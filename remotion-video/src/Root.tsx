@@ -7,6 +7,17 @@ import {
   bluetoothExplainerDefaultProps,
 } from "./BluetoothExplainer";
 import { DURATION_IN_FRAMES, FPS, WIDTH, HEIGHT } from "./constants";
+import {
+  ParticleRingHalo,
+  particleRingHaloSchema,
+  particleRingHaloDefaults,
+} from "./particle-ring/ParticleRingHalo";
+import {
+  DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
+  FPS as RING_FPS,
+  WIDTH as RING_WIDTH,
+  HEIGHT as RING_HEIGHT,
+} from "./particle-ring/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -20,6 +31,16 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         schema={bluetoothExplainerSchema}
         defaultProps={bluetoothExplainerDefaultProps}
+      />
+      <Composition
+        id="ParticleRingHalo"
+        component={ParticleRingHalo}
+        durationInFrames={RING_DURATION_IN_FRAMES}
+        fps={RING_FPS}
+        width={RING_WIDTH}
+        height={RING_HEIGHT}
+        schema={particleRingHaloSchema}
+        defaultProps={particleRingHaloDefaults}
       />
     </>
   );
