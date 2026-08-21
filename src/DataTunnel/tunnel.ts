@@ -14,6 +14,18 @@ export type TunnelCamera = {
   cy: number;
   sinRoll: number;
   cosRoll: number;
+  /**
+   * Distance from the corridor axis to each plane, derived per resolution.
+   *
+   * A fixed world height does not survive an aspect change. The focal length
+   * comes from the frame WIDTH, so a 9:16 frame has a far taller vertical
+   * field: the planes then leave the frame only very close to the camera, and
+   * the top and bottom of the frame go empty. Deriving the height from a target
+   * `edgeDepth` instead keeps the same framing at any aspect.
+   */
+  halfHeight: number;
+  /** Bow of the planes at the sides, scaled with halfHeight. */
+  curve: number;
 };
 
 export const makeCamera = (
@@ -29,15 +41,29 @@ export const makeCamera = (
   // The whole loop rests on this: an integer number of grid cells travelled.
   const travel = t * config.motion.cellsPerLoop * config.tunnel.spacingZ;
 
+  // Solve f * halfHeight / edgeDepth = height / 2, so the planes always cross
+  // the frame edge at the same depth whatever the aspect ratio.
+  const halfHeight = (config.tunnel.edgeDepth * (height / 2)) / f;
+
+  const roll =
+    ((c.rollDeg * Math.PI) / 180) * Math.sin(TAU * (t + c.rollPhase));
+
   return {
     x: c.driftX * Math.sin(TAU * (t + c.driftXPhase)),
-    y: c.axisOffsetY + c.driftY * Math.sin(TAU * (2 * t + c.driftYPhase)),
+    // Vertical offsets scale with the corridor, or they would be imperceptible
+    // in the taller format.
+    y:
+      halfHeight *
+      (c.axisOffsetFrac +
+        c.driftYFrac * Math.sin(TAU * (2 * t + c.driftYPhase))),
     z: -travel,
     f,
     cx: width / 2,
     cy: height / 2,
-    sinRoll: Math.sin(((c.rollDeg * Math.PI) / 180) * Math.sin(TAU * (t + c.rollPhase))),
-    cosRoll: Math.cos(((c.rollDeg * Math.PI) / 180) * Math.sin(TAU * (t + c.rollPhase))),
+    sinRoll: Math.sin(roll),
+    cosRoll: Math.cos(roll),
+    halfHeight,
+    curve: halfHeight * config.tunnel.curveFrac,
   };
 };
 
@@ -76,8 +102,12 @@ export const gridHalfWidth = (): number =>
  *
  * `sign` is +1 for the ceiling, -1 for the floor.
  */
-export const planeY = (x: number, sign: number): number => {
-  const { halfHeight, curve } = config.tunnel;
+export const planeY = (
+  x: number,
+  sign: number,
+  halfHeight: number,
+  curve: number,
+): number => {
   const u = x / gridHalfWidth();
   return sign * (halfHeight + curve * u * u);
 };
@@ -98,6 +128,36 @@ export const dotHash = (col: number, rowMod: number, salt: number): number => {
 
 /** Positive modulo. */
 export const mod = (a: number, n: number): number => ((a % n) + n) % n;
+
+/**
+ * Second noise octave: smooth value noise over a coarse lattice, used to clump
+ * dot brightness into soft organic patches.
+ *
+ * Per-dot white noise alone leaves the grid looking mechanically even, and the
+ * faint structure the raw hash does produce reads as regular. A low-frequency
+ * octave on top breaks that up.
+ *
+ * `cellSize` must divide `motion.cellsPerLoop`, and the lattice row index wraps
+ * on the same period, so the patches survive the loop wrap continuously —
+ * including the interpolation across the seam.
+ */
+export const patchNoise = (
+  latticeCol: number,
+  fx: number,
+  rowA: number,
+  rowB: number,
+  fy: number,
+): number => {
+  const n00 = dotHash(latticeCol, rowA, 7);
+  const n10 = dotHash(latticeCol + 1, rowA, 7);
+  const n01 = dotHash(latticeCol, rowB, 7);
+  const n11 = dotHash(latticeCol + 1, rowB, 7);
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  return (
+    (n00 * (1 - sx) + n10 * sx) * (1 - sy) + (n01 * (1 - sx) + n11 * sx) * sy
+  );
+};
 
 /** Distance the corridor repeats over — one full loop of travel. */
 export const loopDistance = (): number =>
@@ -124,17 +184,22 @@ const buildDrifters = (
   sizeMin: number,
   sizeMax: number,
   seedSalt: number,
+  /**
+   * 1 spreads evenly across the cross-section; higher values pull toward the
+   * corridor axis. The axis projects to the vanishing point, so a strong bias
+   * piles everything onto one spot in the middle of the frame.
+   */
+  bias: number,
 ): readonly Drifter[] => {
   const rng = mulberry32(config.seed ^ seedSalt);
   const L = loopDistance();
   const out: Drifter[] = [];
   for (let i = 0; i < count; i++) {
-    // Squared distribution pushes more of them toward the corridor axis.
     const rx = rng() * 2 - 1;
     const ry = rng() * 2 - 1;
     out.push({
-      x: rx * Math.abs(rx) * spreadX,
-      y: ry * Math.abs(ry) * spreadY,
+      x: Math.sign(rx) * Math.pow(Math.abs(rx), bias) * spreadX,
+      y: Math.sign(ry) * Math.pow(Math.abs(ry), bias) * spreadY,
       z0: rng() * L,
       size: sizeMin + rng() * (sizeMax - sizeMin),
       intensity: 0.35 + rng() * 0.65,
@@ -152,6 +217,7 @@ export const NEBULA = buildDrifters(
   config.nebula.radius.min,
   config.nebula.radius.max,
   0x1111,
+  config.nebula.bias,
 );
 
 export const DUST = buildDrifters(
@@ -161,6 +227,7 @@ export const DUST = buildDrifters(
   config.dust.size.min,
   config.dust.size.max,
   0x2222,
+  config.dust.bias,
 );
 
 /**

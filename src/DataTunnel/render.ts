@@ -10,6 +10,7 @@ import {
   loopDistance,
   makeCamera,
   mod,
+  patchNoise,
   planeY,
   project,
 } from "./tunnel";
@@ -23,6 +24,8 @@ export type Buffers = {
   nebula: HTMLCanvasElement;
   /** Threshold-extracted highlights, the bloom source. */
   bloom: HTMLCanvasElement;
+  /** The same highlights repainted in the bloom tint, for the wide levels. */
+  bloomTint: HTMLCanvasElement;
   /** Scratch for the depth-of-field pass on near dust. */
   scratch: HTMLCanvasElement;
 };
@@ -40,6 +43,7 @@ export const createBuffers = (width: number, height: number): Buffers => ({
   dots: makeCanvas(width, height),
   nebula: makeCanvas(width, height),
   bloom: makeCanvas(width, height),
+  bloomTint: makeCanvas(width, height),
   scratch: makeCanvas(width, height),
 });
 
@@ -118,6 +122,19 @@ const drawPlane = (
 
     // Row hashing must repeat with the loop, or the wrap would be visible.
     const rowMod = mod(row, cells);
+
+    // Second noise octave. The lattice row and its neighbour are constant
+    // across the row, so they are resolved once here rather than per dot; the
+    // neighbour wraps on the loop period so the patches stay continuous across
+    // the seam.
+    const cell = d.patch.cellSize;
+    const latticeRows = cells / cell;
+    const ry = rowMod / cell;
+    const ry0 = Math.floor(ry);
+    const patchFy = ry - ry0;
+    const patchRowA = mod(ry0, latticeRows);
+    const patchRowB = mod(ry0 + 1, latticeRows);
+
     const wave =
       1 -
       d.wave.depth +
@@ -135,17 +152,27 @@ const drawPlane = (
       if (h0 < d.dropout) continue;
 
       const wx = col * t.spacingX;
-      project(cam, wx, planeY(wx, sign), wz, proj);
+      project(cam, wx, planeY(wx, sign, cam.halfHeight, cam.curve), wz, proj);
       const sx = proj.sx;
       const sy = proj.sy;
       if (Number.isNaN(sx)) continue;
       if (sx < -halfW || sx > width + halfW) continue;
       if (sy < -halfH || sy > height + halfH) continue;
 
+      // Fine octave: per-dot white noise.
       const bright =
         d.intensity.min +
         (d.intensity.max - d.intensity.min) * dotHash(col, rowMod, 2);
-      const a = depthAlpha * bright * wave;
+
+      // Coarse octave: soft patches, so the grid does not read mechanically even.
+      const lx = col / cell;
+      const lx0 = Math.floor(lx);
+      const patch = patchNoise(lx0, lx - lx0, patchRowA, patchRowB, patchFy);
+      // Mean-preserving: patch averages 0.5, so this varies around 1.0 rather
+      // than darkening the whole grid.
+      const patchGain = 1 + d.patch.depth * (patch - 0.5);
+
+      const a = depthAlpha * bright * wave * patchGain;
       if (a <= 0.006) continue;
 
       ctx.globalAlpha = a;
@@ -187,7 +214,8 @@ const drawNebula = (
   ctx.globalCompositeOperation = "lighter";
   for (const blob of NEBULA) {
     const depth = drifterDepth(blob, travel);
-    if (depth < 1.5 || depth > config.tunnel.far) continue;
+    if (depth < config.nebula.nearFade.start || depth > config.tunnel.far)
+      continue;
     project(cam, blob.x, blob.y, cam.z - depth, proj);
     if (Number.isNaN(proj.sx)) continue;
     const r = (cam.f * blob.size) / depth;
@@ -195,7 +223,9 @@ const drawNebula = (
     if (proj.sy < -r || proj.sy > height + r) continue;
 
     // Fade at both ends of the slab so the wrap is invisible.
-    const edge = smoothstep(1.5, 9, depth) * (1 - smoothstep(L * 0.62, L, depth));
+    const edge =
+      smoothstep(config.nebula.nearFade.start, config.nebula.nearFade.end, depth) *
+      (1 - smoothstep(L * 0.62, L, depth));
     drawBlob(
       ctx,
       proj.sx,
@@ -317,6 +347,7 @@ export const drawFrame = (
   const dotsCtx = ctxOf(buffers.dots);
   const nebulaCtx = ctxOf(buffers.nebula);
   const bloomCtx = ctxOf(buffers.bloom);
+  const bloomTintCtx = ctxOf(buffers.bloomTint);
   const scratchCtx = ctxOf(buffers.scratch);
 
   reset(target, width, height);
@@ -397,12 +428,26 @@ export const drawFrame = (
     bloomCtx.drawImage(buffers.dots, 0, 0);
     bloomCtx.globalCompositeOperation = "source-over";
 
+    // The wide levels spill far into the dark middle band, and cyan spill is
+    // what stops that band reading as deep blue. Repaint the highlights in the
+    // bloom tint for those levels only — the narrow ones stay the dots' own
+    // colour, since they sit on the dots and read as their glow.
+    const needsTint = config.bloom.levels.some((l) => l.tinted);
+    if (needsTint) {
+      reset(bloomTintCtx, width, height);
+      bloomTintCtx.drawImage(buffers.bloom, 0, 0);
+      bloomTintCtx.globalCompositeOperation = "source-in";
+      bloomTintCtx.fillStyle = config.palette.bloomTint;
+      bloomTintCtx.fillRect(0, 0, width, height);
+      bloomTintCtx.globalCompositeOperation = "source-over";
+    }
+
     target.save();
     target.globalCompositeOperation = "lighter";
     for (const lvl of config.bloom.levels) {
       target.globalAlpha = clamp(lvl.alpha * config.bloom.strength, 0, 1);
       target.filter = `blur(${lvl.blurPx}px)`;
-      target.drawImage(buffers.bloom, 0, 0);
+      target.drawImage(lvl.tinted ? buffers.bloomTint : buffers.bloom, 0, 0);
     }
     target.restore();
   }

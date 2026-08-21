@@ -206,6 +206,27 @@ Three things do the heavy lifting, and all three are in `config.ts`:
   distance. Fading them out well before that point is what keeps the horizon
   clean.
 
+Three smaller things matter more than they look:
+
+- **`bloom.levels[].tinted`.** The wide bloom levels spill a long way into the
+  dark middle band, and cyan spill there stops it reading as deep blue. Those
+  levels are repainted in `palette.bloomTint` by the same `source-in` trick the
+  fog uses; the narrow levels keep the dots' own colour, since they sit on the
+  dots and read as their glow. This took the band's green/blue ratio from 0.51
+  to 0.33 against a reference of 0.28.
+- **`dot.patch`** is a second, low-frequency noise octave — smooth value noise
+  over a coarse lattice, interpolated per dot. Per-dot white noise alone leaves
+  the grid mechanically even, and the faint structure the raw hash produces
+  reads as regular. The gain is deliberately mean-preserving
+  (`1 + depth * (patch - 0.5)`), so adding texture does not also darken the
+  whole grid.
+- **`nebula.bias` and `nebula.nearFade`.** The corridor axis projects to the
+  vanishing point, so biasing cloud blobs toward the axis piles them into one
+  hot spot dead centre — and a blob that drifts close balloons, since its screen
+  radius is `focal * size / depth`. Spreading them evenly (`bias` near 1) and
+  refusing to draw them until they are far enough away fixed a centre that
+  measured 41/129/206 against a reference of 44/68/132.
+
 Its loop works differently from the streaks piece. The camera never returns to
 its starting z — it keeps flying — so instead it advances **exactly
 `motion.cellsPerLoop` grid cells**, and the grid lands back on itself. That has
@@ -246,11 +267,23 @@ And for the tunnel, in `src/DataTunnel/config.ts`:
 | ----------------------------- | -------------------------------------------------------- |
 | faster / slower flight        | `motion.cellsPerLoop` (whole numbers only)                |
 | denser / coarser grid         | `tunnel.spacingX` / `.spacingZ`, `tunnel.columns`         |
-| a wider or tighter corridor   | `tunnel.halfHeight`, `tunnel.curve`                       |
+| a wider or tighter corridor   | `tunnel.edgeDepth`, `tunnel.curveFrac`                    |
+| more or less dot clumping     | `dot.patch.depth` / `.cellSize`                           |
 | a bigger dark band            | `tunnel.farFade` (pull `start` in)                        |
 | more or less atmosphere       | `fog.levels`, `palette.fog`                               |
 | more cloud texture            | `nebula.count` / `.alpha`                                 |
 
 After changing anything periodic, re-run `npm run check:loop`. If you change
-`motion.cellsPerLoop`, keep `dot.wave.rowPeriod` a divisor of it — the checker
-will fail the build if you do not.
+`motion.cellsPerLoop`, keep both `dot.wave.rowPeriod` and `dot.patch.cellSize`
+divisors of it — the checker will fail the build if you do not.
+
+### One number does the aspect ratio
+
+The corridor's world height is not a constant; it is derived per resolution from
+`tunnel.edgeDepth`, the depth at which the planes cross the top and bottom of
+frame. A fixed world height does not survive an aspect change: the focal length
+comes from the frame *width*, so a 9:16 frame has a far taller vertical field,
+the planes leave the frame only very close to the camera, and the top and bottom
+go empty. Solving `f * halfHeight / edgeDepth = height / 2` instead keeps the
+framing identical at any aspect, and `curveFrac` and the camera's vertical
+offsets ride along as fractions of it.

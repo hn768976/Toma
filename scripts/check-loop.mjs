@@ -140,7 +140,16 @@ try {
     );
   }
 
-  // 8. Dust and nebula wrap through a slab exactly one loop of travel long.
+  // 8. The coarse noise lattice must tile the loop, or the brightness patches
+  //    jump at the wrap.
+  if (tc.motion.cellsPerLoop % tc.dot.patch.cellSize !== 0) {
+    failures.push(
+      `dot patch cellSize ${tc.dot.patch.cellSize} does not divide ` +
+        `cellsPerLoop ${tc.motion.cellsPerLoop}`,
+    );
+  }
+
+  // 9. Dust and nebula wrap through a slab exactly one loop of travel long.
   const L = tunnel.loopDistance();
   near(L, tc.motion.cellsPerLoop * tc.tunnel.spacingZ, "tunnel loop distance");
   for (const [name, set] of [
