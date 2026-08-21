@@ -51,8 +51,14 @@ the black vignette so the alpha channel is real:
 
 ```bash
 npx remotion render NeonStreaksAlpha out/neon-streaks-alpha.mov \
-  --codec=prores --prores-profile=4444 --pixel-format=yuva444p10le
+  --codec=prores --prores-profile=4444 --pixel-format=yuva444p10le \
+  --image-format=png
 ```
+
+`--image-format=png` is required and easy to miss: `remotion.config.ts` sets JPEG
+frames (right for the mp4, and faster), and JPEG has no alpha channel, so without
+this flag the render fails outright. Verified output is 50% fully transparent,
+1.5% fully opaque cores and 48.5% partial — the halos really are semi-transparent.
 
 Key it over other footage with a **screen / add** blend, not a luma key — the
 streaks are additive light, and their halos are genuinely semi-transparent.
