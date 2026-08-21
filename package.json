@@ -1,0 +1,23 @@
+{
+  "name": "internet-message-explainer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "How the Internet Sends a Message - animated explainer built with Remotion",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render InternetMessage out/internet-message.mp4",
+    "render:vo": "remotion render InternetMessageVOGuide out/internet-message-vo-guide.mp4",
+    "still": "remotion still InternetMessage out/frame.png",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.7.3"
+  }
+}
