@@ -25,9 +25,13 @@ try {
       "src/NeonStreaks/config.ts",
       "src/NeonStreaks/geometry.ts",
       "src/NeonStreaks/streaks.ts",
-      "src/NeonStreaks/random.ts",
+      "src/lib/random.ts",
+      "src/DataTunnel/config.ts",
+      "src/DataTunnel/tunnel.ts",
       "--outDir",
       outDir,
+      "--rootDir",
+      "src",
       "--module",
       "commonjs",
       "--moduleResolution",
@@ -42,9 +46,9 @@ try {
   const { createRequire } = await import("node:module");
   const require = createRequire(pathToFileURL(join(outDir, "x.cjs")));
 
-  const { config, DURATION_IN_FRAMES } = require(join(outDir, "config.js"));
-  const { makeCamera } = require(join(outDir, "geometry.js"));
-  const { STREAKS, phaseAt, densityAt } = require(join(outDir, "streaks.js"));
+  const { config, DURATION_IN_FRAMES } = require(join(outDir, "NeonStreaks", "config.js"));
+  const { makeCamera } = require(join(outDir, "NeonStreaks", "geometry.js"));
+  const { STREAKS, phaseAt, densityAt } = require(join(outDir, "NeonStreaks", "streaks.js"));
 
   const D = DURATION_IN_FRAMES;
   const failures = [];
@@ -95,14 +99,74 @@ try {
     failures.push(`expected ${config.streaks.count} streaks, got ${STREAKS.length}`);
   }
 
+  // ---------------------------------------------------------------- tunnel
+  const tunnelCfg = require(join(outDir, "DataTunnel", "config.js"));
+  const tunnel = require(join(outDir, "DataTunnel", "tunnel.js"));
+  const TD = tunnelCfg.DURATION_IN_FRAMES;
+  const tc = tunnelCfg.config;
+
+  // 6. The camera returns to its exact starting pose.
+  for (const [w, h] of [
+    [1920, 1080],
+    [1080, 1920],
+  ]) {
+    const a = tunnel.makeCamera(0, TD, w, h);
+    const b = tunnel.makeCamera(TD, TD, w, h);
+    for (const k of ["x", "y", "sinRoll", "cosRoll"]) {
+      near(a[k], b[k], `tunnel camera.${k} @${w}x${h}`);
+    }
+    // z does NOT return to 0 — the camera keeps flying. What must hold is that
+    // it has advanced a whole number of grid cells, so the grid lands on itself.
+    const travelled = -b.z;
+    const cells = travelled / tc.tunnel.spacingZ;
+    if (Math.abs(cells - Math.round(cells)) > 1e-9) {
+      failures.push(
+        `tunnel travel is ${cells} cells over the loop, not a whole number`,
+      );
+    }
+    if (Math.round(cells) !== tc.motion.cellsPerLoop) {
+      failures.push(
+        `tunnel travelled ${Math.round(cells)} cells, expected ${tc.motion.cellsPerLoop}`,
+      );
+    }
+  }
+
+  // 7. The travelling brightness wave must close: its row period has to divide
+  //    the cells travelled, or the wave lands out of phase after the wrap.
+  if (tc.motion.cellsPerLoop % tc.dot.wave.rowPeriod !== 0) {
+    failures.push(
+      `dot wave rowPeriod ${tc.dot.wave.rowPeriod} does not divide ` +
+        `cellsPerLoop ${tc.motion.cellsPerLoop}`,
+    );
+  }
+
+  // 8. Dust and nebula wrap through a slab exactly one loop of travel long.
+  const L = tunnel.loopDistance();
+  near(L, tc.motion.cellsPerLoop * tc.tunnel.spacingZ, "tunnel loop distance");
+  for (const [name, set] of [
+    ["nebula", tunnel.NEBULA],
+    ["dust", tunnel.DUST],
+  ]) {
+    for (let i = 0; i < set.length; i++) {
+      const a = tunnel.drifterDepth(set[i], 0);
+      const b = tunnel.drifterDepth(set[i], L);
+      near(a, b, `${name}[${i}] depth`);
+    }
+  }
+
   if (failures.length) {
     console.error("LOOP CHECK FAILED:");
     for (const f of failures) console.error("  - " + f);
     process.exit(1);
   }
   console.log(
-    `Loop check passed: camera, ${STREAKS.length} streak phases and the ` +
-      `density envelope are all identical at frame 0 and frame ${D}.`,
+    `Loop check passed.\n` +
+      `  NeonStreaks (${D}f): camera, ${STREAKS.length} streak phases and the ` +
+      `density envelope identical at frame 0 and ${D}.\n` +
+      `  DataTunnel  (${TD}f): camera pose identical, grid advanced exactly ` +
+      `${tc.motion.cellsPerLoop} cells, and all ` +
+      `${tunnel.NEBULA.length + tunnel.DUST.length} drifters back at their ` +
+      `starting depth.`,
   );
 } finally {
   rmSync(outDir, { recursive: true, force: true });

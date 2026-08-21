@@ -1,5 +1,10 @@
 import React from "react";
 import { Composition } from "remotion";
+import { DataTunnel } from "./DataTunnel/DataTunnel";
+import {
+  DURATION_IN_FRAMES as TUNNEL_FRAMES,
+  FPS as TUNNEL_FPS,
+} from "./DataTunnel/config";
 import { DURATION_IN_FRAMES, FPS } from "./NeonStreaks/config";
 import { NeonStreaks } from "./NeonStreaks/NeonStreaks";
 import { TitleOverlay, titleOverlaySchema } from "./NeonStreaks/TitleOverlay";
@@ -41,6 +46,27 @@ export const RemotionRoot: React.FC = () => {
         width={1920}
         height={1080}
         defaultProps={{ transparent: true }}
+      />
+
+      {/* --- Data Tunnel: 10s flight down a corridor of dot grids --- */}
+      <Composition
+        id="DataTunnel"
+        component={DataTunnel}
+        durationInFrames={TUNNEL_FRAMES}
+        fps={TUNNEL_FPS}
+        width={1920}
+        height={1080}
+        defaultProps={{ transparent: false }}
+      />
+
+      <Composition
+        id="DataTunnelVertical"
+        component={DataTunnel}
+        durationInFrames={TUNNEL_FRAMES}
+        fps={TUNNEL_FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ transparent: false }}
       />
 
       <Composition

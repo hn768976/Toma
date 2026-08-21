@@ -1,5 +1,5 @@
 import { config } from "./config";
-import { biased, mulberry32, range } from "./random";
+import { biased, mulberry32, range } from "../lib/random";
 
 /**
  * Immutable, resolution-independent description of one streak.
