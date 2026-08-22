@@ -1,5 +1,9 @@
 node_modules
-dist
+
+# Build output. The standalone explainer is committed so the finished page is
+# available without a build step.
+dist/*
+!dist/kurzgesagt-vault.html
 .DS_Store
 .env
 

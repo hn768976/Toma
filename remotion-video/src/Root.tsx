@@ -18,6 +18,13 @@ import {
   WIDTH as RING_WIDTH,
   HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
+import { KurzgesagtVault } from "./vault/KurzgesagtVault";
+import {
+  DURATION_IN_FRAMES as VAULT_DURATION_IN_FRAMES,
+  FPS as VAULT_FPS,
+  WIDTH as VAULT_WIDTH,
+  HEIGHT as VAULT_HEIGHT,
+} from "./vault/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -31,6 +38,14 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         schema={bluetoothExplainerSchema}
         defaultProps={bluetoothExplainerDefaultProps}
+      />
+      <Composition
+        id="KurzgesagtVault"
+        component={KurzgesagtVault}
+        durationInFrames={VAULT_DURATION_IN_FRAMES}
+        fps={VAULT_FPS}
+        width={VAULT_WIDTH}
+        height={VAULT_HEIGHT}
       />
       <Composition
         id="ParticleRingHalo"
