@@ -4,6 +4,7 @@ node_modules
 # available without a build step.
 dist/*
 !dist/kurzgesagt-vault.html
+!dist/minutephysics-alarm.html
 .DS_Store
 .env
 

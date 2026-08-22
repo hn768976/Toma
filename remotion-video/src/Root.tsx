@@ -19,6 +19,13 @@ import {
   HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
 import { KurzgesagtVault } from "./vault/KurzgesagtVault";
+import { MinutePhysicsExplainer } from "./pen/MinutePhysicsExplainer";
+import {
+  DURATION_IN_FRAMES as PEN_DURATION_IN_FRAMES,
+  FPS as PEN_FPS,
+  WIDTH as PEN_WIDTH,
+  HEIGHT as PEN_HEIGHT,
+} from "./pen/constants";
 import {
   DURATION_IN_FRAMES as VAULT_DURATION_IN_FRAMES,
   FPS as VAULT_FPS,
@@ -46,6 +53,14 @@ export const RemotionRoot: React.FC = () => {
         fps={VAULT_FPS}
         width={VAULT_WIDTH}
         height={VAULT_HEIGHT}
+      />
+      <Composition
+        id="MinutePhysicsExplainer"
+        component={MinutePhysicsExplainer}
+        durationInFrames={PEN_DURATION_IN_FRAMES}
+        fps={PEN_FPS}
+        width={PEN_WIDTH}
+        height={PEN_HEIGHT}
       />
       <Composition
         id="ParticleRingHalo"

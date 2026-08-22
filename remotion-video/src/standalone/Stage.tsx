@@ -1,22 +1,33 @@
-// The standalone player page: one fixed 1920x1080 frame with the composition
-// inside it, and a replay button parked OUTSIDE that frame so a screen
-// recording cropped to the frame never catches the control.
+// The standalone player shell: one fixed 1920x1080 frame with a composition
+// inside it, and the controls parked OUTSIDE that frame so a screen recording
+// cropped to the frame never catches them.
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
-import {
-  DURATION_IN_FRAMES,
-  FONT_STACK,
-  FPS,
-  HEIGHT,
-  PALETTE,
-  WIDTH,
-} from "../vault/constants";
-import { KurzgesagtVault } from "../vault/KurzgesagtVault";
 
 const CONTROL_BAR_HEIGHT = 74;
+const WIDTH = 1920;
+const HEIGHT = 1080;
 
-export const Stage: React.FC = () => {
+export type StageTheme = {
+  /** Page colour behind and below the frame. */
+  page: string;
+  /** Control-bar text and button colours. */
+  meta: string;
+  buttonText: string;
+  buttonBackground: string;
+  accent: string;
+  accentText: string;
+  fontStack: string;
+};
+
+export const Stage: React.FC<{
+  component: React.ComponentType;
+  durationInFrames: number;
+  fps: number;
+  meta: string;
+  theme: StageTheme;
+}> = ({ component, durationInFrames, fps, meta, theme }) => {
   const player = useRef<PlayerRef>(null);
   const [playing, setPlaying] = useState(true);
 
@@ -50,21 +61,30 @@ export const Stage: React.FC = () => {
     else ref.play();
   }, []);
 
+  const button = (primary: boolean): React.CSSProperties => ({
+    appearance: "none",
+    border: "none",
+    cursor: "pointer",
+    borderRadius: 999,
+    padding: "11px 26px",
+    fontFamily: theme.fontStack,
+    fontWeight: 700,
+    fontSize: 17,
+    letterSpacing: "0.01em",
+    textTransform: "lowercase",
+    color: primary ? theme.accentText : theme.buttonText,
+    backgroundColor: primary ? theme.accent : theme.buttonBackground,
+  });
+
   return (
-    <div
-      style={{
-        width: WIDTH,
-        height: HEIGHT + CONTROL_BAR_HEIGHT,
-        position: "relative",
-      }}
-    >
+    <div style={{ width: WIDTH, height: HEIGHT + CONTROL_BAR_HEIGHT, position: "relative" }}>
       {/* Everything above this line is the recordable area. */}
       <div style={{ width: WIDTH, height: HEIGHT, position: "relative" }}>
         <Player
           ref={player}
-          component={KurzgesagtVault}
-          durationInFrames={DURATION_IN_FRAMES}
-          fps={FPS}
+          component={component}
+          durationInFrames={durationInFrames}
+          fps={fps}
           compositionWidth={WIDTH}
           compositionHeight={HEIGHT}
           style={{ width: WIDTH, height: HEIGHT }}
@@ -89,7 +109,7 @@ export const Stage: React.FC = () => {
           justifyContent: "flex-end",
           gap: 12,
           paddingTop: 18,
-          fontFamily: FONT_STACK,
+          fontFamily: theme.fontStack,
         }}
       >
         <span
@@ -98,33 +118,18 @@ export const Stage: React.FC = () => {
             fontWeight: 700,
             letterSpacing: "0.06em",
             textTransform: "uppercase",
-            color: "rgba(247, 243, 233, 0.34)",
+            color: theme.meta,
           }}
         >
-          1920 × 1080 · 29s · 30fps
+          {meta}
         </span>
-        <button type="button" onClick={toggle} style={buttonStyle(false)}>
+        <button type="button" onClick={toggle} style={button(false)}>
           {playing ? "pause" : "play"}
         </button>
-        <button type="button" onClick={replay} style={buttonStyle(true)}>
+        <button type="button" onClick={replay} style={button(true)}>
           replay
         </button>
       </div>
     </div>
   );
 };
-
-const buttonStyle = (primary: boolean): React.CSSProperties => ({
-  appearance: "none",
-  border: "none",
-  cursor: "pointer",
-  borderRadius: 999,
-  padding: "11px 26px",
-  fontFamily: FONT_STACK,
-  fontWeight: 700,
-  fontSize: 17,
-  letterSpacing: "0.01em",
-  textTransform: "lowercase",
-  color: primary ? PALETTE.navy : PALETTE.cream,
-  backgroundColor: primary ? PALETTE.teal : "rgba(247, 243, 233, 0.1)",
-});
