@@ -8,6 +8,12 @@ Config.setCrf(15);
 Config.setPixelFormat('yuv420p');
 Config.setOverwriteOutput(true);
 
+// No audio. Without this Remotion muxes in a silent AAC track, which also
+// pushes the container duration past the exact 10.000s of the video stream
+// and would put a hitch in the loop.
+Config.setMuted(true);
+Config.setEnforceAudioTrack(false);
+
 // The 4K scene builds ~180 offscreen strip canvases on the first frame; give
 // the delayRender() that guards it plenty of headroom.
 Config.setDelayRenderTimeoutInMilliseconds(180_000);
