@@ -1,0 +1,8 @@
+# Blender-as-a-module virtualenv (see blender/README.md)
+.venv-blender/
+__pycache__/
+*.pyc
+
+# large intermediates
+*.blend
+*.blend1
