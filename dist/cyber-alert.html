@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>cyber-alert</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    cursor: none;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #stage {
+    display: block;
+    image-rendering: auto;
+  }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<script type="module">
+/**
+ * CYBER-ALERT — deterministic, seamless 10.0s loop at 3840x2160 / 60fps.
+ *
+ * The whole animation is a pure function of the frame index:
+ *
+ *     const scene = createScene(width, height);   // build once
+ *     drawFrame(ctx, scene, frame);               // frame in [0, TOTAL_FRAMES)
+ *
+ * Nothing accumulates between frames, so frame N always paints the same
+ * pixels no matter what order frames are requested in. That is what lets the
+ * standalone HTML page and the Remotion renderer produce identical output,
+ * and it is what makes the loop seam-free: every moving quantity is expressed
+ * as a phase over the 10s period and returns to its t=0 state exactly.
+ *
+ * All magic numbers are authored in 4K pixels and multiplied by `s`
+ * (= height / 2160) so the same scene renders correctly at 1080p previews.
+ */
+
+const WIDTH = 3840;
+const HEIGHT = 2160;
+const FPS = 60;
+const DURATION_SEC = 10;
+const TOTAL_FRAMES = FPS * DURATION_SEC; // 600
+
+const TAU = Math.PI * 2;
+
+const COL = {
+  base: '#0A0E1A',
+  crimson: '90,10,20',
+  rainCyan: '#4A9FD4',
+  rainSlate: '#3A4257',
+  rainHead: '#BFE9FF',
+  bokehCyan: '#5AC8F5',
+  bokehRed: '#E03040',
+  hot: '#FFF0F0',
+  red: '#FF1A25',
+  glitchDark: '#05070E',
+};
+
+/* ------------------------------------------------------------------ *
+ * deterministic randomness
+ * ------------------------------------------------------------------ */
+
+function mulberry32(a) {
+  a = a >>> 0;
+  return function () {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const rand = (rng, a, b) => a + (b - a) * rng();
+const randInt = (rng, a, b) => a + Math.floor(rng() * (b - a + 1));
+
+/* ------------------------------------------------------------------ *
+ * canvas helpers
+ * ------------------------------------------------------------------ */
+
+function makeCanvas(w, h) {
+  const cw = Math.max(1, Math.ceil(w));
+  const ch = Math.max(1, Math.ceil(h));
+  if (typeof document !== 'undefined' && document.createElement) {
+    const c = document.createElement('canvas');
+    c.width = cw;
+    c.height = ch;
+    return c;
+  }
+  return new OffscreenCanvas(cw, ch);
+}
+
+function hexToRgb(hex) {
+  const v = parseInt(hex.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+function rgba(hex, a) {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ------------------------------------------------------------------ *
+ * polyline geometry — every icon path is resampled to uniform spacing so
+ * the glitch walker can slice it by arc length with plain integer indices.
+ * ------------------------------------------------------------------ */
+
+function resample(raw, step, closed) {
+  const src = closed ? raw.concat([raw[0]]) : raw;
+  const out = [src[0][0], src[0][1]];
+  let carry = 0;
+  for (let i = 1; i < src.length; i++) {
+    const x0 = src[i - 1][0];
+    const y0 = src[i - 1][1];
+    const dx = src[i][0] - x0;
+    const dy = src[i][1] - y0;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-9) continue;
+    let d = step - carry;
+    while (d <= len) {
+      out.push(x0 + dx * (d / len), y0 + dy * (d / len));
+      d += step;
+    }
+    carry = len - (d - step);
+  }
+  return { pts: Float64Array.from(out), n: out.length / 2, step };
+}
+
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+function unit(v) {
+  const m = Math.hypot(v[0], v[1]) || 1;
+  return [v[0] / m, v[1] / m];
+}
+function qbez(a, c, b, u) {
+  const iu = 1 - u;
+  return [
+    iu * iu * a[0] + 2 * iu * u * c[0] + u * u * b[0],
+    iu * iu * a[1] + 2 * iu * u * c[1] + u * u * b[1],
+  ];
+}
+
+/** Closed polygon with quadratic-bezier rounded corners. */
+function roundedPolyRaw(verts, r, samples) {
+  const raw = [];
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const p = verts[i];
+    const prev = verts[(i - 1 + n) % n];
+    const next = verts[(i + 1) % n];
+    const a = unit(sub(prev, p));
+    const b = unit(sub(next, p));
+    const A = [p[0] + a[0] * r, p[1] + a[1] * r];
+    const B = [p[0] + b[0] * r, p[1] + b[1] * r];
+    raw.push(A);
+    for (let k = 1; k <= samples; k++) raw.push(qbez(A, p, B, k / samples));
+  }
+  return raw;
+}
+
+function roundRectRaw(x, y, w, h, r, samples) {
+  return roundedPolyRaw(
+    [[x, y], [x + w, y], [x + w, y + h], [x, y + h]],
+    r,
+    samples
+  );
+}
+
+function circleRaw(cx, cy, r, samples) {
+  const raw = [];
+  for (let i = 0; i < samples; i++) {
+    const a = (i / samples) * TAU;
+    raw.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  return raw;
+}
+
+/* ------------------------------------------------------------------ *
+ * background — base + crimson edge bleed, baked once
+ * ------------------------------------------------------------------ */
+
+function buildBackground(width, height) {
+  const cv = makeCanvas(width, height);
+  const c = cv.getContext('2d');
+  c.fillStyle = COL.base;
+  c.fillRect(0, 0, width, height);
+
+  // Broad crimson vignettes bleeding in from the left and right edges,
+  // stretched vertically so they are brightest across mid-height and the
+  // centre of the frame stays comparatively dark.
+  for (const edge of [0, width]) {
+    c.save();
+    c.translate(edge, height / 2);
+    c.scale(1, 1.75);
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, width * 0.46);
+    g.addColorStop(0.0, `rgba(${COL.crimson},0.35)`);
+    g.addColorStop(0.3, `rgba(${COL.crimson},0.23)`);
+    g.addColorStop(0.62, `rgba(${COL.crimson},0.08)`);
+    g.addColorStop(1.0, `rgba(${COL.crimson},0)`);
+    c.fillStyle = g;
+    c.fillRect(-width, -height * 2, width * 2, height * 4);
+    c.restore();
+  }
+  return cv;
+}
+
+/* ------------------------------------------------------------------ *
+ * data rain
+ *
+ * Each column is pre-rendered once into a vertical strip whose height is
+ * exactly the distance the column travels in 10s. Per frame the strip is
+ * simply tiled downward at an offset — so the glyph pattern wraps onto
+ * itself perfectly at the loop point, and a column costs 2-4 drawImage
+ * calls instead of ~70 fillText calls.
+ * ------------------------------------------------------------------ */
+
+function sampleColumnX(rng, width) {
+  // Denser toward the left and right thirds, sparser through the centre so
+  // the foreground icon stays readable.
+  for (let k = 0; k < 32; k++) {
+    const x = rng() * width;
+    const u = x / width;
+    const bell = Math.exp(-Math.pow((u - 0.5) / 0.21, 2));
+    if (rng() < 1 - 0.82 * bell) return x;
+  }
+  return rng() * width;
+}
+
+function buildColumn(rng, s, width, near) {
+  const glyph = near ? rand(rng, 34, 54) * s : rand(rng, 18, 40) * s;
+  const rowH = glyph * 1.18;
+  const wanted = near ? rand(rng, 190, 300) * s : rand(rng, 60, 260) * s;
+  // Quantise the speed so exactly a whole number of rows scrolls past per
+  // loop; that is what makes the strip tile seamlessly at t = 10.0s.
+  const rows = Math.max(2, Math.round((wanted * DURATION_SEC) / rowH));
+  const stripH = rows * rowH;
+  const speed = stripH / DURATION_SEC; // px/sec, for reference
+
+  const blur = near ? rand(rng, 2.6, 6.0) * s : 0;
+  const padX = near ? Math.ceil(blur * 3) : 4;
+  const cw = Math.ceil(glyph * 1.4) + padX * 2;
+  const cv = makeCanvas(cw, stripH);
+  const c = cv.getContext('2d');
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.font = `${glyph.toFixed(1)}px ui-monospace, "DejaVu Sans Mono", "Courier New", monospace`;
+  if (blur) c.filter = `blur(${blur.toFixed(2)}px)`;
+
+  const cyan = rng() < 0.55;
+  const body = cyan ? COL.rainCyan : COL.rainSlate;
+  for (let i = 0; i < rows; i++) {
+    if (rng() < 0.14) continue; // gaps in the stream
+    const head = rng() < 0.05;
+    c.globalAlpha = head ? 1 : 0.22 + 0.78 * Math.pow(rng(), 1.7);
+    c.fillStyle = head ? COL.rainHead : body;
+    c.fillText(rng() < 0.5 ? '0' : '1', cw / 2, i * rowH + rowH / 2);
+  }
+
+  return {
+    cv,
+    x: Math.round(sampleColumnX(rng, width) - cw / 2),
+    stripH,
+    speed,
+    alpha: near ? rand(rng, 0.1, 0.3) : rand(rng, 0.08, 0.45),
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * bokeh
+ * ------------------------------------------------------------------ */
+
+function bokehSprite(hex, sharp) {
+  const S = 256;
+  const cv = makeCanvas(S, S);
+  const c = cv.getContext('2d');
+  const g = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  if (sharp) {
+    g.addColorStop(0.0, rgba(hex, 1));
+    g.addColorStop(0.34, rgba(hex, 0.95));
+    g.addColorStop(0.42, rgba(hex, 0.3));
+    g.addColorStop(0.75, rgba(hex, 0.06));
+    g.addColorStop(1.0, rgba(hex, 0));
+  } else {
+    g.addColorStop(0.0, rgba(hex, 0.8));
+    g.addColorStop(0.34, rgba(hex, 0.42));
+    g.addColorStop(0.68, rgba(hex, 0.12));
+    g.addColorStop(1.0, rgba(hex, 0));
+  }
+  c.fillStyle = g;
+  c.fillRect(0, 0, S, S);
+  return cv;
+}
+
+function buildBokeh(rng, s, width, height, sprites) {
+  const out = [];
+  const soft = randInt(rng, 25, 36);
+  for (let i = 0; i < soft + 6; i++) {
+    const sharp = i >= soft; // a few sharp cyan dots for contrast
+    const cyan = sharp || rng() < 0.6;
+    const r = sharp ? rand(rng, 2.5, 6) * s : rand(rng, 8, 40) * s;
+    out.push({
+      sprite: sprites[(cyan ? 0 : 1) + (sharp ? 2 : 0)],
+      r,
+      alpha: sharp ? rand(rng, 0.45, 0.85) : rand(rng, 0.2, 0.6),
+      x0: rng() * width,
+      ampX: rand(rng, 20, 150) * s,
+      kx: randInt(rng, 1, 3),
+      phx: rng(),
+      driftLaps: rng() < 0.4 ? (rng() < 0.5 ? -1 : 1) : 0,
+      ky: rng() < 0.75 ? 1 : 2, // upward laps per loop
+      py0: rng(),
+      kA: randInt(rng, 1, 4),
+      phA: rng(),
+    });
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * buried detail — faint red glyph clusters, padlocks, shields
+ * ------------------------------------------------------------------ */
+
+function clusterSprite(rng, s) {
+  const cols = randInt(rng, 3, 6);
+  const rows = randInt(rng, 2, 5);
+  const g = rand(rng, 20, 34) * s;
+  const cv = makeCanvas(cols * g * 0.75 + g, rows * g * 1.2 + g);
+  const c = cv.getContext('2d');
+  c.font = `${g.toFixed(1)}px ui-monospace, "DejaVu Sans Mono", "Courier New", monospace`;
+  c.textBaseline = 'middle';
+  c.fillStyle = '#FF3A3A';
+  const chars = '01ABCDEF#*:/\\<>';
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      c.globalAlpha = 0.3 + 0.7 * rng();
+      c.fillText(chars[Math.floor(rng() * chars.length)], g * 0.5 + x * g * 0.75, g * 0.5 + y * g * 1.2);
+    }
+  }
+  return cv;
+}
+
+function lockSprite(rng, s) {
+  const w = rand(rng, 46, 90) * s;
+  const h = w * 1.25;
+  const cv = makeCanvas(w + 12 * s, h + 12 * s);
+  const c = cv.getContext('2d');
+  const p = 6 * s;
+  c.strokeStyle = '#FF4040';
+  c.lineWidth = Math.max(1.5, 3 * s);
+  c.globalAlpha = 0.9;
+  const bodyY = p + h * 0.42;
+  c.strokeRect(p, bodyY, w, h * 0.58);
+  c.beginPath();
+  c.arc(p + w / 2, bodyY, w * 0.29, Math.PI, 0);
+  c.stroke();
+  c.beginPath();
+  c.arc(p + w / 2, bodyY + h * 0.26, w * 0.08, 0, TAU);
+  c.stroke();
+  return cv;
+}
+
+function shieldSprite(rng, s) {
+  const w = rand(rng, 46, 84) * s;
+  const h = w * 1.2;
+  const cv = makeCanvas(w + 12 * s, h + 12 * s);
+  const c = cv.getContext('2d');
+  const p = 6 * s;
+  c.strokeStyle = '#FF4040';
+  c.lineWidth = Math.max(1.5, 3 * s);
+  c.globalAlpha = 0.9;
+  c.beginPath();
+  c.moveTo(p + w / 2, p);
+  c.lineTo(p + w, p + h * 0.2);
+  c.lineTo(p + w, p + h * 0.55);
+  c.quadraticCurveTo(p + w, p + h * 0.9, p + w / 2, p + h);
+  c.quadraticCurveTo(p, p + h * 0.9, p, p + h * 0.55);
+  c.lineTo(p, p + h * 0.2);
+  c.closePath();
+  c.stroke();
+  return cv;
+}
+
+function buildDetail(rng, s, width, height) {
+  const out = [];
+  const n = randInt(rng, 16, 22);
+  for (let i = 0; i < n; i++) {
+    const roll = rng();
+    const cv = roll < 0.55 ? clusterSprite(rng, s) : roll < 0.8 ? lockSprite(rng, s) : shieldSprite(rng, s);
+    out.push({
+      cv,
+      x: sampleColumnX(rng, width) - cv.width / 2,
+      y: rng() * (height - cv.height),
+      alpha: rand(rng, 0.05, 0.15),
+      amp: rand(rng, 10, 60) * s,
+      k: randInt(rng, 1, 2),
+      ph: rng(),
+    });
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * foreground icon
+ * ------------------------------------------------------------------ */
+
+function buildIcon(width, height, s, seed) {
+  const Th = 0.45 * height; // triangle height ~45% of the frame
+  const side = (Th * 2) / Math.sqrt(3); // equilateral
+  const cx = width / 2;
+  const cy = height / 2;
+  const apexY = cy - Th * 0.52;
+  const baseY = cy + Th * 0.48;
+
+  const pad = 170 * s; // room for the widest bloom pass, jitter and displacement
+  const bx = cx - side / 2 - pad;
+  const by = apexY - pad;
+  const bw = side + pad * 2;
+  const bh = Th + pad * 2;
+  const L = (x, y) => [x - bx, y - by];
+
+  const step = 2.5 * s;
+  const tri = resample(
+    roundedPolyRaw(
+      [L(cx, apexY), L(cx + side / 2, baseY), L(cx - side / 2, baseY)],
+      Th * 0.085,
+      20
+    ),
+    step,
+    true
+  );
+
+  const barW = Th * 0.085;
+  const barH = Th * 0.3;
+  const bar = resample(
+    roundRectRaw(...L(cx - barW / 2, cy - Th * 0.11), barW, barH, barW * 0.48, 12),
+    step,
+    true
+  );
+  const dot = resample(circleRaw(...L(cx, cy + Th * 0.285), Th * 0.045, 128), step, true);
+
+  const heavy = {
+    minSeg: 30 * s, maxSeg: 130 * s, breakProb: 0.38,
+    minGap: 3 * s, maxGap: 16 * s, lwMin: 0.55, lwMax: 1.5,
+    jit: 1.9 * s, aMin: 0.7,
+  };
+  const light = {
+    minSeg: 45 * s, maxSeg: 150 * s, breakProb: 0.24,
+    minGap: 2 * s, maxGap: 10 * s, lwMin: 0.7, lwMax: 1.35,
+    jit: 1.2 * s, aMin: 0.78,
+  };
+
+  return {
+    seed,
+    bx, by, bw, bh,
+    // w scales the body/core stroke, gw the fat bloom source. The
+    // exclamation shapes are narrow, so their bloom source is kept thin
+    // enough that the outlines do not glow shut.
+    paths: [
+      { path: tri, opts: heavy, w: 1, gw: 34 },
+      { path: bar, opts: light, w: 0.95, gw: 15 },
+      { path: dot, opts: light, w: 0.95, gw: 15 },
+    ],
+    glow: makeCanvas(bw, bh),
+    red: makeCanvas(bw, bh),
+    core: makeCanvas(bw, bh),
+    full: makeCanvas(bw, bh),
+    tintR: makeCanvas(bw, bh),
+    tintC: makeCanvas(bw, bh),
+    block: -1,
+  };
+}
+
+/**
+ * Slice a path into drawn runs separated by micro-breaks, each run carrying
+ * its own jitter, thickness multiplier and alpha. Redistributed on a frame
+ * block so the stroke crawls rather than boiling every single frame.
+ */
+function buildSegments(path, rng, o) {
+  const segs = [];
+  let i = 0;
+  while (i < path.n - 1) {
+    const runPts = Math.max(2, Math.round(rand(rng, o.minSeg, o.maxSeg) / path.step));
+    const j = Math.min(path.n - 1, i + runPts);
+    segs.push({
+      i0: i,
+      i1: j,
+      lw: rand(rng, o.lwMin, o.lwMax),
+      jx: rand(rng, -o.jit, o.jit),
+      jy: rand(rng, -o.jit, o.jit),
+      a: rand(rng, o.aMin, 1),
+    });
+    const gap = rng() < o.breakProb ? Math.max(1, Math.round(rand(rng, o.minGap, o.maxGap) / path.step)) : 0;
+    i = j + gap;
+  }
+  return segs;
+}
+
+function strokeSegments(c, path, segs, baseWidth, style) {
+  c.strokeStyle = style;
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  for (const sg of segs) {
+    c.globalAlpha = sg.a;
+    c.lineWidth = baseWidth * sg.lw;
+    c.beginPath();
+    for (let k = sg.i0; k <= sg.i1; k++) {
+      const x = path.pts[k * 2] + sg.jx;
+      const y = path.pts[k * 2 + 1] + sg.jy;
+      if (k === sg.i0) c.moveTo(x, y);
+      else c.lineTo(x, y);
+    }
+    c.stroke();
+  }
+}
+
+function tintInto(dst, src, color) {
+  const c = dst.getContext('2d');
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = 'copy';
+  c.drawImage(src, 0, 0);
+  c.globalCompositeOperation = 'multiply';
+  c.fillStyle = color;
+  c.fillRect(0, 0, dst.width, dst.height);
+  c.globalCompositeOperation = 'destination-in';
+  c.drawImage(src, 0, 0);
+  c.globalCompositeOperation = 'source-over';
+}
+
+function renderIconLayers(icon, block, s) {
+  const rng = mulberry32((icon.seed ^ Math.imul(block + 1, 2654435761)) >>> 0);
+  const cg = icon.glow.getContext('2d');
+  const cr = icon.red.getContext('2d');
+  const cc = icon.core.getContext('2d');
+  for (const c of [cg, cr, cc]) {
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = 'source-over';
+    c.clearRect(0, 0, icon.bw, icon.bh);
+  }
+
+  for (const p of icon.paths) {
+    // One segment layout, stroked three times off the same geometry:
+    // a fat red source that feeds the bloom passes, the saturated red body,
+    // and the white-hot core.
+    const segs = buildSegments(p.path, rng, p.opts);
+    strokeSegments(cg, p.path, segs, p.gw * s, COL.red);
+    strokeSegments(cr, p.path, segs, 10 * s * p.w, COL.red);
+    strokeSegments(cc, p.path, segs, 4 * s * p.w, COL.hot);
+  }
+
+  const cf = icon.full.getContext('2d');
+  cf.globalAlpha = 1;
+  cf.globalCompositeOperation = 'copy';
+  cf.drawImage(icon.red, 0, 0);
+  cf.globalCompositeOperation = 'source-over';
+  cf.drawImage(icon.core, 0, 0);
+
+  tintInto(icon.tintR, icon.full, '#FF2A18');
+  tintInto(icon.tintC, icon.full, '#18E4FF');
+}
+
+/* ------------------------------------------------------------------ *
+ * glitch schedule — seeded once, never crosses the loop boundary
+ * ------------------------------------------------------------------ */
+
+function buildBursts(rng) {
+  const bursts = [];
+  let t = 0.4 + rng() * 1.0;
+  for (;;) {
+    const dur = randInt(rng, 2, 5); // 2-5 frames only
+    const f0 = Math.round(t * FPS);
+    if (f0 + dur > TOTAL_FRAMES) break;
+    bursts.push({ f0, dur, seed: Math.floor(rng() * 0x7fffffff) });
+    t += 0.8 + rng() * 1.2; // every 0.8-2.0s
+  }
+  return bursts;
+}
+
+function activeBurst(scene, frame) {
+  for (const b of scene.bursts) {
+    if (frame >= b.f0 && frame < b.f0 + b.dur) return b;
+  }
+  return null;
+}
+
+function burstParams(b, frame, s, width, height) {
+  const rng = mulberry32((b.seed + (frame - b.f0) * 7919) >>> 0);
+  const slices = [];
+  const n = randInt(rng, 3, 6);
+  for (let i = 0; i < n; i++) {
+    const h = rand(rng, 10, 60) * s;
+    slices.push({
+      h,
+      y: rng() * (height - h),
+      dx: (rng() < 0.5 ? -1 : 1) * rand(rng, 20, 120) * s,
+    });
+  }
+  const bars = [];
+  const m = randInt(rng, 3, 9);
+  for (let i = 0; i < m; i++) {
+    const w = rand(rng, 60, 300) * s;
+    const h = rand(rng, 4, 20) * s;
+    bars.push({
+      w, h,
+      x: rng() * (width - w),
+      y: rng() * (height - h),
+      red: rng() < 0.45,
+      a: rand(rng, 0.65, 1),
+    });
+  }
+  return { slices, bars, ox: rand(rng, -6, 6), oy: rand(rng, -4, 4), dip: 0.6 + 0.14 * rng() };
+}
+
+/* ------------------------------------------------------------------ *
+ * scene
+ * ------------------------------------------------------------------ */
+
+function createScene(width = WIDTH, height = HEIGHT, seed = 0x5eed1a25) {
+  const s = height / HEIGHT;
+  const rng = mulberry32(seed);
+  const scale = width / WIDTH;
+
+  const sprites = [
+    bokehSprite(COL.bokehCyan, false),
+    bokehSprite(COL.bokehRed, false),
+    bokehSprite(COL.bokehCyan, true),
+    bokehSprite(COL.bokehRed, true),
+  ];
+
+  const far = [];
+  const farCount = Math.round(150 * scale);
+  for (let i = 0; i < farCount; i++) far.push(buildColumn(rng, s, width, false));
+
+  const near = [];
+  const nearCount = Math.round(26 * scale);
+  for (let i = 0; i < nearCount; i++) near.push(buildColumn(rng, s, width, true));
+
+  return {
+    width,
+    height,
+    s,
+    bg: buildBackground(width, height),
+    far,
+    near,
+    detail: buildDetail(rng, s, width, height),
+    bokeh: buildBokeh(rng, s, width, height, sprites),
+    icon: buildIcon(width, height, s, Math.floor(rng() * 0x7fffffff)),
+    bursts: buildBursts(rng),
+    scratch: makeCanvas(width, height),
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * per-frame drawing
+ * ------------------------------------------------------------------ */
+
+function drawColumns(ctx, cols, height) {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.filter = 'none';
+  for (const col of cols) {
+    ctx.globalAlpha = col.alpha;
+    for (let y = -(col.scroll); y < height; y += col.stripH) {
+      ctx.drawImage(col.cv, col.x, y);
+    }
+  }
+}
+
+function drawIcon(ctx, scene, t, frame, burst, bp) {
+  const { icon, s } = scene;
+
+  // Stroke layout redistributes every 3 frames (600 / 3 = 200 blocks, so it
+  // lands back on block 0 at the loop point).
+  const block = Math.floor(frame / 3);
+  if (icon.block !== block) {
+    renderIconLayers(icon, block, s);
+    icon.block = block;
+  }
+
+  // ~2.5s breathing sine: 4 whole cycles per 10s loop.
+  const pulse = 1 + 0.15 * Math.sin((TAU * t) / 2.5);
+
+  // Constant low-level tremor, resampled every 4 frames.
+  const tr = mulberry32((Math.imul(icon.seed, 3) + Math.floor(frame / 4) * 40503) >>> 0);
+  let ox = (tr() * 2 - 1) * 2 * s;
+  let oy = (tr() * 2 - 1) * 2 * s;
+
+  let dip = 1;
+  let split = 0;
+  if (burst) {
+    dip = bp.dip;
+    split = 8 * s;
+    ox += bp.ox * s;
+    oy += bp.oy * s;
+  }
+
+  const X = icon.bx + ox;
+  const Y = icon.by + oy;
+  const g = pulse * pulse * dip;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  // Layered bloom, additive. The two widest passes run off the fat glow
+  // source so the halo carries enough energy to spill visibly onto the
+  // background; the tight passes run off the body stroke and the core.
+  const bloom = [
+    [icon.glow, 60 * s, 0.55],
+    [icon.glow, 60 * s, 0.45],
+    [icon.glow, 28 * s, 0.6],
+    [icon.red, 12 * s, 0.8],
+    [icon.red, 5 * s, 0.9],
+    [icon.core, 10 * s, 0.75],
+  ];
+  for (const [layer, b, a] of bloom) {
+    ctx.filter = `blur(${b.toFixed(2)}px)`;
+    ctx.globalAlpha = Math.min(1, a * g);
+    ctx.drawImage(layer, X, Y);
+  }
+  ctx.filter = 'none';
+
+  if (split) {
+    // RGB channel split: red pulled left, cyan pushed right.
+    ctx.globalAlpha = Math.min(1, 0.92 * dip);
+    ctx.drawImage(icon.tintR, X - split, Y);
+    ctx.drawImage(icon.tintC, X + split, Y);
+    ctx.globalAlpha = Math.min(1, 0.45 * dip);
+    ctx.drawImage(icon.full, X, Y);
+  } else {
+    ctx.globalAlpha = Math.min(1, 0.95 * Math.min(1, pulse) * dip);
+    ctx.drawImage(icon.red, X, Y);
+    ctx.globalAlpha = Math.min(1, dip);
+    ctx.drawImage(icon.core, X, Y);
+  }
+  ctx.restore();
+}
+
+function applyGlitchPost(ctx, scene, bp) {
+  const { width: W, height: H, scratch } = scene;
+  const sc = scratch.getContext('2d');
+  sc.globalAlpha = 1;
+  sc.filter = 'none';
+  sc.globalCompositeOperation = 'copy';
+  sc.drawImage(ctx.canvas, 0, 0);
+  sc.globalCompositeOperation = 'source-over';
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.filter = 'none';
+  ctx.globalAlpha = 1;
+
+  // Horizontal slice displacement.
+  for (const sl of bp.slices) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, sl.y, W, sl.h);
+    ctx.clip();
+    ctx.fillStyle = COL.glitchDark;
+    ctx.fillRect(0, sl.y, W, sl.h);
+    ctx.drawImage(scratch, 0, sl.y, W, sl.h, sl.dx, sl.y, W, sl.h);
+    ctx.drawImage(scratch, 0, sl.y, W, sl.h, sl.dx + (sl.dx > 0 ? -W : W), sl.y, W, sl.h);
+    ctx.restore();
+  }
+
+  // Solid black / solid red flicker bars.
+  for (const bar of bp.bars) {
+    ctx.globalAlpha = bar.a;
+    ctx.fillStyle = bar.red ? COL.red : '#000000';
+    ctx.fillRect(bar.x, bar.y, bar.w, bar.h);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFrame(ctx, scene, frame) {
+  const f = ((Math.round(frame) % TOTAL_FRAMES) + TOTAL_FRAMES) % TOTAL_FRAMES;
+  const t = f / FPS;
+  const { width: W, height: H } = scene;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.filter = 'none';
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(scene.bg, 0, 0);
+
+  // Each column is built so it travels exactly one strip height per loop,
+  // so the scroll offset is just the loop phase — exact at both ends, no
+  // floating-point residue at the seam.
+  const phase = t / DURATION_SEC;
+  for (const col of scene.far) col.scroll = col.stripH * phase;
+  for (const col of scene.near) col.scroll = col.stripH * phase;
+
+  drawColumns(ctx, scene.far, H);
+
+  // Buried red clusters / padlock / shield outlines.
+  for (const d of scene.detail) {
+    ctx.globalAlpha = d.alpha;
+    ctx.drawImage(d.cv, d.x, d.y + d.amp * Math.sin(TAU * ((t / DURATION_SEC) * d.k + d.ph)));
+  }
+
+  // Nearer, softer depth plane in front of the buried detail.
+  drawColumns(ctx, scene.near, H);
+
+  // Bokeh.
+  ctx.globalCompositeOperation = 'lighter';
+  for (const b of scene.bokeh) {
+    const p = (b.py0 + (t / DURATION_SEC) * b.ky) % 1;
+    const spanY = H + 4 * b.r;
+    const y = H + 2 * b.r - p * spanY;
+    let x = b.x0 + b.ampX * Math.sin(TAU * ((t / DURATION_SEC) * b.kx + b.phx));
+    if (b.driftLaps) {
+      const spanX = W + 4 * b.r;
+      x = (((x + b.driftLaps * spanX * (t / DURATION_SEC)) % spanX) + spanX) % spanX - 2 * b.r;
+    }
+    ctx.globalAlpha = Math.min(1, b.alpha * (0.78 + 0.22 * Math.sin(TAU * ((t / DURATION_SEC) * b.kA + b.phA))));
+    ctx.drawImage(b.sprite, x - b.r * 1.7, y - b.r * 1.7, b.r * 3.4, b.r * 3.4);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+
+  const burst = activeBurst(scene, f);
+  const bp = burst ? burstParams(burst, f, scene.s, W, H) : null;
+
+  drawIcon(ctx, scene, t, f, burst, bp);
+
+  if (burst) applyGlitchPost(ctx, scene, bp);
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.filter = 'none';
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+
+/* ------------------------------------------------------------------ *
+ * page driver
+ * ------------------------------------------------------------------ */
+
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+// Backing store is locked to 3840x2160 — that is the deliverable resolution
+// and already exceeds any display, so devicePixelRatio is used to snap the
+// CSS box to whole device pixels rather than to grow the buffer.
+canvas.width = WIDTH;
+canvas.height = HEIGHT;
+
+function fit() {
+  const dpr = window.devicePixelRatio || 1;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let w = Math.min(vw, (vh * WIDTH) / HEIGHT);
+  let h = (w * HEIGHT) / WIDTH;
+  w = Math.round(w * dpr) / dpr;
+  h = Math.round(h * dpr) / dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+}
+window.addEventListener('resize', fit, { passive: true });
+fit();
+
+async function boot() {
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (e) { /* non-fatal */ }
+  }
+  const scene = createScene(WIDTH, HEIGHT);
+
+  // Locked 60fps, time-based: the frame index is derived from elapsed wall
+  // clock, so the loop keeps real time on displays faster or slower than
+  // 60Hz and repeats exactly every 10.0s.
+  let origin = null;
+  let painted = -1;
+
+  function tick(now) {
+    if (origin === null) origin = now;
+    const frame = Math.floor(((now - origin) / 1000) * FPS) % TOTAL_FRAMES;
+    if (frame !== painted) {
+      drawFrame(ctx, scene, frame);
+      painted = frame;
+    }
+    requestAnimationFrame(tick);
+  }
+
+  drawFrame(ctx, scene, 0);
+  requestAnimationFrame(tick);
+}
+
+boot();
+
+</script>
+</body>
+</html>

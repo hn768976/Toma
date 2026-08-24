@@ -1,0 +1,28 @@
+{
+  "name": "cyber-alert",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Looping 4K cyber-alert animation — canvas + requestAnimationFrame, rendered to video with Remotion",
+  "scripts": {
+    "build:html": "node scripts/build-html.mjs",
+    "studio": "remotion studio",
+    "render": "npm run build:html && remotion render CyberAlert4K out/cyber-alert-4k.mp4 --concurrency=2",
+    "render:preview": "remotion render CyberAlert1080 out/cyber-alert-1080.mp4 --concurrency=4",
+    "render:prores": "remotion render CyberAlert4K out/cyber-alert-4k.mov --codec=prores --prores-profile=hq --concurrency=2",
+    "render:frames": "remotion render CyberAlert4K out/frames --sequence --image-format=png --concurrency=2",
+    "still": "remotion still CyberAlert4K out/still.png --frame=120"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.516",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "remotion": "4.0.516"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "playwright-core": "^1.49.0",
+    "typescript": "^5.7.0"
+  }
+}
