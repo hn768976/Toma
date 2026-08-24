@@ -123,6 +123,43 @@ const det = await page2.evaluate(() => {
 });
 console.log('determinism:', JSON.stringify(det));
 
+// Seam continuity: the jump from the last frame back to the first must be no
+// bigger than an ordinary frame-to-frame step. (Frames 563-599 and 0 are all
+// outside any glitch burst, so this compares like with like.)
+const seam = await page2.evaluate(() => {
+  const { drawFrame, WIDTH, HEIGHT } = window.CA;
+  const grab = (f) => {
+    drawFrame(window.bctx, window.scene, f);
+    return window.bctx.getImageData(0, 0, WIDTH, HEIGHT).data;
+  };
+  const mad = (a, b) => {
+    let sum = 0;
+    for (let i = 0; i < a.length; i += 4) sum += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+    return +(sum / ((a.length / 4) * 3)).toFixed(4);
+  };
+  // The icon's stroke layout redistributes every 3 frames and its tremor
+  // every 4, so a step that crosses those block boundaries is always bigger
+  // than one inside them. 599->0 crosses both, so it must be compared with
+  // interior steps that also cross both (f+1 divisible by 12) -- otherwise
+  // the ordinary redistribution reads as a false seam.
+  const step = (f) => mad(grab(f), grab(f + 1));
+  return {
+    seam_599_0: mad(grab(599), grab(0)),
+    matched_587_588: step(587), // crosses both blocks, like the seam
+    matched_479_480: step(479),
+    matched_311_312: step(311),
+    inside_block_597_598: step(597),
+    inside_block_598_599: step(598),
+  };
+});
+const matched = [seam.matched_587_588, seam.matched_479_480, seam.matched_311_312];
+const avg = matched.reduce((a, b) => a + b, 0) / matched.length;
+console.log('seam continuity:', JSON.stringify(seam));
+console.log(
+  `  seam/matched-step = ${(seam.seam_599_0 / avg).toFixed(3)}  ` +
+    `(matched range ${Math.min(...matched)}-${Math.max(...matched)})`
+);
+
 // contact sheet, 4 x 2 at 960x540 each
 await page2.evaluate((frames) => {
   const { drawFrame } = window.CA;
