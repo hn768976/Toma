@@ -251,14 +251,14 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const lg = ctx.createRadialGradient(
       NEB_CX * NEB_SCALE,
       NEB_CY * NEB_SCALE,
-      NEB_R * 0.88 * NEB_SCALE,
+      NEB_R * 0.8 * NEB_SCALE,
       NEB_CX * NEB_SCALE,
       NEB_CY * NEB_SCALE,
       NEB_R * 1.3 * NEB_SCALE
     );
     lg.addColorStop(0, 'rgba(0,0,0,0)');
-    lg.addColorStop(0.29, 'rgba(0,0,0,0.35)');
-    lg.addColorStop(1, 'rgba(0,0,0,0.12)');
+    lg.addColorStop(0.4, 'rgba(0,0,0,0.62)');
+    lg.addColorStop(1, 'rgba(0,0,0,0.28)');
     ctx.fillStyle = lg;
     ctx.fillRect(0, 0, hw, hh);
     ctx.restore();
@@ -270,7 +270,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     ctx.save();
-    ctx.strokeStyle = rgba(RIM, 0.022);
+    ctx.strokeStyle = rgba(RIM, 0.014);
     ctx.lineWidth = NEB_R * (0.11 + 0.04 * li) * NEB_SCALE;
     ctx.beginPath();
     ctx.arc(
@@ -289,7 +289,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
     const r = NEB_R * (0.05 + 0.07 * random(`neb-rim-${i}-r`));
-    const al = 0.022 + 0.03 * random(`neb-rim-${i}-al`);
+    const al = 0.014 + 0.02 * random(`neb-rim-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, RIM, al);
   }
 
