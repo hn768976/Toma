@@ -95,22 +95,14 @@ export const HERO_SCALE = 2.45;
  */
 export const HERO_TRAVEL_MULT = 2.15;
 /**
- * How long a hero holds still, in seconds.
+ * The half-width of the stop, as a fraction of the crossing: 0.07 means the
+ * hero is stationary for 14% of the cut.
  *
- * In seconds rather than as a fraction of the crossing, so the pause reads the
- * same length whatever a cut's duration is - as a fraction it would stretch
- * with the cut and a longer edit would sit on the hero far too long. Each
- * variant converts it into its own fraction.
- *
- * The distance a hero covers is unchanged, so the time it does not spend
- * stopped is spent moving faster - and the fastest point is the wrap, where it
- * is off frame anyway. Slow where it is readable, quick where it is not.
+ * The distance is unchanged, so the time it does not spend stopped is spent
+ * moving faster - and the fastest point is the wrap, where it is off frame
+ * anyway. Slow where it is readable, quick where it is not.
  */
-export const HERO_DWELL_SECONDS = 1.3;
-
-/** The half-width of the stop as a fraction of the crossing. */
-export const heroDwellFor = (durationInFrames: number) =>
-  Math.min(0.45, (HERO_DWELL_SECONDS * FPS) / (2 * durationInFrames));
+export const HERO_DWELL = 0.07;
 /**
  * Typing runs over this window of the crossing and then holds complete.
  *

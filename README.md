@@ -9,7 +9,7 @@ Two cuts of the same shot:
 | composition | palette | tilt | length |
 | --- | --- | --- | --- |
 | `CodeFlythrough` | dark teal | -28° | 540 frames — 9.0s |
-| `CodeFlythroughBlue` | dark blue | 0° — straight | 600 frames — 10.0s |
+| `CodeFlythroughBlue` | dark blue | 0° — straight | 780 frames — 13.0s |
 
 Both are 3840 x 2160 at 60fps, and both close exactly: the last frame is
 pixel-identical to the first.
@@ -112,12 +112,7 @@ lines, no blur, no filter.
 middle — zero across the stop window, rising to a peak at either end. That peak
 lands on the wrap, where the hero is off frame, so the fast part is never seen
 and the slow part is the whole readable pass. Roughly 49px/frame on the way in,
-0 at centre, 13px/frame through the readable zone.
-
-The hold is specified in **seconds**, not as a fraction of the crossing, and each
-cut converts it to its own fraction. 1.3s in a 9-second cut and 1.3s in a
-10-second one. As a fraction it would stretch with the cut, and a longer edit
-would sit on the hero far too long.
+0 for about 1.3 seconds at centre, 13px/frame through the readable zone.
 
 The position curve is the integral of that velocity, normalised so a crossing
 still advances exactly 1 — the stop redistributes time *within* a crossing

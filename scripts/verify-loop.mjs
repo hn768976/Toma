@@ -15,7 +15,7 @@ import {resolve} from 'node:path';
 
 const CUTS = [
   {composition: 'CodeFlythroughLoopCheck', frames: 540},
-  {composition: 'CodeFlythroughBlueLoopCheck', frames: 600},
+  {composition: 'CodeFlythroughBlueLoopCheck', frames: 780},
 ];
 
 const outDir = resolve('out/loop-check');
