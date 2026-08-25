@@ -6,13 +6,26 @@ scrolling at an angle across a tilted LED grid. 3840×2160, 60fps, 1200 frames
 
 ```
 npx remotion render LedTicker out/led-ticker.mp4 \
-  --codec=h264 --crf=12 --concurrency=8 --image-format=png
+  --codec=h264 --crf=12 --concurrency=8 --image-format=png --muted
 ```
 
 The low CRF is not optional: the dot grid is high-frequency detail that smears
 badly at default settings. `--image-format=png` matters for the same reason —
 the project's default JPEG intermediates soften the lattice before x264 ever
-sees it. Drop `--concurrency` to your core count if the renderer complains.
+sees it. `--muted` drops the silent AAC track Remotion adds by default — the
+piece has no audio. Drop `--concurrency` to your core count if the renderer
+complains.
+
+For a 1080p preview of the same loop, add `--scale=0.5` and relax the CRF:
+
+```
+npx remotion render LedTicker out/led-ticker-1080p.mp4 \
+  --codec=h264 --crf=20 --concurrency=8 --image-format=png --muted --scale=0.5
+```
+
+`--scale` only downsamples the screenshot; the canvas backing store stays
+3840×2160, so the dot detail survives the downscale and render time is
+unchanged.
 
 ## How the look is built
 
