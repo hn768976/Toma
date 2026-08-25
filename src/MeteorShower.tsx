@@ -159,8 +159,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_R * NEB_SCALE
     );
     g.addColorStop(0, rgba(AMBER, 0.042));
-    g.addColorStop(0.65, rgba(AMBER, 0.04));
-    g.addColorStop(0.93, rgba(AMBER, 0.032));
+    g.addColorStop(0.6, rgba(AMBER, 0.04));
+    g.addColorStop(0.88, rgba(AMBER, 0.026));
     g.addColorStop(1, rgba(AMBER, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -211,7 +211,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_R * NEB_SCALE
     );
     mg.addColorStop(0, 'rgba(0,0,0,1)');
-    mg.addColorStop(0.7, 'rgba(0,0,0,0.9)');
+    mg.addColorStop(0.7, 'rgba(0,0,0,0.95)');
+    mg.addColorStop(0.92, 'rgba(0,0,0,0.5)');
     mg.addColorStop(1, 'rgba(0,0,0,0)');
     mctx.fillStyle = mg;
     mctx.fillRect(0, 0, hw, hh);
@@ -239,6 +240,29 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const r = NEB_R * (0.12 + 0.2 * random(`neb-amb-${i}-r`));
     const al = 0.025 + 0.03 * random(`neb-amb-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, i % 3 === 0 ? AMBER : DUST_GREY, al);
+  }
+
+  // Limb darkening: the dust dims into a dark ring at the circle's edge,
+  // just inside the faint rim glow. Peaks at the limb, relaxes outside so
+  // ambient dust beyond the sphere survives.
+  for (let li = 0; li < 2; li++) {
+    const {ctx} = layers[li];
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    const lg = ctx.createRadialGradient(
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      NEB_R * 0.7 * NEB_SCALE,
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      NEB_R * 1.35 * NEB_SCALE
+    );
+    lg.addColorStop(0, 'rgba(0,0,0,0)');
+    lg.addColorStop(0.46, 'rgba(0,0,0,0.5)');
+    lg.addColorStop(1, 'rgba(0,0,0,0.15)');
+    ctx.fillStyle = lg;
+    ctx.fillRect(0, 0, hw, hh);
+    ctx.restore();
   }
 
   // Rim: the faintly brighter round edge where the dust thins, arcing across
@@ -309,8 +333,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     const sh = ctx.createLinearGradient(0, hh, hw * 0.85, hh * 0.1);
-    sh.addColorStop(0, 'rgba(0,0,0,0.68)');
-    sh.addColorStop(0.4, 'rgba(0,0,0,0.32)');
+    sh.addColorStop(0, 'rgba(0,0,0,0.55)');
+    sh.addColorStop(0.4, 'rgba(0,0,0,0.26)');
     sh.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = sh;
     ctx.fillRect(0, 0, hw, hh);
