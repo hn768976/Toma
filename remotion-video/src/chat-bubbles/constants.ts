@@ -51,8 +51,8 @@ export const MAX_SPECK_SIZE = 42;
 // blurs out — near bubbles because they are past the focal plane, far ones
 // because they are behind it.
 export const Z_SHARP = 0.55;
-export const FOCUS_BAND = 0.12;
-export const MAX_BLUR = 24;
+export const FOCUS_BAND = 0.1;
+export const MAX_BLUR = 26;
 
 export const OPACITY_FAR = 0.3;
 export const OPACITY_NEAR = 0.95;

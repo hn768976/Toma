@@ -32,6 +32,14 @@ const rangeOf = (seed: string, min: number, max: number) =>
 const pick = <T,>(seed: string, items: readonly T[]): T =>
   items[Math.min(items.length - 1, Math.floor(random(seed) * items.length))];
 
+// Depth is stratified rather than drawn independently per bubble: with only
+// ~38 samples an unstratified draw leaves gaps, so the near extreme never
+// shows up and far more of the field lands inside the focus band than the
+// band's width implies. One sample per slice keeps the full depth range
+// covered and pins the crisp fraction to the band width.
+const stratified = (seed: string, index: number, count: number, min: number, max: number) =>
+  min + ((index + random(seed)) / count) * (max - min);
+
 export type TextLine = { width: number };
 
 export type Bubble = {
@@ -129,7 +137,7 @@ export const generateBubbles = (count = BUBBLE_COUNT): Bubble[] => {
 
   for (let i = 0; i < count; i++) {
     const seed = `bubble-${i}`;
-    const z = rangeOf(`${seed}-z`, Z_MIN, Z_MAX);
+    const z = stratified(`${seed}-z`, i, count, Z_MIN, Z_MAX);
 
     const bodyWidth = z * MAX_BUBBLE_WIDTH;
     // Mostly wide-and-short with a scattering of square and tall shapes.
@@ -193,7 +201,7 @@ export const generateSpecks = (count = SPECK_COUNT): Speck[] => {
 
   for (let i = 0; i < count; i++) {
     const seed = `speck-${i}`;
-    const z = rangeOf(`${seed}-z`, Z_MIN, 0.5);
+    const z = stratified(`${seed}-z`, i, count, Z_MIN, 0.5);
     const size = z * MAX_SPECK_SIZE + 6;
     const cycles = Math.max(1, Math.round(z * MAX_WRAP_CYCLES));
     const cycleX: number[] = [];
