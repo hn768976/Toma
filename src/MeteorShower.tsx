@@ -14,11 +14,11 @@ const SW = W + MARGIN * 2;
 const SH = H + MARGIN * 2;
 
 // Nebula geometry (scene-layer coordinates, i.e. margin included).
-// A huge spherical dust cloud that nearly fills the frame — its faintly
-// brighter round rim arcs across the upper portion of the picture.
-const NEB_CX = MARGIN + W * 0.56;
-const NEB_CY = MARGIN + H * 0.98;
-const NEB_R = W * 0.5;
+// A large spherical dust cloud centred in the frame, its full round rim
+// visible with a small margin above and below.
+const NEB_CX = MARGIN + W * 0.5;
+const NEB_CY = MARGIN + H * 0.5;
+const NEB_R = H * 0.47;
 
 const GRAIN_TILE = 384;
 const GRAIN_TILES = 8;
@@ -142,9 +142,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.globalCompositeOperation = 'lighter';
   });
 
-  // The sphere's centre sits near the bottom edge, so the visible interior is
-  // its upper half: angles 180°..360° in canvas coords point up from centre.
-  const upAngle = (r: number) => Math.PI + r * Math.PI;
+  // The full sphere is visible, so dust distributes around the whole disc.
+  const upAngle = (r: number) => r * TAU;
 
   // The sphere reads as a FILLED disc of dust, not a ring: paint a broad,
   // nearly flat haze across the whole circle on both layers (they add).
@@ -278,14 +277,14 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_CX * NEB_SCALE,
       NEB_CY * NEB_SCALE,
       NEB_R * (0.955 + 0.02 * li) * NEB_SCALE,
-      Math.PI,
+      0,
       TAU
     );
     ctx.stroke();
     ctx.restore();
   }
   for (let i = 0; i < 16; i++) {
-    const a = (190 + 150 * random(`neb-rim-${i}-a`)) * (Math.PI / 180);
+    const a = random(`neb-rim-${i}-a`) * TAU;
     const d = NEB_R * (0.88 + 0.13 * random(`neb-rim-${i}-d`));
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
