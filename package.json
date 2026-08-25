@@ -6,9 +6,12 @@
   "scripts": {
     "start": "remotion studio",
     "build": "remotion bundle",
-    "render:navy": "remotion render SecureLockNavy out/secure-lock-navy.mp4 --codec=h264 --crf=12 --concurrency=8",
-    "render:green": "remotion render SecureLockGreen out/secure-lock-green.mp4 --codec=h264 --crf=12 --concurrency=8",
-    "typecheck": "tsc --noEmit"
+    "render:navy": "remotion render SecureLockNavy out/secure-lock-navy.mp4 --codec=h264 --crf=12",
+    "render:green": "remotion render SecureLockGreen out/secure-lock-green.mp4 --codec=h264 --crf=12",
+    "typecheck": "tsc --noEmit",
+    "preview:navy": "remotion render SecureLockNavy out/preview/secure-lock-navy-1080p.mp4 --codec=h264 --scale=0.5 --crf=20",
+    "preview:green": "remotion render SecureLockGreen out/preview/secure-lock-green-1080p.mp4 --codec=h264 --scale=0.5 --crf=20",
+    "browser": "remotion browser ensure"
   },
   "dependencies": {
     "@remotion/cli": "4.0.410",
@@ -21,5 +24,8 @@
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
