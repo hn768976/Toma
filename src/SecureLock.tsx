@@ -104,12 +104,9 @@ const DUR = 960;
 const TAU = Math.PI * 2;
 
 const PULSE_PERIOD = 240; // 960 / 240 = 4 whole cycles → loop closes
-const FLARE_IN = 660;
-const FLARE_OUT = 780;
 const GRAIN_TILES = 8; // 960 % 8 === 0 → loop closes
 const GRAIN_TILE_PX = 160;
 
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -461,128 +458,13 @@ const drawRing = (ctx: CanvasRenderingContext2D, t: Theme, frame: number, grade:
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ENERGY FLARE — frames 660–780, fully faded at both ends.
-   ══════════════════════════════════════════════════════════════════════════ */
-
-const flareEnvelope = (frame: number) => {
-  if (frame <= FLARE_IN || frame >= FLARE_OUT) return 0;
-  const t = (frame - FLARE_IN) / (FLARE_OUT - FLARE_IN);
-  return Math.sin(Math.PI * t) ** 1.2;
-};
-
-const flareHead = (frame: number) => {
-  const t = clamp01((frame - FLARE_IN) / (FLARE_OUT - FLARE_IN));
-  const eased = t * t * (3 - 2 * t);
-  return {
-    x: lerp(0.06 * W, 0.3 * W, eased),
-    y: lerp(1.02 * H, 0.66 * H, eased),
-  };
-};
-
-/**
- * Radius inside which no flare light survives, and the radius by which it is
- * back to full strength. The glyph sits in the middle of the frame, so the
- * flare is cut away there rather than being allowed to wash over the lock.
- */
-const FLARE_KEEPOUT_IN = 0.19 * H;
-const FLARE_KEEPOUT_OUT = 0.34 * H;
-
-const renderFlare = (ctx: CanvasRenderingContext2D, t: Theme, frame: number) => {
-  const env = flareEnvelope(frame);
-  if (env <= 0) return;
-  const head = flareHead(frame);
-  const scale = 1;
-
-  // Travel direction, so the tail can be jittered across the path rather than
-  // along it — a straight-sided cone is what makes a flare read as an object.
-  const dx = 0.38 * W;
-  const dy = -0.5 * H;
-  const len = Math.hypot(dx, dy);
-  const ax = dx / len;
-  const ay = dy / len;
-  const px = -ay;
-  const py = ax;
-
-  const puff = (x: number, y: number, radius: number, a: number) => {
-    if (a <= 0.002) return;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    g.addColorStop(0, rgba(t.lockWhite, a));
-    g.addColorStop(0.18, rgba(t.lockWhite, a * 0.72));
-    g.addColorStop(0.44, rgba(t.bright, a * 0.34));
-    g.addColorStop(0.74, rgba(t.bright, a * 0.1));
-    g.addColorStop(1, rgba(t.bright, 0));
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, TAU);
-    ctx.fill();
-  };
-
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  if (typeof ctx.filter === 'string') ctx.filter = 'blur(90px)';
-
-  // A broad, shapeless wash so the whole lower-left lifts, not just the mass.
-  puff(head.x - ax * 0.18 * W, head.y - ay * 0.18 * W, 1750, env * scale * 0.06);
-
-  // The mass and its wispy trailing tail.
-  const blobs = 16;
-  for (let i = 0; i < blobs; i += 1) {
-    const k = i / (blobs - 1);
-    const along = k * 0.62 * len * (0.7 + random(`flare-along-${i}`) * 0.7);
-    const across = (random(`flare-across-${i}`) - 0.5) * lerp(320, 1150, k);
-    const x = head.x - ax * along + px * across;
-    const y = head.y - ay * along + py * across;
-    const radius = lerp(780, 340, k) * (0.7 + random(`flare-r-${i}`) * 0.9);
-    const a = env * scale * lerp(0.2, 0.025, k ** 0.55) * (0.6 + random(`flare-a-${i}`) * 0.8);
-    puff(x, y, radius, a);
-  }
-
-  // Off-axis puffs around the head keep the leading edge irregular.
-  for (let i = 0; i < 5; i += 1) {
-    const ang = random(`flare-head-ang-${i}`) * TAU;
-    const dist = 220 + random(`flare-head-d-${i}`) * 620;
-    puff(
-      head.x + Math.cos(ang) * dist,
-      head.y + Math.sin(ang) * dist,
-      420 + random(`flare-head-r-${i}`) * 560,
-      env * scale * (0.05 + random(`flare-head-a-${i}`) * 0.09),
-    );
-  }
-
-  // Hot core.
-  puff(head.x, head.y, 900, env * scale * 0.26);
-  ctx.restore();
-
-  // Cut the glyph's territory out of the flare entirely.
-  ctx.save();
-  ctx.globalCompositeOperation = 'destination-out';
-  const hole = ctx.createRadialGradient(CX, CY, FLARE_KEEPOUT_IN, CX, CY, FLARE_KEEPOUT_OUT);
-  hole.addColorStop(0, rgba(t.lockWhite, 1));
-  hole.addColorStop(1, rgba(t.lockWhite, 0));
-  ctx.fillStyle = hole;
-  ctx.beginPath();
-  ctx.arc(CX, CY, FLARE_KEEPOUT_OUT, 0, TAU);
-  ctx.fill();
-  ctx.restore();
-};
-
-/* ══════════════════════════════════════════════════════════════════════════
-   BACKGROUND CANVAS — field + ring + flare
+   BACKGROUND CANVAS — field + ring
    ══════════════════════════════════════════════════════════════════════════ */
 
 const BackgroundLayer: React.FC<{theme: Theme; variant: Variant; frame: number}> = ({theme, variant, frame}) => {
   const ref = useRef<HTMLCanvasElement>(null);
   const field = useMemo(() => buildField(), []);
   const grade = GRADE[variant];
-
-  // The flare is composed once into its own buffer so the glyph keep-out can
-  // be cut from it, then blitted twice — under the ring and over it.
-  const flareBuf = useMemo(() => {
-    const c = document.createElement('canvas');
-    c.width = W;
-    c.height = H;
-    return c;
-  }, []);
 
   useLayoutEffect(() => {
     const canvas = ref.current;
@@ -597,39 +479,16 @@ const BackgroundLayer: React.FC<{theme: Theme; variant: Variant; frame: number}>
     ctx.shadowBlur = 0;
     ctx.clearRect(0, 0, W, H);
 
-    const flareCtx = flareBuf.getContext('2d');
-    const hasFlare = flareEnvelope(frame) > 0;
-    if (flareCtx && hasFlare) {
-      flareCtx.setTransform(1, 0, 0, 1, 0, 0);
-      flareCtx.globalCompositeOperation = 'source-over';
-      flareCtx.globalAlpha = 1;
-      flareCtx.filter = 'none';
-      flareCtx.clearRect(0, 0, W, H);
-      renderFlare(flareCtx, theme, frame);
-    }
-
-    const blitFlare = (alpha: number) => {
-      if (!hasFlare) return;
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = alpha;
-      ctx.filter = 'none';
-      ctx.drawImage(flareBuf, 0, 0);
-      ctx.restore();
-    };
-
     drawBackdrop(ctx, theme);
     drawGrid(ctx, theme, grade.field);
     drawField(ctx, theme, field, frame, grade.field, false);
-    blitFlare(0.4); // soft under-glow beneath the ring
     drawRing(ctx, theme, frame, grade.arc);
     drawField(ctx, theme, field, frame, grade.field, true);
-    blitFlare(1); // main mass, brightens the arcs it crosses
 
     ctx.filter = 'none';
     ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
-  }, [theme, frame, field, grade, flareBuf]);
+  }, [theme, frame, field, grade]);
 
   return <canvas ref={ref} width={W} height={H} style={{width: '100%', height: '100%', display: 'block'}} />;
 };

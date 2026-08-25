@@ -39,17 +39,12 @@ Remotion's `random()` with stable string seeds.
 Three stacked canvases:
 
 1. **`BackgroundLayer`** — radial backdrop, the faint 90px grid, the drifting
-   data field (numerals and square outlines expanding outward from centre), the
-   broken-arc HUD ring, and the energy flare.
+   data field (numerals and square outlines expanding outward from centre), and
+   the broken-arc HUD ring.
 2. **`LockGlyph`** — the lock, on its own `screen`-blended canvas so its bloom
    lifts the arcs behind it. Drawn three times (warm fringe, cool fringe, white)
    composited with `lighter` for the persistent chromatic aberration.
 3. **`FinishLayer`** — vignette, scanlines, grain.
-
-The flare is composed into its own full-frame buffer so a soft radial keep-out
-can be cut from the middle of it before compositing. It sweeps the lower-left
-and dissipates before reaching the glyph, and it no longer feeds the glyph's
-bloom — no flare light lands on the lock or the shield.
 
 On glitch frames the composited glyph is blitted back in horizontal bands with
 some of them displaced sideways, and tinted copies of the outline mask are
@@ -64,7 +59,7 @@ composited with `lighter`, which is where the chromatic aberration comes from.
 ### What differs between the two variants
 
 Only the palette and the glyph. Same layout, same arc structure, same rotation
-speeds, same timings, same flare at frames 660-780, same 960-frame loop.
+speeds, same timings, same glitch schedule, same 960-frame loop.
 
 - **navy** — a classic padlock: solid rounded body, stroked shackle, keyhole
   punched clean through. Coral and cyan fringes.
@@ -98,7 +93,8 @@ discontinuous, so each mechanism is designed to close on its own:
 - **Field elements** advance on an integer number of radial trips and fade to
   zero at both ends of each trip, so respawn is invisible.
 - **Lock pulse** is a sine of period 240 — exactly four cycles.
-- **Flare** is windowed to frames 660–780 and its envelope is zero at both ends.
+- **Glitch bursts** sit at frames 138, 352, 561 and 812 — all well inside the
+  loop, so the seam is never caught mid-tear and frames 0 and 960 are clean.
 - **Grain** cycles 8 pre-seeded tiles, and 960 % 8 === 0.
 
 Verified by rendering frames 957→959 and 0 and comparing: the 959→0 step is
