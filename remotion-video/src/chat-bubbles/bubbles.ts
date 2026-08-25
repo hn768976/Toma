@@ -52,8 +52,6 @@ export type Bubble = {
   tailSide: "left" | "right";
   tailWidth: number;
   tailHeight: number;
-  style: "solid" | "outline";
-  strokeWidth: number;
   lines: TextLine[];
   lineThickness: number;
   padX: number;
@@ -124,9 +122,11 @@ const makeLines = (seed: string) => {
   for (let i = 0; i < count; i++) {
     const isLast = i === count - 1;
     lines.push({
+      // The closing line is markedly short — that stub is what makes the
+      // block read as a message rather than a stack of rules.
       width: isLast
-        ? rangeOf(`${seed}-lw-${i}`, 0.3, 0.55)
-        : rangeOf(`${seed}-lw-${i}`, 0.6, 1),
+        ? rangeOf(`${seed}-lw-${i}`, 0.2, 0.38)
+        : rangeOf(`${seed}-lw-${i}`, 0.72, 1),
     });
   }
   return lines;
@@ -151,7 +151,6 @@ export const generateBubbles = (count = BUBBLE_COUNT): Bubble[] => {
     const bodyHeight = bodyWidth / aspect;
 
     const minSide = Math.min(bodyWidth, bodyHeight);
-    const style = random(`${seed}-style`) < 0.6 ? "solid" : "outline";
     const cycles = Math.max(1, Math.round(z * MAX_WRAP_CYCLES));
     const cycleX: number[] = [];
     for (let c = 0; c < cycles; c++) cycleX.push(clusterX(`${seed}-x-${c}`, z));
@@ -163,12 +162,12 @@ export const generateBubbles = (count = BUBBLE_COUNT): Bubble[] => {
       z,
       bodyWidth,
       bodyHeight,
-      cornerRadius: minSide * rangeOf(`${seed}-radius`, 0.24, 0.32),
+      // Softened corners on an otherwise square rectangle — enough to read as
+      // a UI icon, not so much that the silhouette turns into a lozenge.
+      cornerRadius: minSide * rangeOf(`${seed}-radius`, 0.11, 0.17),
       tailSide: random(`${seed}-tailside`) < 0.5 ? "left" : "right",
       tailWidth: minSide * rangeOf(`${seed}-tailw`, 0.17, 0.24),
       tailHeight,
-      style,
-      strokeWidth: Math.max(2, minSide * rangeOf(`${seed}-stroke`, 0.05, 0.07)),
       lines: makeLines(seed),
       lineThickness: Math.max(2, bodyHeight * rangeOf(`${seed}-lt`, 0.065, 0.085)),
       padX: bodyWidth * rangeOf(`${seed}-padx`, 0.11, 0.15),

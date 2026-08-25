@@ -21,7 +21,7 @@ export const BG_DEEP = "#5CA0E8"; // lower-right
 export const BUBBLE_DEEP = "#1B5FC4"; // nearest bubbles
 export const BUBBLE_SOLID = "#2E7FE0"; // the main blue
 export const BUBBLE_PALE = "#7FB8F0"; // most distant bubbles
-export const BUBBLE_WHITE = "#F0F8FF"; // text-line detail / outline fill
+export const BUBBLE_WHITE = "#F0F8FF"; // the text-line detail inside bubbles
 
 // ── Field population ───────────────────────────────────────────────────────
 export const BUBBLE_COUNT = 38; // ~35 on screen once wraps are accounted for

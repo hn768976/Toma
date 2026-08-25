@@ -82,59 +82,26 @@ const drawTextLines = (
   }
 };
 
+// One fill style throughout: flat blue with white text lines. Depth alone
+// separates the bubbles — near ones deep, distant ones pale.
 const paintBubble = (ctx: CanvasRenderingContext2D, bubble: Bubble, pad: number) => {
-  const {
+  const { bodyWidth, bodyHeight, cornerRadius, tailSide, tailWidth, tailHeight, color } =
+    bubble;
+
+  traceBubble(
+    ctx,
+    pad,
+    pad,
     bodyWidth,
     bodyHeight,
     cornerRadius,
     tailSide,
     tailWidth,
     tailHeight,
-    style,
-    strokeWidth,
-    color,
-  } = bubble;
-
-  if (style === "solid") {
-    traceBubble(
-      ctx,
-      pad,
-      pad,
-      bodyWidth,
-      bodyHeight,
-      cornerRadius,
-      tailSide,
-      tailWidth,
-      tailHeight,
-    );
-    ctx.fillStyle = color;
-    ctx.fill();
-    drawTextLines(ctx, bubble, pad, pad, BUBBLE_WHITE);
-    return;
-  }
-
-  // Outline: the stroke sits inside the sprite bounds, so inset by half a line.
-  const inset = strokeWidth / 2;
-  traceBubble(
-    ctx,
-    pad + inset,
-    pad + inset,
-    bodyWidth - strokeWidth,
-    bodyHeight - strokeWidth,
-    Math.max(1, cornerRadius - inset),
-    tailSide,
-    tailWidth,
-    tailHeight,
   );
-  ctx.fillStyle = BUBBLE_WHITE;
-  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = color;
   ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = strokeWidth;
-  ctx.lineJoin = "round";
-  ctx.stroke();
-  drawTextLines(ctx, bubble, pad, pad, color);
+  drawTextLines(ctx, bubble, pad, pad, BUBBLE_WHITE);
 };
 
 /**
