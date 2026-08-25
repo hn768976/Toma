@@ -25,8 +25,8 @@ const GRAIN_TILES = 8;
 
 // Palette
 const DEEP_SPACE = '#04060A';
-const AMBER: [number, number, number] = [124, 99, 58]; // warm dusty brown
-const RIM: [number, number, number] = [150, 124, 76];
+const AMBER: [number, number, number] = [104, 92, 68]; // muted, desaturated dust
+const RIM: [number, number, number] = [124, 110, 82];
 const TEAL: [number, number, number] = [62, 138, 150]; // #3E8A96
 const TEAL_DEEP: [number, number, number] = [26, 74, 85]; // #1A4A55
 const STAR_WHITE: [number, number, number] = [232, 238, 245]; // #E8EEF5
@@ -194,7 +194,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       img.data[i * 4] = color[0];
       img.data[i * 4 + 1] = color[1];
       img.data[i * 4 + 2] = color[2];
-      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 3.6));
+      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 2.6));
     }
     nctx.putImageData(img, 0, 0);
     // Mask to the disc, fading out toward the rim.
@@ -220,9 +220,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     const octaves: [HTMLCanvasElement, number][] = [
-      [noiseOctave(`neb-noise-${li}-0`, 16, 9, AMBER), 0.22],
-      [noiseOctave(`neb-noise-${li}-1`, 52, 30, AMBER), 0.17],
-      [noiseOctave(`neb-noise-${li}-2`, 160, 90, DUST_GREY), 0.1],
+      [noiseOctave(`neb-noise-${li}-0`, 16, 9, AMBER), 0.11],
+      [noiseOctave(`neb-noise-${li}-1`, 52, 30, DUST_GREY), 0.085],
+      [noiseOctave(`neb-noise-${li}-2`, 160, 90, DUST_GREY), 0.06],
     ];
     for (const [oc, strength] of octaves) {
       ctx.save();
@@ -316,7 +316,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, 'rgba(0,0,0,0.34)');
+    g.addColorStop(0, 'rgba(0,0,0,0.2)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.beginPath();
