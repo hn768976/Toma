@@ -12,13 +12,22 @@ Built with [Remotion](https://remotion.dev) 4. Everything is drawn to a single
 ```bash
 npm install
 
-npm start          # Remotion Studio
-npm run render     # 4K ProRes 422 HQ  -> out/ticker-board.mov
-npm run render:mp4 # 4K H.264          -> out/ticker-board.mp4
+npm start      # Remotion Studio
+npm run render # 4K H.264 -> out/ticker-board.mp4
 ```
 
-Both pass `--muted`. The piece has no audio, and without it Remotion writes a
-silent PCM track into the container.
+`--muted`, because the piece has no audio and Remotion otherwise writes a
+silent PCM track into the container. CRF 18 is quality-leaning; the fine grain
+is what makes the file large, so raise the CRF if you want a smaller one.
+
+For a ProRes master instead, swap the codec flags:
+
+```bash
+npx remotion render TickerBoard out/ticker-board.mov \
+  --codec=prores --prores-profile=hq --pixel-format=yuv422p10le --muted
+```
+
+(Remotion names the 422 HQ profile `hq`, not `422hq`.)
 
 If Remotion cannot download its own Chromium (no egress to `remotion.media`),
 point it at a local one — it needs the *headless shell* build, since current
