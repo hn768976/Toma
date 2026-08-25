@@ -1,10 +1,24 @@
 import "./index.css";
-import { MyComposition } from "./Composition";
+import { Composition } from "remotion";
+import { ChatBubbles } from "./chat-bubbles/ChatBubbles";
+import {
+  DURATION_IN_FRAMES,
+  FPS,
+  HEIGHT,
+  WIDTH,
+} from "./chat-bubbles/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      <MyComposition />
+      <Composition
+        id="ChatBubbles"
+        component={ChatBubbles}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+      />
     </>
   );
 };
