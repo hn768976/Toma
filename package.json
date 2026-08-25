@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "remotion studio",
-    "render": "remotion render MeteorShower out/meteor-shower.mp4 --codec=h264 --crf=12 --concurrency=8"
+    "render": "remotion render MeteorShower out/meteor-shower.mp4 --codec=h264 --crf=12 --concurrency=8 --muted"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

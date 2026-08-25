@@ -28,7 +28,7 @@ npm run dev
 
 ```sh
 npx remotion render MeteorShower out/meteor-shower.mp4 \
-  --codec=h264 --crf=12 --concurrency=8
+  --codec=h264 --crf=12 --concurrency=8 --muted
 ```
 
 Low CRF is intentional — the frame is almost entirely smooth dark gradient,
