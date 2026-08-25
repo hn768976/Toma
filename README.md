@@ -19,7 +19,8 @@ npx remotion render CryptoTerminal out/crypto-terminal.mp4 \
 
 Add `--scale=0.5` for a 1080p preview. The scene is always drawn into a
 3840×2160 backing store and downsampled at capture, so a preview and the master
-differ only in output resolution.
+differ only in output resolution. Output is muted in `remotion.config.ts` —
+otherwise Remotion muxes a silent audio track into every render.
 
 | | |
 |---|---|
