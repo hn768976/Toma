@@ -18,6 +18,13 @@ import {
   WIDTH as RING_WIDTH,
   HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
+import { LedTicker } from "./led-ticker/LedTicker";
+import {
+  DURATION_IN_FRAMES as LED_DURATION_IN_FRAMES,
+  FPS as LED_FPS,
+  WIDTH as LED_WIDTH,
+  HEIGHT as LED_HEIGHT,
+} from "./led-ticker/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -41,6 +48,14 @@ export const RemotionRoot: React.FC = () => {
         height={RING_HEIGHT}
         schema={particleRingHaloSchema}
         defaultProps={particleRingHaloDefaults}
+      />
+      <Composition
+        id="LedTicker"
+        component={LedTicker}
+        durationInFrames={LED_DURATION_IN_FRAMES}
+        fps={LED_FPS}
+        width={LED_WIDTH}
+        height={LED_HEIGHT}
       />
     </>
   );

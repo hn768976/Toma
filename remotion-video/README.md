@@ -37,6 +37,14 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Compositions
+
+| id | size | length | notes |
+| --- | --- | --- | --- |
+| `BluetoothExplainer` | 1920×1080 @ 30fps | 30s | Hand-drawn explainer |
+| `ParticleRingHalo` | 1920×1080 @ 25fps | 8s, seamless loop | Abstract particle-ring motion graphic |
+| `LedTicker` | 3840×2160 @ 60fps | 20s, seamless loop | LED stock ticker board — see [src/led-ticker/README.md](src/led-ticker/README.md) |
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
