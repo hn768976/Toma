@@ -67,7 +67,7 @@ export const buildLadder = (): Cell[] => {
       w,
       h: CELL_H,
       color,
-      alpha: 0.5 + random(`cell-a-${i}`) * 0.5,
+      alpha: 0.72 + random(`cell-a-${i}`) * 0.28,
     });
   }
   return cells;
@@ -94,27 +94,37 @@ export const buildBokeh = (): Blob[] => {
   const out: Blob[] = [];
 
   // A second, larger ladder running parallel to the first, further back.
-  for (let i = 0; i < 22; i++) {
-    const t = i / 21;
+  for (let i = 0; i < 13; i++) {
+    const t = i / 12;
     const x = LBX + (LTX - LBX) * t + 660;
     const y = LBY + (LTY - LBY) * t + 40;
     const roll = random(`bk2-hue-${i}`);
     out.push({
       x,
       y,
-      w: 230 * (0.65 + random(`bk2-w-${i}`) * 0.8),
-      h: 78,
+      w: 250 * (0.7 + random(`bk2-w-${i}`) * 0.7),
+      h: 92,
       color: roll < 0.16 ? COL.green : roll < 0.32 ? COL.red : COL.cell,
-      alpha: 0.18 + random(`bk2-a-${i}`) * 0.26,
+      alpha: 0.26 + random(`bk2-a-${i}`) * 0.3,
     });
   }
 
   // Scattered clusters at larger scale, out at the frame edge.
   for (let c = 0; c < 8; c++) {
-    const cxp = 3450 + random(`bkc-x-${c}`) * 1050;
+    const cxp = 3400 + random(`bkc-x-${c}`) * 1100;
     const cyp = -250 + random(`bkc-y-${c}`) * 2900;
     const hue = random(`bkc-hue-${c}`);
-    const color = hue < 0.46 ? COL.red : hue < 0.72 ? "#E8763C" : COL.green;
+    // Red up top, warming to orange lower down, with green the exception.
+    const color =
+      cyp < 900
+        ? hue < 0.82
+          ? COL.red
+          : COL.green
+        : hue < 0.42
+          ? COL.red
+          : hue < 0.78
+            ? "#E8763C"
+            : COL.green;
     const n = 3 + Math.floor(random(`bkc-n-${c}`) * 4);
     for (let i = 0; i < n; i++) {
       out.push({
@@ -123,14 +133,50 @@ export const buildBokeh = (): Blob[] => {
         w: 110 + random(`bkb-w-${c}-${i}`) * 240,
         h: 60 + random(`bkb-h-${c}-${i}`) * 110,
         color,
-        alpha: 0.12 + random(`bkb-a-${c}-${i}`) * 0.26,
+        alpha: 0.18 + random(`bkb-a-${c}-${i}`) * 0.34,
       });
     }
   }
 
   // The highlighted order-book row: a long soft bar behind everything.
-  out.push({ x: 3260, y: 958, w: 1150, h: 70, color: "#8FA4BC", alpha: 0.16 });
+  out.push({ x: 3200, y: 958, w: 1400, h: 78, color: "#9FB4CC", alpha: 0.26 });
   out.push({ x: 3560, y: 1660, w: 820, h: 56, color: "#5C7086", alpha: 0.12 });
+
+  // The reference's top right corner is a whole defocused red panel — rows of
+  // blocks, bright enough to be the second thing the eye finds after the
+  // ladder. Scattered bokeh alone does not reproduce it.
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 3; c++) {
+      const jx = random(`rp-x-${r}-${c}`);
+      const jy = random(`rp-y-${r}-${c}`);
+      out.push({
+        x: 3320 + c * 430 + jx * 120,
+        y: 210 + r * 250 + jy * 90,
+        w: 250 + random(`rp-w-${r}-${c}`) * 170,
+        h: 110 + random(`rp-h-${r}-${c}`) * 60,
+        color: COL.red,
+        alpha: 0.3 + random(`rp-a-${r}-${c}`) * 0.3,
+      });
+    }
+  }
+
+  // Ambient spill along the ladder. In the reference the bezel between the
+  // two chains is nowhere near black — it sits around a fifth of full — and
+  // that lift comes from light scattering off the panel, not from the cells
+  // themselves. Doing it with wider per-cell halos instead just fuses the
+  // chain into one stripe.
+  for (let i = 0; i < 10; i++) {
+    const t = i / 9;
+    out.push({
+      x: LBX + (LTX - LBX) * t + 300,
+      y: LBY + (LTY - LBY) * t,
+      w: 900,
+      h: 900,
+      color: "#93A8C0",
+      alpha: 0.075,
+      glowOnly: true,
+    });
+  }
 
   // Another panel running off the left edge of frame, far outside the focal
   // band. Pure halo, so it sits behind the chart no matter the draw order.

@@ -24,13 +24,13 @@ export type Series = {
 
 /**
  * The walk is a program of trend regimes rather than pure noise: a decline,
- * a base, then a sustained climb. Runs are 27-47 candles. Because the loop
+ * a base, then a sustained climb, of 26 / 20 / 34 candles. Because the loop
  * forces the walk back to where it started, the program reads as a V-shaped
  * recovery — which is exactly the shape the shot wants.
  */
 const PROGRAM = [
-  { frac: 0.34, bias: -1.0, vol: 1.25 }, // decline
-  { frac: 0.24, bias: -0.05, vol: 0.7 }, // base / chop
+  { frac: 0.33, bias: -1.0, vol: 1.25 }, // decline
+  { frac: 0.25, bias: -0.05, vol: 0.7 }, // base / chop
   { frac: 0.42, bias: 1.05, vol: 1.05 }, // sustained climb
 ] as const;
 

@@ -22,7 +22,7 @@ export const DURATION = 1000;
 export const COL = {
   green: "#21D191",
   red: "#E8453C",
-  grid: "#16202E",
+  grid: "#1E2C3E",
   dashed: "#3A4A5E",
   substrate: "#060A10",
   cell: "#E8EEF5",
@@ -83,52 +83,68 @@ export const PRICE_ZOOM = 1.42;
  * is always dead-centred. Partial follow keeps a sense of the walk moving up
  * and down the screen while stopping it from leaving frame.
  */
-export const PRICE_FOLLOW = 0.78;
+export const PRICE_FOLLOW = 0.87;
 
 // ── Candles ────────────────────────────────────────────────────────────────
-export const BODY_W = 26;
-export const GAP = 10;
+// Measured off the reference: bodies run ~34px with ~12px between them, and
+// the outlines are ~4px.
+export const BODY_W = 34;
+export const GAP = 12;
 export const PITCH = BODY_W + GAP;
-export const WICK_W = 3;
-export const STROKE_W = 3;
+export const WICK_W = 4;
+export const STROKE_W = 4;
 
 /**
  * Candle count.
  *
  * The loop closes by scrolling exactly one series width across DURATION
- * frames, so frames-per-candle is pinned to DURATION / N_CANDLES. 112 gives
- * 8.93 frames per candle, matching the ~9 the shot calls for.
+ * frames, so frames-per-candle is pinned to DURATION / N_CANDLES. Tracking
+ * the reference clip frame by frame puts its scroll at ~1.75px per frame on a
+ * 768-wide encode — 219px/sec at 4K — which over a 46px pitch is 4.8 candles
+ * per second. 80 candles gives 12.5 frames each, and lands on that rate.
  */
-export const N_CANDLES = 112;
-/** Candles across the chart panel — the window the price follow averages over. */
-export const MEAN_WINDOW = Math.round((CHART_R - CHART_L) / PITCH);
+export const N_CANDLES = 80;
 export const SERIES_W = N_CANDLES * PITCH; // 4032 board px
 export const FRAMES_PER_CANDLE = DURATION / N_CANDLES;
 
 /**
- * Board x of the newest candle. It has to sit inside the panel's right edge
- * but still clear of the ladder, or the formation — the one detail that makes
- * the chart read as live rather than as a scrolling image — is hidden.
+ * Board x of the newest candle. The reference leaves a wide empty margin
+ * between its last candle and the panel edge — the candles stop around 32% of
+ * frame width while the panel runs on to about 52% — and that gap is a large
+ * part of why the shot reads as calm rather than busy.
  */
-export const LIVE_X = CHART_R - 80;
+export const LIVE_X = 1190;
+
+/** Candles actually on screen — the window the price follow averages over. */
+export const MEAN_WINDOW = Math.round((LIVE_X - CHART_L) / PITCH);
 
 // ── Depth of field ─────────────────────────────────────────────────────────
 /** Focal point: the chart's mid-left, vertically centred. */
-export const FOCUS_X = 780;
+// Fitted to a sharpness map of the reference: gradient energy peaks around
+// 18% of frame width and holds up well top to bottom, so the vertical falloff
+// is gentle and the left edge softens sooner than a symmetric fit would give.
+export const FOCUS_X = 620;
 export const FOCUS_Y = 1080;
 export const FALLOFF_RIGHT = 2250;
-export const FALLOFF_LEFT = 2600;
-export const FALLOFF_V = 2000;
+export const FALLOFF_LEFT = 1400;
+export const FALLOFF_V = 2600;
 export const MAX_BLUR = 26;
 
 // ── Order-book ladder ──────────────────────────────────────────────────────
-export const N_CELLS = 28;
-export const CELL_H = 52;
-export const CELL_W = 172;
+/**
+ * Counted off the reference: about 13 cells cross the frame, spaced ~165px
+ * apart at 4K. At 28 the chain fuses into one bright stripe under this much
+ * blur instead of reading as separate blocks.
+ */
+export const N_CELLS = 16;
+export const CELL_H = 72;
+export const CELL_W = 210;
+/** The reference's cells are visibly rounded, not square. */
+export const CELL_R = 14;
 /**
  * The ladder's signature diagonal. Authored in screen space — it has to run
  * from lower-left to upper-right across the whole frame — then pushed back
  * into board space so it still rides the board transform.
  */
-export const LADDER_BOTTOM_SCREEN: [number, number] = [1880, 2280];
-export const LADDER_TOP_SCREEN: [number, number] = [2930, -120];
+export const LADDER_BOTTOM_SCREEN: [number, number] = [1580, 2280];
+export const LADDER_TOP_SCREEN: [number, number] = [2630, -120];

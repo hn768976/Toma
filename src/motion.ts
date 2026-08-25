@@ -67,17 +67,17 @@ export const formingClose = (
 type Flash = { cell: number; start: number };
 
 /**
- * Pre-rolled flash times. Gaps average ~560 frames per cell across 28 cells,
+ * Pre-rolled flash times. Gaps average ~320 frames per cell across N_CELLS,
  * which lands around 3 flashes per second over the whole ladder.
  */
 export const buildFlashes = (): Flash[] => {
   const out: Flash[] = [];
   for (let c = 0; c < N_CELLS; c++) {
-    let t = random(`flash-off-${c}`) * 560;
+    let t = random(`flash-off-${c}`) * 320;
     let k = 0;
     while (t < DURATION) {
       out.push({ cell: c, start: t });
-      t += 300 + random(`flash-gap-${c}-${k}`) * 520;
+      t += 180 + random(`flash-gap-${c}-${k}`) * 280;
       k++;
     }
   }

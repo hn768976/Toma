@@ -85,7 +85,7 @@ highlight actually does.
 ## The price series
 
 220 candles of pure random walk look flat and characterless. This one is a
-program of trend regimes — a 38-candle decline, a 27-candle base, a 47-candle
+program of trend regimes — a 26-candle decline, a 20-candle base, a 34-candle
 climb — and because the loop forces the walk back to where it started, that
 program reads as a V-shaped recovery. Candle magnitudes are drawn from a cubed
 distribution: mostly small candles with a handful of very large ones. Wicks
@@ -97,32 +97,59 @@ solid, mixed in irregularly.
 
 The rightmost candle is still forming. Its close drifts, so the body grows and
 shrinks and can flip between green and red, settling onto its true close as the
-scroll locks it in.
+scroll locks it in. It sits at ~32% of frame width, inside the focal band, so
+the formation is actually legible.
+
+## Matching the reference
+
+Most of the numbers in `config.ts` were measured off the reference clip rather
+than guessed, because guessing kept landing in the wrong place. What was
+measured, and how:
+
+| quantity | method | result |
+| --- | --- | --- |
+| scroll rate | SSD block-match of a sharp chart band between frames 0→10 and 100→125 of the 768-wide encode | ~1.75 px/frame → 219 px/sec at 4K |
+| candle pitch | detrended autocorrelation of the vertical-edge profile across the sharp band, confirmed by counting candles against a pixel ruler | ~46px at 4K (34px body, 12px gap) |
+| focal band | 99.5th-percentile luminance-normalised gradient, tiled 8×6 across the frame | peaks at ~18% of frame width, gentle vertical falloff |
+| live edge / panel edge | brightened crop of the chart's right half | last candle ~32% of width, panel runs to ~52% |
+| ladder density | counting cells against the frame height | ~13 cells across frame, ~165px apart |
+| tone | luminance percentiles at 640×360 | p25 16, p50 25, p75 51, p90 95, p99 215 |
+
+The render now sits within a few levels of the reference at every percentile.
+Two deliberate residuals: the blacks are a touch lifted (p1 12 vs 9) because
+the reference is a JPEG with crushed shadows, and the peak highlight is a
+little softer (p99 198 vs 215) because our ladder cells spread slightly wider
+under the blur.
 
 ## Deliberate departures from the brief
 
-Three, all of them forced by something else in the brief:
+Where the brief's numbers and the reference disagreed, the reference won — that
+was the explicit call. Each departure below is a measurement, not a preference.
 
-1. **112 candles, not ~220.** The loop closes by scrolling exactly one series
-   width across 1000 frames, which pins frames-per-candle to `1000 / N`. The
-   brief also asks for roughly one candle every 9 frames. Those two can only
-   both hold at N ≈ 111; 220 candles would need a ~1980-frame loop. The stated
-   scroll speed and the exact loop won, since the shape of the walk survives
-   the smaller count intact (the regime runs are still 27–47 candles).
+1. **80 candles at 12.5 frames each, not ~220 at ~9.** Two independent
+   constraints collide here. The loop closes by scrolling exactly one series
+   width across 1000 frames, which pins frames-per-candle to `1000 / N`. And
+   the reference's actual scroll rate is 4.8 candles per second — 12.5 frames
+   each at 60fps — not the ~6.7/sec the brief's "one candle every 9 frames"
+   implies. Matching the measured rate fixes N at 80. The walk's shape survives
+   intact: the regime runs are still 26 / 20 / 34 candles.
 
-2. **The price axis follows the trend.** With a fixed full-range fit, the
-   visible window — about a quarter of the series — used a thin slice of the
-   vertical band and left most of the frame empty. The axis now rides a rolling
-   mean of the closes over one screen width (`PRICE_FOLLOW`, `PRICE_ZOOM` in
-   `config.ts`). It is still a pure, periodic function of the frame, and it is
-   the chart's price axis, not the camera — the camera is locked off, as
-   specified.
+2. **Candle geometry 34/12/4, not 26/10/3.** Measured pitch is ~46px at 4K, not
+   36. The brief's proportions are preserved; the scale is not.
 
-3. **The chart panel ends at ~52% of frame width, not further right.** With the
-   panel running to two thirds, the forming candle — the detail that makes the
-   chart read as live — sat behind the maximum-blur ladder and was invisible.
-   Pulling the live edge in also matches the reference framing, where the
-   candles stop right about where the ladder starts.
+3. **16 ladder cells, not ~28.** At 28 the chain fuses into a single bright
+   stripe under this much blur. The reference resolves ~13 separate cells
+   across the frame height, which is what 16 along the full chain gives.
+
+4. **Two dashed price markers, not one**, and grid rules that are visible
+   rather than "barely visible" — both are plain in the reference.
+
+5. **The price axis follows the trend.** With a fixed full-range fit the
+   visible window used a thin slice of the vertical band and left most of the
+   frame empty. The axis now rides a rolling mean of the closes over one screen
+   width (`PRICE_FOLLOW`, `PRICE_ZOOM`). Still a pure, periodic function of the
+   frame, and it is the chart's price axis, not the camera — the camera is
+   locked off, as specified.
 
 ## Layout
 

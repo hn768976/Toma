@@ -5,6 +5,7 @@ import {
   CHART_L,
   CHART_R,
   CHART_T,
+  CELL_R,
   COL,
   FRAMES_PER_CANDLE,
   HEIGHT,
@@ -176,7 +177,7 @@ const makeGrain = (): HTMLCanvasElement[] => {
 };
 
 export const buildModel = (): Model => ({
-  layers: [makeLayer(1, 1.5), makeLayer(0.5, 7), makeLayer(0.34, 24)],
+  layers: [makeLayer(1, 1.2), makeLayer(0.5, 8), makeLayer(0.34, 24)],
   bloom: (() => {
     const canvas = makeCanvas(BLOOM_SCALE);
     const blurCanvas = makeCanvas(BLOOM_SCALE);
@@ -280,9 +281,9 @@ const drawPanelWash = (ctx: CanvasRenderingContext2D, lum: number) => {
   const [a, b, c, d, e, f] = BOARD_MATRIX;
   ctx.setTransform(a, b, c, d, e, f);
   const g = ctx.createLinearGradient(CHART_L, 0, CHART_R, 0);
-  g.addColorStop(0, tint("#040B14", lum, 1));
-  g.addColorStop(0.74, tint("#040B14", lum, 0.85));
-  g.addColorStop(1, tint("#040B14", lum, 0));
+  g.addColorStop(0, tint("#06101C", lum, 1));
+  g.addColorStop(0.74, tint("#06101C", lum, 0.85));
+  g.addColorStop(1, tint("#06101C", lum, 0));
   ctx.fillStyle = g;
   ctx.fillRect(CHART_L, CHART_T, CHART_R - CHART_L, CHART_B - CHART_T);
   ctx.restore();
@@ -325,10 +326,17 @@ const drawGrid = (layers: Layer[], lum: number) => {
       [],
     );
   }
-  line(PRICE_B - (PRICE_B - PRICE_T) * 0.28, COL.dashed, 3, [26, 22]);
+  line(PRICE_B - (PRICE_B - PRICE_T) * 0.28, COL.dashed, 4, [30, 26]);
+  line(PRICE_B - (PRICE_B - PRICE_T) * 0.06, COL.dashed, 4, [30, 26]);
 };
 
 // ── Candles ────────────────────────────────────────────────────────────────
+
+/** Widening, fading passes that stand in for the phosphor halo. */
+const CANDLE_GLOW: ReadonlyArray<readonly [number, number]> = [
+  [8, 0.05],
+  [3.2, 0.16],
+];
 
 const drawCandles = (
   layers: Layer[],
@@ -387,7 +395,22 @@ const drawCandles = (
         const cc = layers[li].ctx;
         // Defocused candles are boosted before they blur, so they bloom into
         // the black rather than smearing into mush.
-        const k = lum * (li === 0 ? 1 : li === 1 ? 1.18 : 1.4);
+        const k = lum * (li === 0 ? 1 : li === 1 ? 1.25 : 1.5);
+
+        // A wide, faint additive pass under the candle. Phosphor on a screen
+        // this close does not have hard edges, and without it the candles read
+        // flat next to the blown-out ladder.
+        cc.globalCompositeOperation = "lighter";
+        for (const [mult, fade] of CANDLE_GLOW) {
+          cc.strokeStyle = tint(color, k, a * fade);
+          cc.lineWidth = STROKE_W * mult;
+          cc.beginPath();
+          cc.moveTo(cx, yOf(high));
+          cc.lineTo(cx, yOf(low));
+          cc.stroke();
+          cc.strokeRect(cx - half, yTop, BODY_W, bodyH);
+        }
+        cc.globalCompositeOperation = "source-over";
 
         cc.strokeStyle = tint(color, k, a);
         cc.lineWidth = WICK_W;
@@ -443,7 +466,7 @@ const glow = (
  * Resting brightness of a ladder cell. A flash pushes past white: the core
  * clips and the halo swells, which is how a defocused highlight blooms.
  */
-const REST = 0.95;
+const REST = 1.02;
 
 const drawLadder = (
   layers: Layer[],
@@ -474,14 +497,16 @@ const drawLadder = (
         c,
         cell.x,
         cell.y,
-        cell.w * (0.6 + fi * 0.55),
+        cell.w * (0.55 + fi * 0.5),
         cell.color,
         k * boost,
-        a * (0.36 + fi * 0.6),
+        a * (0.38 + fi * 0.6),
       );
       c.globalCompositeOperation = "source-over";
       c.fillStyle = tint(cell.color, k * boost, a);
-      c.fillRect(x, y, cell.w, cell.h);
+      c.beginPath();
+      c.roundRect(x, y, cell.w, cell.h, CELL_R);
+      c.fill();
     }
   }
 };
@@ -531,7 +556,7 @@ const drawChrome = (layers: Layer[], readouts: Readout[], lum: number) => {
 // ── Finish ─────────────────────────────────────────────────────────────────
 
 const BLOOM_SCALE = 0.25;
-const BLOOM_BLUR = 26;
+const BLOOM_BLUR = 40;
 
 /** Squaring the downscaled frame keeps the darks out of the bloom. */
 const drawBloom = (ctx: CanvasRenderingContext2D, m: Model) => {
@@ -553,7 +578,7 @@ const drawBloom = (ctx: CanvasRenderingContext2D, m: Model) => {
 
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = 0.34;
+  ctx.globalAlpha = 0.5;
   ctx.drawImage(gc, 0, 0, WIDTH, HEIGHT);
   ctx.restore();
 };
@@ -572,7 +597,7 @@ const drawVignette = (ctx: CanvasRenderingContext2D) => {
   );
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(0.55, "rgba(0,0,0,0.04)");
-  g.addColorStop(1, "rgba(0,0,0,0.26)");
+  g.addColorStop(1, "rgba(0,0,0,0.3)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, WIDTH, WIDTH);
   ctx.restore();
@@ -585,7 +610,7 @@ const drawGrain = (ctx: CanvasRenderingContext2D, m: Model, frame: number) => {
   const oy = -((frame * 71) % GRAIN_SIZE);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = 0.07;
+  ctx.globalAlpha = 0.04;
   for (let x = ox; x < WIDTH; x += GRAIN_SIZE) {
     for (let y = oy; y < HEIGHT; y += GRAIN_SIZE) {
       ctx.drawImage(tile, x, y);
