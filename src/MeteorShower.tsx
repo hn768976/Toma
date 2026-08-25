@@ -13,10 +13,12 @@ const MARGIN = 48;
 const SW = W + MARGIN * 2;
 const SH = H + MARGIN * 2;
 
-// Nebula geometry (scene-layer coordinates, i.e. margin included)
-const NEB_CX = MARGIN + W * 0.78;
-const NEB_CY = MARGIN + H * 0.47;
-const NEB_R = H * 0.45; // ~90% of frame height in diameter
+// Nebula geometry (scene-layer coordinates, i.e. margin included).
+// A huge spherical dust cloud that nearly fills the frame — its faintly
+// brighter round rim arcs across the upper portion of the picture.
+const NEB_CX = MARGIN + W * 0.56;
+const NEB_CY = MARGIN + H * 0.98;
+const NEB_R = W * 0.5;
 
 const GRAIN_TILE = 384;
 const GRAIN_TILES = 8;
@@ -30,6 +32,8 @@ const TEAL_DEEP: [number, number, number] = [26, 74, 85]; // #1A4A55
 const STAR_WHITE: [number, number, number] = [232, 238, 245]; // #E8EEF5
 const STAR_WARM: [number, number, number] = [245, 231, 205];
 const STAR_BLUE: [number, number, number] = [201, 220, 250];
+const DUST_GREY: [number, number, number] = [86, 88, 76]; // ambient olive-grey dust
+const TEAL_BRIGHT: [number, number, number] = [128, 194, 205]; // edge-glow core
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const rgba = (c: [number, number, number], a: number) =>
@@ -138,66 +142,97 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.globalCompositeOperation = 'lighter';
   });
 
+  // The sphere's centre sits near the bottom edge, so the visible interior is
+  // its upper half: angles 180°..360° in canvas coords point up from centre.
+  const upAngle = (r: number) => Math.PI + r * Math.PI;
+
   // Cluster attractors make the dust density uneven rather than radial.
   const clusters: {x: number; y: number}[] = [];
-  for (let j = 0; j < 4; j++) {
-    const a = random(`neb-cluster-${j}-a`) * TAU;
-    const d = NEB_R * 0.62 * random(`neb-cluster-${j}-d`);
+  for (let j = 0; j < 6; j++) {
+    const a = upAngle(random(`neb-cluster-${j}-a`));
+    const d = NEB_R * (0.2 + 0.6 * random(`neb-cluster-${j}-d`));
     clusters.push({x: NEB_CX + Math.cos(a) * d, y: NEB_CY + Math.sin(a) * d});
   }
 
-  // Broad base blobs: the overall round mass.
-  for (let i = 0; i < 12; i++) {
-    const a = random(`neb-base-${i}-a`) * TAU;
-    const d = NEB_R * 0.72 * Math.pow(random(`neb-base-${i}-d`), 0.6);
+  // Broad base blobs: the overall dusty mass filling the sphere's interior,
+  // reaching almost to the rim so the arc blends into the cloud.
+  for (let i = 0; i < 18; i++) {
+    const a = upAngle(random(`neb-base-${i}-a`));
+    const d = NEB_R * (0.12 + 0.76 * Math.pow(random(`neb-base-${i}-d`), 0.7));
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
-    const r = NEB_R * (0.3 + 0.28 * random(`neb-base-${i}-r`));
-    const al = 0.05 + 0.05 * random(`neb-base-${i}-al`);
+    const r = NEB_R * (0.18 + 0.22 * random(`neb-base-${i}-r`));
+    const al = 0.035 + 0.035 * random(`neb-base-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, AMBER, al);
   }
 
-  // Clustered smaller blobs: internal structure.
-  for (let i = 0; i < 24; i++) {
-    const cl = clusters[Math.floor(random(`neb-blob-${i}-c`) * 4) % 4];
+  // Clustered smaller blobs: the fine mottled internal structure.
+  for (let i = 0; i < 44; i++) {
+    const cl = clusters[Math.floor(random(`neb-blob-${i}-c`) * 6) % 6];
     const a = random(`neb-blob-${i}-a`) * TAU;
-    const d = NEB_R * 0.42 * Math.pow(random(`neb-blob-${i}-d`), 0.8);
+    const d = NEB_R * 0.3 * Math.pow(random(`neb-blob-${i}-d`), 0.8);
     const x = cl.x + Math.cos(a) * d;
     const y = cl.y + Math.sin(a) * d;
-    const r = NEB_R * (0.1 + 0.18 * random(`neb-blob-${i}-r`));
-    const al = 0.05 + 0.07 * random(`neb-blob-${i}-al`);
+    const r = NEB_R * (0.04 + 0.11 * random(`neb-blob-${i}-r`));
+    const al = 0.05 + 0.06 * random(`neb-blob-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, AMBER, al);
   }
 
-  // Rim: slightly brighter dust ringing the lower-left arc of the sphere.
-  // In canvas coords (+y down) the left/lower arc spans roughly 70°..215°.
+  // Ambient mottling outside the sphere so no part of the frame is flat black.
   for (let i = 0; i < 14; i++) {
-    const a = (70 + 145 * random(`neb-rim-${i}-a`)) * (Math.PI / 180);
-    const d = NEB_R * (0.8 + 0.17 * random(`neb-rim-${i}-d`));
+    const x = random(`neb-amb-${i}-x`) * SW;
+    const y = random(`neb-amb-${i}-y`) * SH;
+    const r = NEB_R * (0.12 + 0.2 * random(`neb-amb-${i}-r`));
+    const al = 0.025 + 0.03 * random(`neb-amb-${i}-al`);
+    paintBlob(layers[i % 2].ctx, x, y, r, i % 3 === 0 ? AMBER : DUST_GREY, al);
+  }
+
+  // Rim: the faintly brighter round edge where the dust thins, arcing across
+  // the upper frame. A heavily blurred soft ring plus irregular blobs so it
+  // never reads as a drawn stroke.
+  for (let li = 0; li < 2; li++) {
+    const {ctx} = layers[li];
+    ctx.save();
+    ctx.strokeStyle = rgba(RIM, 0.03);
+    ctx.lineWidth = NEB_R * (0.11 + 0.04 * li) * NEB_SCALE;
+    ctx.beginPath();
+    ctx.arc(
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      NEB_R * (0.955 + 0.02 * li) * NEB_SCALE,
+      Math.PI,
+      TAU
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = (190 + 150 * random(`neb-rim-${i}-a`)) * (Math.PI / 180);
+    const d = NEB_R * (0.88 + 0.13 * random(`neb-rim-${i}-d`));
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
-    const r = NEB_R * (0.09 + 0.09 * random(`neb-rim-${i}-r`));
-    const al = 0.05 + 0.04 * random(`neb-rim-${i}-al`);
+    const r = NEB_R * (0.05 + 0.07 * random(`neb-rim-${i}-r`));
+    const al = 0.03 + 0.035 * random(`neb-rim-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, RIM, al);
   }
 
   // A few brighter elongated filaments.
-  for (let i = 0; i < 5; i++) {
-    const a = random(`neb-fil-${i}-a`) * TAU;
-    const d = NEB_R * 0.6 * random(`neb-fil-${i}-d`);
+  for (let i = 0; i < 6; i++) {
+    const a = upAngle(random(`neb-fil-${i}-a`));
+    const d = NEB_R * 0.65 * random(`neb-fil-${i}-d`);
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
-    const r = NEB_R * (0.08 + 0.08 * random(`neb-fil-${i}-r`));
+    const r = NEB_R * (0.05 + 0.06 * random(`neb-fil-${i}-r`));
     const stretch = 2.4 + 1.6 * random(`neb-fil-${i}-s`);
     const rot = random(`neb-fil-${i}-rot`) * TAU;
-    paintBlob(layers[i % 2].ctx, x, y, r, RIM, 0.06, stretch, rot);
+    paintBlob(layers[i % 2].ctx, x, y, r, RIM, 0.055, stretch, rot);
   }
 
   // Darker voids punched into the dust.
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     const {ctx} = layers[i % 2];
-    const a = random(`neb-void-${i}-a`) * TAU;
-    const d = NEB_R * 0.55 * random(`neb-void-${i}-d`);
+    const a = upAngle(random(`neb-void-${i}-a`));
+    const d = NEB_R * 0.7 * random(`neb-void-${i}-d`);
     const x = (NEB_CX + Math.cos(a) * d) * NEB_SCALE;
     const y = (NEB_CY + Math.sin(a) * d) * NEB_SCALE;
     const r = NEB_R * (0.13 + 0.12 * random(`neb-void-${i}-r`)) * NEB_SCALE;
@@ -256,12 +291,19 @@ const buildTealLayer = (): HTMLCanvasElement => {
     ctx.fillRect(0, 0, hw, hh);
   };
 
-  // Off-screen light source at the upper-right: broad wash plus a tighter
-  // corner core, brightest at the corner, falling off toward centre.
-  glow(SW + 260, -180, 2700, TEAL, 0.38);
-  glow(SW + 80, -120, 1400, TEAL, 0.3);
+  // Off-screen light source past the right edge: a broad wash brightest at
+  // the upper-right, with a bright cyan core hugging the edge itself.
+  glow(SW + 300, SH * 0.1, 3300, TEAL, 0.5);
+  glow(SW + 120, SH * 0.04, 1700, TEAL_BRIGHT, 0.42);
+  // A soft vertical band so the whole right edge reads lit.
+  const band = ctx.createLinearGradient(hw, 0, hw - 720 * NEB_SCALE, 0);
+  band.addColorStop(0, rgba(TEAL, 0.3));
+  band.addColorStop(0.5, rgba(TEAL_DEEP, 0.12));
+  band.addColorStop(1, rgba(TEAL_DEEP, 0));
+  ctx.fillStyle = band;
+  ctx.fillRect(hw - 720 * NEB_SCALE, 0, 720 * NEB_SCALE, hh);
   // Much fainter answering wash at the very bottom-left.
-  glow(-160, SH + 160, 1400, TEAL, 0.12);
+  glow(-160, SH + 160, 1500, TEAL, 0.12);
 
   const {c, ctx: fctx} = makeCanvas(SW, SH);
   fctx.filter = 'blur(20px)';
@@ -279,12 +321,14 @@ const buildStars = (): Star[] => {
     if (d < NEB_R) {
       // Dust obscures stars: keep fewer over the dense interior, and dim
       // the survivors. This is what sells the nebula as volumetric.
+      // The sphere now covers most of the frame, so the dust only thins the
+      // stars rather than wiping them out.
       const rel = d / NEB_R;
-      const keep = 0.28 + 0.58 * rel * rel;
+      const keep = 0.55 + 0.35 * rel * rel;
       if (random(`${seed}-keep`) > keep) {
         return;
       }
-      dim = 0.65 + 0.35 * rel;
+      dim = 0.78 + 0.22 * rel;
     }
 
     const size = 1.5 + 3.5 * Math.pow(random(`${seed}-size`), 3);
