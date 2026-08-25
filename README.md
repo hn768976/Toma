@@ -11,13 +11,22 @@ Both are 3840×2160 @ 60fps, 960 frames.
 
 ## Render
 
+Needs Node 18+. The first render downloads Chrome Headless Shell (~150 MB)
+into `node_modules/.remotion/`; `npm run browser` fetches it ahead of time.
+
 ```bash
 npm install
-npx remotion render SecureLockNavy  out/secure-lock-navy.mp4  --codec=h264 --crf=12 --concurrency=8
-npx remotion render SecureLockGreen out/secure-lock-green.mp4 --codec=h264 --crf=12 --concurrency=8
+npm run render:navy      # full 4K
+npm run render:green
+npm run preview:navy     # 1080p, roughly a third of the time
+npm run preview:green
 ```
 
-Or `npm run render:navy` / `npm run render:green`. `npm start` opens Remotion Studio.
+`npm start` opens Remotion Studio.
+
+Note on `--concurrency`: Remotion caps it at the machine's core count and
+*errors out* rather than clamping, so passing `--concurrency=8` fails outright
+on a 4-core machine. The scripts leave it unset and let Remotion choose.
 
 ## How it is built
 
