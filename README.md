@@ -103,6 +103,10 @@ The plane of focus is a diagonal band through the chart's lower-middle. The
 upper-left recedes into near-pure white haze; the far-right column is a different
 panel of the UI and softens on its own.
 
+The sidebar list runs uniformly from top to bottom — no selected-row highlight.
+Every row carries an icon, a truncated ticker, a last price and, on some rows, a
+signed percentage.
+
 ## Finish
 
 No bloom pass — additive glow on a white screen would be wrong. Instead a blurred

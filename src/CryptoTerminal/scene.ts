@@ -171,9 +171,15 @@ const TICKERS = [
   'LINK-..', 'XLM-U..', 'DOGE-..', 'BCH-U..', 'ATOM-..', 'AVAX-..', 'ALGO-..',
   'TRX-U..', 'FIL-U..',
 ];
-const ICON_COLORS = ['#F2A33C', '#6C7A89', '#2D6FD9', '#26A66A', '#8B7BD8', '#D9455C'];
+const ICON_COLORS = [
+  '#F2A33C',
+  '#6C7A89',
+  COLORS.blue,
+  COLORS.green,
+  '#8B7BD8',
+  COLORS.red,
+];
 const SIDEBAR_ROWS = 15;
-const HIGHLIGHT_ROW = 4;
 
 /**
  * Draws the whole UI into the master buffer, in design space.
@@ -393,15 +399,8 @@ const drawSidebar = (ctx: CanvasRenderingContext2D, frame: number, fonts: Fonts)
   const rowTop = 730;
   const pitch = 68;
 
-  // The one cool accent in the frame: a solid blue selected row, seated in the
-  // icon column. It is the only thing here that is not grey, green or red.
-  ctx.fillStyle = COLORS.blue;
-  roundRect(ctx, x - 10, rowTop + HIGHLIGHT_ROW * pitch - 68, 68, 142, 16);
-  ctx.fill();
-
   for (let i = 0; i < SIDEBAR_ROWS; i++) {
     const y = rowTop + i * pitch;
-    if (i === HIGHLIGHT_ROW || i === HIGHLIGHT_ROW + 1) continue;
     ctx.fillStyle = ICON_COLORS[i % ICON_COLORS.length];
     ctx.globalAlpha = 0.75;
     ctx.beginPath();
