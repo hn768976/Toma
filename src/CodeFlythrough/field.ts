@@ -369,7 +369,7 @@ export const buildField = (measure: Measure, v: Variant): FieldElement[] => {
     // phase 0 puts the stop exactly at frame centre; timeOffset decides when
     // in the loop it happens. Half a loop apart, so they take turns.
     el.phase = 0;
-    el.dwell = C.HERO_DWELL;
+    el.dwell = v.heroDwell;
     el.timeOffset = i === 0 ? 0.35 : 0.85;
 
     out.push(el);

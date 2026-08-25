@@ -51,6 +51,8 @@ export interface Variant {
   perpSpread: number;
   /** Whole caret blinks per loop. */
   caretBlinks: number;
+  /** Half-width of a hero's stop, as a fraction of its crossing. */
+  heroDwell: number;
 }
 
 const build = (o: {
@@ -79,6 +81,7 @@ const build = (o: {
     perpView,
     perpSpread: perpView + C.PERP_MARGIN,
     caretBlinks: C.caretBlinksFor(o.durationInFrames),
+    heroDwell: C.heroDwellFor(o.durationInFrames),
   };
 };
 
@@ -115,7 +118,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
     palette: TEAL,
   }),
   /**
-   * Dark blue, no tilt at all, thirteen seconds.
+   * Dark blue, no tilt at all, ten seconds.
    *
    * At zero tilt the shared axis is horizontal, so the field reads left rather
    * than diagonally and drifts straight across. The handheld camera drift,
@@ -124,7 +127,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
   'blue-straight': build({
     id: 'blue-straight',
     compositionId: 'CodeFlythroughBlue',
-    durationInFrames: 780,
+    durationInFrames: 600,
     tiltDeg: 0,
     palette: BLUE,
   }),
