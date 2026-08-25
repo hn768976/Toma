@@ -189,8 +189,9 @@ export const isComment = (line: string) => line.trimStart().startsWith('//');
  * but the function names and element ids are made up for this animation.
  *
  * `staticLines` is how many lines are already written when the fragment enters
- * frame. Only the final line types itself out, and it is kept to within about
- * a word of the line above it so the block stays a tidy shape while it writes.
+ * frame. The last two type themselves out, and the call is split across them so
+ * neither runs more than about a word past the line above - the block keeps a
+ * tidy shape the whole way through instead of growing a tail off one edge.
  */
 export interface HeroSnippet {
   lines: string[];
@@ -204,6 +205,7 @@ export const HERO_SNIPPETS: readonly HeroSnippet[] = [
       '<script>',
       'function replyStream(txt) {',
       '  document.getElementById("chat")',
+      '    .innerHTML = txt;',
     ],
     staticLines: 3,
   },
@@ -213,6 +215,7 @@ export const HERO_SNIPPETS: readonly HeroSnippet[] = [
       '<script>',
       'function scoreIntent(txt) {',
       '  document.getElementById("bot")',
+      '    .innerHTML = txt;',
     ],
     staticLines: 3,
   },

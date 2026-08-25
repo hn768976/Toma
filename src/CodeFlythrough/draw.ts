@@ -14,13 +14,50 @@ const mod1 = (n: number) => ((n % 1) + 1) % 1;
 const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
 
 /**
+ * Maps a hero's crossing clock to its crossing distance.
+ *
+ * Velocity is a smoothstep of how far the clock is from the middle: zero
+ * across the stop window, rising smoothly to a peak at either end. That peak
+ * lands on the wrap, where the hero is off frame, so the fast part is never
+ * seen and the slow part is the whole readable pass.
+ *
+ * The closed form is the integral of that velocity, normalised so a full
+ * crossing still advances exactly 1. That last property is what keeps the loop
+ * exact - the stop redistributes time within a crossing without adding or
+ * removing any.
+ */
+const heroEase = (u: number, dwell: number) => {
+  const half = 0.5 - dwell;
+  if (half <= 0) return u;
+  const past = u >= 0.5;
+  const t = clamp01(((past ? u - 0.5 : 0.5 - u) - dwell) / half);
+  const advance = t * t * t - (t * t * t * t) / 2;
+  return past ? 0.5 + advance : 0.5 - advance;
+};
+
+/**
+ * Position along the wrap, 1 at the entry edge falling to 0 at the exit edge.
+ *
+ * Ordinary elements drift at a constant rate. Heroes run on their own clock so
+ * they can stop mid-frame; `phase` is 0 for them, which is what puts the stop
+ * at frame centre.
+ */
+const progressFor = (el: FieldElement, f: number) => {
+  if (el.kind !== 'hero') {
+    return mod1(el.phase - (el.speed * f) / el.travel);
+  }
+  const u = mod1(f / C.DURATION + el.timeOffset);
+  return {prog: mod1(el.phase - heroEase(u, el.dwell)), u};
+};
+
+/**
  * Draws a hero fragment: the same tilt as everything else, its leading lines
  * already written, the rest typing itself out as the fragment crosses frame.
  *
- * `prog` runs 1 -> 0 over one crossing, so `1 - prog` is how far along the
- * crossing the fragment is. Deriving the typing from that instead of from the
- * frame number is what keeps it inside the loop: at frame 540 the fragment is
- * back at its frame-0 position and so shows its frame-0 characters.
+ * `u` is the crossing clock, running 0 -> 1 across one pass. Deriving the
+ * typing from that instead of from the frame number is what keeps it inside the
+ * loop: at frame 540 the fragment is back at its frame-0 crossing position and
+ * so shows its frame-0 characters.
  */
 const drawHero = (
   g: CanvasRenderingContext2D,
@@ -29,10 +66,12 @@ const drawHero = (
   y: number,
   scale: number,
   f: number,
-  prog: number,
+  u: number,
   fontFamily: string,
 ) => {
-  const typed = clamp01((1 - prog - C.HERO_TYPE_START) / C.HERO_TYPE_SPAN);
+  // Keyed on the crossing clock rather than on position, so the writing keeps
+  // its steady rate straight through the stop instead of freezing with it.
+  const typed = clamp01((u - C.HERO_TYPE_START) / C.HERO_TYPE_SPAN);
 
   const animated = el.lines.slice(el.staticLines);
   const total = animated.reduce((n, line) => n + line.length, 0);
@@ -224,15 +263,16 @@ export const drawFrame = ({
     const el = field[idx] as FieldElement;
     const sp = sprites[idx] as Sprite;
 
-    const prog = mod1(el.phase - (el.speed * f) / el.travel);
-    const u = (prog - 0.5) * el.travel;
+    const p = progressFor(el, f);
+    const prog = typeof p === 'number' ? p : p.prog;
+    const along = (prog - 0.5) * el.travel;
     const perp = el.perp + cam;
 
-    const x = (C.CX + C.AX * u + C.PX * perp) * sx;
-    const y = (C.CY + C.AY * u + C.PY * perp) * sy;
+    const x = (C.CX + C.AX * along + C.PX * perp) * sx;
+    const y = (C.CY + C.AY * along + C.PY * perp) * sy;
 
-    if (el.kind === 'hero') {
-      drawHero(ctx, el, x, y, el.scale * sx, f, prog, fontFamily);
+    if (typeof p !== 'number') {
+      drawHero(ctx, el, x, y, el.scale * sx, f, p.u, fontFamily);
       continue;
     }
 

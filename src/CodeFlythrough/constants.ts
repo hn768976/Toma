@@ -132,12 +132,40 @@ export const HERO_Z = 0.49;
 /** Fixed rather than derived from z: the hero is deliberately oversized. */
 export const HERO_SCALE = 2.45;
 /**
- * Typing runs over this window of the element's crossing and then holds
- * complete. Tied to the crossing rather than to a wall clock, so it loops for
- * free: at frame 540 every element is back at its frame-0 crossing position,
- * and therefore at its frame-0 typing state.
+ * A hero crosses once per loop, so it drifts through the whole nine seconds.
+ * Travel is set from the distance it needs to clear frame rather than from its
+ * depth, which is what lets it move slowly enough to read.
  */
-export const HERO_TYPE_START = 0.24;
-export const HERO_TYPE_SPAN = 0.42;
+export const HERO_TRAVEL_MULT = 2.15;
+
+/**
+ * The hold.
+ *
+ * A hero does not drift at a constant rate. It comes in quickly, eases to a
+ * dead stop as it reaches the middle of frame, sits there while it finishes
+ * writing itself, then accelerates away. HERO_DWELL is the half-width of the
+ * stop as a fraction of the crossing: 0.07 means it is stationary for 14% of
+ * its nine seconds, a shade over a second.
+ *
+ * The distance is unchanged, so the time it does not spend stopped is spent
+ * moving faster - and the fastest point is the wrap, where it is off frame
+ * anyway. Slow where it is readable, quick where it is not.
+ */
+export const HERO_DWELL = 0.07;
+
+/**
+ * Typing runs over this window of the crossing and then holds complete.
+ *
+ * The window is measured against the crossing's own clock, not against the
+ * hero's position, so the writing carries on at a steady rate through the stop
+ * instead of freezing with it. It is timed to finish just after the hero
+ * settles, leaving about a second of written, motionless text.
+ *
+ * Both are tied to the crossing rather than to a wall clock, so they loop for
+ * free: at frame 540 every element is back at its frame-0 crossing position and
+ * therefore at its frame-0 typing state.
+ */
+export const HERO_TYPE_START = 0.28;
+export const HERO_TYPE_SPAN = 0.18;
 /** Caret blink period in frames. Must divide DURATION: 540 / 36 = 15. */
 export const HERO_CARET_PERIOD = 36;

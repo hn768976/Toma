@@ -47,6 +47,10 @@ export interface FieldElement {
   staticLines: number;
   /** hero only: one colour per line. */
   lineColors: string[];
+  /** hero only: half-width of the mid-crossing stop, as a fraction of it. */
+  dwell: number;
+  /** hero only: where in the 540-frame loop this hero's crossing begins. */
+  timeOffset: number;
 }
 
 export type Measure = (
@@ -213,6 +217,8 @@ const base = (
     squareSize: 0,
     staticLines: 0,
     lineColors: [],
+    dwell: 0,
+    timeOffset: 0,
   };
 };
 
@@ -333,7 +339,6 @@ export const buildField = (measure: Measure): FieldElement[] => {
     // The hero is what the eye reads. It does not get smeared.
     el.steps = 1;
     el.perp = i === 0 ? -C.PERP_SPREAD * 0.11 : C.PERP_SPREAD * 0.03;
-    el.phase = i === 0 ? 0.75 : 0.25;
     el.color = C.COLORS.codeCyan;
     el.commentColor = C.COLORS.codeWhite;
     el.lineColors = hero.lines.map((line, li) => {
@@ -343,12 +348,19 @@ export const buildField = (measure: Measure): FieldElement[] => {
     });
     el.glow = 1.3;
 
-    // Re-resolve the wrap now that scale is the hero's own, not z * MAX_SCALE.
+    // One crossing per loop, at whatever speed that implies, rather than the
+    // speed its depth would give it: a hero that is meant to be read cannot
+    // also be moving at mid-field pace.
     const axisExtent = w0 * el.scale + h0 * el.scale * 0.12;
-    const wrap = wrapFor(C.HERO_Z, axisExtent);
-    el.speed = wrap.speed;
-    el.travel = wrap.travel;
-    el.cycles = wrap.cycles;
+    el.travel = (C.AXIS_VIEW + axisExtent + 60) * C.HERO_TRAVEL_MULT;
+    el.cycles = 1;
+    el.speed = el.travel / C.DURATION;
+
+    // phase 0 puts the stop exactly at frame centre; timeOffset decides when
+    // in the loop it happens. Half a loop apart, so they take turns.
+    el.phase = 0;
+    el.dwell = C.HERO_DWELL;
+    el.timeOffset = i === 0 ? 0.35 : 0.85;
 
     out.push(el);
   }

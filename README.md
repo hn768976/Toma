@@ -68,47 +68,48 @@ makes the field cohere into a stream instead of scattered debris.
 
 ### The hero fragments
 
-Two of the fragments are heroes: large, sharp, on the shared tilt, with their
-**final line** typing itself out as they cross frame — the comment, the
-`<script>` tag and the function declaration already written, then the DOM call
-appearing character by character behind a blinking caret.
+Two of the fragments are heroes: large, sharp, on the shared tilt, and unlike
+everything else in the shot they do not drift at a constant rate. A hero comes
+in quickly, eases to a dead stop in the middle of frame, finishes writing itself
+while stationary, sits there a beat, then accelerates away.
+
+Its **last two lines** type themselves out behind a blinking caret:
 
 ```
 // ai chatbot                     already written
 <script>                          already written
 function replyStream(txt) {       already written
-  document.getElementById("chat") types out
+  document.getElementById("chat")   types out
+    .innerHTML = txt;               types out
 ```
 
-The typing line is kept to within about a word of the line above it, so the
-block holds a tidy shape the whole way through instead of growing a long tail
-off one edge.
+Splitting the call across two lines is what keeps the block tidy — no line runs
+more than about a word past the one above it (27 → 33 → 21 characters), so it
+holds its shape all the way through instead of growing a long tail off one edge.
 
-They are the one population drawn live instead of from a cached sprite, since
-their content changes every frame. That costs nothing: two elements, four short
+Heroes are the one population drawn live instead of from a cached sprite, since
+their content changes every frame. That costs nothing: two elements, five short
 lines, no blur, no filter.
 
-Typing progress is derived from how far the fragment is through its crossing,
-not from the frame number:
+**The stop.** Velocity is a smoothstep of how far the crossing clock is from its
+middle — zero across the stop window, rising to a peak at either end. That peak
+lands on the wrap, where the hero is off frame, so the fast part is never seen
+and the slow part is the whole readable pass. Roughly 49px/frame on the way in,
+0 for about 1.3 seconds at centre, 13px/frame through the readable zone.
 
-```
-typed = clamp01((1 - prog - HERO_TYPE_START) / HERO_TYPE_SPAN)
-```
+The position curve is the integral of that velocity, normalised so a crossing
+still advances exactly 1 — the stop redistributes time *within* a crossing
+without adding or removing any, which is what keeps the loop exact.
 
-so it loops for free. At frame 540 the fragment is back at its frame-0 crossing
-position and therefore shows its frame-0 characters. The caret blink is on a
-36-frame period, and 540 / 36 = 15. The two heroes are phase-offset by half the
-loop and each crosses twice, so the writing plays four times over the nine
-seconds and one hero is always the one being written.
+**The typing** is keyed to the crossing clock rather than to the hero's
+position, so the writing carries on at its steady rate straight through the stop
+instead of freezing with it. It is timed to finish just as the hero settles.
 
-### The seamless loop
-
-Each element's travel distance is chosen so that
-`travel * cycles === speed * 540` exactly, with `cycles` a whole number. At frame
-540 every element has completed an integer number of wraps and is back on its
-frame-0 position. The camera drift is two sines with periods of 540 and 270
-frames, and the grain is indexed by `frame % 540`. `npm run verify-loop` renders
-both frames as lossless PNGs and compares their hashes.
+Both are functions of the crossing rather than of a wall clock, so they loop for
+free: at frame 540 a hero is back at its frame-0 crossing position and therefore
+at its frame-0 characters. The caret blink is on a 36-frame period, and
+540 / 36 = 15. The two heroes cross once each per loop, half a loop apart, so
+they take turns being the one that stops.
 
 ### Determinism
 
