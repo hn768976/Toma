@@ -46,6 +46,15 @@ Three stacked canvases:
    composited with `lighter` for the persistent chromatic aberration.
 3. **`FinishLayer`** — vignette, scanlines, grain.
 
+The flare is composed into its own full-frame buffer so a soft radial keep-out
+can be cut from the middle of it before compositing. It sweeps the lower-left
+and dissipates before reaching the glyph, and it no longer feeds the glyph's
+bloom — no flare light lands on the lock or the shield.
+
+On glitch frames the composited glyph is blitted back in horizontal bands with
+some of them displaced sideways, and tinted copies of the outline mask are
+dragged out behind the displaced bands to pull the colour fringes apart.
+
 `LockGlyph` composites up to three masks: the part that carries the bloom (the
 padlock's solid body, the shield's outline), an optional flat interior drawn
 once at low alpha, and optional detail tinted in the arc colour rather than

@@ -319,6 +319,8 @@ type Band = {
   colour: 'arc' | 'accent';
   alpha: number;
   glow: number;
+  /** Rounded ends by default; the solid blocks are squared off. */
+  cap?: CanvasLineCap;
   /**
    * Fine crosshatch inside the arc fill. Applied to every segment in the band:
    * segments must stay identical, or a whole-period rotation would land a
@@ -329,13 +331,13 @@ type Band = {
 
 const BANDS: Band[] = [
   // 1 — three thick sand blocks, the visual anchor. One symmetry period per loop.
-  {id: 'anchor', radius: 0.3, thickness: 104, segments: 3, sweep: 88, turns: 1 / 3, phase: 18, colour: 'arc', alpha: 0.95, glow: 70},
+  {id: 'anchor', radius: 0.3, thickness: 104, segments: 3, sweep: 97, turns: 1 / 3, phase: 18, colour: 'arc', alpha: 0.95, glow: 70, cap: 'butt'},
   // 2 — thin accent, ~200° broken once.
   {id: 'accent-in', radius: 0.365, thickness: 11, segments: 2, sweep: 100, turns: -0.5, phase: 62, colour: 'accent', alpha: 0.9, glow: 34},
   // 3 — thick sand, crosshatched, faster than band 1 so gaps never align.
-  {id: 'anchor-out', radius: 0.45, thickness: 112, segments: 3, sweep: 76, turns: 2 / 3, phase: 47, colour: 'arc', alpha: 0.88, glow: 74, gridTexture: true},
+  {id: 'anchor-out', radius: 0.45, thickness: 112, segments: 3, sweep: 82, turns: 2 / 3, phase: 47, colour: 'arc', alpha: 0.88, glow: 74, cap: 'butt', gridTexture: true},
   // 4 — narrower sand blocks, counter-rotating.
-  {id: 'combs', radius: 0.525, thickness: 54, segments: 6, sweep: 29, turns: -1 / 3, phase: 11, colour: 'arc', alpha: 0.6, glow: 40},
+  {id: 'combs', radius: 0.525, thickness: 54, segments: 6, sweep: 32, turns: -1 / 3, phase: 11, colour: 'arc', alpha: 0.6, glow: 40, cap: 'butt'},
   // 5 — thin accent, several short segments.
   {id: 'accent-out', radius: 0.555, thickness: 9, segments: 5, sweep: 18, turns: 0.4, phase: 33, colour: 'accent', alpha: 0.8, glow: 30},
   // 6 — long sparse sand, low opacity, a full turn.
@@ -412,8 +414,9 @@ const drawRing = (ctx: CanvasRenderingContext2D, t: Theme, frame: number, grade:
       const a1 = a0 + band.sweep * RAD;
       const alpha = Math.min(1, band.alpha * grade);
 
-      // Soft outer bloom pass, then the solid stroke.
-      ctx.lineCap = 'round';
+      // Soft outer bloom pass, then the solid stroke. Sweeps for the squared
+      // bands already account for the arc length a round cap would have added.
+      ctx.lineCap = band.cap ?? 'round';
       ctx.strokeStyle = rgba(colour, alpha * 0.5);
       ctx.lineWidth = band.thickness;
       ctx.shadowColor = rgba(colour, alpha);
@@ -471,15 +474,24 @@ const flareHead = (frame: number) => {
   const t = clamp01((frame - FLARE_IN) / (FLARE_OUT - FLARE_IN));
   const eased = t * t * (3 - 2 * t);
   return {
-    x: lerp(0.06 * W, 0.44 * W, eased),
-    y: lerp(1.02 * H, 0.52 * H, eased),
+    x: lerp(0.06 * W, 0.3 * W, eased),
+    y: lerp(1.02 * H, 0.66 * H, eased),
   };
 };
 
-const drawFlare = (ctx: CanvasRenderingContext2D, t: Theme, frame: number, scale: number) => {
+/**
+ * Radius inside which no flare light survives, and the radius by which it is
+ * back to full strength. The glyph sits in the middle of the frame, so the
+ * flare is cut away there rather than being allowed to wash over the lock.
+ */
+const FLARE_KEEPOUT_IN = 0.19 * H;
+const FLARE_KEEPOUT_OUT = 0.34 * H;
+
+const renderFlare = (ctx: CanvasRenderingContext2D, t: Theme, frame: number) => {
   const env = flareEnvelope(frame);
   if (env <= 0) return;
   const head = flareHead(frame);
+  const scale = 1;
 
   // Travel direction, so the tail can be jittered across the path rather than
   // along it — a straight-sided cone is what makes a flare read as an object.
@@ -540,6 +552,18 @@ const drawFlare = (ctx: CanvasRenderingContext2D, t: Theme, frame: number, scale
   // Hot core.
   puff(head.x, head.y, 900, env * scale * 0.26);
   ctx.restore();
+
+  // Cut the glyph's territory out of the flare entirely.
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  const hole = ctx.createRadialGradient(CX, CY, FLARE_KEEPOUT_IN, CX, CY, FLARE_KEEPOUT_OUT);
+  hole.addColorStop(0, rgba(t.lockWhite, 1));
+  hole.addColorStop(1, rgba(t.lockWhite, 0));
+  ctx.fillStyle = hole;
+  ctx.beginPath();
+  ctx.arc(CX, CY, FLARE_KEEPOUT_OUT, 0, TAU);
+  ctx.fill();
+  ctx.restore();
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -550,6 +574,15 @@ const BackgroundLayer: React.FC<{theme: Theme; variant: Variant; frame: number}>
   const ref = useRef<HTMLCanvasElement>(null);
   const field = useMemo(() => buildField(), []);
   const grade = GRADE[variant];
+
+  // The flare is composed once into its own buffer so the glyph keep-out can
+  // be cut from it, then blitted twice — under the ring and over it.
+  const flareBuf = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    return c;
+  }, []);
 
   useLayoutEffect(() => {
     const canvas = ref.current;
@@ -564,18 +597,39 @@ const BackgroundLayer: React.FC<{theme: Theme; variant: Variant; frame: number}>
     ctx.shadowBlur = 0;
     ctx.clearRect(0, 0, W, H);
 
+    const flareCtx = flareBuf.getContext('2d');
+    const hasFlare = flareEnvelope(frame) > 0;
+    if (flareCtx && hasFlare) {
+      flareCtx.setTransform(1, 0, 0, 1, 0, 0);
+      flareCtx.globalCompositeOperation = 'source-over';
+      flareCtx.globalAlpha = 1;
+      flareCtx.filter = 'none';
+      flareCtx.clearRect(0, 0, W, H);
+      renderFlare(flareCtx, theme, frame);
+    }
+
+    const blitFlare = (alpha: number) => {
+      if (!hasFlare) return;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha;
+      ctx.filter = 'none';
+      ctx.drawImage(flareBuf, 0, 0);
+      ctx.restore();
+    };
+
     drawBackdrop(ctx, theme);
     drawGrid(ctx, theme, grade.field);
     drawField(ctx, theme, field, frame, grade.field, false);
-    drawFlare(ctx, theme, frame, 0.4); // soft under-glow beneath the ring
+    blitFlare(0.4); // soft under-glow beneath the ring
     drawRing(ctx, theme, frame, grade.arc);
     drawField(ctx, theme, field, frame, grade.field, true);
-    drawFlare(ctx, theme, frame, 1); // main mass, brightens the arcs it crosses
+    blitFlare(1); // main mass, brightens the arcs it crosses
 
     ctx.filter = 'none';
     ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
-  }, [theme, frame, field, grade]);
+  }, [theme, frame, field, grade, flareBuf]);
 
   return <canvas ref={ref} width={W} height={H} style={{width: '100%', height: '100%', display: 'block'}} />;
 };
@@ -772,13 +826,44 @@ const stampVoids = (ctx: CanvasRenderingContext2D, variant: Variant, size: numbe
   if (variant === 'navy') stampPadlockVoids(ctx, size);
 };
 
+/* ══════════════════════════════════════════════════════════════════════════
+   GLITCH / RGB TEAR
+   Short scheduled bursts that slice the composited glyph into horizontal
+   bands, shove some of them sideways, and drag the colour fringes out behind
+   them. Every window sits well inside the loop, so frames 0 and 960 are both
+   perfectly clean and the effect never straddles the seam.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const GLITCH_EVENTS = [
+  {start: 138, length: 9},
+  {start: 352, length: 7},
+  {start: 561, length: 11},
+  {start: 812, length: 8},
+];
+
+const GLITCH_SLICES = 22;
+const GLITCH_MAX_SHIFT = 90; // px at 4K
+const GLITCH_TEAR = 42; // extra separation on the colour ghosts
+
+/** 0 when clean; otherwise how hard this frame is torn. */
+const glitchAmount = (frame: number) => {
+  for (const e of GLITCH_EVENTS) {
+    if (frame >= e.start && frame < e.start + e.length) {
+      // Stutter rather than ramp — a glitch that eases in reads as a dissolve.
+      return 0.35 + 0.65 * random(`glitch-amp-${frame}`);
+    }
+  }
+  return 0;
+};
+
 export const LockGlyph: React.FC<{
   variant: Variant;
   theme: Theme;
   size: number;
   bloom: number;
   aberration: number;
-}> = ({variant, theme, size, bloom, aberration}) => {
+  frame: number;
+}> = ({variant, theme, size, bloom, aberration, frame}) => {
   const ref = useRef<HTMLCanvasElement>(null);
   const box = glyphBox(variant, size);
   const pad = 540;
@@ -793,7 +878,7 @@ export const LockGlyph: React.FC<{
       c.height = ch;
       return c;
     };
-    return {glow: make(), accent: make(), fill: make(), tint: make()};
+    return {glow: make(), accent: make(), fill: make(), tint: make(), composed: make()};
   }, [cw, ch]);
 
   useLayoutEffect(() => {
@@ -804,7 +889,8 @@ export const LockGlyph: React.FC<{
     const accentCtx = buffers.accent.getContext('2d');
     const fillCtx = buffers.fill.getContext('2d');
     const tintCtx = buffers.tint.getContext('2d');
-    if (!ctx || !glowCtx || !accentCtx || !fillCtx || !tintCtx) return;
+    const outCtx = buffers.composed.getContext('2d');
+    if (!ctx || !glowCtx || !accentCtx || !fillCtx || !tintCtx || !outCtx) return;
 
     // 1. Alpha masks: what blooms, and what stays flat.
     const buildMask = (
@@ -826,11 +912,11 @@ export const LockGlyph: React.FC<{
     if (HAS_ACCENT[variant]) buildMask(accentCtx, (c) => stampGlyphAccent(c, variant, size));
     if (HAS_FILL[variant]) buildMask(fillCtx, (c) => stampGlyphFill(c, variant, size));
 
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.clearRect(0, 0, cw, ch);
+    outCtx.setTransform(1, 0, 0, 1, 0, 0);
+    outCtx.globalCompositeOperation = 'source-over';
+    outCtx.globalAlpha = 1;
+    outCtx.shadowBlur = 0;
+    outCtx.clearRect(0, 0, cw, ch);
 
     // 2. Three offset copies composited additively — the RGB fringe. The two
     //    fringes carry their own colour; the centred pass takes the layer's.
@@ -894,34 +980,87 @@ export const LockGlyph: React.FC<{
       tintCtx.fillRect(0, 0, cw, ch);
     };
 
-    ctx.globalCompositeOperation = 'lighter';
+    outCtx.globalCompositeOperation = 'lighter';
     for (const layer of layers) {
       for (const pass of passes) {
         const colour = pass.tint ?? layer.base;
         tintFrom(layer.mask, colour);
         const passAlpha = pass.tint === null ? pass.alpha : pass.alpha * layer.fringe;
         for (const h of layer.halo) {
-          ctx.globalAlpha = passAlpha * h.alpha * layer.scale;
-          ctx.shadowColor = rgba(colour, 1);
-          ctx.shadowBlur = h.blur;
-          ctx.drawImage(buffers.tint, pass.dx, pass.dy);
+          outCtx.globalAlpha = passAlpha * h.alpha * layer.scale;
+          outCtx.shadowColor = rgba(colour, 1);
+          outCtx.shadowBlur = h.blur;
+          outCtx.drawImage(buffers.tint, pass.dx, pass.dy);
         }
       }
     }
 
     // Re-cut the negative space the bloom closed up.
-    ctx.globalAlpha = 0.88;
-    ctx.shadowBlur = 0;
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.save();
-    ctx.translate(cw / 2, pad);
-    ctx.fillStyle = theme.lockWhite;
-    stampVoids(ctx, variant, size);
-    ctx.restore();
+    outCtx.globalAlpha = 0.88;
+    outCtx.shadowBlur = 0;
+    outCtx.globalCompositeOperation = 'destination-out';
+    outCtx.save();
+    outCtx.translate(cw / 2, pad);
+    outCtx.fillStyle = theme.lockWhite;
+    stampVoids(outCtx, variant, size);
+    outCtx.restore();
+    outCtx.globalAlpha = 1;
+    outCtx.globalCompositeOperation = 'source-over';
 
+    // 3. Blit to the visible canvas, tearing it apart on glitch frames.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.clearRect(0, 0, cw, ch);
+
+    const tear = glitchAmount(frame);
+    if (tear <= 0) {
+      ctx.drawImage(buffers.composed, 0, 0);
+      return;
+    }
+
+    const bandH = ch / GLITCH_SLICES;
+    const shifts: number[] = [];
+    for (let i = 0; i < GLITCH_SLICES; i += 1) {
+      const picked = random(`glitch-pick-${frame}-${i}`) < 0.45;
+      shifts.push(
+        picked ? (random(`glitch-shift-${frame}-${i}`) - 0.5) * 2 * GLITCH_MAX_SHIFT * tear : 0,
+      );
+    }
+
+    for (let i = 0; i < GLITCH_SLICES; i += 1) {
+      const y = i * bandH;
+      ctx.drawImage(buffers.composed, 0, y, cw, bandH, shifts[i], y, cw, bandH);
+    }
+
+    // Drag the colour fringes out behind the displaced bands.
+    ctx.globalCompositeOperation = 'lighter';
+    for (const [colour, dir] of [
+      [theme.fringeWarm, -1],
+      [theme.fringeCool, 1],
+    ] as [string, number][]) {
+      tintFrom(buffers.glow, colour);
+      for (let i = 0; i < GLITCH_SLICES; i += 1) {
+        if (shifts[i] === 0) continue;
+        const y = i * bandH;
+        ctx.globalAlpha = 0.5 * tear;
+        ctx.drawImage(
+          buffers.tint,
+          0,
+          y,
+          cw,
+          bandH,
+          shifts[i] + dir * GLITCH_TEAR * tear,
+          y,
+          cw,
+          bandH,
+        );
+      }
+    }
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
-  }, [variant, theme, size, bloom, aberration, buffers, cw, ch, pad]);
+  }, [variant, theme, size, bloom, aberration, buffers, cw, ch, pad, frame]);
 
   return (
     <canvas
@@ -1059,10 +1198,9 @@ export const SecureLock: React.FC<SecureLockProps> = ({variant}) => {
 
   // Slow pulse: 4 whole cycles across the loop.
   const pulse = Math.sin((TAU * frame) / PULSE_PERIOD);
-  const flare = flareEnvelope(frame);
 
-  const bloom = (1 + 0.15 * pulse + 0.35 * flare) * grade.lock;
-  const aberration = 9 * (1 + 0.15 * pulse + 0.2 * flare);
+  const bloom = (1 + 0.15 * pulse) * grade.lock;
+  const aberration = 9 * (1 + 0.15 * pulse);
 
   return (
     <AbsoluteFill style={{backgroundColor: theme.bgDeep}}>
@@ -1073,6 +1211,7 @@ export const SecureLock: React.FC<SecureLockProps> = ({variant}) => {
         size={LOCK_HEIGHT[variant]}
         bloom={bloom}
         aberration={aberration}
+        frame={frame}
       />
       <FinishLayer theme={theme} variant={variant} frame={frame} />
     </AbsoluteFill>
