@@ -93,10 +93,7 @@ const drawBand = (
   // One sequence of travel per loop: at frame 1200 the band has advanced
   // exactly cols * PITCH board px and is pixel-identical to frame 0.
   const travel = cols * PITCH;
-  const offset = mod(
-    -band.dir * frame * (travel / DURATION_IN_FRAMES),
-    travel,
-  );
+  const offset = mod(-band.dir * frame * (travel / DURATION_IN_FRAMES), travel);
   // Scrolling is smooth, so the lattice phase drifts with it. Shifting the
   // band's unlit grid by the same phase keeps lit and unlit emitters on one
   // lattice; a uniform dot grid is periodic, so the shift itself is invisible.
@@ -189,8 +186,7 @@ export const drawFrame = (
 
   // Very slow whole-board brightness breathe; period divides the loop.
   const breathe =
-    1 +
-    BREATHE_AMOUNT * Math.sin((2 * Math.PI * loopFrame) / BREATHE_PERIOD);
+    1 + BREATHE_AMOUNT * Math.sin((2 * Math.PI * loopFrame) / BREATHE_PERIOD);
 
   for (const bucket of [BUCKET_SHARP, BUCKET_MID, BUCKET_FAR]) {
     const bctx = buffers.buckets[bucket].getContext(

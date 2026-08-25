@@ -11,6 +11,7 @@
 // sequence tiles, so scrolling is just an offset into the cached lattice.
 
 import {
+  BANDS,
   FONT_FAMILY,
   FONT_PX,
   GLYPH_ROWS,
@@ -23,7 +24,6 @@ import {
   TEXT_ROWS,
   WHITE,
 } from "./constants";
-import { BANDS } from "./constants";
 import { buildBandContent, Entry } from "./content";
 import { makeCanvas } from "./sprites";
 
@@ -40,7 +40,8 @@ const LIT_THRESHOLD = 128;
 const hexOf = (color: number) =>
   color === LIT_GREEN ? GREEN : color === LIT_RED ? RED : WHITE;
 
-const font = () => `700 ${FONT_PX}px "${FONT_FAMILY}", "Liberation Sans", sans-serif`;
+const font = () =>
+  `700 ${FONT_PX}px "${FONT_FAMILY}", "Liberation Sans", sans-serif`;
 
 const measureWith = (ctx: CanvasRenderingContext2D) => (e: Entry) =>
   e.kind === "tri" ? TRI_W : ctx.measureText(e.text).width;
@@ -122,11 +123,7 @@ export const getBandLeds = (index: number): BandLeds => {
       const red = data[o];
       const green = data[o + 1];
       map[r * cols + c] =
-        green > red * 1.3
-          ? LIT_GREEN
-          : red > green * 1.3
-            ? LIT_RED
-            : LIT_WHITE;
+        green > red * 1.3 ? LIT_GREEN : red > green * 1.3 ? LIT_RED : LIT_WHITE;
     }
   }
 

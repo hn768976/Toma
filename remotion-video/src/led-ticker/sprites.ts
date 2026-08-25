@@ -100,10 +100,7 @@ export const getRuleSprite = () => {
 // A CanvasPattern belongs to the context that created it, and there is one
 // context per depth-of-field bucket, so they are cached per context.
 let darkTile: HTMLCanvasElement | null = null;
-const darkPatterns = new WeakMap<
-  CanvasRenderingContext2D,
-  CanvasPattern
->();
+const darkPatterns = new WeakMap<CanvasRenderingContext2D, CanvasPattern>();
 
 const SS_GRID = 3; // supersample so the dots survive the board scale-up
 
@@ -191,7 +188,12 @@ export const getFocusMask = () => {
     const c = makeCanvas(w, h);
     const ctx = ctxOf(c);
 
-    const lin = ctx.createLinearGradient(0.04 * w, 0.34 * h, 1.12 * w, 0.78 * h);
+    const lin = ctx.createLinearGradient(
+      0.04 * w,
+      0.34 * h,
+      1.12 * w,
+      0.78 * h,
+    );
     lin.addColorStop(0, "rgba(255,255,255,0)");
     lin.addColorStop(0.42, "rgba(255,255,255,0.12)");
     lin.addColorStop(0.75, "rgba(255,255,255,0.55)");

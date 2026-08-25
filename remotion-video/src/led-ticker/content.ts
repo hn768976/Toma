@@ -41,7 +41,11 @@ const makeEntry = (band: number, i: number, up: boolean): Entry => {
 
   switch (kind) {
     case "change":
-      return { kind: "text", text: `${sign} ${(0.05 + v * 5).toFixed(2)}`, color };
+      return {
+        kind: "text",
+        text: `${sign} ${(0.05 + v * 5).toFixed(2)}`,
+        color,
+      };
     case "percent":
       return {
         kind: "text",
