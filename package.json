@@ -1,0 +1,25 @@
+{
+  "name": "toma-secure-lock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K cybersecurity padlock animations built with Remotion",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion bundle",
+    "render:navy": "remotion render SecureLockNavy out/secure-lock-navy.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "render:green": "remotion render SecureLockGreen out/secure-lock-green.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.410",
+    "@remotion/google-fonts": "4.0.410",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.410"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
