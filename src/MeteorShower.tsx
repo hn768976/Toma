@@ -158,9 +158,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_CY * NEB_SCALE,
       NEB_R * NEB_SCALE
     );
-    g.addColorStop(0, rgba(AMBER, 0.034));
-    g.addColorStop(0.65, rgba(AMBER, 0.032));
-    g.addColorStop(0.93, rgba(AMBER, 0.025));
+    g.addColorStop(0, rgba(AMBER, 0.042));
+    g.addColorStop(0.65, rgba(AMBER, 0.04));
+    g.addColorStop(0.93, rgba(AMBER, 0.032));
     g.addColorStop(1, rgba(AMBER, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -293,7 +293,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, 'rgba(0,0,0,0.4)');
+    g.addColorStop(0, 'rgba(0,0,0,0.22)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -309,8 +309,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     const sh = ctx.createLinearGradient(0, hh, hw * 0.85, hh * 0.1);
-    sh.addColorStop(0, 'rgba(0,0,0,0.5)');
-    sh.addColorStop(0.45, 'rgba(0,0,0,0.22)');
+    sh.addColorStop(0, 'rgba(0,0,0,0.68)');
+    sh.addColorStop(0.4, 'rgba(0,0,0,0.32)');
     sh.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = sh;
     ctx.fillRect(0, 0, hw, hh);
