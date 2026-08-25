@@ -26,10 +26,13 @@ import {
   blurAt,
   buildBokeh,
   buildChrome,
+  buildDigits,
   buildLadder,
   depthWeights,
+  GRID_Y,
   type Blob,
   type Cell,
+  type Digit,
   type Readout,
 } from "./layout";
 import {
@@ -112,6 +115,7 @@ export type Model = {
   ladder: Cell[];
   bokeh: Blob[];
   chrome: Readout[];
+  digits: Digit[];
   flashes: ReturnType<typeof buildFlashes>;
 };
 
@@ -193,6 +197,7 @@ export const buildModel = (): Model => ({
   ladder: buildLadder(),
   bokeh: buildBokeh(),
   chrome: buildChrome(),
+  digits: buildDigits(),
   flashes: buildFlashes(),
 });
 
@@ -229,8 +234,9 @@ export const paint = (
     l.ctx.lineCap = "butt";
     l.ctx.lineJoin = "miter";
   }
-  drawGrid(layers, lum);
-  drawCandles(layers, m.series, f, lum);
+  const pm = priceMap(m.series, f);
+  drawGrid(layers, lum, pm);
+  drawCandles(layers, m.series, f, lum, pm);
   for (const l of layers) l.ctx.restore();
 
   for (const l of layers) {
@@ -239,6 +245,7 @@ export const paint = (
   }
   drawBokeh(layers, m.bokeh, lum);
   drawLadder(layers, m.ladder, m.flashes, f, lum);
+  drawDigits(layers, m.digits, lum);
   drawChrome(layers, m.chrome, lum);
   for (const l of layers) l.ctx.restore();
 
@@ -281,9 +288,9 @@ const drawPanelWash = (ctx: CanvasRenderingContext2D, lum: number) => {
   const [a, b, c, d, e, f] = BOARD_MATRIX;
   ctx.setTransform(a, b, c, d, e, f);
   const g = ctx.createLinearGradient(CHART_L, 0, CHART_R, 0);
-  g.addColorStop(0, tint("#06101C", lum, 1));
-  g.addColorStop(0.74, tint("#06101C", lum, 0.85));
-  g.addColorStop(1, tint("#06101C", lum, 0));
+  g.addColorStop(0, tint("#050C16", lum, 1));
+  g.addColorStop(0.74, tint("#050C16", lum, 0.85));
+  g.addColorStop(1, tint("#050C16", lum, 0));
   ctx.fillStyle = g;
   ctx.fillRect(CHART_L, CHART_T, CHART_R - CHART_L, CHART_B - CHART_T);
   ctx.restore();
@@ -294,7 +301,7 @@ const drawPanelWash = (ctx: CanvasRenderingContext2D, lum: number) => {
  * in segments so each one picks up the depth of the region it crosses,
  * instead of the whole line snapping into one focus bucket.
  */
-const drawGrid = (layers: Layer[], lum: number) => {
+const drawGrid = (layers: Layer[], lum: number, pm: PriceMap) => {
   const SEGS = 12;
   const segW = (CHART_R - CHART_L) / SEGS;
 
@@ -318,16 +325,28 @@ const drawGrid = (layers: Layer[], lum: number) => {
     }
   };
 
-  for (let i = 0; i <= 8; i++) {
-    line(
-      PRICE_T - 80 + ((PRICE_B + 260 - (PRICE_T - 80)) * i) / 8,
-      COL.grid,
-      2.5,
-      [],
-    );
-  }
+  for (const y of GRID_Y) line(y, COL.grid, 2.5, []);
   line(PRICE_B - (PRICE_B - PRICE_T) * 0.28, COL.dashed, 4, [30, 26]);
   line(PRICE_B - (PRICE_B - PRICE_T) * 0.06, COL.dashed, 4, [30, 26]);
+
+  // Price scale down the right of the panel, in the empty margin the candles
+  // scroll towards. It is well into the falloff and never legible, but a
+  // column of number-shaped marks is what makes that space read as part of a
+  // screen rather than as blank canvas. The values track the axis, so they
+  // drift as the walk does.
+  const axisX = CHART_R - 250;
+  for (const y of GRID_Y) {
+    const w = depthWeights(blurAt(axisX, y));
+    const text = pm.priceAt(y).toFixed(1);
+    for (let li = 0; li < 3; li++) {
+      if (w[li] < 0.012) continue;
+      const c = layers[li].ctx;
+      c.font = `44px ${MONO}`;
+      c.textBaseline = "middle";
+      c.fillStyle = tint(COL.digits, lum * 1.05, w[li] * 0.34);
+      c.fillText(text, axisX, y);
+    }
+  }
 };
 
 // ── Candles ────────────────────────────────────────────────────────────────
@@ -338,13 +357,18 @@ const CANDLE_GLOW: ReadonlyArray<readonly [number, number]> = [
   [3.2, 0.16],
 ];
 
-const drawCandles = (
-  layers: Layer[],
-  series: Series,
-  frame: number,
-  lum: number,
-) => {
-  const { candles, windowMean, min, max } = series;
+type PriceMap = {
+  yOf: (price: number) => number;
+  priceAt: (y: number) => number;
+};
+
+/**
+ * Price <-> board-y for this frame. The axis rides a rolling mean of the
+ * closes, so the grid, its labels and the candles all have to share one
+ * mapping or they drift apart.
+ */
+const priceMap = (series: Series, frame: number): PriceMap => {
+  const { windowMean, min, max } = series;
   const midPrice = (min + max) / 2;
   const midY = (PRICE_T + PRICE_B) / 2;
   const pxPerPrice = ((PRICE_B - PRICE_T) / (max - min)) * PRICE_ZOOM;
@@ -358,7 +382,22 @@ const drawCandles = (
     windowMean[gi % N_CANDLES] * (1 - gf) +
     windowMean[(gi + 1) % N_CANDLES] * gf;
   const pivot = midPrice + (wm - midPrice) * PRICE_FOLLOW;
-  const yOf = (p: number) => midY - (p - pivot) * pxPerPrice;
+  return {
+    yOf: (p) => midY - (p - pivot) * pxPerPrice,
+    priceAt: (y) => pivot + (midY - y) / pxPerPrice,
+  };
+};
+
+const drawCandles = (
+  layers: Layer[],
+  series: Series,
+  frame: number,
+  lum: number,
+  pm: PriceMap,
+) => {
+  const { candles } = series;
+  const { yOf } = pm;
+  const g = frame / FRAMES_PER_CANDLE;
   const lead = leadCandle(frame);
   const half = BODY_W / 2;
 
@@ -491,7 +530,7 @@ const drawLadder = (
       const c = layers[li].ctx;
       // The blurred layers lose a lot of peak brightness to the blur itself,
       // so they are boosted hard before it is applied.
-      const boost = li === 0 ? 1 : li === 1 ? 1.5 : 2.2;
+      const boost = li === 0 ? 1 : li === 1 ? 1.6 : 2.6;
       c.globalCompositeOperation = "lighter";
       glow(
         c,
@@ -538,6 +577,23 @@ const drawBokeh = (layers: Layer[], blobs: Blob[], lum: number) => {
   }
 };
 
+const MONO = '"DejaVu Sans Mono", "Liberation Mono", monospace';
+
+/**
+ * The price column beside the ladder. Drawn into the far buffer, so it comes
+ * out as a chain of soft number-shaped smudges — which is exactly how it
+ * reads in the reference.
+ */
+const drawDigits = (layers: Layer[], digits: Digit[], lum: number) => {
+  const c = layers[2].ctx;
+  c.textBaseline = "middle";
+  for (const d of digits) {
+    c.font = `${d.size}px ${MONO}`;
+    c.fillStyle = tint(COL.digits, lum * 1.25, 0.62);
+    c.fillText(d.text, d.x, d.y);
+  }
+};
+
 /** Terminal chrome along the top edge: cropped, blurred, never legible. */
 const drawChrome = (layers: Layer[], readouts: Readout[], lum: number) => {
   layers[2].ctx.fillStyle = tint("#0D1620", lum, 0.85);
@@ -547,7 +603,7 @@ const drawChrome = (layers: Layer[], readouts: Readout[], lum: number) => {
   const c = layers[1].ctx;
   c.textBaseline = "middle";
   for (const r of readouts) {
-    c.font = `${r.size}px "DejaVu Sans Mono", "Liberation Mono", monospace`;
+    c.font = `${r.size}px ${MONO}`;
     c.fillStyle = tint(COL.chrome, lum * 1.35, 0.95);
     c.fillText(r.text, r.x, r.y);
   }

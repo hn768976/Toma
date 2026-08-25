@@ -1,9 +1,11 @@
 import { random } from "remotion";
 import {
+  boardAt,
   boardFromScreen,
   CELL_H,
   CELL_W,
   COL,
+  DIGITS_OFFSET,
   FALLOFF_LEFT,
   FALLOFF_RIGHT,
   FALLOFF_V,
@@ -13,6 +15,9 @@ import {
   LADDER_TOP_SCREEN,
   MAX_BLUR,
   N_CELLS,
+  N_DIGITS,
+  PRICE_B,
+  PRICE_T,
 } from "./config";
 import { smoothstep } from "./motion";
 
@@ -37,6 +42,14 @@ export const depthWeights = (blur: number): [number, number, number] => {
   return [1 - far - mid, mid, far];
 };
 
+// ── Chart furniture ────────────────────────────────────────────────────────
+
+/** Board y of each horizontal rule. The price axis labels ride these too. */
+export const GRID_Y: number[] = Array.from(
+  { length: 9 },
+  (_, i) => PRICE_T - 120 + ((PRICE_B + 320 - (PRICE_T - 120)) * i) / 8,
+);
+
 // ── Order-book ladder ──────────────────────────────────────────────────────
 
 export type Cell = {
@@ -51,26 +64,52 @@ export type Cell = {
 
 const [LBX, LBY] = boardFromScreen(...LADDER_BOTTOM_SCREEN);
 const [LTX, LTY] = boardFromScreen(...LADDER_TOP_SCREEN);
+const [DBX, DBY] = boardFromScreen(
+  LADDER_BOTTOM_SCREEN[0] + DIGITS_OFFSET,
+  LADDER_BOTTOM_SCREEN[1],
+);
+const [DTX, DTY] = boardFromScreen(
+  LADDER_TOP_SCREEN[0] + DIGITS_OFFSET,
+  LADDER_TOP_SCREEN[1],
+);
 
 export const buildLadder = (): Cell[] => {
   const cells: Cell[] = [];
   for (let i = 0; i < N_CELLS; i++) {
     const t = i / (N_CELLS - 1);
-    const x = LBX + (LTX - LBX) * t;
-    const y = LBY + (LTY - LBY) * t;
     const roll = random(`cell-hue-${i}`);
-    const color = roll < 0.11 ? COL.green : roll < 0.2 ? COL.red : COL.cell;
-    const w = CELL_W * (0.72 + random(`cell-w-${i}`) * 0.5);
     cells.push({
-      x,
-      y,
-      w,
+      x: LBX + (LTX - LBX) * t,
+      y: LBY + (LTY - LBY) * t,
+      w: CELL_W * (0.72 + random(`cell-w-${i}`) * 0.5),
       h: CELL_H,
-      color,
+      color: roll < 0.11 ? COL.green : roll < 0.2 ? COL.red : COL.cell,
       alpha: 0.72 + random(`cell-a-${i}`) * 0.28,
     });
   }
   return cells;
+};
+
+export type Digit = { x: number; y: number; text: string; size: number };
+
+/**
+ * The price column running alongside the cells. Blurred well past reading, but
+ * number-shaped, which is what stops that half of the frame reading as
+ * abstract blocks rather than as a terminal.
+ */
+export const buildDigits = (): Digit[] => {
+  const out: Digit[] = [];
+  for (let i = 0; i < N_DIGITS; i++) {
+    const t = i / (N_DIGITS - 1);
+    const v = 2986.8 - i * 0.4 + Math.round(random(`dig-j-${i}`) * 2 - 1) / 10;
+    out.push({
+      x: DBX + (DTX - DBX) * t,
+      y: DBY + (DTY - DBY) * t,
+      text: v.toFixed(1),
+      size: 54,
+    });
+  }
+  return out;
 };
 
 // ── Out-of-focus dressing on the right ─────────────────────────────────────
@@ -88,35 +127,49 @@ export type Blob = {
 
 /**
  * Loose clusters of colour past the ladder. These never resolve — they exist
- * only to fill the defocused right edge with soft bokeh.
+ * only to fill the defocused right edge with soft bokeh. All of it is placed
+ * against screen fractions, because board coordinates stop being legible once
+ * the board is tilted.
  */
 export const buildBokeh = (): Blob[] => {
   const out: Blob[] = [];
+  const push = (
+    fx: number,
+    fy: number,
+    w: number,
+    h: number,
+    color: string,
+    alpha: number,
+    glowOnly = false,
+  ) => {
+    const [x, y] = boardAt(fx, fy);
+    out.push({ x, y, w, h, color, alpha, glowOnly });
+  };
 
-  // A second, larger ladder running parallel to the first, further back.
-  for (let i = 0; i < 13; i++) {
-    const t = i / 12;
-    const x = LBX + (LTX - LBX) * t + 660;
-    const y = LBY + (LTY - LBY) * t + 40;
-    const roll = random(`bk2-hue-${i}`);
-    out.push({
-      x,
-      y,
-      w: 250 * (0.7 + random(`bk2-w-${i}`) * 0.7),
-      h: 92,
-      color: roll < 0.16 ? COL.green : roll < 0.32 ? COL.red : COL.cell,
-      alpha: 0.26 + random(`bk2-a-${i}`) * 0.3,
-    });
+  // The reference's top right corner is a whole defocused red panel — rows of
+  // blocks, bright enough to be the second thing the eye finds after the
+  // ladder. Scattered bokeh alone does not reproduce it.
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 2; c++) {
+      push(
+        0.82 + c * 0.11 + random(`rp-x-${r}-${c}`) * 0.035,
+        0.2 + r * 0.13 + random(`rp-y-${r}-${c}`) * 0.04,
+        230 + random(`rp-w-${r}-${c}`) * 150,
+        100 + random(`rp-h-${r}-${c}`) * 50,
+        COL.red,
+        0.13 + random(`rp-a-${r}-${c}`) * 0.15,
+      );
+    }
   }
 
-  // Scattered clusters at larger scale, out at the frame edge.
+  // Scattered clusters at larger scale, out at the frame edge. Red up top,
+  // warming to orange lower down, with green the exception.
   for (let c = 0; c < 8; c++) {
-    const cxp = 3400 + random(`bkc-x-${c}`) * 1100;
-    const cyp = -250 + random(`bkc-y-${c}`) * 2900;
+    const fx = 0.78 + random(`bkc-x-${c}`) * 0.26;
+    const fy = -0.08 + random(`bkc-y-${c}`) * 1.2;
     const hue = random(`bkc-hue-${c}`);
-    // Red up top, warming to orange lower down, with green the exception.
     const color =
-      cyp < 900
+      fy < 0.42
         ? hue < 0.82
           ? COL.red
           : COL.green
@@ -127,72 +180,64 @@ export const buildBokeh = (): Blob[] => {
             : COL.green;
     const n = 3 + Math.floor(random(`bkc-n-${c}`) * 4);
     for (let i = 0; i < n; i++) {
-      out.push({
-        x: cxp + (random(`bkb-x-${c}-${i}`) - 0.5) * 480,
-        y: cyp + (random(`bkb-y-${c}-${i}`) - 0.5) * 600,
-        w: 110 + random(`bkb-w-${c}-${i}`) * 240,
-        h: 60 + random(`bkb-h-${c}-${i}`) * 110,
+      push(
+        fx + (random(`bkb-x-${c}-${i}`) - 0.5) * 0.12,
+        fy + (random(`bkb-y-${c}-${i}`) - 0.5) * 0.26,
+        110 + random(`bkb-w-${c}-${i}`) * 240,
+        60 + random(`bkb-h-${c}-${i}`) * 110,
         color,
-        alpha: 0.18 + random(`bkb-a-${c}-${i}`) * 0.34,
-      });
+        0.12 + random(`bkb-a-${c}-${i}`) * 0.24,
+      );
     }
   }
 
-  // The highlighted order-book row: a long soft bar behind everything.
-  out.push({ x: 3200, y: 958, w: 1400, h: 78, color: "#9FB4CC", alpha: 0.26 });
-  out.push({ x: 3560, y: 1660, w: 820, h: 56, color: "#5C7086", alpha: 0.12 });
-
-  // The reference's top right corner is a whole defocused red panel — rows of
-  // blocks, bright enough to be the second thing the eye finds after the
-  // ladder. Scattered bokeh alone does not reproduce it.
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 3; c++) {
-      const jx = random(`rp-x-${r}-${c}`);
-      const jy = random(`rp-y-${r}-${c}`);
-      out.push({
-        x: 3320 + c * 430 + jx * 120,
-        y: 210 + r * 250 + jy * 90,
-        w: 250 + random(`rp-w-${r}-${c}`) * 170,
-        h: 110 + random(`rp-h-${r}-${c}`) * 60,
-        color: COL.red,
-        alpha: 0.3 + random(`rp-a-${r}-${c}`) * 0.3,
-      });
-    }
-  }
+  // The highlighted order-book rows: long soft bars behind everything.
+  push(0.88, 0.42, 1400, 78, "#9FB4CC", 0.28);
+  push(0.92, 0.66, 820, 56, "#5C7086", 0.12);
 
   // Ambient spill along the ladder. In the reference the bezel between the
-  // two chains is nowhere near black — it sits around a fifth of full — and
-  // that lift comes from light scattering off the panel, not from the cells
-  // themselves. Doing it with wider per-cell halos instead just fuses the
-  // chain into one stripe.
-  for (let i = 0; i < 10; i++) {
-    const t = i / 9;
-    out.push({
-      x: LBX + (LTX - LBX) * t + 300,
-      y: LBY + (LTY - LBY) * t,
-      w: 900,
-      h: 900,
-      color: "#93A8C0",
-      alpha: 0.075,
-      glowOnly: true,
-    });
+  // cells and the number column is nowhere near black — it sits around a fifth
+  // of full — and that lift comes from light scattering off the panel, not
+  // from the cells themselves. Doing it with wider per-cell halos instead just
+  // fuses the chain into one stripe.
+  for (let i = 0; i < 20; i++) {
+    const t = i / 19;
+    // A narrow band along the chain rather than a broad wash: in the
+    // reference the lift peaks just above frame centre and falls away hard at
+    // both ends, and wide blobs bleed it across the whole right half.
+    for (const [dx, dy, a, mid, sigma] of [
+      [300, 110, 0.17, 0.6, 0.32],
+      [820, 220, 0.13, 0.5, 0.26],
+    ] as const) {
+      const u = (t - mid) / sigma;
+      const taper = 0.06 + 0.94 * Math.exp(-u * u);
+      out.push({
+        x: LBX + (LTX - LBX) * t + dx,
+        y: LBY + (LTY - LBY) * t + dy,
+        w: 600,
+        h: 600,
+        color: "#8FA6C2",
+        alpha: a * taper,
+        glowOnly: true,
+      });
+    }
   }
 
   // Another panel running off the left edge of frame, far outside the focal
   // band. Pure halo, so it sits behind the chart no matter the draw order.
   for (let i = 0; i < 7; i++) {
     const top = i < 5;
-    out.push({
-      x: -230 + random(`le-x-${i}`) * 460,
-      y: top
-        ? -380 + random(`le-y-${i}`) * 620
-        : 1980 + random(`le-y-${i}`) * 520,
-      w: 260 + random(`le-w-${i}`) * 340,
-      h: 150 + random(`le-h-${i}`) * 260,
-      color: random(`le-hue-${i}`) < 0.72 ? COL.red : COL.green,
-      alpha: 0.07 + random(`le-a-${i}`) * 0.1,
-      glowOnly: true,
-    });
+    push(
+      -0.04 + random(`le-x-${i}`) * 0.12,
+      top
+        ? -0.1 + random(`le-y-${i}`) * 0.24
+        : 0.86 + random(`le-y-${i}`) * 0.2,
+      260 + random(`le-w-${i}`) * 340,
+      150 + random(`le-h-${i}`) * 260,
+      random(`le-hue-${i}`) < 0.72 ? COL.red : COL.green,
+      0.07 + random(`le-a-${i}`) * 0.1,
+      true,
+    );
   }
 
   return out;
@@ -203,19 +248,19 @@ export const buildBokeh = (): Blob[] => {
 export type Readout = { x: number; y: number; text: string; size: number };
 
 /**
- * The strip of tiny numbers along the very top. It sits mostly above the
- * frame and always lands in the far buffer, so it only ever suggests text.
+ * The strip of tiny numbers along the top. Its board row runs off the top of
+ * frame on the left and drops into view towards the middle, so it is mostly
+ * cropped — exactly as in the reference.
  */
 export const buildChrome = (): Readout[] => {
   const out: Readout[] = [];
-  const base = 2982;
   for (let i = 0; i < 9; i++) {
-    const v = base + Math.round(random(`chrome-v-${i}`) * 40 - 20) / 10;
+    const v = 2982 + Math.round(random(`chrome-v-${i}`) * 40 - 20) / 10;
     out.push({
-      x: 150 + i * 430 + random(`chrome-x-${i}`) * 60,
-      y: -46,
+      x: -200 + i * 400 + random(`chrome-x-${i}`) * 60,
+      y: 210,
       text: v.toFixed(1),
-      size: 34,
+      size: 40,
     });
   }
   return out;
