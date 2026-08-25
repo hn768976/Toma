@@ -25,14 +25,14 @@ const GRAIN_TILES = 8;
 
 // Palette
 const DEEP_SPACE = '#04060A';
-const AMBER: [number, number, number] = [107, 88, 56]; // #6B5838
-const RIM: [number, number, number] = [138, 116, 72]; // #8A7448
+const AMBER: [number, number, number] = [124, 99, 58]; // warm dusty brown
+const RIM: [number, number, number] = [150, 124, 76];
 const TEAL: [number, number, number] = [62, 138, 150]; // #3E8A96
 const TEAL_DEEP: [number, number, number] = [26, 74, 85]; // #1A4A55
 const STAR_WHITE: [number, number, number] = [232, 238, 245]; // #E8EEF5
 const STAR_WARM: [number, number, number] = [245, 231, 205];
 const STAR_BLUE: [number, number, number] = [201, 220, 250];
-const DUST_GREY: [number, number, number] = [86, 88, 76]; // ambient olive-grey dust
+const DUST_GREY: [number, number, number] = [96, 92, 74]; // ambient olive-grey dust
 const TEAL_BRIGHT: [number, number, number] = [128, 194, 205]; // edge-glow core
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       img.data[i * 4] = color[0];
       img.data[i * 4 + 1] = color[1];
       img.data[i * 4 + 2] = color[2];
-      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 3));
+      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 3.6));
     }
     nctx.putImageData(img, 0, 0);
     // Mask to the disc, fading out toward the rim.
@@ -220,9 +220,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     const octaves: [HTMLCanvasElement, number][] = [
-      [noiseOctave(`neb-noise-${li}-0`, 20, 12, AMBER), 0.1],
-      [noiseOctave(`neb-noise-${li}-1`, 64, 36, li === 0 ? AMBER : DUST_GREY), 0.085],
-      [noiseOctave(`neb-noise-${li}-2`, 192, 108, DUST_GREY), 0.065],
+      [noiseOctave(`neb-noise-${li}-0`, 16, 9, AMBER), 0.22],
+      [noiseOctave(`neb-noise-${li}-1`, 52, 30, AMBER), 0.17],
+      [noiseOctave(`neb-noise-${li}-2`, 160, 90, DUST_GREY), 0.1],
     ];
     for (const [oc, strength] of octaves) {
       ctx.save();
@@ -306,17 +306,17 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   }
 
   // Darker voids punched into the dust.
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 9; i++) {
     const {ctx} = layers[i % 2];
     const a = upAngle(random(`neb-void-${i}-a`));
-    const d = NEB_R * 0.7 * random(`neb-void-${i}-d`);
+    const d = NEB_R * 0.8 * random(`neb-void-${i}-d`);
     const x = (NEB_CX + Math.cos(a) * d) * NEB_SCALE;
     const y = (NEB_CY + Math.sin(a) * d) * NEB_SCALE;
     const r = NEB_R * (0.13 + 0.12 * random(`neb-void-${i}-r`)) * NEB_SCALE;
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, 'rgba(0,0,0,0.22)');
+    g.addColorStop(0, 'rgba(0,0,0,0.34)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -332,9 +332,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     const sh = ctx.createLinearGradient(0, hh * 0.85, hw * 0.75, hh * 0.2);
-    sh.addColorStop(0, 'rgba(0,0,0,0.9)');
-    sh.addColorStop(0.35, 'rgba(0,0,0,0.62)');
-    sh.addColorStop(0.7, 'rgba(0,0,0,0.26)');
+    sh.addColorStop(0, 'rgba(0,0,0,0.82)');
+    sh.addColorStop(0.35, 'rgba(0,0,0,0.5)');
+    sh.addColorStop(0.7, 'rgba(0,0,0,0.2)');
     sh.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = sh;
     ctx.fillRect(0, 0, hw, hh);
@@ -386,12 +386,12 @@ const buildTealLayer = (): HTMLCanvasElement => {
 
   // Off-screen light source past the right edge: a broad wash brightest at
   // the upper-right, with a bright cyan core hugging the edge itself.
-  glow(SW + 300, SH * 0.1, 3300, TEAL, 0.32);
-  glow(SW + 120, SH * 0.04, 1700, TEAL_BRIGHT, 0.24);
+  glow(SW + 300, SH * 0.1, 3300, TEAL, 0.46);
+  glow(SW + 120, SH * 0.04, 1700, TEAL_BRIGHT, 0.36);
   // A soft vertical band so the whole right edge reads lit.
   const band = ctx.createLinearGradient(hw, 0, hw - 720 * NEB_SCALE, 0);
-  band.addColorStop(0, rgba(TEAL, 0.18));
-  band.addColorStop(0.5, rgba(TEAL_DEEP, 0.08));
+  band.addColorStop(0, rgba(TEAL, 0.36));
+  band.addColorStop(0.5, rgba(TEAL_DEEP, 0.12));
   band.addColorStop(1, rgba(TEAL_DEEP, 0));
   ctx.fillStyle = band;
   ctx.fillRect(hw - 720 * NEB_SCALE, 0, 720 * NEB_SCALE, hh);
@@ -425,10 +425,10 @@ const buildStars = (): Star[] => {
     }
 
     const size = 1.5 + 3.5 * Math.pow(random(`${seed}-size`), 3);
-    let baseA = (0.18 + 0.24 * Math.pow(random(`${seed}-a`), 1.5)) * dim;
+    let baseA = (0.3 + 0.4 * Math.pow(random(`${seed}-a`), 1.4)) * dim;
     let sz = size;
-    if (random(`${seed}-bright`) < 0.055) {
-      baseA = (0.6 + 0.32 * random(`${seed}-ba`)) * dim;
+    if (random(`${seed}-bright`) < 0.08) {
+      baseA = (0.75 + 0.25 * random(`${seed}-ba`)) * dim;
       sz = Math.min(5, size + 1.4);
     }
 
@@ -441,7 +441,7 @@ const buildStars = (): Star[] => {
     stars.push({x, y, size: sz, color, baseA, amp, k, ph});
   };
 
-  for (let i = 0; i < 1250; i++) {
+  for (let i = 0; i < 2100; i++) {
     tryAdd(`star-${i}`, random(`star-${i}-x`) * SW, random(`star-${i}-y`) * SH);
   }
   // Extra density in the emptier upper-left.
