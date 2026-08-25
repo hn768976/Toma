@@ -1,6 +1,7 @@
 import * as C from './constants';
 import type {FieldElement} from './field';
 import {fontString, type Sprite} from './sprites';
+import type {Variant} from './variant';
 
 export interface Scratch {
   small: HTMLCanvasElement;
@@ -42,11 +43,11 @@ const heroEase = (u: number, dwell: number) => {
  * they can stop mid-frame; `phase` is 0 for them, which is what puts the stop
  * at frame centre.
  */
-const progressFor = (el: FieldElement, f: number) => {
+const progressFor = (el: FieldElement, f: number, v: Variant) => {
   if (el.kind !== 'hero') {
     return mod1(el.phase - (el.speed * f) / el.travel);
   }
-  const u = mod1(f / C.DURATION + el.timeOffset);
+  const u = mod1(f / v.durationInFrames + el.timeOffset);
   return {prog: mod1(el.phase - heroEase(u, el.dwell)), u};
 };
 
@@ -68,6 +69,7 @@ const drawHero = (
   f: number,
   u: number,
   fontFamily: string,
+  v: Variant,
 ) => {
   // Keyed on the crossing clock rather than on position, so the writing keeps
   // its steady rate straight through the stop instead of freezing with it.
@@ -120,9 +122,10 @@ const drawHero = (
   }
 
   // A blinking block caret while there is still text to write.
-  if (typed < 1 && caretX !== null && f % C.HERO_CARET_PERIOD < 22) {
+  const blink = mod1((f / v.durationInFrames) * v.caretBlinks) < 0.62;
+  if (typed < 1 && caretX !== null && blink) {
     g.globalAlpha = el.alpha * 0.5;
-    g.fillStyle = C.COLORS.codeWhite;
+    g.fillStyle = v.palette.codeBright;
     g.fillRect(caretX, caretY - el.fontPx * 0.42, el.fontPx * 0.58, el.fontPx * 0.86);
   }
 
@@ -134,9 +137,9 @@ const drawHero = (
  * Handheld camera: a small drift perpendicular to the diagonal. Both sine
  * terms have periods that divide 540, so the move closes on the loop.
  */
-export const cameraOffset = (f: number) =>
-  C.CAM_A * Math.sin((2 * Math.PI * f) / C.DURATION) +
-  C.CAM_B * Math.sin((4 * Math.PI * f) / C.DURATION + C.CAM_PHASE);
+export const cameraOffset = (f: number, v: Variant) =>
+  C.CAM_A * Math.sin((2 * Math.PI * f) / v.durationInFrames) +
+  C.CAM_B * Math.sin((4 * Math.PI * f) / v.durationInFrames + C.CAM_PHASE);
 
 /**
  * Two-stop bloom.
@@ -219,6 +222,7 @@ export interface DrawArgs {
   height: number;
   rand: (seed: string) => number;
   fontFamily: string;
+  variant: Variant;
 }
 
 /**
@@ -242,8 +246,10 @@ export const drawFrame = ({
   height,
   rand,
   fontFamily,
+  variant: v,
 }: DrawArgs) => {
-  const f = ((frame % C.DURATION) + C.DURATION) % C.DURATION;
+  const n = v.durationInFrames;
+  const f = ((frame % n) + n) % n;
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
@@ -252,10 +258,10 @@ export const drawFrame = ({
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'low';
 
-  ctx.fillStyle = C.COLORS.bg;
+  ctx.fillStyle = v.palette.bg;
   ctx.fillRect(0, 0, width, height);
 
-  const cam = cameraOffset(f);
+  const cam = cameraOffset(f, v);
   const sx = width / C.WIDTH;
   const sy = height / C.HEIGHT;
 
@@ -263,16 +269,16 @@ export const drawFrame = ({
     const el = field[idx] as FieldElement;
     const sp = sprites[idx] as Sprite;
 
-    const p = progressFor(el, f);
+    const p = progressFor(el, f, v);
     const prog = typeof p === 'number' ? p : p.prog;
     const along = (prog - 0.5) * el.travel;
     const perp = el.perp + cam;
 
-    const x = (C.CX + C.AX * along + C.PX * perp) * sx;
-    const y = (C.CY + C.AY * along + C.PY * perp) * sy;
+    const x = (C.CX + v.ax * along + v.px * perp) * sx;
+    const y = (C.CY + v.ay * along + v.py * perp) * sy;
 
     if (typeof p !== 'number') {
-      drawHero(ctx, el, x, y, el.scale * sx, f, p.u, fontFamily);
+      drawHero(ctx, el, x, y, el.scale * sx, f, p.u, fontFamily, v);
       continue;
     }
 

@@ -9,6 +9,7 @@ import {
 } from 'remotion';
 import * as C from './constants';
 import {FONT_FAMILY, loadMonoFont} from './font';
+import {VARIANTS, type VariantId} from './variant';
 import {buildField} from './field';
 import {buildGrainTiles, buildSprites, makeMeasure, makeScratch} from './sprites';
 import {drawFrame} from './draw';
@@ -24,7 +25,16 @@ const ensureFonts = async () => {
   fontsReady = true;
 };
 
-export const CodeFlythrough: React.FC = () => {
+/** A type alias, not an interface: Remotion's Composition needs props to be
+ *  assignable to Record<string, unknown>, and only aliases get an implicit
+ *  index signature. */
+export type CodeFlythroughProps = {
+  /** Which cut to draw. See `variant.ts`. */
+  variant: VariantId;
+};
+
+export const CodeFlythrough: React.FC<CodeFlythroughProps> = ({variant}) => {
+  const v = VARIANTS[variant];
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,13 +73,13 @@ export const CodeFlythrough: React.FC = () => {
 
   // ---- generated once, reused for all 540 frames -------------------------
   const field = useMemo(
-    () => (ready ? buildField(makeMeasure(FONT_FAMILY)) : null),
-    [ready],
+    () => (ready ? buildField(makeMeasure(FONT_FAMILY), v) : null),
+    [ready, v],
   );
 
   const sprites = useMemo(
-    () => (field ? buildSprites(field, FONT_FAMILY) : null),
-    [field],
+    () => (field ? buildSprites(field, FONT_FAMILY, v) : null),
+    [field, v],
   );
 
   /** Far to near, so close elements occlude distant ones. */
@@ -92,7 +102,7 @@ export const CodeFlythrough: React.FC = () => {
 
     if (!field || !sprites || !order || !grain) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.fillStyle = C.COLORS.bg;
+      ctx.fillStyle = v.palette.bg;
       ctx.fillRect(0, 0, width, height);
       return;
     }
@@ -110,6 +120,7 @@ export const CodeFlythrough: React.FC = () => {
       height,
       rand: random,
       fontFamily: FONT_FAMILY,
+      variant: v,
     });
 
     if (handleRef.current !== null) {
@@ -127,7 +138,7 @@ export const CodeFlythrough: React.FC = () => {
         width: '100%',
         height: '100%',
         display: 'block',
-        backgroundColor: C.COLORS.bg,
+        backgroundColor: v.palette.bg,
       }}
     />
   );

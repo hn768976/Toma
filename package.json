@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "remotion studio",
     "render": "remotion render CodeFlythrough out/code-flythrough.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "render:blue": "remotion render CodeFlythroughBlue out/code-flythrough-blue.mp4 --codec=h264 --crf=12 --concurrency=8",
     "still": "remotion still CodeFlythrough out/frame.png",
     "verify-loop": "node scripts/verify-loop.mjs",
     "typecheck": "tsc --noEmit"

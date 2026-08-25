@@ -1,16 +1,22 @@
 /**
- * Proves the 540-frame loop closes.
+ * Proves every cut's loop closes.
  *
- * Renders frame 0 and frame 540 of CodeFlythroughLoopCheck as lossless PNGs
- * and compares them byte for byte. Because every element's wrap cycle count is
- * a whole number over 540 frames, the camera sines have periods that divide
- * 540, and the grain is indexed by frame % 540, the two frames must be
- * identical.
+ * For each variant, renders frame 0 and frame N of its LoopCheck composition
+ * as lossless PNGs and compares them byte for byte. Because every element's
+ * wrap cycle count is a whole number over the cut's length, the camera sines
+ * have periods that divide it, the hero stop redistributes time within a
+ * crossing without adding any, and the grain is indexed by frame % length, the
+ * two frames must be identical.
  */
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {mkdirSync, readFileSync, rmSync} from 'node:fs';
 import {resolve} from 'node:path';
+
+const CUTS = [
+  {composition: 'CodeFlythroughLoopCheck', frames: 540},
+  {composition: 'CodeFlythroughBlueLoopCheck', frames: 780},
+];
 
 const outDir = resolve('out/loop-check');
 rmSync(outDir, {recursive: true, force: true});
@@ -19,14 +25,13 @@ mkdirSync(outDir, {recursive: true});
 // Optional: point at an already-installed Chrome instead of Remotion's own.
 const browser = process.env.REMOTION_BROWSER_EXECUTABLE;
 
-const still = (frame, file) => {
-  console.log(`rendering frame ${frame} ...`);
+const still = (composition, frame, file) => {
   execFileSync(
     'npx',
     [
       'remotion',
       'still',
-      'CodeFlythroughLoopCheck',
+      composition,
       file,
       `--frame=${frame}`,
       '--image-format=png',
@@ -37,23 +42,27 @@ const still = (frame, file) => {
   );
 };
 
-const a = resolve(outDir, 'frame-000.png');
-const b = resolve(outDir, 'frame-540.png');
-
-still(0, a);
-still(540, b);
-
 const hash = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
-const ha = hash(a);
-const hb = hash(b);
 
-console.log(`frame   0: ${ha}`);
-console.log(`frame 540: ${hb}`);
+let failed = false;
 
-if (ha === hb) {
-  console.log('\nPASS - frame 0 and frame 540 are pixel-identical. Loop is seamless.');
-  process.exit(0);
+for (const {composition, frames} of CUTS) {
+  console.log(`\n${composition}: rendering frame 0 and frame ${frames} ...`);
+  const a = resolve(outDir, `${composition}-000.png`);
+  const b = resolve(outDir, `${composition}-${frames}.png`);
+  still(composition, 0, a);
+  still(composition, frames, b);
+
+  const ha = hash(a);
+  const hb = hash(b);
+  console.log(`  frame   0: ${ha}`);
+  console.log(`  frame ${frames}: ${hb}`);
+  if (ha === hb) {
+    console.log(`  PASS - pixel-identical, loop is seamless.`);
+  } else {
+    console.error(`  FAIL - frame 0 and frame ${frames} differ.`);
+    failed = true;
+  }
 }
 
-console.error('\nFAIL - frame 0 and frame 540 differ.');
-process.exit(1);
+process.exit(failed ? 1 : 0);

@@ -1,14 +1,30 @@
 # Code Flythrough
 
-A 4K, nine-second, seamlessly looping camera move through a 3D field of drifting
-code fragments, chatbot icons and binary strings. Built in Remotion, drawn to a
+A 4K, seamlessly looping camera move through a 3D field of drifting code
+fragments, chatbot icons and binary strings. Built in Remotion, drawn to a
 single `<canvas>`.
 
-```
-3840 x 2160   540 frames @ 60fps   frame 540 === frame 0
-```
+Two cuts of the same shot:
 
-![still](docs/still.png)
+| composition | palette | tilt | length |
+| --- | --- | --- | --- |
+| `CodeFlythrough` | dark teal | -28° | 540 frames — 9.0s |
+| `CodeFlythroughBlue` | dark blue | 0° — straight | 780 frames — 13.0s |
+
+Both are 3840 x 2160 at 60fps, and both close exactly: the last frame is
+pixel-identical to the first.
+
+Palette, tilt and length are the only things that differ. They live in
+`variant.ts`, and everything tilt implies — the axis the field is rotated to,
+the axis it drifts along, how far the frame projects onto each axis, which way
+the handheld camera drifts — is derived from the one angle rather than restated.
+At 0° the shared axis is horizontal, so the blue cut reads left and drifts
+straight across, and the camera drift becomes vertical.
+
+Adding a third cut is a palette, an angle and a frame count.
+
+![teal cut](docs/still.png)
+![blue cut](docs/still-blue.png)
 
 ---
 
@@ -17,16 +33,17 @@ single `<canvas>`.
 ```bash
 npm install
 npm run dev            # Remotion Studio
-npm run render         # 4K master, h264, crf 12
-npm run verify-loop    # proves frame 0 and frame 540 are pixel-identical
+npm run render         # 4K master of the teal cut, h264, crf 12
+npm run render:blue    # 4K master of the blue cut
+npm run verify-loop    # proves both cuts' loops are pixel-identical
 npm run typecheck
 ```
 
 The render command in full:
 
 ```bash
-npx remotion render CodeFlythrough out/code-flythrough.mp4 \
-  --codec=h264 --crf=12 --concurrency=8
+npx remotion render CodeFlythrough     out/code-flythrough.mp4      --codec=h264 --crf=12 --concurrency=8
+npx remotion render CodeFlythroughBlue out/code-flythrough-blue.mp4 --codec=h264 --crf=12 --concurrency=8
 ```
 
 Low CRF on purpose: fast motion plus fine text is close to a worst case for
@@ -58,13 +75,13 @@ screen is crisply readable — which is what makes the shot read as photographed
 rather than as a text animation. Everything else is either a soft foreground
 shape sweeping past the lens or dim distant texture.
 
-### The diagonal
+### The shared axis
 
-Every element is rotated to exactly the same -28° axis and drifts along that
-same axis toward the lower left. There is no per-element rotation jitter:
-`ROT_JITTER_DEG` is 0, because at this density any spread at all stops reading
-as life and starts reading as inconsistency. The single shared angle is what
-makes the field cohere into a stream instead of scattered debris.
+Every element is rotated to exactly the same angle and drifts along that same
+axis. There is no per-element rotation jitter: `ROT_JITTER_DEG` is 0, because at
+this density any spread at all stops reading as life and starts reading as
+inconsistency. The single shared angle is what makes the field cohere into a
+stream instead of scattered debris — which is as true at 0° as it is at -28°.
 
 ### The hero fragments
 
@@ -162,6 +179,7 @@ src/
     sprites.ts                offscreen rasterisation, motion smear, grain, scratch surfaces
     draw.ts                   the per-frame blit loop and the post chain
     font.ts                   font loading, local or CDN
+    variant.ts                the cuts: palette, tilt, length, derived geometry
 public/fonts/                 vendored Roboto Mono (Apache-2.0)
 scripts/verify-loop.mjs       loop proof
 ```

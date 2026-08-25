@@ -2,6 +2,7 @@ import * as C from './constants';
 import type {FieldElement, Measure} from './field';
 import {rgba} from './color';
 import {isComment} from './snippets';
+import type {Variant} from './variant';
 
 export interface Sprite {
   canvas: HTMLCanvasElement;
@@ -194,12 +195,17 @@ export const WEIGHTS: number[][] = RAW_W.map((_, i) => {
  * and can be composited into the sprite once instead of costing three to five
  * large scaled draws on every one of the 540 frames.
  */
-const smear = (core: HTMLCanvasElement, el: FieldElement, m: number): Sprite => {
+const smear = (
+  core: HTMLCanvasElement,
+  el: FieldElement,
+  m: number,
+  v: Variant,
+): Sprite => {
   const weights = WEIGHTS[el.steps - 1] as number[];
   // Offsets are in screen px; divide by m to express them in sprite px.
   const reach = (el.speed * 0.5) / m;
-  const padX = Math.ceil(Math.abs(C.MOTION_X) * reach) + 1;
-  const padY = Math.ceil(Math.abs(C.MOTION_Y) * reach) + 1;
+  const padX = Math.ceil(Math.abs(v.motionX) * reach) + 1;
+  const padY = Math.ceil(Math.abs(v.motionY) * reach) + 1;
 
   const out = makeCanvas(core.width + padX * 2, core.height + padY * 2);
   const g = ctx2d(out);
@@ -209,8 +215,8 @@ const smear = (core: HTMLCanvasElement, el: FieldElement, m: number): Sprite => 
     g.globalAlpha = weights[i] as number;
     g.drawImage(
       core,
-      padX + (C.MOTION_X * el.speed * t) / m,
-      padY + (C.MOTION_Y * el.speed * t) / m,
+      padX + (v.motionX * el.speed * t) / m,
+      padY + (v.motionY * el.speed * t) / m,
     );
   }
   g.globalAlpha = 1;
@@ -224,7 +230,7 @@ const smear = (core: HTMLCanvasElement, el: FieldElement, m: number): Sprite => 
  * in. Only its position changes over the 540 frames, so this never has to be
  * redone; per frame the element costs a handful of drawImage calls.
  */
-const buildSprite = (el: FieldElement, fontFamily: string): Sprite => {
+const buildSprite = (el: FieldElement, fontFamily: string, v: Variant): Sprite => {
   // Heroes retype themselves every frame, so there is nothing to cache.
   if (el.kind === 'hero') {
     return {canvas: makeCanvas(1, 1), m: 1, w: 1, h: 1};
@@ -266,7 +272,7 @@ const buildSprite = (el: FieldElement, fontFamily: string): Sprite => {
 
   if (spriteBlur <= 0.05) {
     return el.steps > 1
-      ? smear(sharp, el, m)
+      ? smear(sharp, el, m, v)
       : {canvas: sharp, m, w: sharp.width, h: sharp.height};
   }
 
@@ -280,14 +286,15 @@ const buildSprite = (el: FieldElement, fontFamily: string): Sprite => {
   sharp.height = 0;
 
   return el.steps > 1
-    ? smear(soft, el, m)
+    ? smear(soft, el, m, v)
     : {canvas: soft, m, w: soft.width, h: soft.height};
 };
 
 export const buildSprites = (
   field: FieldElement[],
   fontFamily: string,
-): Sprite[] => field.map((el) => buildSprite(el, fontFamily));
+  v: Variant,
+): Sprite[] => field.map((el) => buildSprite(el, fontFamily, v));
 
 /** Seeded grain tiles, generated once and cycled by frame. */
 export const buildGrainTiles = (

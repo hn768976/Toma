@@ -2,6 +2,7 @@ import {random} from 'remotion';
 import * as C from './constants';
 import {lift, mix} from './color';
 import {HERO_SNIPPETS, makeBinary, makeSnippet} from './snippets';
+import type {Variant} from './variant';
 
 export type Kind = 'code' | 'icon' | 'binary' | 'streak' | 'accent' | 'hero';
 
@@ -119,8 +120,8 @@ const stepsFor = (speed: number) => {
   return 5;
 };
 
-const jitterRot = (seed: string) =>
-  C.DIAG_RAD + (rr(seed, -1, 1) * C.ROT_JITTER_DEG * Math.PI) / 180;
+const jitterRot = (seed: string, v: Variant) =>
+  v.tiltRad + (rr(seed, -1, 1) * C.ROT_JITTER_DEG * Math.PI) / 180;
 
 /**
  * Resolves the wrap geometry for one element.
@@ -129,13 +130,13 @@ const jitterRot = (seed: string) =>
  * frame 540 every element has completed a whole number of wraps and sits on
  * its frame-0 position.
  */
-const wrapFor = (z: number, axisExtent: number) => {
-  const need = C.AXIS_VIEW + axisExtent + 60;
+const wrapFor = (z: number, axisExtent: number, v: Variant) => {
+  const need = v.axisView + axisExtent + 60;
   const wanted = z * C.BASE_SPEED;
-  const total = wanted * C.DURATION;
+  const total = wanted * v.durationInFrames;
   if (total < need) {
-    // Too slow to clear the frame once in 540; walk it at the minimum speed.
-    return {speed: need / C.DURATION, travel: need, cycles: 1};
+    // Too slow to clear the frame once per loop; walk it at the minimum speed.
+    return {speed: need / v.durationInFrames, travel: need, cycles: 1};
   }
   const cycles = Math.max(1, Math.floor(total / need));
   return {speed: wanted, travel: total / cycles, cycles};
@@ -150,10 +151,10 @@ const wrapFor = (z: number, axisExtent: number) => {
  * the frame to its position along the diagonal and carve the field into empty
  * diagonal bands.
  */
-const perpSlots = (seed: string, n: number): number[] => {
+const perpSlots = (seed: string, n: number, v: Variant): number[] => {
   const slots = Array.from(
     {length: n},
-    (_, i) => (-0.5 + (i + random(`${seed}:jit${i}`)) / n) * C.PERP_SPREAD,
+    (_, i) => (-0.5 + (i + random(`${seed}:jit${i}`)) / n) * v.perpSpread,
   );
   for (let i = n - 1; i > 0; i--) {
     const j = Math.floor(random(`${seed}:swap${i}`) * (i + 1));
@@ -164,16 +165,17 @@ const perpSlots = (seed: string, n: number): number[] => {
   return slots;
 };
 
-const codeColor = (seed: string, z: number) => {
+const codeColor = (seed: string, z: number, v: Variant) => {
+  const {code, codeBright, icon, dim} = v.palette;
   const r = random(seed);
-  // Cyan carries the shot. White is reserved for the closest fragments and
-  // stays rare even there, otherwise the field goes chalky.
-  if (z >= 0.68) return r < 0.4 ? C.COLORS.codeWhite : C.COLORS.codeCyan;
+  // The dominant colour carries the shot. The bright tone is reserved for the
+  // closest fragments and stays rare even there, or the field goes chalky.
+  if (z >= 0.68) return r < 0.4 ? codeBright : code;
   if (z >= 0.3) {
-    if (r < 0.09) return C.COLORS.codeWhite;
-    return r < 0.32 ? mix(C.COLORS.codeCyan, C.COLORS.iconTeal, 0.5) : C.COLORS.codeCyan;
+    if (r < 0.09) return codeBright;
+    return r < 0.32 ? mix(code, icon, 0.5) : code;
   }
-  return r < 0.2 ? mix(C.COLORS.dimTeal, C.COLORS.codeCyan, 0.4) : C.COLORS.dimTeal;
+  return r < 0.2 ? mix(dim, code, 0.4) : dim;
 };
 
 const base = (
@@ -186,17 +188,18 @@ const base = (
   i: number,
   n: number,
   perp: number,
+  v: Variant,
   blurMul = 1,
 ): FieldElement => {
   const scale = z * scaleMul * (0.88 + 0.24 * random(id + ':sj'));
   const axisExtent = w0 * scale + h0 * scale * 0.12;
-  const {speed, travel, cycles} = wrapFor(z, axisExtent);
+  const {speed, travel, cycles} = wrapFor(z, axisExtent, v);
   return {
     id,
     kind,
     z,
     scale,
-    rot: jitterRot(id + ':rot'),
+    rot: jitterRot(id + ':rot', v),
     speed,
     travel,
     cycles,
@@ -207,8 +210,8 @@ const base = (
     steps: stepsFor(speed),
     w0,
     h0,
-    color: C.COLORS.codeCyan,
-    commentColor: C.COLORS.codeWhite,
+    color: v.palette.code,
+    commentColor: v.palette.codeBright,
     lines: [],
     fontPx: C.FONT_PX,
     weight: 400,
@@ -226,14 +229,14 @@ const base = (
  * Generates the whole element set once. Seeded, so it is identical in every
  * render worker and stable across the entire 540 frames.
  */
-export const buildField = (measure: Measure): FieldElement[] => {
+export const buildField = (measure: Measure, v: Variant): FieldElement[] => {
   const out: FieldElement[] = [];
 
-  const codePerp = perpSlots('perp:code', C.COUNT_CODE);
-  const iconPerp = perpSlots('perp:icon', C.COUNT_ICON);
-  const binPerp = perpSlots('perp:bin', C.COUNT_BINARY);
-  const streakPerp = perpSlots('perp:streak', C.COUNT_STREAK);
-  const accentPerp = perpSlots('perp:accent', C.COUNT_ACCENT);
+  const codePerp = perpSlots('perp:code', C.COUNT_CODE, v);
+  const iconPerp = perpSlots('perp:icon', C.COUNT_ICON, v);
+  const binPerp = perpSlots('perp:bin', C.COUNT_BINARY, v);
+  const streakPerp = perpSlots('perp:streak', C.COUNT_STREAK, v);
+  const accentPerp = perpSlots('perp:accent', C.COUNT_ACCENT, v);
 
   // 1. CODE FRAGMENTS ------------------------------------------------------
   for (let i = 0; i < C.COUNT_CODE; i++) {
@@ -243,10 +246,10 @@ export const buildField = (measure: Measure): FieldElement[] => {
     const weight = z > 0.55 ? 500 : 400;
     const w0 = measure(lines, C.FONT_PX, weight);
     const h0 = lines.length * C.FONT_PX * C.LINE_HEIGHT;
-    const el = base(id, 'code', z, C.MAX_SCALE, w0, h0, i, C.COUNT_CODE, codePerp[i] as number);
+    const el = base(id, 'code', z, C.MAX_SCALE, w0, h0, i, C.COUNT_CODE, codePerp[i] as number, v);
     el.lines = lines;
     el.weight = weight;
-    el.color = codeColor(id + ':col', z);
+    el.color = codeColor(id + ':col', z, v);
     el.commentColor = lift(el.color, z >= 0.3 ? 0.34 : 0.26);
     el.glow = z >= 0.55 ? 1 : 0.45;
     el.alpha *= 0.82;
@@ -257,13 +260,13 @@ export const buildField = (measure: Measure): FieldElement[] => {
   for (let i = 0; i < C.COUNT_ICON; i++) {
     const id = `icon-${i}`;
     const z = depth(id, 0.2);
-    const el = base(id, 'icon', z, C.MAX_SCALE * 0.92, 140, 126, i, C.COUNT_ICON, iconPerp[i] as number);
+    const el = base(id, 'icon', z, C.MAX_SCALE * 0.92, 140, 126, i, C.COUNT_ICON, iconPerp[i] as number, v);
     el.color =
       z < 0.3
-        ? mix(C.COLORS.iconTeal, C.COLORS.dimTeal, 0.6)
+        ? mix(v.palette.icon, v.palette.dim, 0.6)
         : z > 0.72
-          ? lift(C.COLORS.iconTeal, 0.18)
-          : C.COLORS.iconTeal;
+          ? lift(v.palette.icon, 0.18)
+          : v.palette.icon;
     el.glow = 0.5;
     out.push(el);
   }
@@ -278,14 +281,14 @@ export const buildField = (measure: Measure): FieldElement[] => {
     const weight = 400;
     const w0 = measure([text], C.FONT_PX, weight);
     const h0 = C.FONT_PX * C.LINE_HEIGHT;
-    const el = base(id, 'binary', z, C.MAX_SCALE, w0, h0, i, C.COUNT_BINARY, binPerp[i] as number);
+    const el = base(id, 'binary', z, C.MAX_SCALE, w0, h0, i, C.COUNT_BINARY, binPerp[i] as number, v);
     el.lines = [text];
     el.weight = weight;
     el.color = near
-      ? pick(id + ':acc', [C.COLORS.accentYellow, C.COLORS.accentOrange])
+      ? pick(id + ':acc', [v.palette.accents[1] as string, v.palette.accents[0] as string])
       : z < 0.34
-        ? C.COLORS.dimTeal
-        : mix(C.COLORS.dimTeal, C.COLORS.codeCyan, 0.62);
+        ? v.palette.dim
+        : mix(v.palette.dim, v.palette.code, 0.62);
     el.commentColor = el.color;
     // Dimmer than the code around them.
     el.alpha *= near ? 0.85 : 0.62;
@@ -300,10 +303,12 @@ export const buildField = (measure: Measure): FieldElement[] => {
     const z = rr(id + ':z', 0.5, 1.0);
     const w0 = rr(id + ':len', 220, 760);
     const thickness = rr(id + ':th', 3, 7);
-    const el = base(id, 'streak', z, C.MAX_SCALE * 0.8, w0, thickness, i, C.COUNT_STREAK, streakPerp[i] as number, 0.35);
+    const el = base(id, 'streak', z, C.MAX_SCALE * 0.8, w0, thickness, i, C.COUNT_STREAK, streakPerp[i] as number, v, 0.35);
     el.streakThickness = thickness;
     el.color =
-      random(id + ':c') < 0.12 ? C.COLORS.codeWhite : mix(C.COLORS.codeCyan, C.COLORS.iconTeal, 0.4);
+      random(id + ':c') < 0.12
+        ? v.palette.codeBright
+        : mix(v.palette.code, v.palette.icon, 0.4);
     el.alpha = rr(id + ':a', 0.05, 0.17);
     el.glow = 0.25;
     out.push(el);
@@ -314,9 +319,9 @@ export const buildField = (measure: Measure): FieldElement[] => {
     const id = `accent-${i}`;
     const z = depth(id, 0.15);
     const size = rint(id + ':sz', 13, 24);
-    const el = base(id, 'accent', z, C.MAX_SCALE, size, size, i, C.COUNT_ACCENT, accentPerp[i] as number, 0.35);
+    const el = base(id, 'accent', z, C.MAX_SCALE, size, size, i, C.COUNT_ACCENT, accentPerp[i] as number, v, 0.35);
     el.squareSize = size;
-    el.color = pick(id + ':col', C.ACCENTS);
+    el.color = pick(id + ':col', v.palette.accents);
     el.alpha = Math.min(1, el.alpha * 1.35);
     el.glow = 1.2;
     out.push(el);
@@ -330,7 +335,7 @@ export const buildField = (measure: Measure): FieldElement[] => {
     const hero = HERO_SNIPPETS[i % HERO_SNIPPETS.length] as (typeof HERO_SNIPPETS)[number];
     const w0 = measure(hero.lines, C.FONT_PX, 500);
     const h0 = hero.lines.length * C.FONT_PX * C.LINE_HEIGHT;
-    const el = base(id, 'hero', C.HERO_Z, 0, w0, h0, i, C.COUNT_HERO, 0);
+    const el = base(id, 'hero', C.HERO_Z, 0, w0, h0, i, C.COUNT_HERO, 0, v);
     el.scale = C.HERO_SCALE;
     el.lines = [...hero.lines];
     el.staticLines = hero.staticLines;
@@ -338,13 +343,18 @@ export const buildField = (measure: Measure): FieldElement[] => {
     el.blur = 0;
     // The hero is what the eye reads. It does not get smeared.
     el.steps = 1;
-    el.perp = i === 0 ? -C.PERP_SPREAD * 0.11 : C.PERP_SPREAD * 0.03;
-    el.color = C.COLORS.codeCyan;
-    el.commentColor = C.COLORS.codeWhite;
+    // Offset from centre by a little over half the block's own height, one
+    // each way. Keying this to the block rather than to the field's spread is
+    // what keeps the two clear of each other at any tilt - at zero tilt the
+    // perpendicular spread is the frame height, far narrower than on the
+    // diagonal, and a fraction of it would sit them on top of one another.
+    el.perp = (i === 0 ? -1 : 1) * h0 * el.scale * 0.62;
+    el.color = v.palette.code;
+    el.commentColor = v.palette.codeBright;
     el.lineColors = hero.lines.map((line, li) => {
-      if (li === 0) return C.COLORS.codeWhite;
-      if (line.startsWith('<')) return C.COLORS.codeCyan;
-      return lift(C.COLORS.codeCyan, 0.5);
+      if (li === 0) return v.palette.codeBright;
+      if (line.startsWith('<')) return v.palette.code;
+      return lift(v.palette.code, 0.5);
     });
     el.glow = 1.3;
 
@@ -352,9 +362,9 @@ export const buildField = (measure: Measure): FieldElement[] => {
     // speed its depth would give it: a hero that is meant to be read cannot
     // also be moving at mid-field pace.
     const axisExtent = w0 * el.scale + h0 * el.scale * 0.12;
-    el.travel = (C.AXIS_VIEW + axisExtent + 60) * C.HERO_TRAVEL_MULT;
+    el.travel = (v.axisView + axisExtent + 60) * C.HERO_TRAVEL_MULT;
     el.cycles = 1;
-    el.speed = el.travel / C.DURATION;
+    el.speed = el.travel / v.durationInFrames;
 
     // phase 0 puts the stop exactly at frame centre; timeOffset decides when
     // in the loop it happens. Half a loop apart, so they take turns.
