@@ -14,11 +14,11 @@ const SW = W + MARGIN * 2;
 const SH = H + MARGIN * 2;
 
 // Nebula geometry (scene-layer coordinates, i.e. margin included).
-// A large spherical dust cloud centred in the frame, its full round rim
-// visible with a small margin above and below.
+// A large spherical dust cloud centred in the frame, zoomed in so its rim
+// runs off the top and bottom while staying visible left and right.
 const NEB_CX = MARGIN + W * 0.5;
 const NEB_CY = MARGIN + H * 0.5;
-const NEB_R = H * 0.47;
+const NEB_R = H * 0.75;
 
 const GRAIN_TILE = 384;
 const GRAIN_TILES = 8;
@@ -331,9 +331,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const {ctx} = layers[li];
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
-    const sh = ctx.createLinearGradient(0, hh, hw * 0.85, hh * 0.1);
-    sh.addColorStop(0, 'rgba(0,0,0,0.55)');
-    sh.addColorStop(0.4, 'rgba(0,0,0,0.26)');
+    const sh = ctx.createLinearGradient(0, hh * 0.9, hw * 0.8, hh * 0.15);
+    sh.addColorStop(0, 'rgba(0,0,0,0.78)');
+    sh.addColorStop(0.42, 'rgba(0,0,0,0.36)');
     sh.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = sh;
     ctx.fillRect(0, 0, hw, hh);
@@ -385,12 +385,12 @@ const buildTealLayer = (): HTMLCanvasElement => {
 
   // Off-screen light source past the right edge: a broad wash brightest at
   // the upper-right, with a bright cyan core hugging the edge itself.
-  glow(SW + 300, SH * 0.1, 3300, TEAL, 0.5);
-  glow(SW + 120, SH * 0.04, 1700, TEAL_BRIGHT, 0.42);
+  glow(SW + 300, SH * 0.1, 3300, TEAL, 0.32);
+  glow(SW + 120, SH * 0.04, 1700, TEAL_BRIGHT, 0.24);
   // A soft vertical band so the whole right edge reads lit.
   const band = ctx.createLinearGradient(hw, 0, hw - 720 * NEB_SCALE, 0);
-  band.addColorStop(0, rgba(TEAL, 0.3));
-  band.addColorStop(0.5, rgba(TEAL_DEEP, 0.12));
+  band.addColorStop(0, rgba(TEAL, 0.18));
+  band.addColorStop(0.5, rgba(TEAL_DEEP, 0.08));
   band.addColorStop(1, rgba(TEAL_DEEP, 0));
   ctx.fillStyle = band;
   ctx.fillRect(hw - 720 * NEB_SCALE, 0, 720 * NEB_SCALE, hh);
