@@ -146,36 +146,90 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   // its upper half: angles 180°..360° in canvas coords point up from centre.
   const upAngle = (r: number) => Math.PI + r * Math.PI;
 
-  // Cluster attractors make the dust density uneven rather than radial.
-  const clusters: {x: number; y: number}[] = [];
-  for (let j = 0; j < 6; j++) {
-    const a = upAngle(random(`neb-cluster-${j}-a`));
-    const d = NEB_R * (0.2 + 0.6 * random(`neb-cluster-${j}-d`));
-    clusters.push({x: NEB_CX + Math.cos(a) * d, y: NEB_CY + Math.sin(a) * d});
+  // The sphere reads as a FILLED disc of dust, not a ring: paint a broad,
+  // nearly flat haze across the whole circle on both layers (they add).
+  for (let li = 0; li < 2; li++) {
+    const {ctx} = layers[li];
+    const g = ctx.createRadialGradient(
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      0,
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      NEB_R * NEB_SCALE
+    );
+    g.addColorStop(0, rgba(AMBER, 0.028));
+    g.addColorStop(0.65, rgba(AMBER, 0.026));
+    g.addColorStop(0.93, rgba(AMBER, 0.02));
+    g.addColorStop(1, rgba(AMBER, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(NEB_CX * NEB_SCALE, NEB_CY * NEB_SCALE, NEB_R * NEB_SCALE, 0, TAU);
+    ctx.fill();
   }
 
-  // Broad base blobs: the overall dusty mass filling the sphere's interior,
-  // reaching almost to the rim so the arc blends into the cloud.
+  // Broad base blobs: uneven density over the filled haze.
   for (let i = 0; i < 18; i++) {
     const a = upAngle(random(`neb-base-${i}-a`));
     const d = NEB_R * (0.12 + 0.76 * Math.pow(random(`neb-base-${i}-d`), 0.7));
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
     const r = NEB_R * (0.18 + 0.22 * random(`neb-base-${i}-r`));
-    const al = 0.035 + 0.035 * random(`neb-base-${i}-al`);
+    const al = 0.022 + 0.025 * random(`neb-base-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, AMBER, al);
   }
 
-  // Clustered smaller blobs: the fine mottled internal structure.
-  for (let i = 0; i < 44; i++) {
-    const cl = clusters[Math.floor(random(`neb-blob-${i}-c`) * 6) % 6];
-    const a = random(`neb-blob-${i}-a`) * TAU;
-    const d = NEB_R * 0.3 * Math.pow(random(`neb-blob-${i}-d`), 0.8);
-    const x = cl.x + Math.cos(a) * d;
-    const y = cl.y + Math.sin(a) * d;
-    const r = NEB_R * (0.04 + 0.11 * random(`neb-blob-${i}-r`));
-    const al = 0.05 + 0.06 * random(`neb-blob-${i}-al`);
-    paintBlob(layers[i % 2].ctx, x, y, r, AMBER, al);
+  // Fine mottled dust: seeded value-noise octaves upscaled over the disc.
+  // This granular cloudiness — not discrete blobs — is what makes the
+  // interior read as filled dust.
+  const noiseOctave = (
+    seed: string,
+    cols: number,
+    rows: number,
+    color: [number, number, number]
+  ) => {
+    const {c: nc, ctx: nctx} = makeCanvas(cols, rows);
+    const img = nctx.createImageData(cols, rows);
+    const prng = mulberry32(Math.floor(random(seed) * 0xffffffff));
+    for (let i = 0; i < cols * rows; i++) {
+      img.data[i * 4] = color[0];
+      img.data[i * 4 + 1] = color[1];
+      img.data[i * 4 + 2] = color[2];
+      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 3));
+    }
+    nctx.putImageData(img, 0, 0);
+    // Mask to the disc, fading out toward the rim.
+    const {c: mc, ctx: mctx} = makeCanvas(hw, hh);
+    mctx.drawImage(nc, 0, 0, hw, hh);
+    mctx.globalCompositeOperation = 'destination-in';
+    const mg = mctx.createRadialGradient(
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      0,
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      NEB_R * NEB_SCALE
+    );
+    mg.addColorStop(0, 'rgba(0,0,0,1)');
+    mg.addColorStop(0.7, 'rgba(0,0,0,0.9)');
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
+    mctx.fillStyle = mg;
+    mctx.fillRect(0, 0, hw, hh);
+    return mc;
+  };
+  for (let li = 0; li < 2; li++) {
+    const {ctx} = layers[li];
+    const octaves: [HTMLCanvasElement, number][] = [
+      [noiseOctave(`neb-noise-${li}-0`, 20, 12, AMBER), 0.08],
+      [noiseOctave(`neb-noise-${li}-1`, 64, 36, li === 0 ? AMBER : DUST_GREY), 0.065],
+      [noiseOctave(`neb-noise-${li}-2`, 192, 108, DUST_GREY), 0.05],
+    ];
+    for (const [oc, strength] of octaves) {
+      ctx.save();
+      ctx.globalAlpha = strength;
+      ctx.drawImage(oc, 0, 0);
+      ctx.restore();
+    }
   }
 
   // Ambient mottling outside the sphere so no part of the frame is flat black.
@@ -193,7 +247,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     ctx.save();
-    ctx.strokeStyle = rgba(RIM, 0.03);
+    ctx.strokeStyle = rgba(RIM, 0.022);
     ctx.lineWidth = NEB_R * (0.11 + 0.04 * li) * NEB_SCALE;
     ctx.beginPath();
     ctx.arc(
@@ -212,7 +266,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
     const r = NEB_R * (0.05 + 0.07 * random(`neb-rim-${i}-r`));
-    const al = 0.03 + 0.035 * random(`neb-rim-${i}-al`);
+    const al = 0.022 + 0.03 * random(`neb-rim-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, RIM, al);
   }
 
@@ -248,11 +302,26 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.restore();
   }
 
-  // Final heavy blur so no blob edge is ever discernible (24px at half res
-  // ≈ 48px at 4K). Blit back to full scene size.
+  // Directional shading: the side away from the teal light — the lower-left —
+  // is a little darker. Erase the dust proportionally toward that corner.
+  for (let li = 0; li < 2; li++) {
+    const {ctx} = layers[li];
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    const sh = ctx.createLinearGradient(0, hh, hw * 0.85, hh * 0.1);
+    sh.addColorStop(0, 'rgba(0,0,0,0.5)');
+    sh.addColorStop(0.45, 'rgba(0,0,0,0.22)');
+    sh.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sh;
+    ctx.fillRect(0, 0, hw, hh);
+    ctx.restore();
+  }
+
+  // Final blur softens every edge while keeping the fine dust mottling
+  // (14px at half res ≈ 28px at 4K). Blit back to full scene size.
   const finish = (src: HTMLCanvasElement) => {
     const {c, ctx} = makeCanvas(SW, SH);
-    ctx.filter = 'blur(24px)';
+    ctx.filter = 'blur(14px)';
     ctx.drawImage(src, 0, 0, SW, SH);
     ctx.filter = 'none';
     return c;
