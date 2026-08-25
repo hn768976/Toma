@@ -33,6 +33,8 @@ const STAR_WHITE: [number, number, number] = [232, 238, 245]; // #E8EEF5
 const STAR_WARM: [number, number, number] = [245, 231, 205];
 const STAR_BLUE: [number, number, number] = [201, 220, 250];
 const DUST_GREY: [number, number, number] = [96, 92, 74]; // ambient olive-grey dust
+const INNER_HAZE: [number, number, number] = [104, 91, 66]; // warm muted sphere interior
+const OUTER_DUST: [number, number, number] = [120, 99, 66]; // warm brown dust beyond the rim
 const TEAL_BRIGHT: [number, number, number] = [128, 194, 205]; // edge-glow core
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,10 +159,10 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_CY * NEB_SCALE,
       NEB_R * NEB_SCALE
     );
-    g.addColorStop(0, rgba(AMBER, 0.042));
-    g.addColorStop(0.75, rgba(AMBER, 0.04));
-    g.addColorStop(0.95, rgba(AMBER, 0.03));
-    g.addColorStop(1, rgba(AMBER, 0));
+    g.addColorStop(0, rgba(INNER_HAZE, 0.058));
+    g.addColorStop(0.75, rgba(INNER_HAZE, 0.054));
+    g.addColorStop(0.95, rgba(INNER_HAZE, 0.038));
+    g.addColorStop(1, rgba(INNER_HAZE, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(NEB_CX * NEB_SCALE, NEB_CY * NEB_SCALE, NEB_R * NEB_SCALE, 0, TAU);
@@ -174,8 +176,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
     const r = NEB_R * (0.18 + 0.22 * random(`neb-base-${i}-r`));
-    const al = 0.028 + 0.028 * random(`neb-base-${i}-al`);
-    paintBlob(layers[i % 2].ctx, x, y, r, AMBER, al);
+    const al = 0.018 + 0.018 * random(`neb-base-${i}-al`);
+    paintBlob(layers[i % 2].ctx, x, y, r, INNER_HAZE, al);
   }
 
   // Fine mottled dust: seeded value-noise octaves upscaled over the disc.
@@ -220,9 +222,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     const octaves: [HTMLCanvasElement, number][] = [
-      [noiseOctave(`neb-noise-${li}-0`, 16, 9, AMBER), 0.11],
-      [noiseOctave(`neb-noise-${li}-1`, 52, 30, DUST_GREY), 0.085],
-      [noiseOctave(`neb-noise-${li}-2`, 160, 90, DUST_GREY), 0.06],
+      [noiseOctave(`neb-noise-${li}-0`, 16, 9, INNER_HAZE), 0.13],
+      [noiseOctave(`neb-noise-${li}-1`, 52, 30, INNER_HAZE), 0.09],
+      [noiseOctave(`neb-noise-${li}-2`, 160, 90, DUST_GREY), 0.055],
     ];
     for (const [oc, strength] of octaves) {
       ctx.save();
@@ -232,13 +234,89 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     }
   }
 
-  // Ambient mottling outside the sphere so no part of the frame is flat black.
-  for (let i = 0; i < 14; i++) {
-    const x = random(`neb-amb-${i}-x`) * SW;
-    const y = random(`neb-amb-${i}-y`) * SH;
+  // Warm brown dust BEYOND the sphere. In the reference the amber colour
+  // lives outside the disc — along the left edge and the corners — while the
+  // sphere's interior stays a cooler grey. Same value noise, inverse mask.
+  const outerNoise = (seed: string, cols: number, rows: number) => {
+    const {c: nc, ctx: nctx} = makeCanvas(cols, rows);
+    const img = nctx.createImageData(cols, rows);
+    const prng = mulberry32(Math.floor(random(seed) * 0xffffffff));
+    for (let i = 0; i < cols * rows; i++) {
+      img.data[i * 4] = OUTER_DUST[0];
+      img.data[i * 4 + 1] = OUTER_DUST[1];
+      img.data[i * 4 + 2] = OUTER_DUST[2];
+      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 2.2));
+    }
+    nctx.putImageData(img, 0, 0);
+    const {c: mc, ctx: mctx} = makeCanvas(hw, hh);
+    mctx.drawImage(nc, 0, 0, hw, hh);
+    // Keep only what falls outside the disc, fading in across the rim.
+    mctx.globalCompositeOperation = 'destination-in';
+    const mg = mctx.createRadialGradient(
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      0,
+      NEB_CX * NEB_SCALE,
+      NEB_CY * NEB_SCALE,
+      NEB_R * 1.9 * NEB_SCALE
+    );
+    mg.addColorStop(0, 'rgba(0,0,0,0)');
+    mg.addColorStop(0.47, 'rgba(0,0,0,0)');
+    mg.addColorStop(0.62, 'rgba(0,0,0,0.85)');
+    mg.addColorStop(1, 'rgba(0,0,0,1)');
+    mctx.fillStyle = mg;
+    mctx.fillRect(0, 0, hw, hh);
+    return mc;
+  };
+  for (let li = 0; li < 2; li++) {
+    const {ctx} = layers[li];
+    const outer: [HTMLCanvasElement, number][] = [
+      [outerNoise(`neb-outer-${li}-0`, 14, 8), 0.3],
+      [outerNoise(`neb-outer-${li}-1`, 44, 25), 0.22],
+      [outerNoise(`neb-outer-${li}-2`, 130, 73), 0.12],
+    ];
+    for (const [oc, strength] of outer) {
+      ctx.save();
+      ctx.globalAlpha = strength;
+      ctx.drawImage(oc, 0, 0);
+      ctx.restore();
+    }
+  }
+
+  // A faint warm haze over the ENTIRE frame — in the reference brown wisps
+  // reach into the dark left side too, so nowhere is flat black.
+  const globalNoise = (seed: string, cols: number, rows: number) => {
+    const {c: nc, ctx: nctx} = makeCanvas(cols, rows);
+    const img = nctx.createImageData(cols, rows);
+    const prng = mulberry32(Math.floor(random(seed) * 0xffffffff));
+    for (let i = 0; i < cols * rows; i++) {
+      img.data[i * 4] = OUTER_DUST[0];
+      img.data[i * 4 + 1] = OUTER_DUST[1];
+      img.data[i * 4 + 2] = OUTER_DUST[2];
+      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 2.4));
+    }
+    nctx.putImageData(img, 0, 0);
+    return nc;
+  };
+  for (let li = 0; li < 2; li++) {
+    const {ctx} = layers[li];
+    ctx.save();
+    ctx.globalAlpha = 0.085;
+    ctx.drawImage(globalNoise(`neb-glob-${li}-0`, 12, 7), 0, 0, hw, hh);
+    ctx.globalAlpha = 0.055;
+    ctx.drawImage(globalNoise(`neb-glob-${li}-1`, 40, 23), 0, 0, hw, hh);
+    ctx.restore();
+  }
+
+  // Discrete warm clouds hugging the outside of the rim, denser on the left.
+  for (let i = 0; i < 18; i++) {
+    const a = random(`neb-amb-${i}-a`) * TAU;
+    const d = NEB_R * (1.02 + 0.5 * random(`neb-amb-${i}-d`));
+    const x = NEB_CX + Math.cos(a) * d;
+    const y = NEB_CY + Math.sin(a) * d;
     const r = NEB_R * (0.12 + 0.2 * random(`neb-amb-${i}-r`));
-    const al = 0.025 + 0.03 * random(`neb-amb-${i}-al`);
-    paintBlob(layers[i % 2].ctx, x, y, r, i % 3 === 0 ? AMBER : DUST_GREY, al);
+    const al = 0.03 + 0.035 * random(`neb-amb-${i}-al`);
+    paintBlob(layers[i % 2].ctx, x, y, r, OUTER_DUST, al);
   }
 
   // Limb darkening: the dust dims into a dark ring at the circle's edge,
@@ -257,8 +335,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_R * 1.3 * NEB_SCALE
     );
     lg.addColorStop(0, 'rgba(0,0,0,0)');
-    lg.addColorStop(0.4, 'rgba(0,0,0,0.62)');
-    lg.addColorStop(1, 'rgba(0,0,0,0.28)');
+    lg.addColorStop(0.4, 'rgba(0,0,0,0.5)');
+    lg.addColorStop(1, 'rgba(0,0,0,0.08)');
     ctx.fillStyle = lg;
     ctx.fillRect(0, 0, hw, hh);
     ctx.restore();
@@ -270,7 +348,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     ctx.save();
-    ctx.strokeStyle = rgba(RIM, 0.014);
+    ctx.strokeStyle = rgba(RIM, 0.03);
     ctx.lineWidth = NEB_R * (0.11 + 0.04 * li) * NEB_SCALE;
     ctx.beginPath();
     ctx.arc(
@@ -332,9 +410,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     const sh = ctx.createLinearGradient(0, hh * 0.85, hw * 0.75, hh * 0.2);
-    sh.addColorStop(0, 'rgba(0,0,0,0.82)');
-    sh.addColorStop(0.35, 'rgba(0,0,0,0.5)');
-    sh.addColorStop(0.7, 'rgba(0,0,0,0.2)');
+    sh.addColorStop(0, 'rgba(0,0,0,0.72)');
+    sh.addColorStop(0.35, 'rgba(0,0,0,0.44)');
+    sh.addColorStop(0.7, 'rgba(0,0,0,0.18)');
     sh.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = sh;
     ctx.fillRect(0, 0, hw, hh);
