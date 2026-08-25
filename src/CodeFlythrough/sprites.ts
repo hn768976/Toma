@@ -24,7 +24,7 @@ const ctx2d = (c: HTMLCanvasElement) => {
   return g;
 };
 
-const fontString = (fontFamily: string, px: number, weight: number) =>
+export const fontString = (fontFamily: string, px: number, weight: number) =>
   `${weight} ${px}px "${fontFamily}", "Roboto Mono", ui-monospace, monospace`;
 
 /** Text measurement, used while generating the field. */
@@ -225,6 +225,11 @@ const smear = (core: HTMLCanvasElement, el: FieldElement, m: number): Sprite => 
  * redone; per frame the element costs a handful of drawImage calls.
  */
 const buildSprite = (el: FieldElement, fontFamily: string): Sprite => {
+  // Heroes retype themselves every frame, so there is nothing to cache.
+  if (el.kind === 'hero') {
+    return {canvas: makeCanvas(1, 1), m: 1, w: 1, h: 1};
+  }
+
   const sharpness = 1 / (1 + el.blur / 10);
   let rs = Math.min(
     el.scale,

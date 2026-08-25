@@ -1,9 +1,9 @@
 import {random} from 'remotion';
 import * as C from './constants';
 import {lift, mix} from './color';
-import {makeBinary, makeSnippet} from './snippets';
+import {HERO_SNIPPETS, makeBinary, makeSnippet} from './snippets';
 
-export type Kind = 'code' | 'icon' | 'binary' | 'streak' | 'accent';
+export type Kind = 'code' | 'icon' | 'binary' | 'streak' | 'accent' | 'hero';
 
 export interface FieldElement {
   id: string;
@@ -43,6 +43,10 @@ export interface FieldElement {
   streakThickness: number;
   /** accent only */
   squareSize: number;
+  /** hero only: how many leading lines are already written on entry. */
+  staticLines: number;
+  /** hero only: one colour per line. */
+  lineColors: string[];
 }
 
 export type Measure = (
@@ -207,6 +211,8 @@ const base = (
     glow: 0,
     streakThickness: 0,
     squareSize: 0,
+    staticLines: 0,
+    lineColors: [],
   };
 };
 
@@ -307,6 +313,43 @@ export const buildField = (measure: Measure): FieldElement[] => {
     el.color = pick(id + ':col', C.ACCENTS);
     el.alpha = Math.min(1, el.alpha * 1.35);
     el.glow = 1.2;
+    out.push(el);
+  }
+
+  // 6. HERO FRAGMENTS ------------------------------------------------------
+  // Large, sharp, on the shared tilt, with their second half typing out as
+  // they cross. Phase-offset by half a loop so they take turns crossing.
+  for (let i = 0; i < C.COUNT_HERO; i++) {
+    const id = `hero-${i}`;
+    const hero = HERO_SNIPPETS[i % HERO_SNIPPETS.length] as (typeof HERO_SNIPPETS)[number];
+    const w0 = measure(hero.lines, C.FONT_PX, 500);
+    const h0 = hero.lines.length * C.FONT_PX * C.LINE_HEIGHT;
+    const el = base(id, 'hero', C.HERO_Z, 0, w0, h0, i, C.COUNT_HERO, 0);
+    el.scale = C.HERO_SCALE;
+    el.lines = [...hero.lines];
+    el.staticLines = hero.staticLines;
+    el.weight = 500;
+    el.blur = 0;
+    // The hero is what the eye reads. It does not get smeared.
+    el.steps = 1;
+    el.perp = i === 0 ? -C.PERP_SPREAD * 0.11 : C.PERP_SPREAD * 0.03;
+    el.phase = i === 0 ? 0.75 : 0.25;
+    el.color = C.COLORS.codeCyan;
+    el.commentColor = C.COLORS.codeWhite;
+    el.lineColors = hero.lines.map((line, li) => {
+      if (li === 0) return C.COLORS.codeWhite;
+      if (line.startsWith('<')) return C.COLORS.codeCyan;
+      return lift(C.COLORS.codeCyan, 0.5);
+    });
+    el.glow = 1.3;
+
+    // Re-resolve the wrap now that scale is the hero's own, not z * MAX_SCALE.
+    const axisExtent = w0 * el.scale + h0 * el.scale * 0.12;
+    const wrap = wrapFor(C.HERO_Z, axisExtent);
+    el.speed = wrap.speed;
+    el.travel = wrap.travel;
+    el.cycles = wrap.cycles;
+
     out.push(el);
   }
 

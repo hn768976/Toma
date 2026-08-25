@@ -109,6 +109,7 @@ export const CodeFlythrough: React.FC = () => {
       width,
       height,
       rand: random,
+      fontFamily: FONT_FAMILY,
     });
 
     if (handleRef.current !== null) {

@@ -1,6 +1,6 @@
 import * as C from './constants';
 import type {FieldElement} from './field';
-import type {Sprite} from './sprites';
+import {fontString, type Sprite} from './sprites';
 
 export interface Scratch {
   small: HTMLCanvasElement;
@@ -10,6 +10,86 @@ export interface Scratch {
 }
 
 const mod1 = (n: number) => ((n % 1) + 1) % 1;
+
+const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+
+/**
+ * Draws a hero fragment: the same tilt as everything else, its leading lines
+ * already written, the rest typing itself out as the fragment crosses frame.
+ *
+ * `prog` runs 1 -> 0 over one crossing, so `1 - prog` is how far along the
+ * crossing the fragment is. Deriving the typing from that instead of from the
+ * frame number is what keeps it inside the loop: at frame 540 the fragment is
+ * back at its frame-0 position and so shows its frame-0 characters.
+ */
+const drawHero = (
+  g: CanvasRenderingContext2D,
+  el: FieldElement,
+  x: number,
+  y: number,
+  scale: number,
+  f: number,
+  prog: number,
+  fontFamily: string,
+) => {
+  const typed = clamp01((1 - prog - C.HERO_TYPE_START) / C.HERO_TYPE_SPAN);
+
+  const animated = el.lines.slice(el.staticLines);
+  const total = animated.reduce((n, line) => n + line.length, 0);
+  let left = Math.floor(typed * total);
+
+  const lh = el.fontPx * C.LINE_HEIGHT;
+  const top = -(el.lines.length * lh) / 2;
+
+  g.save();
+  g.translate(x, y);
+  g.rotate(el.rot);
+  g.scale(scale, scale);
+  g.textAlign = 'left';
+  g.textBaseline = 'middle';
+  g.globalAlpha = el.alpha;
+
+  let caretX: number | null = null;
+  let caretY = 0;
+
+  for (let i = 0; i < el.lines.length; i++) {
+    const full = el.lines[i] as string;
+    const isStatic = i < el.staticLines;
+    const lineY = top + (i + 0.5) * lh;
+
+    g.font = fontString(fontFamily, el.fontPx, i === 0 ? el.weight + 100 : el.weight);
+    g.fillStyle = (el.lineColors[i] as string) ?? el.color;
+
+    if (!isStatic && left <= 0) {
+      // Nothing of this line is written yet. The caret waits at its indent.
+      const indent = full.slice(0, full.length - full.trimStart().length);
+      caretX = -el.w0 / 2 + g.measureText(indent).width;
+      caretY = lineY;
+      break;
+    }
+
+    const shown = isStatic ? full : full.slice(0, Math.min(left, full.length));
+    if (!isStatic) left -= shown.length;
+
+    g.fillText(shown, -el.w0 / 2, lineY);
+
+    if (!isStatic && shown.length < full.length) {
+      caretX = -el.w0 / 2 + g.measureText(shown).width;
+      caretY = lineY;
+      break;
+    }
+  }
+
+  // A blinking block caret while there is still text to write.
+  if (typed < 1 && caretX !== null && f % C.HERO_CARET_PERIOD < 22) {
+    g.globalAlpha = el.alpha * 0.5;
+    g.fillStyle = C.COLORS.codeWhite;
+    g.fillRect(caretX, caretY - el.fontPx * 0.42, el.fontPx * 0.58, el.fontPx * 0.86);
+  }
+
+  g.restore();
+  g.globalAlpha = 1;
+};
 
 /**
  * Handheld camera: a small drift perpendicular to the diagonal. Both sine
@@ -99,6 +179,7 @@ export interface DrawArgs {
   width: number;
   height: number;
   rand: (seed: string) => number;
+  fontFamily: string;
 }
 
 /**
@@ -121,6 +202,7 @@ export const drawFrame = ({
   width,
   height,
   rand,
+  fontFamily,
 }: DrawArgs) => {
   const f = ((frame % C.DURATION) + C.DURATION) % C.DURATION;
 
@@ -148,6 +230,11 @@ export const drawFrame = ({
 
     const x = (C.CX + C.AX * u + C.PX * perp) * sx;
     const y = (C.CY + C.AY * u + C.PY * perp) * sy;
+
+    if (el.kind === 'hero') {
+      drawHero(ctx, el, x, y, el.scale * sx, f, prog, fontFamily);
+      continue;
+    }
 
     const dw = sp.w * sp.m * sx;
     const dh = sp.h * sp.m * sy;

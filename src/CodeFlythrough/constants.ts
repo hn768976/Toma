@@ -43,8 +43,13 @@ export const PERP_VIEW = WIDTH * Math.abs(PX) + HEIGHT * Math.abs(PY); // ~3708
 /** Perpendicular spread the field is scattered across. */
 export const PERP_SPREAD = PERP_VIEW + 780;
 
-/** Per-element rotation jitter, in degrees. More than this breaks the stream. */
-export const ROT_JITTER_DEG = 4;
+/**
+ * Per-element rotation jitter, in degrees.
+ *
+ * Zero: every element sits on exactly the same tilt. Any spread at all reads
+ * as inconsistency once the field is this dense, so the stream is kept rigid.
+ */
+export const ROT_JITTER_DEG = 0;
 
 /** Depth range. */
 export const Z_MIN = 0.15;
@@ -112,3 +117,27 @@ export const VIGNETTE = 0.22;
 export const GRAIN_ALPHA = 0.045;
 export const GRAIN_TILES = 12;
 export const GRAIN_TILE_PX = 320;
+
+/**
+ * HERO FRAGMENTS
+ *
+ * Two large, sharp code blocks on the shared tilt whose second half types
+ * itself out as they cross, so the field reads as code being written rather
+ * than only code drifting past. They are drawn live rather than from a cached
+ * sprite, since their content changes frame to frame.
+ */
+export const COUNT_HERO = 2;
+/** Sits at the far edge of the sharp band, so its blur is zero. */
+export const HERO_Z = 0.49;
+/** Fixed rather than derived from z: the hero is deliberately oversized. */
+export const HERO_SCALE = 2.45;
+/**
+ * Typing runs over this window of the element's crossing and then holds
+ * complete. Tied to the crossing rather than to a wall clock, so it loops for
+ * free: at frame 540 every element is back at its frame-0 crossing position,
+ * and therefore at its frame-0 typing state.
+ */
+export const HERO_TYPE_START = 0.24;
+export const HERO_TYPE_SPAN = 0.42;
+/** Caret blink period in frames. Must divide DURATION: 540 / 36 = 15. */
+export const HERO_CARET_PERIOD = 36;

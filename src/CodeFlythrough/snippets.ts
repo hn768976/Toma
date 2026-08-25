@@ -180,3 +180,39 @@ export const makeBinary = (seed: string): string => {
 
 /** True for comment lines, which get the brightest treatment. */
 export const isComment = (line: string) => line.trimStart().startsWith('//');
+
+/**
+ * The two hero fragments.
+ *
+ * Same invented-content rule as the rest of the field: the topics are generic
+ * subject phrases and the surrounding structure is ordinary DOM boilerplate,
+ * but the function names and element ids are made up for this animation.
+ *
+ * `staticLines` is how many lines are already written when the fragment enters
+ * frame. Everything after that types itself out as the fragment crosses.
+ */
+export interface HeroSnippet {
+  lines: string[];
+  staticLines: number;
+}
+
+export const HERO_SNIPPETS: readonly HeroSnippet[] = [
+  {
+    lines: [
+      '// ai chatbot',
+      '<script>',
+      'function replyStream(txt) {',
+      '  document.getElementById("chat-root").innerHTML = txt;',
+    ],
+    staticLines: 2,
+  },
+  {
+    lines: [
+      '// machine learning',
+      '<script>',
+      'function scoreIntent(txt) {',
+      '  document.getElementById("intent-log").innerHTML = txt;',
+    ],
+    staticLines: 2,
+  },
+];

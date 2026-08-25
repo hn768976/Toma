@@ -60,9 +60,34 @@ shape sweeping past the lens or dim distant texture.
 
 ### The diagonal
 
-Every element is rotated to the same -28° axis and drifts along that same axis
-toward the lower left, with ±4° of per-element jitter. The shared angle is what
+Every element is rotated to exactly the same -28° axis and drifts along that
+same axis toward the lower left. There is no per-element rotation jitter:
+`ROT_JITTER_DEG` is 0, because at this density any spread at all stops reading
+as life and starts reading as inconsistency. The single shared angle is what
 makes the field cohere into a stream instead of scattered debris.
+
+### The hero fragments
+
+Two of the fragments are heroes: large, sharp, on the shared tilt, and their
+second half types itself out as they cross frame — a comment and a `<script>`
+tag already written, then the function line and the DOM call appearing
+character by character behind a blinking caret.
+
+They are the one population drawn live instead of from a cached sprite, since
+their content changes every frame. That costs nothing: two elements, four short
+lines, no blur, no filter.
+
+Typing progress is derived from how far the fragment is through its crossing,
+not from the frame number:
+
+```
+typed = clamp01((1 - prog - HERO_TYPE_START) / HERO_TYPE_SPAN)
+```
+
+so it loops for free. At frame 540 the fragment is back at its frame-0 crossing
+position and therefore shows its frame-0 characters. The caret blink is on a
+36-frame period, and 540 / 36 = 15. The two heroes are phase-offset by half the
+loop, so they take turns crossing.
 
 ### The seamless loop
 
@@ -95,7 +120,8 @@ they took it from ~13s to ~2.3s per frame:
 
 - **Sprites are built once.** An element's rotation, depth blur and colour never
   change, so the text is laid out and rasterised a single time into a small
-  offscreen canvas. Per frame it is one blit.
+  offscreen canvas. Per frame it is one blit. (The two hero fragments are the
+  deliberate exception - they retype themselves, so there is nothing to cache.)
 - **Motion blur is baked in.** Speed is constant per element, so the 3–5 offset
   copies that make the directional smear are composited into the sprite when it
   is built instead of being redrawn 540 times.
