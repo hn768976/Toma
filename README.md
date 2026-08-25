@@ -37,6 +37,24 @@ Three stacked canvases:
    composited with `lighter` for the persistent chromatic aberration.
 3. **`FinishLayer`** — vignette, scanlines, grain.
 
+`LockGlyph` composites up to three masks: the part that carries the bloom (the
+padlock's solid body, the shield's outline), an optional flat interior drawn
+once at low alpha, and optional detail tinted in the arc colour rather than
+lock-white. Each is drawn three times — warm fringe, cool fringe, centred —
+composited with `lighter`, which is where the chromatic aberration comes from.
+
+### What differs between the two variants
+
+Only the palette and the glyph. Same layout, same arc structure, same rotation
+speeds, same timings, same flare at frames 660-780, same 960-frame loop.
+
+- **navy** — a classic padlock: solid rounded body, stroked shackle, keyhole
+  punched clean through. Coral and cyan fringes.
+- **green** — a heraldic shield: thick outline over a 12%-alpha interior, so it
+  reads as a translucent barrier rather than a solid mass, with a large solid
+  phosphor keyhole. Amber and lime fringes. Graded harder: deeper blacks,
+  hotter greens, a stronger vignette.
+
 ### Swapping palettes and glyphs
 
 `THEME` is the only place a hex literal appears in `src/SecureLock.tsx`; every

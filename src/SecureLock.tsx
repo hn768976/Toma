@@ -35,7 +35,7 @@ export const MONO = `"${fontFamily}", monospace`;
    Every draw call in this file reads its colours from here.
    ══════════════════════════════════════════════════════════════════════════ */
 
-export type Variant = 'navy';
+export type Variant = 'navy' | 'green';
 
 export type Theme = {
   bgDeep: string;
@@ -63,11 +63,28 @@ export const THEME: Record<Variant, Theme> = {
     fringeWarm: '#E05A6B',
     fringeCool: '#4FB8F5',
   },
+  green: {
+    bgDeep: '#030F08',
+    bgMid: '#0A2E18',
+    numeral: '#2ECC5F',
+    bright: '#4FFF7A',
+    dim: '#103D22',
+    arc: '#7FFFA8',
+    accent: '#E8B84F',
+    lockWhite: '#E8FFE8',
+    fringeWarm: '#E8B84F',
+    fringeCool: '#4FFF7A',
+  },
 };
 
-/** Per-variant intensity trim, so a future palette can be graded independently. */
+/**
+ * Per-variant intensity trim. Same geometry, same timings — only how hard the
+ * palette is pushed. The green build runs hotter and darker: terminal
+ * phosphor rather than corporate dashboard.
+ */
 const GRADE: Record<Variant, {field: number; arc: number; lock: number; vignette: number}> = {
   navy: {field: 1, arc: 1, lock: 1, vignette: 0.22},
+  green: {field: 1.15, arc: 1.12, lock: 1.28, vignette: 0.34},
 };
 
 const rgba = (hex: string, alpha: number) => {
@@ -324,7 +341,7 @@ const BANDS: Band[] = [
   // 6 — long sparse sand, low opacity, a full turn.
   {id: 'sparse', radius: 0.7, thickness: 7, segments: 2, sweep: 130, turns: -1, phase: 88, colour: 'arc', alpha: 0.26, glow: 24},
   // 7/8 — very faint outer arcs, nearly lost in the field.
-  {id: 'ghost-a', radius: 0.84, thickness: 5, segments: 3, sweep: 62, turns: 2 / 3, phase: 5, colour: 'arc', alpha: 0.11, glow: 18},
+  {id: 'ghost-a', radius: 0.84, thickness: 5, segments: 3, sweep: 62, turns: 1, phase: 5, colour: 'arc', alpha: 0.11, glow: 18},
   {id: 'ghost-b', radius: 0.96, thickness: 4, segments: 4, sweep: 40, turns: -1.25, phase: 52, colour: 'accent', alpha: 0.09, glow: 16},
 ];
 const RAD = Math.PI / 180;
@@ -571,7 +588,7 @@ const BackgroundLayer: React.FC<{theme: Theme; variant: Variant; frame: number}>
 /** Bounding box of a glyph, in px, for a given glyph height. */
 const glyphBox = (variant: Variant, size: number) => {
   if (variant === 'navy') return {w: 0.86 * size, h: size};
-  return {w: 0.86 * size, h: size};
+  return {w: SHIELD_WIDTH * size + SHIELD_STROKE, h: size + SHIELD_STROKE};
 };
 
 /** Padlock proportions — the single source of truth for the navy silhouette. */
@@ -659,9 +676,96 @@ const stampPadlockVoids = (ctx: CanvasRenderingContext2D, size: number) => {
   keyholePath(ctx, d.khY, d.khR, d.slotTopHW, d.slotBotHW, d.slotBottom);
 };
 
+/** Shield proportions — the single source of truth for the green silhouette. */
+const SHIELD_STROKE = 14;
+
+const SHIELD_WIDTH = 0.8;
+
+const shield = (size: number) => ({
+  hw: (SHIELD_WIDTH * size) / 2,
+  topR: 0.05 * size,
+  waist: 0.4 * size,
+  khY: 0.42 * size,
+  khR: 0.088 * size,
+  slotTopHW: 0.038 * size,
+  slotBotHW: 0.066 * size,
+  slotBottom: 0.68 * size,
+});
+
+/** The shield outline — flat top, sides curving down and inward to a point. */
+const shieldPath = (ctx: CanvasRenderingContext2D, size: number) => {
+  const d = shield(size);
+  ctx.beginPath();
+  ctx.moveTo(-d.hw + d.topR, 0);
+  ctx.lineTo(d.hw - d.topR, 0);
+  ctx.quadraticCurveTo(d.hw, 0, d.hw, d.topR);
+  ctx.lineTo(d.hw, d.waist);
+  ctx.bezierCurveTo(d.hw, 0.74 * size, d.hw * 0.46, 0.94 * size, 0, size);
+  ctx.bezierCurveTo(-d.hw * 0.46, 0.94 * size, -d.hw, 0.74 * size, -d.hw, d.waist);
+  ctx.lineTo(-d.hw, d.topR);
+  ctx.quadraticCurveTo(-d.hw, 0, -d.hw + d.topR, 0);
+  ctx.closePath();
+};
+
+/**
+ * Heraldic shield: flat top, sides curving down and inward to a point. Drawn
+ * as a thick outline over a translucent fill, so it reads as a barrier you can
+ * see through rather than the padlock's solid mass.
+ */
+const stampShield = (ctx: CanvasRenderingContext2D, size: number) => {
+  shieldPath(ctx, size);
+
+  // The outline carries the bloom.
+  ctx.lineWidth = SHIELD_STROKE;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+};
+
+/**
+ * The keyhole. Kept apart from the outline so it can be tinted phosphor rather
+ * than lock-white — solid and fully opaque against the translucent field.
+ */
+const stampShieldAccent = (ctx: CanvasRenderingContext2D, size: number) => {
+  const d = shield(size);
+  keyholePath(ctx, d.khY, d.khR, d.slotTopHW, d.slotBotHW, d.slotBottom);
+};
+
+/** The shield's translucent interior. Drawn flat, outside the bloom stack. */
+const stampShieldFill = (ctx: CanvasRenderingContext2D, size: number) => {
+  shieldPath(ctx, size);
+  ctx.fill();
+};
+
+/** The parts of the glyph that carry the bloom. */
 const stampGlyph = (ctx: CanvasRenderingContext2D, variant: Variant, size: number) => {
   if (variant === 'navy') stampPadlock(ctx, size);
+  else stampShield(ctx, size);
 };
+
+/**
+ * Flat interior, composited once at low alpha instead of through the bloom
+ * stack. The padlock has none — its body is the bright mass. The shield's
+ * does, which is what makes it read as a translucent barrier rather than a
+ * solid plate.
+ */
+const stampGlyphFill = (ctx: CanvasRenderingContext2D, variant: Variant, size: number) => {
+  if (variant === 'green') stampShieldFill(ctx, size);
+};
+
+/**
+ * Detail that reads in the arc colour rather than lock-white, with only a
+ * light glow of its own. The padlock has none — its keyhole is a hole.
+ */
+const stampGlyphAccent = (ctx: CanvasRenderingContext2D, variant: Variant, size: number) => {
+  if (variant === 'green') stampShieldAccent(ctx, size);
+};
+
+const HAS_FILL: Record<Variant, boolean> = {navy: false, green: true};
+const HAS_ACCENT: Record<Variant, boolean> = {navy: false, green: true};
+
+/** How strongly the flat interior reads, relative to the outline. */
+const FILL_ALPHA = 0.12;
 
 /** Holes to re-cut after the bloom stack is composited. */
 const stampVoids = (ctx: CanvasRenderingContext2D, variant: Variant, size: number) => {
@@ -689,28 +793,38 @@ export const LockGlyph: React.FC<{
       c.height = ch;
       return c;
     };
-    return {mask: make(), tint: make()};
+    return {glow: make(), accent: make(), fill: make(), tint: make()};
   }, [cw, ch]);
 
   useLayoutEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const maskCtx = buffers.mask.getContext('2d');
+    const glowCtx = buffers.glow.getContext('2d');
+    const accentCtx = buffers.accent.getContext('2d');
+    const fillCtx = buffers.fill.getContext('2d');
     const tintCtx = buffers.tint.getContext('2d');
-    if (!ctx || !maskCtx || !tintCtx) return;
+    if (!ctx || !glowCtx || !accentCtx || !fillCtx || !tintCtx) return;
 
-    // 1. Alpha mask of the glyph, drawn once.
-    maskCtx.setTransform(1, 0, 0, 1, 0, 0);
-    maskCtx.globalCompositeOperation = 'source-over';
-    maskCtx.globalAlpha = 1;
-    maskCtx.clearRect(0, 0, cw, ch);
-    maskCtx.save();
-    maskCtx.translate(cw / 2, pad);
-    maskCtx.fillStyle = theme.lockWhite;
-    maskCtx.strokeStyle = theme.lockWhite;
-    stampGlyph(maskCtx, variant, size);
-    maskCtx.restore();
+    // 1. Alpha masks: what blooms, and what stays flat.
+    const buildMask = (
+      target: CanvasRenderingContext2D,
+      stamp: (c: CanvasRenderingContext2D) => void,
+    ) => {
+      target.setTransform(1, 0, 0, 1, 0, 0);
+      target.globalCompositeOperation = 'source-over';
+      target.globalAlpha = 1;
+      target.clearRect(0, 0, cw, ch);
+      target.save();
+      target.translate(cw / 2, pad);
+      target.fillStyle = theme.lockWhite;
+      target.strokeStyle = theme.lockWhite;
+      stamp(target);
+      target.restore();
+    };
+    buildMask(glowCtx, (c) => stampGlyph(c, variant, size));
+    if (HAS_ACCENT[variant]) buildMask(accentCtx, (c) => stampGlyphAccent(c, variant, size));
+    if (HAS_FILL[variant]) buildMask(fillCtx, (c) => stampGlyphFill(c, variant, size));
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
@@ -718,11 +832,12 @@ export const LockGlyph: React.FC<{
     ctx.shadowBlur = 0;
     ctx.clearRect(0, 0, cw, ch);
 
-    // 2. Three tinted copies composited additively — the RGB fringe.
-    const passes: {colour: string; dx: number; dy: number; alpha: number}[] = [
-      {colour: theme.fringeWarm, dx: -aberration, dy: aberration * 0.4, alpha: 0.85},
-      {colour: theme.fringeCool, dx: aberration, dy: -aberration * 0.4, alpha: 0.85},
-      {colour: theme.lockWhite, dx: 0, dy: 0, alpha: 1},
+    // 2. Three offset copies composited additively — the RGB fringe. The two
+    //    fringes carry their own colour; the centred pass takes the layer's.
+    const passes: {tint: string | null; dx: number; dy: number; alpha: number}[] = [
+      {tint: theme.fringeWarm, dx: -aberration, dy: aberration * 0.4, alpha: 0.85},
+      {tint: theme.fringeCool, dx: aberration, dy: -aberration * 0.4, alpha: 0.85},
+      {tint: null, dx: 0, dy: 0, alpha: 1},
     ];
 
     // Bloom stack: wide + soft through to tight + solid.
@@ -733,23 +848,64 @@ export const LockGlyph: React.FC<{
       {blur: 34 * bloom, alpha: 0.36},
       {blur: 0, alpha: 1},
     ];
+    const accentHalo = [
+      {blur: 60 * bloom, alpha: 0.3},
+      {blur: 0, alpha: 1},
+    ];
+    const flatHalo = [{blur: 0, alpha: 1}];
 
-    ctx.globalCompositeOperation = 'lighter';
-    for (const pass of passes) {
+    // Ordered back to front. Only the first carries the full bloom, and only
+    // the first takes the fringe at full strength — the others would wash out
+    // to white if all three offset copies landed on them at full alpha.
+    const layers: {
+      mask: HTMLCanvasElement;
+      base: string;
+      halo: typeof halo;
+      scale: number;
+      fringe: number;
+    }[] = [{mask: buffers.glow, base: theme.lockWhite, halo, scale: 1, fringe: 1}];
+    if (HAS_FILL[variant]) {
+      layers.push({
+        mask: buffers.fill,
+        base: theme.lockWhite,
+        halo: flatHalo,
+        scale: FILL_ALPHA,
+        fringe: 0.5,
+      });
+    }
+    if (HAS_ACCENT[variant]) {
+      layers.push({
+        mask: buffers.accent,
+        base: theme.arc,
+        halo: accentHalo,
+        scale: 1,
+        fringe: 0.4,
+      });
+    }
+
+    const tintFrom = (source: HTMLCanvasElement, colour: string) => {
       tintCtx.setTransform(1, 0, 0, 1, 0, 0);
       tintCtx.globalCompositeOperation = 'source-over';
       tintCtx.globalAlpha = 1;
       tintCtx.clearRect(0, 0, cw, ch);
-      tintCtx.drawImage(buffers.mask, 0, 0);
+      tintCtx.drawImage(source, 0, 0);
       tintCtx.globalCompositeOperation = 'source-in';
-      tintCtx.fillStyle = pass.colour;
+      tintCtx.fillStyle = colour;
       tintCtx.fillRect(0, 0, cw, ch);
+    };
 
-      for (const h of halo) {
-        ctx.globalAlpha = pass.alpha * h.alpha;
-        ctx.shadowColor = rgba(pass.colour, 1);
-        ctx.shadowBlur = h.blur;
-        ctx.drawImage(buffers.tint, pass.dx, pass.dy);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const layer of layers) {
+      for (const pass of passes) {
+        const colour = pass.tint ?? layer.base;
+        tintFrom(layer.mask, colour);
+        const passAlpha = pass.tint === null ? pass.alpha : pass.alpha * layer.fringe;
+        for (const h of layer.halo) {
+          ctx.globalAlpha = passAlpha * h.alpha * layer.scale;
+          ctx.shadowColor = rgba(colour, 1);
+          ctx.shadowBlur = h.blur;
+          ctx.drawImage(buffers.tint, pass.dx, pass.dy);
+        }
       }
     }
 
@@ -888,6 +1044,7 @@ export type SecureLockProps = {
 
 const LOCK_HEIGHT: Record<Variant, number> = {
   navy: 0.22 * H,
+  green: 0.24 * H,
 };
 
 export const SecureLock: React.FC<SecureLockProps> = ({variant}) => {
