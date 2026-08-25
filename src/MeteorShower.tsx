@@ -331,9 +331,10 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const {ctx} = layers[li];
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
-    const sh = ctx.createLinearGradient(0, hh * 0.9, hw * 0.8, hh * 0.15);
-    sh.addColorStop(0, 'rgba(0,0,0,0.78)');
-    sh.addColorStop(0.42, 'rgba(0,0,0,0.36)');
+    const sh = ctx.createLinearGradient(0, hh * 0.85, hw * 0.75, hh * 0.2);
+    sh.addColorStop(0, 'rgba(0,0,0,0.9)');
+    sh.addColorStop(0.35, 'rgba(0,0,0,0.62)');
+    sh.addColorStop(0.7, 'rgba(0,0,0,0.26)');
     sh.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = sh;
     ctx.fillRect(0, 0, hw, hh);
