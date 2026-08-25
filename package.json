@@ -1,0 +1,22 @@
+{
+  "name": "toma-crypto-terminal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K light-mode crypto trading terminal macro animation, built in Remotion.",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion render CryptoTerminal out/crypto-terminal.mp4 --codec=h264 --crf=14 --concurrency=8",
+    "still": "remotion still CryptoTerminal out/still.png",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.516",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.516"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.8.3"
+  }
+}
