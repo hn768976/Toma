@@ -20,6 +20,14 @@ const NEB_CX = MARGIN + W * 0.5;
 const NEB_CY = MARGIN + H * 0.5;
 const NEB_R = H * 0.75;
 
+// Direction to the off-screen light, pointing up-right and toward the viewer.
+// Canvas y grows downward, so a negative y component means "above".
+const LIGHT: [number, number, number] = (() => {
+  const v: [number, number, number] = [0.68, -0.4, 0.58];
+  const l = Math.hypot(v[0], v[1], v[2]);
+  return [v[0] / l, v[1] / l, v[2] / l];
+})();
+
 const GRAIN_TILE = 384;
 const GRAIN_TILES = 8;
 
@@ -159,9 +167,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_CY * NEB_SCALE,
       NEB_R * NEB_SCALE
     );
-    g.addColorStop(0, rgba(INNER_HAZE, 0.058));
-    g.addColorStop(0.75, rgba(INNER_HAZE, 0.054));
-    g.addColorStop(0.95, rgba(INNER_HAZE, 0.038));
+    g.addColorStop(0, rgba(INNER_HAZE, 0.1));
+    g.addColorStop(0.75, rgba(INNER_HAZE, 0.094));
+    g.addColorStop(0.95, rgba(INNER_HAZE, 0.07));
     g.addColorStop(1, rgba(INNER_HAZE, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -176,7 +184,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
     const r = NEB_R * (0.18 + 0.22 * random(`neb-base-${i}-r`));
-    const al = 0.018 + 0.018 * random(`neb-base-${i}-al`);
+    const al = 0.03 + 0.03 * random(`neb-base-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, INNER_HAZE, al);
   }
 
@@ -222,9 +230,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     const octaves: [HTMLCanvasElement, number][] = [
-      [noiseOctave(`neb-noise-${li}-0`, 16, 9, INNER_HAZE), 0.13],
-      [noiseOctave(`neb-noise-${li}-1`, 52, 30, INNER_HAZE), 0.09],
-      [noiseOctave(`neb-noise-${li}-2`, 160, 90, DUST_GREY), 0.055],
+      [noiseOctave(`neb-noise-${li}-0`, 16, 9, INNER_HAZE), 0.2],
+      [noiseOctave(`neb-noise-${li}-1`, 52, 30, INNER_HAZE), 0.14],
+      [noiseOctave(`neb-noise-${li}-2`, 160, 90, DUST_GREY), 0.08],
     ];
     for (const [oc, strength] of octaves) {
       ctx.save();
@@ -383,20 +391,64 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     ctx.restore();
   }
 
-  // Directional shading: the side away from the teal light — the lower-left —
-  // is a little darker. Erase the dust proportionally toward that corner.
+  // Sphere shading. A linear gradient cannot sell a ball; a Lambert term
+  // against the real surface normal can. For a point at offset (dx, dy) from
+  // the centre, measured in radii, the normal is (dx, dy, sqrt(1 - r²)) — so
+  // brightness falls off along a CURVED terminator and the far limb goes dark,
+  // which is the cue the eye reads as three-dimensional.
+  const SHADE_W = 480;
+  const SHADE_H = Math.max(1, Math.round((SHADE_W * hh) / hw));
+  const AMBIENT = 0.13;
+  const shadeMask = (() => {
+    const {c, ctx} = makeCanvas(SHADE_W, SHADE_H);
+    const img = ctx.createImageData(SHADE_W, SHADE_H);
+    const s = SHADE_W / hw; // scene → mask scale (aspect preserved)
+    const cxs = NEB_CX * NEB_SCALE * s;
+    const cys = NEB_CY * NEB_SCALE * s;
+    const rs = NEB_R * NEB_SCALE * s;
+    for (let py = 0; py < SHADE_H; py++) {
+      for (let px = 0; px < SHADE_W; px++) {
+        const dx = (px + 0.5 - cxs) / rs;
+        const dy = (py + 0.5 - cys) / rs;
+        const r2 = dx * dx + dy * dy;
+        let lam: number;
+        if (r2 <= 1) {
+          const nz = Math.sqrt(1 - r2);
+          lam = dx * LIGHT[0] + dy * LIGHT[1] + nz * LIGHT[2];
+        } else {
+          // Beyond the limb the clinging ring is lit by direction alone, so
+          // its bright side lines up with the sphere's.
+          const r = Math.sqrt(r2);
+          lam = (dx / r) * LIGHT[0] + (dy / r) * LIGHT[1];
+        }
+        const lit = AMBIENT + (1 - AMBIENT) * Math.pow(clamp01(lam), 0.85);
+        const i = (py * SHADE_W + px) * 4;
+        img.data[i + 3] = Math.round(255 * (1 - lit));
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  })();
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
-    const sh = ctx.createLinearGradient(0, hh * 0.85, hw * 0.75, hh * 0.2);
-    sh.addColorStop(0, 'rgba(0,0,0,0.72)');
-    sh.addColorStop(0.35, 'rgba(0,0,0,0.44)');
-    sh.addColorStop(0.7, 'rgba(0,0,0,0.18)');
-    sh.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = sh;
-    ctx.fillRect(0, 0, hw, hh);
+    ctx.drawImage(shadeMask, 0, 0, hw, hh);
     ctx.restore();
+  }
+
+  // Lit-limb crescent: a thin brightening where the light grazes the edge on
+  // the illuminated side, the second half of the sphere illusion.
+  const lightAngle = Math.atan2(LIGHT[1], LIGHT[0]);
+  for (let i = 0; i < 22; i++) {
+    const t = i / 21;
+    const a = lightAngle + (t - 0.5) * 2.1; // ±60° around the light
+    const falloff = Math.pow(Math.cos((t - 0.5) * Math.PI), 1.4);
+    const d = NEB_R * (0.965 + 0.03 * random(`neb-cres-${i}-d`));
+    const x = NEB_CX + Math.cos(a) * d;
+    const y = NEB_CY + Math.sin(a) * d;
+    const r = NEB_R * (0.05 + 0.04 * random(`neb-cres-${i}-r`));
+    paintBlob(layers[i % 2].ctx, x, y, r, RIM, 0.05 * falloff);
   }
 
   // Final blur softens every edge while keeping the fine dust mottling
