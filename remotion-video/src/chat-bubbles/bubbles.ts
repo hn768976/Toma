@@ -140,15 +140,10 @@ export const generateBubbles = (count = BUBBLE_COUNT): Bubble[] => {
     const z = stratified(`${seed}-z`, i, count, Z_MIN, Z_MAX);
 
     const bodyWidth = z * MAX_BUBBLE_WIDTH;
-    // Mostly wide-and-short with a scattering of square and tall shapes.
-    const aspectRoll = random(`${seed}-aspect-roll`);
-    const aspect =
-      aspectRoll < 0.5
-        ? rangeOf(`${seed}-aspect`, 1.55, 2.35) // wide and short
-        : aspectRoll < 0.85
-          ? rangeOf(`${seed}-aspect`, 0.95, 1.35) // near square
-          : rangeOf(`${seed}-aspect`, 0.72, 0.9); // tall
-    const bodyHeight = bodyWidth / aspect;
+    // One silhouette throughout: a wide, short rectangle. The proportion still
+    // varies bubble to bubble, but never far enough to read as a square or an
+    // upright shape — the field should look like one icon at many depths.
+    const bodyHeight = bodyWidth / rangeOf(`${seed}-aspect`, 1.5, 2.45);
 
     const minSide = Math.min(bodyWidth, bodyHeight);
     const cycles = Math.max(1, Math.round(z * MAX_WRAP_CYCLES));
