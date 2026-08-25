@@ -158,9 +158,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_CY * NEB_SCALE,
       NEB_R * NEB_SCALE
     );
-    g.addColorStop(0, rgba(AMBER, 0.028));
-    g.addColorStop(0.65, rgba(AMBER, 0.026));
-    g.addColorStop(0.93, rgba(AMBER, 0.02));
+    g.addColorStop(0, rgba(AMBER, 0.034));
+    g.addColorStop(0.65, rgba(AMBER, 0.032));
+    g.addColorStop(0.93, rgba(AMBER, 0.025));
     g.addColorStop(1, rgba(AMBER, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -175,7 +175,7 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
     const r = NEB_R * (0.18 + 0.22 * random(`neb-base-${i}-r`));
-    const al = 0.022 + 0.025 * random(`neb-base-${i}-al`);
+    const al = 0.028 + 0.028 * random(`neb-base-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, AMBER, al);
   }
 
@@ -220,9 +220,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     const octaves: [HTMLCanvasElement, number][] = [
-      [noiseOctave(`neb-noise-${li}-0`, 20, 12, AMBER), 0.08],
-      [noiseOctave(`neb-noise-${li}-1`, 64, 36, li === 0 ? AMBER : DUST_GREY), 0.065],
-      [noiseOctave(`neb-noise-${li}-2`, 192, 108, DUST_GREY), 0.05],
+      [noiseOctave(`neb-noise-${li}-0`, 20, 12, AMBER), 0.1],
+      [noiseOctave(`neb-noise-${li}-1`, 64, 36, li === 0 ? AMBER : DUST_GREY), 0.085],
+      [noiseOctave(`neb-noise-${li}-2`, 192, 108, DUST_GREY), 0.065],
     ];
     for (const [oc, strength] of octaves) {
       ctx.save();
