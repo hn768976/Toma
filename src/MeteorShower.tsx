@@ -260,10 +260,15 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_CY * NEB_SCALE,
       NEB_R * 1.9 * NEB_SCALE
     );
+    // A band hugging the rim: nothing inside, peaking just outside the edge,
+    // gone again shortly beyond — the dust clings to the sphere.
     mg.addColorStop(0, 'rgba(0,0,0,0)');
-    mg.addColorStop(0.47, 'rgba(0,0,0,0)');
-    mg.addColorStop(0.62, 'rgba(0,0,0,0.85)');
-    mg.addColorStop(1, 'rgba(0,0,0,1)');
+    mg.addColorStop(0.44, 'rgba(0,0,0,0)');
+    mg.addColorStop(0.53, 'rgba(0,0,0,1)');
+    mg.addColorStop(0.62, 'rgba(0,0,0,0.75)');
+    mg.addColorStop(0.72, 'rgba(0,0,0,0.16)');
+    mg.addColorStop(0.8, 'rgba(0,0,0,0)');
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
     mctx.fillStyle = mg;
     mctx.fillRect(0, 0, hw, hh);
     return mc;
@@ -271,9 +276,9 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
   for (let li = 0; li < 2; li++) {
     const {ctx} = layers[li];
     const outer: [HTMLCanvasElement, number][] = [
-      [outerNoise(`neb-outer-${li}-0`, 14, 8), 0.3],
-      [outerNoise(`neb-outer-${li}-1`, 44, 25), 0.22],
-      [outerNoise(`neb-outer-${li}-2`, 130, 73), 0.12],
+      [outerNoise(`neb-outer-${li}-0`, 14, 8), 0.36],
+      [outerNoise(`neb-outer-${li}-1`, 44, 25), 0.26],
+      [outerNoise(`neb-outer-${li}-2`, 130, 73), 0.14],
     ];
     for (const [oc, strength] of outer) {
       ctx.save();
@@ -283,39 +288,14 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     }
   }
 
-  // A faint warm haze over the ENTIRE frame — in the reference brown wisps
-  // reach into the dark left side too, so nowhere is flat black.
-  const globalNoise = (seed: string, cols: number, rows: number) => {
-    const {c: nc, ctx: nctx} = makeCanvas(cols, rows);
-    const img = nctx.createImageData(cols, rows);
-    const prng = mulberry32(Math.floor(random(seed) * 0xffffffff));
-    for (let i = 0; i < cols * rows; i++) {
-      img.data[i * 4] = OUTER_DUST[0];
-      img.data[i * 4 + 1] = OUTER_DUST[1];
-      img.data[i * 4 + 2] = OUTER_DUST[2];
-      img.data[i * 4 + 3] = Math.floor(255 * Math.pow(prng(), 2.4));
-    }
-    nctx.putImageData(img, 0, 0);
-    return nc;
-  };
-  for (let li = 0; li < 2; li++) {
-    const {ctx} = layers[li];
-    ctx.save();
-    ctx.globalAlpha = 0.085;
-    ctx.drawImage(globalNoise(`neb-glob-${li}-0`, 12, 7), 0, 0, hw, hh);
-    ctx.globalAlpha = 0.055;
-    ctx.drawImage(globalNoise(`neb-glob-${li}-1`, 40, 23), 0, 0, hw, hh);
-    ctx.restore();
-  }
-
-  // Discrete warm clouds hugging the outside of the rim, denser on the left.
+  // Discrete warm clouds clinging to the outside of the rim.
   for (let i = 0; i < 18; i++) {
     const a = random(`neb-amb-${i}-a`) * TAU;
-    const d = NEB_R * (1.02 + 0.5 * random(`neb-amb-${i}-d`));
+    const d = NEB_R * (1.0 + 0.14 * random(`neb-amb-${i}-d`));
     const x = NEB_CX + Math.cos(a) * d;
     const y = NEB_CY + Math.sin(a) * d;
-    const r = NEB_R * (0.12 + 0.2 * random(`neb-amb-${i}-r`));
-    const al = 0.03 + 0.035 * random(`neb-amb-${i}-al`);
+    const r = NEB_R * (0.08 + 0.12 * random(`neb-amb-${i}-r`));
+    const al = 0.035 + 0.04 * random(`neb-amb-${i}-al`);
     paintBlob(layers[i % 2].ctx, x, y, r, OUTER_DUST, al);
   }
 
