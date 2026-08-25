@@ -159,8 +159,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_R * NEB_SCALE
     );
     g.addColorStop(0, rgba(AMBER, 0.042));
-    g.addColorStop(0.6, rgba(AMBER, 0.04));
-    g.addColorStop(0.88, rgba(AMBER, 0.026));
+    g.addColorStop(0.75, rgba(AMBER, 0.04));
+    g.addColorStop(0.95, rgba(AMBER, 0.03));
     g.addColorStop(1, rgba(AMBER, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
@@ -211,8 +211,8 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
       NEB_R * NEB_SCALE
     );
     mg.addColorStop(0, 'rgba(0,0,0,1)');
-    mg.addColorStop(0.7, 'rgba(0,0,0,0.95)');
-    mg.addColorStop(0.92, 'rgba(0,0,0,0.5)');
+    mg.addColorStop(0.85, 'rgba(0,0,0,1)');
+    mg.addColorStop(0.97, 'rgba(0,0,0,0.6)');
     mg.addColorStop(1, 'rgba(0,0,0,0)');
     mctx.fillStyle = mg;
     mctx.fillRect(0, 0, hw, hh);
@@ -252,14 +252,14 @@ const buildNebulaLayers = (): {nebA: HTMLCanvasElement; nebB: HTMLCanvasElement}
     const lg = ctx.createRadialGradient(
       NEB_CX * NEB_SCALE,
       NEB_CY * NEB_SCALE,
-      NEB_R * 0.7 * NEB_SCALE,
+      NEB_R * 0.88 * NEB_SCALE,
       NEB_CX * NEB_SCALE,
       NEB_CY * NEB_SCALE,
-      NEB_R * 1.35 * NEB_SCALE
+      NEB_R * 1.3 * NEB_SCALE
     );
     lg.addColorStop(0, 'rgba(0,0,0,0)');
-    lg.addColorStop(0.46, 'rgba(0,0,0,0.5)');
-    lg.addColorStop(1, 'rgba(0,0,0,0.15)');
+    lg.addColorStop(0.29, 'rgba(0,0,0,0.35)');
+    lg.addColorStop(1, 'rgba(0,0,0,0.12)');
     ctx.fillStyle = lg;
     ctx.fillRect(0, 0, hw, hh);
     ctx.restore();
