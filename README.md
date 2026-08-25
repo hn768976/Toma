@@ -17,6 +17,9 @@ npm run render     # 4K ProRes 422 HQ  -> out/ticker-board.mov
 npm run render:mp4 # 4K H.264          -> out/ticker-board.mp4
 ```
 
+Both pass `--muted`. The piece has no audio, and without it Remotion writes a
+silent PCM track into the container.
+
 If Remotion cannot download its own Chromium (no egress to `remotion.media`),
 point it at a local one — it needs the *headless shell* build, since current
 full Chrome no longer supports the old headless mode Remotion launches with:
