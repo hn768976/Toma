@@ -189,7 +189,8 @@ export const isComment = (line: string) => line.trimStart().startsWith('//');
  * but the function names and element ids are made up for this animation.
  *
  * `staticLines` is how many lines are already written when the fragment enters
- * frame. Everything after that types itself out as the fragment crosses.
+ * frame. Only the final line types itself out, and it is kept to within about
+ * a word of the line above it so the block stays a tidy shape while it writes.
  */
 export interface HeroSnippet {
   lines: string[];
@@ -202,17 +203,17 @@ export const HERO_SNIPPETS: readonly HeroSnippet[] = [
       '// ai chatbot',
       '<script>',
       'function replyStream(txt) {',
-      '  document.getElementById("chat-root").innerHTML = txt;',
+      '  document.getElementById("chat")',
     ],
-    staticLines: 2,
+    staticLines: 3,
   },
   {
     lines: [
-      '// machine learning',
+      '// artificial intelligence',
       '<script>',
       'function scoreIntent(txt) {',
-      '  document.getElementById("intent-log").innerHTML = txt;',
+      '  document.getElementById("bot")',
     ],
-    staticLines: 2,
+    staticLines: 3,
   },
 ];

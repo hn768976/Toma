@@ -68,10 +68,21 @@ makes the field cohere into a stream instead of scattered debris.
 
 ### The hero fragments
 
-Two of the fragments are heroes: large, sharp, on the shared tilt, and their
-second half types itself out as they cross frame — a comment and a `<script>`
-tag already written, then the function line and the DOM call appearing
-character by character behind a blinking caret.
+Two of the fragments are heroes: large, sharp, on the shared tilt, with their
+**final line** typing itself out as they cross frame — the comment, the
+`<script>` tag and the function declaration already written, then the DOM call
+appearing character by character behind a blinking caret.
+
+```
+// ai chatbot                     already written
+<script>                          already written
+function replyStream(txt) {       already written
+  document.getElementById("chat") types out
+```
+
+The typing line is kept to within about a word of the line above it, so the
+block holds a tidy shape the whole way through instead of growing a long tail
+off one edge.
 
 They are the one population drawn live instead of from a cached sprite, since
 their content changes every frame. That costs nothing: two elements, four short
@@ -87,7 +98,8 @@ typed = clamp01((1 - prog - HERO_TYPE_START) / HERO_TYPE_SPAN)
 so it loops for free. At frame 540 the fragment is back at its frame-0 crossing
 position and therefore shows its frame-0 characters. The caret blink is on a
 36-frame period, and 540 / 36 = 15. The two heroes are phase-offset by half the
-loop, so they take turns crossing.
+loop and each crosses twice, so the writing plays four times over the nine
+seconds and one hero is always the one being written.
 
 ### The seamless loop
 
