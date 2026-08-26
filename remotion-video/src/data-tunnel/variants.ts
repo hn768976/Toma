@@ -78,11 +78,13 @@ export const VARIANTS = {
     farDim: 0.5,
     sharpCenterU: 0.42,
     vanishingPoint: { x: 0.09, y: 0.28 },
-    // Just above horizontal-right, through down-right, to down-and-slightly
-    // -left. The wedge has to clear the top-right corner at one end and reach
-    // the bottom-left at the other, from a vanishing point this far into the
-    // corner.
-    pathAngleStart: -0.25,
+    // Rising-right, through down-right, to down-and-slightly-left. The wedge
+    // has to clear the top-right corner at one end and reach the bottom-left
+    // at the other, from a vanishing point this far into the corner. The
+    // start sits well above the corner's own bearing from the vanishing
+    // point (about -0.17 rad) so rows pass on both sides of it, rather than
+    // the corner sitting outside the topmost row.
+    pathAngleStart: -0.54,
     pathAngleEnd: 1.75,
   },
 
@@ -110,7 +112,7 @@ export const VARIANTS = {
     farDim: 0.6,
     sharpCenterU: 0.27,
     vanishingPoint: { x: 0.09, y: 0.28 },
-    pathAngleStart: -0.25,
+    pathAngleStart: -0.54,
     pathAngleEnd: 1.75,
   },
 } satisfies Record<string, TunnelVariant>;

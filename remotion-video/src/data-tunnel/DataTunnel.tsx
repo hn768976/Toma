@@ -26,6 +26,8 @@ import {
   SHADOW_ALPHA,
   SHADOW_ANGLE,
   SHADOW_EXTENT,
+  SHADOW_MID_ALPHA,
+  SHADOW_MID_STOP,
   SPRITE_SMALL_THRESHOLD,
   TAU,
   VIGNETTE_ALPHA,
@@ -471,6 +473,10 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant: variantName }) 
             "deg, " +
             withAlpha(theme.vignette, SHADOW_ALPHA) +
             " 0%, " +
+            withAlpha(theme.vignette, SHADOW_MID_ALPHA) +
+            " " +
+            SHADOW_MID_STOP * 100 +
+            "%, " +
             withAlpha(theme.vignette, 0) +
             " " +
             SHADOW_EXTENT * 100 +

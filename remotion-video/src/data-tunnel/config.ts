@@ -21,7 +21,7 @@ export const DURATION_IN_FRAMES = 450;
 // in this file is shared by every variant.
 
 // Total number of chips in the field, spread across the paths.
-export const CHIP_COUNT = 840;
+export const CHIP_COUNT = 960;
 
 // Whole path traversals each chip completes in one 450-frame loop. Must be a
 // non-zero integer or the loop will not close.
@@ -43,7 +43,7 @@ export const GLOW_STRENGTH = 1;
 // variants flow in opposite directions relative to that point.
 
 // Number of curved paths radiating from the vanishing point.
-export const PATH_COUNT = 14;
+export const PATH_COUNT = 16;
 
 // Fraction of a slot each path angle may wander, so the fan is uneven.
 export const PATH_ANGLE_JITTER = 0.42;
@@ -206,9 +206,14 @@ export const VIGNETTE_INNER_STOP = 0.42;
 // vignette. The corridor converges into that corner, so the shadow buries
 // the vanishing point and lets the field brighten as it comes forward —
 // which is what stops the convergence reading as a hot spot.
-export const SHADOW_ALPHA = 0.82;
+export const SHADOW_ALPHA = 0.95;
+// A mid stop, so the shadow holds near-full strength across the left edge
+// before easing out. A plain two-stop ramp starts lifting immediately and
+// reads as a mechanical wipe rather than depth.
+export const SHADOW_MID_STOP = 0.2;
+export const SHADOW_MID_ALPHA = 0.74;
 // How far across the frame the shadow has fully faded out.
-export const SHADOW_EXTENT = 0.5;
+export const SHADOW_EXTENT = 0.58;
 // Gradient axis, in CSS degrees. Slightly past 90 so the top-left corner
 // sits deeper in shadow than the bottom-left.
 export const SHADOW_ANGLE = 100;
