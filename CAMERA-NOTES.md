@@ -92,7 +92,9 @@ If the first preview is black, check the camera height against the terrain
     they're already invisible.
   - Per-vertex colours handle the near-bright → far-haze ramp
     (`vertexColors: true`); fade lines *toward the haze colour*, not toward
-    black, so they melt into the horizon glow.
+    black, so they melt into the horizon glow. Neighbouring levels cycle
+    through darker shades of the same colour (×1 … ×0.38) — the bright/dark
+    mix of ropes reads as depth.
   - The grid window **slides with the camera, quantized to whole cells**, so
     sampled world positions never shift — contours stay world-stable while
     the window follows the dolly. Window: x ∈ ±100, z ∈ [camZ−9, camZ+228],

@@ -1,6 +1,6 @@
 import React, {useLayoutEffect, useMemo} from 'react';
 import {useThree} from '@react-three/fiber';
-import {useCurrentFrame, useVideoConfig} from 'remotion';
+import {random, useCurrentFrame, useVideoConfig} from 'remotion';
 import * as THREE from 'three';
 import {LineSegments2} from 'three/examples/jsm/lines/LineSegments2.js';
 import {LineSegmentsGeometry} from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
@@ -160,29 +160,29 @@ export const Contours: React.FC<{
     const positions: number[] = [];
     const colors: number[] = [];
 
-    const pushColor = (d: number) => {
+    const pushColor = (d: number, shade: number) => {
       const bright = clamp01((d - nearBrightDist) / (farDimDist - nearBrightDist));
       const fog = smoothstep(fadeStart, fadeEnd, d);
       // HDR boost on near lines pushes them over the bloom threshold → neon.
-      const glow = CONFIG.contours.nearGlow - (CONFIG.contours.nearGlow - 1) * bright;
+      const glow = (CONFIG.contours.nearGlow - (CONFIG.contours.nearGlow - 1) * bright) * shade;
       let r = (palette.bright.r + (palette.base.r - palette.bright.r) * bright) * glow;
       let g = (palette.bright.g + (palette.base.g - palette.bright.g) * bright) * glow;
       let b = (palette.bright.b + (palette.base.b - palette.bright.b) * bright) * glow;
-      r += (palette.haze.r * 0.9 - r) * fog;
-      g += (palette.haze.g * 0.9 - g) * fog;
-      b += (palette.haze.b * 0.9 - b) * fog;
+      r += (palette.haze.r * 0.9 * shade - r) * fog;
+      g += (palette.haze.g * 0.9 * shade - g) * fog;
+      b += (palette.haze.b * 0.9 * shade - b) * fog;
       colors.push(r, g, b);
     };
 
-    const pushSegment = (L: number, x1: number, z1: number, x2: number, z2: number) => {
+    const pushSegment = (L: number, shade: number, x1: number, z1: number, x2: number, z2: number) => {
       // Cull segments fully behind the camera or beyond the fade horizon.
       if (z1 < camZ - 1.5 && z2 < camZ - 1.5) return;
       const d1 = Math.hypot(x1 - camX, L - camY, z1 - camZ);
       const d2 = Math.hypot(x2 - camX, L - camY, z2 - camZ);
       if (Math.min(d1, d2) > fadeEnd) return;
       positions.push(x1, L, z1, x2, L, z2);
-      pushColor(d1);
-      pushColor(d2);
+      pushColor(d1, shade);
+      pushColor(d2, shade);
     };
 
     const perLevel = extractContours(
@@ -197,16 +197,21 @@ export const Contours: React.FC<{
     );
     perLevel.forEach((polys, li) => {
       const L = levels[li];
+      // Neighbouring ropes alternate between the full colour and darker
+      // shades of it — the bright/dark mix reads as depth.
+      const {shadeMin} = CONFIG.contours;
+      const cycle = [1, 0.5, 0.85, shadeMin, 0.95, 0.62];
+      const shade = cycle[li % cycle.length];
       for (const poly of polys) {
         const n = poly.pts.length / 2;
         // Only long, open flowing ropes: no closed shapes, no tiny stubs.
         if (CONFIG.contours.openRopesOnly && poly.closed) continue;
         if (n < CONFIG.contours.minPoints) continue;
         for (let i = 0; i < n - 1; i++) {
-          pushSegment(L, poly.pts[i * 2], poly.pts[i * 2 + 1], poly.pts[i * 2 + 2], poly.pts[i * 2 + 3]);
+          pushSegment(L, shade, poly.pts[i * 2], poly.pts[i * 2 + 1], poly.pts[i * 2 + 2], poly.pts[i * 2 + 3]);
         }
         if (poly.closed && n > 2) {
-          pushSegment(L, poly.pts[(n - 1) * 2], poly.pts[(n - 1) * 2 + 1], poly.pts[0], poly.pts[1]);
+          pushSegment(L, shade, poly.pts[(n - 1) * 2], poly.pts[(n - 1) * 2 + 1], poly.pts[0], poly.pts[1]);
         }
       }
     });

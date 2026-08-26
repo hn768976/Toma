@@ -71,6 +71,9 @@ export const CONFIG = {
     nearGlow: 2.2,
     /** Drop closed loops: only long, open flowing ropes are drawn. */
     openRopesOnly: true,
+    /** Per-rope shade range: each level renders somewhere between this dark
+     * shade of the contour colour and the full-bright one (seeded). */
+    shadeMin: 0.38,
     /** Discard stubs shorter than this many points after chaining. */
     minPoints: 6,
     /** Distance band over which lines fade into the horizon haze. */
