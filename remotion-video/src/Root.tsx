@@ -63,6 +63,16 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRainSchema}
         defaultProps={particleRainDefaults}
       />
+      <Composition
+        id="ParticleRiseGold"
+        component={ParticleRain}
+        durationInFrames={RAIN_DURATION_IN_FRAMES}
+        fps={RAIN_FPS}
+        width={RAIN_WIDTH}
+        height={RAIN_HEIGHT}
+        schema={particleRainSchema}
+        defaultProps={{ variant: "gold" }}
+      />
     </>
   );
 };

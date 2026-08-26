@@ -10,17 +10,9 @@ export const HEIGHT = 2160;
  *  frame 300 are pixel-identical. */
 export const DURATION_IN_FRAMES = 300;
 
-// ---------------------------------------------------------------------------
-// Flow
-// ---------------------------------------------------------------------------
-
-/**
- * The one signed value that decides which way the field travels:
- * `1` = down, `-1` = up. Every position, wrap and motion-blur calculation
- * multiplies by this — nothing anywhere else assumes "downward", so
- * reversing the whole animation is a change to this line alone.
- */
-export const FLOW_DIRECTION = 1;
+// Four things vary per variant and live in variants.ts instead: flow
+// direction, lean angle, base fall speed, and the source-glow position.
+// Everything below is shared by every variant.
 
 // ---------------------------------------------------------------------------
 // Streams
@@ -36,14 +28,6 @@ export const STREAM_OVERSCAN = 0.13;
 /** How far a stream may wander from its evenly-spaced slot, in slot widths.
  *  This is what turns a regular grid into clusters and gaps. */
 export const STREAM_CLUSTER_SPREAD = 2.6;
-
-/** The shared lean, in degrees off vertical. All streams lean the same way —
- *  that single tilt is what reads as mild perspective rather than flat rain. */
-export const LEAN_ANGLE_DEG = 6;
-
-/** Extra lean magnitude added at the frame edges (same direction as the
- *  base lean), ramped by distance from centre. */
-export const EDGE_LEAN_BOOST_DEG = 5;
 
 // ---------------------------------------------------------------------------
 // Depth
@@ -98,21 +82,8 @@ export const DOT_GAP_JITTER = { min: 0.35, max: 1.75 };
 export const DOT_LATERAL_JITTER_PX = 2.5;
 
 // ---------------------------------------------------------------------------
-// Fall speed and wrapping
+// Wrapping
 // ---------------------------------------------------------------------------
-
-/**
- * Travel per frame at z = 1. Speed is `z * BASE_FALL_SPEED_PX`, so near
- * streams outrun far ones — the parallax.
- *
- * The loop constraint: a stream's dot pattern has to repeat a whole number
- * of times in 300 frames, and the pattern must be at least as long as the
- * frame plus its wrap margins. That puts a floor under this value of
- * roughly `(HEIGHT + 2 * WRAP_MARGIN_PX) / (Z_MIN * DURATION_IN_FRAMES)`;
- * below it the slowest streams cannot complete a cycle and buildField falls
- * back to the minimum span (see the guard there).
- */
-export const BASE_FALL_SPEED_PX = 42;
 
 /** How far past each edge a dot travels before it wraps, so the re-roll on
  *  wrap always happens off-screen. */
@@ -139,18 +110,6 @@ export const FLARE_SIZE_BOOST = 1.6;
 // ---------------------------------------------------------------------------
 // Source glow
 // ---------------------------------------------------------------------------
-
-/** Just above the top edge, slightly right of centre. */
-export const SOURCE_GLOW = {
-  xFraction: 0.56,
-  yFraction: -0.04,
-  /** Wide, heavily blurred wash. */
-  haloRadiusFraction: 0.46,
-  haloAlpha: 0.2,
-  /** Tighter hot centre. */
-  coreRadiusFraction: 0.11,
-  coreAlpha: 0.34,
-};
 
 /** The source glow feeds the bloom pass at reduced strength — it is already
  *  a soft gradient, and blooming it at full strength washes the frame. */

@@ -3,7 +3,7 @@
 // adding a whole new one for a future variant) is a change to this file
 // only.
 
-export const THEME_NAMES = ["cyan"] as const;
+export const THEME_NAMES = ["cyan", "gold"] as const;
 
 export type ThemeName = (typeof THEME_NAMES)[number];
 
@@ -33,6 +33,18 @@ export const THEMES: Record<ThemeName, Theme> = {
     dotDim: "#1A4A7A",
     dotWhite: "#E8FDFF",
     sourceGlow: "#5FD8F5",
+  },
+  // Warm brown-black base, not navy. Gold grains over a blue field would
+  // read as a colour filter laid on top of the cyan piece; the warm base is
+  // what makes them read as emberlight.
+  gold: {
+    backgroundDeep: "#1A0F03",
+    backgroundMid: "#3D2408",
+    dotBright: "#FFC94F",
+    dotMid: "#E8912E",
+    dotDim: "#7A4A14",
+    dotWhite: "#FFF5D8",
+    sourceGlow: "#FFB93F",
   },
 };
 

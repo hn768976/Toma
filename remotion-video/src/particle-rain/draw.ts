@@ -9,13 +9,11 @@ import {
   DRIFT_AMPLITUDE_PX,
   DURATION_IN_FRAMES,
   FLARE_SIZE_BOOST,
-  FLOW_DIRECTION,
   GLOW_STRENGTH,
   GRAIN_ALPHA,
   GRAIN_TILE_PX,
   HEIGHT,
   MOTION_BLUR_TAP_ALPHAS,
-  SOURCE_GLOW,
   SOURCE_GLOW_BLOOM_SCALE,
   TWINKLE_AMPLITUDE,
   VIGNETTE_STRENGTH,
@@ -24,7 +22,8 @@ import {
 import type { Field } from "./field";
 import { rand } from "./random";
 import type { SpriteSet } from "./sprites";
-import { FLARE_TONE_INDEX, hexToRgb, rgba, shade, type Theme } from "./themes";
+import { FLARE_TONE_INDEX, hexToRgb, rgba, shade } from "./themes";
+import type { VariantConfig } from "./variants";
 
 const TWO_PI = Math.PI * 2;
 
@@ -35,9 +34,6 @@ const TONE_WEIGHT = [0.25, 0.5, 0.85, 1];
 /** How far off-frame a dot may sit and still be worth drawing: enough to
  *  cover the widest blur halo plus a full motion-blur trail. */
 const CULL_MARGIN_PX = 200;
-
-const GLOW_X = WIDTH * SOURCE_GLOW.xFraction;
-const GLOW_Y = HEIGHT * SOURCE_GLOW.yFraction;
 
 const clamp01 = (value: number) => (value < 0 ? 0 : value > 1 ? 1 : value);
 
@@ -59,7 +55,7 @@ export const drawFrame = (
   frame: number,
   field: Field,
   sprites: SpriteSet,
-  theme: Theme,
+  config: VariantConfig,
 ) => {
   const { ctx, bloomCtx, bloomBlurCtx } = targets;
   const loopFrame =
@@ -80,7 +76,7 @@ export const drawFrame = (
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  drawBackground(ctx, theme);
+  drawBackground(ctx, config);
 
   bloomCtx.setTransform(1, 0, 0, 1, 0, 0);
   bloomCtx.globalAlpha = 1;
@@ -103,10 +99,10 @@ export const drawFrame = (
   ctx.setTransform(1, 0, 0, 1, driftX, driftY);
   ctx.globalCompositeOperation = "lighter";
 
-  drawSourceGlow(ctx, theme, 1);
-  drawSourceGlow(bloomCtx, theme, SOURCE_GLOW_BLOOM_SCALE);
+  drawSourceGlow(ctx, config, 1);
+  drawSourceGlow(bloomCtx, config, SOURCE_GLOW_BLOOM_SCALE);
 
-  drawDots(ctx, bloomCtx, loopFrame, loopT, field, sprites);
+  drawDots(ctx, bloomCtx, loopFrame, loopT, field, sprites, config.flowDirection);
 
   // Bloom: blur the small buffer, then add it back scaled up. The upscale's
   // own smoothing does most of the spreading, which is why a 5px blur on a
@@ -126,25 +122,30 @@ export const drawFrame = (
 
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = 1;
-  drawVignette(ctx, theme);
+  drawVignette(ctx, config);
   drawGrain(ctx, loopFrame, sprites);
 };
 
-const drawBackground = (ctx: CanvasRenderingContext2D, theme: Theme) => {
-  const deep = hexToRgb(theme.backgroundDeep);
-  const mid = hexToRgb(theme.backgroundMid);
+const drawBackground = (
+  ctx: CanvasRenderingContext2D,
+  config: VariantConfig,
+) => {
+  const deep = hexToRgb(config.theme.backgroundDeep);
+  const mid = hexToRgb(config.theme.backgroundMid);
+  const glowX = WIDTH * config.sourceGlow.xFraction;
+  const glowY = HEIGHT * config.sourceGlow.yFraction;
 
   ctx.fillStyle = rgba(deep, 1);
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // Navy pooled around the source so the frame reads as deep blue lit from
-  // above rather than flat black.
+  // The lifted background tone pools around the source, so the frame reads
+  // as lit from wherever the light is rather than flat black.
   const pool = ctx.createRadialGradient(
-    GLOW_X,
-    GLOW_Y,
+    glowX,
+    glowY,
     0,
-    GLOW_X,
-    GLOW_Y,
+    glowX,
+    glowY,
     WIDTH * BACKGROUND_POOL.radiusFraction,
   );
   pool.addColorStop(0, rgba(mid, BACKGROUND_POOL.strength));
@@ -157,49 +158,52 @@ const drawBackground = (ctx: CanvasRenderingContext2D, theme: Theme) => {
 
 const drawSourceGlow = (
   ctx: CanvasRenderingContext2D,
-  theme: Theme,
+  config: VariantConfig,
   strength: number,
 ) => {
-  const glow = hexToRgb(theme.sourceGlow);
+  const source = config.sourceGlow;
+  const glow = hexToRgb(config.theme.sourceGlow);
   const gain = GLOW_STRENGTH * strength;
+  const glowX = WIDTH * source.xFraction;
+  const glowY = HEIGHT * source.yFraction;
 
-  const haloRadius = WIDTH * SOURCE_GLOW.haloRadiusFraction;
+  const haloRadius = WIDTH * source.haloRadiusFraction;
   const halo = ctx.createRadialGradient(
-    GLOW_X,
-    GLOW_Y,
+    glowX,
+    glowY,
     0,
-    GLOW_X,
-    GLOW_Y,
+    glowX,
+    glowY,
     haloRadius,
   );
-  halo.addColorStop(0, rgba(glow, SOURCE_GLOW.haloAlpha * gain));
-  halo.addColorStop(0.3, rgba(glow, SOURCE_GLOW.haloAlpha * 0.42 * gain));
-  halo.addColorStop(0.62, rgba(glow, SOURCE_GLOW.haloAlpha * 0.12 * gain));
+  halo.addColorStop(0, rgba(glow, source.haloAlpha * gain));
+  halo.addColorStop(0.3, rgba(glow, source.haloAlpha * 0.42 * gain));
+  halo.addColorStop(0.62, rgba(glow, source.haloAlpha * 0.12 * gain));
   halo.addColorStop(1, rgba(glow, 0));
   ctx.fillStyle = halo;
   ctx.fillRect(
-    GLOW_X - haloRadius,
-    GLOW_Y - haloRadius,
+    glowX - haloRadius,
+    glowY - haloRadius,
     haloRadius * 2,
     haloRadius * 2,
   );
 
-  const coreRadius = WIDTH * SOURCE_GLOW.coreRadiusFraction;
+  const coreRadius = WIDTH * source.coreRadiusFraction;
   const core = ctx.createRadialGradient(
-    GLOW_X,
-    GLOW_Y,
+    glowX,
+    glowY,
     0,
-    GLOW_X,
-    GLOW_Y,
+    glowX,
+    glowY,
     coreRadius,
   );
-  core.addColorStop(0, rgba(glow, SOURCE_GLOW.coreAlpha * gain));
-  core.addColorStop(0.45, rgba(glow, SOURCE_GLOW.coreAlpha * 0.3 * gain));
+  core.addColorStop(0, rgba(glow, source.coreAlpha * gain));
+  core.addColorStop(0.45, rgba(glow, source.coreAlpha * 0.3 * gain));
   core.addColorStop(1, rgba(glow, 0));
   ctx.fillStyle = core;
   ctx.fillRect(
-    GLOW_X - coreRadius,
-    GLOW_Y - coreRadius,
+    glowX - coreRadius,
+    glowY - coreRadius,
     coreRadius * 2,
     coreRadius * 2,
   );
@@ -212,15 +216,16 @@ const drawDots = (
   loopT: number,
   field: Field,
   sprites: SpriteSet,
+  flowDirection: number,
 ) => {
   const flareSprites = sprites.tones[FLARE_TONE_INDEX];
 
   for (const stream of field.streams) {
     // Whole number of pattern cycles per loop, so this returns to its
     // starting value at loopT = 1.
-    const travel = FLOW_DIRECTION * loopT * stream.cycles * stream.span;
+    const travel = flowDirection * loopT * stream.cycles * stream.span;
     const patternTop = HEIGHT / 2 - stream.span / 2;
-    const perFrame = FLOW_DIRECTION * stream.speed;
+    const perFrame = flowDirection * stream.speed;
     const toneSprites = sprites.tones;
     const taps = stream.motionBlur ? MOTION_BLUR_TAP_ALPHAS.length : 1;
 
@@ -315,8 +320,11 @@ const blit = (
   ctx.drawImage(sprite, x - radius, y - radius, radius * 2, radius * 2);
 };
 
-const drawVignette = (ctx: CanvasRenderingContext2D, theme: Theme) => {
-  const tint = shade(hexToRgb(theme.backgroundDeep), 0.35);
+const drawVignette = (
+  ctx: CanvasRenderingContext2D,
+  config: VariantConfig,
+) => {
+  const tint = shade(hexToRgb(config.theme.backgroundDeep), 0.35);
   ctx.save();
   ctx.translate(WIDTH / 2, HEIGHT * 0.48);
   // Squash the circle into an ellipse matching the frame aspect, so the

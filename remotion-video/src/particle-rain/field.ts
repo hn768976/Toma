@@ -1,7 +1,6 @@
 import {
   ALPHA_FAR,
   ALPHA_NEAR,
-  BASE_FALL_SPEED_PX,
   BLUR_FALLOFF,
   BLUR_MAX_PX,
   DOT_GAP_JITTER,
@@ -10,13 +9,11 @@ import {
   DOT_SIZE_VARIANCE,
   DOT_SPACING_PX,
   DURATION_IN_FRAMES,
-  EDGE_LEAN_BOOST_DEG,
   FLARES_PER_SECOND,
   FLARE_MAX_FRAMES,
   FLARE_MIN_FRAMES,
   FPS,
   HEIGHT,
-  LEAN_ANGLE_DEG,
   MOTION_BLUR_Z,
   SHARP_Z,
   STREAM_CLUSTER_SPREAD,
@@ -30,6 +27,7 @@ import {
   Z_MIN,
 } from "./constants";
 import { DOT_TONES } from "./themes";
+import type { VariantConfig } from "./variants";
 import { rand, randInt, randPick, randRange, randSpan } from "./random";
 
 export type Dot = {
@@ -93,12 +91,18 @@ const blurForDepth = (z: number) =>
  * bands), the pattern *length* absorbs the remainder: pick the largest whole
  * number of cycles that still leaves the pattern at least a frame-height
  * long, then stretch the pattern to fit. Speed stays exactly `z * base`.
+ *
+ * The floor: one cycle per loop needs `speed * DURATION_IN_FRAMES >=
+ * SPAN_MIN`, i.e. `baseFallSpeedPx >= SPAN_MIN / (Z_MIN * DURATION_IN_FRAMES)`
+ * — about 39 px/frame at these dimensions. A slower base (the gold variant
+ * runs 33.6) leaves the slowest few percent of streams unable to fit a whole
+ * cycle. There is no way to keep both an exact speed and a non-repeating
+ * pattern for those, so they are held at the floor speed: they are the
+ * dimmest, smallest streams in the field and run at most ~16% fast.
  */
 const wrapGeometry = (speed: number) => {
   const travelPerLoop = speed * DURATION_IN_FRAMES;
   if (travelPerLoop < SPAN_MIN) {
-    // Only reachable if BASE_FALL_SPEED_PX is tuned below the floor
-    // documented on it. Keep the loop seamless and give up exact speed.
     return { cycles: 1, span: SPAN_MIN, speed: SPAN_MIN / DURATION_IN_FRAMES };
   }
   const cycles = Math.floor(travelPerLoop / SPAN_MIN);
@@ -168,7 +172,7 @@ const buildDots = (streamIndex: number, z: number, span: number): Dot[] => {
   return dots;
 };
 
-export const buildField = (): Field => {
+export const buildField = (config: VariantConfig): Field => {
   const streams: Stream[] = [];
   let dotCount = 0;
 
@@ -184,11 +188,11 @@ export const buildField = (): Field => {
     // Shared lean for every stream, amplified toward the frame edges so the
     // outer columns splay and the field reads as perspective.
     const edge = clamp(Math.abs(xc - WIDTH / 2) / (WIDTH / 2), 0, 1.3);
-    const leanDeg = LEAN_ANGLE_DEG + EDGE_LEAN_BOOST_DEG * edge;
+    const leanDeg = config.leanAngleDeg + config.edgeLeanBoostDeg * edge;
 
     const z = randRange(`rain-stream-z-${i}`, Z_MIN, Z_MAX);
     const zNorm = (z - Z_MIN) / (Z_MAX - Z_MIN);
-    const geometry = wrapGeometry(z * BASE_FALL_SPEED_PX);
+    const geometry = wrapGeometry(z * config.baseFallSpeedPx);
     const dots = buildDots(i, z, geometry.span);
 
     for (let d = 0; d < dots.length; d++) {

@@ -5,7 +5,8 @@ import { BLOOM_DOWNSCALE, HEIGHT, WIDTH } from "./constants";
 import { buildField } from "./field";
 import { drawFrame } from "./draw";
 import { buildSprites } from "./sprites";
-import { THEMES, THEME_NAMES } from "./themes";
+import { THEME_NAMES } from "./themes";
+import { VARIANTS } from "./variants";
 
 export const particleRainSchema = z.object({
   variant: z.enum(THEME_NAMES),
@@ -26,8 +27,10 @@ const createCanvas = (width: number, height: number) => {
 };
 
 /**
- * Vertical streams of glowing dots falling through dark space, drawn to a
- * single 3840x2160 canvas.
+ * Vertical streams of glowing dots drifting through dark space, drawn to a
+ * single 3840x2160 canvas. Which way they travel, how far they lean, how
+ * fast they move and where the light sits all come from the variant — see
+ * variants.ts.
  *
  * Two rules hold the whole thing together:
  *
@@ -40,13 +43,14 @@ const createCanvas = (width: number, height: number) => {
  */
 export const ParticleRain: React.FC<ParticleRainProps> = ({ variant }) => {
   const frame = useCurrentFrame();
-  const theme = THEMES[variant];
+  const config = VARIANTS[variant];
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Independent of `variant`: dots hold a tone *index*, resolved to a colour
-  // at draw time, so recolouring never rebuilds the field.
-  const field = useMemo(() => buildField(), []);
-  const sprites = useMemo(() => buildSprites(theme), [theme]);
+  // The field depends on the variant's lean and speed, but not on its
+  // colours: dots hold a tone *index* resolved to a colour at draw time, so
+  // a recolour alone never rebuilds it.
+  const field = useMemo(() => buildField(config), [config]);
+  const sprites = useMemo(() => buildSprites(config.theme), [config.theme]);
 
   const bloom = useMemo(
     () => createCanvas(WIDTH / BLOOM_DOWNSCALE, HEIGHT / BLOOM_DOWNSCALE),
@@ -63,8 +67,8 @@ export const ParticleRain: React.FC<ParticleRainProps> = ({ variant }) => {
     const bloomBlurCtx = bloomBlur?.getContext("2d");
     if (!ctx || !bloomCtx || !bloomBlurCtx || !sprites) return;
 
-    drawFrame({ ctx, bloomCtx, bloomBlurCtx }, frame, field, sprites, theme);
-  }, [frame, field, sprites, theme, bloom, bloomBlur]);
+    drawFrame({ ctx, bloomCtx, bloomBlurCtx }, frame, field, sprites, config);
+  }, [frame, field, sprites, config, bloom, bloomBlur]);
 
   return (
     <AbsoluteFill>
