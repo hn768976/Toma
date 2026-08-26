@@ -6,12 +6,15 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@react-three/fiber": "^9.7.0",
     "@remotion/cli": "4.0.515",
     "@remotion/tailwind-v4": "4.0.515",
+    "@remotion/three": "^4.0.515",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
     "tailwindcss": "4.0.0",
+    "three": "^0.185.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
