@@ -100,10 +100,6 @@ const GLOBAL_POINTS: Record<string, [number, number]> = {
   tokyo: [139.69, 35.69],
   sydney: [151.21, -33.87],
   auckland: [174.76, -36.85],
-  // Off-frame anchors: outside the viewport box, so these arcs leave the frame.
-  offEast: [214, 12],
-  offWest: [-206, 28],
-  offSouth: [96, -88],
 };
 
 const GLOBAL_ROUTES: Route[] = [
@@ -126,20 +122,21 @@ const GLOBAL_ROUTES: Route[] = [
   {from: 'nairobi', to: 'istanbul'},
   {from: 'toronto', to: 'reykjavik'},
   {from: 'mexicoCity', to: 'bogota'},
-  {from: 'tokyo', to: 'offEast'},
-  {from: 'auckland', to: 'offEast'},
-  {from: 'losAngeles', to: 'offWest'},
-  {from: 'bangkok', to: 'tehran'},
-  {from: 'jakarta', to: 'offSouth'},
+  {from: 'tokyo', to: 'jakarta'},
+  {from: 'auckland', to: 'hongKong'},
   {from: 'lima', to: 'newYork'},
+  {from: 'bangkok', to: 'tehran'},
+  {from: 'losAngeles', to: 'bogota'},
+  {from: 'moscow', to: 'mumbai'},
 ];
+
 
 export const VARIANTS = {
   global: {
     // Antarctica is deliberately outside the box: it adds nothing and drags
     // the visual mass to the bottom of the frame.
     viewport: {lonMin: -170, lonMax: 180, latMin: -60, latMax: 78},
-    fit: {maxWidth: 0.85, maxHeight: 0.78, offsetY: 170},
+    fit: {maxWidth: 0.85, maxHeight: 0.78, offsetY: 20},
     dotPitch: 14,
     dotSize: 7,
     arcCount: 22,

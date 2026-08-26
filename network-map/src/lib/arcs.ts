@@ -68,6 +68,65 @@ const bezierLength = (arc: Arc, steps = 96): number => {
   return total;
 };
 
+/** Keeps arcs clear of the very edge of the projected map box. */
+const ARC_INSET = 18;
+
+export type Bounds = {left: number; right: number; top: number; bottom: number};
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
+/**
+ * Exact bounding box of a quadratic bezier: the endpoints plus the axis
+ * extrema, which for a quadratic are the single t where the derivative is zero.
+ */
+const curveBounds = (start: Point, control: Point, end: Point): Bounds => {
+  let left = Math.min(start.x, end.x);
+  let right = Math.max(start.x, end.x);
+  let top = Math.min(start.y, end.y);
+  let bottom = Math.max(start.y, end.y);
+
+  const extend = (p0: number, pc: number, p1: number, axis: 'x' | 'y') => {
+    const denominator = p0 - 2 * pc + p1;
+    if (denominator === 0) return;
+    const t = (p0 - pc) / denominator;
+    if (t <= 0 || t >= 1) return;
+    const u = 1 - t;
+    const value = u * u * p0 + 2 * u * t * pc + t * t * p1;
+    if (axis === 'x') {
+      left = Math.min(left, value);
+      right = Math.max(right, value);
+    } else {
+      top = Math.min(top, value);
+      bottom = Math.max(bottom, value);
+    }
+  };
+
+  extend(start.x, control.x, end.x, 'x');
+  extend(start.y, control.y, end.y, 'y');
+  return {left, right, top, bottom};
+};
+
+/**
+ * Largest apex height, in pixels above the endpoint midpoint, that keeps the
+ * whole curve below `top`.
+ *
+ * With the control point at `mid.y - 2h` the curve reduces to
+ * `lerp(y0, y1, t) - 4h * t * (1 - t)`, whose minimum is
+ * `midY - h - d^2 / (16h)` when the turning point falls inside the segment.
+ * Solving that against the headroom `M` gives the quadratic below. When the
+ * headroom is too small for any turning point to fit, the curve's highest
+ * point is an endpoint instead, which is already inside the map.
+ */
+const maxApex = (startY: number, endY: number, top: number): number => {
+  const midY = (startY + endY) / 2;
+  const d = endY - startY;
+  const headroom = midY - top;
+  if (headroom <= 0) return 0;
+  if (headroom < Math.abs(d) / 2) return (Math.abs(d) / 4) * 0.98;
+  return (headroom + Math.sqrt(headroom * headroom - (d * d) / 4)) / 2;
+};
+
 /**
  * Hands out arc colours by quota rather than by rolling a die per arc, so the
  * configured mix is hit exactly instead of approximately, then shuffles the
@@ -108,6 +167,15 @@ export const buildArcs = (
   const routes = config.routes.slice(0, config.arcCount);
   const colors = assignColors(routes.length, config);
 
+  // Nothing is allowed to leave the map: every endpoint and every point along
+  // every curve stays inside this box.
+  const bounds: Bounds = {
+    left: projection.originX + ARC_INSET,
+    right: projection.originX + projection.mapWidth - ARC_INSET,
+    top: projection.originY + ARC_INSET,
+    bottom: projection.originY + projection.mapHeight - ARC_INSET,
+  };
+
   return routes.map((route, id) => {
     const from = config.points[route.from];
     const to = config.points[route.to];
@@ -115,24 +183,56 @@ export const buildArcs = (
       throw new Error(`Unknown endpoint in route ${route.from} -> ${route.to}`);
     }
 
-    const start = {x: projection.projectX(from[0]), y: projection.projectY(from[1])};
-    const end = {x: projection.projectX(to[0]), y: projection.projectY(to[1])};
+    const start = {
+      x: clamp(projection.projectX(from[0]), bounds.left, bounds.right),
+      y: clamp(projection.projectY(from[1]), bounds.top, bounds.bottom),
+    };
+    const end = {
+      x: clamp(projection.projectX(to[0]), bounds.left, bounds.right),
+      y: clamp(projection.projectY(to[1]), bounds.top, bounds.bottom),
+    };
 
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
     // Bow height scales with distance, so long routes arc high and short hops
-    // stay flat. The factor is per-variant because "long" is relative.
+    // stay flat. The factor is per-variant because "long" is relative. The
+    // apex is then capped at whatever headroom the map's top edge leaves, so a
+    // long route near the top of the map flattens instead of arcing out.
     const bow = Math.min(
       config.bowMax,
       Math.max(config.bowMin, distance * config.bowFactor),
+      maxApex(start.y, end.y, bounds.top),
     );
 
     const seed = `${config.seed}-arc-${id}`;
+    const midX = (start.x + end.x) / 2;
+    // The control point's horizontal offset shows up at half strength on the
+    // curve, so the skew is clamped against twice the remaining side margin.
+    const skew = clamp(
+      (random(`${seed}-skew`) - 0.5) * distance * 0.06,
+      2 * (bounds.left - midX),
+      2 * (bounds.right - midX),
+    );
     // A quadratic bezier passes at half the control point's offset, so the
     // control sits twice the intended apex height above the midpoint.
-    const control = {
-      x: (start.x + end.x) / 2 + (random(`${seed}-skew`) - 0.5) * distance * 0.06,
-      y: (start.y + end.y) / 2 - bow * 2,
-    };
+    let control = {x: midX + skew, y: (start.y + end.y) / 2 - bow * 2};
+
+    // Belt and braces: the closed form above should always be enough, but the
+    // invariant is worth guaranteeing rather than deriving.
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const box = curveBounds(start, control, end);
+      if (
+        box.left >= bounds.left - 0.5 &&
+        box.right <= bounds.right + 0.5 &&
+        box.top >= bounds.top - 0.5 &&
+        box.bottom <= bounds.bottom + 0.5
+      ) {
+        break;
+      }
+      control = {
+        x: midX + (control.x - midX) * 0.8,
+        y: (start.y + end.y) / 2 + (control.y - (start.y + end.y) / 2) * 0.8,
+      };
+    }
 
     const cycle = CYCLES[random(`${seed}-cycle`) < 0.72 ? 0 : 1];
     // Arcs enter across the first third of the loop.
