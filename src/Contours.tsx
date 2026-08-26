@@ -168,9 +168,11 @@ export const Contours: React.FC<{
       let r = (palette.bright.r + (palette.base.r - palette.bright.r) * bright) * glow;
       let g = (palette.bright.g + (palette.base.g - palette.bright.g) * bright) * glow;
       let b = (palette.bright.b + (palette.base.b - palette.bright.b) * bright) * glow;
-      r += (palette.haze.r * 0.9 * shade - r) * fog;
-      g += (palette.haze.g * 0.9 * shade - g) * fog;
-      b += (palette.haze.b * 0.9 * shade - b) * fog;
+      // Fade toward a dimmed haze, not the full haze colour: at full haze the
+      // packed far ropes merge into a solid wall instead of a soft horizon.
+      r += (palette.haze.r * 0.5 * shade - r) * fog;
+      g += (palette.haze.g * 0.5 * shade - g) * fog;
+      b += (palette.haze.b * 0.5 * shade - b) * fog;
       colors.push(r, g, b);
     };
 

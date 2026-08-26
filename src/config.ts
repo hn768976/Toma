@@ -39,25 +39,23 @@ export const CONFIG = {
     back: 9,
     depth: 170,
     /** Base spatial frequency of the noise (1/world-units). Higher = tighter,
-     * curvier maze-like ropes. */
-    noiseScale: 0.024,
-    /** X-frequency multiplier (<1 stretches features along x): contours
-     * become long open ropes flowing across the frame instead of loops. */
-    anisoX: 0.32,
+     * curvier maze-like ropes — the reference's dense meander. */
+    noiseScale: 0.032,
+    /** X-frequency multiplier. 1 = isotropic: contours wander equally in both
+     * axes, which is what gives the reference its maze of curves and loops. */
+    anisoX: 1,
     octaves: 3,
-    /** Peak-to-mid height of the terrain. Near-flat on purpose: rope ground
-     * spacing is amplitude-invariant, and with real relief the low camera
-     * sees mid-distance ropes chopped into dashes behind ridges and ropes
-     * crossing on screen. Tiny relief keeps it organic with none of that. */
-    amp: 0.25,
+    /** Peak-to-mid height of the terrain: real rolling relief, like the
+     * reference's rippled sheet. */
+    amp: 1.1,
     /** How fast the noise field breathes, in noise-t per second.
      * 0 = frozen: the rope lines do not move — only the dots travel on them. */
     breatheSpeed: 0,
   },
 
   contours: {
-    /** Number of iso-height levels. Fewer = sparser ropes, wider even gaps. */
-    levels: 16,
+    /** Number of iso-height levels — sets rope density across the field. */
+    levels: 22,
     /** Laplacian smoothing passes on the chained polylines — rounds off the
      * little marching-squares corners so the ropes are pure curves. */
     smoothingPasses: 3,
@@ -66,38 +64,40 @@ export const CONFIG = {
     /** Rope width in PIXELS at 4K output (scaled to the actual render size).
      * Screen-space width keeps far ropes from going sub-pixel, which is what
      * chops world-unit thin lines into dashes. */
-    lineWidthPx: 3.0,
+    lineWidthPx: 2.6,
     /** HDR multiplier on the nearest lines so they read as neon under bloom. */
-    nearGlow: 2.2,
-    /** Drop closed loops: only long, open flowing ropes are drawn. */
-    openRopesOnly: true,
-    /** Per-rope shade range: each level renders somewhere between this dark
-     * shade of the contour colour and the full-bright one (seeded). */
+    nearGlow: 1.35,
+    /** Closed contours (the loops around hilltops and hollows) are part of
+     * the look — the reference is full of them. */
+    openRopesOnly: false,
+    /** Darkest shade in the per-level brightness cycle. */
     shadeMin: 0.38,
     /** Discard stubs shorter than this many points after chaining. */
-    minPoints: 6,
-    /** Distance band over which lines fade into the horizon haze. */
-    fadeStart: 55,
-    fadeEnd: 140,
+    minPoints: 5,
+    /** Distance band over which lines fade into the horizon haze. Pulled in
+     * so far ropes dim before they pack into a solid band at the horizon. */
+    fadeStart: 42,
+    fadeEnd: 105,
     /** Distance band over which line colour ramps bright → base. */
-    nearBrightDist: 16,
-    farDimDist: 110,
+    nearBrightDist: 22,
+    farDimDist: 75,
   },
 
   pins: {
-    count: 140,
-    /** Pin field: x ∈ ±xHalf (centre-biased), z ∈ [zMin, zMax]. */
+    count: 200,
+    /** Pin field: x ∈ ±xHalf, z ∈ [zMin, zMax]. zMax covers the dolly's end
+     * position plus the fade distance — pins past that are never seen. */
     xHalf: 48,
     zMin: -14,
-    zMax: 330,
+    zMax: 230,
     /** Pins sit on a jittered grid — evenly spaced across the field, with
      * this fraction of a grid cell of seeded jitter so it stays organic. */
     gridJitter: 0.55,
     stemHeight: 2.0,
     stemRadius: 0.026,
-    ringRadius: 0.55,
-    ringTube: 0.07,
-    discRadius: 0.44,
+    ringRadius: 0.45,
+    ringTube: 0.058,
+    discRadius: 0.36,
     /** Per-pin uniform scale jitter: 1 ± jitter. */
     scaleJitter: 0.18,
     /** Rise stagger window — every pin's spring has started by this frame. */
@@ -133,9 +133,9 @@ export const CONFIG = {
 
   dof: {
     /** Focus plane distance from the camera, world units (near-middle distance). */
-    focusWorld: 40,
+    focusWorld: 32,
     /** postprocessing focalLength, normalized [0..1]. Bigger = shallower. */
-    focalLength: 0.07,
+    focalLength: 0.085,
     /** Bokeh disc size — generous on purpose; the near-pin bokeh is the shot. */
     bokehScale: 13,
     /** Internal DOF buffer height; keeps bokeh consistent across output sizes. */
@@ -143,13 +143,14 @@ export const CONFIG = {
   },
 
   bloom: {
-    intensity: 1.75,
+    intensity: 1.05,
     /** High enough that the dark background and floor don't bloom. */
-    luminanceThreshold: 0.22,
-    luminanceSmoothing: 0.3,
+    luminanceThreshold: 0.3,
+    luminanceSmoothing: 0.25,
     mipmapBlur: true,
-    /** Halo spread of the mipmap bloom — the neon glow radius. */
-    radius: 0.82,
+    /** Halo spread of the mipmap bloom. Tight: a wide radius floods the
+     * whole frame with haze instead of hugging the ropes. */
+    radius: 0.55,
   },
 
   vignette: {

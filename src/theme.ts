@@ -29,16 +29,16 @@ export type Theme = {
 
 export const THEMES = {
   violet: {
-    bgDeep: '#1B0A0F',
-    bgHaze: '#40161F',
-    contour: '#A93BFF',
-    contourBright: '#D66BFF',
+    bgDeep: '#200C2B',
+    bgHaze: '#43183A',
+    contour: '#9126EE',
+    contourBright: '#BC5CFF',
     pin: '#FF6A28',
     pinHot: '#FF9440',
     avatarWarm: '#FFD4A8',
     avatarCool: '#A8C4E8',
-    floorDeep: '#200609',
-    floorHigh: '#3A0C15',
+    floorDeep: '#1C0718',
+    floorHigh: '#2C0A24',
     ropeDot: '#FFC4EE',
   },
 } as const satisfies Record<string, Theme>;
