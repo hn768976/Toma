@@ -50,8 +50,11 @@ export type VariantConfig = {
   bowMax: number;
   /** Arc stroke width in frame pixels. */
   arcWidth: number;
-  /** Share of arcs coloured [cyan, red, violet]. Must sum to 1. */
-  colorMix: [number, number, number];
+  /**
+   * Shortest arc allowed, in frame pixels. Enforced at build time so a route
+   * list can never introduce a stub.
+   */
+  minArcLength: number;
   /** Named endpoints as [lon, lat]. Entries outside the viewport run off-frame. */
   points: Record<string, [number, number]>;
   /** Endpoint pairs, drawn in order until `arcCount` arcs exist. */
@@ -102,32 +105,20 @@ const GLOBAL_POINTS: Record<string, [number, number]> = {
   auckland: [174.76, -36.85],
 };
 
+// Six routes, twelve endpoints, no endpoint used twice - so no two arcs meet at
+// the same point. Lengths are deliberately graded, roughly 2400 / 1800 / 1560 /
+// 1440 / 1240 / 980 px, so the arcs read as differently sized rather than as one
+// repeated shape, and none of them is a stub.
+//
+// Routes are also kept away from vertical. The bow is always straight up, so a
+// near-vertical chord curls into a hook rather than reading as a route.
 const GLOBAL_ROUTES: Route[] = [
-  {from: 'newYork', to: 'london'},
   {from: 'losAngeles', to: 'tokyo'},
-  {from: 'london', to: 'singapore'},
-  {from: 'saoPaulo', to: 'lagos'},
-  {from: 'newYork', to: 'saoPaulo'},
-  {from: 'dubai', to: 'london'},
-  {from: 'shanghai', to: 'losAngeles'},
-  {from: 'paris', to: 'delhi'},
-  {from: 'johannesburg', to: 'dubai'},
-  {from: 'sydney', to: 'singapore'},
-  {from: 'moscow', to: 'beijing'},
-  {from: 'chicago', to: 'madrid'},
-  {from: 'hongKong', to: 'sydney'},
-  {from: 'cairo', to: 'mumbai'},
-  {from: 'vancouver', to: 'seoul'},
-  {from: 'buenosAires', to: 'casablanca'},
-  {from: 'nairobi', to: 'istanbul'},
-  {from: 'toronto', to: 'reykjavik'},
-  {from: 'mexicoCity', to: 'bogota'},
-  {from: 'tokyo', to: 'jakarta'},
-  {from: 'auckland', to: 'hongKong'},
-  {from: 'lima', to: 'newYork'},
-  {from: 'bangkok', to: 'tehran'},
-  {from: 'losAngeles', to: 'bogota'},
-  {from: 'moscow', to: 'mumbai'},
+  {from: 'toronto', to: 'jakarta'},
+  {from: 'saoPaulo', to: 'hongKong'},
+  {from: 'mexicoCity', to: 'dubai'},
+  {from: 'lima', to: 'moscow'},
+  {from: 'reykjavik', to: 'delhi'},
 ];
 
 
@@ -139,12 +130,12 @@ export const VARIANTS = {
     fit: {maxWidth: 0.85, maxHeight: 0.78, offsetY: 20},
     dotPitch: 14,
     dotSize: 7,
-    arcCount: 22,
+    arcCount: 6,
     bowFactor: 0.22,
     bowMin: 70,
     bowMax: 620,
     arcWidth: 3,
-    colorMix: [0.5, 0.35, 0.15],
+    minArcLength: 900,
     points: GLOBAL_POINTS,
     routes: GLOBAL_ROUTES,
     pulseRadius: 46,

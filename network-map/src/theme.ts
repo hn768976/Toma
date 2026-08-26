@@ -14,6 +14,9 @@ export const THEMES = {
   arcCyan: '#3FD8F5',
   arcRed: '#E8455F',
   arcViolet: '#8B6FE8',
+  arcTeal: '#3FF5B0',
+  arcAmber: '#F5A93F',
+  arcMagenta: '#F55FD0',
   /** Endpoint pulses and travelling dots. */
   nodeWhite: '#F0F8FF',
   /** Pure black, used only by the vignette. */
@@ -24,11 +27,17 @@ export const THEMES = {
 
 export type ThemeColor = keyof typeof THEMES;
 
-/** The three arc colours, in the order the mix weights are declared. */
+/**
+ * The arc colours. Every arc takes a different one, so this list also sets the
+ * hard ceiling on how many arcs a variant may declare.
+ */
 export const ARC_PALETTE = [
   THEMES.arcCyan,
   THEMES.arcRed,
   THEMES.arcViolet,
+  THEMES.arcTeal,
+  THEMES.arcAmber,
+  THEMES.arcMagenta,
 ] as const;
 
 export type Rgb = {r: number; g: number; b: number};

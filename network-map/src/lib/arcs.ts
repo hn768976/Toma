@@ -1,5 +1,5 @@
 import {random} from 'remotion';
-import {LOOP_FRAMES, type VariantConfig} from '../config';
+import {LOOP_FRAMES, type Route, type VariantConfig} from '../config';
 import {ARC_PALETTE} from '../theme';
 import type {Projection} from './projection';
 
@@ -128,36 +128,42 @@ const maxApex = (startY: number, endY: number, top: number): number => {
 };
 
 /**
- * Hands out arc colours by quota rather than by rolling a die per arc, so the
- * configured mix is hit exactly instead of approximately, then shuffles the
- * assignment with a seeded Fisher-Yates so the colours are not clustered.
+ * One distinct colour per arc. The palette is shuffled with a seeded
+ * Fisher-Yates so the two variants do not come out in the same order, but every
+ * arc still gets its own colour - no two arcs share one.
  */
 const assignColors = (count: number, config: VariantConfig): string[] => {
-  const quotas = config.colorMix.map((share) => Math.floor(share * count));
-  let assigned = quotas.reduce((a, b) => a + b, 0);
-  // Hand any rounding remainder to the largest share first.
-  const order = config.colorMix
-    .map((share, i) => ({share, i}))
-    .sort((a, b) => b.share - a.share);
-  let cursor = 0;
-  while (assigned < count) {
-    quotas[order[cursor % order.length].i]++;
-    assigned++;
-    cursor++;
+  if (count > ARC_PALETTE.length) {
+    throw new Error(
+      `Variant "${config.seed}" wants ${count} arcs but only ${ARC_PALETTE.length} ` +
+        'arc colours exist, and no two arcs may share a colour',
+    );
   }
 
-  const pool: string[] = [];
-  quotas.forEach((n, i) => {
-    for (let k = 0; k < n; k++) pool.push(ARC_PALETTE[i]);
-  });
-
+  const pool = [...ARC_PALETTE] as string[];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(random(`${config.seed}-shuffle-${i}`) * (i + 1));
     const tmp = pool[i];
     pool[i] = pool[j];
     pool[j] = tmp;
   }
-  return pool;
+  return pool.slice(0, count);
+};
+
+/** No endpoint may serve two arcs, so no two arcs ever meet at a point. */
+const assertDistinctEndpoints = (routes: Route[], config: VariantConfig): void => {
+  const seen = new Set<string>();
+  for (const route of routes) {
+    for (const endpoint of [route.from, route.to]) {
+      if (seen.has(endpoint)) {
+        throw new Error(
+          `Variant "${config.seed}" reuses endpoint "${endpoint}"; ` +
+            'each arc needs its own pair of points',
+        );
+      }
+      seen.add(endpoint);
+    }
+  }
 };
 
 export const buildArcs = (
@@ -165,6 +171,7 @@ export const buildArcs = (
   projection: Projection,
 ): Arc[] => {
   const routes = config.routes.slice(0, config.arcCount);
+  assertDistinctEndpoints(routes, config);
   const colors = assignColors(routes.length, config);
 
   // Nothing is allowed to leave the map: every endpoint and every point along
@@ -193,6 +200,12 @@ export const buildArcs = (
     };
 
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
+    if (distance < config.minArcLength) {
+      throw new Error(
+        `Route ${route.from} -> ${route.to} is ${Math.round(distance)}px, ` +
+          `below the ${config.minArcLength}px minimum for variant "${config.seed}"`,
+      );
+    }
     // Bow height scales with distance, so long routes arc high and short hops
     // stay flat. The factor is per-variant because "long" is relative. The
     // apex is then capped at whatever headroom the map's top edge leaves, so a

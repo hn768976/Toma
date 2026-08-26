@@ -10,6 +10,9 @@ a seamless 20-second loop.
 | ------------------ | ----------- | ------------------- | --- |
 | `NetworkMapGlobal` | 3840 × 2160 | 600 frames / 20.0 s | 30  |
 
+`NetworkMapGlobal` draws six routes across twelve distinct cities, graded from
+roughly 2400px down to 980px so no two arcs are the same size.
+
 ## Render
 
 ```bash
@@ -50,10 +53,24 @@ at a tighter box. The map is static, so it is rasterised once into an offscreen
 canvas and blitted every frame.
 
 **The arcs** are quadratic beziers whose control point sits above the midpoint
-at twice the intended apex height. Apex height scales with endpoint distance and
-is clamped per variant, so long routes arc high and short hops stay shallow. The
-draw-on is a canvas line dash the length of the whole path with the offset
-easing to zero on `Easing.out(Easing.cubic)`.
+at twice the intended apex height. Apex height scales with endpoint distance,
+then is capped at whatever headroom the map's top edge leaves, so a long route
+near the top flattens rather than arcing out of the map. The draw-on is a canvas
+line dash the length of the whole path with the offset easing to zero on
+`Easing.out(Easing.cubic)`.
+
+Three properties of the arc set are invariants enforced at build time in
+`lib/arcs.ts`, not conventions to be maintained by hand:
+
+- **Nothing leaves the map.** Endpoints are clamped into the projected map box,
+  the apex is capped as above, and an exact bezier bounding-box check shrinks
+  the control point toward the chord if anything still escapes.
+- **No two arcs meet at a point.** Every endpoint in a variant's route list must
+  be unique; a reused one throws.
+- **No stub arcs.** Any route shorter than the variant's `minArcLength` throws.
+
+Each arc also takes its own colour from `ARC_PALETTE`, so no two arcs in a frame
+share one - which caps a variant at as many arcs as there are palette entries.
 
 **The loop closes** because every periodic quantity divides 600: arc cycles are
 600 or 300 frames, travelling-dot laps are 150, 200 or 300, and the camera drift
