@@ -2,11 +2,11 @@ import {useMemo} from 'react';
 import {CONFIG} from '../config';
 import {context2d, createBuffer, roundRectPath, speechTailPath} from '../lib/canvas';
 import {setTransform} from '../lib/matrix';
-import {paintBarCluster} from '../lib/motifs';
+import {dotStatesAtFrame, paintMotif} from '../lib/motifs';
 import {cameraMatrix, depthPushMultiplier, DRIFT_DIRECTION, pushScale} from '../lib/plane';
-import {seededBool, seededFloat} from '../lib/rng';
+import {seededBool, seededFloat, seededInt} from '../lib/rng';
 import {CardSpec} from '../scene/layout';
-import {mixColors, Theme, withAlpha} from '../theme';
+import {CardFillStyle, Theme, withAlpha} from '../theme';
 
 /**
  * A surrounding message card.
@@ -31,59 +31,23 @@ export interface BakedCard {
   variants: CardSprite[];
 }
 
-interface CardPalette {
-  body: string;
-  rim: string;
-  line: string;
-  lineAlpha: number;
-  bars: string;
-}
-
-const paletteFor = (spec: CardSpec, theme: Theme): CardPalette => {
-  switch (spec.fill) {
-    case 'white':
-      return {
-        body: theme.cardWhite,
-        rim: withAlpha(theme.badgeWhite, 0.5),
-        line: theme.lineBlue,
-        lineAlpha: 0.88,
-        bars: theme.glowCyan,
-      };
-    case 'blue':
-      return {
-        body: theme.cardBlue,
-        rim: withAlpha(theme.lineBlue, 0.7),
-        // Filled blue cards carry white or lighter-blue lines.
-        line: seededBool(`${spec.id}-linehue`, 0.5)
-          ? theme.badgeWhite
-          : mixColors(theme.lineBlue, theme.cardWhite, 0.55),
-        lineAlpha: 0.85,
-        bars: mixColors(theme.glowCyan, theme.cardWhite, 0.25),
-      };
-    case 'red':
-      return {
-        body: theme.accentRed,
-        rim: withAlpha(theme.accentRed, 0.9),
-        line: theme.cardWhite,
-        lineAlpha: 0.5,
-        bars: theme.glowCyan,
-      };
-    case 'glass':
-    default:
-      return {
-        body: withAlpha(theme.cardWhite, 0.16),
-        rim: withAlpha(theme.lineBlue, 0.5),
-        line: theme.lineBlue,
-        lineAlpha: 0.6,
-        bars: theme.glowCyan,
-      };
-  }
+/**
+ * A card's style comes straight out of the theme. The seeded coin flip between
+ * `line` and `lineAlt` is what gives filled cards two different line colours;
+ * themes that do not want that variation set both to the same value.
+ */
+const styleFor = (spec: CardSpec, theme: Theme): CardFillStyle & {chosenLine: string} => {
+  const style = theme.cardFills[spec.fill];
+  return {
+    ...style,
+    chosenLine: seededBool(`${spec.id}-linehue`, 0.5) ? style.line : style.lineAlt,
+  };
 };
 
 const PADDING = 26;
 
 const bakeVariant = (spec: CardSpec, theme: Theme, lengths: number[]): CardSprite => {
-  const palette = paletteFor(spec, theme);
+  const style = styleFor(spec, theme);
   const tailHeight = spec.tail ? Math.min(spec.height * 0.2, 54) : 0;
   const width = spec.width + PADDING * 2;
   const height = spec.height + tailHeight + PADDING * 2;
@@ -110,24 +74,26 @@ const bakeVariant = (spec: CardSpec, theme: Theme, lengths: number[]): CardSprit
   if (spec.tail) {
     const tailWidth = Math.min(bw * 0.22, 96);
     const anchorX = spec.tailDirection === 1 ? bx + bw * 0.24 : bx + bw * 0.76;
-    ctx.fillStyle = palette.body;
+    ctx.fillStyle = style.body;
     speechTailPath(ctx, anchorX, by + bh - 1, tailWidth, tailHeight, spec.tailDirection);
     ctx.fill();
   }
 
-  ctx.fillStyle = palette.body;
+  ctx.fillStyle = style.body;
   roundRectPath(ctx, bx, by, bw, bh, radius);
   ctx.fill();
 
-  ctx.strokeStyle = palette.rim;
-  ctx.lineWidth = Math.max(1.5, bw * 0.004);
+  // On a dark field this rim is the only thing separating one card from the next,
+  // so its weight is a theme decision rather than a constant.
+  ctx.strokeStyle = style.rim;
+  ctx.lineWidth = Math.max(theme.rimWidthFloor, bw * theme.rimWidthFactor);
   ctx.stroke();
 
-  // A soft inner highlight along the top edge. White cards are bright surfaces
+  // A soft inner highlight along the top edge. Light cards are bright surfaces
   // catching the badge's glow, and this is what makes them bloom once blurred.
-  if (spec.fill === 'white' || spec.fill === 'glass') {
+  if (style.sheen > 0) {
     const sheen = ctx.createLinearGradient(bx, by, bx, by + bh * 0.6);
-    sheen.addColorStop(0, withAlpha(theme.badgeWhite, spec.fill === 'white' ? 0.5 : 0.18));
+    sheen.addColorStop(0, withAlpha(theme.badgeWhite, style.sheen));
     sheen.addColorStop(1, withAlpha(theme.badgeWhite, 0));
     ctx.fillStyle = sheen;
     roundRectPath(ctx, bx, by, bw, bh, radius);
@@ -145,8 +111,8 @@ const bakeVariant = (spec: CardSpec, theme: Theme, lengths: number[]): CardSprit
   const block = lineCount * lineHeight + (lineCount - 1) * gap;
   let ly = by + (bh - block) / 2;
 
-  ctx.globalAlpha = palette.lineAlpha;
-  ctx.fillStyle = palette.line;
+  ctx.globalAlpha = style.lineAlpha;
+  ctx.fillStyle = style.chosenLine;
   for (let i = 0; i < lineCount; i++) {
     const w = textWidth * lengths[i];
     roundRectPath(ctx, bx + inset, ly, w, lineHeight, lineHeight / 2);
@@ -159,14 +125,19 @@ const bakeVariant = (spec: CardSpec, theme: Theme, lengths: number[]): CardSprit
     const heights = Array.from({length: CONFIG.hero.barCount}, (_, i) =>
       seededFloat(`${spec.id}-bar-${i}`, 0.3, 1),
     );
-    paintBarCluster(
+    // Card motifs are baked, so they hold a pose: a seeded frame of the bounce
+    // keeps the dot cards from all looking identical.
+    const dots = dotStatesAtFrame(seededInt(`${spec.id}-dotpose`, 0, CONFIG.hero.dotPeriodFrames - 1));
+    paintMotif(
       ctx,
+      theme.motif,
       bx + bw - inset - barZoneWidth,
       by + bh * 0.3,
       barZoneWidth,
       bh * 0.4,
+      style.motif,
       heights,
-      palette.bars,
+      dots,
     );
   }
 

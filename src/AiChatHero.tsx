@@ -29,6 +29,8 @@ import {getTheme, Variant} from './theme';
 // assignable to Record<string, unknown>, which interfaces are not.
 export type AiChatHeroProps = {
   variant: Variant;
+  /** The glyph on the badge. A prop, not a constant, so a variant can change it. */
+  badge: string;
 };
 
 interface DepthBuffers {
@@ -71,7 +73,7 @@ const compositeBucket = (
   ctx.restore();
 };
 
-export const AiChatHero: React.FC<AiChatHeroProps> = ({variant}) => {
+export const AiChatHero: React.FC<AiChatHeroProps> = ({variant, badge}) => {
   const frame = useCurrentFrame();
   const theme = useMemo(() => getTheme(variant), [variant]);
   const fontsReady = useFontsReady();
@@ -79,7 +81,9 @@ export const AiChatHero: React.FC<AiChatHeroProps> = ({variant}) => {
 
   // The scene is generated once. Depth buckets in particular are fixed for the
   // whole shot: a card that changed buffers mid-push would pop.
-  const cards = useMemo(() => buildCards(), []);
+  // Only the fills depend on the theme; the geometry these produce is identical
+  // for every variant.
+  const cards = useMemo(() => buildCards(theme), [theme]);
   const codeSpecs = useMemo(() => buildCodeBlocks(), []);
   const liveTimeline = useMemo(() => buildLiveVariantTimeline(cards), [cards]);
 
@@ -153,7 +157,7 @@ export const AiChatHero: React.FC<AiChatHeroProps> = ({variant}) => {
     resetContext(ctx);
     paintHeroBubble(ctx, theme, frame);
     paintBadgeGlow(ctx, theme, frame);
-    paintBadge(ctx, theme, frame);
+    paintBadge(ctx, theme, frame, badge);
 
     // 9. Finish.
     resetContext(ctx);

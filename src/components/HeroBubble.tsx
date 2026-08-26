@@ -1,7 +1,7 @@
 import {CONFIG} from '../config';
 import {roundRectPath, speechTailPath} from '../lib/canvas';
 import {setTransform} from '../lib/matrix';
-import {paintBarCluster} from '../lib/motifs';
+import {dotStatesAtFrame, paintMotif} from '../lib/motifs';
 import {cameraMatrix, pushScale} from '../lib/plane';
 import {seededFloat} from '../lib/rng';
 import {BUBBLE_BOTTOM, BUBBLE_LEFT, BUBBLE_TOP, HERO} from '../scene/heroGeometry';
@@ -36,7 +36,7 @@ export const paintHeroBubble = (
   ctx.save();
   setTransform(ctx, heroCameraMatrix(frame));
 
-  const body = withAlpha(theme.cardWhite, CONFIG.hero.bubbleAlpha);
+  const body = withAlpha(theme.bubbleBody, CONFIG.hero.bubbleAlpha);
 
   // Tail on the lower-left, drawn before the body so the rim covers the seam.
   ctx.fillStyle = body;
@@ -61,23 +61,27 @@ export const paintHeroBubble = (
   );
   ctx.fill();
 
-  ctx.strokeStyle = withAlpha(theme.badgeWhite, 0.55);
+  ctx.strokeStyle = theme.bubbleRim;
   ctx.lineWidth = HERO.bubbleHeight * 0.005;
   ctx.stroke();
 
-  // The waveform cluster, beside the badge.
-  paintBarCluster(
+  // The cluster beside the badge: a live waveform, or a typing indicator.
+  // Either way this is the only fast motion in the piece, and it is what makes
+  // the badge feel active.
+  paintMotif(
     ctx,
+    theme.motif,
     HERO.barsLeft,
     -HERO.barsHeight / 2,
     HERO.barsWidth,
     HERO.barsHeight,
+    theme.heroMotif,
     barHeightsAtFrame(frame),
-    theme.glowCyan,
+    dotStatesAtFrame(frame),
   );
 
   // A few short lines below the bubble — a text preview.
-  ctx.fillStyle = theme.lineBlue;
+  ctx.fillStyle = theme.heroLine;
   ctx.globalAlpha = 0.8;
   let y = BUBBLE_BOTTOM + HERO.tailHeight + HERO.previewGap;
   for (let i = 0; i < CONFIG.hero.previewLines; i++) {

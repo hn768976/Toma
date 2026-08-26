@@ -37,14 +37,18 @@ export const CONFIG = {
     /** 7 x 4 jittered cells across the frame = 28 overlapping cards. */
     columns: 7,
     rows: 4,
-    /** Red cards. Counterweight, not a second theme — keep this tiny. */
-    redCount: 3,
-    /** Red is banned outside this depth window, and near the hero. */
-    redDepthRange: [0.4, 0.75] as const,
-    /** Red must land inside this inset of the frame, or it reads as an edge artefact. */
-    redFrameInset: 0.1,
+    /** Accent cards — red in "blue", amber in "dark". Counterweight, not a
+     * second theme, so keep this tiny. */
+    accentCount: 3,
+    /** The accent is banned outside this depth window, and near the hero. */
+    accentDepthRange: [0.4, 0.75] as const,
+    /** It must land inside this inset of the frame, or it reads as an edge artefact. */
+    accentFrameInset: 0.1,
     /** ...and no closer to the badge than this multiple of the hero clearing. */
-    redMinHeroDistance: 2.4,
+    accentMinHeroDistance: 2.4,
+    /** Accent cards are shrunk by this much. Applied in every variant, so card
+     * sizes stay identical across them. */
+    accentSizeScale: 0.72,
     /** Plane-space card size before the depth scale is applied. */
     minWidth: 360,
     maxWidth: 760,
@@ -125,7 +129,17 @@ export const CONFIG = {
     bubbleAlpha: 0.85,
     /** Badge height as a fraction of the bubble's. */
     badgeHeightFraction: 0.45,
-    glyph: 'AI',
+    /** Cap height as a fraction of the badge, for a two-character glyph... */
+    glyphScale: 0.58,
+    /** ...and for three or more, which need to lose height to keep the badge
+     * footprint identical. */
+    glyphScaleLong: 0.493,
+    /** Letterspacing as a fraction of cap height, short and long glyphs. */
+    glyphTracking: -0.03,
+    glyphTrackingLong: -0.045,
+    /** A long glyph is additionally shrunk to fit this fraction of the badge
+     * width. Short glyphs skip the fit entirely and keep their exact cap height. */
+    glyphMaxWidthFraction: 0.74,
     /** Base halo intensity. */
     glowIntensity: 1.0,
     /** The halo pulses this much either side of the base. */
@@ -134,11 +148,24 @@ export const CONFIG = {
     glowPeriodFrames: 90,
     /** How far the halo reaches, as a multiple of badge size. */
     glowReach: 6.0,
-    /** Bars in the waveform cluster beside the badge. */
+    /** Bars in the waveform cluster beside the badge ("bars" motif). */
     barCount: 6,
     /** The only fast motion in the piece. */
     barMinHz: 1.1,
     barMaxHz: 2.7,
+    /** The typing indicator ("dots" motif). */
+    dotCount: 3,
+    /** How far a dot rises at the top of its bounce, in plane units. */
+    dotLift: 8,
+    /** Frames between one dot's bounce and the next. */
+    dotStaggerFrames: 8,
+    /** Length of one full cycle. */
+    dotPeriodFrames: 45,
+    /** How much of that cycle a single dot spends bouncing. */
+    dotActiveFrames: 18,
+    /** A dot's brightness at rest, relative to its brightness at the peak. */
+    dotRestBrightness: 0.45,
+
     /** Short text-preview lines below the bubble. */
     previewLines: 3,
   },

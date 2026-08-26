@@ -10,6 +10,7 @@ import {
   screenToPlane,
 } from '../lib/plane';
 import {lerp, seededBool, seededFloat, seededInt} from '../lib/rng';
+import {CardFillKind, Theme} from '../theme';
 import {CodeLine, generateCodeBlock} from './codeSource';
 
 /**
@@ -19,8 +20,6 @@ import {CodeLine, generateCodeBlock} from './codeSource';
  * Computed once (useMemo) and never per frame. Depth buckets in particular are
  * fixed for the whole shot — a card that changed buffers mid-push would pop.
  */
-
-export type CardFill = 'white' | 'blue' | 'glass' | 'red';
 
 export interface CardSpec {
   id: string;
@@ -32,7 +31,7 @@ export interface CardSpec {
   height: number;
   /** Small in-plane rotation, radians. Cards are not perfectly aligned. */
   rotation: number;
-  fill: CardFill;
+  fill: CardFillKind;
   tail: boolean;
   tailDirection: -1 | 1;
   hasBars: boolean;
@@ -123,8 +122,13 @@ const OVERSCAN_REGION = (() => {
   };
 })();
 
-export const buildCards = (): CardSpec[] => {
-  const {columns, rows, redCount, redDepthRange, heroExclusionRadius} = CONFIG.cards;
+/**
+ * Card geometry — position, size, rotation, depth bucket, drift, bob — is
+ * deliberately independent of the theme. Every variant lays out the same field;
+ * only which fill each card carries changes.
+ */
+export const buildCards = (theme: Theme): CardSpec[] => {
+  const {columns, rows, accentCount, accentDepthRange, heroExclusionRadius} = CONFIG.cards;
   const count = columns * rows;
 
   const draft = Array.from({length: count}, (_, i) => {
@@ -143,12 +147,13 @@ export const buildCards = (): CardSpec[] => {
     return {id, index: i, depth: depthAt(origin.x, origin.y), origin};
   });
 
-  // Red is a counterweight, not a theme: a few small mid-distance cards, well
-  // clear of the hero, and — crucially — actually inside the frame. Selecting on
-  // plane distance alone parks them on the edges where they read as artefacts.
-  const inset = CONFIG.cards.redFrameInset;
+  // The accent is a counterweight, not a second theme: a few small mid-distance
+  // cards, well clear of the hero, and — crucially — actually inside the frame.
+  // Selecting on plane distance alone parks them on the edges where they read as
+  // artefacts.
+  const inset = CONFIG.cards.accentFrameInset;
   const onScreenMidDistance = draft.filter((c) => {
-    if (c.depth < redDepthRange[0] || c.depth > redDepthRange[1]) return false;
+    if (c.depth < accentDepthRange[0] || c.depth > accentDepthRange[1]) return false;
     const [sx, sy] = screenPositionOf(c.origin);
     return (
       sx > CONFIG.width * inset &&
@@ -158,7 +163,7 @@ export const buildCards = (): CardSpec[] => {
     );
   });
   const heroDistance = (c: (typeof draft)[number]) => Math.hypot(c.origin.x, c.origin.y);
-  const minDistance = heroExclusionRadius * CONFIG.cards.redMinHeroDistance;
+  const minDistance = heroExclusionRadius * CONFIG.cards.accentMinHeroDistance;
   // Prefer candidates well clear of the badge; if the layout does not offer
   // enough, fall back to the furthest available rather than dropping a card.
   const ranked = [
@@ -169,12 +174,63 @@ export const buildCards = (): CardSpec[] => {
       .filter((c) => heroDistance(c) < minDistance)
       .sort((a, b) => heroDistance(b) - heroDistance(a)),
   ];
-  const redSet = new Set(ranked.slice(0, redCount).map((c) => c.index));
+  const accentSet = new Set(ranked.slice(0, accentCount).map((c) => c.index));
+
+  // The rare light fill, where a theme rations one. Drawn from the same
+  // mid-distance pool as the accent, and biased toward the *smaller* cards, so
+  // "mid-distance and small" costs nothing: card sizes stay identical across
+  // variants because no size is altered to achieve it.
+  // Rank by *rendered* width, not base width: a card's size is its base width
+  // times its depth scale, so ranking on the base alone hands the light fill to
+  // cards that draw large and undoes the inversion.
+  const renderedWidth = (c: (typeof draft)[number]) =>
+    seededFloat(`${c.id}-w`, CONFIG.cards.minWidth, CONFIG.cards.maxWidth) *
+    lerp(CONFIG.cards.nearScale, CONFIG.cards.farScale, c.depth);
+  // Small and spread out. Take the smaller half of the candidates as the pool,
+  // seed with the smallest, then repeatedly add whichever pool member sits
+  // furthest from everything already chosen. A hard minimum gap would silently
+  // fall back to "next smallest" when the pool is thin — which is exactly when
+  // two of them end up side by side, reading as one light mass.
+  const pickHighlights = () => {
+    if (theme.highlightCount === 0) return [];
+    const bySize = onScreenMidDistance
+      .filter((c) => !accentSet.has(c.index))
+      .sort((a, b) => renderedWidth(a) - renderedWidth(b));
+    const pool = bySize.slice(0, Math.max(theme.highlightCount, Math.ceil(bySize.length / 2)));
+    if (pool.length === 0) return [];
+
+    const chosen = [pool[0]];
+    const gapTo = (c: (typeof pool)[number], others: typeof pool) => {
+      const [sx, sy] = screenPositionOf(c.origin);
+      return Math.min(
+        ...others.map((o) => {
+          const [ox, oy] = screenPositionOf(o.origin);
+          return Math.hypot(sx - ox, sy - oy);
+        }),
+      );
+    };
+    while (chosen.length < theme.highlightCount && chosen.length < pool.length) {
+      let best = null as (typeof pool)[number] | null;
+      let bestGap = -1;
+      for (const c of pool) {
+        if (chosen.includes(c)) continue;
+        const gap = gapTo(c, chosen);
+        if (gap > bestGap) {
+          bestGap = gap;
+          best = c;
+        }
+      }
+      if (!best) break;
+      chosen.push(best);
+    }
+    return chosen.map((c) => c.index);
+  };
+  const highlightSet = new Set(pickHighlights());
 
   // Live cards re-render their text lines mid-shot. Keep them where they can be
   // read: mid depth, so they land in the sharp or mid bucket.
   const liveOrder = draft
-    .filter((c) => !redSet.has(c.index) && c.depth > 0.28 && c.depth < 0.8)
+    .filter((c) => !accentSet.has(c.index) && c.depth > 0.28 && c.depth < 0.8)
     .sort((a, b) => seededFloat(`${a.id}-livekey`, 0, 1) - seededFloat(`${b.id}-livekey`, 0, 1))
     .slice(0, CONFIG.cards.liveCount)
     .map((c) => c.index);
@@ -183,18 +239,21 @@ export const buildCards = (): CardSpec[] => {
   return draft.map((c) => {
     const {id, index, depth, origin} = c;
 
-    const isRed = redSet.has(index);
+    const isAccent = accentSet.has(index);
     const fillRoll = seededFloat(`${id}-fill`, 0, 1);
-    const fill: CardFill = isRed
-      ? 'red'
-      : fillRoll < 0.46
-        ? 'white'
-        : fillRoll < 0.72
-          ? 'blue'
-          : 'glass';
+    const fill: CardFillKind = isAccent
+      ? 'accent'
+      : highlightSet.has(index)
+        ? 'highlight'
+        : fillRoll < theme.fillThresholds.base
+          ? 'base'
+          : fillRoll < theme.fillThresholds.blue
+            ? 'blue'
+            : 'glass';
 
     const sizeScale =
-      lerp(CONFIG.cards.nearScale, CONFIG.cards.farScale, depth) * (isRed ? 0.72 : 1);
+      lerp(CONFIG.cards.nearScale, CONFIG.cards.farScale, depth) *
+      (isAccent ? CONFIG.cards.accentSizeScale : 1);
     const baseWidth = seededFloat(`${id}-w`, CONFIG.cards.minWidth, CONFIG.cards.maxWidth);
     const aspect = seededFloat(`${id}-a`, CONFIG.cards.minAspect, CONFIG.cards.maxAspect);
     const width = baseWidth * sizeScale;
@@ -221,7 +280,7 @@ export const buildCards = (): CardSpec[] => {
       fill,
       tail: seededBool(`${id}-tail`, 0.72),
       tailDirection: seededBool(`${id}-td`, 0.5) ? 1 : (-1 as -1 | 1),
-      hasBars: !isRed && seededBool(`${id}-bars`, CONFIG.cards.barMotifChance),
+      hasBars: !isAccent && seededBool(`${id}-bars`, CONFIG.cards.barMotifChance),
       lineVariants,
       liveIndex,
       bucket,
