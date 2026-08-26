@@ -18,6 +18,17 @@ import {
   WIDTH as RING_WIDTH,
   HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
+import {
+  DataTunnel,
+  dataTunnelSchema,
+  dataTunnelDefaultProps,
+} from "./data-tunnel/DataTunnel";
+import {
+  DURATION_IN_FRAMES as TUNNEL_DURATION_IN_FRAMES,
+  FPS as TUNNEL_FPS,
+  WIDTH as TUNNEL_WIDTH,
+  HEIGHT as TUNNEL_HEIGHT,
+} from "./data-tunnel/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -41,6 +52,16 @@ export const RemotionRoot: React.FC = () => {
         height={RING_HEIGHT}
         schema={particleRingHaloSchema}
         defaultProps={particleRingHaloDefaults}
+      />
+      <Composition
+        id="DataTunnel"
+        component={DataTunnel}
+        durationInFrames={TUNNEL_DURATION_IN_FRAMES}
+        fps={TUNNEL_FPS}
+        width={TUNNEL_WIDTH}
+        height={TUNNEL_HEIGHT}
+        schema={dataTunnelSchema}
+        defaultProps={dataTunnelDefaultProps}
       />
     </>
   );
