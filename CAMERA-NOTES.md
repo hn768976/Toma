@@ -169,7 +169,11 @@ If the first preview is black, check the camera height against the terrain
 - `multisampling={0}` on EffectComposer — MSAA on SwiftShader is slow and
   occasionally broken; DOF + bloom + the 4K→1080 downscale supply the AA.
 - Software WebGL renders this scene at roughly 4–6 s/frame at 1080p; budget
-  accordingly (480 frames ≈ 30–45 min at concurrency 8 on 4 cores).
+  accordingly (480 frames ≈ 30–45 min at concurrency 4 on 4 cores).
+- With several SwiftShader tabs compiling the postprocessing shaders at
+  once, the *first* frame can exceed Remotion's default 30 s timeout
+  ("Timeout exceeded rendering the component initially") — pass
+  `--timeout=180000` on headless boxes. GPU machines don't hit this.
 - ~20k line segments/frame rebuilt in JS is fine (<15 ms); the GPU fill of
   fat worldUnits lines is the actual cost. Reduce contour *levels* before
   pin count if render time hurts — the lines are the expensive part.
