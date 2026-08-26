@@ -1,0 +1,35 @@
+{
+  "name": "candle-macro",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "studio": "remotion studio"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hn768976/Toma.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hn768976/Toma/issues"
+  },
+  "homepage": "https://github.com/hn768976/Toma#readme",
+  "dependencies": {
+    "@remotion/cli": "^4.0.518",
+    "@remotion/renderer": "^4.0.518",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "remotion": "^4.0.518"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "^4.0.518",
+    "@types/node": "^26.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}

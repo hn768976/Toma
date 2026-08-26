@@ -1,0 +1,8 @@
+node_modules/
+out/
+.remotion/
+*.log
+.build-check.mjs
+.stats.cjs
+.forming.cjs
+.series.cjs
