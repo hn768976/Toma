@@ -7,8 +7,12 @@ not as a changelog of this one.
 ## The camera
 
 ```
-<PerspectiveCamera>  fov 38 · near 0.1 · far 400
+<PerspectiveCamera>  fov 38 · near 0.5 · far 400
 ```
+
+(near 0.5, not 0.1: the near plane governs depth precision at distance —
+at 0.1 the far ropes z-fight the floor. Don't set near tighter than the
+closest thing the camera will ever approach.)
 
 Created via `ThreeCanvas`'s `camera={{fov, near, far, position}}` prop (no
 drei needed), then **mutated every frame** by a rig component:
@@ -75,9 +79,17 @@ If the first preview is black, check the camera height against the terrain
 - Contours: marching squares over a noise height grid → segment soup →
   `LineSegments2` + `LineSegmentsGeometry` + `LineMaterial`. Plain
   `THREE.Line` ignores `linewidth` on nearly every platform.
-  - `worldUnits: true` on LineMaterial gives perspective width attenuation
-    for free: near lines thicker, far lines hairline. Width 0.026 world
-    units — thin "ropes"; the neon body comes from bloom, not width.
+  - Width is SCREEN-SPACE (`worldUnits: false`), ~3px at 4K scaled by
+    render height. World-unit thin lines collapse below one pixel at
+    distance and the rasterizer chops them into dashes; constant pixel
+    width keeps every rope a continuous string. The neon body comes from
+    bloom, not width.
+  - The contour field is anisotropic (x-frequency ×0.32): features stretch
+    along x, so iso-lines run as long open ropes across the frame. Closed
+    polylines (loops around extrema) are dropped entirely — the chaining
+    step's `closed` flag makes that a one-line filter, and the sliding
+    window's fade region guarantees loops only appear/disappear where
+    they're already invisible.
   - Per-vertex colours handle the near-bright → far-haze ramp
     (`vertexColors: true`); fade lines *toward the haze colour*, not toward
     black, so they melt into the horizon glow.
