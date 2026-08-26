@@ -4,7 +4,7 @@ import { z } from "zod";
 import { CoreGlow } from "./CoreGlow";
 import { LedBackground } from "./LedBackground";
 import { ParticleSwarm } from "./ParticleSwarm";
-import { THEMES, type Variant } from "./theme";
+import { THEMES } from "./theme";
 
 export const particleFieldSchema = z.object({
   variant: z.enum(["burst", "implosion"]),
@@ -27,7 +27,7 @@ export const particleImplosionDefaults: ParticleFieldProps = {
  * (composited with plus-lighter so a flash genuinely blows out).
  */
 export const ParticleField: React.FC<ParticleFieldProps> = ({ variant }) => {
-  const theme = THEMES[variant as Variant];
+  const theme = THEMES[variant];
   return (
     <AbsoluteFill
       style={{

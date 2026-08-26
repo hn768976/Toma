@@ -162,14 +162,12 @@ export interface VariantConfig {
   twinkleFrequencyRange: [number, number];
 }
 
-// Radii referenced by the timelines below, expressed against the frame so the
-// numbers stay legible at 4K:
-//   detonation reaches ~30% of frame height  -> 648px
-//   expansion reaches a ring ~90% of frame width across (radius 45% of width)
-const BURST_RADIUS_AT_DETONATION = HEIGHT * 0.3; // 648
-const BURST_RADIUS_AT_EXPANSION_END = WIDTH * 0.45; // 1728
-// Solved so a single drag curve passes through both: 2215*(1-e^(-t/71.7))
-// hits 648px at frame 45 and 1728px at frame 130.
+// The burst's two radius targets, expressed against the frame:
+//   frame 45  -> ~30% of frame height          = 0.30 * 2160 = 648px
+//   frame 130 -> a ring ~90% of frame width across, i.e. radius 45% of width
+//                                              = 0.45 * 3840 = 1728px
+// Span and tau below are solved so one drag curve, 2215*(1-e^(-t/71.7)),
+// passes through both — no keyframe seam between detonation and expansion.
 const BURST_TRAVEL_SPAN = 2215;
 const BURST_TRAVEL_TAU = 71.7;
 
@@ -354,12 +352,4 @@ export const VARIANTS: Record<Variant, VariantConfig> = {
     twinkleAmplitude: 0.15,
     twinkleFrequencyRange: [0.18, 0.55],
   },
-};
-
-// Referenced in the timeline comments above; exported so the numbers that
-// define each phase live in exactly one place.
-export const PHASE_RADII = {
-  burstDetonation: BURST_RADIUS_AT_DETONATION,
-  burstExpansionEnd: BURST_RADIUS_AT_EXPANSION_END,
-  implosionStart: IMPLOSION_START_RADIUS,
 };
