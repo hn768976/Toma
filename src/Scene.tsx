@@ -111,6 +111,7 @@ export const Scene: React.FC<{theme: Theme}> = ({theme}) => {
           luminanceThreshold={bloom.luminanceThreshold}
           luminanceSmoothing={bloom.luminanceSmoothing}
           mipmapBlur={bloom.mipmapBlur}
+          radius={bloom.radius}
         />
         <Vignette offset={vignette.offset} darkness={vignette.darkness} />
       </EffectComposer>

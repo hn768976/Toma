@@ -31,8 +31,8 @@ export const THEMES = {
   violet: {
     bgDeep: '#1B0A0F',
     bgHaze: '#40161F',
-    contour: '#9330F0',
-    contourBright: '#C455FF',
+    contour: '#A93BFF',
+    contourBright: '#D66BFF',
     pin: '#FF6A28',
     pinHot: '#FF9440',
     avatarWarm: '#FFD4A8',
