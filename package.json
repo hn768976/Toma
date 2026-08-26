@@ -1,0 +1,28 @@
+{
+  "name": "contour-crowd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K contour landscape with user pins — Remotion + @remotion/three",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render ContourCrowd out/contour-crowd.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "render:preview": "remotion render ContourCrowd out/contour-preview.mp4 --codec=h264 --crf=18 --scale=0.5 --concurrency=8"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/postprocessing": "^2.16.3",
+    "@remotion/cli": "^4.0.0",
+    "@remotion/three": "^4.0.0",
+    "postprocessing": "^6.36.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0",
+    "simplex-noise": "^4.0.3",
+    "three": "^0.171.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/three": "^0.171.0",
+    "typescript": "^5.6.3"
+  }
+}
