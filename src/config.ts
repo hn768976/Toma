@@ -70,8 +70,9 @@ export const CONFIG = {
     xHalf: 48,
     zMin: -14,
     zMax: 330,
-    /** Exponent biasing pin x toward the camera corridor (1 = uniform). */
-    centerBias: 1.35,
+    /** Pins sit on a jittered grid — evenly spaced across the field, with
+     * this fraction of a grid cell of seeded jitter so it stays organic. */
+    gridJitter: 0.55,
     stemHeight: 2.0,
     stemRadius: 0.026,
     ringRadius: 0.55,

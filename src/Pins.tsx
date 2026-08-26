@@ -37,13 +37,22 @@ export const Pins: React.FC<{
   const P = CONFIG.pins;
 
   const pins = useMemo<Pin[]>(() => {
+    // Evenly spaced: a grid sized to ~count over the field, each pin jittered
+    // within its own cell so spacing stays regular but never mechanical.
+    const width = 2 * P.xHalf;
+    const depth = P.zMax - P.zMin;
+    const cols = Math.max(1, Math.round(Math.sqrt((P.count * width) / depth)));
+    const rows = Math.ceil(P.count / cols);
+    const dx = width / cols;
+    const dz = depth / rows;
+
     const out: Pin[] = [];
-    for (let i = 0; i < P.count; i++) {
-      const sign = random(`pin-xsign-${i}`) < 0.5 ? -1 : 1;
+    for (let i = 0; i < rows * cols; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
       out.push({
-        // Centre-biased x keeps a good share of pins near the camera corridor.
-        x: sign * P.xHalf * Math.pow(random(`pin-x-${i}`), P.centerBias),
-        z: P.zMin + (P.zMax - P.zMin) * random(`pin-z-${i}`),
+        x: -P.xHalf + (col + 0.5) * dx + (random(`pin-x-${i}`) - 0.5) * dx * P.gridJitter,
+        z: P.zMin + (row + 0.5) * dz + (random(`pin-z-${i}`) - 0.5) * dz * P.gridJitter,
         scale: 1 + (random(`pin-scale-${i}`) * 2 - 1) * P.scaleJitter,
         riseStart: random(`pin-rise-${i}`) * (P.riseWindow - 35),
         pulsePhase: random(`pin-pulsephase-${i}`) * Math.PI * 2,
