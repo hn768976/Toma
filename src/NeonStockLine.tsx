@@ -2,9 +2,14 @@ import React, {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'reac
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import {buildScene, drawFrame} from './lib/draw';
 import {FONT_FAMILY, fontPromise, isFontReady} from './lib/font';
-import {COLOR} from './lib/theme';
+import {Variant, resolveVariant} from './lib/variants';
 
-export const NeonStockLine: React.FC = () => {
+export type NeonStockLineProps = {
+  /** which piece this is: the rising green one, or the falling red one */
+  variant: Variant;
+};
+
+export const NeonStockLine: React.FC<NeonStockLineProps> = ({variant}) => {
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,10 +30,11 @@ export const NeonStockLine: React.FC = () => {
     };
   }, [ready]);
 
-  // Generated ONCE. Regenerating the price series per frame would make the
-  // whole line strobe; rebuilding the label tiles per frame would tank the
-  // render.
-  const scene = useMemo(() => buildScene(), []);
+  // Generated ONCE per variant. Regenerating the price series per frame would
+  // make the whole line strobe; rebuilding the label tiles per frame would tank
+  // the render.
+  const cfg = resolveVariant(variant);
+  const scene = useMemo(() => buildScene(cfg), [cfg]);
 
   // Drawn once per React render, synchronously before paint. No
   // requestAnimationFrame anywhere — the frame number is the only clock.
@@ -39,7 +45,7 @@ export const NeonStockLine: React.FC = () => {
   });
 
   return (
-    <AbsoluteFill style={{backgroundColor: COLOR.bg}}>
+    <AbsoluteFill style={{backgroundColor: cfg.theme.bg}}>
       <canvas
         ref={canvasRef}
         style={{width: '100%', height: '100%', display: 'block'}}

@@ -2,11 +2,13 @@
   "name": "neon-stock-line",
   "version": "1.0.0",
   "private": true,
-  "description": "Neon stock line — a glowing green price trend climbing across black, in Remotion.",
+  "description": "Neon stock line — a glowing price trend against black, bull and bear, in Remotion.",
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render NeonStockLine out/neon-stock-line.mp4 --codec=h264 --crf=12",
-    "render:1080p": "remotion render NeonStockLine out/neon-stock-1080p.mp4 --codec=h264 --crf=12 --scale=0.5",
+    "render:bear": "remotion render NeonStockLineBear out/neon-stock-bear.mp4 --codec=h264 --crf=12",
+    "render:1080p": "remotion render NeonStockLine out/neon-stock-1080p.mp4 --codec=h264 --crf=18 --scale=0.5",
+    "render:bear:1080p": "remotion render NeonStockLineBear out/neon-stock-bear-preview.mp4 --codec=h264 --crf=18 --scale=0.5",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

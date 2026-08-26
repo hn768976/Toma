@@ -1,4 +1,4 @@
-import {DURATION} from './theme';
+import {DURATION, RGB} from './theme';
 import {rnd} from './rand';
 
 /**
@@ -11,7 +11,7 @@ export const GRAIN_SIZE = 256;
 
 export type GrainTiles = HTMLCanvasElement[];
 
-export const buildGrain = (): GrainTiles => {
+export const buildGrain = (tint: RGB): GrainTiles => {
   const tiles: HTMLCanvasElement[] = [];
   for (let t = 0; t < GRAIN_TILES; t++) {
     const c = document.createElement('canvas');
@@ -27,10 +27,10 @@ export const buildGrain = (): GrainTiles => {
     for (let i = 0, px = 0; i < d.length; i += 4, px++) {
       const n = rnd(`grain-${t}-${px}`);
       const g = Math.round(n * 255);
-      // Tinted green so the grain never introduces another hue.
-      d[i] = Math.round(g * 0.5);
-      d[i + 1] = g;
-      d[i + 2] = Math.round(g * 0.62);
+      // Tinted to the variant's hue so the grain never introduces another one.
+      d[i] = Math.round(g * tint[0]);
+      d[i + 1] = Math.round(g * tint[1]);
+      d[i + 2] = Math.round(g * tint[2]);
       d[i + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);

@@ -1,4 +1,5 @@
-import {COLOR, DESIGN_H, DESIGN_W, DURATION, RGB, TILT, rgba} from './theme';
+import {DESIGN_H, DESIGN_W, DURATION, RGB, rgba} from './theme';
+import {VariantConfig} from './variants';
 import {Series, buildSeries} from './series';
 import {
   BokehDef,
@@ -15,8 +16,6 @@ const TAU = Math.PI * 2;
 
 /** How far past the visible frame we keep drawing the series, in world px. */
 const CULL_MARGIN = 1320;
-/** The trend sits a little below centre, like the reference framing. */
-const LINE_Y_OFFSET = 60;
 /**
  * The bloom is blurred in fixed-size low-res buffers, deliberately independent
  * of the render resolution, so the spill looks identical at 1080p and at 4K.
@@ -29,6 +28,9 @@ const HALO_W = 360;
 const HALO_H = 203;
 
 export type Scene = {
+  cfg: VariantConfig;
+  mainPasses: Pass[];
+  maPasses: Pass[];
   series: Series;
   labels: LabelDef[];
   bokeh: BokehDef[];
@@ -42,7 +44,7 @@ export type Scene = {
   unit: number;
 };
 
-export const buildScene = (): Scene => {
+export const buildScene = (cfg: VariantConfig): Scene => {
   const lineLayer = document.createElement('canvas');
   const bloom = document.createElement('canvas');
   bloom.width = BLOOM_W;
@@ -54,10 +56,13 @@ export const buildScene = (): Scene => {
   measureCanvas.width = 8;
   measureCanvas.height = 8;
   return {
-    series: buildSeries(),
-    labels: buildLabels(),
+    cfg,
+    mainPasses: mainPasses(cfg),
+    maPasses: maPasses(cfg),
+    series: buildSeries(cfg.series),
+    labels: buildLabels(cfg),
     bokeh: buildBokeh(),
-    grain: buildGrain(),
+    grain: buildGrain(cfg.theme.grainTint),
     textCache: new Map(),
     lineLayer,
     bloom,
@@ -69,18 +74,22 @@ export const buildScene = (): Scene => {
 
 type Pass = {w: number; a: number; blur: number; color: RGB};
 
-/** Wide glow -> mid body -> hot core. The layering is what makes it read neon. */
-const MAIN_PASSES: Pass[] = [
-  {w: 15, a: 0.26, blur: 42, color: COLOR.lineGlow},
-  {w: 7, a: 1, blur: 17, color: COLOR.lineMid},
-  {w: 2.4, a: 1, blur: 0, color: COLOR.lineCore},
+/**
+ * Wide glow -> mid body -> hot core. The layering is what makes it read neon.
+ * The weights are shared by every variant; only the palette and the alpha of
+ * the wide glow pass change, because saturated red blooms harder than green.
+ */
+const mainPasses = (cfg: VariantConfig): Pass[] => [
+  {w: 15, a: cfg.glowAlpha, blur: 42, color: cfg.theme.lineGlow},
+  {w: 7, a: 1, blur: 17, color: cfg.theme.lineMid},
+  {w: 2.4, a: 1, blur: 0, color: cfg.theme.lineCore},
 ];
 
 /** The moving average: same construction, thinner and dimmer. */
-const MA_PASSES: Pass[] = [
-  {w: 8, a: 0.14, blur: 26, color: COLOR.lineGlow},
-  {w: 3, a: 0.42, blur: 11, color: COLOR.lineMid},
-  {w: 1.2, a: 0.6, blur: 0, color: COLOR.lineCore},
+const maPasses = (cfg: VariantConfig): Pass[] => [
+  {w: 8, a: cfg.maGlowAlpha, blur: 26, color: cfg.theme.lineGlow},
+  {w: 3, a: 0.42, blur: 11, color: cfg.theme.lineMid},
+  {w: 1.2, a: 0.6, blur: 0, color: cfg.theme.lineCore},
 ];
 
 const strokeSeries = (
@@ -133,9 +142,17 @@ const drawLabelSet = (
     if (Math.abs(st.u) > 1500 || Math.abs(st.v) > 940) continue;
 
     const tile = L.isDash
-      ? getDashTile(scene.textCache, Math.round(L.dashLen / 4), unit)
+      ? getDashTile(
+          scene.textCache,
+          scene.cfg.theme,
+          scene.cfg.id,
+          Math.round(L.dashLen / 4),
+          unit,
+        )
       : getTextTile(
           scene.textCache,
+          scene.cfg.theme,
+          scene.cfg.id,
           scene.measure,
           st.text,
           L.white,
@@ -164,14 +181,15 @@ const drawLabelSet = (
 };
 
 const drawBokeh = (ctx: CanvasRenderingContext2D, scene: Scene, frame: number) => {
+  const glow = scene.cfg.theme.lineGlow;
   for (const B of scene.bokeh) {
     const st = bokehStateAt(B, frame);
     if (Math.abs(st.u) > 1400 || Math.abs(st.v) > 900) continue;
     const g = ctx.createRadialGradient(st.u, st.v, 0, st.u, st.v, B.radius);
-    g.addColorStop(0, rgba(COLOR.lineGlow, B.alpha));
-    g.addColorStop(0.5, rgba(COLOR.lineGlow, B.alpha * 0.5));
-    g.addColorStop(0.82, rgba(COLOR.lineGlow, B.alpha * 0.14));
-    g.addColorStop(1, rgba(COLOR.lineGlow, 0));
+    g.addColorStop(0, rgba(glow, B.alpha));
+    g.addColorStop(0.5, rgba(glow, B.alpha * 0.5));
+    g.addColorStop(0.82, rgba(glow, B.alpha * 0.14));
+    g.addColorStop(1, rgba(glow, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(st.u, st.v, B.radius, 0, TAU);
@@ -219,10 +237,13 @@ export const drawFrame = (
   const f = ((frame % DURATION) + DURATION) % DURATION;
   const t = f / DURATION;
   const s = scene.series;
+  const cfg = scene.cfg;
+  const theme = cfg.theme;
 
   // ---- camera ------------------------------------------------------------
-  // Tracks along the trend: right by exactly one tile width and up by exactly
-  // one tile rise over 840 frames, so the loop closes on the geometry.
+  // Tracks along the trend: right by exactly one tile width, and up or down by
+  // exactly one tile rise, over 840 frames — so the loop closes on the geometry
+  // and the camera's vertical direction is just the sign of tileRise.
   const camX = t * s.tileWidth;
   const camY = -t * s.tileRise;
   // A very slight ambient drift on a closed Lissajous path so the shot never
@@ -234,14 +255,14 @@ export const drawFrame = (
 
   const applyWorld = (c: CanvasRenderingContext2D) => {
     c.setTransform(unit, 0, 0, unit, 0, 0);
-    c.translate(DESIGN_W / 2 + ax, DESIGN_H / 2 + ay + LINE_Y_OFFSET);
-    c.rotate(TILT);
+    c.translate(DESIGN_W / 2 + ax, DESIGN_H / 2 + ay + cfg.lineYOffset);
+    c.rotate(cfg.tilt);
     c.translate(-camX, -camY);
   };
   const applyTilt = (c: CanvasRenderingContext2D) => {
     c.setTransform(unit, 0, 0, unit, 0, 0);
     c.translate(DESIGN_W / 2 + ax, DESIGN_H / 2 + ay);
-    c.rotate(TILT);
+    c.rotate(cfg.tilt);
   };
 
   // ---- background + ambient wash -----------------------------------------
@@ -249,13 +270,14 @@ export const drawFrame = (
   ctx.filter = 'none';
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = COLOR.bg;
+  ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
 
-  const wash = ctx.createRadialGradient(300, 940, 0, 300, 940, 1320);
-  wash.addColorStop(0, rgba(COLOR.ambient, 0.9));
-  wash.addColorStop(0.45, rgba(COLOR.ambient, 0.45));
-  wash.addColorStop(1, rgba(COLOR.ambient, 0));
+  const {x: wx, y: wy, r: wr} = cfg.wash;
+  const wash = ctx.createRadialGradient(wx, wy, 0, wx, wy, wr);
+  wash.addColorStop(0, rgba(theme.ambient, 0.9));
+  wash.addColorStop(0.45, rgba(theme.ambient, 0.45));
+  wash.addColorStop(1, rgba(theme.ambient, 0));
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
 
@@ -271,21 +293,21 @@ export const drawFrame = (
   lctx.globalCompositeOperation = 'lighter';
   lctx.lineJoin = 'round';
   lctx.lineCap = 'round';
-  strokeSeries(lctx, s, s.ma, camX, MA_PASSES, breathe);
-  strokeSeries(lctx, s, s.main, camX, MAIN_PASSES, breathe);
+  strokeSeries(lctx, s, s.ma, camX, scene.maPasses, breathe);
+  strokeSeries(lctx, s, s.main, camX, scene.mainPasses, breathe);
   lctx.shadowBlur = 0;
 
   bctx.setTransform(1, 0, 0, 1, 0, 0);
   bctx.globalCompositeOperation = 'source-over';
   bctx.clearRect(0, 0, BLOOM_W, BLOOM_H);
-  bctx.filter = 'blur(8px)'; // 24px in design space
+  bctx.filter = `blur(${cfg.bloomBlur}px)`; // x3 in design space
   bctx.drawImage(scene.lineLayer, 0, 0, BLOOM_W, BLOOM_H);
   bctx.filter = 'none';
 
   hctx.setTransform(1, 0, 0, 1, 0, 0);
   hctx.globalCompositeOperation = 'source-over';
   hctx.clearRect(0, 0, HALO_W, HALO_H);
-  hctx.filter = 'blur(12px)'; // 64px in design space
+  hctx.filter = `blur(${cfg.haloBlur}px)`; // x5.33 in design space
   hctx.drawImage(scene.lineLayer, 0, 0, HALO_W, HALO_H);
   hctx.filter = 'none';
 
@@ -293,9 +315,9 @@ export const drawFrame = (
   ctx.globalCompositeOperation = 'lighter';
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.globalAlpha = 0.5 * breathe;
+  ctx.globalAlpha = cfg.haloAlpha * breathe;
   ctx.drawImage(scene.halo, 0, 0, DESIGN_W, DESIGN_H);
-  ctx.globalAlpha = 0.8 * breathe;
+  ctx.globalAlpha = cfg.bloomAlpha * breathe;
   ctx.drawImage(scene.bloom, 0, 0, DESIGN_W, DESIGN_H);
   ctx.globalAlpha = 1;
   ctx.drawImage(scene.lineLayer, 0, 0, DESIGN_W, DESIGN_H);

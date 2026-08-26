@@ -1,6 +1,7 @@
 import {DURATION} from './theme';
 import {clamp, rnd, rndRange} from './rand';
 import {CACHE_FONT} from './text';
+import {VariantConfig} from './variants';
 
 /**
  * The floating price labels.
@@ -31,28 +32,34 @@ export type LabelDef = {
   /** softness in canonical CACHE_FONT units, quantised so tiles are shared */
   blurTile: number;
   white: boolean;
-  /** so distant it reads as a blurred green dash, not a number */
+  /** so distant it reads as a blurred dash, not a number */
   isDash: boolean;
   dashLen: number;
   /** values this label cycles through as it respawns */
   values: string[];
+  /**
+   * When set, the value is chosen by where the label sits in the loop rather
+   * than by wrap count, so its numbers step downward as the loop plays out.
+   */
+  byPhase: boolean;
 };
 
-/** Two decimals, ~200 to ~35000 — the range the reference footage lives in. */
-const priceString = (seed: string): string => {
+/** ~200 to ~35000 — the range the reference footage lives in. */
+const priceValue = (seed: string): number => {
   const m = rnd(`${seed}-mag`);
-  const v =
-    m < 0.24
-      ? rndRange(`${seed}-v`, 200, 999)
-      : m < 0.72
-        ? rndRange(`${seed}-v`, 1000, 9999)
-        : rndRange(`${seed}-v`, 10000, 35000);
-  return v.toFixed(2);
+  return m < 0.24
+    ? rndRange(`${seed}-v`, 200, 999)
+    : m < 0.72
+      ? rndRange(`${seed}-v`, 1000, 9999)
+      : rndRange(`${seed}-v`, 10000, 35000);
 };
+
+/** Two decimals, always. */
+const priceString = (seed: string): string => priceValue(seed).toFixed(2);
 
 export const LABEL_COUNT = 44; // ~30 of these are inside the frame at any time
 
-export const buildLabels = (): LabelDef[] => {
+export const buildLabels = (cfg: VariantConfig): LabelDef[] => {
   const out: LabelDef[] = [];
   for (let id = 0; id < LABEL_COUNT; id++) {
     // Skewed toward the far plane so only a handful are huge.
@@ -73,12 +80,30 @@ export const buildLabels = (): LabelDef[] => {
     const blurPx = z > 0.62 ? (z - 0.62) * 4.2 : 0;
     const blurTile = Math.round(((blurPx * CACHE_FONT) / sizePx) * 2) / 2;
 
-    // ~40% of labels reroll their value when they respawn. With ~8 respawns a
-    // second across the field that lands at a few value changes per second.
-    const rerolls = rnd(`rr-${id}`) < 0.42;
-    const values = rerolls
-      ? [0, 1, 2].map((k) => priceString(`p-${id}-${k}`))
-      : [priceString(`p-${id}-0`)];
+    // A share of labels reroll their value when they respawn. With ~8 respawns
+    // a second across the field that lands at a few value changes per second.
+    const rerolls = rnd(`rr-${id}`) < cfg.rerollChance;
+    // When the variant declines, a rerolling label walks a descending triple
+    // instead of three unrelated numbers, and picks by loop phase rather than
+    // wrap count — so the field as a whole reads lower at the end of the loop
+    // than at the start. Three values per label, so the tile cache does not
+    // grow.
+    const declines = cfg.labelDecline > 0;
+    let values: string[];
+    if (rerolls && declines) {
+      const base = priceValue(`p-${id}-0`);
+      values = [0, 1, 2].map((k) =>
+        (
+          base *
+          (1 - cfg.labelDecline * (k / 2)) *
+          rndRange(`pd-${id}-${k}`, 0.94, 1.06)
+        ).toFixed(2),
+      );
+    } else if (rerolls) {
+      values = [0, 1, 2].map((k) => priceString(`p-${id}-${k}`));
+    } else {
+      values = [priceString(`p-${id}-0`)];
+    }
 
     out.push({
       id,
@@ -93,6 +118,7 @@ export const buildLabels = (): LabelDef[] => {
       isDash,
       dashLen: rndRange(`dl-${id}`, 12, 34),
       values,
+      byPhase: declines && values.length > 1,
     });
   }
   return out;
@@ -115,7 +141,20 @@ export const labelStateAt = (L: LabelDef, frame: number): LabelState => {
   const u = raw - wrapIndex * SPAN - SPAN / 2;
   const slot = ((wrapIndex % L.cycles) + L.cycles) % L.cycles;
   const v = (rnd(`lv-${L.id}-${slot}`) * 2 - 1) * V_HALF;
-  return {u, v, text: L.values[slot % L.values.length]};
+
+  // Every label's speed is proportional to its cycle count, so -wrapIndex/cycles
+  // tracks frame/840 for all of them: this is the label's position in the loop,
+  // quantised to its own respawn cadence. It closes because wrapIndex moves by
+  // exactly `cycles` over 840 frames.
+  let idx: number;
+  if (L.byPhase) {
+    const phaseSlot = (((-wrapIndex) % L.cycles) + L.cycles) % L.cycles;
+    const phase = phaseSlot / L.cycles;
+    idx = Math.min(L.values.length - 1, Math.floor(phase * L.values.length));
+  } else {
+    idx = slot % L.values.length;
+  }
+  return {u, v, text: L.values[idx]};
 };
 
 /** Out-of-focus labels that have already passed the camera. */

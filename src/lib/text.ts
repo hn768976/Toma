@@ -1,4 +1,5 @@
-import {COLOR, rgba} from './theme';
+import {rgba} from './theme';
+import {Theme, Variant} from './variants';
 
 /**
  * Labels are laid out once into a small offscreen canvas — glow and all — and
@@ -21,14 +22,17 @@ export type CachedTile = {
 export type TextCache = Map<string, CachedTile>;
 
 export const cacheKey = (
+  variant: Variant,
   text: string,
   white: boolean,
   unit: number,
   blurTile: number,
-) => `${white ? 'w' : 'g'}|${unit}|${blurTile}|${text}`;
+) => `${variant}|${white ? 'w' : 'd'}|${unit}|${blurTile}|${text}`;
 
 export const getTextTile = (
   cache: TextCache,
+  theme: Theme,
+  variant: Variant,
   measure: CanvasRenderingContext2D,
   text: string,
   white: boolean,
@@ -42,7 +46,7 @@ export const getTextTile = (
   blurTile: number,
   fontFamily: string,
 ): CachedTile => {
-  const key = cacheKey(text, white, unit, blurTile);
+  const key = cacheKey(variant, text, white, unit, blurTile);
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -74,22 +78,22 @@ export const getTextTile = (
   const cy = ch / 2;
 
   // 1. soft green halo
-  ctx.shadowColor = rgba(COLOR.lineGlow, 1);
+  ctx.shadowColor = rgba(theme.lineGlow, 1);
   ctx.shadowBlur = fontPx * 0.4;
-  ctx.fillStyle = rgba(COLOR.lineGlow, white ? 0.5 : 0.38);
+  ctx.fillStyle = rgba(theme.lineGlow, white ? 0.5 : 0.38);
   ctx.fillText(text, cx, cy);
   ctx.fillText(text, cx, cy);
 
   // 2. tighter neon bloom
-  ctx.shadowColor = rgba(COLOR.lineMid, 1);
+  ctx.shadowColor = rgba(theme.lineMid, 1);
   ctx.shadowBlur = fontPx * 0.15;
-  ctx.fillStyle = rgba(COLOR.lineMid, white ? 0.45 : 0.5);
+  ctx.fillStyle = rgba(theme.lineMid, white ? 0.45 : 0.5);
   ctx.fillText(text, cx, cy);
 
   // 3. the legible core
   ctx.shadowBlur = 0;
   ctx.shadowColor = 'rgba(0,0,0,0)';
-  ctx.fillStyle = white ? rgba(COLOR.labelWhite, 1) : rgba(COLOR.labelGreen, 0.92);
+  ctx.fillStyle = white ? rgba(theme.labelWhite, 1) : rgba(theme.labelDim, 0.92);
   ctx.fillText(text, cx, cy);
   ctx.filter = 'none';
 
@@ -98,15 +102,17 @@ export const getTextTile = (
 };
 
 /**
- * The most distant labels never resolve into digits — they are blurred green
+ * The most distant labels never resolve into digits — they are blurred
  * dashes. Cached per length bucket.
  */
 export const getDashTile = (
   cache: TextCache,
+  theme: Theme,
+  variant: Variant,
   lenBucket: number,
   unit: number,
 ): CachedTile => {
-  const key = `dash|${unit}|${lenBucket}`;
+  const key = `dash|${variant}|${unit}|${lenBucket}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -127,9 +133,9 @@ export const getDashTile = (
   }
   ctx.scale(unit, unit);
   ctx.globalCompositeOperation = 'lighter';
-  ctx.shadowColor = rgba(COLOR.lineGlow, 1);
+  ctx.shadowColor = rgba(theme.lineGlow, 1);
   ctx.shadowBlur = 9;
-  ctx.fillStyle = rgba(COLOR.labelGreen, 0.75);
+  ctx.fillStyle = rgba(theme.labelDim, 0.75);
   const x = pad;
   const y = pad;
   ctx.beginPath();
