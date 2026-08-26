@@ -7,7 +7,7 @@ import {LineSegmentsGeometry} from 'three/examples/jsm/lines/LineSegmentsGeometr
 import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial.js';
 import {cameraPose} from './cameraPath';
 import {CONFIG} from './config';
-import {contourLevels, marchContours, type HeightField} from './terrain';
+import {contourLevels, extractContours, type HeightField} from './terrain';
 import type {Theme} from './theme';
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -167,7 +167,18 @@ export const Contours: React.FC<{
       colors.push(r, g, b);
     };
 
-    marchContours(
+    const pushSegment = (L: number, x1: number, z1: number, x2: number, z2: number) => {
+      // Cull segments fully behind the camera or beyond the fade horizon.
+      if (z1 < camZ - 1.5 && z2 < camZ - 1.5) return;
+      const d1 = Math.hypot(x1 - camX, L - camY, z1 - camZ);
+      const d2 = Math.hypot(x2 - camX, L - camY, z2 - camZ);
+      if (Math.min(d1, d2) > fadeEnd) return;
+      positions.push(x1, L, z1, x2, L, z2);
+      pushColor(d1);
+      pushColor(d2);
+    };
+
+    const perLevel = extractContours(
       heights,
       nx,
       nz,
@@ -175,17 +186,20 @@ export const Contours: React.FC<{
       originZ,
       cell,
       levels,
-      (x1, y1, z1, x2, y2, z2) => {
-        // Cull segments fully behind the camera or beyond the fade horizon.
-        if (z1 < camZ - 1.5 && z2 < camZ - 1.5) return;
-        const d1 = Math.hypot(x1 - camX, y1 - camY, z1 - camZ);
-        const d2 = Math.hypot(x2 - camX, y2 - camY, z2 - camZ);
-        if (Math.min(d1, d2) > fadeEnd) return;
-        positions.push(x1, y1, z1, x2, y2, z2);
-        pushColor(d1);
-        pushColor(d2);
-      },
+      CONFIG.contours.smoothingPasses,
     );
+    perLevel.forEach((polys, li) => {
+      const L = levels[li];
+      for (const poly of polys) {
+        const n = poly.pts.length / 2;
+        for (let i = 0; i < n - 1; i++) {
+          pushSegment(L, poly.pts[i * 2], poly.pts[i * 2 + 1], poly.pts[i * 2 + 2], poly.pts[i * 2 + 3]);
+        }
+        if (poly.closed && n > 2) {
+          pushSegment(L, poly.pts[(n - 1) * 2], poly.pts[(n - 1) * 2 + 1], poly.pts[0], poly.pts[1]);
+        }
+      }
+    });
 
     // Fresh geometry per frame; disposing the old one frees its GPU buffers
     // (setPositions on a live geometry leaks the previous attribute buffers).

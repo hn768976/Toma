@@ -31,24 +31,18 @@ export const makeHeightField = (): HeightField => {
   };
 };
 
-/**
- * Marching squares over the height grid: for each iso-height level, emit the
- * line segments where the terrain crosses that height. Output is a flat
- * "segment soup" (pairs of xyz points), ideal for LineSegmentsGeometry.
- *
- * `pushSegment` receives world-space endpoints; the y of every point is the
- * level itself (an iso-height line lies in its own horizontal plane).
- */
-export type SegmentSink = (
-  x1: number,
-  y1: number,
-  z1: number,
-  x2: number,
-  y2: number,
-  z2: number,
-) => void;
+/** A chained contour line: flat [x0,z0, x1,z1, ...]; closed = it's a loop. */
+export type Polyline = {pts: number[]; closed: boolean};
 
-export const marchContours = (
+type Seg = [number, number, number, number];
+
+/**
+ * Marching squares over the height grid, one segment soup per level.
+ * Endpoints on a shared cell edge are computed from the same two corner
+ * heights in both neighboring cells, so they match bit-for-bit — which is
+ * what lets `chainSegments` stitch the soup into polylines afterwards.
+ */
+const marchSegments = (
   heights: Float32Array, // row-major [j * nx + i], j along z, i along x
   nx: number,
   nz: number,
@@ -56,8 +50,8 @@ export const marchContours = (
   originZ: number,
   cell: number,
   levels: readonly number[],
-  pushSegment: SegmentSink,
-): void => {
+): Seg[][] => {
+  const perLevel: Seg[][] = levels.map(() => []);
   // Edge order per cell: a=(i,j) b=(i+1,j) c=(i+1,j+1) d=(i,j+1)
   // ab = south edge, bc = east, cd = north, da = west.
   for (let j = 0; j < nz - 1; j++) {
@@ -73,7 +67,8 @@ export const marchContours = (
       const lo = Math.min(ha, hb, hc, hd);
       const hi = Math.max(ha, hb, hc, hd);
 
-      for (const L of levels) {
+      for (let li = 0; li < levels.length; li++) {
+        const L = levels[li];
         if (L < lo || L >= hi) continue;
 
         const inside =
@@ -91,7 +86,7 @@ export const marchContours = (
         const pDA = (): [number, number] => [x0, z0 + ((L - ha) / (hd - ha)) * cell];
 
         const emit = (p: [number, number], q: [number, number]) =>
-          pushSegment(p[0], L, p[1], q[0], L, q[1]);
+          perLevel[li].push([p[0], p[1], q[0], q[1]]);
 
         switch (inside) {
           case 1:
@@ -146,6 +141,125 @@ export const marchContours = (
       }
     }
   }
+  return perLevel;
+};
+
+const ptKey = (x: number, z: number) => `${x.toFixed(4)},${z.toFixed(4)}`;
+
+/** Stitch a segment soup into polylines by matching shared endpoints. */
+const chainSegments = (segs: Seg[]): Polyline[] => {
+  const used = new Uint8Array(segs.length);
+  // point key -> [segIndex * 2 + endBit, ...]  (endBit 0 = (x1,z1), 1 = (x2,z2))
+  const map = new Map<string, number[]>();
+  segs.forEach((s, idx) => {
+    for (const end of [0, 1]) {
+      const k = ptKey(s[end * 2], s[end * 2 + 1]);
+      const list = map.get(k);
+      if (list) list.push(idx * 2 + end);
+      else map.set(k, [idx * 2 + end]);
+    }
+  });
+
+  const takeNext = (x: number, z: number): [number, number] | null => {
+    const cands = map.get(ptKey(x, z));
+    if (!cands) return null;
+    for (const c of cands) {
+      const si = c >> 1;
+      if (used[si]) continue;
+      used[si] = 1;
+      const other = (c & 1) === 0 ? 2 : 0;
+      return [segs[si][other], segs[si][other + 1]];
+    }
+    return null;
+  };
+
+  const out: Polyline[] = [];
+  for (let i = 0; i < segs.length; i++) {
+    if (used[i]) continue;
+    used[i] = 1;
+    const s = segs[i];
+    const startKey = ptKey(s[0], s[1]);
+    const fwd: number[] = [s[0], s[1], s[2], s[3]];
+    let closed = false;
+
+    // Extend forward from the tail.
+    for (;;) {
+      const next = takeNext(fwd[fwd.length - 2], fwd[fwd.length - 1]);
+      if (!next) break;
+      if (ptKey(next[0], next[1]) === startKey) {
+        closed = true;
+        break;
+      }
+      fwd.push(next[0], next[1]);
+    }
+
+    if (!closed) {
+      // Extend backward from the head.
+      const back: number[] = [];
+      for (;;) {
+        const hx = back.length ? back[back.length - 2] : fwd[0];
+        const hz = back.length ? back[back.length - 1] : fwd[1];
+        const next = takeNext(hx, hz);
+        if (!next) break;
+        back.push(next[0], next[1]);
+      }
+      if (back.length) {
+        const pts: number[] = [];
+        for (let b = back.length - 2; b >= 0; b -= 2) pts.push(back[b], back[b + 1]);
+        pts.push(...fwd);
+        out.push({pts, closed: false});
+        continue;
+      }
+    }
+    out.push({pts: fwd, closed});
+  }
+  return out;
+};
+
+/**
+ * Laplacian smoothing: rounds off the little marching-squares corners
+ * without adding points. Endpoints of open lines stay pinned; loops wrap.
+ */
+const smoothPolyline = (p: Polyline, passes: number): Polyline => {
+  const n = p.pts.length / 2;
+  if (n < 3) return p;
+  let cur = p.pts.slice();
+  let next = p.pts.slice();
+  for (let pass = 0; pass < passes; pass++) {
+    for (let i = 0; i < n; i++) {
+      if (!p.closed && (i === 0 || i === n - 1)) {
+        next[i * 2] = cur[i * 2];
+        next[i * 2 + 1] = cur[i * 2 + 1];
+        continue;
+      }
+      const im = ((i - 1 + n) % n) * 2;
+      const ip = ((i + 1) % n) * 2;
+      next[i * 2] = cur[i * 2] * 0.5 + (cur[im] + cur[ip]) * 0.25;
+      next[i * 2 + 1] = cur[i * 2 + 1] * 0.5 + (cur[im + 1] + cur[ip + 1]) * 0.25;
+    }
+    [cur, next] = [next, cur];
+  }
+  return {pts: cur, closed: p.closed};
+};
+
+/**
+ * The full contour extraction: marching squares → chained polylines →
+ * smoothed curves, one polyline list per level. No little corners survive.
+ */
+export const extractContours = (
+  heights: Float32Array,
+  nx: number,
+  nz: number,
+  originX: number,
+  originZ: number,
+  cell: number,
+  levels: readonly number[],
+  smoothingPasses: number,
+): Polyline[][] => {
+  const perLevel = marchSegments(heights, nx, nz, originX, originZ, cell, levels);
+  return perLevel.map((segs) =>
+    chainSegments(segs).map((p) => smoothPolyline(p, smoothingPasses)),
+  );
 };
 
 /**

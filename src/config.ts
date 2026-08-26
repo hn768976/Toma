@@ -35,7 +35,7 @@ export const CONFIG = {
     /** Sampled window: x ∈ [-xHalf, xHalf], z ∈ [camZ - back, camZ + depth]. */
     xHalf: 100,
     back: 9,
-    depth: 228,
+    depth: 170,
     /** Base spatial frequency of the noise (1/world-units). Higher = tighter,
      * curvier maze-like ropes. */
     noiseScale: 0.026,
@@ -53,6 +53,9 @@ export const CONFIG = {
   contours: {
     /** Number of iso-height levels. */
     levels: 18,
+    /** Laplacian smoothing passes on the chained polylines — rounds off the
+     * little marching-squares corners so the ropes are pure curves. */
+    smoothingPasses: 3,
     /** Line width in WORLD units (LineMaterial worldUnits) — near lines render
      * thick, far ones thin, for free. */
     lineWidth: 0.012,
