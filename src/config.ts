@@ -38,7 +38,7 @@ export const CONFIG = {
     depth: 170,
     /** Base spatial frequency of the noise (1/world-units). Higher = tighter,
      * curvier maze-like ropes. */
-    noiseScale: 0.026,
+    noiseScale: 0.022,
     octaves: 3,
     /** Peak-to-mid height of the terrain. Kept very low: ground spacing of
      * the ropes is amplitude-invariant, but low relief stops ropes at
@@ -51,16 +51,16 @@ export const CONFIG = {
   },
 
   contours: {
-    /** Number of iso-height levels. */
-    levels: 18,
+    /** Number of iso-height levels. Fewer = sparser ropes, wider even gaps. */
+    levels: 11,
     /** Laplacian smoothing passes on the chained polylines — rounds off the
      * little marching-squares corners so the ropes are pure curves. */
     smoothingPasses: 3,
     /** Line width in WORLD units (LineMaterial worldUnits) — near lines render
      * thick, far ones thin, for free. */
-    lineWidth: 0.012,
+    lineWidth: 0.008,
     /** HDR multiplier on the nearest lines so they read as neon under bloom. */
-    nearGlow: 1.7,
+    nearGlow: 1.5,
     /** Distance band over which lines fade into the horizon haze. */
     fadeStart: 55,
     fadeEnd: 140,
