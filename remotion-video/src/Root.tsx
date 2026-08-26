@@ -18,6 +18,17 @@ import {
   WIDTH as RING_WIDTH,
   HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
+import {
+  ParticleRain,
+  particleRainSchema,
+  particleRainDefaults,
+} from "./particle-rain/ParticleRain";
+import {
+  DURATION_IN_FRAMES as RAIN_DURATION_IN_FRAMES,
+  FPS as RAIN_FPS,
+  WIDTH as RAIN_WIDTH,
+  HEIGHT as RAIN_HEIGHT,
+} from "./particle-rain/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -41,6 +52,16 @@ export const RemotionRoot: React.FC = () => {
         height={RING_HEIGHT}
         schema={particleRingHaloSchema}
         defaultProps={particleRingHaloDefaults}
+      />
+      <Composition
+        id="ParticleRain"
+        component={ParticleRain}
+        durationInFrames={RAIN_DURATION_IN_FRAMES}
+        fps={RAIN_FPS}
+        width={RAIN_WIDTH}
+        height={RAIN_HEIGHT}
+        schema={particleRainSchema}
+        defaultProps={particleRainDefaults}
       />
     </>
   );
