@@ -1,0 +1,17 @@
+import React from 'react';
+import {Composition} from 'remotion';
+import {NeonStockLine} from './NeonStockLine';
+import {DURATION, FPS, VIDEO_H, VIDEO_W} from './lib/theme';
+
+export const RemotionRoot: React.FC = () => {
+  return (
+    <Composition
+      id="NeonStockLine"
+      component={NeonStockLine}
+      durationInFrames={DURATION} // 840
+      fps={FPS} // 30  -> 28.0s, seamless loop
+      width={VIDEO_W} // 3840
+      height={VIDEO_H} // 2160 — render 1080p with --scale=0.5
+    />
+  );
+};

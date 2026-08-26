@@ -1,0 +1,24 @@
+{
+  "name": "neon-stock-line",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Neon stock line — a glowing green price trend climbing across black, in Remotion.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render NeonStockLine out/neon-stock-line.mp4 --codec=h264 --crf=12",
+    "render:1080p": "remotion render NeonStockLine out/neon-stock-1080p.mp4 --codec=h264 --crf=12 --scale=0.5",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.517",
+    "@remotion/google-fonts": "4.0.517",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.517"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "typescript": "5.8.3"
+  }
+}
