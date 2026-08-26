@@ -11,7 +11,7 @@ import {loadFont as loadSans} from '@remotion/google-fonts/Montserrat';
 import {PAD, PreparedBlock, SUPERSAMPLE, prepareBlocks} from './blocks';
 import {activeGlitch, buildGlitchEvents} from './glitch';
 import {GRAIN_TILE, buildGrainTiles} from './grain';
-import {PALETTE, depthColor} from './palette';
+import {THEMES, Variant, makeDepthRamp, rgba} from './themes';
 import {prepareTitle} from './title';
 import {pick, rint, rnd, rrange} from './rand';
 
@@ -39,16 +39,12 @@ const Z_SPAN = Z_FAR - Z_NEAR;
 /** Half-width of the square corridor, in vanishing-plane units. */
 const CORRIDOR = 360;
 
-const ELEMENT_COUNT = 34;
-const BLOCK_POOL = 50;
 const GUIDE_LINES = 20;
 
 /** Frames a lap takes at the opening speed, and how much faster it ends up. */
 const BASE_LAP_FRAMES = 268;
 const ACCEL = 2.4;
 
-const TITLE_CAP_FRACTION = 0.09;
-const TITLE_TRACKING_EM = 0.15;
 /** The title creeps from 1.00 to this across the piece. */
 const TITLE_SCALE_END = 1.06;
 
@@ -87,11 +83,11 @@ type Placement = {
  * centre corridor clear enough for the title to stay legible. The anchor makes
  * each block grow *away* from the corridor rather than across it.
  */
-const placeElement = (seed: string): Placement => {
+const placeElement = (seed: string, blockPool: number): Placement => {
   const wall = rint(`${seed}-wall`, 0, 3) as Wall;
   const along = rrange(`${seed}-along`, -1.55, 1.55) * CORRIDOR;
   const perp = CORRIDOR * rrange(`${seed}-perp`, 0.8, 1.24);
-  const block = rint(`${seed}-block`, 0, BLOCK_POOL - 1);
+  const block = rint(`${seed}-block`, 0, blockPool - 1);
   const alpha = rrange(`${seed}-alpha`, 0.38, 0.95);
 
   switch (wall) {
@@ -147,9 +143,16 @@ const blitClipped = (
 
 export type CodeTunnelTitleProps = {
   title: string;
+  /** Which entry of THEMES to draw. Defaults to v1's `cold`. */
+  variant?: Variant;
 };
 
-export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
+export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({
+  title,
+  variant = 'cold',
+}) => {
+  const theme = THEMES[variant];
+  const depthColor = useMemo(() => makeDepthRamp(theme), [theme]);
   const frame = useCurrentFrame();
   const {width, height, durationInFrames} = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -178,8 +181,11 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
   }, [handle]);
 
   const blocks = useMemo<PreparedBlock[] | null>(
-    () => (fontsReady ? prepareBlocks(BLOCK_POOL, mono.fontFamily) : null),
-    [fontsReady]
+    () =>
+      fontsReady
+        ? prepareBlocks(theme.blockPool, mono.fontFamily, theme.baseFontPx)
+        : null,
+    [fontsReady, theme]
   );
 
   /** Shared scratch canvas: the tint + depth-blur pass happens here, at source
@@ -208,17 +214,18 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
         ? prepareTitle(
             title,
             sans.fontFamily,
-            height * TITLE_CAP_FRACTION * TITLE_SCALE_END,
-            TITLE_TRACKING_EM
+            theme,
+            height * theme.titleCapFraction * TITLE_SCALE_END,
+            width * theme.titleMaxWidthFraction
           )
         : null,
-    [fontsReady, title, height]
+    [fontsReady, title, theme, height, width]
   );
 
   const grainTiles = useMemo(() => buildGrainTiles(), []);
   const glitchEvents = useMemo(
-    () => buildGlitchEvents(durationInFrames),
-    [durationInFrames]
+    () => buildGlitchEvents(durationInFrames, theme.glitchIntervalFrames),
+    [durationInFrames, theme]
   );
 
   useLayoutEffect(() => {
@@ -231,6 +238,7 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
       return;
     }
 
+    const C = theme.colors;
     const vpX = width / 2;
     const vpY = height * 0.53;
     const cx = width / 2;
@@ -248,7 +256,7 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
     ctx.filter = 'none';
-    ctx.fillStyle = PALETTE.background;
+    ctx.fillStyle = C.background;
     ctx.fillRect(0, 0, width, height);
 
     // ── 1. Tunnel guide lines ────────────────────────────────────────────
@@ -264,9 +272,9 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
       const strength = rrange(`guide-strength-${i}`, 0.35, 1) * worldDim;
 
       const gradient = ctx.createLinearGradient(vpX, vpY, x2, y2);
-      gradient.addColorStop(0, 'rgba(26, 44, 68, 0)');
-      gradient.addColorStop(0.08, `rgba(26, 44, 68, ${(0.25 * strength).toFixed(3)})`);
-      gradient.addColorStop(1, `rgba(26, 44, 68, ${strength.toFixed(3)})`);
+      gradient.addColorStop(0, rgba(C.tunnelLine, 0));
+      gradient.addColorStop(0.08, rgba(C.tunnelLine, Number((0.25 * strength).toFixed(3))));
+      gradient.addColorStop(1, rgba(C.tunnelLine, Number(strength.toFixed(3))));
 
       ctx.strokeStyle = gradient;
       ctx.beginPath();
@@ -291,7 +299,7 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
 
     const drawn: Drawn[] = [];
 
-    for (let i = 0; i < ELEMENT_COUNT; i++) {
+    for (let i = 0; i < theme.elementCount; i++) {
       const phase = rnd(`phase-${i}`);
       const s = phase + travel;
       const lap = Math.floor(s);
@@ -301,12 +309,12 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
       // Freshly seeded on every lap, so a recycled element never lands back in
       // the same place, and the staggered phases keep the field from
       // refreshing all at once.
-      const p = placeElement(`el-${i}-${lap}`);
+      const p = placeElement(`el-${i}-${lap}`, theme.blockPool);
 
       const fadeIn = smoothstep(0, 0.3, life);
       const fadeOut = 1 - smoothstep(0.76, 0.95, life);
       // The corridor thins by retiring the higher-indexed elements first.
-      const retire = 1 - smoothstep(survivors - 0.12, survivors, i / ELEMENT_COUNT);
+      const retire = 1 - smoothstep(survivors - 0.12, survivors, i / theme.elementCount);
 
       const alpha = p.alpha * fadeIn * fadeOut * retire * worldDim;
       if (alpha <= 0.004) {
@@ -478,9 +486,9 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
     // the corridor -- so the title separates from the busy code behind it.
     const glowR = tl.textWidth * k * 0.78;
     const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
-    glow.addColorStop(0, 'rgba(255, 255, 255, 0.17)');
-    glow.addColorStop(0.42, 'rgba(210, 230, 255, 0.07)');
-    glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    glow.addColorStop(0, rgba(C.titleHaloInner, 0.17));
+    glow.addColorStop(0.42, rgba(C.titleHaloMid, 0.07));
+    glow.addColorStop(1, rgba(C.titleHaloInner, 0));
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(1, 0.46);
@@ -497,16 +505,16 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
     // top. This is what makes the title read as a rendered overlay rather than
     // as flat type.
     const offset = glitch
-      ? 20 * rrange(`glitch-amp-${glitch.start}-${frame}`, 0.85, 1.2)
-      : 7 * rrange(`fringe-${frame}`, 0.9, 1.1);
+      ? theme.glitchOffsetPx * rrange(`glitch-amp-${glitch.start}-${frame}`, 0.85, 1.2)
+      : theme.chromaticOffsetPx * rrange(`fringe-${frame}`, 0.9, 1.1);
     const angle = glitch
       ? rrange(`glitch-dir-${glitch.start}-${frame}`, -Math.PI, Math.PI)
       : rrange(`fringe-dir-${frame}`, -0.28, 0.28);
     const ox = Math.cos(angle) * offset;
     const oy = Math.sin(angle) * offset * 0.55;
 
-    blitTitle(tl.red, 1, ox, oy);
-    blitTitle(tl.cyan, 1, -ox, -oy);
+    blitTitle(tl.fringeA, 1, ox, oy);
+    blitTitle(tl.fringeB, 1, -ox, -oy);
     blitTitle(tl.core, 1);
     // Bloom on the title.
     blitTitle(tl.bloom, 0.34);
@@ -531,7 +539,7 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
         strip.drawImage(canvas, 0, y, width, h, 0, 0, width, h);
 
         ctx.clearRect(0, y, width, h);
-        ctx.fillStyle = PALETTE.background;
+        ctx.fillStyle = C.background;
         ctx.fillRect(0, y, width, h);
         ctx.drawImage(sliceStrip.canvas, 0, 0, width, h, shift, y, width, h);
       }
@@ -546,10 +554,10 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
       cy,
       Math.hypot(width, height) / 2
     );
-    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    vignette.addColorStop(0.48, 'rgba(0, 0, 0, 0.03)');
-    vignette.addColorStop(0.78, 'rgba(0, 0, 0, 0.18)');
-    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.52)');
+    vignette.addColorStop(0, rgba(C.vignette, 0));
+    vignette.addColorStop(0.48, rgba(C.vignette, 0.03));
+    vignette.addColorStop(0.78, rgba(C.vignette, 0.18));
+    vignette.addColorStop(1, rgba(C.vignette, 0.52));
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
@@ -578,10 +586,12 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
     titleLayers,
     glitchEvents,
     title,
+    theme,
+    depthColor,
   ]);
 
   return (
-    <AbsoluteFill style={{backgroundColor: PALETTE.background}}>
+    <AbsoluteFill style={{backgroundColor: theme.colors.background}}>
       <canvas
         ref={canvasRef}
         width={width}

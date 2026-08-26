@@ -1,4 +1,4 @@
-import {PALETTE} from './palette';
+import {Theme} from './themes';
 
 /**
  * The title is prerendered once into a handful of small layers -- core, the two
@@ -13,8 +13,8 @@ import {PALETTE} from './palette';
 
 export type TitleLayers = {
   core: HTMLCanvasElement;
-  red: HTMLCanvasElement;
-  cyan: HTMLCanvasElement;
+  fringeA: HTMLCanvasElement;
+  fringeB: HTMLCanvasElement;
   glowNear: HTMLCanvasElement;
   glowWide: HTMLCanvasElement;
   bloom: HTMLCanvasElement;
@@ -28,6 +28,16 @@ export type TitleLayers = {
   left: number;
   /** Advance width of the tracked type. */
   textWidth: number;
+  fit: TitleFit;
+};
+
+export type TitleFit = {
+  /** Cap height actually used, after any fit-to-width shrink. */
+  capHeight: number;
+  /** Letterspacing actually used, in em. */
+  trackingEm: number;
+  /** Whether the title had to be shrunk to stay inside its width budget. */
+  fitted: boolean;
 };
 
 const PAD = 360;
@@ -61,8 +71,11 @@ const drawTracked = (
 export const prepareTitle = (
   title: string,
   fontFamily: string,
+  theme: Theme,
+  /** Cap height to aim for, in pixels, before any fit-to-width shrink. */
   capHeight: number,
-  trackingEm: number
+  /** Hard ceiling on the rendered width, in pixels. */
+  maxWidth: number
 ): TitleLayers => {
   const probeCanvas = document.createElement('canvas');
   const probe = probeCanvas.getContext('2d');
@@ -72,11 +85,23 @@ export const prepareTitle = (
 
   probe.font = `800 100px ${fontFamily}, sans-serif`;
   const capRatio = probe.measureText('H').actualBoundingBoxAscent / 100 || 0.72;
-  const fontSize = capHeight / capRatio;
+
+  // Width is linear in font size, so one measurement is enough to work out the
+  // shrink a long title needs. Letterspacing scales with it, so the type keeps
+  // its proportions instead of being squeezed.
+  probe.font = `800 ${capHeight / capRatio}px ${fontFamily}, sans-serif`;
+  const naturalWidth = measureTracked(
+    probe,
+    title,
+    (capHeight / capRatio) * theme.titleTrackingEm
+  );
+  const shrink = naturalWidth > maxWidth ? maxWidth / naturalWidth : 1;
+
+  const fontSize = (capHeight * shrink) / capRatio;
   const font = `800 ${fontSize}px ${fontFamily}, sans-serif`;
 
   probe.font = font;
-  const tracking = fontSize * trackingEm;
+  const tracking = fontSize * theme.titleTrackingEm;
   const textWidth = measureTracked(probe, title, tracking);
   const metrics = probe.measureText(title);
   const ascent = Math.ceil(metrics.actualBoundingBoxAscent || fontSize * 0.75);
@@ -110,17 +135,18 @@ export const prepareTitle = (
   };
 
   return {
-    core: layer(PALETTE.titleWhite, 0),
-    red: layer(PALETTE.fringeRed, 0),
-    cyan: layer(PALETTE.fringeCyan, 0),
-    glowNear: layer('#FFFFFF', 52),
-    glowWide: layer('#BEDCFF', 118),
-    bloom: layer('#FFFFFF', 32),
+    core: layer(theme.colors.title, 0),
+    fringeA: layer(theme.colors.fringeA, 0),
+    fringeB: layer(theme.colors.fringeB, 0),
+    glowNear: layer(theme.colors.titleGlowNear, 52),
+    glowWide: layer(theme.colors.titleGlowWide, 118),
+    bloom: layer(theme.colors.titleBloom, 32),
     width,
     height,
-    capHeight,
+    capHeight: capHeight * shrink,
     baseline,
     left,
     textWidth,
+    fit: {capHeight: capHeight * shrink, trackingEm: theme.titleTrackingEm, fitted: shrink < 1},
   };
 };

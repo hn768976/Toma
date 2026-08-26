@@ -3,11 +3,15 @@ import {chance, rint} from './rand';
 export type GlitchEvent = {start: number; length: number; index: number};
 
 /**
- * Glitch accents are irregular and clustered: most events are 40-110 frames
- * apart, but roughly a third of them are followed by a quick second hit a few
- * frames later, which is what stops the rhythm from feeling metronomic.
+ * Glitch accents are irregular and clustered: most events are `interval`
+ * frames apart, but roughly a third of them are followed by a quick second hit
+ * a few frames later, which is what stops the rhythm from feeling metronomic.
  */
-export const buildGlitchEvents = (durationInFrames: number): GlitchEvent[] => {
+export const buildGlitchEvents = (
+  durationInFrames: number,
+  /** Seeded gap between events, in frames: [min, max]. */
+  interval: [number, number]
+): GlitchEvent[] => {
   const events: GlitchEvent[] = [];
   let f = rint('glitch-first', 34, 74);
   let i = 0;
@@ -19,7 +23,7 @@ export const buildGlitchEvents = (durationInFrames: number): GlitchEvent[] => {
     const clustered = chance(`glitch-cluster-${i}`, 0.34);
     f += clustered
       ? length + rint(`glitch-gap-${i}`, 2, 10)
-      : rint(`glitch-wait-${i}`, 40, 110);
+      : rint(`glitch-wait-${i}`, interval[0], interval[1]);
     i++;
   }
 

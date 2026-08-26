@@ -14,6 +14,15 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{title: 'WEB 3.0'}}
       />
+      <Composition
+        id="CodeTunnelTitleV2"
+        component={CodeTunnelTitle}
+        durationInFrames={600}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{title: 'NEURAL NETWORK', variant: 'electric' as const}}
+      />
     </>
   );
 };

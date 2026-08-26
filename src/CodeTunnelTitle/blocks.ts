@@ -7,9 +7,6 @@ import {makeCodeBlock} from './codegen';
  * do, and the text never changes, so it is done exactly once per mount.
  */
 
-/** Font size at 4K *before* the /z perspective scaling. */
-export const BASE_FONT_PX = 26;
-
 /**
  * The offscreen canvases are rendered at 2x so that blocks stay crisp through
  * the sharp mid band (where scale ~ 1..3); nearer than that the depth blur has
@@ -35,9 +32,11 @@ export type PreparedBlock = {
 
 export const prepareBlocks = (
   count: number,
-  fontFamily: string
+  fontFamily: string,
+  /** Code font size at 4K, before the /z perspective scaling. */
+  baseFontPx: number
 ): PreparedBlock[] => {
-  const fontPx = BASE_FONT_PX * SUPERSAMPLE;
+  const fontPx = baseFontPx * SUPERSAMPLE;
   const lineHeight = Math.round(fontPx * LINE_HEIGHT);
   const font = `400 ${fontPx}px ${fontFamily}, monospace`;
 
@@ -67,8 +66,9 @@ export const prepareBlocks = (
       throw new Error('Could not acquire a 2D context for a code block');
     }
 
-    // Rendered pure white: the depth tint is applied at blit time so a single
-    // prerender serves the whole depth ramp.
+    // Rendered pure white. This is a tint mask rather than a palette colour:
+    // the depth tint is punched in at blit time, so one prerender serves the
+    // whole depth ramp of any theme.
     ctx.font = font;
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#FFFFFF';
