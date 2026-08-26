@@ -1,3 +1,5 @@
+import {THEMES} from './theme';
+
 /**
  * Per-variant configuration. Everything that distinguishes one version of the
  * map from another is a value in this file: the lat/lon viewport, the dot
@@ -64,6 +66,21 @@ export type VariantConfig = {
   points: Record<string, [number, number]>;
   /** Endpoint pairs, drawn in order until `arcCount` arcs exist. */
   routes: Route[];
+/**
+   * How far inside the projected map box an arc's endpoints must sit, in frame
+   * pixels. An endpoint closer than this to an edge is rejected outright, so no
+   * line ever begins or ends on the edge of the map.
+   */
+  endpointMargin: number;
+  /**
+   * How far inside the map box the curves themselves must stay. Smaller than
+   * the endpoint margin on purpose: a long route's apex needs the room to keep
+   * a graceful bow, and it only has to avoid running along the boundary, not
+   * terminate clear of it.
+   */
+  curveMargin: number;
+  /** The two background blues this variant paints. */
+  background: {deep: string; glow: string};
   /** Radius a completed-arc node pulse expands to, in frame pixels. */
   pulseRadius: number;
   /** Radius of a travelling dot, in frame pixels. */
@@ -91,6 +108,12 @@ export type Tilt = {
   scale: number;
   /** Vertical nudge in frame pixels, applied after the rotation. */
   offsetY: number;
+  /**
+   * Slow push-in, as a fraction of `scale`. The zoom eases in over the first
+   * half of the loop and back out over the second, so it closes at frame 600
+   * with no velocity discontinuity - a one-way push could not loop.
+   */
+  zoom: number;
 };
 
 const GLOBAL_POINTS: Record<string, [number, number]> = {
@@ -133,7 +156,7 @@ const GLOBAL_POINTS: Record<string, [number, number]> = {
 
 // Six routes, twelve endpoints, no endpoint used twice - so no two arcs meet at
 // the same point. Lengths are deliberately graded, roughly 2400 / 1800 / 1560 /
-// 1440 / 1240 / 980 px, so the arcs read as differently sized rather than as one
+// 1440 / 1240 / 1110 px, so the arcs read as differently sized rather than as one
 // repeated shape, and none of them is a stub.
 //
 // Half the set is declared east-to-west so three arcs draw right to left
@@ -147,7 +170,7 @@ const GLOBAL_ROUTES: Route[] = [
   {from: 'saoPaulo', to: 'hongKong'},
   {from: 'dubai', to: 'mexicoCity'},
   {from: 'lima', to: 'moscow'},
-  {from: 'delhi', to: 'reykjavik'},
+  {from: 'sydney', to: 'nairobi'},
 ];
 
 
@@ -164,6 +187,9 @@ const GLOBAL_VARIANT: VariantConfig = {
   bowMax: 620,
   arcWidth: 3,
   minArcLength: 900,
+  endpointMargin: 150,
+  curveMargin: 40,
+  background: {deep: THEMES.backgroundDeep, glow: THEMES.backgroundGlow},
   points: GLOBAL_POINTS,
   routes: GLOBAL_ROUTES,
   pulseRadius: 46,
@@ -181,7 +207,14 @@ export const VARIANTS = {
    */
   globalTilted: {
     ...GLOBAL_VARIANT,
-    tilt: {angleDeg: 45, perspective: 3400, scale: 1.2, offsetY: 0},
+    // A cooler blue than version one, so the two read as separate pieces.
+    background: {
+      deep: THEMES.backgroundDeepCool,
+      glow: THEMES.backgroundGlowCool,
+    },
+    // The base scale is set so that base x (1 + zoom) stays at the 1.2 where
+    // the near edge of the plane still fits inside the frame.
+    tilt: {angleDeg: 45, perspective: 3400, scale: 1.13, offsetY: 0, zoom: 0.06},
   },
 } satisfies Record<string, VariantConfig>;
 

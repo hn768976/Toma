@@ -3,7 +3,7 @@ import {useCurrentFrame} from 'remotion';
 import {FRAME_HEIGHT, FRAME_WIDTH, LOOP_FRAMES} from '../config';
 import {useCanvasDraw} from '../lib/canvas';
 import type {Projection} from '../lib/projection';
-import {rgba, THEMES} from '../theme';
+import {rgba} from '../theme';
 
 /**
  * The soft lighter wash behind the map. Gradients need no resolution, so this
@@ -12,9 +12,10 @@ import {rgba, THEMES} from '../theme';
 const WASH_WIDTH = 960;
 const WASH_HEIGHT = 540;
 
-export const BackgroundWash: React.FC<{projection: Projection | null}> = ({
-  projection,
-}) => {
+export const BackgroundWash: React.FC<{
+  background: {deep: string; glow: string};
+  projection: Projection | null;
+}> = ({background, projection}) => {
   const frame = useCurrentFrame();
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -25,7 +26,7 @@ export const BackgroundWash: React.FC<{projection: Projection | null}> = ({
       const sx = WASH_WIDTH / FRAME_WIDTH;
       const sy = WASH_HEIGHT / FRAME_HEIGHT;
 
-      ctx.fillStyle = THEMES.backgroundDeep;
+      ctx.fillStyle = background.deep;
       ctx.fillRect(0, 0, WASH_WIDTH, WASH_HEIGHT);
 
       const centreX =
@@ -64,15 +65,15 @@ export const BackgroundWash: React.FC<{projection: Projection | null}> = ({
           lobe.y,
           lobe.r,
         );
-        gradient.addColorStop(0, rgba(THEMES.backgroundGlow, lobe.a));
-        gradient.addColorStop(0.55, rgba(THEMES.backgroundGlow, lobe.a * 0.34));
-        gradient.addColorStop(1, rgba(THEMES.backgroundGlow, 0));
+        gradient.addColorStop(0, rgba(background.glow, lobe.a));
+        gradient.addColorStop(0.55, rgba(background.glow, lobe.a * 0.34));
+        gradient.addColorStop(1, rgba(background.glow, 0));
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, WASH_WIDTH, WASH_HEIGHT);
       }
       ctx.globalCompositeOperation = 'source-over';
     },
-    [frame, projection],
+    [frame, projection, background],
   );
 
   return (

@@ -1,13 +1,12 @@
-import {AbsoluteFill} from 'remotion';
+import {AbsoluteFill, useCurrentFrame} from 'remotion';
 import {ArcLayer} from './components/ArcLayer';
 import {BackgroundWash} from './components/BackgroundWash';
 import {DotMap} from './components/DotMap';
 import {FilmFinish} from './components/FilmFinish';
 import {NodePulse} from './components/NodePulse';
-import type {Tilt, VariantName} from './config';
+import {getVariant, LOOP_FRAMES, type Tilt, type VariantName} from './config';
 import {useLandOutline} from './lib/use-land-outline';
 import {useScene} from './lib/scene';
-import {THEMES} from './theme';
 
 export type NetworkMapProps = {
   variant: VariantName;
@@ -25,20 +24,30 @@ export type NetworkMapProps = {
 const TiltedPlane: React.FC<{tilt: Tilt; children: React.ReactNode}> = ({
   tilt,
   children,
-}) => (
-  <AbsoluteFill
-    style={{perspective: tilt.perspective, perspectiveOrigin: '50% 50%'}}
-  >
+}) => {
+  const frame = useCurrentFrame();
+  // Eases in over the first half of the loop and back out over the second. Both
+  // the value and its rate of change are zero at frame 0 and frame 600, so the
+  // push-in closes the loop instead of snapping back.
+  const t = (frame % LOOP_FRAMES) / LOOP_FRAMES;
+  const push = 1 + tilt.zoom * (1 - Math.cos(2 * Math.PI * t)) * 0.5;
+  const scale = tilt.scale * push;
+
+  return (
     <AbsoluteFill
-      style={{
-        transform: `translateY(${tilt.offsetY}px) rotateX(${tilt.angleDeg}deg) scale(${tilt.scale})`,
-        transformOrigin: '50% 50%',
-      }}
+      style={{perspective: tilt.perspective, perspectiveOrigin: '50% 50%'}}
     >
-      {children}
+      <AbsoluteFill
+        style={{
+          transform: `translateY(${tilt.offsetY}px) rotateX(${tilt.angleDeg}deg) scale(${scale})`,
+          transformOrigin: '50% 50%',
+        }}
+      >
+        {children}
+      </AbsoluteFill>
     </AbsoluteFill>
-  </AbsoluteFill>
-);
+  );
+};
 
 /** Wraps the map plane in a tilt when the variant asks for one, otherwise not
  * at all - an identity transform would still isolate the layers into their own
@@ -56,10 +65,16 @@ const MapPlane: React.FC<{tilt?: Tilt; children: React.ReactNode}> = ({
 export const NetworkMap: React.FC<NetworkMapProps> = ({variant}) => {
   const outline = useLandOutline();
   const scene = useScene(variant, outline);
+  // Read straight from the config rather than the scene, so the frame is the
+  // right colour even on the frames where the outline is still loading.
+  const {background} = getVariant(variant);
 
   return (
-    <AbsoluteFill style={{backgroundColor: THEMES.backgroundDeep}}>
-      <BackgroundWash projection={scene?.projection ?? null} />
+    <AbsoluteFill style={{backgroundColor: background.deep}}>
+      <BackgroundWash
+        background={background}
+        projection={scene?.projection ?? null}
+      />
       {scene ? (
         <MapPlane tilt={scene.config.tilt}>
           <DotMap

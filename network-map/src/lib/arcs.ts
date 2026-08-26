@@ -68,9 +68,6 @@ const bezierLength = (arc: Arc, steps = 96): number => {
   return total;
 };
 
-/** Keeps arcs clear of the very edge of the projected map box. */
-const ARC_INSET = 18;
-
 export type Bounds = {left: number; right: number; top: number; bottom: number};
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -150,6 +147,26 @@ const assignColors = (count: number, config: VariantConfig): string[] => {
   return pool.slice(0, count);
 };
 
+/** No arc may begin or end on, or near, the edge of the map. */
+const assertInside = (
+  name: string,
+  point: Point,
+  bounds: Bounds,
+  config: VariantConfig,
+): void => {
+  if (
+    point.x < bounds.left ||
+    point.x > bounds.right ||
+    point.y < bounds.top ||
+    point.y > bounds.bottom
+  ) {
+    throw new Error(
+      `Endpoint "${name}" is within ${config.endpointMargin}px of the map edge ` +
+        `in variant "${config.seed}"; no arc may end there`,
+    );
+  }
+};
+
 /** No endpoint may serve two arcs, so no two arcs ever meet at a point. */
 const assertDistinctEndpoints = (routes: Route[], config: VariantConfig): void => {
   const seen = new Set<string>();
@@ -174,13 +191,22 @@ export const buildArcs = (
   assertDistinctEndpoints(routes, config);
   const colors = assignColors(routes.length, config);
 
-  // Nothing is allowed to leave the map: every endpoint and every point along
-  // every curve stays inside this box.
+  // Nothing is allowed to leave the map: every point along every curve stays
+  // inside this box, the projected map inset by the curve margin.
   const bounds: Bounds = {
-    left: projection.originX + ARC_INSET,
-    right: projection.originX + projection.mapWidth - ARC_INSET,
-    top: projection.originY + ARC_INSET,
-    bottom: projection.originY + projection.mapHeight - ARC_INSET,
+    left: projection.originX + config.curveMargin,
+    right: projection.originX + projection.mapWidth - config.curveMargin,
+    top: projection.originY + config.curveMargin,
+    bottom: projection.originY + projection.mapHeight - config.curveMargin,
+  };
+
+  // Endpoints are held further in than the curves are, so no arc terminates on
+  // or near an edge even though a long arc's apex may pass closer to one.
+  const endpointBounds: Bounds = {
+    left: projection.originX + config.endpointMargin,
+    right: projection.originX + projection.mapWidth - config.endpointMargin,
+    top: projection.originY + config.endpointMargin,
+    bottom: projection.originY + projection.mapHeight - config.endpointMargin,
   };
 
   return routes.map((route, id) => {
@@ -190,14 +216,12 @@ export const buildArcs = (
       throw new Error(`Unknown endpoint in route ${route.from} -> ${route.to}`);
     }
 
-    const start = {
-      x: clamp(projection.projectX(from[0]), bounds.left, bounds.right),
-      y: clamp(projection.projectY(from[1]), bounds.top, bounds.bottom),
-    };
-    const end = {
-      x: clamp(projection.projectX(to[0]), bounds.left, bounds.right),
-      y: clamp(projection.projectY(to[1]), bounds.top, bounds.bottom),
-    };
+    const start = {x: projection.projectX(from[0]), y: projection.projectY(from[1])};
+    const end = {x: projection.projectX(to[0]), y: projection.projectY(to[1])};
+    // Clamping here would silently drag an endpoint onto the boundary, which is
+    // exactly the thing the margin exists to prevent, so reject it instead.
+    assertInside(route.from, start, endpointBounds, config);
+    assertInside(route.to, end, endpointBounds, config);
 
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
     if (distance < config.minArcLength) {

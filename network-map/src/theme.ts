@@ -7,6 +7,9 @@ export const THEMES = {
   backgroundDeep: '#050E2E',
   /** The soft lighter wash that sits behind the map. */
   backgroundGlow: '#16306B',
+  /** A cooler, more teal-leaning blue, used by the tilted variant. */
+  backgroundDeepCool: '#041A2E',
+  backgroundGlowCool: '#14567E',
   /** Land dots at full brightness. */
   dotPale: '#C8D8F0',
   /** Land dots that have drifted out toward the frame edges. */
