@@ -14,6 +14,27 @@ import {CACHE_FONT, TextCache, getDashTile, getTextTile} from './text';
 
 const TAU = Math.PI * 2;
 
+/**
+ * Radial gradients that fade to nothing need a profile whose *slope* also
+ * reaches zero at the rim, not just its value. A gradient built from a couple
+ * of linear colour stops has a kink where the last segment lands on zero, and
+ * against a near-black field the eye reads that kink as a hard circular edge —
+ * you see the disc, not the haze. Sampling a smooth curve at a dozen stops
+ * removes it: `(1 - t^2)^k` is 1 at the centre and meets zero flat.
+ */
+const addSmoothFalloff = (
+  g: CanvasGradient,
+  color: RGB,
+  peak: number,
+  exponent: number,
+  steps = 14,
+) => {
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    g.addColorStop(t, rgba(color, peak * Math.pow(1 - t * t, exponent)));
+  }
+};
+
 /** How far past the visible frame we keep drawing the series, in world px. */
 const CULL_MARGIN = 1320;
 /**
@@ -186,10 +207,7 @@ const drawBokeh = (ctx: CanvasRenderingContext2D, scene: Scene, frame: number) =
     const st = bokehStateAt(B, frame);
     if (Math.abs(st.u) > 1400 || Math.abs(st.v) > 900) continue;
     const g = ctx.createRadialGradient(st.u, st.v, 0, st.u, st.v, B.radius);
-    g.addColorStop(0, rgba(glow, B.alpha));
-    g.addColorStop(0.5, rgba(glow, B.alpha * 0.5));
-    g.addColorStop(0.82, rgba(glow, B.alpha * 0.14));
-    g.addColorStop(1, rgba(glow, 0));
+    addSmoothFalloff(g, glow, B.alpha, 2, 10);
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(st.u, st.v, B.radius, 0, TAU);
@@ -273,11 +291,11 @@ export const drawFrame = (
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
 
+  // The wash reaches past the far corner of the frame, so the radius where it
+  // finally hits zero is never on screen at all.
   const {x: wx, y: wy, r: wr} = cfg.wash;
   const wash = ctx.createRadialGradient(wx, wy, 0, wx, wy, wr);
-  wash.addColorStop(0, rgba(theme.ambient, 0.9));
-  wash.addColorStop(0.45, rgba(theme.ambient, 0.45));
-  wash.addColorStop(1, rgba(theme.ambient, 0));
+  addSmoothFalloff(wash, theme.ambient, 0.8, 3.4);
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
 
@@ -332,21 +350,25 @@ export const drawFrame = (
   ctx.setTransform(unit, 0, 0, unit, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
-  const vr = Math.hypot(DESIGN_W, DESIGN_H) / 2;
-  const vg = ctx.createRadialGradient(
-    DESIGN_W / 2,
-    DESIGN_H / 2,
-    0,
-    DESIGN_W / 2,
-    DESIGN_H / 2,
-    vr,
-  );
-  vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(0.55, 'rgba(0,0,0,0)');
-  vg.addColorStop(0.8, 'rgba(0,0,0,0.1)');
-  vg.addColorStop(1, 'rgba(0,0,0,0.22)');
+  // Drawn in a squashed space so the falloff is an ellipse matching the frame
+  // rather than a circle inscribed in it — a circular vignette on 16:9 darkens
+  // the left and right edges while leaving the top and bottom untouched, which
+  // is itself a visible round shape. The ramp starts flat for the same reason
+  // the wash does: a linear stop landing on zero would band.
+  ctx.save();
+  ctx.translate(DESIGN_W / 2, DESIGN_H / 2);
+  ctx.scale(1, DESIGN_H / DESIGN_W);
+  const vr = Math.hypot(DESIGN_W / 2, DESIGN_W / 2);
+  const vg = ctx.createRadialGradient(0, 0, 0, 0, 0, vr);
+  const VIGNETTE = 0.22; // at the corners
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12;
+    const u = Math.max(0, (t - 0.22) / 0.78);
+    vg.addColorStop(t, `rgba(0,0,0,${VIGNETTE * Math.pow(u, 2.2)})`);
+  }
   ctx.fillStyle = vg;
-  ctx.fillRect(0, 0, DESIGN_W, DESIGN_H);
+  ctx.fillRect(-DESIGN_W / 2, -DESIGN_W / 2, DESIGN_W, DESIGN_W);
+  ctx.restore();
 
   // ---- grain -------------------------------------------------------------
   const go = grainOffsetAt(f);

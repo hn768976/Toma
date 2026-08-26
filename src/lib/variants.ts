@@ -158,7 +158,9 @@ export const VARIANTS: Record<Variant, VariantConfig> = {
     theme: THEMES.bull,
     tilt: (-8 * Math.PI) / 180, // up to the right
     lineYOffset: 60,
-    wash: {x: 300, y: 940, r: 1320}, // lower-left
+    // The radius runs past the frame's far corner (1873px away) so the wash
+    // never shows the circle where it ends.
+    wash: {x: 300, y: 940, r: 2000}, // lower-left
     glowAlpha: 0.26,
     maGlowAlpha: 0.14,
     bloomBlur: 8,
@@ -197,7 +199,7 @@ export const VARIANTS: Record<Variant, VariantConfig> = {
     // diagonal reads melodramatic where a steep upward one reads triumphant.
     tilt: (6 * Math.PI) / 180,
     lineYOffset: -40, // starts high, with room to fall
-    wash: {x: 1620, y: 940, r: 1320}, // lower-right
+    wash: {x: 1620, y: 940, r: 2000}, // lower-right
     // Red at high saturation spreads more readily than green, so the wide
     // glow pass comes down from 26% to 20% and both bloom radii are trimmed —
     // without that the red line smears where the green one stayed crisp.
