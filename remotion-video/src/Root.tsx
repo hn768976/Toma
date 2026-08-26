@@ -22,6 +22,7 @@ import {
   ParticleField,
   particleFieldSchema,
   particleBurstDefaults,
+  particleImplosionDefaults,
   DURATION_IN_FRAMES as BURST_DURATION_IN_FRAMES,
   FPS as BURST_FPS,
   WIDTH as BURST_WIDTH,
@@ -60,6 +61,16 @@ export const RemotionRoot: React.FC = () => {
         height={BURST_HEIGHT}
         schema={particleFieldSchema}
         defaultProps={particleBurstDefaults}
+      />
+      <Composition
+        id="ParticleImplosion"
+        component={ParticleField}
+        durationInFrames={BURST_DURATION_IN_FRAMES}
+        fps={BURST_FPS}
+        width={BURST_WIDTH}
+        height={BURST_HEIGHT}
+        schema={particleFieldSchema}
+        defaultProps={particleImplosionDefaults}
       />
     </>
   );

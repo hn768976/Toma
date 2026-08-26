@@ -299,7 +299,7 @@ export const VARIANTS: Record<Variant, VariantConfig> = {
     angleJitterFrom: { frame: 15, value: 1 },
     angleJitterTo: { frame: 132, value: 0.06 },
 
-    centreFadePx: 130, // particles vanish at the centre, then the flash
+    centreFadePx: 70, // particles vanish at the centre, then the flash
 
     appearStartFrame: 0,
     fadeInFrames: 6,
@@ -316,10 +316,10 @@ export const VARIANTS: Record<Variant, VariantConfig> = {
 
     // Faint on arrival, brightening as the crowding concentrates light.
     brightnessCurve: [
-      { frame: 0, value: 0.42 },
-      { frame: 15, value: 0.5 },
-      { frame: 90, value: 0.72 },
-      { frame: 120, value: 1 },
+      { frame: 0, value: 0.45 },
+      { frame: 15, value: 0.58 },
+      { frame: 90, value: 0.85 },
+      { frame: 120, value: 1.05 },
       { frame: 138, value: 1.6 },
       { frame: 145, value: 1.6 },
     ],
@@ -336,7 +336,11 @@ export const VARIANTS: Record<Variant, VariantConfig> = {
     // The climax: a single bright white-cyan radial flash.
     coreGlow: {
       curve: [
-        { frame: 140, value: 0 },
+        // A little light gathers in the last frames of the collapse, so the
+        // crowding has somewhere to go instead of leaving a dark pupil.
+        { frame: 126, value: 0 },
+        { frame: 138, value: 0.26 },
+        { frame: 140, value: 0.3 },
         { frame: 146, value: 1 },
         { frame: 150, value: 0.5 },
         { frame: 155, value: 0 },
