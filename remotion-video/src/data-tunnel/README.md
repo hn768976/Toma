@@ -109,18 +109,19 @@ Two things keep a 4K frame affordable, and both are easy to undo by accident:
 ```bash
 # 1080p previews
 npx remotion render DataTunnel out/data-tunnel-preview.mp4 \
-  --codec=h264 --crf=18 --scale=0.5 --concurrency=8
+  --codec=h264 --crf=18 --scale=0.5 --concurrency=8 --muted
 npx remotion render DataTunnelApproach out/data-tunnel-approach-preview.mp4 \
-  --codec=h264 --crf=18 --scale=0.5 --concurrency=8
+  --codec=h264 --crf=18 --scale=0.5 --concurrency=8 --muted
 
 # full 4K
 npx remotion render DataTunnel out/data-tunnel.mp4 \
-  --codec=h264 --crf=12 --concurrency=8
+  --codec=h264 --crf=12 --concurrency=8 --muted
 npx remotion render DataTunnelApproach out/data-tunnel-approach.mp4 \
-  --codec=h264 --crf=12 --concurrency=8
+  --codec=h264 --crf=12 --concurrency=8 --muted
 ```
 
 `--scale=0.5` keeps the canvas backing store at 3840×2160 and downsamples the
 capture, so blur radii and glow sizes in the preview match the 4K master.
-Lower `--concurrency` to the number of available cores if the renderer
-complains.
+`--muted` keeps Remotion from attaching a silent audio track — these are
+picture-only. Lower `--concurrency` to the number of available cores if the
+renderer complains.
