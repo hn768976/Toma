@@ -23,6 +23,9 @@ import {
   SPARKLE_BLUR,
   SPARKLE_MAX_ALPHA,
   SPARKLE_TWINKLE_EXPONENT,
+  SHADOW_ALPHA,
+  SHADOW_ANGLE,
+  SHADOW_EXTENT,
   SPRITE_SMALL_THRESHOLD,
   TAU,
   VIGNETTE_ALPHA,
@@ -459,6 +462,20 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant: variantName }) 
         width={WIDTH}
         height={HEIGHT}
         style={{ ...layerStyle, mixBlendMode: "screen" }}
+      />
+      <AbsoluteFill
+        style={{
+          background:
+            "linear-gradient(" +
+            SHADOW_ANGLE +
+            "deg, " +
+            withAlpha(theme.vignette, SHADOW_ALPHA) +
+            " 0%, " +
+            withAlpha(theme.vignette, 0) +
+            " " +
+            SHADOW_EXTENT * 100 +
+            "%)",
+        }}
       />
       <AbsoluteFill
         style={{

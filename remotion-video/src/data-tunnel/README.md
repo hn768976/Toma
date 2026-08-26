@@ -1,20 +1,20 @@
 # DataTunnel — 4K "data tunnel" corridor
 
-A glowing field of data chips flowing up through a curved perspective
-corridor. Two compositions share one component and one chip set; what
-separates them is which way the camera is travelling, and their palette.
+A glowing field of data chips flowing through a curved perspective corridor.
+Two compositions share one component, one chip set and one corridor geometry;
+what separates them is which way the camera is travelling, and their palette.
 
 | Composition | Variant | Palette | Flow |
 | --- | --- | --- | --- |
-| `DataTunnel` | `violet` | violet | Camera retreats — chips climb *toward* a vanishing point high in the frame. |
-| `DataTunnelApproach` | `azureApproach` | azure (dark blue) | Camera advances — chips emerge from a vanishing point low in the frame and climb out past the lens. |
+| `DataTunnel` | `violet` | violet | Camera retreats — chips travel up and left along the rows, into the vanishing point. |
+| `DataTunnelApproach` | `azureApproach` | azure (dark blue) | Camera advances — chips emerge from the vanishing point and rush down and right, out past the lens. |
 
-Both flows run **up** the frame. Because the two travel in opposite
-directions relative to their vanishing point, that takes opposite geometry:
-v1 hangs its vanishing point high with the fan opening downward, v2 drops it
-low with the fan opening upward. The wedges are mirror images of each other
-about the horizontal, and both hang off the same off-centre column, so the
-corridor reads oblique rather than as a symmetric fountain.
+Both use the same oblique plane: the vanishing point sits hard against the
+**upper-left** edge (9% across, 28% down) and the fan opens right and
+down-right across ~115°, centred near 43° below horizontal. A directional
+shadow across the left of the frame buries the convergence, so the field
+brightens as it comes forward instead of the vanishing point reading as a
+hot spot.
 
 Both are 3840×2160, 450 frames @ 30fps (15.0s), seamless loops, registered in
 `src/Root.tsx`.
@@ -67,15 +67,21 @@ A reversed flow is not a receding flow played backwards, and the rest of
 - **`motionBlurTaps`: 5 passes over 1.25 frames** (v1: 3 over 1). Approaching
   motion strobes far worse at 30fps, because peak per-frame displacement
   lands exactly when the chip is biggest and brightest.
-- **`vanishingPoint` / `pathAngleStart` / `pathAngleEnd`** — mirrored about
-  the horizontal, per the note at the top: opposite flow directions need
-  opposite geometry to send both fields up the frame.
 - **`theme: "azure"`** — a colder, deeper blue with teal and ice accents
   where violet has magenta and cyan.
 
-Everything else is shared and identical: curve amount, path count, chip count
-and types, sparkle count and behaviour, pulse and flash rates, loop closure,
-camera drift.
+Everything else is shared and identical: vanishing point, path wedge, curve
+amount, path count, chip count and types, sparkle count and behaviour, pulse
+and flash rates, loop closure, camera drift.
+
+## Chip size and count are coupled
+
+Chips are evenly spaced in log-radius, so the gap between neighbours on a
+path is a fixed fraction of screen radius — `(Z_FAR/zNear)^(PATH_COUNT/CHIP_COUNT) - 1`
+— just as chip width is (`CHIP_WIDTH_RATIO`). Raise `CHIP_COUNT` without
+lowering `CHIP_WIDTH_RATIO` and the runs close up into continuous streaks
+instead of reading as distinct chips. At the shipped values the gap is about
+79% of a chip width.
 
 ## Determinism
 

@@ -21,7 +21,7 @@ export const DURATION_IN_FRAMES = 450;
 // in this file is shared by every variant.
 
 // Total number of chips in the field, spread across the paths.
-export const CHIP_COUNT = 560;
+export const CHIP_COUNT = 840;
 
 // Whole path traversals each chip completes in one 450-frame loop. Must be a
 // non-zero integer or the loop will not close.
@@ -71,13 +71,18 @@ export const CURVE_REFERENCE_RADIUS = 3300;
 // screen speed dr/du is proportional to r, i.e. chips accelerate as they
 // approach. zNear and depthEase are per-variant; see variants.ts.
 
-export const FOCAL = 4400;
+export const FOCAL = 5600;
 export const Z_FAR = 34;
 
 // Chip width as a fraction of screen radius. Constant, which is what makes
 // chip size scale correctly with perspective (inversely with depth z, and
 // so proportionally to distance from the vanishing point).
-export const CHIP_WIDTH_RATIO = 0.115;
+//
+// This is coupled to CHIP_COUNT: chips are evenly spaced in log-radius, so
+// the gap between neighbours on a path is also a fixed fraction of radius,
+// namely (Z_FAR/zNear)^(PATH_COUNT/CHIP_COUNT) - 1. Keep that above
+// CHIP_WIDTH_RATIO or the runs close up into continuous streaks.
+export const CHIP_WIDTH_RATIO = 0.07;
 
 // Per-chip multiplier on that width, seeded.
 export const CHIP_WIDTH_VARIANCE = 0.28;
@@ -196,6 +201,17 @@ export const BLOOM_WIDE_ALPHA = 0.32;
 
 export const VIGNETTE_ALPHA = 0.22;
 export const VIGNETTE_INNER_STOP = 0.42;
+
+// Directional shadow across the left of the frame, on top of the radial
+// vignette. The corridor converges into that corner, so the shadow buries
+// the vanishing point and lets the field brighten as it comes forward —
+// which is what stops the convergence reading as a hot spot.
+export const SHADOW_ALPHA = 0.82;
+// How far across the frame the shadow has fully faded out.
+export const SHADOW_EXTENT = 0.5;
+// Gradient axis, in CSS degrees. Slightly past 90 so the top-left corner
+// sits deeper in shadow than the bottom-left.
+export const SHADOW_ANGLE = 100;
 
 export const GRAIN_ALPHA = 0.04;
 export const GRAIN_TILE_SIZE = 512;

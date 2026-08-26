@@ -59,10 +59,14 @@ export type TunnelVariant = {
 };
 
 export const VARIANTS = {
-  // v1 — the camera retreats from the field, so chips travel TOWARD the
-  // vanishing point. For that to read as upward motion the vanishing point
-  // has to sit high with the field fanning out below it: chips then climb
-  // the frame as they recede into it.
+  // Both variants share the reference's geometry: an oblique plane whose
+  // vanishing point sits hard against the upper-left edge, with the fan
+  // opening right and down-right across roughly 115 degrees centred near 43
+  // degrees below horizontal. Only the flow direction and the palette differ
+  // between them, which is the whole point of the pair.
+
+  // v1 — the camera retreats, so chips travel up and left along the rows,
+  // into the vanishing point.
   violet: {
     theme: "violet",
     cameraDirection: 1,
@@ -73,23 +77,17 @@ export const VARIANTS = {
     motionBlurSpan: 1,
     farDim: 0.5,
     sharpCenterU: 0.42,
-    vanishingPoint: { x: 0.3, y: 0.18 },
-    // Fans downward across ~137 degrees, centred just off straight down: from
-    // shallow-right, through straight down, to shallow-left. Wide enough to
-    // cover the frame below the vanishing point, centred so the dominant
-    // travel is vertical, and hung off an off-centre vanishing point so the
-    // corridor reads oblique rather than as a symmetric fountain — the left
-    // of the fan runs short into the frame edge while the right runs long.
-    pathAngleStart: 0.3,
-    pathAngleEnd: 2.7,
+    vanishingPoint: { x: 0.09, y: 0.28 },
+    // Just above horizontal-right, through down-right, to down-and-slightly
+    // -left. The wedge has to clear the top-right corner at one end and reach
+    // the bottom-left at the other, from a vanishing point this far into the
+    // corner.
+    pathAngleStart: -0.25,
+    pathAngleEnd: 1.75,
   },
 
-  // v2 — the camera advances into the field, so chips travel AWAY from the
-  // vanishing point. That inverts what upward motion requires: the vanishing
-  // point drops low and the field fans out above it, so chips emerge at the
-  // bottom and climb out past the lens. The wedge is v1's mirrored about the
-  // horizontal, which keeps the two corridors the same shape while sending
-  // both flows up the frame.
+  // v2 — the camera advances, so chips emerge from that same upper-left
+  // vanishing point and rush down and right, out past the lens.
   //
   // A reversed flow is not a receding flow played backwards. Chips now
   // *emerge* from the vanishing point rather than accumulating there, so the
@@ -111,11 +109,9 @@ export const VARIANTS = {
     motionBlurSpan: 1.25,
     farDim: 0.6,
     sharpCenterU: 0.27,
-    vanishingPoint: { x: 0.3, y: 0.82 },
-    // v1's wedge mirrored about the horizontal: fans upward across the same
-    // ~137 degrees, from the same off-centre column.
-    pathAngleStart: -2.7,
-    pathAngleEnd: -0.3,
+    vanishingPoint: { x: 0.09, y: 0.28 },
+    pathAngleStart: -0.25,
+    pathAngleEnd: 1.75,
   },
 } satisfies Record<string, TunnelVariant>;
 
