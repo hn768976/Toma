@@ -30,17 +30,17 @@ import {
   FPS,
   HEIGHT,
   HOLLOW_FRACTION,
-  PATH_ANGLE_END,
   PATH_ANGLE_JITTER,
-  PATH_ANGLE_START,
   PATH_COUNT,
   PATH_CURVE_BIAS,
   PATH_CURVE_SPREAD,
   PULSE_PERIODS,
   SHARP_HALF_WIDTH_U,
   SPARKLE_COUNT,
+  SPARKLE_INNER_RADIUS,
   SPARKLE_MAX_SIZE,
   SPARKLE_MIN_SIZE,
+  SPARKLE_OUTER_RADIUS,
   SPARKLE_PERIODS,
   TICKED_HOLLOW_FRACTION,
   WIDTH,
@@ -164,12 +164,17 @@ export type TunnelPath = {
   curve: number;
 };
 
-export const buildPaths = (): TunnelPath[] => {
+export const vanishingPointFor = (variant: TunnelVariant) => ({
+  x: WIDTH * variant.vanishingPoint.x,
+  y: HEIGHT * variant.vanishingPoint.y,
+});
+
+export const buildPaths = (variant: TunnelVariant): TunnelPath[] => {
   const paths: TunnelPath[] = [];
-  const slot = (PATH_ANGLE_END - PATH_ANGLE_START) / PATH_COUNT;
+  const slot = (variant.pathAngleEnd - variant.pathAngleStart) / PATH_COUNT;
   for (let i = 0; i < PATH_COUNT; i++) {
     const jitter = (random("path-angle-" + i) - 0.5) * 2 * PATH_ANGLE_JITTER;
-    const angle = PATH_ANGLE_START + slot * (i + 0.5 + jitter);
+    const angle = variant.pathAngleStart + slot * (i + 0.5 + jitter);
     const spread = (random("path-curve-" + i) - 0.5) * 2 * PATH_CURVE_SPREAD;
     const curve = CURVE_AMOUNT * (PATH_CURVE_BIAS + spread);
     paths.push({ angle, cos: Math.cos(angle), sin: Math.sin(angle), curve });
@@ -310,15 +315,28 @@ export type Sparkle = {
   rotation: number;
 };
 
-export const buildSparkles = (): Sparkle[] => {
+export const buildSparkles = (variant: TunnelVariant): Sparkle[] => {
   const sparkles: Sparkle[] = [];
+  const origin = vanishingPointFor(variant);
+  const nearRadius = radiusAt(0, variant);
   for (let i = 0; i < SPARKLE_COUNT; i++) {
     const seed = "sparkle-" + i;
+    // Placed within the corridor's own wedge rather than anywhere on screen,
+    // so a sparkle never ends up twinkling alone in the empty region beyond
+    // the vanishing point.
+    const angle = mix(
+      variant.pathAngleStart,
+      variant.pathAngleEnd,
+      random(seed + "-angle"),
+    );
+    const radius = mix(
+      nearRadius * SPARKLE_INNER_RADIUS,
+      nearRadius * SPARKLE_OUTER_RADIUS,
+      random(seed + "-radius"),
+    );
     sparkles.push({
-      // Biased toward the right and lower two-thirds, where the corridor is
-      // open, rather than into the dense far corner.
-      x: mix(WIDTH * 0.18, WIDTH * 0.98, random(seed + "-x")),
-      y: mix(HEIGHT * 0.08, HEIGHT * 0.96, random(seed + "-y")),
+      x: origin.x + radius * Math.cos(angle),
+      y: origin.y + radius * Math.sin(angle),
       size: mix(SPARKLE_MIN_SIZE, SPARKLE_MAX_SIZE, random(seed + "-size")),
       period: pick(SPARKLE_PERIODS, random(seed + "-period")),
       phase: random(seed + "-phase") * Math.PI * 2,

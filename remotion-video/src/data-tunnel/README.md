@@ -1,13 +1,20 @@
 # DataTunnel — 4K "data tunnel" corridor
 
-A glowing field of data chips flowing through a curved perspective corridor.
-Two compositions share one component, one palette and one set of paths; what
-separates them is which way the camera is travelling.
+A glowing field of data chips flowing up through a curved perspective
+corridor. Two compositions share one component and one chip set; what
+separates them is which way the camera is travelling, and their palette.
 
-| Composition | Variant | Flow |
-| --- | --- | --- |
-| `DataTunnel` | `violet` | Camera retreats — chips flow away, toward the vanishing point. |
-| `DataTunnelApproach` | `violetApproach` | Camera advances — chips emerge from the vanishing point and rush past the lens. |
+| Composition | Variant | Palette | Flow |
+| --- | --- | --- | --- |
+| `DataTunnel` | `violet` | violet | Camera retreats — chips climb *toward* a vanishing point high in the frame. |
+| `DataTunnelApproach` | `azureApproach` | azure (dark blue) | Camera advances — chips emerge from a vanishing point low in the frame and climb out past the lens. |
+
+Both flows run **up** the frame. Because the two travel in opposite
+directions relative to their vanishing point, that takes opposite geometry:
+v1 hangs its vanishing point high with the fan opening downward, v2 drops it
+low with the fan opening upward. The wedges are mirror images of each other
+about the horizontal, and both hang off the same off-centre column, so the
+corridor reads oblique rather than as a symmetric fountain.
 
 Both are 3840×2160, 450 frames @ 30fps (15.0s), seamless loops, registered in
 `src/Root.tsx`.
@@ -16,8 +23,8 @@ Both are 3840×2160, 450 frames @ 30fps (15.0s), seamless loops, registered in
 
 | File | Role |
 | --- | --- |
-| `theme.ts` | **The only file with colour literals.** One `THEMES` entry per palette. |
-| `variants.ts` | Per-variant depth response: direction, easing, near plane, blur ceiling, motion-blur taps. |
+| `theme.ts` | **The only file with colour literals.** One `THEMES` entry per palette (`violet`, `azure`). |
+| `variants.ts` | Per-variant geometry and depth response: vanishing point, path wedge, direction, easing, near plane, blur ceiling, motion-blur taps. |
 | `config.ts` | Everything both variants share: geometry, timing, finish. |
 | `geometry.ts` | Seeded path + chip generation and all perspective math. |
 | `sprites.ts` | Offscreen sprite atlas — chips are rasterised once, then blitted. |
@@ -30,8 +37,8 @@ Both are 3840×2160, 450 frames @ 30fps (15.0s), seamless loops, registered in
 way the field flows:
 
 ```ts
-violet:         { cameraDirection:  1, ... }  // retreating
-violetApproach: { cameraDirection: -1, ... }  // approaching
+violet:        { cameraDirection:  1, ... }  // retreating
+azureApproach: { cameraDirection: -1, ... }  // approaching
 ```
 
 Every depth calculation multiplies by it (`chipDepthU`), and the motion-blur
@@ -60,9 +67,15 @@ A reversed flow is not a receding flow played backwards, and the rest of
 - **`motionBlurTaps`: 5 passes over 1.25 frames** (v1: 3 over 1). Approaching
   motion strobes far worse at 30fps, because peak per-frame displacement
   lands exactly when the chip is biggest and brightest.
+- **`vanishingPoint` / `pathAngleStart` / `pathAngleEnd`** — mirrored about
+  the horizontal, per the note at the top: opposite flow directions need
+  opposite geometry to send both fields up the frame.
+- **`theme: "azure"`** — a colder, deeper blue with teal and ice accents
+  where violet has magenta and cyan.
 
-Everything else is shared and identical: palette, paths, curve amount, chip
-count and types, sparkles, pulse and flash rates, loop closure, camera drift.
+Everything else is shared and identical: curve amount, path count, chip count
+and types, sparkle count and behaviour, pulse and flash rates, loop closure,
+camera drift.
 
 ## Determinism
 

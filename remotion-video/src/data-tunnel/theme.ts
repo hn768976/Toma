@@ -44,8 +44,29 @@ export const THEMES = {
     vignette: "#050222",
     grainNeutral: "#808080",
   },
+
+  // A colder, deeper blue. Same structure as violet — two dominant notes,
+  // two sparse accents and a white — but the accents run teal and ice
+  // instead of magenta and cyan, so the two palettes never read as tints of
+  // one another.
+  azure: {
+    backgroundDeep: "#05122F",
+    backgroundMid: "#10306E",
+    chipPalette: [
+      { color: "#3F7FE8", weight: 0.44 }, // chip azure
+      { color: "#2C4FD0", weight: 0.38 }, // chip deep blue
+      { color: "#1FA5B8", weight: 0.06 }, // chip teal — the warmest note, rare
+      { color: "#7FE8F0", weight: 0.05 }, // chip ice
+      { color: "#DCE9FF", weight: 0.07 }, // chip white — the brightest chips
+    ],
+    outlineGlow: "#6FA5F0",
+    chipWhite: "#DCE9FF",
+    sparkle: "#DCE9FF",
+    vignette: "#020818",
+    grainNeutral: "#808080",
+  },
 } satisfies Record<string, Theme>;
 
-export const THEME_NAMES = ["violet"] as const;
+export const THEME_NAMES = ["violet", "azure"] as const;
 
 export type ThemeName = (typeof THEME_NAMES)[number];

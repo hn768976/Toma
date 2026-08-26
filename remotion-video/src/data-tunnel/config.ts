@@ -38,17 +38,12 @@ export const GLOW_STRENGTH = 1;
 // Corridor geometry
 // ---------------------------------------------------------------------------
 
-// Vanishing point, off-centre toward the upper left.
-export const VANISHING_POINT = { x: WIDTH * 0.25, y: HEIGHT * 0.35 };
+// Where the vanishing point sits and which way the paths fan out from it
+// are per-variant — see variants.ts. They have to be, because the two
+// variants flow in opposite directions relative to that point.
 
 // Number of curved paths radiating from the vanishing point.
 export const PATH_COUNT = 14;
-
-// Angular wedge the paths fan across, in radians, measured from the
-// vanishing point with +y pointing down the screen. Runs from up-and-right,
-// around through right, to down-and-slightly-left.
-export const PATH_ANGLE_START = -0.42;
-export const PATH_ANGLE_END = 2.02;
 
 // Fraction of a slot each path angle may wander, so the fan is uneven.
 export const PATH_ANGLE_JITTER = 0.42;
@@ -166,6 +161,10 @@ export const FLASH_ALPHA_BOOST = 1.9;
 // ---------------------------------------------------------------------------
 
 export const SPARKLE_COUNT = 20;
+// Where in the corridor sparkles may sit, as a fraction of the near-plane
+// screen radius.
+export const SPARKLE_INNER_RADIUS = 0.08;
+export const SPARKLE_OUTER_RADIUS = 0.95;
 export const SPARKLE_MIN_SIZE = 45;
 export const SPARKLE_MAX_SIZE = 125;
 export const SPARKLE_PERIODS = [75, 90, 150, 225];

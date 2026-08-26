@@ -25,7 +25,6 @@ import {
   SPARKLE_TWINKLE_EXPONENT,
   SPRITE_SMALL_THRESHOLD,
   TAU,
-  VANISHING_POINT,
   VIGNETTE_ALPHA,
   VIGNETTE_INNER_STOP,
   WIDTH,
@@ -45,6 +44,7 @@ import {
   lateralAt,
   pointOnPath,
   radiusAt,
+  vanishingPointFor,
   wrapFrames,
 } from "./geometry";
 import { buildGrainTiles } from "./grain";
@@ -62,7 +62,7 @@ export type DataTunnelProps = z.infer<typeof dataTunnelSchema>;
 
 export const dataTunnelDefaultProps: DataTunnelProps = { variant: "violet" };
 
-export const dataTunnelApproachDefaultProps: DataTunnelProps = { variant: "violetApproach" };
+export const dataTunnelApproachDefaultProps: DataTunnelProps = { variant: "azureApproach" };
 
 const BLOOM_WIDTH = Math.round(WIDTH * BLOOM_SCALE);
 const BLOOM_HEIGHT = Math.round(HEIGHT * BLOOM_SCALE);
@@ -158,9 +158,10 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant: variantName }) 
   const theme = THEMES[variant.theme];
 
   // Geometry and rasters are built once, seeded, and never touched again.
-  const paths = useMemo(buildPaths, []);
+  const paths = useMemo(() => buildPaths(variant), [variant]);
+  const vanishingPoint = useMemo(() => vanishingPointFor(variant), [variant]);
   const chips = useMemo(() => buildChips(theme.chipPalette), [theme]);
-  const sparkles = useMemo(buildSparkles, []);
+  const sparkles = useMemo(() => buildSparkles(variant), [variant]);
   const atlas = useMemo(() => buildSpriteAtlas(theme), [theme]);
   const grainTiles = useMemo(() => buildGrainTiles(theme.grainNeutral), [theme]);
   const bands = useMemo(() => buildBlurBands(variant), [variant]);
@@ -204,8 +205,8 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant: variantName }) 
     // its start at frame 450.
     const driftX = DRIFT_PIXELS * Math.sin((TAU * loopFrame) / DURATION_IN_FRAMES);
     const driftY = DRIFT_PIXELS * Math.sin((2 * TAU * loopFrame) / DURATION_IN_FRAMES + DRIFT_PHASE);
-    const originX = VANISHING_POINT.x + driftX;
-    const originY = VANISHING_POINT.y + driftY;
+    const originX = vanishingPoint.x + driftX;
+    const originY = vanishingPoint.y + driftY;
 
     // --- resolve every chip for this frame --------------------------------
     for (let i = 0; i < chips.length; i++) {
@@ -408,6 +409,7 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant: variantName }) 
     paths,
     scratches,
     sparkles,
+    vanishingPoint,
     variant,
     whiteIndex,
   ]);

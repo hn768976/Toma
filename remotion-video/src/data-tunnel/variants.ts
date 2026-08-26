@@ -43,6 +43,14 @@ export type TunnelVariant = {
   // Extra dimming applied to chips at the vanishing point.
   farDim: number;
 
+  // Vanishing point, as a fraction of frame width / height.
+  vanishingPoint: { x: number; y: number };
+
+  // Angular wedge the paths fan across, in radians, measured from the
+  // vanishing point with +y pointing DOWN the screen.
+  pathAngleStart: number;
+  pathAngleEnd: number;
+
   // Where along u the narrow in-focus band sits. Because depthEase changes
   // how u maps to screen radius, a variant that eases has to move this to
   // keep the focus band at a comparable distance from the vanishing point —
@@ -51,7 +59,10 @@ export type TunnelVariant = {
 };
 
 export const VARIANTS = {
-  // v1 — the camera retreats from the field.
+  // v1 — the camera retreats from the field, so chips travel TOWARD the
+  // vanishing point. For that to read as upward motion the vanishing point
+  // has to sit high with the field fanning out below it: chips then climb
+  // the frame as they recede into it.
   violet: {
     theme: "violet",
     cameraDirection: 1,
@@ -62,10 +73,23 @@ export const VARIANTS = {
     motionBlurSpan: 1,
     farDim: 0.5,
     sharpCenterU: 0.42,
+    vanishingPoint: { x: 0.3, y: 0.18 },
+    // Fans downward across ~137 degrees, centred just off straight down: from
+    // shallow-right, through straight down, to shallow-left. Wide enough to
+    // cover the frame below the vanishing point, centred so the dominant
+    // travel is vertical, and hung off an off-centre vanishing point so the
+    // corridor reads oblique rather than as a symmetric fountain — the left
+    // of the fan runs short into the frame edge while the right runs long.
+    pathAngleStart: 0.3,
+    pathAngleEnd: 2.7,
   },
 
-  // v2 — the camera advances into the field. Same palette, same paths, same
-  // chips; only the depth response differs.
+  // v2 — the camera advances into the field, so chips travel AWAY from the
+  // vanishing point. That inverts what upward motion requires: the vanishing
+  // point drops low and the field fans out above it, so chips emerge at the
+  // bottom and climb out past the lens. The wedge is v1's mirrored about the
+  // horizontal, which keeps the two corridors the same shape while sending
+  // both flows up the frame.
   //
   // A reversed flow is not a receding flow played backwards. Chips now
   // *emerge* from the vanishing point rather than accumulating there, so the
@@ -74,8 +98,8 @@ export const VARIANTS = {
   // ease-in on size and speed as a chip closes on the lens. The near plane
   // moves closer and the blur ceiling rises, because these chips are passing
   // the lens rather than settling into it.
-  violetApproach: {
-    theme: "violet",
+  azureApproach: {
+    theme: "azure",
     cameraDirection: -1,
     depthEase: 0.56,
     zNear: 1.05,
@@ -87,9 +111,14 @@ export const VARIANTS = {
     motionBlurSpan: 1.25,
     farDim: 0.6,
     sharpCenterU: 0.27,
+    vanishingPoint: { x: 0.3, y: 0.82 },
+    // v1's wedge mirrored about the horizontal: fans upward across the same
+    // ~137 degrees, from the same off-centre column.
+    pathAngleStart: -2.7,
+    pathAngleEnd: -0.3,
   },
 } satisfies Record<string, TunnelVariant>;
 
-export const VARIANT_NAMES = ["violet", "violetApproach"] as const;
+export const VARIANT_NAMES = ["violet", "azureApproach"] as const;
 
 export type VariantName = (typeof VARIANT_NAMES)[number];
