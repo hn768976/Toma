@@ -31,13 +31,14 @@ export const CONFIG = {
   terrain: {
     /** Grid cell size for the height field / marching squares, world units.
      * Smaller = smoother curves (cost grows quadratically). */
-    cell: 1.0,
+    cell: 0.8,
     /** Sampled window: x ∈ [-xHalf, xHalf], z ∈ [camZ - back, camZ + depth]. */
     xHalf: 100,
     back: 9,
     depth: 228,
-    /** Base spatial frequency of the noise (1/world-units). Lower = broader hills. */
-    noiseScale: 0.018,
+    /** Base spatial frequency of the noise (1/world-units). Higher = tighter,
+     * curvier maze-like ropes. */
+    noiseScale: 0.026,
     octaves: 3,
     /** Peak-to-mid height of the terrain. Kept low: gentle relief spaces the
      * ropes evenly and stops them stacking/overlapping on screen when seen
@@ -53,7 +54,7 @@ export const CONFIG = {
     levels: 14,
     /** Line width in WORLD units (LineMaterial worldUnits) — near lines render
      * thick, far ones thin, for free. */
-    lineWidth: 0.017,
+    lineWidth: 0.012,
     /** HDR multiplier on the nearest lines so they read as neon under bloom. */
     nearGlow: 1.7,
     /** Distance band over which lines fade into the horizon haze. */
