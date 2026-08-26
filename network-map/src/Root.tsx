@@ -15,13 +15,13 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{variant: 'global' as const}}
       />
       <Composition
-        id="NetworkMapEurope"
+        id="NetworkMapTilted"
         component={NetworkMap}
         durationInFrames={LOOP_FRAMES}
         fps={FPS}
         width={FRAME_WIDTH}
         height={FRAME_HEIGHT}
-        defaultProps={{variant: 'europe' as const}}
+        defaultProps={{variant: 'globalTilted' as const}}
       />
     </>
   );

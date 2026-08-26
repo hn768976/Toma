@@ -70,6 +70,27 @@ export type VariantConfig = {
   travellerRadius: number;
   /** Seed prefix, so the two variants never share a random stream. */
   seed: string;
+  /**
+   * Optional 3D tilt applied to the map plane as a whole. Presentation only:
+   * the dot map, the arcs and their bounds are all still generated flat, in the
+   * same coordinates, and the tilt is a perspective transform over the top.
+   */
+  tilt?: Tilt;
+};
+
+/**
+ * Lays the map back like a surface seen from above and in front. Positive
+ * `angleDeg` tips the top edge away from the viewer and brings the bottom edge
+ * toward it, which draws the top edge down and the bottom edge up.
+ */
+export type Tilt = {
+  angleDeg: number;
+  /** Viewing distance in frame pixels. Smaller is a more extreme perspective. */
+  perspective: number;
+  /** Uniform scale applied after the rotation, to refill the frame. */
+  scale: number;
+  /** Vertical nudge in frame pixels, applied after the rotation. */
+  offsetY: number;
 };
 
 const GLOBAL_POINTS: Record<string, [number, number]> = {
@@ -130,116 +151,37 @@ const GLOBAL_ROUTES: Route[] = [
 ];
 
 
-const EUROPE_POINTS: Record<string, [number, number]> = {
-  lisbon: [-9.14, 38.72],
-  porto: [-8.61, 41.15],
-  madrid: [-3.7, 40.42],
-  valencia: [-0.38, 39.47],
-  barcelona: [2.17, 41.39],
-  dublin: [-6.26, 53.35],
-  edinburgh: [-3.19, 55.95],
-  manchester: [-2.24, 53.48],
-  london: [-0.13, 51.51],
-  paris: [2.35, 48.86],
-  brussels: [4.35, 50.85],
-  amsterdam: [4.9, 52.37],
-  frankfurt: [8.68, 50.11],
-  zurich: [8.54, 47.37],
-  munich: [11.58, 48.14],
-  milan: [9.19, 45.46],
-  marseille: [5.37, 43.3],
-  rome: [12.5, 41.9],
-  naples: [14.25, 40.85],
-  berlin: [13.4, 52.52],
-  prague: [14.42, 50.08],
-  vienna: [16.37, 48.21],
-  budapest: [19.04, 47.5],
-  zagreb: [15.98, 45.81],
-  belgrade: [20.46, 44.82],
-  sofia: [23.32, 42.7],
-  bucharest: [26.1, 44.43],
-  athens: [23.73, 37.98],
-  istanbul: [28.98, 41.01],
-  ankara: [32.86, 39.93],
-  algiers: [3.06, 36.75],
-  tunis: [10.18, 36.8],
-  copenhagen: [12.57, 55.68],
-  oslo: [10.75, 59.91],
-  stockholm: [18.07, 59.33],
-  helsinki: [24.94, 60.17],
-  tallinn: [24.75, 59.44],
-  riga: [24.11, 56.95],
-  vilnius: [25.28, 54.69],
-  warsaw: [21.01, 52.23],
-  minsk: [27.56, 53.9],
-  kyiv: [30.52, 50.45],
-  odesa: [30.73, 46.48],
-  stPetersburg: [30.34, 59.93],
-  moscow: [37.62, 55.75],
+const GLOBAL_VARIANT: VariantConfig = {
+  // Antarctica is deliberately outside the box: it adds nothing and drags
+  // the visual mass to the bottom of the frame.
+  viewport: {lonMin: -170, lonMax: 180, latMin: -60, latMax: 78},
+  fit: {maxWidth: 0.85, maxHeight: 0.78, offsetY: 20},
+  dotPitch: 14,
+  dotSize: 7,
+  arcCount: 6,
+  bowFactor: 0.22,
+  bowMin: 70,
+  bowMax: 620,
+  arcWidth: 3,
+  minArcLength: 900,
+  points: GLOBAL_POINTS,
+  routes: GLOBAL_ROUTES,
+  pulseRadius: 46,
+  travellerRadius: 4.5,
+  seed: 'global',
 };
 
-// Same rules as the global set: six routes, twelve endpoints, none reused, none
-// near-vertical, and three declared east-to-west so half the network draws right
-// to left. Lengths run about 2440 / 1830 / 1590 / 1230 / 1080 / 940 px.
-//
-// The endpoints are also spread across the frame rather than left where the
-// shortest routes fall: this box is much wider than it is tall, so every
-// non-steep route runs broadly east-west, and without deliberate placement the
-// eastern ends all pile into the same corner.
-const EUROPE_ROUTES: Route[] = [
-  {from: 'lisbon', to: 'moscow'},
-  {from: 'istanbul', to: 'dublin'},
-  {from: 'madrid', to: 'riga'},
-  {from: 'stPetersburg', to: 'zurich'},
-  {from: 'oslo', to: 'kyiv'},
-  {from: 'athens', to: 'marseille'},
-];
-
 export const VARIANTS = {
-  global: {
-    // Antarctica is deliberately outside the box: it adds nothing and drags
-    // the visual mass to the bottom of the frame.
-    viewport: {lonMin: -170, lonMax: 180, latMin: -60, latMax: 78},
-    fit: {maxWidth: 0.85, maxHeight: 0.78, offsetY: 20},
-    dotPitch: 14,
-    dotSize: 7,
-    arcCount: 6,
-    bowFactor: 0.22,
-    bowMin: 70,
-    bowMax: 620,
-    arcWidth: 3,
-    minArcLength: 900,
-    points: GLOBAL_POINTS,
-    routes: GLOBAL_ROUTES,
-    pulseRadius: 46,
-    travellerRadius: 4.5,
-    seed: 'global',
-  },
-  europe: {
-    // Widened slightly from the lon -12 the brief suggested: Iceland runs from
-    // -24.5 to -13.5, so -12 would have left it entirely out of frame. At -20
-    // it is cropped at the west edge, which is the intended reading, and the
-    // box also fills the 16:9 frame instead of leaving dead space at the sides.
-    viewport: {lonMin: -20, lonMax: 42, latMin: 34, latMax: 71},
-    fit: {maxWidth: 0.85, maxHeight: 0.84, offsetY: 0},
-    // A regional box at the global pitch would be far too coarse for the
-    // coastline, which is what makes the region readable.
-    dotPitch: 11,
-    dotSize: 5,
-    arcCount: 6,
-    // Substantially shallower than the global variant: that bow factor is
-    // calibrated to intercontinental distances and would put absurd loops on
-    // these much shorter hops.
-    bowFactor: 0.11,
-    bowMin: 45,
-    bowMax: 320,
-    arcWidth: 3,
-    minArcLength: 900,
-    points: EUROPE_POINTS,
-    routes: EUROPE_ROUTES,
-    pulseRadius: 40,
-    travellerRadius: 4,
-    seed: 'europe',
+  global: GLOBAL_VARIANT,
+  /**
+   * Version two is version one's map seen from about 45 degrees, as though the
+   * plane were laid back on a table. Everything else - the dot set, the six
+   * routes, the colours, the timing, the seed - is the same, so the two
+   * compositions differ only in how the finished plane is presented.
+   */
+  globalTilted: {
+    ...GLOBAL_VARIANT,
+    tilt: {angleDeg: 45, perspective: 3400, scale: 1.2, offsetY: 0},
   },
 } satisfies Record<string, VariantConfig>;
 

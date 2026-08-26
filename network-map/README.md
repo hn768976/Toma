@@ -2,25 +2,26 @@
 
 A 4K "network map" animation built with Remotion: a dotted land map with arcing
 connection paths that draw on, pulse, carry travelling dots, fade and redraw on
-a seamless 20-second loop. Two variants of the same component — one global, one
-regional over Europe.
+a seamless 20-second loop. Two variants of the same component — the map flat on,
+and the same map laid back in 3D.
 
 ## Compositions
 
-| Composition id     | Resolution  | Duration            | FPS | Region                                    |
-| ------------------ | ----------- | ------------------- | --- | ----------------------------------------- |
-| `NetworkMapGlobal` | 3840 × 2160 | 600 frames / 20.0 s | 30  | lat −60…78, lon −170…180                  |
-| `NetworkMapEurope` | 3840 × 2160 | 600 frames / 20.0 s | 30  | lat 34…71, lon −20…42                     |
+| Composition id     | Resolution  | Duration            | FPS | View                        |
+| ------------------ | ----------- | ------------------- | --- | --------------------------- |
+| `NetworkMapGlobal` | 3840 × 2160 | 600 frames / 20.0 s | 30  | flat on                     |
+| `NetworkMapTilted` | 3840 × 2160 | 600 frames / 20.0 s | 30  | laid back 45°, in 3D        |
 
-Both draw six routes over twelve distinct cities, one colour per arc, three
-running left-to-right and three right-to-left.
+Both cover lat −60…78, lon −170…180 at a 14 px dot pitch with 7 px dots — 6,973
+land dots — and draw the same six routes over twelve distinct cities, one colour
+per arc, three running left-to-right and three right-to-left. Arc lengths are
+graded from 2405 px down to 982 px.
 
-| | Global | Europe |
-| --- | --- | --- |
-| Dot pitch / size | 14 px / 7 px | 11 px / 5 px |
-| Land dots | 6,973 | 22,934 |
-| Arc lengths | 2405 … 982 px | 2440 … 938 px |
-| Bow factor | 0.22 of endpoint distance | 0.11 |
+`NetworkMapTilted` is that scene seen from about 45°, as though the map plane
+were laid back on a table: the top edge tips away from the viewer and the bottom
+edge comes toward it, so the far edge draws down and narrows while the near edge
+lifts and spreads. Nothing about the scene itself changes — same dots, same
+routes, same colours, same seed, same timing.
 
 ## Render
 
@@ -30,12 +31,12 @@ npm install
 # Half-scale previews
 npx remotion render NetworkMapGlobal out/network-global-preview.mp4 \
   --codec=h264 --crf=18 --scale=0.5 --concurrency=8
-npx remotion render NetworkMapEurope out/network-europe-preview.mp4 \
+npx remotion render NetworkMapTilted out/network-tilted-preview.mp4 \
   --codec=h264 --crf=18 --scale=0.5 --concurrency=8
 
 # Full 4K
 npx remotion render NetworkMapGlobal out/network-global.mp4 --codec=h264 --crf=12
-npx remotion render NetworkMapEurope out/network-europe.mp4 --codec=h264 --crf=12
+npx remotion render NetworkMapTilted out/network-tilted.mp4 --codec=h264 --crf=12
 ```
 
 `--concurrency` cannot exceed the machine's core count; lower it if Remotion
@@ -63,8 +64,8 @@ scripts/
 scanline-samples the Natural Earth outline against the variant's lat/lon
 bounding box at the configured dot pitch, and `lib/dot-map.ts` turns the
 resulting grid into one dot per land cell. The viewport box and the pitch are
-the only geographic inputs, so the Europe variant is the same generator pointed
-at a tighter box with a finer pitch — no code differs between the two. The map
+the only geographic inputs, so pointing the generator at a tighter box with a
+finer pitch is all a regional variant would need — no code would differ. The map
 is static, so it is rasterised once into an offscreen canvas and blitted every
 frame.
 
@@ -94,6 +95,22 @@ flip the direction it draws.
 
 Routes are also kept away from vertical. The bow always points straight up, so a
 near-vertical chord curls into a hook instead of reading as a route.
+
+**The tilt** is presentation only. The dot map, the arcs and the bounds they are
+clamped to are all still generated flat, in the same coordinates; `NetworkMap`
+then wraps the dot, arc and pulse layers in a CSS `perspective` + `rotateX`,
+which the browser renders with correct perspective at full resolution — the dots
+foreshorten into ellipses rather than being resampled. The background wash stays
+flat so it still fills the frame behind the plane, and the vignette and grain
+stay flat because they belong to the camera rather than to the scene. The
+untilted variant gets no wrapper at all: an identity transform would still
+isolate the layers into their own stacking context and change how they
+composite.
+
+The `scale` in the tilt config is set so the near edge does not run off the
+sides of the frame. Tilting a 2.5:1 map by 45° projects to roughly 3.5:1, which
+cannot fill a 16:9 frame and stay whole; the current value keeps the entire map
+in frame at the cost of some empty space above and below it.
 
 **The loop closes** because every periodic quantity divides 600: arc cycles are
 600 or 300 frames, travelling-dot laps are 150, 200 or 300, and the camera drift
