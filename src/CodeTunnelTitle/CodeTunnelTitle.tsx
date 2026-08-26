@@ -8,7 +8,7 @@ import {
 } from 'remotion';
 import {loadFont as loadMono} from '@remotion/google-fonts/JetBrainsMono';
 import {loadFont as loadSans} from '@remotion/google-fonts/Montserrat';
-import {BASE_FONT_PX, PAD, PreparedBlock, SUPERSAMPLE, prepareBlocks} from './blocks';
+import {PAD, PreparedBlock, SUPERSAMPLE, prepareBlocks} from './blocks';
 import {activeGlitch, buildGlitchEvents} from './glitch';
 import {GRAIN_TILE, buildGrainTiles} from './grain';
 import {PALETTE, depthColor} from './palette';
@@ -37,9 +37,9 @@ const Z_NEAR = 0.05;
 const Z_SPAN = Z_FAR - Z_NEAR;
 
 /** Half-width of the square corridor, in vanishing-plane units. */
-const CORRIDOR = 330;
+const CORRIDOR = 360;
 
-const ELEMENT_COUNT = 30;
+const ELEMENT_COUNT = 34;
 const BLOCK_POOL = 50;
 const GUIDE_LINES = 20;
 
@@ -92,7 +92,7 @@ const placeElement = (seed: string): Placement => {
   const along = rrange(`${seed}-along`, -1.55, 1.55) * CORRIDOR;
   const perp = CORRIDOR * rrange(`${seed}-perp`, 0.8, 1.24);
   const block = rint(`${seed}-block`, 0, BLOCK_POOL - 1);
-  const alpha = rrange(`${seed}-alpha`, 0.5, 1);
+  const alpha = rrange(`${seed}-alpha`, 0.38, 0.95);
 
   switch (wall) {
     case 0: // left wall
@@ -303,7 +303,7 @@ export const CodeTunnelTitle: React.FC<CodeTunnelTitleProps> = ({title}) => {
       // refreshing all at once.
       const p = placeElement(`el-${i}-${lap}`);
 
-      const fadeIn = smoothstep(0, 0.2, life);
+      const fadeIn = smoothstep(0, 0.3, life);
       const fadeOut = 1 - smoothstep(0.76, 0.95, life);
       // The corridor thins by retiring the higher-indexed elements first.
       const retire = 1 - smoothstep(survivors - 0.12, survivors, i / ELEMENT_COUNT);

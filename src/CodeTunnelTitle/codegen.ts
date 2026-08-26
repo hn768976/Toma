@@ -173,7 +173,7 @@ const header = (s: string): {open: string[]; close: string} => {
 
 /** A single block of fictional source: 3-10 lines, already indented. */
 export const makeCodeBlock = (seed: string): string[] => {
-  const target = rint(seed + 'len', 3, 8);
+  const target = rint(seed + 'len', 3, 10);
   const lines: string[] = [];
 
   if (chance(seed + 'lead', 0.45)) {
@@ -200,6 +200,6 @@ export const makeCodeBlock = (seed: string): string[] => {
 
   // Trim anything that would blow the offscreen canvas out to silly widths.
   return lines
-    .slice(0, 8)
+    .slice(0, 10)
     .map((l) => (l.length > MAX_COLS ? l.slice(0, MAX_COLS - 1) + '…' : l));
 };
