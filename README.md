@@ -12,8 +12,8 @@ plus a palette in `THEMES`.
 
 ## Delivered renders
 
-Both files are **1920 × 1080**, H.264, 10.00 s, no audio. They come from the
-4K compositions rendered at `--scale=0.5`.
+Both files are **1920 × 1080**, H.264, 10.00 s, no audio, ~12 MB each. They
+come from the 4K compositions rendered at `--scale=0.5`.
 
 - `out/workflow-meal.mp4`
 - `out/workflow-content.mp4`
@@ -30,8 +30,8 @@ npm start          # Remotion Studio
 1080p (what ships in this package):
 
 ```bash
-npx remotion render WorkflowMeal    out/workflow-meal.mp4    --codec=h264 --crf=14 --scale=0.5 --concurrency=8
-npx remotion render WorkflowContent out/workflow-content.mp4 --codec=h264 --crf=14 --scale=0.5 --concurrency=8
+npx remotion render WorkflowMeal    out/workflow-meal.mp4    --codec=h264 --crf=20 --scale=0.5 --concurrency=8
+npx remotion render WorkflowContent out/workflow-content.mp4 --codec=h264 --crf=20 --scale=0.5 --concurrency=8
 ```
 
 Full 4K, if you want it:
@@ -41,11 +41,11 @@ npx remotion render WorkflowMeal    out/workflow-meal-4k.mp4    --codec=h264 --c
 npx remotion render WorkflowContent out/workflow-content-4k.mp4 --codec=h264 --crf=14
 ```
 
-Lighter previews:
+Higher-bitrate 1080p, if you need more headroom for regrading:
 
 ```bash
-npx remotion render WorkflowMeal    out/workflow-meal-preview.mp4    --codec=h264 --crf=18 --scale=0.5 --concurrency=8
-npx remotion render WorkflowContent out/workflow-content-preview.mp4 --codec=h264 --crf=18 --scale=0.5 --concurrency=8
+npx remotion render WorkflowMeal    out/workflow-meal-hq.mp4    --codec=h264 --crf=14 --scale=0.5 --concurrency=8
+npx remotion render WorkflowContent out/workflow-content-hq.mp4 --codec=h264 --crf=14 --scale=0.5 --concurrency=8
 ```
 
 `--concurrency` must not exceed your CPU core count; drop it to `4` (or omit it)
