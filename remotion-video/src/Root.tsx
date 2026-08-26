@@ -18,6 +18,17 @@ import {
   WIDTH as RING_WIDTH,
   HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
+import {
+  HeadlineScroll,
+  headlineScrollSchema,
+  headlineScrollDefaults,
+} from "./headline-scroll/HeadlineScroll";
+import {
+  DURATION_IN_FRAMES as HEADLINE_DURATION_IN_FRAMES,
+  FPS as HEADLINE_FPS,
+  WIDTH as HEADLINE_WIDTH,
+  HEIGHT as HEADLINE_HEIGHT,
+} from "./headline-scroll/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -41,6 +52,16 @@ export const RemotionRoot: React.FC = () => {
         height={RING_HEIGHT}
         schema={particleRingHaloSchema}
         defaultProps={particleRingHaloDefaults}
+      />
+      <Composition
+        id="HeadlineScroll"
+        component={HeadlineScroll}
+        durationInFrames={HEADLINE_DURATION_IN_FRAMES}
+        fps={HEADLINE_FPS}
+        width={HEADLINE_WIDTH}
+        height={HEADLINE_HEIGHT}
+        schema={headlineScrollSchema}
+        defaultProps={headlineScrollDefaults}
       />
     </>
   );
