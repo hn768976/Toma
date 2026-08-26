@@ -84,15 +84,19 @@ If the first preview is black, check the camera height against the terrain
     distance and the rasterizer chops them into dashes; constant pixel
     width keeps every rope a continuous string. The neon body comes from
     bloom, not width.
-  - The contour field is anisotropic (x-frequency ×0.32): features stretch
-    along x, so iso-lines run as long open ropes across the frame. Closed
-    polylines (loops around extrema) are dropped entirely — the chaining
-    step's `closed` flag makes that a one-line filter, and the sliding
-    window's fade region guarantees loops only appear/disappear where
-    they're already invisible.
+  - Rope character is three numbers in `CONFIG.terrain` + `CONFIG.contours`:
+    `noiseScale` (feature size — how tight the meander), `amp` (relief —
+    how much the sheet ripples), `levels` (how many ropes). `anisoX` < 1
+    stretches features along x into long parallel streaks; leave it at 1
+    for the dense isotropic maze. `openRopesOnly` drops closed polylines
+    (loops around hilltops/hollows) — the chaining step's `closed` flag
+    makes it a one-line filter, and the fade region guarantees loops only
+    appear/disappear where they're already invisible.
   - Per-vertex colours handle the near-bright → far-haze ramp
     (`vertexColors: true`); fade lines *toward the haze colour*, not toward
-    black, so they melt into the horizon glow. Neighbouring levels cycle
+    black, so they melt into the horizon glow — but toward a **dimmed**
+    haze (×0.5). At full haze the packed far ropes merge into a solid
+    purple wall instead of a soft horizon. Neighbouring levels cycle
     through darker shades of the same colour (×1 … ×0.38) — the bright/dark
     mix of ropes reads as depth.
   - The grid window **slides with the camera, quantized to whole cells**, so
@@ -153,7 +157,7 @@ If the first preview is black, check the camera height against the terrain
 ```tsx
 <EffectComposer multisampling={0}>
   <DepthOfField focusDistance={40/400} focalLength={0.07} bokehScale={13} height={720} />
-  <Bloom intensity={1.4} luminanceThreshold={0.22} luminanceSmoothing={0.3} mipmapBlur />
+  <Bloom intensity={1.05} luminanceThreshold={0.3} luminanceSmoothing={0.25} mipmapBlur radius={0.55} />
   <Vignette offset={0.28} darkness={0.52} />
 </EffectComposer>
 ```
@@ -166,10 +170,14 @@ If the first preview is black, check the camera height against the terrain
   Err toward too much bokeh — it's what makes it read as footage.
 - `height: 720` fixes the internal DOF buffer, so bokeh size is consistent
   between preview (`--scale=0.5`) and full 4K renders.
-- `luminanceThreshold 0.22` keeps the dark background and floor out of the
+- `luminanceThreshold 0.3` keeps the dark background and floor out of the
   bloom; pins, dots and bright near contours glow. Instance/vertex colours
   above 1.0 are the lever for "neon": the tone mapping is off (`flat`), so
   HDR values survive to the bloom pass.
+- Bloom `radius` is the difference between neon and fog. Past ~0.7 the halo
+  stops hugging the lines and washes the whole frame into flat lavender —
+  the fix for "it looks hazy" is a smaller radius and a higher threshold,
+  not a lower intensity.
 - Vignette as a post pass; film grain as a plain 2D `<AbsoluteFill>` over
   the canvas (SVG `feTurbulence`, seed cycled by frame — deterministic).
 - Effect order matters: DOF first, then Bloom (so bokeh discs glow), then
