@@ -40,8 +40,9 @@ export const CONFIG = {
     octaves: 3,
     /** Peak-to-mid height of the terrain. */
     amp: 2.3,
-    /** How fast the noise field breathes, in noise-t per second. Subtle. */
-    breatheSpeed: 0.045,
+    /** How fast the noise field breathes, in noise-t per second.
+     * 0 = frozen: the rope lines do not move — only the dots travel on them. */
+    breatheSpeed: 0,
   },
 
   contours: {
@@ -49,10 +50,12 @@ export const CONFIG = {
     levels: 14,
     /** Line width in WORLD units (LineMaterial worldUnits) — near lines render
      * thick, far ones thin, for free. */
-    lineWidth: 0.048,
+    lineWidth: 0.026,
+    /** HDR multiplier on the nearest lines so they read as neon under bloom. */
+    nearGlow: 1.25,
     /** Distance band over which lines fade into the horizon haze. */
-    fadeStart: 75,
-    fadeEnd: 175,
+    fadeStart: 65,
+    fadeEnd: 160,
     /** Distance band over which line colour ramps bright → base. */
     nearBrightDist: 16,
     farDimDist: 110,
@@ -67,7 +70,7 @@ export const CONFIG = {
     /** Exponent biasing pin x toward the camera corridor (1 = uniform). */
     centerBias: 1.35,
     stemHeight: 2.0,
-    stemRadius: 0.032,
+    stemRadius: 0.026,
     ringRadius: 0.55,
     ringTube: 0.07,
     discRadius: 0.44,
@@ -84,6 +87,24 @@ export const CONFIG = {
     avatarVariants: 7,
     /** Fraction of avatars using the cool fill. */
     coolFraction: 0.28,
+    /** The bright dot cycling up each stem. */
+    stemDotSize: 0.05,
+    stemDotCycleSeconds: 1.6,
+    stemDotBrightness: 1.8,
+  },
+
+  /** Dots traveling along the contour ropes. */
+  dots: {
+    count: 130,
+    /** Travel speed along the iso-line, world units per second. */
+    speed: 3.4,
+    size: 0.055,
+    /** HDR brightness multiplier (pushes them over the bloom threshold). */
+    brightness: 2.2,
+    /** Seed field for dot starting points. */
+    xHalf: 85,
+    zMin: -20,
+    zMax: 335,
   },
 
   dof: {
@@ -98,9 +119,9 @@ export const CONFIG = {
   },
 
   bloom: {
-    intensity: 1.15,
-    /** High enough that the plum background and dim far lines don't bloom. */
-    luminanceThreshold: 0.24,
+    intensity: 1.4,
+    /** High enough that the dark background and floor don't bloom. */
+    luminanceThreshold: 0.22,
     luminanceSmoothing: 0.3,
     mipmapBlur: true,
   },

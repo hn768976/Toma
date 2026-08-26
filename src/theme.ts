@@ -19,18 +19,27 @@ export type Theme = {
   avatarWarm: string;
   /** Avatar disc fill — a minority of avatars. */
   avatarCool: string;
+  /** Terrain floor surface, low areas — the dark neon red ground. */
+  floorDeep: string;
+  /** Terrain floor surface, high areas — subtle relief tint. */
+  floorHigh: string;
+  /** The bright dots traveling along the contour ropes. */
+  ropeDot: string;
 };
 
 export const THEMES = {
   violet: {
-    bgDeep: '#150A22',
-    bgHaze: '#2A1240',
-    contour: '#8B4FE8',
-    contourBright: '#B87FF5',
+    bgDeep: '#1B0A0F',
+    bgHaze: '#40161F',
+    contour: '#9330F0',
+    contourBright: '#C455FF',
     pin: '#FF6A28',
     pinHot: '#FF9440',
     avatarWarm: '#FFD4A8',
     avatarCool: '#A8C4E8',
+    floorDeep: '#200609',
+    floorHigh: '#3A0C15',
+    ropeDot: '#FFC4EE',
   },
 } as const satisfies Record<string, Theme>;
 

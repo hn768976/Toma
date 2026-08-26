@@ -49,11 +49,48 @@ export const Contours: React.FC<{
     return {line, material};
   }, []);
 
+  // The terrain floor: the same height grid drawn as a dark surface below the
+  // lines — the "dark neon red" ground the ropes sit on. Geometry is
+  // allocated once (the grid size never changes) and rewritten per frame.
+  const floor = useMemo(() => {
+    const {cell, xHalf, depth} = CONFIG.terrain;
+    const nx = Math.floor((2 * xHalf) / cell) + 1;
+    const nz = Math.floor(depth / cell) + 1;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(new Float32Array(nx * nz * 3), 3),
+    );
+    geometry.setAttribute(
+      'color',
+      new THREE.BufferAttribute(new Float32Array(nx * nz * 3), 3),
+    );
+    const index: number[] = [];
+    for (let j = 0; j < nz - 1; j++) {
+      for (let i = 0; i < nx - 1; i++) {
+        const a = j * nx + i;
+        const b = a + 1;
+        const c = a + nx;
+        const d = c + 1;
+        index.push(a, c, b, b, c, d);
+      }
+    }
+    geometry.setIndex(index);
+    const mesh = new THREE.Mesh(
+      geometry,
+      new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.DoubleSide}),
+    );
+    mesh.frustumCulled = false;
+    return mesh;
+  }, []);
+
   const palette = useMemo(
     () => ({
       base: new THREE.Color(theme.contour),
       bright: new THREE.Color(theme.contourBright),
       haze: new THREE.Color(theme.bgHaze),
+      floorDeep: new THREE.Color(theme.floorDeep),
+      floorHigh: new THREE.Color(theme.floorHigh),
     }),
     [theme],
   );
@@ -81,15 +118,49 @@ export const Contours: React.FC<{
       }
     }
 
+    // Rewrite the floor surface from the same grid: dark red ground, tinted
+    // by height for relief, fading into the horizon haze. Sits slightly
+    // below the lines so they never z-fight.
+    {
+      const posAttr = floor.geometry.getAttribute('position') as THREE.BufferAttribute;
+      const colAttr = floor.geometry.getAttribute('color') as THREE.BufferAttribute;
+      const {amp} = CONFIG.terrain;
+      for (let j = 0; j < nz; j++) {
+        const z = originZ + j * cell;
+        for (let i = 0; i < nx; i++) {
+          const k = j * nx + i;
+          const x = originX + i * cell;
+          const h = heights[k];
+          posAttr.setXYZ(k, x, h - 0.07, z);
+          const relief = clamp01((h / amp + 1) / 2);
+          const d = Math.hypot(x - camX, h - camY, z - camZ);
+          // The floor stays dark far longer than the lines so the midfield
+          // reads near-black red, only melting into haze at the horizon.
+          const fog = smoothstep(fadeStart + 35, fadeEnd + 25, d);
+          let r = palette.floorDeep.r + (palette.floorHigh.r - palette.floorDeep.r) * relief;
+          let g = palette.floorDeep.g + (palette.floorHigh.g - palette.floorDeep.g) * relief;
+          let b = palette.floorDeep.b + (palette.floorHigh.b - palette.floorDeep.b) * relief;
+          r += (palette.haze.r * 0.85 - r) * fog;
+          g += (palette.haze.g * 0.85 - g) * fog;
+          b += (palette.haze.b * 0.85 - b) * fog;
+          colAttr.setXYZ(k, r, g, b);
+        }
+      }
+      posAttr.needsUpdate = true;
+      colAttr.needsUpdate = true;
+    }
+
     const positions: number[] = [];
     const colors: number[] = [];
 
     const pushColor = (d: number) => {
       const bright = clamp01((d - nearBrightDist) / (farDimDist - nearBrightDist));
       const fog = smoothstep(fadeStart, fadeEnd, d);
-      let r = palette.bright.r + (palette.base.r - palette.bright.r) * bright;
-      let g = palette.bright.g + (palette.base.g - palette.bright.g) * bright;
-      let b = palette.bright.b + (palette.base.b - palette.bright.b) * bright;
+      // HDR boost on near lines pushes them over the bloom threshold → neon.
+      const glow = CONFIG.contours.nearGlow - (CONFIG.contours.nearGlow - 1) * bright;
+      let r = (palette.bright.r + (palette.base.r - palette.bright.r) * bright) * glow;
+      let g = (palette.bright.g + (palette.base.g - palette.bright.g) * bright) * glow;
+      let b = (palette.bright.b + (palette.base.b - palette.bright.b) * bright) * glow;
       r += (palette.haze.r * 0.9 - r) * fog;
       g += (palette.haze.g * 0.9 - g) * fog;
       b += (palette.haze.b * 0.9 - b) * fog;
@@ -126,7 +197,12 @@ export const Contours: React.FC<{
     old.dispose();
 
     material.resolution.set(size.width, size.height);
-  }, [frame, durationInFrames, fps, heightField, levels, line, material, palette, size]);
+  }, [frame, durationInFrames, fps, heightField, levels, line, floor, material, palette, size]);
 
-  return <primitive object={line} />;
+  return (
+    <group>
+      <primitive object={floor} />
+      <primitive object={line} />
+    </group>
+  );
 };

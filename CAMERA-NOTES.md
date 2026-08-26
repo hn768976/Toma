@@ -76,7 +76,8 @@ If the first preview is black, check the camera height against the terrain
   `LineSegments2` + `LineSegmentsGeometry` + `LineMaterial`. Plain
   `THREE.Line` ignores `linewidth` on nearly every platform.
   - `worldUnits: true` on LineMaterial gives perspective width attenuation
-    for free: near lines fat, far lines hairline. Width 0.048 world units.
+    for free: near lines thicker, far lines hairline. Width 0.026 world
+    units — thin "ropes"; the neon body comes from bloom, not width.
   - Per-vertex colours handle the near-bright → far-haze ramp
     (`vertexColors: true`); fade lines *toward the haze colour*, not toward
     black, so they melt into the horizon glow.
@@ -87,6 +88,19 @@ If the first preview is black, check the camera height against the terrain
   - Rebuild = new `LineSegmentsGeometry` each frame + `dispose()` the old
     one. Re-calling `setPositions` on a live geometry strands the previous
     GPU buffers.
+- Floor: the same height grid drawn as a dark red surface (indexed
+  BufferGeometry, `meshBasicMaterial` + vertex colours) 0.07 units below
+  the lines. Height tints it for relief; its distance fog starts ~35 units
+  later than the lines' so the midfield stays near-black instead of washing
+  into the haze. Allocated once, positions/colours rewritten per frame.
+- Rope dots: bright particles traveling **along** the iso-lines. A dot owns
+  one height level; its seeded point is Newton-projected onto the level,
+  then advanced per frame by stepping perpendicular to the height-field
+  gradient and re-projecting. The path is re-integrated from frame 0 on
+  every frame (O(frame), ~5 field evals/step — cheap), so parallel render
+  workers with no shared state land on identical positions. Works because
+  the field is static; with a breathing field, evaluate each step at that
+  step's time.
 - Pins: `THREE.InstancedMesh` ×2 (stems, rings) + one InstancedMesh per
   avatar variant (shared canvas texture each). `frustumCulled = false` on
   every instanced mesh — the default bounding sphere doesn't cover moved
@@ -108,9 +122,10 @@ If the first preview is black, check the camera height against the terrain
   jitter, rise stagger, pulse phase/period, flash schedule, avatar variant,
   and the simplex permutation table (`random(\`terrain-perm-${i}\`)`).
   `Math.random()` appears nowhere.
-- Terrain "breathing" = 3D simplex sampled at `(x, z, t)` with
-  `t = seconds · 0.045` — the time axis breathes the field in place instead
-  of sliding it sideways.
+- The terrain is frozen (`breatheSpeed: 0`): the rope lines do not move —
+  only the dots travel on them and the camera provides all parallax. The
+  field is still 3D simplex sampled at `(x, z, t)`, so a v2 can re-enable
+  breathing by setting one config number.
 - Pin rise = Remotion `spring()` (damping 11, stiffness 130) with seeded
   start frames across 0–160; pure function of frame, so parallel render
   workers agree.
@@ -124,7 +139,7 @@ If the first preview is black, check the camera height against the terrain
 ```tsx
 <EffectComposer multisampling={0}>
   <DepthOfField focusDistance={40/400} focalLength={0.07} bokehScale={13} height={720} />
-  <Bloom intensity={1.15} luminanceThreshold={0.24} luminanceSmoothing={0.3} mipmapBlur />
+  <Bloom intensity={1.4} luminanceThreshold={0.22} luminanceSmoothing={0.3} mipmapBlur />
   <Vignette offset={0.28} darkness={0.52} />
 </EffectComposer>
 ```
@@ -137,8 +152,10 @@ If the first preview is black, check the camera height against the terrain
   Err toward too much bokeh — it's what makes it read as footage.
 - `height: 720` fixes the internal DOF buffer, so bokeh size is consistent
   between preview (`--scale=0.5`) and full 4K renders.
-- `luminanceThreshold 0.24` keeps the plum background and faded far lines
-  out of the bloom; only pins + bright near contours glow.
+- `luminanceThreshold 0.22` keeps the dark background and floor out of the
+  bloom; pins, dots and bright near contours glow. Instance/vertex colours
+  above 1.0 are the lever for "neon": the tone mapping is off (`flat`), so
+  HDR values survive to the bloom pass.
 - Vignette as a post pass; film grain as a plain 2D `<AbsoluteFill>` over
   the canvas (SVG `feTurbulence`, seed cycled by frame — deterministic).
 - Effect order matters: DOF first, then Bloom (so bokeh discs glow), then

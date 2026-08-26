@@ -76,6 +76,12 @@ export const Pins: React.FC<{
 
     const stems = makeInstanced(stemGeo, new THREE.MeshBasicMaterial(), pins.length);
     const rings = makeInstanced(ringGeo, new THREE.MeshBasicMaterial(), pins.length);
+    // One bright dot cycles up each stem.
+    const stemDots = makeInstanced(
+      new THREE.SphereGeometry(1, 8, 6),
+      new THREE.MeshBasicMaterial(),
+      pins.length,
+    );
     const discs = avatars.map((v, vi) =>
       makeInstanced(
         discGeo,
@@ -83,7 +89,7 @@ export const Pins: React.FC<{
         pins.filter((p) => p.variant === vi).length,
       ),
     );
-    return {stems, rings, discs};
+    return {stems, rings, stemDots, discs};
   }, [P, pins, avatars]);
 
   const palette = useMemo(
@@ -132,6 +138,7 @@ export const Pins: React.FC<{
       if (!visible || growth <= 0.001) {
         meshes.stems.setMatrixAt(i, zero);
         meshes.rings.setMatrixAt(i, zero);
+        meshes.stemDots.setMatrixAt(i, zero);
         meshes.discs[pin.variant].setMatrixAt(di, zero);
         return;
       }
@@ -160,6 +167,18 @@ export const Pins: React.FC<{
       );
       meshes.discs[pin.variant].setMatrixAt(di, m);
 
+      // A dot travels up the stem, looping — seeded phase per pin.
+      if (growth > 0.3) {
+        const cycle = P.stemDotCycleSeconds * fps * (0.8 + 0.4 * (pin.pulsePhase / (Math.PI * 2)));
+        const frac = ((frame / cycle + pin.pulsePhase) % 1 + 1) % 1;
+        const ds = P.stemDotSize * pin.scale;
+        m.makeScale(ds, ds, ds);
+        m.setPosition(pin.x, baseY + stemH * frac, pin.z);
+        meshes.stemDots.setMatrixAt(i, m);
+      } else {
+        meshes.stemDots.setMatrixAt(i, zero);
+      }
+
       // Glow: seeded ±12% pulse, plus an occasional few-frame flash.
       let glow = 1 + P.pulseAmount * Math.sin((Math.PI * 2 * frame) / pin.pulsePeriod + pin.pulsePhase);
       const flashing = (frame + pin.flashOffset) % pin.flashPeriod < P.flashFrames;
@@ -169,11 +188,13 @@ export const Pins: React.FC<{
       meshes.stems.setColorAt(i, color);
       color.copy(palette.pin).lerp(palette.hot, 0.6).multiplyScalar(1.35 * glow);
       meshes.rings.setColorAt(i, color);
+      color.copy(palette.hot).multiplyScalar(P.stemDotBrightness * glow);
+      meshes.stemDots.setColorAt(i, color);
       color.setScalar(flashing ? 1.35 : 0.92 + 0.08 * glow);
       meshes.discs[pin.variant].setColorAt(di, color);
     });
 
-    for (const mesh of [meshes.stems, meshes.rings, ...meshes.discs]) {
+    for (const mesh of [meshes.stems, meshes.rings, meshes.stemDots, ...meshes.discs]) {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
@@ -183,6 +204,7 @@ export const Pins: React.FC<{
     <group>
       <primitive object={meshes.stems} />
       <primitive object={meshes.rings} />
+      <primitive object={meshes.stemDots} />
       {meshes.discs.map((mesh, i) => (
         <primitive key={i} object={mesh} />
       ))}

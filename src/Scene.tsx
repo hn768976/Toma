@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import {cameraPose} from './cameraPath';
 import {CONFIG} from './config';
 import {Contours} from './Contours';
+import {Dots} from './Dots';
 import {Pins} from './Pins';
 import {makeHeightField} from './terrain';
 import type {Theme} from './theme';
@@ -96,6 +97,7 @@ export const Scene: React.FC<{theme: Theme}> = ({theme}) => {
       <CameraRig />
       <HazeBackdrop theme={theme} />
       <Contours theme={theme} heightField={heightField} />
+      <Dots theme={theme} heightField={heightField} />
       <Pins theme={theme} heightField={heightField} />
       <EffectComposer multisampling={0}>
         <DepthOfField
