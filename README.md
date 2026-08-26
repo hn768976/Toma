@@ -27,17 +27,18 @@ npx remotion render DataCurveUSA   out/data-curve-usa.mp4   --codec=h264 --crf=1
 npx remotion render DataCurveChina out/data-curve-china.mp4 --codec=h264 --crf=12
 ```
 
-Half-scale preview:
+1080p (half scale):
 
 ```bash
-npx remotion render DataCurveUK out/data-curve-uk-preview.mp4 \
-  --codec=h264 --crf=18 --scale=0.5 --concurrency=8
+npx remotion render DataCurveUK    out/data-curve-uk-1080p.mp4    --codec=h264 --crf=18 --scale=0.5
+npx remotion render DataCurveUSA   out/data-curve-usa-1080p.mp4   --codec=h264 --crf=18 --scale=0.5
+npx remotion render DataCurveChina out/data-curve-china-1080p.mp4 --codec=h264 --crf=18 --scale=0.5
 ```
 
 `--scale` only affects the encoded output — the canvas backing store is always
-3840 × 2160, so a preview costs the same wall clock as a full render.
-`--concurrency=8` needs at least 8 CPU cores; lower it to your core count
-otherwise.
+3840 × 2160, so a 1080p render costs the same wall clock as a 4K one (about 23
+minutes per variant on 4 cores). Add `--concurrency=N` to match your core
+count; Remotion rejects a value above it.
 
 `npm start` opens Remotion Studio. `npm run typecheck` runs `tsc --noEmit`.
 
