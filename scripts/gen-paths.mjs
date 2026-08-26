@@ -103,7 +103,20 @@ const usa = build('usa', [byId('840')], {
 });
 const china = build('china', [byId('156')], { minArea: 0.6 });
 
-const res = { uk, usa, china };
+// Mainland only for the European three: the overseas departments and the
+// Canaries sit thousands of km away and would collapse the silhouette to a
+// speck inside its own bounding box.
+const spain = build('spain', [byId('724')], {
+  minArea: 0.02,
+  keep: ([lon, lat]) => lon > -10 && lon < 5 && lat > 35.5 && lat < 44.5,
+});
+const france = build('france', [byId('250')], {
+  minArea: 0.03,
+  keep: ([lon, lat]) => lon > -5.5 && lon < 10 && lat > 41 && lat < 51.5,
+});
+const germany = build('germany', [byId('276')], { minArea: 0.05 });
+
+const res = { uk, usa, china, spain, france, germany };
 for (const k of Object.keys(res)) {
   const r = res[k];
   console.log(k, 'parts=' + r.parts, 'bytes=' + r.bytes, 'bounds=' + JSON.stringify(r.bounds));

@@ -8,8 +8,11 @@
     "render:uk": "remotion render DataCurveUK out/data-curve-uk.mp4 --codec=h264 --crf=12",
     "render:usa": "remotion render DataCurveUSA out/data-curve-usa.mp4 --codec=h264 --crf=12",
     "render:china": "remotion render DataCurveChina out/data-curve-china.mp4 --codec=h264 --crf=12",
-    "render:all": "npm run render:uk && npm run render:usa && npm run render:china",
-    "typecheck": "tsc --noEmit"
+    "render:all": "npm run render:uk && npm run render:usa && npm run render:china && npm run render:spain && npm run render:france && npm run render:germany",
+    "typecheck": "tsc --noEmit",
+    "render:spain": "remotion render DataCurveSpain out/data-curve-spain.mp4 --codec=h264 --crf=12",
+    "render:france": "remotion render DataCurveFrance out/data-curve-france.mp4 --codec=h264 --crf=12",
+    "render:germany": "remotion render DataCurveGermany out/data-curve-germany.mp4 --codec=h264 --crf=12"
   },
   "repository": {
     "type": "git",

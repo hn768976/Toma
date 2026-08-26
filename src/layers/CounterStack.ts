@@ -61,8 +61,9 @@ export const drawCountryLabel = (
   const w = ctx.measureText(text).width;
   const padX = 56;
   const padY = 38;
-  const x = 0.6 * WIDTH;
-  const y = 0.63 * HEIGHT;
+  // Low enough that even the longest label clears the curve at this x.
+  const x = 0.615 * WIDTH;
+  const y = 0.675 * HEIGHT;
 
   ctx.fillStyle = alpha(p.cardTint, 0.82);
   ctx.fillRect(x, y - size / 2 - padY, w + padX * 2, size + padY * 2);

@@ -1,6 +1,6 @@
 # Country Data Curve — 4K Remotion animations
 
-Three variants of the same one-shot scene: a country silhouette on a tilted
+Six variants of the same one-shot scene: a country silhouette on a tilted
 grid plane with an exponential growth curve climbing across it, cumulative
 counters, drifting particles and a depth-of-field falloff toward the frame
 edges. Everything is drawn to a single `<canvas>` as a pure function of
@@ -8,13 +8,23 @@ edges. Everything is drawn to a single `<canvas>` as a pure function of
 
 ## Compositions
 
-| Composition id   | Variant | Dominant colour        | Resolution  | Duration          | FPS |
-| ---------------- | ------- | ---------------------- | ----------- | ----------------- | --- |
-| `DataCurveUK`    | `uk`    | deep navy `#0A1F4A`    | 3840 × 2160 | 474 frames / 15.8s | 30  |
-| `DataCurveUSA`   | `usa`   | teal-navy `#052E42`    | 3840 × 2160 | 474 frames / 15.8s | 30  |
-| `DataCurveChina` | `china` | royal blue `#103A7A`   | 3840 × 2160 | 474 frames / 15.8s | 30  |
+| Composition id     | Variant   | Palette              | Silhouette                       |
+| ------------------ | --------- | -------------------- | -------------------------------- |
+| `DataCurveUK`      | `uk`      | deep navy `#0A1F4A`  | GB + Ireland + Scottish islands  |
+| `DataCurveUSA`     | `usa`     | teal cyan `#052E42`  | contiguous states                |
+| `DataCurveChina`   | `china`   | royal blue `#103A7A` | mainland + Hainan                |
+| `DataCurveSpain`   | `spain`   | deep navy `#0A1F4A`  | mainland + Balearics             |
+| `DataCurveFrance`  | `france`  | teal cyan `#052E42`  | mainland + Corsica               |
+| `DataCurveGermany` | `germany` | royal blue `#103A7A` | mainland                         |
 
-All three render independently from this one project. No audio, no logos, no
+All six are 3840 × 2160, 474 frames at 30fps (15.8s).
+
+The three palettes are shared: each is defined once as `PALETTES.deepNavy`,
+`PALETTES.tealCyan` or `PALETTES.royalBlue` and used by two variants, so a
+colour tweak lands on both. Every country still gets its own silhouette, curve
+shape and number ranges — no two curves in the set follow the same path.
+
+All six render independently from this one project. No audio, no logos, no
 loop — frames 0 and 474 differ by design.
 
 ## Render
@@ -22,17 +32,24 @@ loop — frames 0 and 474 differ by design.
 ```bash
 npm install
 
-npx remotion render DataCurveUK    out/data-curve-uk.mp4    --codec=h264 --crf=12
-npx remotion render DataCurveUSA   out/data-curve-usa.mp4   --codec=h264 --crf=12
-npx remotion render DataCurveChina out/data-curve-china.mp4 --codec=h264 --crf=12
+npx remotion render DataCurveUK      out/data-curve-uk.mp4      --codec=h264 --crf=12
+npx remotion render DataCurveUSA     out/data-curve-usa.mp4     --codec=h264 --crf=12
+npx remotion render DataCurveChina   out/data-curve-china.mp4   --codec=h264 --crf=12
+npx remotion render DataCurveSpain   out/data-curve-spain.mp4   --codec=h264 --crf=12
+npx remotion render DataCurveFrance  out/data-curve-france.mp4  --codec=h264 --crf=12
+npx remotion render DataCurveGermany out/data-curve-germany.mp4 --codec=h264 --crf=12
 ```
 
-1080p (half scale):
+1080p (half scale) — add `--scale=0.5` to any of the above:
 
 ```bash
-npx remotion render DataCurveUK    out/data-curve-uk-1080p.mp4    --codec=h264 --crf=18 --scale=0.5
-npx remotion render DataCurveUSA   out/data-curve-usa-1080p.mp4   --codec=h264 --crf=18 --scale=0.5
-npx remotion render DataCurveChina out/data-curve-china-1080p.mp4 --codec=h264 --crf=18 --scale=0.5
+npx remotion render DataCurveUK out/data-curve-uk-1080p.mp4 --codec=h264 --crf=18 --scale=0.5
+```
+
+A single frame:
+
+```bash
+npx remotion still DataCurveSpain out/spain.png --frame=380
 ```
 
 `--scale` only affects the encoded output — the canvas backing store is always
@@ -65,19 +82,23 @@ scripts/gen-paths.mjs   regenerates the silhouette path data (see below)
 public/fonts/           Roboto, latin subset (Apache-2.0)
 ```
 
-### Adding a fourth country
+### Adding another country
 
-Add an entry to `VARIANTS` in `src/variants.ts` and a `<Composition>` in
+Add an entry to `VARIANTS` in `src/variants.ts` — pointing `palette` at one of
+the three `PALETTES`, or defining a fourth — and a `<Composition>` in
 `src/Root.tsx`. Nothing else changes: no hex literal, no country name and no
 SVG path string appears anywhere outside `variants.ts`.
 
 ### Silhouette data
 
-The three paths were generated from Natural Earth 1:50m country boundaries
+The six paths were generated from Natural Earth 1:50m country boundaries
 (`world-atlas`) by `scripts/gen-paths.mjs`: outer rings only, Douglas–Peucker
 simplified, Mercator-projected and fitted into a shared 1000 × 1000 viewBox so
-the three swap cleanly. UK is Great Britain plus Ireland plus the Scottish
-islands; USA is the contiguous states only; China includes Hainan.
+they all swap cleanly. UK is Great Britain plus Ireland plus the Scottish
+islands; USA is the contiguous states only; China includes Hainan; Spain keeps
+the Balearics but drops the Canaries; France keeps Corsica but drops the
+overseas departments — those sit thousands of kilometres away and would
+collapse the silhouette to a speck inside its own bounding box.
 
 ```bash
 node scripts/gen-paths.mjs   # rewrites scripts/paths.json, then paste into VARIANTS

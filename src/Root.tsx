@@ -33,6 +33,33 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: 'china' as const }}
       />
+      <Composition
+        id="DataCurveSpain"
+        component={DataCurve}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: 'spain' as const }}
+      />
+      <Composition
+        id="DataCurveFrance"
+        component={DataCurve}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: 'france' as const }}
+      />
+      <Composition
+        id="DataCurveGermany"
+        component={DataCurve}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: 'germany' as const }}
+      />
     </>
   );
 };
