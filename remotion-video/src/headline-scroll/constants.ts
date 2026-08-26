@@ -67,7 +67,7 @@ export const TILE_GAP_RATIO = 1.6;
 // ------------------------------------------------------------ centre word ---
 
 /** Cap height of the sharp word, as a fraction of frame height. */
-export const WORD_CAP_HEIGHT_RATIO = 0.11;
+export const WORD_CAP_HEIGHT_RATIO = 0.16;
 
 /** Red/cyan offset on the word, in px. Always present. */
 export const CHROMATIC_OFFSET = 8;
@@ -81,8 +81,12 @@ export const GLITCH_CHROMATIC_OFFSET = 22;
  * opposite operations.
  */
 export const GLOW_STRENGTH = 1;
-/** Base halo radius as a fraction of frame height; each pass scales it. */
-export const GLOW_RADIUS_RATIO = 0.38;
+/**
+ * Base halo radius as a fraction of frame height; each pass scales it. Tracks
+ * WORD_CAP_HEIGHT_RATIO — the treatment behind the word has to stay
+ * proportional to the word, or a larger word outgrows the patch it sits on.
+ */
+export const GLOW_RADIUS_RATIO = 0.46;
 /** Halo breathes +/-10% on a sine whose period divides the loop. */
 export const GLOW_PULSE_AMOUNT = 0.1;
 export const GLOW_PULSE_PERIOD = 70;

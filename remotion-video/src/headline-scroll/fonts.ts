@@ -12,8 +12,8 @@
 // break the loop, so the composition holds a delayRender() handle until both
 // faces are genuinely usable.
 
-import { getInfo as archivoBlackInfo } from "@remotion/google-fonts/ArchivoBlack";
 import { getInfo as interInfo } from "@remotion/google-fonts/Inter";
+import { getInfo as poppinsInfo } from "@remotion/google-fonts/Poppins";
 import { getInfo as sourceSerifInfo } from "@remotion/google-fonts/SourceSerif4";
 import { staticFile } from "remotion";
 
@@ -22,12 +22,12 @@ export const SERIF_FAMILY = sourceSerifInfo().fontFamily;
 
 /**
  * The centre word gets its own face rather than the montage's heavy sans.
- * Archivo Black is wider and blunter than Inter 900, so the one sharp thing in
- * the frame separates from the blurred text by shape as well as by focus —
- * which is the point of the shot.
+ * Poppins Black is geometric where Inter is neoclassical, so the one sharp
+ * thing in the frame separates from the blurred text by shape as well as by
+ * focus — which is the point of the shot.
  */
-export const WORD_FAMILY = archivoBlackInfo().fontFamily;
-export const WORD_WEIGHT = 400;
+export const WORD_FAMILY = poppinsInfo().fontFamily;
+export const WORD_WEIGHT = 900;
 
 const slug = (family: string) => family.replace(/\s+/g, "");
 
@@ -35,8 +35,8 @@ const slug = (family: string) => family.replace(/\s+/g, "");
 const FACES = [
   { family: SANS_FAMILY, weights: "100 900" },
   { family: SERIF_FAMILY, weights: "200 900" },
-  // Archivo Black is a static single-weight face, not variable.
-  { family: WORD_FAMILY, weights: "400" },
+  // Poppins is a set of static faces; only the Black is loaded.
+  { family: WORD_FAMILY, weights: "900" },
 ];
 
 /** Every (weight, family) pair the renderer will ask a canvas to draw. */
