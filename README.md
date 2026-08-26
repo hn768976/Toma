@@ -15,16 +15,30 @@ seamless loops.
 Both are registered in `src/Root.tsx` at `744` frames / `30` fps / `3840×2160`,
 differing only by the `variant` prop.
 
+## What's in this ZIP
+
+```
+candle-bear-preview.mp4    CandleMacroBear, 1920x1080, 744 frames @ 30fps
+candle-bull-preview.mp4    CandleMacroBull, 1920x1080, 744 frames @ 30fps
+README.md                  this file
+src/ scripts/ ...          the full Remotion project
+```
+
+Both clips are rendered at half scale. The composition itself is 3840x2160 and
+the canvas backing store is always 4K regardless of `--scale`; `--scale` only
+sets the size of the captured frame, so the 4K masters can be produced at any
+time from the same source with the commands below.
+
 ## Render commands
 
 ```bash
-# previews (half scale)
+# the two clips included here (half scale)
 npx remotion render CandleMacroBear out/candle-bear-preview.mp4 \
   --codec=h264 --crf=18 --scale=0.5 --concurrency=8
 npx remotion render CandleMacroBull out/candle-bull-preview.mp4 \
   --codec=h264 --crf=18 --scale=0.5 --concurrency=8
 
-# full 4K masters
+# full 4K masters (not included: crf 12 at 3840x2160 runs ~1.4 GB per clip)
 npx remotion render CandleMacroBear out/candle-bear.mp4 --codec=h264 --crf=12
 npx remotion render CandleMacroBull out/candle-bull.mp4 --codec=h264 --crf=12
 ```
