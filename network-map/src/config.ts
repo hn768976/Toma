@@ -24,6 +24,11 @@ export type MapFit = {
   offsetY: number;
 };
 
+/**
+ * A route runs `from` -> `to`, and that order is the direction of travel: the
+ * draw-on starts at `from`, the travelling dots ride toward `to`, and `to` is
+ * the endpoint whose pulse fires on completion.
+ */
 export type Route = {
   from: string;
   to: string;
@@ -110,15 +115,18 @@ const GLOBAL_POINTS: Record<string, [number, number]> = {
 // 1440 / 1240 / 980 px, so the arcs read as differently sized rather than as one
 // repeated shape, and none of them is a stub.
 //
+// Half the set is declared east-to-west so three arcs draw right to left
+// against the other three, rather than the whole network sweeping one way.
+//
 // Routes are also kept away from vertical. The bow is always straight up, so a
 // near-vertical chord curls into a hook rather than reading as a route.
 const GLOBAL_ROUTES: Route[] = [
   {from: 'losAngeles', to: 'tokyo'},
-  {from: 'toronto', to: 'jakarta'},
+  {from: 'jakarta', to: 'toronto'},
   {from: 'saoPaulo', to: 'hongKong'},
-  {from: 'mexicoCity', to: 'dubai'},
+  {from: 'dubai', to: 'mexicoCity'},
   {from: 'lima', to: 'moscow'},
-  {from: 'reykjavik', to: 'delhi'},
+  {from: 'delhi', to: 'reykjavik'},
 ];
 
 

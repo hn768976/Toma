@@ -11,7 +11,8 @@ a seamless 20-second loop.
 | `NetworkMapGlobal` | 3840 × 2160 | 600 frames / 20.0 s | 30  |
 
 `NetworkMapGlobal` draws six routes across twelve distinct cities, graded from
-roughly 2400px down to 980px so no two arcs are the same size.
+roughly 2400px down to 980px so no two arcs are the same size. Three of the six
+are declared east-to-west, so half the network draws right to left.
 
 ## Render
 
@@ -71,6 +72,11 @@ Three properties of the arc set are invariants enforced at build time in
 
 Each arc also takes its own colour from `ARC_PALETTE`, so no two arcs in a frame
 share one - which caps a variant at as many arcs as there are palette entries.
+
+A route's `from` -> `to` order is its direction of travel: the draw-on starts at
+`from`, the travelling dots ride toward `to`, and `to` is the endpoint whose
+pulse fires on completion. Reversing a route in the config is all it takes to
+flip the direction it draws.
 
 **The loop closes** because every periodic quantity divides 600: arc cycles are
 600 or 300 frames, travelling-dot laps are 150, 200 or 300, and the camera drift
