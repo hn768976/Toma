@@ -13,7 +13,7 @@ export const CONFIG = {
     far: 400,
     /** Camera height above y=0 at frame 0. Terrain peaks at ~+2.3, so this
      * keeps the lens ~2.3 units clear of the highest hill. */
-    baseY: 4.6,
+    baseY: 4.0,
     /** Extra height gained across the full duration (the slow rise). */
     rise: 2.2,
     /** Dolly start / total forward travel along +Z over the duration. */
@@ -40,10 +40,11 @@ export const CONFIG = {
      * curvier maze-like ropes. */
     noiseScale: 0.026,
     octaves: 3,
-    /** Peak-to-mid height of the terrain. Kept low: gentle relief spaces the
-     * ropes evenly and stops them stacking/overlapping on screen when seen
-     * from the low camera. */
-    amp: 1.35,
+    /** Peak-to-mid height of the terrain. Kept very low: ground spacing of
+     * the ropes is amplitude-invariant, but low relief stops ropes at
+     * different heights from crossing/overlapping on screen when seen from
+     * the low camera. */
+    amp: 0.85,
     /** How fast the noise field breathes, in noise-t per second.
      * 0 = frozen: the rope lines do not move — only the dots travel on them. */
     breatheSpeed: 0,
