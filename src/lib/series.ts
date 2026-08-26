@@ -122,8 +122,7 @@ export const buildSeries = (): Series => {
   for (let e = 0; e < spikeCount; e++) {
     const up = rndInt(`spike-up-${e}`, 5, 9);
     const down = rndInt(`spike-down-${e}`, 7, 13);
-    const pos =
-      rndInt(`spike-pos-${e}`, 20, N - up - down - 20);
+    const pos = rndInt(`spike-pos-${e}`, 20, N - up - down - 20);
     const height = rndRange(`spike-h-${e}`, 210, 340);
     for (let k = 1; k <= up; k++) {
       spike[pos + k] += height * (k / up) * rndRange(`spike-j-${e}-${k}`, 0.86, 1.06);
