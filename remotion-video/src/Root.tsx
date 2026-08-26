@@ -18,6 +18,15 @@ import {
   WIDTH as RING_WIDTH,
   HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
+import {
+  ParticleField,
+  particleFieldSchema,
+  particleBurstDefaults,
+  DURATION_IN_FRAMES as BURST_DURATION_IN_FRAMES,
+  FPS as BURST_FPS,
+  WIDTH as BURST_WIDTH,
+  HEIGHT as BURST_HEIGHT,
+} from "./particle-burst";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -41,6 +50,16 @@ export const RemotionRoot: React.FC = () => {
         height={RING_HEIGHT}
         schema={particleRingHaloSchema}
         defaultProps={particleRingHaloDefaults}
+      />
+      <Composition
+        id="ParticleBurst"
+        component={ParticleField}
+        durationInFrames={BURST_DURATION_IN_FRAMES}
+        fps={BURST_FPS}
+        width={BURST_WIDTH}
+        height={BURST_HEIGHT}
+        schema={particleFieldSchema}
+        defaultProps={particleBurstDefaults}
       />
     </>
   );

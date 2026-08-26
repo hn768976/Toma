@@ -11,6 +11,11 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// No composition in this project has audio, and the particle pieces are
+// specified as silent. Without both of these Remotion muxes a silent AAC
+// track into every render.
+Config.setEnforceAudioTrack(false);
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 
