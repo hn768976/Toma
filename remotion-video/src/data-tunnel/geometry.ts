@@ -5,10 +5,9 @@
 
 import { random } from "remotion";
 import {
-  BLUR_CEILING,
   BLUR_EXPONENT,
   BLUR_LEVELS,
-  CAMERA_DIRECTION,
+  BLUR_LEVEL_REFERENCE,
   CHIP_ALPHA_MAX,
   CHIP_ALPHA_MIN,
   CHIP_ASPECTS,
@@ -23,7 +22,6 @@ import {
   FADE_IN_U,
   FADE_OUT_U,
   FAR_BLUR_SCALE,
-  FAR_DIM,
   FLASHES_PER_SECOND,
   FLASH_MAX_FRAMES,
   FLASH_MIN_FRAMES,
@@ -39,7 +37,6 @@ import {
   PATH_CURVE_BIAS,
   PATH_CURVE_SPREAD,
   PULSE_PERIODS,
-  SHARP_CENTER_U,
   SHARP_HALF_WIDTH_U,
   SPARKLE_COUNT,
   SPARKLE_MAX_SIZE,
@@ -48,11 +45,9 @@ import {
   TICKED_HOLLOW_FRACTION,
   WIDTH,
   Z_FAR,
-  Z_NEAR,
 } from "./config";
 import type { ChipPaletteEntry } from "./theme";
-
-export const Z_RATIO = Z_FAR / Z_NEAR;
+import type { TunnelVariant } from "./variants";
 
 // Advance in u per frame. FLOW_SPEED whole traversals across the loop keeps
 // frame 450 identical to frame 0.
@@ -74,35 +69,48 @@ const pick = <T>(items: readonly T[], roll: number) =>
 
 // --- depth ------------------------------------------------------------------
 
+// Signed power, so the motion-blur pass can ask for the position a chip held
+// a fraction of a frame beyond either end of the range without producing NaN.
+const easeDepth = (u: number, variant: TunnelVariant) =>
+  variant.depthEase === 1 ? u : Math.sign(u) * Math.pow(Math.abs(u), variant.depthEase);
+
 // u = 0 sits at the camera, u = 1 at the vanishing point.
-export const depthAt = (u: number) => Z_NEAR * Math.pow(Z_RATIO, u);
+export const depthAt = (u: number, variant: TunnelVariant) =>
+  variant.zNear * Math.pow(Z_FAR / variant.zNear, easeDepth(u, variant));
 
-export const radiusAt = (u: number) => FOCAL / depthAt(u);
+export const radiusAt = (u: number, variant: TunnelVariant) => FOCAL / depthAt(u, variant);
 
-export const alphaAt = (u: number) => {
+export const alphaAt = (u: number, variant: TunnelVariant) => {
   const fadeIn = smoothstep((1 - u) / FADE_IN_U);
   const fadeOut = smoothstep(u / FADE_OUT_U);
-  return fadeIn * fadeOut * mix(1, FAR_DIM, u);
+  return fadeIn * fadeOut * mix(1, variant.farDim, u);
 };
 
 // Sharp in a narrow mid band, climbing to the ceiling toward both the camera
 // and the vanishing point.
-export const blurAt = (u: number) => {
-  if (u > SHARP_CENTER_U) {
-    const span = 1 - SHARP_CENTER_U - SHARP_HALF_WIDTH_U;
-    const t = clamp01((u - SHARP_CENTER_U - SHARP_HALF_WIDTH_U) / span);
-    return BLUR_CEILING * FAR_BLUR_SCALE * Math.pow(t, BLUR_EXPONENT);
+export const blurAt = (u: number, variant: TunnelVariant) => {
+  const center = variant.sharpCenterU;
+  if (u > center) {
+    const span = 1 - center - SHARP_HALF_WIDTH_U;
+    const t = clamp01((u - center - SHARP_HALF_WIDTH_U) / span);
+    return variant.blurCeiling * FAR_BLUR_SCALE * Math.pow(t, BLUR_EXPONENT);
   }
-  const span = SHARP_CENTER_U - SHARP_HALF_WIDTH_U;
-  const t = clamp01((SHARP_CENTER_U - SHARP_HALF_WIDTH_U - u) / span);
-  return BLUR_CEILING * Math.pow(t, BLUR_EXPONENT);
+  const span = center - SHARP_HALF_WIDTH_U;
+  const t = clamp01((center - SHARP_HALF_WIDTH_U - u) / span);
+  return variant.blurCeiling * Math.pow(t, BLUR_EXPONENT);
 };
 
-const quantiseBlur = (blur: number) => {
+// The level table is authored against BLUR_LEVEL_REFERENCE and stretched to
+// the variant's ceiling, so a variant that raises the ceiling keeps the same
+// number of bands and the same relative spacing between them.
+export const blurLevelsFor = (variant: TunnelVariant) =>
+  BLUR_LEVELS.map((level) => (level * variant.blurCeiling) / BLUR_LEVEL_REFERENCE);
+
+const quantiseBlur = (blur: number, levels: number[]) => {
   let best = 0;
   let bestDistance = Infinity;
-  for (let i = 0; i < BLUR_LEVELS.length; i++) {
-    const distance = Math.abs(BLUR_LEVELS[i] - blur);
+  for (let i = 0; i < levels.length; i++) {
+    const distance = Math.abs(levels[i] - blur);
     if (distance < bestDistance) {
       bestDistance = distance;
       best = i;
@@ -120,31 +128,30 @@ const quantiseBlur = (blur: number) => {
 
 export type BlurBand = { uHigh: number; uLow: number; blur: number };
 
-const buildBlurBands = (): BlurBand[] => {
+export const buildBlurBands = (variant: TunnelVariant): BlurBand[] => {
+  const levels = blurLevelsFor(variant);
   const steps = 2000;
   const bands: BlurBand[] = [];
-  let currentLevel = quantiseBlur(blurAt(1));
+  let currentLevel = quantiseBlur(blurAt(1, variant), levels);
   let bandStart = 1;
   for (let i = 1; i <= steps; i++) {
     const u = 1 - i / steps;
-    const level = quantiseBlur(blurAt(u));
+    const level = quantiseBlur(blurAt(u, variant), levels);
     if (level !== currentLevel) {
-      bands.push({ uHigh: bandStart, uLow: u, blur: BLUR_LEVELS[currentLevel] });
+      bands.push({ uHigh: bandStart, uLow: u, blur: levels[currentLevel] });
       currentLevel = level;
       bandStart = u;
     }
   }
-  bands.push({ uHigh: bandStart, uLow: 0, blur: BLUR_LEVELS[currentLevel] });
+  bands.push({ uHigh: bandStart, uLow: 0, blur: levels[currentLevel] });
   return bands;
 };
 
-export const BLUR_BANDS = buildBlurBands();
-
-export const bandIndexFor = (u: number) => {
-  for (let i = 0; i < BLUR_BANDS.length; i++) {
-    if (u >= BLUR_BANDS[i].uLow) return i;
+export const bandIndexFor = (bands: BlurBand[], u: number) => {
+  for (let i = 0; i < bands.length; i++) {
+    if (u >= bands[i].uLow) return i;
   }
-  return BLUR_BANDS.length - 1;
+  return bands.length - 1;
 };
 
 // --- paths ------------------------------------------------------------------
@@ -289,8 +296,8 @@ export const wrapFrames = (frame: number) =>
 // that recycle lands on the same frame every loop, which is exactly what
 // makes frame 450 identical to frame 0 — re-seeding on recycle would put a
 // one-frame discontinuity in the loop instead.
-export const chipDepthU = (chip: Chip, loopFrame: number) =>
-  wrap01(chip.u0 + CAMERA_DIRECTION * FLOW_PER_FRAME * loopFrame);
+export const chipDepthU = (chip: Chip, loopFrame: number, variant: TunnelVariant) =>
+  wrap01(chip.u0 + variant.cameraDirection * FLOW_PER_FRAME * loopFrame);
 
 // --- sparkles ---------------------------------------------------------------
 

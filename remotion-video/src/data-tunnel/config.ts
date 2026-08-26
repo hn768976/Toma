@@ -16,12 +16,9 @@ export const DURATION_IN_FRAMES = 450;
 // The five headline knobs, plus the one that v2 flips.
 // ---------------------------------------------------------------------------
 
-// Signed depth direction. THE ONLY PLACE the flow direction is expressed.
-//   +1  camera retreats — chips flow away, toward the vanishing point (v1)
-//   -1  camera advances — chips rush toward the viewer (v2)
-// Every z / depth calculation multiplies by this, and the motion-blur trail
-// direction is derived from it, so v2 is a one-line change.
-export const CAMERA_DIRECTION = 1;
+// The depth direction (cameraDirection), the near plane, the blur ceiling
+// and the motion-blur tap fan are per-variant — see variants.ts. Everything
+// in this file is shared by every variant.
 
 // Total number of chips in the field, spread across the paths.
 export const CHIP_COUNT = 560;
@@ -32,9 +29,6 @@ export const FLOW_SPEED = 1;
 
 // How hard each path arcs away from a straight ray. 0 = a straight shaft.
 export const CURVE_AMOUNT = 0.2;
-
-// Maximum per-chip blur in destination pixels at 4K.
-export const BLUR_CEILING = 30;
 
 // Overall multiplier on the glow baked into chip sprites and on the bloom
 // passes composited over the field.
@@ -74,15 +68,15 @@ export const CURVE_REFERENCE_RADIUS = 3300;
 // A chip's depth parameter u runs 0 (right at the camera) to 1 (at the
 // vanishing point). Depth is exponential in u:
 //
-//     z(u) = Z_NEAR * (Z_FAR / Z_NEAR) ^ u
+//     z(u) = zNear * (Z_FAR / zNear) ^ (u ^ depthEase)
 //
-// so screen radius r = FOCAL / z decays exponentially too. Evenly spaced u
-// therefore gives evenly spaced *ratios* on screen: chips are wide apart
-// near the camera and pack tightly toward the vanishing point, and screen
-// speed dr/du is proportional to r, i.e. chips accelerate as they approach.
+// so screen radius r = FOCAL / z decays exponentially too. With depthEase 1,
+// evenly spaced u gives evenly spaced *ratios* on screen: chips are wide
+// apart near the camera and pack tightly toward the vanishing point, and
+// screen speed dr/du is proportional to r, i.e. chips accelerate as they
+// approach. zNear and depthEase are per-variant; see variants.ts.
 
 export const FOCAL = 4400;
-export const Z_NEAR = 1.35;
 export const Z_FAR = 34;
 
 // Chip width as a fraction of screen radius. Constant, which is what makes
@@ -117,17 +111,13 @@ export const FADE_IN_U = 0.14;
 // ...and fade out over this span of u as they sweep past the camera.
 export const FADE_OUT_U = 0.06;
 
-// Far chips are dimmed to this fraction on top of the fade, so the far end
-// of the corridor reads as a dim haze rather than a wall of chips.
-export const FAR_DIM = 0.5;
-
 // Per-chip base alpha range.
 export const CHIP_ALPHA_MIN = 0.55;
 export const CHIP_ALPHA_MAX = 1;
 
 // Only a narrow band of u is in focus. Blur climbs toward both the camera
-// and the vanishing point from here.
-export const SHARP_CENTER_U = 0.42;
+// and the vanishing point from here. Where the band sits is per-variant
+// (sharpCenterU); how wide it is, is shared.
 export const SHARP_HALF_WIDTH_U = 0.07;
 
 // Ramp shape between the sharp band and the blur ceiling.
@@ -138,14 +128,24 @@ export const BLUR_EXPONENT = 1.35;
 export const FAR_BLUR_SCALE = 0.5;
 
 // Blur is quantised to these levels so chips sharing a level can be drawn
-// as one batch under a single canvas filter.
+// as one batch under a single canvas filter. The table is written against
+// BLUR_LEVEL_REFERENCE and rescaled to whatever ceiling a variant sets.
+export const BLUR_LEVEL_REFERENCE = 30;
 export const BLUR_LEVELS = [0, 2, 5, 9, 14, 21, 30];
+
+// Resolution each blur tier renders its band at, before being blurred and
+// blitted back up. Blurring a 30px gaussian at full 4K resolution, once per
+// band, is the single most expensive thing this composition could do — and
+// at that radius there is nothing left in the image that a full-resolution
+// pass would preserve.
+export const BLUR_TIER_FULL_MAX = 3;
+export const BLUR_TIER_HALF_MAX = 12;
+export const BLUR_TIER_SCALES = { full: 1, half: 0.5, quarter: 0.25 };
 
 // Chips nearer than this u get the 3-tap motion-blur smear.
 export const MOTION_BLUR_U = 0.16;
 
-// Alpha weights of the 3 taps, leading tap first. Normalised at use.
-export const MOTION_BLUR_TAPS = [1, 0.6, 0.3];
+// Tap weights and span are per-variant; see variants.ts.
 
 // ---------------------------------------------------------------------------
 // Brightness animation
@@ -184,6 +184,12 @@ export const DRIFT_PIXELS = 12;
 export const DRIFT_PHASE = 1.1;
 
 // Bloom: two screen-blended blurred copies of the field, tight and wide.
+// Blur radii are in final-frame pixels; the bloom canvases themselves are
+// rendered at BLOOM_SCALE and upscaled by the browser. A bloom is pure low
+// frequency, so a quarter-resolution pass is visually indistinguishable
+// from a full-resolution one and roughly sixteen times cheaper — which
+// matters a lot when the wide pass is a 46px gaussian over a 4K frame.
+export const BLOOM_SCALE = 0.25;
 export const BLOOM_TIGHT_BLUR = 12;
 export const BLOOM_TIGHT_ALPHA = 0.4;
 export const BLOOM_WIDE_BLUR = 46;

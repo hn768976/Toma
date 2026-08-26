@@ -22,6 +22,7 @@ import {
   DataTunnel,
   dataTunnelSchema,
   dataTunnelDefaultProps,
+  dataTunnelApproachDefaultProps,
 } from "./data-tunnel/DataTunnel";
 import {
   DURATION_IN_FRAMES as TUNNEL_DURATION_IN_FRAMES,
@@ -62,6 +63,16 @@ export const RemotionRoot: React.FC = () => {
         height={TUNNEL_HEIGHT}
         schema={dataTunnelSchema}
         defaultProps={dataTunnelDefaultProps}
+      />
+      <Composition
+        id="DataTunnelApproach"
+        component={DataTunnel}
+        durationInFrames={TUNNEL_DURATION_IN_FRAMES}
+        fps={TUNNEL_FPS}
+        width={TUNNEL_WIDTH}
+        height={TUNNEL_HEIGHT}
+        schema={dataTunnelSchema}
+        defaultProps={dataTunnelApproachDefaultProps}
       />
     </>
   );

@@ -1,15 +1,24 @@
 # DataTunnel — 4K "data tunnel" corridor
 
 A glowing field of data chips flowing through a curved perspective corridor.
-Registered in `src/Root.tsx` as `DataTunnel`: 3840×2160, 450 frames @ 30fps
-(15.0s), seamless loop.
+Two compositions share one component, one palette and one set of paths; what
+separates them is which way the camera is travelling.
+
+| Composition | Variant | Flow |
+| --- | --- | --- |
+| `DataTunnel` | `violet` | Camera retreats — chips flow away, toward the vanishing point. |
+| `DataTunnelApproach` | `violetApproach` | Camera advances — chips emerge from the vanishing point and rush past the lens. |
+
+Both are 3840×2160, 450 frames @ 30fps (15.0s), seamless loops, registered in
+`src/Root.tsx`.
 
 ## Files
 
 | File | Role |
 | --- | --- |
-| `theme.ts` | **The only file with colour literals.** One `THEMES` entry per variant. |
-| `config.ts` | Every number: geometry, timing, depth response, finish. |
+| `theme.ts` | **The only file with colour literals.** One `THEMES` entry per palette. |
+| `variants.ts` | Per-variant depth response: direction, easing, near plane, blur ceiling, motion-blur taps. |
+| `config.ts` | Everything both variants share: geometry, timing, finish. |
 | `geometry.ts` | Seeded path + chip generation and all perspective math. |
 | `sprites.ts` | Offscreen sprite atlas — chips are rasterised once, then blitted. |
 | `grain.ts` | Pre-baked film-grain tiles. |
@@ -17,16 +26,43 @@ Registered in `src/Root.tsx` as `DataTunnel`: 3840×2160, 450 frames @ 30fps
 
 ## Depth direction
 
-`CAMERA_DIRECTION` in `config.ts` is the single signed value that decides
-which way the field flows:
+`cameraDirection` in a variant is the single signed value that decides which
+way the field flows:
 
 ```ts
-export const CAMERA_DIRECTION = 1;  // camera retreats — chips flow toward the vanishing point
+violet:         { cameraDirection:  1, ... }  // retreating
+violetApproach: { cameraDirection: -1, ... }  // approaching
 ```
 
 Every depth calculation multiplies by it (`chipDepthU`), and the motion-blur
-trail vector is derived from the same term, so flipping it to `-1` makes the
-chips rush the viewer with no other change anywhere in the codebase.
+trail vector is derived from the same term, so the flow, the recycling and
+the smear direction all invert together. Nothing anywhere hardcodes a
+direction.
+
+## What actually differs between the two
+
+A reversed flow is not a receding flow played backwards, and the rest of
+`violetApproach` exists because of that:
+
+- **`depthEase: 0.56`** (v1: `1`). Depth is `zNear · (Z_FAR/zNear)^(u^depthEase)`.
+  Below 1, chips linger near the vanishing point and accelerate hard as they
+  reach the camera. That does two jobs at once: it packs the far end — which
+  an approach needs, since chips *emerge* there rather than accumulating —
+  and it gives each chip a steep ease-in on size and speed across its life.
+- **`zNear: 1.05`** (v1: `1.35`). Brings the closest chips nearer the lens, so
+  the largest ones run past the frame edge.
+- **`blurCeiling: 40`** (v1: `30`). They are passing the lens, not settling
+  into it.
+- **`sharpCenterU: 0.27`** (v1: `0.42`). Because `depthEase` changes how `u`
+  maps to screen radius, the in-focus band has to move to stay at a
+  comparable distance from the vanishing point. Without this the crisp part
+  of the corridor collapses toward the far end.
+- **`motionBlurTaps`: 5 passes over 1.25 frames** (v1: 3 over 1). Approaching
+  motion strobes far worse at 30fps, because peak per-frame displacement
+  lands exactly when the chip is biggest and brightest.
+
+Everything else is shared and identical: palette, paths, curve amount, chip
+count and types, sparkles, pulse and flash rates, loop closure, camera drift.
 
 ## Determinism
 
@@ -39,8 +75,8 @@ still comes from `random()` — see `grain.ts`.)
 
 ## The loop
 
-Frame 450 is pixel-identical to frame 0. Everything periodic has a period
-that divides 450:
+Frame 450 is pixel-identical to frame 0, in both variants. Everything
+periodic has a period that divides 450:
 
 - chips complete `FLOW_SPEED` (= 1) whole path traversals per loop;
 - brightness pulses use periods from `PULSE_PERIODS`, all divisors of 450;
@@ -53,17 +89,38 @@ pointing at the same component with `durationInFrames={451}`, render stills at
 frame 0 and frame 450, and compare them. The component itself always wraps
 time with `DURATION_IN_FRAMES` (450), so the extra frame re-renders frame 0.
 
+## Performance
+
+Two things keep a 4K frame affordable, and both are easy to undo by accident:
+
+1. **Chips are rasterised once** into a sprite atlas (`sprites.ts`) and blitted
+   with transforms. Rounded rects, outlines, tick marks and glow are never
+   re-stroked per chip per frame.
+2. **Blur is batched by depth band.** Chips are bucketed into contiguous runs
+   of `u` that share a quantised blur level, and each run is drawn into a
+   scratch canvas, blurred once at a resolution matched to its blur radius,
+   and composited back. Setting `ctx.filter` per chip instead costs roughly
+   **ten times** the render time — Chrome allocates a canvas-sized filter
+   layer for every filtered draw. The bloom passes are quarter-resolution for
+   the same reason.
+
 ## Rendering
 
 ```bash
-# 1080p preview
+# 1080p previews
 npx remotion render DataTunnel out/data-tunnel-preview.mp4 \
+  --codec=h264 --crf=18 --scale=0.5 --concurrency=8
+npx remotion render DataTunnelApproach out/data-tunnel-approach-preview.mp4 \
   --codec=h264 --crf=18 --scale=0.5 --concurrency=8
 
 # full 4K
 npx remotion render DataTunnel out/data-tunnel.mp4 \
   --codec=h264 --crf=12 --concurrency=8
+npx remotion render DataTunnelApproach out/data-tunnel-approach.mp4 \
+  --codec=h264 --crf=12 --concurrency=8
 ```
 
 `--scale=0.5` keeps the canvas backing store at 3840×2160 and downsamples the
 capture, so blur radii and glow sizes in the preview match the 4K master.
+Lower `--concurrency` to the number of available cores if the renderer
+complains.
