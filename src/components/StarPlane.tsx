@@ -94,11 +94,11 @@ export const StarPlane: React.FC<{
 
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-    // Cool grey-white upper-left falling to deep blue lower-right.
+    // A dark ramp: the lighter end upper-left, falling to near-black lower-right.
     const bg = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
     bg.addColorStop(0, theme.backgroundLight);
-    bg.addColorStop(0.26, withAlpha(theme.backgroundDeep, 0.55));
-    bg.addColorStop(0.62, withAlpha(theme.backgroundDeep, 0.95));
+    bg.addColorStop(0.35, withAlpha(theme.backgroundDeep, 0.5));
+    bg.addColorStop(0.72, withAlpha(theme.backgroundDeep, 0.9));
     bg.addColorStop(1, theme.backgroundDeep);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);

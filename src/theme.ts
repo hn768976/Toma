@@ -6,7 +6,7 @@
 export type Variant = 'meal' | 'content';
 
 export type Theme = {
-  /** Upper-left of the background gradient. */
+  /** Upper-left of the background gradient (the lighter end of the dark ramp). */
   backgroundLight: string;
   /** Lower-right of the background gradient. */
   backgroundDeep: string;
@@ -36,8 +36,8 @@ export type Theme = {
 
 export const THEMES: Record<Variant, Theme> = {
   meal: {
-    backgroundLight: '#6A6E7A',
-    backgroundDeep: '#16244A',
+    backgroundLight: '#1C3560',
+    backgroundDeep: '#070F26',
     clusterGlow: '#2E4C86',
     dotPale: '#C8CED8',
     nodeFill: '#2A3550',
@@ -51,9 +51,9 @@ export const THEMES: Record<Variant, Theme> = {
     vignette: '#000000',
   },
   content: {
-    backgroundLight: '#4A5568',
-    backgroundDeep: '#0A1433',
-    clusterGlow: '#1E3468',
+    backgroundLight: '#2C2456',
+    backgroundDeep: '#0A0820',
+    clusterGlow: '#3A2E7A',
     dotPale: '#A8B4C8',
     nodeFill: '#16203D',
     nodeBorder: '#3F8FE0',

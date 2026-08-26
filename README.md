@@ -5,10 +5,25 @@ Two 4K-authored, 10-second one-shot workflow animations sharing a single
 the connection graph — is data, so a new version is a new entry in `WORKFLOWS`
 plus a palette in `THEMES`.
 
-| Composition id    | Variant     | Subject           | Connector | Size        | Length            |
-| ----------------- | ----------- | ----------------- | --------- | ----------- | ----------------- |
-| `WorkflowMeal`    | `"meal"`    | Meal planning     | Pink      | 3840 × 2160 | 300 frames @ 30fps |
-| `WorkflowContent` | `"content"` | Content pipeline  | Violet    | 3840 × 2160 | 300 frames @ 30fps |
+| Composition id    | Variant     | Subject          | Palette                | Size        | Length             |
+| ----------------- | ----------- | ---------------- | ---------------------- | ----------- | ------------------ |
+| `WorkflowMeal`    | `"meal"`    | Meal planning    | Pink on dark blue      | 3840 × 2160 | 300 frames @ 30fps |
+| `WorkflowContent` | `"content"` | Content pipeline | Violet on dark indigo  | 3840 × 2160 | 300 frames @ 30fps |
+
+Both sit on a dark background: a ramp from the lighter corner upper-left to
+near-black lower-right. `meal` runs blue, `content` runs indigo.
+
+```
+meal      Fridge Scanner  ─┐                          ┌─ Meal Suggestion
+                           ├─ AI Model ─ Nutrition ───┤
+          Recipe Generator ┘                          └─ Shopping List Export
+
+content   Brief Input ─ AI Model ─ Draft ─┬─ Human Review ─┬─ Publish
+                                          └─ SEO Scoring ──┘
+```
+
+Each variant carries one fan-out and one fan-in, so the two read as a matched
+pair.
 
 ## Delivered renders
 

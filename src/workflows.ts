@@ -41,8 +41,9 @@ export type WorkflowData = {
 
 /**
  * Both variants share the same skeleton: a stepped diagonal that zigzags up and
- * down across four-to-five columns, with exactly one node fanning out to two
- * outputs, so the pair reads as matched.
+ * down across four-to-five columns, carrying one fan-out (a node feeding two
+ * downstream panels) and one fan-in (two panels converging on a single one), so
+ * the pair reads as matched.
  */
 export const WORKFLOWS: Record<Variant, WorkflowData> = {
   meal: {
@@ -69,17 +70,18 @@ export const WORKFLOWS: Record<Variant, WorkflowData> = {
       {id: 'ai', label: 'AI Model', icon: 'robotHead', x: -700, y: 140},
       {id: 'draft', label: 'Draft Generation', icon: 'stackedPages', x: -10, y: -235},
       {id: 'review', label: 'Human Review', icon: 'checkCircle', x: 670, y: -570},
-      {id: 'analytics', label: 'Analytics', icon: 'barChart', x: 670, y: 410},
+      {id: 'scoring', label: 'SEO Scoring', icon: 'barChart', x: 670, y: 410},
       {id: 'publish', label: 'Publish', icon: 'arrowUpBox', x: 1300, y: -250},
     ],
     edges: [
       {from: 'brief', to: 'ai'},
       {from: 'ai', to: 'draft'},
       {from: 'draft', to: 'review'},
-      {from: 'draft', to: 'analytics'},
+      {from: 'draft', to: 'scoring'},
       {from: 'review', to: 'publish'},
+      {from: 'scoring', to: 'publish'},
     ],
-    order: ['brief', 'ai', 'draft', 'analytics', 'review', 'publish'],
+    order: ['brief', 'ai', 'draft', 'review', 'scoring', 'publish'],
   },
 };
 
