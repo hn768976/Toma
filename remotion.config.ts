@@ -2,14 +2,13 @@ import { Config } from '@remotion/cli/config';
 
 Config.setVideoImageFormat('jpeg');
 Config.setOverwriteOutput(true);
+// The scene is entirely canvas 2D, so a software GL backend is fine and is the
+// most portable choice for headless rendering.
 Config.setChromiumOpenGlRenderer('swangle');
-// The scene allocates several full-frame offscreen buffers per render worker.
-Config.setChromiumDisableWebSecurity(false);
 
-// This machine has no egress to remotion.media, so use the Chromium that is
-// already on disk instead of letting Remotion download Chrome Headless Shell.
-// Override with REMOTION_BROWSER_EXECUTABLE, or delete these lines on a
-// machine where Remotion can fetch its own binary.
+// Use a Chromium that is already on disk when one is pointed at, instead of
+// letting Remotion download Chrome Headless Shell. Leave the variable unset on
+// a machine that can fetch its own binary.
 const localChromium = process.env.REMOTION_BROWSER_EXECUTABLE;
 if (localChromium) {
   Config.setBrowserExecutable(localChromium);
