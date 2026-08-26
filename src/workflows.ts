@@ -65,12 +65,12 @@ export const WORKFLOWS: Record<Variant, WorkflowData> = {
   },
   content: {
     nodes: [
-      {id: 'brief', label: 'Brief Input', icon: 'docPen', x: -1150, y: -250},
-      {id: 'ai', label: 'AI Model', icon: 'robotHead', x: -570, y: 30},
-      {id: 'draft', label: 'Draft Generation', icon: 'stackedPages', x: 20, y: -240},
-      {id: 'review', label: 'Human Review', icon: 'checkCircle', x: 610, y: -500},
-      {id: 'analytics', label: 'Analytics', icon: 'barChart', x: 610, y: 80},
-      {id: 'publish', label: 'Publish', icon: 'arrowUpBox', x: 1180, y: -250},
+      {id: 'brief', label: 'Brief Input', icon: 'docPen', x: -1370, y: -250},
+      {id: 'ai', label: 'AI Model', icon: 'robotHead', x: -700, y: 140},
+      {id: 'draft', label: 'Draft Generation', icon: 'stackedPages', x: -10, y: -235},
+      {id: 'review', label: 'Human Review', icon: 'checkCircle', x: 670, y: -570},
+      {id: 'analytics', label: 'Analytics', icon: 'barChart', x: 670, y: 410},
+      {id: 'publish', label: 'Publish', icon: 'arrowUpBox', x: 1300, y: -250},
     ],
     edges: [
       {from: 'brief', to: 'ai'},

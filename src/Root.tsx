@@ -16,6 +16,15 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{variant: 'meal' as const}}
       />
+      <Composition
+        id="WorkflowContent"
+        component={WorkflowDiagram}
+        durationInFrames={DURATION}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{variant: 'content' as const}}
+      />
     </>
   );
 };
