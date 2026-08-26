@@ -1,0 +1,6 @@
+# Rendered intermediates: 1050 PNGs at 1920x1080 (~1.2 GB). Regenerate with
+# `node build/render.mjs`.
+frames/
+probe.riv
+probe.frame.png
+smoke.riv
