@@ -3,51 +3,47 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { z } from "zod";
 import {
   BACKGROUND_COLOR,
-  HALO_DRIFT_DISTANCE,
   HALO_DRIFT_PERIOD,
-  HALO_PARTICLE_COUNT,
-  HEIGHT,
   RIPPLE_PERIOD,
-  RING_PARTICLE_COUNT,
   SHIMMER_PERIOD,
   VIGNETTE_COLOR,
-  WIDTH,
   WIGGLE_PERIOD,
+  computeGeometry,
 } from "./constants";
 import {
-  HALO_START_RADIUS,
   generateHaloParticles,
   generateRingParticles,
+  haloStartRadius,
 } from "./particles";
 import { gradientColorAt } from "./color";
 
 export const particleRingHaloSchema = z.object({
   backgroundColor: z.string(),
-  ringParticleCount: z.number().int().positive(),
-  haloParticleCount: z.number().int().positive(),
+  // 1 = 1080p (1920x1080), 2 = 4K (3840x2160), etc. Must match the
+  // width/height the Composition is registered with in Root.tsx.
+  resolutionScale: z.number().positive(),
+  // Optional overrides; omit to auto-scale with resolutionScale.
+  ringParticleCount: z.number().int().positive().optional(),
+  haloParticleCount: z.number().int().positive().optional(),
 });
 
 export type ParticleRingHaloProps = z.infer<typeof particleRingHaloSchema>;
 
 export const particleRingHaloDefaults: ParticleRingHaloProps = {
   backgroundColor: BACKGROUND_COLOR,
-  ringParticleCount: RING_PARTICLE_COUNT,
-  haloParticleCount: HALO_PARTICLE_COUNT,
+  resolutionScale: 1,
 };
 
 const RIPPLE_LOBES = 3;
 const RIPPLE_TIME_FREQ = (Math.PI * 2) / RIPPLE_PERIOD;
 const SHIMMER_TIME_FREQ = (Math.PI * 2) / SHIMMER_PERIOD;
 const WIGGLE_TIME_FREQ = (Math.PI * 2) / WIGGLE_PERIOD;
-const CENTER_X = WIDTH / 2;
-const CENTER_Y = HEIGHT / 2;
-const HALO_MAX_RADIUS = HALO_START_RADIUS + HALO_DRIFT_DISTANCE;
 
-const createCanvas = () => {
+const createCanvas = (width: number, height: number) => {
   if (typeof document === "undefined") return null;
   const canvas = document.createElement("canvas");
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
+  canvas.width = width;
+  canvas.height = height;
   return canvas;
 };
 
@@ -60,21 +56,24 @@ const createCanvas = () => {
 // copy, both blended with "screen" over the navy background.
 export const ParticleRingHalo: React.FC<ParticleRingHaloProps> = ({
   backgroundColor,
+  resolutionScale,
   ringParticleCount,
   haloParticleCount,
 }) => {
   const frame = useCurrentFrame();
 
-  const ringParticles = useMemo(
-    () => generateRingParticles(ringParticleCount),
-    [ringParticleCount],
+  const geometry = useMemo(
+    () => computeGeometry(resolutionScale, ringParticleCount, haloParticleCount),
+    [resolutionScale, ringParticleCount, haloParticleCount],
   );
-  const haloParticles = useMemo(
-    () => generateHaloParticles(haloParticleCount),
-    [haloParticleCount],
-  );
+  const { width, height, centerX, centerY } = geometry;
+  const haloStart = useMemo(() => haloStartRadius(geometry), [geometry]);
+  const haloMaxRadius = haloStart + geometry.haloDriftDistance;
 
-  const offscreen = useMemo(createCanvas, []);
+  const ringParticles = useMemo(() => generateRingParticles(geometry), [geometry]);
+  const haloParticles = useMemo(() => generateHaloParticles(geometry), [geometry]);
+
+  const offscreen = useMemo(() => createCanvas(width, height), [width, height]);
   const glowRef = useRef<HTMLCanvasElement>(null);
   const sharpRef = useRef<HTMLCanvasElement>(null);
 
@@ -85,7 +84,7 @@ export const ParticleRingHalo: React.FC<ParticleRingHaloProps> = ({
     const sharpCtx = sharpRef.current?.getContext("2d");
     if (!ctx || !glowCtx || !sharpCtx) return;
 
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.clearRect(0, 0, width, height);
     ctx.globalCompositeOperation = "lighter";
 
     for (const p of ringParticles) {
@@ -93,8 +92,8 @@ export const ParticleRingHalo: React.FC<ParticleRingHaloProps> = ({
         p.baseAngle + p.wiggleAAmp * Math.sin(frame * WIGGLE_TIME_FREQ + p.wiggleAPhase);
       const radius =
         p.baseRadius + p.wiggleRAmp * Math.sin(frame * WIGGLE_TIME_FREQ + p.wiggleRPhase);
-      const x = CENTER_X + radius * Math.cos(angle);
-      const y = CENTER_Y + radius * Math.sin(angle);
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
 
       const ripple =
         1 + 0.35 * Math.sin(angle * RIPPLE_LOBES - frame * RIPPLE_TIME_FREQ);
@@ -112,13 +111,13 @@ export const ParticleRingHalo: React.FC<ParticleRingHaloProps> = ({
     for (const p of haloParticles) {
       const t = (((frame / HALO_DRIFT_PERIOD + p.phase) % 1) + 1) % 1;
       const angle = p.angle + p.wobbleAmp * Math.sin(frame * WIGGLE_TIME_FREQ + p.wobblePhase);
-      const radius = HALO_START_RADIUS + t * HALO_DRIFT_DISTANCE;
-      const x = CENTER_X + radius * Math.cos(angle);
-      const y = CENTER_Y + radius * Math.sin(angle);
+      const radius = haloStart + t * geometry.haloDriftDistance;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
 
       const verticalT = Math.max(
         0,
-        Math.min(1, (y - (CENTER_Y - HALO_MAX_RADIUS)) / (HALO_MAX_RADIUS * 2)),
+        Math.min(1, (y - (centerY - haloMaxRadius)) / (haloMaxRadius * 2)),
       );
       const alpha = Math.max(0, Math.min(1, Math.sin(Math.PI * t) * 0.55));
 
@@ -132,30 +131,42 @@ export const ParticleRingHalo: React.FC<ParticleRingHaloProps> = ({
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
 
-    glowCtx.clearRect(0, 0, WIDTH, HEIGHT);
+    glowCtx.clearRect(0, 0, width, height);
     glowCtx.drawImage(offscreen, 0, 0);
-    sharpCtx.clearRect(0, 0, WIDTH, HEIGHT);
+    sharpCtx.clearRect(0, 0, width, height);
     sharpCtx.drawImage(offscreen, 0, 0);
-  }, [frame, offscreen, ringParticles, haloParticles]);
+  }, [
+    frame,
+    offscreen,
+    ringParticles,
+    haloParticles,
+    width,
+    height,
+    centerX,
+    centerY,
+    haloStart,
+    haloMaxRadius,
+    geometry.haloDriftDistance,
+  ]);
 
   return (
     <AbsoluteFill style={{ backgroundColor }}>
       <canvas
         ref={glowRef}
-        width={WIDTH}
-        height={HEIGHT}
+        width={width}
+        height={height}
         style={{
           position: "absolute",
           inset: 0,
-          filter: "blur(19px)",
+          filter: `blur(${geometry.blurPx}px)`,
           opacity: 0.85,
           mixBlendMode: "screen",
         }}
       />
       <canvas
         ref={sharpRef}
-        width={WIDTH}
-        height={HEIGHT}
+        width={width}
+        height={height}
         style={{ position: "absolute", inset: 0, mixBlendMode: "screen" }}
       />
       <AbsoluteFill

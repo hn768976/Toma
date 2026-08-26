@@ -13,10 +13,10 @@ import {
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
 import {
+  BASE_WIDTH,
+  BASE_HEIGHT,
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
-  WIDTH as RING_WIDTH,
-  HEIGHT as RING_HEIGHT,
 } from "./particle-ring/constants";
 
 export const RemotionRoot: React.FC = () => {
@@ -37,10 +37,20 @@ export const RemotionRoot: React.FC = () => {
         component={ParticleRingHalo}
         durationInFrames={RING_DURATION_IN_FRAMES}
         fps={RING_FPS}
-        width={RING_WIDTH}
-        height={RING_HEIGHT}
+        width={BASE_WIDTH}
+        height={BASE_HEIGHT}
         schema={particleRingHaloSchema}
         defaultProps={particleRingHaloDefaults}
+      />
+      <Composition
+        id="ParticleRingHalo4K"
+        component={ParticleRingHalo}
+        durationInFrames={RING_DURATION_IN_FRAMES}
+        fps={RING_FPS}
+        width={BASE_WIDTH * 2}
+        height={BASE_HEIGHT * 2}
+        schema={particleRingHaloSchema}
+        defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
     </>
   );

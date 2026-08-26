@@ -1,6 +1,6 @@
 import { seededRandom } from "./random";
 import { gradientColorAt } from "./color";
-import { CENTER, HALO_INNER_OFFSET, RING_BAND_WIDTH, RING_CORE_RADIUS } from "./constants";
+import type { RingGeometry } from "./constants";
 
 export type RingParticle = {
   baseAngle: number;
@@ -33,20 +33,21 @@ const gaussianish = (index: number, salt: number) => {
   return ((a + b + c) / 3 - 0.5) * 2;
 };
 
-export const generateRingParticles = (count: number): RingParticle[] => {
+export const generateRingParticles = (geometry: RingGeometry): RingParticle[] => {
+  const { ringParticleCount: count, ringCoreRadius, ringBandWidth, centerY, sizeScale } = geometry;
   const particles: RingParticle[] = [];
   for (let i = 0; i < count; i++) {
     const angleJitter = (seededRandom(i, 1) - 0.5) * (Math.PI * 2) / count * 2;
     const baseAngle = (i / count) * Math.PI * 2 + angleJitter;
     const radialSample = gaussianish(i, 10); // roughly in [-1, 1], clustered near 0
-    const baseRadius = RING_CORE_RADIUS + radialSample * RING_BAND_WIDTH;
+    const baseRadius = ringCoreRadius + radialSample * ringBandWidth;
 
-    const y = CENTER.y + baseRadius * Math.sin(baseAngle);
-    const t = (y - (CENTER.y - RING_CORE_RADIUS - RING_BAND_WIDTH)) /
-      ((RING_CORE_RADIUS + RING_BAND_WIDTH) * 2);
+    const y = centerY + baseRadius * Math.sin(baseAngle);
+    const t = (y - (centerY - ringCoreRadius - ringBandWidth)) /
+      ((ringCoreRadius + ringBandWidth) * 2);
 
     const brightnessBase = Math.max(0.35, 1 - Math.abs(radialSample) * 0.75);
-    const size = 1.1 + seededRandom(i, 20) * 1.7;
+    const size = (1.1 + seededRandom(i, 20) * 1.7) * sizeScale;
 
     particles.push({
       baseAngle,
@@ -57,14 +58,15 @@ export const generateRingParticles = (count: number): RingParticle[] => {
       shimmerPhase: seededRandom(i, 30) * Math.PI * 2,
       wiggleRPhase: seededRandom(i, 40) * Math.PI * 2,
       wiggleAPhase: seededRandom(i, 50) * Math.PI * 2,
-      wiggleRAmp: 1.5 + seededRandom(i, 60) * 2.5,
-      wiggleAAmp: 0.004 + seededRandom(i, 70) * 0.006,
+      wiggleRAmp: (1.5 + seededRandom(i, 60) * 2.5) * sizeScale,
+      wiggleAAmp: 0.004 + seededRandom(i, 70) * 0.006, // angular, resolution-independent
     });
   }
   return particles;
 };
 
-export const generateHaloParticles = (count: number): HaloParticle[] => {
+export const generateHaloParticles = (geometry: RingGeometry): HaloParticle[] => {
+  const { haloParticleCount: count, sizeScale } = geometry;
   const particles: HaloParticle[] = [];
   for (let i = 0; i < count; i++) {
     particles.push({
@@ -72,10 +74,11 @@ export const generateHaloParticles = (count: number): HaloParticle[] => {
       wobblePhase: seededRandom(i, 110) * Math.PI * 2,
       wobbleAmp: 0.03 + seededRandom(i, 120) * 0.05,
       phase: seededRandom(i, 130),
-      size: 0.8 + seededRandom(i, 140) * 1.3,
+      size: (0.8 + seededRandom(i, 140) * 1.3) * sizeScale,
     });
   }
   return particles;
 };
 
-export const HALO_START_RADIUS = RING_CORE_RADIUS + RING_BAND_WIDTH + HALO_INNER_OFFSET;
+export const haloStartRadius = (geometry: RingGeometry) =>
+  geometry.ringCoreRadius + geometry.ringBandWidth + geometry.haloInnerOffset;
