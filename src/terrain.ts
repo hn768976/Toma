@@ -148,7 +148,12 @@ export const marchContours = (
   }
 };
 
-/** The evenly spaced iso-height levels, computed once. */
+/**
+ * The evenly spaced iso-height levels. Even GROUND spacing between ropes
+ * comes from the level count + low terrain amplitude combination (gentle,
+ * near-constant slopes), not from redistributing the levels — noise heights
+ * cluster around zero, so the middle levels carry most of the picture.
+ */
 export const contourLevels = (): number[] => {
   const {levels} = CONFIG.contours;
   const {amp} = CONFIG.terrain;

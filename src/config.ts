@@ -43,7 +43,7 @@ export const CONFIG = {
     /** Peak-to-mid height of the terrain. Kept low: gentle relief spaces the
      * ropes evenly and stops them stacking/overlapping on screen when seen
      * from the low camera. */
-    amp: 1.5,
+    amp: 1.35,
     /** How fast the noise field breathes, in noise-t per second.
      * 0 = frozen: the rope lines do not move — only the dots travel on them. */
     breatheSpeed: 0,
@@ -51,7 +51,7 @@ export const CONFIG = {
 
   contours: {
     /** Number of iso-height levels. */
-    levels: 14,
+    levels: 18,
     /** Line width in WORLD units (LineMaterial worldUnits) — near lines render
      * thick, far ones thin, for free. */
     lineWidth: 0.012,
