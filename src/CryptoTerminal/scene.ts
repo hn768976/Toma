@@ -9,7 +9,6 @@ import {
   CAM_SCALE,
   CAM_SHEAR_X,
   CAM_SHEAR_Y,
-  COLORS,
   DURATION,
   HEIGHT,
   K_FAR,
@@ -25,6 +24,7 @@ import {
 } from './constants';
 import {BLEED} from './dof';
 import {Candle, wrap} from './series';
+import {Theme} from './theme';
 
 export type Fonts = {mono: string; sans: string};
 
@@ -165,20 +165,13 @@ const line = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number,
 
 // ── Scene ─────────────────────────────────────────────────────────────────
 
-// Truncated the way a narrow column would truncate them.
-const TICKERS = [
-  'BTC-U..', 'ETH-U..', 'XRP-U..', 'LTC-U..', 'ADA-U..', 'SOL-U..', 'DOT-U..',
-  'LINK-..', 'XLM-U..', 'DOGE-..', 'BCH-U..', 'ATOM-..', 'AVAX-..', 'ALGO-..',
-  'TRX-U..', 'FIL-U..',
+const SYMBOLS = [
+  'BTC', 'ETH', 'XRP', 'LTC', 'ADA', 'SOL', 'DOT', 'LINK',
+  'XLM', 'DOGE', 'BCH', 'ATOM', 'AVAX', 'ALGO', 'TRX', 'FIL',
 ];
-const ICON_COLORS = [
-  '#F2A33C',
-  '#6C7A89',
-  COLORS.blue,
-  COLORS.green,
-  '#8B7BD8',
-  COLORS.red,
-];
+/** How the narrow two-column layout truncates them. */
+const TICKERS = SYMBOLS.map((sym) => `${sym}-USD`.slice(0, 5) + '..');
+const iconColors = (t: Theme) => ['#F2A33C', '#6C7A89', t.blue, t.green, '#8B7BD8', t.red];
 const SIDEBAR_ROWS = 15;
 
 /**
@@ -189,7 +182,8 @@ export const drawScene = (
   ctx: CanvasRenderingContext2D,
   frame: number,
   series: Candle[],
-  fonts: Fonts
+  fonts: Fonts,
+  t: Theme
 ) => {
   const s = scrollAt(frame);
   const head = Math.floor(s) + 1; // the forming candle
@@ -203,13 +197,14 @@ export const drawScene = (
   const at = (j: number): Candle | LiveCandle =>
     j === head ? live : series[wrap(j, SERIES_LEN)];
 
-  drawGrid(ctx, frame, s, fonts);
-  drawVolume(ctx, s, head, series);
-  drawCandles(ctx, s, head, at);
-  drawPriceMarker(ctx, frame, s, head, live, fonts);
-  drawSecondaryChart(ctx, s, series);
-  drawSidebar(ctx, frame, fonts);
-  drawFarAxis(ctx, frame, fonts);
+  drawSidebarPanel(ctx, t);
+  drawGrid(ctx, frame, s, fonts, t);
+  drawVolume(ctx, s, head, series, t);
+  drawCandles(ctx, s, head, at, t);
+  drawPriceMarker(ctx, frame, s, head, live, fonts, t);
+  if (t.showSecondaryChart) drawSecondaryChart(ctx, s, series, t);
+  drawSidebar(ctx, frame, fonts, t);
+  if (t.showFarAxis) drawFarAxis(ctx, frame, fonts, t);
 };
 
 // ── Grid and y-axis ───────────────────────────────────────────────────────
@@ -218,7 +213,8 @@ const drawGrid = (
   ctx: CanvasRenderingContext2D,
   frame: number,
   s: number,
-  fonts: Fonts
+  fonts: Fonts,
+  t: Theme
 ) => {
   const top = -1400;
   const bottom = 3400;
@@ -231,7 +227,7 @@ const drawGrid = (
   // Faint vertical rules, scrolling in lockstep with the candles. The column
   // spacing has to DIVIDE SERIES_LEN, or the rules land on different candles at
   // frame 0 and frame 1620 and the loop stops being pixel-exact.
-  ctx.strokeStyle = COLORS.rule;
+  ctx.strokeStyle = t.rule;
   ctx.lineWidth = 2;
   const COLUMN_SPACING = 13; // 260 / 20
   const firstCol = Math.ceil((s - 130) / COLUMN_SPACING) * COLUMN_SPACING;
@@ -247,10 +243,10 @@ const drawGrid = (
   const first = Math.ceil(priceAtY(bottom, frame) / step) * step;
   for (let v = first; v < priceAtY(top, frame); v += step) {
     const y = yAtPrice(v, frame);
-    ctx.strokeStyle = COLORS.rule;
+    ctx.strokeStyle = t.rule;
     ctx.lineWidth = 2.5;
     line(ctx, LAYOUT.chartLeft, y, LAYOUT.gridRight, y);
-    ctx.fillStyle = COLORS.text;
+    ctx.fillStyle = t.text;
     ctx.fillText(axisLabel(v), LAYOUT.labelRight, y - 14);
   }
   ctx.textAlign = 'left';
@@ -262,7 +258,8 @@ const drawVolume = (
   ctx: CanvasRenderingContext2D,
   s: number,
   head: number,
-  series: Candle[]
+  series: Candle[],
+  t: Theme
 ) => {
   // Low contrast on purpose — this is secondary information.
   for (let j = head - 132; j <= head; j++) {
@@ -271,8 +268,10 @@ const drawVolume = (
     if (x < LAYOUT.chartLeft - PITCH || x > LAYOUT.gridRight + PITCH) continue;
     const base = LAYOUT.volumeBase;
     const h = Math.max(6, c.volume * LAYOUT.volumeMax);
-    ctx.fillStyle = c.close >= c.open ? 'rgba(38,166,106,0.30)' : 'rgba(217,69,92,0.30)';
+    ctx.fillStyle = c.close >= c.open ? t.green : t.red;
+    ctx.globalAlpha = t.volumeAlpha;
     ctx.fillRect(x - 3, base - h, 6, h);
+    ctx.globalAlpha = 1;
   }
 };
 
@@ -282,14 +281,15 @@ const drawCandles = (
   ctx: CanvasRenderingContext2D,
   s: number,
   head: number,
-  at: (j: number) => Candle | LiveCandle
+  at: (j: number) => Candle | LiveCandle,
+  t: Theme
 ) => {
   for (let j = head - 132; j <= head; j++) {
     const x = candleX(j, s);
     if (x < LAYOUT.chartLeft - PITCH || x > LAYOUT.gridRight + PITCH) continue;
     const c = at(j);
     const up = c.close >= c.open;
-    const color = up ? COLORS.green : COLORS.red;
+    const color = up ? t.green : t.red;
     const yHigh = candleY(j, s, c.high);
     const yLow = candleY(j, s, c.low);
     const yOpen = candleY(j, s, c.open);
@@ -312,11 +312,12 @@ const drawPriceMarker = (
   s: number,
   head: number,
   live: LiveCandle,
-  fonts: Fonts
+  fonts: Fonts,
+  t: Theme
 ) => {
   const y = candleY(head, s, live.close);
   const rising = live.close >= live.open;
-  const color = rising ? COLORS.green : COLORS.red;
+  const color = rising ? t.green : t.red;
   const label = priceAtY(y, frame).toFixed(3);
 
   ctx.strokeStyle = color;
@@ -333,7 +334,7 @@ const drawPriceMarker = (
   ctx.fillStyle = color;
   roundRect(ctx, LAYOUT.labelRight + 16 - w, y - h / 2, w, h, 7);
   ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = t.tagText;
   ctx.textAlign = 'right';
   ctx.fillText(label, LAYOUT.labelRight - 1, y + 14);
   ctx.textAlign = 'left';
@@ -345,7 +346,12 @@ const drawPriceMarker = (
  * A second, larger chart peeking out from behind the sidebar. It is always deep
  * in the right-hand blur zone, so it reads as depth rather than as detail.
  */
-const drawSecondaryChart = (ctx: CanvasRenderingContext2D, s: number, series: Candle[]) => {
+const drawSecondaryChart = (
+  ctx: CanvasRenderingContext2D,
+  s: number,
+  series: Candle[],
+  t: Theme
+) => {
   const pitch = 34;
   const scale = pitch / PITCH;
   ctx.globalAlpha = 0.5;
@@ -357,7 +363,7 @@ const drawSecondaryChart = (ctx: CanvasRenderingContext2D, s: number, series: Ca
     const y0 = 640 - (j - s - 130) * SLOPE_PX * scale;
     const yy = (level: number) => y0 - level * PX_PER_LOG * scale * 1.6;
     const up = c.close >= c.open;
-    ctx.fillStyle = up ? COLORS.green : COLORS.red;
+    ctx.fillStyle = up ? t.green : t.red;
     ctx.fillRect(x - 2, yy(c.high), 4, yy(c.low) - yy(c.high));
     const top = Math.min(yy(c.open), yy(c.close));
     ctx.fillRect(x - 12, top, 24, Math.max(4, Math.abs(yy(c.close) - yy(c.open))));
@@ -367,41 +373,79 @@ const drawSecondaryChart = (ctx: CanvasRenderingContext2D, s: number, series: Ca
 
 // ── Sidebar ───────────────────────────────────────────────────────────────
 
-const drawSidebar = (ctx: CanvasRenderingContext2D, frame: number, fonts: Fonts) => {
-  const x = LAYOUT.sidebarX;
+/** A slightly lifted panel behind the list. Only the dark cut carries one. */
+const drawSidebarPanel = (ctx: CanvasRenderingContext2D, t: Theme) => {
+  if (!t.panel) return;
+  ctx.fillStyle = t.panel;
+  ctx.fillRect(LAYOUT.divider1, -1400, 4000, 4800);
+};
 
-  ctx.strokeStyle = COLORS.rule;
+const drawSidebar = (
+  ctx: CanvasRenderingContext2D,
+  frame: number,
+  fonts: Fonts,
+  t: Theme
+) => {
+  const x = LAYOUT.sidebarX;
+  const icons = iconColors(t);
+
+  // With the far-right column dropped, the list takes the room it leaves: the
+  // panel runs off the frame edge and the percentage gets a column of its own
+  // instead of being tucked under the price.
+  // Column positions are bounded by where the frame edge actually falls: the
+  // camera shear pulls it in as you go up, so design x 2300 is the furthest
+  // right anything can sit and still be in shot at the header row.
+  const wide = !t.showFarAxis;
+  const right = wide ? LAYOUT.divider2 + 420 : LAYOUT.divider2;
+  const priceX = wide ? x + 270 : x + 258;
+  const pctX = wide ? x + 395 : x + 258;
+  const pctDy = wide ? 0 : 26;
+
+  ctx.strokeStyle = t.rule;
   ctx.lineWidth = 3;
   line(ctx, LAYOUT.divider1, -1400, LAYOUT.divider1, 3400);
-  line(ctx, LAYOUT.divider2, -1400, LAYOUT.divider2, 3400);
+  if (!wide) line(ctx, LAYOUT.divider2, -1400, LAYOUT.divider2, 3400);
+
+  // Column headers: left-aligned in the narrow layout, right-aligned over
+  // their columns in the wide one, where there are three of them.
+  const headers = (y: number) => {
+    if (!wide) {
+      ctx.fillText('Last P...', x + 150, y);
+      return;
+    }
+    ctx.textAlign = 'right';
+    ctx.fillText('Last P...', priceX, y);
+    ctx.fillText('Chg %', pctX, y);
+    ctx.textAlign = 'left';
+  };
 
   // A second column header, clipped by the top of the frame.
   ctx.font = `500 34px ${fonts.sans}`;
-  ctx.fillStyle = COLORS.text;
+  ctx.fillStyle = t.text;
   ctx.fillText('Symbol', x, 330);
-  ctx.fillText('Last P...', x + 150, 330);
-  ctx.strokeStyle = COLORS.rule;
+  headers(330);
+  ctx.strokeStyle = t.rule;
   ctx.lineWidth = 2.5;
-  line(ctx, LAYOUT.divider1, 372, LAYOUT.divider2, 372);
+  line(ctx, LAYOUT.divider1, 372, right, 372);
 
   ctx.font = `500 58px ${fonts.sans}`;
-  ctx.fillStyle = COLORS.text;
+  ctx.fillStyle = t.text;
   ctx.fillText('Cryptocurrencies', x, 530);
 
   ctx.font = `400 28px ${fonts.sans}`;
-  ctx.fillStyle = COLORS.mid;
+  ctx.fillStyle = t.mid;
   ctx.fillText('Symbol', x + 4, 630);
-  ctx.fillText('Last P...', x + 150, 630);
-  ctx.strokeStyle = COLORS.rule;
+  headers(630);
+  ctx.strokeStyle = t.rule;
   ctx.lineWidth = 2.5;
-  line(ctx, LAYOUT.divider1, 660, LAYOUT.divider2, 660);
+  line(ctx, LAYOUT.divider1, 660, right, 660);
 
   const rowTop = 730;
   const pitch = 68;
 
   for (let i = 0; i < SIDEBAR_ROWS; i++) {
     const y = rowTop + i * pitch;
-    ctx.fillStyle = ICON_COLORS[i % ICON_COLORS.length];
+    ctx.fillStyle = icons[i % icons.length];
     ctx.globalAlpha = 0.75;
     ctx.beginPath();
     ctx.arc(x + 14, y - 9, 12, 0, Math.PI * 2);
@@ -410,17 +454,18 @@ const drawSidebar = (ctx: CanvasRenderingContext2D, frame: number, fonts: Fonts)
 
     // Text is deliberately small and low-contrast — it is texture, not copy.
     ctx.font = `400 26px ${fonts.mono}`;
-    ctx.fillStyle = COLORS.mid;
-    ctx.fillText(TICKERS[i % TICKERS.length], x + 34, y);
+    ctx.fillStyle = t.mid;
+    // The third column buys enough room to spell the symbol out in full.
+    ctx.fillText(wide ? SYMBOLS[i % SYMBOLS.length] : TICKERS[i % TICKERS.length], x + 34, y);
 
     const value = 40 + random(`row-price-${i}`) * 48000;
-    ctx.font = `400 20px ${fonts.mono}`;
+    ctx.font = `400 ${wide ? 22 : 20}px ${fonts.mono}`;
     ctx.textAlign = 'right';
-    ctx.fillStyle = COLORS.text;
+    ctx.fillStyle = t.text;
     ctx.globalAlpha = 0.55;
     ctx.fillText(
       group(Math.round(value)) + '.' + String(Math.floor(random(`row-dec-${i}`) * 900) + 100),
-      x + 258,
+      priceX,
       y
     );
     ctx.globalAlpha = 1;
@@ -428,12 +473,12 @@ const drawSidebar = (ctx: CanvasRenderingContext2D, frame: number, fonts: Fonts)
     // A few rows carry a small signed percentage.
     if (random(`row-pct-${i}`) > 0.42) {
       const pct = (random(`row-pctv-${i}`) - 0.42) * 9;
-      ctx.font = `400 18px ${fonts.mono}`;
-      ctx.fillStyle = pct >= 0 ? COLORS.green : COLORS.red;
+      ctx.font = `400 ${wide ? 20 : 18}px ${fonts.mono}`;
+      ctx.fillStyle = pct >= 0 ? t.green : t.red;
       // One row at a time dims, as if its quote had just ticked. The cycle is
       // 18 steps of 90 frames — exactly DURATION — so it closes on the loop.
       ctx.globalAlpha = i === Math.floor(frame / 90) % 18 ? 0.55 : 1;
-      ctx.fillText(`${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`, x + 258, y + 26);
+      ctx.fillText(`${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`, pctX, y + pctDy);
       ctx.globalAlpha = 1;
     }
     ctx.textAlign = 'left';
@@ -442,7 +487,12 @@ const drawSidebar = (ctx: CanvasRenderingContext2D, frame: number, fonts: Fonts)
 
 // ── Far-right cropped axis ────────────────────────────────────────────────
 
-const drawFarAxis = (ctx: CanvasRenderingContext2D, frame: number, fonts: Fonts) => {
+const drawFarAxis = (
+  ctx: CanvasRenderingContext2D,
+  frame: number,
+  fonts: Fonts,
+  t: Theme
+) => {
   const top = -1400;
   const bottom = 3400;
   const priceAt = (y: number) =>
@@ -452,8 +502,8 @@ const drawFarAxis = (ctx: CanvasRenderingContext2D, frame: number, fonts: Fonts)
   const mid = LAYOUT.yAnchor;
   const step = niceStep(priceAt(mid - VISIBLE_H / 2) - priceAt(mid + VISIBLE_H / 2), 3);
   ctx.font = `400 170px ${fonts.mono}`;
-  ctx.fillStyle = COLORS.mid;
-  ctx.strokeStyle = COLORS.rule;
+  ctx.fillStyle = t.mid;
+  ctx.strokeStyle = t.rule;
   ctx.lineWidth = 5;
   const first = Math.ceil(priceAt(bottom) / step) * step;
   for (let v = first; v < priceAt(top); v += step) {

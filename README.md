@@ -7,13 +7,17 @@ rendered to a single `<canvas>`.
 ```
 npm install
 npm run dev                       # Remotion Studio
-npm run build                     # 4K master, out/crypto-terminal.mp4
+npm run build                     # 4K light master
+npm run build:dark                # 4K dark master
 ```
 
-The full render command:
+The full render commands:
 
 ```
 npx remotion render CryptoTerminal out/crypto-terminal.mp4 \
+  --codec=h264 --crf=14 --concurrency=8
+
+npx remotion render CryptoTerminalDark out/crypto-terminal-dark.mp4 \
   --codec=h264 --crf=14 --concurrency=8
 ```
 
@@ -24,10 +28,32 @@ otherwise Remotion muxes a silent audio track into every render.
 
 | | |
 |---|---|
-| Composition | `CryptoTerminal` |
+| Compositions | `CryptoTerminal`, `CryptoTerminalDark` |
 | Resolution | 3840 × 2160 |
 | Frame rate | 60 fps |
 | Duration | 1620 frames — 27.0 s, seamless |
+
+## The two cuts
+
+Both compositions render the same scene from the same seeded series and the
+same 1620-frame loop. They differ by a `Theme` (`src/CryptoTerminal/theme.ts`),
+which carries more than a palette, because nearly everything about a defocused
+screen inverts between light and dark:
+
+| | light | dark |
+|---|---|---|
+| Defocus washes toward | white | near-black |
+| Highlights | clip gently toward white (`lighten`) | bloom additively, two octaves |
+| Grain | near-white, `multiply` | near-black, `lighter` |
+| Vignette | warm, slight | cool, deeper |
+| Colours | print-like, muted | luminous — muted ones would sink into the ground |
+
+The theme also carries the two content flags that separate the cuts. The dark
+one keeps the main candle chart but drops the candles that bleed across the
+sidebar and the oversized numerals that slide down the far right, so the
+right-hand third stays quiet. The sidebar takes the room they leave: three
+columns instead of two, with the symbols spelled out in full rather than
+truncated.
 
 ## Determinism
 
@@ -104,8 +130,8 @@ upper-left recedes into near-pure white haze; the far-right column is a differen
 panel of the UI and softens on its own.
 
 The sidebar list runs uniformly from top to bottom — no selected-row highlight.
-Every row carries an icon, a truncated ticker, a last price and, on some rows, a
-signed percentage.
+Every row carries an icon, a symbol, a last price and, on some rows, a signed
+percentage.
 
 ## Finish
 
@@ -124,8 +150,9 @@ src/CryptoTerminal/
   series.ts      the seeded, exactly-periodic price series
   scene.ts       everything that draws, in design space
   dof.ts         the three-buffer depth-of-field stack
-  finish.ts      haze, breathe, bloom-out, vignette, grain
+  finish.ts      haze, breathe, bloom, vignette, grain
   fonts.ts       self-hosted tabular figures
+  theme.ts       the light and dark cuts
 ```
 
 `scene.ts` draws in a *design space* much larger than the frame — the shot is a

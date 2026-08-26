@@ -1,16 +1,19 @@
 import {BLUR_FAR, BLUR_MID, BLUR_SHARP, HEIGHT, WIDTH} from './constants';
+import {Theme} from './theme';
 
 /**
- * Faked depth of field for a white screen.
+ * Faked depth of field.
  *
  * The scene is drawn ONCE into a master buffer. That master is then copied into
  * three layer buffers, each masked by a smooth weight field, and composited
  * far -> mid -> sharp with a single `ctx.filter = 'blur(Npx)'` per layer.
  * Per-element blurring would be unusably slow at 4K.
  *
- * Because the background is white, defocused content must LOSE contrast rather
- * than glow: each blurred layer is washed toward the background colour with a
- * `source-atop` white fill before it is composited.
+ * Defocused content must LOSE contrast, whichever way the theme runs: each
+ * blurred layer is washed toward the theme's background colour with a
+ * `source-atop` fill before it is composited. On white that means lifting the
+ * content toward white; on black, sinking it toward black. Either way the
+ * blurred layers recede instead of glowing.
  */
 
 /** Extra margin on every buffer so a 30px blur never samples past the edge. */
@@ -95,15 +98,16 @@ export const createBuffers = (): DofBuffers => {
   };
 };
 
-/** How far each layer is lifted toward white, and its composite opacity. */
-const WASH = [0, 0.16, 0.46];
-const LAYER_ALPHA = [1, 0.97, 0.86];
-
 /**
  * Composites the master buffer onto `out` through the three-layer DOF stack.
  * Draw order is far -> mid -> sharp so nearer, crisper content sits on top.
  */
-export const compositeDof = (out: CanvasRenderingContext2D, bufs: DofBuffers) => {
+export const compositeDof = (
+  out: CanvasRenderingContext2D,
+  bufs: DofBuffers,
+  t: Theme
+) => {
+  const [r, g, b] = t.bgRgb;
   for (let layer = 2; layer >= 0; layer--) {
     const canvas = bufs.layers[layer];
     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -118,16 +122,17 @@ export const compositeDof = (out: CanvasRenderingContext2D, bufs: DofBuffers) =>
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(bufs.masks[layer], 0, 0, BUF_W, BUF_H);
 
-    // Defocused content washes out toward white instead of glowing.
-    if (WASH[layer] > 0) {
+    // Defocused content washes toward the background instead of glowing.
+    const wash = t.dofWash[layer];
+    if (wash > 0) {
       ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = `rgba(255,255,255,${WASH[layer]})`;
+      ctx.fillStyle = `rgba(${r},${g},${b},${wash})`;
       ctx.fillRect(0, 0, BUF_W, BUF_H);
     }
     ctx.globalCompositeOperation = 'source-over';
 
     out.save();
-    out.globalAlpha = LAYER_ALPHA[layer];
+    out.globalAlpha = t.dofAlpha[layer];
     out.filter = LEVELS[layer] > 0 ? `blur(${LEVELS[layer]}px)` : 'none';
     out.drawImage(canvas, -BLEED, -BLEED);
     out.restore();
