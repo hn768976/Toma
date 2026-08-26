@@ -150,65 +150,110 @@ const buildRobot = (
 ): void => {
   const {w, h} = spec;
   const cx = w / 2;
-  const cy = h / 2 + 14;
-  const hw = w * 0.3;
-  const hh = h * 0.25;
+  const cy = h / 2 - h * 0.02;
+  const hw = w * 0.29; // head half-width
+  const hh = h * 0.235; // head half-height
+  const bright = rgba(theme.textWhite, 0.95);
 
   ctx.save();
-  ctx.shadowColor = rgba(theme.panelBorder, 0.9);
-  ctx.shadowBlur = 40;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
 
-  // Antenna.
-  ctx.strokeStyle = rgba(theme.textWhite, 0.85);
-  ctx.lineWidth = 7;
+  /* ---- antenna ------------------------------------------------------- */
+  ctx.shadowColor = rgba(theme.panelBorder, 0.9);
+  ctx.shadowBlur = 34;
+  ctx.strokeStyle = bright;
+  ctx.lineWidth = 6;
   ctx.beginPath();
-  ctx.moveTo(cx, cy - hh - 60);
-  ctx.lineTo(cx, cy - hh - 6);
+  ctx.moveTo(cx, cy - hh - 52);
+  ctx.lineTo(cx, cy - hh + 4);
   ctx.stroke();
   ctx.beginPath();
-  ctx.arc(cx, cy - hh - 74, 16, 0, Math.PI * 2);
-  ctx.fillStyle = rgba(theme.textWhite, 0.95);
+  ctx.arc(cx, cy - hh - 64, 15, 0, Math.PI * 2);
+  ctx.fillStyle = bright;
   ctx.fill();
 
-  // Head.
-  roundedRect(ctx, cx - hw, cy - hh, hw * 2, hh * 2, hh * 0.46);
-  ctx.strokeStyle = rgba(theme.textWhite, 0.9);
-  ctx.lineWidth = 9;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // Ears.
-  for (const s of [-1, 1]) {
-    roundedRect(ctx, cx + s * hw - (s > 0 ? -6 : 20) - 7, cy - 22, 26, 44, 12);
-    ctx.strokeStyle = rgba(theme.textWhite, 0.7);
-    ctx.lineWidth = 7;
-    ctx.stroke();
-  }
-
-  // Eyes.
-  for (const s of [-1, 1]) {
-    ctx.beginPath();
-    ctx.arc(cx + s * hw * 0.42, cy - hh * 0.22, hh * 0.19, 0, Math.PI * 2);
-    ctx.fillStyle = rgba(theme.textWhite, 0.95);
+  /* ---- ears ---------------------------------------------------------- */
+  // Small tabs tucked behind the head on both sides.
+  const earW = 20;
+  const earH = hh * 0.52;
+  for (const side of [-1, 1]) {
+    roundedRect(ctx, cx + side * (hw + earW * 0.35) - earW / 2, cy - earH / 2, earW, earH, earW / 2);
+    ctx.fillStyle = rgba(theme.textWhite, 0.8);
     ctx.fill();
   }
 
-  // Mouth grille.
-  roundedRect(ctx, cx - hw * 0.46, cy + hh * 0.24, hw * 0.92, hh * 0.4, 12);
-  ctx.strokeStyle = rgba(theme.textWhite, 0.6);
+  /* ---- head ---------------------------------------------------------- */
+  // Generous corner radius: a soft, friendly capsule rather than a box.
+  roundedRect(ctx, cx - hw, cy - hh, hw * 2, hh * 2, hh * 0.52);
+  ctx.fillStyle = rgba(theme.panelFill, 0.85);
+  ctx.fill();
+  ctx.strokeStyle = bright;
+  ctx.lineWidth = 8;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  /* ---- visor --------------------------------------------------------- */
+  // A single darker plate carrying both eyes, which is what stops the face
+  // reading as two loose dots on a blank panel.
+  const visorW = hw * 1.42;
+  const visorH = hh * 0.86;
+  roundedRect(ctx, cx - visorW / 2, cy - hh * 0.62, visorW, visorH, visorH * 0.46);
+  ctx.fillStyle = rgba(theme.panelBorder, 0.16);
+  ctx.fill();
+  ctx.strokeStyle = rgba(theme.textWhite, 0.32);
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  /* ---- eyes ---------------------------------------------------------- */
+  const eyeR = hh * 0.2;
+  ctx.shadowColor = rgba(theme.panelBorder, 0.95);
+  ctx.shadowBlur = 22;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.ellipse(cx + side * hw * 0.44, cy - hh * 0.19, eyeR, eyeR * 1.06, 0, 0, Math.PI * 2);
+    ctx.fillStyle = rgba(theme.textWhite, 0.98);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  /* ---- smile --------------------------------------------------------- */
+  ctx.strokeStyle = rgba(theme.textWhite, 0.85);
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(cx - hw * 0.28, cy + hh * 0.36);
+  ctx.quadraticCurveTo(cx, cy + hh * 0.72, cx + hw * 0.28, cy + hh * 0.36);
+  ctx.stroke();
+
+  /* ---- chin indicator ------------------------------------------------ */
+  // Sits half over the head's bottom edge. Deliberately a mark rather than
+  // lettering: the chip already carries the only word in the piece, and a
+  // second one here just competes with it.
+  const badgeR = hh * 0.28;
+  ctx.beginPath();
+  ctx.arc(cx, cy + hh, badgeR, 0, Math.PI * 2);
+  ctx.fillStyle = rgba(theme.panelFill, 0.98);
+  ctx.fill();
+  ctx.shadowColor = rgba(theme.panelBorder, 0.9);
+  ctx.shadowBlur = 20;
+  ctx.strokeStyle = bright;
   ctx.lineWidth = 5;
   ctx.stroke();
-  for (let i = 1; i < 4; i++) {
-    const x = cx - hw * 0.46 + (hw * 0.92 * i) / 4;
-    ctx.beginPath();
-    ctx.moveTo(x, cy + hh * 0.26);
-    ctx.lineTo(x, cy + hh * 0.62);
-    ctx.stroke();
-  }
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.arc(cx, cy + hh, badgeR * 0.5, 0, Math.PI * 2);
+  ctx.strokeStyle = rgba(theme.textWhite, 0.7);
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy + hh, badgeR * 0.17, 0, Math.PI * 2);
+  ctx.fillStyle = rgba(theme.textWhite, 0.95);
+  ctx.fill();
   ctx.restore();
 
   // Caption stub under the icon.
-  roundedRect(ctx, cx - 90, h - 66, 180, 13, 6.5);
+  roundedRect(ctx, cx - 90, h - 62, 180, 13, 6.5);
   ctx.fillStyle = rgba(theme.textWhite, 0.32);
   ctx.fill();
 };

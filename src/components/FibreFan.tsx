@@ -106,9 +106,12 @@ export const FibreFan: React.FC<{
         buf.x[samples - 1],
         buf.y[samples - 1]
       );
-      grad.addColorStop(0, rgba(colour, strand.alpha * 0.55));
-      grad.addColorStop(0.45, rgba(colour, strand.alpha));
-      grad.addColorStop(1, lighten(theme.chip, 0.25, strand.alpha));
+      // Cool at the curtain, warming through the fibre core, and blowing out to
+      // the chip's own hue right at the focus.
+      grad.addColorStop(0, rgba(colour, strand.alpha * 0.45));
+      grad.addColorStop(0.4, rgba(colour, strand.alpha));
+      grad.addColorStop(0.82, lighten(theme.fibreB, 0.3, strand.alpha));
+      grad.addColorStop(1, lighten(theme.chip, 0.45, strand.alpha));
 
       ctx.beginPath();
       tracePath(ctx, buf.x, buf.y);
@@ -139,6 +142,27 @@ export const FibreFan: React.FC<{
       ctx.lineWidth = strand.coreWidth * 1.35;
       ctx.stroke();
     }
+
+    /* ---- pass 4: the focus -------------------------------------------- */
+    // Every strand collapses onto one point, so that point carries a hot spot.
+    // Drawn last and additively, it is what sells the funnel as converging
+    // rather than merely narrowing.
+    const focusGlow = ctx.createRadialGradient(
+      scene.fanFocus.x,
+      scene.fanFocus.y,
+      0,
+      scene.fanFocus.x,
+      scene.fanFocus.y,
+      scene.chip.h * 0.62
+    );
+    focusGlow.addColorStop(0, lighten(theme.fibreB, 0.85, 0.85));
+    focusGlow.addColorStop(0.18, rgba(theme.fibreB, 0.42));
+    focusGlow.addColorStop(0.55, rgba(theme.fibreA, 0.14));
+    focusGlow.addColorStop(1, rgba(theme.fibreA, 0));
+    ctx.fillStyle = focusGlow;
+    ctx.beginPath();
+    ctx.arc(scene.fanFocus.x, scene.fanFocus.y, scene.chip.h * 0.62, 0, Math.PI * 2);
+    ctx.fill();
 
     resetCtx(ctx);
   });

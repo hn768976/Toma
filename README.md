@@ -96,6 +96,36 @@ of those effects takes a dependency array: the draw must run on *every* render,
 or a component whose props happened not to change would be left out of the
 frame.
 
+### The fibre funnel
+
+The strand bundle is a funnel, not a spindle: a wide curtain that tapers the
+whole way to a single tight focus at the chip's upstream face, where a hot spot
+marks the convergence. Each strand is built from two 1-D Bezier profiles —
+`spread` running 1 → 0 across the curtain, `advance` running 0 → 1 along the
+axis — so every strand lands exactly on the focus by construction.
+
+The curtain sits well outside the frame: the strands enter from off-screen and
+only the converging part of the bundle is ever in shot. It has to sit far
+enough out that *both* ends clear the frame edge, because the curtain lies on
+the plane and therefore leans.
+
+That lean does **not** mirror when the piece does — the plane transform is the
+same for both variants, only the layout flips. So the strands nearest the frame
+edge are the bundle's lower ones when the fan is on the left and its upper ones
+when it is on the right, which drags the visible bundle down in one variant and
+up in the other. The origin's vertical offset is therefore signed by
+`flowDirection` like everything else, which puts the bundle across the chip's
+own height in both. Leaving it unsigned is what makes the reversed version look
+like it has come off the plane.
+
+The funnel spreads along the plane's own y axis, so every cross-section of the
+bundle recedes exactly like the panels and the connector traces do. Orienting
+the curtain in screen space instead makes it stand up out of the plane and the
+scene stops reading as one surface.
+
+Hue is organised across the bundle rather than at random: cool on the outside,
+warmer through the core, blowing out to the chip's own hue at the focus.
+
 ### Depth of field
 
 Panels are bucketed into three offscreen buffers by depth and each buffer is

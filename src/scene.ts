@@ -3,6 +3,8 @@ import {
   CHIP_HEIGHT_FRACTION,
   CHIP_OFFSET_FRACTION,
   FAN_ORIGIN_FRACTION,
+  FAN_ORIGIN_Y_OFFSET,
+  FAN_UPSTREAM_LIFT,
   HEIGHT,
   ICON_STRIP,
   PANELS,
@@ -111,6 +113,8 @@ export type Scene = {
   fanOriginScreen: Pt;
   chip: {plane: Pt; w: number; h: number};
   fanOriginPlane: Pt;
+  /** Where the whole bundle converges, in plane space. */
+  fanFocus: Pt;
   strands: StrandGeom[];
   panels: PanelLayout[];
   iconStrip: {plane: Pt; count: number; size: number; gap: number; depth: 0 | 1 | 2};
@@ -123,10 +127,12 @@ export type Scene = {
 
 const SAMPLES = 48;
 
-const cubic = (a: number, b: number, c: number, d: number, t: number): number => {
+/** Scalar cubic Bezier — used to shape the funnel's two 1-D profiles. */
+const cubic1d = (a: number, b: number, c: number, d: number, t: number): number => {
   const m = 1 - t;
   return m * m * m * a + 3 * m * m * t * b + 3 * m * t * t * c + t * t * t * d;
 };
+
 
 export const buildScene = (variant: Variant): Scene => {
   const dir = VARIANT_CONFIG[variant].flowDirection;
@@ -144,7 +150,9 @@ export const buildScene = (variant: Variant): Scene => {
   };
   const fanOriginScreen: Pt = {
     x: WIDTH * (0.5 - dir * FAN_ORIGIN_FRACTION),
-    y: HEIGHT * 0.52,
+    y:
+      HEIGHT *
+      (0.5 - dir * FAN_ORIGIN_Y_OFFSET - ((1 - dir) / 2) * FAN_UPSTREAM_LIFT),
   };
 
   const chipPlane = apply(inv, chipScreen);
@@ -152,53 +160,74 @@ export const buildScene = (variant: Variant): Scene => {
 
   /* ------------------------------------------------------------ strands */
 
-  const originSpread = 150; // tight bundle at the origin, just off-frame
-  const maxSpread = 900; // widest point of the fan, around the frame edge
-  const pinch = 78; // the bundle pinches back down at the chip
+  // The bundle is a funnel, not a spindle: a tall curtain near the frame edge
+  // tapering the whole way to a single tight focus at the chip's upstream face.
+  //
+  // The funnel spreads along the plane's OWN y axis, so every cross-section of
+  // the bundle recedes exactly like the panels and the connector traces do. The
+  // fan has to share the dashboard's perspective; orienting the curtain in
+  // screen space instead makes it stand up out of the plane and the whole scene
+  // stops reading as one surface.
+  const along: Pt = {x: 0, y: 1};
+  const curtainSpread = 1100; // half-height of the curtain, in plane px
+
+  const focus: Pt = {
+    x: chipPlane.x - dir * (chipW / 2) * 0.9,
+    y: chipPlane.y,
+  };
+  const axis: Pt = {x: focus.x - fanOriginPlane.x, y: focus.y - fanOriginPlane.y};
 
   const strands: StrandGeom[] = [];
   for (let i = 0; i < STRAND_COUNT; i++) {
     const seed = `${variant}-strand-${i}`;
-    // -1..1 across the bundle, with a little seeded scatter so the fan does
+    // -1..1 across the bundle, with a little seeded scatter so the curtain does
     // not read as a regular comb.
     const v = ((i + 0.5) / STRAND_COUNT) * 2 - 1 + rrange(`${seed}-jit`, -0.012, 0.012);
 
-    const p0: Pt = {
-      x: fanOriginPlane.x + rrange(`${seed}-ox`, -30, 30),
-      y: fanOriginPlane.y + v * originSpread,
-    };
-    const p3: Pt = {
-      x: chipPlane.x - dir * (chipW / 2) * 0.92,
-      y: chipPlane.y + v * pinch,
-    };
+    // Two 1-D profiles drive the whole strand. `spread` runs 1 -> 0 across the
+    // curtain direction, flaring just past the mouth before it turns over;
+    // `advance` runs 0 -> 1 along the axis to the focus. Because spread ends at
+    // zero and advance ends at one, every strand lands exactly on the focus.
+    const flare = rrange(`${seed}-flare`, 1, 1.13);
+    const adv1 = rrange(`${seed}-d1`, 0.09, 0.17);
+    const adv2 = rrange(`${seed}-d2`, 0.6, 0.72);
+    const tail = rrange(`${seed}-tail`, 0.05, 0.13);
 
-    const run = p3.x - p0.x;
-    const bulge = maxSpread * rrange(`${seed}-bulge`, 0.72, 1.12);
-    const c1: Pt = {
-      x: p0.x + run * rrange(`${seed}-c1x`, 0.2, 0.34),
-      y: fanOriginPlane.y + v * bulge,
-    };
-    const c2: Pt = {
-      x: p0.x + run * rrange(`${seed}-c2x`, 0.55, 0.72),
-      y: chipPlane.y + v * bulge * rrange(`${seed}-c2y`, 0.32, 0.5),
-    };
+    // Small offsets so the ends are not mathematically perfect.
+    const jx = rrange(`${seed}-jx`, -16, 16);
+    const jy = rrange(`${seed}-jy`, -16, 16);
+    const ox = rrange(`${seed}-ox`, -26, 26);
 
     const xs = new Float32Array(SAMPLES);
     const ys = new Float32Array(SAMPLES);
     const env = new Float32Array(SAMPLES);
-    for (let s = 0; s < SAMPLES; s++) {
-      const t = s / (SAMPLES - 1);
-      xs[s] = cubic(p0.x, c1.x, c2.x, p3.x, t);
-      ys[s] = cubic(p0.y, c1.y, c2.y, p3.y, t);
-      // Taper the undulation to zero at both ends so the anchors stay put.
-      env[s] = Math.sin(Math.PI * t) ** 1.4;
+    for (let s2 = 0; s2 < SAMPLES; s2++) {
+      const t = s2 / (SAMPLES - 1);
+      const spread = cubic1d(1, flare, tail, 0, t);
+      const advance = cubic1d(0, adv1, adv2, 1, t);
+      const back = (1 - t) * (1 - t);
+      const fwd = t * t;
+      xs[s2] =
+        fanOriginPlane.x + along.x * v * curtainSpread * spread + axis.x * advance + ox * back + jx * fwd;
+      ys[s2] =
+        fanOriginPlane.y + along.y * v * curtainSpread * spread + axis.y * advance + jy * fwd;
+      // Zero at both ends so the anchors stay put, and weighted toward the open
+      // end: near the focus the strands are packed and must not smear.
+      env[s2] = Math.sin(Math.PI * t) ** 1.2 * (1 - t) ** 0.5 * 1.5;
     }
+
+    // Hue is organised across the bundle rather than at random: the outer
+    // strands stay cool and the core carries the warmer fibre, which is what
+    // makes the funnel read as converging.
+    const across = Math.abs(v) + rrange(`${seed}-hue`, -0.12, 0.12);
+    const colorKey =
+      across > 0.62 ? 'fibreC' : across > 0.3 ? 'fibreA' : 'fibreB';
 
     strands.push({
       xs,
       ys,
       env,
-      colorKey: rpick(`${seed}-hue`, ['fibreA', 'fibreB', 'fibreC'] as const),
+      colorKey,
       coreWidth: rrange(`${seed}-w`, 1.5, 3),
       alpha: rrange(`${seed}-a`, 0.35, 1),
       period: rpick(`${seed}-per`, TRAVEL_PERIODS),
@@ -265,6 +294,7 @@ export const buildScene = (variant: Variant): Scene => {
     fanOriginScreen,
     chip: {plane: chipPlane, w: chipW, h: chipH},
     fanOriginPlane,
+    fanFocus: focus,
     strands,
     panels,
     iconStrip: {

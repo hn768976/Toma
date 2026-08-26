@@ -44,8 +44,41 @@ export const CHIP_HEIGHT_FRACTION = 0.16;
 /** Distance of the chip from frame centre, as a fraction of frame width. */
 export const CHIP_OFFSET_FRACTION = 0.22;
 
-/** Fibre-fan origin, as a fraction of frame width from centre. Just off-frame. */
-export const FAN_ORIGIN_FRACTION = 0.64;
+/**
+ * Where the wide end of the fibre fan sits, as a fraction of frame width from
+ * centre. The fan is a funnel, so this is its widest point, and it sits well
+ * outside the frame: the strands enter from off-screen and only the converging
+ * part of the bundle is ever in shot. Far enough out that BOTH ends of the
+ * curtain clear the frame edge — the curtain lies on the plane, so it leans,
+ * and a nearer origin would poke one end back into view.
+ */
+export const FAN_ORIGIN_FRACTION = 0.63;
+
+/**
+ * Height of the fan origin, as a fraction of frame height, measured from centre
+ * and signed by flowDirection.
+ *
+ * The curtain lies on the plane and therefore leans, and that lean does NOT
+ * mirror when the piece does — the plane transform is the same for both
+ * variants, only the layout flips. So the strands nearest the frame edge are
+ * the bundle's lower ones when the fan is on the left and its upper ones when
+ * it is on the right, and the visible bundle is dragged down in one variant and
+ * up in the other. Offsetting the origin against that, signed the same way
+ * everything else is, puts the bundle across the chip's own height in both.
+ */
+export const FAN_ORIGIN_Y_OFFSET = 0.1;
+
+/**
+ * Extra lift applied only when the fan is upstream (flowDirection -1).
+ *
+ * The signed offset above mirrors the fan's height with the rest of the piece,
+ * but the plane's lean is not itself mirrored, so the two variants do not need
+ * the same correction — the reversed fan sits a little lower than its mirror
+ * would predict. Applied as a separate unsigned term rather than folded into
+ * the offset so that the forward variant's arithmetic is left exactly as it
+ * was.
+ */
+export const FAN_UPSTREAM_LIFT = 0.04;
 
 export const STRAND_COUNT = 140;
 
