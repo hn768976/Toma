@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { useCurrentFrame } from "remotion";
 import { HEIGHT, WIDTH } from "./config";
-import { buildLedTexture } from "./textures";
+import { buildBackgroundTexture } from "./textures";
 import type { Variant } from "./theme";
 
 const LAYER_STYLE: React.CSSProperties = {
@@ -12,12 +12,14 @@ const LAYER_STYLE: React.CSSProperties = {
 };
 
 /**
- * The LED panel and its dark centre. Nothing here moves, so the whole layer is
- * rendered once into an offscreen canvas and blitted on every frame.
+ * The blue gradient field and its dark centre. Nothing here moves, so the whole
+ * layer is rendered once into an offscreen canvas and blitted on every frame.
  */
-export const LedBackground: React.FC<{ variant: Variant }> = ({ variant }) => {
+export const GradientBackground: React.FC<{ variant: Variant }> = ({
+  variant,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const texture = useMemo(() => buildLedTexture(variant), [variant]);
+  const texture = useMemo(() => buildBackgroundTexture(variant), [variant]);
 
   // Read the frame so the blit happens once per rendered frame, exactly like
   // the layers above it.

@@ -15,13 +15,12 @@ export const CENTER_X = WIDTH / 2;
 export const CENTER_Y = HEIGHT * 0.47;
 
 // ---------------------------------------------------------------------------
-// LED panel background (static, rendered once to an offscreen canvas).
+// Background (static, rendered once to an offscreen canvas): a plain blue
+// gradient with a large soft dark radial vignette slightly above frame centre.
+// The dark centre is what the bright particles read against.
 // ---------------------------------------------------------------------------
-export const LED_PITCH = 26; // cell pitch in px at 4K
-export const LED_CELL_JITTER = 0.075; // ± lightness wobble per cell
-export const LED_LINE_ALPHA = 0.55; // grid lines sit barely above the panel
-export const LED_VIGNETTE_RADIUS = HEIGHT * 0.8;
-export const LED_VIGNETTE_ALPHA = 0.55;
+export const VIGNETTE_RADIUS = HEIGHT * 0.8;
+export const VIGNETTE_ALPHA = 0.55;
 
 // ---------------------------------------------------------------------------
 // Particles.
@@ -31,7 +30,7 @@ export const PARTICLE_MIN_SIZE = 4;
 export const PARTICLE_MAX_SIZE = 14;
 
 // Positions snap to this grid so particles fall into faint rows and columns,
-// reinforcing the pixel character of the LED panel.
+// reinforcing the pixel character of the grains themselves.
 export const POSITION_GRID = 8;
 
 // Weighted colour mix: ~55% cyan, ~20% white, ~17% blue, ~8% magenta.

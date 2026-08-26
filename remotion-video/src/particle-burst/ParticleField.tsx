@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import { z } from "zod";
 import { CoreGlow } from "./CoreGlow";
-import { LedBackground } from "./LedBackground";
+import { GradientBackground } from "./GradientBackground";
 import { ParticleSwarm } from "./ParticleSwarm";
 import { THEMES } from "./theme";
 
@@ -22,9 +22,9 @@ export const particleImplosionDefaults: ParticleFieldProps = {
  * including its radialDirection, the one signed value that decides whether
  * this is a burst or an implosion.
  *
- * Three stacked canvases: the static LED panel, the swarm (drawn additively
- * into a transparent layer and composited normally), and the central glow
- * (composited with plus-lighter so a flash genuinely blows out).
+ * Three stacked canvases: the static gradient field, the swarm (drawn
+ * additively into a transparent layer and composited normally), and the
+ * central glow (composited with plus-lighter so a flash genuinely blows out).
  */
 export const ParticleField: React.FC<ParticleFieldProps> = ({ variant }) => {
   const theme = THEMES[variant];
@@ -35,7 +35,7 @@ export const ParticleField: React.FC<ParticleFieldProps> = ({ variant }) => {
         isolation: "isolate",
       }}
     >
-      <LedBackground variant={variant} />
+      <GradientBackground variant={variant} />
       <ParticleSwarm variant={variant} />
       <CoreGlow variant={variant} />
     </AbsoluteFill>

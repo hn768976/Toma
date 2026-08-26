@@ -7,7 +7,6 @@ export type PaletteKey =
   | "backgroundDeep"
   | "backgroundMid"
   | "backgroundDark"
-  | "ledLine"
   | "particleCyan"
   | "particleWhite"
   | "particleBlue"
@@ -20,9 +19,8 @@ export type Palette = Record<PaletteKey, string>;
 // darkening it would turn this into generic particle work.
 const SHARED_PALETTE: Palette = {
   backgroundDeep: "#0A2FBF", // saturated royal blue
-  backgroundMid: "#1540D4", // slightly brighter blue the panel gradates toward
+  backgroundMid: "#1540D4", // slightly brighter blue the field gradates toward
   backgroundDark: "#061A6B", // the soft dark centre vignette
-  ledLine: "#0C36CC", // panel grid, barely above the background
   particleCyan: "#4FF5E8",
   particleWhite: "#E8FDFF", // the brightest grains, these bloom
   particleBlue: "#5FA8F5",

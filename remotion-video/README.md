@@ -2,7 +2,7 @@
 
 A 4K "particle burst" built in Remotion: **one component, two variants**. Both
 run 189 frames at 30fps (6.3s), one-shot, no loop. They share a palette, a
-particle count, an LED-panel background and every drawing routine — what
+particle count, a gradient background and every drawing routine — what
 separates them is motion and timing.
 
 | Composition        | Variant       | Resolution  | Duration           | FPS |
@@ -38,13 +38,13 @@ npm run dev
 
 ## The two versions
 
-**v1 — the burst.** Empty LED panel for 20 frames, with a faint brightening at
+**v1 — the burst.** Empty background for 20 frames, with a faint brightening at
 the centre over the last five. Detonation at frame 20: particles appear at a
 tight central point and accelerate outward on a decelerating curve, reaching
 ~30% of frame height by frame 45 — the brightest moment in the piece. They keep
 expanding and slowing to a ring ~90% of frame width across by frame 130, the
 clean ring loosening into a ragged annulus as angular positions drift apart.
-From 130 they thin, fade and drift past the edges, back to the empty panel with
+From 130 they thin, fade and drift past the edges, back to the empty field with
 a few stragglers holding on until near the end.
 
 **v2 — the implosion.** Not the burst reversed. Particles are simply *there* at
@@ -70,8 +70,8 @@ src/particle-burst/
   config.ts           per-variant timeline config, keyed by variant
   motion.ts           radius / angle / alpha / motion-blur maths
   particles.ts        the seeded 2200-grain swarm
-  textures.ts         offscreen LED panel, glow sprites, grain tiles
-  LedBackground.tsx   static panel layer
+  textures.ts         offscreen background, glow sprites, grain tiles
+  GradientBackground.tsx  static background layer
   ParticleSwarm.tsx   the swarm layer
   CoreGlow.tsx        the central glow / flash layer
   ParticleField.tsx   the composition component (takes `variant`)
@@ -79,16 +79,17 @@ src/particle-burst/
 
 Three stacked canvases, each drawn once per React render through a ref:
 
-- **`<LedBackground>`** — a royal-blue panel with a ~26px cell grid, a seeded
-  per-cell lightness weave and a large soft dark radial vignette slightly above
-  frame centre. Completely static, so it is rendered once into an offscreen
-  canvas in a `useMemo` and blitted every frame.
+- **`<GradientBackground>`** — a plain royal-blue gradient, brighter toward the
+  top-left, with a large soft dark radial vignette slightly above frame centre.
+  No texture of its own: the smooth field is what lets the grains read.
+  Completely static, so it is rendered once into an offscreen canvas in a
+  `useMemo` and blitted every frame.
 - **`<ParticleSwarm>`** — ~2200 grains drawn as small squares (4–14px at 4K),
   snapped to an 8px grid so they fall into faint rows and columns. Weighted
   ~55% cyan / 20% white / 17% blue / 8% magenta, each with a pre-rendered glow
   sprite (the white ones bloom hardest), a seeded twinkle and a staggered
   death. Drawn additively into a transparent layer that composites normally
-  over the panel, so a lone cyan grain stays cyan and only genuinely dense
+  over the field, so a lone cyan grain stays cyan and only genuinely dense
   clusters blow out toward white. Fine grain at 4% closes the layer.
 - **`<CoreGlow>`** — the faint pre-detonation brightening in v1, the climax
   flash in v2. A soft gradient upscales perfectly, so this layer is drawn at
