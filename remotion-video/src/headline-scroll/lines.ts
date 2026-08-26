@@ -8,7 +8,6 @@
 
 import { random } from "remotion";
 import {
-  BLUR_CEILING,
   BLUR_FLOOR,
   BLUR_JITTER,
   CAP_HEIGHT_GAMMA,
@@ -220,10 +219,10 @@ export const buildLineSpecs = (theme: Theme, seed: string): LineSpec[] => {
       CAP_HEIGHT_MIN +
       (CAP_HEIGHT_MAX - CAP_HEIGHT_MIN) * Math.pow(depth, CAP_HEIGHT_GAMMA);
     const blur = clamp(
-      lerp(BLUR_FLOOR, BLUR_CEILING, depth) +
+      lerp(BLUR_FLOOR, theme.lines.blurCeiling, depth) +
         signed(`${seed}-blur-${i}`) * BLUR_JITTER,
       BLUR_FLOOR,
-      BLUR_CEILING,
+      theme.lines.blurCeiling,
     );
 
     const tier = tierFor(depth, random(`${seed}-style-${i}`));
@@ -314,31 +313,54 @@ export const buildLineSpecs = (theme: Theme, seed: string): LineSpec[] => {
   });
 };
 
+const rgbString = (c: [number, number, number]) =>
+  `rgb(${Math.round(c[0])}, ${Math.round(c[1])}, ${Math.round(c[2])})`;
+
 /**
- * Splits the line colour across the two fringe hues so that where the offset
- * copies overlap they sum back to exactly the line colour, and only the
- * leading/trailing few pixels show red or cyan. That is what makes the split
- * read as lens aberration rather than as a coloured drop shadow.
+ * Works out the two offset impressions so that where they overlap they resolve
+ * back to exactly the intended colour, and only the leading and trailing few
+ * pixels show red or cyan. That exact-overlap property is what makes the split
+ * read as aberration rather than as a coloured drop shadow.
+ *
+ * Additive ground: the colour is divided between the two fringe hues so the
+ * pair sums back to it.
+ *
+ * Subtractive ground: the first impression is paper tinted toward red, and the
+ * second is whatever the first still has to be multiplied by to land on the
+ * colour — which comes out on the cyan side of neutral. Tinting from paper
+ * rather than using the saturated hue outright is what keeps that second
+ * impression inside gamut, so the overlap stays exact.
  */
-const fringeChannels = (
+export const fringeImpressions = (
   color: string,
-  fringeRed: string,
-  fringeCyan: string,
+  fringe: Theme["fringe"],
 ): [string, string] => {
-  const [r, g, b] = toRgb(color);
-  const [rr, rg, rb] = toRgb(fringeRed);
-  const [cr, cg, cb] = toRgb(fringeCyan);
-  const split = (base: number, a: number, bch: number): [number, number] => {
-    const total = a + bch;
-    if (total === 0) return [base / 2, base / 2];
-    return [(base * a) / total, (base * bch) / total];
-  };
-  const [r1, r2] = split(r, rr, cr);
-  const [g1, g2] = split(g, rg, cg);
-  const [b1, b2] = split(b, rb, cb);
-  const fmt = (x: number, y: number, z: number) =>
-    `rgb(${Math.round(x)}, ${Math.round(y)}, ${Math.round(z)})`;
-  return [fmt(r1, g1, b1), fmt(r2, g2, b2)];
+  const base = toRgb(color);
+  const red = toRgb(fringe.red);
+  const cyan = toRgb(fringe.cyan);
+
+  if (fringe.blend === "lighter") {
+    const split = (i: number): [number, number] => {
+      const total = red[i] + cyan[i];
+      if (total === 0) return [base[i] / 2, base[i] / 2];
+      return [(base[i] * red[i]) / total, (base[i] * cyan[i]) / total];
+    };
+    const channels = [split(0), split(1), split(2)];
+    return [
+      rgbString([channels[0][0], channels[1][0], channels[2][0]]),
+      rgbString([channels[0][1], channels[1][1], channels[2][1]]),
+    ];
+  }
+
+  const first = red.map((c) => 255 - (255 - c) * fringe.strength) as [
+    number,
+    number,
+    number,
+  ];
+  const second = base.map((c, i) =>
+    clamp((c / Math.max(1, first[i])) * 255, 0, 255),
+  ) as [number, number, number];
+  return [rgbString(first), rgbString(second)];
 };
 
 export const buildLineBuffer = (spec: LineSpec, theme: Theme): LineBuffer => {
@@ -368,22 +390,19 @@ export const buildLineBuffer = (spec: LineSpec, theme: Theme): LineBuffer => {
   sctx.letterSpacing = spec.letterSpacing;
   sctx.textBaseline = "alphabetic";
 
-  // Draw the tile past both edges so the cropped window is exactly periodic.
-  const first = -2;
-  const last = Math.ceil(paddedWidth / tileWidth) + 1;
-  const [redPass, cyanPass] = fringeChannels(
-    spec.color,
-    theme.fringeRed,
-    theme.fringeCyan,
-  );
+  const [firstPass, secondPass] = fringeImpressions(spec.color, theme.fringe);
   const drawAt = (origin: number) => {
     for (const segment of spec.segments) {
       const x = origin + segment.x;
       if (spec.chromatic > 0) {
-        sctx.globalCompositeOperation = "lighter";
-        sctx.fillStyle = redPass;
+        // The first impression lands on an empty buffer, so it goes down
+        // plainly whichever way the pair is meant to combine; the second is
+        // what actually blends against it.
+        sctx.globalCompositeOperation = "source-over";
+        sctx.fillStyle = firstPass;
         sctx.fillText(segment.text, x - spec.chromatic, baseline);
-        sctx.fillStyle = cyanPass;
+        sctx.globalCompositeOperation = theme.fringe.blend;
+        sctx.fillStyle = secondPass;
         sctx.fillText(segment.text, x + spec.chromatic, baseline);
         sctx.globalCompositeOperation = "source-over";
       } else {
@@ -392,7 +411,9 @@ export const buildLineBuffer = (spec: LineSpec, theme: Theme): LineBuffer => {
       }
     }
   };
-  for (let k = first; k <= last; k++) drawAt(pad + k * tileWidth);
+  // Draw the tile past both edges so the cropped window is exactly periodic.
+  const lastRepeat = Math.ceil(paddedWidth / tileWidth) + 1;
+  for (let k = -2; k <= lastRepeat; k++) drawAt(pad + k * tileWidth);
 
   const blurred = createCanvas(paddedWidth, bufferHeight);
   const bctx = context2d(blurred);

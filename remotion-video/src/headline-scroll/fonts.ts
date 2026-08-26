@@ -12,6 +12,7 @@
 // break the loop, so the composition holds a delayRender() handle until both
 // faces are genuinely usable.
 
+import { getInfo as archivoBlackInfo } from "@remotion/google-fonts/ArchivoBlack";
 import { getInfo as interInfo } from "@remotion/google-fonts/Inter";
 import { getInfo as sourceSerifInfo } from "@remotion/google-fonts/SourceSerif4";
 import { staticFile } from "remotion";
@@ -19,12 +20,23 @@ import { staticFile } from "remotion";
 export const SANS_FAMILY = interInfo().fontFamily;
 export const SERIF_FAMILY = sourceSerifInfo().fontFamily;
 
+/**
+ * The centre word gets its own face rather than the montage's heavy sans.
+ * Archivo Black is wider and blunter than Inter 900, so the one sharp thing in
+ * the frame separates from the blurred text by shape as well as by focus —
+ * which is the point of the shot.
+ */
+export const WORD_FAMILY = archivoBlackInfo().fontFamily;
+export const WORD_WEIGHT = 400;
+
 const slug = (family: string) => family.replace(/\s+/g, "");
 
-/** Both families are variable fonts, so one file spans the whole weight axis. */
+/** One woff2 per family; the two variable ones span their whole weight axis. */
 const FACES = [
   { family: SANS_FAMILY, weights: "100 900" },
   { family: SERIF_FAMILY, weights: "200 900" },
+  // Archivo Black is a static single-weight face, not variable.
+  { family: WORD_FAMILY, weights: "400" },
 ];
 
 /** Every (weight, family) pair the renderer will ask a canvas to draw. */
@@ -34,6 +46,7 @@ const REQUIRED_FACES = [
   `900 100px "${SANS_FAMILY}"`,
   `400 100px "${SERIF_FAMILY}"`,
   `600 100px "${SERIF_FAMILY}"`,
+  `${WORD_WEIGHT} 100px "${WORD_FAMILY}"`,
 ];
 
 export const areFontsReady = (): boolean =>

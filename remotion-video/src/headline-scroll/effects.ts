@@ -17,11 +17,10 @@ import {
   GRAIN_TILE_SIZE,
   HEIGHT,
   VIGNETTE_INNER_STOP,
-  VIGNETTE_STRENGTH,
   WIDTH,
   WORD_CAP_HEIGHT_RATIO,
 } from "./constants";
-import { SANS_FAMILY } from "./fonts";
+import { WORD_FAMILY, WORD_WEIGHT } from "./fonts";
 import { createCanvas } from "./lines";
 import { type Theme, withAlpha } from "./theme";
 
@@ -101,7 +100,8 @@ export const glitchAt = (
 // ------------------------------------------------------------ centre word ---
 
 export type WordSprite = {
-  white: HTMLCanvasElement;
+  /** The word in the theme's word colour. */
+  ink: HTMLCanvasElement;
   red: HTMLCanvasElement;
   cyan: HTMLCanvasElement;
   /** Top-left blit position that lands the ink box dead centre. */
@@ -125,11 +125,11 @@ export const buildWordSprite = (word: string, theme: Theme): WordSprite => {
   // Size from the face's cap height, not from the word's own ascender, so the
   // "11% of frame height" holds whatever word is passed in.
   const probe = 400;
-  probeCtx.font = `900 ${probe}px "${SANS_FAMILY}"`;
+  probeCtx.font = `${WORD_WEIGHT} ${probe}px "${WORD_FAMILY}"`;
   const capRatio = probeCtx.measureText("H").actualBoundingBoxAscent / probe;
   const fontSize = (WORD_CAP_HEIGHT_RATIO * HEIGHT) / capRatio;
 
-  const font = `900 ${fontSize}px "${SANS_FAMILY}"`;
+  const font = `${WORD_WEIGHT} ${fontSize}px "${WORD_FAMILY}"`;
   probeCtx.font = font;
   const m = probeCtx.measureText(word);
   const left = m.actualBoundingBoxLeft;
@@ -140,17 +140,17 @@ export const buildWordSprite = (word: string, theme: Theme): WordSprite => {
   const pad = Math.ceil(fontSize * 0.12);
   const inkWidth = right + left;
   const inkHeight = ascent + descent;
-  const white = createCanvas(inkWidth + pad * 2, inkHeight + pad * 2);
-  const ctx = context2d(white);
+  const ink = createCanvas(inkWidth + pad * 2, inkHeight + pad * 2);
+  const ctx = context2d(ink);
   ctx.font = font;
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = theme.word;
   ctx.fillText(word, pad + left, pad + ascent);
 
   return {
-    white,
-    red: tinted(white, theme.fringeRed),
-    cyan: tinted(white, theme.fringeCyan),
+    ink,
+    red: tinted(ink, theme.fringe.red),
+    cyan: tinted(ink, theme.fringe.cyan),
     // Integer position: the one element in the frame that must stay pin sharp.
     x: Math.round(CENTER_X - (pad + inkWidth / 2)),
     y: Math.round(CENTER_Y - (pad + inkHeight / 2)),
@@ -163,7 +163,9 @@ export const buildWordSprite = (word: string, theme: Theme): WordSprite => {
  * Baked full-frame. The gradient is drawn in a squashed space so the falloff is
  * an ellipse matching the 16:9 frame: the end stop lands on the mid-points of
  * all four edges, and the corners sit past it, held at the final colour. That
- * is what makes the edges actually reach black rather than just dim.
+ * is what lets the edges actually reach the vignette colour rather than only
+ * approaching it — whether the theme is pulling them down to black or lifting
+ * them toward paper white.
  */
 export const buildVignette = (theme: Theme): HTMLCanvasElement => {
   const canvas = createCanvas(WIDTH, HEIGHT);
@@ -183,7 +185,7 @@ export const buildVignette = (theme: Theme): HTMLCanvasElement => {
     );
     gradient.addColorStop(
       t,
-      withAlpha(theme.vignette, ramp ** 1.6 * VIGNETTE_STRENGTH),
+      withAlpha(theme.vignette.color, ramp ** 1.6 * theme.vignette.strength),
     );
   }
   ctx.fillStyle = gradient;
@@ -206,7 +208,7 @@ export const buildGrainTiles = (
     const canvas = createCanvas(GRAIN_TILE_SIZE, GRAIN_TILE_SIZE);
     const ctx = context2d(canvas);
     const image = ctx.createImageData(GRAIN_TILE_SIZE, GRAIN_TILE_SIZE);
-    const [r, g, b] = [theme.grain]
+    const [r, g, b] = [theme.grain.color]
       .map((hex) => parseInt(hex.slice(1), 16))
       .flatMap((int) => [(int >> 16) & 255, (int >> 8) & 255, int & 255]);
     // One string seed per tile; per-pixel seeds are numeric offsets from it so

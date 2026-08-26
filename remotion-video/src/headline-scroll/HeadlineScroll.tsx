@@ -13,8 +13,8 @@ import {
   CENTER_Y,
   CHROMATIC_OFFSET,
   DURATION_IN_FRAMES,
+  EXPOSURE_LIFT_AMOUNT,
   GLITCH_CHROMATIC_OFFSET,
-  GLOW_ALPHA,
   GLOW_PULSE_AMOUNT,
   GLOW_PULSE_PERIOD,
   GLOW_RADIUS_RATIO,
@@ -23,8 +23,6 @@ import {
   GRAIN_TILE_COUNT,
   GRAIN_TILE_SIZE,
   HEIGHT,
-  SCRIM_ALPHA,
-  SCRIM_RADIUS_SCALE,
   WIDTH,
 } from "./constants";
 import {
@@ -36,7 +34,7 @@ import {
 } from "./effects";
 import { areFontsReady, fontsReady } from "./fonts";
 import { buildLineBuffer, buildLineSpecs, createCanvas } from "./lines";
-import { THEMES, THEME_NAMES, withAlpha } from "./theme";
+import { type HaloPass, THEMES, THEME_NAMES, withAlpha } from "./theme";
 
 export const headlineScrollSchema = z.object({
   /** Picks a palette out of THEMES. A second palette is a data change here. */
@@ -125,7 +123,7 @@ export const HeadlineScroll: React.FC<HeadlineScrollProps> = ({
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     // ------------------------------------------------ the scrolling layer ---
-    ctx.globalCompositeOperation = theme.blend.lines;
+    ctx.globalCompositeOperation = theme.lines.blend;
     for (const line of scene.lines) {
       const { spec } = line;
       // Written as cycles * tileWidth * frame / DURATION rather than
@@ -151,16 +149,9 @@ export const HeadlineScroll: React.FC<HeadlineScrollProps> = ({
     // ------------------------------------------------------ the halo ------
     const pulse =
       1 + GLOW_PULSE_AMOUNT * Math.sin((TAU * loopFrame) / GLOW_PULSE_PERIOD);
-    const glowRadius = GLOW_RADIUS_RATIO * HEIGHT * pulse;
-    const scrimRadius = GLOW_RADIUS_RATIO * HEIGHT * SCRIM_RADIUS_SCALE;
 
-    const radialFill = (
-      radius: number,
-      color: string,
-      peak: number,
-      falloff: number,
-      blend: GlobalCompositeOperation,
-    ) => {
+    const radialPass = (pass: HaloPass, scale: number, alpha: number) => {
+      const radius = GLOW_RADIUS_RATIO * HEIGHT * pass.radiusScale * scale;
       const gradient = ctx.createRadialGradient(
         CENTER_X,
         CENTER_Y,
@@ -172,9 +163,12 @@ export const HeadlineScroll: React.FC<HeadlineScrollProps> = ({
       const stops = 10;
       for (let i = 0; i <= stops; i++) {
         const t = i / stops;
-        gradient.addColorStop(t, withAlpha(color, peak * (1 - t) ** falloff));
+        gradient.addColorStop(
+          t,
+          withAlpha(pass.color, alpha * (1 - t) ** pass.falloff),
+        );
       }
-      ctx.globalCompositeOperation = blend;
+      ctx.globalCompositeOperation = pass.blend;
       ctx.fillStyle = gradient;
       ctx.fillRect(
         CENTER_X - radius,
@@ -184,36 +178,41 @@ export const HeadlineScroll: React.FC<HeadlineScrollProps> = ({
       );
     };
 
-    // Scrim first, and wider than the halo: it is what visibly knocks the
-    // blurred text down underneath the word instead of letting the glow just
-    // pile brightness on top of it.
-    radialFill(scrimRadius, theme.scrim, SCRIM_ALPHA, 1.8, "source-over");
-    radialFill(
-      glowRadius,
-      theme.glow,
-      GLOW_ALPHA * GLOW_STRENGTH * pulse,
-      2.2,
-      theme.blend.glow,
+    // The wash goes first and reaches wider: it is what resets the ground the
+    // word sits on, rather than letting the halo merely pile onto the blurred
+    // text. The core is the halo proper and is what carries the pulse.
+    radialPass(theme.halo.wash, 1, theme.halo.wash.alpha);
+    radialPass(
+      theme.halo.core,
+      pulse,
+      theme.halo.core.alpha * GLOW_STRENGTH * pulse,
     );
 
     // ------------------------------------------------- the sharp word -----
     const glitch = glitchAt(scene.glitches, loopFrame);
     const sprite = scene.wordSprite;
 
-    // Bloom, on the word only. The blurred text never blooms.
-    ctx.globalCompositeOperation = theme.blend.glow;
-    for (const pass of BLOOM_PASSES) {
-      ctx.filter = `blur(${pass.blur}px)`;
-      ctx.globalAlpha = pass.alpha * GLOW_STRENGTH;
-      ctx.drawImage(sprite.white, sprite.x, sprite.y);
+    // Bloom, on the word only, and only where the ground is dark enough for
+    // additive glow to mean anything. The blurred text never blooms.
+    if (theme.finish.bloom) {
+      ctx.globalCompositeOperation = "lighter";
+      for (const pass of BLOOM_PASSES) {
+        ctx.filter = `blur(${pass.blur}px)`;
+        ctx.globalAlpha = pass.alpha * GLOW_STRENGTH;
+        ctx.drawImage(sprite.ink, sprite.x, sprite.y);
+      }
+      ctx.filter = "none";
+      ctx.globalAlpha = 1;
     }
-    ctx.filter = "none";
-    ctx.globalAlpha = 1;
 
+    // Two offset impressions, then the word itself on top, all combining the
+    // way the theme says impressions combine: additively on a dark ground,
+    // subtractively on paper, where it reads as misregistered print.
     const offset = glitch ? GLITCH_CHROMATIC_OFFSET : CHROMATIC_OFFSET;
+    ctx.globalCompositeOperation = theme.fringe.blend;
     ctx.drawImage(sprite.red, sprite.x - offset, sprite.y);
     ctx.drawImage(sprite.cyan, sprite.x + offset, sprite.y);
-    ctx.drawImage(sprite.white, sprite.x, sprite.y);
+    ctx.drawImage(sprite.ink, sprite.x, sprite.y);
 
     // ----------------------------------------------------- glitch tear ----
     ctx.globalCompositeOperation = "source-over";
@@ -244,11 +243,23 @@ export const HeadlineScroll: React.FC<HeadlineScrollProps> = ({
     // --------------------------------------------------------- finish -----
     ctx.drawImage(scene.vignette, 0, 0);
 
+    // Highlight roll-off, in place of bloom on a light ground. Colour-dodge
+    // against a low flat value divides by (1 - value): what is already near
+    // paper white clips to it, and the dark type barely moves.
+    if (theme.finish.exposureLift) {
+      ctx.globalCompositeOperation = "color-dodge";
+      ctx.fillStyle = withAlpha(theme.finish.exposureLift, 1);
+      ctx.globalAlpha = EXPOSURE_LIFT_AMOUNT;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+
     const tile = scene.grain[loopFrame % GRAIN_TILE_COUNT];
     const pattern = ctx.createPattern(tile, "repeat");
     if (pattern) {
       ctx.save();
-      ctx.globalCompositeOperation = theme.blend.grain;
+      ctx.globalCompositeOperation = theme.grain.blend;
       ctx.globalAlpha = GRAIN_ALPHA;
       ctx.translate(
         -Math.floor(random(`${SEED}-grain-x-${loopFrame}`) * GRAIN_TILE_SIZE),

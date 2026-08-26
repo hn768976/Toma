@@ -11,6 +11,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { getInfo as archivoBlackInfo } from "@remotion/google-fonts/ArchivoBlack";
 import { getInfo as interInfo } from "@remotion/google-fonts/Inter";
 import { getInfo as serifInfo } from "@remotion/google-fonts/SourceSerif4";
 
@@ -23,12 +24,13 @@ const OUT_DIR = resolve(
 
 const SUBSET = "latin";
 
-// Both families ship as variable fonts, so Google serves one file per family
-// covering the whole weight axis. We take the file the lightest requested
-// weight resolves to and declare the full range on the @font-face.
+// Inter and Source Serif ship as variable fonts, so Google serves one file per
+// family covering the whole weight axis; Archivo Black is a single-weight
+// static face. Either way it is one file per family.
 const FACES = [
   { info: interInfo(), weights: ["500", "700", "900"] },
   { info: serifInfo(), weights: ["400", "600"] },
+  { info: archivoBlackInfo(), weights: ["400"] },
 ];
 
 const slug = (family) => family.replace(/\s+/g, "");

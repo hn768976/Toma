@@ -63,6 +63,16 @@ export const RemotionRoot: React.FC = () => {
         schema={headlineScrollSchema}
         defaultProps={headlineScrollDefaults}
       />
+      <Composition
+        id="HeadlineScrollLight"
+        component={HeadlineScroll}
+        durationInFrames={HEADLINE_DURATION_IN_FRAMES}
+        fps={HEADLINE_FPS}
+        width={HEADLINE_WIDTH}
+        height={HEADLINE_HEIGHT}
+        schema={headlineScrollSchema}
+        defaultProps={{ ...headlineScrollDefaults, variant: "light" }}
+      />
     </>
   );
 };

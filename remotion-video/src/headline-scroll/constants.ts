@@ -40,9 +40,10 @@ export const CAP_HEIGHT_GAMMA = 1.35;
 /**
  * Nothing in the scrolling layer is ever sharp — that is the whole point of the
  * centre word. Blur rises with depth (nearer = bigger = further out of focus).
+ * The ceiling is per-theme (`lines.blurCeiling` in THEMES): dark type on a
+ * light ground smears more visibly than light type on dark.
  */
 export const BLUR_FLOOR = 6;
-export const BLUR_CEILING = 30;
 /** Per-line blur wobble, in px, so the depth ramp does not read as a gradient. */
 export const BLUR_JITTER = 2.5;
 
@@ -73,15 +74,15 @@ export const CHROMATIC_OFFSET = 8;
 /** What it snaps to during a glitch. */
 export const GLITCH_CHROMATIC_OFFSET = 22;
 
-/** Master multiplier on halo + bloom. */
+/**
+ * Master multiplier on halo + bloom. The halo's two passes — their colours,
+ * alphas, radii and blend modes — are per-theme (`halo` in THEMES), because
+ * lifting a word off a dark ground and clearing a patch of paper under it are
+ * opposite operations.
+ */
 export const GLOW_STRENGTH = 1;
-/** Halo radius as a fraction of frame height. */
+/** Base halo radius as a fraction of frame height; each pass scales it. */
 export const GLOW_RADIUS_RATIO = 0.38;
-/** Peak halo alpha at the centre, before GLOW_STRENGTH and the pulse. */
-export const GLOW_ALPHA = 0.22;
-/** The scrim reaches wider than the halo so text under the word visibly drops. */
-export const SCRIM_RADIUS_SCALE = 1.4;
-export const SCRIM_ALPHA = 0.85;
 /** Halo breathes +/-10% on a sine whose period divides the loop. */
 export const GLOW_PULSE_AMOUNT = 0.1;
 export const GLOW_PULSE_PERIOD = 70;
@@ -113,11 +114,18 @@ export const GLITCH_TAIL_GUARD = 10;
 
 /**
  * Vignette: fully clear inside this fraction of the half-frame, then ramping to
- * a solid edge. Strong on purpose — every edge, not just the corners, goes to
- * black, so the centre word owns the frame.
+ * the theme's edge colour. Which way it ramps, and how far, is per-theme
+ * (`vignette` in THEMES) — down to black on the dark variant, up toward paper
+ * white on the light one. Either way the centre stays the frame's focus.
  */
 export const VIGNETTE_INNER_STOP = 0.25;
-export const VIGNETTE_STRENGTH = 1;
+
+/**
+ * Colour-dodge source value for the light variant's highlight roll-off. Kept
+ * below the headroom the paper background has left, so the paper itself lifts
+ * but keeps its warmth while anything brighter clips to white.
+ */
+export const EXPOSURE_LIFT_AMOUNT = 0.022;
 
 /** Fine grain. Tiles are pre-baked once; the count must divide the loop. */
 export const GRAIN_ALPHA = 0.04;
