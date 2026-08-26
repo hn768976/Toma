@@ -1,0 +1,25 @@
+{
+  "name": "chip-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K AI chip dashboard animation in Remotion - violet and teal variants",
+  "scripts": {
+    "start": "remotion studio",
+    "render": "remotion render ChipDashboard out/chip-dashboard-1080p.mp4 --codec=h264 --crf=18 --scale=0.5",
+    "render:reverse": "remotion render ChipDashboardReverse out/chip-reverse-1080p.mp4 --codec=h264 --crf=18 --scale=0.5",
+    "typecheck": "tsc --noEmit",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.410",
+    "@remotion/google-fonts": "4.0.410",
+    "remotion": "4.0.410",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.8.2"
+  }
+}
