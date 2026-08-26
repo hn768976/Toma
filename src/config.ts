@@ -9,7 +9,9 @@
 export const CONFIG = {
   camera: {
     fov: 38,
-    near: 0.1,
+    /** Not too tiny: near clip governs depth precision at distance — 0.1
+     * makes the far lines z-fight the floor into dashes. */
+    near: 0.5,
     far: 400,
     /** Camera height above y=0 at frame 0. Terrain peaks at ~+2.3, so this
      * keeps the lens ~2.3 units clear of the highest hill. */
@@ -38,13 +40,16 @@ export const CONFIG = {
     depth: 170,
     /** Base spatial frequency of the noise (1/world-units). Higher = tighter,
      * curvier maze-like ropes. */
-    noiseScale: 0.022,
+    noiseScale: 0.024,
+    /** X-frequency multiplier (<1 stretches features along x): contours
+     * become long open ropes flowing across the frame instead of loops. */
+    anisoX: 0.32,
     octaves: 3,
-    /** Peak-to-mid height of the terrain. Kept very low: ground spacing of
-     * the ropes is amplitude-invariant, but low relief stops ropes at
-     * different heights from crossing/overlapping on screen when seen from
-     * the low camera. */
-    amp: 0.85,
+    /** Peak-to-mid height of the terrain. Near-flat on purpose: rope ground
+     * spacing is amplitude-invariant, and with real relief the low camera
+     * sees mid-distance ropes chopped into dashes behind ridges and ropes
+     * crossing on screen. Tiny relief keeps it organic with none of that. */
+    amp: 0.25,
     /** How fast the noise field breathes, in noise-t per second.
      * 0 = frozen: the rope lines do not move — only the dots travel on them. */
     breatheSpeed: 0,
@@ -52,15 +57,22 @@ export const CONFIG = {
 
   contours: {
     /** Number of iso-height levels. Fewer = sparser ropes, wider even gaps. */
-    levels: 11,
+    levels: 16,
     /** Laplacian smoothing passes on the chained polylines — rounds off the
      * little marching-squares corners so the ropes are pure curves. */
     smoothingPasses: 3,
     /** Line width in WORLD units (LineMaterial worldUnits) — near lines render
      * thick, far ones thin, for free. */
-    lineWidth: 0.008,
+    /** Rope width in PIXELS at 4K output (scaled to the actual render size).
+     * Screen-space width keeps far ropes from going sub-pixel, which is what
+     * chops world-unit thin lines into dashes. */
+    lineWidthPx: 3.0,
     /** HDR multiplier on the nearest lines so they read as neon under bloom. */
-    nearGlow: 1.5,
+    nearGlow: 2.2,
+    /** Drop closed loops: only long, open flowing ropes are drawn. */
+    openRopesOnly: true,
+    /** Discard stubs shorter than this many points after chaining. */
+    minPoints: 6,
     /** Distance band over which lines fade into the horizon haze. */
     fadeStart: 55,
     fadeEnd: 140,
@@ -128,13 +140,13 @@ export const CONFIG = {
   },
 
   bloom: {
-    intensity: 1.5,
+    intensity: 1.75,
     /** High enough that the dark background and floor don't bloom. */
     luminanceThreshold: 0.22,
     luminanceSmoothing: 0.3,
     mipmapBlur: true,
     /** Halo spread of the mipmap bloom — the neon glow radius. */
-    radius: 0.75,
+    radius: 0.82,
   },
 
   vignette: {

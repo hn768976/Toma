@@ -13,7 +13,7 @@ export type HeightField = (x: number, z: number, t: number) => number;
 export const makeHeightField = (): HeightField => {
   let i = 0;
   const noise3D = createNoise3D(() => random(`terrain-perm-${i++}`));
-  const {noiseScale, octaves, amp} = CONFIG.terrain;
+  const {noiseScale, octaves, amp, anisoX} = CONFIG.terrain;
 
   return (x: number, z: number, t: number): number => {
     let sum = 0;
@@ -21,8 +21,9 @@ export const makeHeightField = (): HeightField => {
     let freq = noiseScale;
     let a = 1;
     for (let o = 0; o < octaves; o++) {
-      // Offset each octave so their features don't align.
-      sum += a * noise3D(x * freq + o * 37.7, z * freq - o * 51.3, t + o * 11.1);
+      // Offset each octave so their features don't align. Features are
+      // stretched along x (anisoX < 1) so iso-lines flow across the frame.
+      sum += a * noise3D(x * freq * anisoX + o * 37.7, z * freq - o * 51.3, t + o * 11.1);
       norm += a;
       a *= 0.5;
       freq *= 2.1;
@@ -144,7 +145,11 @@ const marchSegments = (
   return perLevel;
 };
 
-const ptKey = (x: number, z: number) => `${x.toFixed(4)},${z.toFixed(4)}`;
+const q4 = (v: number) => {
+  const s = v.toFixed(4);
+  return s === '-0.0000' ? '0.0000' : s;
+};
+const ptKey = (x: number, z: number) => `${q4(x)},${q4(z)}`;
 
 /** Stitch a segment soup into polylines by matching shared endpoints. */
 const chainSegments = (segs: Seg[]): Polyline[] => {
@@ -207,13 +212,22 @@ const chainSegments = (segs: Seg[]): Polyline[] => {
         const pts: number[] = [];
         for (let b = back.length - 2; b >= 0; b -= 2) pts.push(back[b], back[b + 1]);
         pts.push(...fwd);
-        out.push({pts, closed: false});
+        out.push({pts, closed: nearlyClosed(pts)});
         continue;
       }
     }
-    out.push({pts: fwd, closed});
+    out.push({pts: fwd, closed: closed || nearlyClosed(fwd)});
   }
   return out;
+};
+
+/** Catch-all: an "open" line whose ends nearly meet is a loop in disguise. */
+const nearlyClosed = (pts: number[]): boolean => {
+  const n = pts.length;
+  if (n < 8) return false;
+  const dx = pts[0] - pts[n - 2];
+  const dz = pts[1] - pts[n - 1];
+  return dx * dx + dz * dz < 9;
 };
 
 /**

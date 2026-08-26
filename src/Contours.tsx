@@ -41,8 +41,7 @@ export const Contours: React.FC<{
   const {line, material} = useMemo(() => {
     const material = new LineMaterial({
       vertexColors: true,
-      worldUnits: true,
-      linewidth: CONFIG.contours.lineWidth,
+      worldUnits: false,
     });
     const line = new LineSegments2(new LineSegmentsGeometry(), material);
     line.frustumCulled = false;
@@ -78,7 +77,15 @@ export const Contours: React.FC<{
     geometry.setIndex(index);
     const mesh = new THREE.Mesh(
       geometry,
-      new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.DoubleSide}),
+      // polygonOffset pushes the floor back in depth so the thin line quads
+      // never z-fight it at grazing angles.
+      new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 2,
+        polygonOffsetUnits: 2,
+      }),
     );
     mesh.frustumCulled = false;
     return mesh;
@@ -192,6 +199,9 @@ export const Contours: React.FC<{
       const L = levels[li];
       for (const poly of polys) {
         const n = poly.pts.length / 2;
+        // Only long, open flowing ropes: no closed shapes, no tiny stubs.
+        if (CONFIG.contours.openRopesOnly && poly.closed) continue;
+        if (n < CONFIG.contours.minPoints) continue;
         for (let i = 0; i < n - 1; i++) {
           pushSegment(L, poly.pts[i * 2], poly.pts[i * 2 + 1], poly.pts[i * 2 + 2], poly.pts[i * 2 + 3]);
         }
@@ -211,6 +221,7 @@ export const Contours: React.FC<{
     old.dispose();
 
     material.resolution.set(size.width, size.height);
+    material.linewidth = Math.max(1, CONFIG.contours.lineWidthPx * (size.height / 2160));
   }, [frame, durationInFrames, fps, heightField, levels, line, floor, material, palette, size]);
 
   return (
