@@ -62,7 +62,8 @@ export const layerMatrix = (
   });
 };
 
-export const usePlane = (
+/** Applies the depth-aware plane transform to a context. */
+export const setPlane = (
   ctx: CanvasRenderingContext2D,
   scene: Scene,
   depthFactor: number,

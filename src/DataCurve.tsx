@@ -2,8 +2,8 @@ import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useCurrentFrame } from 'remotion';
 import { ensureFont, FONT_FAMILY } from './font';
 import { CONFIG, HEIGHT, WIDTH } from './config';
-import { ctx2d, makeCanvas, PLANE } from './plane';
-import { buildCurve, buildScene, layerMatrix } from './scene';
+import { ctx2d, makeCanvas } from './plane';
+import { buildCurve, buildScene, setPlane } from './scene';
 import { VARIANTS, type VariantId } from './variants';
 import { bakeGridPlane, drawGridPlane } from './layers/GridPlane';
 import { bakeCountryShape, drawCountryShape } from './layers/CountryShape';
@@ -64,10 +64,8 @@ export const DataCurve: React.FC<DataCurveProps> = ({ variant }) => {
       x.clearRect(0, 0, c.width, c.height);
       return x;
     };
-    const plane = (x: CanvasRenderingContext2D, depthFactor: number, res: number) => {
-      const m = layerMatrix(scene, depthFactor, res);
-      x.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
-    };
+    const plane = (x: CanvasRenderingContext2D, depthFactor: number, res: number) =>
+      setPlane(x, scene, depthFactor, res);
 
     /* ── FAR ─────────────────────────────────────────────────────── */
     const far = reset(baked.far);
@@ -161,6 +159,3 @@ export const DataCurve: React.FC<DataCurveProps> = ({ variant }) => {
     />
   );
 };
-
-/** Exported for tooling that wants the plane extent without importing plane.ts. */
-export const PLANE_EXTENT = PLANE;
