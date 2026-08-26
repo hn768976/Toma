@@ -30,7 +30,7 @@ schedule, grain, loop closure.
 | `theme.ts` | `THEMES` — **every** colour in the piece, plus the blend modes and the handful of numbers that genuinely differ per variant. No hex literal appears anywhere else, and no renderer code branches on the variant name. |
 | `constants.ts` | Scroll speed, blur range, line count, glow strength, chromatic offsets, glitch timings, vignette, grain. |
 | `copy.ts` | The fictional newsprint pools. |
-| `fonts.ts` | Inter (heavy sans) + Source Serif 4 for the montage, Poppins Black for the centre word, gated with `delayRender()`/`continueRender()`. |
+| `fonts.ts` | Inter (heavy sans) + Source Serif 4 for the montage, Roboto Black for the centre word, gated with `delayRender()`/`continueRender()`. |
 | `lines.ts` | Builds each line's spec and its one pre-blurred, tileable buffer. |
 | `effects.ts` | Glitch schedule, centre-word sprites, vignette, grain tiles — all baked once. |
 | `HeadlineScroll.tsx` | The per-frame draw. |
@@ -72,7 +72,7 @@ strip exactly.
 
 ## Fonts
 
-The montage uses Inter and Source Serif 4. The centre word uses Poppins Black —
+The montage uses Inter and Source Serif 4. The centre word uses Roboto Black —
 a different face on purpose, so the one sharp thing in the frame separates from
 the blurred text by shape as well as by focus.
 

@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getInfo as interInfo } from "@remotion/google-fonts/Inter";
-import { getInfo as poppinsInfo } from "@remotion/google-fonts/Poppins";
+import { getInfo as robotoInfo } from "@remotion/google-fonts/Roboto";
 import { getInfo as serifInfo } from "@remotion/google-fonts/SourceSerif4";
 
 const OUT_DIR = resolve(
@@ -24,13 +24,12 @@ const OUT_DIR = resolve(
 
 const SUBSET = "latin";
 
-// Inter and Source Serif ship as variable fonts, so Google serves one file per
-// family covering the whole weight axis. Poppins is a set of static faces, and
-// only its Black is wanted here, so the single-URL check below still holds.
+// One file per family: Inter and Source Serif ship as variable fonts covering
+// their whole weight axis, and only Roboto's Black is wanted here.
 const FACES = [
   { info: interInfo(), weights: ["500", "700", "900"] },
   { info: serifInfo(), weights: ["400", "600"] },
-  { info: poppinsInfo(), weights: ["900"] },
+  { info: robotoInfo(), weights: ["900"] },
 ];
 
 const slug = (family) => family.replace(/\s+/g, "");

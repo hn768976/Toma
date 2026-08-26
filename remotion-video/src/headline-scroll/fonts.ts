@@ -13,7 +13,7 @@
 // faces are genuinely usable.
 
 import { getInfo as interInfo } from "@remotion/google-fonts/Inter";
-import { getInfo as poppinsInfo } from "@remotion/google-fonts/Poppins";
+import { getInfo as robotoInfo } from "@remotion/google-fonts/Roboto";
 import { getInfo as sourceSerifInfo } from "@remotion/google-fonts/SourceSerif4";
 import { staticFile } from "remotion";
 
@@ -21,12 +21,11 @@ export const SANS_FAMILY = interInfo().fontFamily;
 export const SERIF_FAMILY = sourceSerifInfo().fontFamily;
 
 /**
- * The centre word gets its own face rather than the montage's heavy sans.
- * Poppins Black is geometric where Inter is neoclassical, so the one sharp
- * thing in the frame separates from the blurred text by shape as well as by
- * focus — which is the point of the shot.
+ * The centre word gets its own face rather than the montage's heavy sans, so
+ * the one sharp thing in the frame separates from the blurred text by shape as
+ * well as by focus — which is the point of the shot.
  */
-export const WORD_FAMILY = poppinsInfo().fontFamily;
+export const WORD_FAMILY = robotoInfo().fontFamily;
 export const WORD_WEIGHT = 900;
 
 const slug = (family: string) => family.replace(/\s+/g, "");
@@ -35,7 +34,7 @@ const slug = (family: string) => family.replace(/\s+/g, "");
 const FACES = [
   { family: SANS_FAMILY, weights: "100 900" },
   { family: SERIF_FAMILY, weights: "200 900" },
-  // Poppins is a set of static faces; only the Black is loaded.
+  // Only Roboto's Black is loaded.
   { family: WORD_FAMILY, weights: "900" },
 ];
 
