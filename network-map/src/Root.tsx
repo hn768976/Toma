@@ -14,6 +14,15 @@ export const RemotionRoot: React.FC = () => {
         height={FRAME_HEIGHT}
         defaultProps={{variant: 'global' as const}}
       />
+      <Composition
+        id="NetworkMapEurope"
+        component={NetworkMap}
+        durationInFrames={LOOP_FRAMES}
+        fps={FPS}
+        width={FRAME_WIDTH}
+        height={FRAME_HEIGHT}
+        defaultProps={{variant: 'europe' as const}}
+      />
     </>
   );
 };
