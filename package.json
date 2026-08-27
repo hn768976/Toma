@@ -1,0 +1,22 @@
+{
+  "name": "agentic-hud",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K Agentic AI HUD animation in Remotion — three variants (violet / breach / chat)",
+  "scripts": {
+    "studio": "remotion studio",
+    "render:violet": "remotion render AgenticDialViolet out/agentic-violet.mp4 --codec=h264 --crf=12",
+    "render:breach": "remotion render AgenticDialBreach out/agentic-breach.mp4 --codec=h264 --crf=12",
+    "render:chat": "remotion render AgenticDialChat out/agentic-chat.mp4 --codec=h264 --crf=14"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.518",
+    "remotion": "4.0.518",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.0",
+    "typescript": "5.8.3"
+  }
+}
