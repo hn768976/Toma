@@ -599,7 +599,7 @@ const drawNumerals = (a: DrawArgs) => {
 const drawStatus = (a: DrawArgs, s: Readouts['status']) => {
   const {ctx, w, h, p, f} = a;
   const top = HEADER + 12;
-  const idx = Math.floor((f / 90) % s.states.length);
+  const idx = Math.floor(f / 100) % s.states.length;
   setLetterSpacing(ctx, '3px');
   ctx.font = condFont(42, 600);
   ctx.textBaseline = 'middle';

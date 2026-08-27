@@ -673,7 +673,9 @@ const BRAIN: Variant = {
 /* #endregion variant:brain */
 
 export const VARIANTS: Record<VariantKey, Variant> = {
+  /* #region register:car */
   car: CAR,
+  /* #endregion register:car */
   /* #region register:jet */
   jet: JET,
   /* #endregion register:jet */

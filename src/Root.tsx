@@ -6,6 +6,7 @@ import {DURATION, FPS, H, W} from './lib/layout';
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* #region register:car */}
       <Composition
         id="ScanHudCar"
         component={ScanHud}
@@ -15,6 +16,7 @@ export const RemotionRoot: React.FC = () => {
         height={H}
         defaultProps={{variant: 'car' as const}}
       />
+      {/* #endregion register:car */}
       {/* #region register:jet */}
       <Composition
         id="ScanHudJet"
