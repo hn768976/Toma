@@ -73,7 +73,17 @@ remotion.config.ts
 tsconfig.json
 package.json
 public/
+renders/            pre-rendered output for all three compositions
+  agent-light.mp4           3840 x 2160, crf 14
+  agent-dark.mp4            3840 x 2160, crf 14
+  agent-warm.mp4            3840 x 2160, crf 14
+  agent-light-preview.mp4   1920 x 1080, crf 18
+  agent-dark-preview.mp4    1920 x 1080, crf 18
+  agent-warm-preview.mp4    1920 x 1080, crf 18
 ```
+
+`renders/` is output, not input — delete it and re-run the commands below to
+regenerate. Everything needed to build is the rest of the tree.
 
 `src/AgentIcons.tsx` holds one exported `VARIANTS` object keyed by
 `"light" | "dark" | "warm"`. For each variant it carries the palette, the
