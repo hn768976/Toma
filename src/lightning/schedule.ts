@@ -1,5 +1,5 @@
 import type {VariantConfig, VariantName} from '../variants';
-import {randIn, randIntIn} from './rng';
+import {rand, randIn, randIntIn} from './rng';
 
 /** One bolt lit for one return stroke. */
 export interface Lighting {
@@ -49,6 +49,16 @@ interface DraftBolt {
 	stagger: number;
 }
 
+/** Seeded Fisher-Yates over [0, count). */
+const shuffled = (seed: string, count: number): number[] => {
+	const order = Array.from({length: count}, (_, i) => i);
+	for (let i = count - 1; i > 0; i--) {
+		const j = Math.floor(rand(`${seed}:${i}`) * (i + 1));
+		[order[i], order[j]] = [order[j], order[i]];
+	}
+	return order;
+};
+
 const cache = new Map<string, Schedule>();
 
 const buildSchedule = (name: VariantName, cfg: VariantConfig): Schedule => {
@@ -76,9 +86,20 @@ const buildSchedule = (name: VariantName, cfg: VariantConfig): Schedule => {
 				originY,
 				travel: randIn(`${name}:e${e}:b${b}:travel`, bolt.travel) * height,
 				drift: randIn(`${name}:e${e}:b${b}:drift`, bolt.drift) * width,
-				stagger: randIntIn(`${name}:e${e}:b${b}:stagger`, bolt.stagger),
+				stagger: 0,
 			});
 		}
+
+		// Bolts in one event do not all flash together: they are dealt distinct
+		// lags, a seeded few frames apart and in a seeded order, so the burst
+		// ripples across the frame instead of switching on as a block.
+		let lag = 0;
+		shuffled(`${name}:e${e}:order`, boltCount).forEach((boltIndex, position) => {
+			if (position > 0) {
+				lag += randIntIn(`${name}:e${e}:lag${position}`, bolt.stagger);
+			}
+			bolts[boltIndex].stagger = lag;
+		});
 
 		const flashCount = randIntIn(`${name}:e${e}:flashes`, s.flashesPerEvent);
 		const flashes: DraftFlash[] = [];
