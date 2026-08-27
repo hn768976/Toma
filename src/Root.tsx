@@ -24,6 +24,15 @@ export const RemotionRoot: React.FC = () => {
 				height={COMP_H}
 				defaultProps={{variant: 'green' as const}}
 			/>
+			<Composition
+				id="HalftoneDashAmber"
+				component={HalftoneDash}
+				durationInFrames={DURATION}
+				fps={30}
+				width={COMP_W}
+				height={COMP_H}
+				defaultProps={{variant: 'amber' as const}}
+			/>
 		</>
 	);
 };

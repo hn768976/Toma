@@ -6,6 +6,7 @@ import {easeOutCubic, ramp} from '../lib/motion';
 import {DEPTH_LAYER, resetScene, shouldDraw} from '../lib/scene';
 import {drawChartsPanel} from '../panels/charts';
 import {drawCodePanel} from '../panels/code';
+import {drawGaugesPanel} from '../panels/gauges';
 import {contentBox, drawPanelChrome} from '../panels/chrome';
 import {PanelDrawArgs} from '../panels/types';
 
@@ -41,12 +42,20 @@ export const SidePanel: React.FC<{panel: PanelSlot}> = ({panel}) => {
 		ctx.translate(ox, oy);
 		bloom.translate(ox, oy);
 
-		drawPanelChrome(ctx, bloom, panel, variant, frame);
+		// The gauge variant is radial: no rectangular chrome, and no clip, since
+		// tick scales and needles deliberately run outside their own box.
+		const boxed = variant.panelKind !== 'gauges';
 
-		const box = contentBox(panel);
+		if (boxed) {
+			drawPanelChrome(ctx, bloom, panel, variant, frame);
+		}
+
+		const box = boxed ? contentBox(panel) : panel;
 		ctx.save();
-		roundRect(ctx, panel.x + 2, panel.y + 2, panel.w - 4, panel.h - 4, 11);
-		ctx.clip();
+		if (boxed) {
+			roundRect(ctx, panel.x + 2, panel.y + 2, panel.w - 4, panel.h - 4, 11);
+			ctx.clip();
+		}
 
 		const args: PanelDrawArgs = {
 			ctx,
@@ -66,6 +75,9 @@ export const SidePanel: React.FC<{panel: PanelSlot}> = ({panel}) => {
 				break;
 			case 'code':
 				drawCodePanel(args);
+				break;
+			case 'gauges':
+				drawGaugesPanel(args);
 				break;
 			default:
 				break;

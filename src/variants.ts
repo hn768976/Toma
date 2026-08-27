@@ -74,11 +74,7 @@ export const TERMINAL_MONO = 'HalftoneMono';
 /** Shared across every variant: dot pitch of the halftone screen at 4K. */
 export const DOT_PITCH = 14;
 
-/**
- * Filled in one variant per stage; `getVariant` guards the lookup so a name
- * that has not been added yet fails loudly instead of rendering blank.
- */
-export const VARIANTS: Partial<Record<VariantName, Variant>> = {
+export const VARIANTS: Record<VariantName, Variant> = {
 	blue: {
 		name: 'blue',
 		palette: {
@@ -140,6 +136,43 @@ export const VARIANTS: Partial<Record<VariantName, Variant>> = {
 		blurMax: 24,
 		scanlines: true,
 		grainAlpha: 0.03,
+	},
+
+	amber: {
+		name: 'amber',
+		palette: {
+			bgDeep: '#1A0E02',
+			bgMid: '#3D2408',
+			web: '#6B4514',
+			orb: '#FFC44F',
+			orbWhite: '#FFF5D8',
+			panelBorder: '#E8942E',
+			panelFill: '#241505',
+			textPale: '#FFE0A8',
+			accentA: '#B8763A',
+			accentB: '#FFF0D0',
+		},
+		accentAUse: 'bronze - gauge tracks and inactive segments',
+		accentBUse: 'cream - numeric readouts',
+		glyph: 'CORE',
+		glyphFamily: GEOMETRIC_SANS,
+		// Four characters instead of two, so the cap height comes down ~30%
+		// from blue's "AI" and the tracking opens right out.
+		glyphScale: 0.434,
+		glyphTracking: 0.24,
+		glyphBlinkCycle: null,
+		panelKind: 'gauges',
+		panelArrival: 'near-first',
+		// The one flag that matters: no dot screen, the composite goes straight
+		// to the canvas. Crisp vector and smooth gradients where the other two
+		// are quantised into dots.
+		halftone: false,
+		// The halftone was masking how soft the defocus was; without it the
+		// depth has to do more work on its own, so the ceiling goes up.
+		blurMax: 34,
+		scanlines: false,
+		// No dot screen to quantise it, so the same grain reads more strongly.
+		grainAlpha: 0.04,
 	},
 };
 

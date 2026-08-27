@@ -46,20 +46,38 @@ const RECTS: {id: string; x: number; y: number; w: number; h: number; depth: Dep
 const ROLES: Record<PanelKind, string[]> = {
 	charts: ['map', 'bars', 'ringA', 'ringB', 'table', 'line'],
 	code: ['code', 'log', 'log', 'proc', 'code', 'strip'],
-	gauges: [],
+	gauges: ['arc', 'ringL', 'ringR', 'level'],
 };
+
+/**
+ * The gauge variant replaces the rectangular cluster with a single radial
+ * assembly, so it needs its own boxes: one large arc gauge, two smaller rings
+ * flanking it and a semicircular level meter beneath. Each box is the bounding
+ * square of its gauge; the renderers derive centre and radius from it.
+ */
+const GAUGE_RECTS: typeof RECTS = [
+	{id: 'gA', x: 2100, y: 300, w: 1100, h: 1100, depth: 0},
+	{id: 'gL', x: 1650, y: 830, w: 500, h: 500, depth: 1},
+	{id: 'gR', x: 3170, y: 830, w: 500, h: 500, depth: 2},
+	{id: 'gV', x: 2230, y: 1380, w: 840, h: 420, depth: 0},
+];
 
 /** Panels arrive one at a time between frames 90 and ~250. */
 export const PANEL_ARRIVE_START = 90;
 export const PANEL_ARRIVE_STAGGER = 25;
 export const PANEL_ARRIVE_DURATION = 34;
+/** Four gauges instead of six panels, so they are spaced wider to fill the
+ *  same arrival window. */
+const GAUGE_ARRIVE_STAGGER = 42;
 
 export const buildPanels = (
 	kind: PanelKind,
 	arrival: 'near-first' | 'far-first'
 ): PanelSlot[] => {
 	const roles = ROLES[kind];
-	const withDist = RECTS.map((r, i) => {
+	const rects = kind === 'gauges' ? GAUGE_RECTS : RECTS;
+	const stagger = kind === 'gauges' ? GAUGE_ARRIVE_STAGGER : PANEL_ARRIVE_STAGGER;
+	const withDist = rects.map((r, i) => {
 		const cx = r.x + r.w / 2;
 		const cy = r.y + r.h / 2;
 		return {
@@ -73,7 +91,7 @@ export const buildPanels = (
 		arrival === 'near-first' ? a.dist - b.dist : b.dist - a.dist
 	);
 	order.forEach((p, i) => {
-		p.start = PANEL_ARRIVE_START + i * PANEL_ARRIVE_STAGGER;
+		p.start = PANEL_ARRIVE_START + i * stagger;
 	});
 	// Keep painting order stable (by id) - arrival order only drives timing.
 	return withDist;
