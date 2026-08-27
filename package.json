@@ -1,0 +1,23 @@
+{
+  "name": "lightning-strike",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K lightning strike animations in Remotion - three atmospheric variants",
+  "scripts": {
+    "start": "remotion studio",
+    "build:blue": "remotion render LightningBlue out/lightning-blue.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "build:violet": "remotion render LightningViolet out/lightning-violet.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "build:white": "remotion render LightningWhite out/lightning-white.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.418",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.418"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
