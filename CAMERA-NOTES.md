@@ -84,14 +84,26 @@ If the first preview is black, check the camera height against the terrain
     distance and the rasterizer chops them into dashes; constant pixel
     width keeps every rope a continuous string. The neon body comes from
     bloom, not width.
-  - Rope character is three numbers in `CONFIG.terrain` + `CONFIG.contours`:
-    `noiseScale` (feature size — how tight the meander), `amp` (relief —
-    how much the sheet ripples), `levels` (how many ropes). `anisoX` < 1
-    stretches features along x into long parallel streaks; leave it at 1
-    for the dense isotropic maze. `openRopesOnly` drops closed polylines
-    (loops around hilltops/hollows) — the chaining step's `closed` flag
-    makes it a one-line filter, and the fade region guarantees loops only
-    appear/disappear where they're already invisible.
+  - Rope character lives in `CONFIG.terrain` + `CONFIG.contours`:
+    `noiseScale`/`anisoX` (meander wavelength), `amp` (meander depth),
+    `levelStep` (rope gap). The load-bearing trick for "open flowing ropes,
+    no closed shapes, no voids": contour a TILTED field — terrain noise
+    plus `tiltZ`·z (contours only; the visible floor keeps the flat
+    noise). The tilt makes the field monotone-ish in z, so every iso-line
+    is an open rope flowing across the frame at gap ≈ `levelStep/tiltZ`,
+    with meander amplitude ≈ `amp/tiltZ`. Push `amp` well past what the
+    tilt climbs per gap and islands (closed loops) return — those are
+    dropped via `openRopesOnly` (the chaining step's `closed` flag), and
+    the fade region guarantees loops only appear where they're invisible.
+    Levels are multiples of `levelStep` (world-stable as the window
+    slides), generated per window, with the shade cycle keyed to the world
+    level index.
+  - The ropes drape on the terrain (bilinear height sample per vertex)
+    with a lift that GROWS with distance (0.13 + 0.002/unit). The floor
+    renders as planar triangles while the drape bends smoothly; where they
+    disagree a low-lifted rope dips under the floor at grazing angles and
+    renders as regular dashes. If thin lines ever look "beaded", suspect
+    this before blaming DOF.
   - Per-vertex colours handle the near-bright → far-haze ramp
     (`vertexColors: true`); fade lines *toward the haze colour*, not toward
     black, so they melt into the horizon glow — but toward a **dimmed**
