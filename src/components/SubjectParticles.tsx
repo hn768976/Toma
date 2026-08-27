@@ -1,6 +1,7 @@
 import React, {useLayoutEffect} from 'react';
 import {respawnState, twinkle, type ParticleSet} from '../lib/particles';
 import {dotSprite, glowSprite} from '../lib/sprites';
+import {streamFade, streamPoint, type StreamField} from '../lib/streams';
 import {clamp, mix} from '../lib/space';
 import {presence, useLoopFrame} from '../lib/timing';
 import type {Palette, SubjectMode} from '../variants';
@@ -8,6 +9,7 @@ import type {Palette, SubjectMode} from '../variants';
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   particles: ParticleSet;
+  streams: StreamField | null;
   palette: Palette;
   mode: SubjectMode;
   transform: {scale: number; cx: number; cy: number};
@@ -16,9 +18,46 @@ type Props = {
 /** Particles at or above this brightness get a bloom pass. */
 const BLOOM_THRESHOLD = 0.72;
 
+/**
+ * The "stream" branch: ribbons of particles emitted continuously from the back
+ * of the skull, each riding a cubic path out past the right frame edge and
+ * fading as it goes. A behavioural branch, not a re-parameterised shimmer.
+ */
+const drawStreams = (
+  ctx: CanvasRenderingContext2D,
+  streams: StreamField,
+  palette: Palette,
+  frame: number,
+) => {
+  const sprites = [dotSprite(palette.accent), dotSprite(palette.white)];
+  const glow = glowSprite(palette.accent);
+  const gate = presence(frame, 0.95);
+  if (gate <= 0.002) return;
+
+  for (let i = 0; i < streams.count; i++) {
+    const t = (frame / streams.period[i] + streams.phase[i]) % 1;
+    const s = streams.streams[streams.streamIdx[i]];
+    const p = streamPoint(s, t);
+    const off = streams.offset[i];
+    const x = p.x + p.nx * off;
+    const y = p.y + p.ny * off;
+    const alpha = clamp(streamFade(t) * streams.bright[i] * gate, 0, 1);
+    if (alpha <= 0.004) continue;
+    const r = streams.radius[i];
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(sprites[streams.colorIdx[i]], x - r, y - r, r * 2, r * 2);
+    if (streams.bright[i] > 0.82) {
+      const gr = r * 6;
+      ctx.globalAlpha = alpha * 0.24;
+      ctx.drawImage(glow, x - gr, y - gr, gr * 2, gr * 2);
+    }
+  }
+};
+
 export const SubjectParticles: React.FC<Props> = ({
   canvasRef,
   particles,
+  streams,
   palette,
   mode,
   transform,
@@ -95,8 +134,12 @@ export const SubjectParticles: React.FC<Props> = ({
       ctx.drawImage(glows[bloomC[i]], bloomX[i] - r, bloomY[i] - r, r * 2, r * 2);
     }
 
+    if (mode === 'stream' && streams) {
+      drawStreams(ctx, streams, palette, frame);
+    }
+
     ctx.restore();
-  }, [canvasRef, particles, palette, mode, transform, frame]);
+  }, [canvasRef, particles, streams, palette, mode, transform, frame]);
 
   return null;
 };

@@ -66,6 +66,7 @@ export const ParticleFigure: React.FC<ParticleFigureProps> = ({variant}) => {
       <SubjectParticles
         canvasRef={canvasRef}
         particles={scene.particles}
+        streams={scene.streams}
         palette={spec.palette}
         mode={spec.subject}
         transform={transform}

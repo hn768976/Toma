@@ -7,9 +7,9 @@ import {RESPAWN_FRACTION, RESPAWN_SLOTS, TWINKLE_PERIODS} from './timing';
 export const PARTICLE_COUNT = 7000;
 
 /** Density falls off this fast (mask px) away from the silhouette boundary. */
-const EDGE_FALLOFF = 9;
+const EDGE_FALLOFF = 7.5;
 /** How much density survives deep inside the form. Low = a dark, sparse core. */
-const EDGE_FLOOR = 0.09;
+const EDGE_FLOOR = 0.075;
 const CREASE_GAIN = 0.95;
 const CREASE_FALLOFF = 3.5;
 

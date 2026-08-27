@@ -1,12 +1,15 @@
 import {buildGridLines, type GridLines} from './grid';
 import {buildMaskField, type MaskField} from './mask';
 import {sampleParticles, type ParticleSet} from './particles';
+import {buildStreams, type StreamField} from './streams';
 import {VARIANTS, type VariantName} from '../variants';
 
 export type Scene = {
   field: MaskField;
   grid: GridLines;
   particles: ParticleSet;
+  /** Only built for variants whose subject animation mode is "stream". */
+  streams: StreamField | null;
 };
 
 /**
@@ -25,6 +28,8 @@ export const getScene = (variant: VariantName): Scene => {
     field,
     grid: buildGridLines(field),
     particles: sampleParticles(field, `${variant}:subject`),
+    streams:
+      spec.subject === 'stream' ? buildStreams(field, `${variant}:flow`) : null,
   };
   cache.set(variant, scene);
   return scene;
