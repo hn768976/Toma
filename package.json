@@ -1,0 +1,30 @@
+{
+  "name": "wire-city",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K wireframe city animation in Remotion + @remotion/three (three variants)",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion render",
+    "upgrade": "remotion upgrade",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.1.0",
+    "@remotion/cli": "^4.0.518",
+    "@remotion/three": "^4.0.518",
+    "postprocessing": "^6.39.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "remotion": "^4.0.518",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@types/three": "^0.185.4",
+    "typescript": "^7.0.2"
+  }
+}
