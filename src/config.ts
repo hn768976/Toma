@@ -40,22 +40,28 @@ export const CONFIG = {
     depth: 170,
     /** Base spatial frequency of the noise (1/world-units). Higher = tighter,
      * curvier maze-like ropes — the reference's dense meander. */
-    noiseScale: 0.032,
-    /** X-frequency multiplier. 1 = isotropic: contours wander equally in both
-     * axes, which is what gives the reference its maze of curves and loops. */
-    anisoX: 1,
+    noiseScale: 0.026,
+    /** X-frequency multiplier (<1 stretches features along x) so the rope
+     * meanders are broad and flowing rather than jittery. */
+    anisoX: 0.6,
     octaves: 3,
-    /** Peak-to-mid height of the terrain: real rolling relief, like the
-     * reference's rippled sheet. */
-    amp: 1.1,
+    /** Peak-to-mid height of the terrain noise. The ratio amp/tiltZ sets the
+     * meander amplitude of the ropes (≈ ±14 units here); pushing amp much
+     * higher than the tilt climbs per gap brings closed islands back. */
+    amp: 0.9,
+    /** Constant slope added to the CONTOUR field only (not the visible
+     * floor): h_contour = noise + tiltZ·z. It turns the iso-lines into
+     * evenly spaced wavy ropes flowing across the frame, with no loops. */
+    tiltZ: 0.045,
     /** How fast the noise field breathes, in noise-t per second.
      * 0 = frozen: the rope lines do not move — only the dots travel on them. */
     breatheSpeed: 0,
   },
 
   contours: {
-    /** Number of iso-height levels — sets rope density across the field. */
-    levels: 22,
+    /** Height gap between iso levels of the tilted contour field. Ground
+     * gap between ropes ≈ levelStep / tiltZ (≈ 8 units here). */
+    levelStep: 0.4,
     /** Laplacian smoothing passes on the chained polylines — rounds off the
      * little marching-squares corners so the ropes are pure curves. */
     smoothingPasses: 3,
@@ -67,9 +73,9 @@ export const CONFIG = {
     lineWidthPx: 2.6,
     /** HDR multiplier on the nearest lines so they read as neon under bloom. */
     nearGlow: 1.35,
-    /** Closed contours (the loops around hilltops and hollows) are part of
-     * the look — the reference is full of them. */
-    openRopesOnly: false,
+    /** No closed shapes: loops around hilltops/hollows are dropped, only
+     * open flowing ropes are drawn. */
+    openRopesOnly: true,
     /** Darkest shade in the per-level brightness cycle. */
     shadeMin: 0.38,
     /** Discard stubs shorter than this many points after chaining. */
@@ -138,8 +144,9 @@ export const CONFIG = {
     focalLength: 0.085,
     /** Bokeh disc size — generous on purpose; the near-pin bokeh is the shot. */
     bokehScale: 13,
-    /** Internal DOF buffer height; keeps bokeh consistent across output sizes. */
-    height: 720,
+    /** Internal DOF buffer height; keeps bokeh consistent across output
+     * sizes. 1080 keeps blurred thin ropes smooth instead of beaded. */
+    height: 1080,
   },
 
   bloom: {

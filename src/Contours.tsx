@@ -7,7 +7,7 @@ import {LineSegmentsGeometry} from 'three/examples/jsm/lines/LineSegmentsGeometr
 import {LineMaterial} from 'three/examples/jsm/lines/LineMaterial.js';
 import {cameraPose} from './cameraPath';
 import {CONFIG} from './config';
-import {contourLevels, extractContours, type HeightField} from './terrain';
+import {extractContours, windowLevels, type HeightField} from './terrain';
 import type {Theme} from './theme';
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -35,8 +35,6 @@ export const Contours: React.FC<{
   const frame = useCurrentFrame();
   const {fps, durationInFrames} = useVideoConfig();
   const size = useThree((s) => s.size);
-
-  const levels = useMemo(() => contourLevels(), []);
 
   const {line, material} = useMemo(() => {
     const material = new LineMaterial({
@@ -157,6 +155,32 @@ export const Contours: React.FC<{
       colAttr.needsUpdate = true;
     }
 
+    // The CONTOUR field: terrain noise plus the constant z-tilt. The tilt
+    // makes it monotone-ish in z, so its iso-lines are evenly spaced open
+    // ropes flowing across the frame — no loops, no plateau voids.
+    const {tiltZ} = CONFIG.terrain;
+    const contourHeights = new Float32Array(nx * nz);
+    for (let j = 0; j < nz; j++) {
+      const lift = tiltZ * (originZ + j * cell);
+      for (let i = 0; i < nx; i++) {
+        contourHeights[j * nx + i] = heights[j * nx + i] + lift;
+      }
+    }
+    const levels = windowLevels(originZ, originZ + depth);
+
+    // Bilinear sample of the TERRAIN height — ropes drape on the floor.
+    const sampleH = (x: number, z: number) => {
+      const fx = Math.min(nx - 1.001, Math.max(0, (x - originX) / cell));
+      const fz = Math.min(nz - 1.001, Math.max(0, (z - originZ) / cell));
+      const i = Math.floor(fx);
+      const j = Math.floor(fz);
+      const tx = fx - i;
+      const tz = fz - j;
+      const h0 = heights[j * nx + i] * (1 - tx) + heights[j * nx + i + 1] * tx;
+      const h1 = heights[(j + 1) * nx + i] * (1 - tx) + heights[(j + 1) * nx + i + 1] * tx;
+      return h0 * (1 - tz) + h1 * tz;
+    };
+
     const positions: number[] = [];
     const colors: number[] = [];
 
@@ -176,19 +200,25 @@ export const Contours: React.FC<{
       colors.push(r, g, b);
     };
 
-    const pushSegment = (L: number, shade: number, x1: number, z1: number, x2: number, z2: number) => {
+    const pushSegment = (shade: number, x1: number, z1: number, x2: number, z2: number) => {
       // Cull segments fully behind the camera or beyond the fade horizon.
       if (z1 < camZ - 1.5 && z2 < camZ - 1.5) return;
-      const d1 = Math.hypot(x1 - camX, L - camY, z1 - camZ);
-      const d2 = Math.hypot(x2 - camX, L - camY, z2 - camZ);
+      // Lift well clear of the floor triangles: the floor renders as planar
+      // triangles while this bilinear sample bends smoothly, and where the
+      // two disagree a low-lifted rope dips underneath and reads as dashes.
+      // The margin grows with distance — grazing angles amplify the error.
+      const y1 = sampleH(x1, z1) + 0.13 + Math.max(0, z1 - camZ) * 0.002;
+      const y2 = sampleH(x2, z2) + 0.13 + Math.max(0, z2 - camZ) * 0.002;
+      const d1 = Math.hypot(x1 - camX, y1 - camY, z1 - camZ);
+      const d2 = Math.hypot(x2 - camX, y2 - camY, z2 - camZ);
       if (Math.min(d1, d2) > fadeEnd) return;
-      positions.push(x1, L, z1, x2, L, z2);
+      positions.push(x1, y1, z1, x2, y2, z2);
       pushColor(d1, shade);
       pushColor(d2, shade);
     };
 
     const perLevel = extractContours(
-      heights,
+      contourHeights,
       nx,
       nz,
       originX,
@@ -200,20 +230,22 @@ export const Contours: React.FC<{
     perLevel.forEach((polys, li) => {
       const L = levels[li];
       // Neighbouring ropes alternate between the full colour and darker
-      // shades of it — the bright/dark mix reads as depth.
-      const {shadeMin} = CONFIG.contours;
+      // shades of it — the bright/dark mix reads as depth. Keyed to the
+      // world-stable level index so a rope keeps its shade as the window slides.
+      const {shadeMin, levelStep} = CONFIG.contours;
       const cycle = [1, 0.5, 0.85, shadeMin, 0.95, 0.62];
-      const shade = cycle[li % cycle.length];
+      const worldIdx = Math.round(L / levelStep);
+      const shade = cycle[((worldIdx % cycle.length) + cycle.length) % cycle.length];
       for (const poly of polys) {
         const n = poly.pts.length / 2;
         // Only long, open flowing ropes: no closed shapes, no tiny stubs.
         if (CONFIG.contours.openRopesOnly && poly.closed) continue;
         if (n < CONFIG.contours.minPoints) continue;
         for (let i = 0; i < n - 1; i++) {
-          pushSegment(L, shade, poly.pts[i * 2], poly.pts[i * 2 + 1], poly.pts[i * 2 + 2], poly.pts[i * 2 + 3]);
+          pushSegment(shade, poly.pts[i * 2], poly.pts[i * 2 + 1], poly.pts[i * 2 + 2], poly.pts[i * 2 + 3]);
         }
         if (poly.closed && n > 2) {
-          pushSegment(L, shade, poly.pts[(n - 1) * 2], poly.pts[(n - 1) * 2 + 1], poly.pts[0], poly.pts[1]);
+          pushSegment(shade, poly.pts[(n - 1) * 2], poly.pts[(n - 1) * 2 + 1], poly.pts[0], poly.pts[1]);
         }
       }
     });
@@ -229,7 +261,7 @@ export const Contours: React.FC<{
 
     material.resolution.set(size.width, size.height);
     material.linewidth = Math.max(1, CONFIG.contours.lineWidthPx * (size.height / 2160));
-  }, [frame, durationInFrames, fps, heightField, levels, line, floor, material, palette, size]);
+  }, [frame, durationInFrames, fps, heightField, line, floor, material, palette, size]);
 
   return (
     <group>

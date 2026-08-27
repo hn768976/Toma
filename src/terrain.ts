@@ -277,18 +277,20 @@ export const extractContours = (
 };
 
 /**
- * The evenly spaced iso-height levels. Even GROUND spacing between ropes
- * comes from the level count + low terrain amplitude combination (gentle,
- * near-constant slopes), not from redistributing the levels — noise heights
- * cluster around zero, so the middle levels carry most of the picture.
+ * The iso levels of the tilted contour field that can intersect a given z
+ * window: every multiple of levelStep in [tiltZ·zLo − margin, tiltZ·zHi +
+ * margin]. Multiples of a fixed step are world-stable — the same physical
+ * rope keeps the same level (and shade) as the window slides.
  */
-export const contourLevels = (): number[] => {
-  const {levels} = CONFIG.contours;
-  const {amp} = CONFIG.terrain;
-  const top = amp * 0.95;
+export const windowLevels = (zLo: number, zHi: number): number[] => {
+  const {levelStep} = CONFIG.contours;
+  const {amp, tiltZ} = CONFIG.terrain;
+  const margin = amp * 1.1;
+  const lo = tiltZ * zLo - margin;
+  const hi = tiltZ * zHi + margin;
   const out: number[] = [];
-  for (let k = 0; k < levels; k++) {
-    out.push(-top + (2 * top * k) / (levels - 1));
+  for (let k = Math.ceil(lo / levelStep); k * levelStep <= hi; k++) {
+    out.push(k * levelStep);
   }
   return out;
 };
