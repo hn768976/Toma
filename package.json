@@ -1,0 +1,25 @@
+{
+  "name": "scan-hud",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K HUD scan animation built with Remotion - three variants (car, jet, brain).",
+  "scripts": {
+    "start": "remotion studio",
+    "build:car": "remotion render ScanHudCar out/scan-car-preview.mp4 --codec=h264 --crf=18 --scale=0.5",
+    "build:jet": "remotion render ScanHudJet out/scan-jet-preview.mp4 --codec=h264 --crf=18 --scale=0.5",
+    "build:brain": "remotion render ScanHudBrain out/scan-brain-preview.mp4 --codec=h264 --crf=18 --scale=0.5",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.518",
+    "@remotion/google-fonts": "4.0.518",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.518"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.8.2"
+  },
+  "main": "src/index.ts"
+}
