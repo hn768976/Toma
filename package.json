@@ -1,0 +1,22 @@
+{
+  "name": "agent-icons",
+  "version": "1.0.0",
+  "description": "Flat AI agent icon animations in Remotion — three variants at 4K",
+  "private": true,
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render",
+    "upgrade": "remotion upgrade",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.400",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.400"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.8.2"
+  }
+}
