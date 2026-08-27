@@ -66,6 +66,15 @@ export type IconName =
   | 'eye'
   | 'shieldKeyhole'
   | 'bug'
+  /* warm — data domain */
+  | 'database'
+  | 'barChart'
+  | 'pieChart'
+  | 'lineGraph'
+  | 'cloud'
+  | 'funnel'
+  | 'tableGrid'
+  | 'arrowUp'
   /* shared */
   | 'chipEcho';
 
@@ -97,6 +106,8 @@ export type VariantSpec = {
   idleRot: number;
   /** Palette key of a soft halo drawn behind the centre chip, or null. */
   chipGlow: string | null;
+  /** Palette key for the grid connector traces, or null when there are none. */
+  connector: string | null;
 };
 
 export const VARIANTS = {
@@ -134,6 +145,7 @@ export const VARIANTS = {
     idleAmp: 14,
     idleRot: 2,
     chipGlow: null,
+    connector: null,
   },
 
   dark: {
@@ -168,6 +180,38 @@ export const VARIANTS = {
     idleAmp: 14,
     idleRot: 2,
     chipGlow: 'lime',
+    connector: null,
+  },
+
+  warm: {
+    layout: 'grid',
+    label: ['DATA', 'HUB'],
+    palette: {
+      bg: '#F2EAD9',
+      chipFill: '#1F5E5B',
+      chipText: '#F2EAD9',
+      trace: '#1F5E5B',
+      terracotta: '#C4553A',
+      olive: '#6B7A3A',
+      mustard: '#D99A2B',
+      teal: '#1F5E5B',
+      brown: '#7A5540',
+    },
+    icons: [
+      {name: 'database', color: 'teal'},
+      {name: 'barChart', color: 'mustard'},
+      {name: 'pieChart', color: 'terracotta'},
+      {name: 'lineGraph', color: 'olive'},
+      {name: 'cloud', color: 'teal'},
+      {name: 'funnel', color: 'mustard'},
+      {name: 'tableGrid', color: 'brown'},
+      {name: 'arrowUp', color: 'olive'},
+    ],
+    sparkles: {kind: 'star', colors: []},
+    idleAmp: 5,
+    idleRot: 0,
+    chipGlow: null,
+    connector: 'teal',
   },
 } satisfies Record<string, VariantSpec>;
 
@@ -218,6 +262,148 @@ const scatterRank = (() => {
   });
   return rank;
 })();
+
+/* ── GRID layout ──────────────────────────────────────────────────────────
+   A genuine second layout branch: a regular 3x3 grid with the chip holding
+   the centre cell, and right-angle circuit traces joining each cell to it. */
+
+const GRID_COLS = [640, CX, 3200];
+const GRID_ROWS = [400, CY, 1760];
+const GRID_ICON = 360;
+const GRID_HALF = GRID_ICON / 2;
+/** Traces stop just short of the glyph rather than at the cell box edge. */
+const GRID_PORT = GRID_HALF * 0.84;
+/** Where a trace leaves the chip — just clear of its outermost pin dots. */
+const CHIP_PORT = 260;
+/** Half the gutter, used as the turning column for the corner traces. */
+const GRID_TURN_X = [1250, 2590];
+const CORNER_R = 34;
+
+/** Eight cells in reading order, centre cell (the chip) skipped. */
+const GRID_SLOTS: Slot[] = [
+  {x: GRID_COLS[0], y: GRID_ROWS[0], size: GRID_ICON},
+  {x: GRID_COLS[1], y: GRID_ROWS[0], size: GRID_ICON},
+  {x: GRID_COLS[2], y: GRID_ROWS[0], size: GRID_ICON},
+  {x: GRID_COLS[0], y: GRID_ROWS[1], size: GRID_ICON},
+  {x: GRID_COLS[2], y: GRID_ROWS[1], size: GRID_ICON},
+  {x: GRID_COLS[0], y: GRID_ROWS[2], size: GRID_ICON},
+  {x: GRID_COLS[1], y: GRID_ROWS[2], size: GRID_ICON},
+  {x: GRID_COLS[2], y: GRID_ROWS[2], size: GRID_ICON},
+];
+
+export type Pt = {x: number; y: number};
+
+/**
+ * Corner points per trace. Every segment is horizontal or vertical — the
+ * corner cells turn twice, through the gutter, so no trace ever crosses a
+ * neighbouring cell.
+ */
+const GRID_ROUTES: Pt[][] = [
+  /* top-left    */ [
+    {x: CX - CHIP_PORT, y: CY - 70},
+    {x: GRID_TURN_X[0], y: CY - 70},
+    {x: GRID_TURN_X[0], y: GRID_ROWS[0]},
+    {x: GRID_COLS[0] + GRID_PORT, y: GRID_ROWS[0]},
+  ],
+  /* top         */ [
+    {x: CX, y: CY - CHIP_PORT},
+    {x: CX, y: GRID_ROWS[0] + GRID_PORT},
+  ],
+  /* top-right   */ [
+    {x: CX + CHIP_PORT, y: CY - 70},
+    {x: GRID_TURN_X[1], y: CY - 70},
+    {x: GRID_TURN_X[1], y: GRID_ROWS[0]},
+    {x: GRID_COLS[2] - GRID_PORT, y: GRID_ROWS[0]},
+  ],
+  /* left        */ [
+    {x: CX - CHIP_PORT, y: CY},
+    {x: GRID_COLS[0] + GRID_PORT, y: CY},
+  ],
+  /* right       */ [
+    {x: CX + CHIP_PORT, y: CY},
+    {x: GRID_COLS[2] - GRID_PORT, y: CY},
+  ],
+  /* bottom-left */ [
+    {x: CX - CHIP_PORT, y: CY + 70},
+    {x: GRID_TURN_X[0], y: CY + 70},
+    {x: GRID_TURN_X[0], y: GRID_ROWS[2]},
+    {x: GRID_COLS[0] + GRID_PORT, y: GRID_ROWS[2]},
+  ],
+  /* bottom      */ [
+    {x: CX, y: CY + CHIP_PORT},
+    {x: CX, y: GRID_ROWS[2] - GRID_PORT},
+  ],
+  /* bottom-right*/ [
+    {x: CX + CHIP_PORT, y: CY + 70},
+    {x: GRID_TURN_X[1], y: CY + 70},
+    {x: GRID_TURN_X[1], y: GRID_ROWS[2]},
+    {x: GRID_COLS[2] - GRID_PORT, y: GRID_ROWS[2]},
+  ],
+];
+
+/** Replace each corner with a quadratic fillet, sampled into a polyline so
+ *  the drawn path and the travelling dots share one source of truth. */
+const filletPolyline = (pts: Pt[], r: number, seg = 12): Pt[] => {
+  const out: Pt[] = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const a = pts[i - 1];
+    const p = pts[i];
+    const b = pts[i + 1];
+    const d1 = Math.hypot(a.x - p.x, a.y - p.y);
+    const d2 = Math.hypot(b.x - p.x, b.y - p.y);
+    const rr = Math.min(r, d1 / 2, d2 / 2);
+    const s1 = {x: p.x + ((a.x - p.x) / d1) * rr, y: p.y + ((a.y - p.y) / d1) * rr};
+    const s2 = {x: p.x + ((b.x - p.x) / d2) * rr, y: p.y + ((b.y - p.y) / d2) * rr};
+    out.push(s1);
+    for (let k = 1; k < seg; k++) {
+      const t = k / seg;
+      const u = 1 - t;
+      out.push({
+        x: u * u * s1.x + 2 * u * t * p.x + t * t * s2.x,
+        y: u * u * s1.y + 2 * u * t * p.y + t * t * s2.y,
+      });
+    }
+    out.push(s2);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+};
+
+export type Trace = {d: string; pts: Pt[]; cum: number[]; total: number};
+
+const buildTrace = (route: Pt[]): Trace => {
+  const pts = filletPolyline(route, CORNER_R);
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  }
+  const d = pts
+    .map((q, i) => `${i === 0 ? 'M' : 'L'}${q.x.toFixed(2)} ${q.y.toFixed(2)}`)
+    .join(' ');
+  return {d, pts, cum, total: cum[cum.length - 1]};
+};
+
+const GRID_TRACES: Trace[] = GRID_ROUTES.map(buildTrace);
+
+/** Point at a normalised distance along a trace. */
+const pointAt = (tr: Trace, t: number): Pt => {
+  const target = Math.max(0, Math.min(1, t)) * tr.total;
+  let i = 1;
+  while (i < tr.cum.length - 1 && tr.cum[i] < target) i++;
+  const span = tr.cum[i] - tr.cum[i - 1] || 1;
+  const f = (target - tr.cum[i - 1]) / span;
+  const a = tr.pts[i - 1];
+  const b = tr.pts[i];
+  return {x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f};
+};
+
+/* Grid cascade: the hub wires itself up, one trace at a time. */
+const TRACE_START = 22;
+const TRACE_GAP = 11;
+const TRACE_DRAW = 10;
+/** Travelling-dot radius and the frames over which the dots fade in. */
+const DOT_R = 13;
+const DOT_FADE = 15;
 
 /* ════════════════════════════════════════════════════════════════════════
    MOTION HELPERS
@@ -671,6 +857,102 @@ const Glyph: React.FC<GlyphProps> = ({name, c, a, bg, sw, uid}) => {
         </g>
       );
 
+    /* ── data domain ─────────────────────────────────────────────── */
+
+    case 'database':
+      return (
+        <g>
+          <path d="M18 26 V72 C18 82 32 89 50 89 C68 89 82 82 82 72 V26 Z" fill={c} />
+          <ellipse cx={50} cy={26} rx={32} ry={12} fill={c} />
+          <g fill="none" stroke={bg} strokeWidth={sw} strokeLinecap="round">
+            <ellipse cx={50} cy={26} rx={32} ry={12} />
+            <path d="M18 45 C18 55 32 62 50 62 C68 62 82 55 82 45" />
+            <path d="M18 62 C18 72 32 79 50 79 C68 79 82 72 82 62" />
+          </g>
+        </g>
+      );
+
+    case 'barChart':
+      return (
+        <g fill={c}>
+          <rect x={16} y={56} width={19} height={33} rx={4} />
+          <rect x={40} y={36} width={19} height={53} rx={4} />
+          <rect x={64} y={14} width={19} height={75} rx={4} />
+        </g>
+      );
+
+    case 'pieChart':
+      return (
+        <g fill={c}>
+          <path d="M50 50 L50 12 A38 38 0 1 1 12 50 Z" />
+          <g transform="translate(-9 -9)">
+            <path d="M50 50 L12 50 A38 38 0 0 1 50 12 Z" />
+          </g>
+        </g>
+      );
+
+    case 'lineGraph':
+      return (
+        <g>
+          <path
+            d="M16 12 V84 H88"
+            fill="none"
+            stroke={c}
+            strokeWidth={sw}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M27 73 L45 56 L61 63 L81 30"
+            fill="none"
+            stroke={c}
+            strokeWidth={sw * 1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <g fill={c}>
+            <circle cx={27} cy={73} r={5} />
+            <circle cx={45} cy={56} r={5} />
+            <circle cx={61} cy={63} r={5} />
+            <circle cx={81} cy={30} r={5} />
+          </g>
+        </g>
+      );
+
+    case 'cloud':
+      return (
+        <g {...line}>
+          <path d="M28 74 A19 19 0 0 1 30 38 A22 22 0 0 1 70 42 A17 17 0 0 1 74 74 Z" />
+        </g>
+      );
+
+    case 'funnel':
+      return <path d="M11 20 H89 L57 57 V83 L43 92 V57 Z" fill={c} />;
+
+    case 'tableGrid':
+      return (
+        <g {...line}>
+          <rect x={12} y={17} width={76} height={66} rx={7} />
+          <path
+            d="M12 24 A7 7 0 0 1 19 17 H81 A7 7 0 0 1 88 24 V36 H12 Z"
+            fill={c}
+            stroke="none"
+          />
+          <line x1={12} y1={36} x2={88} y2={36} />
+          <line x1={12} y1={59.5} x2={88} y2={59.5} />
+          <line x1={37.3} y1={36} x2={37.3} y2={83} />
+          <line x1={62.7} y1={36} x2={62.7} y2={83} />
+        </g>
+      );
+
+    case 'arrowUp':
+      return (
+        <g>
+          <circle cx={50} cy={50} r={40} fill={c} />
+          <path d="M50 24 L71 47 H59.5 V75 H40.5 V47 H29 Z" fill={bg} />
+        </g>
+      );
+
     case 'chipEcho':
       /* rendered by <SatelliteIcon> directly — never reaches this switch */
       return null;
@@ -799,6 +1081,69 @@ export const Sparkle: React.FC<SparkleProps> = ({
 };
 
 /* ════════════════════════════════════════════════════════════════════════
+   <Connector> — right-angle circuit trace for the grid layout. Draws on via
+   stroke-dash, then carries two travelling dots through the idle section.
+   ════════════════════════════════════════════════════════════════════════ */
+
+type ConnectorProps = {
+  trace: Trace;
+  color: string;
+  index: number;
+  seed: string;
+};
+
+export const Connector: React.FC<ConnectorProps> = ({trace, color, index, seed}) => {
+  const frame = useCurrentFrame();
+
+  const start = CASCADE_START + TRACE_START + index * TRACE_GAP;
+  const progress = interpolate(frame, [start, start + TRACE_DRAW], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  const dotOpacity = interpolate(frame, [IDLE_START, IDLE_START + DOT_FADE], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  /* two dots per line, half a cycle apart, on a period dividing into 180 */
+  const period = IDLE_PERIODS[Math.floor(random(`${seed}:dp`) * IDLE_PERIODS.length)];
+  const wrap = (x: number) => ((x % 1) + 1) % 1;
+  const dots = [0, 0.5].map((off) =>
+    pointAt(trace, wrap((frame - IDLE_START) / period + off))
+  );
+
+  return (
+    <g>
+      {progress > 0 ? (
+        <path
+          d={trace.d}
+          fill="none"
+          stroke={color}
+          strokeWidth={STROKE}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={trace.total}
+          strokeDashoffset={trace.total * (1 - progress)}
+        />
+      ) : null}
+      {dotOpacity > 0
+        ? dots.map((q, i) => (
+            <circle
+              key={i}
+              cx={q.x}
+              cy={q.y}
+              r={DOT_R}
+              fill={color}
+              opacity={dotOpacity}
+            />
+          ))
+        : null}
+    </g>
+  );
+};
+
+/* ════════════════════════════════════════════════════════════════════════
    COMPOSITION
    ════════════════════════════════════════════════════════════════════════ */
 
@@ -810,7 +1155,18 @@ export const AgentIcons: React.FC<AgentIconsProps> = ({variant}) => {
   const v: VariantSpec = VARIANTS[variant];
   const p = v.palette;
   const chip = useEntrance(0);
-  const slots = SCATTER_SLOTS;
+
+  const isGrid = v.layout === 'grid';
+  const slots = isGrid ? GRID_SLOTS : SCATTER_SLOTS;
+  const connectorColor = v.connector ? p[v.connector] : null;
+  const showSparkles = !isGrid && v.sparkles.colors.length > 0;
+
+  /* scatter cascades outward from the chip; the grid wires itself up, so an
+     icon lands the moment its connector reaches it. */
+  const iconDelay = (i: number) =>
+    isGrid
+      ? TRACE_START + i * TRACE_GAP + TRACE_DRAW
+      : (scatterRank[i] + 1) * STAGGER;
 
   return (
     <AbsoluteFill style={{backgroundColor: p.bg}}>
@@ -821,31 +1177,44 @@ export const AgentIcons: React.FC<AgentIconsProps> = ({variant}) => {
         xmlns="http://www.w3.org/2000/svg"
         shapeRendering="geometricPrecision"
       >
-        {/* satellites — cascade outward from the chip */}
+        {/* connector traces sit under everything */}
+        {isGrid && connectorColor
+          ? GRID_TRACES.map((tr, i) => (
+              <Connector
+                key={`${variant}-trace-${i}`}
+                trace={tr}
+                color={connectorColor}
+                index={i}
+                seed={`${variant}-trace-${i}`}
+              />
+            ))
+          : null}
+
         {v.icons.map((spec, i) => (
           <SatelliteIcon
             key={`${variant}-icon-${i}`}
             spec={spec}
             slot={slots[i]}
             v={v}
-            delay={(scatterRank[i] + 1) * STAGGER}
+            delay={iconDelay(i)}
             seed={`${variant}-icon-${i}`}
             uid={`${variant}-${i}`}
           />
         ))}
 
-        {/* sparkles last */}
-        {SPARKLE_SLOTS.map((slot, i) => (
-          <Sparkle
-            key={`${variant}-spark-${i}`}
-            slot={slot}
-            kind={v.sparkles.kind}
-            color={p[v.sparkles.colors[i % v.sparkles.colors.length]]}
-            delay={(slots.length + 1 + i) * STAGGER}
-            seed={`${variant}-spark-${i}`}
-            idleAmp={v.idleAmp}
-          />
-        ))}
+        {showSparkles
+          ? SPARKLE_SLOTS.map((slot, i) => (
+              <Sparkle
+                key={`${variant}-spark-${i}`}
+                slot={slot}
+                kind={v.sparkles.kind}
+                color={p[v.sparkles.colors[i % v.sparkles.colors.length]]}
+                delay={(slots.length + 1 + i) * STAGGER}
+                seed={`${variant}-spark-${i}`}
+                idleAmp={v.idleAmp}
+              />
+            ))
+          : null}
 
         {/* the chip itself never moves */}
         <g
