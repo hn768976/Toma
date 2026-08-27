@@ -4,18 +4,22 @@
  * no animation outside the frame number.
  */
 
-import type {GlitchConfig, PostConfig} from '../variants';
+import type {GlitchConfig, GlowPass, PostConfig} from '../variants';
 import {clearCanvas, context2d, makeCanvas, rgba, rnd, rndInt} from './util';
 
 /**
  * Composite `src` onto `dst`, then add blurred copies of it additively.
  * The blur is done at a quarter resolution, which is both far cheaper at 4K
  * and gives a wider, softer falloff than blurring the full-size buffer.
+ *
+ * Wide, strong passes read as bloom on a dark ground. A single tight, weak
+ * pass reads instead as a gentle overexposure lift — which is what the light
+ * "chat" ground wants, since additive glow on near-white is always wrong.
  */
-export const compositeWithBloom = (
+export const compositeWithGlow = (
   dst: CanvasRenderingContext2D,
   src: HTMLCanvasElement,
-  passes: Array<{blur: number; alpha: number}>,
+  passes: GlowPass[],
   scratch: {small: HTMLCanvasElement}
 ): void => {
   dst.drawImage(src, 0, 0);
@@ -37,31 +41,6 @@ export const compositeWithBloom = (
     dst.drawImage(small, 0, 0, dst.canvas.width, dst.canvas.height);
     dst.restore();
   }
-};
-
-/**
- * Light-ground alternative to bloom: a soft, narrow additive pass that pushes
- * the already-bright areas gently toward white without spilling glow into the
- * page. Additive glow on a near-white ground always reads wrong; this clips.
- */
-export const applyHighlightLift = (
-  dst: CanvasRenderingContext2D,
-  amount: number,
-  scratch: {small: HTMLCanvasElement}
-): void => {
-  if (amount <= 0) return;
-  const small = scratch.small;
-  const sctx = context2d(small);
-  clearCanvas(sctx);
-  sctx.filter = 'blur(3px)';
-  sctx.drawImage(dst.canvas, 0, 0, small.width, small.height);
-  sctx.filter = 'none';
-
-  dst.save();
-  dst.globalCompositeOperation = 'lighten';
-  dst.globalAlpha = amount;
-  dst.drawImage(small, 0, 0, dst.canvas.width, dst.canvas.height);
-  dst.restore();
 };
 
 /* ------------------------------------------------------------------ glitch */

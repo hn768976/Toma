@@ -161,28 +161,50 @@ export const BeamLayer: React.FC<LayerProps> = ({
     const lead = (frame / durationInFrames) * cfg.turns * Math.PI * 2 - Math.PI / 2;
     const wedge = (cfg.wedgeDeg * Math.PI) / 180;
     const radius = R * cfg.radius;
-    const steps = 48;
+    const frac = wedge / (Math.PI * 2);
 
     ctx.save();
     ctx.translate(cx, cy);
-    for (let i = 0; i < steps; i++) {
-      // Brightest at the leading edge, fading to nothing across the trail.
-      const k = 1 - i / steps;
-      const a0 = lead - (wedge * (i + 1)) / steps;
-      const a1 = lead - (wedge * i) / steps + 0.004;
-      ctx.globalAlpha = cfg.alpha * fade * Math.pow(k, 1.9);
-      ctx.fillStyle = palette.accent;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, radius, a0, a1);
-      ctx.closePath();
-      ctx.fill();
-    }
+
+    // One conic gradient across the wedge. Stacking translucent sectors instead
+    // leaves a visible seam wherever two of them overlap.
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, lead - wedge, lead);
+    ctx.closePath();
+    ctx.clip();
+
+    const cone = ctx.createConicGradient(lead - wedge, 0, 0);
+    cone.addColorStop(0, rgba(palette.accent, 0));
+    cone.addColorStop(frac * 0.45, rgba(palette.accent, 0.16));
+    cone.addColorStop(frac * 0.8, rgba(palette.accent, 0.52));
+    cone.addColorStop(frac * 0.97, rgba(palette.accent, 1));
+    cone.addColorStop(Math.min(1, frac), rgba(palette.accent, 1));
+    ctx.globalAlpha = cfg.alpha * fade;
+    ctx.fillStyle = cone;
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+
+    // Soften the far end so the wedge dissolves rather than stopping dead.
+    const falloff = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius);
+    falloff.addColorStop(0, 'rgba(0,0,0,0)');
+    falloff.addColorStop(0.62, 'rgba(0,0,0,0.05)');
+    falloff.addColorStop(0.86, 'rgba(0,0,0,0.34)');
+    falloff.addColorStop(1, 'rgba(0,0,0,1)');
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = falloff;
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+    ctx.globalCompositeOperation = 'source-over';
 
     // A crisp leading edge so the direction of travel is unambiguous.
-    ctx.globalAlpha = cfg.alpha * fade * 1.5;
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = palette.accent;
+    ctx.globalAlpha = cfg.alpha * fade;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    const edge = ctx.createLinearGradient(0, 0, Math.cos(lead) * radius, Math.sin(lead) * radius);
+    edge.addColorStop(0, rgba(palette.accent, 0.15));
+    edge.addColorStop(0.55, rgba(palette.accent, 0.9));
+    edge.addColorStop(1, rgba(palette.accent, 0));
+    ctx.strokeStyle = edge;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(Math.cos(lead) * radius, Math.sin(lead) * radius);

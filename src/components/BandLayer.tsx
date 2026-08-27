@@ -27,7 +27,7 @@ const drawBand = (
   outline: Outline,
   r: number,
   color: string,
-  slate: string,
+  rim: string | null,
   white: string
 ): void => {
   ctx.lineJoin = 'round';
@@ -37,9 +37,11 @@ const drawBand = (
       tracePath(ctx, outline, r);
       ctx.fillStyle = color;
       ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = rgba(slate, 0.7);
-      ctx.stroke();
+      if (rim && band.rim) {
+        ctx.lineWidth = band.rim.thickness;
+        ctx.strokeStyle = rgba(rim, band.rim.alpha);
+        ctx.stroke();
+      }
       break;
     }
 
@@ -150,7 +152,7 @@ export const BandLayer: React.FC<LayerProps> = ({
         outline,
         band.radius * R * m.scale,
         palette[band.color],
-        palette.slate,
+        band.rim ? palette[band.rim.color] : null,
         palette.white
       );
       ctx.restore();

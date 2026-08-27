@@ -89,7 +89,7 @@ const buildBubble = (): Outline => {
   const TAIL_LEFT = -0.62; // where it rejoins (leftmost)
   const TIP_X = -0.94;
   const TIP_Y = H + 0.46;
-  const Y_SHIFT = -0.23; // recentre so tail overhang does not bias the shape
+  const Y_SHIFT = -0.14; // offset the tail overhang without floating the body
 
   const raw: Array<{x: number; y: number}> = [];
   const line = (

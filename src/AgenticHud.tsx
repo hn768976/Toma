@@ -11,9 +11,8 @@ import {activeGlitch, cameraDrift, glitchSchedule} from './lib/motion';
 import {
   applyGlitchSlices,
   applyGrain,
-  applyHighlightLift,
   applyVignette,
-  compositeWithBloom,
+  compositeWithGlow,
   paintGround,
 } from './lib/postfx';
 import {context2d, makeCanvas} from './lib/util';
@@ -83,14 +82,12 @@ export const AgenticHud: React.FC<AgenticHudProps> = ({variant}) => {
 
     ctx.save();
     ctx.translate(drift.x, drift.y);
-    compositeWithBloom(ctx, buffers.backdrop, [], scratch);
-    compositeWithBloom(ctx, buffers.bands, v.post.bloom, scratch);
-    compositeWithBloom(ctx, buffers.beam, v.post.bloom, scratch);
-    compositeWithBloom(ctx, buffers.label, v.post.labelBloom, scratch);
-    compositeWithBloom(ctx, buffers.particles, [], scratch);
+    compositeWithGlow(ctx, buffers.backdrop, [], scratch);
+    compositeWithGlow(ctx, buffers.bands, v.post.bandGlow, scratch);
+    compositeWithGlow(ctx, buffers.beam, v.post.beamGlow, scratch);
+    compositeWithGlow(ctx, buffers.label, v.post.labelGlow, scratch);
+    compositeWithGlow(ctx, buffers.particles, [], scratch);
     ctx.restore();
-
-    applyHighlightLift(ctx, v.post.highlightLift, scratch);
 
     if (glitch && v.glitch) {
       applyGlitchSlices(ctx, v.glitch, glitch.index, scratch);

@@ -1,4 +1,6 @@
 node_modules/
 out/
+# The packaged deliverable is committed; other archives are not.
 *.zip
+!agentic-hud.zip
 .DS_Store

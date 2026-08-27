@@ -63,6 +63,8 @@ export interface BandDef {
   alpha: number;
   /** Bright glowing dots riding this band's edge, at normalised path positions. */
   dots?: number[];
+  /** Outline drawn around a filled band. Omit for a plain fill. */
+  rim?: {color: PaletteKey; thickness: number; alpha: number};
   /** "breach" only: this band holds, then jumps, instead of turning smoothly. */
   stutter?: boolean;
 }
@@ -170,12 +172,15 @@ export interface GlitchConfig {
   clusterChance: number;
 }
 
+export type GlowPass = {blur: number; alpha: number};
+
 export interface PostConfig {
-  bloom: Array<{blur: number; alpha: number}>;
-  /** The label needs a tighter, weaker bloom or the glyphs stop reading. */
-  labelBloom: Array<{blur: number; alpha: number}>;
-  /** Light-ground alternative to bloom: gentle highlight clipping toward white. */
-  highlightLift: number;
+  /** Additive passes for the structural bands. */
+  bandGlow: GlowPass[];
+  /** Additive passes for the beam / shockwave / sweep layer. */
+  beamGlow: GlowPass[];
+  /** The label needs a tighter, weaker pass or the glyphs stop reading. */
+  labelGlow: GlowPass[];
   vignette: number;
   vignetteInvert: boolean;
   grain: number;
@@ -217,6 +222,7 @@ const DIAL_BANDS: BandDef[] = [
     speed: 0.02,
     color: 'bgDeep',
     alpha: 0.92,
+    rim: {color: 'slate', thickness: 3, alpha: 0.7},
   },
   {
     id: 'ticks-fine',
@@ -357,59 +363,59 @@ const withStutter = (bands: BandDef[], ids: string[]): BandDef[] =>
 const BUBBLE_BANDS: BandDef[] = [
   {
     id: 'bubble-core',
-    radius: 0.24,
+    radius: 0.3,
     type: 'disc',
     thickness: 0,
     speed: 0,
     color: 'bright',
-    alpha: 0.22,
+    alpha: 0.14,
   },
   {
     id: 'bubble-solid-inner',
     radius: 0.44,
     type: 'ring',
-    thickness: 6,
+    thickness: 7,
     speed: 0,
     color: 'white',
-    alpha: 0.9,
+    alpha: 0.95,
   },
   {
     id: 'bubble-dash',
     radius: 0.64,
     type: 'dash',
-    thickness: 5,
+    thickness: 8,
     dash: [58, 38],
     speed: 0,
     color: 'bright',
-    alpha: 0.85,
+    alpha: 0.95,
   },
   {
     id: 'bubble-solid-outer',
     radius: 0.82,
     type: 'ring',
-    thickness: 5,
+    thickness: 6,
     speed: 0,
     color: 'white',
-    alpha: 0.55,
+    alpha: 0.62,
   },
   {
     id: 'bubble-broken',
     radius: 0.92,
     type: 'arcs',
-    thickness: 5,
-    arcs: [[42, 288]],
+    thickness: 6,
+    arcs: [[151, 295]],
     speed: 0,
     color: 'slate',
-    alpha: 0.8,
+    alpha: 1,
   },
   {
     id: 'bubble-edge',
     radius: 1.0,
     type: 'ring',
-    thickness: 3,
+    thickness: 4,
     speed: 0,
     color: 'slate',
-    alpha: 0.35,
+    alpha: 0.75,
   },
 ];
 
@@ -421,20 +427,24 @@ const DIAL_BACKDROP: BackdropArc[] = [
 ];
 
 const BUBBLE_BACKDROP: BackdropArc[] = [
-  {radius: 1.32, startDeg: 200, sweepDeg: 110, thickness: 18, alpha: 0.16},
-  {radius: 1.62, startDeg: 34, sweepDeg: 92, thickness: 14, alpha: 0.12},
+  // A single arc, kept clear of the tail. More than one and the frame stops
+  // reading as calm — which is the whole point of this variant.
+  {radius: 1.24, startDeg: 322, sweepDeg: 146, thickness: 10, alpha: 0.26},
 ];
 
 const DARK_POST: PostConfig = {
-  bloom: [
+  bandGlow: [
     {blur: 16, alpha: 0.4},
     {blur: 52, alpha: 0.3},
   ],
-  labelBloom: [
+  beamGlow: [
+    {blur: 16, alpha: 0.4},
+    {blur: 52, alpha: 0.3},
+  ],
+  labelGlow: [
     {blur: 14, alpha: 0.3},
     {blur: 44, alpha: 0.22},
   ],
-  highlightLift: 0,
   vignette: 0.2,
   vignetteInvert: false,
   grain: 0.04,
@@ -582,7 +592,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
   chat: {
     id: 'chat',
     geometry: 'bubbles',
-    scale: 0.31,
+    scale: 0.34,
     palette: {
       bgDeep: '#F7FAF9',
       bgMid: '#DCEFE8',
@@ -607,16 +617,16 @@ export const VARIANTS: Record<VariantId, Variant> = {
       upperInFrame: 110,
       lowerInFrame: 126,
       fadeFrames: 24,
-      // Bubbles hang lower than they rise; sit the block on their optical centre.
-      offsetY: -68,
+      // Sit the block on the optical centre of the bubble that contains it.
+      offsetY: -45,
       typingDots: {
         count: 3,
         cycle: 45,
         stagger: 8,
         rise: 20,
-        radius: 15,
-        gap: 62,
-        offsetY: 86,
+        radius: 17,
+        gap: 68,
+        offsetY: 105,
       },
     },
     beam: {
@@ -625,18 +635,20 @@ export const VARIANTS: Record<VariantId, Variant> = {
       fadeFrames: 40,
       turns: 2,
       wedgeDeg: 64,
-      radius: 1.5,
-      alpha: 0.5,
+      radius: 1.55,
+      alpha: 0.85,
     },
     rotation: 'pulse',
     bandPulse: {amp: 0.02, period: 98, phaseStep: -0.55},
     assembly: {start: 30, stagger: 15, duration: 35, overshoot: 0, ease: 'sine'},
     glitch: null,
     post: {
-      // No bloom on a light ground; a gentle overexposure lift instead.
-      bloom: [],
-      labelBloom: [],
-      highlightLift: 0.26,
+      // No bloom on a light ground. The structural bands stay perfectly crisp;
+      // only the emissive sweep and label get a tight overexposure lift, so
+      // their highlights clip gently toward white instead of spilling glow.
+      bandGlow: [],
+      beamGlow: [{blur: 8, alpha: 0.2}],
+      labelGlow: [{blur: 4, alpha: 0.24}],
       vignette: 0.12,
       vignetteInvert: true,
       grain: 0.03,
