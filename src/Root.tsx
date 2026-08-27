@@ -15,15 +15,6 @@ export const RemotionRoot: React.FC = () => {
         height={H}
         defaultProps={{variant: 'car' as const}}
       />
-      <Composition
-        id="LoopCheck"
-        component={ScanHud}
-        durationInFrames={DURATION + 1}
-        fps={FPS}
-        width={W}
-        height={H}
-        defaultProps={{variant: 'jet' as const}}
-      />
       {/* #region register:jet */}
       <Composition
         id="ScanHudJet"
@@ -36,6 +27,15 @@ export const RemotionRoot: React.FC = () => {
       />
       {/* #endregion register:jet */}
       {/* #region register:brain */}
+      <Composition
+        id="ScanHudBrain"
+        component={ScanHud}
+        durationInFrames={DURATION}
+        fps={FPS}
+        width={W}
+        height={H}
+        defaultProps={{variant: 'brain' as const}}
+      />
       {/* #endregion register:brain */}
     </>
   );

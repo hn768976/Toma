@@ -114,12 +114,15 @@ export const SubjectParticles: React.FC<{
       let b = p.bright[i] * tw;
       if (cpulse !== 0 && p.pulse[i] > 0) b *= 1 + cpulse * p.pulse[i];
       b += sweepBoost(p.axis[i], pos, m) * (0.25 + 0.75 * p.bright[i]);
-      if (boost) b += boost[i];
+      const pb = boost ? boost[i] : 0;
+      b += pb;
       b *= asm;
 
       const lv = Math.min(LEVELS - 1, Math.floor(clamp01(b) * LEVELS));
       if (lv <= 0) continue;
-      buckets[p.hot[i] ? LEVELS + lv : lv].push(i);
+      // a particle a pulse has just reached burns white, whatever it was
+      const isHot = p.hot[i] > 0 || pb > 0.3;
+      buckets[isHot ? LEVELS + lv : lv].push(i);
     }
 
     const bs = 1 / BLOOM_DIV;

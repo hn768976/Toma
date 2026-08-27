@@ -492,11 +492,192 @@ const JET: Variant = {
 
 /* #endregion variant:jet */
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   #region variant:brain
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Human brain, side view, facing left: cerebrum, cerebellum at the lower rear,
+ * brain stem descending. The folds ARE the subject here, so the sulci are
+ * authored as interior curves rather than left to the density map to invent -
+ * a smooth brain-shaped outline on its own reads as a bean.
+ */
+const BRAIN_CEREBRUM =
+  'M 180 370 C 186 288 250 226 342 192 C 440 156 560 150 664 174 ' +
+  'C 790 202 886 272 924 356 C 950 414 944 462 900 486 ' +
+  'C 858 508 812 498 780 484 C 742 468 706 470 672 486 ' +
+  'C 606 516 522 528 452 518 C 402 510 368 490 356 462 ' +
+  'L 372 428 C 340 418 312 412 286 406 C 246 396 210 386 180 370 Z';
+
+const BRAIN_CEREBELLUM =
+  'M 782 486 C 826 470 878 478 906 504 C 934 530 930 572 900 594 ' +
+  'C 866 618 802 618 764 596 C 730 576 722 538 742 512 ' +
+  'C 754 496 768 490 782 486 Z';
+
+const BRAIN_STEM =
+  'M 664 488 L 728 496 C 740 546 740 606 728 664 ' +
+  'C 724 682 704 698 684 692 C 664 686 656 664 660 638 ' +
+  'C 666 588 666 534 664 488 Z';
+
+/** The sulci. Pulses travel along these, so they are also the graph. */
+const BRAIN_SULCI: PathRef[] = [
+  // lateral (Sylvian) fissure
+  {d: 'M 372 430 C 444 456 528 468 610 462 C 664 458 700 444 720 424'},
+  // central, precentral and postcentral sulci
+  {d: 'M 556 172 C 562 238 574 308 592 370 C 600 398 610 418 622 432'},
+  {d: 'M 470 184 C 480 248 492 316 510 376 C 518 402 528 420 540 434'},
+  {d: 'M 646 180 C 656 242 668 308 686 366 C 694 392 704 408 716 420'},
+  // frontal lobe
+  {d: 'M 216 302 C 292 258 384 234 476 230'},
+  {d: 'M 206 356 C 282 330 364 314 446 314'},
+  {d: 'M 232 400 C 300 384 368 374 428 372'},
+  {d: 'M 190 328 C 216 302 244 288 280 278'},
+  // vertex
+  {d: 'M 320 214 C 396 184 486 168 578 166'},
+  {d: 'M 360 246 C 434 218 520 204 604 202'},
+  // parietal and occipital
+  {d: 'M 704 244 C 766 268 818 302 856 344'},
+  {d: 'M 690 198 C 748 214 796 240 834 272'},
+  {d: 'M 800 224 C 822 272 838 324 844 378'},
+  {d: 'M 862 386 C 892 402 912 420 922 442'},
+  {d: 'M 812 424 C 850 436 882 452 902 476'},
+  // temporal lobe
+  {d: 'M 396 484 C 468 502 548 512 624 502 C 662 496 690 486 706 472'},
+  {d: 'M 400 506 C 470 522 546 530 614 522'},
+  {d: 'M 424 468 C 486 482 552 488 612 482'},
+  {d: 'M 660 484 C 700 476 740 474 776 480'},
+  // cerebellum: fine ridged texture
+  {d: 'M 752 514 C 802 500 862 506 900 524'},
+  {d: 'M 742 538 C 798 526 862 530 908 548'},
+  {d: 'M 744 562 C 798 552 860 556 902 574'},
+  {d: 'M 756 586 C 804 578 856 582 890 596'},
+  // brain stem
+  {d: 'M 660 544 C 682 540 706 542 732 548'},
+  {d: 'M 656 604 C 678 600 702 602 726 608'},
+  // shorter cross-running folds, so the frontal and parietal crowns are not
+  // just a stack of parallel arcs
+  {d: 'M 380 200 C 392 244 404 286 420 322'},
+  {d: 'M 288 240 C 306 276 322 312 336 348'},
+  {d: 'M 250 268 C 320 236 400 216 484 208'},
+  {d: 'M 232 348 C 256 370 278 386 302 398'},
+  {d: 'M 744 200 C 760 246 772 296 776 344'},
+  {d: 'M 858 300 C 880 330 896 362 904 396'},
+  {d: 'M 500 440 C 516 462 530 484 540 508'},
+  {d: 'M 300 214 C 318 238 334 264 346 292'},
+];
+
+const BRAIN: Variant = {
+  palette: {
+    bg: '#020F06',
+    line: '#1A6B33',
+    fill: '#05200E',
+    text: '#8FE8A8',
+    particle: '#3FFF7A',
+    particleHot: '#E8FFEC',
+    sweep: '#C4FFD4',
+    accent: '#2ED44F',
+  },
+  silhouette: {
+    vb: [1200, 900],
+    fit: [166, 138, 782, 588],
+    fills: [
+      {d: BRAIN_CEREBRUM},
+      {d: BRAIN_CEREBELLUM},
+      {d: BRAIN_STEM},
+    ],
+    lines: [
+      {d: BRAIN_CEREBRUM},
+      {d: BRAIN_CEREBELLUM},
+      {d: BRAIN_STEM},
+      ...BRAIN_SULCI,
+    ],
+    creaseW: 2.2,
+    clusters: [],
+    light: [-1, -0.5],
+    axis: [1, 0],
+  },
+  density: {
+    target: 5200,
+    falloff: 4.5,
+    flat: 0.02,
+    grid: 8,
+    sizeMin: 3,
+    sizeMax: 9,
+    gradLo: 0.55,
+    gradHi: 1,
+  },
+  motion: {
+    // No sweep at all. Pulses originate at random points and travel ALONG the
+    // folds, branching wherever folds meet.
+    mode: 'propagate',
+    pulses: 44,
+    lifeMin: 40,
+    lifeMax: 70,
+    decay: 20,
+    spread: 420,
+    gain: 1.9,
+  },
+  readouts: {
+    top: [
+      {label: 'EEG ALPHA', unit: 'HZ', lo: 8, hi: 13, dp: 1},
+      {label: 'EEG BETA', unit: 'HZ', lo: 13, hi: 30, dp: 1},
+      {label: 'EEG THETA', unit: 'HZ', lo: 4, hi: 8, dp: 1},
+      {label: 'EEG DELTA', unit: 'HZ', lo: 1, hi: 4, dp: 1},
+      {label: 'SYNAPSE CNT', unit: 'M', lo: 1200, hi: 9800, dp: 0},
+      {label: 'FIRING RATE', unit: 'HZ', lo: 20, hi: 140, dp: 0},
+      {label: 'HEMI BALANCE', unit: '%', lo: 42, hi: 58, dp: 0},
+      {label: 'CORTEX TEMP', unit: 'C', lo: 36, hi: 38, dp: 1},
+    ],
+    wave: {label: 'EEG TRACE', sub: 'CH_F3P4', energy: 0.95},
+    table: {
+      label: 'REGION ACTIVITY',
+      tags: [
+        'FRT', 'PAR', 'TMP', 'OCC', 'CBL', 'STM', 'HIP', 'AMY',
+        'THL', 'INS', 'CNG', 'PFC', 'MTR', 'SMT', 'AUD', 'VIS',
+        'BRO', 'WER', 'SNG', 'PUT', 'PAL', 'CAU', 'NAC', 'VTA',
+      ],
+    },
+    numA: {label: 'SYNAPSE COUNT M', unit: '', lo: 100, hi: 999, dp: 0},
+    numB: {label: 'SIGNAL LATENCY MS', unit: '', lo: 100, hi: 999, dp: 0},
+    grid: {
+      label: 'FREQUENCY BANDS',
+      tags: ['ALPHA', 'BETA', 'THETA', 'DELTA', 'GAMMA', 'MU RHYTHM'],
+    },
+    meters: {
+      label: 'CORTICAL CHANNELS',
+      tags: ['F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'T3', 'T4', 'FZ', 'CZ'],
+    },
+    radar: [
+      {label: 'HEMISPHERE BALANCE', sub: 'L-HEM', turns: 3},
+      {label: 'HEMISPHERE BALANCE', sub: 'R-HEM', turns: 5},
+    ],
+    scroll: {
+      label: 'SPIKE TRAIN LOG',
+      tokens: ['SPK', 'BST', 'INH', 'EXC', 'LTP', 'LTD', 'REF', 'SYN', 'AXN', 'DND'],
+    },
+    strips: [
+      {label: 'ALP', unit: '', lo: 0, hi: 100, dp: 0},
+      {label: 'BET', unit: '', lo: 0, hi: 100, dp: 0},
+      {label: 'THT', unit: '', lo: 0, hi: 100, dp: 0},
+    ],
+    hist: {label: 'SPECTRAL POWER'},
+    numerals: {label: 'SPIKE RASTER'},
+    status: {
+      label: 'NEURAL MONITOR STATE',
+      states: ['BASELINE', 'PROPAGATING', 'SYNCHRONY', 'CONSOLIDATE'],
+    },
+  },
+};
+
+/* #endregion variant:brain */
+
 export const VARIANTS: Record<VariantKey, Variant> = {
   car: CAR,
   /* #region register:jet */
   jet: JET,
   /* #endregion register:jet */
   /* #region register:brain */
+  brain: BRAIN,
   /* #endregion register:brain */
 } as Record<VariantKey, Variant>;

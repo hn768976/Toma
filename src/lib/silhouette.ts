@@ -300,7 +300,7 @@ export const sampleParticles = (
       (0.22 + 0.62 * edge + 0.9 * gb[k]) * Math.max(0.12, grad) * jitter,
     );
     out.hot[k] =
-      random(`${s}h`) < 0.1 + 0.42 * edge + 0.5 * gb[k] ? 1 : 0;
+      random(`${s}h`) < 0.06 + 0.26 * edge + 0.5 * gb[k] ? 1 : 0;
     out.pulse[k] = gp[k];
 
     const sz = rule.sizeMin + random(`${s}s`) * (rule.sizeMax - rule.sizeMin);

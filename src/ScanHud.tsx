@@ -20,6 +20,7 @@ import {ScanSweep, sweepFlash} from './components/ScanSweep';
 import {SidePanel} from './components/SidePanel';
 import type {PanelEntry} from './components/SidePanel';
 import {SubjectParticles, useSubject} from './components/SubjectParticles';
+import {buildPropagation, evalPulses} from './lib/propagate';
 import {clamp01, easeOut, rnd} from './lib/rand';
 
 /** ±8px ambient drift on a closed figure-of-eight, period 600. */
@@ -36,6 +37,18 @@ export const ScanHud: React.FC<{variant: VariantKey}> = ({variant}) => {
   const subject = useSubject(v, variant);
   const d = drift(f);
   const asm = easeOut((f - T_ASSEMBLE_START) / (T_ASSEMBLE_END - T_ASSEMBLE_START));
+
+  // "propagate" variants replace the sweep entirely with signal propagation
+  // along the subject's folds. Built once, evaluated per frame.
+  const propagation = useMemo(
+    () => buildPropagation(v.silhouette, v.motion, subject.particles, variant),
+    [v, subject, variant],
+  );
+  const {boost, activity} = useMemo(() => {
+    if (!propagation) return {boost: null, activity: 0};
+    const out = new Float32Array(subject.particles.n);
+    return {boost: out, activity: evalPulses(propagation, subject.particles, f, out)};
+  }, [propagation, subject, f]);
 
   const entries = useMemo<PanelEntry[]>(() => {
     const [wave, table, numA, numB, grid] = LEFT_SLOTS;
@@ -60,9 +73,11 @@ export const ScanHud: React.FC<{variant: VariantKey}> = ({variant}) => {
 
   // The sweep drives the panels: on each pass, three readouts flash and
   // re-roll. Which three is seeded from the pass index, so the loop closes.
-  const period = v.motion.mode === 'sweep' ? v.motion.period : DURATION;
+  const period = v.motion.mode === 'sweep' ? v.motion.period : 60;
   const cycle = Math.floor(f / period);
-  const flash = sweepFlash(f, v.motion) * clamp01(asm);
+  const flash =
+    (v.motion.mode === 'sweep' ? sweepFlash(f, v.motion) : activity) *
+    clamp01(asm);
   const flashSet = useMemo(() => {
     const keys = entries.map((e) => e.key);
     const out = new Set<string>();
@@ -78,7 +93,7 @@ export const ScanHud: React.FC<{variant: VariantKey}> = ({variant}) => {
         frame={f}
         variant={v}
         subject={subject}
-        boost={null}
+        boost={boost}
         width={W}
         height={H}
         drift={d}
@@ -104,7 +119,7 @@ export const ScanHud: React.FC<{variant: VariantKey}> = ({variant}) => {
         flashSet={flashSet}
         flash={flash}
         reroll={cycle}
-        activity={0}
+        activity={activity}
       />
       <Overlay frame={f} />
     </AbsoluteFill>
