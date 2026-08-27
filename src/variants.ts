@@ -107,6 +107,40 @@ export const VARIANTS: Partial<Record<VariantName, Variant>> = {
 		scanlines: false,
 		grainAlpha: 0.03,
 	},
+
+	green: {
+		name: 'green',
+		// Deeper and higher contrast than blue: a near-black ground with a hot
+		// green on top, so it reads as a CRT terminal rather than a product UI.
+		palette: {
+			bgDeep: '#020C06',
+			bgMid: '#06210F',
+			web: '#0F4A22',
+			orb: '#3FFF6A',
+			orbWhite: '#E8FFE8',
+			panelBorder: '#2ED44F',
+			panelFill: '#03150A',
+			textPale: '#A8FFC0',
+			accentA: '#D9C44F',
+			accentB: '#E85040',
+		},
+		accentAUse: 'amber - log output only',
+		accentBUse: 'red - error lines only',
+		glyph: '>_',
+		// A different typeface, not just different text - the monospace is what
+		// makes it read as a prompt.
+		glyphFamily: TERMINAL_MONO,
+		glyphScale: 0.62,
+		glyphTracking: 0.06,
+		glyphBlinkCycle: 30,
+		panelKind: 'code',
+		// Reverse of blue: the frame fills from the outside in.
+		panelArrival: 'far-first',
+		halftone: true,
+		blurMax: 24,
+		scanlines: true,
+		grainAlpha: 0.03,
+	},
 };
 
 export const getVariant = (name: VariantName): Variant => {

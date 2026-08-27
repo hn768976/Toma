@@ -4,6 +4,8 @@ import {Config} from '@remotion/cli/config';
 Config.setVideoImageFormat('jpeg');
 Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
+// The piece is silent - without this every render carries an empty AAC track.
+Config.setMuted(true);
 Config.setChromiumOpenGlRenderer('angle');
 
 // This machine has no egress to Remotion's Chrome download host, so point the

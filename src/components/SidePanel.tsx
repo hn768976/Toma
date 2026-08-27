@@ -5,6 +5,7 @@ import {ORB, PANEL_ARRIVE_DURATION, PanelSlot} from '../lib/layout';
 import {easeOutCubic, ramp} from '../lib/motion';
 import {DEPTH_LAYER, resetScene, shouldDraw} from '../lib/scene';
 import {drawChartsPanel} from '../panels/charts';
+import {drawCodePanel} from '../panels/code';
 import {contentBox, drawPanelChrome} from '../panels/chrome';
 import {PanelDrawArgs} from '../panels/types';
 
@@ -62,6 +63,9 @@ export const SidePanel: React.FC<{panel: PanelSlot}> = ({panel}) => {
 		switch (variant.panelKind) {
 			case 'charts':
 				drawChartsPanel(args);
+				break;
+			case 'code':
+				drawCodePanel(args);
 				break;
 			default:
 				break;
