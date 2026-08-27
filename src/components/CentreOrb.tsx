@@ -120,36 +120,63 @@ export const CentreOrb: React.FC = () => {
 
 		/* ---- centre glyph ---------------------------------------------- */
 		if (glyphA > 0 && fontsReady) {
-			const size = Math.round(r * variant.glyphScale);
-			const font = `${size}px "${variant.glyphFamily}", sans-serif`;
-			const chars = variant.glyph.split('');
-			const track = size * variant.glyphTracking;
-
-			ctx.font = font;
 			ctx.textAlign = 'left';
 			ctx.textBaseline = 'alphabetic';
-			const widths = chars.map((c) => ctx.measureText(c).width);
-			const total = widths.reduce((s, v) => s + v, 0) + track * (chars.length - 1);
-			const metrics = ctx.measureText(variant.glyph);
-			const capMid = (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
+
+			const base = r * variant.glyphScale;
+			const gap = base * variant.glyphLineGap;
+
+			// Measure every line first: the whole block is centred on the orb by
+			// its ink box, not by its em box, so a line with no descenders is not
+			// pushed off centre. For a single line this reduces to centring that
+			// line's own ascent/descent on cy.
+			const lines = variant.glyph.map((line) => {
+				const size = Math.round(base * line.scale);
+				const font = `${size}px "${variant.glyphFamily}", sans-serif`;
+				ctx.font = font;
+				const chars = line.text.split('');
+				const track = size * variant.glyphTracking;
+				const widths = chars.map((c) => ctx.measureText(c).width);
+				const width = widths.reduce((sum, v) => sum + v, 0) + track * (chars.length - 1);
+				const m = ctx.measureText(line.text);
+				return {
+					font,
+					chars,
+					track,
+					widths,
+					width,
+					asc: m.actualBoundingBoxAscent,
+					desc: m.actualBoundingBoxDescent,
+				};
+			});
+
+			const blockH =
+				lines.reduce((sum, l) => sum + l.asc + l.desc, 0) + gap * (lines.length - 1);
 
 			const blink =
 				variant.glyphBlinkCycle === null
 					? true
 					: frame % variant.glyphBlinkCycle < variant.glyphBlinkCycle / 2;
 
-			let penX = cx - total / 2;
-			chars.forEach((ch, i) => {
-				const isLast = i === chars.length - 1;
-				const visible = variant.glyphBlinkCycle === null || !isLast || blink;
-				if (visible) {
-					ctx.fillStyle = rgba(palette.orbWhite, 0.97 * glyphA);
-					ctx.fillText(ch, penX, cy + capMid);
-					bloom.font = font;
-					bloom.fillStyle = rgba(palette.orb, 0.55 * glyphA);
-					bloom.fillText(ch, penX, cy + capMid);
-				}
-				penX += widths[i] + track;
+			let top = cy - blockH / 2;
+			lines.forEach((line, li) => {
+				const baseline = top + line.asc;
+				const isLastLine = li === lines.length - 1;
+				ctx.font = line.font;
+				bloom.font = line.font;
+				let penX = cx - line.width / 2;
+				line.chars.forEach((ch, i) => {
+					const isCursor = isLastLine && i === line.chars.length - 1;
+					const visible = variant.glyphBlinkCycle === null || !isCursor || blink;
+					if (visible) {
+						ctx.fillStyle = rgba(palette.orbWhite, 0.97 * glyphA);
+						ctx.fillText(ch, penX, baseline);
+						bloom.fillStyle = rgba(palette.orb, 0.55 * glyphA);
+						bloom.fillText(ch, penX, baseline);
+					}
+					penX += line.widths[i] + line.track;
+				});
+				top += line.asc + line.desc + gap;
 			});
 		}
 	}, [scene, variant, frame, fontsReady]);

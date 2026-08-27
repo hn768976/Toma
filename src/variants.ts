@@ -9,6 +9,15 @@ export type VariantName = 'blue' | 'green' | 'amber';
 export type PanelKind = 'charts' | 'code' | 'gauges';
 
 /**
+ * One line of the centre glyph. `scale` multiplies the variant's base glyph
+ * scale, so a variant can set one line larger than another.
+ */
+export type GlyphLine = {
+	text: string;
+	scale: number;
+};
+
+/**
  * Palette keys are deliberately identical across all three variants so the
  * drawing code never has to know which variant it is painting.
  *
@@ -42,15 +51,17 @@ export type Variant = {
 	accentAUse: string;
 	accentBUse: string;
 
-	/** Centre glyph. */
-	glyph: string;
+	/** Centre glyph, one entry per line. */
+	glyph: GlyphLine[];
 	/** Font family used for the centre glyph. */
 	glyphFamily: string;
 	/** Cap-height multiplier relative to the orb radius. */
 	glyphScale: number;
 	/** Extra letter spacing for the glyph, as a fraction of the glyph size. */
 	glyphTracking: number;
-	/** When set, the trailing character blinks on this frame cycle. */
+	/** Gap between glyph lines, as a fraction of the base glyph size. */
+	glyphLineGap: number;
+	/** When set, the trailing character of the last line blinks on this cycle. */
 	glyphBlinkCycle: number | null;
 
 	/** Which SidePanel body renderer to switch to. */
@@ -91,10 +102,11 @@ export const VARIANTS: Record<VariantName, Variant> = {
 		},
 		accentAUse: 'magenta - background web only',
 		accentBUse: 'amber - inside panels only',
-		glyph: 'AI',
+		glyph: [{text: 'AI', scale: 1}],
 		glyphFamily: GEOMETRIC_SANS,
 		glyphScale: 0.62,
 		glyphTracking: 0.04,
+		glyphLineGap: 0,
 		glyphBlinkCycle: null,
 		panelKind: 'charts',
 		panelArrival: 'near-first',
@@ -122,12 +134,18 @@ export const VARIANTS: Record<VariantName, Variant> = {
 		},
 		accentAUse: 'amber - log output only',
 		accentBUse: 'red - error lines only',
-		glyph: '>_',
-		// A different typeface, not just different text - the monospace is what
-		// makes it read as a prompt.
+		// Trailing underscore is the cursor - CentreOrb blinks the last character
+		// of the last line on `glyphBlinkCycle`.
+		glyph: [{text: 'AI LOG_', scale: 1}],
+		// A different typeface, not just different text. The monospace is doing
+		// as much work as the text: it is what makes the orb read as a terminal
+		// rather than a product logo, and it matches the log panels beside it.
 		glyphFamily: TERMINAL_MONO,
-		glyphScale: 0.62,
-		glyphTracking: 0.06,
+		// Six characters plus the cursor, so cap height comes down ~35% from
+		// blue's "AI" and the tracking closes right up to clear the rim.
+		glyphScale: 0.4,
+		glyphTracking: 0,
+		glyphLineGap: 0,
 		glyphBlinkCycle: 30,
 		panelKind: 'code',
 		// Reverse of blue: the frame fills from the outside in.
@@ -154,12 +172,17 @@ export const VARIANTS: Record<VariantName, Variant> = {
 		},
 		accentAUse: 'bronze - gauge tracks and inactive segments',
 		accentBUse: 'cream - numeric readouts',
-		glyph: 'CORE',
+		// Two lines rather than one: seven characters on a single line would
+		// force the type small enough to lose against the gauge assembly.
+		glyph: [
+			{text: 'AI', scale: 0.8},
+			{text: 'CORE', scale: 1},
+		],
 		glyphFamily: GEOMETRIC_SANS,
-		// Four characters instead of two, so the cap height comes down ~30%
-		// from blue's "AI" and the tracking opens right out.
+		// Overall cap height ~30% below blue's single-line "AI", tracking wide.
 		glyphScale: 0.434,
 		glyphTracking: 0.24,
+		glyphLineGap: 0.17,
 		glyphBlinkCycle: null,
 		panelKind: 'gauges',
 		panelArrival: 'near-first',
