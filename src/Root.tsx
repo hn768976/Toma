@@ -1,6 +1,6 @@
 import React from 'react';
 import {Composition} from 'remotion';
-import {WireCity, type WireCityProps} from './wire-city/WireCity';
+import {WireCity} from './wire-city/WireCity';
 
 export const RemotionRoot: React.FC = () => {
 	return (
