@@ -1,20 +1,21 @@
+import type {MaskField} from './mask';
 import {rnd, rndRange} from './rng';
-import {CANVAS_H, DESIGN_TO_CANVAS} from './space';
+import {MASK_TO_CANVAS} from './space';
 
 /**
- * The orb the cupped hands hold. Particles sit on a spherical shell that spins
- * about a screen-horizontal axis, so they travel in vertical circles. This is
- * plain 2D parametric maths drawn to the same canvas as everything else — no
- * 3D renderer involved — and projecting a shell rather than filling a disc is
- * what gives the rim its density: near the limb the surface runs edge-on to the
- * viewer and the projected particles pile up.
+ * The orbiting shell. Particles sit on a sphere that spins about a
+ * screen-horizontal axis, so each one travels a vertical circle at a fixed x —
+ * which is exactly the set of latitude rings the mask's compressed vertical
+ * grid bands already draw. This is plain 2D parametric maths on the same canvas
+ * as everything else, no 3D renderer involved, and projecting a shell rather
+ * than filling a disc is what gives the rim its density: near the limb the
+ * surface runs edge-on to the viewer and the projected particles pile up.
+ *
+ * Its centre and radius come from the silhouette mask rather than from
+ * constants of their own, so the shell and the form it rides can never drift
+ * apart.
  */
-export const SPHERE_COUNT = 860;
-
-/** ~12% of frame height, floating in the gap just above the fingertips. */
-export const SPHERE_RADIUS = CANVAS_H * 0.06;
-const CENTRE_DESIGN_X = 960;
-const CENTRE_DESIGN_Y = 516;
+export const SPHERE_COUNT = 2800;
 
 /** Whole turns per 480 frames, so the orbit closes exactly on the loop. */
 export const SPHERE_TURNS = 2;
@@ -37,12 +38,13 @@ export type SphereField = {
   colorIdx: Uint8Array;
 };
 
-export const buildSphere = (seedPrefix: string): SphereField => {
+export const buildSphere = (field: MaskField, seedPrefix: string): SphereField => {
   const count = SPHERE_COUNT;
-  const field: SphereField = {
-    cx: CENTRE_DESIGN_X * DESIGN_TO_CANVAS,
-    cy: CENTRE_DESIGN_Y * DESIGN_TO_CANVAS,
-    r: SPHERE_RADIUS,
+  const {x0, x1, y0, y1} = field.bbox;
+  const sphere: SphereField = {
+    cx: ((x0 + x1) / 2) * MASK_TO_CANVAS,
+    cy: ((y0 + y1) / 2) * MASK_TO_CANVAS,
+    r: ((x1 - x0) / 2) * MASK_TO_CANVAS,
     count,
     cosPsi: new Float32Array(count),
     sinPsi: new Float32Array(count),
@@ -55,15 +57,15 @@ export const buildSphere = (seedPrefix: string): SphereField => {
   for (let i = 0; i < count; i++) {
     const s = `${seedPrefix}:orb${i}`;
     const c = rnd(`${s}:c`) * 2 - 1;
-    field.cosPsi[i] = c;
-    field.sinPsi[i] = Math.sqrt(Math.max(0, 1 - c * c));
-    field.theta[i] = rnd(`${s}:t`) * Math.PI * 2;
-    field.radius[i] = 2.4 + Math.pow(rnd(`${s}:r`), 1.8) * 3.6;
+    sphere.cosPsi[i] = c;
+    sphere.sinPsi[i] = Math.sqrt(Math.max(0, 1 - c * c));
+    sphere.theta[i] = rnd(`${s}:t`) * Math.PI * 2;
+    sphere.radius[i] = 2.8 + Math.pow(rnd(`${s}:r`), 1.8) * 4.2;
     const b = rnd(`${s}:b`);
-    field.bright[i] = b < 0.14 ? rndRange(`${s}:bh`, 0.8, 1) : rndRange(`${s}:bl`, 0.3, 0.72);
-    field.colorIdx[i] = b < 0.14 ? 2 : rnd(`${s}:cc`) < 0.78 ? 0 : 1;
+    sphere.bright[i] = b < 0.14 ? rndRange(`${s}:bh`, 0.8, 1) : rndRange(`${s}:bl`, 0.3, 0.72);
+    sphere.colorIdx[i] = b < 0.14 ? 2 : rnd(`${s}:cc`) < 0.78 ? 0 : 1;
   }
-  return field;
+  return sphere;
 };
 
 /** Slow brightness pulse; period 160 divides 480. */

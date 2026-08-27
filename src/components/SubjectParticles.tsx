@@ -105,8 +105,8 @@ const drawSphere = (
     sphere.cy,
     sphere.r * 1.9,
   );
-  halo.addColorStop(0, rgba(palette.accent, 0.1 * pulse * gate));
-  halo.addColorStop(0.42, rgba(palette.primary, 0.05 * pulse * gate));
+  halo.addColorStop(0, rgba(palette.accent, 0.07 * pulse * gate));
+  halo.addColorStop(0.42, rgba(palette.primary, 0.035 * pulse * gate));
   halo.addColorStop(1, rgba(palette.primary, 0));
   ctx.globalAlpha = 1;
   ctx.fillStyle = halo;

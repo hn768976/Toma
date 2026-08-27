@@ -51,10 +51,11 @@ const VARIANTS = [
     composition: 'ParticleFigureHands',
     background: 'dots',
     subject: 'sphere',
-    title: 'Particle Figure — Hands',
+    title: 'Particle Figure — Sphere',
     blurb:
-      'Two open hands cupped palms-up around a rotating particle sphere, green on ' +
-      'near-black, over a sparse drifting dot grid.',
+      'A large rotating particle sphere — 70% of frame height — green on ' +
+      'near-black, over a sparse drifting dot grid. The composition id and ' +
+      'package name keep the `hands` label they were first specified under.',
   },
 ];
 

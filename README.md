@@ -8,7 +8,7 @@ no component state: every value on screen is a pure function of the frame number
 | --- | --- | --- | --- | --- |
 | `ParticleFigureFront` | head and shoulders, front | cyan on deep blue | circuit fragments | shimmer |
 | `ParticleFigureProfile` | head and shoulders, left profile | indigo | drifting characters | data streams |
-| `ParticleFigureHands` | two cupped hands + orbiting sphere | green on near-black | sparse dot grid | rotating sphere |
+| `ParticleFigureHands` | a large rotating sphere | green on near-black | sparse dot grid | rotating shell |
 
 All three are 3840 × 2160, 480 frames, 30 fps, silent.
 
@@ -41,7 +41,9 @@ projected flat, so the lines bunch up as they approach the left and right edges
 of the form and spread across its middle. The bunching is computed per scanline
 against the run of silhouette each particle actually sits in, so every arm, every
 hand and each side of the head gets its own wrap. One non-linearity is the whole
-reason a flat mask reads as a body with volume.
+reason a flat mask reads as a body with volume. On the sphere the grid stops
+being a metaphor: those compressed vertical bands *are* the latitude rings the
+orbiting particles ride along.
 
 Horizontal lines use one global mapping over the figure's bounding box so they
 stay continuous straight across the form, compressed toward its top and bottom
@@ -57,10 +59,9 @@ src/lib/mask.ts             rasterise silhouette -> edge / crease / span fields
 src/lib/grid.ts             the distorted grid: snapping and drawable lines
 src/lib/particles.ts        one seeded sample of the particle field
 src/lib/streams.ts          profile only: ribbons off the back of the skull
-src/lib/sphere.ts           hands only: the orbiting shell
+src/lib/sphere.ts           sphere variant only: the orbiting shell
 src/lib/timing.ts           the 480-frame envelope, breath, loop-safe frame
 tools/verify-loop.sh        asserts frame 0 === frame 480, pixel for pixel
-tools/mirror-hand.mjs       authoring aid: mirrors one hand about x = 960
 tools/package.mjs           builds the three single-version zips
 ```
 

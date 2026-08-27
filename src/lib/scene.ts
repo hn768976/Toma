@@ -30,7 +30,7 @@ export const getScene = (variant: VariantName): Scene => {
     grid: buildGridLines(field),
     particles: sampleParticles(field, `${variant}:subject`),
     streams: spec.subject === 'stream' ? buildStreams(field, `${variant}:flow`) : null, // @only:stream
-    sphere: spec.subject === 'sphere' ? buildSphere(`${variant}:orb`) : null, // @only:sphere
+    sphere: spec.subject === 'sphere' ? buildSphere(field, `${variant}:orb`) : null, // @only:sphere
   };
   cache.set(variant, scene);
   return scene;
