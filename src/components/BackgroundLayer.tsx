@@ -1,6 +1,7 @@
 import React, {useLayoutEffect, useMemo} from 'react';
 import {rgba} from '../lib/color';
-import {rnd, rndInt, rndRange, rndSigned} from '../lib/rng';
+import {rnd, rndInt, rndRange} from '../lib/rng'; // @only:circuit,text
+import {rndSigned} from '../lib/rng'; // @only:circuit
 import {CANVAS_H, CANVAS_W} from '../lib/space';
 import {LOOP, useLoopFrame} from '../lib/timing';
 import type {BackgroundMode, Palette} from '../variants';
@@ -12,12 +13,93 @@ type Props = {
   seed: string;
 };
 
+// @only:circuit
 const CIRCUIT_COUNT = 210;
 
+type Fragment = {
+  x: number;
+  y: number;
+  /** Elliptical meander: seamless over the loop, no wrapping seams. */
+  ax: number;
+  ay: number;
+  phase: number;
+  period: number;
+  periodY: number;
+  phaseY: number;
+  alpha: number;
+  kind: 0 | 1 | 2;
+  a: number;
+  b: number;
+  dir: number;
+  width: number;
+};
+
+const buildCircuit = (seed: string): Fragment[] => {
+  const out: Fragment[] = [];
+  for (let i = 0; i < CIRCUIT_COUNT; i++) {
+    const s = `${seed}:circuit:${i}`;
+    out.push({
+      x: rnd(`${s}:x`) * CANVAS_W,
+      y: rnd(`${s}:y`) * CANVAS_H,
+      ax: rndRange(`${s}:ax`, 30, 130),
+      ay: rndRange(`${s}:ay`, 20, 90),
+      phase: rnd(`${s}:ph`),
+      period: LOOP / (rndInt(`${s}:pr`, 2) + 1),
+      periodY: LOOP / (rndInt(`${s}:pry`, 3) + 1),
+      phaseY: rnd(`${s}:phy`),
+      alpha: rndRange(`${s}:al`, 0.07, 0.36),
+      kind: rndInt(`${s}:k`, 3) as 0 | 1 | 2,
+      a: rndRange(`${s}:a`, 28, 200),
+      b: rndRange(`${s}:b`, 22, 150),
+      dir: rndSigned(`${s}:d`, 1) > 0 ? 1 : -1,
+      width: rndRange(`${s}:w`, 2, 4),
+    });
+  }
+  return out;
+};
+
+/** Scattered right-angle trace fragments and pads, drifting on closed orbits. */
+const drawCircuit = (
+  ctx: CanvasRenderingContext2D,
+  frags: Fragment[],
+  color: string,
+  frame: number,
+) => {
+  ctx.save();
+  ctx.lineCap = 'square';
+  for (const f of frags) {
+    const t = (frame / f.period + f.phase) * Math.PI * 2;
+    const ty = (frame / f.periodY + f.phaseY) * Math.PI * 2;
+    const x = f.x + Math.cos(t) * f.ax;
+    const y = f.y + Math.sin(ty) * f.ay;
+    ctx.strokeStyle = rgba(color, f.alpha);
+    ctx.fillStyle = rgba(color, f.alpha * 0.8);
+    ctx.lineWidth = f.width;
+    ctx.beginPath();
+    if (f.kind === 0) {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + f.a, y);
+      ctx.lineTo(x + f.a, y + f.b * f.dir);
+      ctx.stroke();
+    } else if (f.kind === 1) {
+      ctx.moveTo(x, y);
+      if (f.dir > 0) ctx.lineTo(x + f.a, y);
+      else ctx.lineTo(x, y + f.a);
+      ctx.stroke();
+    } else {
+      ctx.strokeRect(x, y, f.a * 0.35, f.b * 0.35);
+      if (f.alpha > 0.26) ctx.fillRect(x + 6, y + 6, f.a * 0.35 - 12, f.b * 0.35 - 12);
+    }
+  }
+  ctx.restore();
+};
+// @end
+
+// @only:text
 /** Illegible "data": digits and hex-ish symbols in a font that always resolves. */
 const GLYPHS = '0123456789ABCDEF/\\|<>{}[]#$%&*+=~:;.-_^';
 const TEXT_ROWS = 30;
-// One tile spans the whole frame, so the row never visibly repeats within it.
+// One tile spans the whole frame, so a row never visibly repeats within it.
 const TEXT_TILE_W = CANVAS_W;
 const TEXT_TILE_H = 44;
 const TEXT_CHAR = 26;
@@ -78,96 +160,75 @@ const drawText = (
   }
   ctx.restore();
 };
+// @end
 
-type Fragment = {
-  x: number;
-  y: number;
-  /** Elliptical meander: seamless over the loop, no wrapping seams. */
-  ax: number;
-  ay: number;
-  phase: number;
-  period: number;
-  periodY: number;
-  phaseY: number;
-  alpha: number;
-  kind: 0 | 1 | 2;
-  a: number;
-  b: number;
-  dir: number;
-  width: number;
-};
+// @only:dots
+const DOT_SPACING = 168;
+const DOT_RADIUS = 3.5;
 
-const buildCircuit = (seed: string): Fragment[] => {
-  const out: Fragment[] = [];
-  for (let i = 0; i < CIRCUIT_COUNT; i++) {
-    const s = `${seed}:circuit:${i}`;
-    out.push({
-      x: rnd(`${s}:x`) * CANVAS_W,
-      y: rnd(`${s}:y`) * CANVAS_H,
-      ax: rndRange(`${s}:ax`, 30, 130),
-      ay: rndRange(`${s}:ay`, 20, 90),
-      phase: rnd(`${s}:ph`),
-      period: LOOP / (rndInt(`${s}:pr`, 2) + 1),
-      periodY: LOOP / (rndInt(`${s}:pry`, 3) + 1),
-      phaseY: rnd(`${s}:phy`),
-      alpha: rndRange(`${s}:al`, 0.07, 0.36),
-      kind: rndInt(`${s}:k`, 3) as 0 | 1 | 2,
-      a: rndRange(`${s}:a`, 28, 200),
-      b: rndRange(`${s}:b`, 22, 150),
-      dir: rndSigned(`${s}:d`, 1) > 0 ? 1 : -1,
-      width: rndRange(`${s}:w`, 2, 4),
-    });
-  }
-  return out;
-};
-
-const drawCircuit = (
+/**
+ * The calm background: a sparse regular dot grid drifting by exactly one cell
+ * per loop, which is what makes the drift wrap without a seam.
+ */
+const drawDots = (
   ctx: CanvasRenderingContext2D,
-  frags: Fragment[],
   color: string,
   frame: number,
 ) => {
+  const t = frame / LOOP;
+  const ox = (t * DOT_SPACING) % DOT_SPACING;
+  const oy = (t * DOT_SPACING * 0.5) % DOT_SPACING;
   ctx.save();
-  ctx.lineCap = 'square';
-  for (const f of frags) {
-    const t = (frame / f.period + f.phase) * Math.PI * 2;
-    const x = f.x + Math.cos(t) * f.ax;
-    const ty = (frame / f.periodY + f.phaseY) * Math.PI * 2;
-    const y = f.y + Math.sin(ty) * f.ay;
-    ctx.strokeStyle = rgba(color, f.alpha);
-    ctx.fillStyle = rgba(color, f.alpha * 0.8);
-    ctx.lineWidth = f.width;
-    ctx.beginPath();
-    if (f.kind === 0) {
-      // right-angle trace fragment
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + f.a, y);
-      ctx.lineTo(x + f.a, y + f.b * f.dir);
-      ctx.stroke();
-    } else if (f.kind === 1) {
-      // a bare run, sometimes vertical
-      ctx.moveTo(x, y);
-      if (f.dir > 0) ctx.lineTo(x + f.a, y);
-      else ctx.lineTo(x, y + f.a);
-      ctx.stroke();
-    } else {
-      // small rectangle / pad
-      ctx.strokeRect(x, y, f.a * 0.35, f.b * 0.35);
-      if (f.alpha > 0.26) ctx.fillRect(x + 6, y + 6, f.a * 0.35 - 12, f.b * 0.35 - 12);
+  ctx.fillStyle = rgba(color, 0.18);
+  ctx.beginPath();
+  for (let y = oy - DOT_SPACING; y < CANVAS_H + DOT_SPACING; y += DOT_SPACING) {
+    for (let x = ox - DOT_SPACING; x < CANVAS_W + DOT_SPACING; x += DOT_SPACING) {
+      ctx.moveTo(x + DOT_RADIUS, y);
+      ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
     }
   }
+  ctx.fill();
   ctx.restore();
 };
+// @end
 
-export const BackgroundLayer: React.FC<Props> = ({canvasRef, palette, mode, seed}) => {
+/** Whatever the chosen background mode needs to have prepared once. */
+type BackgroundData =
+  | {kind: 'circuit'; frags: Fragment[]} // @only:circuit
+  | {kind: 'text'; rows: TextRow[]} // @only:text
+  | {kind: 'dots'} // @only:dots
+  ;
+
+/**
+ * Takes the whole prop bag rather than the individual pieces so that pruning a
+ * mode out never leaves an unused parameter behind.
+ */
+const buildBackground = (props: Props): BackgroundData => {
+  // @only:circuit
+  if (props.mode === 'circuit') {
+    return {kind: 'circuit', frags: buildCircuit(props.seed)};
+  }
+  // @end
+  // @only:text
+  if (props.mode === 'text') {
+    return {kind: 'text', rows: buildText(props.seed, props.palette.accent)};
+  }
+  // @end
+  // @only:dots
+  if (props.mode === 'dots') return {kind: 'dots'};
+  // @end
+  throw new Error(`unknown background mode: ${String(props.mode)}`);
+};
+
+export const BackgroundLayer: React.FC<Props> = (props) => {
+  const {canvasRef, palette} = props;
   const frame = useLoopFrame();
-  const circuit = useMemo(
-    () => (mode === 'circuit' ? buildCircuit(seed) : []),
-    [mode, seed],
-  );
-  const text = useMemo(
-    () => (mode === 'text' ? buildText(seed, palette.accent) : []),
-    [mode, seed, palette.accent],
+  // Keyed on the fields rather than on `props` itself: the prop object is a
+  // fresh identity every frame, and rebuilding 30 text tiles per frame is not.
+  const data = useMemo(
+    () => buildBackground(props),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [props.mode, props.seed, props.palette],
   );
 
   useLayoutEffect(() => {
@@ -199,12 +260,16 @@ export const BackgroundLayer: React.FC<Props> = ({canvasRef, palette, mode, seed
     }
     ctx.globalCompositeOperation = 'source-over';
 
-    if (mode === 'circuit') {
-      drawCircuit(ctx, circuit, palette.accent, frame);
-    } else if (mode === 'text') {
-      drawText(ctx, text, frame);
-    }
-  }, [canvasRef, palette, mode, circuit, text, frame]);
+    // @only:circuit
+    if (data.kind === 'circuit') drawCircuit(ctx, data.frags, palette.accent, frame);
+    // @end
+    // @only:text
+    if (data.kind === 'text') drawText(ctx, data.rows, frame);
+    // @end
+    // @only:dots
+    if (data.kind === 'dots') drawDots(ctx, palette.secondary, frame);
+    // @end
+  }, [canvasRef, palette, data, frame]);
 
   return null;
 };

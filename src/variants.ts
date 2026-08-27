@@ -9,8 +9,8 @@ export type Palette = {
   accent: string;
 };
 
-export type BackgroundMode = 'circuit' | 'text';
-export type SubjectMode = 'shimmer' | 'stream';
+export type BackgroundMode = 'circuit' | 'text' | 'dots';
+export type SubjectMode = 'shimmer' | 'stream' | 'sphere';
 
 export type VariantSpec = {
   palette: Palette;
@@ -22,7 +22,7 @@ export type VariantSpec = {
   subject: SubjectMode;
 };
 
-export type VariantName = 'front' | 'profile';
+export type VariantName = 'front' | 'profile' | 'hands';
 
 /**
  * The single source of truth for every colour and every shape in the piece.
@@ -118,5 +118,66 @@ export const VARIANTS: Record<VariantName, VariantSpec> = {
     ],
     background: 'text',
     subject: 'stream',
+  },
+  hands: {
+    palette: {
+      bgDeep: '#02120A',
+      bgGlow: '#0C3D1E',
+      primary: '#3FE87F',
+      white: '#E8FFEF',
+      secondary: '#2E9F6B',
+      accent: '#C4FFD8',
+    },
+    // One hand is authored, then mirrored about x = 960 by tools/mirror-hand.mjs
+    // and pasted here; palms, fingers and wrists are stroked rather than
+    // outlined, which is what makes a hand tractable to draw as a path at all.
+    silhouette: {
+      fill: [
+        'M 452 880 C 430 806 448 726 506 682 C 566 636 656 640 712 692 C 758 736 770 812 744 878 C 714 950 606 982 528 952 C 486 936 464 918 452 880 Z',
+        'M 1468 880 C 1490 806 1472 726 1414 682 C 1354 636 1264 640 1208 692 C 1162 736 1150 812 1176 878 C 1206 950 1314 982 1392 952 C 1434 936 1456 918 1468 880 Z',
+      ].join(' '),
+      strokes: [
+        {d: 'M 452 1150 C 470 1058 494 992 530 946', w: 158},
+        {d: 'M 636 690 C 706 640 798 600 866 578', w: 46},
+        {d: 'M 676 726 C 748 686 830 656 890 640', w: 48},
+        {d: 'M 708 776 C 772 748 830 726 876 712', w: 44},
+        {d: 'M 726 830 C 774 816 812 800 846 786', w: 38},
+        {d: 'M 632 910 C 690 936 754 944 818 940', w: 62},
+        {d: 'M 1468 1150 C 1450 1058 1426 992 1390 946', w: 158},
+        {d: 'M 1284 690 C 1214 640 1122 600 1054 578', w: 46},
+        {d: 'M 1244 726 C 1172 686 1090 656 1030 640', w: 48},
+        {d: 'M 1212 776 C 1148 748 1090 726 1044 712', w: 44},
+        {d: 'M 1194 830 C 1146 816 1108 800 1074 786', w: 38},
+        {d: 'M 1288 910 C 1230 936 1166 944 1102 940', w: 62},
+      ],
+    },
+    creases: [
+      {d: 'M 502 690 C 472 760 474 844 512 918', w: 11},
+      {d: 'M 452 838 C 534 802 628 796 710 812', w: 11},
+      {d: 'M 474 776 C 552 734 646 724 726 742', w: 11},
+      {d: 'M 622 676 C 668 712 700 762 720 830', w: 12},
+      {d: 'M 658 706 C 674 694 686 686 700 678', w: 9},
+      {d: 'M 694 750 C 708 738 722 730 736 722', w: 9},
+      {d: 'M 720 802 C 734 792 746 784 758 776', w: 9},
+      {d: 'M 760 626 C 768 640 772 650 776 662', w: 8},
+      {d: 'M 792 672 C 800 686 804 696 808 708', w: 8},
+      {d: 'M 800 738 C 808 750 812 758 816 768', w: 8},
+      {d: 'M 792 806 C 798 816 802 822 806 830', w: 8},
+      {d: 'M 620 880 C 600 912 598 940 606 968', w: 10},
+      {d: 'M 1418 690 C 1448 760 1446 844 1408 918', w: 11},
+      {d: 'M 1468 838 C 1386 802 1292 796 1210 812', w: 11},
+      {d: 'M 1446 776 C 1368 734 1274 724 1194 742', w: 11},
+      {d: 'M 1298 676 C 1252 712 1220 762 1200 830', w: 12},
+      {d: 'M 1262 706 C 1246 694 1234 686 1220 678', w: 9},
+      {d: 'M 1226 750 C 1212 738 1198 730 1184 722', w: 9},
+      {d: 'M 1200 802 C 1186 792 1174 784 1162 776', w: 9},
+      {d: 'M 1160 626 C 1152 640 1148 650 1144 662', w: 8},
+      {d: 'M 1128 672 C 1120 686 1116 696 1112 708', w: 8},
+      {d: 'M 1120 738 C 1112 750 1108 758 1104 768', w: 8},
+      {d: 'M 1128 806 C 1122 816 1118 822 1114 830', w: 8},
+      {d: 'M 1300 880 C 1320 912 1322 940 1314 968', w: 10},
+    ],
+    background: 'dots',
+    subject: 'sphere',
   },
 };

@@ -59,14 +59,13 @@ export const ParticleFigure: React.FC<ParticleFigureProps> = ({variant}) => {
       />
       <GridOverlay
         canvasRef={canvasRef}
-        grid={scene.grid}
+        scene={scene}
         palette={spec.palette}
         transform={transform}
       />
       <SubjectParticles
         canvasRef={canvasRef}
-        particles={scene.particles}
-        streams={scene.streams}
+        scene={scene}
         palette={spec.palette}
         mode={spec.subject}
         transform={transform}

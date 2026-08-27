@@ -23,6 +23,15 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{variant: 'profile' as const}}
       />
+      <Composition
+        id="ParticleFigureHands"
+        component={ParticleFigure}
+        durationInFrames={480}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{variant: 'hands' as const}}
+      />
     </>
   );
 };

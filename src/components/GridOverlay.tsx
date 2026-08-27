@@ -1,13 +1,13 @@
 import React, {useLayoutEffect} from 'react';
 import {rgba} from '../lib/color';
-import type {GridLines} from '../lib/grid';
+import type {Scene} from '../lib/scene';
 import {MASK_TO_CANVAS} from '../lib/space';
 import {presence, useLoopFrame} from '../lib/timing';
 import type {Palette} from '../variants';
 
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  grid: GridLines;
+  scene: Scene;
   palette: Palette;
   /** Scale/translate the figure currently sits under. */
   transform: {scale: number; cx: number; cy: number};
@@ -35,7 +35,7 @@ const strokeSegments = (
  * The visible half of the grid technique: the same distorted lattice the
  * particles are snapped onto, drawn faintly so the wrap over the form reads.
  */
-export const GridOverlay: React.FC<Props> = ({canvasRef, grid, palette, transform}) => {
+export const GridOverlay: React.FC<Props> = ({canvasRef, scene, palette, transform}) => {
   const frame = useLoopFrame();
 
   useLayoutEffect(() => {
@@ -55,11 +55,11 @@ export const GridOverlay: React.FC<Props> = ({canvasRef, grid, palette, transfor
     ctx.translate(-transform.cx, -transform.cy);
     ctx.lineCap = 'butt';
 
-    strokeSegments(ctx, grid.vertical, palette.primary, 0.075 * env, 1.7);
-    strokeSegments(ctx, grid.horizontal, palette.secondary, 0.05 * env, 1.5);
+    strokeSegments(ctx, scene.grid.vertical, palette.primary, 0.075 * env, 1.7);
+    strokeSegments(ctx, scene.grid.horizontal, palette.secondary, 0.05 * env, 1.5);
 
     ctx.restore();
-  }, [canvasRef, grid, palette, transform, frame]);
+  }, [canvasRef, scene, palette, transform, frame]);
 
   return null;
 };
