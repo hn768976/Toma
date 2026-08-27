@@ -139,35 +139,40 @@ export type Variant = {
  * No badge, no grille detail, no brand cues.
  */
 /**
- * Sleek modern sedan/fastback in side profile, nose to the left: a low nose
- * with a slim headlight brow, a long bonnet rising into a fast-raked
- * windshield, a short roof sweeping down in one fastback line to a ducktail
- * kick, and a rising beltline. Generic - no badge, no grille, no brand cues.
+ * Sleek modern car in side profile, nose to the left.
+ *
+ * Every line of the upper body is a curve, not a ramp: the nose is rounded,
+ * the bonnet is a domed arc that rises fast off the nose and flattens into the
+ * cowl, and windshield, roof and rear glass run into one another as a single
+ * continuous sweep down to a ducktail kick. Generic - no badge, no grille, no
+ * brand cues.
  */
 const CAR_PROFILE =
-  'M 190 520 L 150 500 L 138 462 L 142 430 Q 146 416 168 408 ' +
-  'C 260 392 360 382 470 372 L 500 368 L 640 268 ' +
-  'Q 660 252 700 250 L 810 252 ' +
-  'C 890 260 960 286 1020 322 L 1052 340 Q 1070 350 1072 372 ' +
-  'L 1078 400 Q 1080 420 1074 444 L 1052 500 ' +
-  'L 1000 516 C 1000 436 976 394 916 394 C 856 394 832 436 832 516 ' +
-  'L 460 522 C 460 440 434 396 372 396 C 310 396 286 440 286 522 Z';
+  'M 196 520 C 168 514 148 500 138 476 C 130 458 130 442 136 426 ' +
+  'C 142 412 148 406 158 402 C 240 372 350 352 470 344 L 506 340 ' +
+  'C 556 298 600 268 656 250 C 706 236 762 232 818 238 ' +
+  'C 890 248 962 280 1024 322 L 1054 342 Q 1074 354 1076 378 ' +
+  'L 1080 404 Q 1082 426 1074 450 L 1052 504 ' +
+  'L 1000 518 C 1000 438 976 396 916 396 C 856 396 832 438 832 518 ' +
+  'L 460 524 C 460 442 434 398 372 398 C 310 398 286 442 286 524 Z';
 
 const CAR_FASCIA =
-  'M 168 408 L 142 430 L 138 462 L 150 500 L 190 520 ' +
-  'L 160 502 L 128 470 L 122 436 L 142 390 Z';
+  'M 158 402 C 148 406 142 412 136 426 C 130 442 130 458 138 476 ' +
+  'C 148 500 168 514 196 520 L 180 508 C 154 494 140 472 138 448 ' +
+  'C 136 424 142 406 152 388 Z';
 
 const CAR_BONNET_TOP =
-  'M 168 408 L 142 390 C 250 374 360 362 474 352 L 500 368 ' +
-  'C 380 378 260 392 168 408 Z';
+  'M 158 402 C 240 372 350 352 470 344 L 506 340 L 490 326 ' +
+  'C 370 334 250 354 152 388 Z';
 
 const CAR_ROOF_TOP =
-  'M 500 368 L 474 352 L 614 252 Q 634 236 674 234 L 790 236 ' +
-  'L 810 252 L 700 250 Q 660 252 640 268 Z';
+  'M 506 340 L 490 326 C 546 286 592 256 650 238 ' +
+  'C 704 224 762 220 820 226 L 818 238 ' +
+  'C 762 232 706 236 656 250 C 600 268 556 298 506 340 Z';
 
 const CAR_REAR_TOP =
-  'M 810 252 L 790 236 C 872 244 944 270 1004 306 L 1020 322 ' +
-  'C 960 286 890 260 810 252 Z';
+  'M 820 226 C 892 236 966 268 1030 310 L 1024 322 ' +
+  'C 962 280 890 248 818 238 Z';
 
 const CAR_WHEEL_F =
   'M 372 500 m -82 0 a 82 82 0 1 0 164 0 a 82 82 0 1 0 -164 0';
@@ -187,7 +192,7 @@ const CAR: Variant = {
   },
   silhouette: {
     vb: [1200, 660],
-    fit: [116, 228, 968, 356],
+    fit: [118, 214, 974, 382],
     fills: [
       {d: CAR_PROFILE},
       {d: CAR_FASCIA},
@@ -206,34 +211,34 @@ const CAR: Variant = {
       {d: CAR_BONNET_TOP},
       {d: CAR_ROOF_TOP},
       {d: CAR_REAR_TOP},
-      // beltline, rising toward the tail
-      {d: 'M 500 368 C 640 358 780 350 890 346 C 950 344 1000 340 1042 340'},
+      // beltline, rising gently toward the tail
+      {d: 'M 506 340 C 640 334 780 328 890 326 C 950 325 1000 328 1046 336'},
       // window frames: B-pillar, raked rear-quarter pillar
-      {d: 'M 736 356 L 726 250'},
-      {d: 'M 890 346 L 866 254'},
+      {d: 'M 740 330 L 730 234'},
+      {d: 'M 890 326 L 858 236'},
       // door shut lines
-      {d: 'M 545 370 L 552 516'},
-      {d: 'M 752 356 L 758 514'},
-      // bonnet shut line + bonnet centre crease
-      {d: 'M 150 442 C 172 424 198 412 230 404'},
-      {d: 'M 192 400 C 292 388 400 378 490 370'},
-      // roof centre crease
-      {d: 'M 686 242 L 796 244'},
-      // strong mid-body character line, nose to tail lamp
-      {d: 'M 250 428 C 520 416 800 408 1050 396'},
+      {d: 'M 548 344 L 554 518'},
+      {d: 'M 754 330 L 760 516'},
+      // bonnet shut line at the nose + the bonnet's own crown crease
+      {d: 'M 146 430 C 162 412 180 402 206 394'},
+      {d: 'M 180 412 C 258 386 360 368 476 360'},
+      // roof crown crease
+      {d: 'M 668 244 C 720 234 764 232 806 236'},
+      // long character line down the flank
+      {d: 'M 250 430 C 520 418 800 410 1052 398'},
       // wheel arches
-      {d: 'M 286 522 C 286 440 310 396 372 396 C 434 396 460 440 460 522'},
-      {d: 'M 832 516 C 832 436 856 394 916 394 C 976 394 1000 436 1000 516'},
+      {d: 'M 286 524 C 286 442 310 398 372 398 C 434 398 460 442 460 524'},
+      {d: 'M 832 518 C 832 438 856 396 916 396 C 976 396 1000 438 1000 518'},
       // rocker + lower door crease
-      {d: 'M 296 508 L 646 516 L 996 508'},
-      {d: 'M 310 476 C 550 484 790 482 1020 468'},
-      // headlight wrap
-      {d: 'M 144 434 C 168 420 196 412 230 406'},
-      {d: 'M 124 444 C 128 424 134 406 142 390'},
+      {d: 'M 296 510 L 646 518 L 996 510'},
+      {d: 'M 310 478 C 550 486 790 484 1020 470'},
+      // headlight wrap and the fascia's lower edge
+      {d: 'M 140 440 C 158 420 182 408 214 400'},
+      {d: 'M 138 476 C 152 492 172 506 196 520'},
       // tail lamp, decklid shut and rear bumper shut
-      {d: 'M 1020 322 C 1042 336 1058 352 1066 370'},
-      {d: 'M 1052 340 C 1064 356 1070 372 1072 390'},
-      {d: 'M 1036 470 C 1058 462 1070 452 1075 440'},
+      {d: 'M 1024 322 C 1046 336 1062 352 1070 372'},
+      {d: 'M 1054 342 C 1066 358 1072 374 1074 392'},
+      {d: 'M 1038 472 C 1058 464 1070 454 1075 442'},
       // tyre walls and hubs, so the wheels are not flat discs
       {d: 'M 372 500 m -56 0 a 56 56 0 1 0 112 0 a 56 56 0 1 0 -112 0'},
       {d: 'M 372 500 m -27 0 a 27 27 0 1 0 54 0 a 27 27 0 1 0 -54 0'},
@@ -244,8 +249,8 @@ const CAR: Variant = {
     clusters: [
       {x: 372, y: 500, r: 86, boost: 0.5},
       {x: 916, y: 496, r: 84, boost: 0.45},
-      {x: 176, y: 416, r: 46, boost: 0.8},
-      {x: 142, y: 400, r: 32, boost: 0.6},
+      {x: 168, y: 420, r: 46, boost: 0.8},
+      {x: 140, y: 444, r: 30, boost: 0.6},
     ],
     light: [-1, -0.45],
     axis: [1, 0],
