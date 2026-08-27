@@ -40,11 +40,12 @@ const VARIANTS = [
     composition: 'ParticleFigureProfile',
     background: 'text',
     subject: 'stream',
-    title: 'Particle Figure — Profile',
+    title: 'Particle Figure — AI',
     blurb:
-      'The same head and shoulders in full left profile, indigo, with ribbons of ' +
-      'particles streaming out of the back of the skull over drifting rows of ' +
-      'illegible characters.',
+      'Particles gather into the word AI set in Roboto Black, indigo, with ' +
+      'ribbons of particles streaming off its trailing edge over drifting rows ' +
+      'of illegible characters. The composition id and package name keep the ' +
+      '`profile` label they were first specified under.',
   },
   {
     name: 'hands',

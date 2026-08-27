@@ -81,41 +81,23 @@ export const VARIANTS: Record<VariantName, VariantSpec> = {
       secondary: '#4F3FC4',
       accent: '#A89FF5',
     },
+    // The subject is the word AI, outlined from Roboto Black (weight 900) by
+    // tools/extract-word-path.mjs and pasted here: 934 x 700 design units,
+    // centred in the frame. Baking the outlines means nothing has to load a
+    // font at render time. The A arrives as three contours — two strokes and a
+    // crossbar — that share a winding direction, so the nonzero fill unions
+    // them and leaves the counter open.
     silhouette: {
       fill: [
-        // Full left profile. The relief is deliberately exaggerated: at a grid
-        // pitch of ~20 design units, an anatomically-scaled lip would vanish.
-        'M 990 78 C 900 82 848 128 836 190',
-        'C 828 222 822 240 818 262 C 830 288 850 294 856 302',
-        'C 828 332 776 366 730 402 C 748 420 800 424 846 428',
-        'C 826 438 802 442 800 454 C 818 464 840 464 838 474',
-        'C 824 484 806 486 806 498 C 826 512 848 514 856 530',
-        'C 858 546 856 558 866 570 C 884 590 906 598 932 602',
-        'C 972 610 1000 612 1034 608 C 1080 604 1114 588 1138 562',
-        'C 1188 508 1218 452 1216 380 C 1214 268 1192 168 1122 118',
-        'C 1082 88 1036 76 990 78 Z',
-        // neck: set back far enough that the chin clearly overhangs it
-        'M 944 560 C 956 618 958 668 952 726 L 1204 732',
-        'C 1186 664 1160 598 1152 536 Z',
-        // chest in front, back behind, near arm running off the bottom edge
-        'M 1010 656 C 1096 656 1160 680 1214 714',
-        'C 1284 760 1324 826 1344 900 C 1358 950 1364 1010 1366 1084',
-        'L 654 1084 C 658 1004 670 944 690 894',
-        'C 716 828 758 774 814 734 C 866 698 918 660 1010 656 Z',
+        'M 865 190 L 844.9 337.1 L 674.2 890 L 492.9 890 L 750.1 190 L 865 190',
+        'M 1167.9 890 L 986.2 890 L 815 337.1 L 792.9 190 L 909.3 190 L 1167.9 890',
+        'M 620.3 628.9 L 979.5 628.9 L 979.5 759.2 L 620.3 759.2 L 620.3 628.9',
+        'M 1258.8 190 L 1427.1 190 L 1427.1 890 L 1258.8 890 L 1258.8 190',
       ].join(' '),
       strokes: [],
     },
-    creases: [
-      // the ear is a density cluster rather than a shape in the outline
-      {d: 'M 1060 412 C 1106 400 1124 438 1116 472 C 1110 500 1078 506 1058 490', w: 15},
-      {d: 'M 830 262 C 858 250 884 254 902 268', w: 11},
-      {d: 'M 866 408 C 914 396 960 402 996 420', w: 10},
-      {d: 'M 910 572 C 958 600 1018 610 1072 600', w: 11},
-      {d: 'M 906 124 C 968 102 1058 128 1100 190', w: 11},
-      {d: 'M 986 712 C 1050 752 1130 758 1194 736', w: 13},
-      {d: 'M 806 782 C 884 720 966 686 1050 674', w: 11},
-      {d: 'M 1246 800 C 1286 890 1306 990 1312 1084', w: 11},
-    ],
+    // Letterforms have no creases; the edge weighting alone cuts them out.
+    creases: [],
     background: 'text',
     subject: 'stream',
   },

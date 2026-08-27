@@ -22,9 +22,10 @@ const BLOOM_THRESHOLD = 0.72;
 
 // @only:stream
 /**
- * The "stream" branch: ribbons of particles emitted continuously from the back
- * of the skull, each riding a cubic path out past the right frame edge and
- * fading as it goes. A behavioural branch, not a re-parameterised shimmer.
+ * The "stream" branch: ribbons of particles emitted continuously from the
+ * subject's trailing edge, each riding a cubic path out past the right frame
+ * edge and fading as it goes. A behavioural branch, not a re-parameterised
+ * shimmer.
  */
 const drawStreams = (
   ctx: CanvasRenderingContext2D,

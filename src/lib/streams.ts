@@ -7,7 +7,7 @@ const PER_STREAM = 140;
 /** Every travel cycle divides 480, so a particle is mid-path at the same place each loop. */
 const TRAVEL_PERIODS = [120, 160, 240] as const;
 
-/** A cubic run from the back of the skull out past the right frame edge. */
+/** A cubic run from the subject's trailing edge out past the right frame edge. */
 export type Stream = {
   x0: number;
   y0: number;
@@ -37,7 +37,7 @@ export type StreamField = {
  * Emission points on the rear silhouette of the skull: the right-hand edge of
  * the widest run on each of a handful of rows through the upper head.
  */
-const rearSkullPoints = (field: MaskField, n: number): [number, number][] => {
+const trailingEdgePoints = (field: MaskField, n: number): [number, number][] => {
   const h = field.bbox.y1 - field.bbox.y0;
   const top = field.bbox.y0 + h * 0.12;
   const bottom = field.bbox.y0 + h * 0.46;
@@ -45,23 +45,18 @@ const rearSkullPoints = (field: MaskField, n: number): [number, number][] => {
   for (let i = 0; i < n; i++) {
     const y = Math.round(top + ((bottom - top) * i) / Math.max(1, n - 1));
     const bounds = field.runs[clamp(y, 0, field.h - 1)];
-    let bestRight = -1;
-    let bestWidth = -1;
-    for (let j = 0; j < bounds.length; j += 2) {
-      const width = bounds[j + 1] - bounds[j];
-      if (width > bestWidth) {
-        bestWidth = width;
-        bestRight = bounds[j + 1];
-      }
+    let right = -1;
+    for (let j = 1; j < bounds.length; j += 2) {
+      if (bounds[j] > right) right = bounds[j];
     }
-    if (bestRight < 0) continue;
-    out.push([bestRight * MASK_TO_CANVAS, y * MASK_TO_CANVAS]);
+    if (right < 0) continue;
+    out.push([right * MASK_TO_CANVAS, y * MASK_TO_CANVAS]);
   }
   return out;
 };
 
 export const buildStreams = (field: MaskField, seedPrefix: string): StreamField => {
-  const origins = rearSkullPoints(field, STREAM_COUNT);
+  const origins = trailingEdgePoints(field, STREAM_COUNT);
   const streams: Stream[] = origins.map(([x0, y0], i) => {
     const s = `${seedPrefix}:stream:${i}`;
     const dx = CANVAS_W + 320 - x0;
