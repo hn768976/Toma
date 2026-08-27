@@ -15,6 +15,8 @@ export type PanelKind = 'charts' | 'code' | 'gauges';
 export type GlyphLine = {
 	text: string;
 	scale: number;
+	/** Overrides the variant's tracking for this line only. */
+	tracking?: number;
 };
 
 /**
@@ -82,8 +84,12 @@ export type Variant = {
 export const GEOMETRIC_SANS = 'HalftoneGeometric';
 export const TERMINAL_MONO = 'HalftoneMono';
 
-/** Shared across every variant: dot pitch of the halftone screen at 4K. */
-export const DOT_PITCH = 14;
+/**
+ * Shared across every variant: dot pitch of the halftone screen at 4K.
+ * Finer pitch = more cells = a less pixelated reconstruction, at the cost of
+ * roughly (14/pitch)^2 more dots to rasterise per frame.
+ */
+export const DOT_PITCH = 9;
 
 export const VARIANTS: Record<VariantName, Variant> = {
 	blue: {
@@ -176,13 +182,15 @@ export const VARIANTS: Record<VariantName, Variant> = {
 		// force the type small enough to lose against the gauge assembly.
 		glyph: [
 			{text: 'AI', scale: 0.8},
-			{text: 'CORE', scale: 1},
+			// CORE sets tighter than the line above it - four wide letters at the
+			// variant tracking crowded the rim.
+			{text: 'CORE', scale: 1, tracking: 0.11},
 		],
 		glyphFamily: GEOMETRIC_SANS,
 		// Overall cap height ~30% below blue's single-line "AI", tracking wide.
 		glyphScale: 0.434,
 		glyphTracking: 0.24,
-		glyphLineGap: 0.17,
+		glyphLineGap: 0.34,
 		glyphBlinkCycle: null,
 		panelKind: 'gauges',
 		panelArrival: 'near-first',

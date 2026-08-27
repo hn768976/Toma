@@ -135,7 +135,7 @@ export const CentreOrb: React.FC = () => {
 				const font = `${size}px "${variant.glyphFamily}", sans-serif`;
 				ctx.font = font;
 				const chars = line.text.split('');
-				const track = size * variant.glyphTracking;
+				const track = size * (line.tracking ?? variant.glyphTracking);
 				const widths = chars.map((c) => ctx.measureText(c).width);
 				const width = widths.reduce((sum, v) => sum + v, 0) + track * (chars.length - 1);
 				const m = ctx.measureText(line.text);

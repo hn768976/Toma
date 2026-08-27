@@ -60,7 +60,7 @@ Install once:
 npm install
 ```
 
-### 1080p previews (what ships in this package)
+### 1080p previews
 
 ```bash
 npx remotion render HalftoneDashBlue  out/halftone-blue-preview.mp4  --codec=h264 --crf=18 --scale=0.5 --concurrency=8
@@ -176,8 +176,9 @@ Bloom, scanlines and the vignette all land on the composite **before** the dot
 screen, so blurred and glowing regions turn into large soft dots. Grain lands
 **after**, so it is not quantised away by the dot grid.
 
-Because the screen resamples at a 14 px pitch, anything with a feature size near
-that pitch is destroyed by it. Panel borders, web lines and map cells are all
+The pitch is set by `DOT_PITCH` in `src/variants.ts` and is currently 9 px at
+4K. Because the screen resamples at that pitch, anything with a feature size near
+it is destroyed by it. Panel borders, web lines and map cells are all
 drawn heavier than they would need to be in a normal render — that is deliberate,
 and it is why the world map's land cells are near-solid rather than a sparse dot
 grid of their own.
