@@ -8,6 +8,8 @@ const fontOf = (size: number) => `700 ${size}px ${FONT_STACK}`;
 interface CentreLabelProps extends LayerProps {
   /** "breach" glitch frames split the label's colour channels by this many px. */
   channelSplit: number;
+  channelWarm: string;
+  channelCool: string;
 }
 
 const drawLine = (
@@ -19,7 +21,9 @@ const drawLine = (
   color: string,
   alpha: number,
   glow: number,
-  channelSplit: number
+  channelSplit: number,
+  channelWarm: string,
+  channelCool: string
 ): void => {
   if (alpha <= 0.002) return;
   ctx.font = fontOf(size);
@@ -46,9 +50,9 @@ const drawLine = (
     // Chromatic split: warm copy left, cool copy right, added over the core.
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = alpha * 0.7;
-    ctx.fillStyle = mixHex(color, '#FF0000', 0.7);
+    ctx.fillStyle = mixHex(color, channelWarm, 0.7);
     ctx.fillText(text, x - channelSplit, y);
-    ctx.fillStyle = mixHex(color, '#00FFFF', 0.7);
+    ctx.fillStyle = mixHex(color, channelCool, 0.7);
     ctx.fillText(text, x + channelSplit, y);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = alpha;
@@ -67,6 +71,8 @@ export const CentreLabel: React.FC<CentreLabelProps> = ({
   cy,
   R,
   channelSplit,
+  channelWarm,
+  channelCool,
 }) => {
   useLayoutEffect(() => {
     const ctx = context2d(canvas);
@@ -93,8 +99,9 @@ export const CentreLabel: React.FC<CentreLabelProps> = ({
     const glow =
       1 + cfg.glowAmount * Math.sin((frame / cfg.glowPeriod) * Math.PI * 2);
 
-    drawLine(ctx, cfg.upper, upperSize, cx, upperY, palette.labelA, upperAlpha, glow, channelSplit);
-    drawLine(ctx, cfg.lower, lowerSize, cx, lowerY, palette.labelB, lowerAlpha, glow, channelSplit);
+    const split = [channelSplit, channelWarm, channelCool] as const;
+    drawLine(ctx, cfg.upper, upperSize, cx, upperY, palette.labelA, upperAlpha, glow, ...split);
+    drawLine(ctx, cfg.lower, lowerSize, cx, lowerY, palette.labelB, lowerAlpha, glow, ...split);
 
     // Three typing dots — the detail that ties "chat" to its subject.
     const dots = cfg.typingDots;

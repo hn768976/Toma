@@ -5,7 +5,7 @@
  */
 
 import type {GlitchConfig, PostConfig} from '../variants';
-import {clearCanvas, context2d, makeCanvas, rgba, rnd} from './util';
+import {clearCanvas, context2d, makeCanvas, rgba, rnd, rndInt} from './util';
 
 /**
  * Composite `src` onto `dst`, then add blurred copies of it additively.
@@ -83,9 +83,7 @@ export const applyGlitchSlices = (
   clearCanvas(cctx);
   cctx.drawImage(dst.canvas, 0, 0);
 
-  const slices = Math.round(
-    rnd(`${cfg.seed}-slices-${eventIndex}`, cfg.minSlices, cfg.maxSlices + 0.999)
-  );
+  const slices = rndInt(`${cfg.seed}-slices-${eventIndex}`, cfg.minSlices, cfg.maxSlices);
 
   for (let s = 0; s < slices; s++) {
     const y = rnd(`${cfg.seed}-y-${eventIndex}-${s}`, 0, height);

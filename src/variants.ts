@@ -163,6 +163,9 @@ export interface GlitchConfig {
   minShift: number;
   maxShift: number;
   channelSplit: number;
+  /** The two primaries the label's channels separate toward. */
+  channelWarm: string;
+  channelCool: string;
   /** Chance an event is immediately followed by a second, close one. */
   clusterChance: number;
 }
@@ -543,7 +546,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
     },
     beam: {
       mode: 'radialPulse',
-      seed: 'breach-shockwave',
+      seed: 'breach-alarm',
       firstFrame: 78,
       minGap: 35,
       maxGap: 60,
@@ -566,6 +569,8 @@ export const VARIANTS: Record<VariantId, Variant> = {
       minShift: 30,
       maxShift: 140,
       channelSplit: 18,
+      channelWarm: '#FF0000',
+      channelCool: '#00FFFF',
       clusterChance: 0.45,
     },
     post: {...DARK_POST, vignette: 0.22, grain: 0.045},

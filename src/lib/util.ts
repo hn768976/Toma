@@ -24,6 +24,10 @@ export const backOut = (t: number, amount: number): number => {
 export const rnd = (seed: string, lo = 0, hi = 1): number =>
   lo + random(seed) * (hi - lo);
 
+/** Deterministic integer in [lo, hi] inclusive — never overshoots `hi`. */
+export const rndInt = (seed: string, lo: number, hi: number): number =>
+  Math.min(hi, lo + Math.floor(random(seed) * (hi - lo + 1)));
+
 export const hexToRgb = (hex: string): [number, number, number] => {
   const h = hex.replace('#', '');
   return [

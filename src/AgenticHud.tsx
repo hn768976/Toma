@@ -115,6 +115,8 @@ export const AgenticHud: React.FC<AgenticHudProps> = ({variant}) => {
         canvas={buffers.label}
         {...layerProps}
         channelSplit={glitch && v.glitch ? v.glitch.channelSplit : 0}
+        channelWarm={v.glitch?.channelWarm ?? v.palette.labelA}
+        channelCool={v.glitch?.channelCool ?? v.palette.labelB}
       />
       <ParticleWash canvas={buffers.particles} {...layerProps} />
     </AbsoluteFill>

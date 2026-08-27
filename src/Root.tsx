@@ -14,6 +14,15 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{variant: 'violet'}}
       />
+      <Composition
+        id="AgenticDialBreach"
+        component={AgenticHud}
+        durationInFrames={490}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{variant: 'breach'}}
+      />
     </>
   );
 };

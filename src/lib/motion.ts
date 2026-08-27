@@ -4,7 +4,15 @@
  */
 
 import type {BandDef, GlitchConfig, Variant} from '../variants';
-import {backOut, clamp, easeInOutSine, easeOutCubic, easeOutExpo, rnd} from './util';
+import {
+  backOut,
+  clamp,
+  easeInOutSine,
+  easeOutCubic,
+  easeOutExpo,
+  rnd,
+  rndInt,
+} from './util';
 
 const EASES = {
   cubic: easeOutCubic,
@@ -114,7 +122,7 @@ export const shockwaveSchedule = (
   let i = 0;
   while (f < until && i < 64) {
     out.push(f);
-    f += Math.round(rnd(`${seed}-gap-${i}`, minGap, maxGap));
+    f += rndInt(`${seed}-gap-${i}`, minGap, maxGap);
     i++;
   }
   return out;
@@ -137,12 +145,12 @@ export const glitchSchedule = (
   let f = g.firstFrame;
   let i = 0;
   while (f < until && i < 64) {
-    const length = Math.round(rnd(`${g.seed}-len-${i}`, g.minLen, g.maxLen + 0.999));
+    const length = rndInt(`${g.seed}-len-${i}`, g.minLen, g.maxLen);
     out.push({start: f, length, index: i});
     const clustered = rnd(`${g.seed}-cluster-${i}`) < g.clusterChance;
     f += clustered
-      ? length + Math.round(rnd(`${g.seed}-tight-${i}`, 4, 12))
-      : Math.round(rnd(`${g.seed}-gap-${i}`, g.minGap, g.maxGap));
+      ? length + rndInt(`${g.seed}-tight-${i}`, 4, 12)
+      : rndInt(`${g.seed}-gap-${i}`, g.minGap, g.maxGap);
     i++;
   }
   return out;
