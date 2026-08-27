@@ -1,0 +1,25 @@
+{
+  "name": "halftone-dash",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K halftone AI dashboard animation in Remotion - three variants",
+  "scripts": {
+    "dev": "remotion studio",
+    "render:blue": "remotion render HalftoneDashBlue out/halftone-blue.mp4 --codec=h264 --crf=12",
+    "render:green": "remotion render HalftoneDashGreen out/halftone-green.mp4 --codec=h264 --crf=12",
+    "render:amber": "remotion render HalftoneDashAmber out/halftone-amber.mp4 --codec=h264 --crf=12"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.518",
+    "@remotion/renderer": "^4.0.518",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "remotion": "^4.0.518"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "typescript": "^7.0.2"
+  }
+}
