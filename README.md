@@ -7,7 +7,7 @@ no component state: every value on screen is a pure function of the frame number
 | Composition | Subject | Palette | Background | Subject animation |
 | --- | --- | --- | --- | --- |
 | `ParticleFigureFront` | head and shoulders, front | cyan on deep blue | circuit fragments | shimmer |
-| `ParticleFigureProfile` | the word **AI**, Roboto Black | indigo | drifting characters | data streams |
+| `ParticleFigureProfile` | the word **AI**, Roboto Black | indigo | drifting characters | shimmer |
 | `ParticleFigureHands` | a large rotating sphere | green on near-black | sparse dot grid | rotating shell |
 
 All three are 3840 × 2160, 480 frames, 30 fps, silent.
@@ -58,7 +58,6 @@ src/components/             BackgroundLayer, GridOverlay, SubjectParticles
 src/lib/mask.ts             rasterise silhouette -> edge / crease / span fields
 src/lib/grid.ts             the distorted grid: snapping and drawable lines
 src/lib/particles.ts        one seeded sample of the particle field
-src/lib/streams.ts          AI variant only: ribbons off the trailing edge
 src/lib/sphere.ts           sphere variant only: the orbiting shell
 src/lib/timing.ts           the 480-frame envelope, breath, loop-safe frame
 tools/verify-loop.sh        asserts frame 0 === frame 480, pixel for pixel
@@ -80,8 +79,8 @@ grain.
 | 120 – 420 | idle: never rotates or translates, breathes at ±0.8% scale on a 4 s sine |
 | 420 – 480 | dissolves back to the scatter it came from |
 
-Every period in the piece divides 480 — twinkle, respawn, stream travel, sphere
-rotation, background drift — and the frame number is wrapped into `[0, 480)`
+Every period in the piece divides 480 — twinkle, respawn, sphere rotation,
+background drift — and the frame number is wrapped into `[0, 480)`
 before any periodic maths, so `sin(8π)` never has to equal `sin(0)` in floating
 point. `tools/verify-loop.sh <composition>` renders frame 0 and frame 480 and
 compares them; all three are byte-identical at full 4K.

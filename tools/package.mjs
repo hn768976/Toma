@@ -39,13 +39,12 @@ const VARIANTS = [
     name: 'profile',
     composition: 'ParticleFigureProfile',
     background: 'text',
-    subject: 'stream',
+    subject: 'shimmer',
     title: 'Particle Figure — AI',
     blurb:
-      'Particles gather into the word AI set in Roboto Black, indigo, with ' +
-      'ribbons of particles streaming off its trailing edge over drifting rows ' +
-      'of illegible characters. The composition id and package name keep the ' +
-      '`profile` label they were first specified under.',
+      'Particles gather into the word AI set in Roboto Black, indigo, over ' +
+      'drifting rows of illegible characters. The composition id and package ' +
+      'name keep the `profile` label they were first specified under.',
   },
   {
     name: 'hands',
@@ -257,7 +256,6 @@ for (const v of VARIANTS) {
     fs.copyFileSync(path.join(ROOT, file), path.join(dest, file));
   }
 
-  if (v.subject !== 'stream') fs.rmSync(path.join(dest, 'src/lib/streams.ts'), {force: true});
   if (v.subject !== 'sphere') fs.rmSync(path.join(dest, 'src/lib/sphere.ts'), {force: true});
 
   fs.writeFileSync(

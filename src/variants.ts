@@ -10,7 +10,7 @@ export type Palette = {
 };
 
 export type BackgroundMode = 'circuit' | 'text' | 'dots';
-export type SubjectMode = 'shimmer' | 'stream' | 'sphere';
+export type SubjectMode = 'shimmer' | 'sphere';
 
 export type VariantSpec = {
   palette: Palette;
@@ -99,7 +99,7 @@ export const VARIANTS: Record<VariantName, VariantSpec> = {
     // Letterforms have no creases; the edge weighting alone cuts them out.
     creases: [],
     background: 'text',
-    subject: 'stream',
+    subject: 'shimmer',
   },
   hands: {
     palette: {

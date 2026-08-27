@@ -143,7 +143,7 @@ const buildText = (seed: string, color: string): TextRow[] => {
   return rows;
 };
 
-/** Rows of characters flowing right, the same way the data streams run. */
+/** Rows of characters drifting steadily rightward at low opacity. */
 const drawText = (
   ctx: CanvasRenderingContext2D,
   rows: TextRow[],

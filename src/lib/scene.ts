@@ -2,14 +2,12 @@ import {buildGridLines, type GridLines} from './grid';
 import {buildMaskField, type MaskField} from './mask';
 import {sampleParticles, type ParticleSet} from './particles';
 import {buildSphere, type SphereField} from './sphere'; // @only:sphere
-import {buildStreams, type StreamField} from './streams'; // @only:stream
 import {VARIANTS, type VariantName} from '../variants';
 
 export type Scene = {
   field: MaskField;
   grid: GridLines;
   particles: ParticleSet;
-  streams: StreamField | null; // @only:stream
   sphere: SphereField | null; // @only:sphere
 };
 
@@ -29,7 +27,6 @@ export const getScene = (variant: VariantName): Scene => {
     field,
     grid: buildGridLines(field),
     particles: sampleParticles(field, `${variant}:subject`),
-    streams: spec.subject === 'stream' ? buildStreams(field, `${variant}:flow`) : null, // @only:stream
     sphere: spec.subject === 'sphere' ? buildSphere(field, `${variant}:orb`) : null, // @only:sphere
   };
   cache.set(variant, scene);
