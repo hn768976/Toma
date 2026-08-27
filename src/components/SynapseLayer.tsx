@@ -42,7 +42,12 @@ const connectionHalves = (
 const pathPoint = (h1: CurvePts, h2: CurvePts, u: number): Vec =>
   u < 0.5 ? cubicAt(h1, u * 2) : cubicAt(h2, (u - 0.5) * 2);
 
-const makeGlowSprite = (size: number, inner: string, mid: string): HTMLCanvasElement => {
+const makeGlowSprite = (
+  size: number,
+  inner: string,
+  mid: string,
+  midStop: number
+): HTMLCanvasElement => {
   const c = document.createElement('canvas');
   c.width = size;
   c.height = size;
@@ -51,7 +56,7 @@ const makeGlowSprite = (size: number, inner: string, mid: string): HTMLCanvasEle
     const h = size / 2;
     const g = ctx.createRadialGradient(h, h, 0, h, h, h);
     g.addColorStop(0, inner);
-    g.addColorStop(0.22, mid);
+    g.addColorStop(midStop, mid);
     g.addColorStop(1, mid.replace(/[\d.]+\)$/, '0)'));
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, size, size);
@@ -77,8 +82,8 @@ export const SynapseLayer: React.FC<{
 
   const sprites = useMemo(
     () => ({
-      junction: makeGlowSprite(256, rgba(palette.nodeWhite, 0.95), rgba(palette.nodeHue, 0.5)),
-      pulse: makeGlowSprite(96, rgba(palette.nodeWhite, 1), rgba(palette.filamentPale, 0.55)),
+      junction: makeGlowSprite(256, rgba(palette.nodeWhite, 0.95), rgba(palette.nodeHue, 0.55), 0.1),
+      pulse: makeGlowSprite(96, rgba(palette.nodeWhite, 1), rgba(palette.filamentPale, 0.55), 0.22),
     }),
     [palette]
   );
@@ -139,7 +144,7 @@ export const SynapseLayer: React.FC<{
       const flare = Math.min(1.4, flares[ji]);
       const base = 0.42 + 0.18 * lsin(t01, j.pulseFreq, j.pulsePhase);
       const alpha = Math.min(1, base + 0.75 * flare);
-      const size = 180 * (1 + 0.35 * Math.min(1, flare));
+      const size = 132 * (1 + 0.35 * Math.min(1, flare));
       ctx.globalAlpha = alpha;
       ctx.drawImage(sprites.junction, j.pos.x - size / 2, j.pos.y - size / 2, size, size);
       ctx.globalAlpha = 1;

@@ -14,6 +14,25 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{variant: 'blue'}}
       />
+      <Composition
+        id="NeuronGreen"
+        component={NeuronField}
+        durationInFrames={375}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{variant: 'green'}}
+      />
+      <Composition
+        id="NeuronIndigo"
+        component={NeuronField}
+        durationInFrames={375}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{variant: 'indigo'}}
+      />
     </>
+
   );
 };
