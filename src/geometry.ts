@@ -252,7 +252,7 @@ const makeSpikes = (key: VariantKey, nodeIdx: number, node: NodeRT): Spike[] => 
     const s = `${seed}-${i}`;
     spikes.push({
       angle: random(`${s}-a`) * Math.PI * 2,
-      len: node.haloR * (0.2 + 0.24 * random(`${s}-l`)),
+      len: Math.min(node.haloR * (0.2 + 0.24 * random(`${s}-l`)), 250),
       width: 2.5 + 2.5 * random(`${s}-w`),
       alphaFreq: intFreq(`${s}-f`, 2, 5),
       alphaPhase: random(`${s}-p`),
