@@ -14,6 +14,15 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{variant: 'light' as const}}
       />
+      <Composition
+        id="AgentIconsDark"
+        component={AgentIcons}
+        durationInFrames={300}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{variant: 'dark' as const}}
+      />
     </>
   );
 };

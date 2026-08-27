@@ -48,6 +48,7 @@ export type LayoutMode = 'scatter' | 'grid';
 export type SparkleKind = 'star' | 'tick';
 
 export type IconName =
+  /* light — general agent domain */
   | 'globe'
   | 'gear'
   | 'cube'
@@ -56,6 +57,16 @@ export type IconName =
   | 'chat'
   | 'avatar'
   | 'folder'
+  /* dark — security domain */
+  | 'padlock'
+  | 'key'
+  | 'fingerprint'
+  | 'firewall'
+  | 'alert'
+  | 'eye'
+  | 'shieldKeyhole'
+  | 'bug'
+  /* shared */
   | 'chipEcho';
 
 export type Palette = {
@@ -123,6 +134,40 @@ export const VARIANTS = {
     idleAmp: 14,
     idleRot: 2,
     chipGlow: null,
+  },
+
+  dark: {
+    layout: 'scatter',
+    label: ['AI', 'Agent'],
+    palette: {
+      bg: '#14161A',
+      chipFill: '#C4F52E',
+      chipText: '#14161A',
+      trace: '#C4F52E',
+      coral: '#FF5C4D',
+      lime: '#C4F52E',
+      grey: '#7A8290',
+      white: '#E8ECF2',
+      amber: '#FFB020',
+    },
+    icons: [
+      {name: 'padlock', color: 'lime'},
+      {name: 'key', color: 'grey'},
+      {name: 'fingerprint', color: 'white'},
+      {name: 'firewall', color: 'coral'},
+      {name: 'alert', color: 'coral'},
+      {name: 'eye', color: 'grey'},
+      {name: 'shieldKeyhole', color: 'lime'},
+      {name: 'bug', color: 'grey'},
+      {name: 'chipEcho', color: 'lime'},
+    ],
+    sparkles: {
+      kind: 'tick',
+      colors: ['grey', 'lime', 'grey', 'grey', 'lime', 'grey'],
+    },
+    idleAmp: 14,
+    idleRot: 2,
+    chipGlow: 'lime',
   },
 } satisfies Record<string, VariantSpec>;
 
@@ -317,12 +362,13 @@ export const CentreChip: React.FC<CentreChipProps> = ({
         <>
           <defs>
             <radialGradient id={`halo-${uid}`}>
-              <stop offset="0%" stopColor={glow} stopOpacity={0.34} />
-              <stop offset="55%" stopColor={glow} stopOpacity={0.14} />
+              <stop offset="0%" stopColor={glow} stopOpacity={0.17} />
+              <stop offset="28%" stopColor={glow} stopOpacity={0.1} />
+              <stop offset="60%" stopColor={glow} stopOpacity={0.035} />
               <stop offset="100%" stopColor={glow} stopOpacity={0} />
             </radialGradient>
           </defs>
-          <circle cx={cx} cy={cy} r={size * 1.55} fill={`url(#halo-${uid})`} />
+          <circle cx={cx} cy={cy} r={size * 2.35} fill={`url(#halo-${uid})`} />
         </>
       ) : null}
 
@@ -502,6 +548,125 @@ const Glyph: React.FC<GlyphProps> = ({name, c, a, bg, sw, uid}) => {
             <line x1={26} y1={49} x2={64} y2={49} />
             <line x1={26} y1={60} x2={64} y2={60} />
             <line x1={26} y1={71} x2={52} y2={71} />
+          </g>
+        </g>
+      );
+
+    /* ── security domain ─────────────────────────────────────────── */
+
+    case 'padlock':
+      return (
+        <g>
+          <path
+            d="M32 50 V36 A18 18 0 0 1 68 36 V50"
+            fill="none"
+            stroke={c}
+            strokeWidth={sw * 1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <rect x={19} y={46} width={62} height={44} rx={9} fill={c} />
+          <g fill={bg}>
+            <circle cx={50} cy={62} r={6.5} />
+            <path d="M46.6 66 L44.5 80 H55.5 L53.4 66 Z" />
+          </g>
+        </g>
+      );
+
+    case 'key':
+      return (
+        <g {...line}>
+          <circle cx={29} cy={50} r={18} />
+          <circle cx={29} cy={50} r={6.5} />
+          <line x1={47} y1={50} x2={90} y2={50} />
+          <line x1={74} y1={50} x2={74} y2={65} />
+          <line x1={86} y1={50} x2={86} y2={60} />
+        </g>
+      );
+
+    case 'fingerprint':
+      return (
+        <g {...line}>
+          <path d="M12 60 A 38 42 0 0 1 88 60" />
+          <path d="M12 60 V76" />
+          <path d="M88 60 V76" />
+          <path d="M21 62 A 29 33 0 0 1 79 62" />
+          <path d="M21 62 V72" />
+          <path d="M79 62 V72" />
+          <path d="M30 64 A 20 24 0 0 1 70 64" />
+          <path d="M39 66 A 11 15 0 0 1 61 66" />
+          <path d="M47 68 A 3 5 0 0 1 53 68" />
+        </g>
+      );
+
+    case 'firewall':
+      return (
+        <g {...line}>
+          <rect x={11} y={23} width={78} height={56} rx={6} />
+          <line x1={11} y1={41.7} x2={89} y2={41.7} />
+          <line x1={11} y1={60.3} x2={89} y2={60.3} />
+          <line x1={37} y1={23} x2={37} y2={41.7} />
+          <line x1={63} y1={23} x2={63} y2={41.7} />
+          <line x1={24} y1={41.7} x2={24} y2={60.3} />
+          <line x1={50} y1={41.7} x2={50} y2={60.3} />
+          <line x1={76} y1={41.7} x2={76} y2={60.3} />
+          <line x1={37} y1={60.3} x2={37} y2={79} />
+          <line x1={63} y1={60.3} x2={63} y2={79} />
+        </g>
+      );
+
+    case 'alert':
+      return (
+        <g>
+          <path
+            d="M43.4 15 A8 8 0 0 1 56.6 15 L88 79 A8 8 0 0 1 81 91 H19 A8 8 0 0 1 12 79 Z"
+            fill={c}
+          />
+          <g fill={bg}>
+            <rect x={45} y={38} width={10} height={28} rx={5} />
+            <circle cx={50} cy={78} r={5.6} />
+          </g>
+        </g>
+      );
+
+    case 'eye':
+      return (
+        <g {...line}>
+          <path d="M10 50 C28 24 72 24 90 50 C72 76 28 76 10 50 Z" />
+          <circle cx={50} cy={50} r={12.5} fill={c} />
+          <line x1={1} y1={50} x2={6} y2={50} />
+          <line x1={94} y1={50} x2={99} y2={50} />
+        </g>
+      );
+
+    case 'shieldKeyhole':
+      return (
+        <g {...line}>
+          <path d="M50 10 L84 23 V52 C84 72 67 85 50 92 C33 85 16 72 16 52 V23 Z" />
+          <circle cx={50} cy={45} r={8.5} />
+          <line x1={50} y1={53.5} x2={50} y2={69} />
+        </g>
+      );
+
+    case 'bug':
+      return (
+        <g>
+          <ellipse cx={50} cy={57} rx={22} ry={27} fill={c} />
+          <circle cx={50} cy={29} r={11.5} fill={c} />
+          <g
+            fill="none"
+            stroke={c}
+            strokeWidth={sw}
+            strokeLinecap="round"
+          >
+            <path d="M43 21 L36 10" />
+            <path d="M57 21 L64 10" />
+            <path d="M29 43 L12 34" />
+            <path d="M28 57 L8 57" />
+            <path d="M29 71 L12 81" />
+            <path d="M71 43 L88 34" />
+            <path d="M72 57 L92 57" />
+            <path d="M71 71 L88 81" />
           </g>
         </g>
       );
