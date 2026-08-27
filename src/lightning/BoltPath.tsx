@@ -20,7 +20,6 @@ import {paintGlow, useSurfaces} from './surface';
  * soft glow is the whole effect — a single thick semi-transparent stroke reads
  * flat.
  */
-const GLOW: PassParts = {halo: true, sharp: true};
 const HALO: PassParts = {halo: true, sharp: false};
 const SHARP: PassParts = {halo: false, sharp: true};
 
@@ -38,7 +37,6 @@ export const BoltPath: React.FC<{
 			return;
 		}
 		const gain = amount * cfg.peakBrightness;
-		const bands = cfg.taperBands;
 
 		// Passes 1 and 2, plus the core bloom, on the glow surface.
 		paintGlow(surfaces, (ctx, scale) => {
@@ -53,9 +51,8 @@ export const BoltPath: React.FC<{
 						tipWidth: cfg.tipWidth,
 						blur: cfg.blur.wide,
 					},
-					bands,
 					scale,
-					GLOW,
+					HALO,
 				);
 				strokeTapered(
 					ctx,
@@ -67,9 +64,8 @@ export const BoltPath: React.FC<{
 						tipWidth: cfg.tipWidth,
 						blur: cfg.blur.outer,
 					},
-					bands,
 					scale,
-					GLOW,
+					HALO,
 				);
 				// The mid channel's halo; its crisp stroke is drawn at full size below.
 				strokeTapered(
@@ -82,7 +78,6 @@ export const BoltPath: React.FC<{
 						tipWidth: cfg.tipWidth,
 						blur: cfg.blur.channel,
 					},
-					bands,
 					scale,
 					HALO,
 				);
@@ -97,7 +92,6 @@ export const BoltPath: React.FC<{
 						tipWidth: cfg.tipWidth,
 						blur: cfg.bloom.blur,
 					},
-					bands,
 					scale,
 					HALO,
 				);
@@ -119,7 +113,6 @@ export const BoltPath: React.FC<{
 					tipWidth: cfg.tipWidth,
 					blur: cfg.blur.channel,
 				},
-				bands,
 				1,
 				SHARP,
 			);
@@ -133,7 +126,6 @@ export const BoltPath: React.FC<{
 					tipWidth: cfg.tipWidth,
 					blur: cfg.blur.core,
 				},
-				bands,
 				1,
 				SHARP,
 			);

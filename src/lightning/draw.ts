@@ -22,9 +22,13 @@ export interface PassStyle {
 }
 
 /**
- * Strokes one channel with a width that tapers along its length: thickest at
- * the origin, thinnest at the tip. The polyline is split into bands so the taper
- * is continuous without paying for a separate path per segment.
+ * Strokes one channel with a width that tapers along its length: thickest at the
+ * origin, thinnest at the tip.
+ *
+ * The crisp half is a single filled ribbon rather than a run of strokes of
+ * decreasing width. Strokes would have to overlap at their joins, and since
+ * every pass composites with 'lighter' each join would add to itself and bead
+ * along the channel; one filled path covers the same ground exactly once.
  *
  * `scale` maps 4K coordinates onto whichever canvas is being drawn to, so the
  * same geometry can be rendered onto the smaller glow surface unchanged.
@@ -33,7 +37,6 @@ export const strokeTapered = (
 	ctx: CanvasRenderingContext2D,
 	stroke: BoltStroke,
 	style: PassStyle,
-	bands: number,
 	scale: number,
 	parts: PassParts = {halo: true, sharp: true},
 ): void => {
@@ -50,13 +53,14 @@ export const strokeTapered = (
 	ctx.save();
 	ctx.globalAlpha = Math.min(1, style.alpha);
 	ctx.strokeStyle = style.color;
+	ctx.fillStyle = style.color;
 	ctx.lineCap = 'round';
 	ctx.lineJoin = 'round';
 
 	if (parts.halo && style.blur > 0) {
-		// The halo is laid down once for the whole channel rather than once per
-		// band: a blur this wide carries no width detail, and blurring each band
-		// separately is what makes the pass expensive.
+		// The halo is laid down once for the whole channel: a blur this wide
+		// carries no width detail, and blurring in pieces is what makes the pass
+		// expensive.
 		//
 		// The path is built far off the left edge and the shadow offset brings
 		// only the blurred copy back into frame, so the halo is not accompanied
@@ -82,19 +86,46 @@ export const strokeTapered = (
 		return;
 	}
 
-	// Narrow strokes need fewer bands to read as tapered.
-	const bandCount = Math.max(2, Math.round(bands * Math.min(1, style.width / 12)));
-	const perBand = Math.max(1, Math.ceil((points.length - 1) / bandCount));
-	for (let start = 0; start < points.length - 1; start += perBand) {
-		const end = Math.min(points.length - 1, start + perBand);
-		ctx.lineWidth = widthAt((travel[start] + travel[end]) / 2);
-		ctx.beginPath();
-		ctx.moveTo(points[start].x * scale, points[start].y * scale);
-		for (let i = start + 1; i <= end; i++) {
-			ctx.lineTo(points[i].x * scale, points[i].y * scale);
-		}
-		ctx.stroke();
+	const count = points.length;
+	const half = new Array<number>(count);
+	const normalX = new Array<number>(count);
+	const normalY = new Array<number>(count);
+	for (let i = 0; i < count; i++) {
+		half[i] = widthAt(travel[i]) / 2;
+		const prev = points[Math.max(0, i - 1)];
+		const next = points[Math.min(count - 1, i + 1)];
+		const dx = next.x - prev.x;
+		const dy = next.y - prev.y;
+		const len = Math.hypot(dx, dy) || 1;
+		normalX[i] = -dy / len;
+		normalY[i] = dx / len;
 	}
+
+	ctx.beginPath();
+	for (let i = 0; i < count; i++) {
+		const x = points[i].x * scale + normalX[i] * half[i];
+		const y = points[i].y * scale + normalY[i] * half[i];
+		if (i === 0) {
+			ctx.moveTo(x, y);
+		} else {
+			ctx.lineTo(x, y);
+		}
+	}
+	for (let i = count - 1; i >= 0; i--) {
+		ctx.lineTo(
+			points[i].x * scale - normalX[i] * half[i],
+			points[i].y * scale - normalY[i] * half[i],
+		);
+	}
+	ctx.closePath();
+	// Round ends, as separate subpaths of the same fill so they cannot add to
+	// the ribbon where they overlap it.
+	for (const i of [0, count - 1]) {
+		ctx.moveTo(points[i].x * scale + half[i], points[i].y * scale);
+		ctx.arc(points[i].x * scale, points[i].y * scale, half[i], 0, Math.PI * 2);
+	}
+	ctx.fill();
+
 	ctx.restore();
 };
 

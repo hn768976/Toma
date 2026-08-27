@@ -82,8 +82,6 @@ export interface BoltConfig {
 	peakBrightness: number;
 	/** Frames a bolt within an event lags behind the flash it belongs to. */
 	stagger: Range;
-	/** Width bands used to taper a stroke along its length. */
-	taperBands: number;
 }
 
 export interface ScheduleConfig {
@@ -137,7 +135,7 @@ export interface FrameFlashConfig {
 	holdFrames: number;
 	/** Frames the lift takes to fall back to black. */
 	decayFrames: number;
-	/** Flashes dimmer than this fraction of the burst peak do not lift. */
+	/** Bursts whose brightest return stroke is dimmer than this do not lift. */
 	threshold: number;
 }
 
@@ -202,12 +200,11 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			branchWidthFalloff: 0.52,
 			width: {wide: 96, outer: 44, channel: 18, core: 5.5},
 			tipWidth: 0.3,
-			alpha: {wide: 0.2, outer: 0.34, channel: 0.85, core: 1},
+			alpha: {wide: 0.42, outer: 0.6, channel: 0.85, core: 1},
 			blur: {wide: 90, outer: 40, channel: 14, core: 0},
 			bloom: {alpha: 0.5, blur: 60, width: 10},
 			peakBrightness: 1,
 			stagger: {min: 0, max: 0},
-			taperBands: 10,
 		},
 		schedule: {
 			events: 3,
@@ -272,12 +269,11 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			branchWidthFalloff: 0.5,
 			width: {wide: 84, outer: 38, channel: 15, core: 4.6},
 			tipWidth: 0.28,
-			alpha: {wide: 0.2, outer: 0.34, channel: 0.85, core: 1},
+			alpha: {wide: 0.42, outer: 0.6, channel: 0.85, core: 1},
 			blur: {wide: 90, outer: 40, channel: 14, core: 0},
 			bloom: {alpha: 0.45, blur: 60, width: 9},
 			peakBrightness: 0.75,
 			stagger: {min: 1, max: 3},
-			taperBands: 10,
 		},
 		schedule: {
 			events: 5,
@@ -328,7 +324,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			travel: {min: 1.02, max: 1.12},
 			drift: {min: -0.08, max: 0.08},
 			depth: 6,
-			displacementScale: 0.055,
+			displacementScale: 0.07,
 			displacementFalloff: 0.5,
 			branchLevels: 2,
 			branchProbability: 0.5,
@@ -340,14 +336,13 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			branchBias: 1,
 			branchBrightnessFalloff: 0.45,
 			branchWidthFalloff: 0.5,
-			width: {wide: 120, outer: 52, channel: 13, core: 6.5},
+			width: {wide: 520, outer: 190, channel: 34, core: 6},
 			tipWidth: 0.34,
-			alpha: {wide: 0.22, outer: 0.36, channel: 0.55, core: 1},
-			blur: {wide: 90, outer: 40, channel: 14, core: 0},
-			bloom: {alpha: 0.7, blur: 60, width: 13},
+			alpha: {wide: 0.36, outer: 0.06, channel: 0.68, core: 1},
+			blur: {wide: 260, outer: 130, channel: 48, core: 0},
+			bloom: {alpha: 0.22, blur: 70, width: 12},
 			peakBrightness: 1.35,
 			stagger: {min: 0, max: 0},
-			taperBands: 10,
 		},
 		schedule: {
 			events: 2,
@@ -361,7 +356,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 		},
 		ambient: {
 			glowRadius: 880,
-			glowAlpha: 0.7,
+			glowAlpha: 0.24,
 			glowDecayFrames: 25,
 			glowSamples: 26,
 			hazeBands: 5,
@@ -376,7 +371,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			color: '#2A2A2E',
 			holdFrames: 3,
 			decayFrames: 6,
-			threshold: 0.92,
+			threshold: 0.5,
 		},
 		finish: {vignette: 0.2, grainAlpha: 0.04, grainTile: 512, grainCell: 2},
 	},

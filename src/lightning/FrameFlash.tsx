@@ -39,7 +39,9 @@ export const FrameFlash: React.FC<{cfg: VariantConfig; variant: VariantName}> = 
 				strength = Math.max(strength, event.peakIntensity);
 				return;
 			}
-			const t = (age - profile.holdFrames) / profile.decayFrames;
+			// The first frame past the hold is already on its way down, so the
+			// lift is held for exactly `holdFrames` frames.
+			const t = (age - profile.holdFrames + 1) / profile.decayFrames;
 			if (t < 1) {
 				strength = Math.max(strength, event.peakIntensity * (1 - t) ** 2);
 			}
