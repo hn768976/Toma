@@ -24,7 +24,8 @@ All three take a single `variant` prop and share one `AgenticHud` component.
 Deep plum ground, twelve dense concentric bands counter-rotating band to band
 at widely varying speeds, and a cyan beam that arrives from the lower left,
 strikes the dial's edge and holds. A second, thinner beam enters from the
-upper right later. Busy and technical by intent.
+upper right later. Busy and technical by intent. The dark core disc is sized
+to hold the centre label outright, with the eleven bands packed around it.
 
 ### v2 — "breach"
 
@@ -41,7 +42,9 @@ The assembly is compressed and snaps in rather than easing.
 Mint on near-white, and the largest departure in the set: `BandLayer` swaps its
 shape primitive from a circle to a rounded speech bubble with a tail on the
 lower left, and the band count drops from twelve to six with ~40% lighter
-strokes. Bubbles cannot spin without reading as broken, so the bands pulse
+strokes. The six bands sit at even 0.14 steps, every outline is closed, and
+the dash pattern runs an even 48/48. "Chatbot" is set in dark green; only the
+three typing dots stay mint. Bubbles cannot spin without reading as broken, so the bands pulse
 ±2% instead, staggered into a slow outward ripple. A soft mint wedge sweeps
 about the assembly, completing exactly two turns across the 490 frames. Three
 typing dots animate beneath the label. No bloom — on a light ground additive
@@ -72,17 +75,24 @@ npx remotion render AgenticDialChat   out/agentic-chat.mp4   --codec=h264 --crf=
 Interactive preview: `npx remotion studio`.
 
 `--concurrency` may not exceed the machine's CPU core count; lower it if
-Remotion rejects the value. The bundled videos were rendered with
-`--concurrency=4`.
+Remotion rejects the value.
 
-## Included renders
+## Included stills
 
-`renders/` holds the three 1080p previews — 1920 × 1080, 490 frames, 30 fps,
-no audio track.
+`stills/` holds verification frames for each composition, rendered at
+1920 × 1080 (`--scale=0.5`). No video files are bundled — render them with the
+commands above.
 
-- `agentic-violet-preview.mp4`
-- `agentic-breach-preview.mp4`
-- `agentic-chat-preview.mp4`
+- `violet-f140.png`, `violet-f240.png`, `violet-f400.png`
+- `breach-f140.png`, `breach-f218.png` (glitch frame), `breach-f240.png`,
+  `breach-f400.png`
+- `chat-f140.png`, `chat-f300.png`, `chat-f420.png`
+
+Render any frame yourself with, for example:
+
+```
+npx remotion still AgenticDialViolet out/violet-f240.png --frame=240 --scale=0.5
+```
 
 ## Project layout
 

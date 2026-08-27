@@ -81,8 +81,8 @@ export const CentreLabel: React.FC<CentreLabelProps> = ({
     const cfg = variant.label;
     const {palette} = variant;
 
-    // Keep both lines comfortably inside the assembly's second band.
-    const maxWidth = R * 0.94;
+    // Keep both lines comfortably inside the shape that contains them.
+    const maxWidth = R * cfg.maxWidthFactor;
     const upperSize = fitFontSize(ctx, cfg.upper, fontOf, cfg.upperSize, maxWidth);
     const lowerSize = fitFontSize(ctx, cfg.lower, fontOf, cfg.lowerSize, maxWidth);
 
@@ -118,8 +118,8 @@ export const CentreLabel: React.FC<CentreLabelProps> = ({
 
         ctx.save();
         ctx.globalAlpha = lowerAlpha * (0.42 + lift * 0.58);
-        ctx.fillStyle = palette.labelB;
-        ctx.shadowColor = rgba(palette.labelB, 0.8);
+        ctx.fillStyle = palette[dots.color];
+        ctx.shadowColor = rgba(palette[dots.color], 0.8);
         ctx.shadowBlur = 18 * glow * lift;
         ctx.beginPath();
         ctx.arc(x, y, dots.radius, 0, Math.PI * 2);

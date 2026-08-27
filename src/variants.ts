@@ -92,8 +92,12 @@ export interface LabelConfig {
   fadeFrames: number;
   /** Vertical nudge from the frame centre, in pixels. */
   offsetY: number;
+  /** Both lines are shrunk until they fit inside this fraction of R. */
+  maxWidthFactor: number;
   /** "chat" only: three typing dots beneath the label. */
   typingDots?: {
+    /** Kept off labelB so the dots stay mint while the word runs dark. */
+    color: PaletteKey;
     count: number;
     cycle: number;
     stagger: number;
@@ -216,7 +220,7 @@ export interface Variant {
 const DIAL_BANDS: BandDef[] = [
   {
     id: 'core-disc',
-    radius: 0.16,
+    radius: 0.4,
     type: 'disc',
     thickness: 0,
     speed: 0.02,
@@ -226,20 +230,20 @@ const DIAL_BANDS: BandDef[] = [
   },
   {
     id: 'ticks-fine',
-    radius: 0.235,
+    radius: 0.455,
     type: 'ticks',
     thickness: 5,
     count: 72,
-    tickLength: 22,
+    tickLength: 18,
     speed: -0.05,
     color: 'tick',
     alpha: 0.85,
   },
   {
     id: 'dash-short',
-    radius: 0.3,
+    radius: 0.505,
     type: 'dash',
-    thickness: 13,
+    thickness: 11,
     dash: [13, 17],
     speed: 0.09,
     color: 'bright',
@@ -247,7 +251,7 @@ const DIAL_BANDS: BandDef[] = [
   },
   {
     id: 'ring-inner',
-    radius: 0.375,
+    radius: 0.555,
     type: 'ring',
     thickness: 8,
     speed: -0.03,
@@ -257,21 +261,21 @@ const DIAL_BANDS: BandDef[] = [
   },
   {
     id: 'bars-mid',
-    radius: 0.46,
+    radius: 0.61,
     type: 'bars',
     thickness: 9,
     count: 84,
-    tickLength: 30,
-    tickVary: 46,
+    tickLength: 20,
+    tickVary: 28,
     speed: 0.06,
     color: 'slate',
     alpha: 0.95,
   },
   {
     id: 'arcs-inner',
-    radius: 0.55,
+    radius: 0.675,
     type: 'arcs',
-    thickness: 17,
+    thickness: 14,
     arcs: [
       [8, 86],
       [128, 74],
@@ -283,20 +287,20 @@ const DIAL_BANDS: BandDef[] = [
   },
   {
     id: 'ticks-dense',
-    radius: 0.61,
+    radius: 0.725,
     type: 'ticks',
     thickness: 4,
     count: 132,
-    tickLength: 17,
+    tickLength: 14,
     speed: 0.16,
     color: 'tick',
     alpha: 0.72,
   },
   {
     id: 'dash-long',
-    radius: 0.68,
+    radius: 0.78,
     type: 'dash',
-    thickness: 14,
+    thickness: 12,
     dash: [48, 27],
     speed: -0.22,
     color: 'slate',
@@ -305,7 +309,7 @@ const DIAL_BANDS: BandDef[] = [
   },
   {
     id: 'ring-mid',
-    radius: 0.74,
+    radius: 0.83,
     type: 'ring',
     thickness: 7,
     speed: 0.05,
@@ -315,19 +319,19 @@ const DIAL_BANDS: BandDef[] = [
   },
   {
     id: 'bars-outer',
-    radius: 0.83,
+    radius: 0.885,
     type: 'bars',
-    thickness: 16,
+    thickness: 13,
     count: 56,
-    tickLength: 62,
-    tickVary: 20,
+    tickLength: 34,
+    tickVary: 12,
     speed: -0.18,
     color: 'slate',
     alpha: 0.95,
   },
   {
     id: 'arcs-outer',
-    radius: 0.92,
+    radius: 0.945,
     type: 'arcs',
     thickness: 11,
     arcs: [
@@ -357,8 +361,9 @@ const withStutter = (bands: BandDef[], ids: string[]): BandDef[] =>
 /* ---------------------------------------------------- v3 band array (six) */
 
 /**
- * Six bands, ~40% lighter strokes, generous spacing. The array shape is
- * identical — only the values and the geometry mode change.
+ * Six bands, evenly spaced at 0.14 apart, ~40% lighter strokes, every outline
+ * closed. The array shape is identical — only the values and the geometry
+ * mode change.
  */
 const BUBBLE_BANDS: BandDef[] = [
   {
@@ -381,17 +386,17 @@ const BUBBLE_BANDS: BandDef[] = [
   },
   {
     id: 'bubble-dash',
-    radius: 0.64,
+    radius: 0.58,
     type: 'dash',
     thickness: 8,
-    dash: [58, 38],
+    dash: [48, 48],
     speed: 0,
     color: 'bright',
     alpha: 0.95,
   },
   {
     id: 'bubble-solid-outer',
-    radius: 0.82,
+    radius: 0.72,
     type: 'ring',
     thickness: 6,
     speed: 0,
@@ -399,11 +404,10 @@ const BUBBLE_BANDS: BandDef[] = [
     alpha: 0.62,
   },
   {
-    id: 'bubble-broken',
-    radius: 0.92,
-    type: 'arcs',
+    id: 'bubble-closed',
+    radius: 0.86,
+    type: 'ring',
     thickness: 6,
-    arcs: [[151, 295]],
     speed: 0,
     color: 'slate',
     alpha: 1,
@@ -426,11 +430,9 @@ const DIAL_BACKDROP: BackdropArc[] = [
   {radius: 1.95, startDeg: 96, sweepDeg: 84, thickness: 18, alpha: 0.05},
 ];
 
-const BUBBLE_BACKDROP: BackdropArc[] = [
-  // A single arc, kept clear of the tail. More than one and the frame stops
-  // reading as calm — which is the whole point of this variant.
-  {radius: 1.24, startDeg: 322, sweepDeg: 146, thickness: 10, alpha: 0.26},
-];
+// None: a partial bubble hanging behind the assembly reads as an unfinished
+// icon rather than as a larger structure fading out.
+const BUBBLE_BACKDROP: BackdropArc[] = [];
 
 const DARK_POST: PostConfig = {
   bandGlow: [
@@ -482,6 +484,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
       lowerInFrame: 126,
       fadeFrames: 24,
       offsetY: 0,
+      maxWidthFactor: 0.6,
     },
     beam: {
       mode: 'linearScan',
@@ -553,6 +556,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
       lowerInFrame: 126,
       fadeFrames: 24,
       offsetY: 0,
+      maxWidthFactor: 0.6,
     },
     beam: {
       mode: 'radialPulse',
@@ -600,7 +604,8 @@ export const VARIANTS: Record<VariantId, Variant> = {
       bright: '#4FBF9F',
       white: '#1F7A66',
       labelA: '#147A63',
-      labelB: '#2ED4A8',
+      // Dark green: mint sat too light on a near-white ground.
+      labelB: '#0B4F3B',
       accent: '#4FE8C0',
       tick: '#8AA8A0',
     },
@@ -618,15 +623,17 @@ export const VARIANTS: Record<VariantId, Variant> = {
       lowerInFrame: 126,
       fadeFrames: 24,
       // Sit the block on the optical centre of the bubble that contains it.
-      offsetY: -45,
+      offsetY: -32,
+      maxWidthFactor: 0.62,
       typingDots: {
+        color: 'bright',
         count: 3,
         cycle: 45,
         stagger: 8,
         rise: 20,
         radius: 17,
         gap: 68,
-        offsetY: 105,
+        offsetY: 108,
       },
     },
     beam: {

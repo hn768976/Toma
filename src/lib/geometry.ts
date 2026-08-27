@@ -85,11 +85,13 @@ const buildBubble = (): Outline => {
   const W = 1.15; // half width
   const H = 0.72; // half height of the body
   const C = 0.34; // corner radius
-  const TAIL_RIGHT = -0.2; // where the tail leaves the bottom edge (rightmost)
-  const TAIL_LEFT = -0.62; // where it rejoins (leftmost)
-  const TIP_X = -0.94;
-  const TIP_Y = H + 0.46;
-  const Y_SHIFT = -0.14; // offset the tail overhang without floating the body
+  // Short and stubby on purpose: nested concentric copies of a long, thin
+  // tail crowd into a tangle in the corner.
+  const TAIL_RIGHT = -0.22; // where the tail leaves the bottom edge (rightmost)
+  const TAIL_LEFT = -0.6; // where it rejoins (leftmost)
+  const TIP_X = -0.72;
+  const TIP_Y = H + 0.3;
+  const Y_SHIFT = -0.1; // offset the tail overhang without floating the body
 
   const raw: Array<{x: number; y: number}> = [];
   const line = (
