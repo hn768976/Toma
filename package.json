@@ -1,0 +1,24 @@
+{
+  "name": "particle-figure",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K particle-figure animations built with Remotion (2D canvas only).",
+  "scripts": {
+    "dev": "remotion studio",
+    "build:front": "remotion render ParticleFigureFront out/figure-front-4k.mp4 --codec=h264 --crf=18",
+    "build:profile": "remotion render ParticleFigureProfile out/figure-profile-4k.mp4 --codec=h264 --crf=18",
+    "build:hands": "remotion render ParticleFigureHands out/figure-hands-4k.mp4 --codec=h264 --crf=18",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.365",
+    "remotion": "4.0.365",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "typescript": "5.6.3"
+  }
+}

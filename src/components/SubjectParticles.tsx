@@ -1,0 +1,102 @@
+import React, {useLayoutEffect} from 'react';
+import {respawnState, twinkle, type ParticleSet} from '../lib/particles';
+import {dotSprite, glowSprite} from '../lib/sprites';
+import {clamp, mix} from '../lib/space';
+import {presence, useLoopFrame} from '../lib/timing';
+import type {Palette, SubjectMode} from '../variants';
+
+type Props = {
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  particles: ParticleSet;
+  palette: Palette;
+  mode: SubjectMode;
+  transform: {scale: number; cx: number; cy: number};
+};
+
+/** Particles at or above this brightness get a bloom pass. */
+const BLOOM_THRESHOLD = 0.72;
+
+export const SubjectParticles: React.FC<Props> = ({
+  canvasRef,
+  particles,
+  palette,
+  mode,
+  transform,
+}) => {
+  const frame = useLoopFrame();
+
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const sprites = [
+      dotSprite(palette.primary),
+      dotSprite(palette.white),
+      dotSprite(palette.secondary),
+    ];
+    const glows = [
+      glowSprite(palette.primary),
+      glowSprite(palette.white),
+      glowSprite(palette.secondary),
+    ];
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.translate(transform.cx, transform.cy);
+    ctx.scale(transform.scale, transform.scale);
+    ctx.translate(-transform.cx, -transform.cy);
+    ctx.globalCompositeOperation = 'lighter';
+
+    const n = particles.count;
+    // Bloom is collected during the main pass and drawn afterwards so the
+    // glow always sits over the discs rather than under half of them.
+    const bloomX: number[] = [];
+    const bloomY: number[] = [];
+    const bloomR: number[] = [];
+    const bloomA: number[] = [];
+    const bloomC: number[] = [];
+
+    for (let i = 0; i < n; i++) {
+      const env = presence(frame, particles.delay[i]);
+      if (env <= 0.002) continue;
+
+      const rs = respawnState(particles, i, frame);
+      if (rs.alpha <= 0.002) continue;
+
+      const x = mix(particles.sx[i], rs.x, env);
+      const y = mix(particles.sy[i], rs.y, env);
+      const tw = twinkle(frame, particles.twinklePeriod[i], particles.twinklePhase[i]);
+      const alpha = clamp(
+        particles.bright[i] * tw * Math.pow(env, 0.55) * rs.alpha,
+        0,
+        1,
+      );
+      if (alpha <= 0.004) continue;
+
+      const r = particles.radius[i];
+      const c = particles.colorIdx[i];
+      ctx.globalAlpha = alpha * 0.92;
+      ctx.drawImage(sprites[c], x - r, y - r, r * 2, r * 2);
+
+      if (particles.bright[i] >= BLOOM_THRESHOLD) {
+        bloomX.push(x);
+        bloomY.push(y);
+        bloomR.push(r * 5.5);
+        bloomA.push(alpha * 0.3);
+        bloomC.push(c);
+      }
+    }
+
+    for (let i = 0; i < bloomX.length; i++) {
+      const r = bloomR[i];
+      ctx.globalAlpha = bloomA[i];
+      ctx.drawImage(glows[bloomC[i]], bloomX[i] - r, bloomY[i] - r, r * 2, r * 2);
+    }
+
+    ctx.restore();
+  }, [canvasRef, particles, palette, mode, transform, frame]);
+
+  return null;
+};
