@@ -24,7 +24,14 @@ export type Xform = [sx: number, sy: number, tx: number, ty: number];
 
 export type PathRef = {d: string; t?: Xform};
 
-export type Cluster = {x: number; y: number; r: number; boost: number};
+export type Cluster = {
+  x: number;
+  y: number;
+  r: number;
+  boost: number;
+  /** particles in this cluster respond to the motion's clusterPulse */
+  pulse?: boolean;
+};
 
 export type Silhouette = {
   /** path-space viewBox that the silhouette is rasterised in */
@@ -304,9 +311,191 @@ const CAR: Variant = {
 
 /* #endregion variant:car */
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   #region variant:jet
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Generic delta-wing fighter, three-quarter view from slightly above, nose to
+ * the left. Delta wing, twin canted tail fins, single canopy. No national
+ * markings and no identifiable airframe - the angular silhouette does the work
+ * a car's compound curves cannot.
+ */
+/**
+ * Generic delta fighter, three-quarter view from slightly above, nose to the
+ * left. Only ONE half of the airframe is authored - nose, LERX flare, wing and
+ * stabilator down one side. JET_MIRROR reflects it across the fuselage
+ * centreline while squashing it to 82% and nudging it left, which is what puts
+ * the camera above and off to one side. Twin canted fins, a single canopy, two
+ * nozzles. No national markings, no identifiable airframe.
+ */
+const JET_HALF =
+  'M 90 360 C 130 372 178 384 236 392 L 320 400 L 396 406 ' +
+  'C 436 418 476 432 500 442 L 520 446 L 852 646 L 886 650 ' +
+  'L 902 476 L 928 452 L 958 454 L 1042 552 L 1064 548 ' +
+  'L 1074 462 L 1088 430 L 1094 392 L 1096 360 Z';
+
+const JET_INTAKE_HALF = 'M 400 412 L 540 444 L 548 472 L 408 438 Z';
+
+const JET_MIRROR: Xform = [1, -0.82, -16, 655.2];
+
+const JET_CANOPY =
+  'M 236 360 C 250 328 296 312 344 310 C 396 309 430 324 442 344 ' +
+  'C 434 368 392 382 344 382 C 292 382 246 376 236 360 Z';
+
+const JET_FIN_NEAR = 'M 892 418 L 936 414 L 1010 288 L 974 278 Z';
+const JET_FIN_FAR = 'M 890 313 L 934 310 L 1002 196 L 966 188 Z';
+
+const JET_NOZZLE_NEAR =
+  'M 1104 392 m -24 0 a 24 24 0 1 0 48 0 a 24 24 0 1 0 -48 0';
+const JET_NOZZLE_FAR =
+  'M 1094 334 m -22 0 a 22 22 0 1 0 44 0 a 22 22 0 1 0 -44 0';
+
+const JET: Variant = {
+  palette: {
+    bg: '#030A1F',
+    line: '#1E4A8F',
+    fill: '#061436',
+    text: '#8FB8F0',
+    particle: '#4F9FFF',
+    particleHot: '#E8F2FF',
+    sweep: '#A8D4FF',
+    accent: '#2E6FD4',
+  },
+  silhouette: {
+    vb: [1200, 720],
+    fit: [64, 108, 1074, 560],
+    fills: [
+      {d: JET_HALF},
+      {d: JET_HALF, t: JET_MIRROR},
+      {d: JET_INTAKE_HALF},
+      {d: JET_INTAKE_HALF, t: JET_MIRROR},
+      {d: JET_FIN_FAR},
+      {d: JET_FIN_NEAR},
+      {d: JET_CANOPY},
+      {d: JET_NOZZLE_FAR},
+      {d: JET_NOZZLE_NEAR},
+    ],
+    lines: [
+      {d: JET_HALF},
+      {d: JET_HALF, t: JET_MIRROR},
+      {d: JET_INTAKE_HALF},
+      {d: JET_INTAKE_HALF, t: JET_MIRROR},
+      {d: JET_FIN_FAR},
+      {d: JET_FIN_NEAR},
+      {d: JET_CANOPY},
+      {d: JET_NOZZLE_FAR},
+      {d: JET_NOZZLE_NEAR},
+      // fuselage spine
+      {d: 'M 104 360 L 1092 360'},
+      // wing-root join and the LERX crease ahead of it
+      {d: 'M 520 446 L 902 476'},
+      {d: 'M 520 446 L 902 476', t: JET_MIRROR},
+      {d: 'M 396 406 L 520 446'},
+      {d: 'M 396 406 L 520 446', t: JET_MIRROR},
+      // one chordwise panel line out along each wing
+      {d: 'M 686 546 L 894 563'},
+      {d: 'M 686 546 L 894 563', t: JET_MIRROR},
+      // canopy frame and coaming
+      {d: 'M 296 314 L 298 380'},
+      {d: 'M 236 360 L 442 344'},
+      // fuselage station lines
+      {d: 'M 320 400 L 320 330'},
+      {d: 'M 928 452 L 928 300'},
+      // nozzle inner rings
+      {d: 'M 1104 392 m -11 0 a 11 11 0 1 0 22 0 a 11 11 0 1 0 -22 0'},
+      {d: 'M 1094 334 m -10 0 a 10 10 0 1 0 20 0 a 10 10 0 1 0 -20 0'},
+    ],
+    creaseW: 2.6,
+    clusters: [
+      {x: 1104, y: 392, r: 34, boost: 0.9, pulse: true},
+      {x: 1094, y: 334, r: 32, boost: 0.85, pulse: true},
+      {x: 340, y: 346, r: 100, boost: 0.55},
+    ],
+    light: [-1, -0.5],
+    axis: [1, 0],
+  },
+  density: {
+    target: 5000,
+    falloff: 4,
+    flat: 0.014,
+    grid: 8,
+    sizeMin: 3,
+    sizeMax: 9,
+    gradLo: 0.5,
+    gradHi: 1,
+  },
+  motion: {
+    mode: 'sweep',
+    // Nose-to-tail and faster than the car. 75 frames is the closest cadence
+    // to the intended ~90 that still divides 600 exactly (8 passes), which the
+    // seamless loop requires.
+    period: 75,
+    band: 0.055,
+    trail: 0.26,
+    gain: 1.2,
+    // the afterburner clusters breathe on their own sine, 15 cycles per loop
+    clusterPulse: {period: 40, amount: 0.25},
+  },
+  readouts: {
+    top: [
+      {label: 'ALTITUDE', unit: 'FT', lo: 18, hi: 42, dp: 0},
+      {label: 'AIRSPEED', unit: 'KT', lo: 320, hi: 780, dp: 0},
+      {label: 'HEADING', unit: 'DEG', lo: 0, hi: 359, dp: 0},
+      {label: 'MACH', unit: 'M', lo: 0.6, hi: 1.8, dp: 2},
+      {label: 'THRUST', unit: '%', lo: 42, hi: 100, dp: 0},
+      {label: 'FUEL', unit: 'KG', lo: 1200, hi: 6400, dp: 0},
+      {label: 'ANGLE OF ATK', unit: 'DEG', lo: 2, hi: 18, dp: 1},
+      {label: 'LOAD', unit: 'G', lo: 1, hi: 9, dp: 0},
+    ],
+    wave: {label: 'RADAR RETURN', sub: 'BAND_X', energy: 0.5},
+    table: {
+      label: 'TELEMETRY FEED',
+      tags: [
+        'ALT', 'IAS', 'HDG', 'MCH', 'THR', 'FUL', 'AOA', 'GLD',
+        'VSI', 'TAS', 'QNH', 'OAT', 'EPR', 'N1G', 'N2G', 'EGT',
+        'HYD', 'ELE', 'RUD', 'AIL', 'FLP', 'GER', 'BRK', 'TRM',
+      ],
+    },
+    numA: {label: 'ALTITUDE FL', unit: '', lo: 180, hi: 420, dp: 0},
+    numB: {label: 'AIRSPEED KT', unit: '', lo: 320, hi: 780, dp: 0},
+    grid: {
+      label: 'SYSTEM STATUS',
+      tags: ['HYD PRESS', 'FUEL FLOW', 'ELEC BUS'],
+    },
+    meters: {
+      label: 'THRUST CHANNELS',
+      tags: ['N1', 'N2', 'EG', 'FF', 'OP', 'VB', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6'],
+    },
+    radar: [
+      {label: 'THREAT BEARING', sub: 'FWD', turns: 3},
+      {label: 'THREAT BEARING', sub: 'AFT', turns: 5},
+    ],
+    scroll: {
+      label: 'LOCK STATUS',
+      tokens: ['TRK', 'LCK', 'SRC', 'ACQ', 'BRK', 'ILL', 'PNT', 'WRN', 'CHF', 'FLR'],
+    },
+    strips: [
+      {label: 'FUL', unit: '', lo: 0, hi: 100, dp: 0},
+      {label: 'THR', unit: '', lo: 0, hi: 100, dp: 0},
+      {label: 'LCK', unit: '', lo: 0, hi: 100, dp: 0},
+    ],
+    hist: {label: 'RADAR SPECTRUM'},
+    numerals: {label: 'DATALINK STREAM'},
+    status: {
+      label: 'TARGET LOCK STATUS',
+      states: ['SEARCHING', 'TRACKING', 'LOCKED', 'ENGAGED'],
+    },
+  },
+};
+
+/* #endregion variant:jet */
+
 export const VARIANTS: Record<VariantKey, Variant> = {
   car: CAR,
   /* #region register:jet */
+  jet: JET,
   /* #endregion register:jet */
   /* #region register:brain */
   /* #endregion register:brain */

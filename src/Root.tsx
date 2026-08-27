@@ -22,9 +22,18 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={W}
         height={H}
-        defaultProps={{variant: 'car' as const}}
+        defaultProps={{variant: 'jet' as const}}
       />
       {/* #region register:jet */}
+      <Composition
+        id="ScanHudJet"
+        component={ScanHud}
+        durationInFrames={DURATION}
+        fps={FPS}
+        width={W}
+        height={H}
+        defaultProps={{variant: 'jet' as const}}
+      />
       {/* #endregion register:jet */}
       {/* #region register:brain */}
       {/* #endregion register:brain */}

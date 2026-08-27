@@ -137,6 +137,7 @@ export type ParticleSet = {
   size: Float32Array;
   bright: Float32Array;
   hot: Float32Array; // 0 = palette colour, 1 = white-hot
+  pulse: Float32Array; // membership of a pulsing bright cluster
   twP: Float32Array;
   twPh: Float32Array;
   sx: Float32Array;
@@ -179,63 +180,79 @@ export const sampleParticles = (
   const alen = Math.hypot(ax, ay) || 1;
 
   // clusters in raster space
-  const cl = sil.clusters.map((c: {x: number; y: number; r: number; boost: number}) => ({
+  const cl = sil.clusters.map((c) => ({
     x: c.x * rscale,
     y: c.y * rscale,
     r: c.r * rscale,
     boost: c.boost,
+    pulse: c.pulse ? 1 : 0,
   }));
 
-  const target = rule.target;
   const grid = rule.grid;
-  const taken = new Set<number>();
+
+  /**
+   * Candidates are the cells of the coarse grid that the particles snap to.
+   * Enumerating them (rather than firing random darts until a quota is met)
+   * means the density rule alone decides the distribution: a flat interior
+   * stays sparse instead of soaking up whatever the edges did not take.
+   */
+  const cellX0 = Math.floor((ox + (x0 / rscale) * scale) / grid);
+  const cellX1 = Math.ceil((ox + (x1 / rscale) * scale) / grid);
+  const cellY0 = Math.floor((oy + (y0 / rscale) * scale) / grid);
+  const cellY1 = Math.ceil((oy + (y1 / rscale) * scale) / grid);
+
+  type Cand = {cx: number; cy: number; p: number; d: number; b: number; pw: number};
+  const cands: Cand[] = [];
+  let total = 0;
+
+  for (let cy = cellY0; cy <= cellY1; cy++) {
+    for (let cx = cellX0; cx <= cellX1; cx++) {
+      const fx = cx * grid;
+      const fy = cy * grid;
+      const ix = Math.round((((fx - ox) / scale) * rscale));
+      const iy = Math.round((((fy - oy) / scale) * rscale));
+      if (ix < 0 || iy < 0 || ix >= rw || iy >= rh) continue;
+      const idx = iy * rw + ix;
+      if (!inside[idx]) continue;
+
+      const d = dist[idx];
+      let p = rule.flat + (1 - rule.flat) * Math.exp(-d / rule.falloff);
+
+      let boost = 0;
+      let pw = 0;
+      for (const c of cl) {
+        const cd = Math.hypot(ix - c.x, iy - c.y);
+        if (cd < c.r) {
+          const t = 1 - cd / c.r;
+          boost = Math.max(boost, t * c.boost);
+          if (c.pulse) pw = Math.max(pw, t);
+        }
+      }
+      p = Math.min(1, p + boost * 0.9);
+
+      cands.push({cx, cy, p, d, b: boost, pw});
+      total += p;
+    }
+  }
+
+  // scale every probability by the same factor so the expected particle count
+  // lands on the target without distorting the density map
+  const k = total > 0 ? rule.target / total : 0;
+
   const gx: number[] = [];
   const gy: number[] = [];
   const gb: number[] = [];
+  const gp: number[] = [];
   const gd: number[] = [];
 
-  const maxTries = target * 90;
-  let i = 0;
-  while (gx.length < target && i < maxTries) {
-    const s = `${seed}/p${i}`;
-    i++;
-    const rx = x0 + random(`${s}x`) * bw;
-    const ry = y0 + random(`${s}y`) * bh;
-    const ix = Math.round(rx);
-    const iy = Math.round(ry);
-    if (ix < 0 || iy < 0 || ix >= rw || iy >= rh) continue;
-    const idx = iy * rw + ix;
-    if (!inside[idx]) continue;
-
-    const d = dist[idx];
-    let p = rule.flat + (1 - rule.flat) * Math.exp(-d / rule.falloff);
-
-    // bright clusters pull in extra density
-    let clusterBoost = 0;
-    for (const c of cl) {
-      const cd = Math.hypot(rx - c.x, ry - c.y);
-      if (cd < c.r) {
-        const t = 1 - cd / c.r;
-        clusterBoost = Math.max(clusterBoost, t * c.boost);
-      }
-    }
-    p = Math.min(1, p + clusterBoost * 0.85);
-
-    if (random(`${s}a`) > p) continue;
-
-    // snap to the coarse grid so particles align into faint rows
-    const fx = ox + (rx / rscale) * scale;
-    const fy = oy + (ry / rscale) * scale;
-    const cx = Math.round(fx / grid);
-    const cy = Math.round(fy / grid);
-    const key = cy * 100000 + cx;
-    if (taken.has(key)) continue;
-    taken.add(key);
-
-    gx.push(cx * grid);
-    gy.push(cy * grid);
-    gd.push(d);
-    gb.push(clusterBoost);
+  for (let i = 0; i < cands.length; i++) {
+    const c = cands[i];
+    if (random(`${seed}/c${c.cx},${c.cy}`) > Math.min(1, c.p * k)) continue;
+    gx.push(c.cx * grid);
+    gy.push(c.cy * grid);
+    gd.push(c.d);
+    gb.push(c.b);
+    gp.push(c.pw);
   }
 
   const n = gx.length;
@@ -246,6 +263,7 @@ export const sampleParticles = (
     size: new Float32Array(n),
     bright: new Float32Array(n),
     hot: new Float32Array(n),
+    pulse: new Float32Array(n),
     twP: new Float32Array(n),
     twPh: new Float32Array(n),
     sx: new Float32Array(n),
@@ -283,6 +301,7 @@ export const sampleParticles = (
     );
     out.hot[k] =
       random(`${s}h`) < 0.1 + 0.42 * edge + 0.5 * gb[k] ? 1 : 0;
+    out.pulse[k] = gp[k];
 
     const sz = rule.sizeMin + random(`${s}s`) * (rule.sizeMax - rule.sizeMin);
     out.size[k] = Math.max(2, Math.round(sz));

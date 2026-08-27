@@ -112,7 +112,7 @@ export const SubjectParticles: React.FC<{
       const tw =
         0.7 + 0.3 * Math.sin((f / p.twP[i]) * Math.PI * 2 + p.twPh[i]);
       let b = p.bright[i] * tw;
-      if (cpulse !== 0) b *= 1 + cpulse * p.hot[i];
+      if (cpulse !== 0 && p.pulse[i] > 0) b *= 1 + cpulse * p.pulse[i];
       b += sweepBoost(p.axis[i], pos, m) * (0.25 + 0.75 * p.bright[i]);
       if (boost) b += boost[i];
       b *= asm;
