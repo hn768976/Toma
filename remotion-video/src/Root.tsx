@@ -18,6 +18,7 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import { IconField, iconFieldSchema } from "./icon-field/IconField";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +52,36 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="LockFieldBlue"
+        component={IconField}
+        durationInFrames={450}
+        fps={30}
+        width={3840}
+        height={2160}
+        schema={iconFieldSchema}
+        defaultProps={{ variant: "blue" as const }}
+      />
+      <Composition
+        id="LockFieldTeal"
+        component={IconField}
+        durationInFrames={450}
+        fps={30}
+        width={3840}
+        height={2160}
+        schema={iconFieldSchema}
+        defaultProps={{ variant: "teal" as const }}
+      />
+      <Composition
+        id="LockFieldBreach"
+        component={IconField}
+        durationInFrames={450}
+        fps={30}
+        width={3840}
+        height={2160}
+        schema={iconFieldSchema}
+        defaultProps={{ variant: "breach" as const }}
       />
     </>
   );
