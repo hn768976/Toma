@@ -41,6 +41,16 @@ export type Variant = {
     outline: (height: number) => Point[];
     heightRatio: number;
     integrity: GlyphIntegrity;
+    /**
+     * An optional second closed shape drawn inside the outline — an icon
+     * within the glyph. The sweep never runs along it; it simply glows.
+     * Both ratios are fractions of the frame height.
+     */
+    inner?: {
+      outline: (height: number) => Point[];
+      heightRatio: number;
+      offsetYRatio: number;
+    };
   };
   panelDensity: PanelDensity;
   panelBehaviour: PanelBehaviour;

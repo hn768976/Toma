@@ -23,6 +23,8 @@ export type GlyphGeometry = {
   outline: SubPath[];
   /** Fray stubs and the interior crack: drawn, but never swept. */
   detail: SubPath[];
+  /** A closed shape sitting inside the outline: drawn, but never swept. */
+  interior: SubPath[];
   /** Gap ranges along the outline, in nominal arc length. */
   gaps: { start: number; end: number }[];
 };
@@ -240,6 +242,59 @@ export const keyholeOutline = (height: number): Point[] => {
   return resample(flatten(start, cmds), 2.4, true);
 };
 
+/**
+ * Crest shield: an arched top rising to a crest between wide shoulders, a
+ * full-bodied waist and a broad rounded base. Deliberately a different
+ * silhouette from `shieldOutline` — that one is flat across the top and
+ * tapers to a point, this one curves at both ends.
+ */
+export const crestShieldOutline = (height: number): Point[] => {
+  const hh = height / 2;
+  const width = height * 0.86;
+  const hw = width / 2;
+  const shoulder = -hh + height * 0.11;
+
+  const start: Point = { x: -hw, y: shoulder };
+  const cmds: Cmd[] = [
+    // The crest: one arc across the top, peaking level with the frame's top
+    // edge and dropping to the shoulders on either side.
+    {
+      kind: "cubic",
+      c1: { x: -hw * 0.46, y: -hh - height * 0.035 },
+      c2: { x: hw * 0.46, y: -hh - height * 0.035 },
+      to: { x: hw, y: shoulder },
+    },
+    // Right flank: full through the waist, then drawing in to the base.
+    {
+      kind: "cubic",
+      c1: { x: hw, y: -hh + height * 0.4 },
+      c2: { x: hw * 0.97, y: hh * 0.44 },
+      to: { x: hw * 0.6, y: hh * 0.78 },
+    },
+    // A broad rounded base rather than a point.
+    {
+      kind: "cubic",
+      c1: { x: hw * 0.41, y: hh * 0.95 },
+      c2: { x: hw * 0.19, y: hh },
+      to: { x: 0, y: hh },
+    },
+    {
+      kind: "cubic",
+      c1: { x: -hw * 0.19, y: hh },
+      c2: { x: -hw * 0.41, y: hh * 0.95 },
+      to: { x: -hw * 0.6, y: hh * 0.78 },
+    },
+    // Left flank, mirrored.
+    {
+      kind: "cubic",
+      c1: { x: -hw * 0.97, y: hh * 0.44 },
+      c2: { x: -hw, y: -hh + height * 0.4 },
+      to: start,
+    },
+  ];
+  return resample(flatten(start, cmds), 2.4, true);
+};
+
 const subPathFrom = (points: Point[], start: number, closed: boolean): SubPath => ({
   points,
   start,
@@ -293,8 +348,10 @@ export const buildGlyphGeometry = (
   outline: Point[],
   integrity: "solid" | "fractured",
   seed: string,
+  inner?: Point[],
 ): GlyphGeometry => {
   const outlineLength = polylineLength(outline, true);
+  const interior = inner ? [subPathFrom(inner, 0, true)] : [];
 
   if (integrity === "solid") {
     return {
@@ -302,6 +359,7 @@ export const buildGlyphGeometry = (
       outlineLength,
       outline: [subPathFrom(outline, 0, true)],
       detail: [],
+      interior,
       gaps: [],
     };
   }
@@ -358,7 +416,7 @@ export const buildGlyphGeometry = (
   const crackEnd = { x: crackStart.x * 0.06, y: crackStart.y + outlineLength * 0.085 };
   detail.push(subPathFrom(jaggedPath(crackStart, crackEnd, 4, `${seed}-crack`), 0, false));
 
-  return { nominal: outline, outlineLength, outline: runs, detail, gaps };
+  return { nominal: outline, outlineLength, outline: runs, detail, interior, gaps };
 };
 
 export const toPath2D = (sub: SubPath): Path2D => {

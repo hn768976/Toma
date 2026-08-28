@@ -55,15 +55,23 @@ export const ShieldHud: React.FC<ShieldHudProps> = ({ variant: variantKey }) => 
   const grain = useMemo(() => createGrainTiles(seed), [seed]);
   const layout = useMemo(() => buildLayout(variant), [variant]);
 
-  const geometry = useMemo(
-    () =>
-      buildGlyphGeometry(
-        variant.glyph.outline(HEIGHT * variant.glyph.heightRatio),
-        variant.glyph.integrity,
-        seed,
-      ),
-    [seed, variant],
-  );
+  const geometry = useMemo(() => {
+    const { inner } = variant.glyph;
+    // The inner shape is built at its own size and dropped into place inside
+    // the outline before either is handed over.
+    const innerPoints = inner
+      ? inner.outline(HEIGHT * inner.heightRatio).map((point) => ({
+          x: point.x,
+          y: point.y + HEIGHT * inner.offsetYRatio,
+        }))
+      : undefined;
+    return buildGlyphGeometry(
+      variant.glyph.outline(HEIGHT * variant.glyph.heightRatio),
+      variant.glyph.integrity,
+      seed,
+      innerPoints,
+    );
+  }, [seed, variant]);
   const sweep = useMemo(() => buildSweep(variant, geometry, seed), [geometry, seed, variant]);
   const readouts = useMemo(
     () => buildReadoutModel(variant.panelDensity, variant.panelBehaviour, seed),

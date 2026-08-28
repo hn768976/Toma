@@ -32,6 +32,13 @@ const PASSES: Pass[] = [
 const DETAIL_BRIGHTNESS = 0.6;
 
 /**
+ * An interior shape — the keyhole inside v2's shield — is lit steadily rather
+ * than swept, a little below the brightness the trail reaches at its head so
+ * the sweep still leads the eye.
+ */
+const INTERIOR_BRIGHTNESS = 0.62;
+
+/**
  * Strokes the slice of the outline covering [start, start + length) in the
  * glyph's own arc length, using a dash pattern long enough that only one
  * band can ever be on.
@@ -78,6 +85,7 @@ export const CentreGlyph: React.FC<{ path: GlyphGeometry; integrity: GlyphIntegr
 
   const outlinePaths = useMemo(() => path.outline.map(toPath2D), [path]);
   const detailPaths = useMemo(() => path.detail.map(toPath2D), [path]);
+  const interiorPaths = useMemo(() => path.interior.map(toPath2D), [path]);
 
   useLayoutEffect(() => {
     const { head } = sweep.sample(frame);
@@ -114,6 +122,19 @@ export const CentreGlyph: React.FC<{ path: GlyphGeometry; integrity: GlyphIntegr
               path.outlineLength,
             );
           }
+        }
+      }
+
+      // The interior icon: the same four passes, held at a steady level.
+      if (interiorPaths.length > 0) {
+        for (const pass of PASSES) {
+          const colour = palette[pass.hue];
+          ctx.strokeStyle = colour;
+          ctx.lineWidth = pass.width * 0.66;
+          ctx.shadowBlur = pass.shadowBlur * 0.8;
+          ctx.shadowColor = pass.shadowBlur > 0 ? colour : "transparent";
+          ctx.globalAlpha = pass.peak * INTERIOR_BRIGHTNESS * breath;
+          interiorPaths.forEach((p) => ctx.stroke(p));
         }
       }
 
