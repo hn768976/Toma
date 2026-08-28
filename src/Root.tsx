@@ -14,6 +14,15 @@ export const RemotionRoot: React.FC = () => {
 				height={2160}
 				defaultProps={{variant: 'mint'}}
 			/>
+			<Composition
+				id="WireCityEmerald"
+				component={WireCity}
+				durationInFrames={450}
+				fps={30}
+				width={3840}
+				height={2160}
+				defaultProps={{variant: 'emerald'}}
+			/>
 		</>
 	);
 };

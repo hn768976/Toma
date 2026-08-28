@@ -32,6 +32,7 @@ import {Grain} from './Grain';
 import {Ground} from './Ground';
 import {Haze} from './Haze';
 import {Post} from './Post';
+import {Windows} from './Windows';
 import {VARIANTS, type VariantName} from './variants';
 
 /** One seed for the whole project: all three versions show the same city. */
@@ -68,6 +69,9 @@ const Scene: React.FC<{variant: VariantName}> = ({variant}) => {
 			<CameraRig makeDefault camera={camera} lens={LENS} state={cameraState} />
 			<Ground config={config} />
 			<Buildings city={city} config={config} />
+			{config.windows.enabled ? (
+				<Windows city={city} config={config} frame={frame} seed={CITY_SEED} />
+			) : null}
 			<Haze config={config} camera={cameraState} />
 			<Post config={config} camera={camera} />
 			<CanvasWarmup />

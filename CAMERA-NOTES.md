@@ -163,6 +163,7 @@ emissive/basic and the bloom pass supplies the glow.
 | Building edges | `LineMaterial` (`three/examples/jsm/lines/LineMaterial.js`) on `LineSegments2` |
 | Building bodies | `MeshBasicMaterial` on an `InstancedMesh` |
 | Ground dots | custom `ShaderMaterial` on `THREE.Points` |
+| Lit windows (emerald only) | custom `ShaderMaterial` on one `THREE.Points` |
 | Horizon haze | custom `ShaderMaterial` on a `CylinderGeometry` |
 
 > Adding a `meshStandardMaterial` to a scene with no lights is the single most
@@ -192,6 +193,30 @@ height. Opacity is **baked into those colours** rather than set on the
 material, so the material can stay opaque and use `alphaToCoverage: true`,
 which anti-aliases sub-pixel-thin lines against the MSAA buffer. A transparent
 LineMaterial cannot.
+
+### The lit windows (the "windows" building mode)
+
+Every window in the city is ONE `THREE.Points` object — ~13k points on a
+regular grid over each building's four side faces, thinned by a seeded
+keep-test (`density: 0.42`), never modelled as geometry. Placement rules:
+1.9 / 2.6 unit column/row pitch, 0.95 margin from the wireframe edges, first
+row at y = 1.6, and each point sits **0.09 units outside its face** so it
+cannot z-fight with the building fill (whose `polygonOffset` pushes the other
+way).
+
+The progressive switch-on is data, not time: each surviving window carries a
+seeded activation frame in 60–380 (`aActivate` attribute) plus a seeded
+brightness in 0.72–1.0, and the shader compares `aActivate` against a
+`uFrame` uniform fed from `useCurrentFrame()`:
+
+```glsl
+vAlpha = smoothstep(aActivate, aActivate + uFade, uFrame);
+```
+
+`transparent: true, depthWrite: false, depthTest: true` — so a window behind
+a nearer building is hidden by that building's fill exactly like the
+wireframe edges are, while the fade-in composites cleanly. `renderOrder = 2`
+puts the points after the opaque fills/edges and before the haze.
 
 ### Hidden-line removal
 
@@ -253,6 +278,7 @@ size and a `--scale=0.5` preview is an honest preview of the 4K render:
 
 ```glsl
 float sizePx = uSize * uHalfHeight / depth;   // uHalfHeight = drawingBufferHeight / 2
+sizePx = min(sizePx, uHalfHeight * 0.012);    // street-level cameras: no polka dots
 vSizePx = max(sizePx, 1.0);
 gl_PointSize = vSizePx;
 vDim = clamp(sizePx, 0.3, 1.0);               // sub-pixel dots dim instead of vanishing

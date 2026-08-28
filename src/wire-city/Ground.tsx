@@ -74,6 +74,9 @@ ${
 		: ''
 }
   float sizePx = uSize * uHalfHeight / max(depth, 0.001);
+  // Cap the on-screen size so street-level cameras don't blow the nearest
+  // dots up into polka dots (0.012 of buffer height ~= 13px at 4K).
+  sizePx = min(sizePx, uHalfHeight * 0.012);
   // A point thinner than a pixel is drawn at one pixel and dimmed instead,
   // which keeps the far field smooth rather than hard aliased speckle.
   vSizePx = max(sizePx, 1.0);

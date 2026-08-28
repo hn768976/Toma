@@ -82,7 +82,7 @@ export type VariantConfig = {
 		fadeFrames: number;
 		/** Fraction of the candidate window grid that is actually lit. */
 		density: number;
-		/** Point size in px at 1 unit distance. */
+		/** Window point size in WORLD units (attenuated with distance). */
 		size: number;
 	};
 	annotations: {
@@ -135,7 +135,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			onTo: 380,
 			fadeFrames: 8,
 			density: 0.5,
-			size: 44,
+			size: 0.62,
 		},
 		annotations: {enabled: false, count: 0, tickCount: 0, lineWidth: 1},
 		ground: {intensity: 1.9, dotSize: 1},
@@ -178,7 +178,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			onTo: 380,
 			fadeFrames: 9,
 			density: 0.42,
-			size: 52,
+			size: 0.62,
 		},
 		annotations: {enabled: false, count: 0, tickCount: 0, lineWidth: 1},
 		ground: {intensity: 1.9, dotSize: 1},
@@ -221,7 +221,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 			onTo: 380,
 			fadeFrames: 8,
 			density: 0.5,
-			size: 44,
+			size: 0.62,
 		},
 		annotations: {enabled: true, count: 25, tickCount: 46, lineWidth: 0.9},
 		ground: {intensity: 1, dotSize: 0.95},
