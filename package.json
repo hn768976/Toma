@@ -1,0 +1,24 @@
+{
+  "name": "microarray-rack-focus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K DNA microarray rack focus animation built with Remotion.",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render MicroarrayRackFocus out/microarray.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "preview": "remotion render MicroarrayRackFocus out/microarray-preview.mp4 --codec=h264 --crf=18 --scale=0.5 --concurrency=8",
+    "upgrade": "remotion upgrade",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.410",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.410"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.8.3"
+  }
+}
