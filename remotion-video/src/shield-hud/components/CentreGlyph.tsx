@@ -22,10 +22,14 @@ type Pass = {
  * stroke does not read the same way at any width.
  */
 const PASSES: Pass[] = [
-  { width: 104, hue: "glyphMid", peak: 0.1, ember: 0.045, shadowBlur: 80, bands: 4 },
-  { width: 44, hue: "glyphMid", peak: 0.28, ember: 0.05, shadowBlur: 36, bands: 6 },
-  { width: 16, hue: "glyphMid", peak: 1, ember: 0.13, shadowBlur: 12, bands: 14 },
-  { width: 5, hue: "glyphWhite", peak: 1, ember: 0.05, shadowBlur: 0, bands: 14 },
+  // The two wide passes carry no trail at all: they are the glyph's standing
+  // atmosphere. Letting them follow the head is what made the travelling
+  // light read as a thick band rather than a filament.
+  { width: 104, hue: "glyphMid", peak: 0, ember: 0.05, shadowBlur: 80, bands: 0 },
+  { width: 40, hue: "glyphMid", peak: 0.1, ember: 0.055, shadowBlur: 36, bands: 4 },
+  // The trail itself is thin — a narrow mid channel under a thinner core.
+  { width: 9, hue: "glyphMid", peak: 0.95, ember: 0.12, shadowBlur: 12, bands: 16 },
+  { width: 3.5, hue: "glyphWhite", peak: 1, ember: 0.05, shadowBlur: 0, bands: 16 },
 ];
 
 /** Detail strokes — frays and the crack — sit at 60% of the outline's level. */
@@ -111,7 +115,10 @@ export const CentreGlyph: React.FC<{ path: GlyphGeometry; integrity: GlyphIntegr
         if (pass.bands > 0) {
           const bandLength = (TRAIL_FRACTION * path.outlineLength) / pass.bands;
           for (let k = 0; k < pass.bands; k++) {
-            const decay = Math.pow(1 - k / pass.bands, 1.7);
+            // A steep falloff: the trail still runs 40% of the outline, but
+            // nearly all of its brightness sits in the first few bands, so
+            // the eye reads one bright point with a filament behind it.
+            const decay = Math.pow(1 - k / pass.bands, 3.4);
             ctx.globalAlpha = pass.peak * decay * breath;
             strokeBand(
               ctx,

@@ -3,7 +3,7 @@ import { onPlane, rgba, useScene } from "../scene";
 import { pointAt, toPath2D } from "../paths";
 
 /** Length of the hot leading segment, as a fraction of the outline. */
-const HEAD_FRACTION = 0.016;
+const HEAD_FRACTION = 0.007;
 
 /**
  * The bright head of the sweep: a short hot segment of outline plus a soft
@@ -30,8 +30,8 @@ export const SweepHead: React.FC = () => {
       // white core. On a fractured outline this simply draws nothing while
       // the head is sitting in a gap.
       const strokes = [
-        { colour: palette.glyphPale, width: 22, alpha: 0.55 * flicker, blur: 30 },
-        { colour: palette.glyphWhite, width: 7, alpha: 1 * flicker, blur: 0 },
+        { colour: palette.glyphPale, width: 12, alpha: 0.6 * flicker, blur: 26 },
+        { colour: palette.glyphWhite, width: 4, alpha: 1 * flicker, blur: 0 },
       ];
       for (const stroke of strokes) {
         ctx.strokeStyle = stroke.colour;
@@ -54,10 +54,13 @@ export const SweepHead: React.FC = () => {
       ctx.shadowBlur = 0;
 
       // The blob of light riding on the head itself.
-      const radius = 96;
+      const radius = 78;
       const glow = ctx.createRadialGradient(at.point.x, at.point.y, 0, at.point.x, at.point.y, radius);
-      glow.addColorStop(0, rgba(palette.glyphWhite, 0.95 * flicker));
-      glow.addColorStop(0.25, rgba(palette.glyphPale, 0.5 * flicker));
+      // Tight in the middle so the head reads as a single point of light
+      // rather than a soft patch.
+      glow.addColorStop(0, rgba(palette.glyphWhite, 1 * flicker));
+      glow.addColorStop(0.12, rgba(palette.glyphWhite, 0.72 * flicker));
+      glow.addColorStop(0.32, rgba(palette.glyphPale, 0.34 * flicker));
       glow.addColorStop(1, rgba(palette.glyphMid, 0));
       ctx.globalAlpha = breath;
       ctx.fillStyle = glow;
