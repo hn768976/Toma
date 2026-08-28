@@ -18,6 +18,13 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import { ShieldHud } from "./shield-hud/ShieldHud";
+import {
+  DURATION_IN_FRAMES as HUD_DURATION_IN_FRAMES,
+  FPS as HUD_FPS,
+  HEIGHT as HUD_HEIGHT,
+  WIDTH as HUD_WIDTH,
+} from "./shield-hud/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +58,24 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="ShieldHudBlue"
+        component={ShieldHud}
+        durationInFrames={HUD_DURATION_IN_FRAMES}
+        fps={HUD_FPS}
+        width={HUD_WIDTH}
+        height={HUD_HEIGHT}
+        defaultProps={{ variant: "blue" as const }}
+      />
+      <Composition
+        id="ShieldHudLoopCheck"
+        component={ShieldHud}
+        durationInFrames={HUD_DURATION_IN_FRAMES + 1}
+        fps={HUD_FPS}
+        width={HUD_WIDTH}
+        height={HUD_HEIGHT}
+        defaultProps={{ variant: "blue" as const }}
       />
     </>
   );
