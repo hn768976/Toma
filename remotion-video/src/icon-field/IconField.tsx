@@ -4,7 +4,6 @@ import { z } from "zod";
 import { BackgroundWash } from "./BackgroundWash";
 import { Compositor } from "./Compositor";
 import { DotBlock } from "./DotBlock";
-import { OutlineShape } from "./OutlineShape";
 import { SecurityIcon } from "./SecurityIcon";
 import { TilePlane } from "./TilePlane";
 import { computeFrameState, createEnv } from "./env";
@@ -59,9 +58,6 @@ export const IconField: React.FC<IconFieldProps> = ({ variant }) => {
       ))}
       {env.layout.dotBlocks.map((spec) => (
         <DotBlock key={`dots-${spec.id}`} env={env} fs={fs} spec={spec} />
-      ))}
-      {env.layout.outlines.map((spec, i) => (
-        <OutlineShape key={`outline-${i}`} env={env} fs={fs} spec={spec} />
       ))}
       <Compositor env={env} fs={fs} canvasRef={canvasRef} />
     </AbsoluteFill>

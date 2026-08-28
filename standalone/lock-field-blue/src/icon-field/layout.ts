@@ -1,4 +1,11 @@
-import { BLOCK, DEPTH_HALF, LOOP_FRAMES } from "./plane";
+import {
+  BLOCK,
+  DEPTH_HALF,
+  LOOP_FRAMES,
+  depth01,
+  iconDepthScale,
+  tileDepthScale,
+} from "./plane";
 import { pickWeighted, rand, randInt, randRange } from "./rng";
 import type { IconName, VariantConfig, VariantKey } from "./variants";
 
@@ -32,6 +39,8 @@ export interface IconSpec {
   x: number;
   y: number;
   size: number;
+  /** Effective footprint radius in local units, for overlap avoidance. */
+  r: number;
   name: IconName;
   tier: "pale" | "white";
   flickers: { start: number; dur: number }[];
@@ -51,18 +60,6 @@ export interface DotBlockSpec {
   period: number;
   phase: number;
   id: number;
-  sepAmp: number;
-  sepAngle: number;
-}
-
-export interface OutlineSpec {
-  x: number;
-  y: number;
-  kind: "rect" | "ellipse";
-  w: number;
-  h: number;
-  lineWidth: number;
-  alpha: number;
   sepAmp: number;
   sepAngle: number;
 }
@@ -104,7 +101,6 @@ export interface Layout {
   tiles: TileSpec[];
   icons: IconSpec[];
   dotBlocks: DotBlockSpec[];
-  outlines: OutlineSpec[];
   dashes: DashSpec[];
   highlights: HighlightSpec[];
   glitches: GlitchEvent[];
@@ -114,6 +110,28 @@ const sepJitter = (seed: string): [number, number] => [
   randRange(`${seed}-sepamp`, 0.55, 1.45),
   randRange(`${seed}-sepang`, -0.32, 0.32),
 ];
+
+/**
+ * Narrow jitter for content elements (icons, dot blocks): they still creep
+ * apart in the "separating" mode, but nearly uniformly, so neighbours never
+ * drift into each other and reopen an overlap the layout avoided.
+ */
+const sepJitterTight = (seed: string): [number, number] => [
+  randRange(`${seed}-sepamp`, 0.88, 1.12),
+  randRange(`${seed}-sepang`, -0.12, 0.12),
+];
+
+/** Distance between two layout points, wrapped on the drift (y) axis. */
+const wrappedDist = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): number => {
+  let dy = Math.abs(y1 - y2);
+  dy = Math.min(dy, BLOCK - dy);
+  return Math.hypot(x1 - x2, dy);
+};
 
 const generateTiles = (v: VariantKey, cfg: VariantConfig): TileSpec[] => {
   const tiles: TileSpec[] = [];
@@ -175,25 +193,28 @@ const generateTiles = (v: VariantKey, cfg: VariantConfig): TileSpec[] => {
 const generateIcons = (v: VariantKey, cfg: VariantConfig): IconSpec[] => {
   const icons: IconSpec[] = [];
   const count = cfg.iconsPerBlock;
-  const minDist = 255;
+  // Icons must never overlap: the required gap is the sum of the two
+  // footprint radii plus a safety margin. The "separating" drift mode gets a
+  // larger margin to absorb the (deliberately small) per-icon drift spread.
+  const margin = cfg.driftMode === "separating" ? 85 : 30;
   const lockName = cfg.iconSet[0].name; // the plurality icon (padlock)
   for (let k = 0; k < count; k++) {
-    // Seeded rejection sampling for a poisson-ish spread. The y span extends
-    // a margin past the block edge implicitly via wrapping in draw copies.
+    const s = `${v}-icon-${k}`;
+    const size = randRange(`${s}-size`, 92, 158);
+    // Seeded rejection sampling. The footprint radius accounts for the
+    // depth-dependent draw scale at the candidate position.
     let x = 0;
     let y = 0;
+    let r = 0;
     let placed = false;
-    for (let attempt = 0; attempt < 14; attempt++) {
-      const s = `${v}-icon-${k}-try${attempt}`;
-      x = randRange(`${s}-x`, -DEPTH_HALF + 60, DEPTH_HALF - 60);
-      y = randRange(`${s}-y`, 0, BLOCK);
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const t = `${s}-try${attempt}`;
+      x = randRange(`${t}-x`, -DEPTH_HALF + 60, DEPTH_HALF - 60);
+      y = randRange(`${t}-y`, 0, BLOCK);
+      r = size * iconDepthScale(depth01(x, cfg.tileScale)) * 0.62;
       let ok = true;
       for (const other of icons) {
-        // Distance on the wrapped drift axis.
-        let dy = Math.abs(y - other.y);
-        dy = Math.min(dy, BLOCK - dy);
-        const dx = x - other.x;
-        if (dx * dx + dy * dy < minDist * minDist) {
+        if (wrappedDist(x, y, other.x, other.y) < r + other.r + margin) {
           ok = false;
           break;
         }
@@ -205,30 +226,30 @@ const generateIcons = (v: VariantKey, cfg: VariantConfig): IconSpec[] => {
     }
     if (!placed) continue;
     // Weighted draw; avoid two of the same non-lock icon adjacent.
-    let name = pickWeighted(`${v}-icon-${k}-name`, cfg.iconSet).name;
+    let name = pickWeighted(`${s}-name`, cfg.iconSet).name;
     if (name !== lockName) {
       for (let redraw = 0; redraw < 5; redraw++) {
         let clash = false;
         for (const other of icons) {
-          let dy = Math.abs(y - other.y);
-          dy = Math.min(dy, BLOCK - dy);
-          const dx = x - other.x;
-          if (other.name === name && dx * dx + dy * dy < 470 * 470) {
+          if (
+            other.name === name &&
+            wrappedDist(x, y, other.x, other.y) < 470
+          ) {
             clash = true;
             break;
           }
         }
         if (!clash) break;
-        name = pickWeighted(`${v}-icon-${k}-name-r${redraw}`, cfg.iconSet).name;
+        name = pickWeighted(`${s}-name-r${redraw}`, cfg.iconSet).name;
         if (name === lockName) break;
       }
     }
-    const s = `${v}-icon-${k}`;
-    const [sepAmp, sepAngle] = sepJitter(s);
+    const [sepAmp, sepAngle] = sepJitterTight(s);
     icons.push({
       x,
       y,
-      size: randRange(`${s}-size`, 92, 158),
+      size,
+      r,
       name,
       tier: rand(`${s}-tier`) < 0.28 ? "white" : "pale",
       flickers: [],
@@ -249,19 +270,60 @@ const generateIcons = (v: VariantKey, cfg: VariantConfig): IconSpec[] => {
   return icons;
 };
 
-const generateDotBlocks = (v: VariantKey): DotBlockSpec[] => {
+const generateDotBlocks = (
+  v: VariantKey,
+  cfg: VariantConfig,
+  icons: IconSpec[],
+): DotBlockSpec[] => {
   const blocks: DotBlockSpec[] = [];
   const periods = [45, 50, 75, 90]; // all divide 450 — reroll wraps cleanly
   for (let k = 0; k < 30; k++) {
     const s = `${v}-dots-${k}`;
-    const [sepAmp, sepAngle] = sepJitter(s);
+    const cols = randInt(`${s}-c`, 3, 6);
+    const rows = randInt(`${s}-r`, 4, 8);
+    const cell = randRange(`${s}-cell`, 9, 14);
+    const gap = randRange(`${s}-gap`, 0.35, 0.55);
+    // Data patches must not sit on top of icons (or each other): reject
+    // positions whose footprint would touch an icon's footprint.
+    let x = 0;
+    let y = 0;
+    let placed = false;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const t = `${s}-try${attempt}`;
+      x = randRange(`${t}-x`, -DEPTH_HALF, DEPTH_HALF);
+      y = randRange(`${t}-y`, 0, BLOCK);
+      const ds = tileDepthScale(depth01(x, cfg.tileScale));
+      const pitch = cell * ds * (1 + gap);
+      const blockR = Math.hypot(cols * pitch, rows * pitch) / 2;
+      let ok = true;
+      for (const icon of icons) {
+        if (wrappedDist(x, y, icon.x, icon.y) < blockR + icon.r + 30) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        for (const other of blocks) {
+          if (wrappedDist(x, y, other.x, other.y) < blockR + 200) {
+            ok = false;
+            break;
+          }
+        }
+      }
+      if (ok) {
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) continue;
+    const [sepAmp, sepAngle] = sepJitterTight(s);
     blocks.push({
-      x: randRange(`${s}-x`, -DEPTH_HALF, DEPTH_HALF),
-      y: randRange(`${s}-y`, 0, BLOCK),
-      cols: randInt(`${s}-c`, 3, 6),
-      rows: randInt(`${s}-r`, 4, 8),
-      cell: randRange(`${s}-cell`, 9, 14),
-      gap: randRange(`${s}-gap`, 0.35, 0.55),
+      x,
+      y,
+      cols,
+      rows,
+      cell,
+      gap,
       litFrac: randRange(`${s}-lit`, 0.35, 0.68),
       period: periods[randInt(`${s}-per`, 0, periods.length - 1)],
       phase: randInt(`${s}-ph`, 0, LOOP_FRAMES - 1),
@@ -271,33 +333,6 @@ const generateDotBlocks = (v: VariantKey): DotBlockSpec[] => {
     });
   }
   return blocks;
-};
-
-const generateOutlines = (v: VariantKey): OutlineSpec[] => {
-  const outlines: OutlineSpec[] = [];
-  for (let k = 0; k < 9; k++) {
-    const s = `${v}-outline-${k}`;
-    const kind = rand(`${s}-kind`) < 0.62 ? "rect" : "ellipse";
-    const [sepAmp, sepAngle] = sepJitter(s);
-    outlines.push({
-      x: randRange(`${s}-x`, -DEPTH_HALF + 200, DEPTH_HALF - 200),
-      y: randRange(`${s}-y`, 0, BLOCK),
-      kind,
-      w:
-        kind === "rect"
-          ? randRange(`${s}-w`, 340, 860)
-          : randRange(`${s}-w`, 420, 1050),
-      h:
-        kind === "rect"
-          ? randRange(`${s}-h`, 190, 430)
-          : randRange(`${s}-h`, 240, 590),
-      lineWidth: randRange(`${s}-lw`, 2.4, 4.2),
-      alpha: randRange(`${s}-a`, 0.32, 0.6),
-      sepAmp,
-      sepAngle,
-    });
-  }
-  return outlines;
 };
 
 const generateDashes = (v: VariantKey): DashSpec[] => {
@@ -376,8 +411,7 @@ export const generateLayout = (v: VariantKey, cfg: VariantConfig): Layout => {
   return {
     tiles: generateTiles(v, cfg),
     icons,
-    dotBlocks: generateDotBlocks(v),
-    outlines: generateOutlines(v),
+    dotBlocks: generateDotBlocks(v, cfg, icons),
     dashes: generateDashes(v),
     highlights: generateHighlights(v),
     glitches: generateGlitches(v, cfg, icons.length),
