@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo } from "react";
-import { onPlane, rgba, useScene } from "../scene";
+import { onPlane, useScene } from "../scene";
 import { toPath2D, type GlyphGeometry, type SubPath } from "../paths";
 import { TRAIL_FRACTION } from "../sweep";
 import type { GlyphIntegrity, Palette } from "../variants";
@@ -98,11 +98,6 @@ export const CentreGlyph: React.FC<{ path: GlyphGeometry; integrity: GlyphIntegr
         ctx.globalAlpha = pass.ember * breath;
         outlinePaths.forEach((p) => ctx.stroke(p));
 
-        if (integrity === "fractured") {
-          ctx.globalAlpha = pass.ember * breath * DETAIL_BRIGHTNESS;
-          detailPaths.forEach((p) => ctx.stroke(p));
-        }
-
         // The trail: a run of bands behind the head, each dimmer than the
         // last, fading out over 40% of the outline.
         if (pass.bands > 0) {
@@ -122,16 +117,16 @@ export const CentreGlyph: React.FC<{ path: GlyphGeometry; integrity: GlyphIntegr
         }
       }
 
-      // The crack and frays get the same treatment at 60% brightness — no
-      // sweep runs along them, they simply glow.
+      // The crack and the frays get the same four passes at 60% brightness.
+      // No sweep runs along them — they simply glow.
       if (integrity === "fractured") {
         for (const pass of PASSES) {
           const colour = palette[pass.hue];
-          ctx.strokeStyle = rgba(colour, 1);
+          ctx.strokeStyle = colour;
           ctx.lineWidth = pass.width * 0.62;
           ctx.shadowBlur = pass.shadowBlur * 0.7;
           ctx.shadowColor = pass.shadowBlur > 0 ? colour : "transparent";
-          ctx.globalAlpha = pass.peak * DETAIL_BRIGHTNESS * 0.5 * breath;
+          ctx.globalAlpha = pass.peak * DETAIL_BRIGHTNESS * breath;
           detailPaths.forEach((p) => ctx.stroke(p));
         }
       }

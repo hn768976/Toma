@@ -110,10 +110,12 @@ export const compositeSplitGlyph = (
   split: number,
   alpha: number,
 ) => {
-  const channels: { colour: string; dx: number }[] = [
-    { colour: "#FF0000", dx: split },
-    { colour: "#00FF00", dx: 0 },
-    { colour: "#0000FF", dx: -split },
+  // Channel masks, not palette colours: multiplying by pure red, green or
+  // blue keeps one channel of the glyph and discards the other two.
+  const channels: { mask: string; dx: number }[] = [
+    { mask: "rgb(255, 0, 0)", dx: split },
+    { mask: "rgb(0, 255, 0)", dx: 0 },
+    { mask: "rgb(0, 0, 255)", dx: -split },
   ];
   for (const channel of channels) {
     scratch.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -123,7 +125,7 @@ export const compositeSplitGlyph = (
     scratch.ctx.clearRect(0, 0, WIDTH, HEIGHT);
     scratch.ctx.drawImage(glyph.canvas, 0, 0);
     scratch.ctx.globalCompositeOperation = "multiply";
-    scratch.ctx.fillStyle = channel.colour;
+    scratch.ctx.fillStyle = channel.mask;
     scratch.ctx.fillRect(0, 0, WIDTH, HEIGHT);
     // The multiply fill is opaque everywhere, so the glyph's own alpha has
     // to be stamped back in to leave just the isolated channel.

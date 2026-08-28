@@ -37,8 +37,8 @@ export const BackgroundLayer: React.FC = () => {
       HEIGHT * 0.46,
       HEIGHT * 1.15,
     );
-    wash.addColorStop(0, rgba(palette.backgroundWash, 0.95));
-    wash.addColorStop(0.45, rgba(palette.backgroundWash, 0.4));
+    wash.addColorStop(0, rgba(palette.backgroundWash, 0.7));
+    wash.addColorStop(0.45, rgba(palette.backgroundWash, 0.26));
     wash.addColorStop(1, rgba(palette.backgroundDeep, 0));
     ctx.fillStyle = wash;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);

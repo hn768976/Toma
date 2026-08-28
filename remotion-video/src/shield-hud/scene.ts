@@ -54,7 +54,9 @@ export const buildLayout = (variant: Variant): Layout => {
       { x: glyphCentre.x - bracketX * 1.5, y: glyphCentre.y, flipX: 1, flipY: 1, size: 74 },
       { x: glyphCentre.x + bracketX * 1.42, y: glyphCentre.y - 90, flipX: -1, flipY: 1, size: 74 },
     ],
-    logStrip: { x: 980, y: 1830, width: 1720, height: 250, rowHeight: 44 },
+    // Sits low and left, where the tilt pushes the plane down — any lower
+    // and the strip walks off the bottom of the frame.
+    logStrip: { x: 700, y: 1500, width: 1500, height: 220, rowHeight: 44 },
   };
 };
 

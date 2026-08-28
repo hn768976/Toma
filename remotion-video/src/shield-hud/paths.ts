@@ -354,7 +354,7 @@ export const buildGlyphGeometry = (
   }
 
   // The crack: from the upper-right edge inward and down toward centre.
-  const crackStart = pointAt(outline, true, outlineLength * 0.08).point;
+  const crackStart = pointAt(outline, true, outlineLength * 0.3).point;
   const crackEnd = { x: crackStart.x * 0.06, y: crackStart.y + outlineLength * 0.085 };
   detail.push(subPathFrom(jaggedPath(crackStart, crackEnd, 4, `${seed}-crack`), 0, false));
 

@@ -166,7 +166,7 @@ export const ReadoutColumn: React.FC<{ index: number }> = ({ index }) => {
         ctx.lineWidth = 2;
         ctx.strokeRect(meterX, meterTop, 26, meterHeight);
         const fill = readouts.meter(index, frame) * meterHeight;
-        ctx.fillStyle = rgba(palette.readoutWhite, 0.55);
+        ctx.fillStyle = rgba(palette.tickPale, 0.42);
         ctx.fillRect(meterX + 4, meterTop + meterHeight - fill + 4, 18, Math.max(fill - 8, 0));
       }
     });
