@@ -86,15 +86,6 @@ export const RemotionRoot: React.FC = () => {
         height={HUD_HEIGHT}
         defaultProps={{ variant: "breach" as const }}
       />
-      <Composition
-        id="ShieldHudLoopCheck"
-        component={ShieldHud}
-        durationInFrames={HUD_DURATION_IN_FRAMES + 1}
-        fps={HUD_FPS}
-        width={HUD_WIDTH}
-        height={HUD_HEIGHT}
-        defaultProps={{ variant: "blue" as const }}
-      />
     </>
   );
 };

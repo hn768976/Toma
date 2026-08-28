@@ -26,7 +26,6 @@ waitUntilDone()
     continueRender(handle);
   })
   .catch((error) => {
-    // eslint-disable-next-line no-console
     console.error("Readout font failed to load", error);
     ready = true;
     listeners.forEach((listener) => listener());

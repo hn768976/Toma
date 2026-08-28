@@ -5,3 +5,6 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Generated standalone projects; the zips beside them are the deliverable.
+packages/shield-hud-*/

@@ -40,14 +40,14 @@ export const glitchAt = (events: Event[], frame: number, seed: string): GlitchSt
   const count = 3 + Math.floor(random(`${key}-n`) * 3);
   const slices: Slice[] = [];
   for (let i = 0; i < count; i++) {
-    const height = 26 + random(`${key}-h-${i}`) * 150;
+    const height = 18 + random(`${key}-h-${i}`) * 62;
     slices.push({
       y: random(`${key}-y-${i}`) * (HEIGHT - height),
       height,
       dx: (random(`${key}-d-${i}`) < 0.5 ? -1 : 1) * (40 + random(`${key}-x-${i}`) * 120),
     });
   }
-  return { active: true, slices, split: 14 + random(`${key}-split`) * 12 };
+  return { active: true, slices, split: 16 + random(`${key}-split`) * 8 };
 };
 
 /** Shifts horizontal bands of the finished frame sideways. */
