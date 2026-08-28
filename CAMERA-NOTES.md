@@ -196,22 +196,39 @@ LineMaterial cannot.
 
 ### The lit windows (the "windows" building mode)
 
-Every window in the city is ONE `THREE.Points` object — ~13k points on a
-regular grid over each building's four side faces, thinned by a seeded
-keep-test (`density: 0.42`), never modelled as geometry. Placement rules:
-1.9 / 2.6 unit column/row pitch, 0.95 margin from the wireframe edges, first
-row at y = 1.6, and each point sits **0.09 units outside its face** so it
+Every window in the city is ONE `THREE.Points` object — a regular grid over
+each building's four side faces, thinned by a seeded keep-test, never
+modelled as geometry. Each point sits **0.09 units outside its face** so it
 cannot z-fight with the building fill (whose `polygonOffset` pushes the other
-way).
+way); margin from the wireframe edges is 0.95 and the first row is at y = 1.6.
 
-The progressive switch-on is data, not time: each surviving window carries a
-seeded activation frame in 60–380 (`aActivate` attribute) plus a seeded
-brightness in 0.72–1.0, and the shader compares `aActivate` against a
-`uFrame` uniform fed from `useCurrentFrame()`:
+`config.windows` drives two quite different looks from the same layer:
+
+| | v1 orbit | v2 descend |
+|---|---|---|
+| `progressive` | `false` — lit from frame 0 | `true` — lights up over the shot |
+| `density` | 0.82 | 0.42 |
+| `colSpacing` / `rowSpacing` | 2.4 / 3.0 | 1.9 / 2.6 |
+| `size` / `brightness` | 0.55 / 0.9 | 0.62 / 1.0 |
+
+**A sparse random subset of a grid reads as noise, not as windows.** The first
+attempt at v1 used `density: 0.34` and at orbit distance (~260 units) the
+result was isolated specks. Near-filling the grid is what makes the rows and
+columns legible once each window is barely a pixel across.
+
+The progressive switch-on is data, not time: each window carries a seeded
+activation frame in 60–380 (`aActivate`) plus a seeded brightness in
+0.72–1.0, and the shader compares `aActivate` against a `uFrame` uniform fed
+from `useCurrentFrame()`:
 
 ```glsl
 vAlpha = smoothstep(aActivate, aActivate + uFade, uFrame);
 ```
+
+When `progressive` is false the activation is written as −1000, so the
+smoothstep has already saturated on the first frame and the layer is pure
+surface detail. Keeping the switch-on exclusive to v2 is what keeps the two
+versions distinct now that both carry windows.
 
 `transparent: true, depthWrite: false, depthTest: true` — so a window behind
 a nearer building is hidden by that building's fill exactly like the
@@ -239,7 +256,7 @@ miss.
 
 ### Colour management
 
-`new THREE.Color('#4FFFD4')` converts sRGB → linear working space, because
+`new THREE.Color('#4FE3FF')` converts sRGB → linear working space, because
 `THREE.ColorManagement` is on by default. Every raw rgb triple handed to a
 shader uniform or a vertex-colour buffer must come from a `THREE.Color` —
 never from parsing the hex by hand — or the whole scene comes out too bright.
@@ -361,9 +378,9 @@ Mint bloom settings:
 | `mipmapBlur` | `true` |
 | `radius` | 0.82 |
 
-`luminanceThreshold` is the setting to get right. The background is `#010D0A`,
+`luminanceThreshold` is the setting to get right. The background is `#030B14`,
 whose linear luminance is ~0.004 — far below 0.24, so it contributes nothing.
-The building lines (`#4FFFD4`, linear luminance ~0.85) are well above it. The
+The building lines (`#4FE3FF`, linear luminance ~0.7) are well above it. The
 ground dots sit deliberately *below* the threshold so the grid stays crisp and
 only the wireframe glows.
 

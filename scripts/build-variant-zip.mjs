@@ -33,38 +33,44 @@ const VARIANT_META = {
 		compositionId: 'WireCityMint',
 		title: 'Wire City — "mint"',
 		tagline:
-			'Glowing mint wireframes on near-black teal. The camera orbits the city ' +
-			'at tower height, covering about a third of a full orbit while drifting ' +
-			'slowly inward, with a slight handheld wobble on top.',
+			'Glowing aqua-cyan wireframes on deep navy, with lit window detail on ' +
+			'every building. The camera orbits the city at tower height, covering ' +
+			'about a third of a full orbit while drifting slowly inward, with a ' +
+			'slight handheld wobble on top.',
 		palette: [
-			['background', '#010D0A', 'near-black teal'],
-			['ground dot', '#145247', ''],
-			['ground bright', '#2E8F7A', 'nearer dots'],
-			['building line', '#4FFFD4', 'the wireframe edges'],
-			['building glow', '#A8FFE8', 'the brightest towers'],
-			['haze', '#0A3D33', 'the horizon glow'],
+			['background', '#030B14', 'near-black navy'],
+			['ground dot', '#10405E', ''],
+			['ground bright', '#2A87B0', 'nearer dots'],
+			['building line', '#4FE3FF', 'the wireframe edges'],
+			['building glow', '#BFF6FF', 'the brightest towers'],
+			['window lit', '#CFEEFF', 'always-lit window detail'],
+			['haze', '#0A3350', 'the horizon glow'],
 		],
 		cameraPath: 'orbit',
 		buildingMode: 'wireframe',
 		bloom: 'Bloom, intensity 1.55, luminanceThreshold 0.24',
+		windows: 'always lit from frame 0 — surface detail, not an event',
 	},
 	emerald: {
 		compositionId: 'WireCityEmerald',
 		title: 'Wire City — "emerald"',
 		tagline:
-			'Lit windows switching on across the shot while the camera descends ' +
-			'from high above the city to street level.',
+			'Electric-blue wireframes on midnight indigo, with bright cyan-white ' +
+			'windows switching on progressively across the shot while the camera ' +
+			'descends from high above the city to street level.',
 		palette: [
-			['background', '#020F04', 'near-black green'],
-			['ground dot', '#1A5C22', ''],
-			['ground bright', '#3FA84F', ''],
-			['building line', '#3FFF6A', 'the wireframe edges'],
-			['window lit', '#C4FF8F', 'the lit window points'],
-			['haze', '#0F4415', ''],
+			['background', '#010714', 'near-black indigo'],
+			['ground dot', '#113055', ''],
+			['ground bright', '#2A6FA8', ''],
+			['building line', '#2FA8FF', 'the wireframe edges'],
+			['building glow', '#8FD4FF', 'the brightest towers'],
+			['window lit', '#DCF6FF', 'the lit window points'],
+			['haze', '#06284A', ''],
 		],
 		cameraPath: 'descend',
 		buildingMode: 'windows',
 		bloom: 'Bloom, intensity 1.05, luminanceThreshold 0.28',
+		windows: 'switch on progressively across frames 60-380',
 	},
 	blueprint: {
 		compositionId: 'WireCityBlueprint',
@@ -83,6 +89,7 @@ const VARIANT_META = {
 		cameraPath: 'levelOrbit',
 		buildingMode: 'blueprint',
 		bloom: 'none — the Bloom pass is not mounted for this variant',
+		windows: 'none',
 	},
 };
 
@@ -223,6 +230,7 @@ ${meta.tagline}
 | **Camera path mode** | \`${meta.cameraPath}\` |
 | **Building render mode** | \`${meta.buildingMode}\` |
 | **Post-processing** | ${meta.bloom} |
+| **Lit windows** | ${meta.windows} |
 
 One-shot: the camera travels and does not reset, so the first and last frames
 differ by design. There is no audio, no text and no logo.

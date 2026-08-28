@@ -7,11 +7,17 @@
  * seeded keep-test, so no window is modelled as geometry and the whole layer
  * is a single draw call.
  *
- * Windows switch on progressively: each surviving window carries a seeded
- * activation frame spread across config.windows.onFrom..onTo, and the
- * fragment shader compares it against a uFrame uniform driven by
- * useCurrentFrame(). The city therefore lights up over the shot, identically
- * on every render — the activation pattern is data, not time.
+ * Two behaviours, chosen by `config.windows.progressive`:
+ *   - progressive (emerald): each window carries a seeded activation frame
+ *     spread across onFrom..onTo, so the city lights up over the shot. The
+ *     shader compares that attribute against a uFrame uniform driven by
+ *     useCurrentFrame() — the pattern is data, not time, so it is identical
+ *     on every render.
+ *   - non-progressive (mint): activation is pushed far below frame 0, so
+ *     every window is lit from the first frame and the layer reads as
+ *     surface detail on the wireframes rather than as an event. Keeping the
+ *     switch-on exclusive to emerald is what keeps the two versions
+ *     distinct now that both carry windows.
  *
  * Placement details that matter:
  *  - points sit 0.09 units OUTSIDE their face, so they cannot z-fight with
@@ -60,6 +66,7 @@ void main() {
 
 const FRAG = /* glsl */ `
 uniform vec3 uColor;
+uniform float uBrightness;
 
 varying float vAlpha;
 varying float vBright;
@@ -70,13 +77,15 @@ void main() {
   // Same guard as Ground.tsx: gl_PointCoord is unreliable at point size 1.
   vec2 d = gl_PointCoord - 0.5;
   if (vSizePx > 2.5 && dot(d, d) > 0.25) discard;
-  gl_FragColor = vec4(uColor * vBright, vAlpha);
+  gl_FragColor = vec4(uColor * vBright, vAlpha * uBrightness);
 }
 `;
 
-/** Horizontal / vertical pitch of the candidate window grid, world units. */
-const COL_SPACING = 1.9;
-const ROW_SPACING = 2.6;
+/**
+ * Activation value used when `progressive` is false — far enough below frame
+ * 0 that the shader's smoothstep has already saturated on the first frame.
+ */
+const ALWAYS_LIT = -1000;
 /** Keep-out from face edges so windows never touch the wireframe lines. */
 const MARGIN = 0.95;
 /** First row height — no windows at ground contact. */
@@ -96,7 +105,8 @@ const buildWindowBuffers = (
 	config: VariantConfig,
 	seed: string,
 ): WindowBuffers => {
-	const {onFrom, onTo, density} = config.windows;
+	const {onFrom, onTo, density, progressive, colSpacing, rowSpacing} =
+		config.windows;
 	const positions: number[] = [];
 	const activate: number[] = [];
 	const bright: number[] = [];
@@ -112,9 +122,9 @@ const buildWindowBuffers = (
 
 		faces.forEach((face, f) => {
 			const span = (face.alongW ? b.w : b.d) - MARGIN * 2;
-			const cols = Math.max(1, Math.floor(span / COL_SPACING) + 1);
+			const cols = Math.max(1, Math.floor(span / colSpacing) + 1);
 			const colStep = cols === 1 ? 0 : span / (cols - 1);
-			const rows = Math.floor((b.h - FIRST_ROW - MARGIN) / ROW_SPACING) + 1;
+			const rows = Math.floor((b.h - FIRST_ROW - MARGIN) / rowSpacing) + 1;
 			if (rows < 1) return;
 
 			for (let c = 0; c < cols; c++) {
@@ -124,13 +134,17 @@ const buildWindowBuffers = (
 					const key = `${seed}-win-${b.i}-${b.j}-${f}-${c}-${r}`;
 					if (random(`${key}-keep`) > density) continue;
 
-					const y = FIRST_ROW + r * ROW_SPACING;
+					const y = FIRST_ROW + r * rowSpacing;
 					positions.push(
 						face.alongW ? b.x + along : face.fixed,
 						y,
 						face.alongW ? face.fixed : b.z + along,
 					);
-					activate.push(onFrom + random(`${key}-on`) * (onTo - onFrom));
+					activate.push(
+						progressive
+							? onFrom + random(`${key}-on`) * (onTo - onFrom)
+							: ALWAYS_LIT,
+					);
 					bright.push(0.72 + random(`${key}-br`) * 0.28);
 				}
 			}
@@ -176,6 +190,7 @@ export const Windows: React.FC<{
 				uFrame: {value: 0},
 				uFade: {value: config.windows.fadeFrames},
 				uColor: {value: new THREE.Color(config.palette.windowLit)},
+				uBrightness: {value: config.windows.brightness},
 			},
 			transparent: true,
 			depthWrite: false,

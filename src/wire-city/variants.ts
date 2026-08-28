@@ -75,6 +75,14 @@ export type VariantConfig = {
 	lineOpacity: number;
 	windows: {
 		enabled: boolean;
+		/**
+		 * When true, each window has a seeded activation frame in
+		 * onFrom..onTo and the city lights up during the shot. When false
+		 * every window is lit from frame 0 and the layer is pure surface
+		 * detail. The progressive switch-on is the emerald version's
+		 * signature, so only it sets this.
+		 */
+		progressive: boolean;
 		/** Frame range across which windows switch on, inclusive. */
 		onFrom: number;
 		onTo: number;
@@ -84,6 +92,11 @@ export type VariantConfig = {
 		density: number;
 		/** Window point size in WORLD units (attenuated with distance). */
 		size: number;
+		/** Overall brightness multiplier for the window layer. */
+		brightness: number;
+		/** Pitch of the candidate window grid on each face, world units. */
+		colSpacing: number;
+		rowSpacing: number;
 	};
 	annotations: {
 		enabled: boolean;
@@ -113,16 +126,16 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 	/* ─────────────────────────── v1 — mint ─────────────────────────── */
 	mint: {
 		palette: {
-			background: '#010D0A',
-			groundDot: '#145247',
-			groundBright: '#2E8F7A',
-			buildingLine: '#4FFFD4',
-			buildingGlow: '#A8FFE8',
-			windowLit: '#A8FFE8',
-			annotation: '#2E8F7A',
-			haze: '#0A3D33',
-			buildingFill: '#03150F',
-			vignette: '#010D0A',
+			background: '#030B14',
+			groundDot: '#10405E',
+			groundBright: '#2A87B0',
+			buildingLine: '#4FE3FF',
+			buildingGlow: '#BFF6FF',
+			windowLit: '#CFEEFF',
+			annotation: '#2A87B0',
+			haze: '#0A3350',
+			buildingFill: '#051523',
+			vignette: '#030B14',
 		},
 		cameraPath: 'orbit',
 		buildingMode: 'wireframe',
@@ -130,12 +143,22 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 		heightRamp: true,
 		lineOpacity: 0.95,
 		windows: {
-			enabled: false,
+			// Surface detail, not an event: every window is lit from frame 0.
+			// A coarser grid than emerald's so the rows still read as windows
+			// at orbit distance rather than dissolving into speckle.
+			enabled: true,
+			progressive: false,
 			onFrom: 60,
 			onTo: 380,
 			fadeFrames: 8,
-			density: 0.5,
-			size: 0.62,
+			// Nearly filled: a sparse random subset of a grid reads as noise
+			// at orbit distance, not as windows. Keeping most of the grid is
+			// what makes the rows and columns legible.
+			density: 0.82,
+			size: 0.55,
+			brightness: 0.9,
+			colSpacing: 2.4,
+			rowSpacing: 3,
 		},
 		annotations: {enabled: false, count: 0, tickCount: 0, lineWidth: 1},
 		ground: {intensity: 1.9, dotSize: 1},
@@ -156,16 +179,16 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 	/* ────────────────────────── v2 — emerald ───────────────────────── */
 	emerald: {
 		palette: {
-			background: '#020F04',
-			groundDot: '#1A5C22',
-			groundBright: '#3FA84F',
-			buildingLine: '#3FFF6A',
-			buildingGlow: '#8CFFA4',
-			windowLit: '#C4FF8F',
-			annotation: '#3FA84F',
-			haze: '#0F4415',
-			buildingFill: '#04170A',
-			vignette: '#020F04',
+			background: '#010714',
+			groundDot: '#113055',
+			groundBright: '#2A6FA8',
+			buildingLine: '#2FA8FF',
+			buildingGlow: '#8FD4FF',
+			windowLit: '#DCF6FF',
+			annotation: '#2A6FA8',
+			haze: '#06284A',
+			buildingFill: '#030D1B',
+			vignette: '#010714',
 		},
 		cameraPath: 'descend',
 		buildingMode: 'windows',
@@ -174,11 +197,15 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 		lineOpacity: 0.9,
 		windows: {
 			enabled: true,
+			progressive: true,
 			onFrom: 60,
 			onTo: 380,
 			fadeFrames: 9,
 			density: 0.42,
 			size: 0.62,
+			brightness: 1,
+			colSpacing: 1.9,
+			rowSpacing: 2.6,
 		},
 		annotations: {enabled: false, count: 0, tickCount: 0, lineWidth: 1},
 		ground: {intensity: 1.9, dotSize: 1},
@@ -217,11 +244,15 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
 		lineOpacity: 1,
 		windows: {
 			enabled: false,
+			progressive: false,
 			onFrom: 60,
 			onTo: 380,
 			fadeFrames: 8,
 			density: 0.5,
 			size: 0.62,
+			brightness: 1,
+			colSpacing: 1.9,
+			rowSpacing: 2.6,
 		},
 		annotations: {enabled: true, count: 25, tickCount: 46, lineWidth: 0.9},
 		ground: {intensity: 1, dotSize: 0.95},
