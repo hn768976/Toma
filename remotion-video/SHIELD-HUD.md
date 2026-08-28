@@ -6,7 +6,7 @@ and one variant table.
 | Composition | Version | Glyph | Panels | Sweep |
 | --- | --- | --- | --- | --- |
 | `ShieldHudBlue` | v1 "blue" | shield, solid | medium, steady | smooth, 2 circuits |
-| `ShieldHudGreen` | v2 "green" | crest shield + inner keyhole, solid | high, active | smooth, 3 circuits |
+| `ShieldHudGreen` | v2 "green" | guard shield + inner keyhole, solid | high, active | smooth, 3 circuits |
 | `ShieldHudBreach` | v3 "breach" | shield, fractured | high, failing | stutter, 2 circuits |
 
 All three are 3840x2160, 330 frames at 30fps (11.0s), and loop seamlessly.

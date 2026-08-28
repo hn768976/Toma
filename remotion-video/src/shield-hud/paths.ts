@@ -243,52 +243,62 @@ export const keyholeOutline = (height: number): Point[] => {
 };
 
 /**
- * Crest shield: an arched top rising to a crest between wide shoulders, a
- * full-bodied waist and a broad rounded base. Deliberately a different
- * silhouette from `shieldOutline` — that one is flat across the top and
- * tapers to a point, this one curves at both ends.
+ * Guard shield: flat across the top between generously rounded shoulders,
+ * sides converging steadily from their widest point at the very top, then a
+ * long taper to a narrow tip — the shape a security badge takes.
+ *
+ * Close cousin to `shieldOutline`, and deliberately so, but wider across a
+ * flatter top, with straight sides rather than bulging flanks and a much
+ * longer, sharper taper.
  */
-export const crestShieldOutline = (height: number): Point[] => {
+export const guardShieldOutline = (height: number): Point[] => {
   const hh = height / 2;
-  const width = height * 0.86;
+  const width = height * 0.84;
   const hw = width / 2;
-  const shoulder = -hh + height * 0.11;
+  const corner = width * 0.11;
 
-  const start: Point = { x: -hw, y: shoulder };
+  const start: Point = { x: -hw + corner, y: -hh };
   const cmds: Cmd[] = [
-    // The crest: one arc across the top, peaking level with the frame's top
-    // edge and dropping to the shoulders on either side.
+    { kind: "line", to: { x: hw - corner, y: -hh } },
+    // Rounded shoulder, a fuller radius than v1's clipped corner.
     {
       kind: "cubic",
-      c1: { x: -hw * 0.46, y: -hh - height * 0.035 },
-      c2: { x: hw * 0.46, y: -hh - height * 0.035 },
-      to: { x: hw, y: shoulder },
+      c1: { x: hw - corner * 0.42, y: -hh },
+      c2: { x: hw, y: -hh + corner * 0.42 },
+      to: { x: hw, y: -hh + corner },
     },
-    // Right flank: full through the waist, then drawing in to the base.
+    // The side: no outward bulge — it narrows from the shoulder downward,
+    // gently at first and then harder through the waist.
     {
       kind: "cubic",
-      c1: { x: hw, y: -hh + height * 0.4 },
-      c2: { x: hw * 0.97, y: hh * 0.44 },
-      to: { x: hw * 0.6, y: hh * 0.78 },
+      c1: { x: hw * 0.995, y: -hh + height * 0.3 },
+      c2: { x: hw * 0.93, y: -hh + height * 0.56 },
+      to: { x: hw * 0.56, y: hh * 0.54 },
     },
-    // A broad rounded base rather than a point.
+    // The long taper down to a narrow, barely rounded tip.
     {
       kind: "cubic",
-      c1: { x: hw * 0.41, y: hh * 0.95 },
-      c2: { x: hw * 0.19, y: hh },
+      c1: { x: hw * 0.33, y: hh * 0.85 },
+      c2: { x: hw * 0.1, y: hh * 0.985 },
       to: { x: 0, y: hh },
     },
     {
       kind: "cubic",
-      c1: { x: -hw * 0.19, y: hh },
-      c2: { x: -hw * 0.41, y: hh * 0.95 },
-      to: { x: -hw * 0.6, y: hh * 0.78 },
+      c1: { x: -hw * 0.1, y: hh * 0.985 },
+      c2: { x: -hw * 0.33, y: hh * 0.85 },
+      to: { x: -hw * 0.56, y: hh * 0.54 },
     },
-    // Left flank, mirrored.
+    // Left side, mirrored.
     {
       kind: "cubic",
-      c1: { x: -hw * 0.97, y: hh * 0.44 },
-      c2: { x: -hw, y: -hh + height * 0.4 },
+      c1: { x: -hw * 0.93, y: -hh + height * 0.56 },
+      c2: { x: -hw * 0.995, y: -hh + height * 0.3 },
+      to: { x: -hw, y: -hh + corner },
+    },
+    {
+      kind: "cubic",
+      c1: { x: -hw, y: -hh + corner * 0.42 },
+      c2: { x: -hw + corner * 0.42, y: -hh },
       to: start,
     },
   ];

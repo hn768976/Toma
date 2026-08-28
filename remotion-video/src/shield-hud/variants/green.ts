@@ -1,11 +1,11 @@
-import { crestShieldOutline, keyholeOutline } from "../paths";
+import { guardShieldOutline, keyholeOutline } from "../paths";
 import { HIGH_DENSITY, type Variant } from "./types";
 
 /**
- * v2 "green": a shield again, but a crest shield — arched across the top,
- * full through the waist, broad and round at the base, where v1's is flat on
- * top and tapers to a point. Inside it sits the same keyhole at icon size,
- * lit but never swept. Amber accents, four busy columns, three circuits.
+ * v2 "green": a guard shield — flat across a wide top with rounded
+ * shoulders, straight sides converging into a long taper to a narrow tip.
+ * Inside it sits the same keyhole at icon size, lit but never swept. Amber
+ * accents, four busy columns, three circuits.
  */
 export const GREEN: Variant = {
   palette: {
@@ -20,10 +20,10 @@ export const GREEN: Variant = {
     tickPale: "#8AD4A0",
   },
   glyph: {
-    outline: crestShieldOutline,
+    outline: guardShieldOutline,
     heightRatio: 0.45,
     integrity: "solid",
-    inner: { outline: keyholeOutline, heightRatio: 0.18, offsetYRatio: -0.012 },
+    inner: { outline: keyholeOutline, heightRatio: 0.15, offsetYRatio: -0.022 },
   },
   panelDensity: HIGH_DENSITY,
   panelBehaviour: "active",

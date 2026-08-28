@@ -33,11 +33,12 @@ const VARIANTS = [
     constant: "GREEN",
     composition: "ShieldHudGreen",
     output: "shield-green",
-    title: 'v2 "green" — crest shield with an inner keyhole, denser panels',
+    title: 'v2 "green" — guard shield with an inner keyhole, denser panels',
     description:
-      "A crest shield in near-black green — arched on top, broad at the base " +
-      "— carrying a small keyhole inside it, with amber accents, four busy " +
-      "readout columns, a scrolling log strip and a three-circuit sweep.",
+      "A guard shield in near-black green — flat across a wide top, tapering " +
+      "to a narrow tip — carrying a small keyhole inside it, with amber " +
+      "accents, four busy readout columns, a scrolling log strip and a " +
+      "three-circuit sweep.",
   },
   {
     key: "breach",
