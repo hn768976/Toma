@@ -35,6 +35,12 @@ export const ColourWash: React.FC<{stage: Stage}> = ({stage}) => {
     ctx.fillStyle = palette.washMain;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
+    if (stage.cfg.glitch.deepen > 0) {
+      ctx.globalAlpha = stage.cfg.glitch.deepen;
+      ctx.fillStyle = palette.washDeep;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    }
+
     // Striations drift downward against the upward text scroll. One full frame
     // height over exactly 300 frames, so the drift is loop-closed too.
     const drift = -(stage.f / 300) * HEIGHT;

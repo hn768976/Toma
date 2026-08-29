@@ -36,6 +36,8 @@ export type GlitchProfile = {
   washAlpha: [number, number];
   /** Striation texture strength at zero and full instability. */
   striation: [number, number];
+  /** How far the flood is pulled back toward the deep tone, 0..1. */
+  deepen: number;
   /** Banner shift in px at full instability. */
   bannerJitter: number;
 };
@@ -120,6 +122,7 @@ const denied: VariantConfig = {
     chromatic: 13,
     washAlpha: [0.44, 0.6],
     striation: [0.18, 0.42],
+    deepen: 0,
     bannerJitter: 6,
   },
   text: {
@@ -182,6 +185,10 @@ const granted: VariantConfig = {
     // red's intensity reads as toxic rather than as approval.
     washAlpha: [0.4, 0.55],
     striation: [0.14, 0.36],
+    // Green carries far more luminance than red at the same saturation, so the
+    // flood is pulled back toward the deep tone. Without this the approval
+    // colour reads as acid rather than as approval.
+    deepen: 0.32,
     bannerJitter: 6,
   },
   text: {
