@@ -76,8 +76,15 @@ export const TILE_INDICES = [-1, 0, 1] as const;
 
 export type Bucket = "far" | "mid" | "near";
 
+/**
+ * Where the shield sits, as a fraction of the frame: left of centre, and high
+ * enough to leave room for the main status word beneath it.
+ */
+export const SHIELD_ANCHOR_X = 0.44;
+export const SHIELD_ANCHOR_Y = 0.44;
+
 /** Local y of the shield — the centre of the focal band. */
-export const FOCAL_Y = toLocalY(FRAME_W * 0.44, FRAME_H * 0.47);
+export const FOCAL_Y = toLocalY(FRAME_W * SHIELD_ANCHOR_X, FRAME_H * SHIELD_ANCHOR_Y);
 /** Half-height of the in-focus band, in local units. */
 export const FOCAL_HALF = 300;
 

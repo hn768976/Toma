@@ -32,6 +32,8 @@ import {
   makeLayer,
   onScreen,
   resetLayer,
+  SHIELD_ANCHOR_X,
+  SHIELD_ANCHOR_Y,
   TILE_INDICES,
   TILE_W,
   toLocalX,
@@ -84,7 +86,11 @@ type WordSpec = {
   sx: number;
   sy: number;
   size: number;
-  /** Counter-clockwise degrees within the plane's local space. */
+  /**
+   * Counter-clockwise degrees within the plane's local space. Every instance
+   * uses 0, so all type lies flat on the plane in exactly the shield's
+   * perspective; the layout varies by position, size, depth and colour instead.
+   */
   rot: number;
   tone: "wordPrimary" | "wordAccent";
   focus: Bucket;
@@ -148,50 +154,52 @@ export const VARIANTS: Record<VariantName, Variant> = {
       card: "#145056",
     },
     words: [
+      // The main instance, seated directly beneath the shield.
       {
         text: "ACTIVE",
-        sx: 0.5,
-        sy: 0.2,
-        size: 168,
+        sx: 0.44,
+        sy: 0.72,
+        size: 176,
         rot: 0,
         tone: "wordPrimary",
         focus: "mid",
         breathPeriod: 300,
         breathPhase: 0,
-        alpha: 0.96,
+        alpha: 0.97,
       },
+      // Three more scattered across the frame at other depths and sizes.
       {
         text: "ACTIVE",
-        sx: 0.3,
-        sy: 0.53,
-        size: 132,
-        rot: 90,
+        sx: 0.16,
+        sy: 0.3,
+        size: 128,
+        rot: 0,
         tone: "wordPrimary",
-        focus: "near",
-        breathPeriod: 225,
-        breathPhase: 1.9,
-        alpha: 0.74,
-      },
-      {
-        text: "ACTIVE",
-        sx: 0.45,
-        sy: 0.79,
-        size: 126,
-        rot: -8,
-        tone: "wordPrimary",
-        focus: "mid",
+        focus: "far",
         breathPeriod: 450,
-        breathPhase: 3.4,
+        breathPhase: 1.9,
         alpha: 0.92,
       },
       {
         text: "ACTIVE",
-        sx: 0.665,
-        sy: 0.45,
-        size: 136,
-        rot: 90,
+        sx: 0.815,
+        sy: 0.6,
+        size: 140,
+        rot: 0,
+        tone: "wordPrimary",
+        focus: "near",
+        breathPeriod: 225,
+        breathPhase: 3.4,
+        alpha: 0.86,
+      },
+      {
+        text: "ACTIVE",
+        sx: 0.735,
+        sy: 0.135,
+        size: 104,
+        rot: 0,
         tone: "wordAccent",
-        focus: "far",
+        focus: "mid",
         breathPeriod: 180,
         breathPhase: 0.8,
         alpha: 0.95,
@@ -235,65 +243,68 @@ export const VARIANTS: Record<VariantName, Variant> = {
       card: "#3A1046",
     },
     words: [
+      // The main instance, seated directly beneath the shield.
       {
         text: "BREACH",
-        sx: 0.5,
-        sy: 0.19,
-        size: 178,
-        rot: -14,
+        sx: 0.44,
+        sy: 0.72,
+        size: 184,
+        rot: 0,
         tone: "wordPrimary",
         focus: "mid",
         breathPeriod: 300,
         breathPhase: 0,
-        alpha: 0.96,
+        alpha: 0.97,
       },
+      // Four more scattered wider and less evenly than the active layout,
+      // with one running off the right edge of the frame.
       {
         text: "DENIED",
-        sx: 0.275,
-        sy: 0.51,
-        size: 116,
-        rot: 90,
+        sx: 0.145,
+        sy: 0.325,
+        size: 130,
+        rot: 0,
         tone: "wordPrimary",
-        focus: "near",
+        focus: "far",
         breathPeriod: 225,
         breathPhase: 2.2,
-        alpha: 0.76,
+        alpha: 0.9,
       },
       {
         text: "LOCKED",
-        sx: 0.665,
-        sy: 0.43,
-        size: 150,
-        rot: 112,
+        sx: 0.785,
+        sy: 0.155,
+        size: 136,
+        rot: 0,
         tone: "wordAccent",
-        focus: "far",
+        focus: "near",
         breathPeriod: 180,
         breathPhase: 1.1,
-        alpha: 0.95,
+        alpha: 0.9,
       },
       {
         text: "BREACH",
-        sx: 0.93,
-        sy: 0.87,
-        size: 96,
-        rot: -32,
+        sx: 0.965,
+        sy: 0.85,
+        size: 116,
+        rot: 0,
         tone: "wordPrimary",
         focus: "mid",
         breathPeriod: 450,
         breathPhase: 4.1,
-        alpha: 0.9,
+        alpha: 0.93,
       },
       {
         text: "DENIED",
-        sx: 0.82,
-        sy: 0.145,
-        size: 124,
-        rot: 78,
+        sx: 0.185,
+        sy: 0.875,
+        size: 112,
+        rot: 0,
         tone: "wordPrimary",
         focus: "far",
         breathPeriod: 450,
         breathPhase: 5.2,
-        alpha: 0.92,
+        alpha: 0.88,
       },
     ],
     shieldMode: "solidInverted",
@@ -337,8 +348,6 @@ const SWEEP_LENGTH = 0.16;
 const GRAIN_TILES = 15;
 const GRAIN_TILE_PX = 160;
 
-const SHIELD_ANCHOR_X = 0.44;
-const SHIELD_ANCHOR_Y = 0.47;
 /** ~30% of frame height, expressed in the plane's local units. */
 const SHIELD_SCALE = (FRAME_H * 0.3) / 1.2;
 
