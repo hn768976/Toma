@@ -1,7 +1,6 @@
 import React from "react";
 import {
   bucketWeights,
-  clipToPlane,
   depthAt,
   depthOpacity,
   setPlaneTransform,
@@ -57,8 +56,6 @@ export const Connector: React.FC<Props> = ({
         bucket: buckets[b].key,
         alpha,
         fn: (ctx, res) => {
-          ctx.setTransform(res, 0, 0, res, 0, 0);
-          clipToPlane(ctx, plane);
           setPlaneTransform(ctx, res, plane.m);
           ctx.strokeStyle = withAlpha(palette.diagram, 0.75);
           ctx.lineWidth = 1.4;

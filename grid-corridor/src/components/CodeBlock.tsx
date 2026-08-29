@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import {
   bucketWeights,
-  clipToPlane,
   depthAt,
   depthOpacity,
   setPlaneTransform,
@@ -10,7 +9,7 @@ import {
 } from "../geometry";
 import { driftedPosition, type BlockSpec, type CodeEvent } from "../layout";
 import { LAYER, useRegister, type DrawOp } from "../scene";
-import { buildCodeBlockSprite, buildEquationSprite } from "../sprites";
+import { buildCodeBlockSprite, buildFormulaSprite } from "../sprites";
 import type { Bucket, Palette } from "../variants";
 
 type Props = {
@@ -28,10 +27,10 @@ type Props = {
 };
 
 /**
- * A dense rectangle of invented monospace text, or — in the equation text
- * layer — a fragment of invented notation. The sprite is laid out once and
- * blitted, because laying out multi-line text at 4K every frame is the one
- * thing that will not survive a render.
+ * A dense rectangle of invented monospace text, or a fragment of real
+ * scientific notation. The sprite is laid out once and blitted, because laying
+ * out multi-line text at 4K every frame is the one thing that will not survive
+ * a render.
  */
 export const CodeBlock: React.FC<Props> = ({
   spec,
@@ -54,9 +53,15 @@ export const CodeBlock: React.FC<Props> = ({
   );
 
   const sprite = useMemo(() => {
-    if (spec.kind === "equation") {
-      return buildEquationSprite(
-        { seed: spec.id, rows: spec.lineCount, fontSize: spec.fontSize * 1.5 },
+    if (spec.kind === "formula") {
+      return buildFormulaSprite(
+        {
+          seed: spec.id,
+          surfaceSeed: spec.surfaceSeed,
+          formulaIndex: spec.formulaIndex,
+          rows: spec.lineCount,
+          fontSize: spec.fontSize,
+        },
         palette,
       );
     }
@@ -89,7 +94,7 @@ export const CodeBlock: React.FC<Props> = ({
   for (const copy of tileCopies(plane, pos.u, pos.v, radius)) {
     const d = depthAt(plane, copy.x, copy.y);
     const weights = bucketWeights(d, buckets.length);
-    const base = depthOpacity(d, depthDimming) * 0.92;
+    const base = depthOpacity(d, depthDimming);
     for (let b = 0; b < buckets.length; b++) {
       const alpha = base * weights[b];
       if (alpha <= 0.004) continue;
@@ -98,8 +103,6 @@ export const CodeBlock: React.FC<Props> = ({
         bucket: buckets[b].key,
         alpha,
         fn: (ctx, res) => {
-          ctx.setTransform(res, 0, 0, res, 0, 0);
-          clipToPlane(ctx, plane);
           setPlaneTransform(ctx, res, plane.m);
           ctx.translate(copy.x, copy.y);
           ctx.rotate(spec.rotation);

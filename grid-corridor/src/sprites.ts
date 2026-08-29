@@ -1,8 +1,8 @@
 import {
   makeCodeLines,
-  makeEquationRow,
   makeWallLine,
-  type EqAtom,
+  pickFormula,
+  type MathNode,
 } from "./content";
 import { pick, rndInt, rndRange } from "./seed";
 import {
@@ -77,7 +77,7 @@ export const buildCodeBlockSprite = (
     const overridden = spec.overrides[i] !== undefined;
     const colour =
       overridden || bright > 0.9 ? palette.textPale : palette.textMain;
-    const alpha = overridden ? 1 : 0.45 + bright * 0.5;
+    const alpha = overridden ? 1 : 0.6 + bright * 0.4;
     ctx.fillStyle = withAlpha(colour, alpha);
     ctx.fillText(line, pad, pad + i * lh, w - pad * 2);
   }
@@ -85,150 +85,328 @@ export const buildCodeBlockSprite = (
 };
 
 /* ------------------------------------------------------------------ */
-/* Equation fragments. */
+/* Formula fragments.
+ *
+ * A small measure-then-draw layout pass. Every node reports its own width and
+ * how far it reaches above and below the baseline, and every parent lays its
+ * children out from those numbers — so subscripts, fraction bars and radicals
+ * cannot collide with each other or with the next row.
+ */
 
-const drawAtom = (
+const MATH_FONT = 'Georgia, "Times New Roman", serif';
+
+type Metrics = { w: number; above: number; below: number };
+
+const mathFont = (size: number, italic?: boolean) =>
+  `${italic ? "italic " : ""}${size}px ${MATH_FONT}`;
+
+/** Scale of a superscript or subscript relative to its base. */
+const SCRIPT = 0.62;
+
+const measure = (
   ctx: CanvasRenderingContext2D,
-  atom: EqAtom,
-  x: number,
-  baseline: number,
-  fs: number,
-  colour: string,
-): number => {
-  const charW = fs * 0.6;
-  ctx.fillStyle = colour;
-  ctx.strokeStyle = colour;
-  ctx.lineWidth = Math.max(1.2, fs * 0.06);
-  ctx.lineCap = "round";
-  switch (atom.kind) {
-    case "op": {
-      ctx.font = `${fs}px monospace`;
-      ctx.fillText(atom.text, x, baseline);
-      return charW * (atom.text.length + 1);
+  node: MathNode,
+  size: number,
+): Metrics => {
+  switch (node.t) {
+    case "run": {
+      ctx.font = mathFont(size, node.italic);
+      return {
+        w: ctx.measureText(node.text).width,
+        above: size * 0.74,
+        below: size * 0.24,
+      };
     }
-    case "sym": {
-      ctx.font = `italic ${fs}px serif`;
-      ctx.fillText(atom.text, x, baseline);
-      let adv = charW * 1.05;
-      if (atom.sub) {
-        ctx.font = `italic ${fs * 0.6}px serif`;
-        ctx.fillText(atom.sub, x + adv, baseline + fs * 0.18);
-        adv += charW * 0.6 * atom.sub.length;
+    case "row": {
+      let w = 0;
+      let above = 0;
+      let below = 0;
+      for (const item of node.items) {
+        const m = measure(ctx, item, size);
+        w += m.w;
+        above = Math.max(above, m.above);
+        below = Math.max(below, m.below);
       }
-      if (atom.sup) {
-        ctx.font = `${fs * 0.6}px serif`;
-        ctx.fillText(atom.sup, x + adv, baseline - fs * 0.5);
-        adv += charW * 0.55;
-      }
-      return adv + charW * 0.3;
+      return { w, above, below };
+    }
+    case "sup": {
+      const b = measure(ctx, node.base, size);
+      const s = measure(ctx, node.sup, size * SCRIPT);
+      const rise = size * 0.46;
+      return {
+        w: b.w + s.w + size * 0.04,
+        above: Math.max(b.above, rise + s.above),
+        below: b.below,
+      };
+    }
+    case "sub": {
+      const b = measure(ctx, node.base, size);
+      const s = measure(ctx, node.sub, size * SCRIPT);
+      const drop = size * 0.22;
+      return {
+        w: b.w + s.w + size * 0.04,
+        above: b.above,
+        below: Math.max(b.below, drop + s.below),
+      };
     }
     case "frac": {
-      const fsS = fs * 0.68;
-      ctx.font = `italic ${fsS}px serif`;
-      const wTop = ctx.measureText(atom.top).width;
-      const wBot = ctx.measureText(atom.bottom).width;
-      const w = Math.max(wTop, wBot);
-      ctx.fillText(atom.top, x + (w - wTop) / 2, baseline - fs * 0.32);
-      ctx.fillText(atom.bottom, x + (w - wBot) / 2, baseline + fs * 0.62);
-      ctx.beginPath();
-      ctx.moveTo(x, baseline + fs * 0.06);
-      ctx.lineTo(x + w, baseline + fs * 0.06);
-      ctx.stroke();
-      return w + charW * 0.6;
-    }
-    case "sum": {
-      // A drawn sigma, so the fragment never depends on the face's coverage.
-      const h = fs * 1.05;
-      const w = fs * 0.72;
-      const top = baseline - h * 0.72;
-      ctx.beginPath();
-      ctx.moveTo(x + w, top);
-      ctx.lineTo(x, top);
-      ctx.lineTo(x + w * 0.62, top + h / 2);
-      ctx.lineTo(x, top + h);
-      ctx.lineTo(x + w, top + h);
-      ctx.stroke();
-      return w + charW;
-    }
-    case "integral": {
-      const h = fs * 1.35;
-      const top = baseline - h * 0.78;
-      ctx.beginPath();
-      ctx.moveTo(x + fs * 0.34, top);
-      ctx.bezierCurveTo(
-        x + fs * 0.02,
-        top + h * 0.08,
-        x + fs * 0.42,
-        top + h * 0.42,
-        x + fs * 0.2,
-        top + h * 0.92,
-      );
-      ctx.stroke();
-      return fs * 0.62 + charW * 0.4;
+      const n = measure(ctx, node.num, size);
+      const d = measure(ctx, node.den, size);
+      const bar = size * 0.3;
+      return {
+        w: Math.max(n.w, d.w) + size * 0.34,
+        above: bar + size * 0.14 + n.below + n.above,
+        below: -bar + size * 0.34 + d.above + d.below,
+      };
     }
     case "sqrt": {
-      const fsS = fs * 0.82;
-      ctx.font = `italic ${fsS}px serif`;
-      const w = ctx.measureText(atom.text).width;
-      const h = fs * 0.95;
-      ctx.beginPath();
-      ctx.moveTo(x, baseline - h * 0.28);
-      ctx.lineTo(x + fs * 0.18, baseline + fs * 0.16);
-      ctx.lineTo(x + fs * 0.34, baseline - h * 0.78);
-      ctx.lineTo(x + fs * 0.34 + w + fs * 0.2, baseline - h * 0.78);
-      ctx.stroke();
-      ctx.fillText(atom.text, x + fs * 0.44, baseline);
-      return w + fs * 0.8;
+      const b = measure(ctx, node.body, size);
+      return {
+        w: b.w + size * 0.78,
+        above: b.above + size * 0.24,
+        below: b.below,
+      };
     }
     case "paren": {
-      const fsS = fs * 0.9;
-      ctx.font = `italic ${fsS}px serif`;
-      const text = `(${atom.text})`;
-      ctx.fillText(text, x, baseline);
-      return ctx.measureText(text).width + charW * 0.4;
+      const b = measure(ctx, node.body, size);
+      return {
+        w: b.w + size * 0.62,
+        above: b.above + size * 0.06,
+        below: b.below + size * 0.06,
+      };
+    }
+    case "glyph": {
+      if (node.kind === "sum")
+        return { w: size * 0.94, above: size * 0.76, below: size * 0.14 };
+      if (node.kind === "integral")
+        return { w: size * 0.66, above: size * 0.96, below: size * 0.36 };
+      if (node.kind === "arrow")
+        return { w: size * 1.5, above: size * 0.36, below: 0 };
+      return { w: size * 1.6, above: size * 0.5, below: size * 0.2 };
     }
     default:
-      return charW;
+      return { w: 0, above: 0, below: 0 };
   }
 };
 
-export type EquationSpec = {
+const strokeGlyph = (
+  ctx: CanvasRenderingContext2D,
+  kind: Extract<MathNode, { t: "glyph" }>["kind"],
+  x: number,
+  baseline: number,
+  size: number,
+): void => {
+  ctx.lineWidth = Math.max(1.3, size * 0.055);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  if (kind === "sum") {
+    const h = size * 0.9;
+    const w = size * 0.74;
+    const top = baseline - size * 0.76;
+    ctx.moveTo(x + w, top);
+    ctx.lineTo(x, top);
+    ctx.lineTo(x + w * 0.62, top + h / 2);
+    ctx.lineTo(x, top + h);
+    ctx.lineTo(x + w, top + h);
+  } else if (kind === "integral") {
+    const top = baseline - size * 0.92;
+    const h = size * 1.28;
+    ctx.moveTo(x + size * 0.5, top);
+    ctx.bezierCurveTo(
+      x + size * 0.06,
+      top + h * 0.08,
+      x + size * 0.6,
+      top + h * 0.44,
+      x + size * 0.16,
+      top + h,
+    );
+  } else if (kind === "arrow") {
+    const y = baseline - size * 0.22;
+    const w = size * 1.24;
+    ctx.moveTo(x + size * 0.14, y);
+    ctx.lineTo(x + w, y);
+    ctx.moveTo(x + w - size * 0.24, y - size * 0.16);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w - size * 0.24, y + size * 0.16);
+  } else {
+    // Equilibrium: forward arrow above, reverse arrow below.
+    const w = size * 1.32;
+    const top = baseline - size * 0.4;
+    const bottom = baseline - size * 0.02;
+    ctx.moveTo(x + size * 0.16, top);
+    ctx.lineTo(x + w, top);
+    ctx.lineTo(x + w - size * 0.22, top - size * 0.14);
+    ctx.moveTo(x + w, bottom);
+    ctx.lineTo(x + size * 0.16, bottom);
+    ctx.lineTo(x + size * 0.16 + size * 0.22, bottom + size * 0.14);
+  }
+  ctx.stroke();
+};
+
+const drawNode = (
+  ctx: CanvasRenderingContext2D,
+  node: MathNode,
+  x: number,
+  baseline: number,
+  size: number,
+): void => {
+  switch (node.t) {
+    case "run": {
+      ctx.font = mathFont(size, node.italic);
+      ctx.fillText(node.text, x, baseline);
+      break;
+    }
+    case "row": {
+      let cursor = x;
+      for (const item of node.items) {
+        drawNode(ctx, item, cursor, baseline, size);
+        cursor += measure(ctx, item, size).w;
+      }
+      break;
+    }
+    case "sup": {
+      const b = measure(ctx, node.base, size);
+      drawNode(ctx, node.base, x, baseline, size);
+      drawNode(
+        ctx,
+        node.sup,
+        x + b.w + size * 0.04,
+        baseline - size * 0.46,
+        size * SCRIPT,
+      );
+      break;
+    }
+    case "sub": {
+      const b = measure(ctx, node.base, size);
+      drawNode(ctx, node.base, x, baseline, size);
+      drawNode(
+        ctx,
+        node.sub,
+        x + b.w + size * 0.04,
+        baseline + size * 0.22,
+        size * SCRIPT,
+      );
+      break;
+    }
+    case "frac": {
+      const n = measure(ctx, node.num, size);
+      const d = measure(ctx, node.den, size);
+      const inner = Math.max(n.w, d.w);
+      const left = x + size * 0.17;
+      const barY = baseline - size * 0.3;
+      drawNode(
+        ctx,
+        node.num,
+        left + (inner - n.w) / 2,
+        barY - size * 0.14 - n.below,
+        size,
+      );
+      drawNode(
+        ctx,
+        node.den,
+        left + (inner - d.w) / 2,
+        barY + size * 0.34 + d.above,
+        size,
+      );
+      ctx.lineWidth = Math.max(1.1, size * 0.045);
+      ctx.beginPath();
+      ctx.moveTo(left, barY);
+      ctx.lineTo(left + inner, barY);
+      ctx.stroke();
+      break;
+    }
+    case "sqrt": {
+      const b = measure(ctx, node.body, size);
+      const top = baseline - b.above - size * 0.22;
+      const foot = baseline + b.below * 0.4;
+      ctx.lineWidth = Math.max(1.2, size * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(x, baseline - b.above * 0.42);
+      ctx.lineTo(x + size * 0.2, foot);
+      ctx.lineTo(x + size * 0.42, top);
+      ctx.lineTo(x + size * 0.62 + b.w, top);
+      ctx.stroke();
+      drawNode(ctx, node.body, x + size * 0.6, baseline, size);
+      break;
+    }
+    case "paren": {
+      const b = measure(ctx, node.body, size);
+      const open = node.kind === "()" ? "(" : "[";
+      const close = node.kind === "()" ? ")" : "]";
+      // Brackets grow with the body they enclose, but each still occupies
+      // exactly the slot `measure` reserved for it.
+      const bracketSize =
+        size * Math.min(2.2, Math.max(1, (b.above + b.below) / (size * 0.98)));
+      const slot = size * 0.31;
+      const drop = (bracketSize - size) * 0.28;
+      ctx.font = mathFont(bracketSize);
+      const bw = ctx.measureText(open).width;
+      ctx.fillText(open, x + (slot - bw) / 2, baseline + drop);
+      drawNode(ctx, node.body, x + slot, baseline, size);
+      ctx.font = mathFont(bracketSize);
+      ctx.fillText(close, x + slot + b.w + (slot - bw) / 2, baseline + drop);
+      break;
+    }
+    case "glyph":
+      strokeGlyph(ctx, node.kind, x, baseline, size);
+      break;
+    default:
+      break;
+  }
+};
+
+export type FormulaSpec = {
   seed: string;
+  /** Seed of the surface, so one surface never repeats a formula. */
+  surfaceSeed: string;
+  /** Where this fragment starts in the surface's run of formulas. */
+  formulaIndex: number;
   rows: number;
   fontSize: number;
 };
 
-export const buildEquationSprite = (
-  spec: EquationSpec,
+export const buildFormulaSprite = (
+  spec: FormulaSpec,
   palette: Palette,
 ): HTMLCanvasElement => {
-  const fs = spec.fontSize;
-  const rowH = Math.round(fs * 2.1);
-  const pad = Math.round(fs * 0.9);
-  // Two passes: measure on a scratch context, then draw at the real size.
+  const size = spec.fontSize;
+  const gap = size * 0.85;
+  const pad = Math.round(size * 0.7);
   const scratch = ctxOf(createCanvas(8, 8));
   scratch.textBaseline = "alphabetic";
-  const rows: { atoms: EqAtom[]; width: number }[] = [];
+
+  const rows = [];
   for (let r = 0; r < spec.rows; r++) {
-    const atoms = makeEquationRow(`${spec.seed}:row:${r}`);
-    let x = 0;
-    for (const a of atoms) x += drawAtom(scratch, a, x, 0, fs, "rgba(0,0,0,0)");
-    rows.push({ atoms, width: x });
+    const node = pickFormula(spec.surfaceSeed, spec.formulaIndex + r);
+    rows.push({ node, m: measure(scratch, node, size) });
   }
-  const w = Math.min(880, Math.max(...rows.map((r) => r.width)) + pad * 2);
-  const h = rows.length * rowH + pad * 2;
+
+  const w = Math.max(...rows.map((r) => r.m.w)) + pad * 2;
+  const h =
+    rows.reduce((acc, r) => acc + r.m.above + r.m.below, 0) +
+    gap * (rows.length - 1) +
+    pad * 2;
+
   const canvas = createCanvas(w, h);
   const ctx = ctxOf(canvas);
   ctx.textBaseline = "alphabetic";
+
+  let y = pad;
   for (let r = 0; r < rows.length; r++) {
+    const { node, m } = rows[r];
     const bright = rndRange(`${spec.seed}:b:${r}`, 0, 1);
-    const colour = bright > 0.82 ? palette.textPale : palette.textMain;
-    const alpha = 0.5 + bright * 0.45;
-    let x = pad;
-    const baseline = pad + r * rowH + rowH * 0.62;
-    for (const a of rows[r].atoms) {
-      x += drawAtom(ctx, a, x, baseline, fs, withAlpha(colour, alpha));
-    }
+    // Formulas carry the same pale as the diagrams, so they read in front of
+    // the surface rather than dissolving into the type around them.
+    const colour = bright > 0.35 ? palette.diagram : palette.textPale;
+    ctx.fillStyle = withAlpha(colour, 0.84 + bright * 0.16);
+    // A soft dark backing so a formula still reads when it floats over dense
+    // type rather than over open surface.
+    ctx.shadowColor = withAlpha(palette.bgDeep, 0.92);
+    ctx.shadowBlur = size * 0.75;
+    ctx.strokeStyle = ctx.fillStyle;
+    drawNode(ctx, node, pad, y + m.above, size);
+    y += m.above + m.below + gap;
   }
   return canvas;
 };

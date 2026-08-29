@@ -6,9 +6,9 @@ Remotion composition and driven entirely by the `VARIANTS` table in
 
 | Composition id | Variant | Structure | Camera | Diagrams | Type layer |
 | --- | --- | --- | --- | --- | --- |
-| `GridCorridorTeal` | `teal` | corridor | roll, `rollDirection: 1` | molecules | code blocks |
-| `GridCorridorAmber` | `amber` | corridor, mirrored planes | roll, `rollDirection: -1` | circuit schematics | code + equations |
-| `GridCorridorGreen` | `green` | wall | static, `rollDirection: 0` | molecules, larger and fewer | scrolling text wall |
+| `GridCorridorTeal` | `teal` | one tilted grid surface | roll, `rollDirection: 1` | molecules | code blocks + formulas |
+| `GridCorridorAmber` | `amber` | the same surface, mirrored | roll, `rollDirection: -1` | molecules | formulas + code blocks |
+| `GridCorridorGreen` | `green` | flat grid over a scrolling text wall | static, `rollDirection: 0` | molecules, larger and fewer | scrolling wall + formulas |
 
 All three are 3840x2160, 360 frames at 30fps (12.0s), and loop seamlessly:
 frame 0 and frame 360 are pixel-identical.
@@ -20,14 +20,21 @@ frame 0 and frame 360 are pixel-identical.
 - Every value is a pure function of `useCurrentFrame()`, so renders are
   deterministic. All randomness comes from Remotion's `random()` with stable
   string seeds.
-- The corridor is faked: three or four planes each get their own
-  `ctx.setTransform()` rotation and shear, clipped to triangles between the
-  frame corners and a shared vanishing anchor. The seams between them are the
-  corners of the space.
+- Each version is one continuous surface filling the frame: a single plane
+  with its own `ctx.setTransform()` rotation and shear. Parallel lines stay
+  parallel — it is a tilt, not a projection. v2 is v1 with the rotation, the
+  shear, the roll and the drift all negated.
+- The formulas are real: standard relations from chemistry, physics and
+  mathematics, held as expression trees and laid out by a measure-then-draw
+  pass, so subscripts, fraction bars and radicals cannot collide.
+- Nothing overlaps. Code blocks, formula fragments and diagram glyphs are
+  measured, sorted largest-first and placed by seeded rejection sampling with
+  a rectangle separation test. `node tools/check-layout.ts` (see below) reports
+  the packing.
 - Depth of field uses three offscreen buffers (near / mid / far), each blurred
   once at composite time. Elements are spread across buffers by weight so they
   cross-dissolve through the focal band instead of popping.
-- Code blocks, equation fragments, diagram glyphs and the text wall are each
+- Code blocks, formula fragments, diagram glyphs and the text wall are each
   rendered once to a small offscreen canvas and blitted.
 
 ## Render
@@ -43,6 +50,17 @@ npx remotion render GridCorridorGreen out/corridor-green-preview.mp4 --codec=h26
 # Full 4K
 npx remotion render GridCorridorTeal out/corridor-teal.mp4 --codec=h264 --crf=12 --concurrency=8
 ```
+
+## Checking the packing
+
+Any change to a population count in `src/variants.ts` should be checked:
+
+```
+node_modules/.bin/esbuild tools/check-layout.ts --bundle --platform=node --format=cjs --outfile=/tmp/check.cjs && node /tmp/check.cjs
+```
+
+It reports each surface's coverage and the number of overlapping pairs, and
+exits non-zero if anything overlaps.
 
 ## Packaging
 

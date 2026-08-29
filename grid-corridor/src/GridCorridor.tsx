@@ -1,9 +1,9 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { DURATION_IN_FRAMES, HEIGHT, WIDTH } from "./constants";
-import { buildPlanes, vanishPoint } from "./geometry";
+import { buildPlanes, depthAnchor } from "./geometry";
 import { useMonoFont } from "./fonts";
-import { buildLayout } from "./layout";
+import { buildLayout, gridDrift } from "./layout";
 import {
   createBuffer,
   paintOps,
@@ -12,7 +12,7 @@ import {
   type SceneApi,
   type SceneBuffer,
 } from "./scene";
-import { buildGrainTiles, buildHaloSprite, withAlpha } from "./sprites";
+import { buildGrainTiles, buildHaloSprite } from "./sprites";
 import { makeCodeLine } from "./content";
 import { rndRange } from "./seed";
 import { getVariant, type VariantName } from "./variants";
@@ -105,10 +105,7 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
     ctx.filter = "none";
 
     // Background wash, brightest around the vanishing anchor.
-    const anchor =
-      config.structure === "wall"
-        ? { x: WIDTH / 2, y: HEIGHT / 2 }
-        : vanishPoint(config.planeMirror);
+    const anchor = depthAnchor(config.structure, config.planeMirror);
     const bg = ctx.createRadialGradient(
       anchor.x,
       anchor.y,
@@ -145,38 +142,6 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
       ctx.drawImage(buffer.canvas, 0, 0, WIDTH, HEIGHT);
     }
     ctx.filter = "none";
-
-    // Soft creases where the planes meet, so the seams read as corners.
-    // Each crease fades out toward the vanishing anchor: the corners of the
-    // space should converge, not meet in a hard star.
-    if (config.structure === "corridor") {
-      ctx.save();
-      ctx.lineCap = "round";
-      for (const plane of planes) {
-        const [a, , v] = plane.poly;
-        const crease = (colour: string, peak: number) => {
-          const g = ctx.createLinearGradient(v.x, v.y, a.x, a.y);
-          g.addColorStop(0, withAlpha(colour, 0));
-          g.addColorStop(0.16, withAlpha(colour, peak * 0.4));
-          g.addColorStop(0.55, withAlpha(colour, peak));
-          g.addColorStop(1, withAlpha(colour, peak * 0.8));
-          return g;
-        };
-        ctx.beginPath();
-        ctx.moveTo(v.x, v.y);
-        ctx.lineTo(a.x, a.y);
-        ctx.filter = "blur(34px)";
-        ctx.strokeStyle = crease(palette.bgDeep, 0.72);
-        ctx.lineWidth = 62;
-        ctx.stroke();
-        ctx.filter = "blur(4px)";
-        ctx.strokeStyle = crease(palette.structureDim, 0.4);
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-      }
-      ctx.restore();
-      ctx.filter = "none";
-    }
 
     // Moderate bloom, from the buffer only the bright elements drew into.
     const glow = buffers.get(config.glow.key);
@@ -240,19 +205,24 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
             frame={frame}
             fontFamily={fontFamily}
           />
-        ) : (
-          planes.map((plane) => (
-            <GridPlane
-              key={plane.key}
-              plane={plane}
-              palette={palette}
-              buckets={config.buckets}
-              glow={config.glow}
-              frame={frame}
-              rollDirection={camera.rollDirection}
-            />
-          ))
-        )}
+        ) : null}
+
+        {planes.map((plane) => (
+          <GridPlane
+            key={plane.key}
+            plane={plane}
+            palette={palette}
+            buckets={config.buckets}
+            glow={config.glow}
+            flat={config.structure === "wall"}
+            drift={gridDrift(
+              plane,
+              frame,
+              camera.rollDirection,
+              config.structure,
+            )}
+          />
+        ))}
 
         {layout.connectors.map((spec) => (
           <Connector

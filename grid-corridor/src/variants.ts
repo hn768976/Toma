@@ -4,16 +4,25 @@
  * literal, a diagram-set name, a structure mode or a roll direction.
  */
 
+import { WALL_ROTATION_DEG } from "./constants";
+
 export type VariantName = "teal" | "amber" | "green";
 
-/** "corridor" = tilted grid planes. "wall" = one flat scrolling text surface. */
-export type StructureMode = "corridor" | "wall";
+/**
+ * "plane" = one continuous tilted grid surface filling the frame.
+ * "wall" = the same, flat, with a scrolling mass of monospace behind the grid.
+ */
+export type StructureMode = "plane" | "wall";
 
 /** "roll" = the composite rotates on a sine. "static" = the camera holds. */
 export type CameraMode = "roll" | "static";
 
-/** What the type layer is made of. */
-export type TextLayerMode = "blocks" | "equations" | "wall";
+/**
+ * "blocks" = discrete code blocks and formula fragments scattered on the
+ * surface. "wall" = one continuous scrolling text mass, with formula
+ * fragments floating in front of it.
+ */
+export type TextLayerMode = "blocks" | "wall";
 
 /** Which vocabulary the small technical drawings are pulled from. */
 export type DiagramSet = "molecules" | "circuits";
@@ -57,8 +66,14 @@ export type PlaneSpec = {
   rot: number;
   /** Horizontal shear of the plane's local axes. */
   shear: number;
-  /** Relative brightness of this plane's grid, so surfaces separate. */
+  /** Relative brightness of this plane's grid. */
   tone: number;
+  /**
+   * "drift" wraps content on the distance the drift covers in one loop.
+   * "frame" gives a static scene one tile the size of the frame, so nothing
+   * on it ever repeats.
+   */
+  tile: "drift" | "frame";
 };
 
 export type VariantConfig = {
@@ -100,16 +115,27 @@ export type VariantConfig = {
   };
 };
 
-/** Plane angles for the corridor. v2 receives these with planeMirror -1. */
-const CORRIDOR_PLANES: PlaneSpec[] = [
-  { key: "ceiling", rot: -0.15, shear: 0.5, tone: 0.8 },
-  { key: "right", rot: 0.4, shear: -0.64, tone: 1.0 },
-  { key: "floor", rot: 0.13, shear: -0.46, tone: 1.08 },
-  { key: "left", rot: -0.37, shear: 0.62, tone: 0.86 },
+/**
+ * One surface, filling the frame. v2 receives it with planeMirror -1, which
+ * negates both the rotation and the shear.
+ */
+const TILTED_SURFACE: PlaneSpec[] = [
+  { key: "surface", rot: -0.16, shear: 0.3, tone: 1, tile: "drift" },
+];
+
+/** The flat surface the text wall and its grid share. */
+const FLAT_SURFACE: PlaneSpec[] = [
+  {
+    key: "wall",
+    rot: (WALL_ROTATION_DEG * Math.PI) / 180,
+    shear: 0,
+    tone: 0.9,
+    tile: "frame",
+  },
 ];
 
 /** Three-way depth-of-field: far and near blur hard, the middle band is sharp. */
-const CORRIDOR_BUCKETS: Bucket[] = [
+const SURFACE_BUCKETS: Bucket[] = [
   { key: "far", blur: 22, res: 0.5 },
   { key: "mid", blur: 2, res: 1 },
   { key: "near", blur: 26, res: 0.5 },
@@ -137,7 +163,7 @@ export const TEAL_VARIANT: VariantConfig = {
     nodeAccent: "#5FE8E8",
     accent: "#E8455F",
   },
-  structure: "corridor",
+  structure: "plane",
   diagrams: "molecules",
   textLayer: "blocks",
   camera: {
@@ -147,12 +173,12 @@ export const TEAL_VARIANT: VariantConfig = {
     wanderPx: 0,
   },
   planeMirror: 1,
-  planes: CORRIDOR_PLANES,
-  buckets: CORRIDOR_BUCKETS,
+  planes: TILTED_SURFACE,
+  buckets: SURFACE_BUCKETS,
   glow: GLOW_BUCKET,
   diagramScale: 1,
   depthDimming: 1,
-  perPlane: { dots: 78, glyphs: 14, codeBlocks: 17, equations: 0 },
+  perPlane: { dots: 168, glyphs: 30, codeBlocks: 20, equations: 9 },
 };
 /* @end:teal */
 
@@ -170,9 +196,9 @@ export const AMBER_VARIANT: VariantConfig = {
     nodeAccent: "#FFC44F",
     accent: "#3FC4E8",
   },
-  structure: "corridor",
-  diagrams: "circuits",
-  textLayer: "equations",
+  structure: "plane",
+  diagrams: "molecules",
+  textLayer: "blocks",
   camera: {
     mode: "roll",
     rollDirection: -1,
@@ -180,12 +206,12 @@ export const AMBER_VARIANT: VariantConfig = {
     wanderPx: 0,
   },
   planeMirror: -1,
-  planes: CORRIDOR_PLANES,
-  buckets: CORRIDOR_BUCKETS,
+  planes: TILTED_SURFACE,
+  buckets: SURFACE_BUCKETS,
   glow: GLOW_BUCKET,
   diagramScale: 1,
   depthDimming: 1,
-  perPlane: { dots: 78, glyphs: 14, codeBlocks: 8, equations: 9 },
+  perPlane: { dots: 168, glyphs: 32, codeBlocks: 15, equations: 15 },
 };
 /* @end:amber */
 
@@ -213,12 +239,12 @@ export const GREEN_VARIANT: VariantConfig = {
     wanderPx: 8,
   },
   planeMirror: 1,
-  planes: [],
+  planes: FLAT_SURFACE,
   buckets: WALL_BUCKETS,
   glow: GLOW_BUCKET,
   diagramScale: 2,
   depthDimming: 0.22,
-  perPlane: { dots: 174, glyphs: 15, codeBlocks: 0, equations: 0 },
+  perPlane: { dots: 214, glyphs: 26, codeBlocks: 0, equations: 18 },
 };
 /* @end:green */
 

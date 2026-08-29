@@ -1,4 +1,4 @@
-import { pick, rndInt, rndRange } from "./seed";
+import { pick, rnd, rndInt, rndRange } from "./seed";
 
 /**
  * Every string in the piece is invented here. Nothing is quoted from a real
@@ -205,86 +205,242 @@ export const makeCodeLine = (seed: string, indent: number): string =>
   `const ${pick(seed + "x", IDENT)} = ${pick(seed + "y", FN)}(${num(seed + "z")});`;
 
 /* ------------------------------------------------------------------ */
-/* Equation fragments — structurally mathematical rather than programmatic. */
+/* Formulas. Unlike the code, these are real: standard relations from
+   chemistry, physics and mathematics, laid out as expression trees so the
+   renderer can measure them and nothing ever overlaps. */
 
-const VAR = [
-  "x",
-  "y",
-  "n",
-  "k",
-  "t",
-  "u",
-  "v",
-  "p",
-  "q",
-  "r",
-  "s",
-  "m",
-] as const;
-const SUB = ["i", "j", "k", "0", "1", "n", "t", "ij"] as const;
-const OP = ["+", "-", "·", "−"] as const;
+export type MathNode =
+  | { t: "run"; text: string; italic?: boolean }
+  | { t: "row"; items: MathNode[] }
+  | { t: "sup"; base: MathNode; sup: MathNode }
+  | { t: "sub"; base: MathNode; sub: MathNode }
+  | { t: "frac"; num: MathNode; den: MathNode }
+  | { t: "sqrt"; body: MathNode }
+  | { t: "paren"; body: MathNode; kind: "()" | "[]" }
+  | { t: "glyph"; kind: "sum" | "integral" | "arrow" | "equilibrium" };
 
-export type EqAtom =
-  | { kind: "sym"; text: string; sub?: string; sup?: string }
-  | { kind: "op"; text: string }
-  | { kind: "frac"; top: string; bottom: string }
-  | { kind: "sum" }
-  | { kind: "integral" }
-  | { kind: "sqrt"; text: string }
-  | { kind: "paren"; text: string };
-
-const symbol = (seed: string): EqAtom => ({
-  kind: "sym",
-  text: pick(seed + "v", VAR),
-  sub: rndRange(seed + "s", 0, 1) < 0.6 ? pick(seed + "ss", SUB) : undefined,
-  sup:
-    rndRange(seed + "p", 0, 1) < 0.25
-      ? String(rndInt(seed + "pp", 2, 4))
-      : undefined,
+const t = (text: string): MathNode => ({ t: "run", text });
+const v = (text: string): MathNode => ({ t: "run", text, italic: true });
+const row = (...items: MathNode[]): MathNode => ({ t: "row", items });
+const sup = (base: MathNode, s: MathNode): MathNode => ({
+  t: "sup",
+  base,
+  sup: s,
+});
+const sub = (base: MathNode, s: MathNode): MathNode => ({
+  t: "sub",
+  base,
+  sub: s,
+});
+const frac = (num: MathNode, den: MathNode): MathNode => ({
+  t: "frac",
+  num,
+  den,
+});
+const sqrt = (body: MathNode): MathNode => ({ t: "sqrt", body });
+const paren = (body: MathNode, kind: "()" | "[]" = "()"): MathNode => ({
+  t: "paren",
+  body,
+  kind,
+});
+const glyph = (
+  kind: "sum" | "integral" | "arrow" | "equilibrium",
+): MathNode => ({
+  t: "glyph",
+  kind,
 });
 
-/** One short row of notation. */
-export const makeEquationRow = (seed: string): EqAtom[] => {
-  const atoms: EqAtom[] = [];
-  const lead = rndRange(seed + "l", 0, 1);
-  if (lead < 0.22) atoms.push({ kind: "sum" });
-  else if (lead < 0.38) atoms.push({ kind: "integral" });
+/** Two squared digits and a bracketed species come up often enough to name. */
+const sq = (base: MathNode): MathNode => sup(base, t("2"));
+const conc = (text: string): MathNode => paren(t(text), "[]");
 
-  const n = rndInt(seed + "n", 2, 5);
-  for (let i = 0; i < n; i++) {
-    const s = `${seed}:${i}`;
-    const roll = rndRange(s, 0, 1);
-    if (roll < 0.18) {
-      atoms.push({
-        kind: "frac",
-        top: pick(s + "a", VAR) + pick(s + "b", SUB),
-        bottom: pick(s + "c", VAR) + " " + pick(s + "d", OP) + " 1",
-      });
-    } else if (roll < 0.28) {
-      atoms.push({
-        kind: "sqrt",
-        text: pick(s + "e", VAR) + pick(s + "f", SUB),
-      });
-    } else if (roll < 0.42) {
-      atoms.push({
-        kind: "paren",
-        text:
-          pick(s + "g", VAR) +
-          " " +
-          pick(s + "h", OP) +
-          " " +
-          pick(s + "i", VAR),
-      });
-    } else {
-      atoms.push(symbol(s));
+const FORMULAS: MathNode[] = [
+  row(v("E"), t(" = "), v("m"), sq(v("c"))),
+  row(v("P"), v("V"), t(" = "), v("n"), v("R"), v("T")),
+  row(
+    t("Δ"),
+    v("G"),
+    t(" = "),
+    t("Δ"),
+    v("H"),
+    t(" − "),
+    v("T"),
+    t("Δ"),
+    v("S"),
+  ),
+  row(t("pH = −log"), conc("H⁺")),
+  row(
+    v("F"),
+    t(" = "),
+    v("G"),
+    frac(row(sub(v("m"), t("1")), sub(v("m"), t("2"))), sq(v("r"))),
+  ),
+  row(t("λ"), t(" = "), frac(v("h"), row(v("m"), v("v")))),
+  row(sub(v("E"), v("n")), t(" = − "), frac(t("13.6"), sq(v("n"))), t(" eV")),
+  row(sq(v("a")), t(" + "), sq(v("b")), t(" = "), sq(v("c"))),
+  row(sup(v("e"), row(v("i"), t("π"))), t(" + 1 = 0")),
+  row(
+    glyph("integral"),
+    sup(v("e"), row(t("−"), sq(v("x")))),
+    t(" d"),
+    v("x"),
+    t(" = "),
+    sqrt(t("π")),
+  ),
+  row(
+    sub(v("K"), t("eq")),
+    t(" = "),
+    frac(
+      row(sup(conc("C"), v("c")), sup(conc("D"), v("d"))),
+      row(sup(conc("A"), v("a")), sup(conc("B"), v("b"))),
+    ),
+  ),
+  row(
+    t("C"),
+    sub(t(""), t("6")),
+    t("H"),
+    sub(t(""), t("12")),
+    t("O"),
+    sub(t(""), t("6")),
+    t(" + 6 O"),
+    sub(t(""), t("2")),
+    glyph("arrow"),
+    t("6 CO"),
+    sub(t(""), t("2")),
+    t(" + 6 H"),
+    sub(t(""), t("2")),
+    t("O"),
+  ),
+  row(
+    t("N"),
+    sub(t(""), t("2")),
+    t(" + 3 H"),
+    sub(t(""), t("2")),
+    glyph("equilibrium"),
+    t("2 NH"),
+    sub(t(""), t("3")),
+  ),
+  row(
+    v("i"),
+    t("ħ "),
+    frac(row(t("∂"), t("Ψ")), row(t("∂"), v("t"))),
+    t(" = "),
+    v("Ĥ"),
+    t("Ψ"),
+  ),
+  row(t("∇ · "), v("E"), t(" = "), frac(t("ρ"), sub(t("ε"), t("0")))),
+  row(
+    v("s"),
+    t(" = "),
+    v("u"),
+    v("t"),
+    t(" + "),
+    frac(t("1"), t("2")),
+    v("a"),
+    sq(v("t")),
+  ),
+  row(v("v"), t(" = "), t("λ"), v("f")),
+  row(v("Q"), t(" = "), v("m"), v("c"), t("Δ"), v("T")),
+  row(
+    t("σ"),
+    t(" = "),
+    sqrt(
+      frac(
+        row(glyph("sum"), paren(row(sub(v("x"), v("i")), t(" − "), t("μ")))),
+        v("N"),
+      ),
+    ),
+  ),
+  row(v("c"), t(" = "), t("λν")),
+  row(v("n"), t(" = "), frac(v("m"), v("M"))),
+  row(t("Δ"), v("E"), t(" = "), v("h"), t("ν")),
+  row(v("F"), t(" = "), v("m"), v("a")),
+  row(v("p"), t(" = "), v("m"), v("v")),
+  row(v("A"), t(" = "), t("π"), sq(v("r"))),
+  row(sup(t("sin"), t("2")), t(" θ + "), sup(t("cos"), t("2")), t(" θ = 1")),
+  row(
+    v("k"),
+    t(" = "),
+    v("A"),
+    sup(v("e"), row(t("−"), sub(v("E"), t("a")), t("/"), v("R"), v("T"))),
+  ),
+  row(conc("H⁺"), conc("OH⁻"), t(" = "), sup(t("10"), t("−14"))),
+  row(v("V"), t(" = "), v("I"), v("R")),
+  row(t("ΔS = "), frac(sub(v("q"), t("rev")), v("T"))),
+];
+
+/**
+ * The nth formula of a surface's run. The seed picks a starting point and a
+ * stride coprime with the list length, so a surface walks the whole list
+ * before repeating one — the formulas are legible now, and two of the same on
+ * screen would read as a mistake.
+ */
+export const pickFormula = (seed: string, index: number): MathNode => {
+  const n = FORMULAS.length;
+  const offset = Math.floor(rnd(seed + ":offset") * n);
+  const start = Math.floor(rnd(seed + ":stride") * STRIDE_CANDIDATES.length);
+  let stride = 1;
+  for (let k = 0; k < STRIDE_CANDIDATES.length; k++) {
+    const candidate = STRIDE_CANDIDATES[(start + k) % STRIDE_CANDIDATES.length];
+    if (gcd(n, candidate) === 1) {
+      stride = candidate;
+      break;
     }
-    if (i < n - 1) atoms.push({ kind: "op", text: pick(s + "o", OP) });
   }
-  if (rndRange(seed + "eq", 0, 1) < 0.5) {
-    atoms.push({ kind: "op", text: "=" });
-    atoms.push(symbol(seed + "rhs"));
+  return FORMULAS[(offset + index * stride) % n];
+};
+
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/** Candidate strides; the first coprime with the list length is used. */
+const STRIDE_CANDIDATES = [7, 9, 11, 13, 17, 19, 23, 3, 1];
+
+/**
+ * Rough extent of a formula in multiples of its font size, without a canvas.
+ * The layout needs a size before the font has loaded; the renderer measures
+ * properly later, and this only has to be close enough to keep things apart.
+ */
+export const formulaExtent = (node: MathNode): { w: number; h: number } => {
+  switch (node.t) {
+    case "run":
+      return { w: node.text.length * 0.52, h: 1 };
+    case "row": {
+      let w = 0;
+      let h = 1;
+      for (const item of node.items) {
+        const e = formulaExtent(item);
+        w += e.w;
+        h = Math.max(h, e.h);
+      }
+      return { w, h };
+    }
+    case "sup":
+    case "sub": {
+      const base = formulaExtent(node.base);
+      const script = formulaExtent(node.t === "sup" ? node.sup : node.sub);
+      return { w: base.w + script.w * 0.62, h: base.h + 0.3 };
+    }
+    case "frac": {
+      const n = formulaExtent(node.num);
+      const d = formulaExtent(node.den);
+      return { w: Math.max(n.w, d.w) + 0.34, h: n.h + d.h + 0.3 };
+    }
+    case "sqrt": {
+      const b = formulaExtent(node.body);
+      return { w: b.w + 0.78, h: b.h + 0.25 };
+    }
+    case "paren": {
+      const b = formulaExtent(node.body);
+      return { w: b.w + 0.62, h: b.h + 0.1 };
+    }
+    case "glyph":
+      return {
+        w: node.kind === "arrow" || node.kind === "equilibrium" ? 1.6 : 0.9,
+        h: 1.3,
+      };
+    default:
+      return { w: 0, h: 1 };
   }
-  return atoms;
 };
 
 /* ------------------------------------------------------------------ */

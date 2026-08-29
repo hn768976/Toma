@@ -2,7 +2,6 @@ import React from "react";
 import { DURATION_IN_FRAMES } from "../constants";
 import {
   bucketWeights,
-  clipToPlane,
   depthAt,
   depthOpacity,
   setPlaneTransform,
@@ -74,8 +73,6 @@ export const NodeDot: React.FC<Props> = ({
     u: number,
     v: number,
   ) => {
-    ctx.setTransform(res, 0, 0, res, 0, 0);
-    clipToPlane(ctx, plane);
     setPlaneTransform(ctx, res, plane.m);
     if (spec.halo) {
       const a = ctx.globalAlpha;
@@ -109,8 +106,6 @@ export const NodeDot: React.FC<Props> = ({
       bucket: glow.key,
       alpha: base * 0.6,
       fn: (ctx, res) => {
-        ctx.setTransform(res, 0, 0, res, 0, 0);
-        clipToPlane(ctx, plane);
         setPlaneTransform(ctx, res, plane.m);
         const r = haloR * 1.3;
         ctx.drawImage(halo, copy.x - r, copy.y - r, r * 2, r * 2);

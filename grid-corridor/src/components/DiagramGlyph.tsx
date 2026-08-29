@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import {
   bucketWeights,
-  clipToPlane,
   depthAt,
   depthOpacity,
   setPlaneTransform,
@@ -68,8 +67,6 @@ export const DiagramGlyph: React.FC<Props> = ({
     v: number,
     scale: number,
   ) => {
-    ctx.setTransform(res, 0, 0, res, 0, 0);
-    clipToPlane(ctx, plane);
     setPlaneTransform(ctx, res, plane.m);
     ctx.translate(u, v);
     ctx.rotate(spec.rotation);

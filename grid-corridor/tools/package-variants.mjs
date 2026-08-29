@@ -26,9 +26,9 @@ const VARIANTS = [
     project: "grid-corridor-teal",
     output: "corridor-teal",
     blurb:
-      "A teal molecular corridor: four tilted grid planes meeting at soft " +
-      "seams, scattered with invented code blocks and molecular diagrams. " +
-      "The camera rolls clockwise and the contents drift up-left.",
+      "A teal data surface: one continuous tilted grid scattered with " +
+      "invented code blocks, real scientific formulas and molecular " +
+      "diagrams. The camera rolls clockwise and the contents drift up-left.",
   },
   {
     name: "amber",
@@ -36,10 +36,9 @@ const VARIANTS = [
     project: "grid-corridor-amber",
     output: "corridor-amber",
     blurb:
-      "The same corridor mirrored: the plane angles, the roll and the drift " +
-      "are all negated, so the corners fall on the opposite side of frame. " +
-      "Circuit schematics replace the molecules and half the type layer is " +
-      "mathematical notation.",
+      "The same surface mirrored: the tilt, the shear, the roll and the " +
+      "drift are all negated, so the whole space leans the other way. The " +
+      "type layer leans harder on formulas than on code.",
   },
   {
     name: "green",
@@ -47,9 +46,9 @@ const VARIANTS = [
     project: "grid-corridor-green",
     output: "corridor-green",
     blurb:
-      "No corridor and no grid: one flat wall of dense monospace scrolling " +
-      "steadily upward, with larger molecular diagrams and node dots floating " +
-      "softly in front of it. The camera holds.",
+      "A flat grid ruled over a wall of dense monospace scrolling steadily " +
+      "upward, with larger molecular diagrams, formulas and node dots " +
+      "floating softly in front of it. The camera holds.",
   },
 ];
 
@@ -82,6 +81,29 @@ const dropUnusedConsts = (header, names, usedIn) =>
     )
     .join("\n\n");
 
+/**
+ * Drops import specifiers the trimmed module no longer references, and the
+ * whole statement when nothing is left. Dropping a shared constant can orphan
+ * the import it needed, and the project typechecks with noUnusedLocals.
+ */
+const pruneImports = (source) =>
+  source.replace(
+    /^import \{([^}]*)\} from "([^"]+)";$/gm,
+    (statement, specifiers, from) => {
+      const body = source.replace(statement, "");
+      const kept = specifiers
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .filter((entry) =>
+          new RegExp(`\\b${entry.replace(/^type\s+/, "")}\\b`).test(body),
+        );
+      return kept.length === 0
+        ? ""
+        : `import { ${kept.join(", ")} } from "${from}";`;
+    },
+  );
+
 /** variants.ts with a single variant inlined and no registry. */
 const buildVariantsModule = (source, name) => {
   let header = source.slice(0, source.indexOf("/* @variant:teal */")).trimEnd();
@@ -94,15 +116,23 @@ const buildVariantsModule = (source, name) => {
   );
   header = dropUnusedConsts(
     header,
-    ["CORRIDOR_PLANES", "CORRIDOR_BUCKETS", "WALL_BUCKETS", "GLOW_BUCKET"],
+    [
+      "TILTED_SURFACE",
+      "FLAT_SURFACE",
+      "SURFACE_BUCKETS",
+      "WALL_BUCKETS",
+      "GLOW_BUCKET",
+    ],
     inlined,
   );
-  const narrowed = header
-    .replace(
-      /export type VariantName =[^;]+;/,
-      `export type VariantName = "${name}";`,
-    )
-    .trimEnd();
+  const narrowed = pruneImports(
+    header
+      .replace(
+        /export type VariantName =[^;]+;/,
+        `export type VariantName = "${name}";`,
+      )
+      .trimEnd(),
+  );
   return `${narrowed}
 
 /** This project ships one version. Its data is inlined here. */

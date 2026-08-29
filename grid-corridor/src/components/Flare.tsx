@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  clipToPlane,
-  setPlaneTransform,
-  tileCopies,
-  type Plane,
-} from "../geometry";
+import { setPlaneTransform, tileCopies, type Plane } from "../geometry";
 import { driftedPosition, type FlareSpec } from "../layout";
 import { LAYER, useRegister, type DrawOp } from "../scene";
 import type { Bucket, Palette } from "../variants";
@@ -45,8 +40,6 @@ export const Flare: React.FC<Props> = ({
         res: number,
         scale: number,
       ) => {
-        ctx.setTransform(res, 0, 0, res, 0, 0);
-        clipToPlane(ctx, plane);
         setPlaneTransform(ctx, res, plane.m);
         const s = r * scale;
         ctx.drawImage(halo, copy.x - s, copy.y - s, s * 2, s * 2);
