@@ -36,6 +36,8 @@ npx remotion render AccessGranted out/access-granted.mp4 --codec=h264 --crf=12 -
 
 `--concurrency` must not exceed the number of CPU cores available.
 
+1080p renders of both are committed under `previews/`.
+
 ## Deliverable zips
 
 ```bash
