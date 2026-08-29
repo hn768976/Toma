@@ -6,7 +6,7 @@
 // positioning subscripts, stroking a ring) on every frame for seventy glyphs
 // would dominate the render; this is the whole reason 4K stays affordable.
 
-import type { Notation, Palette, Variant } from "./variants";
+import type { Notation, Palette, Variant } from "./variant-types";
 import { layDiagram } from "./diagram";
 import { lay } from "./layout";
 

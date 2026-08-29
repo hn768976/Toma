@@ -6,7 +6,7 @@
 // identical whichever order Remotion's workers happen to visit frames in.
 
 import { random } from "remotion";
-import type { Notation, Variant } from "./variants";
+import type { Notation, Variant } from "./variant-types";
 
 export const DURATION_IN_FRAMES = 600;
 export const FPS = 30;

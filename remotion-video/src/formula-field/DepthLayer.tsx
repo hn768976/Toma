@@ -1,6 +1,6 @@
 import React from "react";
 import type { Instance } from "./field";
-import type { Variant } from "./variants";
+import type { Variant } from "./variant-types";
 import { EquationLine } from "./EquationLine";
 import { NotationGlyph } from "./NotationGlyph";
 import { useCanvasPass } from "./useCanvasPass";

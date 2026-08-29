@@ -6,7 +6,7 @@ import { BUFFER_BLUR, DURATION_IN_FRAMES, evaluate } from "./field";
 import { drawGrain } from "./grain";
 import { rgba } from "./color";
 import { useFinalCanvasPass } from "./useCanvasPass";
-import { VARIANTS, type VariantKey } from "./variants";
+import { getVariant, type VariantKey } from "./registry";
 
 export type FormulaFieldProps = {
   variant: VariantKey;
@@ -38,7 +38,7 @@ const createBuffer = (w: number, h: number) => {
 export const FormulaField: React.FC<FormulaFieldProps> = ({ variant: variantKey }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
-  const variant = VARIANTS[variantKey];
+  const variant = getVariant(variantKey);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const buffers = useMemo(

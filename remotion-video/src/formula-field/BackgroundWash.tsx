@@ -1,5 +1,5 @@
 import React from "react";
-import type { Palette } from "./variants";
+import type { Palette } from "./variant-types";
 import { rgba } from "./color";
 import { useCanvasPass } from "./useCanvasPass";
 
