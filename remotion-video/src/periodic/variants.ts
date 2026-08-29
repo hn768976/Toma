@@ -1,4 +1,7 @@
-import type { ElementCategory, PeriodicElement } from "./elements";
+// @variant-only:categories start
+import type { ElementCategory } from "./elements";
+// @variant-only:categories end
+import type { PeriodicElement } from "./elements";
 
 /**
  * The single source of truth for everything that differs between the two
@@ -66,6 +69,7 @@ const withAlpha = (hex: string, alpha: number): string => {
 
 /* ------------------------------------------------------------------ v1 --- */
 
+// @variant-only:assemble start
 const ASSEMBLE_PALETTE = {
   background: "#0A0A0C",
   cellFill: "#0F2A5C",
@@ -84,9 +88,11 @@ const UNIFORM_PAINT: CellPaint = {
   border: ASSEMBLE_PALETTE.cellBorder,
   glow: ASSEMBLE_PALETTE.cellGlow,
 };
+// @variant-only:assemble end
 
 /* ------------------------------------------------------------------ v2 --- */
 
+// @variant-only:categories start
 const CATEGORIES_PALETTE = {
   background: "#06090A",
   symbol: "#F0FFFA",
@@ -123,10 +129,12 @@ const CATEGORY_PAINT: Record<ElementCategory, CellPaint> = (() => {
   });
   return out;
 })();
+// @variant-only:categories end
 
 /* --------------------------------------------------------------------- */
 
 export const VARIANTS: Record<VariantId, Variant> = {
+  // @variant-only:assemble start
   assemble: {
     id: "assemble",
     background: ASSEMBLE_PALETTE.background,
@@ -145,6 +153,8 @@ export const VARIANTS: Record<VariantId, Variant> = {
     },
     highlight: { mode: "none" },
   },
+  // @variant-only:assemble end
+  // @variant-only:categories start
   categories: {
     id: "categories",
     background: CATEGORIES_PALETTE.background,
@@ -168,4 +178,5 @@ export const VARIANTS: Record<VariantId, Variant> = {
       dimTo: 0.3,
     },
   },
+  // @variant-only:categories end
 };

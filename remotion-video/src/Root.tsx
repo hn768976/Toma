@@ -68,6 +68,15 @@ export const RemotionRoot: React.FC = () => {
         height={PERIODIC_HEIGHT}
         defaultProps={{ variant: "assemble" as const }}
       />
+      <Composition
+        id="PeriodicCategories"
+        component={PeriodicTable}
+        durationInFrames={PERIODIC_DURATION}
+        fps={PERIODIC_FPS}
+        width={PERIODIC_WIDTH}
+        height={PERIODIC_HEIGHT}
+        defaultProps={{ variant: "categories" as const }}
+      />
     </>
   );
 };
