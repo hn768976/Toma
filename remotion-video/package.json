@@ -28,7 +28,8 @@
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
-    "vendor-font": "node scripts/vendor-font.mjs"
+    "vendor-font": "node scripts/vendor-font.mjs",
+    "build-packages": "node scripts/build-single-variant.mjs"
   },
   "sideEffects": [
     "*.css",

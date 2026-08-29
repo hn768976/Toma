@@ -164,7 +164,9 @@ export const evaluate = (
     const wMid = Math.max(0, 1 - wFar - wNear);
 
     let alpha = lateral
-      ? 0.34 + 0.66 * t
+      // No edge fade in lateral mode: a glyph slides off frame rather than
+      // dissolving. Depth sets its brightness once, and holds it.
+      ? 0.42 + 0.58 * t
       : 0.95 * smooth01(t / 0.13) * (1 - smooth01((t - 0.88) / 0.12));
 
     const period = PULSE_PERIODS[Math.floor(random(`pp-${variant.key}-${i}`) * PULSE_PERIODS.length)];

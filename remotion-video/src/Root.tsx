@@ -79,6 +79,15 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ variant: "math" as const }}
       />
       <Composition
+        id="FormulaFieldAmber"
+        component={FormulaField}
+        durationInFrames={FIELD_DURATION}
+        fps={FIELD_FPS}
+        width={FIELD_WIDTH}
+        height={FIELD_HEIGHT}
+        defaultProps={{ variant: "physics" as const }}
+      />
+      <Composition
         id="LoopCheck"
         component={FormulaField}
         durationInFrames={FIELD_DURATION + 1}
