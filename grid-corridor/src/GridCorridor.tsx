@@ -15,7 +15,7 @@ import {
 import { buildGrainTiles, buildHaloSprite, withAlpha } from "./sprites";
 import { makeCodeLine } from "./content";
 import { rndRange } from "./seed";
-import { VARIANTS, type VariantName } from "./variants";
+import { getVariant, type VariantName } from "./variants";
 import { GridPlane } from "./components/GridPlane";
 import { CodeBlock, overridesForBlock } from "./components/CodeBlock";
 import { DiagramGlyph } from "./components/DiagramGlyph";
@@ -38,7 +38,7 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
   // frame 0 and frame 360 are the same picture by construction rather than by
   // floating-point luck.
   const frame = useCurrentFrame() % DURATION_IN_FRAMES;
-  const config = VARIANTS[variant];
+  const config = getVariant(variant);
   const { palette, camera } = config;
   const fontFamily = useMonoFont();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -177,7 +177,7 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
     const glow = buffers.get(config.glow.key);
     if (glow) {
       ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.62;
+      ctx.globalAlpha = 0.52;
       ctx.filter = `blur(${config.glow.blur}px)`;
       ctx.drawImage(glow.canvas, 0, 0, WIDTH, HEIGHT);
       ctx.filter = "none";
@@ -256,6 +256,7 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
             plane={planes[spec.plane]}
             palette={palette}
             buckets={config.buckets}
+            depthDimming={config.depthDimming}
             frame={frame}
             rollDirection={camera.rollDirection}
           />
@@ -268,6 +269,7 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
             plane={planes[spec.plane]}
             palette={palette}
             buckets={config.buckets}
+            depthDimming={config.depthDimming}
             frame={frame}
             rollDirection={camera.rollDirection}
             fontFamily={fontFamily}
@@ -284,6 +286,7 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
             plane={planes[spec.plane]}
             palette={palette}
             buckets={config.buckets}
+            depthDimming={config.depthDimming}
             glow={config.glow}
             diagrams={config.diagrams}
             frame={frame}
@@ -298,6 +301,7 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
             plane={planes[spec.plane]}
             palette={palette}
             buckets={config.buckets}
+            depthDimming={config.depthDimming}
             glow={config.glow}
             frame={frame}
             rollDirection={camera.rollDirection}

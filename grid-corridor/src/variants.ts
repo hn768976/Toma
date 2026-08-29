@@ -83,10 +83,10 @@ export type VariantConfig = {
   buckets: Bucket[];
   /** Extra buffer that collects the bright elements for the bloom pass. */
   glow: Bucket;
-  /** Roughly how many diagram glyphs are visible at once. */
-  diagramCount: number;
   /** Multiplier on the drawn size of every diagram glyph. */
   diagramScale: number;
+  /** How hard elements fade with depth. 1 is full corridor falloff. */
+  depthDimming: number;
   /**
    * Population per plane on its wrap-around tile, before the tiling
    * replication that fills the plane. In "wall" mode the single front plane
@@ -123,95 +123,112 @@ const WALL_BUCKETS: Bucket[] = [
 
 const GLOW_BUCKET: Bucket = { key: "glow", blur: 26, res: 0.5, additive: true };
 
-export const VARIANTS: Record<VariantName, VariantConfig> = {
-  teal: {
-    palette: {
-      bgDeep: "#05142E",
-      bgWash: "#0C2A52",
-      structureMain: "#2EC4C4",
-      structureDim: "#14666B",
-      textMain: "#3FD4D4",
-      textPale: "#A8ECEC",
-      diagram: "#E8F4F8",
-      nodeWhite: "#FFFFFF",
-      nodeAccent: "#5FE8E8",
-      accent: "#E8455F",
-    },
-    structure: "corridor",
-    diagrams: "molecules",
-    textLayer: "blocks",
-    camera: {
-      mode: "roll",
-      rollDirection: 1,
-      rollDegrees: 4,
-      wanderPx: 0,
-    },
-    planeMirror: 1,
-    planes: CORRIDOR_PLANES,
-    buckets: CORRIDOR_BUCKETS,
-    glow: GLOW_BUCKET,
-    diagramCount: 22,
-    diagramScale: 1,
-    perPlane: { dots: 78, glyphs: 14, codeBlocks: 17, equations: 0 },
+/* @variant:teal */
+export const TEAL_VARIANT: VariantConfig = {
+  palette: {
+    bgDeep: "#05142E",
+    bgWash: "#0C2A52",
+    structureMain: "#2EC4C4",
+    structureDim: "#14666B",
+    textMain: "#3FD4D4",
+    textPale: "#A8ECEC",
+    diagram: "#E8F4F8",
+    nodeWhite: "#FFFFFF",
+    nodeAccent: "#5FE8E8",
+    accent: "#E8455F",
   },
-  amber: {
-    palette: {
-      bgDeep: "#1A0F02",
-      bgWash: "#3D2408",
-      structureMain: "#E8942E",
-      structureDim: "#7A4A14",
-      textMain: "#F5B84F",
-      textPale: "#FFE8C0",
-      diagram: "#FFF4E0",
-      nodeWhite: "#FFFFFF",
-      nodeAccent: "#FFC44F",
-      accent: "#3FC4E8",
-    },
-    structure: "corridor",
-    diagrams: "circuits",
-    textLayer: "equations",
-    camera: {
-      mode: "roll",
-      rollDirection: -1,
-      rollDegrees: 4,
-      wanderPx: 0,
-    },
-    planeMirror: -1,
-    planes: CORRIDOR_PLANES,
-    buckets: CORRIDOR_BUCKETS,
-    glow: GLOW_BUCKET,
-    diagramCount: 22,
-    diagramScale: 1,
-    perPlane: { dots: 78, glyphs: 14, codeBlocks: 8, equations: 9 },
+  structure: "corridor",
+  diagrams: "molecules",
+  textLayer: "blocks",
+  camera: {
+    mode: "roll",
+    rollDirection: 1,
+    rollDegrees: 4,
+    wanderPx: 0,
   },
-  green: {
-    palette: {
-      bgDeep: "#010A04",
-      bgWash: "#04200E",
-      structureMain: "#2EB84F",
-      structureDim: "#0F4A1E",
-      textMain: "#2EB84F",
-      textPale: "#6FFF8F",
-      diagram: "#C4FFD4",
-      nodeWhite: "#F0FFF4",
-      nodeAccent: "#4FE87A",
-      accent: "#E85FC4",
-    },
-    structure: "wall",
-    diagrams: "molecules",
-    textLayer: "wall",
-    camera: {
-      mode: "static",
-      rollDirection: 0,
-      rollDegrees: 0,
-      wanderPx: 8,
-    },
-    planeMirror: 1,
-    planes: [],
-    buckets: WALL_BUCKETS,
-    glow: GLOW_BUCKET,
-    diagramCount: 10,
-    diagramScale: 2,
-    perPlane: { dots: 120, glyphs: 10, codeBlocks: 0, equations: 0 },
-  },
+  planeMirror: 1,
+  planes: CORRIDOR_PLANES,
+  buckets: CORRIDOR_BUCKETS,
+  glow: GLOW_BUCKET,
+  diagramScale: 1,
+  depthDimming: 1,
+  perPlane: { dots: 78, glyphs: 14, codeBlocks: 17, equations: 0 },
 };
+/* @end:teal */
+
+/* @variant:amber */
+export const AMBER_VARIANT: VariantConfig = {
+  palette: {
+    bgDeep: "#1A0F02",
+    bgWash: "#3D2408",
+    structureMain: "#E8942E",
+    structureDim: "#7A4A14",
+    textMain: "#F5B84F",
+    textPale: "#FFE8C0",
+    diagram: "#FFF4E0",
+    nodeWhite: "#FFFFFF",
+    nodeAccent: "#FFC44F",
+    accent: "#3FC4E8",
+  },
+  structure: "corridor",
+  diagrams: "circuits",
+  textLayer: "equations",
+  camera: {
+    mode: "roll",
+    rollDirection: -1,
+    rollDegrees: 4,
+    wanderPx: 0,
+  },
+  planeMirror: -1,
+  planes: CORRIDOR_PLANES,
+  buckets: CORRIDOR_BUCKETS,
+  glow: GLOW_BUCKET,
+  diagramScale: 1,
+  depthDimming: 1,
+  perPlane: { dots: 78, glyphs: 14, codeBlocks: 8, equations: 9 },
+};
+/* @end:amber */
+
+/* @variant:green */
+export const GREEN_VARIANT: VariantConfig = {
+  palette: {
+    bgDeep: "#010A04",
+    bgWash: "#04200E",
+    structureMain: "#2EB84F",
+    structureDim: "#0F4A1E",
+    textMain: "#2EB84F",
+    textPale: "#6FFF8F",
+    diagram: "#C4FFD4",
+    nodeWhite: "#F0FFF4",
+    nodeAccent: "#4FE87A",
+    accent: "#E85FC4",
+  },
+  structure: "wall",
+  diagrams: "molecules",
+  textLayer: "wall",
+  camera: {
+    mode: "static",
+    rollDirection: 0,
+    rollDegrees: 0,
+    wanderPx: 8,
+  },
+  planeMirror: 1,
+  planes: [],
+  buckets: WALL_BUCKETS,
+  glow: GLOW_BUCKET,
+  diagramScale: 2,
+  depthDimming: 0.22,
+  perPlane: { dots: 174, glyphs: 15, codeBlocks: 0, equations: 0 },
+};
+/* @end:green */
+
+/* @registry */
+/** The one place the three versions are declared. */
+export const VARIANTS: Record<VariantName, VariantConfig> = {
+  teal: TEAL_VARIANT,
+  amber: AMBER_VARIANT,
+  green: GREEN_VARIANT,
+};
+
+export const getVariant = (name: VariantName): VariantConfig => VARIANTS[name];
+/* @end:registry */

@@ -106,7 +106,7 @@ export const buildLayout = (
       const { u, v } = spread(s, plane);
       const tone: DotSpec["tone"] = chance(s + "acc", 0.04)
         ? "contrast"
-        : chance(s + "tone", 0.45)
+        : chance(s + "tone", 0.62)
           ? "accent"
           : "white";
       dots.push({
@@ -131,7 +131,12 @@ export const buildLayout = (
         plane: pi,
         u,
         v,
-        rotation: rndRange(s + "rot", -Math.PI, Math.PI),
+        // Schematics are orthogonal, so they sit on quarter turns with only a
+        // hand-drawn wobble. Molecules are radial and rotate freely.
+        rotation:
+          config.diagrams === "circuits"
+            ? (Math.PI / 2) * rndInt(s + "q", 0, 4) + rndRange(s + "j", -0.05, 0.05)
+            : rndRange(s + "rot", -Math.PI, Math.PI),
         size: rndRange(s + "sz", 62, 132) * config.diagramScale,
         speed: pick(s + "sp", SPEEDS),
       });

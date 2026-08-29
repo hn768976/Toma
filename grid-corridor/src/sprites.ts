@@ -504,7 +504,10 @@ export const buildWallSprite = (
     const w = ctx.measureText(text).width;
     let cursor = x + w + fs * 2;
     let rep = 0;
-    while (cursor < width) {
+    // Stop short of the sprite's edge so line ends stay ragged rather than
+    // being sliced off flush by the canvas boundary.
+    const fillTo = width - 300;
+    while (cursor < fillTo) {
       const t2 = makeWallLine(`${s}:r${rep}`);
       ctx.fillText(t2, cursor, i * WALL_LINE_HEIGHT);
       cursor += ctx.measureText(t2).width + fs * rndRange(`${s}:g${rep}`, 1.5, 5);

@@ -21,10 +21,10 @@ type Props = {
 const RAD = (WALL_ROTATION_DEG * Math.PI) / 180;
 /** Enough to cover the frame once the wall is rotated. */
 const WALL_WIDTH = Math.ceil(
-  Math.abs(WIDTH * Math.cos(RAD)) + Math.abs(HEIGHT * Math.sin(RAD)) + 480,
+  Math.abs(WIDTH * Math.cos(RAD)) + Math.abs(HEIGHT * Math.sin(RAD)) + 700,
 );
 const COVER_HEIGHT = Math.ceil(
-  Math.abs(WIDTH * Math.sin(RAD)) + Math.abs(HEIGHT * Math.cos(RAD)) + 480,
+  Math.abs(WIDTH * Math.sin(RAD)) + Math.abs(HEIGHT * Math.cos(RAD)) + 400,
 );
 
 /**

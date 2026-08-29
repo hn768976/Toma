@@ -18,6 +18,8 @@ type Props = {
   plane: Plane;
   palette: Palette;
   buckets: Bucket[];
+  /** How hard this variant fades elements with depth. */
+  depthDimming: number;
   frame: number;
   rollDirection: number;
 };
@@ -28,6 +30,7 @@ export const Connector: React.FC<Props> = ({
   plane,
   palette,
   buckets,
+  depthDimming,
   frame,
   rollDirection,
 }) => {
@@ -38,7 +41,7 @@ export const Connector: React.FC<Props> = ({
   for (const copy of tileCopies(plane, pos.u, pos.v, length)) {
     const d = depthAt(plane, copy.x + spec.du / 2, copy.y + spec.dv / 2);
     const weights = bucketWeights(d, buckets.length);
-    const base = depthOpacity(d) * 0.34;
+    const base = depthOpacity(d, depthDimming) * 0.34;
     for (let b = 0; b < buckets.length; b++) {
       const alpha = base * weights[b];
       if (alpha <= 0.004) continue;

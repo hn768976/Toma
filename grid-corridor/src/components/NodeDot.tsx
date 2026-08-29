@@ -18,6 +18,8 @@ type Props = {
   plane: Plane;
   palette: Palette;
   buckets: Bucket[];
+  /** How hard this variant fades elements with depth. */
+  depthDimming: number;
   glow: Bucket;
   frame: number;
   rollDirection: number;
@@ -34,6 +36,7 @@ export const NodeDot: React.FC<Props> = ({
   plane,
   palette,
   buckets,
+  depthDimming,
   glow,
   frame,
   rollDirection,
@@ -53,7 +56,7 @@ export const NodeDot: React.FC<Props> = ({
         : palette.accent;
   const halo = halos[spec.tone];
   const pos = driftedPosition(plane, spec.u, spec.v, spec.speed, frame, rollDirection);
-  const haloR = spec.radius * 6;
+  const haloR = spec.radius * 4.4;
   const ops: DrawOp[] = [];
 
   const drawCore = (
@@ -66,7 +69,10 @@ export const NodeDot: React.FC<Props> = ({
     clipToPlane(ctx, plane);
     setPlaneTransform(ctx, res, plane.m);
     if (spec.halo) {
+      const a = ctx.globalAlpha;
+      ctx.globalAlpha = a * 0.72;
       ctx.drawImage(halo, u - haloR, v - haloR, haloR * 2, haloR * 2);
+      ctx.globalAlpha = a;
     }
     ctx.fillStyle = colour;
     ctx.beginPath();
@@ -77,7 +83,7 @@ export const NodeDot: React.FC<Props> = ({
   for (const copy of tileCopies(plane, pos.u, pos.v, haloR)) {
     const d = depthAt(plane, copy.x, copy.y);
     const weights = bucketWeights(d, buckets.length);
-    const base = depthOpacity(d) * pulse;
+    const base = depthOpacity(d, depthDimming) * pulse;
     for (let b = 0; b < buckets.length; b++) {
       const alpha = base * weights[b];
       if (alpha <= 0.004) continue;
@@ -92,7 +98,7 @@ export const NodeDot: React.FC<Props> = ({
     ops.push({
       order: LAYER.dot,
       bucket: glow.key,
-      alpha: base * 0.75,
+      alpha: base * 0.6,
       fn: (ctx, res) => {
         ctx.setTransform(res, 0, 0, res, 0, 0);
         clipToPlane(ctx, plane);

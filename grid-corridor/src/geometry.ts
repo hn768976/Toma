@@ -191,12 +191,14 @@ const FOCAL_T = 0.35;
 /** How much further out the plane takes to reach full foreground blur. */
 const NEAR_SPAN = 0.4;
 
-/** Opacity falls off into the distance and softens again in the foreground. */
-export const depthOpacity = (d: number): number => {
-  if (d < 0.5) {
-    return 0.3 + (d / 0.5) * 0.7;
-  }
-  return 1 - ((d - 0.5) / 0.5) * 0.22;
+/**
+ * Opacity falls off into the distance and softens again in the foreground.
+ * `dimming` scales how much of that falloff applies: elements floating in
+ * front of a flat surface have no distance to fade into.
+ */
+export const depthOpacity = (d: number, dimming: number): number => {
+  const full = d < 0.5 ? 0.3 + (d / 0.5) * 0.7 : 1 - ((d - 0.5) / 0.5) * 0.22;
+  return 1 + dimming * (full - 1);
 };
 
 /**

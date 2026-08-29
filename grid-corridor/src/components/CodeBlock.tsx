@@ -21,6 +21,8 @@ type Props = {
   plane: Plane;
   palette: Palette;
   buckets: Bucket[];
+  /** How hard this variant fades elements with depth. */
+  depthDimming: number;
   frame: number;
   rollDirection: number;
   fontFamily: string;
@@ -39,6 +41,7 @@ export const CodeBlock: React.FC<Props> = ({
   plane,
   palette,
   buckets,
+  depthDimming,
   frame,
   rollDirection,
   fontFamily,
@@ -82,7 +85,7 @@ export const CodeBlock: React.FC<Props> = ({
   for (const copy of tileCopies(plane, pos.u, pos.v, radius)) {
     const d = depthAt(plane, copy.x, copy.y);
     const weights = bucketWeights(d, buckets.length);
-    const base = depthOpacity(d) * 0.92;
+    const base = depthOpacity(d, depthDimming) * 0.92;
     for (let b = 0; b < buckets.length; b++) {
       const alpha = base * weights[b];
       if (alpha <= 0.004) continue;

@@ -18,6 +18,8 @@ type Props = {
   plane: Plane;
   palette: Palette;
   buckets: Bucket[];
+  /** How hard this variant fades elements with depth. */
+  depthDimming: number;
   glow: Bucket;
   diagrams: DiagramSet;
   frame: number;
@@ -33,6 +35,7 @@ export const DiagramGlyph: React.FC<Props> = ({
   plane,
   palette,
   buckets,
+  depthDimming,
   glow,
   diagrams,
   frame,
@@ -66,7 +69,7 @@ export const DiagramGlyph: React.FC<Props> = ({
   for (const copy of tileCopies(plane, pos.u, pos.v, radius)) {
     const d = depthAt(plane, copy.x, copy.y);
     const weights = bucketWeights(d, buckets.length);
-    const base = depthOpacity(d);
+    const base = depthOpacity(d, depthDimming);
     for (let b = 0; b < buckets.length; b++) {
       const alpha = base * weights[b];
       if (alpha <= 0.004) continue;

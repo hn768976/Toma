@@ -6,6 +6,9 @@ import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
 Config.setVideoImageFormat("jpeg");
+// The piece has no audio, so no silent track is written.
+Config.setMuted(true);
+Config.setEnforceAudioTrack(false);
 Config.setOverwriteOutput(true);
 Config.setChromiumOpenGlRenderer("angle");
 
