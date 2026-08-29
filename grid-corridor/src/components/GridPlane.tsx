@@ -43,12 +43,14 @@ export const GridPlane: React.FC<Props> = ({
 
   const tracePath = (ctx: CanvasRenderingContext2D) => {
     ctx.beginPath();
-    const u0 = Math.floor((bbox.u0 - drift.u) / GRID_PITCH) * GRID_PITCH + drift.u;
+    const u0 =
+      Math.floor((bbox.u0 - drift.u) / GRID_PITCH) * GRID_PITCH + drift.u;
     for (let u = u0; u <= bbox.u1; u += GRID_PITCH) {
       ctx.moveTo(u, bbox.v0);
       ctx.lineTo(u, bbox.v1);
     }
-    const v0 = Math.floor((bbox.v0 - drift.v) / GRID_PITCH) * GRID_PITCH + drift.v;
+    const v0 =
+      Math.floor((bbox.v0 - drift.v) / GRID_PITCH) * GRID_PITCH + drift.v;
     for (let v = v0; v <= bbox.v1; v += GRID_PITCH) {
       ctx.moveTo(bbox.u0, v);
       ctx.lineTo(bbox.u1, v);
@@ -74,7 +76,10 @@ export const GridPlane: React.FC<Props> = ({
     for (let i = 0; i <= GRADIENT_STOPS; i++) {
       const t = i / GRADIENT_STOPS;
       const colour = t < 0.45 ? palette.structureDim : palette.structureMain;
-      g.addColorStop(t, withAlpha(colour, weightFor(t) * gridBrightness(t) * plane.tone));
+      g.addColorStop(
+        t,
+        withAlpha(colour, weightFor(t) * gridBrightness(t) * plane.tone),
+      );
     }
     return g;
   };

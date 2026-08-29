@@ -40,7 +40,11 @@ export const Flare: React.FC<Props> = ({
     const pos = driftedPosition(plane, spec.u, spec.v, 1, frame, rollDirection);
     const r = spec.size * (0.6 + intensity * 0.6);
     for (const copy of tileCopies(plane, pos.u, pos.v, r)) {
-      const paint = (ctx: CanvasRenderingContext2D, res: number, scale: number) => {
+      const paint = (
+        ctx: CanvasRenderingContext2D,
+        res: number,
+        scale: number,
+      ) => {
         ctx.setTransform(res, 0, 0, res, 0, 0);
         clipToPlane(ctx, plane);
         setPlaneTransform(ctx, res, plane.m);

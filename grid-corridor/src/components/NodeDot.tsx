@@ -46,7 +46,9 @@ export const NodeDot: React.FC<Props> = ({
     0.58 +
     0.42 *
       Math.sin(
-        Math.PI * 2 * ((spec.pulseK * frame) / DURATION_IN_FRAMES + spec.pulsePhase),
+        Math.PI *
+          2 *
+          ((spec.pulseK * frame) / DURATION_IN_FRAMES + spec.pulsePhase),
       );
   const colour =
     spec.tone === "white"
@@ -55,7 +57,14 @@ export const NodeDot: React.FC<Props> = ({
         ? palette.nodeAccent
         : palette.accent;
   const halo = halos[spec.tone];
-  const pos = driftedPosition(plane, spec.u, spec.v, spec.speed, frame, rollDirection);
+  const pos = driftedPosition(
+    plane,
+    spec.u,
+    spec.v,
+    spec.speed,
+    frame,
+    rollDirection,
+  );
   const haloR = spec.radius * 4.4;
   const ops: DrawOp[] = [];
 

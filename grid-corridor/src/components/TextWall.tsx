@@ -60,7 +60,8 @@ export const TextWall: React.FC<Props> = ({
         const top = -COVER_HEIGHT / 2;
         // Scrolls upward; the block height divides the loop exactly.
         const start =
-          Math.floor((top + scroll) / WALL_BLOCK_HEIGHT) * WALL_BLOCK_HEIGHT - scroll;
+          Math.floor((top + scroll) / WALL_BLOCK_HEIGHT) * WALL_BLOCK_HEIGHT -
+          scroll;
         for (let i = 0; i <= copies; i++) {
           ctx.drawImage(sprite, x, start + i * WALL_BLOCK_HEIGHT);
         }

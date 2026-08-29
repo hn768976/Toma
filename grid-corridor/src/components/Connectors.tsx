@@ -34,7 +34,14 @@ export const Connector: React.FC<Props> = ({
   frame,
   rollDirection,
 }) => {
-  const pos = driftedPosition(plane, spec.u, spec.v, spec.speed, frame, rollDirection);
+  const pos = driftedPosition(
+    plane,
+    spec.u,
+    spec.v,
+    spec.speed,
+    frame,
+    rollDirection,
+  );
   const length = Math.hypot(spec.du, spec.dv);
   const ops: DrawOp[] = [];
 

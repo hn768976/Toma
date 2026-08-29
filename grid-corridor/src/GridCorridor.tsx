@@ -47,7 +47,10 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
     () => buildPlanes(config.structure, config.planes, config.planeMirror),
     [config],
   );
-  const layout = useMemo(() => buildLayout(variant, config, planes), [variant, config, planes]);
+  const layout = useMemo(
+    () => buildLayout(variant, config, planes),
+    [variant, config, planes],
+  );
 
   const buffers = useMemo(() => {
     const map = new Map<string, SceneBuffer>();
@@ -122,7 +125,9 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
     // The whole scene rolls, on a sine whose period is the loop itself.
     const phase = (Math.PI * 2 * frame) / DURATION_IN_FRAMES;
     const roll =
-      ((camera.rollDegrees * Math.PI) / 180) * Math.sin(phase) * camera.rollDirection;
+      ((camera.rollDegrees * Math.PI) / 180) *
+      Math.sin(phase) *
+      camera.rollDirection;
     const wanderX = camera.wanderPx * Math.sin(phase);
     const wanderY = camera.wanderPx * Math.sin(phase * 2);
 
@@ -273,8 +278,11 @@ export const GridCorridor: React.FC<GridCorridorProps> = ({ variant }) => {
             frame={frame}
             rollDirection={camera.rollDirection}
             fontFamily={fontFamily}
-            overrides={overridesForBlock(layout.codeEvents, spec.id, frame, (event) =>
-              makeCodeLine(event.seed, 1),
+            overrides={overridesForBlock(
+              layout.codeEvents,
+              spec.id,
+              frame,
+              (event) => makeCodeLine(event.seed, 1),
             )}
           />
         ))}

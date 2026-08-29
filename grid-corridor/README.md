@@ -43,3 +43,29 @@ npx remotion render GridCorridorGreen out/corridor-green-preview.mp4 --codec=h26
 # Full 4K
 npx remotion render GridCorridorTeal out/corridor-teal.mp4 --codec=h264 --crf=12 --concurrency=8
 ```
+
+## Packaging
+
+`node tools/package-variants.mjs` writes one self-contained, independently
+runnable project per variant into `dist-zips/` and zips each:
+
+```
+grid-corridor-teal.zip
+grid-corridor-amber.zip
+grid-corridor-green.zip
+```
+
+Each zip registers only its own composition and has that variant's data
+inlined in `src/variants.ts` rather than importing a shared three-key object.
+`node_modules/`, `out/` and `.git/` are never staged, so they cannot end up in
+a zip.
+
+## The monospace face
+
+The face is loaded through `@remotion/google-fonts`, gated with
+`delayRender()` / `continueRender()`. Because a render host that cannot reach
+`fonts.gstatic.com` would otherwise fail the render outright, the CDN is
+probed first and a vendored copy of the same face
+(`public/fonts/RobotoMono-latin.woff2`, SIL OFL 1.1) is used when it is
+unreachable. The family name is identical either way, so text metrics do not
+change.

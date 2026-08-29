@@ -7,24 +7,80 @@ import { pick, rndInt, rndRange } from "./seed";
  */
 
 const IDENT = [
-  "nodeBuffer", "shardIndex", "frameLattice", "probeSet", "deltaMap",
-  "tensorSlab", "routeHint", "vectorCache", "gridSpan", "pulseQueue",
-  "seamTrace", "depthBand", "latchKey", "driftPhase", "emitPool",
-  "biasTable", "glyphAtlas", "ringBuffer", "stackFrame", "tokenSpan",
-  "waveField", "memoSlot", "coalesceMap", "anchorSet", "sliceCursor",
-  "packetLane", "fanoutTree", "residualHint", "chunkHead", "wardenLock",
+  "nodeBuffer",
+  "shardIndex",
+  "frameLattice",
+  "probeSet",
+  "deltaMap",
+  "tensorSlab",
+  "routeHint",
+  "vectorCache",
+  "gridSpan",
+  "pulseQueue",
+  "seamTrace",
+  "depthBand",
+  "latchKey",
+  "driftPhase",
+  "emitPool",
+  "biasTable",
+  "glyphAtlas",
+  "ringBuffer",
+  "stackFrame",
+  "tokenSpan",
+  "waveField",
+  "memoSlot",
+  "coalesceMap",
+  "anchorSet",
+  "sliceCursor",
+  "packetLane",
+  "fanoutTree",
+  "residualHint",
+  "chunkHead",
+  "wardenLock",
 ] as const;
 
 const TYPE = [
-  "Vec3", "Lattice", "SpanMap", "NodeRef", "Buffer", "Frame", "Chunk",
-  "Handle", "Matrix", "Stream", "Slab", "Token", "Bandwidth", "Phase",
-  "Cursor", "Region", "Pitch", "Seam",
+  "Vec3",
+  "Lattice",
+  "SpanMap",
+  "NodeRef",
+  "Buffer",
+  "Frame",
+  "Chunk",
+  "Handle",
+  "Matrix",
+  "Stream",
+  "Slab",
+  "Token",
+  "Bandwidth",
+  "Phase",
+  "Cursor",
+  "Region",
+  "Pitch",
+  "Seam",
 ] as const;
 
 const FN = [
-  "resolve", "collapse", "emit", "bind", "traverse", "commit", "sample",
-  "anneal", "project", "flatten", "dispatch", "reduce", "align", "hydrate",
-  "quantize", "stitch", "prune", "seed", "advance", "settle",
+  "resolve",
+  "collapse",
+  "emit",
+  "bind",
+  "traverse",
+  "commit",
+  "sample",
+  "anneal",
+  "project",
+  "flatten",
+  "dispatch",
+  "reduce",
+  "align",
+  "hydrate",
+  "quantize",
+  "stitch",
+  "prune",
+  "seed",
+  "advance",
+  "settle",
 ] as const;
 
 const COMMENT = [
@@ -151,7 +207,20 @@ export const makeCodeLine = (seed: string, indent: number): string =>
 /* ------------------------------------------------------------------ */
 /* Equation fragments — structurally mathematical rather than programmatic. */
 
-const VAR = ["x", "y", "n", "k", "t", "u", "v", "p", "q", "r", "s", "m"] as const;
+const VAR = [
+  "x",
+  "y",
+  "n",
+  "k",
+  "t",
+  "u",
+  "v",
+  "p",
+  "q",
+  "r",
+  "s",
+  "m",
+] as const;
 const SUB = ["i", "j", "k", "0", "1", "n", "t", "ij"] as const;
 const OP = ["+", "-", "·", "−"] as const;
 
@@ -168,7 +237,10 @@ const symbol = (seed: string): EqAtom => ({
   kind: "sym",
   text: pick(seed + "v", VAR),
   sub: rndRange(seed + "s", 0, 1) < 0.6 ? pick(seed + "ss", SUB) : undefined,
-  sup: rndRange(seed + "p", 0, 1) < 0.25 ? String(rndInt(seed + "pp", 2, 4)) : undefined,
+  sup:
+    rndRange(seed + "p", 0, 1) < 0.25
+      ? String(rndInt(seed + "pp", 2, 4))
+      : undefined,
 });
 
 /** One short row of notation. */
@@ -189,11 +261,19 @@ export const makeEquationRow = (seed: string): EqAtom[] => {
         bottom: pick(s + "c", VAR) + " " + pick(s + "d", OP) + " 1",
       });
     } else if (roll < 0.28) {
-      atoms.push({ kind: "sqrt", text: pick(s + "e", VAR) + pick(s + "f", SUB) });
+      atoms.push({
+        kind: "sqrt",
+        text: pick(s + "e", VAR) + pick(s + "f", SUB),
+      });
     } else if (roll < 0.42) {
       atoms.push({
         kind: "paren",
-        text: pick(s + "g", VAR) + " " + pick(s + "h", OP) + " " + pick(s + "i", VAR),
+        text:
+          pick(s + "g", VAR) +
+          " " +
+          pick(s + "h", OP) +
+          " " +
+          pick(s + "i", VAR),
       });
     } else {
       atoms.push(symbol(s));
@@ -211,9 +291,34 @@ export const makeEquationRow = (seed: string): EqAtom[] => {
 /* The text wall. */
 
 const WALL_TOKENS = [
-  "if", "for", "let", "const", "case", "void", "async", "await", "return",
-  "class", "yield", "static", "export", "while", "break", "match", "true",
-  "null", "0x1F", "0x04", "->", "=>", "::", "[]", "{}", "()", "&&", "||",
+  "if",
+  "for",
+  "let",
+  "const",
+  "case",
+  "void",
+  "async",
+  "await",
+  "return",
+  "class",
+  "yield",
+  "static",
+  "export",
+  "while",
+  "break",
+  "match",
+  "true",
+  "null",
+  "0x1F",
+  "0x04",
+  "->",
+  "=>",
+  "::",
+  "[]",
+  "{}",
+  "()",
+  "&&",
+  "||",
 ] as const;
 
 /** One ragged monospace line of the wall. */

@@ -1,10 +1,4 @@
-import {
-  HEIGHT,
-  PLANE_MARGIN,
-  TILE_U,
-  TILE_V,
-  WIDTH,
-} from "./constants";
+import { HEIGHT, PLANE_MARGIN, TILE_U, TILE_V, WIDTH } from "./constants";
 import type { PlaneSpec, StructureMode } from "./variants";
 
 /** A 2D affine transform, in the same order ctx.setTransform() takes. */
@@ -63,7 +57,12 @@ export type Plane = {
   tone: number;
 };
 
-const bboxOfLocalPoly = (poly: Point[], inv: Mat, padU: number, padV: number) => {
+const bboxOfLocalPoly = (
+  poly: Point[],
+  inv: Mat,
+  padU: number,
+  padV: number,
+) => {
   let u0 = Infinity;
   let u1 = -Infinity;
   let v0 = Infinity;
@@ -156,7 +155,10 @@ export const buildPlanes = (
     let depthRadius = 0;
     for (const p of poly) {
       const l = matApply(inv, p.x, p.y);
-      depthRadius = Math.max(depthRadius, Math.hypot(l.x - vanish.x, l.y - vanish.y));
+      depthRadius = Math.max(
+        depthRadius,
+        Math.hypot(l.x - vanish.x, l.y - vanish.y),
+      );
     }
     return {
       key: spec.key,
@@ -178,7 +180,8 @@ export const buildPlanes = (
  * plane. Drives blur bucket, opacity and how bright the grid is.
  */
 export const depthAt = (plane: Plane, u: number, v: number): number => {
-  const t = Math.hypot(u - plane.vanish.x, v - plane.vanish.y) / plane.depthRadius;
+  const t =
+    Math.hypot(u - plane.vanish.x, v - plane.vanish.y) / plane.depthRadius;
   // The focal band sits a third of the way out, and the foreground saturates
   // well before the plane's far corner, so a real share of the frame is soft
   // at both ends rather than only at two extreme points.
@@ -252,7 +255,10 @@ export const tileCopies = (
   return out;
 };
 
-export const clipToPlane = (ctx: CanvasRenderingContext2D, plane: Plane): void => {
+export const clipToPlane = (
+  ctx: CanvasRenderingContext2D,
+  plane: Plane,
+): void => {
   ctx.beginPath();
   ctx.moveTo(plane.poly[0].x, plane.poly[0].y);
   for (let i = 1; i < plane.poly.length; i++) {
@@ -268,5 +274,12 @@ export const setPlaneTransform = (
   res: number,
   m: Mat,
 ): void => {
-  ctx.setTransform(m[0] * res, m[1] * res, m[2] * res, m[3] * res, m[4] * res, m[5] * res);
+  ctx.setTransform(
+    m[0] * res,
+    m[1] * res,
+    m[2] * res,
+    m[3] * res,
+    m[4] * res,
+    m[5] * res,
+  );
 };

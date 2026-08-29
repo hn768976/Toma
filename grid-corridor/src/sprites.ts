@@ -1,4 +1,9 @@
-import { makeCodeLines, makeEquationRow, makeWallLine, type EqAtom } from "./content";
+import {
+  makeCodeLines,
+  makeEquationRow,
+  makeWallLine,
+  type EqAtom,
+} from "./content";
 import { pick, rndInt, rndRange } from "./seed";
 import {
   WALL_BLOCK_HEIGHT,
@@ -70,7 +75,8 @@ export const buildCodeBlockSprite = (
     const s = `${spec.seed}:line:${i}`;
     const bright = rndRange(s + "b", 0, 1);
     const overridden = spec.overrides[i] !== undefined;
-    const colour = overridden || bright > 0.9 ? palette.textPale : palette.textMain;
+    const colour =
+      overridden || bright > 0.9 ? palette.textPale : palette.textMain;
     const alpha = overridden ? 1 : 0.45 + bright * 0.5;
     ctx.fillStyle = withAlpha(colour, alpha);
     ctx.fillText(line, pad, pad + i * lh, w - pad * 2);
@@ -150,9 +156,12 @@ const drawAtom = (
       ctx.beginPath();
       ctx.moveTo(x + fs * 0.34, top);
       ctx.bezierCurveTo(
-        x + fs * 0.02, top + h * 0.08,
-        x + fs * 0.42, top + h * 0.42,
-        x + fs * 0.2, top + h * 0.92,
+        x + fs * 0.02,
+        top + h * 0.08,
+        x + fs * 0.42,
+        top + h * 0.42,
+        x + fs * 0.2,
+        top + h * 0.92,
       );
       ctx.stroke();
       return fs * 0.62 + charW * 0.4;
@@ -227,14 +236,24 @@ export const buildEquationSprite = (
 /* ------------------------------------------------------------------ */
 /* Diagram glyphs. */
 
-const node = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, filled: boolean) => {
+const node = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  filled: boolean,
+) => {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   if (filled) ctx.fill();
   else ctx.stroke();
 };
 
-const poly = (ctx: CanvasRenderingContext2D, pts: number[][], close: boolean) => {
+const poly = (
+  ctx: CanvasRenderingContext2D,
+  pts: number[][],
+  close: boolean,
+) => {
   ctx.beginPath();
   ctx.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
@@ -242,8 +261,21 @@ const poly = (ctx: CanvasRenderingContext2D, pts: number[][], close: boolean) =>
   ctx.stroke();
 };
 
-const MOLECULES = ["hexRing", "branchedChain", "tetrahedral", "fusedRings", "bondPair"] as const;
-const CIRCUITS = ["resistor", "capacitor", "junction", "ground", "inductor", "transistor"] as const;
+const MOLECULES = [
+  "hexRing",
+  "branchedChain",
+  "tetrahedral",
+  "fusedRings",
+  "bondPair",
+] as const;
+const CIRCUITS = [
+  "resistor",
+  "capacitor",
+  "junction",
+  "ground",
+  "inductor",
+  "transistor",
+] as const;
 
 export type DiagramSpec = {
   seed: string;
@@ -303,7 +335,8 @@ const drawMolecule = (
       // A branch off one of the middle vertices.
       const bi = rndInt(seed + "b", 1, Math.max(2, n - 1));
       const bx = pts[bi][0] + rndRange(seed + "bx", -s * 0.2, s * 0.2);
-      const by = pts[bi][1] + (rndRange(seed + "bs", 0, 1) < 0.5 ? -1 : 1) * s * 0.6;
+      const by =
+        pts[bi][1] + (rndRange(seed + "bs", 0, 1) < 0.5 ? -1 : 1) * s * 0.6;
       poly(ctx, [pts[bi], [bx, by]], false);
       node(ctx, bx, by, nodeR, false);
       for (const p of pts) node(ctx, p[0], p[1], nodeR, false);
@@ -312,11 +345,19 @@ const drawMolecule = (
     case "tetrahedral": {
       const base = rndRange(seed + "r", 0, Math.PI);
       for (let i = 0; i < 4; i++) {
-        const a = base + (Math.PI / 2) * i + rndRange(`${seed}:a${i}`, -0.25, 0.25);
+        const a =
+          base + (Math.PI / 2) * i + rndRange(`${seed}:a${i}`, -0.25, 0.25);
         const r = s * rndRange(`${seed}:l${i}`, 0.6, 0.95);
         const x = Math.cos(a) * r;
         const y = Math.sin(a) * r;
-        poly(ctx, [[0, 0], [x, y]], false);
+        poly(
+          ctx,
+          [
+            [0, 0],
+            [x, y],
+          ],
+          false,
+        );
         node(ctx, x, y, nodeR, false);
       }
       node(ctx, 0, 0, nodeR * 1.35, true);
@@ -333,7 +374,14 @@ const drawMolecule = (
       const a = rndRange(seed + "a", 0, Math.PI);
       const x = Math.cos(a) * s * 0.75;
       const y = Math.sin(a) * s * 0.75;
-      poly(ctx, [[-x, -y], [x, y]], false);
+      poly(
+        ctx,
+        [
+          [-x, -y],
+          [x, y],
+        ],
+        false,
+      );
       node(ctx, -x, -y, nodeR, false);
       node(ctx, x, y, nodeR, false);
       break;
@@ -351,7 +399,10 @@ const drawCircuit = (
   const lead = s * 0.42;
   switch (kind) {
     case "resistor": {
-      const zig: number[][] = [[-s, 0], [-lead, 0]];
+      const zig: number[][] = [
+        [-s, 0],
+        [-lead, 0],
+      ];
       const teeth = 6;
       for (let i = 0; i < teeth; i++) {
         const x = -lead + ((2 * lead) / teeth) * (i + 0.5);
@@ -364,10 +415,38 @@ const drawCircuit = (
       break;
     }
     case "capacitor": {
-      poly(ctx, [[-s, 0], [-s * 0.16, 0]], false);
-      poly(ctx, [[s * 0.16, 0], [s, 0]], false);
-      poly(ctx, [[-s * 0.16, -s * 0.5], [-s * 0.16, s * 0.5]], false);
-      poly(ctx, [[s * 0.16, -s * 0.5], [s * 0.16, s * 0.5]], false);
+      poly(
+        ctx,
+        [
+          [-s, 0],
+          [-s * 0.16, 0],
+        ],
+        false,
+      );
+      poly(
+        ctx,
+        [
+          [s * 0.16, 0],
+          [s, 0],
+        ],
+        false,
+      );
+      poly(
+        ctx,
+        [
+          [-s * 0.16, -s * 0.5],
+          [-s * 0.16, s * 0.5],
+        ],
+        false,
+      );
+      poly(
+        ctx,
+        [
+          [s * 0.16, -s * 0.5],
+          [s * 0.16, s * 0.5],
+        ],
+        false,
+      );
       node(ctx, -s, 0, nodeR, false);
       node(ctx, s, 0, nodeR, false);
       break;
@@ -380,24 +459,52 @@ const drawCircuit = (
         const len = s * rndRange(`${seed}:l${i}`, 0.6, 1);
         const x = Math.round(Math.cos(a)) * len;
         const y = Math.round(Math.sin(a)) * len;
-        poly(ctx, [[0, 0], [x, y]], false);
+        poly(
+          ctx,
+          [
+            [0, 0],
+            [x, y],
+          ],
+          false,
+        );
         node(ctx, x, y, nodeR, false);
       }
       node(ctx, 0, 0, nodeR * 1.4, true);
       break;
     }
     case "ground": {
-      poly(ctx, [[0, -s], [0, 0]], false);
+      poly(
+        ctx,
+        [
+          [0, -s],
+          [0, 0],
+        ],
+        false,
+      );
       for (let i = 0; i < 3; i++) {
         const w = s * (0.62 - i * 0.19);
         const y = i * s * 0.26;
-        poly(ctx, [[-w, y], [w, y]], false);
+        poly(
+          ctx,
+          [
+            [-w, y],
+            [w, y],
+          ],
+          false,
+        );
       }
       node(ctx, 0, -s, nodeR, false);
       break;
     }
     case "inductor": {
-      poly(ctx, [[-s, 0], [-s * 0.6, 0]], false);
+      poly(
+        ctx,
+        [
+          [-s, 0],
+          [-s * 0.6, 0],
+        ],
+        false,
+      );
       ctx.beginPath();
       const arcs = 4;
       const r = (s * 1.2) / (arcs * 2);
@@ -407,17 +514,52 @@ const drawCircuit = (
         ctx.arc(cx, 0, r, Math.PI, 0, false);
       }
       ctx.stroke();
-      poly(ctx, [[s * 0.6, 0], [s, 0]], false);
+      poly(
+        ctx,
+        [
+          [s * 0.6, 0],
+          [s, 0],
+        ],
+        false,
+      );
       node(ctx, -s, 0, nodeR, false);
       node(ctx, s, 0, nodeR, false);
       break;
     }
     case "transistor":
     default: {
-      poly(ctx, [[-s, 0], [-s * 0.3, 0]], false);
-      poly(ctx, [[-s * 0.3, -s * 0.55], [-s * 0.3, s * 0.55]], false);
-      poly(ctx, [[-s * 0.3, -s * 0.3], [s * 0.65, -s * 0.8]], false);
-      poly(ctx, [[-s * 0.3, s * 0.3], [s * 0.65, s * 0.8]], false);
+      poly(
+        ctx,
+        [
+          [-s, 0],
+          [-s * 0.3, 0],
+        ],
+        false,
+      );
+      poly(
+        ctx,
+        [
+          [-s * 0.3, -s * 0.55],
+          [-s * 0.3, s * 0.55],
+        ],
+        false,
+      );
+      poly(
+        ctx,
+        [
+          [-s * 0.3, -s * 0.3],
+          [s * 0.65, -s * 0.8],
+        ],
+        false,
+      );
+      poly(
+        ctx,
+        [
+          [-s * 0.3, s * 0.3],
+          [s * 0.65, s * 0.8],
+        ],
+        false,
+      );
       node(ctx, -s, 0, nodeR, false);
       node(ctx, s * 0.65, -s * 0.8, nodeR, false);
       node(ctx, s * 0.65, s * 0.8, nodeR, false);
@@ -456,7 +598,14 @@ export const buildHaloSprite = (colour: string): HTMLCanvasElement => {
   const size = 128;
   const canvas = createCanvas(size, size);
   const ctx = ctxOf(canvas);
-  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  const g = ctx.createRadialGradient(
+    size / 2,
+    size / 2,
+    0,
+    size / 2,
+    size / 2,
+    size / 2,
+  );
   g.addColorStop(0, withAlpha(colour, 1));
   g.addColorStop(0.14, withAlpha(colour, 0.85));
   g.addColorStop(0.36, withAlpha(colour, 0.24));
@@ -510,7 +659,8 @@ export const buildWallSprite = (
     while (cursor < fillTo) {
       const t2 = makeWallLine(`${s}:r${rep}`);
       ctx.fillText(t2, cursor, i * WALL_LINE_HEIGHT);
-      cursor += ctx.measureText(t2).width + fs * rndRange(`${s}:g${rep}`, 1.5, 5);
+      cursor +=
+        ctx.measureText(t2).width + fs * rndRange(`${s}:g${rep}`, 1.5, 5);
       rep++;
     }
   }
@@ -520,7 +670,10 @@ export const buildWallSprite = (
 /* ------------------------------------------------------------------ */
 /* Grain. */
 
-export const buildGrainTiles = (count: number, size: number): HTMLCanvasElement[] => {
+export const buildGrainTiles = (
+  count: number,
+  size: number,
+): HTMLCanvasElement[] => {
   const tiles: HTMLCanvasElement[] = [];
   for (let t = 0; t < count; t++) {
     const canvas = createCanvas(size, size);
@@ -528,7 +681,7 @@ export const buildGrainTiles = (count: number, size: number): HTMLCanvasElement[
     const img = ctx.createImageData(size, size);
     const data = img.data;
     for (let i = 0; i < size * size; i++) {
-      const v = 128 + (rndRange(`grain:${t}:${i}`, -1, 1) * 90);
+      const v = 128 + rndRange(`grain:${t}:${i}`, -1, 1) * 90;
       data[i * 4] = v;
       data[i * 4 + 1] = v;
       data[i * 4 + 2] = v;

@@ -74,7 +74,10 @@ export const paintOps = (
       flat.push({ id: `${id}#${i}`, op: list[i] });
     }
   });
-  flat.sort((a, b) => a.op.order - b.op.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  flat.sort(
+    (a, b) =>
+      a.op.order - b.op.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
   for (const { op } of flat) {
     if (op.alpha <= 0.002) continue;
     const buffer = buffers.get(op.bucket);

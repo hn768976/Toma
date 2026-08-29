@@ -135,7 +135,8 @@ export const buildLayout = (
         // hand-drawn wobble. Molecules are radial and rotate freely.
         rotation:
           config.diagrams === "circuits"
-            ? (Math.PI / 2) * rndInt(s + "q", 0, 4) + rndRange(s + "j", -0.05, 0.05)
+            ? (Math.PI / 2) * rndInt(s + "q", 0, 4) +
+              rndRange(s + "j", -0.05, 0.05)
             : rndRange(s + "rot", -Math.PI, Math.PI),
         size: rndRange(s + "sz", 62, 132) * config.diagramScale,
         speed: pick(s + "sp", SPEEDS),

@@ -42,11 +42,22 @@ export const DiagramGlyph: React.FC<Props> = ({
   rollDirection,
 }) => {
   const sprite = useMemo(
-    () => buildDiagramSprite({ seed: spec.id, set: diagrams, size: spec.size }, palette),
+    () =>
+      buildDiagramSprite(
+        { seed: spec.id, set: diagrams, size: spec.size },
+        palette,
+      ),
     [spec.id, spec.size, diagrams, palette],
   );
 
-  const pos = driftedPosition(plane, spec.u, spec.v, spec.speed, frame, rollDirection);
+  const pos = driftedPosition(
+    plane,
+    spec.u,
+    spec.v,
+    spec.speed,
+    frame,
+    rollDirection,
+  );
   const radius = sprite.width / 2;
   const ops: DrawOp[] = [];
 

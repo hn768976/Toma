@@ -10,10 +10,7 @@ import {
 } from "../geometry";
 import { driftedPosition, type BlockSpec, type CodeEvent } from "../layout";
 import { LAYER, useRegister, type DrawOp } from "../scene";
-import {
-  buildCodeBlockSprite,
-  buildEquationSprite,
-} from "../sprites";
+import { buildCodeBlockSprite, buildEquationSprite } from "../sprites";
 import type { Bucket, Palette } from "../variants";
 
 type Props = {
@@ -78,7 +75,14 @@ export const CodeBlock: React.FC<Props> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec, palette, fontFamily, overrideKey]);
 
-  const pos = driftedPosition(plane, spec.u, spec.v, spec.speed, frame, rollDirection);
+  const pos = driftedPosition(
+    plane,
+    spec.u,
+    spec.v,
+    spec.speed,
+    frame,
+    rollDirection,
+  );
   const radius = Math.hypot(sprite.width, sprite.height) / 2;
   const ops: DrawOp[] = [];
 

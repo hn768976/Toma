@@ -6,7 +6,13 @@
  *   node tools/package-variants.mjs
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,7 +59,11 @@ const section = (source, tag) => {
   const from = source.indexOf(open);
   const to = source.indexOf(close);
   if (from < 0 || to < 0) throw new Error(`missing section ${tag}`);
-  return { from, to: to + close.length, body: source.slice(from + open.length, to).trim() };
+  return {
+    from,
+    to: to + close.length,
+    body: source.slice(from + open.length, to).trim(),
+  };
 };
 
 /**
@@ -77,7 +87,9 @@ const buildVariantsModule = (source, name) => {
   let header = source.slice(0, source.indexOf("/* @variant:teal */")).trimEnd();
   const chosen = section(source, `variant:${name}`).body;
   const inlined = chosen.replace(
-    new RegExp(`export const ${name.toUpperCase()}_VARIANT: VariantConfig = \\{`),
+    new RegExp(
+      `export const ${name.toUpperCase()}_VARIANT: VariantConfig = \\{`,
+    ),
     "export const VARIANT: VariantConfig = {",
   );
   header = dropUnusedConsts(
@@ -86,7 +98,10 @@ const buildVariantsModule = (source, name) => {
     inlined,
   );
   const narrowed = header
-    .replace(/export type VariantName =[^;]+;/, `export type VariantName = "${name}";`)
+    .replace(
+      /export type VariantName =[^;]+;/,
+      `export type VariantName = "${name}";`,
+    )
     .trimEnd();
   return `${narrowed}
 
@@ -187,7 +202,9 @@ npx remotion render ${variant.compositionId} out/${variant.output}-preview.mp4 -
 
 /** The working lockfile, renamed so `npm ci` matches this project. */
 const buildLockfile = (variant) => {
-  const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
+  const lock = JSON.parse(
+    readFileSync(join(root, "package-lock.json"), "utf8"),
+  );
   lock.name = variant.project;
   if (lock.packages?.[""]) lock.packages[""].name = variant.project;
   return `${JSON.stringify(lock, null, 2)}\n`;
@@ -227,7 +244,10 @@ for (const variant of VARIANTS) {
   writeFileSync(join(dir, "remotion.config.ts"), REMOTION_CONFIG);
   writeFileSync(join(dir, "package-lock.json"), buildLockfile(variant));
 
-  writeFileSync(join(dir, "src", "variants.ts"), buildVariantsModule(variantsSource, variant.name));
+  writeFileSync(
+    join(dir, "src", "variants.ts"),
+    buildVariantsModule(variantsSource, variant.name),
+  );
   writeFileSync(join(dir, "src", "Root.tsx"), buildRoot(variant));
   writeFileSync(join(dir, "package.json"), buildPackageJson(variant));
   writeFileSync(join(dir, "README.md"), buildReadme(variant));
