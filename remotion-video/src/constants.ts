@@ -1,7 +1,9 @@
 // Global timing, sizing and palette for the "How Bluetooth Works" explainer.
 // Change values here to re-time or re-skin the whole video.
 
-export const FPS = 30;
+// FPS lives in ./timing so the caption helpers and the compositions cannot
+// drift apart. Re-exported here because the scenes read it from constants.
+export { FPS } from "./timing";
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
 
