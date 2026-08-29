@@ -5,3 +5,6 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Whisper.cpp checkout + models, installed by scripts/transcribe.mjs
+whisper.cpp
