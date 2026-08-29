@@ -12,6 +12,13 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { PeriodicTable } from "./periodic/PeriodicTable";
+import {
+  DURATION_IN_FRAMES as PERIODIC_DURATION,
+  FPS as PERIODIC_FPS,
+  FRAME_HEIGHT as PERIODIC_HEIGHT,
+  FRAME_WIDTH as PERIODIC_WIDTH,
+} from "./periodic/layout";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +58,15 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="PeriodicAssemble"
+        component={PeriodicTable}
+        durationInFrames={PERIODIC_DURATION}
+        fps={PERIODIC_FPS}
+        width={PERIODIC_WIDTH}
+        height={PERIODIC_HEIGHT}
+        defaultProps={{ variant: "assemble" as const }}
       />
     </>
   );
