@@ -54,3 +54,16 @@ npx remotion render LabDashAlert out/labdash-alert.mp4  --codec=h264 --crf=12 --
   stable string seeds.
 
 `npx remotion studio` opens both compositions for scrubbing.
+
+## Standalone archives
+
+`deliverables/` holds two self-contained, independently runnable Remotion
+projects, one per version:
+
+- `lab-dashboard-steady.zip` — registers only `LabDashGreen`
+- `lab-dashboard-alert.zip` — registers only `LabDashAlert`
+
+Each carries its variant's data inlined in `src/config.ts` instead of importing
+the shared two-key `VARIANTS` object, and excludes `node_modules/`, `out/` and
+`.git/`. Rebuild them with `node tools/build-standalone.mjs` — see
+`tools/README.md`.
