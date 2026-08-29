@@ -44,7 +44,7 @@ export const CellMatrix: React.FC<{ state: FrameState }> = ({ state }) => {
       const k = `cm-${cx}-${cy}-${epoch}`;
 
       // Once the matrix starts going dark only the brightest cells survive.
-      const survives = rnd(`cm-keep-${cx}-${cy}`) > matrixDarkness * 0.93;
+      const survives = rnd(`cm-keep-${cx}-${cy}`) > matrixDarkness * 0.97;
       if (!survives) continue;
 
       const level = 0.12 + 0.88 * rnd(`${k}-v`) ** 1.6;

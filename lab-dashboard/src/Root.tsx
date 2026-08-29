@@ -15,6 +15,15 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "steady" as const }}
       />
+      <Composition
+        id="LabDashAlert"
+        component={LabDashboard}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: "alert" as const }}
+      />
     </>
   );
 };

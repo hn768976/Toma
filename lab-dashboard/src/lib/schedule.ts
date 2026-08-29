@@ -117,7 +117,7 @@ export const glitchAt = (
   const start = from + burst * 14 + jitter;
   const len = rndInt(`${seed}-bl${burst}`, 2, 4);
   if (frame < start || frame >= start + len) return [];
-  if (rnd(`${seed}-bo${burst}`) < 0.25) return [];
+  if (rnd(`${seed}-bo${burst}`) < 0.35) return [];
 
   const count = rndInt(`${seed}-bc${burst}`, 3, 5);
   const out: GlitchSlice[] = [];

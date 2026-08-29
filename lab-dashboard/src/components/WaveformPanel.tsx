@@ -6,6 +6,7 @@ import type { FrameState } from "../lib/frame";
 import {
   Ctx,
   bloomStroke,
+  mix,
   clipRect,
   resetCtx,
   setFont,
@@ -88,7 +89,7 @@ export const WaveformPanel: React.FC<{ state: FrameState; index: number }> = ({
   const cy = plot.y + plot.h / 2;
   const maxH = plot.h / 2 - 52;
   const hot = state.alert?.target === index;
-  const traceColor = hot ? p.tracePale : p.trace;
+  const traceColor = hot ? mix(p.trace, p.tracePale, 0.55) : p.trace;
   const bloom = hot ? 1.7 : 1;
 
   resetCtx(ctx);

@@ -10,6 +10,12 @@ versions live in this one project, driven by a single `variant` prop.
 
 Both are **3840 × 2160**, **600 frames @ 30 fps** (20.0 s).
 
+`LabDashGreen` is a seamless loop: frame 0 and frame 600 are byte-identical at
+full 4K. `LabDashAlert` deliberately does **not** loop — the instability ramp
+does not reset, two data tables freeze permanently at frame 450 and the cell
+matrix goes dark from frame 520, so frames 560-600 hold in the degraded state
+rather than resolving. It is a one-shot.
+
 ## Rendering
 
 1080p previews:

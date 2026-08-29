@@ -52,7 +52,7 @@ export const DataTable: React.FC<{ state: FrameState; index: number }> = ({
   ctx.rect(rect.x, rect.y, rect.w, rect.h);
   ctx.clip();
 
-  const dim = state.tablesFrozen ? 0.55 : 1;
+  const dim = state.tablesFrozen ? 0.72 : 1;
 
   setFont(ctx, { family: MONO, size: FONT.tableTitle, weight: 500 }, 1);
   ctx.fillStyle = withAlpha(p.text, 0.95 * dim);

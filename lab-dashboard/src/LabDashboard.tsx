@@ -89,11 +89,10 @@ export const LabDashboard: React.FC<LabDashboardProps> = ({ variant }) => {
 
   const state: FrameState = useMemo(() => {
     const ev = cfg.events;
+    // Reaches "only a few cells still lit" about 45 frames after the trigger
+    // and stays there for the rest of the piece.
     const matrixDarkness = Number.isFinite(ev.matrixDarkFrom)
-      ? Math.max(
-          0,
-          Math.min(1, (frame - ev.matrixDarkFrom) / (DURATION_IN_FRAMES - ev.matrixDarkFrom)),
-        )
+      ? Math.max(0, Math.min(1, (frame - ev.matrixDarkFrom) / 45))
       : 0;
     return {
       ctx,
