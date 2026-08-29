@@ -37,6 +37,39 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Shield status HUD (4K)
+
+Two 30-second 4K compositions built entirely on a 2D `<canvas>` — no 3D, no
+Three.js, no WebGL. They share one component tree and one `VARIANTS` object;
+the variant decides palette, status wording, shield render mode, outline mode,
+panel behaviour and glitch profile.
+
+| Composition | Variant | Looks like | Loops? |
+| --- | --- | --- | --- |
+| `ShieldActive` | `active` | cyan; a glowing outlined shield with a dot-textured interior; steady panels | Yes — frame 0 and frame 900 are pixel-identical |
+| `ShieldBreach` | `breach` | magenta; the shield inverted into a solid dark void with a burning exclamation; a fragmented boundary; panels that progressively fail | No — one-shot by design |
+
+Both are 3840x2160, 900 frames at 30 fps.
+
+```console
+# 1080p previews (the compositions stay 4K; --scale only changes the capture)
+npx remotion render ShieldActive out/shield-active-preview.mp4 --codec=h264 --crf=18 --scale=0.5
+npx remotion render ShieldBreach out/shield-breach-preview.mp4 --codec=h264 --crf=18 --scale=0.5
+
+# full 4K
+npx remotion render ShieldActive out/shield-active.mp4 --codec=h264 --crf=12 --concurrency=8
+npx remotion render ShieldBreach out/shield-breach.mp4 --codec=h264 --crf=12 --concurrency=8
+```
+
+Source lives in `src/shield/`. `scripts/make-zips.mjs` splits it into two
+standalone, independently runnable projects — each carrying only its own
+variant, with its own `Root.tsx` and README — and writes `shield-active.zip`
+and `shield-breach.zip` to `build/`.
+
+```console
+node scripts/make-zips.mjs
+```
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).

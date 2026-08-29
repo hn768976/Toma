@@ -12,6 +12,7 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { ShieldStatus } from "./shield/ShieldStatus";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +52,24 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="ShieldActive"
+        component={ShieldStatus}
+        durationInFrames={900}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "active" as const }}
+      />
+      <Composition
+        id="ShieldBreach"
+        component={ShieldStatus}
+        durationInFrames={900}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "breach" as const }}
       />
     </>
   );
