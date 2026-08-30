@@ -7,8 +7,20 @@ import type { Skeleton } from "../draw/codegen";
 import { HudCanvas } from "./canvas";
 import { monoFont } from "../fonts";
 
-/** Roboto Mono's advance width, used to size the panel from its column count. */
-const ADVANCE = 0.6;
+/**
+ * The panel is sized from its column count, so the advance width is measured
+ * from the loaded face rather than assumed. The layout is recomputed once the
+ * fonts resolve, and nothing is drawn before then.
+ */
+let scratch: CanvasRenderingContext2D | null = null;
+
+const advanceFor = (px: number) => {
+  if (!scratch) {
+    scratch = ctxOf(makeCanvas(8, 8));
+  }
+  scratch.font = monoFont(px);
+  return scratch.measureText("0".repeat(64)).width / 64;
+};
 
 const dims = (config: { lines?: number; cols?: number; fontSize?: number; leading?: number }) => ({
   lines: config.lines ?? 20,
@@ -19,8 +31,9 @@ const dims = (config: { lines?: number; cols?: number; fontSize?: number; leadin
 
 export const measureCodePanel: Measurer = ({ config, scale }) => {
   const d = dims(config);
+  const px = Math.round(d.fontSize * scale);
   return {
-    w: Math.round(d.cols * d.fontSize * ADVANCE * scale),
+    w: Math.ceil(d.cols * advanceFor(px)) + 2,
     h: Math.round(d.lines * d.leading * scale),
   };
 };

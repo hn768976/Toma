@@ -24,6 +24,15 @@ export const RemotionRoot: React.FC = () => {
         height={FRAME_HEIGHT}
         defaultProps={{ variant: "rings" as const }}
       />
+      <Composition
+        id="CoreHudSparse"
+        component={CoreHud}
+        durationInFrames={DURATION}
+        fps={FPS}
+        width={FRAME_WIDTH}
+        height={FRAME_HEIGHT}
+        defaultProps={{ variant: "sparse" as const }}
+      />
     </>
   );
 };

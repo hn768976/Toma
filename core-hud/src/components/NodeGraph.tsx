@@ -118,30 +118,48 @@ const renderNodeChrome = (node: Omit<GNode, "chrome">, stroke: StrokeSet) => {
   }
 
   if (kind === "crosshair") {
+    // Arm reach, hub size and the optional tick band all vary per node, so two
+    // crosshair nodes in the same graph never read as copies.
     ctx.strokeStyle = THEME.mid;
-    const inner = r * 0.58;
-    const gap = r * 0.16;
+    const inner = r * rndRange(`xh-${i}`, 0.5, 0.68);
+    const gap = r * rndRange(`xg-${i}`, 0.12, 0.22);
     line(ctx, c - inner, c, c - gap, c);
     line(ctx, c + gap, c, c + inner, c);
     line(ctx, c, c - inner, c, c - gap);
     line(ctx, c, c + gap, c, c + inner);
     ctx.strokeStyle = THEME.dim;
-    circle(ctx, c, c, r * 0.30);
+    circle(ctx, c, c, r * rndRange(`xr-${i}`, 0.24, 0.38));
+    if (rnd(`xt-${i}`) < 0.5) {
+      const ticks = rndInt(`xtn-${i}`, 10, 18);
+      for (let t = 0; t < ticks; t++) {
+        const a = (t / ticks) * Math.PI * 2;
+        line(
+          ctx,
+          c + Math.cos(a) * r * 0.82,
+          c + Math.sin(a) * r * 0.82,
+          c + Math.cos(a) * r * 0.9,
+          c + Math.sin(a) * r * 0.9,
+        );
+      }
+    }
   }
 
   if (kind === "segring") {
     // A segmented ring: arcs with unequal gaps, plus a fine tick band outside.
+    // Segment and tick counts vary per node so two large nodes never read as
+    // copies of each other.
     ctx.strokeStyle = THEME.mid;
-    const segs = 7;
+    const segs = rndInt(`segn-${i}`, 5, 9);
+    const band = rndRange(`segb-${i}`, 0.7, 0.84);
     for (let s = 0; s < segs; s++) {
       const a0 = (s / segs) * Math.PI * 2 + rndRange(`seg-${i}-${s}`, 0.04, 0.16);
       const a1 = ((s + 1) / segs) * Math.PI * 2 - rndRange(`sege-${i}-${s}`, 0.04, 0.2);
       ctx.beginPath();
-      ctx.arc(c, c, r * 0.78, a0, a1);
+      ctx.arc(c, c, r * band, a0, a1);
       ctx.stroke();
     }
     ctx.strokeStyle = THEME.dim;
-    const ticks = 32;
+    const ticks = rndInt(`segt-${i}`, 24, 40);
     for (let t = 0; t < ticks; t++) {
       const a = (t / ticks) * Math.PI * 2;
       const len = t % 4 === 0 ? r * 0.13 : r * 0.07;
@@ -209,7 +227,9 @@ const buildGraph = (
     const large = i < Math.min(3, Math.max(2, Math.round(count * 0.25)));
     let kind: NodeKind;
     if (large) {
-      kind = rnd(`${seed}-k-${i}`) < 0.5 ? "crosshair" : "segring";
+      // Alternate the two detailed constructions so a run of large nodes is
+      // never all one kind.
+      kind = i % 2 === 0 ? "crosshair" : "segring";
     } else {
       kind = pick(`${seed}-k-${i}`, [
         "plain",

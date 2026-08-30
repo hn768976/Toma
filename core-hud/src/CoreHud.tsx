@@ -81,9 +81,11 @@ export const CoreHud: React.FC<{ variant: VariantName }> = ({ variant }) => {
   const fontsReady = useHudFonts();
   const spec = VARIANTS[variant];
 
+  // Text-sized panels measure themselves against the loaded face, so the layout
+  // is resolved again once the fonts land. Nothing renders before that.
   const placed = useMemo(
     () => resolveLayout(buildLayout(variant), width, height),
-    [variant, width, height],
+    [variant, width, height, fontsReady],
   );
 
   const flicker = useMemo(
