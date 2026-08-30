@@ -1,0 +1,24 @@
+{
+  "name": "crypto-symbol-hud",
+  "version": "1.0.0",
+  "private": true,
+  "description": "4K crypto symbol HUD animation — two variants (cyan / blue) in one Remotion project.",
+  "scripts": {
+    "dev": "remotion studio",
+    "render:cyan": "remotion render CryptoHudCyan out/crypto-hud-cyan.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "render:blue": "remotion render CryptoHudBlue out/crypto-hud-blue.mp4 --codec=h264 --crf=12 --concurrency=8",
+    "upgrade": "remotion upgrade",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.418",
+    "remotion": "4.0.418",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.8.2"
+  }
+}
