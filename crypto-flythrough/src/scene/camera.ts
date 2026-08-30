@@ -11,7 +11,12 @@ export type CameraState = {
 };
 
 /**
- * Every camera value is a pure function of the loop phase `t`. The wobble is
+ * Every camera value is a pure function of the loop phase `t`.
+ *
+ * The static roll is deliberately *not* mirrored into `fieldQuaternion`: the
+ * field is laid out square and the camera leans off it, which tilts the whole
+ * frame — text, streaks and coins together — the way a handheld shot does.
+ * The pitch is mirrored, so it orients the rig without cropping the field. The wobble is
  * built from sines whose periods divide 270 frames, and `t` is exactly 0 on
  * both frame 0 and frame 270, so the loop closes on the nose.
  *
@@ -33,7 +38,7 @@ export const cameraState = (t: number, config: VariantConfig): CameraState => {
   const pitch =
     config.cameraPitch + 0.005 * Math.sin(TAU * 3 * t + 0.25) * handheld;
   const yaw = 0.006 * Math.cos(TAU * t) * handheld;
-  const roll = 0.008 * Math.sin(TAU * 2 * t + 0.9) * handheld;
+  const roll = config.cameraRoll + 0.008 * Math.sin(TAU * 2 * t + 0.9) * handheld;
 
   const euler = new Euler(pitch, yaw, roll, "YXZ");
   const quaternion = new Quaternion().setFromEuler(euler);

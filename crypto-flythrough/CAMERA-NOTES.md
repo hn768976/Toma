@@ -12,9 +12,12 @@ object (`src/variants.ts`); everything that differs between them is a value in
 | camera mode | `forward` | `static` |
 | coin count | 16 | 0 |
 | plane count | 90 | 140 |
+| hero blocks | 2 | 2 |
+| hero scale / cross bias | 3.8 / 0.36 | 5.2 / 0.10 |
 | base plane width | 1.5 | 1.0 |
 | plane scale range | 0.80 – 1.50 | 0.28 – 2.38 (3x wider span) |
 | camera pitch | 0.02 rad | 0.075 rad (looks slightly up) |
+| camera roll | 0.045 rad | 0.035 rad |
 | dolly rate | 0.16 units/frame | 0 |
 
 Both are 3840x2160, 270 frames at 30fps (9.0s), seamless.
@@ -95,10 +98,15 @@ straight down. This is the only place the two are distinguished; the blur
 direction, the pre-smeared textures and the per-copy stretch all read the same
 vector.
 
-**Text never rotates.** Planes billboard by taking the camera's own
-orientation (expressed inside the field group as
-`fieldQuaternion⁻¹ * cameraQuaternion`), which leaves every block upright and
-horizontal in both variants. Only the travel direction turns 90°.
+**Planes never rotate to follow the travel axis.** They billboard by taking
+the camera's own orientation (expressed inside the field group as
+`fieldQuaternion⁻¹ * cameraQuaternion`), so a block is upright and square to
+the lens in both variants. Only the travel direction turns 90°.
+
+The frame does carry a small tilt, but it comes from the camera, not from the
+elements: `cameraRoll` leans the camera off a field that stays square, so
+text, streaks and coins all tilt together by the same 2-3° — which is what the
+reference footage does. Set `cameraRoll: 0` for a dead-level frame.
 
 ---
 
@@ -108,20 +116,21 @@ Elements do not drift freely; each belongs to a depth band keyed by its **lap
 count** — the number of whole screen traversals it makes in 270 frames
 (`BANDS` in `src/field.ts`):
 
-| laps | distance | tier | shutter x | notes |
-|---|---|---|---|---|
-| 2 | 84 – 132 | dim | 0.45 | far haze |
-| 3 | 62 – 96 | dim | 0.45 | |
-| 5 | 42 – 70 | main | 0.45 | focal band, crisp |
-| 8 | 27 – 48 | main | 1.00 | partly legible |
-| 13 | 15 – 30 | bright | 1.45 | |
-| 21 | 8 – 18 | bright | 1.60 | |
-| 30 | 4.5 – 10 | bright | 1.85 | long streaks |
+| laps | distance | tier | shutter x | streak / width | notes |
+|---|---|---|---|---|---|
+| 1 | 84 – 132 | dim | 0.70 | 0.17 | far haze |
+| 2 | 62 – 96 | dim | 0.60 | 0.25 | |
+| 3 | 42 – 70 | main | 0.60 | 0.34 | focal band, crisp |
+| 4 | 27 – 48 | main | 1.20 | 0.78 | partly legible |
+| 6 | 15 – 30 | bright | 1.60 | 1.27 | |
+| 10 | 8 – 18 | bright | 1.60 | 1.80 | |
+| 15 | 4.5 – 10 | bright | 1.65 | 2.23 | longest streaks |
+
+A near element crosses the frame in 18 frames, a far one takes the whole 270.
 
 A whole-number lap count is what makes the loop close: at `t = 1` an element
 has completed exactly `laps` traversals and is back at its start. Tying the
-lap count to depth is also where the parallax comes from — a near element
-crosses the frame in 9 frames, a far one takes 135.
+lap count to depth is also where the parallax comes from.
 
 Elements re-seed their distance within the band, their cross-axis position and
 (for coins) nothing else at every traversal boundary, which is exactly the
@@ -129,6 +138,32 @@ moment they are off frame. A per-element `phase` staggers elements that share
 a lap count; since the lap count is a whole number, adding a constant phase to
 `t` leaves both the lap index and the progress unchanged between `t = 0` and
 `t = 1`, so the loop still closes.
+
+---
+
+## Hero blocks
+
+Two large, perfectly crisp blocks per variant (`heroCount`), and they are what
+the frame is actually about — everything else is the low-contrast streak field
+behind them. They differ from the ordinary planes in four ways:
+
+- They sit in the depth of field's focus band (`focusWorldDistance ± ~11`), so
+  the post pass leaves them alone.
+- They travel one or two traversals over the whole loop — a slow readable
+  drift rather than a pass.
+- They render as a **single copy**: `passes: 1`, `shutterScale: 0`. Even one
+  trailing copy at this size reads as doubled text rather than as blur.
+- They come from their own 2048x1024 texture set (`HERO_BLOCK_COUNT` of them),
+  because at 2-3x the size of anything else the 1024px blocks would upscale
+  visibly at 4K.
+
+`heroCrossBias` pushes the two to opposite sides of the cross axis and narrows
+their spread to 0.09 so they cannot drift back into each other. The bias is
+per-variant because the cross axis swaps with the stream axis: it is vertical
+for a horizontal stream, where a 0.36 bias separates two blocks cleanly, but
+horizontal for a vertical stream, where the same value would push blocks that
+are half the frame wide straight off the sides. Blue uses 0.10 and lets the
+vertical travel do the separating.
 
 ---
 
@@ -161,8 +196,8 @@ Near elements also get a flatter brightness falloff across their copies
 (exponent `1.4 - 0.1 * passes`, floored at 0.4) so no single copy stays sharp
 enough to read against its own streak.
 
-Resulting streak length as a multiple of the element's own width: about 6x at
-the nearest band, 1.5x at mid distance, 0.3x at the far plane.
+Resulting streak length as a multiple of the element's own width: about 2.2x
+at the nearest band, 0.8x at mid distance, 0.2x at the far plane.
 
 **The blur direction always follows the stream axis** — horizontal in v1,
 vertical in v2. Nothing is ever blurred diagonally.
@@ -249,6 +284,16 @@ textures got an alpha fade at the edges (9% horizontally, 11% vertically,
 deep, clips green and blue and comes out white. Per-element energy had to come
 down (`ENERGY = 1.05` spread across all copies) and the dim tier down to 0.4
 alpha before the palette survived.
+
+**The first pass had no subject.** Every element was the same order of size,
+so the frame read as an even carpet of smeared text with nothing to land on.
+The fix was not less density — it was the two hero blocks, plus dropping the
+background planes to 0.85 brightness so they sit behind rather than compete.
+
+**Blur and speed both ran hot to begin with.** The near band was crossing the
+frame in 9 frames and smearing 6x its own width, which is a lot of nothing.
+Halving the lap counts and cutting the shutter to 5 frames brought both to
+roughly 40% of where they started.
 
 **140 planes are not 90 planes.** v2 raises the plane count to 140 and widens
 the size range about threefold, which together cover roughly 2.6x as much of

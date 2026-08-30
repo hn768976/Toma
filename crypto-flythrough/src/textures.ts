@@ -18,8 +18,15 @@ export type Tier = (typeof TIERS)[number];
 
 export const CODE_TEXTURE_COUNT = BLOCK_COUNT * TIERS.length;
 
+/** Large foreground blocks. Few, crisp, and the thing the eye lands on. */
+export const HERO_BLOCK_COUNT = 4;
+
 const TEX_W = 1024;
 const TEX_H = 512;
+// Heroes are drawn two to three times the size of anything else on screen, so
+// they get their own higher resolution set to stay sharp at 4K.
+const HERO_TEX_W = 2048;
+const HERO_TEX_H = 1024;
 const PAD_X = 26;
 const PAD_Y = 22;
 
@@ -34,6 +41,8 @@ export type TextureSet = {
    * a row of separate ghosts.
    */
   readonly codeSmeared: readonly Texture[];
+  /** The large crisp foreground blocks. */
+  readonly hero: readonly Texture[];
   /** Invented coin face marks. */
   readonly marks: readonly Texture[];
   /** Small floating accent glyphs. */
@@ -79,6 +88,15 @@ type TierStyle = {
   glow: number;
 };
 
+/** The hero blocks: the brightest, sharpest thing in the frame. */
+const heroStyle = (palette: Palette): TierStyle => ({
+  code: palette.codeWhite,
+  comment: palette.comment,
+  accent: palette.accent,
+  alpha: 1,
+  glow: 20,
+});
+
 const tierStyle = (tier: Tier, palette: Palette): TierStyle => {
   if (tier === "bright") {
     return {
@@ -112,25 +130,28 @@ const SMEAR_TAPS = 11;
 
 const drawBlock = (
   lines: readonly CodeLine[],
-  tier: Tier,
-  palette: Palette,
+  style: TierStyle,
   smear: { x: number; y: number },
+  texW = TEX_W,
+  texH = TEX_H,
 ): HTMLCanvasElement => {
-  const { canvas, ctx } = makeCanvas(TEX_W, TEX_H);
-  const style = tierStyle(tier, palette);
+  const { canvas, ctx } = makeCanvas(texW, texH);
+  const scale = texW / TEX_W;
+  const padX = PAD_X * scale;
+  const padY = PAD_Y * scale;
 
   // Fit the widest line into the usable width.
-  const probe = 40;
+  const probe = 40 * scale;
   ctx.font = `${probe}px ${MONO}`;
   let widest = 1;
   for (const line of lines) {
     const w = ctx.measureText("  ".repeat(line.indent) + line.text).width;
     widest = Math.max(widest, w);
   }
-  const fitted = (probe * (TEX_W - PAD_X * 2)) / widest;
+  const fitted = (probe * (texW - padX * 2)) / widest;
   const lineCount = lines.length;
-  const byHeight = (TEX_H - PAD_Y * 2) / (lineCount * 1.52);
-  const fontSize = Math.min(fitted, byHeight, 46);
+  const byHeight = (texH - padY * 2) / (lineCount * 1.52);
+  const fontSize = Math.min(fitted, byHeight, 46 * scale);
   const lineHeight = fontSize * 1.52;
 
   ctx.font = `${fontSize}px ${MONO}`;
@@ -138,7 +159,7 @@ const drawBlock = (
   ctx.globalCompositeOperation = "lighter";
 
   const blockHeight = lineCount * lineHeight;
-  const top = (TEX_H - blockHeight) / 2;
+  const top = (texH - blockHeight) / 2;
 
   const smeared = smear.x !== 0 || smear.y !== 0;
   const taps = smeared ? SMEAR_TAPS : 1;
@@ -154,17 +175,17 @@ const drawBlock = (
       ctx.globalAlpha = Math.min(1, style.alpha * 1.15);
       ctx.fillStyle = style.comment;
       ctx.shadowColor = style.comment;
-      ctx.shadowBlur = style.glow * 1.6;
+      ctx.shadowBlur = style.glow * 1.6 * scale;
     } else if (line.kind === "accent") {
       ctx.globalAlpha = style.alpha * 0.95;
       ctx.fillStyle = style.accent;
       ctx.shadowColor = style.accent;
-      ctx.shadowBlur = style.glow;
+      ctx.shadowBlur = style.glow * scale;
     } else {
       ctx.globalAlpha = style.alpha * 0.82;
       ctx.fillStyle = style.code;
       ctx.shadowColor = style.code;
-      ctx.shadowBlur = style.glow * 0.75;
+      ctx.shadowBlur = style.glow * 0.75 * scale;
     }
     // The smear itself softens the glyphs, so the (expensive) glow pass is
     // only worth paying for on the sharp variant.
@@ -173,14 +194,14 @@ const drawBlock = (
     for (let k = 0; k < taps; k++) {
       const u = taps === 1 ? 0 : k / (taps - 1) - 0.5;
       ctx.globalAlpha = baseAlpha * tapScale;
-      ctx.fillText(text, PAD_X + u * smear.x, y + u * smear.y);
+      ctx.fillText(text, padX + u * smear.x, y + u * smear.y);
     }
     // A second pass thickens the glyph core so bloom has something to bite on.
     ctx.shadowBlur = 0;
     for (let k = 0; k < taps; k++) {
       const u = taps === 1 ? 0 : k / (taps - 1) - 0.5;
       ctx.globalAlpha = baseAlpha * 0.55 * tapScale;
-      ctx.fillText(text, PAD_X + u * smear.x, y + u * smear.y);
+      ctx.fillText(text, padX + u * smear.x, y + u * smear.y);
     }
   });
 
@@ -190,8 +211,8 @@ const drawBlock = (
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
   ctx.globalCompositeOperation = "destination-out";
-  const fadeX = TEX_W * 0.09;
-  const fadeY = TEX_H * 0.11;
+  const fadeX = texW * 0.09;
+  const fadeY = texH * 0.11;
   const edge = (
     x0: number,
     y0: number,
@@ -206,10 +227,10 @@ const drawBlock = (
     ctx.fillStyle = g;
     ctx.fillRect(Math.min(x0, x1), Math.min(y0, y1), w, h);
   };
-  edge(0, 0, fadeX, 0, fadeX, TEX_H);
-  edge(TEX_W, 0, TEX_W - fadeX, 0, fadeX, TEX_H);
-  edge(0, 0, 0, fadeY, TEX_W, fadeY);
-  edge(0, TEX_H, 0, TEX_H - fadeY, TEX_W, fadeY);
+  edge(0, 0, fadeX, 0, fadeX, texH);
+  edge(texW, 0, texW - fadeX, 0, fadeX, texH);
+  edge(0, 0, 0, fadeY, texW, fadeY);
+  edge(0, texH, 0, texH - fadeY, texW, fadeY);
 
   return canvas;
 };
@@ -318,7 +339,7 @@ const buildAll = (palette: Palette, axis: StreamAxis): TextureSet => {
   const none = { x: 0, y: 0 };
   // Nearer tiers travel further during the shutter, so their pre-smear is
   // proportionally longer.
-  const SMEAR_BY_TIER = [0.06, 0.13, 0.28];
+  const SMEAR_BY_TIER = [0.03, 0.07, 0.15];
   const smearFor = (tierIndex: number) => {
     const amount = SMEAR_BY_TIER[tierIndex];
     return axis === "horizontal"
@@ -329,19 +350,43 @@ const buildAll = (palette: Palette, axis: StreamAxis): TextureSet => {
   const code: Texture[] = [];
   const codeSmeared: Texture[] = [];
   TIERS.forEach((tier, tierIndex) => {
+    const style = tierStyle(tier, palette);
     const smear = smearFor(tierIndex);
     blocks.forEach((lines) => {
-      code.push(toTexture(drawBlock(lines, tier, palette, none)));
-      codeSmeared.push(toTexture(drawBlock(lines, tier, palette, smear)));
+      code.push(toTexture(drawBlock(lines, style, none)));
+      codeSmeared.push(toTexture(drawBlock(lines, style, smear)));
     });
   });
+
+  const hs = heroStyle(palette);
+  const hero: Texture[] = [];
+  for (let i = 0; i < HERO_BLOCK_COUNT; i++) {
+    hero.push(
+      toTexture(
+        drawBlock(
+          buildCodeBlock(BLOCK_COUNT + i),
+          hs,
+          none,
+          HERO_TEX_W,
+          HERO_TEX_H,
+        ),
+      ),
+    );
+  }
 
   const marks = [0, 1, 2].map((i) => toTexture(drawMark(i, palette)));
   const accents = [0, 1, 2, 3].map((i) =>
     toTexture(drawAccent(Math.floor(random(`accent-${i}`) * 6), palette)),
   );
 
-  return { code, codeSmeared, marks, accents, codeAspect: TEX_W / TEX_H };
+  return {
+    code,
+    codeSmeared,
+    hero,
+    marks,
+    accents,
+    codeAspect: TEX_W / TEX_H,
+  };
 };
 
 /**

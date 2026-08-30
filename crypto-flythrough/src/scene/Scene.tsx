@@ -12,6 +12,7 @@ import { Color, PerspectiveCamera as ThreePerspectiveCamera } from "three";
 import {
   ASPECT,
   buildCoinElements,
+  buildHeroElements,
   buildPlaneElements,
   loopPhase,
 } from "../field";
@@ -68,6 +69,10 @@ export const Scene: React.FC<{
   const t = loopPhase(frame);
 
   const planes = useMemo(() => buildPlaneElements(config), [config]);
+  const heroes = useMemo(
+    () => buildHeroElements(config, textures.hero.length),
+    [config, textures.hero.length],
+  );
   const coins = useMemo(() => buildCoinElements(config), [config]);
   const cam = useMemo(() => cameraState(t, config), [t, config]);
 
@@ -93,6 +98,17 @@ export const Scene: React.FC<{
           elements={planes}
           textures={textures.code}
           smearedTextures={textures.codeSmeared}
+          config={config}
+          aspect={textures.codeAspect}
+          t={t}
+          cameraQuaternion={cam.quaternion}
+          fieldQuaternion={cam.fieldQuaternion}
+        />
+        <CodeField
+          elements={heroes}
+          textures={textures.hero}
+          smearedTextures={textures.hero}
+          smearNearHeads={false}
           config={config}
           aspect={textures.codeAspect}
           t={t}

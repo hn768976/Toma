@@ -74,21 +74,21 @@ type Band = {
   /**
    * Shutter multiplier for the band. Tuned so the streak is roughly this
    * many times the element's own width:
-   *   near bands  ~3-6x  (unreadable)
-   *   mid bands   ~1.5x  (partly legible)
-   *   focal band  ~0.5x  (crisp)
+   *   near bands  ~1.8-2.2x  (smeared, but the block still reads as a block)
+   *   mid bands   ~0.8-1.3x  (partly legible)
+   *   focal band  ~0.3x      (crisp)
    */
   shutter: number;
 };
 
 const BANDS: readonly Band[] = [
-  { laps: 2, near: 84, far: 132, weight: 0.17, tier: 0, size: 1, shutter: 0.45 },
-  { laps: 3, near: 62, far: 96, weight: 0.18, tier: 0, size: 1.1, shutter: 0.45 },
-  { laps: 5, near: 42, far: 70, weight: 0.2, tier: 1, size: 1.4, shutter: 0.45 },
-  { laps: 8, near: 27, far: 48, weight: 0.2, tier: 1, size: 1.15, shutter: 1 },
-  { laps: 13, near: 15, far: 30, weight: 0.1, tier: 2, size: 1, shutter: 1.45 },
-  { laps: 21, near: 8, far: 18, weight: 0.055, tier: 2, size: 1, shutter: 1.6 },
-  { laps: 30, near: 4.5, far: 10, weight: 0.03, tier: 2, size: 1, shutter: 1.85 },
+  { laps: 1, near: 84, far: 132, weight: 0.17, tier: 0, size: 1, shutter: 0.7 },
+  { laps: 2, near: 62, far: 96, weight: 0.18, tier: 0, size: 1.1, shutter: 0.6 },
+  { laps: 3, near: 42, far: 70, weight: 0.2, tier: 1, size: 1.4, shutter: 0.6 },
+  { laps: 4, near: 27, far: 48, weight: 0.2, tier: 1, size: 1.15, shutter: 1.2 },
+  { laps: 6, near: 15, far: 30, weight: 0.1, tier: 2, size: 1, shutter: 1.6 },
+  { laps: 10, near: 8, far: 18, weight: 0.055, tier: 2, size: 1, shutter: 1.6 },
+  { laps: 15, near: 4.5, far: 10, weight: 0.03, tier: 2, size: 1, shutter: 1.65 },
 ];
 
 const CUMULATIVE = (() => {
@@ -127,6 +127,11 @@ export type PlaneElement = {
    */
   readonly shutterScale: number;
   readonly brightness: number;
+  /**
+   * Pushes the element toward one side of the cross axis and narrows its
+   * spread. Used to keep the hero blocks from landing on top of each other.
+   */
+  readonly crossBias: number;
 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -139,7 +144,7 @@ const clamp = (v: number, lo: number, hi: number) =>
  */
 const passesFor = (dist: number) => {
   const d01 = clamp((dist - 4.5) / (132 - 4.5), 0, 1);
-  return clamp(Math.round(11 - 9 * Math.pow(d01, 0.45)), 2, 10);
+  return clamp(Math.round(9 - 7 * Math.pow(d01, 0.45)), 2, 8);
 };
 
 export const buildPlaneElements = (
@@ -170,7 +175,9 @@ export const buildPlaneElements = (
       shutterScale: band.shutter,
       // A gentle falloff with depth, lifted where the depth of field is in
       // focus so the legible band is also the brightest thing in frame.
+      crossBias: 0,
       brightness:
+        0.85 *
         lerp(1.0, 0.45, clamp((midDist - 4.5) / 128, 0, 1)) *
         (1 +
           1.1 *
@@ -181,6 +188,41 @@ export const buildPlaneElements = (
                 2,
               ),
             )),
+    });
+  }
+  return out;
+};
+
+/**
+ * The one or two large blocks that carry the frame. They sit in the depth of
+ * field's focus band, so they stay crisp; they travel slowly, so they are not
+ * smeared; and they are biased to opposite sides of the cross axis so two of
+ * them do not stack up.
+ */
+export const buildHeroElements = (
+  config: VariantConfig,
+  heroTextureCount: number,
+): readonly PlaneElement[] => {
+  const out: PlaneElement[] = [];
+  for (let i = 0; i < config.heroCount; i++) {
+    const seed = `hero-${config.streamAxis}-${i}`;
+    const near = config.focusWorldDistance - 12;
+    const far = config.focusWorldDistance + 10;
+    out.push({
+      id: 1000 + i,
+      // One or two traversals over the whole loop: a slow, readable drift.
+      laps: 1 + (i % 2),
+      bandNear: near,
+      bandFar: far,
+      midDist: (near + far) / 2,
+      scale: config.heroScale * lerp(0.86, 1.12, random(`${seed}-scale`)),
+      textureIndex: Math.floor(random(`${seed}-tex`) * heroTextureCount),
+      // A single copy: any trailing copy at this size reads as doubled text
+      // rather than as blur.
+      passes: 1,
+      shutterScale: 0,
+      brightness: 0.95,
+      crossBias: (i % 2 === 0 ? -1 : 1) * config.heroCrossBias,
     });
   }
   return out;
@@ -292,6 +334,7 @@ export const placeElement = (
   cameraMode: CameraMode,
   dollyRate: number,
   t: number,
+  crossBias = 0,
 ): Placement => {
   const lap = lapState(laps, t, random(`${seed}-phase`));
   const lapSeed = `${seed}-lap-${lap.lapIndex}`;
@@ -310,7 +353,14 @@ export const placeElement = (
     CANONICAL[axis][axis === "horizontal" ? 0 : 1] * flowDirection;
   const along = dir * (2 * lap.p - 1) * travelHalfSpan;
 
-  const crossUnit = random(`${lapSeed}-cross`) * 2 - 1;
+  // A biased element keeps a narrow spread, so it cannot wander back to the
+  // middle and collide with its opposite number.
+  const spread = crossBias === 0 ? 1 : 0.09;
+  const crossUnit = clamp(
+    crossBias + (random(`${lapSeed}-cross`) * 2 - 1) * spread,
+    -1,
+    1,
+  );
   const crossWorld = crossUnit * extentStart.cross * 1.7;
 
   const speedPerFrame = (2 * travelHalfSpan * laps) / DURATION_IN_FRAMES;

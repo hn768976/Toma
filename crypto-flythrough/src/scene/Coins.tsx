@@ -191,7 +191,7 @@ export const Coins: React.FC<{
         <meshBasicMaterial
           color={bodyColor}
           transparent
-          opacity={0.32}
+          opacity={0.26}
           blending={AdditiveBlending}
           depthWrite={false}
           depthTest={false}
@@ -205,7 +205,7 @@ export const Coins: React.FC<{
         <meshBasicMaterial
           color={rimColor}
           transparent
-          opacity={0.95}
+          opacity={0.45}
           blending={AdditiveBlending}
           depthWrite={false}
           depthTest={false}

@@ -14,11 +14,7 @@ import {
   travelVector,
   type PlaneElement,
 } from "../field";
-import {
-  CODE_TEXTURE_COUNT,
-  TIERS,
-  tierOfTextureIndex,
-} from "../textures";
+import { TIERS, tierOfTextureIndex } from "../textures";
 import type { VariantConfig } from "../variants";
 
 /**
@@ -131,6 +127,7 @@ const PlaneGroup: React.FC<PlaneGroupProps> = ({
         config.cameraMode,
         config.dollyRate,
         t,
+        el.crossBias,
       );
       const size = planeWorldSize(place.dist, el.scale, aspect, config.planeBase);
 
@@ -254,6 +251,8 @@ export const CodeField: React.FC<{
   readonly elements: readonly PlaneElement[];
   readonly textures: readonly Texture[];
   readonly smearedTextures: readonly Texture[];
+  /** Whether the near tier's sharpest copy also samples the smeared block. */
+  readonly smearNearHeads?: boolean;
   readonly config: VariantConfig;
   readonly aspect: number;
   readonly t: number;
@@ -263,6 +262,7 @@ export const CodeField: React.FC<{
   elements,
   textures,
   smearedTextures,
+  smearNearHeads = true,
   config,
   aspect,
   t,
@@ -271,14 +271,14 @@ export const CodeField: React.FC<{
 }) => {
   const byTexture = useMemo(() => {
     const buckets: PlaneElement[][] = Array.from(
-      { length: CODE_TEXTURE_COUNT },
+      { length: textures.length },
       () => [],
     );
     for (const el of elements) {
-      buckets[el.textureIndex % CODE_TEXTURE_COUNT].push(el);
+      buckets[el.textureIndex % textures.length].push(el);
     }
     return buckets;
-  }, [elements]);
+  }, [elements, textures.length]);
 
   return (
     <>
@@ -290,7 +290,9 @@ export const CodeField: React.FC<{
                 key={mode}
                 texture={textures[i]}
                 smearedTexture={smearedTextures[i]}
-                smearHead={tierOfTextureIndex(i) === TIERS.length - 1}
+                smearHead={
+                  smearNearHeads && tierOfTextureIndex(i) === TIERS.length - 1
+                }
                 elements={bucket}
                 mode={mode}
                 config={config}
