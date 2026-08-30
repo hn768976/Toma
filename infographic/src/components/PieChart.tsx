@@ -1,8 +1,19 @@
 import React, { useMemo } from "react";
 import type { PanelSpec } from "../layout";
 import { font } from "../fonts";
-import { makeCanvas, rndInt, rndRange, type Ctx } from "../draw/primitives";
+import {
+  fillerWords,
+  makeCanvas,
+  rndInt,
+  rndRange,
+  type Ctx,
+} from "../draw/primitives";
 import { drawPanelHeading } from "../draw/chrome";
+import {
+  circleLayout,
+  drawLegendStatic,
+  drawLegendValues,
+} from "../draw/legend";
 import { usePanelPainter, usePlane } from "./PlaneContext";
 
 const TAU = Math.PI * 2;
@@ -13,9 +24,8 @@ export const PieChart: React.FC<{ panel: PanelSpec }> = ({ panel }) => {
   const scale = variant.contentScale;
   const top = 70 * scale;
 
-  const cx = panel.w / 2;
-  const cy = top + (panel.h - top) * 0.5;
-  const r = Math.min(panel.w * 0.4, (panel.h - top) * 0.42);
+  const geo = circleLayout(panel.w, panel.h, top, 0.82);
+  const { cx, cy, r } = geo;
 
   const wedges = useMemo(() => {
     const count = rndInt(`${panel.seed}-n`, 3, 5);
@@ -41,6 +51,11 @@ export const PieChart: React.FC<{ panel: PanelSpec }> = ({ panel }) => {
     });
   }, [panel.seed, variant.chart.wedgeTones]);
 
+  const legendLabels = useMemo(
+    () => fillerWords(`${panel.seed}-leg`, 5),
+    [panel.seed],
+  );
+
   const staticLayer = useMemo(() => {
     const c = makeCanvas(panel.w, panel.h);
     const ctx = c.getContext("2d") as Ctx;
@@ -48,10 +63,31 @@ export const PieChart: React.FC<{ panel: PanelSpec }> = ({ panel }) => {
     ctx.font = font(500, 16 * scale);
     ctx.textAlign = "center";
     ctx.fillStyle = variant.palette.textDim;
-    ctx.fillText("composition, indexed", cx, cy + r + 40 * scale, panel.w * 0.9);
+    ctx.fillText("composition, indexed", cx, cy + r + 40 * scale, r * 2.2);
     ctx.textAlign = "left";
+    if (geo.legend) {
+      drawLegendStatic(
+        ctx,
+        variant,
+        geo.legend,
+        wedges.map((w, i) => ({ tone: w.tone, label: legendLabels[i] })),
+        scale,
+      );
+    }
     return c;
-  }, [panel.w, panel.h, panel.seed, variant, scale, cx, cy, r]);
+  }, [
+    panel.w,
+    panel.h,
+    panel.seed,
+    variant,
+    scale,
+    cx,
+    cy,
+    r,
+    geo.legend,
+    wedges,
+    legendLabels,
+  ]);
 
   usePanelPainter(panel, (ctx, api) => {
     ctx.drawImage(staticLayer, 0, 0);
@@ -83,6 +119,22 @@ export const PieChart: React.FC<{ panel: PanelSpec }> = ({ panel }) => {
       ctx.lineWidth = Math.max(2, 3 * scale);
       ctx.stroke();
       ctx.restore();
+    }
+
+    if (geo.legend) {
+      drawLegendValues(
+        ctx,
+        variant,
+        geo.legend,
+        wedges.map((w) => {
+          const local = Math.min(
+            1,
+            Math.max(0, (api.t - w.from) / Math.max(1e-6, w.to - w.from)),
+          );
+          return (w.to - w.from) * local;
+        }),
+        scale,
+      );
     }
   });
 

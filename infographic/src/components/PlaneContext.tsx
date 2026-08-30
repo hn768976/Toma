@@ -44,7 +44,7 @@ export const usePanelPainter = (
   paint: (ctx: Ctx, api: PlaneApi) => void,
 ) => {
   const api = usePlane();
-  const bucket = bucketForPanel(panel, api.variant.depth);
+  const bucket = bucketForPanel(panel, api.variant.depth, api.variant.tilt);
   const ctx = api.buffers[bucket];
 
   useLayoutEffect(() => {

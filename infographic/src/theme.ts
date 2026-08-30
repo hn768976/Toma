@@ -38,7 +38,10 @@ export type Tilt = {
 };
 
 export type DepthConfig = {
-  /** Half-width of the sharp focal band, in sheet units, measured from v = 0. */
+  /**
+   * Half-width of the sharp focal band, in sheet units, measured along the
+   * recession axis (the sheet's x axis) out from the sheet's middle.
+   */
   bandHalfWidth: number;
   /** Gaussian radius in canvas px applied to each of the three buffers. */
   nearBlur: number;
@@ -49,7 +52,8 @@ export type DepthConfig = {
 export type FinishConfig = {
   /** Alpha of the paper-shade tonal gradient. */
   paperShadeAlpha: number;
-  /** Alpha of the brightness lift at the sheet's upper-left. */
+  /** Colour and alpha of the brightness lift at the sheet's upper-left. */
+  lightLiftColor: string;
   lightLiftAlpha: number;
   vignetteColor: string;
   vignetteAlpha: number;
@@ -99,7 +103,11 @@ export type Variant = {
   depth: DepthConfig;
   finish: FinishConfig;
   chart: ChartStyle;
-  /** Sheet-space drift over the full duration, along the plane's own axis. */
+  /**
+   * Sheet-space drift over the full duration. It runs along the sheet's y axis,
+   * which is parallel to the focal band, so the sheet slides across the frame
+   * without any panel changing depth bucket.
+   */
   drift: { fromU: number; toU: number; fromV: number; toV: number };
 };
 
@@ -126,9 +134,10 @@ export const VARIANTS: Record<string, Variant> = {
     chartMix:
       "6 donuts (3x2 grid), 2 bar, 3 line, 3 pie, 4 text, 3 value-row groups",
     tilt: { rotateDeg: -14, shear: -0.16, scaleX: 0.91, scaleY: 1 },
-    depth: { bandHalfWidth: 620, nearBlur: 12, midBlur: 0, farBlur: 20 },
+    depth: { bandHalfWidth: 800, nearBlur: 12, midBlur: 0, farBlur: 20 },
     finish: {
       paperShadeAlpha: 0.85,
+      lightLiftColor: "#FFFFFF",
       lightLiftAlpha: 0.075,
       vignetteColor: "#C9A98A",
       vignetteAlpha: 0.08,
@@ -149,7 +158,7 @@ export const VARIANTS: Record<string, Variant> = {
       textBlockOpacity: 1,
       glowBlur: 0,
     },
-    drift: { fromU: 0, toU: -620, fromV: 0, toV: -60 },
+    drift: { fromU: 60, toU: -60, fromV: 290, toV: -290 },
   },
   // #endregion
   // #region variant:warm
@@ -173,9 +182,10 @@ export const VARIANTS: Record<string, Variant> = {
     counter: { start: 1900, end: 2000 },
     chartMix: "3 large donuts (single row), 1 wide line, 2 bar, 1 pie, 2 text",
     tilt: { rotateDeg: 11, shear: 0.16, scaleX: 0.91, scaleY: 1 },
-    depth: { bandHalfWidth: 600, nearBlur: 12, midBlur: 0, farBlur: 20 },
+    depth: { bandHalfWidth: 1100, nearBlur: 12, midBlur: 0, farBlur: 20 },
     finish: {
       paperShadeAlpha: 0.9,
+      lightLiftColor: "#FFFFFF",
       lightLiftAlpha: 0.08,
       vignetteColor: "#B08A5E",
       vignetteAlpha: 0.08,
@@ -196,7 +206,7 @@ export const VARIANTS: Record<string, Variant> = {
       textBlockOpacity: 1,
       glowBlur: 0,
     },
-    drift: { fromU: 0, toU: -340, fromV: 0, toV: 30 },
+    drift: { fromU: -60, toU: 60, fromV: 260, toV: -260 },
   },
   // #endregion
   // #region variant:dark
@@ -221,10 +231,11 @@ export const VARIANTS: Record<string, Variant> = {
     chartMix:
       "6 donuts (3x2 grid), 2 bar, 3 line, 3 pie, 4 text, 3 value-row groups",
     tilt: { rotateDeg: -14, shear: -0.16, scaleX: 0.91, scaleY: 1 },
-    depth: { bandHalfWidth: 620, nearBlur: 12, midBlur: 0, farBlur: 20 },
+    depth: { bandHalfWidth: 800, nearBlur: 12, midBlur: 0, farBlur: 20 },
     finish: {
       // Strong tonal variation reads as dirt on a dark ground, so keep it faint.
       paperShadeAlpha: 0.4,
+      lightLiftColor: "#E8F4F8",
       lightLiftAlpha: 0.035,
       vignetteColor: "#000000",
       vignetteAlpha: 0.16,
@@ -245,7 +256,7 @@ export const VARIANTS: Record<string, Variant> = {
       textBlockOpacity: 0.7,
       glowBlur: 14,
     },
-    drift: { fromU: 0, toU: -620, fromV: 0, toV: -60 },
+    drift: { fromU: 60, toU: -60, fromV: 290, toV: -290 },
   },
   // #endregion
 };

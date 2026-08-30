@@ -164,8 +164,8 @@ export const SheetPlane: React.FC<{
       CANVAS_H * 0.13,
       CANVAS_W * 0.95,
     );
-    lift.addColorStop(0, `rgba(255, 255, 255, ${f.lightLiftAlpha})`);
-    lift.addColorStop(1, "rgba(255, 255, 255, 0)");
+    lift.addColorStop(0, withAlpha(f.lightLiftColor, f.lightLiftAlpha));
+    lift.addColorStop(1, withAlpha(f.lightLiftColor, 0));
     ctx.fillStyle = lift;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
