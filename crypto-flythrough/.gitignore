@@ -1,5 +1,11 @@
 node_modules/
-out/
-dist/
-*.zip
 .env
+
+# Build outputs. The rendered previews and the two deliverable packages are
+# checked in deliberately; everything else under these paths is not.
+out/*
+!out/crypto-fly-teal-preview.mp4
+!out/crypto-fly-blue-preview.mp4
+dist/*
+!dist/crypto-fly-teal.zip
+!dist/crypto-fly-blue.zip

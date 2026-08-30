@@ -7,7 +7,14 @@
  * Produces dist/crypto-fly-teal/ and dist/crypto-fly-blue/ plus the two zips.
  * node_modules/, out/, dist/ and .git/ are never copied.
  */
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -44,6 +51,8 @@ const EXCLUDE = new Set([
   "package-lock.json",
   "scripts",
 ]);
+
+const isExcluded = (entry) => EXCLUDE.has(entry) || entry.endsWith(".zip");
 
 /** Strips the other variant out of `variants.ts` so only one ships. */
 const narrowVariants = (source, keep) => {
@@ -144,14 +153,13 @@ mkdirSync(dist, { recursive: true });
 
 for (const [key, v] of Object.entries(VARIANTS)) {
   const target = join(dist, v.dir);
-  cpSync(root, target, {
-    recursive: true,
-    filter: (src) => {
-      const rel = src.slice(root.length + 1);
-      if (!rel) return true;
-      return !EXCLUDE.has(rel.split("/")[0]);
-    },
-  });
+  mkdirSync(target, { recursive: true });
+  // Copied entry by entry rather than in one go: node refuses to copy a
+  // directory into a subdirectory of itself, and dist/ lives inside root.
+  for (const entry of readdirSync(root)) {
+    if (isExcluded(entry)) continue;
+    cpSync(join(root, entry), join(target, entry), { recursive: true });
+  }
 
   const variantsPath = join(target, "src/variants.ts");
   writeFileSync(
@@ -170,6 +178,10 @@ for (const [key, v] of Object.entries(VARIANTS)) {
 
   writeFileSync(join(target, "README.md"), readme(v, key));
 
-  execFileSync("zip", ["-r", "-q", `../${v.dir}.zip`, v.dir], { cwd: dist });
-  console.log(`built ${v.dir} and ${v.dir}.zip`);
+  execFileSync(
+    "zip",
+    ["-r", "-q", `${v.dir}.zip`, v.dir, "-x", `${v.dir}/node_modules/*`],
+    { cwd: dist },
+  );
+  console.log(`built ${v.dir}/ and ${v.dir}.zip`);
 }
