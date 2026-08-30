@@ -32,9 +32,9 @@ const VARIANTS = [
     dir: "crypto-hud-blue",
     compositionId: "CryptoHudBlue",
     outName: "crypto-hud-blue",
-    title: "Crypto Symbol HUD — Blue (generic token)",
+    title: "Crypto Symbol HUD — Blue (Bitcoin, mirrored)",
     blurb:
-      "An invented hexagonal token mark inside eight bands of broken arcs, over a\ndense field of mixed-hue bokeh. The composition is mirrored, so the mark sits\nright of centre with the rings extending left.",
+      "A glowing Bitcoin mark inside eight bands of broken, counter-rotating arcs,\nover a dense field of mixed-hue bokeh. The composition is mirrored, so the mark\nsits right of centre with the rings extending left -- the mark itself is\ncounter-flipped so it never reads reversed.",
   },
 ];
 
@@ -251,7 +251,15 @@ All motion comes from \`useCurrentFrame()\` and all randomness from Remotion's
 \`random()\` with stable string seeds, so renders are deterministic and every
 frame is a pure function of its frame number.
 
-No audio, no watermark${v.key === "cyan" ? ".\n\nThe Bitcoin symbol is a community mark in general commercial use, not a\ncorporate trademark." : ", and the token mark is invented — it belongs to no\nexisting project, so the footage carries no dependency on anyone's branding."}
+No audio and no watermark.
+
+The Bitcoin symbol is a community mark in general commercial use, not a
+corporate trademark.
+
+\`SymbolGlyph\` still branches on \`symbolType\`, and \`src/crypto-hud/glyph.ts\`
+also carries a generic, invented hexagonal token mark that belongs to no
+existing project. Switching \`symbolType\` to \`"generic"\` in \`variants.ts\`
+swaps this composition over to it.
 `;
 
 rmSync(stage, { recursive: true, force: true });
