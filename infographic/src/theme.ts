@@ -74,6 +74,8 @@ export type ChartStyle = {
   seriesTones: string[];
   /** Tones cycled by the pie wedges. */
   wedgeTones: string[];
+  /** Alpha of the neutral comparison bar behind each value row. */
+  neutralAlpha: number;
   /**
    * How the donut's unfilled remainder reads.
    * "track" paints a visible darker ring; "ghost" paints a very dim ring at
@@ -152,6 +154,7 @@ export const VARIANTS: Record<string, Variant> = {
       barTones: ["#2E6FD4", "#4FA8E8"],
       seriesTones: ["#2E6FD4", "#4FA8E8", "#1B3A6B"],
       wedgeTones: ["#2E6FD4", "#4FA8E8", "#1B3A6B", "#8A96A4", "#2E6FD4"],
+      neutralAlpha: 0.34,
       donutRemainder: "track",
       donutTrackColor: "#8A96A4",
       donutTrackAlpha: 0.34,
@@ -200,6 +203,7 @@ export const VARIANTS: Record<string, Variant> = {
       barTones: ["#C4553A", "#D99A2B", "#7A8A4A"],
       seriesTones: ["#C4553A", "#D99A2B", "#7A8A4A"],
       wedgeTones: ["#C4553A", "#D99A2B", "#7A8A4A", "#5C3A24", "#A89684"],
+      neutralAlpha: 0.38,
       donutRemainder: "track",
       donutTrackColor: "#A89684",
       donutTrackAlpha: 0.4,
@@ -249,7 +253,10 @@ export const VARIANTS: Record<string, Variant> = {
     chart: {
       barTones: ["#4FD4F5", "#2E9FB8"],
       seriesTones: ["#4FD4F5", "#2E9FB8", "#E8F4F8"],
-      wedgeTones: ["#4FD4F5", "#2E9FB8", "#E8F4F8", "#4A5866", "#4FD4F5"],
+      // Ink white is reserved for headings and the third line series; a
+      // white wedge this large would be the loudest thing on the sheet.
+      wedgeTones: ["#4FD4F5", "#2E9FB8", "#4A5866", "#2E9FB8", "#4FD4F5"],
+      neutralAlpha: 0.55,
       donutRemainder: "ghost",
       donutTrackColor: "#4FD4F5",
       donutTrackAlpha: 0.2,

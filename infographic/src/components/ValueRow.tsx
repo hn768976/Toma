@@ -49,7 +49,10 @@ export const ValueRow: React.FC<{ panel: PanelSpec }> = ({ panel }) => {
     drawPanelHeading(ctx, variant, panel.seed, panel.w, scale);
     rows.forEach((row, i) => {
       const y = y0 + i * (rowH + gap);
-      ctx.fillStyle = withAlpha(variant.palette.inkGrey, 0.34);
+      ctx.fillStyle = withAlpha(
+        variant.palette.inkGrey,
+        variant.chart.neutralAlpha,
+      );
       ctx.fillRect(0, y, panel.w * row.ceiling, rowH);
     });
     return c;
