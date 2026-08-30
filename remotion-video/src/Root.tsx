@@ -1,6 +1,13 @@
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
+import { CryptoHud } from "./crypto-hud/CryptoHud";
+import {
+  DURATION as CRYPTO_HUD_DURATION,
+  FPS as CRYPTO_HUD_FPS,
+  CANVAS_W as CRYPTO_HUD_WIDTH,
+  CANVAS_H as CRYPTO_HUD_HEIGHT,
+} from "./crypto-hud/layout";
 import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
@@ -51,6 +58,15 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="CryptoHudCyan"
+        component={CryptoHud}
+        durationInFrames={CRYPTO_HUD_DURATION}
+        fps={CRYPTO_HUD_FPS}
+        width={CRYPTO_HUD_WIDTH}
+        height={CRYPTO_HUD_HEIGHT}
+        defaultProps={{ variant: "cyan" as const }}
       />
     </>
   );
