@@ -185,22 +185,41 @@ export const drawWorldMap = (a: DrawArgs, spec: PanelSpec, map: ProjectedMap) =>
     c.stroke(country.path);
   }
 
-  // v2 only: connector lines between the lit nodes, suggesting a network.
+  // v2 only: a connector mesh between the lit nodes. Each node links to its
+  // nearest two lit neighbours inside a radius, which reads as a network
+  // rather than as an arbitrary polyline.
   if (a.v.connectors && active.length > 1) {
-    both(a.p, (g) => {
-      g.strokeStyle = alpha(pal.accent, 0.4);
-      g.lineWidth = 1.6;
-      g.beginPath();
-      for (let i = 0; i < active.length - 1; i++) {
-        const from = map.countries[active[i].index];
-        const to = map.countries[active[i + 1].index];
-        const strength = Math.min(active[i].k, active[i + 1].k);
-        if (strength < 0.35) continue;
-        g.moveTo(from.cx, from.cy);
-        g.lineTo(to.cx, to.cy);
-      }
-      g.stroke();
-    }, 0.5);
+    const maxLink = Math.min(body.w, body.h) * 0.42;
+    both(
+      a.p,
+      (g) => {
+        g.strokeStyle = alpha(pal.accent, 0.55);
+        g.lineWidth = 2;
+        g.beginPath();
+        for (let i = 0; i < active.length; i++) {
+          const from = map.countries[active[i].index];
+          const neighbours = active
+            .map((other, j) => ({
+              j,
+              d: Math.hypot(
+                map.countries[other.index].cx - from.cx,
+                map.countries[other.index].cy - from.cy,
+              ),
+            }))
+            .filter((n) => n.j !== i && n.d < maxLink)
+            .sort((x, y) => x.d - y.d)
+            .slice(0, 2);
+          for (const n of neighbours) {
+            if (n.j < i) continue; // draw each edge once
+            const to = map.countries[active[n.j].index];
+            g.moveTo(from.cx, from.cy);
+            g.lineTo(to.cx, to.cy);
+          }
+        }
+        g.stroke();
+      },
+      0.5,
+    );
   }
 
   // Fixed map markers.

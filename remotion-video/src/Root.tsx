@@ -13,6 +13,7 @@ import {
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
 import { GeoHud } from "./geo-hud/GeoHud";
+import { GeoHudTilted } from "./geo-hud/GeoHudTilted";
 import {
   DURATION_IN_FRAMES as HUD_DURATION,
   FPS as HUD_FPS,
@@ -68,8 +69,26 @@ export const RemotionRoot: React.FC = () => {
         height={HUD_HEIGHT}
         defaultProps={{ variant: "blue" as const }}
       />
-      {/* QA only: 901 frames so stills at frame 0 and frame 900 can be
-          compared to prove the loop closes. */}
+      <Composition
+        id="GeoHudGreen"
+        component={GeoHud}
+        durationInFrames={HUD_DURATION}
+        fps={HUD_FPS}
+        width={HUD_WIDTH}
+        height={HUD_HEIGHT}
+        defaultProps={{ variant: "green" as const }}
+      />
+      <Composition
+        id="GeoHudTilted"
+        component={GeoHudTilted}
+        durationInFrames={HUD_DURATION}
+        fps={HUD_FPS}
+        width={HUD_WIDTH}
+        height={HUD_HEIGHT}
+        defaultProps={{ variant: "tilted" as const }}
+      />
+      {/* QA only: 901 frames so frames 0 and 900 can be compared to prove the
+          loop closes. Not part of the deliverables. */}
       <Composition
         id="GeoHudLoopCheck"
         component={GeoHud}
@@ -78,6 +97,15 @@ export const RemotionRoot: React.FC = () => {
         width={HUD_WIDTH}
         height={HUD_HEIGHT}
         defaultProps={{ variant: "blue" as const }}
+      />
+      <Composition
+        id="GeoHudTiltedLoopCheck"
+        component={GeoHudTilted}
+        durationInFrames={HUD_DURATION + 1}
+        fps={HUD_FPS}
+        width={HUD_WIDTH}
+        height={HUD_HEIGHT}
+        defaultProps={{ variant: "tilted" as const }}
       />
     </>
   );

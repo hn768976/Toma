@@ -109,7 +109,7 @@ export const VARIANTS: Record<VariantName, Variant> = {
     renderMode: "flat2D",
     title: "NODE MESH INTEGRITY",
     subtitle: "RELAY NETWORK",
-    markers: { mode: "blink", count: 9, radius: 22 },
+    markers: { mode: "blink", count: 9, radius: 28 },
     connectors: true,
   },
   // v3 re-renders the v1 dashboard as a texture on a plane; it shares the blue

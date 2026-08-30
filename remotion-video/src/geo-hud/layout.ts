@@ -179,6 +179,7 @@ const centredLayout = (): Layout => {
  */
 const offsetLayout = (): Layout => {
   const topH = 1684;
+  const mapH = 1200;
   const mapW = 1728; // 45% of 3840
   const colX = [1784, 2464, 3144];
   const colW = 660;
@@ -223,6 +224,19 @@ const offsetLayout = (): Layout => {
     "colC",
   );
 
+  // Under the map, filling the space an equirectangular world leaves in a tall
+  // panel, sits one wide readout.
+  const registry: PanelSpec = {
+    id: "registry",
+    kind: "readout",
+    label: "NODE REGISTRY",
+    x: M,
+    y: M + mapH + G,
+    w: mapW,
+    h: topH - mapH - G,
+    opts: { cols: 6, rows: 3 },
+  };
+
   const wide: PanelSpec = {
     id: "wide-trace",
     kind: "trace",
@@ -241,7 +255,7 @@ const offsetLayout = (): Layout => {
     x: M,
     y: M,
     w: mapW,
-    h: topH,
+    h: mapH,
   };
 
   const title: PanelSpec = {
@@ -254,7 +268,7 @@ const offsetLayout = (): Layout => {
     h: 74,
   };
 
-  return { panels: [...colA, ...colB, ...colC, wide], map, title };
+  return { panels: [...colA, ...colB, ...colC, registry, wide], map, title };
 };
 
 export const buildLayout = (mode: LayoutMode): Layout =>
