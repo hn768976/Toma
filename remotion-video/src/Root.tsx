@@ -68,6 +68,15 @@ export const RemotionRoot: React.FC = () => {
         height={CRYPTO_HUD_HEIGHT}
         defaultProps={{ variant: "cyan" as const }}
       />
+      <Composition
+        id="CryptoHudBlue"
+        component={CryptoHud}
+        durationInFrames={CRYPTO_HUD_DURATION}
+        fps={CRYPTO_HUD_FPS}
+        width={CRYPTO_HUD_WIDTH}
+        height={CRYPTO_HUD_HEIGHT}
+        defaultProps={{ variant: "blue" as const }}
+      />
     </>
   );
 };

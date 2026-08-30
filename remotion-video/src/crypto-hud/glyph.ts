@@ -83,14 +83,14 @@ const BITCOIN: GlyphGeometry = {
  * mirrored variant stays forgiving.
  */
 const GENERIC: GlyphGeometry = {
-  minX: -1.065,
-  maxX: 1.065,
+  minX: -1.075,
+  maxX: 1.075,
   minY: -1.1,
   maxY: 1.1,
   draw: (ctx, unit) => {
     ctx.lineCap = "butt";
     ctx.lineJoin = "round";
-    ctx.lineWidth = 0.13 * unit;
+    ctx.lineWidth = 0.15 * unit;
 
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {

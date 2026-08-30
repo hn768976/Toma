@@ -103,17 +103,17 @@ const CYAN_BANDS: BandSpec[] = [
  * gaps sweep past one another.
  */
 const BLUE_BANDS: BandSpec[] = [
-  { id: "b0", radius: 0.46, thickness: 18, symmetry: 1, periods: 1, spin: 1, bright: false, tickCount: 5, dashCount: 3, blockCount: 1, depth: "near",
+  { id: "b0", radius: 0.52, thickness: 18, symmetry: 1, periods: 1, spin: 1, bright: false, tickCount: 5, dashCount: 3, blockCount: 1, depth: "near",
     arcs: [{ start: 0, span: 110 }, { start: 140, span: 60 }, { start: 224, span: 95 }] },
-  { id: "b1", radius: 0.55, thickness: 30, symmetry: 2, periods: 4, spin: -1, bright: true, tickCount: 4, dashCount: 2, blockCount: 1, depth: "near",
+  { id: "b1", radius: 0.61, thickness: 30, symmetry: 2, periods: 4, spin: -1, bright: true, tickCount: 4, dashCount: 2, blockCount: 1, depth: "near",
     arcs: [{ start: 5, span: 110 }, { start: 133, span: 37 }] },
-  { id: "b2", radius: 0.63, thickness: 12, symmetry: 1, periods: 3, spin: 1, bright: false, tickCount: 3, dashCount: 2, blockCount: 0, depth: "near",
+  { id: "b2", radius: 0.68, thickness: 12, symmetry: 1, periods: 3, spin: 1, bright: false, tickCount: 3, dashCount: 2, blockCount: 0, depth: "near",
     arcs: [{ start: 22, span: 70 }, { start: 108, span: 52 }, { start: 181, span: 80 }, { start: 286, span: 45 }] },
-  { id: "b3", radius: 0.71, thickness: 38, symmetry: 1, periods: 1, spin: -1, bright: true, tickCount: 7, dashCount: 4, blockCount: 2, depth: "near",
+  { id: "b3", radius: 0.75, thickness: 38, symmetry: 1, periods: 1, spin: -1, bright: true, tickCount: 7, dashCount: 4, blockCount: 2, depth: "near",
     arcs: [{ start: 12, span: 140 }, { start: 190, span: 120 }], progressArc: { start: 322, span: 55 } },
-  { id: "b4", radius: 0.79, thickness: 14, symmetry: 3, periods: 6, spin: 1, bright: false, tickCount: 2, dashCount: 1, blockCount: 0, depth: "near",
+  { id: "b4", radius: 0.81, thickness: 14, symmetry: 3, periods: 6, spin: 1, bright: false, tickCount: 2, dashCount: 1, blockCount: 0, depth: "near",
     arcs: [{ start: 5, span: 55 }, { start: 72, span: 40 }] },
-  { id: "b5", radius: 0.87, thickness: 26, symmetry: 1, periods: 1, spin: -1, bright: false, tickCount: 6, dashCount: 3, blockCount: 1, depth: "mid",
+  { id: "b5", radius: 0.88, thickness: 26, symmetry: 1, periods: 1, spin: -1, bright: false, tickCount: 6, dashCount: 3, blockCount: 1, depth: "mid",
     arcs: [{ start: 30, span: 95 }, { start: 152, span: 120 }, { start: 300, span: 45 }] },
   { id: "b6", radius: 0.94, thickness: 16, symmetry: 2, periods: 2, spin: 1, bright: false, tickCount: 3, dashCount: 2, blockCount: 0, depth: "mid",
     arcs: [{ start: 15, span: 70 }, { start: 100, span: 62 }] },
