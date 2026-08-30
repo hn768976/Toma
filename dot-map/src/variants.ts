@@ -150,14 +150,16 @@ export type VariantConfig = {
  * a queue.
  */
 const REGIONS: Region[] = [
+  // Centres sit a little inland of the places they name: a centre out over
+  // water spends most of its radius on ocean and barely lights anything.
   {id: 'western-europe', lon: 4, lat: 48.5, radiusDeg: 11},
-  {id: 'east-asia', lon: 126, lat: 35, radiusDeg: 12},
-  {id: 'north-america-east', lon: -76, lat: 40, radiusDeg: 11},
+  {id: 'east-asia', lon: 116, lat: 33, radiusDeg: 12},
+  {id: 'north-america-east', lon: -78, lat: 40, radiusDeg: 11},
   {id: 'south-asia', lon: 78, lat: 21, radiusDeg: 12},
-  {id: 'the-gulf', lon: 51, lat: 25.5, radiusDeg: 9},
-  {id: 'west-africa', lon: 1, lat: 7.5, radiusDeg: 11},
-  {id: 'south-america-east', lon: -46.5, lat: -23, radiusDeg: 11},
-  {id: 'australia-southeast', lon: 147, lat: -34, radiusDeg: 10},
+  {id: 'the-gulf', lon: 49, lat: 26.5, radiusDeg: 9},
+  {id: 'west-africa', lon: 2, lat: 10, radiusDeg: 11},
+  {id: 'south-america-east', lon: -48, lat: -21, radiusDeg: 11},
+  {id: 'australia-southeast', lon: 146, lat: -32, radiusDeg: 10},
 ];
 
 /** Settings shared by variants that do not use a given mode. */
@@ -318,17 +320,19 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       cycles: 2,
       waveFrames: 20,
       attackFrames: 6,
-      holdFrames: 30,
-      decayFrames: 25,
+      // wave + hold + decay is 80 frames against a 37.5 frame stagger, so two
+      // regions are always lit and a third is often fading in or out.
+      holdFrames: 32,
+      decayFrames: 28,
       strength: 0.9,
       arcs: {
         bowRatio: 0.17,
         minBow: 40,
         maxBow: 320,
-        width: 2.4,
-        alpha: 0.62,
+        width: 3.4,
+        alpha: 0.7,
         travellerFrames: 50,
-        travellerRadius: 5,
+        travellerRadius: 6,
       },
     },
     background: {

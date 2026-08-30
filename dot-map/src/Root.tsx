@@ -24,6 +24,15 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{variant: 'green' as const}}
       />
+      <Composition
+        id="DotMapAmber"
+        component={DotMap}
+        durationInFrames={LOOP_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{variant: 'amber' as const}}
+      />
     </>
   );
 };

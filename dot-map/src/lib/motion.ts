@@ -129,26 +129,31 @@ export const regionLocalTime = (
 
 /**
  * The activation envelope for a point at `radiusFraction` of the way from the
- * region's centre to its rim: the wavefront reaches it, it attacks, holds,
- * then decays.
+ * region's centre to its rim.
+ *
+ * The wavefront reaches each dot in turn, so the region lights from the middle
+ * outward, but the hold and the decay are region-wide: once the front has
+ * finished crossing, the whole region fades as one. That keeps a region's span
+ * a fixed `wave + hold + decay`, which is what lets the staggered activations
+ * overlap by a predictable amount.
  */
 export const regionEnvelope = (
   localTime: number,
   radiusFraction: number,
   config: HotspotConfig,
 ): number => {
-  const t = localTime - radiusFraction * config.waveFrames;
-  if (t < 0) {
+  const arrival = radiusFraction * config.waveFrames;
+  if (localTime < arrival) {
     return 0;
   }
-  if (t < config.attackFrames) {
-    return t / config.attackFrames;
+  if (localTime < arrival + config.attackFrames) {
+    return (localTime - arrival) / config.attackFrames;
   }
-  const held = t - config.attackFrames;
-  if (held < config.holdFrames) {
+  const holdEnd = config.waveFrames + config.holdFrames;
+  if (localTime < holdEnd) {
     return 1;
   }
-  const decayed = held - config.holdFrames;
+  const decayed = localTime - holdEnd;
   if (decayed < config.decayFrames) {
     return 1 - decayed / config.decayFrames;
   }
@@ -164,6 +169,6 @@ export const regionActivity = (
 ): number =>
   regionEnvelope(
     regionLocalTime(regionIndex, frame, config, duration),
-    0.3,
+    0,
     config,
   );
