@@ -1,0 +1,5 @@
+# Intermediate staging for the standalone zips (see scripts/package-geo-hud.mjs).
+build/
+
+node_modules/
+.DS_Store
