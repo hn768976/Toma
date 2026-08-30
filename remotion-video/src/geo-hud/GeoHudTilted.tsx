@@ -194,6 +194,9 @@ const ComposerReadySync: React.FC = () => {
 
   useEffect(() => {
     if (!composer) return;
+    // performance.now() is only the r3f loop's timestamp argument - the same
+    // one @remotion/three passes. Nothing in this scene reads a delta; the
+    // camera, the texture and the sheen are all driven by useCurrentFrame().
     advance(performance.now());
   }, [advance, composer, settled]);
 
