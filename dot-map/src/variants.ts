@@ -162,7 +162,10 @@ const REGIONS: Region[] = [
   {id: 'australia-southeast', lon: 146, lat: -32, radiusDeg: 10},
 ];
 
-/** Settings shared by variants that do not use a given mode. */
+/**
+ * Sweep settings for a variant that does not sweep. The engine is generic over
+ * the motion mode, so every variant carries every section; this one is inert.
+ */
 const INERT_SWEEP: SweepConfig = {
   passes: 3,
   decayFrames: 25,
@@ -176,6 +179,7 @@ const INERT_SWEEP: SweepConfig = {
   readoutMargin: 120,
 };
 
+/** Hotspot settings for a variant that has no hotspots — likewise inert. */
 const INERT_HOTSPOT: HotspotConfig = {
   regions: REGIONS,
   cycles: 2,

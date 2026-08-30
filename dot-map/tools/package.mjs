@@ -113,6 +113,24 @@ const extractVariantLiteral = (source, name) => {
     .join('\n');
 };
 
+/**
+ * Drops a top-level `const` whose value is never read. A variant that does not
+ * sweep ships no sweep placeholder, and so on; `noUnusedLocals` would reject
+ * the generated file otherwise.
+ */
+const dropUnusedConst = (source, name) => {
+  const references = source.match(new RegExp(`\\b${name}\\b`, 'g')) ?? [];
+  if (references.length !== 1) {
+    return source;
+  }
+  return source
+    .split('\n\n')
+    .filter(
+      (block) => !new RegExp(`(^|\\*/\\n)const ${name}\\b`).test(block),
+    )
+    .join('\n\n');
+};
+
 const buildVariantModule = (source, variant) => {
   const head = source.slice(0, source.indexOf('export const VARIANTS'));
   const header = head
@@ -124,10 +142,14 @@ const buildVariantModule = (source, variant) => {
       /export type VariantName =[^;]*;/,
       `export type VariantName = '${variant.name}';`,
     );
-  return `${header}/** The ${variant.name} map. */\nexport const VARIANT: VariantConfig = ${extractVariantLiteral(
+  const module = `${header}/** The ${variant.name} map. */\nexport const VARIANT: VariantConfig = ${extractVariantLiteral(
     source,
     variant.name,
   )};\n`;
+  return ['INERT_SWEEP', 'INERT_HOTSPOT', 'REGIONS'].reduce(
+    dropUnusedConst,
+    module,
+  );
 };
 
 const buildDotMap = (variant) => {
