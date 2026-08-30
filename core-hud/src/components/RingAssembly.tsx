@@ -16,7 +16,9 @@ import { HudCanvas } from "./canvas";
 import { monoFont } from "../fonts";
 
 export const RING_BOX = 1240;
-const MAX_R = 600;
+/** Sized so the outermost tick band clears the radar dial in the mirrored
+ *  layout, where the two sit closest. */
+const MAX_R = 570;
 
 export const measureRingAssembly: Measurer = ({ scale }) => ({
   w: Math.round(RING_BOX * scale),
@@ -128,8 +130,8 @@ const renderStatic = (size: number, scale: number, stroke: StrokeSet, seed: stri
   ctx.strokeStyle = THEME.faint;
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2 + rndRange(`${seed}-guide`, 0, 0.2);
-    const r0 = 0.31 * MAX_R * scale;
-    const r1 = 0.98 * MAX_R * scale;
+    const r0 = 0.33 * MAX_R * scale;
+    const r1 = 0.70 * MAX_R * scale;
     line(ctx, Math.cos(a) * r0, Math.sin(a) * r0, Math.cos(a) * r1, Math.sin(a) * r1);
   }
 

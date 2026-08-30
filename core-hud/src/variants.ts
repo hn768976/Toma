@@ -56,7 +56,7 @@ export const BASE_LAYOUT: LayoutEntry[] = [
     x: 0.02,
     y: 0.14,
     scale: 1,
-    props: { seed: "code-a", lines: 30, cols: 66, fontSize: 15, leading: 26 },
+    props: { seed: "code-a", lines: 30, cols: 50, fontSize: 14, leading: 24 },
   },
   {
     id: "codeB",
