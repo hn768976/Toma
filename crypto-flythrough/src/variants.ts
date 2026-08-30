@@ -47,6 +47,8 @@ export type VariantConfig = {
   planeCount: number;
   /** How the camera behaves over the 270 frame loop. */
   cameraMode: CameraMode;
+  /** Base world width for a code plane, before the per-plane multiplier. */
+  planeBase: number;
   /** Multiplier range for the per-plane size. Wider range = more hierarchy. */
   planeScale: { min: number; max: number };
   /**
@@ -96,6 +98,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     coinCount: 16,
     planeCount: 90,
     cameraMode: "forward",
+    planeBase: 1.5,
     planeScale: { min: 0.8, max: 1.5 },
     shutterFrames: 6,
     focusWorldDistance: 56,
@@ -120,9 +123,13 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     coinCount: 0,
     planeCount: 140,
     cameraMode: "static",
-    // Roughly 3x the size span of the teal variant: 0.45..2.55 (2.10 wide)
+    // 140 planes over a much wider size range covers far more of the frame
+    // than 90 planes do, so the base comes down to keep the density
+    // comparable.
+    planeBase: 1.0,
+    // Roughly 3x the size span of the teal variant: 0.28..2.38 (2.10 wide)
     // against 0.80..1.50 (0.70 wide).
-    planeScale: { min: 0.45, max: 2.55 },
+    planeScale: { min: 0.28, max: 2.38 },
     shutterFrames: 6,
     focusWorldDistance: 56,
     focusWorldRange: 26,

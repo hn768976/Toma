@@ -12,7 +12,8 @@ object (`src/variants.ts`); everything that differs between them is a value in
 | camera mode | `forward` | `static` |
 | coin count | 16 | 0 |
 | plane count | 90 | 140 |
-| plane scale range | 0.80 – 1.50 | 0.45 – 2.55 (~3x wider) |
+| base plane width | 1.5 | 1.0 |
+| plane scale range | 0.80 – 1.50 | 0.28 – 2.38 (3x wider span) |
 | camera pitch | 0.02 rad | 0.075 rad (looks slightly up) |
 | dolly rate | 0.16 units/frame | 0 |
 
@@ -191,8 +192,16 @@ the shortest shutter and the brightness peak — so the crisp elements, the
 legible elements and the brightest elements are the same elements.
 
 Vignette is a post pass, not a 2D overlay. Grain is the only 2D layer: an SVG
-`feTurbulence` field at 4% alpha over the canvas, cycling six seeds
-(270 % 6 == 0, so it lands back on seed 0 at the loop point).
+`feTurbulence` field at 6% opacity over the canvas in `overlay`, cycling six
+seeds (270 % 6 == 0, so it lands back on seed 0 at the loop point).
+`feTurbulence` writes noise into the alpha channel as well as the colour
+channels, so a `feComponentTransfer` forces alpha opaque — otherwise the grain
+comes out blotchy rather than even. `overlay` modulates what is already on
+screen; plain compositing lays a grey haze over the blacks of a near-black
+frame.
+
+The render is muted (`Config.setMuted(true)`). Without it an h264 render picks
+up a silent audio track, and this piece has no audio.
 
 ---
 
@@ -240,6 +249,12 @@ textures got an alpha fade at the edges (9% horizontally, 11% vertically,
 deep, clips green and blue and comes out white. Per-element energy had to come
 down (`ENERGY = 1.05` spread across all copies) and the dim tier down to 0.4
 alpha before the palette survived.
+
+**140 planes are not 90 planes.** v2 raises the plane count to 140 and widens
+the size range about threefold, which together cover roughly 2.6x as much of
+the frame as v1 — the whole thing went to a solid wall. `planeBase` is a
+per-variant value for that reason: 1.5 for teal, 1.0 for blue, which brings
+the two back to comparable density.
 
 **Rendering timed out at 30s.** Four workers each generating 36 canvas
 textures and warming up WebGL blows past Remotion's default `delayRender`

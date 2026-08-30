@@ -9,7 +9,6 @@ import {
   type Texture,
 } from "three";
 import {
-  PLANE_BASE,
   placeElement,
   planeWorldSize,
   travelVector,
@@ -115,7 +114,7 @@ const PlaneGroup: React.FC<PlaneGroupProps> = ({
 
     let cursor = 0;
     for (const el of members) {
-      const approx = planeWorldSize(el.midDist, el.scale, aspect, PLANE_BASE);
+      const approx = planeWorldSize(el.midDist, el.scale, aspect, config.planeBase);
       const halfAlongTravel =
         config.streamAxis === "horizontal"
           ? approx.width / 2
@@ -133,7 +132,7 @@ const PlaneGroup: React.FC<PlaneGroupProps> = ({
         config.dollyRate,
         t,
       );
-      const size = planeWorldSize(place.dist, el.scale, aspect, PLANE_BASE);
+      const size = planeWorldSize(place.dist, el.scale, aspect, config.planeBase);
 
       // Streak length: how far this element travels during the shutter.
       const streak =

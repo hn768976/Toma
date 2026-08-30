@@ -15,6 +15,15 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "teal" as const }}
       />
+      <Composition
+        id="CryptoFlyBlue"
+        component={CodeFlythrough}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: "blue" as const }}
+      />
     </>
   );
 };

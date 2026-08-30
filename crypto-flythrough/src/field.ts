@@ -324,9 +324,6 @@ export const placeElement = (
   };
 };
 
-/** Base world width multiplier for the code planes. */
-export const PLANE_BASE = 1.5;
-
 /** World size of a plane at a given distance. Partial depth compensation
  * keeps far blocks from collapsing to sub-pixel noise while still giving the
  * near field a clear size advantage. */

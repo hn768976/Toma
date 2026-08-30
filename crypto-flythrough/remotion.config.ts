@@ -15,6 +15,8 @@ Config.setConcurrency(4);
 // Generating the shared code textures and warming up WebGL takes longer than
 // the 30s default when several workers boot at once.
 Config.setDelayRenderTimeoutInMilliseconds(180000);
+// The piece has no audio; without this h264 renders pick up a silent track.
+Config.setMuted(true);
 // The WebGL scene must survive a full 4K frame; give Chrome room to work.
 Config.setChromiumDisableWebSecurity(false);
 

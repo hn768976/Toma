@@ -19,7 +19,10 @@ export const Grain: React.FC = () => {
     <AbsoluteFill
       style={{
         pointerEvents: "none",
-        opacity: 0.04,
+        opacity: 0.06,
+        // Overlay modulates what is already there rather than laying a grey
+        // haze over the blacks, which is what plain compositing does to a
+        // near-black frame.
         mixBlendMode: "overlay",
       }}
     >
@@ -33,6 +36,11 @@ export const Grain: React.FC = () => {
             stitchTiles="stitch"
           />
           <feColorMatrix type="saturate" values="0" />
+          {/* feTurbulence writes noise into alpha too; force it opaque so the
+              grain is an even field rather than a blotchy one. */}
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0" intercept="1" />
+          </feComponentTransfer>
         </filter>
         <rect
           width="100%"
