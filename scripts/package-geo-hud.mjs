@@ -219,8 +219,9 @@ import { Config } from "@remotion/cli/config";
 
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
-// This composition carries no audio; without this Remotion muxes a silent AAC
-// track that also stretches the file past an exact 30.000s.
+// This composition carries no audio. Without both of these Remotion muxes a
+// silent AAC track, which also stretches the file past an exact 30.000s.
+Config.setMuted(true);
 Config.setEnforceAudioTrack(false);
 ${
   target.three

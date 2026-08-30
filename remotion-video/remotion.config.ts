@@ -11,8 +11,10 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
-// The geodata HUD compositions carry no audio; without this Remotion muxes a
-// silent AAC track that also stretches the file past an exact 30.000s.
+// The geodata HUD compositions carry no audio. Without both of these Remotion
+// muxes a silent AAC track, which also stretches the file past an exact
+// 30.000s.
+Config.setMuted(true);
 Config.setEnforceAudioTrack(false);
 // GeoHudTilted renders through @remotion/three. Headless Chrome has no GPU
 // here, so WebGL needs an explicit renderer; "swangle" (software ANGLE) works
