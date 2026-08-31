@@ -1,0 +1,10 @@
+node_modules
+dist
+out
+.DS_Store
+.env
+
+# Staging directories for the three standalone projects. The zips beside
+# them are the deliverable and are committed; rebuild with
+# `python3 scripts/package-variant.py`.
+zips/zoom-city-*/
