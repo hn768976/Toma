@@ -11,7 +11,7 @@ export const FPS = 30;
 export const WIDTH = 3840;
 export const HEIGHT = 2160;
 
-export type VariantName = 'blue';
+export type VariantName = 'blue' | 'black';
 
 export type BurstTypeName =
   | 'peony'
@@ -162,6 +162,69 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       children: [0, 0],
       delay: [0, 0],
       scale: 0,
+    },
+  },
+
+  /**
+   * Version 2 — a finale. True black sky, bursts across the whole frame, three
+   * times the rate, the full spectrum instead of a gold and pink pairing, and
+   * shells breaking a second time from their own particles.
+   */
+  black: {
+    palette: {
+      skyDeep: '#000000',
+      skyWash: '#0A0A12',
+      starPale: '#A8A8B8',
+      starBright: '#FFFFFF',
+      burst: [
+        {value: '#F5483F', weight: 0.22}, // red
+        {value: '#F58F3F', weight: 0.2}, // orange
+        {value: '#4FE87A', weight: 0.2}, // green
+        {value: '#9B5FE8', weight: 0.2}, // violet
+        {value: '#FFFFFF', weight: 0.18}, // white
+      ],
+      ember: '#F58F3F',
+      flash: '#FFFFFF',
+      vignette: '#000000',
+      grain: '#FFFFFF',
+    },
+    sky: {
+      mode: 'black',
+      // The city glow is gone; what is left is barely present.
+      washStrength: 0.22,
+      // The star field is thinned so it has nothing competing with the bursts.
+      starCount: 540,
+      starBrightness: 0.75,
+    },
+    placement: {
+      mode: 'centredFull',
+      xRange: [0.06, 0.94],
+      yRange: [0.08, 0.6],
+      clustering: 0.18,
+    },
+    rate: {
+      mode: 'continuous',
+      step: [7, 15],
+      gap: [0, 0],
+      clusterSize: [1, 1],
+    },
+    types: [
+      {value: 'willow', weight: 0.3},
+      {value: 'ring', weight: 0.21},
+      {value: 'crackle', weight: 0.16},
+      {value: 'peony', weight: 0.18},
+      {value: 'chrysanthemum', weight: 0.15},
+    ],
+    // A finale puts many bursts on screen at once, so each one is pulled back
+    // about a quarter to keep the frame from blowing out.
+    brightness: 0.75,
+    density: 0.72,
+    shellLaunchChance: 0.92,
+    multiBreak: {
+      chance: 0.2,
+      children: [2, 4],
+      delay: [10, 17],
+      scale: 0.42,
     },
   },
 };

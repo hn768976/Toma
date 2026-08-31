@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2018",
+    "target": "ES2020",
     "module": "ESNext",
     "jsx": "react-jsx",
     "esModuleInterop": true,
@@ -9,7 +9,7 @@
     "noEmit": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
-    "lib": ["ES2018", "DOM"],
+    "lib": ["ES2020", "DOM"],
     "types": ["@types/web"]
   },
   "include": ["src"]

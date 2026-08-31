@@ -14,6 +14,15 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{variant: 'blue' as const}}
       />
+      <Composition
+        id="FireworksBlack"
+        component={Fireworks}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{variant: 'black' as const}}
+      />
     </>
   );
 };

@@ -1,3 +1,4 @@
+import {getBurstParticles, positionAt, velocityAt} from './particles';
 import {BURST_TYPES} from './physics';
 import {pickWeighted, pickWeightedIndex, randBool, randInt, randRange} from './rng';
 import {DURATION_IN_FRAMES, HEIGHT, WIDTH} from './variants';
@@ -37,6 +38,9 @@ export type Burst = {
 
 /** Frames of slack kept between the last ember dying and the loop point. */
 const LOOP_MARGIN = 2;
+
+/** Golden ratio conjugate, used to spread burst positions across the band. */
+const GOLDEN = 0.618033988749895;
 
 const maxLifeOf = (type: BurstTypeName, lifeScale: number): number =>
   Math.ceil(BURST_TYPES[type].life[1] * lifeScale) + 1;
@@ -92,10 +96,15 @@ const makeBurst = (
   const {placement} = variant;
   const xMid = (placement.xRange[0] + placement.xRange[1]) / 2;
   const xHalf = (placement.xRange[1] - placement.xRange[0]) / 2;
-  const uniformX = randRange(seed + ':x', -1, 1);
-  const centredX =
-    randRange(seed + ':xa', -1, 1) * 0.5 + randRange(seed + ':xb', -1, 1) * 0.5;
-  const fx = uniformX + (centredX - uniformX) * placement.clustering;
+  // Successive bursts step across the band by the golden ratio, so the whole
+  // band gets used instead of the run clumping wherever the seed happens to
+  // land. Some of them are then pulled in towards the middle of the band,
+  // which is what gives the weighting without emptying the edges.
+  const stride = (index * GOLDEN + randRange(name + ':xoff', 0, 1)) % 1;
+  let fx = stride * 2 - 1;
+  if (randBool(seed + ':pull', placement.clustering)) {
+    fx *= randRange(seed + ':pullAmount', 0.15, 0.6);
+  }
   const x = (xMid + fx * xHalf) * WIDTH;
   const y =
     randRange(seed + ':y', placement.yRange[0], placement.yRange[1]) * HEIGHT;
@@ -106,10 +115,15 @@ const makeBurst = (
     variant.palette.burst,
   );
 
-  const launchDuration = Math.round(randRange(seed + ':ld', 26, 38));
+  // A shell that would have to start before frame 0 climbs faster instead of
+  // being dropped, so the loop opens with rising shells like any other moment.
+  const launchDuration = Math.min(
+    Math.round(randRange(seed + ':ld', 26, 38)),
+    start,
+  );
   const wantsLaunch = randBool(seed + ':launch', variant.shellLaunchChance);
   const launch: ShellLaunch | null =
-    wantsLaunch && start - launchDuration >= 0
+    wantsLaunch && launchDuration >= 12
       ? {
           start: start - launchDuration,
           duration: launchDuration,
@@ -135,6 +149,64 @@ const makeBurst = (
     maxLife,
     launch,
   };
+};
+
+/**
+ * A multi-break shell: a few of the primary burst's own particles detonate
+ * again a beat later, carrying the drift they had at that moment. Nothing else
+ * in the piece behaves like this — it is what makes the finale read as a
+ * finale rather than as more of the same.
+ */
+const makeSecondaryBursts = (
+  parent: Burst,
+  variant: VariantConfig,
+): Burst[] => {
+  const {multiBreak} = variant;
+  if (multiBreak.chance <= 0 || !randBool(parent.id + ':mb', multiBreak.chance)) {
+    return [];
+  }
+  const particles = getBurstParticles(parent, variant);
+  const count = randInt(
+    parent.id + ':mbn',
+    multiBreak.children[0],
+    multiBreak.children[1],
+  );
+  const delay = Math.round(
+    randRange(parent.id + ':mbd', multiBreak.delay[0], multiBreak.delay[1]),
+  );
+  const start = parent.start + delay;
+  const room = DURATION_IN_FRAMES - LOOP_MARGIN - start;
+  const type: BurstTypeName = 'crackle';
+  if (maxLifeOf(type, 1) > room) {
+    return [];
+  }
+
+  const children: Burst[] = [];
+  for (let i = 0; i < count; i++) {
+    const seed = parent.id + ':mb' + i;
+    const p = particles[randInt(seed + ':i', 0, particles.length - 1)];
+    const {x, y} = positionAt(parent, p, delay);
+    const v = velocityAt(p, delay);
+    children.push({
+      id: seed,
+      start,
+      type,
+      x,
+      y,
+      scale: parent.scale * multiBreak.scale,
+      lifeScale: 1,
+      // The secondary keeps the momentum of the particle it came from.
+      vx: v.vx * 0.8,
+      vy: v.vy * 0.8,
+      brightness: parent.brightness * 1.15,
+      colorIndex: pickWeightedIndex(seed + ':col', variant.palette.burst),
+      altColorIndex: parent.colorIndex,
+      altRate: randRange(seed + ':ar', 0.1, 0.35),
+      maxLife: Math.min(maxLifeOf(type, 1), room),
+      launch: null,
+    });
+  }
+  return children;
 };
 
 const buildSchedule = (name: VariantName, variant: VariantConfig): Burst[] => {
@@ -169,5 +241,8 @@ const buildSchedule = (name: VariantName, variant: VariantConfig): Burst[] => {
     }
   }
 
-  return bursts;
+  const secondaries = bursts.flatMap((b: Burst) =>
+    makeSecondaryBursts(b, variant),
+  );
+  return [...bursts, ...secondaries].sort((a, b) => a.start - b.start);
 };
