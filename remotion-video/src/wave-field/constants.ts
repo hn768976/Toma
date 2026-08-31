@@ -82,5 +82,12 @@ export const GRAIN_TILE_COUNT = 15;
 /** The whole field drifts on a closed path of this radius, in 4K pixels. */
 export const DRIFT_RADIUS_PX = 14;
 
+/**
+ * Ceiling on the surface slope used to tilt a particle dash. Dashes flex with
+ * the wave, but past this they would swing toward vertical on a steep swell
+ * and stop reading as running along the band.
+ */
+export const PARTICLE_TILT_LIMIT = 0.45;
+
 /** Spacing between sample points along a band surface strand, in 4K pixels. */
 export const STRAND_STEP_PX = 40;

@@ -3,7 +3,9 @@
  * No hex literal appears anywhere else in the wave-field source.
  */
 
-export type VariantName = "blue" | "violet" | "mono";
+export const VARIANT_NAMES = ["blue", "violet", "mono"] as const;
+
+export type VariantName = (typeof VARIANT_NAMES)[number];
 
 export type MeshMode = "sparse" | "dense" | "none";
 
@@ -234,15 +236,22 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       ],
     },
     washStrength: 1,
+    // Two bands instead of seven, each roughly 40% of frame height. The
+    // negative space between and around them is a major element here.
     bandCount: 2,
-    bandPitch: 1000,
-    bandThickness: 864,
-    strandRows: 46,
-    strandAlpha: 0.2,
+    bandPitch: 1250,
+    bandThickness: 900,
+    strandRows: 40,
+    strandAlpha: 0.28,
+    // Fewer particles at roughly double v1's size and far more varied in
+    // length, so each one is individually visible. With no colour to carry
+    // variety, size and length have to.
     particleCount: 4000,
-    particleLength: [70, 260],
-    particleWidth: [9, 17],
+    particleLength: [55, 230],
+    particleWidth: [7.2, 13],
     particleAlpha: [0.2, 1],
+    // Larger and more widely spaced than v1, with a far more pronounced
+    // travelling pulse. With no colour and few elements, this is the main event.
     dotSpacing: 130,
     dotRadius: 30,
     pulseCrests: 1,
@@ -251,12 +260,15 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     meshMode: "none",
     meshCount: 0,
     meshAlpha: 0,
+    // Much higher amplitude and much longer wavelength than v1: one or two
+    // large sweeping swells across the frame rather than many small ones, so
+    // the wave is the frame's dominant shape rather than a texture within it.
     harmonics: [
       { spatial: 2, temporal: 2, amp: 330, phase: 0 },
       { spatial: 3, temporal: -1, amp: 120, phase: 0.37 },
       { spatial: 5, temporal: 3, amp: 52, phase: 0.8 },
     ],
     bandRateOffsets: [0, 1],
-    depthScale: [0.75, 1.3],
+    depthScale: [0.8, 1.05],
   },
 };

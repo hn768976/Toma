@@ -25,10 +25,10 @@ import { MeshLayer } from "./MeshLayer";
 import { WaveBand } from "./WaveBand";
 import { ParticleLayer } from "./ParticleLayer";
 import { LeadingEdge } from "./LeadingEdge";
-import { VARIANTS } from "./variants";
+import { VARIANT_NAMES, VARIANTS } from "./variants";
 
 export const waveFieldSchema = z.object({
-  variant: z.enum(["blue", "violet", "mono"]),
+  variant: z.enum(VARIANT_NAMES),
 });
 
 export type WaveFieldProps = z.infer<typeof waveFieldSchema>;

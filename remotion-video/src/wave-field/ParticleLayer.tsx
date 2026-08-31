@@ -4,6 +4,7 @@ import {
   BAND_LENGTH,
   DURATION_IN_FRAMES,
   HEIGHT,
+  PARTICLE_TILT_LIMIT,
   WIDTH,
   type DepthBucket,
 } from "./constants";
@@ -92,8 +93,9 @@ export const drawParticleLayer = (
 
       // Elongated along the band, tilted by the local surface slope, which is
       // what makes the field read as flowing rather than as static dots.
+      const tilt = Math.max(-PARTICLE_TILT_LIMIT, Math.min(PARTICLE_TILT_LIMIT, slope));
       const tx = ALONG_X;
-      const ty = ALONG_Y - slope;
+      const ty = ALONG_Y - tilt;
       const norm = Math.sqrt(tx * tx + ty * ty);
       const dx = (tx / norm) * p.halfLength;
       const dy = (ty / norm) * p.halfLength;

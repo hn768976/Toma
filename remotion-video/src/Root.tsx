@@ -80,14 +80,14 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ variant: "violet" as const }}
       />
       <Composition
-        id="LoopCheck"
+        id="WaveFieldMono"
         component={WaveField}
-        durationInFrames={WAVE_DURATION_IN_FRAMES + 1}
+        durationInFrames={WAVE_DURATION_IN_FRAMES}
         fps={WAVE_FPS}
         width={WAVE_WIDTH}
         height={WAVE_HEIGHT}
         schema={waveFieldSchema}
-        defaultProps={{ variant: "violet" as const }}
+        defaultProps={{ variant: "mono" as const }}
       />
     </>
   );
