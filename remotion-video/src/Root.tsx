@@ -18,6 +18,13 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  SearchBar,
+  SEARCH_BAR_DURATION,
+  SEARCH_BAR_FPS,
+  SEARCH_BAR_HEIGHT,
+  SEARCH_BAR_WIDTH,
+} from "./search-bar/SearchBar";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +58,15 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="SearchBarCyan"
+        component={SearchBar}
+        durationInFrames={SEARCH_BAR_DURATION}
+        fps={SEARCH_BAR_FPS}
+        width={SEARCH_BAR_WIDTH}
+        height={SEARCH_BAR_HEIGHT}
+        defaultProps={{ variant: "cyan" as const }}
       />
     </>
   );
