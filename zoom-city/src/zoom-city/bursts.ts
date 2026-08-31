@@ -82,7 +82,7 @@ export const burstSchedule = (variant: Variant): Burst[] => {
 const pickSector = (variant: Variant, i: number) => {
   const map = angularMap(variant);
   let candidate = random(`${variant.name}-burst-sector-${i}`);
-  if (variant.streaks.upwardBias === 0) {
+  if (variant.streaks.downBias === 0) {
     return candidate;
   }
   for (let attempt = 0; attempt < 8; attempt++) {

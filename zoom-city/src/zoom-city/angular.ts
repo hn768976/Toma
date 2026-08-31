@@ -16,6 +16,14 @@ const BINS = 1024;
 export type AngularMap = {
   /** Uniform value in [0,1) -> angle in radians. */
   angleAt: (u: number) => number;
+  /**
+   * Uniform value in [0,1) -> angle, with the field drawn into bundles of
+   * near-identical angle. The uniform is split into `bundles` cells; each
+   * cell keeps its share of the streaks but collapses them towards its centre,
+   * so the field arrives as sheets of parallel filaments rather than as an
+   * even spray. Setting tightness to 1 is exactly `angleAt`.
+   */
+  bundledAngleAt: (u: number, free: boolean) => number;
 };
 
 const cache = new Map<string, AngularMap>();
@@ -39,11 +47,15 @@ const build = (variant: Variant): AngularMap => {
     for (const h of harmonics) {
       d += h.amp * Math.sin(h.k * theta + h.phase);
     }
+    // A street seen head-on is dark straight up and packed to the left and
+    // right, so pull the density towards the horizontal.
+    const horizontal = Math.pow(Math.abs(Math.cos(theta)), 1.15);
+    d *= 1 - variant.streaks.corridor * (1 - horizontal);
     // Angles pointing below the horizon are wasted where the floor clips the
-    // field, so bias against straight down. Canvas y grows downward, so
+    // field, so bias against straight down too. Canvas y grows downward, so
     // sin(theta) > 0 is the downward half.
     const down = Math.max(0, Math.sin(theta));
-    d *= 1 - variant.streaks.upwardBias * Math.pow(down, 0.75);
+    d *= 1 - variant.streaks.downBias * Math.pow(down, 0.75);
     // Never fully empty: a bare sector reads as a missing wedge, not as sparse.
     d = Math.max(0.06, d);
     density[i] = d;
@@ -76,7 +88,27 @@ const build = (variant: Variant): AngularMap => {
     return ((lo + frac) / BINS) * Math.PI * 2;
   };
 
-  return { angleAt };
+  const { bundles, bundleTightness } = variant.streaks;
+
+  const bundledAngleAt = (u: number, free: boolean) => {
+    if (free || bundleTightness >= 1 || bundles < 2) {
+      return angleAt(u);
+    }
+    const t = (u - Math.floor(u)) * bundles;
+    const cell = Math.floor(t);
+    const within = t - cell;
+    // The cell's own angular width, so a bundle in a dense fan stays narrow
+    // and one in a sparse sector stays wide.
+    const lo = angleAt(cell / bundles);
+    let hi = angleAt((cell + 1) / bundles);
+    if (hi < lo) {
+      hi += Math.PI * 2;
+    }
+    const centre = (lo + hi) / 2;
+    return centre + (within - 0.5) * (hi - lo) * bundleTightness;
+  };
+
+  return { angleAt, bundledAngleAt };
 };
 
 export const angularMap = (variant: Variant): AngularMap => {

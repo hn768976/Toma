@@ -34,8 +34,10 @@ export type Streak = {
   reach: number;
   /** The streak's own extent, as a share of its current radius. */
   lengthFraction: number;
-  /** Width at the outer end when the streak is at the frame edge. */
+  /** Half-width of the soft halo at the outer end, at the frame edge. */
   width: number;
+  /** Streaks outside a bundle keep the field's gaps from going empty. */
+  free: boolean;
   colour: RGB;
   /** The hot inner colour — the brightest streaks burn out towards white. */
   hotColour: RGB;
@@ -84,19 +86,19 @@ export const buildStreaks = (variant: Variant): Streak[] => {
       kind = "short";
       reach = 0.1 + random(`reach-s-${i}`) * 0.2;
       lengthFraction = 0.16 + random(`len-s-${i}`) * 0.2;
-      widthMul = 0.55;
-      brightMul = 0.75;
+      widthMul = 0.6;
+      brightMul = 0.8;
     } else if (classRoll > 1 - variant.streaks.heroFraction) {
       kind = "hero";
-      reach = 1.3 + random(`reach-h-${i}`) * 0.25;
-      lengthFraction = 0.68 + random(`len-h-${i}`) * 0.3;
-      widthMul = 1.5;
-      brightMul = 1.65;
+      reach = 2 + random(`reach-h-${i}`) * 0.45;
+      lengthFraction = 0.86 + random(`len-h-${i}`) * 0.14;
+      widthMul = 1.45;
+      brightMul = 1.7;
     } else {
       kind = "normal";
-      reach = 1 + random(`reach-n-${i}`) * 0.28;
-      lengthFraction = 0.3 + random(`len-n-${i}`) * 0.32;
-      widthMul = 0.8 + random(`wid-n-${i}`) * 0.7;
+      reach = 1.5 + random(`reach-n-${i}`) * 0.42;
+      lengthFraction = 0.55 + random(`len-n-${i}`) * 0.4;
+      widthMul = 0.75 + random(`wid-n-${i}`) * 0.8;
       brightMul = 1;
     }
 
@@ -120,13 +122,22 @@ export const buildStreaks = (variant: Variant): Streak[] => {
 
     out.push({
       index: i,
-      cycles: 1 + Math.floor(random(`cycles-${i}`) * 3),
+      cycles:
+        variant.motion.cyclesMin +
+        Math.floor(
+          random(`cycles-${i}`) *
+            (variant.motion.cyclesMax - variant.motion.cyclesMin + 1),
+        ),
       phase: random(`phase-${i}`),
       startRadius: 10 + random(`start-${i}`) * 110,
       reach,
       lengthFraction,
+      // Filaments, not wedges: at 4K the halo runs about 8-26px across and
+      // the hot core inside it about a third of that, which is what the
+      // reference footage looks like when it is scaled up to this frame.
       width:
-        (6 + random(`width-${i}`) * 26) * widthMul * variant.streaks.widthScale,
+        (4 + random(`width-${i}`) * 9) * widthMul * variant.streaks.widthScale,
+      free: random(`free-${i}`) < variant.streaks.freeShare,
       colour,
       hotColour: mix(colour, white, 0.35 + Math.pow(b, 3) * 0.6),
       brightness,
@@ -136,6 +147,51 @@ export const buildStreaks = (variant: Variant): Streak[] => {
 
   cache.set(key, out);
   return out;
+};
+
+/**
+ * Bundles brighten and fade on their own seeded, loop-periodic schedules —
+ * lit facades arriving and passing. Without this the field's large-scale
+ * structure never changes, however fast the individual filaments travel.
+ */
+const pulseCache = new Map<string, Float64Array>();
+
+const pulseTable = (variant: Variant) => {
+  const hit = pulseCache.get(variant.name);
+  if (hit) {
+    return hit;
+  }
+  const n = variant.streaks.pulseGroups;
+  const table = new Float64Array(n * 2);
+  for (let b = 0; b < n; b++) {
+    // Whole numbers of pulses per loop, so the schedule closes with it.
+    table[b * 2] = 1 + Math.floor(random(`pulse-rate-${variant.name}-${b}`) * 4);
+    table[b * 2 + 1] = random(`pulse-phase-${variant.name}-${b}`);
+  }
+  pulseCache.set(variant.name, table);
+  return table;
+};
+
+export const bundlePulseAt = (
+  variant: Variant,
+  angleSeed: number,
+  f: number,
+) => {
+  const depth = variant.streaks.bundlePulse;
+  if (depth <= 0) {
+    return 1;
+  }
+  const n = variant.streaks.pulseGroups;
+  const b = Math.min(n - 1, Math.floor((angleSeed - Math.floor(angleSeed)) * n));
+  const table = pulseTable(variant);
+  const wave =
+    0.5 +
+    0.5 *
+      Math.sin(
+        (table[b * 2] * (f / LOOP_FRAMES) + table[b * 2 + 1]) * Math.PI * 2,
+      );
+  // Dim most of the time, flaring as the bundle comes past.
+  return 1 + depth * (Math.pow(wave, 2.4) * 1.65 - 0.62);
 };
 
 export type StreakState = {
@@ -164,28 +220,32 @@ export const streakStateAt = (
   const u = t - cycleIndex;
 
   const angleSeed = angleSeedOf(s, cycleIndex);
-  const angle = map.angleAt(angleSeed) + scene.rotation;
+  const angle = map.bundledAngleAt(angleSeed, s.free) + scene.rotation;
 
   const endRadius = s.reach * scene.maxRadius;
   const outerRadius = s.startRadius * Math.pow(endRadius / s.startRadius, u);
   const innerRadius = outerRadius * (1 - s.lengthFraction);
 
-  // Width grows with radius, i.e. with speed. Sub-linear so the frame edge
-  // doesn't turn into slabs.
-  const growth = Math.pow(outerRadius / scene.maxRadius, 0.55);
-  const outerWidth = Math.max(1.2, s.width * growth);
+  // Width grows with radius, i.e. with speed, but only weakly: the lines in
+  // real radial blur stay filaments rather than fanning into slabs.
+  const growth = Math.pow(outerRadius / scene.maxRadius, 0.38);
+  const outerWidth = Math.max(1.1, s.width * growth);
 
+  // The streak holds its brightness until its leading end is out past the
+  // frame corner, then dissolves over the last stretch of the cycle. Fading
+  // it on the cycle alone would empty the frame edges, because the radius
+  // grows exponentially and most of the travel happens at the very end.
   const alpha =
     s.brightness *
-    smoothstep(0, 0.12, u) *
-    (1 - smoothstep(0.78, 1, u));
+    smoothstep(0, 0.08, u) *
+    (1 - smoothstep(0.86, 1, u));
 
   return {
     angle,
     angleSeed,
     innerRadius,
     outerRadius,
-    innerWidth: outerWidth * 0.16,
+    innerWidth: outerWidth * 0.34,
     outerWidth,
     alpha,
   };
@@ -217,13 +277,22 @@ export const drawStreak = (
   const nx = -sa;
   const ny = ca;
 
-  const quad = (wIn: number, wOut: number, colour: RGB, a: number) => {
+  // The colour shifts along the line — hotter and cooler near the vanishing
+  // point, settling into the streak's own hue further out — which is what
+  // gives a real zoom blur its chromatic banding.
+  const quad = (
+    wIn: number,
+    wOut: number,
+    inner: RGB,
+    outer: RGB,
+    a: number,
+  ) => {
     const grad = ctx.createLinearGradient(ix, iy, ox, oy);
-    grad.addColorStop(0, rgba(colour, 0));
-    grad.addColorStop(0.22, rgba(colour, a));
-    grad.addColorStop(0.55, rgba(colour, a * 0.62));
-    grad.addColorStop(0.84, rgba(colour, a * 0.2));
-    grad.addColorStop(1, rgba(colour, 0));
+    grad.addColorStop(0, rgba(inner, 0));
+    grad.addColorStop(0.16, rgba(inner, a));
+    grad.addColorStop(0.42, rgba(outer, a * 0.74));
+    grad.addColorStop(0.78, rgba(outer, a * 0.3));
+    grad.addColorStop(1, rgba(outer, 0));
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.moveTo(ix + nx * wIn, iy + ny * wIn);
@@ -234,11 +303,19 @@ export const drawStreak = (
     ctx.fill();
   };
 
-  quad(st.innerWidth, st.outerWidth, s.colour, Math.min(1, alpha * 0.85));
+  // A soft halo, then the hot filament inside it.
   quad(
-    st.innerWidth * 0.4,
-    Math.max(0.9, st.outerWidth * 0.34),
+    st.innerWidth,
+    st.outerWidth,
     s.hotColour,
-    Math.min(1, alpha * 0.95),
+    s.colour,
+    Math.min(1, alpha * 0.6),
+  );
+  quad(
+    Math.max(0.6, st.innerWidth * 0.36),
+    Math.max(0.8, st.outerWidth * 0.32),
+    s.hotColour,
+    s.colour,
+    Math.min(1, alpha * 1.1),
   );
 };

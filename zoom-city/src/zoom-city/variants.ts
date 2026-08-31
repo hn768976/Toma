@@ -67,7 +67,45 @@ export type Variant = {
      * clips the field at the horizon, streaks aimed downward would be thrown
      * away, so the versions with a floor spend them above it instead.
      */
-    upwardBias: number;
+    downBias: number;
+    /**
+     * How strongly the field favours the horizontal. High values open a dark
+     * cone above the vanishing point and pack the light into the left and
+     * right walls, which is what makes the frame read as a street being
+     * driven down rather than as a sunburst.
+     */
+    corridor: number;
+    /**
+     * Streaks are grouped into bundles of near-identical angle, which is what
+     * gives a real zoom blur its sheets of parallel filaments. This is how
+     * much of its natural angular cell a bundle collapses into: 1 leaves the
+     * field evenly spread, small values draw it into tight ribbons.
+     */
+    bundleTightness: number;
+    /**
+     * How many bundles the field is divided into. Bundles also brighten and
+     * fade on their own schedules, which is how lit facades arrive and pass.
+     */
+    bundles: number;
+    /**
+     * How many groups the pulsing works on. This is deliberately far coarser
+     * than the bundles: a few dozen wide sectors swelling and fading changes
+     * the frame's large-scale structure, where hundreds of independent little
+     * pulses would just average out to a constant.
+     */
+    pulseGroups: number;
+    /** How hard the groups pulse. 0 holds the field's structure still. */
+    bundlePulse: number;
+    /** Share of streaks that ignore bundling, so the gaps are not empty. */
+    freeShare: number;
+  };
+  motion: {
+    /**
+     * Whole traversals of the frame each streak makes across the loop. Whole
+     * numbers are what let the loop close. Higher is faster.
+     */
+    cyclesMin: number;
+    cyclesMax: number;
   };
   floor: {
     mode: FloorMode;
@@ -117,14 +155,21 @@ export const VARIANTS: Record<VariantName, Variant> = {
     colourWeights: { dominant: 0.52, secondary: 0.18, accent: 0.15, white: 0.15 },
     vanishingPoint: { x: 0.5, y: 0.62 },
     streaks: {
-      count: 900,
+      count: 2600,
       widthScale: 1,
       brightnessScale: 1,
       shortFraction: 0.22,
       heroFraction: 0.05,
       lumpiness: 1,
-      upwardBias: 0.85,
+      downBias: 0.82,
+      corridor: 0.85,
+      bundleTightness: 0.24,
+      bundles: 300,
+      pulseGroups: 24,
+      bundlePulse: 1.05,
+      freeShare: 0.2,
     },
+    motion: { cyclesMin: 3, cyclesMax: 8 },
     floor: { mode: "wet", opacity: 0.35, smear: 1.45, blur: 12, horizonBand: 1 },
     core: { scale: 1, anamorphic: true },
     bursts: {
@@ -154,14 +199,21 @@ export const VARIANTS: Record<VariantName, Variant> = {
     colourWeights: { dominant: 0.52, secondary: 0.18, accent: 0.15, white: 0.15 },
     vanishingPoint: { x: 0.34, y: 0.58 },
     streaks: {
-      count: 500,
+      count: 1500,
       widthScale: 1.75,
       brightnessScale: 1.25,
       shortFraction: 0.18,
       heroFraction: 0.08,
       lumpiness: 1.05,
-      upwardBias: 0.85,
+      downBias: 0.82,
+      corridor: 0.8,
+      bundleTightness: 0.28,
+      bundles: 180,
+      pulseGroups: 18,
+      bundlePulse: 1,
+      freeShare: 0.22,
     },
+    motion: { cyclesMin: 3, cyclesMax: 8 },
     floor: { mode: "dry", opacity: 0.15, smear: 1, blur: 72, horizonBand: 1.5 },
     core: { scale: 1, anamorphic: true },
     bursts: {
@@ -191,7 +243,7 @@ export const VARIANTS: Record<VariantName, Variant> = {
     colourWeights: { dominant: 0.4, secondary: 0.27, accent: 0.18, white: 0.15 },
     vanishingPoint: { x: 0.5, y: 0.45 },
     streaks: {
-      count: 1600,
+      count: 4000,
       widthScale: 0.55,
       brightnessScale: 0.72,
       shortFraction: 0.25,
@@ -199,8 +251,18 @@ export const VARIANTS: Record<VariantName, Variant> = {
       // Near-uniform: with no colour and no floor the field is meant to read
       // as a starfield rather than as a city, so the sunburst risk is taken.
       lumpiness: 0.12,
-      upwardBias: 0,
+      downBias: 0,
+      corridor: 0,
+      // Deliberately unbundled: v3 is meant to read as a starfield.
+      bundleTightness: 1,
+      // No angular bundling in v3, but the groups still pulse, so the field
+      // keeps changing instead of sitting as a fixed spray.
+      bundles: 260,
+      pulseGroups: 30,
+      bundlePulse: 0.85,
+      freeShare: 1,
     },
+    motion: { cyclesMin: 3, cyclesMax: 8 },
     floor: { mode: "none", opacity: 0, smear: 1, blur: 0, horizonBand: 0 },
     core: { scale: 1.05, anamorphic: false },
     bursts: {

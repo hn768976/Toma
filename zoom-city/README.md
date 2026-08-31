@@ -8,9 +8,9 @@ new angle. 2D canvas only — no 3D and no Three.js.
 
 | Composition | Version | Vanishing point | Streaks | Floor |
 | --- | --- | --- | --- | --- |
-| `ZoomCityViolet` | v1 — centred, dense, wet floor | 50% × 62% | ~900 | wet: 35% reflection with a pronounced vertical smear |
-| `ZoomCityAmber` | v2 — off-centre, sparser, dry floor | 34% × 58% | ~500, wider and brighter | dry: 15%, heavily blurred into a soft glow |
-| `ZoomCityMono` | v3 — monochrome, no floor, high horizon | 50% × 45% | ~1600, thinner and dimmer | none |
+| `ZoomCityViolet` | v1 — centred, dense, wet floor | 50% × 62% | ~2600 | wet: 35% reflection with a pronounced vertical smear |
+| `ZoomCityAmber` | v2 — off-centre, sparser, dry floor | 34% × 58% | ~1500, wider and brighter | dry: 15%, heavily blurred into a soft glow |
+| `ZoomCityMono` | v3 — monochrome, no floor, high horizon | 50% × 45% | ~4000, thinner and dimmer | none |
 
 All three are 3840 × 2160, 300 frames at 30 fps (10.0 s), and loop: frame 300
 is pixel-identical to frame 0.
@@ -50,7 +50,10 @@ randomness comes from Remotion's `random()` with stable string seeds.
   over a cycle is exponential, which is what makes speed proportional to radius.
 - `src/zoom-city/angular.ts` — the uneven angular distribution, built as a seeded
   density and inverted through its CDF: dense fans and sparse sectors rather than
-  an even sunburst.
+  an even sunburst. The density is pulled towards the horizontal, which opens a
+  dark cone above the vanishing point and packs the light into left and right
+  walls, and the streaks inside each cell are collapsed into bundles — the sheets
+  of parallel filaments a real radial blur produces.
 - `src/zoom-city/bursts.ts` — the burst schedule; gaps are normalised to tile the
   loop exactly, and every envelope is evaluated on `frame % 300`.
 - `src/zoom-city/components/` — the stacked canvas layers.
@@ -58,6 +61,11 @@ randomness comes from Remotion's `random()` with stable string seeds.
 The streak field is drawn once per frame into its own canvas; the floor
 reflection and the bloom pass read that canvas back with `drawImage` instead of
 redrawing the field.
+
+Streak counts, widths, lengths, bundling and traversal speed were set by
+measuring reference footage rather than by eye: the temporal decorrelation of
+the render (how fast the frame turns over) and its line geometry were compared
+against the reference clip and tuned to match.
 
 ## Standalone single-version projects
 

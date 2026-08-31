@@ -22,21 +22,21 @@ VERSIONS = {
         "zip": "zoom-city-violet",
         "out": "zoomcity-violet",
         "title": "Zoom City — violet",
-        "blurb": "Centred vanishing point, a dense field of ~900 streaks and a wet floor: a strong mirrored reflection with a pronounced vertical smear.",
+        "blurb": "Centred vanishing point, a dense field of ~2600 streaks and a wet floor: a strong mirrored reflection with a pronounced vertical smear.",
     },
     "amber": {
         "id": "ZoomCityAmber",
         "zip": "zoom-city-amber",
         "out": "zoomcity-amber",
         "title": "Zoom City — amber",
-        "blurb": "Vanishing point off-centre at 34% across and higher on the horizon, ~500 wider and brighter streaks, and a dry floor: the reflection is only a soft glow beneath a brighter horizon.",
+        "blurb": "Vanishing point off-centre at 34% across and higher on the horizon, ~1500 wider and brighter streaks, and a dry floor: the reflection is only a soft glow beneath a brighter horizon.",
     },
     "mono": {
         "id": "ZoomCityMono",
         "zip": "zoom-city-mono",
         "out": "zoomcity-mono",
         "title": "Zoom City — mono",
-        "blurb": "Monochrome, no floor and no horizon, vanishing point up near the centre of the frame: ~1600 thinner streaks spread almost evenly, reading as a data burst rather than as a road.",
+        "blurb": "Monochrome, no floor and no horizon, vanishing point up near the centre of the frame: ~4000 thinner streaks spread almost evenly, reading as a data burst rather than as a road.",
     },
 }
 

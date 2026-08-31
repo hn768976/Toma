@@ -51,10 +51,10 @@ export const CoreFlare: React.FC<{
       };
 
       // Layered radial gradients, widest and faintest first.
-      halo(1150 * scale, glow, 0.3);
-      halo(520 * scale, glow, 0.42);
-      halo(230 * scale, core, 0.6);
-      halo(96 * scale, core, 0.95);
+      halo(880 * scale, glow, 0.22);
+      halo(390 * scale, glow, 0.34);
+      halo(170 * scale, core, 0.55);
+      halo(70 * scale, core, 0.92);
 
       if (variant.core.anamorphic) {
         // Several times wider than tall, at low alpha.
@@ -67,13 +67,13 @@ export const CoreFlare: React.FC<{
       }
 
       // The hot centre itself.
-      const hot = ctx.createRadialGradient(0, 0, 0, 0, 0, 44 * scale);
+      const hot = ctx.createRadialGradient(0, 0, 0, 0, 0, 32 * scale);
       hot.addColorStop(0, rgba(core, 1));
       hot.addColorStop(0.55, rgba(core, 0.75));
       hot.addColorStop(1, rgba(core, 0));
       ctx.fillStyle = hot;
       ctx.beginPath();
-      ctx.arc(0, 0, 44 * scale, 0, Math.PI * 2);
+      ctx.arc(0, 0, 32 * scale, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
