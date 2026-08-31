@@ -18,6 +18,13 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import { CandleClose, candleCloseSchema } from "./candle-close/CandleClose";
+import {
+  BASE_WIDTH as CANDLE_WIDTH,
+  BASE_HEIGHT as CANDLE_HEIGHT,
+  DURATION_IN_FRAMES as CANDLE_DURATION_IN_FRAMES,
+  FPS as CANDLE_FPS,
+} from "./candle-close/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +58,36 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="CandleCloseBlue"
+        component={CandleClose}
+        durationInFrames={CANDLE_DURATION_IN_FRAMES}
+        fps={CANDLE_FPS}
+        width={CANDLE_WIDTH}
+        height={CANDLE_HEIGHT}
+        schema={candleCloseSchema}
+        defaultProps={{ variant: "neonBlue" as const }}
+      />
+      <Composition
+        id="CandleCloseAmber"
+        component={CandleClose}
+        durationInFrames={CANDLE_DURATION_IN_FRAMES}
+        fps={CANDLE_FPS}
+        width={CANDLE_WIDTH}
+        height={CANDLE_HEIGHT}
+        schema={candleCloseSchema}
+        defaultProps={{ variant: "amberDark" as const }}
+      />
+      <Composition
+        id="CandleCloseLight"
+        component={CandleClose}
+        durationInFrames={CANDLE_DURATION_IN_FRAMES}
+        fps={CANDLE_FPS}
+        width={CANDLE_WIDTH}
+        height={CANDLE_HEIGHT}
+        schema={candleCloseSchema}
+        defaultProps={{ variant: "monoLight" as const }}
       />
     </>
   );
