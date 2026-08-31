@@ -11,6 +11,8 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// The wave field carries no audio; without this Remotion muxes a silent track.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

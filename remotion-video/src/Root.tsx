@@ -12,6 +12,13 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { WaveField, waveFieldSchema } from "./wave-field/WaveField";
+import {
+  DURATION_IN_FRAMES as WAVE_DURATION_IN_FRAMES,
+  FPS as WAVE_FPS,
+  HEIGHT as WAVE_HEIGHT,
+  WIDTH as WAVE_WIDTH,
+} from "./wave-field/constants";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +58,26 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="WaveFieldBlue"
+        component={WaveField}
+        durationInFrames={WAVE_DURATION_IN_FRAMES}
+        fps={WAVE_FPS}
+        width={WAVE_WIDTH}
+        height={WAVE_HEIGHT}
+        schema={waveFieldSchema}
+        defaultProps={{ variant: "blue" as const }}
+      />
+      <Composition
+        id="LoopCheck"
+        component={WaveField}
+        durationInFrames={WAVE_DURATION_IN_FRAMES + 1}
+        fps={WAVE_FPS}
+        width={WAVE_WIDTH}
+        height={WAVE_HEIGHT}
+        schema={waveFieldSchema}
+        defaultProps={{ variant: "blue" as const }}
       />
     </>
   );
