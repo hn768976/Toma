@@ -74,6 +74,11 @@ export interface DotFieldConfig {
   readonly flashChance: number;
   /** Share of dots that are bright rather than dim. */
   readonly brightChance: number;
+  /**
+   * How much the outer rows thin out. 0 fills the band evenly; higher values
+   * pull the field into a lens that matches where the strands arrive.
+   */
+  readonly rowFalloff: number;
 }
 
 export interface BackdropConfig {
@@ -141,7 +146,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       { label: "DATA 3", yFraction: 0.715, pulsePeriod: 200 },
     ],
     fanDirection: 1,
-    nodeEdgeFraction: 0.085,
+    nodeEdgeFraction: 0.11,
     strandsPerNode: 70,
     // Pinched at the node, opening as it travels: broadcast.
     spread: { c1: 0.011, c2: 0.16, end: 0.46 },
@@ -155,12 +160,12 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     nodeHaloRadius: 260,
     labelSize: 36,
     labelSpacing: 9,
-    labelGap: 132,
+    labelGap: 110,
     dotField: {
       uStart: 0.48,
       uEnd: 0.985,
       rows: 54,
-      baseGap: 0.0055,
+      baseGap: 0.0048,
       gapGrowth: 2.4,
       sizeMin: 3.5,
       sizeMax: 9,
@@ -169,6 +174,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       rowTrack: 0.22,
       flashChance: 0.006,
       brightChance: 0.2,
+      rowFalloff: 0.2,
     },
     backdrop: {
       orientation: "vertical",
@@ -205,7 +211,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       { label: "NODE 05", yFraction: 0.662, pulsePeriod: 300 },
     ],
     fanDirection: -1,
-    nodeEdgeFraction: 0.09,
+    nodeEdgeFraction: 0.105,
     strandsPerNode: 45,
     // Spread at the node, narrowing as it travels: collection.
     spread: { c1: 0.155, c2: 0.105, end: 0.028 },
@@ -219,20 +225,21 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     nodeHaloRadius: 170,
     labelSize: 28,
     labelSpacing: 7,
-    labelGap: 94,
+    labelGap: 96,
     dotField: {
-      uStart: 0.66,
-      uEnd: 0.985,
-      rows: 54,
-      baseGap: 0.0044,
+      uStart: 0.63,
+      uEnd: 0.99,
+      rows: 66,
+      baseGap: 0.003,
       gapGrowth: 2.8,
       sizeMin: 3,
-      sizeMax: 6,
-      yTop: 0.16,
-      yBottom: 0.84,
+      sizeMax: 6.5,
+      yTop: 0.2,
+      yBottom: 0.8,
       rowTrack: -0.2,
       flashChance: 0.006,
-      brightChance: 0.16,
+      brightChance: 0.26,
+      rowFalloff: 0.75,
     },
     backdrop: {
       orientation: "horizontal",

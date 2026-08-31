@@ -101,7 +101,7 @@ export const buildStrands = (config: VariantConfig): Strand[] => {
       };
 
       const alphaRoll = random(`${seed}-a`);
-      const fadeStart = 0.4 + 0.12 * random(`${seed}-fs`);
+      const fadeStart = 0.34 + 0.24 * random(`${seed}-fs`);
       strands.push({
         nodeIndex: n,
         c1,
@@ -209,6 +209,11 @@ export const buildDots = (config: VariantConfig, flow: Flow): Dot[] => {
         (field.yBottom - field.yTop) *
           (evenY + (random(`${seed}-y`) - 0.5) * (1.3 / field.rows)));
     const track = (rowY - centreY) * field.rowTrack;
+    // Outer rows thin out so the field is a lens rather than a rectangle.
+    const weight = Math.max(
+      0.16,
+      1 - field.rowFalloff * (Math.abs(evenY - 0.5) * 2) ** 1.6,
+    );
     const scatter = 6 + 16 * random(`${seed}-sc`);
 
     let u = field.uStart + span * 0.1 * random(`${seed}-u0`);
@@ -246,7 +251,8 @@ export const buildDots = (config: VariantConfig, flow: Flow): Dot[] => {
       const gap =
         field.baseGap *
         (0.25 + 1.9 * random(`${dseed}-g`) ** 2) *
-        (1 + field.gapGrowth * progress * progress);
+        (1 + field.gapGrowth * progress * progress) /
+        weight;
       u += Math.max(gap, field.baseGap * 0.15);
       i++;
       if (i > 4000) {

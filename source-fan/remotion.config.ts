@@ -9,6 +9,8 @@ import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
 Config.setVideoImageFormat("jpeg");
+// The piece has no audio; do not attach a silent track.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 
 // Some sandboxed dev environments block downloading Remotion's own
