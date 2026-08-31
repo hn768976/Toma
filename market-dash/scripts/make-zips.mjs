@@ -142,6 +142,19 @@ npx remotion render ${COMPOSITION[variant]} out/marketdash-${variant}-preview.mp
 \`--concurrency=8\` assumes at least 8 CPU cores; lower it to your core count
 if Remotion rejects the value.
 
+## Fonts
+
+Type is **Roboto Mono**, loaded through \`@remotion/google-fonts\` and gated with
+\`delayRender()\`/\`continueRender()\` so no frame is captured before the face is
+ready. A monospaced face is deliberate: canvas 2D has no way to request the
+\`tabular-nums\` OpenType feature, and proportional figures make the callout
+digits shuffle sideways as their values change.
+
+Because the font is fetched from Google Fonts, the render host needs to reach
+\`fonts.googleapis.com\` and \`fonts.gstatic.com\`. Behind a TLS-inspecting proxy
+Chromium will reject the certificate; add \`--ignore-certificate-errors\` to the
+render command in that case.
+
 ## Map data
 
 \`public/land-110m.json\` is **Natural Earth** 1:110m land, as published in
