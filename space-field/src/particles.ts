@@ -161,22 +161,33 @@ export const buildParticles = (variant: Variant, aspect: number): Particle[] => 
       angles[c] = random(`${seed}-angle-${i}-${c}`) * TAU;
     }
 
-    const sizeRoll = random(`${seed}-size-${i}`);
-    const size = lerp(
-      variant.size[0],
-      variant.size[1],
-      Math.pow(sizeRoll, variant.sizeBias),
-    );
-
     const brightness = brightnessFor(
       variant,
       random(`${seed}-bright-${i}`),
       random(`${seed}-bright-within-${i}`),
     );
 
+    // Size is mostly its own roll but leans on brightness, so the bright
+    // minority also tends to be the large minority. Fully independent rolls
+    // scatter the bright stars across every size and the field loses the
+    // near/far reading that the brightness spread is there to create.
+    const sizeRoll = clamp(
+      random(`${seed}-size-${i}`) * 0.68 + brightness * 0.32,
+      0,
+      1,
+    );
+    const size = lerp(
+      variant.size[0],
+      variant.size[1],
+      Math.pow(sizeRoll, variant.sizeBias),
+    );
+
+    // Every palette is ordered dominant hue -> accent -> pale -> white, so
+    // nudging the colour roll up with brightness draws the bright minority
+    // from the pale end without flattening the weighting of the field.
     const colorIndex = pickWeightedIndex(
       colorWeights,
-      random(`${seed}-color-${i}`),
+      clamp(random(`${seed}-color-${i}`) * 0.72 + brightness * 0.28, 0, 0.999),
     );
 
     const periods = variant.twinkle.periods;
@@ -257,20 +268,21 @@ export const buildDust = (variant: Variant, aspect: number): DustBlob[] => {
     const scatter = random(`${seed}-scatter-${i}`) < dust.scatterShare;
 
     if (dust.band && !scatter) {
-      // Walk along the band axis and offset perpendicular to it.
+      // Walk along the band axis and offset perpendicular to it, in the same
+      // height-relative screen space `bandDistance` measures in, so the blobs
+      // land on exactly the line the star density is biased toward.
       const theta = (dust.band.angleDeg * Math.PI) / 180;
-      const along = lerp(-0.15, 1.15, random(`${seed}-along-${i}`));
+      const along = lerp(-0.75, 0.75, random(`${seed}-along-${i}`));
       // Two rolls summed give a soft centre-weighted spread across the band.
       const across =
         dust.band.width *
-        ((random(`${seed}-across-a-${i}`) +
-          random(`${seed}-across-b-${i}`) -
-          1) *
-          1.6);
-      const cx = 0.5 + (along - 0.5) * Math.cos(theta) * 1.25;
-      const cy = 0.5 + (along - 0.5) * Math.sin(theta) * 1.25 * aspect;
-      x = cx - Math.sin(theta) * (across + dust.band.offset) / aspect;
-      y = cy + Math.cos(theta) * (across + dust.band.offset);
+        (random(`${seed}-across-a-${i}`) + random(`${seed}-across-b-${i}`) - 1) *
+        1.6;
+      const offset = across + dust.band.offset;
+      const u = along * Math.cos(theta) - offset * Math.sin(theta);
+      const v = along * Math.sin(theta) + offset * Math.cos(theta);
+      x = 0.5 + u / aspect;
+      y = 0.5 + v;
     } else if (!scatter && knots.length > 0) {
       const knot =
         knots[Math.floor(random(`${seed}-pick-${i}`) * knots.length) % knots.length];

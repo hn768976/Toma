@@ -534,14 +534,14 @@ export const VARIANTS: Record<VariantId, Variant> = {
     dust: {
       count: 30,
       alpha: [0.05, 0.1],
-      radius: [0.18, 0.42],
+      radius: [0.06, 0.19],
       breathAmp: 0.12,
       colors: [
         { hex: FIELD_BLUE.dustBlue, weight: 0.62 },
         { hex: FIELD_BLUE.dustPale, weight: 0.38 },
       ],
-      gain: 1.15,
-      blur: 9,
+      gain: 1.5,
+      blur: 6,
       band: { angleDeg: -27, width: 0.09, offset: -0.02 },
       knots: 4,
       knotSpread: 0.14,
@@ -551,7 +551,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
     flares: { perLoop: 46, durationRange: [3, 5], gain: 3 },
     spikes: null,
 
-    bloom: { threshold: 0.48, radius: 28, strength: 0.9 },
+    bloom: { threshold: 0.48, radius: 28, strength: 1 },
     vignette: 0.22,
     grain: 0.04,
   },
@@ -592,14 +592,14 @@ export const VARIANTS: Record<VariantId, Variant> = {
     dust: {
       count: 22,
       alpha: [0.04, 0.09],
-      radius: [0.14, 0.34],
+      radius: [0.06, 0.17],
       breathAmp: 0.12,
       colors: [
         { hex: FIELD_TEAL.dustTeal, weight: 0.66 },
         { hex: FIELD_TEAL.dustPale, weight: 0.34 },
       ],
-      gain: 1,
-      blur: 9,
+      gain: 1.35,
+      blur: 6,
       band: null,
       // Few, tight knots with nothing between them: isolated clouds.
       knots: 4,

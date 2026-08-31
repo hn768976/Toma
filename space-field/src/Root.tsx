@@ -28,6 +28,24 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{ variant: "warpViolet" as const }}
       />
+      <Composition
+        id="WarpAmber"
+        component={SpaceField}
+        durationInFrames={VARIANTS.warpAmber.loopLength}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "warpAmber" as const }}
+      />
+      <Composition
+        id="FieldBlue"
+        component={SpaceField}
+        durationInFrames={VARIANTS.fieldBlue.loopLength}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "fieldBlue" as const }}
+      />
     </>
   );
 };
