@@ -11,6 +11,9 @@ import { Config } from "@remotion/cli/config";
 Config.setVideoImageFormat("jpeg");
 // The piece has no audio; do not attach a silent track.
 Config.setMuted(true);
+// The first frame has to build the strand geometry, the dot field and the
+// grain tiles, and load the webfont; 30s is not always enough at 4K.
+Config.setDelayRenderTimeoutInMilliseconds(120000);
 Config.setOverwriteOutput(true);
 
 // Some sandboxed dev environments block downloading Remotion's own

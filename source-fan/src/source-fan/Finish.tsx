@@ -5,7 +5,7 @@ import { useCanvasLayer } from "./hooks";
 import { HEIGHT, WIDTH } from "./layout";
 import type { VariantConfig } from "./variants";
 
-const GRAIN_TILE = 384;
+const GRAIN_TILE = 256;
 /** Tile count and both offset periods divide 600, so the grain loops too. */
 const GRAIN_TILES = 4;
 const GRAIN_X_STEPS = 5;
