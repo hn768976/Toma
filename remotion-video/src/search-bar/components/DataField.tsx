@@ -170,6 +170,7 @@ export const DataField: React.FC<{
   count: number;
   opacity: number;
   additive: boolean;
+  washStrength: number;
   scanlines: boolean;
   frame: number;
   seed: string;
@@ -181,6 +182,7 @@ export const DataField: React.FC<{
   count,
   opacity,
   additive,
+  washStrength,
   scanlines,
   frame,
   seed,
@@ -198,8 +200,11 @@ export const DataField: React.FC<{
     const cx = width / 2;
     const cy = height * 0.42;
     const wash = ctx.createRadialGradient(cx, cy, 0, cx, cy, width * 0.72);
-    wash.addColorStop(0, palette.bgWash);
-    wash.addColorStop(0.34, mix(palette.bgWash, palette.bgDeep, 0.42));
+    wash.addColorStop(0, mix(palette.bgWash, palette.bgDeep, 1 - washStrength));
+    wash.addColorStop(
+      0.34,
+      mix(palette.bgWash, palette.bgDeep, 1 - washStrength * 0.58),
+    );
     wash.addColorStop(1, palette.bgDeep);
     ctx.fillStyle = wash;
     ctx.fillRect(0, 0, width, height);
@@ -214,7 +219,7 @@ export const DataField: React.FC<{
       }
     }
     return canvas;
-  }, [width, height, palette, scanlines]);
+  }, [width, height, palette, scanlines, washStrength]);
 
   const squares = useMemo(
     () => buildSquares(width, height, mode, palette, count, seed),

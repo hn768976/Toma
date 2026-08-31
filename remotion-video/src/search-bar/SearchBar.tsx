@@ -75,6 +75,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
         count={config.fieldCount}
         opacity={config.fieldOpacity}
         additive={!config.fieldDarker}
+        washStrength={config.washStrength}
         scanlines={config.scanlines}
         frame={frame}
         seed={variant}

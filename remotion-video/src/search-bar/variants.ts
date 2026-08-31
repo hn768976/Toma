@@ -82,6 +82,8 @@ export type VariantConfig = {
   termFont: FontRole;
   /** Multiplier on the data field's opacity — it must stay subordinate. */
   fieldOpacity: number;
+  /** How far the radial wash behind the bar lifts the ground. */
+  washStrength: number;
   /** Light mode: squares go darker than the ground instead of lighter. */
   fieldDarker: boolean;
   /** Rough number of squares in the field. */
@@ -125,6 +127,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     timing: { typeStart: 30, typeEnd: 170, holdEnd: 290, deleteEnd: 330 },
     termFont: "sans",
     fieldOpacity: 0.9,
+    washStrength: 1,
     fieldDarker: false,
     fieldCount: 1500,
     scanlines: false,
@@ -161,6 +164,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     timing: { typeStart: 30, typeEnd: 230, holdEnd: 290, deleteEnd: 330 },
     termFont: "mono",
     fieldOpacity: 0.85,
+    washStrength: 0.6,
     fieldDarker: false,
     fieldCount: 780,
     scanlines: true,
@@ -205,6 +209,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     timing: { typeStart: 30, typeEnd: 180, holdEnd: 290, deleteEnd: 330 },
     termFont: "sans",
     fieldOpacity: 0.4,
+    washStrength: 1,
     fieldDarker: true,
     fieldCount: 420,
     scanlines: false,
