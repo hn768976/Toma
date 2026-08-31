@@ -34,14 +34,24 @@ export interface SourceSpec {
 }
 
 /**
- * Vertical spread of the fan at each control point, as a fraction of
- * composition height. A profile that grows (c1 < c2 < end) broadcasts; one
- * that shrinks (c1 > c2 > end) collects.
+ * The shape of the fan, in fractions of composition height.
+ *
+ * Each strand leaves its node almost horizontally, bends up or down onto its
+ * own row, and then runs flat along that row — so the second control point and
+ * the endpoint share a vertical offset and the tail is horizontal. `splay` is
+ * extra spread carried only by the second control point: it opens the fan out
+ * in mid-flight without widening the band it settles into, which is what makes
+ * a collecting fan (v2) narrow as it travels.
  */
 export interface SpreadProfile {
+  /** Offset of the first control point — small keeps the origin pinched. */
   readonly c1: number;
-  readonly c2: number;
+  /** Half-height of the band of rows the strands settle onto. */
   readonly end: number;
+  /** Extra mid-flight spread at the second control point. */
+  readonly splay: number;
+  /** How far past its row the second control point sits, as a multiplier. */
+  readonly overshoot: number;
 }
 
 /** Where each control point sits along the flow, 0 = node, 1 = far edge. */
@@ -62,9 +72,6 @@ export interface DotFieldConfig {
   readonly gapGrowth: number;
   readonly sizeMin: number;
   readonly sizeMax: number;
-  /** Vertical extent of the field as fractions of height. */
-  readonly yTop: number;
-  readonly yBottom: number;
   /**
    * How rows track the strands: positive spreads rows apart across the
    * field (a broadcasting fan), negative draws them together (a collecting one).
@@ -87,7 +94,12 @@ export interface BackdropConfig {
   readonly glyphStep: number;
   /** Distance between adjacent character lines across the drift axis. */
   readonly lineStep: number;
-  /** Glyph slots the pattern repeats over, and slots it drifts per loop. */
+  /**
+   * Glyph slots the pattern repeats over, and slots it drifts per loop. The
+   * loop only closes when driftSlots is a multiple of patternSlots, so make
+   * the pattern longer than the frame and drift it exactly one pattern: the
+   * bands then scroll without ever showing a seam or a visible repeat.
+   */
   readonly patternSlots: number;
   readonly driftSlots: number;
   /** Lines are grouped into bands: `bandLines` drawn out of every `bandStride`. */
@@ -148,10 +160,10 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     fanDirection: 1,
     nodeEdgeFraction: 0.11,
     strandsPerNode: 70,
-    // Pinched at the node, opening as it travels: broadcast.
-    spread: { c1: 0.011, c2: 0.16, end: 0.46 },
-    flowStops: { c1: 0.1, c2: 0.55, end: 1 },
-    gather: 0,
+    // Pinched at the node, bending out onto rows that span the frame: broadcast.
+    spread: { c1: 0.008, end: 0.42, splay: 0, overshoot: 1.38 },
+    flowStops: { c1: 0.013, c2: 0.065, end: 0.5 },
+    gather: 0.85,
     strandWidthMin: 1,
     strandWidthMax: 2.5,
     strandAlphaMin: 0.25,
@@ -162,30 +174,28 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     labelSpacing: 9,
     labelGap: 110,
     dotField: {
-      uStart: 0.48,
+      uStart: 0.42,
       uEnd: 0.985,
-      rows: 54,
-      baseGap: 0.0048,
-      gapGrowth: 2.4,
+      rows: 90,
+      baseGap: 0.0032,
+      gapGrowth: 3.4,
       sizeMin: 3.5,
       sizeMax: 9,
-      yTop: 0.05,
-      yBottom: 0.95,
-      rowTrack: 0.22,
+      rowTrack: 0,
       flashChance: 0.006,
       brightChance: 0.2,
-      rowFalloff: 0.2,
+      rowFalloff: 0.18,
     },
     backdrop: {
       orientation: "vertical",
       glyphStep: 46,
-      lineStep: 62,
-      patternSlots: 24,
-      driftSlots: 24,
-      bandLines: 4,
+      lineStep: 54,
+      patternSlots: 48,
+      driftSlots: 48,
+      bandLines: 5,
       bandStride: 7,
       fontSize: 34,
-      alpha: 0.9,
+      alpha: 1,
       glyphs: GLYPHS,
     },
     vignetteStrength: 0.2,
@@ -213,10 +223,10 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     fanDirection: -1,
     nodeEdgeFraction: 0.105,
     strandsPerNode: 45,
-    // Spread at the node, narrowing as it travels: collection.
-    spread: { c1: 0.155, c2: 0.105, end: 0.028 },
-    flowStops: { c1: 0.11, c2: 0.55, end: 1 },
-    gather: 0.62,
+    // Opens wide in mid-flight, then gathers onto a narrow band: collection.
+    spread: { c1: 0.05, end: 0.16, splay: 0.24, overshoot: 1.38 },
+    flowStops: { c1: 0.018, c2: 0.088, end: 0.68 },
+    gather: 0.25,
     strandWidthMin: 1,
     strandWidthMax: 2.2,
     strandAlphaMin: 0.25,
@@ -227,30 +237,28 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     labelSpacing: 7,
     labelGap: 96,
     dotField: {
-      uStart: 0.63,
+      uStart: 0.55,
       uEnd: 0.99,
-      rows: 66,
-      baseGap: 0.003,
-      gapGrowth: 2.8,
+      rows: 96,
+      baseGap: 0.0026,
+      gapGrowth: 3,
       sizeMin: 3,
       sizeMax: 6.5,
-      yTop: 0.2,
-      yBottom: 0.8,
-      rowTrack: -0.2,
+      rowTrack: 0,
       flashChance: 0.006,
       brightChance: 0.26,
-      rowFalloff: 0.75,
+      rowFalloff: 0.15,
     },
     backdrop: {
       orientation: "horizontal",
       glyphStep: 40,
-      lineStep: 58,
-      patternSlots: 24,
-      driftSlots: 24,
-      bandLines: 4,
+      lineStep: 52,
+      patternSlots: 96,
+      driftSlots: 96,
+      bandLines: 5,
       bandStride: 7,
       fontSize: 30,
-      alpha: 0.5,
+      alpha: 0.72,
       glyphs: GLYPHS,
     },
     vignetteStrength: 0.2,

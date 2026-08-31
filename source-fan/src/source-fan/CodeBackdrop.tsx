@@ -40,7 +40,7 @@ export const CodeBackdrop: React.FC<{
           char: backdrop.glyphs.charAt(
             Math.floor(random(seed) * backdrop.glyphs.length),
           ),
-          alpha: 0.35 + 0.65 * random(`${seed}-a`) ** 1.6,
+          alpha: 0.28 + 0.95 * random(`${seed}-a`) ** 1.8,
         });
       }
       grid.push(row);
@@ -63,8 +63,8 @@ export const CodeBackdrop: React.FC<{
     const cx = flow.x(0.34);
     const cy = HEIGHT * 0.5;
     const wash = ctx.createRadialGradient(cx, cy, 0, cx, cy, WIDTH * 0.66);
-    wash.addColorStop(0, rgba(washRgb, 0.95));
-    wash.addColorStop(0.45, rgba(washRgb, 0.45));
+    wash.addColorStop(0, rgba(washRgb, 0.8));
+    wash.addColorStop(0.45, rgba(washRgb, 0.36));
     wash.addColorStop(1, rgba(washRgb, 0));
     ctx.fillStyle = wash;
     ctx.fillRect(-WIDTH, -HEIGHT, WIDTH * 3, HEIGHT * 3);

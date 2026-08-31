@@ -69,7 +69,9 @@ export const buildStrands = (config: VariantConfig): Strand[] => {
 
   for (let n = 0; n < config.sources.length; n++) {
     const ny = HEIGHT * config.sources[n].yFraction;
-    const gatherOffset = (centreY - ny) * config.gather;
+    // The band this node's strands settle into: pulled toward the centre line
+    // so the fans from every node interleave over the same rows.
+    const bandCentre = ny + (centreY - ny) * config.gather;
 
     for (let i = 0; i < config.strandsPerNode; i++) {
       const seed = `strand-${n}-${i}`;
@@ -78,6 +80,11 @@ export const buildStrands = (config: VariantConfig): Strand[] => {
       const even = count === 1 ? 0 : (i / (count - 1)) * 2 - 1;
       const k = even + (random(`${seed}-k`) - 0.5) * (1.9 / count);
 
+      // The row this strand runs along once it has finished bending.
+      const rowOffset =
+        k * spread.end * HEIGHT + (random(`${seed}-row`) - 0.5) * HEIGHT * 0.012;
+      const rowDy = bandCentre - ny + rowOffset;
+
       const c1 = {
         u: flowStops.c1 * (0.7 + 0.6 * random(`${seed}-u1`)),
         dy: k * spread.c1 * HEIGHT + (random(`${seed}-j1`) - 0.5) * 6,
@@ -85,23 +92,22 @@ export const buildStrands = (config: VariantConfig): Strand[] => {
       };
       const c2 = {
         u: flowStops.c2 * (0.82 + 0.36 * random(`${seed}-u2`)),
+        // Sits a little past the row (a slight whip) plus any mid-flight splay.
         dy:
-          k * spread.c2 * HEIGHT * (0.8 + 0.4 * random(`${seed}-s2`)) +
-          gatherOffset * 0.45 +
-          (random(`${seed}-j2`) - 0.5) * HEIGHT * 0.035,
+          bandCentre -
+          ny +
+          rowOffset * spread.overshoot +
+          k * spread.splay * HEIGHT,
         wobble: wobble(`${seed}-w2`),
       };
       const end = {
-        u: flowStops.end * (0.9 + 0.16 * random(`${seed}-u3`)),
-        dy:
-          k * spread.end * HEIGHT * (0.85 + 0.3 * random(`${seed}-s3`)) +
-          gatherOffset +
-          (random(`${seed}-j3`) - 0.5) * HEIGHT * 0.04,
+        u: flowStops.end * (0.9 + 0.18 * random(`${seed}-u3`)),
+        dy: rowDy,
         wobble: wobble(`${seed}-w3`),
       };
 
       const alphaRoll = random(`${seed}-a`);
-      const fadeStart = 0.34 + 0.24 * random(`${seed}-fs`);
+      const fadeStart = 0.84 + 0.1 * random(`${seed}-fs`);
       strands.push({
         nodeIndex: n,
         c1,
@@ -117,7 +123,7 @@ export const buildStrands = (config: VariantConfig): Strand[] => {
         pulsePhase: random(`${seed}-ph`),
         pulseGain: 0.75 + 0.75 * random(`${seed}-pg`),
         fadeStart,
-        glowEnd: fadeStart + 0.1 + 0.14 * random(`${seed}-ge`),
+        glowEnd: Math.min(1, fadeStart + 0.06 + 0.1 * random(`${seed}-ge`)),
         bucket: Math.min(GLOW_BUCKETS - 1, Math.floor(alphaRoll * GLOW_BUCKETS)),
       });
     }
@@ -167,6 +173,12 @@ export const strandPoints = (
   }
 };
 
+/** The y of every strand's flat run, sorted: the rows the dots line up with. */
+export const strandRowYs = (config: VariantConfig): number[] =>
+  buildStrands(config)
+    .map((s) => HEIGHT * config.sources[s.nodeIndex].yFraction + s.end.dy)
+    .sort((a, b) => a - b);
+
 export interface Dot {
   readonly x: number;
   readonly y: number;
@@ -199,22 +211,25 @@ export const buildDots = (config: VariantConfig, flow: Flow): Dot[] => {
   const dots: Dot[] = [];
   const span = field.uEnd - field.uStart;
   const centreY = HEIGHT / 2;
+  // Rows sit on the strands' own rows, so the field reads as what the strands
+  // are delivering rather than as a block laid over them.
+  const rowYs = strandRowYs(config);
 
   for (let r = 0; r < field.rows; r++) {
     const seed = `dot-row-${r}`;
     const evenY = field.rows === 1 ? 0.5 : r / (field.rows - 1);
     const rowY =
-      HEIGHT *
-      (field.yTop +
-        (field.yBottom - field.yTop) *
-          (evenY + (random(`${seed}-y`) - 0.5) * (1.3 / field.rows)));
+      rowYs[
+        Math.min(rowYs.length - 1, Math.floor(((r + 0.5) / field.rows) * rowYs.length))
+      ] +
+      (random(`${seed}-y`) - 0.5) * 10;
     const track = (rowY - centreY) * field.rowTrack;
     // Outer rows thin out so the field is a lens rather than a rectangle.
     const weight = Math.max(
       0.16,
       1 - field.rowFalloff * (Math.abs(evenY - 0.5) * 2) ** 1.6,
     );
-    const scatter = 6 + 16 * random(`${seed}-sc`);
+    const scatter = 3 + 6 * random(`${seed}-sc`);
 
     let u = field.uStart + span * 0.1 * random(`${seed}-u0`);
     let i = 0;

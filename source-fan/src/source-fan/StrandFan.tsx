@@ -24,7 +24,7 @@ const GLOW_ALPHA = 0.12;
 /** Where the strand colour has finished desaturating to the pale mid tone. */
 const PALE_AT = 0.45;
 /** How much of the curve the fade-out is spread over. */
-const FADE_LENGTH = 0.3;
+const FADE_LENGTH = 0.12;
 
 const strandColour = (
   hue: Rgb,
