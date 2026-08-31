@@ -47,6 +47,8 @@ export interface Harmonic {
 
 export interface VariantConfig {
   palette: Palette;
+  /** How strongly the background wash lifts off the deep tone, 0 to 1. */
+  washStrength: number;
 
   /** Number of parallel bands stacked across the frame. */
   bandCount: number;
@@ -137,6 +139,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
         { color: BLUE_PARTICLE_PALE, weight: 0.16 },
       ],
     },
+    washStrength: 1,
     bandCount: 4,
     bandPitch: 565,
     bandThickness: 285,
@@ -170,7 +173,8 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       meshLine: VIOLET_MESH_LINE,
       edgeAccent: VIOLET_EDGE_MAGENTA,
       edgeCore: VIOLET_EDGE_WHITE,
-      strand: VIOLET_PARTICLE_PALE,
+      // Teal, not the pale mint: a near-white strand greys out the mint field.
+      strand: VIOLET_PARTICLE_TEAL,
       particleTones: [
         { color: VIOLET_PARTICLE_MINT, weight: 0.46 },
         { color: VIOLET_PARTICLE_TEAL, weight: 0.22 },
@@ -178,30 +182,40 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
         { color: VIOLET_PARTICLE_PALE, weight: 0.16 },
       ],
     },
+    // The violet wash sits far closer to its particles in luminance than the
+    // blue one does, so it is held back to keep the mint field reading.
+    washStrength: 0.7,
+    // Narrower bands at tighter spacing than v1: 7 across the frame where v1
+    // had 4, so the frame reads as busier and more layered.
     bandCount: 7,
-    bandPitch: 330,
-    bandThickness: 200,
+    bandPitch: 320,
+    bandThickness: 165,
     strandRows: 18,
-    strandAlpha: 0.2,
+    strandAlpha: 0.13,
+    // More particles at smaller scale: count up, size down ~25%, alpha down
+    // ~20%, so the field reads finer-grained rather than merely busier.
     particleCount: 15000,
-    particleLength: [26, 72],
-    particleWidth: [3.4, 6],
+    particleLength: [20, 58],
+    particleWidth: [2.7, 4.9],
     particleAlpha: [0.14, 0.76],
     dotSpacing: 52,
     dotRadius: 11,
     pulseCrests: 3,
     pulseTravel: 5,
     pulseSharpness: 6,
+    // Roughly double v1's curve count at lower opacity each.
     meshMode: "dense",
     meshCount: 28,
-    meshAlpha: 0.18,
+    meshAlpha: 0.32,
+    // Shorter wavelength and higher frequency than v1, so each band carries
+    // more crests; amplitude drops so the narrower bands do not overlap.
     harmonics: [
-      { spatial: 8, temporal: 4, amp: 78, phase: 0 },
-      { spatial: 13, temporal: -3, amp: 34, phase: 0.4 },
-      { spatial: 21, temporal: 5, amp: 16, phase: 0.75 },
+      { spatial: 11, temporal: 4, amp: 52, phase: 0 },
+      { spatial: 19, temporal: -3, amp: 19, phase: 0.4 },
+      { spatial: 29, temporal: 5, amp: 8, phase: 0.75 },
     ],
     bandRateOffsets: [0, 1, -1, 2, -2, 3, 1],
-    depthScale: [0.6, 1.22],
+    depthScale: [0.62, 1.12],
   },
 
   mono: {
@@ -219,6 +233,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
         { color: MONO_PARTICLE_DIM, weight: 0.16 },
       ],
     },
+    washStrength: 1,
     bandCount: 2,
     bandPitch: 1000,
     bandThickness: 864,

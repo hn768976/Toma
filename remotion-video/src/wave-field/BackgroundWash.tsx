@@ -25,8 +25,8 @@ export const drawBackgroundWash = (ctx: CanvasRenderingContext2D, cfg: VariantCo
     HEIGHT * 0.46,
     WIDTH * 0.78,
   );
-  wash.addColorStop(0, withAlpha(palette.backgroundWash, 0.95));
-  wash.addColorStop(0.45, withAlpha(palette.backgroundWash, 0.5));
+  wash.addColorStop(0, withAlpha(palette.backgroundWash, 0.95 * cfg.washStrength));
+  wash.addColorStop(0.45, withAlpha(palette.backgroundWash, 0.5 * cfg.washStrength));
   wash.addColorStop(1, withAlpha(palette.backgroundWash, 0));
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
