@@ -39,7 +39,13 @@ export const Autocomplete: React.FC<{
     frame,
     [timing.holdEnd, timing.holdEnd + config.closeFrames],
     [1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.in(Easing.cubic) },
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      // Fast off the mark, so the panel is clearly going away the moment the
+      // first character is deleted.
+      easing: Easing.out(Easing.cubic),
+    },
   );
   const height = fullHeight * grow * shrink;
 

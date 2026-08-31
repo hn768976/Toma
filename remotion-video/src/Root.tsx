@@ -77,6 +77,15 @@ export const RemotionRoot: React.FC = () => {
         height={SEARCH_BAR_HEIGHT}
         defaultProps={{ variant: "green" as const }}
       />
+      <Composition
+        id="SearchBarLight"
+        component={SearchBar}
+        durationInFrames={SEARCH_BAR_DURATION}
+        fps={SEARCH_BAR_FPS}
+        width={SEARCH_BAR_WIDTH}
+        height={SEARCH_BAR_HEIGHT}
+        defaultProps={{ variant: "light" as const }}
+      />
     </>
   );
 };

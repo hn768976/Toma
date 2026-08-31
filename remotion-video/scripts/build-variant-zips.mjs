@@ -8,7 +8,7 @@
  * mounts them. Pruning is driven by markers in the shared source:
  *
  *   something                       // @only green
- *   // @only-start light
+ *   // @only-start light          (or {/* @only-start light *\/} inside JSX)
  *   ...
  *   // @only-end
  *
@@ -64,7 +64,7 @@ const prune = (source, variant) => {
   const out = [];
   let skipDepth = 0;
   for (const line of lines) {
-    const start = line.match(/\/\/\s*@only-start\s+([\w\s]+)$/);
+    const start = line.match(/(?:\/\/|\{\/\*)\s*@only-start\s+([\w ]+?)\s*(?:\*\/\})?$/);
     if (start !== null) {
       const wanted = start[1].trim().split(/\s+/);
       if (wanted.indexOf(variant) === -1) {
@@ -72,7 +72,7 @@ const prune = (source, variant) => {
       }
       continue;
     }
-    if (/\/\/\s*@only-end\s*$/.test(line)) {
+    if (/(?:\/\/|\{\/\*)\s*@only-end\s*(?:\*\/\})?$/.test(line)) {
       skipDepth = 0;
       continue;
     }
@@ -126,10 +126,9 @@ const singleVariantSource = (source, variant) => {
     }
     result = result.slice(0, from) + result.slice(end);
   }
-  return result.replace(
-    /export type VariantName =[^;]+;/,
-    `export type VariantName = "${variant}";`,
-  );
+  return result
+    .replace(/export type VariantName =[^;]+;/, `export type VariantName = "${variant}";`)
+    .replace(/\n{2,}\};/, "\n};");
 };
 
 const packageJson = (variant) =>

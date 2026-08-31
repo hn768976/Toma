@@ -11,6 +11,35 @@
 
 Welcome to your Remotion project!
 
+## The AI search bar
+
+Three versions of a 4K (3840x2160), 480-frame, 30 fps seamless loop of a search
+bar typing a term, holding it, deleting it and starting again.
+
+| Composition | Term | Treatment |
+| --- | --- | --- |
+| `SearchBarCyan` | `AI AGENTS` | Deep navy, glowing cyan pill, square columns |
+| `SearchBarGreen` | `MACHINE LEARNING` | Terminal: square corners, monospace, live result count |
+| `SearchBarLight` | `HOW DOES AI` | Light mode: drop shadow, autocomplete panel |
+
+All three are the same component and the same typing engine; a variant key in
+`src/search-bar/variants.ts` selects the palette, the term, the bar style, the
+background mode and the extras. That file is the only place a colour value or a
+search string appears.
+
+Everything is drawn to canvases from `useCurrentFrame()` alone, so a render is
+deterministic and frame 480 is byte-identical to frame 0.
+
+```console
+npx remotion render SearchBarCyan out/searchbar-cyan.mp4 --codec=h264 --crf=14 --concurrency=8
+```
+
+To package each version as its own standalone project:
+
+```console
+node scripts/build-variant-zips.mjs      # writes dist-zips/search-bar-*.zip
+```
+
 ## Commands
 
 **Install Dependencies**

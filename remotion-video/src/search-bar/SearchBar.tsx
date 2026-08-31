@@ -1,12 +1,12 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { Autocomplete } from "./components/Autocomplete";
+import { Autocomplete } from "./components/Autocomplete"; // @only light
 import { Bar } from "./components/Bar";
 import { Cursor } from "./components/Cursor";
 import { DataField, LOOP } from "./components/DataField";
 import { Finish } from "./components/Finish";
 import { MagnifierIcon } from "./components/MagnifierIcon";
-import { ResultCount } from "./components/ResultCount";
+import { ResultCount } from "./components/ResultCount"; // @only green
 import { TypedText } from "./components/TypedText";
 import { fontString, measureText, SANS, useFontsReady } from "./fonts";
 import { getLayout } from "./layout";
@@ -62,8 +62,10 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
   const visible = visibleCount(frame, config.term, timing, schedule);
   const typed = config.term.slice(0, visible);
 
+  // @only-start light
   // The panel opens once roughly half the term is down.
   const openFrame = schedule.appear[Math.floor(config.term.length / 2)];
+  // @only-end
 
   return (
     <AbsoluteFill style={{ backgroundColor: palette.bgDeep }}>
@@ -83,6 +85,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
 
       {ready ? (
         <>
+          {/* @only-start light */}
           {config.autocomplete === null ? null : (
             <Autocomplete
               layout={layout}
@@ -94,6 +97,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
               typedLength={visible}
             />
           )}
+          {/* @only-end */}
           <Bar
             layout={layout}
             palette={palette}
@@ -120,6 +124,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
             opacity={cursorOpacity(frame, schedule)}
             bloom={config.bloom}
           />
+          {/* @only-start green */}
           {config.resultCount === null ? null : (
             <ResultCount
               layout={layout}
@@ -130,6 +135,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
               seed={variant}
             />
           )}
+          {/* @only-end */}
         </>
       ) : null}
 
