@@ -1,0 +1,30 @@
+{
+  "name": "market-dash",
+  "version": "1.0.0",
+  "description": "4K global market dashboard animation (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "@remotion/google-fonts": "4.0.515",
+    "d3-geo": "3.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "topojson-client": "3.1.0"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.0",
+    "@types/react": "19.2.7",
+    "@types/topojson-client": "3.1.5",
+    "@types/topojson-specification": "1.0.5",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3",
+    "world-atlas": "^2.0.2"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc"
+  }
+}
