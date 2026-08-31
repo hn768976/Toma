@@ -6,6 +6,7 @@ import { ErrorCascade } from "./ErrorCascade";
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* >>> composition:light — dropped from the dark-only bundle by scripts/package.mjs */}
       <Composition
         id="ErrorCascadeLight"
         component={ErrorCascade}
@@ -15,6 +16,8 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "light" as const }}
       />
+      {/* <<< composition:light */}
+      {/* >>> composition:dark — dropped from the light-only bundle by scripts/package.mjs */}
       <Composition
         id="ErrorCascadeDark"
         component={ErrorCascade}
@@ -24,6 +27,7 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "dark" as const }}
       />
+      {/* <<< composition:dark */}
     </>
   );
 };

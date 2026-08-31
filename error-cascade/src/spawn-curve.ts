@@ -85,11 +85,3 @@ export const buildSchedule = (segments: SpawnSegment[]): ScheduledDialog[] => {
 
   return schedule;
 };
-
-/** Total groups a segment list produces, so cluster spread can be normalised. */
-export const groupCount = (segments: SpawnSegment[]): number =>
-  segments.reduce(
-    (acc, seg) =>
-      segmentCounts(seg).some((c) => c > 0) ? acc + Math.max(1, seg.clusters ?? 1) : acc,
-    0,
-  );

@@ -7,8 +7,6 @@
  * look, you add a key here and nothing else changes.
  */
 
-export type VariantName = "light" | "dark";
-
 export const WIDTH = 3840;
 export const HEIGHT = 2160;
 export const FPS = 30;
@@ -91,6 +89,14 @@ export interface Variant {
   spawnDurationInFrames: number;
   /** Dialogs pop in from this scale. */
   spawnFromScale: number;
+  /**
+   * Clustered layout only: how tightly each burst piles into its own patch,
+   * from the first burst to the last. 0.3 means a burst covers roughly a
+   * third as much ground as its dialog count would if they were spread out —
+   * i.e. it stacks about three deep. Low early values are what keep the first
+   * bursts reading as compact attacks instead of instantly filling the frame.
+   */
+  clusterDensity: [number, number];
   grainAlpha: number;
 }
 
@@ -110,6 +116,7 @@ const BASE_DIALOG: DialogStyle = {
   paddingX: 20,
 };
 
+// >>> spawn:light — dropped from the dark-only bundle by scripts/package.mjs
 /**
  * v1 "accelerating": one dialog alone, then a leak that turns into a flood.
  *
@@ -136,7 +143,9 @@ const ACCELERATING: SpawnSegment[] = [
   // Hold. Nothing moves.
   { from: 570, to: 600, total: 0 },
 ];
+// <<< spawn:light
 
+// >>> spawn:dark — dropped from the light-only bundle by scripts/package.mjs
 /**
  * v2 "bursts": silence, then waves. Each burst is its own cluster, so coverage
  * builds as overlapping patches rather than as an even fill.
@@ -161,66 +170,90 @@ const BURSTS: SpawnSegment[] = [
   // Hold, frame covered.
   { from: 560, to: 600, total: 0 },
 ];
+// <<< spawn:dark
 
-export const VARIANTS: Record<VariantName, Variant> = {
-  light: {
-    palette: {
-      background: "#000000",
-      dialogFill: "#F0F0F0",
-      dialogBorder: "#7A7A7A",
-      dialogBevel: "#FFFFFF",
-      titleBar: "#2E6FD4",
-      titleText: "#FFFFFF",
-      bodyText: "#1A1A1A",
-      iconCircle: "#D93A3A",
-      iconGlyph: "#FFFFFF",
-      shadow: "rgba(0, 0, 0, 0.35)",
-      grain: "#FFFFFF",
-    },
-    dialog: BASE_DIALOG,
-    spawn: ACCELERATING,
-    layout: "radial",
-    messages: {
-      title: "System Notice",
-      body: "Critical Error #20326202620261510",
-    },
-    rotationJitterDeg: 1.5,
-    spawnDurationInFrames: 5,
-    spawnFromScale: 0.94,
-    grainAlpha: 0.02,
+// >>> variant:light — dropped from the dark-only bundle by scripts/package.mjs
+const LIGHT: Variant = {
+  palette: {
+    background: "#000000",
+    dialogFill: "#F0F0F0",
+    dialogBorder: "#7A7A7A",
+    dialogBevel: "#FFFFFF",
+    titleBar: "#2E6FD4",
+    titleText: "#FFFFFF",
+    bodyText: "#1A1A1A",
+    iconCircle: "#D93A3A",
+    iconGlyph: "#FFFFFF",
+    shadow: "rgba(0, 0, 0, 0.35)",
+    grain: "#FFFFFF",
   },
-  dark: {
-    palette: {
-      background: "#08090C",
-      dialogFill: "#1E2128",
-      dialogBorder: "#3A3F48",
-      dialogBevel: "#4A5058",
-      // The alarm colour moves: title bar red-orange, icon amber.
-      titleBar: "#C4442E",
-      titleText: "#FFFFFF",
-      bodyText: "#D8DCE2",
-      iconCircle: "#F5A02E",
-      iconGlyph: "#1E2128",
-      shadow: "rgba(0, 0, 0, 0.55)",
-      grain: "#FFFFFF",
-    },
-    dialog: {
-      ...BASE_DIALOG,
-      // A bright top-left edge that reads as a bevel on a pale dialog reads as
-      // a rendering error on a dark one.
-      bevelAlpha: 0.45,
-      shadowBlur: 20,
-      shadowOffsetY: 10,
-    },
-    spawn: BURSTS,
-    layout: "clustered",
-    messages: {
-      title: "System Notice",
-      body: "Critical Error #20326202620261510",
-    },
-    rotationJitterDeg: 1.5,
-    spawnDurationInFrames: 5,
-    spawnFromScale: 0.94,
-    grainAlpha: 0.02,
+  dialog: BASE_DIALOG,
+  spawn: ACCELERATING,
+  layout: "radial",
+  messages: {
+    title: "System Notice",
+    body: "Critical Error #20326202620261510",
   },
+  rotationJitterDeg: 1.5,
+  spawnDurationInFrames: 5,
+  spawnFromScale: 0.94,
+  clusterDensity: [1, 1],
+  grainAlpha: 0.02,
 };
+// <<< variant:light
+
+// >>> variant:dark — dropped from the light-only bundle by scripts/package.mjs
+const DARK: Variant = {
+  palette: {
+    background: "#08090C",
+    dialogFill: "#1E2128",
+    dialogBorder: "#3A3F48",
+    dialogBevel: "#4A5058",
+    // The alarm colour moves: title bar red-orange, icon amber.
+    titleBar: "#C4442E",
+    titleText: "#FFFFFF",
+    bodyText: "#D8DCE2",
+    iconCircle: "#F5A02E",
+    iconGlyph: "#1E2128",
+    shadow: "rgba(0, 0, 0, 0.55)",
+    grain: "#FFFFFF",
+  },
+  dialog: {
+    ...BASE_DIALOG,
+    // A bright top-left edge that reads as a bevel on a pale dialog reads as
+    // a rendering error on a dark one.
+    bevelAlpha: 0.45,
+    shadowBlur: 20,
+    shadowOffsetY: 10,
+  },
+  spawn: BURSTS,
+  layout: "clustered",
+  messages: {
+    title: "System Notice",
+    body: "Critical Error #20326202620261510",
+  },
+  rotationJitterDeg: 1.5,
+  spawnDurationInFrames: 5,
+  spawnFromScale: 0.94,
+  clusterDensity: [0.28, 1],
+  grainAlpha: 0.02,
+};
+// <<< variant:dark
+
+const ALL_VARIANTS = {
+  // >>> entry:light — dropped from the dark-only bundle by scripts/package.mjs
+  light: LIGHT,
+  // <<< entry:light
+  // >>> entry:dark — dropped from the light-only bundle by scripts/package.mjs
+  dark: DARK,
+  // <<< entry:dark
+};
+
+/**
+ * Derived from the table rather than declared, so a bundle that ships only one
+ * variant narrows to that single name without any other edit.
+ */
+export type VariantName = keyof typeof ALL_VARIANTS;
+
+/** The one place a look, a curve and a message set are chosen. */
+export const VARIANTS: Record<VariantName, Variant> = ALL_VARIANTS;

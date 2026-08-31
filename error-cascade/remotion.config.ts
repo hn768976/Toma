@@ -7,7 +7,9 @@ import { Config } from "@remotion/cli/config";
 
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
-// The piece has no audio at all; without this Remotion muxes a silent track.
+// The piece has no audio at all; without these Remotion muxes a silent
+// AAC track into the mp4.
+Config.setMuted(true);
 Config.setEnforceAudioTrack(false);
 
 // Some sandboxed environments block Remotion's Chrome Headless Shell download
