@@ -208,12 +208,13 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       gap: [0, 0],
       clusterSize: [1, 1],
     },
+    // No ring: a flat disc of particles reads as a horizontal ellipse, which
+    // is not wanted here. The weight goes to the spherical types.
     types: [
-      {value: 'willow', weight: 0.3},
-      {value: 'ring', weight: 0.21},
-      {value: 'crackle', weight: 0.16},
-      {value: 'peony', weight: 0.18},
-      {value: 'chrysanthemum', weight: 0.15},
+      {value: 'willow', weight: 0.32},
+      {value: 'peony', weight: 0.23},
+      {value: 'crackle', weight: 0.23},
+      {value: 'chrysanthemum', weight: 0.22},
     ],
     // A finale puts many bursts on screen at once, so each one is pulled back
     // about a quarter to keep the frame from blowing out.
