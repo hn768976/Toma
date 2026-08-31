@@ -55,8 +55,8 @@ const renderLand = (
   }
 
   const matrix = buildDotMatrix(land, DOT_PITCH);
-  const inner = withAlpha(ink, 0.38);
-  const edge = withAlpha(ink, 0.9);
+  const inner = withAlpha(ink, 0.46);
+  const edge = withAlpha(ink, 1);
   for (let row = 0; row < matrix.rows; row++) {
     for (let col = 0; col < matrix.cols; col++) {
       const index = row * matrix.cols + col;
@@ -137,7 +137,7 @@ export const WorldBackdrop: React.FC<WorldBackdropProps> = ({
     if (moodWash) {
       // Grows as the series fall, strongest in the final third. It should
       // register as mood, not as an element.
-      const strength = Math.max(0, (progress - 0.42) / 0.58) ** 1.6 * 0.2;
+      const strength = Math.max(0, (progress - 0.42) / 0.58) ** 1.6 * 0.13;
       if (strength > 0.001) {
         const x = WIDTH * 0.6;
         const y = HEIGHT * 0.62;

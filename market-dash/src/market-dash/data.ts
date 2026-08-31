@@ -86,9 +86,9 @@ const buildFallingWalk = (
       lastDrop = -total;
     } else {
       length = 26 + Math.floor(random(`${s}-len`) * 20);
-      // The recovery attempt only ever wins back a third to two thirds of
-      // what the preceding drop took, so every rally fails.
-      total = lastDrop * (0.30 + random(`${s}-amp`) * 0.32);
+      // The recovery attempt only ever wins back part of what the preceding
+      // drop took, so every rally is visible and every rally fails.
+      total = lastDrop * (0.45 + random(`${s}-amp`) * 0.35);
     }
 
     const step = total / length;
@@ -238,7 +238,7 @@ export const buildCallouts = (
     const point = leadingPoint(s, t);
     const previous = sampleAt(s.values, Math.max(0, t - 0.02));
     const level = 1000 + point.value * 3200;
-    const delta = (point.value - previous) * 240;
+    const delta = (point.value - previous) * 80;
     // Sits just above the leading point and tracks it, flipping to the far
     // side once the point nears the right edge.
     const flip = point.x > 3840 * 0.74;
