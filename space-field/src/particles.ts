@@ -254,11 +254,19 @@ export const buildDust = (variant: Variant, aspect: number): DustBlob[] => {
 
   // Knot centres give the scattered layouts their dense clumps and empty
   // regions; the banded layout ignores them and strings blobs along the plane.
+  //
+  // They are placed on a jittered grid rather than freely: a handful of free
+  // rolls clump often enough that a layout meant to read as isolated clouds
+  // ends up as one mass in the middle of the frame.
   const knots: { x: number; y: number }[] = [];
+  const columns = Math.ceil(Math.sqrt(dust.knots));
+  const rows = Math.ceil(dust.knots / columns);
   for (let k = 0; k < dust.knots; k++) {
+    const col = k % columns;
+    const row = Math.floor(k / columns);
     knots.push({
-      x: lerp(0.08, 0.92, random(`${seed}-knot-x-${k}`)),
-      y: lerp(0.08, 0.92, random(`${seed}-knot-y-${k}`)),
+      x: ((col + lerp(0.2, 0.8, random(`${seed}-knot-x-${k}`))) / columns) * 1.1 - 0.05,
+      y: ((row + lerp(0.2, 0.8, random(`${seed}-knot-y-${k}`))) / rows) * 1.1 - 0.05,
     });
   }
 

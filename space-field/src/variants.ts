@@ -567,7 +567,7 @@ export const VARIANTS: Record<VariantId, Variant> = {
 
     backgroundDeep: FIELD_TEAL.backgroundDeep,
     backgroundWash: FIELD_TEAL.backgroundWash,
-    wash: { x: 0.5, y: 0.48, radius: 0.9, alpha: 0.32 },
+    wash: { x: 0.5, y: 0.48, radius: 0.9, alpha: 0.18 },
 
     density: 7000,
     size: [2, 7],
@@ -631,10 +631,13 @@ export const VARIANTS: Record<VariantId, Variant> = {
     density: 22000,
     size: [2, 6],
     sizeBias: 3.4,
+    // A long tail of very dim stars, but on a pure black ground the dim end
+    // of the palette and the dim end of this range multiply: pushed much
+    // lower than this the 88% stop being faint and simply stop existing.
     brightness: [
-      { share: 0.88, range: [0.03, 0.16] },
-      { share: 0.09, range: [0.16, 0.42] },
-      { share: 0.03, range: [0.42, 1] },
+      { share: 0.88, range: [0.15, 0.34] },
+      { share: 0.09, range: [0.32, 0.6] },
+      { share: 0.03, range: [0.6, 1] },
     ],
     colors: [
       { hex: FIELD_MONO.particleDim, weight: 0.55 },

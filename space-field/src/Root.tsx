@@ -46,6 +46,24 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{ variant: "fieldBlue" as const }}
       />
+      <Composition
+        id="FieldTeal"
+        component={SpaceField}
+        durationInFrames={VARIANTS.fieldTeal.loopLength}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "fieldTeal" as const }}
+      />
+      <Composition
+        id="FieldMono"
+        component={SpaceField}
+        durationInFrames={VARIANTS.fieldMono.loopLength}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "fieldMono" as const }}
+      />
     </>
   );
 };
