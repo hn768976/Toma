@@ -19,6 +19,15 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{ variant: "warpBlue" as const }}
       />
+      <Composition
+        id="WarpViolet"
+        component={SpaceField}
+        durationInFrames={VARIANTS.warpViolet.loopLength}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "warpViolet" as const }}
+      />
     </>
   );
 };
