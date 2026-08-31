@@ -23,8 +23,6 @@ export type MarketDashProps = {
   variant: VariantName;
 };
 
-export const marketDashDefaultProps: MarketDashProps = { variant: "blue" };
-
 /**
  * A global market dashboard. Every layer — the lines, the bars, the callouts,
  * the axis — advances on one normalised `progress`, so the frame reads as a

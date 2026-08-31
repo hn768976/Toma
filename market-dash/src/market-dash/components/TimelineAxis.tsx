@@ -4,10 +4,10 @@ import { createOffscreen } from "../geo";
 import { font } from "../fonts";
 import {
   AXIS_HEIGHT,
-  AXIS_QUARTER_Y,
-  AXIS_RULE_Y,
+  AXIS_QUARTER_DY,
+  AXIS_RULE_DY,
   AXIS_TOP,
-  AXIS_YEAR_Y,
+  AXIS_YEAR_DY,
   WIDTH,
   axisQuarterWidth,
 } from "../layout";
@@ -34,7 +34,7 @@ const renderAxis = (
   const ctx = strip.getContext("2d");
   if (!ctx) return { strip, width };
 
-  const ruleY = AXIS_RULE_Y - AXIS_TOP;
+  const ruleY = AXIS_RULE_DY;
   ctx.strokeStyle = palette.textPale;
   ctx.globalAlpha = 0.35;
   ctx.lineWidth = 3;
@@ -61,7 +61,7 @@ const renderAxis = (
     ctx.globalAlpha = 0.72;
     ctx.fillStyle = palette.textPale;
     ctx.font = font(36, 400);
-    ctx.fillText(`Q${quarter}`, centre, AXIS_QUARTER_Y - AXIS_TOP);
+    ctx.fillText(`Q${quarter}`, centre, AXIS_QUARTER_DY);
   }
 
   // Year labels sit under their own run of quarters, in a brighter weight.
@@ -76,7 +76,7 @@ const renderAxis = (
     ctx.fillText(
       String(year),
       i * cell + (span * cell) / 2,
-      AXIS_YEAR_Y - AXIS_TOP,
+      AXIS_YEAR_DY,
     );
     i += span;
   }

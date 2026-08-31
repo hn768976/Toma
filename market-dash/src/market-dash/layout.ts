@@ -35,12 +35,16 @@ export const BAR_X1 = WIDTH - PAD_RIGHT;
 export const RAIL_OFFSET = 18;
 export const RAIL_BOW = 34;
 
-/** The timeline axis occupies the very bottom of the frame. */
-export const AXIS_TOP = 1900;
-export const AXIS_RULE_Y = 1952;
-export const AXIS_QUARTER_Y = 2020;
-export const AXIS_YEAR_Y = 2108;
+/**
+ * The timeline axis occupies the very bottom of the frame. Its parts are
+ * offsets from AXIS_TOP because the axis is drawn into its own strip canvas,
+ * whose origin is AXIS_TOP rather than the top of the frame.
+ */
+export const AXIS_TOP = HEIGHT - 260;
 export const AXIS_HEIGHT = HEIGHT - AXIS_TOP;
+export const AXIS_RULE_DY = 52;
+export const AXIS_QUARTER_DY = 120;
+export const AXIS_YEAR_DY = 208;
 
 /**
  * Quarter cells are sized so the whole range is about 2.6 frame widths of

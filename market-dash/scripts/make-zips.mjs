@@ -69,10 +69,8 @@ const soleVariant = (source, keep) => {
       /export type VariantName = [^;]+;/,
       `export type VariantName = "${keep}";`,
     )
-    .replace(
-      "export const VARIANTS: Record<VariantName, Variant> = {",
-      "export const VARIANTS: Record<VariantName, Variant> = {",
-    )
+    .replace(/= \{\n\n/g, "= {\n")
+    .replace(/\n\n\};/g, "\n};")
     .replace(/\n{3,}/g, "\n\n");
 };
 

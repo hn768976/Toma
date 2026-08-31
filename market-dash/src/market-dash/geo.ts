@@ -119,7 +119,9 @@ export const buildDotMatrix = (
   const coastal = new Uint8Array(cols * rows);
   if (!maskCtx) return { pitch, cols, rows, land: onLand, coastal };
 
-  maskCtx.fillStyle = "#fff";
+  // An offscreen stencil, never composited into the frame, so this colour is
+  // not part of any palette.
+  maskCtx.fillStyle = "white";
   traceLand(maskCtx, land);
   maskCtx.fill("evenodd");
   const pixels = maskCtx.getImageData(0, 0, WIDTH, HEIGHT).data;
