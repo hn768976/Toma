@@ -56,7 +56,37 @@ const VARIANTS = [
       "Light mode: a drop shadow instead of a glow, with an autocomplete panel under the bar.",
     output: "searchbar-light.mp4",
   },
+  {
+    key: "aiOverview",
+    slug: "overview",
+    compositionId: "SearchBarOverview",
+    title: "AI search bar — overview",
+    blurb:
+      "Pure black. A mouse pointer clicks into the bar, types, submits, and a results panel opens underneath.",
+    output: "searchbar-overview.mp4",
+  },
+  {
+    key: "cleanLight",
+    slug: "clean",
+    compositionId: "SearchBarClean",
+    title: "AI search bar — clean",
+    blurb:
+      "Pure white. A pointer clicks in, the term types, and a blue circle wipe closes the loop.",
+    output: "searchbar-clean.mp4",
+  },
+  {
+    key: "cleanLightAlt",
+    slug: "clean-alt",
+    compositionId: "SearchBarCleanAlt",
+    title: "AI search bar — clean, alternate term",
+    blurb:
+      "The clean variant against a second search term, with the pointer mirrored and the typing re-seeded.",
+    output: "searchbar-clean-alt.mp4",
+  },
 ];
+
+/** Directory and zip name; defaults to the variant key. */
+const slugOf = (variant) => variant.slug ?? variant.key;
 
 /** Drops every line and region tagged for a variant other than this one. */
 const prune = (source, variant) => {
@@ -213,6 +243,41 @@ import { RemotionRoot } from "./Root";
 registerRoot(RemotionRoot);
 `;
 
+const loopingTimeline = (typeEnd) => [
+  ["0–30", "Empty bar, cursor blinking"],
+  [`30–${typeEnd}`, "The term types in, character by character"],
+  [`${typeEnd}–290`, "The completed term holds, cursor blinking"],
+  ["290–330", "The term deletes, right to left, faster and more evenly than it typed"],
+  ["330–480", "Empty bar, cursor blinking — then the loop repeats"],
+];
+
+const OVERVIEW_TIMELINE = [
+  ["0–20", "Empty black"],
+  ["20–45", "The bar's border strokes itself on, from the left and around the pill"],
+  ["45–70", "The \"Search\" placeholder fades in, greyed"],
+  ["70–110", "The pointer arcs in from the lower right and stops over the bar"],
+  ["110–115", "Click: the border brightens and the placeholder clears"],
+  ["115–125", "The pointer moves to the search button and rests there"],
+  ["125–260", "The term types in"],
+  ["260–270", "The pointer clicks the button, which flashes to its hover colour"],
+  ["270–290", "The sparkle lands below the bar and pulses once"],
+  ["290–320", "The results panel expands and its lines fade in"],
+  ["320–440", "Hold — the panel stays, the pointer rests"],
+  ["440–480", "Everything fades back to black, closing the loop"],
+];
+
+const cleanTimeline = (side) => [
+  ["0–25", "Empty white"],
+  ["25–55", "The bar springs in from 0.96, the placeholder arriving with it"],
+  ["55–95", `The pointer arcs in from the lower ${side} and stops over the bar`],
+  ["95–100", "Click: the placeholder clears and a caret appears"],
+  ["100–290", "The term types in"],
+  ["290–380", "Hold — caret blinking, pointer resting below the bar"],
+  ["380–405", "A blue circle wipe expands from the bar's centre and covers the frame"],
+  ["405–450", "Hold on solid blue"],
+  ["450–480", "Fade to white, closing the loop"],
+];
+
 const readme = (variant, term, extras) => `# ${variant.title}
 
 ${variant.blurb}
@@ -230,11 +295,7 @@ ${variant.blurb}
 
 | Frames | |
 | --- | --- |
-| 0–30 | Empty bar, cursor blinking |
-| 30–${extras.typeEnd} | The term types in, character by character |
-| ${extras.typeEnd}–290 | The completed term holds, cursor blinking |
-| 290–330 | The term deletes, right to left, faster and more evenly than it typed |
-| 330–480 | Empty bar, cursor blinking — then the loop repeats |
+${extras.timeline.map(([frames, what]) => `| ${frames} | ${what} |`).join("\n")}
 
 ${extras.notes}
 
@@ -298,27 +359,58 @@ const copyTree = (from, to, filter) => {
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
-const EXTRA_COMPONENTS = {
-  cyan: { file: null, notes: "", componentList: "" },
+/** Components only some variants use, and what each variant's README says. */
+const OPTIONAL_COMPONENTS = [
+  "ResultCount.tsx",
+  "Autocomplete.tsx",
+  "PointerCursor.tsx",
+  "ResultsPanel.tsx",
+  "CircleWipe.tsx",
+];
+
+const EXTRAS = {
+  cyan: { keep: [], notes: "", componentList: "" },
   green: {
-    file: "ResultCount.tsx",
+    keep: ["ResultCount.tsx"],
     notes:
       "Once typing completes, a result count fades up under the bar and keeps re-rolling every 20–30 frames — the same order of magnitude, small changes — as though the count were still resolving. It fades out when deletion begins.",
     componentList: ", ResultCount",
   },
   light: {
-    file: "Autocomplete.tsx",
+    keep: ["Autocomplete.tsx"],
     notes:
       "An autocomplete panel expands under the bar once about half the term is typed, with the matched prefix of each suggestion in the normal weight and the completion in bold. The highlight steps down the rows every 40 frames, and the panel collapses when deletion begins.",
     componentList: ", Autocomplete",
   },
+  aiOverview: {
+    timeline: OVERVIEW_TIMELINE,
+    keep: ["PointerCursor.tsx", "ResultsPanel.tsx"],
+    notes:
+      "A mouse pointer drives this one. It travels on a curved path and eases out hard, so it arrives fast and settles rather than gliding in at a constant speed, and it dips to 0.92 for three frames on a click while whatever it clicked responds on the same frame. The results panel that follows grows from zero height and staggers its lines in behind the growth; its body copy is invented filler, there to read as texture.",
+    componentList: ", PointerCursor, ResultsPanel",
+  },
+  cleanLight: {
+    timeline: cleanTimeline("left"),
+    keep: ["PointerCursor.tsx", "CircleWipe.tsx"],
+    notes:
+      "A mouse pointer clicks into the field, and a blue circle wipe expands out of the bar's centre to close. The wipe eases in — slow, then accelerating — so it reads as a deliberate transition rather than a balloon inflating.",
+    componentList: ", PointerCursor, CircleWipe",
+  },
+  cleanLightAlt: {
+    timeline: cleanTimeline("right"),
+    keep: ["PointerCursor.tsx", "CircleWipe.tsx"],
+    notes:
+      "The clean variant against a second term. The pointer enters from the opposite side and rests on the opposite side of the bar, and the typing is re-seeded so the hesitations fall in different places. Nothing else differs — the pair is meant to read as two listings targeting two search terms.",
+    componentList: ", PointerCursor, CircleWipe",
+  },
 };
 
 for (const variant of VARIANTS) {
-  const stage = join(outDir, `search-bar-${variant.key}`);
-  const extras = EXTRA_COMPONENTS[variant.key];
-  const drop = ["ResultCount.tsx", "Autocomplete.tsx"].filter(
-    (name) => name !== extras.file,
+  const slug = slugOf(variant);
+  const stage = join(outDir, `search-bar-${slug}`);
+  const extras = EXTRAS[variant.key];
+  const drop = OPTIONAL_COMPONENTS.filter(
+    (name) => extras.keep.indexOf(name) === -1,
   );
 
   copyTree(
@@ -367,14 +459,14 @@ for (const variant of VARIANTS) {
   writeFileSync(
     join(stage, "README.md"),
     readme(variant, term, {
-      typeEnd,
+      timeline: extras.timeline ?? loopingTimeline(typeEnd),
       notes: extras.notes,
       componentList: extras.componentList,
     }),
   );
   writeFileSync(join(stage, ".gitignore"), "node_modules\nout\ndist\n");
 
-  const zipPath = join(outDir, `search-bar-${variant.key}.zip`);
-  execFileSync("zip", ["-rq", zipPath, `search-bar-${variant.key}`], { cwd: outDir });
+  const zipPath = join(outDir, `search-bar-${slug}.zip`);
+  execFileSync("zip", ["-rq", zipPath, `search-bar-${slug}`], { cwd: outDir });
   console.log(`built ${zipPath}`);
 }
