@@ -105,12 +105,14 @@ export const CellLayer: React.FC<{
       wctx.globalCompositeOperation = variant.additive
         ? "lighter"
         : "source-over";
+      wctx.globalAlpha = variant.exposure;
       for (const depth of DEPTHS) {
         const blurPx = variant.blurCeiling * variant.depthBlur[depth] * SCALE;
         wctx.filter = `blur(${blurPx.toFixed(3)}px)`;
         wctx.drawImage(buffers[depth], 0, 0);
       }
       wctx.filter = "none";
+      wctx.globalAlpha = 1;
       wctx.globalCompositeOperation = "source-over";
 
       // 3. Bloom — v2 only. Cells brighter than the background have to read as

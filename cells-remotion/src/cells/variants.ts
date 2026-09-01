@@ -80,6 +80,13 @@ export type Variant = {
    * overlap, so they composite additively and get a bloom pass.
    */
   additive: boolean;
+  /**
+   * Exposure of the composited cell layer. Additive compositing clips to white
+   * wherever three or four cells stack, which throws the colour away; pulling
+   * the layer down leaves headroom so pools read as brighter blue rather than
+   * as blown highlights.
+   */
+  exposure: number;
   bloom: { radius: number; strength: number } | null;
   /** 0 disables the vignette pass entirely. */
   vignette: number;
@@ -145,6 +152,7 @@ export const VARIANTS: Record<VariantName, Variant> = {
     saturationBoost: 0.16,
     lightnessShift: -0.09, // darker, because blurring lifts dark cells on white
     additive: false,
+    exposure: 1,
     bloom: null,
     vignette: 0,
     grainAlpha: 0.03,
@@ -187,10 +195,11 @@ export const VARIANTS: Record<VariantName, Variant> = {
       depthSpeed: [0.45, 0.72, 1],
       camera: [8, 10],
     },
-    saturationBoost: 0.16,
-    lightnessShift: 0.08, // brighter, because these read as emissive on dark
+    saturationBoost: 0.2,
+    lightnessShift: 0.03, // brighter, because these read as emissive on dark
     additive: true,
-    bloom: { radius: 130, strength: 0.5 },
+    exposure: 0.7,
+    bloom: { radius: 150, strength: 0.38 },
     vignette: 0.2,
     grainAlpha: 0.03,
     tintAnchor: [0.2, 0.14],

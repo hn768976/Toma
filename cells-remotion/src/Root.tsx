@@ -15,6 +15,15 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "red" as const }}
       />
+      <Composition
+        id="CellsBlue"
+        component={CellField}
+        durationInFrames={LOOP_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: "blue" as const }}
+      />
     </>
   );
 };

@@ -23,6 +23,9 @@ export type Cell = {
   y0: number;
   /** Mean radius, in 4K px. */
   radius: number;
+  /** Short-axis / long-axis ratio, and the angle of the long axis. */
+  elongation: number;
+  elongationAngle: number;
   points: BlobPoint[];
   /** 0 = far (least blurred), 1 = mid, 2 = near (blurriest, fastest). */
   depth: 0 | 1 | 2;
@@ -149,17 +152,35 @@ export const buildCells = (
     // Biased toward the upper end of the range: five points reads as a rounded
     // polygon, seven or eight reads organic.
     const pointCount = Math.round(
-      lerp(minPoints, maxPoints, Math.pow(s("points"), 0.6)),
+      lerp(minPoints, maxPoints, Math.pow(s("points"), 0.5)),
     );
+    // The per-point radii are varied along two low harmonics of the angle
+    // rather than independently. Independent radii on six or eight points tend
+    // to alternate long/short, which reads as a triangle or a square once the
+    // curve is smoothed; two harmonics give the lopsided ovoid and kidney
+    // shapes that read as cells.
+    const harmonic1 = 1 + Math.round(s("h1"));
+    const harmonic2 = 2 + Math.round(s("h2"));
+    const phase1 = s("hp1") * TAU;
+    const phase2 = s("hp2") * TAU;
+
     const points: BlobPoint[] = [];
     for (let p = 0; p < pointCount; p++) {
       const pk = (part: string) => random(`${key}-p${p}-${part}`);
       const slice = TAU / pointCount;
+      // Angular jitter within the point's own slice keeps the order stable,
+      // so the outline never self-crosses.
+      const angle = p * slice + (pk("angle") - 0.5) * slice * 0.55;
+      const shape =
+        0.62 * Math.sin(harmonic1 * angle + phase1) +
+        0.38 * Math.sin(harmonic2 * angle + phase2);
       points.push({
-        // Angular jitter within the point's own slice keeps the order stable,
-        // so the outline never self-crosses.
-        angle: p * slice + (pk("angle") - 0.5) * slice * 0.55,
-        radiusFactor: 1 + (pk("radius") - 0.5) * 2 * variant.radiusJitter,
+        angle,
+        // Still +/-25% from the mean at most, just correlated around the ring.
+        radiusFactor:
+          1 +
+          variant.radiusJitter *
+            (shape * 0.85 + (pk("radius") - 0.5) * 2 * 0.15),
         morphFreq: pick(variant.morphFrequencies, pk("freq")),
         morphPhase: pk("phase"),
         morphAmp: lerp(
@@ -175,6 +196,11 @@ export const buildCells = (
       x0,
       y0,
       radius,
+      // A cell built only from radii around a centre still tends toward a
+      // circle, and circles read as bubbles. Squashing each blob along a
+      // seeded axis is what makes the field read as cells.
+      elongation: lerp(0.55, 0.98, s("elongation")),
+      elongationAngle: s("elongationAngle") * TAU,
       points,
       depthScore,
       baseHex,
@@ -291,9 +317,17 @@ export const traceBlob = (
       cell.radius *
       p.radiusFactor *
       (1 + p.morphAmp * Math.sin(TAU * (p.morphFreq * t + p.morphPhase)));
+    // Squash toward the cell's short axis. The rotation is applied to the
+    // whole blob, axis included, so a rotating cell tumbles rather than
+    // wobbling inside a fixed outline.
+    const local = p.angle - cell.elongationAngle;
+    const cosL = Math.cos(local);
+    const sinL = Math.sin(local);
+    const squash =
+      1 / Math.hypot(cosL, sinL / cell.elongation);
     const a = p.angle + rotation;
-    xs[i] = cx + Math.cos(a) * r;
-    ys[i] = cy + Math.sin(a) * r;
+    xs[i] = cx + Math.cos(a) * r * squash;
+    ys[i] = cy + Math.sin(a) * r * squash;
   }
 
   ctx.beginPath();

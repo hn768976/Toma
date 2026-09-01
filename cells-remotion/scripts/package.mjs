@@ -20,6 +20,7 @@ const INCLUDE = [
   "scripts",
   "public",
   "package.json",
+  "package-lock.json",
   "tsconfig.json",
   "remotion.config.ts",
   ".gitignore",
