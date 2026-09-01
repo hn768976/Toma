@@ -61,6 +61,24 @@ export type Variant = {
   pointRange: [number, number];
   /** Per-point radius deviation from the mean, as a fraction. */
   radiusJitter: number;
+  /**
+   * How the outline curves. Point radii vary along two integer harmonics of
+   * the angle rather than independently, so the curve stays smooth all the way
+   * round; these settings decide how gentle that curve is.
+   */
+  shape: {
+    /** Harmonics available to the broad lobe and to the finer one. */
+    harmonics: [number[], number[]];
+    /** Their relative weights. More on the first = broader, calmer curves. */
+    harmonicWeights: [number, number];
+    /** Share of the radius variation that is independent per point. Adds kinks. */
+    pointNoise: number;
+    /** Angular jitter as a fraction of a point's slice. Uneven spacing bends
+     *  the curve unevenly, which reads as lumpy rather than curved. */
+    angleJitter: number;
+    /** Bias on the point count. Below 0.5 favours the top of pointRange. */
+    countBias: number;
+  };
   /** Morph depth: how far each point's radius breathes, as a fraction. */
   morphAmplitude: [number, number];
   /** Integer morph frequencies (cycles per loop) available to a point. */
@@ -138,6 +156,20 @@ export const VARIANTS: Record<VariantName, Variant> = {
     opacityRange: [0.45, 1],
     pointRange: [5, 8],
     radiusJitter: 0.25,
+    // v1's cells are large and few, so their outlines carry the piece. The
+    // broad lobe is the first harmonic — one maximum and one minimum, which
+    // leans the blob into an egg. The second harmonic is avoided here: its
+    // four extrema sit 90 degrees apart and line up with the elongation axes,
+    // which builds a rounded rectangle. A weak third harmonic adds asymmetry
+    // without flattening anything. With almost no per-point noise and
+    // near-even point spacing, the result is a smooth curved cell.
+    shape: {
+      harmonics: [[1], [3]],
+      harmonicWeights: [0.84, 0.16],
+      pointNoise: 0.03,
+      angleJitter: 0.14,
+      countBias: 0.3,
+    },
     morphAmplitude: [0.05, 0.13],
     morphFrequencies: [1, 2, 3],
     rotatingShare: 0.25,
@@ -184,6 +216,15 @@ export const VARIANTS: Record<VariantName, Variant> = {
     opacityRange: [0.45, 1],
     pointRange: [5, 8],
     radiusJitter: 0.25,
+    // v2's cells are small and many, and a busier outline survives being
+    // shrunk to a bright speck.
+    shape: {
+      harmonics: [[1, 2], [2, 3]],
+      harmonicWeights: [0.62, 0.38],
+      pointNoise: 0.15,
+      angleJitter: 0.55,
+      countBias: 0.5,
+    },
     morphAmplitude: [0.05, 0.13],
     morphFrequencies: [1, 2, 3],
     rotatingShare: 0.25,

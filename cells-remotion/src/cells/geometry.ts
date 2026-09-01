@@ -71,6 +71,7 @@ export const buildCells = (
   const [minSize, maxSize] = variant.sizeRange;
   const [minAlpha, maxAlpha] = variant.opacityRange;
   const [minPoints, maxPoints] = variant.pointRange;
+  const { shape: shapeSettings } = variant;
   const { drift } = variant;
 
 
@@ -152,15 +153,16 @@ export const buildCells = (
     // Biased toward the upper end of the range: five points reads as a rounded
     // polygon, seven or eight reads organic.
     const pointCount = Math.round(
-      lerp(minPoints, maxPoints, Math.pow(s("points"), 0.5)),
+      lerp(minPoints, maxPoints, Math.pow(s("points"), shapeSettings.countBias)),
     );
     // The per-point radii are varied along two low harmonics of the angle
     // rather than independently. Independent radii on six or eight points tend
     // to alternate long/short, which reads as a triangle or a square once the
     // curve is smoothed; two harmonics give the lopsided ovoid and kidney
-    // shapes that read as cells.
-    const harmonic1 = 1 + Math.round(s("h1"));
-    const harmonic2 = 2 + Math.round(s("h2"));
+    // shapes that read as cells. How gentle those curves are is a per-variant
+    // setting.
+    const harmonic1 = pick(shapeSettings.harmonics[0], s("h1"));
+    const harmonic2 = pick(shapeSettings.harmonics[1], s("h2"));
     const phase1 = s("hp1") * TAU;
     const phase2 = s("hp2") * TAU;
 
@@ -170,17 +172,21 @@ export const buildCells = (
       const slice = TAU / pointCount;
       // Angular jitter within the point's own slice keeps the order stable,
       // so the outline never self-crosses.
-      const angle = p * slice + (pk("angle") - 0.5) * slice * 0.55;
+      const angle =
+        p * slice + (pk("angle") - 0.5) * slice * shapeSettings.angleJitter;
       const shape =
-        0.62 * Math.sin(harmonic1 * angle + phase1) +
-        0.38 * Math.sin(harmonic2 * angle + phase2);
+        shapeSettings.harmonicWeights[0] *
+          Math.sin(harmonic1 * angle + phase1) +
+        shapeSettings.harmonicWeights[1] *
+          Math.sin(harmonic2 * angle + phase2);
       points.push({
         angle,
         // Still +/-25% from the mean at most, just correlated around the ring.
         radiusFactor:
           1 +
           variant.radiusJitter *
-            (shape * 0.85 + (pk("radius") - 0.5) * 2 * 0.15),
+            (shape * (1 - shapeSettings.pointNoise) +
+              (pk("radius") - 0.5) * 2 * shapeSettings.pointNoise),
         morphFreq: pick(variant.morphFrequencies, pk("freq")),
         morphPhase: pk("phase"),
         morphAmp: lerp(
@@ -306,6 +312,14 @@ export const traceBlob = (
 ) => {
   const rotation = cell.rotation0 + TAU * cell.rotationTurns * t;
   const n = cell.points.length;
+
+  // Plain Catmull-Rom control offsets are (P[i+1] - P[i-1]) / 6, which is 11%
+  // too short to reproduce the curvature of a circle at eight points and 37%
+  // too short at five. That shortfall is what leaves a blob with flat sides
+  // and faint corners at its sample points. Scaling the offsets by the ratio
+  // between the circular control length, (4/3)tan(pi/2n), and what Catmull-Rom
+  // would give on a regular polygon, sin(2pi/n)/3, puts the curvature back.
+  const tension = (4 * Math.tan(Math.PI / (2 * n))) / Math.sin(TAU / n);
   const xs = new Array<number>(n);
   const ys = new Array<number>(n);
 
@@ -338,10 +352,10 @@ export const traceBlob = (
     const i2 = (i + 1) % n;
     const i3 = (i + 2) % n;
     ctx.bezierCurveTo(
-      xs[i1] + (xs[i2] - xs[i0]) / 6,
-      ys[i1] + (ys[i2] - ys[i0]) / 6,
-      xs[i2] - (xs[i3] - xs[i1]) / 6,
-      ys[i2] - (ys[i3] - ys[i1]) / 6,
+      xs[i1] + ((xs[i2] - xs[i0]) / 6) * tension,
+      ys[i1] + ((ys[i2] - ys[i0]) / 6) * tension,
+      xs[i2] - ((xs[i3] - xs[i1]) / 6) * tension,
+      ys[i2] - ((ys[i3] - ys[i1]) / 6) * tension,
       xs[i2],
       ys[i2],
     );
