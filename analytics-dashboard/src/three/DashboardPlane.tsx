@@ -38,11 +38,12 @@ const buildCornerMask = (): THREE.CanvasTexture => {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not build the plane's corner mask");
 
-  ctx.fillStyle = "#000000";
+  // Mask levels, not palette colours: 0 = cut away, 255 = keep.
+  ctx.fillStyle = "rgb(0, 0, 0)";
   ctx.fillRect(0, 0, width, height);
 
   const radius = height * CORNER_RADIUS;
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "rgb(255, 255, 255)";
   ctx.beginPath();
   ctx.moveTo(radius, 0);
   ctx.arcTo(width, 0, width, height, radius);

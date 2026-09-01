@@ -10,6 +10,17 @@
  * proxy — which this project was built behind — makes the headless browser
  * reject the gstatic certificate and fail the render outright.
  *
+ * To fetch from Google instead, swap the FontFace block below for:
+ *
+ *   import { loadFont } from "@remotion/google-fonts/Inter";
+ *   const { fontFamily, waitUntilDone } = loadFont("normal", {
+ *     weights: ["400", "500", "600", "700"], subsets: ["latin"],
+ *   });
+ *
+ * and await `waitUntilDone()` where `face.load()` is awaited here. Everything
+ * downstream — the family name, the cache invalidation, the delayRender gate —
+ * is unchanged.
+ *
  * Tabular figures are produced by `drawTabular` in paint/utils.ts rather than by
  * a font feature: Canvas 2D exposes no way to switch on `tnum`, so the digits
  * are laid out on a fixed pitch by hand. That is stricter than the font feature
