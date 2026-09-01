@@ -18,6 +18,13 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import { EncryptScreen } from "./encrypt/EncryptScreen";
+import {
+  DURATION_IN_FRAMES as ENCRYPT_DURATION_IN_FRAMES,
+  FPS as ENCRYPT_FPS,
+  WIDTH as ENCRYPT_WIDTH,
+  HEIGHT as ENCRYPT_HEIGHT,
+} from "./encrypt/timeline";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +58,24 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="EncryptSuccess"
+        component={EncryptScreen}
+        durationInFrames={ENCRYPT_DURATION_IN_FRAMES}
+        fps={ENCRYPT_FPS}
+        width={ENCRYPT_WIDTH}
+        height={ENCRYPT_HEIGHT}
+        defaultProps={{ variant: "success" as const }}
+      />
+      <Composition
+        id="EncryptFailure"
+        component={EncryptScreen}
+        durationInFrames={ENCRYPT_DURATION_IN_FRAMES}
+        fps={ENCRYPT_FPS}
+        width={ENCRYPT_WIDTH}
+        height={ENCRYPT_HEIGHT}
+        defaultProps={{ variant: "failure" as const }}
       />
     </>
   );

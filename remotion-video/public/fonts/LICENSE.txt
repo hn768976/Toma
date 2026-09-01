@@ -1,0 +1,12 @@
+Roboto Condensed and Roboto Mono
+Copyright 2015 The Roboto Project Authors (https://github.com/googlefonts/roboto)
+Licensed under the Apache License, Version 2.0.
+Full licence text: https://www.apache.org/licenses/LICENSE-2.0
+
+The files RobotoCondensed-*.woff2 and RobotoMono-*.woff2 in this directory are
+the latin subsets published by Google Fonts, bundled here so that rendering
+requires no network access.
+
+Patrick Hand
+Copyright The Patrick Hand Project Authors.
+Licensed under the SIL Open Font License, Version 1.1.
