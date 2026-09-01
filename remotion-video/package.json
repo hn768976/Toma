@@ -20,9 +20,11 @@
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.515",
     "@types/d3-geo": "^3.1.1",
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^26.4.0",
     "@types/react": "19.2.7",
     "@types/topojson-client": "^3.1.5",
+    "@types/topojson-specification": "^1.0.5",
     "@types/web": "0.0.166",
     "eslint": "9.19.0",
     "prettier": "3.8.1",

@@ -80,9 +80,11 @@ const packageJsonFor = (target) => ({
   devDependencies: {
     "@remotion/eslint-config-flat": version("@remotion/eslint-config-flat"),
     "@types/d3-geo": version("@types/d3-geo"),
+    "@types/geojson": version("@types/geojson"),
     "@types/node": version("@types/node"),
     "@types/react": version("@types/react"),
     "@types/topojson-client": version("@types/topojson-client"),
+    "@types/topojson-specification": version("@types/topojson-specification"),
     "@types/web": version("@types/web"),
     eslint: version("eslint"),
     typescript: version("typescript"),
@@ -127,16 +129,16 @@ import { DocApprovalCompositions } from "./doc-approval/compositions";
 export const RemotionRoot: React.FC = () => <DocApprovalCompositions />;
 `;
 
-const ESLINT_CONFIG = `import { flatConfig } from "@remotion/eslint-config-flat";
-
-export default flatConfig;
-`;
+const ESLINT_CONFIG = readFileSync(path.join(root, "eslint.config.mjs"), "utf8");
 
 const GITIGNORE = `node_modules
 out
 dist
 .DS_Store
 `;
+
+const sibling = (target) =>
+  target.compositionId === "DocApproved" ? "DocRejected" : "DocApproved";
 
 const readme = (target) => `# ${target.title}
 
@@ -153,10 +155,9 @@ ${target.blurb}
 | Loops | Yes - see "How the loop closes" below |
 | Audio | None |
 
-This project also contains the sibling composition
-\`${target.compositionId === "DocApproved" ? "DocRejected" : "DocApproved"}\`; both are the same
-component driven by the \`variant\` prop, and every colour, mark and label that
-differs between them lives in the single \`VARIANTS\` object in
+This project also contains the sibling composition \`${sibling(target)}\`. Both are
+the same component driven by the \`variant\` prop, and every colour, mark, rating
+row and label that differs between them lives in the single \`VARIANTS\` object in
 \`src/doc-approval/variants.ts\`.
 
 ## Render
@@ -263,7 +264,10 @@ const checkDependencies = (stage, pkg) => {
       if (specifier.startsWith(".") || specifier.startsWith("node:")) continue;
       const parts = specifier.split("/");
       const name = specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
-      if (!declared.has(name)) missing.add(`${name} (from ${path.relative(stage, file)})`);
+      // A bare `geojson` import is satisfied by the @types/geojson package.
+      if (!declared.has(name) && !declared.has(`@types/${name}`)) {
+        missing.add(`${name} (from ${path.relative(stage, file)})`);
+      }
     }
   }
   if (missing.size > 0) {
