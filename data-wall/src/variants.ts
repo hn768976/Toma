@@ -144,21 +144,25 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
    * in front at reduced opacity, plane mirrored to recede to the upper left,
    * denser grid, and no moving averages (three curves behind a dense grid read
    * as noise).
+   *
+   * The field is dark cyan. The accent stays warm, so the two boards keep the
+   * same relationship — a scattered warm minority in a cool field — with the
+   * cyan and the amber swapping which of them carries the frame.
    */
   amber: {
     palette: {
-      bgDeep: "#14100A",
-      bgWash: "#3A2E14",
-      mapLand: "#4A3A18",
-      numberMid: "#C4A05F",
-      numberBright: "#FFE8B8",
-      numberAccent: "#4FC4E8",
-      gridRule: "#4A3A18",
-      candleUp: "#FFF4E0",
+      bgDeep: "#05161A",
+      bgWash: "#0E3A44",
+      mapLand: "#14515E",
+      numberMid: "#3FA8C4",
+      numberBright: "#C8F0FF",
+      numberAccent: "#F5A83F",
+      gridRule: "#14515E",
+      candleUp: "#E6FAFF",
       candleDown: "#C4553A",
-      volumeBar: "#A87A2E",
-      maLines: ["#4FC4E8", "#FFE8B8"],
-      vignette: "#0A0704",
+      volumeBar: "#2E7F96",
+      maLines: ["#F5A83F", "#C8F0FF"],
+      vignette: "#020B0E",
     },
     layerOrder: "numbersFront",
     numbersOpacity: 0.85,
@@ -180,8 +184,8 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       maLengths: [],
     },
     volumeAlpha: 0.45,
-    // The amber field is far darker than the blue one, so the same nominal
-    // land tone would jump forward and read as a subject. Both are pulled back
+    // This field is far darker than the blue one, so the same nominal land
+    // tone would jump forward and read as a subject. Both are pulled back
     // until the continents are only a shape you notice second.
     washAlpha: 0.5,
     mapAlpha: 0.45,

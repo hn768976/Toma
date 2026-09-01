@@ -14,13 +14,19 @@ to the upper right (rotated -12°, sheared so the right compresses ~9%). Chart
 mix: candlesticks, volume bars and three moving-average lines. Grid density:
 roughly 14 columns × 20 rows, 12% of positions left empty.'
 
-amber_desc='**v2 "amber"** — a data board with charts bleeding through it. The
-chart layer draws *behind* the number grid, and the grid is laid over it at 85%
-opacity so the candles show faintly between the cells. The plane is mirrored to
-recede to the upper left (rotated +10° with the shear reversed). Chart mix:
-candlesticks and volume bars only — behind a dense grid, three coloured curves
-would read as noise. Grid density: roughly 18 columns × 26 rows in smaller
-type, with 18% of positions left empty so the denser field still breathes.'
+amber_desc='**v2** — a data board with charts bleeding through it, in a dark
+cyan field. The chart layer draws *behind* the number grid, and the grid is
+laid over it at 85% opacity so the candles show faintly between the cells. The
+plane is mirrored to recede to the upper left (rotated +10° with the shear
+reversed). Chart mix: candlesticks and volume bars only — behind a dense grid,
+three coloured curves would read as noise. Grid density: roughly 18 columns ×
+26 rows in smaller type, with 18% of positions left empty so the denser field
+still breathes. The accent stays warm, so both boards keep the same
+relationship: a scattered warm minority in a cool field.
+
+The composition id and the archive name still read "amber", from the palette
+this board started out with. They are kept as they are so existing render
+commands keep working; only the colours changed.'
 
 build() {
   local key="$1" comp="$2" other="$3" title="$4" outname="$5" desc="$6"
@@ -53,6 +59,6 @@ PY
 }
 
 build blue  DataWallBlue  DataWallAmber "v1, blue"  datawall-blue  "$blue_desc"
-build amber DataWallAmber DataWallBlue  "v2, amber" datawall-amber "$amber_desc"
+build amber DataWallAmber DataWallBlue  "v2, dark cyan" datawall-amber "$amber_desc"
 
 rm -rf "$stage"
