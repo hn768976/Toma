@@ -1,3 +1,4 @@
+import { DENSE_FIELD } from "./fields/dense";
 import { SPARSE_FIELD } from "./fields/sparse";
 import type { Variant, VariantName } from "./types";
 
@@ -41,6 +42,61 @@ export const VARIANTS: Record<VariantName, Variant> = {
     ],
     field: SPARSE_FIELD,
     flicker: { chance: 0.13, level: 0.26, minDur: 2, maxDur: 3 },
+    inkVariation: null,
+    glitch: {
+      minGap: 45,
+      maxGap: 90,
+      minDur: 2,
+      maxDur: 3,
+      minSlices: 2,
+      maxSlices: 4,
+      minShift: 20,
+      maxShift: 90,
+      minSliceH: 10,
+      maxSliceH: 58,
+      cluster: 320,
+    },
+    grain: { alpha: 0.03, tile: 256, frames: 6 },
+    paper: null,
+  },
+
+  dense: {
+    palette: {
+      bg: "#030305",
+      ink: "#FFFFFF",
+      dim: "#6A6A72",
+      accent: "#E8452E",
+      panel: "#C8C8D0",
+    },
+    vocabulary: [
+      "cornerBracket",
+      "dotColumn",
+      "chevron",
+      "diagonalPair",
+      "crossedX",
+      "arc",
+      "squarePanel",
+      "tickRow",
+      "circleOutline",
+      "dash",
+    ],
+    layout: "centredCluster",
+    pitch: 85,
+    stroke: 3,
+    peakCount: 48,
+    phases: [
+      { name: "black", from: 0, to: 15 },
+      { name: "wave1", from: 15, to: 45 },
+      { name: "pause1", from: 45, to: 60 },
+      { name: "wave2", from: 60, to: 95 },
+      { name: "pause2", from: 95, to: 110 },
+      { name: "wave3", from: 110, to: 140 },
+      { name: "hold", from: 140, to: 230 },
+      { name: "clear", from: 230, to: 250 },
+      { name: "black", from: 250, to: 300 },
+    ],
+    field: DENSE_FIELD,
+    flicker: { chance: 0.06, level: 0.26, minDur: 2, maxDur: 3 },
     inkVariation: null,
     glitch: {
       minGap: 45,

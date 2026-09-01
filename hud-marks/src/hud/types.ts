@@ -126,4 +126,4 @@ export type Variant = {
   paper: { alpha: number } | null;
 };
 
-export type VariantName = "sparse";
+export type VariantName = "sparse" | "dense";

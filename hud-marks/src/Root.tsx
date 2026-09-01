@@ -14,6 +14,15 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{ variant: "sparse" as const }}
       />
+      <Composition
+        id="HudMarksDense"
+        component={HudMarks}
+        durationInFrames={300}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "dense" as const }}
+      />
     </>
   );
 };
