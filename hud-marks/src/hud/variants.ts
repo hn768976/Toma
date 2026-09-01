@@ -1,4 +1,5 @@
 import { DENSE_FIELD } from "./fields/dense";
+import { PRINT_FIELD } from "./fields/print";
 import { SPARSE_FIELD } from "./fields/sparse";
 import type { Variant, VariantName } from "./types";
 
@@ -114,4 +115,58 @@ export const VARIANTS: Record<VariantName, Variant> = {
     grain: { alpha: 0.03, tile: 256, frames: 6 },
     paper: null,
   },
+
+  print: {
+    palette: {
+      bg: "#F4F2EE",
+      ink: "#14120E",
+      dim: "#8A867E",
+      accent: "#1A5CD4",
+      panel: "#2A2620",
+    },
+    vocabulary: [
+      "cropMark",
+      "registrationTarget",
+      "colourBar",
+      "dotColumn",
+      "chevron",
+      "diagonalPair",
+      "crossedX",
+      "squarePanel",
+      "tickRow",
+      "circleOutline",
+      "dash",
+    ],
+    layout: "registration",
+    pitch: 130,
+    stroke: 3,
+    peakCount: 33,
+    phases: [
+      { name: "paper", from: 0, to: 20 },
+      { name: "arrive", from: 20, to: 120 },
+      { name: "hold", from: 120, to: 250 },
+      { name: "depart", from: 250, to: 300 },
+    ],
+    field: PRINT_FIELD,
+    // No flicker: a two-frame drop is a screen artefact. Print gets a slower,
+    // gentler under-inking instead.
+    flicker: null,
+    inkVariation: { chance: 0.05, level: 0.72, minDur: 4, maxDur: 7 },
+    // No glitch either — horizontal slice tearing reads as an error on paper.
+    glitch: null,
+    grain: { alpha: 0.03, tile: 256, frames: 6 },
+    paper: { alpha: 0.03 },
+  },
 };
+
+// Keeps each version's declared vocabulary honest: a mark type that is not in
+// its variant's list is a mistake in the field data, not a silent extra shape.
+for (const [name, variant] of Object.entries(VARIANTS)) {
+  for (const mark of variant.field) {
+    if (!variant.vocabulary.includes(mark.type)) {
+      throw new Error(
+        `${name}: mark "${mark.id}" uses ${mark.type}, which is not in this variant's vocabulary`,
+      );
+    }
+  }
+}
