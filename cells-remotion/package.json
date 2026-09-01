@@ -1,0 +1,25 @@
+{
+  "name": "cells-remotion",
+  "version": "1.0.0",
+  "description": "4K defocused-cells motion loops (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc",
+    "package": "node scripts/package.mjs",
+    "verify-loop": "node --no-warnings --experimental-strip-types --import ./scripts/ts-resolve.mjs scripts/verify-loop.mjs"
+  }
+}
