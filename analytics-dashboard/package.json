@@ -1,0 +1,32 @@
+{
+  "name": "analytics-dashboard",
+  "version": "1.0.0",
+  "description": "4K analytics dashboard animation \u2014 flat 2D and tilted 3D variants",
+  "repository": {},
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit",
+    "package": "node scripts/package.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "@remotion/google-fonts": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "@react-three/fiber": "9.1.2",
+    "@react-three/postprocessing": "3.0.4",
+    "postprocessing": "6.36.6",
+    "three": "0.172.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.172.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
