@@ -1,0 +1,21 @@
+{
+  "name": "remotion-lib-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "One composition per remotion-lib component, shown in isolation.",
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render LibDemo out/lib-demo.mp4 --codec=h264 --crf=18",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
