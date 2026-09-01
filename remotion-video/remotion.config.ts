@@ -11,6 +11,9 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// None of the compositions in this project have audio; without this Remotion
+// still muxes a silent AAC track into every MP4.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 
