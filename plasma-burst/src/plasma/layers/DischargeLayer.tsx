@@ -7,15 +7,16 @@ import { rgba, type PlasmaTheme } from "../theme";
 /**
  * The filament web, composited from four passes with 'lighter'.
  *
- * The whole effect is a thin near-white core sitting inside a wide soft glow; a
- * single thick semi-transparent stroke does not read the same way at all.
+ * Every pass is blurred; none of them lays down a crisp stroke. Each is
+ * rendered on a reduced-resolution scratch canvas and blurred *there*, so a
+ * radius of r becomes r * downsample once upscaled. Glow is low-frequency by
+ * definition, so nothing is lost, and it costs a fraction of what an equivalent
+ * shadow on every stroke would at 4K.
  *
- * The glow of each pass is rendered on a reduced-resolution scratch canvas and
- * blurred *there*, so a radius of r becomes r * downsample once upscaled. Glow
- * is low-frequency by definition, so nothing is lost, and it costs a fraction
- * of what an equivalent shadow on every stroke would at 4K. Passes that also
- * want the stroke itself (the mid channel and the hot core) lay it over the
- * glow crisply at full resolution.
+ * Widths and blurs are graded so structure survives the softening: the widest
+ * pass is a 92px stroke under 70px of blur and the narrowest a 6px stroke under
+ * 9px, which still reads as a bright ridge down the middle of each filament
+ * without ever presenting a hard edge.
  */
 
 type Pass = {
@@ -23,7 +24,7 @@ type Pass = {
   readonly alpha: number;
   readonly blur: number;
   readonly downsample: number;
-  readonly crisp: boolean;
+  readonly gain: number;
 };
 
 type ColourFor = (filament: Filament) => string;
@@ -35,7 +36,6 @@ const strokeWeb = (
   scale: number,
   colourFor: ColourFor,
   energy: number,
-  alphaScale: number,
 ) => {
   ctx.globalCompositeOperation = "lighter";
   ctx.lineCap = "round";
@@ -48,7 +48,7 @@ const strokeWeb = (
     // Filaments thin as well as thin out — the web weakens, it does not just
     // lose members.
     ctx.lineWidth = pass.width * scale * widthScale * (0.55 + 0.45 * energy);
-    ctx.globalAlpha = Math.min(1, pass.alpha * filament.brightness * energy * alphaScale);
+    ctx.globalAlpha = Math.min(1, pass.alpha * filament.brightness * energy);
     ctx.stroke(filament.path);
   }
 
@@ -66,31 +66,33 @@ const drawPass = (
   colourFor: ColourFor,
   energy: number,
 ) => {
-  if (pass.blur > 0) {
-    const w = Math.max(1, Math.round(width / pass.downsample));
-    const h = Math.max(1, Math.round(height / pass.downsample));
+  const w = Math.max(1, Math.round(width / pass.downsample));
+  const h = Math.max(1, Math.round(height / pass.downsample));
 
-    const scratch = getScratch(key, w, h);
-    const sctx = clear2d(scratch);
-    // Stroke the shared Path2D objects in frame coordinates, scaled down.
-    sctx.scale(1 / pass.downsample, 1 / pass.downsample);
-    strokeWeb(sctx, filaments, pass, scale, colourFor, energy, 1);
-    sctx.setTransform(1, 0, 0, 1, 0, 0);
+  const scratch = getScratch(key, w, h);
+  const sctx = clear2d(scratch);
+  // Stroke the shared Path2D objects in frame coordinates, scaled down.
+  sctx.scale(1 / pass.downsample, 1 / pass.downsample);
+  strokeWeb(sctx, filaments, pass, scale, colourFor, energy);
+  sctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    const blurred = clear2d(getScratch(`${key}-blur`, w, h));
-    blurred.filter = `blur(${(pass.blur * scale) / pass.downsample}px)`;
-    blurred.drawImage(scratch, 0, 0);
-    blurred.filter = "none";
+  const blurred = clear2d(getScratch(`${key}-blur`, w, h));
+  blurred.filter = `blur(${(pass.blur * scale) / pass.downsample}px)`;
+  blurred.drawImage(scratch, 0, 0);
+  blurred.filter = "none";
 
-    target.globalCompositeOperation = "lighter";
-    target.imageSmoothingEnabled = true;
-    target.imageSmoothingQuality = "high";
+  target.globalCompositeOperation = "lighter";
+  target.imageSmoothingEnabled = true;
+  target.imageSmoothingQuality = "high";
+
+  // Composite the pass `gain` times to put back the peak brightness the blur
+  // spread out. The fractional remainder goes in as a partial-alpha draw.
+  for (let remaining = pass.gain; remaining > 0; remaining -= 1) {
+    target.globalAlpha = Math.min(1, remaining);
     target.drawImage(blurred.canvas, 0, 0, w, h, 0, 0, width, height);
   }
 
-  if (pass.crisp) {
-    strokeWeb(target, filaments, pass, scale, colourFor, energy, pass.blur > 0 ? 0.85 : 1);
-  }
+  target.globalAlpha = 1;
 };
 
 export const DischargeLayer: React.FC<{

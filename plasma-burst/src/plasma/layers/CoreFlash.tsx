@@ -63,7 +63,7 @@ export const CoreFlash: React.FC<{
 
       const x = cx + Math.cos(angle) * distance;
       const y = cy + Math.sin(angle) * distance;
-      const alpha = randRange(`${seed}-alpha`, 0.12, 0.34) * energy;
+      const alpha = randRange(`${seed}-alpha`, 0.09, 0.25) * energy;
 
       // Stretched and tilted, like the cloud blobs, so the blown-out centre has
       // an irregular edge rather than reading as a disc.

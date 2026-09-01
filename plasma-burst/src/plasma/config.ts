@@ -108,28 +108,34 @@ export const DISCHARGE = {
   generationWidth: [1, 0.8, 0.62] as const,
 
   /**
-   * The four composited passes. The thin white core inside a wide soft glow is
-   * the entire effect — a single thick semi-transparent stroke will not do it.
+   * The four composited passes, widest and softest first.
+   *
+   * EVERY pass is blurred — no pass lays down a crisp stroke. The hot core is a
+   * narrow stroke under a moderate blur, so it still reads as a bright ridge
+   * running down the middle of the filament, but it has no hard edge anywhere:
+   * the piece is a soft luminous mass, not a wire diagram.
    *
    * `downsample` renders the pass on a reduced-resolution scratch canvas and
-   * blurs it there before upscaling. The two wide passes are pure low-frequency
-   * glow, so nothing is lost and the blur costs a fraction of what an
-   * equivalent per-stroke shadow would at 4K. `blur` is always expressed as the
-   * effective radius in 4K pixels.
+   * blurs it *there* before upscaling, so a radius of r in that space becomes
+   * r * downsample once upscaled. Glow is low-frequency by definition, so
+   * nothing is lost and it costs a fraction of what an equivalent per-stroke
+   * shadow would at 4K. `blur` is always the effective radius in 4K pixels.
+   *
+   * `gain` is how many times the finished pass is composited additively.
+   * Blurring spreads a stroke's energy over several times its own area, which
+   * costs the narrow passes most of their peak brightness; compositing them
+   * more than once puts that back without reintroducing an edge, which raising
+   * the stroke alpha (capped at 1) cannot do.
    */
   passes: {
-    /** 1. Wide atmospheric glow — very wide, very low alpha, 70px of blur. */
-    atmosphere: { width: 92, alpha: 0.16, blur: 70, downsample: 4, crisp: false },
-    /** 2. Outer glow — medium width, low alpha, 32px of blur. */
-    outer: { width: 34, alpha: 0.34, blur: 32, downsample: 2, crisp: false },
-    /**
-     * 3. Mid channel. The glow is rendered at half resolution and the stroke
-     * itself is laid crisply over it at full resolution — which is what a 10px
-     * shadow under a stroke amounts to, at a fraction of the cost at 4K.
-     */
-    channel: { width: 13, alpha: 0.38, blur: 10, downsample: 2, crisp: true },
-    /** 4. Hot core — a thin near-white stroke, no blur. This is the effect. */
-    core: { width: 3.2, alpha: 0.8, blur: 0, downsample: 1, crisp: true },
+    /** 1. Wide atmospheric glow — very wide, very low alpha. */
+    atmosphere: { width: 92, alpha: 0.17, blur: 70, downsample: 4, gain: 1 },
+    /** 2. Outer glow — medium width, low alpha. */
+    outer: { width: 34, alpha: 0.36, blur: 34, downsample: 2, gain: 1.35 },
+    /** 3. Mid channel. */
+    channel: { width: 14, alpha: 0.5, blur: 18, downsample: 2, gain: 1.9 },
+    /** 4. Hot core — narrow and bright, but softened like everything else. */
+    core: { width: 6, alpha: 0.95, blur: 9, downsample: 2, gain: 2.45 },
   },
 } as const;
 
@@ -172,8 +178,8 @@ export const CORE_FLASH = {
   blobRadiusMin: 0.05,
   blobRadiusMax: 0.15,
   /** The soft halo the blobs sit in. */
-  haloRadius: 0.27,
-  haloAlpha: 0.26,
+  haloRadius: 0.25,
+  haloAlpha: 0.18,
   /** Frame at which the flash peaks, and its exponential decay constant. */
   peakFrame: 12,
   riseExponent: 3,
@@ -201,14 +207,15 @@ export const SPARKS = {
    */
   curl: 0.03,
   /**
-   * Sparks are drawn as glowing points, never as streaks. A trailing stroke —
-   * even a tapered one — reads as a straight scratch on the frame, and a frame
-   * full of them reads as rain or lens flare rather than ejecta.
+   * Sparks are soft radial points, never streaks and never hard-edged discs. A
+   * trailing stroke — even a tapered one — reads as a straight scratch on the
+   * frame, and a frame full of them reads as rain or lens flare rather than
+   * ejecta. These are the gradient's outer radius, in 4K pixels.
    */
-  radiusMin: 2.4,
-  radiusMax: 5.2,
-  /** Soft glow around each point, in 4K pixels. */
-  glow: 11,
+  radiusMin: 9,
+  radiusMax: 21,
+  /** Sparks sit under the discharge, not on top of it. */
+  brightness: 0.72,
   /** Fraction of sparks rendered at full core white rather than pale. */
   whiteFraction: 0.3,
 } as const;
@@ -221,8 +228,8 @@ export const BLOOM = {
   /** Two radii, in 4K pixels: a tight halo and a wide wash. */
   tightRadius: 44,
   wideRadius: 190,
-  tightAlpha: 0.44,
-  wideAlpha: 0.4,
+  tightAlpha: 0.47,
+  wideAlpha: 0.41,
   /** Softens the bright-pass so the cloud blooms too, not only the cores. */
   linearMix: 0.3,
 } as const;

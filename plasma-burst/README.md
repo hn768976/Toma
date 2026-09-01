@@ -81,8 +81,20 @@ start at the core, the rest starting partway out on other filaments, so the web
 has no single obvious source.
 
 Each filament is drawn in four passes composited with `lighter`: a wide
-atmospheric glow, an outer glow, a mid channel, and a thin near-white core. The
-thin core inside a wide soft glow is the whole effect.
+atmospheric glow, an outer glow, a mid channel, and a narrow hot core.
+
+**Every pass is blurred — nothing in the piece draws a crisp stroke or a
+hard-edged shape.** Widths and blurs are graded so structure survives the
+softening: the widest pass is a 92px stroke under 70px of blur, the narrowest a
+6px stroke under 9px, which still reads as a bright ridge down the middle of a
+filament without ever presenting an edge. Because blurring spreads a stroke's
+energy over several times its own area, each pass is composited more than once
+(`gain` in `config.ts`) to put the peak brightness back — raising the stroke
+alpha cannot, since it is capped at 1.
+
+The sparks follow the same rule: each is a soft radial gradient, never a streak
+and never a filled disc. A trailing stroke reads as a straight scratch on the
+frame however short or tapered it is.
 
 ### The intensity curve
 

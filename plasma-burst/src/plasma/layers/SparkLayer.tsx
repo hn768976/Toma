@@ -9,10 +9,10 @@ import { rgba, type PlasmaTheme } from "../theme";
  * decelerate and persist into the decay phase — still drifting and dimming
  * after the filaments have gone.
  *
- * Each spark is a glowing point and nothing else. A trailing streak drawn as a
- * stroke reads as a straight scratch across the frame however short or however
- * tapered it is, and a hundred of them radiating from one origin read as rain
- * or a lens flare rather than as ejecta.
+ * Each spark is a soft radial point and nothing else. A trailing streak drawn
+ * as a stroke reads as a straight scratch across the frame however short or
+ * however tapered it is, and a hundred of them radiating from one origin read
+ * as rain or a lens flare rather than as ejecta.
  */
 
 type Spark = {
@@ -92,7 +92,7 @@ export const SparkLayer: React.FC<{
 
       const t = age / spark.life;
       const flicker = 0.75 + 0.25 * Math.sin(spark.flickerPhase + age * 0.9);
-      const alpha = (1 - t) ** 1.6 * flicker * gate;
+      const alpha = (1 - t) ** 1.6 * flicker * gate * SPARKS.brightness;
       if (alpha <= 0.004) {
         continue;
       }
@@ -101,16 +101,21 @@ export const SparkLayer: React.FC<{
       const colour = spark.white ? theme.coreWhite : theme.sparkPale;
       const radius = spark.radius * scale * (0.45 + 0.55 * (1 - t));
 
-      ctx.shadowBlur = SPARKS.glow * scale;
-      ctx.shadowColor = rgba(theme.plasmaCyan, alpha);
-      ctx.fillStyle = rgba(colour, alpha);
+      // A radial falloff rather than a filled disc: a spark should have no
+      // edge either, only a bright centre fading into the frame.
+      const gradient = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, radius);
+      gradient.addColorStop(0, rgba(colour, alpha));
+      gradient.addColorStop(0.16, rgba(colour, alpha * 0.62));
+      gradient.addColorStop(0.44, rgba(theme.plasmaCyan, alpha * 0.22));
+      gradient.addColorStop(0.72, rgba(theme.plasmaMid, alpha * 0.06));
+      gradient.addColorStop(1, rgba(theme.plasmaMid, 0));
+
+      ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(head.x, head.y, radius, 0, TAU);
       ctx.fill();
     }
 
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
   }, [canvasRef, frame, width, height, scale, theme, gate]);
 
   return (
