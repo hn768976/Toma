@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  ChristmasBokeh,
+  christmasBokehSchema,
+  christmasBokehDefaults,
+} from "./christmas-bokeh/ChristmasBokeh";
+import {
+  DURATION_IN_FRAMES as BOKEH_DURATION_IN_FRAMES,
+  FPS as BOKEH_FPS,
+  WIDTH as BOKEH_WIDTH,
+  HEIGHT as BOKEH_HEIGHT,
+} from "./christmas-bokeh/config";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,16 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="ChristmasBokeh"
+        component={ChristmasBokeh}
+        durationInFrames={BOKEH_DURATION_IN_FRAMES}
+        fps={BOKEH_FPS}
+        width={BOKEH_WIDTH}
+        height={BOKEH_HEIGHT}
+        schema={christmasBokehSchema}
+        defaultProps={christmasBokehDefaults}
       />
     </>
   );
