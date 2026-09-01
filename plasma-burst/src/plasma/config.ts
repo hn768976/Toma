@@ -195,14 +195,20 @@ export const SPARKS = {
   lifeMax: 82,
   /** Slow drift once the initial throw has decayed away. */
   driftSpeed: 0.55,
-  /** Trailing streak length, in frames of travel. Short — these are sparks,
-   * not flare rays. */
-  trailFrames: 0.7,
-  /** Peak angular drift, radians per frame, so paths bend instead of radiating
-   * as perfectly straight spokes. */
+  /**
+   * Peak angular drift, radians per frame. Sparks curve away from the core
+   * instead of running dead straight down a radius.
+   */
   curl: 0.03,
-  widthMin: 2.2,
-  widthMax: 4.6,
+  /**
+   * Sparks are drawn as glowing points, never as streaks. A trailing stroke —
+   * even a tapered one — reads as a straight scratch on the frame, and a frame
+   * full of them reads as rain or lens flare rather than ejecta.
+   */
+  radiusMin: 2.4,
+  radiusMax: 5.2,
+  /** Soft glow around each point, in 4K pixels. */
+  glow: 11,
   /** Fraction of sparks rendered at full core white rather than pale. */
   whiteFraction: 0.3,
 } as const;
