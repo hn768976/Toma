@@ -33,12 +33,15 @@ export const ResultCount: React.FC<{
   frame: number;
   seed: string;
 }> = ({ layout, palette, config, timing, frame, seed }) => {
+  // This variant always deletes, so the count always has a frame to fade on.
+  const closeFrame = timing.deletion === null ? Infinity : timing.deletion.start;
+
   const rolls = useMemo(() => {
     const list: { frame: number; text: string }[] = [];
     let at = timing.typeEnd;
     let index = 0;
     const span = config.rerollMax - config.rerollMin + 1;
-    while (at < timing.holdEnd + config.fadeFrames) {
+    while (at < closeFrame + config.fadeFrames) {
       const drift = index === 0 ? 0 : (random(`${seed}:count:${index}`) - 0.5) * 0.014;
       const count = config.baseCount * (1 + drift);
       const seconds =
@@ -53,7 +56,7 @@ export const ResultCount: React.FC<{
       index++;
     }
     return list;
-  }, [config, timing, seed]);
+  }, [config, timing, seed, closeFrame]);
 
   const opacity =
     frame < timing.typeEnd
@@ -63,8 +66,8 @@ export const ResultCount: React.FC<{
           [
             timing.typeEnd,
             timing.typeEnd + config.fadeFrames,
-            timing.holdEnd,
-            timing.holdEnd + config.fadeFrames,
+            closeFrame,
+            closeFrame + config.fadeFrames,
           ],
           [0, 1, 1, 0],
           { extrapolateLeft: "clamp", extrapolateRight: "clamp" },

@@ -1,6 +1,9 @@
 import React from "react";
 import { CanvasLayer } from "./CanvasLayer";
 import { fontString, SANS } from "../fonts";
+import { NO_ENTRANCE } from "../stages";
+import type { Entrance } from "../stages";
+import { withEntrance } from "./TypedText";
 import type { Layout } from "../layout";
 import { PROMPT_CHEVRON } from "../variants";
 
@@ -62,27 +65,32 @@ export const MagnifierIcon: React.FC<{
   layout: Layout;
   color: string;
   kind: IconKind;
-}> = React.memo(({ layout, color, kind }) => {
-  const box = layout.iconR * 4;
+  entrance?: Entrance;
+}> = React.memo(({ layout, color, kind, entrance = NO_ENTRANCE }) => {
+  const box = layout.markR * 4;
   return (
     <CanvasLayer
-      x={layout.iconCx - box / 2}
+      x={layout.markCx - box / 2}
       y={layout.iconCy - box / 2}
       width={Math.ceil(box)}
       height={Math.ceil(box)}
       draw={(ctx) => {
+        const transformed = withEntrance(ctx, layout, entrance);
         if (kind === "chevron") {
-          drawChevron(ctx, layout.iconCx, layout.iconCy, layout.iconR, color);
-          return;
+          drawChevron(ctx, layout.markCx, layout.iconCy, layout.markR, color);
+        } else {
+          drawMagnifier(
+            ctx,
+            layout.markCx,
+            layout.iconCy,
+            layout.markR,
+            layout.markR * (layout.iconStroke / layout.iconR),
+            color,
+          );
         }
-        drawMagnifier(
-          ctx,
-          layout.iconCx,
-          layout.iconCy,
-          layout.iconR,
-          layout.iconStroke,
-          color,
-        );
+        if (transformed) {
+          ctx.restore();
+        }
       }}
     />
   );

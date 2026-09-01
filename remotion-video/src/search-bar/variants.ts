@@ -5,13 +5,19 @@
  * project. Adding a fourth version means adding a key here — nothing else.
  */
 
-export type VariantName = "cyan" | "green" | "light";
+export type VariantName =
+  | "cyan"
+  | "green"
+  | "light"
+  | "aiOverview"
+  | "cleanLight"
+  | "cleanLightAlt";
 
 /** How the pill itself is drawn. */
-export type BarStyle = "glow" | "terminal" | "clean";
+export type BarStyle = "glow" | "terminal" | "clean" | "minimal" | "input";
 
 /** How the background field of squares is distributed. */
-export type FieldMode = "columns" | "scatter" | "sparse";
+export type FieldMode = "columns" | "scatter" | "sparse" | "none";
 
 export type FontRole = "sans" | "mono";
 
@@ -33,6 +39,37 @@ export type Palette = {
   /** Autocomplete — v3 only. */
   suggestText: string | null;
   suggestHover: string | null;
+  /** Present on the variants that show a mouse pointer and a placeholder. */
+  ui: UiPalette | null;
+  /** Present on the variant whose bar ends in a filled search button. */
+  button: ButtonPalette | null;
+  /** Present on the variant that opens a results panel. */
+  panel: PanelPalette | null;
+  /** The circle wipe's colour, on the variants that end with one. */
+  wipe: string | null;
+};
+
+export type UiPalette = {
+  /** The greyed placeholder shown before the field is focused. */
+  placeholder: string;
+  /**
+   * The magnifier, which on these variants is not the label's colour: white
+   * inside the filled button, or a saturated blue inline.
+   */
+  icon: string;
+  pointerFill: string;
+  pointerOutline: string;
+};
+
+export type ButtonPalette = {
+  fill: string;
+  hover: string;
+};
+
+export type PanelPalette = {
+  heading: string;
+  body: string;
+  sparkle: string;
 };
 
 export type Timing = {
@@ -40,10 +77,11 @@ export type Timing = {
   typeStart: number;
   /** Last character appears here — typing is complete. */
   typeEnd: number;
-  /** Deletion starts here. */
-  holdEnd: number;
-  /** Bar is empty again here. */
-  deleteEnd: number;
+  /**
+   * When the term is deleted again, or null when it never is: the interactive
+   * variants close on a transition rather than rewinding the field.
+   */
+  deletion: { start: number; end: number } | null;
 };
 
 export type ResultCountConfig = {
@@ -71,13 +109,72 @@ export type AutocompleteConfig = {
   highlightFrames: number;
 };
 
+/** Where the chrome sits inside the pill. */
+export type ChromeConfig = {
+  /** The letterspaced "SEARCH" label followed by a divider. */
+  label: boolean;
+  /** Greyed placeholder shown until the field is focused, if any. */
+  placeholder: string | null;
+  /**
+   * "left" and "chevron" put the mark in front of the label; "right" puts an
+   * inline magnifier at the far end; "button" replaces it with a filled
+   * search button.
+   */
+  icon: "left" | "right" | "button" | "chevron";
+};
+
+/**
+ * A point the pointer travels to, expressed against the bar so it survives any
+ * change of resolution: x is a fraction of the bar's width from its left edge,
+ * y an offset from its vertical centre measured in bar heights.
+ */
+export type PointerAnchor = { x: number; y: number };
+
+export type PointerScript = {
+  /** Where the pointer waits before its first move — off frame. */
+  from: PointerAnchor;
+  moves: { start: number; end: number; to: PointerAnchor }[];
+  /** Frames at which the pointer clicks wherever it stands. */
+  clicks: number[];
+};
+
+export type ResultsPanelConfig = {
+  /** The sparkle lands before the panel opens, and pulses once as it does. */
+  sparkleFrame: number;
+  start: number;
+  openFrames: number;
+  lineStagger: number;
+  heading: string;
+  /** Invented filler — it is there to read as texture, not to be read. */
+  lines: string[];
+};
+
+/** The staged, interactive timeline the later variants run on. */
+export type StageConfig = {
+  barEntrance: { kind: "draw" | "scale"; start: number; end: number } | null;
+  /** Placeholder fade-in window. */
+  placeholderIn: { start: number; end: number } | null;
+  /** The field is clicked here: the placeholder clears and the caret appears. */
+  focusFrame: number | null;
+  /** The search button flashes to its hover colour from this frame. */
+  buttonFlash: { frame: number; frames: number } | null;
+  pointer: PointerScript | null;
+  panel: ResultsPanelConfig | null;
+  wipe: { start: number; end: number } | null;
+  /** Everything settles back to the ground colour so the loop closes. */
+  fadeOut: { start: number; end: number } | null;
+};
+
 export type VariantConfig = {
   palette: Palette;
   /** The term that gets typed. */
   term: string;
   barStyle: BarStyle;
+  chrome: ChromeConfig;
   fieldMode: FieldMode;
   timing: Timing;
+  /** Weight of the typed term. */
+  termWeight: number;
   /** Font used for the typed term (the label is always the UI sans). */
   termFont: FontRole;
   /** Multiplier on the data field's opacity — it must stay subordinate. */
@@ -100,6 +197,8 @@ export type VariantConfig = {
   grain: number;
   resultCount: ResultCountConfig | null;
   autocomplete: AutocompleteConfig | null;
+  /** null for the variants that simply loop type-hold-delete. */
+  stages: StageConfig | null;
 };
 
 export const VARIANTS: Record<VariantName, VariantConfig> = {
@@ -120,12 +219,18 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       accent: null,
       suggestText: null,
       suggestHover: null,
+      ui: null,
+      button: null,
+      panel: null,
+      wipe: null,
     },
     term: "AI AGENTS",
     barStyle: "glow",
+    chrome: { label: true, placeholder: null, icon: "left" },
     fieldMode: "columns",
-    timing: { typeStart: 30, typeEnd: 170, holdEnd: 290, deleteEnd: 330 },
+    timing: { typeStart: 30, typeEnd: 170, deletion: { start: 290, end: 330 } },
     termFont: "sans",
+    termWeight: 700,
     fieldOpacity: 0.9,
     washStrength: 1,
     fieldDarker: false,
@@ -138,6 +243,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     grain: 0.04,
     resultCount: null,
     autocomplete: null,
+    stages: null,
   },
 
   /* ── v2 ─ terminal: square corners, mono type, a live result count ─────── */
@@ -157,12 +263,18 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       accent: "#F5C43F",
       suggestText: null,
       suggestHover: null,
+      ui: null,
+      button: null,
+      panel: null,
+      wipe: null,
     },
     term: "MACHINE LEARNING",
     barStyle: "terminal",
+    chrome: { label: true, placeholder: null, icon: "chevron" },
     fieldMode: "scatter",
-    timing: { typeStart: 30, typeEnd: 230, holdEnd: 290, deleteEnd: 330 },
+    timing: { typeStart: 30, typeEnd: 230, deletion: { start: 290, end: 330 } },
     termFont: "mono",
+    termWeight: 700,
     fieldOpacity: 0.85,
     washStrength: 0.6,
     fieldDarker: false,
@@ -183,6 +295,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       fadeFrames: 8,
     },
     autocomplete: null,
+    stages: null,
   },
 
   /* ── v3 ─ light mode: shadow instead of glow, autocomplete dropdown ────── */
@@ -202,12 +315,18 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       accent: null,
       suggestText: "#3A4756",
       suggestHover: "#E8EEF5",
+      ui: null,
+      button: null,
+      panel: null,
+      wipe: null,
     },
     term: "HOW DOES AI",
     barStyle: "clean",
+    chrome: { label: true, placeholder: null, icon: "left" },
     fieldMode: "sparse",
-    timing: { typeStart: 30, typeEnd: 180, holdEnd: 290, deleteEnd: 330 },
+    timing: { typeStart: 30, typeEnd: 180, deletion: { start: 290, end: 330 } },
     termFont: "sans",
+    termWeight: 700,
     fieldOpacity: 0.4,
     washStrength: 1,
     fieldDarker: true,
@@ -226,6 +345,219 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       rowStagger: 5,
       highlightFrames: 40,
     },
+    stages: null,
+  },
+  /* ── v4 ─ pure black, a pointer drives the search, a results panel opens ─ */
+  aiOverview: {
+    palette: {
+      bgDeep: "#000000",
+      bgWash: "#000000",
+      // The field is off in this variant; these are never sampled.
+      fieldSquare: "#000000",
+      fieldBright: "#000000",
+      barFill: "#000000",
+      barBorder: "#4A4A4A",
+      barGlow: "#4A4A4A",
+      label: "#8A8A8A",
+      divider: "#4A4A4A",
+      text: "#FFFFFF",
+      cursor: "#FFFFFF",
+      accent: null,
+      suggestText: null,
+      suggestHover: null,
+      ui: {
+        placeholder: "#8A8A8A",
+        icon: "#FFFFFF",
+        pointerFill: "#FFFFFF",
+        pointerOutline: "#000000",
+      },
+      button: { fill: "#2E5CD4", hover: "#3F72E8" },
+      panel: { heading: "#E8E8E8", body: "#9A9A9A", sparkle: "#FFFFFF" },
+      wipe: null,
+    },
+    term: "AI OVERVIEW",
+    barStyle: "minimal",
+    chrome: { label: false, placeholder: "Search", icon: "button" },
+    fieldMode: "none",
+    timing: { typeStart: 125, typeEnd: 260, deletion: null },
+    termFont: "sans",
+    termWeight: 700,
+    fieldOpacity: 0,
+    washStrength: 0,
+    fieldDarker: false,
+    fieldCount: 0,
+    scanlines: false,
+    bloom: false,
+    vignette: 0,
+    vignetteLighten: false,
+    overexpose: 0,
+    grain: 0,
+    resultCount: null,
+    autocomplete: null,
+    stages: {
+      barEntrance: { kind: "draw", start: 20, end: 45 },
+      placeholderIn: { start: 45, end: 70 },
+      focusFrame: 110,
+      buttonFlash: { frame: 260, frames: 4 },
+      pointer: {
+        from: { x: 2.2, y: 9 },
+        moves: [
+          { start: 70, end: 110, to: { x: 0.3, y: 0 } },
+          { start: 115, end: 125, to: { x: 0.9, y: 0 } },
+        ],
+        clicks: [110, 260],
+      },
+      panel: {
+        sparkleFrame: 270,
+        start: 290,
+        openFrames: 14,
+        lineStagger: 4,
+        heading: "Generated summary",
+        // Invented filler. It is set small enough to read as texture, and is
+        // deliberately not a quotation of anything.
+        lines: [
+          "A short answer is assembled from the sources that match the query most closely.",
+          "Each line is drawn from a different part of the result set and ranked before it is shown.",
+          "Related topics are grouped together so the shape of the answer is visible at a glance.",
+          "Longer passages are shortened to the sentence that addresses the question directly.",
+          "Every source stays listed underneath, so any line can be traced back to where it came from.",
+        ],
+      },
+      wipe: null,
+      fadeOut: { start: 440, end: 480 },
+    },
+  },
+
+  /* ── v5 ─ pure white, a pointer, and a blue circle wipe to close ───────── */
+  cleanLight: {
+    palette: {
+      bgDeep: "#FFFFFF",
+      bgWash: "#FFFFFF",
+      // The field is off in this variant; these are never sampled.
+      fieldSquare: "#FFFFFF",
+      fieldBright: "#FFFFFF",
+      barFill: "#FFFFFF",
+      barBorder: "#C8C8C8",
+      barGlow: "#C8C8C8",
+      label: "#A0A0A0",
+      divider: "#C8C8C8",
+      text: "#111111",
+      cursor: "#111111",
+      accent: null,
+      suggestText: null,
+      suggestHover: null,
+      ui: {
+        placeholder: "#A0A0A0",
+        icon: "#1A5CFF",
+        pointerFill: "#FFFFFF",
+        pointerOutline: "#333333",
+      },
+      button: null,
+      panel: null,
+      wipe: "#1A5CFF",
+    },
+    term: "NEURAL NETWORK",
+    barStyle: "input",
+    chrome: { label: false, placeholder: "Search", icon: "right" },
+    fieldMode: "none",
+    timing: { typeStart: 100, typeEnd: 290, deletion: null },
+    termFont: "sans",
+    termWeight: 500,
+    fieldOpacity: 0,
+    washStrength: 0,
+    fieldDarker: true,
+    fieldCount: 0,
+    scanlines: false,
+    bloom: false,
+    vignette: 0,
+    vignetteLighten: false,
+    overexpose: 0,
+    grain: 0,
+    resultCount: null,
+    autocomplete: null,
+    stages: {
+      barEntrance: { kind: "scale", start: 25, end: 55 },
+      placeholderIn: { start: 25, end: 55 },
+      focusFrame: 95,
+      buttonFlash: null,
+      pointer: {
+        from: { x: -1.2, y: 9 },
+        moves: [
+          { start: 55, end: 95, to: { x: 0.3, y: 0 } },
+          { start: 100, end: 125, to: { x: 0.28, y: 2.6 } },
+        ],
+        clicks: [95],
+      },
+      panel: null,
+      wipe: { start: 380, end: 405 },
+      fadeOut: { start: 450, end: 480 },
+    },
+  },
+
+  /* ── v6 ─ v5 with a different term; the pair targets two search listings ─ */
+  cleanLightAlt: {
+    palette: {
+      bgDeep: "#FFFFFF",
+      bgWash: "#FFFFFF",
+      // The field is off in this variant; these are never sampled.
+      fieldSquare: "#FFFFFF",
+      fieldBright: "#FFFFFF",
+      barFill: "#FFFFFF",
+      barBorder: "#C8C8C8",
+      barGlow: "#C8C8C8",
+      label: "#A0A0A0",
+      divider: "#C8C8C8",
+      text: "#111111",
+      cursor: "#111111",
+      accent: null,
+      suggestText: null,
+      suggestHover: null,
+      ui: {
+        placeholder: "#A0A0A0",
+        icon: "#1A5CFF",
+        pointerFill: "#FFFFFF",
+        pointerOutline: "#333333",
+      },
+      button: null,
+      panel: null,
+      wipe: "#1A5CFF",
+    },
+    term: "DEEP LEARNING",
+    barStyle: "input",
+    chrome: { label: false, placeholder: "Search", icon: "right" },
+    fieldMode: "none",
+    timing: { typeStart: 100, typeEnd: 290, deletion: null },
+    termFont: "sans",
+    termWeight: 500,
+    fieldOpacity: 0,
+    washStrength: 0,
+    fieldDarker: true,
+    fieldCount: 0,
+    scanlines: false,
+    bloom: false,
+    vignette: 0,
+    vignetteLighten: false,
+    overexpose: 0,
+    grain: 0,
+    resultCount: null,
+    autocomplete: null,
+    stages: {
+      barEntrance: { kind: "scale", start: 25, end: 55 },
+      placeholderIn: { start: 25, end: 55 },
+      focusFrame: 95,
+      buttonFlash: null,
+      pointer: {
+        from: { x: 2.2, y: 9 },
+        moves: [
+          { start: 55, end: 95, to: { x: 0.7, y: 0 } },
+          { start: 100, end: 125, to: { x: 0.72, y: 2.6 } },
+        ],
+        clicks: [95],
+      },
+      panel: null,
+      wipe: { start: 380, end: 405 },
+      fadeOut: { start: 450, end: 480 },
+    },
   },
 };
 
@@ -234,6 +566,8 @@ export const BAR_FILL_ALPHA: Record<BarStyle, number> = {
   glow: 0.55,
   terminal: 0.65,
   clean: 1,
+  minimal: 1,
+  input: 1,
 };
 
 /** Opacity of the light-mode drop shadow. */

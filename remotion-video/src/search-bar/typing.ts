@@ -97,11 +97,14 @@ export const buildSchedule = (term: string, timing: Timing, seed: string): Sched
   }
 
   // Deletion is quicker and perfectly even — no hesitations on the way out.
-  const deleteInterval = (timing.deleteEnd - timing.holdEnd) / n;
+  const deleteInterval =
+    timing.deletion === null ? 0 : (timing.deletion.end - timing.deletion.start) / n;
 
   const changes = appear.slice();
-  for (let i = 1; i <= n; i++) {
-    changes.push(timing.holdEnd + i * deleteInterval);
+  if (timing.deletion !== null) {
+    for (let i = 1; i <= n; i++) {
+      changes.push(timing.deletion.start + i * deleteInterval);
+    }
   }
 
   return { appear, deleteInterval, changes };
@@ -110,17 +113,21 @@ export const buildSchedule = (term: string, timing: Timing, seed: string): Sched
 /** How many characters of the term are on screen at this frame. */
 export const visibleCount = (frame: number, term: string, timing: Timing, s: Schedule): number => {
   const n = term.length;
-  if (frame < timing.typeStart || frame >= timing.deleteEnd) {
+  if (frame < timing.typeStart) {
     return 0;
   }
-  if (frame < timing.holdEnd) {
+  // With no deletion the finished term simply stays up.
+  if (timing.deletion === null || frame < timing.deletion.start) {
     let count = 0;
     while (count < n && s.appear[count] <= frame) {
       count++;
     }
     return count;
   }
-  const removed = Math.floor((frame - timing.holdEnd) / s.deleteInterval);
+  if (frame >= timing.deletion.end) {
+    return 0;
+  }
+  const removed = Math.floor((frame - timing.deletion.start) / s.deleteInterval);
   const left = n - removed;
   return left < 0 ? 0 : left;
 };

@@ -52,7 +52,9 @@ export const Finish: React.FC<{
   lighten: boolean;
   overexpose: number;
   grain: number;
-}> = ({ width, height, frame, vignette, lighten, overexpose, grain }) => {
+  /** Ground-colour wash over everything, for variants that fade out. */
+  fade?: { color: string; amount: number } | null;
+}> = ({ width, height, frame, vignette, lighten, overexpose, grain, fade = null }) => {
   const overlay = useMemo(() => {
     const canvas = createOffscreen(width, height);
     const ctx = canvas.getContext("2d");
@@ -101,19 +103,30 @@ export const Finish: React.FC<{
       draw={(ctx) => {
         ctx.drawImage(overlay, 0, 0);
 
-        const f = frame % LOOP;
-        const tile = tiles[Math.floor(random(`grain:pick:${f}`) * TILE_COUNT) % TILE_COUNT];
-        const offsetX = -Math.floor(random(`grain:x:${f}`) * TILE);
-        const offsetY = -Math.floor(random(`grain:y:${f}`) * TILE);
+        if (grain > 0) {
+          const f = frame % LOOP;
+          const tile =
+            tiles[Math.floor(random(`grain:pick:${f}`) * TILE_COUNT) % TILE_COUNT];
+          const offsetX = -Math.floor(random(`grain:x:${f}`) * TILE);
+          const offsetY = -Math.floor(random(`grain:y:${f}`) * TILE);
 
-        ctx.save();
-        ctx.globalAlpha = grain;
-        for (let y = offsetY; y < height; y += TILE) {
-          for (let x = offsetX; x < width; x += TILE) {
-            ctx.drawImage(tile, x, y);
+          ctx.save();
+          ctx.globalAlpha = grain;
+          for (let y = offsetY; y < height; y += TILE) {
+            for (let x = offsetX; x < width; x += TILE) {
+              ctx.drawImage(tile, x, y);
+            }
           }
+          ctx.restore();
         }
-        ctx.restore();
+
+        if (fade !== null && fade.amount > 0) {
+          ctx.save();
+          ctx.globalAlpha = fade.amount;
+          ctx.fillStyle = fade.color;
+          ctx.fillRect(0, 0, width, height);
+          ctx.restore();
+        }
       }}
     />
   );

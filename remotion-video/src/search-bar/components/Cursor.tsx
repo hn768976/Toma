@@ -4,7 +4,9 @@ import { measureText } from "../fonts";
 import { withAlpha } from "../color";
 import type { Layout } from "../layout";
 import type { FontRole, Palette } from "../variants";
-import { TEXT_TRACKING, typedFont } from "./TypedText";
+import { TEXT_TRACKING, typedFont, withEntrance } from "./TypedText";
+import { NO_ENTRANCE } from "../stages";
+import type { Entrance } from "../stages";
 
 /**
  * A thin vertical bar sitting after the last typed character. Its opacity is
@@ -16,9 +18,11 @@ export const Cursor: React.FC<{
   palette: Palette;
   text: string;
   role: FontRole;
+  weight: number;
   opacity: number;
   bloom: boolean;
-}> = ({ layout, palette, text, role, opacity, bloom }) => {
+  entrance?: Entrance;
+}> = ({ layout, palette, text, role, weight, opacity, bloom, entrance = NO_ENTRANCE }) => {
   return (
     <CanvasLayer
       x={layout.layerX}
@@ -29,7 +33,8 @@ export const Cursor: React.FC<{
         if (opacity <= 0) {
           return;
         }
-        const font = typedFont(layout, role);
+        const transformed = withEntrance(ctx, layout, entrance);
+        const font = typedFont(layout, role, weight);
         const tracking = layout.textSize * TEXT_TRACKING;
         const advance = measureText(text, font, tracking);
         const x = Math.min(
@@ -56,6 +61,10 @@ export const Cursor: React.FC<{
         ctx.fillStyle = withAlpha(palette.cursor, opacity);
         ctx.fillRect(x, y, w, h);
         ctx.restore();
+
+        if (transformed) {
+          ctx.restore();
+        }
       }}
     />
   );

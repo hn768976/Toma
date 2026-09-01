@@ -1,4 +1,4 @@
-import type { BarStyle } from "./variants";
+import type { BarStyle, ChromeConfig } from "./variants";
 
 /**
  * Geometry, all in composition pixels. Everything inside the pill is derived
@@ -34,6 +34,15 @@ export type Layout = {
   textSize: number;
   textRight: number;
   borderWidth: number;
+  /** Resolved position of the magnifier, wherever the chrome puts it. */
+  markCx: number;
+  markR: number;
+  /** The filled search button at the right end, when the chrome has one. */
+  buttonX: number;
+  buttonY: number;
+  buttonW: number;
+  buttonH: number;
+  buttonR: number;
   /** Autocomplete panel below the bar. */
   panelGap: number;
   rowH: number;
@@ -41,6 +50,15 @@ export type Layout = {
   /** Result count line below the bar. */
   countY: number;
   countSize: number;
+};
+
+/** Border weight per bar style, as a fraction of the pill's height. */
+const BORDER_WEIGHT: Record<BarStyle, number> = {
+  glow: 0.03,
+  terminal: 0.022,
+  clean: 0.03,
+  minimal: 0.018,
+  input: 0.018,
 };
 
 const BAR_WIDTH_FRACTION = 0.34;
@@ -52,6 +70,7 @@ export const getLayout = (
   height: number,
   barStyle: BarStyle,
   labelWidth: number,
+  chrome: ChromeConfig,
 ): Layout => {
   const barW = Math.round(width * BAR_WIDTH_FRACTION);
   const barH = Math.round(barW * BAR_HEIGHT_FRACTION);
@@ -65,7 +84,28 @@ export const getLayout = (
   const iconCx = barX + padX + iconR;
   const labelX = iconCx + iconR + gap;
   const dividerX = labelX + labelWidth + gap;
-  const textX = dividerX + gap * 1.15;
+
+  // The filled button, inset inside the right end of the pill.
+  const buttonH = barH * 0.72;
+  const buttonW = barH * 1.9;
+  const buttonX = barX + barW - barH * 0.16 - buttonW;
+
+  // Without the "SEARCH" label the typed text starts at the pill's own
+  // padding, and the right edge is whatever the chrome leaves free.
+  const textX = chrome.label ? dividerX + gap * 1.15 : barX + padX;
+  const rightIconCx = barX + barW - padX - iconR;
+  const textRight =
+    chrome.icon === "button"
+      ? buttonX - gap
+      : chrome.icon === "right"
+        ? rightIconCx - iconR - gap
+        : barX + barW - padX * 0.6;
+  const markCx =
+    chrome.icon === "button"
+      ? buttonX + buttonW / 2
+      : chrome.icon === "right"
+        ? rightIconCx
+        : iconCx;
 
   return {
     width,
@@ -91,8 +131,15 @@ export const getLayout = (
     dividerX,
     textX,
     textSize: barH * 0.42,
-    textRight: barX + barW - padX * 0.6,
-    borderWidth: barStyle === "terminal" ? Math.max(2, barH * 0.022) : Math.max(2, barH * 0.03),
+    textRight,
+    borderWidth: Math.max(2, barH * BORDER_WEIGHT[barStyle]),
+    markCx,
+    markR: chrome.icon === "button" ? buttonH * 0.26 : iconR,
+    buttonX,
+    buttonY: barY + (barH - buttonH) / 2,
+    buttonW,
+    buttonH,
+    buttonR: buttonH * 0.34,
     panelGap: barH * 0.16,
     rowH: barH * 0.9,
     panelPadY: barH * 0.22,

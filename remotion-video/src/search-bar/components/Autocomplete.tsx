@@ -35,9 +35,11 @@ export const Autocomplete: React.FC<{
     extrapolateRight: "clamp",
     easing: Easing.out(Easing.cubic),
   });
+  // This variant always deletes, so the panel always has a frame to close on.
+  const closeFrame = timing.deletion === null ? Infinity : timing.deletion.start;
   const shrink = interpolate(
     frame,
-    [timing.holdEnd, timing.holdEnd + config.closeFrames],
+    [closeFrame, closeFrame + config.closeFrames],
     [1, 0],
     {
       extrapolateLeft: "clamp",

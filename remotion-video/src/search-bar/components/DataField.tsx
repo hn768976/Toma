@@ -81,6 +81,10 @@ const buildSquares = (
   count: number,
   seed: string,
 ): Square[] => {
+  if (mode === "none") {
+    // The minimal variants are the ground and the bar, nothing else.
+    return [];
+  }
   const density = makeDensity(seed);
   const base = rgbPrefix(palette.fieldSquare);
   const bright = rgbPrefix(palette.fieldBright);

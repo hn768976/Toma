@@ -2,6 +2,9 @@ import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { Autocomplete } from "./components/Autocomplete"; // @only light
 import { Bar } from "./components/Bar";
+import { CircleWipe } from "./components/CircleWipe"; // @only cleanLight cleanLightAlt
+import { PointerCursor } from "./components/PointerCursor"; // @only aiOverview cleanLight cleanLightAlt
+import { ResultsPanel } from "./components/ResultsPanel"; // @only aiOverview
 import { Cursor } from "./components/Cursor";
 import { DataField, LOOP } from "./components/DataField";
 import { Finish } from "./components/Finish";
@@ -10,6 +13,7 @@ import { ResultCount } from "./components/ResultCount"; // @only green
 import { TypedText } from "./components/TypedText";
 import { fontString, measureText, SANS, useFontsReady } from "./fonts";
 import { getLayout } from "./layout";
+import { stageState } from "./stages";
 import { buildSchedule, cursorOpacity, visibleCount } from "./typing";
 import { SEARCH_LABEL, VARIANTS } from "./variants";
 import type { VariantName } from "./variants";
@@ -29,7 +33,7 @@ export type SearchBarProps = {
  * typing, the cursor and the cycle are the same code in all three.
  */
 export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
-  const { width, height } = useVideoConfig();
+  const { width, height, fps } = useVideoConfig();
   const rawFrame = useCurrentFrame();
   // Everything downstream reads this, so the cycle is closed by construction:
   // frame 480 is frame 0.
@@ -43,7 +47,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
     // The divider and the typed text sit after the label, so the label has to
     // be measured — which is only meaningful once the real font has arrived,
     // hence the re-measure when `ready` flips.
-    const probe = getLayout(width, height, config.barStyle, 0);
+    const probe = getLayout(width, height, config.barStyle, 0, config.chrome);
     const labelWidth = ready
       ? measureText(
           SEARCH_LABEL,
@@ -51,8 +55,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
           probe.labelTracking,
         )
       : 0;
-    return getLayout(width, height, config.barStyle, labelWidth);
-  }, [width, height, config.barStyle, ready]);
+    return getLayout(width, height, config.barStyle, labelWidth, config.chrome);
+  }, [width, height, config.barStyle, config.chrome, ready]);
 
   const schedule = useMemo(
     () => buildSchedule(config.term, timing, variant),
@@ -61,6 +65,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
 
   const visible = visibleCount(frame, config.term, timing, schedule);
   const typed = config.term.slice(0, visible);
+  const stage = stageState(frame, config.stages, fps);
+  // The in-pill mark rides the same transform as the bar, dimmed while the
+  // border is still stroking itself on. Reusing the frozen entrance object
+  // when there is nothing to fade keeps the icon's memo intact.
+  const markEntrance =
+    stage.chromeFade === 1
+      ? stage.entrance
+      : {
+          scale: stage.entrance.scale,
+          opacity: stage.entrance.opacity * stage.chromeFade,
+        };
 
   // @only-start light
   // The panel opens once roughly half the term is down.
@@ -102,28 +117,51 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
             layout={layout}
             palette={palette}
             barStyle={config.barStyle}
+            chrome={config.chrome}
             bloom={config.bloom}
+            reveal={stage.reveal}
+            focused={stage.focused}
+            buttonHot={stage.buttonHot}
+            chromeFade={stage.chromeFade}
+            entrance={stage.entrance}
           />
           <MagnifierIcon
             layout={layout}
-            color={palette.label}
-            kind={config.barStyle === "terminal" ? "chevron" : "magnifier"}
+            color={palette.ui === null ? palette.label : palette.ui.icon}
+            kind={config.chrome.icon === "chevron" ? "chevron" : "magnifier"}
+            entrance={markEntrance}
           />
           <TypedText
             layout={layout}
             palette={palette}
             text={typed}
             role={config.termFont}
+            weight={config.termWeight}
             bloom={config.bloom}
+            placeholder={config.chrome.placeholder}
+            placeholderOpacity={stage.placeholderOpacity}
+            entrance={stage.entrance}
           />
           <Cursor
             layout={layout}
             palette={palette}
             text={typed}
             role={config.termFont}
-            opacity={cursorOpacity(frame, schedule)}
+            weight={config.termWeight}
+            opacity={stage.caretVisible ? cursorOpacity(frame, schedule) : 0}
             bloom={config.bloom}
+            entrance={stage.entrance}
           />
+          {/* @only-start aiOverview */}
+          {config.stages === null || config.stages.panel === null ? null : (
+            <ResultsPanel
+              layout={layout}
+              palette={palette}
+              config={config.stages.panel}
+              frame={frame}
+            />
+          )}
+          {/* @only-end */}
           {/* @only-start green */}
           {config.resultCount === null ? null : (
             <ResultCount
@@ -133,6 +171,35 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
               timing={timing}
               frame={frame}
               seed={variant}
+            />
+          )}
+          {/* @only-end */}
+          {/* @only-start aiOverview cleanLight cleanLightAlt */}
+          {config.stages === null ||
+          config.stages.pointer === null ||
+          palette.ui === null ? null : (
+            <PointerCursor
+              layout={layout}
+              ui={palette.ui}
+              script={config.stages.pointer}
+              frame={frame}
+              height={height}
+              seed={variant}
+            />
+          )}
+          {/* @only-end */}
+          {/* @only-start cleanLight cleanLightAlt */}
+          {config.stages === null ||
+          config.stages.wipe === null ||
+          palette.wipe === null ? null : (
+            <CircleWipe
+              layout={layout}
+              width={width}
+              height={height}
+              color={palette.wipe}
+              start={config.stages.wipe.start}
+              end={config.stages.wipe.end}
+              frame={frame}
             />
           )}
           {/* @only-end */}
@@ -147,6 +214,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ variant }) => {
         lighten={config.vignetteLighten}
         overexpose={config.overexpose}
         grain={config.grain}
+        fade={stage.fade > 0 ? { color: palette.bgDeep, amount: stage.fade } : null}
       />
     </AbsoluteFill>
   );
