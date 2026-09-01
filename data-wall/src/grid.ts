@@ -31,6 +31,13 @@ export type GridModel = {
 /** How long a cell stays lit after it rerolls. */
 export const FLASH_FRAMES = 3;
 
+/**
+ * How many distinct percentage strings the whole board draws from. A real
+ * board repeats itself; a pool this size gives the field a recognisable
+ * vocabulary of numbers instead of ~1500 unrelated ones.
+ */
+const POOL_SIZE = 72;
+
 /** Percentage strings: two or three digits, a point, two more, a percent. */
 const makeValue = (seed: string): string => {
   const threeDigit = rnd(`${seed}-w`) < 0.85;
@@ -40,6 +47,9 @@ const makeValue = (seed: string): string => {
   const frac = rndInt(`${seed}-c`, 0, 100);
   return `${whole}.${String(frac).padStart(2, "0")}%`;
 };
+
+const buildPool = (seed: string): string[] =>
+  Array.from({ length: POOL_SIZE }, (_, i) => makeValue(`${seed}-pool-${i}`));
 
 const pickTone = (r: number, config: VariantConfig): Tone => {
   const { brightRatio, accentRatio } = config.grid;
@@ -57,6 +67,7 @@ export const buildGrid = (
   const rows = plane.tileRows;
   const total = cols * rows;
 
+  const pool = buildPool(seed);
   const cells: Cell[] = new Array(total);
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
@@ -66,7 +77,7 @@ export const buildGrid = (
         col,
         row,
         empty: rnd(`${key}-empty`) < config.grid.emptyRatio,
-        value: makeValue(`${key}-v0`),
+        value: pool[rndInt(`${key}-v0`, 0, POOL_SIZE)],
         tone: pickTone(rnd(`${key}-tone`), config),
         rerolls: [],
       };
@@ -92,7 +103,7 @@ export const buildGrid = (
     if (cells[cellIndex].empty) continue;
     cells[cellIndex].rerolls.push({
       frame,
-      value: makeValue(`${seed}-r-${k}`),
+      value: pool[rndInt(`${seed}-r-${k}`, 0, POOL_SIZE)],
       tone: pickTone(rnd(`${seed}-rtone-${k}`), config),
     });
     schedule[frame].push(cellIndex);

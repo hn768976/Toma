@@ -50,7 +50,7 @@ export const WorldBackdrop: React.FC<Props> = ({ plane, config, variantKey }) =>
     );
     wash.addColorStop(0, palette.bgWash);
     wash.addColorStop(1, palette.bgDeep);
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = config.washAlpha;
     ctx.fillStyle = wash;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     ctx.globalAlpha = 1;
@@ -58,7 +58,7 @@ export const WorldBackdrop: React.FC<Props> = ({ plane, config, variantKey }) =>
     setPlaneTransform(ctx, plane, frame);
     const baseX = tileBaseX(frame, plane);
     ctx.fillStyle = palette.mapLand;
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = config.mapAlpha;
     for (const k of TILE_COPIES) {
       ctx.save();
       // Equirectangular land is square-ish; stretch it vertically so the

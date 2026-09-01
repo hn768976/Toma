@@ -83,6 +83,10 @@ export type VariantConfig = {
   chart: ChartConfig;
   /** Alpha the volume bars are drawn at. */
   volumeAlpha: number;
+  /** Alpha of the centre background wash over the deep tone. */
+  washAlpha: number;
+  /** Alpha the continents are filled at. Low enough to stay a texture. */
+  mapAlpha: number;
   /** Vignette strength, 0..1. */
   vignette: number;
   /** Film-grain alpha, 0..1. */
@@ -129,6 +133,8 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       maLengths: [9, 24, 55],
     },
     volumeAlpha: 0.45,
+    washAlpha: 0.75,
+    mapAlpha: 0.9,
     vignette: 0.22,
     grain: 0.04,
   },
@@ -174,6 +180,11 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
       maLengths: [],
     },
     volumeAlpha: 0.45,
+    // The amber field is far darker than the blue one, so the same nominal
+    // land tone would jump forward and read as a subject. Both are pulled back
+    // until the continents are only a shape you notice second.
+    washAlpha: 0.5,
+    mapAlpha: 0.45,
     vignette: 0.22,
     grain: 0.04,
   },
