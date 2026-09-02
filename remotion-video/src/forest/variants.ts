@@ -1,4 +1,4 @@
-import { mixHex } from "./color";
+import { mixHex } from "../lib/color";
 
 // The ONE place any colour literal appears in this project.
 //

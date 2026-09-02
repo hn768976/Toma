@@ -1,9 +1,13 @@
 import { random } from "remotion";
 
-// Every value that varies per tree / per particle comes from here. Remotion's
-// random() is a pure hash of its seed, so the same string always yields the
-// same number — which is what makes the forest identical on every render,
-// across every worker, in any frame order.
+/**
+ * Seeded random helpers for Remotion scenes.
+ *
+ * Remotion renders frames out of order across worker processes, so anything
+ * that is not a pure function of (identity, frame) will flicker or pop. Every
+ * per-instance value in a scene should come from one of these, keyed by a
+ * stable string, and never from Math.random() or Date.now().
+ */
 
 export const rnd = (seed: string) => random(seed);
 
@@ -24,9 +28,10 @@ export const rndBool = (seed: string, probability = 0.5) =>
   random(seed) < probability;
 
 /**
- * A fast local PRNG, used only where a seeded hash per value would be far too
- * slow — currently just the ~590k samples of the film-grain tile. Its own seed
- * still comes from random(), so the output stays a pure function of the frame.
+ * A fast local PRNG (mulberry32), for the rare case where a seeded hash per
+ * value would be far too slow — hundreds of thousands of samples, as in a
+ * per-frame film-grain tile. Seed it from rnd() so the output is still a pure
+ * function of the frame.
  */
 export const mulberry32 = (seed: number) => {
   let s = seed | 0;

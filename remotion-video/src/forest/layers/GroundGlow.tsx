@@ -1,17 +1,18 @@
 import React, { useMemo } from "react";
-import { useCurrentFrame } from "remotion";
-import { LayerCanvas } from "../useLayerCanvas";
-import { loopCos, loopT } from "../constants";
-import { cameraDrift, DRIFT } from "../drift";
-import { buildRidge, ridgeAt } from "../placement";
+import { useCurrentFrame, useVideoConfig } from "remotion";
+import { LayerCanvas } from "../../lib/useLayerCanvas";
+import { cameraDrift, loopCos } from "../../lib/loop";
+import { DURATION_IN_FRAMES, loopT } from "../constants";
+import { DRIFT } from "../drift";
+import { buildEdgeProfile, edgeAt } from "../../lib/noiseEdge";
 import {
   buildParticleSprites,
   buildParticles,
   drawParticle,
   particleAt,
-} from "../particles";
-import { applyBloom } from "./ParticleField";
-import { mixHex, withAlpha } from "../color";
+} from "../../lib/ParticleDriftField";
+import { applyBloom } from "../../lib/bloom";
+import { mixHex, withAlpha } from "../../lib/color";
 import type { GroundSettings, Palette, ParticleSettings } from "../variants";
 
 /**
@@ -30,20 +31,20 @@ export const GroundGlow: React.FC<{
   particleSettings: ParticleSettings;
   palette: Palette;
   seedPrefix: string;
-  width: number;
-  height: number;
-}> = ({ ground, particleSettings, palette, seedPrefix, width, height }) => {
+}> = ({ ground, particleSettings, palette, seedPrefix }) => {
   const frame = useCurrentFrame();
+  const { width, height } = useVideoConfig();
   const W = Math.round(width / 2);
   const H = Math.round(height / 2);
   const scale = 0.5;
 
   const bandTop = height * (1 - ground.bandFrac);
-  const edge = useMemo(() => buildRidge(`${seedPrefix}-bed-edge`, 5), [seedPrefix]);
+  const edge = useMemo(() => buildEdgeProfile(`${seedPrefix}-bed-edge`, 5), [seedPrefix]);
 
   const sprites = useMemo(
-    () => buildParticleSprites(
-        palette,
+    () =>
+      buildParticleSprites(
+        [palette.particleHot, palette.particleMid, palette.particleCool],
         particleSettings.coreHardness,
         particleSettings.spriteAspect,
       ),
@@ -59,8 +60,9 @@ export const GroundGlow: React.FC<{
         width,
         spanTop: bandTop - height * 0.02,
         spanHeight: height * (ground.bandFrac + 0.02),
-        settings: particleSettings,
+        behaviour: particleSettings,
         sizeScale: ground.bedSizeMax / particleSettings.sizeMax,
+        loopFrames: DURATION_IN_FRAMES,
       }),
     [seedPrefix, ground, particleSettings, width, height, bandTop],
   );
@@ -75,7 +77,7 @@ export const GroundGlow: React.FC<{
   const t = loopT(frame);
   // A slow, closed pulse — the bed breathes once over the 8-second loop.
   const pulse = 1 - ground.pulseDepth * 0.5 * (1 - loopCos(t, 1));
-  const drift = cameraDrift(frame, DRIFT.ground);
+  const drift = cameraDrift(t, DRIFT.ground);
 
   const draw = (ctx: CanvasRenderingContext2D) => {
     ctx.save();
@@ -87,7 +89,7 @@ export const GroundGlow: React.FC<{
 
     ctx.globalCompositeOperation = particleSettings.blend;
     for (const spec of bed.particles) {
-      drawParticle(ctx, sprites, particleAt(spec, bed, particleSettings, frame));
+      drawParticle(ctx, sprites, particleAt(spec, bed, particleSettings, t));
     }
     ctx.restore();
 
@@ -182,7 +184,7 @@ export const GroundGlow: React.FC<{
   const drawSnowBed = (ctx: CanvasRenderingContext2D) => {
     const wobble = height * ground.edgeIrregularity;
     const edgeY = (u: number) =>
-      bandTop + ridgeAt(edge, u) * wobble + ridgeAt(edge, u * 3.1) * wobble * 0.42;
+      bandTop + edgeAt(edge, u) * wobble + edgeAt(edge, u * 3.1) * wobble * 0.42;
 
     ctx.save();
     ctx.beginPath();

@@ -82,6 +82,12 @@ export const RemotionRoot: React.FC = () => {
         schema={forestSceneSchema}
         defaultProps={{ variant: "frost" as const }}
       />
+      {/*
+        One frame longer than the loop, and the layers are still driven by the
+        240-frame loop via `loopFrames`. That makes frame 240 renderable and
+        directly comparable with frame 0, which is how the seamless loop is
+        verified — both variants come back at zero differing pixels.
+      */}
       <Composition
         id="ForestLoopCheck"
         component={ForestScene}

@@ -1,6 +1,6 @@
 import React from "react";
-import { LayerCanvas } from "../useLayerCanvas";
-import { mixHex, withAlpha } from "../color";
+import { LayerCanvas } from "../../lib/useLayerCanvas";
+import { mixHex, withAlpha } from "../../lib/color";
 import type { Palette } from "../variants";
 
 /**

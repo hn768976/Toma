@@ -10,14 +10,16 @@ export type LayerDraw = (
  * Mounts a full-bleed <canvas> and runs `draw` against it exactly once per
  * React render, synchronously before paint.
  *
- * There is deliberately no requestAnimationFrame and no state: the component
- * re-renders because useCurrentFrame() changed, the effect redraws, and the
- * pixels are a pure function of the frame number. That is what lets Remotion
- * render frames out of order across workers and still get a stable result.
+ * There is deliberately no requestAnimationFrame and no component state: the
+ * component re-renders because useCurrentFrame() changed, the effect redraws,
+ * and the pixels are a pure function of the frame number. That is what lets
+ * Remotion render frames out of order across workers and still get a stable,
+ * reproducible result.
  *
- * `width`/`height` are the canvas *backing store* size. Layers whose content
- * is entirely soft gradient (sky, fog) use a smaller backing store and let the
- * browser upscale it — nothing is lost and it is dramatically cheaper at 4K.
+ * `width`/`height` are the canvas BACKING STORE size, which need not match the
+ * composition. A layer whose content is entirely soft gradient (a sky wash,
+ * volumetric fog) can use a much smaller backing store and let the browser
+ * upscale it: nothing is lost and it is dramatically cheaper at 4K.
  */
 export const useLayerCanvas = (
   width: number,
@@ -46,7 +48,6 @@ export const LayerCanvas: React.FC<{
   width: number;
   height: number;
   draw: LayerDraw;
-  /** CSS blur applied to the composited layer, in on-screen pixels. */
   style?: React.CSSProperties;
 }> = ({ width, height, draw, style }) => {
   const ref = useLayerCanvas(width, height, draw);
