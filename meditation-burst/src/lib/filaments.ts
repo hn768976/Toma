@@ -1,20 +1,21 @@
-import { midpointDisplace } from "../lib/midpointCurve";
+import { midpointDisplace } from "./midpointCurve";
+import { buildAngularCdf, distanceToEdge, sampleAngle } from "./radialPlaces";
 import {
-  buildAngularCdf,
-  distanceToEdge,
-  sampleAngle,
-} from "../lib/radialPlaces";
-import { rnd, rndInt, rndPick, rndRange, rndSigned, smoothstep } from "../lib/rand";
-import { Layout, LOOP, TAU } from "./layout";
-import { angularWeight, VariantConfig } from "./variants";
+  rnd,
+  rndInt,
+  rndPick,
+  rndRange,
+  rndSigned,
+  smoothstep,
+} from "./rand";
 
 /**
- * Filament geometry.
+ * Filament geometry for <RadiantBurst>.
  *
- * Every filament is built ONCE, in a frame-independent form, and the
- * per-frame work is only the undulation offset. Regenerating 320
- * recursive curves per frame would both cost heavily and make the whole
- * field writhe, because the seeds would have to change with the frame.
+ * Every filament is built ONCE, in a frame-independent form; the only
+ * per-frame work is the undulation offset. Regenerating recursive curves
+ * per frame would both cost heavily and make the whole field writhe,
+ * because the seeds would have to change with the frame.
  *
  * A filament lives in its own polar frame: a unit vector `u` along its
  * ray and `v` perpendicular to it. A vertex is
@@ -24,13 +25,13 @@ import { angularWeight, VariantConfig } from "./variants";
  * which keeps the "sinuous ray" shape explicit and makes the animated
  * part a single scalar per vertex.
  *
- * Vertices are ordered from the EMISSION end to the far end. For an
- * outward burst that is origin -> frame edge; for an inward one it is
- * frame edge -> origin. Brightness pulses always travel index 0 -> n-1,
- * so reversing `burstDirection` reverses them for free. Width and
- * opacity, by contrast, are functions of RADIUS, so a filament is always
- * thickest and brightest at the origin end whichever way it is running —
- * which is exactly the inverted taper the inward variant needs.
+ * Vertices are ordered from the EMISSION end to the far end. With
+ * `direction: 1` that is origin -> frame edge; with `-1` it is frame
+ * edge -> origin. Brightness pulses always travel index 0 -> n-1, so
+ * reversing the direction reverses them for free. Width, by contrast, is
+ * a function of RADIUS, so a filament is always thickest at its origin
+ * end whichever way it runs — which is the inverted taper a converging
+ * field needs, and not simply an outward field played backwards.
  */
 
 /** Recursion depth for the midpoint displacement: 2^5 + 1 = 33 vertices. */
@@ -38,10 +39,30 @@ const DEPTH = 5;
 /** Low displacement scale keeps the curves sinuous rather than jagged. */
 const DISPLACE_SCALE = 0.055;
 const ROUGHNESS = 0.52;
-const BRANCH_PROBABILITY = 0.13;
 
-/** Pulse periods, all exact divisors of the 600-frame loop. */
-const PULSE_PERIODS = [50, 60, 75, 100, 120, 150, 200] as const;
+export type FilamentFieldOptions = {
+  width: number;
+  height: number;
+  originX: number;
+  originY: number;
+  /** +1 radiates away from the origin, -1 converges on it. */
+  direction: 1 | -1;
+  count: number;
+  /** Reach as a fraction of the distance from the origin to the frame edge. */
+  reach: { min: number; max: number };
+  /** Weight of a ray at angular distance `phi` (0..PI) from straight up. */
+  angularWeight: (phi: number) => number;
+  /** Chance that a filament forks. Keep low or the field becomes a tangle. */
+  branchProbability?: number;
+  /** Pulse periods in frames. Each MUST divide the loop length exactly. */
+  pulsePeriods?: readonly number[];
+  /**
+   * Per-filament undulation amplitude in pixels, as [min, max] ranges for
+   * the two harmonics. Their sum is the peak sideways travel of a vertex.
+   */
+  undulation?: { primary: [number, number]; secondary: [number, number] };
+  seed: string;
+};
 
 export type Filament = {
   ux: number;
@@ -52,7 +73,7 @@ export type Filament = {
   r: Float64Array;
   /** Static perpendicular offset at each vertex. */
   o: Float64Array;
-  /** Undulation envelope at each vertex: 0 at the origin, 1 out in the field. */
+  /** Undulation envelope per vertex: 0 at the origin, 1 out in the field. */
   env: Float64Array;
   rNear: number;
   rFar: number;
@@ -70,34 +91,27 @@ export type Filament = {
   pulseStrength: number;
 };
 
-type Frame = { ux: number; uy: number; vx: number; vy: number };
-
-const frameFor = (angle: number): Frame => ({
-  ux: Math.cos(angle),
-  uy: Math.sin(angle),
-  vx: -Math.sin(angle),
-  vy: Math.cos(angle),
-});
+const DEFAULT_PULSE_PERIODS = [50, 60, 75, 100, 120, 150, 200] as const;
 
 const buildOne = (
   seed: string,
   angle: number,
   rEmit: number,
   rEnd: number,
-  layout: Layout,
-  config: VariantConfig,
+  maxRadius: number,
+  outward: boolean,
   widthScale: number,
   alphaScale: number,
   startOffset: number,
+  undulation: { primary: [number, number]; secondary: [number, number] },
+  pulsePeriods: readonly number[],
 ): Filament => {
-  const f = frameFor(angle);
   const count = (1 << DEPTH) + 1;
   const span = rEnd - rEmit;
   const length = Math.abs(span);
 
   // The end nearest the origin is pinned close to the ray so filaments
   // converge on (or spring from) a point rather than a smear.
-  const outward = config.burstDirection === 1;
   const nearOffset = rndSigned(`${seed}:near`, 3);
   const farOffset = rndSigned(`${seed}:far`, length * 0.06);
   const o = midpointDisplace(
@@ -112,7 +126,7 @@ const buildOne = (
 
   const r = new Float64Array(count);
   const env = new Float64Array(count);
-  const rampEnd = layout.maxRadius * 0.22;
+  const rampEnd = maxRadius * 0.22;
   for (let i = 0; i < count; i++) {
     const t = i / (count - 1);
     r[i] = rEmit + span * t;
@@ -122,7 +136,10 @@ const buildOne = (
   }
 
   return {
-    ...f,
+    ux: Math.cos(angle),
+    uy: Math.sin(angle),
+    vx: -Math.sin(angle),
+    vy: Math.cos(angle),
     r,
     o,
     env,
@@ -130,55 +147,68 @@ const buildOne = (
     rFar: Math.max(rEmit, rEnd),
     widthScale,
     alphaScale,
-    undA1: rndRange(`${seed}:a1`, 11, 19),
+    undA1: rndRange(`${seed}:a1`, undulation.primary[0], undulation.primary[1]),
     undK1: rndInt(`${seed}:k1`, 1, 2),
-    undP1: rnd(`${seed}:p1`) * TAU,
-    undA2: rndRange(`${seed}:a2`, 5, 10),
+    undP1: rnd(`${seed}:p1`) * Math.PI * 2,
+    undA2: rndRange(`${seed}:a2`, undulation.secondary[0], undulation.secondary[1]),
     undK2: rndInt(`${seed}:k2`, 2, 4),
-    undP2: rnd(`${seed}:p2`) * TAU,
+    undP2: rnd(`${seed}:p2`) * Math.PI * 2,
     waveSpan: rndRange(`${seed}:ws`, 1.6, 3.4),
-    pulsePeriod: rndPick(`${seed}:pp`, PULSE_PERIODS),
+    pulsePeriod: rndPick(`${seed}:pp`, pulsePeriods),
     pulsePhase: rnd(`${seed}:ph`),
     pulseStrength: rndRange(`${seed}:ps`, 0.35, 1),
   };
 };
 
-export const buildFilaments = (
-  config: VariantConfig,
-  layout: Layout,
-  seedPrefix: string,
-): Filament[] => {
-  // Angles are drawn from a weighted CDF rather than spaced evenly:
-  // even spacing produces a sunburst, which reads as clip art.
+export const buildFilaments = (options: FilamentFieldOptions): Filament[] => {
+  const {
+    width,
+    height,
+    originX,
+    originY,
+    direction,
+    count,
+    reach,
+    angularWeight,
+    seed: seedPrefix,
+  } = options;
+  const branchProbability = options.branchProbability ?? 0.13;
+  const pulsePeriods = options.pulsePeriods ?? DEFAULT_PULSE_PERIODS;
+  const undulation = options.undulation ?? {
+    primary: [11, 19] as [number, number],
+    secondary: [5, 10] as [number, number],
+  };
+
+  const maxRadius = Math.max(
+    Math.hypot(originX, originY),
+    Math.hypot(width - originX, originY),
+    Math.hypot(originX, height - originY),
+    Math.hypot(width - originX, height - originY),
+  );
+
+  // Angles are drawn from a weighted CDF rather than spaced evenly: even
+  // spacing produces a sunburst, which reads as clip art.
   const cdf = buildAngularCdf(
-    (a) => {
-      // Straight up is -PI/2 in canvas coordinates.
-      const phi = Math.abs(
-        Math.atan2(Math.sin(a + Math.PI / 2), Math.cos(a + Math.PI / 2)),
-      );
-      return angularWeight(config.angular, phi);
-    },
+    (a) =>
+      angularWeight(
+        Math.abs(
+          Math.atan2(Math.sin(a + Math.PI / 2), Math.cos(a + Math.PI / 2)),
+        ),
+      ),
     { bins: 1440 },
   );
 
-  const outward = config.burstDirection === 1;
+  const outward = direction === 1;
   const out: Filament[] = [];
 
-  for (let i = 0; i < config.filamentCount; i++) {
+  for (let i = 0; i < count; i++) {
     const seed = `${seedPrefix}:fil:${i}`;
     const angle = sampleAngle(cdf, rnd(`${seed}:u`));
-    const edge = distanceToEdge(
-      layout.originX,
-      layout.originY,
-      layout.width,
-      layout.height,
-      angle,
-    );
-    const reach =
-      edge * rndRange(`${seed}:reach`, config.reach.min, config.reach.max);
+    const edge = distanceToEdge(originX, originY, width, height, angle);
+    const span = edge * rndRange(`${seed}:reach`, reach.min, reach.max);
     const nearRadius = rndRange(`${seed}:r0`, 22, 95);
-    const rEmit = outward ? nearRadius : reach;
-    const rEnd = outward ? reach : nearRadius;
+    const rEmit = outward ? nearRadius : span;
+    const rEnd = outward ? span : nearRadius;
 
     const widthScale = rndRange(`${seed}:w`, 0.55, 1.35);
     const alphaScale = Math.pow(rnd(`${seed}:al`), 0.75) * 0.62 + 0.38;
@@ -188,26 +218,27 @@ export const buildFilaments = (
       angle,
       rEmit,
       rEnd,
-      layout,
-      config,
+      maxRadius,
+      outward,
       widthScale,
       alphaScale,
       0,
+      undulation,
+      pulsePeriods,
     );
     out.push(parent);
 
     // Occasional forks, so the field has branches without becoming a
-    // tangle. The child is expressed in its own rotated frame, so its
-    // start radius/offset are the parent's junction point re-projected
+    // tangle. The child lives in its own rotated frame, so its start
+    // radius and offset are the parent's junction point re-projected
     // into that frame — otherwise the fork would visibly detach.
-    if (rnd(`${seed}:br`) < BRANCH_PROBABILITY) {
+    if (rnd(`${seed}:br`) < branchProbability) {
       const n = parent.r.length;
       const j = Math.round(rndRange(`${seed}:bj`, 0.34, 0.66) * (n - 1));
       const jr = parent.r[j];
       const jo = parent.o[j];
       const delta =
-        rndRange(`${seed}:bd`, 0.06, 0.17) *
-        (rnd(`${seed}:bs`) < 0.5 ? -1 : 1);
+        rndRange(`${seed}:bd`, 0.06, 0.17) * (rnd(`${seed}:bs`) < 0.5 ? -1 : 1);
       const childAngle = angle + delta;
       const phi = Math.atan2(jo, jr);
       const radius = Math.hypot(jr, jo);
@@ -215,7 +246,8 @@ export const buildFilaments = (
       const childEmit = radius * Math.cos(rel);
       const childStartOffset = radius * Math.sin(rel);
       const childEnd = outward
-        ? childEmit + (parent.rFar - childEmit) * rndRange(`${seed}:bl`, 0.5, 0.95)
+        ? childEmit +
+          (parent.rFar - childEmit) * rndRange(`${seed}:bl`, 0.5, 0.95)
         : rndRange(`${seed}:bl2`, 22, 95);
       out.push(
         buildOne(
@@ -223,11 +255,13 @@ export const buildFilaments = (
           childAngle,
           childEmit,
           childEnd,
-          layout,
-          config,
+          maxRadius,
+          outward,
           widthScale * 0.62,
           alphaScale * 0.72,
           childStartOffset,
+          undulation,
+          pulsePeriods,
         ),
       );
     }
@@ -239,22 +273,24 @@ export const buildFilaments = (
 /**
  * Writes the frame-`frame` vertex positions of `fil` into `xs`/`ys`.
  *
- * The undulation is a sum of two sines whose frequencies are integers in
- * cycles-per-loop, with a phase that shifts along the filament so the
- * wave travels rather than pumping. Integer frequencies are what make
- * frame 0 and frame LOOP identical.
+ * The undulation is a sum of two sines whose frequencies are integer
+ * cycles per loop, with a phase that shifts along the filament so the
+ * wave travels rather than pumping. Those integer frequencies are what
+ * make frame 0 and frame `loopLength` identical.
  */
 export const evaluateFilament = (
   fil: Filament,
   frame: number,
+  loopLength: number,
   originX: number,
   originY: number,
   xs: Float64Array,
   ys: Float64Array,
 ): void => {
   const n = fil.r.length;
-  const w1 = (TAU * fil.undK1 * frame) / LOOP + fil.undP1;
-  const w2 = (TAU * fil.undK2 * frame) / LOOP + fil.undP2;
+  const tau = Math.PI * 2;
+  const w1 = (tau * fil.undK1 * frame) / loopLength + fil.undP1;
+  const w2 = (tau * fil.undK2 * frame) / loopLength + fil.undP2;
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
     const wobble =

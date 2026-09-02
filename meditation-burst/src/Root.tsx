@@ -33,6 +33,10 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "inward" as const }}
       />
+      {/*
+        Verification only. Same component, one frame longer, so frame 600
+        can be rendered and compared against frame 0 — see README.
+      */}
       <Composition
         id="LoopCheck"
         component={Meditation}

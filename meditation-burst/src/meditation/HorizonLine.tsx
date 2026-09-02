@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import { withAlpha } from "../lib/color";
-import { rnd, rndBiased, rndInt, rndRange, rndSigned } from "../lib/rand";
+import { HorizonSilhouette } from "../lib/HorizonSilhouette";
 import { useCanvas } from "../lib/useCanvas";
 import { paintCoreGlow } from "./CoreGlow";
 import { FigureRaster, paintFigure, rasterizeFigure } from "./Figure";
 import { layerStyle } from "./layers";
-import { cameraDrift, coreGlowLevel, Layout, TAU } from "./layout";
+import { cameraDrift, coreGlowLevel, Layout, LOOP, TAU } from "./layout";
 import { VariantConfig } from "./variants";
 
 /**
@@ -15,111 +15,14 @@ import { VariantConfig } from "./variants";
  * Two modes, chosen per variant:
  *
  *   "grass" — low irregular overlapping hills beyond the line, and a
- *   dense band of fine vertical strokes along it. The strokes are
- *   irregularly spaced on purpose: even spacing reads as a comb.
+ *   dense band of fine vertical strokes along it, delegated to the
+ *   library's <HorizonSilhouette>.
  *
  *   "water" — no hills, no band. A clean line with a soft reflection
  *   beneath it: a vertically mirrored, much dimmer, heavily blurred copy
  *   of the figure and the core glow, pushed around by a gentle
  *   horizontal ripple.
  */
-
-type Blade = {
-  x: number;
-  height: number;
-  width: number;
-  lean: number;
-  swayAmp: number;
-  swayK: number;
-  swayPhase: number;
-};
-
-type Hill = {
-  cx: number;
-  halfWidth: number;
-  peak: number;
-  wobbleAmp: number;
-  wobbleK: number;
-  wobblePhase: number;
-};
-
-const buildBlades = (layout: Layout, seedPrefix: string): Blade[] => {
-  const blades: Blade[] = [];
-  let x = -40;
-  let i = 0;
-  while (x < layout.width + 40 && i < 4000) {
-    const seed = `${seedPrefix}:blade:${i}`;
-    blades.push({
-      x,
-      height: rndBiased(`${seed}:h`, 22, 235, 1.6),
-      width: rndRange(`${seed}:w`, 1.6, 4.2),
-      lean: rndSigned(`${seed}:l`, 26),
-      swayAmp: rndRange(`${seed}:sa`, 2.5, 9),
-      swayK: rndInt(`${seed}:sk`, 1, 3),
-      swayPhase: rnd(`${seed}:sp`) * TAU,
-    });
-    x += rndRange(`${seed}:gap`, 0.8, 3.9);
-    i++;
-  }
-  return blades;
-};
-
-const buildHills = (layout: Layout, seedPrefix: string): Hill[] => {
-  const hills: Hill[] = [];
-  const count = 7;
-  for (let i = 0; i < count; i++) {
-    const seed = `${seedPrefix}:hill:${i}`;
-    // Peaks are nudged away from frame centre so they never look like
-    // they are slicing through the seated figure.
-    const raw = rndRange(`${seed}:cx`, -0.15, 1.15);
-    const pushed = raw < 0.5 ? raw - 0.14 : raw + 0.14;
-    hills.push({
-      cx: pushed * layout.width,
-      halfWidth: rndRange(`${seed}:hw`, 0.11, 0.27) * layout.width,
-      peak: rndRange(`${seed}:p`, 34, 186),
-      wobbleAmp: rndRange(`${seed}:wa`, 6, 22),
-      wobbleK: rndRange(`${seed}:wk`, 2.2, 5.4),
-      wobblePhase: rnd(`${seed}:wp`) * TAU,
-    });
-  }
-  return hills;
-};
-
-/** Hills + solid ground: static, so it is rasterised once and blitted. */
-const buildGroundRaster = (
-  layout: Layout,
-  color: string,
-  hills: Hill[],
-): HTMLCanvasElement => {
-  const c = document.createElement("canvas");
-  c.width = layout.width;
-  c.height = layout.height;
-  const ctx = c.getContext("2d");
-  if (!ctx) throw new Error("buildGroundRaster: no 2d context");
-  ctx.fillStyle = color;
-
-  for (const hill of hills) {
-    ctx.beginPath();
-    ctx.moveTo(hill.cx - hill.halfWidth, layout.height);
-    const steps = 96;
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const x = hill.cx + (t * 2 - 1) * hill.halfWidth;
-      const dome = Math.pow(Math.cos((t * 2 - 1) * (Math.PI / 2)), 1.6);
-      const wobble =
-        hill.wobbleAmp *
-        Math.sin(hill.wobbleK * (t * 2 - 1) * Math.PI + hill.wobblePhase) *
-        dome;
-      ctx.lineTo(x, layout.horizonY - hill.peak * dome - wobble);
-    }
-    ctx.lineTo(hill.cx + hill.halfWidth, layout.height);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  ctx.fillRect(0, layout.horizonY, layout.width, layout.height - layout.horizonY);
-  return c;
-};
 
 type WaterBuffers = {
   refl: HTMLCanvasElement;
@@ -226,7 +129,7 @@ const drawWater = (
   // across the water.
   //
   // Both ripple frequencies are whole cycles per loop, so the water is
-  // exactly where it started at frame 600.
+  // exactly where it started at the end of the loop.
   wctx.setTransform(1, 0, 0, 1, 0, 0);
   wctx.globalAlpha = 1;
   wctx.globalCompositeOperation = "source-over";
@@ -241,8 +144,8 @@ const drawWater = (
     const t = sy / reflBlur.height;
     const amp = (5 + 58 * t) * scale;
     const dx =
-      amp * Math.sin(t * 13.5 + (TAU * 2 * frame) / 600) +
-      amp * 0.45 * Math.sin(t * 27 - (TAU * 3 * frame) / 600);
+      amp * Math.sin(t * 13.5 + (TAU * 2 * frame) / LOOP) +
+      amp * 0.45 * Math.sin(t * 27 - (TAU * 3 * frame) / LOOP);
     wctx.drawImage(
       reflBlur,
       0,
@@ -256,7 +159,9 @@ const drawWater = (
     );
   }
 
-  // Fade the reflection out with depth.
+  // Fade the reflection out with depth. This is an alpha mask applied
+  // through 'destination-in', so only the alpha of these stops is read —
+  // the rgb is inert and carries no palette meaning.
   const fade = wctx.createLinearGradient(0, 0, 0, reflWarp.height);
   fade.addColorStop(0, "rgba(0, 0, 0, 1)");
   fade.addColorStop(0.62, "rgba(0, 0, 0, 0.55)");
@@ -290,46 +195,6 @@ const drawWater = (
   ctx.restore();
 };
 
-const drawGrass = (
-  ctx: CanvasRenderingContext2D,
-  config: VariantConfig,
-  layout: Layout,
-  frame: number,
-  ground: HTMLCanvasElement,
-  blades: Blade[],
-): void => {
-  // The whole layer is translated by the ambient drift, so the solid
-  // ground is over-filled past the frame edges to avoid a sliver of
-  // background appearing at the bottom.
-  ctx.fillStyle = config.palette.silhouette;
-  ctx.fillRect(
-    -20,
-    layout.horizonY,
-    layout.width + 40,
-    layout.height - layout.horizonY + 20,
-  );
-  ctx.drawImage(ground, 0, 0);
-  for (const blade of blades) {
-    const sway =
-      blade.swayAmp * Math.sin((TAU * blade.swayK * frame) / 600 + blade.swayPhase);
-    const tipX = blade.x + blade.lean + sway;
-    const tipY = layout.horizonY - blade.height;
-    const midX = blade.x + (blade.lean + sway) * 0.35;
-    const midY = layout.horizonY - blade.height * 0.55;
-    ctx.beginPath();
-    ctx.moveTo(blade.x - blade.width, layout.horizonY + 6);
-    ctx.quadraticCurveTo(midX - blade.width * 0.45, midY, tipX, tipY);
-    ctx.quadraticCurveTo(
-      midX + blade.width * 0.45,
-      midY,
-      blade.x + blade.width,
-      layout.horizonY + 6,
-    );
-    ctx.closePath();
-    ctx.fill();
-  }
-};
-
 export const HorizonLine: React.FC<{
   config: VariantConfig;
   layout: Layout;
@@ -338,22 +203,8 @@ export const HorizonLine: React.FC<{
   seed: string;
 }> = ({ config, layout, frame, image, seed }) => {
   const grass = config.foreground === "grass";
+  const drift = cameraDrift(frame);
 
-  const blades = useMemo(
-    () => (grass ? buildBlades(layout, seed) : []),
-    [grass, layout, seed],
-  );
-  const ground = useMemo(
-    () =>
-      grass
-        ? buildGroundRaster(
-            layout,
-            config.palette.silhouette,
-            buildHills(layout, seed),
-          )
-        : null,
-    [grass, layout, config.palette.silhouette, seed],
-  );
   const waterBuffers = useMemo(
     () => (grass ? null : buildWaterBuffers(layout)),
     [grass, layout],
@@ -368,20 +219,38 @@ export const HorizonLine: React.FC<{
             config.palette.silhouette,
           )
         : null,
-    [image, grass, layout.figureWidth, layout.figureHeight, config.palette.silhouette],
+    [
+      image,
+      grass,
+      layout.figureWidth,
+      layout.figureHeight,
+      config.palette.silhouette,
+    ],
   );
 
   const ref = useCanvas(layout.width, layout.height, (ctx) => {
-    const drift = cameraDrift(frame);
+    if (grass || !waterBuffers) return;
     ctx.save();
     ctx.translate(drift.x, drift.y);
-    if (grass && ground) {
-      drawGrass(ctx, config, layout, frame, ground, blades);
-    } else if (waterBuffers) {
-      drawWater(ctx, config, layout, frame, raster, waterBuffers);
-    }
+    drawWater(ctx, config, layout, frame, raster, waterBuffers);
     ctx.restore();
   });
+
+  if (grass) {
+    return (
+      <HorizonSilhouette
+        width={layout.width}
+        height={layout.height}
+        horizonY={layout.horizonY}
+        color={config.palette.silhouette}
+        frame={frame}
+        loopLength={LOOP}
+        seed={seed}
+        offset={drift}
+        style={layerStyle("normal")}
+      />
+    );
+  }
 
   return <canvas ref={ref} style={layerStyle("normal")} />;
 };

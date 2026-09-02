@@ -1,14 +1,15 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, staticFile, useCurrentFrame } from "remotion";
+import { RadiantBurst } from "../lib/RadiantBurst";
+import { SparkField } from "../lib/SparkField";
 import { useSvgImage } from "../lib/useSvgImage";
 import { CoreGlow } from "./CoreGlow";
 import { Figure } from "./Figure";
 import { Finish } from "./Finish";
 import { HorizonLine } from "./HorizonLine";
-import { computeLayout, HEIGHT, WIDTH } from "./layout";
-import { RadiantBurst } from "./RadiantBurst";
-import { SparkField } from "./SparkField";
-import { VariantName, VARIANTS } from "./variants";
+import { layerStyle } from "./layers";
+import { cameraDrift, computeLayout, HEIGHT, LOOP, WIDTH } from "./layout";
+import { angularWeight, VariantName, VARIANTS } from "./variants";
 
 /**
  * A 20-second seamless loop: a seated figure in silhouette against a
@@ -32,6 +33,25 @@ export const Meditation: React.FC<{ variant: VariantName }> = ({ variant }) => {
   const layout = useMemo(() => computeLayout(config, WIDTH, HEIGHT), [config]);
   const image = useSvgImage(staticFile("lotus.svg"));
   const seed = `meditation:${variant}`;
+  const drift = cameraDrift(frame);
+
+  // Memoised together so <RadiantBurst> and <SparkField> see stable
+  // object and function identities: both rebuild their whole field when
+  // any of these change, and a fresh literal every frame would rebuild
+  // hundreds of recursive curves 30 times a second.
+  const field = useMemo(
+    () => ({
+      angularWeight: (phi: number) => angularWeight(config.angular, phi),
+      colors: {
+        core: config.palette.coreWhite,
+        inner: config.palette.coreMid,
+        mid: config.palette.filamentMid,
+        outer: config.palette.filamentDeep,
+      },
+      reach: config.reach,
+    }),
+    [config],
+  );
 
   return (
     <AbsoluteFill
@@ -44,12 +64,37 @@ export const Meditation: React.FC<{ variant: VariantName }> = ({ variant }) => {
     >
       <CoreGlow config={config} layout={layout} frame={frame} />
       <RadiantBurst
-        config={config}
-        layout={layout}
+        width={layout.width}
+        height={layout.height}
+        originX={layout.originX}
+        originY={layout.originY}
+        frame={frame}
+        loopLength={LOOP}
+        seed={seed}
+        colors={field.colors}
+        direction={config.burstDirection}
+        count={config.filamentCount}
+        filamentWidth={config.filamentWidth}
+        opacity={config.filamentOpacity}
+        reach={field.reach}
+        angularWeight={field.angularWeight}
+        offset={drift}
+        style={layerStyle("screen")}
+      />
+      <SparkField
+        width={layout.width}
+        height={layout.height}
+        originX={layout.originX}
+        originY={layout.originY}
         frame={frame}
         seed={seed}
+        color={config.palette.sparkPale}
+        count={config.sparkCount}
+        direction={config.burstDirection}
+        angularWeight={field.angularWeight}
+        offset={drift}
+        style={layerStyle("screen")}
       />
-      <SparkField config={config} layout={layout} frame={frame} seed={seed} />
       <Figure config={config} layout={layout} frame={frame} image={image} />
       <HorizonLine
         config={config}
@@ -58,7 +103,7 @@ export const Meditation: React.FC<{ variant: VariantName }> = ({ variant }) => {
         image={image}
         seed={seed}
       />
-      <Finish layout={layout} frame={frame} />
+      <Finish config={config} layout={layout} frame={frame} />
     </AbsoluteFill>
   );
 };
