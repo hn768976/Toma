@@ -14,10 +14,10 @@ export const DURATION_IN_FRAMES = 600;
 // ---------------------------------------------------------------- subject
 
 /** Brain silhouette height as a fraction of frame height. */
-export const BRAIN_HEIGHT_FRACTION = 0.35;
+export const BRAIN_HEIGHT_FRACTION = 0.37;
 /** Silhouette centre, as fractions of the frame — centre-right. */
 export const BRAIN_CENTER_X = 0.665;
-export const BRAIN_CENTER_Y = 0.425;
+export const BRAIN_CENTER_Y = 0.415;
 
 export const BRAIN_PARTICLE_COUNT = 5200;
 /** Coarse lattice the particles snap to, in 4K pixels. */
@@ -30,8 +30,8 @@ export const FREE_PARTICLE_FRACTION = 0.03;
 export const FREE_PARTICLE_REACH = 52;
 
 /** Interior guide curves. Density is pulled onto these without drawing them. */
-export const GYRI_COUNT = 46;
-export const CEREBELLUM_FOLIA_COUNT = 9;
+export const GYRI_COUNT = 50;
+export const CEREBELLUM_FOLIA_COUNT = 5;
 
 /** Density weighting: how sharply particles crowd the outline / the gyri. */
 export const EDGE_FALLOFF = 17;

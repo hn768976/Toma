@@ -1,20 +1,21 @@
 /**
- * The subject: a brain in three-quarter view, facing left.
+ * The subject: a brain in lateral view, facing left.
  *
- * The silhouette is authored in "brain units" (a hand-tuned 822x654 box)
- * and scaled to pixels once. It is the union of four filled pieces —
- * a near cerebral hemisphere, a far hemisphere sitting up and behind it,
- * a cerebellum tucked under the posterior, and a descending stem — with
- * two fissures then CARVED OUT of the result:
+ * The silhouette is authored in "brain units" (a hand-tuned 942x860 box)
+ * and scaled to pixels once. It is the union of three filled pieces — the
+ * cerebrum, a cerebellum tucked under the posterior, and a short
+ * descending stem — with two fissures then CARVED OUT of the result:
  *
- *  - the longitudinal fissure, running front-to-back along the crease
- *    where the near hemisphere's crown meets the far one. Because the
- *    view is three-quarter we look slightly down onto the top surface, so
- *    the far hemisphere shows as a crescent above the fissure.
+ *  - the SYLVIAN FISSURE, the deep cleft that enters from the front-lower
+ *    edge and sweeps up and back. It is the feature that makes a lateral
+ *    brain read as a brain: it cuts the temporal lobe free as a distinct
+ *    forward-pointing lobe beneath the frontal and parietal mass.
  *  - the transverse fissure, separating the cerebellum from the cerebrum.
  *
  * Carving rather than shading matters: the gap is absent from the mask,
- * so no particle can ever land in it and the split stays legible.
+ * so no particle can ever land in it and the split stays legible. It also
+ * doubles the outline the density weighting has to work with, so the
+ * particles crowd along both lips of the cleft.
  *
  * The gyri are NOT drawn. They are generated as guide curves and used
  * only to weight particle density, so the folds emerge from where the
@@ -22,8 +23,7 @@
  * roughly tangential to the nearest surface (the direction real
  * convolutions run) with up to ~50 degrees of seeded deviation, and then
  * walks with a curvature that itself wobbles — so they curl and wander
- * instead of stacking into parallel bands, and the two hemispheres never
- * mirror each other.
+ * instead of stacking into parallel bands.
  */
 import type { Field, Mask } from "../lib/maskSampler";
 import { coverageField, distanceField, renderMask } from "../lib/maskSampler";
@@ -38,75 +38,84 @@ type P = [number, number];
 // ---------------------------------------------------------- brain units
 
 /** Bounding box of every piece below, used to map units -> pixels. */
-export const UNIT_MIN_X = 104;
-export const UNIT_MIN_Y = 190;
-export const UNIT_MAX_X = 918;
-export const UNIT_MAX_Y = 852;
+export const UNIT_MIN_X = 20;
+export const UNIT_MIN_Y = 40;
+export const UNIT_MAX_X = 962;
+export const UNIT_MAX_Y = 900;
 export const UNIT_W = UNIT_MAX_X - UNIT_MIN_X;
 export const UNIT_H = UNIT_MAX_Y - UNIT_MIN_Y;
 
 /**
- * Near hemisphere, clockwise from the frontal pole. The kink around
- * (262, 508) is the notch above the temporal pole where the frontal
- * lobe's underside sweeps back.
+ * The cerebrum, clockwise from the frontal pole. Frontal lobe at the
+ * left, crown a little forward of centre, occipital pole at the right,
+ * and the temporal lobe running back along the underside. The kink at
+ * (148, 528) is the notch the Sylvian fissure opens out of.
  */
-const NEAR_HEMISPHERE: P[] = [
-  [110, 424],
-  [134, 350],
-  [206, 292],
-  [316, 256],
-  [438, 240],
-  [566, 248],
-  [700, 288],
-  [826, 372],
-  [896, 470],
-  [886, 548],
-  [804, 600],
-  [690, 622],
-  [566, 664],
-  [452, 686],
-  [330, 672],
-  [252, 622],
-  [228, 570],
-  [244, 516],
-  [166, 468],
+const CEREBRUM: P[] = [
+  [20, 425],
+  [46, 318],
+  [114, 212],
+  [220, 126],
+  [338, 70],
+  [458, 42],
+  [580, 40],
+  [700, 64],
+  [806, 120],
+  [884, 202],
+  [938, 304],
+  [962, 418],
+  [950, 508],
+  [906, 574],
+  [840, 616],
+  [736, 652],
+  [614, 702],
+  [490, 738],
+  [364, 748],
+  [252, 732],
+  [186, 702],
+  [140, 646],
+  [124, 584],
+  [152, 526],
+  [68, 480],
 ];
 
-/** Far hemisphere: an ovoid offset up and back, exposed as a crescent. */
-const FAR_HEMISPHERE = { cx: 572, cy: 388, rx: 340, ry: 190, rot: -0.04 };
+/** Cerebellum: a leaf tucked under the occipital, tip pointing forward. */
+const CEREBELLUM = { cx: 800, cy: 668, rx: 182, ry: 120, rot: -0.62 };
 
-/** Cerebellum: narrow, tucked under the occipital pole. */
-const CEREBELLUM = { cx: 770, cy: 662, rx: 162, ry: 104, rot: 0.2 };
-
-/** Brainstem, descending anterior to the cerebellum. */
+/** Brainstem, short and thick, descending between temporal and cerebellum. */
 const STEM: P[] = [
-  [648, 600],
-  [642, 690],
-  [628, 776],
-  [612, 844],
+  [628, 650],
+  [624, 730],
+  [610, 800],
+  [594, 858],
 ];
-const STEM_WIDTHS = [96, 82, 66, 52];
+const STEM_WIDTHS = [128, 112, 96, 84];
 
-/** Longitudinal fissure: the crease between the two hemispheres. */
-const LONGITUDINAL_FISSURE: P[] = [
-  [258, 308],
-  [356, 276],
-  [464, 258],
-  [576, 264],
-  [692, 300],
-  [800, 372],
-  [870, 456],
+/**
+ * Sylvian fissure. Opens outside the silhouette at the front so the carve
+ * reaches the edge cleanly, then sweeps up and back, tapering to a point
+ * where it terminates inside the parietal mass.
+ */
+const SYLVIAN_FISSURE: P[] = [
+  [40, 540],
+  [180, 534],
+  [310, 520],
+  [430, 490],
+  [534, 446],
+  [612, 400],
+  [664, 364],
 ];
-const LONGITUDINAL_WIDTHS = [4, 14, 21, 22, 19, 13, 7];
+const SYLVIAN_WIDTHS = [32, 40, 38, 35, 30, 20, 7];
 
 /** Transverse fissure: cerebrum above, cerebellum below. */
 const TRANSVERSE_FISSURE: P[] = [
-  [612, 646],
-  [700, 616],
-  [794, 612],
-  [896, 644],
+  [634, 706],
+  [720, 668],
+  [806, 634],
+  [880, 598],
+  [962, 548],
 ];
-const TRANSVERSE_WIDTHS = [5, 19, 19, 7];
+const TRANSVERSE_WIDTHS = [8, 22, 22, 20, 10];
 
 // ------------------------------------------------------------- path utils
 
@@ -230,18 +239,6 @@ const fillSilhouette = (ctx: CanvasRenderingContext2D): void => {
 
   ctx.beginPath();
   ctx.ellipse(
-    FAR_HEMISPHERE.cx,
-    FAR_HEMISPHERE.cy,
-    FAR_HEMISPHERE.rx,
-    FAR_HEMISPHERE.ry,
-    FAR_HEMISPHERE.rot,
-    0,
-    Math.PI * 2,
-  );
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.ellipse(
     CEREBELLUM.cx,
     CEREBELLUM.cy,
     CEREBELLUM.rx,
@@ -255,7 +252,7 @@ const fillSilhouette = (ctx: CanvasRenderingContext2D): void => {
   fillVariableWidth(ctx, STEM, STEM_WIDTHS);
 
   ctx.beginPath();
-  closedSpline(ctx, NEAR_HEMISPHERE);
+  closedSpline(ctx, CEREBRUM);
   ctx.fill();
 };
 
@@ -264,7 +261,7 @@ const carveFissures = (ctx: CanvasRenderingContext2D): void => {
   ctx.save();
   ctx.globalCompositeOperation = "destination-out";
   ctx.fillStyle = "rgb(0,0,0)";
-  fillVariableWidth(ctx, LONGITUDINAL_FISSURE, LONGITUDINAL_WIDTHS);
+  fillVariableWidth(ctx, SYLVIAN_FISSURE, SYLVIAN_WIDTHS);
   fillVariableWidth(ctx, TRANSVERSE_FISSURE, TRANSVERSE_WIDTHS);
   ctx.restore();
 };
@@ -338,29 +335,47 @@ const walkGyrus = (
   return pts;
 };
 
-/** Fine parallel folia across the cerebellum, in brain units. */
+/**
+ * The cerebellum as leaf venation: a central spine along the long axis
+ * with veins branching off both sides and sweeping toward the tip.
+ *
+ * Real cerebellar folia are fine parallel ridges, but at this size they
+ * would sit below the particle lattice and read as noise. The radiating
+ * pattern is the convention lateral brain line art uses, and it is what
+ * separates the cerebellum from "another lobe" at a glance.
+ */
 const cerebellarFolia = (rng: Rng): Gyrus[] => {
-  const out: Gyrus[] = [];
   const cos = Math.cos(CEREBELLUM.rot);
   const sin = Math.sin(CEREBELLUM.rot);
+  // Ellipse-local (u, v), each in [-1, 1], to brain units.
+  const toUnits = (u: number, v: number): { x: number; y: number } => ({
+    x: CEREBELLUM.cx + u * CEREBELLUM.rx * cos - v * CEREBELLUM.ry * sin,
+    y: CEREBELLUM.cy + u * CEREBELLUM.rx * sin + v * CEREBELLUM.ry * cos,
+  });
+
+  const out: Gyrus[] = [];
+
+  // The midrib, base (+u, toward the occipital) to tip (-u, forward).
+  const spine: Gyrus = [];
+  for (let s = 0; s <= 12; s++) {
+    const t = s / 12;
+    spine.push(toUnits(0.88 - t * 1.74, Math.sin(t * Math.PI) * 0.12));
+  }
+  out.push(spine);
+
   for (let k = 0; k < CEREBELLUM_FOLIA_COUNT; k++) {
-    const v =
-      (-0.72 + (k / (CEREBELLUM_FOLIA_COUNT - 1)) * 1.44 + (rng() - 0.5) * 0.09) *
-      CEREBELLUM.ry;
-    const half = Math.sqrt(Math.max(0, 1 - (v / CEREBELLUM.ry) ** 2)) * CEREBELLUM.rx * 0.86;
-    if (half < 12) continue;
-    const bow = (rng() - 0.5) * 26;
-    const pts: Gyrus = [];
-    for (let s = 0; s <= 10; s++) {
-      const t = s / 10;
-      const u = -half + t * half * 2;
-      const vv = v + bow * Math.sin(Math.PI * t);
-      pts.push({
-        x: CEREBELLUM.cx + u * cos - vv * sin,
-        y: CEREBELLUM.cy + u * sin + vv * cos,
-      });
+    const u0 = 0.62 - (k / (CEREBELLUM_FOLIA_COUNT - 1)) * 1.14 + (rng() - 0.5) * 0.05;
+    const u1 = u0 - 0.34;
+    for (let s = 0; s < 2; s++) {
+      const side = s === 0 ? -1 : 1;
+      const reach = Math.sqrt(Math.max(0, 1 - u1 * u1)) * (0.8 + rng() * 0.14);
+      const vein: Gyrus = [];
+      for (let i = 0; i <= 6; i++) {
+        const t = i / 6;
+        vein.push(toUnits(u0 + (u1 - u0) * t, side * reach * Math.pow(t, 0.72)));
+      }
+      out.push(vein);
     }
-    out.push(pts);
   }
   return out;
 };
@@ -468,23 +483,6 @@ export const buildBrainGeometry = (
     if (g.length >= 4) gyri.push(g);
   }
 
-  // The far-hemisphere crescent is a thin band and would otherwise get
-  // only a couple of curves by area; give it a few short ones of its own.
-  const crescentRng = makeRng(seed + ":crescent");
-  let crescentPlaced = 0;
-  let crescentAttempts = 0;
-  while (crescentPlaced < 5 && crescentAttempts < 4000) {
-    crescentAttempts++;
-    const x = PAD + crescentRng() * pxW;
-    const y = PAD + crescentRng() * (pxH * 0.22);
-    if (mask.alpha[Math.round(y) * width + Math.round(x)] < 128) continue;
-    if (sampleAt(distIn, width, height, x, y) < 5 * scale) continue;
-    const g = walkGyrus(crescentRng, mask, distIn, { x, y }, scale * 0.62);
-    if (g.length < 4) continue;
-    gyri.push(g);
-    crescentPlaced++;
-  }
-
   // Cerebellar folia are authored in brain units, so convert them.
   const foliaRng = makeRng(seed + ":folia");
   const folia = cerebellarFolia(foliaRng).map((f) =>
@@ -520,10 +518,10 @@ export const buildBrainGeometry = (
       }
     };
     drawSet(gyri, 1);
-    drawSet(folia, 0.36);
-    // A second pass: fine parallel folia are the cerebellum's signature and
-    // need to survive next to the much larger cerebral folds.
-    drawSet(folia, 0.22);
+    // The venation must be drawn wider than the particle lattice or it falls
+    // straight through the gaps; a second narrower pass sharpens its spine.
+    drawSet(folia, 0.7);
+    drawSet(folia, 0.42);
   });
 
   return {
