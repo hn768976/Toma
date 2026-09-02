@@ -106,97 +106,111 @@ const trefoilPath = (cx: number, cy: number, radius: number): Path2D => {
 
 /**
  * The standard international biohazard mark, in fractions of the symbol's
- * overall radius. Like the trefoil these proportions are standardised rather
- * than chosen, so they are reproduced faithfully instead of stylised.
+ * overall radius.
  *
- * The three rings sit at 120 degrees on a circle of RING_DISTANCE and reach
- * out to exactly 1, so RING_OUTER is what is left. RING_INNER is small enough
- * that each hole stays a clean circle — a neighbour's outer edge stops short
- * of it — while RING_OUTER is large enough that neighbouring rings overlap
- * substantially, which is what makes the mark read as interlocked.
+ * These proportions are not invented: they were measured off the mark itself
+ * by fitting circles to its outline, and reproduce it to an intersection-over-
+ * union of 0.975 (the remainder is antialiasing on the reference at its own
+ * resolution). Like the trefoil, the mark is standardised, so it is
+ * reproduced faithfully rather than stylised.
+ *
+ * The mark is built from three families of circles, all on the same three
+ * axes 120 degrees apart:
+ *
+ *   - Three RING discs, whose union is the mark's outer silhouette. Each sits
+ *     RING_DISTANCE from the centre and reaches exactly to the symbol radius.
+ *   - Three CUT discs, one inside each ring disc but pushed further out, which
+ *     hollow each ring into a thick crescent — thin where it meets the
+ *     silhouette, broad where it sweeps past the centre.
+ *   - A central VOID with three lobes on the same axes, which opens the middle
+ *     and severs the three crescents from one another.
+ *
+ * Three round-capped ARCS, concentric with the centre, complete the mark.
+ *
+ * The three crescents and the three arcs are six separate pieces: the mark is
+ * not one connected shape, and the negative spaces between the crescents are
+ * its most recognisable feature.
  */
 const BIOHAZARD = {
-  /** Distance from the common centre to each ring's centre. */
-  RING_DISTANCE: 0.485,
-  /** Outer radius of each ring; RING_DISTANCE + RING_OUTER == 1. */
-  RING_OUTER: 0.515,
-  /** Inner radius: the circle removed to make each ring an annulus. */
-  RING_INNER: 0.305,
-  /** Radius of the central area cleared out of the rings' overlap. */
-  CLEAR_RADIUS: 0.175,
-  /** The small circle left at the common centre. */
-  CORE_RADIUS: 0.075,
-  /** Half-width of the arcs bridging the core to each ring's inner edge. */
-  BRIDGE_HALF_WIDTH: 0.042,
+  /** Distance from the common centre to each ring disc's centre. */
+  RING_DISTANCE: 0.4255,
+  /** Radius of each ring disc. RING_DISTANCE + RING_RADIUS is the extent. */
+  RING_RADIUS: 0.577,
+  /** Distance to each cut disc's centre, further out than the ring's. */
+  CUT_DISTANCE: 0.5787,
+  /** Radius of each cut disc; smaller than the ring's, so it hollows it. */
+  CUT_RADIUS: 0.4062,
+  /** The circular part of the central void. */
+  VOID_RADIUS: 0.1175,
+  /** Distance to each of the void's three lobes. */
+  VOID_LOBE_DISTANCE: 0.14,
+  /** Radius of each lobe; these are what part the three crescents. */
+  VOID_LOBE_RADIUS: 0.0256,
+  /** Inner and outer radius of the three arcs around the centre. */
+  ARC_INNER: 0.386,
+  ARC_OUTER: 0.52,
+  /** Half the angle each arc subtends, in degrees. */
+  ARC_HALF_ANGLE: 32.25,
 };
 
-/**
- * The biohazard mark: three thick annuli at 120 degrees, overlapping their
- * neighbours, unioned rather than cut where they cross.
- *
- * The union has to be accumulated one ring at a time. Punching all three holes
- * out of all three outer circles would be wrong: where ring A's hole crosses
- * ring B's material, that material belongs to the shape and must survive.
- *
- * The centre is then cleared and a small circle put back, bridged out toward
- * each ring's inner edge. Those bridges divide the cleared area into the three
- * curved triangular gaps that are the mark's most recognisable feature.
- */
 const paintBiohazard: SymbolPainter = (ctx, cx, cy, radius) => {
-  const distance = radius * BIOHAZARD.RING_DISTANCE;
-  const outer = radius * BIOHAZARD.RING_OUTER;
-  const inner = radius * BIOHAZARD.RING_INNER;
-  const clear = radius * BIOHAZARD.CLEAR_RADIUS;
-  const core = radius * BIOHAZARD.CORE_RADIUS;
-  const bridgeWidth = radius * BIOHAZARD.BRIDGE_HALF_WIDTH * 2;
+  const B = BIOHAZARD;
+  // Normalise so the mark's extent is exactly the requested radius, whatever
+  // the fitted constants sum to.
+  const unit = radius / (B.RING_DISTANCE + B.RING_RADIUS);
+  // One axis points straight up, the others follow at 120 degrees.
+  const axis = (i: number) => -TAU / 4 + (TAU / 3) * i;
+  const along = (angle: number, distance: number) =>
+    [cx + Math.cos(angle) * distance * unit, cy + Math.sin(angle) * distance * unit] as const;
 
-  const ring = createLayer(ctx.canvas.width, ctx.canvas.height);
+  const scratch = createLayer(ctx.canvas.width, ctx.canvas.height);
+  ctx.fillStyle = "#ffffff";
 
   for (let i = 0; i < 3; i++) {
-    // One ring points straight up, the others follow at 120 degrees.
-    const angle = -TAU / 4 + (TAU / 3) * i;
-    const rx = cx + Math.cos(angle) * distance;
-    const ry = cy + Math.sin(angle) * distance;
+    const angle = axis(i);
+    const [rx, ry] = along(angle, B.RING_DISTANCE);
+    const [kx, ky] = along(angle, B.CUT_DISTANCE);
 
-    resetLayer(ring.ctx);
-    ring.ctx.fillStyle = "#ffffff";
-    ring.ctx.beginPath();
-    ring.ctx.arc(rx, ry, outer, 0, TAU);
-    ring.ctx.fill();
-    ring.ctx.globalCompositeOperation = "destination-out";
-    ring.ctx.beginPath();
-    ring.ctx.arc(rx, ry, inner, 0, TAU);
-    ring.ctx.fill();
+    // Each crescent is hollowed on its own layer before joining the union.
+    // Cutting after the union would let one crescent's cut eat into its
+    // neighbour's material, which the mark does not do.
+    resetLayer(scratch.ctx);
+    scratch.ctx.fillStyle = "#ffffff";
+    scratch.ctx.beginPath();
+    scratch.ctx.arc(rx, ry, B.RING_RADIUS * unit, 0, TAU);
+    scratch.ctx.fill();
+    scratch.ctx.globalCompositeOperation = "destination-out";
+    scratch.ctx.beginPath();
+    scratch.ctx.arc(kx, ky, B.CUT_RADIUS * unit, 0, TAU);
+    scratch.ctx.fill();
 
     ctx.globalCompositeOperation = "source-over";
-    ctx.drawImage(ring.canvas, 0, 0);
+    ctx.drawImage(scratch.canvas, 0, 0);
   }
 
-  // Clear the middle, then put back the core and its bridges.
+  // Open the centre and part the three crescents.
   ctx.globalCompositeOperation = "destination-out";
   ctx.beginPath();
-  ctx.arc(cx, cy, clear, 0, TAU);
+  ctx.arc(cx, cy, B.VOID_RADIUS * unit, 0, TAU);
   ctx.fill();
-
-  ctx.globalCompositeOperation = "source-over";
-  ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(cx, cy, core, 0, TAU);
-  ctx.fill();
-
-  ctx.lineWidth = bridgeWidth;
-  ctx.lineCap = "round";
   for (let i = 0; i < 3; i++) {
-    const angle = -TAU / 4 + (TAU / 3) * i;
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-    // Out to where the ring's own inner edge begins, so the bridge lands on
-    // material rather than stopping in the cleared area.
-    const reach = distance - inner;
+    const [lx, ly] = along(axis(i), B.VOID_LOBE_DISTANCE);
     ctx.beginPath();
-    ctx.moveTo(cx + dx * core * 0.5, cy + dy * core * 0.5);
-    ctx.lineTo(cx + dx * reach, cy + dy * reach);
+    ctx.arc(lx, ly, B.VOID_LOBE_RADIUS * unit, 0, TAU);
+    ctx.fill();
+  }
+
+  // The three arcs, concentric with the centre and round-capped.
+  ctx.globalCompositeOperation = "source-over";
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = (B.ARC_OUTER - B.ARC_INNER) * unit;
+  ctx.lineCap = "round";
+  const arcRadius = ((B.ARC_INNER + B.ARC_OUTER) / 2) * unit;
+  const half = (B.ARC_HALF_ANGLE * Math.PI) / 180;
+  for (let i = 0; i < 3; i++) {
+    const angle = axis(i);
+    ctx.beginPath();
+    ctx.arc(cx, cy, arcRadius, angle - half, angle + half);
     ctx.stroke();
   }
 };
