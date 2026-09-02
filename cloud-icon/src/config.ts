@@ -8,30 +8,56 @@ export const HEIGHT = 2160;
 export const FPS = 30;
 export const DURATION_IN_FRAMES = 480; // 16.0s, one-shot — not a loop.
 
+/**
+ * Overall size of the cloud + ring group, as a multiple of the original
+ * framing. Every dimension below that belongs to the glyph — lobe geometry,
+ * ring radius and stroke, particle size, edge-falloff distance, bloom radii,
+ * drift amplitude — derives from this, so resizing the subject is one edit
+ * rather than a dozen coupled constants that drift out of proportion.
+ *
+ * It does not touch the backdrop: the circuit grid and star field stay at
+ * frame scale, which is what makes the glyph read as smaller within the frame
+ * rather than the whole image reading as zoomed out.
+ */
+export const GLYPH_SCALE = 0.66;
+
+/** Where the silhouette's optical centre sits, slightly above frame centre. */
+const CLOUD_CENTER_TARGET_Y = 1058;
+
+/**
+ * The three overlapping lobes at scale 1, relative to (centerX, baselineY).
+ * Radii differ and — importantly — so do the centre heights: three circles on
+ * a shared centreline read as a caterpillar rather than a cloud.
+ */
+const BASE_LOBES = [
+  { dx: -320, dy: -140, r: 168 }, // left — smallest, sits lowest
+  { dx: -10, dy: -296, r: 274 }, // centre — largest and highest
+  { dx: 286, dy: -198, r: 214 }, // right — medium, between the two
+] as const;
+
+const LOBES = BASE_LOBES.map((l) => ({
+  dx: l.dx * GLYPH_SCALE,
+  dy: l.dy * GLYPH_SCALE,
+  r: l.r * GLYPH_SCALE,
+}));
+
+/** Silhouette height, measured from the flat bottom to the highest lobe. */
+const CLOUD_HEIGHT = -Math.min(...LOBES.map((l) => l.dy - l.r));
+
 /** Cloud geometry, in composition (4K) pixels. */
 export const CLOUD = {
   centerX: WIDTH / 2,
   /**
-   * Flat bottom edge of the silhouette. Chosen so the cloud's optical centre
-   * lands slightly above the frame's centre, which leaves the ring room to
-   * clear the top edge.
+   * Flat bottom edge of the silhouette, derived so the optical centre holds
+   * at CLOUD_CENTER_TARGET_Y no matter how GLYPH_SCALE changes.
    */
-  baselineY: 1343,
-  /**
-   * The three overlapping lobes. Radii differ and — importantly — so do the
-   * centre heights: three circles on a shared centreline read as a caterpillar
-   * rather than a cloud. Offsets are relative to (centerX, baselineY).
-   */
-  lobes: [
-    { dx: -320, dy: -140, r: 168 }, // left — smallest, sits lowest
-    { dx: -10, dy: -296, r: 274 }, // centre — largest and highest
-    { dx: 286, dy: -198, r: 214 }, // right — medium, between the two
-  ],
+  baselineY: CLOUD_CENTER_TARGET_Y + CLOUD_HEIGHT / 2,
+  lobes: LOBES,
   /** Height of the slab that joins the lobes into a flat-bottomed mass. */
-  skirtHeight: 180,
+  skirtHeight: 180 * GLYPH_SCALE,
   /** Horizontal inset of that slab, so the shoulders stay rounded. */
-  skirtInset: 38,
-} as const;
+  skirtInset: 38 * GLYPH_SCALE,
+};
 
 /** Widest horizontal extent of the silhouette, used to size the ring. */
 export const CLOUD_WIDTH =
@@ -39,25 +65,23 @@ export const CLOUD_WIDTH =
   Math.min(...CLOUD.lobes.map((l) => l.dx - l.r));
 
 /** Vertical centre of the silhouette — the optical centre of the composition. */
-export const CLOUD_CENTER_Y =
-  CLOUD.baselineY -
-  (CLOUD.baselineY -
-    Math.min(...CLOUD.lobes.map((l) => CLOUD.baselineY + l.dy - l.r))) /
-    2;
+export const CLOUD_CENTER_Y = CLOUD_CENTER_TARGET_Y;
 
 export const PARTICLES = {
   /** Total particles, including the free-drifting outliers. */
   count: 2200,
   /** Fraction placed just outside the silhouette, drifting free. */
   outsideFraction: 0.04,
-  minRadius: 1.5, // drawn diameter 3px
-  maxRadius: 4.0, // drawn diameter 8px
+  // Drawn diameter 3-8px at scale 1, scaled with the glyph so the grain of
+  // the particle field stays proportional to the shape it builds.
+  minRadius: 1.5 * GLYPH_SCALE,
+  maxRadius: 4.0 * GLYPH_SCALE,
   /**
    * Edge weighting. Acceptance probability falls from 1 at the silhouette
    * boundary to `interiorFloor` deep inside, over `edgeFalloff` pixels.
    * This concentration along the edge is what makes the shape legible.
    */
-  edgeFalloff: 62,
+  edgeFalloff: 62 * GLYPH_SCALE,
   interiorFloor: 0.028,
   /** Resolution of the distance field used for edge weighting. */
   maskDownscale: 4,
@@ -67,7 +91,7 @@ export const RING = {
   segmentCount: 14,
   /** Ring diameter as a multiple of the cloud's width. */
   diameterFactor: 1.7,
-  lineWidth: 15,
+  lineWidth: 15 * GLYPH_SCALE,
   /** Indices of the two long segments — opposite each other on the circle. */
   longSegments: [0, 7],
   /** How much longer a promoted segment is than an ordinary one. */
@@ -133,9 +157,27 @@ export const TIMING = {
   twinklePeriodMax: 210,
   /** Free-drift excursion cycle for the handful of wandering particles. */
   driftPeriod: 200,
+  /** How far a wandering particle strays before returning. */
+  driftMin: 26 * GLYPH_SCALE,
+  driftMax: 92 * GLYPH_SCALE,
 };
 
 export const FINISH = {
+  /**
+   * Bloom stacks: a tight core glow under a wide soft halo. Radii are in
+   * full-resolution pixels and scale with the glyph, so a smaller subject gets
+   * a proportionally smaller glow instead of being swallowed by it.
+   */
+  bloom: {
+    ring: [
+      { blurPx: 26 * GLYPH_SCALE, alpha: 0.7 },
+      { blurPx: 90 * GLYPH_SCALE, alpha: 0.4 },
+    ],
+    particles: [
+      { blurPx: 18 * GLYPH_SCALE, alpha: 0.95 },
+      { blurPx: 72 * GLYPH_SCALE, alpha: 0.58 },
+    ],
+  },
   vignetteStrength: 0.22,
   grainAlpha: 0.04,
   grainTileSize: 1024,

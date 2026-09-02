@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Easing, interpolate } from "remotion";
 import {
   CLOUD,
+  FINISH,
   CLOUD_CENTER_Y,
   HEIGHT,
   PARTICLES,
@@ -119,7 +120,7 @@ export const CloudParticles: React.FC<{ frame: number; theme: Theme }> = ({
           TIMING.twinklePeriodMax,
         ),
         twinklePhase: rand(`twinkle-phase-${i}`) * Math.PI * 2,
-        driftAmp: drifts ? randRange(`drift-amp-${i}`, 26, 92) : 0,
+        driftAmp: drifts ? randRange(`drift-amp-${i}`, TIMING.driftMin, TIMING.driftMax) : 0,
         driftAngle: rand(`drift-angle-${i}`) * Math.PI * 2,
         driftPhase: rand(`drift-phase-${i}`) * Math.PI * 2,
       };
@@ -201,10 +202,7 @@ export const CloudParticles: React.FC<{ frame: number; theme: Theme }> = ({
     bloomPass(canvas, ctx, {
       downscale: 4,
       scratch,
-      layers: [
-        { blurPx: 18, alpha: 0.95 },
-        { blurPx: 72, alpha: 0.58 },
-      ],
+      layers: FINISH.bloom.particles,
     });
   });
 

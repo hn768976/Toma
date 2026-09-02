@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { interpolate } from "remotion";
 import {
   CLOUD,
+  FINISH,
   CLOUD_CENTER_Y,
   CLOUD_WIDTH,
   DURATION_IN_FRAMES,
@@ -85,10 +86,7 @@ export const SegmentRing: React.FC<{ frame: number; theme: Theme }> = ({ frame, 
     bloomPass(canvas, ctx, {
       downscale: 4,
       scratch,
-      layers: [
-        { blurPx: 26, alpha: 0.7 },
-        { blurPx: 90, alpha: 0.4 },
-      ],
+      layers: FINISH.bloom.ring,
     });
   });
 

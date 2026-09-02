@@ -80,6 +80,15 @@ makes `npx remotion render` reproducible across workers.
 **Colour.** Every colour lives in the `THEME` object in `src/theme.ts`, keyed
 by `variant`. There is no hex literal anywhere else in `src/`.
 
+**Sizing.** `GLYPH_SCALE` in `src/config.ts` is the single knob for how large
+the cloud and ring are within the frame. Lobe geometry, ring radius and stroke
+weight, particle size, the edge-falloff distance, bloom radii and drift
+amplitude all derive from it, and the baseline is recomputed so the glyph stays
+optically centred at any value. It deliberately does not touch the circuit
+field or star field, which stay at frame scale — that is what makes a lower
+value read as a smaller icon rather than as a zoomed-out image. `RING
+.diameterFactor` sets the ring's size relative to the cloud independently.
+
 **The cloud.** Three overlapping lobes of different radii sit at three
 different heights on a shared baseline, joined by a slab and cut flat along the
 bottom. That shape is filled to an offscreen canvas once, a chamfer distance
