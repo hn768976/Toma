@@ -66,7 +66,7 @@ export const PARTICLES = {
 export const RING = {
   segmentCount: 14,
   /** Ring diameter as a multiple of the cloud's width. */
-  diameterFactor: 1.9,
+  diameterFactor: 1.7,
   lineWidth: 15,
   /** Indices of the two long segments — opposite each other on the circle. */
   longSegments: [0, 7],
