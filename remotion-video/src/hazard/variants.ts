@@ -48,6 +48,10 @@ export interface ShimmerSpec {
   highCycles: [number, number];
   /** Cycles-per-loop range for the slow band. Integers only. */
   lowCycles: [number, number];
+  /** Spatial frequency range of the slow band, in cycles across the layer. */
+  lowFreq: [number, number];
+  /** Spatial frequency range of the fast band. Coarser reads as organic. */
+  highFreq: [number, number];
   /** Contrast applied to the combined field before the colour ramp. */
   contrast: number;
   /** How much brighter the shimmer runs within a rim of the symbol's edge. */
@@ -90,6 +94,8 @@ export const VARIANTS: Record<VariantName, HazardVariant> = {
       highWeight: 0.9,
       lowCycles: [1, 3],
       highCycles: [5, 12],
+      lowFreq: [1.5, 4],
+      highFreq: [13, 30],
       contrast: 1.15,
       edgeBoost: 0.55,
       wispGain: 1.5,
@@ -120,11 +126,13 @@ export const VARIANTS: Record<VariantName, HazardVariant> = {
       highWeight: 0.3,
       lowCycles: [1, 2],
       highCycles: [2, 5],
+      lowFreq: [1.2, 3],
+      highFreq: [7, 16],
       contrast: 0.95,
       edgeBoost: 0.45,
       // Half the escaping wisps of the radiation variant, blurred further.
-      wispGain: 0.42,
-      wispBlur: 15,
+      wispGain: 0.75,
+      wispBlur: 20,
       flareGap: [100, 180],
       flareDuration: [12, 18],
       flareOnset: 0.45,

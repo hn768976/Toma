@@ -51,6 +51,8 @@ export interface EnergyFillLook {
   highWeight: number;
   lowCycles: [number, number];
   highCycles: [number, number];
+  lowFreq: [number, number];
+  highFreq: [number, number];
   contrast: number;
   edgeBoost: number;
   wispGain: number;
@@ -186,8 +188,8 @@ export const EnergyFill: React.FC<EnergyFillProps> = ({
       low: buildSpectralBand(
         `${seed}-low`,
         LOW_BAND_WAVES,
-        1.5,
-        4,
+        look.lowFreq[0],
+        look.lowFreq[1],
         look.lowCycles[0],
         look.lowCycles[1],
         n,
@@ -195,8 +197,8 @@ export const EnergyFill: React.FC<EnergyFillProps> = ({
       high: buildSpectralBand(
         `${seed}-high`,
         HIGH_BAND_WAVES,
-        13,
-        30,
+        look.highFreq[0],
+        look.highFreq[1],
         look.highCycles[0],
         look.highCycles[1],
         n,

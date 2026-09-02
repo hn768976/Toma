@@ -69,6 +69,16 @@ export const RemotionRoot: React.FC = () => {
         schema={hazardSymbolSchema}
         defaultProps={{ variant: "radiation" as const }}
       />
+      <Composition
+        id="HazardBiohazard"
+        component={HazardSymbol}
+        durationInFrames={HAZARD_FRAMES}
+        fps={HAZARD_FPS}
+        width={HAZARD_WIDTH}
+        height={HAZARD_HEIGHT}
+        schema={hazardSymbolSchema}
+        defaultProps={{ variant: "biohazard" as const }}
+      />
     </>
   );
 };

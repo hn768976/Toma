@@ -108,6 +108,8 @@ export const HazardSymbol: React.FC<HazardSymbolProps> = ({ variant }) => {
       highWeight: shimmer.highWeight,
       lowCycles: shimmer.lowCycles,
       highCycles: shimmer.highCycles,
+      lowFreq: shimmer.lowFreq,
+      highFreq: shimmer.highFreq,
       contrast: shimmer.contrast,
       edgeBoost: shimmer.edgeBoost,
       wispGain: shimmer.wispGain,
