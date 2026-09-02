@@ -3,7 +3,7 @@ import { useCurrentFrame, useVideoConfig } from "remotion";
 import { LayerCanvas } from "./useLayerCanvas";
 import { cameraDrift, loopSin, loopT } from "./loop";
 import { hexToRgb, mixRgb, rgbToCss, withAlpha } from "./color";
-import { rndInt, rndRange, wrap } from "./random";
+import { clamp, rndInt, rndRange, wrap } from "./random";
 
 /**
  * Drifting volumetric haze: broad, wider-than-tall blobs composited with
@@ -56,6 +56,13 @@ export const FogLayer: React.FC<{
   /** Colour the lowest strata are mixed toward, and by how much (0..1). */
   tintColor?: string;
   tintAmount?: number;
+  /**
+   * Where the tint ramp starts and how far it takes to reach full strength,
+   * as fractions of frame height. Widen or raise these to make the haze read
+   * as lit from below by something on the ground rather than ambiently.
+   */
+  tintFrom?: number;
+  tintSpan?: number;
   /** Master opacity for the whole layer. */
   opacity: number;
   /** Blur radius in composition pixels. */
@@ -79,6 +86,8 @@ export const FogLayer: React.FC<{
   color,
   tintColor,
   tintAmount = 0,
+  tintFrom = 0.42,
+  tintSpan = 0.5,
   opacity,
   blur,
   bufferWidth,
@@ -128,7 +137,7 @@ export const FogLayer: React.FC<{
         if (cx < -blob.rx * W - W * 0.1 || cx > W + blob.rx * W + W * 0.1) continue;
         const cy = (blob.y + bob) * H;
         const grad = bctx.createRadialGradient(cx, cy, 0, cx, cy, 1);
-        const warm = tintAmount * Math.max(0, (blob.y - 0.42) / 0.5);
+        const warm = tintAmount * clamp((blob.y - tintFrom) / tintSpan, 0, 1);
         const tint = mixRgb(base, target, warm);
         grad.addColorStop(0, rgbToCss(tint, blob.alpha));
         grad.addColorStop(0.55, rgbToCss(tint, blob.alpha * 0.42));

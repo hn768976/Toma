@@ -9,11 +9,11 @@ import type { FogSettings, Palette } from "../variants";
  * in front of them and behind the near ones — and that interleaving is what
  * produces the sense of depth.
  *
- * Strata sit on the tree line rather than up in the sky; putting them higher
- * washes the whole upper third and flattens the scene.
+ * The strata come from the variant: they sit on the tree line rather than up
+ * in the sky (higher washes the whole upper third and flattens the scene),
+ * and the burnt variant drops them lower still so that `warmCast` can light
+ * them from the coals below.
  */
-const STRATA = [0.44, 0.58, 0.72];
-
 export const FogLayer: React.FC<{
   depth: "back" | "front";
   fog: FogSettings;
@@ -26,10 +26,12 @@ export const FogLayer: React.FC<{
   <LibFogLayer
     seed={`${seedPrefix}-fog-${depth}`}
     blobCount={Math.round(fog.blobCount * share)}
-    strata={STRATA}
+    strata={fog.strata}
     color={palette.fogPale}
-    tintColor={palette.groundGlow}
+    tintColor={palette.fogWarm}
     tintAmount={fog.warmCast}
+    tintFrom={fog.warmFrom}
+    tintSpan={fog.warmSpan}
     opacity={fog.opacity}
     blur={fog.blur}
     driftAmount={depth === "back" ? DRIFT.fogBack : DRIFT.fogFront}

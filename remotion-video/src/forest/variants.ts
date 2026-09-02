@@ -20,6 +20,12 @@ export type Palette = {
   skyMid: string;
   fogPale: string;
   fogBright: string;
+  /**
+   * The colour the low haze is lit toward. Mixing smoke toward a warm, fairly
+   * bright tone is what makes it read as smoke lit from below by a fire;
+   * mixing it toward the dark ground colour just makes it dirty.
+   */
+  fogWarm: string;
   treeNear: string;
   treeMid: string;
   treeFar: string;
@@ -79,12 +85,32 @@ export type ParticleSettings = {
   bloomStrength: number;
 };
 
+export type SkySettings = {
+  /**
+   * How far the horizon band lifts toward the haze colour, 0..1. Low values
+   * keep the sky black and let the ground be the only light in the frame.
+   */
+  horizonLift: number;
+  /**
+   * How far that lift is pushed toward `groundGlow`, 0..1. This is what makes
+   * the sky read as lit BY the fire rather than by an ambient grey dusk.
+   */
+  horizonWarm: number;
+  /** Alpha of the soft off-centre brightening in the upper frame. */
+  glowAlpha: number;
+};
+
 export type FogSettings = {
   blobCount: number;
+  /** Heights the blobs cluster into, as fractions of frame height. */
+  strata: number[];
   /** Master opacity multiplier for the whole fog stack. */
   opacity: number;
   /** How far the lower fog strata are mixed toward `groundGlow`, 0..1. */
   warmCast: number;
+  /** Height the warm cast starts at, and how far it takes to reach full. */
+  warmFrom: number;
+  warmSpan: number;
   /** Blur radius applied to the fog buffer, in 4K pixels. */
   blur: number;
   /** Opacity of the single angled light shaft. */
@@ -110,6 +136,7 @@ export type GroundSettings = {
 export type Variant = {
   palette: Palette;
   particles: ParticleSettings;
+  sky: SkySettings;
   fog: FogSettings;
   ground: GroundSettings;
 };
@@ -131,13 +158,14 @@ export const VARIANTS: Record<VariantName, Variant> = {
   // ── Burnt forest, rising embers ────────────────────────────────────────
   ember: {
     palette: {
-      skyDeep: "#16161A",
-      skyMid: "#2A2A30",
-      fogPale: "#8A8E96",
-      fogBright: "#C4C8D0",
-      treeNear: "#0A0A0C",
-      treeMid: "#1A1A20",
-      treeFar: "#3A3A42",
+      skyDeep: "#08080B",
+      skyMid: "#141419",
+      fogPale: "#47413C",
+      fogBright: "#9A968F",
+      fogWarm: "#8A3A16",
+      treeNear: "#050506",
+      treeMid: "#0F0F13",
+      treeFar: "#26262E",
       particleHot: "#FFB88A",
       particleMid: "#F5763A",
       particleCool: "#E8402A",
@@ -168,21 +196,31 @@ export const VARIANTS: Record<VariantName, Variant> = {
     },
     fog: {
       blobCount: 20,
-      opacity: 0.26,
-      warmCast: 0.32,
+      // Low and warm: the haze hangs just above the coals and is lit by them,
+      // which is the whole difference between "night fire" and "grey dusk".
+      strata: [0.5, 0.63, 0.75],
+      opacity: 0.22,
+      warmCast: 0.85,
+      warmFrom: 0.18,
+      warmSpan: 0.42,
       blur: 260,
-      shaftOpacity: 0.55,
+      shaftOpacity: 0.3,
+    },
+    sky: {
+      horizonLift: 0.14,
+      horizonWarm: 0.62,
+      glowAlpha: 0.05,
     },
     ground: {
       treatment: "emberBed",
-      bandFrac: 0.15,
+      bandFrac: 0.19,
       bedCount: 280,
       bedSizeMin: 3,
       bedSizeMax: 11,
       edgeIrregularity: 0,
       pulseDepth: 0.22,
-      bloomRadius: 24,
-      bloomStrength: 0.26,
+      bloomRadius: 30,
+      bloomStrength: 0.34,
     },
   },
 
@@ -193,6 +231,8 @@ export const VARIANTS: Record<VariantName, Variant> = {
       skyMid: "#1E2C3C",
       fogPale: "#7A8A9E",
       fogBright: "#C8D8E8",
+      // Inert: the frost variant's warmCast is 0.
+      fogWarm: "#1A222E",
       treeNear: "#060A0E",
       treeMid: "#16202C",
       treeFar: "#33445A",
@@ -226,10 +266,18 @@ export const VARIANTS: Record<VariantName, Variant> = {
     },
     fog: {
       blobCount: 30,
+      strata: [0.44, 0.58, 0.72],
       opacity: 0.35,
       warmCast: 0,
+      warmFrom: 0.42,
+      warmSpan: 0.5,
       blur: 260,
       shaftOpacity: 0.45,
+    },
+    sky: {
+      horizonLift: 0.34,
+      horizonWarm: 0,
+      glowAlpha: 0.1,
     },
     ground: {
       treatment: "snowBed",

@@ -45,7 +45,7 @@ const SEED = "forest";
 export const ForestScene: React.FC<z.infer<typeof forestSceneSchema>> = ({
   variant,
 }) => {
-  const { palette, fog, particles, ground } = VARIANTS[variant as VariantName];
+  const { palette, sky, fog, particles, ground } = VARIANTS[variant as VariantName];
 
   const sprites = useSvgSprites({
     src: staticFile("tree.svg"),
@@ -59,7 +59,7 @@ export const ForestScene: React.FC<z.infer<typeof forestSceneSchema>> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: palette.skyDeep }}>
-      <SkyWash palette={palette} />
+      <SkyWash palette={palette} sky={sky} />
 
       {sprites ? (
         <>

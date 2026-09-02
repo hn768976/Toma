@@ -124,6 +124,24 @@ export const GroundGlow: React.FC<{
     ctx.fillStyle = band;
     ctx.fillRect(-width * 0.2, bandTop, width * 1.4, height * 1.3 - bandTop);
 
+    // One very wide, very faint pool of the same warm light the smoke is
+    // tinted with, so the fire reaches up into the haze instead of stopping at
+    // a line. Kept low enough in alpha that the near trunks stay in silhouette
+    // — that is the constraint the whole ground treatment is tuned against.
+    const spill = ctx.createRadialGradient(
+      width * 0.5,
+      height * 1.08,
+      0,
+      width * 0.5,
+      height * 1.08,
+      width * 0.42,
+    );
+    spill.addColorStop(0, withAlpha(palette.fogWarm, 0.34 * pulse));
+    spill.addColorStop(0.45, withAlpha(palette.fogWarm, 0.1 * pulse));
+    spill.addColorStop(1, withAlpha(palette.fogWarm, 0));
+    ctx.fillStyle = spill;
+    ctx.fillRect(-width * 0.2, 0, width * 1.4, height * 1.3);
+
     // Overlapping pools on top of it, so the line of coals is unevenly lit
     // rather than a uniform strip. They are kept wide and low-contrast enough
     // to merge into the band instead of reading as separate blobs.
