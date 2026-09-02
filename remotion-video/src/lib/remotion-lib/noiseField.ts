@@ -18,7 +18,7 @@
  * Deterministic: the whole band is derived from a string seed.
  */
 
-import { TAU } from "../constants";
+import { TAU } from "./math";
 import { rand01, randInt, randRange } from "./seededRandom";
 
 export interface SpectralBand {

@@ -11,7 +11,7 @@
 
 import React from "react";
 import { TAU } from "./constants";
-import { hexToRgb, rgba } from "./lib/canvas";
+import { hexToRgb, rgba } from "../lib/remotion-lib";
 
 export interface OuterRingProps {
   ctx: CanvasRenderingContext2D;

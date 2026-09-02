@@ -11,7 +11,7 @@
  */
 
 import React, { useMemo } from "react";
-import { createLayer, hexToRgb, rgba } from "./lib/canvas";
+import { createLayer, hexToRgb, rgba } from "./canvas";
 
 export interface RimGlowProps {
   ctx: CanvasRenderingContext2D;

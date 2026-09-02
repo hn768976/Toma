@@ -15,19 +15,19 @@
  *
  * Everything is a pure function of the loop position, and every temporal
  * frequency is a whole number of cycles per loop, so the shimmer closes
- * seamlessly.
+ * seamlessly: frame N and frame N + loopFrames are identical.
  */
 
 import React, { useMemo } from "react";
-import { LOOP_FRAMES, TAU } from "./constants";
-import { createLayer, hexToRgb } from "./lib/canvas";
-import { lowResUpscale } from "./lib/lowResUpscale";
+import { TAU } from "./math";
+import { createLayer, hexToRgb } from "./canvas";
+import { lowResUpscale } from "./lowResUpscale";
 import {
   buildSpectralBand,
   combineBands,
   sampleSpectralBand,
-} from "./lib/noiseField";
-import { randInt, randRange } from "./lib/seededRandom";
+} from "./noiseField";
+import { randInt, randRange } from "./seededRandom";
 
 export interface EnergyFillMask {
   size: number;
@@ -86,11 +86,15 @@ const RAMP_STEPS = 256;
  * first — still obeys the spacing rule, and the schedule closes seamlessly.
  * Positions, sizes and timings all come from a stable seed.
  */
-const buildFlareSchedule = (seed: string, look: EnergyFillLook): Flare[] => {
+const buildFlareSchedule = (
+  seed: string,
+  look: EnergyFillLook,
+  loopFrames: number,
+): Flare[] => {
   const [minGap, maxGap] = look.flareGap;
   // A count whose mean gap lands inside the range, so the repair below always
   // has enough slack to work with.
-  const count = Math.max(1, Math.round(LOOP_FRAMES / ((minGap + maxGap) / 2)));
+  const count = Math.max(1, Math.round(loopFrames / ((minGap + maxGap) / 2)));
 
   const gaps: number[] = [];
   let total = 0;
@@ -100,7 +104,7 @@ const buildFlareSchedule = (seed: string, look: EnergyFillLook): Flare[] => {
     total += gap;
   }
 
-  const deficit = LOOP_FRAMES - total;
+  const deficit = loopFrames - total;
   let slack = 0;
   for (const gap of gaps) slack += deficit > 0 ? maxGap - gap : gap - minGap;
   if (slack > 0) {
@@ -111,12 +115,12 @@ const buildFlareSchedule = (seed: string, look: EnergyFillLook): Flare[] => {
   }
 
   const flares: Flare[] = [];
-  let cursor = randRange(`${seed}-first`, 0, LOOP_FRAMES);
+  let cursor = randRange(`${seed}-first`, 0, loopFrames);
   for (let i = 0; i < count; i++) {
     const angle = randRange(`${seed}-a-${i}`, 0, TAU);
     const distance = randRange(`${seed}-d-${i}`, 0.18, 0.82);
     flares.push({
-      start: cursor % LOOP_FRAMES,
+      start: cursor % loopFrames,
       duration: randInt(`${seed}-dur-${i}`, look.flareDuration[0], look.flareDuration[1]),
       x: 0.5 + Math.cos(angle) * distance * 0.5,
       y: 0.5 + Math.sin(angle) * distance * 0.5,
@@ -129,10 +133,10 @@ const buildFlareSchedule = (seed: string, look: EnergyFillLook): Flare[] => {
 };
 
 /** Shortest signed distance between two frames on a circular timeline. */
-const loopDelta = (frame: number, start: number): number => {
+const loopDelta = (frame: number, start: number, loopFrames: number): number => {
   let d = frame - start;
-  if (d < -LOOP_FRAMES / 2) d += LOOP_FRAMES;
-  if (d > LOOP_FRAMES / 2) d -= LOOP_FRAMES;
+  if (d < -loopFrames / 2) d += loopFrames;
+  if (d > loopFrames / 2) d -= loopFrames;
   return d;
 };
 
@@ -168,6 +172,8 @@ export interface EnergyFillProps {
   look: EnergyFillLook;
   seed: string;
   frame: number;
+  /** Length of the loop in frames. Everything closes on this. */
+  loopFrames: number;
   centerX: number;
   centerY: number;
 }
@@ -178,6 +184,7 @@ export const EnergyFill: React.FC<EnergyFillProps> = ({
   look,
   seed,
   frame,
+  loopFrames,
   centerX,
   centerY,
 }) => {
@@ -207,7 +214,7 @@ export const EnergyFill: React.FC<EnergyFillProps> = ({
       highValues: new Float32Array(n * n),
       field: new Float32Array(n * n),
       ramp: buildRamp(look),
-      flares: buildFlareSchedule(`${seed}-flare`, look),
+      flares: buildFlareSchedule(`${seed}-flare`, look, loopFrames),
       noise: createLayer(n, n),
       wisps: createLayer(n, n),
       layer: createLayer(mask.size, mask.size),
@@ -216,10 +223,10 @@ export const EnergyFill: React.FC<EnergyFillProps> = ({
     };
     // The look and mask are fixed per variant; rebuilding per frame is exactly
     // what this memo exists to prevent.
-  }, [seed, n, mask.size, look]);
+  }, [seed, n, mask.size, look, loopFrames]);
 
-  const frameInLoop = ((frame % LOOP_FRAMES) + LOOP_FRAMES) % LOOP_FRAMES;
-  const t = frameInLoop / LOOP_FRAMES;
+  const frameInLoop = ((frame % loopFrames) + loopFrames) % loopFrames;
+  const t = frameInLoop / loopFrames;
 
   const { low, high, lowValues, highValues, field, ramp, flares } = resources;
   sampleSpectralBand(low, t, lowValues);
@@ -237,7 +244,11 @@ export const EnergyFill: React.FC<EnergyFillProps> = ({
   const active: { cx: number; cy: number; inverseRadius: number; amount: number }[] = [];
   for (const flare of flares) {
     const amount =
-      flareEnvelope(loopDelta(frameInLoop, flare.start), flare.duration, look.flareOnset) *
+      flareEnvelope(
+        loopDelta(frameInLoop, flare.start, loopFrames),
+        flare.duration,
+        look.flareOnset,
+      ) *
       flare.strength;
     if (amount > 0.001) {
       active.push({

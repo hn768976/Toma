@@ -27,13 +27,16 @@ import {
   WISP_REACH,
 } from "./constants";
 import type { HazardPalette, SymbolType } from "./variants";
-import { createLayer, hexToRgb, resetLayer, rgba } from "./lib/canvas";
 import {
+  createLayer,
   dilateMask,
   erodeMask,
+  hexToRgb,
   maskCoverage,
+  resetLayer,
+  rgba,
   subtractMask,
-} from "./lib/morphology";
+} from "../lib/remotion-lib";
 
 export interface SymbolGeometry {
   /** Edge length of the square layer the symbol is composed in. */

@@ -39,6 +39,10 @@ import {
   GRAIN_TILE_SIZE,
   HEIGHT,
   LOOP_FRAMES,
+  PLATE_HOLE_RADIUS,
+  PLATE_LIGHT_CYCLES_X,
+  PLATE_LIGHT_CYCLES_Y,
+  PLATE_PITCH,
   RING_BREATHE_CYCLES,
   RING_BREATHE_DEPTH,
   RING_RADIUS,
@@ -52,15 +56,19 @@ import {
   WISP_REACH,
 } from "./constants";
 import { VARIANTS } from "./variants";
-import { EnergyFill } from "./EnergyFill";
 import { OuterRing } from "./OuterRing";
-import { PerforatedPlate } from "./PerforatedPlate";
-import { RimGlow } from "./RimGlow";
 import { SymbolShape, getSymbolGeometry } from "./SymbolShape";
-import { createLayer } from "./lib/canvas";
-import { bloomPass, createBloomBuffers } from "./lib/bloomPass";
-import { buildGrainTiles, grainPass } from "./lib/grainPass";
-import { vignettePass } from "./lib/vignettePass";
+import {
+  EnergyFill,
+  PerforatedPlate,
+  RimGlow,
+  bloomPass,
+  buildGrainTiles,
+  createBloomBuffers,
+  createLayer,
+  grainPass,
+  vignettePass,
+} from "../lib/remotion-lib";
 
 const BLOOM_SCALE = 0.25;
 
@@ -126,6 +134,16 @@ export const HazardSymbol: React.FC<HazardSymbolProps> = ({ variant }) => {
     [palette],
   );
 
+  const plateMetrics = useMemo(
+    () => ({
+      pitch: PLATE_PITCH,
+      holeRadius: PLATE_HOLE_RADIUS,
+      lightCyclesX: PLATE_LIGHT_CYCLES_X,
+      lightCyclesY: PLATE_LIGHT_CYCLES_Y,
+    }),
+    [],
+  );
+
   // The whole assembly drifts on a closed Lissajous path — a slow settling,
   // never a rotation. A spinning hazard mark reads as decoration.
   const driftX = Math.sin(TAU * DRIFT_CYCLES_X * t) * DRIFT_AMPLITUDE;
@@ -171,6 +189,7 @@ export const HazardSymbol: React.FC<HazardSymbolProps> = ({ variant }) => {
       <PerforatedPlate
         ctx={ctx}
         look={plateLook}
+        metrics={plateMetrics}
         seed="hazard-plate"
         width={WIDTH}
         height={HEIGHT}
@@ -201,6 +220,7 @@ export const HazardSymbol: React.FC<HazardSymbolProps> = ({ variant }) => {
         look={energyLook}
         seed={`hazard-energy-${variant}`}
         frame={frame}
+        loopFrames={LOOP_FRAMES}
         centerX={centerX}
         centerY={centerY}
       />

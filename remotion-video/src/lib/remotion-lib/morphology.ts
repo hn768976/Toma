@@ -11,7 +11,7 @@
  * These run once per shape in a useMemo, never per frame.
  */
 
-import { TAU } from "../constants";
+import { TAU } from "./math";
 import { createLayer } from "./canvas";
 
 const DIRECTIONS = 24;
