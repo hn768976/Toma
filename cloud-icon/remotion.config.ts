@@ -8,8 +8,9 @@ import { Config } from "@remotion/cli/config";
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
-// The piece has no audio. Without this, Remotion pads the mp4 with a silent
-// AAC track; this leaves the output video-only.
+// The piece has no audio. Remotion otherwise pads the mp4 with a silent AAC
+// track; enforceAudioTrack alone does not suppress it, muted as well does.
+Config.setMuted(true);
 Config.setEnforceAudioTrack(false);
 Config.setOverwriteOutput(true);
 // Canvas work is CPU-bound here; give each frame room to finish.
