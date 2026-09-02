@@ -12,6 +12,13 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { HazardSymbol, hazardSymbolSchema } from "./hazard/HazardSymbol";
+import {
+  WIDTH as HAZARD_WIDTH,
+  HEIGHT as HAZARD_HEIGHT,
+  FPS as HAZARD_FPS,
+  LOOP_FRAMES as HAZARD_FRAMES,
+} from "./hazard/constants";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +58,16 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="HazardRadiation"
+        component={HazardSymbol}
+        durationInFrames={HAZARD_FRAMES}
+        fps={HAZARD_FPS}
+        width={HAZARD_WIDTH}
+        height={HAZARD_HEIGHT}
+        schema={hazardSymbolSchema}
+        defaultProps={{ variant: "radiation" as const }}
       />
     </>
   );
