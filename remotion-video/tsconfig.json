@@ -10,7 +10,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": true
+    "noUnusedLocals": true,
+    "baseUrl": ".",
+    "paths": {
+      "@lib/*": ["../remotion-lib/src/*"]
+    }
   },
+  "include": ["src/**/*", "../remotion-lib/src/**/*"],
   "exclude": ["remotion.config.ts"]
 }

@@ -6,6 +6,7 @@
  */
 
 import { existsSync } from "node:fs";
+import path from "node:path";
 import { Config } from "@remotion/cli/config";
 import { enableTailwind } from '@remotion/tailwind-v4';
 
@@ -13,6 +14,26 @@ Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
+
+// `@lib` resolves to the shared remotion-lib source. Standalone/vendored
+// copies of a project point this same alias at their own ./src/lib, so no
+// import statement has to change when a project is packaged up.
+// NOTE: `__dirname` inside a Remotion config resolves to @remotion/cli's own
+// directory, not the project — always anchor project-relative paths on
+// process.cwd(), which is where the `remotion` CLI was invoked.
+const LIB_SRC = path.resolve(process.cwd(), "../remotion-lib/src");
+const VENDORED_LIB_SRC = path.resolve(process.cwd(), "src/lib");
+
+Config.overrideBundlerConfig((config) => ({
+  ...config,
+  resolve: {
+    ...config.resolve,
+    alias: {
+      ...config.resolve?.alias,
+      "@lib": existsSync(VENDORED_LIB_SRC) ? VENDORED_LIB_SRC : LIB_SRC,
+    },
+  },
+}));
 
 // Some sandboxed dev environments block downloading Remotion's own
 // Chrome Headless Shell but ship a Playwright Chromium at this path.

@@ -1,6 +1,9 @@
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
+import { HudCentre, hudCentreSchema } from "./hud-centre/HudCentre";
+import { DURATION as HUD_DURATION, FPS as HUD_FPS } from "./hud-centre/timing";
+import { FRAME_H as HUD_H, FRAME_W as HUD_W } from "./hud-centre/layout";
 import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
@@ -51,6 +54,36 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="HudCentreWifi"
+        component={HudCentre}
+        durationInFrames={HUD_DURATION}
+        fps={HUD_FPS}
+        width={HUD_W}
+        height={HUD_H}
+        schema={hudCentreSchema}
+        defaultProps={{ variant: "wifi" as const }}
+      />
+      <Composition
+        id="HudCentreCrypto"
+        component={HudCentre}
+        durationInFrames={HUD_DURATION}
+        fps={HUD_FPS}
+        width={HUD_W}
+        height={HUD_H}
+        schema={hudCentreSchema}
+        defaultProps={{ variant: "crypto" as const }}
+      />
+      <Composition
+        id="HudCentreRadar"
+        component={HudCentre}
+        durationInFrames={HUD_DURATION}
+        fps={HUD_FPS}
+        width={HUD_W}
+        height={HUD_H}
+        schema={hudCentreSchema}
+        defaultProps={{ variant: "radar" as const }}
       />
     </>
   );

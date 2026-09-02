@@ -5,3 +5,6 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Staging directory for scripts/package-standalone.mjs
+dist-zip
