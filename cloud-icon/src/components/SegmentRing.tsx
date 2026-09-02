@@ -28,6 +28,8 @@ export const SegmentRing: React.FC<{ frame: number; theme: Theme }> = ({ frame, 
         count: RING.segmentCount,
         seed: "cloud-icon/ring",
         longIndices: RING.longSegments,
+        longFactor: RING.longFactor,
+        lengthJitter: RING.lengthJitter,
       }),
     [],
   );

@@ -70,6 +70,10 @@ export const RING = {
   lineWidth: 15,
   /** Indices of the two long segments — opposite each other on the circle. */
   longSegments: [0, 7],
+  /** How much longer a promoted segment is than an ordinary one. */
+  longFactor: 3.4,
+  /** Ordinary segment length variation, as a multiple of the mean. */
+  lengthJitter: 0.45,
   /** One full turn across the composition. */
   rotationTurns: 1,
   /** Travelling brightness wave period, a divisor of DURATION_IN_FRAMES. */
