@@ -13,6 +13,16 @@ import {
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
 import {
+  ForestScene,
+  forestSceneSchema,
+} from "./forest/ForestScene";
+import {
+  WIDTH as FOREST_WIDTH,
+  HEIGHT as FOREST_HEIGHT,
+  FPS as FOREST_FPS,
+  DURATION_IN_FRAMES as FOREST_DURATION,
+} from "./forest/constants";
+import {
   BASE_WIDTH,
   BASE_HEIGHT,
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
@@ -51,6 +61,36 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="ForestEmber"
+        component={ForestScene}
+        durationInFrames={FOREST_DURATION}
+        fps={FOREST_FPS}
+        width={FOREST_WIDTH}
+        height={FOREST_HEIGHT}
+        schema={forestSceneSchema}
+        defaultProps={{ variant: "ember" as const }}
+      />
+      <Composition
+        id="ForestFrost"
+        component={ForestScene}
+        durationInFrames={FOREST_DURATION}
+        fps={FOREST_FPS}
+        width={FOREST_WIDTH}
+        height={FOREST_HEIGHT}
+        schema={forestSceneSchema}
+        defaultProps={{ variant: "frost" as const }}
+      />
+      <Composition
+        id="ForestLoopCheck"
+        component={ForestScene}
+        durationInFrames={FOREST_DURATION + 1}
+        fps={FOREST_FPS}
+        width={FOREST_WIDTH}
+        height={FOREST_HEIGHT}
+        schema={forestSceneSchema}
+        defaultProps={{ variant: "ember" as const }}
       />
     </>
   );
