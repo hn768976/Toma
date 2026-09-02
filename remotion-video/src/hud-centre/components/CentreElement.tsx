@@ -1,4 +1,5 @@
 import { toRgb, withAlpha } from "../palette";
+import { BITCOIN_ASPECT } from "../bitcoin-glyph";
 import {
   CENTRE_RADAR_CONTACT_DECAY,
   CENTRE_RADAR_PERIOD,
@@ -74,93 +75,20 @@ export const drawWifi = (
 // v2 — "crypto"
 // ---------------------------------------------------------------------------
 
-/** A rounded-on-the-right rectangle, wound in the requested direction. */
-const rightRoundedRect = (
-  p: Path2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  ccw: boolean,
-) => {
-  const r = Math.min(h / 2, w);
-  if (!ccw) {
-    p.moveTo(x, y);
-    p.lineTo(x + w - r, y);
-    p.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2, false);
-    p.lineTo(x, y + h);
-  } else {
-    p.moveTo(x, y);
-    p.lineTo(x, y + h);
-    p.lineTo(x + w - r, y + h);
-    p.arc(x + w - r, y + r, r, Math.PI / 2, -Math.PI / 2, true);
-  }
-  p.closePath();
-};
+export const CRYPTO_HEIGHT = 580; // total height, INCLUDING the vertical strokes
 
 /**
- * The Bitcoin mark as ONE Path2D, filled with the nonzero winding rule.
+ * The Bitcoin mark.
  *
- * The two counters are wound anticlockwise so nonzero punches them out, while
- * the two vertical strokes are wound clockwise so they stay solid where they
- * cross those counters. Even-odd would look right until a stroke crossed a
- * solid part of a bowl, where it would punch a hole instead.
- *
- * Being a real path rather than a rasterised mask is what makes the rest of
- * the treatment cheap: the same object gets filled for the body, clipped
- * against for the internal scan bands, and stroked for the rim.
+ * The outline is traced from the reference artwork and lives in
+ * ../bitcoin-glyph — see that file for why it is traced rather than
+ * constructed. Being a real path, rather than a rasterised mask, is what
+ * makes the rest of the treatment cheap: the same object gets filled for the
+ * body, clipped against for the internal scan bands, and stroked for the rim.
  *
  * The Bitcoin symbol is a community mark in general commercial use, not a
  * corporate trademark.
  */
-export const bitcoinPath = (W: number, H: number, pad: number): Path2D => {
-  const p = new Path2D();
-  const stem = 0.21 * W; // left vertical
-  const wall = 0.15 * W; // right wall of each bowl
-  const barTop = 0.115 * H; // top and bottom horizontals
-  const barMid = 0.13 * H; // the horizontal where the two bowls meet
-  const h1 = 0.47 * H; // upper bowl, smaller than the lower one
-  const h2 = H - h1;
-  const w1 = 0.86 * W; // upper bowl is narrower than the lower one
-  const w2 = W;
-
-  // Outer forms, wound clockwise.
-  p.rect(0, pad, stem, H);
-  rightRoundedRect(p, 0, pad, w1, h1, false);
-  rightRoundedRect(p, 0, pad + h1, w2, h2, false);
-
-  // Counters, wound anticlockwise so nonzero punches them out. Sized from the
-  // bar weights directly rather than by insetting the bowl, which is what
-  // keeps them open at bold weights.
-  rightRoundedRect(
-    p,
-    stem,
-    pad + barTop,
-    w1 - stem - wall,
-    h1 - barTop - barMid / 2,
-    true,
-  );
-  rightRoundedRect(
-    p,
-    stem,
-    pad + h1 + barMid / 2,
-    w2 - stem - wall,
-    h2 - barMid / 2 - barTop,
-    true,
-  );
-
-  // The two vertical strokes, extending above and below the letterform and
-  // wound clockwise so they stay solid where they cross the counters.
-  const sw = 0.12 * W;
-  p.rect(0.31 * W, 0, sw, H + 2 * pad);
-  p.rect(0.55 * W, 0, sw, H + 2 * pad);
-  return p;
-};
-
-export const CRYPTO_HEIGHT = 460;
-export const CRYPTO_PAD_RATIO = 0.16;
-export const CRYPTO_WIDTH_RATIO = 0.62;
-
 export const drawCrypto = (
   ctx: CanvasRenderingContext2D,
   o: {
@@ -174,9 +102,7 @@ export const drawCrypto = (
 ) => {
   const { cx, cy, accent, frame, pale, path } = o;
   const H = CRYPTO_HEIGHT;
-  const W = H * CRYPTO_WIDTH_RATIO;
-  const pad = H * CRYPTO_PAD_RATIO;
-  const totalH = H + 2 * pad;
+  const W = H * BITCOIN_ASPECT;
 
   // One breathing pulse, +/-12% of glow, on a 75-frame sine (6 clean cycles
   // across the loop). Deliberately unlike v1's sequential arc pulse.
@@ -184,7 +110,7 @@ export const drawCrypto = (
   const [r, g, b] = toRgb(accent);
 
   ctx.save();
-  ctx.translate(cx - W / 2, cy - totalH / 2);
+  ctx.translate(cx - W / 2, cy - H / 2);
 
   // Chromatic fringe: the same form three times, one channel offset each way,
   // added together. Where they coincide they sum back to the accent colour;
@@ -200,7 +126,7 @@ export const drawCrypto = (
     ctx.save();
     ctx.translate(dx, dy);
     ctx.fillStyle = col;
-    ctx.fill(path);
+    ctx.fill(path, "evenodd");
     ctx.restore();
   }
   ctx.restore();
@@ -225,21 +151,21 @@ export const drawCrypto = (
   ctx.globalAlpha = 0.95;
   ctx.shadowColor = accent;
   ctx.shadowBlur = 52 * breath;
-  ctx.fill(path);
+  ctx.fill(path, "evenodd");
   ctx.restore();
 
   // Internal scan bands: low contrast, drifting slowly, clipped to the form.
   // This is what stops it reading as a flat logo.
   ctx.save();
-  ctx.clip(path);
+  ctx.clip(path, "evenodd");
   const spacing = 20;
   const drift = ((frame % 150) / 150) * spacing * 3;
   ctx.fillStyle = "rgba(0, 0, 0, 0.075)";
-  for (let y = -spacing + (drift % spacing); y < totalH; y += spacing) {
+  for (let y = -spacing + (drift % spacing); y < H; y += spacing) {
     ctx.fillRect(0, y, W, 4);
   }
   ctx.fillStyle = withAlpha(pale, 0.035);
-  for (let y = -spacing + (drift % spacing) + 8; y < totalH; y += spacing) {
+  for (let y = -spacing + (drift % spacing) + 8; y < H; y += spacing) {
     ctx.fillRect(0, y, W, 2);
   }
   ctx.restore();

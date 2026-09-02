@@ -9,13 +9,11 @@ import type { CentreType } from "../variants";
 import { drawSegmentRing, drawSegmentRingChrome } from "@lib/rings/segment-ring";
 import {
   CRYPTO_HEIGHT,
-  CRYPTO_PAD_RATIO,
-  CRYPTO_WIDTH_RATIO,
-  bitcoinPath,
   drawCentreRadar,
   drawCrypto,
   drawWifi,
 } from "./CentreElement";
+import { bitcoinPath } from "../bitcoin-glyph";
 
 const SEGMENTS = 30;
 const GAP_FRACTION = 0.34;
@@ -76,15 +74,7 @@ export const CentreStage: React.FC<CentreStageProps> = ({ type, accent, frame })
     [],
   );
 
-  const cryptoGlyph = useMemo(
-    () =>
-      bitcoinPath(
-        CRYPTO_HEIGHT * CRYPTO_WIDTH_RATIO,
-        CRYPTO_HEIGHT,
-        CRYPTO_HEIGHT * CRYPTO_PAD_RATIO,
-      ),
-    [],
-  );
+  const cryptoGlyph = useMemo(() => bitcoinPath(CRYPTO_HEIGHT), []);
 
   // Static furniture: the ring's tick ring and inner circle, plus (for v3) the
   // scope's polar grid.
