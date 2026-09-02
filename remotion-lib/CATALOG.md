@@ -112,14 +112,29 @@ Returns `{ index, start, length, long }[]` in radians, summing to exactly 2π
 including gaps. Apply rotation at draw time — the geometry itself is static.
 
 ```ts
-const segments = brokenArcRing({ count: 14, seed: "ring", longIndices: [0, 7] });
+const segments = brokenArcRing({
+  count: 14, seed: "ring", longIndices: [0, 7],
+  longFactor: 3.4, lengthJitter: 0.45,
+});
 for (const s of segments) {
   ctx.arc(cx, cy, r, s.start + rotation, s.start + s.length + rotation);
 }
 ```
 
-**Gotcha:** `start` is the *un-rotated* angle. Adding rotation inside the
-generator would make it frame-dependent and force a per-frame rebuild.
+**Gotchas:**
+- `start` is the *un-rotated* angle. Adding rotation inside the generator would
+  make it frame-dependent and force a per-frame rebuild.
+- `longFactor` and `lengthJitter` interact, and the defaults are weak: a
+  promoted segment's jitter is applied *before* the factor, so an unlucky one
+  can come out barely longer than a lucky ordinary segment and stop reading as
+  a long arc at all. At the defaults (`2.6` / `0.55`) cloud-icon's two promoted
+  segments landed at 45.3° and 27.4° against a longest ordinary of 21.1° — the
+  second one vanished into the crowd. `3.4` / `0.45` gave 52.9° and 35.1°
+  against 18.3°. **Print the sorted lengths for your seed rather than trusting
+  the defaults.**
+- `longIndices` opposite in *index* space are only approximately opposite in
+  *angle*, because lengths are unequal. `[0, 7]` of 14 lands within a couple of
+  degrees of 180° in practice, but check if it matters to you.
 
 **First used by:** cloud-icon.
 
