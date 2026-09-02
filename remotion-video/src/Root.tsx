@@ -12,6 +12,13 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { Clippings } from "./clippings/Clippings";
+import {
+  DURATION_IN_FRAMES as CLIP_DURATION,
+  FPS as CLIP_FPS,
+  HEIGHT as CLIP_HEIGHT,
+  WIDTH as CLIP_WIDTH,
+} from "./clippings/constants";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +58,24 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="ClippingsFire"
+        component={Clippings}
+        durationInFrames={CLIP_DURATION}
+        fps={CLIP_FPS}
+        width={CLIP_WIDTH}
+        height={CLIP_HEIGHT}
+        defaultProps={{ variant: "fire" as const }}
+      />
+      <Composition
+        id="ClippingsFinance"
+        component={Clippings}
+        durationInFrames={CLIP_DURATION}
+        fps={CLIP_FPS}
+        width={CLIP_WIDTH}
+        height={CLIP_HEIGHT}
+        defaultProps={{ variant: "finance" as const }}
       />
     </>
   );

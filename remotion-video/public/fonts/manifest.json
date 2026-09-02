@@ -1,0 +1,23 @@
+[
+  {
+    "family": "Playfair Display",
+    "weight": "400 900",
+    "file": "PlayfairDisplay-variable.woff2",
+    "bytes": 38404,
+    "url": "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFiD-vYSZviVYUb_rj3ij__anPXDTzYgA.woff2"
+  },
+  {
+    "family": "PT Serif",
+    "weight": "400",
+    "file": "PTSerif-400.woff2",
+    "bytes": 33116,
+    "url": "https://fonts.gstatic.com/s/ptserif/v19/EJRVQgYoZZY2vCFuvAFWzr8.woff2"
+  },
+  {
+    "family": "PT Serif",
+    "weight": "700",
+    "file": "PTSerif-700.woff2",
+    "bytes": 29588,
+    "url": "https://fonts.gstatic.com/s/ptserif/v19/EJRSQgYoZZY2vCFuvAnt66qSVys.woff2"
+  }
+]
