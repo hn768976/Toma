@@ -13,6 +13,17 @@ import {
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
 import {
+  ParticleBrain,
+  particleBrainSchema,
+  particleBrainDefaultProps,
+} from "./particle-brain/ParticleBrain";
+import {
+  DURATION_IN_FRAMES as BRAIN_DURATION,
+  FPS as BRAIN_FPS,
+  WIDTH as BRAIN_WIDTH,
+  HEIGHT as BRAIN_HEIGHT,
+} from "./particle-brain/config";
+import {
   BASE_WIDTH,
   BASE_HEIGHT,
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
@@ -31,6 +42,28 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         schema={bluetoothExplainerSchema}
         defaultProps={bluetoothExplainerDefaultProps}
+      />
+      <Composition
+        id="ParticleBrain"
+        component={ParticleBrain}
+        durationInFrames={BRAIN_DURATION}
+        fps={BRAIN_FPS}
+        width={BRAIN_WIDTH}
+        height={BRAIN_HEIGHT}
+        schema={particleBrainSchema}
+        defaultProps={particleBrainDefaultProps}
+      />
+      {/* Same composition one frame longer, so a render of frame 600 can be
+          pixel-compared against frame 0 to prove the loop closes. */}
+      <Composition
+        id="ParticleBrainLoopCheck"
+        component={ParticleBrain}
+        durationInFrames={BRAIN_DURATION + 1}
+        fps={BRAIN_FPS}
+        width={BRAIN_WIDTH}
+        height={BRAIN_HEIGHT}
+        schema={particleBrainSchema}
+        defaultProps={particleBrainDefaultProps}
       />
       <Composition
         id="ParticleRingHalo"

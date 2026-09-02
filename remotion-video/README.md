@@ -11,6 +11,27 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+| id | size | duration | notes |
+|---|---|---|---|
+| `ParticleBrain` | 3840x2160 | 600f @ 30fps (20.0s) | Particle brain, seamless loop. See `src/particle-brain/`. |
+| `ParticleBrainLoopCheck` | 3840x2160 | 601f @ 30fps | The same composition one frame longer, for verifying the loop. |
+| `ParticleRingHalo` | 1920x1080 | 200f @ 25fps | Abstract particle-ring halo. |
+| `ParticleRingHalo4K` | 3840x2160 | 200f @ 25fps | 4K variant of the above. |
+| `BluetoothExplainer` | 1920x1080 | 30s | Hand-drawn Bluetooth explainer. |
+
+### ParticleBrain
+
+```console
+npx remotion render ParticleBrain out/particle-brain.mp4 \
+  --codec=h264 --crf=12 --concurrency=8
+```
+
+Takes a `variant` prop (`teal` | `ice` | `ember`). Every colour lives in
+`src/particle-brain/theme.ts`. Reusable, subject-agnostic pieces live in
+`src/lib/` and are catalogued in `../remotion-lib/CATALOG.md`.
+
 ## Commands
 
 **Install Dependencies**
