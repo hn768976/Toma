@@ -102,7 +102,23 @@ export type CornerNodeFrameProps = {
   style?: React.CSSProperties;
 };
 
-const HIGHLIGHT_SEGMENTS = 64;
+/**
+ * The travelling highlight is a hot core stroke plus a soft underglow.
+ *
+ * The core is drawn straight onto the layer. The underglow is NOT drawn with
+ * `ctx.filter = "blur(...)"`: setting a filter makes Chromium allocate a
+ * filter layer for the draw, and a tail is dozens of short strokes, so at 4K
+ * that alone cost more than the entire rest of the composition (measured: it
+ * tripled total render time). Instead the wider passes go into the same
+ * low-resolution bright-pass buffer as the corner nodes and are blurred once,
+ * by bloomPass, along with everything else that glows.
+ */
+const HIGHLIGHT_GLOW_PASSES = [
+  { widthScale: 6, alphaScale: 0.42, segments: 16 },
+  { widthScale: 2.4, alphaScale: 0.5, segments: 24 },
+] as const;
+const HIGHLIGHT_CORE_SEGMENTS = 64;
+const HIGHLIGHT_CORE_ALPHA = 0.62;
 
 type EdgeSpec = NeonSegment & {
   length: number;
@@ -283,29 +299,42 @@ export const CornerNodeFrame: React.FC<CornerNodeFrameProps> = ({
     // Butt caps, not round: with additive compositing a rounded cap at every
     // segment joint bulges, and the tail reads as a string of beads instead
     // of one travelling stroke.
-    ctx.lineCap = "butt";
-    const drawTail = (widthScale: number, alphaScale: number, blur: number) => {
-      ctx.filter = blur > 0 ? `blur(${blur}px)` : "none";
-      for (let s = 0; s < HIGHLIGHT_SEGMENTS; s++) {
-        const t = s / HIGHLIGHT_SEGMENTS;
+    const drawTail = (
+      target: CanvasRenderingContext2D,
+      coordScale: number,
+      widthScale: number,
+      alphaScale: number,
+      segments: number,
+    ) => {
+      target.lineCap = "butt";
+      for (let s = 0; s < segments; s++) {
+        const t = s / segments;
         const spanEnd = headT - t * highlightTail;
-        const spanStart = spanEnd - highlightTail / HIGHLIGHT_SEGMENTS;
+        const spanStart = spanEnd - highlightTail / segments;
         const alpha = Math.pow(1 - t, 2.2) * alphaScale;
         const points = perimeterPolyline(edges, perimeter, spanStart, spanEnd);
-        ctx.strokeStyle = rgba(coreColor, alpha);
-        ctx.lineWidth = strokeWidth * widthScale * (0.5 + 1.1 * (1 - t));
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
+        target.strokeStyle = rgba(coreColor, alpha);
+        target.lineWidth =
+          strokeWidth * widthScale * (0.5 + 1.1 * (1 - t)) * coordScale;
+        target.beginPath();
+        target.moveTo(points[0].x * coordScale, points[0].y * coordScale);
         for (let p = 1; p < points.length; p++) {
-          ctx.lineTo(points[p].x, points[p].y);
+          target.lineTo(points[p].x * coordScale, points[p].y * coordScale);
         }
-        ctx.stroke();
+        target.stroke();
       }
-      ctx.filter = "none";
     };
-    drawTail(7, 0.1, 18);
-    drawTail(2.2, 0.22, 5);
-    drawTail(1, 0.62, 0);
+
+    for (const pass of HIGHLIGHT_GLOW_PASSES) {
+      drawTail(
+        bloomBuffer.ctx,
+        bloomScale,
+        pass.widthScale,
+        pass.alphaScale,
+        pass.segments,
+      );
+    }
+    drawTail(ctx, 1, 1, HIGHLIGHT_CORE_ALPHA, HIGHLIGHT_CORE_SEGMENTS);
     ctx.lineCap = "round";
 
     /* ------------------------------------------------ the four corner nodes */

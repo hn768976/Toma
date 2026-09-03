@@ -102,7 +102,18 @@ export type CornerNodeFrameProps = {
   style?: React.CSSProperties;
 };
 
-const HIGHLIGHT_SEGMENTS = 64;
+/**
+ * The travelling highlight is drawn as three stacked passes: a wide blurred
+ * underglow, a mid glow, and the hot core. Each pass walks the perimeter in
+ * short segments so its alpha can fall off along the tail — but a blurred
+ * pass does not need fine segmentation, and `ctx.filter` makes every stroke
+ * an expensive filtered draw, so the blurred passes use far fewer.
+ */
+const HIGHLIGHT_PASSES = [
+  { widthScale: 7, alphaScale: 0.1, blur: 18, segments: 14 },
+  { widthScale: 2.2, alphaScale: 0.22, blur: 5, segments: 24 },
+  { widthScale: 1, alphaScale: 0.62, blur: 0, segments: 64 },
+] as const;
 
 type EdgeSpec = NeonSegment & {
   length: number;
@@ -284,16 +295,16 @@ export const CornerNodeFrame: React.FC<CornerNodeFrameProps> = ({
     // segment joint bulges, and the tail reads as a string of beads instead
     // of one travelling stroke.
     ctx.lineCap = "butt";
-    const drawTail = (widthScale: number, alphaScale: number, blur: number) => {
-      ctx.filter = blur > 0 ? `blur(${blur}px)` : "none";
-      for (let s = 0; s < HIGHLIGHT_SEGMENTS; s++) {
-        const t = s / HIGHLIGHT_SEGMENTS;
+    for (const pass of HIGHLIGHT_PASSES) {
+      ctx.filter = pass.blur > 0 ? `blur(${pass.blur}px)` : "none";
+      for (let s = 0; s < pass.segments; s++) {
+        const t = s / pass.segments;
         const spanEnd = headT - t * highlightTail;
-        const spanStart = spanEnd - highlightTail / HIGHLIGHT_SEGMENTS;
-        const alpha = Math.pow(1 - t, 2.2) * alphaScale;
+        const spanStart = spanEnd - highlightTail / pass.segments;
+        const alpha = Math.pow(1 - t, 2.2) * pass.alphaScale;
         const points = perimeterPolyline(edges, perimeter, spanStart, spanEnd);
         ctx.strokeStyle = rgba(coreColor, alpha);
-        ctx.lineWidth = strokeWidth * widthScale * (0.5 + 1.1 * (1 - t));
+        ctx.lineWidth = strokeWidth * pass.widthScale * (0.5 + 1.1 * (1 - t));
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         for (let p = 1; p < points.length; p++) {
@@ -302,10 +313,7 @@ export const CornerNodeFrame: React.FC<CornerNodeFrameProps> = ({
         ctx.stroke();
       }
       ctx.filter = "none";
-    };
-    drawTail(7, 0.1, 18);
-    drawTail(2.2, 0.22, 5);
-    drawTail(1, 0.62, 0);
+    }
     ctx.lineCap = "round";
 
     /* ------------------------------------------------ the four corner nodes */
