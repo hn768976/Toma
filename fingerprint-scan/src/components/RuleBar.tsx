@@ -3,8 +3,8 @@
  * nodes at irregular intervals. The nodes blink irregularly.
  */
 import React, { useEffect, useRef } from "react";
-import { useOffscreen, withAlpha } from "../lib/draw";
-import { irregularPositions, rand } from "../lib/rng";
+import { useOffscreen, withAlpha } from "../shared/draw";
+import { irregularPositions, rand } from "../shared/rng";
 import { W } from "../layout";
 import type { Palette } from "../variants";
 

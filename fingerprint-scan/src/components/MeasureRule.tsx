@@ -1,7 +1,7 @@
 /** A vertical measurement rule with tick marks down the right edge. */
 import React from "react";
 import { monoFont } from "../fonts";
-import { useOffscreen, withAlpha } from "../lib/draw";
+import { useOffscreen, withAlpha } from "../shared/draw";
 import type { Palette } from "../variants";
 
 export const MeasureRule: React.FC<{

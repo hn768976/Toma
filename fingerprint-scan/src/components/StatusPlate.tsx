@@ -7,7 +7,7 @@
  */
 import React, { useEffect, useRef } from "react";
 import { sansFont } from "../fonts";
-import { withAlpha } from "../lib/draw";
+import { withAlpha } from "../shared/draw";
 import { PRINT_CX, PRINT_CY } from "../layout";
 import type { OutcomeConfig } from "../variants";
 

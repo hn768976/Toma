@@ -6,7 +6,7 @@
 import React, { useEffect, useRef } from "react";
 import { random } from "remotion";
 import { H, W } from "../layout";
-import { useGrainTiles } from "../lib/post";
+import { useGrainTiles } from "../shared/post";
 
 const TILE = 512;
 const ALPHA = 0.04;

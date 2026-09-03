@@ -1,6 +1,9 @@
 /**
- * Seeded helpers. Every random value in the piece comes through here, so a frame
- * is a pure function of its number and `npx remotion render` is deterministic.
+ * Seeded random helpers built on Remotion's `random()`.
+ *
+ * Every value is a pure function of its seed string, so anything driven by
+ * these is reproducible across renders and across machines. Never use
+ * Math.random() in a Remotion project — it makes frames non-deterministic.
  */
 import { random } from "remotion";
 
@@ -8,20 +11,21 @@ import { random } from "remotion";
 export const rand = (seed: string, min = 0, max = 1) =>
   min + random(seed) * (max - min);
 
-/** Integer in [min, max]. */
+/** Integer in [min, max], inclusive. */
 export const randInt = (seed: string, min: number, max: number) =>
   Math.floor(min + random(seed) * (max - min + 1));
 
-/** Picks one item. */
+/** Picks one item from a list. */
 export const pick = <T,>(seed: string, items: readonly T[]): T =>
   items[Math.floor(random(seed) * items.length) % items.length];
 
-/** True with probability p. */
+/** True with probability `p`. */
 export const chance = (seed: string, p: number) => random(seed) < p;
 
 /**
- * A value that rerolls `perSecond` times a second, seeded from the frame so it is
- * stable for any given frame. Panel values use this to flicker without animating.
+ * A value that rerolls `perSecond` times a second, seeded from the frame so it
+ * is stable for any given frame. Use for HUD panel values that should flicker
+ * without being animated.
  */
 export const rerolled = (
   seed: string,
@@ -33,7 +37,11 @@ export const rerolled = (
   return random(`${seed}-${bucket}`);
 };
 
-/** Irregular, non-uniform positions along a span — never evenly spaced. */
+/**
+ * `count` positions spread across [from, to] with seeded jitter, so they read as
+ * irregular rather than as a evenly spaced row. `jitter` is a fraction of the
+ * mean spacing.
+ */
 export const irregularPositions = (
   seed: string,
   count: number,

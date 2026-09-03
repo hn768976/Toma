@@ -1,10 +1,13 @@
-/** Finishing passes: bloom onto a canvas, and deterministic tiled grain. */
+/** Finishing passes: additive bloom, and deterministic tiled film grain. */
 import { useMemo } from "react";
 import { random } from "remotion";
 
 /**
- * Additive bloom. The blur is done at half resolution and scaled back up —
- * visually identical to a full-resolution blur here, and far cheaper at 4K.
+ * Additive bloom onto `ctx` from a rendered `scene` canvas.
+ *
+ * The blur runs at half resolution and is scaled back up: visually
+ * indistinguishable from a full-resolution blur at these radii, and far cheaper
+ * at 4K. Pass several layers (wide+faint, tight+strong) for a filmic falloff.
  */
 export const bloomPass = (
   ctx: CanvasRenderingContext2D,
@@ -16,8 +19,7 @@ export const bloomPass = (
   const half = document.createElement("canvas");
   half.width = w;
   half.height = h;
-  const hctx = half.getContext("2d")!;
-  hctx.drawImage(scene, 0, 0, w, h);
+  half.getContext("2d")!.drawImage(scene, 0, 0, w, h);
 
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
@@ -32,8 +34,9 @@ export const bloomPass = (
 };
 
 /**
- * A small set of noise tiles, generated once. Each frame picks a seeded tile and
- * offset per cell, which gives moving grain without regenerating any pixels.
+ * A small set of seeded noise tiles, generated once. Blit them with per-frame
+ * seeded offsets to get moving grain without regenerating any pixels — far
+ * cheaper than building a full-frame noise buffer every frame.
  */
 export const useGrainTiles = (size = 512, count = 6) =>
   useMemo(() => {

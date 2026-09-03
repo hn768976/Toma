@@ -17,6 +17,8 @@
   },
   "scripts": {
     "dev": "remotion studio",
-    "lint": "tsc"
+    "lint": "tsc",
+    "sync-shared": "node scripts/sync-shared.mjs",
+    "check-shared": "node scripts/sync-shared.mjs --check"
   }
 }

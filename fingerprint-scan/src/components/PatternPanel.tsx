@@ -3,9 +3,9 @@
  * field or a mesh fragment. Never photographic, never data.
  */
 import React, { useEffect, useRef } from "react";
-import { monoFont, sansFont } from "../fonts";
-import { panelChrome, useOffscreen, withAlpha } from "../lib/draw";
-import { rand, rerolled } from "../lib/rng";
+import { useOffscreen, withAlpha } from "../shared/draw";
+import { drawPanelChrome } from "../lib/chrome";
+import { rand, rerolled } from "../shared/rng";
 import type { Rect } from "../layout";
 import type { Palette } from "../variants";
 
@@ -23,7 +23,7 @@ export const PatternPanel: React.FC<{
   const chrome = useOffscreen(
     rect.w,
     rect.h,
-    (ctx) => panelChrome(ctx, rect, palette, label, { mono: monoFont, sans: sansFont }),
+    (ctx) => drawPanelChrome(ctx, rect, palette, label),
     [rect.w, rect.h, palette, label],
   );
 

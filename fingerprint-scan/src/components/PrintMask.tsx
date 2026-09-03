@@ -8,8 +8,9 @@
  */
 import React, { useEffect, useMemo, useRef } from "react";
 import { PRINT_HEIGHT, PRINT_WIDTH, PRINT_X, PRINT_Y } from "../layout";
-import { tintMask, type PrintMask as Mask } from "../lib/mask";
-import { bloomPass } from "../lib/post";
+import { tintMask } from "../shared/bitmapMask";
+import type { PrintMask as Mask } from "../lib/mask";
+import { bloomPass } from "../shared/post";
 import type { Palette } from "../variants";
 
 export const PrintMask: React.FC<{

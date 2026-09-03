@@ -7,7 +7,7 @@
  */
 import React, { useEffect, useRef } from "react";
 import { monoFont, sansFont } from "../fonts";
-import { tickRing, useOffscreen, withAlpha } from "../lib/draw";
+import { tickRing, useOffscreen, withAlpha } from "../shared/draw";
 import type { Rect } from "../layout";
 import type { Palette, ReadoutConfig } from "../variants";
 

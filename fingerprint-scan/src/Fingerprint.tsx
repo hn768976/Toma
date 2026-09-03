@@ -14,7 +14,7 @@ import {
   RULE_BOTTOM_Y, RULE_TOP_Y, RULE_V, W, drift,
 } from "./layout";
 import { usePrintMask } from "./lib/mask";
-import { withAlpha } from "./lib/draw";
+import { withAlpha } from "./shared/draw";
 import { scanState } from "./lib/scan";
 import { Backdrop } from "./components/Backdrop";
 import { CodePanel } from "./components/CodePanel";
@@ -61,6 +61,10 @@ export const Fingerprint: React.FC<{ variant: VariantName }> = ({ variant }) => 
     value = fill * cfg.readout.max;
   }
 
+  // Panel values are seeded from frame % duration, so the reroll sequence is
+  // defined by position within the piece rather than by absolute frame number.
+  const rollFrame = frame % durationInFrames;
+
   const d = drift(frame, durationInFrames);
 
   return (
@@ -69,8 +73,8 @@ export const Fingerprint: React.FC<{ variant: VariantName }> = ({ variant }) => 
       <AbsoluteFill style={{ transform: `translate(${d.x}px, ${d.y}px)` }}>
         <Backdrop palette={palette} />
 
-        <RuleBar y={RULE_TOP_Y} palette={palette} seed="rule-top" frame={frame} />
-        <RuleBar y={RULE_BOTTOM_Y} palette={palette} seed="rule-bottom" frame={frame} />
+        <RuleBar y={RULE_TOP_Y} palette={palette} seed="rule-top" frame={rollFrame} />
+        <RuleBar y={RULE_BOTTOM_Y} palette={palette} seed="rule-bottom" frame={rollFrame} />
 
         <PercentDial
           rect={DIAL}
@@ -82,11 +86,11 @@ export const Fingerprint: React.FC<{ variant: VariantName }> = ({ variant }) => 
 
         <CodePanel
           rect={CODE_A} palette={palette} label="TRACE / 0x41"
-          seed="code-a" frame={frame} speed={0.32}
+          seed="code-a" frame={rollFrame} fps={fps} speed={0.32}
         />
         <CodePanel
           rect={CODE_B} palette={palette} label="SEG / 0x0C"
-          seed="code-b" frame={frame} speed={0.19}
+          seed="code-b" frame={rollFrame} fps={fps} speed={0.19}
         />
 
         <DotGlobe
@@ -98,11 +102,11 @@ export const Fingerprint: React.FC<{ variant: VariantName }> = ({ variant }) => 
 
         <PatternPanel
           rect={PAT_A} palette={palette} label="FIELD" kind="dots"
-          seed="pat-a" frame={frame} fps={fps}
+          seed="pat-a" frame={rollFrame} fps={fps}
         />
         <PatternPanel
           rect={PAT_B} palette={palette} label="MESH" kind="mesh"
-          seed="pat-b" frame={frame} fps={fps}
+          seed="pat-b" frame={rollFrame} fps={fps}
         />
 
         {mask ? (

@@ -7,8 +7,8 @@
  * completes a whole number of turns across the piece.
  */
 import React, { useEffect, useMemo, useRef } from "react";
-import { tickRing, useOffscreen, withAlpha } from "../lib/draw";
-import { rand } from "../lib/rng";
+import { tickRing, useOffscreen, withAlpha } from "../shared/draw";
+import { rand } from "../shared/rng";
 import type { Rect } from "../layout";
 import type { Palette } from "../variants";
 

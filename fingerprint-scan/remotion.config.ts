@@ -3,6 +3,8 @@ import { Config } from "@remotion/cli/config";
 
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
+// The piece has no audio; without this Remotion writes a silent AAC track.
+Config.setMuted(true);
 
 // This sandbox blocks Remotion's own Chrome Headless Shell download but ships a
 // Playwright Chromium. Reuse it here; on a normal machine the path is absent and

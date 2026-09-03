@@ -8,9 +8,10 @@
  * out per frame.
  */
 import React, { useEffect, useRef } from "react";
-import { monoFont, sansFont } from "../fonts";
-import { panelChrome, useOffscreen, withAlpha } from "../lib/draw";
-import { pick, rand, randInt } from "../lib/rng";
+import { monoFont } from "../fonts";
+import { useOffscreen, withAlpha } from "../shared/draw";
+import { drawPanelChrome } from "../lib/chrome";
+import { pick, rand, randInt, rerolled } from "../shared/rng";
 import type { Rect } from "../layout";
 import type { Palette } from "../variants";
 
@@ -66,15 +67,16 @@ export const CodePanel: React.FC<{
   label: string;
   seed: string;
   frame: number;
+  fps: number;
   /** Pixels of scroll per frame. */
   speed: number;
-}> = ({ rect, palette, label, seed, frame, speed }) => {
+}> = ({ rect, palette, label, seed, frame, fps, speed }) => {
   const ref = useRef<HTMLCanvasElement>(null);
 
   const chrome = useOffscreen(
     rect.w,
     rect.h,
-    (ctx) => panelChrome(ctx, rect, palette, label, { mono: monoFont, sans: sansFont }),
+    (ctx) => drawPanelChrome(ctx, rect, palette, label),
     [rect.w, rect.h, palette, label],
   );
 
@@ -111,6 +113,28 @@ export const CodePanel: React.FC<{
     const off = ((frame * speed) % total + total) % total;
     ctx.drawImage(block, 0, inset - off);
     ctx.drawImage(block, 0, inset - off + total);
+
+    // Live values sitting over the scroll, rerolling 5 times a second. Panel
+    // content is texture, not data — these just have to keep moving.
+    ctx.font = monoFont(19, 500);
+    ctx.textBaseline = "middle";
+    for (let i = 0; i < 3; i++) {
+      const v = rerolled(`${seed}-val-${i}`, frame, fps, 5);
+      const row = rerolled(`${seed}-row-${i}`, frame, fps, 5);
+      const y = inset + 18 + Math.floor(row * (viewH - 36));
+      const x = inset + 20 + rand(`${seed}-vx-${i}`, 0, 0.5) * (rect.w - inset * 2);
+      const text = `0x${Math.floor(v * 0xffffff)
+        .toString(16)
+        .toUpperCase()
+        .padStart(6, "0")}`;
+      const tw = ctx.measureText(text).width;
+      // Knock the scrolling text out behind the value so it reads as a live
+      // field rather than as two overlapping lines.
+      ctx.fillStyle = withAlpha(palette.panelFill, 0.96);
+      ctx.fillRect(x - 6, y - 13, tw + 12, 26);
+      ctx.fillStyle = withAlpha(palette.textBright, 0.95);
+      ctx.fillText(text, x, y);
+    }
     ctx.restore();
   });
 

@@ -4,7 +4,7 @@
  * once into an offscreen canvas and blitted.
  */
 import React from "react";
-import { crosshair, irregularDashes, useOffscreen, withAlpha } from "../lib/draw";
+import { crosshair, irregularDashes, useOffscreen, withAlpha } from "../shared/draw";
 import { CROSSHAIRS, DASHED_RULES, H, PRINT_CX, PRINT_CY, W } from "../layout";
 import type { Palette } from "../variants";
 
@@ -17,9 +17,9 @@ export const Backdrop: React.FC<{ palette: Palette }> = ({ palette }) => {
       ctx.fillRect(0, 0, W, H);
 
       // A wash centred behind the subject, falling off to the deep ground.
-      const g = ctx.createRadialGradient(PRINT_CX, PRINT_CY, 0, PRINT_CX, PRINT_CY, W * 0.62);
-      g.addColorStop(0, withAlpha(palette.bgWash, 0.95));
-      g.addColorStop(0.55, withAlpha(palette.bgWash, 0.34));
+      const g = ctx.createRadialGradient(PRINT_CX, PRINT_CY, 0, PRINT_CX, PRINT_CY, W * 0.55);
+      g.addColorStop(0, withAlpha(palette.bgWash, 0.62));
+      g.addColorStop(0.5, withAlpha(palette.bgWash, 0.2));
       g.addColorStop(1, withAlpha(palette.bgWash, 0));
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);

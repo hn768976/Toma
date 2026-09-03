@@ -1,16 +1,22 @@
-/** Canvas primitives shared by every panel. Nothing here reads the frame. */
+/**
+ * Canvas primitives for HUD-style chrome. All colour arrives as a parameter —
+ * nothing here has a palette of its own.
+ */
 import { useMemo } from "react";
-import type { Palette, Rect } from "./types";
 import { irregularPositions, rand } from "./rng";
 
-/** #RRGGBB -> rgba() at the given alpha. Keeps palette hexes the only source. */
+/** #RRGGBB -> rgba() at the given alpha. */
 export const withAlpha = (hex: string, alpha: number) => {
   const h = hex.replace("#", "");
   const n = parseInt(h, 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
-/** An offscreen canvas built once and blitted every frame after that. */
+/**
+ * An offscreen canvas drawn once and blitted every frame after that. Use for
+ * any chrome that does not change: it turns per-frame vector work into a single
+ * drawImage.
+ */
 export const useOffscreen = (
   w: number,
   h: number,
@@ -26,7 +32,7 @@ export const useOffscreen = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-/** A run of dashes with irregular lengths and gaps. */
+/** A horizontal run of dashes with seeded, irregular lengths and gaps. */
 export const irregularDashes = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -35,6 +41,8 @@ export const irregularDashes = (
   seed: string,
   color: string,
   thickness = 3,
+  lengthRange: [number, number] = [10, 62],
+  gapRange: [number, number] = [8, 40],
 ) => {
   ctx.save();
   ctx.strokeStyle = color;
@@ -42,8 +50,8 @@ export const irregularDashes = (
   let cursor = 0;
   let i = 0;
   while (cursor < width) {
-    const len = rand(`${seed}-len-${i}`, 10, 62);
-    const gap = rand(`${seed}-gap-${i}`, 8, 40);
+    const len = rand(`${seed}-len-${i}`, lengthRange[0], lengthRange[1]);
+    const gap = rand(`${seed}-gap-${i}`, gapRange[0], gapRange[1]);
     const end = Math.min(width, cursor + len);
     ctx.beginPath();
     ctx.moveTo(x + cursor, y);
@@ -55,7 +63,10 @@ export const irregularDashes = (
   ctx.restore();
 };
 
-/** A thin ring with fine radial ticks, optionally broken into arcs. */
+/**
+ * A ring with fine radial ticks. Set `breaks` above zero to cut the ring itself
+ * into irregular arcs — the "broken outer ring" of instrument-panel chrome.
+ */
 export const tickRing = (
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -66,7 +77,6 @@ export const tickRing = (
     ticks?: number;
     tickLength?: number;
     thickness?: number;
-    /** Number of gaps to cut out of the ring itself. */
     breaks?: number;
     seed?: string;
     everyNthLong?: number;
@@ -90,7 +100,6 @@ export const tickRing = (
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.stroke();
   } else {
-    // Irregular arcs with gaps between them — a broken outer ring.
     const starts = irregularPositions(`${seed}-arc`, breaks, 0, Math.PI * 2, 0.9);
     for (let i = 0; i < starts.length; i++) {
       const a0 = starts[i];
@@ -113,17 +122,18 @@ export const tickRing = (
   ctx.restore();
 };
 
-/** A small crosshair mark. */
+/** A small crosshair mark, for frame margins. */
 export const crosshair = (
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   color: string,
   size = 18,
+  thickness = 2.5,
 ) => {
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = thickness;
   ctx.beginPath();
   ctx.moveTo(x - size, y);
   ctx.lineTo(x + size, y);
@@ -133,31 +143,38 @@ export const crosshair = (
   ctx.restore();
 };
 
+export type PanelChromeColors = {
+  fill: string;
+  fillAlpha: number;
+  border: string;
+  label: string;
+};
+
 /**
- * The chrome every panel shares: thin border, small corner ticks, tiny label
- * strip. Drawn in panel-local coordinates so it can be cached offscreen.
+ * The chrome shared by HUD panels: translucent fill, thin border, small corner
+ * ticks and a tiny label strip. Drawn in panel-local coordinates (0,0 at the
+ * panel's top-left) so it can be cached to an offscreen canvas.
  */
 export const panelChrome = (
   ctx: CanvasRenderingContext2D,
-  rect: Rect,
-  palette: Palette,
+  size: { w: number; h: number },
+  colors: PanelChromeColors,
   label: string,
-  fonts: { mono: (s: number, w?: number) => string; sans: (s: number, w?: number) => string },
+  labelFont: string,
+  opts: { inset?: number; tick?: number; stripWidth?: number; stripHeight?: number } = {},
 ) => {
-  const { w, h } = rect;
+  const { w, h } = size;
+  const { inset = 12, tick = 26, stripWidth = 190, stripHeight = 30 } = opts;
   ctx.save();
 
-  ctx.fillStyle = withAlpha(palette.panelFill, palette.panelFillAlpha);
+  ctx.fillStyle = withAlpha(colors.fill, colors.fillAlpha);
   ctx.fillRect(0, 0, w, h);
 
-  ctx.strokeStyle = withAlpha(palette.panelBorder, 0.85);
+  ctx.strokeStyle = withAlpha(colors.border, 0.85);
   ctx.lineWidth = 2.5;
   ctx.strokeRect(1.25, 1.25, w - 2.5, h - 2.5);
 
-  // Corner ticks, sitting just inside the border.
-  const t = 26;
-  const inset = 12;
-  ctx.strokeStyle = palette.panelBorder;
+  ctx.strokeStyle = colors.border;
   ctx.lineWidth = 4;
   const corners: [number, number, number, number][] = [
     [inset, inset, 1, 1],
@@ -167,20 +184,19 @@ export const panelChrome = (
   ];
   for (const [cx, cy, sx, sy] of corners) {
     ctx.beginPath();
-    ctx.moveTo(cx + sx * t, cy);
+    ctx.moveTo(cx + sx * tick, cy);
     ctx.lineTo(cx, cy);
-    ctx.lineTo(cx, cy + sy * t);
+    ctx.lineTo(cx, cy + sy * tick);
     ctx.stroke();
   }
 
-  // Tiny label strip.
-  ctx.fillStyle = withAlpha(palette.panelBorder, 0.3);
-  ctx.fillRect(inset, h - inset - 30, 190, 30);
-  ctx.fillStyle = palette.textPale;
-  ctx.font = fonts.sans(21, 600);
+  ctx.fillStyle = withAlpha(colors.border, 0.3);
+  ctx.fillRect(inset, h - inset - stripHeight, stripWidth, stripHeight);
+  ctx.fillStyle = colors.label;
+  ctx.font = labelFont;
   ctx.textBaseline = "middle";
   ctx.letterSpacing = "3px";
-  ctx.fillText(label, inset + 10, h - inset - 14);
+  ctx.fillText(label, inset + 10, h - inset - stripHeight / 2 + 1);
   ctx.letterSpacing = "0px";
 
   ctx.restore();
