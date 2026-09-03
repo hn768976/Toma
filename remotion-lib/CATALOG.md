@@ -157,3 +157,21 @@ Remotion bundles from a project root, so projects vendor a copy of `src/` into
 their own `src/lib/` (`node scripts/sync-lib.mjs`) rather than importing across
 the filesystem. That also keeps a project's distributable ZIP standalone. The
 canonical source is this repository; edit here and re-sync.
+
+---
+
+## Performance notes (learned the hard way)
+
+- **Never set `ctx.filter` per draw call.** Chromium allocates a filter layer
+  for each filtered draw, so a few dozen short blurred strokes at 4K can cost
+  more than every other layer in a composition combined — measured at roughly
+  a 3x whole-render regression from one glow effect. Draw the thing that
+  should glow into a small buffer instead and blur it **once** (`bloomPass`),
+  or blur a whole buffer on its way to the destination (`threeBufferDOF`).
+- **`--scale` does not make a render cheaper.** It changes the screenshot
+  size, not the canvas backing store, so a "1080p preview" of a 4K composition
+  does exactly as much drawing as the 4K render.
+- **Rasterise once, blit many.** `glyphAtlas` for text, `lightSprite` for
+  glows. Both cache; neither re-rasterises per frame.
+- **Create offscreen buffers in `useMemo`, never per frame.** A 4K RGBA
+  surface is ~33 MB.
