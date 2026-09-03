@@ -1,10 +1,11 @@
 import React, { useMemo } from "react";
-import { Canvas2D } from "./lib/Canvas2D";
-import { mixHex, rgba } from "./lib/color";
-import { neonPasses, neonStroke } from "./lib/neonStroke";
-import { bloomPasses, glowPool, makeBloomScratch } from "./lib/postFx";
-import { leaningRect, roundedPolygon } from "./lib/shapes";
-import { applyTilt, DEFAULT_TILT, type Tilt } from "./lib/tilt";
+import { Canvas2D } from "./Canvas2D";
+import { mixHex, rgba } from "./color";
+import { neonPasses, neonStroke } from "./neonStroke";
+import { bloomPasses, glowPool, makeBloomScratch } from "./postFx";
+import { leaningRect, roundedPolygon } from "./shapes";
+import { applyTilt, DEFAULT_TILT, type Tilt } from "./tilt";
+import { completionFrame, progressAt, type Waypoint } from "./curve";
 
 export type NeonBarPalette = {
   outline: string;
@@ -23,14 +24,21 @@ export type NeonBarProps = {
   /** How far the top edge leans past the bottom edge, in px. */
   skew: number;
   cornerRadius: number;
-  /** 0..1, supplied by the caller's fill curve. */
-  progress: number;
+  frame: number;
   /**
-   * 1 while filling, easing to ~0 once complete — the leading edge is
-   * the brightest thing on screen right up until there is nowhere left
-   * to advance to.
+   * The fill curve: (frame, progress) waypoints the fill interpolates
+   * between. Uneven waypoints are the point — a linear fill reads as
+   * fake immediately.
    */
-  leadFlash: number;
+  curve: Waypoint[];
+  /** How strongly each segment eases; 1 = full ease-in-out, 0 = linear. */
+  ease?: number;
+  /**
+   * Frames over which the leading-edge flash fades once the curve
+   * completes. The leading edge is the brightest thing on screen right
+   * up until there is nowhere left to advance to.
+   */
+  flashFadeFrames?: number;
   palette: NeonBarPalette;
   /** Stroke weights and blur radii are authored against a 1920 frame. */
   scale: number;
@@ -52,6 +60,10 @@ export type NeonBarProps = {
  * Everything on this layer is composited with 'lighter'; the layer as a
  * whole is blended onto the backdrop so the spill lands on the wall
  * rather than being clipped to the bar.
+ *
+ * The component owns its fill curve: hand it the current frame and a
+ * list of (frame, progress) waypoints and it interpolates, eases and
+ * fades the completion flash itself.
  */
 export const NeonBar: React.FC<NeonBarProps> = ({
   width,
@@ -62,14 +74,23 @@ export const NeonBar: React.FC<NeonBarProps> = ({
   barHeight,
   skew,
   cornerRadius,
-  progress,
-  leadFlash,
+  frame,
+  curve,
+  ease = 1,
+  flashFadeFrames = 28,
   palette,
   scale,
   tilt = DEFAULT_TILT,
   blend = "screen",
 }) => {
   const bloom = useMemo(() => makeBloomScratch(width, height), [width, height]);
+
+  const progress = progressAt(frame, curve, ease);
+  const done = completionFrame(curve);
+  const leadFlash =
+    frame <= done
+      ? 1
+      : Math.max(0.12, 1 - (frame - done) / flashFadeFrames);
 
   return (
     <Canvas2D

@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { FilmFinish } from "./FilmFinish";
+import { FilmFinish } from "./lib/FilmFinish";
 import {
   DISPLAY_FONT_FAMILY,
   DISPLAY_FONT_WEIGHT,
@@ -8,21 +8,18 @@ import {
   MONO_FONT_WEIGHT,
 } from "./fonts";
 import { computeLayout } from "./layout";
-import { completionFrame, progressAt } from "./lib/curve";
+import { progressAt } from "./lib/curve";
+import { MottledBackdrop } from "./lib/MottledBackdrop";
+import { NeonBar } from "./lib/NeonBar";
+import { SparkField } from "./lib/SparkField";
 import { tiltPoint } from "./lib/tilt";
-import { MottledBackdrop } from "./MottledBackdrop";
-import { NeonBar } from "./NeonBar";
 import { PercentReadout } from "./PercentReadout";
-import { SparkField } from "./SparkField";
 import { VARIANTS, type VariantName } from "./variants";
 import { dotsVisibleAt, WordMark } from "./WordMark";
 
 export type LoadingBarProps = {
   variant: VariantName;
 };
-
-/** Frames over which the leading-edge flash fades once the bar completes. */
-const FLASH_FADE_FRAMES = 28;
 
 /**
  * The whole piece. Three variants share this component and differ only
@@ -45,13 +42,10 @@ export const LoadingBar: React.FC<LoadingBarProps> = ({ variant }) => {
   const { palette } = config;
 
   const layout = computeLayout(width, height, config.capHeightRatio);
+  // <NeonBar> interpolates the curve itself; this is the same pure
+  // function on the same inputs, for the layers that need to know where
+  // the light is coming from.
   const progress = progressAt(frame, config.curve, config.ease);
-
-  const done = completionFrame(config.curve);
-  const leadFlash =
-    frame <= done
-      ? 1
-      : Math.max(0.12, 1 - (frame - done) / FLASH_FADE_FRAMES);
 
   // Where the bar's light is coming from right now, in frame space, so
   // the dust can brighten around it even though it is not itself tilted.
@@ -105,8 +99,9 @@ export const LoadingBar: React.FC<LoadingBarProps> = ({ variant }) => {
         barHeight={layout.barHeight}
         skew={layout.barSkew}
         cornerRadius={layout.barRadius}
-        progress={progress}
-        leadFlash={leadFlash}
+        frame={frame}
+        curve={config.curve}
+        ease={config.ease}
         scale={layout.scale}
         palette={{
           outline: palette.barOutline,

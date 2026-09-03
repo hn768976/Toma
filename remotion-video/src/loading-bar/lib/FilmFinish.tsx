@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
-import { Canvas2D } from "./lib/Canvas2D";
-import { grainPass, makeGrainTile, vignettePass } from "./lib/postFx";
+import { Canvas2D } from "./Canvas2D";
+import { grainPass, makeGrainTile, vignettePass } from "./postFx";
 
 export type FilmFinishProps = {
   width: number;

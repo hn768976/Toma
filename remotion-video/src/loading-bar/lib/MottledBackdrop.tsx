@@ -1,9 +1,9 @@
 import React, { useMemo } from "react";
-import { Canvas2D } from "./lib/Canvas2D";
-import { rgba } from "./lib/color";
-import { lowResUpscale, makeCanvas, paintLowRes } from "./lib/lowResUpscale";
-import { glowPool } from "./lib/postFx";
-import { seeded, seededRange } from "./lib/rand";
+import { Canvas2D } from "./Canvas2D";
+import { rgba } from "./color";
+import { lowResUpscale, makeCanvas, paintLowRes } from "./lowResUpscale";
+import { glowPool } from "./postFx";
+import { seeded, seededRange } from "./rand";
 
 export type MottledBackdropProps = {
   width: number;

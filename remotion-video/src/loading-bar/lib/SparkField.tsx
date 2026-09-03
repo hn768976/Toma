@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
-import { Canvas2D } from "./lib/Canvas2D";
-import { rgba } from "./lib/color";
-import { seeded, seededRange, seededSigned } from "./lib/rand";
+import { Canvas2D } from "./Canvas2D";
+import { rgba } from "./color";
+import { seeded, seededRange, seededSigned } from "./rand";
 
 export type Spark = {
   x: number;
