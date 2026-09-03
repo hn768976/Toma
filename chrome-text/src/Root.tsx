@@ -19,6 +19,24 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{ variant: "welcome" as const }}
       />
+      <Composition
+        id="ChromeThanks"
+        component={ChromeText}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: "thanks" as const }}
+      />
+      <Composition
+        id="ChromeSubscribe"
+        component={ChromeText}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: "subscribe" as const }}
+      />
     </>
   );
 };
