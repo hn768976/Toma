@@ -17,8 +17,9 @@ VARIANTS = {
     blurb=(
       "Blue-white, sparser, higher horizon. Roughly 170 filaments — fewer, longer and slightly "
       "thicker than the gold variant — concentrate into a narrow fan above the figure, so the burst "
-      "reads as a shaft rather than a halo. The foreground is water: a clean horizon line with a "
-      "mirrored, heavily blurred, gently rippling reflection of the figure and the core glow beneath it."
+      "reads as a shaft rather than a halo. The foreground is a waterline: reeds standing along a "
+      "clean horizon, with a mirrored, heavily blurred, gently rippling reflection of the figure and "
+      "the core glow beneath them. No hills, and no solid ground below the line."
     ),
   ),
   "inward": dict(

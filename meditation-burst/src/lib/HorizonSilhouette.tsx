@@ -13,8 +13,10 @@ import { useCanvas } from "./useCanvas";
  * its own seeded phase at an integer number of cycles per loop, so frame
  * 0 and frame `loopLength` match exactly.
  *
- * Both features are optional. Pass `hills: null` for a clean line, or
- * `blades: null` for bare ground.
+ * Every part is optional. Pass `hills: null` for a clean line,
+ * `blades: null` for bare ground, or `ground: false` to drop the solid
+ * fill below the line — which is what turns the blade band into reeds
+ * standing at a waterline rather than grass on a bank.
  */
 
 export type HillOptions = {
@@ -58,10 +60,21 @@ export type HorizonSilhouetteProps = {
   seed: string;
   hills?: HillOptions | null;
   blades?: BladeOptions | null;
+  /** Fill everything below the line with `color`. Default true. */
+  ground?: boolean;
   offset?: { x: number; y: number };
   style?: React.CSSProperties;
   className?: string;
 };
+
+/**
+ * Stable defaults. A `{}` written inline as a destructuring default is a
+ * NEW object on every render, which would invalidate the memos below and
+ * rebuild every blade — and the full-frame ground raster — once per
+ * frame. Module-level constants keep the identity fixed.
+ */
+const DEFAULT_HILLS: HillOptions = {};
+const DEFAULT_BLADES: BladeOptions = {};
 
 type Blade = {
   x: number;
@@ -148,6 +161,7 @@ const buildGroundRaster = (
   horizonY: number,
   color: string,
   hills: Hill[],
+  ground: boolean,
 ): HTMLCanvasElement => {
   const c = document.createElement("canvas");
   c.width = width;
@@ -175,7 +189,9 @@ const buildGroundRaster = (
     ctx.fill();
   }
 
-  ctx.fillRect(0, horizonY, width, height - horizonY);
+  if (ground) {
+    ctx.fillRect(0, horizonY, width, height - horizonY);
+  }
   return c;
 };
 
@@ -187,8 +203,9 @@ export const HorizonSilhouette: React.FC<HorizonSilhouetteProps> = ({
   frame,
   loopLength,
   seed,
-  hills = {},
-  blades = {},
+  hills = DEFAULT_HILLS,
+  blades = DEFAULT_BLADES,
+  ground = true,
   offset = { x: 0, y: 0 },
   style,
   className,
@@ -197,7 +214,7 @@ export const HorizonSilhouette: React.FC<HorizonSilhouetteProps> = ({
     () => (blades ? buildBlades(width, blades, seed) : []),
     [width, blades, seed],
   );
-  const ground = useMemo(
+  const groundRaster = useMemo(
     () =>
       buildGroundRaster(
         width,
@@ -205,8 +222,9 @@ export const HorizonSilhouette: React.FC<HorizonSilhouetteProps> = ({
         horizonY,
         color,
         hills ? buildHills(width, hills, seed) : [],
+        ground,
       ),
-    [width, height, horizonY, color, hills, seed],
+    [width, height, horizonY, color, hills, seed, ground],
   );
 
   const ref = useCanvas(width, height, (ctx) => {
@@ -214,12 +232,14 @@ export const HorizonSilhouette: React.FC<HorizonSilhouetteProps> = ({
     ctx.save();
     ctx.translate(offset.x, offset.y);
 
-    // The whole layer may be translated by an ambient drift, so the solid
-    // ground is over-filled past the frame edges to keep a sliver of
-    // background from appearing at the bottom.
     ctx.fillStyle = color;
-    ctx.fillRect(-20, horizonY, width + 40, height - horizonY + 20);
-    ctx.drawImage(ground, 0, 0);
+    if (ground) {
+      // The whole layer may be translated by an ambient drift, so the
+      // solid ground is over-filled past the frame edges to keep a sliver
+      // of background from appearing at the bottom.
+      ctx.fillRect(-20, horizonY, width + 40, height - horizonY + 20);
+    }
+    ctx.drawImage(groundRaster, 0, 0);
 
     for (const blade of bladeList) {
       const sway =

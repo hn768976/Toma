@@ -42,6 +42,22 @@ export type AngularProfile = {
   horizonCut: number;
 };
 
+/**
+ * The foreground is described by what it contains rather than by a single
+ * mode name, so a variant can mix the parts: the plant band is common to
+ * all three, while hills and the water reflection are not.
+ */
+export type ForegroundMode = {
+  /** Low irregular overlapping hills beyond the line. */
+  hills: boolean;
+  /** A dense band of fine vertical strokes along the line. */
+  plants: boolean;
+  /** Solid ground below the line. Off when the line is a waterline. */
+  ground: boolean;
+  /** A mirrored, blurred, rippling reflection below the line. */
+  reflection: boolean;
+};
+
 export type CoreGlowMode =
   /** Steady +/-10% breath on a sine whose period divides the loop. */
   | "breathe"
@@ -54,7 +70,7 @@ export type VariantConfig = {
   burstDirection: 1 | -1;
   /** Filament count before branches are added. */
   filamentCount: number;
-  foreground: "grass" | "water";
+  foreground: ForegroundMode;
 
   angular: AngularProfile;
   /** Per-filament reach as a fraction of the distance to the frame edge. */
@@ -96,7 +112,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     },
     burstDirection: 1,
     filamentCount: 320,
-    foreground: "grass",
+    foreground: { hills: true, plants: true, ground: true, reflection: false },
     angular: { floor: 0.14, concentration: 2.3, horizonCut: 0.7 },
     reach: { min: 0.34, max: 1.06 },
     filamentWidth: 7.5,
@@ -110,7 +126,8 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
   /**
    * Clear and directional. Warm light reads as abundant; cool light
    * reads as a shaft. Fewer, longer, slightly thicker filaments packed
-   * into a narrow fan above the head, over a still water horizon.
+   * into a narrow fan above the head, over a still water horizon with
+   * reeds standing at its edge.
    */
   cool: {
     palette: {
@@ -124,7 +141,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     },
     burstDirection: 1,
     filamentCount: 170,
-    foreground: "water",
+    foreground: { hills: false, plants: true, ground: false, reflection: true },
     angular: { floor: 0.01, concentration: 8.5, horizonCut: 0.94 },
     reach: { min: 0.62, max: 1.14 },
     filamentWidth: 9.5,
@@ -153,7 +170,7 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     },
     burstDirection: -1,
     filamentCount: 420,
-    foreground: "grass",
+    foreground: { hills: true, plants: true, ground: true, reflection: false },
     angular: { floor: 0.66, concentration: 0.85, horizonCut: 0.4 },
     reach: { min: 1, max: 1.14 },
     filamentWidth: 7,

@@ -56,6 +56,14 @@ export type SparkFieldProps = {
   className?: string;
 };
 
+/** Stable default objects — see the note in HorizonSilhouette.tsx. */
+const DEFAULT_SIZES = {
+  small: [7, 17] as [number, number],
+  large: [22, 36] as [number, number],
+};
+const DEFAULT_TRAVEL: [number, number] = [110, 420];
+const NO_OFFSET = { x: 0, y: 0 };
+
 type Spark = {
   angle: number;
   radius: number;
@@ -169,12 +177,12 @@ export const SparkField: React.FC<SparkFieldProps> = ({
   count,
   direction,
   angularWeight,
-  sizes = { small: [7, 17], large: [22, 36] },
+  sizes = DEFAULT_SIZES,
   largeShare = 0.13,
-  travel = [110, 420],
+  travel = DEFAULT_TRAVEL,
   flickerPeriods = DEFAULT_FLICKER_PERIODS,
   driftPeriods = DEFAULT_DRIFT_PERIODS,
-  offset = { x: 0, y: 0 },
+  offset = NO_OFFSET,
   style,
   className,
 }) => {

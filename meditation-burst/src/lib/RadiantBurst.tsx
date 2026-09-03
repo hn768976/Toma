@@ -91,6 +91,11 @@ export type RadiantBurstProps = {
   className?: string;
 };
 
+/** Stable default objects — see the note in HorizonSilhouette.tsx. */
+const DEFAULT_REACH = { min: 0.34, max: 1.06 };
+const DEFAULT_BLOOM = { radius: 120, strength: 0.32 };
+const NO_OFFSET = { x: 0, y: 0 };
+
 type Buffers = {
   glow: HTMLCanvasElement;
   glowBlur: HTMLCanvasElement;
@@ -237,13 +242,13 @@ export const RadiantBurst: React.FC<RadiantBurstProps> = ({
   count,
   filamentWidth,
   opacity = 1,
-  reach = { min: 0.34, max: 1.06 },
+  reach = DEFAULT_REACH,
   angularWeight,
   branchProbability,
   pulsePeriods,
   undulation,
-  bloom = { radius: 120, strength: 0.32 },
-  offset = { x: 0, y: 0 },
+  bloom = DEFAULT_BLOOM,
+  offset = NO_OFFSET,
   style,
   className,
 }) => {

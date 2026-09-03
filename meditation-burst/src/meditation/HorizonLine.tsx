@@ -12,16 +12,20 @@ import { VariantConfig } from "./variants";
  * The foreground: a horizon line across the lower frame with the figure
  * seated on it, treated as pure silhouette in the same way the figure is.
  *
- * Two modes, chosen per variant:
+ * The variant's `foreground` says which parts are present rather than
+ * naming a single mode, because they combine:
  *
- *   "grass" — low irregular overlapping hills beyond the line, and a
- *   dense band of fine vertical strokes along it, delegated to the
- *   library's <HorizonSilhouette>.
+ *   hills + plants + ground — a bank: low irregular overlapping hills
+ *   beyond the line and a dense band of fine vertical strokes along it,
+ *   both delegated to the library's <HorizonSilhouette>.
  *
- *   "water" — no hills, no band. A clean line with a soft reflection
- *   beneath it: a vertically mirrored, much dimmer, heavily blurred copy
- *   of the figure and the core glow, pushed around by a gentle
- *   horizontal ripple.
+ *   reflection — a waterline: below it, a vertically mirrored, much
+ *   dimmer, heavily blurred copy of the figure and the core glow, pushed
+ *   around by a gentle horizontal ripple.
+ *
+ * The cool variant takes both: reeds standing at the edge of still
+ * water. The plant band draws over the water layer, so the reeds sit in
+ * front of the reflection instead of floating above it.
  */
 
 type WaterBuffers = {
@@ -202,16 +206,16 @@ export const HorizonLine: React.FC<{
   image: HTMLImageElement | null;
   seed: string;
 }> = ({ config, layout, frame, image, seed }) => {
-  const grass = config.foreground === "grass";
+  const fg = config.foreground;
   const drift = cameraDrift(frame);
 
   const waterBuffers = useMemo(
-    () => (grass ? null : buildWaterBuffers(layout)),
-    [grass, layout],
+    () => (fg.reflection ? buildWaterBuffers(layout) : null),
+    [fg.reflection, layout],
   );
   const raster = useMemo(
     () =>
-      image && !grass
+      image && fg.reflection
         ? rasterizeFigure(
             image,
             layout.figureWidth,
@@ -221,36 +225,45 @@ export const HorizonLine: React.FC<{
         : null,
     [
       image,
-      grass,
+      fg.reflection,
       layout.figureWidth,
       layout.figureHeight,
       config.palette.silhouette,
     ],
   );
 
+  // Memoised so <HorizonSilhouette> keeps its blade list and ground
+  // raster across frames instead of rebuilding both every frame.
+  const hillOptions = useMemo(() => (fg.hills ? {} : null), [fg.hills]);
+  const bladeOptions = useMemo(() => (fg.plants ? {} : null), [fg.plants]);
+
   const ref = useCanvas(layout.width, layout.height, (ctx) => {
-    if (grass || !waterBuffers) return;
+    if (!waterBuffers) return;
     ctx.save();
     ctx.translate(drift.x, drift.y);
     drawWater(ctx, config, layout, frame, raster, waterBuffers);
     ctx.restore();
   });
 
-  if (grass) {
-    return (
-      <HorizonSilhouette
-        width={layout.width}
-        height={layout.height}
-        horizonY={layout.horizonY}
-        color={config.palette.silhouette}
-        frame={frame}
-        loopLength={LOOP}
-        seed={seed}
-        offset={drift}
-        style={layerStyle("normal")}
-      />
-    );
-  }
-
-  return <canvas ref={ref} style={layerStyle("normal")} />;
+  return (
+    <>
+      {waterBuffers ? <canvas ref={ref} style={layerStyle("normal")} /> : null}
+      {fg.hills || fg.plants || fg.ground ? (
+        <HorizonSilhouette
+          width={layout.width}
+          height={layout.height}
+          horizonY={layout.horizonY}
+          color={config.palette.silhouette}
+          frame={frame}
+          loopLength={LOOP}
+          seed={seed}
+          hills={hillOptions}
+          blades={bladeOptions}
+          ground={fg.ground}
+          offset={drift}
+          style={layerStyle("normal")}
+        />
+      ) : null}
+    </>
+  );
 };
