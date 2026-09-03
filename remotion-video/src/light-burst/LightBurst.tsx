@@ -25,6 +25,18 @@ import {
 export const lightBurstSchema = z.object({
   palette: paletteSchema,
   /**
+   * Iris ring visibility, 0..1.
+   *
+   * Delivered at 0 — the rings are off. The reference leans on a thin bright
+   * iris arc, but read as a circle line drawn over the glow rather than as
+   * part of it, so this build takes them out entirely. The machinery is
+   * intact: raise this to bring the arc and its two companions back, on the
+   * envelope described in timeline.ts.
+   */
+  ringIntensity: z.number().min(0).max(1),
+  /** Anamorphic streak visibility, 0..1. The other directional element. */
+  streakIntensity: z.number().min(0).max(1),
+  /**
    * Film grain opacity. Kept exposed because it is the dial you reach for if
    * the encoded output bands — raise it (or the bitrate) rather than trying to
    * smooth the gradients further.
@@ -36,6 +48,8 @@ export type LightBurstProps = z.infer<typeof lightBurstSchema>;
 
 export const lightBurstDefaults: LightBurstProps = {
   palette: GOLD,
+  ringIntensity: 0,
+  streakIntensity: 1,
   grainOpacity: GRAIN_OPACITY,
 };
 
@@ -68,6 +82,8 @@ const createCanvas = (width: number, height: number) => {
  */
 export const LightBurst: React.FC<LightBurstProps> = ({
   palette,
+  ringIntensity,
+  streakIntensity,
   grainOpacity,
 }) => {
   const frame = useCurrentFrame();
@@ -97,8 +113,8 @@ export const LightBurst: React.FC<LightBurstProps> = ({
 
     const brightness = coreBrightness(frame);
     const radiusFactor = coreRadiusFactor(brightness);
-    const travelling = ringDrive(frame);
-    const resting = restingRing(frame);
+    const travelling = ringDrive(frame) * ringIntensity;
+    const resting = restingRing(frame) * ringIntensity;
     const core = corePosition(frame);
 
     // Haze first — everything else composites additively on top of it.
@@ -127,7 +143,7 @@ export const LightBurst: React.FC<LightBurstProps> = ({
         radiusFactor,
         travelling,
         ghostDrive(brightness),
-        streakDrive(brightness),
+        streakDrive(brightness) * streakIntensity,
         flare,
       );
       drawFlareSharp(
@@ -191,6 +207,8 @@ export const LightBurst: React.FC<LightBurstProps> = ({
     hazeCanvas,
     grainTiles,
     grainOpacity,
+    ringIntensity,
+    streakIntensity,
     haze,
     flare,
   ]);
