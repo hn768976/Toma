@@ -22,7 +22,7 @@ import { useMemo } from "react";
 import type { CSSProperties } from "react";
 import { createCanvas, ctx2d, useCanvasPaint } from "./canvas";
 import type { PaintGate } from "./canvas";
-import { lighten, mix, rgba } from "./color";
+import { mix, rgba } from "./color";
 import { bloomPass } from "./passes";
 
 export type ChromePalette = {
@@ -89,19 +89,24 @@ export const CHROME_HORIZON = 0.48;
  * spacing reads as reflection. The duplicated stop at CHROME_HORIZON is what
  * produces the hard edge: canvas gradients allow two stops at one offset and
  * render the transition with no interpolation at all.
+ *
+ * The bands stay well inside the palette's extremes. Driving them all the way
+ * to the light and deep ends makes the letters stripe rather than shine, and
+ * the horizon still reads as hard from the discontinuity alone — it does not
+ * need the full contrast range behind it.
  */
 export const chromeFaceStops = (
   p: ChromePalette,
 ): readonly { t: number; color: string }[] => [
-  { t: 0, color: mix(p.faceLight, p.faceDeep, 0.2) },
-  { t: 0.14, color: lighten(p.faceLight, 0.2) },
-  { t: 0.34, color: p.faceDeep },
-  { t: 0.46, color: mix(p.faceDeep, p.faceLight, 0.45) },
-  { t: CHROME_HORIZON, color: mix(p.faceDeep, p.faceLight, 0.45) },
-  { t: CHROME_HORIZON, color: mix(p.faceLight, p.faceCore, 0.55) },
-  { t: 0.62, color: mix(p.faceLight, p.faceDeep, 0.22) },
-  { t: 0.86, color: mix(p.faceLight, p.faceDeep, 0.78) },
-  { t: 1, color: p.faceDeep },
+  { t: 0, color: mix(p.faceLight, p.faceDeep, 0.34) },
+  { t: 0.14, color: p.faceLight },
+  { t: 0.34, color: mix(p.faceDeep, p.faceLight, 0.24) },
+  { t: 0.46, color: mix(p.faceDeep, p.faceLight, 0.44) },
+  { t: CHROME_HORIZON, color: mix(p.faceDeep, p.faceLight, 0.44) },
+  { t: CHROME_HORIZON, color: mix(p.faceLight, p.faceCore, 0.22) },
+  { t: 0.62, color: mix(p.faceLight, p.faceDeep, 0.32) },
+  { t: 0.86, color: mix(p.faceLight, p.faceDeep, 0.72) },
+  { t: 1, color: mix(p.faceDeep, p.faceLight, 0.12) },
 ];
 
 const measureCtx = (): CanvasRenderingContext2D => ctx2d(createCanvas(8, 8));
@@ -284,9 +289,9 @@ export const renderChromeWord = (
   const hx = word.pad - band * 2 + sweep * travel;
   const sweepGrad = ctx.createLinearGradient(hx - band, 0, hx + band, 0);
   sweepGrad.addColorStop(0, rgba(palette.faceCore, 0));
-  sweepGrad.addColorStop(0.35, rgba(palette.faceCore, 0.28));
-  sweepGrad.addColorStop(0.5, rgba(palette.faceCore, 0.85));
-  sweepGrad.addColorStop(0.65, rgba(palette.faceCore, 0.28));
+  sweepGrad.addColorStop(0.35, rgba(palette.faceCore, 0.16));
+  sweepGrad.addColorStop(0.5, rgba(palette.faceCore, 0.5));
+  sweepGrad.addColorStop(0.65, rgba(palette.faceCore, 0.16));
   sweepGrad.addColorStop(1, rgba(palette.faceCore, 0));
   ctx.globalCompositeOperation = "lighter";
   ctx.fillStyle = sweepGrad;

@@ -32,8 +32,8 @@ const FIELD_DIVISOR = 8;
 /** Vertical placement of the word, leaving room for its reflection below. */
 const WORD_CENTER_Y = 0.455;
 /** Letterspacing and word spacing, as fractions of the font size. */
-const TRACKING_RATIO = 0.12;
-const WORD_GAP_RATIO = 0.34;
+const TRACKING_RATIO = 0.055;
+const WORD_GAP_RATIO = 0.24;
 /** The widest the set word may be, as a fraction of the frame. */
 const MAX_WIDTH_RATIO = 0.84;
 
