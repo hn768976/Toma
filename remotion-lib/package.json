@@ -1,0 +1,8 @@
+{
+  "name": "@local/remotion-lib",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable Remotion canvas primitives: seeded randomness, 2D geometry, offscreen/bloom/vignette/grain passes, HUD ring builders, satellite layout and icon nodes.",
+  "type": "module",
+  "peerDependencies": { "react": ">=18", "remotion": ">=4" }
+}

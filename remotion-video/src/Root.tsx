@@ -1,6 +1,8 @@
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
+import { NodeHub } from "./node-hub/NodeHub";
+import { FPS as HUB_FPS, FRAME_H as HUB_H, FRAME_W as HUB_W, LOOP_FRAMES } from "./node-hub/constants";
 import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
@@ -52,6 +54,49 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      <Composition
+        id="HubAI"
+        component={NodeHub}
+        durationInFrames={LOOP_FRAMES}
+        fps={HUB_FPS}
+        width={HUB_W}
+        height={HUB_H}
+        defaultProps={{ variant: "ai" as const }}
+      />
+      <Composition
+        id="HubDownload"
+        component={NodeHub}
+        durationInFrames={LOOP_FRAMES}
+        fps={HUB_FPS}
+        width={HUB_W}
+        height={HUB_H}
+        defaultProps={{ variant: "download" as const }}
+      />
+      <Composition
+        id="HubMedical"
+        component={NodeHub}
+        durationInFrames={LOOP_FRAMES}
+        fps={HUB_FPS}
+        width={HUB_W}
+        height={HUB_H}
+        defaultProps={{ variant: "medical" as const }}
+      />
+      {/*
+       * Loop-check helpers: one frame longer than the loop, so frame 0 and
+       * frame LOOP_FRAMES can both be stilled and compared. Not deliverables.
+       */}
+      {(["ai", "download", "medical"] as const).map((variant) => (
+        <Composition
+          key={variant}
+          id={`HubLoopCheck${variant[0].toUpperCase()}${variant.slice(1)}`}
+          component={NodeHub}
+          durationInFrames={LOOP_FRAMES + 1}
+          fps={HUB_FPS}
+          width={HUB_W}
+          height={HUB_H}
+          defaultProps={{ variant }}
+        />
+      ))}
     </>
   );
 };
