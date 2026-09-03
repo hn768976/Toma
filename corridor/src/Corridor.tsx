@@ -11,14 +11,16 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop } from "./components/Backdrop";
 import { BokehLayer } from "./components/BokehLayer";
+import { CorridorEdgeLines } from "./components/CorridorEdgeLines";
 import { FibreStrand } from "./components/FibreStrand";
 import { FinishPass } from "./components/FinishPass";
 import { HorizonGlow } from "./components/HorizonGlow";
+import { SlabPanel } from "./components/SlabPanel";
 import { PerspectiveCorridor } from "./components/PerspectiveCorridor";
 import { CanvasStage } from "./lib/canvasLayers";
 import { TAU } from "./lib/math";
 import { CorridorGeometry } from "./lib/perspective";
-import { LOOP_FRAMES, VARIANTS, VariantId } from "./variants";
+import { EXTRA_COUNTS, LOOP_FRAMES, VARIANTS, VariantId } from "./variants";
 
 const ORDER = {
   backdrop: 10,
@@ -104,6 +106,17 @@ export const Corridor: React.FC<CorridorProps> = ({ variant }) => {
         >
           {v.elementType === "fibre" ? (
             <FibreStrand order={10} count={v.density} seed={v.id} />
+          ) : null}
+
+          {v.elementType === "slab" ? (
+            <>
+              <SlabPanel order={10} count={v.density} seed={v.id} />
+              <CorridorEdgeLines
+                order={20}
+                count={EXTRA_COUNTS.slabDepthLines}
+                seed={v.id}
+              />
+            </>
           ) : null}
         </PerspectiveCorridor>
 

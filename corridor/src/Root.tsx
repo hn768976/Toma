@@ -15,6 +15,15 @@ export const RemotionRoot: React.FC = () => {
         height={VIDEO_HEIGHT}
         defaultProps={{ variant: "fibre" as const }}
       />
+      <Composition
+        id="CorridorSlab"
+        component={Corridor}
+        durationInFrames={LOOP_FRAMES}
+        fps={FPS}
+        width={VIDEO_WIDTH}
+        height={VIDEO_HEIGHT}
+        defaultProps={{ variant: "slab" as const }}
+      />
     </>
   );
 };
