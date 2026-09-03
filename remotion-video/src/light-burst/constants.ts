@@ -85,11 +85,17 @@ export const IRIS_BRIGHT_ANGLE = (Math.PI * 2) / 3; // 120deg: down-and-left
 export const IRIS_ARC_FALLOFF = 2.2; // how hard the arc fades toward the top
 export const IRIS_MIN_ARC_ALPHA = 0.03;
 
-// Two further rings, concentric with the first and much fainter.
+// Two further rings, concentric with the first and much fainter. These are
+// drawn blurred on the soft layer, not crisp on the sharp one: at a 1px stroke
+// they read as drawn-on hairline circles rather than as optics. The gains
+// below compensate for the blur spreading them out.
 export const SECONDARY_RINGS = [
   { radiusScale: 1.44, alpha: 0.3, widthScale: 0.8 },
   { radiusScale: 2.05, alpha: 0.14, widthScale: 0.65 },
 ];
+export const SECONDARY_BLUR = 0.0035; // fraction of frame width
+export const SECONDARY_WIDTH_GAIN = 2.6;
+export const SECONDARY_ALPHA_GAIN = 1.9;
 
 // Ghosts sit on the line running from the core through frame centre and out
 // the other side: position = centre + (core - centre) * k. Negative k puts

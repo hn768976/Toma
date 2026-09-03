@@ -8,7 +8,10 @@ import {
   IRIS_LINE_WIDTH,
   IRIS_MIN_ARC_ALPHA,
   IRIS_RADIUS,
+  SECONDARY_ALPHA_GAIN,
+  SECONDARY_BLUR,
   SECONDARY_RINGS,
+  SECONDARY_WIDTH_GAIN,
   STREAK_HALF_WIDTH,
   STREAK_HEIGHT,
 } from "./constants";
@@ -112,6 +115,58 @@ const coreGradient = (
 // becomes an opaque white bar straight through the core and reads as a wipe
 // rather than a lens artifact.
 const STREAK_GAIN = 0.3;
+
+/**
+ * The iris arc's angular brightness, as a conic gradient.
+ *
+ * Previously this was ~160 separately stroked arc segments, each with its own
+ * alpha. That beads: every segment's antialiased end caps overlap its
+ * neighbour's and, under "lighter", the overlaps sum into a dotted line. A
+ * conic gradient carries the same angular profile in a single stroke, so there
+ * are no seams to sum — and it is far cheaper.
+ *
+ * The profile is periodic, so the stop at t=1 equals the stop at t=0 and the
+ * gradient has no seam at its own wrap point either.
+ */
+const arcGradient = (
+  ctx: CanvasRenderingContext2D,
+  color: Rgb,
+  alpha: number,
+) => {
+  const g = ctx.createConicGradient(0, 0, 0);
+  const STOPS = 96;
+  for (let i = 0; i <= STOPS; i++) {
+    const t = i / STOPS;
+    // Brightest through the lower-left quadrant, fading out around the top.
+    // The partial visibility is the whole character of the detail.
+    const arc =
+      IRIS_MIN_ARC_ALPHA +
+      (1 - IRIS_MIN_ARC_ALPHA) *
+        Math.pow(
+          Math.max(
+            0,
+            0.5 + 0.5 * Math.cos(t * Math.PI * 2 - IRIS_BRIGHT_ANGLE),
+          ),
+          IRIS_ARC_FALLOFF,
+        );
+    g.addColorStop(t, rgba(color, alpha * arc));
+  }
+  return g;
+};
+
+/** Strokes one ring, centred on the current transform's origin. */
+const strokeRing = (
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  lineWidth: number,
+  gradient: CanvasGradient,
+) => {
+  ctx.lineWidth = lineWidth;
+  ctx.strokeStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.stroke();
+};
 
 const polygonPath = (
   ctx: CanvasRenderingContext2D,
@@ -232,32 +287,30 @@ export const drawFlareSoft = (
     );
   }
 
-  // --- Diffuse glow under the iris ring ----------------------------------
+  // --- Ring glow, and the two secondary rings ----------------------------
   // The reference's arc sits in a faint halo; without it the sharp line reads
-  // as vector art rather than light.
+  // as vector art rather than light. The two larger companion rings live here
+  // rather than on the sharp layer on purpose: only the iris ring itself may
+  // have a hard edge, and drawn crisp these read as drawn-on hairline circles.
   if (ringAlpha > 0.002) {
     const r = IRIS_RADIUS * width;
     ctx.save();
-    ctx.filter = `blur(${width * 0.006}px)`;
     ctx.translate(coreX, coreY);
     ctx.scale(1, IRIS_ELLIPSE_Y);
-    const SEGMENTS = 90;
-    ctx.lineWidth = width * 0.007;
-    for (let i = 0; i < SEGMENTS; i++) {
-      const a0 = (i / SEGMENTS) * Math.PI * 2;
-      const a1 = ((i + 1.05) / SEGMENTS) * Math.PI * 2;
-      const mid = (a0 + a1) / 2;
-      const arc =
-        IRIS_MIN_ARC_ALPHA +
-        (1 - IRIS_MIN_ARC_ALPHA) *
-          Math.pow(
-            Math.max(0, 0.5 + 0.5 * Math.cos(mid - IRIS_BRIGHT_ANGLE)),
-            IRIS_ARC_FALLOFF,
-          );
-      ctx.strokeStyle = rgba(colors.ring, ringAlpha * arc * 0.16);
-      ctx.beginPath();
-      ctx.arc(0, 0, r, a0, a1);
-      ctx.stroke();
+
+    ctx.filter = `blur(${width * 0.006}px)`;
+    strokeRing(ctx, r, width * 0.007, arcGradient(ctx, colors.ring, ringAlpha * 0.16));
+
+    // Companions: wider strokes under a wider blur, so they survive as
+    // diffuse bands rather than the hairlines a 1px stroke would leave.
+    ctx.filter = `blur(${width * SECONDARY_BLUR}px)`;
+    for (const ring of SECONDARY_RINGS) {
+      strokeRing(
+        ctx,
+        r * ring.radiusScale,
+        Math.max(1, IRIS_LINE_WIDTH * width * ring.widthScale * SECONDARY_WIDTH_GAIN),
+        arcGradient(ctx, colors.ring, ringAlpha * ring.alpha * SECONDARY_ALPHA_GAIN),
+      );
     }
     ctx.restore();
     ctx.filter = "none";
@@ -285,39 +338,18 @@ export const drawFlareSharp = (
   ctx.globalCompositeOperation = "lighter";
 
   if (ringAlpha > 0.002) {
-    const rings = [
-      { radiusScale: 1, alpha: 1, widthScale: 1 },
-      ...SECONDARY_RINGS,
-    ];
+    // The iris ring, and only the iris ring. Its two companions are drawn
+    // blurred on the soft layer — this is the one element in the whole comp
+    // that is allowed a hard edge.
     ctx.save();
     ctx.translate(coreX, coreY);
     ctx.scale(1, IRIS_ELLIPSE_Y);
-    const SEGMENTS = 160;
-    for (const ring of rings) {
-      ctx.lineWidth = Math.max(
-        1,
-        IRIS_LINE_WIDTH * width * ring.widthScale,
-      );
-      const r = IRIS_RADIUS * width * ring.radiusScale;
-      for (let i = 0; i < SEGMENTS; i++) {
-        const a0 = (i / SEGMENTS) * Math.PI * 2;
-        const a1 = ((i + 1.15) / SEGMENTS) * Math.PI * 2;
-        const mid = (a0 + a1) / 2;
-        // Brightest through the lower-left quadrant, fading out around the
-        // top — the partial visibility is the whole character of the detail.
-        const arc =
-          IRIS_MIN_ARC_ALPHA +
-          (1 - IRIS_MIN_ARC_ALPHA) *
-            Math.pow(
-              Math.max(0, 0.5 + 0.5 * Math.cos(mid - IRIS_BRIGHT_ANGLE)),
-              IRIS_ARC_FALLOFF,
-            );
-        ctx.strokeStyle = rgba(colors.ring, ringAlpha * ring.alpha * arc);
-        ctx.beginPath();
-        ctx.arc(0, 0, r, a0, a1);
-        ctx.stroke();
-      }
-    }
+    strokeRing(
+      ctx,
+      IRIS_RADIUS * width,
+      Math.max(1, IRIS_LINE_WIDTH * width),
+      arcGradient(ctx, colors.ring, ringAlpha),
+    );
     ctx.restore();
   }
 
