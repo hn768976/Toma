@@ -11,6 +11,9 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// The jet-hud pieces carry no audio by design; without this the CLI attaches
+// a silent AAC track to every render.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

@@ -12,6 +12,14 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { JetHud } from "./jet-hud/JetHud";
+import { JetSpriteQA } from "./jet-hud/JetSpriteQA";
+import {
+  DURATION_IN_FRAMES as JET_DURATION,
+  FPS as JET_FPS,
+  WIDTH as JET_WIDTH,
+  HEIGHT as JET_HEIGHT,
+} from "./jet-hud/constants";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +59,42 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="JetHudBlue"
+        component={JetHud}
+        durationInFrames={JET_DURATION}
+        fps={JET_FPS}
+        width={JET_WIDTH}
+        height={JET_HEIGHT}
+        defaultProps={{ variant: "blue" as const }}
+      />
+      <Composition
+        id="JetHudAmber"
+        component={JetHud}
+        durationInFrames={JET_DURATION}
+        fps={JET_FPS}
+        width={JET_WIDTH}
+        height={JET_HEIGHT}
+        defaultProps={{ variant: "amber" as const }}
+      />
+      <Composition
+        id="JetHudLoopCheck"
+        component={JetHud}
+        durationInFrames={JET_DURATION + 1}
+        fps={JET_FPS}
+        width={JET_WIDTH}
+        height={JET_HEIGHT}
+        defaultProps={{ variant: "blue" as const }}
+      />
+      <Composition
+        id="JetSpriteQA"
+        component={JetSpriteQA}
+        durationInFrames={1}
+        fps={30}
+        width={1600}
+        height={1600}
+        defaultProps={{ variant: "blue" as const }}
       />
     </>
   );
