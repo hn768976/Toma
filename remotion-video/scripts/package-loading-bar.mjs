@@ -169,23 +169,26 @@ Lower \`--concurrency\` if the machine has fewer than 8 cores. For a fast
 
 \`\`\`
 src/
-  index.ts                  registerRoot
-  Root.tsx                  the single <Composition>
+  index.ts                    registerRoot
+  Root.tsx                    the single <Composition>
   loading-bar/
-    LoadingBar.tsx          stacks the canvas layers
-    variants.ts             THE only file holding a palette or a word
-    layout.ts               group geometry as fractions of the frame
-    constants.ts            3840x2160, 30fps, 378 frames
-    fonts.ts                gated font loading + cap-height fitting
-    MottledBackdrop.tsx     dark, unevenly lit surface
-    NeonBar.tsx             skewed outlined bar with a glowing fill
-    WordMark.tsx            the word and its animated trailing dots
-    SparkField.tsx          ~250 drifting dust motes
-    PercentReadout.tsx      monospace % (the "process" variant only)
-    FilmFinish.tsx          vignette + grain
-    lib/                    vendored, palette-agnostic helpers
+    LoadingBar.tsx            stacks the canvas layers
+    variants.ts               THE only file holding a palette or a word
+    layout.ts                 group geometry as fractions of the frame
+    constants.ts              3840x2160, 30fps, 378 frames
+    fonts.ts                  gated font loading
+    WordMark.tsx              the word and its animated trailing dots
+    PercentReadout.tsx        monospace % (the "process" variant only)
+    lib/                      vendored, palette-agnostic library
+      NeonBar.tsx             skewed outlined bar with a glowing fill
+      MottledBackdrop.tsx     dark, unevenly lit surface
+      SparkField.tsx          ~250 drifting dust motes
+      FilmFinish.tsx          vignette + grain
+      Canvas2D.tsx            one redraw per React render
+      curve.ts tilt.ts shapes.ts neonStroke.ts postFx.ts
+      rand.ts color.ts lowResUpscale.ts textFit.ts
 public/
-  fonts/                    the two woff2 faces, self-hosted
+  fonts/                      the two woff2 faces, self-hosted
 \`\`\`
 
 All three palettes, words and fill curves live in
