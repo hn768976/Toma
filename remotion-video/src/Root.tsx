@@ -12,6 +12,13 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { LoadingBar } from "./loading-bar/LoadingBar";
+import {
+  DURATION_IN_FRAMES as LOADING_DURATION_IN_FRAMES,
+  FPS as LOADING_FPS,
+  WIDTH as LOADING_WIDTH,
+  HEIGHT as LOADING_HEIGHT,
+} from "./loading-bar/constants";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +58,15 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="LoadingUpload"
+        component={LoadingBar}
+        durationInFrames={LOADING_DURATION_IN_FRAMES}
+        fps={LOADING_FPS}
+        width={LOADING_WIDTH}
+        height={LOADING_HEIGHT}
+        defaultProps={{ variant: "upload" as const }}
       />
     </>
   );
