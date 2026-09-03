@@ -51,7 +51,7 @@ export const LoadingBar: React.FC<LoadingBarProps> = ({ variant }) => {
   const leadFlash =
     frame <= done
       ? 1
-      : Math.max(0.12, 1 - (frame - done) / FLASH_FADE_FRAMES) * 1;
+      : Math.max(0.12, 1 - (frame - done) / FLASH_FADE_FRAMES);
 
   // Where the bar's light is coming from right now, in frame space, so
   // the dust can brighten around it even though it is not itself tilted.

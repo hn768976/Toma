@@ -1,9 +1,8 @@
 import React, { useMemo } from "react";
 import { Canvas2D } from "./lib/Canvas2D";
 import { mixHex, rgba } from "./lib/color";
-import { makeCanvas } from "./lib/lowResUpscale";
 import { neonPasses, neonStroke } from "./lib/neonStroke";
-import { bloomPass, glowPool } from "./lib/postFx";
+import { bloomPasses, glowPool, makeBloomScratch } from "./lib/postFx";
 import { leaningRect, roundedPolygon } from "./lib/shapes";
 import { applyTilt, DEFAULT_TILT, type Tilt } from "./lib/tilt";
 
@@ -70,10 +69,7 @@ export const NeonBar: React.FC<NeonBarProps> = ({
   tilt = DEFAULT_TILT,
   blend = "screen",
 }) => {
-  const bloomScratch = useMemo(
-    () => makeCanvas(width / 8, height / 8),
-    [width, height],
-  );
+  const bloom = useMemo(() => makeBloomScratch(width, height), [width, height]);
 
   return (
     <Canvas2D
@@ -108,15 +104,15 @@ export const NeonBar: React.FC<NeonBarProps> = ({
             Math.max(filled * 0.75, barHeight * 1.4),
             barHeight * 2.3,
             palette.fill,
-            0.2,
+            0.26,
           );
 
           // 2. Bloom spilling past the outline. Drawn unclipped and
           //    heavily blurred, so light leaks onto the backdrop
           //    instead of stopping dead at the bar's edge.
           ctx.save();
-          ctx.globalAlpha = 0.28;
-          ctx.shadowBlur = 70 * scale;
+          ctx.globalAlpha = 0.3;
+          ctx.shadowBlur = 22 * scale;
           ctx.shadowColor = palette.fill;
           ctx.fillStyle = rgba(palette.fill, 0.5);
           roundedPolygon(
@@ -139,9 +135,9 @@ export const NeonBar: React.FC<NeonBarProps> = ({
           // would sum every channel to white and throw the hue away.
           ctx.globalCompositeOperation = "source-over";
           const body = ctx.createLinearGradient(0, y, 0, y + barHeight);
-          body.addColorStop(0, mixHex(palette.fill, palette.fillBright, 0.12));
-          body.addColorStop(0.4, mixHex(palette.fill, palette.fillBright, 0.5));
-          body.addColorStop(1, palette.fill);
+          body.addColorStop(0, mixHex(palette.fill, palette.fillBright, 0.34));
+          body.addColorStop(0.38, mixHex(palette.fill, palette.fillBright, 0.8));
+          body.addColorStop(1, mixHex(palette.fill, palette.fillBright, 0.22));
           ctx.fillStyle = body;
           ctx.beginPath();
           ctx.moveTo(x - cornerRadius, y);
@@ -179,14 +175,14 @@ export const NeonBar: React.FC<NeonBarProps> = ({
           ctx.globalAlpha = leadFlash;
           ctx.lineCap = "round";
           ctx.shadowColor = palette.fillBright;
-          ctx.shadowBlur = 55 * scale;
+          ctx.shadowBlur = 20 * scale;
           ctx.strokeStyle = rgba(palette.fillBright, 0.55);
           ctx.lineWidth = 7 * scale;
           ctx.beginPath();
           ctx.moveTo(leadTopX, y + barHeight * 0.06);
           ctx.lineTo(leadX, y + barHeight * 0.94);
           ctx.stroke();
-          ctx.shadowBlur = 16 * scale;
+          ctx.shadowBlur = 8 * scale;
           ctx.strokeStyle = rgba(palette.core, 0.85);
           ctx.lineWidth = 3 * scale;
           ctx.stroke();
@@ -215,8 +211,18 @@ export const NeonBar: React.FC<NeonBarProps> = ({
 
         ctx.restore();
 
-        // Generous bloom over the finished layer.
-        bloomPass(ctx, bloomScratch, 0.4, 5);
+        // Generous, two-radius bloom over the finished layer: a tight
+        // glow hugging the bar and a wide atmospheric halo that spills
+        // well outside it onto the backdrop.
+        bloomPasses(
+          ctx,
+          bloom,
+          [
+            { blur: 3, amount: 0.85 },
+            { blur: 14, amount: 1 },
+          ],
+          true,
+        );
       }}
     />
   );

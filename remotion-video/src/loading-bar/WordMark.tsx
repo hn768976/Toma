@@ -2,8 +2,7 @@ import React, { useMemo } from "react";
 import { Canvas2D } from "./lib/Canvas2D";
 import { rgba } from "./lib/color";
 import { cssFont, fontSizeForCapHeight } from "./fonts";
-import { makeCanvas } from "./lib/lowResUpscale";
-import { bloomPass } from "./lib/postFx";
+import { bloomPasses, makeBloomScratch } from "./lib/postFx";
 import { applyTilt, DEFAULT_TILT, type Tilt } from "./lib/tilt";
 
 export type WordMarkProps = {
@@ -45,10 +44,7 @@ export const WordMark: React.FC<WordMarkProps> = ({
   tilt = DEFAULT_TILT,
   blend = "screen",
 }) => {
-  const bloomScratch = useMemo(
-    () => makeCanvas(width / 8, height / 8),
-    [width, height],
-  );
+  const bloom = useMemo(() => makeBloomScratch(width, height), [width, height]);
 
   return (
     <Canvas2D
@@ -97,34 +93,22 @@ export const WordMark: React.FC<WordMarkProps> = ({
         paintGlyphs(fringe, 0);
         ctx.restore();
 
-        // Filled letterforms in the palette hue. The halo passes are
-        // additive, but the body itself is drawn source-over: stacking
-        // it additively too would sum the channels past the hue and
-        // land on white, which is exactly what a neon word should not
-        // do.
-        const halo: { alpha: number; blur: number }[] = [
-          { alpha: 0.18, blur: 95 * scale },
-          { alpha: 0.3, blur: 34 * scale },
-        ];
-        for (const pass of halo) {
-          ctx.globalAlpha = pass.alpha;
-          ctx.fillStyle = palette.word;
-          ctx.shadowBlur = pass.blur;
-          ctx.shadowColor = rgba(palette.word, 1);
-          paintGlyphs(0, 0);
-        }
-
+        // Filled letterforms in the palette hue. Drawn source-over,
+        // not additively: stacking the body on itself sums every
+        // channel past the hue and lands on white, which is exactly
+        // what a neon word should not do. The halo comes from the
+        // bloom below rather than from a giant shadowBlur.
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = 1;
         ctx.fillStyle = palette.word;
-        ctx.shadowBlur = 11 * scale;
+        ctx.shadowBlur = 10 * scale;
         ctx.shadowColor = rgba(palette.word, 1);
         paintGlyphs(0, 0);
 
         // A touch of the core colour so the letterforms read as hot
         // rather than flat, without losing the hue.
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = 0.2;
+        ctx.globalAlpha = 0.22;
         ctx.fillStyle = palette.core;
         ctx.shadowBlur = 0;
         ctx.shadowColor = "rgba(0, 0, 0, 0)";
@@ -132,7 +116,15 @@ export const WordMark: React.FC<WordMarkProps> = ({
 
         ctx.restore();
 
-        bloomPass(ctx, bloomScratch, 0.34, 5);
+        bloomPasses(
+          ctx,
+          bloom,
+          [
+            { blur: 2.5, amount: 0.8 },
+            { blur: 12, amount: 1 },
+          ],
+          true,
+        );
       }}
     />
   );

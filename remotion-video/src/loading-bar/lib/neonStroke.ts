@@ -7,6 +7,12 @@
  * four that sells it. Every pass is composited with 'lighter' so the
  * overlaps sum toward white exactly the way emitted light does.
  *
+ * The blur radii here are deliberately modest and the widest pass gets
+ * its reach from stroke *width* rather than shadow radius: a 120px
+ * canvas shadowBlur over a 2400px path at 4K is ruinously slow, and the
+ * atmospheric halo is better produced by running `bloomPasses` over the
+ * finished layer, which also picks its colour up from the content.
+ *
  * `path` is re-invoked per pass rather than cached, so callers can hand
  * in any path-building closure without worrying about Path2D support.
  */
@@ -23,9 +29,9 @@ export const neonPasses = (
   coreColor: string,
   scale: number,
 ): NeonPass[] => [
-  { color: glowColor, alpha: 0.1, lineWidth: 11 * scale, blur: 60 * scale },
-  { color: glowColor, alpha: 0.22, lineWidth: 8 * scale, blur: 26 * scale },
-  { color: glowColor, alpha: 0.55, lineWidth: 5.5 * scale, blur: 9 * scale },
+  { color: glowColor, alpha: 0.12, lineWidth: 13 * scale, blur: 22 * scale },
+  { color: glowColor, alpha: 0.24, lineWidth: 8 * scale, blur: 12 * scale },
+  { color: glowColor, alpha: 0.58, lineWidth: 5.5 * scale, blur: 5 * scale },
   { color: coreColor, alpha: 0.92, lineWidth: 2.6 * scale, blur: 0 },
 ];
 

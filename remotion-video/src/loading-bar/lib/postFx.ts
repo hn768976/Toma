@@ -11,35 +11,100 @@ import { seeded } from "./rand";
  * per-frame random() calls.
  */
 
-/** Downscale-blur-upscale-add. `scratch` should be roughly 1/8 scale. */
-export const bloomPass = (
+export type BloomScratch = {
+  a: HTMLCanvasElement;
+  b: HTMLCanvasElement;
+};
+
+/**
+ * Allocate the pair of scratch canvases `bloomPasses` works in. A
+ * divisor of 8 is the sweet spot: the downscale is itself a blur, so a
+ * few pixels of blur down here buy a very wide halo up there.
+ */
+export const makeBloomScratch = (
+  width: number,
+  height: number,
+  divisor = 8,
+): BloomScratch => {
+  const make = () => {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(width / divisor));
+    c.height = Math.max(1, Math.round(height / divisor));
+    return c;
+  };
+  return { a: make(), b: make() };
+};
+
+export type BloomLayer = {
+  /** Blur radius *in scratch pixels* — multiply by the divisor for the
+   * effective full-resolution radius. */
+  blur: number;
+  /** How much of the blurred copy to add back. */
+  amount: number;
+};
+
+/**
+ * Multi-radius bloom over whatever is already on `ctx`.
+ *
+ * This is how the piece gets its wide halos. A 190px canvas
+ * `shadowBlur` at 3840x2160 costs enormously more than downscaling the
+ * finished layer 8x, blurring a handful of pixels there and adding it
+ * back — and unlike a shadow, a bloom picks its colour up from the
+ * content, which is exactly right for emitted light.
+ *
+ * Every layer blurs the *same* snapshot (scratch `a`) and they are
+ * summed in scratch `b`, so a tight glow and a wide halo stack without
+ * the second compounding the first.
+ *
+ * `behind` composites the result with 'destination-over' instead of
+ * 'lighter'. That is usually what you want for a coloured subject: an
+ * additive bloom lands on top of its own source and drags the hue
+ * toward white, whereas placing it behind leaves the letterforms and
+ * the bar's fill at their exact palette colour and puts the halo
+ * strictly outside them, spilling onto whatever is underneath.
+ */
+export const bloomPasses = (
   ctx: CanvasRenderingContext2D,
-  scratch: HTMLCanvasElement,
-  amount: number,
-  blurPx: number,
+  scratch: BloomScratch,
+  layers: BloomLayer[],
+  behind = false,
 ): void => {
-  const source = ctx.canvas;
-  const sctx = scratch.getContext("2d");
-  if (!sctx) {
+  const { a, b } = scratch;
+  const actx = a.getContext("2d");
+  const bctx = b.getContext("2d");
+  if (!actx || !bctx) {
     return;
   }
-  sctx.setTransform(1, 0, 0, 1, 0, 0);
-  sctx.globalCompositeOperation = "source-over";
-  sctx.globalAlpha = 1;
-  sctx.clearRect(0, 0, scratch.width, scratch.height);
-  sctx.filter = `blur(${blurPx}px)`;
-  sctx.imageSmoothingEnabled = true;
-  sctx.imageSmoothingQuality = "high";
-  sctx.drawImage(source, 0, 0, scratch.width, scratch.height);
-  sctx.filter = "none";
+
+  actx.setTransform(1, 0, 0, 1, 0, 0);
+  actx.globalCompositeOperation = "source-over";
+  actx.globalAlpha = 1;
+  actx.filter = "none";
+  actx.clearRect(0, 0, a.width, a.height);
+  actx.imageSmoothingEnabled = true;
+  actx.imageSmoothingQuality = "high";
+  actx.drawImage(ctx.canvas, 0, 0, a.width, a.height);
+
+  bctx.setTransform(1, 0, 0, 1, 0, 0);
+  bctx.globalCompositeOperation = "source-over";
+  bctx.globalAlpha = 1;
+  bctx.filter = "none";
+  bctx.clearRect(0, 0, b.width, b.height);
+  bctx.globalCompositeOperation = "lighter";
+  for (const layer of layers) {
+    bctx.filter = `blur(${layer.blur}px)`;
+    bctx.globalAlpha = layer.amount;
+    bctx.drawImage(a, 0, 0);
+  }
+  bctx.filter = "none";
 
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = amount;
+  ctx.globalCompositeOperation = behind ? "destination-over" : "lighter";
+  ctx.globalAlpha = 1;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(scratch, 0, 0, source.width, source.height);
+  ctx.drawImage(b, 0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.restore();
 };
 
