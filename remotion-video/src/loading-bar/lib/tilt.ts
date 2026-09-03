@@ -28,6 +28,26 @@ export const applyTilt = (
   ctx.translate(-cx, -cy);
 };
 
+/**
+ * Map a *displacement* in frame space back into untilted space, so a
+ * layout can say "move the group 138px up on screen" and get the
+ * offset to add to its untilted coordinates. The tilt is affine about
+ * the frame centre, so only its linear part matters here — inverting
+ * the rotation and then the shear.
+ */
+export const untiltVector = (
+  dx: number,
+  dy: number,
+  tilt: Tilt = DEFAULT_TILT,
+): { x: number; y: number } => {
+  const rad = (-tilt.degrees * Math.PI) / 180;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  const rx = dx * c - dy * s;
+  const ry = dx * s + dy * c;
+  return { x: rx, y: ry - tilt.shear * rx };
+};
+
 /** Map an untilted point into the tilted frame. Mirrors `applyTilt`. */
 export const tiltPoint = (
   x: number,
