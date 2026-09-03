@@ -44,6 +44,16 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ variant: "red" as const }}
       />
       <Composition
+        id="ArrowFieldGreen"
+        component={ArrowField}
+        durationInFrames={330}
+        fps={30}
+        width={3840}
+        height={2160}
+        schema={arrowFieldSchema}
+        defaultProps={{ variant: "green" as const }}
+      />
+      <Composition
         id="ParticleRingHalo"
         component={ParticleRingHalo}
         durationInFrames={RING_DURATION_IN_FRAMES}

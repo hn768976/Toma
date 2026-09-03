@@ -1,7 +1,11 @@
 /**
- * Fixed numbers for the arrow field. Everything spatial is expressed in 4K
- * composition pixels; nothing here depends on the render `--scale`.
+ * Fixed numbers for the arrow field, and the bindings that hand them to the
+ * shared drift library. Everything spatial is expressed in 4K composition
+ * pixels; nothing here depends on the render `--scale`.
  */
+
+import { DepthBand } from "../lib/depthBuffers";
+import { DensityFalloff, DriftRamps, Viewport } from "../lib/drift";
 
 export const WIDTH = 3840;
 export const HEIGHT = 2160;
@@ -27,16 +31,11 @@ export const Z_MAX = 1.0;
  * never per element. The mid band is sharp; both extremes are soft, which is
  * what a real lens does either side of its focal plane.
  */
-export const DEPTH_BANDS = [
+export const DEPTH_BANDS: readonly DepthBand[] = [
   { name: "far", zMax: 0.45, blur: 22 },
   { name: "mid", zMax: 0.78, blur: 0 },
   { name: "near", zMax: Infinity, blur: 13 },
-] as const;
-
-export type BandIndex = 0 | 1 | 2;
-
-export const bandForDepth = (z: number): BandIndex =>
-  (z < DEPTH_BANDS[0].zMax ? 0 : z < DEPTH_BANDS[1].zMax ? 1 : 2) as BandIndex;
+];
 
 /** Opacity ramp across depth: 20% at the far plane, 70% at the near plane. */
 export const OPACITY_FAR = 0.2;
@@ -94,3 +93,46 @@ export const GRAIN_ALPHA = 0.04;
 export const BLOOM_DIVISOR = 4;
 
 export const VIGNETTE_STRENGTH = 0.2;
+
+/* ------------------------------------------------------------------ *
+ * Bindings for the shared drift library
+ * ------------------------------------------------------------------ */
+
+export const VIEWPORT: Viewport = { width: WIDTH, height: HEIGHT };
+
+/**
+ * How hard the field collapses towards its dense corner. Tuned so the open
+ * corner is genuinely dark enough to set copy over, without hollowing out the
+ * middle of the frame.
+ */
+export const FALLOFF: DensityFalloff = { reach: 1.06, exponent: 2 };
+
+export const RAMPS: DriftRamps = {
+  zMin: Z_MIN,
+  zMax: Z_MAX,
+  scaleFar: SCALE_FAR,
+  scaleNear: SCALE_NEAR,
+  sizeJitter: SIZE_JITTER,
+  opacityFar: OPACITY_FAR,
+  opacityNear: OPACITY_NEAR,
+  speedFar: SPEED_FAR,
+  speedNear: SPEED_NEAR,
+  wobbleDeg: WOBBLE_DEG,
+  cycleChoices: CYCLE_CHOICES,
+  loopFrames: LOOP_FRAMES,
+};
+
+export const BUILD_OPTIONS = {
+  viewport: VIEWPORT,
+  ramps: RAMPS,
+  bands: DEPTH_BANDS,
+  falloff: FALLOFF,
+};
+
+/** Reduced-resolution backing stores for the mottle, bloom and grain passes. */
+export const MOTTLE_W = WIDTH / MOTTLE_DIVISOR;
+export const MOTTLE_H = HEIGHT / MOTTLE_DIVISOR;
+export const BLOOM_W = WIDTH / BLOOM_DIVISOR;
+export const BLOOM_H = HEIGHT / BLOOM_DIVISOR;
+export const GRAIN_W = Math.round(WIDTH / GRAIN_DIVISOR);
+export const GRAIN_H = Math.round(HEIGHT / GRAIN_DIVISOR);

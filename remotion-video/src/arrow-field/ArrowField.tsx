@@ -24,7 +24,12 @@ import { z } from "zod";
 import {
   ARROW_COUNT,
   ARROW_TILT_DEG,
+  BLOOM_H,
+  BLOOM_W,
+  BUILD_OPTIONS,
   CAMERA_DRIFT_PX,
+  GRAIN_H,
+  GRAIN_W,
   GRAIN_ALPHA,
   HEIGHT,
   LOOP_FRAMES,
@@ -32,10 +37,18 @@ import {
   SHARD_COUNT,
   SHARD_TILT_DEG,
   SPARK_COUNT,
+  VIEWPORT,
+  VIGNETTE_STRENGTH,
   WIDTH,
 } from "./constants";
 import { useDepthBuffers } from "./depth";
-import { TAU, axisFrame, buildElements } from "./geometry";
+import { TAU } from "../lib/random";
+import { axisFrame, buildElements } from "../lib/drift";
+import { ShardField } from "../lib/ShardField";
+import { DepthComposite } from "../lib/depthBuffers";
+import { BloomPass, bloomLayerStyle } from "../lib/passes/bloomPass";
+import { GrainPass, grainLayerStyle } from "../lib/passes/grainPass";
+import { VignettePass } from "../lib/passes/vignettePass";
 import {
   ARROW_BASE_HALF_EXTENT,
   SHARD_SPRITE_COUNT,
@@ -47,18 +60,7 @@ import {
 } from "./sprites";
 import { ArrowShape } from "./ArrowShape";
 import { BackgroundGradient } from "./BackgroundGradient";
-import { ShardField } from "./ShardField";
 import { SparkLayer } from "./SparkLayer";
-import {
-  BLOOM_H,
-  BLOOM_W,
-  BloomPass,
-  DepthComposite,
-  GRAIN_H,
-  GRAIN_W,
-  GrainLayer,
-  Vignette,
-} from "./finish";
 import { VARIANTS, VariantName } from "./variants";
 
 export const arrowFieldSchema = z.object({
@@ -85,7 +87,7 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
   const config = VARIANTS[variant];
   const { palette, densityCorner: corner, drift, outlineArrowCount } = config;
 
-  const axis = useMemo(() => axisFrame(drift), [drift]);
+  const axis = useMemo(() => axisFrame(drift, VIEWPORT), [drift]);
 
   const shardElements = useMemo(
     () =>
@@ -100,6 +102,7 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
         },
         axis,
         corner,
+        BUILD_OPTIONS,
       ),
     [variant, axis, corner],
   );
@@ -116,6 +119,7 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
         },
         axis,
         corner,
+        BUILD_OPTIONS,
       ),
     [variant, axis, corner],
   );
@@ -133,6 +137,7 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
         },
         axis,
         corner,
+        BUILD_OPTIONS,
       ),
     [variant, axis, corner, outlineArrowCount],
   );
@@ -150,6 +155,7 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
         },
         axis,
         corner,
+        BUILD_OPTIONS,
       ),
     [variant, axis, corner],
   );
@@ -188,26 +194,16 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
         ref={bloomRef}
         width={BLOOM_W}
         height={BLOOM_H}
-        style={{
-          ...fullSize,
-          transform: camera,
-          filter: "blur(26px) brightness(1.5) contrast(1.35)",
-          mixBlendMode: "screen",
-          opacity: 0.42,
-        }}
+        style={bloomLayerStyle({ blur: 26, opacity: 0.42, transform: camera })}
       />
 
-      <Vignette deep={palette.bgDeep} />
+      <VignettePass color={palette.bgDeep} strength={VIGNETTE_STRENGTH} />
 
       <canvas
         ref={grainRef}
         width={GRAIN_W}
         height={GRAIN_H}
-        style={{
-          ...fullSize,
-          mixBlendMode: "overlay",
-          opacity: GRAIN_ALPHA,
-        }}
+        style={grainLayerStyle(GRAIN_ALPHA)}
       />
 
       {/* Draw passes. These render no DOM; their order is the frame pipeline. */}
@@ -216,10 +212,13 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
           <ShardField
             buffers={buffers}
             frame={frame}
+            loopFrames={LOOP_FRAMES}
             elements={shardElements}
             sprites={sprites.shards}
             axis={axis}
             corner={corner}
+            viewport={VIEWPORT}
+            falloff={BUILD_OPTIONS.falloff}
           />
           <ArrowShape
             buffers={buffers}
@@ -240,8 +239,18 @@ export const ArrowField: React.FC<ArrowFieldProps> = ({ variant }) => {
             axis={axis}
             corner={corner}
           />
-          <BloomPass sourceRef={fieldRef} targetRef={bloomRef} />
-          <GrainLayer targetRef={grainRef} frame={frame} />
+          <BloomPass
+            sourceRef={fieldRef}
+            targetRef={bloomRef}
+            width={BLOOM_W}
+            height={BLOOM_H}
+          />
+          <GrainPass
+            targetRef={grainRef}
+            frame={frame}
+            width={GRAIN_W}
+            height={GRAIN_H}
+          />
         </>
       ) : null}
     </AbsoluteFill>

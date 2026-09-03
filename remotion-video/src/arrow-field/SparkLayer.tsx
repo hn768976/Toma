@@ -11,10 +11,10 @@
  */
 
 import React, { useLayoutEffect } from "react";
-import { LOOP_FRAMES } from "./constants";
-import { AxisFrame, DriftElement, TAU, placeElement } from "./geometry";
-import { Sprite, blitSprite } from "./sprites";
-import { Corner } from "./variants";
+import { BUILD_OPTIONS, LOOP_FRAMES, VIEWPORT } from "./constants";
+import { AxisFrame, Corner, DriftElement, placeElement } from "../lib/drift";
+import { TAU } from "../lib/random";
+import { Sprite, blitSprite } from "../lib/sprite";
 
 export type SparkLayerProps = {
   targetRef: React.RefObject<HTMLCanvasElement | null>;
@@ -40,7 +40,10 @@ export const SparkLayer: React.FC<SparkLayerProps> = ({
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (const el of elements) {
-      const place = placeElement(el, axis, corner, t);
+      const place = placeElement(el, axis, corner, t, {
+        viewport: VIEWPORT,
+        falloff: BUILD_OPTIONS.falloff,
+      });
       // A sharper curve than the field's breathe: mostly dim, briefly bright.
       const phase = 0.5 + 0.5 * Math.sin(TAU * el.wobbleCycles * t + el.wobblePhase);
       const twinkle = 0.12 + 0.88 * Math.pow(phase, 2.4);

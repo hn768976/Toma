@@ -26,54 +26,15 @@ import {
   SHARD_STROKE,
 } from "./constants";
 import { Palette } from "./variants";
+import {
+  PathFn,
+  Sprite,
+  hexToRgba,
+  rasteriseGlow,
+  rasterisePath,
+} from "../lib/sprite";
 
-export type Sprite = {
-  canvas: HTMLCanvasElement;
-  /** The sizeMul the sprite was rasterised at. Blit scale is sizeMul / scale. */
-  scale: number;
-};
-
-export const createCanvas = (width: number, height: number) => {
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.ceil(width));
-  canvas.height = Math.max(1, Math.ceil(height));
-  return canvas;
-};
-
-/** `#RRGGBB` to a canvas `rgba()` string. The only place hex is parsed. */
-export const hexToRgba = (hex: string, alpha: number) => {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
-type PathFn = (ctx: CanvasRenderingContext2D) => void;
-
-/**
- * Rasterises one path, centred, at `scale`. `shapeW`/`shapeH` are the path's
- * bounds in base units; the canvas is grown to hold the stroke.
- */
-const rasterise = (
-  path: PathFn,
-  shapeW: number,
-  shapeH: number,
-  stroke: number,
-  scale: number,
-  paint: (ctx: CanvasRenderingContext2D) => void,
-): Sprite => {
-  const pad = stroke + 4;
-  const canvas = createCanvas((shapeW + pad * 2) * scale, (shapeH + pad * 2) * scale);
-  const ctx = canvas.getContext("2d")!;
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.scale(scale, scale);
-  ctx.lineJoin = "round";
-  ctx.lineWidth = stroke;
-  path(ctx);
-  paint(ctx);
-  return { canvas, scale };
-};
+export type { Sprite };
 
 /* ------------------------------------------------------------------ *
  * Arrow
@@ -107,7 +68,7 @@ export type ArrowSprites = {
 };
 
 export const buildArrowSprites = (palette: Palette): ArrowSprites => ({
-  filled: rasterise(
+  filled: rasterisePath(
     arrowPath,
     ARROW_HEAD_WIDTH,
     ARROW_LENGTH,
@@ -120,7 +81,7 @@ export const buildArrowSprites = (palette: Palette): ArrowSprites => ({
       ctx.stroke();
     },
   ),
-  outline: rasterise(
+  outline: rasterisePath(
     arrowPath,
     ARROW_HEAD_WIDTH,
     ARROW_LENGTH,
@@ -191,7 +152,7 @@ export const buildShardSprites = (palette: Palette): Sprite[] => {
     for (let k = 0; k < SHARD_SHAPES.length; k++) {
       const shape = SHARD_SHAPES[k];
       sprites.push(
-        rasterise(
+        rasterisePath(
           shape.path,
           shape.w,
           shape.h,
@@ -224,29 +185,7 @@ export const shardSpriteIndexToShape = (i: number) => i % SHARD_SHAPES.length;
 export const SPARK_SPRITE_RADIUS = 96;
 
 /** A soft radial dot; sparks are the only things in the field that emit light. */
-export const buildSparkSprite = (palette: Palette): Sprite => {
-  const r = SPARK_SPRITE_RADIUS;
-  const canvas = createCanvas(r * 2, r * 2);
-  const ctx = canvas.getContext("2d")!;
-  const gradient = ctx.createRadialGradient(r, r, 0, r, r, r);
-  gradient.addColorStop(0, hexToRgba(palette.sparkPale, 1));
-  gradient.addColorStop(0.16, hexToRgba(palette.sparkPale, 0.75));
-  gradient.addColorStop(0.45, hexToRgba(palette.sparkPale, 0.16));
-  gradient.addColorStop(1, hexToRgba(palette.sparkPale, 0));
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, r * 2, r * 2);
-  return { canvas, scale: 1 };
-};
+export const buildSparkSprite = (palette: Palette): Sprite =>
+  rasteriseGlow(SPARK_SPRITE_RADIUS, palette.sparkPale);
 
-/** Blits a sprite centred on the current transform origin. */
-export const blitSprite = (
-  ctx: CanvasRenderingContext2D,
-  sprite: Sprite,
-  sizeMul: number,
-  widthMul = 1,
-) => {
-  const s = sizeMul / sprite.scale;
-  const w = sprite.canvas.width * s * widthMul;
-  const h = sprite.canvas.height * s;
-  ctx.drawImage(sprite.canvas, -w / 2, -h / 2, w, h);
-};
+export { hexToRgba };
