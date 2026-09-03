@@ -10,6 +10,10 @@ import { Config } from "@remotion/cli/config";
 import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
+// The grid-plane compositions render through WebGL. These machines have no
+// GPU, and Chrome no longer falls back to software WebGL on its own, so
+// ask for SwiftShader/ANGLE explicitly. Canvas-2D compositions ignore it.
+Config.setChromiumOpenGlRenderer("swangle");
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
