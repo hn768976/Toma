@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useMemo } from "react";
 import { bloomPass, sharpPass } from "./effects";
-import { beginScratch, claim, type Stage } from "./stage";
+import { beginScratch, claim, type Stage } from "./canvasStage";
 
 export type RadialBarRingProps = {
   stage: Stage | null;

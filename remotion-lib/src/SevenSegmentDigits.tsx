@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo } from "react";
 import { bloomPass, sharpPass } from "./effects";
-import { beginScratch, claim, type Stage } from "./stage";
-import { DIGIT_SEGMENTS, buildSegments, type SegmentPolygon } from "./segments";
+import { beginScratch, claim, type Stage } from "./canvasStage";
+import { DIGIT_SEGMENTS, buildSegments, type SegmentPolygon } from "./sevenSegmentGeometry";
 
 export type SevenSegmentDigitsProps = {
   stage: Stage | null;
