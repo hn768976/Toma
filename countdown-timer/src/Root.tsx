@@ -23,6 +23,24 @@ export const RemotionRoot: React.FC = () => {
         height={2160}
         defaultProps={{ variant: "sixty" as const }}
       />
+      <Composition
+        id="Countdown30"
+        component={CountdownTimer}
+        durationInFrames={VARIANTS.thirty.durationInFrames}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "thirty" as const }}
+      />
+      <Composition
+        id="Countdown90"
+        component={CountdownTimer}
+        durationInFrames={VARIANTS.ninety.durationInFrames}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={{ variant: "ninety" as const }}
+      />
     </>
   );
 };

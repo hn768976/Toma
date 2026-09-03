@@ -10,6 +10,11 @@ Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 
+// The piece has no audio. Without this Remotion adds a silent AAC track
+// to keep output uniform, which is not wanted in a graphic-only asset.
+Config.setEnforceAudioTrack(false);
+Config.setMuted(true);
+
 // Some sandboxed environments block downloading Remotion's own Chrome
 // Headless Shell but ship a Playwright Chromium. Reuse one when present;
 // on a normal machine neither path exists and Remotion falls back to its
