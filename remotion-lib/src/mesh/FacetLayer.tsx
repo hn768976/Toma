@@ -1,14 +1,20 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { createBuffer } from "../lib/canvas";
-import { mix } from "../lib/color";
-import type { MeshFrame } from "../mesh/geometry";
-import type { Palette } from "../variants";
+import { createBuffer } from "../core/canvas";
+import { mix } from "../core/color";
+import type { MeshFrame } from "./node-field";
+
+export interface FacetLayerColors {
+  /** Fill colour of a facet at the near end of the depth range. */
+  facet: string;
+  /** Colour far facets sink toward; usually the background wash. */
+  sink: string;
+}
 
 export interface FacetLayerProps {
   width: number;
   height: number;
   mesh: MeshFrame;
-  palette: Palette;
+  colors: FacetLayerColors;
   /** Peak alpha of a single facet. Must stay tiny. */
   opacity: number;
 }
@@ -19,7 +25,7 @@ export interface FacetLayerProps {
 const SCALE = 0.25;
 
 /**
- * Very low-alpha washes filling the triangles formed by three mutually
+ * <FacetLayer> — very low-alpha washes filling the triangles formed by three mutually
  * connected nodes. Kept faint on purpose — if they read as solid the mesh
  * becomes a low-poly surface instead of a network.
  */
@@ -27,7 +33,7 @@ export const FacetLayer: React.FC<FacetLayerProps> = ({
   width,
   height,
   mesh,
-  palette,
+  colors,
   opacity,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,7 +53,7 @@ export const FacetLayer: React.FC<FacetLayerProps> = ({
     ctx.clearRect(0, 0, buffer.width, buffer.height);
     ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
 
-    const base = palette.facet;
+    const base = colors.facet;
     if (base) {
       const { x, y, triangles } = mesh;
       for (let i = 0; i < triangles.length; i++) {
@@ -55,7 +61,7 @@ export const FacetLayer: React.FC<FacetLayerProps> = ({
         // Fill colour shifts slightly with the triangle's average depth:
         // far facets sink toward the background wash, near ones lift a little.
         const shade = mix(
-          palette.backgroundWash,
+          colors.sink,
           base,
           0.25 + t.z * 0.75,
         );

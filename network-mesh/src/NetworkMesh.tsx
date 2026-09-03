@@ -1,17 +1,20 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { DURATION_IN_FRAMES, FIELD_MARGIN } from "./constants";
-import { rgba } from "./lib/color";
-import { computeMeshFrame, generateNodes } from "./mesh/geometry";
-import { AnamorphicFlare, flareStateAt } from "./components/AnamorphicFlare";
+import { rgba } from "./vendor/core/color";
+import { computeMeshFrame, generateNodes } from "./vendor/mesh/node-field";
+import {
+  AnamorphicFlare,
+  flareStateAt,
+} from "./vendor/light/AnamorphicFlare";
 import { BackgroundWash } from "./components/BackgroundWash";
-import { BokehLayer } from "./components/BokehLayer";
+import { BokehLayer } from "./vendor/atmosphere/BokehLayer";
 import { DustMotes } from "./components/DustMotes";
-import { FacetLayer } from "./components/FacetLayer";
+import { FacetLayer } from "./vendor/mesh/FacetLayer";
 import { LabelField } from "./components/LabelField";
 import { LightBloom, bloomLevelAt, bloomTopAt } from "./components/LightBloom";
-import { NodeMesh, type LightBoost } from "./components/NodeMesh";
-import { PostFx } from "./components/PostFx";
+import { NodeMesh, type LightBoost } from "./vendor/mesh/NodeMesh";
+import { PostFx } from "./vendor/atmosphere/PostFx";
 import { VARIANTS, type VariantName } from "./variants";
 
 // A type alias (not an interface) so it satisfies Remotion's
@@ -111,11 +114,34 @@ export const NetworkMesh: React.FC<NetworkMeshProps> = ({ variant }) => {
       return (_x: number, y: number) => {
         const depth = (y - top) / (height * 0.5);
         if (depth <= 0) return 0;
-        return Math.min(1, depth) * level * 0.85;
+        return Math.min(1, depth) * level * 0.6;
       };
     }
     return undefined;
   }, [config.lightMode, frame, durationInFrames, width, height, bloomLevel]);
+
+  // The vendored components hold no palette of their own; this is where
+  // VARIANTS is turned into the colours each one needs.
+  const meshColors = {
+    nodeBase: palette.nodePale,
+    nodePeak: palette.nodeBright,
+    edgeNear: palette.edgeMain,
+    edgeFar: palette.edgeDim,
+  };
+  const facetColors =
+    palette.facet === undefined
+      ? null
+      : { facet: palette.facet, sink: palette.backgroundWash };
+  const flareColors =
+    palette.flareCore === undefined ||
+    palette.flareCyan === undefined ||
+    palette.flareMagenta === undefined
+      ? null
+      : {
+          core: palette.flareCore,
+          fringeA: palette.flareCyan,
+          fringeB: palette.flareMagenta,
+        };
 
   return (
     <AbsoluteFill
@@ -147,15 +173,15 @@ export const NetworkMesh: React.FC<NetworkMeshProps> = ({ variant }) => {
           height={height}
           frame={frame}
           duration={durationInFrames}
-          palette={palette}
+          color={palette.bokeh}
           pass="back"
         />
-        {config.facetMode === "on" ? (
+        {config.facetMode === "on" && facetColors ? (
           <FacetLayer
             width={width}
             height={height}
             mesh={mesh}
-            palette={palette}
+            colors={facetColors}
             opacity={config.facetOpacity}
           />
         ) : null}
@@ -164,7 +190,7 @@ export const NetworkMesh: React.FC<NetworkMeshProps> = ({ variant }) => {
           height={height}
           nodes={nodes}
           mesh={mesh}
-          palette={palette}
+          colors={meshColors}
           lightBoost={lightBoost}
         />
         <LabelField
@@ -181,7 +207,7 @@ export const NetworkMesh: React.FC<NetworkMeshProps> = ({ variant }) => {
           height={height}
           frame={frame}
           duration={durationInFrames}
-          palette={palette}
+          color={palette.bokeh}
           pass="front"
         />
         {config.dustMotes ? (
@@ -207,13 +233,13 @@ export const NetworkMesh: React.FC<NetworkMeshProps> = ({ variant }) => {
           palette={palette}
         />
       ) : null}
-      {config.lightMode === "anamorphic" ? (
+      {config.lightMode === "anamorphic" && flareColors ? (
         <AnamorphicFlare
           width={width}
           height={height}
           frame={frame}
           duration={durationInFrames}
-          palette={palette}
+          colors={flareColors}
         />
       ) : null}
 

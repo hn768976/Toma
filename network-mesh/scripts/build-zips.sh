@@ -11,11 +11,12 @@ rm -rf "$DIST"
 mkdir -p "$DIST"
 
 emit() {
-  local slug="$1" comp="$2" title="$3" desc="$4"
+  local slug="$1" comp="$2" variant="$3" title="$4" desc="$5"
   local stage="$DIST/$slug"
   mkdir -p "$stage"
   cp -R "$ROOT/src" "$stage/src"
-  cp "$ROOT/package.json" "$ROOT/tsconfig.json" "$ROOT/remotion.config.ts" "$stage/"
+  cp "$ROOT/package.json" "$ROOT/package-lock.json" "$ROOT/tsconfig.json" \
+     "$ROOT/remotion.config.ts" "$stage/"
   cp "$ROOT/.gitignore" "$stage/.gitignore"
   mkdir -p "$stage/public"
   cp -R "$ROOT/public/." "$stage/public/" 2>/dev/null || true
@@ -67,22 +68,34 @@ only file in the project containing a colour literal.
 
 \`\`\`
 src/
-  Root.tsx                    all four compositions
+  Root.tsx                    all four compositions, plus MeshLoopCheck
+                              (451 frames) for verifying the loop
   NetworkMesh.tsx             the composition: one mesh, four variants
   variants.ts                 palettes + per-version configuration
   constants.ts                4K geometry and loop length
-  mesh/geometry.ts            seeded node field, drift, spatial-grid edges, triangles
-  lib/                        seeded random, colour and canvas helpers
   components/
     BackgroundWash.tsx        base fill and drifting soft washes
-    NodeMesh.tsx              nodes + edges, three-buffer depth of field, bloom
-    FacetLayer.tsx            low-alpha triangulated facets
     LabelField.tsx            edge-weighted drifting text field
-    BokehLayer.tsx            defocused discs, behind and in front of the mesh
-    AnamorphicFlare.tsx       travelling streak with chromatic fringing
     LightBloom.tsx            rising atmospheric glow
     DustMotes.tsx             upward-drifting motes
-    PostFx.tsx                vignette and film grain
+  vendor/                     vendored from the shared remotion-lib
+    core/                     seeded random, colour, canvas helpers
+    mesh/node-field.ts        seeded node field, drift, spatial-grid edges
+    mesh/NodeMesh.tsx         nodes + edges, three-buffer depth of field, bloom
+    mesh/FacetLayer.tsx       low-alpha triangulated facets
+    light/AnamorphicFlare.tsx travelling streak with chromatic fringing
+    atmosphere/BokehLayer.tsx defocused discs, behind and in front of the mesh
+    atmosphere/PostFx.tsx     vignette and film grain
+\`\`\`
+
+## Verifying the loop
+
+\`MeshLoopCheck\` is the same component registered for 451 frames. Frame 450
+renders identically to frame 0:
+
+\`\`\`
+npx remotion still MeshLoopCheck out/f0.png   --frame=0   --props='{"variant":"$variant"}'
+npx remotion still MeshLoopCheck out/f450.png --frame=450 --props='{"variant":"$variant"}'
 \`\`\`
 
 All motion derives from \`useCurrentFrame()\` and all randomness from
@@ -95,13 +108,13 @@ EOF
   echo "built $slug.zip"
 }
 
-emit mesh-plexus-blue  MeshPlexusBlue  "Network Mesh — Plexus Blue (v1)" \
+emit mesh-plexus-blue  MeshPlexusBlue  plexusBlue "Network Mesh — Plexus Blue (v1)" \
   "A dense, faceted node field in deep navy with numeric readouts scattered around the edges. No light element: the mesh and the bokeh carry the frame."
-emit mesh-plexus-green MeshPlexusGreen "Network Mesh — Plexus Green (v2)" \
+emit mesh-plexus-green MeshPlexusGreen plexusGreen "Network Mesh — Plexus Green (v2)" \
   "A finer-grained mesh — more nodes, shorter edges — in a near-black terminal green, with short uppercase words dominating the label field."
-emit mesh-flare-blue   MeshFlareBlue   "Network Mesh — Flare Blue (v3)" \
+emit mesh-flare-blue   MeshFlareBlue   flareBlue "Network Mesh — Flare Blue (v3)" \
   "A sparse mesh of long edges across a luminous, saturated blue field, crossed twice by a travelling anamorphic lens flare with cyan and magenta chromatic fringing."
-emit mesh-flare-amber  MeshFlareAmber  "Network Mesh — Flare Amber (v4)" \
+emit mesh-flare-amber  MeshFlareAmber  flareAmber "Network Mesh — Flare Amber (v4)" \
   "The same sparse mesh over a warm brown field, lit by a broad soft bloom rising from below the lower edge and receding, with fine dust motes drifting upward through it."
 
 rm -rf "$DIST"

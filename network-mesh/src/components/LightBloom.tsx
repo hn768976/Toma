@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { createBuffer } from "../lib/canvas";
-import { rgba } from "../lib/color";
+import { createBuffer } from "../vendor/core/canvas";
+import { rgba } from "../vendor/core/color";
 import type { Palette } from "../variants";
 
 const TAU = Math.PI * 2;
@@ -82,8 +82,8 @@ export const LightBloom: React.FC<LightBloomProps> = ({
     ctx.translate(cx, cy);
     ctx.scale(rx, ry);
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-    g.addColorStop(0, rgba(core, 0.5 * level));
-    g.addColorStop(0.3, rgba(tint, 0.3 * level));
+    g.addColorStop(0, rgba(core, 0.38 * level));
+    g.addColorStop(0.3, rgba(tint, 0.24 * level));
     g.addColorStop(0.62, rgba(tint, 0.12 * level));
     g.addColorStop(0.85, rgba(tint, 0.035 * level));
     g.addColorStop(1, rgba(tint, 0));
@@ -99,7 +99,7 @@ export const LightBloom: React.FC<LightBloomProps> = ({
     ctx.translate(lx, ly);
     ctx.scale(width * 0.4, height * (0.26 + 0.3 * level));
     const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-    g2.addColorStop(0, rgba(tint, 0.26 * level));
+    g2.addColorStop(0, rgba(tint, 0.2 * level));
     g2.addColorStop(0.5, rgba(tint, 0.1 * level));
     g2.addColorStop(1, rgba(tint, 0));
     ctx.fillStyle = g2;

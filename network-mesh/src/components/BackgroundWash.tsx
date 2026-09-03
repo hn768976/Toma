@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef } from "react";
-import { rgba } from "../lib/color";
-import { rnd, rndRange } from "../lib/rng";
+import { rgba } from "../vendor/core/color";
+import { rnd, rndRange } from "../vendor/core/seeded-random";
 import type { Palette } from "../variants";
 
 export interface BackgroundWashProps {

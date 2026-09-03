@@ -1,15 +1,15 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { createBuffer } from "../lib/canvas";
-import { rgba } from "../lib/color";
-import { rnd, rndRange } from "../lib/rng";
-import type { Palette } from "../variants";
+import { createBuffer } from "../core/canvas";
+import { rgba } from "../core/color";
+import { rnd, rndRange } from "../core/seeded-random";
 
 export interface BokehLayerProps {
   width: number;
   height: number;
   frame: number;
   duration: number;
-  palette: Palette;
+  /** Single hue the discs are drawn in. */
+  color: string;
   /**
    * "back" discs sit behind the mesh, "front" discs drift over it and
    * partially occlude it. The same seeded field is split between the two.
@@ -56,7 +56,7 @@ const buildDiscs = (count: number, width: number, height: number): Disc[] => {
 };
 
 /**
- * Soft out-of-focus discs drifting on closed paths, in the palette's hue.
+ * <BokehLayer> — soft out-of-focus discs drifting on closed paths, in the palette's hue.
  * Rendered at half resolution and blurred once — they are defocused by
  * definition, so there is nothing to resolve.
  */
@@ -65,7 +65,7 @@ export const BokehLayer: React.FC<BokehLayerProps> = ({
   height,
   frame,
   duration,
-  palette,
+  color,
   pass,
   count = 25,
 }) => {
@@ -101,11 +101,11 @@ export const BokehLayer: React.FC<BokehLayerProps> = ({
       // more weight than the ones behind it.
       const alpha = d.alpha * (wantFront ? 1.45 : 1);
       const grad = ctx.createRadialGradient(x, y, 0, x, y, d.radius);
-      grad.addColorStop(0, rgba(palette.bokeh, alpha * 0.75));
-      grad.addColorStop(0.72, rgba(palette.bokeh, alpha * 0.85));
+      grad.addColorStop(0, rgba(color, alpha * 0.75));
+      grad.addColorStop(0.72, rgba(color, alpha * 0.85));
       // A faintly brighter rim is what makes a defocused disc read as bokeh.
-      grad.addColorStop(0.9, rgba(palette.bokeh, alpha));
-      grad.addColorStop(1, rgba(palette.bokeh, 0));
+      grad.addColorStop(0.9, rgba(color, alpha));
+      grad.addColorStop(1, rgba(color, 0));
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(x, y, d.radius, 0, TAU);

@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { random } from "remotion";
-import { createBuffer } from "../lib/canvas";
-import { mulberry32 } from "../lib/rng";
+import { createBuffer } from "../core/canvas";
+import { mulberry32 } from "../core/seeded-random";
 
 export interface PostFxProps {
   width: number;
@@ -19,7 +19,7 @@ export interface PostFxProps {
 const GRAIN_SCALE = 0.5;
 
 /**
- * Vignette and film grain. The grain is reseeded from `frame % duration`, so
+ * <PostFx> — vignette and film grain. The grain is reseeded from `frame % duration`, so
  * it is a pure function of the frame number and identical across renders —
  * and frame 450 gets exactly frame 0's noise, closing the loop.
  */

@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { rgba } from "../lib/color";
-import { rnd, rndInt, rndRange } from "../lib/rng";
+import { rgba } from "../vendor/core/color";
+import { rnd, rndInt, rndRange } from "../vendor/core/seeded-random";
 import type { Palette } from "../variants";
 
 const TAU = Math.PI * 2;
@@ -27,7 +27,7 @@ const buildMotes = (count: number, width: number, height: number): Mote[] => {
       x0: rndRange(`${s}-x`, -0.02, 1.02) * width,
       y0: rnd(`${s}-y`) * span,
       radius: rndRange(`${s}-r`, 1.4, 4.6),
-      alpha: rndRange(`${s}-a`, 0.06, 0.22),
+      alpha: rndRange(`${s}-a`, 0.1, 0.3),
       laps: rndInt(`${s}-l`, 1, 3),
       wobble: rndRange(`${s}-w`, 8, 46),
       phase: rnd(`${s}-p`) * TAU,

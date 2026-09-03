@@ -1,19 +1,54 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import { createBuffer } from "../lib/canvas";
-import { mix } from "../lib/color";
-import type { MeshFrame, MeshNodeSpec } from "../mesh/geometry";
-import type { Palette } from "../variants";
+import { createBuffer } from "../core/canvas";
+import { mix } from "../core/color";
+import type { MeshFrame, MeshNodeSpec } from "./node-field";
 
 export type LightBoost = (x: number, y: number) => number;
+
+/** Every colour the component uses. No palette is baked in. */
+export interface NodeMeshColors {
+  /** Node colour at rest. */
+  nodeBase: string;
+  /** Node colour at full pulse / flash. */
+  nodePeak: string;
+  /** Colour of short, strong edges. */
+  edgeNear: string;
+  /** Colour of long, weak edges. */
+  edgeFar: string;
+}
+
+export interface NodeMeshDepthOfField {
+  /** Depths below this go in the far buffer. */
+  farMax?: number;
+  /** Depths at or above this go in the near buffer. */
+  nearMin?: number;
+  /** Composite blur in destination pixels, per buffer. */
+  blurFar?: number;
+  blurMid?: number;
+  blurNear?: number;
+}
+
+export interface NodeMeshBloom {
+  /** Brightness above which a node feeds the bloom pass. */
+  threshold?: number;
+  /** Composite blur radius of the bloom pass, in destination pixels. */
+  blur?: number;
+  /** Overall bloom opacity. */
+  strength?: number;
+}
 
 export interface NodeMeshProps {
   width: number;
   height: number;
   nodes: MeshNodeSpec[];
   mesh: MeshFrame;
-  palette: Palette;
-  /** Extra brightness contributed by the variant's light element, 0..1. */
+  colors: NodeMeshColors;
+  /** Extra brightness from an external light element, 0..1 per position. */
   lightBoost?: LightBoost;
+  /** How strongly `lightBoost` multiplies node brightness. */
+  boostGain?: number;
+  depthOfField?: NodeMeshDepthOfField;
+  bloom?: NodeMeshBloom;
 }
 
 // Depth-of-field. Elements are bucketed into three offscreen buffers by depth
@@ -32,11 +67,12 @@ const FAR_SCALE = 0.5;
 const MID_SCALE = 1;
 const NEAR_SCALE = 0.5;
 const BLOOM_SCALE = 0.25;
-
-const bucketOf = (z: number) => (z < FAR_MAX ? 0 : z < NEAR_MIN ? 1 : 2);
+const BLOOM_THRESHOLD = 1.18;
+const BLOOM_BLUR = 34;
+const BLOOM_STRENGTH = 0.55;
 
 /**
- * The drifting node field: dots, and the edges that form and break between
+ * <NodeMesh> — the drifting node field: dots, and the edges that form and break between
  * them as they move. Draws through three depth buffers for DOF and adds an
  * additive bloom pass over the brightest nodes.
  */
@@ -45,9 +81,21 @@ export const NodeMesh: React.FC<NodeMeshProps> = ({
   height,
   nodes,
   mesh,
-  palette,
+  colors,
   lightBoost,
+  boostGain = 1.15,
+  depthOfField,
+  bloom: bloomOptions,
 }) => {
+  const farMax = depthOfField?.farMax ?? FAR_MAX;
+  const nearMin = depthOfField?.nearMin ?? NEAR_MIN;
+  const blurFar = depthOfField?.blurFar ?? BLUR_FAR;
+  const blurMid = depthOfField?.blurMid ?? BLUR_MID;
+  const blurNear = depthOfField?.blurNear ?? BLUR_NEAR;
+  const bloomThreshold = bloomOptions?.threshold ?? BLOOM_THRESHOLD;
+  const bloomBlur = bloomOptions?.blur ?? BLOOM_BLUR;
+  const bloomStrength = bloomOptions?.strength ?? BLOOM_STRENGTH;
+  const bucketOf = (z: number) => (z < farMax ? 0 : z < nearMin ? 1 : 2);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bloomCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -92,7 +140,7 @@ export const NodeMesh: React.FC<NodeMeshProps> = ({
     const litness = new Float64Array(nodes.length);
     for (let i = 0; i < nodes.length; i++) {
       const boost = lightBoost ? lightBoost(x[i], y[i]) : 0;
-      litness[i] = bright[i] * (1 + boost * 1.5);
+      litness[i] = bright[i] * (1 + boost * boostGain);
     }
 
     // ---- edges, behind the dots -------------------------------------------
@@ -100,7 +148,7 @@ export const NodeMesh: React.FC<NodeMeshProps> = ({
       const edge = edges[e];
       const ctx = layers[bucketOf(edge.z)]!;
       const lit = (litness[edge.a] + litness[edge.b]) * 0.5;
-      const c = mix(palette.edgeDim, palette.edgeMain, edge.strength);
+      const c = mix(colors.edgeFar, colors.edgeNear, edge.strength);
       const alpha = Math.min(
         1,
         edge.strength * 0.95 * (1 - 0.25 * edge.z) * lit,
@@ -120,8 +168,8 @@ export const NodeMesh: React.FC<NodeMeshProps> = ({
       const ctx = layers[bucketOf(z)]!;
       const lit = litness[i];
       const c = mix(
-        palette.nodePale,
-        palette.nodeBright,
+        colors.nodeBase,
+        colors.nodePeak,
         Math.min(1, Math.max(0, (lit - 0.95) * 0.85)),
       );
       // Near nodes are larger and dimmer, distant ones small and sharp.
@@ -133,9 +181,9 @@ export const NodeMesh: React.FC<NodeMeshProps> = ({
       ctx.fill();
 
       // Only genuinely bright nodes feed the bloom pass.
-      if (lit > 1.18) {
-        const strength = Math.min(1, (lit - 1.18) * 0.75);
-        bloomCtx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${strength * 0.55})`;
+      if (lit > bloomThreshold) {
+        const strength = Math.min(1, (lit - bloomThreshold) * 0.75);
+        bloomCtx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${strength * bloomStrength})`;
         bloomCtx.beginPath();
         bloomCtx.arc(x[i], y[i], radius * (2.6 + strength * 5.5), 0, Math.PI * 2);
         bloomCtx.fill();
@@ -145,17 +193,17 @@ export const NodeMesh: React.FC<NodeMeshProps> = ({
     // ---- composite ---------------------------------------------------------
     main.setTransform(1, 0, 0, 1, 0, 0);
     main.clearRect(0, 0, width, height);
-    main.filter = `blur(${BLUR_FAR}px)`;
+    main.filter = `blur(${blurFar}px)`;
     main.drawImage(far, 0, 0, width, height);
-    main.filter = `blur(${BLUR_MID}px)`;
+    main.filter = `blur(${blurMid}px)`;
     main.drawImage(mid, 0, 0, width, height);
-    main.filter = `blur(${BLUR_NEAR}px)`;
+    main.filter = `blur(${blurNear}px)`;
     main.drawImage(near, 0, 0, width, height);
     main.filter = "none";
 
     bloomOut.setTransform(1, 0, 0, 1, 0, 0);
     bloomOut.clearRect(0, 0, width, height);
-    bloomOut.filter = "blur(34px)";
+    bloomOut.filter = `blur(${bloomBlur}px)`;
     bloomOut.drawImage(bloom, 0, 0, width, height);
     bloomOut.filter = "none";
   });

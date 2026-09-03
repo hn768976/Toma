@@ -1,14 +1,30 @@
 import React, { useLayoutEffect, useRef } from "react";
-import { rgba } from "../lib/color";
-import { rnd, rndRange } from "../lib/rng";
-import type { Palette } from "../variants";
+import { rgba } from "../core/color";
+import { rnd, rndRange } from "../core/seeded-random";
 
 const TAU = Math.PI * 2;
 
-/** Frames a single traversal spends crossing the frame; the rest is dark. */
-const TRAVEL_FRAMES = 180;
-/** Two traversals across the 450-frame loop. */
-const TRAVERSALS = 2;
+const DEFAULT_TRAVEL_FRAMES = 180;
+const DEFAULT_TRAVERSALS = 2;
+/** Height of each traversal as a fraction of frame height. */
+const DEFAULT_HEIGHTS = [0.34, 0.63];
+
+/** Timing and path of the travelling flare. Defaults suit a 450-frame loop. */
+export interface FlareTravel {
+  /**
+   * Frames one traversal spends crossing the frame. The remainder of each
+   * cycle (duration / traversals) has no flare at all.
+   */
+  travelFrames?: number;
+  /** Crossings per loop. `duration` must divide evenly by this. */
+  traversals?: number;
+  /** Height of each traversal, 0..1 of frame height. Cycles if shorter. */
+  heights?: readonly number[];
+  /** Whether traversal 0 runs left to right; each one alternates from there. */
+  startLeftToRight?: boolean;
+  /** How far past each edge the flare starts and ends, in frame widths. */
+  overshoot?: number;
+}
 
 export interface FlareState {
   x: number;
@@ -26,29 +42,50 @@ export const flareStateAt = (
   duration: number,
   width: number,
   height: number,
+  travel: FlareTravel = {},
 ): FlareState => {
-  const cycleLength = duration / TRAVERSALS;
-  const cycle = Math.floor(frame / cycleLength) % TRAVERSALS;
-  const local = frame % cycleLength;
-  if (local >= TRAVEL_FRAMES) return { x: 0, y: 0, intensity: 0 };
+  const travelFrames = travel.travelFrames ?? DEFAULT_TRAVEL_FRAMES;
+  const traversals = travel.traversals ?? DEFAULT_TRAVERSALS;
+  const heights = travel.heights ?? DEFAULT_HEIGHTS;
+  const startLeftToRight = travel.startLeftToRight ?? true;
+  const overshoot = travel.overshoot ?? 0.38;
 
-  const p = local / TRAVEL_FRAMES;
-  // Alternate direction and height so the two traversals do not repeat.
-  const leftToRight = cycle === 0;
-  const from = leftToRight ? -0.38 : 1.38;
-  const to = leftToRight ? 1.38 : -0.38;
+  const cycleLength = duration / traversals;
+  const cycle = Math.floor(frame / cycleLength) % traversals;
+  const local = frame % cycleLength;
+  if (local >= travelFrames) return { x: 0, y: 0, intensity: 0 };
+
+  const p = local / travelFrames;
+  // Alternate direction and height so successive traversals do not repeat.
+  const leftToRight = cycle % 2 === 0 ? startLeftToRight : !startLeftToRight;
+  const from = leftToRight ? -overshoot : 1 + overshoot;
+  const to = leftToRight ? 1 + overshoot : -overshoot;
   const x = (from + (to - from) * p) * width;
-  const y = (cycle === 0 ? 0.34 : 0.63) * height;
+  const y = heights[cycle % heights.length] * height;
+  // Fades from and to nothing, so a cycle boundary is never a cut.
   const intensity = Math.pow(Math.sin(Math.PI * p), 0.62);
   return { x, y, intensity };
 };
+
+/** The three colours the streak is composited from. */
+export interface AnamorphicFlareColors {
+  /** The hot core. Usually white. */
+  core: string;
+  /** Fringe tint offset one way; conventionally cyan. */
+  fringeA: string;
+  /** Fringe tint offset the other way; conventionally magenta. */
+  fringeB: string;
+}
 
 export interface AnamorphicFlareProps {
   width: number;
   height: number;
   frame: number;
   duration: number;
-  palette: Palette;
+  colors: AnamorphicFlareColors;
+  travel?: FlareTravel;
+  /** Overall opacity of the whole flare. */
+  intensityScale?: number;
 }
 
 /**
@@ -125,7 +162,7 @@ const hexagon = (
 const GHOSTS = [-0.42, -0.18, 0.3, 0.52, 0.78, 1.12, 1.4] as const;
 
 /**
- * A travelling anamorphic lens flare: a hot white core inside a wide flat
+ * <AnamorphicFlare> — a travelling anamorphic lens flare: a hot white core inside a wide flat
  * streak, with cyan and magenta copies offset either side. The chromatic
  * fringe is what makes it read as a lens artefact rather than a drawn line.
  */
@@ -134,7 +171,9 @@ export const AnamorphicFlare: React.FC<AnamorphicFlareProps> = ({
   height,
   frame,
   duration,
-  palette,
+  colors,
+  travel,
+  intensityScale = 1,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -148,32 +187,37 @@ export const AnamorphicFlare: React.FC<AnamorphicFlareProps> = ({
     ctx.globalCompositeOperation = "source-over";
     ctx.clearRect(0, 0, width, height);
 
-    const core = palette.flareCore;
-    const cyan = palette.flareCyan;
-    const magenta = palette.flareMagenta;
-    if (!core || !cyan || !magenta) return;
+    const { core, fringeA: cyan, fringeB: magenta } = colors;
 
-    const { x, y, intensity } = flareStateAt(frame, duration, width, height);
+    const state = flareStateAt(frame, duration, width, height, travel);
+    const { x, y } = state;
+    const intensity = state.intensity * intensityScale;
     if (intensity <= 0.002) return;
 
     ctx.globalCompositeOperation = "lighter";
 
-    // Chromatic fringe: the streak drawn three times, the tinted copies
-    // pushed apart horizontally and spread a little taller than the core.
-    const fringe = width * 0.038;
-    streak(ctx, x - fringe, y, width * 2.4, 58, cyan, 0.5 * intensity);
-    streak(ctx, x + fringe, y, width * 2.4, 58, magenta, 0.44 * intensity);
-    streak(ctx, x - fringe * 0.45, y, width * 1.7, 26, cyan, 0.4 * intensity);
-    streak(ctx, x + fringe * 0.45, y, width * 1.7, 26, magenta, 0.36 * intensity);
+    // Chromatic fringe. Three things make it read as a lens artefact rather
+    // than a drawn line: the tinted copies are pushed far enough apart
+    // horizontally that their tails extend past the white core, they are
+    // offset vertically so one colour rides above the line and the other
+    // below, and the core itself is kept short and thin so it cannot wash
+    // them out.
+    const fringeX = width * 0.17;
+    const fringeY = 16;
+    streak(ctx, x - fringeX, y - fringeY, width * 2.35, 62, cyan, 0.6 * intensity);
+    streak(ctx, x + fringeX, y + fringeY, width * 2.35, 62, magenta, 0.55 * intensity);
+    streak(ctx, x - fringeX * 0.32, y - fringeY * 0.45, width * 1.75, 26, cyan, 0.45 * intensity);
+    streak(ctx, x + fringeX * 0.32, y + fringeY * 0.45, width * 1.75, 26, magenta, 0.42 * intensity);
 
-    // The white core sits on top and stays narrow.
-    streak(ctx, x, y, width * 2.1, 17, core, 0.92 * intensity);
-    streak(ctx, x, y, width * 0.85, 7, core, 1 * intensity);
+    // The hot white core: shorter than the tinted tails, so the ends of the
+    // streak stay cyan one way and magenta the other.
+    streak(ctx, x, y, width * 1.45, 10, core, 0.82 * intensity);
+    streak(ctx, x, y, width * 0.45, 4.5, core, 1 * intensity);
 
     // Soft radial bloom around the core.
-    glow(ctx, x, y, 480, core, 0.42 * intensity);
-    glow(ctx, x, y, 1150, cyan, 0.1 * intensity);
-    glow(ctx, x, y, 820, magenta, 0.06 * intensity);
+    glow(ctx, x, y, 460, core, 0.3 * intensity);
+    glow(ctx, x, y, 1180, cyan, 0.14 * intensity);
+    glow(ctx, x, y, 900, magenta, 0.11 * intensity);
 
     // Secondary elements along the core -> frame-centre axis.
     const vx = width / 2 - x;

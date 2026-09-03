@@ -1,4 +1,26 @@
-import { rnd, rndInt, rndRange } from "../lib/rng";
+/**
+ * node-field — the geometry behind <NodeMesh>.
+ *
+ * Seeds a field of depth-carrying points across a frame plus a margin, drifts
+ * each along its own closed path, and rebuilds the edge (and optionally the
+ * triangle) set from the drifted positions on every frame. Nothing is
+ * keyframed: the changing topology falls out of the drift.
+ *
+ * Deterministic and palette-agnostic. All randomness comes from Remotion's
+ * `random()` with the caller's seed key, so a given (seedKey, count, size)
+ * always produces the same field.
+ *
+ * Two properties matter for how it looks in motion:
+ *  - Edge alpha falls off with length and reaches exactly zero at the
+ *    connection threshold, so edges fade rather than pop.
+ *  - The per-node connection cap is continuous: a node's edge strengths may
+ *    sum to at most `maxConnections`, so crowded regions dim instead of
+ *    dropping lines (a hard "keep the N shortest" cap blinks visibly).
+ *
+ * Neighbour search uses a uniform spatial grid, so node counts in the
+ * hundreds stay affordable at 4K.
+ */
+import { rnd, rndInt, rndRange } from "../core/seeded-random";
 
 /**
  * A node's immutable identity: where it sits, how deep it is, and the closed
