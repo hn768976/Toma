@@ -93,9 +93,18 @@ export const SECONDARY_RINGS = [
   { radiusScale: 1.44, alpha: 0.3, widthScale: 0.8 },
   { radiusScale: 2.05, alpha: 0.14, widthScale: 0.65 },
 ];
-export const SECONDARY_BLUR = 0.0035; // fraction of frame width
+export const SECONDARY_BLUR = 0.006; // fraction of frame width
 export const SECONDARY_WIDTH_GAIN = 2.6;
-export const SECONDARY_ALPHA_GAIN = 1.9;
+export const SECONDARY_ALPHA_GAIN = 0.7;
+
+// How far the core's own flood swamps the rings, and how sharply that kicks
+// in. The reference is unambiguous here: the arc is clearly visible while the
+// core is igniting, vanishes completely at the peak flood, and is at its
+// strongest afterwards, over blue haze with no warm light left. Cubing the
+// brightness is what keeps the ring through ignition and only takes it away
+// at the very top — a linear wash would fade it out far too early.
+export const RING_WASHOUT = 0.88;
+export const RING_WASHOUT_EXPONENT = 3;
 
 // Ghosts sit on the line running from the core through frame centre and out
 // the other side: position = centre + (core - centre) * k. Negative k puts

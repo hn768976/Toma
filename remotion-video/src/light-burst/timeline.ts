@@ -17,6 +17,8 @@ import {
   T_RING_FULL,
   T_RING_IN,
   T_RING_OUT,
+  RING_WASHOUT,
+  RING_WASHOUT_EXPONENT,
 } from "./constants";
 
 const CLAMP = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -63,18 +65,29 @@ export const coreRadiusFactor = (brightness: number): number =>
   (1 - CORE_MIN_RADIUS_FACTOR) * Math.pow(brightness, 0.55);
 
 /**
- * The travelling iris ring's own envelope. It leads the core in (the ring is
- * already forming while the frame is still dark) and lags it out, which is
- * exactly what the reference does: several beats of thin bright arc over blue
- * haze with no warm light left at all.
+ * The travelling iris ring's visibility.
+ *
+ * Two things shape it. An envelope that leads the core in (the ring is already
+ * forming while the frame is still dark) and lags it out, which is what gives
+ * the reference its several beats of thin bright arc over blue haze with no
+ * warm light left at all. And a washout by the core's own flood: at full peak
+ * the rings are swamped and effectively gone, exactly as in the reference,
+ * where the ring is invisible at the brightest frames and only returns as the
+ * core dims. Without the washout the rings sit on top of the flood and read as
+ * drawn-on circles rather than as artifacts of it.
  */
-export const ringDrive = (frame: number): number =>
-  interpolate(
+export const ringDrive = (frame: number): number => {
+  const envelope = interpolate(
     frame,
     [T_RING_IN, T_RING_FULL, T_PEAK_OUT, T_RING_FADE, T_RING_OUT],
     [0, 1, 1, 0.62, 0],
     { ...CLAMP, easing: Easing.inOut(Easing.quad) },
   );
+  const wash =
+    1 -
+    RING_WASHOUT * Math.pow(coreBrightness(frame), RING_WASHOUT_EXPONENT);
+  return envelope * wash;
+};
 
 /**
  * The resting ring's alpha. This is the loop's hinge: it is 1 at frame 0 and
