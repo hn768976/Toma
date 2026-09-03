@@ -1,0 +1,10 @@
+{
+  "name": "remotion-lib",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable Remotion canvas components and passes. Source-only: vendor the files you need into a project's src/.",
+  "peerDependencies": {
+    "react": ">=18",
+    "remotion": ">=4"
+  }
+}

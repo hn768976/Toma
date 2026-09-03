@@ -9,7 +9,7 @@
  */
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { Backdrop } from "./components/Backdrop";
+import { CorridorBackdrop } from "./components/CorridorBackdrop";
 import { BinaryColumn } from "./components/BinaryColumn";
 import { BlockCluster } from "./components/BlockCluster";
 import { BokehLayer } from "./components/BokehLayer";
@@ -68,12 +68,18 @@ export const Corridor: React.FC<CorridorProps> = ({ variant }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: v.palette.backgroundDeep }}>
       <CanvasStage width={width} height={height}>
-        <Backdrop order={ORDER.backdrop} geo={geo} palette={v.palette} />
+        <CorridorBackdrop
+          order={ORDER.backdrop}
+          geo={geo}
+          deep={v.palette.backgroundDeep}
+          wash={v.palette.backgroundWash}
+          shadow={v.palette.shadow}
+        />
 
         <HorizonGlow
           order={ORDER.glow}
           geo={geo}
-          palette={v.palette}
+          color={v.palette.horizonGlow}
           frame={frame}
           loop={loop}
           radius={v.horizonGlow.radius}
@@ -85,7 +91,8 @@ export const Corridor: React.FC<CorridorProps> = ({ variant }) => {
           id="bokeh-back"
           order={ORDER.bokehBack}
           geo={geo}
-          palette={v.palette}
+          colorA={v.palette.bokehBlue}
+          colorB={v.palette.horizonGlow}
           frame={frame}
           loop={loop}
           seed={v.id}
@@ -137,7 +144,8 @@ export const Corridor: React.FC<CorridorProps> = ({ variant }) => {
           id="bokeh-front"
           order={ORDER.bokehFront}
           geo={geo}
-          palette={v.palette}
+          colorA={v.palette.bokehBlue}
+          colorB={v.palette.horizonGlow}
           frame={frame}
           loop={loop}
           seed={v.id}
@@ -157,7 +165,7 @@ export const Corridor: React.FC<CorridorProps> = ({ variant }) => {
           frame={frame}
           loop={loop}
           seed={v.id}
-          palette={v.palette}
+          vignetteColor={v.palette.shadow}
           bloom={v.bloom}
           vignette={v.vignette}
           grainAlpha={v.grainAlpha}
