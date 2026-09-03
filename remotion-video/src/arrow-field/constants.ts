@@ -55,8 +55,15 @@ export const MAX_SIZE_MUL = SCALE_NEAR * SIZE_JITTER.max;
 export const SPEED_FAR = 9;
 export const SPEED_NEAR = 32;
 
-/** Static per-element tilt off the shared axis. */
-export const ARROW_TILT_DEG = 12;
+/**
+ * Static per-element tilt off the shared axis.
+ *
+ * Kept tight for arrows: the field is meant to read as one diagonal, and a
+ * wide scatter cancels the axis out — past roughly ±8° the eye stops seeing a
+ * direction and starts seeing noise. Shards are allowed to wander much
+ * further; they are texture, not signage.
+ */
+export const ARROW_TILT_DEG = 5;
 export const SHARD_TILT_DEG = 25;
 
 /** Slow seeded wobble layered on top of the static tilt. */
@@ -104,8 +111,18 @@ export const VIEWPORT: Viewport = { width: WIDTH, height: HEIGHT };
  * How hard the field collapses towards its dense corner. Tuned so the open
  * corner is genuinely dark enough to set copy over, without hollowing out the
  * middle of the frame.
+ *
+ * Softer than it looks like it should be, and deliberately so. The drift axis
+ * now runs almost parallel to this gradient, which means every lateral lane
+ * sees the same average brightness over the loop and the seeded spawn bias has
+ * nothing left to bias — each element simply sweeps the whole ramp. All the
+ * concentration therefore has to come from this curve. So it is shallower
+ * through the middle than the maths alone would suggest, to keep the dense
+ * half populated, and `reach` above 1 makes it hit exactly zero before the
+ * open corner rather than trailing a faint tail into it — a hard-empty
+ * triangle is what makes copy legible, not a very dim one.
  */
-export const FALLOFF: DensityFalloff = { reach: 1.06, exponent: 2 };
+export const FALLOFF: DensityFalloff = { reach: 1.12, exponent: 1.4 };
 
 export const RAMPS: DriftRamps = {
   zMin: Z_MIN,

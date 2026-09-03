@@ -37,6 +37,11 @@ export type Variant = {
   /**
    * Unit-ish vector the arrows point along, in screen space (+y is down).
    * The drift axis IS this vector — elements travel the way they point.
+   *
+   * x/y sets the lean off vertical: 0.625 is tan(32°). Both variants use the
+   * same magnitude and opposite signs, so their arrows lie on ONE diagonal
+   * line — red running down it, green running up it. A shallower lean reads
+   * as "vertical with a wobble" rather than as a diagonal at all.
    */
   drift: { x: number; y: number };
   /** Corner holding the dense mass of the field. The opposite corner is left open for copy. */
@@ -58,8 +63,8 @@ const RED: Variant = {
     shardEdge: "#E8506A",
     sparkPale: "#FFC4CC",
   },
-  // Down, and slightly left.
-  drift: { x: -0.28, y: 1 },
+  // Down the diagonal, to the left. 32° off vertical.
+  drift: { x: -0.625, y: 1 },
   densityCorner: { x: 1, y: 0 }, // upper-right
   copyCorner: { x: 0, y: 1 }, // lower-left
   outlineArrowCount: 0,
@@ -76,7 +81,7 @@ const GREEN: Variant = {
     shardEdge: "#5FE88A",
     sparkPale: "#C8FFD8",
   },
-  // Up, and slightly right — the exact negation of RED.drift.
+  // Up the same diagonal, to the right — the exact negation of RED.drift.
   drift: { x: -RED.drift.x, y: -RED.drift.y },
   // Not a vertical mirror of v1: the open corner moves diagonally, so the two
   // clips leave copy space in different places and can share one edit.
