@@ -21,6 +21,7 @@ import {
   ribbon,
   sampleArc,
   sampleCubic,
+  sampleLine,
   unionBounds,
   type Bounds,
   type CapStyle,
@@ -41,6 +42,7 @@ type StrokeSpec = {
   widthStops: WidthStop[];
   capStart?: CapStyle;
   capEnd?: CapStyle;
+  interpolation?: "linear" | "smooth";
   /** Closed outlines (the warning triangle) are stroked, never ribboned. */
   closed?: boolean;
 };
@@ -66,40 +68,70 @@ const flat = (w: number): WidthStop[] => [
 ];
 
 const QUESTION: GlyphSpec = (() => {
-  // The hook is a circular arc swept from roughly 8 o'clock, up and over the
-  // top, round the right side and back down to about 4 o'clock; a cubic then
-  // carries it inward and down into a short vertical stem.
-  const bowl = sampleArc(0, -250, 190, 152, 400, 64);
-  const tailStart = bowl[bowl.length - 1];
-  const tail = sampleCubic(
-    tailStart,
-    { x: 74, y: -44 },
-    { x: 14, y: 58 },
-    { x: 0, y: 150 },
-    28,
+  // Anatomy, in the order the spine is walked:
+  //
+  //   1. a bowl, swept as a circular arc from a thin terminal at the lower
+  //      left, up round the top and down the right side to about 4:30;
+  //   2. a short cubic that turns the stroke inward and brings it to the
+  //      centreline while still well above the baseline;
+  //   3. a straight vertical stem.
+  //
+  // Step 3 is what makes it a question mark. Carrying the curve all the way
+  // down instead — one long diagonal from the bowl to the foot — produces a
+  // shepherd's crook or a figure 2, however well drawn the bowl is.
+  const bowlCentre = { x: 0, y: -300 };
+  const bowlRadius = 168;
+  const bowl = sampleArc(bowlCentre.x, bowlCentre.y, bowlRadius, 150, 400, 84);
+
+  const bowlEnd = bowl[bowl.length - 1];
+  // Tangent of the arc where it leaves the bowl, at 40 degrees: down and to
+  // the left. The first control point continues along it so the join is smooth.
+  const leaveAngle = (40 * Math.PI) / 180;
+  const leave = { x: -Math.sin(leaveAngle), y: Math.cos(leaveAngle) };
+  const stemTop = { x: 0, y: 15 };
+  // The turn is given a generous vertical run. Tightening it further would
+  // push the inner offset's radius of curvature below half the stroke width,
+  // at which point the outline folds through itself and leaves a notch.
+  const turn = sampleCubic(
+    bowlEnd,
+    { x: bowlEnd.x + leave.x * 120, y: bowlEnd.y + leave.y * 120 },
+    // Directly above the stem top, so the stroke arrives travelling straight
+    // down and the stem continues it without a kink.
+    { x: stemTop.x, y: stemTop.y - 75 },
+    stemTop,
+    36,
   );
+
+  const stem = sampleLine(stemTop, { x: 0, y: 200 }, 16);
+
   return {
     strokes: [
       {
-        points: chain(bowl, tail),
-        // Thin at the hook's free end, heaviest across the top of the bowl,
-        // tapering again into the stem.
+        points: chain(bowl, turn, stem),
+        // Letterform contrast: heavy on the bowl's left and right shoulders
+        // where the stroke runs vertically, lighter across the top where it
+        // runs horizontally, thinning to a fine terminal and tapering again
+        // into the stem's foot.
         widthStops: [
-          { t: 0, w: 34 },
-          { t: 0.1, w: 66 },
-          { t: 0.3, w: 88 },
-          { t: 0.5, w: 84 },
-          { t: 0.68, w: 70 },
-          { t: 0.85, w: 56 },
-          { t: 1, w: 48 },
+          { t: 0, w: 66 },
+          { t: 0.12, w: 86 },
+          { t: 0.3, w: 68 },
+          { t: 0.527, w: 86 },
+          { t: 0.66, w: 74 },
+          { t: 0.84, w: 58 },
+          { t: 1, w: 50 },
         ],
-        capStart: "round",
+        // Cut square, the way a sans-serif question mark's bowl ends. A round
+        // cap on a stroke this much lighter than the bowl behind it flares into
+        // a beak as the width ramps up.
+        capStart: "flat",
         capEnd: "round",
+        interpolation: "smooth",
       },
     ],
     // Set well clear of the stem: a question mark whose stem touches its dot
     // reads as a malformed letterform.
-    discs: [{ cx: 0, cy: 390, r: 66 }],
+    discs: [{ cx: 0, cy: 400, r: 62 }],
     rings: [],
     fieldScale: 1,
   };
@@ -275,6 +307,7 @@ export const outlineGlyph = (kind: GlyphKind): BuiltGlyph => {
       widthStops: stroke.widthStops,
       capStart: stroke.capStart,
       capEnd: stroke.capEnd,
+      interpolation: stroke.interpolation,
     });
     paths.push(built.path);
     allBounds.push(built.bounds);

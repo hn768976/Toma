@@ -24,6 +24,13 @@ export type RibbonOptions = {
   capEnd?: CapStyle;
   /** Segments used to draw each round cap. */
   capSegments?: number;
+  /**
+   * How width is read between stops. "linear" is right for a plain taper;
+   * "smooth" eases each stop's slope in and out, which matters on letterforms
+   * because a slope change in the width profile shows up as a visible crease
+   * along the edge of the shape.
+   */
+  interpolation?: "linear" | "smooth";
 };
 
 /** Samples a cubic Bezier into `segments + 1` points. */
@@ -75,6 +82,19 @@ export const sampleArc = (
   return pts;
 };
 
+/**
+ * Samples a straight run into `segments + 1` points. Straight sections still
+ * need intermediate points so a width profile can taper along them.
+ */
+export const sampleLine = (a: Pt, b: Pt, segments: number): Pt[] => {
+  const pts: Pt[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    pts.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  }
+  return pts;
+};
+
 /** Joins point runs, dropping a duplicated joint where two runs meet. */
 export const chain = (...runs: Pt[][]): Pt[] => {
   const out: Pt[] = [];
@@ -100,8 +120,14 @@ const normalisedArcLength = (pts: Pt[]): number[] => {
   return lengths.map((l) => l / total);
 };
 
-/** Piecewise-linear read of a width profile at normalised position `t`. */
-const widthAt = (stops: WidthStop[], t: number): number => {
+const smoothstep = (k: number): number => k * k * (3 - 2 * k);
+
+/** Reads a width profile at normalised position `t`. */
+const widthAt = (
+  stops: WidthStop[],
+  t: number,
+  interpolation: "linear" | "smooth",
+): number => {
   if (t <= stops[0].t) return stops[0].w;
   const last = stops[stops.length - 1];
   if (t >= last.t) return last.w;
@@ -110,7 +136,8 @@ const widthAt = (stops: WidthStop[], t: number): number => {
     const b = stops[i + 1];
     if (t >= a.t && t <= b.t) {
       const span = b.t - a.t || 1;
-      return a.w + ((b.w - a.w) * (t - a.t)) / span;
+      const k = (t - a.t) / span;
+      return a.w + (b.w - a.w) * (interpolation === "smooth" ? smoothstep(k) : k);
     }
   }
   return last.w;
@@ -142,11 +169,14 @@ export const ribbon = (centreline: Pt[], options: RibbonOptions): Ribbon => {
     capStart = "round",
     capEnd = "round",
     capSegments = 16,
+    interpolation = "linear",
   } = options;
 
   const ts = normalisedArcLength(centreline);
   const ns = normals(centreline);
-  const halfWidths = ts.map((t) => widthAt(widthStops, t) / 2);
+  const halfWidths = ts.map(
+    (t) => widthAt(widthStops, t, interpolation) / 2,
+  );
 
   const left: Pt[] = centreline.map((p, i) => ({
     x: p.x + ns[i].x * halfWidths[i],
