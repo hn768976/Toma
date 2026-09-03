@@ -12,6 +12,7 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { ArrowField, arrowFieldSchema } from "./arrow-field/ArrowField";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -31,6 +32,16 @@ export const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         schema={bluetoothExplainerSchema}
         defaultProps={bluetoothExplainerDefaultProps}
+      />
+      <Composition
+        id="ArrowFieldRed"
+        component={ArrowField}
+        durationInFrames={330}
+        fps={30}
+        width={3840}
+        height={2160}
+        schema={arrowFieldSchema}
+        defaultProps={{ variant: "red" as const }}
       />
       <Composition
         id="ParticleRingHalo"
