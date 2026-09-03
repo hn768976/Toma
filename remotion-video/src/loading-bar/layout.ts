@@ -43,11 +43,13 @@ export const computeLayout = (
   const barSkew = barHeight * 0.24;
   const capHeight = height * capHeightRatio;
 
-  // Nominal placement: the word upper-left of centre, the bar beneath
-  // and slightly right of it, so the two read as one hand-placed unit.
+  // Nominal placement: the word directly above the bar, sharing its
+  // left edge, so the two read as one deliberately set unit. The bar's
+  // left edge is vertical (only its right edge leans), so a single x
+  // aligns the word's first glyph with the whole left side of the box.
   const nominalBarLeft = width * 0.205;
   const nominalBarTop = height * 0.6 - barHeight / 2;
-  const nominalWordLeft = width * 0.155;
+  const nominalWordLeft = nominalBarLeft;
   const nominalWordBaseline = nominalBarTop - height * WORD_GAP_RATIO;
 
   // The tilt rotates the group about the frame centre, which drags the
@@ -55,10 +57,11 @@ export const computeLayout = (
   // that is centred on paper lands low and slightly left on screen.
   // Measure the tilted bounding box and cancel the difference.
   //
-  // Only four corners can be extreme: the word's cap-top-left is always
-  // the highest and leftmost point, the bar's bottom-left the lowest,
-  // and the bar's top-right the rightmost (every word is narrower than
-  // the bar, so the word's right edge never wins). That keeps this
+  // Only four corners can be extreme: the word's cap-top-left is the
+  // highest and (sharing x with the bar but sitting higher, so rotated
+  // further left) the leftmost point, the bar's bottom-left the lowest,
+  // and the bar's top-right the rightmost — every word is narrower than
+  // the bar, so the word's right edge never wins. That keeps this
   // independent of text metrics, which are not known until draw time.
   const corners = [
     { x: nominalWordLeft, y: nominalWordBaseline - capHeight },

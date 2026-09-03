@@ -62,13 +62,19 @@ export const WordMark: React.FC<WordMarkProps> = ({
         ctx.textBaseline = "alphabetic";
         ctx.textAlign = "left";
 
-        const wordWidth = ctx.measureText(word).width;
+        // Flush the word's *ink* to `left`, not its text origin. The
+        // first glyph's left side bearing would otherwise indent the
+        // word a few pixels relative to the bar's hard left edge, which
+        // is exactly the misalignment a shared edge is meant to avoid.
+        const metrics = ctx.measureText(word);
+        const originX = left + metrics.actualBoundingBoxLeft;
+        const wordWidth = metrics.width;
         const dotRadius = capHeight * 0.085;
         const dotGap = dotRadius * 3.4;
-        const dotStart = left + wordWidth + dotGap * 0.9;
+        const dotStart = originX + wordWidth + dotGap * 0.9;
 
         const paintGlyphs = (dx: number, dy: number) => {
-          ctx.fillText(word, left + dx, baseline + dy);
+          ctx.fillText(word, originX + dx, baseline + dy);
           for (let i = 0; i < dotsVisible; i++) {
             ctx.beginPath();
             ctx.arc(
