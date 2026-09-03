@@ -31,6 +31,11 @@ export type Variant = {
   capHeightRatio: number;
   palette: Palette;
   curve: Waypoint[];
+  /**
+   * How strongly each curve segment eases in and out: 1 is a full
+   * ease-in-out (pronounced stalls), 0 is straight linear.
+   */
+  ease: number;
   /** Transfer bars usually show no number; a processing bar does. */
   showPercent: boolean;
 };
@@ -62,6 +67,7 @@ export const VARIANTS: Record<VariantName, Variant> = {
       { frame: 330, progress: 0.94 },
       { frame: 350, progress: 1 },
     ],
+    ease: 1,
     showPercent: false,
   },
   download: {
@@ -92,6 +98,7 @@ export const VARIANTS: Record<VariantName, Variant> = {
       { frame: 330, progress: 0.99 },
       { frame: 345, progress: 1 },
     ],
+    ease: 1,
     showPercent: false,
   },
   process: {
@@ -118,6 +125,9 @@ export const VARIANTS: Record<VariantName, Variant> = {
       { frame: 300, progress: 0.9 },
       { frame: 355, progress: 1 },
     ],
+    // Barely eased: over 90-frame segments a full ease-in-out reads as
+    // a pulse, and "processing" should grind, not breathe.
+    ease: 0.22,
     showPercent: true,
   },
 };

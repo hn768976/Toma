@@ -45,7 +45,7 @@ export const LoadingBar: React.FC<LoadingBarProps> = ({ variant }) => {
   const { palette } = config;
 
   const layout = computeLayout(width, height, config.capHeightRatio);
-  const progress = progressAt(frame, config.curve);
+  const progress = progressAt(frame, config.curve, config.ease);
 
   const done = completionFrame(config.curve);
   const leadFlash =

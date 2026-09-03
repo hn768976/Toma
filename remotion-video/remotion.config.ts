@@ -11,6 +11,9 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// None of the compositions here have audio; without this every render
+// carries a silent AAC track.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

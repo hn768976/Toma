@@ -68,6 +68,15 @@ export const RemotionRoot: React.FC = () => {
         height={LOADING_HEIGHT}
         defaultProps={{ variant: "upload" as const }}
       />
+      <Composition
+        id="LoadingDownload"
+        component={LoadingBar}
+        durationInFrames={LOADING_DURATION_IN_FRAMES}
+        fps={LOADING_FPS}
+        width={LOADING_WIDTH}
+        height={LOADING_HEIGHT}
+        defaultProps={{ variant: "download" as const }}
+      />
     </>
   );
 };
