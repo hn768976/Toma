@@ -18,6 +18,25 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  ParticleWaveField,
+  particleWaveFieldSchema,
+  particleWaveFieldDefaults,
+} from "./particle-wave/ParticleWaveField";
+import {
+  BASE_WIDTH as WAVE_WIDTH,
+  BASE_HEIGHT as WAVE_HEIGHT,
+  DURATION_IN_FRAMES as WAVE_DURATION_IN_FRAMES,
+  FPS as WAVE_FPS,
+} from "./particle-wave/constants";
+
+// The three colourways of the particle wave field. The composition is
+// authored at 4K; render a 1080p preview with --scale=0.5.
+const WAVE_VERSIONS = [
+  { id: "V1-WaveMagentaCyan", paletteId: "magentaCyan" },
+  { id: "V2-WaveBlueWhite", paletteId: "blueWhite" },
+  { id: "V3-WaveAmberMagenta", paletteId: "amberMagenta" },
+] as const;
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -52,6 +71,19 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      {WAVE_VERSIONS.map(({ id, paletteId }) => (
+        <Composition
+          key={id}
+          id={id}
+          component={ParticleWaveField}
+          durationInFrames={WAVE_DURATION_IN_FRAMES}
+          fps={WAVE_FPS}
+          width={WAVE_WIDTH}
+          height={WAVE_HEIGHT}
+          schema={particleWaveFieldSchema}
+          defaultProps={{ ...particleWaveFieldDefaults, paletteId }}
+        />
+      ))}
     </>
   );
 };
