@@ -1,6 +1,6 @@
 import type { Strand } from "./geometry";
 import type { Variant } from "./variants";
-import type { Ctx } from "./draw";
+import type { Ctx } from "../lib";
 
 /** Everything a layer needs to draw one frame. Rebuilt per frame, cheaply. */
 export type Scene = {

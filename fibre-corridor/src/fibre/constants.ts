@@ -5,7 +5,12 @@ export const FPS = 30;
 /** 375 frames @ 30fps = 12.5s. Every periodic term below closes on this. */
 export const LOOP = 375;
 
-/** Depth-of-field buckets. Depth `d` is 0 at the horizon, 1 at the camera. */
+/**
+ * Default depth-of-field bucket edges. Depth `d` is 0 at the horizon, 1 at
+ * the camera. Each variant may move them: where the focal band sits depends
+ * on how the geometry maps depth onto the frame, and a corridor and a tube do
+ * not map it the same way.
+ */
 export const DOF_NEAR = 0.58;
 export const DOF_FAR = 0.18;
 /** Cross-fade width between buckets, in depth units. */

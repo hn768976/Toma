@@ -1,8 +1,8 @@
 import React, { useLayoutEffect } from "react";
 import { HEIGHT, WIDTH } from "./constants";
-import { mixHex, parseHex } from "./color";
-import { radialBlob } from "./draw";
-import { TAU } from "./geometry";
+import { mixHex, parseHex } from "../lib";
+import { radialBlob } from "../lib";
+import { TAU } from "../lib";
 import type { Scene } from "./scene";
 
 /** Three pulses over 375 frames — a period of 125, an exact divisor. */
@@ -19,6 +19,7 @@ export const HorizonGlow: React.FC<{ scene: Scene }> = ({ scene }) => {
     const hot = mixHex(variant.palette.horizonGlow, variant.palette.strandWhite, 0.7);
 
     const pulse = 1 + 0.08 * Math.sin(TAU * PULSE_CYCLES * p);
+    const g = variant.horizonGain;
     const x = vpx + camX;
     const y = vpy + camY;
 
@@ -27,9 +28,9 @@ export const HorizonGlow: React.FC<{ scene: Scene }> = ({ scene }) => {
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "lighter";
 
-    radialBlob(ctx, x, y, WIDTH * 0.34 * pulse, glow, glow, 0.17, 0.25);
-    radialBlob(ctx, x, y, WIDTH * 0.13 * pulse, hot, glow, 0.24, 0.30);
-    radialBlob(ctx, x, y, HEIGHT * 0.035 * pulse, hot, hot, 0.46, 0.35);
+    radialBlob(ctx, x, y, WIDTH * 0.34 * pulse, glow, glow, 0.17 * g, 0.25);
+    radialBlob(ctx, x, y, WIDTH * 0.13 * pulse, hot, glow, 0.24 * g, 0.30);
+    radialBlob(ctx, x, y, HEIGHT * 0.035 * pulse, hot, hot, 0.46 * g, 0.35);
 
     ctx.globalCompositeOperation = "source-over";
   });

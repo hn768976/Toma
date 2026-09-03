@@ -16,13 +16,22 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ variant: "rising" as const }}
       />
       <Composition
-        id="LoopCheck"
+        id="FibreDescending"
         component={FibreCorridor}
-        durationInFrames={LOOP + 2}
+        durationInFrames={LOOP}
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ variant: "rising" as const }}
+        defaultProps={{ variant: "descending" as const }}
+      />
+      <Composition
+        id="FibreTunnel"
+        component={FibreCorridor}
+        durationInFrames={LOOP}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{ variant: "tunnel" as const }}
       />
     </>
   );

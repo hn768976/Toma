@@ -1,8 +1,8 @@
 import React, { useLayoutEffect, useMemo } from "react";
 import { HEIGHT, WIDTH } from "./constants";
-import { parseHex } from "./color";
-import { makeBuffer } from "./draw";
-import { clamp, TAU } from "./geometry";
+import { parseHex } from "../lib";
+import { makeBuffer } from "../lib";
+import { clamp, TAU } from "../lib";
 import type { Scene } from "./scene";
 
 /** The treatment is computed at 1/8 resolution and upscaled. */
@@ -92,7 +92,7 @@ export const FloorSheen: React.FC<{ scene: Scene }> = ({ scene }) => {
         const Y = (py + 0.5) * DOWN;
         const q = (Y - vpy) / span;
         if (q <= 0 || q > 1.05) continue;
-        const band = Math.exp(-Math.pow((q - 0.34) / 0.42, 2));
+        const band = Math.exp(-Math.pow((q - 0.46) / 0.66, 2));
         for (let px = 0; px < SW; px++) {
           const xn = (px + 0.5) / SW;
           const n =
@@ -117,7 +117,7 @@ export const FloorSheen: React.FC<{ scene: Scene }> = ({ scene }) => {
 
     main.setTransform(1, 0, 0, 1, 0, 0);
     main.globalCompositeOperation = "lighter";
-    main.globalAlpha = variant.floorTreatment === "sheen" ? 0.26 : 0.42;
+    main.globalAlpha = variant.floorTreatment === "sheen" ? 0.26 : 0.30;
     main.imageSmoothingEnabled = true;
     main.imageSmoothingQuality = "high";
     main.filter = "blur(11px)";

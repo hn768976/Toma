@@ -1,7 +1,7 @@
 import React, { useLayoutEffect } from "react";
 import { HEIGHT, WIDTH } from "./constants";
-import { mixHex, rgba } from "./color";
-import { clamp, TAU } from "./geometry";
+import { mixHex, rgba } from "../lib";
+import { clamp, TAU } from "../lib";
 import type { Scene } from "./scene";
 
 const RINGS = 4;
@@ -33,10 +33,10 @@ export const RingPulses: React.FC<{ scene: Scene }> = ({ scene }) => {
       const ry = HEIGHT * 0.5 * d * d;
       ctx.beginPath();
       ctx.ellipse(vpx + camX, vpy + camY, rx, ry, 0, 0, TAU);
-      ctx.strokeStyle = rgba(col, 0.1 * fade);
-      ctx.lineWidth = 2 + 9 * d * d;
+      ctx.strokeStyle = rgba(col, 0.075 * fade);
+      ctx.lineWidth = 2 + 5 * d * d;
       ctx.stroke();
-      ctx.strokeStyle = rgba(col, 0.055 * fade);
+      ctx.strokeStyle = rgba(col, 0.038 * fade);
       ctx.lineWidth = 10 + 34 * d * d;
       ctx.stroke();
     }

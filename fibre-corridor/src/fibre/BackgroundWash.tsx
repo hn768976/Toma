@@ -1,6 +1,6 @@
 import React, { useLayoutEffect } from "react";
 import { HEIGHT, WIDTH } from "./constants";
-import { parseHex, rgba } from "./color";
+import { parseHex, rgba } from "../lib";
 import type { Scene } from "./scene";
 
 /**

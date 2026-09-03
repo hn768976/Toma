@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { HEIGHT, LOOP, WIDTH } from "./constants";
-import { buildStrands, laneDensity, TAU } from "./geometry";
+import { buildStrands, laneDensity } from "./geometry";
+import { TAU } from "../lib";
 import { VARIANTS, type VariantName } from "./variants";
-import type { Ctx } from "./draw";
+import type { Ctx } from "../lib";
 import type { Scene } from "./scene";
 import { BackgroundWash } from "./BackgroundWash";
 import { FloorSheen } from "./FloorSheen";
@@ -70,7 +71,7 @@ export const FibreCorridor: React.FC<FibreCorridorProps> = ({
     : null;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "black" }}>
+    <AbsoluteFill style={{ backgroundColor: variant.palette.bgDeep }}>
       <canvas
         ref={attach}
         style={{ width: WIDTH, height: HEIGHT, display: "block" }}

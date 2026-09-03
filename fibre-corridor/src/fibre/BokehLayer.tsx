@@ -1,9 +1,9 @@
 import React, { useLayoutEffect, useMemo } from "react";
 import { random } from "remotion";
 import { HEIGHT, WIDTH } from "./constants";
-import { mixHex, parseHex } from "./color";
-import { radialBlob } from "./draw";
-import { TAU } from "./geometry";
+import { mixHex, parseHex, rgba } from "../lib";
+import { radialBlob } from "../lib";
+import { TAU } from "../lib";
 import type { Scene } from "./scene";
 
 const COUNT = 35;
@@ -81,9 +81,7 @@ export const BokehLayer: React.FC<{ scene: Scene; front: boolean }> = ({
       radialBlob(ctx, x, y, disc.r, inner, base, disc.alpha, 0.55);
       // A faint rim, the way a defocused highlight reads.
       ctx.globalAlpha = disc.alpha * 0.55;
-      ctx.strokeStyle = `rgba(${Math.round(inner.r)},${Math.round(
-        inner.g,
-      )},${Math.round(inner.b)},1)`;
+      ctx.strokeStyle = rgba(inner, 1);
       ctx.lineWidth = disc.r * 0.06;
       ctx.beginPath();
       ctx.arc(x, y, disc.r * 0.88, 0, TAU);

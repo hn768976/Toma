@@ -1,7 +1,15 @@
 import React, { useLayoutEffect } from "react";
-import { mixHex, rgba } from "./color";
-import { bucketWeights, chunksOf, fillTapered, type Ctx } from "./draw";
-import { clamp, type Strand } from "./geometry";
+import {
+  bucketWeights,
+  chunkRanges,
+  clamp,
+  fillTapered,
+  mixHex,
+  rgba,
+  type Ctx,
+} from "../lib";
+import { CHUNK, DOF_FEATHER } from "./constants";
+import type { Strand } from "./geometry";
 import type { Scene } from "./scene";
 
 /** Width multiplier of the soft glow pass, relative to the core. */
@@ -10,7 +18,7 @@ const GLOW_A = 0.055;
 const CORE_A = 0.94;
 
 export type Buffers = {
-  ctxs: [Ctx, Ctx, Ctx];
+  ctxs: Ctx[];
 };
 
 /**
@@ -20,7 +28,7 @@ export type Buffers = {
  * Two passes, composited with 'lighter': a wide soft glow at low alpha, then
  * a thin bright core. A single thick semi-transparent stroke reads flat; the
  * pair is what gives the fibre-optic look. The halo proper is added once per
- * buffer by <StrandComposite>, not once per strand — at 4K a per-strand
+ * buffer at composite time, not once per strand — at 4K a per-strand
  * shadowBlur is unusably slow.
  *
  * The strand is split into short chunks so width, brightness and depth
@@ -33,39 +41,39 @@ export const BendingStrand: React.FC<{
   buffers: Buffers;
 }> = ({ scene, strand, pos, buffers }) => {
   useLayoutEffect(() => {
-    const { palette } = scene.variant;
+    const { palette, dofNear, dofFar } = scene.variant;
     const glowCol = mixHex(palette.strandBody, palette.strandPale, 0.22);
     const n = strand.samples.length;
 
-    for (const [a, b] of chunksOf(n)) {
+    for (const [a, b] of chunkRanges(n, CHUNK)) {
       const mid = strand.samples[(a + b) >> 1];
-      const w = bucketWeights(mid.d);
+      const w = bucketWeights(mid.d, dofNear, dofFar, DOF_FEATHER);
       const bright = mid.b * strand.gain;
       const coreCol = mixHex(
         palette.strandPale,
         palette.strandWhite,
         clamp((bright - 0.35) / 0.75, 0, 1),
       );
-      for (let k = 0; k < 3; k++) {
+      for (let k = 0; k < w.length; k++) {
         if (w[k] < 0.004) continue;
         const ctx = buffers.ctxs[k];
         fillTapered(
           ctx,
-          strand,
-          pos,
+          strand.samples,
           a,
           b,
           GLOW_W,
           rgba(glowCol, GLOW_A * bright * w[k]),
+          pos,
         );
         fillTapered(
           ctx,
-          strand,
-          pos,
+          strand.samples,
           a,
           b,
           1,
           rgba(coreCol, CORE_A * bright * w[k]),
+          pos,
         );
       }
     }

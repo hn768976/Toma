@@ -59,6 +59,20 @@ export type Variant = {
   geometryMode: "bend" | "tunnel";
   /** "sheen" reflective bands, "haze" diffuse volumetric light, or "none". */
   floorTreatment: "sheen" | "haze" | "none";
+  /**
+   * Where the focal band sits, in depth units. Everything nearer than
+   * `dofNear` blurs heavily; everything beyond `dofFar` softens.
+   */
+  dofNear: number;
+  dofFar: number;
+  /** Scales the bloom on the vanishing point. */
+  horizonGain: number;
+  /**
+   * How much the nearest strands are held back. In a corridor the foreground
+   * strands overlap into a saturated mass without it; in a tube they are the
+   * main depth cue and want to stay bright.
+   */
+  nearFalloff: number;
   /** Lateral spread of the outermost lane at the camera, as a fraction of W. */
   laneSpread: number;
   packets: {
@@ -103,6 +117,10 @@ export const VARIANTS: Record<VariantName, Variant> = {
     strandDensity: 95,
     geometryMode: "bend",
     floorTreatment: "sheen",
+    dofNear: 0.58,
+    dofFar: 0.18,
+    horizonGain: 1,
+    nearFalloff: 0.62,
     laneSpread: 1.05,
     packets: {
       direction: 1,
@@ -136,6 +154,10 @@ export const VARIANTS: Record<VariantName, Variant> = {
     strandDensity: 70,
     geometryMode: "bend",
     floorTreatment: "haze",
+    dofNear: 0.58,
+    dofFar: 0.18,
+    horizonGain: 1,
+    nearFalloff: 0.62,
     laneSpread: 1.05,
     packets: {
       direction: -1,
@@ -171,6 +193,13 @@ export const VARIANTS: Record<VariantName, Variant> = {
     strandDensity: 160,
     geometryMode: "tunnel",
     floorTreatment: "none",
+    // A tube maps depth onto screen radius, so the sharp band has to reach
+    // much closer to the camera or only a small disc around the vanishing
+    // point stays in focus and the piece collapses into a starburst.
+    dofNear: 0.58,
+    dofFar: 0.08,
+    horizonGain: 0.95,
+    nearFalloff: 0.12,
     laneSpread: 1.0,
     packets: {
       direction: -1,
