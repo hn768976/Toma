@@ -66,7 +66,11 @@ Two versions:
 | Composition | Look |
 | --- | --- |
 | `GridPlaneBlue` / `GridPlaneBlue4K` | Cool white-blue lines, calm swell. Matches the reference. |
-| `GridPlaneSynthwave` / `GridPlaneSynthwave4K` | Magenta/cyan, a horizon glow band, and 2x the displacement. |
+| `GridPlaneSynthwave` / `GridPlaneSynthwave4K` | Magenta/cyan lines and 2x the displacement. |
+
+Both versions share one background — black with a slight navy lift toward
+the top, and the same starfield — so the line colour and the warp are the
+only things that differ.
 
 The 1080p compositions are the same image as the 4K ones at a quarter of
 the pixels — every pixel-denominated value (line width, glow radius, star

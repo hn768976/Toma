@@ -12,7 +12,6 @@ import {
   CAMERA_HEIGHT,
   CAMERA_NEAR,
   CAMERA_PITCH_DEG,
-  HORIZON_SCREEN_FRACTION,
   VIGNETTE,
   YAW_DRIFT_DEG,
 } from "./constants";
@@ -94,20 +93,6 @@ export const GridPlane: React.FC<GridPlaneProps> = ({ variant }) => {
         }}
       />
       <Starfield frame={frame} pixelScale={pixelScale} />
-      {palette.horizonGlow ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            width: "100%",
-            top: `${(HORIZON_SCREEN_FRACTION - palette.horizonGlow.heightFraction / 2) * 100}%`,
-            height: `${palette.horizonGlow.heightFraction * 100}%`,
-            background: `radial-gradient(ellipse 62% 50% at 50% 52%, ${palette.horizonGlow.color} 0%, transparent 85%)`,
-            opacity: palette.horizonGlow.opacity,
-            mixBlendMode: "screen",
-          }}
-        />
-      ) : null}
       <ThreeCanvas
         width={width}
         height={height}

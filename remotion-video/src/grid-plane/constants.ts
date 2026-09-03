@@ -122,11 +122,3 @@ export const TWINKLING_STAR_CHANCE = 0.12;
 export const TWINKLE_PERIODS = [60, 80, 120];
 export const STAR_TINTS = ["#ffffff", "#ffffff", "#ffffff", "#cfe0ff", "#ffe7cc"];
 
-// Where the geometric horizon lands vertically, as a fraction of frame
-// height from the top. Derived from the camera so the V2 horizon glow
-// band can never drift out of register with the geometry.
-export const HORIZON_SCREEN_FRACTION =
-  0.5 -
-  0.5 *
-    (Math.tan((CAMERA_PITCH_DEG * Math.PI) / 180) /
-      Math.tan((CAMERA_FOV_DEG * Math.PI) / 360));
