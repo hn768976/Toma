@@ -86,6 +86,26 @@ export const RemotionRoot: React.FC = () => {
         schema={grungeOverlaySchema}
         defaultProps={{ variant: "dust" as const, alpha: true }}
       />
+      <Composition
+        id="GrungeBurn"
+        component={GrungeOverlay}
+        durationInFrames={GRUNGE_LOOP_FRAMES}
+        fps={GRUNGE_FPS}
+        width={GRUNGE_WIDTH}
+        height={GRUNGE_HEIGHT}
+        schema={grungeOverlaySchema}
+        defaultProps={{ variant: "burn" as const }}
+      />
+      <Composition
+        id="GrungeBurnAlpha"
+        component={GrungeOverlay}
+        durationInFrames={GRUNGE_LOOP_FRAMES}
+        fps={GRUNGE_FPS}
+        width={GRUNGE_WIDTH}
+        height={GRUNGE_HEIGHT}
+        schema={grungeOverlaySchema}
+        defaultProps={{ variant: "burn" as const, alpha: true }}
+      />
       {/* QA aid: one frame longer than the loop, with grain switched off, so
           `remotion still` can be used to prove frame 900 == frame 0. */}
       <Composition

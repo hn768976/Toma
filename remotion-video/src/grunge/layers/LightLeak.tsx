@@ -31,28 +31,38 @@ const WHITE_STOPS: LeakGradientStop[] = [
   { at: 1, alpha: 0 },
 ];
 
+/** A long tail matters: the fringe needs amber still present to sit on top of,
+ *  or the cyan separates into a band of its own. */
 const AMBER_STOPS: LeakGradientStop[] = [
   { at: 0, alpha: 0.62 },
-  { at: 0.3, alpha: 0.46 },
-  { at: 0.55, alpha: 0.24 },
-  { at: 0.75, alpha: 0.07 },
-  { at: 0.9, alpha: 0.015 },
+  { at: 0.28, alpha: 0.48 },
+  { at: 0.5, alpha: 0.3 },
+  { at: 0.68, alpha: 0.16 },
+  { at: 0.8, alpha: 0.075 },
+  { at: 0.9, alpha: 0.025 },
   { at: 1, alpha: 0 },
 ];
 
+/**
+ * Peaks at ~0.8 of the amber radius, where the body has faded to about 0.075
+ * but is not yet gone. Additively that tips the edge cold without ever
+ * outshining the amber inside it — a fringe on the glow rather than a
+ * separate teal stripe, which is what a stronger, further-out cyan produced.
+ */
 const CYAN_STOPS: LeakGradientStop[] = [
   { at: 0, alpha: 0 },
-  { at: 0.62, alpha: 0 },
-  { at: 0.74, alpha: 0.13 },
-  { at: 0.84, alpha: 0.32 },
-  { at: 0.93, alpha: 0.12 },
+  { at: 0.55, alpha: 0 },
+  { at: 0.66, alpha: 0.05 },
+  { at: 0.76, alpha: 0.16 },
+  { at: 0.86, alpha: 0.06 },
+  { at: 0.94, alpha: 0.015 },
   { at: 1, alpha: 0 },
 ];
 
 /** Radius multipliers: cyan reaches marginally further than the body. */
 const WHITE_RADIUS = 0.42;
 const AMBER_RADIUS = 1;
-const CYAN_RADIUS = 1.08;
+const CYAN_RADIUS = 1.05;
 
 const paintBloom = (
   ctx: CanvasRenderingContext2D,

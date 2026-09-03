@@ -110,9 +110,11 @@ export const activeLeaks = (events: LeakEvent[], frame: number): ActiveLeak[] =>
 
     let flash = 0;
     if (e.flashStart >= 0 && frame >= e.flashStart && frame < e.flashStart + e.flashLife) {
-      // Strikes almost immediately, then falls away over the remaining frames.
-      const u = (frame - e.flashStart) / e.flashLife;
-      flash = u < 0.25 ? u / 0.25 : Math.pow(1 - (u - 0.25) / 0.75, 1.5);
+      // Holds near full brightness for the first half of its life, then falls
+      // away. Offsetting by one keeps the first and last frames of the event
+      // from landing exactly on zero, so all of its 3-4 frames carry light.
+      const u = (frame - e.flashStart + 1) / (e.flashLife + 1);
+      flash = u <= 0.5 ? 1 : Math.pow(1 - (u - 0.5) / 0.5, 1.2);
     }
 
     out.push({ event: e, strength, flash });

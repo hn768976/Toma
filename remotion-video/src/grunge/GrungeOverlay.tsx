@@ -11,11 +11,12 @@ import { FilmGrain } from "./layers/FilmGrain";
 import { HairLayer } from "./layers/HairLayer";
 import { LightLeak } from "./layers/LightLeak";
 import { ScratchLayer } from "./layers/ScratchLayer";
+import { SpliceMarks } from "./layers/SpliceMarks";
 import type { LayerMode } from "./layers/types";
 import { VARIANTS } from "./variants";
 
 export const grungeOverlaySchema = z.object({
-  variant: z.enum(["dust"]),
+  variant: z.enum(["dust", "burn"]),
   /**
    * Renders the overlay on transparency instead of on its near-black base:
    * light layers contribute alpha, darkening layers take it away. Needs a
@@ -124,6 +125,12 @@ export const GrungeOverlay: React.FC<GrungeOverlayProps> = ({
         {...base}
         intensity={layers.hairs.intensity}
         settings={layers.hairs}
+        loopFrames={LOOP_FRAMES}
+      />
+      <SpliceMarks
+        {...base}
+        intensity={layers.splice.intensity}
+        settings={layers.splice}
         loopFrames={LOOP_FRAMES}
       />
       <FilmGrain

@@ -7,7 +7,7 @@
  * zero. No hex literal appears anywhere else in the project.
  */
 
-export type VariantName = "dust";
+export type VariantName = "dust" | "burn";
 
 export type LeakPalette = {
   /** The body of the leak. */
@@ -182,6 +182,73 @@ export const VARIANTS: Record<VariantName, VariantConfig> = {
     motion: {
       dustWander: 1,
       blotchDrift: 1,
+      grainDensityCycles: 1,
+    },
+  },
+
+  /**
+   * "burn" — heavy film burn. Warm, damaged, and dominated by light leaks.
+   * Scratches are the strongest of the three variants and splice marks pass
+   * the gate every few seconds.
+   */
+  burn: {
+    palette: {
+      base: "#100A06",
+      dustPale: "#D4C4A8",
+      dustBright: "#FFF0D8",
+      scratchPale: "#FFE8C0",
+      blotchLight: "#6B4A28",
+      blotchDark: "#080503",
+      // Monochrome grain with a very slight warm bias.
+      grainTint: "#FFF4E4",
+      leak: {
+        amber: "#FFA84F",
+        white: "#FFF8E8",
+        cyan: "#4FC4D4",
+      },
+    },
+    layers: {
+      dust: { intensity: 0.5, count: 450 },
+      scratches: {
+        intensity: 1,
+        minConcurrent: 8,
+        maxConcurrent: 18,
+        minLife: 4,
+        maxLife: 30,
+        minGap: 4,
+        maxGap: 40,
+        baseWidth: 1,
+        maxWidth: 6,
+        // A quarter of them are the thick, ragged-edged kind.
+        thickChance: 0.25,
+        horizontalConcurrent: 3,
+      },
+      blotches: { intensity: 1, count: 25 },
+      hairs: {
+        intensity: 0.8,
+        maxConcurrent: 2,
+        minLife: 20,
+        maxLife: 60,
+        minGap: 70,
+        maxGap: 280,
+      },
+      grain: { intensity: 0.8, pitch: 1, densityVariation: 0.3, clusterConcurrent: 0 },
+      leak: {
+        intensity: 1,
+        eventCount: 3,
+        buildFrames: 50,
+        holdFrames: 40,
+        recedeFrames: 70,
+        minReach: 0.33,
+        maxReach: 0.5,
+        flashChance: 0.45,
+      },
+      vignette: { intensity: 0.9 },
+      splice: { intensity: 1, minGap: 150, maxGap: 260, minLife: 2, maxLife: 3 },
+    },
+    motion: {
+      dustWander: 1,
+      blotchDrift: 1.15,
       grainDensityCycles: 1,
     },
   },
