@@ -139,7 +139,7 @@ export const LoadingBar: React.FC<LoadingBarProps> = ({ variant }) => {
           fontWeight={MONO_FONT_WEIGHT}
           fontSize={layout.barHeight * 0.4}
           right={layout.barLeft + layout.barWidth + layout.barSkew}
-          baseline={layout.barTop - height * 0.016}
+          baseline={layout.barTop - height * 0.028}
           color={palette.word}
           scale={layout.scale}
         />
