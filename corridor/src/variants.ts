@@ -139,7 +139,7 @@ export const VARIANTS: Record<VariantId, CorridorVariant> = {
     },
     density: 180,
     horizon: 0.58,
-    spread: 1.9,
+    spread: 1.0,
     floorEdge: 1.26,
     ceilEdge: -0.1,
     openBand: { height: 0.12, offset: -0.075, residual: 0.05 },

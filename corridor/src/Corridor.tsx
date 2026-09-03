@@ -10,6 +10,8 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { Backdrop } from "./components/Backdrop";
+import { BinaryColumn } from "./components/BinaryColumn";
+import { BlockCluster } from "./components/BlockCluster";
 import { BokehLayer } from "./components/BokehLayer";
 import { CorridorEdgeLines } from "./components/CorridorEdgeLines";
 import { FibreStrand } from "./components/FibreStrand";
@@ -106,6 +108,17 @@ export const Corridor: React.FC<CorridorProps> = ({ variant }) => {
         >
           {v.elementType === "fibre" ? (
             <FibreStrand order={10} count={v.density} seed={v.id} />
+          ) : null}
+
+          {v.elementType === "block" ? (
+            <>
+              <BlockCluster order={10} count={v.density} seed={v.id} />
+              <BinaryColumn
+                order={20}
+                count={EXTRA_COUNTS.binaryColumns}
+                seed={v.id}
+              />
+            </>
           ) : null}
 
           {v.elementType === "slab" ? (

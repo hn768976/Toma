@@ -24,6 +24,15 @@ export const RemotionRoot: React.FC = () => {
         height={VIDEO_HEIGHT}
         defaultProps={{ variant: "slab" as const }}
       />
+      <Composition
+        id="CorridorBlock"
+        component={Corridor}
+        durationInFrames={LOOP_FRAMES}
+        fps={FPS}
+        width={VIDEO_WIDTH}
+        height={VIDEO_HEIGHT}
+        defaultProps={{ variant: "block" as const }}
+      />
     </>
   );
 };
