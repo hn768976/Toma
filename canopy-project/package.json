@@ -1,13 +1,15 @@
 {
   "name": "canopy-project",
   "version": "1.0.0",
-  "description": "Looking Up Through Winter Canopy — Remotion (4K-ready)",
+  "description": "Looking Up Through Winter Canopy \u2014 Remotion (4K-ready)",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
-    "lint": "tsc"
+    "lint": "tsc",
+    "trace": "node tools/trace-trees.mjs",
+    "assets": "node tools/make-trees.mjs && node tools/trace-trees.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.515",

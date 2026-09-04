@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { Fog } from "./Fog";
 import { Grain } from "./Grain";
-import { useKeyedTrees } from "./keying";
+import { useTreeMasks } from "./masks";
 import { TREE_INSTANCES, VANISHING_POINT } from "./layout";
 import { Bloom, Vignette } from "./Overlays";
 import type { Palette } from "./palette";
@@ -26,7 +26,7 @@ const FAR_TIERS = [2, 3];
 export const Canopy: React.FC<{ palette: Palette }> = ({ palette }) => {
   const frame = useCurrentFrame();
   const { width, height, durationInFrames } = useVideoConfig();
-  const keyed = useKeyedTrees();
+  const masks = useTreeMasks();
 
   // Loop position. Dividing by the duration (not duration - 1) means frame 600
   // would land exactly back on frame 0, so the cut is seamless.
@@ -41,14 +41,14 @@ export const Canopy: React.FC<{ palette: Palette }> = ({ palette }) => {
   };
 
   const layer = (tiers: number[]) =>
-    keyed === null ? null : (
+    masks === null ? null : (
       <AbsoluteFill style={arrangement}>
         {TREE_INSTANCES.map((instance, i) =>
           tiers.includes(instance.tier) ? (
             <Tree
               key={i}
               instance={instance}
-              keyed={keyed[instance.asset]}
+              mask={masks[instance.asset]}
               palette={palette}
               t={t}
               width={width}

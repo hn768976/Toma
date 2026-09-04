@@ -1,5 +1,5 @@
 import React from "react";
-import type { KeyedTree } from "./keying";
+import type { TreeMask } from "./masks";
 import { edgeDistance, VANISHING_POINT, type TreeInstance } from "./layout";
 import type { Palette } from "./palette";
 import { loopWave } from "./random";
@@ -16,13 +16,13 @@ import { loopWave } from "./random";
  */
 export const Tree: React.FC<{
   instance: TreeInstance;
-  keyed: KeyedTree;
+  mask: TreeMask;
   palette: Palette;
   /** Loop position in [0, 1). */
   t: number;
   width: number;
   height: number;
-}> = ({ instance, keyed, palette, t, width, height }) => {
+}> = ({ instance, mask, palette, t, width, height }) => {
   const vx = VANISHING_POINT.x * width;
   const vy = VANISHING_POINT.y * height;
 
@@ -31,7 +31,7 @@ export const Tree: React.FC<{
   const baseY = vy + Math.sin(instance.theta) * baseR;
 
   const h = baseR * instance.reach;
-  const w = h * keyed.aspect;
+  const w = h * mask.aspect;
 
   // The artwork points up; rotate so that "up" runs from the foot toward the
   // vanishing point. For a foot at bearing theta that is theta - 90 degrees.
@@ -72,8 +72,8 @@ export const Tree: React.FC<{
             width: "100%",
             height: "100%",
             backgroundColor: palette.tiers[instance.tier],
-            WebkitMaskImage: `url(${keyed.url})`,
-            maskImage: `url(${keyed.url})`,
+            WebkitMaskImage: `url(${mask.url})`,
+            maskImage: `url(${mask.url})`,
             WebkitMaskSize: "100% 100%",
             maskSize: "100% 100%",
             WebkitMaskRepeat: "no-repeat",
