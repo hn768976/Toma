@@ -53,7 +53,19 @@ slower.
 
 ### Measured render time
 
-MEASURED_PLACEHOLDER
+Measured on a 4-core Intel Xeon @ 2.80GHz, 15 GB RAM, **no GPU** - so Chromium
+fell back to SwiftShader (software GL) and Remotion chose a concurrency of 2:
+
+| Composition | Output          | 300 frames | Per frame  |
+| ----------- | --------------- | ---------- | ---------- |
+| V1 cyan     | 1080p (`--scale=0.5`) | 6m 30s | **1.30 s** |
+| V2 magenta  | 1080p (`--scale=0.5`) | 6m 42s | **1.34 s** |
+
+Note that the composition is 4K, so a `--scale=0.5` render still shades every
+frame at 3840x2160 and downsamples - which is where the supersampled edge
+quality comes from, and most of the cost. A machine with a real GPU (ANGLE
+picking it up instead of SwiftShader) is dramatically faster; a 4K render on
+this same box would be roughly 4x the per-frame figures above.
 
 ## How it works
 
