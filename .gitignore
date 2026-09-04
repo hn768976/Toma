@@ -1,6 +1,2 @@
 node_modules
 .DS_Store
-
-# Rendered deliverables (mp4s, stills, packaged zip) — large and regenerable;
-# see remotion-video/README.md for the render commands.
-deliverables/
