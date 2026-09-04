@@ -3,8 +3,6 @@ import type {CorpusName} from './code/sources';
 
 export type Palette = {
 	id: string;
-	/** Deliverable file stem; composition ids may not contain underscores. */
-	outputName: string;
 	corpus: CorpusName;
 	/** Colour of the screen surface behind the glyphs. */
 	background: string;
@@ -17,13 +15,10 @@ export type Palette = {
 	flareStreak: string;
 	/** Multiplier on glyph glow; phosphor reads hotter than an LCD. */
 	glow: number;
-	/** Deepest background plane, seen as soft colour blocks. */
-	deepTint: string;
 };
 
 const V1: Palette = {
 	id: 'V1-MacroCodeBlue',
-	outputName: 'V1_MacroCodeBlue',
 	corpus: 'python',
 	background: '#0a1420',
 	token: {
@@ -43,37 +38,34 @@ const V1: Palette = {
 	flare: 'rgba(196, 226, 255, 1)',
 	flareStreak: 'rgba(214, 236, 255, 1)',
 	glow: 1,
-	deepTint: '#0c2036',
 };
 
 const V2: Palette = {
-	id: 'V2-MacroCodeAmber',
-	outputName: 'V2_MacroCodeAmber',
+	id: 'V2-MacroCodeCyan',
 	corpus: 'typescript',
-	background: '#150d07',
+	background: '#04151c',
 	token: {
-		plain: '#f2e2cc',
-		keyword: '#ffb454',
-		string: '#7fd4c1',
-		comment: '#7a5f45',
-		number: '#ff8f57',
-		type: '#ffd08a',
-		func: '#ffc98c',
-		punct: '#b99672',
-		error: '#ff6b5e',
-		decorator: '#8fd8c8',
+		plain: '#d6f3fa',
+		keyword: '#22d3ee',
+		string: '#7ee8c8',
+		comment: '#3f6f7d',
+		number: '#f4a2b6',
+		type: '#8fdcf0',
+		func: '#5fd0e8',
+		punct: '#5f93a4',
+		// The one warm note, so the frame reads cyan rather than monochrome.
+		error: '#ff7b93',
+		decorator: '#9ae6d8',
 	},
-	cast: '#8a3d05',
-	castOpacity: 0.14,
-	flare: 'rgba(255, 226, 178, 1)',
-	flareStreak: 'rgba(255, 238, 208, 1)',
-	glow: 1.1,
-	deepTint: '#2a1608',
+	cast: '#0596aa',
+	castOpacity: 0.16,
+	flare: 'rgba(186, 244, 255, 1)',
+	flareStreak: 'rgba(214, 250, 255, 1)',
+	glow: 1.15,
 };
 
 const V3: Palette = {
 	id: 'V3-MacroCodeGreen',
-	outputName: 'V3_MacroCodeGreen',
 	corpus: 'rust',
 	background: '#030705',
 	token: {
@@ -93,7 +85,6 @@ const V3: Palette = {
 	flare: 'rgba(190, 255, 214, 1)',
 	flareStreak: 'rgba(214, 255, 228, 1)',
 	glow: 1.6,
-	deepTint: '#04150b',
 };
 
 export const PALETTES = {V1, V2, V3};

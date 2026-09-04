@@ -7,7 +7,7 @@ slowly upward on a seamless twelve-second loop.
 | Composition id       | Look                                  | Language   |
 | -------------------- | ------------------------------------- | ---------- |
 | `V1-MacroCodeBlue`   | Cool blue, the reference match        | Python     |
-| `V2-MacroCodeAmber`  | Warm amber with teal accents          | TypeScript |
+| `V2-MacroCodeCyan`   | Cyan on deep teal, coral accents      | TypeScript |
 | `V3-MacroCodeGreen`  | Phosphor green on near-black, high contrast | Rust  |
 
 All three are defined at **3840x2160, 30fps, 360 frames (12s)**.
@@ -24,9 +24,9 @@ npx remotion studio
 One command per composition. `--scale=1` is the composition's native 3840x2160.
 
 ```bash
-npx remotion render V1-MacroCodeBlue  out/V1_MacroCodeBlue.mp4  --scale=1 --crf=16
-npx remotion render V2-MacroCodeAmber out/V2_MacroCodeAmber.mp4 --scale=1 --crf=16
-npx remotion render V3-MacroCodeGreen out/V3_MacroCodeGreen.mp4 --scale=1 --crf=16
+npx remotion render V1-MacroCodeBlue   out/V1_MacroCodeBlue.mp4  --scale=1 --crf=16
+npx remotion render V2-MacroCodeCyan   out/V2_MacroCodeCyan.mp4  --scale=1 --crf=16
+npx remotion render V3-MacroCodeGreen  out/V3_MacroCodeGreen.mp4 --scale=1 --crf=16
 ```
 
 Stills:
