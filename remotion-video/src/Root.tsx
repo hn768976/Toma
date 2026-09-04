@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  PaperRippleRelief,
+  paperRippleReliefSchema,
+  paperRippleReliefDefaults,
+} from "./paper-ripple/PaperRippleRelief";
+import {
+  BASE_WIDTH as RIPPLE_WIDTH,
+  BASE_HEIGHT as RIPPLE_HEIGHT,
+  DURATION_IN_FRAMES as RIPPLE_DURATION_IN_FRAMES,
+  FPS as RIPPLE_FPS,
+} from "./paper-ripple/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,26 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="PaperRippleWhite"
+        component={PaperRippleRelief}
+        durationInFrames={RIPPLE_DURATION_IN_FRAMES}
+        fps={RIPPLE_FPS}
+        width={RIPPLE_WIDTH}
+        height={RIPPLE_HEIGHT}
+        schema={paperRippleReliefSchema}
+        defaultProps={{ ...paperRippleReliefDefaults, variant: "white" }}
+      />
+      <Composition
+        id="PaperRippleGraphite"
+        component={PaperRippleRelief}
+        durationInFrames={RIPPLE_DURATION_IN_FRAMES}
+        fps={RIPPLE_FPS}
+        width={RIPPLE_WIDTH}
+        height={RIPPLE_HEIGHT}
+        schema={paperRippleReliefSchema}
+        defaultProps={{ ...paperRippleReliefDefaults, variant: "graphite" }}
       />
     </>
   );
