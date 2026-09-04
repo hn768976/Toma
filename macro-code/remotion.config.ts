@@ -6,10 +6,12 @@ Config.setColorSpace('bt709');
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
 
-// PNG frames rather than JPEG. The whole picture is soft gradients and heavy
-// blur, which is exactly where JPEG's chroma blocking shows, and it also keeps
-// the output limited-range yuv420p instead of picking up JPEG's full range.
-Config.setVideoImageFormat('png');
+// The picture is soft gradients and heavy blur, which is exactly where JPEG at
+// its default quality would band. PNG frames avoid that but are roughly four
+// times slower to capture -- painful at 1080p and punishing at 4K -- and
+// quality 100 is indistinguishable here. Stills stay PNG; they are one frame.
+Config.setVideoImageFormat('jpeg');
+Config.setJpegQuality(100);
 Config.setStillImageFormat('png');
 
 // There is no sound here; without this Remotion muxes a silent AAC track, which
