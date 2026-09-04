@@ -22,6 +22,10 @@ const PITCH = 0.0052;
 const COLS = Math.round((X1 - X0) / PITCH);
 const ROWS = Math.round((Y1 - Y0) / PITCH);
 
+/** Radius of the landing node sitting inside a pin bar, where a trace meets
+ *  the pin. Sized to clear the two-cell spacing between seeded pins. */
+export const PIN_NODE_R = 0.0024;
+
 /** Trace width tiers: thin signal lines, signals, and thicker buses. */
 export const TIER_WIDTH = [0.00085, 0.00125, 0.00205] as const;
 
@@ -282,6 +286,12 @@ const addIc = (
         const [c, r] = nearestCell(x2, y2);
         const d = horizontal ? (outward < 0 ? 6 : 2) : outward < 0 ? 4 : 0;
         pins.push({ c, r, d, ix: x1, iy: y1 });
+        // A landing node inside the bar, on the pin the trace connects to. The
+        // route runs the length of the pin, so a pulse passes right over it.
+        const nx = x1 + (x2 - x1) * 0.36;
+        const ny = y1 + (y2 - y1) * 0.36;
+        ctx.circles.push({ x: nx, y: ny, r: PIN_NODE_R, lw: 0.0009 });
+        ctx.lightables.push({ kind: "via", x: nx, y: ny, r: PIN_NODE_R });
       }
     }
   };

@@ -480,9 +480,20 @@ export const drawFrame = ({
     const v = lit[i];
     if (v < 0.02) continue;
     const l = board.lightables[i];
+    const b = bucketOf(palette, l.x, l.y);
     g.globalAlpha = Math.min(1, v * (l.kind === "pin" ? 0.7 : 0.8));
-    g.strokeStyle = luts.flash[bucketOf(palette, l.x, l.y)];
+    g.strokeStyle = luts.flash[b];
     strokeLightable(g, l, gs, camX, camY, l.kind === "pin" ? 1.4 : 2.2);
+    if (l.kind !== "pin" && v > 0.1) {
+      const rr = gs * 0.012 * v;
+      g.drawImage(
+        sprites[b],
+        (l.x - camX) * gs - rr,
+        (l.y - camY) * gs - rr,
+        rr * 2,
+        rr * 2,
+      );
+    }
   }
   g.globalAlpha = 1;
 
@@ -511,9 +522,23 @@ export const drawFrame = ({
     const v = lit[i];
     if (v < 0.02) continue;
     const l = board.lightables[i];
+    const b = bucketOf(palette, l.x, l.y);
     ctx.globalAlpha = Math.min(1, v * 0.95);
-    ctx.strokeStyle = luts.flash[bucketOf(palette, l.x, l.y)];
+    ctx.strokeStyle = luts.flash[b];
     strokeLightable(ctx, l, S, camX, camY, 1);
+    // A lit node gets a hot core, so it reads as a bright point rather than a
+    // slightly brighter outline.
+    if (l.kind !== "pin" && v > 0.1) {
+      const rr = S * 0.007 * v;
+      ctx.globalAlpha = Math.min(1, v * 1.1);
+      ctx.drawImage(
+        sprites[b],
+        (l.x - camX) * S - rr,
+        (l.y - camY) * S - rr,
+        rr * 2,
+        rr * 2,
+      );
+    }
   }
   ctx.globalAlpha = 1;
 
