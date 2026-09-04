@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#fff}canvas{display:block}</style></head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ---------------------------------------------------------------------------
+// Procedural bare-tree silhouette generator.
+//
+// Two passes: the tree is first grown in an abstract coordinate space (trunk
+// base at the origin, growing along -y) and measured, then fitted into the
+// output canvas and drawn. Fitting means the branching parameters can be tuned
+// for *shape* without also having to keep the tree inside the frame.
+//
+// Output is black-on-white, tightly cropped, with the trunk base at (0.5, 1.0)
+// of the image — the same convention as the reference stock silhouettes.
+// ---------------------------------------------------------------------------
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const PRESETS = {
+  // Dense bare oak: upright, a strong central trunk, heavy canopy of twigs.
+  dense: {
+    seed: 20240517, depth: 10,
+    trunkWidth: 0.135, widthRatio: 0.690,
+    spread: [0.26, 0.46], lenRatio: [0.66, 0.80], curve: 0.22, upBias: 0.30,
+    children: (d) => (d > 8 ? 3 : 2), extraSplit: 0.26, drop: 0.06,
+    stubChance: 0.11, flare: 2.4,
+  },
+  // Wide spreading dead tree: low fork, gnarly limbs reaching sideways.
+  wide: {
+    seed: 8811237, depth: 10,
+    trunkWidth: 0.200, widthRatio: 0.700,
+    spread: [0.55, 0.94], lenRatio: [0.70, 0.84], curve: 0.24, upBias: 0.08,
+    children: (d) => (d > 8 ? 3 : 2), extraSplit: 0.22, drop: 0.08,
+    stubChance: 0.18, flare: 2.8,
+  },
+  // Slim sparse tree: a long clean trunk with only a few branches.
+  slim: {
+    seed: 553091, depth: 8,
+    trunkWidth: 0.062, widthRatio: 0.660,
+    spread: [0.32, 0.62], lenRatio: [0.60, 0.74], curve: 0.24, upBias: 0.46,
+    children: () => 2, extraSplit: 0.06, drop: 0.22,
+    stubChance: 0.08, flare: 2.0,
+  },
+};
+
+// --- pass 1: grow the tree in abstract space -------------------------------
+function grow(preset) {
+  const p = PRESETS[preset];
+  const rnd = mulberry32(p.seed);
+  const rr = (a, b) => a + rnd() * (b - a);
+  const segs = [];
+  const stubs = [];
+
+  function branch(x, y, angle, len, width, depth) {
+    if (depth <= 0 || len < 0.0025) return;
+
+    const bend = rr(-p.curve, p.curve);
+    const midAng = angle + bend * 0.5;
+    const cx = x + Math.cos(midAng) * len * 0.5;
+    const cy = y + Math.sin(midAng) * len * 0.5;
+    const endAng = angle + bend;
+    const x1 = cx + Math.cos(endAng) * len * 0.5;
+    const y1 = cy + Math.sin(endAng) * len * 0.5;
+    const w1 = width * p.widthRatio;
+
+    segs.push({ x, y, cx, cy, x1, y1, w0: width, w1 });
+
+    // Broken-off stubs: what makes a bare tree read as bare rather than pruned.
+    if (depth > 2 && depth < 10 && rnd() < p.stubChance) {
+      const sa = endAng + (rnd() < 0.5 ? -1 : 1) * rr(0.75, 1.35);
+      const sl = len * rr(0.16, 0.34);
+      stubs.push({ x: x1, y: y1, x1: x1 + Math.cos(sa) * sl, y1: y1 + Math.sin(sa) * sl, w: w1 * 0.8 });
+    }
+
+    let n = p.children(depth);
+    if (rnd() < p.extraSplit) n += 1;
+    const spread = rr(p.spread[0], p.spread[1]);
+    for (let i = 0; i < n; i++) {
+      if (n > 2 && rnd() < p.drop) continue;
+      const t = n === 1 ? 0 : i / (n - 1) - 0.5;
+      let a = endAng + t * spread * 2 + rr(-0.18, 0.18);
+      // Bias decays toward the tips: major limbs reach for the sky, fine
+      // twigs are free to wander, which keeps the crown from doming over.
+      const bias = p.upBias * (depth / p.depth);
+      a += (-Math.PI / 2 - a) * bias * rr(0.4, 1.0);
+      branch(x1, y1, a, len * rr(p.lenRatio[0], p.lenRatio[1]), w1, depth - 1);
+    }
+  }
+
+  branch(0, 0, -Math.PI / 2 + rr(-0.05, 0.05), 1, p.trunkWidth, p.depth);
+
+  let minX = 0, maxX = 0, minY = 0, maxY = 0;
+  const acc = (x, y, w) => {
+    if (x - w < minX) minX = x - w;
+    if (x + w > maxX) maxX = x + w;
+    if (y - w < minY) minY = y - w;
+    if (y + w > maxY) maxY = y + w;
+  };
+  for (const s of segs) { acc(s.x, s.y, s.w0); acc(s.cx, s.cy, s.w0); acc(s.x1, s.y1, s.w1); }
+  for (const s of stubs) { acc(s.x, s.y, s.w); acc(s.x1, s.y1, s.w); }
+  acc(0, 0, p.trunkWidth * p.flare);
+
+  return { p, segs, stubs, bbox: { minX, maxX, minY, maxY } };
+}
+
+// --- pass 2: fit and draw ---------------------------------------------------
+window.renderTree = function (preset, maxSize) {
+  const { p, segs, stubs, bbox } = grow(preset);
+
+  // Symmetrise horizontally around the trunk base so the base lands at x=0.5.
+  const half = Math.max(-bbox.minX, bbox.maxX);
+  const treeW = half * 2;
+  const treeH = -bbox.minY;
+  const scale = maxSize / Math.max(treeW, treeH);
+  const margin = Math.round(maxSize * 0.012);
+  const W = Math.round(treeW * scale) + margin * 2;
+  const H = Math.round(treeH * scale) + margin * 2;
+
+  const c = document.getElementById("c");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(W / 2, H - margin);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#000";
+  ctx.strokeStyle = "#000";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const hairline = 0.55 / scale; // ~0.55 device px: fine twigs the fog can catch
+
+  for (const s of segs) {
+    if (s.w0 * scale > 0.9) {
+      const ang = Math.atan2(s.y1 - s.y, s.x1 - s.x);
+      const nx = Math.cos(ang + Math.PI / 2);
+      const ny = Math.sin(ang + Math.PI / 2);
+      const wm = (s.w0 + s.w1) / 2;
+      ctx.beginPath();
+      ctx.moveTo(s.x + nx * s.w0, s.y + ny * s.w0);
+      ctx.quadraticCurveTo(s.cx + nx * wm, s.cy + ny * wm, s.x1 + nx * s.w1, s.y1 + ny * s.w1);
+      ctx.lineTo(s.x1 - nx * s.w1, s.y1 - ny * s.w1);
+      ctx.quadraticCurveTo(s.cx - nx * wm, s.cy - ny * wm, s.x - nx * s.w0, s.y - ny * s.w0);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.lineWidth = Math.max(hairline, (s.w0 + s.w1));
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.quadraticCurveTo(s.cx, s.cy, s.x1, s.y1);
+      ctx.stroke();
+    }
+  }
+  for (const s of stubs) {
+    ctx.lineWidth = Math.max(hairline, s.w * 1.6);
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x1, s.y1);
+    ctx.stroke();
+  }
+
+  // Root flare where the trunk meets the ground.
+  const tw = p.trunkWidth;
+  ctx.beginPath();
+  ctx.moveTo(-tw * p.flare, 0);
+  ctx.quadraticCurveTo(-tw * 1.05, -tw * 1.4, -tw, -tw * 3.0);
+  ctx.lineTo(tw, -tw * 3.0);
+  ctx.quadraticCurveTo(tw * 1.05, -tw * 1.4, tw * p.flare, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  document.title = "ready:" + W + "x" + H;
+  return { width: W, height: H };
+};
+</script>
+</body>
+</html>

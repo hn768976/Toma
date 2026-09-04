@@ -13,6 +13,16 @@ import {
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
 import {
+  FoggyForest,
+  foggyForestSchema,
+} from "./foggy-forest/FoggyForest";
+import {
+  WIDTH as FOG_WIDTH,
+  HEIGHT as FOG_HEIGHT,
+  FPS as FOG_FPS,
+  DURATION_IN_FRAMES as FOG_DURATION,
+} from "./foggy-forest/constants";
+import {
   BASE_WIDTH,
   BASE_HEIGHT,
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
@@ -52,6 +62,25 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      {(
+        [
+          ["V1-FoggyForestTeal", "teal"],
+          ["V2-FoggyForestAmber", "amber"],
+          ["V3-FoggyForestMono", "mono"],
+        ] as const
+      ).map(([id, palette]) => (
+        <Composition
+          key={id}
+          id={id}
+          component={FoggyForest}
+          durationInFrames={FOG_DURATION}
+          fps={FOG_FPS}
+          width={FOG_WIDTH}
+          height={FOG_HEIGHT}
+          schema={foggyForestSchema}
+          defaultProps={{ palette }}
+        />
+      ))}
     </>
   );
 };
