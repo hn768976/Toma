@@ -68,8 +68,13 @@ Measured on this project at **1920×1080** (`--scale=0.5`), 4-core x86-64 VM wit
 
 | | |
 |---|---|
-| Single frame, `--concurrency=1` | **≈ 2.2 s/frame** |
-| Full 600-frame pass, `--concurrency=4` | **PLACEHOLDER_WALL** wall clock (**PLACEHOLDER_PER** effective per frame) |
+| `--concurrency=1` | **2.25 s/frame** |
+| `--concurrency=4`, full 600-frame pass | **2.19 s/frame** (21 m 56 s wall) |
+
+Concurrency buys almost nothing here, and that is expected rather than a
+misconfiguration: SwiftShader is a multithreaded software rasteriser, so a
+single tab already saturates all four cores and extra tabs just divide the same
+CPU. On a GPU box, raise `--concurrency` and it will scale.
 
 Plan the 4K pass from these numbers. 4K is four times the pixels and this scene
 is fill-bound — large additive quads, a full-screen shader-heavy ground plane —
