@@ -178,13 +178,3 @@ export const boundsOf = (geom: PathGeom, pad: number) => {
     height: maxY - minY + pad * 2,
   };
 };
-
-/**
- * Picks a dash period close to `preferred` that divides the path length a
- * whole number of times, so the dash pattern meets the far end cleanly
- * instead of being cut mid-dash.
- */
-export const fitDashPeriod = (length: number, preferred: number) => {
-  const repeats = Math.max(2, Math.round(length / preferred));
-  return length / repeats;
-};

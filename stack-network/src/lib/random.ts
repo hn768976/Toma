@@ -22,11 +22,3 @@ export type Random = ReturnType<typeof makeRandom>;
 /** Uniform in [min, max). */
 export const between = (rng: Random, min: number, max: number) =>
   min + rng() * (max - min);
-
-/** Uniform integer in [min, max]. */
-export const intBetween = (rng: Random, min: number, max: number) =>
-  Math.floor(between(rng, min, max + 1));
-
-/** Picks one entry; never mutates the source array. */
-export const pick = <T>(rng: Random, items: readonly T[]): T =>
-  items[Math.min(items.length - 1, Math.floor(rng() * items.length))];
