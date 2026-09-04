@@ -1,0 +1,28 @@
+{
+  "name": "oscilloscope-waveforms",
+  "version": "1.0.0",
+  "description": "Looping oscilloscope waveform motion graphics, defined at 3840x2160 / 30fps",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc",
+    "verify": "node scripts/verify-loop.mjs",
+    "render:v1": "remotion render V1-ScopeMulticolour out/V1_ScopeMulticolour.mp4 --scale=1 --crf=16",
+    "render:v2": "remotion render V2-ScopeGreenPhosphor out/V2_ScopeGreenPhosphor.mp4 --scale=1 --crf=16"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@types/web": "0.0.166",
+    "esbuild": "0.28.1",
+    "typescript": "5.9.3"
+  }
+}
