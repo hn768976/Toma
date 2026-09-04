@@ -63,8 +63,8 @@ Measured on a 4-core cloud VM with **no GPU** (SwiftShader software rasteriser,
 
 | Resolution           | Per frame | Per 900-frame composition |
 | -------------------- | --------- | ------------------------- |
-| 1920×1080 (`--scale=0.5`) | **5.5 s** (measured) | **82 min** (measured, 4945 s) |
-| 3840×2160 (`--scale=1`)   | ~22 s (projected, 4× the pixels) | **~5 h 30 m** (projected) |
+| 1920×1080 (`--scale=0.5`) | **~8.4 s** | **~2 h 5 m** |
+| 3840×2160 (`--scale=1`)   | ~34 s (projected, 4× the pixels) | **~8 h 30 m** (projected) |
 
 The 1080p figure is the wall-clock average over a full 900-frame render, encode
 included. The shader cost is very close to linear in pixel count, so the 4K
@@ -88,6 +88,21 @@ planar, the disc plane is crossed at exactly two known values of `phi` per turn
 — crossings are solved for in closed form instead of being hunted for by
 sampling. That is what produces the double arc: the far side of the disc appears
 both above and below the sphere.
+
+**The luminous field is volumetric, not bloom.** The disc carries a flared,
+optically-thin envelope integrated along the ray, which is what fills the frame
+with the soft glow the reference has. It has to be real scene light rather than
+post-processing, because the dust lanes stay dark and crisp against it — bloom
+laid over the top would veil them. The envelope is sampled off the disc plane
+using a small-angle rotation recurrence for cos/sin of phi, so it costs no trig
+per step; the disc crossings and the exit direction still use exact values,
+where a little phase drift would matter.
+
+**Dust lanes** are built from a five-octave, high-persistence noise (the fine
+octaves keep real weight, which is what reads as granular torn dust rather than
+a soft smudge) and are carved further by the material turbulence itself. The
+nearest lane column also shadows the envelope, or the glow floods straight
+through the dust and the lanes never read as the large dark masses they are.
 
 **The horizon is an absolute void.** Any radiance a ray gathered before falling
 through the horizon is discarded, so nothing shows through the black disc — no
@@ -126,6 +141,13 @@ guess:
 - *Transcendentals at disc crossings*. A single shared `log2(r)` now feeds the
   radial profile, the rotation rate and both noise layers' radial coordinate,
   and the `pow()` calls became one `exp2` each.
+
+The exit direction is computed in closed form (`phi_inf = phi + pi - atan(u, du)`)
+rather than read off the last integration step. Reading it off the step makes it
+jump wherever the step count changes between neighbouring pixels, which tears
+the starfield into false arcs. Stars themselves sit on equal-area latitude rings
+— a single lat/long grid degenerates at the poles, where one cell spans a whole
+latitude circle and smears one star into an arc across the frame.
 
 Supersampling is adaptive: 4 rays per pixel only inside a band around the
 critical impact parameter, where the horizon edge, the photon ring and the
