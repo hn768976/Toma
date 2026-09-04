@@ -26,10 +26,20 @@ The compositions are authored at 4K, so a full-resolution render is just
 `--scale=1`:
 
 ```bash
-npx remotion render V1-FoggyForestTeal  out/V1_FoggyForestTeal.mp4  --scale=1 --crf=16
-npx remotion render V2-FoggyForestAmber out/V2_FoggyForestAmber.mp4 --scale=1 --crf=16
-npx remotion render V3-FoggyForestMono  out/V3_FoggyForestMono.mp4  --scale=1 --crf=16
+npx remotion render V1-FoggyForestTeal  out/V1_FoggyForestTeal.mp4  --scale=1 --crf=16 --pixel-format=yuv420p --image-format=png --color-space=bt709 --muted
+npx remotion render V2-FoggyForestAmber out/V2_FoggyForestAmber.mp4 --scale=1 --crf=16 --pixel-format=yuv420p --image-format=png --color-space=bt709 --muted
+npx remotion render V3-FoggyForestMono  out/V3_FoggyForestMono.mp4  --scale=1 --crf=16 --pixel-format=yuv420p --image-format=png --color-space=bt709 --muted
 ```
+
+The flags past `--scale` matter more than they look:
+
+- `--image-format=png` keeps the frames out of a JPEG round-trip on the way
+  into H.264. Remotion's default JPEG intermediates would mush the grain and
+  block up the dark gradients — the two things this piece is made of.
+- `--color-space=bt709` with `--pixel-format=yuv420p` tags limited range.
+  Without it, JPEG frames yield full-range `yuvj420p`, which some players
+  read as limited and show with crushed blacks.
+- `--muted` drops the silent audio track Remotion adds by default.
 
 Stills:
 
