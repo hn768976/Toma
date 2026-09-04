@@ -1,0 +1,27 @@
+{
+  "name": "ai-hologram",
+  "version": "1.0.0",
+  "description": "AI Hologram Platform — 4K stock motion graphic built with Remotion + three.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.520",
+    "@remotion/three": "4.0.520",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.520",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.185.4",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
