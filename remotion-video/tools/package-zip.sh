@@ -13,7 +13,8 @@ mkdir -p "$PROJ/src/foggy-forest" "$PROJ/public/trees" "$PROJ/tools"
 cp "$ROOT"/src/foggy-forest/*.ts "$ROOT"/src/foggy-forest/*.tsx "$PROJ/src/foggy-forest/"
 cp "$ROOT"/public/trees/*.png "$ROOT"/public/trees/manifest.json "$PROJ/public/trees/"
 cp "$ROOT"/tools/tree-gen.html "$ROOT"/tools/render-trees.mjs \
-   "$ROOT"/tools/check-neutral.mjs "$ROOT"/tools/render-all.sh "$PROJ/tools/"
+   "$ROOT"/tools/check-neutral.mjs "$ROOT"/tools/check-loop.mjs \
+   "$ROOT"/tools/render-all.sh "$PROJ/tools/"
 cp "$ROOT/tsconfig.json" "$ROOT/.prettierrc" "$PROJ/"
 cp "$ROOT/FOGGY-FOREST-README.md" "$PROJ/README.md"
 chmod +x "$PROJ/tools/render-all.sh"

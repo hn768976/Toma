@@ -106,5 +106,6 @@ To regenerate the stand-ins: `node tools/render-trees.mjs`.
 |---|---|
 | `node tools/render-trees.mjs` | Regenerates the silhouette PNGs |
 | `node tools/check-neutral.mjs out/V3_FoggyForestMono.png` | Asserts the mono version is genuinely neutral (R=G=B) |
+| `node tools/check-loop.mjs out/V1_FoggyForestTeal.mp4` | Asserts the wrap (last frame → first) is no more abrupt than an ordinary frame step |
 | `./tools/render-all.sh` | Renders all three 1080p previews and stills |
 | `npm run lint` | ESLint + `tsc` |
