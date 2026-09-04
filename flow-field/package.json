@@ -1,0 +1,29 @@
+{
+  "name": "flow-field-streamlines",
+  "version": "1.0.0",
+  "description": "Flow Field Streamlines — 4K curl-noise streamline motion graphics (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit",
+    "verify-loop": "esbuild tools/verify-loop.ts --bundle --platform=node --format=cjs --outfile=node_modules/.cache/verify-loop.cjs --log-level=error && node node_modules/.cache/verify-loop.cjs"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.0",
+    "@types/react": "19.2.7",
+    "@types/three": "0.185.0",
+    "esbuild": "0.28.1",
+    "typescript": "5.9.3"
+  }
+}
