@@ -64,8 +64,8 @@ Measured on a 4-core cloud VM with **no GPU** (SwiftShader software rasteriser,
 
 | Resolution           | Per frame | Per 900-frame composition |
 | -------------------- | --------- | ------------------------- |
-| 1920×1080 (`--scale=0.5`) | **~4.6 s** | **~1 h 10 m** |
-| 3840×2160 (`--scale=1`)   | ~18 s (projected, 4× the pixels) | **~4 h 40 m** (projected) |
+| 1920×1080 (`--scale=0.5`) | **~5.2 s** | **~77 min** (measured, 4642 s) |
+| 3840×2160 (`--scale=1`)   | ~21 s (projected, 4× the pixels) | **~5 h 15 m** (projected) |
 
 The 1080p figure is the wall-clock average over a full 900-frame render, encode
 included. The shader cost is very close to linear in pixel count, so the 4K
@@ -171,6 +171,22 @@ contouring at CRF 16. If a 4K encode does band, raise `LOOK.grain` in
 `src/look.ts` before lowering the CRF.
 
 No lens flare, no chromatic aberration, no camera motion — the camera is locked.
+
+## A note on bitrate
+
+Small, hard-edged particles in motion are expensive to encode: consecutive
+frames correlate poorly, so H.264 has little to reuse. At CRF 16 the 1080p
+preview lands around 28 Mbps (~107 MB for 30 s), which is a legitimate
+high-quality master rate but larger than most delivery pipelines want. The
+1080p previews here are therefore encoded at **CRF 18** (~20 Mbps, ~74 MB),
+which measures 44.9 dB PSNR against the CRF 16 master — visually transparent.
+
+The 4K commands above keep `--crf=16`, since a 4K master should stay at master
+quality. Expect a large file. If size matters more than the last of the detail,
+raise the CRF before lowering `LOOK.grain`: with sharp particles covering the
+frame there is already plenty of high-frequency detail breaking up any
+contouring, so the grain is doing less work here than it did for the earlier
+smooth-gradient look.
 
 ## Tuning
 
