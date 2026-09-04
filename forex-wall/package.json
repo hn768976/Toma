@@ -1,0 +1,27 @@
+{
+  "name": "forex-wall",
+  "version": "1.0.0",
+  "description": "Forex Ticker Wall — a 4K/30fps seamless-loop Remotion motion graphic in a dark and a light version",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc",
+    "render:v1": "remotion render V1-ForexWallDark out/V1_ForexWallDark.mp4 --scale=1 --crf=16 --muted",
+    "render:v2": "remotion render V2-ForexWallLight out/V2_ForexWallLight.mp4 --scale=1 --crf=16 --muted",
+    "still:v1": "remotion still V1-ForexWallDark out/V1_ForexWallDark.png --frame=96 --scale=1",
+    "still:v2": "remotion still V2-ForexWallLight out/V2_ForexWallLight.png --frame=96 --scale=1"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
