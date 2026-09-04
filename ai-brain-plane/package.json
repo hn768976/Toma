@@ -1,0 +1,32 @@
+{
+  "name": "ai-brain-plane",
+  "version": "1.0.0",
+  "description": "AI Brain Over Circuit Plane - Remotion 4K motion graphic",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc",
+    "render:preview": "remotion render V1-AIBrainPlaneBlue out/V1_AIBrainPlaneBlue.mp4 --scale=0.5 --crf=23 && remotion render V2-AIBrainPlaneMono out/V2_AIBrainPlaneMono.mp4 --scale=0.5 --crf=23",
+    "render:4k": "remotion render V1-AIBrainPlaneBlue out/V1_AIBrainPlaneBlue.mp4 --scale=1 --crf=16 && remotion render V2-AIBrainPlaneMono out/V2_AIBrainPlaneMono.mp4 --scale=1 --crf=16",
+    "check:neutral": "node scripts/check-neutral.mjs out/V2_AIBrainPlaneMono.png",
+    "check:banding": "node scripts/check-banding.mjs",
+    "still:preview": "remotion still V1-AIBrainPlaneBlue out/V1_AIBrainPlaneBlue.png --frame=400 --scale=0.5 && remotion still V2-AIBrainPlaneMono out/V2_AIBrainPlaneMono.png --frame=400 --scale=0.5"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.185.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
