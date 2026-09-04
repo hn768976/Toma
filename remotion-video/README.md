@@ -11,13 +11,13 @@ npx remotion studio  # open the preview studio
 
 ## Compositions
 
-| ID | Size | Length | Notes |
-| --- | --- | --- | --- |
-| `BluetoothExplainer` | 1920x1080 | 30s | Hand-drawn explainer |
-| `ParticleRingHalo` | 1920x1080 | 8s | Abstract particle ring |
-| `ParticleRingHalo4K` | 3840x2160 | 8s | 4K variant of the above |
-| `PaperRippleWhite` | 3840x2160 | 10s | Paper Ripple Relief, V1 — white paper |
-| `PaperRippleGraphite` | 3840x2160 | 10s | Paper Ripple Relief, V2 — graphite |
+| ID                    | Size      | Length | Notes                                 |
+| --------------------- | --------- | ------ | ------------------------------------- |
+| `BluetoothExplainer`  | 1920x1080 | 30s    | Hand-drawn explainer                  |
+| `ParticleRingHalo`    | 1920x1080 | 8s     | Abstract particle ring                |
+| `ParticleRingHalo4K`  | 3840x2160 | 8s     | 4K variant of the above               |
+| `PaperRippleWhite`    | 3840x2160 | 10s    | Paper Ripple Relief, V1 — white paper |
+| `PaperRippleGraphite` | 3840x2160 | 10s    | Paper Ripple Relief, V2 — graphite    |
 
 ---
 
@@ -59,8 +59,12 @@ across threads.
 
 Seamless at 300 frames. The pattern has a single spiral arm, so it only maps
 back onto itself after a full 360 degrees; the rotation is exactly one turn
-across the loop, and the amplitude pulse is exactly one cycle. Frame 300 is
+across the loop and the amplitude pulse is exactly one cycle, so frame 300 is
 frame 0.
+
+Verified rather than asserted: the mean per-channel difference across the loop
+seam (frame 299 -> frame 0) is 1.811 levels, identical to an ordinary step
+within the loop (frame 298 -> 299).
 
 ### Rendering
 
@@ -71,20 +75,26 @@ just slower. (`--gl=swiftshader` also works and is a little slower again.)
 **4K masters** (the compositions are already 4K, so `--scale=1`):
 
 ```console
-npx remotion render PaperRippleWhite out/V1_PaperRippleWhite.mp4 --scale=1 --crf=16 --gl=angle
-npx remotion render PaperRippleGraphite out/V2_PaperRippleGraphite.mp4 --scale=1 --crf=16 --gl=angle
+npx remotion render PaperRippleWhite out/V1_PaperRippleWhite.mp4 --scale=1 --crf=16 \
+  --gl=angle --image-format=png --pixel-format=yuv420p --color-space=bt709 --muted
+npx remotion render PaperRippleGraphite out/V2_PaperRippleGraphite.mp4 --scale=1 --crf=16 \
+  --gl=angle --image-format=png --pixel-format=yuv420p --color-space=bt709 --muted
 ```
 
 **1080p previews** — same compositions at half scale:
 
 ```console
 npx remotion render PaperRippleWhite out/V1_PaperRippleWhite.mp4 --scale=0.5 --crf=16 \
-  --gl=angle --pixel-format=yuv420p --image-format=png --color-space=bt709 --muted
+  --gl=angle --image-format=png --pixel-format=yuv420p --color-space=bt709 --muted
+npx remotion render PaperRippleGraphite out/V2_PaperRippleGraphite.mp4 --scale=0.5 --crf=16 \
+  --gl=angle --image-format=png --pixel-format=yuv420p --color-space=bt709 --muted
 ```
 
 `--image-format=png` matters more than it looks: the default JPEG intermediate
-puts chroma loss into exactly the huge, smooth, near-white gradients that V1 is
-made of, before x264 ever sees them.
+puts chroma loss into exactly the huge, smooth, near-white gradients V1 is made
+of, before x264 ever sees them. `--muted` drops the silent audio track Remotion
+would otherwise attach, and `--color-space=bt709` is what makes the output
+`yuv420p` rather than full-range `yuvj420p`.
 
 **Stills**:
 
@@ -95,14 +105,17 @@ npx remotion still PaperRippleGraphite out/V2_PaperRippleGraphite.png --frame=90
 
 ### Measured render time
 
-On 4 vCPU with no GPU (SwiftShader via ANGLE), `--gl=angle`, `--concurrency=1`,
-measured by differencing two runs of different lengths so per-run startup drops
-out:
+On 4 vCPU with no GPU (SwiftShader via ANGLE), using the render commands above
+with `--concurrency=1`:
 
-| Output | Per frame | 300 frames |
-| --- | --- | --- |
-| 1920x1080 (`--scale=0.5`) | **1.04 s** | ~5m 10s |
-| 3840x2160 (`--scale=1`) | **2.89 s** | ~14m 30s |
+| Output                    | Per frame  | 300 frames                  |
+| ------------------------- | ---------- | --------------------------- |
+| 1920x1080 (`--scale=0.5`) | **1.11 s** | 5m 38s (measured, full run) |
+| 3840x2160 (`--scale=1`)   | **3.67 s** | ~18m 20s (extrapolated)     |
+
+The 1080p number is a full 300-frame render divided by its own frame count. The
+4K number comes from differencing a 12-frame and a 2-frame run so per-run
+startup drops out; only the 300-frame total is extrapolated from it.
 
 Raising `--concurrency` does **not** help here: SwiftShader already saturates
 every core inside a single GL context, and 60 frames took 68s at
