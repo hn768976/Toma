@@ -1,0 +1,31 @@
+{
+  "name": "neon-corridor",
+  "version": "1.0.0",
+  "description": "Neon Corridor — looping 3D neon tunnel motion graphic (Remotion + three.js)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "render:v1": "remotion render V1-NeonCorridorMagenta out/V1_NeonCorridorMagenta.mp4 --scale=1 --crf=16",
+    "render:v2": "remotion render V2-NeonCorridorCyan out/V2_NeonCorridorCyan.mp4 --scale=1 --crf=16",
+    "preview:v1": "remotion render V1-NeonCorridorMagenta out/V1_NeonCorridorMagenta.mp4 --scale=0.5 --crf=16",
+    "preview:v2": "remotion render V2-NeonCorridorCyan out/V2_NeonCorridorCyan.mp4 --scale=0.5 --crf=16",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "postprocessing": "6.39.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  }
+}
