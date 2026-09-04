@@ -63,11 +63,13 @@ Measured on a 4-core cloud VM with **no GPU** (SwiftShader software rasteriser,
 
 | Resolution           | Per frame | Per 900-frame composition |
 | -------------------- | --------- | ------------------------- |
-| 1920×1080 (`--scale=0.5`) | ~4.1 s | ~1 h 2 m |
-| 3840×2160 (`--scale=1`)   | ~16 s (projected, 4× the pixels) | ~4 h (projected) |
+| 1920×1080 (`--scale=0.5`) | **5.5 s** (measured) | **82 min** (measured, 4945 s) |
+| 3840×2160 (`--scale=1`)   | ~22 s (projected, 4× the pixels) | **~5 h 30 m** (projected) |
 
-The shader cost is very close to linear in pixel count, so the 4K projection is
-reliable. **On a real GPU expect this to drop by roughly an order of
+The 1080p figure is the wall-clock average over a full 900-frame render, encode
+included. The shader cost is very close to linear in pixel count, so the 4K
+projection is reliable — budget about five and a half hours per composition on a
+comparable CPU-only machine, or roughly sixteen and a half hours for all three. **On a real GPU expect this to drop by roughly an order of
 magnitude** — budget the 4K pass accordingly, and raise `--concurrency` only if
 the renderer is *not* SwiftShader (SwiftShader already saturates every core from
 a single context, so extra concurrency just adds memory pressure).
