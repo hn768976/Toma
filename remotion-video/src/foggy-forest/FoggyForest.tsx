@@ -8,8 +8,9 @@ import {
   useVideoConfig,
 } from "remotion";
 import { z } from "zod";
-import { loadTrees } from "./assets";
+import { prepareTrees } from "./assets";
 import { getGrainTiles } from "./noise";
+import { treeVariants } from "./forest";
 import { PALETTES } from "./palettes";
 import { drawScene, warmFogTextures } from "./render";
 
@@ -26,21 +27,22 @@ export const FoggyForest: React.FC<FoggyForestProps> = ({ palette }) => {
   const [handle] = useState(() => delayRender("Keying tree silhouettes"));
   const [ready, setReady] = useState(false);
 
-  // The silhouettes are keyed to alpha once, and the fog and grain textures are
-  // baked once, before the first frame is allowed through.
+  // The trace is rasterised once per (colour, size) the scene needs, and the
+  // fog and grain textures are baked once, before the first frame is allowed
+  // through. Nothing after this point is asynchronous.
   useEffect(() => {
     let cancelled = false;
-    loadTrees()
+    prepareTrees(treeVariants(PALETTES[palette], height))
       .then(() => {
         warmFogTextures();
         getGrainTiles();
         if (!cancelled) setReady(true);
       })
-      .catch((err) => cancelRender(err));
+      .catch((err: Error) => cancelRender(err));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [palette, height]);
 
   // Draw synchronously before paint, so the captured frame is always the frame
   // that was asked for.

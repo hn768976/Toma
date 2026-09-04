@@ -11,8 +11,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const html = `<!doctype html><body style="margin:0;background:#fff;display:flex;align-items:flex-end;gap:8px">
 ${files.map((f) => `<img src="file://${f}" style="height:640px;border:1px solid #ccc">`).join("")}
 </body>`;
-writeFileSync("/tmp/sheet.html", html);
-const proc = spawn(chrome, ["--headless=new", `--remote-debugging-port=${PORT}`, "--no-sandbox", "--disable-gpu", "--hide-scrollbars", "--window-size=2400,700", "about:blank"]);
+if (!process.env.SHEET_HTML) writeFileSync("/tmp/sheet.html", html);
+const proc = spawn(chrome, ["--headless=new", `--remote-debugging-port=${PORT}`, "--no-sandbox", "--disable-gpu", "--hide-scrollbars", "--window-size=1400,700", "about:blank"]);
 proc.stderr.on("data", () => {});
 let wsUrl = null;
 for (let i = 0; i < 60 && !wsUrl; i++) { await sleep(400); try { wsUrl = (await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json()).webSocketDebuggerUrl; } catch {} }
@@ -23,8 +23,8 @@ const send = (method, params = {}, sessionId) => new Promise((res) => { const i 
 const { targetId } = await send("Target.createTarget", { url: "about:blank" });
 const { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true });
 await send("Page.enable", {}, sessionId);
-await send("Emulation.setDeviceMetricsOverride", { width: 2400, height: 700, deviceScaleFactor: 1, mobile: false }, sessionId);
-await send("Page.navigate", { url: "file:///tmp/sheet.html" }, sessionId);
+await send("Emulation.setDeviceMetricsOverride", { width: 1400, height: 700, deviceScaleFactor: 1, mobile: false }, sessionId);
+await send("Page.navigate", { url: "file://" + (process.env.SHEET_HTML || "/tmp/sheet.html") }, sessionId);
 await sleep(2000);
 const shot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
 writeFileSync(join(__dirname, "..", "..", "sheet.png"), Buffer.from(shot.data, "base64"));

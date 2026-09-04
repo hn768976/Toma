@@ -18,11 +18,7 @@ const CHROME_CANDIDATES = [
 const chrome = CHROME_CANDIDATES.find((p) => existsSync(p));
 if (!chrome) throw new Error("No Chromium binary found");
 
-const TARGETS = [
-  { preset: "dense", file: "tree-dense-oak.png", size: 3072 },
-  { preset: "wide", file: "tree-wide-dead.png", size: 3072 },
-  { preset: "slim", file: "tree-slim-sparse.png", size: 3072 },
-];
+const TARGETS = [{ preset: "dense", file: "tree-dense-oak.png", size: 3072 }];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

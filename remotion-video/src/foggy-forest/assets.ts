@@ -1,39 +1,53 @@
 import { staticFile } from "remotion";
-import { clamp01, smoothstep } from "./prng";
 
 /**
- * The tree silhouettes are black-on-white PNGs, not transparent ones, so they
- * are keyed to alpha once at module level and cached. The ramp is deliberately
- * soft rather than a hard threshold: the fine twigs are anti-aliased greys, and
- * a threshold would eat exactly the detail the fog needs to catch.
+ * The forest is built from one tree.
+ *
+ * `public/trees/tree-dense-oak.svg` is a vector trace of the dense bare oak
+ * silhouette (`tools/trace-svg.mjs`, from the black-on-white PNG). Tracing
+ * buys two things a keyed bitmap cannot:
+ *
+ *  - **Real gaps.** Every enclosed space between the branches is a hole in the
+ *    path, not white paint, so fog and the distant glow show through the crown
+ *    instead of being blocked by it.
+ *  - **Sharpness at any scale.** The near-tier trunks are drawn close to twice
+ *    the frame height at 4K; rasterising the vector at the size actually
+ *    needed keeps them crisp where an enlarged bitmap would go soft.
  */
 
-export type TreeKey = "dense" | "wide" | "slim";
+export const TREE_SVG = "trees/tree-dense-oak.svg";
+
+/** The trunk base within the artwork, as a fraction of its width. The trace is
+ *  cropped tight and symmetrised about the trunk, so it is the centre. */
+export const TRUNK_X = 0.5;
 
 /**
- * Drop-in replacement point: swap these files for the originals
- * (Untitled_design__2_.png / __3_ / __4_) and nothing else needs to change,
- * as long as the replacements are also black-on-white with the trunk base at
- * the bottom centre of the image.
+ * Where the trunk base falls within a crop window, as a fraction of the
+ * window's width. Drawing anchors on this rather than on the window's centre,
+ * so an off-centre crop still stands its trunk on the ground line — otherwise
+ * every trimmed tree would sit shifted sideways from where its base belongs.
  */
-export const TREE_FILES: Record<TreeKey, string> = {
-  dense: "trees/tree-dense-oak.png", // dense bare oak — mid tiers
-  wide: "trees/tree-wide-dead.png", // wide spreading dead tree — near tier
-  slim: "trees/tree-slim-sparse.png", // slim sparse tree — far tiers
-};
+export const trunkFraction = (crop?: Crop) =>
+  crop ? (TRUNK_X - (crop.cx - crop.w / 2)) / crop.w : TRUNK_X;
 
-/** Luminance below this is fully opaque; above WHITE_POINT, fully clear. */
-const BLACK_POINT = 30;
-const WHITE_POINT = 238;
+/**
+ * A window onto the artwork, as fractions of its box, anchored to the bottom
+ * (so the trunk base is always included). Used by the near tier, where drawing
+ * a whole tree at close to twice the frame height would both bury the shot and
+ * outrun the raster.
+ */
+export type Crop = { cx: number; w: number; h: number };
 
-export type KeyedTree = {
-  canvas: HTMLCanvasElement;
-  width: number;
-  height: number;
-};
+/** One rasterisation the scene needs: a colour, a pixel height, and
+ *  optionally the window of the artwork to rasterise rather than all of it. */
+export type TreeVariant = { color: string; height: number; crop?: Crop };
 
-const keyed = new Map<TreeKey, KeyedTree>();
-const tinted = new Map<string, HTMLCanvasElement>();
+let svgSource: string | null = null;
+let viewBox = { w: 1, h: 1 };
+const rasterised = new Map<string, HTMLCanvasElement>();
+
+export const variantKey = ({ color, height, crop }: TreeVariant) =>
+  `${color}|${height}|${crop ? `${crop.cx},${crop.w},${crop.h}` : "full"}`;
 
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
@@ -43,70 +57,85 @@ const loadImage = (src: string) =>
     img.src = src;
   });
 
-const keyToAlpha = (img: HTMLImageElement): KeyedTree => {
-  const { naturalWidth: w, naturalHeight: h } = img;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-  ctx.drawImage(img, 0, 0);
+/**
+ * Rasterises the trace at an explicit pixel size, in a given colour.
+ *
+ * The size is baked into the SVG's own width/height rather than being applied
+ * at drawImage time: a browser rasterises an <img> at its intrinsic size and
+ * then scales the result, so drawing a 3071px-tall SVG into a 3600px box would
+ * throw away the very sharpness the vector was for.
+ */
+const rasterise = async ({ color, height, crop }: TreeVariant) => {
+  if (!svgSource) throw new Error("prepareTrees() has not resolved yet");
 
-  const data = ctx.getImageData(0, 0, w, h);
-  const p = data.data;
-  for (let i = 0; i < p.length; i += 4) {
-    // Rec. 709 luma — the assets are greyscale, but this stays correct if a
-    // replacement asset carries any colour cast.
-    const lum = 0.2126 * p[i] + 0.7152 * p[i + 1] + 0.0722 * p[i + 2];
-    const a = 1 - smoothstep(BLACK_POINT, WHITE_POINT, lum);
-    p[i] = 0;
-    p[i + 1] = 0;
-    p[i + 2] = 0;
-    p[i + 3] = Math.round(clamp01(a) * 255);
+  // Cropping via the viewBox rather than a source rectangle at draw time means
+  // the raster covers only the window that is actually drawn — so a near-tier
+  // slab is rendered at full resolution for the size of a slab, not the size
+  // the whole tree would have to be to contain it.
+  const vw = crop ? viewBox.w * crop.w : viewBox.w;
+  const vh = crop ? viewBox.h * crop.h : viewBox.h;
+  const vx = crop ? viewBox.w * (crop.cx - crop.w / 2) : 0;
+  const vy = crop ? viewBox.h * (1 - crop.h) : 0;
+
+  const width = Math.max(1, Math.round((height * vw) / vh));
+  const sized = svgSource
+    .replace(/viewBox="[^"]*"/, `viewBox="${vx} ${vy} ${vw} ${vh}"`)
+    .replace(/width="[^"]*"/, `width="${width}"`)
+    .replace(/height="[^"]*"/, `height="${height}"`)
+    .replace(/fill="#000"/, `fill="${color}"`);
+
+  const url = URL.createObjectURL(new Blob([sized], { type: "image/svg+xml" }));
+  try {
+    const img = await loadImage(url);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, width, height);
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(url);
   }
-  ctx.putImageData(data, 0, 0);
-  return { canvas, width: w, height: h };
 };
 
-let loadPromise: Promise<void> | null = null;
+let sourcePromise: Promise<void> | null = null;
 
-/** Loads and keys every silhouette once; safe to call repeatedly. */
-export const loadTrees = (): Promise<void> => {
-  if (!loadPromise) {
-    loadPromise = Promise.all(
-      (Object.keys(TREE_FILES) as TreeKey[]).map(async (key) => {
-        const img = await loadImage(staticFile(TREE_FILES[key]));
-        keyed.set(key, keyToAlpha(img));
-      }),
-    ).then(() => undefined);
+/** Fetches and parses the trace once per page. */
+const ensureSource = () => {
+  if (!sourcePromise) {
+    sourcePromise = (async () => {
+      const res = await fetch(staticFile(TREE_SVG));
+      svgSource = await res.text();
+      const box = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svgSource);
+      if (!box) throw new Error("Trace is missing a viewBox");
+      viewBox = { w: Number(box[1]), h: Number(box[2]) };
+    })();
   }
-  return loadPromise;
-};
-
-export const getKeyedTree = (key: TreeKey): KeyedTree => {
-  const t = keyed.get(key);
-  if (!t) throw new Error(`Tree ${key} was drawn before loadTrees() resolved`);
-  return t;
+  return sourcePromise;
 };
 
 /**
- * A silhouette pre-filled with a tier colour. Tinting per frame would mean an
- * offscreen composite per tree per frame; doing it once per (tree, colour) pair
- * and caching keeps the per-frame cost to a plain drawImage.
+ * Rasterises the trace once per variant the scene needs, before the first
+ * frame is allowed through — so drawing stays synchronous and no frame pays
+ * for rasterisation.
+ *
+ * The per-variant cache, rather than one memoised call, is what lets a page
+ * render more than one palette: switching composition in the Studio asks for
+ * colours that have never been rasterised, and only those are done.
  */
-export const getTintedTree = (key: TreeKey, color: string) => {
-  const cacheKey = `${key}|${color}`;
-  const hit = tinted.get(cacheKey);
-  if (hit) return hit;
+export const prepareTrees = async (
+  variants: readonly TreeVariant[],
+): Promise<void> => {
+  await ensureSource();
+  for (const v of variants) {
+    const key = variantKey(v);
+    if (!rasterised.has(key)) rasterised.set(key, await rasterise(v));
+  }
+};
 
-  const base = getKeyedTree(key);
-  const canvas = document.createElement("canvas");
-  canvas.width = base.width;
-  canvas.height = base.height;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(base.canvas, 0, 0);
-  ctx.globalCompositeOperation = "source-in";
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, base.width, base.height);
-  tinted.set(cacheKey, canvas);
-  return canvas;
+export const getTree = (variant: TreeVariant): HTMLCanvasElement => {
+  const key = variantKey(variant);
+  const hit = rasterised.get(key);
+  if (!hit) throw new Error(`Tree ${key} was drawn before it was prepared`);
+  return hit;
 };

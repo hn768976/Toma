@@ -1,6 +1,12 @@
-import { getKeyedTree, getTintedTree } from "./assets";
-import { GLOW_HEIGHT, GLOW_X, GROUND_TOP, REF_WIDTH } from "./constants";
-import { getTierLayout, TIERS, type Tier, type TreeInstance } from "./forest";
+import { getTree, trunkFraction } from "./assets";
+import { GLOW_HEIGHT, GLOW_X, GROUND_TOP, LOW_RES as LOW, REF_WIDTH } from "./constants";
+import {
+  getTierLayout,
+  TIERS,
+  variantFor,
+  type Tier,
+  type TreeInstance,
+} from "./forest";
 import { getGrainTiles, makeFogTexture } from "./noise";
 import type { Palette } from "./palettes";
 import { loopWave, mix } from "./prng";
@@ -22,12 +28,6 @@ export type SceneOptions = {
   duration: number;
   palette: Palette;
 };
-
-// Fog planes and the far tiers are drawn into a buffer at this fraction of the
-// frame. They are blurred well past the point where the lost resolution could
-// ever show, and it takes the cost of the large blurs down by an order of
-// magnitude.
-const LOW = 0.3;
 
 const buffers = new Map<string, HTMLCanvasElement>();
 
@@ -114,16 +114,16 @@ const glowPath = (
   ctx.globalCompositeOperation = "lighter";
   ctx.translate(gx, groundY - glowH * 0.42);
   // A tall, soft column: light diffusing through fog, with no visible source.
-  ctx.scale(0.5, 1);
+  ctx.scale(0.58, 1);
   const g = ctx.createRadialGradient(0, 0, 0, 0, 0, glowH);
   // A long tail of low-alpha stops: the light has to fade out into the fog
   // without ever showing an edge of its own.
   g.addColorStop(0, palette.glow);
-  g.addColorStop(0.1, `${palette.glowOuter}dd`);
-  g.addColorStop(0.24, `${palette.glowOuter}82`);
-  g.addColorStop(0.42, `${palette.glowOuter}3c`);
-  g.addColorStop(0.62, `${palette.glowOuter}18`);
-  g.addColorStop(0.82, `${palette.glowOuter}07`);
+  g.addColorStop(0.14, `${palette.glow}b4`);
+  g.addColorStop(0.3, `${palette.glowOuter}96`);
+  g.addColorStop(0.48, `${palette.glowOuter}52`);
+  g.addColorStop(0.68, `${palette.glowOuter}24`);
+  g.addColorStop(0.86, `${palette.glowOuter}0a`);
   g.addColorStop(1, "#00000000");
   ctx.globalAlpha = intensity;
   ctx.fillStyle = g;
@@ -140,20 +140,20 @@ const drawTree = (
   H: number,
   frame: number,
   duration: number,
-  color: string,
+  tier: Tier,
+  palette: Palette,
+  frameHeight: number,
 ) => {
-  const base = getKeyedTree(inst.source);
-  const tint = getTintedTree(inst.source, color);
-
-  // Source rectangle: the whole image, or — for the near tier — a slab of
-  // trunk and inner branches anchored to the bottom of the image.
-  const sw = base.width * (inst.crop?.w ?? 1);
-  const sh = base.height * (inst.crop?.h ?? 1);
-  const sx = base.width * (inst.crop?.cx ?? 0.5) - sw / 2;
-  const sy = base.height - sh;
+  // The raster already *is* the window this instance draws — cropping happens
+  // in the SVG viewBox at rasterisation time — so this is a whole-image draw.
+  // Note `frameHeight` is the composition height, not `H`: a low-resolution
+  // tier draws into a smaller buffer but its raster is keyed on the frame.
+  const art = getTree(variantFor(tier, inst, palette, frameHeight));
 
   const h = inst.height * H;
-  const w = h * (sw / sh);
+  const w = h * (art.width / art.height);
+  // Anchor on the trunk, not on the middle of the artwork.
+  const anchorX = -w * trunkFraction(inst.crop);
   const sway =
     inst.swayAmp * loopWave(frame, duration, inst.swayCycles, inst.swayPhase);
 
@@ -162,7 +162,7 @@ const drawTree = (
   // Pivot about the trunk base, so the crown moves and the base does not.
   ctx.rotate(((inst.rotation + sway) * Math.PI) / 180);
   if (inst.flip) ctx.scale(-1, 1);
-  ctx.drawImage(tint, sx, sy, sw, sh, -w / 2, -h, w, h);
+  ctx.drawImage(art, anchorX, -h, w, h);
   ctx.restore();
 };
 
@@ -173,7 +173,6 @@ const drawTier = (
   scale: number,
 ) => {
   const { width: W, height: H, frame, duration, palette } = opts;
-  const color = palette[tier.color];
   const trees = getTierLayout(tier);
   const blurPx = tier.blur * scale;
 
@@ -182,7 +181,7 @@ const drawTier = (
     const lowH = Math.max(2, Math.round(H * LOW));
     const sharp = buffer(`tier-${tier.name}`, lowW, lowH);
     for (const inst of trees) {
-      drawTree(sharp.ctx, inst, lowW, lowH, frame, duration, color);
+      drawTree(sharp.ctx, inst, lowW, lowH, frame, duration, tier, palette, H);
     }
     const soft = buffer(`tier-blur-${tier.name}`, lowW, lowH);
     soft.ctx.filter = `blur(${(blurPx * LOW).toFixed(2)}px)`;
@@ -200,7 +199,7 @@ const drawTier = (
   ctx.globalAlpha = tier.alpha;
   if (blurPx > 0.4) ctx.filter = `blur(${blurPx.toFixed(2)}px)`;
   for (const inst of trees) {
-    drawTree(ctx, inst, W, H, frame, duration, color);
+    drawTree(ctx, inst, W, H, frame, duration, tier, palette, H);
   }
   ctx.restore();
 };
@@ -363,7 +362,7 @@ export const drawScene = (
   ctx.restore();
 
   // Mist hugging the ground, in front of everything.
-  drawFogPlane(ctx, 5, 0.3 * globalBreath, opts, scale);
+  drawFogPlane(ctx, 5, 0.24 * globalBreath, opts, scale);
 
   // --- 5. bloom, on the distant glow only ---
   const lowW = Math.max(2, Math.round(W * LOW));

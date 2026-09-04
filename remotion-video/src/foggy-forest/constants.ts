@@ -19,3 +19,10 @@ export const GLOW_HEIGHT = 0.45;
 
 // Ground band occupies the bottom ~12% of the frame.
 export const GROUND_TOP = 0.88;
+
+/**
+ * Fog planes and the far tiers are drawn into a buffer at this fraction of the
+ * frame. They are blurred well past the point where the lost resolution could
+ * show, and it takes the cost of the large blurs down by an order of magnitude.
+ */
+export const LOW_RES = 0.3;

@@ -26,29 +26,46 @@ function mulberry32(a) {
 }
 
 const PRESETS = {
-  // Dense bare oak: upright, a strong central trunk, heavy canopy of twigs.
+  /**
+   * Dense bare oak, after `Untitled_design__2_.png`.
+   *
+   * Monopodial, not dichotomous: a central leader runs the full height of the
+   * tree and laterals come off it in tiers, rather than the trunk forking into
+   * equal limbs. That is what gives the reference its straight trunk visible
+   * all the way up through the canopy — and, because the laterals arch over
+   * without meeting, the large open gaps between them.
+   */
   dense: {
-    seed: 20240517, depth: 10,
-    trunkWidth: 0.135, widthRatio: 0.690,
-    spread: [0.26, 0.46], lenRatio: [0.66, 0.80], curve: 0.22, upBias: 0.30,
-    children: (d) => (d > 8 ? 3 : 2), extraSplit: 0.26, drop: 0.06,
-    stubChance: 0.11, flare: 2.4,
-  },
-  // Wide spreading dead tree: low fork, gnarly limbs reaching sideways.
-  wide: {
-    seed: 8811237, depth: 10,
-    trunkWidth: 0.200, widthRatio: 0.700,
-    spread: [0.55, 0.94], lenRatio: [0.70, 0.84], curve: 0.24, upBias: 0.08,
-    children: (d) => (d > 8 ? 3 : 2), extraSplit: 0.22, drop: 0.08,
-    stubChance: 0.18, flare: 2.8,
-  },
-  // Slim sparse tree: a long clean trunk with only a few branches.
-  slim: {
-    seed: 553091, depth: 8,
-    trunkWidth: 0.062, widthRatio: 0.660,
-    spread: [0.32, 0.62], lenRatio: [0.60, 0.74], curve: 0.24, upBias: 0.46,
-    children: () => 2, extraSplit: 0.06, drop: 0.22,
-    stubChance: 0.08, flare: 2.0,
+    seed: 20240517,
+    /** Leader segments from base to tip. */
+    leaderSteps: 14,
+    /** Leader length per step, as a fraction of the previous step. */
+    leaderTaper: 0.93,
+    /** Trunk half-width at the base, in leader-step units. */
+    trunkWidth: 0.195,
+    widthRatio: 0.755,
+    /** Wander of the leader, in radians per step. */
+    leaderWander: 0.075,
+    /** Where along the leader the first lateral appears. */
+    firstLateralAt: 0.18,
+    /** Lateral length as a multiple of the leader step it grows from. */
+    lateralLen: [2.05, 3.25],
+    /** Lateral launch angle from vertical: near-horizontal low down, steeper
+     *  toward the top, which is what rounds the crown off. */
+    lateralAngle: [1.15, 0.42],
+    /** Lateral thickness relative to the leader at that height. */
+    lateralWidth: 0.74,
+    /** Sub-branching within a lateral. */
+    depth: 7,
+    spread: [0.30, 0.62],
+    lenRatio: [0.62, 0.78],
+    curve: 0.26,
+    upBias: 0.34,
+    children: () => 2,
+    extraSplit: 0.14,
+    drop: 0.16,
+    stubChance: 0.14,
+    flare: 2.6,
   },
 };
 
@@ -60,8 +77,13 @@ function grow(preset) {
   const segs = [];
   const stubs = [];
 
-  function branch(x, y, angle, len, width, depth) {
-    if (depth <= 0 || len < 0.0025) return;
+  const push = (x, y, cx, cy, x1, y1, w0, w1) =>
+    segs.push({ x, y, cx, cy, x1, y1, w0, w1 });
+
+  // Sub-branching inside a lateral: this part stays dichotomous, because that
+  // is how real twigs divide.
+  function twig(x, y, angle, len, width, depth) {
+    if (depth <= 0 || len < 0.004) return;
 
     const bend = rr(-p.curve, p.curve);
     const midAng = angle + bend * 0.5;
@@ -72,10 +94,9 @@ function grow(preset) {
     const y1 = cy + Math.sin(endAng) * len * 0.5;
     const w1 = width * p.widthRatio;
 
-    segs.push({ x, y, cx, cy, x1, y1, w0: width, w1 });
+    push(x, y, cx, cy, x1, y1, width, w1);
 
-    // Broken-off stubs: what makes a bare tree read as bare rather than pruned.
-    if (depth > 2 && depth < 10 && rnd() < p.stubChance) {
+    if (depth > 1 && rnd() < p.stubChance) {
       const sa = endAng + (rnd() < 0.5 ? -1 : 1) * rr(0.75, 1.35);
       const sl = len * rr(0.16, 0.34);
       stubs.push({ x: x1, y: y1, x1: x1 + Math.cos(sa) * sl, y1: y1 + Math.sin(sa) * sl, w: w1 * 0.8 });
@@ -88,25 +109,63 @@ function grow(preset) {
       if (n > 2 && rnd() < p.drop) continue;
       const t = n === 1 ? 0 : i / (n - 1) - 0.5;
       let a = endAng + t * spread * 2 + rr(-0.18, 0.18);
-      // Bias decays toward the tips: major limbs reach for the sky, fine
-      // twigs are free to wander, which keeps the crown from doming over.
       const bias = p.upBias * (depth / p.depth);
       a += (-Math.PI / 2 - a) * bias * rr(0.4, 1.0);
-      branch(x1, y1, a, len * rr(p.lenRatio[0], p.lenRatio[1]), w1, depth - 1);
+      twig(x1, y1, a, len * rr(p.lenRatio[0], p.lenRatio[1]), w1, depth - 1);
     }
   }
 
-  branch(0, 0, -Math.PI / 2 + rr(-0.05, 0.05), 1, p.trunkWidth, p.depth);
+  // The leader: one continuous axis from base to tip, shedding laterals.
+  let x = 0;
+  let y = 0;
+  let angle = -Math.PI / 2 + rr(-0.03, 0.03);
+  let len = 1;
+  let width = p.trunkWidth;
+  let side = rnd() < 0.5 ? -1 : 1;
+
+  for (let step = 0; step < p.leaderSteps; step++) {
+    const t = step / (p.leaderSteps - 1);
+    const bend = rr(-p.leaderWander, p.leaderWander);
+    const midAng = angle + bend * 0.5;
+    const cx = x + Math.cos(midAng) * len * 0.5;
+    const cy = y + Math.sin(midAng) * len * 0.5;
+    const endAng = angle + bend;
+    const x1 = cx + Math.cos(endAng) * len * 0.5;
+    const y1 = cy + Math.sin(endAng) * len * 0.5;
+    const w1 = width * p.leaderTaper;
+
+    push(x, y, cx, cy, x1, y1, width, w1);
+
+    if (t >= p.firstLateralAt) {
+      // Laterals alternate sides, the way a real leader sheds them, with the
+      // launch angle steepening toward the top to round the crown.
+      const n = rnd() < 0.55 ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        const dir = i === 0 ? side : -side;
+        const flat = p.lateralAngle[0] + (p.lateralAngle[1] - p.lateralAngle[0]) * t;
+        const a = -Math.PI / 2 + dir * (flat + rr(-0.16, 0.16));
+        const l = len * rr(p.lateralLen[0], p.lateralLen[1]);
+        twig(x1, y1, a, l, w1 * p.lateralWidth, p.depth);
+      }
+    }
+    side = -side;
+
+    x = x1;
+    y = y1;
+    angle = endAng;
+    len *= p.leaderTaper;
+    width = w1;
+  }
 
   let minX = 0, maxX = 0, minY = 0, maxY = 0;
-  const acc = (x, y, w) => {
-    if (x - w < minX) minX = x - w;
-    if (x + w > maxX) maxX = x + w;
-    if (y - w < minY) minY = y - w;
-    if (y + w > maxY) maxY = y + w;
+  const acc = (px, py, w) => {
+    if (px - w < minX) minX = px - w;
+    if (px + w > maxX) maxX = px + w;
+    if (py - w < minY) minY = py - w;
+    if (py + w > maxY) maxY = py + w;
   };
-  for (const s of segs) { acc(s.x, s.y, s.w0); acc(s.cx, s.cy, s.w0); acc(s.x1, s.y1, s.w1); }
-  for (const s of stubs) { acc(s.x, s.y, s.w); acc(s.x1, s.y1, s.w); }
+  for (const sg of segs) { acc(sg.x, sg.y, sg.w0); acc(sg.cx, sg.cy, sg.w0); acc(sg.x1, sg.y1, sg.w1); }
+  for (const sg of stubs) { acc(sg.x, sg.y, sg.w); acc(sg.x1, sg.y1, sg.w); }
   acc(0, 0, p.trunkWidth * p.flare);
 
   return { p, segs, stubs, bbox: { minX, maxX, minY, maxY } };

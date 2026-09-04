@@ -2,19 +2,7 @@
   "dense": {
     "file": "tree-dense-oak.png",
     "width": 3146,
-    "height": 2654,
-    "bytes": 809705
-  },
-  "wide": {
-    "file": "tree-wide-dead.png",
-    "width": 3146,
-    "height": 1973,
-    "bytes": 1058900
-  },
-  "slim": {
-    "file": "tree-slim-sparse.png",
-    "width": 2045,
-    "height": 3146,
-    "bytes": 441415
+    "height": 3054,
+    "bytes": 1229358
   }
 }
