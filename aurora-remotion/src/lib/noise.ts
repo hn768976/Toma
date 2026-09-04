@@ -81,6 +81,13 @@ export const sfbm3 = (
   octaves = 4,
 ) => fbm3(x, y, z, seed, octaves) * 2 - 1;
 
+/** Cheap deterministic hash of one integer, in [0, 1). */
+export const hash01 = (i: number, seed: number) => {
+  let h = Math.imul(i ^ seed, 0x27d4eb2d) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b) >>> 0;
+  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+};
+
 export const clamp = (v: number, lo: number, hi: number) =>
   v < lo ? lo : v > hi ? hi : v;
 

@@ -1,4 +1,4 @@
-import {clamp, sfbm3, smoothstep, TAU, waveSum} from '../lib/noise';
+import {clamp, hash01, sfbm3, smoothstep, TAU, waveSum} from '../lib/noise';
 import type {CurtainSpec, Palette, Variant} from './config';
 
 /**
@@ -69,17 +69,31 @@ const striation = (c: CurtainSpec, nx: number, t: number, soften: number) => {
   const bands = Math.pow(clamp(0.5 + 1.15 * v, 0, 1), 1.35);
   const env = 0.34 + 0.66 * clamp(0.5 + 1.0 * e, 0, 1);
   const s = 0.22 + 1.15 * bands * env;
-  // Broad faint sheets carry much flatter striations than the bright curtains.
-  return s + (0.85 - s) * soften;
+  // Broad faint sheets carry flatter striations than the bright curtains, but
+  // never flat: a sheet with no internal variation reads as a uniform slab
+  // with a visible edge rather than as diffuse light.
+  return s + (0.85 - s) * soften * 0.55;
 };
 
 export type CurtainTargets = {
+  /** Crisp, dominant curtains — composited sharp so striations survive. */
   aurora: CanvasRenderingContext2D;
+  /**
+   * Broad diffuse sheets. These are composited through a blur, which is both
+   * what they should look like and what dissolves the hard horizontal cut
+   * left where the colour ramp's alpha tail rounds away to nothing at the
+   * same height in every column.
+   */
+  sheets: CanvasRenderingContext2D;
   bloom: CanvasRenderingContext2D;
   bloomScale: number;
 };
 
+/** Curtains at or above this softness are treated as diffuse sheets. */
+export const SHEET_SOFTNESS = 0.35;
+
 const drawCurtain = (
+  ctx: CanvasRenderingContext2D,
   tg: CurtainTargets,
   c: CurtainSpec,
   palette: Palette,
@@ -88,10 +102,9 @@ const drawCurtain = (
   h: number,
   t: number,
 ) => {
-  const ctx = tg.aurora;
   // Two buckets keeps the ramp cache tiny while still separating the crisp
   // dominant curtains from the broad, diffuse sheets.
-  const ramp = getRamp(palette, 512, c.soft > 0.35 ? 0.1 : 0.022);
+  const ramp = getRamp(palette, 512, c.soft > SHEET_SOFTNESS ? 0.1 : 0.022);
   const ct = Math.cos(TAU * t);
   const st = Math.sin(TAU * t);
 
@@ -103,7 +116,7 @@ const drawCurtain = (
   const span = c.x1 - c.x0;
   const sw = swell(c, t);
   const baseAlpha = c.opacity * sw * gain;
-  if (baseAlpha < 0.006) return;
+  if (baseAlpha < 0.0015) return;
 
   ctx.save();
   // Strips cross over one another once the shear grows faster than the frame
@@ -118,8 +131,17 @@ const drawCurtain = (
   bctx.save();
   bctx.fillStyle = palette.hot;
 
-  for (let x = c.x0 * w; x <= c.x1 * w; x += step) {
+  let col = 0;
+  for (let x = c.x0 * w; x <= c.x1 * w; x += step, col++) {
     const nx = x / w;
+    // Every column is scaled from the same vertical ramp, so without this the
+    // height at which `globalAlpha * ramp` rounds away to nothing is identical
+    // across neighbouring columns — a straight cut that steps in rectangular
+    // blocks as alpha crosses each 1/255 threshold. A small static per-column
+    // jitter decorrelates those thresholds; it is fixed in x, so it reads as
+    // extra striation rather than crawling.
+    const jh = 0.94 + 0.12 * hash01(col, c.seed);
+    const ja = 0.9 + 0.2 * hash01(col + 9973, c.seed);
     const u = (nx - c.x0) / span; // 0..1 along the curtain
 
     // 1. Base path — the bottom edge, undulating like fabric.
@@ -161,18 +183,25 @@ const drawCurtain = (
     // Skewed so stretches of the curtain thin out almost to nothing, which is
     // what breaks a continuous band into separate hanging folds.
     const hn = Math.pow(clamp(0.5 + 0.5 * hv, 0, 1), 1.7);
-    const height = c.height * h * (0.14 + 1.15 * hn) * taperF;
+    const height = c.height * h * (0.14 + 1.15 * hn) * taperF * jh;
     if (height < h * 0.01) continue;
     // A collapsing fold must dim as it thins, otherwise the bright lower lip
     // survives on its own as a hard hairline across the sky.
-    const thin = smoothstep(0, 0.3, hn);
+    // The fade is long, so the fold dissolves instead of switching off
+    // behind a visible edge.
+    const thin = smoothstep(0, 0.55, hn);
 
     // 3. Striations travelling along the curtain, plus end fades.
     // Wide end fades: a short one leaves the sheared leading edge reading as
     // a straight-sided parallelogram.
-    const edge = smoothstep(0, 0.24, u) * (1 - smoothstep(0.76, 1, u));
-    const alpha = baseAlpha * striation(c, nx, t, c.soft) * edge * thin;
-    if (alpha < 0.005) continue;
+    const fadeIn = 0.24 + c.soft * 0.16;
+    const edge =
+      smoothstep(0, fadeIn, u) * (1 - smoothstep(1 - fadeIn, 1, u));
+    const alpha = baseAlpha * striation(c, nx, t, c.soft) * edge * thin * ja;
+    // Columns overlap about five deep, so a cutoff has to sit well below one
+    // code value — dropping strips at 0.005 removed roughly five levels at
+    // once and left a hard edge across the sky wherever alpha crossed it.
+    if (alpha < 0.0009) continue;
 
     // 4. Fan-out from near the zenith: columns lean away from the vanishing x.
     const skew = c.tilt + spread * dv;
@@ -212,9 +241,13 @@ export const drawAurora = (
   t: number,
 ) => {
   tg.aurora.save();
+  tg.sheets.save();
   tg.aurora.globalCompositeOperation = 'lighter';
+  tg.sheets.globalCompositeOperation = 'lighter';
   for (const c of v.curtains) {
-    drawCurtain(tg, c, v.palette, v.gain, w, h, t);
+    const ctx = c.soft > SHEET_SOFTNESS ? tg.sheets : tg.aurora;
+    drawCurtain(ctx, tg, c, v.palette, v.gain, w, h, t);
   }
+  tg.sheets.restore();
   tg.aurora.restore();
 };

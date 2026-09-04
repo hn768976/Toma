@@ -167,7 +167,7 @@ const makeCurtain = (
     swellPhB: rng(),
     striations: makeWaves(rng, 5, 22, 95, 5, 24),
     envelope: makeWaves(rng, 3, 1.2, 5, 1, 3),
-    soft: dominant ? range(rng, 0.0, 0.2) : range(rng, 0.4, 0.78),
+    soft: dominant ? range(rng, 0.0, 0.2) : range(rng, 0.35, 0.65),
   };
 };
 

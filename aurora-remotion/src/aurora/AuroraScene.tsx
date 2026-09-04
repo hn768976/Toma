@@ -68,13 +68,17 @@ export const AuroraScene: React.FC<{variant: VariantId}> = ({variant}) => {
     const bw = Math.max(2, Math.round(w * bloomScale));
     const bh = Math.max(2, Math.round(h * bloomScale));
     const auroraCanvas = getScratch('aurora', w, h);
+    const sheetCanvas = getScratch('sheets', w, h);
     const bloomCanvas = getScratch('bloom', bw, bh);
     const actx = ctxOf(auroraCanvas);
+    const sctx = ctxOf(sheetCanvas);
     const bctx = ctxOf(bloomCanvas);
-    actx.setTransform(1, 0, 0, 1, 0, 0);
-    actx.globalAlpha = 1;
-    actx.globalCompositeOperation = 'source-over';
-    actx.clearRect(0, 0, w, h);
+    for (const c of [actx, sctx]) {
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.globalAlpha = 1;
+      c.globalCompositeOperation = 'source-over';
+      c.clearRect(0, 0, w, h);
+    }
     bctx.setTransform(1, 0, 0, 1, 0, 0);
     bctx.globalAlpha = 1;
     bctx.globalCompositeOperation = 'lighter';
@@ -82,6 +86,7 @@ export const AuroraScene: React.FC<{variant: VariantId}> = ({variant}) => {
 
     const targets: CurtainTargets = {
       aurora: actx,
+      sheets: sctx,
       bloom: bctx,
       bloomScale,
     };
@@ -89,6 +94,12 @@ export const AuroraScene: React.FC<{variant: VariantId}> = ({variant}) => {
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
+    // Diffuse sheets go down through a blur — it is how they should look, and
+    // it dissolves the hard cut left where their ramp's alpha tail rounds to
+    // nothing at the same height in every column.
+    ctx.filter = `blur(${(w * 0.0028).toFixed(2)}px)`;
+    ctx.drawImage(sheetCanvas, 0, 0);
+    ctx.filter = 'none';
     ctx.drawImage(auroraCanvas, 0, 0);
     // Bloom on the bright lower lips only — aurora light is diffuse, and a
     // heavy overall bloom would erase the striations.
