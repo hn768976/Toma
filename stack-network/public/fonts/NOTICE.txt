@@ -1,0 +1,9 @@
+Rajdhani
+Copyright (c) Indian Type Foundry.
+
+Licensed under the SIL Open Font License, Version 1.1.
+Full licence text: https://fonts.google.com/specimen/Rajdhani/license
+Upstream: https://fonts.google.com/specimen/Rajdhani
+
+Rajdhani-SemiBold.woff2  weight 600, latin subset
+Rajdhani-Bold.woff2      weight 700, latin subset

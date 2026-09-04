@@ -1,0 +1,4 @@
+# Packaged deliverable, rebuilt from stack-network/ with:
+#   cd stack-network && zip -r ../stack-network-project.zip . \
+#     -x 'node_modules/*' 'out/*' '.git/*' '*/.DS_Store'
+stack-network-project.zip
