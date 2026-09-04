@@ -1,8 +1,8 @@
 # Aurora Borealis — Remotion
 
 Three procedural aurora borealis clips. Everything on screen is generated in
-code: sky gradient, Milky Way, starfield, aurora curtains, horizon glow and
-ridgeline. There are no photographic assets of any kind — no star maps, no sky
+code: sky gradient, Milky Way, starfield, aurora curtains, horizon glow, mountains and
+treeline. There are no photographic assets of any kind — no star maps, no sky
 plates, no landscape photos — which is what keeps the clips clean for
 royalty-free licensing. No watermark, no logo.
 
@@ -10,7 +10,7 @@ royalty-free licensing. No watermark, no logo.
 
 | ID | Description |
 | --- | --- |
-| `V1-AuroraGreenRidge` | Green curtains over a silhouetted ridgeline with a gold horizon glow. |
+| `V1-AuroraGreenRidge` | Green curtains over a silhouetted mountain range and treeline, with a gold horizon glow. |
 | `V2-AuroraVioletStorm` | A stronger magenta/violet display, more curtains, same landscape. |
 | `V3-AuroraSkyPlate` | Sky-only plate: green, full-frame aurora over stars, no landscape and no horizon glow. Composite your own foreground onto this. |
 
@@ -61,8 +61,19 @@ Layers, back to front (`src/aurora/`):
    lifting the stars.
 5. **Horizon glow** — gold through amber to a thin band of red, brightest
    centre-right (V1/V2 only).
-6. **Ridgeline** — a pure black cutout with a couple of rock spires and one
-   warm pinpoint light on the plain (V1/V2 only).
+6. **Landscape** — a jagged mountain range behind a coniferous treeline, plus
+   one warm pinpoint light out among the distant trees (V1/V2 only). The
+   mountains come from midpoint displacement between hand-placed anchors,
+   which is what gives rock its angular, faceted profile; smooth noise alone
+   reads as hills. The same profile, flipped, shifted and flattened, forms the
+   foothills. Trees are built tier by tier, each branch hanging out and
+   slightly up from the notch below it. Everything is a pure black cutout with
+   no interior detail, except that the far range is left a shade short of
+   black so a little horizon glow bleeds through and the planes separate — a
+   thin band of valley haze does the rest.
+
+   These are vector paths rather than traced bitmaps, so the edges stay razor
+   sharp at 4K and the project keeps no image assets.
 
 Then a sub-level uniform dither, fine grain at about 2%, and a very slight
 corner darkening.
@@ -94,7 +105,7 @@ Every source of motion is periodic in `t = frame / durationInFrames`:
   of cycles** over the loop;
 - star twinkle uses integer cycle counts; the grain tiles cycle with the frame.
 
-Stars, Milky Way, horizon glow and ridgeline are otherwise completely static —
+Stars, Milky Way, horizon glow and landscape are otherwise completely static —
 the reference is a locked shot, with no camera move and no parallax.
 
 ### Encoding note
@@ -112,7 +123,7 @@ src/
   lib/rng.ts            mulberry32
   lib/noise.ts          value noise, fbm, looping wave trains
   aurora/config.ts      per-version palettes and curtain parameters
-  aurora/layers.ts      sky, Milky Way, stars, horizon glow, ridge, grain
+  aurora/layers.ts      sky, Milky Way, stars, horizon glow, landscape, grain
   aurora/curtains.ts    the curtain renderer
   aurora/AuroraScene.tsx  per-frame compositing
 ```

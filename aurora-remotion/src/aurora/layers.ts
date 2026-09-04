@@ -1,5 +1,5 @@
 import {clamp, fbm3, smoothstep, TAU} from '../lib/noise';
-import {mulberry32, range} from '../lib/rng';
+import {mulberry32, range, type Rng} from '../lib/rng';
 import type {Variant} from './config';
 
 /**
@@ -328,57 +328,235 @@ export const getHorizonGlow = (v: Variant, w: number, h: number) =>
   });
 
 // ---------------------------------------------------------------------------
-// Ridgeline — a pure black cutout, no interior detail.
+// Landscape — a jagged mountain range behind a coniferous treeline, all of it
+// a pure black cutout with no interior detail. Both are generated as vector
+// paths rather than traced from bitmaps, so the edges stay razor sharp at 4K.
 // ---------------------------------------------------------------------------
 
-const ridgeProfile = (v: Variant, w: number, h: number) => {
-  const hy = v.horizonY * h;
-  const pts: {x: number; y: number}[] = [];
-  const step = Math.max(1, w / 900);
-  // A few hand-placed features on top of the noise: two jagged spires and a
-  // higher mass at the right edge.
-  const spires = [
-    {x: 0.215, amp: 0.062, wid: 0.016},
-    {x: 0.245, amp: 0.038, wid: 0.011},
-    {x: 0.505, amp: 0.048, wid: 0.014},
-  ];
-  for (let x = -step; x <= w + step; x += step) {
-    const nx = x / w;
-    const hills =
-      (fbm3(nx * 3.4, 0.7, 0.3, v.seed + 301, 4) - 0.5) * 0.052 +
-      (fbm3(nx * 9.1, 2.3, 1.1, v.seed + 302, 3) - 0.5) * 0.016;
-    let y = hy - h * (0.026 + hills);
-    for (const s of spires) {
-      const d = (nx - s.x) / s.wid;
-      y -= h * s.amp * Math.exp(-d * d) * (1 - 0.35 * Math.abs(Math.sin(d * 5)));
+type Pt = {x: number; y: number};
+
+/**
+ * Midpoint displacement between hand-placed anchors. Straight-line subdivision
+ * with a shrinking random offset is what gives rock its angular, faceted
+ * profile — smooth noise alone reads as hills, not mountains.
+ */
+const displaceRidge = (anchors: Pt[], rng: Rng, roughness: number, depth: number) => {
+  let pts = anchors;
+  let amp = roughness;
+  for (let d = 0; d < depth; d++) {
+    const next: Pt[] = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1];
+      const b = pts[i];
+      const mid = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2 + (rng() - 0.5) * amp * Math.abs(b.x - a.x),
+      };
+      next.push(mid, b);
     }
-    // Rising mass toward the right edge.
-    y -= h * 0.058 * smoothstep(0.72, 1.0, nx);
-    pts.push({x, y});
+    pts = next;
+    // Rock is close to self-similar: the offset must shrink no faster than
+    // the segment it sits on, or the profile smooths into dunes.
+    amp *= 0.95;
   }
   return pts;
 };
 
-const ridgeYAt = (pts: {x: number; y: number}[], x: number) => {
-  let best = pts[0];
-  for (const p of pts) if (Math.abs(p.x - x) < Math.abs(best.x - x)) best = p;
-  return best.y;
+const MOUNTAIN_ANCHORS: Pt[] = [
+  {x: -0.06, y: 0.893},
+  {x: 0.05, y: 0.872},
+  {x: 0.14, y: 0.836},
+  {x: 0.23, y: 0.795},
+  {x: 0.33, y: 0.734},
+  {x: 0.385, y: 0.783},
+  {x: 0.44, y: 0.812},
+  {x: 0.5, y: 0.858},
+  {x: 0.535, y: 0.836},
+  {x: 0.585, y: 0.787},
+  {x: 0.63, y: 0.831},
+  {x: 0.67, y: 0.809},
+  {x: 0.73, y: 0.846},
+  {x: 0.8, y: 0.858},
+  {x: 0.88, y: 0.874},
+  {x: 1.06, y: 0.888},
+];
+
+/** Base line the anchor profile is measured against. */
+const MOUNTAIN_FOOT = 0.892;
+
+/**
+ * `baseLine` is where the range meets the ground and `peakScale` how far its
+ * peaks rise above it, so the same profile serves both the tall distant range
+ * and the low foothills in front of it. `xShift` and `flip` keep the two from
+ * repeating the same skyline.
+ */
+const mountainRange = (
+  seed: number,
+  w: number,
+  h: number,
+  opts: {baseLine: number; peakScale: number; xShift: number; flip: boolean},
+) => {
+  const rng = mulberry32(seed);
+  const anchors = MOUNTAIN_ANCHORS.map((p) => {
+    const nx = opts.flip ? 1 - p.x : p.x;
+    return {
+      x: (nx + opts.xShift) * w,
+      y: (opts.baseLine - (MOUNTAIN_FOOT - p.y) * opts.peakScale) * h,
+    };
+  });
+  if (opts.flip) anchors.reverse();
+  return displaceRidge(anchors, rng, 0.32, 7);
+};
+
+/**
+ * One spruce. Each tier hangs a branch out and slightly up from the notch
+ * below it, which is what reads as a conifer rather than a triangle; a small
+ * intermediate jag on every edge carries the needle raggedness.
+ */
+const spruce = (
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  baseY: number,
+  height: number,
+  halfW: number,
+  rng: Rng,
+) => {
+  const tiers = 8 + Math.floor(rng() * 5);
+  const top = baseY - height;
+  const trunk = halfW * 0.09;
+
+  // Each side is generated top-to-bottom; the left one is then emitted in
+  // reverse so the outline is a single non-self-intersecting loop.
+  const side = (dir: number) => {
+    const pts: Pt[] = [];
+    for (let i = 1; i <= tiers; i++) {
+      const f = i / tiers;
+      const yTop = baseY - height * (1 - (i - 1) / tiers);
+      const yBot = baseY - height * (1 - f);
+      const reach = halfW * Math.pow(f, 0.82) * (0.72 + 0.56 * rng());
+      // A short jag partway out, then the branch tip, then back to the trunk.
+      pts.push({x: cx + dir * reach * 0.55, y: yTop + (yBot - yTop) * 0.42});
+      pts.push({x: cx + dir * reach, y: yBot - (yBot - yTop) * 0.22});
+      pts.push({x: cx + dir * reach * 0.42, y: yBot - (yBot - yTop) * 0.06});
+      pts.push({x: cx + dir * trunk * (1 + f), y: yBot});
+    }
+    return pts;
+  };
+
+  const right = side(1);
+  const left = side(-1);
+
+  ctx.moveTo(cx, top);
+  for (const p of right) ctx.lineTo(p.x, p.y);
+  ctx.lineTo(cx + halfW * 0.16, baseY);
+  ctx.lineTo(cx - halfW * 0.16, baseY);
+  for (let i = left.length - 1; i >= 0; i--) ctx.lineTo(left[i].x, left[i].y);
+  ctx.closePath();
+};
+
+const treeBand = (
+  ctx: CanvasRenderingContext2D,
+  seed: number,
+  w: number,
+  h: number,
+  opts: {
+    baseY: number;
+    minH: number;
+    maxH: number;
+    count: number;
+    slant: number;
+  },
+) => {
+  const rng = mulberry32(seed);
+  const trees: {cx: number; baseY: number; height: number; halfW: number}[] = [];
+  for (let i = 0; i < opts.count; i++) {
+    const t = (i + rng() * 0.9 - 0.45) / opts.count;
+    const cx = (-0.04 + t * 1.08) * w;
+    // The band follows the ground, which is not level.
+    const ground =
+      opts.baseY * h +
+      opts.slant * h * (t - 0.5) +
+      (fbm3(t * 4.1, 0.5, 0.5, seed + 77, 3) - 0.5) * h * 0.012;
+    // Weighted toward the short end so a few spires stand clear of the canopy.
+    const height =
+      h * (opts.minH + Math.pow(rng(), 1.9) * (opts.maxH - opts.minH));
+    trees.push({cx, baseY: ground, height, halfW: height * (0.17 + rng() * 0.15)});
+  }
+  // Shortest first, so the tall ones sit in front.
+  trees.sort((a, b) => a.height - b.height);
+  ctx.beginPath();
+  for (const t of trees) {
+    spruce(ctx, t.cx, t.baseY, t.height, t.halfW, rng);
+  }
+  ctx.fill();
 };
 
 export const getRidge = (v: Variant, w: number, h: number) =>
   cached(`ridge-${v.id}-${w}x${h}`, w, h, (ctx) => {
-    const pts = ridgeProfile(v, w, h);
-    ctx.beginPath();
-    ctx.moveTo(-w, h + 10);
-    for (const p of pts) ctx.lineTo(p.x, p.y);
-    ctx.lineTo(w * 2, h + 10);
-    ctx.closePath();
-    ctx.fillStyle = '#000000';
-    ctx.fill();
+    const fill = (pts: Pt[], style: string) => {
+      ctx.beginPath();
+      ctx.moveTo(-w, h + 10);
+      for (const p of pts) ctx.lineTo(p.x, p.y);
+      ctx.lineTo(w * 2, h + 10);
+      ctx.closePath();
+      ctx.fillStyle = style;
+      ctx.fill();
+    };
 
-    // One tiny warm pinpoint light out on the plain.
-    const lx = w * 0.372;
-    const ly = ridgeYAt(pts, lx) - h * 0.004;
+    // Far range: the tall one, and not quite black, so a little of the
+    // horizon glow bleeds through it and the planes separate.
+    fill(
+      mountainRange(v.seed + 401, w, h, {
+        baseLine: 0.888,
+        peakScale: 1,
+        xShift: 0,
+        flip: false,
+      }),
+      'rgba(0,0,0,0.87)',
+    );
+
+    // A thin band of haze sitting in the valley between the two ranges.
+    const hazeTop = 0.79 * h;
+    const haze = ctx.createLinearGradient(0, hazeTop, 0, 0.895 * h);
+    haze.addColorStop(0, 'rgba(120,132,150,0)');
+    haze.addColorStop(0.55, 'rgba(126,134,148,0.1)');
+    haze.addColorStop(1, 'rgba(150,140,140,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, hazeTop, w, 0.11 * h);
+
+    // Near foothills — the same profile flipped, shifted and flattened — plus
+    // the treeline standing on them.
+    fill(
+      mountainRange(v.seed + 402, w, h, {
+        baseLine: 0.947,
+        peakScale: 0.3,
+        xShift: -0.11,
+        flip: true,
+      }),
+      '#000000',
+    );
+
+    ctx.fillStyle = '#000000';
+    treeBand(ctx, v.seed + 501, w, h, {
+      baseY: 0.906,
+      minH: 0.026,
+      maxH: 0.058,
+      count: 130,
+      slant: 0.012,
+    });
+    treeBand(ctx, v.seed + 502, w, h, {
+      baseY: 1.035,
+      minH: 0.075,
+      maxH: 0.235,
+      count: 74,
+      slant: -0.018,
+    });
+    // Solid ground beneath the near trees.
+    ctx.fillRect(0, 0.978 * h, w, h);
+
+    // One tiny warm pinpoint light out among the distant trees.
+    const lx = w * 0.435;
+    const ly = h * 0.9;
     const glow = ctx.createRadialGradient(lx, ly, 0, lx, ly, w * 0.012);
     glow.addColorStop(0, 'rgba(255,196,120,0.95)');
     glow.addColorStop(0.18, 'rgba(255,164,80,0.35)');
