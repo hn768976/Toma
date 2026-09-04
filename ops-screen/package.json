@@ -1,0 +1,26 @@
+{
+  "name": "ops-screen",
+  "version": "1.0.0",
+  "description": "Multi-window terminal UI motion graphic (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.520",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.520"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "sideEffects": [
+    "./src/load-fonts.ts"
+  ]
+}
