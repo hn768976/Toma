@@ -33,9 +33,14 @@ A 1080p preview from the same 4K composition — layout is identical, only the
 raster scale changes:
 
 ```bash
-npx remotion render V1-HUDPlaneBlue  out/V1_HUDPlaneBlue.mp4  --scale=0.5 --crf=16
-npx remotion render V2-HUDPlaneAmber out/V2_HUDPlaneAmber.mp4 --scale=0.5 --crf=16
+npx remotion render V1-HUDPlaneBlue  out/V1_HUDPlaneBlue.mp4  --scale=0.5 --crf=18
+npx remotion render V2-HUDPlaneAmber out/V2_HUDPlaneAmber.mp4 --scale=0.5 --crf=18
 ```
+
+CRF 18 is used for previews rather than 16 only to keep the files a sensible
+size; measured on the encoded output the grain — and therefore the dither that
+keeps the gradient smooth — survives both settings equally. Render the 4K
+masters at CRF 16.
 
 Stills:
 
