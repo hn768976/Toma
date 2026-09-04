@@ -82,9 +82,42 @@ src/
 ```
 
 Structure, inner to outer: a hard-edged, noise-perturbed black pupil; a hot inner
-rim broken into a few uneven arcs; the filament field itself (1400 strands, each
-a chain of additive dots, curved and tapering, clustered into bundles); a ragged
-outer membrane; and a handful of low-alpha spikes punching past the edge.
+rim broken into a few uneven arcs; the filament field itself (3600 strands, each
+a chain of additive dots, curved and tapering, clustered into bundles, with
+staggered start radii); a darker gap; a striated outer shell standing off the
+field; and a handful of low-alpha spikes punching past the edge.
+
+### Matching the reference
+
+The layout and colour were fitted to measurements of the reference clip rather
+than by eye. Numbers below are fractions of frame height, measured on a radial
+luminance profile about the brightness centroid:
+
+| | reference | this build |
+| --- | --- | --- |
+| centre | 0.505-0.513 | 0.507 |
+| pupil diameter | 0.374-0.378 | 0.378 |
+| 25%-of-peak radius | 0.313-0.317 | 0.333 |
+| faint outer extent | 0.393-0.463 | 0.425 |
+| peak radial-mean luminance | 119-123 | 113 |
+| mean colour at r=0.22 | rgb(17,118,182) | rgb(23,121,180) |
+| mean colour at r=0.32 | rgb(33,18,98) | rgb(38,24,101) |
+
+Two findings shaped the tuning, and are worth keeping in mind before changing
+gains:
+
+- **The washed-out look was additive clipping, not the colour ramp.** In the
+  bright band the reference is 94-96% lit with 0.02% near-white pixels; an
+  earlier build was 66% lit with 3.4% near-white — a sparse field of blown-out
+  strands separated by black. The fix was structural: many more, dimmer strands
+  (1400 -> 3600) at a lower gain, plus staggered start radii, since 3600 strands
+  at full width overlap the pupil circumference several times over and clip
+  every channel to white. Raising or lowering a gain alone cannot fix it.
+- **The ring is far larger than a first reading of the brief suggests.** The
+  reference nearly fills the frame height (outer diameter ~0.85*H, not 0.62*H),
+  sits on the optical centre rather than above it, and its pupil is ~0.46 of the
+  outer radius. Spikes and shell are held inside 0.476*H so nothing touches the
+  boundary; the rendered frames leave ~82px of margin top and bottom at 1080p.
 
 ### Things worth knowing before editing
 
@@ -97,7 +130,7 @@ outer membrane; and a handful of low-alpha spikes punching past the edge.
   derived from its index through a seeded `mulberry32`. Anything else pops.
 - **All sizes are fractions of frame height** (via `useVideoConfig()`), so the
   1080p preview and the 4K render are proportionally identical.
-- **Colour buckets matter.** `DotBatcher` groups ~240k dots per frame by
+- **Colour buckets matter.** `DotBatcher` groups ~700k dots per frame by
   quantised colour so the canvas takes one `fillStyle` assignment and one
   `fill()` per bucket. Quantisation is on a square-root curve — a linear one
   rounds the many very dim dots to zero and hollows the field out.

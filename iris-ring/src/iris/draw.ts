@@ -20,17 +20,17 @@ import {
 } from "./field";
 
 // --- Tuning --------------------------------------------------------------
-const FILAMENT_GAIN = 1.15;
-const RIM_GAIN = 0.95;
+const FILAMENT_GAIN = 0.62;
+const RIM_GAIN = 0.14;
 const SPIKE_GAIN = 1.0;
-const MEMBRANE_GAIN = 0.13;
+const MEMBRANE_GAIN = 0.36;
 
 const BLOOM_DIV = 5;
 const BLOOM_THRESHOLD = 120; // premultiplied luminance a dot must beat to bloom
 const BLOOM_TIGHT_PX = 26; // halo radius, in composition pixels
 const BLOOM_WIDE_PX = 84;
 const BLOOM_TIGHT_ALPHA = 0.5;
-const BLOOM_WIDE_ALPHA = 0.34;
+const BLOOM_WIDE_ALPHA = 0.4;
 
 const GRAIN_TILE = 512;
 const GRAIN_AMPLITUDE = 6; // ~1.5% of full scale, dithers the black surround
@@ -39,16 +39,19 @@ const GRAIN_AMPLITUDE = 6; // ~1.5% of full scale, dithers the black surround
 // the outer boundary). Kept as two separate terms so the caller can gate the
 // inner-rim spike on the hotspot field — that gating is what breaks the rim
 // into uneven arcs instead of one continuous blown-out ring.
-const innerSpike = (q: number) => Math.exp(-((q / 0.1) * (q / 0.1)));
+const innerSpike = (q: number) => {
+  const d = (q - 0.06) / 0.14;
+  return Math.exp(-d * d);
+};
 
 const bodyFalloff = (q: number) => {
-  const membraneT = (q - 0.93) / 0.075;
   // Every strand root lands on the same small circumference, so without
   // this dip their additive pile-up fuses the rim into one even white band.
-  const rootRelief = 0.34 + 0.56 * smoothstep(q / 0.13);
-  return (
-    rootRelief * Math.exp(-q * 0.55) + 0.12 * Math.exp(-membraneT * membraneT)
-  );
+  const rootRelief = 0.24 + 0.68 * smoothstep(q / 0.3);
+  // Shallow: most of what thins the field outward is the 1/r drop in strand
+  // density plus strands reaching their ends. Tuned so the profile tracks the
+  // reference, which holds 44% of peak at q=0.41 and 22% at q=0.59.
+  return rootRelief * Math.exp(-q * 0.72);
 };
 
 export type DrawArgs = {
@@ -85,7 +88,7 @@ export const drawIris = ({
   const R = height * OUTER_RADIUS_FRAC;
   const pupilBase = R * pupilDiameterFrac(t);
   const dotSpacing = height * DOT_SPACING_FRAC;
-  const baseDot = height * 0.00092;
+  const baseDot = height * 0.00095;
 
   // --- Per-angle fields, evaluated once and interpolated ------------------
   const pupilLut = pupilEdgeLut(lt, rot);
@@ -126,7 +129,7 @@ export const drawIris = ({
       lt.sin * 0.6,
       523,
     );
-    return 0.34 + 1.0 * clamp01(0.5 + 0.62 * n);
+    return 0.72 + 0.5 * clamp01(0.5 + 0.62 * n);
   });
 
   const pupilAt = (theta: number) => pupilBase * sampleLut(pupilLut, theta);
@@ -205,18 +208,19 @@ export const drawIris = ({
     // field twinkles instead of pulsing as a block.
     const wave = 0.5 + 0.5 * Math.sin(t * TWO_PI * f.shimmerCycles + f.shimmerPhase);
     const shimmer =
-      1 - f.shimmerDepth + f.shimmerDepth * Math.pow(wave, 1.7) * 1.35;
+      1 - f.shimmerDepth + f.shimmerDepth * Math.pow(wave, 1.7) * 1.15;
 
+    const start = span * f.startFrac;
     const len = span * f.lengthFrac;
     const steps = Math.max(10, Math.round(len / dotSpacing));
     const undertoneBase = sampleLut(undertoneLut, ang0);
     // Roots only blow out to white where the hotspot field says so.
-    const rimGate = 0.06 + 1.55 * sampleLut(rimLut, ang0);
+    const rimGate = 0.25 + 0.9 * sampleLut(rimLut, ang0);
     const sector = sampleLut(sectorLut, ang0);
 
     for (let i = 0; i <= steps; i++) {
       const s = i / steps;
-      const r = pR + len * s;
+      const r = pR + start + len * s;
       const ang =
         ang0 +
         f.curve * Math.pow(s, 1.45) +
@@ -232,7 +236,7 @@ export const drawIris = ({
       }
 
       const intensity =
-        (0.62 * innerSpike(q) * rimGate + 0.88 * bodyFalloff(q)) *
+        (0.16 * innerSpike(q) * rimGate + 0.97 * bodyFalloff(q)) *
         f.brightness *
         sector *
         shimmer *
@@ -250,7 +254,7 @@ export const drawIris = ({
       // Undertone: absent at the white-hot rim, strongest through the body,
       // easing off before the edge.
       const gate =
-        smoothstep((q - 0.05) / 0.16) * (1 - smoothstep((q - 0.8) / 0.32));
+        smoothstep((q - 0.14) / 0.24) * (1 - smoothstep((q - 0.92) / 0.28));
       const mix = palette.undertoneStrength * undertoneBase * gate;
       if (mix > 0.001) {
         cr += (palette.undertone.r - cr) * mix;
@@ -258,7 +262,7 @@ export const drawIris = ({
         cb += (palette.undertone.b - cb) * mix;
       }
 
-      const rad = baseDot * f.width * (1.3 - 0.65 * s);
+      const rad = baseDot * f.width * (1.25 - 0.45 * s);
       emit(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r, rad, cr * intensity, cg * intensity, cb * intensity);
     }
   }
@@ -273,14 +277,14 @@ export const drawIris = ({
     if (hot < 0.02) continue;
     const pR = pupilAt(theta);
     const oR = outerAt(theta);
-    const band = (oR - pR) * 0.085;
+    const band = (oR - pR) * 0.06;
     for (let l = 0; l < RIM_LAYERS; l++) {
       const s = l / (RIM_LAYERS - 1);
       const r = pR + band * s;
       const profile = Math.exp(-((s / 0.42) * (s / 0.42)));
       const intensity = hot * profile * RIM_GAIN;
       // The hottest points blow out past the rim colour to pure white.
-      const white = clamp01((hot - 0.45) / 0.5);
+      const white = clamp01((hot - 0.75) / 0.3);
       const cr = palette.rim.r + (255 - palette.rim.r) * white;
       const cg = palette.rim.g + (255 - palette.rim.g) * white;
       const cb = palette.rim.b + (255 - palette.rim.b) * white;
@@ -327,31 +331,56 @@ export const drawIris = ({
     }
   }
 
-  // --- 4. Outer membrane: a faint rim just beyond the filament tips -------
-  const MEM_STEPS = 2400;
-  const memColor = sampleRamp(palette.stops, 0.86);
+  // --- 4. Outer shell -----------------------------------------------------
+  // Not a rim line but a striated membrane standing off the filament field,
+  // with a darker gap between the two. It is a signature of the reference:
+  // short radial striations, ragged, brightest on its inner face.
+  const MEM_STEPS = 4200;
+  const memColor = sampleRamp(palette.stops, 0.9);
   for (let i = 0; i < MEM_STEPS; i++) {
     const theta = (i / MEM_STEPS) * TWO_PI;
     const oR = outerAt(theta);
     const a = theta - rot;
-    const varyRaw = noise4(
-      Math.cos(a) * 5.5,
-      Math.sin(a) * 5.5,
+    // Slow noise thins the shell to nothing over whole arcs; fast noise
+    // breaks what remains into individual striations.
+    const slow = noise4(
+      Math.cos(a) * 3.5,
+      Math.sin(a) * 3.5,
       lt.cos * 0.6,
       lt.sin * 0.6,
       307,
     );
-    const vary = Math.pow(clamp01(0.5 + 0.85 * varyRaw), 2.4);
-    const intensity = vary * MEMBRANE_GAIN;
-    const r = oR * (1.012 + 0.016 * varyRaw);
-    emit(
-      cx + Math.cos(theta) * r,
-      cy + Math.sin(theta) * r,
-      baseDot * 1.15,
-      memColor.r * intensity,
-      memColor.g * intensity,
-      memColor.b * intensity,
+    // High frequency: one striation every few degrees, not one lump every
+    // 26 degrees, which is what made this read as floating dashes.
+    const fast = noise4(
+      Math.cos(a) * 55,
+      Math.sin(a) * 55,
+      lt.cos * 0.6,
+      lt.sin * 0.6,
+      401,
     );
+    const vary = clamp01(0.62 + 0.5 * slow) * clamp01(0.55 + 0.6 * fast);
+    if (vary < 0.03) continue;
+
+    // Overlaps the filament tips slightly rather than floating clear of them.
+    const inner = oR * (0.975 + 0.016 * slow);
+    const depth = oR * (0.04 + 0.028 * fast);
+    const steps = Math.max(4, Math.round(depth / dotSpacing));
+    for (let k = 0; k <= steps; k++) {
+      const sk = k / steps;
+      const r = inner + depth * sk;
+      const prof = Math.exp(-Math.pow((sk - 0.3) / 0.5, 2));
+      const intensity = vary * prof * MEMBRANE_GAIN;
+      if (intensity < 0.004) continue;
+      emit(
+        cx + Math.cos(theta) * r,
+        cy + Math.sin(theta) * r,
+        baseDot * 1.1,
+        memColor.r * intensity,
+        memColor.g * intensity,
+        memColor.b * intensity,
+      );
+    }
   }
 
   main.flush(ctx);

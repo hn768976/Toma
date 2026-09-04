@@ -12,16 +12,23 @@ export const COMP_HEIGHT = 2160;
 // --- Layout (all fractions of frame height, so 1080p preview and 4K
 // --- render are pixel-for-pixel proportional) ----------------------------
 export const CENTER_X_FRAC = 0.5;
-export const CENTER_Y_FRAC = 0.47; // slightly above optical centre
-export const OUTER_RADIUS_FRAC = 0.31; // -> outer diameter = 0.62 * height
+// Measured off the reference: its ring sits on the optical centre, a hair
+// low if anything, not above it.
+export const CENTER_Y_FRAC = 0.502;
+// Measured off the reference: the lit body reaches ~0.315*H (25%-of-peak
+// radius) and its faintest outer extent ~0.46*H, so the ring very nearly
+// fills the frame height. Spikes and membrane are held inside 0.476*H so
+// nothing touches the boundary.
+export const OUTER_RADIUS_FRAC = 0.41;
 
-// Pupil diameter as a fraction of the outer diameter. Breathes across the
-// loop; 0.38 (the rest value from the spec) is the midpoint.
-export const PUPIL_FRAC_MIN = 0.34;
-export const PUPIL_FRAC_MAX = 0.42;
+// Pupil radius as a fraction of the outer radius. Breathes across the loop
+// about a midpoint of 0.46, which puts the pupil diameter at ~0.377*H —
+// the reference measures 0.374-0.378*H.
+export const PUPIL_FRAC_MIN = 0.4;
+export const PUPIL_FRAC_MAX = 0.478;
 
 // --- Filament field ------------------------------------------------------
-export const FILAMENT_COUNT = 1400;
+export const FILAMENT_COUNT = 3600;
 // Dot spacing along a strand, as a fraction of frame height. Small enough
 // that consecutive dots overlap and read as a continuous fibre.
 export const DOT_SPACING_FRAC = 0.001;
@@ -30,6 +37,7 @@ export const SPIKE_COUNT = 11;
 export type Filament = {
   angle: number; // base angle at the pupil edge
   curve: number; // tangential drift accumulated over its length
+  startFrac: number; // where the strand begins, out from the pupil edge
   lengthFrac: number; // fraction of the pupil->edge span
   tipSharp: number; // how abruptly the strand ends
   width: number; // relative stroke weight
@@ -75,9 +83,9 @@ export const buildField = (seed: number): IrisField => {
     // bundles and opens darker gaps between them. Harmonics are integers so
     // the warp stays continuous where the ring wraps.
     const warp =
-      0.055 * Math.sin(u * TWO_PI * 3 + w1) +
-      0.03 * Math.sin(u * TWO_PI * 7 + w2) +
-      0.016 * Math.sin(u * TWO_PI * 13 + w3);
+      0.028 * Math.sin(u * TWO_PI * 3 + w1) +
+      0.016 * Math.sin(u * TWO_PI * 7 + w2) +
+      0.009 * Math.sin(u * TWO_PI * 13 + w3);
     const angle = (u + warp) * TWO_PI + (rand() - 0.5) * 0.011;
 
     // Length. Most strands run nearly the full depth so the field
@@ -86,18 +94,23 @@ export const buildField = (seed: number): IrisField => {
     const bundleLen = 0.07 * Math.sin(u * TWO_PI * 5 + lenPhase);
     const long = rand() < 0.74;
     const lengthFrac =
-      (long ? 0.84 + rand() * 0.26 : 0.32 + rand() * 0.44) + bundleLen;
+      (long ? 0.8 + rand() * 0.2 : 0.34 + rand() * 0.42) + bundleLen;
 
     filaments.push({
       angle,
       curve: (rand() - 0.5) * 0.2,
+      // Roots are staggered rather than all landing on the pupil circle.
+      // 1700 strands at full width overlap ~1.6x on that circumference, and
+      // the additive pile-up clips every channel to white, which is what
+      // desaturates the brightest band.
+      startFrac: Math.pow(rand(), 1.5) * 0.05,
       lengthFrac: Math.max(0.26, lengthFrac),
-      tipSharp: 0.14 + rand() * 0.2,
+      tipSharp: 0.1 + rand() * 0.16,
       width: 0.55 + rand() * 0.85,
-      brightness: 0.3 + Math.pow(rand(), 1.9) * 1.35,
+      brightness: 0.55 + Math.pow(rand(), 1.2) * 0.6,
       shimmerCycles: 2 + Math.floor(rand() * 6), // 2..7 cycles per loop
       shimmerPhase: rand() * TWO_PI,
-      shimmerDepth: 0.28 + rand() * 0.42,
+      shimmerDepth: 0.15 + rand() * 0.25,
       wobbleFreq: 5 + rand() * 11,
       wobblePhase: rand() * TWO_PI,
       wobbleAmp: 0.0012 + rand() * 0.0034,
@@ -108,7 +121,7 @@ export const buildField = (seed: number): IrisField => {
   for (let i = 0; i < SPIKE_COUNT; i++) {
     spikes.push({
       angle: rand() * TWO_PI,
-      reach: 1.06 + rand() * 0.16,
+      reach: 1.03 + rand() * 0.07,
       brightness: 0.11 + rand() * 0.16,
       width: 0.6 + rand() * 1.0,
       cycles: 1 + Math.floor(rand() * 3),
@@ -203,7 +216,7 @@ export const outerEdgeLut = (lt: LoopTime, rotation: number): Float32Array =>
       lt.sin * 0.7,
       41,
     );
-    return 1 + n * 0.075;
+    return 1 + n * 0.055;
   });
 
 // Inner-rim hotspots: 3-5 uneven bright arcs whose angles drift over the
@@ -228,5 +241,5 @@ export const rimHotLut = (lt: LoopTime, rotation: number): Float32Array =>
     // Raised to a power so the field breaks into a few separated arcs
     // rather than an even ring.
     const v = clamp01(0.5 + 0.5 * (n * 0.78 + n2 * 0.32));
-    return Math.pow(v, 3.2);
+    return Math.pow(v, 4.5);
   });
