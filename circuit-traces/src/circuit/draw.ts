@@ -299,6 +299,52 @@ const drawPulseTail = (
   }
 };
 
+/** How far from a pulse head a component still catches light. Package pins get
+ *  a wider reach so a signal arriving at a chip lights a run of the comb. */
+const PART_LIGHT_R = 0.016;
+const PIN_LIGHT_R = 0.03;
+/** Falloff exponent for a lit pin run. Higher keeps the comb's individual pins
+ *  readable instead of blowing the lit section into a solid block. */
+const PIN_FALLOFF = 1.6;
+
+/** Draws one lit component. Shared by the crisp pass and the bloom layer, so
+ *  the two never drift apart. */
+const strokeLightable = (
+  c: CanvasRenderingContext2D,
+  l: Lightable,
+  S: number,
+  camX: number,
+  camY: number,
+  widthMul: number,
+) => {
+  const x = (l.x - camX) * S;
+  const y = (l.y - camY) * S;
+  if (l.kind === "via") {
+    c.lineWidth = 0.0013 * S * widthMul;
+    c.beginPath();
+    c.arc(x, y, l.r * S, 0, Math.PI * 2);
+    c.stroke();
+  } else if (l.kind === "pin") {
+    // The signal runs the length of the pin and into the package.
+    c.lineWidth = l.w * S * 1.5 * Math.min(widthMul, 1.4);
+    c.beginPath();
+    c.moveTo(x, y);
+    c.lineTo((l.ix - camX) * S, (l.iy - camY) * S);
+    c.stroke();
+  } else {
+    c.lineWidth = 0.0015 * S * widthMul;
+    c.beginPath();
+    c.roundRect(
+      x - (l.w * S) / 2,
+      y - (l.h * S) / 2,
+      l.w * S,
+      l.h * S,
+      l.r * S,
+    );
+    c.stroke();
+  }
+};
+
 export type FrameArgs = {
   ctx: CanvasRenderingContext2D;
   board: Board;
@@ -364,6 +410,33 @@ export const drawFrame = ({
     });
   }
 
+  // ---- Resolve which components an arriving pulse lights ----------------
+  const lg = board.lightGrid;
+  const lit = new Float32Array(board.lightables.length);
+  for (let i = 0; i < heads.length; i++) {
+    const hd = heads[i];
+    const gc = Math.floor((hd.x - X0) / lg.cell);
+    const gr = Math.floor((hd.y - Y0) / lg.cell);
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const cc = gc + dc;
+        const rr = gr + dr;
+        if (cc < 0 || rr < 0 || cc >= lg.cols || rr >= lg.rows) continue;
+        for (const li of lg.buckets[rr * lg.cols + cc]) {
+          const l = board.lightables[li];
+          // A pulse reaching a package lights a run of the pin comb, not just
+          // the one pin it arrived on.
+          const R = l.kind === "pin" ? PIN_LIGHT_R : PART_LIGHT_R;
+          const d = Math.hypot(l.x - hd.x, l.y - hd.y);
+          if (d > R) continue;
+          const t0 = 1 - d / R;
+          const v = (l.kind === "pin" ? Math.pow(t0, PIN_FALLOFF) : t0) * hd.gain;
+          if (v > lit[li]) lit[li] = v;
+        }
+      }
+    }
+  }
+
   // ---- Bloom layer -------------------------------------------------------
   const g = glow.ctx;
   const gs = S / GLOW_DIV;
@@ -402,6 +475,15 @@ export const drawFrame = ({
       r * 2,
     );
   }
+  // Lit components bloom alongside the pulses that lit them.
+  for (let i = 0; i < lit.length; i++) {
+    const v = lit[i];
+    if (v < 0.02) continue;
+    const l = board.lightables[i];
+    g.globalAlpha = Math.min(1, v * (l.kind === "pin" ? 0.7 : 0.8));
+    g.strokeStyle = luts.flash[bucketOf(palette, l.x, l.y)];
+    strokeLightable(g, l, gs, camX, camY, l.kind === "pin" ? 1.4 : 2.2);
+  }
   g.globalAlpha = 1;
 
   // Blur small, then upscale: bloom without the cost of a full-res filter.
@@ -423,56 +505,15 @@ export const drawFrame = ({
   ctx.globalAlpha = 1;
 
   // ---- Lit components ----------------------------------------------------
-  const lg = board.lightGrid;
-  const lit = new Float32Array(board.lightables.length);
-  const R = 0.016;
-  for (let i = 0; i < heads.length; i++) {
-    const hd = heads[i];
-    const gc = Math.floor((hd.x - X0) / lg.cell);
-    const gr = Math.floor((hd.y - Y0) / lg.cell);
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        const cc = gc + dc;
-        const rr = gr + dr;
-        if (cc < 0 || rr < 0 || cc >= lg.cols || rr >= lg.rows) continue;
-        for (const li of lg.buckets[rr * lg.cols + cc]) {
-          const l = board.lightables[li];
-          const d = Math.hypot(l.x - hd.x, l.y - hd.y);
-          if (d > R) continue;
-          const v = (1 - d / R) * hd.gain;
-          if (v > lit[li]) lit[li] = v;
-        }
-      }
-    }
-  }
-
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   for (let i = 0; i < lit.length; i++) {
     const v = lit[i];
     if (v < 0.02) continue;
-    const l: Lightable = board.lightables[i];
+    const l = board.lightables[i];
     ctx.globalAlpha = Math.min(1, v * 0.95);
     ctx.strokeStyle = luts.flash[bucketOf(palette, l.x, l.y)];
-    const x = (l.x - camX) * S;
-    const y = (l.y - camY) * S;
-    if (l.kind === "via") {
-      ctx.lineWidth = 0.0013 * S;
-      ctx.beginPath();
-      ctx.arc(x, y, l.r * S, 0, tau);
-      ctx.stroke();
-    } else {
-      ctx.lineWidth = 0.0015 * S;
-      ctx.beginPath();
-      ctx.roundRect(
-        x - (l.w * S) / 2,
-        y - (l.h * S) / 2,
-        l.w * S,
-        l.h * S,
-        l.r * S,
-      );
-      ctx.stroke();
-    }
+    strokeLightable(ctx, l, S, camX, camY, 1);
   }
   ctx.globalAlpha = 1;
 

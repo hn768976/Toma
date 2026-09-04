@@ -50,10 +50,20 @@ export type RectPart = {
 export type CirclePart = { x: number; y: number; r: number; lw: number };
 export type DashPart = Line & { dash: number };
 
-/** Anything a pulse can briefly light up when it passes. */
+/** Anything a pulse can briefly light up when it passes. `x`/`y` is the point
+ *  a trace connects to, which is what the pulse head is tested against. */
 export type Lightable =
   | { kind: "via"; x: number; y: number; r: number }
-  | { kind: "pad"; x: number; y: number; w: number; h: number; r: number };
+  | { kind: "pad"; x: number; y: number; w: number; h: number; r: number }
+  | {
+      kind: "pin";
+      x: number;
+      y: number;
+      /** Inner end, at the package edge. */
+      ix: number;
+      iy: number;
+      w: number;
+    };
 
 export type Board = {
   traces: Trace[];
@@ -123,7 +133,14 @@ const DIRS: readonly (readonly [number, number])[] = [
 // Components
 // ---------------------------------------------------------------------------
 
-type Pin = { c: number; r: number; d: number };
+type Pin = {
+  c: number;
+  r: number;
+  d: number;
+  /** Inner end of the pin, at the package edge. */
+  ix: number;
+  iy: number;
+};
 
 type BuildCtx = {
   rng: Rng;
@@ -209,9 +226,10 @@ const addIc = (
 
   const bank = (side: "l" | "r" | "t" | "b") => {
     const horizontal = side === "t" || side === "b";
-    const span = (horizontal ? w : h) - 0.03;
     const n = pinCount;
-    const step = span / (n - 1);
+    // Pins sit one lattice cell apart and land exactly on lattice lines, so a
+    // route leaving a pin runs straight out of it with no jog at the tip.
+    const span = (n - 1) * PITCH;
     const outward = side === "l" || side === "t" ? -1 : 1;
     const bankDepth = pinLen + 0.006;
 
@@ -236,26 +254,34 @@ const addIc = (
       });
     }
 
+    // Lattice index of the package centre along the comb's axis.
+    const centre = horizontal
+      ? Math.round((cx - X0) / PITCH - 0.5)
+      : Math.round((cy - Y0) / PITCH - 0.5);
+    const first = centre - ((n - 1) >> 1);
+
     for (let i = 0; i < n; i++) {
-      const t = -span / 2 + i * step;
+      const lat = horizontal ? cellX(first + i) : cellY(first + i);
       let x1: number, y1: number, x2: number, y2: number;
       if (horizontal) {
-        x1 = cx + t;
+        x1 = lat;
         y1 = cy + outward * (h / 2);
         x2 = x1;
         y2 = y1 + outward * pinLen;
       } else {
         x1 = cx + outward * (w / 2);
-        y1 = cy + t;
+        y1 = lat;
         x2 = x1 + outward * pinLen;
         y2 = y1;
       }
       lines.push({ x1, y1, x2, y2, w: pinW });
-      // Every other pin seeds a route, so traces fan out of the package.
+      // Every pin can be lit by an arriving pulse.
+      ctx.lightables.push({ kind: "pin", x: x2, y: y2, ix: x1, iy: y1, w: pinW });
+      // Every other pin seeds a route, keeping route starts two cells apart.
       if (i % 2 === 0) {
         const [c, r] = nearestCell(x2, y2);
         const d = horizontal ? (outward < 0 ? 6 : 2) : outward < 0 ? 4 : 0;
-        pins.push({ c, r, d });
+        pins.push({ c, r, d, ix: x1, iy: y1 });
       }
     }
   };
@@ -467,21 +493,22 @@ export const buildBoard = (seed: number): Board => {
     pins: [],
   };
 
-  // The centre-left package, the frame's anchor: four fine pin combs with the
-  // board still routed through the middle.
-  addIc(ctx, 0.385, 0.285, 0.185, 0.185, "lrtb", 26, true);
+  // The frame's anchor, dead centre: four fine pin combs with the board still
+  // routed through the middle.
+  const MAIN = { x: 0.5, y: ASPECT / 2 };
+  addIc(ctx, MAIN.x, MAIN.y, 0.185, 0.185, "lrtb", 29, true);
   // Supporting packages.
-  addIc(ctx, 0.79, 0.1, 0.075, 0.115, "lr", 16);
-  addIc(ctx, 0.115, 0.455, 0.105, 0.06, "tb", 18);
-  addIc(ctx, 0.655, 0.475, 0.085, 0.055, "tb", 14);
-  addIc(ctx, 0.965, 0.375, 0.07, 0.09, "lr", 13);
+  addIc(ctx, 0.855, 0.095, 0.075, 0.115, "lr", 17);
+  addIc(ctx, 0.115, 0.455, 0.105, 0.06, "tb", 15);
+  addIc(ctx, 0.7, 0.48, 0.085, 0.055, "tb", 13);
+  addIc(ctx, 0.985, 0.385, 0.07, 0.09, "lr", 13);
 
   const hotspots: Pt[] = [
-    { x: 0.385, y: 0.285 },
-    { x: 0.79, y: 0.1 },
+    MAIN,
+    { x: 0.855, y: 0.095 },
     { x: 0.115, y: 0.455 },
-    { x: 0.655, y: 0.475 },
-    { x: 0.965, y: 0.375 },
+    { x: 0.7, y: 0.48 },
+    { x: 0.985, y: 0.385 },
   ];
   const density = makeDensity(rng, hotspots);
 
@@ -597,7 +624,17 @@ export const buildBoard = (seed: number): Board => {
       if (c < 0 || r < 0 || c >= COLS || r >= ROWS) break;
     }
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS || occ[idx(c, r)]) continue;
-    routeWithBus(c, r, pin.d, 0.25);
+    const w = walk(rng, occ, density, c, r, pin.d);
+    if (!w) continue;
+    // Begin the polyline at the pin's inner end so a pulse runs the length of
+    // the pin and into the package rather than appearing beside it. The pin is
+    // lattice-aligned, so this stays collinear with the route's first run.
+    const pts: Pt[] = [{ x: pin.ix, y: pin.iy }, ...w.pts];
+    // Half the pin routes are stored reversed, so signals both enter and leave
+    // the package instead of every pulse running outward.
+    if (rng() < 0.5) pts.reverse();
+    const tr = buildTrace(pts, tierFor());
+    if (tr) traces.push(tr);
   }
 
   // Pass 3 - free routes fill the rest of the board.
