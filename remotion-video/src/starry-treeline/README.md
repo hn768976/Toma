@@ -40,12 +40,14 @@ src/starry-treeline/
   noise.ts            seeded value noise + fbm
   sky.ts              sky gradient, mottling, Milky Way band, band geometry
   stars.ts            star generation, twinkle, drawing
-  trees.ts            PNG alpha-keying, tinting, treeline layout
+  trees.ts            asset loading, tinting, treeline layout
   grain.ts            looping film grain (also the gradient dither)
   StarryTreeline.tsx  the composition
-public/trees/         the three silhouette PNGs
+public/trees/         the silhouettes: traced .svg (used) + source .png
+tools/trace-png-to-svg.mjs
+                      traces a black-on-white PNG to SVG
 tools/generate-tree-assets.mjs
-                      regenerates the silhouette PNGs (see "Tree assets")
+                      regenerates the stand-in PNGs (see "Tree assets")
 ```
 
 ## How it stays fast and deterministic
@@ -58,10 +60,14 @@ tools/generate-tree-assets.mjs
   frame. Only the twinkling subset (~6%) is redrawn.
 - The mid and far tree tiers never move, so they're baked into a second
   offscreen layer. Only the five near-tier trees are drawn live, for sway.
-- The source PNGs are black-on-white, not transparent. They're keyed to alpha
-  once at module level (soft luminance ramp, so antialiased needle edges
-  survive) and cached, then cropped to their own bounds so placement doesn't
-  depend on how much padding a source file carries.
+- The trees are **SVG**, traced from the source PNGs, so the silhouettes stay
+  crisp at any output size rather than being locked to the source raster.
+  They're rasterised, cropped to their own bounds and cached once at module
+  level, so placement doesn't depend on how much padding a source file carries.
+- The loader takes either form. A traced SVG is used through its own alpha; a
+  raw black-on-white PNG is keyed with a soft luminance ramp (so antialiased
+  needle edges survive) — it picks between the two by sampling the source's
+  alpha channel, so an untraced PNG can be dropped straight in.
 
 ## Loop
 

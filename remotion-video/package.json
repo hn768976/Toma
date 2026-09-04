@@ -19,6 +19,8 @@
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
     "eslint": "9.19.0",
+    "pngjs": "^7.0.0",
+    "potrace": "^2.1.8",
     "prettier": "3.8.1",
     "typescript": "5.9.3"
   },
@@ -26,7 +28,8 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "trace-trees": "node tools/trace-png-to-svg.mjs --all"
   },
   "sideEffects": [
     "*.css",

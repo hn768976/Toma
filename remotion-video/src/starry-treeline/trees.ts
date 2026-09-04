@@ -1,8 +1,12 @@
 // Silhouette assets and treeline layout.
 //
-// The supplied PNGs are black artwork on a *white* background, not
-// transparent. They are keyed to alpha once at module level and cached, since
-// a 1920x1920 per-pixel pass per frame per tree would dominate render time.
+// The trees are SVGs traced from the supplied black-on-white PNGs with
+// tools/trace-png-to-svg.mjs, so the treeline stays crisp at any output size.
+// They are rasterised and cropped once at module level and cached, since doing
+// that per frame per tree would dominate render time.
+//
+// The loader still accepts raw black-on-white PNGs, keyed with a soft
+// luminance ramp — so an untraced PNG can be dropped straight in.
 import { staticFile } from "remotion";
 import { mulberry32 } from "../particle-ring/random";
 import {
@@ -13,9 +17,9 @@ import {
 } from "./constants";
 
 export const TREE_ASSETS = {
-  single: "trees/Untitled_design__5_.png",
-  group: "trees/Untitled_design__6_.png",
-  bare: "trees/Untitled_design__4_.png",
+  single: "trees/Untitled_design__5_.svg",
+  group: "trees/Untitled_design__6_.svg",
+  bare: "trees/Untitled_design__4_.svg",
 } as const;
 
 export type TreeAssetName = keyof typeof TREE_ASSETS;
@@ -26,12 +30,17 @@ export type KeyedTree = {
   height: number;
 };
 
-// A soft luminance ramp rather than a hard threshold, so the needle edges —
-// which are all antialiased grey — survive keying instead of going crunchy.
-// Anything lighter than KEY_HIGH (including the light grey ground shadow some
-// of the source art carries) drops out completely.
+// For an opaque black-on-white source: a soft luminance ramp rather than a
+// hard threshold, so the needle edges — which are all antialiased grey —
+// survive keying instead of going crunchy. Anything lighter than KEY_HIGH
+// (including the light grey ground shadow some of the source art carries)
+// drops out completely.
 const KEY_LOW = 0.16;
 const KEY_HIGH = 0.62;
+
+// Vector sources are rasterised to at least this long edge, so a small nominal
+// viewBox still yields enough detail to downsample from at 4K.
+const MIN_RASTER_EDGE = 1920;
 
 const keyedCache = new Map<string, Promise<KeyedTree>>();
 
@@ -47,15 +56,33 @@ const loadImage = (src: string) =>
 
 const keyToAlpha = async (src: string): Promise<KeyedTree> => {
   const image = await loadImage(src);
+
+  // An SVG carries its own alpha and can be rasterised at whatever size we
+  // ask for; a PNG is used at its native size so it is never resampled twice.
+  const natural = Math.max(image.naturalWidth, image.naturalHeight);
+  const scale = natural < MIN_RASTER_EDGE ? MIN_RASTER_EDGE / natural : 1;
+
   const raw = document.createElement("canvas");
-  raw.width = image.naturalWidth;
-  raw.height = image.naturalHeight;
+  raw.width = Math.round(image.naturalWidth * scale);
+  raw.height = Math.round(image.naturalHeight * scale);
   const rawCtx = raw.getContext("2d", { willReadFrequently: true });
   if (!rawCtx) throw new Error("2d context unavailable");
-  rawCtx.drawImage(image, 0, 0);
+  rawCtx.drawImage(image, 0, 0, raw.width, raw.height);
 
   const pixels = rawCtx.getImageData(0, 0, raw.width, raw.height);
   const data = pixels.data;
+
+  // Decide how to read the source. A traced SVG arrives with real alpha and a
+  // transparent ground; a supplied PNG is opaque black on white and needs the
+  // luminance ramp. Sample sparsely — checking only the corners would be
+  // fooled by artwork that runs to the edge of the frame.
+  let transparent = 0;
+  let sampled = 0;
+  for (let i = 3; i < data.length; i += 4 * 64) {
+    if (data[i] < 250) transparent++;
+    sampled++;
+  }
+  const hasAlpha = transparent > sampled * 0.02;
 
   let minX = raw.width;
   let minY = raw.height;
@@ -65,10 +92,16 @@ const keyToAlpha = async (src: string): Promise<KeyedTree> => {
   for (let y = 0; y < raw.height; y++) {
     for (let x = 0; x < raw.width; x++) {
       const i = (y * raw.width + x) * 4;
-      const lum =
-        (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
-      let alpha = (KEY_HIGH - lum) / (KEY_HIGH - KEY_LOW);
-      alpha = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+      let alpha: number;
+      if (hasAlpha) {
+        alpha = data[i + 3] / 255;
+      } else {
+        const lum =
+          (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) /
+          255;
+        alpha = (KEY_HIGH - lum) / (KEY_HIGH - KEY_LOW);
+        alpha = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+      }
       // Silhouettes are pure black with no interior detail — the shape is the
       // whole point, and it is what makes the stars pop.
       data[i] = 0;
