@@ -32,17 +32,24 @@ npx remotion render V2-FlowFieldEmerald out/V2_FlowFieldEmerald.mp4 --scale=1 --
 **1080p previews** — the same picture at half scale:
 
 ```console
-npx remotion render V1-FlowFieldBlue out/V1_FlowFieldBlue.mp4 --scale=0.5 --crf=20 --color-space=bt709 --pixel-format=yuv420p
-npx remotion render V2-FlowFieldEmerald out/V2_FlowFieldEmerald.mp4 --scale=0.5 --crf=20 --color-space=bt709 --pixel-format=yuv420p
+npx remotion render V1-FlowFieldBlue out/V1_FlowFieldBlue.mp4 --scale=0.5 --crf=27 --color-space=bt709 --pixel-format=yuv420p
+npx remotion render V2-FlowFieldEmerald out/V2_FlowFieldEmerald.mp4 --scale=0.5 --crf=27 --color-space=bt709 --pixel-format=yuv420p
 ```
 
 `--color-space=bt709` matters: without it Remotion tags the file full-range and
 ffprobe reports `yuvj420p`, which anything that ignores the range flag renders
 with crushed blacks. With it you get properly tagged limited-range `yuv420p`.
 
-`--crf=20` rather than 16 for the previews: dense hairlines plus film grain are
-expensive to encode, and at 1080p crf 16 costs 60% more file (104 MB against
-65 MB for 15 s) for no gain visible at 3x zoom. The 4K masters keep 16.
+Dense hairlines plus film grain are expensive to encode, so the previews run
+crf 27 — 12-13 Mbps, 23 MB for the blue and 25 MB for the brighter emerald —
+rather than crf 16, which at 1080p costs four times the file for nothing visible
+at 3x zoom. The ladder on this content runs roughly crf 16 → 104 MB, 20 → 60 MB,
+25 → 31 MB, 27 → 23 MB; pick to taste, the structure survives all of them. The
+4K masters keep crf 16.
+
+Note that `--encoding-max-rate` / `--encoding-buffer-size` are silently ignored
+on this codec path in Remotion 4.0.515 — passing an 8 Mbps ceiling to a 19 Mbps
+encode produced a byte-identical file — so size is steered with `--crf` alone.
 
 **Stills:**
 
@@ -69,6 +76,13 @@ frame** — the two 450-frame loops took 394 s and 414 s of wall clock. SwiftSha
 already spreads rasterisation across every core, so raising `--concurrency` past
 1 buys nothing on a 4-core box: measured throughput was the same at
 `--concurrency=1` (0.83 s/frame over 30 frames) and at `--concurrency=4`.
+
+Integration runs one midpoint step per frame of a particle's age, so the
+longest-lived particles (cycle 225) are integrated up to 224 steps rather than
+the 30-60 a shorter cycle would need. That buys the long ribbons the look
+depends on, and it is affordable here because the field is read from a grid
+rather than from the noise directly: the whole frame's integration is a few
+hundred thousand bilinear lookups.
 
 Roughly 0.3 s of each frame is CPU-side geometry building — about 240k ribbon
 and glow quads rebuilt from scratch, which `npm run verify-loop` reports — and
