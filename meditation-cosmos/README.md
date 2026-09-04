@@ -68,17 +68,37 @@ src/
                             <MeditationFigure>, <Bloom>, <Grain>, <Vignette>
   compositions/             Hilltop, Orb, Chakra, Vortex
 public/
-  figure.png                the lotus silhouette (black on white)
-  figure.svg                the vector it was rasterised from
+  figure.png                the supplied lotus silhouette (2000x2000 RGBA)
 ```
 
-**The silhouette is black on an opaque white background, not transparent.**
-`lib/figure.ts` keys it to alpha through a soft luminance ramp — wide and
-near-linear, so the anti-aliased pixels along the fingers and the topknot
-survive instead of being chewed off by a hard threshold. The result is cropped
-to its bounding box and memoised at module level, so the key runs once per
-renderer thread and is shared by all four compositions rather than repeating a
-full-resolution `getImageData` pass on all 2520 frames.
+**The silhouette.** `lib/figure.ts` prepares the artwork once and shares it
+across all four compositions. It handles two kinds of source, deciding by
+inspecting the file rather than by assumption:
+
+- artwork that already carries an alpha channel — which the supplied
+  `figure.png` does — keeps its own alpha and only has its colour forced to
+  pure black;
+- artwork that is opaque black-on-white is keyed to alpha from luminance,
+  through a ramp wide and near-linear enough that the anti-aliased pixels along
+  the fingers and the topknot survive instead of being chewed off by a hard
+  threshold.
+
+The distinction is not cosmetic: keying a transparent PNG by luminance would
+read its cleared background as `(0,0,0,0)`, decide black meant "solid", and fill
+the whole frame.
+
+The result is cropped to its bounding box and memoised at module level, so the
+work runs once per renderer thread rather than repeating a full-resolution
+`getImageData` pass on all 2520 frames.
+
+**Swapping the silhouette.** Drop a replacement in over `public/figure.png` and
+everything else follows: the crop, the aspect ratio and the layout all derive
+from the image's own bounding box, not from hard-coded pixel positions. The one
+thing to re-check is `CENTRELINE` in `lib/figure.ts` — the seven chakra anchors,
+as fractions of the cropped height. They were measured off this artwork by
+profiling the width of the silhouette's central run row by row (the neck is its
+narrowest point, the shoulders are where it jumps, the seat is where it leaps to
+full width), so a differently proportioned figure needs them re-measured.
 
 **Looping.** Every animated quantity is a pure function of `useCurrentFrame()`
 that is periodic over its composition's `durationInFrames`. The nebulae loop by

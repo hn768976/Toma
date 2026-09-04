@@ -1,11 +1,20 @@
 /**
- * The supplied silhouette is black artwork on an opaque *white* background, so
- * it has to be keyed to alpha before it can be laid over a nebula.
+ * Prepares the supplied silhouette for compositing over a nebula.
  *
- * The key runs exactly once per renderer thread: the result is memoised at
- * module level and shared by all four compositions. Re-keying per frame (or per
- * composition) would repeat a full-resolution `getImageData` pass 2520 times for
- * no benefit.
+ * Two kinds of artwork are handled, decided by inspecting the file rather than
+ * by assumption:
+ *
+ *   - Artwork that already carries an alpha channel keeps its own alpha, and
+ *     only has its colour forced to pure black.
+ *   - Artwork that is opaque black-on-white is keyed to alpha from luminance.
+ *
+ * The distinction matters: keying a transparent PNG by luminance would read its
+ * cleared background as (0,0,0,0), decide that black meant "solid", and fill
+ * the whole frame.
+ *
+ * Either way the key runs exactly once per renderer thread — the result is
+ * memoised at module level and shared by all four compositions, rather than
+ * repeating a full-resolution `getImageData` pass on all 2520 frames.
  */
 import { continueRender, delayRender, staticFile } from 'remotion';
 import { useEffect, useState } from 'react';
@@ -25,9 +34,14 @@ export type KeyedFigure = {
  * the range between the two ramps linearly. The ramp is deliberately wide and
  * near-linear: the anti-aliased pixels along the fingers and the topknot are
  * mid-greys, and a hard threshold would chew them off.
+ *
+ * Only used for opaque black-on-white artwork.
  */
 const CLEAR = 0.97;
 const SOLID = 0.03;
+
+/** How many soft/clear pixels it takes to call a source "already keyed". */
+const ALPHA_EVIDENCE = 64;
 
 let cache: KeyedFigure | null = null;
 let pending: Promise<KeyedFigure> | null = null;
@@ -45,6 +59,14 @@ const key = (img: HTMLImageElement): KeyedFigure => {
   const image = sctx.getImageData(0, 0, w, h);
   const p = image.data;
 
+  // Does this artwork already carry an alpha channel? A handful of stray soft
+  // pixels could be JPEG-ish noise, so require real evidence before trusting it.
+  let soft = 0;
+  for (let i = 3; i < p.length; i += 4) {
+    if (p[i] < 250 && ++soft > ALPHA_EVIDENCE) break;
+  }
+  const alreadyKeyed = soft > ALPHA_EVIDENCE;
+
   // Key to alpha and track the silhouette's bounding box in the same pass.
   let minX = w;
   let minY = h;
@@ -54,8 +76,15 @@ const key = (img: HTMLImageElement): KeyedFigure => {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
-      const lum = (p[i] * 0.2126 + p[i + 1] * 0.7152 + p[i + 2] * 0.0722) / 255;
-      const a = clamp((CLEAR - lum) / (CLEAR - SOLID));
+      let a: number;
+      if (alreadyKeyed) {
+        a = p[i + 3] / 255;
+      } else {
+        const lum = (p[i] * 0.2126 + p[i + 1] * 0.7152 + p[i + 2] * 0.0722) / 255;
+        a = clamp((CLEAR - lum) / (CLEAR - SOLID));
+      }
+      // Pure black either way — no interior detail, no colour fringing carried
+      // over from the source's anti-aliasing.
       p[i] = 0;
       p[i + 1] = 0;
       p[i + 2] = 0;
@@ -127,15 +156,20 @@ export const useFigure = (): KeyedFigure | null => {
 
 /**
  * Anchor points down the figure's centreline, as fractions of the cropped
- * silhouette's height (0 = crown of the topknot, 1 = underside of the feet).
- * Measured off the artwork; used by the chakra composition.
+ * silhouette's height (0 = top of the topknot, 1 = underside of the feet).
+ *
+ * Measured off the supplied artwork by profiling the width of the silhouette's
+ * central run row by row, rather than by eye: the neck is its narrowest point
+ * (t=0.312), the shoulders are where it jumps from 303 to 476 px (t=0.39), the
+ * waist is the local minimum below the ribs (t=0.649), and the seat begins
+ * where it leaps to full width (t=0.779).
  */
 export const CENTRELINE = {
-  crown: 0.014,
-  brow: 0.224,
-  throat: 0.357,
-  heart: 0.503,
-  solar: 0.579,
-  sacral: 0.656,
-  root: 0.738,
+  crown: 0.03,
+  brow: 0.265,
+  throat: 0.345,
+  heart: 0.495,
+  solar: 0.59,
+  sacral: 0.69,
+  root: 0.775,
 } as const;
