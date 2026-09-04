@@ -27,11 +27,23 @@ npx remotion still V1-CanopyMonoFog out/V1_CanopyMonoFog.png --frame=90 --scale=
 npx remotion still V2-CanopyBlueNight out/V2_CanopyBlueNight.png --frame=300 --scale=1
 ```
 
-The 1080p previews shipped alongside this project are the same commands with
-`--scale=0.5`. Codec, pixel format (`yuv420p`) and CRF come from
-`remotion.config.ts`, so the flags above only need to override the scale.
-Frames are captured as PNG rather than JPEG so the fog gradients reach the
-encoder without picking up block artefacts first.
+Codec, pixel format (`yuv420p`) and CRF come from `remotion.config.ts`, so the
+4K commands above only need to override the scale. Frames are captured as PNG
+rather than JPEG so the fog gradients reach the encoder without picking up
+block artefacts first.
+
+The 1080p previews shipped alongside this project were rendered with:
+
+```bash
+npx remotion render V1-CanopyMonoFog out/V1_CanopyMonoFog.mp4 --scale=0.5 --crf=21
+npx remotion render V2-CanopyBlueNight out/V2_CanopyBlueNight.mp4 --scale=0.5 --crf=21
+```
+
+CRF 21 rather than 16 for the previews specifically because of the grain. Film
+grain is close to incompressible, and at CRF 16 a 20-second 1080p clip lands
+around 190 MB — roughly 78 Mbit/s, which is master-grade bitrate for a preview
+file. CRF 21 brings that to about a third with no change in the measured
+banding and ~86% of the grain retained. Keep `--crf=16` for the 4K master.
 
 Note the composition IDs use hyphens — Remotion does not allow underscores in
 them — while the output filenames use underscores.
