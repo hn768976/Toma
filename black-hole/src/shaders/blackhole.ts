@@ -36,7 +36,7 @@ const float CAM_ROLL = 0.36;    // rad, tilts the disc lower-left -> upper-right
 const float FOV_Y    = 0.44;    // full vertical field of view, rad
 
 // ------------------------------------------------------------------ disc ---
-const float R_IN   = 7.0;       // motes start well clear of the shadow
+const float R_IN   = 5.0;       // motes start well clear of the shadow
 const float R_OUT  = 30.0;      // runs well past every frame edge
 const float B_CRIT = 2.59808;   // 3*sqrt(3)*M
 
@@ -45,8 +45,8 @@ const float B_CRIT = 2.59808;   // 3*sqrt(3)*M
 // shadow, so the clear gap is guaranteed by construction rather than by hoping
 // the geometry cooperates -- strongly lensed images would otherwise wrap right
 // up against the horizon.
-const float GAP_IN  = 3.30;
-const float GAP_OUT = 6.20;
+const float GAP_IN  = 3.05;
+const float GAP_OUT = 4.90;
 
 // ------------------------------------------------------------------ haze ---
 // The reference's broad luminous field is in the scene, not painted on top:
@@ -54,7 +54,7 @@ const float GAP_OUT = 6.20;
 // disc carries a genuine volumetric envelope, integrated along the ray.
 const float HAZE_H0 = 1.60;     // slab half-thickness at the inner edge
 const float HAZE_HR = 0.135;    // flare per unit radius
-const float HAZE_K  = 0.0085;   // overall strength
+const float HAZE_K  = 0.0115;   // overall strength
 const float HAZE_R2 = 0.0075;   // radial falloff
 
 // ------------------------------------------------------------------ march --
@@ -103,9 +103,9 @@ float fbm(vec2 p, float P) {
 // so the field returns exactly to its start; neighbouring rows take different
 // counts, which is the differential rotation. Because the motes are discrete,
 // the row boundaries are invisible -- no cross-fading, and so no ghosting.
-const float LOG2_RIN = 2.8073549;   // log2(R_IN), R_IN = 7
-const float MOTE_U = 276.0;    // cells around the disc
-const float MOTE_V = 3.2;      // radial rows per unit log2(r)
+const float LOG2_RIN = 2.3219281;   // log2(R_IN), R_IN = 5
+const float MOTE_U = 832.0;    // cells around the disc
+const float MOTE_V = 9.64;     // radial rows per unit log2(r)
 
 float rowTurns(float lr2c) {
   return max(1.0, floor(0.6 + 3.2 * exp2((LOG2_RIN - lr2c) * 1.1) + 0.5));
@@ -117,6 +117,12 @@ float rowTurns(float lr2c) {
 // frame, so motes that are round near the hole streak into radial spokes
 // further out.
 const float MOTE_ASPECT = 9.51;   // (ln2 * MOTE_U) / (TAU * MOTE_V)
+
+// Large-scale clumping field, evaluated on the cell grid itself so the clusters
+// ride along with the motes and wrap exactly with it.
+float clusterAt(vec2 cell) {
+  return fbm(vec2(cell.x * (1.0 / 32.0), cell.y * 0.30), MOTE_U / 32.0);
+}
 
 float motes(float ang, float lr2, float t, float kR, float kT) {
   float gv = lr2 * MOTE_V;
@@ -136,17 +142,19 @@ float motes(float ang, float lr2, float t, float kR, float kT) {
     float fy = gv - row;
     for (int i = -1; i <= 1; i++) {
       vec2 cell = vec2(mod(col0 + float(i), MOTE_U), row);
+      // Particles gather into big clumps with near-empty space between, rather
+      // than spreading evenly over the disc.
+      float dens = smoothstep(0.44, 0.62, clusterAt(cell));
       float h = hash21(cell);
-      if (h < 0.36) continue;
+      if (h > dens * 0.92) continue;
       vec2 sp = vec2(hash21(cell + 7.1), hash21(cell + 19.3));
-      float sz = 0.42 + 0.38 * hash21(cell + 3.3);
-      float br = 0.30 + 0.70 * hash21(cell + 11.7);
+      float sz = 0.26 + 0.20 * hash21(cell + 3.3);
+      float br = 0.35 + 0.65 * hash21(cell + 11.7);
       float d = length(vec2((fx - float(i) - sp.x) * kT,
                             (fy - sp.y) * MOTE_ASPECT * kR));
-      // A soft shoulder rather than a hard core: these should read as blurry
-      // motes of light, not as sprites with an edge.
-      float w = smoothstep(sz, 0.0, d);
-      acc += br * w * w * w;
+      // Crisp: a flat core with only enough of a ramp to anti-alias the edge.
+      // These are meant to read as hard little grains, not soft blobs.
+      acc += br * (1.0 - smoothstep(sz * 0.62, sz, d));
     }
   }
   return acc;
@@ -367,7 +375,7 @@ vec3 trace(vec3 ro, vec3 rd, float gap, out float shadow) {
 
   // The envelope is added whether or not the ray escaped, but never for a ray
   // that fell through the horizon -- that path returns black above.
-  col += hazeAcc * gap * ramp(hazeTemp / max(hazeAcc, 1e-6));
+  col += hazeAcc * ramp(hazeTemp / max(hazeAcc, 1e-6));
 
   if (escaped) {
     // Asymptotic exit direction in closed form. Far from the hole the orbit is

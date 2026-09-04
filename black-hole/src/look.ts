@@ -17,11 +17,11 @@ export const LOOK = {
   exposure: 1.10,
   /** ~2% grain, the cheapest defence against H.264 banding in the falloffs. */
   grain: 0.022,
-  bloomTight: 1.5,
-  bloomWide: 1.35,
-  /** Low: the motes are meant to read as soft, blurry light, so most of the
-   *  frame feeds the bloom rather than only the brightest cores. */
-  bloomThreshold: 0.30,
+  bloomTight: 0.30,
+  bloomWide: 0.85,
+  /** Kept high and weak: the particles must stay crisp, so only the brightest
+   *  cores glow at all. The soft ambient light is the shader's envelope. */
+  bloomThreshold: 0.55,
 };
 
 export const FPS = 30;
