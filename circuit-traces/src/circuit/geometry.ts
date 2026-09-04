@@ -40,6 +40,9 @@ export type Trace = {
   /** Hue-bucket index, resolved from the trace centroid at build time. */
   hx: number;
   hy: number;
+  /** True when the route escapes from a package pin, so the pulse schedule can
+   *  guarantee traffic through the pin combs. */
+  fromPin: boolean;
 };
 
 export type Line = { x1: number; y1: number; x2: number; y2: number; w: number };
@@ -344,7 +347,11 @@ const addTwoPad = (ctx: BuildCtx, x: number, y: number, vertical: boolean) => {
 // Route walker
 // ---------------------------------------------------------------------------
 
-const buildTrace = (pts: Pt[], tier: number): Trace | null => {
+const buildTrace = (
+  pts: Pt[],
+  tier: number,
+  fromPin = false,
+): Trace | null => {
   // Drop collinear vertices so arc-length lookup stays cheap.
   const out: Pt[] = [pts[0]];
   for (let i = 1; i < pts.length - 1; i++) {
@@ -378,6 +385,7 @@ const buildTrace = (pts: Pt[], tier: number): Trace | null => {
     tier,
     hx: sx / out.length,
     hy: sy / out.length,
+    fromPin,
   };
 };
 
@@ -613,29 +621,37 @@ export const buildBoard = (seed: number): Board => {
     }
   };
 
-  // Pass 1 - long backbone runs across an empty board. Going first is what
-  // lets these travel a good fraction of the frame before terminating.
-  for (let attempt = 0; attempt < 900; attempt++) {
-    const c = Math.floor(rng() * COLS);
-    const r = Math.floor(rng() * ROWS);
-    if (occ[idx(c, r)]) continue;
-    const d = [0, 0, 0, 4, 4, 4, 1, 3, 5, 7][Math.floor(rng() * 10)];
-    routeWithBus(c, r, d, 0.62);
-  }
-
-  // Pass 2 - routes that start on a package pin, fanning out of the packages.
+  // Pass 1 - escape routing out of the packages, on an empty board. This goes
+  // first because a pin that cannot get off the package leaves its comb dark
+  // for the whole loop, and the pins are the point of the picture.
   for (const pin of pins) {
     let c = pin.c;
     let r = pin.r;
-    // Step off the pin until we clear the package keep-out.
-    for (let s = 0; s < 5 && occ[idx(c, r)]; s++) {
+    // Step off the pin until we clear the comb keep-out. The band is deeper
+    // than the pin is long, so this needs real headroom.
+    let s0 = 0;
+    while (
+      s0 < 10 &&
+      c >= 0 &&
+      r >= 0 &&
+      c < COLS &&
+      r < ROWS &&
+      occ[idx(c, r)]
+    ) {
       c += DIRS[pin.d][0];
       r += DIRS[pin.d][1];
-      if (c < 0 || r < 0 || c >= COLS || r >= ROWS) break;
+      s0++;
     }
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS || occ[idx(c, r)]) continue;
-    const w = walk(rng, occ, density, c, r, pin.d);
+
+    // Straight out if it will run, otherwise peel off at 45 degrees.
+    let w: { pts: Pt[]; moves: { dir: number; steps: number }[] } | null = null;
+    for (const turn of [0, 1, -1, 2, -2]) {
+      w = walk(rng, occ, density, c, r, (pin.d + turn + 8) % 8);
+      if (w) break;
+    }
     if (!w) continue;
+
     // Begin the polyline at the pin's inner end so a pulse runs the length of
     // the pin and into the package rather than appearing beside it. The pin is
     // lattice-aligned, so this stays collinear with the route's first run.
@@ -643,8 +659,17 @@ export const buildBoard = (seed: number): Board => {
     // Half the pin routes are stored reversed, so signals both enter and leave
     // the package instead of every pulse running outward.
     if (rng() < 0.5) pts.reverse();
-    const tr = buildTrace(pts, tierFor());
+    const tr = buildTrace(pts, tierFor(), true);
     if (tr) traces.push(tr);
+  }
+
+  // Pass 2 - long backbone runs across the rest of the board.
+  for (let attempt = 0; attempt < 900; attempt++) {
+    const c = Math.floor(rng() * COLS);
+    const r = Math.floor(rng() * ROWS);
+    if (occ[idx(c, r)]) continue;
+    const d = [0, 0, 0, 4, 4, 4, 1, 3, 5, 7][Math.floor(rng() * 10)];
+    routeWithBus(c, r, d, 0.62);
   }
 
   // Pass 3 - free routes fill the rest of the board.

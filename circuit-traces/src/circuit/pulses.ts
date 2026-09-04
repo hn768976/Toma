@@ -37,17 +37,37 @@ export const buildPulses = (
   // Rank traces so the long ones carry most of the traffic, and leave a good
   // share of the board dark for the whole loop.
   const order = board.traces
-    .map((t, i) => ({ i, len: t.len, key: t.len * range(rng, 0.35, 1) }))
+    .map((t, i) => ({ i, key: t.len * range(rng, 0.35, 1) }))
     .sort((a, b) => b.key - a.key);
-
   const busy = order.slice(0, Math.min(n, Math.round(count * 0.85)));
 
+  // Routes escaping a package pin are what light the chip combs, and they are
+  // rarely the longest traces on the board — so reserve traffic for them
+  // rather than leaving it to the length ranking.
+  const pinIdx: number[] = [];
+  for (let i = 0; i < n; i++) if (board.traces[i].fromPin) pinIdx.push(i);
+  for (let i = pinIdx.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pinIdx[i], pinIdx[j]] = [pinIdx[j], pinIdx[i]];
+  }
+  const reserved = Math.min(
+    Math.round(count * 0.42),
+    pinIdx.length * 2,
+    count,
+  );
+
   for (let p = 0; p < count; p++) {
-    const pickIdx =
-      p < busy.length
-        ? busy[p].i
-        : // Remaining pulses double up on already-busy traces.
-          busy[Math.floor(rng() * busy.length)].i;
+    let pickIdx: number;
+    if (p < reserved && pinIdx.length > 0) {
+      pickIdx = pinIdx[p % pinIdx.length];
+    } else {
+      const q = p - reserved;
+      pickIdx =
+        q < busy.length
+          ? busy[q].i
+          : // Remaining pulses double up on already-busy traces.
+            busy[Math.floor(rng() * busy.length)].i;
+    }
     const tr = board.traces[pickIdx];
     pulses.push({
       t: pickIdx,
