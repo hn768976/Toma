@@ -1,0 +1,29 @@
+{
+  "name": "terminal-streaks",
+  "version": "1.0.0",
+  "description": "Retro terminal streaks — motion-smeared BBS text screens (Remotion, 4K/30fps/20s loop)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "render:v1": "remotion render V1-TerminalStreaksColour out/V1_TerminalStreaksColour.mp4 --scale=1 --crf=16",
+    "render:v2": "remotion render V2-TerminalStreaksAmber out/V2_TerminalStreaksAmber.mp4 --scale=1 --crf=16",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "sideEffects": [
+    "./src/load-fonts.ts"
+  ]
+}
