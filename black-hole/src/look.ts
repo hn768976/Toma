@@ -14,13 +14,14 @@ export const LOOK = {
   center: [0.32, 0.45] as [number, number],
   /** Rays per pixel per axis. 2 = 4x supersampling. */
   supersample: 2,
-  exposure: 1.05,
+  exposure: 1.10,
   /** ~2% grain, the cheapest defence against H.264 banding in the falloffs. */
   grain: 0.022,
-  bloomTight: 1.1,
-  bloomWide: 2.6,
-  /** Above the outer disc's radiance, so only the ring and inner edge bloom. */
-  bloomThreshold: 0.90,
+  bloomTight: 1.5,
+  bloomWide: 1.35,
+  /** Low: the motes are meant to read as soft, blurry light, so most of the
+   *  frame feeds the bloom rather than only the brightest cores. */
+  bloomThreshold: 0.30,
 };
 
 export const FPS = 30;

@@ -15,7 +15,8 @@
 export const SCENE_FRAGMENT = /* glsl */ `#version 300 es
 precision highp float;
 
-// rgb = radiance, a = horizon mask (1 where the ray fell through the horizon).
+// rgb = radiance, a = keep-clear mask: 1 where no light may appear, covering
+// both the horizon and the gap that isolates it. The composite masks bloom by it.
 out vec4 fragColor;
 
 uniform vec2  uRes;      // render resolution in px
@@ -35,22 +36,30 @@ const float CAM_ROLL = 0.36;    // rad, tilts the disc lower-left -> upper-right
 const float FOV_Y    = 0.44;    // full vertical field of view, rad
 
 // ------------------------------------------------------------------ disc ---
-const float R_IN   = 3.0;       // ISCO = 6M
-const float R_OUT  = 26.0;      // runs well past every frame edge
+const float R_IN   = 7.0;       // motes start well clear of the shadow
+const float R_OUT  = 30.0;      // runs well past every frame edge
 const float B_CRIT = 2.59808;   // 3*sqrt(3)*M
+
+// Nothing is allowed to touch the black disc. Emission fades out below this
+// impact parameter, which is a circle in screen space concentric with the
+// shadow, so the clear gap is guaranteed by construction rather than by hoping
+// the geometry cooperates -- strongly lensed images would otherwise wrap right
+// up against the horizon.
+const float GAP_IN  = 3.30;
+const float GAP_OUT = 6.20;
 
 // ------------------------------------------------------------------ haze ---
 // The reference's broad luminous field is in the scene, not painted on top:
 // the dust lanes stay dark and crisp against it, which bloom would veil. So the
 // disc carries a genuine volumetric envelope, integrated along the ray.
-const float HAZE_H0 = 0.95;     // slab half-thickness at the inner edge
-const float HAZE_HR = 0.105;    // flare per unit radius
-const float HAZE_K  = 0.056;    // overall strength
-const float HAZE_R2 = 0.0105;   // radial falloff
+const float HAZE_H0 = 1.60;     // slab half-thickness at the inner edge
+const float HAZE_HR = 0.135;    // flare per unit radius
+const float HAZE_K  = 0.0085;   // overall strength
+const float HAZE_R2 = 0.0075;   // radial falloff
 
 // ------------------------------------------------------------------ march --
 const int   MAX_STEPS = 320;
-const int   MAX_HITS  = 3;
+const int   MAX_HITS  = 2;
 
 // ------------------------------------------------------------------- noise --
 float hash21(vec2 p) {
@@ -88,80 +97,59 @@ float fbm(vec2 p, float P) {
 
 // Five octaves at high persistence: the fine detail keeps real weight, which
 // is what makes the lanes read as torn, granular dust instead of a soft smudge.
-const float DUST_NORM = 1.0 / 2.3928;
+// ------------------------------------------------------------------ motes ---
+// Dust motes on a polar grid, one per cell, jittered in position, size and
+// brightness. Each radial row completes a WHOLE number of turns over the loop,
+// so the field returns exactly to its start; neighbouring rows take different
+// counts, which is the differential rotation. Because the motes are discrete,
+// the row boundaries are invisible -- no cross-fading, and so no ghosting.
+const float LOG2_RIN = 2.8073549;   // log2(R_IN), R_IN = 7
+const float MOTE_U = 276.0;    // cells around the disc
+const float MOTE_V = 3.2;      // radial rows per unit log2(r)
 
-float fbmRough(vec2 p, float P) {
-  float s = pnoise(p, P);
-  p = p * 2.0 + vec2(0.0, 19.7); P *= 2.0;
-  s += 0.62 * pnoise(p, P);
-  p = p * 2.0 + vec2(0.0, 11.3); P *= 2.0;
-  s += 0.3844 * pnoise(p, P);
-  p = p * 2.0 + vec2(0.0, 27.1); P *= 2.0;
-  s += 0.2383 * pnoise(p, P);
-  p = p * 2.0 + vec2(0.0, 5.9); P *= 2.0;
-  s += 0.1478 * pnoise(p, P);
-  return s * DUST_NORM;
+float rowTurns(float lr2c) {
+  return max(1.0, floor(0.6 + 3.2 * exp2((LOG2_RIN - lr2c) * 1.1) + 0.5));
 }
 
-// Same two-layer construction as rotLayer, on the rough noise.
-float rotLayerRough(float u, float v, float t, float turns, float P) {
-  float n0 = floor(turns);
-  float s0 = fract(n0 * t);
-  float s1 = fract((n0 + 1.0) * t);
-  float a = fbmRough(vec2((u - s0) * P, v), P);
-  float b = fbmRough(vec2((u - s1) * P, v), P);
-  float w = smoothstep(0.14, 0.86, turns - n0);
-  float m = mix(a, b, w) - 0.5;
-  return 0.5 + m * inversesqrt((1.0 - w) * (1.0 - w) + w * w);
-}
+// kR / kT are the local foreshortening of the disc's radial and tangential
+// directions, taken from the ray's own tangent at the crossing. A single global
+// aspect cannot work: the plane is seen at a different grazing angle across the
+// frame, so motes that are round near the hole streak into radial spokes
+// further out.
+const float MOTE_ASPECT = 9.51;   // (ln2 * MOTE_U) / (TAU * MOTE_V)
 
-const float LOG2_RIN = 1.5849625;     // log2(R_IN), R_IN = 3
-
-// Turns completed over one loop at radius r. Compressed Keplerian shear:
-// fast inner material, ~1.2 turns at the outer edge over the 30s loop.
-// lr2 is log2(r), shared with everything else that needs it.
-float turnsAt(float lr2) {
-  return 1.2 + 2.9 * exp2((LOG2_RIN - lr2) * 1.05);
-}
-
-// One rotating noise layer. The phase is split across the two integer turn
-// counts bracketing turns and cross-faded by a time-independent weight: each
-// layer returns exactly to its start after a whole number of turns, while the
-// blend still reads as continuous differential rotation.
-float rotLayer(float u, float v, float t, float turns, float P) {
-  float n0 = floor(turns);
-  // The pattern is periodic in u with period 1, so whole turns can be dropped
-  // from the phase without changing a pixel. Doing so keeps the noise
-  // coordinate small, which is what makes t = 1 land bit-exactly on t = 0
-  // instead of a rounding error away from it.
-  float s0 = fract(n0 * t);
-  float s1 = fract((n0 + 1.0) * t);
-  float a = fbm(vec2((u - s0) * P, v), P);
-  float b = fbm(vec2((u - s1) * P, v), P);
-  // Renormalise the contrast the blend would otherwise wash out, or the band
-  // boundaries read as concentric rings.
-  float w = smoothstep(0.14, 0.86, turns - n0);
-  float m = mix(a, b, w) - 0.5;
-  return 0.5 + m * inversesqrt((1.0 - w) * (1.0 - w) + w * w);
-}
-
-// Bright material: fine filaments stretched along the direction of travel.
-float material(float ang, float lr2, float turns, float t) {
-  return rotLayer(ang / TAU, lr2 * 6.40, t, turns, 62.0);
-}
-
-// Dust lanes: coarser, higher contrast, sheared into arms and drifting slower
-// than the material so the striations shear over the loop.
-// The lanes are carved out of the same turbulence that shapes the material,
-// which is what gives them torn edges instead of smooth bands. Passing the
-// material noise back in buys that raggedness for free.
-float dust(float ang, float r, float lr2, float turns, float t, float mat) {
-  float d = rotLayerRough(ang / TAU + lr2 * 0.30, lr2 * 2.45, t, turns * 0.55, 6.0);
-  float outer = smoothstep(R_IN, R_IN + 3.0, r);
-  // The lanes are carved by the same turbulence that shapes the material, which
-  // is what tears their edges instead of leaving smooth bands.
-  d = d + (mat - 0.5) * (0.62 + 0.55 * outer);
-  return smoothstep(0.625 - 0.045 * outer, 0.330 - 0.045 * outer, d) * (0.60 + 0.40 * outer);
+float motes(float ang, float lr2, float t, float kR, float kT) {
+  float gv = lr2 * MOTE_V;
+  float row0 = floor(gv);
+  float u = ang / TAU + 0.5;
+  float acc = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    float row = row0 + float(j);
+    float n = rowTurns((row + 0.5) / MOTE_V);
+    // Whole turns can be dropped from the phase without moving a single mote,
+    // and doing so keeps the coordinate small. Subtracting n*t outright loses
+    // enough mantissa that t = 1 lands a rounding error away from t = 0 rather
+    // than exactly on it, which breaks the loop.
+    float gx = (u - fract(n * t)) * MOTE_U;
+    float col0 = floor(gx);
+    float fx = gx - col0;
+    float fy = gv - row;
+    for (int i = -1; i <= 1; i++) {
+      vec2 cell = vec2(mod(col0 + float(i), MOTE_U), row);
+      float h = hash21(cell);
+      if (h < 0.36) continue;
+      vec2 sp = vec2(hash21(cell + 7.1), hash21(cell + 19.3));
+      float sz = 0.42 + 0.38 * hash21(cell + 3.3);
+      float br = 0.30 + 0.70 * hash21(cell + 11.7);
+      float d = length(vec2((fx - float(i) - sp.x) * kT,
+                            (fy - sp.y) * MOTE_ASPECT * kR));
+      // A soft shoulder rather than a hard core: these should read as blurry
+      // motes of light, not as sprites with an edge.
+      float w = smoothstep(sz, 0.0, d);
+      acc += br * w * w * w;
+    }
+  }
+  return acc;
 }
 
 // ---------------------------------------------------------------- palette ---
@@ -239,7 +227,7 @@ vec3 starfield(vec3 dir, float t) {
 // ------------------------------------------------------------------ trace ---
 // Integrates one photon backwards from the camera. Returns radiance; shadow
 // is 1 where the ray ended inside the horizon.
-vec3 trace(vec3 ro, vec3 rd, out float shadow) {
+vec3 trace(vec3 ro, vec3 rd, float gap, out float shadow) {
   shadow = 0.0;
   vec3 col = vec3(0.0);
   float trans = 1.0;
@@ -270,7 +258,6 @@ vec3 trace(vec3 ro, vec3 rd, out float shadow) {
   // only the smooth envelope, where a little phase drift is invisible.
   float cf = 1.0, sf = 0.0;
   float hazeAcc = 0.0, hazeTemp = 0.0;
-  float dustFront = 0.0;
   bool escaped = false;
   bool opaque = false;
   float outU = 1.0 / r0, outDu = 0.0, outPhi = 0.0;
@@ -321,9 +308,9 @@ vec3 trace(vec3 ro, vec3 rd, out float shadow) {
       float uc = mix(u, un, f);
       float rc = 1.0 / uc;
       float lr2 = log2(rc);
-      float inner = smoothstep(R_IN, R_IN + 0.5, rc);
-      float outer = 1.0 - smoothstep(R_OUT * 0.28, R_OUT * 0.68, rc);
-      float prof = exp2((LOG2_RIN - lr2) * 1.55) * inner * outer;
+      float inner = smoothstep(R_IN, R_IN + 2.2, rc);
+      float outer = 1.0 - smoothstep(R_OUT * 0.42, R_OUT, rc);
+      float prof = exp2((LOG2_RIN - lr2) * 1.15) * inner * outer;
       if (rc > R_IN && rc < R_OUT && hits < MAX_HITS && prof > 2e-5 && trans > 0.01) {
         hits++;
         float cp = cos(phiCross), sp = sin(phiCross);
@@ -331,39 +318,27 @@ vec3 trace(vec3 ro, vec3 rd, out float shadow) {
         vec3 wp = -sp * e1 + cp * e2;          // unit, perpendicular, along travel
         float ang = atan(w.z, w.x);
 
-        // Tangent at the crossing, for the Doppler shift and for how much slab
-        // the ray actually traverses. w and wp are orthonormal, so the norm is
-        // known without touching the components.
         float rp = -mix(du, dun, f) / (uc * uc);
         vec3 tang = (rp * w + rc * wp) * inversesqrt(rp * rp + rc * rc);
 
-        // A flared slab of finite thickness, not a razor plane: a grazing ray
-        // travels much further through the material, which is what makes an
-        // edge-on disc read as thick and hot rather than as a wire.
-        float halfH = 0.34 + 0.085 * rc;
-        float path = clamp(halfH / max(abs(tang.y), 0.04), 0.30, 2.6);
+        // A grazing ray passes through more of the mote field.
+        float halfH = 0.60 + 0.10 * rc;
+        float path = clamp(halfH / max(abs(tang.y), 0.05), 0.35, 2.2);
 
-        float turns = turnsAt(lr2);
-        float mat = material(ang, lr2, turns, uT);
-        float d = clamp((mat - 0.17) * 1.60, 0.0, 1.0);
-        float dens = d * (0.6 + 0.4 * d);
+        // Local foreshortening of the radial and tangential directions.
+        vec3 vhat0 = vec3(-w.z, 0.0, w.x);
+        float dwt = dot(w, tang);
+        float dvt = dot(vhat0, tang);
+        float kR = clamp(sqrt(max(1.0 - dwt * dwt, 0.0)), 0.02, 0.45);
+        float kT = clamp(sqrt(max(1.0 - dvt * dvt, 0.0)), 0.62, 1.0);
+        float m = motes(ang, lr2, uT, kR, kT);
 
-        // Orbital direction at a point in the disc plane, unit by construction.
-        vec3 vhat = vec3(-w.z, 0.0, w.x);
-        float dv = 1.0 + 0.18 * dot(vhat, -tang);
+        // Doppler: motes orbiting toward the camera are brighter. Subtle.
+        float dv = 1.0 - 0.14 * dvt;
         float dopp = dv * dv;
 
-        float dustA = clamp(dust(ang, rc, lr2, turns, uT, mat), 0.0, 0.995);
-        if (hits == 1) dustFront = dustA;   // the column nearest the camera
-
-        float ordDim = (hits > 2) ? 0.38 : 1.0;
-        float emis = prof * (0.14 + 1.15 * dens) * dopp * path * ordDim;
-        float temp = smoothstep(R_IN, R_OUT * 0.55, rc);
-        col += trans * emis * ramp(temp) * (1.0 - dustA) * 2.9;
-
-        // The near side of the disc partly occludes the lensed arcs behind it.
-        float opa = clamp(dens * prof * path * 2.6, 0.0, 0.90) * inner;
-        trans *= (1.0 - opa) * (1.0 - dustA * 0.96);
+        float temp = smoothstep(R_IN, R_OUT * 0.70, rc);
+        col += trans * m * prof * dopp * path * gap * ramp(temp) * 5.2;
       }
       phiCross += PI;
     }
@@ -392,8 +367,7 @@ vec3 trace(vec3 ro, vec3 rd, out float shadow) {
 
   // The envelope is added whether or not the ray escaped, but never for a ray
   // that fell through the horizon -- that path returns black above.
-  hazeAcc *= 1.0 - 0.82 * dustFront;
-  col += hazeAcc * ramp(hazeTemp / max(hazeAcc, 1e-6));
+  col += hazeAcc * gap * ramp(hazeTemp / max(hazeAcc, 1e-6));
 
   if (escaped) {
     // Asymptotic exit direction in closed form. Far from the hole the orbit is
@@ -404,11 +378,6 @@ vec3 trace(vec3 ro, vec3 rd, out float shadow) {
     float phiInf = outPhi + PI - atan(outU, outDu);
     vec3 dirOut = normalize(cos(phiInf) * e1 + sin(phiInf) * e2);
     col += trans * starfield(dirOut, uT) * 1.15;
-
-    // Photon ring: rays grazing the photon sphere wind around it repeatedly and
-    // come back out along the shadow's edge, brighter than anything else here.
-    float ring = exp(-max(rmin - 1.502, 0.0) / 0.026);
-    col += ring * ramp(0.0) * 21.0;
   }
 
   return col;
@@ -435,10 +404,10 @@ void main() {
   // else one ray per pixel is already smooth.
   float bPix = CAM_DIST * length(vec2(pc.x, pc.y)) * tanHalf
              / sqrt(1.0 + dot(pc, pc) * tanHalf * tanHalf);
-  int ss = (abs(bPix - B_CRIT) < 1.1) ? uSS : 1;
+  int ss = (abs(bPix - B_CRIT) < 1.4) ? uSS : 1;
 
   vec3 sum = vec3(0.0);
-  float shadowSum = 0.0;
+  float edgeSum = 0.0;
   float n = 0.0;
   for (int sy = 0; sy < 2; sy++) {
     if (sy >= ss) break;
@@ -447,13 +416,16 @@ void main() {
       vec2 jitter = (vec2(float(sx), float(sy)) + 0.5) / float(ss);
       vec2 p = (base + jitter - centerPx) * invH;
       vec3 dir = normalize(fwd + rr * (p.x * tanHalf) + uu * (p.y * tanHalf));
+      float b = CAM_DIST * length(p) * tanHalf
+              / sqrt(1.0 + dot(p, p) * tanHalf * tanHalf);
+      float gap = smoothstep(GAP_IN, GAP_OUT, b);
       float sh;
-      sum += trace(camPos, dir, sh);
-      shadowSum += sh;
+      sum += trace(camPos, dir, gap, sh);
+      edgeSum += max(sh, 1.0 - smoothstep(B_CRIT + 0.10, B_CRIT + 1.60, b));
       n += 1.0;
     }
   }
 
-  fragColor = vec4(sum / n * uGain, shadowSum / n);
+  fragColor = vec4(sum / n * uGain, edgeSum / n);
 }
 `;

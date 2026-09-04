@@ -225,6 +225,7 @@ export class BlackHoleRenderer {
 
     // 3. Tight bloom at half res.
     this.blur(a, aTmp, a, 1.0);
+    this.blur(a, aTmp, a, 2.0);
 
     // 4. Wide halo: half -> quarter -> eighth, blurred at three radii.
     gl.useProgram(this.progDown);
@@ -237,9 +238,12 @@ export class BlackHoleRenderer {
     this.useTexture(this.progDown, 'uTex', q.tex, 0);
     gl.uniform2f(dTexel, 1 / q.w, 1 / q.h);
     this.draw();
-    this.blur(e, eTmp, e, 1.0);
-    this.blur(e, eTmp, e, 2.0);
-    this.blur(e, eTmp, e, 3.5);
+    // Wide, soft diffusion. The look calls for blurry light, so the halo is
+    // built from several passes at increasing radius rather than one tight one.
+    this.blur(e, eTmp, e, 1.5);
+    this.blur(e, eTmp, e, 3.0);
+    this.blur(e, eTmp, e, 5.5);
+    this.blur(e, eTmp, e, 9.0);
 
     // 5. Composite to the canvas.
     gl.useProgram(this.progComposite);

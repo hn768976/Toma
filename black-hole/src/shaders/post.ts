@@ -94,8 +94,9 @@ float hash13(vec3 p) {
 void main() {
   vec4 s = texture(uScene, vUv);
   vec3 c = s.rgb * uInvGain;
-  // The horizon is a hard black disc: no edge glow, no gradient. Masking the
-  // bloom by the horizon coverage is what keeps that edge hard.
+  // Nothing may touch the black disc, so bloom is masked by the keep-clear
+  // region -- the horizon and the gap around it. Without this the glow from the
+  // motes creeps back across the gap and lands on the horizon's edge.
   float lit = 1.0 - s.a;
   c += texture(uBloomA, vUv).rgb * (uBloomA_k * uInvGain) * lit;
   c += texture(uBloomB, vUv).rgb * (uBloomB_k * uInvGain) * lit;

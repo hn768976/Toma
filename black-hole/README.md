@@ -1,9 +1,10 @@
 # Black Hole / Gravitational Lensing — Remotion
 
 A 30-second seamless loop of a Schwarzschild black hole: a hard black event
-horizon, a bright accretion disc lensed up over the top of the sphere and back
-under it, ragged dust lanes cutting across the material, and a lensed starfield
-behind everything. Monochrome, gold and blue versions.
+horizon with soft, blurry dust motes orbiting well clear of it, lensed up over
+the top of the sphere and back under it, against a lensed starfield. Nothing
+touches the black disc — a clear gap isolates it. Monochrome, gold and blue
+versions.
 
 Everything is procedural. No texture assets, no external media, no watermark.
 
@@ -63,8 +64,8 @@ Measured on a 4-core cloud VM with **no GPU** (SwiftShader software rasteriser,
 
 | Resolution           | Per frame | Per 900-frame composition |
 | -------------------- | --------- | ------------------------- |
-| 1920×1080 (`--scale=0.5`) | **~8.4 s** | **~2 h 5 m** |
-| 3840×2160 (`--scale=1`)   | ~34 s (projected, 4× the pixels) | **~8 h 30 m** (projected) |
+| 1920×1080 (`--scale=0.5`) | **~4.6 s** | **~1 h 10 m** |
+| 3840×2160 (`--scale=1`)   | ~18 s (projected, 4× the pixels) | **~4 h 40 m** (projected) |
 
 The 1080p figure is the wall-clock average over a full 900-frame render, encode
 included. The shader cost is very close to linear in pixel count, so the 4K
@@ -89,20 +90,24 @@ planar, the disc plane is crossed at exactly two known values of `phi` per turn
 sampling. That is what produces the double arc: the far side of the disc appears
 both above and below the sphere.
 
-**The luminous field is volumetric, not bloom.** The disc carries a flared,
-optically-thin envelope integrated along the ray, which is what fills the frame
-with the soft glow the reference has. It has to be real scene light rather than
-post-processing, because the dust lanes stay dark and crisp against it — bloom
-laid over the top would veil them. The envelope is sampled off the disc plane
-using a small-angle rotation recurrence for cos/sin of phi, so it costs no trig
-per step; the disc crossings and the exit direction still use exact values,
-where a little phase drift would matter.
+**Nothing touches the black disc.** Emission fades out below a fixed impact
+parameter, which is a circle in screen space concentric with the shadow, so the
+clear gap is guaranteed by construction rather than by hoping the geometry
+cooperates — strongly lensed images would otherwise wrap right up against the
+horizon. A second, much tighter mask keeps bloom off the horizon's edge; using
+the wide gap for both jobs turns the black disc into a soft blob and loses the
+hard edge that sells its scale.
 
-**Dust lanes** are built from a five-octave, high-persistence noise (the fine
-octaves keep real weight, which is what reads as granular torn dust rather than
-a soft smudge) and are carved further by the material turbulence itself. The
-nearest lane column also shadows the envelope, or the glow floods straight
-through the dust and the lanes never read as the large dark masses they are.
+**Dust motes, not a turbulent disc.** The motes sit on a polar grid, one per
+cell, jittered in position, size and brightness, with a soft shoulder rather
+than a hard core so they read as blurry light rather than as sprites. Their
+shape is corrected for the *local* foreshortening of the disc's radial and
+tangential directions, taken from the ray's own tangent at each crossing: a
+single global aspect cannot work, because the plane is seen at a different
+grazing angle across the frame, and motes that are round near the hole streak
+into radial spokes further out. Where the sightline runs along the orbit the
+tangential foreshortening collapses and a mote would stretch without bound, so
+that term is clamped.
 
 **The horizon is an absolute void.** Any radiance a ray gathered before falling
 through the horizon is discarded, so nothing shows through the black disc — no
@@ -113,17 +118,17 @@ stops shows a perfectly flat black, so this follows the reference.
 **Seamless loop.** Time enters the shader only as `uT = frame / durationInFrames`
 in `[0,1)`, and every time-varying term is periodic in it *by construction*:
 
-- Disc rotation is differential (inner material faster than outer), which cannot
-  complete a whole number of turns at every radius at once. So each radius is
-  rendered from the two integer turn counts bracketing its true rate, cross-faded
-  by a weight that does not depend on time. Each layer returns exactly to its
-  start after a whole number of turns; the blend still reads as continuous shear.
-  The blend is contrast-renormalised, otherwise the band boundaries show up as
-  concentric rings.
-- The noise wraps exactly in the angular axis (`pnoise` takes a period), and the
-  rotation phase is reduced modulo one turn so the noise coordinate stays small
-  — large coordinates lose enough mantissa that `t = 1` lands a rounding error
-  away from `t = 0` rather than exactly on it.
+- Rotation is differential (inner motes faster than outer), which cannot complete
+  a whole number of turns at every radius at once. Each radial row therefore
+  takes its own *integer* turn count, so every row returns exactly to its start;
+  neighbouring rows take different counts, and that difference is the shear.
+  Because the motes are discrete, the row boundaries are invisible — no
+  cross-fading, and so no ghosting.
+- The rotation phase is reduced modulo one turn (`fract(n*t)`). Whole turns can
+  be dropped without moving a single mote, and doing so keeps the coordinate
+  small: subtracting `n*t` outright loses enough mantissa that `t = 1` lands a
+  rounding error away from `t = 0` rather than exactly on it. This one caught
+  the loop out twice.
 - Star twinkle uses `sin(TAU * fract(k*t + phase))` with integer `k`. The `fract`
   matters: `sin(TAU*k + x)` is only periodic in exact arithmetic, not in floats.
 
@@ -155,9 +160,11 @@ tightest arcs live. One ray per pixel is already smooth everywhere else, and
 stars are sized in angular units so they cover the same solid angle — and stay
 the same apparent size — at 1080p and at 4K.
 
-**Post.** Bloom is thresholded above the outer disc's radiance so only the photon
-ring and the disc's inner edge feed it, and it is masked by the horizon coverage
-so no glow leaks over the black disc. Grain sits at ~2%: large smooth dark
+**Post.** The light is meant to be soft and blurry, so the bloom threshold sits
+low — most of the frame feeds it — and the wide halo is built from four blur
+passes at increasing radius rather than one tight one. It is masked by the
+keep-clear region so no glow creeps back across the gap onto the horizon. Grain
+sits at ~2%: large smooth dark
 falloffs around a black disc are the worst case for H.264 banding. The encoded
 1080p output was checked at 14× contrast across the falloff and shows no
 contouring at CRF 16. If a 4K encode does band, raise `LOOK.grain` in
