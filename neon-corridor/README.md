@@ -47,7 +47,10 @@ npx remotion still V2-NeonCorridorCyan    out/V2_NeonCorridorCyan.png    --frame
 wrap the same commands.
 
 Codec settings — H.264, `yuv420p`, CRF 16 — are pinned in `remotion.config.ts`,
-so they do not need to be passed on the command line.
+so they do not need to be passed on the command line. Frames are handed to the
+encoder as PNG rather than JPEG: JPEG intermediates are full-range and make
+x264 tag the result `yuvj420p`, and JPEG chroma subsampling mangles the dark
+smooth gradients before H.264 ever sees them.
 
 ### Chromium GL flag
 
@@ -75,13 +78,32 @@ Measured on this project, **1080p (`--scale=0.5`), 300 frames**, 4 vCPU / 15 GB,
 
 | Composition              | Wall clock | Per frame |
 | ------------------------ | ---------- | --------- |
-| `V1-NeonCorridorMagenta` | _see below_ | _see below_ |
-| `V2-NeonCorridorCyan`    | _see below_ | _see below_ |
+| `V1-NeonCorridorMagenta` | 545 s      | **1.82 s** |
+| `V2-NeonCorridorCyan`    | 540 s      | **1.80 s** |
 
-Expect 4K (`--scale=1`) to cost roughly 4× that per frame for the same
-concurrency, and far less on a machine with a real GPU — almost all of the
-per-frame cost here is fragment work (bloom mip chain, 9-tap reflection blur,
-4× MSAA) that a GPU eats for breakfast.
+Wall clock is the whole `npx remotion render` invocation at Remotion's default
+concurrency, so it includes bundling and browser startup (~15 s); net of that
+the steady-state cost is ~1.77 s/frame.
+
+Expect 4K (`--scale=1`) to cost roughly 4× that per frame at the same
+concurrency, and far less on a machine with a real GPU — nearly all of the cost
+here is fragment work (bloom mip chain, 9-tap reflection blur, 4× MSAA) that a
+GPU eats for breakfast.
+
+## Verification
+
+Checked against the encoded 1080p files, not the studio preview:
+
+- **Loop.** The frame 299 → 0 wrap is 1.12× (V1) and 1.14× (V2) the mean
+  frame-to-frame difference, against a worst ordinary step of 1.7× — so the
+  wrap is an unremarkable step and there is no seam.
+- **Format.** 1920×1080, H.264, `yuv420p`, 30 fps, exactly 300 frames.
+- **Flicker.** High-passing per-frame luminance finds the three scheduled
+  events at frames 45–62, 123–138 and 239–248 (scheduled 46, 128, 237), each
+  a dip.
+- **Banding and grain.** A vertical scan of the dark upper gradient moves in
+  1–2 level increments with no staircase; a flat dark patch has a non-zero
+  frame-to-frame delta, confirming the dither survives encoding.
 
 ## How it works
 
