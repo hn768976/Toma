@@ -31,7 +31,7 @@ A 1080p preview is the same composition at `--scale=0.5`, not a separate
 composition, so the two resolutions can never drift apart:
 
 ```bash
-npx remotion render V1-HalftoneWaveMagenta out/V1_HalftoneWaveMagenta.mp4 --scale=0.5 --crf=18
+npx remotion render V1-HalftoneWaveMagenta out/V1_HalftoneWaveMagenta.mp4 --scale=0.5 --crf=20
 ```
 
 Stills:
