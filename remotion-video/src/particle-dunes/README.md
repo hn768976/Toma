@@ -70,15 +70,18 @@ faster; these are close to a worst case.
 
 | Output                | Wall clock (450 frames) | Per frame |
 | --------------------- | ----------------------- | --------- |
-| 1080p (`--scale=0.5`) | 1252 s (~21 min)        | 2.78 s    |
+| 1080p (`--scale=0.5`) | 1320 s (22 min)         | 2.93 s    |
 
-Measured at `--concurrency=4`, so that is four frames in flight at once, not
-2.78 s of single-threaded work.
+Measured at `--concurrency=4`, so that is four frames in flight at once rather
+than 2.93 s of single-threaded work.
 
-Fill rate dominates, not the particle count: the vertex shader evaluates 4D
-simplex noise five times per grain and that is comparatively cheap, while the
-wide defocus discs in the foreground are what costs. Expect 4K (`--scale=1`) to
-cost roughly 4x the 1080p figure on the same machine.
+Fill rate dominates, not the particle count. Each grain costs twelve 4D simplex
+evaluations in the vertex shader (three height samples, for the value and its
+two finite differences, across four noise layers) and that is comparatively
+cheap; the wide defocus discs in the foreground are what actually costs. A
+probe during development bore this out: shrinking the sprites while leaving the
+vertex work untouched cut render time by more than 4x. Expect 4K (`--scale=1`)
+to cost roughly 4x the 1080p figure on the same machine.
 
 If you need it faster, lower `PARTICLE_COUNT` in `src/particle-dunes/constants.ts`
 before touching the depth of field -- the DOF is doing most of the visual work.
