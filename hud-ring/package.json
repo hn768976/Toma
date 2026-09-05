@@ -1,0 +1,24 @@
+{
+  "name": "hud-ring",
+  "version": "1.0.0",
+  "description": "Circular HUD Assembly — Remotion motion graphic (4K-ready)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
