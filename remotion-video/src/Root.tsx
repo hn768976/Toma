@@ -18,6 +18,16 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  RadialEqualizer,
+  radialEqualizerSchema,
+} from "./radial-equalizer/RadialEqualizer";
+import {
+  BASE_WIDTH as EQ_WIDTH,
+  BASE_HEIGHT as EQ_HEIGHT,
+  DURATION_IN_FRAMES as EQ_DURATION,
+  FPS as EQ_FPS,
+} from "./radial-equalizer/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +61,26 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="V1-RadialEqualizerOrangeBlue"
+        component={RadialEqualizer}
+        durationInFrames={EQ_DURATION}
+        fps={EQ_FPS}
+        width={EQ_WIDTH}
+        height={EQ_HEIGHT}
+        schema={radialEqualizerSchema}
+        defaultProps={{ variant: "orangeBlue" as const }}
+      />
+      <Composition
+        id="V2-RadialEqualizerGoldMagenta"
+        component={RadialEqualizer}
+        durationInFrames={EQ_DURATION}
+        fps={EQ_FPS}
+        width={EQ_WIDTH}
+        height={EQ_HEIGHT}
+        schema={radialEqualizerSchema}
+        defaultProps={{ variant: "goldMagenta" as const }}
       />
     </>
   );
