@@ -1,0 +1,23 @@
+{
+  "name": "dot-vortex",
+  "version": "1.0.0",
+  "description": "Gold Dot Vortex — looping 4K dot-field motion graphic (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.520",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.520"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc"
+  }
+}
