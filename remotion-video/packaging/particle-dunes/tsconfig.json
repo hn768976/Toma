@@ -12,10 +12,5 @@
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true
   },
-  "exclude": [
-    "remotion.config.ts",
-    // Templates for the standalone Particle Dunes project. They only resolve
-    // once assembled by scripts/package-particle-dunes.mjs.
-    "packaging"
-  ]
+  "exclude": ["remotion.config.ts"]
 }

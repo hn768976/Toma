@@ -2,6 +2,17 @@ import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
 import {
+  ParticleDunes,
+  particleDunesSchema,
+  particleDunesDefaults,
+} from "./particle-dunes/ParticleDunes";
+import {
+  BASE_WIDTH as DUNES_WIDTH,
+  BASE_HEIGHT as DUNES_HEIGHT,
+  DURATION_IN_FRAMES as DUNES_DURATION,
+  FPS as DUNES_FPS,
+} from "./particle-dunes/constants";
+import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
   bluetoothExplainerDefaultProps,
@@ -51,6 +62,26 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="ParticleDunesCyan"
+        component={ParticleDunes}
+        durationInFrames={DUNES_DURATION}
+        fps={DUNES_FPS}
+        width={DUNES_WIDTH}
+        height={DUNES_HEIGHT}
+        schema={particleDunesSchema}
+        defaultProps={particleDunesDefaults}
+      />
+      <Composition
+        id="ParticleDunesSand"
+        component={ParticleDunes}
+        durationInFrames={DUNES_DURATION}
+        fps={DUNES_FPS}
+        width={DUNES_WIDTH}
+        height={DUNES_HEIGHT}
+        schema={particleDunesSchema}
+        defaultProps={{ ...particleDunesDefaults, palette: "sand" }}
       />
     </>
   );
