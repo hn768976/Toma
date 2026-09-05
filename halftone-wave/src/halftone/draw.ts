@@ -35,7 +35,6 @@ const TAU = Math.PI * 2;
 
 export type RenderState = {
   sheet: Sheet;
-  ramp: Rgb[];
   /** Premultiplied fill colour for every (colour bucket, level) pair. */
   fills: string[];
   /** Reused per-bucket scratch lists of x, y, r triples. */
@@ -57,7 +56,7 @@ export const createRenderState = (palette: Palette): RenderState => {
   const buckets: number[][] = new Array(COLOR_BUCKETS * LEVEL_BUCKETS);
   for (let i = 0; i < buckets.length; i++) buckets[i] = [];
 
-  return { sheet: createSheet(), ramp, fills, buckets, glowRgb: palette.glow };
+  return { sheet: createSheet(), fills, buckets, glowRgb: palette.glow };
 };
 
 /** The wide, faint glow that sits under the densest part of the sheet. */

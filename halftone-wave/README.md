@@ -17,6 +17,9 @@ npm install
 npx remotion studio
 ```
 
+`remotion.config.ts` pins the output to H.264 / `yuv420p` with no audio
+track, so the commands below need no extra flags.
+
 ## Rendering at 4K
 
 ```bash
