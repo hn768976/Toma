@@ -40,10 +40,17 @@ export type Layout = {
   towers: TowerSpec[];
 };
 
-const GRID_MIN = -34;
-const GRID_MAX = 34;
-const GRID_STEP = 7.6;
-const MIN_SEPARATION = 6.4;
+const GRID_MIN = -20;
+const GRID_MAX = 20;
+const GRID_STEP = 5.0;
+const MIN_SEPARATION = 5.0;
+/**
+ * Floor on how close any tower may sit to the camera path, independent of its
+ * width. A tower's peak sweep across the frame is speed / distance, so this is
+ * what actually caps it: 3.71 u/s at 6.2 units is ~34 deg/s, near the camera's
+ * own 30 deg/s heading rate, so nothing whips past faster than the frame turns.
+ */
+const MIN_PATH_CLEARANCE = 6.2;
 const TOWER_COUNT = 16;
 /** Spec budget: 12-20 vertical planes. 16 towers + 4 crossed second planes. */
 const PLANE_BUDGET = 20;
@@ -55,15 +62,21 @@ export const buildLayout = (seed: number): Layout => {
   const candidates: { x: number; z: number; k: number }[] = [];
   for (let gx = GRID_MIN; gx <= GRID_MAX; gx += GRID_STEP) {
     for (let gz = GRID_MIN; gz <= GRID_MAX; gz += GRID_STEP) {
-      const x = gx + range(rand, -2.5, 2.5);
-      const z = gz + range(rand, -2.5, 2.5);
+      // Jitter grows with distance from the middle. Near the origin it goes to
+      // zero, which keeps the innermost tower inside the camera loop — without
+      // it the camera orbits an empty clearing and the towers only ever pass on
+      // one side.
+      const jitter = Math.min(2.0, 0.11 * Math.hypot(gx, gz));
+      const x = gx + range(rand, -jitter, jitter);
+      const z = gz + range(rand, -jitter, jitter);
       candidates.push({ x, z, k: rand() });
     }
   }
-  // Seeded shuffle, then bias toward the middle of the space so the loop is
-  // always flanked by towers rather than staring into empty distance.
+  // Seeded shuffle, biased toward the middle of the space. The bias is strong
+  // enough that the innermost candidates are claimed first, so the camera loop
+  // is flanked by towers on both sides rather than staring into empty distance.
   candidates.sort(
-    (a, b) => a.k + Math.hypot(a.x, a.z) / 62 - (b.k + Math.hypot(b.x, b.z) / 62),
+    (a, b) => a.k + Math.hypot(a.x, a.z) / 22 - (b.k + Math.hypot(b.x, b.z) / 22),
   );
 
   const towers: TowerSpec[] = [];
@@ -80,8 +93,13 @@ export const buildLayout = (seed: number): Layout => {
     const height = visibleRows * CELL_WORLD_H;
     const half = width * 0.5;
 
-    // Wide gaps: never sit on the camera path, never crowd a neighbour.
-    if (distanceToPathXZ(c.x, c.z) < half + 3.2) continue;
+    // Wide gaps: never sit on the camera path, never crowd a neighbour. The
+    // path clearance also sets how fast a tower sweeps past — the peak angular
+    // rate is speed / distance, so pulling towers closer would undo the slower
+    // travel speed. At this clearance nothing sweeps faster than ~33 deg/s,
+    // close to the camera's own 30 deg/s heading rate, so the whole frame moves
+    // at one gentle pace.
+    if (distanceToPathXZ(c.x, c.z) < Math.max(half + 2.2, MIN_PATH_CLEARANCE)) continue;
     if (towers.some((t) => Math.hypot(t.x - c.x, t.z - c.z) < MIN_SEPARATION)) continue;
 
     const towerId = towers.length;

@@ -1,17 +1,28 @@
 import * as THREE from "three";
 
 /**
- * A closed, gently curved loop that threads between the towers. Because the
- * curve is closed and sampled with `getPointAt` (arc-length parameterised),
- * frame 0 and frame 360 are the same pose and the speed is constant.
+ * A closed, near-circular loop that threads between the towers.
+ *
+ * The radius varies only slightly on purpose. Any closed loop walked once in
+ * 12s turns a full 360 degrees, so the heading rate is fixed at 30 deg/s and
+ * cannot be lowered; what *can* be controlled is where that turning happens.
+ * Spreading it evenly around a near-circle reads as a slow drift, where the
+ * lobed path this replaced concentrated it into three swerves and felt busy.
+ * Keeping the loop short then holds the travel speed down to a walking pace.
+ *
+ * Because the curve is closed and sampled with `getPointAt` (arc-length
+ * parameterised), frame 0 and frame 360 are the same pose and the speed is
+ * constant.
  */
 const CONTROL_POINTS: [number, number, number][] = [
-  [13.40, 4.40, 0.00],
-  [3.15, 5.10, 5.46],
-  [-6.70, 4.10, 11.60],
-  [-6.30, 4.90, 0.00],
-  [-6.70, 5.30, -11.60],
-  [3.15, 4.30, -5.46],
+  [7.60, 4.35, 0.00],
+  [4.67, 4.85, 4.67],
+  [0.00, 5.15, 7.40],
+  [-4.60, 4.60, 4.60],
+  [-7.50, 4.30, 0.00],
+  [-4.74, 4.75, -4.74],
+  [-0.00, 5.10, -7.30],
+  [4.53, 4.55, -4.53],
 ];
 
 export const CAMERA_CURVE = new THREE.CatmullRomCurve3(
@@ -47,7 +58,7 @@ export const cameraPoseAt = (progress: number): CameraPose => {
   const ay = _pos.y - Math.tan((PITCH_DEGREES * Math.PI) / 180) * AIM_DISTANCE;
 
   // A very small roll, phased so it closes exactly over the loop.
-  const roll = Math.sin(u * Math.PI * 2) * 0.022 + Math.sin(u * Math.PI * 4) * 0.011;
+  const roll = Math.sin(u * Math.PI * 2) * 0.016 + Math.sin(u * Math.PI * 4) * 0.007;
 
   return {
     position: [_pos.x, _pos.y, _pos.z],

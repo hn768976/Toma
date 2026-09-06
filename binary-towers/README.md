@@ -68,14 +68,14 @@ browser startup are excluded):
 
 | Resolution           | Per frame | 360-frame clip |
 | -------------------- | --------- | -------------- |
-| 1920×1080 (`--scale=0.5`) | **1.27 s** | ~7.5 min       |
-| 3840×2160 (`--scale=1`)   | **1.87 s** | ~11 min        |
+| 1920×1080 (`--scale=0.5`) | **1.20 s** | ~7 min         |
+| 3840×2160 (`--scale=1`)   | **1.93 s** | ~12 min        |
 
-4K is only ~1.5× the cost of 1080p because the frame is dominated by CPU work
+4K is only ~1.6× the cost of 1080p because the frame is dominated by CPU work
 (drawing the 20 character-grid canvases), not by fill rate. On this box raising
-`--concurrency` did not help — 4 concurrent tabs measured 1.93 s/frame at 1080p,
-worse than one — because SwiftShader is already using every core. On a machine with
-a real GPU, raise concurrency and expect a large speedup.
+`--concurrency` did not help — 4 concurrent tabs measured 1.47 s/frame at 1080p,
+worse than the 1.20 s of a single tab — because SwiftShader is already using every
+core. On a machine with a real GPU, raise concurrency and expect a large speedup.
 
 ## How it is built
 
@@ -122,8 +122,28 @@ seeded mulberry32 PRNG and a stateless `hash4(tower, row, col, epoch)`.
 - Debris drift uses integer harmonics of the loop period.
 
 Verified: rendering frame 0 and frame 360 of a temporarily-extended composition
-gave a maximum difference of 1/255 on 0.005 % of bytes — floating-point rounding
-only.
+produced byte-identical images.
+
+**The camera** walks a near-circular closed loop at a constant **3.7 units/second**,
+drifting between the towers rather than flying past them.
+
+Three things set that pace, and only the first is the obvious one:
+
+1. *Travel speed.* The loop is short on purpose — 44 units over 12 s.
+2. *Where the turning goes.* Any closed path walked once in 12 s turns a full
+   360°, so the heading rate is pinned at 30°/s and cannot be lowered without
+   breaking the loop. What is free is where that turn happens. Spreading it
+   evenly around a near-circle reads as a drift; the lobed path this replaced
+   concentrated the same rotation into three swerves and felt restless at any
+   speed.
+3. *How close the towers get.* A tower's peak sweep across the frame is
+   speed / distance, so letting towers crowd the path would cancel out a lower
+   speed. `MIN_PATH_CLEARANCE` holds every tower at least 6.2 units off the
+   path, capping the fastest sweep at ~33°/s — close enough to the camera's own
+   30°/s that the whole frame moves at one pace.
+
+Tower placement is biased toward the middle of the space so the loop is flanked on
+both sides, with one tower standing inside the ring.
 
 **Depth of field** is per tower, not global. `dofRadius()` in
 `scene/towerMaterial.ts` maps each tower's distance to a blur radius across five
