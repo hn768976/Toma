@@ -78,12 +78,12 @@ Measured on this project, **1080p (`--scale=0.5`), 300 frames**, 4 vCPU / 15 GB,
 
 | Composition              | Wall clock | Per frame |
 | ------------------------ | ---------- | --------- |
-| `V1-NeonCorridorMagenta` | 810 s      | **2.70 s** |
-| `V2-NeonCorridorCyan`    | 805 s      | **2.68 s** |
+| `V1-NeonCorridorMagenta` | 835 s      | **2.78 s** |
+| `V2-NeonCorridorCyan`    | 819 s      | **2.73 s** |
 
 Wall clock is the whole `npx remotion render` invocation at Remotion's default
 concurrency, so it includes bundling and browser startup (~15 s); net of that
-the steady-state cost is ~2.65 s/frame. The corridor runs 46 rectangles deep to
+the steady-state cost is ~2.73 s/frame. The corridor runs 46 rectangles deep to
 hide its far end in fog, which is what makes this dearer than a shallower
 tunnel would be.
 
@@ -96,8 +96,8 @@ GPU eats for breakfast.
 
 Checked against the encoded 1080p files, not the studio preview:
 
-- **Loop.** The frame 299 → 0 wrap is 1.14× (V1) and 1.11× (V2) the mean
-  frame-to-frame difference, against a worst ordinary step of 1.27× and 1.25× —
+- **Loop.** The frame 299 → 0 wrap is 1.13× (V1) and 1.11× (V2) the mean
+  frame-to-frame difference, against a worst ordinary step of 1.29× and 1.27× —
   so the wrap is an unremarkable step and there is no seam.
 - **Travel.** Frames 0, 50, 100 and 150 are identical bar the camera float,
   which is the signature of the camera covering exactly one frame-spacing every
@@ -105,7 +105,7 @@ Checked against the encoded 1080p files, not the studio preview:
 - **Format.** 1920×1080, H.264, `yuv420p`, 30 fps, exactly 300 frames.
 - **Flicker.** Because the corridor repeats every 50 frames, diffing each frame
   against its periodic twin cancels the travel and leaves the flicker. That
-  isolates all three scheduled events — frames 49–55, 132–139 and 241–246
+  isolates all three scheduled events — frames 49–55, 132–135 and 238–246
   (scheduled 46, 128, 237) — each a dip of 3–6% in mid-corridor luminance.
 - **Banding.** A vertical scan of the dark upper gradient moves in 1–2 level
   increments with no staircase (20 distinct values over 166 pixels spanning 23
@@ -171,10 +171,23 @@ take over the render loop, so it slots in ahead of the post chain without
 disturbing it.
 
 The blur is vertical-biased and world-constant, so it is wide underfoot and
-tight down the corridor. The noise warp matters more than it looks: reflected
-top bars arrive as clean horizontal lines, and a vertical displacement that
-varies along x is what breaks them into the interrupted banding a wet slab
-actually gives.
+tight down the corridor — that axis dissolves horizontal features while leaving
+the vertical streaks that make the floor read as wet. The noise warp matters
+more than it looks: reflected top bars arrive as clean horizontal lines, and a
+vertical displacement that varies along x is what breaks them into the
+interrupted banding a wet slab actually gives.
+
+The blur kernel is also **jittered by up to half a tap per pixel**, and that is
+load-bearing. Down the corridor the reflected rectangles stack up only a few
+pixels apart — the same order as the tap spacing — so a fixed kernel samples
+the same phase of that stack on every scanline and the floor ribs up like
+corduroy. Taking more taps does not fix it (a denser 15-tap kernel brings the
+ribbing straight back); breaking the phase lock per pixel does, turning the
+moiré into fine noise the grain absorbs.
+
+Reflection strength is 0.24, not the ~0.4 the brief suggested. Damp concrete
+scatters most of the light, and the slab reads better when its brightness comes
+from the diffuse spill than from a legible second copy of the corridor.
 
 ### The post chain
 
