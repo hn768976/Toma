@@ -16,7 +16,7 @@ const rng = makeRandom(0x7101e7);
 const drift = (tier: number) => ({
   driftCycles: 1 + Math.round(between(rng, 0, 1)),
   driftPhase: rng(),
-  driftRadius: between(rng, 10, 26) * (1 + (4 - tier) * 0.2),
+  driftRadius: between(rng, 7, 16) * (1 + (4 - tier) * 0.14),
 });
 
 const label = (
@@ -84,32 +84,32 @@ const nodes: NodeSpec[] = [
   },
 
   // --- Sharp bracketed labels.
-  label("css", "[CSS]", 2018, 408, 230, 0, { layer: 5 }),
-  label("xml", "[XML]", 3946, -198, 280, 0, { layer: 5 }),
-  label("sql", "[SQL]", 2255, 2903, 200, 0, { layer: 5 }),
-  label("api", "[API]", 5437, 2345, 200, 1, { layer: 3, fade: 0.9 }),
+  label("css", "[CSS]", 2047, 384, 230, 0, { layer: 5 }),
+  label("xml", "[XML]", 3948, -129, 280, 0, { layer: 5 }),
+  label("sql", "[SQL]", 2239, 2919, 200, 0, { layer: 5 }),
+  label("api", "[API]", 5342, 2411, 200, 1, { layer: 3, fade: 0.9 }),
 
   // --- Icon badges: orange rings and one teal, as in the reference.
-  icon("database", "database", 1754, 1027, 320, 1, TEAL, { layer: 3 }),
-  icon("globe", "globe", 3454, 1300, 370, 0, ORANGE, { layer: 5 }),
-  icon("gears", "gears", 2117, 2620, 290, 1, ORANGE, { layer: 3 }),
-  icon("check", "check", 5191, 94, 330, 2, TEAL, { layer: 1, fade: 0.85 }),
-  icon("bulb", "bulb", 3100, 640, 260, 1, ORANGE, { layer: 3, fade: 0.9 }),
-  label("http2", "[JSON]", 4520, 1980, 210, 1, { layer: 3, fade: 0.85 }),
+  icon("database", "database", 1714, 969, 320, 1, TEAL, { layer: 3 }),
+  icon("globe", "globe", 3668, 1133, 360, 0, ORANGE, { layer: 5 }),
+  icon("gears", "gears", 1735, 2704, 280, 1, ORANGE, { layer: 3 }),
+  icon("check", "check", 5165, 406, 320, 2, TEAL, { layer: 1, fade: 0.85 }),
+  icon("bulb", "bulb", 2991, 384, 280, 1, ORANGE, { layer: 3, fade: 0.9 }),
+  label("http2", "[JSON]", 4649, 2016, 210, 1, { layer: 3, fade: 0.85 }),
 
   // --- Softer mid ground.
-  label("php", "[PHP]", 1344, 1484, 250, 2, { layer: 1, fade: 1 }),
-  label("seo", "[SEO]", 1382, 2211, 240, 2, { layer: 1, fade: 1 }),
-  label("http", "[HTTP]", 5472, 1435, 300, 2, { layer: 1, fade: 0.7 }),
+  label("php", "[PHP]", 1324, 1440, 240, 2, { layer: 1, fade: 1 }),
+  label("seo", "[SEO]", 1323, 2177, 230, 2, { layer: 1, fade: 1 }),
+  label("http", "[HTTP]", 5424, 1500, 290, 2, { layer: 1, fade: 0.7 }),
 
   // --- Out of focus. `layer` puts some behind the network and some in
   // front of the lens; a blur radius on its own cannot say which.
-  icon("refresh", "refresh", 554, 2854, 670, 4, ORANGE, { layer: 8, fade: 0.7 }),
-  label("json", "[JSON]", 5976, -265, 650, 4, { layer: 8, fade: 0.4 }),
-  icon("bolt", "bolt", 502, 868, 550, 3, TEAL, { layer: -3, fade: 0.55 }),
-  label("html", "[HTML]", 5124, 2878, 510, 3, { layer: 7, fade: 0.45 }),
-  icon("search", "search", 3427, 3007, 430, 3, ORANGE, { layer: -3, fade: 0.5 }),
-  label("web", "[WEB]", 1073, 3236, 390, 4, { layer: -4, fade: 0.35 }),
+  icon("refresh", "refresh", 485, 3010, 670, 4, ORANGE, { layer: 8, fade: 0.7 }),
+  label("json", "[JSON]", 6798, -694, 660, 4, { layer: 8, fade: 0.35 }),
+  icon("bolt", "bolt", 383, 777, 550, 3, TEAL, { layer: -3, fade: 0.55 }),
+  label("html", "[HTML]", 5592, 3123, 510, 3, { layer: 7, fade: 0.45 }),
+  icon("search", "search", 3403, 3165, 420, 3, ORANGE, { layer: -3, fade: 0.5 }),
+  label("web", "[WEB]", 4260, 3360, 440, 4, { layer: -4, fade: 0.35 }),
 ];
 
 /**
@@ -158,7 +158,7 @@ const connectors: ConnectorSpec[] = [
     dashRatio: 0.4,
     march: -24,
     caps: true,
-    chevrons: [0.3],
+    chevrons: [0.62],
     layer: 5.5,
   },
   {
@@ -279,19 +279,6 @@ const connectors: ConnectorSpec[] = [
     caps: true,
     fade: 0.6,
     layer: 1.5,
-  },
-  {
-    from: "seo",
-    to: "web",
-    tier: 3,
-    mode: "VHV",
-    split: 0.5,
-    width: 14,
-    dash: 92,
-    dashRatio: 0.4,
-    march: 11,
-    fade: 0.45,
-    layer: -3.5,
   },
   {
     from: "bolt",

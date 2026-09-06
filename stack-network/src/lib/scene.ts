@@ -1,5 +1,6 @@
 import type { GlyphName } from "../components/Glyph";
-import { boundsOf, curve, ortho, type OrthoMode, type PathGeom } from "./path";
+import { edgeDistance } from "./nodeMetrics";
+import { boundsOf, curve, ortho, trim, type OrthoMode, type PathGeom } from "./path";
 
 /** A node's visual treatment. */
 export type NodeShape =
@@ -67,6 +68,11 @@ export type ConnectorSpec = {
   chevrons?: number[];
   /** Round terminals, as in the reference's schematic runs. */
   caps?: boolean;
+  /**
+   * Extra clearance between the connector's ends and the two nodes, in
+   * board units, on top of the automatic trim back to their boundaries.
+   */
+  gap?: number;
   color?: string;
   fade?: number;
 };
@@ -95,6 +101,16 @@ export type ResolvedConnector = {
  */
 export type Arrival = { trips: number; phase: number };
 
+/**
+ * How far along a path to look when deciding which way it leaves a node.
+ * Far enough to be past any rounding, short enough that an orthogonal
+ * run's first segment still dominates.
+ */
+const DIRECTION_PROBE = 40;
+
+/** Default clearance between a connector end and its node, board units. */
+const DEFAULT_GAP = 52;
+
 export type ResolvedScene = {
   nodes: NodeSpec[];
   byId: Map<string, NodeSpec>;
@@ -121,10 +137,23 @@ export const resolveScene = (scene: Scene): ResolvedScene => {
     const from = { x: a.x, y: a.y };
     const to = { x: b.x, y: b.y };
 
-    const geom =
+    const full =
       scene.routing === "curved"
         ? curve(from, to, spec.bow ?? 0, spec.sway ?? 0)
         : ortho(from, to, spec.mode ?? "HV", spec.split ?? 0.5);
+
+    // Stop the line at each node's boundary instead of its centre, plus a
+    // little air. The direction is taken from the path's own first and
+    // last segments, so a right-angle run leaves along its axis rather
+    // than along the straight line between the two centres.
+    const headed = full.pointAt(Math.min(full.length, DIRECTION_PROBE));
+    const tailed = full.pointAt(Math.max(0, full.length - DIRECTION_PROBE));
+    const gap = spec.gap ?? DEFAULT_GAP;
+    const geom = trim(
+      full,
+      edgeDistance(a, headed.x - from.x, headed.y - from.y) + gap,
+      edgeDistance(b, to.x - tailed.x, to.y - tailed.y) + gap,
+    );
 
     // Snap the dash period so a whole number of dashes spans the path.
     const repeats = Math.max(2, Math.round(geom.length / spec.dash));

@@ -1,6 +1,7 @@
 import React from "react";
 import { tierBlur, tierOpacity } from "../lib/constants";
 import { driftOffset, loopRange, wrap01 } from "../lib/loop";
+import { BLOB_FONT_RATIO, blobWidth } from "../lib/nodeMetrics";
 import type { Arrival, NodeSpec } from "../lib/scene";
 import type { Theme } from "../lib/theme";
 import { FONT_FAMILY } from "../load-fonts";
@@ -25,15 +26,6 @@ const arrivalGlow = (progress: number, arrivals: Arrival[] | undefined) => {
   return best;
 };
 
-/**
- * Capsule width for a label, from its character count.
- *
- * Rajdhani is embedded and fixed, so the advance width per character is
- * known and this stays in step with the text -- which is exactly why the
- * font is self-hosted: a fallback face would change every width here and
- * pull the whole layout apart.
- */
-const blobWidth = (text: string, size: number) => size * (0.72 + 0.08 * text.length);
 
 export const Node: React.FC<{
   node: NodeSpec;
@@ -152,7 +144,7 @@ const BlobLabel: React.FC<{
         style={{
           fontFamily: FONT_FAMILY,
           fontWeight: 700,
-          fontSize: height * 0.22,
+          fontSize: height * BLOB_FONT_RATIO,
           letterSpacing: "0.04em",
           color: theme.labelText,
           whiteSpace: "nowrap",
@@ -274,9 +266,9 @@ const HeroMark: React.FC<{ node: NodeSpec; theme: Theme; progress: number }> = (
       <div
         style={{
           position: "absolute",
-          inset: -node.size * 0.34,
+          inset: -node.size * 0.14,
           borderRadius: "50%",
-          border: `${node.size * 0.014}px solid ${hexToRgba(theme.hero, 0.16)}`,
+          border: `${node.size * 0.012}px solid ${hexToRgba(theme.hero, 0.13)}`,
           filter: `blur(${node.size * 0.02}px)`,
         }}
       />

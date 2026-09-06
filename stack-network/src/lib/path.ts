@@ -67,6 +67,14 @@ const fromPolyline = (points: Point[], d: string): PathGeom => {
 
 const round = (v: number) => Math.round(v * 100) / 100;
 
+/** Emits a polyline as an SVG `d` string. */
+const polylineD = (points: Point[]) =>
+  `M ${round(points[0].x)} ${round(points[0].y)} ` +
+  points
+    .slice(1)
+    .map((p) => `L ${round(p.x)} ${round(p.y)}`)
+    .join(" ");
+
 /**
  * A smooth cubic sweep between two nodes (V1 routing).
  *
@@ -150,13 +158,41 @@ export const ortho = (
   }
   push(to.x, to.y);
 
-  const d =
-    `M ${round(points[0].x)} ${round(points[0].y)} ` +
-    points
-      .slice(1)
-      .map((p) => `L ${round(p.x)} ${round(p.y)}`)
-      .join(" ");
-  return fromPolyline(points, d);
+  return fromPolyline(points, polylineD(points));
+};
+
+/**
+ * Shortens a path at both ends.
+ *
+ * Connectors are declared centre-to-centre because that is how the graph
+ * is meant to read, but drawing them that way puts every line straight
+ * through the node bodies at each end. Trimming back to the node's
+ * boundary is what makes the picture legible.
+ *
+ * The result is re-emitted as a polyline. For the right-angle runs that
+ * is exact; for the curved sweeps the flattening is already fine enough
+ * that the difference is well under a pixel at 4K.
+ */
+export const trim = (geom: PathGeom, startTrim: number, endTrim: number): PathGeom => {
+  const total = geom.length;
+  // Never trim a path away to nothing: if the two nodes are close enough
+  // that their boundaries meet, scale both trims back to leave a stub.
+  const wanted = startTrim + endTrim;
+  const allowed = total * 0.82;
+  const k = wanted > allowed && wanted > 0 ? allowed / wanted : 1;
+  const from = Math.max(0, startTrim * k);
+  const to = Math.min(total, total - endTrim * k);
+  if (to - from < 1) return geom;
+
+  const points: Point[] = [geom.pointAt(from)];
+  let acc = 0;
+  for (let i = 1; i < geom.points.length; i++) {
+    acc += dist(geom.points[i - 1], geom.points[i]);
+    if (acc > from && acc < to) points.push(geom.points[i]);
+  }
+  points.push(geom.pointAt(to));
+
+  return fromPolyline(points, polylineD(points));
 };
 
 /** Axis-aligned bounds of a path, grown by `pad` on every side. */

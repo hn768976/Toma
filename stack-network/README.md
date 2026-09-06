@@ -104,6 +104,22 @@ character counts, so a substituted fallback face would pull the layout apart.
 `src/load-fonts.ts` holds the first frame with `delayRender()` until the faces
 are ready and never touches the network at render time.
 
+**Connectors are declared centre-to-centre but drawn edge-to-edge.**
+A scene says `from: "hero", to: "css"` because that is how the graph reads,
+but drawing it that way puts every line straight through the node bodies at
+each end. `resolveScene()` trims each path back to both nodes' boundaries
+(plus a gap) using `lib/nodeMetrics.ts`, which is also what the components
+size themselves from -- one set of numbers, so the two cannot drift apart.
+
+**Three layout invariants worth re-checking after moving anything.** No two
+nodes' boxes may intersect; no connector may pass through a node it does not
+belong to; no run may be trimmed down to a stub. Board-space intersection is
+the test that matters -- the board-to-screen projection is injective, so
+shapes that miss each other on the board cannot collide on screen, and
+screen-space bounding boxes of rotated shapes over-report badly. Node drift
+is deliberately kept smaller than the connector gap, so a node breathing
+never pulls away from its own lines or pushes into them.
+
 **The grain is not decoration.** At ~1.5% it dithers the large, very soft
 background gradients, which otherwise band once H.264 quantises them. Judge it
 on the encoded file, never on the Studio preview.
