@@ -11,10 +11,8 @@ PROJ="$STAGE/foggy-forest-project"
 mkdir -p "$PROJ/src/foggy-forest" "$PROJ/public/trees" "$PROJ/tools"
 
 cp "$ROOT"/src/foggy-forest/*.ts "$ROOT"/src/foggy-forest/*.tsx "$PROJ/src/foggy-forest/"
-cp "$ROOT"/public/trees/*.png "$ROOT"/public/trees/*.svg \
-   "$ROOT"/public/trees/manifest.json "$PROJ/public/trees/"
-cp "$ROOT"/tools/tree-gen.html "$ROOT"/tools/render-trees.mjs \
-   "$ROOT"/tools/check-neutral.mjs "$ROOT"/tools/check-loop.mjs \
+cp "$ROOT"/public/trees/tree-source.png "$ROOT"/public/trees/tree.svg "$PROJ/public/trees/"
+cp "$ROOT"/tools/check-neutral.mjs "$ROOT"/tools/check-loop.mjs \
    "$ROOT"/tools/cdp.mjs "$ROOT"/tools/trace-svg.mjs \
    "$ROOT"/tools/render-all.sh "$PROJ/tools/"
 cp "$ROOT/tsconfig.json" "$ROOT/.prettierrc" "$PROJ/"

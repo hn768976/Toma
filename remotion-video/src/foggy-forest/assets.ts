@@ -3,9 +3,9 @@ import { staticFile } from "remotion";
 /**
  * The forest is built from one tree.
  *
- * `public/trees/tree-dense-oak.svg` is a vector trace of the dense bare oak
- * silhouette (`tools/trace-svg.mjs`, from the black-on-white PNG). Tracing
- * buys two things a keyed bitmap cannot:
+ * `public/trees/tree.svg` is a vector trace of the supplied silhouette
+ * (`tools/trace-svg.mjs`, from `tree-source.png`). Tracing buys two things a
+ * bitmap cannot:
  *
  *  - **Real gaps.** Every enclosed space between the branches is a hole in the
  *    path, not white paint, so fog and the distant glow show through the crown
@@ -15,11 +15,18 @@ import { staticFile } from "remotion";
  *    needed keeps them crisp where an enlarged bitmap would go soft.
  */
 
-export const TREE_SVG = "trees/tree-dense-oak.svg";
+export const TREE_SVG = "trees/tree.svg";
 
-/** The trunk base within the artwork, as a fraction of its width. The trace is
- *  cropped tight and symmetrised about the trunk, so it is the centre. */
-export const TRUNK_X = 0.5;
+/**
+ * The trunk base within the artwork, as a fraction of its width. Measured by
+ * the tracer from the ink at the foot of the silhouette and carried on the SVG
+ * as `data-trunk-x`, because it is not the middle — this tree's trunk sits left
+ * of centre, and standing every instance on its midpoint would lean the whole
+ * forest off the ground line.
+ */
+let trunkX = 0.5;
+
+export const getTrunkX = () => trunkX;
 
 /**
  * Where the trunk base falls within a crop window, as a fraction of the
@@ -28,7 +35,7 @@ export const TRUNK_X = 0.5;
  * every trimmed tree would sit shifted sideways from where its base belongs.
  */
 export const trunkFraction = (crop?: Crop) =>
-  crop ? (TRUNK_X - (crop.cx - crop.w / 2)) / crop.w : TRUNK_X;
+  crop ? (trunkX - (crop.cx - crop.w / 2)) / crop.w : trunkX;
 
 /**
  * A window onto the artwork, as fractions of its box, anchored to the bottom
@@ -109,6 +116,9 @@ const ensureSource = () => {
       const box = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svgSource);
       if (!box) throw new Error("Trace is missing a viewBox");
       viewBox = { w: Number(box[1]), h: Number(box[2]) };
+
+      const anchor = /data-trunk-x="([\d.]+)"/.exec(svgSource);
+      trunkX = anchor ? Number(anchor[1]) : 0.5;
     })();
   }
   return sourcePromise;

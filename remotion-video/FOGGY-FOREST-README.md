@@ -87,46 +87,65 @@ so any frame renders identically in isolation.
 
 ## The tree
 
-The whole forest is **one tree**, drawn 48 times.
+The whole forest is **one tree**, drawn 55 times.
 
-`public/trees/tree-dense-oak.svg` is a vector trace of the dense bare oak
-silhouette. Tracing rather than keying a bitmap buys two things:
+`public/trees/tree.svg` is a vector trace of the supplied silhouette
+(`public/trees/tree-source.png`). Tracing rather than drawing the bitmap buys:
 
-- **Real gaps.** Every enclosed space between the branches is a hole in the
-  path (`fill-rule="evenodd"`), not white paint — so fog and the distant glow
-  show *through* the crown instead of being blocked by it. This is most of why
-  the canopies read as bare branches rather than dark masses.
-- **Sharpness at any scale.** The near-tier trunks are drawn at up to 1.6x the
-  frame height. Each tier rasterises the vector at the size it actually needs,
-  and a near-tier crop rasterises only its window — so a slab of trunk is
-  rendered at full resolution for a slab, not at whatever a whole tree would
-  have to be to contain one.
+- **Real gaps.** Every enclosed space in the silhouette is a hole in the path
+  (`fill-rule="evenodd"`), not white paint — so fog and the distant glow show
+  *through* the tree instead of being blocked by it.
+- **Sharpness at any scale.** The source is 233x462; a near-tier trunk is drawn
+  at up to 1.9x the frame height, which is roughly nine times the source. Each
+  tier rasterises the vector at the size it actually needs, so those trunks stay
+  clean where the bitmap would be a blur.
 
-Using a single asset means variation has to be earned. It comes from scale,
-horizontal flip, ±3° rotation, irregular trunk spacing, and per-tier **crop
-windows** — trimming different parts of the tree so no two read alike. Crops
-anchor on the trunk rather than on the middle of the artwork, so an off-centre
-crop still stands its trunk on the ground line.
+### How the trace works
 
-### Regenerating or replacing it
+`tools/trace-svg.mjs`, in three steps that each matter for a source this small:
+
+1. **Resample up first.** The art is composited onto white and resampled to
+   ~2200px tall with smooth interpolation. Tracing at native size would bake the
+   pixel staircase into the vector and show it as jagged edges once a trunk is
+   drawn nine times larger. This invents no detail — it just lets the contour
+   follow a smooth edge rather than a stair.
+2. **Follow pixel cracks, not pixel centres.** The outline and every enclosed
+   gap come out as separate, consistently wound loops. That is what makes the
+   gaps read as holes.
+3. **Round the contour, keep the corners.** After Douglas-Peucker simplification,
+   vertices turning less than 72° become quadratic control points; sharper ones
+   stay hard, so the edges smooth out but the branch tips stay pointed.
+
+The tracer also measures where the trunk actually meets the ground — the
+centroid of the ink at the foot of the silhouette — and writes it to the SVG as
+`data-trunk-x`. For this tree that is 0.449, not 0.5. Every instance is stood on
+that point; using the midpoint instead would lean the whole forest off the
+ground line.
+
+### Replacing it
 
 ```bash
-node tools/render-trees.mjs                            # silhouette PNG
-node tools/trace-svg.mjs public/trees/tree-dense-oak.png   # PNG -> SVG
+node tools/trace-svg.mjs public/trees/tree-source.png public/trees/tree.svg
 ```
 
-The PNG in `public/trees/` is a **procedural stand-in** for
-`Untitled_design__2_.png` (`tools/tree-gen.html`), because the original was not
-available in the environment this was built in. To use the original, drop it in
-as `public/trees/tree-dense-oak.png` and re-run the trace — the tracer only
-assumes what the original already is: a black subject on a white background
-with the trunk base at the bottom centre.
+Drop any black silhouette in as `tree-source.png` and re-run. A white or a
+transparent background both work — the tracer composites onto white first.
+
+### Variation from one asset
+
+Scale, horizontal flip, ±3° rotation, and irregular trunk spacing. The near tier
+also varies **how much of the tree** each instance shows, from the base up.
+
+A crop cuts the artwork on a straight line, so it is only ever applied where
+that cut falls outside the frame: the near-tier crops trim the top only, and
+those trees are tall enough that the cut is always above the frame. Trimming the
+sides, or cropping a tier whose trees sit wholly in frame, would show the cut as
+an unnatural straight edge across the silhouette.
 
 ## Tools
 
 | Command | What it does |
 |---|---|
-| `node tools/render-trees.mjs` | Regenerates the silhouette PNG |
 | `node tools/check-neutral.mjs out/V3_FoggyForestMono.png` | Asserts the mono version is genuinely neutral (R=G=B) |
 | `node tools/check-loop.mjs out/V1_FoggyForestTeal.mp4` | Asserts the wrap (last frame → first) is no more abrupt than an ordinary frame step |
 | `./tools/render-all.sh` | Renders all three 1080p previews and stills |

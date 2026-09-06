@@ -36,10 +36,13 @@ export type Tier = {
   anchors?: readonly number[];
   /**
    * Windows onto the artwork the tier draws instead of whole trees, assigned to
-   * instances in turn. The near tier uses these: a whole crown across the
-   * middle of the frame buries the shot, so it draws a slab of trunk and inner
-   * branches whose crown leaves frame at the top. Keeping `cx` at 0.5 keeps the
-   * trunk centred in the slab, so instances still align on the ground line.
+   * instances in turn — how much of the tree, from the base up, each one shows.
+   *
+   * A crop cuts the artwork on a straight line, so it is only safe where that
+   * cut falls outside the frame. These trim the top only (`w: 1`), and the near
+   * tier is tall enough that the cut is always above the frame; trimming the
+   * sides, or cropping a tier whose trees sit wholly in frame, would show the
+   * cut as an unnatural straight edge across the silhouette.
    */
   crops?: readonly Crop[];
 };
@@ -48,11 +51,11 @@ export const TIERS: readonly Tier[] = [
   {
     name: "far-b",
     seed: 1013,
-    count: 15,
-    height: [0.22, 0.36],
+    count: 17,
+    height: [0.18, 0.31],
     baseY: [0.876, 0.892],
     blur: 30,
-    alpha: 0.28,
+    alpha: 0.24,
     color: "treeFar",
     sway: 0.06,
     alignGapToGlow: true,
@@ -63,11 +66,11 @@ export const TIERS: readonly Tier[] = [
   {
     name: "far-a",
     seed: 2027,
-    count: 12,
-    height: [0.33, 0.52],
+    count: 14,
+    height: [0.29, 0.46],
     baseY: [0.888, 0.906],
     blur: 19,
-    alpha: 0.46,
+    alpha: 0.38,
     color: "treeFar",
     sway: 0.09,
     alignGapToGlow: true,
@@ -78,41 +81,30 @@ export const TIERS: readonly Tier[] = [
   {
     name: "mid-a",
     seed: 3041,
-    count: 10,
-    height: [0.48, 0.74],
+    count: 11,
+    height: [0.48, 0.72],
     baseY: [0.9, 0.922],
     blur: 11,
-    alpha: 0.72,
+    alpha: 0.6,
     color: "treeMid",
     sway: 0.16,
     alignGapToGlow: true,
     wash: 0.42,
-    crops: [
-      { cx: 0.5, w: 1, h: 1 },
-      { cx: 0.56, w: 0.86, h: 0.9 },
-      { cx: 0.46, w: 0.9, h: 0.96 },
-      { cx: 0.5, w: 0.76, h: 1 },
-    ],
     washPlane: 2,
     lowRes: true,
   },
   {
     name: "mid-b",
     seed: 4057,
-    count: 7,
-    height: [0.72, 1.06],
+    count: 9,
+    height: [0.70, 1.02],
     baseY: [0.918, 0.945],
     blur: 6,
-    alpha: 0.9,
+    alpha: 0.82,
     color: "treeNear",
     sway: 0.26,
     alignGapToGlow: true,
     wash: 0.2,
-    crops: [
-      { cx: 0.5, w: 1, h: 1 },
-      { cx: 0.44, w: 0.84, h: 0.93 },
-      { cx: 0.58, w: 0.78, h: 0.97 },
-    ],
     washPlane: 3,
     lowRes: false,
   },
@@ -120,7 +112,7 @@ export const TIERS: readonly Tier[] = [
     name: "near",
     seed: 5077,
     count: 4,
-    height: [1.08, 1.62],
+    height: [1.3, 1.9],
     baseY: [0.99, 1.07],
     blur: 2,
     alpha: 1,
@@ -134,10 +126,10 @@ export const TIERS: readonly Tier[] = [
     // height of the frame just inside the frame line.
     anchors: [-0.05, 0.07, 0.9, 1.06],
     crops: [
-      { cx: 0.5, w: 0.24, h: 0.88 },
-      { cx: 0.42, w: 0.34, h: 0.74 },
-      { cx: 0.58, w: 0.3, h: 0.82 },
-      { cx: 0.5, w: 0.4, h: 0.68 },
+      { cx: 0.5, w: 1, h: 0.74 },
+      { cx: 0.5, w: 1, h: 1 },
+      { cx: 0.5, w: 1, h: 0.6 },
+      { cx: 0.5, w: 1, h: 0.87 },
     ],
   },
 ] as const;
