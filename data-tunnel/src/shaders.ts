@@ -126,19 +126,16 @@ void main() {
 }
 `;
 
-// Dashes and streaks are screen-space capsules: both endpoints are
-// projected, the quad is expanded around the resulting screen-space segment
-// and the fragment shader evaluates a capsule SDF. Because the segment runs
-// along the travel axis, perspective makes it radiate from the vanishing
-// point and foreshorten correctly with depth.
+// Dashes are screen-space capsules: both endpoints are projected, the quad
+// is expanded around the resulting screen-space segment and the fragment
+// shader evaluates a capsule SDF. Because the segment runs along the travel
+// axis, perspective makes it radiate from the vanishing point and
+// foreshorten correctly with depth.
 export const CAPSULE_VERTEX = /* glsl */ `
 ${COMMON}
 
-uniform vec2  uHalfRes;       // half the drawing buffer, device px
-uniform float uWidthGain;
-uniform float uMaxLenPx;      // screen-space length cap, reference px
-uniform float uNearOnly;      // 1 => restrict to the near band
-uniform vec2  uNearOnlyRange; // (from, to) depth of that restriction
+uniform vec2  uHalfRes;   // half the drawing buffer, device px
+uniform float uMaxLenPx;  // screen-space length cap, reference px
 
 attribute vec3  iPos;
 attribute float iLen;
@@ -167,11 +164,10 @@ void main() {
               * iBright
               * shimmerAt(iShim, iPeriod)
               * uIntensity;
-  alpha *= mix(1.0, smoothstep(uNearOnlyRange.x, uNearOnlyRange.y, d), uNearOnly);
 
   float dist = max(-mv0.z, 0.5);
-  float want = iWidth * uPixelScale * (uAtten / dist + uAttenBase) * uWidthGain;
-  want = min(want, uSizeMax * uPixelScale * uWidthGain);
+  float want = iWidth * uPixelScale * (uAtten / dist + uAttenBase);
+  want = min(want, uSizeMax * uPixelScale);
   float actual = max(want, MIN_PX);
   alpha *= want / actual; // only one dimension is thin
 
@@ -219,8 +215,6 @@ void main() {
 export const CAPSULE_FRAGMENT = /* glsl */ `
 precision highp float;
 
-uniform float uBead;
-
 varying vec3  vColor;
 varying float vAlpha;
 varying vec2  vS0;
@@ -234,13 +228,6 @@ void main() {
   float dist = length(pa - ba * h);
   float f = clamp(1.0 - dist / max(vHalfW, 1e-4), 0.0, 1.0);
   float a = f * f;
-
-  // The reference's bright streaks read as a fast run of beads rather than
-  // a solid rod, so modulate along the length.
-  if (uBead > 0.5) {
-    a *= 0.58 + 0.42 * sin(h * length(ba) * 0.35);
-  }
-
   if (a <= 0.0) discard;
   gl_FragColor = vec4(vColor * a, vAlpha * a);
 }

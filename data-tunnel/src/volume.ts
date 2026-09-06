@@ -15,16 +15,13 @@ import {
   FILL_SETS,
   JITTER,
   NX_FILL,
-  NX_WALL,
   NY_FILL,
-  NY_WALL,
   NZ,
-  STREAK_COUNT,
   WALL_SHELLS,
-  WALL_SHELL_INSET,
+  WALL_SPACING_X,
+  WALL_SPACING_Y,
   X_HALF,
   Y_HALF,
-  Z_TOTAL,
 } from "./constants";
 import { brightnessField, mulberry32 } from "./random";
 
@@ -109,42 +106,49 @@ const makeElement = (
 const buildElements = (): RawElement[] => {
   const out: RawElement[] = [];
 
-  const sx = (2 * X_HALF) / NX_WALL;
-  const sy = (2 * Y_HALF) / NY_WALL;
-
-  // --- Four walls -------------------------------------------------------
-  // Denser planes of points at top, bottom, left and right. Each wall is a
-  // regular (u, z) grid so it reads as a wall, with a half-cell stagger
-  // between shells to avoid a picket-fence look.
-  for (let shell = 0; shell < WALL_SHELLS; shell++) {
-    const inset = shell * WALL_SHELL_INSET;
-    const stagger = shell * 0.5;
+  // --- Walls ------------------------------------------------------------
+  // Nested rectangular shells: two dense inner ones that read as the walls
+  // of the corridor, then a coarser, dimmer mantle spreading outward so the
+  // field carries all the way past the frame edges.
+  WALL_SHELLS.forEach((shell, si) => {
+    const halfX = X_HALF + shell.offset;
+    const halfY = Y_HALF + shell.offset;
+    const nx = Math.max(6, Math.round((2 * halfX) / (WALL_SPACING_X * shell.step)));
+    const ny = Math.max(6, Math.round((2 * halfY) / (WALL_SPACING_Y * shell.step)));
+    const sx = (2 * halfX) / nx;
+    const sy = (2 * halfY) / ny;
+    const stagger = (si % 2) * 0.5;
+    // Outer shells are given more spread along their normal so they read as
+    // thickness rather than as a hard concentric outline.
+    const spread = 1.6 * shell.step;
 
     for (let iz = 0; iz < NZ; iz++) {
       const z = (iz + stagger) * DZ + jitter(DZ);
 
-      for (let ix = 0; ix < NX_WALL; ix++) {
-        const x = -X_HALF + (ix + 0.5 + stagger) * sx + jitter(sx);
+      for (let ix = 0; ix < nx; ix++) {
+        const x = -halfX + (ix + 0.5 + stagger) * sx + jitter(sx);
         for (const sign of [1, -1]) {
           out.push(
-            makeElement(x, sign * (Y_HALF - inset) + jitter(0.45), z, 1.15),
+            makeElement(x, sign * halfY + jitter(spread), z, shell.bright),
           );
         }
       }
 
-      for (let iy = 0; iy < NY_WALL; iy++) {
-        const y = -Y_HALF + (iy + 0.5 + stagger) * sy + jitter(sy);
+      for (let iy = 0; iy < ny; iy++) {
+        const y = -halfY + (iy + 0.5 + stagger) * sy + jitter(sy);
         for (const sign of [1, -1]) {
           out.push(
-            makeElement(sign * (X_HALF - inset) + jitter(0.45), y, z, 1.15),
+            makeElement(sign * halfX + jitter(spread), y, z, shell.bright),
           );
         }
       }
     }
-  }
+  });
 
   // --- Interior scatter -------------------------------------------------
   // Sparser fill between the walls, held dimmer so the walls stay dominant.
+  // These are also what sweeps closest to the camera, so they supply most of
+  // the big out-of-focus blobs near the frame edges.
   const fx = (2 * X_HALF * FILL_EXTENT_X) / NX_FILL;
   const fy = (2 * Y_HALF * FILL_EXTENT_Y) / NY_FILL;
 
@@ -158,7 +162,7 @@ const buildElements = (): RawElement[] => {
             -X_HALF * FILL_EXTENT_X + (ix + 0.5 + stagger) * fx + jitter(fx);
           const y =
             -Y_HALF * FILL_EXTENT_Y + (iy + 0.5 + stagger) * fy + jitter(fy);
-          out.push(makeElement(x, y, z, 0.55));
+          out.push(makeElement(x, y, z, 0.42));
         }
       }
     }
@@ -225,54 +229,7 @@ export const DASHES = toCapsules(
   0.85,
 );
 
-// --- Bright streaks -------------------------------------------------------
-// Much longer and much brighter than the dashes, spread evenly down the
-// tunnel so only three or four are ever inside the near band at once. They
-// are the elements that get bloomed.
-const buildStreaks = (): CapsuleBuffers => {
-  const srnd = mulberry32(90210);
-  const src: RawElement[] = [];
-
-  for (let i = 0; i < STREAK_COUNT; i++) {
-    const z = ((i + 0.5 + (srnd() - 0.5) * 0.6) / STREAK_COUNT) * Z_TOTAL;
-
-    // Most of them ride near a wall, where the reference's streaks sit; the
-    // rest cut through the interior.
-    let x: number;
-    let y: number;
-    if (srnd() < 0.72) {
-      if (srnd() < 0.55) {
-        x = (srnd() * 2 - 1) * X_HALF * 0.95;
-        y = (srnd() < 0.5 ? 1 : -1) * (Y_HALF - srnd() * 2.2);
-      } else {
-        x = (srnd() < 0.5 ? 1 : -1) * (X_HALF - srnd() * 2.2);
-        y = (srnd() * 2 - 1) * Y_HALF * 0.95;
-      }
-    } else {
-      x = (srnd() * 2 - 1) * X_HALF * 0.7;
-      y = (srnd() * 2 - 1) * Y_HALF * 0.7;
-    }
-
-    src.push({
-      x,
-      y,
-      z,
-      size: 1.5 + srnd() * 1.5,
-      bright: 0.7 + srnd() * 0.45,
-      shimAmp: 0.12,
-      shimPhase: srnd(),
-      period: SHIMMER_PERIODS[Math.floor(srnd() * SHIMMER_PERIODS.length)],
-      tint: Math.pow(srnd(), 2),
-      dashLength: 3.5 + srnd() * 6,
-    });
-  }
-
-  return toCapsules(src, 1);
-};
-
-export const STREAKS = buildStreaks();
-
-export const TOTAL_ELEMENTS = DOTS.count + DASHES.count + STREAKS.count;
+export const TOTAL_ELEMENTS = DOTS.count + DASHES.count;
 
 /** Apparent-size attenuation, mirrored in the shaders. */
 export const attenuation = (distance: number): number =>

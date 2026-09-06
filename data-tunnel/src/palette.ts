@@ -15,8 +15,6 @@ export type Palette = {
   readonly colNear: string;
   /** Vanishing-point glow. */
   readonly glow: string;
-  /** Colour the brightest streaks clip towards. */
-  readonly streak: string;
   /**
    * How far individual elements may drift in hue away from the ramp above.
    * Zero for the monochrome version, which must stay genuinely neutral.
@@ -37,7 +35,6 @@ export const PALETTES: Record<Variant, Palette> = {
     colMid: "#2a6fe8",
     colNear: "#8ab8ff",
     glow: "#78aaff",
-    streak: "#dceaff",
     tintAmount: 0.35,
     tint: "#5fe0ff",
     intensity: 2.6,
@@ -54,7 +51,6 @@ export const PALETTES: Record<Variant, Palette> = {
     colMid: "#9f9f9f",
     colNear: "#ffffff",
     glow: "#e8e8e8",
-    streak: "#ffffff",
     tintAmount: 0,
     tint: "#ffffff",
     intensity: 2.2,

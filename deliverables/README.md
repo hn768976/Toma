@@ -4,7 +4,7 @@
 | ---- | ---------- |
 | `V1_DataTunnelBlue.mp4` | V1 deep blue, 1920x1080, H.264 `yuv420p`, 30fps, 15.00s, seamless loop |
 | `V2_DataTunnelMono.mp4` | V2 neutral monochrome, same spec |
-| `V1_DataTunnelBlue_still.png` | 1920x1080 still, frame 180 (two bright streaks crossing) |
+| `V1_DataTunnelBlue_still.png` | 1920x1080 still, frame 180 |
 | `V2_DataTunnelMono_still.png` | 1920x1080 still, frame 180 |
 | `data-tunnel-project.zip` | The full Remotion project, ready to render at 4K |
 
@@ -17,14 +17,17 @@ The project source also lives unzipped at `../data-tunnel/`.
 
 ## Checks run on these files
 
-- **Loop.** Frame 449 -> frame 0 differs by 3.23 mean levels/channel, against
-  3.08 and 3.14 for ordinary one-frame steps elsewhere in the clip and 3.47
+- **Frame coverage.** The outer 6% bands of an encoded frame sit at 62-71%
+  of the centre's mean level (left 68, right 62, top 71, bottom 65), so the
+  field bleeds off all four edges instead of ending on a visible boundary.
+- **Loop.** Frame 449 -> frame 0 differs by 2.83 mean levels/channel, against
+  2.77 and 2.70 for ordinary one-frame steps elsewhere in the clip and 3.07
   for a two-frame step. The seam is an ordinary frame step.
 - **V2 neutrality.** Every one of the 2,073,600 pixels in a decoded V2 frame
-  has R = G = B exactly; mean 13.651 on all three channels.
+  has R = G = B exactly; mean 17.475 on all three channels.
 - **Resolution independence.** A 4K still downscaled to 1080p and a directly
-  rendered 1080p still of the same frame agree to a mean 0.98 levels per
-  channel, with mean image level matching to within 0.04% - so point sizes
+  rendered 1080p still of the same frame agree to a mean 0.95 levels per
+  channel, with mean image level matching to within 1.4% - so point sizes
   and blur radii scale correctly between the preview and the 4K master.
-- **Banding.** The dark background ramp in the encoded file carries +/-1
-  dither throughout rather than hard contours.
+- **Banding.** The dark background ramp in the encoded file breaks into 293
+  dithered runs across 750px (longest 17px) rather than hard contours.

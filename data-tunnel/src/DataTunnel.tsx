@@ -3,10 +3,6 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { z } from "zod";
 
 import {
-  BLOOM_BLUR,
-  BLOOM_OPACITY,
-  BLOOM_RENDER_SCALE,
-  BLOOM_WIDTH_GAIN,
   BUCKET_FEATHERS,
   DEPTH_BUCKETS,
   GRAIN_CELL,
@@ -14,7 +10,6 @@ import {
   GRAIN_TILE,
   VP_OFFSET_X,
   VP_OFFSET_Y,
-  Z_TOTAL,
 } from "./constants";
 import { grainTileUrl } from "./grain";
 import { hexToRgba, PALETTES, scalePx } from "./palette";
@@ -91,7 +86,7 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant }) => {
       {/* Background: the tunnel opens onto light at the vanishing point. */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(ellipse 75% 95% at ${vpX} ${vpY}, ${palette.bgInner} 0%, ${palette.bgOuter} 72%)`,
+          background: `radial-gradient(ellipse 120% 135% at ${vpX} ${vpY}, ${palette.bgInner} 0%, ${palette.bgOuter} 85%)`,
         }}
       />
 
@@ -138,37 +133,15 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant }) => {
               {...layerProps}
               renderScale={bucket.renderScale}
               slab={[bucket.near, feather.near, bucket.far, feather.far]}
-              content="all"
             />
           </AbsoluteFill>
         );
       })}
 
-      {/*
-        Bloom, restricted to the bright streaks. Blooming the whole dot grid
-        would merge the rows into a haze and lose the structure that makes
-        this read as data rather than stars.
-      */}
-      <AbsoluteFill
-        style={{
-          filter: `blur(${scalePx(BLOOM_BLUR, height)}px)`,
-          opacity: BLOOM_OPACITY,
-          mixBlendMode: "plus-lighter",
-        }}
-      >
-        <TunnelLayer
-          {...layerProps}
-          renderScale={BLOOM_RENDER_SCALE}
-          slab={[0, 0, Z_TOTAL, 0]}
-          content="streaks"
-          widthGain={BLOOM_WIDTH_GAIN}
-        />
-      </AbsoluteFill>
-
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse 78% 88% at 50% 50%, rgba(0,0,0,0) 46%, rgba(0,0,0,0.5) 100%)",
+            "radial-gradient(ellipse 86% 96% at 50% 50%, rgba(0,0,0,0) 56%, rgba(0,0,0,0.28) 100%)",
         }}
       />
 

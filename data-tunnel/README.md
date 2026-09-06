@@ -61,8 +61,13 @@ falls back to ANGLE's software backend there), PNG frames, H.264 `--crf=16`:
 
 | Output              | Per frame | 450 frames |
 | ------------------- | --------- | ---------- |
-| 1080p (`--scale=0.5`) | **2.0 s** | **15 min** |
-| 4K (`--scale=1`)      | **9.4 s** | **~70 min** |
+| 1080p (`--scale=0.5`) | **1.6 s** | **12-13 min** (measured end to end) |
+| 4K (`--scale=1`)      | **7.6 s** | **~58 min** (projected) |
+
+The per-frame figures are marginal cost, taken by differencing a 32-frame run
+against a 16-frame one so bundling and browser warm-up cancel out. The 1080p
+total is wall-clock for a real full render; the 4K total is that marginal rate
+extrapolated.
 
 The 4K pass is the one that needs planning. On a machine with a real GPU
 (`--gl=egl`) expect this to drop by roughly an order of magnitude; the cost
@@ -85,17 +90,35 @@ sweep outward past the frame edges while distant ones barely move.
   numbers. Sizes and blur radii are authored against a 1080-pixel-tall
   reference frame and scaled by `useVideoConfig().height`, so 1080p and 4K
   stay in sync.
-- **`volume.ts`** - the ~66,000-element volume, generated **once** at module
-  scope from a seeded PRNG. Four walls of dots on a loose grid (with +/-15%
-  jitter), a sparser interior scatter between them, plus 24 long bright
-  streaks. Recycling is an offset computed in the shader, never a
-  regeneration.
+- **`volume.ts`** - the 70,000-element volume, generated **once** at module
+  scope from a seeded PRNG. Nested rectangular shells on a loose grid (with
+  +/-15% jitter) plus a sparser interior scatter. Recycling is an offset
+  computed in the shader, never a regeneration.
 - **`shaders.ts`** - two instanced renderers. Dots are `THREE.Points`;
-  dashes and streaks are screen-space capsules built from both projected
-  endpoints, so they radiate from the vanishing point and foreshorten
-  correctly. Both write premultiplied alpha and blend `ONE`/`ONE`.
+  dashes are screen-space capsules built from both projected endpoints, so
+  they radiate from the vanishing point and foreshorten correctly. Their
+  projected length is capped - a fixed world length explodes into a
+  frame-crossing streak near the camera and the shot stops reading as a data
+  field. Both write premultiplied alpha and blend `ONE`/`ONE`.
 - **`TunnelLayer.tsx`** - one `<ThreeCanvas>` per depth bucket.
 - **`DataTunnel.tsx`** - background, glow, the layer stack, vignette, grain.
+
+### Filling the frame
+
+`WALL_SHELLS` defines the volume as nested rectangular shells. The two inner
+ones are the walls of the corridor. Beyond them sits a gap, then a mantle of
+three progressively coarser and dimmer shells reaching out to four times the
+tunnel's own half-width.
+
+Both parts earn their place. Without the mantle, a ray toward the frame
+corner leaves the box about nine units out and meets nothing beyond, so the
+field ends on a visible rectangular boundary with dark margins around it.
+Without the gap - and without the mantle falling away steeply in both
+density and brightness - there is no step at the wall plane and the corridor
+flattens into a plain radial burst.
+
+Measured on an encoded frame: the outer 6% bands of the picture sit at
+62-71% of the centre's mean level, against 35-49% before the mantle existed.
 
 ### Depth of field
 
@@ -123,11 +146,7 @@ Camera position, element offsets and grain offset are pure functions of
 `useCurrentFrame()`. There is no `useFrame` clock and no delta
 accumulation - Remotion renders frames out of order across threads.
 
-### Bloom and grain
-
-Bloom is a seventh layer containing only the bright streaks, widened and
-heavily blurred. Blooming the whole dot grid would merge the rows into a
-haze and lose the detail that makes this read as data rather than stars.
+### Grain
 
 The grain is a 256x256 seeded-noise tile composited with `plus-lighter` at
 2%. It is dither: without it the dark background ramp posterises into
@@ -151,10 +170,11 @@ Almost everything worth changing is in `constants.ts`:
 | ---- | ------ |
 | Faster / slower travel | `Z_TOTAL` (distance covered per loop) |
 | Longer loop | `DURATION_IN_FRAMES` - keep the shimmer periods dividing it |
-| More / fewer elements | `NZ`, `NX_WALL`, `NY_WALL`, `WALL_SHELLS`, `FILL_SETS` |
+| More / fewer elements | `NZ`, `WALL_SPACING_X/Y`, `WALL_SHELLS`, `FILL_SETS` |
 | Wider / narrower tunnel | `X_HALF`, `Y_HALF` |
 | Move the focus band | `BUCKET_EDGES` / `BUCKET_BLUR` |
 | Vanishing point position | `VP_OFFSET_X`, `VP_OFFSET_Y` |
-| Streak frequency | `STREAK_COUNT`, `STREAK_VISIBLE_FROM` |
+| Frame coverage / mantle reach | `WALL_SHELLS` offsets and brightness |
+| Dash length and weight | `DASH_FRACTION`, `DASH_MAX_LEN_PX` |
 
 Colours are in `palette.ts`.

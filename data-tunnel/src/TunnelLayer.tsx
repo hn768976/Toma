@@ -23,9 +23,6 @@ import {
   ROLL_DEGREES,
   ROLL_PERIOD,
   SIZE_MAX,
-  STREAK_MAX_LEN_PX,
-  STREAK_VISIBLE_FROM,
-  STREAK_VISIBLE_TO,
   VP_OFFSET_X,
   VP_OFFSET_Y,
   Z_TOTAL,
@@ -37,7 +34,7 @@ import {
   DOT_FRAGMENT,
   DOT_VERTEX,
 } from "./shaders";
-import { CapsuleBuffers, DASHES, DOTS, STREAKS } from "./volume";
+import { CapsuleBuffers, DASHES, DOTS } from "./volume";
 
 const TAU = Math.PI * 2;
 
@@ -198,7 +195,7 @@ const Dots: React.FC<{ readonly shared: SharedUniformValues }> = ({ shared }) =>
 };
 
 // --------------------------------------------------------------------------
-// Dashes and streaks (screen-space capsules)
+// Dashes (screen-space capsules)
 // --------------------------------------------------------------------------
 
 const QUAD_POSITION = new Float32Array([
@@ -210,20 +207,10 @@ const QUAD_INDEX = [0, 1, 2, 0, 2, 3];
 type CapsuleProps = {
   readonly shared: SharedUniformValues;
   readonly buffers: CapsuleBuffers;
-  readonly widthGain: number;
-  readonly bead: boolean;
-  readonly nearOnly: boolean;
   readonly maxLenPx: number;
 };
 
-const Capsules: React.FC<CapsuleProps> = ({
-  shared,
-  buffers,
-  widthGain,
-  bead,
-  nearOnly,
-  maxLenPx,
-}) => {
+const Capsules: React.FC<CapsuleProps> = ({ shared, buffers, maxLenPx }) => {
   const { geometry, material } = useMemo(() => {
     const g = new THREE.InstancedBufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(QUAD_POSITION, 3));
@@ -242,20 +229,14 @@ const Capsules: React.FC<CapsuleProps> = ({
       uniforms: {
         ...makeSharedUniforms(),
         uHalfRes: { value: new THREE.Vector2(1, 1) },
-        uWidthGain: { value: widthGain },
         uMaxLenPx: { value: maxLenPx },
-        uNearOnly: { value: nearOnly ? 1 : 0 },
-        uNearOnlyRange: {
-          value: new THREE.Vector2(STREAK_VISIBLE_FROM, STREAK_VISIBLE_TO),
-        },
-        uBead: { value: bead ? 1 : 0 },
       },
       vertexShader: CAPSULE_VERTEX,
       fragmentShader: CAPSULE_FRAGMENT,
       ...BLEND,
     });
     return { geometry: g, material: m };
-  }, [buffers, widthGain, bead, nearOnly, maxLenPx]);
+  }, [buffers, maxLenPx]);
 
   useLayoutEffect(() => {
     const u = material.uniforms as SharedUniforms & {
@@ -283,9 +264,6 @@ export type TunnelLayerProps = {
   readonly renderScale: number;
   readonly dpr: number;
   readonly slab: [number, number, number, number];
-  /** What this layer draws. */
-  readonly content: "all" | "streaks";
-  readonly widthGain?: number;
 };
 
 export const TunnelLayer: React.FC<TunnelLayerProps> = ({
@@ -297,8 +275,6 @@ export const TunnelLayer: React.FC<TunnelLayerProps> = ({
   renderScale,
   dpr,
   slab,
-  content,
-  widthGain = 1,
 }) => {
   const layerWidth = Math.max(2, Math.round(frameWidth * renderScale));
   const layerHeight = Math.max(2, Math.round(frameHeight * renderScale));
@@ -338,27 +314,8 @@ export const TunnelLayer: React.FC<TunnelLayerProps> = ({
       }}
     >
       <CameraRig frame={frame} aspect={aspect} />
-      {content === "all" ? (
-        <>
-          <Dots shared={shared} />
-          <Capsules
-            shared={shared}
-            buffers={DASHES}
-            widthGain={1}
-            bead={false}
-            nearOnly={false}
-            maxLenPx={DASH_MAX_LEN_PX}
-          />
-        </>
-      ) : null}
-      <Capsules
-        shared={shared}
-        buffers={STREAKS}
-        widthGain={widthGain}
-        bead
-        nearOnly
-        maxLenPx={STREAK_MAX_LEN_PX}
-      />
+      <Dots shared={shared} />
+      <Capsules shared={shared} buffers={DASHES} maxLenPx={DASH_MAX_LEN_PX} />
     </ThreeCanvas>
   );
 };

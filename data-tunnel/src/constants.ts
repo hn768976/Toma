@@ -30,22 +30,49 @@ export const Z_TOTAL = 150;
 
 // Number of grid rows down the tunnel axis. Z_TOTAL is an exact multiple of
 // the row spacing, so the rows cycle exactly as well.
-export const NZ = 120;
-export const DZ = Z_TOTAL / NZ; // 1.25
+export const NZ = 100;
+export const DZ = Z_TOTAL / NZ; // 1.5
 
 // Rectangular cross-section: half-width / half-height of the four walls.
 export const X_HALF = 9;
 export const Y_HALF = 5.2;
 
-// Wall grid resolution (points across each wall, per shell).
-export const NX_WALL = 44; // top + bottom walls, across X
-export const NY_WALL = 26; // left + right walls, across Y
-export const WALL_SHELLS = 2; // stacked planes per wall, staggered
-export const WALL_SHELL_INSET = 0.45; // world units between shells
+// Base grid spacing on the wall planes, world units.
+export const WALL_SPACING_X = 0.41;
+export const WALL_SPACING_Y = 0.4;
+
+export type WallShell = {
+  /** Offset outward from the nominal wall plane, world units. */
+  readonly offset: number;
+  /** Grid spacing multiplier - outer shells are coarser. */
+  readonly step: number;
+  readonly bright: number;
+};
+
+// Wall shells, innermost first. The first two are the visible walls of the
+// corridor. The outer three are a sparser, dimmer mantle carrying the field
+// out past the frame edges: a ray toward the frame corner leaves the inner
+// box about ten units out, and without anything beyond it the shot sits in
+// a rectangle in the middle of the frame instead of filling it.
+// The mantle falls off steeply in both density and brightness, so the step
+// at the wall plane still reads as a wall - a mantle carried at anything
+// like the wall's own weight flattens the corridor back into a plain radial
+// burst.
+export const WALL_SHELLS: readonly WallShell[] = [
+  { offset: -0.5, step: 1, bright: 1.5 },
+  { offset: 0, step: 1, bright: 1.5 },
+  // A deliberate gap before the mantle starts. The dark band just outside
+  // the wall plane is what lets the wall read as a wall now that there is
+  // material beyond it.
+  { offset: 3, step: 2.4, bright: 0.34 },
+  { offset: 6.5, step: 4, bright: 0.2 },
+  { offset: 11.5, step: 6, bright: 0.13 },
+  { offset: 18, step: 10, bright: 0.09 },
+];
 
 // Sparser interior scatter filling the space between the walls.
-export const NX_FILL = 15;
-export const NY_FILL = 9;
+export const NX_FILL = 12;
+export const NY_FILL = 7;
 export const FILL_SETS = 2;
 export const FILL_EXTENT_X = 1; // fraction of X_HALF the fill spans
 export const FILL_EXTENT_Y = 1;
@@ -76,16 +103,9 @@ export const SIZE_MAX = 55; // px at REFERENCE_HEIGHT, near-camera clamp
 // axis) rather than dots.
 export const DASH_FRACTION = 0.12;
 
-// Projected length caps, in px at REFERENCE_HEIGHT. Without these a dash
-// close to the camera sweeps most of the way across the frame.
+// Projected length cap, in px at REFERENCE_HEIGHT. Without it a dash close
+// to the camera sweeps most of the way across the frame.
 export const DASH_MAX_LEN_PX = 12;
-export const STREAK_MAX_LEN_PX = 300;
-
-// Long, bright streaks passing close to the camera. Spread evenly through
-// the volume so only a handful are ever inside the near band at once.
-export const STREAK_COUNT = 24;
-export const STREAK_VISIBLE_FROM = 40; // fully faded by this depth
-export const STREAK_VISIBLE_TO = 11; // fully lit by this depth
 
 // ---------------------------------------------------------------------------
 // Camera
@@ -94,8 +114,8 @@ export const STREAK_VISIBLE_TO = 11; // fully lit by this depth
 // Vanishing point offset from frame centre, in normalised device coords
 // (-1..1). Slightly above and left, as in the reference: the asymmetry is
 // what stops the shot reading as a screensaver.
-export const VP_OFFSET_X = -0.1;
-export const VP_OFFSET_Y = 0.1;
+export const VP_OFFSET_X = -0.08;
+export const VP_OFFSET_Y = 0.08;
 
 // Gentle looping float. Amplitudes are world units; at the in-focus depth
 // they move the image by well under 2% of the frame.
@@ -158,14 +178,6 @@ export const BUCKET_FEATHERS = BUCKET_BLUR.map((_, i) => ({
   near: bucketFeather(i),
   far: bucketFeather(i + 1),
 }));
-
-// Bloom is confined to the bright streaks and the vanishing-point glow.
-// Blooming the whole dot grid would merge the rows into a haze and lose the
-// detail that makes this read as data rather than stars.
-export const BLOOM_BLUR = 26; // px at REFERENCE_HEIGHT
-export const BLOOM_RENDER_SCALE = 0.3;
-export const BLOOM_WIDTH_GAIN = 2.6;
-export const BLOOM_OPACITY = 0.55;
 
 // ---------------------------------------------------------------------------
 // Grain
