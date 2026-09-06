@@ -26,7 +26,18 @@ PATH_PRECISION = 3        # decimal places in path data
 
 # background knockout (only applied to images with no alpha channel)
 KNOCKOUT_FUZZ = "12%"
-KNOCKOUT_COLOR = "white"
+# "auto" samples the four corners and knocks out the colour they agree on, so
+# black-backed art works as well as white-backed -- knocking out white on a
+# black-backed image would leave the background and eat any white artwork.
+# Pin a colour ("white", "#ffffff", "black", ...) to force one instead.
+KNOCKOUT_COLOR = "auto"
+KNOCKOUT_FALLBACK_COLOR = "white"   # when "auto" cannot decide
+KNOCKOUT_CORNER_AGREEMENT = 3       # corners that must agree, out of 4
+# "flood" clears only the background region connected to the image border, so
+# artwork that happens to share the background colour (black linework on a black
+# field, white highlights on white) survives. "global" clears every matching
+# pixel anywhere -- the plain `-transparent` behaviour.
+KNOCKOUT_MODE = "flood"
 
 # a <rect> counts as a full-canvas background if it covers at least
 # (1 - BG_RECT_TOLERANCE) of the canvas in both axes, anchored at the origin
@@ -41,6 +52,7 @@ import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
+from collections import Counter
 
 SVG_NS = "http://www.w3.org/2000/svg"
 ET.register_namespace("", SVG_NS)
@@ -127,12 +139,69 @@ def has_alpha(path):
     return alpha_flag.strip().lower() in ("true", "on", "blend")
 
 
-def knockout_background(src, dst):
-    """Make KNOCKOUT_COLOR transparent, writing a PNG to dst."""
-    subprocess.run(
-        ["magick", src, "-fuzz", KNOCKOUT_FUZZ, "-transparent", KNOCKOUT_COLOR, dst],
-        capture_output=True, text=True, check=True, timeout=600,
-    )
+def detect_background_color(path):
+    """Return the colour the image's four corners agree on, or None."""
+    try:
+        result = subprocess.run(
+            ["magick", path, "-format",
+             "%[pixel:p{0,0}]|%[pixel:p{w-1,0}]|%[pixel:p{0,h-1}]|%[pixel:p{w-1,h-1}]",
+             "info:"],
+            capture_output=True, text=True, timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+
+    corners = [c.strip() for c in result.stdout.strip().split("|") if c.strip()]
+    if len(corners) != 4:
+        return None
+    colour, count = Counter(corners).most_common(1)[0]
+    return colour if count >= KNOCKOUT_CORNER_AGREEMENT else None
+
+
+def resolve_knockout_color(path, name):
+    """Pick the colour to knock out for this image."""
+    if KNOCKOUT_COLOR != "auto":
+        return KNOCKOUT_COLOR
+    detected = detect_background_color(path)
+    if detected is None:
+        print(f"  warning: {name}: corners disagree on a background colour, "
+              f"falling back to {KNOCKOUT_FALLBACK_COLOR}", file=sys.stderr)
+        return KNOCKOUT_FALLBACK_COLOR
+    return detected
+
+
+def image_size(path):
+    """Return (width, height), or None if it cannot be read."""
+    try:
+        result = subprocess.run(
+            ["magick", path, "-format", "%w %h", "info:"],
+            capture_output=True, text=True, timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        width, height = (int(v) for v in result.stdout.split()[:2])
+    except ValueError:
+        return None
+    return width, height
+
+
+def knockout_background(src, dst, color):
+    """Make `color` transparent, writing a PNG to dst."""
+    size = image_size(src) if KNOCKOUT_MODE == "flood" else None
+    if size is not None:
+        width, height = size
+        args = ["magick", src, "-alpha", "set", "-fuzz", KNOCKOUT_FUZZ, "-fill", "none"]
+        for x, y in ((0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)):
+            args += ["-floodfill", f"+{x}+{y}", color]
+        args.append(dst)
+    else:
+        args = ["magick", src, "-fuzz", KNOCKOUT_FUZZ, "-transparent", color, dst]
+    subprocess.run(args, capture_output=True, text=True, check=True, timeout=600)
 
 
 def run_vtracer(src, dst):
@@ -262,18 +331,19 @@ def collect_inputs(input_dir):
 
 
 def process(name, input_dir, output_dir):
-    """Trace one image. Returns (viewbox, path_count, bytes, knocked_out)."""
+    """Trace one image. Returns (viewbox, path_count, bytes, note)."""
     src = os.path.join(input_dir, name)
     dst = os.path.join(output_dir, os.path.splitext(name)[0] + ".svg")
 
     workdir = tempfile.mkdtemp(prefix="trace-")
     try:
         traced_from = src
-        knocked_out = False
+        note = "had alpha"
         if not has_alpha(src):
+            color = resolve_knockout_color(src, name)
             traced_from = os.path.join(workdir, "knockout.png")
-            knockout_background(src, traced_from)
-            knocked_out = True
+            knockout_background(src, traced_from, color)
+            note = f"knocked out {color} [{KNOCKOUT_MODE}]"
 
         # Trace to a temp file and move into place, so a crash mid-run never
         # leaves a partial SVG that the next run would treat as "already done".
@@ -283,7 +353,7 @@ def process(name, input_dir, output_dir):
 
         os.makedirs(output_dir, exist_ok=True)
         shutil.move(staged, dst)
-        return viewbox, path_count, os.path.getsize(dst), knocked_out
+        return viewbox, path_count, os.path.getsize(dst), note
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
@@ -327,7 +397,7 @@ def main():
             skipped += 1
             continue
         try:
-            viewbox, path_count, size, knocked_out = process(name, args.input_dir, args.output_dir)
+            viewbox, path_count, size, note = process(name, args.input_dir, args.output_dir)
         except subprocess.CalledProcessError as exc:
             tool = os.path.basename(exc.cmd[0])
             detail = (exc.stderr or exc.stdout or "").strip().splitlines()
@@ -345,8 +415,7 @@ def main():
             written_bytes += size
             box = " ".join(_fmt(v) for v in viewbox) if viewbox else "none"
             print(f"ok      {name} -> {os.path.basename(dst)}  "
-                  f"viewBox=[{box}]  paths={path_count}  {human(size)}"
-                  f"{'  (bg knocked out)' if knocked_out else '  (had alpha)'}")
+                  f"viewBox=[{box}]  paths={path_count}  {human(size)}  ({note})")
 
     total_output = 0
     for name in names:
