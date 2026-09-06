@@ -207,6 +207,26 @@ const script = `(async () => {
   }
   const trunkX = baseCount ? (baseSum / baseCount - minX) / (maxX - minX) : 0.5;
 
+  // --- how wide the trunk is ---
+  // Measured on a band above the root flare, where the trunk is normally the
+  // only ink. Trees in a forest are spaced by their trunks, not by the width of
+  // their crowns: crowns interlace overhead, trunks do not.
+  const widths = [];
+  const lo = Math.round(maxY - (maxY - minY) * 0.26);
+  const hi = Math.round(maxY - (maxY - minY) * 0.1);
+  for (let y = lo; y <= hi; y++) {
+    if (y < 0 || y >= H) continue;
+    let a = -1, b = -1;
+    for (let x = 0; x < W; x++) {
+      if (ink[y * W + x]) { if (a < 0) a = x; b = x; }
+    }
+    if (a >= 0) widths.push(b - a + 1);
+  }
+  widths.sort((p, q) => p - q);
+  const trunkW = widths.length
+    ? widths[Math.floor(widths.length / 2)] / (maxX - minX)
+    : 0.2;
+
   let parts = [], pts = 0, kept = 0;
   for (const raw of loops) {
     const simple = rdpClosed(dedupe(raw), ${EPSILON});
@@ -247,7 +267,7 @@ const script = `(async () => {
   }
 
   return JSON.stringify({
-    w: maxX - minX, h: maxY - minY, scale, trunkX,
+    w: maxX - minX, h: maxY - minY, scale, trunkX, trunkW,
     loops: loops.length, kept, points: pts, d: parts.join(''),
   });
 })()`;
@@ -256,7 +276,8 @@ const r = JSON.parse(await evaluate(script));
 close();
 
 const trunkX = Math.round(r.trunkX * 10000) / 10000;
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${r.w} ${r.h}" width="${r.w}" height="${r.h}" data-trunk-x="${trunkX}">
+const trunkW = Math.round(r.trunkW * 10000) / 10000;
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${r.w} ${r.h}" width="${r.w}" height="${r.h}" data-trunk-x="${trunkX}" data-trunk-w="${trunkW}">
 <path fill="#000" fill-rule="evenodd" d="${r.d}"/>
 </svg>
 `;
@@ -264,5 +285,5 @@ writeFileSync(output, svg);
 console.log(
   `${output.split("/").pop()}  ${r.w}x${r.h} (traced at ${r.scale.toFixed(1)}x)  ` +
     `loops=${r.loops} kept=${r.kept}  points=${r.points}  ` +
-    `trunkX=${trunkX}  ${(svg.length / 1024).toFixed(0)} KB`,
+    `trunkX=${trunkX} trunkW=${trunkW}  ${(svg.length / 1024).toFixed(0)} KB`,
 );

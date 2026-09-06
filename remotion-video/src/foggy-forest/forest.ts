@@ -15,12 +15,19 @@ export type Tier = {
    *  how wide they are. */
   count: number;
   /**
-   * Spacing between neighbouring trunks, as a multiple of the two trees' summed
-   * half-widths. At 1 their silhouettes just touch; below that their crowns
-   * interlace, which real trees at the same distance do, while their trunks
-   * stay well apart. Above ~2 is a clearing.
+   * Spacing between neighbouring trunks, as a multiple of the two trunks'
+   * summed half-widths — so 2 leaves a trunk's width of daylight between them.
+   * Crowns are free to interlace overhead, which is what they do in a real
+   * stand; it is the trunks that have to keep their distance.
    */
   gap: [number, number];
+  /**
+   * Vertical exaggeration. The supplied silhouette is a stocky dead tree, and
+   * the reference is a stand of tall slender trunks; stretching it makes the
+   * trunk read as a forest tree's rather than a stump's. Applied as a divisor
+   * on width, so height is unchanged.
+   */
+  stretch: [number, number];
   /** Tree height as a fraction of frame height. */
   height: [number, number];
   /** Where the trunk base sits, as a fraction of frame height. */
@@ -56,13 +63,14 @@ export type Tier = {
 export const TIERS: readonly Tier[] = [
   {
     name: "far-b",
-    gap: [0.42, 1.15],
+    stretch: [2.6, 3.4],
+    gap: [1.3, 3.2],
     seed: 1013,
-    count: 110,
-    height: [0.18, 0.31],
-    baseY: [0.876, 0.892],
-    blur: 30,
-    alpha: 0.24,
+    count: 200,
+    height: [0.56, 0.80],
+    baseY: [0.800, 0.818],
+    blur: 26,
+    alpha: 0.32,
     color: "treeFar",
     sway: 0.06,
     alignGapToGlow: true,
@@ -72,77 +80,77 @@ export const TIERS: readonly Tier[] = [
   },
   {
     name: "far-a",
-    gap: [0.45, 1.25],
+    stretch: [2.6, 3.4],
+    gap: [1.7, 4.2],
     seed: 2027,
-    count: 86,
-    height: [0.29, 0.46],
-    baseY: [0.888, 0.906],
-    blur: 19,
-    alpha: 0.38,
+    count: 160,
+    height: [0.62, 0.86],
+    baseY: [0.818, 0.840],
+    blur: 17,
+    alpha: 0.5,
     color: "treeFar",
     sway: 0.09,
     alignGapToGlow: true,
-    wash: 0.46,
+    wash: 0.42,
     washPlane: 1,
     lowRes: true,
   },
   {
     name: "mid-a",
-    gap: [0.45, 1.2],
+    stretch: [2.7, 3.5],
+    gap: [2.3, 5.4],
     seed: 3041,
-    count: 60,
-    height: [0.48, 0.72],
-    baseY: [0.9, 0.922],
-    blur: 11,
-    alpha: 0.68,
+    count: 120,
+    height: [0.85, 1.15],
+    baseY: [0.840, 0.868],
+    blur: 10,
+    alpha: 0.72,
     color: "treeMid",
     sway: 0.16,
     alignGapToGlow: true,
-    wash: 0.3,
+    wash: 0.27,
     washPlane: 2,
     lowRes: true,
   },
   {
     name: "mid-b",
-    gap: [0.5, 1.3],
+    stretch: [3.0, 3.9],
+    gap: [2.8, 6.5],
     seed: 4057,
-    count: 42,
-    height: [0.70, 1.02],
-    baseY: [0.918, 0.945],
-    blur: 6,
-    alpha: 0.82,
-    color: "treeNear",
+    count: 80,
+    height: [1.15, 1.55],
+    baseY: [0.868, 0.905],
+    blur: 5,
+    alpha: 0.86,
+    color: "treeMid",
     sway: 0.26,
     alignGapToGlow: true,
-    wash: 0.2,
+    wash: 0.22,
     washPlane: 3,
     lowRes: false,
   },
   {
     name: "near",
-    gap: [0.7, 1.35],
+    stretch: [3.4, 4.4],
+    gap: [3.4, 8.0],
     seed: 5077,
-    count: 18,
-    height: [1.3, 1.9],
-    baseY: [0.99, 1.07],
+    count: 40,
+    height: [2.2, 3.2],
+    baseY: [0.950, 1.000],
     blur: 2,
-    alpha: 1,
+    alpha: 1.0,
     color: "treeNear",
     sway: 0.4,
     alignGapToGlow: false,
-    wash: 0.06,
+    wash: 0.18,
     washPlane: 4,
     lowRes: false,
-    crops: [
-      { cx: 0.5, w: 1, h: 0.74 },
-      { cx: 0.5, w: 1, h: 1 },
-      { cx: 0.5, w: 1, h: 0.6 },
-      { cx: 0.5, w: 1, h: 0.87 },
-    ],
   },
 ] as const;
 
 export type TreeInstance = {
+  /** Vertical exaggeration; see Tier.stretch. */
+  stretch: number;
   /** Trunk base, as fractions of frame width/height. */
   x: number;
   y: number;
@@ -199,9 +207,15 @@ const layouts = new Map<string, TreeInstance[]>();
 export const getTierLayout = (
   tier: Tier,
   artAspect: number,
+  trunkWidth: number,
   frameAspect: number,
 ): TreeInstance[] => {
-  const key = `${tier.name}|${artAspect.toFixed(4)}|${frameAspect.toFixed(4)}`;
+  const key = [
+    tier.name,
+    artAspect.toFixed(4),
+    trunkWidth.toFixed(4),
+    frameAspect.toFixed(4),
+  ].join("|");
   const cached = layouts.get(key);
   if (cached) return cached;
 
@@ -211,12 +225,14 @@ export const getTierLayout = (
   for (let i = 0; i < tier.count; i++) {
     const crop = tier.crops ? tier.crops[i % tier.crops.length] : undefined;
     const height = range(rng, tier.height[0], tier.height[1]);
-    // Width as a fraction of the frame, for this instance's size and crop.
-    const aspect = artAspect * (crop ? crop.w / crop.h : 1);
-    const halfWidth = (height * aspect) / frameAspect / 2;
+    const stretch = range(rng, tier.stretch[0], tier.stretch[1]);
+    // Trunk half-width as a fraction of the frame, for this instance.
+    const aspect = (artAspect * (crop ? crop.w / crop.h : 1)) / stretch;
+    const halfWidth = (height * aspect * trunkWidth) / frameAspect / 2;
     draft.push({
       y: range(rng, tier.baseY[0], tier.baseY[1]),
       height,
+      stretch,
       flip: rng() < 0.5,
       rotation: range(rng, -3, 3),
       // Staggered integer cycle counts: every tree returns to its starting
@@ -254,6 +270,7 @@ export const getTierLayout = (
       x: tx,
       y: d.y,
       height: d.height,
+      stretch: d.stretch,
       flip: d.flip,
       rotation: d.rotation,
       swayCycles: d.swayCycles,

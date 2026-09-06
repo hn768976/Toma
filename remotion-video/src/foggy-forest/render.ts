@@ -1,4 +1,9 @@
-import { getArtAspect, getTree, trunkFraction } from "./assets";
+import {
+  getArtAspect,
+  getTree,
+  getTrunkWidth,
+  trunkFraction,
+} from "./assets";
 import { GLOW_HEIGHT, GLOW_X, GROUND_TOP, LOW_RES as LOW, REF_WIDTH } from "./constants";
 import {
   getTierLayout,
@@ -126,7 +131,7 @@ const paintLight = (
   // The broad column of lit fog.
   ctx.save();
   ctx.translate(gx, groundY - glowH * 0.44);
-  ctx.scale(0.62, 1);
+  ctx.scale(0.84, 1);
   const g = ctx.createRadialGradient(0, 0, 0, 0, 0, glowH);
   g.addColorStop(0, `${palette.glow}c8`);
   g.addColorStop(0.18, `${palette.glow}8c`);
@@ -212,7 +217,7 @@ const drawTree = (
   const art = getTree(variantFor(tier, inst, palette, frameHeight));
 
   const h = inst.height * H;
-  const w = h * (art.width / art.height);
+  const w = (h * (art.width / art.height)) / inst.stretch;
   // Anchor on the trunk, not on the middle of the artwork.
   const anchorX = -w * trunkFraction(inst.crop);
   const sway =
@@ -234,7 +239,7 @@ const drawTier = (
   scale: number,
 ) => {
   const { width: W, height: H, frame, duration, palette } = opts;
-  const trees = getTierLayout(tier, getArtAspect(), W / H);
+  const trees = getTierLayout(tier, getArtAspect(), getTrunkWidth(), W / H);
   const blurPx = tier.blur * scale;
 
   if (tier.lowRes) {
@@ -310,10 +315,11 @@ const drawFogPlane = (
     0,
     GLOW_X * lowW,
     GROUND_TOP * lowH,
-    lowW * 0.82,
+    lowW * 1.15,
   );
   cg.addColorStop(0, palette.fogNear);
-  cg.addColorStop(0.55, mixHex(palette.fogNear, palette.fogFar, 0.6));
+  cg.addColorStop(0.4, mixHex(palette.fogNear, palette.fogFar, 0.32));
+  cg.addColorStop(0.75, mixHex(palette.fogNear, palette.fogFar, 0.72));
   cg.addColorStop(1, palette.fogFar);
   fog.ctx.fillStyle = cg;
   fog.ctx.fillRect(0, 0, lowW, lowH);
@@ -379,15 +385,17 @@ export const drawScene = (
   ctx.fillRect(0, 0, W, H);
 
   // Extra darkening toward the top of the frame.
-  const top = ctx.createLinearGradient(0, 0, 0, H * 0.62);
-  top.addColorStop(0, `${palette.fogFar}dd`);
-  top.addColorStop(1, `${palette.fogFar}00`);
+  const top = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+  top.addColorStop(0, "#000000b0");
+  top.addColorStop(0.35, "#00000064");
+  top.addColorStop(0.7, "#00000020");
+  top.addColorStop(1, "#00000000");
   ctx.fillStyle = top;
-  ctx.fillRect(0, 0, W, H * 0.62);
+  ctx.fillRect(0, 0, W, H * 0.7);
 
   // --- 2. the distant light, pulsing almost imperceptibly ---
   const pulse = 1 + 0.07 * loopWave(frame, duration, 2, 0.12);
-  drawLight(ctx, opts, scale, 0.92 * pulse);
+  drawLight(ctx, opts, scale, 0.84 * pulse);
 
   // --- 3. tree tiers, each followed by the fog that sits in front of it ---
   const globalBreath = 1 + 0.16 * loopWave(frame, duration, 1, 0.4);
@@ -400,8 +408,8 @@ export const drawScene = (
   const groundY = GROUND_TOP * H;
   const gg = ctx.createLinearGradient(0, groundY - H * 0.08, 0, H);
   gg.addColorStop(0, `${palette.ground}00`);
-  gg.addColorStop(0.3, `${palette.ground}5c`);
-  gg.addColorStop(0.62, `${palette.ground}c8`);
+  gg.addColorStop(0.4, `${palette.ground}46`);
+  gg.addColorStop(0.72, `${palette.ground}b4`);
   gg.addColorStop(1, palette.ground);
   ctx.fillStyle = gg;
   ctx.fillRect(0, groundY - H * 0.08, W, H - groundY + H * 0.08);
@@ -423,7 +431,7 @@ export const drawScene = (
   ctx.restore();
 
   // Mist hugging the ground, in front of everything.
-  drawFogPlane(ctx, 5, 0.2 * globalBreath, opts, scale);
+  drawFogPlane(ctx, 5, 0.22 * globalBreath, opts, scale);
 
   // --- 5. bloom, on the distant glow only ---
   const lowW = Math.max(2, Math.round(W * LOW));
@@ -441,19 +449,25 @@ export const drawScene = (
   ctx.restore();
 
   // --- 6. vignette, fairly strong, centred on the glow ---
-  const vig = ctx.createRadialGradient(
-    GLOW_X * W,
-    H * 0.6,
-    W * 0.16,
-    GLOW_X * W,
-    H * 0.6,
-    W * 0.78,
-  );
+  // Elliptical, not circular: scaled to the frame so it falls off over the same
+  // fraction of the width and of the height. A circular vignette either leaves
+  // the top and bottom bright or crushes the sides — the reference has dark
+  // corners and a luminous middle band, which is what an ellipse gives.
+  ctx.save();
+  ctx.translate(GLOW_X * W, H * 0.62);
+  ctx.scale(1, W / H);
+  const vig = ctx.createRadialGradient(0, 0, W * 0.3, 0, 0, W * 0.62);
   vig.addColorStop(0, `${palette.vignette}00`);
-  vig.addColorStop(0.55, `${palette.vignette}62`);
-  vig.addColorStop(1, `${palette.vignette}ee`);
+  vig.addColorStop(0.34, `${palette.vignette}24`);
+  vig.addColorStop(0.66, `${palette.vignette}9a`);
+  vig.addColorStop(0.86, `${palette.vignette}e6`);
+  vig.addColorStop(1, palette.vignette);
+  // Filling well past the outer radius, not just the ellipse: a canvas radial
+  // gradient clamps to its last stop beyond r1, so this blacks everything
+  // outside the falloff in one pass.
   ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(-W * 2, -H * 2, W * 4, H * 4);
+  ctx.restore();
 
   // --- 7. grain: dithers the big soft ramps so H.264 cannot band them ---
   const tiles = getGrainTiles();

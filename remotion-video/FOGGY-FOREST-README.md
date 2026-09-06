@@ -137,22 +137,46 @@ node tools/trace-svg.mjs public/trees/tree-source.png public/trees/tree.svg
 Drop any black silhouette in as `tree-source.png` and re-run. A white or a
 transparent background both work — the tracer composites onto white first.
 
+### Composition
+
+The reference is a stand of **tall slender trunks running the full height of
+frame**, branches only near the top, receding into fog. Two things get there
+from a single stocky silhouette:
+
+- **Vertical stretch.** Each instance is drawn taller than its natural aspect
+  (roughly 2.6-4.4x, further back is more), which turns a stump into a forest
+  trunk. Height is unchanged; only width is divided.
+- **Height and base by depth.** Near trees are 2-3x the frame height with their
+  bases low, so only trunk is in shot and the crown is far above it. Distant
+  tiers are shorter with bases nearer the horizon, so their crowns come down
+  into the top of frame and form the canopy.
+
 ### Spacing
 
-Trees are placed left to right, and the step to the next trunk is set from the
-two trees' **actual widths** — each tree's size is drawn first, then the gap
-follows from it. Spacing by a bare fraction of the frame puts a small tree and a
+Trees are placed left to right, and the step to the next trunk is a multiple of
+the two **trunks'** widths — not their crowns'. The tracer measures trunk width
+from the artwork (`data-trunk-w`) on a band above the root flare. Crowns
+interlace overhead in a real stand; trunks are what keep their distance. Spacing
+by a bare fraction of the frame, as this did before, puts a small tree and a
 large one the same distance apart, so the large pair grow through each other
-while the small pair sit in a void. The gap factor is a multiple of the two
-trees' summed half-widths: at 1 their silhouettes just touch, below that their
-crowns interlace as real trees at the same distance do, while their trunks stay
-well apart, and above ~2 is a clearing.
+while the small pair sit in a void.
 
-Each tier is generated far wider than the frame, then slid so that a clearing
-frames the light. Only gaps that already fall near the light are candidates for
-that — taking the widest gap anywhere in a run generated several frame widths
-wide meant sliding everything by more than a frame to bring it into place, which
-emptied most of the shot.
+Each tier is generated far wider than the frame, then slid so a clearing frames
+the light. Only gaps that already fall near the light are candidates — taking
+the widest gap anywhere in a run several frame widths long meant sliding
+everything by more than a frame, which emptied most of the shot.
+
+### Matching the reference's tone
+
+Palette and falloff were set by measuring the reference frame rather than by
+eye — `mean luminance and a luma histogram over the whole frame, plus point
+samples`. Three things came out of that and would not have come out of
+guessing: the fog carries far more light than it looks like it does (mid-field
+41,61,62 against the 3,7,8 we had); it is greyer than it looks, running about
+0.67 red-to-green where ours was 0.55; and the vignette is **elliptical**,
+scaled to the frame, so it blacks the corners and top while leaving a luminous
+band across the middle. A circular vignette either crushes the sides or leaves
+the top bright.
 
 ### Variation from one asset
 

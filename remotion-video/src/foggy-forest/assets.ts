@@ -29,9 +29,17 @@ let viewBox = { w: 1, h: 1 };
 
 export const getTrunkX = () => trunkX;
 
-/** Width / height of the traced artwork. Needed to space trees by how wide
- *  they actually are rather than by a bare fraction of the frame. */
+/** Width / height of the traced artwork. */
 export const getArtAspect = () => viewBox.w / viewBox.h;
+
+/**
+ * Trunk width as a fraction of the artwork's width, measured by the tracer on a
+ * band above the root flare. Trees in a forest are spaced by their trunks, not
+ * by the width of their crowns — crowns interlace overhead, trunks do not.
+ */
+let trunkW = 0.25;
+
+export const getTrunkWidth = () => trunkW;
 
 /**
  * Where the trunk base falls within a crop window, as a fraction of the
@@ -123,6 +131,8 @@ const ensureSource = () => {
 
       const anchor = /data-trunk-x="([\d.]+)"/.exec(svgSource);
       trunkX = anchor ? Number(anchor[1]) : 0.5;
+      const width = /data-trunk-w="([\d.]+)"/.exec(svgSource);
+      trunkW = width ? Number(width[1]) : 0.25;
     })();
   }
   return sourcePromise;

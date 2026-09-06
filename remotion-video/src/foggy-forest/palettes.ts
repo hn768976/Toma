@@ -27,15 +27,15 @@ export type Palette = {
 
 export const TEAL: Palette = {
   id: "teal",
-  fogNear: "#1a4a48",
-  fogFar: "#08181c",
+  fogNear: "#568180",
+  fogFar: "#2c4245",
   glow: "#a8e0dc",
   glowOuter: "#3d8a86",
-  treeFar: "#0d2426",
-  treeMid: "#061214",
+  treeFar: "#1c3a3c",
+  treeMid: "#0c2224",
   treeNear: "#000000",
   ground: "#040d10",
-  vignette: "#02080a",
+  vignette: "#000000",
 };
 
 /**
@@ -44,15 +44,15 @@ export const TEAL: Palette = {
  */
 export const AMBER: Palette = {
   id: "amber",
-  fogNear: "#4a3a24",
-  fogFar: "#1a1008",
+  fogNear: "#8a7150",
+  fogFar: "#443426",
   glow: "#f0d0a0",
   glowOuter: "#9a7442",
-  treeFar: "#261b0d",
-  treeMid: "#140c06",
+  treeFar: "#3a2b16",
+  treeMid: "#1f1509",
   treeNear: "#000000",
   ground: "#100a04",
-  vignette: "#0a0602",
+  vignette: "#000000",
   sun: { y: 0.575, radius: 0.052 },
 };
 
@@ -65,15 +65,15 @@ export const AMBER: Palette = {
  */
 export const MONO: Palette = {
   id: "mono",
-  fogNear: "#2d2d2d",
-  fogFar: "#0c0c0c",
+  fogNear: "#606060",
+  fogFar: "#383838",
   glow: "#dbdbdb",
   glowOuter: "#828282",
-  treeFar: "#252525",
-  treeMid: "#121212",
+  treeFar: "#3a3a3a",
+  treeMid: "#1d1d1d",
   treeNear: "#000000",
   ground: "#090909",
-  vignette: "#060606",
+  vignette: "#000000",
 };
 
 export const PALETTES: Record<string, Palette> = {
