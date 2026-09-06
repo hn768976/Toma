@@ -16,6 +16,13 @@ export type Palette = {
   ground: string;
   /** Vignette colour (multiplied in at the edges). */
   vignette: string;
+  /**
+   * A visible sun, for versions where the light has a source rather than being
+   * a formless glow in the fog. Height is a fraction of the frame; radius is a
+   * fraction of frame height. Even with a disc the edge stays soft — a sun seen
+   * through this much fog has no hard limb.
+   */
+  sun?: { y: number; radius: number };
 };
 
 export const TEAL: Palette = {
@@ -31,6 +38,10 @@ export const TEAL: Palette = {
   vignette: "#02080a",
 };
 
+/**
+ * Warm dawn, with the sun itself low in the mist. The disc gives the light a
+ * source and a direction the teal and mono versions deliberately lack.
+ */
 export const AMBER: Palette = {
   id: "amber",
   fogNear: "#4a3a24",
@@ -42,6 +53,7 @@ export const AMBER: Palette = {
   treeNear: "#000000",
   ground: "#100a04",
   vignette: "#0a0602",
+  sun: { y: 0.575, radius: 0.052 },
 };
 
 /**

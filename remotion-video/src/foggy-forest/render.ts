@@ -1,4 +1,4 @@
-import { getTree, trunkFraction } from "./assets";
+import { getArtAspect, getTree, trunkFraction } from "./assets";
 import { GLOW_HEIGHT, GLOW_X, GROUND_TOP, LOW_RES as LOW, REF_WIDTH } from "./constants";
 import {
   getTierLayout,
@@ -99,7 +99,16 @@ const fogTexture = (plane: FogPlane) =>
 /** Pre-bakes every fog texture, so no frame pays for noise generation. */
 export const warmFogTextures = () => FOG_PLANES.forEach(fogTexture);
 
-const glowPath = (
+/**
+ * The distant light.
+ *
+ * Painted into a low-resolution buffer and blurred before it reaches the
+ * frame, rather than composited as a gradient directly. A gradient, however
+ * many stops it has, still resolves to a shape with a findable edge; blurring
+ * it at low resolution dissolves that edge completely, which is what makes the
+ * light read as diffusing through the fog rather than lying on top of it.
+ */
+const paintLight = (
   ctx: CanvasRenderingContext2D,
   W: number,
   H: number,
@@ -110,26 +119,78 @@ const glowPath = (
   const gx = GLOW_X * W;
   const groundY = GROUND_TOP * H + H * 0.02;
   const glowH = GLOW_HEIGHT * H * spreadScale;
+
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.translate(gx, groundY - glowH * 0.42);
-  // A tall, soft column: light diffusing through fog, with no visible source.
-  ctx.scale(0.58, 1);
+
+  // The broad column of lit fog.
+  ctx.save();
+  ctx.translate(gx, groundY - glowH * 0.44);
+  ctx.scale(0.62, 1);
   const g = ctx.createRadialGradient(0, 0, 0, 0, 0, glowH);
-  // A long tail of low-alpha stops: the light has to fade out into the fog
-  // without ever showing an edge of its own.
-  g.addColorStop(0, palette.glow);
-  g.addColorStop(0.14, `${palette.glow}b4`);
-  g.addColorStop(0.3, `${palette.glowOuter}96`);
-  g.addColorStop(0.48, `${palette.glowOuter}52`);
-  g.addColorStop(0.68, `${palette.glowOuter}24`);
-  g.addColorStop(0.86, `${palette.glowOuter}0a`);
+  g.addColorStop(0, `${palette.glow}c8`);
+  g.addColorStop(0.18, `${palette.glow}8c`);
+  g.addColorStop(0.36, `${palette.glowOuter}5a`);
+  g.addColorStop(0.56, `${palette.glowOuter}2c`);
+  g.addColorStop(0.78, `${palette.glowOuter}10`);
   g.addColorStop(1, "#00000000");
   ctx.globalAlpha = intensity;
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(0, 0, glowH, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+
+  // The sun, where the version has one.
+  if (palette.sun) {
+    const sy = palette.sun.y * H;
+    const r = palette.sun.radius * H * spreadScale;
+    const core = mixHex(palette.glow, "#ffffff", 0.6);
+    ctx.save();
+    ctx.translate(gx, sy);
+    const disc = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 3.2);
+    // Flat through the disc, then a long fall-off: a sun in fog reads as a
+    // bright core that never quite ends.
+    disc.addColorStop(0, core);
+    disc.addColorStop(0.2, `${core}f0`);
+    disc.addColorStop(0.3, `${palette.glow}b4`);
+    disc.addColorStop(0.48, `${palette.glowOuter}70`);
+    disc.addColorStop(0.68, `${palette.glowOuter}34`);
+    disc.addColorStop(0.85, `${palette.glowOuter}14`);
+    disc.addColorStop(1, "#00000000");
+    ctx.globalAlpha = intensity;
+    ctx.fillStyle = disc;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+};
+
+/** The light, softened through a blurred low-resolution buffer. */
+const drawLight = (
+  ctx: CanvasRenderingContext2D,
+  opts: SceneOptions,
+  scale: number,
+  intensity: number,
+) => {
+  const { width: W, height: H, palette } = opts;
+  const lowW = Math.max(2, Math.round(W * LOW));
+  const lowH = Math.max(2, Math.round(H * LOW));
+  const src = buffer("light-src", lowW, lowH);
+  paintLight(src.ctx, lowW, lowH, palette, 1, 1);
+
+  const soft = buffer("light", lowW, lowH);
+  soft.ctx.filter = `blur(${(46 * scale * LOW).toFixed(2)}px)`;
+  soft.ctx.drawImage(src.canvas, 0, 0);
+  soft.ctx.filter = "none";
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = intensity;
+  ctx.drawImage(soft.canvas, 0, 0, W, H);
   ctx.restore();
 };
 
@@ -173,7 +234,7 @@ const drawTier = (
   scale: number,
 ) => {
   const { width: W, height: H, frame, duration, palette } = opts;
-  const trees = getTierLayout(tier);
+  const trees = getTierLayout(tier, getArtAspect(), W / H);
   const blurPx = tier.blur * scale;
 
   if (tier.lowRes) {
@@ -326,7 +387,7 @@ export const drawScene = (
 
   // --- 2. the distant light, pulsing almost imperceptibly ---
   const pulse = 1 + 0.07 * loopWave(frame, duration, 2, 0.12);
-  glowPath(ctx, W, H, palette, 1.0 * pulse, 1);
+  drawLight(ctx, opts, scale, 0.92 * pulse);
 
   // --- 3. tree tiers, each followed by the fog that sits in front of it ---
   const globalBreath = 1 + 0.16 * loopWave(frame, duration, 1, 0.4);
@@ -362,20 +423,20 @@ export const drawScene = (
   ctx.restore();
 
   // Mist hugging the ground, in front of everything.
-  drawFogPlane(ctx, 5, 0.24 * globalBreath, opts, scale);
+  drawFogPlane(ctx, 5, 0.2 * globalBreath, opts, scale);
 
   // --- 5. bloom, on the distant glow only ---
   const lowW = Math.max(2, Math.round(W * LOW));
   const lowH = Math.max(2, Math.round(H * LOW));
   const bloomSrc = buffer("bloom-src", lowW, lowH);
-  glowPath(bloomSrc.ctx, lowW, lowH, palette, 1, 0.92);
+  paintLight(bloomSrc.ctx, lowW, lowH, palette, 1, 1.35);
   const bloom = buffer("bloom", lowW, lowH);
-  bloom.ctx.filter = `blur(${(52 * scale * LOW).toFixed(2)}px)`;
+  bloom.ctx.filter = `blur(${(120 * scale * LOW).toFixed(2)}px)`;
   bloom.ctx.drawImage(bloomSrc.canvas, 0, 0);
   bloom.ctx.filter = "none";
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.globalAlpha = 0.3 * pulse;
+  ctx.globalAlpha = 0.2 * pulse;
   ctx.drawImage(bloom.canvas, 0, 0, W, H);
   ctx.restore();
 

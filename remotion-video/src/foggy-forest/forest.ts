@@ -1,7 +1,7 @@
 import type { Crop, TreeVariant } from "./assets";
 import { GLOW_X, LOW_RES } from "./constants";
 import type { Palette } from "./palettes";
-import { mulberry32, range, type Rng } from "./prng";
+import { mulberry32, range } from "./prng";
 
 /**
  * Depth tiers, far to near. Depth in this shot is entirely 2D — it comes from
@@ -11,7 +11,16 @@ import { mulberry32, range, type Rng } from "./prng";
 export type Tier = {
   name: string;
   seed: number;
+  /** Safety cap. Density is set by `gap`, since how many trees fit depends on
+   *  how wide they are. */
   count: number;
+  /**
+   * Spacing between neighbouring trunks, as a multiple of the two trees' summed
+   * half-widths. At 1 their silhouettes just touch; below that their crowns
+   * interlace, which real trees at the same distance do, while their trunks
+   * stay well apart. Above ~2 is a clearing.
+   */
+  gap: [number, number];
   /** Tree height as a fraction of frame height. */
   height: [number, number];
   /** Where the trunk base sits, as a fraction of frame height. */
@@ -31,9 +40,6 @@ export type Tier = {
   /** Tiers drawn into the low-resolution buffer: cheap, and they are blurred
    *  past the point where the extra resolution would ever be visible. */
   lowRes: boolean;
-  /** Explicit trunk positions, used by the near tier to hold its trees against
-   *  the frame edges instead of letting them sit across the middle. */
-  anchors?: readonly number[];
   /**
    * Windows onto the artwork the tier draws instead of whole trees, assigned to
    * instances in turn — how much of the tree, from the base up, each one shows.
@@ -50,8 +56,9 @@ export type Tier = {
 export const TIERS: readonly Tier[] = [
   {
     name: "far-b",
+    gap: [0.42, 1.15],
     seed: 1013,
-    count: 17,
+    count: 110,
     height: [0.18, 0.31],
     baseY: [0.876, 0.892],
     blur: 30,
@@ -65,8 +72,9 @@ export const TIERS: readonly Tier[] = [
   },
   {
     name: "far-a",
+    gap: [0.45, 1.25],
     seed: 2027,
-    count: 14,
+    count: 86,
     height: [0.29, 0.46],
     baseY: [0.888, 0.906],
     blur: 19,
@@ -74,29 +82,31 @@ export const TIERS: readonly Tier[] = [
     color: "treeFar",
     sway: 0.09,
     alignGapToGlow: true,
-    wash: 0.54,
+    wash: 0.46,
     washPlane: 1,
     lowRes: true,
   },
   {
     name: "mid-a",
+    gap: [0.45, 1.2],
     seed: 3041,
-    count: 11,
+    count: 60,
     height: [0.48, 0.72],
     baseY: [0.9, 0.922],
     blur: 11,
-    alpha: 0.6,
+    alpha: 0.68,
     color: "treeMid",
     sway: 0.16,
     alignGapToGlow: true,
-    wash: 0.42,
+    wash: 0.3,
     washPlane: 2,
     lowRes: true,
   },
   {
     name: "mid-b",
+    gap: [0.5, 1.3],
     seed: 4057,
-    count: 9,
+    count: 42,
     height: [0.70, 1.02],
     baseY: [0.918, 0.945],
     blur: 6,
@@ -110,8 +120,9 @@ export const TIERS: readonly Tier[] = [
   },
   {
     name: "near",
+    gap: [0.7, 1.35],
     seed: 5077,
-    count: 4,
+    count: 18,
     height: [1.3, 1.9],
     baseY: [0.99, 1.07],
     blur: 2,
@@ -122,9 +133,6 @@ export const TIERS: readonly Tier[] = [
     wash: 0.06,
     washPlane: 4,
     lowRes: false,
-    // Held against the left and right edges, with one trunk running the full
-    // height of the frame just inside the frame line.
-    anchors: [-0.05, 0.07, 0.9, 1.06],
     crops: [
       { cx: 0.5, w: 1, h: 0.74 },
       { cx: 0.5, w: 1, h: 1 },
@@ -150,37 +158,26 @@ export type TreeInstance = {
 };
 
 /**
- * Irregular trunk spacing: mostly medium gaps, some close pairs, some wide
- * clearings. Evenly spaced trunks are the fastest way to make a generated
- * forest look generated.
+ * Slides the run of trunks so a clearing frames the distant glow.
+ *
+ * Only gaps that already fall near the target are candidates. Taking the widest
+ * gap anywhere in the run — which is generated far wider than the frame — could
+ * mean sliding everything by more than a frame width to bring it into place,
+ * which emptied most of the shot.
  */
-const spacings = (rng: Rng): number[] => {
-  const xs: number[] = [];
-  let x = range(rng, -0.14, 0.0);
-  while (x < 1.14) {
-    xs.push(x);
-    const r = rng();
-    const step =
-      r < 0.24
-        ? range(rng, 0.022, 0.055) // close pair
-        : r < 0.82
-          ? range(rng, 0.085, 0.17)
-          : range(rng, 0.21, 0.34); // clearing
-    x += step;
-  }
-  return xs;
-};
+const REACH = 0.4;
 
-/** Slides the run of trunks so its widest clearing frames the distant glow. */
-const alignWidestGap = (xs: number[], target: number) => {
+const alignGapToTarget = (xs: number[], target: number) => {
   if (xs.length < 2) return xs;
-  let best = 0;
-  let bestCentre = xs[0];
+  let best = -1;
+  let bestCentre = target;
   for (let i = 1; i < xs.length; i++) {
+    const centre = (xs[i] + xs[i - 1]) / 2;
+    if (Math.abs(centre - target) > REACH) continue;
     const gap = xs[i] - xs[i - 1];
     if (gap > best) {
       best = gap;
-      bestCentre = (xs[i] + xs[i - 1]) / 2;
+      bestCentre = centre;
     }
   }
   const delta = target - bestCentre;
@@ -189,40 +186,84 @@ const alignWidestGap = (xs: number[], target: number) => {
 
 const layouts = new Map<string, TreeInstance[]>();
 
-export const getTierLayout = (tier: Tier): TreeInstance[] => {
-  const cached = layouts.get(tier.name);
+/**
+ * Places a tier's trees left to right.
+ *
+ * Each tree's size is drawn first, then the step to the next trunk is set from
+ * the two trees' actual widths. Spacing a forest by a bare fraction of the
+ * frame — as this did before — puts a small tree and a large one the same
+ * distance apart, so the large pair grow through each other while the small
+ * pair sit in a void. Stepping by width keeps every gap valid whatever sizes
+ * come up.
+ */
+export const getTierLayout = (
+  tier: Tier,
+  artAspect: number,
+  frameAspect: number,
+): TreeInstance[] => {
+  const key = `${tier.name}|${artAspect.toFixed(4)}|${frameAspect.toFixed(4)}`;
+  const cached = layouts.get(key);
   if (cached) return cached;
 
   const rng = mulberry32(tier.seed);
-  let chosen: number[];
-  if (tier.anchors) {
-    chosen = tier.anchors
-      .map((x) => x + range(rng, -0.02, 0.02))
-      .slice(0, tier.count);
-  } else {
-    let xs = spacings(rng);
-    if (tier.alignGapToGlow) xs = alignWidestGap(xs, GLOW_X);
-    // Keep the trees that land in or just outside frame, then thin to count.
-    const visible = xs.filter((x) => x > -0.2 && x < 1.2);
-    const step = Math.max(1, Math.floor(visible.length / tier.count));
-    chosen = visible.filter((_, i) => i % step === 0).slice(0, tier.count);
+  const draft: (Omit<TreeInstance, "x"> & { halfWidth: number })[] = [];
+
+  for (let i = 0; i < tier.count; i++) {
+    const crop = tier.crops ? tier.crops[i % tier.crops.length] : undefined;
+    const height = range(rng, tier.height[0], tier.height[1]);
+    // Width as a fraction of the frame, for this instance's size and crop.
+    const aspect = artAspect * (crop ? crop.w / crop.h : 1);
+    const halfWidth = (height * aspect) / frameAspect / 2;
+    draft.push({
+      y: range(rng, tier.baseY[0], tier.baseY[1]),
+      height,
+      flip: rng() < 0.5,
+      rotation: range(rng, -3, 3),
+      // Staggered integer cycle counts: every tree returns to its starting
+      // attitude at frame 900, but none of them sway in step.
+      swayCycles: 1 + (i % 3),
+      swayPhase: rng(),
+      swayAmp: tier.sway * range(rng, 0.7, 1.3),
+      crop,
+      halfWidth,
+    });
   }
 
-  const instances = chosen.map((x, i) => ({
-    x,
-    y: range(rng, tier.baseY[0], tier.baseY[1]),
-    height: range(rng, tier.height[0], tier.height[1]),
-    flip: rng() < 0.5,
-    rotation: range(rng, -3, 3),
-    // Staggered integer cycle counts: every tree returns to its starting
-    // attitude at frame 900, but none of them sway in step.
-    swayCycles: 1 + (i % 3),
-    swayPhase: rng(),
-    swayAmp: tier.sway * range(rng, 0.7, 1.3),
-    crop: tier.crops ? tier.crops[i % tier.crops.length] : undefined,
-  }));
+  const xs: number[] = [];
+  let x = -1.7;
+  for (let i = 0; i < draft.length; i++) {
+    if (i > 0) {
+      const span = draft[i - 1].halfWidth + draft[i].halfWidth;
+      // Most steps are ordinary; one in six opens a clearing.
+      const factor =
+        rng() < 0.17
+          ? range(rng, tier.gap[1], tier.gap[1] * 1.7)
+          : range(rng, tier.gap[0], tier.gap[1]);
+      x += span * factor;
+    }
+    xs.push(x);
+    if (x > 2.7) break;
+  }
 
-  layouts.set(tier.name, instances);
+  const placed = tier.alignGapToGlow ? alignGapToTarget(xs, GLOW_X) : xs;
+  const instances: TreeInstance[] = [];
+  placed.forEach((tx, i) => {
+    const d = draft[i];
+    if (tx < -0.35 - d.halfWidth || tx > 1.35 + d.halfWidth) return;
+    instances.push({
+      x: tx,
+      y: d.y,
+      height: d.height,
+      flip: d.flip,
+      rotation: d.rotation,
+      swayCycles: d.swayCycles,
+      swayPhase: d.swayPhase,
+      swayAmp: d.swayAmp,
+      crop: d.crop,
+    });
+  });
+
+  layouts.set(key, instances);
   return instances;
 };
 
@@ -249,13 +290,19 @@ export const variantFor = (
   crop: inst.crop,
 });
 
-/** Every rasterisation the scene needs, for prepareTrees(). */
+/**
+ * Every rasterisation the scene needs, for prepareTrees(). Enumerated from the
+ * tier configuration rather than from the layout, so it can be resolved before
+ * the artwork — and therefore the layout, which needs its aspect — is loaded.
+ */
 export const treeVariants = (
   palette: Palette,
   frameHeight: number,
 ): TreeVariant[] =>
   TIERS.flatMap((tier) =>
-    getTierLayout(tier).map((inst) =>
-      variantFor(tier, inst, palette, frameHeight),
-    ),
+    (tier.crops ?? [undefined]).map((crop) => ({
+      color: palette[tier.color],
+      height: rasterHeight(tier, frameHeight),
+      crop,
+    })),
   );

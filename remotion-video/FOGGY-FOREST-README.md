@@ -6,7 +6,7 @@ receding into thick fog, with a pale light glowing from deep in the woods.
 | Composition id | Look |
 |---|---|
 | `V1-FoggyForestTeal` | Teal night fog (reference match) |
-| `V2-FoggyForestAmber` | Warm amber dawn through mist |
+| `V2-FoggyForestAmber` | Warm amber dawn, with the sun low in the mist |
 | `V3-FoggyForestMono` | Neutral monochrome grey, for grading |
 
 All three are defined at **3840×2160, 30 fps, 900 frames (30s)** and loop
@@ -63,7 +63,13 @@ Everything is composited back to front onto a single 2D canvas
 (`src/foggy-forest/render.ts`):
 
 1. Sky, lightest around the distant glow and falling off to the frame edges.
-2. The distant light — a soft vertical column left of centre, no visible source.
+2. The distant light. It is painted into a low-resolution buffer and blurred
+   before it reaches the frame, rather than composited as a gradient: a
+   gradient, however many stops it has, still resolves to a shape with a
+   findable edge, and blurring dissolves that edge so the light reads as
+   diffusing through the fog rather than lying on top of it. V1 and V3 have no
+   visible source; V2 has a sun disc, still soft-edged because a sun seen
+   through this much fog has no hard limb.
 3. Five tree tiers, far to near, each **followed by** the fog plane that sits in
    front of it. That interleaving is the whole illusion: distant trees are
    genuinely inside the fog rather than under a global overlay.
@@ -87,7 +93,7 @@ so any frame renders identically in isolation.
 
 ## The tree
 
-The whole forest is **one tree**, drawn 55 times.
+The whole forest is **one tree**, drawn around 40 times per frame.
 
 `public/trees/tree.svg` is a vector trace of the supplied silhouette
 (`public/trees/tree-source.png`). Tracing rather than drawing the bitmap buys:
@@ -131,10 +137,27 @@ node tools/trace-svg.mjs public/trees/tree-source.png public/trees/tree.svg
 Drop any black silhouette in as `tree-source.png` and re-run. A white or a
 transparent background both work — the tracer composites onto white first.
 
+### Spacing
+
+Trees are placed left to right, and the step to the next trunk is set from the
+two trees' **actual widths** — each tree's size is drawn first, then the gap
+follows from it. Spacing by a bare fraction of the frame puts a small tree and a
+large one the same distance apart, so the large pair grow through each other
+while the small pair sit in a void. The gap factor is a multiple of the two
+trees' summed half-widths: at 1 their silhouettes just touch, below that their
+crowns interlace as real trees at the same distance do, while their trunks stay
+well apart, and above ~2 is a clearing.
+
+Each tier is generated far wider than the frame, then slid so that a clearing
+frames the light. Only gaps that already fall near the light are candidates for
+that — taking the widest gap anywhere in a run generated several frame widths
+wide meant sliding everything by more than a frame to bring it into place, which
+emptied most of the shot.
+
 ### Variation from one asset
 
-Scale, horizontal flip, ±3° rotation, and irregular trunk spacing. The near tier
-also varies **how much of the tree** each instance shows, from the base up.
+Scale, horizontal flip, ±3° rotation, and the irregular spacing above. The near
+tier also varies **how much of the tree** each instance shows, from the base up.
 
 A crop cuts the artwork on a straight line, so it is only ever applied where
 that cut falls outside the frame: the near-tier crops trim the top only, and

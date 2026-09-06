@@ -25,8 +25,13 @@ export const TREE_SVG = "trees/tree.svg";
  * forest off the ground line.
  */
 let trunkX = 0.5;
+let viewBox = { w: 1, h: 1 };
 
 export const getTrunkX = () => trunkX;
+
+/** Width / height of the traced artwork. Needed to space trees by how wide
+ *  they actually are rather than by a bare fraction of the frame. */
+export const getArtAspect = () => viewBox.w / viewBox.h;
 
 /**
  * Where the trunk base falls within a crop window, as a fraction of the
@@ -50,7 +55,6 @@ export type Crop = { cx: number; w: number; h: number };
 export type TreeVariant = { color: string; height: number; crop?: Crop };
 
 let svgSource: string | null = null;
-let viewBox = { w: 1, h: 1 };
 const rasterised = new Map<string, HTMLCanvasElement>();
 
 export const variantKey = ({ color, height, crop }: TreeVariant) =>
