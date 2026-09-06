@@ -5,26 +5,30 @@ export type CameraState = {
   target: [number, number, number];
 };
 
-// Camera drifts across and slightly through the aisles on a closed path.
-// Every term is built from sin/cos of a full turn, so frame 300 lands
-// exactly back on frame 0 and the loop is seamless.
+// Slow dolly inward. The camera starts at the outermost point of a shallow
+// closed arc and pushes toward the racks, then eases back out along a
+// slightly different line - the small lateral bow means the way out isn't a
+// retrace of the way in, and the move never comes to a standstill at the
+// turnaround. Built from sin/cos of a single full turn, so frame 300 lands
+// exactly back on frame 0 and the loop stays seamless.
 const BASE_Y = 9.8;
-const BASE_Z = 18.5;
-const SWEEP_X = 3.4; // lateral drift
-const RISE_Y = 0.85; // the "small rise"
-const PUSH_Z = 2.6; // gentle push through the aisles and back
+const Z_CENTER = 18.0;
+const Z_REACH = 2.4; // how far it pushes in, and back out again
+const X_ARC = 0.7; // slight sideways bow, keeps the return path distinct
+const Y_RISE = 0.45;
 
 export const cameraAt = (frame: number): CameraState => {
   const a = (2 * Math.PI * frame) / DURATION_IN_FRAMES;
 
-  const x = SWEEP_X * Math.sin(a);
-  const y = BASE_Y + RISE_Y * Math.sin(a);
-  const z = BASE_Z + PUSH_Z * 0.5 * (Math.cos(a) - 1);
-
-  // The target tracks the camera laterally so the view direction barely
-  // changes - the whole move stays within a couple of degrees of rotation.
   return {
-    position: [x, y, z],
-    target: [x * 0.86, 1.3, -2.6],
+    position: [
+      X_ARC * Math.sin(a),
+      BASE_Y + Y_RISE * Math.sin(a),
+      Z_CENTER + Z_REACH * Math.cos(a),
+    ],
+    // Target is fixed, so moving the camera toward it reads as a dolly
+    // rather than a pan. The lateral bow swings the view by under two
+    // degrees across the whole loop.
+    target: [0, 1.3, -2.6],
   };
 };

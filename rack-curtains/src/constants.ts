@@ -32,8 +32,3 @@ export const DOF_FOCUS = 17.5;
 export const DOF_RANGE = 12.0;
 export const DOF_BUCKETS = 5;
 
-// --- Light shafts ---------------------------------------------------------
-export const SHAFT_COUNT = 7;
-// Each shaft is several stacked transparent planes rather than a true
-// volumetric pass - far cheaper and, at this softness, indistinguishable.
-export const SHAFT_LAYERS = 3;

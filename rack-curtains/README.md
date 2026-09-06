@@ -1,8 +1,8 @@
 # Data Rack Curtains
 
 A looping 3D motion graphic: aisles of tall dotted panels standing in a hazy
-blue space like server racks, with shafts of light falling between them and the
-camera drifting slowly on a closed path.
+blue space like server racks, with the camera pushing slowly inward on a closed
+path.
 
 Two versions share the same geometry and motion:
 
@@ -56,10 +56,14 @@ slower.
 Measured on a 4-core Intel Xeon @ 2.80GHz, 15 GB RAM, **no GPU** - so Chromium
 fell back to SwiftShader (software GL) and Remotion chose a concurrency of 2:
 
-| Composition | Output          | 300 frames | Per frame  |
-| ----------- | --------------- | ---------- | ---------- |
-| V1 cyan     | 1080p (`--scale=0.5`) | 6m 30s | **1.30 s** |
-| V2 magenta  | 1080p (`--scale=0.5`) | 6m 42s | **1.34 s** |
+| Composition | Frames rendered       | Wall clock | Per frame  |
+| ----------- | --------------------- | ---------- | ---------- |
+| V1 cyan     | 100 (`--frames=0-99`) | 1m 33s     | **0.93 s** |
+| V2 magenta  | 300 (full)            | 4m 26s     | **0.89 s** |
+
+Both are 1080p (`--scale=0.5`). The two are the same workload - only the
+palette uniforms differ - and the shorter run carries proportionally more of
+the one-time bundle and browser startup, which is the whole gap between them.
 
 Note that the composition is 4K, so a `--scale=0.5` render still shades every
 frame at 3840x2160 and downsamples - which is where the supersampled edge
@@ -79,11 +83,13 @@ this same box would be roughly 4x the per-frame figures above.
   fragment keeps a panel from carrying a blur gradient across its own face.
 - **Bloom** is a `backdrop-filter` pass that blurs what has already been drawn
   and screens it back over the top, with a contrast step first so the glow
-  gathers on the bright dots and shafts instead of lifting the whole frame.
+  gathers on the bright dots instead of lifting the whole frame.
   That avoids a second WebGL render.
-- **Light shafts** are stacked transparent planes with a soft gradient, yawed
-  to face the camera - far cheaper than a true volumetric pass and, at this
-  softness, indistinguishable.
+- **Camera** is a slow dolly inward on a shallow closed arc: it pushes toward
+  the racks and eases back out along a slightly different line, so the return
+  isn't a retrace and the move never stalls at the turnaround. The target is
+  fixed, which keeps it a dolly rather than a pan - under two degrees of swing
+  across the whole loop.
 - **Looping.** The camera path and every pattern state is a pure function of
   `useCurrentFrame()` - no `useFrame` clock and no delta accumulation, since
   Remotion renders frames out of order across threads. Time reaches the shaders

@@ -7,7 +7,6 @@ import { DURATION_IN_FRAMES, GRID_YAW, PANEL_HEIGHT } from "./constants";
 import { paletteSchema, V1_CYAN, type Palette } from "./palette";
 import { cameraAt } from "./scene/camera";
 import { Panels } from "./scene/Panels";
-import { Shafts } from "./scene/Shafts";
 import { Backdrop } from "./scene/Backdrop";
 import { Grain } from "./scene/Grain";
 
@@ -45,11 +44,6 @@ const Scene: React.FC<{ palette: Palette; seed: number; frame: number }> = ({
   frame,
 }) => {
   const time = (frame % DURATION_IN_FRAMES) / DURATION_IN_FRAMES;
-  const { position } = cameraAt(frame);
-
-  // Shafts billboard toward the camera. Working in the yawed grid's local
-  // space keeps them sitting in the aisles.
-  const faceYaw = Math.atan2(position[0], position[2]) - GRID_YAW;
 
   return (
     <>
@@ -68,8 +62,6 @@ const Scene: React.FC<{ palette: Palette; seed: number; frame: number }> = ({
             blurBias={1.6}
           />
         </group>
-
-        <Shafts palette={palette} time={time} seed={seed + 991} faceYaw={faceYaw} />
       </group>
     </>
   );
