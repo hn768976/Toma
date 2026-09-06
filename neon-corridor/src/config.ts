@@ -17,8 +17,15 @@ export const HALF_WIDTH = 2.5;
 export const HEIGHT_UNITS = 3.0;
 
 // --- Corridor depth -------------------------------------------------------
-/** Neon rectangles alive at any moment. */
-export const FRAME_COUNT = 26;
+/**
+ * Neon rectangles alive at any moment.
+ *
+ * With no haze plane at the vanishing point any more, nothing hides the end of
+ * the tunnel but the fog — so the corridor has to run deep enough that the
+ * rectangles are long invisible before the last one, and dim gradually on the
+ * way rather than dropping off a cliff into a hard-edged black hole.
+ */
+export const FRAME_COUNT = 46;
 /**
  * World-space gap between consecutive rectangles.
  *
@@ -28,12 +35,22 @@ export const FRAME_COUNT = 26;
  * ratio — pins that product at ~0.70, which is what this pair is chosen to
  * hit. Change one and you must change the other.
  */
-export const SPACING = 2.03;
+export const SPACING = 3.2;
 /**
  * Z of slot 0. Positive means "just behind the camera", which is where the
  * back-to-front recycling happens, so a tube is never seen popping.
  */
 export const Z_SLOT0 = 0.5;
+
+/**
+ * How far the camera travels over one loop, in frame-spacings.
+ *
+ * Must be a whole number: the loop closes because every tube advances an
+ * integer number of slots, leaving the set of occupied positions identical at
+ * t = 0 and t = 1. A fractional value would put the tubes between slots at the
+ * wrap and produce a visible jump.
+ */
+export const TRAVEL_SPACINGS = 6;
 export const CORRIDOR_DEPTH = FRAME_COUNT * SPACING;
 
 // --- Tubes ----------------------------------------------------------------
@@ -56,6 +73,9 @@ export const FLOAT_X = 0.022;
 export const FLOAT_Y = 0.016;
 
 // --- Atmosphere -----------------------------------------------------------
-export const FOG_DENSITY = 0.022;
+// Light enough to leave a long, gradual tail of ever-smaller rectangles
+// converging on the vanishing point. FogExp2 falls off sharply, and a denser
+// setting cuts the corridor off while the innermost frame is still bright.
+export const FOG_DENSITY = 0.016;
 /** Depth at which the neon colour ramp has fully reached its far end. */
-export const RAMP_DEPTH = 16;
+export const RAMP_DEPTH = 25;

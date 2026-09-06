@@ -13,8 +13,6 @@ export type Palette = {
 	readonly alt: string;
 	/** Near-black field colour; also the fog colour. */
 	readonly background: string;
-	/** Haze at the vanishing point. */
-	readonly haze: string;
 	/** Faint tint of the wet floor itself, before reflections. */
 	readonly floorTint: string;
 	/** Walls and ceiling. */
@@ -28,7 +26,6 @@ export const MAGENTA: Palette = {
 	far: '#7a3ce8',
 	alt: '#8c34e4',
 	background: '#0a0210',
-	haze: '#8f36d8',
 	floorTint: '#150520',
 	shell: '#1a0828',
 };
@@ -40,7 +37,6 @@ export const CYAN: Palette = {
 	far: '#1e6fd9',
 	alt: '#2087dd',
 	background: '#010c12',
-	haze: '#2a8fdd',
 	floorTint: '#03141d',
 	shell: '#03192a',
 };
@@ -72,7 +68,7 @@ const linear = (hex: string) => {
  * whole way down the tunnel, while the *glow* around them stays violet.
  */
 export const intensityAt = (depth: number) =>
-	0.4 + 3.8 / (1 + Math.pow(depth / 11, 1.5));
+	0.4 + 3.8 / (1 + Math.pow(depth / 17, 1.5));
 
 /**
  * Colour of a tube at a given depth.

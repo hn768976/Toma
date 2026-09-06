@@ -1,15 +1,7 @@
 import React, {useMemo} from 'react';
-import {AdditiveBlending, Color, DoubleSide} from 'three';
+import {DoubleSide} from 'three';
 import {useCurrentFrame, useVideoConfig} from 'remotion';
-import {
-	CORRIDOR_DEPTH,
-	FRAME_COUNT,
-	HALF_WIDTH,
-	HEIGHT_UNITS,
-	SPACING,
-	TUBE_THICKNESS,
-	Z_SLOT0,
-} from '../config';
+import {FRAME_COUNT, HALF_WIDTH} from '../config';
 import {depthOfSlot, loopT, slotOf, zOfSlot} from '../loop';
 import {flickerAt} from '../flicker';
 import {neonColorAt, type Palette} from '../palette';
@@ -26,7 +18,7 @@ import {Shell} from './Shell';
  * depth alone, this costs the loop nothing (see loop.ts).
  */
 const baseBarGain = (depth: number) => {
-	const t = Math.min(1, Math.max(0, (depth - 5) / 9));
+	const t = Math.min(1, Math.max(0, (depth - 8) / 14));
 	return 0.18 * t * t * (3 - 2 * t);
 };
 
@@ -51,7 +43,7 @@ export const Corridor: React.FC<{palette: Palette}> = ({palette}) => {
 		return Array.from({length: FRAME_COUNT}, (_, k) => {
 			const slot = slotOf(k, t);
 			const depth = depthOfSlot(slot);
-			const gain = flickerAt(slot, frame, durationInFrames);
+			const gain = flickerAt(k, frame, durationInFrames);
 			const barGain = baseBarGain(depth);
 			return {
 				key: k,
@@ -73,9 +65,6 @@ export const Corridor: React.FC<{palette: Palette}> = ({palette}) => {
 			return {key: k, z: zOfSlot(slot), color: neonColorAt(depth, palette, 1.15)};
 		});
 	}, [t, palette]);
-
-	const shellZ = Z_SLOT0 - CORRIDOR_DEPTH / 2;
-	const shellLen = CORRIDOR_DEPTH + 8;
 
 	return (
 		<group>
@@ -109,52 +98,6 @@ export const Corridor: React.FC<{palette: Palette}> = ({palette}) => {
 			))}
 
 			<Shell palette={palette} />
-
-			<Haze palette={palette} />
 		</group>
-	);
-};
-
-/**
- * Soft bright haze past the last rectangle, so the corridor fades into a glow
- * instead of terminating. Fog is off for this one — it *is* the far end.
- */
-const Haze: React.FC<{palette: Palette}> = ({palette}) => {
-	const uniforms = useMemo(
-		() => ({
-			uColor: {value: new Color(palette.haze).multiplyScalar(2.6)},
-		}),
-		[palette],
-	);
-
-	return (
-		<mesh position={[0, HEIGHT_UNITS * 0.42, Z_SLOT0 - (FRAME_COUNT - 3) * SPACING]}>
-			<planeGeometry args={[HALF_WIDTH * 2.4, HEIGHT_UNITS * 1.8]} />
-			<shaderMaterial
-				uniforms={uniforms}
-				transparent
-				depthWrite={false}
-				blending={AdditiveBlending}
-				toneMapped={false}
-				side={DoubleSide}
-				vertexShader={`
-					varying vec2 vUv;
-					void main() {
-						vUv = uv;
-						gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-					}
-				`}
-				fragmentShader={`
-					uniform vec3 uColor;
-					varying vec2 vUv;
-					void main() {
-						vec2 d = (vUv - 0.5) * vec2(1.0, 1.35);
-						float r = length(d) * 2.0;
-						float a = exp(-r * r * 3.2);
-						gl_FragColor = vec4(uColor * a, a);
-					}
-				`}
-			/>
-		</mesh>
 	);
 };

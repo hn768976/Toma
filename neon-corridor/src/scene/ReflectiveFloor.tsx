@@ -17,6 +17,7 @@ import {
 	HALF_WIDTH,
 	RAMP_DEPTH,
 	SPACING,
+	TRAVEL_SPACINGS,
 	Z_SLOT0,
 } from '../config';
 import {loopT} from '../loop';
@@ -159,7 +160,7 @@ const fragmentShader = /* glsl */ `
 export const ReflectiveFloor: React.FC<{palette: Palette}> = ({palette}) => {
 	const frame = useCurrentFrame();
 	const {durationInFrames} = useVideoConfig();
-	const travel = loopT(frame, durationInFrames) * SPACING;
+	const travel = loopT(frame, durationInFrames) * SPACING * TRAVEL_SPACINGS;
 
 	const gl = useThree((s) => s.gl);
 	const scene = useThree((s) => s.scene);
@@ -218,7 +219,7 @@ export const ReflectiveFloor: React.FC<{palette: Palette}> = ({palette}) => {
 	uniforms.uTravel.value = travel;
 	uniforms.uFogColor.value.set(palette.background);
 	uniforms.uFloorTint.value.set(palette.floorTint);
-	uniforms.uSpillNear.value.copy(neonColorAt(14, palette, SPILL_GAIN));
+	uniforms.uSpillNear.value.copy(neonColorAt(22, palette, SPILL_GAIN));
 	uniforms.uSpillFar.value.copy(neonColorAt(RAMP_DEPTH, palette, SPILL_GAIN));
 
 	const clearColor = useMemo(() => new Color(), []);

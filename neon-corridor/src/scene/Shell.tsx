@@ -65,7 +65,7 @@ const fragmentShader = /* glsl */ `
 const useShellUniforms = (palette: Palette, gain: number, gradient: number) =>
 	useMemo(
 		() => ({
-			uSpillNear: {value: neonColorAt(14, palette, gain)},
+			uSpillNear: {value: neonColorAt(22, palette, gain)},
 			uSpillFar: {value: neonColorAt(RAMP_DEPTH, palette, gain)},
 			uBase: {value: new Color(palette.shell)},
 			uFogColor: {value: new Color(palette.background)},

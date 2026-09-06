@@ -43,8 +43,8 @@ export const Effects: React.FC = () => {
 		// Near frames slightly soft, mid corridor sharp, far end softening into
 		// the haze.
 		const dof = new DepthOfFieldEffect(camera, {
-			worldFocusDistance: 13,
-			worldFocusRange: 20,
+			worldFocusDistance: 20,
+			worldFocusRange: 32,
 			bokehScale: 2.2,
 			resolutionScale: 0.5,
 		});

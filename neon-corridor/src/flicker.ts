@@ -1,4 +1,4 @@
-import {slotDistance} from './loop';
+import {FRAME_COUNT, TRAVEL_SPACINGS} from './config';
 
 /** Deterministic scalar hash — no Math.random anywhere in this project. */
 export const hash1 = (n: number) => {
@@ -12,7 +12,7 @@ export const hash1 = (n: number) => {
 const SEED = 20260904;
 const EVENT_COUNT = 3;
 
-type FlickerEvent = {start: number; length: number; slot: number};
+type FlickerEvent = {start: number; length: number; tube: number};
 
 /**
  * Three failing-tube events across the loop. Sparse by design — the corridor
@@ -23,12 +23,19 @@ const eventsFor = (durationInFrames: number): FlickerEvent[] =>
 		const r0 = hash1(SEED + i * 7919);
 		const r1 = hash1(SEED + i * 104729);
 		const r2 = hash1(SEED + i * 15485863);
-		return {
-			start: Math.floor(((i + 0.15 + r0 * 0.5) / EVENT_COUNT) * durationInFrames),
-			length: 9 + Math.floor(r1 * 8),
-			// Slots 2..8: near enough to read clearly, far enough to be on screen.
-			slot: 2 + Math.floor(r2 * 7),
-		};
+		const start = Math.floor(((i + 0.15 + r0 * 0.5) / EVENT_COUNT) * durationInFrames);
+		const length = 9 + Math.floor(r1 * 8);
+		// Slots 2..8: near enough to read clearly, far enough to be on screen.
+		const slot = 2 + Math.floor(r2 * 7);
+
+		// Resolve that slot to whichever tube is standing in it halfway through
+		// the event, and flicker that tube for the event's duration. Inverting
+		// slotOf: slot = k - TRAVEL_SPACINGS * t, so k = slot + TRAVEL_SPACINGS * t.
+		const tMid = (start + length / 2) / durationInFrames;
+		const tube =
+			(Math.round(slot + TRAVEL_SPACINGS * tMid) % FRAME_COUNT + FRAME_COUNT) % FRAME_COUNT;
+
+		return {start, length, tube};
 	});
 
 const eventCache = new Map<number, FlickerEvent[]>();
@@ -57,29 +64,28 @@ const stutter = (tau: number, seed: number) => {
 };
 
 /**
- * Brightness multiplier for a tube currently standing in `slot`.
+ * Brightness multiplier for tube `k`.
  *
- * Keyed off the slot rather than the tube's identity, which is what makes the
- * loop exact (see loop.ts). The events are 9-16 frames long, over which the
- * corridor advances less than 6% of one spacing — far too little to notice
- * that the flicker is anchored to a position rather than to a tube, so it
- * still reads as one specific tube failing.
+ * Keyed off the tube's identity, so the flicker travels with the tube down the
+ * corridor. That matters at TRAVEL_SPACINGS = 6: an event runs 9-16 frames,
+ * over which the corridor now advances up to a quarter of a spacing, and a
+ * position-keyed flicker would visibly slide off its tube onto the next one.
  *
- * The Gaussian falloff over slot distance keeps it continuous: a tube crossing
- * a slot boundary mid-event hands the flicker over smoothly instead of
- * snapping.
+ * This is the one place the loop.ts rule is broken on purpose, and it is still
+ * exact. The rule exists because at t = 1 a different tube stands where tube k
+ * stood at t = 0 — but every event opens and closes strictly inside the loop,
+ * and the `sin(pi * tau)` envelope means the multiplier is exactly 1 at both
+ * ends. Both boundary frames are therefore unflickered whichever tube is
+ * where, so the wrap is untouched.
  */
-export const flickerAt = (slot: number, frame: number, durationInFrames: number) => {
+export const flickerAt = (k: number, frame: number, durationInFrames: number) => {
 	let mul = 1;
 	for (const ev of getEvents(durationInFrames)) {
 		const local = frame - ev.start;
 		if (local < 0 || local > ev.length) continue;
+		if (k !== ev.tube) continue;
 
-		const d = slotDistance(slot, ev.slot);
-		if (d > 1.4) continue;
-
-		const w = Math.exp(-(d * d) / (2 * 0.35 * 0.35));
-		mul *= 1 + w * (stutter(local / ev.length, ev.slot) - 1);
+		mul *= stutter(local / ev.length, ev.tube);
 	}
 	return mul;
 };
