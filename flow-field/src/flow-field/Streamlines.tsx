@@ -80,7 +80,7 @@ export const Streamlines: React.FC<{
 
     // Room for every trail segment plus the wider bloom and halo quads the
     // brightest of them add on top.
-    const capacity = Math.ceil(particles.maxSegments * 1.3);
+    const capacity = Math.ceil(particles.maxSegments * 1.25);
     const buffers = createTrailBuffers(capacity);
 
     const geometry = new THREE.BufferGeometry();

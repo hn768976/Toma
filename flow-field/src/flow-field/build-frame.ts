@@ -24,6 +24,8 @@ import {
   NEAR_DEPTH,
   STEP,
   TRAIL_MAX,
+  TRAIL_MAX_TURN,
+  TRAIL_STEP,
 } from "./constants";
 import { GRID_DX, GRID_DZ, sampleGrid, updateField, type Field } from "./field";
 import type { Particles } from "./particles";
@@ -75,7 +77,6 @@ const ptR = new Float32Array(TRAIL_MAX + 1);
 const ptG = new Float32Array(TRAIL_MAX + 1);
 const ptB = new Float32Array(TRAIL_MAX + 1);
 const ptOn = new Uint8Array(TRAIL_MAX + 1);
-const ptEnergy = new Float32Array(TRAIL_MAX + 1);
 
 export type BuildArgs = {
   frame: number;
@@ -245,27 +246,24 @@ export const buildFrame = ({
   for (let i = 0; i < count; i++) {
     const c = cycle[i];
     const age = (frame + phase[i]) % c;
-    if (age < 2) continue;
 
-    const len = Math.min(trail[i], age);
-    if (len < 2) continue;
+    // A reset is the only moment a filament is not a full solid line, so it is
+    // faded all the way out and back in rather than cut.
+    const life =
+      smoothstep(0, FADE_IN_STEPS, age) * smoothstep(0, FADE_OUT_STEPS, c - age);
+    if (life <= 0.002) continue;
 
-    // --- integrate the streamline forward from the seed ----------------------
+    // --- find the head ------------------------------------------------------
+    // One RK2 (midpoint) step per frame of age. Velocity is normalised, so
+    // every particle moves at its own steady pace along the streamline rather
+    // than racing through the strong parts of the field and stalling in the
+    // weak ones.
     const h = STEP * speed[i];
     const halfH = h * 0.5;
     let x = seedX[i];
     let z = seedZ[i];
-    const skip = age - len;
 
-    // One RK2 (midpoint) step per frame of age. Velocity is normalised, so
-    // every particle moves at its own steady pace along the streamline rather
-    // than racing through the strong parts of the field and stalling in the
-    // weak ones — and the trail keeps a stable length.
     for (let s = 0; s < age; s++) {
-      if (s === skip) {
-        trailX[0] = x;
-        trailZ[0] = z;
-      }
       const v1x = sampleGrid(gvx, x, z);
       const v1z = sampleGrid(gvz, x, z);
       let inv = 1 / (Math.sqrt(v1x * v1x + v1z * v1z) + 1e-9);
@@ -276,23 +274,76 @@ export const buildFrame = ({
       inv = 1 / (Math.sqrt(v2x * v2x + v2z * v2z) + 1e-9);
       x += v2x * inv * h;
       z += v2z * inv * h;
-      if (s >= skip) {
-        trailX[s - skip + 1] = x;
-        trailZ[s - skip + 1] = z;
+    }
+
+    // --- walk the trail backward out of the head ----------------------------
+    // Backward, not forward from the seed: a trail grown forward is only as
+    // long as the particle is old, so every young particle would draw a short
+    // stub. Running the streamline back out of the head instead means the line
+    // is its full length on every frame of its life.
+    //
+    // The step here is TRAIL_STEP, not the head's per-frame advance, so the
+    // clip can be slowed down without the filaments getting shorter.
+    const len = trail[i];
+    trailX[len] = x;
+    trailZ[len] = z;
+    const halfT = TRAIL_STEP * 0.5;
+    let tail = 0;
+    let turn = 0;
+    let prevX = 0;
+    let prevZ = 0;
+    let hasPrev = false;
+
+    for (let s = len - 1; s >= 0; s--) {
+      const v1x = sampleGrid(gvx, x, z);
+      const v1z = sampleGrid(gvz, x, z);
+      let inv = 1 / (Math.sqrt(v1x * v1x + v1z * v1z) + 1e-9);
+      const mx = x - v1x * inv * halfT;
+      const mz = z - v1z * inv * halfT;
+      const v2x = sampleGrid(gvx, mx, mz);
+      const v2z = sampleGrid(gvz, mx, mz);
+      inv = 1 / (Math.sqrt(v2x * v2x + v2z * v2z) + 1e-9);
+      const dirX = -v2x * inv;
+      const dirZ = -v2z * inv;
+
+      // Signed turn, accumulated as the 2D cross product of successive unit
+      // directions — sin(theta), which is the angle itself at these step sizes.
+      if (hasPrev) turn += prevX * dirZ - prevZ * dirX;
+      prevX = dirX;
+      prevZ = dirZ;
+      hasPrev = true;
+
+      x += dirX * TRAIL_STEP;
+      z += dirZ * TRAIL_STEP;
+      trailX[s] = x;
+      trailZ[s] = z;
+
+      if (turn > TRAIL_MAX_TURN || turn < -TRAIL_MAX_TURN) {
+        tail = s;
+        break;
       }
     }
 
-    // Age envelope. Trails grow from nothing at birth and dim away before the
-    // reset, so the once-per-cycle jump back to the seed is never visible.
-    const life =
-      smoothstep(0, FADE_IN_STEPS, age) * smoothstep(0, FADE_OUT_STEPS, c - age);
-    if (life <= 0.002) continue;
+    const span = len - tail;
+    if (span < 8) continue;
 
-    const particleBias = bias[i];
+    // Brightness is a property of the *filament*, sampled once at the head, not
+    // of each point along it. Sampling per point makes a long trail that
+    // crosses a ribbon boundary light up only partway and read as a broken
+    // line; the reference's bright strands are evenly lit end to end.
+    const ribbon = smoothstep(-0.55, 0.55, sampleGrid(gb, trailX[len], trailZ[len]));
+    const energy = clamp(bias[i] * (0.6 + 1.05 * ribbon), 0, 1);
+    const lut3 = ((energy * 255) | 0) * 3;
+    const rampR = rampLut[lut3];
+    const rampG = rampLut[lut3 + 1];
+    const rampB = rampLut[lut3 + 2];
+    const baseIntensity = 0.5 + 1.3 * Math.pow(energy, 1.6);
+    const isBloom = energy > BLOOM_THRESHOLD;
+    const isHalo = energy > HALO_THRESHOLD;
     let anyOn = false;
 
     // --- project, shade and colour every point on the trail ------------------
-    for (let j = 0; j <= len; j++) {
+    for (let j = tail; j <= len; j++) {
       const wx = trailX[j];
       const wz = trailZ[j];
       const wy = sampleGrid(gh, wx, wz);
@@ -313,7 +364,6 @@ export const buildFrame = ({
         ptR[j] = 0;
         ptG[j] = 0;
         ptB[j] = 0;
-        ptEnergy[j] = 0;
         continue;
       }
 
@@ -344,14 +394,6 @@ export const buildFrame = ({
       }
       ptSigma[j] = sigma;
 
-      // Brightness. The spread from dim to hot is carried by the per-particle
-      // bias; the low-frequency ribbon field only modulates it up and down
-      // around a solid base, so hot filaments cluster into bands without any
-      // part of the frame going flat or blowing out wholesale.
-      const ribbon = smoothstep(-0.55, 0.55, sampleGrid(gb, wx, wz));
-      const energy = clamp(particleBias * (0.6 + 1.05 * ribbon), 0, 1);
-      ptEnergy[j] = energy;
-
       // Surface orientation: crests turned toward the camera read brighter,
       // which is what makes the relief legible at all.
       const dhx =
@@ -368,28 +410,32 @@ export const buildFrame = ({
 
       const fog = Math.exp(-Math.pow(depth / FOG_DISTANCE, FOG_POWER));
 
-      const u = j / len;
-      const taper = smoothstep(0, 0.12, u) * (0.55 + 0.45 * u);
+      const u = (j - tail) / span;
+      // Both ends taper to nothing. Without a fade at the head a filament stops
+      // dead mid-frame, and a hard end reads as a broken line rather than as a
+      // line that simply finishes.
+      const taper =
+        smoothstep(0, 0.18, u) *
+        smoothstep(0, 0.12, 1 - u) *
+        (0.62 + 0.38 * u);
 
       const intensity =
-        (0.5 + 1.3 * Math.pow(energy, 1.6)) *
+        baseIntensity *
         fog *
         shade *
         taper *
         life *
         energyScale;
 
-      const lut = (energy * 255) | 0;
-      const l3 = lut * 3;
-      ptR[j] = rampLut[l3] * intensity;
-      ptG[j] = rampLut[l3 + 1] * intensity;
-      ptB[j] = rampLut[l3 + 2] * intensity;
+      ptR[j] = rampR * intensity;
+      ptG[j] = rampG * intensity;
+      ptB[j] = rampB * intensity;
     }
 
     if (!anyOn) continue;
 
     // --- emit ribbon quads ---------------------------------------------------
-    for (let j = 0; j < len; j++) {
+    for (let j = tail; j < len; j++) {
       if (!ptOn[j] && !ptOn[j + 1]) continue;
       const da = ptDepth[j];
       const db = ptDepth[j + 1];
@@ -445,8 +491,7 @@ export const buildFrame = ({
         ptR[j + 1], ptG[j + 1], ptB[j + 1],
       );
 
-      const eMax = ptEnergy[j] > ptEnergy[j + 1] ? ptEnergy[j] : ptEnergy[j + 1];
-      if (eMax <= BLOOM_THRESHOLD) continue;
+      if (!isBloom) continue;
 
       const midDepth = (da + db) * 0.5;
       const worldPerPxMid = worldPerPxK * midDepth;
@@ -487,7 +532,7 @@ export const buildFrame = ({
 
       // A very faint wide glow under the hottest strands, so the frame is not
       // uniformly black between the lines.
-      if (eMax > HALO_THRESHOLD) {
+      if (isHalo) {
         const haloSigma = Math.min(sigmaMid * HALO_WIDTH_MULT, haloCap);
         const haloStride = Math.max(
           1,

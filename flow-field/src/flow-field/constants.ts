@@ -61,8 +61,17 @@ export const FIELD_OCTAVES: { wavelength: number; weight: number }[] = [
   { wavelength: 23, weight: 0.16 }, // per-line wobble
 ];
 
-/** Radius of the circle walked through the noise's two time axes. */
-export const FIELD_TIME_RADIUS = 0.62;
+/**
+ * Radius of the circle walked through the noise's two time axes — i.e. how far
+ * the field is allowed to evolve over the loop.
+ *
+ * Small on purpose. Noise features sit about one unit apart, so a radius R
+ * carries the field 2*PI*R feature-lengths over the whole 15 s; anything much
+ * above 0.2 and the vortices re-form rather than drift, which reads as churn
+ * instead of flow. The motion in this clip is meant to be the particles moving
+ * through a near-standing field, not the field rearranging itself.
+ */
+export const FIELD_TIME_RADIUS = 0.16;
 
 // ---------------------------------------------------------------------------
 // Surface relief. Slopes stay under the camera pitch so the surface never folds
@@ -74,7 +83,7 @@ export const RELIEF_OCTAVES: { wavelength: number; amplitude: number }[] = [
   { wavelength: 70, amplitude: 1.1 },
 ];
 
-export const RELIEF_TIME_RADIUS = 0.34;
+export const RELIEF_TIME_RADIUS = 0.1;
 
 // ---------------------------------------------------------------------------
 // Brightness field — low frequency, so hot filaments cluster into ribbons
@@ -83,33 +92,64 @@ export const RELIEF_TIME_RADIUS = 0.34;
 
 export const BRIGHT_WAVELENGTH = 88;
 export const BRIGHT_WAVELENGTH_2 = 27;
-export const BRIGHT_TIME_RADIUS = 0.45;
+export const BRIGHT_TIME_RADIUS = 0.14;
 
 // ---------------------------------------------------------------------------
 // Particles.
 // ---------------------------------------------------------------------------
 
-export const PARTICLE_COUNT = 7000;
+export const PARTICLE_COUNT = 1800;
 
 /**
  * Per-particle life lengths. Each divides evenly into DURATION_IN_FRAMES, so
- * every particle is back at its seed on frame 450; because several different
+ * every particle is back at its seed on frame 450; because two different
  * lengths are in play the *ensemble* only repeats at 450 rather than at the
- * shortest cycle.
+ * shorter one. Long lives keep resets rare, which matters because a reset is
+ * the only moment a filament is not at full brightness.
  */
-export const CYCLE_LENGTHS = [75, 90, 150, 225];
+export const CYCLE_LENGTHS = [225, 450];
 
-export const TRAIL_MIN = 28;
-export const TRAIL_MAX = 100;
+/**
+ * Trail length in steps. Trails are integrated backward from the head, so a
+ * particle carries its full length from the moment it appears — nothing ever
+ * shows up as a short stub part-way through growing.
+ */
+export const TRAIL_MIN = 200;
+export const TRAIL_MAX = 290;
 
-/** World units advanced along a streamline per frame, before per-particle scale. */
-export const STEP = 0.34;
-export const SPEED_MIN = 0.72;
-export const SPEED_MAX = 1.5;
+/**
+ * World units the head advances per frame. This is the speed of the clip and
+ * nothing else: it is deliberately far smaller than TRAIL_STEP so a filament
+ * drifts about its own length over the whole loop and the eye can follow one.
+ */
+export const STEP = 0.15;
+export const SPEED_MIN = 0.75;
+export const SPEED_MAX = 1.35;
 
-/** Frames a particle spends fading in at birth and out before its reset. */
-export const FADE_IN_STEPS = 16;
-export const FADE_OUT_STEPS = 20;
+/**
+ * Spacing of the points a trail is drawn from, in world units. Independent of
+ * STEP: the trail is a curve through the field, not a record of how fast the
+ * particle travelled it, so its shape and length do not change when the clip is
+ * slowed down.
+ */
+export const TRAIL_STEP = 0.4;
+
+/**
+ * A trail stops once it has turned this far in one direction — a bit over a
+ * full circle. Trails are long enough to lap a tight vortex core several times,
+ * and a filament stacked on its own orbit accumulates additively until the
+ * channels clip and the core blows out to a white-green blob. Signed turn, so
+ * an S-curve (which cancels) is left alone and only real loops are cut.
+ */
+export const TRAIL_MAX_TURN = Math.PI * 2.1;
+
+/**
+ * Frames a particle spends fading in at birth and out before its reset. Long,
+ * because a reset is the one moment a filament is not a full, solid line: the
+ * slower it fades the less any of them reads as breaking.
+ */
+export const FADE_IN_STEPS = 34;
+export const FADE_OUT_STEPS = 38;
 
 // ---------------------------------------------------------------------------
 // Look. Pixel sizes are in *composition* pixels (i.e. at 3840x2160), so a 1080p

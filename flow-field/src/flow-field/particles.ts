@@ -27,10 +27,10 @@ export type Particles = {
   seedX: Float32Array;
   seedZ: Float32Array;
   /** Trail length in integration steps. */
-  trail: Uint8Array;
+  trail: Uint16Array;
   /** Life length in frames; always a divisor of the composition duration. */
-  cycle: Uint8Array;
-  phase: Uint8Array;
+  cycle: Uint16Array;
+  phase: Uint16Array;
   speed: Float32Array;
   /** Per-particle brightness bias, before the ribbon field is applied. */
   bias: Float32Array;
@@ -45,9 +45,9 @@ export const createParticles = (seed: number): Particles => {
 
   const seedX = new Float32Array(n);
   const seedZ = new Float32Array(n);
-  const trail = new Uint8Array(n);
-  const cycle = new Uint8Array(n);
-  const phase = new Uint8Array(n);
+  const trail = new Uint16Array(n);
+  const cycle = new Uint16Array(n);
+  const phase = new Uint16Array(n);
   const speed = new Float32Array(n);
   const bias = new Float32Array(n);
 
@@ -70,11 +70,10 @@ export const createParticles = (seed: number): Particles => {
     cycle[i] = c;
     phase[i] = (rand() * c) | 0;
 
-    // Trail length varies from short ticks to long ribbons, but always stops a
-    // few steps short of the life length — a particle whose trail is as long as
-    // its life spends the whole life growing one and never settles.
-    const want = Math.round(lerp(TRAIL_MIN, TRAIL_MAX, rand() ** 1.35));
-    const t = Math.max(4, Math.min(want, c - 6));
+    // Length varies between long and longer. There is no upper bound tied to
+    // the life length any more: trails run backward from the head, so a
+    // particle carries its whole trail from its first frame.
+    const t = Math.round(lerp(TRAIL_MIN, TRAIL_MAX, rand()));
     trail[i] = t;
     maxSegments += t;
 

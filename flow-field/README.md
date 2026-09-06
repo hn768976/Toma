@@ -41,10 +41,10 @@ ffprobe reports `yuvj420p`, which anything that ignores the range flag renders
 with crushed blacks. With it you get properly tagged limited-range `yuv420p`.
 
 Dense hairlines plus film grain are expensive to encode, so the previews run
-crf 27 — 12-13 Mbps, 23 MB for the blue and 25 MB for the brighter emerald —
+crf 27 — 11-12 Mbps, 20 MB for the blue and 23 MB for the brighter emerald —
 rather than crf 16, which at 1080p costs four times the file for nothing visible
 at 3x zoom. The ladder on this content runs roughly crf 16 → 104 MB, 20 → 60 MB,
-25 → 31 MB, 27 → 23 MB; pick to taste, the structure survives all of them. The
+25 → 31 MB, 27 → 20 MB; pick to taste, the structure survives all of them. The
 4K masters keep crf 16.
 
 Note that `--encoding-max-rate` / `--encoding-buffer-size` are silently ignored
@@ -71,20 +71,20 @@ slower; add `--gl=swiftshader` explicitly if ANGLE misbehaves in your image.
 
 ### Measured render time
 
-On 4 vCPUs with no GPU (SwiftShader), **1080p (`--scale=0.5`) costs ≈ 0.9 s per
-frame** — the two 450-frame loops took 394 s and 414 s of wall clock. SwiftShader
+On 4 vCPUs with no GPU (SwiftShader), **1080p (`--scale=0.5`) costs ≈ 1.4 s per
+frame** — the two 450-frame loops took 619 s and 638 s of wall clock. SwiftShader
 already spreads rasterisation across every core, so raising `--concurrency` past
 1 buys nothing on a 4-core box: measured throughput was the same at
 `--concurrency=1` (0.83 s/frame over 30 frames) and at `--concurrency=4`.
 
-Integration runs one midpoint step per frame of a particle's age, so the
-longest-lived particles (cycle 225) are integrated up to 224 steps rather than
-the 30-60 a shorter cycle would need. That buys the long ribbons the look
+Integration runs one midpoint step per frame of a particle's age, plus one per
+trail point, so a long-lived particle costs a few hundred steps rather than the
+30-60 a short cycle would need. That buys the long unbroken filaments the look
 depends on, and it is affordable here because the field is read from a grid
 rather than from the noise directly: the whole frame's integration is a few
 hundred thousand bilinear lookups.
 
-Roughly 0.3 s of each frame is CPU-side geometry building — about 240k ribbon
+Roughly 0.35 s of each frame is CPU-side geometry building — about 347k ribbon
 and glow quads rebuilt from scratch, which `npm run verify-loop` reports — and
 the rest is rasterisation and encode. A 4K render is four times the pixels and
 the same geometry cost, so budget around 2 s per frame on the same machine, and
@@ -115,12 +115,36 @@ no curl at all.
 **The loop** is the part worth reading the code for. Remotion renders frames out
 of order across threads, so no mutable particle array can survive between
 frames. Instead every particle has a fixed seed, a life length that divides
-evenly into 450, and a phase offset; at any frame it is integrated forward from
-its seed by `(frame + phase) mod cycle` steps. That makes a frame a pure
-function of its frame number. Four different life lengths (75, 90, 150, 225) are
-in play, so although each particle resets several times over the clip, the
+evenly into 450, and a phase offset; at any frame its head is integrated forward
+from its seed by `(frame + phase) mod cycle` steps. That makes a frame a pure
+function of its frame number. Two life lengths (225 and 450) are in play, so the
 ensemble only repeats at frame 450. `tools/verify-loop.ts` checks this: it
 builds frames 0 and 450 and asserts the vertex buffers are bit-identical.
+
+**Trails run backward out of the head**, not forward from the seed. Grown
+forward, a trail is only as long as the particle is old, so every young particle
+draws a short stub and the frame fills with dashes; walked backward from the
+head instead, a filament is its full length on every frame of its life. The
+backward walk uses its own step size, so the clip's speed and the length of its
+lines are independent settings.
+
+Three more things keep a line reading as one unbroken line:
+
+- **Brightness belongs to the filament, not the point.** Sampling the ribbon
+  field per point makes a long trail that crosses a ribbon boundary light up
+  only partway, which looks like a break. It is sampled once, at the head.
+- **Both ends taper out.** A head that stops at full brightness is a hard cut;
+  the eye reads that as a broken line rather than as a line that finishes.
+- **A trail stops after one full turn.** Trails are long enough to lap a tight
+  vortex core several times, and a filament stacked on its own orbit accumulates
+  additively until the channels clip and the core blows out to a white blob. The
+  turn is measured signed, so an S-curve is left alone and only real loops cut.
+
+**The motion is the particles, not the field.** The field does evolve, but only
+just: over the whole loop it walks about a sixth of a noise feature. Letting it
+move much faster makes vortices re-form in place rather than drift, which reads
+as churn. What you see moving is filaments drifting along their own streamlines
+at about their own length over the 15 s.
 
 ```console
 npm run verify-loop
