@@ -26,11 +26,11 @@ export const REFERENCE_HEIGHT = 1080;
 // Depth of the generated volume. The camera travels exactly this far over
 // DURATION_IN_FRAMES, so every element recycles exactly once per loop and
 // the cloud at the last frame is identical to the cloud at frame 0.
-export const Z_TOTAL = 150;
+export const Z_TOTAL = 135;
 
 // Number of grid rows down the tunnel axis. Z_TOTAL is an exact multiple of
 // the row spacing, so the rows cycle exactly as well.
-export const NZ = 100;
+export const NZ = 90;
 export const DZ = Z_TOTAL / NZ; // 1.5
 
 // Rectangular cross-section: half-width / half-height of the four walls.
@@ -59,20 +59,27 @@ export type WallShell = {
 // like the wall's own weight flattens the corridor back into a plain radial
 // burst.
 export const WALL_SHELLS: readonly WallShell[] = [
-  { offset: -0.5, step: 1, bright: 1.5 },
-  { offset: 0, step: 1, bright: 1.5 },
+  { offset: -0.5, step: 1, bright: 1.75 },
+  { offset: 0, step: 1, bright: 1.75 },
   // A deliberate gap before the mantle starts. The dark band just outside
   // the wall plane is what lets the wall read as a wall now that there is
   // material beyond it.
-  { offset: 3, step: 2.4, bright: 0.34 },
-  { offset: 6.5, step: 4, bright: 0.2 },
-  { offset: 11.5, step: 6, bright: 0.13 },
-  { offset: 18, step: 10, bright: 0.09 },
+  //
+  // The mantle then holds a near-flat weight rather than falling away, and
+  // reaches out to three times the tunnel's own half-width. A steeper
+  // falloff leaves the frame corners visibly empty; the corridor still
+  // reads because of the 3x step at the wall plane and the gap behind it,
+  // not because the mantle is dim.
+  { offset: 3, step: 2.2, bright: 0.44 },
+  { offset: 6.5, step: 3.4, bright: 0.38 },
+  { offset: 11.5, step: 5, bright: 0.34 },
+  { offset: 18, step: 8, bright: 0.34 },
+  { offset: 28, step: 12, bright: 0.32 },
 ];
 
 // Sparser interior scatter filling the space between the walls.
-export const NX_FILL = 12;
-export const NY_FILL = 7;
+export const NX_FILL = 11;
+export const NY_FILL = 6;
 export const FILL_SETS = 2;
 export const FILL_EXTENT_X = 1; // fraction of X_HALF the fill spans
 export const FILL_EXTENT_Y = 1;
@@ -87,8 +94,8 @@ export const FOV = 55; // vertical field of view, degrees
 // Elements fade out as they sweep past the camera and fade in at the far
 // end of the volume, which is what hides the recycling seam.
 export const NEAR_FADE = 1.8;
-export const FOG_START = 88;
-export const FOG_END = 146;
+export const FOG_START = 80;
+export const FOG_END = 131;
 
 // Depth over which the near -> mid -> far colour ramp is traversed.
 export const COLOR_DEPTH = 70;
@@ -112,10 +119,11 @@ export const DASH_MAX_LEN_PX = 12;
 // ---------------------------------------------------------------------------
 
 // Vanishing point offset from frame centre, in normalised device coords
-// (-1..1). Slightly above and left, as in the reference: the asymmetry is
-// what stops the shot reading as a screensaver.
-export const VP_OFFSET_X = -0.08;
-export const VP_OFFSET_Y = 0.08;
+// (-1..1). Centred: an off-axis vanishing point pushes the far half of the
+// frame out to wider angles, where the tunnel is thinner on screen, and
+// that is what left one side reading as empty space.
+export const VP_OFFSET_X = 0;
+export const VP_OFFSET_Y = 0;
 
 // Gentle looping float. Amplitudes are world units; at the in-focus depth
 // they move the image by well under 2% of the frame.

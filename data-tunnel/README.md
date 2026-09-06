@@ -61,8 +61,8 @@ falls back to ANGLE's software backend there), PNG frames, H.264 `--crf=16`:
 
 | Output              | Per frame | 450 frames |
 | ------------------- | --------- | ---------- |
-| 1080p (`--scale=0.5`) | **1.6 s** | **12-13 min** (measured end to end) |
-| 4K (`--scale=1`)      | **7.6 s** | **~58 min** (projected) |
+| 1080p (`--scale=0.5`) | **1.1 s** | **8 min** (measured end to end) |
+| 4K (`--scale=1`)      | **5.9 s** | **~44 min** (projected) |
 
 The per-frame figures are marginal cost, taken by differencing a 32-frame run
 against a 16-frame one so bundling and browser warm-up cancel out. The 1080p
@@ -90,7 +90,7 @@ sweep outward past the frame edges while distant ones barely move.
   numbers. Sizes and blur radii are authored against a 1080-pixel-tall
   reference frame and scaled by `useVideoConfig().height`, so 1080p and 4K
   stay in sync.
-- **`volume.ts`** - the 70,000-element volume, generated **once** at module
+- **`volume.ts`** - the ~69,000-element volume, generated **once** at module
   scope from a seeded PRNG. Nested rectangular shells on a loose grid (with
   +/-15% jitter) plus a sparser interior scatter. Recycling is an offset
   computed in the shader, never a regeneration.
@@ -107,18 +107,27 @@ sweep outward past the frame edges while distant ones barely move.
 
 `WALL_SHELLS` defines the volume as nested rectangular shells. The two inner
 ones are the walls of the corridor. Beyond them sits a gap, then a mantle of
-three progressively coarser and dimmer shells reaching out to four times the
+five progressively coarser shells reaching out to about four times the
 tunnel's own half-width.
 
-Both parts earn their place. Without the mantle, a ray toward the frame
-corner leaves the box about nine units out and meets nothing beyond, so the
-field ends on a visible rectangular boundary with dark margins around it.
-Without the gap - and without the mantle falling away steeply in both
-density and brightness - there is no step at the wall plane and the corridor
-flattens into a plain radial burst.
+Each part earns its place. Without the mantle, a ray toward the frame corner
+leaves the box about nine units out and meets nothing beyond, so the field
+ends on a visible rectangular boundary with dark margins around it. Without
+the gap, there is no step at the wall plane and the corridor flattens into a
+plain radial burst. The mantle's weight is the dial between those two
+failure modes: it is held near-flat (0.44 down to 0.32 against the wall's
+1.75) so the frame corners stay populated, and the corridor survives on the
+4x step at the wall plane plus the gap behind it rather than on the mantle
+being dim.
 
-Measured on an encoded frame: the outer 6% bands of the picture sit at
-62-71% of the centre's mean level, against 35-49% before the mantle existed.
+The vanishing point is centred. Off-axis - which is what the reference
+does - it pushes the far half of the frame out to wider angles where the
+tunnel is thinner on screen, and that side reads as empty. Set
+`VP_OFFSET_X` / `VP_OFFSET_Y` if you want the asymmetry back.
+
+Measured on an encoded frame: the outer 6% bands and both far corners sit at
+69-75% of the centre's mean level, and left/right agree to within 2 points.
+Before the mantle existed those bands were at 35-49% and 14 points apart.
 
 ### Depth of field
 
@@ -173,7 +182,7 @@ Almost everything worth changing is in `constants.ts`:
 | More / fewer elements | `NZ`, `WALL_SPACING_X/Y`, `WALL_SHELLS`, `FILL_SETS` |
 | Wider / narrower tunnel | `X_HALF`, `Y_HALF` |
 | Move the focus band | `BUCKET_EDGES` / `BUCKET_BLUR` |
-| Vanishing point position | `VP_OFFSET_X`, `VP_OFFSET_Y` |
+| Vanishing point position | `VP_OFFSET_X`, `VP_OFFSET_Y` (0 = centred) |
 | Frame coverage / mantle reach | `WALL_SHELLS` offsets and brightness |
 | Dash length and weight | `DASH_FRACTION`, `DASH_MAX_LEN_PX` |
 

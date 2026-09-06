@@ -86,7 +86,7 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant }) => {
       {/* Background: the tunnel opens onto light at the vanishing point. */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(ellipse 120% 135% at ${vpX} ${vpY}, ${palette.bgInner} 0%, ${palette.bgOuter} 85%)`,
+          background: `radial-gradient(ellipse 145% 165% at ${vpX} ${vpY}, ${palette.bgInner} 0%, ${palette.bgOuter} 100%)`,
         }}
       />
 
@@ -141,7 +141,7 @@ export const DataTunnel: React.FC<DataTunnelProps> = ({ variant }) => {
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse 86% 96% at 50% 50%, rgba(0,0,0,0) 56%, rgba(0,0,0,0.28) 100%)",
+            "radial-gradient(ellipse 86% 96% at 50% 50%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.08) 100%)",
         }}
       />
 

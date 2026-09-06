@@ -162,7 +162,7 @@ const buildElements = (): RawElement[] => {
             -X_HALF * FILL_EXTENT_X + (ix + 0.5 + stagger) * fx + jitter(fx);
           const y =
             -Y_HALF * FILL_EXTENT_Y + (iy + 0.5 + stagger) * fy + jitter(fy);
-          out.push(makeElement(x, y, z, 0.42));
+          out.push(makeElement(x, y, z, 0.6));
         }
       }
     }
