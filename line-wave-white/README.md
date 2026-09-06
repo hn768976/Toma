@@ -59,23 +59,26 @@ npx remotion render V1-LineWaveWhiteBlue out/V1.mp4 --scale=1 --crf=16 --gl=swan
 
 ## Render time
 
-Measured on the machine this project was built on — 4 vCPU, no GPU, SwiftShader
-via ANGLE, Chromium headless shell:
+Measured on the machine this project was built on — 4 vCPU, **no GPU**, so
+ANGLE fell back to SwiftShader, Chromium headless shell, Remotion's automatic
+concurrency (2 workers):
 
-| | |
-| --- | --- |
-| 1080p preview (`--scale=0.5`) | _measurement pending — filled in from the reference render_ |
-| Composition size actually rasterised | 3840x2160 at both scales — see below |
+| Composition | 600 frames | Per frame |
+| --- | --- | --- |
+| `V1-LineWaveWhiteBlue` | 1375.5s (22m 56s) | **2.28s** |
+| `V2-LineWaveWhiteGraphite` | 1401.8s (23m 22s) | **2.32s** |
 
-`--scale` sets the browser's device scale factor, but the WebGL drawing buffer
-stays at the composition's 3840x2160 either way; only the screenshot Chromium
+Those are `--scale=0.5` numbers, but they are also roughly the 4K numbers.
+`--scale` sets the browser's device scale factor, and the WebGL drawing buffer
+stays at the composition's 3840x2160 either way — only the screenshot Chromium
 hands back is smaller. So a 1080p preview costs the same GPU work as a 4K
-master and the preview is a true 2x supersample of the 4K frame — which is
-where most of its anti-aliasing quality comes from. Expect a 4K master to take
-about the same time per frame as the numbers above, plus more encoding.
+master (and is a true 2x supersample of the 4K frame, which is where much of
+its anti-aliasing quality comes from); a 4K master differs mainly in encoding
+time.
 
-A GPU makes a large difference here; the figures above are the floor, not the
-ceiling.
+SwiftShader is the floor, not the ceiling. On a machine with a real GPU, drop
+the `--gl` override and expect this to be very much faster — it is one draw
+call of ~106k instances per frame, which is nothing for actual hardware.
 
 ## How it is built
 
