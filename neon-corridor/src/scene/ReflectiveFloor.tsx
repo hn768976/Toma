@@ -25,10 +25,16 @@ import {neonColorAt, type Palette} from '../palette';
 
 /** Reflection is blurred anyway, so half resolution costs nothing visible. */
 const REFLECTION_SCALE = 0.5;
-/** How much of the neon survives the bounce. */
-const REFLECTION_STRENGTH = 0.46;
+/**
+ * How much of the neon survives the bounce.
+ *
+ * Damp concrete, not a mirror: most of the light is scattered away, and the
+ * floor's brightness should come mainly from the diffuse spill below rather
+ * than from a legible second copy of the corridor.
+ */
+const REFLECTION_STRENGTH = 0.24;
 /** Fraction of tube brightness that lands on the slab as diffuse spill. */
-const SPILL_GAIN = 0.009;
+const SPILL_GAIN = 0.0075;
 
 const MIRROR = new Matrix4().makeScale(1, -1, 1);
 
@@ -117,10 +123,20 @@ const fragmentShader = /* glsl */ `
 		float rv = mix(uBlurFar, uBlurNear, near01) * (0.7 + 0.6 * m);
 		float rh = rv * 0.18;
 
+		// Jitter the whole kernel by up to half a tap, per pixel.
+		//
+		// Down the corridor the reflected rectangles stack up only a few pixels
+		// apart, which is the same order as the tap spacing — a fixed kernel
+		// then samples the same phase of that stack on every scanline and the
+		// floor ribs up like corduroy. Simply taking more taps does not fix it;
+		// offsetting the kernel per pixel does, turning the structured moire
+		// into fine noise that the grain absorbs.
+		float jitter = hash21(gl_FragCoord.xy * 0.7) - 0.5;
+
 		vec3 acc = vec3(0.0);
 		float wsum = 0.0;
-		for (int i = -4; i <= 4; i++) {
-			float fi = float(i);
+		for (int i = -6; i <= 6; i++) {
+			float fi = (float(i) + jitter) * 0.7;
 			float wt = exp(-0.5 * fi * fi / 4.4);
 			acc += texture2D(uRefl, uv + warp + vec2(fi * rh, fi * rv)).rgb * wt;
 			wsum += wt;
@@ -202,8 +218,8 @@ export const ReflectiveFloor: React.FC<{palette: Palette}> = ({palette}) => {
 			uSpacing: {value: SPACING},
 			uCamZ: {value: 0},
 			uStrength: {value: REFLECTION_STRENGTH},
-			uBlurNear: {value: 0.016},
-			uBlurFar: {value: 0.0045},
+			uBlurNear: {value: 0.026},
+			uBlurFar: {value: 0.012},
 			uFogDensity: {value: FOG_DENSITY},
 			uFogColor: {value: new Color(palette.background)},
 			uFloorTint: {value: new Color(palette.floorTint)},
