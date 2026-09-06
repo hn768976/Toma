@@ -27,5 +27,7 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1400, height: 800, dev
 await send("Page.navigate", { url: "file://" + (process.env.SHEET_HTML || "/tmp/sheet.html") }, sessionId);
 await sleep(2000);
 const shot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
-writeFileSync(join(__dirname, "..", "..", "sheet.png"), Buffer.from(shot.data, "base64"));
+const out = process.env.SHEET_OUT || "/tmp/sheet.png";
+writeFileSync(out, Buffer.from(shot.data, "base64"));
+console.log(out);
 ws.close(); proc.kill(); process.exit(0);
