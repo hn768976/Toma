@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- shackle: cream outline behind, black bar on top -->
+  <path fill="none" stroke="#E8DCC8" stroke-width="108" stroke-linecap="round"
+        d="M246 516 C246 268, 304 194, 384 194 C464 194, 520 268, 520 516"/>
+  <path fill="none" stroke="#111111" stroke-width="74" stroke-linecap="round"
+        d="M246 516 C246 268, 304 194, 384 194 C464 194, 520 268, 520 516"/>
+  <!-- lock body -->
+  <rect x="140" y="486" width="490" height="392" rx="30"
+        fill="#E8DCC8" stroke="#111111" stroke-width="15"/>
+  <!-- inner bracket line and stud -->
+  <g fill="none" stroke="#111111" stroke-width="11" stroke-linecap="round">
+    <path d="M382 548 L556 548 L556 776 L382 776"/>
+    <path d="M186 546 L556 546" opacity="0"/>
+    <path d="M188 830 L580 830"/>
+    <path d="M188 560 L346 560"/>
+    <circle cx="524" cy="662" r="24"/>
+    <!-- keyhole resonance arcs -->
+    <path d="M300 610 C282 636, 282 676, 300 702"/>
+    <path d="M448 610 C466 636, 466 676, 448 702"/>
+    <path d="M318 726 L306 782"/>
+    <path d="M430 726 L442 782"/>
+  </g>
+  <!-- keyhole -->
+  <path fill="#111111"
+        d="M374 596 C408 596, 434 622, 434 654 C434 676, 422 692, 406 702
+           L420 774 L328 774 L342 702 C326 692, 314 676, 314 654
+           C314 622, 340 596, 374 596 Z"/>
+  <!-- key: blade with notches, round head, hole cut through (evenodd) -->
+  <path fill="#E8DCC8" stroke="#111111" stroke-width="15" stroke-linejoin="round" fill-rule="evenodd"
+        d="M797 292 L832 336 L832 652
+           C884 670, 922 716, 922 766
+           C922 834, 866 888, 797 888
+           C728 888, 672 834, 672 766
+           C672 716, 710 670, 762 652
+           L762 596 L806 596 L806 558 L762 558
+           L762 498 L806 498 L806 460 L762 460 L762 336 Z
+           M797 726 C819 726, 836 743, 836 764 C836 785, 819 802, 797 802
+           C775 802, 758 785, 758 764 C758 743, 775 726, 797 726 Z"/>
+  <!-- head highlight arc and small nick -->
+  <g fill="none" stroke="#111111" stroke-width="11" stroke-linecap="round">
+    <path d="M868 700 C888 722, 896 748, 894 772"/>
+    <path d="M872 812 L878 822"/>
+  </g>
+</svg>

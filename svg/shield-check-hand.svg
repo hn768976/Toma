@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g fill="#E8DCC8" stroke="#111111" stroke-width="13" stroke-linejoin="round" stroke-linecap="round">
+    <!-- shield body -->
+    <path d="M512 96 C404 156, 292 190, 186 206 C180 388, 194 536, 262 640
+             C330 744, 424 800, 512 838 C600 800, 694 744, 762 640
+             C830 536, 844 388, 838 206 C732 190, 620 156, 512 96 Z"/>
+  </g>
+  <!-- inner shield line -->
+  <path fill="none" stroke="#111111" stroke-width="11" stroke-linejoin="round"
+        d="M512 178 C420 228, 322 258, 246 272 C242 412, 254 534, 314 622
+           C374 710, 452 758, 512 786 C572 758, 650 710, 710 622
+           C770 534, 782 412, 778 272 C702 258, 604 228, 512 178 Z"/>
+  <!-- checkmark -->
+  <path fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linejoin="miter" stroke-linecap="butt"
+        d="M372 508 L478 626 L700 318"/>
+  <g fill="#E8DCC8" stroke="#111111" stroke-width="13" stroke-linejoin="round" stroke-linecap="round">
+    <!-- curled index finger, behind the palm -->
+    <path d="M752 736 C756 686, 776 640, 810 616 C848 590, 892 608, 900 652
+             C908 696, 888 748, 858 780 C830 810, 790 818, 766 800 Z"/>
+    <!-- open palm, thumb and cuff -->
+    <path d="M148 862 C154 824, 194 798, 258 792 C352 782, 456 804, 556 834
+             C596 846, 634 852, 668 844 C698 836, 720 816, 734 788
+             C754 752, 782 726, 816 720 C852 714, 880 738, 882 774
+             C884 808, 864 842, 832 868 C792 900, 738 928, 674 950
+             C602 974, 520 988, 446 990 C372 992, 300 984, 242 968
+             C186 952, 146 918, 146 918 C120 898, 116 874, 148 862 Z"/>
+  </g>
+  <!-- thumbnail and knuckle creases -->
+  <g fill="none" stroke="#111111" stroke-width="11" stroke-linecap="round">
+    <path d="M812 788 C824 766, 852 756, 872 768 C890 780, 892 806, 878 826
+             C862 848, 832 852, 816 838 C804 828, 802 806, 812 788 Z"/>
+    <path d="M610 906 C658 924, 714 922, 756 902"/>
+    <path d="M652 838 L662 870"/>
+    <path d="M694 828 L706 860"/>
+  </g>
+</svg>
