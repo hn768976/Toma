@@ -1,6 +1,7 @@
 import React from "react";
 import { Easing, interpolate, interpolateColors, useCurrentFrame } from "remotion";
 import { BEATS, ITEM_DURATION, SPIN } from "../constants";
+import { R } from "../layout";
 import { arcPath, tangentialTransform } from "../geometry";
 import { drawOn, flicker, spin, stagger } from "../timing";
 import { colorOf, type LayerProps } from "./common";
@@ -27,8 +28,8 @@ export const DashedCircle: React.FC<LayerProps> = ({ layout, palette, h }) => {
             d={arcPath(d.r * h, d.a0, d.a1)}
             fill="none"
             stroke={palette.dimWhite}
-            strokeWidth={0.0014 * h}
-            strokeLinecap="round"
+            strokeWidth={R.dashedWidth * h}
+            strokeLinecap="butt"
             opacity={0.85}
             {...drawOn(p)}
           />
@@ -60,7 +61,7 @@ export const SegmentRing: React.FC<LayerProps> = ({ layout, palette, h }) => {
               rx={s.rx * h}
               fill={s.filled ? color : "none"}
               stroke={color}
-              strokeWidth={0.0016 * h}
+              strokeWidth={R.segmentStroke * h}
               opacity={p * (s.filled ? 0.95 : 0.85) * alive}
             />
           </g>
@@ -90,7 +91,7 @@ export const BlockRing: React.FC<LayerProps> = ({ layout, palette, h }) => {
           Easing.linear,
         );
         if (p <= 0) return null;
-        const scale = interpolate(p, [0, 0.6, 1], [0.35, 1.12, 1], {
+        const scale = interpolate(p, [0, 0.6, 1], [0.35, R.blockOvershoot, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
           easing: Easing.out(Easing.cubic),

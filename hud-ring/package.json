@@ -1,13 +1,14 @@
 {
   "name": "hud-ring",
   "version": "1.0.0",
-  "description": "Circular HUD Assembly — Remotion motion graphic (4K-ready)",
+  "description": "Circular HUD Assembly \u2014 Remotion motion graphic (4K-ready)",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "verify": "esbuild src/hud/verify-layout.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify-layout.mjs --log-level=warning && node node_modules/.cache/verify-layout.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.515",
@@ -19,6 +20,7 @@
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@types/web": "0.0.166",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "esbuild": "0.25.12"
   }
 }

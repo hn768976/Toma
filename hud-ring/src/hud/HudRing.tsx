@@ -44,10 +44,10 @@ export const HudRing: React.FC<HudRingProps> = ({ palette: paletteName, seed, gr
             height="150%"
             colorInterpolationFilters="sRGB"
           >
-            <feGaussianBlur in="SourceGraphic" stdDeviation={height * 0.0045} result="tight" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation={height * 0.017} result="wide" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation={height * 0.0035} result="tight" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation={height * 0.010} result="wide" />
             <feComponentTransfer in="wide" result="wideDim">
-              <feFuncA type="linear" slope="0.5" />
+              <feFuncA type="linear" slope="0.42" />
             </feComponentTransfer>
             <feMerge>
               <feMergeNode in="wideDim" />

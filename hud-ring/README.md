@@ -22,6 +22,42 @@ npm install
 npx remotion studio
 ```
 
+## No overlapping elements
+
+Nothing in the scene overlaps anything else, and that holds for every frame
+even though the rings turn at different rates. Two rules make it true:
+
+1. **Every layer owns a radial band**, and the bands are disjoint with at least
+   `BAND_GAP` (0.006 of frame height) of clearance between them. Two elements
+   in different bands can never reach each other, whatever their rotation.
+2. **Within a band, placement is collision-checked.** The scattered blocks and
+   corner marks are rejection-sampled against what is already there, and each
+   band rotates as a single group — so the relative angles checked at build
+   time hold for the whole render.
+
+The long radial lines are the one deliberate crossing: they run through the
+*angular gaps* of the broken outer circle and belong to the same rotation
+group as it, so the two never move relative to each other.
+
+`npm run verify` asserts all of this against the real layout — band gaps,
+pairwise overlap inside every band (blocks checked at their peak pop-in
+scale), corner marks against each other and against the assembly — and prints
+the radial budget:
+
+```
+$ npm run verify
+assembly spans 80.8% of frame height
+  0.0943 - 0.0957  dashed circle
+  0.1157 - 0.1363  segment ring   (gap 0.0200)
+  0.1440 - 0.1584  lane 0   (gap 0.0077)
+  0.1660 - 0.2080  block ring   (gap 0.0076)
+  ...
+OK — no overlapping elements.
+```
+
+If you retune radii or add elements, run it — it exits non-zero on any
+collision and names the offending pair.
+
 ## Render at 4K
 
 Compositions are authored at 3840x2160, so a full-resolution render is just
@@ -65,6 +101,7 @@ src/
     geometry.ts             SVG path helpers (arcs, radials, rects)
     timing.ts               stagger / spin / flicker / draw-on helpers
     random.ts               seeded PRNG
+    verify-layout.ts        asserts nothing overlaps (npm run verify)
     HudRing.tsx             assembles the layers, bloom filter, overlays
     layers/                 one file per group of concentric layers
 ```
@@ -79,7 +116,8 @@ Each composition takes three props, editable in the Remotion studio sidebar:
 
 - `palette` — `"cyan"` or `"alert"`.
 - `seed` — reshuffles the scattered data blocks and corner marks. The
-  concentric rings are fixed; only the scatter is seeded.
+  concentric rings are fixed; only the scatter is seeded. Any seed stays
+  collision-free — the packer rejects a candidate that would touch anything.
 - `grain` — grain opacity, default `0.02`.
 
 ## Build sequence
