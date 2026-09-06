@@ -78,12 +78,14 @@ Measured on this project, **1080p (`--scale=0.5`), 300 frames**, 4 vCPU / 15 GB,
 
 | Composition              | Wall clock | Per frame |
 | ------------------------ | ---------- | --------- |
-| `V1-NeonCorridorMagenta` | 545 s      | **1.82 s** |
-| `V2-NeonCorridorCyan`    | 540 s      | **1.80 s** |
+| `V1-NeonCorridorMagenta` | 810 s      | **2.70 s** |
+| `V2-NeonCorridorCyan`    | 805 s      | **2.68 s** |
 
 Wall clock is the whole `npx remotion render` invocation at Remotion's default
 concurrency, so it includes bundling and browser startup (~15 s); net of that
-the steady-state cost is ~1.77 s/frame.
+the steady-state cost is ~2.65 s/frame. The corridor runs 46 rectangles deep to
+hide its far end in fog, which is what makes this dearer than a shallower
+tunnel would be.
 
 Expect 4K (`--scale=1`) to cost roughly 4× that per frame at the same
 concurrency, and far less on a machine with a real GPU — nearly all of the cost
@@ -94,16 +96,20 @@ GPU eats for breakfast.
 
 Checked against the encoded 1080p files, not the studio preview:
 
-- **Loop.** The frame 299 → 0 wrap is 1.12× (V1) and 1.14× (V2) the mean
-  frame-to-frame difference, against a worst ordinary step of 1.7× — so the
-  wrap is an unremarkable step and there is no seam.
+- **Loop.** The frame 299 → 0 wrap is 1.14× (V1) and 1.11× (V2) the mean
+  frame-to-frame difference, against a worst ordinary step of 1.27× and 1.25× —
+  so the wrap is an unremarkable step and there is no seam.
+- **Travel.** Frames 0, 50, 100 and 150 are identical bar the camera float,
+  which is the signature of the camera covering exactly one frame-spacing every
+  50 frames — six over the loop, as intended.
 - **Format.** 1920×1080, H.264, `yuv420p`, 30 fps, exactly 300 frames.
-- **Flicker.** High-passing per-frame luminance finds the three scheduled
-  events at frames 45–62, 123–138 and 239–248 (scheduled 46, 128, 237), each
-  a dip.
-- **Banding and grain.** A vertical scan of the dark upper gradient moves in
-  1–2 level increments with no staircase; a flat dark patch has a non-zero
-  frame-to-frame delta, confirming the dither survives encoding.
+- **Flicker.** Because the corridor repeats every 50 frames, diffing each frame
+  against its periodic twin cancels the travel and leaves the flicker. That
+  isolates all three scheduled events — frames 49–55, 132–139 and 241–246
+  (scheduled 46, 128, 237) — each a dip of 3–6% in mid-corridor luminance.
+- **Banding.** A vertical scan of the dark upper gradient moves in 1–2 level
+  increments with no staircase (20 distinct values over 166 pixels spanning 23
+  levels, 7 steps of 3 or more).
 
 ## How it works
 
@@ -112,23 +118,34 @@ Checked against the encoded 1080p files, not the studio preview:
 `src/loop.ts` is the whole mechanism, and it is worth reading before changing
 anything visual.
 
-The camera travels forward exactly **one frame-spacing over the 300 frames**,
-with tubes recycled from the back to the front. That is modelled with the
-camera pinned at the origin and the corridor sliding past it — equivalent, and
-it keeps the reflection and DOF maths in a fixed frame.
+The camera travels forward a **whole number of frame-spacings**
+(`TRAVEL_SPACINGS`, currently 6) over the 300 frames, with tubes recycled from
+the back to the front. That is modelled with the camera pinned at the origin
+and the corridor sliding past it — equivalent, and it keeps the reflection and
+DOF maths in a fixed frame.
 
-Tube `k` sits at slot `m = (k − t) mod FRAME_COUNT`, `t` running 0 → 1 across
-the loop, and slot `m` sits at `z = Z_SLOT0 − m · SPACING`. At `t = 1` every
-tube has advanced exactly one slot, so the *set* of occupied positions is
-identical to `t = 0`. Hence the invariant everything else obeys:
+Tube `k` sits at slot `m = (k − TRAVEL_SPACINGS · t) mod FRAME_COUNT`, `t`
+running 0 → 1 across the loop, and slot `m` sits at `z = Z_SLOT0 − m · SPACING`.
+At `t = 1` every tube has advanced a whole number of slots, so the *set* of
+occupied positions is identical to `t = 0`. The whole-number part is the
+constraint: a fractional travel would leave the tubes between slots at the wrap
+and produce a visible jump. Hence the invariant everything else obeys:
 
 > Any visual property that is a pure function of a tube's camera-relative
 > position loops perfectly.
 
-So colour, brightness, the bottom-bar fade and the flicker are all keyed off
-depth or slot — never off a tube's identity `k`. Keying colour off `k` would
-break the loop, because at `t = 1` a *different* tube stands where tube `k`
-stood at `t = 0`.
+So colour, brightness and the bottom-bar fade are keyed off depth or slot,
+never off a tube's identity `k`. Keying colour off `k` would break the loop,
+because at `t = 1` a *different* tube stands where tube `k` stood at `t = 0`.
+
+**Flicker is the one deliberate exception**, and it has to be. Keyed to a slot
+it sits at a fixed distance from the camera, which only passes for
+tube-anchored while the corridor is barely moving; at six spacings per loop the
+corridor advances a quarter of a spacing during an event and the flicker
+visibly slides off its tube onto the next one. So it is keyed to `k` and
+travels with the tube. That stays exact because every event opens and closes
+strictly inside the loop behind a `sin(π·τ)` envelope — both boundary frames
+are unflickered whichever tube stands where, so the wrap is untouched.
 
 The same rule drives the floor: its mottling scrolls with the corridor, and
 every noise octave tiles with a period of exactly one frame-spacing in world z,
@@ -176,10 +193,14 @@ in the highlights.
 
 ### Departures from the reference
 
-- The reference clip loops every **30** frames — it travels one frame-spacing
-  per second. This build travels one frame-spacing per **300** frames as
-  specified, so the drift is about 10× slower and reads as a slow push rather
-  than a flight.
+- **No haze at the vanishing point.** The reference ends its corridor in a
+  bright blown-out core; this build has none, so the tunnel converges into fog
+  instead. That is why `FRAME_COUNT` is 46 and `FOG_DENSITY` is low: with
+  nothing bright to hide the end, the rectangles have to dim gradually over a
+  long tail, or the corridor terminates in a hard-edged black rectangle.
+- **Travel speed.** The reference loops every **30** frames — one frame-spacing
+  per second. This build covers six frame-spacings per 300-frame loop, so a
+  rectangle passes roughly every 1.7 s.
 - The rectangles' bottom bars fade out over the last few metres
   (`baseBarGain` in `src/scene/Corridor.tsx`). Down the corridor they give the
   faint floor ladder the reference has; up close the same bar is seen almost

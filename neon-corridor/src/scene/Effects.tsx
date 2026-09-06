@@ -40,8 +40,8 @@ export const Effects: React.FC = () => {
 		});
 		c.addPass(new RenderPass(scene, camera));
 
-		// Near frames slightly soft, mid corridor sharp, far end softening into
-		// the haze.
+		// Near frames slightly soft, mid corridor sharp, far end softening as it
+		// fades into the fog.
 		const dof = new DepthOfFieldEffect(camera, {
 			worldFocusDistance: 20,
 			worldFocusRange: 32,
