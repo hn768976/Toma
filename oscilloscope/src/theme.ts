@@ -32,7 +32,6 @@ export type Theme = {
   gridMajorOpacity: number;
   labelColor: string;
   labelOpacity: number;
-  sweepColor: string;
   /** Blur radius of the bloom pass, in design px. */
   bloom: number;
   traces: Record<TraceKey, TraceStyle>;
@@ -47,7 +46,6 @@ export const V1: Theme = {
   gridMajorOpacity: 0.52,
   labelColor: "#6a90b8",
   labelOpacity: 0.8,
-  sweepColor: "#9fd8f5",
   bloom: 20,
   traces: {
     noiseTop: {
@@ -97,7 +95,6 @@ export const V2: Theme = {
   gridMajorOpacity: 0.95,
   labelColor: "#2f8f5a",
   labelOpacity: 0.8,
-  sweepColor: "#8ff0b4",
   bloom: 22,
   traces: {
     // Dim and thin: reads as the quietest signal on the screen.

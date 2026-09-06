@@ -80,6 +80,7 @@ frame**, so a 420-frame loop travels exactly **6720 px**.
 - The axis labels cycle through 14 values on a 480 px pitch — 6720 px, one full
   loop — so the number sequence wraps at the same instant the scroll does.
 - The sweep line crosses twice per loop, entering and leaving fully off-frame.
+  It brightens only the traces it passes over, never the empty field.
 - The main sine's amplitude modulation runs two whole cycles per loop.
 
 Everything is a pure function of `useCurrentFrame()`: no `Math.random()` at
@@ -106,6 +107,11 @@ public/fonts/         Roboto Mono, self-hosted so renders never hit the network
 - Trace cores are 3–7 design px rather than the 2–3 px in the brief. At 2 px the
   cyan sine reads as a hairline next to its own bloom and loses the reference's
   neon weight; the current widths match the reference's proportions.
+- The sweep paints nothing on the background. Laying even a faint gradient bar
+  across the full frame height lifted the empty field by ~12 levels, and that
+  moving light column read as a shimmer far more conspicuous than the traces it
+  was meant to accent. Masking a brighter copy of the traces to the band gives
+  the beam-passing-over-phosphor effect without touching the background.
 - The horizontal grid is offset so a major division lands exactly on the main
   sine's zero line, and the square wave's midline sits three majors below it, so
   the left-hand voltage labels agree with the grid instead of floating near it.
