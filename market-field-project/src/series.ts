@@ -49,7 +49,7 @@ export const seriesNoise = (i: number, seed: number) => {
   // Slow "volatility regime": dips give the flat stretches, peaks give the
   // busy ones. Never zero, so the line always has some tick to it.
   const activity =
-    0.22 + 0.78 * smoothstep((latticeNoise(i, 50, seed ^ 0x1111) + 1) / 2);
+    0.22 + 0.78 * smoothstep((latticeNoise(i, 48, seed ^ 0x1111) + 1) / 2);
 
   const wander =
     0.62 * latticeNoise(i, 60, seed ^ 0x2222) +
@@ -63,7 +63,10 @@ export const seriesNoise = (i: number, seed: number) => {
   return wander + activity * (detail + 0.42 * spikes(i, seed ^ 0x7777));
 };
 
-/** Cosine-interpolated envelope across 5 control points spanning x = 0..1. */
+/**
+ * Cosine-interpolated envelope across equally spaced control points, indexed
+ * by `x` in 0..1 across the overscanned span (not across the frame).
+ */
 export const envelopeAt = (controls: readonly number[], x: number) => {
   const span = controls.length - 1;
   const p = Math.min(Math.max(x, 0), 1) * span;
@@ -101,14 +104,17 @@ export const buildSeries = ({
 }): SeriesGeometry => {
   const spacing = width / POINTS_ACROSS;
   const offset = mod(frame, DURATION_IN_FRAMES) * SCROLL_POINTS_PER_FRAME;
-  const first = Math.floor(offset) - 2;
-  const last = first + POINTS_ACROSS + 5;
+  const overscan = Math.ceil(CHART.overscan * POINTS_ACROSS);
+  const first = Math.floor(offset) - 2 - overscan;
+  const last = first + POINTS_ACROSS + 5 + overscan * 2;
   const amplitude = CHART.amplitude * height;
+  const span = 1 + CHART.overscan * 2;
 
   const points: SeriesPoint[] = [];
   for (let i = first; i <= last; i++) {
     const x = (i - offset) * spacing;
-    const base = envelopeAt(envelope, x / width) * height;
+    const base =
+      envelopeAt(envelope, (x / width + CHART.overscan) / span) * height;
     points.push({ x, y: base + amplitude * seriesNoise(i, seed) });
   }
 

@@ -1,8 +1,9 @@
 # Market Chart Field
 
-A seamlessly looping 4K market-chart background: two glowing area charts
-crossing over a faint continental map, with candlestick bokeh drifting through
-the foreground. Built with [Remotion](https://remotion.dev).
+A seamlessly looping 4K market-chart background: the camera flies inward
+through layered planes of glowing area charts crossing over a faint
+continental map, with candlestick bokeh drifting through the foreground.
+Built with [Remotion](https://remotion.dev).
 
 Two colourways, same composition:
 
@@ -52,13 +53,47 @@ npx remotion still V1-MarketFieldViolet out/V1_MarketFieldViolet.png --frame=300
 kind of wide, dark, low-contrast gradient that bands in H.264, which is what
 the grain layer exists to prevent.
 
+## The camera
+
+The camera dollies forward the whole time, and the animation still loops. Those
+two are usually in tension: a push-in ends somewhere other than where it
+started.
+
+The way out is to make the scene periodic in depth. It is a repeating lattice
+of planes one `cellDepth` apart, and the camera advances exactly one cell over
+the 600 frames — so plane *i* finishes the loop at the depth plane *i-1* held
+at the start, and frame 600 is frame 0 again.
+
+Crucially the dolly is **linear in distance**, not an exponential zoom. Because
+depth enters the projection as `1/d`, planes at different depths grow at
+different rates: over one loop the chart planes swell about 2x while the map,
+sitting further back, creeps by much less. That difference is real parallax,
+not a uniform scale-up of a flat image.
+
+Two things keep the handover from reading as a double exposure:
+
+- **The fade window is a partition of unity.** Depth in cell units decreases by
+  exactly 1 per loop, so a raised cosine over that variable makes the visible
+  planes' opacities sum to 1 at every frame. Nothing pulses as they hand over.
+- **Depth of field.** Focus sits on the plane holding full opacity. A plane
+  coming at the lens defocuses hard and blows out into a soft mass; the one
+  fading in behind is softened much more gently. Without this the two planes
+  look like a duplicated chart rather than one scene with depth.
+
+The bokeh candlesticks deliberately stay in screen space rather than riding the
+lattice, which is also what the reference does — a repeating depth lattice
+would line them up along radial rays.
+
+See `src/camera.ts`; the constants are in `CAMERA` in `src/config.ts`.
+
 ## How the loop works
 
 Everything that moves is a pure function of the frame, and every periodic term
 completes a whole number of cycles over the 600-frame composition:
 
-- **Series data.** Values are a function of `index mod CYCLE_LENGTH` (300).
-  Over 600 frames the window scrolls by `SCROLL_POINTS_PER_LOOP` (300) points —
+- **The camera.** One cell of forward travel per loop, as above.
+- **Series data.** Values are a function of `index mod CYCLE_LENGTH` (480).
+  Over 600 frames the window scrolls by `SCROLL_POINTS_PER_LOOP` (480) points —
   a whole multiple of the cycle — so frame 600 samples exactly what frame 0 did.
   Nothing accumulates and nothing drifts.
 - **Series shape.** The rising/falling envelopes are functions of *screen*
@@ -80,6 +115,7 @@ mulberry32 / integer hash (`src/random.ts`) evaluated fresh for each frame.
 src/
   Root.tsx              compositions (both colourways)
   MarketField.tsx       layer stack, back to front
+  camera.ts             the dolly: depth lattice, fade window, depth of field
   config.ts             every tunable; sizes as fractions of the frame
   palettes.ts           V1 and V2 colour definitions
   series.ts             pure, periodic series generation
@@ -87,8 +123,9 @@ src/
   color.ts              hex helpers
   components/
     Background.tsx      near-black field with a slight centre lift
-    WorldMap.tsx        static continental silhouette
-    ChartLayer.tsx      SVG areas, additive overlap, strokes and bloom
+    WorldMap.tsx        continental silhouette, on its own depth lattice
+    ChartLayer.tsx      SVG areas, additive overlap, strokes and bloom, one
+                        copy per visible camera plane
     FloatingBars.tsx    canvas bokeh candlesticks
     Vignette.tsx
     Grain.tsx           additive dither, ~2%
@@ -101,6 +138,15 @@ scripts/
 Sizes and stroke widths are fractions of the frame from `useVideoConfig()`, so
 the 1080p preview is the same composition as the 4K master rather than an
 approximation of it.
+
+Two things inside a plane are lens effects rather than geometry — the bloom and
+the defocus — so their radii are divided by the plane's scale to stay constant
+on screen. The line weights are geometry, and do thicken as a plane comes at
+the camera.
+
+The chart is drawn well past the frame edges (`CHART.overscan`). A plane behind
+the focus is smaller than the frame, so without that margin its geometry runs
+out and leaves a hard rectangle in mid-air.
 
 ## Map data
 

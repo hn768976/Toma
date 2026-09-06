@@ -1,45 +1,51 @@
-import { AbsoluteFill, useVideoConfig } from "remotion";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { planeTransform, planesAt } from "../camera";
+import { CAMERA } from "../config";
 import { LAND_PATHS, MAP_VIEWBOX_WIDTH } from "../map/land-paths";
 import { MAP_COLOR } from "../palettes";
 
 /**
- * Static continental silhouette across the upper two thirds.
+ * Continental silhouette across the upper two thirds.
  *
  * Cropped to 84N..58S (the reference map stops well above Antarctica) and
- * blurred a little, so it reads as a shape and never as detail. It does not
- * move with the charts.
+ * blurred a little, so it reads as a shape and never as detail. It sits on
+ * its own lattice, further back than the charts, so the camera's push-in
+ * grows it more slowly than the data in front of it — that difference in
+ * rate is what sells the depth.
  */
 
 // Equirectangular y for the crop, in the generated 1000 x 500 viewBox.
 const VIEW_TOP = 14; // 84N
 const VIEW_HEIGHT = 397; // down to ~58S
 
+/** Baseline softening, in map user units at scale 1. */
+const BASE_SOFTENING = 0.9;
+
 export const WorldMap: React.FC = () => {
-  const { width, height } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const { width, height, durationInFrames } = useVideoConfig();
+
   const mapWidth = width * 1.02;
-  const mapHeight = (mapWidth / MAP_VIEWBOX_WIDTH) * VIEW_HEIGHT;
+  const mapScale = mapWidth / MAP_VIEWBOX_WIDTH;
+  const layout = `translate(${((width - mapWidth) / 2).toFixed(2)} ${(height * 0.045).toFixed(2)}) scale(${mapScale.toFixed(5)}) translate(0 ${-VIEW_TOP})`;
+
+  const planes = planesAt(frame / durationInFrames, CAMERA.mapDepth);
+
+  // One map user unit is `mapScale * plane.scale` screen pixels, so both the
+  // baseline softening and the defocus are converted back through that to
+  // stay constant on screen as a plane comes forward.
+  const softening = (plane: (typeof planes)[number]) =>
+    BASE_SOFTENING / plane.scale +
+    (plane.dof * CAMERA.mapDofScale * width) / (mapScale * plane.scale);
 
   return (
     <AbsoluteFill>
-      <svg
-        width={mapWidth}
-        height={mapHeight}
-        viewBox={`0 ${VIEW_TOP} ${MAP_VIEWBOX_WIDTH} ${VIEW_HEIGHT}`}
-        style={{
-          position: "absolute",
-          left: (width - mapWidth) / 2,
-          top: height * 0.045,
-        }}
-      >
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         <defs>
-          <filter id="map-soften" x="-5%" y="-5%" width="110%" height="110%">
-            {/* User units, so the softening scales with the render resolution. */}
-            <feGaussianBlur stdDeviation={0.9} />
-          </filter>
           <radialGradient id="map-falloff" cx="50%" cy="46%" r="62%">
             <stop offset="0%" stopColor="#fff" stopOpacity={1} />
             <stop offset="48%" stopColor="#fff" stopOpacity={0.8} />
-            <stop offset="100%" stopColor="#fff" stopOpacity={0.06} />
+            <stop offset="100%" stopColor="#fff" stopOpacity={0} />
           </radialGradient>
           <mask id="map-mask">
             <rect
@@ -50,12 +56,25 @@ export const WorldMap: React.FC = () => {
               fill="url(#map-falloff)"
             />
           </mask>
-        </defs>
-        <g mask="url(#map-mask)" filter="url(#map-soften)">
-          {LAND_PATHS.map((d, i) => (
-            <path key={i} d={d} fill={MAP_COLOR} />
+          {planes.map((plane, i) => (
+            // Softening is atmosphere, not geometry: dividing by the plane
+            // scale keeps it constant on screen as the plane approaches.
+            <filter key={i} id={`map-soften-${i}`} x="-6%" y="-6%" width="112%" height="112%">
+              <feGaussianBlur stdDeviation={softening(plane)} />
+            </filter>
           ))}
-        </g>
+        </defs>
+        {planes.map((plane, i) => (
+          <g key={i} opacity={plane.opacity} transform={planeTransform(plane.scale, width, height)}>
+            <g transform={layout}>
+              <g mask="url(#map-mask)" filter={`url(#map-soften-${i})`}>
+                {LAND_PATHS.map((d, n) => (
+                  <path key={n} d={d} fill={MAP_COLOR} />
+                ))}
+              </g>
+            </g>
+          </g>
+        ))}
       </svg>
     </AbsoluteFill>
   );
