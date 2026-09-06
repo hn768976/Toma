@@ -10,6 +10,10 @@ import { Config } from "@remotion/cli/config";
 
 Config.setOverwriteOutput(true);
 
+// There is no sound in either composition, so don't let the encoder attach a
+// silent AAC track — it is a few hundred kb/s of nothing in a delivered file.
+Config.setMuted(true);
+
 // The strokes are drawn on white with normal alpha blending; JPEG's chroma
 // subsampling puts visible mosquito noise in the white around the dense
 // ridges, so hand PNG frames to the encoder instead.
