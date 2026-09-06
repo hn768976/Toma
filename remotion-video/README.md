@@ -55,16 +55,47 @@ Everything animated is a pure function of `useCurrentFrame()` — no `useFrame`
 clock, no accumulated deltas — because Remotion renders frames out of order
 across threads.
 
+### Motion
+
+Three periodic terms, each a whole number of cycles across the 300-frame loop:
+
+- **Rotation** — one full turn, sweeping the vortex seam around once.
+- **Ripple travel** — 7 ridge periods of outward phase advance.
+- **Breath** — one amplitude swell and settle.
+
+Rotation and ripple travel both push the ridges outward, so total travel is
+8 ridge spacings across the loop, or **0.8 spacings per second**.
+
+That second term is not decoration, it is the clip. With a single spiral arm,
+one turn of rotation drags the ridges outward by exactly _one_ ridge spacing —
+0.1 spacings per second, which measures as **zero** frame-to-frame travel and
+looks like a still image. Rotation alone cannot carry this composition; the
+radial term is what makes it ripple.
+
+Measured by cross-correlating a horizontal brightness profile between frames:
+
+| Clip                                 | Ridge travel      |
+| ------------------------------------ | ----------------- |
+| Reference (`istockphoto-2227405885`) | ~2.7 spacings/sec |
+| This composition                     | 0.82 spacings/sec |
+| Rotation only (what this replaced)   | 0.00 spacings/sec |
+
+About a third of the reference's speed, which is the brief's "one calm breath"
+rather than the reference's brisker churn.
+
 ### The loop
 
-Seamless at 300 frames. The pattern has a single spiral arm, so it only maps
-back onto itself after a full 360 degrees; the rotation is exactly one turn
-across the loop and the amplitude pulse is exactly one cycle, so frame 300 is
-frame 0.
+Seamless at 300 frames: every animated term above completes a whole number of
+cycles, so frame 300 is frame 0.
 
-Verified rather than asserted: the mean per-channel difference across the loop
-seam (frame 299 -> frame 0) is 1.811 levels, identical to an ordinary step
-within the loop (frame 298 -> 299).
+Verified rather than asserted. Comparing frames after an 8x8 box average —
+which averages the per-pixel grain down far enough to expose the underlying
+structure — the loop seam (frame 299 -> 0) differs by 2.886 levels, matching an
+ordinary step within the loop (298 -> 299) at 2.883.
+
+Do this check on _blurred_ frames. On raw frames the 2% grain contributes about
+1.7 levels of difference all by itself, which is enough to make a completely
+motionless clip look like it is moving.
 
 ### Rendering
 

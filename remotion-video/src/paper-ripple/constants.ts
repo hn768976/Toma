@@ -71,13 +71,31 @@ export const RIDGE_AMPLITUDE = 0.045;
 export const CORE_RADIUS = 0.62;
 
 // --- Motion -----------------------------------------------------------------
-// One full 360 deg turn across the loop. With a single spiral arm nothing
-// shorter maps the pattern back onto itself.
+// Two independent periodic terms, each a whole number of cycles across the
+// loop so both land exactly back on frame 0.
+//
+// ROTATION turns the pattern about its centre, which is what sweeps the
+// vortex seam around. With a single spiral arm one turn also drags the ridges
+// outward by exactly one ridge spacing — and that, on its own, is the entire
+// motion budget for ten seconds: 0.1 ridge-spacings per second, which
+// measures as literally zero travel frame to frame. Rotation alone cannot
+// carry this clip.
+//
+// So the radial travel is its own term. RIPPLE_CYCLES_PER_LOOP advances the
+// ridge phase directly, spreading the ripples outward from the centre the way
+// the name implies, without spinning the seam any faster.
 export const ROTATIONS_PER_LOOP = 1;
+export const RIPPLE_CYCLES_PER_LOOP = 7;
+
+// Total outward travel is ROTATIONS_PER_LOOP + RIPPLE_CYCLES_PER_LOOP = 8
+// ridge spacings across the loop, i.e. 0.8 per second. Measured against the
+// reference clip, which runs at ~2.7 ridge-spacings per second, that is
+// roughly a third of the speed — clearly alive, but still one calm breath
+// rather than a churn.
 
 // The breath: ridge amplitude swells and settles once across the loop, with a
 // slight radial lag so it reads as a pulse spreading rather than a global fade.
-export const PULSE_AMOUNT = 0.11;
+export const PULSE_AMOUNT = 0.16;
 export const PULSE_RADIAL_LAG = 0.22;
 
 // --- Self-shadowing ---------------------------------------------------------

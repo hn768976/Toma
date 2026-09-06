@@ -17,6 +17,7 @@ import {
   RIDGE_TIGHTEN,
   RIDGE_TIGHTEN_FALLOFF,
   RIPPLE_CENTER,
+  RIPPLE_CYCLES_PER_LOOP,
   ROTATIONS_PER_LOOP,
   SHADOW_START,
   SHADOW_STEP,
@@ -80,10 +81,11 @@ const directionFrom = (azimuthDeg: number, elevationDeg: number) => {
 const Surface: React.FC<{
   variant: PaperRippleVariant;
   rotation: number;
+  ripplePhase: number;
   pulsePhase: number;
   grainSeed: number;
   aspect: number;
-}> = ({ variant, rotation, pulsePhase, grainSeed, aspect }) => {
+}> = ({ variant, rotation, ripplePhase, pulsePhase, grainSeed, aspect }) => {
   const preset = VARIANT_PRESETS[variant];
 
   // Built once per variant and then mutated in place: the uniform object
@@ -98,6 +100,7 @@ const Surface: React.FC<{
       uTightenFalloff: { value: RIDGE_TIGHTEN_FALLOFF },
       uSpiral: { value: SPIRAL_ARMS },
       uRotation: { value: 0 },
+      uRipplePhase: { value: 0 },
       uPulseAmount: { value: PULSE_AMOUNT },
       uPulseLag: { value: PULSE_RADIAL_LAG },
       uPulsePhase: { value: 0 },
@@ -140,6 +143,7 @@ const Surface: React.FC<{
   // Per-frame values. Written during render; three reads them when the canvas
   // is advanced, which happens after commit.
   uniforms.uRotation.value = rotation;
+  uniforms.uRipplePhase.value = ripplePhase;
   uniforms.uPulsePhase.value = pulsePhase;
   uniforms.uGrainSeed.value = grainSeed;
   uniforms.uAspect.value = aspect;
@@ -172,9 +176,13 @@ export const PaperRippleRelief: React.FC<
   // value below is a pure function of the frame number. No clock, no deltas.
   const t = frame / durationInFrames;
 
-  // One full turn across the loop. A single-arm spiral only maps back onto
-  // itself after 360 deg, so nothing shorter would loop.
+  // One full turn across the loop: the vortex seam sweeps around once. A
+  // single-arm spiral only maps back onto itself after 360 deg, so nothing
+  // shorter would loop.
   const rotation = TAU * ROTATIONS_PER_LOOP * t;
+  // The ripples themselves travelling outward. A whole number of ridge
+  // periods across the loop, so this lands back on frame 0 too.
+  const ripplePhase = TAU * RIPPLE_CYCLES_PER_LOOP * t;
   // One breath in, one breath out, landing exactly where it started.
   const pulsePhase = TAU * t;
 
@@ -210,6 +218,7 @@ export const PaperRippleRelief: React.FC<
         <Surface
           variant={variant}
           rotation={rotation}
+          ripplePhase={ripplePhase}
           pulsePhase={pulsePhase}
           grainSeed={frame * 17.13}
           aspect={width / height}

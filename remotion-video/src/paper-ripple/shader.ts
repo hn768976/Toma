@@ -20,6 +20,7 @@ uniform float uTighten;
 uniform float uTightenFalloff;
 uniform float uSpiral;
 uniform float uRotation;
+uniform float uRipplePhase;
 uniform float uPulseAmount;
 uniform float uPulseLag;
 uniform float uPulsePhase;
@@ -57,7 +58,7 @@ float rippleHeight(vec2 p) {
   vec2 d = p - uCenter;
   float r = max(length(d), 1e-4);
   float theta = atan(d.y, d.x);
-  float u = ridgePhase(r) - uSpiral * theta - uRotation;
+  float u = ridgePhase(r) - uSpiral * (theta + uRotation) - uRipplePhase;
   return ridgeAmplitude(r) * sin(u);
 }
 
@@ -68,7 +69,7 @@ void rippleSurface(vec2 p, out float h, out vec2 grad, out float ridge) {
   float r = max(length(d), 1e-4);
   float theta = atan(d.y, d.x);
 
-  float u = ridgePhase(r) - uSpiral * theta - uRotation;
+  float u = ridgePhase(r) - uSpiral * (theta + uRotation) - uRipplePhase;
   float su = sin(u);
   float cu = cos(u);
 
