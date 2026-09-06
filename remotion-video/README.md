@@ -149,20 +149,16 @@ npx remotion still PaperRippleGraphite out/V2_PaperRippleGraphite.png --frame=90
 ### Measured render time
 
 On 4 vCPU with no GPU (SwiftShader via ANGLE), using the render commands above
-with `--concurrency=1`:
+with `--concurrency=1`. Each figure comes from differencing a 12-frame and a
+2-frame run, so per-run startup drops out:
 
-| Output                    | Per frame  | 300 frames                  |
-| ------------------------- | ---------- | --------------------------- |
-| 1920x1080 (`--scale=0.5`) | **1.11 s** | 5m 38s (measured, full run) |
-| 3840x2160 (`--scale=1`)   | **3.67 s** | ~18m 20s (extrapolated)     |
+| Output                    | Per frame  | 300 frames |
+| ------------------------- | ---------- | ---------- |
+| 1920x1080 (`--scale=0.5`) | **1.33 s** | ~6m 40s    |
+| 3840x2160 (`--scale=1`)   | **3.93 s** | ~19m 40s   |
 
-The 1080p number is a full 300-frame render divided by its own frame count. The
-4K number comes from differencing a 12-frame and a 2-frame run so per-run
-startup drops out; only the 300-frame total is extrapolated from it.
-
-Raising `--concurrency` does **not** help here: SwiftShader already saturates
-every core inside a single GL context, and 60 frames took 68s at
-`--concurrency=1` versus 70s at `--concurrency=4`. On a machine with a real GPU,
+Raising `--concurrency` does **not** help much here: SwiftShader already
+saturates every core inside a single GL context. On a machine with a real GPU,
 raise it.
 
 ### Banding
