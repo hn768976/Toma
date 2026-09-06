@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { ThreeCanvas } from "@remotion/three";
 import * as THREE from "three";
@@ -80,13 +80,37 @@ const directionFrom = (azimuthDeg: number, elevationDeg: number) => {
 
 const Surface: React.FC<{
   variant: PaperRippleVariant;
-  rotation: number;
-  ripplePhase: number;
-  pulsePhase: number;
-  grainSeed: number;
   aspect: number;
-}> = ({ variant, rotation, ripplePhase, pulsePhase, grainSeed, aspect }) => {
+}> = ({ variant, aspect }) => {
   const preset = VARIANT_PRESETS[variant];
+
+  // The frame is read HERE, inside the canvas, rather than being computed by
+  // the parent and handed down as props.
+  //
+  // <ThreeCanvas> hands its `children` element to react-three-fiber's own
+  // reconciler. Components inside that tree re-render from their own hooks
+  // every frame, but the `children` element the parent captured does not
+  // reliably follow the parent's re-render — so frame-dependent *props* go
+  // stale while the canvas keeps redrawing. That renders a video in which
+  // every frame is frame 0, while `remotion still` still looks correct
+  // because each still is a fresh page whose first render is always right.
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+
+  // Remotion renders frames out of order across threads, so every animated
+  // value below is a pure function of the frame number. No clock, no deltas.
+  const t = frame / durationInFrames;
+
+  // One full turn across the loop: the vortex seam sweeps around once. A
+  // single-arm spiral only maps back onto itself after 360 deg, so nothing
+  // shorter would loop.
+  const rotation = TAU * ROTATIONS_PER_LOOP * t;
+  // The ripples themselves travelling outward. A whole number of ridge
+  // periods across the loop, so this lands back on frame 0 too.
+  const ripplePhase = TAU * RIPPLE_CYCLES_PER_LOOP * t;
+  // One breath in, one breath out, landing exactly where it started.
+  const pulsePhase = TAU * t;
+  const grainSeed = frame * 17.13;
 
   // Built once per variant and then mutated in place: the uniform object
   // identity has to stay stable or three rebuilds the program every frame.
@@ -140,15 +164,32 @@ const Surface: React.FC<{
     [variant],
   );
 
-  // Per-frame values. Written during render; three reads them when the canvas
-  // is advanced, which happens after commit.
-  uniforms.uRotation.value = rotation;
-  uniforms.uRipplePhase.value = ripplePhase;
-  uniforms.uPulsePhase.value = pulsePhase;
-  uniforms.uGrainSeed.value = grainSeed;
-  uniforms.uAspect.value = aspect;
-
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+
+  // Per-frame values are written onto the MATERIAL, not onto the `uniforms`
+  // object above.
+  //
+  // react-three-fiber copies that object into the material when the material
+  // is first created. From then on the material owns a different object, and
+  // because the prop's identity never changes R3F never re-applies it — so
+  // mutating our own copy silently stops reaching the GPU after frame 0. The
+  // draw call still happens every frame, it just draws the same values, which
+  // renders a video where every frame is frame 0. `remotion still` hides the
+  // bug completely, because a still only ever performs that first draw.
+  //
+  // This has to be a LAYOUT effect. <ThreeCanvas> issues its manual draw from
+  // a passive effect, and React runs all layout effects before any passive
+  // effect, so writing here lands before the draw for the same frame. In a
+  // passive effect it would race with the draw and land a frame late.
+  useLayoutEffect(() => {
+    const material = materialRef.current;
+    if (!material) return;
+    material.uniforms.uRotation.value = rotation;
+    material.uniforms.uRipplePhase.value = ripplePhase;
+    material.uniforms.uPulsePhase.value = pulsePhase;
+    material.uniforms.uGrainSeed.value = grainSeed;
+    material.uniforms.uAspect.value = aspect;
+  });
 
   return (
     <mesh>
@@ -168,23 +209,8 @@ const Surface: React.FC<{
 export const PaperRippleRelief: React.FC<
   z.infer<typeof paperRippleReliefSchema>
 > = ({ variant }) => {
-  const frame = useCurrentFrame();
-  const { width, height, durationInFrames } = useVideoConfig();
+  const { width, height } = useVideoConfig();
   const preset = VARIANT_PRESETS[variant];
-
-  // Remotion renders frames out of order across threads, so every animated
-  // value below is a pure function of the frame number. No clock, no deltas.
-  const t = frame / durationInFrames;
-
-  // One full turn across the loop: the vortex seam sweeps around once. A
-  // single-arm spiral only maps back onto itself after 360 deg, so nothing
-  // shorter would loop.
-  const rotation = TAU * ROTATIONS_PER_LOOP * t;
-  // The ripples themselves travelling outward. A whole number of ridge
-  // periods across the loop, so this lands back on frame 0 too.
-  const ripplePhase = TAU * RIPPLE_CYCLES_PER_LOOP * t;
-  // One breath in, one breath out, landing exactly where it started.
-  const pulsePhase = TAU * t;
 
   // The drawing buffer must follow Remotion's --scale, otherwise react-three-
   // fiber clamps devicePixelRatio to >= 1 and the preview quietly renders the
@@ -215,14 +241,7 @@ export const PaperRippleRelief: React.FC<
           far: 100,
         }}
       >
-        <Surface
-          variant={variant}
-          rotation={rotation}
-          ripplePhase={ripplePhase}
-          pulsePhase={pulsePhase}
-          grainSeed={frame * 17.13}
-          aspect={width / height}
-        />
+        <Surface variant={variant} aspect={width / height} />
       </ThreeCanvas>
     </AbsoluteFill>
   );

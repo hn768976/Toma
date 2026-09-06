@@ -45,6 +45,18 @@ Both compositions are **authored at 3840x2160** and are 300 frames at 30 fps.
   failure of a displaced plane, cannot occur.
 - `variants.ts` — the two material/light presets.
 
+Per-frame uniforms are written onto the material inside a **layout** effect,
+which is load-bearing. react-three-fiber copies the `uniforms` object into the
+material when it creates it, and never re-applies a prop whose identity has not
+changed — so mutating your own copy reaches the GPU on the first draw and never
+again. And it has to be a layout effect specifically, because `<ThreeCanvas>`
+issues its manual draw from a passive effect, which React runs after every
+layout effect; from a passive effect the write lands a frame late.
+
+Get either detail wrong and `remotion still` still looks perfect — a still
+performs only that first draw — while every frame of the rendered video is
+frame 0.
+
 **Shadows are ray-marched against the height field in the fragment shader**,
 not sampled from a shadow map. At a 13-degree key angle a shadow map would
 either alias along the ridge or acne across the flats, and either one destroys
