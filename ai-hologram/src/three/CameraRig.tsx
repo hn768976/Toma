@@ -11,13 +11,13 @@ export const CAMERA = {
   /** Fixed elevation above the plane. The camera never crosses it, never looks up. */
   elevationDeg: 30,
   /** A barely perceptible dolly in over the run. */
-  radiusStart: 22.6,
-  radiusEnd: 20.9,
+  radiusStart: 21.4,
+  radiusEnd: 19.9,
   /** Total arc across the 20 seconds. */
   arcDeg: 31,
   startAzimuthDeg: -14,
-  targetYStart: 1.35,
-  targetYEnd: 1.8,
+  targetYStart: 1.1,
+  targetYEnd: 1.5,
   /** Frames over which the constant orbit speed ramps up from rest. */
   easeFrames: 55,
 };

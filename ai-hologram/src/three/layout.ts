@@ -144,7 +144,11 @@ export const PARTICLES = Array.from({ length: PARTICLE_COUNT }, () => {
 
 export const CARD = {
   width: 3.35,
-  y: 4.75,
+  /**
+   * Deliberately low: the card hovers just clear of the platform, its lower
+   * edge overlapping the outer rings, rather than floating free above them.
+   */
+  y: 3.15,
   /** Y it rises from. */
-  fromY: 0.9,
+  fromY: 0.7,
 };

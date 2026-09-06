@@ -69,7 +69,7 @@ Measured on this project at **1920×1080** (`--scale=0.5`), 4-core x86-64 VM wit
 | | |
 |---|---|
 | `--concurrency=1` | **2.25 s/frame** |
-| `--concurrency=4`, full 600-frame pass | **2.19 s/frame** (21 m 56 s wall) |
+| `--concurrency=4`, full 600-frame pass | **2.10 s/frame** (21 m 4 s wall) |
 
 Concurrency buys almost nothing here, and that is expected rather than a
 misconfiguration: SwiftShader is a multithreaded software rasteriser, so a

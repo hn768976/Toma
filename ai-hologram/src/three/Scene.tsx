@@ -138,7 +138,7 @@ export const Scene: React.FC<{
         renderOrder={9}
       />
 
-      <ProjectionCone palette={palette} alpha={hazeAlpha * 0.12} height={4.6} />
+      <ProjectionCone palette={palette} alpha={hazeAlpha * 0.12} height={3.0} />
 
       <Atmosphere
         palette={palette}
