@@ -1,0 +1,28 @@
+{
+  "name": "globe-white",
+  "version": "1.0.0",
+  "description": "Dotted globe network on white - Remotion, 4K, seamless 20s loop",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "render:v1": "remotion render V1-GlobeWhiteMono out/V1_GlobeWhiteMono.mp4 --scale=1 --crf=16",
+    "render:v2": "remotion render V2-GlobeWhiteBlue out/V2_GlobeWhiteBlue.mp4 --scale=1 --crf=16",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.185.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.185.0",
+    "typescript": "5.9.3"
+  }
+}
