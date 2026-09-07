@@ -52,7 +52,32 @@ slower.
 
 ### Measured per-frame render time
 
-<!--TIMING-->
+Measured in this project's own container: 4 workers, no GPU, `--gl=swangle`
+(ANGLE over SwiftShader). A machine with a real GPU and `--gl=angle` will be
+substantially faster.
+
+| Run                                  | Per frame | 600 frames |
+| ------------------------------------ | --------- | ---------- |
+| `--scale=0.5` (1080p preview)        | 1.53 s    | ~15 min    |
+| `--scale=1` (4K)                     | ~1.83 s   | ~18 min    |
+
+The two are closer than the 4x pixel ratio suggests, and the reason is worth
+knowing before you plan a 4K run: **`--scale` does not change the resolution
+the WebGL canvas renders at.** The canvas is always the composition size,
+3840x2160; `--scale` only downsamples the screenshot Remotion takes of it.
+
+Verified three ways on a matched frame: the 1080p output matches a 2x2 box
+downsample of the 4K render to within 0.476/255; their per-pixel deltas are
+identical (1.967 vs 1.967, against 3.423 for native 4K); and the weave detail
+still contributes at 1080p, which it could not if the canvas were 1080p and
+the sampling guard had zeroed it.
+
+Two consequences:
+
+- The 1080p previews are effectively 4x supersampled, so they are cleaner
+  than a native 1080p render would be.
+- Going from the preview to 4K costs only the extra H.264 encoding, not extra
+  shading. Almost all of the difference above is x264 on 4x the pixels.
 
 ## How it works
 
