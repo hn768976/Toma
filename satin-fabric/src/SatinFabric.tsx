@@ -59,6 +59,7 @@ const Surface: React.FC<{ palette: SatinPalette }> = ({ palette }) => {
     () => ({
       uTime: { value: 0 },
       uAmp: { value: palette.amp },
+      uRidge: { value: palette.ridge },
       uCamPos: { value: new THREE.Vector3(0, 0, CAMERA_Z) },
       uTrough: { value: new THREE.Vector3(...hexToLinear(palette.trough)) },
       uBase: { value: new THREE.Vector3(...hexToLinear(palette.base)) },

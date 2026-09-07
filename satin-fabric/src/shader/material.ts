@@ -15,6 +15,7 @@ uniform mat4  projectionMatrix;
 uniform mat4  modelViewMatrix;
 uniform float uTime;
 uniform float uAmp;
+uniform float uRidge;
 
 in vec3 position;
 
@@ -27,7 +28,7 @@ void main() {
   vec2 p = position.xy;
   // detail = 0: the two finest octaves are finer than the tessellation and
   // would only alias here. The fragment stage adds them back per pixel.
-  vec3 h = satinField(p, uTime, uAmp, 0.0);
+  vec3 h = satinField(p, uTime, uAmp, uRidge, 0.0);
 
   vec3 displaced = vec3(p, h.x);
   vP   = p;
@@ -41,6 +42,7 @@ precision highp float;
 
 uniform float uTime;
 uniform float uAmp;
+uniform float uRidge;
 uniform vec3  uCamPos;
 
 uniform vec3  uTrough;      // linear-light palette stops
@@ -139,7 +141,7 @@ float hash12(vec2 p) {
 
 void main() {
   // --- surface ------------------------------------------------------
-  vec3 h = satinField(vP, uTime, uAmp, 1.0);
+  vec3 h = satinField(vP, uTime, uAmp, uRidge, 1.0);
   vec2 grad = h.yz;
 
   // Fabric weave: two thread directions at 45 degrees to the fold axis,

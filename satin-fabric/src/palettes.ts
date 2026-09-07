@@ -35,6 +35,7 @@ export type SatinPalette = {
   sheenTint: [number, number, number];
 
   amp: number;
+  ridge: number;
   weave: number;
   grain: number;
   vignette: number;
@@ -50,15 +51,16 @@ const FILL_DIR: [number, number, number] = [0.45, -0.70, 0.45];
 const COMMON = {
   keyDir: KEY_DIR,
   fillDir: FILL_DIR,
-  ambient: 0.008,
-  diffuse: 1.15,
+  ambient: 0.020,
+  diffuse: 1.05,
   fillW: 0.14,
   wrap: 0.18,
   shoulder: 0.90,
-  rough: 0.44,
+  rough: 0.58,
   roughVar: 0.075,
-  anisoRatio: 2.1,
+  anisoRatio: 1.9,
   amp: 1.05,
+  ridge: 1.35,
   weave: 0.016,
   grain: 0.028,
 } as const;
@@ -76,9 +78,9 @@ export const PALETTES: SatinPalette[] = [
     fillInt: 0.55,
     fillTint: [0.04, 0.07, 0.15],
     fillTintMix: 0.012,
-    specInt: 20.0,
-    black: 0.155,
-    contrast: 1.15,
+    specInt: 6.0,
+    black: 0.10,
+    contrast: 0.92,
     sheen: 0.3,
     sheenTint: [0.16, 0.21, 0.32],
     vignette: 0.0,
@@ -95,9 +97,9 @@ export const PALETTES: SatinPalette[] = [
     fillInt: 0.45,
     fillTint: [0.14, 0.03, 0.06],
     fillTintMix: 0.012,
-    specInt: 22.0,
-    black: 0.19,
-    contrast: 1.1,
+    specInt: 7.0,
+    black: 0.06,
+    contrast: 0.95,
     sheen: 0.34,
     sheenTint: [0.34, 0.1, 0.15],
     vignette: 0.0,

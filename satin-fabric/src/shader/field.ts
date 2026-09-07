@@ -86,7 +86,7 @@ const vec3 UNIT3 = vec3(1.0, 0.0, 0.0);
  *
  * Returns vec3(h, dh/dx, dh/dy).
  */
-vec3 satinField(vec2 p, float t, float amp, float detail) {
+vec3 satinField(vec2 p, float t, float amp, float ridge, float detail) {
   float T = TAU * t;
 
   // ---- domain warp -------------------------------------------------
@@ -94,14 +94,20 @@ vec3 satinField(vec2 p, float t, float amp, float detail) {
   // is what turns parallel corrugations into the curving, gathering folds
   // of draped cloth. Kept moderate: too much warp and the crest lines stop
   // being coherent, and the highlights break into disconnected glints.
+  // Amplitude here is a fraction of a fold wavelength, and it has to be a
+  // large fraction. A warp of a few percent only ripples the fold lines; it
+  // takes a displacement comparable to the spacing itself to bend them into
+  // the nested concentric arcs that draped cloth actually makes. The ceiling
+  // is |grad W| < 1, past which the level sets fold back on themselves and
+  // pinch; these sum to ~0.72.
   vec3 wx = vec3(0.0);
   vec3 wy = vec3(0.0);
-  addWave(wx, p, kAcross(1.05,  2.30), 0.10175, 0.00, ZERO2, ZERO2, ZERO2, UNIT3,  T);
-  addWave(wx, p, kAlong (1.70, -0.80), 0.06050, 1.97, ZERO2, ZERO2, ZERO2, UNIT3, -T);
-  addWave(wx, p, kAcross(3.10,  0.55), 0.02090, 4.21, ZERO2, ZERO2, ZERO2, UNIT3,  T);
-  addWave(wy, p, kAlong (1.35, -1.60), 0.09075, 2.55, ZERO2, ZERO2, ZERO2, UNIT3, -T);
-  addWave(wy, p, kAcross(2.40,  1.00), 0.04675, 5.63, ZERO2, ZERO2, ZERO2, UNIT3,  T);
-  addWave(wy, p, kAlong (3.60, -0.40), 0.01650, 0.84, ZERO2, ZERO2, ZERO2, UNIT3, -T);
+  addWave(wx, p, kAcross(0.85,  2.30), 0.3400, 0.00, ZERO2, ZERO2, ZERO2, UNIT3,  T);
+  addWave(wx, p, kAlong (1.30, -0.80), 0.2000, 1.97, ZERO2, ZERO2, ZERO2, UNIT3, -T);
+  addWave(wx, p, kAcross(2.40,  0.55), 0.0700, 4.21, ZERO2, ZERO2, ZERO2, UNIT3,  T);
+  addWave(wy, p, kAlong (1.05, -1.60), 0.3000, 2.55, ZERO2, ZERO2, ZERO2, UNIT3, -T);
+  addWave(wy, p, kAcross(1.90,  1.00), 0.1700, 5.63, ZERO2, ZERO2, ZERO2, UNIT3,  T);
+  addWave(wy, p, kAlong (2.90, -0.40), 0.0600, 0.84, ZERO2, ZERO2, ZERO2, UNIT3, -T);
   vec2 W   = vec2(wx.x, wy.x);
   vec2 gWx = wx.yz;
   vec2 gWy = wy.yz;
@@ -109,7 +115,7 @@ vec3 satinField(vec2 p, float t, float amp, float detail) {
   // ---- fold amplitude across the frame -----------------------------
   // Broad, flatter folds up top; tighter gathered ones toward lower left.
   vec3 envBroad = envelope(p, vec2( 0.00,  0.85),  0.10, 0.72, 1.18);
-  vec3 envTight = envelope(p, vec2(-0.95, -1.25),  0.05, 0.10, 1.00);
+  vec3 envTight = envelope(p, vec2(-0.95, -1.25),  0.05, 0.38, 1.05);
   vec3 envAlong = envelope(p, vec2(-0.55, -0.70),  0.00, 0.55, 1.15);
 
   // A very slight overall breathing of the fold amplitude.
@@ -124,25 +130,41 @@ vec3 satinField(vec2 p, float t, float amp, float detail) {
   // fundamental clearly dominates. That is what keeps a crest line coherent
   // across the frame and its highlight continuous; octaves of comparable
   // slope interfere and chop the ribbons into separate glints.
-  addWave(h, p, kAcross( 5.50,  0.20), 0.068000, 0.31, W, gWx, gWy, envBroad,  T);
-  addWave(h, p, kAcross( 8.91, -0.11), 0.015993, 2.74, W, gWx, gWy, envBroad, -T);
-  addWave(h, p, kAcross(14.43,  0.07), 0.003765, 5.02, W, gWx, gWy, envBroad,  T);
+  addWave(h, p, kAcross(11.50,  0.030), 0.032000, 0.31, W, gWx, gWy, envBroad,  T);
+  addWave(h, p, kAcross(18.63, -0.020), 0.007520, 2.74, W, gWx, gWy, envBroad, -T);
+  addWave(h, p, kAcross(30.18,  0.015), 0.001770, 5.02, W, gWx, gWy, envBroad,  T);
 
   // A second, tighter fold group weighted toward the lower left, so the
   // fold pitch varies across the frame instead of reading as one comb.
-  addWave(h, p, kAcross( 9.50,  0.07), 0.026000, 1.16, W, gWx, gWy, envTight, -T);
-  addWave(h, p, kAcross(15.39, -0.15), 0.006114, 4.48, W, gWx, gWy, envTight,  T);
+  addWave(h, p, kAcross(19.40,  0.025), 0.009900, 1.16, W, gWx, gWy, envTight, -T);
+  addWave(h, p, kAcross(31.43, -0.018), 0.002330, 4.48, W, gWx, gWy, envTight,  T);
 
   // Ridge-length modulation: low frequency along the folds, so crests swell
   // and pinch instead of running edge to edge at constant height.
-  addWave(h, p, kAlong ( 1.05,  0.18), 0.009000, 3.55, W, gWx, gWy, envAlong,  T);
-  addWave(h, p, kAlong ( 1.71, -0.25), 0.004680, 0.62, W, gWx, gWy, envAlong, -T);
+  addWave(h, p, kAlong ( 1.05,  0.18), 0.004000, 3.55, W, gWx, gWy, envAlong,  T);
+  addWave(h, p, kAlong ( 1.71, -0.25), 0.002000, 0.62, W, gWx, gWy, envAlong, -T);
 
   if (detail > 0.5) {
     vec3 envFine = envBroad * 0.5;
     addWave(h, p, kAcross(30.00,  0.16), 0.00110, 5.71, W, gWx, gWy, envFine,  T);
     addWave(h, p, kAcross(41.00, -0.11), 0.00050, 1.83, W, gWx, gWy, envFine, -T);
   }
+
+  // ---- ridge shaping -----------------------------------------------
+  // Real fabric folds are not sinusoidal. They have broad, rounded,
+  // light-catching tops separated by narrow deep creases; a sinusoid gives
+  // equal-width light and dark bands, which reads as corrugated metal with
+  // black voids between the highlights rather than as cloth.
+  //
+  //   f(u) = -(1-u)^q / q      f'(u) = (1-u)^(q-1)
+  //
+  // f' vanishes at the crest (broad flat top) and grows toward the trough
+  // (narrow sharp crease). Applying it to the summed height and scaling the
+  // gradient by f' keeps the normals exact -- it is just the chain rule.
+  float A = 0.038 * amp;
+  float u = clamp(h.x / A, -1.3, 0.95);
+  h.x   = -A * pow(1.0 - u, ridge) / ridge;
+  h.yz *= pow(1.0 - u, ridge - 1.0);
 
   return h;
 }
