@@ -37,6 +37,26 @@ Stills:
 npx remotion still V1-SatinCharcoal out/V1_SatinCharcoal.png --frame=90 --scale=1
 ```
 
+### If you need a smaller file
+
+At CRF 14 a 20 s 1080p preview lands around 90 MB. This clip is almost pure
+grain over smooth gradients, so bitrate falls away very fast: CRF 14 gives
+91 MiB, CRF 20 gives 4 MiB. Do not simply raise the CRF -- by CRF 20 x264 has
+smoothed the dither out of the troughs, which is the banding the dither exists
+to prevent. It does not show up as reduced code occupancy; it shows up as long
+runs of identical value along a scanline (12 px at CRF 14, 133 px at CRF 20).
+
+`-tune grain` is what makes the difference, because it stops x264 discarding
+exactly the high-frequency detail that matters here:
+
+```console
+ffmpeg -i out/V1_SatinCharcoal.mp4 -c:v libx264 -crf 19 -tune grain \
+       -pix_fmt yuv420p -preset slow -movflags +faststart out/V1_web.mp4
+```
+
+That gives ~19 MB with the dither essentially intact (longest constant run
+14 px against the master's 12 px).
+
 ### Chromium GL flag
 
 Headless Chromium needs an OpenGL backend before it will give Remotion a WebGL
