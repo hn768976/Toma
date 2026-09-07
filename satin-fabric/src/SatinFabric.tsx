@@ -85,6 +85,7 @@ const Surface: React.FC<{ palette: SatinPalette }> = ({ palette }) => {
       uWeave: { value: palette.weave },
       uGrain: { value: palette.grain },
       uVignette: { value: palette.vignette },
+      uHalfExtent: { value: new THREE.Vector2(1, 1) },
       uSeed: { value: 0 },
     }),
     [palette],
@@ -93,6 +94,7 @@ const Surface: React.FC<{ palette: SatinPalette }> = ({ palette }) => {
   uniforms.uTime.value = t;
   // Grain is re-seeded per frame so it never freezes into a static pattern.
   uniforms.uSeed.value = (frame % durationInFrames) * 17.31;
+  uniforms.uHalfExtent.value.set(aspect, 1);
 
   const material = useMemo(
     () =>

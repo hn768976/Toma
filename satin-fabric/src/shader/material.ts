@@ -20,7 +20,6 @@ in vec3 position;
 
 out vec2 vP;
 out vec3 vPos;
-out vec2 vScreen;
 
 ${FIELD_GLSL}
 
@@ -34,9 +33,6 @@ void main() {
   vP   = p;
   vPos = displaced;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
-  // Screen position carried as a varying rather than read back from
-  // gl_FragCoord, so the vignette is identical at 1080p and at 4K.
-  vScreen = gl_Position.xy / gl_Position.w * 0.5 + 0.5;
 }
 `;
 
@@ -75,11 +71,11 @@ uniform vec3  uSheenTint;
 uniform float uWeave;
 uniform float uGrain;
 uniform float uVignette;
+uniform vec2  uHalfExtent;  // visible frame half-size, in field units
 uniform float uSeed;
 
 in vec2 vP;
 in vec3 vPos;
-in vec2 vScreen;
 
 out vec4 fragColor;
 
@@ -151,10 +147,11 @@ void main() {
   vec2 w1 = normalize(FOLD + CROSS);
   vec2 w2 = normalize(FOLD - CROSS);
   float kw = 1256.0;
-  // Fade the weave out as it approaches the sampling limit, measured from
-  // the actual screen-space footprint of a pixel. Without this it is a moire
-  // generator at 1080p; with it, it is barely there at 1080p and resolves
-  // properly at 4K, which is the intent.
+  // Attenuate the weave as it approaches the sampling limit, measured from
+  // the actual screen-space footprint of a pixel. Undithered, this detail is
+  // a moire generator at preview resolution; the attenuation is what keeps
+  // the 1080p output clean. Measured: the weave is still present in the
+  // spectrum at 1080p, at low amplitude -- "barely visible", not absent.
   float footprint = max(length(fwidth(vP)), 1e-6);
   float cyclesPerPixel = kw * footprint / TAU;
   float weave = uWeave * (1.0 - smoothstep(0.14, 0.34, cyclesPerPixel));
@@ -194,7 +191,8 @@ void main() {
   float sheen = pow(1.0 - ndv, 4.0) * (shape1 * 0.75 + shape2 * 0.25) * uSheen;
 
   // --- grade --------------------------------------------------------
-  // Diffuse is deliberately weak; the brightness is the specular response.
+  // The wrapped diffuse carries the broad fold shading; the specular adds
+  // the bright streaks along the crests and drives the top of the range.
   float lum = uAmbient
             + uDiffuse * shape1 * uKeyInt
             + uFillW   * shape2 * uFillInt
@@ -219,7 +217,9 @@ void main() {
 
   // --- output -------------------------------------------------------
   if (uVignette > 0.0) {
-    vec2 d = (vScreen - 0.5) * vec2(1.0, 0.62);
+    // Framed from field-space position rather than a screen-space varying:
+    // exact, and identical at 1080p and 4K.
+    vec2 d = (vP / uHalfExtent) * vec2(0.5, 0.31);
     col *= 1.0 - uVignette * smoothstep(0.10, 0.62, dot(d, d));
   }
 
