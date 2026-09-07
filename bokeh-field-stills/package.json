@@ -1,0 +1,30 @@
+{
+  "name": "bokeh-field-stills",
+  "version": "1.0.0",
+  "description": "Digital bokeh field \u2014 4K 16:9 still image generator for stock illustration",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "still": "remotion still BokehField",
+    "batch": "tsx scripts/render-batch.ts",
+    "contact-sheet": "tsx scripts/contact-sheet.ts",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.515",
+    "@remotion/cli": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "tsx": "^4.19.2",
+    "typescript": "5.9.3"
+  }
+}
