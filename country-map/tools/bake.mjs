@@ -197,12 +197,15 @@ const overlapArea = (a, b) =>
   Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
 
 // Offsets tried when all four sides are taken, as [dx, dy] multiples of the
-// label height. The label goes out to the first clear one and a leader line
-// joins it back to the marker.
+// label height, nearest first. The label takes the first clear one and a leader
+// line joins it back to the marker. Short nudges before long leaps: the point is
+// to shift a label off a border or a neighbour, not to fling it across the map.
 const LEADER_STEPS = [
-  [2.6, -1.8], [-2.6, -1.8], [2.6, 1.8], [-2.6, 1.8],
-  [3.8, -3.0], [-3.8, -3.0], [3.8, 3.0], [-3.8, 3.0],
-  [0, -3.4], [0, 3.4],
+  [0.9, 0], [-0.9, 0], [0, -1.0], [0, 1.0],
+  [1.3, -0.8], [-1.3, -0.8], [1.3, 0.8], [-1.3, 0.8],
+  [1.9, 0], [-1.9, 0], [0, -1.9], [0, 1.9],
+  [2.4, -1.5], [-2.4, -1.5], [2.4, 1.5], [-2.4, 1.5],
+  [3.2, -2.4], [-3.2, -2.4], [3.2, 2.4], [-3.2, 2.4],
 ];
 
 function placeLabels(cities, rect, {overrides = {}, obstacles = [], subjectRings} = {}) {

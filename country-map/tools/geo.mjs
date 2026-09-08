@@ -68,17 +68,22 @@ export function partitionTerritory(subject) {
 
   const near = [];
   const far = [];
+  const framingParts = [];
   parts.forEach((part, i) => {
     if (i === main) {
       near.push(i);
+      framingParts.push(i);
       return;
     }
     const c = geoCentroid(part);
     const dLon = Math.abs(((c[0] - centre[0] + 540) % 360) - 180);
     const close = Math.hypot(dLon, c[1] - centre[1]) < reach;
-    // Small islands close by belong to the main view; anything big or far is
-    // its own problem.
-    (close && areas[i] >= areas[main] * 0.03 ? near : close ? near : far).push(i);
+    (close ? near : far).push(i);
+    // Only substantial nearby landmasses steer the framing. A scatter of small
+    // islands belongs in the fill but must not drag the frame around — one of
+    // Russia's eastern slivers crosses the antimeridian, and letting it into
+    // the framing bounds throws the projection's centre meridian to zero.
+    if (close && areas[i] >= areas[main] * 0.03) framingParts.push(i);
   });
 
   const collect = (list) =>
@@ -93,7 +98,11 @@ export function partitionTerritory(subject) {
         }
       : null;
 
-  return {main: collect(near), distant: collect(far)};
+  return {
+    main: collect(near),
+    distant: collect(far),
+    framing: collect(framingParts),
+  };
 }
 
 // What the framing is built around: the main landmass, or an explicit rectangle.
@@ -105,12 +114,17 @@ export function framingGeometry(subject, framing = {}) {
     // this rectangle" — which fits the world into the frame.
     return polygon([[[w, s], [w, n], [e, n], [e, s], [w, s]]]);
   }
-  return partitionTerritory(subject).main ?? subject;
+  const {framing: parts} = partitionTerritory(subject);
+  return parts ?? subject;
 }
 
 export function buildProjection(subject, framing = {}) {
   const [[minLon, minLat], [maxLon, maxLat]] = geoBounds(subject);
-  const midLon = (minLon + maxLon) / 2;
+  // geoBounds reports a near-global longitude span for anything crossing the
+  // antimeridian, and the midpoint of that is meaningless — half a world from
+  // the subject. The spherical centroid is right in both cases.
+  const midLon =
+    maxLon - minLon > 180 ? geoCentroid(subject)[0] : (minLon + maxLon) / 2;
   const midLat = (minLat + maxLat) / 2;
 
   // Conic conformal away from the equator (the standard choice for mid- and

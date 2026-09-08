@@ -212,13 +212,17 @@
     },
     "maxCities": 11,
     "reliefGain": 2.1,
-    "nameScale": 1,
+    "nameScale": 0.85,
     "territories": "include",
     "seaLabels": [
       "Baltic Sea",
       "Gulf of Bothnia",
       "North Sea",
       "Norwegian Sea"
+    ],
+    "nameAt": [
+      15.4,
+      60.6
     ]
   },
   "russia": {
@@ -291,10 +295,10 @@
     },
     "maxCities": 12,
     "reliefGain": 2.1,
-    "nameScale": 0.85,
+    "nameScale": 0.72,
     "nameAt": [
-      -1.9,
-      53.4
+      -1.4,
+      53.5
     ],
     "territories": "include",
     "seaLabels": [
@@ -612,7 +616,7 @@
     "seaLabels": [
       "South Atlantic Ocean",
       "South Pacific Ocean",
-      "Río de la Plata"
+      "R\u00edo de la Plata"
     ]
   },
   "thailand": {
@@ -654,7 +658,7 @@
     },
     "maxCities": 12,
     "reliefGain": 1.8,
-    "nameScale": 0.8,
+    "nameScale": 0.7,
     "nameAt": [
       122.6,
       11.8
