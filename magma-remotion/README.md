@@ -35,7 +35,10 @@ npx remotion render V2-PlasmaBlue  out/V2_PlasmaBlue.mp4  --scale=1 --crf=15
 npx remotion render V3-ToxicGreen  out/V3_ToxicGreen.mp4  --scale=1 --crf=15
 ```
 
-A 1080p preview is the same command at `--scale=0.5`. Stills:
+The delivered 1080p previews are the same command at `--scale=0.5 --crf=20`,
+which is visually indistinguishable from `--crf=15` on this content at a little
+under half the size (51 MB against 103 MB for 20s). Checked at 8x contrast on
+the dark plates: no banding at either. Stills:
 
 ```bash
 npx remotion still V1-MagmaOrange out/V1_MagmaOrange.png --frame=0 --scale=0.5
@@ -58,13 +61,20 @@ only needed to override it. On a machine with no GPU, use `--gl=swiftshader`
 Measured on the machine that produced the delivered previews: **4 vCPU, no GPU**,
 so ANGLE resolved to a software rasteriser. `--concurrency=4`.
 
-| Output                | Per frame | 600 frames |
-| --------------------- | --------- | ---------- |
-| 1080p (`--scale=0.5`) | PF_1080   | TOT_1080   |
-| 4K (`--scale=1`)      | PF_4K     | TOT_4K     |
+| Output                | Concurrency | Per frame | 600 frames |
+| --------------------- | ----------- | --------- | ---------- |
+| 1080p (`--scale=0.5`) | 4           | 1.09 s    | 11 min (measured over a full 600-frame render, 652 s) |
+| 4K (`--scale=1`)      | 2           | 4.61 s    | ~46 min    |
 
-The 4K figure is a slope rather than a single timing, so the fixed startup cost
-falls out of it.
+The 4K figure is a slope rather than a single timing, so the fixed startup falls
+out of it: 12 frames took 64 s and 48 frames took 230 s, giving 166 s / 36
+frames and a ~9 s startup that both runs agree on.
+
+4K costs 4.2x 1080p per frame, which is what four times the pixels should cost.
+
+**Use `--concurrency 2` at 4K on a 16 GB machine.** Four workers each holding a
+3840x2160 canvas plus its frame buffers exhausted memory here and killed the
+render. 1080p is fine at 4.
 
 If a 4K render needs to be cheaper, reduce the domain-warp work before the
 cellular work — the plate structure matters more than the swirl detail, and
