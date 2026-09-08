@@ -82,6 +82,18 @@ The two heaviest things on the page are the `backdrop-filter` depth-of-field ban
 and the size of the map plane; the bands are already clipped to the height of their
 own gradients rather than covering the frame, which is worth about 23%.
 
+### What was checked on the encoded files
+
+- **Format:** 1920x1080, H.264, `yuv420p`, limited range, bt709, 30 fps, exactly
+  480 frames / 16.000 s, no audio track.
+- **Loop:** the difference between the last frame and the first is the same
+  order as any other one-frame step (1.5 vs 1.0-1.1 mean abs luma), i.e. the
+  seam is indistinguishable from an ordinary frame advance.
+- **Banding:** in the deep water, a 400x260 sample uses 186 distinct luma
+  levels with no stepped contours at 3.6x contrast boost; the baked bathymetry
+  mottle plus the grain plate dither the gradient.
+- **Shipping lanes:** `npm run check` passes for all six regions.
+
 ## Data sources
 
 Both are **public domain**, and both are baked into this repository so the
