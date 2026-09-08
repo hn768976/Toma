@@ -3,7 +3,7 @@
 Three seamless 20-second loops of a procedural molten surface: dark crust
 plates with concentric contour rings, floating in a connected molten matrix of
 glowing veins. Everything is generated in a single GLSL fragment shader — there
-are no texture assets, no video, and no geometry beyond one full-screen quad.
+are no texture assets, no video, and no geometry beyond one full-screen triangle.
 
 | Composition id    | Delivered as          | Look                          |
 | ----------------- | --------------------- | ----------------------------- |
@@ -58,37 +58,27 @@ only needed to override it. On a machine with no GPU, use `--gl=swiftshader`
 Measured on the machine that produced the delivered previews: **4 vCPU, no GPU**,
 so ANGLE resolved to a software rasteriser. `--concurrency=4`.
 
-| Output                | Per frame | 600 frames        |
-| --------------------- | --------- | ----------------- |
-| 1080p (`--scale=0.5`) | 2.50 s    | 25 min (measured over a full 600-frame render, 1516 s) |
-| 4K (`--scale=1`)      | 3.08 s    | ~31 min           |
+| Output                | Per frame | 600 frames |
+| --------------------- | --------- | ---------- |
+| 1080p (`--scale=0.5`) | PF_1080   | TOT_1080   |
+| 4K (`--scale=1`)      | PF_4K     | TOT_4K     |
 
-The 4K figure is a slope, not a single timing: 12 frames took 53 s and 60 frames
-took 201 s, so 148 s / 48 frames = 3.08 s per frame with a 16 s fixed startup
-that both runs agree on.
+The 4K figure is a slope rather than a single timing, so the fixed startup cost
+falls out of it.
 
-**4K costs only 1.23x 1080p per frame, not 4x**, and that is worth
-understanding before optimising anything. Solving the two measurements for a
-fixed and a per-pixel term gives roughly 2.3 s per frame of fixed cost against
-0.19 s (1080p) and 0.77 s (4K) of pixel-dependent cost. The render is dominated
-by per-frame overhead — browser round-trip, lossless frame capture, IPC — not by
-the shader.
-
-So on hardware like this, **simplifying the shader would buy very little**: even
-making the fragment shader free would save about 8% at 1080p and 25% at 4K.
-Attack the overhead first (a real GPU, higher `--concurrency` on more cores). If
-the shader ever does become the bottleneck, reduce the domain-warp work before
-the cellular work — the plate structure matters more than the swirl detail, and
+If a 4K render needs to be cheaper, reduce the domain-warp work before the
+cellular work — the plate structure matters more than the swirl detail, and
 `warpAmp2` in `src/constants.ts` can go to `0` to drop the second warp level,
-two of the six 4D noise calls, at a visible but survivable cost to the liquid
+two of the 4D noise calls, at a visible but survivable cost to the liquid
 detail.
 
-These are software-rasteriser numbers on 4 vCPU and are close to a worst case;
-budget your own hardware by measuring a short `--frames=0-11` range first.
+These are software-rasteriser numbers on 4 vCPU with no GPU, and are close to a
+worst case; budget your own hardware by measuring a short `--frames=0-11` range
+first.
 
 ## How the look is built
 
-Three layers of maths, in `src/shaders/magma.ts`:
+Four layers of maths, in `src/shaders/magma.ts`:
 
 1. **Cellular (Worley) noise** gives plates rather than clouds. Two octaves: a
    coarse one for the crust islands and their contours, and a fine one for the
@@ -101,12 +91,44 @@ Three layers of maths, in `src/shaders/magma.ts`:
    every iso-level of the distance field, which is what produces the concentric
    topographic rings inside the cooler blobs. Without this the surface reads as
    a fire filter rather than cooling crust.
+4. **Advection**, which is what makes it flow. See below — it is the one piece
+   the other three cannot supply.
 
 The crust is **not** a Voronoi tiling. Thresholding `F1` per cell gives rounded
 islands of varying size floating in one connected molten matrix, which is what
 the reference actually shows; an `F2 - F1` tiling would instead make every plate
 share a border with its neighbours and close the matrix off. `F2 - F1` is still
 used, for the bright veins that run *through* the matrix.
+
+### Motion: why a warp is not enough
+
+A domain warp does not transport anything. It is a bounded oscillating
+displacement, so raising its rate makes the field reshape faster *in place*.
+Measured against the reference that shows up unmistakably: at `warpRate1 = 2.0`
+the per-frame change tripled to 7.33 while block displacement between frames
+stayed at 1.25px. The reference instead travels 1.66 / 6.42 / 8.73 / 10.53px
+over 0.3 / 1 / 2 / 3s — steadily growing, because its structures move along
+continuous paths and stay recognisable while they do.
+
+So the field is advected. Every point travels the ellipse spanned by two static
+low-frequency vector fields, once per cycle:
+
+```glsl
+qa = q + uAdvAmp * (flowA * cos(TAU * uT) + flowB * sin(TAU * uT));
+```
+
+Neighbouring regions set off in different directions, so there is no pan, and
+each path is closed and traversed exactly once, so the loop still closes. The
+warp and both noise fields are then sampled at `qa`, so everything travels with
+the material rather than sliding through it.
+
+Giving each point a random *phase* instead is the obvious formulation and it
+does not work: the phase swings tens of degrees across a single plate, so its
+two halves set off in opposing directions and it tears in place instead of being
+carried. Two smooth vector fields keep neighbouring points moving together.
+
+`advAmp` is the flow speed, `advFreq` how sharply the direction varies across
+the frame. Lower `advFreq` drifts towards a pan; higher tears structures apart.
 
 ### Looping
 
@@ -131,13 +153,45 @@ In the **source frames** (lossless stills, so no codec in the way), the
 frame-to-frame difference across the seam (599 → 0) is 2.642 mean absolute
 levels, against 2.637 for 598 → 599 and 2.657 for 0 → 1.
 
-In the **encoded file** the check needs more care, because H.264 makes the
-frame differences bimodal: about 25% of all frame boundaries measure ~6.67–6.76
-and the other 75% measure ~2.40–2.59, a GOP cadence re-quantising the grain
-rather than anything in the field. The seam measures 6.788 — an ordinary member
-of the high group, not an outlier. Comparing it against a *low*-group neighbour
-is what makes it look like a discontinuity when it is not. The cadence itself is
-not visible: per-frame mean level varies by 0.23 of 255 across the clip.
+In the **encoded file**, frame differences now sit in a tight band, so the seam
+can be read directly against its neighbours.
+
+An earlier version of this file claimed those differences were bimodal and put
+the spikes down to an H.264 GOP cadence re-quantising the grain. That was wrong.
+The spikes came in blocks of four, matching `--concurrency 4`, and were the
+renderer capturing stale frames — see **Determinism** below. They are gone.
+
+### Determinism
+
+The field is drawn with **raw WebGL**, not react-three-fiber, and the draw is
+synchronous:
+
+```tsx
+useLayoutEffect(draw);   // during commit, before paint
+...
+gl.drawArrays(gl.TRIANGLES, 0, 3);
+gl.finish();             // buffer complete before Remotion can screenshot
+```
+
+This is not a stylistic preference. With a renderer that draws on its own
+schedule, the frame Remotion captures is whatever happened to be in the buffer
+at capture time, and under `--concurrency 4` that lost **27 of 31 frames** to
+stale draws, in blocks matching the worker count. Single-threaded, every frame
+came out identical to frame 0.
+
+The failure is worth knowing about because of how well it hides: a still renders
+one frame into a fresh page and is *always* correct, so no amount of checking
+stills reveals it. It only appears when you difference a video render against a
+single-threaded render of the same range.
+
+With the synchronous draw, `--concurrency 1` and `--concurrency 4` produce
+bit-identical output (max difference 0.000 across every frame). If you change
+how this component draws, re-run that comparison.
+
+The canvas is also sized to real device pixels rather than composition size.
+Remotion implements `--scale` as a device scale factor, so a canvas fixed at
+3840x2160 runs the shader at 4K even for a 1080p preview and discards three
+quarters of the result.
 
 ### Rendering notes
 
