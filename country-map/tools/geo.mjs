@@ -19,6 +19,10 @@ export const COMP_HEIGHT = 2160;
 const FIT_WIDTH = 0.44;
 const FIT_HEIGHT = 0.52;
 
+// framing.bounds names the view itself rather than the subject, so the
+// rectangle fills the frame instead of sitting in the central third.
+const BOUNDS_FIT = 0.98;
+
 // The push-in crops the frame as it runs, so anything placed for the opening
 // framing may be off screen by the end. Everything is culled against the
 // tightest framing instead — the rectangle still visible at full push.
@@ -51,7 +55,10 @@ const polygon = (coordinates) => ({
 export function framingGeometry(subject, framing = {}) {
   if (framing.bounds) {
     const [w, s, e, n] = framing.bounds;
-    return polygon([[[w, s], [e, s], [e, n], [w, n], [w, s]]]);
+    // Clockwise in lon/lat. d3-geo reads spherical polygons by winding order,
+    // and the other way round this rectangle means "the whole globe except
+    // this rectangle" — which fits the world into the frame.
+    return polygon([[[w, s], [w, n], [e, n], [e, s], [w, s]]]);
   }
   if (subject.geometry.type !== 'MultiPolygon') return subject;
 
@@ -115,9 +122,11 @@ export function buildProjection(subject, framing = {}) {
 
   const path = geoPath(projection);
   const b0 = path.bounds(subject);
+  const fitW = framing.bounds ? BOUNDS_FIT : FIT_WIDTH;
+  const fitH = framing.bounds ? BOUNDS_FIT : FIT_HEIGHT;
   const fit = Math.min(
-    (COMP_WIDTH * FIT_WIDTH) / (b0[1][0] - b0[0][0]),
-    (COMP_HEIGHT * FIT_HEIGHT) / (b0[1][1] - b0[0][1]),
+    (COMP_WIDTH * fitW) / (b0[1][0] - b0[0][0]),
+    (COMP_HEIGHT * fitH) / (b0[1][1] - b0[0][1]),
   );
   projection.scale(projection.scale() * fit * (framing.zoom ?? 1));
 

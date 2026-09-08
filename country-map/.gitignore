@@ -1,4 +1,6 @@
 node_modules
 out
-data
+# The Natural Earth download cache the bake step fills. Anchored: src/data is
+# project source and must stay tracked.
+/data
 .DS_Store

@@ -309,6 +309,23 @@ function pointInFeature(feature, x, y) {
   );
 }
 
+// Bounding box of the parts of a shape that are actually in frame.
+function visibleBox(rings, rect, fallback) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const ring of rings) {
+    for (let i = 0; i < ring.length; i += 2) {
+      const x = ring[i];
+      const y = ring[i + 1];
+      if (x < rect[0] || x > rect[2] || y < rect[1] || y > rect[3]) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return x1 > x0 ? [x0, y0, x1, y1] : fallback;
+}
+
 // The visible pole of inaccessibility: the point of a shape, inside the
 // framing, furthest from its own edge. Natural Earth ships a label point per
 // country, but on a regional map the big neighbour's label point is usually
@@ -516,14 +533,10 @@ async function bakeCountry(slug, config, layers, reliefSource) {
 
     const box = neighbourBox(name, at.x, at.y);
     if (!fitsIn(box, rect, inset)) continue;
-    // A neighbour's name struck through the subject country reads as a mistake;
-    // better to leave that neighbour unnamed.
-    if (
-      [box[0], box[0] + box[2] / 2, box[0] + box[2]].some((px) =>
-        inside(subjectRings, px, at.y),
-      )
-    )
-      continue;
+    // A neighbour's name struck through the middle of the subject country reads
+    // as a mistake. Overhanging ends do not — on a map of Indonesia, MALAYSIA
+    // has nowhere to sit on Borneo that does not overhang Kalimantan.
+    if (inside(subjectRings, at.x, at.y)) continue;
     // A country name half on top of its neighbour's is worse than one missing
     // name, and the more prominent country has already been placed.
     if (neighbourBoxes.some((b) => overlaps(box, b))) continue;
@@ -572,8 +585,13 @@ async function bakeCountry(slug, config, layers, reliefSource) {
 
   // Bounds of the framed part of the country, not of every scattered island:
   // the country name is sized and placed against what is actually on screen.
+  // Where the view was framed by hand, `framed` is the framing rectangle rather
+  // than the country, so measure the country's visible extent instead.
   const b = geoPath(projection).bounds(framed);
-  const subjectBox = [b[0][0], b[0][1], b[1][0], b[1][1]].map(round);
+  const subjectBox = (framing.bounds
+    ? visibleBox(subjectRings, rect, [b[0][0], b[0][1], b[1][0], b[1][1]])
+    : [b[0][0], b[0][1], b[1][0], b[1][1]]
+  ).map(round);
 
   // Country name: sized to sit across roughly half the country's width, then
   // clamped so a wide country does not get a headline and a narrow one does not

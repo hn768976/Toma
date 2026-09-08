@@ -1,0 +1,461 @@
+{
+  "united-states": {
+    "adm0a3": "USA",
+    "name": "UNITED STATES",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 13,
+    "reliefGain": 2.0,
+    "nameScale": 1
+  },
+  "china": {
+    "adm0a3": "CHN",
+    "name": "CHINA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 13,
+    "reliefGain": 2.0,
+    "nameScale": 1,
+    "cities": {
+      "exclude": [
+        "Hechi",
+        "Zhangzhou"
+      ],
+      "rename": {
+        "Shenyeng": "Shenyang",
+        "Xian": "Xi'an"
+      }
+    }
+  },
+  "india": {
+    "adm0a3": "IND",
+    "name": "INDIA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 13,
+    "reliefGain": 1.9,
+    "nameScale": 1,
+    "cities": {
+      "exclude": [
+        "Amaravati"
+      ]
+    }
+  },
+  "iran": {
+    "adm0a3": "IRN",
+    "name": "IRAN",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.9,
+    "nameScale": 1
+  },
+  "australia": {
+    "adm0a3": "AUS",
+    "name": "AUSTRALIA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 2.3,
+    "nameScale": 1
+  },
+  "poland": {
+    "adm0a3": "POL",
+    "name": "POLAND",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0.02
+    },
+    "maxCities": 12,
+    "reliefGain": 2.1,
+    "nameScale": 1
+  },
+  "italy": {
+    "adm0a3": "ITA",
+    "name": "ITALY",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.6,
+    "nameScale": 0.8,
+    "nameAt": [
+      12.75,
+      42.75
+    ]
+  },
+  "mexico": {
+    "adm0a3": "MEX",
+    "name": "MEXICO",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0.01
+    },
+    "maxCities": 12,
+    "reliefGain": 1.7,
+    "nameScale": 0.92,
+    "nameAt": [
+      -101.5,
+      23.2
+    ]
+  },
+  "sweden": {
+    "adm0a3": "SWE",
+    "name": "SWEDEN",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 11,
+    "reliefGain": 2.1,
+    "nameScale": 1
+  },
+  "russia": {
+    "adm0a3": "RUS",
+    "name": "RUSSIA",
+    "framing": {
+      "zoom": 1.8,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 13,
+    "reliefGain": 2.0,
+    "nameScale": 1
+  },
+  "japan": {
+    "adm0a3": "JPN",
+    "name": "JAPAN",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.6,
+    "nameScale": 1
+  },
+  "germany": {
+    "adm0a3": "DEU",
+    "name": "GERMANY",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 2.1,
+    "nameScale": 1
+  },
+  "united-kingdom": {
+    "adm0a3": "GBR",
+    "name": "UNITED KINGDOM",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 2.1,
+    "nameScale": 0.9
+  },
+  "france": {
+    "adm0a3": "FRA",
+    "name": "FRANCE",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.9,
+    "nameScale": 1
+  },
+  "brazil": {
+    "adm0a3": "BRA",
+    "name": "BRAZIL",
+    "framing": {
+      "zoom": 1.3,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 13,
+    "reliefGain": 2.0,
+    "nameScale": 1
+  },
+  "canada": {
+    "adm0a3": "CAN",
+    "name": "CANADA",
+    "framing": {
+      "zoom": 1.4,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.9,
+    "nameScale": 1
+  },
+  "indonesia": {
+    "adm0a3": "IDN",
+    "name": "INDONESIA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "bounds": [
+        93,
+        -12.5,
+        143.5,
+        8.5
+      ]
+    },
+    "maxCities": 12,
+    "reliefGain": 1.8,
+    "nameScale": 1
+  },
+  "turkey": {
+    "adm0a3": "TUR",
+    "name": "TURKEY",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.6,
+    "nameScale": 1
+  },
+  "saudi-arabia": {
+    "adm0a3": "SAU",
+    "name": "SAUDI ARABIA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 11,
+    "reliefGain": 2.0,
+    "nameScale": 1
+  },
+  "south-korea": {
+    "adm0a3": "KOR",
+    "name": "SOUTH KOREA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 11,
+    "reliefGain": 1.6,
+    "nameScale": 1
+  },
+  "spain": {
+    "adm0a3": "ESP",
+    "name": "SPAIN",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.7,
+    "nameScale": 1
+  },
+  "south-africa": {
+    "adm0a3": "ZAF",
+    "name": "SOUTH AFRICA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.9,
+    "nameScale": 1
+  },
+  "netherlands": {
+    "adm0a3": "NLD",
+    "name": "NETHERLANDS",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 11,
+    "reliefGain": 2.3,
+    "nameScale": 0.85
+  },
+  "uae": {
+    "adm0a3": "ARE",
+    "name": "UAE",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 8,
+    "reliefGain": 2.1,
+    "nameScale": 1
+  },
+  "singapore": {
+    "adm0a3": "SGP",
+    "name": "SINGAPORE",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "bounds": [
+        99.5,
+        -2.5,
+        108.5,
+        6.5
+      ]
+    },
+    "maxCities": 6,
+    "reliefGain": 2.0,
+    "nameScale": 0.8,
+    "nameAt": [
+      103.85,
+      0.1
+    ]
+  },
+  "vietnam": {
+    "adm0a3": "VNM",
+    "name": "VIETNAM",
+    "framing": {
+      "zoom": 1.15,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.8,
+    "nameScale": 1
+  },
+  "nigeria": {
+    "adm0a3": "NGA",
+    "name": "NIGERIA",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 2.1,
+    "nameScale": 1
+  },
+  "egypt": {
+    "adm0a3": "EGY",
+    "name": "EGYPT",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 2.0,
+    "nameScale": 1
+  },
+  "argentina": {
+    "adm0a3": "ARG",
+    "name": "ARGENTINA",
+    "framing": {
+      "zoom": 1.2,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.8,
+    "nameScale": 1
+  },
+  "thailand": {
+    "adm0a3": "THA",
+    "name": "THAILAND",
+    "framing": {
+      "zoom": 1.1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.9,
+    "nameScale": 1
+  },
+  "philippines": {
+    "adm0a3": "PHL",
+    "name": "PHILIPPINES",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "bounds": [
+        114.5,
+        3.0,
+        129.5,
+        21.5
+      ]
+    },
+    "maxCities": 12,
+    "reliefGain": 1.8,
+    "nameScale": 1
+  },
+  "switzerland": {
+    "adm0a3": "CHE",
+    "name": "SWITZERLAND",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 10,
+    "reliefGain": 1.4,
+    "nameScale": 0.85
+  },
+  "norway": {
+    "adm0a3": "NOR",
+    "name": "NORWAY",
+    "framing": {
+      "zoom": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "bounds": [
+        4,
+        57.5,
+        31.5,
+        71.5
+      ]
+    },
+    "maxCities": 11,
+    "reliefGain": 1.6,
+    "nameScale": 1
+  },
+  "chile": {
+    "adm0a3": "CHL",
+    "name": "CHILE",
+    "framing": {
+      "zoom": 1.3,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "maxCities": 12,
+    "reliefGain": 1.5,
+    "nameScale": 1
+  }
+}
