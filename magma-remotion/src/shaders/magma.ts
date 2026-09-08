@@ -38,6 +38,7 @@ uniform float uFiligree;   // strength of that octave's fine crackle
 uniform float uPlateMin;   // smallest crust island radius, in cell units
 uniform float uPlateVar;   // spread of island radius across cells
 uniform float uSpeck;      // cooled specks the fine octave drops in the matrix
+uniform float uHeatGamma;  // exposure; see the note in palettes.ts
 uniform float uVeinW;
 uniform float uContourN;   // iso-levels per cell => concentric rings
 uniform float uBloom;
@@ -260,8 +261,9 @@ void main() {
   heat *= mix(1.0, pulse, smoothstep(0.38, 0.90, heat));
 
   // Bias the distribution towards the cool end so the plates actually sit
-  // dark and only the vein cores reach the top of the ramp.
-  heat = pow(clamp(heat, 0.0, 1.0), 1.00);
+  // dark and only the vein cores reach the top of the ramp. Per palette,
+  // because the three ramps are not equally luminous — see palettes.ts.
+  heat = pow(clamp(heat, 0.0, 1.0), uHeatGamma);
 
   vec3 col = ramp(heat);
 

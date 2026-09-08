@@ -36,6 +36,7 @@ const Field: React.FC<{ palette: Palette }> = ({ palette }) => {
       uPlateMin: { value: FIELD.plateMin },
       uPlateVar: { value: FIELD.plateVar },
       uSpeck: { value: FIELD.speck },
+      uHeatGamma: { value: palette.heatGamma },
       uVeinW: { value: FIELD.veinW },
       uContourN: { value: FIELD.contourN },
       uBloom: { value: FIELD.bloom },
