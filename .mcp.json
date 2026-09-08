@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "svgator": {
+      "type": "http",
+      "url": "https://mcp.svgator.com/mcp"
+    }
+  }
+}
