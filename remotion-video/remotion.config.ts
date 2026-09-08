@@ -10,6 +10,10 @@ import { Config } from "@remotion/cli/config";
 import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
+// The ink-diffusion compositions are a WebGL2 fragment shader; headless
+// Chromium needs ANGLE to expose a usable GL context. On a machine with no
+// GPU, swap this for "swangle" (ANGLE on top of SwiftShader).
+Config.setChromiumOpenGlRenderer("angle");
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
