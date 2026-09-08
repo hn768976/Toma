@@ -6,10 +6,7 @@ import {rampTable} from '../styles';
 // G = shoreline ink, B = land coverage. These filters turn that one image into
 // coloured terrain and a hairline coast, differently per style version, without
 // ever baking a second plate.
-const Ramp: React.FC<{id: string; ramp: MapStyle['landRamp']; alphaFrom: 'B'}> = ({
-  id,
-  ramp,
-}) => (
+const Ramp: React.FC<{id: string; ramp: MapStyle['landRamp']}> = ({id, ramp}) => (
   <filter
     id={id}
     x="0%"
@@ -45,8 +42,8 @@ export const Defs: React.FC<{
   const [sr, sg, sb] = rgb(style.shore);
   return (
     <defs>
-      <Ramp id="landRamp" ramp={style.landRamp} alphaFrom="B" />
-      <Ramp id="subjectRamp" ramp={style.subjectRamp} alphaFrom="B" />
+      <Ramp id="landRamp" ramp={style.landRamp} />
+      <Ramp id="subjectRamp" ramp={style.subjectRamp} />
 
       {/* Flat shore colour, with the shoreline channel as its alpha. */}
       <filter

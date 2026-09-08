@@ -9,19 +9,21 @@ export const useImageReady = (src: string) => {
 
   useEffect(() => {
     const handle = delayRender(`loading relief plate ${src}`);
+    let open = true;
+    const done = () => {
+      if (!open) return;
+      open = false;
+      continueRender(handle);
+    };
+
     const img = new Image();
-    let cancelled = false;
     img.onload = () => {
-      if (cancelled) return;
       setReady(true);
-      continueRender(handle);
+      done();
     };
-    img.onerror = () => continueRender(handle);
+    img.onerror = done;
     img.src = src;
-    return () => {
-      cancelled = true;
-      continueRender(handle);
-    };
+    return done;
   }, [src]);
 
   return ready;
