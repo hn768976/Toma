@@ -72,9 +72,18 @@ Boundaries are used **exactly as Natural Earth publishes them** — nothing is
 redrawn, added or removed. No tile service, licensed basemap or third-party map
 image is used anywhere in this project.
 
-Fonts are vendored under `public/fonts`: **Inter** and **Barlow Condensed**, both
-under the SIL Open Font License (licences included alongside them). Nothing is
-fetched at render time.
+Type is **Inter** and **Inter Tight**, both under the SIL Open Font License,
+which permits embedding in footage that is sold on. Both are vendored under
+`public/fonts` with their licences, so a render never depends on a font CDN or
+on what happens to be installed on the render machine.
+
+| Element | Face |
+|---|---|
+| Country name | Inter Bold, upper case, tracked out |
+| Country name over 10 characters | Inter Tight Bold — switches face rather than shrinking, so the set stays consistent |
+| City labels | Inter Medium, dark halo |
+| Water labels | Inter Italic — the drawn italic, not a synthesised oblique |
+| Neighbour countries | Inter Medium, caps, tracked and dimmed |
 
 ## Rendering
 
@@ -201,6 +210,10 @@ between a preview and a delivery render.
    | `cities.exclude` | Names to leave off. |
    | `cities.rename` | `{"Shenyeng": "Shenyang"}` for Natural Earth transliterations a news map would not use. |
    | `cities.anchors` | `{"Kraków": "below"}` to force a label side. |
+   | `cities.priority` | `{"Miami": 900000}` — decides which city goes when a cluster cannot be resolved. Defaults to population; the capital is never dropped. |
+   | `territories` | `include`, `mainland-only` or `inset`. See below. |
+   | `insets` | For `inset`: `[{bounds: [w,s,e,n], at: [x,y,w,h], label}]`, `at` in fractions of the frame. |
+   | `seaLabels` | Water bodies in priority order, by their Natural Earth name. Only those that fit are drawn. |
 
 2. **Bake it.**
 
@@ -233,6 +246,48 @@ between a preview and a delivery render.
 Two compositions, `V1-<Country>MapLight` and `V2-<Country>MapDark`, appear
 automatically. Nothing else needs editing.
 
+### Non-contiguous territory
+
+A country's distant holdings are the easiest thing to get factually wrong on a
+map like this, and the error is glaring to anyone from that country. Every entry
+carries a decision:
+
+| `territories` | Effect |
+|---|---|
+| `include` | Every part of the country inside the framing takes the highlight fill. The default. |
+| `mainland-only` | Only the main landmass is filled. The framing must put the rest off screen. |
+| `inset` | Main landmass framed normally, distant territory drawn into a boxed inset in a corner, same fill treatment. |
+
+Dependencies of the same sovereign — Puerto Rico on a map of the United States —
+are always filled when visible, whichever mode is set. An unfilled one is the
+same error as an unfilled Alaska.
+
+**The bake enforces this.** After placing everything it checks whether any part
+of the subject country is on screen without the fill, and warns by name if so.
+A clean bake means no country in the set has that error.
+
+The decisions in this project:
+
+| Country | Mode | Why |
+|---|---|---|
+| United States | `inset` | Alaska and Hawaii each get a box. The main framing is tightened onto the contiguous states, because with a conic centred there Alaska otherwise sits in the top-left of frame. |
+| France | `mainland-only` | The overseas departments span three oceans. |
+| Spain | `mainland-only` | Canary Islands. |
+| Netherlands | `mainland-only` | Caribbean territories. |
+| Norway | `mainland-only` | Svalbard. |
+| Chile | `mainland-only` | Easter Island. |
+| India, Indonesia, Philippines, Japan, Canada | `include` | Every landmass in frame belongs in the framing and is filled. |
+| All others | `include` | No distant territory to decide about. |
+
+### Sea and ocean labels
+
+`seaLabels` lists the water bodies a viewer associates with **this** subject, most
+relevant first; the bake draws as many as fit without collision. Without a list
+it falls back to labelling whatever open water is most prominent in frame, which
+is how a map of the United States ends up naming the Sargasso Sea instead of the
+Gulf of Mexico. Names must match Natural Earth's `name` exactly; an unknown name
+is reported as a warning rather than silently dropped.
+
 ### Choosing countries
 
 A country-highlight map takes a position on where borders lie. This project
@@ -256,6 +311,11 @@ that is a commissioning decision, not a technical one.
 - **`src/CountryMap.tsx`** is the whole composition. Everything is driven from
   `useCurrentFrame()` with `interpolate` and explicit clamping — no state, no
   timers. Sizes and type are fractions of the frame from `useVideoConfig()`.
+- **Labels never overlap.** Each label tries right, left, above and below its
+  marker; a label may not straddle the country's border; and where every side is
+  taken it moves out to clear space with a leader line back to the marker. If
+  even that fails the city is dropped by `priority` rather than shipping an
+  overlap.
 - **The push-in is one transform** on the composed layer, so relief and vectors
   scale together and stay registered. Labels are culled against the framing that
   survives to the end of the push, not the one it starts with, so nothing crops
