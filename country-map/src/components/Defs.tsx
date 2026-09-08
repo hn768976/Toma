@@ -38,7 +38,8 @@ export const Defs: React.FC<{
   shadowBlur: number;
   shadowOffset: number;
   nameShadowBlur: number;
-}> = ({style, subject, wipe, shadowBlur, shadowOffset, nameShadowBlur}) => {
+  insets: {box: [number, number, number, number]}[];
+}> = ({style, subject, wipe, shadowBlur, shadowOffset, nameShadowBlur, insets}) => {
   const [sr, sg, sb] = rgb(style.shore);
   return (
     <defs>
@@ -60,13 +61,14 @@ export const Defs: React.FC<{
         />
       </filter>
 
-      <filter id="subjectShadow" x="-15%" y="-15%" width="130%" height="130%">
-        <feDropShadow
-          dx="0"
-          dy={shadowOffset}
-          stdDeviation={shadowBlur}
-          floodColor={style.subjectShadow}
-        />
+      {/* Shadow only, with no copy of the shape in the output. The fill above it
+          is deliberately not opaque so the relief reads through, and a
+          feDropShadow on that would show its own shadow through the fill. */}
+      <filter id="subjectShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation={shadowBlur} />
+        <feOffset dx={shadowOffset * 0.55} dy={shadowOffset} result="cast" />
+        <feFlood floodColor={style.subjectShadow} />
+        <feComposite in2="cast" operator="in" />
       </filter>
 
       <filter id="typeShadow" x="-25%" y="-25%" width="150%" height="150%">
@@ -81,6 +83,12 @@ export const Defs: React.FC<{
       <clipPath id="subjectClip">
         <path d={subject} />
       </clipPath>
+
+      {insets.map((inset, i) => (
+        <clipPath key={i} id={`insetClip${i}`}>
+          <rect x={inset.box[0]} y={inset.box[1]} width={inset.box[2]} height={inset.box[3]} />
+        </clipPath>
+      ))}
 
       {/* The fill wipe: a soft-edged disc growing from the country's centre,
           clipped to the polygon so it reads as the shape filling in. */}

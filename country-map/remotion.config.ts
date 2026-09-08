@@ -10,5 +10,9 @@ Config.setPixelFormat('yuv420p');
 // range), which some players show washed out.
 Config.setColorSpace('bt709');
 Config.setCrf(16);
+// No audio track. These are silent map beds, and a stock file that carries an
+// empty AAC stream gets flagged.
+Config.setMuted(true);
+Config.setEnforceAudioTrack(false);
 Config.setChromiumOpenGlRenderer('angle');
 Config.setEntryPoint('src/index.ts');

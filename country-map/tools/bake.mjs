@@ -26,6 +26,8 @@ import {
   ringsOfMany,
   safeRect,
   framingGeometry,
+  partitionTerritory,
+  polygon,
 } from './geo.mjs';
 import {
   loadSource,
@@ -41,6 +43,7 @@ import {widthOf} from './metrics.mjs';
 import {ensureSources, DATA_DIR} from './sources.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const warnings = [];
 const read = (f) => JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
 
 const round = (n) => Math.round(n * 10) / 10;
@@ -193,8 +196,28 @@ const overlapArea = (a, b) =>
   Math.max(0, Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0])) *
   Math.max(0, Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]));
 
-function placeLabels(cities, rect, overrides = {}, obstacles = []) {
+// Offsets tried when all four sides are taken, as [dx, dy] multiples of the
+// label height. The label goes out to the first clear one and a leader line
+// joins it back to the marker.
+const LEADER_STEPS = [
+  [2.6, -1.8], [-2.6, -1.8], [2.6, 1.8], [-2.6, 1.8],
+  [3.8, -3.0], [-3.8, -3.0], [3.8, 3.0], [-3.8, 3.0],
+  [0, -3.4], [0, 3.4],
+];
+
+function placeLabels(cities, rect, {overrides = {}, obstacles = [], subjectRings} = {}) {
   const placed = [...obstacles];
+  // A label lying half on the country and half off it reads as a mistake, so
+  // every corner of the box has to be on the same side of the border.
+  const straddles = (box) => {
+    if (!subjectRings) return false;
+    const corners = [
+      [box[0], box[1]], [box[0] + box[2], box[1]],
+      [box[0], box[1] + box[3]], [box[0] + box[2], box[1] + box[3]],
+    ].map(([x, y]) => inside(subjectRings, x, y));
+    return corners.some(Boolean) && !corners.every(Boolean);
+  };
+
   for (const city of cities) {
     const forced = overrides[city.name];
     const order = forced ? [forced] : ANCHOR_ORDER;
@@ -205,26 +228,49 @@ function placeLabels(cities, rect, overrides = {}, obstacles = []) {
       const box = labelBox(city, anchor);
       if (!fitsIn(box, rect, 24)) continue;
       if (placed.some((b) => overlaps(box, b))) continue;
+      if (straddles(box)) continue;
       chosen = anchor;
       break;
     }
-    if (!chosen) {
-      // Nowhere clear to put it. Two labels printed on top of each other is
-      // worse than one city fewer, so the city goes — except the capital,
-      // which always stays and takes the least bad side.
-      if (!city.capital) {
-        city.drop = true;
-        continue;
-      }
-      chosen = order
-        .map((a) => ({
-          a,
-          cost: placed.reduce((sum, b) => sum + overlapArea(labelBox(city, a), b), 0),
-        }))
-        .sort((p, q) => p.cost - q.cost)[0].a;
+
+    if (chosen) {
+      placed.push(labelBox(city, chosen));
+      city.anchor = chosen;
+      continue;
     }
-    placed.push(labelBox(city, chosen));
-    city.anchor = chosen;
+
+    // All four sides are taken. Push the label out to clear space and run a
+    // leader line back to the marker — the usual answer for a dense cluster
+    // like the American northeast.
+    const h = LABEL_SIZE * 1.35;
+    for (const [dx, dy] of LEADER_STEPS) {
+      const at = {...city, x: city.x + dx * h, y: city.y + dy * h};
+      const anchor = dx < 0 ? 'left' : dx > 0 ? 'right' : 'below';
+      const box = labelBox(at, anchor);
+      if (!fitsIn(box, rect, 24)) continue;
+      if (placed.some((b) => overlaps(box, b))) continue;
+      if (straddles(box)) continue;
+      placed.push(box);
+      city.anchor = anchor;
+      city.leader = {x: round(at.x), y: round(at.y)};
+      chosen = anchor;
+      break;
+    }
+    if (chosen) continue;
+
+    // Still nothing. One city fewer beats two labels on top of each other —
+    // except the capital, which stays and takes the least bad side.
+    if (!city.capital) {
+      city.drop = true;
+      continue;
+    }
+    city.anchor = order
+      .map((a) => ({
+        a,
+        cost: placed.reduce((sum, b) => sum + overlapArea(labelBox(city, a), b), 0),
+      }))
+      .sort((p, q) => p.cost - q.cost)[0].a;
+    placed.push(labelBox(city, city.anchor));
   }
   return cities;
 }
@@ -373,7 +419,43 @@ function poleOfVisibility(rings, rect) {
 // from any coast inside the visible rectangle, and ask which sea that is. That
 // puts "Baltic Sea" in the middle of the visible Baltic, the way a cartographer
 // would set it.
-function seaLabels(mask, projection, rect, marine, limit = 3) {
+// Places the seas a viewer would associate with this country, in the order the
+// country entry lists them, and only as many as fit. Without a list it falls
+// back to whatever open water is most prominent in frame — which is how a map
+// of the United States ends up labelling the Sargasso Sea instead of the Gulf
+// of Mexico, so the list is worth writing.
+function seaLabels(mask, projection, rect, marine, wanted, limit = 3) {
+  if (wanted?.length) {
+    const out = [];
+    const placed = [];
+    for (const name of wanted) {
+      if (out.length >= limit) break;
+      const feature = marine.features.find((f) => f.properties.name === name);
+      if (!feature) {
+        warnings.push(`no Natural Earth marine polygon named "${name}"`);
+        continue;
+      }
+      const spot = poleOfVisibility(ringsOfMany(projection, [feature]), rect);
+      if (!spot) continue;
+      const half = widthOf.italic(name, SEA_SIZE, SEA_TRACK) / 2;
+      const edge = 0.022 * COMP_WIDTH;
+      if (spot.clearance < half * 0.55) continue;
+      if (
+        !within(rect, [spot.x - half, spot.y], edge) ||
+        !within(rect, [spot.x + half, spot.y], edge)
+      )
+        continue;
+      const box = [spot.x - half, spot.y - SEA_SIZE * 0.7, half * 2, SEA_SIZE * 1.4];
+      if (placed.some((b) => overlaps(box, b))) continue;
+      placed.push(box);
+      out.push({name: titleCase(name), x: round(spot.x), y: round(spot.y)});
+    }
+    return out;
+  }
+  return autoSeaLabels(mask, projection, rect, marine, limit);
+}
+
+function autoSeaLabels(mask, projection, rect, marine, limit = 3) {
   const k = PLATE_WIDTH / COMP_WIDTH;
   const g = gridOf(rect);
   const blocked = new Uint8Array(g.gw * g.gh);
@@ -418,7 +500,7 @@ function seaLabels(mask, projection, rect, marine, limit = 3) {
     if (!sea || taken.has(sea.properties.name)) continue;
     // Only label water that has room for the word, and only where the whole
     // word stays comfortably inside the framing.
-    const half = widthOf.small(sea.properties.name, SEA_SIZE, SEA_TRACK) / 2;
+    const half = widthOf.italic(sea.properties.name, SEA_SIZE, SEA_TRACK) / 2;
     if (cell.d * g.stepX < half) continue;
     const edge = 0.022 * COMP_WIDTH;
     if (!within(rect, [x - half, y], edge) || !within(rect, [x + half, y], edge))
@@ -428,6 +510,88 @@ function seaLabels(mask, projection, rect, marine, limit = 3) {
     out.push({name: titleCase(sea.properties.name), x: round(x), y: round(y)});
   }
   return out;
+}
+
+// ------------------------------------------------------------------- insets
+
+const INSET_PLATE = 1280;
+
+// A territory inset: the distant part of a country, framed on its own and drawn
+// into a box in a corner of the map. Alaska on a map of the United States.
+// Everything is projected into the box's own coordinates, so the composition
+// only has to draw it.
+async function bakeInset(slug, index, inset, config, layers, reliefSource, subject) {
+  const {countries, boundaries} = layers;
+  const [w, s0, e, n] = inset.bounds;
+  const at = inset.at ?? [0.02, 0.62, 0.22, 0.34];
+  const box = [
+    at[0] * COMP_WIDTH,
+    at[1] * COMP_HEIGHT,
+    at[2] * COMP_WIDTH,
+    at[3] * COMP_HEIGHT,
+  ];
+
+  const framing = {bounds: inset.bounds};
+  const framed = framingGeometry(subject, framing);
+
+  // Fit the window to the frame, then scale it down into the box.
+  const projection = buildProjection(framed, framing);
+  const scale = Math.min(box[2] / COMP_WIDTH, box[3] / COMP_HEIGHT);
+  const [tx, ty] = projection.translate();
+  projection.scale(projection.scale() * scale);
+  projection.translate([
+    box[0] + box[2] / 2 + (tx - COMP_WIDTH / 2) * scale,
+    box[1] + box[3] / 2 + (ty - COMP_HEIGHT / 2) * scale,
+  ]);
+
+  const win = [w - 2, s0 - 2, e + 2, n + 2];
+  const inWin = (f) => intersects(bboxOf(f), win);
+  const near = countries.features.filter(inWin);
+
+  // The plate covers exactly the box, at the box's own aspect, so a tall inset
+  // is not letterboxed inside a 16:9 plate. warpRelief only inverts, so a thin
+  // wrapper that maps plate space onto the box is all it needs.
+  const plateWidth = 1024;
+  const plateHeight = Math.max(64, Math.round((plateWidth * box[3]) / box[2]));
+  const boxPlate = {
+    invert: ([x, y]) =>
+      projection.invert([
+        box[0] + (x * box[2]) / COMP_WIDTH,
+        box[1] + (y * box[3]) / COMP_HEIGHT,
+      ]),
+  };
+
+  const mask = fillRings(ringsOfMany(projection, near), plateWidth, plateHeight, {
+    scaleX: plateWidth / box[2],
+    scaleY: plateHeight / box[3],
+    offsetX: box[0],
+    offsetY: box[1],
+  });
+  const png = warpRelief(reliefSource, boxPlate, {
+    gain: config.reliefGain ?? 1.7,
+    mask,
+    shore: shoreChannel(mask, 1.1, plateWidth, plateHeight),
+    width: plateWidth,
+    height: plateHeight,
+  });
+  const plate = `relief/${slug}-inset${index}.png`;
+  await writePlate(png, path.join(ROOT, 'public', plate));
+
+  // Only the country's polygons that fall in this window — projecting the whole
+  // United States into the Alaska box would carry the lower 48 with it.
+  const parts =
+    subject.geometry.type === 'MultiPolygon'
+      ? subject.geometry.coordinates.map(polygon).filter(inWin)
+      : [subject];
+
+  return {
+    box: box.map(round),
+    image: box.map(round),
+    plate,
+    subject: pathOfMany(projection, parts, 0.4),
+    borders: pathOfMany(projection, boundaries.features.filter(inWin), 0.8),
+    label: inset.label ?? null,
+  };
 }
 
 // --------------------------------------------------------------------- bake
@@ -443,17 +607,38 @@ async function bakeCountry(slug, config, layers, reliefSource) {
   const framing = config.framing ?? {};
   const framed = framingGeometry(subject, framing);
   const projection = buildProjection(framed, framing);
-  const project = (lon, lat) => projection([lon, lat]);
+
   const win = viewWindow(projection);
 
   const visible = (f) => intersects(bboxOf(f), win);
+
+  // What the highlight fill covers. `include` takes every scrap of the country,
+  // dependencies included; the other two take the main landmass only and leave
+  // distant holdings to an inset, or out of frame entirely.
+  const territories = config.territories ?? 'include';
+  if (!['include', 'mainland-only', 'inset'].includes(territories)) {
+    throw new Error(`${slug}: unknown territories value "${territories}"`);
+  }
+  const {main, distant} = partitionTerritory(subject);
+  const sovereign = countries.features.filter(
+    (f) =>
+      f.properties.SOV_A3 === subject.properties.SOV_A3 &&
+      f.properties.ADM0_A3 !== config.adm0a3,
+  );
+  const filled = [
+    territories === 'include' ? subject : main ?? subject,
+    // Dependencies are the country's territory too: an unfilled Puerto Rico on
+    // a map of the United States is the same error as an unfilled Alaska.
+    ...sovereign.filter(visible),
+  ];
+  const project = (lon, lat) => projection([lon, lat]);
 
   // Every country polygon in view. The full-detail rings become the land mask
   // baked into the relief plate's alpha; a heavily decimated copy is all the
   // shoreline stroke needs.
   const inView = countries.features.filter(visible);
   const landRings = ringsOfMany(projection, inView);
-  const subjectRings = ringsOfMany(projection, [subject]);
+  const subjectRings = ringsOfMany(projection, filled);
 
   // The push-in crops as it runs, so every label is culled against the framing
   // that survives to the end of the clip, not the one it starts with.
@@ -544,16 +729,38 @@ async function bakeCountry(slug, config, layers, reliefSource) {
     neighbours.push({name, x: round(at.x), y: round(at.y)});
   }
 
+  // The check the brief calls for: nothing belonging to this country may be on
+  // screen without the highlight. An unfilled piece of the subject is exactly
+  // the Alaska error.
+  const unfilled = (territories === 'include' ? [] : [distant].filter(Boolean)).filter((f) => {
+    const pole = poleOfVisibility(ringsOfMany(projection, [f]), rect);
+    return pole && pole.area > 0.00004 * COMP_WIDTH * COMP_HEIGHT;
+  });
+  if (unfilled.length) {
+    warnings.push(
+      `${slug}: territory of the subject is visible but not filled — ` +
+        `${unfilled.map((f) => f.properties?.NAME ?? 'distant territory').join(', ')}. ` +
+        'Set territories to "include" or "inset", or tighten framing.',
+    );
+  }
+
   const mask = rasteriseLandMask(landRings);
-  const seas = seaLabels(mask, projection, rect, marine);
+  const seas = seaLabels(mask, projection, rect, marine, config.seaLabels);
 
   const exclude = new Set(config.cities?.exclude ?? []);
   // Natural Earth carries a few transliterations a news map would not use.
   const rename = config.cities?.rename ?? {};
+  // Priority decides which city goes when a cluster cannot be resolved. It
+  // defaults to population, and a country entry can override any city by name
+  // so the drop order is a decision rather than an accident.
+  const priority = config.cities?.priority ?? {};
+  const rank = (f) =>
+    priority[f.properties.NAME] ??
+    (f.properties.ADM0CAP === 1 ? Infinity : f.properties.POP_MAX ?? 0);
   const candidates = places.features
     .filter((f) => f.properties.ADM0_A3 === config.adm0a3)
     .filter((f) => !exclude.has(f.properties.NAME))
-    .sort((a, b) => (b.properties.POP_MAX ?? 0) - (a.properties.POP_MAX ?? 0));
+    .sort((a, b) => rank(b) - rank(a));
 
   const maxCities = config.maxCities ?? 12;
   let picked = [];
@@ -666,22 +873,22 @@ async function bakeCountry(slug, config, layers, reliefSource) {
     MARKER_GAP * 1.4,
   ]);
   const seaBoxes = seas.map((s) => {
-    const w = widthOf.small(s.name, SEA_SIZE, SEA_TRACK);
+    const w = widthOf.italic(s.name, SEA_SIZE, SEA_TRACK);
     return [s.x - w / 2, s.y - SEA_SIZE * 0.7, w, SEA_SIZE * 1.4];
   });
-  placeLabels(picked, rect, config.cities?.anchors ?? {}, [
-    nameBox,
-    ...markerBoxes,
-    ...neighbourBoxes,
-    ...seaBoxes,
-  ]);
+  placeLabels(picked, rect, {
+    overrides: config.cities?.anchors ?? {},
+    obstacles: [nameBox, ...markerBoxes, ...neighbourBoxes, ...seaBoxes],
+    subjectRings,
+  });
   picked = picked.filter((c) => !c.drop);
 
   const geo = {
     slug,
     name: config.name,
     subjectBox,
-    subject: toPath(projection, subject, 0.5),
+    territories,
+    subject: pathOfMany(projection, filled, 0.5),
     borders: pathOfMany(projection, boundaries.features.filter(visible), 1.2),
     lakes: pathOfMany(
       projection,
@@ -696,19 +903,34 @@ async function bakeCountry(slug, config, layers, reliefSource) {
     nameSize: round(nameSize),
   };
 
-  fs.mkdirSync(path.join(ROOT, 'src/data/geo'), {recursive: true});
-  fs.writeFileSync(
-    path.join(ROOT, 'src/data/geo', `${slug}.json`),
-    JSON.stringify(geo),
-  );
+  
 
   const png = warpRelief(reliefSource, projection, {
     gain: config.reliefGain ?? 1.7,
     mask,
     shore: shoreChannel(mask),
   });
+
+  const insets = [];
+  if (territories === 'inset') {
+    if (!config.insets?.length) {
+      throw new Error(`${slug}: territories is "inset" but no insets are configured`);
+    }
+    for (const [i, inset] of config.insets.entries()) {
+      insets.push(
+        await bakeInset(slug, i, inset, config, layers, reliefSource, subject),
+      );
+    }
+  }
   fs.mkdirSync(path.join(ROOT, 'public/relief'), {recursive: true});
   await writePlate(png, path.join(ROOT, 'public/relief', `${slug}.png`));
+
+  geo.insets = insets;
+  fs.mkdirSync(path.join(ROOT, 'src/data/geo'), {recursive: true});
+  fs.writeFileSync(
+    path.join(ROOT, 'src/data/geo', `${slug}.json`),
+    JSON.stringify(geo),
+  );
 
   return geo;
 }
@@ -787,3 +1009,7 @@ fs.writeFileSync(
     '\n} as unknown as Record<string, CountryGeo>;\n',
 );
 console.log(`registered: ${slugs.join(', ')}`);
+if (warnings.length) {
+  console.log(`\n${warnings.length} warning(s):`);
+  for (const w of warnings) console.log(`  ! ${w}`);
+}

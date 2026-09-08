@@ -151,15 +151,18 @@ export function fillRings(rings, width, height, {
   return mask;
 }
 
-export const rasteriseLandMask = (rings) => {
-  const k = PLATE_WIDTH / COMP_WIDTH;
-  return fillRings(rings, PLATE_WIDTH, PLATE_HEIGHT, {scaleX: k, scaleY: k});
-};
+export const rasteriseLandMask = (rings, width = PLATE_WIDTH, height = PLATE_HEIGHT) =>
+  fillRings(rings, width, height, {
+    scaleX: width / COMP_WIDTH,
+    scaleY: height / COMP_HEIGHT,
+  });
 
 // Morphological gradient of the land mask: the set of pixels that sit on the
 // land/water boundary. Baked as its own channel so the shoreline is a hairline
 // in the plate rather than a 110k-point SVG stroke re-rasterised every frame.
-export function shoreChannel(mask, radius = 1.6) {
+export function shoreChannel(mask, radius = 1.6, W = PLATE_WIDTH, H = PLATE_HEIGHT) {
+  const PLATE_WIDTH = W;
+  const PLATE_HEIGHT = H;
   const shore = Buffer.alloc(PLATE_WIDTH * PLATE_HEIGHT);
   const r = Math.ceil(radius);
   for (let y = 0; y < PLATE_HEIGHT; y++) {
@@ -185,14 +188,19 @@ export function shoreChannel(mask, radius = 1.6) {
   return shore;
 }
 
+// Same warp at an arbitrary size, for the small plates the territory insets use.
+export function warpReliefAt(src, projection, width, height, opts) {
+  return warpRelief(src, projection, {...opts, width, height});
+}
+
 export function warpRelief(
   src,
   projection,
-  {gain = 1.7, mask = null, shore = null} = {},
+  {gain = 1.7, mask = null, shore = null, width = PLATE_WIDTH, height = PLATE_HEIGHT} = {},
 ) {
   const png = new PNG({
-    width: PLATE_WIDTH,
-    height: PLATE_HEIGHT,
+    width,
+    height,
     // Three data channels, no alpha: R = relief shading (neutral 128),
     // G = shoreline ink, B = land coverage. The composition turns each into a
     // colour and an alpha with an feColorMatrix, so one plate serves both
@@ -201,7 +209,7 @@ export function warpRelief(
     inputColorType: 2,
     bitDepth: 8,
   });
-  const out = Buffer.alloc(PLATE_WIDTH * PLATE_HEIGHT * 3);
+  const out = Buffer.alloc(width * height * 3);
   png.data = out;
   const sx = COMP_WIDTH / PLATE_WIDTH;
   const sy = COMP_HEIGHT / PLATE_HEIGHT;

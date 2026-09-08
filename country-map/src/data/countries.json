@@ -3,13 +3,51 @@
     "adm0a3": "USA",
     "name": "UNITED STATES",
     "framing": {
-      "zoom": 1,
-      "offsetX": 0,
-      "offsetY": 0
+      "zoom": 1.7,
+      "offsetX": 0.02,
+      "offsetY": -0.09
     },
     "maxCities": 13,
-    "reliefGain": 2.0,
-    "nameScale": 1
+    "reliefGain": 2,
+    "nameScale": 1,
+    "territories": "inset",
+    "insets": [
+      {
+        "bounds": [
+          -172,
+          51.5,
+          -129,
+          72
+        ],
+        "at": [
+          0.012,
+          0.58,
+          0.175,
+          0.3
+        ],
+        "label": "ALASKA"
+      },
+      {
+        "bounds": [
+          -160.8,
+          18.4,
+          -154.4,
+          22.7
+        ],
+        "at": [
+          0.012,
+          0.885,
+          0.105,
+          0.085
+        ],
+        "label": "HAWAII"
+      }
+    ],
+    "seaLabels": [
+      "Gulf of Mexico",
+      "North Atlantic Ocean",
+      "North Pacific Ocean"
+    ]
   },
   "china": {
     "adm0a3": "CHN",
@@ -20,7 +58,7 @@
       "offsetY": 0
     },
     "maxCities": 13,
-    "reliefGain": 2.0,
+    "reliefGain": 2,
     "nameScale": 1,
     "cities": {
       "exclude": [
@@ -31,7 +69,14 @@
         "Shenyeng": "Shenyang",
         "Xian": "Xi'an"
       }
-    }
+    },
+    "territories": "include",
+    "seaLabels": [
+      "South China Sea",
+      "East China Sea",
+      "Yellow Sea",
+      "Philippine Sea"
+    ]
   },
   "india": {
     "adm0a3": "IND",
@@ -48,7 +93,13 @@
       "exclude": [
         "Amaravati"
       ]
-    }
+    },
+    "territories": "include",
+    "seaLabels": [
+      "Arabian Sea",
+      "Bay of Bengal",
+      "INDIAN OCEAN"
+    ]
   },
   "iran": {
     "adm0a3": "IRN",
@@ -60,7 +111,14 @@
     },
     "maxCities": 12,
     "reliefGain": 1.9,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Persian Gulf",
+      "Caspian Sea",
+      "Gulf of Oman",
+      "Arabian Sea"
+    ]
   },
   "australia": {
     "adm0a3": "AUS",
@@ -72,7 +130,15 @@
     },
     "maxCities": 12,
     "reliefGain": 2.3,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Coral Sea",
+      "Tasman Sea",
+      "INDIAN OCEAN",
+      "Great Australian Bight",
+      "South Pacific Ocean"
+    ]
   },
   "poland": {
     "adm0a3": "POL",
@@ -84,7 +150,12 @@
     },
     "maxCities": 12,
     "reliefGain": 2.1,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Baltic Sea",
+      "North Sea"
+    ]
   },
   "italy": {
     "adm0a3": "ITA",
@@ -100,6 +171,13 @@
     "nameAt": [
       12.75,
       42.75
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "Mediterranean Sea",
+      "Tyrrhenian Sea",
+      "Adriatic Sea",
+      "Ionian Sea"
     ]
   },
   "mexico": {
@@ -116,6 +194,12 @@
     "nameAt": [
       -101.5,
       23.2
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "Gulf of Mexico",
+      "North Pacific Ocean",
+      "Caribbean Sea"
     ]
   },
   "sweden": {
@@ -128,7 +212,14 @@
     },
     "maxCities": 11,
     "reliefGain": 2.1,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Baltic Sea",
+      "Gulf of Bothnia",
+      "North Sea",
+      "Norwegian Sea"
+    ]
   },
   "russia": {
     "adm0a3": "RUS",
@@ -139,11 +230,18 @@
       "offsetY": 0
     },
     "maxCities": 13,
-    "reliefGain": 2.0,
-    "nameScale": 1.0,
+    "reliefGain": 2,
+    "nameScale": 1,
     "nameAt": [
-      80.0,
-      62.0
+      80,
+      62
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "Barents Sea",
+      "Sea of Okhotsk",
+      "Bering Sea",
+      "Arctic Ocean"
     ]
   },
   "japan": {
@@ -156,7 +254,14 @@
     },
     "maxCities": 12,
     "reliefGain": 1.6,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Sea of Japan",
+      "North Pacific Ocean",
+      "East China Sea",
+      "Philippine Sea"
+    ]
   },
   "germany": {
     "adm0a3": "DEU",
@@ -168,7 +273,13 @@
     },
     "maxCities": 12,
     "reliefGain": 2.1,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "North Sea",
+      "Baltic Sea",
+      "English Channel"
+    ]
   },
   "united-kingdom": {
     "adm0a3": "GBR",
@@ -184,6 +295,13 @@
     "nameAt": [
       -1.9,
       53.4
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "North Sea",
+      "English Channel",
+      "North Atlantic Ocean",
+      "Irish Sea"
     ]
   },
   "france": {
@@ -196,7 +314,14 @@
     },
     "maxCities": 12,
     "reliefGain": 1.9,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "mainland-only",
+    "seaLabels": [
+      "Bay of Biscay",
+      "English Channel",
+      "Mediterranean Sea",
+      "North Atlantic Ocean"
+    ]
   },
   "brazil": {
     "adm0a3": "BRA",
@@ -207,8 +332,13 @@
       "offsetY": 0
     },
     "maxCities": 13,
-    "reliefGain": 2.0,
-    "nameScale": 1
+    "reliefGain": 2,
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "South Atlantic Ocean",
+      "North Atlantic Ocean"
+    ]
   },
   "canada": {
     "adm0a3": "CAN",
@@ -220,7 +350,15 @@
     },
     "maxCities": 12,
     "reliefGain": 1.9,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "North Atlantic Ocean",
+      "North Pacific Ocean",
+      "Arctic Ocean",
+      "Labrador Sea",
+      "Hudson Bay"
+    ]
   },
   "indonesia": {
     "adm0a3": "IDN",
@@ -238,7 +376,15 @@
     },
     "maxCities": 12,
     "reliefGain": 1.8,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "INDIAN OCEAN",
+      "South China Sea",
+      "Banda Sea",
+      "Arafura Sea",
+      "Java Sea"
+    ]
   },
   "turkey": {
     "adm0a3": "TUR",
@@ -250,7 +396,13 @@
     },
     "maxCities": 12,
     "reliefGain": 1.6,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Black Sea",
+      "Mediterranean Sea",
+      "Aegean Sea"
+    ]
   },
   "saudi-arabia": {
     "adm0a3": "SAU",
@@ -261,8 +413,15 @@
       "offsetY": 0
     },
     "maxCities": 11,
-    "reliefGain": 2.0,
-    "nameScale": 1
+    "reliefGain": 2,
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Red Sea",
+      "Persian Gulf",
+      "Arabian Sea",
+      "Gulf of Aden"
+    ]
   },
   "south-korea": {
     "adm0a3": "KOR",
@@ -274,7 +433,13 @@
     },
     "maxCities": 11,
     "reliefGain": 1.6,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Yellow Sea",
+      "Sea of Japan",
+      "Korea Strait"
+    ]
   },
   "spain": {
     "adm0a3": "ESP",
@@ -286,7 +451,14 @@
     },
     "maxCities": 12,
     "reliefGain": 1.7,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "mainland-only",
+    "seaLabels": [
+      "Mediterranean Sea",
+      "Bay of Biscay",
+      "North Atlantic Ocean",
+      "Balearic Sea"
+    ]
   },
   "south-africa": {
     "adm0a3": "ZAF",
@@ -298,7 +470,13 @@
     },
     "maxCities": 12,
     "reliefGain": 1.9,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "INDIAN OCEAN",
+      "South Atlantic Ocean",
+      "Mozambique Channel"
+    ]
   },
   "netherlands": {
     "adm0a3": "NLD",
@@ -310,7 +488,12 @@
     },
     "maxCities": 11,
     "reliefGain": 2.3,
-    "nameScale": 0.85
+    "nameScale": 0.85,
+    "territories": "mainland-only",
+    "seaLabels": [
+      "North Sea",
+      "English Channel"
+    ]
   },
   "uae": {
     "adm0a3": "ARE",
@@ -322,7 +505,12 @@
     },
     "maxCities": 8,
     "reliefGain": 2.1,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Persian Gulf",
+      "Gulf of Oman"
+    ]
   },
   "singapore": {
     "adm0a3": "SGP",
@@ -339,11 +527,17 @@
       ]
     },
     "maxCities": 6,
-    "reliefGain": 2.0,
+    "reliefGain": 2,
     "nameScale": 0.8,
     "nameAt": [
       103.85,
       0.1
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "South China Sea",
+      "Strait of Malacca",
+      "INDIAN OCEAN"
     ]
   },
   "vietnam": {
@@ -360,6 +554,13 @@
     "nameAt": [
       107.4,
       13.5
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "South China Sea",
+      "Gulf of Tonkin",
+      "Gulf of Thailand",
+      "Andaman Sea"
     ]
   },
   "nigeria": {
@@ -372,7 +573,12 @@
     },
     "maxCities": 12,
     "reliefGain": 2.1,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Gulf of Guinea",
+      "North Atlantic Ocean"
+    ]
   },
   "egypt": {
     "adm0a3": "EGY",
@@ -383,8 +589,13 @@
       "offsetY": 0
     },
     "maxCities": 12,
-    "reliefGain": 2.0,
-    "nameScale": 1
+    "reliefGain": 2,
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "Mediterranean Sea",
+      "Red Sea"
+    ]
   },
   "argentina": {
     "adm0a3": "ARG",
@@ -396,7 +607,13 @@
     },
     "maxCities": 12,
     "reliefGain": 1.8,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "include",
+    "seaLabels": [
+      "South Atlantic Ocean",
+      "South Pacific Ocean",
+      "Río de la Plata"
+    ]
   },
   "thailand": {
     "adm0a3": "THA",
@@ -412,6 +629,13 @@
     "nameAt": [
       101.2,
       15.8
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "Gulf of Thailand",
+      "Andaman Sea",
+      "South China Sea",
+      "Bay of Bengal"
     ]
   },
   "philippines": {
@@ -423,7 +647,7 @@
       "offsetY": 0,
       "bounds": [
         114.5,
-        3.0,
+        3,
         129.5,
         21.5
       ]
@@ -434,6 +658,13 @@
     "nameAt": [
       122.6,
       11.8
+    ],
+    "territories": "include",
+    "seaLabels": [
+      "Philippine Sea",
+      "South China Sea",
+      "Sulu Sea",
+      "Celebes Sea"
     ]
   },
   "switzerland": {
@@ -446,7 +677,9 @@
     },
     "maxCities": 10,
     "reliefGain": 1.4,
-    "nameScale": 0.85
+    "nameScale": 0.85,
+    "territories": "include",
+    "seaLabels": []
   },
   "norway": {
     "adm0a3": "NOR",
@@ -466,8 +699,14 @@
     "reliefGain": 1.6,
     "nameScale": 0.85,
     "nameAt": [
-      11.0,
+      11,
       61.3
+    ],
+    "territories": "mainland-only",
+    "seaLabels": [
+      "Norwegian Sea",
+      "North Sea",
+      "Barents Sea"
     ]
   },
   "chile": {
@@ -480,6 +719,11 @@
     },
     "maxCities": 12,
     "reliefGain": 1.5,
-    "nameScale": 1
+    "nameScale": 1,
+    "territories": "mainland-only",
+    "seaLabels": [
+      "South Pacific Ocean",
+      "South Atlantic Ocean"
+    ]
   }
 }

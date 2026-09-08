@@ -10,7 +10,7 @@ import {
 import {Defs} from './components/Defs';
 import {Grain} from './components/Grain';
 import {CITIES, NAME, PING, PUSH, FILL_WIPE} from './timing';
-import {DISPLAY, FONT_CSS, SANS} from './fonts';
+import {FONT_CSS, SANS, displayFamily} from './fonts';
 import type {CountryGeo} from './data/types';
 import type {MapStyle} from './styles';
 import {useImageReady} from './useImage';
@@ -93,6 +93,7 @@ export const CountryMap: React.FC<{geo: CountryGeo; style: MapStyle}> = ({
             shadowBlur={0.005 * W}
             shadowOffset={0.0035 * W}
             nameShadowBlur={nameType * 0.09}
+            insets={geo.insets ?? []}
           />
 
           <rect x="0" y="0" width={W} height={H} fill={style.water} />
@@ -137,9 +138,12 @@ export const CountryMap: React.FC<{geo: CountryGeo; style: MapStyle}> = ({
 
           {/* Subject country: fill, its own relief showing through, edge. */}
           <g mask="url(#fillWipe)">
-            <g filter="url(#subjectShadow)">
-              <path d={geo.subject} fill={style.subjectFill} />
-            </g>
+            <path d={geo.subject} fill="#000" filter="url(#subjectShadow)" />
+            <path
+              d={geo.subject}
+              fill={style.subjectFill}
+              fillOpacity={style.subjectFillOpacity}
+            />
             {ready ? (
               <g clipPath="url(#subjectClip)" opacity={style.subjectReliefOpacity}>
                 <image
@@ -172,7 +176,7 @@ export const CountryMap: React.FC<{geo: CountryGeo; style: MapStyle}> = ({
               fontFamily={SANS}
               fontSize={0.0084 * W}
               fontStyle="italic"
-              fontWeight={500}
+              fontWeight={400}
               letterSpacing={0.08 * 0.0084 * W}
               textAnchor="middle"
             >
@@ -222,7 +226,7 @@ export const CountryMap: React.FC<{geo: CountryGeo; style: MapStyle}> = ({
               x="0"
               y="0"
               fill="#ffffff"
-              fontFamily={DISPLAY}
+              fontFamily={displayFamily(geo.name)}
               fontSize={nameType}
               fontWeight={700}
               letterSpacing={0.06 * nameType}
@@ -235,6 +239,39 @@ export const CountryMap: React.FC<{geo: CountryGeo; style: MapStyle}> = ({
         </svg>
       </AbsoluteFill>
 
+      {/* Territory insets sit outside the push-in: a corner inset is a fixed
+          piece of furniture on the frame, not part of the map being pushed
+          into, and scaling it would crop it against the frame edge. */}
+      {(geo.insets ?? []).length ? (
+        <AbsoluteFill>
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            width="100%"
+            height="100%"
+            style={{display: 'block'}}
+          >
+          {(geo.insets ?? []).map((inset, i) => (
+            <TerritoryInset
+              key={i}
+              inset={inset}
+              style={style}
+              index={i}
+              ready={ready}
+              opacity={interpolate(
+                frame,
+                [FILL_WIPE.from + 6, FILL_WIPE.to + 6],
+                [0, 1],
+                {...clamp, easing: OUT},
+              )}
+              type={0.0078 * W}
+              stroke={0.0009 * W}
+            />
+          ))}
+
+          </svg>
+        </AbsoluteFill>
+      ) : null}
+
       <Grain opacity={style.grain} />
       {style.vignette > 0 ? (
         <AbsoluteFill
@@ -244,6 +281,69 @@ export const CountryMap: React.FC<{geo: CountryGeo; style: MapStyle}> = ({
         />
       ) : null}
     </AbsoluteFill>
+  );
+};
+
+const TerritoryInset: React.FC<{
+  inset: NonNullable<CountryGeo['insets']>[number];
+  style: MapStyle;
+  index: number;
+  ready: boolean;
+  opacity: number;
+  type: number;
+  stroke: number;
+}> = ({inset, style, index, ready, opacity, type, stroke}) => {
+  const [bx, by, bw, bh] = inset.box;
+  const [ix, iy, iw, ih] = inset.image;
+  const plate = staticFile(inset.plate);
+  return (
+    <g opacity={opacity}>
+      <rect x={bx} y={by} width={bw} height={bh} fill={style.water} />
+      <g clipPath={`url(#insetClip${index})`}>
+        {ready ? (
+          <>
+            <image href={plate} x={ix} y={iy} width={iw} height={ih} filter="url(#landRamp)" />
+            <image href={plate} x={ix} y={iy} width={iw} height={ih} filter="url(#shoreInk)" />
+          </>
+        ) : null}
+        <path d={inset.borders} fill="none" stroke={style.border} strokeWidth={stroke} />
+        <path
+          d={inset.subject}
+          fill={style.subjectFill}
+          fillOpacity={style.subjectFillOpacity}
+        />
+        <path
+          d={inset.subject}
+          fill="none"
+          stroke={style.subjectEdge}
+          strokeWidth={stroke * 1.2}
+          strokeLinejoin="round"
+        />
+      </g>
+      <rect
+        x={bx}
+        y={by}
+        width={bw}
+        height={bh}
+        fill="none"
+        stroke={style.insetBorder}
+        strokeWidth={stroke * 1.4}
+      />
+      {inset.label ? (
+        <text
+          x={bx + bw / 2}
+          y={by + bh - type * 0.55}
+          fill={style.neighbourLabel}
+          fontFamily={SANS}
+          fontSize={type}
+          fontWeight={500}
+          letterSpacing={0.16 * type}
+          textAnchor="middle"
+        >
+          {inset.label}
+        </text>
+      ) : null}
+    </g>
   );
 };
 
@@ -307,17 +407,31 @@ const CityMarker: React.FC<{
     {...clamp, easing: OUT},
   );
 
+  // A label pushed out to clear space keeps a leader line back to its marker.
+  const from = city.leader ?? city;
   const offset = r + gap;
   const anchors = {
-    right: {x: city.x + offset, y: city.y, anchor: 'start', baseline: 'central'},
-    left: {x: city.x - offset, y: city.y, anchor: 'end', baseline: 'central'},
-    above: {x: city.x, y: city.y - offset, anchor: 'middle', baseline: 'auto'},
-    below: {x: city.x, y: city.y + offset, anchor: 'middle', baseline: 'hanging'},
+    right: {x: from.x + offset, y: from.y, anchor: 'start', baseline: 'central'},
+    left: {x: from.x - offset, y: from.y, anchor: 'end', baseline: 'central'},
+    above: {x: from.x, y: from.y - offset, anchor: 'middle', baseline: 'auto'},
+    below: {x: from.x, y: from.y + offset, anchor: 'middle', baseline: 'hanging'},
   } as const;
   const at = anchors[city.anchor] ?? anchors.right;
 
   return (
     <g>
+      {city.leader ? (
+        <line
+          x1={city.x}
+          y1={city.y}
+          x2={city.leader.x}
+          y2={city.leader.y}
+          stroke={style.markerFill}
+          strokeWidth={ring * 0.9}
+          opacity={label * 0.75}
+          strokeLinecap="round"
+        />
+      ) : null}
       <circle
         cx={city.x}
         cy={city.y}
@@ -348,7 +462,7 @@ const CityMarker: React.FC<{
         strokeLinejoin="round"
         fontFamily={SANS}
         fontSize={type}
-        fontWeight={600}
+        fontWeight={500}
         textAnchor={at.anchor}
         dominantBaseline={at.baseline}
       >

@@ -15,6 +15,9 @@ export type MapStyle = {
   subjectFill: string;
   subjectEdge: string;
   subjectRamp: readonly [string, string, string];
+  // The fill is not opaque: the relief underneath has to read through it, or the
+  // country looks like a flat sticker laid on the map.
+  subjectFillOpacity: number;
   subjectReliefOpacity: number;
   subjectShadow: string;
   markerFill: string;
@@ -22,6 +25,7 @@ export type MapStyle = {
   label: string;
   labelHalo: string;
   ping: string;
+  insetBorder: string;
   grain: number;
   vignette: number;
 };
@@ -38,13 +42,15 @@ export const STYLES = {
     subjectFill: '#d93a2b',
     subjectEdge: '#a82a1e',
     subjectRamp: ['#ae2c1e', '#d93a2b', '#e8664f'],
-    subjectReliefOpacity: 0.5,
-    subjectShadow: 'rgba(40, 22, 18, 0.42)',
+    subjectFillOpacity: 0.88,
+    subjectReliefOpacity: 0.42,
+    subjectShadow: 'rgba(38, 20, 16, 0.5)',
     markerFill: '#ffffff',
     markerRing: 'rgba(26, 28, 30, 0.8)',
     label: '#ffffff',
     labelHalo: 'rgba(20, 14, 12, 0.55)',
     ping: 'rgba(255, 255, 255, 0.9)',
+    insetBorder: 'rgba(70, 78, 86, 0.75)',
     grain: 0.01,
     vignette: 0,
   },
@@ -59,13 +65,16 @@ export const STYLES = {
     subjectFill: '#d93a2b',
     subjectEdge: '#a82a1e',
     subjectRamp: ['#a82a1e', '#d93a2b', '#e8664f'],
-    subjectReliefOpacity: 0.55,
-    subjectShadow: 'rgba(0, 0, 0, 0.6)',
+    subjectFillOpacity: 0.9,
+    // Softened for the dark style, where a heavy shadow just muddies.
+    subjectReliefOpacity: 0.45,
+    subjectShadow: 'rgba(0, 0, 0, 0.45)',
     markerFill: '#ffffff',
     markerRing: 'rgba(10, 14, 20, 0.85)',
     label: '#ffffff',
     labelHalo: 'rgba(0, 0, 0, 0.6)',
     ping: 'rgba(255, 255, 255, 0.85)',
+    insetBorder: 'rgba(150, 165, 180, 0.45)',
     grain: 0.02,
     vignette: 0.38,
   },

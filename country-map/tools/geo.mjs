@@ -40,27 +40,21 @@ export function safeRect(capital, push) {
   return [cx - hw, cy - hh, cx + hw, cy + hh];
 }
 
-const polygon = (coordinates) => ({
+export const polygon = (coordinates) => ({
   type: 'Feature',
   properties: {},
   geometry: {type: 'Polygon', coordinates},
 });
 
-// What the framing should actually be built around. A country's polygon can
-// carry territory thousands of miles from the part anyone means — Alaska and
-// Hawaii on the United States — and fitting the whole lot puts the subject in
-// one corner of an ocean. Keep the main landmass plus whatever is near enough
-// and big enough to belong to the same view (Sicily and Sardinia for Italy),
-// and let the rest fall outside the frame. Override with framing.bounds.
-export function framingGeometry(subject, framing = {}) {
-  if (framing.bounds) {
-    const [w, s, e, n] = framing.bounds;
-    // Clockwise in lon/lat. d3-geo reads spherical polygons by winding order,
-    // and the other way round this rectangle means "the whole globe except
-    // this rectangle" — which fits the world into the frame.
-    return polygon([[[w, s], [w, n], [e, n], [e, s], [w, s]]]);
+// Splits a country's polygons into the landmass the map is about and the
+// territory that sits too far away to share a framing — Alaska and Hawaii on
+// the United States, the overseas departments on France, Svalbard on Norway.
+// Which of the two the highlight fill covers is the country entry's
+// `territories` decision, not something this function assumes.
+export function partitionTerritory(subject) {
+  if (subject.geometry.type !== 'MultiPolygon') {
+    return {main: subject, distant: null};
   }
-  if (subject.geometry.type !== 'MultiPolygon') return subject;
 
   const parts = subject.geometry.coordinates.map(polygon);
   const areas = parts.map(geoArea);
@@ -72,22 +66,46 @@ export function framingGeometry(subject, framing = {}) {
   // American one.
   const reach = Math.hypot(e - w, n - s) * 0.6;
 
-  const keep = parts.filter((part, i) => {
-    if (i === main) return true;
-    if (areas[i] < areas[main] * 0.03) return false;
+  const near = [];
+  const far = [];
+  parts.forEach((part, i) => {
+    if (i === main) {
+      near.push(i);
+      return;
+    }
     const c = geoCentroid(part);
     const dLon = Math.abs(((c[0] - centre[0] + 540) % 360) - 180);
-    return Math.hypot(dLon, c[1] - centre[1]) < reach;
+    const close = Math.hypot(dLon, c[1] - centre[1]) < reach;
+    // Small islands close by belong to the main view; anything big or far is
+    // its own problem.
+    (close && areas[i] >= areas[main] * 0.03 ? near : close ? near : far).push(i);
   });
 
-  return {
-    type: 'Feature',
-    properties: {},
-    geometry: {
-      type: 'MultiPolygon',
-      coordinates: keep.map((part) => part.geometry.coordinates),
-    },
-  };
+  const collect = (list) =>
+    list.length
+      ? {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'MultiPolygon',
+            coordinates: list.map((i) => parts[i].geometry.coordinates),
+          },
+        }
+      : null;
+
+  return {main: collect(near), distant: collect(far)};
+}
+
+// What the framing is built around: the main landmass, or an explicit rectangle.
+export function framingGeometry(subject, framing = {}) {
+  if (framing.bounds) {
+    const [w, s, e, n] = framing.bounds;
+    // Clockwise in lon/lat. d3-geo reads spherical polygons by winding order,
+    // and the other way round this rectangle means "the whole globe except
+    // this rectangle" — which fits the world into the frame.
+    return polygon([[[w, s], [w, n], [e, n], [e, s], [w, s]]]);
+  }
+  return partitionTerritory(subject).main ?? subject;
 }
 
 export function buildProjection(subject, framing = {}) {

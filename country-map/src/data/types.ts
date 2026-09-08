@@ -6,6 +6,9 @@ export type City = {
   x: number;
   y: number;
   anchor: Anchor;
+  // Set when the label had to be pushed away from a crowded cluster; the
+  // composition draws a leader line from the marker to this point.
+  leader?: {x: number; y: number};
 };
 
 export type Placed = {name: string; x: number; y: number};
@@ -25,4 +28,17 @@ export type CountryGeo = {
   capital: {x: number; y: number};
   nameAt: {x: number; y: number};
   nameSize: number;
+  territories: 'include' | 'mainland-only' | 'inset';
+  insets: Inset[];
+};
+
+// A distant territory drawn into a box in a corner — Alaska on a map of the
+// United States. Produced by tools/bake.mjs in composition coordinates.
+export type Inset = {
+  box: [number, number, number, number];
+  image: [number, number, number, number];
+  plate: string;
+  subject: string;
+  borders: string;
+  label: string | null;
 };

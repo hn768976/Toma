@@ -36,11 +36,33 @@ const measurer = (files) => {
   };
 };
 
+// Must mirror the faces and weights CountryMap.tsx renders with; see src/fonts.ts.
+const inter500 = measurer([
+  'inter-latin-500-normal.woff2',
+  'inter-latin-ext-500-normal.woff2',
+]);
+const interItalic = measurer([
+  'inter-latin-400-italic.woff2',
+  'inter-latin-ext-400-italic.woff2',
+]);
+const interBold = measurer([
+  'inter-latin-700-normal.woff2',
+  'inter-latin-ext-700-normal.woff2',
+]);
+const interTightBold = measurer([
+  'inter-tight-latin-700-normal.woff2',
+  'inter-tight-latin-ext-700-normal.woff2',
+]);
+
+// Country names past this length are set in Inter Tight. Keep in step with
+// TIGHT_THRESHOLD in src/fonts.ts.
+export const TIGHT_THRESHOLD = 10;
+
 export const widthOf = {
-  city: measurer(['inter-latin-600-normal.woff2', 'inter-latin-ext-600-normal.woff2']),
-  small: measurer(['inter-latin-500-normal.woff2', 'inter-latin-ext-500-normal.woff2']),
-  display: measurer([
-    'barlow-condensed-latin-700-normal.woff2',
-    'barlow-condensed-latin-ext-700-normal.woff2',
-  ]),
+  city: inter500,
+  small: inter500,
+  italic: interItalic,
+  // Picks the face the composition will actually use for this name.
+  display: (text, size, tracking = 0) =>
+    (text.length > TIGHT_THRESHOLD ? interTightBold : interBold)(text, size, tracking),
 };
