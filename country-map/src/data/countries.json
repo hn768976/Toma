@@ -140,7 +140,11 @@
     },
     "maxCities": 13,
     "reliefGain": 2.0,
-    "nameScale": 1
+    "nameScale": 1.0,
+    "nameAt": [
+      80.0,
+      62.0
+    ]
   },
   "japan": {
     "adm0a3": "JPN",
@@ -176,7 +180,11 @@
     },
     "maxCities": 12,
     "reliefGain": 2.1,
-    "nameScale": 0.9
+    "nameScale": 0.85,
+    "nameAt": [
+      -1.9,
+      53.4
+    ]
   },
   "france": {
     "adm0a3": "FRA",
@@ -348,7 +356,11 @@
     },
     "maxCities": 12,
     "reliefGain": 1.8,
-    "nameScale": 1
+    "nameScale": 0.8,
+    "nameAt": [
+      107.4,
+      13.5
+    ]
   },
   "nigeria": {
     "adm0a3": "NGA",
@@ -396,7 +408,11 @@
     },
     "maxCities": 12,
     "reliefGain": 1.9,
-    "nameScale": 1
+    "nameScale": 0.9,
+    "nameAt": [
+      101.2,
+      15.8
+    ]
   },
   "philippines": {
     "adm0a3": "PHL",
@@ -414,7 +430,11 @@
     },
     "maxCities": 12,
     "reliefGain": 1.8,
-    "nameScale": 1
+    "nameScale": 0.8,
+    "nameAt": [
+      122.6,
+      11.8
+    ]
   },
   "switzerland": {
     "adm0a3": "CHE",
@@ -444,7 +464,11 @@
     },
     "maxCities": 11,
     "reliefGain": 1.6,
-    "nameScale": 1
+    "nameScale": 0.85,
+    "nameAt": [
+      11.0,
+      61.3
+    ]
   },
   "chile": {
     "adm0a3": "CHL",
