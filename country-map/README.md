@@ -14,8 +14,8 @@ a render, not a new build.
 
 ## Countries included
 
-Nine countries ship baked, giving eighteen compositions. Every one renders at
-4K straight from this project — no re-baking, no data download.
+34 countries ship baked, giving 68 compositions. Every one renders at
+4K straight from this project — no re-baking and no data download.
 
 | Country | Slug | Compositions |
 |---|---|---|
@@ -28,6 +28,31 @@ Nine countries ship baked, giving eighteen compositions. Every one renders at
 | Italy | `italy` | `V1-ItalyMapLight`, `V2-ItalyMapDark` |
 | Mexico | `mexico` | `V1-MexicoMapLight`, `V2-MexicoMapDark` |
 | Sweden | `sweden` | `V1-SwedenMapLight`, `V2-SwedenMapDark` |
+| Russia | `russia` | `V1-RussiaMapLight`, `V2-RussiaMapDark` |
+| Japan | `japan` | `V1-JapanMapLight`, `V2-JapanMapDark` |
+| Germany | `germany` | `V1-GermanyMapLight`, `V2-GermanyMapDark` |
+| United Kingdom | `united-kingdom` | `V1-UnitedKingdomMapLight`, `V2-UnitedKingdomMapDark` |
+| France | `france` | `V1-FranceMapLight`, `V2-FranceMapDark` |
+| Brazil | `brazil` | `V1-BrazilMapLight`, `V2-BrazilMapDark` |
+| Canada | `canada` | `V1-CanadaMapLight`, `V2-CanadaMapDark` |
+| Indonesia | `indonesia` | `V1-IndonesiaMapLight`, `V2-IndonesiaMapDark` |
+| Turkey | `turkey` | `V1-TurkeyMapLight`, `V2-TurkeyMapDark` |
+| Saudi Arabia | `saudi-arabia` | `V1-SaudiArabiaMapLight`, `V2-SaudiArabiaMapDark` |
+| South Korea | `south-korea` | `V1-SouthKoreaMapLight`, `V2-SouthKoreaMapDark` |
+| Spain | `spain` | `V1-SpainMapLight`, `V2-SpainMapDark` |
+| South Africa | `south-africa` | `V1-SouthAfricaMapLight`, `V2-SouthAfricaMapDark` |
+| Netherlands | `netherlands` | `V1-NetherlandsMapLight`, `V2-NetherlandsMapDark` |
+| UAE | `uae` | `V1-UaeMapLight`, `V2-UaeMapDark` |
+| Singapore | `singapore` | `V1-SingaporeMapLight`, `V2-SingaporeMapDark` |
+| Vietnam | `vietnam` | `V1-VietnamMapLight`, `V2-VietnamMapDark` |
+| Nigeria | `nigeria` | `V1-NigeriaMapLight`, `V2-NigeriaMapDark` |
+| Egypt | `egypt` | `V1-EgyptMapLight`, `V2-EgyptMapDark` |
+| Argentina | `argentina` | `V1-ArgentinaMapLight`, `V2-ArgentinaMapDark` |
+| Thailand | `thailand` | `V1-ThailandMapLight`, `V2-ThailandMapDark` |
+| Philippines | `philippines` | `V1-PhilippinesMapLight`, `V2-PhilippinesMapDark` |
+| Switzerland | `switzerland` | `V1-SwitzerlandMapLight`, `V2-SwitzerlandMapDark` |
+| Norway | `norway` | `V1-NorwayMapLight`, `V2-NorwayMapDark` |
+| Chile | `chile` | `V1-ChileMapLight`, `V2-ChileMapDark` |
 
 ## Data
 
@@ -67,27 +92,75 @@ npx remotion studio
 
 ### 4K renders
 
-Nine countries ship baked and ready to render:
-
 ```sh
-npx remotion render V1-UnitedStatesMapLight  out/V1_UnitedStatesMapLight.mp4  --scale=1 --crf=16
-npx remotion render V2-UnitedStatesMapDark   out/V2_UnitedStatesMapDark.mp4   --scale=1 --crf=16
-npx remotion render V1-ChinaMapLight         out/V1_ChinaMapLight.mp4         --scale=1 --crf=16
-npx remotion render V2-ChinaMapDark          out/V2_ChinaMapDark.mp4          --scale=1 --crf=16
-npx remotion render V1-IndiaMapLight         out/V1_IndiaMapLight.mp4         --scale=1 --crf=16
-npx remotion render V2-IndiaMapDark          out/V2_IndiaMapDark.mp4          --scale=1 --crf=16
-npx remotion render V1-IranMapLight          out/V1_IranMapLight.mp4          --scale=1 --crf=16
-npx remotion render V2-IranMapDark           out/V2_IranMapDark.mp4           --scale=1 --crf=16
-npx remotion render V1-AustraliaMapLight     out/V1_AustraliaMapLight.mp4     --scale=1 --crf=16
-npx remotion render V2-AustraliaMapDark      out/V2_AustraliaMapDark.mp4      --scale=1 --crf=16
-npx remotion render V1-PolandMapLight        out/V1_PolandMapLight.mp4        --scale=1 --crf=16
-npx remotion render V2-PolandMapDark         out/V2_PolandMapDark.mp4         --scale=1 --crf=16
-npx remotion render V1-ItalyMapLight         out/V1_ItalyMapLight.mp4         --scale=1 --crf=16
-npx remotion render V2-ItalyMapDark          out/V2_ItalyMapDark.mp4          --scale=1 --crf=16
-npx remotion render V1-MexicoMapLight        out/V1_MexicoMapLight.mp4        --scale=1 --crf=16
-npx remotion render V2-MexicoMapDark         out/V2_MexicoMapDark.mp4         --scale=1 --crf=16
-npx remotion render V1-SwedenMapLight        out/V1_SwedenMapLight.mp4        --scale=1 --crf=16
-npx remotion render V2-SwedenMapDark         out/V2_SwedenMapDark.mp4         --scale=1 --crf=16
+npx remotion render V1-UnitedStatesMapLight             out/V1_UnitedStatesMapLight.mp4             --scale=1 --crf=16
+npx remotion render V2-UnitedStatesMapDark              out/V2_UnitedStatesMapDark.mp4              --scale=1 --crf=16
+npx remotion render V1-ChinaMapLight                    out/V1_ChinaMapLight.mp4                    --scale=1 --crf=16
+npx remotion render V2-ChinaMapDark                     out/V2_ChinaMapDark.mp4                     --scale=1 --crf=16
+npx remotion render V1-IndiaMapLight                    out/V1_IndiaMapLight.mp4                    --scale=1 --crf=16
+npx remotion render V2-IndiaMapDark                     out/V2_IndiaMapDark.mp4                     --scale=1 --crf=16
+npx remotion render V1-IranMapLight                     out/V1_IranMapLight.mp4                     --scale=1 --crf=16
+npx remotion render V2-IranMapDark                      out/V2_IranMapDark.mp4                      --scale=1 --crf=16
+npx remotion render V1-AustraliaMapLight                out/V1_AustraliaMapLight.mp4                --scale=1 --crf=16
+npx remotion render V2-AustraliaMapDark                 out/V2_AustraliaMapDark.mp4                 --scale=1 --crf=16
+npx remotion render V1-PolandMapLight                   out/V1_PolandMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-PolandMapDark                    out/V2_PolandMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-ItalyMapLight                    out/V1_ItalyMapLight.mp4                    --scale=1 --crf=16
+npx remotion render V2-ItalyMapDark                     out/V2_ItalyMapDark.mp4                     --scale=1 --crf=16
+npx remotion render V1-MexicoMapLight                   out/V1_MexicoMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-MexicoMapDark                    out/V2_MexicoMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-SwedenMapLight                   out/V1_SwedenMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-SwedenMapDark                    out/V2_SwedenMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-RussiaMapLight                   out/V1_RussiaMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-RussiaMapDark                    out/V2_RussiaMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-JapanMapLight                    out/V1_JapanMapLight.mp4                    --scale=1 --crf=16
+npx remotion render V2-JapanMapDark                     out/V2_JapanMapDark.mp4                     --scale=1 --crf=16
+npx remotion render V1-GermanyMapLight                  out/V1_GermanyMapLight.mp4                  --scale=1 --crf=16
+npx remotion render V2-GermanyMapDark                   out/V2_GermanyMapDark.mp4                   --scale=1 --crf=16
+npx remotion render V1-UnitedKingdomMapLight            out/V1_UnitedKingdomMapLight.mp4            --scale=1 --crf=16
+npx remotion render V2-UnitedKingdomMapDark             out/V2_UnitedKingdomMapDark.mp4             --scale=1 --crf=16
+npx remotion render V1-FranceMapLight                   out/V1_FranceMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-FranceMapDark                    out/V2_FranceMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-BrazilMapLight                   out/V1_BrazilMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-BrazilMapDark                    out/V2_BrazilMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-CanadaMapLight                   out/V1_CanadaMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-CanadaMapDark                    out/V2_CanadaMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-IndonesiaMapLight                out/V1_IndonesiaMapLight.mp4                --scale=1 --crf=16
+npx remotion render V2-IndonesiaMapDark                 out/V2_IndonesiaMapDark.mp4                 --scale=1 --crf=16
+npx remotion render V1-TurkeyMapLight                   out/V1_TurkeyMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-TurkeyMapDark                    out/V2_TurkeyMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-SaudiArabiaMapLight              out/V1_SaudiArabiaMapLight.mp4              --scale=1 --crf=16
+npx remotion render V2-SaudiArabiaMapDark               out/V2_SaudiArabiaMapDark.mp4               --scale=1 --crf=16
+npx remotion render V1-SouthKoreaMapLight               out/V1_SouthKoreaMapLight.mp4               --scale=1 --crf=16
+npx remotion render V2-SouthKoreaMapDark                out/V2_SouthKoreaMapDark.mp4                --scale=1 --crf=16
+npx remotion render V1-SpainMapLight                    out/V1_SpainMapLight.mp4                    --scale=1 --crf=16
+npx remotion render V2-SpainMapDark                     out/V2_SpainMapDark.mp4                     --scale=1 --crf=16
+npx remotion render V1-SouthAfricaMapLight              out/V1_SouthAfricaMapLight.mp4              --scale=1 --crf=16
+npx remotion render V2-SouthAfricaMapDark               out/V2_SouthAfricaMapDark.mp4               --scale=1 --crf=16
+npx remotion render V1-NetherlandsMapLight              out/V1_NetherlandsMapLight.mp4              --scale=1 --crf=16
+npx remotion render V2-NetherlandsMapDark               out/V2_NetherlandsMapDark.mp4               --scale=1 --crf=16
+npx remotion render V1-UaeMapLight                      out/V1_UaeMapLight.mp4                      --scale=1 --crf=16
+npx remotion render V2-UaeMapDark                       out/V2_UaeMapDark.mp4                       --scale=1 --crf=16
+npx remotion render V1-SingaporeMapLight                out/V1_SingaporeMapLight.mp4                --scale=1 --crf=16
+npx remotion render V2-SingaporeMapDark                 out/V2_SingaporeMapDark.mp4                 --scale=1 --crf=16
+npx remotion render V1-VietnamMapLight                  out/V1_VietnamMapLight.mp4                  --scale=1 --crf=16
+npx remotion render V2-VietnamMapDark                   out/V2_VietnamMapDark.mp4                   --scale=1 --crf=16
+npx remotion render V1-NigeriaMapLight                  out/V1_NigeriaMapLight.mp4                  --scale=1 --crf=16
+npx remotion render V2-NigeriaMapDark                   out/V2_NigeriaMapDark.mp4                   --scale=1 --crf=16
+npx remotion render V1-EgyptMapLight                    out/V1_EgyptMapLight.mp4                    --scale=1 --crf=16
+npx remotion render V2-EgyptMapDark                     out/V2_EgyptMapDark.mp4                     --scale=1 --crf=16
+npx remotion render V1-ArgentinaMapLight                out/V1_ArgentinaMapLight.mp4                --scale=1 --crf=16
+npx remotion render V2-ArgentinaMapDark                 out/V2_ArgentinaMapDark.mp4                 --scale=1 --crf=16
+npx remotion render V1-ThailandMapLight                 out/V1_ThailandMapLight.mp4                 --scale=1 --crf=16
+npx remotion render V2-ThailandMapDark                  out/V2_ThailandMapDark.mp4                  --scale=1 --crf=16
+npx remotion render V1-PhilippinesMapLight              out/V1_PhilippinesMapLight.mp4              --scale=1 --crf=16
+npx remotion render V2-PhilippinesMapDark               out/V2_PhilippinesMapDark.mp4               --scale=1 --crf=16
+npx remotion render V1-SwitzerlandMapLight              out/V1_SwitzerlandMapLight.mp4              --scale=1 --crf=16
+npx remotion render V2-SwitzerlandMapDark               out/V2_SwitzerlandMapDark.mp4               --scale=1 --crf=16
+npx remotion render V1-NorwayMapLight                   out/V1_NorwayMapLight.mp4                   --scale=1 --crf=16
+npx remotion render V2-NorwayMapDark                    out/V2_NorwayMapDark.mp4                    --scale=1 --crf=16
+npx remotion render V1-ChileMapLight                    out/V1_ChileMapLight.mp4                    --scale=1 --crf=16
+npx remotion render V2-ChileMapDark                     out/V2_ChileMapDark.mp4                     --scale=1 --crf=16
 ```
 
 A 1080p preview is the same command with `--scale=0.5`. A still is
