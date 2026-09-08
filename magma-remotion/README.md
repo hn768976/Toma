@@ -58,21 +58,33 @@ only needed to override it. On a machine with no GPU, use `--gl=swiftshader`
 Measured on the machine that produced the delivered previews: **4 vCPU, no GPU**,
 so ANGLE resolved to a software rasteriser. `--concurrency=4`.
 
-| Output                | Per frame | 600 frames |
-| --------------------- | --------- | ---------- |
-| 1080p (`--scale=0.5`) | 2.51 s    | 25 min (measured, 1506 s) |
-| 4K (`--scale=1`)      | PLACEHOLDER_4K | PLACEHOLDER_4K_TOTAL |
+| Output                | Per frame | 600 frames        |
+| --------------------- | --------- | ----------------- |
+| 1080p (`--scale=0.5`) | 2.50 s    | 25 min (measured over a full 600-frame render, 1516 s) |
+| 4K (`--scale=1`)      | 3.08 s    | ~31 min           |
 
-These are software-rasteriser numbers and are close to a worst case. On a
-machine with a real GPU and ANGLE bound to it, expect this to drop by an order
-of magnitude; budget by measuring a short `--frames=0-11` range first.
+The 4K figure is a slope, not a single timing: 12 frames took 53 s and 60 frames
+took 201 s, so 148 s / 48 frames = 3.08 s per frame with a 16 s fixed startup
+that both runs agree on.
 
-The shader cost is dominated by the two cellular passes and the six 4D simplex
-noise evaluations per pixel. If a 4K render needs to be cheaper, reduce the
-domain-warp work before the cellular work — the plate structure matters more
-than the swirl detail. `warpAmp2` in `src/constants.ts` can go to `0` to drop
-the second warp level (two of the six noise calls) at a visible but survivable
-cost to the liquid detail.
+**4K costs only 1.23x 1080p per frame, not 4x**, and that is worth
+understanding before optimising anything. Solving the two measurements for a
+fixed and a per-pixel term gives roughly 2.3 s per frame of fixed cost against
+0.19 s (1080p) and 0.77 s (4K) of pixel-dependent cost. The render is dominated
+by per-frame overhead — browser round-trip, lossless frame capture, IPC — not by
+the shader.
+
+So on hardware like this, **simplifying the shader would buy very little**: even
+making the fragment shader free would save about 8% at 1080p and 25% at 4K.
+Attack the overhead first (a real GPU, higher `--concurrency` on more cores). If
+the shader ever does become the bottleneck, reduce the domain-warp work before
+the cellular work — the plate structure matters more than the swirl detail, and
+`warpAmp2` in `src/constants.ts` can go to `0` to drop the second warp level,
+two of the six 4D noise calls, at a visible but survivable cost to the liquid
+detail.
+
+These are software-rasteriser numbers on 4 vCPU and are close to a worst case;
+budget your own hardware by measuring a short `--frames=0-11` range first.
 
 ## How the look is built
 
