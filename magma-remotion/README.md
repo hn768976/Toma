@@ -58,10 +58,10 @@ only needed to override it. On a machine with no GPU, use `--gl=swiftshader`
 Measured on the machine that produced the delivered previews: **4 vCPU, no GPU**,
 so ANGLE resolved to a software rasteriser. `--concurrency=4`.
 
-| Output               | Per frame | 600 frames |
-| -------------------- | --------- | ---------- |
-| 1080p (`--scale=0.5`) | ~1.8 s   | ~18 min    |
-| 4K (`--scale=1`)      | (see below) | (see below) |
+| Output                | Per frame | 600 frames |
+| --------------------- | --------- | ---------- |
+| 1080p (`--scale=0.5`) | 2.51 s    | 25 min (measured, 1506 s) |
+| 4K (`--scale=1`)      | PLACEHOLDER_4K | PLACEHOLDER_4K_TOTAL |
 
 These are software-rasteriser numbers and are close to a worst case. On a
 machine with a real GPU and ANGLE bound to it, expect this to drop by an order
@@ -113,9 +113,19 @@ The loop is exact, and every time-varying term is periodic in
 - The brightness pulse uses an integer cycle count, and the grain is seeded from
   `fract(t)` so the frame at `t = 1` is identical to the frame at `t = 0`.
 
-Verified empirically: the frame-to-frame difference across the loop seam
-(599 → 0) is 2.642 mean absolute levels, against 2.637 for 598 → 599 and 2.657
-for 0 → 1 — the seam is indistinguishable from any other frame boundary.
+Verified twice over.
+
+In the **source frames** (lossless stills, so no codec in the way), the
+frame-to-frame difference across the seam (599 → 0) is 2.642 mean absolute
+levels, against 2.637 for 598 → 599 and 2.657 for 0 → 1.
+
+In the **encoded file** the check needs more care, because H.264 makes the
+frame differences bimodal: about 25% of all frame boundaries measure ~6.67–6.76
+and the other 75% measure ~2.40–2.59, a GOP cadence re-quantising the grain
+rather than anything in the field. The seam measures 6.788 — an ordinary member
+of the high group, not an outlier. Comparing it against a *low*-group neighbour
+is what makes it look like a discontinuity when it is not. The cadence itself is
+not visible: per-frame mean level varies by 0.23 of 255 across the clip.
 
 ### Rendering notes
 
