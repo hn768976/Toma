@@ -35,10 +35,19 @@ npx remotion render V2-PlasmaBlue  out/V2_PlasmaBlue.mp4  --scale=1 --crf=15
 npx remotion render V3-ToxicGreen  out/V3_ToxicGreen.mp4  --scale=1 --crf=15
 ```
 
-The delivered 1080p previews are the same command at `--scale=0.5 --crf=20`,
-which is visually indistinguishable from `--crf=15` on this content at a little
-under half the size (51 MB against 103 MB for 20s). Checked at 8x contrast on
-the dark plates: no banding at either. Stills:
+The delivered 1080p previews are the same command at `--scale=0.5
+--x264-preset=slow`, with `--crf=24` (V1 at `--crf=25`, being the densest of the
+three, to fit a 30 MiB transfer limit).
+
+This content is expensive to encode — 2% grain over a field that genuinely
+moves — so the quality knob is worth understanding. At `--crf=15` a 20s preview
+is 103 MB; crf 24 is 30 MB. There is no banding penalty across that whole range:
+counting flat-neighbour runs in the dark plates, the fraction is 37.5% at crf 20
+against 38.4% at crf 28, i.e. unchanged, because the grain that does the
+dithering survives. Verified visually too, at 8x contrast. Use crf 15-18 for a
+master, 24 for a preview.
+
+Stills:
 
 ```bash
 npx remotion still V1-MagmaOrange out/V1_MagmaOrange.png --frame=0 --scale=0.5
