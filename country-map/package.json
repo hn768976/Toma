@@ -1,0 +1,30 @@
+{
+  "name": "country-map",
+  "version": "1.0.0",
+  "description": "Parameterised news-desk country map template (Remotion, 4K, 30fps)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "bake": "node tools/bake.mjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/media-utils": "4.0.515",
+    "d3-geo": "3.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@fontsource/barlow-condensed": "5.2.5",
+    "@fontsource/inter": "5.2.5",
+    "@remotion/cli": "4.0.515",
+    "@types/d3-geo": "3.1.0",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "fontkit": "^2.0.4",
+    "pngjs": "7.0.0",
+    "typescript": "5.9.3"
+  }
+}
