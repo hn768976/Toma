@@ -28,6 +28,18 @@ Everything the studio needs is committed: the baked basemaps in
 `public/basemaps/`, the Natural Earth vectors in `data/`, and the bundled mono
 face in `public/fonts/`. No network access is required after `npm install`.
 
+```bash
+npm run check       # every shipping lane is verified to stay in the water
+npm run lint        # tsc --noEmit
+npm run bake        # rebuild the basemap tiles from data/
+```
+
+`npm run check` samples each sea route along the curve the renderer actually
+draws and tests it against the Natural Earth land polygons, allowing the Suez,
+Panama, Kiel and Corinth canals as deliberate transits. It exits non-zero if a
+lane runs inland, so it is worth running before queueing a render batch — a
+shipping map with lanes over land is worse than no shipping map.
+
 ## Rendering at 4K
 
 One command per composition. `--scale=1` is the native 3840×2160.
@@ -46,7 +58,29 @@ A 1080p preview is the same command with `--scale=0.5`. A still is
 
 ### Measured 4K render time
 
-MEASURED_TIME_PLACEHOLDER
+Measured on the machine this project was built on: **4 vCPU Intel Xeon @ 2.80 GHz,
+15 GB RAM, no GPU** (Chromium on software GL via `swangle`), `Config.setConcurrency(4)`.
+
+Timed by rendering 10 frames and 70 frames of the same composition and taking the
+difference, which cancels out bundling and browser start-up:
+
+| Composition | 10 frames | 70 frames | **Per frame at 4K** | Full 480-frame render |
+|---|---|---|---|---|
+| `V1-RouteMapNorthAmericaAir` | 82.6 s | 383.8 s | **5.02 s** | ~41 min |
+| `V2-RouteMapEuropeShipping` | 59.2 s | 279.2 s | **3.67 s** | ~30 min |
+
+Fixed overhead (bundle + browser start) is ~32 s and ~23 s respectively.
+
+Budget the other four regions at roughly **4–5 s/frame**, i.e. **30–40 minutes each**
+on hardware like the above — call it **3–4 hours for all six**. The cost is almost
+all CPU rasterisation, so it scales close to linearly with core count: a 16-core
+box should land nearer 8–10 minutes per composition. Raise
+`Config.setConcurrency()` in `remotion.config.ts` to match the render machine —
+each worker holds a decoded ~4096x2824 basemap, so allow roughly 1.5 GB per worker.
+
+The two heaviest things on the page are the `backdrop-filter` depth-of-field bands
+and the size of the map plane; the bands are already clipped to the height of their
+own gradients rather than covering the frame, which is worth about 23%.
 
 ## Data sources
 
@@ -130,10 +164,12 @@ src/
   lib/paths.ts             route curves; marker position + tangent heading
   lib/prng.ts              seeded PRNG (no Math.random at render time)
   lib/palettes.ts          the two colour treatments
-  components/              basemap grade, graticule, routes, markers, pins, grade
+  components/              graticule, routes, markers, pins, depth of field
 scripts/
   fetch-data.mjs           re-fetch and re-simplify the public-domain sources
   bake-basemaps.mjs        build public/basemaps/*.jpg from data/
+  check-routes.mjs         fail if a shipping lane runs over land
+  make-zip.sh              package the project for a 4K render elsewhere
 data/                      baked public-domain source data
 public/basemaps/           baked basemap tiles (one per region and palette)
 ```
