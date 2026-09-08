@@ -189,6 +189,12 @@ void main() {
   // octave above; this one only contributes thin crackle, which is what fills
   // the molten channels with filigree instead of leaving them flat orange.
   //
+  // It is gated hard to the matrix where it is used below. Its cell borders
+  // have nothing to do with where the crust plates are, so any of it that
+  // reaches a plate draws a closed loop straight across the crust, cutting
+  // over the concentric contours that are supposed to be the only structure
+  // in there.
+  //
   // The domain warp above varies far too slowly to bend anything at this
   // scale, so the fine cells would meet along their straight perpendicular
   // bisectors and lay an angular web over the matrix. This extra wobble is
@@ -244,7 +250,7 @@ void main() {
     + 0.30 * core                                  // and blow out at their centre
     + 0.20 * crustHeat * island                    // warmth banked in the crust
     + 0.34 * line * (0.35 + 0.65 * crustHeat) * (0.50 + 0.50 * island)
-    + uFiligree * filigree * (0.25 + 0.75 * regionHeat) * (0.30 + 0.70 * molten);
+    + uFiligree * filigree * (0.25 + 0.75 * regionHeat) * molten * molten;
 
   // A subtle level shift per ring band, so the contours read as topography
   // rather than as lines drawn on a flat surface.
