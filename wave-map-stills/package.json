@@ -1,0 +1,31 @@
+{
+  "name": "wave-map-stills",
+  "version": "1.0.0",
+  "description": "Wave map field still image generator (Remotion, 2D canvas)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "d3-geo": "3.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "topojson-client": "3.1.0"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.0",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "19.2.7",
+    "@types/topojson-client": "3.1.5",
+    "@types/web": "0.0.166",
+    "pngjs": "^7.0.0",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "still": "remotion still",
+    "batch": "node --experimental-strip-types scripts/render-batch.ts",
+    "contact-sheet": "node --experimental-strip-types scripts/contact-sheet.ts",
+    "typecheck": "tsc"
+  }
+}
