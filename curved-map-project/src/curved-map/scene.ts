@@ -62,31 +62,13 @@ type ChartSpec = {
   count: number;
   lineWidth: number;
   labelDensity: number;
+  /** Momentum persistence: low is choppy and direction-changing, high trends. */
+  roughness: number;
   start: number;
   end: number;
 };
 
-/** A random walk with a few scripted spikes, normalised to +/-1. */
-const makeSeries = (rng: Rng, count: number): Float32Array => {
-  const values = new Float32Array(count);
-  // Frames at which the series makes a sharp, out-of-character move.
-  const spikes = new Set<number>();
-  const spikeCount = randInt(rng, 3, 6);
-  for (let i = 0; i < spikeCount; i++) {
-    spikes.add(randInt(rng, Math.floor(count * 0.12), count - 4));
-  }
-
-  let value = 0;
-  let momentum = 0;
-  for (let i = 0; i < count; i++) {
-    momentum = momentum * 0.72 + (rng() - 0.5) * 0.42;
-    value += momentum;
-    if (spikes.has(i)) value += (rng() < 0.5 ? -1 : 1) * randRange(rng, 1.6, 3.4);
-    // Pull back toward the middle so the walk does not run off.
-    value *= 0.965;
-    values[i] = value;
-  }
-
+const normalise = (values: Float32Array): void => {
   let min = Infinity;
   let max = -Infinity;
   for (const v of values) {
@@ -94,13 +76,57 @@ const makeSeries = (rng: Rng, count: number): Float32Array => {
     if (v > max) max = v;
   }
   const span = Math.max(1e-6, max - min);
-  for (let i = 0; i < count; i++) values[i] = ((values[i] - min) / span) * 2 - 1;
+  for (let i = 0; i < values.length; i++) {
+    values[i] = ((values[i] - min) / span) * 2 - 1;
+  }
+};
+
+/**
+ * A random walk with a few scripted spikes, normalised to +/-1.
+ *
+ * The walk is normalised before the spikes go in: a choppy, low-momentum walk
+ * covers a much smaller raw range than a trending one, so spiking first and
+ * normalising afterwards would flatten its ordinary movement into a straight
+ * line and leave only the spikes.
+ */
+const makeSeries = (
+  rng: Rng,
+  count: number,
+  roughness: number,
+): Float32Array => {
+  const values = new Float32Array(count);
+  let value = 0;
+  let momentum = 0;
+  for (let i = 0; i < count; i++) {
+    momentum = momentum * roughness + (rng() - 0.5) * 0.42;
+    value += momentum;
+    // Pull back toward the middle so the walk does not run off.
+    value *= 0.965;
+    values[i] = value;
+  }
+  normalise(values);
+
+  // Sharp, out-of-character moves, in normalised units so they read the same
+  // against any roughness.
+  const spikeCount = randInt(rng, 3, 6);
+  for (let i = 0; i < spikeCount; i++) {
+    const at = randInt(rng, Math.floor(count * 0.1), count - 4);
+    const size = (rng() < 0.5 ? -1 : 1) * randRange(rng, 0.45, 1.05);
+    values[at] += size;
+    // One neighbour at part height keeps the spike sharp but not a single tooth.
+    const side = rng() < 0.5 ? -1 : 1;
+    const neighbour = at + side;
+    if (neighbour >= 0 && neighbour < count) {
+      values[neighbour] += size * randRange(rng, 0.3, 0.75);
+    }
+  }
+  normalise(values);
   return values;
 };
 
 const buildChart = (spec: ChartSpec): Chart => {
   const rng = mulberry32(spec.seed);
-  const series = makeSeries(rng, spec.count);
+  const series = makeSeries(rng, spec.count, spec.roughness);
   const points = new Float32Array(spec.count * 2);
   for (let i = 0; i < spec.count; i++) {
     points[i * 2] = spec.x0 + ((spec.x1 - spec.x0) * i) / (spec.count - 1);
@@ -133,40 +159,52 @@ const buildChart = (spec: ChartSpec): Chart => {
   };
 };
 
+/**
+ * All three series run the full width of the display, off both edges — the
+ * overhang covers the drift so no line ever ends inside the frame. They differ
+ * in shape rather than extent: the first is coarse and jagged, the second is
+ * choppier and changes direction often, the third trends in long, fine moves.
+ */
+const CHART_X0 = FLAT_WIDTH * -0.022;
+const CHART_X1 = FLAT_WIDTH * 1.022;
+
 export const CHARTS: readonly Chart[] = [
   buildChart({
     seed: 0xc0ffee,
-    x0: FLAT_WIDTH * 0.025,
-    x1: FLAT_WIDTH * 0.945,
+    x0: CHART_X0,
+    x1: CHART_X1,
     baseline: visibleY(0.63),
     amplitude: VIDEO_HEIGHT * 0.145,
     count: 138,
     lineWidth: 4.2,
-    labelDensity: 0.075,
+    labelDensity: 0.07,
+    roughness: 0.72,
     start: TIMING.charts[0].start,
     end: TIMING.charts[0].end,
   }),
   buildChart({
     seed: 0xbeef17,
-    x0: FLAT_WIDTH * 0.285,
-    x1: FLAT_WIDTH * 0.985,
-    baseline: visibleY(0.235),
-    amplitude: VIDEO_HEIGHT * 0.082,
-    count: 96,
+    x0: CHART_X0,
+    x1: CHART_X1,
+    baseline: visibleY(0.225),
+    amplitude: VIDEO_HEIGHT * 0.088,
+    count: 118,
     lineWidth: 3.2,
-    labelDensity: 0.06,
+    labelDensity: 0.05,
+    roughness: 0.46,
     start: TIMING.charts[1].start,
     end: TIMING.charts[1].end,
   }),
   buildChart({
     seed: 0x1a2b3c,
-    x0: FLAT_WIDTH * 0.045,
-    x1: FLAT_WIDTH * 0.335,
-    baseline: visibleY(0.845),
-    amplitude: VIDEO_HEIGHT * 0.055,
-    count: 62,
+    x0: CHART_X0,
+    x1: CHART_X1,
+    baseline: visibleY(0.855),
+    amplitude: VIDEO_HEIGHT * 0.068,
+    count: 210,
     lineWidth: 2.6,
-    labelDensity: 0.05,
+    labelDensity: 0.028,
+    roughness: 0.76,
     start: TIMING.charts[2].start,
     end: TIMING.charts[2].end,
   }),
