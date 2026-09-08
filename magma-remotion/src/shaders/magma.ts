@@ -1,14 +1,15 @@
 import { NOISE_4D } from "./noise4d";
 
 /**
- * The plane is a 2x2 quad and the vertex shader writes clip space directly, so
- * the field always fills the frame exactly and no camera maths can drift.
+ * One full-screen triangle in clip space. No camera, no transform, nothing that
+ * can drift between frames.
  */
 export const VERTEX_SHADER = /* glsl */ `
+attribute vec2 aPos;
 varying vec2 vUv;
 void main() {
-  vUv = uv;
-  gl_Position = vec4(position.xy, 0.0, 1.0);
+  vUv = aPos * 0.5 + 0.5;
+  gl_Position = vec4(aPos, 0.0, 1.0);
 }
 `;
 
@@ -39,6 +40,8 @@ uniform float uPlateMin;   // smallest crust island radius, in cell units
 uniform float uPlateVar;   // spread of island radius across cells
 uniform float uSpeck;      // cooled specks the fine octave drops in the matrix
 uniform float uHeatGamma;  // exposure; see the note in palettes.ts
+uniform float uAdvAmp;     // advection radius, in cell units
+uniform float uAdvFreq;    // how fast the flow direction varies across the frame
 uniform float uVeinW;
 uniform float uContourN;   // iso-levels per cell => concentric rings
 uniform float uBloom;
@@ -147,6 +150,32 @@ void main() {
   vec2 p = (vUv - 0.5) * vec2(aspect, 1.0);
   vec2 q = p * (uCells / aspect);
 
+  // -- advection ------------------------------------------------------------
+  // Transport, which the domain warp below cannot provide. A warp is a bounded
+  // oscillating displacement: raising its rate makes the field reshape faster
+  // in place, and measured against the reference that shows up as per-frame
+  // change climbing while block displacement stays pinned near zero. Real magma
+  // carries its crust along, so the structures have to travel.
+  //
+  // Every point travels the ellipse spanned by two static low-frequency vector
+  // fields, once per cycle. Neighbouring regions set off in different
+  // directions so there is no net pan, and because each path is closed and
+  // traversed exactly once the loop still closes perfectly.
+  //
+  // Spanning the motion with two smooth vector fields, rather than giving each
+  // point a random phase angle, is what makes it work: a random phase swings
+  // by tens of degrees across a single structure, so its two halves set off in
+  // opposing directions and it tears in place instead of being carried.
+  vec2 flowA = vec2(
+    snoise4(vec4(q * uAdvFreq, 0.0, 0.0)),
+    snoise4(vec4(q * uAdvFreq + vec2(31.7, 58.2), 0.0, 0.0))
+  );
+  vec2 flowB = vec2(
+    snoise4(vec4(q * uAdvFreq + vec2(77.3, 12.9), 0.0, 0.0)),
+    snoise4(vec4(q * uAdvFreq + vec2(5.1, 91.4), 0.0, 0.0))
+  );
+  vec2 qa = q + uAdvAmp * (flowA * cos(TAU * uT) + flowB * sin(TAU * uT));
+
   // -- domain warp, two levels ---------------------------------------------
   // Level 1 is large and slow. Its divergence is also what varies cell size
   // across the field: where the warp spreads, plates open out; where it
@@ -154,10 +183,10 @@ void main() {
   // which a multiplicative frequency term could not do.
   vec2 c1 = timeCircle(uWarpRate1);
   vec2 w1 = vec2(
-    snoise4(vec4(q * uWarpFreq1, c1)),
-    snoise4(vec4(q * uWarpFreq1 + vec2(41.7, 19.3), c1))
+    snoise4(vec4(qa * uWarpFreq1, c1)),
+    snoise4(vec4(qa * uWarpFreq1 + vec2(41.7, 19.3), c1))
   );
-  vec2 q1 = q + w1 * uWarpAmp1;
+  vec2 q1 = qa + w1 * uWarpAmp1;
 
   // Level 2 is finer and quicker: the liquid detail riding on the big swirl.
   vec2 c2 = timeCircle(uWarpRate2);
@@ -178,7 +207,7 @@ void main() {
 
   // Vein width from its own field, so some boundaries stay thin cracks while
   // others open into wide channels — spatially, not per pixel.
-  float vwN = snoise4(vec4(q * 0.20 + vec2(120.0, 77.0), timeCircle(uWarpRate1 * 1.4)));
+  float vwN = snoise4(vec4(qa * 0.20 + vec2(120.0, 77.0), timeCircle(uWarpRate1 * 1.4)));
   float veinW = uVeinW * (1.0 + 0.95 * vwN);
   veinW = max(veinW, 0.02);
 
@@ -238,7 +267,7 @@ void main() {
   // -- which plates are hot, which have cooled ------------------------------
   // cid is per cell and static, so a plate keeps its character for the whole
   // loop; the low-frequency field migrates the hot regions across it.
-  float hotN = snoise4(vec4(q * 0.20 + vec2(900.0, 400.0), timeCircle(uWarpRate1 * 0.8)));
+  float hotN = snoise4(vec4(qa * 0.20 + vec2(900.0, 400.0), timeCircle(uWarpRate1 * 0.8)));
   float regionHeat = clamp(0.60 + 0.55 * hotN, 0.0, 1.0);
   float cooled = smoothstep(0.50, 0.92, cid);   // a few plates sit nearly black
   float crustHeat = regionHeat * (1.0 - 0.75 * cooled);

@@ -11,16 +11,13 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.522",
-    "@remotion/three": "4.0.522",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "remotion": "4.0.522",
-    "three": "0.185.1"
+    "remotion": "4.0.522"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "@types/three": "0.185.4",
     "typescript": "5.9.3"
   }
 }
