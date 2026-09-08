@@ -29,12 +29,17 @@ SwiftShader) — otherwise Chromium may fail to create the context at all.
 ### 4K masters
 
 ```console
-npx remotion render V1-InkBlackOnWhite  out/V1_InkBlackOnWhite.mp4  --scale=1 --crf=15
-npx remotion render V2-InkColourOnBlack out/V2_InkColourOnBlack.mp4 --scale=1 --crf=15
-npx remotion render V3-MilkInWater      out/V3_MilkInWater.mp4      --scale=1 --crf=15
+npx remotion render V1-InkBlackOnWhite  out/V1_InkBlackOnWhite.mp4  --scale=1 --crf=15 --pixel-format=yuv420p --muted
+npx remotion render V2-InkColourOnBlack out/V2_InkColourOnBlack.mp4 --scale=1 --crf=15 --pixel-format=yuv420p --muted
+npx remotion render V3-MilkInWater      out/V3_MilkInWater.mp4      --scale=1 --crf=15 --pixel-format=yuv420p --muted
 ```
 
-Each writes 3840×2160, H.264, `yuv420p`, 30fps, 600 frames.
+Each writes 3840×2160, H.264, `yuv420p`, 30fps, 600 frames, no audio track.
+
+Both trailing flags matter. Without `--pixel-format=yuv420p` the encoder picks
+`yuvj420p` (full-range), which some NLEs read as a levels shift. Without
+`--muted` Remotion attaches a silent AAC track, which stock footage should not
+carry.
 
 `remotion.config.ts` sets the intermediate frame format to PNG. Do not switch
 it back to JPEG: the ink edges are high contrast, and JPEG ringing there
@@ -43,7 +48,7 @@ survives into the H.264 encode as mosquito noise around the thinnest tendrils.
 ### 1080p previews
 
 ```console
-npx remotion render V1-InkBlackOnWhite out/V1_InkBlackOnWhite.mp4 --scale=0.5 --crf=16
+npx remotion render V1-InkBlackOnWhite out/V1_InkBlackOnWhite.mp4 --scale=0.5 --crf=16 --pixel-format=yuv420p --muted
 ```
 
 `--scale` changes only the device pixel ratio, so the shader runs at exactly
@@ -57,25 +62,38 @@ npx remotion still V1-InkBlackOnWhite out/V1_InkBlackOnWhite.png --frame=340 --s
 ### Render times
 
 Measured on a 4-core container with **no GPU**, so Chromium falls back to
-software GL. A machine with a real GPU will be far faster; these are the
-pessimistic numbers.
+software GL (SwiftShader). A machine with a real GPU will be far faster; these
+are the pessimistic numbers.
 
 Cost rises through the clip, because a late frame has a longer history to
-unwind than an early one — so these are measured at the **end** of the clip,
-not the start. Times are shader-only, with process start, bundling and browser
-launch (a one-off ~3.4s) subtracted.
+unwind than an early one — so the figures below are measured at the **end** of
+the clip, not the start. They are shader-only: process start, bundling and
+browser launch (a one-off 3.2s) are subtracted.
 
 | Frame | 1920×1080 (`--scale=0.5`) | 3840×2160 (`--scale=1`) |
 |---|---|---|
-| 300 (mid-clip) | 8.3 s | — |
-| 599 (last frame) | 11.0 s | 45 s |
+| 0 | ~0 s | ~0 s |
+| 300 (mid-clip) | 8.1 s | — |
+| **599 (last frame)** | **9.9 s** | **41.3 s** |
 
-4K costs 4.1x the 1080p figure — the shader is purely per-pixel, so cost
-tracks pixel count almost exactly. Frame 0 is effectively free either way:
-there is no history to integrate yet.
+4K costs 4.18× the 1080p figure. The shader is purely per-pixel, so cost tracks
+pixel count almost exactly. Frame 0 is free either way — there is no history to
+integrate yet.
 
-A full 600-frame 4K master on hardware like this is therefore a multi-hour
-job; budget accordingly, or render it somewhere with a GPU.
+Whole-clip wall time for the 1080p previews on the same machine, 600 frames
+including encode:
+
+| | Total | Per frame |
+|---|---|---|
+| `V2-InkColourOnBlack` | 83m 49s | 8.4 s |
+| `V3-MilkInWater` | 68m 12s | 6.8 s |
+
+V3 is cheaper because it has one fewer injection and almost no high-frequency
+octave. Scaling by 4.18, a full 600-frame **4K master is roughly a 6-hour job
+per version on hardware like this** — budget accordingly, or render it
+somewhere with a GPU. Concurrency does not help: SwiftShader already saturates
+every core, so rendering the three versions in parallel is no faster than one
+after another.
 
 ## How it works
 
