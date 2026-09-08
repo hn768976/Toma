@@ -199,5 +199,7 @@ export const lightFalloff = (stage: Stage, x: number, y: number): number => {
   const dx = x - stage.light.x;
   const dy = y - stage.light.y;
   const d2 = (dx * dx + dy * dy) / (stage.light.r * stage.light.r);
-  return 1 / (1 + d2 * 1.35);
+  // Deliberately gentle: a tight falloff would concentrate the lift into a
+  // bright knot of dots and read as a light "dot" again.
+  return 1 / (1 + d2 * 0.7);
 };

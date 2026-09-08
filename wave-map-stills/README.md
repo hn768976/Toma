@@ -138,7 +138,7 @@ one is idempotent.
 | `<WaveField>` | evaluates the height field and displaces every dot vertically; derives crest-lit size and brightness |
 | `<AccentCells>` | promotes ~2% of dots to the accent colour, as singles and short horizontal runs |
 | `<DotMapSurface>` | draws every dot as a small square into one of four blur buffers |
-| `<LightSource>` | core, halo and faint ray streaks, on their own layer |
+| `<LightSource>` | a broad soft glow — deliberately with no hot core, so the light reads through its falloff and through the dots it lifts rather than as a bright point — plus faint ray streaks, on their own layer |
 | `<FocusPass>` | blurs each of the four buffers exactly once on the way onto the frame |
 | `<GrainPass>` | a fine seeded grain, laid down as a repeating tile |
 
