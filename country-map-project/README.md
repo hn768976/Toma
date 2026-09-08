@@ -442,16 +442,16 @@ be placed legibly it is dropped rather than shrunk.
   cannot be reached in 30× from a whole-world view without filling the frame edge
   to edge, which the brief also rules out. The zoom per country is therefore
   derived from its closing frame and reported in the table — 2.6× for Brazil,
-  12× for South Korea, 13× for Poland.
+  12.1× for South Korea, 11.7× for Poland.
 - **Argentina's flag** is published in the source set at 8:5 (1.600); the
   official specification is 9:14 (1.556), a 2.9% difference. Every other flag in
   the set matches its official ratio exactly. The difference is invisible under a
   cover-crop, and the file is shipped as published rather than being re-scaled,
   which would distort the artwork.
-- **City counts.** The brief's 10–14 is met for 26 of the 33. The rest are
-  limited by the data or the geography: Singapore has one populated place in
-  Natural Earth, the UAE eight, and the Netherlands, Switzerland and Norway run
-  out of room for legible labels before they run out of cities. Labels are
-  dropped rather than shrunk, as the brief asks.
+- **City counts.** The brief's 10–14 is met for 28 of the 33. The other
+  5 are limited by the data or the geography: SGP (1), ARE (5), NLD (7), CHE (7), KOR (9).
+  Singapore has exactly one populated place in Natural Earth and the UAE eight;
+  the Netherlands and Switzerland run out of room for legible labels before they
+  run out of cities. Labels are dropped rather than shrunk, as the brief asks.
 - **The satellite base is not Blue Marble** in this build — see the warning
   above.
