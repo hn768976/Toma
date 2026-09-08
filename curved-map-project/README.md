@@ -52,16 +52,20 @@ below was measured on.
 
 ### Measured render time
 
-Measured on 4 vCPU / 15 GB, no GPU (ANGLE over SwiftShader), 1920x1080
-(`--scale=0.5`), PNG intermediates:
+Measured on 4 vCPU / 15 GB, **no GPU** (ANGLE falling back to SwiftShader), PNG
+intermediates. Each figure is the slope of two runs of different frame counts,
+so the fixed bundle and browser start-up cost (~5 s) is excluded:
 
-* **~1.3 s per frame** single-threaded (`--concurrency=1`).
-* **~0.56 s per frame** wall clock at `--concurrency=3` — about **4 min** for
-  the full 450-frame composition.
+| Output | Concurrency | Per frame |
+|---|---|---|
+| 1920x1080 (`--scale=0.5`) | 1 | **~1.56 s** |
+| 1920x1080 (`--scale=0.5`) | 3 | **~0.9 s** wall clock — about 6 min for all 450 frames |
+| 3840x2160 (`--scale=1`) | 1 | **~2.5 s** |
 
-The flat composite is authored at 5768x2842 regardless of output scale, so a
-4K render costs roughly the same per frame in the 2D pass and about 4x more in
-the warp pass. Budget accordingly.
+The flat composite is authored at 5768x2842 whatever the output scale, so most
+of the 2D pass costs the same at both sizes; the extra 4K cost is the warp pass.
+On a machine with real GPU acceleration the warp pass is close to free and these
+numbers drop substantially.
 
 ## How it is built
 
