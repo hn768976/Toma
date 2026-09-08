@@ -1,0 +1,36 @@
+{
+  "name": "country-map-project",
+  "version": "1.0.0",
+  "description": "Parameterised news-desk country map template (Remotion, 3840x2160, 30fps)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "build:assets": "tsx scripts/build-assets.ts",
+    "fetch:data": "node scripts/fetch-data.mjs",
+    "lint": "tsc --noEmit",
+    "check:framing": "tsx scripts/check-framing.ts",
+    "render:previews": "tsx scripts/render-previews.ts",
+    "check:push": "tsx scripts/check-push.ts",
+    "sync:cities": "tsx scripts/sync-cities.ts",
+    "report": "tsx scripts/report-tables.ts"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@remotion/cli": "4.0.515",
+    "d3-geo": "3.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "^4.0.515",
+    "@remotion/renderer": "^4.0.515",
+    "@types/d3-geo": "3.1.0",
+    "@types/react": "19.2.7",
+    "sharp": "0.35.4",
+    "tsx": "^4.20.6",
+    "typescript": "5.9.3"
+  }
+}

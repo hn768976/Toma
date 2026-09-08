@@ -1,0 +1,752 @@
+{
+  "builtAt": "2026-09-08T19:54:06.087Z",
+  "satelliteSource": "naturalearth",
+  "countries": [
+    {
+      "code": "USA",
+      "name": "United States",
+      "projection": "conic 33/45",
+      "partsKept": "52/127",
+      "cities": 14,
+      "droppedCities": [
+        "Dallas (no room for the label)",
+        "Atlanta (no room for the label)",
+        "Phoenix (no room for the label)",
+        "Cincinnati (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 3.85,
+        "endSpanKm": 8729,
+        "endMetresPerPixel": 2273,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.82,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "CHN",
+      "name": "China",
+      "projection": "conic 25/45",
+      "partsKept": "13/13",
+      "cities": 14,
+      "droppedCities": [
+        "Wuhan (no room for the label)",
+        "Xian (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 2.83,
+        "endSpanKm": 11889,
+        "endMetresPerPixel": 3096,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.6,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "IND",
+      "name": "India",
+      "projection": "mercator",
+      "partsKept": "14/14",
+      "cities": 14,
+      "droppedCities": [
+        "Nagpur (no room for the label)",
+        "Indore (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 3.11,
+        "endSpanKm": 10809,
+        "endMetresPerPixel": 2815,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.66,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "RUS",
+      "name": "Russia",
+      "projection": "conic 50/68",
+      "partsKept": "101/101",
+      "cities": 14,
+      "droppedCities": [
+        "Rostov (no room for the label)",
+        "Krasnoyarsk (no room for the label)",
+        "Surgut (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 2.75,
+        "endSpanKm": 12228,
+        "endMetresPerPixel": 3184,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.58,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "JPN",
+      "name": "Japan",
+      "projection": "conic 28/42",
+      "partsKept": "33/34",
+      "cities": 10,
+      "droppedCities": [
+        "Sendai (no room for the label)",
+        "Nagaoka (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1.09,
+      "v3": {
+        "zoomFactor": 4.44,
+        "endSpanKm": 7567,
+        "endMetresPerPixel": 1971,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.94,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "DEU",
+      "name": "Germany",
+      "projection": "conic 49/54",
+      "partsKept": "6/6",
+      "cities": 14,
+      "droppedCities": [
+        "Dresden (no room for the label)",
+        "Kassel (no room for the label)"
+      ],
+      "reliefPx": "3556x2000",
+      "reliefUpscale": 1.62,
+      "v3": {
+        "zoomFactor": 9.09,
+        "endSpanKm": 3695,
+        "endMetresPerPixel": 962,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.93,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "GBR",
+      "name": "United Kingdom",
+      "projection": "conic 52/59",
+      "partsKept": "23/23",
+      "cities": 14,
+      "droppedCities": [
+        "Manchester (no room for the label)",
+        "Kingston upon Hull (no room for the label)",
+        "Peterborough (no room for the label)"
+      ],
+      "reliefPx": "4128x2322",
+      "reliefUpscale": 1.4,
+      "v3": {
+        "zoomFactor": 7.14,
+        "endSpanKm": 4707,
+        "endMetresPerPixel": 1226,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.51,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "FRA",
+      "name": "France",
+      "projection": "conic 43/49",
+      "partsKept": "3/10",
+      "cities": 14,
+      "droppedCities": [
+        "Tours (no room for the label)"
+      ],
+      "reliefPx": "3934x2214",
+      "reliefUpscale": 1.46,
+      "v3": {
+        "zoomFactor": 7.95,
+        "endSpanKm": 4229,
+        "endMetresPerPixel": 1101,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.68,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "BRA",
+      "name": "Brazil",
+      "projection": "mercator",
+      "partsKept": "17/17",
+      "cities": 14,
+      "droppedCities": [
+        "Fortaleza (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 2.56,
+        "endSpanKm": 13121,
+        "endMetresPerPixel": 3417,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.54,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "CAN",
+      "name": "Canada",
+      "projection": "conic 50/70",
+      "partsKept": "141/141",
+      "cities": 14,
+      "droppedCities": [
+        "Calgary (no room for the label)",
+        "Terrace (no room for the label)",
+        "Thompson (no room for the label)",
+        "Fort Nelson (no room for the label)",
+        "Cochrane (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 2.73,
+        "endSpanKm": 12302,
+        "endMetresPerPixel": 3204,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.58,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "IDN",
+      "name": "Indonesia",
+      "projection": "mercator",
+      "partsKept": "133/133",
+      "cities": 14,
+      "droppedCities": [
+        "Palu (no room for the label)",
+        "Pontianak (no room for the label)",
+        "Tanjungpinang (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 4.4,
+        "endSpanKm": 7635,
+        "endMetresPerPixel": 1988,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.93,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "MEX",
+      "name": "Mexico",
+      "projection": "conic 18/30",
+      "partsKept": "16/16",
+      "cities": 14,
+      "droppedCities": [
+        "San Luis Potosí (no room for the label)",
+        "Tampico (no room for the label)",
+        "Culiacán (no room for the label)",
+        "Veracruz (no room for the label)",
+        "Matamoros (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 4.92,
+        "endSpanKm": 6832,
+        "endMetresPerPixel": 1779,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.04,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "TUR",
+      "name": "Turkey",
+      "projection": "conic 37/41",
+      "partsKept": "3/3",
+      "cities": 14,
+      "droppedCities": [
+        "Adana (no room for the label)",
+        "Konya (no room for the label)",
+        "Antalya (no room for the label)",
+        "Şanlıurfa (no room for the label)"
+      ],
+      "reliefPx": "3736x2100",
+      "reliefUpscale": 1.54,
+      "v3": {
+        "zoomFactor": 9.22,
+        "endSpanKm": 3646,
+        "endMetresPerPixel": 950,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.95,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "SAU",
+      "name": "Saudi Arabia",
+      "projection": "conic 19/29",
+      "partsKept": "4/4",
+      "cities": 12,
+      "droppedCities": [
+        "Jeddah (no room for the label)",
+        "Qal at Bishah (no room for the label)",
+        "As Sulayyil (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1.16,
+      "v3": {
+        "zoomFactor": 5.67,
+        "endSpanKm": 5923,
+        "endMetresPerPixel": 1543,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.2,
+        "flagFill": false,
+        "flagRatioOk": null
+      },
+      "warnings": []
+    },
+    {
+      "code": "KOR",
+      "name": "South Korea",
+      "projection": "conic 34/38",
+      "partsKept": "11/11",
+      "cities": 9,
+      "droppedCities": [
+        "Daegu (no room for the label)",
+        "Daejeon (no room for the label)",
+        "Jeonju (no room for the label)",
+        "Pohang (no room for the label)",
+        "Andong (no room for the label)"
+      ],
+      "reliefPx": "2136x1202",
+      "reliefUpscale": 2.7,
+      "v3": {
+        "zoomFactor": 12.05,
+        "endSpanKm": 2790,
+        "endMetresPerPixel": 727,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 2.55,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "AUS",
+      "name": "Australia",
+      "projection": "conic -38/-16",
+      "partsKept": "41/42",
+      "cities": 14,
+      "droppedCities": [
+        "Mount Isa (no room for the label)",
+        "Alice Springs (no room for the label)",
+        "Roebourne (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 2.98,
+        "endSpanKm": 11293,
+        "endMetresPerPixel": 2941,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.63,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "ITA",
+      "name": "Italy",
+      "projection": "conic 38/45",
+      "partsKept": "8/8",
+      "cities": 14,
+      "droppedCities": [
+        "Milan (no room for the label)",
+        "Verona (no room for the label)",
+        "Venice (no room for the label)"
+      ],
+      "reliefPx": "2936x1652",
+      "reliefUpscale": 1.96,
+      "v3": {
+        "zoomFactor": 8.17,
+        "endSpanKm": 4114,
+        "endMetresPerPixel": 1071,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.73,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "ESP",
+      "name": "Spain",
+      "projection": "conic 37/42",
+      "partsKept": "5/12",
+      "cities": 14,
+      "droppedCities": [
+        "Valladolid (no room for the label)"
+      ],
+      "reliefPx": "2912x1638",
+      "reliefUpscale": 1.98,
+      "v3": {
+        "zoomFactor": 9.14,
+        "endSpanKm": 3676,
+        "endMetresPerPixel": 957,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.94,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "ZAF",
+      "name": "South Africa",
+      "projection": "conic -33/-24",
+      "partsKept": "1/2",
+      "cities": 14,
+      "droppedCities": [
+        "East London (no room for the label)",
+        "Umtata (no room for the label)",
+        "Graaff Reinet (no room for the label)",
+        "Vryburg (no room for the label)",
+        "Beaufort West (no room for the label)"
+      ],
+      "reliefPx": "4112x2314",
+      "reliefUpscale": 1.4,
+      "v3": {
+        "zoomFactor": 6.72,
+        "endSpanKm": 5003,
+        "endMetresPerPixel": 1303,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.42,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "POL",
+      "name": "Poland",
+      "projection": "conic 50/54",
+      "partsKept": "1/1",
+      "cities": 14,
+      "droppedCities": [
+        "Bydgoszcz (no room for the label)"
+      ],
+      "reliefPx": "2672x1502",
+      "reliefUpscale": 2.16,
+      "v3": {
+        "zoomFactor": 11.68,
+        "endSpanKm": 2878,
+        "endMetresPerPixel": 750,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 2.48,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "NLD",
+      "name": "Netherlands",
+      "projection": "conic 51/53",
+      "partsKept": "9/12",
+      "cities": 7,
+      "droppedCities": [
+        "Groningen (no room for the label)",
+        "Leeuwarden (no room for the label)"
+      ],
+      "reliefPx": "2212x1244",
+      "reliefUpscale": 2.6,
+      "v3": null,
+      "warnings": []
+    },
+    {
+      "code": "ARE",
+      "name": "United Arab Emirates",
+      "projection": "conic 23/25",
+      "partsKept": "5/5",
+      "cities": 5,
+      "droppedCities": [],
+      "reliefPx": "2024x1138",
+      "reliefUpscale": 2.85,
+      "v3": null,
+      "warnings": []
+    },
+    {
+      "code": "SGP",
+      "name": "Singapore",
+      "projection": "mercator",
+      "partsKept": "1/1",
+      "cities": 1,
+      "droppedCities": [],
+      "reliefPx": "1920x1080",
+      "reliefUpscale": 24.03,
+      "v3": null,
+      "warnings": []
+    },
+    {
+      "code": "VNM",
+      "name": "Vietnam",
+      "projection": "mercator",
+      "partsKept": "8/8",
+      "cities": 14,
+      "droppedCities": [
+        "Vinh (no room for the label)"
+      ],
+      "reliefPx": "3120x1754",
+      "reliefUpscale": 1.85,
+      "v3": {
+        "zoomFactor": 7.67,
+        "endSpanKm": 4382,
+        "endMetresPerPixel": 1141,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.63,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "NGA",
+      "name": "Nigeria",
+      "projection": "mercator",
+      "partsKept": "2/2",
+      "cities": 14,
+      "droppedCities": [
+        "Kaduna (no room for the label)"
+      ],
+      "reliefPx": "2780x1564",
+      "reliefUpscale": 2.07,
+      "v3": {
+        "zoomFactor": 7.69,
+        "endSpanKm": 4368,
+        "endMetresPerPixel": 1137,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.63,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "EGY",
+      "name": "Egypt",
+      "projection": "conic 24/30",
+      "partsKept": "1/1",
+      "cities": 14,
+      "droppedCities": [
+        "Sohag (no room for the label)",
+        "El Arish (no room for the label)",
+        "El Qasr (no room for the label)"
+      ],
+      "reliefPx": "3132x1762",
+      "reliefUpscale": 1.84,
+      "v3": {
+        "zoomFactor": 8.37,
+        "endSpanKm": 4015,
+        "endMetresPerPixel": 1045,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.77,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "ARG",
+      "name": "Argentina",
+      "projection": "conic -49/-27",
+      "partsKept": "4/4",
+      "cities": 14,
+      "droppedCities": [
+        "San Luis (no room for the label)",
+        "Posadas (no room for the label)",
+        "Neuquén (no room for the label)",
+        "La Rioja (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 3.01,
+        "endSpanKm": 11180,
+        "endMetresPerPixel": 2911,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.64,
+        "flagFill": true,
+        "flagRatioOk": false
+      },
+      "warnings": [
+        "flag ratio 1.600 vs official 1.556 (2.9%)"
+      ]
+    },
+    {
+      "code": "SWE",
+      "name": "Sweden",
+      "projection": "conic 58/67",
+      "partsKept": "6/6",
+      "cities": 14,
+      "droppedCities": [
+        "Jönköping (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 7.3,
+        "endSpanKm": 4606,
+        "endMetresPerPixel": 1199,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.55,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "THA",
+      "name": "Thailand",
+      "projection": "mercator",
+      "partsKept": "10/10",
+      "cities": 13,
+      "droppedCities": [
+        "Nakhon Ratchasima (no room for the label)",
+        "Ubon Ratchathani (no room for the label)",
+        "Nakhon Sawan (no room for the label)",
+        "Nan (no room for the label)",
+        "Sakhon Nakhon (no room for the label)",
+        "Surin (no room for the label)",
+        "Lop Buri (no room for the label)"
+      ],
+      "reliefPx": "3046x1712",
+      "reliefUpscale": 1.89,
+      "v3": {
+        "zoomFactor": 6.38,
+        "endSpanKm": 5268,
+        "endMetresPerPixel": 1372,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.35,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "PHL",
+      "name": "Philippines",
+      "projection": "mercator",
+      "partsKept": "48/48",
+      "cities": 12,
+      "droppedCities": [
+        "Laoag (no room for the label)"
+      ],
+      "reliefPx": "3250x1828",
+      "reliefUpscale": 1.77,
+      "v3": {
+        "zoomFactor": 5.66,
+        "endSpanKm": 5934,
+        "endMetresPerPixel": 1545,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.2,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "CHE",
+      "name": "Switzerland",
+      "projection": "conic 46/47",
+      "partsKept": "1/1",
+      "cities": 7,
+      "droppedCities": [
+        "Zürich (no room for the label)",
+        "Basel (no room for the label)",
+        "Saint Gallen (no room for the label)"
+      ],
+      "reliefPx": "1920x1080",
+      "reliefUpscale": 3.69,
+      "v3": null,
+      "warnings": []
+    },
+    {
+      "code": "NOR",
+      "name": "Norway",
+      "projection": "conic 60/69",
+      "partsKept": "22/32",
+      "cities": 11,
+      "droppedCities": [
+        "Bergen (no room for the label)",
+        "Lillehammer (no room for the label)",
+        "Leikanger (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 8.63,
+        "endSpanKm": 3715,
+        "endMetresPerPixel": 968,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 1.92,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    },
+    {
+      "code": "CHL",
+      "name": "Chile",
+      "projection": "mercator",
+      "partsKept": "30/31",
+      "cities": 10,
+      "droppedCities": [
+        "Antofagasta (no room for the label)"
+      ],
+      "reliefPx": "4800x2700",
+      "reliefUpscale": 1,
+      "v3": {
+        "zoomFactor": 3.54,
+        "endSpanKm": 9496,
+        "endMetresPerPixel": 2473,
+        "sourceMetresPerPixel": 1855,
+        "upscale": 0.75,
+        "flagFill": true,
+        "flagRatioOk": true
+      },
+      "warnings": []
+    }
+  ]
+}

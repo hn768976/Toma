@@ -1,0 +1,3 @@
+# Raw source data downloaded by scripts/fetch-data.mjs — regenerable, ~1 GB.
+.cache/
+node_modules/
