@@ -1,0 +1,28 @@
+{
+  "name": "route-map-project",
+  "version": "1.0.0",
+  "description": "Route Map: Air & Shipping \u2014 Remotion motion graphics, 6 regions, 4K-ready",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "bake": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/bake-basemaps.mjs",
+    "check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-routes.mjs",
+    "fetch-data": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/fetch-data.mjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@types/web": "0.0.166",
+    "sharp": "0.34.4",
+    "typescript": "5.9.3"
+  }
+}
