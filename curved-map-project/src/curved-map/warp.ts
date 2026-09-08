@@ -23,6 +23,7 @@ precision highp float;
 
 uniform sampler2D uTex;
 uniform vec2 uRes;
+uniform vec2 uTexSize;
 uniform float uThetaMax;
 uniform float uCamA;
 uniform float uPMax;
@@ -31,6 +32,24 @@ uniform float uTime;
 uniform float uGrain;
 uniform float uVignette;
 uniform float uEdgeFalloff;
+
+const int MAX_TAPS = 8;
+
+// Invert the perspective projection of the cylinder:
+//   p = sin(theta) / (a - cos(theta))
+float thetaAt(float sx) {
+  float p = sx * uPMax;
+  return asin(clamp(p * uCamA / sqrt(1.0 + p * p), -1.0, 1.0)) - atan(p);
+}
+
+vec2 mapUV(float sx, float sy) {
+  float theta = thetaAt(sx);
+  float depth = (uCamA - cos(theta)) / (uCamA - 1.0);
+  return vec2(
+    (theta / uThetaMax) * 0.5 + 0.5,
+    (sy * depth) / uOverscan * 0.5 + 0.5
+  );
+}
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -41,17 +60,26 @@ void main() {
   float sx = screen.x * 2.0 - 1.0;
   float sy = 1.0 - screen.y * 2.0; // +1 at the bottom of the frame
 
-  // Invert the perspective projection of the cylinder:
-  //   p = sin(theta) / (a - cos(theta))
-  float p = sx * uPMax;
-  float theta = asin(clamp(p * uCamA / sqrt(1.0 + p * p), -1.0, 1.0)) - atan(p);
-  float depth = (uCamA - cos(theta)) / (uCamA - 1.0);
+  float tu = thetaAt(sx) / uThetaMax;
 
-  float tu = theta / uThetaMax;
-  float tv = sy * depth;
+  // Footprint of this output pixel in texture space. Toward the left and right
+  // edges the cylinder turns away and compresses the texture horizontally by
+  // about 5x, which a single bilinear tap aliases into streaks across the dot
+  // matrix. Integrate the footprint with as many taps as it actually needs:
+  // one at the centre of the frame, where the mapping is 1:1.
+  float halfPixel = 1.0 / uRes.x;
+  vec2 uvA = mapUV(sx - halfPixel, sy);
+  vec2 uvB = mapUV(sx + halfPixel, sy);
+  vec2 span = uvB - uvA;
+  float texels = length(span * uTexSize);
+  int taps = int(min(float(MAX_TAPS), max(1.0, ceil(texels))));
 
-  vec2 uv = vec2(tu * 0.5 + 0.5, tv / uOverscan * 0.5 + 0.5);
-  vec3 col = texture2D(uTex, uv).rgb;
+  vec3 col = vec3(0.0);
+  for (int i = 0; i < MAX_TAPS; i++) {
+    if (i >= taps) break;
+    col += texture2D(uTex, uvA + span * ((float(i) + 0.5) / float(taps))).rgb;
+  }
+  col /= float(taps);
 
   // The surface turns away at the left and right edges, so it takes less light.
   float edge = 1.0 - uEdgeFalloff * pow(abs(tu), 2.1);
@@ -138,6 +166,7 @@ export const createWarper = (canvas: HTMLCanvasElement): Warper => {
   const uniform = (name: string) => gl.getUniformLocation(program, name);
   const uTex = uniform("uTex");
   const uRes = uniform("uRes");
+  const uTexSize = uniform("uTexSize");
   const uThetaMax = uniform("uThetaMax");
   const uCamA = uniform("uCamA");
   const uPMax = uniform("uPMax");
@@ -149,6 +178,11 @@ export const createWarper = (canvas: HTMLCanvasElement): Warper => {
 
   return {
     render: (source, frame, params) => {
+      const texWidth =
+        (source as HTMLCanvasElement).width ?? (source as ImageBitmap).width;
+      const texHeight =
+        (source as HTMLCanvasElement).height ?? (source as ImageBitmap).height;
+
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.texImage2D(
         gl.TEXTURE_2D,
@@ -163,6 +197,7 @@ export const createWarper = (canvas: HTMLCanvasElement): Warper => {
       gl.useProgram(program);
       gl.uniform1i(uTex, 0);
       gl.uniform2f(uRes, canvas.width, canvas.height);
+      gl.uniform2f(uTexSize, texWidth, texHeight);
       gl.uniform1f(uThetaMax, params.thetaMax);
       gl.uniform1f(uCamA, params.camDistance);
       gl.uniform1f(uPMax, params.pMax);
