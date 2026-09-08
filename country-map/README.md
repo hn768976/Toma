@@ -12,6 +12,23 @@ a render, not a new build.
 - **Two style versions per country:** V1 light relief (broadcast standard) and
   V2 dark mode. Colour is not the version axis beyond these two — the country is.
 
+## Countries included
+
+Nine countries ship baked, giving eighteen compositions. Every one renders at
+4K straight from this project — no re-baking, no data download.
+
+| Country | Slug | Compositions |
+|---|---|---|
+| United States | `united-states` | `V1-UnitedStatesMapLight`, `V2-UnitedStatesMapDark` |
+| China | `china` | `V1-ChinaMapLight`, `V2-ChinaMapDark` |
+| India | `india` | `V1-IndiaMapLight`, `V2-IndiaMapDark` |
+| Iran | `iran` | `V1-IranMapLight`, `V2-IranMapDark` |
+| Australia | `australia` | `V1-AustraliaMapLight`, `V2-AustraliaMapDark` |
+| Poland | `poland` | `V1-PolandMapLight`, `V2-PolandMapDark` |
+| Italy | `italy` | `V1-ItalyMapLight`, `V2-ItalyMapDark` |
+| Mexico | `mexico` | `V1-MexicoMapLight`, `V2-MexicoMapDark` |
+| Sweden | `sweden` | `V1-SwedenMapLight`, `V2-SwedenMapDark` |
+
 ## Data
 
 All map data is **[Natural Earth](https://www.naturalearthdata.com/)**, which is
@@ -50,17 +67,27 @@ npx remotion studio
 
 ### 4K renders
 
+Nine countries ship baked and ready to render:
+
 ```sh
-npx remotion render V1-UnitedStatesMapLight out/V1_UnitedStatesMapLight.mp4 --scale=1 --crf=16
-npx remotion render V2-UnitedStatesMapDark  out/V2_UnitedStatesMapDark.mp4  --scale=1 --crf=16
-npx remotion render V1-ChinaMapLight        out/V1_ChinaMapLight.mp4        --scale=1 --crf=16
-npx remotion render V2-ChinaMapDark         out/V2_ChinaMapDark.mp4         --scale=1 --crf=16
-npx remotion render V1-IndiaMapLight        out/V1_IndiaMapLight.mp4        --scale=1 --crf=16
-npx remotion render V2-IndiaMapDark         out/V2_IndiaMapDark.mp4         --scale=1 --crf=16
-npx remotion render V1-IranMapLight         out/V1_IranMapLight.mp4         --scale=1 --crf=16
-npx remotion render V2-IranMapDark          out/V2_IranMapDark.mp4          --scale=1 --crf=16
-npx remotion render V1-AustraliaMapLight    out/V1_AustraliaMapLight.mp4    --scale=1 --crf=16
-npx remotion render V2-AustraliaMapDark     out/V2_AustraliaMapDark.mp4     --scale=1 --crf=16
+npx remotion render V1-UnitedStatesMapLight  out/V1_UnitedStatesMapLight.mp4  --scale=1 --crf=16
+npx remotion render V2-UnitedStatesMapDark   out/V2_UnitedStatesMapDark.mp4   --scale=1 --crf=16
+npx remotion render V1-ChinaMapLight         out/V1_ChinaMapLight.mp4         --scale=1 --crf=16
+npx remotion render V2-ChinaMapDark          out/V2_ChinaMapDark.mp4          --scale=1 --crf=16
+npx remotion render V1-IndiaMapLight         out/V1_IndiaMapLight.mp4         --scale=1 --crf=16
+npx remotion render V2-IndiaMapDark          out/V2_IndiaMapDark.mp4          --scale=1 --crf=16
+npx remotion render V1-IranMapLight          out/V1_IranMapLight.mp4          --scale=1 --crf=16
+npx remotion render V2-IranMapDark           out/V2_IranMapDark.mp4           --scale=1 --crf=16
+npx remotion render V1-AustraliaMapLight     out/V1_AustraliaMapLight.mp4     --scale=1 --crf=16
+npx remotion render V2-AustraliaMapDark      out/V2_AustraliaMapDark.mp4      --scale=1 --crf=16
+npx remotion render V1-PolandMapLight        out/V1_PolandMapLight.mp4        --scale=1 --crf=16
+npx remotion render V2-PolandMapDark         out/V2_PolandMapDark.mp4         --scale=1 --crf=16
+npx remotion render V1-ItalyMapLight         out/V1_ItalyMapLight.mp4         --scale=1 --crf=16
+npx remotion render V2-ItalyMapDark          out/V2_ItalyMapDark.mp4          --scale=1 --crf=16
+npx remotion render V1-MexicoMapLight        out/V1_MexicoMapLight.mp4        --scale=1 --crf=16
+npx remotion render V2-MexicoMapDark         out/V2_MexicoMapDark.mp4         --scale=1 --crf=16
+npx remotion render V1-SwedenMapLight        out/V1_SwedenMapLight.mp4        --scale=1 --crf=16
+npx remotion render V2-SwedenMapDark         out/V2_SwedenMapDark.mp4         --scale=1 --crf=16
 ```
 
 A 1080p preview is the same command with `--scale=0.5`. A still is
