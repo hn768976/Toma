@@ -10,6 +10,10 @@ Config.setPixelFormat('yuv420p');
 Config.setColorSpace('bt709');
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// These are silent graphics. Without both of these Remotion writes a silent AAC
+// track into every file, which editors then have to strip.
+Config.setMuted(true);
+Config.setEnforceAudioTrack(false);
 Config.setChromiumOpenGlRenderer('angle');
 // The maps are large static SVG scenes and a 4K tab is memory-hungry; raise or
 // lower with --concurrency on the render command to suit the machine.

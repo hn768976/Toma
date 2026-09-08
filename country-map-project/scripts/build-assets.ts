@@ -23,7 +23,16 @@ import {
   normLon,
   type BakedFraming,
 } from '../src/geo/projection';
-import {COMP_HEIGHT, COMP_WIDTH, MARKER, TYPE, estimateTextWidth} from '../src/layout';
+import {
+  COMP_HEIGHT,
+  COMP_WIDTH,
+  DEFAULT_FINAL_ZOOM,
+  MARKER,
+  TITLE_PAD,
+  TYPE,
+  WEIGHT,
+} from '../src/layout';
+import {fitFontSize, measureText} from './lib/text';
 import {RELIEF_VARIANTS, STYLES} from '../src/styles';
 import {
   collectRings,
@@ -56,6 +65,14 @@ const H = COMP_HEIGHT;
 const CLIP_MARGIN = 48;
 
 const EARTH_CIRCUMFERENCE_M = 40_075_017;
+
+/**
+ * How far the satellite base may be upscaled in the closing frame before the
+ * zoom is pulled back. The brief's own benchmark is ~2x with full-resolution
+ * Blue Marble; 2.6 is the ceiling here because the shipped base is Natural
+ * Earth II, which is about 4x coarser (see README -> Satellite base).
+ */
+const MAX_SATELLITE_UPSCALE = 2.6;
 
 // ── sources ────────────────────────────────────────────────────────────────
 
@@ -151,7 +168,19 @@ const subjectGeometry = (code: string): {geometry: AnyGeometry; feature: Feature
   return {geometry: {type: 'MultiPolygon', coordinates: polys}, feature: feats[0]};
 };
 
-type CityLabelSide = 'r' | 'l' | 't' | 'b' | 'tr' | 'br' | 'tl' | 'bl';
+interface CityLabel {
+  name: string;
+  x: number;
+  y: number;
+  capital: boolean;
+  /** Baked label anchor point and text-anchor, so the composition draws exactly
+   *  what the offline solver decided. */
+  lx: number;
+  ly: number;
+  anchor: 'start' | 'end' | 'middle';
+  /** True when the label had to be pushed out and needs a leader line. */
+  leader: boolean;
+}
 
 interface PlacedLabel {
   x: number;
@@ -177,10 +206,17 @@ interface Report {
   projection: string;
   partsKept: string;
   cities: number;
+  namePosition: [number, number];
+  titleFontSize: number;
+  titleFace: string;
+  titleShrunk: boolean;
+  leaderLines: number;
   droppedCities: string[];
   reliefPx: string;
   reliefUpscale: number;
   v3: null | {
+    finalZoom: number;
+    requestedFinalZoom: number;
     zoomFactor: number;
     endSpanKm: number;
     endMetresPerPixel: number;
@@ -188,6 +224,7 @@ interface Report {
     upscale: number;
     flagFill: boolean;
     flagRatioOk: boolean | null;
+    flagCovers: boolean | null;
   };
   warnings: string[];
 }
@@ -240,6 +277,7 @@ const buildCountry = async (cfg: CountryConfig) => {
   const fitRingsProjected = collectRings(projection, parts.geometry);
   if (!subjectRings.length) throw new Error(`${cfg.code}: subject projects to nothing`);
   const subjectBBox = ringsBBox(subjectRings);
+  const fitBBox = fitRingsProjected.length ? ringsBBox(fitRingsProjected) : subjectBBox;
   const anchor = labelAnchor(subjectRings, W, H) ?? {
     x: subjectBBox.x + subjectBBox.w / 2,
     y: subjectBBox.y + subjectBBox.h / 2,
@@ -249,56 +287,6 @@ const buildCountry = async (cfg: CountryConfig) => {
   const title = {x: anchor.x + tox * W, y: anchor.y + toy * H};
   const bb = subjectBBox;
 
-  // 4. Neighbours: every other country with territory in frame, labelled inside
-  //    whatever part of it is actually visible.
-  const neighbourFeatures = countries.features.filter(
-    (f) => prop(f, 'ADM0_A3') !== cfg.code && inFrame(f)
-  );
-  const neighbourLabels: {name: string; x: number; y: number}[] = [];
-  const placed: PlacedLabel[] = [];
-  const neighbourSize = TYPE.neighbour * W;
-  for (const f of neighbourFeatures.sort((a, b) => num(b, 'POP_EST') - num(a, 'POP_EST'))) {
-    if (neighbourLabels.length >= 12) break;
-    const rings = collectRings(projection, f.geometry);
-    if (!rings.length) continue;
-    const a = labelAnchor(rings, W, H);
-    if (!a) continue;
-    // NAME is Natural Earth's short display name ("China"); NAME_EN is the long
-    // form ("People's Republic of China"), which is wrong for a neighbour label.
-    const label = (prop(f, 'NAME') || prop(f, 'NAME_EN')).toUpperCase();
-    const tw = estimateTextWidth(label, neighbourSize, {
-      caps: true,
-      letterSpacing: TYPE.neighbourLetterSpacing,
-    });
-    // Only label a country if its visible sliver can hold the name, and only if
-    // the whole name fits in frame — a half-word at the edge reads as a bug.
-    if (a.clearance * 2 < tw * 0.55 || a.clearance < neighbourSize * 1.15) continue;
-    if (a.x - tw / 2 < 12 || a.x + tw / 2 > W - 12) continue;
-    const box = {x: a.x - tw / 2, y: a.y - neighbourSize / 2, w: tw, h: neighbourSize * 1.4};
-    if (placed.some((p) => overlaps(p, box))) continue;
-    placed.push(box);
-    neighbourLabels.push({name: label, x: a.x, y: a.y});
-  }
-
-  // 5. Named seas and gulfs.
-  const marineLabels: {name: string; x: number; y: number}[] = [];
-  const marineSize = TYPE.marine * W;
-  for (const f of marine.features.filter(inFrame)) {
-    const rings = collectRings(projection, f.geometry);
-    if (!rings.length) continue;
-    const a = labelAnchor(rings, W, H);
-    if (!a) continue;
-    const label = prop(f, 'name') || prop(f, 'NAME');
-    if (!label) continue;
-    const tw = estimateTextWidth(label, marineSize, {letterSpacing: TYPE.marineLetterSpacing});
-    if (a.clearance * 2 < tw * 0.5) continue;
-    if (a.x - tw / 2 < 12 || a.x + tw / 2 > W - 12) continue;
-    const box = {x: a.x - tw / 2, y: a.y - marineSize / 2, w: tw, h: marineSize * 1.4};
-    if (placed.some((p) => overlaps(p, box))) continue;
-    placed.push(box);
-    marineLabels.push({name: label, x: a.x, y: a.y});
-  }
-
   // 6. Cities. Names resolve to Natural Earth coordinates — never typed by hand.
   const SETTLEMENT = /^(populated place|admin-\d|admin-\d region capital|admin-0 capital alt)/i;
   const candidates = places.features.filter(
@@ -307,6 +295,7 @@ const buildCountry = async (cfg: CountryConfig) => {
       SETTLEMENT.test(prop(f, 'FEATURECLA'))
   );
   const isCapital = (f: Feature) => prop(f, 'FEATURECLA').toLowerCase().includes('admin-0 capital');
+  const capitalFeature = candidates.find(isCapital);
   const byName = new Map<string, Feature>();
   for (const f of candidates) {
     for (const key of ['NAME', 'NAMEASCII', 'NAME_EN', 'NAMEALT']) {
@@ -352,118 +341,272 @@ const buildCountry = async (cfg: CountryConfig) => {
     }
   }
   // The capital always makes the cut — it anchors the location ping.
-  const capitalFeature = candidates.find(isCapital);
   if (capitalFeature && !chosen.includes(capitalFeature)) chosen.unshift(capitalFeature);
 
   const citySize = TYPE.city * W;
-  const titleNatural = TYPE.title * W;
-  const titleEst = estimateTextWidth(name.toUpperCase(), titleNatural, {
-    caps: true,
-    letterSpacing: TYPE.titleLetterSpacing,
-  });
-  // The name is sized to the frame but capped against the country it sits on, so
-  // a small subject does not end up with type spilling far out into the sea.
+  const titleFace = cfg.titleFace ?? 'semi';
+  const titleText = name.toUpperCase();
+
+  // ── the country name goes down FIRST ─────────────────────────────────────
+  // It is a first-class occupant of the layout, not an overlay: its box is a
+  // fixed obstacle that every city label — the capital included — routes around.
+  //
+  // Sized to the frame, then capped against the country it sits on so a small
+  // subject does not end up with type spilling out into the sea. Barlow Semi
+  // Condensed is narrow enough that the cap almost never bites; where a name is
+  // long enough that it would, set `titleFace: 'condensed'` on the entry rather
+  // than accepting smaller type.
   const titleLimit = Math.min(
     TYPE.titleMaxWidthFrac * W,
-    Math.max(subjectBBox.w * 1.15, 0.22 * W)
+    Math.max(fitBBox.w * 1.15, 0.28 * W)
   );
-  const titleW = Math.min(titleEst, titleLimit);
-  const titleH = titleNatural * 1.15;
+  const titleStyle = {
+    face: titleFace,
+    weight: WEIGHT.title,
+    letterSpacing: TYPE.titleLetterSpacing,
+  } as const;
+  const titleFontSize = fitFontSize(titleText, titleLimit, TYPE.title * W, titleStyle);
+  const titleShrunk = titleFontSize < TYPE.title * W - 0.5;
+  if (titleShrunk) {
+    warnings.push(
+      `country name set down to ${titleFontSize.toFixed(0)}px from ${(TYPE.title * W).toFixed(0)}px ` +
+        `to fit — consider titleFace: 'condensed'`
+    );
+  }
+  const titleW = measureText(titleText, {...titleStyle, fontSize: titleFontSize});
+  const titleH = titleFontSize * 1.1;
+  const pad = TITLE_PAD * W;
 
-  const cityPlaced: PlacedLabel[] = [];
-  const cities: {name: string; x: number; y: number; capital: boolean; side: CityLabelSide}[] = [];
+  // Position: the per-country override if there is one, otherwise the point of
+  // greatest clearance inside the country, expressed normalised so it can be
+  // written back into the data file and reviewed.
+  // The automatic position is the point of greatest clearance inside the
+  // country, nudged clear of the capital's marker if it lands on it — a capital
+  // at the visual centre of its own country is the common case, and a marker
+  // sitting inside a letterform reads as a mistake even when the leader line
+  // rescues the label. A manual `namePosition` is taken verbatim: it is the
+  // author's word, and the whole point of the override.
+  const capitalPt = capitalFeature
+    ? projection([num(capitalFeature, 'LONGITUDE'), num(capitalFeature, 'LATITUDE')])
+    : null;
+  let autoX = anchor.x;
+  let autoY = anchor.y;
+  if (capitalPt) {
+    const halfW = measureText(titleText, {...titleStyle, fontSize: TYPE.title * W}) / 2;
+    const halfH = (TYPE.title * W * 1.1) / 2;
+    const onCapital =
+      Math.abs(capitalPt[0] - autoX) < halfW + citySize * 0.6 &&
+      Math.abs(capitalPt[1] - autoY) < halfH + citySize * 0.6;
+    if (onCapital) {
+      const shift = halfH + citySize * 1.1;
+      const up = autoY - shift > fitBBox.y + fitBBox.h * 0.06;
+      autoY += capitalPt[1] > autoY || !up ? shift : -shift;
+    }
+  }
+  const npAuto: [number, number] = [
+    fitBBox.w > 0 ? (autoX - fitBBox.x) / fitBBox.w : 0.5,
+    fitBBox.h > 0 ? (autoY - fitBBox.y) / fitBBox.h : 0.5,
+  ];
+  const namePosition: [number, number] = cfg.namePosition ?? [
+    Number(npAuto[0].toFixed(3)),
+    Number(npAuto[1].toFixed(3)),
+  ];
+  title.x = fitBBox.x + namePosition[0] * fitBBox.w;
+  title.y = fitBBox.y + namePosition[1] * fitBBox.h;
+
+  // Keep it inside the frame whatever the override says.
+  title.x = Math.max(titleW / 2 + pad, Math.min(W - titleW / 2 - pad, title.x));
+  title.y = Math.max(titleH * 0.75, Math.min(H - titleH * 0.75, title.y));
+
+  const titleBox: PlacedLabel = {
+    x: title.x - titleW / 2 - pad,
+    y: title.y - titleH / 2 - pad,
+    w: titleW + pad * 2,
+    h: titleH + pad * 2,
+  };
+
+  // ── everything else that carries type ────────────────────────────────────
+  // Placed after the country name, against its box: the name is a first-class
+  // occupant of the layout and every other label routes around it, sea and
+  // neighbour names included.
+  const placed: PlacedLabel[] = [titleBox];
+
+  // Neighbours: every other country with territory in frame, labelled inside
+  //    whatever part of it is actually visible.
+  const neighbourFeatures = countries.features.filter(
+    (f) => prop(f, 'ADM0_A3') !== cfg.code && inFrame(f)
+  );
+  const neighbourLabels: {name: string; x: number; y: number}[] = [];
+  const neighbourSize = TYPE.neighbour * W;
+  for (const f of neighbourFeatures.sort((a, b) => num(b, 'POP_EST') - num(a, 'POP_EST'))) {
+    if (neighbourLabels.length >= 12) break;
+    const rings = collectRings(projection, f.geometry);
+    if (!rings.length) continue;
+    const a = labelAnchor(rings, W, H);
+    if (!a) continue;
+    // NAME is Natural Earth's short display name ("China"); NAME_EN is the long
+    // form ("People's Republic of China"), which is wrong for a neighbour label.
+    const label = (prop(f, 'NAME') || prop(f, 'NAME_EN')).toUpperCase();
+    const tw = measureText(label, {
+      fontSize: neighbourSize,
+      weight: WEIGHT.neighbour,
+      letterSpacing: TYPE.neighbourLetterSpacing,
+    });
+    // Only label a country if its visible sliver can hold the name, and only if
+    // the whole name fits in frame — a half-word at the edge reads as a bug.
+    if (a.clearance * 2 < tw * 0.55 || a.clearance < neighbourSize * 1.15) continue;
+    if (a.x - tw / 2 < 12 || a.x + tw / 2 > W - 12) continue;
+    const box = {x: a.x - tw / 2, y: a.y - neighbourSize / 2, w: tw, h: neighbourSize * 1.4};
+    if (placed.some((p) => overlaps(p, box))) continue;
+    placed.push(box);
+    neighbourLabels.push({name: label, x: a.x, y: a.y});
+  }
+
+  // 5. Named seas and gulfs.
+  const marineLabels: {name: string; x: number; y: number}[] = [];
+  const marineSize = TYPE.marine * W;
+  for (const f of marine.features.filter(inFrame)) {
+    const rings = collectRings(projection, f.geometry);
+    if (!rings.length) continue;
+    const a = labelAnchor(rings, W, H);
+    if (!a) continue;
+    const label = prop(f, 'name') || prop(f, 'NAME');
+    if (!label) continue;
+    const tw = measureText(label, {
+      fontSize: marineSize,
+      weight: WEIGHT.marine,
+      italic: true,
+      letterSpacing: TYPE.marineLetterSpacing,
+    });
+    if (a.clearance * 2 < tw * 0.5) continue;
+    if (a.x - tw / 2 < 12 || a.x + tw / 2 > W - 12) continue;
+    const box = {x: a.x - tw / 2, y: a.y - marineSize / 2, w: tw, h: marineSize * 1.4};
+    if (placed.some((p) => overlaps(p, box))) continue;
+    placed.push(box);
+    marineLabels.push({name: label, x: a.x, y: a.y});
+  }
+
+
+  // ── city markers and labels ──────────────────────────────────────────────
+  const cityPlaced: PlacedLabel[] = [titleBox];
+  const cities: CityLabel[] = [];
   const edge = W * 0.02;
+  const reach = MARKER.leaderReach * W;
 
-  /** Place one city's marker and label, routing the label around what is already
-   *  down. The capital keeps its marker even if every label slot is taken — the
-   *  location ping is anchored to it. */
+  /**
+   * Place one city. Eight adjacent slots first; if every one of them collides,
+   * push the label out on a leader line rather than dropping the city — the same
+   * treatment a cartographer gives a crowded coastline.
+   */
   const placeCity = (f: Feature): boolean => {
     const pt = projection([num(f, 'LONGITUDE'), num(f, 'LATITUDE')]);
     if (!pt) return false;
     const [x, y] = pt;
     if (x < edge || x > W - edge || y < edge || y > H - edge) return false;
-    // NAME is Natural Earth's display label. NAME_EN is a Wikipedia-derived
-    // field with occasional bad rows, so it is only a fallback.
     const label = prop(f, 'NAME') || prop(f, 'NAME_EN');
     const capital = isCapital(f);
-    const tw = estimateTextWidth(label, citySize);
+    const tw = measureText(label, {
+      fontSize: citySize,
+      weight: capital ? WEIGHT.capital : WEIGHT.city,
+    });
     const r = (capital ? MARKER.capital : MARKER.city) * W;
     const gap = r + citySize * 0.42;
     const dy = citySize * 0.95;
-    const opts: {side: CityLabelSide; box: PlacedLabel}[] = [
-      {side: 'r', box: {x: x + gap, y: y - citySize * 0.6, w: tw, h: citySize * 1.2}},
-      {side: 'l', box: {x: x - gap - tw, y: y - citySize * 0.6, w: tw, h: citySize * 1.2}},
-      {side: 'tr', box: {x: x + gap * 0.5, y: y - dy - citySize * 0.6, w: tw, h: citySize * 1.2}},
-      {side: 'br', box: {x: x + gap * 0.5, y: y + dy - citySize * 0.6, w: tw, h: citySize * 1.2}},
-      {side: 'tl', box: {x: x - gap * 0.5 - tw, y: y - dy - citySize * 0.6, w: tw, h: citySize * 1.2}},
-      {side: 'bl', box: {x: x - gap * 0.5 - tw, y: y + dy - citySize * 0.6, w: tw, h: citySize * 1.2}},
-      {side: 't', box: {x: x - tw / 2, y: y - gap - citySize, w: tw, h: citySize * 1.2}},
-      {side: 'b', box: {x: x - tw / 2, y: y + gap * 0.4, w: tw, h: citySize * 1.2}},
+    const th = citySize * 1.15;
+
+    type Slot = {lx: number; ly: number; anchor: 'start' | 'end' | 'middle'; leader: boolean};
+    const slot = (lx: number, ly: number, anchor: Slot['anchor'], leader = false): Slot => ({
+      lx,
+      ly,
+      anchor,
+      leader,
+    });
+    const boxOf = (sl: Slot): PlacedLabel => ({
+      x: sl.anchor === 'start' ? sl.lx : sl.anchor === 'end' ? sl.lx - tw : sl.lx - tw / 2,
+      y: sl.ly - th / 2,
+      w: tw,
+      h: th,
+    });
+
+    const adjacent: Slot[] = [
+      slot(x + gap, y, 'start'),
+      slot(x - gap, y, 'end'),
+      slot(x + gap * 0.5, y - dy, 'start'),
+      slot(x + gap * 0.5, y + dy, 'start'),
+      slot(x - gap * 0.5, y - dy, 'end'),
+      slot(x - gap * 0.5, y + dy, 'end'),
+      slot(x, y - gap - citySize * 0.4, 'middle'),
+      slot(x, y + gap + citySize * 0.4, 'middle'),
     ];
-    const fit = opts.find(
-      (o) =>
-        o.box.x > 8 &&
-        o.box.x + o.box.w < W - 8 &&
-        o.box.y > 8 &&
-        o.box.y + o.box.h < H - 8 &&
-        !cityPlaced.some((p) => overlaps(p, o.box))
-    );
-    if (!fit && !capital) {
-      droppedCities.push(`${label} (no room for the label)`);
+    // Leader-line slots: further out, in eight directions.
+    const extended: Slot[] = [];
+    for (const [dxr, dyr] of [
+      [1, 0], [-1, 0], [1, -1], [1, 1], [-1, -1], [-1, 1], [0, -1], [0, 1],
+    ] as const) {
+      for (const k of [1, 1.7]) {
+        const lx = x + dxr * reach * k;
+        const ly = y + dyr * reach * k * 0.7;
+        extended.push(
+          slot(lx + (dxr >= 0 ? gap * 0.2 : -gap * 0.2), ly, dxr >= 0 ? 'start' : dxr < 0 ? 'end' : 'middle', true)
+        );
+      }
+    }
+
+    // Escape slots: where the marker sits inside the country name's box — a
+    // capital at the centre of its own country, most often — the ordinary leader
+    // reach cannot get clear of it. These land just outside the box, so the name
+    // being placed first never costs a label.
+    const escapes: Slot[] = [];
+    const inTitle =
+      x > titleBox.x && x < titleBox.x + titleBox.w && y > titleBox.y && y < titleBox.y + titleBox.h;
+    if (inTitle) {
+      escapes.push(
+        slot(titleBox.x - citySize * 0.35, y, 'end', true),
+        slot(titleBox.x + titleBox.w + citySize * 0.35, y, 'start', true),
+        slot(x, titleBox.y - th * 0.75, 'middle', true),
+        slot(x, titleBox.y + titleBox.h + th * 0.75, 'middle', true)
+      );
+    }
+
+    const fits = (sl: Slot) => {
+      const b = boxOf(sl);
+      return (
+        b.x > 8 &&
+        b.x + b.w < W - 8 &&
+        b.y > 8 &&
+        b.y + b.h < H - 8 &&
+        !cityPlaced.some((p) => overlaps(p, b))
+      );
+    };
+
+    const chosenSlot = adjacent.find(fits) ?? extended.find(fits) ?? escapes.find(fits) ?? null;
+    if (!chosenSlot && !capital) {
+      droppedCities.push(`${label} (nowhere legible to put the label)`);
       return false;
     }
-    if (fit) cityPlaced.push(fit.box);
+    const sl = chosenSlot ?? adjacent[0];
+    if (chosenSlot) cityPlaced.push(boxOf(sl));
     else droppedCities.push(`${label} (marker kept, label crowded out)`);
     cityPlaced.push({x: x - r * 2, y: y - r * 2, w: r * 4, h: r * 4});
-    cities.push({name: label, x, y, capital, side: (fit ?? opts[0]).side});
+
+    cities.push({
+      name: label,
+      x,
+      y,
+      capital,
+      lx: sl.lx,
+      ly: sl.ly,
+      anchor: sl.anchor,
+      leader: Boolean(chosenSlot && sl.leader),
+    });
     return true;
   };
 
-  // The capital goes down before anything else, so its label is never the one
-  // crowded out by the country name.
-  if (capitalFeature) placeCity(capitalFeature);
-
-  // The country name sits at the country's visual centre, which is very often
-  // exactly where the capital and the largest cities are. Offer the name a few
-  // positions along the country's axis and keep the one that covers least.
-  const titleBoxAt = (y: number): PlacedLabel => ({
-    x: title.x - titleW / 2,
-    y: y - titleH / 2,
-    w: titleW,
-    h: titleH,
-  });
-  // Only the capital is on the board at this point, and it is the one label the
-  // name must not sit on. Everything else is placed afterwards and routes around
-  // the name, so the name keeps its anchor — the brief wants it over the
-  // country's interior, not wherever there happens to be least traffic.
-  const cost = (y: number) => cityPlaced.filter((p) => overlaps(p, titleBoxAt(y))).length;
-  const room = titleH;
-  let bestY = title.y;
-  let bestCost = cost(title.y);
-  for (const y of [title.y - room, title.y + room, title.y - room * 1.8, title.y + room * 1.8]) {
-    if (bestCost === 0) break;
-    if (y - titleH / 2 < bb.y - titleH * 0.3 || y + titleH / 2 > bb.y + bb.h + titleH * 0.3) continue;
-    const c = cost(y);
-    if (c < bestCost) {
-      bestCost = c;
-      bestY = y;
-    }
-  }
-  // Keep the name inside the frame and within the country's middle band: on a
-  // 4 000 km-long subject the clearance peak can sit right at the top edge.
-  const yLo = Math.max(titleH * 0.75, bb.y + bb.h * 0.1);
-  const yHi = Math.min(H - titleH * 0.75, bb.y + bb.h * 0.9);
-  title.y = Math.max(Math.min(bestY, Math.max(yLo, yHi)), Math.min(yLo, yHi));
-
-  // The name is the dominant type in frame, so its box is reserved before the
-  // remaining cities: their labels route around it rather than under it.
-  cityPlaced.push(titleBoxAt(title.y));
-
   for (const f of chosen) {
     if (cities.length >= 14) break;
-    if (f === capitalFeature) continue;
     placeCity(f);
   }
+  if (!cities.some((c) => c.capital) && capitalFeature) placeCity(capitalFeature);
   if (!cities.some((c) => c.capital)) warnings.push('no capital marker in frame');
 
   // The shortlist the placer worked from, before collisions thinned it. This is
@@ -504,7 +647,6 @@ const buildCountry = async (cfg: CountryConfig) => {
   const v3 = cfg.v3 ? await buildSatellite(cfg, geometry, parts.geometry, name, iso2, warnings) : null;
 
   const region = {
-    titleMaxWidth: titleLimit,
     code: cfg.code,
     name,
     displayName: name.toUpperCase(),
@@ -517,8 +659,11 @@ const buildCountry = async (cfg: CountryConfig) => {
       subject: d(geometry),
     },
     subjectBBox,
-    fitBBox: fitRingsProjected.length ? ringsBBox(fitRingsProjected) : subjectBBox,
+    fitBBox,
     title,
+    titleFontSize,
+    titleFace,
+    namePosition,
     neighbourLabels,
     marineLabels,
     cities,
@@ -549,10 +694,17 @@ const buildCountry = async (cfg: CountryConfig) => {
     partsKept: `${parts.kept}/${parts.total}`,
     cities: cities.length,
     droppedCities,
+    namePosition,
+    titleFontSize: Number(titleFontSize.toFixed(1)),
+    titleFace,
+    titleShrunk,
+    leaderLines: cities.filter((c) => c.leader).length,
     reliefPx: `${reliefW}x${reliefH}`,
     reliefUpscale: Number((1 / Math.min(1, density)).toFixed(2)),
     v3: v3
       ? {
+          finalZoom: v3.finalZoom,
+          requestedFinalZoom: v3.requestedFinalZoom,
           zoomFactor: v3.zoomFactor,
           endSpanKm: v3.endSpanKm,
           endMetresPerPixel: v3.endMetresPerPixel,
@@ -560,6 +712,7 @@ const buildCountry = async (cfg: CountryConfig) => {
           upscale: v3.upscale,
           flagFill: Boolean(v3.flag),
           flagRatioOk: v3.flagRatioOk,
+          flagCovers: v3.flagCovers,
         }
       : null,
     warnings,
@@ -608,12 +761,49 @@ const buildSatellite = async (
   // proportions while the opening frame stays a true world view.
   const kx = Math.max(0.45, Math.min(1, Math.cos((lat0 * Math.PI) / 180)));
 
-  const context = cfg.v3.context ?? 3;
+  // The closing framing: scale so the country's LONGEST dimension fills
+  // `finalZoom` of the corresponding frame dimension. Expressed this way the
+  // number means what it says on every country shape — a wide country binds on
+  // width, a tall one on height — and the country cannot overflow the frame.
+  const requestedFinalZoom = cfg.v3.finalZoom ?? DEFAULT_FINAL_ZOOM;
   const openScale = (H * 1.06) / (PLANE_WIDTH / 2);
-  const endScale = Math.min(
-    W / (bbox.w * kx * context),
-    H / (bbox.h * context)
+  const longest = Math.max((bbox.w * kx) / W, bbox.h / H);
+
+  // Resolution guard. `finalZoom` states the framing you want; the satellite
+  // base decides how much of it you can have. Rather than baking a pulled-back
+  // number into the data — which would then be wrong the moment a finer base is
+  // dropped in — the requested zoom is capped here against the measured upscale
+  // and the effective value is reported. Swap in Blue Marble and every country
+  // returns to its requested framing with no data edits.
+  const cosLat0 = Math.cos((lat0 * Math.PI) / 180);
+  const satForGuard = await getSatMeta();
+  const srcMpp = Math.max(
+    (EARTH_CIRCUMFERENCE_M / satForGuard.width) * cosLat0,
+    EARTH_CIRCUMFERENCE_M / 2 / satForGuard.height
   );
+  const upscaleAt = (fz: number) => {
+    const sc = fz / longest;
+    const spanKmH =
+      (((W / 2 / (sc * kx)) * 2 * (360 / PLANE_WIDTH)) / 360) *
+      (EARTH_CIRCUMFERENCE_M / 1000) *
+      cosLat0;
+    const spanKmV =
+      (((H / 2 / sc) * 2 * (360 / PLANE_WIDTH)) / 360) * (EARTH_CIRCUMFERENCE_M / 1000);
+    return srcMpp / Math.min((spanKmH * 1000) / W, (spanKmV * 1000) / H);
+  };
+  const requestedUpscale = upscaleAt(requestedFinalZoom);
+  const guarded =
+    cfg.v3.ignoreResolutionGuard || requestedUpscale <= MAX_SATELLITE_UPSCALE
+      ? requestedFinalZoom
+      : requestedFinalZoom * (MAX_SATELLITE_UPSCALE / requestedUpscale);
+  const finalZoom = Number(guarded.toFixed(3));
+  if (finalZoom < requestedFinalZoom - 1e-6) {
+    warnings.push(
+      `V3 ends wider than requested: finalZoom ${requestedFinalZoom} -> ${finalZoom} ` +
+        `(satellite base would be upscaled ${requestedUpscale.toFixed(2)}x at the requested depth)`
+    );
+  }
+  const endScale = finalZoom / longest;
   const zoomFactor = endScale / openScale;
 
   // The closing window, in real degrees, and what it costs in resolution.
@@ -756,6 +946,7 @@ const buildSatellite = async (
     rect: {x: number; y: number; w: number; h: number};
   } | null = null;
   let flagRatioOk: boolean | null = null;
+  let flagCovers: boolean | null = null;
   if (cfg.v3.flagFill) {
     const flagFile = path.join(CACHE, 'flags', `${iso2}.svg`);
     if (!existsSync(flagFile)) {
@@ -780,6 +971,20 @@ const buildSatellite = async (
       const scale = Math.max(bb.w / f.viewBox[2], bb.h / f.viewBox[3]);
       const fw = f.viewBox[2] * scale;
       const fh = f.viewBox[3] * scale;
+      // Assert the cover fit rather than trusting it: the drawn rectangle must
+      // carry the flag's own aspect ratio exactly, or the artwork is being
+      // stretched. A circular emblem staying circular is the visible symptom.
+      const drawnRatio = fw / fh;
+      if (Math.abs(drawnRatio - f.ratio) / f.ratio > 1e-6) {
+        throw new Error(
+          `${cfg.code}: flag would be drawn at ${drawnRatio.toFixed(5)} but its ` +
+            `ratio is ${f.ratio.toFixed(5)} — the cover fit is wrong`
+        );
+      }
+      flagCovers = fw >= bb.w - 1e-6 && fh >= bb.h - 1e-6;
+      if (!flagCovers) {
+        throw new Error(`${cfg.code}: flag does not cover the silhouette`);
+      }
       flag = {
         viewBox: f.viewBox,
         inner: f.inner,
@@ -827,6 +1032,9 @@ const buildSatellite = async (
     cropFadeEnd,
     flag,
     flagRatioOk,
+    flagCovers,
+    finalZoom,
+    requestedFinalZoom,
     endSpanKm: Number(endSpanKm.toFixed(0)),
     endMetresPerPixel: Number(endMetresPerPixel.toFixed(0)),
     sourceMetresPerPixel: Number(sourceMetresPerPixel.toFixed(0)),

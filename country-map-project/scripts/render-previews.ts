@@ -28,9 +28,14 @@ const BROWSER = process.env.REMOTION_BROWSER_EXECUTABLE ?? null;
 const OUT = path.join(ROOT, 'out', 'previews');
 const STILL_FRAME = 340;
 
-/** The three preview countries, by composition-id fragment. */
+/**
+ * The preview countries, by composition-id fragment. Chosen to prove the
+ * template rather than to look good: a large country comfortable for V3, a
+ * detailed emblem flag at two different sizes, and the awkward-shape test.
+ */
 const PREVIEW_COUNTRIES = process.env.PREVIEW_COUNTRIES?.split(',') ?? [
   'Brazil',
+  'UnitedStates',
   'SouthKorea',
   'Chile',
 ];
@@ -68,6 +73,9 @@ const main = async () => {
       codec: 'h264',
       pixelFormat: 'yuv420p',
       colorSpace: 'bt709',
+      // Silent graphics: no audio stream at all, not a silent one.
+      muted: true,
+      enforceAudioTrack: false,
       crf: 16,
       scale: 0.5,
       outputLocation: path.join(OUT, `${deliveryName(comp.id)}.mp4`),
@@ -106,6 +114,9 @@ const main = async () => {
       codec: 'h264',
       pixelFormat: 'yuv420p',
       colorSpace: 'bt709',
+      // Silent graphics: no audio stream at all, not a silent one.
+      muted: true,
+      enforceAudioTrack: false,
       crf: 16,
       scale: 1,
       frameRange: BENCH_RANGE,

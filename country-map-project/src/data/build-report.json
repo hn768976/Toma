@@ -1,5 +1,5 @@
 {
-  "builtAt": "2026-09-08T19:54:06.087Z",
+  "builtAt": "2026-09-08T22:56:14.049Z",
   "satelliteSource": "naturalearth",
   "countries": [
     {
@@ -8,22 +8,28 @@
       "projection": "conic 33/45",
       "partsKept": "52/127",
       "cities": 14,
-      "droppedCities": [
-        "Dallas (no room for the label)",
-        "Atlanta (no room for the label)",
-        "Phoenix (no room for the label)",
-        "Cincinnati (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.482,
+        0.491
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 3.85,
-        "endSpanKm": 8729,
-        "endMetresPerPixel": 2273,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 4.45,
+        "endSpanKm": 7551,
+        "endMetresPerPixel": 1966,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.82,
+        "upscale": 0.94,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -33,20 +39,28 @@
       "projection": "conic 25/45",
       "partsKept": "13/13",
       "cities": 14,
-      "droppedCities": [
-        "Wuhan (no room for the label)",
-        "Xian (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.604,
+        0.607
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 4,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 2.83,
-        "endSpanKm": 11889,
-        "endMetresPerPixel": 3096,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 3.27,
+        "endSpanKm": 10284,
+        "endMetresPerPixel": 2678,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.6,
+        "upscale": 0.69,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -56,20 +70,28 @@
       "projection": "mercator",
       "partsKept": "14/14",
       "cities": 14,
-      "droppedCities": [
-        "Nagpur (no room for the label)",
-        "Indore (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.38,
+        0.467
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 2,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 3.11,
-        "endSpanKm": 10809,
-        "endMetresPerPixel": 2815,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 4.02,
+        "endSpanKm": 8366,
+        "endMetresPerPixel": 2179,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.66,
+        "upscale": 0.85,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -79,21 +101,28 @@
       "projection": "conic 50/68",
       "partsKept": "101/101",
       "cities": 14,
-      "droppedCities": [
-        "Rostov (no room for the label)",
-        "Krasnoyarsk (no room for the label)",
-        "Surgut (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.576,
+        0.582
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 2.75,
-        "endSpanKm": 12228,
-        "endMetresPerPixel": 3184,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 2.52,
+        "endSpanKm": 13320,
+        "endMetresPerPixel": 3469,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.58,
+        "upscale": 0.53,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -102,21 +131,29 @@
       "name": "Japan",
       "projection": "conic 28/42",
       "partsKept": "33/34",
-      "cities": 10,
-      "droppedCities": [
-        "Sendai (no room for the label)",
-        "Nagaoka (no room for the label)"
+      "cities": 12,
+      "droppedCities": [],
+      "namePosition": [
+        0.683,
+        0.557
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 2,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1.09,
       "v3": {
-        "zoomFactor": 4.44,
-        "endSpanKm": 7567,
-        "endMetresPerPixel": 1971,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 5.44,
+        "endSpanKm": 6183,
+        "endMetresPerPixel": 1610,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.94,
+        "upscale": 1.15,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -126,22 +163,32 @@
       "projection": "conic 49/54",
       "partsKept": "6/6",
       "cities": 14,
-      "droppedCities": [
-        "Dresden (no room for the label)",
-        "Kassel (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.511,
+        0.272
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 4,
       "reliefPx": "3556x2000",
       "reliefUpscale": 1.62,
       "v3": {
-        "zoomFactor": 9.09,
-        "endSpanKm": 3695,
-        "endMetresPerPixel": 962,
+        "finalZoom": 0.562,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 12.27,
+        "endSpanKm": 2740,
+        "endMetresPerPixel": 713,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.93,
+        "upscale": 2.6,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
-      "warnings": []
+      "warnings": [
+        "V3 ends wider than requested: finalZoom 0.68 -> 0.562 (satellite base would be upscaled 3.15x at the requested depth)"
+      ]
     },
     {
       "code": "GBR",
@@ -149,23 +196,32 @@
       "projection": "conic 52/59",
       "partsKept": "23/23",
       "cities": 14,
-      "droppedCities": [
-        "Manchester (no room for the label)",
-        "Kingston upon Hull (no room for the label)",
-        "Peterborough (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.65,
+        0.782
       ],
+      "titleFontSize": 163.4,
+      "titleFace": "condensed",
+      "titleShrunk": true,
+      "leaderLines": 3,
       "reliefPx": "4128x2322",
       "reliefUpscale": 1.4,
       "v3": {
-        "zoomFactor": 7.14,
-        "endSpanKm": 4707,
-        "endMetresPerPixel": 1226,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 10.68,
+        "endSpanKm": 3146,
+        "endMetresPerPixel": 819,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.51,
+        "upscale": 2.26,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
-      "warnings": []
+      "warnings": [
+        "country name set down to 163px from 177px to fit — consider titleFace: 'condensed'"
+      ]
     },
     {
       "code": "FRA",
@@ -173,19 +229,28 @@
       "projection": "conic 43/49",
       "partsKept": "3/10",
       "cities": 14,
-      "droppedCities": [
-        "Tours (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.477,
+        0.409
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "3934x2214",
       "reliefUpscale": 1.46,
       "v3": {
-        "zoomFactor": 7.95,
-        "endSpanKm": 4229,
-        "endMetresPerPixel": 1101,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 11.89,
+        "endSpanKm": 2827,
+        "endMetresPerPixel": 736,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.68,
+        "upscale": 2.52,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -195,19 +260,28 @@
       "projection": "mercator",
       "partsKept": "17/17",
       "cities": 14,
-      "droppedCities": [
-        "Fortaleza (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.63,
+        0.563
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 4,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 2.56,
-        "endSpanKm": 13121,
-        "endMetresPerPixel": 3417,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 2.96,
+        "endSpanKm": 11350,
+        "endMetresPerPixel": 2956,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.54,
+        "upscale": 0.63,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -217,23 +291,28 @@
       "projection": "conic 50/70",
       "partsKept": "141/141",
       "cities": 14,
-      "droppedCities": [
-        "Calgary (no room for the label)",
-        "Terrace (no room for the label)",
-        "Thompson (no room for the label)",
-        "Fort Nelson (no room for the label)",
-        "Cochrane (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.248,
+        0.598
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 5,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 2.73,
-        "endSpanKm": 12302,
-        "endMetresPerPixel": 3204,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 2.79,
+        "endSpanKm": 12061,
+        "endMetresPerPixel": 3141,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.58,
+        "upscale": 0.59,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -243,21 +322,28 @@
       "projection": "mercator",
       "partsKept": "133/133",
       "cities": 14,
-      "droppedCities": [
-        "Palu (no room for the label)",
-        "Pontianak (no room for the label)",
-        "Tanjungpinang (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.374,
+        0.405
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 4,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 4.4,
-        "endSpanKm": 7635,
-        "endMetresPerPixel": 1988,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 4.49,
+        "endSpanKm": 7486,
+        "endMetresPerPixel": 1949,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.93,
+        "upscale": 0.95,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -267,23 +353,28 @@
       "projection": "conic 18/30",
       "partsKept": "16/16",
       "cities": 14,
-      "droppedCities": [
-        "San Luis Potosí (no room for the label)",
-        "Tampico (no room for the label)",
-        "Culiacán (no room for the label)",
-        "Veracruz (no room for the label)",
-        "Matamoros (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.506,
+        0.528
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 2,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 4.92,
-        "endSpanKm": 6832,
-        "endMetresPerPixel": 1779,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 6.36,
+        "endSpanKm": 5288,
+        "endMetresPerPixel": 1377,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.04,
+        "upscale": 1.35,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -293,46 +384,61 @@
       "projection": "conic 37/41",
       "partsKept": "3/3",
       "cities": 14,
-      "droppedCities": [
-        "Adana (no room for the label)",
-        "Konya (no room for the label)",
-        "Antalya (no room for the label)",
-        "Şanlıurfa (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.404,
+        0.3
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 3,
       "reliefPx": "3736x2100",
       "reliefUpscale": 1.54,
       "v3": {
-        "zoomFactor": 9.22,
-        "endSpanKm": 3646,
-        "endMetresPerPixel": 950,
+        "finalZoom": 0.605,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 12.27,
+        "endSpanKm": 2740,
+        "endMetresPerPixel": 713,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.95,
+        "upscale": 2.6,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
-      "warnings": []
+      "warnings": [
+        "V3 ends wider than requested: finalZoom 0.68 -> 0.605 (satellite base would be upscaled 2.92x at the requested depth)"
+      ]
     },
     {
       "code": "SAU",
       "name": "Saudi Arabia",
       "projection": "conic 19/29",
       "partsKept": "4/4",
-      "cities": 12,
-      "droppedCities": [
-        "Jeddah (no room for the label)",
-        "Qal at Bishah (no room for the label)",
-        "As Sulayyil (no room for the label)"
+      "cities": 14,
+      "droppedCities": [],
+      "namePosition": [
+        0.493,
+        0.454
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 3,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1.16,
       "v3": {
-        "zoomFactor": 5.67,
-        "endSpanKm": 5923,
-        "endMetresPerPixel": 1543,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 7.33,
+        "endSpanKm": 4585,
+        "endMetresPerPixel": 1194,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.2,
+        "upscale": 1.55,
         "flagFill": false,
-        "flagRatioOk": null
+        "flagRatioOk": null,
+        "flagCovers": null
       },
       "warnings": []
     },
@@ -341,26 +447,33 @@
       "name": "South Korea",
       "projection": "conic 34/38",
       "partsKept": "11/11",
-      "cities": 9,
-      "droppedCities": [
-        "Daegu (no room for the label)",
-        "Daejeon (no room for the label)",
-        "Jeonju (no room for the label)",
-        "Pohang (no room for the label)",
-        "Andong (no room for the label)"
+      "cities": 14,
+      "droppedCities": [],
+      "namePosition": [
+        0.412,
+        0.435
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "condensed",
+      "titleShrunk": false,
+      "leaderLines": 5,
       "reliefPx": "2136x1202",
       "reliefUpscale": 2.7,
       "v3": {
-        "zoomFactor": 12.05,
-        "endSpanKm": 2790,
-        "endMetresPerPixel": 727,
+        "finalZoom": 0.392,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 12.28,
+        "endSpanKm": 2737,
+        "endMetresPerPixel": 713,
         "sourceMetresPerPixel": 1855,
-        "upscale": 2.55,
+        "upscale": 2.6,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
-      "warnings": []
+      "warnings": [
+        "V3 ends wider than requested: finalZoom 0.68 -> 0.392 (satellite base would be upscaled 4.52x at the requested depth)"
+      ]
     },
     {
       "code": "AUS",
@@ -368,21 +481,28 @@
       "projection": "conic -38/-16",
       "partsKept": "41/42",
       "cities": 14,
-      "droppedCities": [
-        "Mount Isa (no room for the label)",
-        "Alice Springs (no room for the label)",
-        "Roebourne (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.446,
+        0.376
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 2,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 2.98,
-        "endSpanKm": 11293,
-        "endMetresPerPixel": 2941,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 3.44,
+        "endSpanKm": 9769,
+        "endMetresPerPixel": 2544,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.63,
+        "upscale": 0.73,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -392,21 +512,28 @@
       "projection": "conic 38/45",
       "partsKept": "8/8",
       "cities": 14,
-      "droppedCities": [
-        "Milan (no room for the label)",
-        "Verona (no room for the label)",
-        "Venice (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.319,
+        0.177
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 3,
       "reliefPx": "2936x1652",
       "reliefUpscale": 1.96,
       "v3": {
-        "zoomFactor": 8.17,
-        "endSpanKm": 4114,
-        "endMetresPerPixel": 1071,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 11.11,
+        "endSpanKm": 3025,
+        "endMetresPerPixel": 788,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.73,
+        "upscale": 2.36,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -416,21 +543,32 @@
       "projection": "conic 37/42",
       "partsKept": "5/12",
       "cities": 14,
-      "droppedCities": [
-        "Valladolid (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.417,
+        0.338
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "2912x1638",
       "reliefUpscale": 1.98,
       "v3": {
-        "zoomFactor": 9.14,
-        "endSpanKm": 3676,
-        "endMetresPerPixel": 957,
+        "finalZoom": 0.559,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 12.27,
+        "endSpanKm": 2740,
+        "endMetresPerPixel": 713,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.94,
+        "upscale": 2.6,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
-      "warnings": []
+      "warnings": [
+        "V3 ends wider than requested: finalZoom 0.68 -> 0.559 (satellite base would be upscaled 3.16x at the requested depth)"
+      ]
     },
     {
       "code": "ZAF",
@@ -438,23 +576,28 @@
       "projection": "conic -33/-24",
       "partsKept": "1/2",
       "cities": 14,
-      "droppedCities": [
-        "East London (no room for the label)",
-        "Umtata (no room for the label)",
-        "Graaff Reinet (no room for the label)",
-        "Vryburg (no room for the label)",
-        "Beaufort West (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.407,
+        0.52
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 3,
       "reliefPx": "4112x2314",
       "reliefUpscale": 1.4,
       "v3": {
-        "zoomFactor": 6.72,
-        "endSpanKm": 5003,
-        "endMetresPerPixel": 1303,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 9.14,
+        "endSpanKm": 3678,
+        "endMetresPerPixel": 958,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.42,
+        "upscale": 1.94,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -464,32 +607,48 @@
       "projection": "conic 50/54",
       "partsKept": "1/1",
       "cities": 14,
-      "droppedCities": [
-        "Bydgoszcz (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.539,
+        0.355
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "2672x1502",
       "reliefUpscale": 2.16,
       "v3": {
-        "zoomFactor": 11.68,
-        "endSpanKm": 2878,
-        "endMetresPerPixel": 750,
+        "finalZoom": 0.42,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 12.26,
+        "endSpanKm": 2741,
+        "endMetresPerPixel": 714,
         "sourceMetresPerPixel": 1855,
-        "upscale": 2.48,
+        "upscale": 2.6,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
-      "warnings": []
+      "warnings": [
+        "V3 ends wider than requested: finalZoom 0.68 -> 0.42 (satellite base would be upscaled 4.21x at the requested depth)"
+      ]
     },
     {
       "code": "NLD",
       "name": "Netherlands",
       "projection": "conic 51/53",
       "partsKept": "9/12",
-      "cities": 7,
-      "droppedCities": [
-        "Groningen (no room for the label)",
-        "Leeuwarden (no room for the label)"
+      "cities": 9,
+      "droppedCities": [],
+      "namePosition": [
+        0.617,
+        0.603
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "condensed",
+      "titleShrunk": false,
+      "leaderLines": 5,
       "reliefPx": "2212x1244",
       "reliefUpscale": 2.6,
       "v3": null,
@@ -502,10 +661,20 @@
       "partsKept": "5/5",
       "cities": 5,
       "droppedCities": [],
+      "namePosition": [
+        0.61,
+        0.762
+      ],
+      "titleFontSize": 116.1,
+      "titleFace": "condensed",
+      "titleShrunk": true,
+      "leaderLines": 0,
       "reliefPx": "2024x1138",
       "reliefUpscale": 2.85,
       "v3": null,
-      "warnings": []
+      "warnings": [
+        "country name set down to 116px from 177px to fit — consider titleFace: 'condensed'"
+      ]
     },
     {
       "code": "SGP",
@@ -514,6 +683,14 @@
       "partsKept": "1/1",
       "cities": 1,
       "droppedCities": [],
+      "namePosition": [
+        0.48,
+        1.018
+      ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "1920x1080",
       "reliefUpscale": 24.03,
       "v3": null,
@@ -525,19 +702,28 @@
       "projection": "mercator",
       "partsKept": "8/8",
       "cities": 14,
-      "droppedCities": [
-        "Vinh (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.438,
+        0.204
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 3,
       "reliefPx": "3120x1754",
       "reliefUpscale": 1.85,
       "v3": {
-        "zoomFactor": 7.67,
-        "endSpanKm": 4382,
-        "endMetresPerPixel": 1141,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 7.82,
+        "endSpanKm": 4296,
+        "endMetresPerPixel": 1119,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.63,
+        "upscale": 1.66,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -547,19 +733,28 @@
       "projection": "mercator",
       "partsKept": "2/2",
       "cities": 14,
-      "droppedCities": [
-        "Kaduna (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.372,
+        0.596
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "2780x1564",
       "reliefUpscale": 2.07,
       "v3": {
-        "zoomFactor": 7.69,
-        "endSpanKm": 4368,
-        "endMetresPerPixel": 1137,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 12.03,
+        "endSpanKm": 2793,
+        "endMetresPerPixel": 727,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.63,
+        "upscale": 2.55,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -569,21 +764,28 @@
       "projection": "conic 24/30",
       "partsKept": "1/1",
       "cities": 14,
-      "droppedCities": [
-        "Sohag (no room for the label)",
-        "El Arish (no room for the label)",
-        "El Qasr (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.376,
+        0.558
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 2,
       "reliefPx": "3132x1762",
       "reliefUpscale": 1.84,
       "v3": {
-        "zoomFactor": 8.37,
-        "endSpanKm": 4015,
-        "endMetresPerPixel": 1045,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 11.95,
+        "endSpanKm": 2811,
+        "endMetresPerPixel": 732,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.77,
+        "upscale": 2.53,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -593,22 +795,28 @@
       "projection": "conic -49/-27",
       "partsKept": "4/4",
       "cities": 14,
-      "droppedCities": [
-        "San Luis (no room for the label)",
-        "Posadas (no room for the label)",
-        "Neuquén (no room for the label)",
-        "La Rioja (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.433,
+        0.231
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 5,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 3.01,
-        "endSpanKm": 11180,
-        "endMetresPerPixel": 2911,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 3.47,
+        "endSpanKm": 9671,
+        "endMetresPerPixel": 2518,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.64,
+        "upscale": 0.74,
         "flagFill": true,
-        "flagRatioOk": false
+        "flagRatioOk": false,
+        "flagCovers": true
       },
       "warnings": [
         "flag ratio 1.600 vs official 1.556 (2.9%)"
@@ -620,19 +828,28 @@
       "projection": "conic 58/67",
       "partsKept": "6/6",
       "cities": 14,
-      "droppedCities": [
-        "Jönköping (no room for the label)"
+      "droppedCities": [],
+      "namePosition": [
+        0.566,
+        0.309
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 7.3,
-        "endSpanKm": 4606,
-        "endMetresPerPixel": 1199,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 8.43,
+        "endSpanKm": 3984,
+        "endMetresPerPixel": 1038,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.55,
+        "upscale": 1.79,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -641,26 +858,29 @@
       "name": "Thailand",
       "projection": "mercator",
       "partsKept": "10/10",
-      "cities": 13,
-      "droppedCities": [
-        "Nakhon Ratchasima (no room for the label)",
-        "Ubon Ratchathani (no room for the label)",
-        "Nakhon Sawan (no room for the label)",
-        "Nan (no room for the label)",
-        "Sakhon Nakhon (no room for the label)",
-        "Surin (no room for the label)",
-        "Lop Buri (no room for the label)"
+      "cities": 14,
+      "droppedCities": [],
+      "namePosition": [
+        0.468,
+        0.344
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 2,
       "reliefPx": "3046x1712",
       "reliefUpscale": 1.89,
       "v3": {
-        "zoomFactor": 6.38,
-        "endSpanKm": 5268,
-        "endMetresPerPixel": 1372,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 7.81,
+        "endSpanKm": 4304,
+        "endMetresPerPixel": 1121,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.35,
+        "upscale": 1.66,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -669,20 +889,29 @@
       "name": "Philippines",
       "projection": "mercator",
       "partsKept": "48/48",
-      "cities": 12,
-      "droppedCities": [
-        "Laoag (no room for the label)"
+      "cities": 13,
+      "droppedCities": [],
+      "namePosition": [
+        0.471,
+        0.335
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "3250x1828",
       "reliefUpscale": 1.77,
       "v3": {
-        "zoomFactor": 5.66,
-        "endSpanKm": 5934,
-        "endMetresPerPixel": 1545,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 7.32,
+        "endSpanKm": 4593,
+        "endMetresPerPixel": 1196,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.2,
+        "upscale": 1.55,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -691,12 +920,16 @@
       "name": "Switzerland",
       "projection": "conic 46/47",
       "partsKept": "1/1",
-      "cities": 7,
-      "droppedCities": [
-        "Zürich (no room for the label)",
-        "Basel (no room for the label)",
-        "Saint Gallen (no room for the label)"
+      "cities": 10,
+      "droppedCities": [],
+      "namePosition": [
+        0.37,
+        0.252
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 3,
       "reliefPx": "1920x1080",
       "reliefUpscale": 3.69,
       "v3": null,
@@ -707,22 +940,29 @@
       "name": "Norway",
       "projection": "conic 60/69",
       "partsKept": "22/32",
-      "cities": 11,
-      "droppedCities": [
-        "Bergen (no room for the label)",
-        "Lillehammer (no room for the label)",
-        "Leikanger (no room for the label)"
+      "cities": 14,
+      "droppedCities": [],
+      "namePosition": [
+        0.234,
+        0.754
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 3,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 8.63,
-        "endSpanKm": 3715,
-        "endMetresPerPixel": 968,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 8.8,
+        "endSpanKm": 3642,
+        "endMetresPerPixel": 949,
         "sourceMetresPerPixel": 1855,
-        "upscale": 1.92,
+        "upscale": 1.96,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     },
@@ -731,20 +971,29 @@
       "name": "Chile",
       "projection": "mercator",
       "partsKept": "30/31",
-      "cities": 10,
-      "droppedCities": [
-        "Antofagasta (no room for the label)"
+      "cities": 11,
+      "droppedCities": [],
+      "namePosition": [
+        0.799,
+        0.124
       ],
+      "titleFontSize": 176.6,
+      "titleFace": "semi",
+      "titleShrunk": false,
+      "leaderLines": 1,
       "reliefPx": "4800x2700",
       "reliefUpscale": 1,
       "v3": {
-        "zoomFactor": 3.54,
-        "endSpanKm": 9496,
-        "endMetresPerPixel": 2473,
+        "finalZoom": 0.68,
+        "requestedFinalZoom": 0.68,
+        "zoomFactor": 3.01,
+        "endSpanKm": 11171,
+        "endMetresPerPixel": 2909,
         "sourceMetresPerPixel": 1855,
-        "upscale": 0.75,
+        "upscale": 0.64,
         "flagFill": true,
-        "flagRatioOk": true
+        "flagRatioOk": true,
+        "flagCovers": true
       },
       "warnings": []
     }

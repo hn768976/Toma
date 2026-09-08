@@ -20,9 +20,9 @@ import {
 } from 'remotion';
 
 import {REGIONS, type RegionCode} from '../data';
-import {COMP_WIDTH, DURATION, TYPE, estimateTextWidth} from '../layout';
+import {COMP_WIDTH, DURATION, HALO, TYPE, WEIGHT} from '../layout';
 import {SATELLITE_STYLE} from '../styles';
-import {FONT_FAMILY} from '../fonts';
+import {FONT_FAMILY, titleFontFamily} from '../fonts';
 import {Grain} from './Grain';
 
 export type SatelliteFill = 'white' | 'flag';
@@ -74,20 +74,12 @@ export const SatelliteZoom: React.FC<SatelliteZoomProps> = ({countryCode, fill})
   const planeH = v.planeWidth / 2;
   const uid = `${countryCode}_${fill}`;
 
-  // Type is sized in screen pixels, so it stays the same size as the plane zooms.
-  const titleNatural = TYPE.satelliteTitle * COMP_WIDTH;
-  const titleMax = 0.5 * COMP_WIDTH;
-  const titleWidth = estimateTextWidth(region.displayName, titleNatural, {
-    caps: true,
-    letterSpacing: TYPE.satelliteLetterSpacing,
-  });
-  // The text is drawn inside the plane but un-squeezed by 1/kx below, so its
-  // net scale is `scale` in both axes — divide once by that to hold a constant
-  // on-screen size as the plane zooms.
-  const titleOnScreen =
-    titleWidth > titleMax ? (titleNatural * titleMax) / titleWidth : titleNatural;
+  // Type is sized in screen pixels, so it holds a constant size as the plane
+  // zooms. The text is drawn inside the plane but un-squeezed by 1/kx below, so
+  // its net scale is `scale` in both axes — divide once by that.
+  const titleOnScreen = TYPE.satelliteTitle * COMP_WIDTH;
   const titleSize = titleOnScreen / scale;
-  const titleStroke = (titleOnScreen * 0.06) / scale;
+  const titleStroke = (titleOnScreen * HALO.satellite) / scale;
 
   const worldTiles = [-1, 0, 1];
 
@@ -145,18 +137,14 @@ export const SatelliteZoom: React.FC<SatelliteZoomProps> = ({countryCode, fill})
             <clipPath id={`sat-${uid}`}>
               <path d={v.subjectPath} />
             </clipPath>
-            <radialGradient id={`satScrim-${uid}`}>
-              <stop offset="0%" stopColor="#000000" stopOpacity={0.5} />
-              <stop offset="55%" stopColor="#000000" stopOpacity={0.32} />
-              <stop offset="100%" stopColor="#000000" stopOpacity={0} />
-            </radialGradient>
-            <filter id={`satTitle-${uid}`} x="-25%" y="-40%" width="150%" height="200%">
+            {/* A tight offset only — the halo on the glyphs does the work. */}
+            <filter id={`satTitle-${uid}`} x="-10%" y="-15%" width="120%" height="140%">
               <feDropShadow
                 dx="0"
-                dy={titleOnScreen * 0.05 / scale}
-                stdDeviation={(titleOnScreen * 0.12) / scale}
+                dy={(titleOnScreen * 0.03) / scale}
+                stdDeviation={(titleOnScreen * 0.03) / scale}
                 floodColor="#000000"
-                floodOpacity={0.55}
+                floodOpacity={0.5}
               />
             </filter>
           </defs>
@@ -179,53 +167,52 @@ export const SatelliteZoom: React.FC<SatelliteZoomProps> = ({countryCode, fill})
             <path
               d={v.subjectPath}
               fill="#ffffff"
-              opacity={0.35 * fillIn}
+              opacity={SATELLITE_STYLE.whiteFillOpacity * fillIn}
               stroke="none"
             />
           )}
 
-          {/* The outline draws around the polygon, then stays on top. */}
+          {/* The outline draws around the polygon, then stays on top. A dark
+              outer edge under the white keeps it readable against both snow and
+              dark ocean. */}
           <path
             d={v.subjectPath}
             fill="none"
-            stroke={SATELLITE_STYLE.outline}
-            strokeWidth={5 / scale}
+            stroke="rgba(0,0,0,0.45)"
+            strokeWidth={11 / scale}
             strokeLinejoin="round"
             pathLength={1000}
             strokeDasharray={1000}
             strokeDashoffset={1000 * (1 - outlineDraw)}
-            opacity={0.92}
+          />
+          <path
+            d={v.subjectPath}
+            fill="none"
+            stroke={SATELLITE_STYLE.outline}
+            strokeWidth={6.5 / scale}
+            strokeLinejoin="round"
+            pathLength={1000}
+            strokeDasharray={1000}
+            strokeDashoffset={1000 * (1 - outlineDraw)}
+            opacity={0.96}
           />
 
-          {/* A soft scrim under the label. The label sits wherever the country's
-              interior is, which on the flag fill can be the middle of an emblem;
-              this lifts it off without turning it into a plate. */}
-          <g
-            transform={`translate(${v.title.x} ${v.title.y}) scale(${1 / kx} 1) translate(${-v.title.x} ${-v.title.y})`}
-            opacity={titleIn}
-          >
-            <ellipse
-              cx={v.title.x}
-              cy={v.title.y}
-              rx={(titleOnScreen * (region.displayName.length * 0.62 + 1.6)) / 2 / scale}
-              ry={(titleOnScreen * 1.5) / scale}
-              fill={`url(#satScrim-${uid})`}
-            />
-          </g>
           <text
             x={v.title.x}
             y={v.title.y}
             fill={SATELLITE_STYLE.title}
+            fontFamily={titleFontFamily(region.titleFace)}
             fontSize={titleSize}
-            fontWeight={300}
+            fontWeight={WEIGHT.satelliteTitle}
             letterSpacing={titleSize * TYPE.satelliteLetterSpacing}
             textAnchor="middle"
             dominantBaseline="middle"
             opacity={titleIn}
             transform={`translate(${v.title.x} ${v.title.y}) scale(${1 / kx} 1) translate(${-v.title.x} ${-v.title.y})`}
             filter={`url(#satTitle-${uid})`}
-            stroke="rgba(0,0,0,0.28)"
+            stroke={`rgba(0,0,0,${HALO.satelliteOpacity})`}
             strokeWidth={titleStroke}
+            strokeLinejoin="round"
             paintOrder="stroke"
             style={{textTransform: 'uppercase'}}
           >

@@ -87,7 +87,9 @@ export type StyleKey = keyof typeof STYLES;
 export const SATELLITE_STYLE = {
   ocean: '#08121f',
   outline: '#ffffff',
-  whiteFill: 'rgba(255,255,255,0.35)',
+  /** The white fill has to separate the country from its neighbours while the
+   *  terrain still reads through it. */
+  whiteFillOpacity: 0.5,
   flagFillOpacity: 0.85,
   title: '#ffffff',
   grainOpacity: 0.012,

@@ -19,9 +19,9 @@ import {
 
 import {REGIONS, type RegionCode} from '../data';
 import type {CityPoint} from '../regionTypes';
-import {COMP_WIDTH, DURATION, MARKER, PUSH, TYPE, estimateTextWidth} from '../layout';
+import {COMP_WIDTH, DURATION, HALO, MARKER, PUSH, TYPE, WEIGHT} from '../layout';
 import {STYLES, type StyleKey} from '../styles';
-import {FONT_FAMILY} from '../fonts';
+import {FONT_FAMILY, titleFontFamily} from '../fonts';
 import {Grain, Vignette} from './Grain';
 
 export type CountryMapProps = {
@@ -63,13 +63,7 @@ export const CountryMap: React.FC<CountryMapProps> = ({countryCode, style}) => {
   // ── the country name ─────────────────────────────────────────────────────
   const titleIn = interpolate(frame, [90, 130], [0, 1], {easing: EASE_OUT, ...clamp});
   const titleScale = 0.955 + 0.045 * titleIn;
-  const titleMax = region.titleMaxWidth;
-  const titleNatural = TYPE.title * COMP_WIDTH;
-  const titleWidth = estimateTextWidth(region.displayName, titleNatural, {
-    caps: true,
-    letterSpacing: TYPE.titleLetterSpacing,
-  });
-  const titleSize = titleWidth > titleMax ? (titleNatural * titleMax) / titleWidth : titleNatural;
+  const titleSize = region.titleFontSize;
 
   const capital = region.cities.find((c) => c.capital) ?? region.cities[0];
   const uid = `${countryCode}_${style}`;
@@ -111,11 +105,13 @@ export const CountryMap: React.FC<CountryMapProps> = ({countryCode, style}) => {
                 floodOpacity={s.shadowOpacity * 0.55}
               />
             </filter>
-            <filter id={`titleShadow-${uid}`} x="-20%" y="-30%" width="140%" height="180%">
+            {/* Depth on the type, not a stain on the map: a tight offset, small
+                blur radius. The halo below does the legibility work. */}
+            <filter id={`titleShadow-${uid}`} x="-8%" y="-12%" width="116%" height="130%">
               <feDropShadow
                 dx="0"
-                dy={6}
-                stdDeviation={14}
+                dy={titleSize * 0.028}
+                stdDeviation={titleSize * 0.028}
                 floodColor="#000000"
                 floodOpacity={s.shadowOpacity}
               />
@@ -159,7 +155,7 @@ export const CountryMap: React.FC<CountryMapProps> = ({countryCode, style}) => {
               y={n.y}
               fill={s.neighbourLabel}
               fontSize={neighbourSize}
-              fontWeight={500}
+              fontWeight={WEIGHT.neighbour}
               letterSpacing={neighbourSize * TYPE.neighbourLetterSpacing}
               textAnchor="middle"
               dominantBaseline="middle"
@@ -177,7 +173,7 @@ export const CountryMap: React.FC<CountryMapProps> = ({countryCode, style}) => {
               fill={s.marineLabel}
               fontSize={marineSize}
               fontStyle="italic"
-              fontWeight={400}
+              fontWeight={WEIGHT.marine}
               letterSpacing={marineSize * TYPE.marineLetterSpacing}
               textAnchor="middle"
               dominantBaseline="middle"
@@ -238,12 +234,16 @@ export const CountryMap: React.FC<CountryMapProps> = ({countryCode, style}) => {
               x={0}
               y={0}
               fill={s.title}
+              fontFamily={titleFontFamily(region.titleFace)}
               fontSize={titleSize}
-              fontWeight={700}
+              fontWeight={WEIGHT.title}
               letterSpacing={titleSize * TYPE.titleLetterSpacing}
               textAnchor="middle"
               dominantBaseline="middle"
-              style={{textTransform: 'uppercase'}}
+              stroke={`rgba(0,0,0,${HALO.titleOpacity})`}
+              strokeWidth={titleSize * HALO.title}
+              strokeLinejoin="round"
+              paintOrder="stroke"
             >
               {region.displayName}
             </text>
@@ -305,23 +305,22 @@ const City: React.FC<{
   if (markerIn <= 0) return null;
 
   const r = (city.capital ? MARKER.capital : MARKER.city) * COMP_WIDTH;
-  const gap = r + fontSize * 0.42;
-  const dy = fontSize * 0.95;
-  const POSITIONS = {
-    r: {dx: gap, dy: 0, anchor: 'start' as const},
-    l: {dx: -gap, dy: 0, anchor: 'end' as const},
-    tr: {dx: gap * 0.5, dy: -dy, anchor: 'start' as const},
-    br: {dx: gap * 0.5, dy, anchor: 'start' as const},
-    tl: {dx: -gap * 0.5, dy: -dy, anchor: 'end' as const},
-    bl: {dx: -gap * 0.5, dy, anchor: 'end' as const},
-    t: {dx: 0, dy: -gap - fontSize * 0.4, anchor: 'middle' as const},
-    b: {dx: 0, dy: gap + fontSize * 0.4, anchor: 'middle' as const},
-  };
-  const p = POSITIONS[city.side];
-  const pos = {x: city.x + p.dx, y: city.y + p.dy, anchor: p.anchor};
 
   return (
     <g>
+      {/* A leader line only where the label had nowhere adjacent to sit. */}
+      {city.leader ? (
+        <line
+          x1={city.x}
+          y1={city.y}
+          x2={city.lx - (city.anchor === 'start' ? fontSize * 0.28 : city.anchor === 'end' ? -fontSize * 0.28 : 0)}
+          y2={city.ly}
+          stroke={s.cityLabel}
+          strokeWidth={fontSize * 0.055}
+          opacity={labelIn * 0.75}
+          strokeLinecap="round"
+        />
+      ) : null}
       <g transform={`translate(${city.x} ${city.y}) scale(${markerIn})`}>
         <circle
           cx={0}
@@ -336,16 +335,16 @@ const City: React.FC<{
         ) : null}
       </g>
       <text
-        x={pos.x}
-        y={pos.y}
+        x={city.lx}
+        y={city.ly}
         opacity={labelIn}
         fill={s.cityLabel}
         fontSize={fontSize}
-        fontWeight={city.capital ? 700 : 500}
-        textAnchor={pos.anchor}
+        fontWeight={city.capital ? WEIGHT.capital : WEIGHT.city}
+        textAnchor={city.anchor}
         dominantBaseline="middle"
-        stroke="rgba(0,0,0,0.55)"
-        strokeWidth={fontSize * 0.17}
+        stroke={`rgba(0,0,0,${HALO.cityOpacity})`}
+        strokeWidth={fontSize * HALO.city}
         strokeLinejoin="round"
         paintOrder="stroke"
       >

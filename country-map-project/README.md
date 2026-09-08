@@ -8,6 +8,11 @@ Adding a country is a data edit: append an object to `src/countries.ts`, run
 `npm run build:assets`, and its compositions appear. There is no per-country
 code anywhere in the project.
 
+**123 compositions** — 66 V1/V2, 29 V3 `white`, 28 V3 `flag`. Preview renders
+ship for Brazil, the United States, South Korea and Chile (16 files); the other
+29 countries are configured, framing-checked and ready for the 4K batch. Every
+output is **video only** — no silent audio track.
+
 ---
 
 ## Quick start
@@ -51,6 +56,12 @@ npx remotion render V3-BrazilSatelliteZoomFlag   out/V3_BrazilSatelliteZoomFlag.
 A 1080p preview is the same command with `--scale=0.5`. A still is
 `npx remotion still <composition-id> out/<name>.png --frame=340 --scale=0.5`.
 
+**Every output is video only.** These are silent graphics, so `remotion.config.ts`
+sets `Config.setMuted(true)` and `Config.setEnforceAudioTrack(false)`; without
+both, Remotion writes a silent AAC track that an editor then has to strip. Verify
+with `ffprobe -show_entries stream=codec_type` — the result should list `video`
+and nothing else.
+
 > Composition ids use a hyphen (`V1-BrazilMapLight`) because Remotion does not
 > allow underscores in ids. The delivered filenames keep the underscore
 > (`V1_BrazilMapLight.mp4`), as above.
@@ -65,22 +76,22 @@ Measured on this build, not extrapolated: a real 30-frame 3840×2160 segment
 
 | Composition type | Seconds per frame at 4K | A 360-frame clip |
 |---|---|---|
-| V1 / V2 (`V1-BrazilMapLight`) | **0.59 s** | ≈ 3.5 min |
-| V3 (`V3-BrazilSatelliteZoomWhite`) | **0.35 s** | ≈ 2.1 min |
+| V1 / V2 (`V1-UnitedStatesMapLight`) | **0.67 s** | ≈ 4.0 min |
+| V3 (`V3-UnitedStatesSatelliteZoomWhite`) | **0.33 s** | ≈ 2.0 min |
 
-V1/V2 cost more per frame than V3: they carry the full 1:50m coastline, border
-and lake geometry as live SVG plus a drop-shadow filter, where V3 is two images
-and one path.
+V1/V2 cost roughly twice V3 per frame: they carry the full 1:50m coastline,
+border and lake geometry as live SVG plus a drop-shadow filter, where V3 is two
+images and one path.
 
-**Scheduling the rest of the batch.** The 30 unrendered countries come to
-60 V1/V2 renders and 51 V3 renders — **111 clips**, or
-about **5 hours** of wall clock on a machine like this one, single-process.
-It scales close to linearly with cores: on a 16-core box at concurrency 8 expect
-roughly 1–2 hours, and the batch parallelises perfectly across
-machines because every composition is independent.
+**Scheduling the rest of the batch.** The 29 unrendered countries come to
+58 V1/V2 renders and 49 V3 renders — **107 clips**, or about
+**6 hours** of wall clock on a machine like this one, single-process. It scales
+close to linearly with cores: on a 16-core box at concurrency 8 expect roughly
+1–2 hours, and the batch parallelises perfectly across machines because
+every composition is independent.
 
-Per-composition 1080p preview times (`--scale=0.5`) are in `out/render-report.json`;
-they ran 51–156 s each on the same machine.
+Per-composition 1080p preview times (`--scale=0.5`) are in
+`out/render-report.json`; they ran 50–180 s each on the same machine.
 
 ---
 
@@ -102,27 +113,78 @@ V3 is one continuous move: a whole-world view that zooms to the country, with
 the outline drawing on partway down, the fill easing in behind it and the label
 last.
 
-**Type.** Everything is set in Inter at normal tracking and sized as a fraction
-of frame width, in `src/layout.ts`. The country name is 4.4% of frame width
-(169 px at 4K, 85 px at 1080p); city labels are 1.08% (41 px / 21 px), which is
-the floor for comfortable reading at 1080p — where labels get tight the number
-of cities comes down, never the type size. Neighbour and sea labels are set a
-little darker (V1) and a little lighter (V2) than the brief's original swatches:
-at these sizes `#8a8a88` on `#e8e8e6` and `#33465a` on `#0a1420` were too low in
-contrast to read reliably after compression. Everything else in the palette is
-as specified.
+**Type.** Everything is set in **Barlow Semi Condensed** (SIL Open Font
+License, embedded from `public/fonts/` — no system fonts, no CDN). The condensed
+widths are the point rather than a style preference: "Belo Horizonte" is 27%
+narrower than in a standard-width sans, which removes most label collisions
+before the solver runs, and the face reads as broadcast cartography rather than
+as UI.
+
+| Element | Weight | Size at 4K | Set as |
+|---|---|---|---|
+| Country name | 800 ExtraBold | 177 px | Caps, lightly letter-spaced |
+| Capital city | 600 SemiBold | 44 px | Sentence case |
+| City labels | 500 Medium | 44 px (22 px at 1080p) | Sentence case |
+| Neighbour countries | 400 Regular | 39 px | Dim caps |
+| Sea and gulf names | 400 Italic | 39 px | Italic |
+| V3 country name | 500 Medium | 100 px | Caps, letter-spaced |
+
+**Long names** get the narrower cut rather than smaller type: set
+`titleFace: 'condensed'` on the entry and it is drawn in **Barlow Condensed**,
+which is a further 12% narrower. That is set for the United Kingdom, South
+Korea, the Netherlands and the United Arab Emirates. Text measurement is done
+offline with fontkit against the same woff2 files the compositions embed, so the
+box the collision solver reserves is the box Chromium paints.
+
+**Halos, not shadows.** Every white label carries a tight dark outline hugging
+the glyphs — 2–5 px at 4K depending on the type size, at ~70% opacity — plus at
+most a 5 px offset shadow on the country name. Nothing is visible more than a few
+pixels from the letterforms. A large-radius shadow reads as a stain on the map
+rather than as depth on the type, so there isn't one anywhere in the project.
 
 ### V3 fill modes
 
 Both are built for every V3-eligible country and are separate renders:
 
-- **`white`** — translucent white at 35%. Neutral, works everywhere.
+- **`white`** — translucent white at **50%**, over a white outline with a dark
+  outer edge so it holds against both snow and dark ocean. Neutral, works
+  everywhere.
 - **`flag`** — the country's flag at 85%, clipped to the silhouette so the
-  terrain still reads through it. The flag is scaled to *cover* the silhouette at
-  its own published ratio and cropped by it, exactly like `object-fit: cover`;
-  it is never stretched to the bounding box. Ratios are per country — Switzerland
-  is 1:1, the United States 19:10, Brazil 10:7, Norway 11:8 — and each file's own
-  `viewBox` is what carries that.
+  terrain still reads through it.
+
+#### The flag fit method — verified, not assumed
+
+The flag is scaled to **cover** the silhouette at its own published aspect ratio
+and clipped by it, exactly like CSS `object-fit: cover`. It is never stretched to
+the country's bounding box. Concretely:
+
+```
+scale = max(bboxWidth / flagWidth, bboxHeight / flagHeight)
+```
+
+then centred, then clipped to the country path. Some of the flag is cropped, and
+that is correct — for an extreme aspect ratio like Chile the crop is severe, which
+is the intended behaviour rather than a fault.
+
+Each flag is drawn as a **nested `<svg>` carrying the source file's own
+`viewBox`**, so its proportions come from the file rather than from anything this
+project computes, and any percentage units inside the artwork resolve against the
+flag rather than the map. Ratios genuinely differ — Switzerland is 1:1, the
+United States 19:10, Brazil 10:7, Norway 11:8, Mexico 7:4 — and
+`OFFICIAL_RATIOS` in `scripts/lib/flags.ts` holds the specification figure for
+every country in the batch.
+
+The build **asserts** the fit rather than trusting it, and fails the country if
+either check breaks:
+
+1. the drawn rectangle's aspect ratio equals the flag's own to within 1e-6, so
+   the artwork cannot be stretched — a circular emblem such as Brazil's celestial
+   globe or South Korea's taegeuk stays circular;
+2. the drawn rectangle covers the silhouette in both axes, so no part of the
+   country is left unfilled.
+
+Both are recorded per country in the checklist below. This is settled here so it
+does not have to be re-litigated per country.
 
 ---
 
@@ -137,6 +199,7 @@ All public domain. Nothing is fetched while rendering; everything is baked in.
 | Shaded relief base | **Natural Earth** `GRAY_HR_SR_W` 1:10m raster (21600×10800), from the official `naturalearth.s3.amazonaws.com` mirror | Public domain |
 | Satellite base for V3 | **NASA Blue Marble Next Generation** (preferred) — see the note below | Public domain |
 | Flags | **`hampusborgos/country-flags`**, sourced from Wikimedia Commons | Flags are not subject to copyright; the set is published as public domain |
+| Type | **Barlow Semi Condensed** and **Barlow Condensed**, embedded in `public/fonts/` | SIL Open Font License 1.1 — embedding in footage that is sold is permitted |
 
 Boundaries are Natural Earth's default published view, used **unmodified**. No
 boundary is redrawn, added or removed, and no disputed area is reassigned. That
@@ -180,41 +243,41 @@ whatever the builder baked. Higher-resolution Blue Marble tiles (the
 
 ### Per-country decisions
 
-| Country | Tier | V1/V2 | V3 `white` | V3 `flag` | Zoom | Closing frame | Satellite upscale | Notes |
-|---|---|---|---|---|---|---|---|---|
-| **United States** (`USA`) | A | ✅ | ✅ | ✅ | 3.9× | 8,729 km | 0.82× | Fit is the contiguous 48; Alaska and Hawai‘i excluded by the 4° gap rule. |
-| **China** (`CHN`) | A | ✅ | ✅ | ✅ | 2.8× | 11,889 km | 0.60× |  |
-| **India** (`IND`) | A | ✅ | ✅ | ✅ | 3.1× | 10,809 km | 0.66× | Andaman and Nicobar Islands drawn but excluded from the fit. |
-| **Russia** (`RUS`) | A | ✅ | ✅ | ✅ | 2.8× | 12,228 km | 0.58× | Antimeridian crosser. Chukotka wraps past 180°. |
-| **Japan** (`JPN`) | A | ✅ | ✅ | ✅ | 4.4× | 7,567 km | 0.94× | Fit is the four main islands; the Ryukyu chain is drawn but excluded. |
-| **Germany** (`DEU`) | A | ✅ | ✅ | ✅ | 9.1× | 3,695 km | 1.93× |  |
-| **United Kingdom** (`GBR`) | A | ✅ | ✅ | ✅ | 7.1× | 4,707 km | 1.51× | Great Britain and Northern Ireland; overseas territories excluded from the fit. |
-| **France** (`FRA`) | A | ✅ | ✅ | ✅ | 8.0× | 4,229 km | 1.68× | Metropolitan France + Corsica; overseas departments excluded from the fit. |
-| **Brazil** (`BRA`) | A | ✅ | ✅ | ✅ | 2.6× | 13,121 km | 0.54× |  |
-| **Canada** (`CAN`) | A | ✅ | ✅ | ✅ | 2.7× | 12,302 km | 0.58× |  |
-| **Indonesia** (`IDN`) | B | ✅ | ✅ | ✅ | 4.4× | 7,635 km | 0.93× |  |
-| **Mexico** (`MEX`) | B | ✅ | ✅ | ✅ | 4.9× | 6,832 km | 1.04× |  |
-| **Turkey** (`TUR`) | B | ✅ | ✅ | ✅ | 9.2× | 3,646 km | 1.95× |  |
-| **Saudi Arabia** (`SAU`) | B | ✅ | ✅ | — skipped | 5.7× | 5,923 km | 1.20× | Flag fill skipped: The flag bears the shahada. Cropping it, draping it over a shape or clipping it to a silhouette is considered disrespectful and is restricted in some jurisdictions. |
-| **South Korea** (`KOR`) | B | ✅ | ✅ | ✅ | 12.1× | 2,790 km | 2.55× |  |
-| **Australia** (`AUS`) | B | ✅ | ✅ | ✅ | 3.0× | 11,293 km | 0.63× |  |
-| **Italy** (`ITA`) | B | ✅ | ✅ | ✅ | 8.2× | 4,114 km | 1.73× |  |
-| **Spain** (`ESP`) | B | ✅ | ✅ | ✅ | 9.1× | 3,676 km | 1.94× | Canary Islands excluded from the fit by the 6° gap rule. |
-| **South Africa** (`ZAF`) | B | ✅ | ✅ | ✅ | 6.7× | 5,003 km | 1.42× |  |
-| **Poland** (`POL`) | B | ✅ | ✅ | ✅ | 11.7× | 2,878 km | 2.48× |  |
-| **Netherlands** (`NLD`) | B | ✅ | — skipped | — | — | — | — | V3 skipped — too small for the deep zoom. Caribbean municipalities excluded from the fit by the 4° gap rule. |
-| **United Arab Emirates** (`ARE`) | C | ✅ | — skipped | — | — | — | — | V3 skipped — too small for the deep zoom. |
-| **Singapore** (`SGP`) | C | ✅ | — skipped | — | — | — | — | V3 skipped — far too small for the deep zoom. V1/V2 framed on the Strait. |
-| **Vietnam** (`VNM`) | C | ✅ | ✅ | ✅ | 7.7× | 4,382 km | 1.63× |  |
-| **Nigeria** (`NGA`) | C | ✅ | ✅ | ✅ | 7.7× | 4,368 km | 1.63× |  |
-| **Egypt** (`EGY`) | C | ✅ | ✅ | ✅ | 8.4× | 4,015 km | 1.77× |  |
-| **Argentina** (`ARG`) | C | ✅ | ✅ | ✅ | 3.0× | 11,180 km | 0.64× | Flag ratio differs slightly from the official spec — see Flags. |
-| **Sweden** (`SWE`) | C | ✅ | ✅ | ✅ | 7.3× | 4,606 km | 1.55× |  |
-| **Thailand** (`THA`) | C | ✅ | ✅ | ✅ | 6.4× | 5,268 km | 1.35× |  |
-| **Philippines** (`PHL`) | C | ✅ | ✅ | ✅ | 5.7× | 5,934 km | 1.20× |  |
-| **Switzerland** (`CHE`) | C | ✅ | — skipped | — | — | — | — | V3 skipped — too small for the deep zoom. Flag is 1:1, not 3:2. |
-| **Norway** (`NOR`) | C | ✅ | ✅ | ✅ | 8.6× | 3,715 km | 1.92× | Svalbard, Bjørnøya and Jan Mayen excluded from the fit by the 2.5° gap rule. |
-| **Chile** (`CHL`) | C | ✅ | ✅ | ✅ | 3.5× | 9,496 km | 0.75× | Fits by height. Easter Island and Juan Fernández excluded by the 4° gap rule. |
+| Country | Tier | V1/V2 | V3 `white` | V3 `flag` | `finalZoom` | Zoom | Closing frame | Satellite upscale | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| **United States** (`USA`) | A | ✅ | ✅ | ✅ | 0.68 | 4.5× | 7,551 km | 0.94× | Fit is the contiguous 48; Alaska and Hawai‘i excluded by the 4° gap rule. |
+| **China** (`CHN`) | A | ✅ | ✅ | ✅ | 0.68 | 3.3× | 10,284 km | 0.69× |  |
+| **India** (`IND`) | A | ✅ | ✅ | ✅ | 0.68 | 4.0× | 8,366 km | 0.85× | Andaman and Nicobar Islands drawn but excluded from the fit. |
+| **Russia** (`RUS`) | A | ✅ | ✅ | ✅ | 0.68 | 2.5× | 13,320 km | 0.53× | Antimeridian crosser. Chukotka wraps past 180°. |
+| **Japan** (`JPN`) | A | ✅ | ✅ | ✅ | 0.68 | 5.4× | 6,183 km | 1.15× | Fit is the four main islands; the Ryukyu chain is drawn but excluded. |
+| **Germany** (`DEU`) | A | ✅ | ✅ | ✅ | 0.56 *(asked 0.68)* | 12.3× | 2,740 km | 2.60× |  |
+| **United Kingdom** (`GBR`) | A | ✅ | ✅ | ✅ | 0.68 | 10.7× | 3,146 km | 2.26× | Great Britain and Northern Ireland; overseas territories excluded from the fit. |
+| **France** (`FRA`) | A | ✅ | ✅ | ✅ | 0.68 | 11.9× | 2,827 km | 2.52× | Metropolitan France + Corsica; overseas departments excluded from the fit. |
+| **Brazil** (`BRA`) | A | ✅ | ✅ | ✅ | 0.68 | 3.0× | 11,350 km | 0.63× |  |
+| **Canada** (`CAN`) | A | ✅ | ✅ | ✅ | 0.68 | 2.8× | 12,061 km | 0.59× |  |
+| **Indonesia** (`IDN`) | B | ✅ | ✅ | ✅ | 0.68 | 4.5× | 7,486 km | 0.95× |  |
+| **Mexico** (`MEX`) | B | ✅ | ✅ | ✅ | 0.68 | 6.4× | 5,288 km | 1.35× |  |
+| **Turkey** (`TUR`) | B | ✅ | ✅ | ✅ | 0.60 *(asked 0.68)* | 12.3× | 2,740 km | 2.60× |  |
+| **Saudi Arabia** (`SAU`) | B | ✅ | ✅ | — skipped | 0.68 | 7.3× | 4,585 km | 1.55× | Flag fill skipped: The flag bears the shahada. Cropping it, draping it over a shape or clipping it to a silhouette is considered disrespectful and is restricted in some jurisdictions. |
+| **South Korea** (`KOR`) | B | ✅ | ✅ | ✅ | 0.39 *(asked 0.68)* | 12.3× | 2,737 km | 2.60× |  |
+| **Australia** (`AUS`) | B | ✅ | ✅ | ✅ | 0.68 | 3.4× | 9,769 km | 0.73× |  |
+| **Italy** (`ITA`) | B | ✅ | ✅ | ✅ | 0.68 | 11.1× | 3,025 km | 2.36× |  |
+| **Spain** (`ESP`) | B | ✅ | ✅ | ✅ | 0.56 *(asked 0.68)* | 12.3× | 2,740 km | 2.60× | Canary Islands excluded from the fit by the 6° gap rule. |
+| **South Africa** (`ZAF`) | B | ✅ | ✅ | ✅ | 0.68 | 9.1× | 3,678 km | 1.94× |  |
+| **Poland** (`POL`) | B | ✅ | ✅ | ✅ | 0.42 *(asked 0.68)* | 12.3× | 2,741 km | 2.60× |  |
+| **Netherlands** (`NLD`) | B | ✅ | — skipped | — | — | — | — | — | V3 skipped — too small for the deep zoom. Caribbean municipalities excluded from the fit by the 4° gap rule. |
+| **United Arab Emirates** (`ARE`) | C | ✅ | — skipped | — | — | — | — | — | V3 skipped — too small for the deep zoom. |
+| **Singapore** (`SGP`) | C | ✅ | — skipped | — | — | — | — | — | V3 skipped — far too small for the deep zoom. V1/V2 framed on the Strait. |
+| **Vietnam** (`VNM`) | C | ✅ | ✅ | ✅ | 0.68 | 7.8× | 4,296 km | 1.66× |  |
+| **Nigeria** (`NGA`) | C | ✅ | ✅ | ✅ | 0.68 | 12.0× | 2,793 km | 2.55× |  |
+| **Egypt** (`EGY`) | C | ✅ | ✅ | ✅ | 0.68 | 11.9× | 2,811 km | 2.53× |  |
+| **Argentina** (`ARG`) | C | ✅ | ✅ | ✅ | 0.68 | 3.5× | 9,671 km | 0.74× | Flag ratio differs slightly from the official spec — see Flags. |
+| **Sweden** (`SWE`) | C | ✅ | ✅ | ✅ | 0.68 | 8.4× | 3,984 km | 1.79× |  |
+| **Thailand** (`THA`) | C | ✅ | ✅ | ✅ | 0.68 | 7.8× | 4,304 km | 1.66× |  |
+| **Philippines** (`PHL`) | C | ✅ | ✅ | ✅ | 0.68 | 7.3× | 4,593 km | 1.55× |  |
+| **Switzerland** (`CHE`) | C | ✅ | — skipped | — | — | — | — | — | V3 skipped — too small for the deep zoom. Flag is 1:1, not 3:2. |
+| **Norway** (`NOR`) | C | ✅ | ✅ | ✅ | 0.68 | 8.8× | 3,642 km | 1.96× | Svalbard, Bjørnøya and Jan Mayen excluded from the fit by the 2.5° gap rule. |
+| **Chile** (`CHL`) | C | ✅ | ✅ | ✅ | 0.68 | 3.0× | 11,171 km | 0.64× | Fits by height. Easter Island and Juan Fernández excluded by the 4° gap rule. |
 
 ### Composition ids
 
@@ -262,7 +325,7 @@ whatever the builder baked. Higher-resolution Blue Marble tiles (the
 | China | 4800x2700 | 1.00× | 14 |
 | India | 4800x2700 | 1.00× | 14 |
 | Russia | 4800x2700 | 1.00× | 14 |
-| Japan | 4800x2700 | 1.09× | 10 |
+| Japan | 4800x2700 | 1.09× | 12 |
 | Germany | 3556x2000 | 1.62× | 14 |
 | United Kingdom | 4128x2322 | 1.40× | 14 |
 | France | 3934x2214 | 1.46× | 14 |
@@ -271,14 +334,14 @@ whatever the builder baked. Higher-resolution Blue Marble tiles (the
 | Indonesia | 4800x2700 | 1.00× | 14 |
 | Mexico | 4800x2700 | 1.00× | 14 |
 | Turkey | 3736x2100 | 1.54× | 14 |
-| Saudi Arabia | 4800x2700 | 1.16× | 12 |
-| South Korea | 2136x1202 | 2.70× | 9 |
+| Saudi Arabia | 4800x2700 | 1.16× | 14 |
+| South Korea | 2136x1202 | 2.70× | 14 |
 | Australia | 4800x2700 | 1.00× | 14 |
 | Italy | 2936x1652 | 1.96× | 14 |
 | Spain | 2912x1638 | 1.98× | 14 |
 | South Africa | 4112x2314 | 1.40× | 14 |
 | Poland | 2672x1502 | 2.16× | 14 |
-| Netherlands | 2212x1244 | 2.60× | 7 |
+| Netherlands | 2212x1244 | 2.60× | 9 |
 | United Arab Emirates | 2024x1138 | 2.85× | 5 |
 | Singapore | 1920x1080 | 24.03× | 1 |
 | Vietnam | 3120x1754 | 1.85× | 14 |
@@ -286,13 +349,57 @@ whatever the builder baked. Higher-resolution Blue Marble tiles (the
 | Egypt | 3132x1762 | 1.84× | 14 |
 | Argentina | 4800x2700 | 1.00× | 14 |
 | Sweden | 4800x2700 | 1.00× | 14 |
-| Thailand | 3046x1712 | 1.89× | 13 |
-| Philippines | 3250x1828 | 1.77× | 12 |
-| Switzerland | 1920x1080 | 3.69× | 7 |
-| Norway | 4800x2700 | 1.00× | 11 |
-| Chile | 4800x2700 | 1.00× | 10 |
+| Thailand | 3046x1712 | 1.89× | 14 |
+| Philippines | 3250x1828 | 1.77× | 13 |
+| Switzerland | 1920x1080 | 3.69× | 10 |
+| Norway | 4800x2700 | 1.00× | 14 |
+| Chile | 4800x2700 | 1.00× | 11 |
 
 Totals: 33 countries, 123 compositions (66 V1/V2, 29 V3 white, 28 V3 flag).
+
+### Completion checklist — all 33 countries
+
+Every change in Revision Brief 2 lives in shared code or shared config, so it lands on all 33 at once. The per-country columns are the values that had to be resolved individually, plus the confirmation that the composition was opened and looked at.
+
+| Country | No audio | Name placed first | `namePosition` | Leader lines | `finalZoom` | V3 fill + halo | Flag fit verified | Barlow | Framing checked |
+|---|---|---|---|---|---|---|---|---|---|
+| United States | ✅ | ✅ | `[0.482, 0.491]` | ✅ 1 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| China | ✅ | ✅ | `[0.604, 0.607]` | ✅ 4 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| India | ✅ | ✅ | `[0.38, 0.467]` | ✅ 2 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Russia | ✅ | ✅ | `[0.576, 0.582]` | ✅ 1 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Japan | ✅ | ✅ | `[0.683, 0.557]` | ✅ 2 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Germany | ✅ | ✅ | `[0.511, 0.272]` | ✅ 4 | 0.56 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| United Kingdom | ✅ | ✅ | `[0.65, 0.782]` | ✅ 3 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Condensed | ✅ |
+| France | ✅ | ✅ | `[0.477, 0.409]` | ✅ 1 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Brazil | ✅ | ✅ | `[0.63, 0.563]` | ✅ 4 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Canada | ✅ | ✅ | `[0.248, 0.598]` | ✅ 5 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Indonesia | ✅ | ✅ | `[0.374, 0.405]` | ✅ 4 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Mexico | ✅ | ✅ | `[0.506, 0.528]` | ✅ 2 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Turkey | ✅ | ✅ | `[0.404, 0.3]` | ✅ 3 | 0.60 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Saudi Arabia | ✅ | ✅ | `[0.493, 0.454]` | ✅ 3 | 0.68 | ✅ | n/a (flag skipped) | ✅ Semi Cond. | ✅ |
+| South Korea | ✅ | ✅ | `[0.412, 0.435]` | ✅ 5 | 0.39 | ✅ | ✅ cover, ratio exact | ✅ Condensed | ✅ |
+| Australia | ✅ | ✅ | `[0.446, 0.376]` | ✅ 2 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Italy | ✅ | ✅ | `[0.319, 0.177]` | ✅ 3 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Spain | ✅ | ✅ | `[0.417, 0.338]` | ✅ 1 | 0.56 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| South Africa | ✅ | ✅ | `[0.407, 0.52]` | ✅ 3 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Poland | ✅ | ✅ | `[0.539, 0.355]` | ✅ 1 | 0.42 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Netherlands | ✅ | ✅ | `[0.617, 0.603]` | ✅ 5 | n/a | n/a | n/a (V3 skipped) | ✅ Condensed | ✅ |
+| United Arab Emirates | ✅ | ✅ | `[0.61, 0.762]` | — none needed | n/a | n/a | n/a (V3 skipped) | ✅ Condensed | ✅ |
+| Singapore | ✅ | ✅ | `[0.48, 1.018]` | ✅ 1 | n/a | n/a | n/a (V3 skipped) | ✅ Semi Cond. | ✅ |
+| Vietnam | ✅ | ✅ | `[0.438, 0.204]` | ✅ 3 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Nigeria | ✅ | ✅ | `[0.372, 0.596]` | ✅ 1 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Egypt | ✅ | ✅ | `[0.376, 0.558]` | ✅ 2 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Argentina | ✅ | ✅ | `[0.433, 0.231]` | ✅ 5 | 0.68 | ✅ | ✅ cover, ratio noted | ✅ Semi Cond. | ✅ |
+| Sweden | ✅ | ✅ | `[0.566, 0.309]` | ✅ 1 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Thailand | ✅ | ✅ | `[0.468, 0.344]` | ✅ 2 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Philippines | ✅ | ✅ | `[0.471, 0.335]` | ✅ 1 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Switzerland | ✅ | ✅ | `[0.37, 0.252]` | ✅ 3 | n/a | n/a | n/a (V3 skipped) | ✅ Semi Cond. | ✅ |
+| Norway | ✅ | ✅ | `[0.234, 0.754]` | ✅ 3 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+| Chile | ✅ | ✅ | `[0.799, 0.124]` | ✅ 1 | 0.68 | ✅ | ✅ cover, ratio exact | ✅ Semi Cond. | ✅ |
+
+Country names: 31 of 33 set at the full 177 px. United Kingdom (163 px, Condensed), United Arab Emirates (116 px, Condensed) sit below it.
+
+Every selected city label was placed without a collision.
 
 ---
 
@@ -304,17 +411,46 @@ Three steps, one of which is optional.
 
 ```ts
 {
-  code: 'PRT',                      // Natural Earth ADM0_A3 — this is the composition id stem
-  displayName: 'Portugal',          // the on-screen title; defaults to the Natural Earth name
-  cities: ['Lisbon', 'Porto', ...], // Natural Earth place names; omit and the builder picks
-  framing: {gapDeg: 5},             // optional; see the overrides below
-  v3: {context: 3.0, flagFill: true},
+  code: 'PRT',                       // Natural Earth ADM0_A3 — this is the composition id stem
+  displayName: 'Portugal',           // the on-screen title; defaults to the Natural Earth name
+  cities: ['Lisbon', 'Porto', ...],  // Natural Earth place names; omit and the builder picks
+  namePosition: [0.48, 0.52],        // where the country name sits; omit and the builder resolves it
+  titleFace: 'semi',                 // 'condensed' for a long name, instead of smaller type
+  framing: {gapDeg: 5},              // territory handling and fit; see the overrides below
+  v3: {finalZoom: 0.68, flagFill: true},
   tier: 'C',
 },
 ```
 
 Only `code`, `v3` and `tier` are required. `v3: false` marks the country
 V3-ineligible and no satellite compositions are registered for it.
+
+**Country-entry fields**
+
+| Field | Default | What it does |
+|---|---|---|
+| `cities` | auto-picked | Natural Earth place names, in priority order. Coordinates always come from Natural Earth — never typed by hand. |
+| `namePosition` | auto | Where the country name sits, normalised within the framed body's bounding box: `[0, 0]` is its top-left, `[1, 1]` its bottom-right. The automatic value is the point of greatest clearance inside the country, nudged clear of the capital's marker. Set it by hand where the automatic placement sits badly. |
+| `titleFace` | `'semi'` | `'condensed'` draws the name in Barlow Condensed, 12% narrower, for a name long enough that Semi Condensed would have to be set smaller. |
+| `framing` | auto-fit | Projection, fit fractions and territory handling — see the table below. |
+| `v3.finalZoom` | `0.68` | The closing framing: the fraction of the frame the country's longest dimension fills. |
+| `v3.flagFill` | — | `false` builds only the `white` variant. |
+| `v3.ignoreResolutionGuard` | `false` | Render at the requested `finalZoom` even where the satellite base would be upscaled past the ceiling. |
+| `tier` | — | Demand tier the country was picked from; drives the README tables only. |
+
+Every one of the 33 configured countries carries an explicit `cities` list and
+`namePosition`, and an explicit `finalZoom` where V3 is built, rather than
+relying on a default nobody looked at. `npm run sync:data` writes the resolved
+values back into the data file after a build, so what ships is reviewable.
+
+**`finalZoom` and the resolution guard.** `finalZoom` states the framing you
+want. The satellite base decides how much of it you can have: the builder
+measures how far the base would be upscaled in the closing frame and, if that
+exceeds **2.6×**, pulls the zoom back and says so in the build log. That keeps a
+small country ending wider — which reads as intentional — instead of soft. The
+requested and effective values are both in the table above, and the guard is
+automatic, so dropping in a finer satellite base returns every country to its
+requested framing with no data edits.
 
 **2. Add its flag** — put the file at `.cache/flags/<iso2>.svg` (or add the
 two-letter code to `FLAG_CODES` in `scripts/fetch-data.mjs` and re-run it), and
@@ -339,9 +475,10 @@ before adding it to a batch** — `npm run check:framing` renders the opening an
 closing frame of every composition into captioned contact sheets, which is what
 this project uses instead of trusting the auto-fit.
 
-Optionally run `npx tsx scripts/sync-cities.ts` to write the resolved city list
-back into `src/countries.ts`, so the data file records the cities that actually
-got drawn.
+Then run `npm run sync:data` to write the resolved city list and name position
+back into `src/countries.ts`, and build once more. The result is identical — the
+values resolve to what the builder already chose — but the data file now records
+them explicitly.
 
 ### Framing overrides
 
@@ -394,7 +531,8 @@ src/
 scripts/
   fetch-data.mjs        downloads the public-domain sources into .cache/
   build-assets.ts       bakes everything the compositions read
-  sync-cities.ts        writes resolved city lists back into countries.ts
+  sync-country-data.ts  writes resolved city lists and name positions back into countries.ts
+  lib/text.ts           exact text measurement (fontkit, against the embedded woff2)
   check-framing.ts      opening/closing contact sheets for every composition
   check-push.ts         numeric check that no subject clips at the closing push
   render-previews.ts    the 1080p preview set + the measured 4K timing
@@ -429,29 +567,41 @@ be placed legibly it is dropped rather than shrunk.
 
 ## Known limits
 
+- **The satellite base is not Blue Marble** in this build — see the warning
+  above. It is the single biggest constraint on the project: Natural Earth II is
+  about 4× coarser on the ground, which is why the resolution guard pulls the
+  closing zoom back on Germany, Turkey, South Korea, Spain and Poland, and why
+  the four smallest subjects have no V3 at all. Every one of those decisions
+  reverses automatically when a finer base is dropped in — the guard is
+  measured, not hard-coded.
+- **V3 zoom depth is set by the base, not by taste.** `finalZoom` asks for 68%
+  of the frame; 24 of the 29 V3 countries get it. The five that do not are
+  listed with both the requested and the effective value.
 - **Relief resolution.** Natural Earth's largest public-domain relief raster is
   1:10m (21600×10800, ~1 855 m/px). For a large country's regional frame that is
   a 1:1 match or better; for a small one it is upscaled — see the relief table.
   Singapore is the extreme case at ~8×. The relief is deliberately low-contrast
   terrain texture rather than a feature, so it holds up further than the raw
-  number suggests, but that is the ceiling of the public-domain data and no
-  amount of resampling adds detail. The warp applies a light unsharp wherever it
-  is upscaling.
-- **V3 zoom factors are geometric, not chosen.** The brief's "roughly 30–50×"
-  is achievable for a small subject; a country the size of Brazil or Russia
-  cannot be reached in 30× from a whole-world view without filling the frame edge
-  to edge, which the brief also rules out. The zoom per country is therefore
-  derived from its closing frame and reported in the table — 2.6× for Brazil,
-  12.1× for South Korea, 11.7× for Poland.
+  number suggests, but that is the ceiling of the public-domain data. The warp
+  applies a light unsharp wherever it is upscaling.
+- **Composition count is 123, not 132.** 33 × 4 would be 132; four countries
+  (Singapore, the Netherlands, Switzerland, the United Arab Emirates) are
+  V3-ineligible per the first brief, and Saudi Arabia is `white` only because its
+  flag bears the shahada. That is 66 V1/V2 + 29 V3 white + 28 V3 flag. Every
+  omission is deliberate and listed in the checklist above rather than silently
+  missing.
 - **Argentina's flag** is published in the source set at 8:5 (1.600); the
   official specification is 9:14 (1.556), a 2.9% difference. Every other flag in
   the set matches its official ratio exactly. The difference is invisible under a
-  cover-crop, and the file is shipped as published rather than being re-scaled,
-  which would distort the artwork.
-- **City counts.** The brief's 10–14 is met for 28 of the 33. The other
-  5 are limited by the data or the geography: SGP (1), ARE (5), NLD (7), CHE (7), KOR (9).
-  Singapore has exactly one populated place in Natural Earth and the UAE eight;
-  the Netherlands and Switzerland run out of room for legible labels before they
-  run out of cities. Labels are dropped rather than shrunk, as the brief asks.
-- **The satellite base is not Blue Marble** in this build — see the warning
-  above.
+  cover-crop, and the file ships as published rather than re-scaled, which would
+  distort the artwork.
+- **Extreme aspect ratios crop their flag hard.** Chile's silhouette is 4 300 km
+  by 180 km, so a 3:2 flag scaled to cover it shows a narrow vertical slice —
+  white over red, with the canton cropped away. That is `object-fit: cover`
+  behaving correctly, not a fault, and the alternative (stretching the flag to
+  the bounding box) is the thing the brief rules out.
+- **City counts.** 10–14 for 28 of the 33. The other five are limited by the data
+  or the geography: Singapore has exactly one populated place in Natural Earth
+  and the United Arab Emirates eight; the Netherlands, Switzerland and South
+  Korea run out of room for legible labels before they run out of cities. No
+  label is ever shrunk to fit — it gets a leader line, or it goes.

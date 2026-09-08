@@ -10,8 +10,14 @@ export interface LabelPoint {
 
 export interface CityPoint extends LabelPoint {
   capital: boolean;
-  /** Which side of the marker the label was placed on, resolved offline. */
-  side: 'r' | 'l' | 't' | 'b' | 'tr' | 'br' | 'tl' | 'bl';
+  /** Label anchor point and text-anchor, resolved offline against the real font
+   *  metrics — the composition draws exactly what the solver decided. */
+  lx: number;
+  ly: number;
+  anchor: 'start' | 'end' | 'middle';
+  /** True when nothing adjacent was free and the label was pushed out, so it
+   *  needs a leader line back to its marker. */
+  leader: boolean;
 }
 
 export interface BBox {
@@ -29,6 +35,10 @@ export interface SatelliteData {
   kx: number;
   openScale: number;
   endScale: number;
+  /** Fraction of the frame the country's longest dimension fills at the close. */
+  finalZoom: number;
+  /** What the data file asked for, before the resolution guard. */
+  requestedFinalZoom: number;
   zoomFactor: number;
   openCenter: [number, number];
   endCenter: [number, number];
@@ -50,6 +60,7 @@ export interface SatelliteData {
     rect: {x: number; y: number; w: number; h: number};
   } | null;
   flagRatioOk: boolean | null;
+  flagCovers: boolean | null;
   endSpanKm: number;
   endMetresPerPixel: number;
   sourceMetresPerPixel: number;
@@ -73,9 +84,12 @@ export interface Region {
    *  territories that are drawn but never pull the frame. */
   fitBBox: BBox;
   title: {x: number; y: number};
-  /** Upper bound on the rendered width of the country name, resolved offline
-   *  against both the frame and the country's own extent. */
-  titleMaxWidth: number;
+  /** Font size the country name is drawn at, resolved offline so the box the
+   *  solver reserved is the box that gets painted. */
+  titleFontSize: number;
+  titleFace: 'semi' | 'condensed';
+  /** The resolved name position, normalised within fitBBox. */
+  namePosition: [number, number];
   neighbourLabels: LabelPoint[];
   marineLabels: LabelPoint[];
   cities: CityPoint[];
