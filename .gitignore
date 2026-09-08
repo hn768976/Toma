@@ -1,3 +1,9 @@
 # Raw source data downloaded by scripts/fetch-data.mjs — regenerable, ~1 GB.
 .cache/
 node_modules/
+
+# The packaged deliverable and any split parts. Byte-for-byte reproducible from
+# country-map-project/ with `bash country-map-project/scripts/package-zip.sh`,
+# so it is not tracked as a 46 MB duplicate of content already in the repo.
+country-map-project.zip
+country-map-project.zip.part-*
