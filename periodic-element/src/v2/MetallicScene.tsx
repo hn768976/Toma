@@ -62,23 +62,41 @@ export const MetallicScene: React.FC<{ element: PeriodicElement }> = ({
       <AbsoluteFill
         style={{
           perspective: height * 1.6,
+          // Vanishing point on the card's own centre, which is also frame
+          // centre. The card carries no translation at any point in the clip;
+          // all drift belongs to the background. Do not add one here.
+          perspectiveOrigin: "50% 50%",
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        {/* Contact shadow. Outside the rotating group so it stays flat on the
-            ground plane, but driven by the same swing so it tracks the card. */}
+        {/* Shadow, in two parts, sitting between the ribbons and the card so
+            it darkens the lit ground rather than disappearing into the black.
+
+            It tracks the card's rotation, but its lateral travel is kept
+            small: a shadow sliding under a card that is itself locked to
+            frame centre reads as the card drifting, which is exactly the
+            thing this composition must not do. */}
         <div
           style={{
             position: "absolute",
-            width: S * 1.1,
-            height: S * 0.15,
-            top: `calc(50% + ${S * 0.5}px)`,
+            width: S,
+            height: S,
+            background: "rgba(0,0,0,0.82)",
+            filter: `blur(${S * 0.055}px)`,
+            transform: `translateY(${S * 0.085}px) translateX(${-swing * S * 0.035}px) rotateY(${rotY}deg) scale(0.97)`,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            width: S * 0.98,
+            height: S * 0.11,
+            top: `calc(50% + ${S * 0.45}px)`,
             borderRadius: "50%",
-            background: "rgba(0,0,0,0.72)",
-            filter: `blur(${S * 0.05}px)`,
-            transform: `translateX(${-swing * S * 0.09}px) scaleX(${1 - Math.abs(swing) * 0.12})`,
-            opacity: 0.8,
+            background: "rgba(0,0,0,0.9)",
+            filter: `blur(${S * 0.028}px)`,
+            transform: `translateX(${-swing * S * 0.02}px) scaleX(${1 - Math.abs(swing) * 0.1})`,
           }}
         />
 

@@ -11,7 +11,7 @@ type Ribbon = {
   /** Sway amplitude per control point, fraction of frame width. */
   amps: [number, number, number, number];
   phases: [number, number, number, number];
-  /** Core stroke width as a fraction of frame height. */
+  /** Stroke widths as fractions of frame height. */
   coreWidth: number;
   haloWidth: number;
   core: string;
@@ -20,42 +20,74 @@ type Ribbon = {
   haloOpacity: number;
 };
 
+/**
+ * Two ribbons, and nothing else — they are the whole background.
+ *
+ * The base positions are set deliberately rather than scattered: one runs
+ * through the left third, the other crosses behind the card. That keeps the
+ * pair spaced across the frame and puts lit ground under the card for its
+ * shadow to fall on. Only the sway phases come from the seed.
+ */
 const RIBBONS: Ribbon[] = (() => {
   const rng = makeRandom("metallic-ribbons");
-  const palette: [string, string][] = [
-    ["#e6c8ff", "#7b3fe4"],
-    ["#f5b8ee", "#c0349f"],
-    ["#cbb0ff", "#5c2bb8"],
+
+  const specs: {
+    base: number;
+    core: string;
+    halo: string;
+    coreWidth: number;
+    haloWidth: number;
+    coreOpacity: number;
+    haloOpacity: number;
+  }[] = [
+    {
+      base: 0.26,
+      core: "#e8ccff",
+      halo: "#7b3fe4",
+      coreWidth: 0.0055,
+      haloWidth: 0.115,
+      coreOpacity: 0.7,
+      haloOpacity: 0.26,
+    },
+    {
+      base: 0.56,
+      core: "#f7bdf0",
+      halo: "#a32f92",
+      coreWidth: 0.0038,
+      haloWidth: 0.085,
+      coreOpacity: 0.6,
+      haloOpacity: 0.2,
+    },
   ];
-  return palette.map(([core, halo], i) => {
-    const base = 0.16 + i * 0.24 + range(rng, -0.05, 0.05);
-    return {
-      xs: [
-        base + range(rng, -0.04, 0.04),
-        base + range(rng, 0.02, 0.16),
-        base + range(rng, -0.16, -0.02),
-        base + range(rng, -0.04, 0.04),
-      ] as [number, number, number, number],
-      amps: [
-        range(rng, 0.01, 0.03),
-        range(rng, 0.04, 0.09),
-        range(rng, 0.04, 0.09),
-        range(rng, 0.01, 0.03),
-      ] as [number, number, number, number],
-      phases: [rng() * TAU, rng() * TAU, rng() * TAU, rng() * TAU] as [
-        number,
-        number,
-        number,
-        number,
-      ],
-      coreWidth: range(rng, 0.003, 0.007),
-      haloWidth: range(rng, 0.035, 0.075),
-      core,
-      halo,
-      coreOpacity: range(rng, 0.45, 0.75),
-      haloOpacity: range(rng, 0.1, 0.2),
-    };
-  });
+
+  return specs.map((sp) => ({
+    xs: [
+      sp.base + range(rng, -0.03, 0.03),
+      sp.base + range(rng, 0.05, 0.14),
+      sp.base + range(rng, -0.14, -0.05),
+      sp.base + range(rng, -0.03, 0.03),
+    ] as [number, number, number, number],
+    // The background carries the drift in this composition, so the ribbons
+    // sway a little more than they used to.
+    amps: [
+      range(rng, 0.015, 0.035),
+      range(rng, 0.06, 0.11),
+      range(rng, 0.06, 0.11),
+      range(rng, 0.015, 0.035),
+    ] as [number, number, number, number],
+    phases: [rng() * TAU, rng() * TAU, rng() * TAU, rng() * TAU] as [
+      number,
+      number,
+      number,
+      number,
+    ],
+    coreWidth: sp.coreWidth,
+    haloWidth: sp.haloWidth,
+    core: sp.core,
+    halo: sp.halo,
+    coreOpacity: sp.coreOpacity,
+    haloOpacity: sp.haloOpacity,
+  }));
 })();
 
 export const MetallicBackground: React.FC = () => {
@@ -77,25 +109,27 @@ export const MetallicBackground: React.FC = () => {
         style={{ position: "absolute", inset: 0 }}
       >
         <defs>
-          <filter id="ribbon-halo" x="-40%" y="-20%" width="180%" height="140%">
-            <feGaussianBlur stdDeviation={height * 0.035} />
-          </filter>
-          <filter id="ribbon-core" x="-40%" y="-20%" width="180%" height="140%">
-            <feGaussianBlur stdDeviation={height * 0.004} />
-          </filter>
+          {/* The filter region is given in user space and covers well beyond
+              the frame. A bounding-box region (the default) is measured on the
+              path geometry and excludes the stroke, so a halo this wide gets
+              cut off mid-blur and leaves a hard vertical edge in the purple. */}
+          {[
+            { id: "ribbon-halo", sd: height * 0.038 },
+            { id: "ribbon-core", sd: height * 0.004 },
+          ].map(({ id, sd }) => (
+            <filter
+              key={id}
+              id={id}
+              filterUnits="userSpaceOnUse"
+              x={-width * 0.5}
+              y={-height * 0.5}
+              width={width * 2}
+              height={height * 2}
+            >
+              <feGaussianBlur stdDeviation={sd} />
+            </filter>
+          ))}
         </defs>
-
-        {/* Broad, very soft violet wash so the ribbons sit in something rather
-            than floating on flat black. */}
-        <ellipse
-          cx={width * (0.36 + Math.sin(TAU * t) * 0.03)}
-          cy={height * 0.5}
-          rx={width * 0.18}
-          ry={height * 0.6}
-          fill="#4c1a86"
-          opacity={0.14}
-          filter="url(#ribbon-halo)"
-        />
 
         {RIBBONS.map((r, i) => {
           // Every control point sways on a sine of the loop, so the ribbon

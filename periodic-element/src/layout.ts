@@ -2,10 +2,16 @@ import { FONT_FAMILY } from "./load-fonts";
 
 export type CardStyle = "neon" | "metallic";
 
-/** Card edge length as a fraction of frame height. */
+/**
+ * Card edge length as a fraction of frame height. Sized to match the reference
+ * clips, which measure roughly 0.50 (neon) and 0.54 (metallic) of frame
+ * height. Every content size below is a fraction of this, so changing these
+ * two numbers rescales both cards completely and identically for all 118
+ * elements.
+ */
 export const CARD_FRACTION: Record<CardStyle, number> = {
-  neon: 0.42,
-  metallic: 0.4,
+  neon: 0.5,
+  metallic: 0.48,
 };
 
 /**

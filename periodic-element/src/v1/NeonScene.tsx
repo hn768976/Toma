@@ -34,9 +34,15 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
   const l = cardLayout(S, "neon");
 
   // 1 at frame 0, 0 from frame 90 on.
+  //
+  // An ease-out spends most of the move in the first third: it was ~10 deg by
+  // frame 30, so the entrance was over before a viewer registered it. An
+  // ease-in-out holds near the entry angle, turns through the middle of the
+  // window and settles in — ~30 deg at frame 30, ~5 deg at frame 60 — so the
+  // rotation actually reads across the full 90 frames.
   const settle = interpolate(frame, [0, SETTLE_FRAMES], [1, 0], {
     extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
+    easing: Easing.inOut(Easing.cubic),
   });
 
   // The hold oscillation is a sine of the loop, so it is zero at both frame 0
@@ -59,6 +65,10 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
       <AbsoluteFill
         style={{
           perspective: height * 1.45,
+          // Vanishing point on the card's own centre, which is also frame
+          // centre. The card carries no translation at any point in the clip;
+          // all drift belongs to the background. Do not add one here.
+          perspectiveOrigin: "50% 50%",
           justifyContent: "center",
           alignItems: "center",
         }}
@@ -69,17 +79,18 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
             transform: `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`,
           }}
         >
-          {/* Pool of light under the card, moving with it. */}
+          {/* Pool of light under the card, moving with it. Kept shallow so
+              the glow hugs the tube instead of spilling into the frame. */}
           <div
             style={{
               position: "absolute",
-              left: -S * 0.25,
-              width: S * 1.5,
-              top: S * 0.98,
-              height: S * 0.34,
+              left: -S * 0.09,
+              width: S * 1.18,
+              top: S * 0.97,
+              height: S * 0.2,
               borderRadius: "50%",
-              background: `radial-gradient(ellipse, rgba(58,168,255,${0.3 * breath}) 0%, rgba(58,168,255,0) 70%)`,
-              filter: `blur(${S * 0.045}px)`,
+              background: `radial-gradient(ellipse, rgba(58,168,255,${0.22 * breath}) 0%, rgba(58,168,255,0) 70%)`,
+              filter: `blur(${S * 0.032}px)`,
             }}
           />
 
@@ -93,9 +104,9 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
               width: S,
               height: S,
               borderRadius: l.radius,
-              border: `${S * 0.022}px solid ${CYAN}`,
-              filter: `blur(${S * 0.035}px)`,
-              opacity: 0.85 * breath,
+              border: `${S * 0.018}px solid ${CYAN}`,
+              filter: `blur(${S * 0.02}px)`,
+              opacity: 0.95 * breath,
             }}
           />
 
@@ -124,11 +135,13 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
                 "radial-gradient(ellipse at 50% 48%, #0b1a33 0%, #071224 55%, #050d1c 100%)",
               boxShadow: [
                 // brighter inner edge, so the outline reads as a lit tube
-                `inset 0 0 ${S * 0.012}px rgba(215,240,255,0.95)`,
-                `inset 0 0 ${S * 0.05}px rgba(58,168,255,0.55)`,
-                glow(S * 0.03, 0.9),
-                glow(S * 0.08, 0.55),
-                glow(S * 0.2, 0.3),
+                `inset 0 0 ${S * 0.01}px rgba(225,244,255,1)`,
+                `inset 0 0 ${S * 0.038}px rgba(58,168,255,0.5)`,
+                // Bright core, short falloff: reads as a lit tube rather than
+                // as a lamp behind a card.
+                glow(S * 0.014, 1),
+                glow(S * 0.04, 0.6),
+                glow(S * 0.095, 0.22),
               ].join(", "),
               overflow: "hidden",
             }}
@@ -154,7 +167,7 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
                 top: l.pad,
                 ...numericFont(l.metaSize),
                 color: CYAN_PALE,
-                textShadow: `0 0 ${S * 0.02}px rgba(58,168,255,0.8)`,
+                textShadow: `0 0 ${S * 0.014}px rgba(58,168,255,0.8)`,
               }}
             >
               {element.number}
@@ -166,7 +179,7 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
                 top: l.pad,
                 ...numericFont(l.metaSize),
                 color: CYAN_PALE,
-                textShadow: `0 0 ${S * 0.02}px rgba(58,168,255,0.8)`,
+                textShadow: `0 0 ${S * 0.014}px rgba(58,168,255,0.8)`,
               }}
             >
               {element.mass}
@@ -199,9 +212,9 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
                 ...symbolFont(l.symbolSize, 700),
                 color: "#ffffff",
                 textShadow: [
-                  `0 0 ${S * 0.012}px rgba(205,238,255,0.95)`,
-                  `0 0 ${S * 0.038}px rgba(58,168,255,0.9)`,
-                  `0 0 ${S * 0.1}px rgba(58,168,255,0.55)`,
+                  `0 0 ${S * 0.008}px rgba(215,242,255,1)`,
+                  `0 0 ${S * 0.026}px rgba(58,168,255,0.9)`,
+                  `0 0 ${S * 0.062}px rgba(58,168,255,0.45)`,
                 ].join(", "),
               }}
             >
@@ -221,7 +234,7 @@ export const NeonScene: React.FC<{ element: PeriodicElement }> = ({ element }) =
                 style={{
                   ...nameFont(l.nameSize),
                   color: CYAN_PALE,
-                  textShadow: `0 0 ${S * 0.022}px rgba(58,168,255,0.85)`,
+                  textShadow: `0 0 ${S * 0.016}px rgba(58,168,255,0.85)`,
                 }}
               >
                 {element.name}

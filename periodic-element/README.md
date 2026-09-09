@@ -3,11 +3,11 @@
 Two styles of periodic-table element card, animated as a 10-second clip per
 element. Compositions are authored at **3840×2160, 30 fps, 300 frames**.
 
-- **V1 — neon blue.** A neon-outlined rounded tile on a dark navy bokeh field
-  with out-of-focus periodic-table squares behind it. The card enters rotated
-  and settles face-on.
+- **V1 — neon blue.** A neon-outlined rounded tile on a dark navy field of
+  out-of-focus periodic-table squares. The card enters rotated and settles
+  face-on.
 - **V2 — metallic on purple.** A sharp-cornered metal-framed card on a deep
-  purple field with flowing violet ribbons. The card swings continuously
+  purple field with two flowing violet ribbons. The card swings continuously
   around its vertical axis and the brushed-metal gradient on the symbol
   travels with it.
 
@@ -60,6 +60,23 @@ The 1080p previews in this delivery were rendered with `--scale=0.5 --crf=18`.
 H.264 / `yuv420p` / 30 fps and **no audio track** are set in
 `remotion.config.ts` and by the compositions themselves; nothing in the project
 mounts an audio tag.
+
+## Card size
+
+The card's edge length is a fraction of frame height, set in
+`CARD_FRACTION` in `src/layout.ts`:
+
+| Style | Fraction of frame height | At 4K (2160 px) |
+| --- | --- | --- |
+| V1 neon | **0.50** | 1080 px |
+| V2 metallic | **0.48** | 1037 px |
+
+These match the reference clips, which measure roughly 0.50 and 0.54. Every
+content size is a fraction of the card's edge length, so changing these two
+numbers rescales both cards completely, identically, for all 118 elements.
+Two values elsewhere are expressed in frame-height units rather than card
+units and were set to follow the card: the ghost-tile keep-out radius and the
+background glow radius, both in `src/v1/NeonBackground.tsx`.
 
 ## Atomic mass convention
 
@@ -125,6 +142,10 @@ which the layout is sized for), and the symbol is at most two letters.
   seeded mulberry32 PRNG in `src/lib/random.ts`, evaluated once at module load.
 - **Sizes are fractions of frame height** via `useVideoConfig()`, so a 4K
   render and a 1080p preview are the same picture at different scales.
+- **No particle layers.** V1's background is ghost tiles only — out-of-focus
+  periodic-table squares on a jittered lattice, which read as context. V2's is
+  two ribbons and nothing else. Drifting circles were removed deliberately;
+  don't reintroduce them.
 - **Fonts are embedded.** Inter (SIL Open Font License 1.1) ships in
   `public/fonts` and is registered through `FontFace` in `src/load-fonts.ts`
   behind a `delayRender()`. No system font is relied on, and no network fetch
@@ -150,6 +171,12 @@ you want V1 to loop end to end as well, set `ENTRY_ROT_Y`, `ENTRY_ROT_X` and
 `ENTRY_ROT_Z` in `src/v1/NeonScene.tsx` to `0` — the ±4° hold oscillation is
 already periodic and will carry the motion on its own.
 
+The settle is eased with `Easing.inOut(Easing.cubic)` rather than an ease-out.
+An ease-out puts most of the movement in the first third of the window, which
+left the card essentially face-on by frame 30 and wasted the entrance. The
+ease-in-out spreads it: roughly 30° at frame 30, 5° at frame 60, seated by
+frame 90.
+
 ## Layout
 
 `src/layout.ts` holds every size as a fraction of the card's edge length, and
@@ -158,6 +185,23 @@ which is what makes a set of 118 look like a set. The layout is sized for the
 worst case on each axis at once: a three-digit atomic number, a two-letter
 symbol with a descender (`Hg`, `Ag`, `Rg`), a five-character mass, and the
 longest element name.
+
+### The card is locked to frame centre
+
+The card group carries **no translation** in either style — only
+`rotateX`/`rotateY`/`rotateZ` about its own centre, with `perspective-origin`
+pinned to `50% 50%`, which is both the card's centre and the frame's. All
+drift belongs to the background: the ghost tiles in V1, the ribbons in V2.
+Don't add a translate to the card.
+
+Note that a rotating plane in perspective still moves its *bounding box*, even
+though its centre is fixed — the near edge magnifies and the far edge shrinks.
+Measured on the delivered previews that is about 8 px at 1920 wide for V1 and
+18 px for V2, and it is inherent to the specified rotation, not a translation
+that can be removed. What can be kept small is anything moving *near* the
+card: V2's shadow tracks the rotation, but its lateral travel is deliberately
+limited (`0.035` and `0.02` of the card size, in `src/v2/MetallicScene.tsx`),
+because a shadow sliding under a static card reads as the card drifting.
 
 ## Licence
 
