@@ -69,6 +69,12 @@ Three extra compositions (`v1-blue-arc-preview`, `v2-violet-arc-preview`,
 npm run render:preview:v1
 ```
 
+These target 10 Mbps rather than a CRF. Constant-quality encoding is a poor
+fit here: the 1.5% grain and the thousands of thin high-contrast lines are
+close to incompressible, so CRF 22 lands the 20-second loop at over 100 MB.
+10 Mbps holds up with no visible artifacts and keeps the previews portable.
+Use `--crf=14`, as in the 4K commands above, when quality is what matters.
+
 ---
 
 ## The versions

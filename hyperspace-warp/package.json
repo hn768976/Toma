@@ -15,9 +15,9 @@
     "still:4k:v1": "remotion still v1-blue-arc out/v1-blue-arc-peak-4k.png --frame=225",
     "still:4k:v2": "remotion still v2-violet-arc out/v2-violet-arc-peak-4k.png --frame=225",
     "still:4k:v3": "remotion still v3-blue-loop out/v3-blue-loop-peak-4k.png --frame=300",
-    "render:preview:v1": "remotion render v1-blue-arc-preview out/v1-blue-arc-1080p.mp4 --codec=h264 --crf=22",
-    "render:preview:v2": "remotion render v2-violet-arc-preview out/v2-violet-arc-1080p.mp4 --codec=h264 --crf=22",
-    "render:preview:v3": "remotion render v3-blue-loop-preview out/v3-blue-loop-1080p.mp4 --codec=h264 --crf=22",
+    "render:preview:v1": "remotion render v1-blue-arc-preview out/v1-blue-arc-1080p.mp4 --codec=h264 --video-bitrate=10M",
+    "render:preview:v2": "remotion render v2-violet-arc-preview out/v2-violet-arc-1080p.mp4 --codec=h264 --video-bitrate=10M",
+    "render:preview:v3": "remotion render v3-blue-loop-preview out/v3-blue-loop-1080p.mp4 --codec=h264 --video-bitrate=10M",
     "verify:loop": "remotion still v3-blue-loop-seamcheck out/seam-000.png --frame=0 && remotion still v3-blue-loop-seamcheck out/seam-600.png --frame=600"
   },
   "dependencies": {
