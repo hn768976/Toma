@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { DepthOfField, Grain, Vignette } from "./components/Atmosphere";
-import { EdgeReadouts } from "./components/EdgeReadouts";
 import { Markers, type MarkerInstance } from "./components/Markers";
 import { PinBodies, PinGradients, PinPulses, PinShadows, placePins } from "./components/Pushpins";
 import { dashSpec, EndpointDots, Routes, type PreparedRoute } from "./components/Routes";
@@ -11,7 +10,6 @@ import { routePathData } from "./lib/paths";
 import { makeRng, rngRange } from "./lib/prng";
 import type { RouteMapProps } from "./lib/types";
 import { regionById } from "./data/regions";
-import "./load-fonts";
 
 /** Markers on screen at once when a composition does not say otherwise. */
 const DEFAULT_MARKER_COUNT = 26;
@@ -47,12 +45,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           color: pal.route[def.color],
           dashArray: spec.array,
           dashPeriod: spec.period,
-          width: (def.weight ?? 1) * u * 1.9,
+          width: (def.weight ?? 1) * u * 3.2,
           // Whole dash periods per loop, so the march closes exactly. Derived
           // from a target travel distance so dotted and dashed lines march at
-          // a similar rate rather than by their very different periods.
+          // a similar rate rather than by their very different periods. Kept
+          // slow: this distance over 16s is what sets how often a dash crosses
+          // any fixed point, and above roughly 1 Hz that reads as a blink.
           marchPeriods: spec.period
-            ? Math.max(1, Math.round((u * (620 + (i % 5) * 90)) / spec.period))
+            ? Math.max(1, Math.round((u * (220 + (i % 5) * 25)) / spec.period))
             : 0,
         };
       }),
@@ -134,14 +134,6 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             height={g.planeH}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            <EdgeReadouts
-              region={region}
-              g={g}
-              pal={pal}
-              u={u}
-              frame={frame}
-              duration={durationInFrames}
-            />
             <PinShadows pins={pins} progress={progress} />
             <Routes routes={routes} pal={pal} progress={progress} />
             <EndpointDots routes={routes} pal={pal} u={u} />

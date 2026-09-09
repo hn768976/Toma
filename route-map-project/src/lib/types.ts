@@ -72,8 +72,6 @@ export interface RegionDef {
   gridStep: number;
   /** A major graticule line every N minor lines. */
   gridMajor: number;
-  /** Base value for the left / right numeric edge readouts. */
-  edgeScale: [number, number];
   /** Boxes of open water, [lonMin, latMin, lonMax, latMax], for scattered decor. */
   waterBoxes: [number, number, number, number][];
   routes: RouteDef[];

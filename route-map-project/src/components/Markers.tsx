@@ -55,7 +55,7 @@ export const Markers: React.FC<Props> = ({ markers, progress, color, u }) => (
             fill="none"
             stroke={color}
             strokeOpacity={0.20}
-            strokeWidth={u * 1.9 * m.scale}
+            strokeWidth={u * 2.8 * m.scale}
             strokeLinecap="round"
           />
           <polyline
@@ -66,7 +66,7 @@ export const Markers: React.FC<Props> = ({ markers, progress, color, u }) => (
             fill="none"
             stroke={color}
             strokeOpacity={0.42}
-            strokeWidth={u * 1.9 * m.scale}
+            strokeWidth={u * 2.8 * m.scale}
             strokeLinecap="round"
           />
           <g transform={`translate(${p.x} ${p.y}) rotate(${p.angle}) scale(${s})`}>

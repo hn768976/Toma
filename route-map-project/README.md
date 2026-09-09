@@ -96,8 +96,8 @@ own gradients rather than covering the frame, which is worth about 23%.
   the exact bowed curve the renderer draws, via the same `routePlanePoints`
   and `sampleSpline` the component uses, so the check and the picture cannot
   drift apart.
-- **No stray linework:** routes are the only lines on the plate. There is no
-  graticule and no survey decor.
+- **No stray linework:** routes are the only marks on the plate besides the
+  pins and markers. No graticule, no survey decor, no numeric readouts.
 
 ## Data sources
 
@@ -119,10 +119,6 @@ aircraft, vessels — is an SVG path drawn in this project
 invented**; they are not published route data, and the plates carry no place
 names or country names.
 
-`public/fonts/DejaVuSansMono.ttf` is the DejaVu font (Bitstream Vera / DejaVu
-licence — free to use and redistribute), bundled so the numeric readouts render
-identically on any machine.
-
 ---
 
 ## Adding a region
@@ -141,7 +137,6 @@ Adding a region is a data entry plus one bake. No component changes.
    | `stdParallel` | Standard parallel; omit to use `center[1]`. Use `0` for a world view |
    | `palette` | `"warm"` (satellite) or `"cool"` (blue-grey shaded relief) |
    | `routeType` | `"air"`, `"shipping"` or `"mixed"` — the default marker species |
-   | `edgeScale` | `[left, right]` base values for the two numeric readout columns |
    | `waterBoxes` | `[lonMin, latMin, lonMax, latMax]` boxes of open water; the survey decor is scattered inside them |
    | `routes` | See below |
    | `pins` | `{ lon, lat, color, pulse? }`, 12–20 of them, clustered rather than spread |
@@ -190,7 +185,7 @@ src/
   lib/paths.ts             route curves; marker position + tangent heading
   lib/prng.ts              seeded PRNG (no Math.random at render time)
   lib/palettes.ts          the two colour treatments
-  components/              routes, markers, pins, edge readouts, depth of field
+  components/              routes, markers, pins, depth of field
 scripts/
   fetch-data.mjs           re-fetch and re-simplify the public-domain sources
   bake-basemaps.mjs        build public/basemaps/*.jpg from data/

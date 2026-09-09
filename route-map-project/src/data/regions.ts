@@ -24,7 +24,6 @@ export const REGIONS: RegionDef[] = [
     routeType: "mixed",
     gridStep: 15,
     gridMajor: 3,
-    edgeScale: [120, 60],
     waterBoxes: [
       [-60, -35, -20, 10],
       [-160, 10, -125, 40],
@@ -312,7 +311,6 @@ export const REGIONS: RegionDef[] = [
     routeType: "shipping",
     gridStep: 5,
     gridMajor: 3,
-    edgeScale: [160, 45],
     waterBoxes: [
       [-30, 40, -14, 56],
       [-24, 26, -12, 36],
@@ -619,7 +617,6 @@ export const REGIONS: RegionDef[] = [
     routeType: "air",
     gridStep: 10,
     gridMajor: 3,
-    edgeScale: [40, 50],
     waterBoxes: [
       [-150, 15, -122, 40],
       [-60, 20, -35, 40],
@@ -682,7 +679,6 @@ export const REGIONS: RegionDef[] = [
     routeType: "air",
     gridStep: 10,
     gridMajor: 3,
-    edgeScale: [55, 30],
     waterBoxes: [
       [-52, 28, -22, 44],
       [-30, 50, -14, 60],
@@ -750,7 +746,6 @@ export const REGIONS: RegionDef[] = [
     routeType: "shipping",
     gridStep: 10,
     gridMajor: 3,
-    edgeScale: [95, 20],
     waterBoxes: [
       [140, 5, 175, 30],
       [80, -20, 105, 0],
@@ -1061,7 +1056,6 @@ export const REGIONS: RegionDef[] = [
     routeType: "shipping",
     gridStep: 5,
     gridMajor: 3,
-    edgeScale: [75, 25],
     waterBoxes: [
       [60, -8, 78, 8],
       [42, -12, 58, 2],

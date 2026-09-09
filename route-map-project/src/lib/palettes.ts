@@ -6,7 +6,6 @@ export interface PaletteSpec {
   grid: string;
   gridOpacity: number;
   gridMajorOpacity: number;
-  readout: string;
   route: Record<RouteColor, string>;
   marker: string;
   /** Multiplied over the baked basemap; keeps the two grades in one place. */
@@ -20,7 +19,6 @@ export const PALETTES: Record<Palette, PaletteSpec> = {
     grid: "#7ad4e8",
     gridOpacity: 0.2,
     gridMajorOpacity: 0.32,
-    readout: "#9fd8e8",
     route: { cyan: "#22d3ee", white: "#eef6fb", green: "#8ae0a0" },
     marker: "#ffffff",
     baseFilter: "saturate(1.06) contrast(1.03) brightness(1.02)",
@@ -31,7 +29,6 @@ export const PALETTES: Record<Palette, PaletteSpec> = {
     grid: "#a8d8f0",
     gridOpacity: 0.2,
     gridMajorOpacity: 0.3,
-    readout: "#a8d8f0",
     route: { cyan: "#7fe3f5", white: "#f2f8fc", green: "#a9e6c0" },
     marker: "#ffffff",
     baseFilter: "saturate(1.0) contrast(1.04) brightness(1.0)",
