@@ -158,8 +158,21 @@ which the layout is sized for), and the symbol is at most two letters.
   between elements.
 - **Grain** (`src/Grain.tsx`) is one tileable `feTurbulence` tile encoded as a
   data URI, repeated and offset per frame. Both styles sit on large, very dark
-  gradients, which is exactly what H.264 bands on; check the encoded file
-  rather than the Studio preview when judging it.
+  gradients, which is exactly what H.264 bands on. Two details matter, and
+  both were found by measuring an encoded file rather than looking at the
+  Studio preview:
+  - **Two blend passes.** `overlay` alone dithers midtones but collapses
+    toward zero as the backdrop approaches black — the very region that
+    bands. A second `screen` pass adds light that survives in the shadows.
+  - **Grain has to be coarse enough to survive.** At `baseFrequency` 0.8 the
+    features were about one composition pixel, so a `--scale=0.5` preview
+    averaged them away and the encoder quantised out the rest. `BASE_FREQUENCY`
+    is now 0.32, giving roughly three-composition-pixel features.
+
+  For reference, measured across a 1920px row of encoded V1 in the dark
+  surround: mean flat run went from 112 px to about 16 px. If you change the
+  grain, re-measure on an encoded file — this is not judgeable by eye in the
+  preview.
 
 ### Looping
 
