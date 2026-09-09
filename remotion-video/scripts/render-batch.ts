@@ -51,8 +51,7 @@ const BROWSER_CANDIDATES = [
   "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
   "/opt/pw-browsers/chromium",
 ];
-const browserExecutable =
-  BROWSER_CANDIDATES.find((p) => existsSync(p)) ?? null;
+const browserExecutable = BROWSER_CANDIDATES.find((p) => existsSync(p)) ?? null;
 
 type Job = { composition: string; palette: string; name: string; file: string };
 
@@ -79,7 +78,10 @@ const renderAll = async (jobs: Job[]) => {
   console.log("Bundling…");
   const serveUrl = await bundle({
     entryPoint: path.join(ROOT, "src", "index.ts"),
-    webpackOverride: enableTailwind,
+    // Persistent webpack caching has been observed serving a stale bundle
+    // after edits to the composition data, which silently renders the
+    // previous version of a still. Correctness beats a faster re-bundle.
+    webpackOverride: (config) => ({ ...enableTailwind(config), cache: false }),
     onProgress: () => undefined,
   });
 

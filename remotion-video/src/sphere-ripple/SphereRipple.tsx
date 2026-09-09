@@ -24,10 +24,7 @@ export const SphereRipple: React.FC<SphereRippleProps> = ({
   palette,
 }) => {
   const spec = useMemo(() => resolveComposition(composition), [composition]);
-  const pal = useMemo(
-    () => resolvePalette(palette as PaletteName),
-    [palette],
-  );
+  const pal = useMemo(() => resolvePalette(palette as PaletteName), [palette]);
 
   // Painting 4K ring art takes a while; hold the render open until every
   // layer's layout effect has run. Child layout effects complete before this

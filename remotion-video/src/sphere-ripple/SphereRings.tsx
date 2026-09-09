@@ -30,7 +30,11 @@ const strokeFor = (
   gain: number,
 ) => {
   const want = baseAlpha * level * gain;
-  return rgba(rampAt(palette, rampPos), Math.min(1, want), Math.min(2.4, Math.max(1, want)));
+  return rgba(
+    rampAt(palette, rampPos),
+    Math.min(1, want),
+    Math.min(2.4, Math.max(1, want)),
+  );
 };
 
 const strokePath = (ctx: CanvasRenderingContext2D, pts: number[]) => {

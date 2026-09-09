@@ -11,27 +11,27 @@ is seeded from the composition name through Remotion's `random()`.
 
 ## Props
 
-| prop | accepted values |
-| --- | --- |
+| prop          | accepted values                                                         |
+| ------------- | ----------------------------------------------------------------------- |
 | `composition` | `r01` `r02` `r03` `r04` `r05` `r06` `r07` `r08` `r09` `r10` `r11` `r12` |
-| `palette` | `cobalt` `cyan` `violet` `emerald` `amber` `crimson` |
+| `palette`     | `cobalt` `cyan` `violet` `emerald` `amber` `crimson`                    |
 
 ### The twelve compositions
 
-| id | setup |
-| --- | --- |
+| id    | setup                                                                                                                |
+| ----- | -------------------------------------------------------------------------------------------------------------------- |
 | `r01` | Large sphere sunk below the bottom-right; upper cap only. Tight spacing, many fine rings. The reference composition. |
-| `r02` | Very large sphere off the left edge — its right limb crosses the frame as a curved band. Wide spacing, bold rings. |
-| `r03` | Small complete sphere centre-frame, origin at its centre, near-concentric rings. |
-| `r04` | Large sphere mostly above the frame, lower cap visible; rings sweep up and to the right. |
-| `r05` | Close to the surface — gentle curvature, broad arcs, origin off-frame to the right. |
-| `r06` | Medium sphere lower-left with the origin out on the limb: a compressed fan. |
-| `r07` | Small sphere upper-left with the sharp band placed away from it, so the subject itself is soft. |
-| `r08` | Large sphere centred on the bottom edge, symmetric. The tightest spacing and highest ring count. |
-| `r09` | Medium sphere right of centre, origin thrown onto the limb — rings truncate almost at once. |
-| `r10` | Enormous sphere off the bottom-right corner; only a diagonal sliver of limb. The emptiest of the twelve. |
-| `r11` | Centred sphere lit from below: brightest at the bottom, near-black at the top. |
-| `r12` | Two ripple sources — a large sphere upper-left and a smaller, dimmer one lower-right. |
+| `r02` | Very large sphere off the left edge — its right limb crosses the frame as a curved band. Wide spacing, bold rings.   |
+| `r03` | Small complete sphere centre-frame, origin at its centre, near-concentric rings.                                     |
+| `r04` | Large sphere mostly above the frame, lower cap visible; rings sweep up and to the right.                             |
+| `r05` | Close to the surface — gentle curvature, broad arcs, origin off-frame to the right.                                  |
+| `r06` | Medium sphere lower-left with the origin out on the limb: a compressed fan.                                          |
+| `r07` | Small sphere upper-left with the sharp band placed away from it, so the subject itself is soft.                      |
+| `r08` | Large sphere centred on the bottom edge, symmetric. The tightest spacing and highest ring count.                     |
+| `r09` | Medium sphere right of centre, origin thrown onto the limb — rings truncate almost at once.                          |
+| `r10` | Enormous sphere off the bottom-right corner; only a diagonal sliver of limb. The emptiest of the twelve.             |
+| `r11` | Centred sphere lit from below: brightest at the bottom, near-black at the top.                                       |
+| `r12` | Two ripple sources — a large sphere upper-left and a smaller, dimmer one lower-right.                                |
 
 ## Rendering one still
 
@@ -78,15 +78,15 @@ r06 → crimson, cobalt    r12 → cyan,   amber
 
 `src/sphere-ripple/`
 
-| file | what it holds |
-| --- | --- |
-| `compositions.ts` | Everything that varies between stills: sphere centre and radius, ripple origin, ring spacing and count, focus band, light direction. The renderer only walks this structure, so a thirteenth composition is a data edit. |
-| `palettes.ts` | The six palettes. The only file in the project allowed a hex literal. |
-| `geometry.ts` | The sphere maths: rings as circles *on the sphere*, orthographic projection, back-hemisphere culling, per-segment lighting and focus bucketing. |
-| `SphereRings.tsx` | Paints the segments into four blur-bracket buffers — a wide soft glow, then a thin bright core, composited with `lighter`. |
-| `FocusPass.tsx` | Blurs each of the four buffers once and adds them together. |
-| `BackgroundWash.tsx` | Deep base, broad radial wash, large-scale mottling, built at 1/8 scale and upscaled. |
-| `GrainPass.tsx` | Fine monochrome grain over the finished frame. |
+| file                 | what it holds                                                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `compositions.ts`    | Everything that varies between stills: sphere centre and radius, ripple origin, ring spacing and count, focus band, light direction. The renderer only walks this structure, so a thirteenth composition is a data edit. |
+| `palettes.ts`        | The six palettes. The only file in the project allowed a hex literal.                                                                                                                                                    |
+| `geometry.ts`        | The sphere maths: rings as circles _on the sphere_, orthographic projection, back-hemisphere culling, per-segment lighting and focus bucketing.                                                                          |
+| `SphereRings.tsx`    | Paints the segments into four blur-bracket buffers — a wide soft glow, then a thin bright core, composited with `lighter`.                                                                                               |
+| `FocusPass.tsx`      | Blurs each of the four buffers once and adds them together.                                                                                                                                                              |
+| `BackgroundWash.tsx` | Deep base, broad radial wash, large-scale mottling, built at 1/8 scale and upscaled.                                                                                                                                     |
+| `GrainPass.tsx`      | Fine monochrome grain over the finished frame.                                                                                                                                                                           |
 
 Rings are generated as parametric **paths**, not as a per-pixel distance
 field, which is what makes per-segment stroke width, glow and blur possible.
