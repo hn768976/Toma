@@ -1,0 +1,22 @@
+{
+  "name": "hud-frame",
+  "version": "1.0.0",
+  "description": "Futuristic HUD video frame — Remotion, 3840x2160 @ 30fps, 20s seamless hold-loop",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc"
+  }
+}
