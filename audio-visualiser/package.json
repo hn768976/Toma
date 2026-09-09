@@ -1,0 +1,27 @@
+{
+  "name": "audio-visualiser-pack",
+  "version": "1.0.0",
+  "description": "Three synthetic audio visualiser compositions built on one shared spectrum engine (Remotion, 3840x2160, 30fps)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.185.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/node": "22.19.4",
+    "@types/three": "0.185.4",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
