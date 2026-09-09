@@ -1,0 +1,34 @@
+{
+  "name": "hyperspace-warp",
+  "version": "1.0.0",
+  "description": "4K hyperspace / warp-jump clip — pure 2D canvas, deterministic, rendered with Remotion",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "lint": "tsc --noEmit",
+    "render:4k:v1": "remotion render v1-blue-arc out/v1-blue-arc-4k.mp4 --codec=h264 --crf=14 --concurrency=2",
+    "render:4k:v2": "remotion render v2-violet-arc out/v2-violet-arc-4k.mp4 --codec=h264 --crf=14 --concurrency=2",
+    "render:4k:v3": "remotion render v3-blue-loop out/v3-blue-loop-4k.mp4 --codec=h264 --crf=14 --concurrency=2",
+    "render:4k:all": "npm run render:4k:v1 && npm run render:4k:v2 && npm run render:4k:v3",
+    "still:4k:v1": "remotion still v1-blue-arc out/v1-blue-arc-peak-4k.png --frame=225",
+    "still:4k:v2": "remotion still v2-violet-arc out/v2-violet-arc-peak-4k.png --frame=225",
+    "still:4k:v3": "remotion still v3-blue-loop out/v3-blue-loop-peak-4k.png --frame=300",
+    "render:preview:v1": "remotion render v1-blue-arc-preview out/v1-blue-arc-1080p.mp4 --codec=h264 --crf=22",
+    "render:preview:v2": "remotion render v2-violet-arc-preview out/v2-violet-arc-1080p.mp4 --codec=h264 --crf=22",
+    "render:preview:v3": "remotion render v3-blue-loop-preview out/v3-blue-loop-1080p.mp4 --codec=h264 --crf=22",
+    "verify:loop": "remotion still v3-blue-loop-seamcheck out/seam-000.png --frame=0 && remotion still v3-blue-loop-seamcheck out/seam-600.png --frame=600"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
