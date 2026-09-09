@@ -41,11 +41,17 @@ npx remotion render Starfield4K-v2-amber-cyan  out/starfield-v2-amber-cyan-4k.mp
 ```
 
 Codec, pixel format and CRF come from `remotion.config.ts` (H.264 / yuv420p /
-CRF 16). To trade size for quality, override per render:
+CRF 18). Expect a large file: full-frame 2% grain is close to incompressible, so
+the grain rather than the starfield sets the bitrate. Override per render to
+trade size against it:
 
 ```bash
-npx remotion render Starfield4K-v1-violet-teal out/v1.mp4 --crf=20
+npx remotion render Starfield4K-v1-violet-teal out/v1.mp4 --crf=16   # near-lossless, ~2x the size
+npx remotion render Starfield4K-v1-violet-teal out/v1.mp4 --crf=22   # still clean, ~half the size
 ```
+
+If size matters more than the grade, `GRAIN_SIGMA` in
+`src/starfield/constants.ts` is the single number that drives it.
 
 If your machine has spare cores, add `--concurrency=8` (or higher). If a render
 runs out of memory at 4K, lower it instead — each worker holds a full 4K frame.
