@@ -13,6 +13,10 @@ import {
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
 import {
+  SphereRipple,
+  sphereRippleDefaultProps,
+} from "./sphere-ripple/SphereRipple";
+import {
   BASE_WIDTH,
   BASE_HEIGHT,
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
@@ -51,6 +55,15 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="SphereRipple"
+        component={SphereRipple}
+        durationInFrames={1}
+        fps={30}
+        width={3840}
+        height={2160}
+        defaultProps={sphereRippleDefaultProps}
       />
     </>
   );

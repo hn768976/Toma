@@ -15,18 +15,23 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@remotion/bundler": "^4.0.515",
     "@remotion/eslint-config-flat": "4.0.515",
+    "@remotion/renderer": "^4.0.515",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
     "eslint": "9.19.0",
     "prettier": "3.8.1",
+    "sharp": "^0.35.4",
     "typescript": "5.9.3"
   },
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:batch": "node --experimental-strip-types scripts/render-batch.ts",
+    "render:still": "remotion still SphereRipple"
   },
   "sideEffects": [
     "*.css",
