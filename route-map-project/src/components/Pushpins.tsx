@@ -22,7 +22,7 @@ export const placePins = (pins: PinDef[], g: MapGeometry, u: number): PlacedPin[
       px,
       py,
       phase: (hashSeed(`${def.lon},${def.lat},${def.color}`) % 1000) / 1000,
-      height: u * 50,
+      height: u * 60,
     };
   });
 
@@ -48,14 +48,17 @@ export const PinShadows: React.FC<ShadowProps> = ({ pins, progress }) => (
       const bob = Math.sin(progress * Math.PI * 2 * 2 + p.phase * Math.PI * 2);
       const h = p.height * (1 + bob * 0.02);
       return (
-        <ellipse
-          key={i}
-          cx={p.px + h * 0.42}
-          cy={p.py + h * 0.16}
-          rx={h * 0.4}
-          ry={h * 0.17}
-          fill="url(#pinShadow)"
-        />
+        <g key={i}>
+          <ellipse
+            cx={p.px + h * 0.3}
+            cy={p.py + h * 0.1}
+            rx={h * 0.34}
+            ry={h * 0.135}
+            fill="url(#pinShadow)"
+          />
+          {/* hard little contact patch right where the point enters the map */}
+          <ellipse cx={p.px} cy={p.py} rx={h * 0.05} ry={h * 0.022} fill="#000" fillOpacity={0.5} />
+        </g>
       );
     })}
   </g>
@@ -113,30 +116,84 @@ export const PinBodies: React.FC<BodyProps> = ({ pins, g, progress, drift }) => 
       const H = p.height * s.scale * (1 + bob * 0.02);
       const lift = bob * H * 0.02;
       const c = PIN_COLORS[p.def.color];
-      const r = H * 0.27;
-      const hx = -H * 0.15;
-      const hy = -(H - r * 0.9);
-      const sw = H * 0.062;
-      const gid = `pinGrad-${p.def.color}`;
+
+      // Head sits on an axis that leans slightly left of vertical; the shaft is
+      // a tapered cone along that same axis, so the pin reads as one object
+      // pushed into the map rather than a ball balanced on a wire.
+      const r = H * 0.215;
+      const hx = -H * 0.055;
+      const hy = -(H - r * 1.02);
+      const len = Math.hypot(hx, hy);
+      const ux = hx / len;
+      const uy = hy / len;
+      const nx = -uy;
+      const ny = ux;
+      const topT = 0.80;
+      const tx = hx * topT;
+      const ty = hy * topT;
+      const half = H * 0.125;
+      const shaft = `M0,0 L${tx + nx * half},${ty + ny * half} L${tx - nx * half},${ty - ny * half} Z`;
+      // a narrower wedge on the lit side gives the cone its roundness
+      const lit = `M0,0 L${tx + nx * half * 0.92},${ty + ny * half * 0.92} L${tx + nx * half * 0.18},${ty + ny * half * 0.18} Z`;
+      const collarT = 0.7;
+      const angle = (Math.atan2(uy, ux) * 180) / Math.PI;
+
       return (
         <g key={i} transform={`translate(${s.x} ${s.y + lift})`}>
+          <path d={shaft} fill={c.rim} />
+          <path d={lit} fill={c.body} fillOpacity={0.85} />
           <path
-            d={`M0,0 L${hx * 0.5 - sw},${-H * 0.5} L${hx - sw * 1.5},${hy + r * 0.55}
-                L${hx + sw * 1.5},${hy + r * 0.55} L${hx * 0.5 + sw},${-H * 0.5} Z`}
-            fill={c.rim}
-            fillOpacity={0.95}
+            d={shaft}
+            fill="none"
+            stroke="#000"
+            strokeOpacity={0.28}
+            strokeWidth={H * 0.012}
           />
-          <ellipse cx={hx} cy={hy + r * 0.62} rx={r * 0.52} ry={r * 0.2} fill={c.rim} fillOpacity={0.9} />
-          <circle cx={hx} cy={hy} r={r} fill={`url(#${gid})`} />
-          <circle cx={hx} cy={hy} r={r} fill="none" stroke={c.rim} strokeOpacity={0.5} strokeWidth={H * 0.014} />
+          {/* collar where the shaft meets the head */}
           <ellipse
-            cx={hx - r * 0.33}
-            cy={hy - r * 0.38}
-            rx={r * 0.3}
-            ry={r * 0.2}
+            cx={hx * collarT}
+            cy={hy * collarT}
+            rx={H * 0.115}
+            ry={H * 0.042}
+            fill={c.rim}
+            transform={`rotate(${angle + 90} ${hx * collarT} ${hy * collarT})`}
+          />
+          <ellipse cx={hx} cy={hy} rx={r} ry={r * 0.96} fill={`url(#pinGrad-${p.def.color})`} />
+          {/* shaded crescent on the away side, then the specular */}
+          <circle
+            cx={hx + r * 0.3}
+            cy={hy + r * 0.32}
+            r={r * 0.82}
+            fill={c.rim}
+            fillOpacity={0.3}
+          />
+          <ellipse
+            cx={hx}
+            cy={hy}
+            rx={r}
+            ry={r * 0.96}
+            fill="none"
+            stroke="#000"
+            strokeOpacity={0.34}
+            strokeWidth={H * 0.014}
+          />
+          <ellipse
+            cx={hx - r * 0.36}
+            cy={hy - r * 0.4}
+            rx={r * 0.24}
+            ry={r * 0.14}
             fill="#ffffff"
-            fillOpacity={0.55}
-            transform={`rotate(-30 ${hx - r * 0.33} ${hy - r * 0.38})`}
+            fillOpacity={0.6}
+            transform={`rotate(-32 ${hx - r * 0.36} ${hy - r * 0.4})`}
+          />
+          <ellipse
+            cx={hx + r * 0.26}
+            cy={hy + r * 0.44}
+            rx={r * 0.24}
+            ry={r * 0.12}
+            fill="#ffffff"
+            fillOpacity={0.14}
+            transform={`rotate(-20 ${hx + r * 0.26} ${hy + r * 0.44})`}
           />
         </g>
       );

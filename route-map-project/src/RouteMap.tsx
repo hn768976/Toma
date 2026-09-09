@@ -47,7 +47,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           color: pal.route[def.color],
           dashArray: spec.array,
           dashPeriod: spec.period,
-          width: (def.weight ?? 1) * u * 1.55,
+          width: (def.weight ?? 1) * u * 1.9,
           // Whole dash periods per loop, so the march closes exactly. Derived
           // from a target travel distance so dotted and dashed lines march at
           // a similar rate rather than by their very different periods.
