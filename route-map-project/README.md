@@ -1,7 +1,7 @@
 # Route Map: Air & Shipping
 
 A Remotion project that renders an angled world-map plate — satellite base,
-graticule, curved route network, moving aircraft or vessel markers and upright
+curved route network, moving aircraft or vessel markers and upright
 pushpins — as a seamless 16-second loop.
 
 **Six regions are configured. All are defined at 3840×2160 / 30 fps / 480 frames.**
@@ -92,7 +92,12 @@ own gradients rather than covering the frame, which is worth about 23%.
 - **Banding:** in the deep water, a 400x260 sample uses 186 distinct luma
   levels with no stepped contours at 3.6x contrast boost; the baked bathymetry
   mottle plus the grain plate dither the gradient.
-- **Shipping lanes:** `npm run check` passes for all six regions.
+- **Shipping lanes:** `npm run check` passes for all six regions. It samples
+  the exact bowed curve the renderer draws, via the same `routePlanePoints`
+  and `sampleSpline` the component uses, so the check and the picture cannot
+  drift apart.
+- **No stray linework:** routes are the only lines on the plate. There is no
+  graticule and no survey decor.
 
 ## Data sources
 
@@ -136,7 +141,6 @@ Adding a region is a data entry plus one bake. No component changes.
    | `stdParallel` | Standard parallel; omit to use `center[1]`. Use `0` for a world view |
    | `palette` | `"warm"` (satellite) or `"cool"` (blue-grey shaded relief) |
    | `routeType` | `"air"`, `"shipping"` or `"mixed"` — the default marker species |
-   | `gridStep` / `gridMajor` | Minor graticule spacing in degrees, and a major line every N minor |
    | `edgeScale` | `[left, right]` base values for the two numeric readout columns |
    | `waterBoxes` | `[lonMin, latMin, lonMax, latMax]` boxes of open water; the survey decor is scattered inside them |
    | `routes` | See below |
@@ -146,7 +150,17 @@ Adding a region is a data entry plus one bake. No component changes.
    Two `pts` are drawn as a bowed arc (`bend`, a fraction of the chord —
    0.08–0.18 reads well). Three or more are smoothed through with a spline:
    **that is how shipping lanes are kept in the water** — give a sea route
-   enough waypoints that it never crosses land. `markers` is a weight, not a
+   enough waypoints that it never crosses land.
+
+   Waypoints that keep a lane in the water are often near-collinear, and a
+   spline through them renders as a dead straight line that reads as a ruler
+   stroke laid over the map. So every multi-point route is bowed out to a
+   minimum curvature (`MIN_BOW` in `src/lib/paths.ts`, 10% of the chord),
+   in whichever direction its waypoints already lean, on a squared-sine
+   profile that builds in the open middle and fades at the ends so waypoints
+   placed to thread a strait stay put. **Raising `MIN_BOW` pushes lanes
+   outward and can beach them — always re-run `npm run check` after.** At 0.12
+   three lanes go ashore, at 0.14 five do. `markers` is a weight, not a
    count: the component distributes its total (26 by default) across routes in
    proportion. `trips` must be a whole number so the loop closes.
 
@@ -176,7 +190,7 @@ src/
   lib/paths.ts             route curves; marker position + tangent heading
   lib/prng.ts              seeded PRNG (no Math.random at render time)
   lib/palettes.ts          the two colour treatments
-  components/              graticule, routes, markers, pins, depth of field
+  components/              routes, markers, pins, edge readouts, depth of field
 scripts/
   fetch-data.mjs           re-fetch and re-simplify the public-domain sources
   bake-basemaps.mjs        build public/basemaps/*.jpg from data/

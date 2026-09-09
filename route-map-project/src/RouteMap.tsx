@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { DepthOfField, Grain, Vignette } from "./components/Atmosphere";
-import { Graticule } from "./components/Graticule";
+import { EdgeReadouts } from "./components/EdgeReadouts";
 import { Markers, type MarkerInstance } from "./components/Markers";
 import { PinBodies, PinGradients, PinPulses, PinShadows, placePins } from "./components/Pushpins";
 import { dashSpec, EndpointDots, Routes, type PreparedRoute } from "./components/Routes";
@@ -134,7 +134,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             height={g.planeH}
             style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
           >
-            <Graticule
+            <EdgeReadouts
               region={region}
               g={g}
               pal={pal}

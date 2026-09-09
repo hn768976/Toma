@@ -13,7 +13,9 @@
  */
 
 import type { MapGeometry } from "./geo";
-import { toPlane } from "./geo";
+// explicit extension so the bake/check scripts can import this straight through
+// Node's TypeScript stripping, not only through the bundler
+import { toPlane } from "./geo.ts";
 import type { RouteDef } from "./types";
 
 const fmt = (n: number) => (Math.round(n * 100) / 100).toString();
@@ -60,8 +62,82 @@ const splinePath = (pts: [number, number][], tension = 0.5): string => {
   return d;
 };
 
-export const routePathData = (route: RouteDef, g: MapGeometry): string => {
+/** Minimum bow a multi-point route must show, as a fraction of its chord. */
+const MIN_BOW = 0.1;
+
+/**
+ * Waypoints chosen to keep a lane in the water are often close to collinear,
+ * and a spline through them renders as a dead straight line — which reads as a
+ * ruler stroke laid over the map rather than a route. This bows such a run out
+ * to a minimum curvature, in whichever direction it already leans, so it stays
+ * on the side of the chord its waypoints chose.
+ */
+const bowToMinimum = (pts: [number, number][], target: number): [number, number][] => {
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return pts;
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = -uy;
+  const ny = ux;
+
+  let extreme = 0;
+  for (const p of pts) {
+    const off = (p[0] - a[0]) * nx + (p[1] - a[1]) * ny;
+    if (Math.abs(off) > Math.abs(extreme)) extreme = off;
+  }
+  const add = target - Math.abs(extreme) / len;
+  if (add <= 0) return pts;
+  const sign = extreme >= 0 ? 1 : -1;
+
+  return pts.map(([x, y]) => {
+    const t = Math.min(1, Math.max(0, ((x - a[0]) * ux + (y - a[1]) * uy) / len));
+    // squared sine rather than sine: the bow builds in the open middle of the
+    // run and fades fast at the ends, so the waypoints that were placed to
+    // thread a strait or round a headland stay where they were put
+    const profile = Math.sin(t * Math.PI) ** 2;
+    const k = profile * add * len * sign;
+    return [x + nx * k, y + ny * k];
+  });
+};
+
+/**
+ * The route's waypoints in plane space, bowed. Exported so the land check can
+ * sample exactly the curve the renderer draws rather than an approximation of
+ * it — the two drifting apart is how a lane ends up crossing a coastline with
+ * a green check next to it.
+ */
+export const routePlanePoints = (route: RouteDef, g: MapGeometry): [number, number][] => {
   const pts = route.pts.map(([lon, lat]) => toPlane(lon, lat, g));
+  if (pts.length === 2) return pts;
+  return bowToMinimum(pts, route.bend ?? MIN_BOW);
+};
+
+/** Point at `t` (0..1) along a Catmull-Rom run through `pts`. */
+export const sampleSpline = (pts: [number, number][], t: number): [number, number] => {
+  const n = pts.length - 1;
+  const seg = Math.min(n - 1, Math.floor(t * n));
+  const u = t * n - seg;
+  const p0 = pts[seg === 0 ? 0 : seg - 1];
+  const p1 = pts[seg];
+  const p2 = pts[seg + 1];
+  const p3 = pts[Math.min(pts.length - 1, seg + 2)];
+  const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+  const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+  const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+  const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+  const m = 1 - u;
+  return [
+    m * m * m * p1[0] + 3 * m * m * u * c1x + 3 * m * u * u * c2x + u * u * u * p2[0],
+    m * m * m * p1[1] + 3 * m * m * u * c1y + 3 * m * u * u * c2y + u * u * u * p2[1],
+  ];
+};
+
+export const routePathData = (route: RouteDef, g: MapGeometry): string => {
+  const pts = routePlanePoints(route, g);
   if (pts.length === 2) {
     const midLat = (route.pts[0][1] + route.pts[1][1]) / 2;
     // +1 bows upward on screen (northern hemisphere), -1 downward

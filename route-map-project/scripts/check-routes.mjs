@@ -16,6 +16,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
 const { REGIONS } = await import(path.join(ROOT, "src/data/regions.ts"));
 const { mapGeometry, toPlane } = await import(path.join(ROOT, "src/lib/geo.ts"));
+const { routePlanePoints, sampleSpline } = await import(path.join(ROOT, "src/lib/paths.ts"));
 
 const args = process.argv.slice(2);
 const argVal = (k, d) => {
@@ -95,23 +96,11 @@ const wellInland = (lon, lat) => {
   return true;
 };
 
-// --- curve sampling, mirroring src/lib/paths.ts in lon/lat space
-const catmull = (pts, t) => {
-  const n = pts.length - 1;
-  const seg = Math.min(n - 1, Math.floor(t * n));
-  const u = t * n - seg;
-  const p0 = pts[seg === 0 ? 0 : seg - 1];
-  const p1 = pts[seg];
-  const p2 = pts[seg + 1];
-  const p3 = pts[Math.min(pts.length - 1, seg + 2)];
-  const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
-  const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
-  const m = 1 - u;
-  return [
-    m * m * m * p1[0] + 3 * m * m * u * c1[0] + 3 * m * u * u * c2[0] + u * u * u * p2[0],
-    m * m * m * p1[1] + 3 * m * m * u * c1[1] + 3 * m * u * u * c2[1] + u * u * u * p2[1],
-  ];
-};
+// Plane space -> lon/lat, the inverse of geo.toPlane.
+const toLonLat = (p, g) => [
+  g.centerLon + (p[0] - g.originX) / g.pxPerDegLon,
+  g.centerLat - (p[1] - g.originY) / g.pxPerDegLat,
+];
 
 /** Two-point arc: built in plane space like the renderer, then mapped back. */
 const arcSampler = (route, g) => {
@@ -151,7 +140,12 @@ for (const region of REGIONS) {
       route.mode === "sea" ||
       (!route.mode && (region.routeType === "shipping" || region.routeType === "mixed"));
     if (!isSea) continue;
-    const sample = route.pts.length === 2 ? arcSampler(route, g) : (t) => catmull(route.pts, t);
+    // exactly the geometry the renderer draws, bow included
+    const planePts = routePlanePoints(route, g);
+    const sample =
+      route.pts.length === 2
+        ? arcSampler(route, g)
+        : (t) => toLonLat(sampleSpline(planePts, t), g);
     const inland = [];
     for (let i = 0; i <= SAMPLES; i++) {
       const [lon, lat] = sample(i / SAMPLES);
