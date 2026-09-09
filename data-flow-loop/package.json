@@ -1,0 +1,31 @@
+{
+  "name": "data-flow-loop",
+  "version": "1.0.0",
+  "description": "4K abstract data-flow background loop (Remotion + three.js)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "render:4k:v1": "remotion render v1-cyan-copper out/v1-cyan-copper-4k.mp4",
+    "render:4k:v2": "remotion render v2-teal-magenta out/v2-teal-magenta-4k.mp4",
+    "render:4k:v3": "remotion render v3-violet-gold out/v3-violet-gold-4k.mp4",
+    "render:4k:all": "npm run render:4k:v1 && npm run render:4k:v2 && npm run render:4k:v3",
+    "render:1080:all": "remotion render v1-cyan-copper-1080 out/v1-cyan-copper-1080p.mp4 && remotion render v2-teal-magenta-1080 out/v2-teal-magenta-1080p.mp4 && remotion render v3-violet-gold-1080 out/v3-violet-gold-1080p.mp4",
+    "still:4k:all": "remotion still v1-cyan-copper out/v1-cyan-copper-frame150.png --frame=150 --image-format=png && remotion still v2-teal-magenta out/v2-teal-magenta-frame150.png --frame=150 --image-format=png && remotion still v3-violet-gold out/v3-violet-gold-frame150.png --frame=150 --image-format=png",
+    "verify:loop": "node tools/verify-loop.mjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.171.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.171.0",
+    "typescript": "5.9.3",
+    "pngjs": "^7.0.0"
+  }
+}
