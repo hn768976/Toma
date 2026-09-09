@@ -184,15 +184,18 @@ export const drawField = (ctx: CanvasRenderingContext2D, o: FieldOptions) => {
 
     const len = Math.hypot(x1 - x0, y1 - y0);
 
-    let w = (1.5 + p.bright * 1.5 + (p.fat ? 1.0 : 0)) * s;
-    w *= 0.82 + 0.35 * sn;
+    // 1.5 - 4 px at 4K: brightness carries most of it, the top ~8% get the
+    // extra px, and speed nudges it. Clamped so the widest streak still
+    // lands on 4 px rather than overshooting it.
+    let w = (1.5 + p.bright * 1.5 + (p.fat ? 1 : 0)) * (0.82 + 0.35 * sn);
+    w = clamp(w, 1.5, 4) * s;
 
     if (len < dotLimit) {
       // Calm starfield: a 1-2 px point at 4K. The radius is floored in device
       // pixels as well as in 4K-authored units, because a sub-pixel dot all
       // but vanishes once the frame is scaled down to 1080p.
       sampleRamp(palette, colourX, bodyRgb);
-      const dotR = Math.max(1.15 * s, 0.8, w * 0.5);
+      const dotR = Math.max(1 * s, 0.8, w * 0.5);
       // Points cover a tiny fraction of the frame and barely overlap, so they
       // can carry more alpha than a streak without the field blowing out.
       const dotAlpha = Math.min(1, alpha * 1.7);
