@@ -24,7 +24,25 @@ export const STREAK: EmberClass = 2;
 export const DEPTH_BUCKETS = 6;
 
 /** Cycle lengths, in frames. Every one divides 450 exactly. */
-const CYCLES = [150, 225, 450] as const;
+const CYCLES = [90, 150, 225, 450] as const;
+
+/**
+ * Rise speed, in fractions of frame height per frame.
+ *
+ * Drawn log-uniformly rather than from a narrow band: tracking blobs through
+ * the reference plate gives speeds spanning better than an order of magnitude
+ * within a single frame, from embers that barely creep to ones that cross in
+ * a couple of seconds. A tight speed distribution is what makes a particle
+ * field read as an escalator instead of as convection.
+ */
+const SPEED_MIN = 0.0005;
+const SPEED_MAX = 0.019;
+
+/** Skews the draw toward the faster end; 1 would be plain log-uniform. */
+const SPEED_SKEW = 0.88;
+
+/** Ideal path length as a multiple of the full span, used to choose a cycle. */
+const IDEAL_SPAN_MULTIPLE = 1.3;
 
 /**
  * How far above and below the frame an ember's path extends, as a fraction of
@@ -43,6 +61,8 @@ export type EmberSpec = {
   readonly offset: number;
   /** Path length as a multiple of the full top-to-bottom span. */
   readonly distScale: number;
+  /** Where the ember's path begins, in fractions of height. */
+  readonly yStart: number;
 
   readonly heat0: number;
   readonly coolRate: number;
@@ -87,7 +107,7 @@ export type EmberConfig = {
 
 /** Class mix: 60% pinpoints, 25% streaks, 15% orbs. */
 const pickClass = (r: number): EmberClass =>
-  r < 0.63 ? PINPOINT : r < 0.87 ? STREAK : ORB;
+  r < 0.56 ? PINPOINT : r < 0.84 ? STREAK : ORB;
 
 /**
  * Brightness by depth: mid-depth embers are brightest, near ones are dim and
@@ -122,10 +142,38 @@ const buildEmber = (rnd: () => number, cfg: EmberConfig): EmberSpec => {
         ? range(rnd, 0.26, 0.74)
         : rangeBiased(rnd, 0.2, 1.0, 0.8);
 
-  // Near embers cover more ground per second than far ones. That parallax is
-  // what sells depth without a camera.
-  const cycleBias = Math.min(0.999, depth * 0.85 + rnd() * 0.4);
-  const cycle = CYCLES[Math.min(CYCLES.length - 1, Math.floor(cycleBias * CYCLES.length))];
+  // Speed is drawn first and the cycle is fitted to it, rather than the other
+  // way round: deriving speed from distance/cycle ties it to the handful of
+  // cycle lengths that divide 450 and collapses the distribution.
+  // Near embers cover more ground per second than far ones — that parallax is
+  // what sells depth without a camera — so depth biases the draw upward.
+  const speedDraw = Math.min(1, rnd() * 0.78 + (1 - depth) * 0.26);
+  const riseSpeed =
+    SPEED_MIN *
+    Math.pow(SPEED_MAX / SPEED_MIN, Math.pow(speedDraw, SPEED_SKEW));
+
+  const span = 1 + 2 * MARGIN;
+  // Pick the cycle whose resulting path length sits closest to the ideal.
+  let cycle = CYCLES[CYCLES.length - 1];
+  let bestFit = Infinity;
+  for (const candidate of CYCLES) {
+    const fit = Math.abs(
+      Math.log((riseSpeed * candidate) / (span * IDEAL_SPAN_MULTIPLE)),
+    );
+    if (fit < bestFit) {
+      bestFit = fit;
+      cycle = candidate;
+    }
+  }
+  const distScale = (riseSpeed * cycle) / span;
+
+  // An ember whose path is shorter than the frame never traverses it, so it
+  // cannot start at the bottom edge — it would only ever be seen down there.
+  // Spread those over the full height instead; they still reset once per
+  // cycle, invisibly, behind the fade envelope.
+  const dist = distScale * span;
+  const yStart =
+    dist >= span ? 1 + MARGIN : range(rnd, dist - MARGIN, 1 + MARGIN);
 
   // The big defocused orbs sit in the orange band rather than the white-hot
   // one: a near-camera ember reading as a pale disc looks like dust, not fire.
@@ -147,16 +195,17 @@ const buildEmber = (rnd: () => number, cfg: EmberConfig): EmberSpec => {
     x0: range(rnd, -0.08, 1.08),
     cycle,
     offset: Math.floor(rnd() * cycle),
-    distScale: range(rnd, 0.95, 1.5) * cfg.riseBoost,
+    distScale: distScale * cfg.riseBoost,
+    yStart,
 
     heat0,
     coolRate: range(rnd, 0.2, 0.65),
     heatBucket0: heatBucket(heat0),
 
     // Near embers are displaced more by the same field — closer to the eye.
-    turbAmp: range(rnd, 0.6, 1.4) * (0.013 - depth * 0.0072),
+    turbAmp: rangeBiased(rnd, 0.08, 0.8, 2.4) * (0.056 - depth * 0.030),
     turbSeed: Math.floor(rnd() * 4) * 0x1f3d,
-    swayAmp: range(rnd, 0.0012, 0.0055) * (1.2 - depth * 0.7),
+    swayAmp: rangeBiased(rnd, 0.0008, 0.016, 2.2) * (1.2 - depth * 0.7),
     swayFreq: 2 + Math.floor(rnd() * 4),
     swayPhase: rnd(),
 
@@ -212,17 +261,45 @@ const cyclicDistance = (a: number, b: number): number => {
   return Math.min(d, 1 - d);
 };
 
-/** Horizontal position, in fractions of width, at a fractional frame. */
-const emberX = (
+/**
+ * How much of the curl field's vertical component is applied, relative to its
+ * horizontal one. Buoyancy dominates, so eddies push embers sideways more
+ * readily than up or down — but not so much less that an ember can never be
+ * carried backwards, which is what makes a field read as convection rather
+ * than as an escalator.
+ */
+const VERTICAL_TURBULENCE = 0.62;
+
+type Point = { x: number; y: number };
+
+/**
+ * Position at a fractional frame, in fractions of width and height. `t` is the
+ * ember's own position in its cycle; the caller derives it so that the
+ * velocity samples share one definition of the path.
+ */
+const emberPosition = (
   e: EmberSpec,
-  y: number,
+  t: number,
   frame: number,
   loopFrames: number,
-): number => {
+  aspect: number,
+  span: number,
+): Point => {
+  const yBase = e.yStart - span * e.distScale * t;
   const phase = frame / loopFrames;
-  const curl = curlNoise(e.x0 * 2.1, y * 3.0, phase, e.turbSeed);
+  // Sample the field along the ember's progress through its cycle rather than
+  // its actual travel, so a fast ember is not also deflected faster. Tying the
+  // sample to real position couples deflection to rise speed, which throws the
+  // fast tail of the speed distribution well past the reference.
+  const noiseY = e.yStart - span * t;
+  const curl = curlNoise(e.x0 * 1.5, noiseY * 1.9, phase, e.turbSeed);
   const sway = Math.sin(TAU * (e.swayFreq * phase + e.swayPhase));
-  return e.x0 + curl.x * e.turbAmp + sway * e.swayAmp;
+  return {
+    x: e.x0 + curl.x * e.turbAmp + sway * e.swayAmp,
+    // turbAmp is in fractions of width; scale by the aspect ratio so a given
+    // eddy displaces by the same number of pixels in both axes.
+    y: yBase + curl.y * e.turbAmp * aspect * VERTICAL_TURBULENCE,
+  };
 };
 
 export type EmberSample = {
@@ -264,33 +341,28 @@ export const sampleEmber = (
   out: EmberSample,
 ): EmberSample => {
   const span = 1 + 2 * MARGIN;
-  const dist = span * e.distScale;
-  const t = (((frame + e.offset) % e.cycle) + e.cycle) % e.cycle / e.cycle;
+  const cyclePos = (f: number) =>
+    ((((f + e.offset) % e.cycle) + e.cycle) % e.cycle) / e.cycle;
+  const t = cyclePos(frame);
 
-  const y = 1 + MARGIN - dist * t;
+  const here = emberPosition(e, t, frame, loopFrames, aspect, span);
 
   // Below the bottom edge or well past the top: nothing to draw.
-  if (y > 1 + MARGIN * 0.5 || y < -MARGIN * 0.5) {
+  if (here.y > 1 + MARGIN * 0.5 || here.y < -MARGIN * 0.5) {
     out.visible = false;
     return out;
   }
 
-  const x = emberX(e, y, frame, loopFrames);
-
   // Streak orientation must follow the actual velocity vector, turbulence
   // included — so take it from the path itself rather than assuming vertical.
   const dt = 0.5;
-  const tBack = (((frame - dt + e.offset) % e.cycle) + e.cycle) % e.cycle / e.cycle;
-  const tFwd = (((frame + dt + e.offset) % e.cycle) + e.cycle) % e.cycle / e.cycle;
-  const yBack = 1 + MARGIN - dist * tBack;
-  const yFwd = 1 + MARGIN - dist * tFwd;
-  const xBack = emberX(e, yBack, frame - dt, loopFrames);
-  const xFwd = emberX(e, yFwd, frame + dt, loopFrames);
+  const back = emberPosition(e, cyclePos(frame - dt), frame - dt, loopFrames, aspect, span);
+  const fwd = emberPosition(e, cyclePos(frame + dt), frame + dt, loopFrames, aspect, span);
 
   // Convert the horizontal component to height units so the angle is correct
   // on a non-square frame.
-  const vx = (xFwd - xBack) * aspect;
-  const vy = yFwd - yBack;
+  const vx = (fwd.x - back.x) * aspect;
+  const vy = fwd.y - back.y;
   const vLen = Math.hypot(vx, vy) || 1e-6;
 
   const phase = frame / loopFrames;
@@ -307,8 +379,8 @@ export const sampleEmber = (
       ? 1
       : smoothstep(0, e.winkWidth, cyclicDistance(t, e.winkCenter));
 
-  out.x = x;
-  out.y = y;
+  out.x = here.x;
+  out.y = here.y;
   out.dx = vx / vLen;
   out.dy = vy / vLen;
   out.speed = vLen;

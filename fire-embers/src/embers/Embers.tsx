@@ -17,7 +17,7 @@ import { getSprites, stretchBucket } from "./sprites";
 const BLOOM_STRENGTH = 0.8;
 
 /** Typical distance covered per frame, used to normalise streak stretching. */
-const REFERENCE_SPEED = 0.0055;
+const REFERENCE_SPEED = 0.0069;
 
 export type EmbersProps = {
   readonly config: EmberConfig;

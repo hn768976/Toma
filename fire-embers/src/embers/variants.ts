@@ -20,7 +20,7 @@ export type Variant = {
 export const V1_WARM: Variant = {
   id: "V1-EmbersWarm",
   config: {
-    count: 430,
+    count: 350,
     palette: WARM,
     riseBoost: 1,
     hazeIntensity: 1,
@@ -32,7 +32,7 @@ export const V1_WARM: Variant = {
 export const V2_COOL: Variant = {
   id: "V2-EmbersCool",
   config: {
-    count: 430,
+    count: 350,
     palette: COOL,
     riseBoost: 1,
     hazeIntensity: 0.9,
@@ -44,7 +44,7 @@ export const V2_COOL: Variant = {
 export const V3_DENSE: Variant = {
   id: "V3-EmbersDense",
   config: {
-    count: 1450,
+    count: 1185,
     palette: WARM,
     riseBoost: 1.32,
     hazeIntensity: 1.3,

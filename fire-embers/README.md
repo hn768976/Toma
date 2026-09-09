@@ -78,7 +78,9 @@ REMOTION_BROWSER_EXECUTABLE=/path/to/chrome npx remotion render V1-EmbersWarm ..
   mutable particle array would both flicker and fail to loop.
 - `src/embers/noise.ts` — curl-noise turbulence, sampled on a *circle* through
   two extra noise dimensions so the field itself repeats exactly over 450
-  frames.
+  frames. The curl is applied to both axes, not just horizontally: an ember
+  caught in an eddy can be carried sideways and briefly backwards, which is
+  the difference between convection and an escalator.
 - `src/embers/sprites.ts` — cached sprites per (shape, softness, colour) bucket.
   Blurring hundreds of elements individually is hopeless; these are rasterised
   once and scaled and rotated per particle. Gradients carry a dither in the
@@ -95,8 +97,18 @@ large defocused orbs. Each ember carries a depth value that drives its size,
 blur, brightness and speed — the speed difference is what reads as parallax
 without any camera in the scene.
 
+Rise speed is drawn log-uniformly, spanning better than an order of magnitude
+within a single frame, and the cycle length is then fitted to that speed —
+rather than the other way round, which ties speed to the handful of cycle
+lengths that divide 450 and collapses the distribution into a uniform crawl.
+
 Every particle cycle length divides 450 exactly, and each ember's phase offset
 is staggered, so resets are invisible in aggregate.
+
+The motion was matched to the reference plate by measurement rather than by
+eye: blobs are tracked frame to frame in both, and the resulting distributions
+of speed, direction and net drift are compared. Judging this from stills does
+not work — a field can look right frozen and still move like an escalator.
 
 ## Tuning
 

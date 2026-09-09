@@ -81,7 +81,7 @@ export const noise4 = (
 };
 
 /** Radius of the circle traced through the two time dimensions. */
-const TIME_RADIUS = 1.35;
+const TIME_RADIUS = 2.2;
 
 /**
  * Two octaves of potential, sampled on the time circle. `phase` is the
