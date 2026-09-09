@@ -1,0 +1,23 @@
+{
+  "name": "gradient-button",
+  "version": "1.0.0",
+  "description": "Gradient border button — animated placeholder pill (Remotion, 4K, 30fps, seamless 20s loop)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "render:4k": "remotion render V1-GradientButtonSpectrum out/V1_GradientButtonSpectrum.mp4 --scale=1 --crf=15",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}

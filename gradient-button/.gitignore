@@ -1,0 +1,8 @@
+node_modules
+out
+dist
+.DS_Store
+.env
+
+# Packaged deliverable, rebuilt from source
+gradient-button-project.zip
