@@ -1,0 +1,26 @@
+{
+  "name": "glitter-ring",
+  "version": "1.0.0",
+  "description": "Golden/silver/rose-gold glitter ring loops (Remotion, 3840x2160, 30fps, 20s)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "lint": "tsc --noEmit",
+    "render:gold": "remotion render V1-GlitterRingGold out/V1_GlitterRingGold.mp4 --scale=1 --crf=15",
+    "render:silver": "remotion render V2-GlitterRingSilver out/V2_GlitterRingSilver.mp4 --scale=1 --crf=15",
+    "render:rosegold": "remotion render V3-GlitterRingRoseGold out/V3_GlitterRingRoseGold.mp4 --scale=1 --crf=15"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.4",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
