@@ -1,0 +1,3 @@
+# Packaged deliverables — rebuild with:
+#   zip -qr data-flow-loop.zip data-flow-loop -x "data-flow-loop/node_modules/*" "data-flow-loop/out/*"
+*.zip
