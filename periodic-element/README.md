@@ -214,9 +214,11 @@ settle, the glow breathing and the grain.
 
 Note that a rotating plane in perspective still moves its *bounding box*, even
 though its centre is fixed — the near edge magnifies and the far edge shrinks.
-Measured on the delivered previews that is about 8 px at 1920 wide for V1 and
-18 px for V2, and it is inherent to the specified rotation, not a translation
-that can be removed. What can be kept small is anything moving *near* the
+Measured on the delivered previews that is about 6 px at 1920 wide for V1 and
+28 px for V2, and it is inherent to the specified rotation, not a translation
+that can be removed. It scales with the card: V2's figure was 18 px before the
+card grew from 0.40 to 0.48 of frame height. The only levers on it are card
+size and swing amplitude. What can be kept small is anything moving *near* the
 card: V2's shadow tracks the rotation, but its lateral travel is deliberately
 limited (`0.035` and `0.02` of the card size, in `src/v2/MetallicScene.tsx`),
 because a shadow sliding under a static card reads as the card drifting.
