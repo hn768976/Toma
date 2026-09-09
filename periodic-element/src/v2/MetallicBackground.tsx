@@ -23,10 +23,11 @@ type Ribbon = {
 /**
  * Two ribbons, and nothing else — they are the whole background.
  *
- * The base positions are set deliberately rather than scattered: one runs
- * through the left third, the other crosses behind the card. That keeps the
- * pair spaced across the frame and puts lit ground under the card for its
- * shadow to fall on. Only the sway phases come from the seed.
+ * Both are placed to run behind the card. At a 0.48 card fraction the card
+ * spans roughly 0.365 to 0.635 of frame width, so the bases sit at 0.42 and
+ * 0.60: far enough apart to stay two distinct ribbons, both inside the card's
+ * band. That also guarantees lit ground under the card for its shadow to fall
+ * on. Only the sway phases come from the seed.
  */
 const RIBBONS: Ribbon[] = (() => {
   const rng = makeRandom("metallic-ribbons");
@@ -41,7 +42,7 @@ const RIBBONS: Ribbon[] = (() => {
     haloOpacity: number;
   }[] = [
     {
-      base: 0.26,
+      base: 0.42,
       core: "#e8ccff",
       halo: "#7b3fe4",
       coreWidth: 0.0055,
@@ -50,7 +51,7 @@ const RIBBONS: Ribbon[] = (() => {
       haloOpacity: 0.26,
     },
     {
-      base: 0.56,
+      base: 0.6,
       core: "#f7bdf0",
       halo: "#a32f92",
       coreWidth: 0.0038,
@@ -62,18 +63,18 @@ const RIBBONS: Ribbon[] = (() => {
 
   return specs.map((sp) => ({
     xs: [
-      sp.base + range(rng, -0.03, 0.03),
-      sp.base + range(rng, 0.05, 0.14),
-      sp.base + range(rng, -0.14, -0.05),
-      sp.base + range(rng, -0.03, 0.03),
+      sp.base + range(rng, -0.025, 0.025),
+      sp.base + range(rng, 0.04, 0.1),
+      sp.base + range(rng, -0.1, -0.04),
+      sp.base + range(rng, -0.025, 0.025),
     ] as [number, number, number, number],
     // The background carries the drift in this composition, so the ribbons
     // sway a little more than they used to.
     amps: [
-      range(rng, 0.015, 0.035),
-      range(rng, 0.06, 0.11),
-      range(rng, 0.06, 0.11),
-      range(rng, 0.015, 0.035),
+      range(rng, 0.012, 0.028),
+      range(rng, 0.04, 0.08),
+      range(rng, 0.04, 0.08),
+      range(rng, 0.012, 0.028),
     ] as [number, number, number, number],
     phases: [rng() * TAU, rng() * TAU, rng() * TAU, rng() * TAU] as [
       number,

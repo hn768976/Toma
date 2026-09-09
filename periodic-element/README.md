@@ -3,13 +3,12 @@
 Two styles of periodic-table element card, animated as a 10-second clip per
 element. Compositions are authored at **3840×2160, 30 fps, 300 frames**.
 
-- **V1 — neon blue.** A neon-outlined rounded tile on a dark navy field of
-  out-of-focus periodic-table squares. The card enters rotated and settles
-  face-on.
+- **V1 — neon blue.** A neon-outlined rounded tile on a plain dark navy
+  gradient. The card enters rotated and settles face-on.
 - **V2 — metallic on purple.** A sharp-cornered metal-framed card on a deep
-  purple field with two flowing violet ribbons. The card swings continuously
-  around its vertical axis and the brushed-metal gradient on the symbol
-  travels with it.
+  purple field, with two flowing violet ribbons running behind it. The card
+  swings continuously around its vertical axis and the brushed-metal gradient
+  on the symbol travels with it.
 
 The set currently ships three elements — Hydrogen, Lithium and Mercury —
 chosen to cover the layout's extremes: a one-character symbol with a
@@ -74,9 +73,13 @@ The card's edge length is a fraction of frame height, set in
 These match the reference clips, which measure roughly 0.50 and 0.54. Every
 content size is a fraction of the card's edge length, so changing these two
 numbers rescales both cards completely, identically, for all 118 elements.
-Two values elsewhere are expressed in frame-height units rather than card
-units and were set to follow the card: the ghost-tile keep-out radius and the
-background glow radius, both in `src/v1/NeonBackground.tsx`.
+
+Two values elsewhere are in frame-height units rather than card units, and
+follow the card by hand if you change it: the background glow radius in
+`src/v1/NeonBackground.tsx`, and the ribbon base positions in
+`src/v2/MetallicBackground.tsx` — those are chosen so both ribbons fall
+inside the card's horizontal band (at 0.48 the card spans about 0.365 to
+0.635 of frame width).
 
 ## Atomic mass convention
 
@@ -135,17 +138,19 @@ which the layout is sized for), and the symbol is at most two letters.
   `perspective` container, rotated with `rotateX`/`rotateY`. The type stays
   live text under the transform, so it is crisp at any render scale. Nothing
   is rasterised — the only `blur()` filters are on separate decorative copies
-  (the bloom pass, the bokeh, the ribbons), never on a layer containing type.
+  (the bloom pass, the shadow, the ribbons), never on a layer containing type.
 - **Everything is a pure function of `useCurrentFrame()`.** No state, no
   timers, no `Math.random()` at render time — Remotion renders frames out of
   order across threads, so anything else would flicker. Scatter comes from a
-  seeded mulberry32 PRNG in `src/lib/random.ts`, evaluated once at module load.
+  seeded mulberry32 PRNG in `src/lib/random.ts`, evaluated once at module
+  load — currently only the ribbon sway phases and the grain offsets.
 - **Sizes are fractions of frame height** via `useVideoConfig()`, so a 4K
   render and a 1080p preview are the same picture at different scales.
-- **No particle layers.** V1's background is ghost tiles only — out-of-focus
-  periodic-table squares on a jittered lattice, which read as context. V2's is
-  two ribbons and nothing else. Drifting circles were removed deliberately;
-  don't reintroduce them.
+- **The backgrounds are deliberately bare.** V1 is a navy radial gradient and
+  a soft glow behind the card — no shapes at all. Both the drifting bokeh and
+  the out-of-focus periodic-table squares were removed on review; don't
+  reintroduce either. V2 is two ribbons and nothing else, both positioned to
+  run behind the card.
 - **Fonts are embedded.** Inter (SIL Open Font License 1.1) ships in
   `public/fonts` and is registered through `FontFace` in `src/load-fonts.ts`
   behind a `delayRender()`. No system font is relied on, and no network fetch
@@ -159,9 +164,8 @@ which the layout is sized for), and the symbol is at most two letters.
 ### Looping
 
 The 300-frame cycle is closed for everything driven by a sine of
-`frame / 300` or by a whole-cycle wrap: the bokeh field, the ghost tiles, the
-neon glow breath, the ribbons, the grain, and V2's card rotation, sheen and
-metal gradient. **V2 loops seamlessly end to end.**
+`frame / 300`: the neon glow breath, the ribbons, the grain, and V2's card
+rotation, sheen and metal gradient. **V2 loops seamlessly end to end.**
 
 **V1's card does not**, deliberately: its brief calls for the card to start at
 ~35° and settle face-on over the first 90 frames, then hold. That is an
@@ -190,9 +194,10 @@ longest element name.
 
 The card group carries **no translation** in either style — only
 `rotateX`/`rotateY`/`rotateZ` about its own centre, with `perspective-origin`
-pinned to `50% 50%`, which is both the card's centre and the frame's. All
-drift belongs to the background: the ghost tiles in V1, the ribbons in V2.
-Don't add a translate to the card.
+pinned to `50% 50%`, which is both the card's centre and the frame's. Don't
+add a translate to the card. In V2 the ribbons carry the background drift;
+V1's background has no moving shapes left, so its motion is the card's
+settle, the glow breathing and the grain.
 
 Note that a rotating plane in perspective still moves its *bounding box*, even
 though its centre is fixed — the near edge magnifies and the far edge shrinks.
