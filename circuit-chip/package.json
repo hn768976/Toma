@@ -1,0 +1,25 @@
+{
+  "name": "circuit-chip",
+  "version": "1.0.0",
+  "description": "Radial Circuit Chip - looping 4K stock motion backgrounds (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "render:blue": "remotion render V1-CircuitChipBlue out/V1_CircuitChipBlue.mp4 --scale=1 --crf=16",
+    "render:amber": "remotion render V2-CircuitChipAmber out/V2_CircuitChipAmber.mp4 --scale=1 --crf=16",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3"
+  }
+}
