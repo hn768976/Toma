@@ -39,7 +39,9 @@ npx remotion render V3-HUDFrameOverlayAmber out/V3_HUDFrameOverlayAmber.mp4 --sc
 otherwise attach; `ffprobe` on the result should show a single video stream.
 Drop `--scale=1` to `--scale=0.5` for a 1920×1080 preview — every size in the
 project is a fraction of `useVideoConfig()`, so the two are identical up to
-resolution. Stills:
+resolution. The delivered previews were made that way at `--crf=20` for V1 and
+`--crf=17` for V2/V3; V1's dither costs bits, so keep its CRF tighter than you
+would for a flat graphic. Stills:
 
 ```bash
 npx remotion still V1-HUDFrameBlue out/V1_HUDFrameBlue.png --frame=420 --scale=0.5
