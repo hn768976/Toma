@@ -55,7 +55,8 @@ bare commands above are complete. To be fully explicit:
 
 ```bash
 npx remotion render v1-cyan-copper out/v1-cyan-copper-4k.mp4 \
-  --codec=h264 --pixel-format=yuv420p --crf=16 --gl=swangle --concurrency=4
+  --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png \
+  --muted --gl=swangle --concurrency=4
 ```
 
 4K stills at frame 150 (the stock-image grabs):
@@ -70,6 +71,14 @@ or `npm run still:4k:all`.
 
 ### Rendering notes
 
+- **Lossless intermediate frames.** `videoImageFormat` is `png`, not Remotion's
+  default `jpeg`. Almost the whole image sits in the bottom quarter of the
+  tonal range, where JPEG at quality 80 costs a mean of 2.17/255 against a PNG
+  reference, with peaks of 80/255 — blocking around the hairlines. PNG measured
+  no slower on a 30-frame benchmark and gave a *smaller* output file, because
+  the encoder stops spending bitrate on compression artifacts.
+- **No audio track.** `Config.setMuted(true)` — otherwise Remotion muxes a
+  silent stereo AAC track into the MP4.
 - **Software GL.** `remotion.config.ts` sets `swangle` (SwiftShader via ANGLE),
   which is what works headlessly on a machine with no GPU. On a desktop with a
   real GPU, `--gl=angle` is considerably faster.
