@@ -1,0 +1,27 @@
+{
+  "name": "digital-debris",
+  "version": "1.0.0",
+  "description": "Digital Debris Field — abstract 4K motion-graphic background loops (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc",
+    "render:v1": "remotion render V1-DigitalDebrisTeal out/V1_DigitalDebrisTeal.mp4 --scale=0.5 --crf=16",
+    "render:v2": "remotion render V2-DigitalDebrisViolet out/V2_DigitalDebrisViolet.mp4 --scale=0.5 --crf=16",
+    "still:v1": "remotion still V1-DigitalDebrisTeal out/V1_DigitalDebrisTeal.png --scale=0.5 --frame=150",
+    "still:v2": "remotion still V2-DigitalDebrisViolet out/V2_DigitalDebrisViolet.png --scale=0.5 --frame=150"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
