@@ -73,11 +73,15 @@ export const SILVER: Palette = {
  * measured in the disc's own (un-squashed) plane.
  */
 export const WHEEL = {
-  /** Outer radius as a fraction of frame height. */
-  radiusOfHeight: 0.868,
+  /**
+   * Outer radius as a fraction of frame height. The vertical squash makes the
+   * disc widest horizontally, so it is the frame's height that caps this: the
+   * whole dotted ring has to clear the top and bottom edges.
+   */
+  radiusOfHeight: 0.77,
   /** Centre position as a fraction of frame width / height. */
-  centerX: 0.383,
-  centerY: 0.562,
+  centerX: 0.468,
+  centerY: 0.515,
   /** The single fixed vertical squash that bakes in the tilt. */
   squash: 0.575,
 
@@ -99,7 +103,7 @@ export const WHEEL = {
   rBurst: 0.148,
 
   /** Faint ellipses and radials that continue past the wheel. */
-  rHalo: [1.09, 1.185, 1.34] as const,
+  rHalo: [1.055, 1.17, 1.34] as const,
   rRadialOut: 2.4,
 } as const;
 
