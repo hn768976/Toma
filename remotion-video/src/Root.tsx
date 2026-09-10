@@ -18,6 +18,18 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  AIHubNetwork,
+  aiHubSchema,
+  aiHubBlueDefaults,
+  aiHubTealDefaults,
+} from "./ai-hub/AIHubNetwork";
+import {
+  BASE_WIDTH as HUB_WIDTH,
+  BASE_HEIGHT as HUB_HEIGHT,
+  DURATION_IN_FRAMES as HUB_DURATION_IN_FRAMES,
+  FPS as HUB_FPS,
+} from "./ai-hub/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +63,26 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="V1-AIHubBlue"
+        component={AIHubNetwork}
+        durationInFrames={HUB_DURATION_IN_FRAMES}
+        fps={HUB_FPS}
+        width={HUB_WIDTH}
+        height={HUB_HEIGHT}
+        schema={aiHubSchema}
+        defaultProps={aiHubBlueDefaults}
+      />
+      <Composition
+        id="V2-AIHubTeal"
+        component={AIHubNetwork}
+        durationInFrames={HUB_DURATION_IN_FRAMES}
+        fps={HUB_FPS}
+        width={HUB_WIDTH}
+        height={HUB_HEIGHT}
+        schema={aiHubSchema}
+        defaultProps={aiHubTealDefaults}
       />
     </>
   );
