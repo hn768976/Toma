@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <!-- Capsule rotated via a group transform (tests transform flattening). One half filled, outline stroked. -->
+  <g transform="rotate(-38 500 500)">
+    <rect x="270" y="400" width="460" height="200" rx="100" fill="none" stroke="#000" stroke-width="16"/>
+    <path fill="#000" d="M 500 430 H 370 A 70 70 0 0 0 370 570 H 500 Z"/>
+    <line x1="500" y1="400" x2="500" y2="600" stroke="#000" stroke-width="16"/>
+  </g>
+</svg>

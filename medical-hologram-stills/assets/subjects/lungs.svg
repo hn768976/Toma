@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <!-- Lungs with trachea and bronchi. Mixed fill + stroke artwork. -->
+  <g fill="none" stroke="#000" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 500 110 V 330"/>
+    <path d="M 500 330 C 500 400 450 420 400 440"/>
+    <path d="M 500 330 C 500 400 550 420 600 440"/>
+  </g>
+  <path fill="#000" d="M 455 400 C 455 330 340 320 280 400 C 200 500 170 720 240 850 C 290 940 420 930 455 830 C 460 760 460 500 455 400 Z"/>
+  <path fill="#000" d="M 545 400 C 545 330 660 320 720 400 C 800 500 830 720 760 850 C 710 940 580 930 545 830 C 540 760 540 500 545 400 Z"/>
+</svg>

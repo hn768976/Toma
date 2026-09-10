@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <!-- Erlenmeyer flask outline with filled liquid and rising bubbles. -->
+  <path fill="none" stroke="#000" stroke-width="16" stroke-linejoin="round" d="M 420 120 H 580 V 380 L 760 780 C 790 850 750 900 690 900 H 310 C 250 900 210 850 240 780 L 420 380 Z"/>
+  <path fill="#000" d="M 345 640 H 655 L 760 780 C 790 850 750 900 690 900 H 310 C 250 900 210 850 240 780 Z"/>
+  <g fill="none" stroke="#000" stroke-width="12">
+    <circle cx="470" cy="540" r="24"/>
+    <circle cx="540" cy="470" r="16"/>
+    <circle cx="505" cy="600" r="12"/>
+  </g>
+</svg>

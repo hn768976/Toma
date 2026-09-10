@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <!-- Stethoscope. Stroke tubing, stroked chest piece with a filled diaphragm. -->
+  <g fill="none" stroke="#000" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 300 120 V 400 C 300 520 380 600 480 600 C 580 600 660 520 660 400 V 120"/>
+    <path d="M 480 600 V 700 C 480 800 560 860 660 860 C 740 860 800 800 800 720 V 540"/>
+    <path d="M 270 100 H 330 M 630 100 H 690"/>
+  </g>
+  <circle cx="800" cy="480" r="80" fill="none" stroke="#000" stroke-width="24"/>
+  <circle cx="800" cy="480" r="40" fill="#000"/>
+</svg>

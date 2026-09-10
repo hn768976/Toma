@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
+  <!-- Stylised heart with a pulse line, drawn off-centre in a padded viewBox on purpose (tests bbox centring). -->
+  <path fill="#e11d48" d="M 520 300 C 440 210 300 200 220 280 C 130 370 140 510 230 610 L 520 900 L 810 610 C 900 510 910 370 820 280 C 740 200 600 210 520 300 Z"/>
+  <path fill="none" stroke="#e11d48" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" d="M 190 560 H 380 L 430 470 L 500 640 L 560 400 L 620 560 H 850"/>
+</svg>

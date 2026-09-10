@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <!-- Protection shield with medical cross. Outline-only artwork (stroke mode). -->
+  <g fill="none" stroke="#1d4ed8" stroke-width="12" stroke-linejoin="round">
+    <path d="M 500 110 L 810 250 L 810 560 C 810 750 660 880 500 950 C 340 880 190 750 190 560 L 190 250 Z"/>
+    <path d="M 500 175 L 760 290 L 760 555 C 760 720 630 830 500 890 C 370 830 240 720 240 555 L 240 290 Z"/>
+    <path d="M 462 380 H 538 V 462 H 620 V 538 H 538 V 620 H 462 V 538 H 380 V 462 H 462 Z"/>
+  </g>
+</svg>

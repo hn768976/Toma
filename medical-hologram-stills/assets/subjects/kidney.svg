@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <!-- Kidney (bean with hilum) plus ureter. Mixed fill + stroke. -->
+  <path fill="#000" d="M 500 150 C 320 130 220 320 240 520 C 255 690 330 870 500 860 C 640 850 700 740 700 660 C 700 610 620 600 610 540 C 600 480 690 470 690 400 C 690 280 640 165 500 150 Z"/>
+  <path fill="none" stroke="#000" stroke-width="26" stroke-linecap="round" d="M 640 590 C 720 600 740 700 730 800 C 725 860 720 900 720 940"/>
+</svg>

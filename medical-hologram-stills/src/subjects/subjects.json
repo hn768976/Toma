@@ -1,0 +1,17 @@
+[
+  { "id": "shield-cross",    "name": "Protection Shield",  "svg": "shield-cross.svg",    "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "large-intestine", "name": "Large Intestine",    "svg": "large-intestine.svg", "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "heart",           "name": "Heart",              "svg": "heart.svg",           "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "lungs",           "name": "Lungs",              "svg": "lungs.svg",           "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "kidney",          "name": "Kidney",             "svg": "kidney.svg",          "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "tooth",           "name": "Tooth",              "svg": "tooth.svg",           "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "dna-helix",       "name": "DNA Helix",          "svg": "dna-helix.svg",       "scaleOverride": 0.62, "colourways": ["blue", "violet"] },
+  { "id": "virus",           "name": "Virus",              "svg": "virus.svg",           "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "pill-capsule",    "name": "Capsule",            "svg": "pill-capsule.svg",    "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "syringe",         "name": "Syringe",            "svg": "syringe.svg",         "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "flask",           "name": "Laboratory Flask",   "svg": "flask.svg",           "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "stethoscope",     "name": "Stethoscope",        "svg": "stethoscope.svg",     "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "eye",             "name": "Eye",                "svg": "eye.svg",             "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "brain",           "name": "Brain",              "svg": "brain.svg",           "scaleOverride": null, "colourways": ["blue", "violet"] },
+  { "id": "heartbeat",       "name": "Heartbeat",          "svg": "heartbeat.svg",       "scaleOverride": 0.68, "colourways": ["blue", "violet"] }
+]
