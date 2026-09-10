@@ -1,0 +1,27 @@
+{
+  "name": "washi-motif",
+  "version": "1.0.0",
+  "description": "Washi paper motif still-image generator (Remotion, 2D canvas)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "still": "remotion still WashiMotif",
+    "batch": "esbuild scripts/render-batch.ts --bundle --platform=node --format=esm --external:remotion --outfile=out/.render-batch.mjs --log-level=warning && node out/.render-batch.mjs",
+    "contact-sheet": "remotion still ContactSheet out/contact-sheet.png",
+    "lint": "tsc",
+    "check:layout": "esbuild scripts/check-layout.ts --bundle --platform=node --format=esm --external:remotion --outfile=out/.check-layout.mjs --log-level=warning && node out/.check-layout.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "esbuild": "^0.28.1",
+    "typescript": "5.9.3"
+  }
+}
