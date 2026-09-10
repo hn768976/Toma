@@ -15,7 +15,11 @@ export const Grain: React.FC<{ amount?: number; seed?: number }> = ({
   seed = 4242,
 }) => {
   const frame = useCurrentFrame();
-  const { width, height } = useVideoConfig();
+  const config = useVideoConfig();
+  // Grain is drawn at 1080p and stretched to fill: it is high-frequency noise,
+  // so a 4K buffer buys nothing and costs real compositing time every frame.
+  const width = Math.min(config.width, 1920);
+  const height = Math.round((width / config.width) * config.height);
   const ref = React.useRef<HTMLCanvasElement>(null);
 
   const tiles = React.useMemo(

@@ -47,6 +47,12 @@ export type NebulaSpec = {
   accent: number;
   /** Overrides the palette's nebula ramp -- used for the cool accent clouds. */
   colors?: [string, string, string];
+  /**
+   * Blur applied to the field once at build time, in source pixels. Softening
+   * the small source is equivalent to blurring the upscaled draw, but it costs
+   * nothing per frame -- blurring a 4K composite every frame does not.
+   */
+  blur?: number;
 };
 
 const nebulaCache = new Map<string, HTMLCanvasElement>();
@@ -136,6 +142,18 @@ export const buildNebula = (
   }
 
   ctx.putImageData(img, 0, 0);
+
+  if (spec.blur) {
+    const soft = document.createElement("canvas");
+    soft.width = w;
+    soft.height = h;
+    const sctx = soft.getContext("2d")!;
+    sctx.filter = `blur(${spec.blur}px)`;
+    sctx.drawImage(canvas, 0, 0);
+    nebulaCache.set(key, soft);
+    return soft;
+  }
+
   nebulaCache.set(key, canvas);
   return canvas;
 };

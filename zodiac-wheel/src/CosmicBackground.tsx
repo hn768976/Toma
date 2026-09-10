@@ -39,6 +39,7 @@ const layerSpecs = (
     maxAlpha: 0.88,
     dust: 0.45,
     accent: 0.18,
+    blur: 1.1,
   },
   {
     seed: seed + 4211,
@@ -55,6 +56,7 @@ const layerSpecs = (
     maxAlpha: 0.7,
     dust: 0.55,
     accent: 0.18,
+    blur: 0.9,
   },
   // A sparse third cloud in the cool accent hue -- the teal patches the
   // reference threads through its warm gas.
@@ -75,6 +77,7 @@ const layerSpecs = (
     maxAlpha: 0.62,
     dust: 0.4,
     accent: 0,
+    blur: 0.8,
     colors: accentRamp,
   },
 ];
@@ -212,8 +215,6 @@ export const CosmicBackground: React.FC<Props> = ({
       const [dx, dy] = drift[i];
       const pad = 0.06;
       ctx.globalAlpha = [0.95, 0.55, 0.5][i];
-      // A touch of blur hides the upscale of the low-resolution cloud fields.
-      ctx.filter = `blur(${[0.0026, 0.0011, 0.0016][i] * height}px)`;
       ctx.drawImage(
         layer,
         -width * pad + dx * width,
@@ -222,7 +223,6 @@ export const CosmicBackground: React.FC<Props> = ({
         height * (1 + pad * 2),
       );
     });
-    ctx.filter = "none";
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
   }, [frame, width, height, palette, stars, constellations, layers]);
