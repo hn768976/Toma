@@ -5,3 +5,6 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Rendered deliverables (mp4/png/zip) — build artifacts, not source.
+deliverables
