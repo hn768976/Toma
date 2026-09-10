@@ -105,6 +105,9 @@ To take the brief literally anyway, pass `turns: 1/12` as a prop (in
 - Bloom is confined to the sunburst and the brightest ring arc; the wheel's own
   glow is a tight blur (≈7 disc units) so the line work stays readable — that
   detail is the product.
+- At `--crf=16` the 1080p previews land around 95-105 MB for 30 s (~25-28
+  Mbit/s). The grain is what costs the bitrate; `--crf=18` roughly halves the
+  file and still shows no banding, if size matters more than headroom.
 - Grain runs at about 2 %, cycling six pre-rolled tiles. It is mostly there to
   dither the dark nebula gradients so H.264 does not band them. Six tiles divide
   900 exactly.
