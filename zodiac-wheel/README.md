@@ -28,6 +28,16 @@ npx remotion render V1-ZodiacWheelGold  out/V1_ZodiacWheelGold_4K.mp4   --scale=
 npx remotion render V2-ZodiacWheelSilver out/V2_ZodiacWheelSilver_4K.mp4 --scale=1 --crf=16
 ```
 
+The `--crf=16` previews land around 95-105 MB for 30 s. If you need a file
+small enough to email or upload, re-encode rather than re-render -- one x264
+pass at crf 23 gives ~26 MB with no visible banding:
+
+```bash
+ffmpeg -i out/V1_ZodiacWheelGold.mp4 -c:v libx264 -preset slow -crf 23 \
+  -pix_fmt yuv420p -colorspace bt709 -color_primaries bt709 -color_trc bt709 \
+  -color_range tv -movflags +faststart -an out/preview/V1_ZodiacWheelGold.mp4
+```
+
 Stills:
 
 ```bash
@@ -105,9 +115,9 @@ To take the brief literally anyway, pass `turns: 1/12` as a prop (in
 - Bloom is confined to the sunburst and the brightest ring arc; the wheel's own
   glow is a tight blur (≈7 disc units) so the line work stays readable — that
   detail is the product.
-- At `--crf=16` the 1080p previews land around 95-105 MB for 30 s (~25-28
-  Mbit/s). The grain is what costs the bitrate; `--crf=18` roughly halves the
-  file and still shows no banding, if size matters more than headroom.
+- The grain is what costs the bitrate: at `--crf=16` a 30 s 1080p preview runs
+  25-28 Mbit/s. Lower settings hold up well -- crf 23 keeps the gradients clean
+  at 7 Mbit/s, it just smooths most of the grain away.
 - Grain runs at about 2 %, cycling six pre-rolled tiles. It is mostly there to
   dither the dark nebula gradients so H.264 does not band them. Six tiles divide
   900 exactly.
