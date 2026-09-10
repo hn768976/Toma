@@ -23,8 +23,12 @@ export const computeLayout = (width: number, height: number) => {
   const promptTop = Math.round(height * 0.055);
   const promptFontSize = Math.round(height * 0.0205);
 
+  // Placed so the whole sphere clears the right edge rather than
+  // bleeding off it. The ~3 degree tilt scales right-hand content
+  // outward, so the sphere reaches roughly 3% further right than this
+  // centre alone suggests — hence the margin baked in here.
   const orbRadius = Math.round(height * 0.245);
-  const orbCenterX = Math.round(width * 0.868);
+  const orbCenterX = Math.round(width * 0.821);
   const orbCenterY = Math.round(height * 0.575);
 
   return {
