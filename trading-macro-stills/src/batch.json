@@ -1,0 +1,14 @@
+[
+  { "composition": "t01", "palette": "cyanNavy" },
+  { "composition": "t01", "palette": "violetPink" },
+  { "composition": "t02", "palette": "tealBlue" },
+  { "composition": "t02", "palette": "amberDark" },
+  { "composition": "t03", "palette": "cyanNavy" },
+  { "composition": "t03", "palette": "greenSlate" },
+  { "composition": "t04", "palette": "violetPink" },
+  { "composition": "t04", "palette": "tealBlue" },
+  { "composition": "t05", "palette": "amberDark" },
+  { "composition": "t05", "palette": "magentaBlue" },
+  { "composition": "t06", "palette": "magentaBlue" },
+  { "composition": "t06", "palette": "cyanNavy" }
+]
