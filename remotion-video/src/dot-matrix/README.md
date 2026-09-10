@@ -17,16 +17,21 @@ composition rendered at half scale:
 ```bash
 # 1080p preview (what ships as the deliverable)
 npx remotion render V1-DotMatrixBlue out/V1_DotMatrixBlue.mp4 \
-  --scale=0.5 --image-format=png --crf=16
+  --scale=0.5 --image-format=png --crf=16 --muted
 
 # full 4K
 npx remotion render V1-DotMatrixBlue out/V1_DotMatrixBlue.mp4 \
-  --scale=1 --crf=15 --image-format=png
+  --scale=1 --crf=15 --image-format=png --muted
 
 # a still
 npx remotion still V1-DotMatrixBlue out/V1_DotMatrixBlue.png \
   --frame=150 --scale=0.5
 ```
+
+`--muted` matters too: without it Remotion muxes a silent AAC track, and these
+are meant to ship with no audio track at all. Verify with
+`npx remotion ffprobe out/V1_DotMatrixBlue.mp4` — there should be no audio
+stream, and the duration should be exactly 20.000s.
 
 `--image-format=png` matters. The project's `remotion.config.ts` sets JPEG
 intermediate frames, which is right for the other compositions here but wrong
