@@ -1,7 +1,7 @@
 import React from "react";
 import { SIGN_NAMES, WHEEL, type Palette } from "./config";
 import { GLYPHS } from "./glyphs";
-import { UNIT, arcPath, evenDashes, polar, polarPoint, spokePath } from "./wheel-geometry";
+import { UNIT, arcPath, evenDashes, polarPoint, spokePath } from "./wheel-geometry";
 
 const r = (k: number) => k * UNIT;
 
@@ -30,6 +30,20 @@ const NAME_ARC_HALF = 13.2;
 const NAME_BASELINE = r(WHEEL.rNameIn) + 42;
 const NAME_SIZE = 52;
 
+const SECTORS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+/**
+ * Straight chords between sector boundaries -- the star-polygon pattern every
+ * chart wheel carries across its interior. Steps of 4 and 5 give the four
+ * trine triangles and the twelve-point star; both are 12-fold symmetric.
+ */
+const ASPECTS = SECTORS.flatMap((i) =>
+  [4, 5].map(
+    (step) =>
+      `M ${polarPoint(i * 30, r(WHEEL.rAspect))} L ${polarPoint(((i + step) % 12) * 30, r(WHEEL.rAspect))}`,
+  ),
+);
+
 export const WheelLinework: React.FC<Props> = ({
   palette,
   rotationDeg,
@@ -43,24 +57,6 @@ export const WheelLinework: React.FC<Props> = ({
   const bright = glow ? palette.wheelGlow : palette.wheelBright;
   const faint = glow ? palette.wheelGlow : palette.constellation;
 
-  const sectors = React.useMemo(() => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], []);
-
-  // Straight chords between sector boundaries -- the star-polygon pattern
-  // every chart wheel carries across its interior.
-  const aspects = React.useMemo(() => {
-    const out: string[] = [];
-    for (let i = 0; i < 12; i++) {
-      for (const step of [4, 5]) {
-        const j = (i + step) % 12;
-        if (step === 4 && i >= 4) continue; // trines: only the two triangles
-        out.push(
-          `M ${polarPoint(i * 30, r(WHEEL.rAspect))} L ${polarPoint(j * 30, r(WHEEL.rAspect))}`,
-        );
-      }
-    }
-    return out;
-  }, []);
-
   return (
     <g fill="none" strokeLinecap="butt">
       {/* --- Far field: faint ellipses and radials continuing past the wheel --- */}
@@ -68,7 +64,7 @@ export const WheelLinework: React.FC<Props> = ({
         {WHEEL.rHalo.map((h) => (
           <circle key={h} cx={0} cy={0} r={r(h)} strokeWidth={W.hair * k} />
         ))}
-        {sectors.map((i) => (
+        {SECTORS.map((i) => (
           <path
             key={i}
             d={spokePath(i * 30 + 15, r(WHEEL.rOuterDots) * 1.02, r(WHEEL.rRadialOut))}
@@ -131,7 +127,7 @@ export const WheelLinework: React.FC<Props> = ({
       <circle cx={0} cy={0} r={r(WHEEL.rNameOut)} stroke={line} strokeWidth={W.thin * k} opacity={0.85} />
       <circle cx={0} cy={0} r={r(WHEEL.rNameIn)} stroke={line} strokeWidth={W.thin * k} opacity={0.85} />
       <g stroke={line} opacity={0.8}>
-        {sectors.map((i) => (
+        {SECTORS.map((i) => (
           <path
             key={i}
             d={spokePath(i * 30, r(WHEEL.rNameIn), r(WHEEL.rNameOut))}
@@ -141,7 +137,7 @@ export const WheelLinework: React.FC<Props> = ({
       </g>
 
       <defs>
-        {sectors.map((i) => (
+        {SECTORS.map((i) => (
           <path
             key={i}
             id={`${idPrefix}-name-${i}`}
@@ -185,7 +181,7 @@ export const WheelLinework: React.FC<Props> = ({
       <circle cx={0} cy={0} r={r(WHEEL.rGlyphOut)} stroke={line} strokeWidth={W.med * k} opacity={0.9} />
       <circle cx={0} cy={0} r={r(WHEEL.rGlyphIn)} stroke={line} strokeWidth={W.med * k} opacity={0.9} />
       <g stroke={line} opacity={0.75}>
-        {sectors.map((i) => (
+        {SECTORS.map((i) => (
           <path
             key={i}
             d={spokePath(i * 30, r(WHEEL.rGlyphIn), r(WHEEL.rGlyphOut))}
@@ -207,7 +203,8 @@ export const WheelLinework: React.FC<Props> = ({
                 <g
                   key={glyph.name}
                   transform={`rotate(${angle}) translate(0 ${-mid}) rotate(${counter}) scale(${size / 100}) translate(-50 -50)`}
-                  strokeWidth={(glyph.weight ?? 6.4) * (glow ? 1.9 : 1) * (100 / size) * (glow ? 1 : 1)}
+                  // Weights are in disc units; undo the glyph box scale.
+                  strokeWidth={((glyph.weight ?? 6.4) * (glow ? 1.9 : 1) * 100) / size}
                 >
                   {glyph.d.map((d, j) => (
                     <path key={j} d={d} />
@@ -236,14 +233,14 @@ export const WheelLinework: React.FC<Props> = ({
 
       {/* --- Aspect chords --- */}
       <g stroke={line} opacity={glow ? 0.5 : 0.62}>
-        {aspects.map((d, i) => (
+        {ASPECTS.map((d, i) => (
           <path key={i} d={d} strokeWidth={W.hair * k} />
         ))}
       </g>
 
       {/* --- Major spokes, centre out through the whole disc --- */}
       <g stroke={line} opacity={0.8}>
-        {sectors.map((i) => (
+        {SECTORS.map((i) => (
           <path
             key={i}
             d={spokePath(i * 30, r(WHEEL.rInnerB), r(WHEEL.rOuterCircle))}
@@ -260,7 +257,3 @@ export const WheelLinework: React.FC<Props> = ({
     </g>
   );
 };
-
-/** Exported for the scene so the glow pass can reuse the same normalisation. */
-export const wheelUnit = UNIT;
-export const wheelPolar = polar;
