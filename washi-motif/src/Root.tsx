@@ -3,6 +3,7 @@ import { Composition } from "remotion";
 import { DURATION_IN_FRAMES, FPS, HEIGHT, WIDTH } from "./constants";
 import { WashiMotif, washiMotifDefaultProps } from "./WashiMotif";
 import { ContactSheet, contactSheetSize } from "./ContactSheet";
+import { PaperProof, paperProofDefaultProps } from "./PaperProof";
 
 const sheet = contactSheetSize();
 
@@ -21,6 +22,16 @@ export const RemotionRoot: React.FC = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={washiMotifDefaultProps}
+      />
+      {/* A 1:1 crop of the sheet, for judging the fibre texture at actual pixels. */}
+      <Composition
+        id="PaperProof"
+        component={PaperProof}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={1400}
+        height={900}
+        defaultProps={paperProofDefaultProps}
       />
       <Composition
         id="ContactSheet"

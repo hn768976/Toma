@@ -61,14 +61,30 @@ tree while the output is a single deterministic canvas pass.
 Built first, because it underlies everything and a flat fill will not do:
 
 - a base tone, near-white or near-black per palette;
-- **fibre texture** — ~4000 short strands, 15–90px at this resolution, random
-  angles, 1–2px, very low contrast, plus a few hundred longer ones. Barely
+- **fibre texture** — three passes, because real washi has three scales of
+  fibre: a dense mat of very short pulp, ~13,000 characteristic strands of
+  15–90px at random angles and 1–2px, and ~1,400 long ones. Nearly half the
+  mid-length strands are laid inside clumps, because washi fibre bunches and an
+  even scatter reads as digital noise. Most strands are *paler* than the
+  ground — washi fibre catches the light; only a scattering are deeper. Barely
   visible individually; collectively they are what separates washi from
   cartridge paper;
 - **mottling** — broad soft tonal variation from overlapping radial falloffs,
   so no edge can show;
+- **cloudiness** — the mid-scale band between the mottling and the grain:
+  coarse noise upscaled with smoothing. This is the band that survives
+  downscaling, and without it the sheet looks flat in anything but a 1:1 crop;
 - a **grain** pass, ~2% per pixel;
 - a slight overall gradient, one corner marginally brighter.
+
+Counts are per-sheet totals **scaled by area**, not fixed. Lengths scale with
+the frame height, so if the counts did not scale with the area a half-size
+contact-sheet tile would carry four times the fibre density of the still it
+stands in for.
+
+`npx remotion still PaperProof out/proof.png` renders a 1:1 crop of the sheet.
+Texture is the half of this product a downscaled preview hides — judge it
+there, at actual pixels.
 
 The sheet is rendered **once** into an offscreen canvas held by `useMemo` and
 then blitted. Four thousand strands and ten million grain samples are not
