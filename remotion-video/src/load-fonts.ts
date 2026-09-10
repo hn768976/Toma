@@ -13,7 +13,10 @@ const fontFace = new FontFace(
   { weight: "400", style: "normal" },
 );
 
-fontFace
+// Exported so components that measure or rasterise text (the zodiac
+// wheel draws its sign names into an offscreen canvas) can wait on the
+// same promise instead of racing the font.
+export const fontReady = fontFace
   .load()
   .then((loaded) => {
     document.fonts.add(loaded);

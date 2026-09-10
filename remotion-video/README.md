@@ -37,6 +37,21 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Compositions
+
+| Id                                            | Size      | Length | What it is                                                       |
+| --------------------------------------------- | --------- | ------ | ---------------------------------------------------------------- |
+| `BluetoothExplainer`                          | 1920x1080 | 30 s   | Hand-drawn "How Bluetooth Works" explainer                        |
+| `ParticleRingHalo` / `ParticleRingHalo4K`     | 1080p/4K  | 8 s    | Abstract particle-ring halo, seamless loop                        |
+| `ZodiacTunnelChalk` / `ZodiacTunnelGold`      | 3840x2160 | 15 s   | Infinite zodiac tunnel, seamless Droste loop — two colourways     |
+| `ZodiacTunnelLoopTest`                        | 3840x2160 | 15 s   | The chalk tunnel plus one frame, so frame 450 can be diffed vs. 0 |
+
+The zodiac tunnel has its own write-up in
+[`src/zodiac-tunnel/README.md`](./src/zodiac-tunnel/README.md) — it explains
+the doubling-scale loop construction, which is reusable for any infinite
+zoom. Rendered previews, stills and a standalone project zip are in
+[`deliverables/zodiac-tunnel/`](./deliverables/zodiac-tunnel).
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
