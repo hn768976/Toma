@@ -1,0 +1,24 @@
+{
+  "name": "zodiac-wheel",
+  "version": "1.0.0",
+  "description": "Golden Zodiac Wheel — procedural 4K seamless-loop stock animation (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "render:v1": "remotion render V1-ZodiacWheelGold out/V1_ZodiacWheelGold.mp4 --scale=0.5 --crf=16",
+    "render:v2": "remotion render V2-ZodiacWheelSilver out/V2_ZodiacWheelSilver.mp4 --scale=0.5 --crf=16",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
