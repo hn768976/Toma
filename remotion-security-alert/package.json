@@ -1,0 +1,31 @@
+{
+  "name": "security-alert-project",
+  "version": "1.0.0",
+  "description": "Security Breach Alert — 4K/30fps Remotion compositions (breach + access-granted outcomes)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.515",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render SecurityBreach out/V1_SecurityBreach.mp4 --scale=1 --crf=16",
+    "render:v2": "remotion render AccessGranted out/V2_AccessGranted.mp4 --scale=1 --crf=16"
+  },
+  "sideEffects": [
+    "./src/fonts.ts"
+  ]
+}
