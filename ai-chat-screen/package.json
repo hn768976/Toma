@@ -1,0 +1,25 @@
+{
+  "name": "ai-chat-screen",
+  "version": "1.0.0",
+  "description": "AI Chat code screen — Remotion motion graphic (4K-ready)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "prismjs": "1.30.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/prismjs": "1.26.5",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc"
+  }
+}
