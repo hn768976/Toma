@@ -78,29 +78,35 @@ export const WHEEL = {
    * disc widest horizontally, so it is the frame's height that caps this: the
    * whole dotted ring has to clear the top and bottom edges.
    */
-  radiusOfHeight: 0.77,
+  radiusOfHeight: 0.65,
   /** Centre position as a fraction of frame width / height. */
-  centerX: 0.468,
-  centerY: 0.515,
+  centerX: 0.475,
+  centerY: 0.505,
   /** The single fixed vertical squash that bakes in the tilt. */
   squash: 0.575,
 
   /** Ring radii, outermost inward. */
   rOuterDots: 1.0,
-  rOuterCircle: 0.951,
-  rTickOut: 0.941,
-  rTickIn: 0.862,
-  rNameOut: 0.852,
-  rNameIn: 0.724,
-  rGlyphOut: 0.714,
-  rGlyphIn: 0.552,
+  rOuterCircle: 0.955,
+  rTickOut: 0.947,
+  rTickIn: 0.9,
+  // The name band is the widest ring for a reason: SAGITTARIUS is eleven
+  // characters and has to sit inside a 30 degree sector without touching its
+  // dividers, so the type needs both a tall band and a long arc to sit on.
+  rNameOut: 0.89,
+  rNameIn: 0.8,
+  rGlyphOut: 0.79,
+  rGlyphIn: 0.58,
   rMarkers: 0.5,
   rAspect: 0.436,
   rInnerA: 0.33,
-  rInnerB: 0.185,
+  rInnerB: 0.2,
 
-  /** Sunburst radius, in the same disc units. */
-  rBurst: 0.148,
+  /**
+   * Sunburst radius, in the same disc units. Sized so the star's apparent
+   * height stays near 0.13 of the frame once the squash is applied.
+   */
+  rBurst: 0.172,
 
   /** Faint ellipses and radials that continue past the wheel. */
   rHalo: [1.055, 1.17, 1.34] as const,

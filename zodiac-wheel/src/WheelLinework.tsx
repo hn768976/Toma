@@ -27,8 +27,11 @@ type Props = {
 };
 
 const NAME_ARC_HALF = 13.2;
-const NAME_BASELINE = r(WHEEL.rNameIn) + 42;
-const NAME_SIZE = 52;
+// The names hang off the outer edge of their band. The further out the
+// baseline sits the longer each sector's arc is, and that arc is what caps the
+// type size: at this setting SAGITTARIUS fills about 90% of its sector.
+const NAME_BASELINE = r(WHEEL.rNameOut) - 63;
+const NAME_SIZE = 51;
 
 const SECTORS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
@@ -150,7 +153,7 @@ export const WheelLinework: React.FC<Props> = ({
         stroke="none"
         fontFamily='"DejaVu Sans", "Trebuchet MS", "Helvetica Neue", Arial, sans-serif'
         fontSize={NAME_SIZE}
-        letterSpacing={4}
+        letterSpacing={2}
         opacity={glow ? 0.55 : 0.98}
       >
         {SIGN_NAMES.map((name, i) =>
@@ -190,7 +193,7 @@ export const WheelLinework: React.FC<Props> = ({
         ))}
       </g>
       {(() => {
-        const size = 108;
+        const size = 128;
         const mid = (r(WHEEL.rGlyphIn) + r(WHEEL.rGlyphOut)) / 2;
         return (
           <g stroke={bright} strokeLinecap="round" strokeLinejoin="round">
