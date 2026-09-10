@@ -9,6 +9,11 @@ Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
+// These are backgrounds: no audio track at all, not a silent one.
+Config.setMuted(true);
+Config.setEnforceAudioTrack(false);
+// Without this the JPEG frames encode as full-range yuvj420p.
+Config.setColorSpace("bt709");
 // The first frame of a render builds every element sprite; give it room.
 Config.setDelayRenderTimeoutInMilliseconds(120000);
 
