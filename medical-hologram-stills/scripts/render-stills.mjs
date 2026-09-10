@@ -93,7 +93,7 @@ const main = async () => {
       serveUrl,
       output: null, // we post-process and write the PNG ourselves
       imageFormat: format,
-      jpegQuality: 88,
+      ...(format === "jpeg" ? { jpegQuality: 88 } : {}),
       scale,
       inputProps: { subjectId: job.subject.id, colourway: job.colourway },
       browserExecutable,
