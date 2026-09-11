@@ -2,8 +2,8 @@
 
 A **stills** template, not a video project. It renders **PNG images** of a glowing,
 translucent subject centred on a deep blue field, wrapped in a hexagonal mesh,
-ringed by a HUD circle with tick marks, with a horizontal light streak, sparkles
-and drifting particles.
+ringed by a HUD circle with tick marks, with a horizontal light streak, soft
+points of light and drifting particles.
 
 The subject is **swappable**: drop in a monochrome SVG, add one data row, and the
 template produces a finished stock still in the house style — no per-subject code.
@@ -150,7 +150,7 @@ Subjects in this batch that needed one:
 
 ## Colourways
 
-Exactly two. Field geometry, mesh, ring assembly and sparkle placement are
+Exactly two. Field geometry, mesh, ring assembly and light placement are
 identical between them — only the base tint and the two cast colours change — so
 a subject's pair reads as a matched set.
 
@@ -184,7 +184,7 @@ to those numbers. Anything a render can be checked against:
 | tick angular pitch | ~2.7° | 2.7° |
 | tick band contrast | ±5.2 – 6.2 / 255 | ±5.1 – 6.3 |
 | lens streak, peak over field | +15 at 0.53H from centre, +5 at 0.65H | +14, +12 |
-| sparkle ray reach | ~0.024 × frame height | 0.015 – 0.038 |
+| light bloom reach | — | 0.024 – 0.058 × frame height |
 | radial luminance profile | — | within ±5 / 255 at every radius |
 | field, 56 sample points | — | RMS 3.4 / 255 |
 
@@ -235,11 +235,15 @@ out/                                rendered PNGs (git-ignored)
 - The artwork bounding box, aspect ratio and the high-curvature anchor points used
   for sparkle placement are all computed at build time in the prepare step.
 - Sparkles and particles use a mulberry32 PRNG seeded from the subject id.
-- A sparkle is light, not a shape: tapered rays drawn inside a per-sparkle
-  gaussian blur, with the hot core painted as a radial gradient on top rather
-  than blurred, so the centre stays white while nothing in it has a hard edge.
-  The blur radius has to scale with the sparkle, which is why each one gets its
-  own filter — a single filter on a scaled group rasterises at the wrong size.
+- The points of light on the subject's outline are diffuse blooms, not
+  sparkles: a broad soft glow around a diffuse core, the whole thing pushed
+  through a heavy gaussian blur so there is no ray, no star and no edge to
+  read. The two ring flares are the same element at a larger size. The blur
+  radius has to scale with each light, which is why each gets its own filter —
+  a single filter on a scaled group rasterises at the wrong size.
+  Brightness and blur trade off directly: blurring a small core spreads its
+  energy until it disappears, so if you soften them further, grow the core in
+  `SoftLight` to match.
 - Every size is a fraction of frame height, so the 1920 × 1080 `Preview`
   composition and the 6000 × 3375 stills are the same layout.
 - A quirk to know: `remotion.config.ts` only applies to the CLI. The batch script

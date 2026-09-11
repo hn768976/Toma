@@ -83,29 +83,6 @@ export const arcPath = (cx: number, cy: number, r: number, a0: number, a1: numbe
 };
 
 /**
- * One ray of a sparkle: a leaf pointing up from the origin, tapering to a
- * point at both ends so that once blurred it reads as light rather than as a
- * drawn shape. `len` is the tip distance, `width` the half-width at the belly.
- */
-export const sparkleRayPath = (len: number, width: number) =>
-  `M0 0Q${width} ${-len * 0.42} 0 ${-len}Q${-width} ${-len * 0.42} 0 0Z`;
-
-/**
- * Ray layout for a sparkle: four long ones on the axes and four short ones on
- * the diagonals, which is what the reference's flares resolve into.
- */
-export const SPARKLE_RAYS: { deg: number; scale: number }[] = [
-  { deg: 0, scale: 1 },
-  { deg: 90, scale: 1 },
-  { deg: 180, scale: 1 },
-  { deg: 270, scale: 1 },
-  { deg: 45, scale: 0.45 },
-  { deg: 135, scale: 0.45 },
-  { deg: 225, scale: 0.45 },
-  { deg: 315, scale: 0.45 },
-];
-
-/**
  * Horizontal falloff of the lens streak, sampled from the reference: the
  * streak's amplitude relative to its centre measured 0.68 at 0.33H out, 0.45
  * at 0.44H, 0.28 at 0.53H and 0.12 at 0.65H, which is exp(-(dx/0.5H)^2.6).
