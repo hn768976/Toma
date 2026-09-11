@@ -86,6 +86,9 @@ without visible grain, and writes an opaque RGB PNG. Re-renders are byte-identic
 5. **Render**: `npm run render -- --subject <subject-id>`.
 
 Removing a subject is the reverse: delete the row (and the SVG if you like).
+The batch is at its 30-still cap, so adding a subject means dropping one. The
+capsule came out when the caduceus went in; its SVG is still in
+`assets/subjects/` if you want to swap them back.
 
 ### Tracing a bitmap into a subject
 
@@ -146,6 +149,7 @@ Subjects in this batch that needed one:
 | subject     | aspect   | override | why |
 |-------------|----------|----------|-----|
 | `dna-helix` | 0.35 : 1 (tall) | `0.62` | At the default 58% a 1:2.8 helix is a thin sliver in the middle of the ring; 62% fills the ring's height without touching it. |
+| `caduceus` | 0.85 : 1 | `0.66` | The artwork is a cross shape with a lot of empty field inside its bounding box, so the default 58% reads small against the ring; 66% fills it without crowding. |
 | `heartbeat` | 4.44 : 1 (wide) | `0.68` | An ECG trace at 58% of frame height is only 1958 px wide on a 6000 px frame; 68% (~4080 px) fills the ring's width while leaving the lens streak room to run past it. |
 
 ## Colourways
