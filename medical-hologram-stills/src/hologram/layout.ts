@@ -82,10 +82,28 @@ export const arcPath = (cx: number, cy: number, r: number, a0: number, a1: numbe
   return `M${p0.x} ${p0.y}A${r} ${r} 0 ${large} ${sweep} ${p1.x} ${p1.y}`;
 };
 
-// Four-point sparkle star centred on the origin; quadratic curves through
-// the centre give the concave "lens flare" sides.
-export const sparklePath = (R: number) =>
-  `M0 ${-R}Q0 0 ${R} 0Q0 0 0 ${R}Q0 0 ${-R} 0Q0 0 0 ${-R}Z`;
+/**
+ * One ray of a sparkle: a leaf pointing up from the origin, tapering to a
+ * point at both ends so that once blurred it reads as light rather than as a
+ * drawn shape. `len` is the tip distance, `width` the half-width at the belly.
+ */
+export const sparkleRayPath = (len: number, width: number) =>
+  `M0 0Q${width} ${-len * 0.42} 0 ${-len}Q${-width} ${-len * 0.42} 0 0Z`;
+
+/**
+ * Ray layout for a sparkle: four long ones on the axes and four short ones on
+ * the diagonals, which is what the reference's flares resolve into.
+ */
+export const SPARKLE_RAYS: { deg: number; scale: number }[] = [
+  { deg: 0, scale: 1 },
+  { deg: 90, scale: 1 },
+  { deg: 180, scale: 1 },
+  { deg: 270, scale: 1 },
+  { deg: 45, scale: 0.45 },
+  { deg: 135, scale: 0.45 },
+  { deg: 225, scale: 0.45 },
+  { deg: 315, scale: 0.45 },
+];
 
 /**
  * Horizontal falloff of the lens streak, sampled from the reference: the

@@ -184,6 +184,7 @@ to those numbers. Anything a render can be checked against:
 | tick angular pitch | ~2.7° | 2.7° |
 | tick band contrast | ±5.2 – 6.2 / 255 | ±5.1 – 6.3 |
 | lens streak, peak over field | +15 at 0.53H from centre, +5 at 0.65H | +14, +12 |
+| sparkle ray reach | ~0.024 × frame height | 0.015 – 0.038 |
 | radial luminance profile | — | within ±5 / 255 at every radius |
 | field, 56 sample points | — | RMS 3.4 / 255 |
 
@@ -234,6 +235,11 @@ out/                                rendered PNGs (git-ignored)
 - The artwork bounding box, aspect ratio and the high-curvature anchor points used
   for sparkle placement are all computed at build time in the prepare step.
 - Sparkles and particles use a mulberry32 PRNG seeded from the subject id.
+- A sparkle is light, not a shape: tapered rays drawn inside a per-sparkle
+  gaussian blur, with the hot core painted as a radial gradient on top rather
+  than blurred, so the centre stays white while nothing in it has a hard edge.
+  The blur radius has to scale with the sparkle, which is why each one gets its
+  own filter — a single filter on a scaled group rasterises at the wrong size.
 - Every size is a fraction of frame height, so the 1920 × 1080 `Preview`
   composition and the 6000 × 3375 stills are the same layout.
 - A quirk to know: `remotion.config.ts` only applies to the CLI. The batch script

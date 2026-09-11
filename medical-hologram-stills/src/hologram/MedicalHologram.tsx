@@ -18,7 +18,8 @@ import {
   computeFit,
   hexMeshPath,
   polar,
-  sparklePath,
+  SPARKLE_RAYS,
+  sparkleRayPath,
   streakFalloffStops,
 } from "./layout";
 import {
@@ -37,6 +38,39 @@ import type { ColourwayId, FlatPath, Manifest, SubjectManifest } from "./types";
 const HALO_REACH = 1.7;
 
 const SCREEN: React.CSSProperties = { mixBlendMode: "screen" };
+
+/**
+ * A sparkle: tapered rays and a hot core, drawn inside a blur so nothing in it
+ * has a hard edge. The reference's sparkles are pure light — a small white
+ * core with thin soft rays — so the shapes below are only scaffolding for the
+ * blur, never meant to be seen as outlines.
+ */
+const Sparkle: React.FC<{
+  len: number;
+  colour: string;
+  glowId: string;
+  coreId: string;
+  blurId: string;
+  opacity?: number;
+}> = ({ len, colour, glowId, coreId, blurId, opacity = 1 }) => (
+  <g opacity={opacity}>
+    <circle r={len * 1.5} fill={`url(#${glowId})`} />
+    <g filter={`url(#${blurId})`}>
+      {SPARKLE_RAYS.map((ray, i) => (
+        <path
+          key={i}
+          d={sparkleRayPath(len * ray.scale, len * ray.scale * 0.2)}
+          transform={`rotate(${ray.deg})`}
+          fill={colour}
+          opacity={ray.scale === 1 ? 1 : 0.8}
+        />
+      ))}
+    </g>
+    {/* The hot core is a gradient rather than a blurred disc: it keeps a
+        white centre (a blur would flatten it) and still has no hard edge. */}
+    <circle r={len * 0.24} fill={`url(#${coreId})`} />
+  </g>
+);
 
 const renderStops = (stops: Stop[]) =>
   stops.map((st, i) => (
@@ -62,7 +96,10 @@ export type MedicalHologramProps = z.infer<typeof medicalHologramSchema>;
 // subject id + frame size, so both colourways of a subject match exactly.
 // ---------------------------------------------------------------------------
 type PathKind = "fill" | "line" | "band";
-type Sparkle = { x: number; y: number; r: number; rot: number; bright: number };
+// `len` is the distance a long ray reaches from the centre; the visible core
+// is a small fraction of it. Sizes are measured off the reference, where a
+// sparkle's rays reach about 0.024 x frame height.
+type Sparkle = { x: number; y: number; len: number; rot: number; bright: number };
 type Particle = { x: number; y: number; r: number; o: number; blur: boolean; tint: boolean };
 type Trail = { d: string; o: number };
 
@@ -85,7 +122,7 @@ const buildDecor = (subject: SubjectManifest, W: number, H: number) => {
       sparkles.push({
         x,
         y,
-        r: H * (big ? range(rng, 0.024, 0.032) : range(rng, 0.011, 0.022)),
+        len: H * (big ? range(rng, 0.03, 0.038) : range(rng, 0.015, 0.027)),
         rot: rng() < 0.25 ? 45 : 0,
         bright: range(rng, 0.75, 1),
       });
@@ -438,10 +475,48 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
 
           {/* 6. Sparkles + particles */}
           <radialGradient id={`${uid}-sparkleGlow`}>
-            <stop offset="0" stopColor={cw.sparkle} stopOpacity="0.6" />
-            <stop offset="0.3" stopColor={cw.glow} stopOpacity="0.22" />
+            <stop offset="0" stopColor={cw.sparkle} stopOpacity="0.55" />
+            <stop offset="0.18" stopColor={cw.sparkle} stopOpacity="0.3" />
+            <stop offset="0.45" stopColor={cw.glow} stopOpacity="0.1" />
             <stop offset="1" stopColor={cw.glow} stopOpacity="0" />
           </radialGradient>
+          <radialGradient id={`${uid}-sparkleCore`}>
+            <stop offset="0" stopColor={cw.sparkle} stopOpacity="1" />
+            <stop offset="0.16" stopColor={cw.sparkle} stopOpacity="0.92" />
+            <stop offset="0.36" stopColor={cw.sparkle} stopOpacity="0.45" />
+            <stop offset="0.65" stopColor={cw.sparkle} stopOpacity="0.12" />
+            <stop offset="1" stopColor={cw.sparkle} stopOpacity="0" />
+          </radialGradient>
+          {/* One blur per sparkle: the radius has to scale with the sparkle, and
+              a filter on a scaled group would rasterise at the wrong size. */}
+          {sparkles.map((sp, i) => (
+            <filter
+              key={i}
+              id={`${uid}-sparkleBlur-${i}`}
+              filterUnits="userSpaceOnUse"
+              x={-sp.len * 1.6}
+              y={-sp.len * 1.6}
+              width={sp.len * 3.2}
+              height={sp.len * 3.2}
+            >
+              <feGaussianBlur stdDeviation={sp.len * 0.03} />
+            </filter>
+          ))}
+          <filter
+            id={`${uid}-flareBlur`}
+            filterUnits="userSpaceOnUse"
+            x={-H * 0.09}
+            y={-H * 0.09}
+            width={H * 0.18}
+            height={H * 0.18}
+          >
+            <feGaussianBlur stdDeviation={H * 0.0009} />
+          </filter>
+          <linearGradient id={`${uid}-flareStreak`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor={cw.sparkle} stopOpacity="0" />
+            <stop offset="0.5" stopColor={cw.sparkle} stopOpacity="0.75" />
+            <stop offset="1" stopColor={cw.sparkle} stopOpacity="0" />
+          </linearGradient>
           <filter id={`${uid}-dotBlur`} filterUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
             <feGaussianBlur stdDeviation={H * 0.0014} />
           </filter>
@@ -504,11 +579,28 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
           </g>
           <circle cx={cx - R} cy={cy} r={H * 0.085} fill={`url(#${uid}-flareL)`} />
           <circle cx={cx + R} cy={cy} r={H * 0.085} fill={`url(#${uid}-flareR)`} />
-          {([[cx - R, cw.arcLeft], [cx + R, cw.arcRight]] as [number, string][]).map(([fx, fc], i) => (
+          {[cx - R, cx + R].map((fx, i) => (
             <g key={i} transform={`translate(${fx} ${cy})`}>
-              <circle r={H * 0.02} fill={`url(#${uid}-sparkleGlow)`} />
-              <path d={sparklePath(H * 0.016)} fill={cw.sparkle} opacity={0.95} />
-              <path d={`M${-H * 0.055} 0H${H * 0.055}`} stroke={fc} strokeWidth={H * 0.0014} opacity={0.8} />
+              <g filter={`url(#${uid}-flareBlur)`}>
+                <rect
+                  x={-H * 0.075}
+                  y={-H * 0.0016}
+                  width={H * 0.15}
+                  height={H * 0.0032}
+                  fill={`url(#${uid}-flareStreak)`}
+                />
+                {SPARKLE_RAYS.map((ray, k) => (
+                  <path
+                    key={k}
+                    d={sparkleRayPath(H * 0.026 * ray.scale, H * 0.026 * ray.scale * 0.2)}
+                    transform={`rotate(${ray.deg})`}
+                    fill={cw.sparkle}
+                    opacity={ray.scale === 1 ? 1 : 0.8}
+                  />
+                ))}
+              </g>
+              <circle r={H * 0.0088} fill={`url(#${uid}-sparkleCore)`} />
+              <circle r={H * 0.04} fill={`url(#${uid}-sparkleGlow)`} />
             </g>
           ))}
         </g>
@@ -616,10 +708,15 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
         </g>
         <g style={{ mixBlendMode: "screen" }}>
           {sparkles.map((sp, i) => (
-            <g key={i} transform={`translate(${sp.x} ${sp.y}) rotate(${sp.rot})`} opacity={sp.bright}>
-              <circle r={sp.r * 3.2} fill={`url(#${uid}-sparkleGlow)`} />
-              <path d={sparklePath(sp.r)} fill={cw.sparkle} />
-              <path d={`M0 ${-sp.r * 2.1}V${sp.r * 2.1}M${-sp.r * 2.1} 0H${sp.r * 2.1}`} stroke={cw.sparkle} strokeWidth={H * 0.0008} strokeOpacity={0.7} fill="none" />
+            <g key={i} transform={`translate(${sp.x} ${sp.y}) rotate(${sp.rot})`}>
+              <Sparkle
+                len={sp.len}
+                colour={cw.sparkle}
+                glowId={`${uid}-sparkleGlow`}
+                coreId={`${uid}-sparkleCore`}
+                blurId={`${uid}-sparkleBlur-${i}`}
+                opacity={sp.bright}
+              />
             </g>
           ))}
         </g>
