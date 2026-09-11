@@ -184,7 +184,7 @@ to those numbers. Anything a render can be checked against:
 | tick angular pitch | ~2.7° | 2.7° |
 | tick band contrast | ±5.2 – 6.2 / 255 | ±5.1 – 6.3 |
 | lens streak, peak over field | +15 at 0.53H from centre, +5 at 0.65H | +14, +12 |
-| light bloom reach | — | 0.024 – 0.058 × frame height |
+| light bloom reach | — | 0.013 – 0.031 × frame height |
 | radial luminance profile | — | within ±5 / 255 at every radius |
 | field, 56 sample points | — | RMS 3.4 / 255 |
 

@@ -106,7 +106,7 @@ const buildDecor = (subject: SubjectManifest, W: number, H: number) => {
       sparkles.push({
         x,
         y,
-        len: H * (big ? range(rng, 0.046, 0.058) : range(rng, 0.024, 0.04)),
+        len: H * (big ? range(rng, 0.024, 0.031) : range(rng, 0.013, 0.021)),
         rot: rng() < 0.25 ? 45 : 0,
         bright: range(rng, 0.75, 1),
       });
@@ -564,7 +564,7 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
           {[cx - R, cx + R].map((fx, i) => (
             <g key={i} transform={`translate(${fx} ${cy})`}>
               <SoftLight
-                len={H * 0.046}
+                len={H * 0.026}
                 glowId={`${uid}-sparkleGlow`}
                 coreId={`${uid}-sparkleCore`}
                 blurId={`${uid}-flareBlur`}
