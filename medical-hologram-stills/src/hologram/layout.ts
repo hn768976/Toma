@@ -2,9 +2,22 @@ import type { SubjectManifest } from "./types";
 
 // Every size in the template is a fraction of frame height, so the same
 // layout holds at 6000x3375, 1920x1080 or any other 16:9 output.
-export const FIT_FRACTION = 0.52; // longest side of the artwork / frame height
-export const RING_RADIUS = 0.39; // ring diameter ~0.78 x frame height
-export const HEX_CELL = 0.025; // flat-to-flat hexagon width / frame height
+// All three are measured off the reference stills (see README, "Measured
+// against the reference"), not guessed.
+export const FIT_FRACTION = 0.58; // longest side of the artwork / frame height
+export const RING_RADIUS = 0.462; // ring diameter ~0.92 x frame height
+export const HEX_CELL = 0.0335; // flat-to-flat hexagon width / frame height
+
+// Tick band radii, as fractions of frame height.
+export const TICK_INNER = 0.435;
+export const TICK_OUTER = 0.502;
+export const TICK_PITCH_DEG = 2.7;
+export const TICK_BAR_DEG = 1.9;
+export const TICK_HALF_SPAN_DEG = 62;
+// Fainter, finer inner band.
+export const INNER_TICK_INNER = 0.345;
+export const INNER_TICK_OUTER = 0.395;
+export const INNER_TICK_PITCH_DEG = 1.9;
 
 export type Fit = {
   scale: number; // artwork units -> frame pixels
@@ -73,3 +86,19 @@ export const arcPath = (cx: number, cy: number, r: number, a0: number, a1: numbe
 // the centre give the concave "lens flare" sides.
 export const sparklePath = (R: number) =>
   `M0 ${-R}Q0 0 ${R} 0Q0 0 0 ${R}Q0 0 ${-R} 0Q0 0 0 ${-R}Z`;
+
+/**
+ * Horizontal falloff of the lens streak, sampled from the reference: the
+ * streak's amplitude relative to its centre measured 0.68 at 0.33H out, 0.45
+ * at 0.44H, 0.28 at 0.53H and 0.12 at 0.65H, which is exp(-(dx/0.5H)^2.6).
+ */
+export const streakFalloffStops = (width: number, height: number, steps = 15) =>
+  Array.from({ length: steps }, (_, i) => {
+    const offset = i / (steps - 1);
+    const dx = Math.abs(offset - 0.5) * width;
+    return {
+      offset,
+      colour: "#ffffff",
+      opacity: Math.exp(0 - ((dx / (0.5 * height)) ** 2.6)),
+    };
+  });

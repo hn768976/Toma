@@ -5,15 +5,43 @@ import manifestJson from "../subjects/manifest.generated.json";
 import { COLOURWAYS, COLOURWAY_IDS } from "./colourways";
 import {
   HEX_CELL,
+  INNER_TICK_INNER,
+  INNER_TICK_OUTER,
+  INNER_TICK_PITCH_DEG,
   RING_RADIUS,
+  TICK_BAR_DEG,
+  TICK_HALF_SPAN_DEG,
+  TICK_INNER,
+  TICK_OUTER,
+  TICK_PITCH_DEG,
   arcPath,
   computeFit,
   hexMeshPath,
   polar,
   sparklePath,
+  streakFalloffStops,
 } from "./layout";
+import {
+  castTransform,
+  gaussianStops,
+  rampStops,
+  rgb,
+  superGaussianStops,
+  type Stop,
+} from "./field";
 import { range, seededRng } from "./random";
 import type { ColourwayId, FlatPath, Manifest, SubjectManifest } from "./types";
+
+// The field halo gradient is drawn out to this many multiples of its scale;
+// beyond it the fitted falloff is below 1/255.
+const HALO_REACH = 1.7;
+
+const SCREEN: React.CSSProperties = { mixBlendMode: "screen" };
+
+const renderStops = (stops: Stop[]) =>
+  stops.map((st, i) => (
+    <stop key={i} offset={st.offset} stopColor={st.colour} stopOpacity={st.opacity} />
+  ));
 
 const MANIFEST = manifestJson as Manifest;
 export const SUBJECTS: SubjectManifest[] = MANIFEST.subjects;
@@ -81,43 +109,104 @@ const buildDecor = (subject: SubjectManifest, W: number, H: number) => {
     });
   }
 
-  // Long faint curved lines sweeping through the lower left and right.
+  // Long, very faint curved lines sweeping out of the ring toward the frame
+  // edges — a tight fan on the right and a looser one through the lower left,
+  // as in the reference. Each is a single bowed curve that starts on the ring
+  // and leaves the frame, so nothing ever crosses the subject.
   const trails: Trail[] = [];
   const cx = W / 2;
   const cy = H / 2;
-  const mk = (ccx: number, ccy: number, r: number, a0: number, a1: number, o: number) =>
-    trails.push({ d: arcPath(ccx, ccy, r, a0, a1), o });
-  mk(cx - W * range(rng, 0.02, 0.08), cy + H * range(rng, 0.02, 0.1), H * range(rng, 0.62, 0.7), 118 + range(rng, -6, 6), 196 + range(rng, -6, 6), 0.22);
-  mk(cx - W * range(rng, 0.0, 0.05), cy + H * range(rng, 0.08, 0.16), H * range(rng, 0.74, 0.82), 128 + range(rng, -6, 6), 178 + range(rng, -6, 6), 0.14);
-  mk(cx + W * range(rng, 0.02, 0.08), cy - H * range(rng, 0.0, 0.08), H * range(rng, 0.66, 0.74), -34 + range(rng, -6, 6), 44 + range(rng, -6, 6), 0.18);
+  const R = RING_RADIUS * H;
+  const sweep = (x0: number, y0: number, x1: number, y1: number, bow: number) => {
+    const dx = x1 - x0, dy = y1 - y0;
+    const len = Math.hypot(dx, dy) || 1;
+    return `M${x0.toFixed(1)} ${y0.toFixed(1)}Q${(
+      (x0 + x1) / 2 - (dy / len) * bow
+    ).toFixed(1)} ${((y0 + y1) / 2 + (dx / len) * bow).toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  };
+  const fan = (
+    degs: number[],
+    endX: number,
+    endY: (i: number) => number,
+    bow: (i: number) => number,
+    o: number,
+  ) => {
+    degs.forEach((deg, i) => {
+      const start = polar(cx, cy, R * range(rng, 0.99, 1.06), deg + range(rng, -3, 3));
+      trails.push({
+        d: sweep(start.x, start.y, endX, endY(i), bow(i) * range(rng, 0.85, 1.15)),
+        o: o * range(rng, 0.65, 1.1),
+      });
+    });
+  };
+  // right flank: a tight fan flattening out toward the right edge
+  fan([-70, -55, -40], W * 1.02, (i) => cy - H * (0.3 - i * 0.09), (i) => H * (0.1 + i * 0.035), 0.3);
+  // lower right
+  fan([34], W * 1.02, () => cy + H * 0.24, () => -H * 0.08, 0.2);
+  // lower left
+  fan([146, 128], -W * 0.02, (i) => cy + H * (0.13 + i * 0.16), () => H * 0.11, 0.24);
+
+  // A few fine dots riding the trails, as in the reference.
+  const pointOn = (d: string, t: number) => {
+    const m = d.match(/M([-\d.]+) ([-\d.]+)Q([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+)/);
+    if (!m) return null;
+    const [x0, y0, qx, qy, x1, y1] = m.slice(1).map(Number);
+    const u = 1 - t;
+    return { x: u * u * x0 + 2 * u * t * qx + t * t * x1, y: u * u * y0 + 2 * u * t * qy + t * t * y1 };
+  };
+  for (const tr of trails) {
+    const n = Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) {
+      const pt = pointOn(tr.d, range(rng, 0.12, 0.88));
+      if (!pt || pt.x < 0 || pt.x > W || pt.y < 0 || pt.y > H) continue;
+      particles.push({
+        x: pt.x,
+        y: pt.y,
+        r: H * range(rng, 0.0009, 0.0022),
+        o: range(rng, 0.5, 1),
+        blur: false,
+        tint: rng() < 0.5,
+      });
+    }
+  }
 
   return { fit, sparkles, particles, trails };
 };
 
 // ---------------------------------------------------------------------------
-// Ring tick band: dense at the top and bottom, sparse at the sides.
+// Ring tick band. In the reference this is the strongest piece of HUD
+// furniture: wide, closely spaced radial bars straddling the ring across the
+// top and bottom of the frame, plus a fainter, finer band further in. Radii
+// and pitch are measured (see layout.ts).
 // ---------------------------------------------------------------------------
-const buildTicks = (cx: number, cy: number, R: number, H: number) => {
-  const ticks: { d: string; o: number; w: number }[] = [];
-  const inner = R + H * 0.018;
-  const push = (deg: number, len: number, o: number, w: number) => {
-    const p0 = polar(cx, cy, inner, deg);
-    const p1 = polar(cx, cy, inner + len, deg);
-    ticks.push({ d: `M${p0.x} ${p0.y}L${p1.x} ${p1.y}`, o, w });
-  };
-  const bands = [270, 90]; // screen-space: 270 = top, 90 = bottom
-  for (const centre of bands) {
-    for (let k = -44; k <= 44; k++) {
-      const deg = centre + k * 1.5;
-      const long = k % 5 === 0;
-      const edge = 1 - Math.pow(Math.abs(k) / 46, 3); // fade toward band ends
-      push(deg, H * (long ? 0.013 : 0.007), (long ? 0.5 : 0.32) * edge, H * (long ? 0.0011 : 0.0008));
+type Tick = { d: string; o: number; w: number };
+
+const buildTickBand = (
+  cx: number,
+  cy: number,
+  H: number,
+  innerFrac: number,
+  outerFrac: number,
+  pitchDeg: number,
+  barDeg: number,
+  halfSpanDeg: number,
+  opacity: number,
+): Tick[] => {
+  const ticks: Tick[] = [];
+  const inner = innerFrac * H;
+  const outer = outerFrac * H;
+  const mid = (inner + outer) / 2;
+  // A bar of angular width barDeg at the mid radius, drawn as a thick stroke.
+  const w = 2 * mid * Math.sin((barDeg * Math.PI) / 360);
+  const steps = Math.floor(halfSpanDeg / pitchDeg);
+  for (const centre of [270, 90]) {
+    for (let k = -steps; k <= steps; k++) {
+      const deg = centre + k * pitchDeg;
+      const p0 = polar(cx, cy, inner, deg);
+      const p1 = polar(cx, cy, outer, deg);
+      const fade = 1 - Math.pow(Math.abs(k) / (steps + 1), 2.5);
+      ticks.push({ d: `M${p0.x} ${p0.y}L${p1.x} ${p1.y}`, o: opacity * fade, w });
     }
-  }
-  for (let deg = 0; deg < 360; deg += 7.5) {
-    const fromTop = Math.min(Math.abs(((deg - 270 + 540) % 360) - 180), Math.abs(((deg - 90 + 540) % 360) - 180));
-    if (fromTop > 114) continue; // inside the dense bands
-    push(deg, H * 0.006, 0.16, H * 0.0008);
   }
   return ticks;
 };
@@ -139,7 +228,13 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
   const cy = H / 2;
   const R = RING_RADIUS * H;
   const mesh = useMemo(() => hexMeshPath(W, H, HEX_CELL * H), [W, H]);
-  const ticks = useMemo(() => buildTicks(cx, cy, R, H), [cx, cy, R, H]);
+  const ticks = useMemo(
+    () => [
+      ...buildTickBand(cx, cy, H, TICK_INNER, TICK_OUTER, TICK_PITCH_DEG, TICK_BAR_DEG, TICK_HALF_SPAN_DEG, 0.072),
+      ...buildTickBand(cx, cy, H, INNER_TICK_INNER, INNER_TICK_OUTER, INNER_TICK_PITCH_DEG, 1.1, 50, 0.04),
+    ],
+    [cx, cy, H],
+  );
   const { fit, sparkles, particles, trails } = useMemo(() => buildDecor(subject, W, H), [subject, W, H]);
 
   // Template sizes are fractions of frame height; inside the fitted subject
@@ -182,7 +277,7 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
     );
 
   return (
-    <AbsoluteFill style={{ backgroundColor: cw.fieldEdge }}>
+    <AbsoluteFill style={{ backgroundColor: rgb(cw.field.tint.map((t) => t * cw.field.ramp[0]) as [number, number, number]) }}>
       <svg
         width={W}
         height={H}
@@ -191,30 +286,44 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
         style={{ display: "block", shapeRendering: "geometricPrecision" }}
       >
         <defs>
-          {/* 1. Background field */}
-          <radialGradient id={`${uid}-field`} gradientUnits="userSpaceOnUse" cx={cx} cy={cy} r={W * 0.6}>
-            <stop offset="0" stopColor={cw.fieldCentre} />
-            <stop offset="0.3" stopColor={cw.fieldCentre} stopOpacity="0.45" />
-            <stop offset="1" stopColor={cw.fieldEdge} stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id={`${uid}-halo`} gradientUnits="userSpaceOnUse" cx={cx} cy={cy} r={H * 0.5}>
-            <stop offset="0" stopColor={cw.fieldCentre} stopOpacity="0.9" />
-            <stop offset="0.7" stopColor={cw.fieldCentre} stopOpacity="0.25" />
-            <stop offset="1" stopColor={cw.fieldCentre} stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id={`${uid}-castL`} gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={W * 0.55} y2={0}>
-            <stop offset="0" stopColor={cw.castLeft} stopOpacity="0.55" />
-            <stop offset="0.45" stopColor={cw.castLeft} stopOpacity="0.18" />
-            <stop offset="1" stopColor={cw.castLeft} stopOpacity="0" />
+          {/* 1. Background field — the fitted layer stack (see field.ts) */}
+          <linearGradient id={`${uid}-base`} gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={W} y2={0}>
+            {renderStops(rampStops(cw.field))}
           </linearGradient>
-          <linearGradient id={`${uid}-castR`} gradientUnits="userSpaceOnUse" x1={W * 0.5} y1={0} x2={W} y2={0}>
-            <stop offset="0" stopColor={cw.castRight} stopOpacity="0" />
-            <stop offset="1" stopColor={cw.castRight} stopOpacity="0.32" />
-          </linearGradient>
-          <radialGradient id={`${uid}-vignette`} gradientUnits="userSpaceOnUse" cx={cx} cy={cy} r={W * 0.6}>
-            <stop offset="0.42" stopColor="#000010" stopOpacity="0" />
-            <stop offset="1" stopColor="#000010" stopOpacity="0.62" />
+          <radialGradient
+            id={`${uid}-castL`}
+            gradientUnits="userSpaceOnUse"
+            cx={cw.field.left.x * W}
+            cy={H / 2}
+            r={3 * cw.field.left.sx * W}
+            gradientTransform={castTransform(cw.field.left, W, H)}
+          >
+            {renderStops(gaussianStops(rgb(cw.field.left.colour)))}
           </radialGradient>
+          <radialGradient
+            id={`${uid}-castR`}
+            gradientUnits="userSpaceOnUse"
+            cx={cw.field.right.x * W}
+            cy={H / 2}
+            r={3 * cw.field.right.sx * W}
+            gradientTransform={castTransform(cw.field.right, W, H)}
+          >
+            {renderStops(gaussianStops(rgb(cw.field.right.colour)))}
+          </radialGradient>
+          <radialGradient
+            id={`${uid}-fieldHalo`}
+            gradientUnits="userSpaceOnUse"
+            cx={cx}
+            cy={cy}
+            r={cw.field.halo.scale * HALO_REACH * H}
+          >
+            {renderStops(superGaussianStops(rgb(cw.field.halo.colour), cw.field.halo.power, HALO_REACH))}
+          </radialGradient>
+          <linearGradient id={`${uid}-bottomShade`} gradientUnits="userSpaceOnUse" x1={0} y1={cy} x2={0} y2={H}>
+            <stop offset="0" stopColor="#000008" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#000008" stopOpacity={cw.field.bottomShade * 0.5} />
+            <stop offset="1" stopColor="#000008" stopOpacity={cw.field.bottomShade} />
+          </linearGradient>
 
           {/* 2. Hex mesh: brighter where it crosses the central glow */}
           <radialGradient id={`${uid}-meshGrad`} gradientUnits="userSpaceOnUse" cx={cx} cy={cy} r={H * 0.78}>
@@ -229,8 +338,8 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
           {/* 3. HUD ring: fades out at the top and bottom */}
           <linearGradient id={`${uid}-ringFadeGrad`} gradientUnits="userSpaceOnUse" x1={0} y1={cy - R} x2={0} y2={cy + R}>
             <stop offset="0" stopColor="#000" />
-            <stop offset="0.2" stopColor="#fff" />
-            <stop offset="0.8" stopColor="#fff" />
+            <stop offset="0.14" stopColor="#fff" />
+            <stop offset="0.86" stopColor="#fff" />
             <stop offset="1" stopColor="#000" />
           </linearGradient>
           <mask id={`${uid}-ringFade`} maskUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
@@ -245,13 +354,15 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
             <rect x="-0.1" y="-0.1" width="1.2" height="1.2" fill={`url(#${uid}-arcFade)`} />
           </mask>
           <radialGradient id={`${uid}-flareL`}>
-            <stop offset="0" stopColor={cw.arcLeft} stopOpacity="0.75" />
-            <stop offset="0.35" stopColor={cw.arcLeft} stopOpacity="0.25" />
+            <stop offset="0" stopColor={cw.arcLeft} stopOpacity="0.8" />
+            <stop offset="0.25" stopColor={cw.arcLeft} stopOpacity="0.22" />
+            <stop offset="0.6" stopColor={cw.arcLeft} stopOpacity="0.05" />
             <stop offset="1" stopColor={cw.arcLeft} stopOpacity="0" />
           </radialGradient>
           <radialGradient id={`${uid}-flareR`}>
-            <stop offset="0" stopColor={cw.arcRight} stopOpacity="0.75" />
-            <stop offset="0.35" stopColor={cw.arcRight} stopOpacity="0.25" />
+            <stop offset="0" stopColor={cw.arcRight} stopOpacity="0.8" />
+            <stop offset="0.25" stopColor={cw.arcRight} stopOpacity="0.22" />
+            <stop offset="0.6" stopColor={cw.arcRight} stopOpacity="0.05" />
             <stop offset="1" stopColor={cw.arcRight} stopOpacity="0" />
           </radialGradient>
           <filter id={`${uid}-arcGlow`} filterUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
@@ -266,24 +377,25 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
             <stop offset="0.6" stopColor={cw.burst} stopOpacity="0.06" />
             <stop offset="1" stopColor={cw.burst} stopOpacity="0" />
           </radialGradient>
+          {/* The streak has no hard core in the reference: a soft ~0.018H band
+              with a brighter centre, fading to nothing well before the frame
+              edge (measured falloff exp(-(dx/0.5H)^2.6)). */}
           <linearGradient id={`${uid}-streakV`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor={cw.streak} stopOpacity="0" />
-            <stop offset="0.38" stopColor={cw.streak} stopOpacity="0.14" />
-            <stop offset="0.5" stopColor={cw.streak} stopOpacity="0.85" />
-            <stop offset="0.62" stopColor={cw.streak} stopOpacity="0.14" />
+            <stop offset="0.3" stopColor={cw.streak} stopOpacity="0.045" />
+            <stop offset="0.44" stopColor={cw.streak} stopOpacity="0.19" />
+            <stop offset="0.5" stopColor={cw.streak} stopOpacity="0.28" />
+            <stop offset="0.56" stopColor={cw.streak} stopOpacity="0.19" />
+            <stop offset="0.7" stopColor={cw.streak} stopOpacity="0.045" />
             <stop offset="1" stopColor={cw.streak} stopOpacity="0" />
           </linearGradient>
           <linearGradient id={`${uid}-streakWideV`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor={cw.streak} stopOpacity="0" />
-            <stop offset="0.5" stopColor={cw.streak} stopOpacity="0.16" />
+            <stop offset="0.5" stopColor={cw.streak} stopOpacity="0.045" />
             <stop offset="1" stopColor={cw.streak} stopOpacity="0" />
           </linearGradient>
-          <linearGradient id={`${uid}-streakH`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#fff" stopOpacity="0.1" />
-            <stop offset="0.2" stopColor="#fff" stopOpacity="0.35" />
-            <stop offset="0.5" stopColor="#fff" stopOpacity="1" />
-            <stop offset="0.8" stopColor="#fff" stopOpacity="0.35" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0.1" />
+          <linearGradient id={`${uid}-streakH`} gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={W} y2={0}>
+            {renderStops(streakFalloffStops(W, H))}
           </linearGradient>
           <mask id={`${uid}-streakMask`} maskUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
             <rect width={W} height={H} fill={`url(#${uid}-streakH)`} />
@@ -333,20 +445,29 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
           <filter id={`${uid}-dotBlur`} filterUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
             <feGaussianBlur stdDeviation={H * 0.0014} />
           </filter>
-          <linearGradient id={`${uid}-trailGrad`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor={cw.ring} stopOpacity="0" />
-            <stop offset="0.5" stopColor={cw.ring} stopOpacity="1" />
-            <stop offset="1" stopColor={cw.ring} stopOpacity="0" />
-          </linearGradient>
+          {/* Trails fade out before they reach the frame edge, as in the
+              reference, so they read as passing through rather than stopping. */}
+          <radialGradient id={`${uid}-trailFade`} gradientUnits="userSpaceOnUse" cx={cx} cy={cy} r={W * 0.56}>
+            <stop offset="0" stopColor="#fff" stopOpacity="1" />
+            <stop offset="0.62" stopColor="#fff" stopOpacity="0.85" />
+            <stop offset="0.85" stopColor="#fff" stopOpacity="0.35" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          </radialGradient>
+          <mask id={`${uid}-trailMask`} maskUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
+            <rect width={W} height={H} fill={`url(#${uid}-trailFade)`} />
+          </mask>
         </defs>
 
         {/* ---- 1. Background ---- */}
-        <rect width={W} height={H} fill={cw.fieldEdge} />
-        <rect width={W} height={H} fill={`url(#${uid}-field)`} />
-        <rect width={W} height={H} fill={`url(#${uid}-halo)`} />
-        <rect width={W} height={H} fill={`url(#${uid}-castL)`} />
-        <rect width={W} height={H} fill={`url(#${uid}-castR)`} />
-        <rect width={W} height={H} fill={`url(#${uid}-vignette)`} />
+        <rect width={W} height={H} fill={`url(#${uid}-base)`} />
+        {/* Each cast screens onto everything painted below it. The blend mode
+            has to sit on the element, not on a wrapping group: siblings inside
+            a group composite with each other normally, and only the finished
+            group would blend with the backdrop. */}
+        <rect width={W} height={H} fill={`url(#${uid}-castL)`} style={SCREEN} />
+        <rect width={W} height={H} fill={`url(#${uid}-castR)`} style={SCREEN} />
+        <rect width={W} height={H} fill={`url(#${uid}-fieldHalo)`} style={SCREEN} />
+        <rect x={0} y={cy} width={W} height={H - cy} fill={`url(#${uid}-bottomShade)`} />
 
         {/* ---- 2. Hex mesh ---- */}
         <path
@@ -360,36 +481,44 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
 
         {/* ---- 3. HUD ring assembly ---- */}
         <g mask={`url(#${uid}-ringFade)`}>
-          <circle cx={cx} cy={cy} r={R + H * 0.075} fill="none" stroke={cw.ring} strokeWidth={H * 0.0006} strokeOpacity={0.16} strokeDasharray={`${H * 0.018} ${H * 0.012}`} />
-          <circle cx={cx} cy={cy} r={R + H * 0.125} fill="none" stroke={cw.ring} strokeWidth={H * 0.0006} strokeOpacity={0.1} strokeDasharray={`${H * 0.03} ${H * 0.02}`} />
-          <circle cx={cx} cy={cy} r={R} fill="none" stroke={cw.ring} strokeWidth={H * 0.007} strokeOpacity={0.35} filter={`url(#${uid}-arcGlow)`} />
-          <circle cx={cx} cy={cy} r={R} fill="none" stroke={cw.ring} strokeWidth={H * 0.0018} strokeOpacity={0.85} />
+          <circle cx={cx} cy={cy} r={H * 0.408} fill="none" stroke={cw.ring} strokeWidth={H * 0.0007} strokeOpacity={0.14} strokeDasharray={`${H * 0.02} ${H * 0.013}`} />
+          <circle cx={cx} cy={cy} r={H * 0.502} fill="none" stroke={cw.ring} strokeWidth={H * 0.0007} strokeOpacity={0.1} strokeDasharray={`${H * 0.032} ${H * 0.021}`} />
+          <circle cx={cx} cy={cy} r={R} fill="none" stroke={cw.ring} strokeWidth={H * 0.006} strokeOpacity={0.3} filter={`url(#${uid}-arcGlow)`} />
+          <circle cx={cx} cy={cy} r={R} fill="none" stroke={cw.ring} strokeWidth={H * 0.0016} strokeOpacity={0.8} />
         </g>
-        <g fill="none" strokeLinecap="round" stroke={cw.ring}>
+        <g fill="none" stroke={cw.ring}>
           {ticks.map((t, i) => (
             <path key={i} d={t.d} strokeWidth={t.w} strokeOpacity={t.o} />
           ))}
         </g>
+        {/* The two accent arcs run most of the left and right flanks and each
+            carries a bright point flare where it crosses the centre line. */}
         <g style={{ mixBlendMode: "screen" }}>
           <g mask={`url(#${uid}-arcMaskL)`}>
-            <path d={arcPath(cx, cy, R, 145, 215)} fill="none" stroke={cw.arcLeft} strokeWidth={H * 0.012} strokeOpacity={0.55} filter={`url(#${uid}-arcGlow)`} />
-            <path d={arcPath(cx, cy, R, 145, 215)} fill="none" stroke={cw.arcLeft} strokeWidth={H * 0.0034} />
+            <path d={arcPath(cx, cy, R, 138, 222)} fill="none" stroke={cw.arcLeft} strokeWidth={H * 0.014} strokeOpacity={0.5} filter={`url(#${uid}-arcGlow)`} />
+            <path d={arcPath(cx, cy, R, 138, 222)} fill="none" stroke={cw.arcLeft} strokeWidth={H * 0.0028} />
           </g>
           <g mask={`url(#${uid}-arcMaskL)`}>
-            <path d={arcPath(cx, cy, R, -35, 35)} fill="none" stroke={cw.arcRight} strokeWidth={H * 0.012} strokeOpacity={0.55} filter={`url(#${uid}-arcGlow)`} />
-            <path d={arcPath(cx, cy, R, -35, 35)} fill="none" stroke={cw.arcRight} strokeWidth={H * 0.0034} />
+            <path d={arcPath(cx, cy, R, -42, 42)} fill="none" stroke={cw.arcRight} strokeWidth={H * 0.014} strokeOpacity={0.5} filter={`url(#${uid}-arcGlow)`} />
+            <path d={arcPath(cx, cy, R, -42, 42)} fill="none" stroke={cw.arcRight} strokeWidth={H * 0.0028} />
           </g>
-          <circle cx={cx - R} cy={cy} r={H * 0.16} fill={`url(#${uid}-flareL)`} />
-          <circle cx={cx + R} cy={cy} r={H * 0.16} fill={`url(#${uid}-flareR)`} />
+          <circle cx={cx - R} cy={cy} r={H * 0.085} fill={`url(#${uid}-flareL)`} />
+          <circle cx={cx + R} cy={cy} r={H * 0.085} fill={`url(#${uid}-flareR)`} />
+          {([[cx - R, cw.arcLeft], [cx + R, cw.arcRight]] as [number, string][]).map(([fx, fc], i) => (
+            <g key={i} transform={`translate(${fx} ${cy})`}>
+              <circle r={H * 0.02} fill={`url(#${uid}-sparkleGlow)`} />
+              <path d={sparklePath(H * 0.016)} fill={cw.sparkle} opacity={0.95} />
+              <path d={`M${-H * 0.055} 0H${H * 0.055}`} stroke={fc} strokeWidth={H * 0.0014} opacity={0.8} />
+            </g>
+          ))}
         </g>
 
         {/* ---- 4. Central light burst + lens streak ---- */}
         <g style={{ mixBlendMode: "screen" }}>
           <circle cx={cx} cy={cy} r={H * 0.34} fill={`url(#${uid}-burst)`} />
           <g mask={`url(#${uid}-streakMask)`}>
-            <rect x={0} y={cy - H * 0.11} width={W} height={H * 0.22} fill={`url(#${uid}-streakWideV)`} />
-            <rect x={0} y={cy - H * 0.028} width={W} height={H * 0.056} fill={`url(#${uid}-streakV)`} />
-            <rect x={0} y={cy - H * 0.0012} width={W} height={H * 0.0024} fill={cw.streak} opacity={0.9} />
+            <rect x={0} y={cy - H * 0.1} width={W} height={H * 0.2} fill={`url(#${uid}-streakWideV)`} />
+            <rect x={0} y={cy - H * 0.022} width={W} height={H * 0.044} fill={`url(#${uid}-streakV)`} />
           </g>
         </g>
 
@@ -470,9 +599,9 @@ export const MedicalHologram: React.FC<MedicalHologramProps> = ({ subjectId, col
         </g>
 
         {/* ---- 6. Sparkles, particles, motion trails ---- */}
-        <g fill="none" strokeLinecap="round">
+        <g fill="none" strokeLinecap="round" mask={`url(#${uid}-trailMask)`}>
           {trails.map((t, i) => (
-            <path key={i} d={t.d} stroke={`url(#${uid}-trailGrad)`} strokeWidth={H * 0.0016} opacity={t.o * 1.6} />
+            <path key={i} d={t.d} stroke={cw.ring} strokeWidth={H * 0.0011} opacity={t.o} />
           ))}
         </g>
         <g fill={cw.sparkle}>

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T20:09:05.351Z",
+  "generatedAt": "2026-09-11T05:24:39.902Z",
   "subjects": [
     {
       "id": "shield-cross",
@@ -25,6 +25,14 @@
       "aspect": 0.7418,
       "extremeAspect": false,
       "paths": [
+        {
+          "d": "M500 175L760 290 760 555C760 720 630 830 500 890 370 830 240 720 240 555L240 290Z",
+          "mode": "fill",
+          "strokeWidth": 0,
+          "fillRule": "nonzero",
+          "linecap": "butt",
+          "linejoin": "miter"
+        },
         {
           "d": "M500 110L810 250 810 560C810 750 660 880 500 950 340 880 190 750 190 560L190 250Z",
           "mode": "stroke",
