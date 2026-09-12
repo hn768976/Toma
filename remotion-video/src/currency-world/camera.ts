@@ -43,13 +43,22 @@ export const cameraAt = (
 
 /**
  * World transform for the camera. A camera that moves +x is the same as
- * a world that moves -x, so every term is negated; the yaw/roll are
- * applied outside the translation so the whole field swings about the
- * eye rather than about the world origin.
+ * a world that moves -x, so the lateral terms are negated; the yaw/roll
+ * are applied outside the translation so the whole field swings about
+ * the eye rather than about the world origin.
+ *
+ * There is deliberately NO z term. The dolly is carried by depthAt(),
+ * which folds the camera's forward travel into each element's own depth
+ * and wraps it back through the slab. Translating the container as well
+ * would count that travel twice and march the field straight through
+ * the eye plane — elements would silently clip out, and the shot would
+ * thin from front to back. Anything that must NOT dolly (the map
+ * plates, the grid decks) simply keeps a fixed depth and never calls
+ * depthAt.
  */
 export const worldTransform = (cam: CameraState) =>
   [
     `rotateZ(${cam.roll.toFixed(3)}deg)`,
     `rotateY(${(-cam.yaw).toFixed(3)}deg)`,
-    `translate3d(${(-cam.x).toFixed(2)}px, ${(-cam.y).toFixed(2)}px, ${cam.z.toFixed(2)}px)`,
+    `translate3d(${(-cam.x).toFixed(2)}px, ${(-cam.y).toFixed(2)}px, 0px)`,
   ].join(" ");

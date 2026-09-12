@@ -65,7 +65,10 @@ export const STREAK_COUNT = 48;
 export const HUD_COUNT = 60;
 export const SPARK_COUNT = 140;
 
-export const CURRENCY_GLYPHS = ["$", "€", "£", "¥", "₽"];
+// Weighted, not uniform: the dollar and euro carry a global exchange
+// board, and the reference plate leads on them too. A flat five-way
+// split leaves visible pockets of the frame reading as all-yen.
+export const CURRENCY_GLYPHS = ["$", "$", "$", "€", "€", "€", "£", "¥", "₽"];
 
 // Quantised so ticker values read as a live feed without every tag being
 // a unique string (the reference plate reuses a small set too).

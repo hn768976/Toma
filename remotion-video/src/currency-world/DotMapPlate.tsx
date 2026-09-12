@@ -26,14 +26,19 @@ export type PlateSpec = {
 // every frame, where an unfiltered plate rasterises once and is only
 // re-composited as the camera moves. Same picture, a fraction of the
 // render time.
-const EDGE_RX = 1.36; // normalised radii of the falloff ellipse
-const EDGE_RY = 1.56;
-const EDGE_SOLID = 0.52; // fully opaque inside this fraction of it
+//
+// The falloff is VERTICAL ONLY. An equirectangular map is periodic in
+// longitude, so plates are laid edge to edge and the join is a real
+// one: the column after the last is the first. Fading the left and
+// right edges would put a dark seam through that join, and it is the
+// seam that lets the map stream through the frame indefinitely instead
+// of wiping off and leaving the frame bare.
+const EDGE_RY = 1.18; // normalised radius of the vertical falloff
+const EDGE_SOLID = 0.5; // fully opaque inside this fraction of it
 
-const edgeAlpha = (col: number, row: number) => {
-  const u = ((col + 0.5) / DOT_COLS) * 2 - 1;
+const edgeAlpha = (row: number) => {
   const v = ((row + 0.5) / DOT_ROWS) * 2 - 1;
-  const d = Math.hypot(u / EDGE_RX, v / EDGE_RY);
+  const d = Math.abs(v) / EDGE_RY;
   if (d <= EDGE_SOLID) return 1;
   return Math.max(0, (1 - d) / (1 - EDGE_SOLID));
 };
@@ -61,7 +66,7 @@ const buildSvg = (spec: PlateSpec, palette: Palette) => {
     // the plate reading as a flat halftone screen.
     const fill =
       roll > 0.9 ? palette.dotBright : roll > 0.34 ? palette.dotMid : palette.dotDim;
-    const alpha = ((0.45 + roll * 0.55) * edgeAlpha(dot.col, dot.row)).toFixed(
+    const alpha = ((0.45 + roll * 0.55) * edgeAlpha(dot.row)).toFixed(
       3,
     );
     if (Number(alpha) < 0.02) continue;
@@ -74,7 +79,7 @@ const buildSvg = (spec: PlateSpec, palette: Palette) => {
   for (let i = 0; i < spec.scatter; i++) {
     const col = Math.floor(scatterRand() * DOT_COLS);
     const row = Math.floor(scatterRand() * DOT_ROWS);
-    const alpha = (0.16 + scatterRand() * 0.3) * edgeAlpha(col, row);
+    const alpha = (0.16 + scatterRand() * 0.3) * edgeAlpha(row);
     if (alpha < 0.02) continue;
     parts.push(
       `<rect x="${(col + offset).toFixed(3)}" y="${(row + offset).toFixed(3)}" width="${size}" height="${size}" fill="${palette.dotDim}" opacity="${alpha.toFixed(3)}"/>`,
