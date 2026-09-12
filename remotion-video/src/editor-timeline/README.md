@@ -1,7 +1,7 @@
 # Editor timeline (macro screen shot)
 
 A close-up of a video editor's timeline on a monitor, shot at an angle
-with a very shallow lens. 1565 frames at 30fps (52.17s).
+with a very shallow lens. 660 frames at 30fps (22s).
 
 Two variants of the same setup are registered, each at two resolutions:
 

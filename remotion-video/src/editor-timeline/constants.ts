@@ -15,9 +15,11 @@
 
 export const FPS = 30;
 
-// The reference clip is 52.16s. 52.16 * 30 = 1564.8, so 1565 frames is
-// the closest whole-frame match at 30fps (52.1667s).
-export const DURATION_IN_FRAMES = 1565;
+// 22s at 30fps. The reference plate runs 52.16s, and the session in
+// script-a / script-b was originally paced to fill it; cutting to 22s
+// is a re-time, not a trim - beats were dropped rather than squeezed, so
+// each razor cut and drag still holds long enough to read.
+export const DURATION_IN_FRAMES = 660;
 
 export const BASE_WIDTH = 1920;
 export const BASE_HEIGHT = 1080;

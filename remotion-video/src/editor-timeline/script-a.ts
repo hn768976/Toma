@@ -58,50 +58,44 @@ const CLIPS: Clip[] = [
 // the chain reads top-to-bottom as the editor walking right along the
 // track chopping it into beats.
 const razor: EditEvent[] = [
-  { kind: "cut", at: 156, clipId: "s2", offset: 1.5 },
-  { kind: "cut", at: 186, clipId: "s2b", offset: 1.2 },
-  { kind: "cut", at: 214, clipId: "s2bb", offset: 0.9 },
-  { kind: "cut", at: 246, clipId: "s2bbb", offset: 1.4 },
-  { kind: "cut", at: 278, clipId: "s2bbbb", offset: 0.8 },
-  { kind: "cut", at: 312, clipId: "s3", offset: 1.1 },
-  { kind: "cut", at: 340, clipId: "s3b", offset: 1.3 },
-  { kind: "cut", at: 368, clipId: "s3bb", offset: 0.7 },
-  { kind: "cut", at: 398, clipId: "s3bbb", offset: 1.0 },
-  { kind: "cut", at: 430, clipId: "s4", offset: 1.6 },
-  { kind: "cut", at: 462, clipId: "s4b", offset: 1.1 },
-  { kind: "cut", at: 492, clipId: "s4bb", offset: 2.0 },
+  { kind: "cut", at: 58, clipId: "s2", offset: 1.5 },
+  { kind: "cut", at: 84, clipId: "s2b", offset: 1.2 },
+  { kind: "cut", at: 110, clipId: "s2bb", offset: 0.9 },
+  { kind: "cut", at: 136, clipId: "s2bbb", offset: 1.4 },
+  { kind: "cut", at: 164, clipId: "s3", offset: 1.1 },
+  { kind: "cut", at: 190, clipId: "s3b", offset: 1.3 },
+  { kind: "cut", at: 216, clipId: "s3bb", offset: 0.7 },
+  { kind: "cut", at: 242, clipId: "s3bbb", offset: 1.0 },
 ];
 
 const EVENTS: EditEvent[] = [
   ...razor,
 
   // Audition the cut: select one beat, its music underneath lights up.
-  { kind: "select", from: 560, to: 660, clipIds: ["s2bba"] },
+  { kind: "select", from: 266, to: 320, clipIds: ["s2bba"] },
 
   // Trim the tail of that beat in, with the duration tooltip up.
-  { kind: "trim", from: 690, to: 780, clipId: "s2bba", edge: "end", delta: 0.55 },
-  { kind: "select", from: 690, to: 800, clipIds: ["s2bba"] },
+  { kind: "trim", from: 336, to: 392, clipId: "s2bba", edge: "end", delta: 0.55 },
+  { kind: "select", from: 336, to: 404, clipIds: ["s2bba"] },
 
   // Marquee a run of short clips further right...
   {
     kind: "marquee",
-    from: 850,
-    to: 935,
-    rect: [TRACK_X0 + 13.4 * PX_PER_SECOND, 196, TRACK_X0 + 19.6 * PX_PER_SECOND, 352],
+    from: 424,
+    to: 478,
+    rect: [TRACK_X0 + 13.4 * PX_PER_SECOND, 240, TRACK_X0 + 19.6 * PX_PER_SECOND, 378],
   },
-  { kind: "select", from: 930, to: 1010, clipIds: ["s3a", "s3ba", "s3bba"] },
+  { kind: "select", from: 476, to: 520, clipIds: ["s3a", "s3ba", "s3bba"] },
 
   // ...and ripple-delete two of them, pulling the rest of the track left.
-  { kind: "remove", at: 1015, clipId: "s3ba", ripple: true },
-  { kind: "remove", at: 1048, clipId: "s3bba", ripple: true },
+  { kind: "remove", at: 524, clipId: "s3ba", ripple: true },
+  { kind: "remove", at: 538, clipId: "s3bba", ripple: true },
 
   // Drag a B-roll clip up the timeline to fill the hole.
-  { kind: "move", from: 1105, to: 1210, clipId: "v2e", deltaStart: -3.3 },
-  { kind: "select", from: 1105, to: 1250, clipIds: ["v2e"] },
+  { kind: "move", from: 556, to: 618, clipId: "v2e", deltaStart: -3.3 },
+  { kind: "select", from: 552, to: 638, clipIds: ["v2e"] },
 
-  // Final trim, on a clip inside the focal band so the tooltip reads.
-  { kind: "trim", from: 1285, to: 1360, clipId: "v2d", edge: "end", delta: 0.9 },
-  { kind: "select", from: 1400, to: 1500, clipIds: ["s4a"] },
+  { kind: "select", from: 644, to: 659, clipIds: ["s4"] },
 ];
 
 // The panel's resting scroll. The pointer is authored in edit seconds
@@ -115,41 +109,33 @@ const x = (seconds: number) =>
 
 const CURSOR: CursorKey[] = [
   { frame: 0, x: x(24.5), y: 700, tool: "pointer" },
-  { frame: 90, x: x(7.0), y: 340, tool: "pointer" },
-  { frame: 140, x: x(8.1), y: 292, tool: "razor" },
+  { frame: 36, x: x(7.0), y: 340, tool: "pointer" },
+  { frame: 52, x: x(8.1), y: 292, tool: "razor" },
   // walk right along V1, one pause per razor cut
-  { frame: 156, x: x(8.1), y: 292, tool: "razor" },
-  { frame: 186, x: x(9.3), y: 298, tool: "razor" },
-  { frame: 214, x: x(10.2), y: 330, tool: "razor" },
-  { frame: 246, x: x(11.6), y: 340, tool: "razor" },
-  { frame: 278, x: x(12.4), y: 292, tool: "razor" },
-  { frame: 312, x: x(15.1), y: 340, tool: "razor" },
-  { frame: 340, x: x(16.4), y: 294, tool: "razor" },
-  { frame: 368, x: x(17.1), y: 302, tool: "razor" },
-  { frame: 398, x: x(18.1), y: 292, tool: "razor" },
-  { frame: 430, x: x(21.8), y: 340, tool: "razor" },
-  { frame: 462, x: x(22.9), y: 292, tool: "razor" },
-  { frame: 492, x: x(24.9), y: 302, tool: "razor" },
-  { frame: 540, x: x(10.4), y: 318, tool: "pointer" },
-  { frame: 600, x: x(10.6), y: 330, tool: "pointer" },
-  { frame: 686, x: x(11.2), y: 316, tool: "trim" },
-  { frame: 780, x: x(11.8), y: 316, tool: "trim" },
-  { frame: 830, x: x(13.4), y: 244, tool: "pointer" },
-  { frame: 935, x: x(19.6), y: 378, tool: "pointer" },
-  { frame: 1000, x: x(16.2), y: 326, tool: "pointer" },
-  { frame: 1060, x: x(16.0), y: 326, tool: "pointer" },
-  { frame: 1100, x: x(18.2), y: 176, tool: "hand" },
-  { frame: 1210, x: x(14.9), y: 176, tool: "hand" },
-  { frame: 1270, x: x(17.1), y: 176, tool: "trim" },
-  { frame: 1360, x: x(18.0), y: 176, tool: "trim" },
-  { frame: 1410, x: x(21.4), y: 304, tool: "pointer" },
-  { frame: 1470, x: x(21.6), y: 314, tool: "pointer" },
-  { frame: 1564, x: x(23.9), y: 340, tool: "pointer" },
+  { frame: 58, x: x(8.1), y: 292, tool: "razor" },
+  { frame: 84, x: x(9.3), y: 298, tool: "razor" },
+  { frame: 110, x: x(10.2), y: 330, tool: "razor" },
+  { frame: 136, x: x(11.6), y: 340, tool: "razor" },
+  { frame: 164, x: x(15.1), y: 340, tool: "razor" },
+  { frame: 190, x: x(16.4), y: 294, tool: "razor" },
+  { frame: 216, x: x(17.1), y: 302, tool: "razor" },
+  { frame: 242, x: x(18.1), y: 292, tool: "razor" },
+  { frame: 266, x: x(10.4), y: 318, tool: "pointer" },
+  { frame: 312, x: x(10.6), y: 330, tool: "pointer" },
+  { frame: 332, x: x(11.2), y: 316, tool: "trim" },
+  { frame: 392, x: x(11.8), y: 316, tool: "trim" },
+  { frame: 416, x: x(13.4), y: 244, tool: "pointer" },
+  { frame: 478, x: x(19.6), y: 378, tool: "pointer" },
+  { frame: 512, x: x(16.2), y: 326, tool: "pointer" },
+  { frame: 544, x: x(16.0), y: 326, tool: "pointer" },
+  { frame: 556, x: x(18.2), y: 176, tool: "hand" },
+  { frame: 618, x: x(14.9), y: 176, tool: "hand" },
+  { frame: 640, x: x(21.4), y: 304, tool: "pointer" },
+  { frame: 659, x: x(21.8), y: 314, tool: "pointer" },
 ];
 
 const CLICKS = [
-  156, 186, 214, 246, 278, 312, 340, 368, 398, 430, 462, 492, 560, 690, 850,
-  1015, 1048, 1105, 1285, 1400,
+  58, 84, 110, 136, 164, 190, 216, 242, 266, 336, 424, 524, 538, 556, 644,
 ];
 
 export const SCRIPT_A: TimelineScript = {
@@ -160,20 +146,20 @@ export const SCRIPT_A: TimelineScript = {
   clicks: CLICKS,
   playhead: [
     { frame: 0, seconds: 10.4 },
-    { frame: 140, seconds: 10.4 },
-    { frame: 520, seconds: 12.8 },
-    { frame: 660, seconds: 10.6 },
-    { frame: 840, seconds: 11.4 },
-    { frame: 1060, seconds: 16.2 },
-    { frame: 1300, seconds: 4.1 },
-    { frame: 1564, seconds: 22.6 },
+    { frame: 52, seconds: 10.4 },
+    { frame: 220, seconds: 12.8 },
+    { frame: 290, seconds: 10.6 },
+    { frame: 360, seconds: 11.4 },
+    { frame: 450, seconds: 16.2 },
+    { frame: 560, seconds: 4.1 },
+    { frame: 659, seconds: 14.2 },
   ],
+  // Held still: at 22s every beat is pointer-anchored to a clip, and
+  // scrolling the panel under the pointer would slide the clip it is
+  // working on out from under it.
   scroll: [
-    { frame: BASE_SCROLL, seconds: BASE_SCROLL },
-    { frame: 1240, seconds: BASE_SCROLL },
-    // Only the closing playback pass scrolls the panel, and the pointer
-    // is parked on screen-anchored chrome by then.
-    { frame: 1564, seconds: BASE_SCROLL + 4.6 },
+    { frame: 0, seconds: BASE_SCROLL },
+    { frame: 659, seconds: BASE_SCROLL },
   ],
   rubberBand: [{ track: "A1", level: 0.2 }],
   seed: 1907,
