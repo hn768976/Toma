@@ -8,7 +8,7 @@
 // screen fractions keeps the composition directable; carrying a real z
 // gives true parallax when the camera pushes in.
 
-import { mulberry32 } from "../particle-ring/random";
+import { mulberry32 } from "./random";
 import { Z_FAR, Z_NEAR } from "./constants";
 
 export type Puff = {

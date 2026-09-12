@@ -79,6 +79,7 @@ there is nothing else to change, the compositions share one component.
 | --- | --- |
 | `constants.ts` | Timing, camera, and the two palettes |
 | `noise.ts` | Value noise, fBm and the ridged variant behind the filaments |
+| `random.ts` | Seeded PRNG (the layout must be identical in every render tab) |
 | `textures.ts` | Bakes the nebula puff and star sprites (cached per tab) |
 | `scene.ts` | Deterministic layout of every puff, star and warm knot |
 | `draw.ts` | Per-frame canvas render |

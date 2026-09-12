@@ -6,7 +6,7 @@
 // so this cost is paid a few times per render, never per frame.
 
 import { clamp01, fbm2D, ridged2D } from "./noise";
-import { mulberry32 } from "../particle-ring/random";
+import { mulberry32 } from "./random";
 
 export type Rgb = { r: number; g: number; b: number };
 
