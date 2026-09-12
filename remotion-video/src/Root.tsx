@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  CurrencyWorld,
+  currencyWorldSchema,
+  currencyWorldDefaults,
+} from "./currency-world/CurrencyWorld";
+import {
+  BASE_WIDTH as CW_WIDTH,
+  BASE_HEIGHT as CW_HEIGHT,
+  DURATION_IN_FRAMES as CW_DURATION_IN_FRAMES,
+  FPS as CW_FPS,
+} from "./currency-world/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,52 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/*
+        Same shot, four outputs: two camera directions x two
+        resolutions. The scene is authored at 1920x1080 and scaled by
+        (width / 1920), so each 4K composition is the 1080p framing
+        rasterised larger — never a re-composed shot.
+      */}
+      <Composition
+        id="CurrencyWorld-LTR-1080p"
+        component={CurrencyWorld}
+        durationInFrames={CW_DURATION_IN_FRAMES}
+        fps={CW_FPS}
+        width={CW_WIDTH}
+        height={CW_HEIGHT}
+        schema={currencyWorldSchema}
+        defaultProps={{ ...currencyWorldDefaults, direction: "ltr" as const, palette: "steel" as const }}
+      />
+      <Composition
+        id="CurrencyWorld-RTL-1080p"
+        component={CurrencyWorld}
+        durationInFrames={CW_DURATION_IN_FRAMES}
+        fps={CW_FPS}
+        width={CW_WIDTH}
+        height={CW_HEIGHT}
+        schema={currencyWorldSchema}
+        defaultProps={{ ...currencyWorldDefaults, direction: "rtl" as const, palette: "midnight" as const }}
+      />
+      <Composition
+        id="CurrencyWorld-LTR-4K"
+        component={CurrencyWorld}
+        durationInFrames={CW_DURATION_IN_FRAMES}
+        fps={CW_FPS}
+        width={CW_WIDTH * 2}
+        height={CW_HEIGHT * 2}
+        schema={currencyWorldSchema}
+        defaultProps={{ ...currencyWorldDefaults, direction: "ltr" as const, palette: "steel" as const }}
+      />
+      <Composition
+        id="CurrencyWorld-RTL-4K"
+        component={CurrencyWorld}
+        durationInFrames={CW_DURATION_IN_FRAMES}
+        fps={CW_FPS}
+        width={CW_WIDTH * 2}
+        height={CW_HEIGHT * 2}
+        schema={currencyWorldSchema}
+        defaultProps={{ ...currencyWorldDefaults, direction: "rtl" as const, palette: "midnight" as const }}
       />
     </>
   );
