@@ -69,7 +69,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     text: "#61bdf7",
     textStrong: "#8ad6f7",
     dot: "#123650",
-    glow: 7,
+    glow: 5,
     glowColor: "#1fb8ff",
     layerB: 0.42,
     haze: "#04070f",

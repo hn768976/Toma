@@ -87,9 +87,10 @@ const PlaneLayer: React.FC<{
 
   const glow =
     theme.glow > 0
-      ? `drop-shadow(0 0 ${theme.glow * 0.6}px ${theme.glowColor}) ` +
-        `drop-shadow(0 0 ${theme.glow * 2}px ${theme.glowColor}) ` +
-        `drop-shadow(0 0 ${theme.glow * 5}px ${theme.glowColor})`
+      ? // Two tight passes, not three wide ones. A wide halo reads as mush
+        // rather than as neon, and blur radius dominates render cost.
+        `drop-shadow(0 0 ${theme.glow * 0.55}px ${theme.glowColor}) ` +
+        `drop-shadow(0 0 ${theme.glow * 1.9}px ${theme.glowColor})`
       : undefined;
 
   return (
