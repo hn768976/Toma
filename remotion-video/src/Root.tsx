@@ -1,5 +1,6 @@
 import "./index.css";
 import "./load-fonts";
+import "./data-charts/fonts";
 import { Composition } from "remotion";
 import {
   BluetoothExplainer,
@@ -18,6 +19,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  DataCharts,
+  dataChartsSchema,
+  dataChartsDefaults,
+} from "./data-charts/DataCharts";
+import {
+  BASE_WIDTH as CHARTS_WIDTH,
+  BASE_HEIGHT as CHARTS_HEIGHT,
+  DURATION_IN_FRAMES as CHARTS_DURATION_IN_FRAMES,
+  FPS as CHARTS_FPS,
+} from "./data-charts/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +63,48 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/* Digital data charts dashboard: dark (reference look) and light,
+          each at 1080p and 4K. The 4K variants render the same scene at 2x. */}
+      <Composition
+        id="DataChartsDark"
+        component={DataCharts}
+        durationInFrames={CHARTS_DURATION_IN_FRAMES}
+        fps={CHARTS_FPS}
+        width={CHARTS_WIDTH}
+        height={CHARTS_HEIGHT}
+        schema={dataChartsSchema}
+        defaultProps={{ ...dataChartsDefaults, theme: "dark" }}
+      />
+      <Composition
+        id="DataChartsLight"
+        component={DataCharts}
+        durationInFrames={CHARTS_DURATION_IN_FRAMES}
+        fps={CHARTS_FPS}
+        width={CHARTS_WIDTH}
+        height={CHARTS_HEIGHT}
+        schema={dataChartsSchema}
+        defaultProps={{ ...dataChartsDefaults, theme: "light" }}
+      />
+      <Composition
+        id="DataChartsDark4K"
+        component={DataCharts}
+        durationInFrames={CHARTS_DURATION_IN_FRAMES}
+        fps={CHARTS_FPS}
+        width={CHARTS_WIDTH * 2}
+        height={CHARTS_HEIGHT * 2}
+        schema={dataChartsSchema}
+        defaultProps={{ ...dataChartsDefaults, theme: "dark" }}
+      />
+      <Composition
+        id="DataChartsLight4K"
+        component={DataCharts}
+        durationInFrames={CHARTS_DURATION_IN_FRAMES}
+        fps={CHARTS_FPS}
+        width={CHARTS_WIDTH * 2}
+        height={CHARTS_HEIGHT * 2}
+        schema={dataChartsSchema}
+        defaultProps={{ ...dataChartsDefaults, theme: "light" }}
       />
     </>
   );

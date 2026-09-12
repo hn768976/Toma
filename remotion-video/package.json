@@ -30,6 +30,7 @@
   },
   "sideEffects": [
     "*.css",
-    "./src/load-fonts.ts"
+    "./src/load-fonts.ts",
+    "./src/data-charts/fonts.ts"
   ]
 }
