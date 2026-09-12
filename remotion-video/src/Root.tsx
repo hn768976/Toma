@@ -1,5 +1,6 @@
 import "./index.css";
 import "./load-fonts";
+import "./trading-floor/fonts";
 import { Composition } from "remotion";
 import {
   BluetoothExplainer,
@@ -12,6 +13,17 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import {
+  TradingFloor,
+  tradingFloorSchema,
+  tradingFloorDefaults,
+} from "./trading-floor";
+import {
+  DURATION_IN_FRAMES as FLOOR_DURATION,
+  FPS as FLOOR_FPS,
+  HD,
+  UHD,
+} from "./trading-floor/constants";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +63,50 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+
+      {/* Trading floor: the 1080p deliverables and their 4K masters.
+          All four share one 1920x1080 design space, so the 4K pair is the
+          same frame re-rasterised at 2x, not an upscale. */}
+      <Composition
+        id="TradingFloor-Dark-1080p"
+        component={TradingFloor}
+        durationInFrames={FLOOR_DURATION}
+        fps={FLOOR_FPS}
+        width={HD.width}
+        height={HD.height}
+        schema={tradingFloorSchema}
+        defaultProps={{ ...tradingFloorDefaults, theme: "dark" as const }}
+      />
+      <Composition
+        id="TradingFloor-Light-1080p"
+        component={TradingFloor}
+        durationInFrames={FLOOR_DURATION}
+        fps={FLOOR_FPS}
+        width={HD.width}
+        height={HD.height}
+        schema={tradingFloorSchema}
+        defaultProps={{ ...tradingFloorDefaults, theme: "light" as const }}
+      />
+      <Composition
+        id="TradingFloor-Dark-4K"
+        component={TradingFloor}
+        durationInFrames={FLOOR_DURATION}
+        fps={FLOOR_FPS}
+        width={UHD.width}
+        height={UHD.height}
+        schema={tradingFloorSchema}
+        defaultProps={{ ...tradingFloorDefaults, theme: "dark" as const }}
+      />
+      <Composition
+        id="TradingFloor-Light-4K"
+        component={TradingFloor}
+        durationInFrames={FLOOR_DURATION}
+        fps={FLOOR_FPS}
+        width={UHD.width}
+        height={UHD.height}
+        schema={tradingFloorSchema}
+        defaultProps={{ ...tradingFloorDefaults, theme: "light" as const }}
       />
     </>
   );
