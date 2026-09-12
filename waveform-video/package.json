@@ -1,0 +1,35 @@
+{
+  "name": "waveform-video",
+  "version": "1.0.0",
+  "description": "Dynamic audio waveform visualizer (LED equalizer) \u2014 4K, 30fps, seamless 10s loop",
+  "repository": {},
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.523",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.523"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.523",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:blue1080": "remotion render WaveformBlue1080 out/waveform-blue-1080p.mp4",
+    "render:white1080": "remotion render WaveformWhite1080 out/waveform-white-1080p.mp4",
+    "render:blue4k": "remotion render WaveformBlue4K out/waveform-blue-4k.mp4",
+    "render:white4k": "remotion render WaveformWhite4K out/waveform-white-4k.mp4"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
