@@ -92,9 +92,10 @@ export const evaluateScript = (script: Script, frame: number): CursorState => {
     const raw = seg.dur <= 0 ? 1 : clamp((frame - t0) / seg.dur, 0, 1);
 
     if (seg.kind === "dwell") {
-      if (frame >= t1) t0 = t1;
-      else if (active) break;
-      else break;
+      // Either we are inside this dwell and the position stands, or it is
+      // already over and we move on to the next segment.
+      if (frame < t1) break;
+      t0 = t1;
       continue;
     }
 
@@ -129,15 +130,20 @@ export const evaluateScript = (script: Script, frame: number): CursorState => {
       controls[seg.control] = lerpP(startVal, seg.value, eased);
     }
 
+    // Note this is derived from `eased`, not from `to`. A scrub ends part
+    // way back along its own travel, so handing the next segment `to` as
+    // its start point would teleport the pointer the moment the scrub
+    // ended. Carrying the eased position forward keeps it continuous.
+    const settled = lerpP(from, to, eased);
+
     if (active) {
-      const base = lerpP(from, to, eased);
       const bow = arcOffset(from, to, raw, seg.arc ?? 0);
-      pos = { x: base.x + bow.x, y: base.y + bow.y };
+      pos = { x: settled.x + bow.x, y: settled.y + bow.y };
       pressed = seg.kind === "drag" || seg.kind === "scrub";
       break;
     }
 
-    pos = to;
+    pos = settled;
     t0 = t1;
   }
 

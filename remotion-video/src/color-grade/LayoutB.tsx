@@ -236,8 +236,8 @@ export const LayoutB: React.FC<Props> = ({ camera, frame, cursor, grade }) => {
         </DepthLayer>
       ))}
 
-      <div style={{ position: "absolute", inset: 0, zIndex: 50 }}>
-        <DepthLayer camera={camera} x={cursor.x} y={cursor.y} width={1} height={1} zIndex={60}>
+      <div style={{ position: "absolute", inset: 0, zIndex: 30 }}>
+        <DepthLayer camera={camera} x={cursor.x} y={cursor.y} width={1} height={1} zIndex={31}>
           <Cursor x={0} y={0} size={38} pressed={cursor.pressed} clickPulse={cursor.clickPulse} />
         </DepthLayer>
       </div>
