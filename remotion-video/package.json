@@ -32,10 +32,10 @@
     "lint": "eslint src && tsc",
     "generate:map": "node scripts/generate-world-dots.mjs",
     "generate:grain": "node scripts/generate-grain.mjs",
-    "render:1080": "remotion render DataNetwork1080Blue out/data-network-1080-blue.mp4 --codec=h264 --crf=18 --jpeg-quality=100 --color-space=bt709",
-    "render:1080:green": "remotion render DataNetwork1080Green out/data-network-1080-green.mp4 --codec=h264 --crf=18 --jpeg-quality=100 --color-space=bt709",
-    "render:4k": "remotion render DataNetwork4KBlue out/data-network-4k-blue.mp4 --codec=h264 --crf=16 --jpeg-quality=100 --color-space=bt709",
-    "render:4k:green": "remotion render DataNetwork4KGreen out/data-network-4k-green.mp4 --codec=h264 --crf=16 --jpeg-quality=100 --color-space=bt709"
+    "render:1080": "remotion render DataNetwork1080Blue out/data-network-1080-blue.mp4 --codec=h264 --muted --crf=18 --jpeg-quality=100 --color-space=bt709",
+    "render:1080:green": "remotion render DataNetwork1080Green out/data-network-1080-green.mp4 --codec=h264 --muted --crf=18 --jpeg-quality=100 --color-space=bt709",
+    "render:4k": "remotion render DataNetwork4KBlue out/data-network-4k-blue.mp4 --codec=h264 --muted --crf=16 --jpeg-quality=100 --color-space=bt709",
+    "render:4k:green": "remotion render DataNetwork4KGreen out/data-network-4k-green.mp4 --codec=h264 --muted --crf=16 --jpeg-quality=100 --color-space=bt709"
   },
   "sideEffects": [
     "*.css",

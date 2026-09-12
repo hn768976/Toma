@@ -41,6 +41,10 @@ npx remotion render DataNetwork4KBlue out/master-blue.mp4 \
 
 `npm run dev` opens the Remotion Studio if you want to scrub or retime.
 
+`--muted` matters: without it Remotion writes a silent AAC track whose padding
+stretches the container to 20.054s. Muted, the file is exactly 600 frames /
+20.000s with a single video stream, matching the reference.
+
 **Render cost.** The bloom pass (the stage is drawn twice, once blurred and
 screen-blended) is the expensive part: roughly 3.5s per frame at 1080p and
 four to five times that at 4K on a modest CPU, so budget ~35 minutes for a
