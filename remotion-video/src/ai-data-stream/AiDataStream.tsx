@@ -5,12 +5,19 @@ import {
   BASE_HEIGHT,
   BASE_WIDTH,
   BLUR_BUCKETS,
+  DURATION_IN_FRAMES,
   FONT_FAMILY,
   LETTER_SPACING_EM,
   MONO_ADVANCE_EM,
   THEMES,
 } from "./constants";
-import { cameraAt, generateLabels, projectLabel, type Projected } from "./field";
+import {
+  cameraAt,
+  computeVisibility,
+  generateLabels,
+  projectLabel,
+  type Projected,
+} from "./field";
 
 export const aiDataStreamSchema = z.object({
   theme: z.enum(["dark", "light"]),
@@ -115,6 +122,11 @@ export const AiDataStream: React.FC<AiDataStreamProps> = ({
   const height = BASE_HEIGHT * s;
 
   const labels = useMemo(() => generateLabels(theme.palette.length), [theme]);
+  // Per-frame, per-label visibility that keeps labels from overlapping.
+  const visibility = useMemo(
+    () => computeVisibility(labels, BASE_WIDTH, BASE_HEIGHT, theme.farDim, depthOfField),
+    [labels, theme, depthOfField],
+  );
   const buckets = useMemo(
     () =>
       BLUR_BUCKETS.map((b) => ({
@@ -139,6 +151,8 @@ export const AiDataStream: React.FC<AiDataStreamProps> = ({
     const projected: Projected[] = [];
     for (const label of labels) {
       const p = projectLabel(label, camera, frame, BASE_WIDTH, BASE_HEIGHT, theme.farDim, depthOfField);
+      const loopFrame = ((frame % DURATION_IN_FRAMES) + DURATION_IN_FRAMES) % DURATION_IN_FRAMES;
+      p.alpha *= visibility[label.index * DURATION_IN_FRAMES + loopFrame];
       if (p.alpha <= 0.01) continue;
       // Cheap cull using the monospace advance width.
       const fontPx = label.fontSize * p.scale;
@@ -197,7 +211,7 @@ export const AiDataStream: React.FC<AiDataStreamProps> = ({
       t.clearRect(0, 0, width, height);
       t.drawImage(composite, 0, 0);
     }
-  }, [frame, labels, buckets, composite, theme, width, height, s, depthOfField]);
+  }, [frame, labels, visibility, buckets, composite, theme, width, height, s, depthOfField]);
 
   const layer = (extra: React.CSSProperties): React.CSSProperties => ({
     position: "absolute",

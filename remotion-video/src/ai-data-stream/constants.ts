@@ -61,6 +61,14 @@ export const BLUR_BUCKETS: { radius: number; downscale: number }[] = [
   { radius: 26, downscale: 4 },
 ];
 
+// Screen-space spacing. Every label claims its text box padded by these
+// margins (in em of its own font size); anything that would intrude on a
+// nearer label's box is faded out so the field always reads with clear
+// gaps. Visibility changes are smoothed over +-OVERLAP_SMOOTH_FRAMES.
+export const GAP_X_EM = 0.8;
+export const GAP_Y_EM = 0.7;
+export const OVERLAP_SMOOTH_FRAMES = 7;
+
 // Approximate advance width of JetBrains Mono, for cheap culling.
 export const MONO_ADVANCE_EM = 0.6;
 export const LETTER_SPACING_EM = 0.05;
