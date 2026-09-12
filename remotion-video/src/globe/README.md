@@ -15,6 +15,14 @@ perspective data streams and a volumetric flare.
 
 All four are 750 frames @ 30fps.
 
+## Key light
+
+The flare sits in a frame corner — upper **left** for v1, upper **right** for
+v2 — with its anamorphic streak laid along the frame diagonal, pointing away
+from that corner and into the picture. `flarePosition()` and `flareAngle()` in
+`draw.ts` are the single source of truth; the ambient background wash is
+centred on the same point, so the lighting can never drift out of agreement.
+
 ## Resolution independence
 
 The whole scene is authored in a 3840×2160 "master unit" space and multiplied

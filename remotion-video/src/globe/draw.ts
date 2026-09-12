@@ -17,6 +17,26 @@ import { rgba, type Rgb, type Theme } from "./theme";
 
 const TAU = Math.PI * 2;
 
+/**
+ * Where the key light sits, as a fraction of the frame. Corner-anchored:
+ * upper-left for the reference layout, upper-right for the mirrored one.
+ */
+export const flarePosition = (mirror: boolean, width: number, height: number) => ({
+  // Sat right in the corner itself, so most of the bloom spills in from
+  // off-frame rather than sitting as a disc inside the picture.
+  fx: mirror ? width * 0.975 : width * 0.025,
+  fy: height * 0.04,
+});
+
+/**
+ * The streak runs along the frame diagonal, away from the corner the light
+ * sits in — down-right from the upper left, down-left from the upper right.
+ */
+export const flareAngle = (mirror: boolean, width: number, height: number) => {
+  const diagonal = Math.atan2(height, width);
+  return mirror ? -diagonal : diagonal;
+};
+
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 const smoothstep = (edge0: number, edge1: number, x: number) => {
@@ -120,14 +140,15 @@ export const drawScene = ({
   ctx.filter = "none";
 
   // ---------------------------------------------------------------- background
-  const bgFocusX = theme.mirror ? width * 0.24 : width * 0.76;
+  // The ambient wash follows the key light rather than sitting mid-frame.
+  const { fx: bgFocusX, fy: bgFocusY } = flarePosition(theme.mirror, width, height);
   const bg = ctx.createRadialGradient(
     bgFocusX,
-    height * 0.46,
+    bgFocusY,
     0,
     bgFocusX,
-    height * 0.46,
-    width * 0.92,
+    bgFocusY,
+    width * 1.02,
   );
   bg.addColorStop(0, rgba(theme.bgInner, 1));
   bg.addColorStop(0.55, rgba(theme.bgInner, 0.45));
@@ -466,36 +487,36 @@ const paintTicker = (
 const drawFlare = ({
   ctx, width, height, theme, p,
 }: { ctx: CanvasRenderingContext2D; width: number; height: number; theme: Theme; p: number }) => {
-  const fx = theme.mirror ? width * 0.095 : width * 0.905;
-  const fy = height * 0.44;
+  const { fx, fy } = flarePosition(theme.mirror, width, height);
   const pulse = 1 + 0.06 * Math.sin(TAU * p) + 0.03 * Math.sin(TAU * p * 3 + 2);
 
   ctx.globalCompositeOperation = "lighter";
 
-  const bloom = ctx.createRadialGradient(fx, fy, 0, fx, fy, width * 0.66 * pulse);
-  bloom.addColorStop(0, rgba(theme.flareBloom, 0.62));
-  bloom.addColorStop(0.14, rgba(theme.flareBloom, 0.3));
-  bloom.addColorStop(0.42, rgba(theme.flareBloom, 0.1));
-  bloom.addColorStop(0.75, rgba(theme.flareBloom, 0.02));
+  const bloom = ctx.createRadialGradient(fx, fy, 0, fx, fy, width * 0.82 * pulse);
+  bloom.addColorStop(0, rgba(theme.flareBloom, 0.72));
+  bloom.addColorStop(0.13, rgba(theme.flareBloom, 0.34));
+  bloom.addColorStop(0.4, rgba(theme.flareBloom, 0.12));
+  bloom.addColorStop(0.74, rgba(theme.flareBloom, 0.025));
   bloom.addColorStop(1, rgba(theme.flareBloom, 0));
   ctx.fillStyle = bloom;
   ctx.fillRect(0, 0, width, height);
 
-  // Anamorphic streak.
+  // Anamorphic streak, laid along the frame diagonal.
   ctx.save();
   ctx.translate(fx, fy);
-  ctx.scale(1, 0.045);
-  const streak = ctx.createRadialGradient(0, 0, 0, 0, 0, width * 0.46 * pulse);
-  streak.addColorStop(0, rgba(theme.flareCore, 0.55));
-  streak.addColorStop(0.35, rgba(theme.flareBloom, 0.18));
+  ctx.rotate(flareAngle(theme.mirror, width, height));
+  ctx.scale(1, 0.05);
+  const streak = ctx.createRadialGradient(0, 0, 0, 0, 0, width * 0.58 * pulse);
+  streak.addColorStop(0, rgba(theme.flareCore, 0.6));
+  streak.addColorStop(0.32, rgba(theme.flareBloom, 0.2));
   streak.addColorStop(1, rgba(theme.flareBloom, 0));
   ctx.fillStyle = streak;
   ctx.beginPath();
-  ctx.arc(0, 0, width * 0.46 * pulse, 0, TAU);
+  ctx.arc(0, 0, width * 0.58 * pulse, 0, TAU);
   ctx.fill();
   ctx.restore();
 
-  const core = ctx.createRadialGradient(fx, fy, 0, fx, fy, width * 0.055 * pulse);
+  const core = ctx.createRadialGradient(fx, fy, 0, fx, fy, width * 0.07 * pulse);
   core.addColorStop(0, rgba(theme.flareCore, 0.95));
   core.addColorStop(0.25, rgba(theme.flareCore, 0.4));
   core.addColorStop(1, rgba(theme.flareCore, 0));
