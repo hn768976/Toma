@@ -1,0 +1,3 @@
+# Rendered videos and the packaged project zip. These are build outputs —
+# the project source they are built from is already tracked.
+deliverables/
