@@ -23,20 +23,27 @@ export const currencyWorldSchema = z.object({
 
 export type CurrencyWorldProps = z.infer<typeof currencyWorldSchema>;
 
-// Three map plates stacked in depth, each masked at its edges so the
-// plate's own rectangle never shows. Sizes and depths are chosen
-// together: they hold the on-screen width that gives a reference-like
-// dot pitch, while keeping each plate's layout box small enough to
-// rasterise cheaply. A plate big enough to be placed far away is a
-// layer of hundreds of megapixels once a mask and a 3D transform are
-// on it, and several render workers holding those at once will run a
-// machine out of memory.
+// The map plates.
+//
+// Each is held at a CONSTANT distance from the lens: the composition
+// subtracts the camera's forward travel back out of the plate's depth,
+// so the dolly slides past the map instead of inflating it. That is
+// what the reference plate does — its map pans steadily and zooms at
+// about 0 %/s — and it is what lets the pan read as a wipe. Everything
+// else in the field still takes the full dolly, so the currency tokens
+// come at the camera while the map sweeps behind them.
+//
+// Depth sets each plate's parallax: the nearest slides fastest, the
+// furthest at about the reference's own 46 px/s. Widths are chosen so
+// all three land on a similar on-screen dot pitch (~11-13 px), which is
+// what makes them read as one map at three distances rather than three
+// maps at three sizes.
 const PLATES: PlateSpec[] = [
   {
-    width: 8000,
-    z: -5100,
-    x: -2100,
-    y: 340,
+    width: 10000,
+    z: -6200,
+    x: -2600,
+    y: 330,
     step: 1,
     opacity: 0.34,
     dotRatio: 0.42,
@@ -44,10 +51,10 @@ const PLATES: PlateSpec[] = [
     seed: 3,
   },
   {
-    width: 7000,
-    z: -3700,
-    x: 1500,
-    y: -400,
+    width: 8200,
+    z: -4300,
+    x: 1900,
+    y: -380,
     step: 1,
     opacity: 0.55,
     dotRatio: 0.44,
@@ -55,9 +62,9 @@ const PLATES: PlateSpec[] = [
     seed: 11,
   },
   {
-    width: 5600,
-    z: -2900,
-    x: -700,
+    width: 6400,
+    z: -2800,
+    x: -600,
     y: 200,
     step: 1,
     opacity: 0.85,
@@ -158,14 +165,14 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
               transform: world,
             }}
           >
-            <GridDecks palette={palette} />
+            <GridDecks palette={palette} camZ={cam.z} />
 
             {PLATES.map((plate, i) => (
               <DotMapPlate
                 key={i}
                 spec={plate}
                 palette={palette}
-                transform={place(plate.x, plate.y, plate.z + cam.z)}
+                transform={place(plate.x, plate.y, plate.z - cam.z)}
                 opacity={1}
               />
             ))}

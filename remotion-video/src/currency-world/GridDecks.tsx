@@ -1,6 +1,11 @@
 import React from "react";
 import type { Palette } from "./palette";
 
+// The decks are held at a constant distance like the map plates (the
+// camera's forward travel is subtracted back out), so they stay a
+// stable horizon for the pan to slide along instead of rushing past
+// and through the lens.
+//
 // A deck is built from individual rails rather than one big gridded
 // plane. A plane large enough to reach the horizon is a layer of
 // hundreds of megapixels, and Chromium rasterises it whole once a mask
@@ -16,7 +21,10 @@ const RAIL_COUNT = 11;
 const CROSS_WIDTH = 11000;
 const CROSS_DEPTHS = [-1000, -2200, -3600, -5200, -7000, -9200];
 
-export const GridDecks: React.FC<{ palette: Palette }> = ({ palette }) => {
+export const GridDecks: React.FC<{ palette: Palette; camZ: number }> = ({
+  palette,
+  camZ,
+}) => {
   const fadeBoth = `linear-gradient(90deg, rgba(0,0,0,0) 0%, ${palette.hud} 24%, ${palette.hud} 68%, rgba(0,0,0,0) 100%)`;
 
   return (
@@ -33,7 +41,7 @@ export const GridDecks: React.FC<{ palette: Palette }> = ({ palette }) => {
               key: `rail-${y}-${i}`,
               width: RAIL_LENGTH,
               height: 3,
-              transform: `translate3d(${x}px, ${y}px, ${RAIL_Z_CENTER}px) rotateY(90deg)`,
+              transform: `translate3d(${x}px, ${y}px, ${RAIL_Z_CENTER - camZ}px) rotateY(90deg)`,
             };
           }),
           // Cross ties, marking off distance along those rails.
@@ -41,7 +49,7 @@ export const GridDecks: React.FC<{ palette: Palette }> = ({ palette }) => {
             key: `tie-${y}-${i}`,
             width: CROSS_WIDTH,
             height: 2,
-            transform: `translate3d(0px, ${y}px, ${z}px)`,
+            transform: `translate3d(0px, ${y}px, ${z - camZ}px)`,
           })),
         ].map((bar) => (
           <div

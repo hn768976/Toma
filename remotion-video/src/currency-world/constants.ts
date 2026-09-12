@@ -24,13 +24,13 @@ export const PERSPECTIVE = 1500;
 // The depth slab the field lives in. Elements travel from Z_FAR towards
 // Z_NEAR as the camera dollies in, then wrap back — both ends are inside
 // a fade so the recycle is never visible.
-export const Z_NEAR = -260;
+export const Z_NEAR = -180;
 export const Z_FAR = -7200;
 export const Z_SPAN = Z_NEAR - Z_FAR;
 
 // Fade bands at each end of the slab.
 export const FADE_IN_DEPTH = 1500; // from Z_FAR inwards
-export const FADE_OUT_DEPTH = 950; // before Z_NEAR
+export const FADE_OUT_DEPTH = 620; // before Z_NEAR
 
 // Depth of the focal plane. Anything nearer or further defocuses.
 export const FOCUS_Z = -2600;
@@ -43,8 +43,15 @@ export const SPREAD_X = 6200;
 export const SPREAD_Y = 3500;
 
 // Camera travel, in design px per second at z = 0.
-export const PAN_SPEED = 105; // sideways — the shot's main move
-export const DOLLY_SPEED = 110; // forwards, into the field
+//
+// The two moves do different jobs, and only the token field feels both.
+// The pan is what wipes the map across and out of frame; the dolly is
+// what brings the currency tokens at the lens. The map plates are held
+// at a constant distance (see CurrencyWorld.tsx) so the dolly never
+// inflates them — measured against the reference plate, its map pans at
+// ~46 px/s of a 1920 frame and zooms at ~0 %/s.
+export const PAN_SPEED = 240; // sideways — the shot's main move
+export const DOLLY_SPEED = 340; // forwards, into the field
 export const BOB_AMPLITUDE_X = 26;
 export const BOB_AMPLITUDE_Y = 34;
 export const YAW_DEGREES = 0.9; // slight lead into the pan direction

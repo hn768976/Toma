@@ -25,7 +25,7 @@ const buildMedallions = (): Medallion[] =>
       x: between(rand, -SPREAD_X, SPREAD_X),
       y: between(rand, -SPREAD_Y, SPREAD_Y),
       z0: rand() * Z_SPAN,
-      size: between(rand, 190, 430),
+      size: between(rand, 220, 560),
       glyph: pick(rand, CURRENCY_GLYPHS),
       dashed: rand() < 0.34,
       spin: between(rand, -14, 14),
