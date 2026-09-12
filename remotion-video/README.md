@@ -25,12 +25,11 @@ Welcome to your Remotion project!
 ### Market map
 
 A global market dot-map: the continents drawn as a lattice of glowing LEDs on
-a plane tilted away from the camera, over a receding ground grid, with light
-shafts raking the plane and percentage readouts floating above it. It comes in
-two cuts:
+a plane tilted away from the camera, over a receding ground grid, with
+percentage readouts floating above it. It comes in two cuts:
 
-- **Bearish** - red, shafts rake down the plane, background candlestick series
-  trends down, arrows point down.
+- **Bearish** - red, background candlestick series trends down, arrows point
+  down.
 - **Bullish** - green, and all of that inverted. See `src/market-map/theme.ts`:
   the variants differ in motion and direction, not only in colour.
 

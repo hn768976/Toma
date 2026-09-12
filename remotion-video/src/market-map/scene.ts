@@ -1,6 +1,6 @@
 // Deterministic generators for everything on the plane besides the baked
 // dot lattice: the ground grid, the background candlestick series, the
-// light shafts, the floating tickers and the atmospheric haze.
+// floating tickers and the atmospheric haze.
 //
 // These are all authored directly in plane units (u across, v into the
 // distance) rather than in lon/lat. Only the continents are geographic;
@@ -27,7 +27,6 @@ import {
   GRID_V_MAX,
   GRID_V_MIN,
   HAZE_BLOB_COUNT,
-  STREAK_COUNT,
   TICKER_COUNT,
 } from "./constants";
 
@@ -118,40 +117,6 @@ export const generateCandles = (direction: -1 | 1): Candle[] => {
   }
 
   return candles;
-};
-
-// --- Light shafts -------------------------------------------------------
-
-export type Streak = {
-  u: number;
-  /** Length of the shaft along v, in plane units. */
-  length: number;
-  /** Where in its travel cycle the shaft starts, 0..1. */
-  phase: number;
-  widthScale: number;
-  brightness: number;
-  /** Height above the plane, so the brightest shafts float clear of it. */
-  elevation: number;
-};
-
-// Travel limits for a shaft head, wide enough that it is fully out of
-// frame at both ends of its cycle.
-export const STREAK_V_MIN = -0.95;
-export const STREAK_V_MAX = 0.9;
-
-export const generateStreaks = (): Streak[] => {
-  const streaks: Streak[] = [];
-  for (let i = 0; i < STREAK_COUNT; i++) {
-    streaks.push({
-      u: -1.4 + seededRandom(i, 101) * 2.8,
-      length: 0.14 + seededRandom(i, 113) * 0.36,
-      phase: seededRandom(i, 127),
-      widthScale: 0.55 + seededRandom(i, 131) * 1.15,
-      brightness: 0.45 + seededRandom(i, 149) * 0.75,
-      elevation: seededRandom(i, 151) * 0.035,
-    });
-  }
-  return streaks;
 };
 
 // --- Tickers ------------------------------------------------------------

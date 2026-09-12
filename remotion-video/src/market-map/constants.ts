@@ -95,13 +95,6 @@ export const CANDLE_U_MAX = 1.15;
 export const CANDLE_V_MIN = -0.38;
 export const CANDLE_V_MAX = 0.46;
 
-// --- Data streaks -------------------------------------------------------
-// Vertical light shafts that rake down the plane (bearish) or up it
-// (bullish), standing in for falling / rising prices.
-export const STREAK_COUNT = 26;
-export const STREAK_PERIOD = 90;
-export const BASE_STREAK_WIDTH = 2.1;
-
 // --- Tickers ------------------------------------------------------------
 export const TICKER_COUNT = 56;
 export const TICKER_PERIOD = 90;
@@ -127,7 +120,6 @@ export type MapGeometry = {
   sizeScale: number;
   dotRadius: number;
   gridDotRadius: number;
-  streakWidth: number;
   tickerFontSize: number;
   blurPx: number;
 };
@@ -153,7 +145,6 @@ export const computeGeometry = (resolutionScale: number): MapGeometry => {
     sizeScale: resolutionScale,
     dotRadius: BASE_DOT_RADIUS * resolutionScale,
     gridDotRadius: BASE_GRID_DOT_RADIUS * resolutionScale,
-    streakWidth: BASE_STREAK_WIDTH * resolutionScale,
     tickerFontSize: BASE_TICKER_FONT_SIZE * resolutionScale,
     blurPx: BASE_BLUR_PX * resolutionScale,
   };

@@ -2,10 +2,10 @@
 // reference match and the bullish variant lives here, so the composition
 // itself is written once.
 //
-// `direction` is the important one: it is not just a recolour. -1 rakes the
-// light shafts downward and walks the background candlestick series lower;
-// +1 sends both the other way. Colour alone would read as a palette swap,
-// not as a rising market.
+// `direction` is the important one: it is not just a recolour. -1 walks the
+// background candlestick series lower and points the ticker arrows down; +1
+// sends both the other way. Colour alone would read as a palette swap, not
+// as a rising market.
 
 export type MarketTheme = {
   /** -1 = falling / bearish, +1 = rising / bullish. */
@@ -16,7 +16,7 @@ export type MarketTheme = {
   haze: string;
   /** Hot core of a map dot (near-white, faintly tinted). */
   dotCore: string;
-  /** Fully saturated accent, used for far dots, streaks and highlights. */
+  /** Fully saturated accent, used for far dots and highlights. */
   accent: string;
   /** Dimmer accent for the graticule and background candles. */
   accentDim: string;

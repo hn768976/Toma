@@ -1,9 +1,9 @@
 // A real 3D pinhole camera looking at the map plane.
 //
 // This is deliberately a projective transform and not a CSS skew or a
-// vertical squash: every dot, graticule line, candle body, light shaft and
-// ticker anchor goes through the same matrix, so they all share one
-// vanishing point and one depth scale. That is what makes the plane read as
+// vertical squash: every dot, grid line, candle body and ticker anchor goes
+// through the same matrix, so they all share one vanishing point and one
+// depth scale. That is what makes the plane read as
 // a plane rather than as a flat image that has been distorted - and it means
 // dot spacing tightens towards the horizon on its own, because the spacing
 // is computed in map space and projected, never faked in screen space.
@@ -99,10 +99,7 @@ const rotZ = (a: number) => {
 
 // Everything below uses one full cycle (or an exact divisor) of the clip
 // length, so the camera returns to its starting attitude on the last frame.
-export const cameraAtFrame = (
-  frame: number,
-  geometry: MapGeometry,
-): Camera => {
+export const cameraAtFrame = (frame: number, geometry: MapGeometry): Camera => {
   const pitch =
     (PITCH_BASE_DEG + PITCH_AMP_DEG * Math.sin((frame / PITCH_PERIOD) * TAU)) *
     DEG;
@@ -142,8 +139,8 @@ const NEAR_PLANE = 0.08;
 
 /**
  * Projects a plane-local point. `w` lifts the point off the plane along the
- * plane normal, which is how tickers and streak heads float in front of the
- * map instead of being painted onto it.
+ * plane normal, which is how tickers float in front of the map instead of
+ * being painted onto it.
  */
 export const project = (
   cam: Camera,
@@ -172,12 +169,8 @@ export const project = (
 };
 
 /** Convenience wrapper for the common lon/lat case. */
-export const projectLonLat = (
-  cam: Camera,
-  lon: number,
-  lat: number,
-  w = 0,
-) => project(cam, lonToU(lon), latToV(lat), w);
+export const projectLonLat = (cam: Camera, lon: number, lat: number, w = 0) =>
+  project(cam, lonToU(lon), latToV(lat), w);
 
 /**
  * Depth shading. Far geometry loses brightness so the plane recedes into

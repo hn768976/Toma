@@ -10,7 +10,6 @@ import {
   DOT_WAVE_PERIOD,
   DURATION_IN_FRAMES,
   HAZE_PERIOD,
-  STREAK_PERIOD,
   TICKER_BOB_PERIOD,
   TICKER_FAST_TICK_FRAMES,
   TICKER_PERIOD,
@@ -26,12 +25,9 @@ import {
   type Projected,
 } from "./projection";
 import {
-  STREAK_V_MAX,
-  STREAK_V_MIN,
   generateCandles,
   generateGridDots,
   generateHazeBlobs,
-  generateStreaks,
   generateTickers,
   tickerValue,
   type Ticker,
@@ -230,8 +226,7 @@ const drawTicker = (
 /**
  * A global market dot-map: continents rendered as a lattice of glowing
  * LEDs on a plane tilted away from the camera, over a receding ground
- * grid, with light shafts raking the plane and percentage readouts
- * floating above it.
+ * grid, with percentage readouts floating above it.
  *
  * Drawn on canvas rather than SVG/DOM because it pushes 5000+ map dots and
  * ~2000 grid dots every frame. Bloom follows the same approach as the
@@ -258,7 +253,6 @@ export const MarketMap: React.FC<MarketMapProps> = ({
     () => generateCandles(theme.direction),
     [theme.direction],
   );
-  const streaks = useMemo(() => generateStreaks(), []);
   const tickers = useMemo(() => generateTickers(), []);
   const hazeBlobs = useMemo(() => generateHazeBlobs(), []);
 
@@ -322,7 +316,8 @@ export const MarketMap: React.FC<MarketMapProps> = ({
     const hazePhase = (frame / HAZE_PERIOD) * TAU;
     ctx.globalAlpha = 1;
     for (const blob of hazeBlobs) {
-      const bx = (blob.x + blob.driftX * Math.sin(hazePhase + blob.phase)) * width;
+      const bx =
+        (blob.x + blob.driftX * Math.sin(hazePhase + blob.phase)) * width;
       const by =
         (blob.y + blob.driftY * Math.cos(hazePhase + blob.phase)) * height;
       const r = blob.radius * width;
@@ -385,7 +380,8 @@ export const MarketMap: React.FC<MarketMapProps> = ({
       const p = project(cam, lonToU(lon), latToV(lat));
       if (!p.visible || !onScreen(p)) continue;
 
-      const shimmer = 0.74 + 0.26 * Math.sin(frame * shimmerFreq + dotPhases[i]);
+      const shimmer =
+        0.74 + 0.26 * Math.sin(frame * shimmerFreq + dotPhases[i]);
       // A slow brightness wave crossing the map, so activity sweeps the
       // globe instead of every dot twinkling independently.
       const wave = 0.82 + 0.18 * Math.sin(lon * 0.021 - frame * waveFreq);
@@ -404,44 +400,6 @@ export const MarketMap: React.FC<MarketMapProps> = ({
       ctx.beginPath();
       ctx.arc(p.x, p.y, geometry.dotRadius * clamp(p.scale, 0.5, 2.1), 0, TAU);
       ctx.fill();
-    }
-
-    // --- Light shafts -------------------------------------------------
-    const travel = STREAK_V_MAX - STREAK_V_MIN;
-    ctx.globalAlpha = 1;
-    ctx.lineCap = "round";
-    for (const streak of streaks) {
-      const t = (((frame / STREAK_PERIOD + streak.phase) % 1) + 1) % 1;
-      // The head runs with the market: down the plane when bearish, up it
-      // when bullish. The tail trails behind, so the shaft always points
-      // back the way it came.
-      const span = travel + streak.length * 2;
-      const headV =
-        theme.direction < 0
-          ? STREAK_V_MAX + streak.length - t * span
-          : STREAK_V_MIN - streak.length + t * span;
-      const tailV = headV - theme.direction * streak.length;
-
-      const head = project(cam, streak.u, headV, streak.elevation);
-      const tail = project(cam, streak.u, tailV, streak.elevation);
-      if (!head.visible || !tail.visible) continue;
-      if (!onScreen(head) && !onScreen(tail)) continue;
-
-      const alpha =
-        streak.brightness * Math.sin(Math.PI * t) * depthFade(head.scale) * 1.1;
-      if (alpha <= 0.012) continue;
-
-      const grad = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
-      grad.addColorStop(0, rgbaString(coreRgb, alpha));
-      grad.addColorStop(0.12, rgbaString(accentRgb, alpha * 0.85));
-      grad.addColorStop(1, rgbaString(accentRgb, 0));
-      ctx.strokeStyle = grad;
-      ctx.lineWidth =
-        geometry.streakWidth * streak.widthScale * clamp(head.scale, 0.5, 1.8);
-      ctx.beginPath();
-      ctx.moveTo(head.x, head.y);
-      ctx.lineTo(tail.x, tail.y);
-      ctx.stroke();
     }
 
     ctx.globalAlpha = 1;
@@ -463,20 +421,11 @@ export const MarketMap: React.FC<MarketMapProps> = ({
       const cycle = Math.floor(phase / TICKER_PERIOD);
       const local = (phase % TICKER_PERIOD) / TICKER_PERIOD;
       const env =
-        local < 0.1
-          ? local / 0.1
-          : local > 0.86
-            ? (1 - local) / 0.14
-            : 1;
+        local < 0.1 ? local / 0.1 : local > 0.86 ? (1 - local) / 0.14 : 1;
       if (env <= 0.01) continue;
 
       const bob = Math.sin(frame * bobFreq + ticker.bobPhase) * 0.006;
-      const point = project(
-        cam,
-        ticker.u,
-        ticker.v + bob,
-        ticker.elevation,
-      );
+      const point = project(cam, ticker.u, ticker.v + bob, ticker.elevation);
       if (!point.visible) continue;
       const slack = 260 * geometry.sizeScale;
       if (
@@ -515,7 +464,6 @@ export const MarketMap: React.FC<MarketMapProps> = ({
     theme,
     gridDots,
     candles,
-    streaks,
     tickers,
     hazeBlobs,
     dotCount,
