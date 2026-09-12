@@ -292,75 +292,91 @@ const drawMatrix = (ctx: Ctx, t: number, theme: Theme) => {
   textLine(ctx, MATRIX.x, MATRIX.y + MATRIX.h + 26, `${word(140)} ${hexToken(141 + Math.floor(t * 2), 6)}`, rgba(theme.textDim, 0.9), 11);
 };
 
-type Ribbon = { k: Accent; y0: number; y1: number; w: number; id: number };
+type Ribbon = { k: Accent; y0: number; y1: number; w: number; id: number; row: number };
 
+// Strands are routed per chart row, like the reference: every row's
+// legend receives a handful of strands in that row's colour (one or two
+// thick, the rest thin), and their sources are interleaved along the
+// matrix edge so the bundles weave and cross on the way over.
 const buildRibbons = (): Ribbon[] => {
-  const groups: { k: Accent; n: number; src: number; dst: number; seed: number }[] = [
-    { k: "a", n: 10, src: 760, dst: 262, seed: 1 },
-    { k: "b", n: 13, src: 612, dst: 500, seed: 2 },
-    { k: "c", n: 10, src: 940, dst: 880, seed: 3 },
-  ];
   const ribbons: Ribbon[] = [];
   let id = 0;
-  for (const g of groups) {
-    let y0 = g.src;
-    let y1 = g.dst;
-    for (let i = 0; i < g.n; i++) {
-      const w = 3 + hashN(g.seed, i, 50) * 11;
-      ribbons.push({ k: g.k, y0: y0 + w / 2, y1: y1 + w / 2, w, id: id++ });
-      y0 += w + 3 + hashN(g.seed, i, 51) * 6;
-      y1 += w + 8 + hashN(g.seed, i, 52) * 16;
+  for (let r = 0; r < CHART.rows; r++) {
+    const top = CHART.y + r * CHART.rowH;
+    const count = 4 + Math.floor(hashN(r, 70) * 3); // 4..6 per row
+    const thickAt = Math.floor(hashN(r, 71) * count);
+    let y1 = top + 14 + hashN(r, 72) * 10;
+    for (let i = 0; i < count; i++) {
+      const w =
+        i === thickAt
+          ? 14 + hashN(r, i, 73) * 10
+          : hashN(r, i, 77) < 0.35
+            ? 8 + hashN(r, i, 74) * 4
+            : 4 + hashN(r, i, 74) * 3;
+      ribbons.push({ k: ROW_ACCENT[r], y0: 0, y1: y1 + w / 2, w, id: id++, row: r });
+      y1 += w + 5 + hashN(r, i, 75) * 4;
     }
+  }
+  // Source order: destination order with noise, so neighbouring rows swap
+  // places and strands cross, while the bundle still reads top -> bottom.
+  const order = [...ribbons].sort(
+    (p, q) => p.y1 + (hashN(p.id, 76) - 0.5) * 640 - (q.y1 + (hashN(q.id, 76) - 0.5) * 640),
+  );
+  // Packed tight at the source (centred on the matrix edge) so the bundle
+  // visibly fans out towards the rows.
+  const gap = 3;
+  const totalH = order.reduce((acc, rb) => acc + rb.w + gap, 0);
+  let y0 = MATRIX.y + (MATRIX.h - totalH) / 2;
+  for (const rb of order) {
+    rb.y0 = y0 + rb.w / 2;
+    y0 += rb.w + gap;
   }
   return ribbons;
 };
 
 const RIBBONS = buildRibbons();
 
+const ribbonPath = (ctx: Ctx, x0: number, y0: number, x1: number, y1: number) => {
+  const dx = x1 - x0;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  ctx.bezierCurveTo(x0 + dx * 0.48, y0, x1 - dx * 0.48, y1, x1, y1);
+};
+
 const drawRibbons = (ctx: Ctx, t: number, theme: Theme) => {
   const x0 = MATRIX.x + MATRIX.w;
   const x1 = LEGEND_X;
-  const cx = (x0 + x1) / 2;
-  // Draw blue over red over green so bundles visibly cross.
-  const order = [...RIBBONS].sort((p, q) => {
-    const rank = { c: 0, a: 1, b: 2 };
-    return rank[p.k] - rank[q.k] || q.w - p.w;
-  });
+  ctx.lineCap = "butt";
+  // thick strands underneath, thin ones on top
+  const order = [...RIBBONS].sort((p, q) => q.w - p.w);
   for (const rb of order) {
     const col = accent(theme, rb.k);
-    const wobble = (vnoise(t * 0.6 + rb.id, 300 + rb.id) - 0.5) * 5;
+    const wobble = (vnoise(t * 0.6 + rb.id, 300 + rb.id) - 0.5) * 4;
     const y0 = rb.y0 + wobble;
-    const y1 = rb.y1;
-    const hw = rb.w / 2;
-    ctx.beginPath();
-    ctx.moveTo(x0, y0 - hw);
-    ctx.bezierCurveTo(cx, y0 - hw, cx, y1 - hw, x1, y1 - hw);
-    ctx.lineTo(x1, y1 + hw);
-    ctx.bezierCurveTo(cx, y1 + hw, cx, y0 + hw, x0, y0 + hw);
-    ctx.closePath();
-    // base fill, brighter towards the legend column
+    // dark rim so overlapping strands stay separated
+    ribbonPath(ctx, x0, y0, x1, rb.y1);
+    ctx.lineWidth = rb.w + 3.2;
+    ctx.strokeStyle = rgba(theme.background, 0.85);
+    ctx.stroke();
+    // body, a touch dimmer at the source end
     const g = ctx.createLinearGradient(x0, 0, x1, 0);
-    g.addColorStop(0, rgba(col, 0.55));
+    g.addColorStop(0, rgba(col, 0.62));
+    g.addColorStop(0.5, rgba(col, 0.74));
     g.addColorStop(1, rgba(col, 0.9));
-    ctx.fillStyle = g;
-    ctx.fill();
-    // travelling highlight band
-    const p = (t * (0.18 + hashN(rb.id, 60) * 0.12) + hashN(rb.id, 61)) % 1;
+    ribbonPath(ctx, x0, y0, x1, rb.y1);
+    ctx.lineWidth = rb.w;
+    ctx.strokeStyle = g;
+    ctx.stroke();
+    // travelling light pulse
+    const p = (t * (0.16 + hashN(rb.id, 60) * 0.12) + hashN(rb.id, 61)) % 1;
     const band = ctx.createLinearGradient(x0, 0, x1, 0);
-    const bw = 0.16;
+    const bw = 0.14;
     band.addColorStop(0, "rgba(255,255,255,0)");
     band.addColorStop(clamp01(p - bw), "rgba(255,255,255,0)");
-    band.addColorStop(clamp01(p), "rgba(255,255,255,0.28)");
+    band.addColorStop(clamp01(p), "rgba(255,255,255,0.22)");
     band.addColorStop(clamp01(p + bw), "rgba(255,255,255,0)");
     band.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = band;
-    ctx.fill();
-    // crisp top edge
-    ctx.beginPath();
-    ctx.moveTo(x0, y0 - hw);
-    ctx.bezierCurveTo(cx, y0 - hw, cx, y1 - hw, x1, y1 - hw);
-    ctx.lineWidth = 0.8;
-    ctx.strokeStyle = rgba(col, 0.35);
+    ctx.strokeStyle = band;
     ctx.stroke();
   }
 };
@@ -374,8 +390,8 @@ const drawLegendColumn = (ctx: Ctx, t: number, theme: Theme) => {
   }
   for (const rb of RIBBONS) {
     const col = accent(theme, rb.k);
-    const w = 22 + 34 * fbm(t * 0.5 + rb.id, 400 + rb.id);
-    const h = Math.max(3, Math.min(8, rb.w * 0.55));
+    const w = 28 + 30 * fbm(t * 0.5 + rb.id, 400 + rb.id);
+    const h = Math.max(3, Math.min(12, rb.w));
     ctx.fillStyle = rgba(col, 0.95);
     ctx.fillRect(LEGEND_X, rb.y1 - h / 2, w, h);
     ctx.fillStyle = rgba(col, 0.25);
