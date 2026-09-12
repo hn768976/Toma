@@ -1,5 +1,6 @@
 import "./index.css";
 import "./load-fonts";
+import "./data-network/preload";
 import { Composition } from "remotion";
 import {
   BluetoothExplainer,
@@ -18,6 +19,19 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  DataNetworkBoard,
+  dataNetworkSchema,
+  dataNetworkDefaults,
+} from "./data-network/DataNetworkBoard";
+import {
+  BASE_WIDTH as NET_WIDTH,
+  BASE_HEIGHT as NET_HEIGHT,
+  UHD_WIDTH as NET_UHD_WIDTH,
+  UHD_HEIGHT as NET_UHD_HEIGHT,
+  DURATION_IN_FRAMES as NET_DURATION_IN_FRAMES,
+  FPS as NET_FPS,
+} from "./data-network/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +65,50 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/*
+        Global Data Network. The 4K entries are the masters; the 1080p entries
+        are the same design space at half the pixels, for delivery.
+      */}
+      <Composition
+        id="DataNetwork4KBlue"
+        component={DataNetworkBoard}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_UHD_WIDTH}
+        height={NET_UHD_HEIGHT}
+        schema={dataNetworkSchema}
+        defaultProps={{ ...dataNetworkDefaults, theme: "blue" as const }}
+      />
+      <Composition
+        id="DataNetwork4KGreen"
+        component={DataNetworkBoard}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_UHD_WIDTH}
+        height={NET_UHD_HEIGHT}
+        schema={dataNetworkSchema}
+        defaultProps={{ ...dataNetworkDefaults, theme: "green" as const }}
+      />
+      <Composition
+        id="DataNetwork1080Blue"
+        component={DataNetworkBoard}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_WIDTH}
+        height={NET_HEIGHT}
+        schema={dataNetworkSchema}
+        defaultProps={{ ...dataNetworkDefaults, theme: "blue" as const }}
+      />
+      <Composition
+        id="DataNetwork1080Green"
+        component={DataNetworkBoard}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_WIDTH}
+        height={NET_HEIGHT}
+        schema={dataNetworkSchema}
+        defaultProps={{ ...dataNetworkDefaults, theme: "green" as const }}
       />
     </>
   );

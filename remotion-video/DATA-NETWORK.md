@@ -1,0 +1,90 @@
+# Global Data Network
+
+An abstract "big data" motion graphic: an oblique HUD table carrying a halftone
+world map, a live link graph between 39 city nodes, and a field of ~180
+dashboard widgets, with a slow continuous camera drift across it.
+
+Built to match a 20-second, 30fps reference clip — same length, same frame
+rate, same 16:9 framing, in two colourways.
+
+## Compositions
+
+| Composition ID         | Size        | fps | Frames | Notes                     |
+| ---------------------- | ----------- | --- | ------ | ------------------------- |
+| `DataNetwork4KBlue`    | 3840 × 2160 | 30  | 600    | 4K master, blue colourway |
+| `DataNetwork4KGreen`   | 3840 × 2160 | 30  | 600    | 4K master, green          |
+| `DataNetwork1080Blue`  | 1920 × 1080 | 30  | 600    | Delivery, blue            |
+| `DataNetwork1080Green` | 1920 × 1080 | 30  | 600    | Delivery, green           |
+
+All four are the same picture: the scene is authored in a fixed 1920 × 1080
+design space and scaled by `width / 1920`, so the 4K compositions are true
+resolution masters rather than upscales, and the two resolutions match frame
+for frame.
+
+## Rendering
+
+```console
+npm i
+
+# 4K masters
+npx remotion render DataNetwork4KBlue  out/data-network-4k-blue.mp4  --codec=h264 --crf=16
+npx remotion render DataNetwork4KGreen out/data-network-4k-green.mp4 --codec=h264 --crf=16
+
+# 1080p delivery
+npx remotion render DataNetwork1080Blue  out/data-network-1080-blue.mp4  --codec=h264 --crf=18
+npx remotion render DataNetwork1080Green out/data-network-1080-green.mp4 --codec=h264 --crf=18
+```
+
+`npm run dev` opens the Remotion Studio if you want to scrub or retime.
+
+## Where things live
+
+```
+src/data-network/
+  constants.ts          timing, board geometry, camera rig
+  theme.ts              the blue and green palettes
+  rng.ts                seeded PRNG — the board is identical on every render
+  network.ts            city coordinates, link graph, bezier helpers
+  layout.ts             where every HUD widget sits, and the readable captions
+  hud-modules.tsx       the 14 widget types (bars, donuts, gauges, streams…)
+  DataNetworkBoard.tsx  camera rig, map layers, bloom and atmosphere
+  preload.ts            blocks frame 1 until fonts and bitmaps are decoded
+public/
+  world-dots.png        7040 × 2528 halftone landmass mask
+  grain.png             256 × 256 noise tile
+scripts/
+  generate-world-dots.mjs   rebuilds world-dots.png from Natural Earth data
+  generate-grain.mjs        rebuilds grain.png
+```
+
+## Retiming and re-skinning
+
+- **Length / fps** — `DURATION_IN_FRAMES` and `FPS` in `constants.ts`.
+- **Camera** — the `CAMERA` block in `constants.ts`. `distance*` is a real
+  dolly (the board sits that far behind the lens), `pan`/`dolly` slide along
+  the table surface, `tilt`/`roll` orient it.
+- **Colour** — `theme.ts`. Adding a third colourway is a new entry in `THEMES`
+  plus a `Composition` in `src/Root.tsx`; nothing else changes.
+- **Widget mix** — the `weight` values in `layout.ts` control how often each
+  widget type appears; `COLS`/`ROWS` control density.
+
+## Regenerating the assets
+
+The two bitmaps in `public/` are committed, so a plain `npm i` is enough to
+render. They only need rebuilding if you change the map projection or the
+grain:
+
+```console
+npm run generate:map
+npm run generate:grain
+```
+
+The map is sampled from Natural Earth land polygons (via the `world-atlas`
+package) on an equirectangular grid cropped to 73°N – 56°S, which is the
+framing broadcast data graphics normally use.
+
+## Fonts
+
+JetBrains Mono (SIL Open Font License 1.1) is bundled in `public/fonts/` and
+loaded through `delayRender()`, so renders never depend on a network fetch or
+on fonts installed locally.
