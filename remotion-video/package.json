@@ -18,15 +18,23 @@
     "@remotion/eslint-config-flat": "4.0.515",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
+    "d3-geo": "^3.1.1",
     "eslint": "9.19.0",
     "prettier": "3.8.1",
-    "typescript": "5.9.3"
+    "topojson-client": "^3.1.0",
+    "typescript": "5.9.3",
+    "world-atlas": "^2.0.2"
   },
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "globe:points": "node scripts/gen-land-points.mjs",
+    "globe:v1:1080": "remotion render FinanceGlobe1080 out/global-financial-data_v1-classic_1080p.mp4 --codec=h264 --crf=18 --x264-preset=slow --pixel-format=yuv420p --image-format=png --muted",
+    "globe:v2:1080": "remotion render FinanceGlobeCyan1080 out/global-financial-data_v2-cyan-mirror_1080p.mp4 --codec=h264 --crf=18 --x264-preset=slow --pixel-format=yuv420p --image-format=png --muted",
+    "globe:v1:4k": "remotion render FinanceGlobe4K out/global-financial-data_v1-classic_4k.mp4 --codec=h264 --crf=18 --x264-preset=slow --pixel-format=yuv420p --image-format=png --muted",
+    "globe:v2:4k": "remotion render FinanceGlobeCyan4K out/global-financial-data_v2-cyan-mirror_4k.mp4 --codec=h264 --crf=18 --x264-preset=slow --pixel-format=yuv420p --image-format=png --muted"
   },
   "sideEffects": [
     "*.css",

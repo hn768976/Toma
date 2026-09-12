@@ -18,6 +18,15 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  GlobeScene,
+  globeSceneSchema,
+  globeSceneDefaults,
+} from "./globe/GlobeScene";
+import {
+  DURATION_IN_FRAMES as GLOBE_DURATION_IN_FRAMES,
+  FPS as GLOBE_FPS,
+} from "./globe/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +60,52 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/*
+        Global Financial Data — 25s / 30fps seamless loop.
+        The 4K compositions are the masters; the 1080p ones render the exact
+        same scene (the whole thing is authored in 3840x2160 master units and
+        scaled by width), so they are frame-identical apart from resolution.
+      */}
+      <Composition
+        id="FinanceGlobe4K"
+        component={GlobeScene}
+        durationInFrames={GLOBE_DURATION_IN_FRAMES}
+        fps={GLOBE_FPS}
+        width={3840}
+        height={2160}
+        schema={globeSceneSchema}
+        defaultProps={globeSceneDefaults}
+      />
+      <Composition
+        id="FinanceGlobe1080"
+        component={GlobeScene}
+        durationInFrames={GLOBE_DURATION_IN_FRAMES}
+        fps={GLOBE_FPS}
+        width={1920}
+        height={1080}
+        schema={globeSceneSchema}
+        defaultProps={globeSceneDefaults}
+      />
+      <Composition
+        id="FinanceGlobeCyan4K"
+        component={GlobeScene}
+        durationInFrames={GLOBE_DURATION_IN_FRAMES}
+        fps={GLOBE_FPS}
+        width={3840}
+        height={2160}
+        schema={globeSceneSchema}
+        defaultProps={{ ...globeSceneDefaults, theme: "cyan-mirror" as const }}
+      />
+      <Composition
+        id="FinanceGlobeCyan1080"
+        component={GlobeScene}
+        durationInFrames={GLOBE_DURATION_IN_FRAMES}
+        fps={GLOBE_FPS}
+        width={1920}
+        height={1080}
+        schema={globeSceneSchema}
+        defaultProps={{ ...globeSceneDefaults, theme: "cyan-mirror" as const }}
       />
     </>
   );
