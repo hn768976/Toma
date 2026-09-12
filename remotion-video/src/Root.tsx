@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  MarketMap,
+  marketMapSchema,
+  marketMapDefaults,
+} from "./market-map/MarketMap";
+import {
+  BASE_WIDTH as MAP_WIDTH,
+  BASE_HEIGHT as MAP_HEIGHT,
+  DURATION_IN_FRAMES as MAP_DURATION_IN_FRAMES,
+  FPS as MAP_FPS,
+} from "./market-map/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,58 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+
+      {/* Global market dot-map. Each cut is registered twice: 1080p for
+          delivery and 4K for the project hand-off. The 4K pair differs
+          only in resolutionScale, so both stay in visual sync. */}
+      <Composition
+        id="MarketMapBearish"
+        component={MarketMap}
+        durationInFrames={MAP_DURATION_IN_FRAMES}
+        fps={MAP_FPS}
+        width={MAP_WIDTH}
+        height={MAP_HEIGHT}
+        schema={marketMapSchema}
+        defaultProps={{ ...marketMapDefaults, theme: "bearish" as const }}
+      />
+      <Composition
+        id="MarketMapBullish"
+        component={MarketMap}
+        durationInFrames={MAP_DURATION_IN_FRAMES}
+        fps={MAP_FPS}
+        width={MAP_WIDTH}
+        height={MAP_HEIGHT}
+        schema={marketMapSchema}
+        defaultProps={{ ...marketMapDefaults, theme: "bullish" as const }}
+      />
+      <Composition
+        id="MarketMapBearish4K"
+        component={MarketMap}
+        durationInFrames={MAP_DURATION_IN_FRAMES}
+        fps={MAP_FPS}
+        width={MAP_WIDTH * 2}
+        height={MAP_HEIGHT * 2}
+        schema={marketMapSchema}
+        defaultProps={{
+          ...marketMapDefaults,
+          theme: "bearish" as const,
+          resolutionScale: 2,
+        }}
+      />
+      <Composition
+        id="MarketMapBullish4K"
+        component={MarketMap}
+        durationInFrames={MAP_DURATION_IN_FRAMES}
+        fps={MAP_FPS}
+        width={MAP_WIDTH * 2}
+        height={MAP_HEIGHT * 2}
+        schema={marketMapSchema}
+        defaultProps={{
+          ...marketMapDefaults,
+          theme: "bullish" as const,
+          resolutionScale: 2,
+        }}
       />
     </>
   );
