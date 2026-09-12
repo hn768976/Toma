@@ -1,0 +1,28 @@
+{
+  "name": "ai-ops-motion",
+  "version": "1.0.0",
+  "description": "Autonomous AI operations motion graphics (Remotion) - dashboard matrix + processing pipeline, 4K & 1080p",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build:1080": "npm run render:matrix:1080 && npm run render:pipeline:1080",
+    "build:4k": "npm run render:matrix:4k && npm run render:pipeline:4k",
+    "render:matrix:1080": "remotion render OperationsMatrix1080 out/operations-matrix-1080p.mp4",
+    "render:matrix:4k": "remotion render OperationsMatrix4K out/operations-matrix-4k.mp4",
+    "render:pipeline:1080": "remotion render ProcessingPipeline1080 out/processing-pipeline-1080p.mp4",
+    "render:pipeline:4k": "remotion render ProcessingPipeline4K out/processing-pipeline-4k.mp4",
+    "typecheck": "tsc"
+  }
+}
