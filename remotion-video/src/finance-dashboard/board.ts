@@ -331,6 +331,31 @@ const buildRibbons = (): Ribbon[] => {
     rb.y0 = y0 + rb.w / 2;
     y0 += rb.w + gap;
   }
+  // No strand may run straight across: if a strand's source sits level
+  // with its destination, swap source slots with another strand so both
+  // still sweep by at least MIN_SWEEP.
+  const MIN_SWEEP = 90;
+  const sweep = (rb: Ribbon, src: number) => Math.abs(rb.y1 - src);
+  for (let pass = 0; pass < 3; pass++) {
+    for (const rb of order) {
+      if (sweep(rb, rb.y0) >= MIN_SWEEP) continue;
+      let best: Ribbon | null = null;
+      let bestScore = 0;
+      for (const other of order) {
+        if (other === rb) continue;
+        const score = Math.min(sweep(rb, other.y0), sweep(other, rb.y0));
+        if (score >= MIN_SWEEP && score > bestScore) {
+          best = other;
+          bestScore = score;
+        }
+      }
+      if (best) {
+        const tmp = rb.y0;
+        rb.y0 = best.y0;
+        best.y0 = tmp;
+      }
+    }
+  }
   return ribbons;
 };
 
@@ -340,7 +365,7 @@ const ribbonPath = (ctx: Ctx, x0: number, y0: number, x1: number, y1: number) =>
   const dx = x1 - x0;
   ctx.beginPath();
   ctx.moveTo(x0, y0);
-  ctx.bezierCurveTo(x0 + dx * 0.48, y0, x1 - dx * 0.48, y1, x1, y1);
+  ctx.bezierCurveTo(x0 + dx * 0.45, y0, x1 - dx * 0.45, y1, x1, y1);
 };
 
 const drawRibbons = (ctx: Ctx, t: number, theme: Theme) => {
