@@ -11,6 +11,21 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+| ID | Size | Length | Source |
+| -- | ---- | ------ | ------ |
+| `BluetoothExplainer` | 1920x1080 @ 30fps | 30s | `src/BluetoothExplainer.tsx` |
+| `ParticleRingHalo` | 1920x1080 @ 25fps | 8s (loop) | `src/particle-ring/` |
+| `ParticleRingHalo4K` | 3840x2160 @ 25fps | 8s (loop) | `src/particle-ring/` |
+| `EditorTimelineA1080` | 1920x1080 @ 30fps | 52.17s | `src/editor-timeline/` |
+| `EditorTimelineA4K` | 3840x2160 @ 30fps | 52.17s | `src/editor-timeline/` |
+| `EditorTimelineB1080` | 1920x1080 @ 30fps | 52.17s | `src/editor-timeline/` |
+| `EditorTimelineB4K` | 3840x2160 @ 30fps | 52.17s | `src/editor-timeline/` |
+
+The editing-timeline shot has its own notes in
+[`src/editor-timeline/README.md`](src/editor-timeline/README.md).
+
 ## Commands
 
 **Install Dependencies**
@@ -28,7 +43,7 @@ npm run dev
 **Render video**
 
 ```console
-npx remotion render
+npx remotion render <composition-id> out/<name>.mp4 --codec=h264
 ```
 
 **Upgrade Remotion**
