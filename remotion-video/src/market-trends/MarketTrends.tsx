@@ -13,7 +13,7 @@ import {
   THEMES,
 } from "./constants";
 import { generateSceneData } from "./data";
-import { type RenderContext, drawFar, drawFore, drawMain, drawMid } from "./draw";
+import { type RenderContext, drawFar, drawMain, drawMid } from "./draw";
 import { useInterFont } from "./fonts";
 
 export const marketTrendsSchema = z.object({
@@ -85,9 +85,8 @@ const CanvasLayer: React.FC<LayerProps> = ({
 
 // 3D market-trends data visualisation: a perspective-tilted plane of
 // green bars, saw-tooth and smooth line charts, a dotted node grid and
-// time-stamp labels, scrolling past a slowly drifting camera. Blurred
-// ticker digits and donut charts sit far behind, and soft bokeh floats in
-// front. Everything is projected through a real pinhole camera (see
+// time-stamp labels, scrolling past a slowly drifting camera, with
+// blurred ticker digits far behind. Everything is projected through a real pinhole camera (see
 // camera.ts) rather than faked with CSS transforms, so parallax between
 // depth layers and foreshortening along the plane are physically
 // consistent.
@@ -142,12 +141,6 @@ export const MarketTrends: React.FC<MarketTrendsProps> = ({
         draw={layer(drawMid)}
       />
       <CanvasLayer {...common} blur={LAYER_BLUR.main} opacity={1} draw={layer(drawMain)} />
-      <CanvasLayer
-        {...common}
-        blur={LAYER_BLUR.fore}
-        opacity={theme.foreOpacity}
-        draw={layer(drawFore)}
-      />
       <AbsoluteFill style={{ background: theme.vignette, pointerEvents: "none" }} />
     </AbsoluteFill>
   );

@@ -58,8 +58,7 @@ Note that for some entities a company license is needed. [Read the terms here](h
 `src/market-trends/` renders a 12 s seamless loop of a perspective-tilted
 market dashboard: weaving green bars, thin cyan bars, purple and lime
 saw-tooth lines, smooth white and red curves, a dotted node grid and
-time-stamp labels, with blurred ticker digits and donut charts far behind
-and soft bokeh in front. Everything is projected through a real pinhole
+time-stamp labels, with blurred ticker digits far behind. Everything is projected through a real pinhole
 camera (`camera.ts`) so parallax and foreshortening are consistent.
 
 Compositions registered in `src/Root.tsx`:

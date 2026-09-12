@@ -50,16 +50,6 @@ export type TickerToken = {
 
 export type TickerRow = { v: number; tokens: TickerToken[] };
 
-export type Donut = {
-  u: number;
-  v: number;
-  r: number;
-  thickness: number;
-  wedgeStart: number;
-  wedgeSweep: number;
-  alpha: number;
-};
-
 export type NodeLink = { a: Vertex; b: Vertex };
 
 export type HBarGroup = { u: number; v: number; widths: number[] };
@@ -87,9 +77,6 @@ export type SceneData = {
   nodes: Vertex[];
   nodeLinks: NodeLink[];
   tickerRows: TickerRow[];
-  donutsFar: Donut[];
-  donutsFore: Donut[];
-  bokeh: { u: number; v: number; r: number }[];
   hbarGroups: HBarGroup[];
 };
 
@@ -262,39 +249,6 @@ export const generateSceneData = (seed: number): SceneData => {
     tickerRows.push({ v, tokens });
   }
 
-  const donutsFar: Donut[] = [];
-  for (let i = 0; i < 4; i++) {
-    donutsFar.push({
-      u: rand() * LOOP_SCROLL,
-      v: -420 + rand() * 840,
-      r: 140 + rand() * 120,
-      thickness: 22 + rand() * 14,
-      wedgeStart: rand() * TAU,
-      wedgeSweep: 0.6 + rand() * 2.4,
-      alpha: 0.4 + rand() * 0.3,
-    });
-  }
-  const donutsFore: Donut[] = [];
-  for (let i = 0; i < 2; i++) {
-    donutsFore.push({
-      u: rand() * LOOP_SCROLL,
-      v: -260 + rand() * 520,
-      r: 230 + rand() * 140,
-      thickness: 40 + rand() * 20,
-      wedgeStart: rand() * TAU,
-      wedgeSweep: 1.2 + rand() * 2.2,
-      alpha: 0.5 + rand() * 0.3,
-    });
-  }
-  const bokeh: SceneData["bokeh"] = [];
-  for (let i = 0; i < 5; i++) {
-    bokeh.push({
-      u: rand() * LOOP_SCROLL,
-      v: -500 + rand() * 1000,
-      r: 40 + rand() * 70,
-    });
-  }
-
   const hbarGroups: HBarGroup[] = [];
   for (let i = 0; i < 2; i++) {
     const widths: number[] = [];
@@ -329,9 +283,6 @@ export const generateSceneData = (seed: number): SceneData => {
     nodes,
     nodeLinks,
     tickerRows,
-    donutsFar,
-    donutsFore,
-    bokeh,
     hbarGroups,
   };
 };

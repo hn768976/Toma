@@ -1,6 +1,6 @@
 // Per-layer canvas drawing. Each function receives a RenderContext and
 // paints one depth slice of the scene; the component blurs the far and
-// foreground canvases with CSS for depth-of-field.
+// mid canvases with CSS for depth-of-field.
 
 import {
   type Camera,
@@ -24,7 +24,6 @@ import {
 } from "./constants";
 import {
   type Bar,
-  type Donut,
   type Label,
   type SceneData,
   type Series,
@@ -45,12 +44,10 @@ export type RenderContext = {
 
 const PLANES = {
   far: makePlane(LAYER_DEPTH.far),
-  farDonut: makePlane(LAYER_DEPTH.farDonut),
   mid: makePlane(LAYER_DEPTH.mid),
   grid: makePlane(LAYER_DEPTH.grid),
   main: makePlane(LAYER_DEPTH.main),
   curves: makePlane(LAYER_DEPTH.curves),
-  fore: makePlane(LAYER_DEPTH.fore),
 };
 
 const MARGIN = 260;
@@ -285,58 +282,8 @@ const drawLabel = (
   ctx.globalAlpha = 1;
 };
 
-const drawDonut = (
-  rc: RenderContext,
-  plane: Plane,
-  donut: Donut,
-  uWorld: number,
-  stroke: string,
-  fill: string,
-) => {
-  const { ctx, cam } = rc;
-  const centre = projectPlane(cam, plane, uWorld, donut.v);
-  if (!onScreen(centre)) return;
-  const segments = 56;
-  const ring: (Projected | null)[] = [];
-  for (let i = 0; i <= segments; i++) {
-    const a = (i / segments) * TAU;
-    ring.push(
-      projectPlane(
-        cam,
-        plane,
-        uWorld + Math.cos(a) * donut.r,
-        donut.v + Math.sin(a) * donut.r,
-      ),
-    );
-  }
-  ctx.strokeStyle = stroke;
-  ctx.lineCap = "butt";
-  strokeProjected(ctx, ring, donut.thickness, donut.alpha, 8);
-
-  // Pie wedge inside the ring.
-  const inner = donut.r - donut.thickness * 0.9;
-  ctx.fillStyle = fill;
-  ctx.globalAlpha = donut.alpha * fog(centre.depth);
-  ctx.beginPath();
-  ctx.moveTo(centre.x, centre.y);
-  const wedgeSegments = 24;
-  for (let i = 0; i <= wedgeSegments; i++) {
-    const a = donut.wedgeStart + (i / wedgeSegments) * donut.wedgeSweep;
-    const p = projectPlane(
-      cam,
-      plane,
-      uWorld + Math.cos(a) * inner,
-      donut.v + Math.sin(a) * inner,
-    );
-    if (p) ctx.lineTo(p.x, p.y);
-  }
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = 1;
-};
-
 // ---------------------------------------------------------------------
-// Layer: far background (heavily blurred ticker digits + donut charts)
+// Layer: far background (heavily blurred ticker digits)
 // ---------------------------------------------------------------------
 export const drawFar = (rc: RenderContext) => {
   const { ctx, cam, scroll, theme, data } = rc;
@@ -360,10 +307,6 @@ export const drawFar = (rc: RenderContext) => {
     });
   }
   ctx.globalAlpha = 1;
-
-  forEachPeriodic(data.donutsFar, scroll, (donut, uWorld) => {
-    drawDonut(rc, PLANES.farDonut, donut, uWorld, theme.donut, theme.donutFill);
-  });
 };
 
 // ---------------------------------------------------------------------
@@ -508,22 +451,3 @@ export const drawMain = (rc: RenderContext) => {
   });
 };
 
-// ---------------------------------------------------------------------
-// Layer: foreground bokeh (very blurred donut + soft discs)
-// ---------------------------------------------------------------------
-export const drawFore = (rc: RenderContext) => {
-  const { ctx, cam, scroll, theme, data } = rc;
-  forEachPeriodic(data.donutsFore, scroll, (donut, uWorld) => {
-    drawDonut(rc, PLANES.fore, donut, uWorld, theme.donut, theme.donutFill);
-  });
-  ctx.fillStyle = theme.bokeh;
-  forEachPeriodic(data.bokeh, scroll, (b, uWorld) => {
-    const p = projectPlane(cam, PLANES.fore, uWorld, b.v);
-    if (!onScreen(p)) return;
-    ctx.globalAlpha = 0.5;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, b.r * p.s, 0, TAU);
-    ctx.fill();
-  });
-  ctx.globalAlpha = 1;
-};

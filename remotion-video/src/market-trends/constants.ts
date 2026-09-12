@@ -35,12 +35,10 @@ export const PLANE_YAW = -0.60; // radians (~ -34 deg)
 // Signed offsets along the plane normal. Positive = nearer the camera.
 export const LAYER_DEPTH = {
   far: -760,
-  farDonut: -640,
   mid: -300,
   grid: -90,
   main: 0,
   curves: 45,
-  fore: 560,
 };
 
 // Visible u-range (along the plane) that we bother iterating over, per
@@ -53,7 +51,7 @@ export const NODE_PULSE_PERIOD = 120;
 export const CURVE_DRIFT_PERIOD = 360;
 
 // Depth-of-field: CSS blur radius (1x px) applied to each canvas layer.
-export const LAYER_BLUR = { far: 7, mid: 1.6, main: 0, fore: 18 };
+export const LAYER_BLUR = { far: 7, mid: 1.6, main: 0 };
 
 export type Theme = {
   id: "dark" | "light";
@@ -76,13 +74,9 @@ export type Theme = {
   tickerUp: string;
   tickerDown: string;
   tickerNeutral: string;
-  donut: string;
-  donutFill: string;
   hbar: string;
-  bokeh: string;
   farOpacity: number;
   midOpacity: number;
-  foreOpacity: number;
 };
 
 export const DARK_THEME: Theme = {
@@ -108,13 +102,9 @@ export const DARK_THEME: Theme = {
   tickerUp: "#3b7bff",
   tickerDown: "#ff2d55",
   tickerNeutral: "#c8d8ea",
-  donut: "#35c6ec",
-  donutFill: "rgba(53, 198, 236, 0.35)",
   hbar: "#2fb8ff",
-  bokeh: "rgba(120, 220, 255, 0.55)",
   farOpacity: 0.85,
   midOpacity: 0.95,
-  foreOpacity: 0.55,
 };
 
 export const LIGHT_THEME: Theme = {
@@ -140,13 +130,9 @@ export const LIGHT_THEME: Theme = {
   tickerUp: "#2f6ff5",
   tickerDown: "#ee2f55",
   tickerNeutral: "#4d5f78",
-  donut: "#1aa9d8",
-  donutFill: "rgba(26, 169, 216, 0.30)",
   hbar: "#1e9fe0",
-  bokeh: "rgba(30, 150, 210, 0.40)",
   farOpacity: 0.6,
   midOpacity: 0.95,
-  foreOpacity: 0.45,
 };
 
 export const THEMES: Record<Theme["id"], Theme> = {
