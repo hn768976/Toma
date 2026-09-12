@@ -5,7 +5,7 @@ world map, a live link graph between 39 city nodes, and a field of ~180
 dashboard widgets, with a slow continuous camera drift across it.
 
 Built to match a 20-second, 30fps reference clip — same length, same frame
-rate, same 16:9 framing, in two colourways.
+rate, same 16:9 framing, in three colourways.
 
 ## Compositions
 
@@ -15,6 +15,8 @@ rate, same 16:9 framing, in two colourways.
 | `DataNetwork4KGreen`   | 3840 × 2160 | 30  | 600    | 4K master, green          |
 | `DataNetwork1080Blue`  | 1920 × 1080 | 30  | 600    | Delivery, blue            |
 | `DataNetwork1080Green` | 1920 × 1080 | 30  | 600    | Delivery, green           |
+| `DataNetwork4KCyan`    | 3840 × 2160 | 30  | 600    | 4K master, dark cyan      |
+| `DataNetwork1080Cyan`  | 1920 × 1080 | 30  | 600    | Delivery, dark cyan       |
 
 All four are the same picture: the scene is authored in a fixed 1920 × 1080
 design space and scaled by `width / 1920`, so the 4K compositions are true
@@ -26,10 +28,12 @@ for frame.
 ```console
 npm i
 
-npm run render:1080         # 1920x1080 blue   (h264, crf 18)
+npm run render:1080         # 1920x1080 blue       (h264, crf 18)
 npm run render:1080:green   # 1920x1080 green
-npm run render:4k           # 3840x2160 blue   (h264, crf 16)
+npm run render:1080:cyan    # 1920x1080 dark cyan
+npm run render:4k           # 3840x2160 blue       (h264, crf 16)
 npm run render:4k:green     # 3840x2160 green
+npm run render:4k:cyan      # 3840x2160 dark cyan
 ```
 
 Or drive the CLI directly, e.g.:
@@ -61,7 +65,7 @@ src/
   Root.tsx              composition registrations
   data-network/
     constants.ts        timing, board geometry, camera rig
-    theme.ts            the blue and green palettes
+    theme.ts            the blue, green and dark cyan palettes
     rng.ts              seeded PRNG — the board is identical on every render
     network.ts          city coordinates, link graph, bezier helpers
     layout.ts           where every HUD widget sits, and the readable captions
@@ -82,8 +86,11 @@ scripts/
 - **Camera** — the `CAMERA` block in `constants.ts`. `distance*` is a real
   dolly (the board sits that far behind the lens), `pan`/`dolly` slide along
   the table surface, `tilt`/`roll` orient it.
-- **Colour** — `theme.ts`. Adding a third colourway is a new entry in `THEMES`
-  plus a `Composition` in `src/Root.tsx`; nothing else changes.
+- **Colour** — `theme.ts`. Adding another colourway is a new entry in `THEMES`,
+  its name in the `dataNetworkSchema` enum, plus a `Composition` in
+  `src/Root.tsx`; nothing else changes. The blue carries the reference's
+  full-spectrum HUD accents; the green and dark cyan are single-family
+  re-skins, so all three cut together.
 - **Widget mix** — the `weight` values in `layout.ts` control how often each
   widget type appears; `COLS`/`ROWS` control density.
 

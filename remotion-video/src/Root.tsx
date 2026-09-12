@@ -110,6 +110,26 @@ export const RemotionRoot: React.FC = () => {
         schema={dataNetworkSchema}
         defaultProps={{ ...dataNetworkDefaults, theme: "green" as const }}
       />
+      <Composition
+        id="DataNetwork4KCyan"
+        component={DataNetworkBoard}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_UHD_WIDTH}
+        height={NET_UHD_HEIGHT}
+        schema={dataNetworkSchema}
+        defaultProps={{ ...dataNetworkDefaults, theme: "cyan" as const }}
+      />
+      <Composition
+        id="DataNetwork1080Cyan"
+        component={DataNetworkBoard}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_WIDTH}
+        height={NET_HEIGHT}
+        schema={dataNetworkSchema}
+        defaultProps={{ ...dataNetworkDefaults, theme: "cyan" as const }}
+      />
     </>
   );
 };

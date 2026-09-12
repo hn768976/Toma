@@ -36,7 +36,7 @@ import {
 import { THEMES } from "./theme";
 
 export const dataNetworkSchema = z.object({
-  theme: z.enum(["blue", "green"]),
+  theme: z.enum(["blue", "green", "cyan"]),
 });
 
 export type DataNetworkProps = z.infer<typeof dataNetworkSchema>;

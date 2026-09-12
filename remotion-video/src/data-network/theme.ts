@@ -91,9 +91,41 @@ export const GREEN_THEME: DataNetworkTheme = {
   hazeSoft: "rgba(4, 42, 28, 0.4)",
 };
 
+
+export const CYAN_THEME: DataNetworkTheme = {
+  void: "#00070b",
+  boardCore: "#0b6577",
+  boardEdge: "#03191f",
+  grid: "rgba(110, 230, 255, 0.16)",
+  landHot: "#e8feff",
+  landCool: "#2ecfe4",
+  link: "rgba(140, 245, 255, 0.42)",
+  linkHot: "#c4f8ff",
+  node: "#ffb347",
+  nodeGlow: "rgba(255, 179, 71, 0.5)",
+  panelFill: "rgba(28, 158, 184, 0.14)",
+  panelStroke: "rgba(120, 235, 255, 0.32)",
+  micro: "rgba(180, 240, 255, 0.62)",
+  text: "#e2fbff",
+  textDim: "rgba(190, 240, 255, 0.55)",
+  accents: [
+    "#00e5ff",
+    "#2affd5",
+    "#00b0d0",
+    "#7df4ff",
+    "#19d3c5",
+    "#4fd8ff",
+    "#00ffe0",
+    "#e6fbff",
+  ],
+  hazeStrong: "rgba(3, 30, 40, 0.86)",
+  hazeSoft: "rgba(3, 30, 40, 0.4)",
+};
+
 export const THEMES = {
   blue: BLUE_THEME,
   green: GREEN_THEME,
+  cyan: CYAN_THEME,
 } as const;
 
 export type ThemeName = keyof typeof THEMES;
