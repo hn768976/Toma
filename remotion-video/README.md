@@ -37,6 +37,22 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Compositions
+
+| Composition                   | Size      | Length          |
+| ----------------------------- | --------- | --------------- |
+| `NorthAmericaDataMapSignal`   | 1920x1080 | 10.00s @ 30fps  |
+| `NorthAmericaDataMapCyan`     | 1920x1080 | 10.00s @ 30fps  |
+| `NorthAmericaDataMapSignal4K` | 3840x2160 | 10.00s @ 30fps  |
+| `NorthAmericaDataMapCyan4K`   | 3840x2160 | 10.00s @ 30fps  |
+| `BluetoothExplainer`          | 1920x1080 | 30.00s @ 30fps  |
+| `ParticleRingHalo`            | 1920x1080 | 8.00s @ 25fps   |
+| `ParticleRingHalo4K`          | 3840x2160 | 8.00s @ 25fps   |
+
+The North America data map is documented in
+[`src/usa-map/README.md`](./src/usa-map/README.md), including how to re-bake
+its geodata.
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).

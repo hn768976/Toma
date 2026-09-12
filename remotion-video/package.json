@@ -16,17 +16,28 @@
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.515",
+    "@types/d3-geo": "^3.1.1",
     "@types/react": "19.2.7",
+    "@types/topojson-client": "^3.1.5",
     "@types/web": "0.0.166",
+    "d3-geo": "^3.1.1",
     "eslint": "9.19.0",
     "prettier": "3.8.1",
-    "typescript": "5.9.3"
+    "topojson-client": "^3.1.0",
+    "typescript": "5.9.3",
+    "us-atlas": "^3.0.1",
+    "world-atlas": "^2.0.2"
   },
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "build:geo": "node scripts/build-geo-data.mjs",
+    "render:map": "remotion render NorthAmericaDataMapSignal out/north-america-data-map_signal_1080p.mp4 --codec=h264 --crf=17",
+    "render:map:cyan": "remotion render NorthAmericaDataMapCyan out/north-america-data-map_cyan_1080p.mp4 --codec=h264 --crf=17",
+    "render:map:4k": "remotion render NorthAmericaDataMapSignal4K out/north-america-data-map_signal_4k.mp4 --codec=h264 --crf=17",
+    "render:map:cyan:4k": "remotion render NorthAmericaDataMapCyan4K out/north-america-data-map_cyan_4k.mp4 --codec=h264 --crf=17"
   },
   "sideEffects": [
     "*.css",
