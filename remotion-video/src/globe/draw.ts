@@ -493,10 +493,10 @@ const drawFlare = ({
   ctx.globalCompositeOperation = "lighter";
 
   const bloom = ctx.createRadialGradient(fx, fy, 0, fx, fy, width * 0.72 * pulse);
-  bloom.addColorStop(0, rgba(theme.flareBloom, 0.3));
-  bloom.addColorStop(0.13, rgba(theme.flareBloom, 0.13));
-  bloom.addColorStop(0.4, rgba(theme.flareBloom, 0.045));
-  bloom.addColorStop(0.74, rgba(theme.flareBloom, 0.01));
+  bloom.addColorStop(0, rgba(theme.flareBloom, 0.14));
+  bloom.addColorStop(0.18, rgba(theme.flareBloom, 0.085));
+  bloom.addColorStop(0.45, rgba(theme.flareBloom, 0.035));
+  bloom.addColorStop(0.76, rgba(theme.flareBloom, 0.008));
   bloom.addColorStop(1, rgba(theme.flareBloom, 0));
   ctx.fillStyle = bloom;
   ctx.fillRect(0, 0, width, height);
@@ -505,10 +505,11 @@ const drawFlare = ({
   ctx.save();
   ctx.translate(fx, fy);
   ctx.rotate(flareAngle(theme.mirror, width, height));
-  ctx.scale(1, 0.022);
+  ctx.scale(1, 0.0095);
   const streak = ctx.createRadialGradient(0, 0, 0, 0, 0, width * 0.62 * pulse);
-  streak.addColorStop(0, rgba(theme.flareCore, 0.34));
-  streak.addColorStop(0.3, rgba(theme.flareBloom, 0.09));
+  streak.addColorStop(0, rgba(theme.flareCore, 0.2));
+  streak.addColorStop(0.22, rgba(theme.flareCore, 0.13));
+  streak.addColorStop(0.55, rgba(theme.flareBloom, 0.055));
   streak.addColorStop(1, rgba(theme.flareBloom, 0));
   ctx.fillStyle = streak;
   ctx.beginPath();
@@ -516,12 +517,6 @@ const drawFlare = ({
   ctx.fill();
   ctx.restore();
 
-  const core = ctx.createRadialGradient(fx, fy, 0, fx, fy, width * 0.038 * pulse);
-  core.addColorStop(0, rgba(theme.flareCore, 0.5));
-  core.addColorStop(0.25, rgba(theme.flareCore, 0.16));
-  core.addColorStop(1, rgba(theme.flareCore, 0));
-  ctx.fillStyle = core;
-  ctx.fillRect(0, 0, width, height);
 };
 
 export { FIELD_Y, FIELD_X };

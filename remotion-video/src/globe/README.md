@@ -19,9 +19,9 @@ All four are 750 frames @ 30fps.
 
 The flare sits in a frame corner — upper **left** for v1, upper **right** for
 v2 — with a thin anamorphic streak laid along the frame diagonal, pointing
-away from that corner and into the picture. It is deliberately restrained: a
-dim glint that grades the corner rather than a bloom competing with the
-globe. `flarePosition()` and `flareAngle()` in
+away from that corner and into the picture. It is deliberately restrained — a
+fine line plus a very soft ambient wash, with no bright core at the corner —
+so it grades the frame instead of competing with the globe. `flarePosition()` and `flareAngle()` in
 `draw.ts` are the single source of truth; the ambient background wash is
 centred on the same point, so the lighting can never drift out of agreement.
 
