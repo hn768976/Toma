@@ -11,6 +11,10 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// The satin-waves compositions render through a WebGL2 fragment shader.
+// Headless Chrome needs an explicit GL backend for that; swangle is
+// SwiftShader-via-ANGLE, which works on a machine with no GPU.
+Config.setChromiumOpenGlRenderer("swangle");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

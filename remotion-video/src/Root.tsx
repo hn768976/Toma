@@ -18,6 +18,19 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  SatinWaves,
+  satinWavesSchema,
+  satinWavesDefaults,
+} from "./satin-waves/SatinWaves";
+import {
+  DURATION_IN_FRAMES as SATIN_DURATION_IN_FRAMES,
+  FPS as SATIN_FPS,
+  HD_WIDTH,
+  HD_HEIGHT,
+  UHD_WIDTH,
+  UHD_HEIGHT,
+} from "./satin-waves/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +64,53 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+
+      {/*
+        Satin waves — a seamless 10.000 s / 300-frame loop at 30 fps, matching
+        the reference clip's length and frame rate. The shader works in units
+        of frame height, so the 4K compositions frame the identical image as
+        the 1080p ones rather than a cropped or rescaled version of it.
+      */}
+      <Composition
+        id="SatinWavesLight"
+        component={SatinWaves}
+        durationInFrames={SATIN_DURATION_IN_FRAMES}
+        fps={SATIN_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={satinWavesSchema}
+        defaultProps={{ ...satinWavesDefaults, theme: "light" }}
+      />
+      <Composition
+        id="SatinWavesDark"
+        component={SatinWaves}
+        durationInFrames={SATIN_DURATION_IN_FRAMES}
+        fps={SATIN_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={satinWavesSchema}
+        defaultProps={{ ...satinWavesDefaults, theme: "dark" }}
+      />
+      <Composition
+        id="SatinWavesLight4K"
+        component={SatinWaves}
+        durationInFrames={SATIN_DURATION_IN_FRAMES}
+        fps={SATIN_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={satinWavesSchema}
+        defaultProps={{ ...satinWavesDefaults, theme: "light" }}
+      />
+      <Composition
+        id="SatinWavesDark4K"
+        component={SatinWaves}
+        durationInFrames={SATIN_DURATION_IN_FRAMES}
+        fps={SATIN_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={satinWavesSchema}
+        defaultProps={{ ...satinWavesDefaults, theme: "dark" }}
       />
     </>
   );

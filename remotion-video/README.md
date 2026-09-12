@@ -11,6 +11,21 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+| Composition ID       | Resolution  | Length         | Notes                                |
+| -------------------- | ----------- | -------------- | ------------------------------------ |
+| `SatinWavesLight`    | 1920 × 1080 | 300f / 10s @30 | Seamless satin loop, cool near-white |
+| `SatinWavesDark`     | 1920 × 1080 | 300f / 10s @30 | Same loop, charcoal + silver         |
+| `SatinWavesLight4K`  | 3840 × 2160 | 300f / 10s @30 | 4K master of the light look          |
+| `SatinWavesDark4K`   | 3840 × 2160 | 300f / 10s @30 | 4K master of the dark look           |
+| `ParticleRingHalo`   | 1920 × 1080 | —              | Particle-ring halo motion graphic    |
+| `ParticleRingHalo4K` | 3840 × 2160 | —              | 4K variant of the above              |
+| `BluetoothExplainer` | 1920 × 1080 | 30s            | Hand-drawn Bluetooth explainer       |
+
+See [`src/satin-waves/README.md`](src/satin-waves/README.md) for how the satin
+loop is built, how to render the 4K masters, and what to tune.
+
 ## Commands
 
 **Install Dependencies**
