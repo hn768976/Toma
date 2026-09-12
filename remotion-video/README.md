@@ -11,6 +11,13 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+- **`HudBlue` / `HudBlue4K`, `HudViolet` / `HudViolet4K`** — two 20s looping
+  sci-fi HUD motion graphics at 1080p and 4K. See [HUD.md](./HUD.md).
+- `ParticleRingHalo` / `ParticleRingHalo4K` — abstract particle-ring halo.
+- `BluetoothExplainer` — hand-drawn Bluetooth explainer.
+
 ## Commands
 
 **Install Dependencies**
