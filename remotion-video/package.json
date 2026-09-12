@@ -30,6 +30,7 @@
   },
   "sideEffects": [
     "*.css",
-    "./src/load-fonts.ts"
+    "./src/load-fonts.ts",
+    "./src/ai-data-stream/fonts.ts"
   ]
 }
