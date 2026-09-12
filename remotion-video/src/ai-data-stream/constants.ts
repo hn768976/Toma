@@ -39,9 +39,10 @@ export const FONT_SIZES: { size: number; weight: number }[] = [
   { size: 56, weight: 1 },
 ];
 
-// Depth of field (px at 1x). Blur ramps from 0 at the focus plane up to
-// these values at the near / far ends of the field. Labels flying past the
-// camera smear hard; the far background only goes a little soft.
+// Depth of field (px at 1x) at full strength: blur ramps from 0 at the
+// focus plane up to these values at the near / far ends of the field.
+// The composition's `depthOfField` prop scales this; the default is 0 so
+// every label stays crisp at every depth.
 export const NEAR_BLUR_PX = 26;
 export const FAR_BLUR_PX = 7;
 
@@ -107,7 +108,7 @@ export const DARK_THEME: Theme = {
   palette: ["#5cf3ff", "#b9c7ff", "#f1f4ff", "#8d97ff", "#5563de", "#5cf3ff"],
   composite: "lighter",
   bloomBlend: "screen",
-  bloomOpacity: 0.6,
+  bloomOpacity: 0.45,
   bloomBlurPx: 18,
   haloBlurPx: 4,
   haloOpacity: 0.75,

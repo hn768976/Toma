@@ -17,6 +17,9 @@ export const aiDataStreamSchema = z.object({
   // 1 = 1080p (1920x1080), 2 = 4K (3840x2160). Must match the width/height
   // the Composition is registered with in Root.tsx.
   resolutionScale: z.number().positive(),
+  // Depth-of-field strength. 0 = every label crisp (default); 1 = full
+  // blur on labels far from the focus plane.
+  depthOfField: z.number().min(0),
 });
 
 export type AiDataStreamProps = z.infer<typeof aiDataStreamSchema>;
@@ -24,6 +27,7 @@ export type AiDataStreamProps = z.infer<typeof aiDataStreamSchema>;
 export const aiDataStreamDefaults: AiDataStreamProps = {
   theme: "dark",
   resolutionScale: 1,
+  depthOfField: 0,
 };
 
 type Ctx = CanvasRenderingContext2D & { letterSpacing?: string };
@@ -102,6 +106,7 @@ const drawLabel = (
 export const AiDataStream: React.FC<AiDataStreamProps> = ({
   theme: themeName,
   resolutionScale,
+  depthOfField,
 }) => {
   const frame = useCurrentFrame();
   const theme = THEMES[themeName];
@@ -133,7 +138,7 @@ export const AiDataStream: React.FC<AiDataStreamProps> = ({
     const camera = cameraAt(frame);
     const projected: Projected[] = [];
     for (const label of labels) {
-      const p = projectLabel(label, camera, frame, BASE_WIDTH, BASE_HEIGHT, theme.farDim);
+      const p = projectLabel(label, camera, frame, BASE_WIDTH, BASE_HEIGHT, theme.farDim, depthOfField);
       if (p.alpha <= 0.01) continue;
       // Cheap cull using the monospace advance width.
       const fontPx = label.fontSize * p.scale;
@@ -192,7 +197,7 @@ export const AiDataStream: React.FC<AiDataStreamProps> = ({
       t.clearRect(0, 0, width, height);
       t.drawImage(composite, 0, 0);
     }
-  }, [frame, labels, buckets, composite, theme, width, height, s]);
+  }, [frame, labels, buckets, composite, theme, width, height, s, depthOfField]);
 
   const layer = (extra: React.CSSProperties): React.CSSProperties => ({
     position: "absolute",

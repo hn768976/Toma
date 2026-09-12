@@ -112,6 +112,7 @@ export const projectLabel = (
   frameWidth: number,
   frameHeight: number,
   farDim: number,
+  depthOfField: number,
 ): Projected => {
   // Wrap the label's depth into the moving window in front of the camera.
   const wrapped =
@@ -125,10 +126,11 @@ export const projectLabel = (
 
   // Blur ramps away from the focus plane, steeper on the near side.
   const blur =
-    z < FOCUS_Z
+    depthOfField *
+    (z < FOCUS_Z
       ? NEAR_BLUR_PX * Math.pow((FOCUS_Z - z) / (FOCUS_Z - NEAR_Z), 1.5)
       : FAR_BLUR_PX *
-        Math.pow((z - FOCUS_Z) / (NEAR_Z + FIELD_DEPTH - FOCUS_Z), 1.2);
+        Math.pow((z - FOCUS_Z) / (NEAR_Z + FIELD_DEPTH - FOCUS_Z), 1.2));
 
   // Fade in at the back, fade out just before wrapping, dim with distance.
   const nearFade = smoothstep(0, 0.07, depthT);
