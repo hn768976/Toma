@@ -44,7 +44,7 @@ export const SPREAD_Y = 3500;
 
 // Camera travel, in design px per second at z = 0.
 export const PAN_SPEED = 105; // sideways — the shot's main move
-export const DOLLY_SPEED = 150; // forwards, into the field
+export const DOLLY_SPEED = 110; // forwards, into the field
 export const BOB_AMPLITUDE_X = 26;
 export const BOB_AMPLITUDE_Y = 34;
 export const YAW_DEGREES = 0.9; // slight lead into the pan direction

@@ -20,6 +20,24 @@ export type PlateSpec = {
   seed: number;
 };
 
+// Edge falloff, baked into each dot's alpha rather than applied as a
+// CSS mask. The plate is a few thousand rects; a mask (or a blur) on a
+// layer that size forces Chromium to re-rasterise the whole thing on
+// every frame, where an unfiltered plate rasterises once and is only
+// re-composited as the camera moves. Same picture, a fraction of the
+// render time.
+const EDGE_RX = 1.36; // normalised radii of the falloff ellipse
+const EDGE_RY = 1.56;
+const EDGE_SOLID = 0.52; // fully opaque inside this fraction of it
+
+const edgeAlpha = (col: number, row: number) => {
+  const u = ((col + 0.5) / DOT_COLS) * 2 - 1;
+  const v = ((row + 0.5) / DOT_ROWS) * 2 - 1;
+  const d = Math.hypot(u / EDGE_RX, v / EDGE_RY);
+  if (d <= EDGE_SOLID) return 1;
+  return Math.max(0, (1 - d) / (1 - EDGE_SOLID));
+};
+
 /**
  * One dot-matrix world map, drawn as a flat plane in the 3D field.
  *
@@ -43,7 +61,10 @@ const buildSvg = (spec: PlateSpec, palette: Palette) => {
     // the plate reading as a flat halftone screen.
     const fill =
       roll > 0.9 ? palette.dotBright : roll > 0.34 ? palette.dotMid : palette.dotDim;
-    const alpha = (0.45 + roll * 0.55).toFixed(2);
+    const alpha = ((0.45 + roll * 0.55) * edgeAlpha(dot.col, dot.row)).toFixed(
+      3,
+    );
+    if (Number(alpha) < 0.02) continue;
     parts.push(
       `<rect x="${(dot.col + offset).toFixed(3)}" y="${(dot.row + offset).toFixed(3)}" width="${size}" height="${size}" fill="${fill}" opacity="${alpha}"/>`,
     );
@@ -53,12 +74,14 @@ const buildSvg = (spec: PlateSpec, palette: Palette) => {
   for (let i = 0; i < spec.scatter; i++) {
     const col = Math.floor(scatterRand() * DOT_COLS);
     const row = Math.floor(scatterRand() * DOT_ROWS);
+    const alpha = (0.16 + scatterRand() * 0.3) * edgeAlpha(col, row);
+    if (alpha < 0.02) continue;
     parts.push(
-      `<rect x="${(col + offset).toFixed(3)}" y="${(row + offset).toFixed(3)}" width="${size}" height="${size}" fill="${palette.dotDim}" opacity="${(0.16 + scatterRand() * 0.3).toFixed(2)}"/>`,
+      `<rect x="${(col + offset).toFixed(3)}" y="${(row + offset).toFixed(3)}" width="${size}" height="${size}" fill="${palette.dotDim}" opacity="${alpha.toFixed(3)}"/>`,
     );
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DOT_COLS} ${DOT_ROWS}" width="100%" height="100%" shape-rendering="geometricPrecision">${parts.join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${DOT_COLS} ${DOT_ROWS}" width="100%" height="100%">${parts.join("")}</svg>`;
 };
 
 export const DotMapPlate: React.FC<{
@@ -66,8 +89,7 @@ export const DotMapPlate: React.FC<{
   palette: Palette;
   transform: string;
   opacity: number;
-  blur: number;
-}> = ({ spec, palette, transform, opacity, blur }) => {
+}> = ({ spec, palette, transform, opacity }) => {
   const html = useMemo(() => buildSvg(spec, palette), [spec, palette]);
   const height = (spec.width * DOT_ROWS) / DOT_COLS;
 
@@ -84,14 +106,6 @@ export const DotMapPlate: React.FC<{
         transform,
         transformStyle: "preserve-3d",
         opacity: opacity * spec.opacity,
-        filter: blur > 0 ? `blur(${blur.toFixed(2)}px)` : undefined,
-        // Dissolve the plate's own rectangular edge — without this the
-        // boundary between "map" and "no map" reads as a hard box
-        // sliding through the field.
-        WebkitMaskImage:
-          "radial-gradient(ellipse 68% 78% at 50% 50%, rgba(0,0,0,1) 52%, rgba(0,0,0,0) 100%)",
-        maskImage:
-          "radial-gradient(ellipse 68% 78% at 50% 50%, rgba(0,0,0,1) 52%, rgba(0,0,0,0) 100%)",
         willChange: "transform",
       }}
       dangerouslySetInnerHTML={{ __html: html }}

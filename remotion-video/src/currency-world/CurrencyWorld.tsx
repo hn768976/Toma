@@ -3,7 +3,7 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { z } from "zod";
 import { cameraAt, worldTransform, type CameraDirection } from "./camera";
 import { BASE_HEIGHT, BASE_WIDTH, PERSPECTIVE } from "./constants";
-import { defocusAt, place } from "./depth";
+import { place } from "./depth";
 import { DotMapPlate, type PlateSpec } from "./DotMapPlate";
 import "./fonts";
 import { GridDecks } from "./GridDecks";
@@ -23,18 +23,19 @@ export const currencyWorldSchema = z.object({
 
 export type CurrencyWorldProps = z.infer<typeof currencyWorldSchema>;
 
-// Three map plates stacked in depth, all well behind the token field
-// so the tokens read as floating in front of the map — as in the
-// reference plate. They sit deep enough that the dolly grows them by
-// about a third across the shot: enough to feel the push, not enough to
-// turn the dot screen into chunky blocks. Plates are defocused at a
-// third of the normal rate; a dot screen smeared by the full defocus
-// budget stops reading as a map.
+// Three map plates stacked in depth, each masked at its edges so the
+// plate's own rectangle never shows. Sizes and depths are chosen
+// together: they hold the on-screen width that gives a reference-like
+// dot pitch, while keeping each plate's layout box small enough to
+// rasterise cheaply. A plate big enough to be placed far away is a
+// layer of hundreds of megapixels once a mask and a 3D transform are
+// on it, and several render workers holding those at once will run a
+// machine out of memory.
 const PLATES: PlateSpec[] = [
   {
-    width: 18000,
-    z: -11500,
-    x: -3200,
+    width: 8000,
+    z: -5100,
+    x: -2100,
     y: 340,
     step: 1,
     opacity: 0.34,
@@ -43,10 +44,10 @@ const PLATES: PlateSpec[] = [
     seed: 3,
   },
   {
-    width: 13500,
-    z: -8500,
-    x: 2100,
-    y: -420,
+    width: 7000,
+    z: -3700,
+    x: 1500,
+    y: -400,
     step: 1,
     opacity: 0.55,
     dotRatio: 0.44,
@@ -54,10 +55,10 @@ const PLATES: PlateSpec[] = [
     seed: 11,
   },
   {
-    width: 9500,
-    z: -6000,
-    x: -900,
-    y: 220,
+    width: 5600,
+    z: -2900,
+    x: -700,
+    y: 200,
     step: 1,
     opacity: 0.85,
     dotRatio: 0.46,
@@ -65,8 +66,6 @@ const PLATES: PlateSpec[] = [
     seed: 23,
   },
 ];
-
-const PLATE_BLUR_SCALE = 0.33;
 
 export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
   direction,
@@ -161,19 +160,15 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
           >
             <GridDecks palette={palette} />
 
-            {PLATES.map((plate, i) => {
-              const z = plate.z + cam.z;
-              return (
-                <DotMapPlate
-                  key={i}
-                  spec={plate}
-                  palette={palette}
-                  transform={place(plate.x, plate.y, z)}
-                  opacity={1}
-                  blur={defocusAt(z) * PLATE_BLUR_SCALE}
-                />
-              );
-            })}
+            {PLATES.map((plate, i) => (
+              <DotMapPlate
+                key={i}
+                spec={plate}
+                palette={palette}
+                transform={place(plate.x, plate.y, plate.z + cam.z)}
+                opacity={1}
+              />
+            ))}
 
             <Hud palette={palette} camZ={cam.z} />
             <Streaks palette={palette} camZ={cam.z} />
