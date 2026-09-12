@@ -23,3 +23,24 @@ fontFace
     console.error("Failed to load Patrick Hand font", err);
     continueRender(handle);
   });
+
+// Monospace HUD face for the financial dashboard, self-hosted for the same
+// reason.
+export const DASHBOARD_FONT_FAMILY_NAME = "Share Tech Mono";
+
+const dashboardHandle = delayRender("Loading Share Tech Mono font");
+
+new FontFace(
+  DASHBOARD_FONT_FAMILY_NAME,
+  `url(${staticFile("fonts/ShareTechMono-Regular.ttf")}) format("truetype")`,
+  { weight: "400", style: "normal" },
+)
+  .load()
+  .then((loaded) => {
+    document.fonts.add(loaded);
+    continueRender(dashboardHandle);
+  })
+  .catch((err) => {
+    console.error("Failed to load Share Tech Mono font", err);
+    continueRender(dashboardHandle);
+  });

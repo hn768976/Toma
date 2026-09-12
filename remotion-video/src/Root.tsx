@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  FinanceDashboard,
+  financeDashboardSchema,
+  financeDashboardDefaults,
+} from "./finance-dashboard/FinanceDashboard";
+import {
+  BASE_WIDTH as DASH_WIDTH,
+  BASE_HEIGHT as DASH_HEIGHT,
+  DURATION_IN_FRAMES as DASH_DURATION_IN_FRAMES,
+  FPS as DASH_FPS,
+} from "./finance-dashboard/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,48 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/* Financial AI analytics dashboard — reference (red/blue/green) palette */}
+      <Composition
+        id="FinanceDashboard"
+        component={FinanceDashboard}
+        durationInFrames={DASH_DURATION_IN_FRAMES}
+        fps={DASH_FPS}
+        width={DASH_WIDTH}
+        height={DASH_HEIGHT}
+        schema={financeDashboardSchema}
+        defaultProps={{ ...financeDashboardDefaults, theme: "reference" }}
+      />
+      <Composition
+        id="FinanceDashboard4K"
+        component={FinanceDashboard}
+        durationInFrames={DASH_DURATION_IN_FRAMES}
+        fps={DASH_FPS}
+        width={DASH_WIDTH * 2}
+        height={DASH_HEIGHT * 2}
+        schema={financeDashboardSchema}
+        defaultProps={{ theme: "reference", resolutionScale: 2 }}
+      />
+      {/* Same piece in the dark-cyan palette */}
+      <Composition
+        id="FinanceDashboardCyan"
+        component={FinanceDashboard}
+        durationInFrames={DASH_DURATION_IN_FRAMES}
+        fps={DASH_FPS}
+        width={DASH_WIDTH}
+        height={DASH_HEIGHT}
+        schema={financeDashboardSchema}
+        defaultProps={{ theme: "dark-cyan", resolutionScale: 1 }}
+      />
+      <Composition
+        id="FinanceDashboardCyan4K"
+        component={FinanceDashboard}
+        durationInFrames={DASH_DURATION_IN_FRAMES}
+        fps={DASH_FPS}
+        width={DASH_WIDTH * 2}
+        height={DASH_HEIGHT * 2}
+        schema={financeDashboardSchema}
+        defaultProps={{ theme: "dark-cyan", resolutionScale: 2 }}
       />
     </>
   );
