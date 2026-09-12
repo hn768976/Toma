@@ -11,6 +11,14 @@
 
 Welcome to your Remotion project!
 
+## Videos in this project
+
+- **AI Agent Builder** (`src/agent-builder`) — 15s dark-mode UI animation, two
+  cuts (Signal / Meridian), each with a 1080p and a 4K composition.
+  See [`src/agent-builder/README.md`](src/agent-builder/README.md).
+- **Bluetooth Explainer** (`src/BluetoothExplainer.tsx`) — 30s hand-drawn explainer.
+- **Particle Ring Halo** (`src/particle-ring`) — abstract motion graphic.
+
 ## Commands
 
 **Install Dependencies**
