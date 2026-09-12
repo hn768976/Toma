@@ -121,7 +121,7 @@ const Walls: React.FC<{ plan: Plan; theme: Theme }> = ({ plan, theme }) => {
         stroke={theme.wall}
         strokeWidth={theme.wallStroke * 0.78}
         strokeLinecap="square"
-        opacity={0.58}
+        opacity={theme.partitions}
       />
       <path
         d={heavyPath.join("")}

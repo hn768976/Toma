@@ -8,9 +8,9 @@ three cuts.
 
 | Cut | What it is |
 | --- | --- |
-| **Reference** | Matches the supplied clip: cyan neon linework on near-black, heavy bloom, two overlapping plan layers. |
+| **Reference** | Matches the supplied clip: cyan neon linework on near-black. |
 | **Light** | Printed-paper inversion. Pale stock, blue ink, no bloom, soft grey dot grid. |
-| **Lite** | Stripped-back dark plate. Same world, calmer: wider framing, no bloom, no second layer, a third of the annotation. Built to sit behind overlaid titles. |
+| **Lite** | Stripped-back dark plate. Same world, calmer: wider framing, no bloom, lighter partitions, a third of the annotation. Built to sit behind overlaid titles. |
 
 Each cut exists as a 4K mastering composition and a 1080p delivery
 composition. **Both are the same drawing** — everything is authored in a fixed
@@ -66,8 +66,9 @@ Open the studio to scrub or retheme: `npm run dev`.
   the camera. Walls are split into heavy and light passes so the plan has
   depth rather than reading as a flat mesh; the heavy runs get a hot core
   stroke, which is what makes neon read as neon.
-- **`BlueprintFlyover.tsx`** — the camera, the two plan layers, and the grade
-  (depth wash, far-field haze, vignette, grain).
+- **`BlueprintFlyover.tsx`** — the camera, the plan layer, and the grade
+  (depth wash, far-field haze, vignette, grain). One plan only: the floor
+  beneath it stays clean, with nothing drawn under the drawing.
 - **`constants.ts`** — the three themes, plus frame size and duration.
 
 Randomness runs through a seeded `mulberry32`, so a given seed always draws

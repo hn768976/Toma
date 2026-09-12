@@ -39,8 +39,10 @@ export type Theme = {
   /** Bloom radius in design px. 0 disables the glow filter entirely. */
   glow: number;
   glowColor: string;
-  /** Opacity of the second, off-angle plan layer. 0 disables it. */
-  layerB: number;
+  /** Opacity of the non-load-bearing partition walls within the plan. Lower
+   *  values push them back; higher values make the plan read as one solid
+   *  drawing. */
+  partitions: number;
   /** Haze colour pulled over the far (top) half of the plane. */
   haze: string;
   /** Corner vignette strength, 0..1. */
@@ -71,7 +73,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     dot: "#123650",
     glow: 5,
     glowColor: "#1fb8ff",
-    layerB: 0.42,
+    partitions: 0.88,
     haze: "#04070f",
     vignette: 0.72,
     vignetteColor: "#01040a",
@@ -94,7 +96,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     dot: "#c2cddd",
     glow: 0,
     glowColor: "#16468f",
-    layerB: 0.2,
+    partitions: 0.88,
     haze: "#eef2f7",
     vignette: 0.32,
     vignetteColor: "#8c9cb4",
@@ -118,7 +120,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     dot: "#0e2a3c",
     glow: 0,
     glowColor: "#2fb9dd",
-    layerB: 0,
+    partitions: 0.58,
     haze: "#050a14",
     vignette: 0.5,
     vignetteColor: "#01040a",

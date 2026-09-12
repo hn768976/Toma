@@ -59,19 +59,14 @@ const useCamera = (theme: ThemeName, frame: number): Camera => {
   };
 };
 
+/** The single plan, laid on the tilted plane. The floor beneath it stays
+ *  clean — nothing is drawn under the drawing. */
 const PlaneLayer: React.FC<{
   theme: Theme;
-  themeName: ThemeName;
   cam: Camera;
-  /** 1 = foreground plan, <1 = the slower, dimmer plan behind it. */
-  parallax: number;
-  opacity: number;
   seed: number;
-  /** Extra in-plane rotation, so the back layer sits off-angle. */
-  skew: number;
-  scale: number;
   id: string;
-}> = ({ theme, themeName, cam, parallax, opacity, seed, skew, scale, id }) => {
+}> = ({ theme, cam, seed, id }) => {
   const plan = useMemo(
     () =>
       generatePlan({
@@ -79,10 +74,10 @@ const PlaneLayer: React.FC<{
         width: PLAN_W,
         height: PLAN_H,
         roomSize: theme.roomSize,
-        labelDensity: parallax === 1 ? theme.labelDensity : theme.labelDensity * 0.5,
-        chains: theme.chains && parallax === 1,
+        labelDensity: theme.labelDensity,
+        chains: theme.chains,
       }),
-    [seed, theme, parallax],
+    [seed, theme],
   );
 
   const glow =
@@ -106,23 +101,16 @@ const PlaneLayer: React.FC<{
         transformStyle: "preserve-3d",
         transform: [
           `rotateX(${cam.tiltX}deg)`,
-          `rotateZ(${cam.rollZ + skew}deg)`,
-          `scale(${cam.scale * scale})`,
-          `translate(${cam.x * parallax}px, ${cam.y * parallax}px)`,
+          `rotateZ(${cam.rollZ}deg)`,
+          `scale(${cam.scale})`,
+          `translate(${cam.x}px, ${cam.y}px)`,
         ].join(" "),
-        opacity,
       }}
     >
       {/* filter lives on an inner element: putting it on the transformed
           node above would collapse the 3D context in Chromium. */}
       <div style={{ width: "100%", height: "100%", filter: glow }}>
-        <PlanSvg
-          plan={plan}
-          theme={theme}
-          pad={260}
-          dots={parallax === 1}
-          id={id}
-        />
+        <PlanSvg plan={plan} theme={theme} pad={260} dots id={id} />
       </div>
     </div>
   );
@@ -172,30 +160,7 @@ export const BlueprintFlyover: React.FC<BlueprintFlyoverProps> = ({
             perspectiveOrigin: "50% 40%",
           }}
         >
-          {theme.layerB > 0 ? (
-            <PlaneLayer
-              theme={theme}
-              themeName={themeName}
-              cam={cam}
-              parallax={0.62}
-              opacity={theme.layerB}
-              seed={seed + 911}
-              skew={34}
-              scale={0.78}
-              id={`${themeName}-b`}
-            />
-          ) : null}
-          <PlaneLayer
-            theme={theme}
-            themeName={themeName}
-            cam={cam}
-            parallax={1}
-            opacity={1}
-            seed={seed}
-            skew={0}
-            scale={1}
-            id={`${themeName}-a`}
-          />
+          <PlaneLayer theme={theme} cam={cam} seed={seed} id={themeName} />
         </AbsoluteFill>
 
         {/* Atmospheric haze over the far half of the plane, so the horizon
