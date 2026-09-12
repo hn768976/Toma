@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  MarketTrends,
+  marketTrendsSchema,
+  marketTrendsDefaults,
+} from "./market-trends/MarketTrends";
+import {
+  BASE_WIDTH as MT_BASE_WIDTH,
+  BASE_HEIGHT as MT_BASE_HEIGHT,
+  DURATION_IN_FRAMES as MT_DURATION_IN_FRAMES,
+  FPS as MT_FPS,
+} from "./market-trends/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,46 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="MarketTrendsDark"
+        component={MarketTrends}
+        durationInFrames={MT_DURATION_IN_FRAMES}
+        fps={MT_FPS}
+        width={MT_BASE_WIDTH}
+        height={MT_BASE_HEIGHT}
+        schema={marketTrendsSchema}
+        defaultProps={{ ...marketTrendsDefaults, theme: "dark" }}
+      />
+      <Composition
+        id="MarketTrendsLight"
+        component={MarketTrends}
+        durationInFrames={MT_DURATION_IN_FRAMES}
+        fps={MT_FPS}
+        width={MT_BASE_WIDTH}
+        height={MT_BASE_HEIGHT}
+        schema={marketTrendsSchema}
+        defaultProps={{ ...marketTrendsDefaults, theme: "light" }}
+      />
+      <Composition
+        id="MarketTrendsDark4K"
+        component={MarketTrends}
+        durationInFrames={MT_DURATION_IN_FRAMES}
+        fps={MT_FPS}
+        width={MT_BASE_WIDTH * 2}
+        height={MT_BASE_HEIGHT * 2}
+        schema={marketTrendsSchema}
+        defaultProps={{ ...marketTrendsDefaults, theme: "dark", resolutionScale: 2 }}
+      />
+      <Composition
+        id="MarketTrendsLight4K"
+        component={MarketTrends}
+        durationInFrames={MT_DURATION_IN_FRAMES}
+        fps={MT_FPS}
+        width={MT_BASE_WIDTH * 2}
+        height={MT_BASE_HEIGHT * 2}
+        schema={marketTrendsSchema}
+        defaultProps={{ ...marketTrendsDefaults, theme: "light", resolutionScale: 2 }}
       />
     </>
   );
