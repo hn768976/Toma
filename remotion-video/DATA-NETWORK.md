@@ -26,29 +26,44 @@ for frame.
 ```console
 npm i
 
-# 4K masters
-npx remotion render DataNetwork4KBlue  out/data-network-4k-blue.mp4  --codec=h264 --crf=16
-npx remotion render DataNetwork4KGreen out/data-network-4k-green.mp4 --codec=h264 --crf=16
+npm run render:1080         # 1920x1080 blue   (h264, crf 18)
+npm run render:1080:green   # 1920x1080 green
+npm run render:4k           # 3840x2160 blue   (h264, crf 16)
+npm run render:4k:green     # 3840x2160 green
+```
 
-# 1080p delivery
-npx remotion render DataNetwork1080Blue  out/data-network-1080-blue.mp4  --codec=h264 --crf=18
-npx remotion render DataNetwork1080Green out/data-network-1080-green.mp4 --codec=h264 --crf=18
+Or drive the CLI directly, e.g.:
+
+```console
+npx remotion render DataNetwork4KBlue out/master-blue.mp4 \
+  --codec=h264 --crf=16 --jpeg-quality=100 --color-space=bt709
 ```
 
 `npm run dev` opens the Remotion Studio if you want to scrub or retime.
 
+**Render cost.** The bloom pass (the stage is drawn twice, once blurred and
+screen-blended) is the expensive part: roughly 3.5s per frame at 1080p and
+four to five times that at 4K on a modest CPU, so budget ~35 minutes for a
+1080p pass and a couple of hours for a 4K one. Rendering is CPU-bound and
+parallel — `--concurrency` is worth raising on a bigger machine. To trade the
+glow for speed, drop the `opacity` of the bloom `AbsoluteFill` in
+`DataNetworkBoard.tsx` to 0, or delete that block.
+
 ## Where things live
 
 ```
-src/data-network/
-  constants.ts          timing, board geometry, camera rig
-  theme.ts              the blue and green palettes
-  rng.ts                seeded PRNG — the board is identical on every render
-  network.ts            city coordinates, link graph, bezier helpers
-  layout.ts             where every HUD widget sits, and the readable captions
-  hud-modules.tsx       the 14 widget types (bars, donuts, gauges, streams…)
-  DataNetworkBoard.tsx  camera rig, map layers, bloom and atmosphere
-  preload.ts            blocks frame 1 until fonts and bitmaps are decoded
+src/
+  index.ts              Remotion entry point
+  Root.tsx              composition registrations
+  data-network/
+    constants.ts        timing, board geometry, camera rig
+    theme.ts            the blue and green palettes
+    rng.ts              seeded PRNG — the board is identical on every render
+    network.ts          city coordinates, link graph, bezier helpers
+    layout.ts           where every HUD widget sits, and the readable captions
+    hud-modules.tsx     the 14 widget types (bars, donuts, gauges, streams…)
+    DataNetworkBoard.tsx  camera rig, map layers, bloom and atmosphere
+    preload.ts          blocks frame 1 until fonts and bitmaps are decoded
 public/
   world-dots.png        7040 × 2528 halftone landmass mask
   grain.png             256 × 256 noise tile
