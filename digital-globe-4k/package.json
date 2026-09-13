@@ -1,0 +1,23 @@
+{
+  "name": "digital-globe-4k",
+  "version": "1.0.0",
+  "description": "4K digital globe / binary data-sphere loop built with Remotion",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "render:4k": "remotion render GlobeViolet4K out/globe-violet-4k.mp4 && remotion render GlobeDarkBlue4K out/globe-darkblue-4k.mp4",
+    "render:1080": "remotion render GlobeViolet1080 out/globe-violet-1080p.mp4 && remotion render GlobeDarkBlue1080 out/globe-darkblue-1080p.mp4"
+  }
+}
