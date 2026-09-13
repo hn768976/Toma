@@ -7,10 +7,15 @@
 
 import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
-import { enableTailwind } from '@remotion/tailwind-v4';
+import { enableTailwind } from "@remotion/tailwind-v4";
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// Deliver limited-range Rec.709 rather than ffmpeg's full-range yuvj420p.
+// Full-range H.264 gets re-interpreted as limited by most NLEs and players,
+// which crushes the blacks and clips the paper whites.
+Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

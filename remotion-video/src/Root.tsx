@@ -19,6 +19,18 @@ import {
   FPS as RING_FPS,
 } from "./particle-ring/constants";
 
+import {
+  RansomNote,
+  ransomNoteSchema,
+  ransomNoteDefaults,
+} from "./ransom/RansomNote";
+import {
+  DURATION_IN_FRAMES as RANSOM_DURATION,
+  FPS as RANSOM_FPS,
+  BASE_WIDTH as RANSOM_WIDTH,
+  BASE_HEIGHT as RANSOM_HEIGHT,
+} from "./ransom/constants";
+
 export const RemotionRoot: React.FC = () => {
   return (
     <>
@@ -51,6 +63,65 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/* Ransom-note title animation. Authored at 1920x1080; the 4K
+          compositions render the identical layout at resolutionScale 2, so
+          the deliverable and the master never drift apart. */}
+      <Composition
+        id="RansomMentalHealth-1080p"
+        component={RansomNote}
+        durationInFrames={RANSOM_DURATION}
+        fps={RANSOM_FPS}
+        width={RANSOM_WIDTH}
+        height={RANSOM_HEIGHT}
+        schema={ransomNoteSchema}
+        defaultProps={{
+          ...ransomNoteDefaults,
+          word: "mentalHealth" as const,
+          resolutionScale: 1,
+        }}
+      />
+      <Composition
+        id="RansomMentalHealth-4K"
+        component={RansomNote}
+        durationInFrames={RANSOM_DURATION}
+        fps={RANSOM_FPS}
+        width={RANSOM_WIDTH * 2}
+        height={RANSOM_HEIGHT * 2}
+        schema={ransomNoteSchema}
+        defaultProps={{
+          ...ransomNoteDefaults,
+          word: "mentalHealth" as const,
+          resolutionScale: 2,
+        }}
+      />
+      <Composition
+        id="RansomPsychology-1080p"
+        component={RansomNote}
+        durationInFrames={RANSOM_DURATION}
+        fps={RANSOM_FPS}
+        width={RANSOM_WIDTH}
+        height={RANSOM_HEIGHT}
+        schema={ransomNoteSchema}
+        defaultProps={{
+          ...ransomNoteDefaults,
+          word: "psychology" as const,
+          resolutionScale: 1,
+        }}
+      />
+      <Composition
+        id="RansomPsychology-4K"
+        component={RansomNote}
+        durationInFrames={RANSOM_DURATION}
+        fps={RANSOM_FPS}
+        width={RANSOM_WIDTH * 2}
+        height={RANSOM_HEIGHT * 2}
+        schema={ransomNoteSchema}
+        defaultProps={{
+          ...ransomNoteDefaults,
+          word: "psychology" as const,
+          resolutionScale: 2,
+        }}
       />
     </>
   );
