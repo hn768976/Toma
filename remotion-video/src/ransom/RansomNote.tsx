@@ -27,6 +27,7 @@ export const RansomNote: React.FC<z.infer<typeof ransomNoteSchema>> = ({
   // Offsetting the seed per word means the two versions crumple and jitter
   // differently instead of looking like the same take with the text swapped.
   const seedBase = word === "psychology" ? 400 : 0;
+  const maxCol = Math.max(...letters.map((l) => l.col));
 
   return (
     <AbsoluteFill style={{ backgroundColor: BACKGROUND_COLOR }}>
@@ -44,6 +45,7 @@ export const RansomNote: React.FC<z.infer<typeof ransomNoteSchema>> = ({
             spec={spec}
             seed={seedBase + i * 13 + 7}
             frame={frame}
+            maxCol={maxCol}
           />
         ))}
       </AbsoluteFill>

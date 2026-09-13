@@ -18,15 +18,25 @@ export const BACKGROUND_COLOR = "#000000";
 // handmade, paper-under-a-camera feel instead of a smooth digital tween.
 export const BOIL_STEP = 3;
 
-// Build-in: letters unfold left-to-right, both lines running in parallel.
+// Build-in: letters unfold left-to-right, all lines running in parallel.
+//
+// The wave takes the same time to cross the piece however many letters it has
+// to cross, so a 6-letter line and a 10-letter line read at the same pace and
+// the last letter always lands in the same place. Per-letter stagger is
+// derived from the span, not fixed, which also keeps the crumple-out from
+// running off the end of the composition on a longer word.
 export const IN_START = 16;
-export const IN_STAGGER = 5;
+export const IN_WAVE_SPAN = 25;
 export const IN_DURATION = 16;
 
 // Build-out: the same wave, crumpling back up.
 export const OUT_START = 246;
-export const OUT_STAGGER = 5;
+export const OUT_WAVE_SPAN = 25;
 export const OUT_DURATION = 14;
+
+// Stagger between neighbouring letters, given how many follow the first.
+export const waveStagger = (span: number, maxCol: number): number =>
+  maxCol > 0 ? span / maxCol : 0;
 
 // How small a letter balls up to at its most crumpled.
 export const CRUMPLE_SCALE = 0.34;

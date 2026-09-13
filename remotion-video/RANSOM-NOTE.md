@@ -4,14 +4,20 @@ A cut-out magazine "ransom note" title that crumples in and out, rebuilt in
 Remotion from a reference clip. Two versions, both 1920x1080 / 3840x2160,
 30 fps, 300 frames (10.000 s) on a pure black background.
 
+- **MenTAL HEalth** follows the reference's two-line layout and tile sizes.
+- **PsYChOLOgY** sets the word on one line. Fitting ten letters across means
+  noticeably smaller cuttings — tiles run ~170-200 tall against the two-line
+  layout's ~230-290 — with per-letter widths set so every glyph keeps a real
+  margin inside its cutting.
+
 ## Compositions
 
 | Composition ID              | Resolution  | Reads            |
 | --------------------------- | ----------- | ---------------- |
 | `RansomMentalHealth-1080p`  | 1920 x 1080 | MenTAL HEalth    |
 | `RansomMentalHealth-4K`     | 3840 x 2160 | MenTAL HEalth    |
-| `RansomPsychology-1080p`    | 1920 x 1080 | PsYChO LOgY      |
-| `RansomPsychology-4K`       | 3840 x 2160 | PsYChO LOgY      |
+| `RansomPsychology-1080p`    | 1920 x 1080 | PsYChOLOgY       |
+| `RansomPsychology-4K`       | 3840 x 2160 | PsYChOLOgY       |
 
 ## Rendering
 
@@ -73,12 +79,18 @@ flattens — a wad of magazine mostly shows white, not print.
 
 ### Timing
 
-Letters unfold left to right, both lines in parallel, and crumple away in the
+Letters unfold left to right, all lines in parallel, and crumple away in the
 same wave. Edit in `constants.ts`:
 
-- in: `IN_START` 16, `IN_STAGGER` 5, `IN_DURATION` 16 — settled by frame 57
+- in: `IN_START` 16, `IN_WAVE_SPAN` 25, `IN_DURATION` 16 — settled by frame 57
 - hold: to frame 246
-- out: `OUT_START` 246, `OUT_STAGGER` 5, `OUT_DURATION` 14 — clear by frame 285
+- out: `OUT_START` 246, `OUT_WAVE_SPAN` 25, `OUT_DURATION` 14 — clear by frame 285
+
+Per-letter stagger is *derived* from the wave span rather than fixed, so the
+wave takes the same time to cross the piece however many letters it has to
+cross. The two-line MenTAL HEalth (6 per line) and the single-line PsYChOLOgY
+(10) therefore settle and clear on the same frames — and a longer word can
+never push its crumple-out past the end of the composition.
 
 ### Fonts
 

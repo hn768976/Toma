@@ -4,13 +4,14 @@ import {
   BOIL_STEP,
   CRUMPLE_SCALE,
   IN_DURATION,
-  IN_STAGGER,
+  IN_WAVE_SPAN,
   IN_START,
   OUT_DURATION,
-  OUT_STAGGER,
+  OUT_WAVE_SPAN,
   OUT_START,
   PAPER_EDGE_COLOR,
   PAPER_EDGE_PX,
+  waveStagger,
 } from "./constants";
 import {
   crumpleFacets,
@@ -26,10 +27,14 @@ import type { LetterSpec } from "./words";
 // `open` runs 0 (balled up) -> 1 (flat on the table) -> 0 (balled up again).
 // Returns null outside the letter's life, so it is not in the DOM at all
 // before it arrives or after it is swept away.
-const openness = (boiled: number, col: number): number | null => {
-  const inStart = IN_START + col * IN_STAGGER;
+const openness = (
+  boiled: number,
+  col: number,
+  maxCol: number,
+): number | null => {
+  const inStart = IN_START + col * waveStagger(IN_WAVE_SPAN, maxCol);
   const inEnd = inStart + IN_DURATION;
-  const outStart = OUT_START + col * OUT_STAGGER;
+  const outStart = OUT_START + col * waveStagger(OUT_WAVE_SPAN, maxCol);
   const outEnd = outStart + OUT_DURATION;
 
   if (boiled < inStart || boiled >= outEnd) return null;
@@ -52,7 +57,9 @@ export const RansomLetter: React.FC<{
   spec: LetterSpec;
   seed: number;
   frame: number;
-}> = ({ spec, seed, frame }) => {
+  /** Highest column index in the word, so the wave can pace itself. */
+  maxCol: number;
+}> = ({ spec, seed, frame, maxCol }) => {
   // Quantise to the stop-motion cadence. Doing this once, here, is what puts
   // the whole piece on 3s — the unfold, the drift and the jitter all step
   // together like frames of a physical shoot.
@@ -62,7 +69,7 @@ export const RansomLetter: React.FC<{
   const flat = useMemo(() => rectPerimeter(), []);
   const wad = useMemo(() => crumpleShape(seed), [seed]);
 
-  const open = openness(boiled, spec.col);
+  const open = openness(boiled, spec.col, maxCol);
 
   const shape = useMemo(
     () => (open === null ? null : lerpShape(wad, flat, open)),
