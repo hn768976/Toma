@@ -40,6 +40,20 @@ npx remotion render CurrencyWorld-RTL-4K    out/rtl-4k.mp4    --codec=h264 --crf
 4K takes roughly four times as long as 1080p per frame. Lower
 `--concurrency` if a machine runs short of memory.
 
+## What moves, and what doesn't
+
+The map is **pinned**. The plates sit in the perspective stage but
+outside the camera rig, so they neither pan nor dolly — they are still
+perspective-projected planes at three real depths, which is what sets
+their dot pitch and puts them behind the token field, but the camera
+slides past without shifting them. The grid decks and the background
+haze are pinned with them, since a haze that drifted while the map held
+still would give the pin away.
+
+The whole camera move is therefore carried by the token field: the
+currency tokens, quotes, streaks and HUD parts pan with the camera and
+come at the lens under the dolly.
+
 ## How the 3D works
 
 Real perspective, not a fake 2D parallax. The stage sets a CSS
@@ -52,7 +66,10 @@ depth-aligned streaks all fall out of one consistent camera.
   dolly, with a slow bob and a slight yaw lead. `worldTransform()`
   negates it onto the world container, which is how a camera move is
   expressed in CSS.
-- **`depth.ts`** — everything depth-derived: where an element sits this
+- **`depth.ts`** — everything depth-derived. Note that `depthAt()` folds
+  the camera's forward travel into each element's depth itself, so the
+  camera rig must NOT also translate in z; doing both counts the dolly
+  twice and marches the field through the eye plane.: where an element sits this
   frame, its atmospheric fade, and its defocus. Defocus is budgeted in
   *screen* px and then divided by the perspective scale, because CSS
   applies `filter` before the 3D transform.

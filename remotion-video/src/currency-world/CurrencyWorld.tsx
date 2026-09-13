@@ -2,14 +2,7 @@ import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { z } from "zod";
 import { cameraAt, worldTransform, type CameraDirection } from "./camera";
-import {
-  BASE_HEIGHT,
-  BASE_WIDTH,
-  DURATION_IN_FRAMES,
-  FPS,
-  PAN_SPEED,
-  PERSPECTIVE,
-} from "./constants";
+import { BASE_HEIGHT, BASE_WIDTH, PERSPECTIVE } from "./constants";
 import { place } from "./depth";
 import { DotMapPlate, type PlateSpec } from "./DotMapPlate";
 import "./fonts";
@@ -32,22 +25,20 @@ export type CurrencyWorldProps = z.infer<typeof currencyWorldSchema>;
 
 // The map plates.
 //
-// Each is held at a CONSTANT distance from the lens: plates never go
-// through depthAt(), so the dolly slides past the map instead of
-// inflating it. That is
-// what the reference plate does — its map pans steadily and zooms at
-// about 0 %/s — and it is what lets the pan read as a wipe. Everything
-// else in the field still takes the full dolly, so the currency tokens
-// come at the camera while the map sweeps behind them.
+// The map is PINNED: the plates sit outside the camera rig entirely, so
+// they neither pan nor dolly. They are still perspective-projected
+// planes at three real depths — that is what sets their dot pitch and
+// what puts them behind the token field — but the camera slides past
+// them without shifting them. The whole camera move is carried by the
+// currency tokens coming at the lens.
 //
-// Depth sets each plate's parallax: the nearest slides fastest, the
-// furthest at about the reference's own 46 px/s. Widths are chosen so
-// all three land on a similar on-screen dot pitch (~11-13 px), which is
-// what makes them read as one map at three distances rather than three
-// maps at three sizes.
+// Each is sized so its on-screen width covers the 1920 frame at its
+// depth, at a similar dot pitch (~11-13 px), which is what makes three
+// plates read as one map at three distances rather than three maps at
+// three sizes.
 const PLATES: PlateSpec[] = [
   {
-    width: 6000,
+    width: 10000,
     z: -6200,
     x: -2600,
     y: 330,
@@ -99,16 +90,6 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
 
   const world = worldTransform(cam);
 
-  // Each plate sweeps roughly a thousand px across the shot, so its
-  // start offset is pushed half a traverse upwind of where it should
-  // sit mid-shot. Without this the map begins centred and spends the
-  // whole shot leaving, baring one side of the frame; with it, the
-  // wipe is centred and each plate enters as the one ahead clears.
-  // The offset follows the camera's direction, so it holds for both
-  // versions.
-  const plateLead =
-    (cam.sign * PAN_SPEED * DURATION_IN_FRAMES) / FPS / 2;
-
   const backdrop = useMemo(
     () =>
       palette.blooms
@@ -120,10 +101,9 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
     [palette],
   );
 
-  // Backdrop and haze track the camera at a fraction of its speed: far
-  // enough away to be nearly parallax-free, but not nailed to the frame.
-  const backdropShift = -cam.x * 0.035;
-  const hazeShift = -cam.x * 0.075;
+  // Backdrop and haze are pinned along with the map. The warm haze
+  // reads as light bleeding through the map plates, so if it drifted
+  // while they held still it would give the pin away.
 
   return (
     <AbsoluteFill style={{ backgroundColor: palette.base, overflow: "hidden" }}>
@@ -145,7 +125,6 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
             top: -300,
             width: BASE_WIDTH + 800,
             height: BASE_HEIGHT + 600,
-            transform: `translateX(${backdropShift.toFixed(2)}px)`,
             backgroundImage: backdrop,
           }}
         />
@@ -156,7 +135,6 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
             top: -200,
             width: BASE_WIDTH + 1000,
             height: BASE_HEIGHT + 400,
-            transform: `translateX(${hazeShift.toFixed(2)}px)`,
             backgroundImage: `radial-gradient(48% 42% at 30% 62%, ${palette.haze} 0%, rgba(0,0,0,0) 100%), radial-gradient(36% 34% at 72% 38%, ${palette.haze} 0%, rgba(0,0,0,0) 100%)`,
             mixBlendMode: "screen",
           }}
@@ -171,6 +149,33 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
             transformStyle: "preserve-3d",
           }}
         >
+          {/*
+            The pinned backdrop. It sits in the same perspective stage
+            but outside the camera rig, and ahead of it in paint order,
+            so the map holds still behind a field that moves.
+          */}
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: 0,
+              height: 0,
+              transformStyle: "preserve-3d",
+            }}
+          >
+            <GridDecks palette={palette} />
+            {PLATES.map((plate, i) => (
+              <DotMapPlate
+                key={i}
+                spec={plate}
+                palette={palette}
+                transform={place(plate.x, plate.y, plate.z)}
+                opacity={1}
+              />
+            ))}
+          </div>
+
           <div
             style={{
               position: "absolute",
@@ -182,30 +187,6 @@ export const CurrencyWorld: React.FC<CurrencyWorldProps> = ({
               transform: world,
             }}
           >
-            <GridDecks palette={palette} />
-
-            {PLATES.flatMap((plate, i) =>
-              // Two tiles per depth, laid edge to edge and centred on
-              // where the plate should sit mid-shot. One tile is only
-              // ~2100px wide on screen, so a single one would wipe
-              // clear of the 1920 frame before the shot ended; a pair
-              // spans twice that and keeps the map streaming through
-              // from the first frame to the last.
-              [-0.5, 0.5].map((side) => (
-                <DotMapPlate
-                  key={`${i}:${side}`}
-                  spec={plate}
-                  palette={palette}
-                  transform={place(
-                    plate.x + plateLead + side * plate.width,
-                    plate.y,
-                    plate.z,
-                  )}
-                  opacity={1}
-                />
-              )),
-            )}
-
             <Hud palette={palette} camZ={cam.z} />
             <Streaks palette={palette} camZ={cam.z} />
             <PriceTags palette={palette} camZ={cam.z} frame={frame} />
