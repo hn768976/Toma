@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { buildRoundedRectOutline } from "./geometry";
+import type { Point } from "./geometry";
 import { ChipBlocks } from "./ChipBlocks";
 import { HologramOutline } from "./HologramOutline";
 import { DISPLAY_FONT } from "./load-fonts";
@@ -8,12 +8,12 @@ import { DISPLAY_FONT } from "./load-fonts";
 // a glowing AI wordmark on the die, edged with the same electric neon
 // treatment as the cloud.
 export const CHIP_SIZE = 360;
-const PAD = 70; // room around the package for the pins
+export const CHIP_PAD = 70; // room around the package for the pins
+const PAD = CHIP_PAD;
 export const CHIP_VIEW = CHIP_SIZE + PAD * 2;
 const PIN_COUNT = 11;
 
-export const AiChipHologram: React.FC<{ frame: number }> = ({ frame }) => {
-  const points = useMemo(() => buildRoundedRectOutline(PAD, PAD, CHIP_SIZE, CHIP_SIZE, 26), []);
+export const AiChipHologram: React.FC<{ frame: number; points: Point[] }> = ({ frame, points }) => {
   const inside = useMemo(
     () => (x: number, y: number) => x > PAD + 16 && x < PAD + CHIP_SIZE - 16 && y > PAD + 16 && y < PAD + CHIP_SIZE - 16,
     [],

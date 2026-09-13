@@ -1,6 +1,4 @@
 import {
-  BOARD_CENTER_X,
-  BOARD_CENTER_Y,
   BOARD_HEIGHT,
   BOARD_WIDTH,
   NODE_COLORS,
@@ -8,7 +6,7 @@ import {
   TRACE_BRIGHT_COLOR,
   TRACE_COLOR,
 } from "./constants";
-import { pathFromPoints, polylineLength, type Point } from "./geometry";
+import { pathFromPoints, polygonCrossings, polylineLength, type Point } from "./geometry";
 import { intFrom, mulberry32, pickFrom, pickWeighted, rangeFrom, type Rng } from "./random";
 
 export type Pulse = {
@@ -114,143 +112,182 @@ const finishTrace = (
 
 export type BoardData = { traces: Trace[]; vias: Point[] };
 
-// Keep-out ellipse around the hologram so traces stop at its edge
-// instead of running straight through it.
-const KEEP_OUT_RX = 520;
-const KEEP_OUT_RY = 420;
+const GAP_MIN = 4;
+const GAP_MAX = 26;
 
-export const generateBoard = (seed: number): BoardData => {
+type Axis = "x" | "y";
+
+// Routes one bundle of parallel lanes towards the hub: lanes get a final
+// steering jog so they land inside the hub's band on the other axis, then
+// either stop at the hub's edge (pad) or run underneath and out the far
+// side. Returns the finished traces.
+const routeBundle = (
+  rng: Rng,
+  hub: Point[],
+  axis: Axis,
+  opts: {
+    laneCount: number;
+    spacing: number;
+    centerAcross: number;
+    fromLow: boolean; // enters from the low end of the axis (left / top)
+    jogs: Jog[];
+    hubMinAlong: number;
+    hubMaxAlong: number;
+    hubMinAcross: number;
+    hubMaxAcross: number;
+    boardAlong: number;
+    passUnderChance: number;
+    brightChance: number;
+    maxPulses: number;
+    nextId: () => number;
+  },
+): Trace[] => {
+  const out: Trace[] = [];
+  const targetAcross = rangeFrom(rng, opts.hubMinAcross + 30, opts.hubMaxAcross - 20);
+  const bright = rng() < opts.brightChance;
+  for (let l = 0; l < opts.laneCount; l++) {
+    const laneOffset = (l - (opts.laneCount - 1) / 2) * opts.spacing;
+    const across = opts.centerAcross + laneOffset;
+    const laneJogs = opts.jogs.map((j) => ({ ...j }));
+    const preAcross = laneJogs.reduce((acc, j) => acc + j.delta, across);
+    const steer = targetAcross + laneOffset - preAcross;
+    const steerAt = opts.fromLow
+      ? opts.hubMinAlong - Math.abs(steer) - rangeFrom(rng, 120, 520)
+      : opts.hubMaxAlong + rangeFrom(rng, 120, 520);
+    laneJogs.push({ at: steerAt, delta: steer });
+    const finalAcross = targetAcross + laneOffset;
+    const crossings = polygonCrossings(hub, axis, finalAcross);
+    if (crossings.length < 2) continue;
+    const passUnder = rng() < opts.passUnderChance;
+    let start: number;
+    let end: number;
+    if (opts.fromLow) {
+      start = rangeFrom(rng, -500, 100);
+      end = passUnder
+        ? crossings[crossings.length - 1] + rangeFrom(rng, 200, 900)
+        : crossings[0] - rangeFrom(rng, GAP_MIN, GAP_MAX);
+      laneJogs.sort((p, q) => p.at - q.at);
+    } else {
+      start = opts.boardAlong + rangeFrom(rng, -100, 500);
+      end = passUnder
+        ? crossings[0] - rangeFrom(rng, 200, 900)
+        : crossings[crossings.length - 1] + rangeFrom(rng, GAP_MIN, GAP_MAX);
+      laneJogs.sort((p, q) => q.at - p.at);
+    }
+    const points = buildLane(axis, start, end, across, laneJogs);
+    out.push(
+      finishTrace(rng, opts.nextId(), points, {
+        bright: bright || rng() < 0.15,
+        padAtEnd: !passUnder,
+        towardsStart: rng() < 0.3,
+        pulseCount: intFrom(rng, 1, opts.maxPulses),
+      }),
+    );
+  }
+  return out;
+};
+
+// The board is generated around a "hub" polygon (the cloud / chip
+// outline in board coordinates). Every trace is routed to the hub: it
+// either terminates at the hub's edge with a pad, or runs underneath it
+// and out the other side. Nothing just wanders past.
+export const generateBoard = (seed: number, hub: Point[]): BoardData => {
   const rng = mulberry32(seed);
   const traces: Trace[] = [];
   const vias: Point[] = [];
   let id = 0;
+  const nextId = () => id++;
 
-  // Horizontal bundles: bands of 3..7 parallel lanes sharing jogs, like
-  // a real PCB bus. They enter from the left (off-board) and run right.
-  const bundleCount = 13;
-  for (let b = 0; b < bundleCount; b++) {
-    const laneCount = intFrom(rng, 3, 7);
-    const spacing = rangeFrom(rng, 15, 22);
-    const centerY = rangeFrom(rng, 120, BOARD_HEIGHT - 120);
-    const jogCount = intFrom(rng, 1, 4);
+  const hubMinY = Math.min(...hub.map((p) => p.y));
+  const hubMaxY = Math.max(...hub.map((p) => p.y));
+  const hubMinX = Math.min(...hub.map((p) => p.x));
+  const hubMaxX = Math.max(...hub.map((p) => p.x));
+
+  // Horizontal bundles; two thirds enter from the left like the reference.
+  for (let b = 0; b < 16; b++) {
     const jogs: Jog[] = [];
+    const jogCount = intFrom(rng, 1, 3);
     for (let j = 0; j < jogCount; j++) {
       jogs.push({ at: rangeFrom(rng, 200, BOARD_WIDTH - 500), delta: rangeFrom(rng, 60, 220) * (rng() < 0.5 ? -1 : 1) });
     }
-    jogs.sort((p, q) => p.at - q.at);
-    const bright = rng() < 0.4;
-    for (let l = 0; l < laneCount; l++) {
-      const y = centerY + (l - (laneCount - 1) / 2) * spacing;
-      const start = rangeFrom(rng, -400, 300);
-      let end = rangeFrom(rng, BOARD_WIDTH * 0.4, BOARD_WIDTH + 300);
-      // Clip lanes that would cross the hologram keep-out.
-      const crosses = Math.abs(y - BOARD_CENTER_Y) < KEEP_OUT_RY;
-      let padAtEnd = rng() < 0.45;
-      if (crosses) {
-        const dx = KEEP_OUT_RX * Math.sqrt(1 - ((y - BOARD_CENTER_Y) / KEEP_OUT_RY) ** 2);
-        const stopX = BOARD_CENTER_X - dx - rangeFrom(rng, 10, 90);
-        if (end > stopX) {
-          end = stopX;
-          padAtEnd = true;
-        }
-      }
-      if (end - start < 300) continue;
-      const points = buildLane("x", start, end, y, jogs);
-      traces.push(
-        finishTrace(rng, id++, points, {
-          bright: bright || rng() < 0.15,
-          padAtEnd,
-          towardsStart: false,
-          pulseCount: intFrom(rng, 1, 3),
-        }),
-      );
-    }
+    traces.push(
+      ...routeBundle(rng, hub, "x", {
+        laneCount: intFrom(rng, 3, 7),
+        spacing: rangeFrom(rng, 15, 22),
+        // Bundles start near the hub's band so the steering jogs stay short.
+        centerAcross: Math.min(BOARD_HEIGHT - 80, Math.max(80, (hubMinY + hubMaxY) / 2 + rangeFrom(rng, -1000, 1000))),
+        fromLow: b % 3 !== 2,
+        jogs,
+        hubMinAlong: hubMinX,
+        hubMaxAlong: hubMaxX,
+        hubMinAcross: hubMinY,
+        hubMaxAcross: hubMaxY,
+        boardAlong: BOARD_WIDTH,
+        passUnderChance: 0.22,
+        brightChance: 0.4,
+        maxPulses: 3,
+        nextId,
+      }),
+    );
   }
 
-  // Vertical bundles (the perpendicular set), fewer and shorter.
-  const vBundleCount = 9;
-  for (let b = 0; b < vBundleCount; b++) {
-    const laneCount = intFrom(rng, 2, 5);
-    const spacing = rangeFrom(rng, 15, 22);
-    const centerX = rangeFrom(rng, 150, BOARD_WIDTH - 150);
-    const jogCount = intFrom(rng, 0, 3);
+  // Vertical bundles.
+  for (let b = 0; b < 10; b++) {
     const jogs: Jog[] = [];
+    const jogCount = intFrom(rng, 0, 2);
     for (let j = 0; j < jogCount; j++) {
       jogs.push({ at: rangeFrom(rng, 200, BOARD_HEIGHT - 400), delta: rangeFrom(rng, 50, 180) * (rng() < 0.5 ? -1 : 1) });
     }
-    jogs.sort((p, q) => p.at - q.at);
-    const downwards = rng() < 0.5;
-    for (let l = 0; l < laneCount; l++) {
-      const x = centerX + (l - (laneCount - 1) / 2) * spacing;
-      const start = downwards ? rangeFrom(rng, -300, 200) : BOARD_HEIGHT + rangeFrom(rng, -200, 300);
-      let end = downwards ? rangeFrom(rng, BOARD_HEIGHT * 0.35, BOARD_HEIGHT + 200) : rangeFrom(rng, -200, BOARD_HEIGHT * 0.65);
-      let padAtEnd = rng() < 0.5;
-      const crosses = Math.abs(x - BOARD_CENTER_X) < KEEP_OUT_RX;
-      if (crosses) {
-        const dy = KEEP_OUT_RY * Math.sqrt(1 - ((x - BOARD_CENTER_X) / KEEP_OUT_RX) ** 2);
-        if (downwards) {
-          const stopY = BOARD_CENTER_Y - dy - rangeFrom(rng, 10, 80);
-          if (end > stopY) {
-            end = stopY;
-            padAtEnd = true;
-          }
-        } else {
-          const stopY = BOARD_CENTER_Y + dy + rangeFrom(rng, 10, 80);
-          if (end < stopY) {
-            end = stopY;
-            padAtEnd = true;
-          }
-        }
-      }
-      if (Math.abs(end - start) < 250) continue;
-      const points = buildLane("y", start, end, x, jogs);
-      traces.push(
-        finishTrace(rng, id++, points, {
-          bright: rng() < 0.3,
-          padAtEnd,
-          towardsStart: false,
-          pulseCount: intFrom(rng, 1, 2),
-        }),
-      );
-    }
+    traces.push(
+      ...routeBundle(rng, hub, "y", {
+        laneCount: intFrom(rng, 2, 5),
+        spacing: rangeFrom(rng, 15, 22),
+        centerAcross: Math.min(BOARD_WIDTH - 100, Math.max(100, (hubMinX + hubMaxX) / 2 + rangeFrom(rng, -1500, 1500))),
+        fromLow: rng() < 0.5,
+        jogs,
+        hubMinAlong: hubMinY,
+        hubMaxAlong: hubMaxY,
+        hubMinAcross: hubMinX,
+        hubMaxAcross: hubMaxX,
+        boardAlong: BOARD_HEIGHT,
+        passUnderChance: 0.2,
+        brightChance: 0.3,
+        maxPulses: 2,
+        nextId,
+      }),
+    );
   }
 
-  // Feeder traces: short runs from the hologram edge outwards, so light
-  // packets are seen arriving at / leaving the hologram in every
-  // direction, as in the reference.
-  const feeders = 26;
-  for (let f = 0; f < feeders; f++) {
+  // Short feeders that start right at the hub edge and run outwards, so
+  // light packets are seen arriving at / leaving the hologram all round.
+  for (let f = 0; f < 30; f++) {
     const side = f % 4; // 0 right, 1 left, 2 down, 3 up
-    const offset = rangeFrom(rng, -320, 320);
-    const gap = rangeFrom(rng, 40, 140);
-    const run = rangeFrom(rng, 500, 1500);
+    const run = rangeFrom(rng, 400, 1400);
     const jogs: Jog[] = [];
-    if (rng() < 0.7) {
-      jogs.push({ at: 0, delta: rangeFrom(rng, 40, 160) * (rng() < 0.5 ? -1 : 1) });
-    }
+    if (rng() < 0.7) jogs.push({ at: 0, delta: rangeFrom(rng, 40, 160) * (rng() < 0.5 ? -1 : 1) });
     let points: Point[];
     if (side === 0 || side === 1) {
-      const y = BOARD_CENTER_Y + offset;
-      const dx = KEEP_OUT_RX * Math.sqrt(1 - (offset / KEEP_OUT_RY) ** 2) * 0.8;
-      const startX = side === 0 ? BOARD_CENTER_X + dx + gap : BOARD_CENTER_X - dx - gap;
+      const y = rangeFrom(rng, hubMinY + 20, hubMaxY - 10);
+      const crossings = polygonCrossings(hub, "x", y);
+      if (crossings.length < 2) continue;
+      const startX = side === 0 ? crossings[crossings.length - 1] + rangeFrom(rng, GAP_MIN, 14) : crossings[0] - rangeFrom(rng, GAP_MIN, 14);
       const endX = side === 0 ? startX + run : startX - run;
       const dir = side === 0 ? 1 : -1;
       jogs.forEach((j) => (j.at = startX + dir * rangeFrom(rng, 120, 400)));
       points = buildLane("x", startX, endX, y, jogs);
     } else {
-      const x = BOARD_CENTER_X + offset;
-      const dy = KEEP_OUT_RY * Math.sqrt(1 - (offset / KEEP_OUT_RX) ** 2) * 0.8;
-      const startY = side === 2 ? BOARD_CENTER_Y + dy + gap : BOARD_CENTER_Y - dy - gap;
+      const x = rangeFrom(rng, hubMinX + 30, hubMaxX - 30);
+      const crossings = polygonCrossings(hub, "y", x);
+      if (crossings.length < 2) continue;
+      const startY = side === 2 ? crossings[crossings.length - 1] + rangeFrom(rng, GAP_MIN, 14) : crossings[0] - rangeFrom(rng, GAP_MIN, 14);
       const endY = side === 2 ? startY + run : startY - run;
       const dir = side === 2 ? 1 : -1;
       jogs.forEach((j) => (j.at = startY + dir * rangeFrom(rng, 120, 400)));
       points = buildLane("y", startY, endY, x, jogs);
     }
-    // Reverse so the "end" (pad) is the hologram side and pulses travel in.
     const towardsHologram = rng() < 0.65;
-    const ordered = points.slice().reverse();
     traces.push(
-      finishTrace(rng, id++, ordered, {
+      finishTrace(rng, nextId(), points.slice().reverse(), {
         bright: rng() < 0.5,
         padAtEnd: true,
         towardsStart: !towardsHologram,
@@ -259,7 +296,6 @@ export const generateBoard = (seed: number): BoardData => {
     );
   }
 
-  // Scattered vias / solder dots for texture.
   for (let v = 0; v < 260; v++) {
     vias.push({ x: rangeFrom(rng, 0, BOARD_WIDTH), y: rangeFrom(rng, 0, BOARD_HEIGHT) });
   }

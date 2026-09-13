@@ -1,12 +1,21 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { z } from "zod";
 import "./load-fonts";
-import { AiChipHologram, CHIP_VIEW } from "./AiChipHologram";
+import { AiChipHologram, CHIP_PAD, CHIP_SIZE, CHIP_VIEW } from "./AiChipHologram";
 import { CircuitBoard } from "./CircuitBoard";
 import { CloudHologram, CLOUD_HEIGHT, CLOUD_WIDTH } from "./CloudHologram";
-import { BACKGROUND_COLOR, BASE_HEIGHT, BASE_WIDTH, BOARD_HEIGHT, BOARD_WIDTH } from "./constants";
+import {
+  BACKGROUND_COLOR,
+  BASE_HEIGHT,
+  BASE_WIDTH,
+  BOARD_CENTER_X,
+  BOARD_CENTER_Y,
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
+} from "./constants";
 import { FloatingLabels } from "./FloatingLabels";
+import { buildCloudOutline, buildRoundedRectOutline, transformPoints } from "./geometry";
 import { mulberry32 } from "./random";
 
 export const circuitHologramSchema = z.object({
@@ -28,7 +37,21 @@ export const circuitHologramDefaults: CircuitHologramProps = {
 // Screen position of the hologram (fraction of the frame), matching the
 // off-centre framing of the reference.
 const HOLO_X = 0.585;
-const HOLO_Y = 0.55;
+const HOLO_Y = 0.56;
+
+// Camera: the board is a flat plane tilted away from the viewer and
+// turned so its "horizontal" traces run down-right and its "vertical"
+// traces run down-left, exactly like the reference's two-point
+// perspective. The hologram lies ON that plane so it shares the
+// perspective (its flat bottom edge runs parallel to the traces).
+const BOARD_TILT = 52; // degrees, rotateX
+const BOARD_TURN = 22; // degrees, rotateZ
+const PERSPECTIVE = 1050;
+
+// Hologram size on the board, in board units (the SVGs are authored
+// at CLOUD_WIDTH x CLOUD_HEIGHT / CHIP_VIEW x CHIP_VIEW and scaled).
+const CLOUD_SCALE = 1.3;
+const CHIP_SCALE = 1.1;
 
 // Soft, slowly drifting bokeh discs in front of the board.
 const Bokeh: React.FC<{ frame: number }> = ({ frame }) => {
@@ -72,20 +95,34 @@ export const CircuitHologram: React.FC<CircuitHologramProps> = ({ variant, resol
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
 
-  // Slow camera drift: a gentle push-in with a lateral sway, plus a
-  // little extra parallax on the hologram so it reads as floating above
-  // the board.
-  const t = frame / durationInFrames;
-  const camScale = 1.04 + 0.05 * Math.sin(t * Math.PI * 2 - Math.PI / 2) * 0.5 + 0.025 * t;
-  const camX = Math.sin(t * Math.PI * 2) * 22;
-  const camY = Math.cos(t * Math.PI * 2 * 0.5) * 12;
-  const boardTilt = 60 + Math.sin(t * Math.PI * 2) * 1.2;
-  const boardSpin = 19 + Math.cos(t * Math.PI * 2) * 1.5;
-  const holoBob = Math.sin(frame * 0.045) * 8;
+  // Hologram geometry: local outline (SVG units), its placement on the
+  // board, and the same outline in board units (the "hub" every trace
+  // is routed to).
+  const holo = useMemo(() => {
+    if (variant === "cloud") {
+      const local = buildCloudOutline();
+      const scale = CLOUD_SCALE;
+      const left = BOARD_CENTER_X - (CLOUD_WIDTH / 2) * scale;
+      const top = BOARD_CENTER_Y - (CLOUD_HEIGHT / 2) * scale;
+      return { local, scale, left, top, width: CLOUD_WIDTH, height: CLOUD_HEIGHT, hub: transformPoints(local, left, top, scale) };
+    }
+    const local = buildRoundedRectOutline(CHIP_PAD, CHIP_PAD, CHIP_SIZE, CHIP_SIZE, 26);
+    const scale = CHIP_SCALE;
+    const left = BOARD_CENTER_X - (CHIP_VIEW / 2) * scale;
+    const top = BOARD_CENTER_Y - (CHIP_VIEW / 2) * scale;
+    // Route traces to the outer edge of the pins, not the package.
+    const pinOutline = buildRoundedRectOutline(CHIP_PAD - 44, CHIP_PAD - 44, CHIP_SIZE + 88, CHIP_SIZE + 88, 30);
+    return { local, scale, left, top, width: CHIP_VIEW, height: CHIP_VIEW, hub: transformPoints(pinOutline, left, top, scale) };
+  }, [variant]);
 
-  const holoWidth = variant === "cloud" ? CLOUD_WIDTH : CHIP_VIEW;
-  const holoHeight = variant === "cloud" ? CLOUD_HEIGHT : CHIP_VIEW;
-  const holoScale = variant === "cloud" ? 1.05 : 0.86;
+  // Slow camera drift: a gentle push-in with a lateral sway and a tiny
+  // change of viewing angle so the perspective feels alive.
+  const t = frame / durationInFrames;
+  const camScale = 1.0 + 0.04 * (1 - Math.cos(t * Math.PI * 2)) * 0.5 + 0.03 * t;
+  const camX = Math.sin(t * Math.PI * 2) * 18;
+  const camY = Math.cos(t * Math.PI * 2 * 0.5) * 10;
+  const boardTilt = BOARD_TILT + Math.sin(t * Math.PI * 2) * 1.0;
+  const boardTurn = BOARD_TURN + Math.cos(t * Math.PI * 2) * 1.2;
 
   return (
     <AbsoluteFill style={{ backgroundColor: BACKGROUND_COLOR, overflow: "hidden" }}>
@@ -112,13 +149,13 @@ export const CircuitHologram: React.FC<CircuitHologramProps> = ({ variant, resol
           style={{
             position: "absolute",
             inset: 0,
-            perspective: 1500,
-            perspectiveOrigin: "50% 40%",
+            perspective: PERSPECTIVE,
+            perspectiveOrigin: `${HOLO_X * 100}% ${HOLO_Y * 100}%`,
             transform: `translate(${camX}px, ${camY}px) scale(${camScale})`,
             transformOrigin: `${HOLO_X * 100}% ${HOLO_Y * 100}%`,
           }}
         >
-          {/* Tilted circuit board. */}
+          {/* Tilted circuit board with the hologram lying on it. */}
           <div
             style={{
               position: "absolute",
@@ -126,26 +163,28 @@ export const CircuitHologram: React.FC<CircuitHologramProps> = ({ variant, resol
               top: BASE_HEIGHT * HOLO_Y - BOARD_HEIGHT / 2,
               width: BOARD_WIDTH,
               height: BOARD_HEIGHT,
-              transform: `rotateX(${boardTilt}deg) rotateZ(${boardSpin}deg)`,
+              transform: `rotateX(${boardTilt}deg) rotateZ(${boardTurn}deg)`,
               transformOrigin: "50% 50%",
             }}
           >
-            <CircuitBoard seed={seed} />
-          </div>
-
-          {/* Hologram floating just above the board, tilted less so it stays readable. */}
-          <div
-            style={{
-              position: "absolute",
-              left: BASE_WIDTH * HOLO_X - holoWidth / 2,
-              top: BASE_HEIGHT * HOLO_Y - holoHeight / 2 + holoBob,
-              width: holoWidth,
-              height: holoHeight,
-              transform: `translateX(${camX * 0.4}px) rotateX(${boardTilt * 0.42}deg) rotateZ(${boardSpin * 0.35}deg) scale(${holoScale})`,
-              transformOrigin: "50% 50%",
-            }}
-          >
-            {variant === "cloud" ? <CloudHologram frame={frame} /> : <AiChipHologram frame={frame} />}
+            <CircuitBoard seed={seed} hub={holo.hub} />
+            <div
+              style={{
+                position: "absolute",
+                left: holo.left,
+                top: holo.top,
+                width: holo.width * holo.scale,
+                height: holo.height * holo.scale,
+              }}
+            >
+              <div style={{ transform: `scale(${holo.scale})`, transformOrigin: "top left" }}>
+                {variant === "cloud" ? (
+                  <CloudHologram frame={frame} points={holo.local} />
+                ) : (
+                  <AiChipHologram frame={frame} points={holo.local} />
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

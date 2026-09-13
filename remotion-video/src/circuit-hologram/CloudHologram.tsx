@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { buildCloudOutline, pathFromPoints } from "./geometry";
+import { pathFromPoints, type Point } from "./geometry";
 import { ChipBlocks } from "./ChipBlocks";
 import { HologramOutline } from "./HologramOutline";
 
@@ -8,8 +8,7 @@ import { HologramOutline } from "./HologramOutline";
 export const CLOUD_WIDTH = 540;
 export const CLOUD_HEIGHT = 300;
 
-export const CloudHologram: React.FC<{ frame: number }> = ({ frame }) => {
-  const points = useMemo(() => buildCloudOutline(), []);
+export const CloudHologram: React.FC<{ frame: number; points: Point[] }> = ({ frame, points }) => {
   const d = useMemo(() => pathFromPoints(points, true), [points]);
   const inside = useMemo(() => {
     // Point-in-polygon against the sampled outline.
@@ -29,7 +28,7 @@ export const CloudHologram: React.FC<{ frame: number }> = ({ frame }) => {
     <svg
       width={CLOUD_WIDTH}
       height={CLOUD_HEIGHT}
-      viewBox={`-10 -20 ${CLOUD_WIDTH} ${CLOUD_HEIGHT}`}
+      viewBox={`0 0 ${CLOUD_WIDTH} ${CLOUD_HEIGHT}`}
       style={{ display: "block", overflow: "visible" }}
     >
       <defs>

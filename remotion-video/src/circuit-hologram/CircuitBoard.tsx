@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useCurrentFrame } from "remotion";
 import { BOARD_HEIGHT, BOARD_WIDTH, TRACE_GLOW_COLOR } from "./constants";
 import { generateBoard, type Trace } from "./traces";
+import type { Point } from "./geometry";
 
 // The flat circuit board: dim blue traces with a soft glow, square pads,
 // glowing node dots, and bright light "packets" sliding along the
@@ -53,9 +54,9 @@ const Pulses: React.FC<{ traces: Trace[]; frame: number; glow: boolean }> = ({ t
   </g>
 );
 
-export const CircuitBoard: React.FC<{ seed: number }> = ({ seed }) => {
+export const CircuitBoard: React.FC<{ seed: number; hub: Point[] }> = ({ seed, hub }) => {
   const frame = useCurrentFrame();
-  const board = useMemo(() => generateBoard(seed), [seed]);
+  const board = useMemo(() => generateBoard(seed, hub), [seed, hub]);
   const { traces, vias } = board;
 
   return (

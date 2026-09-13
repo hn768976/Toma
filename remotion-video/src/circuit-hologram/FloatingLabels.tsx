@@ -24,15 +24,16 @@ export const FloatingLabels: React.FC<{ frame: number; seed: number; durationInF
       if (Math.abs(x - BASE_WIDTH * 0.58) < 320 && Math.abs(y - BASE_HEIGHT * 0.52) < 240) {
         y = y < BASE_HEIGHT * 0.52 ? BASE_HEIGHT * 0.2 : BASE_HEIGHT * 0.86;
       }
-      list.push({ start: t, duration, x, y, text: pickFrom(rng, TEXTS), size: rangeFrom(rng, 18, 30) });
-      // Overlap a second label occasionally.
+      const text = pickFrom(rng, TEXTS);
+      list.push({ start: t, duration, x, y, text, size: rangeFrom(rng, 18, 30) });
+      // Overlap a second label occasionally (always with a different read-out).
       if (rng() < 0.5) {
         list.push({
           start: t + rangeFrom(rng, 10, 50),
           duration: rangeFrom(rng, 60, 110),
           x: rangeFrom(rng, 80, BASE_WIDTH - 260),
           y: rng() < 0.5 ? rangeFrom(rng, 50, 200) : rangeFrom(rng, BASE_HEIGHT - 240, BASE_HEIGHT - 60),
-          text: pickFrom(rng, TEXTS),
+          text: pickFrom(rng, TEXTS.filter((candidate) => candidate !== text)),
           size: rangeFrom(rng, 16, 24),
         });
       }

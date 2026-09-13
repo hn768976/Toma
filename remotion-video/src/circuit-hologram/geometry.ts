@@ -160,3 +160,23 @@ export const buildRoundedRectOutline = (
   edge({ x, y: y + h - r }, { x, y: y + r });
   return points;
 };
+
+// Where a horizontal (axis "x": line y = coord) or vertical (axis "y":
+// line x = coord) line crosses a closed polygon, sorted ascending. Used
+// to stop board traces exactly at the hologram's edge.
+export const polygonCrossings = (polygon: Point[], axis: "x" | "y", coord: number): number[] => {
+  const out: number[] = [];
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i];
+    const b = polygon[j];
+    const aAcross = axis === "x" ? a.y : a.x;
+    const bAcross = axis === "x" ? b.y : b.x;
+    if (aAcross > coord === bAcross > coord) continue;
+    const t = (coord - aAcross) / (bAcross - aAcross);
+    out.push(axis === "x" ? a.x + (b.x - a.x) * t : a.y + (b.y - a.y) * t);
+  }
+  return out.sort((p, q) => p - q);
+};
+
+export const transformPoints = (points: Point[], offsetX: number, offsetY: number, scale: number): Point[] =>
+  points.map((p) => ({ x: offsetX + p.x * scale, y: offsetY + p.y * scale }));
