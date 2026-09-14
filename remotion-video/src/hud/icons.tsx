@@ -1,38 +1,56 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { useTheme } from "./context";
-import { MONO, type Box } from "./primitives";
+import { type Box } from "./primitives";
 import { noise1d } from "./rng";
 
-/** Wind turbine with a slowly turning rotor - the reference's hero pictogram. */
+/**
+ * Wind turbine with a slowly turning rotor - the reference's hero pictogram.
+ *
+ * It sizes itself from the box it is given rather than from a hand-tuned
+ * height, so the swept circle of the blades is always fully inside its housing
+ * no matter how the panel is laid out. The rotor is the constraint: it needs a
+ * full diameter of width and, stacked above the tower, roughly two thirds of
+ * the height.
+ */
 export const Turbine: React.FC<{
-  cx: number;
-  /** Ground line: the tower rises from here. */
-  baseY: number;
-  height: number;
+  box: Box;
   /** Rotor revolutions per minute. */
   rpm?: number;
-}> = ({ cx, baseY, height, rpm = 11 }) => {
+  /** Fraction of the box kept clear around the pictogram. */
+  inset?: number;
+}> = ({ box, rpm = 11, inset = 0.08 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
-  const hubY = baseY - height;
-  const bladeLength = height * 0.52;
+
+  const padX = box.w * inset;
+  const padY = box.h * inset;
+  const innerW = box.w - padX * 2;
+  const innerH = box.h - padY * 2;
+
+  // The rotor must fit the width and leave at least a third of the height for
+  // the tower; whichever limit bites first sets the blade length.
+  const bladeLength = Math.min(innerW / 2, innerH * 0.33);
+  const cx = box.x + box.w / 2;
+  const hubY = box.y + padY + bladeLength;
+  const baseY = box.y + box.h - padY;
+  const towerHeight = baseY - hubY;
   const rotation = (frame / 30) * rpm * 6;
 
   return (
     <g>
       {/* Tower - tapered so it does not read as a plain stick. */}
       <path
-        d={`M ${cx - height * 0.035} ${baseY} L ${cx - height * 0.013} ${hubY} L ${cx + height * 0.013} ${hubY} L ${cx + height * 0.035} ${baseY} Z`}
+        d={`M ${cx - towerHeight * 0.035} ${baseY} L ${cx - towerHeight * 0.013} ${hubY} L ${cx + towerHeight * 0.013} ${hubY} L ${cx + towerHeight * 0.035} ${baseY} Z`}
         fill={theme.mid}
         opacity={0.55}
         stroke={theme.bright}
         strokeWidth={1.2}
       />
       <line
-        x1={cx - height * 0.1}
+        x1={cx - towerHeight * 0.1}
         y1={baseY}
-        x2={cx + height * 0.1}
+        x2={cx + towerHeight * 0.1}
         y2={baseY}
         stroke={theme.bright}
         strokeWidth={1.6}
@@ -51,7 +69,7 @@ export const Turbine: React.FC<{
           />
         ))}
       </g>
-      <circle cx={cx} cy={hubY} r={height * 0.035} fill={theme.hot} />
+      <circle cx={cx} cy={hubY} r={Math.max(3, bladeLength * 0.055)} fill={theme.hot} />
     </g>
   );
 };
@@ -186,102 +204,6 @@ export const PlugMark: React.FC<{ cx: number; cy: number; size: number }> = ({
         fill={theme.mid}
         opacity={0.55}
       />
-    </g>
-  );
-};
-
-/** Solar array pictogram, used in place of the turbine in the second layout. */
-export const SolarArray: React.FC<{ box: Box }> = ({ box }) => {
-  const theme = useTheme();
-  const frame = useCurrentFrame();
-  const shimmer = noise1d("solar", frame / 20);
-  const cols = 4;
-  const rows = 3;
-  const cellW = box.w / cols;
-  const cellH = (box.h * 0.62) / rows;
-
-  return (
-    <g>
-      {/* Panels sheared about their own centre so the array reads as tilted
-          towards the sun without drifting out of its housing. */}
-      <g transform={`translate(${box.x} ${box.y}) skewX(-12) translate(${-box.x} ${-box.y})`}>
-        {Array.from({ length: cols * rows }, (_, i) => {
-          const col = i % cols;
-          const row = Math.floor(i / cols);
-          const lit = (col + row + Math.floor(frame / 14)) % 5 === 0;
-          return (
-            <rect
-              key={i}
-              x={box.x + col * cellW + 2}
-              y={box.y + row * cellH + 2}
-              width={cellW - 4}
-              height={cellH - 4}
-              fill={lit ? theme.hot : theme.mid}
-              opacity={lit ? 0.55 + shimmer * 0.35 : 0.32}
-              stroke={theme.bright}
-              strokeWidth={1.1}
-            />
-          );
-        })}
-      </g>
-      <path
-        d={`M ${box.x + box.w * 0.34} ${box.y + box.h * 0.64} L ${box.x + box.w * 0.34} ${box.y + box.h}`}
-        stroke={theme.bright}
-        strokeWidth={2}
-      />
-      <line
-        x1={box.x + box.w * 0.2}
-        y1={box.y + box.h}
-        x2={box.x + box.w * 0.48}
-        y2={box.y + box.h}
-        stroke={theme.bright}
-        strokeWidth={2}
-      />
-    </g>
-  );
-};
-
-/** Radar-style sweep disc for the blue layout's left cluster. */
-export const SweepDisc: React.FC<{ cx: number; cy: number; r: number }> = ({ cx, cy, r }) => {
-  const theme = useTheme();
-  const frame = useCurrentFrame();
-  const angle = (frame / 30) * 48;
-
-  return (
-    <g>
-      {[0.33, 0.66, 1].map((k) => (
-        <circle
-          key={k}
-          cx={cx}
-          cy={cy}
-          r={r * k}
-          fill="none"
-          stroke={theme.hairline}
-          strokeWidth={1}
-        />
-      ))}
-      <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} stroke={theme.hairline} strokeWidth={1} />
-      <line x1={cx} y1={cy - r} x2={cx} y2={cy + r} stroke={theme.hairline} strokeWidth={1} />
-      <g transform={`rotate(${angle} ${cx} ${cy})`}>
-        <path
-          d={`M ${cx} ${cy} L ${cx + r} ${cy} A ${r} ${r} 0 0 0 ${cx + r * Math.cos(-0.9)} ${cy + r * Math.sin(-0.9)} Z`}
-          fill={theme.bright}
-          opacity={0.18}
-        />
-        <line x1={cx} y1={cy} x2={cx + r} y2={cy} stroke={theme.hot} strokeWidth={1.4} />
-      </g>
-      <text
-        x={cx}
-        y={cy + r + 14}
-        fill={theme.bright}
-        fontSize={9}
-        fontFamily={MONO}
-        textAnchor="middle"
-        letterSpacing={1.8}
-        opacity={0.8}
-      >
-        GRID SCAN
-      </text>
     </g>
   );
 };

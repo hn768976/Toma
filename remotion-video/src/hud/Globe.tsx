@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useCurrentFrame } from "remotion";
 import { useTheme } from "./context";
-import { MONO } from "./primitives";
+import { HudText, useMirrored } from "./primitives";
 import { makeRandom } from "./rng";
 
 /**
@@ -11,31 +11,73 @@ import { makeRandom } from "./rng";
  */
 type Blob = { lon: number; lat: number; rLon: number; rLat: number };
 
+/**
+ * More blobs than strictly necessary, because the silhouette is the whole job:
+ * a viewer recognises Earth from the taper of South America, the horn of
+ * Africa and the Eurasian mass running off to the east, and gets none of that
+ * from three fat ellipses. Coverage lands at 29% of the sphere, which is
+ * Earth's actual land fraction.
+ */
 const LANDMASS: Blob[] = [
-  { lon: -103, lat: 48, rLon: 34, rLat: 20 }, // North America
-  { lon: -92, lat: 26, rLon: 16, rLat: 13 }, // Mexico / Central America
-  { lon: -42, lat: 72, rLon: 15, rLat: 9 }, // Greenland
-  { lon: -62, lat: -12, rLon: 15, rLat: 16 }, // northern South America
-  { lon: -66, lat: -33, rLon: 9, rLat: 18 }, // southern South America
-  { lon: 17, lat: 12, rLon: 20, rLat: 19 }, // north Africa
-  { lon: 24, lat: -14, rLon: 15, rLat: 20 }, // south Africa
-  { lon: 14, lat: 50, rLon: 20, rLat: 11 }, // Europe
-  { lon: 60, lat: 56, rLon: 38, rLat: 16 }, // Siberia / central Asia
-  { lon: 108, lat: 46, rLon: 28, rLat: 16 }, // east Asia
-  { lon: 78, lat: 22, rLon: 12, rLat: 13 }, // India
-  { lon: 112, lat: 4, rLon: 16, rLat: 10 }, // south-east Asia
-  { lon: 134, lat: -25, rLon: 17, rLat: 11 }, // Australia
+  // North America
+  { lon: -125, lat: 60, rLon: 26, rLat: 12 }, // Alaska / Yukon
+  { lon: -100, lat: 58, rLon: 34, rLat: 14 }, // Canadian shield
+  { lon: -98, lat: 42, rLon: 26, rLat: 13 }, // continental US
+  { lon: -80, lat: 34, rLon: 14, rLat: 11 }, // eastern seaboard
+  { lon: -103, lat: 25, rLon: 12, rLat: 10 }, // Mexico
+  { lon: -86, lat: 14, rLon: 10, rLat: 5 }, // Central America
+  { lon: -45, lat: 73, rLon: 16, rLat: 9 }, // Greenland
+  // South America
+  { lon: -66, lat: -6, rLon: 16, rLat: 12 }, // Amazon basin
+  { lon: -44, lat: -12, rLon: 10, rLat: 12 }, // Brazilian highlands
+  { lon: -66, lat: -28, rLon: 9, rLat: 12 }, // the cone
+  { lon: -70, lat: -44, rLon: 5, rLat: 11 }, // Patagonia
+  // Africa
+  { lon: 5, lat: 18, rLon: 22, rLat: 14 }, // Sahara west
+  { lon: 30, lat: 17, rLon: 15, rLat: 14 }, // Sahara east
+  { lon: 22, lat: 2, rLon: 18, rLat: 12 }, // equatorial belt
+  { lon: 26, lat: -18, rLon: 13, rLat: 14 }, // southern Africa
+  { lon: 45, lat: 8, rLon: 8, rLat: 7 }, // Horn of Africa
+  { lon: 47, lat: -19, rLon: 4, rLat: 7 }, // Madagascar
+  // Europe
+  { lon: 10, lat: 48, rLon: 18, rLat: 10 }, // western Europe
+  { lon: 28, lat: 54, rLon: 18, rLat: 11 }, // eastern Europe
+  { lon: 22, lat: 65, rLon: 14, rLat: 8 }, // Scandinavia
+  { lon: -3, lat: 53, rLon: 6, rLat: 5 }, // British Isles
+  // Asia
+  { lon: 60, lat: 60, rLon: 30, rLat: 12 }, // west Siberia
+  { lon: 105, lat: 64, rLon: 32, rLat: 11 }, // east Siberia
+  { lon: 145, lat: 64, rLon: 16, rLat: 9 }, // Kamchatka / far east
+  { lon: 70, lat: 45, rLon: 22, rLat: 12 }, // central Asia
+  { lon: 100, lat: 40, rLon: 22, rLat: 12 }, // Mongolia / north China
+  { lon: 112, lat: 28, rLon: 15, rLat: 11 }, // south China
+  { lon: 45, lat: 32, rLon: 15, rLat: 10 }, // Middle East
+  { lon: 78, lat: 22, rLon: 11, rLat: 11 }, // India
+  { lon: 102, lat: 14, rLon: 9, rLat: 9 }, // Indochina
+  { lon: 112, lat: -2, rLon: 14, rLat: 5 }, // Indonesia
+  { lon: 138, lat: 37, rLon: 6, rLat: 8 }, // Japan
+  // Oceania
+  { lon: 133, lat: -24, rLon: 19, rLat: 11 }, // Australia
+  { lon: 172, lat: -42, rLon: 5, rLat: 7 }, // New Zealand
+  { lon: 142, lat: -6, rLon: 9, rLat: 4 }, // New Guinea
 ];
 
+/**
+ * The blobs above are drawn generously so neighbours overlap into continuous
+ * coastlines instead of a string of beads; this trims them back so total land
+ * coverage lands on Earth's ~29%.
+ */
+const LAND_SCALE = 0.86;
+
 const isLand = (lon: number, lat: number): boolean => {
-  if (lat < -74) return true; // Antarctic cap
+  if (lat < -72) return true; // Antarctic cap - 2.4% of the sphere, as on Earth
   for (const blob of LANDMASS) {
     let dLon = lon - blob.lon;
     if (dLon > 180) dLon -= 360;
     if (dLon < -180) dLon += 360;
     // Meridians converge towards the poles, so scale longitude by cos(lat).
-    const nx = (dLon * Math.cos((lat * Math.PI) / 180)) / blob.rLon;
-    const ny = (lat - blob.lat) / blob.rLat;
+    const nx = (dLon * Math.cos((lat * Math.PI) / 180)) / (blob.rLon * LAND_SCALE);
+    const ny = (lat - blob.lat) / (blob.rLat * LAND_SCALE);
     if (nx * nx + ny * ny < 1) return true;
   }
   return false;
@@ -74,22 +116,32 @@ export const Globe: React.FC<{
   r: number;
   /** Degrees of spin per second. */
   spin?: number;
+  /**
+   * Starting rotation in degrees. The longitude facing the camera is this plus
+   * 90, so -170 opens on the Americas; at the default spin the take ends over
+   * Africa, keeping land in view throughout instead of drifting into an empty
+   * Pacific hemisphere.
+   */
+  phase?: number;
   density?: number;
-}> = ({ cx, cy, r, spin = 9, density = 2600 }) => {
+}> = ({ cx, cy, r, spin = 4.5, phase = -170, density = 20000 }) => {
   const theme = useTheme();
+  const mirrored = useMirrored();
   const frame = useCurrentFrame();
   const points = useMemo(() => buildPoints(density), [density]);
 
-  const angle = ((frame / 30) * spin * Math.PI) / 180;
+  const angle = (((frame / 30) * spin + phase) * Math.PI) / 180;
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
-  // A slight axial tilt keeps the sphere from reading as a flat disc.
-  const tilt = (-16 * Math.PI) / 180;
+  // Axial tilt towards the camera: it keeps the sphere from reading as a flat
+  // disc, favours the land-heavy northern hemisphere, and pushes the Antarctic
+  // cap round to the far limb where it belongs rather than banding the bottom.
+  const tilt = (16 * Math.PI) / 180;
   const cosT = Math.cos(tilt);
   const sinT = Math.sin(tilt);
 
   // One dot per ~1.6% of the radius keeps density constant across sizes.
-  const unit = r / 145;
+  const unit = r / 190;
   let landPath = "";
   let oceanPath = "";
   for (const p of points) {
@@ -102,9 +154,11 @@ export const Globe: React.FC<{
     const py = cy - ry * r;
     // Dot size tracks the sphere's radius, and shrinks towards the limb so
     // the surface reads as curved rather than as a flat disc of confetti.
-    const size = unit * (0.55 + depth * 0.55);
+    const size = unit * (0.6 + depth * 0.5);
     if (p.land) {
-      landPath += dot(px, py, size * 1.45);
+      // Sized so neighbouring dots just overlap at this density: any smaller
+      // and the continents break up into confetti.
+      landPath += dot(px, py, size * 2.45);
     } else {
       oceanPath += dot(px, py, size * 0.8);
     }
@@ -113,16 +167,22 @@ export const Globe: React.FC<{
   return (
     <g>
       <defs>
-        <radialGradient id={`globe-core-${Math.round(cx)}`}>
-          <stop offset="0%" stopColor={theme.glow} stopOpacity={0.55} />
-          <stop offset="70%" stopColor={theme.glow} stopOpacity={0.22} />
-          <stop offset="100%" stopColor={theme.glow} stopOpacity={0} />
+        {/* Limb darkening: bright at the sub-camera point, falling off towards
+            the edge, so the dot field reads as a sphere and not a disc. */}
+        <radialGradient id={`globe-core-${Math.round(cx)}`} cx="42%" cy="38%">
+          <stop offset="0%" stopColor={theme.glow} stopOpacity={0.42} />
+          <stop offset="60%" stopColor={theme.glow} stopOpacity={0.14} />
+          <stop offset="100%" stopColor={theme.void} stopOpacity={0.5} />
         </radialGradient>
       </defs>
       <circle cx={cx} cy={cy} r={r * 1.02} fill={theme.void} opacity={0.7} />
-      <circle cx={cx} cy={cy} r={r} fill={`url(#globe-core-${Math.round(cx)})`} />
-      <path d={oceanPath} fill={theme.mid} opacity={0.45} />
-      <path d={landPath} fill={theme.hot} opacity={1} />
+      {/* The sphere counter-flips inside a mirrored console for the same
+          reason type does: a backwards Earth reads as a mistake. */}
+      <g transform={mirrored ? `translate(${cx * 2} 0) scale(-1 1)` : undefined}>
+        <circle cx={cx} cy={cy} r={r} fill={`url(#globe-core-${Math.round(cx)})`} />
+        <path d={oceanPath} fill={theme.line} opacity={0.55} />
+        <path d={landPath} fill={theme.hot} opacity={1} />
+      </g>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={theme.bright} strokeWidth={1.4} opacity={0.7} />
       <circle
         cx={cx}
@@ -187,17 +247,16 @@ export const OrbitRing: React.FC<{
               strokeWidth={isActive ? 1.8 : 1.1}
               opacity={0.95}
             />
-            <text
+            <HudText
               x={x}
               y={y + 4.5}
               fill={isActive ? theme.hot : theme.bright}
               fontSize={12}
-              fontFamily={MONO}
               textAnchor="middle"
               opacity={0.95}
             >
               {glyph}
-            </text>
+            </HudText>
           </g>
         );
       })}
@@ -231,18 +290,17 @@ export const Callout: React.FC<{
         strokeWidth={1}
       />
       {lines.map((line, i) => (
-        <text
+        <HudText
           key={line}
           x={dx < 0 ? tailX : endX + 6}
           y={endY - 6 + i * 12}
           fill={theme.bright}
           fontSize={9}
-          fontFamily={MONO}
           letterSpacing={1.4}
-          textAnchor={dx < 0 ? "start" : "start"}
+          textAnchor="start"
         >
           {line}
-        </text>
+        </HudText>
       ))}
     </g>
   );

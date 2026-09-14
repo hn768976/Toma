@@ -1,7 +1,42 @@
-import React from "react";
+import React, { createContext, useContext } from "react";
 import { useCurrentFrame } from "remotion";
 import { useTheme } from "./context";
 import { makeRandom, noise1d, randomSeries } from "./rng";
+
+/**
+ * True while the console is being drawn inside a mirrored group.
+ *
+ * The mirrored variant flips the entire plane with one `scale(-1, 1)`, which
+ * would also flip every glyph. `HudText` reads this and counter-flips about its
+ * own anchor point, so type stays readable while its position mirrors.
+ */
+const MirrorContext = createContext(false);
+
+export const MirrorProvider: React.FC<{
+  mirrored: boolean;
+  children: React.ReactNode;
+}> = ({ mirrored, children }) => (
+  <MirrorContext.Provider value={mirrored}>{children}</MirrorContext.Provider>
+);
+
+export const useMirrored = (): boolean => useContext(MirrorContext);
+
+/**
+ * Every piece of type on the console. Use this rather than a bare `<text>`:
+ * it is what keeps the mirrored variant legible.
+ */
+export const HudText: React.FC<
+  React.SVGProps<SVGTextElement> & { x: number; y: number }
+> = ({ x, y, children, ...rest }) => {
+  const mirrored = useMirrored();
+  const text = (
+    <text x={x} y={y} fontFamily={MONO} {...rest}>
+      {children}
+    </text>
+  );
+  if (!mirrored) return text;
+  return <g transform={`translate(${x * 2} 0) scale(-1 1)`}>{text}</g>;
+};
 
 /** Monospaced stack used for every readout on the console. */
 export const MONO =
@@ -58,17 +93,16 @@ export const Panel: React.FC<{
           ))
         : null}
       {label ? (
-        <text
+        <HudText
           x={x + 9}
           y={y + 16}
           fill={theme.bright}
           fontSize={11}
-          fontFamily={MONO}
           letterSpacing={2.2}
           opacity={0.85}
         >
           {label}
-        </text>
+        </HudText>
       ) : null}
       {children}
     </g>
@@ -149,19 +183,16 @@ export const Ticker: React.FC<{
     : "";
 
   return (
-    <text
+    <HudText
       x={x}
       y={y}
       fill={color ?? theme.hot}
       fontSize={size}
-      fontFamily={MONO}
       textAnchor={anchor}
       letterSpacing={1}
     >
-      {whole}
-      {fraction}
-      {suffix}
-    </text>
+      {`${whole}${fraction}${suffix}`}
+    </HudText>
   );
 };
 
@@ -178,18 +209,17 @@ export const Label: React.FC<{
 }> = ({ x, y, children, size = 12, color, anchor = "start", opacity = 0.9, tracking = 2 }) => {
   const theme = useTheme();
   return (
-    <text
+    <HudText
       x={x}
       y={y}
       fill={color ?? theme.bright}
       fontSize={size}
-      fontFamily={MONO}
       textAnchor={anchor}
       letterSpacing={tracking}
       opacity={opacity}
     >
       {children}
-    </text>
+    </HudText>
   );
 };
 

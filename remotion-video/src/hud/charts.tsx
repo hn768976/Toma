@@ -1,7 +1,7 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { useTheme } from "./context";
-import { Grid, Label, MONO, type Box } from "./primitives";
+import { Grid, HudText, Label, type Box } from "./primitives";
 import { noise1d, randomSeries } from "./rng";
 
 /**
@@ -234,18 +234,17 @@ export const Gauge: React.FC<{
       />
       <circle cx={cx} cy={cy} r={2.4} fill={theme.hot} />
       {label ? (
-        <text
+        <HudText
           x={cx}
           y={cy + 15}
           fill={theme.bright}
           fontSize={10}
-          fontFamily={MONO}
           textAnchor="middle"
           letterSpacing={1.6}
           opacity={0.85}
         >
           {label}
-        </text>
+        </HudText>
       ) : null}
     </g>
   );
@@ -278,16 +277,9 @@ export const RingGauge: React.FC<{
         transform={`rotate(-90 ${cx} ${cy})`}
         strokeLinecap="butt"
       />
-      <text
-        x={cx}
-        y={cy + 4}
-        fill={theme.hot}
-        fontSize={r * 0.55}
-        fontFamily={MONO}
-        textAnchor="middle"
-      >
-        {Math.round(v * 100)}
-      </text>
+      <HudText x={cx} y={cy + 4} fill={theme.hot} fontSize={r * 0.55} textAnchor="middle">
+        {String(Math.round(v * 100))}
+      </HudText>
     </g>
   );
 };
@@ -385,16 +377,15 @@ export const StatBlock: React.FC<{
             <Label x={box.x} y={box.y + i * rowHeight + rowHeight * 0.7} size={10} opacity={0.7}>
               {entry}
             </Label>
-            <text
+            <HudText
               x={box.x + box.w}
               y={box.y + i * rowHeight + rowHeight * 0.7}
               fill={theme.hot}
               fontSize={11}
-              fontFamily={MONO}
               textAnchor="end"
             >
               {(v * 100).toFixed(1)}
-            </text>
+            </HudText>
           </g>
         );
       })}

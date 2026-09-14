@@ -40,7 +40,7 @@ npx remotion upgrade
 ## Compositions
 
 - **`CleanEnergyHUD-4K` / `CleanEnergyHUD-Blue-4K`** - 3840x2160, 30fps, 20s.
-  The clean-energy console, in green and in dark blue. See
+  The clean-energy console in green, and the same shot mirrored in dark blue. See
   [`src/hud/README.md`](./src/hud/README.md) for the layout breakdown and the
   exact delivery render commands.
 - **`CleanEnergyHUD-1080p` / `CleanEnergyHUD-Blue-1080p`** - the same two at

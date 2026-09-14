@@ -86,7 +86,7 @@ export const RemotionRoot: React.FC = () => {
         width={UHD_WIDTH}
         height={UHD_HEIGHT}
         schema={cleanEnergyHudSchema}
-        defaultProps={{ ...cleanEnergyHudDefaults, variant: "alternate" }}
+        defaultProps={{ ...cleanEnergyHudDefaults, variant: "mirrored" }}
       />
       <Composition
         id="CleanEnergyHUD-1080p"
@@ -106,7 +106,7 @@ export const RemotionRoot: React.FC = () => {
         width={HD_WIDTH}
         height={HD_HEIGHT}
         schema={cleanEnergyHudSchema}
-        defaultProps={{ ...cleanEnergyHudDefaults, variant: "alternate" }}
+        defaultProps={{ ...cleanEnergyHudDefaults, variant: "mirrored" }}
       />
     </>
   );
