@@ -31,14 +31,20 @@ export type Projected = { x: number; y: number; depth: number };
 export const NEAR = 0.4;
 
 /**
- * Depth of a ground point in camera space. Affine in (wx, wz), which is what
- * lets the segment and polygon clippers below interpolate in world space.
+ * Depth of a world point in camera space. `wy` defaults to the ground plane;
+ * pass a smaller value for a point above it. Affine in (wx, wy, wz), which is
+ * what lets the segment and polygon clippers below interpolate in world space.
  */
-export const depthAt = (wx: number, wz: number, cam: Camera): number => {
+export const depthAt = (
+  wx: number,
+  wz: number,
+  cam: Camera,
+  wy: number = cam.height,
+): number => {
   const px = wx - cam.panX;
   const pz = wz - cam.dolly;
   const rz = px * Math.sin(cam.yaw) + pz * Math.cos(cam.yaw);
-  return cam.height * Math.sin(cam.pitch) + rz * Math.cos(cam.pitch);
+  return wy * Math.sin(cam.pitch) + rz * Math.cos(cam.pitch);
 };
 
 /**
@@ -77,14 +83,66 @@ export const project = (
   };
 };
 
-/** Padding around the 1920x1080 frame within which geometry is still drawn. */
+/**
+ * Padding around the 1920x1080 frame within which geometry is still drawn.
+ * Wider than the reach of the bloom filters, so clipping to it cannot remove
+ * glow that would have spilled back into frame.
+ */
 const CULL_PAD = 220;
 
-export const offScreen = (a: Projected, b: Projected): boolean =>
-  (a.x < -CULL_PAD && b.x < -CULL_PAD) ||
-  (a.x > 1920 + CULL_PAD && b.x > 1920 + CULL_PAD) ||
-  (a.y < -CULL_PAD && b.y < -CULL_PAD) ||
-  (a.y > 1080 + CULL_PAD && b.y > 1080 + CULL_PAD);
+const CLIP_X0 = -CULL_PAD;
+const CLIP_X1 = 1920 + CULL_PAD;
+const CLIP_Y0 = -CULL_PAD;
+const CLIP_Y1 = 1080 + CULL_PAD;
+
+/**
+ * Liang-Barsky clip of a projected segment to the padded frame.
+ *
+ * Near-plane clipping alone is not enough: a line running under the camera
+ * reaches the near plane at coordinates in the tens of thousands, and a segment
+ * with one end out there is not rejected by a simple both-ends-outside test. A
+ * few of those in a bloomed group stretch its bounding box enormously, and
+ * because an SVG filter region is expressed relative to that box, the blur then
+ * changes from frame to frame as the geometry shifts — visible as a flicker
+ * across the whole image. Clipping to the frame keeps every coordinate sane.
+ *
+ * Depth is interpolated through its reciprocal, which is the quantity that is
+ * affine in screen space, so the clipped endpoints carry true depths.
+ */
+const clipToFrame = (
+  a: Projected,
+  b: Projected,
+): [Projected, Projected] | null => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const p = [-dx, dx, -dy, dy];
+  const q = [a.x - CLIP_X0, CLIP_X1 - a.x, a.y - CLIP_Y0, CLIP_Y1 - a.y];
+
+  let t0 = 0;
+  let t1 = 1;
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      if (q[i] < 0) return null; // parallel to this edge and outside it
+      continue;
+    }
+    const r = q[i] / p[i];
+    if (p[i] < 0) {
+      if (r > t1) return null;
+      if (r > t0) t0 = r;
+    } else {
+      if (r < t0) return null;
+      if (r < t1) t1 = r;
+    }
+  }
+  if (t0 === 0 && t1 === 1) return [a, b];
+
+  const at = (t: number): Projected => ({
+    x: a.x + dx * t,
+    y: a.y + dy * t,
+    depth: 1 / ((1 - t) / a.depth + t / b.depth),
+  });
+  return [t0 > 0 ? at(t0) : a, t1 < 1 ? at(t1) : b];
+};
 
 /**
  * Project a ground-plane segment, clipping it against the near plane first so
@@ -96,9 +154,10 @@ export const projectSegment = (
   bx: number,
   bz: number,
   cam: Camera,
+  wy: number = cam.height,
 ): [Projected, Projected] | null => {
-  const da = depthAt(ax, az, cam);
-  const db = depthAt(bx, bz, cam);
+  const da = depthAt(ax, az, cam, wy);
+  const db = depthAt(bx, bz, cam, wy);
   if (da < NEAR && db < NEAR) return null;
 
   let x0 = ax;
@@ -116,44 +175,54 @@ export const projectSegment = (
     z1 = bz + (az - bz) * t;
   }
 
-  const pa = project(x0, z0, cam);
-  const pb = project(x1, z1, cam);
-  if (!pa || !pb || offScreen(pa, pb)) return null;
-  return [pa, pb];
+  const pa = project(x0, z0, cam, wy);
+  const pb = project(x1, z1, cam, wy);
+  if (!pa || !pb) return null;
+  return clipToFrame(pa, pb);
 };
 
+/** A world-space corner: x, y (down-positive), z. */
+export type Corner3 = readonly [number, number, number];
+
 /**
- * Sutherland-Hodgman clip of a convex ground polygon against the near plane,
- * in world space. Depth is affine in (wx, wz), so clipping before projecting
- * is exact.
+ * Sutherland-Hodgman clip of a convex polygon against the near plane, in world
+ * space. Depth is affine in (wx, wy, wz), so clipping before projecting is
+ * exact — and works for the vertical faces of a raised module, not just for
+ * polygons lying flat on the ground.
  */
-const clipPolygonNear = (
-  corners: readonly (readonly [number, number])[],
-  cam: Camera,
-): [number, number][] => {
-  const clipped: [number, number][] = [];
+const clipPolygonNear = (corners: readonly Corner3[], cam: Camera): Corner3[] => {
+  const clipped: Corner3[] = [];
   for (let i = 0; i < corners.length; i++) {
-    const [cx0, cz0] = corners[i];
-    const [cx1, cz1] = corners[(i + 1) % corners.length];
-    const d0 = depthAt(cx0, cz0, cam);
-    const d1 = depthAt(cx1, cz1, cam);
-    if (d0 >= NEAR) clipped.push([cx0, cz0]);
+    const a = corners[i];
+    const b = corners[(i + 1) % corners.length];
+    const d0 = depthAt(a[0], a[2], cam, a[1]);
+    const d1 = depthAt(b[0], b[2], cam, b[1]);
+    if (d0 >= NEAR) clipped.push(a);
     if (d0 >= NEAR !== d1 >= NEAR) {
       const t = (NEAR - d0) / (d1 - d0);
-      clipped.push([cx0 + (cx1 - cx0) * t, cz0 + (cz1 - cz0) * t]);
+      clipped.push([
+        a[0] + (b[0] - a[0]) * t,
+        a[1] + (b[1] - a[1]) * t,
+        a[2] + (b[2] - a[2]) * t,
+      ]);
     }
   }
   return clipped;
 };
 
-/**
- * Project a convex ground-plane polygon. Returns an SVG points string and the
- * screen bounds, or null when fully culled.
- */
-export const projectPolygon = (
-  corners: readonly (readonly [number, number])[],
+export type ProjectedPolygon = {
+  points: string;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+};
+
+/** Project a convex world-space polygon to an SVG points string and bounds. */
+export const projectPolygon3 = (
+  corners: readonly Corner3[],
   cam: Camera,
-): { points: string; minX: number; maxX: number; minY: number; maxY: number } | null => {
+): ProjectedPolygon | null => {
   const clipped = clipPolygonNear(corners, cam);
   if (clipped.length < 3) return null;
 
@@ -162,8 +231,8 @@ export const projectPolygon = (
   let minY = Infinity;
   let maxY = -Infinity;
   const parts: string[] = [];
-  for (const [wx, wz] of clipped) {
-    const p = project(wx, wz, cam);
+  for (const [wx, wy, wz] of clipped) {
+    const p = project(wx, wz, cam, wy);
     if (!p) return null;
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
@@ -177,17 +246,32 @@ export const projectPolygon = (
   return { points: parts.join(" "), minX, maxX, minY, maxY };
 };
 
+const lift = (
+  corners: readonly (readonly [number, number])[],
+  wy: number,
+): Corner3[] => corners.map(([wx, wz]) => [wx, wy, wz] as Corner3);
+
 /**
- * Project a convex ground-plane polygon straight to SVG path data. Solar cell
- * detail runs to thousands of small polygons per frame; emitting them as
- * subpaths of one <path> keeps the DOM flat, so this skips the intermediate
- * points string.
+ * Project a convex polygon lying at one elevation. `wy` defaults to the ground
+ * plane; pass a smaller value for the face of a raised module.
+ */
+export const projectPolygon = (
+  corners: readonly (readonly [number, number])[],
+  cam: Camera,
+  wy: number = cam.height,
+): ProjectedPolygon | null => projectPolygon3(lift(corners, wy), cam);
+
+/**
+ * Project a convex polygon straight to SVG path data. Solar cell detail runs to
+ * thousands of small polygons per frame; emitting them as subpaths of one
+ * <path> keeps the DOM flat, so this skips the intermediate points string.
  */
 export const projectPolygonPath = (
   corners: readonly (readonly [number, number])[],
   cam: Camera,
+  wy: number = cam.height,
 ): string | null => {
-  const clipped = clipPolygonNear(corners, cam);
+  const clipped = clipPolygonNear(lift(corners, wy), cam);
   if (clipped.length < 3) return null;
 
   let minX = Infinity;
@@ -196,7 +280,8 @@ export const projectPolygonPath = (
   let maxY = -Infinity;
   let d = "";
   for (let i = 0; i < clipped.length; i++) {
-    const p = project(clipped[i][0], clipped[i][1], cam);
+    const [wx, cy, wz] = clipped[i];
+    const p = project(wx, wz, cam, cy);
     if (!p) return null;
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;

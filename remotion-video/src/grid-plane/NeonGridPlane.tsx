@@ -23,6 +23,7 @@ import {
   cornerDiamondPath,
   detailFade,
   gapLinePath,
+  strokeFor,
 } from "./solar-surface";
 import { hash2, seeded } from "./random";
 
@@ -105,14 +106,16 @@ const ignitionEnvelope = (frame: number, duration: number): number =>
     easing: Easing.bezier(0.4, 0, 0.35, 1),
   });
 
-/** How lit one structural line is, 0..1. */
-const lineIntensity = (axis: number, index: number, env: number, t: number): number => {
+/**
+ * How lit one seam is, 0..1. Each seam has its own offset into the rising
+ * envelope, so they come up at different times; once up, a seam holds steady —
+ * there is no brightness oscillation on top.
+ */
+const lineIntensity = (axis: number, index: number, env: number): number => {
   const phase = hash2(axis, index);
   const raw = env * 1.75 - phase * 0.72;
   if (raw <= 0) return 0;
-  const lit = Math.min(1, raw);
-  // Slow breathing so the lit lines never look like static strokes.
-  return lit * (0.86 + 0.14 * Math.sin(t * 2.1 + phase * 31.4));
+  return Math.min(1, raw);
 };
 
 const widthForDepth = (depth: number, base: number): number =>
@@ -127,9 +130,18 @@ type Piece = {
 };
 
 /**
- * Split the visible stretch of a ground line into pieces so stroke width and
- * opacity can taper with distance — one stroke across a line running to the
- * horizon reads as a flat ribbon.
+ * Split the visible stretch of a seam into pieces, so stroke width and opacity
+ * can taper with distance — one stroke across a line running to the horizon
+ * reads as a flat ribbon.
+ *
+ * The pieces are spaced evenly across the SCREEN, not evenly along the line.
+ * Spacing them along the line puts nearly all of them beyond the middle
+ * distance and leaves a single piece covering the whole foreground, drawn at
+ * one width taken from its midpoint. That width then steps up and down as the
+ * camera moves the midpoint around — a visible flicker, and on the brightest
+ * lines in the shot. Depth is affine along the line and its reciprocal is
+ * affine across the screen, so stepping uniformly through the reciprocal puts
+ * the pieces where the line actually covers pixels.
  */
 const linePieces = (
   ax: number,
@@ -146,10 +158,28 @@ const linePieces = (
   const dx = bx - ax;
   const dz = bz - az;
 
+  const dA = depthAt(ax, az, cam);
+  const dB = depthAt(bx, bz, cam);
+  const slope = dB - dA;
+  const flat = Math.abs(slope) < 1e-9; // line at constant depth
+
+  const dStart = dA + slope * t0;
+  const dEnd = dA + slope * t1;
+  const invStart = 1 / dStart;
+  const invEnd = 1 / dEnd;
+
+  /** Depth at a fraction of the way across the piece's screen extent. */
+  const depthAtFraction = (f: number): number =>
+    flat ? dStart : 1 / (invStart + (invEnd - invStart) * f);
+
+  /** Segment parameter at that same fraction. */
+  const paramAtFraction = (f: number): number =>
+    flat ? t0 + (t1 - t0) * f : (depthAtFraction(f) - dA) / slope;
+
   const out: Piece[] = [];
   for (let i = 0; i < count; i++) {
-    const u0 = t0 + ((t1 - t0) * i) / count;
-    const u1 = t0 + ((t1 - t0) * (i + 1)) / count;
+    const u0 = paramAtFraction(i / count);
+    const u1 = paramAtFraction((i + 1) / count);
     const seg = projectSegment(
       ax + dx * u0,
       az + dz * u0,
@@ -163,7 +193,9 @@ const linePieces = (
       y1: seg[0].y,
       x2: seg[1].x,
       y2: seg[1].y,
-      depth: (seg[0].depth + seg[1].depth) / 2,
+      // Depth of the piece itself, so the width never depends on where the
+      // frame edge happens to cut it.
+      depth: depthAtFraction((i + 0.5) / count),
     });
   }
   return out;
@@ -259,14 +291,15 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
     if (gapAlpha > 0.01 && panel.screenW > 26) {
       const d = gapLinePath(panel.rect, CELL_SPEC, cam);
       if (d) {
+        const s = strokeFor(panel.depth, 0.8);
         cellDetail.push(
           <path
             key={`cg${panel.key}`}
             d={d}
             fill="none"
             stroke="#8fb3d8"
-            strokeWidth={widthForDepth(panel.depth, 0.8)}
-            opacity={0.42 * gapAlpha}
+            strokeWidth={s.width}
+            opacity={0.42 * gapAlpha * s.alpha}
           />,
         );
       }
@@ -276,14 +309,15 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
     if (busAlpha > 0.01) {
       const d = busbarPath(panel.rect, CELL_SPEC, cam);
       if (d) {
+        const s = strokeFor(panel.depth, 0.45);
         cellDetail.push(
           <path
             key={`cb${panel.key}`}
             d={d}
             fill="none"
             stroke="#82a5c8"
-            strokeWidth={widthForDepth(panel.depth, 0.45)}
-            opacity={0.36 * busAlpha}
+            strokeWidth={s.width}
+            opacity={0.36 * busAlpha * s.alpha}
           />,
         );
       }
@@ -319,8 +353,9 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
     bz: number,
     intensity: number,
   ) => {
-    for (const [n, p] of linePieces(ax, az, bx, bz, cam, MAJOR_MAX_DEPTH, 8).entries()) {
+    for (const [n, p] of linePieces(ax, az, bx, bz, cam, MAJOR_MAX_DEPTH, 18).entries()) {
       const fade = 1 - p.depth / MAJOR_MAX_DEPTH;
+      const seam = strokeFor(p.depth, 1.7);
       dormant.push(
         <line
           key={`d${key}-${n}`}
@@ -329,8 +364,8 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
           x2={p.x2}
           y2={p.y2}
           stroke="#c6dcf7"
-          strokeWidth={widthForDepth(p.depth, 1.7)}
-          opacity={0.42 * fade}
+          strokeWidth={seam.width}
+          opacity={0.42 * fade * seam.alpha}
         />,
       );
       if (intensity <= 0.02) continue;
@@ -376,10 +411,10 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
   };
 
   for (let i = iMajX0; i <= iMajX1; i++) {
-    emitMajor(`x${i}`, i * MAJOR, zMin, i * MAJOR, zMax, lineIntensity(0, i, env, t));
+    emitMajor(`x${i}`, i * MAJOR, zMin, i * MAJOR, zMax, lineIntensity(0, i, env));
   }
   for (let i = iMajZ0; i <= iMajZ1; i++) {
-    emitMajor(`z${i}`, xMin, i * MAJOR, xMax, i * MAJOR, lineIntensity(1, i, env, t));
+    emitMajor(`z${i}`, xMin, i * MAJOR, xMax, i * MAJOR, lineIntensity(1, i, env));
   }
 
   // --- dust ----------------------------------------------------------------
@@ -442,10 +477,10 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
             <stop offset="58%" stopColor="#000000" stopOpacity="0" />
             <stop offset="100%" stopColor="#000000" stopOpacity="0.66" />
           </radialGradient>
-          <filter id="ng-bloom" x="-25%" y="-25%" width="150%" height="150%">
+          <filter id="ng-bloom" filterUnits="userSpaceOnUse" x="-220" y="-220" width="2360" height="1520">
             <feGaussianBlur stdDeviation="16" />
           </filter>
-          <filter id="ng-bloom-wide" x="-40%" y="-40%" width="180%" height="180%">
+          <filter id="ng-bloom-wide" filterUnits="userSpaceOnUse" x="-220" y="-220" width="2360" height="1520">
             <feGaussianBlur stdDeviation="44" />
           </filter>
         </defs>

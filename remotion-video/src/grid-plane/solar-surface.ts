@@ -38,11 +38,20 @@ export type CellSpec = {
   diamond: number;
 };
 
-/** Straight gaps between neighbouring cells, as one multi-subpath string. */
-export const gapLinePath = (r: PanelRect, spec: CellSpec, cam: Camera): string => {
+/**
+ * Straight gaps between neighbouring cells, as one multi-subpath string.
+ * `wy` is the elevation of the cell face — the top of a raised module, not the
+ * mounting plane.
+ */
+export const gapLinePath = (
+  r: PanelRect,
+  spec: CellSpec,
+  cam: Camera,
+  wy: number = cam.height,
+): string => {
   let d = "";
   const add = (ax: number, az: number, bx: number, bz: number) => {
-    const seg = projectSegment(ax, az, bx, bz, cam);
+    const seg = projectSegment(ax, az, bx, bz, cam, wy);
     if (!seg) return;
     d += `M${seg[0].x.toFixed(1)} ${seg[0].y.toFixed(1)}L${seg[1].x.toFixed(1)} ${seg[1].y.toFixed(1)}`;
   };
@@ -59,7 +68,12 @@ export const gapLinePath = (r: PanelRect, spec: CellSpec, cam: Camera): string =
 };
 
 /** The pale diamonds where four chamfered cell corners meet. */
-export const cornerDiamondPath = (r: PanelRect, spec: CellSpec, cam: Camera): string => {
+export const cornerDiamondPath = (
+  r: PanelRect,
+  spec: CellSpec,
+  cam: Camera,
+  wy: number = cam.height,
+): string => {
   const cw = (r.x1 - r.x0) / spec.cellsX;
   const cd = (r.z1 - r.z0) / spec.cellsZ;
   const s = Math.min(cw, cd) * spec.diamond;
@@ -77,6 +91,7 @@ export const cornerDiamondPath = (r: PanelRect, spec: CellSpec, cam: Camera): st
           [gx, gz + s],
         ],
         cam,
+        wy,
       );
       if (sub) d += sub;
     }
@@ -89,13 +104,18 @@ export const cornerDiamondPath = (r: PanelRect, spec: CellSpec, cam: Camera): st
  * arrangement as the reference, where each cell is crossed by two thin silver
  * lines that carry on into the cell beyond.
  */
-export const busbarPath = (r: PanelRect, spec: CellSpec, cam: Camera): string => {
+export const busbarPath = (
+  r: PanelRect,
+  spec: CellSpec,
+  cam: Camera,
+  wy: number = cam.height,
+): string => {
   const cd = (r.z1 - r.z0) / spec.cellsZ;
   let d = "";
   for (let j = 0; j < spec.cellsZ; j++) {
     for (let b = 1; b <= spec.busbars; b++) {
       const z = r.z0 + cd * (j + b / (spec.busbars + 1));
-      const seg = projectSegment(r.x0, z, r.x1, z, cam);
+      const seg = projectSegment(r.x0, z, r.x1, z, cam, wy);
       if (!seg) continue;
       d += `M${seg[0].x.toFixed(1)} ${seg[0].y.toFixed(1)}L${seg[1].x.toFixed(1)} ${seg[1].y.toFixed(1)}`;
     }
@@ -113,4 +133,31 @@ export const detailFade = (depth: number, full: number, gone: number): number =>
   if (depth >= gone) return 0;
   const t = (depth - full) / (gone - full);
   return 1 - t * t * (3 - 2 * t);
+};
+
+export type Stroke = {
+  /** Stroke width in design-space units. */
+  width: number;
+  /** Opacity multiplier that compensates for holding the width at a pixel. */
+  alpha: number;
+};
+
+/**
+ * Stroke width for a line at a given depth, plus an opacity scale.
+ *
+ * Below about a pixel, a stroke's antialiased coverage depends on exactly where
+ * it falls between pixel centres, so a whole field of hairlines crawls and
+ * flickers as the camera moves — the cell mesh covers most of the frame, which
+ * makes that read as the entire surface shimmering. Holding the width at one
+ * pixel and taking the lost weight out of the opacity instead keeps the
+ * apparent density identical with none of the aliasing.
+ */
+export const strokeFor = (
+  depth: number,
+  base: number,
+  maxScale = 2.4,
+): Stroke => {
+  const ideal = Math.min(base * maxScale, (base * 11) / depth);
+  if (ideal >= 1) return { width: ideal, alpha: 1 };
+  return { width: 1, alpha: Math.max(0.05, ideal) };
 };

@@ -42,8 +42,12 @@ there is nothing to re-tune per resolution. No raster assets are involved.
   segments and polygons, and `depthBand`, which solves exactly for the visible
   stretch of a line within a depth range.
 - `solar-surface.ts` — the monocrystalline cell surface both videos sit on.
-- `SolarPanelArray.tsx` — reference A. Brick-staggered modules drawn far-to-near
-  (painter's algorithm), specular flares sweeping the frames, airborne sparkles.
+- `SolarPanelArray.tsx` — reference A. Brick-staggered modules, each a slab
+  standing proud of its mounting plane so the aluminium frame has real
+  thickness. Drawn far-to-near (painter's algorithm); all four frame walls are
+  emitted and then the glass on top, so walls facing away land inside the top
+  face's silhouette and the drawing order does the hidden-surface removal.
+  Specular flares sweep the frames; sparkles drift above the array.
 - `NeonGridPlane.tsx` — reference B. A field of square modules whose seams
   ignite on individually seeded schedules under a rising global envelope,
   bloomed through stacked blurred copies. The cell surface itself is static:
@@ -68,6 +72,31 @@ less geometry, and it lets each kind of detail dissolve at the distance where it
 stops being resolvable (`detailFade`) instead of a panel switching level of
 detail at one depth and popping. Each helper returns path data holding many
 subpaths, so a panel's hundreds of cell details cost a single DOM node.
+
+## Avoiding flicker
+
+Two things in a moving perspective scene will strobe from frame to frame unless
+they are handled, and both were visible before they were fixed:
+
+- **Sub-pixel strokes.** Below about a pixel wide, a stroke's antialiased
+  coverage depends on where it falls between pixel centres, so a field of
+  hairlines crawls as the camera moves. `strokeFor` holds the width at a pixel
+  and takes the lost weight out of the opacity instead, which keeps the apparent
+  density identical with none of the aliasing.
+- **Coarse subdivision of long lines.** A seam is split into pieces so its
+  stroke can taper with distance. Spacing those pieces evenly *along the line*
+  puts nearly all of them past the middle distance and leaves one piece covering
+  the whole foreground at a single width — and that width then steps around as
+  the camera moves. `linePieces` spaces them evenly across the *screen* instead,
+  stepping through the reciprocal of depth, which is the quantity that is affine
+  in screen space. Measured on a frozen camera, this took the frame-to-frame
+  swing in mean luminance from 11% to under 1%.
+
+Two smaller rules follow from the same concern: geometry is clipped to the frame
+(`clipToFrame`), since a line reaching the near plane projects to coordinates in
+the tens of thousands and a bloom group's bounding box would balloon; and the
+bloom filters use `filterUnits="userSpaceOnUse"` with a fixed region, so the blur
+cannot shift as content enters and leaves the group.
 
 ## Tuning
 

@@ -7,13 +7,20 @@ import {
 } from "remotion";
 import { z } from "zod";
 import { BASE_HEIGHT, BASE_WIDTH } from "./constants";
-import { Camera, project, projectPolygon, projectSegment } from "./camera";
+import {
+  Camera,
+  project,
+  projectPolygon,
+  projectPolygon3,
+  projectSegment,
+} from "./camera";
 import {
   busbarPath,
   CellSpec,
   cornerDiamondPath,
   detailFade,
   gapLinePath,
+  strokeFor,
 } from "./solar-surface";
 import { hash2, seeded } from "./random";
 
@@ -37,10 +44,18 @@ export const solarArrayDefaults: SolarArrayProps = {
   sparkleCount: 300,
 };
 
-/** One panel's footprint, and the gap left between neighbours. */
+/** One module's footprint, and the gap left between neighbours. */
 const PANEL_W = 4.0;
 const PANEL_D = 1.35;
 const GAP = 0.1;
+
+/**
+ * How far the module stands proud of its mounting plane — an aluminium frame
+ * is roughly this fraction of the panel's width, and drawing the resulting
+ * side walls is what makes the array read as solid objects rather than tiles
+ * painted on the floor.
+ */
+const PANEL_LIFT = 0.17;
 
 /**
  * Cells on the face of a single panel. The panel is ~3:1, so 14 x 5 keeps the
@@ -99,6 +114,11 @@ type Panel = {
   screenW: number;
 };
 
+/** Aluminium, shaded by which way the frame wall faces. */
+const WALL_NEAR = "#93aecb";
+const WALL_SIDE = "#5c738f";
+const WALL_FAR = "#31415a";
+
 export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -115,6 +135,8 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
   const row1 = Math.ceil(zMax / PANEL_D);
 
   // --- gather visible panels ----------------------------------------------
+  const topY = cam.height - PANEL_LIFT;
+
   const panels: Panel[] = [];
   for (let row = row0; row <= row1; row++) {
     // Alternate rows are offset by half a panel, giving the brick stagger.
@@ -135,9 +157,10 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
           [x0, z1],
         ],
         cam,
+        topY,
       );
       if (!quad) continue;
-      const centre = project((x0 + x1) / 2, (z0 + z1) / 2, cam);
+      const centre = project((x0 + x1) / 2, (z0 + z1) / 2, cam, topY);
       if (!centre || centre.depth > PANEL_MAX_DEPTH) continue;
       panels.push({
         key: `p${row}_${col}`,
@@ -156,7 +179,13 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
   // Painter's algorithm: far panels first so near ones overlap them.
   panels.sort((a, b) => b.depth - a.depth);
 
-  // --- panel faces, cell detail and lit frames -----------------------------
+  // --- modules: deck, frame walls, glass, cell detail -----------------------
+  // Each module is a slab standing PANEL_LIFT above the mounting plane. All
+  // four frame walls are emitted, then the glass on top: walls facing away
+  // project inside the top face's silhouette and are covered by it, so the
+  // drawing order does the hidden-surface removal for free.
+  const deck: React.ReactNode[] = [];
+  const walls: React.ReactNode[] = [];
   const faces: React.ReactNode[] = [];
   const cells: React.ReactNode[] = [];
   const edges: React.ReactNode[] = [];
@@ -166,6 +195,65 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
     // A little per-panel variation stops the array reading as a printed texture.
     const tint = hash2(p.row, p.col);
     const rect = { x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1 };
+
+    // Mounting plane under this module, out to half the gap on every side, so
+    // neighbouring decks tile exactly and the gaps read as shadowed recesses.
+    const half = GAP / 2;
+    const deckQuad = projectPolygon(
+      [
+        [p.x0 - half, p.z0 - half],
+        [p.x1 + half, p.z0 - half],
+        [p.x1 + half, p.z1 + half],
+        [p.x0 - half, p.z1 + half],
+      ],
+      cam,
+    );
+    if (deckQuad) {
+      deck.push(
+        <polygon
+          key={`k${p.key}`}
+          points={deckQuad.points}
+          fill="#050b16"
+          opacity={0.3 + 0.6 * fade}
+        />,
+      );
+    }
+
+    // Frame walls, from the top edge down to the mounting plane.
+    const wall = (
+      id: string,
+      ax: number,
+      az: number,
+      bx: number,
+      bz: number,
+      colour: string,
+      shade: number,
+    ) => {
+      const q = projectPolygon3(
+        [
+          [ax, topY, az],
+          [bx, topY, bz],
+          [bx, cam.height, bz],
+          [ax, cam.height, az],
+        ],
+        cam,
+      );
+      if (!q) return;
+      walls.push(
+        <polygon
+          key={`w${id}${p.key}`}
+          points={q.points}
+          fill={colour}
+          opacity={shade * (0.4 + 0.6 * fade)}
+        />,
+      );
+    };
+    // z0 is the edge nearest the lens, so its wall faces the camera and takes
+    // the light; the far wall is almost always hidden behind the glass.
+    wall("n", p.x0, p.z0, p.x1, p.z0, WALL_NEAR, 0.95);
+    wall("l", p.x0, p.z1, p.x0, p.z0, WALL_SIDE, 0.8);
+    wall("r", p.x1, p.z0, p.x1, p.z1, WALL_SIDE, 0.66);
+    wall("f", p.x1, p.z1, p.x0, p.z1, WALL_FAR, 0.7);
 
     faces.push(
       <polygon
@@ -180,16 +268,17 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
     // layer is drawn light over the face rather than as its own cell shapes.
     const gapAlpha = detailFade(p.depth, GAP_FADE[0], GAP_FADE[1]);
     if (gapAlpha > 0.01 && p.screenW > 26) {
-      const d = gapLinePath(rect, CELL_SPEC, cam);
+      const d = gapLinePath(rect, CELL_SPEC, cam, topY);
       if (d) {
+        const s = strokeFor(p.depth, 0.85);
         cells.push(
           <path
             key={`cg${p.key}`}
             d={d}
             fill="none"
             stroke="#9dbcdd"
-            strokeWidth={widthForDepth(p.depth, 0.85)}
-            opacity={0.5 * gapAlpha}
+            strokeWidth={s.width}
+            opacity={0.5 * gapAlpha * s.alpha}
           />,
         );
       }
@@ -197,16 +286,17 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
 
     const busAlpha = detailFade(p.depth, BUSBAR_FADE[0], BUSBAR_FADE[1]);
     if (busAlpha > 0.01) {
-      const d = busbarPath(rect, CELL_SPEC, cam);
+      const d = busbarPath(rect, CELL_SPEC, cam, topY);
       if (d) {
+        const s = strokeFor(p.depth, 0.5);
         cells.push(
           <path
             key={`cb${p.key}`}
             d={d}
             fill="none"
             stroke="#8fb0d4"
-            strokeWidth={widthForDepth(p.depth, 0.5)}
-            opacity={0.34 * busAlpha}
+            strokeWidth={s.width}
+            opacity={0.34 * busAlpha * s.alpha}
           />,
         );
       }
@@ -214,7 +304,7 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
 
     const diamondAlpha = detailFade(p.depth, DIAMOND_FADE[0], DIAMOND_FADE[1]);
     if (diamondAlpha > 0.01) {
-      const d = cornerDiamondPath(rect, CELL_SPEC, cam);
+      const d = cornerDiamondPath(rect, CELL_SPEC, cam, topY);
       if (d) {
         cells.push(
           <path
@@ -227,15 +317,17 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
       }
     }
 
+    // The top lip of the frame, catching the light.
+    const lip = strokeFor(p.depth, 1.2);
     edges.push(
       <polygon
         key={`e${p.key}`}
         points={p.poly}
         fill="none"
         stroke="#d8ecff"
-        strokeWidth={widthForDepth(p.depth, 1.5)}
+        strokeWidth={lip.width}
         strokeLinejoin="round"
-        opacity={Math.min(0.95, 0.5 + 0.5 * fade)}
+        opacity={Math.min(0.9, 0.45 + 0.5 * fade) * lip.alpha}
       />,
     );
   }
@@ -253,7 +345,7 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
       const pulse = Math.max(0, Math.sin(cycle * Math.PI) ** 5);
       if (pulse < 0.02) continue;
 
-      const seg = projectSegment(p.x0, p.z0, p.x0, p.z1, cam);
+      const seg = projectSegment(p.x0, p.z0, p.x0, p.z1, cam, topY);
       if (!seg) continue;
       const amount = pulse * props.glint * (1 - p.depth / 40);
       glints.push(
@@ -275,7 +367,7 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
           x2={seg[1].x}
           y2={seg[1].y}
           stroke="#f4fbff"
-          strokeWidth={widthForDepth(p.depth, 2.0)}
+          strokeWidth={Math.max(1, widthForDepth(p.depth, 2.0))}
           strokeLinecap="round"
           opacity={Math.min(1, amount * 1.35)}
         />,
@@ -351,16 +443,18 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
             <stop offset="44%" stopColor="#000510" stopOpacity="0" />
             <stop offset="100%" stopColor="#000510" stopOpacity="0.88" />
           </radialGradient>
-          <filter id="sp-bloom" x="-30%" y="-30%" width="160%" height="160%">
+          <filter id="sp-bloom" filterUnits="userSpaceOnUse" x="-220" y="-220" width="2360" height="1520">
             <feGaussianBlur stdDeviation="14" />
           </filter>
-          <filter id="sp-bloom-wide" x="-45%" y="-45%" width="190%" height="190%">
+          <filter id="sp-bloom-wide" filterUnits="userSpaceOnUse" x="-220" y="-220" width="2360" height="1520">
             <feGaussianBlur stdDeviation="40" />
           </filter>
         </defs>
 
         <rect width={BASE_WIDTH} height={BASE_HEIGHT} fill="url(#sp-sky)" />
 
+        <g>{deck}</g>
+        <g>{walls}</g>
         <g>{faces}</g>
         <g>{cells}</g>
         <g filter="url(#sp-bloom)" opacity={0.45}>{edges}</g>
