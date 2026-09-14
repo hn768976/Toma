@@ -5,7 +5,7 @@ export const PRESET_IDS = [
   "Bacteria02VioletCluster",
   "Bacteria03PaleBlueSoftFocus",
   "Bacteria04SaturatedCobalt",
-  "Bacteria05VioletMatte",
+  "Bacteria05IndigoDrift",
   "Bacteria06MagentaBloom",
   "Bacteria07GoldenField",
   "Bacteria08LavenderProbiotic",

@@ -68,24 +68,28 @@ relief, ribosome speckle, a fresnel edge, wrap lighting for the
 translucent gel, and a bright-field mode where the cell absorbs light
 and sits *darker* than the ground (versions 07 and 09).
 
-## Colour pass and matte pass
+## Colour pass and matte tail
 
-The reference for version 05 carries its alpha as a white-on-black
-matte in the back half of its timeline, time-aligned with the colour
-pass. Every version here follows that same contract:
+The reference stock clips carry their alpha as a white-on-black matte
+on the back of the timeline. Every version here ends the same way, but
+on a short tail rather than the half-and-half split those clips use:
 
 ```
-frame 0 ────────── colour ──────────┼────────── matte ────────── end
-                                  50%
+frame 0 ─────────────── colour ───────────────┼─── matte ─── end
+                                            −2.5s
 ```
 
-The matte replays the colour pass from frame 0 as flat white on black,
-so frame *n* of the matte is exactly the alpha of frame *n* of the
-colour pass. Total length always equals the reference's.
+`MATTE_TAIL_SECONDS` sets the length, capped at a third of the clip so
+it cannot swallow a short one. The timeline runs straight through the
+cut — the matte picks the scene up exactly where the colour left it,
+same drift, same camera move — so the tail reads as a deliberate ending
+rather than a jump back to the top. Total length always equals the
+reference's.
 
-Version 02 and version 05 answer the same source clip — the two
-uploads were byte-identical — so 02 is graded to its colour pass and 05
-to its matte pass.
+Version 02 and version 05 answer the same source clip; the two uploads
+were byte-identical. Rather than ship a duplicate, 05 takes a second
+read of it — a brighter indigo on a drifting, spread-out field, against
+02's tight violet knot — on its own layout seed.
 
 ## Rendering notes
 

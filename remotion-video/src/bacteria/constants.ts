@@ -22,13 +22,16 @@ export const HEIGHT_4K = BASE_HEIGHT * 2;
 export const MODEL_SRC = "models/bacillus.glb";
 
 /**
- * The reference clip for version 05 carries its alpha as a white-on-black
- * matte occupying the back half of the timeline, time-aligned with the
- * colour pass. Every version in this series follows that same contract:
- * colour for the first half, matte for the second, with the matte
- * replaying the colour pass from frame 0.
+ * Every version ends on a short white-on-black matte tail, the way the
+ * reference stock clips carry their alpha -- but kept to a few seconds
+ * rather than the half-and-half split those clips use, so the colour
+ * pass gets nearly the whole runtime.
+ *
+ * The motion runs straight through the cut: the matte picks up the
+ * scene exactly where the colour pass left it, so the tail reads as a
+ * deliberate ending rather than a jump back to the top.
  */
-export const MATTE_SPLIT = 0.5;
+export const MATTE_TAIL_SECONDS = 2.5;
 
 /** Model bounding box (metres, from the GLB accessor min/max). */
 export const MODEL_HALF_EXTENT = { x: 0.9509, y: 0.4911, z: 0.3153 };

@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { z } from "zod";
-import { BASE_HEIGHT, MATTE_SPLIT } from "./constants";
+import { BASE_HEIGHT, MATTE_TAIL_SECONDS } from "./constants";
 import { getPreset } from "./presets";
 import { useBacillusGeometry } from "./geometry";
 import { LayerCanvas, MatteCanvas } from "./SwarmLayer";
@@ -32,10 +32,11 @@ const hexToRgba = (hex: string, alpha: number) => {
 /**
  * One version of the series.
  *
- * The timeline mirrors how the reference stock clip is delivered: the
- * colour pass occupies the first half, then the picture cuts to the
- * matte -- the same cells, same motion, replayed from frame 0 as flat
- * white on black. Total length always equals the reference's.
+ * The colour pass runs almost the whole clip, then the picture cuts to
+ * a short white-on-black matte tail -- the same cells, the same motion,
+ * carrying straight on from where the colour left off, so the cut reads
+ * as an ending rather than a restart. Total length always equals the
+ * reference clip's.
  */
 export const BacteriaVersion: React.FC<BacteriaVersionProps> = ({ presetId }) => {
   const preset = getPreset(presetId);
@@ -46,13 +47,18 @@ export const BacteriaVersion: React.FC<BacteriaVersionProps> = ({ presetId }) =>
   const scale = height / BASE_HEIGHT;
 
 
-  const colourFrames = Math.round(durationInFrames * MATTE_SPLIT);
+  // Never let the tail eat more than a third of a short clip.
+  const matteFrames = Math.min(
+    Math.round(MATTE_TAIL_SECONDS * fps),
+    Math.floor(durationInFrames / 3),
+  );
+  const colourFrames = durationInFrames - matteFrames;
   const matte = frame >= colourFrames;
-  const localFrame = matte ? frame - colourFrames : frame;
-  const passLength = matte ? durationInFrames - colourFrames : colourFrames;
 
-  const seconds = localFrame / fps;
-  const progress = passLength > 1 ? localFrame / (passLength - 1) : 0;
+  // One continuous timeline across both passes, so the swarm keeps
+  // drifting and the camera keeps moving through the cut.
+  const seconds = frame / fps;
+  const progress = durationInFrames > 1 ? frame / (durationInFrames - 1) : 0;
 
   if (!geometry) {
     return <AbsoluteFill style={{ backgroundColor: "#000000" }} />;

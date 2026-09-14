@@ -37,7 +37,7 @@ change to its geometry.
 | Compositions | 11, authored at **3840×2160 @ 30fps** |
 | Delivered | **1920×1080**, H.264 / MP4, yuv420p, limited range, Rec.709 |
 | Audio | none |
-| Structure | colour pass for the first half, time-aligned white-on-black matte for the second |
+| Structure | colour pass, then a ~2.5s white-on-black matte tail |
 
 The 1080p files are rendered from the 4K compositions with
 \`--scale=0.5\`; there is no separate 1080p composition to keep in sync.
@@ -57,19 +57,24 @@ ${table}
 
 ${totalFrames} frames in total. Each duration matches its reference clip exactly.
 
+## The matte tail
+
+Every version ends on roughly 2.5 seconds of white-on-black matte,
+following how the reference stock clips deliver their alpha. The
+timeline runs continuously through the cut — the matte carries the
+scene on from exactly where the colour pass left it — so the tail plays
+as an ending rather than a restart. Length is one constant,
+\`MATTE_TAIL_SECONDS\` in \`src/bacteria/constants.ts\`, capped at a third
+of the clip.
+
 ## A note on versions 02 and 05
 
-Two of the eleven uploads were byte-identical — the same iStock clip
-(2278455892), which carries its colour pass in the front half of its
-timeline and its alpha, as a white-on-black matte, in the back half.
-Version 02 is graded to that clip's colour pass and version 05 to its
-matte pass, so the set delivers eleven distinct looks rather than ten
-and a duplicate.
-
-That clip is also where the colour/matte structure used across the
-whole series comes from: the split sits at exactly 50%, and the matte
-replays the colour pass from frame 0, so frame *n* of the matte is
-precisely the alpha of frame *n* of the colour.
+Two of the eleven uploads were byte-identical — the same iStock clip,
+2278455892. Rather than ship a duplicate, version 05 takes a second
+read of it: a brighter indigo across a drifting, spread-out field,
+against version 02's tight violet knot, and on its own layout seed. The
+set therefore delivers eleven distinct looks rather than ten and a
+repeat.
 `,
 );
 
