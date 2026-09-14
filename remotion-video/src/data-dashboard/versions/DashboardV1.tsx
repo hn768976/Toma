@@ -46,7 +46,7 @@ const CAMERA: CameraKeyframe[] = [
     rotateX: 1.8,
     rotateY: -3,
     rotateZ: -0.4,
-    scale: 0.665,
+    scale: 0.63,
   },
 ];
 

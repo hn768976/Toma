@@ -2,9 +2,9 @@ import React from "react";
 import { z } from "zod";
 import { AbsoluteFill } from "remotion";
 import { GlowSpot, Grade, Vignette } from "../components/Atmosphere";
-import { ArcRail } from "../components/ArcRail";
 import { AxisTicks } from "../components/AxisTicks";
 import { DashboardStage } from "../components/DashboardStage";
+import { Histogram } from "../components/Histogram";
 import { LabelChip } from "../components/LabelChip";
 import { LineSeries } from "../components/LineSeries";
 import { MarkerStack } from "../components/Markers";
@@ -42,21 +42,21 @@ const CAMERA: CameraKeyframe[] = [
     frame: 220,
     x: -30,
     y: 0,
-    z: 10,
+    z: 20,
     rotateX: 3,
     rotateY: 3.5,
     rotateZ: 0.5,
-    scale: 0.7,
+    scale: 0.72,
   },
   {
     frame: 420,
-    x: 150,
-    y: 70,
-    z: 150,
+    x: 0,
+    y: -20,
+    z: -90,
     rotateX: 1.2,
-    rotateY: -6,
-    rotateZ: -0.9,
-    scale: 0.76,
+    rotateY: -2.5,
+    rotateZ: -0.5,
+    scale: 0.6,
   },
 ];
 
@@ -120,7 +120,7 @@ export const DashboardV3: React.FC<z.infer<typeof dashboardV3Schema>> = ({
         x={440}
         y={330}
         step={72}
-        count={17}
+        count={12}
         from={64000}
         increment={-3400}
         fontSize={24}
@@ -219,20 +219,46 @@ export const DashboardV3: React.FC<z.infer<typeof dashboardV3Schema>> = ({
         </text>
       </g>
 
-      {/* The curved terminal rail. Its circle centre sits far below the
-          board, so the bars stand off a shallow crest and the whole strip
-          appears to wrap away from the camera at both ends. */}
-      <ArcRail
-        cx={1500}
-        cy={4700}
-        radius={3200}
-        startAngle={242}
-        endAngle={298}
-        count={120}
+      <Histogram
+        x={300}
+        baseline={1500}
+        width={2400}
+        maxHeight={310}
+        count={104}
         seed={79}
-        barColor="#2f9fe0"
-        maxBarHeight={320}
-        railColors={["#f07a3c", "#dfeaf7"]}
+        colors={["#2f9fe0", "#46b6ec", "#1f7fc4"]}
+        drawStart={-250}
+        drawDuration={430}
+      />
+      <line
+        x1={300}
+        y1={1500}
+        x2={2700}
+        y2={1500}
+        stroke="#f07a3c"
+        strokeWidth={5}
+        opacity={0.9}
+      />
+      <line
+        x1={300}
+        y1={1518}
+        x2={2700}
+        y2={1518}
+        stroke="#dfeaf7"
+        strokeWidth={3}
+        opacity={0.5}
+      />
+      <AxisTicks
+        x={420}
+        y={1572}
+        step={240}
+        count={10}
+        from={0}
+        increment={0}
+        orientation="horizontal"
+        anchor="middle"
+        fontSize={26}
+        color="rgba(190, 220, 250, 0.75)"
         labels={[
           "2026",
           "Q2",
@@ -245,8 +271,6 @@ export const DashboardV3: React.FC<z.infer<typeof dashboardV3Schema>> = ({
           "2028",
           "Q2",
         ]}
-        appearAt={-250}
-        drawDuration={430}
       />
 
       <ScreenTexture {...BLEED_RECT} pitch={7} opacity={0.11} />

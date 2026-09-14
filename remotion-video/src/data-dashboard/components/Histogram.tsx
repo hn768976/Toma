@@ -42,12 +42,14 @@ export const Histogram: React.FC<HistogramProps> = ({
   const rand = mulberry32(seed * 3671 + 5);
 
   // Bar heights are a random walk too, so neighbouring bars relate the
-  // way a real time series does instead of looking like white noise.
+  // way a real time series does instead of looking like white noise. The
+  // envelope only shapes them gently - the histogram has to stay full
+  // across its whole width, right through the last frame.
   let level = 0.45;
   const bars = Array.from({ length: count }, (_, i) => {
     level += (rand() - 0.48) * 0.22;
     level = Math.min(0.98, Math.max(0.12, level));
-    const envelope = 0.55 + 0.45 * Math.sin((i / count) * Math.PI * 1.7);
+    const envelope = 0.78 + 0.22 * Math.sin((i / count) * Math.PI * 1.7);
     return {
       height: level * envelope,
       color: colors[i % colors.length],

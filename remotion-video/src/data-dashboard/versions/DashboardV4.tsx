@@ -26,31 +26,31 @@ export const dashboardV4Defaults: z.infer<typeof dashboardV4Schema> = {
 
 // Version 4 - "Macro Panel". The busiest layout and the only one where
 // the board is a finite object: the panel has edges, and the defocused
-// room behind it is visible past them at the start of the move. The
-// camera tracks laterally across the panel, swinging from a raking
-// three-quarter view to nearly square on.
+// room behind it is visible past them. It shares version 1's camera - a
+// raking three-quarter view easing back to near square-on - so the film
+// lands wide with the whole panel and the finished graph in frame.
 const PANEL = { x: 60, y: 200, width: 2880, height: 1390 };
 
 const CAMERA: CameraKeyframe[] = [
   {
     frame: 0,
-    x: 300,
-    y: 20,
-    z: 150,
-    rotateX: 5.5,
-    rotateY: -18,
-    rotateZ: -1.8,
-    scale: 0.74,
+    x: 150,
+    y: 70,
+    z: 180,
+    rotateX: 6.5,
+    rotateY: -13,
+    rotateZ: -1.6,
+    scale: 0.78,
   },
   {
     frame: 300,
-    x: -300,
-    y: -10,
-    z: 0,
-    rotateX: 2.4,
-    rotateY: 6,
-    rotateZ: 1.2,
-    scale: 0.72,
+    x: -40,
+    y: -20,
+    z: -70,
+    rotateX: 1.8,
+    rotateY: -3,
+    rotateZ: -0.4,
+    scale: 0.62,
   },
 ];
 

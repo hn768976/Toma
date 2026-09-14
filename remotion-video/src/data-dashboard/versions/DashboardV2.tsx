@@ -21,10 +21,11 @@ export const dashboardV2Defaults: z.infer<typeof dashboardV2Schema> = {
   resolutionScale: 1,
 };
 
-// Version 2 - "Household Costs, close up". A long lens pressed against
-// the board: heavy perspective, a diagonal drift across the surface, and
-// a rack focus that keeps only one depth sharp at a time. Where version
-// 1 is about reading the whole board, this one is about texture.
+// Version 2 - "Household Costs". Opens as a long lens pressed against
+// the board - heavy perspective, a diagonal drift across the surface, a
+// rack focus that keeps one depth sharp at a time - then pulls all the
+// way back so the film lands wide on the finished graph. Where version 1
+// is about reading the board, this one is about arriving at it.
 const CAMERA: CameraKeyframe[] = [
   {
     frame: 0,
@@ -37,14 +38,24 @@ const CAMERA: CameraKeyframe[] = [
     scale: 1.5,
   },
   {
+    frame: 170,
+    x: 250,
+    y: -140,
+    z: 70,
+    rotateX: 6,
+    rotateY: -16,
+    rotateZ: 1.2,
+    scale: 1.18,
+  },
+  {
     frame: 300,
-    x: 430,
-    y: -250,
-    z: 30,
-    rotateX: 4.5,
-    rotateY: -12,
-    rotateZ: 1.8,
-    scale: 1.32,
+    x: 0,
+    y: 0,
+    z: -60,
+    rotateX: 2,
+    rotateY: -4,
+    rotateZ: 0.3,
+    scale: 0.64,
   },
 ];
 
@@ -57,6 +68,14 @@ const TRACES: {
   // Which focus plane the trace belongs to; drives the rack focus.
   depth: "far" | "mid" | "near";
 }[] = [
+  {
+    color: SERIES_COLORS.cyan,
+    seed: 191,
+    offset: -300,
+    trend: 0.36,
+    width: 4,
+    depth: "far",
+  },
   {
     color: SERIES_COLORS.cyan,
     seed: 101,
@@ -113,28 +132,20 @@ const TRACES: {
     width: 5,
     depth: "near",
   },
-  {
-    color: SERIES_COLORS.cyan,
-    seed: 191,
-    offset: -300,
-    trend: 0.36,
-    width: 4,
-    depth: "far",
-  },
 ];
 
-// Loose readouts scattered over the surface. At this focal length the
-// camera only ever sees a fraction of the board, so the plate has to be
+// Loose readouts scattered over the surface. For most of the shot the
+// camera only sees a fraction of the board, so the plate has to be
 // populated everywhere rather than composed for one framing.
 const LOOSE_VALUES: { x: number; y: number; text: string; color: string }[] = [
-  { x: 180, y: 620, text: "2,417.08", color: "rgba(150, 205, 255, 0.6)" },
-  { x: 900, y: 560, text: "1,982.44", color: "rgba(150, 205, 255, 0.55)" },
-  { x: 1640, y: 1320, text: "4.18%", color: "rgba(240, 170, 90, 0.75)" },
-  { x: 2240, y: 620, text: "27,904.11", color: "rgba(150, 205, 255, 0.6)" },
-  { x: 2760, y: 520, text: "1,285.40", color: "rgba(150, 205, 255, 0.55)" },
-  { x: 2760, y: 940, text: "7.85%", color: "rgba(240, 170, 90, 0.7)" },
-  { x: 420, y: 1300, text: "9,640.27", color: "rgba(150, 205, 255, 0.55)" },
-  { x: 2980, y: 1280, text: "3.02%", color: "rgba(240, 170, 90, 0.7)" },
+  { x: 220, y: 560, text: "2,417.08", color: "rgba(150, 205, 255, 0.6)" },
+  { x: 900, y: 500, text: "1,982.44", color: "rgba(150, 205, 255, 0.55)" },
+  { x: 1640, y: 1240, text: "4.18%", color: "rgba(240, 170, 90, 0.75)" },
+  { x: 2180, y: 560, text: "27,904.11", color: "rgba(150, 205, 255, 0.6)" },
+  { x: 2560, y: 470, text: "1,285.40", color: "rgba(150, 205, 255, 0.55)" },
+  { x: 2600, y: 860, text: "7.85%", color: "rgba(240, 170, 90, 0.7)" },
+  { x: 420, y: 1220, text: "9,640.27", color: "rgba(150, 205, 255, 0.55)" },
+  { x: 2540, y: 1470, text: "3.02%", color: "rgba(240, 170, 90, 0.7)" },
 ];
 
 export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
@@ -143,18 +154,24 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
   const frame = useCurrentFrame();
 
   // Rack focus: the sharp plane travels from the back of the board to
-  // the front over the length of the shot, so different rows of data
-  // resolve as the camera drifts past them.
-  const focus = interpolate(frame, [0, 300], [0, 1], {
+  // the front while the camera is close, then the whole thing resolves
+  // to deep focus as it pulls back - the last frames have to read as a
+  // complete, sharp graph, not a defocused texture.
+  const focus = interpolate(frame, [0, 190, 300], [0, 1, 0.5], {
+    extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const blurFor = (depth: number) => Math.abs(depth - focus) * 13 + 0.35;
+  const spread = interpolate(frame, [0, 190, 300], [13, 13, 0.5], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const blurFor = (depth: number) => Math.abs(depth - focus) * spread + 0.3;
 
   const band = (offset: number): PlotBand => ({
-    x: -300,
-    y: 620 + offset,
-    width: 3600,
-    height: 340,
+    x: 120,
+    y: 540 + offset,
+    width: 2760,
+    height: 300,
   });
 
   return (
@@ -164,11 +181,19 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
       camera={CAMERA}
       backgroundColor="#03060e"
       backdrop={
-        <GlowSpot x="50%" y="52%" size="72%" color="rgba(14, 44, 92, 0.5)" />
+        <>
+          <GlowSpot
+            x="48%"
+            y="50%"
+            size="82%"
+            color="rgba(20, 60, 122, 0.75)"
+          />
+          <GlowSpot x="82%" y="28%" size="48%" color="rgba(18, 84, 142, 0.5)" />
+        </>
       }
       overlay={
         <AbsoluteFill>
-          <Vignette strength={0.88} color="rgba(0, 1, 6, 0.96)" />
+          <Vignette strength={0.72} color="rgba(0, 1, 6, 0.96)" />
           <Grade color="rgba(40, 110, 200, 0.28)" opacity={0.3} />
         </AbsoluteFill>
       }
@@ -202,19 +227,19 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
       {/* Far plane: axis scaffolding and the quietest traces. */}
       <g filter="url(#dof-far)">
         <AxisTicks
-          x={330}
-          y={560}
-          step={118}
+          x={300}
+          y={480}
+          step={112}
           count={10}
           from={3000}
           increment={-280}
-          fontSize={40}
+          fontSize={38}
         />
         <line
-          x1={360}
-          y1={420}
-          x2={360}
-          y2={1560}
+          x1={330}
+          y1={350}
+          x2={330}
+          y2={1480}
           stroke="rgba(120, 180, 245, 0.35)"
           strokeWidth={3}
         />
@@ -235,26 +260,26 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
             color={trace.color}
             strokeWidth={trace.width}
             drawStart={-120 + i * 14}
-            drawDuration={300}
+            drawDuration={290}
             glow={0.8}
           />
         ))}
         <LabelChip
           x={1180}
-          y={430}
+          y={400}
           label="Heating"
           value="6.50%"
           appearAt={0}
-          fontSize={62}
+          fontSize={60}
           valuePlacement="right"
         />
         <LabelChip
-          x={2420}
-          y={360}
+          x={2220}
+          y={330}
           label="Food"
           value="1,285.40"
           appearAt={0}
-          fontSize={58}
+          fontSize={56}
           valuePlacement="right"
         />
       </g>
@@ -278,39 +303,31 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
             color={trace.color}
             strokeWidth={trace.width}
             drawStart={-100 + i * 16}
-            drawDuration={300}
+            drawDuration={290}
             glow={0.9}
           />
         ))}
         <LabelChip
           x={760}
-          y={1040}
+          y={980}
           label="Electricity"
           value="1,716.63"
           percent="6.30%"
           appearAt={10}
-          fontSize={64}
+          fontSize={62}
         />
         <LabelChip
-          x={1980}
-          y={1180}
+          x={1960}
+          y={1100}
           label="Rent"
           value="11,727.52"
           appearAt={72}
-          fontSize={64}
-          valuePlacement="right"
-        />
-        <LabelChip
-          x={2820}
-          y={1020}
-          label="Transport"
-          value="10,964.49"
-          appearAt={252}
           fontSize={62}
+          valuePlacement="right"
         />
         <MarkerStack
           x={1520}
-          y={900}
+          y={840}
           count={3}
           color={SERIES_COLORS.yellow}
           size={34}
@@ -319,8 +336,8 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
           startAt={0}
         />
         <MarkerStack
-          x={2560}
-          y={760}
+          x={2540}
+          y={700}
           count={3}
           color={SERIES_COLORS.yellow}
           size={34}
@@ -330,7 +347,7 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
         />
       </g>
 
-      {/* Near plane: the biggest type, sharp only at the end of the move. */}
+      {/* Near plane: the biggest type, sharp by the end of the move. */}
       <g filter="url(#dof-near)">
         {TRACES.filter((t) => t.depth === "near").map((trace, i) => (
           <LineSeries
@@ -349,38 +366,46 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
             color={trace.color}
             strokeWidth={trace.width}
             drawStart={-80 + i * 18}
-            drawDuration={300}
+            drawDuration={290}
             glow={1}
           />
         ))}
         <LabelChip
           x={520}
-          y={1430}
+          y={1330}
           label="Taxes"
           value="11,377.49"
           appearAt={120}
-          fontSize={66}
+          fontSize={62}
         />
         <LabelChip
-          x={1760}
-          y={1520}
+          x={1700}
+          y={1420}
           label="Mortgage"
           value="453,285.18"
           percent="5.90%"
           appearAt={168}
-          fontSize={66}
+          fontSize={62}
         />
         <LabelChip
-          x={2680}
-          y={1360}
+          x={2380}
+          y={1250}
           label="Gasoline"
           value="368,830.65"
-          appearAt={214}
-          fontSize={66}
+          appearAt={206}
+          fontSize={62}
+        />
+        <LabelChip
+          x={2380}
+          y={930}
+          label="Transport"
+          value="10,964.49"
+          appearAt={244}
+          fontSize={60}
         />
         <MarkerStack
-          x={2280}
-          y={1280}
+          x={2200}
+          y={1190}
           count={3}
           direction="down"
           color={SERIES_COLORS.amber}
@@ -394,24 +419,24 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
       {/* Bottom quarter rail, in the reference's orange. */}
       <g filter="url(#dof-near)">
         <line
-          x1={-300}
-          y1={1690}
-          x2={3300}
-          y2={1690}
+          x1={120}
+          y1={1600}
+          x2={2880}
+          y2={1600}
           stroke="#f07a3c"
           strokeWidth={5}
           opacity={0.85}
         />
         <AxisTicks
-          x={120}
-          y={1760}
-          step={400}
+          x={280}
+          y={1668}
+          step={340}
           count={8}
           from={0}
           increment={0}
           orientation="horizontal"
           anchor="middle"
-          fontSize={40}
+          fontSize={38}
           color="rgba(240, 150, 80, 0.9)"
           labels={["2026", "Q2", "Q3", "Q4", "2027", "Q2", "Q3", "Q4"]}
         />
