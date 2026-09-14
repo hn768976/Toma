@@ -93,7 +93,7 @@ export const PerspectiveGrid: React.FC<{ readonly cam: Camera }> = ({
             top: -1480,
             width: 1.6,
             height: 2960,
-            background: rgba("#7cc0ff", 0.22),
+            background: rgba("#5aa8ff", 0.46),
           }}
         />
       ))}
@@ -106,7 +106,7 @@ export const PerspectiveGrid: React.FC<{ readonly cam: Camera }> = ({
             top: y,
             width,
             height: 1.6,
-            background: rgba("#7cc0ff", 0.16),
+            background: rgba("#5aa8ff", 0.38),
           }}
         />
       ))}
@@ -225,7 +225,7 @@ export const TimelineAxis: React.FC<AxisProps> = ({ cam, head, heatYears }) => {
 
     if (q % 4 === 0) {
       const year = String(yearOf(q));
-      const size = 46;
+      const size = 50;
       const colour = heatYears
         ? passed
           ? sampleRamp(HEAT_RAMP, q / 4)
@@ -246,7 +246,7 @@ export const TimelineAxis: React.FC<AxisProps> = ({ cam, head, heatYears }) => {
             size={size}
             color={colour}
             ghostColor={rgba("#5a8ec4", 0.07)}
-            glow={passed ? 5 + 8 * flare : 2}
+            glow={passed ? 3 + 3 * flare : 1.5}
           >
             {year}
           </SegmentText>
@@ -254,7 +254,7 @@ export const TimelineAxis: React.FC<AxisProps> = ({ cam, head, heatYears }) => {
       );
     } else {
       const label = QUARTER_LABELS[q % 4];
-      const size = 26;
+      const size = 29;
       marks.push(
         <div
           key={`q${q}`}
@@ -267,7 +267,7 @@ export const TimelineAxis: React.FC<AxisProps> = ({ cam, head, heatYears }) => {
           <SegmentText
             size={size}
             color={passed ? "#eaf6ff" : rgba("#bcd9f5", 0.5)}
-            glow={passed ? 4 : 0}
+            glow={passed ? 2.5 : 0}
           >
             {label}
           </SegmentText>
@@ -306,9 +306,9 @@ export type ChevronTrailProps = {
   readonly hue: string;
 };
 
-const CHEVRON_PITCH = QUARTER_PX / 2.8;
-const CHEVRON_W = 100;
-const CHEVRON_H = 74;
+const CHEVRON_PITCH = QUARTER_PX / 2.4;
+const CHEVRON_W = 108;
+const CHEVRON_H = 80;
 /** An open V-stroke, not a filled arrowhead: the gap between the back of
  *  one chevron and the nose of the next is what reads as motion. */
 const CHEVRON_CLIP =

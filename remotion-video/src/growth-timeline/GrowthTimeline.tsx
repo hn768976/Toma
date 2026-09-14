@@ -59,7 +59,7 @@ const chevronRig = (frame: number, duration: number): Rig => {
     extrapolateRight: "clamp",
   }));
   const head = interpolate(p, [0, 1], [-1.2, 32.2]);
-  const scale = interpolate(p, [0, 1], [1.08, 0.93]);
+  const scale = interpolate(p, [0, 1], [1.24, 1.07]);
   const scroll = head * QUARTER_PX - 385 / scale;
   return {
     head,
@@ -78,8 +78,8 @@ const chevronRig = (frame: number, duration: number): Rig => {
     mapPan: -scroll * 0.052,
     mapScale: interpolate(p, [0, 1], [1.08, 1.18]),
     mapDrift: interpolate(p, [0, 1], [26, -34]),
-    dofBlur: 11,
-    bandHalf: 0.17,
+    dofBlur: 6,
+    bandHalf: 0.32,
   };
 };
 
@@ -94,7 +94,7 @@ const barRig = (frame: number, duration: number): Rig => {
     extrapolateRight: "clamp",
   }));
   const head = interpolate(p, [0, 1], [-1, 24.4]);
-  const scale = interpolate(p, [0, 1], [0.82, 0.96]);
+  const scale = interpolate(p, [0, 1], [0.94, 1.1]);
   const scroll = head * QUARTER_PX - 350 / scale;
   return {
     head,
@@ -113,8 +113,8 @@ const barRig = (frame: number, duration: number): Rig => {
     mapPan: -scroll * 0.042,
     mapScale: interpolate(p, [0, 1], [1.18, 1.06]),
     mapDrift: interpolate(p, [0, 1], [-22, 30]),
-    dofBlur: 13,
-    bandHalf: 0.19,
+    dofBlur: 7,
+    bandHalf: 0.34,
   };
 };
 
@@ -239,7 +239,7 @@ export const GrowthTimeline: React.FC<GrowthTimelineProps> = ({
           pan={rig.mapPan}
           mapScale={rig.mapScale}
           drift={rig.mapDrift}
-          blur={12}
+          blur={4.5}
         />
 
         <AbsoluteFill style={{ opacity: fadeIn }}>
@@ -277,9 +277,9 @@ export const GrowthTimeline: React.FC<GrowthTimelineProps> = ({
           {/* Bloom: the graphics again, blurred wide and screened back on. */}
           <AbsoluteFill
             style={{
-              filter: "blur(26px)",
+              filter: "blur(18px)",
               mixBlendMode: "screen",
-              opacity: 0.55,
+              opacity: 0.34,
             }}
           >
             {graphics}
@@ -291,8 +291,8 @@ export const GrowthTimeline: React.FC<GrowthTimelineProps> = ({
           style={{
             background: `radial-gradient(ellipse 80% 86% at 50% 50%, rgba(0,0,0,0) 46%, ${rgba(
               "#010512",
-              0.5,
-            )} 82%, ${rgba("#00030c", 0.82)} 100%)`,
+              0.34,
+            )} 82%, ${rgba("#00030c", 0.6)} 100%)`,
             pointerEvents: "none",
           }}
         />

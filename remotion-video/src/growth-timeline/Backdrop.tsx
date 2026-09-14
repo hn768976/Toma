@@ -36,7 +36,7 @@ export const Backdrop: React.FC<BackdropProps> = ({
         <AbsoluteFill
           style={{
             background:
-              "linear-gradient(116deg, #061024 0%, #13294e 22%, #315f95 46%, #5686bb 64%, #26456f 84%, #0a1631 100%)",
+              "linear-gradient(116deg, #0a1730 0%, #1d3a63 20%, #4b7cb0 44%, #8fb3d2 62%, #46709f 82%, #12244a 100%)",
           }}
         />
         <Img
@@ -54,7 +54,7 @@ export const Backdrop: React.FC<BackdropProps> = ({
         <AbsoluteFill
           style={{
             background:
-              "radial-gradient(ellipse 62% 74% at 66% 46%, rgba(62,134,222,0.55) 0%, rgba(24,68,142,0.3) 44%, rgba(8,20,48,0) 78%)",
+              "radial-gradient(ellipse 62% 74% at 66% 46%, rgba(92,168,248,0.72) 0%, rgba(34,92,180,0.4) 44%, rgba(8,20,48,0) 78%)",
             mixBlendMode: "screen",
           }}
         />
@@ -62,7 +62,7 @@ export const Backdrop: React.FC<BackdropProps> = ({
         <AbsoluteFill
           style={{
             background:
-              "radial-gradient(ellipse 58% 66% at 14% 88%, rgba(18,56,120,0.32) 0%, rgba(6,16,40,0) 72%)",
+              "radial-gradient(ellipse 58% 66% at 14% 88%, rgba(26,76,152,0.42) 0%, rgba(6,16,40,0) 72%)",
             mixBlendMode: "screen",
           }}
         />
@@ -74,18 +74,18 @@ export const Backdrop: React.FC<BackdropProps> = ({
         style={{
           background: `radial-gradient(ellipse 74% 82% at 50% 48%, rgba(0,0,0,0) 38%, ${rgba(
             "#03081a",
-            0.62,
-          )} 78%, ${rgba("#01040f", 0.9)} 100%)`,
+            0.42,
+          )} 78%, ${rgba("#01040f", 0.72)} 100%)`,
         }}
       />
       <AbsoluteFill
         style={{
           background: `linear-gradient(180deg, ${rgba(
             "#02060f",
-            0.55,
+            0.4,
           )} 0%, rgba(0,0,0,0) 24%, rgba(0,0,0,0) 72%, ${rgba(
             "#02060f",
-            0.6,
+            0.44,
           )} 100%)`,
         }}
       />

@@ -28,10 +28,10 @@ All four run at 30 fps.
 ## Rendering
 
 ```console
-npx remotion render GrowthTimelineV1    out/GrowthTimeline-V1-1080p.mp4 --codec=h264 --image-format=png --crf=15
-npx remotion render GrowthTimelineV2    out/GrowthTimeline-V2-1080p.mp4 --codec=h264 --image-format=png --crf=15
-npx remotion render GrowthTimelineV1-4K out/GrowthTimeline-V1-4K.mp4    --codec=h264 --image-format=png --crf=15
-npx remotion render GrowthTimelineV2-4K out/GrowthTimeline-V2-4K.mp4    --codec=h264 --image-format=png --crf=15
+npx remotion render GrowthTimelineV1    out/GrowthTimeline-V1-1080p.mp4 --codec=h264 --image-format=png --crf=15 --muted
+npx remotion render GrowthTimelineV2    out/GrowthTimeline-V2-1080p.mp4 --codec=h264 --image-format=png --crf=15 --muted
+npx remotion render GrowthTimelineV1-4K out/GrowthTimeline-V1-4K.mp4    --codec=h264 --image-format=png --crf=15 --muted
+npx remotion render GrowthTimelineV2-4K out/GrowthTimeline-V2-4K.mp4    --codec=h264 --image-format=png --crf=15 --muted
 ```
 
 ## Files

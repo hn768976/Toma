@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { rgba } from "./constants";
 
 // A seven-segment LED display, drawn as SVG polygons rather than loaded as
 // a font. The readouts on this kind of broadcast chart are the one element
@@ -104,6 +105,9 @@ export const SegmentText: React.FC<SegmentTextProps> = ({
   style,
 }) => {
   const chars = useMemo(() => children.split(""), [children]);
+  // `color` arrives as a hex literal or as an rgb() string from the colour
+  // ramps; only the former can be thinned down for the outer halo.
+  const halo = color.startsWith("#") ? rgba(color, 0.45) : color;
   const advance = CELL_W + 34;
   const width = chars.length * advance - 34;
   const scale = size / CELL_H;
@@ -118,8 +122,8 @@ export const SegmentText: React.FC<SegmentTextProps> = ({
         opacity,
         filter: glow
           ? `drop-shadow(0 0 ${glow}px ${color}) drop-shadow(0 0 ${
-              glow * 2.4
-            }px ${color})`
+              glow * 2
+            }px ${halo})`
           : undefined,
         ...style,
       }}
