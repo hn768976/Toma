@@ -18,6 +18,14 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  BacteriaVersion,
+  bacteriaVersionSchema,
+  PRESETS,
+  FPS as BACTERIA_FPS,
+  WIDTH_4K,
+  HEIGHT_4K,
+} from "./bacteria";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -52,6 +60,27 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+
+      {/*
+        The microscopic-bacteria series: eleven versions, one per
+        reference clip. Each is authored natively at 4K/30fps and each
+        runs exactly as long as the clip it answers to. The 1080p
+        deliverables come off these same compositions via `--scale=0.5`,
+        so there is no second set of comps to keep in sync.
+      */}
+      {PRESETS.map((preset) => (
+        <Composition
+          key={preset.id}
+          id={preset.id}
+          component={BacteriaVersion}
+          durationInFrames={preset.durationInFrames}
+          fps={BACTERIA_FPS}
+          width={WIDTH_4K}
+          height={HEIGHT_4K}
+          schema={bacteriaVersionSchema}
+          defaultProps={{ presetId: preset.id }}
+        />
+      ))}
     </>
   );
 };
