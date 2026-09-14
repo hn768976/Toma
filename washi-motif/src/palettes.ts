@@ -123,7 +123,7 @@ export const PALETTES = {
     paper: "#EEB84F",
     mottle: "#E0A436",
     fibre: "#F4CE7E",
-    motifs: ["#D8921F", "#B4700F", "#FBE7B4"],
+    motifs: ["#D8921F", "#C4841C", "#FBE7B4"],
   },
   creamPaper: {
     label: "Cream paper",

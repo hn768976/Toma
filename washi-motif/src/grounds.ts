@@ -67,6 +67,8 @@ export const drawGround = (env: GroundEnv, spec: GroundSpec): void => {
         fibreDensity: spec.fibreDensity,
         mottleStrength: spec.mottle,
         cornerLight: spec.light,
+        longFibres: spec.longFibres,
+        flecks: spec.flecks,
       });
       break;
     case "cloth":
@@ -273,7 +275,11 @@ const drawMetallicLeaf = (pass: Pass) => {
     height,
     scale,
     area,
-    spec.fibreDensity ?? 0.7,
+    {
+      density: spec.fibreDensity ?? 0.7,
+      longFibres: spec.longFibres,
+      flecks: spec.flecks,
+    },
     rng,
     surface,
   );
@@ -342,6 +348,24 @@ const drawWatercolour = (pass: Pass) => {
   const pigments: Rgb[] = env.palette.motifs.map(parseHex);
   const blooms = Math.round((spec.blooms ?? 26) * (spec.bloomScale ?? 1));
 
+  /* The paper FIRST. Watercolour is transparent: the sheet's texture shows
+     through the wash and is tinted by it. Laying the fibre over the pigment
+     instead left it invisible — a pale strand on a pale wash is nothing. */
+  drawFibres(
+    ctx,
+    env.width,
+    env.height,
+    scale,
+    area,
+    {
+      density: spec.fibreDensity ?? 0.8,
+      longFibres: spec.longFibres ?? 0.5,
+      flecks: spec.flecks,
+    },
+    rng,
+    surface,
+  );
+
   ctx.save();
   ctx.globalCompositeOperation = "multiply";
   for (let i = 0; i < blooms; i += 1) {
@@ -349,7 +373,7 @@ const drawWatercolour = (pass: Pass) => {
     const cy = rng.range(-0.15, 1.15) * height;
     const spread = rng.range(0.16, 0.52) * height * (spec.bloomScale ?? 1);
     const pigment = pigments[Math.floor(rng.next() * pigments.length)];
-    const strength = rng.range(0.05, 0.17) * (spec.pigment ?? 1);
+    const strength = rng.range(0.11, 0.34) * (spec.pigment ?? 1);
     const lobes = rng.int(7, 14);
 
     for (let j = 0; j < lobes; j += 1) {
@@ -403,17 +427,6 @@ const drawWatercolour = (pass: Pass) => {
     ctx.fill();
   }
 
-  /* The paper beneath. */
-  drawFibres(
-    ctx,
-    width,
-    height,
-    scale,
-    area,
-    spec.fibreDensity ?? 0.45,
-    rng,
-    surface,
-  );
   drawCornerLight(
     ctx,
     width,

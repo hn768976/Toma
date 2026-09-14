@@ -562,7 +562,7 @@ const splatter = (
     const v = rng.bell() * r;
     const [x, y] = at(u, v);
     const size = Math.pow(rng.next(), 2.4);
-    dots.push({ x, y, r: r * (0.008 + size * 0.055) });
+    dots.push({ x, y, r: r * (0.004 + size * 0.022) });
   }
   return { ...emptyGeometry(r * aspect), dots };
 };
@@ -622,7 +622,7 @@ export const buildMotif = (
         radiusPx,
         rot,
         spec.aspect ?? 1,
-        Math.round(220 * (spec.fillDensity ?? 1)),
+        Math.round(520 * (spec.fillDensity ?? 1)),
         rng,
       );
     default: {

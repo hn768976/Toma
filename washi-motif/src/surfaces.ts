@@ -11,6 +11,10 @@ export type GroundSpec = {
   /** Below 1 for an evenly formed sheet: less blotching, flatter light. */
   readonly mottle?: number;
   readonly light?: number;
+  /** 0 for an evenly felted machine sheet, above 1 for a sheet showing bark. */
+  readonly longFibres?: number;
+  /** Dark specks and flecks in the pulp. */
+  readonly flecks?: number;
   /** Corners pulled down. Applied last, over the motifs. */
   readonly vignette?: number;
   /* cloth */
@@ -71,12 +75,12 @@ const TABLE = {
         x: 0.5,
         y: 0.5,
         r: 0.1,
-        unit: 0.145,
+        unit: 0.086,
         rings: 5,
-        tonal: 0.3,
+        tonal: 0.34,
         ink: 0,
         alpha: 1,
-        stroke: 0.0024,
+        stroke: 0.0016,
       },
     ],
   },
@@ -87,7 +91,7 @@ const TABLE = {
     label: "Lime fibre paper",
     note: "Plain yellow-green sheet, dense even fibre, no motif.",
     palette: "limePaper",
-    ground: { kind: "washi", fibreDensity: 1.55, mottle: 0.18, light: 0.15 },
+    ground: { kind: "washi", fibreDensity: 1.7, mottle: 0.18, light: 0.15, longFibres: 0, flecks: 1.3 },
     motifs: [],
   },
 
@@ -138,8 +142,9 @@ const TABLE = {
       kind: "wash",
       blooms: 44,
       bloomScale: 0.72,
-      pigment: 1.2,
-      granulation: 1300,
+      pigment: 0.95,
+      granulation: 700,
+      fibreDensity: 0.8,
     },
     motifs: [],
   },
@@ -198,10 +203,11 @@ const TABLE = {
     palette: "amberWash",
     ground: {
       kind: "wash",
-      blooms: 30,
-      bloomScale: 0.6,
-      pigment: 0.72,
-      granulation: 2400,
+      blooms: 34,
+      bloomScale: 0.66,
+      pigment: 0.68,
+      granulation: 1400,
+      fibreDensity: 0.85,
     },
     motifs: [],
   },
@@ -291,9 +297,9 @@ const TABLE = {
       kind: "metallic",
       angle: 28,
       sheen: 0.8,
-      crease: 700,
-      granulation: 4600,
-      fibreDensity: 0.25,
+      crease: 380,
+      granulation: 5400,
+      fibreDensity: 0,
       hotspot: { x: 0.78, y: 0.1, r: 0.62 },
     },
     motifs: [],
@@ -307,12 +313,12 @@ const TABLE = {
     palette: "shiroWhite",
     ground: { kind: "washi", fibreDensity: 1.1 },
     motifs: [
-      { motif: "brushRing", fill: "outline", x: 0.18, y: 0.21, r: 0.36, ink: 0, strokes: 6, stroke: 0.0045 },
-      { motif: "brushRing", fill: "outline", x: 0.55, y: 0.11, r: 0.3, ink: 0, strokes: 5, stroke: 0.004 },
-      { motif: "brushRing", fill: "outline", x: 0.83, y: 0.41, r: 0.4, ink: 0, strokes: 6, stroke: 0.0048 },
-      { motif: "brushRing", fill: "outline", x: 0.31, y: 0.81, r: 0.34, ink: 0, strokes: 6, stroke: 0.0042 },
-      { motif: "brushRing", fill: "outline", x: 0.71, y: 0.91, r: 0.32, ink: 0, strokes: 5, stroke: 0.004 },
-      { motif: "brushRing", fill: "outline", x: 0.02, y: 0.59, r: 0.26, ink: 0, strokes: 4, stroke: 0.0036 },
+      { motif: "brushRing", fill: "outline", x: 0.18, y: 0.21, r: 0.36, ink: 0, strokes: 8, stroke: 0.0024 },
+      { motif: "brushRing", fill: "outline", x: 0.55, y: 0.11, r: 0.3, ink: 0, strokes: 7, stroke: 0.0022 },
+      { motif: "brushRing", fill: "outline", x: 0.83, y: 0.41, r: 0.4, ink: 0, strokes: 8, stroke: 0.0026 },
+      { motif: "brushRing", fill: "outline", x: 0.31, y: 0.81, r: 0.34, ink: 0, strokes: 8, stroke: 0.0023 },
+      { motif: "brushRing", fill: "outline", x: 0.71, y: 0.91, r: 0.32, ink: 0, strokes: 7, stroke: 0.0022 },
+      { motif: "brushRing", fill: "outline", x: 0.02, y: 0.59, r: 0.26, ink: 0, strokes: 6, stroke: 0.002 },
     ],
   },
 
@@ -322,7 +328,7 @@ const TABLE = {
     label: "Sumi black paper",
     note: "Plain near-black washi, fine pale fibre.",
     palette: "sumiBlack",
-    ground: { kind: "washi", fibreDensity: 0.9, mottle: 0.45, light: 0.4 },
+    ground: { kind: "washi", fibreDensity: 0.9, mottle: 0.45, light: 0.4, longFibres: 0.35 },
     motifs: [],
   },
 
@@ -332,7 +338,7 @@ const TABLE = {
     label: "Kraft paper",
     note: "Plain kraft washi, heavily flecked with fibre.",
     palette: "kraftPaper",
-    ground: { kind: "washi", fibreDensity: 1.65, mottle: 0.4, light: 0.4 },
+    ground: { kind: "washi", fibreDensity: 1.65, mottle: 0.4, light: 0.4, longFibres: 1.3, flecks: 1.4 },
     motifs: [],
   },
 
@@ -344,11 +350,11 @@ const TABLE = {
     palette: "skyWash",
     ground: {
       kind: "wash",
-      blooms: 36,
-      bloomScale: 0.9,
-      pigment: 0.85,
+      blooms: 40,
+      bloomScale: 0.8,
+      pigment: 0.86,
       granulation: 900,
-      fibreDensity: 0.3,
+      fibreDensity: 0.55,
     },
     motifs: [],
   },

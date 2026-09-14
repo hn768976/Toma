@@ -19,6 +19,13 @@ export type PaperOptions = {
   mottleStrength?: number;
   /** Multiplier on the corner light. */
   cornerLight?: number;
+  /**
+   * Multiplier on the long fibres. 0 for an evenly felted machine sheet,
+   * above 1 for a sheet that shows its bark.
+   */
+  longFibres?: number;
+  /** Multiplier on the dark specks and flecks in the pulp. */
+  flecks?: number;
 };
 
 /**
@@ -32,6 +39,8 @@ export type PaperOptions = {
 const PULP_STRANDS = 34000;
 const STRANDS = 13000;
 const LONG_FIBRES = 1400;
+/** Short thick specks — bundles of fibre and bits of bark caught in the pulp. */
+const FLECKS = 5200;
 /** Fraction of the mid-length strands drawn inside a clump. */
 const CLUMPED_SHARE = 0.45;
 const CLUMPS = 520;
@@ -55,12 +64,31 @@ export type Surface = {
 export const makeSurface = (palette: Palette, tone?: PaperTone): Surface => {
   const paper = parseHex(palette.paper);
   const fibre = parseHex(palette.fibre);
-  const dark = tone === "dark" || luminance(paper) < 0.5;
+  const lightness = luminance(paper);
+  const dark = tone === "dark" || lightness < 0.5;
+
+  /**
+   * Fibre tones are set by HEADROOM, not by a fixed amount.
+   *
+   * On an almost-white sheet there is nowhere lighter to go, so a pale strand
+   * has to be white and the contrast comes from the darker ones. On a coloured
+   * sheet — lime, vermilion, navy — white is far too much: it reads as a
+   * scatter of hard needles rather than felted pulp. The darker the ground,
+   * the further a pale strand has to travel to register at all.
+   */
+  const paleT = lightness > 0.86 ? 1 : 0.14 + (1 - lightness) * 0.22;
+  const deepT = 0.1 + (1 - lightness) * 0.1;
+
   return {
     paper,
     fibre,
-    pale: dark ? lighten(fibre, 0.3) : lighten(paper, 0.95),
-    deep: dark ? darken(fibre, 0.35) : darken(fibre, 0.13),
+    pale: mix(paper, { r: 255, g: 255, b: 255 }, paleT),
+    // On a near-black sheet a darker strand cannot be seen at all, so the
+    // shadow between fibres lifts instead.
+    deep:
+      lightness < 0.14
+        ? mix(paper, { r: 255, g: 255, b: 255 }, 0.17)
+        : mix(paper, { r: 0, g: 0, b: 0 }, deepT),
     dark,
   };
 };
@@ -77,7 +105,6 @@ export const drawPaper = (
 
   const paper = parseHex(palette.paper);
   const mottle = parseHex(palette.mottle);
-  const fibre = parseHex(palette.fibre);
   /**
    * A composition declares its intended tone, but any composition can be
    * rendered in any palette — w08 on indigo, for instance — so the sheet also
@@ -87,16 +114,10 @@ export const drawPaper = (
    */
   const dark = o.tone === "dark" || luminance(paper) < 0.5;
 
-  const surface: Surface = {
-    paper,
-    fibre,
-    // Washi fibre mostly CATCHES the light: the strands that read are pale
-    // ones, with only a scattering of slightly deeper shadows. Make the deep
-    // tone too dark and the sheet reads as pencil scratches on cartridge.
-    pale: dark ? lighten(fibre, 0.3) : lighten(paper, 0.95),
-    deep: dark ? darken(fibre, 0.35) : darken(fibre, 0.13),
-    dark,
-  };
+  // One source of truth for the fibre tones. These used to be built inline
+  // here as well as in makeSurface, so fixing them in one place silently left
+  // the washi sheet — the ground most of the set uses — on the old values.
+  const surface = makeSurface(palette, dark ? "dark" : "light");
 
   /* Base tone. */
   ctx.fillStyle = css(paper);
@@ -116,7 +137,16 @@ export const drawPaper = (
   /* FIBRE TEXTURE — short thin strands at random angles and lengths, each a
      single faint stroke. Individually almost invisible; together they give the
      sheet its handmade quality. */
-  drawFibres(ctx, width, height, scale, area, density, rng, surface);
+  drawFibres(
+    ctx,
+    width,
+    height,
+    scale,
+    area,
+    { density, longFibres: o.longFibres, flecks: o.flecks },
+    rng,
+    surface,
+  );
 
   /* A slight overall gradient — one corner marginally brighter. */
   drawCornerLight(ctx, width, height, rng, surface, mottle, o.cornerLight ?? 1);
@@ -214,16 +244,25 @@ export const drawCloudiness = (
    long ones. Nearly half the mid-length strands are laid inside clumps — an
    even scatter reads as digital noise, whereas washi fibres bunch.          */
 
+export type FibreOptions = {
+  density?: number;
+  longFibres?: number;
+  flecks?: number;
+};
+
 export const drawFibres = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   scale: number,
   area: number,
-  density: number,
+  options: FibreOptions | number,
   rng: Rng,
   surface: Surface,
 ) => {
+  const opts: FibreOptions =
+    typeof options === "number" ? { density: options } : options;
+  const density = opts.density ?? 1;
   ctx.lineCap = "round";
 
   /**
@@ -321,7 +360,9 @@ export const drawFibres = (
   }
 
   /* The long fibres real washi shows on close inspection. */
-  const longFibres = Math.round(LONG_FIBRES * area * density);
+  const longFibres = Math.round(
+    LONG_FIBRES * area * density * (opts.longFibres ?? 1),
+  );
   for (let i = 0; i < longFibres; i += 1) {
     strand(
       rng.next() * width,
@@ -331,6 +372,28 @@ export const drawFibres = (
       [1, 2.2],
       0.1,
     );
+  }
+
+  /* FLECKS — short thick specks of fibre bundle and bark. These are what the
+     eye actually reads as handmade paper at a glance, and the only part of the
+     texture that survives being looked at from across a room. */
+  const flecks = Math.round(FLECKS * area * density * (opts.flecks ?? 1));
+  const speck = surface.dark ? lighten(surface.fibre, 0.1) : surface.deep;
+  for (let i = 0; i < flecks; i += 1) {
+    const x = rng.next() * width;
+    const y = rng.next() * height;
+    const angle = rng.next() * TAU;
+    const len = rng.range(3, 16) * scale;
+    const pale = rng.chance(0.32);
+    ctx.strokeStyle = css(
+      pale ? surface.pale : speck,
+      pale ? rng.range(0.2, 0.5) : rng.range(0.12, 0.4),
+    );
+    ctx.lineWidth = rng.range(1.6, 3.6) * scale;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+    ctx.stroke();
   }
 };
 

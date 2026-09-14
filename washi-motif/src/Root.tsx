@@ -6,9 +6,16 @@ import { ContactSheet, contactSheetSize } from "./ContactSheet";
 import { PaperProof, paperProofDefaultProps } from "./PaperProof";
 import { WashiSurface, washiSurfaceDefaultProps } from "./WashiSurface";
 import { SurfaceSheet, surfaceSheetSize } from "./SurfaceSheet";
+import { SurfaceProof, surfaceProofDefaultProps } from "./SurfaceProof";
+import {
+  TextureProof,
+  textureProofDefaultProps,
+  textureProofSize,
+} from "./TextureProof";
 
 const sheet = contactSheetSize();
 const surfaceSheet = surfaceSheetSize();
+const textureProof = textureProofSize(9);
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -35,6 +42,24 @@ export const RemotionRoot: React.FC = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={washiSurfaceDefaultProps}
+      />
+      <Composition
+        id="TextureProof"
+        component={TextureProof}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={textureProof.width}
+        height={textureProof.height}
+        defaultProps={textureProofDefaultProps}
+      />
+      <Composition
+        id="SurfaceProof"
+        component={SurfaceProof}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={1400}
+        height={900}
+        defaultProps={surfaceProofDefaultProps}
       />
       <Composition
         id="SurfaceSheet"

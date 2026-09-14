@@ -75,14 +75,15 @@ tree while the output is a single deterministic canvas pass.
 Built first, because it underlies everything and a flat fill will not do:
 
 - a base tone, near-white or near-black per palette;
-- **fibre texture** — three passes, because real washi has three scales of
+- **fibre texture** — four passes, because real washi has several scales of
   fibre: a dense mat of very short pulp, ~13,000 characteristic strands of
-  15–90px at random angles and 1–2px, and ~1,400 long ones. Nearly half the
-  mid-length strands are laid inside clumps, because washi fibre bunches and an
-  even scatter reads as digital noise. Most strands are *paler* than the
-  ground — washi fibre catches the light; only a scattering are deeper. Barely
-  visible individually; collectively they are what separates washi from
-  cartridge paper;
+  15–90px at random angles and 1–2px, ~1,400 long ones, and ~5,200 short thick
+  **flecks** — bundles of fibre and bits of bark. The flecks are what the eye
+  reads as handmade paper at a glance, and the only part of the texture that
+  survives being seen from across a room. Nearly half the mid-length strands
+  are laid inside clumps, because washi fibre bunches and an even scatter reads
+  as digital noise. `longFibres: 0` gives an evenly felted machine sheet;
+  above 1, a sheet that shows its bark;
 - **mottling** — broad soft tonal variation from overlapping radial falloffs,
   so no edge can show;
 - **cloudiness** — the mid-scale band between the mottling and the grain:
@@ -96,9 +97,28 @@ the frame height, so if the counts did not scale with the area a half-size
 contact-sheet tile would carry four times the fibre density of the still it
 stands in for.
 
-`npx remotion still PaperProof out/proof.png` renders a 1:1 crop of the sheet.
-Texture is the half of this product a downscaled preview hides — judge it
-there, at actual pixels.
+**Fibre tones are set by headroom, not by a fixed amount.** On an almost-white
+sheet there is nowhere lighter to go, so a pale strand has to be white and the
+contrast comes from the darker ones; on a coloured sheet — lime, vermilion,
+navy — white is far too much and reads as a scatter of hard needles rather than
+felted pulp. `makeSurface` in `src/paper.ts` is the single source of those
+tones for every ground.
+
+### Judging texture
+
+A contact-sheet tile is a few hundred pixels wide and cannot show a fibre, so
+tuning texture from one is guesswork. Three compositions exist for it:
+
+```bash
+npx remotion still PaperProof   out/proof.png                    # 1:1 washi crop
+npx remotion still SurfaceProof out/proof.png --props='{"surface":"s03"}'
+npx remotion still TextureProof out/proof.png \
+  --props='{"surfaces":["s02","s05","s06","s11","s12","s14","s15","s16","s07"]}'
+```
+
+`TextureProof` tiles 1:1 crops of several surfaces at actual pixels — the
+instrument for this, and the one that should be consulted before any texture
+parameter is changed.
 
 The sheet is rendered **once** into an offscreen canvas held by `useMemo` and
 then blitted. Four thousand strands and ten million grain samples are not
