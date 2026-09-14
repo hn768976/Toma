@@ -139,7 +139,7 @@ const TRACES: {
 // camera only sees a fraction of the board, so the plate has to be
 // populated everywhere rather than composed for one framing.
 const LOOSE_VALUES: { x: number; y: number; text: string; color: string }[] = [
-  { x: 220, y: 560, text: "2,417.08", color: "rgba(150, 205, 255, 0.6)" },
+  { x: 620, y: 470, text: "2,417.08", color: "rgba(150, 205, 255, 0.6)" },
   { x: 900, y: 500, text: "1,982.44", color: "rgba(150, 205, 255, 0.55)" },
   { x: 1640, y: 1240, text: "4.18%", color: "rgba(240, 170, 90, 0.75)" },
   { x: 2180, y: 560, text: "27,904.11", color: "rgba(150, 205, 255, 0.6)" },
@@ -169,9 +169,9 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
   const blurFor = (depth: number) => Math.abs(depth - focus) * spread + 0.3;
 
   const band = (offset: number): PlotBand => ({
-    x: 120,
+    x: 330,
     y: 540 + offset,
-    width: 2760,
+    width: 2550,
     height: 300,
   });
 
@@ -238,11 +238,11 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
         />
         <AxisLines
           x={330}
-          y={350}
+          y={240}
           width={2550}
-          height={1250}
+          height={1360}
           which="y"
-          yTickOffset={130}
+          yTickOffset={240}
           yTickStep={112}
           yTickCount={10}
         />
@@ -423,9 +423,9 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
       <g filter="url(#dof-near)">
         <AxisLines
           x={330}
-          y={350}
+          y={240}
           width={2550}
-          height={1250}
+          height={1360}
           which="x"
           xTickOffset={50}
           xTickStep={340}

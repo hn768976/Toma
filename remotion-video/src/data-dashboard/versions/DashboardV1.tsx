@@ -104,9 +104,9 @@ export const DashboardV1: React.FC<z.infer<typeof dashboardV1Schema>> = ({
   resolutionScale,
 }) => {
   const plotBand = (offset: number): PlotBand => ({
-    x: 240,
+    x: 225,
     y: 720 + offset,
-    width: 2520,
+    width: 2535,
     height: 300,
   });
 
@@ -293,9 +293,9 @@ export const DashboardV1: React.FC<z.infer<typeof dashboardV1Schema>> = ({
       />
 
       <Histogram
-        x={240}
+        x={225}
         baseline={1620}
-        width={2520}
+        width={2535}
         maxHeight={250}
         count={86}
         seed={29}
