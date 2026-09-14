@@ -15,6 +15,10 @@ export type PaperOptions = {
   seed: string;
   /** Multiplier on the fibre counts. 1 is the standard washi surface. */
   fibreDensity?: number;
+  /** Multiplier on the broad mottling. Below 1 for an evenly formed sheet. */
+  mottleStrength?: number;
+  /** Multiplier on the corner light. */
+  cornerLight?: number;
 };
 
 /**
@@ -32,7 +36,7 @@ const LONG_FIBRES = 1400;
 const CLUMPED_SHARE = 0.45;
 const CLUMPS = 520;
 
-type Surface = {
+export type Surface = {
   paper: Rgb;
   fibre: Rgb;
   pale: Rgb;
@@ -47,6 +51,20 @@ type Surface = {
  * strands are what separate washi from cartridge paper, so they are drawn one
  * by one.
  */
+/** The tone set a ground paints with, derived from a palette. */
+export const makeSurface = (palette: Palette, tone?: PaperTone): Surface => {
+  const paper = parseHex(palette.paper);
+  const fibre = parseHex(palette.fibre);
+  const dark = tone === "dark" || luminance(paper) < 0.5;
+  return {
+    paper,
+    fibre,
+    pale: dark ? lighten(fibre, 0.3) : lighten(paper, 0.95),
+    deep: dark ? darken(fibre, 0.35) : darken(fibre, 0.13),
+    dark,
+  };
+};
+
 export const drawPaper = (
   ctx: CanvasRenderingContext2D,
   o: PaperOptions,
@@ -86,7 +104,7 @@ export const drawPaper = (
 
   /* MOTTLING — broad soft tonal variation. Overlapping radial falloffs, so
      the transitions are inherently blurred and no edge can show. */
-  drawMottling(ctx, width, height, rng, surface, mottle);
+  drawMottling(ctx, width, height, rng, surface, mottle, o.mottleStrength ?? 1);
 
   /* CLOUDINESS — the mid-scale unevenness between the broad mottling and the
      per-pixel grain. Coarse noise upscaled with smoothing, so it stays soft.
@@ -101,7 +119,7 @@ export const drawPaper = (
   drawFibres(ctx, width, height, scale, area, density, rng, surface);
 
   /* A slight overall gradient — one corner marginally brighter. */
-  drawCornerLight(ctx, width, height, rng, surface, mottle);
+  drawCornerLight(ctx, width, height, rng, surface, mottle, o.cornerLight ?? 1);
 
   /* GRAIN — a very subtle per-pixel noise over everything. */
   applyGrain(ctx, width, height, o.seed, dark ? 7.5 : 6.5);
@@ -109,13 +127,14 @@ export const drawPaper = (
 
 /* ── MOTTLING ───────────────────────────────────────────────────────────── */
 
-const drawMottling = (
+export const drawMottling = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   rng: Rng,
   surface: Surface,
   mottle: Rgb,
+  strength = 1,
 ) => {
   for (let i = 0; i < 46; i += 1) {
     const cx = rng.range(-0.1, 1.1) * width;
@@ -127,8 +146,8 @@ const drawMottling = (
         ? lighten(surface.paper, 0.05)
         : lighten(surface.paper, 0.55);
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    grad.addColorStop(0, css(tone, rng.range(0.35, 0.8)));
-    grad.addColorStop(0.55, css(tone, rng.range(0.12, 0.3)));
+    grad.addColorStop(0, css(tone, rng.range(0.35, 0.8) * strength));
+    grad.addColorStop(0.55, css(tone, rng.range(0.12, 0.3) * strength));
     grad.addColorStop(1, css(tone, 0));
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -142,7 +161,7 @@ const drawMottling = (
    `cell` pixels across, lighter or darker than the sheet, so there is tonal
    structure at a scale the eye reads as handmade unevenness.                */
 
-const drawCloudiness = (
+export const drawCloudiness = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -195,7 +214,7 @@ const drawCloudiness = (
    long ones. Nearly half the mid-length strands are laid inside clumps — an
    even scatter reads as digital noise, whereas washi fibres bunch.          */
 
-const drawFibres = (
+export const drawFibres = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -317,13 +336,14 @@ const drawFibres = (
 
 /* ── CORNER LIGHT ───────────────────────────────────────────────────────── */
 
-const drawCornerLight = (
+export const drawCornerLight = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   rng: Rng,
   surface: Surface,
   mottle: Rgb,
+  strength = 1,
 ) => {
   const corner = Math.floor(rng.next() * 4);
   const cx = corner === 0 || corner === 3 ? 0 : width;
@@ -334,7 +354,7 @@ const drawCornerLight = (
   const liftTone = surface.dark
     ? lighten(surface.paper, 0.5)
     : lighten(surface.paper, 1);
-  lift.addColorStop(0, css(liftTone, surface.dark ? 0.07 : 0.34));
+  lift.addColorStop(0, css(liftTone, (surface.dark ? 0.07 : 0.34) * strength));
   lift.addColorStop(1, css(liftTone, 0));
   ctx.fillStyle = lift;
   ctx.fillRect(0, 0, width, height);
@@ -348,7 +368,7 @@ const drawCornerLight = (
     reach * 0.9,
   );
   const shadeTone = mix(surface.paper, darken(mottle, 0.35), 0.7);
-  shade.addColorStop(0, css(shadeTone, 0.16));
+  shade.addColorStop(0, css(shadeTone, 0.16 * strength));
   shade.addColorStop(1, css(shadeTone, 0));
   ctx.fillStyle = shade;
   ctx.fillRect(0, 0, width, height);
@@ -360,7 +380,7 @@ const drawCornerLight = (
  * A per-pixel noise pass over everything. Seeded from the composition name
  * like the rest of the sheet, so the grain is identical on every render.
  */
-const applyGrain = (
+export const applyGrain = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,

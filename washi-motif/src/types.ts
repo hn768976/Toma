@@ -10,7 +10,12 @@ export type MotifKind =
   | "seigaiha"
   | "ringFlower"
   | "kumo"
-  | "dotCluster";
+  | "dotCluster"
+  /* The surface set: these cover the whole frame rather than sitting in it. */
+  | "seigaihaField"
+  | "brushRing"
+  | "foilSweep"
+  | "splatter";
 
 /** How a motif's area is inked. */
 export type FillKind =
@@ -56,6 +61,16 @@ export type MotifSpec = {
   readonly aspect?: number;
   /** Concentric arcs per seigaiha unit. */
   readonly rings?: number;
+  /** Tile size for a field pattern, as a fraction of frame height. */
+  readonly unit?: number;
+  /** Stroke count for a brush ring. */
+  readonly strokes?: number;
+  /** Edge irregularity, as a fraction of frame height. */
+  readonly roughness?: number;
+  /** 0 = a solid area with a ragged edge, 1 = separated dry-brush strokes. */
+  readonly dryBrush?: number;
+  /** Per-tile tonal variation in a field pattern. */
+  readonly tonal?: number;
 };
 
 /** Paper treatment, chosen per composition. */

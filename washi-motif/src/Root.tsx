@@ -4,8 +4,11 @@ import { DURATION_IN_FRAMES, FPS, HEIGHT, WIDTH } from "./constants";
 import { WashiMotif, washiMotifDefaultProps } from "./WashiMotif";
 import { ContactSheet, contactSheetSize } from "./ContactSheet";
 import { PaperProof, paperProofDefaultProps } from "./PaperProof";
+import { WashiSurface, washiSurfaceDefaultProps } from "./WashiSurface";
+import { SurfaceSheet, surfaceSheetSize } from "./SurfaceSheet";
 
 const sheet = contactSheetSize();
+const surfaceSheet = surfaceSheetSize();
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -22,6 +25,24 @@ export const RemotionRoot: React.FC = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={washiMotifDefaultProps}
+      />
+      {/* The surface set: full-bleed textures, also stills. */}
+      <Composition
+        id="WashiSurface"
+        component={WashiSurface}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={washiSurfaceDefaultProps}
+      />
+      <Composition
+        id="SurfaceSheet"
+        component={SurfaceSheet}
+        durationInFrames={DURATION_IN_FRAMES}
+        fps={FPS}
+        width={surfaceSheet.width}
+        height={surfaceSheet.height}
       />
       {/* A 1:1 crop of the sheet, for judging the fibre texture at actual pixels. */}
       <Composition

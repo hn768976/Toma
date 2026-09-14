@@ -1,4 +1,11 @@
-# Washi paper motif generator
+# Washi paper generator
+
+Two families of **still images**, from one engine:
+
+- **the motif set** — eight bordered compositions that keep the centre open for
+  copy (`WashiMotif`);
+- **the surface set** — seventeen full-bleed textures: plain sheets, a seigaiha
+  field, beaten gold leaf, watercolour washes, torn foil (`WashiSurface`).
 
 A **still image** generator for stock illustration: traditional Japanese motifs
 printed in gold and colour on textured handmade paper, arranged around the
@@ -23,16 +30,21 @@ npm run dev            # Remotion Studio
 npx remotion still WashiMotif out/stills/washi-w01-goldWhite.png \
   --props='{"composition":"w01","palette":"goldWhite"}'
 
-npm run batch          # all 16 stills + the contact sheet
-npm run check:layout   # the open-centre / cropping guard
-npm run lint           # tsc
+# one surface
+npx remotion still WashiSurface out/surfaces/washi-s04-goldLeaf.png \
+  --props='{"surface":"s04"}'
+
+npm run batch            # the motif set: 16 stills + the contact sheet
+npm run batch:surfaces   # the surface set: 17 stills + the surface sheet
+npm run check:layout     # the open-centre / cropping guard
+npm run lint             # tsc
 ```
 
 `scripts/render-batch.sh` is a shell equivalent of `scripts/render-batch.ts`
 for environments without a TypeScript loader.
 
-Output: `out/stills/washi-<composition>-<palette>.png` and
-`out/contact-sheet.png`.
+Output: `out/stills/washi-<composition>-<palette>.png`, `out/contact-sheet.png`,
+`out/surfaces/washi-<surface>-<palette>.png` and `out/surface-sheet.png`.
 
 ## How it is put together
 
@@ -43,7 +55,9 @@ new code.**
 | File | What lives there |
 | --- | --- |
 | `src/palettes.ts` | The six palettes. The **only** place hex literals appear. |
-| `src/compositions.ts` | The eight compositions: motif, fill, placement, scale, rotation, ink, paper tone. Also the batch's palette pairing. |
+| `src/compositions.ts` | The eight bordered compositions: motif, fill, placement, scale, rotation, ink, paper tone. Also the batch's palette pairing. |
+| `src/surfaces.ts` | The seventeen surfaces: ground kind and its parameters, plus any motifs laid over it. |
+| `src/grounds.ts` | The four grounds: washi, cloth, metallic leaf, watercolour wash. |
 | `src/paper.ts` | The washi sheet. |
 | `src/motifs/shapes.ts` | The motif geometry. |
 | `src/fills/treatments.ts` | The seven fill treatments. |
@@ -152,3 +166,65 @@ produces the identical still, down to each fibre and each stipple dot.
 
 `goldWhite`, `goldBlack`, `redGold`, `silverGold`, `indigoGold`, `sakuraPink`.
 Each defines a paper base, a mottle tone, a fibre tone and three motif inks.
+
+## The surface set
+
+The companion product. The motif set keeps its centre open because it is made
+to be typed over; a surface is the **material** — the sheet itself, edge to
+edge — so there is no open-centre rule and the guard does not apply to it.
+
+Each surface names the palette it was designed for, and `palette` is optional
+on `WashiSurface` for that reason: defaulting it to a fixed name rendered every
+surface in `s01`'s colours.
+
+### Grounds
+
+| kind | what it is |
+| --- | --- |
+| `washi` | The handmade sheet the motif set uses. `mottle` and `light` below 1 give an evenly formed sheet. |
+| `cloth` | A woven board: fabric weave at right angles, chalk-dust smudges, a heavy vignette. |
+| `metallic` | Beaten leaf: a directional sheen, creases running with it, an optional specular hotspot and sparkle. Still fibrous underneath, because leaf here is laid on washi. |
+| `wash` | Watercolour: pigment blooms laid down with `multiply` so overlaps deepen, each a cluster of soft discs so its edge stays irregular, some with the darker rim watercolour dries to. |
+
+The vignette is applied **after** the motifs, not under them — on a board or a
+photographed sheet the falloff dims the pattern too.
+
+### Surface motifs
+
+Four motifs are built against the frame rather than against their own radius:
+
+- **`seigaihaField`** — the wave-scale pattern over the whole sheet: rows of
+  concentric top-half arcs on a half-offset grid. Every tile also gets its own
+  faint tonal wash, which is what stops a field of identical arcs from looking
+  printed.
+- **`brushRing`** — a circle as a loaded brush leaves it: several wobbling
+  strokes at slightly different radii, each stopping short of a full turn.
+- **`foilSweep`** — everything to one side of a torn edge. The body is one
+  polygon reaching well past the frame, so there is never a straight cut inside
+  the picture, and the edge is three octaves of noise. `dryBrush` swaps the
+  solid body for overlapping bands running *with* the stroke.
+- **`splatter`** — flicked dots in a band, thrown along one direction.
+
+### The seventeen
+
+| id | | palette |
+| --- | --- | --- |
+| `s01` | Green board — woven cloth, chalk haze, heavy vignette | `boardGreen` |
+| `s02` | Seigaiha field — wave scales over the whole sheet | `crimsonWave` |
+| `s03` | Lime fibre paper — plain, dense even fibre | `limePaper` |
+| `s04` | Gold leaf — strong diagonal sheen, heavy creasing | `goldLeaf` |
+| `s05` | Vermilion paper — plain | `vermilionPaper` |
+| `s06` | Navy paper — plain | `navyPaper` |
+| `s07` | Peach wash — warm watercolour sky | `peachWash` |
+| `s08` | Sumi and gold sweep — torn diagonal with splatter | `sumiGold` |
+| `s09` | Amber wash — granulating stains | `amberWash` |
+| `s10` | Gold discs — translucent discs over fibrous leaf | `goldLeaf` |
+| `s11` | Cream discs — soft discs, each edged with a thin gold line | `creamPaper` |
+| `s12` | Gold brush corners — torn gold in opposite corners | `shiroGold` |
+| `s13` | Gold sheen — polished, one soft highlight, fine sparkle | `goldLeaf` |
+| `s14` | White brush rings — overlapping, white on near-white | `shiroWhite` |
+| `s15` | Sumi black paper — plain | `sumiBlack` |
+| `s16` | Kraft paper — plain, heavily flecked | `kraftPaper` |
+| `s17` | Sky wash — pale blue watercolour | `skyWash` |
+
+Twenty-two palettes in total: the original six plus sixteen for the surfaces.

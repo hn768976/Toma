@@ -10,7 +10,9 @@
     "batch": "esbuild scripts/render-batch.ts --bundle --platform=node --format=esm --external:remotion --outfile=out/.render-batch.mjs --log-level=warning && node out/.render-batch.mjs",
     "contact-sheet": "remotion still ContactSheet out/contact-sheet.png",
     "lint": "tsc",
-    "check:layout": "esbuild scripts/check-layout.ts --bundle --platform=node --format=esm --external:remotion --outfile=out/.check-layout.mjs --log-level=warning && node out/.check-layout.mjs"
+    "check:layout": "esbuild scripts/check-layout.ts --bundle --platform=node --format=esm --external:remotion --outfile=out/.check-layout.mjs --log-level=warning && node out/.check-layout.mjs",
+    "batch:surfaces": "esbuild scripts/render-surfaces.ts --bundle --platform=node --format=esm --external:remotion --outfile=out/.render-surfaces.mjs --log-level=warning && node out/.render-surfaces.mjs",
+    "surface": "remotion still WashiSurface"
   },
   "dependencies": {
     "@remotion/cli": "4.0.515",

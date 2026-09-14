@@ -35,7 +35,12 @@ export const resolveMotifs = (
     const radius = spec.r * height;
     const cx = spec.x * width;
     const cy = spec.y * height;
-    const extent = motifExtent(spec, radius);
+    // A full-bleed motif is built against the frame, not its own radius.
+    const fullBleed =
+      spec.motif === "seigaihaField" || spec.motif === "foilSweep";
+    const extent = fullBleed
+      ? Math.hypot(width, height)
+      : motifExtent(spec, radius);
     const inward = Math.atan2(height / 2 - cy, width / 2 - cx);
     return {
       index,
@@ -143,7 +148,8 @@ export const drawMotifInstance = (
   const { spec } = instance;
   const scale = env.height / REFERENCE_HEIGHT;
   const rng = createRng(seedFor(env.composition.id, `motif-${instance.index}`));
-  const geometry = buildMotif(spec, instance.radius, instance.stroke, rng);
+  const frame = { width: env.width, height: env.height };
+  const geometry = buildMotif(spec, instance.radius, instance.stroke, rng, frame);
 
   const paper = parseHex(env.palette.paper);
   const rawInk = parseHex(env.palette.motifs[spec.ink ?? 0]);
@@ -174,6 +180,14 @@ export const drawMotifInstance = (
       ctx.strokeStyle = css(ink, alpha);
       ctx.lineWidth = instance.stroke;
       ctx.stroke(geometry.regions);
+    }
+  }
+
+  // Field patterns lay a faint tonal wash under their lattice.
+  if (geometry.washes.length > 0) {
+    for (const wash of geometry.washes) {
+      ctx.fillStyle = css(ink, wash.alpha * alpha);
+      ctx.fill(wash.path);
     }
   }
 

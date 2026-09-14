@@ -21,7 +21,20 @@ export const MotifLayout: React.FC<{
   /** Stage order of the first motif; motifs stack in table order above it. */
   baseOrder?: number;
   idPrefix?: string;
-}> = ({ width, height, composition, palette, baseOrder = 10, idPrefix }) => {
+  /**
+   * Surfaces are full-bleed by design — the sheet edge to edge — so the
+   * open-centre guard does not apply to them.
+   */
+  guard?: boolean;
+}> = ({
+  width,
+  height,
+  composition,
+  palette,
+  baseOrder = 10,
+  idPrefix,
+  guard = true,
+}) => {
   const instances = useMemo(
     () => resolveMotifs(composition, width, height),
     [composition, width, height],
@@ -33,6 +46,7 @@ export const MotifLayout: React.FC<{
   );
 
   useMemo(() => {
+    if (!guard) return;
     const rect = openCentreRect(composition, width, height);
     let worst = Number.POSITIVE_INFINITY;
     for (const instance of instances) {
@@ -51,7 +65,7 @@ export const MotifLayout: React.FC<{
       `[washi] ${composition.id} "${composition.label}": ${instances.length} motifs,` +
         ` open centre clear by ${worst.toFixed(0)}px`,
     );
-  }, [instances, composition, width, height]);
+  }, [instances, composition, width, height, guard]);
 
   return (
     <>

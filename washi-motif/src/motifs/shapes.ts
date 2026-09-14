@@ -2,6 +2,8 @@ import type { MotifKind, MotifSpec } from "../types";
 import type { Rng } from "../rng";
 
 export type Dot = { x: number; y: number; r: number };
+/** The frame a full-bleed motif is built against. */
+export type Frame = { width: number; height: number };
 export type StrokeSet = { path: Path2D; width: number };
 
 /**
@@ -21,6 +23,8 @@ export type MotifGeometry = {
   /** Paper-toned strokes laid over the fill (sakura stamens). */
   knockoutLines: StrokeSet[];
   knockoutDots: Dot[];
+  /** Faint per-tile tonal fills, painted under a field's lattice. */
+  washes: { path: Path2D; alpha: number }[];
   /** Optional clip applied to `lines` only. */
   clip: Path2D | null;
   /** Farthest extent from the centre, used for the open-centre check. */
@@ -36,6 +40,7 @@ const emptyGeometry = (extent: number): MotifGeometry => ({
   dots: [],
   knockoutLines: [],
   knockoutDots: [],
+  washes: [],
   clip: null,
   extent,
 });
@@ -325,6 +330,243 @@ const dotCluster = (r: number, density: number, rng: Rng): MotifGeometry => {
   return { ...emptyGeometry(r), dots };
 };
 
+
+/* ── SURFACE MOTIFS ─────────────────────────────────────────────────────────
+   These four cover the whole frame rather than sitting inside it, so they are
+   built against the frame rather than against their own radius.             */
+
+/** Deterministic 1-D value noise, cosine-interpolated and two octaves deep. */
+const makeNoise = (rng: Rng, samples: number) => {
+  const coarse = Array.from({ length: samples }, () => rng.next() * 2 - 1);
+  const fine = Array.from({ length: samples * 4 }, () => rng.next() * 2 - 1);
+  const at = (table: number[], t: number) => {
+    const x = t * (table.length - 1);
+    const i = Math.floor(x);
+    const f = x - i;
+    const a = table[Math.max(0, Math.min(table.length - 1, i))];
+    const b = table[Math.max(0, Math.min(table.length - 1, i + 1))];
+    const smooth = (1 - Math.cos(f * Math.PI)) / 2;
+    return a + (b - a) * smooth;
+  };
+  return (t: number) => at(coarse, t) * 0.72 + at(fine, t) * 0.28;
+};
+
+/**
+ * SEIGAIHA FIELD — the wave-scale pattern over the whole sheet. Rows of
+ * concentric top-half arcs on a half-offset grid, so each scale overlaps the
+ * two below it. Every tile also gets its own faint tonal wash, which is what
+ * keeps a field of identical arcs from looking printed.
+ */
+const seigaihaField = (
+  frame: Frame,
+  unit: number,
+  rings: number,
+  weight: number,
+  tonal: number,
+  rng: Rng,
+): MotifGeometry => {
+  const halfW = frame.width / 2 + unit * 2;
+  const halfH = frame.height / 2 + unit * 2;
+  const lattice = new Path2D();
+  const washes: { path: Path2D; alpha: number }[] = [];
+
+  const rowStep = unit * 0.5;
+  let row = 0;
+  for (let cy = -halfH; cy <= halfH; cy += rowStep) {
+    const offset = row % 2 === 0 ? 0 : unit;
+    for (let cx = -halfW + offset; cx <= halfW; cx += unit * 2) {
+      if (tonal > 0) {
+        const wash = new Path2D();
+        wash.moveTo(cx - unit, cy);
+        wash.arc(cx, cy, unit, Math.PI, TAU);
+        wash.closePath();
+        washes.push({ path: wash, alpha: rng.range(0, tonal) });
+      }
+      for (let k = 1; k <= rings; k += 1) {
+        const r = (unit * k) / rings;
+        lattice.moveTo(cx - r, cy);
+        lattice.arc(cx, cy, r, Math.PI, TAU);
+      }
+    }
+    row += 1;
+  }
+
+  return {
+    ...emptyGeometry(Math.hypot(halfW, halfH)),
+    lines: [{ path: lattice, width: weight }],
+    washes,
+  };
+};
+
+/**
+ * BRUSH RING — a circle drawn the way a loaded brush leaves it: several
+ * wobbling strokes at slightly different radii, each starting and stopping
+ * short of a full turn.
+ */
+const brushRing = (
+  r: number,
+  strokes: number,
+  weight: number,
+  rng: Rng,
+): MotifGeometry => {
+  const lines: StrokeSet[] = [];
+  for (let i = 0; i < strokes; i += 1) {
+    const noise = makeNoise(rng, 7);
+    const radius = r * rng.range(0.9, 1.06);
+    const start = rng.next() * TAU;
+    const sweep = TAU * rng.range(0.55, 0.98);
+    const path = new Path2D();
+    const steps = 130;
+    for (let j = 0; j <= steps; j += 1) {
+      const t = j / steps;
+      const a = start + sweep * t;
+      const rr = radius * (1 + noise(t) * 0.035);
+      const x = Math.cos(a) * rr;
+      const y = Math.sin(a) * rr;
+      if (j === 0) path.moveTo(x, y);
+      else path.lineTo(x, y);
+    }
+    lines.push({ path, width: weight * rng.range(0.5, 1.5) });
+  }
+  return { ...emptyGeometry(r * 1.1), lines };
+};
+
+/**
+ * FOIL SWEEP — everything to one side of a torn, brushed edge.
+ *
+ * The body is one polygon reaching well past the frame, so there is never a
+ * straight cut inside the picture. The edge itself is noise-displaced and
+ * gently curved, then frayed with slivers that straddle it.
+ *
+ * `dryBrush` replaces the solid body with bands running PARALLEL to the edge,
+ * each spanning the full length and some left out — the way a dry brush lays
+ * leaf down in streaks. The gaps run with the stroke, never across it, which
+ * is what the first attempt got wrong: gaps along the length showed as hard
+ * rectangular holes wherever one landed inside the frame.
+ */
+const foilSweep = (
+  frame: Frame,
+  rot: number,
+  roughness: number,
+  dryBrush: number,
+  curvature: number,
+  rng: Rng,
+): MotifGeometry => {
+  const reach = Math.hypot(frame.width, frame.height) * 1.2;
+  const at = rotator(rot);
+  const path = new Path2D();
+  /* Fine enough to carry the high-frequency octave of the tear. */
+  const steps = 560;
+
+  /**
+   * The torn edge. Three octaves: the broad wander, the tear itself, and a
+   * fine one for the fibres. A torn edge is fractal — the first attempt added
+   * triangular frays instead, and a row of identical triangles reads as saw
+   * teeth, not as paper.
+   */
+  const broad = makeNoise(rng, 7);
+  const tear = makeNoise(rng, 40);
+  const fine = makeNoise(rng, 220);
+  const edge = (t: number) => {
+    const centred = t * 2 - 1;
+    return (
+      broad(t) * roughness * 0.9 +
+      tear(t) * roughness * 0.45 +
+      fine(t) * roughness * 0.22 +
+      curvature * reach * centred * centred
+    );
+  };
+
+  const layEdge = (offset: number, depth: number) => {
+    for (let j = 0; j <= steps; j += 1) {
+      const t = j / steps;
+      const u = -reach + 2 * reach * t;
+      const [x, y] = at(u, edge(t) + offset);
+      if (j === 0) path.moveTo(x, y);
+      else path.lineTo(x, y);
+    }
+    path.lineTo(...at(reach, depth));
+    path.lineTo(...at(-reach, depth));
+    path.closePath();
+  };
+
+  if (dryBrush > 0) {
+    /* Bands along the stroke, with gaps between them. */
+    const bands = 16;
+    const span = reach * 1.6;
+    for (let k = 0; k < bands; k += 1) {
+      // Only the bands near the edge drop out: that breaks up the edge while
+      // the body stays covered. Dropping any band striped the whole sweep.
+      if (k >= 1 && k <= 4 && rng.chance(dryBrush)) continue;
+      const v0 = (span * k) / bands;
+      // Bands overlap, so present ones leave no seam between them.
+      const v1 = v0 + (span / bands) * rng.range(1.05, 1.7);
+      const bandNoise = makeNoise(rng, 8);
+      for (let j = 0; j <= steps; j += 1) {
+        const t = j / steps;
+        const u = -reach + 2 * reach * t;
+        const wobble = bandNoise(t) * roughness * (k === 0 ? 1 : 0.8);
+        const [x, y] = at(u, edge(t) + (v0 - edge(t) * 0) + wobble);
+        if (j === 0) path.moveTo(x, y);
+        else path.lineTo(x, y);
+      }
+      for (let j = steps; j >= 0; j -= 1) {
+        const t = j / steps;
+        const u = -reach + 2 * reach * t;
+        path.lineTo(...at(u, edge(t) + v1));
+      }
+      path.closePath();
+    }
+  } else {
+    layEdge(0, reach * 2);
+  }
+
+  /* A few loose fibres lifting off the tear, varied enough not to pattern. */
+  const frays = 70;
+  for (let i = 0; i < frays; i += 1) {
+    const t = rng.next();
+    const u = -reach + 2 * reach * t;
+    const len = reach * Math.pow(rng.next(), 2) * 0.012 + reach * 0.001;
+    const out = roughness * Math.pow(rng.next(), 1.6) * 1.1;
+    const base = edge(t);
+    path.moveTo(...at(u, base));
+    path.lineTo(...at(u + len * rng.range(0.2, 0.8), base - out));
+    path.lineTo(...at(u + len, base));
+    path.lineTo(...at(u + len, base + roughness));
+    path.lineTo(...at(u, base + roughness));
+    path.closePath();
+  }
+
+  return {
+    ...emptyGeometry(reach),
+    regions: path,
+    regionRule: "nonzero",
+  };
+};
+
+/**
+ * SPLATTER — flicked dots in a band, thrown along one direction. Used where a
+ * foil edge has been struck.
+ */
+const splatter = (
+  r: number,
+  rot: number,
+  aspect: number,
+  count: number,
+  rng: Rng,
+): MotifGeometry => {
+  const at = rotator(rot);
+  const dots: Dot[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const u = rng.bell() * r * aspect;
+    const v = rng.bell() * r;
+    const [x, y] = at(u, v);
+    const size = Math.pow(rng.next(), 2.4);
+    dots.push({ x, y, r: r * (0.008 + size * 0.055) });
+  }
+  return { ...emptyGeometry(r * aspect), dots };
+};
+
 /* ── DISPATCH ───────────────────────────────────────────────────────────────
    The renderer walks the composition data; adding a composition never means
    touching code, only the table.                                            */
@@ -334,6 +576,7 @@ export const buildMotif = (
   radiusPx: number,
   strokePx: number,
   rng: Rng,
+  frame: Frame,
 ): MotifGeometry => {
   const rot = ((spec.rotate ?? 0) * Math.PI) / 180;
   const kind: MotifKind = spec.motif;
@@ -354,6 +597,34 @@ export const buildMotif = (
       return kumo(radiusPx, rot, spec.aspect ?? 1.7, spec.petals ?? 5, rng);
     case "dotCluster":
       return dotCluster(radiusPx, spec.fillDensity ?? 1, rng);
+    case "seigaihaField":
+      return seigaihaField(
+        frame,
+        (spec.unit ?? 0.12) * frame.height,
+        spec.rings ?? 4,
+        strokePx,
+        spec.tonal ?? 0.1,
+        rng,
+      );
+    case "brushRing":
+      return brushRing(radiusPx, spec.strokes ?? 5, strokePx, rng);
+    case "foilSweep":
+      return foilSweep(
+        frame,
+        rot,
+        (spec.roughness ?? 0.02) * frame.height,
+        spec.dryBrush ?? 0,
+        spec.aspect ?? 0,
+        rng,
+      );
+    case "splatter":
+      return splatter(
+        radiusPx,
+        rot,
+        spec.aspect ?? 1,
+        Math.round(220 * (spec.fillDensity ?? 1)),
+        rng,
+      );
     default: {
       const exhaustive: never = kind;
       throw new Error(`Unknown motif: ${String(exhaustive)}`);
