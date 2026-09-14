@@ -75,14 +75,20 @@ reflows between sizes, and no per-resolution tuning.
 - `Camera.tsx` - lays the console on a CSS-3D plane and holds the lens still on
   it. The plane overhangs the layout by a wide margin on every side so its edges
   never enter frame.
-- `LayoutConsole.tsx` - the console, in one SVG, with the `mirrored` flag.
+- `LayoutConsole.tsx` - the console, in one SVG, with the `mirrored` flag. Its
+  `GAPS` list declares every rectangle the foreground leaves bare.
+- `Filler.tsx` - tiles those rectangles with secondary instruments. The console
+  has to read as wall-to-wall hardware: bare surface inside the frame looks like
+  a hole in the design. Declaring the gaps and filling them procedurally beats
+  hand-placing a panel into each one and re-doing it whenever the layout moves.
 - `primitives.tsx`, `charts.tsx`, `icons.tsx`, `Globe.tsx` - the instrument kit:
   panels, scrolling plots, gauges, heat grids, the dotted globe and its orbit
   ring, turbine, battery, gears.
-- `Atmosphere.tsx` - bloom, scanlines, tiled film grain, vignette and the
-  periodic light sweep. Grain strength lives in `CleanEnergyHud.tsx` as
-  `GRAIN_OPACITY_GREEN` / `GRAIN_OPACITY_BLUE`; blue runs lighter because its
-  brighter surface makes the same grain read stronger.
+- `Atmosphere.tsx` - bloom, scanlines, vignette and the periodic light sweep.
+  Film grain is **off**: `GRAIN_OPACITY_GREEN` / `GRAIN_OPACITY_BLUE` in
+  `CleanEnergyHud.tsx` are zero, and at zero the layer is skipped rather than
+  composited as a no-op. The dial is kept because it is the one knob likely to
+  be reached for again.
 - `theme.ts` - the two palettes. No component knows which version it is in.
 - `rng.ts` - seeded randomness. Remotion re-mounts the tree every frame, so any
   value that must stay put between frames is derived from a seed rather than

@@ -8,13 +8,13 @@ import { LayoutConsole } from "./LayoutConsole";
 import { BLUE_THEME, GREEN_THEME } from "./theme";
 
 /**
- * Film grain strength, cut to a third of the original pass. The grain is the
- * only noise source in the finish; the scanlines are a regular pattern and are
- * left alone. Blue runs slightly lighter than green because its surface is
- * brighter, so the same grain reads stronger on it.
+ * Film grain, off. The dial is kept rather than deleted because it is the one
+ * knob likely to be reached for again; at zero the layer is skipped entirely
+ * rather than composited as a no-op. The scanlines are a regular pattern
+ * rather than noise and are unaffected.
  */
-const GRAIN_OPACITY_GREEN = 0.033;
-const GRAIN_OPACITY_BLUE = 0.027;
+const GRAIN_OPACITY_GREEN = 0;
+const GRAIN_OPACITY_BLUE = 0;
 
 export const cleanEnergyHudSchema = z.object({
   /**

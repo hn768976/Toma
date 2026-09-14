@@ -80,7 +80,7 @@ export const Atmosphere: React.FC<{
   height: number;
   scanlineOpacity?: number;
   grainOpacity?: number;
-}> = ({ width, height, scanlineOpacity = 0.22, grainOpacity = 0.1 }) => {
+}> = ({ width, height, scanlineOpacity = 0.22, grainOpacity = 0 }) => {
   const theme = useTheme();
 
   return (
@@ -99,7 +99,9 @@ export const Atmosphere: React.FC<{
           opacity: 0.8,
         }}
       />
-      <Grain width={width} height={height} opacity={grainOpacity} />
+      {grainOpacity > 0 ? (
+        <Grain width={width} height={height} opacity={grainOpacity} />
+      ) : null}
       {/* Vignette - pulls the eye to the globe and hides the plane's edges. */}
       <AbsoluteFill
         style={{

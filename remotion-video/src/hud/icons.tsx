@@ -174,36 +174,3 @@ export const Gear: React.FC<{
     </g>
   );
 };
-
-/** Plug-and-leaf mark that sits under the turbine as the section's sign-off. */
-export const PlugMark: React.FC<{ cx: number; cy: number; size: number }> = ({
-  cx,
-  cy,
-  size,
-}) => {
-  const theme = useTheme();
-  const w = size;
-  const h = size * 0.78;
-
-  return (
-    <g stroke={theme.bright} strokeWidth={2} fill="none" strokeLinecap="round">
-      <path d={`M ${cx - w * 0.34} ${cy - h * 0.5} L ${cx - w * 0.34} ${cy + h * 0.18}`} />
-      <path d={`M ${cx + w * 0.02} ${cy - h * 0.5} L ${cx + w * 0.02} ${cy + h * 0.18}`} />
-      <rect
-        x={cx - w * 0.48}
-        y={cy + h * 0.18}
-        width={w * 0.62}
-        height={h * 0.42}
-        fill={theme.bright}
-        opacity={0.85}
-        stroke="none"
-      />
-      <path d={`M ${cx - w * 0.17} ${cy + h * 0.6} L ${cx - w * 0.17} ${cy + h * 0.85}`} />
-      <path
-        d={`M ${cx + w * 0.2} ${cy + h * 0.1} q ${w * 0.4} ${-h * 0.1} ${w * 0.42} ${-h * 0.55} q ${-w * 0.46} ${h * 0.05} ${-w * 0.42} ${h * 0.55} Z`}
-        fill={theme.mid}
-        opacity={0.55}
-      />
-    </g>
-  );
-};

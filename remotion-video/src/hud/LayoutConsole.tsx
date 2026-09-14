@@ -21,7 +21,8 @@ import {
   StepTrace,
 } from "./charts";
 import { Callout, Globe, OrbitRing } from "./Globe";
-import { Battery, Gear, PlugMark, Turbine } from "./icons";
+import { FillerField } from "./Filler";
+import { Battery, Gear, Turbine } from "./icons";
 import {
   Grid,
   HudText,
@@ -71,11 +72,33 @@ const innerLeft = [box(600, 260, 480, 400), box(600, 690, 480, 330), box(600, 10
 
 // Right column: the clean-energy block plus its supporting readouts.
 const energyPanel = box(2040, 260, 620, 900);
-const turbineBox = box(2080, 310, 540, 520);
+// The turbine is locked up with the "Clean Energy" label rather than floating
+// in the panel: rotor above, words directly beneath, the pair centred together.
+const turbineBox = box(2110, 330, 480, 540);
 const rightPanels = [
   box(2700, 260, 240, 290),
   box(2700, 570, 240, 290),
   box(2700, 880, 240, 280),
+];
+
+/**
+ * Every rectangle inside the frame that the foreground layout leaves bare.
+ *
+ * The camera is locked, so the visible slice of the plane is fixed and can be
+ * worked out once: undoing the zoom, the 40.5 degree tilt and the 15.5 degree
+ * roll on a 1920x1080 frame gives roughly 3100 x 2610 plane units around the
+ * centre. That is wider and, above all, taller than the 3000 x 1900 layout - so
+ * bands above and below it are in shot - and the layout has holes of its own
+ * around the globe and under the bottom row.
+ */
+const GAPS: Box[] = [
+  box(-460, -470, 3920, 420), // band above the layout
+  box(-460, 1910, 3920, 450), // band below the layout
+  box(-460, -50, 500, 1960), // left of the layout
+  box(2960, -50, 500, 1960), // right of the layout
+  box(1100, 236, 920, 190), // above the globe
+  box(620, 1755, 1340, 150), // under the distribution block
+  box(2040, 1450, 900, 455), // lower right, behind the gears
 ];
 
 const energyBand = box(70, 1440, 480, 180);
@@ -145,6 +168,11 @@ export const LayoutConsole: React.FC<{ mirrored?: boolean }> = ({ mirrored = fal
           </g>
 
           <g transform={`translate(${PLANE_MARGIN_X} ${PLANE_MARGIN_Y})`}>
+            {/* --- secondary instruments, filling every gap in shot --------- */}
+            {GAPS.map((gap, i) => (
+              <FillerField key={`gap${i}`} box={gap} seed={`gap-${i}`} />
+            ))}
+
             {/* --- top strip ------------------------------------------------ */}
             {topPanels.map((b, i) => (
               <Panel key={`t${i}`} box={b} label={`CH ${String(i + 1).padStart(2, "0")}`}>
@@ -256,12 +284,11 @@ export const LayoutConsole: React.FC<{ mirrored?: boolean }> = ({ mirrored = fal
             <Panel box={energyPanel} label="RENEWABLE SOURCE">
               <Grid box={pad(energyPanel)} cols={9} rows={11} opacity={0.3} />
               <Turbine box={turbineBox} rpm={10} />
-              <PlugMark cx={energyPanel.x + energyPanel.w / 2} cy={energyPanel.y + 620} size={110} />
               <HudText
                 x={energyPanel.x + energyPanel.w / 2}
-                y={energyPanel.y + 740}
+                y={energyPanel.y + 690}
                 fill={theme.hot}
-                fontSize={40}
+                fontSize={44}
                 textAnchor="middle"
                 letterSpacing={5}
               >
@@ -341,8 +368,8 @@ export const LayoutConsole: React.FC<{ mirrored?: boolean }> = ({ mirrored = fal
             </Panel>
 
             {/* Gears in the lower corners, mostly cropped by the vignette. */}
-            <Gear cx={2760} cy={1690} r={210} teeth={18} rpm={2.4} opacity={0.35} />
-            <Gear cx={2450} cy={1830} r={130} teeth={13} rpm={-3.6} opacity={0.28} />
+            <Gear cx={2760} cy={1690} r={210} teeth={18} rpm={2.4} opacity={0.2} />
+            <Gear cx={2450} cy={1830} r={130} teeth={13} rpm={-3.6} opacity={0.16} />
 
             {/* Corner slates. */}
             <Label x={70} y={1700} size={12} tracking={4} opacity={0.65}>
