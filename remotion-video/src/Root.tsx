@@ -18,6 +18,16 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  GlobalNetwork,
+  globalNetworkSchema,
+} from "./global-network/GlobalNetwork";
+import {
+  DURATION_IN_FRAMES as NET_DURATION_IN_FRAMES,
+  FPS as NET_FPS,
+  WIDTH as NET_WIDTH,
+  HEIGHT as NET_HEIGHT,
+} from "./global-network/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +61,52 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+
+      {/* Global-network motion graphic. The artwork is one 1920x1080
+          vector scene stretched to the composition size, so the 4K
+          compositions are exact upscales of the 1080p ones — same
+          framing, same timing, same particle counts. Deliver from the
+          1080p ids; hand off the 4K ids in the project. */}
+      <Composition
+        id="GlobalNetwork"
+        component={GlobalNetwork}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_WIDTH}
+        height={NET_HEIGHT}
+        schema={globalNetworkSchema}
+        defaultProps={{ variant: "reference" as const }}
+      />
+      <Composition
+        id="GlobalNetwork4K"
+        component={GlobalNetwork}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_WIDTH * 2}
+        height={NET_HEIGHT * 2}
+        schema={globalNetworkSchema}
+        defaultProps={{ variant: "reference" as const }}
+      />
+      <Composition
+        id="GlobalNetworkBlue"
+        component={GlobalNetwork}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_WIDTH}
+        height={NET_HEIGHT}
+        schema={globalNetworkSchema}
+        defaultProps={{ variant: "darkBlue" as const }}
+      />
+      <Composition
+        id="GlobalNetworkBlue4K"
+        component={GlobalNetwork}
+        durationInFrames={NET_DURATION_IN_FRAMES}
+        fps={NET_FPS}
+        width={NET_WIDTH * 2}
+        height={NET_HEIGHT * 2}
+        schema={globalNetworkSchema}
+        defaultProps={{ variant: "darkBlue" as const }}
       />
     </>
   );
