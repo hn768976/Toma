@@ -60,12 +60,12 @@ from four reference clips. They share one component library
 (`src/data-dashboard/`) and differ in layout, palette weighting and
 camera move:
 
-| Composition   | Length     | The idea                                                                                                                    |
-| ------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `DashboardV1` | 10s / 300f | Energy markets. Near-frontal board, full legend, slow pull-back. The most legible of the four.                              |
-| `DashboardV2` | 10s / 300f | Household costs, close up. Long lens on the surface, diagonal drift, rack focus through three depth planes.                 |
-| `DashboardV3` | 14s / 420f | Asset classes. The deepest blue of the four; the camera crosses the board left to right, easing in through the middle of the shot. |
-| `DashboardV4` | 10s / 300f | Macro panel. The busiest layout, and the only board with visible edges - the defocused room shows past them.                |
+| Composition   | Length     | The idea                                                                                                                                                                                                                   |
+| ------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DashboardV1` | 10s / 300f | Energy markets. Near-frontal board, full legend, slow pull-back. The most legible of the four.                                                                                                                             |
+| `DashboardV2` | 10s / 300f | Household costs. Opens as a long lens on the surface - diagonal drift, rack focus through three depth planes - then pulls back to deep focus.                                                                              |
+| `DashboardV3` | 14s / 420f | Asset classes. The deepest blue of the four; the camera crosses the board left to right, easing in through the middle of the shot.                                                                                         |
+| `DashboardV4` | 10s / 300f | Macro panel. The busiest layout, and the only board with visible edges - the defocused room shows past them. Shares version 1's move, pushed further in: it opens deep inside the graph and pulls back to the whole panel. |
 
 Every version has a `-4K` twin (`DashboardV1-4K` and so on) at
 3840x2160. Both run the same component tree: the scene is drawn into a
@@ -74,9 +74,11 @@ and `resolutionScale` only changes the pixel size of that element and the
 CSS perspective distance. Nothing is authored twice, and the 4K output is
 genuinely resolution-independent rather than an upscale.
 
-All four are 30fps, and all four end the same way: the camera resolves
-wide on the completed graph, with every trace drawn, every bar grown and
-every callout placed. Nothing is still animating on the last frame.
+All four are 30fps, all four are framed by X and Y rules with tick
+marks registered to their value and time labels, and all four end the
+same way: the camera resolves wide on the completed graph, with every
+trace drawn, every bar grown and every callout placed. Nothing is still
+animating on the last frame.
 
 ### Rendering
 
@@ -96,8 +98,8 @@ editors read back washed out.
 - `src/data-dashboard/constants.ts` - fps, durations, stage size, palette
 - `src/data-dashboard/series.ts` - seeded random-walk series and formatting
 - `src/data-dashboard/camera.ts` - keyframed camera, stage units to CSS transform
-- `src/data-dashboard/components/` - grid, line series, histogram, donut,
-  dial, widgets, chips, markers, atmosphere
+- `src/data-dashboard/components/` - grid, axis rules and ticks, line
+  series, histogram, donut, dial, widgets, chips, markers, atmosphere
 - `src/data-dashboard/versions/` - the four films
 
 All generated values derive from an integer seed through `mulberry32`, so
