@@ -80,7 +80,9 @@ reflows between sizes, and no per-resolution tuning.
   panels, scrolling plots, gauges, heat grids, the dotted globe and its orbit
   ring, turbine, battery, gears.
 - `Atmosphere.tsx` - bloom, scanlines, tiled film grain, vignette and the
-  periodic light sweep.
+  periodic light sweep. Grain strength lives in `CleanEnergyHud.tsx` as
+  `GRAIN_OPACITY_GREEN` / `GRAIN_OPACITY_BLUE`; blue runs lighter because its
+  brighter surface makes the same grain read stronger.
 - `theme.ts` - the two palettes. No component knows which version it is in.
 - `rng.ts` - seeded randomness. Remotion re-mounts the tree every frame, so any
   value that must stay put between frames is derived from a seed rather than

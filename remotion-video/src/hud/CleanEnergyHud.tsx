@@ -7,6 +7,15 @@ import { ThemeProvider } from "./context";
 import { LayoutConsole } from "./LayoutConsole";
 import { BLUE_THEME, GREEN_THEME } from "./theme";
 
+/**
+ * Film grain strength, cut to a third of the original pass. The grain is the
+ * only noise source in the finish; the scanlines are a regular pattern and are
+ * left alone. Blue runs slightly lighter than green because its surface is
+ * brighter, so the same grain reads stronger on it.
+ */
+const GRAIN_OPACITY_GREEN = 0.033;
+const GRAIN_OPACITY_BLUE = 0.027;
+
 export const cleanEnergyHudSchema = z.object({
   /**
    * `reference` is the green console framed like the source clip;
@@ -85,7 +94,7 @@ export const CleanEnergyHud: React.FC<CleanEnergyHudProps> = ({
             <Atmosphere
               width={DESIGN_WIDTH}
               height={DESIGN_HEIGHT}
-              grainOpacity={mirrored ? 0.08 : 0.1}
+              grainOpacity={mirrored ? GRAIN_OPACITY_BLUE : GRAIN_OPACITY_GREEN}
             />
           </div>
         </AbsoluteFill>
