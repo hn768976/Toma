@@ -65,6 +65,17 @@ for (const [index, id] of ids.entries()) {
     concurrency: 4,
     jpegQuality: 95,
     crf: 17,
+    // The frames arrive as full-range JPEG. Left alone they reach the
+    // MP4 tagged yuvj420p / full range -- legal, but players and NLEs
+    // disagree about it and the picture can come back washed out or
+    // with crushed blacks. Asking for bt709 converts the range properly
+    // on the way through and tags the result, so what lands is ordinary
+    // limited-range Rec.709 that anything will read the same way.
+    pixelFormat: "yuv420p",
+    colorSpace: "bt709",
+    // Nothing in this series makes a sound; without this Remotion still
+    // lays down a silent AAC track.
+    muted: true,
     timeoutInMilliseconds: 180000,
     inputProps: {},
     onProgress: ({ renderedFrames }) => {
