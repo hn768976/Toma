@@ -62,6 +62,14 @@ npm run render:wall:green4k   # 4K green
 npm run render:wall:all       # all four
 ```
 
+Each script passes `--codec=h264 --crf=17 --muted --image-format=png
+--color-space=bt709`. The last three matter: without `--muted` Remotion
+writes a silent AAC track that stretches the container past the exact
+20.000s of video; the default JPEG intermediate rings around this much fine
+text before H.264 sees it; and the JPEG path otherwise yields full-range
+`yuvj420p`, which some NLEs read as limited range and show with crushed
+levels.
+
 4K renders roughly 4x the pixels of 1080p and holds ~2x the panel-bitmap
 memory. On a machine with little RAM per core, add `--concurrency=2`.
 
