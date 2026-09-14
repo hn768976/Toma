@@ -51,6 +51,16 @@ The two market-arrow pieces have their own notes in
 ready-made `npm run render:v1` / `render:v2` / `render:v1:4k` /
 `render:v2:4k` commands.
 
+**Packaging the market-arrow hand-off**
+
+```console
+bash scripts/package-delivery.sh
+```
+
+Zips the git-tracked project plus [`docs/DELIVERY.md`](docs/DELIVERY.md)
+into `dist-delivery/` (gitignored — it is a build artifact, rebuildable
+from source at any time).
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
