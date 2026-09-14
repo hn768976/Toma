@@ -7,7 +7,7 @@ reference, all built on the single supplied bacillus model.
 
 | | |
 |---|---|
-| Compositions | 11, all **3840×2160 @ 30fps** |
+| Compositions | 22, all **3840×2160 @ 30fps** |
 | 1080p delivery | the same compositions rendered with `--scale=0.5` |
 | Codec | H.264 / MP4 |
 | Length | each version matches its reference clip exactly |
@@ -16,12 +16,13 @@ There is no separate 1080p composition. Scale is a render-time
 argument, so the two resolutions cannot drift apart.
 
 ```bash
-npm run render:bacteria:1080p   # 11 × 1920×1080 H.264
-npm run render:bacteria:4k      # 11 × 3840×2160 H.264
-npm run stills:bacteria         # one colour + one matte frame per version
+npm run render:bacteria:1080p   # 22 × 1920×1080 H.264
+npm run render:bacteria:4k      # 22 × 3840×2160 H.264
+npm run stills:bacteria         # one frame from every composition
 ```
 
-Every composition also appears in `npm run dev` (Remotion Studio).
+`npm run dev` opens Remotion Studio with the compositions grouped into
+`Bacteria-Colour` and `Bacteria-Matte` folders.
 
 ## The model
 
@@ -68,23 +69,16 @@ relief, ribosome speckle, a fresnel edge, wrap lighting for the
 translucent gel, and a bright-field mode where the cell absorbs light
 and sits *darker* than the ground (versions 07 and 09).
 
-## Colour pass and matte tail
+## Colour and matte
 
-The reference stock clips carry their alpha as a white-on-black matte
-on the back of the timeline. Every version here ends the same way, but
-on a short tail rather than the half-and-half split those clips use:
+Each version ships as two clips of identical length: `<Version>.mp4` is
+the picture and `<Version>Matte.mp4` is its key.
 
-```
-frame 0 ─────────────── colour ───────────────┼─── matte ─── end
-                                            −2.5s
-```
-
-`MATTE_TAIL_SECONDS` sets the length, capped at a third of the clip so
-it cannot swallow a short one. The timeline runs straight through the
-cut — the matte picks the scene up exactly where the colour left it,
-same drift, same camera move — so the tail reads as a deliberate ending
-rather than a jump back to the top. Total length always equals the
-reference's.
+Both passes run the same timeline off the same seed, so frame *n* of
+the matte is exactly the alpha of frame *n* of the colour, all the way
+through — a full-length key rather than a sample of one. The matte is
+flat white on black: no backdrop, no defocus, no grade, no grain, and
+one canvas instead of three, since it has no depth of field to separate.
 
 Version 02 and version 05 answer the same source clip; the two uploads
 were byte-identical. Rather than ship a duplicate, 05 takes a second

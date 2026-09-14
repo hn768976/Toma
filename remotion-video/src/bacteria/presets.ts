@@ -182,7 +182,7 @@ export const PRESETS: Preset[] = [
   {
     id: "Bacteria02VioletCluster",
     title: "02 — Violet dark cluster",
-    reference: "istockphoto-2278455892 (colour pass)",
+    reference: "istockphoto-2278455892 (first read)",
     durationInFrames: 396, // 13.200s
     seed: 2027,
     camera: { fov: 34, z: [9.1, 8.1], panX: 0.22, panY: 0.14 },

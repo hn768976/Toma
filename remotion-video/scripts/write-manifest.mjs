@@ -16,7 +16,7 @@ const rows = blocks.map((block) => {
 const table = rows
   .map(
     (r) =>
-      `| \`${r.id}\` | ${r.title.replace(/^\d+ — /, "")} | ${r.reference} | ${r.frames} | ${r.seconds}s |`,
+      `| \`${r.id}\` | \`${r.id}Matte\` | ${r.title.replace(/^\d+ — /, "")} | ${r.reference} | ${r.frames} | ${r.seconds}s |`,
   )
   .join("\n");
 
@@ -27,45 +27,48 @@ writeFileSync(
   `# Delivery manifest
 
 Eleven versions of the microscopic-bacteria series, one per reference
-clip. Every one is built from the single supplied bacillus GLB, with no
-change to its geometry.
+clip, each delivered as a colour clip and a matching matte clip — 22
+files. Every one is built from the single supplied bacillus GLB, with
+no change to its geometry.
 
 ## Format
 
 | | |
 |---|---|
-| Compositions | 11, authored at **3840×2160 @ 30fps** |
+| Compositions | 22, authored at **3840×2160 @ 30fps** |
 | Delivered | **1920×1080**, H.264 / MP4, yuv420p, limited range, Rec.709 |
 | Audio | none |
-| Structure | colour pass, then a ~2.5s white-on-black matte tail |
+| Pairing | \`<Version>.mp4\` is the picture, \`<Version>Matte.mp4\` is its key |
+
+Both passes of a version share a duration, a seed and a timeline, so
+frame *n* of the matte is exactly the alpha of frame *n* of the colour,
+over the full length of the clip.
 
 The 1080p files are rendered from the 4K compositions with
 \`--scale=0.5\`; there is no separate 1080p composition to keep in sync.
 
 \`\`\`bash
 npm install
-npm run render:bacteria:1080p   # 11 × 1920×1080
-npm run render:bacteria:4k      # 11 × 3840×2160
-npm run dev                     # Remotion Studio, all 11 compositions
+npm run render:bacteria:1080p   # 22 × 1920×1080
+npm run render:bacteria:4k      # 22 × 3840×2160
+npm run dev                     # Remotion Studio: Bacteria-Colour and Bacteria-Matte folders
 \`\`\`
 
 ## Versions
 
-| Composition | Look | Reference | Frames | Duration |
-|---|---|---|---|---|
+| Colour | Matte | Look | Reference | Frames | Duration |
+|---|---|---|---|---|---|
 ${table}
 
-${totalFrames} frames in total. Each duration matches its reference clip exactly.
+${totalFrames} frames per pass, ${totalFrames * 2} in total. Each duration
+matches its reference clip exactly.
 
-## The matte tail
+## Mattes
 
-Every version ends on roughly 2.5 seconds of white-on-black matte,
-following how the reference stock clips deliver their alpha. The
-timeline runs continuously through the cut — the matte carries the
-scene on from exactly where the colour pass left it — so the tail plays
-as an ending rather than a restart. Length is one constant,
-\`MATTE_TAIL_SECONDS\` in \`src/bacteria/constants.ts\`, capped at a third
-of the clip.
+Each version's matte ships as its own clip, the same length as the
+colour and keyed to it frame for frame — a full-length key, so you can
+pull any part of the clip rather than a sample of it. The matte is flat
+white on black: no backdrop, no defocus, no grade, no grain.
 
 ## A note on versions 02 and 05
 

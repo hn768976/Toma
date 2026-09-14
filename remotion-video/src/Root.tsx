@@ -1,6 +1,6 @@
 import "./index.css";
 import "./load-fonts";
-import { Composition } from "remotion";
+import { Composition, Folder } from "remotion";
 import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
@@ -22,6 +22,7 @@ import {
   BacteriaVersion,
   bacteriaVersionSchema,
   PRESETS,
+  PASSES,
   FPS as BACTERIA_FPS,
   WIDTH_4K,
   HEIGHT_4K,
@@ -63,23 +64,32 @@ export const RemotionRoot: React.FC = () => {
 
       {/*
         The microscopic-bacteria series: eleven versions, one per
-        reference clip. Each is authored natively at 4K/30fps and each
-        runs exactly as long as the clip it answers to. The 1080p
-        deliverables come off these same compositions via `--scale=0.5`,
-        so there is no second set of comps to keep in sync.
+        reference clip, each delivered as a colour clip and a matching
+        matte clip -- 22 compositions in all.
+
+        Both passes of a version share a duration, a seed and a
+        timeline, so the matte keys the colour frame for frame over the
+        full length. Everything is authored natively at 4K/30fps, and
+        the 1080p deliverables come off these same compositions via
+        `--scale=0.5`, so there is no second set of comps to keep in
+        sync.
       */}
-      {PRESETS.map((preset) => (
-        <Composition
-          key={preset.id}
-          id={preset.id}
-          component={BacteriaVersion}
-          durationInFrames={preset.durationInFrames}
-          fps={BACTERIA_FPS}
-          width={WIDTH_4K}
-          height={HEIGHT_4K}
-          schema={bacteriaVersionSchema}
-          defaultProps={{ presetId: preset.id }}
-        />
+      {PASSES.map((pass) => (
+        <Folder key={pass} name={pass === "colour" ? "Bacteria-Colour" : "Bacteria-Matte"}>
+          {PRESETS.map((preset) => (
+            <Composition
+              key={`${preset.id}-${pass}`}
+              id={pass === "colour" ? preset.id : `${preset.id}Matte`}
+              component={BacteriaVersion}
+              durationInFrames={preset.durationInFrames}
+              fps={BACTERIA_FPS}
+              width={WIDTH_4K}
+              height={HEIGHT_4K}
+              schema={bacteriaVersionSchema}
+              defaultProps={{ presetId: preset.id, pass }}
+            />
+          ))}
+        </Folder>
       ))}
     </>
   );

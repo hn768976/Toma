@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { z } from "zod";
-import { BASE_HEIGHT, MATTE_TAIL_SECONDS } from "./constants";
+import { BASE_HEIGHT, PASSES } from "./constants";
 import { getPreset } from "./presets";
 import { useBacillusGeometry } from "./geometry";
 import { LayerCanvas, MatteCanvas } from "./SwarmLayer";
@@ -10,6 +10,7 @@ import { Grade } from "./Grade";
 
 export const bacteriaVersionSchema = z.object({
   presetId: z.string(),
+  pass: z.enum(PASSES),
 });
 
 export type BacteriaVersionProps = z.infer<typeof bacteriaVersionSchema>;
@@ -30,15 +31,20 @@ const hexToRgba = (hex: string, alpha: number) => {
 };
 
 /**
- * One version of the series.
+ * One pass of one version.
  *
- * The colour pass runs almost the whole clip, then the picture cuts to
- * a short white-on-black matte tail -- the same cells, the same motion,
- * carrying straight on from where the colour left off, so the cut reads
- * as an ending rather than a restart. Total length always equals the
- * reference clip's.
+ * Colour and matte are delivered as two separate clips of identical
+ * length, and both run the very same timeline off the very same seed:
+ * frame n of the matte is exactly the alpha of frame n of the colour,
+ * all the way through. That makes the matte a usable full-length key
+ * rather than a sample of one.
+ *
+ * Length always equals the reference clip's.
  */
-export const BacteriaVersion: React.FC<BacteriaVersionProps> = ({ presetId }) => {
+export const BacteriaVersion: React.FC<BacteriaVersionProps> = ({
+  presetId,
+  pass,
+}) => {
   const preset = getPreset(presetId);
   const frame = useCurrentFrame();
   const { fps, width, height, durationInFrames } = useVideoConfig();
@@ -47,16 +53,10 @@ export const BacteriaVersion: React.FC<BacteriaVersionProps> = ({ presetId }) =>
   const scale = height / BASE_HEIGHT;
 
 
-  // Never let the tail eat more than a third of a short clip.
-  const matteFrames = Math.min(
-    Math.round(MATTE_TAIL_SECONDS * fps),
-    Math.floor(durationInFrames / 3),
-  );
-  const colourFrames = durationInFrames - matteFrames;
-  const matte = frame >= colourFrames;
+  const matte = pass === "matte";
 
-  // One continuous timeline across both passes, so the swarm keeps
-  // drifting and the camera keeps moving through the cut.
+  // Identical for both passes -- this is what keeps the matte keyed to
+  // the colour frame for frame.
   const seconds = frame / fps;
   const progress = durationInFrames > 1 ? frame / (durationInFrames - 1) : 0;
 

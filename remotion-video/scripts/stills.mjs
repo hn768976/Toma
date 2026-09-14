@@ -1,14 +1,20 @@
-// Calibration harness: bundle once, then pull a colour still and a
-// matte still from every composition in the series, so all eleven looks
-// and their keys can be compared side by side without re-bundling.
+// Calibration harness: bundle once, then pull one frame from every
+// composition in the series, so all eleven looks and their keys can be
+// compared side by side without re-bundling each time.
+//
+//   node scripts/stills.mjs out/bacteria-stills 0.45 0.5
+//
+// The third argument is how far into the clip to sample (0-1); a fourth
+// renders only the named compositions.
 import { bundle } from "@remotion/bundler";
 import { selectComposition, renderStill } from "@remotion/renderer";
 import { enableTailwind } from "@remotion/tailwind-v4";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { PRESET_IDS } from "./preset-ids.mjs";
 
-const outDir = process.argv[2];
-const at = Number(process.argv[3] ?? 0.45); // fraction into each pass
+const outDir = process.argv[2] ?? "out/bacteria-stills";
+const at = Number(process.argv[3] ?? 0.45);
 const scale = Number(process.argv[4] ?? 0.5);
 const only = process.argv[5];
 
@@ -23,23 +29,7 @@ const serveUrl = await bundle({
   webpackOverride: enableTailwind,
 });
 
-const ids = (
-  only
-    ? only.split(",")
-    : [
-        "Bacteria01ElectricCyan",
-        "Bacteria02VioletCluster",
-        "Bacteria03PaleBlueSoftFocus",
-        "Bacteria04SaturatedCobalt",
-        "Bacteria05VioletMatte",
-        "Bacteria06MagentaBloom",
-        "Bacteria07GoldenField",
-        "Bacteria08LavenderProbiotic",
-        "Bacteria09BrightfieldGrey",
-        "Bacteria10CrimsonSalmonella",
-        "Bacteria11SteelTeal",
-      ]
-).map((s) => s.trim());
+const ids = only ? only.split(",").map((s) => s.trim()) : PRESET_IDS;
 
 for (const id of ids) {
   const composition = await selectComposition({
@@ -48,22 +38,15 @@ for (const id of ids) {
     inputProps: {},
     browserExecutable,
   });
-  const half = Math.round(composition.durationInFrames * 0.5);
-  const passes = [
-    ["colour", Math.floor(half * at)],
-    ["matte", half + Math.floor((composition.durationInFrames - half) * at)],
-  ];
-  for (const [label, frame] of passes) {
-    await renderStill({
-      composition,
-      serveUrl,
-      output: path.join(outDir, `${id}.${label}.png`),
-      frame,
-      scale,
-      chromiumOptions: { gl: "swangle" },
-      browserExecutable,
-      inputProps: {},
-    });
-  }
+  await renderStill({
+    composition,
+    serveUrl,
+    output: path.join(outDir, `${id}.png`),
+    frame: Math.floor(composition.durationInFrames * at),
+    scale,
+    chromiumOptions: { gl: "swangle" },
+    browserExecutable,
+    inputProps: {},
+  });
   console.log("done", id);
 }

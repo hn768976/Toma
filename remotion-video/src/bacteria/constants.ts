@@ -22,16 +22,14 @@ export const HEIGHT_4K = BASE_HEIGHT * 2;
 export const MODEL_SRC = "models/bacillus.glb";
 
 /**
- * Every version ends on a short white-on-black matte tail, the way the
- * reference stock clips carry their alpha -- but kept to a few seconds
- * rather than the half-and-half split those clips use, so the colour
- * pass gets nearly the whole runtime.
- *
- * The motion runs straight through the cut: the matte picks up the
- * scene exactly where the colour pass left it, so the tail reads as a
- * deliberate ending rather than a jump back to the top.
+ * Each version is delivered as two separate files: the colour pass, and
+ * its matte as a standalone clip of the same length. Both run the same
+ * timeline from the same seed, so frame n of the matte is exactly the
+ * alpha of frame n of the colour -- a full-length key, not a sample.
  */
-export const MATTE_TAIL_SECONDS = 2.5;
+export const PASSES = ["colour", "matte"] as const;
+
+export type Pass = (typeof PASSES)[number];
 
 /** Model bounding box (metres, from the GLB accessor min/max). */
 export const MODEL_HALF_EXTENT = { x: 0.9509, y: 0.4911, z: 0.3153 };

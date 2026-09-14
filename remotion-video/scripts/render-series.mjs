@@ -1,6 +1,7 @@
 // Renders the microscopic-bacteria series.
 //
-// The eleven compositions are authored at 4K; this bundles once and
+// Twenty-two compositions -- eleven versions, each as a colour clip and
+// a matching matte clip. All are authored at 4K; this bundles once and
 // renders every one of them at whatever scale it is asked for, so the
 // 1080p deliverables and the 4K masters come off the same source with
 // no second set of compositions to keep in sync.
