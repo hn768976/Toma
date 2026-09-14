@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { STAGE_HEIGHT, STAGE_WIDTH } from "./constants";
 import { RALLY_TREND } from "./series";
 
@@ -23,6 +23,9 @@ export const TrendLine: React.FC<{
   glowColor,
   glowBlur,
 }) => {
+  // Unique per rendered copy — <DepthOfField> paints the scene twice.
+  const glowId = `trend-glow-${useId().replace(/:/g, "")}`;
+
   const exact = head * (RALLY_TREND.length - 1);
   const lastWhole = Math.floor(exact);
   const localT = exact - lastWhole;
@@ -55,7 +58,7 @@ export const TrendLine: React.FC<{
       style={{ position: "absolute", inset: 0, overflow: "visible" }}
     >
       <defs>
-        <filter id="trend-glow" x="-30%" y="-30%" width="160%" height="160%">
+        <filter id={glowId} x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation={glowBlur} />
         </filter>
       </defs>
@@ -66,7 +69,7 @@ export const TrendLine: React.FC<{
         strokeWidth={strokeWidth * 1.9}
         strokeLinecap="round"
         strokeLinejoin="round"
-        filter="url(#trend-glow)"
+        filter={`url(#${glowId})`}
       />
       <path
         d={d}

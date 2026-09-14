@@ -144,7 +144,6 @@ export const RallyScene: React.FC<z.infer<typeof rallySchema>> = ({
       />
 
       <MarketArrow
-        idPrefix="rally-arrow"
         direction="up"
         x={arrowX}
         tipY={arrowTipY}

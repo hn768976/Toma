@@ -138,8 +138,7 @@ export const DownturnScene: React.FC<z.infer<typeof downturnSchema>> = ({
           fontFamily={MONO_FONT_FAMILY_NAME}
         />
         <MarketArrow
-          idPrefix="downturn-arrow"
-          direction="down"
+            direction="down"
           x={DOWNTURN.arrowX}
           tipY={tipY}
           tailY={-260}

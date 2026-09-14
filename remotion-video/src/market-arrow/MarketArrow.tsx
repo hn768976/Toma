@@ -1,9 +1,7 @@
-import React from "react";
+import React, { useId } from "react";
 import { STAGE_HEIGHT, STAGE_WIDTH } from "./constants";
 
 export type ArrowProps = {
-  /** Unique per instance — SVG defs are document-global. */
-  idPrefix: string;
   direction: "up" | "down";
   /** Centreline of the shaft, in stage px. */
   x: number;
@@ -26,7 +24,6 @@ export type ArrowProps = {
 // The hero arrow for both scenes. Corners are softened by stroking the
 // same path with a round line join rather than by hand-rolling arcs.
 export const MarketArrow: React.FC<ArrowProps> = ({
-  idPrefix,
   direction,
   x,
   tipY,
@@ -57,8 +54,12 @@ export const MarketArrow: React.FC<ArrowProps> = ({
     "Z",
   ].join(" ");
 
-  const gradientId = `${idPrefix}-grad`;
-  const glowId = `${idPrefix}-glow`;
+  // SVG defs are document-global, and <DepthOfField> renders the whole
+  // scene twice, so these ids have to be unique per rendered copy.
+  // Colons are stripped: they are legal in an id but awkward in url(#...).
+  const uid = useId().replace(/:/g, "");
+  const gradientId = `arrow-grad-${uid}`;
+  const glowId = `arrow-glow-${uid}`;
   const round = Math.max(2, shaftWidth * 0.1);
 
   return (
