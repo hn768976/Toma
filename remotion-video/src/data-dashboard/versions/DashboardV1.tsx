@@ -2,6 +2,7 @@ import React from "react";
 import { z } from "zod";
 import { AbsoluteFill } from "remotion";
 import { GlowSpot, Grade, Vignette } from "../components/Atmosphere";
+import { AxisLines } from "../components/AxisLines";
 import { AxisTicks } from "../components/AxisTicks";
 import { DashboardStage } from "../components/DashboardStage";
 import { DonutChart } from "../components/DonutChart";
@@ -150,7 +151,20 @@ export const DashboardV1: React.FC<z.infer<typeof dashboardV1Schema>> = ({
         majorColor="rgba(125, 180, 245, 0.26)"
       />
 
-      {/* Left axis and year strip. */}
+      {/* The X and Y rules the plot is read against, then the value
+          and time labels that sit outside them. */}
+      <AxisLines
+        x={225}
+        y={660}
+        width={2535}
+        height={960}
+        yTickOffset={120}
+        yTickStep={78}
+        yTickCount={9}
+        xTickOffset={75}
+        xTickStep={300}
+        xTickCount={9}
+      />
       <AxisTicks
         x={205}
         y={780}

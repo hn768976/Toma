@@ -2,6 +2,7 @@ import React from "react";
 import { z } from "zod";
 import { AbsoluteFill } from "remotion";
 import { GlowSpot, Grade, Vignette } from "../components/Atmosphere";
+import { AxisLines } from "../components/AxisLines";
 import { AxisTicks } from "../components/AxisTicks";
 import { DashboardStage } from "../components/DashboardStage";
 import { Histogram } from "../components/Histogram";
@@ -73,9 +74,9 @@ export const DashboardV3: React.FC<z.infer<typeof dashboardV3Schema>> = ({
   resolutionScale,
 }) => {
   const band = (offset: number): PlotBand => ({
-    x: 260,
+    x: 370,
     y: 420 + offset,
-    width: 2300,
+    width: 2320,
     height: 260,
   });
 
@@ -115,9 +116,22 @@ export const DashboardV3: React.FC<z.infer<typeof dashboardV3Schema>> = ({
         majorColor="rgba(110, 175, 245, 0.2)"
       />
 
-      {/* Repeating value column down the left edge. */}
+      {/* The X and Y rules, then the repeating value column outside
+          them down the left edge. */}
+      <AxisLines
+        x={350}
+        y={300}
+        width={2350}
+        height={1200}
+        yTickOffset={30}
+        yTickStep={72}
+        yTickCount={12}
+        xTickOffset={90}
+        xTickStep={226}
+        xTickCount={10}
+      />
       <AxisTicks
-        x={440}
+        x={330}
         y={330}
         step={72}
         count={12}
@@ -220,9 +234,9 @@ export const DashboardV3: React.FC<z.infer<typeof dashboardV3Schema>> = ({
       </g>
 
       <Histogram
-        x={300}
+        x={370}
         baseline={1500}
-        width={2400}
+        width={2330}
         maxHeight={310}
         count={104}
         seed={79}
@@ -231,27 +245,18 @@ export const DashboardV3: React.FC<z.infer<typeof dashboardV3Schema>> = ({
         drawDuration={430}
       />
       <line
-        x1={300}
-        y1={1500}
+        x1={350}
+        y1={1514}
         x2={2700}
-        y2={1500}
+        y2={1514}
         stroke="#f07a3c"
-        strokeWidth={5}
-        opacity={0.9}
-      />
-      <line
-        x1={300}
-        y1={1518}
-        x2={2700}
-        y2={1518}
-        stroke="#dfeaf7"
-        strokeWidth={3}
-        opacity={0.5}
+        strokeWidth={4}
+        opacity={0.85}
       />
       <AxisTicks
-        x={420}
+        x={440}
         y={1572}
-        step={240}
+        step={226}
         count={10}
         from={0}
         increment={0}

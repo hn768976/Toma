@@ -2,6 +2,7 @@ import React from "react";
 import { z } from "zod";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { GlowSpot, Grade, Vignette } from "../components/Atmosphere";
+import { AxisLines } from "../components/AxisLines";
 import { AxisTicks } from "../components/AxisTicks";
 import { DashboardStage } from "../components/DashboardStage";
 import { LabelChip } from "../components/LabelChip";
@@ -235,13 +236,15 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
           increment={-280}
           fontSize={38}
         />
-        <line
-          x1={330}
-          y1={350}
-          x2={330}
-          y2={1480}
-          stroke="rgba(120, 180, 245, 0.35)"
-          strokeWidth={3}
+        <AxisLines
+          x={330}
+          y={350}
+          width={2550}
+          height={1250}
+          which="y"
+          yTickOffset={130}
+          yTickStep={112}
+          yTickCount={10}
         />
         {TRACES.filter((t) => t.depth === "far").map((trace, i) => (
           <LineSeries
@@ -418,17 +421,20 @@ export const DashboardV2: React.FC<z.infer<typeof dashboardV2Schema>> = ({
 
       {/* Bottom quarter rail, in the reference's orange. */}
       <g filter="url(#dof-near)">
-        <line
-          x1={120}
-          y1={1600}
-          x2={2880}
-          y2={1600}
-          stroke="#f07a3c"
+        <AxisLines
+          x={330}
+          y={350}
+          width={2550}
+          height={1250}
+          which="x"
+          xTickOffset={50}
+          xTickStep={340}
+          xTickCount={8}
+          color="rgba(240, 150, 80, 0.9)"
           strokeWidth={5}
-          opacity={0.85}
         />
         <AxisTicks
-          x={280}
+          x={380}
           y={1668}
           step={340}
           count={8}

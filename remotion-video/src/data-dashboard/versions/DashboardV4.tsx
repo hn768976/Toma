@@ -2,6 +2,7 @@ import React from "react";
 import { z } from "zod";
 import { AbsoluteFill } from "remotion";
 import { GlowSpot, Grade, Vignette } from "../components/Atmosphere";
+import { AxisLines } from "../components/AxisLines";
 import { AxisTicks } from "../components/AxisTicks";
 import { DashboardStage } from "../components/DashboardStage";
 import { DonutChart } from "../components/DonutChart";
@@ -40,7 +41,7 @@ const CAMERA: CameraKeyframe[] = [
     rotateX: 6.5,
     rotateY: -13,
     rotateZ: -1.6,
-    scale: 0.78,
+    scale: 1.05,
   },
   {
     frame: 300,
@@ -67,9 +68,9 @@ export const DashboardV4: React.FC<z.infer<typeof dashboardV4Schema>> = ({
   resolutionScale,
 }) => {
   const band = (offset: number): PlotBand => ({
-    x: 180,
+    x: 360,
     y: 600 + offset,
-    width: 2640,
+    width: 2460,
     height: 250,
   });
 
@@ -131,8 +132,32 @@ export const DashboardV4: React.FC<z.infer<typeof dashboardV4Schema>> = ({
         majorColor="rgba(120, 180, 245, 0.22)"
       />
 
+      {/* X and Y rules, with a second value scale on the right edge. */}
+      <AxisLines
+        x={350}
+        y={400}
+        width={2470}
+        height={1070}
+        yTickOffset={50}
+        yTickStep={56}
+        yTickCount={17}
+        xTickOffset={90}
+        xTickStep={196}
+        xTickCount={13}
+      />
+      <AxisLines
+        x={350}
+        y={400}
+        width={2470}
+        height={1070}
+        which="y"
+        side="right"
+        yTickOffset={50}
+        yTickStep={56}
+        yTickCount={17}
+      />
       <AxisTicks
-        x={330}
+        x={320}
         y={450}
         step={56}
         count={17}
@@ -300,9 +325,9 @@ export const DashboardV4: React.FC<z.infer<typeof dashboardV4Schema>> = ({
       />
 
       <Histogram
-        x={180}
+        x={360}
         baseline={1470}
-        width={2640}
+        width={2460}
         maxHeight={330}
         count={132}
         seed={431}
@@ -310,18 +335,10 @@ export const DashboardV4: React.FC<z.infer<typeof dashboardV4Schema>> = ({
         drawStart={-130}
         drawDuration={330}
       />
-      <line
-        x1={180}
-        y1={1470}
-        x2={2820}
-        y2={1470}
-        stroke="rgba(150, 200, 250, 0.4)"
-        strokeWidth={3}
-      />
       <AxisTicks
-        x={260}
+        x={440}
         y={1535}
-        step={216}
+        step={196}
         count={13}
         from={0}
         increment={0}
