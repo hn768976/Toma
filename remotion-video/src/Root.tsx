@@ -19,6 +19,20 @@ import {
   FPS as RING_FPS,
 } from "./particle-ring/constants";
 
+import {
+  GrowthTimeline,
+  growthTimelineSchema,
+  growthTimelineChevronDefaults,
+  growthTimelineBarsDefaults,
+} from "./growth-timeline/GrowthTimeline";
+import {
+  BASE_WIDTH as GT_WIDTH,
+  BASE_HEIGHT as GT_HEIGHT,
+  FPS as GT_FPS,
+  V1_DURATION_IN_FRAMES,
+  V2_DURATION_IN_FRAMES,
+} from "./growth-timeline/constants";
+
 export const RemotionRoot: React.FC = () => {
   return (
     <>
@@ -51,6 +65,46 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="GrowthTimelineV1"
+        component={GrowthTimeline}
+        durationInFrames={V1_DURATION_IN_FRAMES}
+        fps={GT_FPS}
+        width={GT_WIDTH}
+        height={GT_HEIGHT}
+        schema={growthTimelineSchema}
+        defaultProps={growthTimelineChevronDefaults}
+      />
+      <Composition
+        id="GrowthTimelineV1-4K"
+        component={GrowthTimeline}
+        durationInFrames={V1_DURATION_IN_FRAMES}
+        fps={GT_FPS}
+        width={GT_WIDTH * 2}
+        height={GT_HEIGHT * 2}
+        schema={growthTimelineSchema}
+        defaultProps={{ ...growthTimelineChevronDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="GrowthTimelineV2"
+        component={GrowthTimeline}
+        durationInFrames={V2_DURATION_IN_FRAMES}
+        fps={GT_FPS}
+        width={GT_WIDTH}
+        height={GT_HEIGHT}
+        schema={growthTimelineSchema}
+        defaultProps={growthTimelineBarsDefaults}
+      />
+      <Composition
+        id="GrowthTimelineV2-4K"
+        component={GrowthTimeline}
+        durationInFrames={V2_DURATION_IN_FRAMES}
+        fps={GT_FPS}
+        width={GT_WIDTH * 2}
+        height={GT_HEIGHT * 2}
+        schema={growthTimelineSchema}
+        defaultProps={{ ...growthTimelineBarsDefaults, resolutionScale: 2 }}
       />
     </>
   );
