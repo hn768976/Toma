@@ -26,7 +26,12 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:wall:blue": "remotion render CodeWallBlue1080 out/code-wall-blue-1080p.mp4 --codec=h264 --crf=17",
+    "render:wall:green": "remotion render CodeWallGreen1080 out/code-wall-green-1080p.mp4 --codec=h264 --crf=17",
+    "render:wall:blue4k": "remotion render CodeWallBlue4K out/code-wall-blue-4k.mp4 --codec=h264 --crf=17",
+    "render:wall:green4k": "remotion render CodeWallGreen4K out/code-wall-green-4k.mp4 --codec=h264 --crf=17",
+    "render:wall:all": "npm run render:wall:blue && npm run render:wall:green && npm run render:wall:blue4k && npm run render:wall:green4k"
   },
   "sideEffects": [
     "*.css",

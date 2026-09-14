@@ -18,6 +18,13 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import { CodeWall, codeWallSchema, codeWallDefaults } from "./code-wall/CodeWall";
+import {
+  BASE_WIDTH as WALL_WIDTH,
+  BASE_HEIGHT as WALL_HEIGHT,
+  DURATION_IN_FRAMES as WALL_DURATION_IN_FRAMES,
+  FPS as WALL_FPS,
+} from "./code-wall/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +58,52 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+
+      {/*
+        Code wall: 20s @ 30fps, two colourways, each mastered at 4K with a
+        matching 1080p composition. resolutionScale must always equal
+        width / 1920, or the canvas and the output size drift apart.
+      */}
+      <Composition
+        id="CodeWallBlue4K"
+        component={CodeWall}
+        durationInFrames={WALL_DURATION_IN_FRAMES}
+        fps={WALL_FPS}
+        width={WALL_WIDTH * 2}
+        height={WALL_HEIGHT * 2}
+        schema={codeWallSchema}
+        defaultProps={{ ...codeWallDefaults, theme: "blue", resolutionScale: 2 }}
+      />
+      <Composition
+        id="CodeWallBlue1080"
+        component={CodeWall}
+        durationInFrames={WALL_DURATION_IN_FRAMES}
+        fps={WALL_FPS}
+        width={WALL_WIDTH}
+        height={WALL_HEIGHT}
+        schema={codeWallSchema}
+        defaultProps={{ ...codeWallDefaults, theme: "blue", resolutionScale: 1 }}
+      />
+      <Composition
+        id="CodeWallGreen4K"
+        component={CodeWall}
+        durationInFrames={WALL_DURATION_IN_FRAMES}
+        fps={WALL_FPS}
+        width={WALL_WIDTH * 2}
+        height={WALL_HEIGHT * 2}
+        schema={codeWallSchema}
+        defaultProps={{ ...codeWallDefaults, theme: "green", resolutionScale: 2 }}
+      />
+      <Composition
+        id="CodeWallGreen1080"
+        component={CodeWall}
+        durationInFrames={WALL_DURATION_IN_FRAMES}
+        fps={WALL_FPS}
+        width={WALL_WIDTH}
+        height={WALL_HEIGHT}
+        schema={codeWallSchema}
+        defaultProps={{ ...codeWallDefaults, theme: "green", resolutionScale: 1 }}
       />
     </>
   );
