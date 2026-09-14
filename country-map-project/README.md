@@ -22,6 +22,14 @@ npm install
 npx remotion studio
 ```
 
+> **If you received this as three zips** — `country-map-project-1-source.zip`,
+> `-2-relief.zip` and `-3-satellite.zip` — unzip all three into the same folder
+> first. They are split by directory, not by byte range, so each one is a
+> complete, valid archive and the order does not matter:
+> `unzip -o 'country-map-project-*.zip' -d country-map-project`.
+> `scripts/package-zip.sh --parts` regenerates them; without the flag it writes
+> the single `country-map-project.zip`.
+
 The studio opens with every registered composition. Nothing is fetched at render
 time — the projected vectors, the label positions and the pre-warped rasters are
 all baked into `src/data/` and `public/`.
