@@ -181,7 +181,7 @@ export const LOOKS: Look[] = [
       vignetteColor: "#000208",
       grain: 0.05,
     },
-    bloom: { color: "#c0389b", x: 57, y: 44, size: 44, opacity: 0.62, pulse: 0.1 },
+    bloom: { color: "#c0389b", x: 54, y: 43, size: 36, opacity: 0.38, pulse: 0.1 },
     mat: {
       capsid: "#0e1c4e",
       spike: "#3fd2ff",
@@ -192,7 +192,7 @@ export const LOOKS: Look[] = [
       rimPower: 3.2,
       rimStrength: 1.05,
       sssColor: "#ff4f93",
-      sss: 0.58,
+      sss: 0.42,
       specular: 0.75,
       shininess: 42,
       bump: 0.55,

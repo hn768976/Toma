@@ -227,6 +227,7 @@ export const Vignette: React.FC<{ look: Look }> = ({ look }) => (
 export const Grain: React.FC<{ look: Look }> = ({ look }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
+  const s = useScale();
   if (look.bg.grain <= 0) return null;
 
   // A new seed per frame keeps the grain alive without any non-deterministic
@@ -239,7 +240,9 @@ export const Grain: React.FC<{ look: Look }> = ({ look }) => {
         <filter id={`grain-${frame}`}>
           <feTurbulence
             type="fractalNoise"
-            baseFrequency="0.8"
+            // baseFrequency is in pixels, so it has to scale with the
+            // composition or 4K would get half-size grain relative to frame.
+            baseFrequency={0.8 / s}
             numOctaves={2}
             seed={seed}
           />
