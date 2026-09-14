@@ -37,6 +37,20 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Compositions in this project
+
+| Composition | Size | fps | Length |
+| --- | --- | --- | --- |
+| `BluetoothExplainer` | 1920x1080 | 30 | 30 s |
+| `ParticleRingHalo` / `ParticleRingHalo4K` | 1920x1080 / 3840x2160 | 25 | 8 s (loop) |
+| `MarketDownturn4K` / `MarketDownturn1080` | 3840x2160 / 1920x1080 | 30 | 10 s |
+| `MarketRally4K` / `MarketRally1080` | 3840x2160 / 1920x1080 | 30 | 12 s |
+
+The two market-arrow pieces have their own notes in
+[`src/market-arrow/README.md`](src/market-arrow/README.md), including the
+ready-made `npm run render:v1` / `render:v2` / `render:v1:4k` /
+`render:v2:4k` commands.
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).

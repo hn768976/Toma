@@ -26,7 +26,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:v1": "remotion render MarketDownturn1080 out/market-downturn-v1_1080p.mp4 --codec=h264 --image-format=png --crf=17 --muted",
+    "render:v2": "remotion render MarketRally1080 out/market-rally-v2_1080p.mp4 --codec=h264 --image-format=png --crf=17 --muted",
+    "render:v1:4k": "remotion render MarketDownturn4K out/market-downturn-v1_4k.mp4 --codec=h264 --image-format=png --crf=17 --muted",
+    "render:v2:4k": "remotion render MarketRally4K out/market-rally-v2_4k.mp4 --codec=h264 --image-format=png --crf=17 --muted"
   },
   "sideEffects": [
     "*.css",
