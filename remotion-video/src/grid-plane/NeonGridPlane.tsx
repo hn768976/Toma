@@ -8,7 +8,22 @@ import {
 } from "remotion";
 import { z } from "zod";
 import { BASE_HEIGHT, BASE_WIDTH } from "./constants";
-import { Camera, depthBand, NEAR, project, projectSegment } from "./camera";
+import {
+  Camera,
+  depthAt,
+  depthBand,
+  NEAR,
+  project,
+  projectPolygon,
+  projectSegment,
+} from "./camera";
+import {
+  busbarPath,
+  CellSpec,
+  cornerDiamondPath,
+  detailFade,
+  gapLinePath,
+} from "./solar-surface";
 import { hash2, seeded } from "./random";
 
 export const neonGridSchema = z.object({
@@ -31,19 +46,34 @@ export const neonGridDefaults: NeonGridProps = {
   dustCount: 520,
 };
 
-/** World-space spacing of the bright structural lines. */
+/** World-space pitch of the panels, and so of the bright seams between them. */
 const MAJOR = 4.4;
-/** Sub-divisions of a major cell, i.e. the fine mesh inside each square. */
-const SUBDIVISIONS = 12;
-const FINE = MAJOR / SUBDIVISIONS;
+/** Half-width of the seam, i.e. how far each panel is inset from its cell. */
+const SEAM = 0.1;
+
+/**
+ * The panel face. Square panels, so the cell count matches on both axes; the
+ * cells themselves are static — only the seams between panels ever light up.
+ */
+const CELL_SPEC: CellSpec = {
+  cellsX: 10,
+  cellsZ: 10,
+  busbars: 2,
+  diamond: 0.095,
+};
+
+/** Depths at which each kind of cell detail is fully drawn / fully gone. */
+const DIAMOND_FADE: [number, number] = [12, 26];
+const BUSBAR_FADE: [number, number] = [10, 24];
+const GAP_FADE: [number, number] = [18, 40];
+/** Past this a panel is a dark face with no cell detail left. */
+const PANEL_MAX_DEPTH = 52;
 
 /** How far out geometry is generated, relative to the camera. */
 const X_REACH = 70;
 const Z_BACK = 30;
 const Z_AHEAD = 80;
 
-/** Depth at which the fine mesh has faded out completely: past it, it aliases. */
-const FINE_MAX_DEPTH = 40;
 /** Depth at which the structural lines have faded out completely. */
 const MAJOR_MAX_DEPTH = 78;
 
@@ -152,48 +182,127 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
   const xMin = cam.panX - X_REACH;
   const xMax = cam.panX + X_REACH;
 
-  // Snap generation bounds to the grid so lines don't pop as the camera
+  // Snap generation bounds to the grid so panels don't pop as the camera
   // crosses a cell boundary.
-  const iFineX0 = Math.floor(xMin / FINE);
-  const iFineX1 = Math.ceil(xMax / FINE);
-  const iFineZ0 = Math.floor(zMin / FINE);
-  const iFineZ1 = Math.ceil(zMax / FINE);
   const iMajX0 = Math.floor(xMin / MAJOR);
   const iMajX1 = Math.ceil(xMax / MAJOR);
   const iMajZ0 = Math.floor(zMin / MAJOR);
   const iMajZ1 = Math.ceil(zMax / MAJOR);
 
-  // --- fine mesh -----------------------------------------------------------
-  const fine: React.ReactNode[] = [];
-  const emitFine = (
-    key: string,
-    ax: number,
-    az: number,
-    bx: number,
-    bz: number,
-  ) => {
-    for (const [n, p] of linePieces(ax, az, bx, bz, cam, FINE_MAX_DEPTH, 5).entries()) {
-      fine.push(
-        <line
-          key={`${key}-${n}`}
-          x1={p.x1}
-          y1={p.y1}
-          x2={p.x2}
-          y2={p.y2}
-          stroke="#a8d2ff"
-          strokeWidth={widthForDepth(p.depth, 1.05)}
-          opacity={0.5 * (1 - p.depth / FINE_MAX_DEPTH)}
-        />,
-      );
-    }
+  // --- panel faces ---------------------------------------------------------
+  // The plane is a field of solar modules. Everything here is static: the cell
+  // grid, busbars and corner chamfers never light up or shimmer — only the
+  // seams between panels do.
+  type VisiblePanel = {
+    key: string;
+    rect: { x0: number; x1: number; z0: number; z1: number };
+    depth: number;
+    poly: string;
+    screenW: number;
   };
-  for (let i = iFineX0; i <= iFineX1; i++) {
-    if (i % SUBDIVISIONS === 0) continue; // structural lines are drawn below
-    emitFine(`fx${i}`, i * FINE, zMin, i * FINE, zMax);
+
+  const visible: VisiblePanel[] = [];
+  for (let i = iMajX0; i < iMajX1; i++) {
+    for (let j = iMajZ0; j < iMajZ1; j++) {
+      const x0 = i * MAJOR + SEAM;
+      const x1 = (i + 1) * MAJOR - SEAM;
+      const z0 = j * MAJOR + SEAM;
+      const z1 = (j + 1) * MAJOR - SEAM;
+
+      // Cheap reject on the centre before projecting the four corners.
+      const cxw = (x0 + x1) / 2;
+      const czw = (z0 + z1) / 2;
+      const depth = depthAt(cxw, czw, cam);
+      if (depth < NEAR || depth > PANEL_MAX_DEPTH) continue;
+
+      const quad = projectPolygon(
+        [
+          [x0, z0],
+          [x1, z0],
+          [x1, z1],
+          [x0, z1],
+        ],
+        cam,
+      );
+      if (!quad) continue;
+      visible.push({
+        key: `${i}_${j}`,
+        rect: { x0, x1, z0, z1 },
+        depth,
+        poly: quad.points,
+        screenW: quad.maxX - quad.minX,
+      });
+    }
   }
-  for (let i = iFineZ0; i <= iFineZ1; i++) {
-    if (i % SUBDIVISIONS === 0) continue;
-    emitFine(`fz${i}`, xMin, i * FINE, xMax, i * FINE);
+  // Painter's algorithm: far panels first so near ones overlap them.
+  visible.sort((a, b) => b.depth - a.depth);
+
+  const faces: React.ReactNode[] = [];
+  const cellDetail: React.ReactNode[] = [];
+
+  for (const panel of visible) {
+    const fade = 1 - panel.depth / PANEL_MAX_DEPTH;
+    const tint = hash2(Math.round(panel.rect.x0), Math.round(panel.rect.z0));
+
+    faces.push(
+      <polygon
+        key={`f${panel.key}`}
+        points={panel.poly}
+        fill="url(#ng-face)"
+        opacity={(0.84 + tint * 0.16) * (0.4 + 0.6 * fade)}
+      />,
+    );
+
+    // Cell detail is pale backsheet showing between the dark cells, so each
+    // layer is drawn light over the face rather than as its own cell shapes.
+    const gapAlpha = detailFade(panel.depth, GAP_FADE[0], GAP_FADE[1]);
+    if (gapAlpha > 0.01 && panel.screenW > 26) {
+      const d = gapLinePath(panel.rect, CELL_SPEC, cam);
+      if (d) {
+        cellDetail.push(
+          <path
+            key={`cg${panel.key}`}
+            d={d}
+            fill="none"
+            stroke="#8fb3d8"
+            strokeWidth={widthForDepth(panel.depth, 0.8)}
+            opacity={0.42 * gapAlpha}
+          />,
+        );
+      }
+    }
+
+    const busAlpha = detailFade(panel.depth, BUSBAR_FADE[0], BUSBAR_FADE[1]);
+    if (busAlpha > 0.01) {
+      const d = busbarPath(panel.rect, CELL_SPEC, cam);
+      if (d) {
+        cellDetail.push(
+          <path
+            key={`cb${panel.key}`}
+            d={d}
+            fill="none"
+            stroke="#82a5c8"
+            strokeWidth={widthForDepth(panel.depth, 0.45)}
+            opacity={0.36 * busAlpha}
+          />,
+        );
+      }
+    }
+
+    const diamondAlpha = detailFade(panel.depth, DIAMOND_FADE[0], DIAMOND_FADE[1]);
+    if (diamondAlpha > 0.01) {
+      const d = cornerDiamondPath(panel.rect, CELL_SPEC, cam);
+      if (d) {
+        cellDetail.push(
+          <path
+            key={`cd${panel.key}`}
+            d={d}
+            fill="#a6c6e6"
+            opacity={0.5 * diamondAlpha}
+          />,
+        );
+      }
+    }
   }
 
   // --- structural lines ----------------------------------------------------
@@ -324,6 +433,11 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
             <stop offset="55%" stopColor="#081428" />
             <stop offset="100%" stopColor="#02060f" />
           </radialGradient>
+          <linearGradient id="ng-face" x1="0%" y1="0%" x2="22%" y2="100%">
+            <stop offset="0%" stopColor="#132339" />
+            <stop offset="45%" stopColor="#0b1626" />
+            <stop offset="100%" stopColor="#060c16" />
+          </linearGradient>
           <radialGradient id="ng-vignette" cx="50%" cy="50%" r="72%">
             <stop offset="58%" stopColor="#000000" stopOpacity="0" />
             <stop offset="100%" stopColor="#000000" stopOpacity="0.66" />
@@ -338,7 +452,8 @@ export const NeonGridPlane: React.FC<NeonGridProps> = (props) => {
 
         <rect width={BASE_WIDTH} height={BASE_HEIGHT} fill="url(#ng-sky)" />
 
-        <g>{fine}</g>
+        <g>{faces}</g>
+        <g>{cellDetail}</g>
         <g>{dormant}</g>
         <g filter="url(#ng-bloom)" opacity={0.7}>{halo}</g>
         <g>{halo}</g>

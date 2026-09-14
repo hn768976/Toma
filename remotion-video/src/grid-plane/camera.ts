@@ -123,13 +123,14 @@ export const projectSegment = (
 };
 
 /**
- * Project a convex ground-plane polygon, Sutherland-Hodgman clipped against
- * the near plane. Returns an SVG points string, or null when fully culled.
+ * Sutherland-Hodgman clip of a convex ground polygon against the near plane,
+ * in world space. Depth is affine in (wx, wz), so clipping before projecting
+ * is exact.
  */
-export const projectPolygon = (
+const clipPolygonNear = (
   corners: readonly (readonly [number, number])[],
   cam: Camera,
-): { points: string; minX: number; maxX: number; minY: number; maxY: number } | null => {
+): [number, number][] => {
   const clipped: [number, number][] = [];
   for (let i = 0; i < corners.length; i++) {
     const [cx0, cz0] = corners[i];
@@ -142,6 +143,18 @@ export const projectPolygon = (
       clipped.push([cx0 + (cx1 - cx0) * t, cz0 + (cz1 - cz0) * t]);
     }
   }
+  return clipped;
+};
+
+/**
+ * Project a convex ground-plane polygon. Returns an SVG points string and the
+ * screen bounds, or null when fully culled.
+ */
+export const projectPolygon = (
+  corners: readonly (readonly [number, number])[],
+  cam: Camera,
+): { points: string; minX: number; maxX: number; minY: number; maxY: number } | null => {
+  const clipped = clipPolygonNear(corners, cam);
   if (clipped.length < 3) return null;
 
   let minX = Infinity;
@@ -162,6 +175,39 @@ export const projectPolygon = (
   if (maxY < -CULL_PAD || minY > 1080 + CULL_PAD) return null;
 
   return { points: parts.join(" "), minX, maxX, minY, maxY };
+};
+
+/**
+ * Project a convex ground-plane polygon straight to SVG path data. Solar cell
+ * detail runs to thousands of small polygons per frame; emitting them as
+ * subpaths of one <path> keeps the DOM flat, so this skips the intermediate
+ * points string.
+ */
+export const projectPolygonPath = (
+  corners: readonly (readonly [number, number])[],
+  cam: Camera,
+): string | null => {
+  const clipped = clipPolygonNear(corners, cam);
+  if (clipped.length < 3) return null;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let d = "";
+  for (let i = 0; i < clipped.length; i++) {
+    const p = project(clipped[i][0], clipped[i][1], cam);
+    if (!p) return null;
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+    d += `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  }
+  if (maxX < -CULL_PAD || minX > 1920 + CULL_PAD) return null;
+  if (maxY < -CULL_PAD || minY > 1080 + CULL_PAD) return null;
+
+  return d + "Z";
 };
 
 /**

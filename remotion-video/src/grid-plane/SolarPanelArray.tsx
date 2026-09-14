@@ -8,6 +8,13 @@ import {
 import { z } from "zod";
 import { BASE_HEIGHT, BASE_WIDTH } from "./constants";
 import { Camera, project, projectPolygon, projectSegment } from "./camera";
+import {
+  busbarPath,
+  CellSpec,
+  cornerDiamondPath,
+  detailFade,
+  gapLinePath,
+} from "./solar-surface";
 import { hash2, seeded } from "./random";
 
 export const solarArraySchema = z.object({
@@ -35,9 +42,21 @@ const PANEL_W = 4.0;
 const PANEL_D = 1.35;
 const GAP = 0.1;
 
-/** Cells etched into the face of a single panel. */
-const CELLS_X = 14;
-const CELLS_Z = 5;
+/**
+ * Cells on the face of a single panel. The panel is ~3:1, so 14 x 5 keeps the
+ * individual cells square, as they are on a real module.
+ */
+const CELL_SPEC: CellSpec = {
+  cellsX: 14,
+  cellsZ: 5,
+  busbars: 2,
+  diamond: 0.115,
+};
+
+/** Depths at which each kind of cell detail is fully drawn / fully gone. */
+const DIAMOND_FADE: [number, number] = [9, 21];
+const BUSBAR_FADE: [number, number] = [7, 17];
+const GAP_FADE: [number, number] = [16, 38];
 
 /** How far out geometry is generated, relative to the camera. */
 const X_REACH = 78;
@@ -45,8 +64,6 @@ const Z_BACK = 12;
 const Z_AHEAD = 90;
 
 const PANEL_MAX_DEPTH = 62;
-/** Past this depth a panel is too small on screen to be worth etching cells. */
-const CELL_MAX_DEPTH = 26;
 
 const DEG = Math.PI / 180;
 
@@ -139,7 +156,7 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
   // Painter's algorithm: far panels first so near ones overlap them.
   panels.sort((a, b) => b.depth - a.depth);
 
-  // --- panel faces, etched cells and lit edges -----------------------------
+  // --- panel faces, cell detail and lit frames -----------------------------
   const faces: React.ReactNode[] = [];
   const cells: React.ReactNode[] = [];
   const edges: React.ReactNode[] = [];
@@ -148,49 +165,63 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
     const fade = 1 - p.depth / PANEL_MAX_DEPTH;
     // A little per-panel variation stops the array reading as a printed texture.
     const tint = hash2(p.row, p.col);
+    const rect = { x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1 };
 
     faces.push(
       <polygon
         key={`f${p.key}`}
         points={p.poly}
         fill="url(#sp-face)"
-        opacity={(0.78 + tint * 0.22) * (0.35 + 0.65 * fade)}
+        opacity={(0.82 + tint * 0.18) * (0.4 + 0.6 * fade)}
       />,
     );
 
-    if (p.depth < CELL_MAX_DEPTH && p.screenW > 45) {
-      const cellFade = 1 - p.depth / CELL_MAX_DEPTH;
-      for (let i = 1; i < CELLS_X; i++) {
-        const cx = p.x0 + ((p.x1 - p.x0) * i) / CELLS_X;
-        const seg = projectSegment(cx, p.z0, cx, p.z1, cam);
-        if (!seg) continue;
+    // Cell detail is pale backsheet showing between the dark cells, so each
+    // layer is drawn light over the face rather than as its own cell shapes.
+    const gapAlpha = detailFade(p.depth, GAP_FADE[0], GAP_FADE[1]);
+    if (gapAlpha > 0.01 && p.screenW > 26) {
+      const d = gapLinePath(rect, CELL_SPEC, cam);
+      if (d) {
         cells.push(
-          <line
-            key={`cx${p.key}_${i}`}
-            x1={seg[0].x}
-            y1={seg[0].y}
-            x2={seg[1].x}
-            y2={seg[1].y}
-            stroke="#9fc9f5"
-            strokeWidth={widthForDepth(p.depth, 0.55)}
-            opacity={0.44 * cellFade}
+          <path
+            key={`cg${p.key}`}
+            d={d}
+            fill="none"
+            stroke="#9dbcdd"
+            strokeWidth={widthForDepth(p.depth, 0.85)}
+            opacity={0.5 * gapAlpha}
           />,
         );
       }
-      for (let i = 1; i < CELLS_Z; i++) {
-        const cz = p.z0 + ((p.z1 - p.z0) * i) / CELLS_Z;
-        const seg = projectSegment(p.x0, cz, p.x1, cz, cam);
-        if (!seg) continue;
+    }
+
+    const busAlpha = detailFade(p.depth, BUSBAR_FADE[0], BUSBAR_FADE[1]);
+    if (busAlpha > 0.01) {
+      const d = busbarPath(rect, CELL_SPEC, cam);
+      if (d) {
         cells.push(
-          <line
-            key={`cz${p.key}_${i}`}
-            x1={seg[0].x}
-            y1={seg[0].y}
-            x2={seg[1].x}
-            y2={seg[1].y}
-            stroke="#9fc9f5"
-            strokeWidth={widthForDepth(p.depth, 0.55)}
-            opacity={0.44 * cellFade}
+          <path
+            key={`cb${p.key}`}
+            d={d}
+            fill="none"
+            stroke="#8fb0d4"
+            strokeWidth={widthForDepth(p.depth, 0.5)}
+            opacity={0.34 * busAlpha}
+          />,
+        );
+      }
+    }
+
+    const diamondAlpha = detailFade(p.depth, DIAMOND_FADE[0], DIAMOND_FADE[1]);
+    if (diamondAlpha > 0.01) {
+      const d = cornerDiamondPath(rect, CELL_SPEC, cam);
+      if (d) {
+        cells.push(
+          <path
+            key={`cd${p.key}`}
+            d={d}
+            fill="#b3cee9"
+            opacity={0.62 * diamondAlpha}
           />,
         );
       }
@@ -302,9 +333,9 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
       >
         <defs>
           <linearGradient id="sp-face" x1="0%" y1="0%" x2="18%" y2="100%">
-            <stop offset="0%" stopColor="#1d5599" />
-            <stop offset="45%" stopColor="#133a72" />
-            <stop offset="100%" stopColor="#0a2247" />
+            <stop offset="0%" stopColor="#16273f" />
+            <stop offset="42%" stopColor="#0d1a2c" />
+            <stop offset="100%" stopColor="#070e1a" />
           </linearGradient>
           <radialGradient id="sp-sky" cx="50%" cy="78%" r="82%">
             <stop offset="0%" stopColor="#133c76" />
@@ -312,8 +343,8 @@ export const SolarPanelArray: React.FC<SolarArrayProps> = (props) => {
             <stop offset="100%" stopColor="#02070f" />
           </radialGradient>
           <radialGradient id="sp-key" cx={`${keyX}%`} cy={`${keyY}%`} r="52%">
-            <stop offset="0%" stopColor="#8fc6ff" stopOpacity="0.38" />
-            <stop offset="60%" stopColor="#4d8fe0" stopOpacity="0.09" />
+            <stop offset="0%" stopColor="#a8d2ff" stopOpacity="0.5" />
+            <stop offset="58%" stopColor="#5b9ae8" stopOpacity="0.14" />
             <stop offset="100%" stopColor="#000000" stopOpacity="0" />
           </radialGradient>
           <radialGradient id="sp-vignette" cx="50%" cy="52%" r="70%">

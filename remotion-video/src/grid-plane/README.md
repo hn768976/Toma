@@ -41,16 +41,33 @@ there is nothing to re-tune per resolution. No raster assets are involved.
   `y = camera.height`. Handles yaw/pitch/roll, near-plane clipping for both
   segments and polygons, and `depthBand`, which solves exactly for the visible
   stretch of a line within a depth range.
-- `SolarPanelArray.tsx` — reference A. Brick-staggered panels drawn far-to-near
-  (painter's algorithm), etched cells on the near ones, specular flares
-  sweeping the seams, airborne sparkles.
-- `NeonGridPlane.tsx` — reference B. Fine mesh plus structural lines that
+- `solar-surface.ts` — the monocrystalline cell surface both videos sit on.
+- `SolarPanelArray.tsx` — reference A. Brick-staggered modules drawn far-to-near
+  (painter's algorithm), specular flares sweeping the frames, airborne sparkles.
+- `NeonGridPlane.tsx` — reference B. A field of square modules whose seams
   ignite on individually seeded schedules under a rising global envelope,
-  bloomed through stacked blurred copies.
+  bloomed through stacked blurred copies. The cell surface itself is static:
+  nothing on the panel face lights up or shimmers, only the seams between
+  panels.
 - `random.ts` — seeded RNG. Frames are rendered by many separate browser
   instances, so anything that varies per panel/mote must be derived from a seed
   rather than `Math.random()`.
 - `constants.ts` — design box, fps and the two durations.
+
+## The panel surface
+
+`solar-surface.ts` draws the modules from the supplied reference photograph.
+The giveaway of a monocrystalline module is the pseudo-square cell: its corners
+are cut off, so the pale backsheet shows through as a straight gap between
+neighbouring cells and as a small diamond wherever four cells meet, with thin
+silver busbars crossing each cell row.
+
+It is drawn as light detail over a dark panel face — gaps, corner diamonds and
+busbars — rather than as one polygon per cell. That is the same picture with far
+less geometry, and it lets each kind of detail dissolve at the distance where it
+stops being resolvable (`detailFade`) instead of a panel switching level of
+detail at one depth and popping. Each helper returns path data holding many
+subpaths, so a panel's hundreds of cell details cost a single DOM node.
 
 ## Tuning
 
