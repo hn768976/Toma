@@ -31,6 +31,18 @@ npm run dev
 npx remotion render
 ```
 
+The grid-plane background pieces have dedicated scripts:
+
+```console
+npm run render:solar:1080   # 1920x1080, 10.000s
+npm run render:solar:4k     # 3840x2160, 10.000s
+npm run render:neon:1080    # 1920x1080, 6.000s
+npm run render:neon:4k      # 3840x2160, 6.000s
+```
+
+See [`src/grid-plane/README.md`](./src/grid-plane/README.md) for what those
+compositions are and how the 1080p/4K pairs stay in sync.
+
 **Upgrade Remotion**
 
 ```console

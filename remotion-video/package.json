@@ -26,7 +26,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:solar:1080": "remotion render SolarPanelArray1080 out/solar-panel-array-1080p.mp4 --codec=h264 --crf=17 --jpeg-quality=95 --muted --pixel-format=yuv420p --color-space=bt709",
+    "render:solar:4k": "remotion render SolarPanelArray4K out/solar-panel-array-4k.mp4 --codec=h264 --crf=17 --jpeg-quality=95 --muted --pixel-format=yuv420p --color-space=bt709",
+    "render:neon:1080": "remotion render NeonGridPlane1080 out/neon-grid-plane-1080p.mp4 --codec=h264 --crf=17 --jpeg-quality=95 --muted --pixel-format=yuv420p --color-space=bt709",
+    "render:neon:4k": "remotion render NeonGridPlane4K out/neon-grid-plane-4k.mp4 --codec=h264 --crf=17 --jpeg-quality=95 --muted --pixel-format=yuv420p --color-space=bt709"
   },
   "sideEffects": [
     "*.css",
