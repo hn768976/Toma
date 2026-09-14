@@ -30,7 +30,7 @@ export const COMMANDS: VCRCommand[] = [
     label: "PLAY",
     glyph: "play",
     seed: 101,
-    stillFrame: 151,
+    stillFrame: 408,
   },
   {
     id: "VCR-Pause",
@@ -38,7 +38,7 @@ export const COMMANDS: VCRCommand[] = [
     label: "PAUSE",
     glyph: "pause",
     seed: 202,
-    stillFrame: 112,
+    stillFrame: 135,
   },
   {
     id: "VCR-Rewind",
@@ -46,7 +46,7 @@ export const COMMANDS: VCRCommand[] = [
     label: "REWIND",
     glyph: "rewind",
     seed: 303,
-    stillFrame: 4,
+    stillFrame: 263,
   },
   {
     id: "VCR-FastForward",
@@ -54,7 +54,7 @@ export const COMMANDS: VCRCommand[] = [
     label: "FAST FORWARD",
     glyph: "fastForward",
     seed: 404,
-    stillFrame: 408,
+    stillFrame: 4,
   },
   {
     id: "VCR-Record",
@@ -62,7 +62,7 @@ export const COMMANDS: VCRCommand[] = [
     label: "RECORD",
     glyph: "record",
     seed: 505,
-    stillFrame: 432,
+    stillFrame: 450,
   },
   {
     id: "VCR-Stop",
@@ -70,7 +70,7 @@ export const COMMANDS: VCRCommand[] = [
     label: "STOP",
     glyph: "stop",
     seed: 606,
-    stillFrame: 296,
+    stillFrame: 451,
   },
   {
     id: "VCR-Eject",
@@ -78,7 +78,7 @@ export const COMMANDS: VCRCommand[] = [
     label: "EJECT",
     glyph: "eject",
     seed: 707,
-    stillFrame: 436,
+    stillFrame: 457,
   },
   {
     id: "VCR-Tracking",
@@ -86,6 +86,6 @@ export const COMMANDS: VCRCommand[] = [
     label: "TRACKING",
     glyph: "none",
     seed: 808,
-    stillFrame: 547,
+    stillFrame: 52,
   },
 ];

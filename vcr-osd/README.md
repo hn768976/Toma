@@ -1,7 +1,7 @@
 # Retro VCR On-Screen Display
 
-A template for VCR transport-control overlay plates: chunky bitmap `PLAY`,
-`REWIND`, `FAST FORWARD`… with their transport glyph, over VHS tracking
+A template for VCR transport-control overlay plates: small centred bitmap
+`PLAY`, `REWIND`, `FAST FORWARD`… with their transport glyph, over VHS tracking
 distortion on black. One component, one data file, one clip per command.
 
 - **3840×2160, 30fps, 600 frames (20s), seamless loop.**
@@ -92,8 +92,9 @@ composition appears in the Studio, and `scripts/render-all.mjs` picks it up.
 },
 ```
 
-Long labels shrink to fit: the cell size is clamped so the block never exceeds
-70% of frame width, which is why `FAST FORWARD` sets smaller type than `PLAY`.
+The block is centred in frame and every command shares one cell size, so `PLAY`
+and `FAST FORWARD` set the same size type. A label long enough to pass 70% of
+frame width would shrink to fit; at the current size nothing in the set does.
 
 To add a **new glyph**, add a pixel grid to `SHAPES` in `src/glyphs.ts` — seven
 rows of `#` and `.`, any width. To add a **new character**, add a 5×7 grid to

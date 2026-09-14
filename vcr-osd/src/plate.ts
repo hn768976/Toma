@@ -16,12 +16,11 @@ import {
   labelWidthInCells,
 } from "./pixel-font";
 
-/** Left edge of the OSD block, as a fraction of frame width. */
-const BLOCK_LEFT = 0.075;
-/** Vertical centre of the OSD block, as a fraction of frame height. */
-const BLOCK_CENTRE_Y = 0.26;
+/** Centre of the OSD block, as a fraction of frame width and height. */
+const BLOCK_CENTRE_X = 0.5;
+const BLOCK_CENTRE_Y = 0.5;
 /** Cell size at full size, as a fraction of frame height. */
-const CELL_FRACTION = 0.0195;
+const CELL_FRACTION = 0.013;
 /** The block never grows past this fraction of frame width. */
 const MAX_BLOCK_WIDTH = 0.7;
 /** Blank cells between the glyph and the first letter. */
@@ -69,8 +68,11 @@ export const buildPlate = ({
     Math.min(idealCell, Math.floor((MAX_BLOCK_WIDTH * dw) / totalCells)),
   );
 
+  const blockWidth = totalCells * cell;
   const blockHeight = FONT_ROWS * cell;
-  const originX = Math.round(BLOCK_LEFT * dw);
+  // Centred on the frame. The phosphor trail spills to the right of this box;
+  // the box itself is what gets centred, so the letterforms sit true.
+  const originX = Math.round(BLOCK_CENTRE_X * dw - blockWidth / 2);
   const originY = Math.round(BLOCK_CENTRE_Y * dh - blockHeight / 2);
 
   const lum = new Uint8Array(dw * dh);
