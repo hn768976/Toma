@@ -38,11 +38,11 @@ npx remotion upgrade
 ```
 
 
-## Data grid field (`DataGrid*`)
+## 3D data field (`DataGrid*`)
 
-A "big data visualisation" motion background: a field of glowing nodes,
-numeric readouts and data dashes flowing outward over a bowed perspective
-grid. Built to match a 20.00s / 30fps / 16:9 reference clip.
+A "big data visualisation" motion background: a volume of glowing nodes,
+numeric readouts and data dashes that the camera flies forward through.
+20.00s / 30fps / 16:9, matching the reference clip's timing.
 
 ### Compositions
 
@@ -60,19 +60,21 @@ prop (`"blue"` / `"green"`).
 ### Rendering
 
 ```console
-# 1080p H.264 (the delivered files)
-npx remotion render DataGridBlue1080  out/data-grid-blue-1080p.mp4  --codec=h264 --image-format=png --crf=16
-npx remotion render DataGridGreen1080 out/data-grid-green-1080p.mp4 --codec=h264 --image-format=png --crf=16
+# 1080p H.264, no audio track (the delivered files)
+npx remotion render DataGridBlue1080  out/data-grid-blue-1080p.mp4  --codec=h264 --image-format=png --crf=16 --muted --enforce-audio-track=false
+npx remotion render DataGridGreen1080 out/data-grid-green-1080p.mp4 --codec=h264 --image-format=png --crf=16 --muted --enforce-audio-track=false
 
 # 4K H.264
-npx remotion render DataGridBlue4K  out/data-grid-blue-4k.mp4  --codec=h264 --image-format=png --crf=16
-npx remotion render DataGridGreen4K out/data-grid-green-4k.mp4 --codec=h264 --image-format=png --crf=16
+npx remotion render DataGridBlue4K  out/data-grid-blue-4k.mp4  --codec=h264 --image-format=png --crf=16 --muted --enforce-audio-track=false
+npx remotion render DataGridGreen4K out/data-grid-green-4k.mp4 --codec=h264 --image-format=png --crf=16 --muted --enforce-audio-track=false
 ```
 
 `--image-format=png` overrides the project-wide JPEG frame capture in
 `remotion.config.ts`. Worth it here: the field is all soft glows and fine
 gradients, which pick up visible blocking if frames are JPEG'd before
-being handed to the encoder.
+being handed to the encoder. Without `--enforce-audio-track=false`
+Remotion muxes in a silent AAC track, which also pushes the container
+duration to 20.05s.
 
 4K renders are roughly 4x the cost of 1080p. Add `--concurrency=<n>` to
 tune for your machine.
@@ -83,39 +85,46 @@ Everything lives in `src/data-grid/`:
 
 | File             | Role                                                          |
 | ---------------- | ------------------------------------------------------------- |
-| `constants.ts`   | Timing, camera rate, field extents, element counts, value pool |
+| `constants.ts`   | Timing, camera geometry, field extents, counts, value pool     |
 | `theme.ts`       | The two colourways — add a third here and nothing else changes |
 | `field.ts`       | Seeds the field once at module load                            |
-| `projection.ts`  | Zoom-band camera, barrel bow, fades, culling                   |
+| `projection.ts`  | Perspective camera, depth recycling, haze, fades, culling      |
 | `random.ts`      | Deterministic PRNG                                             |
 | `loop.ts`        | Oscillators that close exactly over the clip                   |
-| `layers/`        | Atmosphere, grid, dashes, readouts, nodes                      |
+| `layers/`        | Atmosphere, dashes, readouts, nodes                            |
 
 Three things are worth knowing before changing it:
 
-**The camera is a uniform zoom, not a perspective fly-through.** The
-reference's motion was measured by scale-space cross-correlation between
-frames 0.5s-2.0s apart: a uniform radial zoom about frame centre of
-**1.032x per second**, consistent to within 0.5% across every interval
-tested. `ZOOM_PER_SECOND` in `constants.ts` is that number. Elements ride
-a logarithmic zoom band, entering small at the centre and fading out as
-they reach the edge.
+**The camera is a true perspective fly-through.** Elements are seeded
+uniformly through a depth slab (`Z_NEAR`..`Z_FAR`) and projected through
+a pinhole camera; the camera travels forward at a constant rate and
+elements that pass it are recycled to the back. Depth is real, so the
+radial expansion rate varies with distance — across the visible depth
+window it spans 1.76x/s at the near edge to 1.11x/s at the far edge, a
+1.59x parallax spread. A flat zoom would be 1.00x. Aerial haze
+(`hazeAt`) sinks distant elements back toward the ground, which is most
+of what sells the depth.
 
-**It loops seamlessly.** Frame 600 lands back exactly on frame 0: the zoom
-band is crossed a whole number of times (`ZOOM_CYCLES`), every oscillator
-goes through `loopSin` which completes whole periods over the clip, and
-readout values only change on periods that divide 600. Measured seam
-delta is 1.12 mean absolute vs 0.93 for an ordinary frame step —
-indistinguishable. Keep that property in mind when adding motion.
+**It loops seamlessly.** Frame 600 lands back exactly on frame 0: the
+camera crosses the depth slab a whole number of times
+(`DEPTH_CROSSINGS`), every oscillator goes through `loopSin` which
+completes whole periods over the clip, and readout values only change on
+periods that divide 600. Measured seam delta is 1.281 mean absolute vs
+1.270 for an ordinary frame step — indistinguishable. Keep that property
+in mind when adding motion.
 
 **Sizes are resolution-independent.** Every dimension is authored against
 a virtual 1920x1080 frame and multiplied by `s = width / BASE_WIDTH` at
 render time. The 4K compositions are therefore true 2x renders — text and
 dots are rasterised at 4K — rather than an upscale of the 1080p output.
 
-Element identity (position, size, tier, phase) is a pure function of
-index via the seeded PRNG, never `Math.random()`: Remotion renders frames
-out of order across workers, so anything else would flicker.
+Element identity (position, depth, size, tier, phase) is a pure function
+of index via the seeded PRNG, never `Math.random()`: Remotion renders
+frames out of order across workers, so anything else would flicker.
+
+To change the pace, adjust `DEPTH_CROSSINGS` (whole numbers only, or the
+loop breaks). To let elements sweep closer to the camera before they
+vanish, lower `FADE_OUT`.
 
 ## Docs
 

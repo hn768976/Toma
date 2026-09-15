@@ -1,34 +1,34 @@
 import {
   BLOCK_COUNT,
-  DURATION_IN_FRAMES,
   DASH_COUNT,
+  DURATION_IN_FRAMES,
   FIELD_HALF_X,
   FIELD_HALF_Y,
-  GRID_HORIZONTALS,
-  GRID_VERTICALS,
   NODE_COUNT,
   READOUT_COUNT,
   READOUT_VALUES,
+  Z_DEPTH,
 } from "./constants";
 import { rngFor } from "./random";
 
 /**
- * Shared placement: a position in base pixels at the bottom of the zoom
- * band, plus the element's starting phase within that band.
+ * Shared placement: a position in the world volume. Depth is uniform
+ * across the slab, which is what a real fly-through looks like — most
+ * elements read as distant, a few sweep past close.
  */
-type Placed = { bx: number; by: number; seed: number };
+type Placed = { wx: number; wy: number; wz: number };
 
 const place = (index: number, salt: number): Placed => {
   const r = rngFor(index, salt);
   return {
-    bx: (r() * 2 - 1) * FIELD_HALF_X,
-    by: (r() * 2 - 1) * FIELD_HALF_Y,
-    seed: r(),
+    wx: (r() * 2 - 1) * FIELD_HALF_X,
+    wy: (r() * 2 - 1) * FIELD_HALF_Y,
+    wz: r() * Z_DEPTH,
   };
 };
 
 export type Node = Placed & {
-  /** Diameter in base pixels at zoom 1. */
+  /** Diameter in world units; multiplied by the perspective scale. */
   size: number;
   /** 0 dim, 1 mid, 2 hot (white, with a halo). */
   tier: 0 | 1 | 2;
@@ -37,7 +37,7 @@ export type Node = Placed & {
 };
 
 export type Readout = Placed & {
-  /** Type size in base pixels at zoom 1. */
+  /** Type size in world units. */
   size: number;
   tier: 0 | 1 | 2;
   /** Index into READOUT_VALUES; stepped over time when `cycle` > 0. */
@@ -74,7 +74,7 @@ const buildNodes = (): Node[] =>
     const tier = roll > 0.84 ? 2 : roll > 0.5 ? 1 : 0;
     return {
       ...p,
-      size: 1.8 + r() * (tier === 2 ? 4.2 : 2.2),
+      size: 2 + r() * (tier === 2 ? 4.5 : 2.5),
       tier: tier as 0 | 1 | 2,
       phase: r() * Math.PI * 2,
       twinkle: 0.1 + r() * 0.35,
@@ -90,12 +90,12 @@ const buildReadouts = (): Readout[] =>
     const r = rngFor(i, 22);
     const roll = r();
     const tier = roll > 0.93 ? 2 : roll > 0.64 ? 1 : 0;
-    // A wide size spread: with the zoom band this narrow, the mix of
-    // big headline values and tiny background ones comes from here.
+    // Depth supplies most of the size variation now, so the seeded
+    // spread is narrower than it would be for a flat field.
     const t = r();
     return {
       ...p,
-      size: tier === 2 ? 20 + t * 13 : tier === 1 ? 11 + t * 7 : 7 + t * 4,
+      size: tier === 2 ? 17 + t * 9 : tier === 1 ? 12 + t * 5 : 9 + t * 3,
       tier: tier as 0 | 1 | 2,
       valueIndex: Math.floor(r() * READOUT_VALUES.length),
       cycle: r() > 0.5 ? 0 : VALUE_CYCLES[Math.floor(r() * VALUE_CYCLES.length)],
@@ -134,43 +134,12 @@ const buildBlocks = (): Block[] =>
     };
   });
 
-export type GridLine = {
-  /** Offset from frame centre in base pixels, at zoom 1. */
-  offset: number;
-  seed: number;
-  hot: boolean;
-  alpha: number;
-};
-
-/**
- * Grid lines are spread evenly across the field and then jittered: the
- * reference's spacing is irregular, not a regular lattice. Each line
- * carries its own band phase so lines recycle independently rather than
- * all sweeping outward in lockstep.
- */
-const buildLines = (count: number, halfExtent: number, salt: number) =>
-  Array.from({ length: count }, (_, i): GridLine => {
-    const r = rngFor(i, salt);
-    const even = (i / (count - 1)) * 2 - 1;
-    const jitter = (r() * 2 - 1) * (halfExtent / count) * 1.15;
-    return {
-      offset: even * halfExtent + jitter,
-      seed: r(),
-      hot: r() > 0.82,
-      alpha: 0.55 + r() * 0.45,
-    };
-  });
-
 // Built once at module load: the field's identity never changes, only
 // the camera moves through it.
 export const NODES = buildNodes();
 export const READOUTS = buildReadouts();
 export const DASHES = buildDashes();
 export const BLOCKS = buildBlocks();
-export const GRID = {
-  vertical: buildLines(GRID_VERTICALS, FIELD_HALF_X, 51),
-  horizontal: buildLines(GRID_HORIZONTALS, FIELD_HALF_Y, 52),
-};
 
 export const readoutText = (readout: Readout, frame: number) => {
   if (readout.cycle === 0) return READOUT_VALUES[readout.valueIndex];

@@ -17,14 +17,15 @@ export const Nodes: React.FC<{
   return (
     <>
       {NODES.map((node, i) => {
-        const p = project(node.bx, node.by, node.seed, camera);
+        const p = project(node.wx, node.wy, node.wz, camera);
         if (!p.onScreen || p.fade <= 0.01) return null;
 
         const twinkle = 1 + node.twinkle * loopSin(frame, 3, node.phase);
-        const opacity = p.fade * TIER_ALPHA[node.tier] * hazeAt(p.e) * twinkle;
+        const opacity =
+          p.fade * TIER_ALPHA[node.tier] * hazeAt(p.depth) * twinkle;
         if (opacity <= 0.02) return null;
 
-        const size = node.size * p.zoom * s;
+        const size = Math.max(1, node.size * p.scale) * s;
         const halo = node.tier === 2 ? 2.4 : node.tier === 1 ? 1.5 : 0.8;
 
         return (

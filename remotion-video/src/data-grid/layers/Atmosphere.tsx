@@ -27,10 +27,13 @@ export const Atmosphere: React.FC<{
             top: 0,
             bottom: 0,
             left: `${u * 100}%`,
-            width: (90 + i * 26) * s,
-            marginLeft: -((90 + i * 26) * s) / 2,
-            background: `linear-gradient(to bottom, transparent 0%, ${theme.shaft} 45%, transparent 100%)`,
-            opacity: 0.6 + 0.4 * loopSin(frame, i + 1, i * 1.7),
+            width: (260 + i * 90) * s,
+            marginLeft: -((260 + i * 90) * s) / 2,
+            // Elliptical, not linear: a linear gradient leaves hard
+            // left/right edges, which show as banding now that no grid
+            // crosses them.
+            background: `radial-gradient(ellipse 50% 42% at 50% 50%, ${theme.shaft} 0%, transparent 72%)`,
+            opacity: 0.3 + 0.2 * loopSin(frame, i + 1, i * 1.7),
           }}
         />
       ))}

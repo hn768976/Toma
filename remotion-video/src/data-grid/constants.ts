@@ -1,11 +1,9 @@
-// Timing and camera geometry for the "big data" grid field.
+// Timing and camera geometry for the 3D data field.
 //
-// Modelled on a 20.00s @ 30fps 16:9 reference clip. The reference's
-// motion was measured by scale-space cross-correlation between frames
-// 0.5s-2.0s apart: it is a *uniform radial zoom* about frame centre of
-// 1.032x per second (consistent to within 0.5% across all intervals),
-// not a wide-depth perspective fly-through. The camera below reproduces
-// that exactly.
+// A perspective fly-through: elements are seeded through a depth volume
+// and the camera travels forward through it at a constant rate. Unlike a
+// flat zoom, near elements sweep past fast and large while distant ones
+// barely crawl — that depth parallax is what reads as 3D.
 //
 // Every size here is in *base* pixels (a virtual 1920x1080 frame) and is
 // multiplied by a resolution scale at render time, so the 4K
@@ -21,61 +19,67 @@ export const DURATION_IN_FRAMES = DURATION_IN_SECONDS * FPS; // 600
 export const CENTER_X = BASE_WIDTH / 2;
 export const CENTER_Y = BASE_HEIGHT / 2;
 
-/** Measured from the reference. */
-export const ZOOM_PER_SECOND = 1.0323;
-export const LOG_ZOOM_PER_FRAME = Math.log(ZOOM_PER_SECOND) / FPS;
+/**
+ * Pinhole camera. FOCAL is in base pixels: an element at depth FOCAL is
+ * drawn at 1:1, closer ones grow, further ones shrink.
+ */
+export const FOCAL = 1000;
+
+/** The depth slab the field occupies. */
+export const Z_NEAR = 260;
+export const Z_FAR = 2100;
+export const Z_DEPTH = Z_FAR - Z_NEAR;
 
 /**
- * Elements ride a zoom band: they enter small at the centre, drift
- * outward as the zoom grows, then recycle. Running a whole number of
- * bands over the clip is what makes the export loop — frame 600 lands
- * back exactly on frame 0.
+ * Elements are recycled to the back of the slab as they pass the camera.
+ * Crossing the slab a whole number of times over the clip is what makes
+ * the export loop — frame 600 lands back exactly on frame 0.
  */
-export const ZOOM_CYCLES = 4;
-export const CYCLE_FRAMES = DURATION_IN_FRAMES / ZOOM_CYCLES; // 150
-export const BAND_LOG = LOG_ZOOM_PER_FRAME * CYCLE_FRAMES;
-export const ZOOM_MAX = Math.exp(BAND_LOG); // ~1.172
+export const DEPTH_CROSSINGS = 2;
+export const TRAVEL_PER_FRAME = (DEPTH_CROSSINGS * Z_DEPTH) / DURATION_IN_FRAMES;
 
-/** Fractions of a band spent fading in at the start and out at the end. */
-export const FADE_IN = 0.18;
-export const FADE_OUT = 0.22;
+/**
+ * Fractions of the slab spent fading. Elements fade in at the back and
+ * out again before they get close enough to fill the frame, so nothing
+ * ever pops and nothing balloons.
+ */
+export const FADE_IN = 0.14;
+export const FADE_OUT = 0.09;
 
-// A slow parallax drift so the field is never perfectly static. Whole
+// Parallax drift, in world units. Real depth makes this read properly:
+// near elements swing further across the frame than distant ones. Whole
 // numbers of periods, again for the loop.
-export const DRIFT_X_AMPLITUDE = 30;
-export const DRIFT_Y_AMPLITUDE = 14;
+export const DRIFT_X_AMPLITUDE = 60;
+export const DRIFT_Y_AMPLITUDE = 26;
 export const DRIFT_X_PERIODS = 1;
 export const DRIFT_Y_PERIODS = 2;
 
 /**
- * Barrel bow. Horizontal grid lines sag toward the optical centre by
- * CURVE/2 of their offset at mid-frame; every element is warped with the
- * same curve, so dots and readouts keep sitting exactly on the lines.
+ * A gentle barrel warp, as though through a wide lens: positions bow
+ * toward the optical centre by CURVE/2 of their offset at mid-frame.
  */
-export const CURVE = 0.12;
+export const CURVE = 0.08;
 
 /** How far outside the frame an element may sit before it is culled. */
-export const CULL_MARGIN = 0.1;
+export const CULL_MARGIN = 0.12;
 
 /**
- * Extents elements are seeded across, in base pixels at zoom 1 (the
- * bottom of the band). Slightly wider than the frame so the edges stay
- * populated as the field flows outward.
+ * World extents the field is seeded across. Wide enough that the far
+ * plane still fills a 16:9 frame once projected.
  */
-export const FIELD_HALF_X = 1010;
-export const FIELD_HALF_Y = 580;
+export const FIELD_HALF_X = 2150;
+export const FIELD_HALF_Y = 1240;
 
-// Element counts, matched to the reference's on-screen density.
-export const NODE_COUNT = 430;
-export const READOUT_COUNT = 150;
-export const DASH_COUNT = 165;
-export const BLOCK_COUNT = 16;
-
-// Grid lines. The reference's spacing is irregular rather than a regular
-// lattice, so offsets are evenly spread and then jittered, and each line
-// carries its own band phase so lines recycle independently.
-export const GRID_VERTICALS = 26;
-export const GRID_HORIZONTALS = 18;
+/**
+ * Element counts are totals, not on-screen counts. With a depth slab
+ * this deep only about a third project inside the frame at any moment —
+ * the near ones are mostly off the edges, which is what a fly-through
+ * looks like.
+ */
+export const NODE_COUNT = 1650;
+export const READOUT_COUNT = 620;
+export const DASH_COUNT = 700;
+export const BLOCK_COUNT = 75;
 
 /** The pool of readout values, transcribed from the reference clip. */
 export const READOUT_VALUES = [

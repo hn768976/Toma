@@ -22,14 +22,17 @@ export const Readouts: React.FC<{
   return (
     <>
       {READOUTS.map((readout, i) => {
-        const p = project(readout.bx, readout.by, readout.seed, camera);
+        const p = project(readout.wx, readout.wy, readout.wz, camera);
         if (!p.onScreen || p.fade <= 0.01) return null;
 
         const pulse = 1 + 0.12 * loopSin(frame, 2, readout.phase);
-        const fontSize = readout.size * p.zoom * s;
+        // Below ~7px the digits are unreadable mush that only muddies
+        // the field, so distant readouts drop out rather than shrink on.
+        const fontSize = readout.size * p.scale;
+        if (fontSize < 7) return null;
 
         const opacity =
-          p.fade * TIER_ALPHA[readout.tier] * hazeAt(p.e) * pulse;
+          p.fade * TIER_ALPHA[readout.tier] * hazeAt(p.depth) * pulse;
         if (opacity <= 0.02) return null;
 
         const glowRadius = readout.tier === 2 ? 0.85 : 0.4;
@@ -43,14 +46,14 @@ export const Readouts: React.FC<{
               top: p.y * s,
               transform: "translate(-50%, -50%)",
               fontFamily: READOUT_FONT,
-              fontSize,
+              fontSize: fontSize * s,
               fontWeight: readout.tier === 0 ? 400 : 700,
-              letterSpacing: fontSize * 0.02,
+              letterSpacing: fontSize * s * 0.02,
               lineHeight: 1,
               whiteSpace: "nowrap",
               color: colors[readout.tier],
               opacity: Math.min(1, opacity),
-              textShadow: `0 0 ${fontSize * glowRadius}px ${theme.glow}`,
+              textShadow: `0 0 ${fontSize * s * glowRadius}px ${theme.glow}`,
             }}
           >
             {readoutText(readout, frame)}

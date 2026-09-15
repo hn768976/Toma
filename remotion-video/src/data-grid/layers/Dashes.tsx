@@ -15,18 +15,19 @@ export const Dashes: React.FC<{
 }> = ({ theme, camera, frame, s }) => (
   <>
     {DASHES.map((dash, i) => {
-      const p = project(dash.bx, dash.by, dash.seed, camera);
+      const p = project(dash.wx, dash.wy, dash.wz, camera);
       if (!p.onScreen || p.fade <= 0.01) return null;
 
       const blink =
         dash.blink === 0
           ? 1
           : 1 - dash.blink * (0.5 + 0.5 * loopSin(frame, 5, dash.phase));
-      const opacity = p.fade * hazeAt(p.e) * (dash.hot ? 0.95 : 0.6) * blink;
+      const opacity =
+        p.fade * hazeAt(p.depth) * (dash.hot ? 0.95 : 0.6) * blink;
       if (opacity <= 0.02) return null;
 
-      const width = dash.length * p.zoom * s;
-      const height = dash.thickness * p.zoom * s;
+      const width = dash.length * p.scale * s;
+      const height = Math.max(1, dash.thickness * p.scale) * s;
 
       return (
         <div
@@ -48,14 +49,14 @@ export const Dashes: React.FC<{
     })}
 
     {BLOCKS.map((block, i) => {
-      const p = project(block.bx, block.by, block.seed, camera);
+      const p = project(block.wx, block.wy, block.wz, camera);
       if (!p.onScreen || p.fade <= 0.01) return null;
 
       const flicker = 0.7 + 0.3 * loopSin(frame, 4, block.phase);
-      const opacity = p.fade * hazeAt(p.e) * 0.9 * flicker;
+      const opacity = p.fade * hazeAt(p.depth) * 0.9 * flicker;
       if (opacity <= 0.02) return null;
 
-      const height = block.thickness * p.zoom * s;
+      const height = Math.max(1, block.thickness * p.scale) * s;
 
       return (
         <div
@@ -72,9 +73,9 @@ export const Dashes: React.FC<{
               key={j}
               style={{
                 position: "absolute",
-                left: bar.dx * p.zoom * s,
-                top: bar.dy * p.zoom * s,
-                width: bar.length * p.zoom * s,
+                left: bar.dx * p.scale * s,
+                top: bar.dy * p.scale * s,
+                width: bar.length * p.scale * s,
                 height,
                 background: theme.dashHot,
                 boxShadow: `0 0 ${height * 2.5}px ${theme.glow}`,

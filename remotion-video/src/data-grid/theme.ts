@@ -44,7 +44,7 @@ export const BLUE_THEME: Theme = {
   dash: "#2E7FDE",
   dashHot: "#8CC4FF",
   glow: "rgba(96, 166, 255, 0.85)",
-  shaft: "rgba(72, 142, 238, 0.10)",
+  shaft: "rgba(72, 142, 238, 0.05)",
 };
 
 // "Matrix terminal" green: near-black ground, bright terminal green.
@@ -64,7 +64,7 @@ export const GREEN_THEME: Theme = {
   dash: "#14B455",
   dashHot: "#6CFFA6",
   glow: "rgba(0, 255, 100, 0.80)",
-  shaft: "rgba(14, 200, 88, 0.07)",
+  shaft: "rgba(14, 200, 88, 0.035)",
 };
 
 export const THEMES = { blue: BLUE_THEME, green: GREEN_THEME };
