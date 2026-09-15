@@ -80,9 +80,12 @@ export const buildField = (config: VersionConfig): Layers => {
       origin = [Math.cos(a) * d, Math.sin(a) * d * 0.62, spread(rnd, field.spreadZ * 1.6)];
     }
     if (field.motion === 'fill') {
-      const a = rnd() * Math.PI * 2;
-      const d = range(rnd, 13, 24);
-      origin = [Math.cos(a) * d, Math.sin(a) * d * 0.72, home[2]];
+      // Pushed radially outward from the packed position rather than out to a
+      // fixed radius: bubbles headed for the centre start near the frame edge
+      // and are visible immediately, while the outermost ones start off-screen
+      // and sweep in behind them.
+      const push = range(rnd, 2.0, 3.0);
+      origin = [home[0] * push, home[1] * push, home[2]];
     }
     if (field.motion === 'rise') {
       home = [home[0], spread(rnd, field.spreadY * 2.1), home[2]];

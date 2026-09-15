@@ -241,9 +241,9 @@ export const VERSIONS: VersionConfig[] = [
     reference: '1b05cea5 — amber oil beads filling the frame',
     durationInFrames: 250,
     background: {
-      inner: [1.0, 0.97, 0.9], outer: [0.95, 0.89, 0.76],
+      inner: [0.99, 0.95, 0.85], outer: [0.95, 0.89, 0.76],
       center: [0.5, 0.5], radius: 0.7, falloff: 1.1,
-      rampColor: [1.0, 0.95, 0.83], rampAmount: 0.12, rampAngle: 1.57, panel: 0.12,
+      rampColor: [1.0, 0.95, 0.83], rampAmount: 0.12, rampAngle: 1.57, panel: 0.035,
     },
     glass: {
       ...base.glass, tint: [1.0, 0.76, 0.24], rimColor: [1.0, 0.9, 0.6],
@@ -257,7 +257,7 @@ export const VERSIONS: VersionConfig[] = [
       farRatio: 0.35, nearRatio: 0.1, seed: 5055,
     },
     camera: { ...base.camera, fov: 40, frameHeight: 10, pushIn: -0.5 },
-    grade: { ...base.grade, farBlur: 4.6, bloom: 0.3, vignette: 0.1, saturation: 1.14, contrast: 1.06 },
+    grade: { ...base.grade, farBlur: 4.6, bloom: 0.20, vignette: 0.1, saturation: 1.14, contrast: 1.06 },
   },
   {
     id: 'v06-aqua-gel',
