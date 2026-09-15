@@ -1,6 +1,9 @@
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
+import { AiTest, aiTestDefaults } from "./ai/AiTest";
+import { AiDebug } from "./ai/AiDebug";
+import { AiProbe } from "./ai/AiProbe";
 import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
@@ -52,6 +55,24 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      <Composition
+        id="AiTest"
+        component={AiTest}
+        durationInFrames={300}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={aiTestDefaults}
+      />
+      <Composition
+        id="AiDebug"
+        component={AiDebug}
+        durationInFrames={300}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition id="AiProbe" component={AiProbe} durationInFrames={30} fps={30} width={1920} height={1080} />
     </>
   );
 };
