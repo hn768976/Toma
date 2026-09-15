@@ -32,10 +32,17 @@ IDS=(
 
 for id in "${IDS[@]}"; do
   echo "=== $id ==="
+  # PNG intermediates, not the default JPEG: these frames are mostly smooth
+  # gradients across enamel and backdrop, which is exactly what a lossy
+  # intermediate bands. --muted drops the silent AAC track Remotion adds by
+  # default, which also keeps the container duration exactly equal to the
+  # frame count.
   npx remotion render "$BUNDLE" "$id" "$OUT/$id.mp4" \
     --codec=h264 \
     --crf=17 \
+    --image-format=png \
     --pixel-format=yuv420p \
+    --muted \
     --concurrency=2 \
     --timeout=180000 \
     --log=error
