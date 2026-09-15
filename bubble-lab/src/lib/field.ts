@@ -165,7 +165,10 @@ export const bubbleTransform = (
         (b.origin[1] + (b.home[1] - b.origin[1]) * k) * breathe + sway[1] * settle,
         b.origin[2] + (b.home[2] - b.origin[2]) * k + sway[2] * settle,
       ];
-      scale = smoothstep(b.bornAt, b.bornAt + 0.2, p);
+      // Full size from frame one. `bornAt` staggers where a bubble travels
+      // from, not whether it exists — scaling it in as well left every bubble
+      // at zero size on the opening frame, so the clip started on a blank
+      // plate and popped in.
       break;
     }
     case 'fill': {
@@ -175,7 +178,8 @@ export const bubbleTransform = (
         b.origin[1] + (b.home[1] - b.origin[1]) * k + sway[1],
         b.home[2] + sway[2],
       ];
-      scale = smoothstep(b.bornAt, b.bornAt + 0.25, p);
+      // Same as `converge`: these origins already sit outside the frame, so
+      // the entrance reads without also animating scale.
       break;
     }
     case 'rise': {
