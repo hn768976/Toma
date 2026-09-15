@@ -80,7 +80,8 @@ export const glassFragmentShader = /* glsl */ `
    * per cell and each occupied cell contributes one shaded sphere, which is
    * what gives the reference clips their "serum" reading rather than plain glass.
    */
-  vec2 innerBubbles(vec3 p) {
+  /** One lattice shell: the trapped bubbles this sample point passes through. */
+  vec2 innerShell(vec3 p) {
     vec3 gp = p * uInnerScale + uSeed * 4.13;
     vec3 base = floor(gp);
     vec3 f = gp - base;
@@ -97,15 +98,28 @@ export const glassFragmentShader = /* glsl */ `
           float rad = 0.08 + 0.20 * h.y;
           float d = length(f - o - jitter);
           // Soft-shouldered disc with a gentle darker ring just inside its
-          // edge: each trapped bubble reads as a little sphere rather than a
-          // hard dot, which is what keeps the texture soft at this scale.
+          // edge, so each trapped bubble reads as a little sphere.
           body += smoothstep(rad, rad * 0.15, d);
           ring += smoothstep(rad * 1.05, rad * 0.82, d)
                 - smoothstep(rad * 0.82, rad * 0.55, d);
         }
       }
     }
-    return vec2(clamp(body, 0.0, 1.0), clamp(ring, 0.0, 1.0));
+    return vec2(body, ring);
+  }
+
+  /**
+   * Micro-bubbles suspended inside the gel. Sampling the lattice once, at the
+   * surface point, only ever decorates the shell — the droplets cluster toward
+   * the silhouette and the interior stays empty. Three concentric shells stand
+   * in for a volume: each is dimmer than the one outside it, as if seen
+   * through more medium, which is what gives the read of depth.
+   */
+  vec2 innerBubbles(vec3 p) {
+    vec2 acc = innerShell(p)
+             + innerShell(p * 0.72) * 0.78
+             + innerShell(p * 0.45) * 0.52;
+    return vec2(clamp(acc.x, 0.0, 1.0), clamp(acc.y, 0.0, 1.0));
   }
 
   /** Thin-film interference approximated as a hue sweep over the fresnel term. */

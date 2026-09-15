@@ -115,8 +115,8 @@ const base = {
     specAniso: 3.2,
     rimWidth: 0.62,
     innerAmount: 0.26,
-    innerScale: 3.4,
-    innerDensity: 0.4,
+    innerScale: 2.79,
+    innerDensity: 0.48,
     iridescence: 0.0,
     edgeDark: 0.09,
     sheen: 0.028,
@@ -153,7 +153,7 @@ export const VERSIONS: VersionConfig[] = [
       ...base.glass, tint: [0.9, 0.93, 0.97], rimColor: [0.99, 1.0, 1.0],
       specColor: [1, 1, 1], refract: 0.068, absorb: 0.44, fresnelStrength: 0.31,
       dispersion: 0.07, specStrength: 0.61, innerAmount: 0.16,
-      innerDensity: 0.22, edgeDark: 0.23, specPower: 38, rimWidth: 0.55, sheen: 0.033, opacity: 0.93,
+      innerDensity: 0.26, edgeDark: 0.23, specPower: 38, rimWidth: 0.55, sheen: 0.033, opacity: 0.93,
     },
     field: {
       motion: 'converge', count: 80, minRadius: 0.62, maxRadius: 1.3,
@@ -176,7 +176,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [1.0, 0.85, 0.42], rimColor: [1.0, 0.94, 0.72],
       specColor: [1, 0.99, 0.9], refract: 0.044, absorb: 1.36, fresnelStrength: 0.21,
-      specStrength: 0.41, innerAmount: 0.3, innerScale: 4.6, innerDensity: 0.4,
+      specStrength: 0.41, innerAmount: 0.3, innerScale: 3.77, innerDensity: 0.48,
       edgeDark: 0.15, specPower: 26, rimWidth: 0.66, sheen: 0.028, opacity: 0.93,
     },
     field: {
@@ -200,7 +200,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.72, 0.52, 0.95], rimColor: [0.93, 0.89, 1.0],
       specColor: [1, 1, 1], refract: 0.044, absorb: 1.20, fresnelStrength: 0.22,
-      specStrength: 0.43, innerAmount: 0.3, innerScale: 4.6, innerDensity: 0.4,
+      specStrength: 0.43, innerAmount: 0.3, innerScale: 3.77, innerDensity: 0.48,
       edgeDark: 0.15, specPower: 26, rimWidth: 0.66, sheen: 0.028, opacity: 0.93,
     },
     field: {
@@ -224,7 +224,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.99, 0.9, 0.62], rimColor: [1.0, 0.97, 0.87],
       specColor: [1, 1, 0.96], refract: 0.041, absorb: 1.25, fresnelStrength: 0.20,
-      specStrength: 0.47, innerAmount: 0.34, innerScale: 5.4, innerDensity: 0.46,
+      specStrength: 0.47, innerAmount: 0.34, innerScale: 4.43, innerDensity: 0.55,
       edgeDark: 0.16, specPower: 30, rimWidth: 0.62, sheen: 0.033, opacity: 0.93,
     },
     field: {
@@ -248,7 +248,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [1.0, 0.76, 0.24], rimColor: [1.0, 0.9, 0.6],
       specColor: [1, 0.98, 0.88], refract: 0.048, absorb: 1.60, fresnelStrength: 0.19,
-      specStrength: 0.41, innerAmount: 0.3, innerScale: 5.0, innerDensity: 0.44,
+      specStrength: 0.41, innerAmount: 0.3, innerScale: 4.10, innerDensity: 0.53,
       edgeDark: 0.21, specPower: 28, rimWidth: 0.6, sheen: 0.028, opacity: 0.93,
     },
     field: {
@@ -272,8 +272,8 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.5, 0.76, 0.93], rimColor: [0.93, 0.98, 1.0],
       specColor: [1, 1, 1], refract: 0.065, absorb: 1.7, fresnelStrength: 0.25,
-      dispersion: 0.06, specStrength: 0.55, innerAmount: 0.28, innerScale: 6.0,
-      innerDensity: 0.5, edgeDark: 0.3, specPower: 34, rimWidth: 0.58, sheen: 0.033, opacity: 0.93,
+      dispersion: 0.06, specStrength: 0.55, innerAmount: 0.28, innerScale: 4.92,
+      innerDensity: 0.60, edgeDark: 0.3, specPower: 34, rimWidth: 0.58, sheen: 0.033, opacity: 0.93,
     },
     field: {
       motion: 'packed', count: 44, minRadius: 1.95, maxRadius: 2.6,
@@ -296,7 +296,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [1.0, 0.66, 0.4], rimColor: [1.0, 0.89, 0.79],
       specColor: [1, 0.99, 0.95], refract: 0.044, absorb: 1.24, fresnelStrength: 0.21,
-      specStrength: 0.41, innerAmount: 0.3, innerScale: 4.6, innerDensity: 0.4,
+      specStrength: 0.41, innerAmount: 0.3, innerScale: 3.77, innerDensity: 0.48,
       edgeDark: 0.15, specPower: 26, rimWidth: 0.66, sheen: 0.028, opacity: 0.93,
     },
     field: {
@@ -320,7 +320,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.45, 0.6, 0.88], rimColor: [0.98, 0.99, 1.0],
       specColor: [1, 1, 1], refract: 0.051, absorb: 1.04, fresnelStrength: 0.19,
-      specStrength: 0.49, innerAmount: 0.14, innerScale: 5.0, innerDensity: 0.2,
+      specStrength: 0.49, innerAmount: 0.14, innerScale: 4.10, innerDensity: 0.24,
       edgeDark: 0.18, specPower: 33, rimWidth: 0.6, sheen: 0.039, opacity: 0.93,
     },
     field: {
@@ -344,8 +344,8 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.52, 0.36, 0.86], rimColor: [0.95, 0.92, 1.0],
       specColor: [1, 1, 1], refract: 0.065, absorb: 1.8, fresnelStrength: 0.25,
-      dispersion: 0.06, specStrength: 0.55, innerAmount: 0.28, innerScale: 6.0,
-      innerDensity: 0.5, edgeDark: 0.3, specPower: 34, rimWidth: 0.58, sheen: 0.033, opacity: 0.93,
+      dispersion: 0.06, specStrength: 0.55, innerAmount: 0.28, innerScale: 4.92,
+      innerDensity: 0.60, edgeDark: 0.3, specPower: 34, rimWidth: 0.58, sheen: 0.033, opacity: 0.93,
     },
     field: {
       motion: 'packed', count: 44, minRadius: 1.95, maxRadius: 2.6,
@@ -368,7 +368,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.98, 0.62, 0.7], rimColor: [1.0, 0.95, 0.96],
       specColor: [1, 1, 1], refract: 0.051, absorb: 0.96, fresnelStrength: 0.21,
-      specStrength: 0.51, innerAmount: 0.2, innerScale: 5.2, innerDensity: 0.3,
+      specStrength: 0.51, innerAmount: 0.2, innerScale: 4.27, innerDensity: 0.36,
       edgeDark: 0.09,
     sheen: 0.039, specPower: 33, rimWidth: 0.58, opacity: 0.93,
     },
@@ -393,7 +393,7 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.99, 0.55, 0.72], rimColor: [1.0, 0.93, 0.95],
       specColor: [1, 1, 1], refract: 0.068, absorb: 0.72, fresnelStrength: 0.29,
-      dispersion: 0.07, specStrength: 0.61, innerAmount: 0.18, innerDensity: 0.24,
+      dispersion: 0.07, specStrength: 0.61, innerAmount: 0.18, innerDensity: 0.29,
       edgeDark: 0.23, specPower: 38, rimWidth: 0.55, sheen: 0.033, opacity: 0.93,
     },
     field: {
@@ -417,8 +417,8 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.62, 0.84, 0.97], rimColor: [0.82, 0.92, 1.0],
       specColor: [1, 1, 1], refract: 0.058, absorb: 1.3, fresnelStrength: 0.27,
-      dispersion: 0.06, specStrength: 0.60, innerAmount: 0.2, innerScale: 5.6,
-      innerDensity: 0.26, edgeDark: 0.26, specPower: 37, rimWidth: 0.56, sheen: 0.033, opacity: 0.93,
+      dispersion: 0.06, specStrength: 0.60, innerAmount: 0.2, innerScale: 4.59,
+      innerDensity: 0.31, edgeDark: 0.26, specPower: 37, rimWidth: 0.56, sheen: 0.033, opacity: 0.93,
     },
     field: {
       motion: 'swirl', count: 100, minRadius: 0.32, maxRadius: 1.25,
@@ -442,8 +442,8 @@ export const VERSIONS: VersionConfig[] = [
       ...base.glass, tint: [0.86, 0.94, 1.0], rimColor: [0.95, 0.99, 1.0],
       specColor: [1, 1, 1], ior: 1.28, refract: 0.075, absorb: 0.48,
       fresnelPower: 3.0, fresnelStrength: 0.25, dispersion: 0.11,
-      specPower: 41, specStrength: 0.66, innerAmount: 0.34, innerScale: 7.0,
-      innerDensity: 0.5, iridescence: 0.3, edgeDark: 0.28, rimWidth: 0.54, sheen: 0.028, opacity: 0.93,
+      specPower: 41, specStrength: 0.66, innerAmount: 0.34, innerScale: 5.74,
+      innerDensity: 0.60, iridescence: 0.3, edgeDark: 0.28, rimWidth: 0.54, sheen: 0.028, opacity: 0.93,
     },
     field: {
       motion: 'packed', count: 36, minRadius: 1.8, maxRadius: 2.4,
@@ -467,7 +467,7 @@ export const VERSIONS: VersionConfig[] = [
       ...base.glass, tint: [0.99, 0.6, 0.68], rimColor: [1.0, 0.92, 0.94],
       specColor: [1, 1, 1], refract: 0.048, absorb: 1.05, fresnelPower: 3.2,
       fresnelStrength: 0.31, specStrength: 0.49, innerAmount: 0.12,
-      innerScale: 3.0, innerDensity: 0.16, edgeDark: 0.23, specPower: 35, rimWidth: 0.56, sheen: 0.044, opacity: 0.93,
+      innerScale: 2.46, innerDensity: 0.19, edgeDark: 0.23, specPower: 35, rimWidth: 0.56, sheen: 0.044, opacity: 0.93,
       shellGap: 0.3,
     },
     field: {
@@ -491,8 +491,8 @@ export const VERSIONS: VersionConfig[] = [
     glass: {
       ...base.glass, tint: [0.98, 0.3, 0.55], rimColor: [1.0, 0.82, 0.88],
       specColor: [1, 1, 1], refract: 0.061, absorb: 1.44, fresnelStrength: 0.25,
-      dispersion: 0.07, specStrength: 0.53, innerAmount: 0.26, innerScale: 4.8,
-      innerDensity: 0.38, edgeDark: 0.21, specPower: 35, rimWidth: 0.58, sheen: 0.028, opacity: 0.93,
+      dispersion: 0.07, specStrength: 0.53, innerAmount: 0.26, innerScale: 3.93,
+      innerDensity: 0.46, edgeDark: 0.21, specPower: 35, rimWidth: 0.58, sheen: 0.028, opacity: 0.93,
     },
     field: {
       motion: 'swirl', count: 68, minRadius: 0.6, maxRadius: 1.7,
