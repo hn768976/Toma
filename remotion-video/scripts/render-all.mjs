@@ -14,6 +14,11 @@ import path from "node:path";
 const outDir = process.argv[2] ?? "out/1080p";
 const scale = Number(process.argv[3] ?? 0.5);
 const only = process.argv[4];
+// Quality is uniform across the set by default. V03 is the densest scene and
+// encodes largest, so it can be given a slightly higher CRF when a delivery
+// channel imposes a size ceiling - re-rendering at a new CRF rather than
+// transcoding the finished file avoids a second generation of h264 loss.
+const crf = Number(process.env.CRF ?? 16);
 
 const headlessShell =
   "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell";
@@ -64,7 +69,7 @@ for (const id of ids) {
     outputLocation: output,
     browserExecutable,
     scale,
-    crf: 16,
+    crf,
     pixelFormat: "yuv420p",
     concurrency: 4,
     overwrite: true,
