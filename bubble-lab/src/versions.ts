@@ -180,7 +180,7 @@ export const VERSIONS: VersionConfig[] = [
       edgeDark: 0.15, specPower: 26, rimWidth: 0.66, sheen: 0.028, opacity: 0.93,
     },
     field: {
-      motion: 'macroHero', heroRadius: 2.85, count: 20, minRadius: 0.9, maxRadius: 2.0,
+      motion: 'macroHero', heroRadius: 3.3, count: 24, minRadius: 1.6, maxRadius: 3.2,
       spreadX: 7.5, spreadY: 5.0, spreadZ: 7.0, driftSpeed: 0.12, rotateSpeed: 0.05,
       farRatio: 0.72, nearRatio: 0.0, seed: 2022,
     },
@@ -204,7 +204,7 @@ export const VERSIONS: VersionConfig[] = [
       edgeDark: 0.15, specPower: 26, rimWidth: 0.66, sheen: 0.028, opacity: 0.93,
     },
     field: {
-      motion: 'macroHero', heroRadius: 2.85, count: 20, minRadius: 0.9, maxRadius: 2.0,
+      motion: 'macroHero', heroRadius: 3.3, count: 24, minRadius: 1.6, maxRadius: 3.2,
       spreadX: 7.5, spreadY: 5.0, spreadZ: 7.0, driftSpeed: 0.12, rotateSpeed: 0.05,
       farRatio: 0.72, nearRatio: 0.0, seed: 3033,
     },
@@ -300,7 +300,7 @@ export const VERSIONS: VersionConfig[] = [
       edgeDark: 0.15, specPower: 26, rimWidth: 0.66, sheen: 0.028, opacity: 0.93,
     },
     field: {
-      motion: 'macroHero', heroRadius: 2.85, count: 20, minRadius: 0.9, maxRadius: 2.0,
+      motion: 'macroHero', heroRadius: 3.3, count: 24, minRadius: 1.6, maxRadius: 3.2,
       spreadX: 7.5, spreadY: 5.0, spreadZ: 7.0, driftSpeed: 0.12, rotateSpeed: 0.05,
       farRatio: 0.72, nearRatio: 0.0, seed: 7077,
     },
