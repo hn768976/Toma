@@ -27,7 +27,7 @@ export const V05Flythrough: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.03, 0.93);
+  const fade = envelope(frame);
 
   // Ease-out: most of the distance is covered early, so the move reads as a
   // rush that brakes rather than a constant glide.

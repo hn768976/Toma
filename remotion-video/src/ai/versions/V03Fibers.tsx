@@ -26,7 +26,7 @@ export const V03Fibers: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.05, 0.9);
+  const fade = envelope(frame);
 
   const reveal = easeOutQuint(remap(p, 0.04, 0.34));
   const fibresIn = ramp(p, 0.0, 0.2);

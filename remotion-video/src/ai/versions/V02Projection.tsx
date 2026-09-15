@@ -29,7 +29,7 @@ export const V02Projection: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.06, 0.93);
+  const fade = envelope(frame);
 
   // The emitter fires first, the beam climbs, then the hero resolves in it.
   const ignite = ramp(p, 0.01, 0.09);

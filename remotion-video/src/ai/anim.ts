@@ -45,8 +45,18 @@ export const drift = (t: number, rate = 1, phase = 0) =>
   Math.sin(t * rate + phase) * 0.6 + Math.sin(t * rate * 0.618 + phase * 1.7) * 0.4;
 
 /**
- * Eased in-and-out envelope for the whole composition: fades content up at the
- * start and back down at the end so every version can loop or cut cleanly.
+ * Opacity envelope for a whole version.
+ *
+ * There is deliberately no fade-out. The reference clips run at full brightness
+ * from first frame to last - measured mean luma on their final frames is 21-34,
+ * the same as mid-clip - so fading down at the end would read as a deviation
+ * and would make the files worse as backplates, since an editor could not cut
+ * near the tail. The build-in that each version does have is choreographed
+ * (the hero's wipe, rings arriving), not a global dip in opacity.
+ *
+ * The short fade-in that remains exists only to avoid a hard pop on frame 0,
+ * and is specified in frames rather than as a fraction of the duration so it
+ * lasts the same time whether the version runs 10s or 25s.
  */
-export const envelope = (p: number, inEnd = 0.08, outStart = 0.9) =>
-  Math.min(ramp(p, 0, inEnd), 1 - ramp(p, outStart, 1));
+export const envelope = (frame: number, fadeInFrames = 6) =>
+  clamp01(frame / Math.max(1, fadeInFrames));

@@ -52,7 +52,7 @@ export const V08Chevron: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.05, 0.92);
+  const fade = envelope(frame);
 
   const busIn = ramp(p, 0.0, 0.18);
   const reveal = easeOutQuint(remap(p, 0.1, 0.44));

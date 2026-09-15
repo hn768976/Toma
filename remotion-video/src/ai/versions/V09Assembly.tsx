@@ -32,7 +32,7 @@ export const V09Assembly: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.04, 0.9);
+  const fade = envelope(frame);
 
   // The assembly itself, and the hero fading up to take over from it.
   const assembly = easeInOutCubic(remap(p, 0.08, 0.62));

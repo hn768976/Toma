@@ -28,7 +28,7 @@ export const V01Halo: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.05, 0.92);
+  const fade = envelope(frame);
 
   // Camera: a long, slow push in that never quite stops moving.
   const dolly = 5.6 - easeInOutCubic(remap(p, 0, 0.75)) * 1.15;

@@ -29,7 +29,7 @@ export const V06Amber: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.04, 0.88);
+  const fade = envelope(frame);
 
   const reveal = easeOutQuint(remap(p, 0.02, 0.3));
   const camZ = 5.0 - remap(p, 0, 1) * 0.55;

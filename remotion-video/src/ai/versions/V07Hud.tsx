@@ -25,7 +25,7 @@ export const V07Hud: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.05, 0.93);
+  const fade = envelope(frame);
 
   // Acquire: the reticle closes in from oversize, then locks.
   const acquire = easeOutQuint(remap(p, 0.02, 0.26));

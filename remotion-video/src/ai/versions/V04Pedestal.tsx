@@ -29,7 +29,7 @@ export const V04Pedestal: React.FC = () => {
 
   const t = frame / fps;
   const p = frame / Math.max(1, durationInFrames - 1);
-  const fade = envelope(p, 0.07, 0.9);
+  const fade = envelope(frame);
 
   // Only 15s, so the reveal has to be quicker than the 25s versions.
   const reveal = easeOutQuint(remap(p, 0.05, 0.4));
