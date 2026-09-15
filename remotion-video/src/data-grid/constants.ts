@@ -76,10 +76,8 @@ export const FIELD_HALF_Y = 1240;
  * the near ones are mostly off the edges, which is what a fly-through
  * looks like.
  */
-export const NODE_COUNT = 1650;
-export const READOUT_COUNT = 620;
-export const DASH_COUNT = 700;
-export const BLOCK_COUNT = 75;
+export const NODE_COUNT = 2300;
+export const READOUT_COUNT = 880;
 
 /** The pool of readout values, transcribed from the reference clip. */
 export const READOUT_VALUES = [

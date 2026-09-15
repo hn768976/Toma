@@ -40,9 +40,10 @@ npx remotion upgrade
 
 ## 3D data field (`DataGrid*`)
 
-A "big data visualisation" motion background: a volume of glowing nodes,
-numeric readouts and data dashes that the camera flies forward through.
-20.00s / 30fps / 16:9, matching the reference clip's timing.
+A "big data visualisation" motion background: a volume of glowing nodes
+and numeric readouts that the camera flies forward through. No grid and
+no dashes — just points and values in depth. 20.00s / 30fps / 16:9,
+matching the reference clip's timing.
 
 ### Compositions
 
@@ -91,7 +92,7 @@ Everything lives in `src/data-grid/`:
 | `projection.ts`  | Perspective camera, depth recycling, haze, fades, culling      |
 | `random.ts`      | Deterministic PRNG                                             |
 | `loop.ts`        | Oscillators that close exactly over the clip                   |
-| `layers/`        | Atmosphere, dashes, readouts, nodes                            |
+| `layers/`        | Atmosphere, readouts, nodes                                    |
 
 Three things are worth knowing before changing it:
 
