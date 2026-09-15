@@ -1,0 +1,26 @@
+{
+  "name": "serum-bubbles-4k",
+  "version": "1.0.0",
+  "description": "15 cosmetic 3D glass-bubble motion graphics — Remotion + three.js/WebGL, 4K compositions, 30fps",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.1.2",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "render:1080": "node scripts/render-all.mjs",
+    "bundle": "remotion bundle"
+  }
+}
