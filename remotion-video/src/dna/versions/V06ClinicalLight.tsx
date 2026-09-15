@@ -25,11 +25,11 @@ export const V06ClinicalLight: React.FC = () => {
   const glass = useMemo(
     () =>
       frostedGlass({
-        color: "#5f90bd",
-        opacity: 0.78,
-        roughness: 0.14,
+        color: "#4a7ba8",
+        opacity: 0.84,
+        roughness: 0.16,
         clearcoat: 1,
-        envIntensity: 2.2,
+        envIntensity: 1.7,
       }),
     [],
   );
@@ -49,11 +49,11 @@ export const V06ClinicalLight: React.FC = () => {
   accents.uniforms.uTime.value = t;
 
   const moleculeNear = useMemo(
-    () => matteCeramic({ color: "#93aec6", roughness: 0.45, envIntensity: 1.3 }),
+    () => matteCeramic({ color: "#7d9cba", roughness: 0.42, envIntensity: 1.2 }),
     [],
   );
   const moleculeFar = useMemo(
-    () => matteCeramic({ color: "#a8c0d4", roughness: 0.6, envIntensity: 1.05 }),
+    () => matteCeramic({ color: "#93afc8", roughness: 0.58, envIntensity: 1.0 }),
     [],
   );
 
@@ -94,7 +94,7 @@ export const V06ClinicalLight: React.FC = () => {
       }}
     >
       {/* Far molecules, well out of focus. */}
-      <AbsoluteFill style={{ filter: `blur(${9 * resolutionScale}px)`, opacity: 0.75 }}>
+      <AbsoluteFill style={{ filter: `blur(${7 * resolutionScale}px)`, opacity: 0.9 }}>
         <Stage
           width={width}
           height={height}
@@ -102,7 +102,7 @@ export const V06ClinicalLight: React.FC = () => {
           camera={camera}
           env={env}
           clearAlpha={0}
-          toneMappingExposure={1.25}
+          toneMappingExposure={1.05}
         >
           <ambientLight intensity={1.5} color="#e8f2fa" />
           <directionalLight position={[3, 6, 5]} intensity={2.0} color="#ffffff" />
@@ -131,7 +131,7 @@ export const V06ClinicalLight: React.FC = () => {
       </AbsoluteFill>
 
       {/* Mid molecules, softly defocused. */}
-      <AbsoluteFill style={{ filter: `blur(${3 * resolutionScale}px)` }}>
+      <AbsoluteFill style={{ filter: `blur(${2.2 * resolutionScale}px)` }}>
         <Stage
           width={width}
           height={height}
@@ -139,7 +139,7 @@ export const V06ClinicalLight: React.FC = () => {
           camera={camera}
           env={env}
           clearAlpha={0}
-          toneMappingExposure={1.2}
+          toneMappingExposure={1.0}
         >
           <ambientLight intensity={1.4} color="#e4eff8" />
           <directionalLight position={[2, 5, 6]} intensity={2.2} color="#ffffff" />
@@ -169,7 +169,7 @@ export const V06ClinicalLight: React.FC = () => {
           camera={camera}
           env={env}
           clearAlpha={0}
-          toneMappingExposure={1.02}
+          toneMappingExposure={0.92}
         >
           <ambientLight intensity={1.1} color="#dfecf7" />
           <directionalLight position={[3, 6, 6]} intensity={2.6} color="#ffffff" />

@@ -48,9 +48,11 @@ const Bases: React.FC<{ frame: number; fps: number; scale: number }> = ({
 }) => {
   const letters = "ATGC";
   const rand = mulberry32(9001);
+  // Held inside the middle band of frame so the letters never drift through
+  // the top readout, the panel or the bottom log.
   const items = Array.from({ length: 26 }, () => ({
-    x: rand() * 100,
-    y: rand() * 100,
+    x: 4 + rand() * 92,
+    y: 22 + rand() * 58,
     letter: letters[Math.floor(rand() * 4)],
     period: 4 + rand() * 6,
     phase: rand(),
@@ -74,7 +76,7 @@ const Bases: React.FC<{ frame: number; fps: number; scale: number }> = ({
             style={{
               position: "absolute",
               left: `${it.x}%`,
-              top: `${it.y - cycle * 9}%`,
+              top: `${it.y - cycle * 7}%`,
               color: cyan,
               opacity,
               fontFamily: HUD_MONO,
