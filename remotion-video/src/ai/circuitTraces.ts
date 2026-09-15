@@ -147,3 +147,88 @@ export const generateTraces = ({
     pads: new Float32Array(pads),
   };
 };
+
+export type ChevronOptions = {
+  /** Number of nested chevrons. */
+  count: number;
+  /** X of the innermost apex. Successive chevrons step outward from here. */
+  startX: number;
+  /** Spacing between chevrons along X. */
+  gap: number;
+  /** Horizontal run of each arm. */
+  armX: number;
+  /** Vertical rise of each arm. */
+  armY: number;
+  /** Length of the horizontal tail on the end of each arm. */
+  tail?: number;
+  /** Per-chevron jitter on the arm rise, so the stack is not perfectly regular. */
+  jitter?: number;
+  seed?: number;
+};
+
+/**
+ * Nested chevrons pointing along +X, as used by the symmetrical bus version.
+ * Mirroring the same field with a negative X scale gives the exact left/right
+ * symmetry the reference has - generating each side separately would not.
+ */
+export const generateChevrons = ({
+  count,
+  startX,
+  gap,
+  armX,
+  armY,
+  tail = 0,
+  jitter = 0,
+  seed = 5,
+}: ChevronOptions): TraceField => {
+  const rng = makeRng(seed);
+  const positions: number[] = [];
+  const distances: number[] = [];
+  const lengths: number[] = [];
+  const ids: number[] = [];
+  const pads: number[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const apexX = startX + i * gap;
+    const rise = armY * (1 + (rng() - 0.5) * 2 * jitter);
+    const run = armX * (1 + (rng() - 0.5) * 2 * jitter);
+
+    // Each chevron is drawn as one run: down-tail, down-arm, apex, up-arm,
+    // up-tail, so the pulse travels the whole shape in a single sweep.
+    const points: [number, number][] = [];
+    if (tail > 0) points.push([apexX - run - tail, -rise]);
+    points.push([apexX - run, -rise]);
+    points.push([apexX, 0]);
+    points.push([apexX - run, rise]);
+    if (tail > 0) points.push([apexX - run - tail, rise]);
+
+    let total = 0;
+    const cumulative: number[] = [0];
+    for (let k = 1; k < points.length; k++) {
+      total += Math.hypot(
+        points[k][0] - points[k - 1][0],
+        points[k][1] - points[k - 1][1],
+      );
+      cumulative.push(total);
+    }
+    if (total <= 0) continue;
+
+    const id = i / Math.max(1, count - 1);
+    for (let k = 1; k < points.length; k++) {
+      positions.push(points[k - 1][0], points[k - 1][1], 0);
+      positions.push(points[k][0], points[k][1], 0);
+      distances.push(cumulative[k - 1], cumulative[k]);
+      lengths.push(total, total);
+      ids.push(id, id);
+    }
+    pads.push(apexX, 0, 0);
+  }
+
+  return {
+    positions: new Float32Array(positions),
+    distances: new Float32Array(distances),
+    lengths: new Float32Array(lengths),
+    ids: new Float32Array(ids),
+    pads: new Float32Array(pads),
+  };
+};

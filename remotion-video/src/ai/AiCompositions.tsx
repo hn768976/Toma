@@ -8,22 +8,36 @@
 import React from "react";
 import { Composition } from "remotion";
 import { V01Halo } from "./versions/V01Halo";
+import { V02Projection } from "./versions/V02Projection";
+import { V03Fibers } from "./versions/V03Fibers";
+import { V04Pedestal } from "./versions/V04Pedestal";
+import { V05Flythrough } from "./versions/V05Flythrough";
+import { V06Amber } from "./versions/V06Amber";
+import { V07Hud } from "./versions/V07Hud";
+import { V08Chevron } from "./versions/V08Chevron";
+import { V09Assembly } from "./versions/V09Assembly";
 import { FPS, MASTER_HEIGHT, MASTER_WIDTH, VersionId, VERSIONS } from "./versions";
 
-const COMPONENTS: Partial<Record<VersionId, React.FC>> = {
+const COMPONENTS: Record<VersionId, React.FC> = {
   V01Halo,
+  V02Projection,
+  V03Fibers,
+  V04Pedestal,
+  V05Flythrough,
+  V06Amber,
+  V07Hud,
+  V08Chevron,
+  V09Assembly,
 };
 
 export const AiCompositions: React.FC = () => (
   <>
     {VERSIONS.map((version) => {
-      const component = COMPONENTS[version.id];
-      if (!component) return null;
       return (
         <Composition
           key={version.id}
           id={version.id}
-          component={component}
+          component={COMPONENTS[version.id]}
           durationInFrames={version.durationInFrames}
           fps={FPS}
           width={MASTER_WIDTH}

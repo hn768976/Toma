@@ -146,7 +146,10 @@ export const Glow: React.FC<GlowProps> = ({
 
     // The triangle's vertices reach outside the ortho frustum by design, so it
     // has to opt out of culling or the whole chain silently renders nothing.
-    const quad = new THREE.Mesh(TRIANGLE, new THREE.MeshBasicMaterial());
+    const quad: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(
+      TRIANGLE,
+      new THREE.MeshBasicMaterial(),
+    );
     quad.frustumCulled = false;
     const quadScene = new THREE.Scene();
     quadScene.add(quad);

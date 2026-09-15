@@ -7,10 +7,12 @@
 import React, { useMemo } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
-import { generateTraces, TraceOptions } from "../circuitTraces";
+import { generateTraces, TraceField, TraceOptions } from "../circuitTraces";
 import { toRgb } from "../palette";
 
-export type CircuitFieldProps = TraceOptions & {
+export type CircuitFieldProps = Partial<TraceOptions> & {
+  /** Use a pre-built field (e.g. chevrons) instead of generating traces. */
+  field?: TraceField;
   /** Resting colour of the copper. */
   colour: string;
   /** Colour of the energy travelling along a run. */
@@ -28,6 +30,8 @@ export type CircuitFieldProps = TraceOptions & {
   falloffRadius?: number;
   position?: [number, number, number];
   rotation?: [number, number, number];
+  /** Per-axis scale; [-1, 1, 1] mirrors the field across X. */
+  scale?: [number, number, number];
   showPads?: boolean;
   padSize?: number;
 };
@@ -113,7 +117,9 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
   falloffRadius = 0,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
+  scale = [1, 1, 1],
   showPads = true,
+  field,
   padSize = 40,
   ...traceOptions
 }) => {
@@ -121,14 +127,21 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
   const { fps } = useVideoConfig();
 
   const { lines, padGeometry } = useMemo(() => {
-    const field = generateTraces(traceOptions);
+    const built =
+      field ??
+      generateTraces({
+        ...traceOptions,
+        count: traceOptions.count ?? 100,
+        width: traceOptions.width ?? 6,
+        height: traceOptions.height ?? 4,
+      });
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(field.positions, 3));
-    g.setAttribute("aDist", new THREE.BufferAttribute(field.distances, 1));
-    g.setAttribute("aLen", new THREE.BufferAttribute(field.lengths, 1));
-    g.setAttribute("aId", new THREE.BufferAttribute(field.ids, 1));
+    g.setAttribute("position", new THREE.BufferAttribute(built.positions, 3));
+    g.setAttribute("aDist", new THREE.BufferAttribute(built.distances, 1));
+    g.setAttribute("aLen", new THREE.BufferAttribute(built.lengths, 1));
+    g.setAttribute("aId", new THREE.BufferAttribute(built.ids, 1));
     const p = new THREE.BufferGeometry();
-    p.setAttribute("position", new THREE.BufferAttribute(field.pads, 3));
+    p.setAttribute("position", new THREE.BufferAttribute(built.pads, 3));
     return { lines: g, padGeometry: p };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -141,6 +154,7 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
     traceOptions.diagonalChance,
     traceOptions.padChance,
     traceOptions.seed,
+    field,
   ]);
 
   const material = useMemo(
@@ -201,7 +215,7 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
   pu.uOpacity.value = opacity * 0.9;
 
   return (
-    <group position={position} rotation={rotation}>
+    <group position={position} rotation={rotation} scale={scale}>
       <lineSegments geometry={lines} material={material} frustumCulled={false} />
       {showPads && padGeometry.attributes.position.count > 0 ? (
         <points geometry={padGeometry} material={padMaterial} frustumCulled={false} />

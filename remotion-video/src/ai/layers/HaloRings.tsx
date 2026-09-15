@@ -37,6 +37,8 @@ export type HaloRingsProps = {
   opacity?: number;
   position?: [number, number, number];
   rotation?: [number, number, number];
+  /** Uniform scale, for reticles that close in on their target. */
+  scale?: number;
 };
 
 const MAX_RINGS = 8;
@@ -112,6 +114,7 @@ export const HaloRings: React.FC<HaloRingsProps> = ({
   opacity = 1,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
+  scale = 1,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -171,7 +174,13 @@ export const HaloRings: React.FC<HaloRingsProps> = ({
   u.uOpacity.value = opacity;
 
   return (
-    <mesh material={material} position={position} rotation={rotation} frustumCulled={false}>
+    <mesh
+      material={material}
+      position={position}
+      rotation={rotation}
+      scale={scale}
+      frustumCulled={false}
+    >
       <planeGeometry args={[extent * 2, extent * 2]} />
     </mesh>
   );
