@@ -25,6 +25,7 @@ Measured from the supplied reference clip (596×336, VP8/WebM, 30 fps, 17.000 s)
   runs at roughly 43 bpm while the readout shows ~60. Visual fidelity was
   prioritised, so the R-R spacing matches the reference and the readout keeps
   showing 59–61, exactly as the source does.
-- **Red variant.** ECG trace and the large HR number are red; the secondary
-  readout stays teal, matching how monitors colour-code an ECG lead and its
-  derived rate together.
+- **Red variant.** Every lit element is red - trace, HR number, secondary
+  readout and the marker squares. The grey block keeps its neutral grey, as in
+  the reference, where it reads as a greyscale status indicator rather than a
+  colour-coded channel. To take it red too, set `grey` in the `RED` theme.

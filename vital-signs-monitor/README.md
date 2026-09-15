@@ -8,9 +8,9 @@ Two colour variants:
 | Composition | Size | ECG trace | HR number | Secondary readout |
 |---|---|---|---|---|
 | `VitalSigns-Teal-4K` | 3840×2160 | teal | teal | teal |
-| `VitalSigns-Red-4K` | 3840×2160 | **red** | **red** | teal |
+| `VitalSigns-Red-4K` | 3840×2160 | **red** | **red** | **red** |
 | `VitalSigns-Teal-1080` | 1920×1080 | teal | teal | teal |
-| `VitalSigns-Red-1080` | 1920×1080 | **red** | **red** | teal |
+| `VitalSigns-Red-1080` | 1920×1080 | **red** | **red** | **red** |
 
 All four are **30 fps, 510 frames — exactly 17.000 s**, matching the reference clip.
 

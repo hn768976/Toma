@@ -30,7 +30,7 @@ export const RED: Theme = {
   trace: '#ff2f3c',
   traceCore: '#ffdedb',
   hr: '#f0323c',
-  sub: '#57b6ad',
+  sub: '#ed2f39',
   accent: '#ff2f3c',
   grey: '#bebdc0',
 };
