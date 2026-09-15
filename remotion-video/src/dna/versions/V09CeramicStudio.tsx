@@ -152,7 +152,7 @@ export const V09CeramicStudio: React.FC = () => {
             rotationOrder="ZYX"
             position={[0.2 + drift(t * 0.18, 211) * 0.1, -0.15, 0.3]}
             rotation={spin(0.33, 0.6)}
-            scale={2.25}
+            scale={3.5}
           />
           {/* A second strand running into the upper right corner. */}
           <Solid

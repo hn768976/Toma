@@ -9,7 +9,8 @@ import { drift } from "../random";
 
 /**
  * Reference: istockphoto-2257339429 — 8.4s.
- * Several helices stacked at a shallow diagonal, lit magenta from the upper
+ * The violet strand carries the frame alone — nothing sits behind it — with a
+ * single second strand in the bottom-left corner. Lit magenta from the upper
  * right and deep blue from below, with an iridescent sheen rolling over the
  * ribbons as they turn.
  */
@@ -74,40 +75,7 @@ export const V03VioletCascade: React.FC = () => {
         }}
       />
 
-      {/* Defocused strands well behind the hero. */}
-      <AbsoluteFill style={{ filter: `blur(${11 * resolutionScale}px)`, opacity: 0.85 }}>
-        <Stage
-          width={width}
-          height={height}
-          resolutionScale={resolutionScale}
-          camera={camera}
-          env={env}
-          clearAlpha={0}
-          toneMappingExposure={1.05}
-        >
-          <ambientLight intensity={0.5} color="#5a4ba8" />
-          <directionalLight position={[5, 6, 3]} intensity={1.6} color="#ff87c4" />
-          <directionalLight position={[-5, -4, 1]} intensity={1.1} color="#3f6adf" />
-          <Solid
-            geometry={geo.dna}
-            material={backdropStrand}
-            rotationOrder="ZYX"
-            position={[-2.2, 1.6, -4.5]}
-            rotation={spin(0.28, 1.2)}
-            scale={4.6}
-          />
-          <Solid
-            geometry={geo.dna}
-            material={backdropStrand}
-            rotationOrder="ZYX"
-            position={[2.8, -1.9, -3.2]}
-            rotation={spin(0.31, 4.4)}
-            scale={4.6}
-          />
-        </Stage>
-      </AbsoluteFill>
-
-      {/* Mid layer, lightly defocused. */}
+      {/* The only other strand: one in the bottom-left corner. */}
       <AbsoluteFill style={{ filter: `blur(${3.5 * resolutionScale}px)` }}>
         <Stage
           width={width}

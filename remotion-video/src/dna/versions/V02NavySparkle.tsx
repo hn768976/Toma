@@ -15,7 +15,7 @@ import { drift } from "../random";
  * sparkle points crawling along its surface.
  */
 const HERO_SCALE = 2.3;
-const BACK_SCALE = 3.4;
+const BACK_SCALE = 2.15;
 
 export const V02NavySparkle: React.FC = () => {
   const frame = useCurrentFrame();
@@ -51,6 +51,20 @@ export const V02NavySparkle: React.FC = () => {
     [],
   );
 
+  // The strand behind sits well back in the mix — its own far dimmer material
+  // rather than sharing the hero's.
+  const backRim = useMemo(
+    () =>
+      fresnelGlow({
+        colorA: "#081a33",
+        colorB: "#2f7ec0",
+        power: 2.4,
+        intensity: 0.5,
+        opacity: 0.3,
+      }),
+    [],
+  );
+
   const camera: CameraState = {
     position: [0.35 + drift(t * 0.18, 13) * 0.1, drift(t * 0.15, 41) * 0.16, 3.6],
     lookAt: [0.35, 0, 0],
@@ -68,7 +82,9 @@ export const V02NavySparkle: React.FC = () => {
   // which keeps every join comfortably outside frame — the strand reads as one
   // unbroken helix with nothing overlapping on screen.
   const heroTiles = helixTiles(3, HERO_SCALE, 0);
-  const backTiles = helixTiles(3, BACK_SCALE, 0);
+  // Smaller now, so it needs more tiles to run past the top and bottom of
+  // frame; helixTiles keeps the joins closed at any scale.
+  const backTiles = helixTiles(6, BACK_SCALE, 0);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#01050e" }}>
@@ -140,7 +156,7 @@ export const V02NavySparkle: React.FC = () => {
             <Solid
               key={`back-${i}`}
               geometry={geo.dna}
-              material={rim}
+              material={backRim}
               position={[-1.4, offset, -3.6]}
               rotation={[0, t * 0.4 + 1.9, upright]}
               scale={BACK_SCALE}

@@ -138,7 +138,7 @@ export const V12GlassRimlight: React.FC = () => {
             rotationOrder="ZYX"
             position={[0.15, -0.05, 0.5]}
             rotation={spin(0.34, 0)}
-            scale={2.35}
+            scale={3.5}
           />
           <Solid
             geometry={geo.dna}
@@ -146,15 +146,21 @@ export const V12GlassRimlight: React.FC = () => {
             rotationOrder="ZYX"
             position={[0.15, -0.05, 0.5]}
             rotation={spin(0.34, 0)}
-            scale={2.355}
+            scale={3.507}
           />
         </Stage>
       </AbsoluteFill>
 
+      {/*
+        The vignette is tinted with the background's own colour and ramped over
+        several stops. Darkening toward a *different* colour than the backdrop
+        is what made the old one read as an ellipse sitting on top of the frame
+        rather than as falloff.
+      */}
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse 78% 74% at 50% 48%, rgba(0,0,0,0) 42%, rgba(0,2,7,0.9) 100%)",
+            "radial-gradient(ellipse 96% 92% at 50% 48%, rgba(1,4,10,0) 35%, rgba(1,4,10,0.25) 58%, rgba(1,4,10,0.6) 78%, rgba(1,4,10,0.88) 100%)",
         }}
       />
     </AbsoluteFill>
