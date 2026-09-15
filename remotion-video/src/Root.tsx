@@ -1,3 +1,4 @@
+import React from "react";
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
@@ -12,6 +13,8 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { FPS as TOOTH_FPS, HD, UHD } from "./tooth/config";
+import { TOOTH_VERSIONS, durationOf } from "./tooth/versions";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -52,6 +55,26 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      {TOOTH_VERSIONS.map((v) => (
+        <React.Fragment key={v.id}>
+          <Composition
+            id={`Tooth-${v.id}-1080p`}
+            component={v.component}
+            durationInFrames={durationOf(v)}
+            fps={TOOTH_FPS}
+            width={HD.width}
+            height={HD.height}
+          />
+          <Composition
+            id={`Tooth-${v.id}-4K`}
+            component={v.component}
+            durationInFrames={durationOf(v)}
+            fps={TOOTH_FPS}
+            width={UHD.width}
+            height={UHD.height}
+          />
+        </React.Fragment>
+      ))}
     </>
   );
 };
