@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+/*
+ * The glow pass renders into a deliberately small drawing buffer and is then
+ * stretched back over the full frame. three.js sets an explicit CSS width and
+ * height on the canvas when it sizes the drawing buffer, which would otherwise
+ * pin the glow to a small box in the top-left corner, so override it here.
+ */
+.dna-glow-pass canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
