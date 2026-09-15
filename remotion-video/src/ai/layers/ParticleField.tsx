@@ -95,15 +95,17 @@ export const ParticleField: React.FC<ParticleFieldProps> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  const [boundsX, boundsY, boundsZ] = bounds;
+
   const geometry = useMemo(() => {
     const rng = makeRng(seed);
     const pos = new Float32Array(count * 3);
     const phase = new Float32Array(count);
     const scale = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = range(rng, -bounds[0], bounds[0]);
-      pos[i * 3 + 1] = range(rng, -bounds[1], bounds[1]);
-      pos[i * 3 + 2] = range(rng, -bounds[2], bounds[2]);
+      pos[i * 3] = range(rng, -boundsX, boundsX);
+      pos[i * 3 + 1] = range(rng, -boundsY, boundsY);
+      pos[i * 3 + 2] = range(rng, -boundsZ, boundsZ);
       phase[i] = rng();
       // A few noticeably larger motes stop the field reading as uniform noise.
       scale[i] = rng() < 0.08 ? range(rng, 1.8, 3.2) : range(rng, 0.4, 1.1);
@@ -113,7 +115,8 @@ export const ParticleField: React.FC<ParticleFieldProps> = ({
     g.setAttribute("aPhase", new THREE.BufferAttribute(phase, 1));
     g.setAttribute("aScale", new THREE.BufferAttribute(scale, 1));
     return g;
-  }, [count, bounds, seed]);
+    // Depend on the numbers, never on the array's identity.
+  }, [count, boundsX, boundsY, boundsZ, seed]);
 
   const material = useMemo(
     () =>

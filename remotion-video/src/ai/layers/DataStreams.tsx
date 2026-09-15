@@ -81,6 +81,8 @@ export const DataStreams: React.FC<DataStreamsProps> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  const [lengthMin, lengthMax] = lengthRange;
+
   const geometry = useMemo(() => {
     const rng = makeRng(seed);
     const pos: number[] = [];
@@ -98,7 +100,7 @@ export const DataStreams: React.FC<DataStreamsProps> = ({
         y = sign * (clearBand + Math.abs(y) * (1 - clearBand / height));
       }
       const z = range(rng, -depth, depth);
-      const l = range(rng, lengthRange[0], lengthRange[1]);
+      const l = range(rng, lengthMin, lengthMax);
       const p = rng();
       const s = range(rng, 0.55, 1.6);
       const b = range(rng, 0.25, 1);
@@ -120,7 +122,8 @@ export const DataStreams: React.FC<DataStreamsProps> = ({
     g.setAttribute("aLen", new THREE.BufferAttribute(new Float32Array(len), 1));
     g.setAttribute("aBright", new THREE.BufferAttribute(new Float32Array(bright), 1));
     return g;
-  }, [count, span, height, depth, lengthRange, clearBand, seed]);
+    // Depend on the numbers, never on the array's identity.
+  }, [count, span, height, depth, lengthMin, lengthMax, clearBand, seed]);
 
   const material = useMemo(
     () =>
