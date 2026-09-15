@@ -26,7 +26,7 @@ export const secondsToFrames = (seconds: number) => Math.round(seconds * FPS);
 export const MODELS = {
   /** 188k triangles - the hero mesh, used for every solid/glossy version. */
   full: "models/tooth-full.bin",
-  /** 21k triangles - used where a visible but fine mesh topology is wanted. */
+  /** 21k triangles. Shipped for edits; not loaded by any version today. */
   mid: "models/tooth-midpoly.bin",
   /** 5k triangles - the deliberate low-poly look of the wireframe versions. */
   low: "models/tooth-lowpoly.bin",

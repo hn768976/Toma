@@ -122,7 +122,7 @@ derived variants:
 |------|----------|---------|
 | `tooth.glb` | the normalised source model, with a material attached | external tools |
 | `tooth-full.bin` | 97,635 verts / 188,158 tris, with UVs | every solid version |
-| `tooth-midpoly.bin` | 10,639 verts / 21,306 tris | fine wireframes |
+| `tooth-midpoly.bin` | 10,639 verts / 21,306 tris | shipped for edits, not loaded |
 | `tooth-lowpoly.bin` | 2,525 verts / 5,052 tris | versions 01 and 02 |
 | `tooth-points.bin` | 24,000 area-weighted surface samples | the point clouds |
 

@@ -37,17 +37,6 @@ export const saw = (t: number, cycles = 1, phase = 0) => {
   return v < 0 ? v + 1 : v;
 };
 
-/** A 0..1..0 triangle repeating `cycles` times across the loop. */
-export const ping = (t: number, cycles = 1, phase = 0) =>
-  1 - Math.abs(saw(t, cycles, phase) * 2 - 1);
-
-/** Smooth 0..1..0 bell, peaking at `centre`, over the loop's [0,1). */
-export const bell = (t: number, centre: number, halfWidth: number) => {
-  let d = Math.abs(t - centre);
-  d = Math.min(d, 1 - d); // wrap around the loop
-  return THREE.MathUtils.smoothstep(1 - d / halfWidth, 0, 1);
-};
-
 const Renderer: React.FC<{
   readonly toneMapping: THREE.ToneMapping;
   readonly exposure: number;

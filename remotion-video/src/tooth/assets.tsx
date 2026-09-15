@@ -11,9 +11,6 @@ import {
 export type ToothAssets = {
   /** 188k triangles - the hero mesh. */
   readonly full: THREE.BufferGeometry;
-  /** 21k triangles, plus a barycentric copy for the fine wireframes. */
-  readonly mid: THREE.BufferGeometry;
-  readonly midBary: THREE.BufferGeometry;
   /** 5k triangles, plus a barycentric copy for the low-poly wireframes. */
   readonly low: THREE.BufferGeometry;
   readonly lowBary: THREE.BufferGeometry;
@@ -43,19 +40,19 @@ export const WithToothAssets: React.FC<{
   readonly children: React.ReactNode;
   readonly fallback?: React.ReactNode;
 }> = ({ children, fallback = null }) => {
+  // MODELS.mid is deliberately not loaded: nothing currently uses it, and
+  // every rendering tab would pay the fetch and the non-indexed expansion.
   const full = useToothGeometry(MODELS.full);
-  const mid = useToothGeometry(MODELS.mid);
   const low = useToothGeometry(MODELS.low);
   const points = useToothPoints(MODELS.points);
-  const midBary = useBarycentricGeometry(mid);
   const lowBary = useBarycentricGeometry(low);
 
-  if (!full || !mid || !low || !points || !midBary || !lowBary) {
+  if (!full || !low || !points || !lowBary) {
     return <>{fallback}</>;
   }
 
   return (
-    <AssetContext.Provider value={{ full, mid, midBary, low, lowBary, points }}>
+    <AssetContext.Provider value={{ full, low, lowBary, points }}>
       {children}
     </AssetContext.Provider>
   );

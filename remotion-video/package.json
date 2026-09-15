@@ -34,7 +34,8 @@
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
     "render:1080p": "node scripts/render-all.mjs --res=1080p",
-    "render:4k": "node scripts/render-all.mjs --res=4k"
+    "render:4k": "node scripts/render-all.mjs --res=4k",
+    "package": "node scripts/make-project-zip.mjs"
   },
   "sideEffects": [
     "*.css",
