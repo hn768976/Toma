@@ -52,7 +52,13 @@ void main() {
   vec3 pos = position;
   vec3 nrm = normal;
 
-  float tooth = smoothstep(uGumLine, uGumLine + uGumBlend, aGumT) * aBand;
+  // A receded margin needs a softer cut than a healthy one. At the natural
+  // gum line the threshold sits exactly on the geometric crease, so a tight
+  // blend follows real anatomy. Pushed down the root there is no crease to
+  // follow and the per-vertex height field's local variation shows up as a
+  // frayed edge, so the blend widens with the recession.
+  float blend = uGumBlend + max(0.0, -uGumLine) * 0.42;
+  float tooth = smoothstep(uGumLine, uGumLine + blend, aGumT) * aBand;
   float gum = 1.0 - tooth;
 
   // Oedema: inflamed gingiva swells hardest at the margin and the papillae,
