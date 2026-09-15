@@ -47,7 +47,7 @@ const Scene: React.FC<{ progress: number; time: number }> = ({
     wetness: 0.4,
     cavity: ramp(progress, [0.3, 0.86], [0, 1]),
     cavityCenter: centre,
-    cavityRadius: 0.038,
+    cavityRadius: 0.032,
     cavityDepth: 0.03,
     hazeStrength: 0.18,
     hazeNear: 0.8,

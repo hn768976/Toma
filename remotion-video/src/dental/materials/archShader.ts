@@ -340,22 +340,30 @@ void main() {
   float sss = pow(clamp(dot(-N, uKeyDir) * 0.5 + 0.5, 0.0, 1.0), 2.5);
   vec3 transmission = uGumDeepColor * sss * (1.0 - tooth) * 0.55 * (1.0 + inflam);
   // Enamel picks up a softer version of the same effect at the thin incisal edge.
-  transmission += uDentinColor * sss * tooth * tip * 0.22;
+  transmission += uDentinColor * sss * tooth * tip * 0.22 * (1.0 - caries);
 
   vec3 color = albedo * diffuse * ao + transmission * ao;
 
-  float fres = f0 + (1.0 - f0) * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+  // Grazing fresnel is capped rather than allowed to reach 1. The gain
+  // below is an art multiplier that makes enamel gleam, and multiplying a
+  // full grazing term by it blows out every concavity -- most visibly the
+  // inside of a carious lesion, where the dark albedo was being washed
+  // back to the brightness of clean enamel.
+  float specFres = f0 + (0.34 - f0) * pow(1.0 - max(dot(N, V), 0.0), 5.0);
   vec3 spec = uKeyColor * ggx(N, V, uKeyDir, specRough)
             + uFillColor * ggx(N, V, uFillDir, specRough) * 0.5
             + uRimColor * ggx(N, V, uRimDir, specRough) * 0.7;
-  color += spec * fres * mix(3.4, 12.0, tooth) * mix(0.75, 1.0, ao);
+  // Caries is porous and matte; it must not catch the enamel highlight.
+  float lesionMatte = 1.0 - caries * 0.92;
+  color += spec * specFres * mix(3.4, 12.0, tooth) * mix(0.75, 1.0, ao) * lesionMatte;
 
   // Environment reflection. Occlusion gates it so it never lights the
   // inside of an interproximal gap, and the grazing term is held back or
   // every silhouette edge rims out to white.
   vec3 R = reflect(-V, N);
   float grazing = f0 + (0.24 - f0) * pow(1.0 - max(dot(N, V), 0.0), 4.0);
-  color += environment(R, rough) * grazing * uEnvStrength * mix(0.3, 1.0, vAo) * mix(0.7, 1.0, tooth);
+  color += environment(R, rough) * grazing * uEnvStrength
+         * mix(0.3, 1.0, vAo) * mix(0.7, 1.0, tooth) * lesionMatte;
 
   // ---- fluoride shield ----------------------------------------------
   if (uShield > 0.0001) {
