@@ -60,6 +60,15 @@ for (const [i, id] of ids.entries()) {
       "remotion", "render", composition, output,
       "--codec=h264",
       `--crf=${crf}`,
+      // Lossless intermediates. The default JPEG frames visibly band on these
+      // smooth pastel gradients — the whole frame is gradient.
+      "--image-format=png",
+      // Remotion 4 defaults to "default" (bt601, full range) and tags the file
+      // yuvj420p. The references are bt709 limited range, which is also what an
+      // NLE expects; without this, levels shift on import.
+      "--color-space=bt709",
+      // Video-only: no silent AAC track.
+      "--muted",
       `--gl=${gl}`,
       `--concurrency=${concurrency}`,
       "--log=error",
