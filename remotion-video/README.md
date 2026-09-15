@@ -60,6 +60,13 @@ Browse and scrub everything in the Studio:
 npm run dev
 ```
 
+### File sizes
+
+At the default CRF 16 most versions land between 1 and 11 MB. Versions 01 and 02
+are the exception at ~48 MB: thousands of thin, high-contrast, moving wireframe
+edges are about the worst case there is for H.264. `--crf=23` brings them to
+~24 MB with no visible difference at 100%, and barely moves the others.
+
 ### A note on 4K render time
 
 These are software-rendered WebGL scenes unless the rendering machine exposes a
