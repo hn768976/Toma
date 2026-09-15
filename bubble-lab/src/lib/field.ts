@@ -46,6 +46,14 @@ export const buildField = (config: VersionConfig): Layers => {
         heroScale = field.heroRadius ? field.heroRadius / radius : 1.15;
       } else {
         home = [spread(rnd, field.spreadX), spread(rnd, field.spreadY), range(rnd, -field.spreadZ, -1.2)];
+        // Size tracks depth for the supporting cast: the ones nearest the hero
+        // stay small so they cannot compete with it, while the ones furthest
+        // back are large and land in the defocused layer, filling the frame
+        // with soft bokeh the way the plates do. Drawing their radius at
+        // random instead put full-size sharp bubbles right beside the hero and
+        // the composition lost its subject.
+        const depth = clamp(-home[2] / Math.max(field.spreadZ, 0.001));
+        heroScale = (field.minRadius + (field.maxRadius - field.minRadius) * depth) / radius;
       }
     }
 
