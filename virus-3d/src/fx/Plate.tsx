@@ -214,14 +214,44 @@ export const NetworkGraph: React.FC<{ look: Look }> = ({ look }) => {
   );
 };
 
-export const Vignette: React.FC<{ look: Look }> = ({ look }) => (
-  <AbsoluteFill
-    style={{
-      background: `radial-gradient(115% 105% at 50% 50%, transparent 38%, ${look.bg.vignetteColor} 100%)`,
-      opacity: look.bg.vignette,
-    }}
-  />
-);
+/** #rrggbb -> rgba() with an explicit alpha. */
+const rgba = (hex: string, a: number) => {
+  const h = hex.replace("#", "");
+  const n = parseInt(
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h,
+    16,
+  );
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+};
+
+/**
+ * Two things made the old vignette sit on top of the plate as a visible oval:
+ * a single hard stop, and the `transparent` keyword — which interpolates
+ * through rgba(0,0,0,0) and greys out the midtones of any non-black tint.
+ * This eases across several stops of the vignette's own colour at alpha 0.
+ */
+export const Vignette: React.FC<{ look: Look }> = ({ look }) => {
+  const c = look.bg.vignetteColor;
+  const v = look.bg.vignette;
+  return (
+    <AbsoluteFill
+      style={{
+        background: `radial-gradient(140% 128% at 50% 48%, ${rgba(c, 0)} 0%, ${rgba(
+          c,
+          0.03 * v,
+        )} 34%, ${rgba(c, 0.12 * v)} 52%, ${rgba(c, 0.3 * v)} 68%, ${rgba(
+          c,
+          0.56 * v,
+        )} 82%, ${rgba(c, 0.8 * v)} 92%, ${rgba(c, v)} 100%)`,
+      }}
+    />
+  );
+};
 
 /** Frame-deterministic film grain. */
 export const Grain: React.FC<{ look: Look }> = ({ look }) => {

@@ -1,6 +1,6 @@
 export type Vec3 = [number, number, number];
 
-export type RenderMode = "surface" | "points";
+export type RenderMode = "surface" | "points" | "hologram";
 
 export interface Look {
   id: string;
@@ -56,6 +56,18 @@ export interface Look {
     fillColor: string;
     fillDir: Vec3;
     fill: number;
+    /** 0 = hard terminator, 1 = half-lambert. High values read as soft tissue. */
+    wrap: number;
+  };
+
+  /** See-through shell settings, used when mode is "hologram". */
+  holo: {
+    /** Opacity of faces pointing straight at the camera. */
+    base: number;
+    /** Falloff exponent toward the silhouette. */
+    power: number;
+    /** "add" on dark plates; "normal" on light ones, where additive blows out. */
+    blend: "add" | "normal";
   };
 
   mode: RenderMode;
@@ -142,6 +154,7 @@ export interface Look {
 
 const base = {
   bg: { fogNear: 6, fogFar: 26, vignetteColor: "#000000" },
+  holo: { base: 0.35, power: 2.0, blend: "normal" as const },
   points: {
     size: 0.015,
     opacity: 0.9,
@@ -206,7 +219,9 @@ export const LOOKS: Look[] = [
       fillColor: "#2a4ea8",
       fillDir: [0.7, -0.3, -0.6],
       fill: 0.55,
+      wrap: 0.3,
     },
+    holo: { base: 0.35, power: 2.0, blend: "normal" as const },
     mode: "surface",
     points: base.points,
     hero: { pos: [0.55, 0.05, 0], scale: 1.25, tilt: [0.25, 0.5, -0.12], spin: 0.0022 },
@@ -290,7 +305,9 @@ export const LOOKS: Look[] = [
       fillColor: "#8fb2ea",
       fillDir: [-0.6, -0.2, -0.5],
       fill: 0.6,
+      wrap: 0.45,
     },
+    holo: { base: 0.35, power: 2.0, blend: "normal" as const },
     mode: "surface",
     points: base.points,
     hero: { pos: [0.5, -0.02, 0], scale: 1.32, tilt: [-0.18, 0.3, 0.1], spin: 0.0024 },
@@ -360,12 +377,12 @@ export const LOOKS: Look[] = [
       rimPower: 3.4,
       rimStrength: 0.7,
       sssColor: "#ff6a52",
-      sss: 0.35,
-      specular: 0.5,
-      shininess: 30,
-      bump: 0.95,
-      noiseScale: 26,
-      mottle: 0.45,
+      sss: 0.6,
+      specular: 0.18,
+      shininess: 12,
+      bump: 0.3,
+      noiseScale: 11,
+      mottle: 0.22,
       ambientColor: "#4a1416",
       ambient: 0.3,
       keyColor: "#fff0e2",
@@ -374,7 +391,9 @@ export const LOOKS: Look[] = [
       fillColor: "#8a2420",
       fillDir: [0.65, -0.25, -0.55],
       fill: 0.5,
+      wrap: 0.85,
     },
+    holo: { base: 0.35, power: 2.0, blend: "normal" as const },
     mode: "surface",
     points: base.points,
     hero: { pos: [-0.35, -0.12, 0], scale: 1.05, tilt: [0.12, -0.4, 0.08], spin: 0.0018 },
@@ -458,8 +477,10 @@ export const LOOKS: Look[] = [
       fillColor: "#0f5a66",
       fillDir: [-0.7, -0.2, -0.5],
       fill: 0.45,
+      wrap: 0.4,
     },
-    mode: "points",
+    holo: { base: 0.16, power: 1.7, blend: "add" as const },
+    mode: "hologram",
     points: {
       size: 0.009,
       opacity: 1.0,
@@ -552,8 +573,10 @@ export const LOOKS: Look[] = [
       fillColor: "#8ea6c0",
       fillDir: [-0.7, -0.2, -0.45],
       fill: 0.55,
+      wrap: 0.5,
     },
-    mode: "points",
+    holo: { base: 0.3, power: 1.9, blend: "normal" as const },
+    mode: "hologram",
     points: {
       size: 0.009,
       opacity: 0.95,
@@ -617,8 +640,8 @@ export const LOOKS: Look[] = [
       fog: "#06180c",
       fogNear: 6,
       fogFar: 22,
-      vignette: 0.7,
-      vignetteColor: "#000402",
+      vignette: 0.6,
+      vignetteColor: "#000603",
       grain: 0.05,
     },
     bloom: { color: "#9dff4a", x: 52, y: 47, size: 46, opacity: 0.4, pulse: 0.12 },
@@ -646,7 +669,9 @@ export const LOOKS: Look[] = [
       fillColor: "#2f7a2c",
       fillDir: [0.6, -0.3, -0.6],
       fill: 0.45,
+      wrap: 0.4,
     },
+    holo: { base: 0.35, power: 2.0, blend: "normal" as const },
     mode: "surface",
     points: base.points,
     hero: { pos: [0.22, 0.0, 0], scale: 0.92, tilt: [0.15, 0.25, -0.08], spin: 0.0032 },
@@ -723,7 +748,9 @@ export const LOOKS: Look[] = [
       fillColor: "#2f8a7e",
       fillDir: [-0.6, -0.3, -0.5],
       fill: 0.5,
+      wrap: 0.55,
     },
+    holo: { base: 0.35, power: 2.0, blend: "normal" as const },
     mode: "surface",
     points: base.points,
     hero: { pos: [-0.55, -0.3, 0], scale: 0.8, tilt: [0.2, 0.35, 0.1], spin: 0.0026 },
@@ -771,13 +798,13 @@ export const LOOKS: Look[] = [
       fog: "#05071e",
       fogNear: 6,
       fogFar: 22,
-      vignette: 0.78,
-      vignetteColor: "#000004",
+      vignette: 0.62,
+      vignetteColor: "#01020a",
       grain: 0.05,
     },
     bloom: { color: "#5a48d8", x: 38, y: 50, size: 56, opacity: 0.42, pulse: 0.09 },
     mat: {
-      capsid: "#0b0e2e",
+      capsid: "#2b2f80",
       spike: "#9a6cf0",
       spikeStart: 0.76,
       spikeEnd: 0.94,
@@ -787,11 +814,11 @@ export const LOOKS: Look[] = [
       rimStrength: 0.95,
       sssColor: "#7f5bff",
       sss: 0.5,
-      specular: 0.5,
-      shininess: 30,
-      bump: 0.5,
-      noiseScale: 15,
-      mottle: 0.3,
+      specular: 0.16,
+      shininess: 11,
+      bump: 0.18,
+      noiseScale: 8,
+      mottle: 0.18,
       ambientColor: "#1a1f56",
       ambient: 0.3,
       keyColor: "#cfd8ff",
@@ -800,8 +827,10 @@ export const LOOKS: Look[] = [
       fillColor: "#3d55c0",
       fillDir: [0.7, -0.2, -0.5],
       fill: 0.45,
+      wrap: 0.8,
     },
-    mode: "points",
+    holo: { base: 0.14, power: 1.8, blend: "add" as const },
+    mode: "hologram",
     points: {
       size: 0.011,
       opacity: 0.9,
@@ -858,8 +887,8 @@ export const LOOKS: Look[] = [
       fog: "#04163a",
       fogNear: 5,
       fogFar: 22,
-      vignette: 0.7,
-      vignetteColor: "#000208",
+      vignette: 0.58,
+      vignetteColor: "#010714",
       grain: 0.05,
     },
     bloom: { color: "#2f7fd8", x: 50, y: 50, size: 70, opacity: 0.45, pulse: 0.14 },
@@ -887,18 +916,20 @@ export const LOOKS: Look[] = [
       fillColor: "#1f5aa8",
       fillDir: [0.6, -0.25, -0.5],
       fill: 0.45,
+      wrap: 0.35,
     },
+    holo: { base: 0.35, power: 2.0, blend: "normal" as const },
     mode: "points",
     points: {
       size: 0.014,
-      opacity: 1.0,
-      colorA: "#8ed8ff",
-      colorB: "#ffffff",
+      opacity: 0.78,
+      colorA: "#2f6ea8",
+      colorB: "#5b9ed0",
       disperse: 4.2,
       jitter: 0.02,
       dissolveStart: 0.26,
       dissolveEnd: 0.95,
-      shell: 0.22,
+      shell: 0.92,
     },
     hero: { pos: [0.35, 0.06, 0], scale: 1.35, tilt: [0.15, 0.3, -0.05], spin: 0.0028 },
     cam: {
@@ -945,8 +976,8 @@ export const LOOKS: Look[] = [
       fog: "#05193f",
       fogNear: 5,
       fogFar: 22,
-      vignette: 0.66,
-      vignetteColor: "#00030a",
+      vignette: 0.56,
+      vignetteColor: "#010816",
       grain: 0.05,
     },
     bloom: { color: "#3f93e8", x: 44, y: 46, size: 66, opacity: 0.5, pulse: 0.12 },
@@ -974,18 +1005,20 @@ export const LOOKS: Look[] = [
       fillColor: "#246bbd",
       fillDir: [0.6, -0.25, -0.5],
       fill: 0.45,
+      wrap: 0.35,
     },
+    holo: { base: 0.35, power: 2.0, blend: "normal" as const },
     mode: "points",
     points: {
       size: 0.015,
-      opacity: 1.0,
-      colorA: "#9fdcff",
-      colorB: "#ffffff",
+      opacity: 0.8,
+      colorA: "#3779b4",
+      colorB: "#66a9d8",
       disperse: 3.4,
       jitter: 0.018,
       dissolveStart: 0.3,
       dissolveEnd: 0.98,
-      shell: 0.24,
+      shell: 0.95,
     },
     hero: { pos: [-0.32, 0.05, 0], scale: 1.5, tilt: [0.12, -0.25, 0.06], spin: 0.0024 },
     cam: {

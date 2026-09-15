@@ -32,7 +32,19 @@ export const HeroLayer: React.FC<{
 
   return (
     <group position={motion.groupPos} rotation={motion.groupRot}>
-      {look.mode === "points" ? (
+      {look.mode === "hologram" ? (
+        // See-through shell only — no point sprites, which is what produced
+        // the white speckle over the capsid.
+        <VirusSurface
+          geometry={geometry}
+          look={look}
+          cameraZ={CAMERA_Z}
+          holo
+          position={heroPos}
+          rotation={motion.heroRot}
+          scale={look.hero.scale}
+        />
+      ) : look.mode === "points" ? (
         <>
           {look.points.shell > 0 && dissolve < 0.92 ? (
             <VirusSurface
@@ -58,6 +70,9 @@ export const HeroLayer: React.FC<{
             position={heroPos}
             rotation={motion.heroRot}
             scale={look.hero.scale}
+            // Particles stay subtle while the shell is intact and take over as
+            // it disperses, so the solid virus never looks speckled.
+            opacityMul={0.12 + 0.88 * Math.min(dissolve * 1.6, 1)}
           />
         </>
       ) : (
