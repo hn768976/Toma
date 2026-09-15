@@ -69,6 +69,8 @@ for (const [i, id] of ids.entries()) {
       "--color-space=bt709",
       // Video-only: no silent AAC track.
       "--muted",
+      // The 512x256 PMREM build can exceed the 30s default on a loaded worker.
+      "--timeout=180000",
       `--gl=${gl}`,
       `--concurrency=${concurrency}`,
       "--log=error",

@@ -25,6 +25,12 @@ export type GlassSpec = {
   attenuationDistance: number;
   clearcoat: number;
   clearcoatRoughness: number;
+  /** Velvety fresnel falloff — what makes the surface read as skin, not mirror. */
+  sheen: number;
+  sheenRoughness: number;
+  sheenColor: string;
+  /** Pulls down the strength of the direct specular lobe. */
+  specularIntensity: number;
   /** Thin-film interference: the magenta/gold edge fringe in the macro refs. */
   iridescence: number;
   iridescenceIOR: number;

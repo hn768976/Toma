@@ -40,6 +40,8 @@ export const Effects: React.FC<{
   const composer = useMemo(() => {
     const instance = new EffectComposer(gl, {
       frameBufferType: THREE.HalfFloatType,
+      // The RenderPass draws into its own target, so the canvas's own
+      // `antialias` never applies — without this the silhouettes crawl.
       multisampling: 0,
     });
     instance.addPass(new RenderPass(scene, camera));

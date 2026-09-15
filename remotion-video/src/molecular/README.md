@@ -77,6 +77,31 @@ default here because the render box is headless) for a large speedup.
 | `MolecularScene.tsx` | Scene assembly and camera rig. |
 | `MolecularVersion.tsx` | Remotion entry point for a version. |
 
+## Surface softness and specular shimmer
+
+The glass is deliberately not near-mirror. An early pass ran `roughness` at
+0.04-0.08 against small, intense environment lights, and the refracted highlight
+inside each sphere landed on roughly a pixel: it popped in and out between
+frames as the surface rotated, which reads as shimmer. Measured on V4, 0.13% of
+pixels changed by more than 28 levels between adjacent frames while the camera
+was barely moving.
+
+The fix is three things, in order of how much they mattered:
+
+1. `roughness` raised to >= 0.20 and `clearcoatRoughness` to >= 0.14, which
+   spreads the specular lobe over enough pixels to be stable.
+2. Environment lights broadened (~1.9x radius, intensity scaled down to match)
+   and the equirect raised to 512x256, so PMREM has something to filter.
+3. `sheen` plus a reduced `specularIntensity`, which is what makes the surface
+   read as soft skin rather than polished glass.
+
+That took the unstable pixels from 2699 to 574 per frame, a 79% reduction.
+
+MSAA is deliberately **off**. It only reached 574 from 695 — a 17% gain for 23%
+more render time — because MSAA antialiases geometry edges and this is shading
+aliasing, which it does not touch. If you re-enable it, expect the cost without
+much of the benefit.
+
 ## Two things worth knowing before editing
 
 **Everything is a pure function of time.** The camera rig, instance motion, dust

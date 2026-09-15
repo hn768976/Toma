@@ -31,8 +31,11 @@ export type EnvSpec = {
   lights: EnvLight[];
 };
 
-const EQUIRECT_WIDTH = 256;
-const EQUIRECT_HEIGHT = 128;
+// Higher than strictly needed for a blurry IBL, but PMREM's roughness mips are
+// built from this: at 256x128 a small light lands on ~1px and its reflection
+// aliases into a shimmering dot as the surface rotates.
+const EQUIRECT_WIDTH = 512;
+const EQUIRECT_HEIGHT = 256;
 
 const mixColor = (
   a: [number, number, number],
