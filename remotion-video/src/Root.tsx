@@ -1,3 +1,4 @@
+import React from "react";
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
@@ -12,6 +13,8 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { SmokeTest } from "./dental/SmokeTest";
+import { DENTAL_VERSIONS } from "./dental/versions";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -51,6 +54,36 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {DENTAL_VERSIONS.map((version) => (
+        <React.Fragment key={version.id}>
+          <Composition
+            id={version.id}
+            component={version.component}
+            durationInFrames={version.durationInFrames}
+            fps={30}
+            width={1920}
+            height={1080}
+            defaultProps={{ resolutionScale: 1 }}
+          />
+          <Composition
+            id={`${version.id}-4K`}
+            component={version.component}
+            durationInFrames={version.durationInFrames}
+            fps={30}
+            width={3840}
+            height={2160}
+            defaultProps={{ resolutionScale: 2 }}
+          />
+        </React.Fragment>
+      ))}
+      <Composition
+        id="SmokeTest"
+        component={SmokeTest}
+        durationInFrames={60}
+        fps={30}
+        width={1920}
+        height={1080}
       />
     </>
   );
