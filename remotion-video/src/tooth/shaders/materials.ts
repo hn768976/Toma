@@ -699,6 +699,15 @@ export type BackdropValues = {
   readonly uRadius: [number, number];
   readonly uLinear: number;
   readonly uAngle: number;
+  /** Vignette strength, 0 = none. */
+  readonly uVig: number;
+  readonly uVigColor: string;
+  readonly uVigCenter: [number, number];
+  readonly uVigRadius: [number, number];
+  /** Where the vignette starts and finishes easing, in uVigRadius units. */
+  readonly uVigRange: [number, number];
+  /** Falloff shape. >1 keeps the onset flatter and pushes the weight outward. */
+  readonly uVigPower: number;
 };
 
 /**
@@ -727,6 +736,12 @@ export const useBackdropMaterial = (values: BackdropValues) =>
           uRadius: { value: new THREE.Vector2(0.8, 0.8) },
           uLinear: { value: 0 },
           uAngle: { value: 0 },
+          uVig: { value: 0 },
+          uVigColor: colorUniform("#000000"),
+          uVigCenter: { value: new THREE.Vector2(0.5, 0.5) },
+          uVigRadius: { value: new THREE.Vector2(0.75, 0.65) },
+          uVigRange: { value: new THREE.Vector2(0.45, 1.25) },
+          uVigPower: { value: 2.2 },
         },
         vertexShader: /* glsl */ `
 varying vec2 vUv;
@@ -741,6 +756,10 @@ uniform vec3 uC0, uC1, uC2, uC3;
 uniform vec4 uStops;
 uniform vec2 uCenter, uRadius;
 uniform float uLinear, uAngle;
+uniform float uVig;
+uniform vec3 uVigColor;
+uniform vec2 uVigCenter, uVigRadius, uVigRange;
+uniform float uVigPower;
 
 vec3 ramp(float x) {
   vec3 c = mix(uC0, uC1, smoothstep(uStops.x, uStops.y, x));
@@ -762,6 +781,20 @@ void main() {
 
   float x = clamp(mix(radial, linear, uLinear), 0.0, 1.0);
   vec3 colour = ramp(x);
+
+  // Vignette, eased rather than ramped linearly as a CSS gradient would.
+  // A linear ramp changes slope abruptly where it starts and the eye reads that
+  // as a ring (Mach band) across an otherwise smooth gradient. smoothstep gives
+  // a zero-derivative onset; the exponent then keeps the first part of the
+  // curve nearly flat so the corners can still go properly dark without the
+  // mid-field picking up any visible shading.
+  if (uVig > 0.0) {
+    float vd = length((vUv - uVigCenter) / uVigRadius);
+    float v = pow(smoothstep(uVigRange.x, uVigRange.y, vd), uVigPower);
+    colour = mix(colour, uVigColor, v * uVig);
+  }
+
+  // Dither last, so it covers the vignette's own gradient as well as the ramp's.
   colour += (hash(gl_FragCoord.xy) + hash(gl_FragCoord.yx * 1.7) - 1.0) * 1.4 / 255.0;
 
   gl_FragColor = vec4(colour, 1.0);

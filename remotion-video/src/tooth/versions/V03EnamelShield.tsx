@@ -3,7 +3,14 @@ import { AbsoluteFill } from "remotion";
 import * as THREE from "three";
 import { useToothAssets, WithToothAssets } from "../assets";
 import { StudioEnvironment, type EnvSpec } from "../environment";
-import { Backdrop, ContactShadow, Halo, SceneBackdrop, Starfield } from "../parts";
+import {
+  Backdrop,
+  ContactShadow,
+  Halo,
+  SceneBackdrop,
+  Starfield,
+  easedRadialGradient,
+} from "../parts";
 import { Stage, cwave, useLoop, usePxScale, wave } from "../stage";
 import { useHexMaterial, useRingsMaterial } from "../shaders/materials";
 
@@ -148,7 +155,13 @@ export const V03EnamelShield: React.FC = () => {
         </Stage>
       </WithToothAssets>
       <Backdrop
-        background="radial-gradient(60% 55% at 50% 42%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%)"
+        background={easedRadialGradient({
+          rgb: "255,255,255",
+          alpha: 0.55,
+          radius: [0.6, 0.55],
+          center: [0.5, 0.42],
+          to: 0.7,
+        })}
         blend="screen"
       />
     </AbsoluteFill>

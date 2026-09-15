@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import * as THREE from "three";
 import { useToothAssets, WithToothAssets } from "../assets";
-import { Backdrop, GlowShell, Halo, SceneBackdrop, Starfield, SurfacePoints } from "../parts";
+import { GlowShell, Halo, SceneBackdrop, Starfield, SurfacePoints } from "../parts";
 import { Stage, saw, useLoop, usePxScale, wave } from "../stage";
 import { useRadialMaterial, useWireMaterial } from "../shaders/materials";
 
@@ -58,6 +58,12 @@ const Scene: React.FC = () => {
         stops={[0, 0.32, 0.62, 1]}
         center={[0.5, 0.54]}
         radius={[1.2, 0.95]}
+        vignette={0.86}
+        vignetteColor="#000208"
+        vignetteCenter={[0.5, 0.52]}
+        vignetteRadius={[0.7, 0.6]}
+        vignetteRange={[0.3, 1.15]}
+        vignettePower={2.2}
       />
       <Halo color="#1b5fc0" size={9} opacity={0.34} power={2.8} position={[0, 0, -2.2]} />
       <Starfield count={340} seed={11} spread={[18, 10, 12]} color="#7cc4ff" size={13} opacity={0.75} />
@@ -96,9 +102,5 @@ export const V02ScanSweep: React.FC = () => (
         <Scene />
       </Stage>
     </WithToothAssets>
-    <Backdrop
-      background="radial-gradient(70% 60% at 50% 48%, rgba(0,0,0,0) 55%, rgba(0,2,12,0.55) 100%)"
-      blend="multiply"
-    />
   </AbsoluteFill>
 );

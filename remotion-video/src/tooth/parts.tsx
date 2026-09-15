@@ -46,6 +46,13 @@ export const SceneBackdrop: React.FC<{
   readonly linear?: number;
   /** Radians; 0 points right, PI/2 points up. */
   readonly angle?: number;
+  /** Vignette strength, 0 = none. Eased, and dithered with the rest of the ramp. */
+  readonly vignette?: number;
+  readonly vignetteColor?: string;
+  readonly vignetteCenter?: [number, number];
+  readonly vignetteRadius?: [number, number];
+  readonly vignetteRange?: [number, number];
+  readonly vignettePower?: number;
 }> = ({
   colors,
   stops = [0, 0.34, 0.68, 1],
@@ -53,6 +60,12 @@ export const SceneBackdrop: React.FC<{
   radius = [0.8, 0.8],
   linear = 0,
   angle = Math.PI / 2,
+  vignette = 0,
+  vignetteColor = "#000000",
+  vignetteCenter,
+  vignetteRadius = [0.75, 0.65],
+  vignetteRange = [0.45, 1.25],
+  vignettePower = 2.2,
 }) => {
   const material = useBackdropMaterial({
     uC0: colors[0],
@@ -64,6 +77,12 @@ export const SceneBackdrop: React.FC<{
     uRadius: radius,
     uLinear: linear,
     uAngle: angle,
+    uVig: vignette,
+    uVigColor: vignetteColor,
+    uVigCenter: vignetteCenter ?? center,
+    uVigRadius: vignetteRadius,
+    uVigRange: vignetteRange,
+    uVigPower: vignettePower,
   });
   return (
     <mesh material={material} renderOrder={-1000} frustumCulled={false}>
@@ -270,4 +289,49 @@ export const FloorReflection: React.FC<{
       <mesh geometry={geometry} material={material} />
     </group>
   );
+};
+
+/**
+ * A radial CSS gradient whose alpha follows a smoothstep instead of a straight
+ * line between two stops.
+ *
+ * CSS interpolates linearly between colour stops, so a two-stop fade has a hard
+ * slope change at each end. Over a smooth background the eye reads those as
+ * rings. Sampling the curve into several stops removes both, at the cost of a
+ * longer gradient string.
+ *
+ * Used for overlays that genuinely have to sit above the WebGL canvas; anything
+ * that only treats the background belongs in <SceneBackdrop> instead, where it
+ * is also covered by the backdrop's dither.
+ */
+export const easedRadialGradient = ({
+  rgb,
+  alpha,
+  radius,
+  center,
+  from = 0,
+  to = 1,
+  steps = 12,
+  invert = false,
+}: {
+  /** "255,255,255" */
+  readonly rgb: string;
+  readonly alpha: number;
+  readonly radius: [number, number];
+  readonly center: [number, number];
+  readonly from?: number;
+  readonly to?: number;
+  readonly steps?: number;
+  /** false: opaque at the centre fading out. true: clear at the centre. */
+  readonly invert?: boolean;
+}) => {
+  const stops: string[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const p = i / steps;
+    const eased = p * p * (3 - 2 * p);
+    const a = alpha * (invert ? eased : 1 - eased);
+    const pos = (from + (to - from) * p) * 100;
+    stops.push(`rgba(${rgb},${a.toFixed(4)}) ${pos.toFixed(2)}%`);
+  }
+  return `radial-gradient(${(radius[0] * 100).toFixed(1)}% ${(radius[1] * 100).toFixed(1)}% at ${(center[0] * 100).toFixed(1)}% ${(center[1] * 100).toFixed(1)}%, ${stops.join(", ")})`;
 };

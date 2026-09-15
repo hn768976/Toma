@@ -90,7 +90,7 @@ public/models/         the tooth geometry (see below)
 scripts/render-all.mjs batch renderer
 ```
 
-Four things are worth knowing before changing anything:
+Five things are worth knowing before changing anything:
 
 **Seamless looping.** Every scene is driven by `t = frame / durationInFrames`,
 and only through whole-cycle periodic functions (`wave`, `cwave`, `saw`, `ping`
@@ -104,6 +104,16 @@ line widths, point sprite sizes, CSS in the HUD overlay — must be multiplied b
 out at 1920×1080 and scales. Otherwise the 4K render is not a true 2× of the
 1080p one: screen-space derivatives are measured in real pixels, so lines come
 out half as thick.
+
+**Vignettes and glows are eased, never linear.** A CSS gradient interpolates
+linearly between stops, so a two-stop fade changes slope abruptly at each end
+and the eye reads that as a ring across an otherwise smooth background. The
+vignette therefore lives in the backdrop shader as
+`pow(smoothstep(start, end, d), power)` — zero derivative at the onset, with the
+exponent keeping the near field flat so the corners can still go properly dark.
+Overlays that genuinely have to sit above the canvas (version 03's soft-focus
+glow, which hazes the tooth too) use `easedRadialGradient()`, which samples the
+same curve into enough CSS stops that neither end kinks.
 
 **The background lives in the 3D scene, not in CSS.** `<SceneBackdrop>` draws it
 as a full-screen quad inside WebGL. With a transparent canvas over a CSS
