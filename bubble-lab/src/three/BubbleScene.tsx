@@ -143,7 +143,7 @@ export const BubbleScene: React.FC<{ config: VersionConfig }> = ({ config }) => 
   }, []);
 
   // ---- Bubble meshes --------------------------------------------------
-  const geometry = useMemo(() => new THREE.SphereGeometry(1, 56, 40), []);
+  const geometry = useMemo(() => new THREE.SphereGeometry(1, 128, 80), []);
   useLayoutEffect(() => () => geometry.dispose(), [geometry]);
 
   const build = useMemo(() => {
@@ -189,7 +189,7 @@ export const BubbleScene: React.FC<{ config: VersionConfig }> = ({ config }) => 
           uSeed: { value: b.seed },
           uShellGap: { value: g.shellGap },
           uTime: { value: 0 },
-          uWobble: { value: g.wobble },
+          uSheen: { value: g.sheen },
         },
       });
 
@@ -282,11 +282,11 @@ export const BubbleScene: React.FC<{ config: VersionConfig }> = ({ config }) => 
         const { pos, rot, scale } = bubbleTransform(b, config, t, p);
         mesh.position.set(pos[0], pos[1], pos[2]);
         mesh.rotation.set(rot[0], rot[1], rot[2]);
-        mesh.scale.set(
-          b.radius * b.squash[0] * scale,
-          b.radius * b.squash[1] * scale,
-          b.radius * b.squash[2] * scale,
-        );
+        // Uniform on every axis. Bubbles differ by size alone; any squash
+        // turns them into ellipsoids, which is exactly the shape change the
+        // brief rules out.
+        const s = b.radius * scale;
+        mesh.scale.set(s, s, s);
         mesh.visible = scale > 0.005;
         const u = (mesh.material as THREE.ShaderMaterial).uniforms;
         u.uTime.value = t;

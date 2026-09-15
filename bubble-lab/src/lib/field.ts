@@ -5,8 +5,6 @@ export type Bubble = {
   index: number;
   seed: number;
   radius: number;
-  /** Non-uniform scale, so no two bubbles read as the same sphere. */
-  squash: [number, number, number];
   home: [number, number, number];
   origin: [number, number, number];
   drift: [number, number, number];
@@ -96,11 +94,6 @@ export const buildField = (config: VersionConfig): Layers => {
       index: i,
       seed: rnd() * 100,
       radius: radius * heroScale,
-      squash: [
-        1 + spread(rnd, 0.13),
-        1 + spread(rnd, 0.13),
-        1 + spread(rnd, 0.1),
-      ],
       home,
       origin,
       drift: [spread(rnd, 1), spread(rnd, 1), spread(rnd, 0.6)],

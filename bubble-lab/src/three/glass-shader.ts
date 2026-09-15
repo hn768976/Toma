@@ -10,58 +10,19 @@
  */
 
 export const glassVertexShader = /* glsl */ `
-  uniform float uTime;
-  uniform float uWobble;
-  uniform float uSeed;
-
   varying vec3 vViewPos;
   varying vec3 vViewNormal;
   varying vec3 vObjPos;
 
-  // Cheap value noise, enough to break the silhouette off a perfect sphere.
-  float hash31(vec3 p) {
-    p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
-    p *= 17.0;
-    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-  }
-
-  float vnoise(vec3 x) {
-    vec3 i = floor(x);
-    vec3 f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(hash31(i + vec3(0, 0, 0)), hash31(i + vec3(1, 0, 0)), f.x),
-          mix(hash31(i + vec3(0, 1, 0)), hash31(i + vec3(1, 1, 0)), f.x), f.y),
-      mix(mix(hash31(i + vec3(0, 0, 1)), hash31(i + vec3(1, 0, 1)), f.x),
-          mix(hash31(i + vec3(0, 1, 1)), hash31(i + vec3(1, 1, 1)), f.x), f.y),
-      f.z);
-  }
-
   void main() {
+    // No surface displacement. Serum bubbles read as perfect spheres, and any
+    // noise on the silhouette immediately reads as a blob instead, so the
+    // geometry is left exactly as authored and only scale varies per bubble.
     vObjPos = position;
 
-    // Surface-tension wobble: low-frequency, slow, and scaled by uWobble so a
-    // taut water bead and a slack gel blob use the same code path.
-    vec3 np = position * 1.6 + vec3(uSeed * 13.7) + uTime * 0.35;
-    float n = vnoise(np);
-    vec3 displaced = position * (1.0 + (n - 0.5) * uWobble);
-
-    // Perturb the normal by the tangential part of the noise gradient. Central
-    // differences keep this continuous across the surface; reconstructing the
-    // normal from finite-difference cross products instead produces visible
-    // faceting wherever the two sample tangents flip orientation.
-    float e = 0.12;
-    vec3 grad = vec3(
-      vnoise(np + vec3(e, 0.0, 0.0)) - vnoise(np - vec3(e, 0.0, 0.0)),
-      vnoise(np + vec3(0.0, e, 0.0)) - vnoise(np - vec3(0.0, e, 0.0)),
-      vnoise(np + vec3(0.0, 0.0, e)) - vnoise(np - vec3(0.0, 0.0, e))
-    ) / (2.0 * e);
-    vec3 tangential = grad - normal * dot(grad, normal);
-    vec3 shaped = normalize(normal - tangential * uWobble * 0.6);
-
-    vec4 viewPos = modelViewMatrix * vec4(displaced, 1.0);
+    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
     vViewPos = viewPos.xyz;
-    vViewNormal = normalize(normalMatrix * shaped);
+    vViewNormal = normalize(normalMatrix * normal);
 
     gl_Position = projectionMatrix * viewPos;
   }
@@ -95,6 +56,7 @@ export const glassFragmentShader = /* glsl */ `
   uniform float uEdgeDark;
   uniform float uSpecAniso;
   uniform float uRimWidth;
+  uniform float uSheen;
 
   varying vec3 vViewPos;
   varying vec3 vViewNormal;
@@ -132,10 +94,14 @@ export const glassFragmentShader = /* glsl */ `
           vec3 h = hash33(cell);
           if (h.x > uInnerDensity) continue;
           vec3 jitter = hash33(cell + 19.1);
-          float rad = 0.10 + 0.24 * h.y;
+          float rad = 0.08 + 0.20 * h.y;
           float d = length(f - o - jitter);
-          body += smoothstep(rad, rad * 0.25, d);
-          ring += smoothstep(rad, rad * 0.78, d) - smoothstep(rad * 0.78, rad * 0.5, d);
+          // Soft-shouldered disc with a gentle darker ring just inside its
+          // edge: each trapped bubble reads as a little sphere rather than a
+          // hard dot, which is what keeps the texture soft at this scale.
+          body += smoothstep(rad, rad * 0.15, d);
+          ring += smoothstep(rad * 1.05, rad * 0.82, d)
+                - smoothstep(rad * 0.82, rad * 0.55, d);
         }
       }
     }
@@ -193,11 +159,11 @@ export const glassFragmentShader = /* glsl */ `
 
     // The far inner wall throws a second, dimmer highlight back at the camera.
     vec3 Rb = reflect(-V, -N);
-    float specInner = pow(max(dot(Rb, La), 0.0), uSpecPower * 0.35) * 0.35;
+    float specInner = pow(max(dot(Rb, La), 0.0), uSpecPower * 0.35) * 0.22;
 
     vec3 spec = uSpecColor * (specA * uSpecStrength
-                            + specB * uSpecStrength * 0.4
-                            + specInner * uSpecStrength);
+                            + specB * uSpecStrength * 0.20
+                            + specInner * uSpecStrength * 0.45);
 
     float r = 1.0 - ndv;  // 0 at the centre of the silhouette, 1 at its edge
 
@@ -207,14 +173,20 @@ export const glassFragmentShader = /* glsl */ `
 
     vec3 color = absorbed;
 
-    // A thin dark contour set just inside the silhouette, then a bright
-    // fresnel rim outboard of it. Glass reads as glass because of this
-    // dark-then-bright pair; a uniformly darkened edge reads as matte.
-    float contour = smoothstep(uRimWidth - 0.26, uRimWidth, r)
-                  * (1.0 - smoothstep(uRimWidth, uRimWidth + 0.12, r));
+    // A broad, very soft wrap of light across the lit hemisphere. This is what
+    // makes the surface read as soft gel rather than hard glass — without it
+    // the only tonal variation is at the silhouette and the interior goes flat.
+    float wrap = pow(clamp(dot(N, La) * 0.5 + 0.5, 0.0, 1.0), 1.6);
+    color += uSpecColor * wrap * uSheen;
+
+    // A soft density band inside the silhouette, then a gentle fresnel rim
+    // outboard of it. Both are deliberately wide and low-contrast: a narrow,
+    // hard contour reads as a drawn outline, not as thickness.
+    float contour = smoothstep(uRimWidth - 0.44, uRimWidth + 0.04, r)
+                  * (1.0 - smoothstep(uRimWidth + 0.04, uRimWidth + 0.30, r));
     color *= 1.0 - contour * uEdgeDark;
 
-    float rim = pow(clamp((r - uRimWidth) / max(1.0 - uRimWidth, 0.001), 0.0, 1.0), 0.85);
+    float rim = pow(clamp((r - uRimWidth) / max(1.0 - uRimWidth, 0.001), 0.0, 1.0), 1.35);
     color = mix(color, uRimColor, rim * uFresnelStrength);
 
     color += spec;
