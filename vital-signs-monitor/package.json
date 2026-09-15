@@ -1,0 +1,25 @@
+{
+  "name": "vital-signs-monitor",
+  "version": "1.0.0",
+  "description": "4K hospital vital-signs monitor recreation (Remotion)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "render:teal:1080": "remotion render VitalSigns-Teal-1080 out/vital-signs-teal-1080p.mp4",
+    "render:red:1080": "remotion render VitalSigns-Red-1080 out/vital-signs-red-1080p.mp4",
+    "render:teal:4k": "remotion render VitalSigns-Teal-4K out/vital-signs-teal-4k.mp4",
+    "render:red:4k": "remotion render VitalSigns-Red-4K out/vital-signs-red-4k.mp4"
+  }
+}
