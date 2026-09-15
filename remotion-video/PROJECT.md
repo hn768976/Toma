@@ -29,6 +29,12 @@ composition, framing and camera move.
 Every version is registered twice — `V05GenomeHud` is the 1080p composition,
 `V05GenomeHud4K` the 3840 × 2160 one. Both run the same scene code.
 
+`npx remotion studio` will also list `BluetoothExplainer`, `ParticleRingHalo`
+and `ParticleRingHalo4K`. Those are pre-existing compositions from this repo and
+are unrelated to these plates — ignore them, or delete their entries from
+`src/Root.tsx` along with `src/components/`, `src/scenes/` and
+`src/particle-ring/` if you want the project to contain nothing else.
+
 Three references are 25 fps sources and three are 29.97 fps; since everything
 here is 30 fps, each duration is the nearest whole frame to the original
 wall-clock length (e.g. ref 08 at 8.320s → 250 frames = 8.333s).
@@ -51,11 +57,16 @@ npx remotion bundle src/index.ts --out-dir=build
 ./scripts/render-all.sh 4k       # 13 × 2160p  -> out/4k
 ```
 
+`--muted` is deliberate: these are silent plates, and without it Remotion writes
+a silent AAC track that also pads the container past the exact video duration.
+If you ever render without it, `./scripts/strip-audio.sh <dir>` removes the
+track with a stream copy, leaving the video bit-identical.
+
 Or a single composition:
 
 ```bash
 npx remotion render src/index.ts V05GenomeHud4K out/v05-4k.mp4 \
-  --gl=swangle --codec=h264 --crf=16 --pixel-format=yuv420p
+  --gl=swangle --codec=h264 --crf=16 --pixel-format=yuv420p --muted
 ```
 
 ### The `--gl` flag matters

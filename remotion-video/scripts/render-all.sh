@@ -33,8 +33,10 @@ for entry in "${NAMES[@]}"; do
   out="$OUTDIR/${num}_${slug}_${TAG}.mp4"
   echo "=== [$num/13] $comp -> $out"
   start=$(date +%s)
+  # --muted: these are silent plates, and without it Remotion writes a silent
+  # AAC track that also pads the container past the exact video duration.
   npx remotion render build "$comp" "$out" \
-    --gl=swangle --codec=h264 --crf=16 --pixel-format=yuv420p \
+    --gl=swangle --codec=h264 --crf=16 --pixel-format=yuv420p --muted \
     --log=error 2>&1 | grep -viE "memory reported|differing memory|docker run|lower amount" || true
   end=$(date +%s)
   if [ -f "$out" ]; then
