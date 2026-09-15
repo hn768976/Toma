@@ -32,7 +32,7 @@ export const V08NeonWire: React.FC = () => {
   );
 
   const camera: CameraState = {
-    position: [drift(t * 0.15, 5) * 0.22, drift(t * 0.13, 101) * 0.16, 3.4],
+    position: [drift(t * 0.15, 5) * 0.2, drift(t * 0.13, 101) * 0.14, 2.7],
     lookAt: [0, 0, 0],
     fov: 44,
     roll: drift(t * 0.11, 29) * 1.4,
@@ -73,7 +73,7 @@ export const V08NeonWire: React.FC = () => {
             rotationOrder="ZYX"
             position={[0, 0, 0]}
             rotation={rot}
-            scale={2.7}
+            scale={4.1}
           />
           <Wire
             geometry={geo.dna}
@@ -83,11 +83,11 @@ export const V08NeonWire: React.FC = () => {
             rotationOrder="ZYX"
             position={[0, 0, 0]}
             rotation={rot}
-            scale={2.71}
+            scale={4.11}
           />
           <SurfacePoints
             geometry={geo.dna}
-            count={9000}
+            count={16000}
             seed={801}
             size={2.3}
             colorA="#4ae0ff"
@@ -100,7 +100,7 @@ export const V08NeonWire: React.FC = () => {
             rotationOrder="ZYX"
             position={[0, 0, 0]}
             rotation={rot}
-            scale={2.72}
+            scale={4.12}
           />
         </Stage>
       </AbsoluteFill>

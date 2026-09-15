@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # Renders every 1080p master from a pre-built bundle.
-#   ./scripts/render-all.sh            -> all 13 at 1080p into out/1080p
-#   ./scripts/render-all.sh 4k         -> all 13 at 2160p into out/4k
+#   ./scripts/render-all.sh                 -> all 13 at 1080p into out/1080p
+#   ./scripts/render-all.sh 4k              -> all 13 at 2160p into out/4k
+#   ./scripts/render-all.sh 1080p 01 05 11  -> only those versions
 # Requires a bundle in ./build (npx remotion bundle src/index.ts --out-dir=build).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
 VARIANT="${1:-1080p}"
+shift || true
+ONLY="$*"   # optional space-separated version numbers, e.g. "01 05 11"
 if [ "$VARIANT" = "4k" ]; then SUFFIX="4K"; OUTDIR="out/4k"; TAG="2160p"; else SUFFIX=""; OUTDIR="out/1080p"; TAG="1080p"; fi
 mkdir -p "$OUTDIR"
 
@@ -28,6 +31,7 @@ NAMES=(
 
 for entry in "${NAMES[@]}"; do
   num="${entry%%:*}"
+  if [ -n "$ONLY" ] && ! printf '%s\n' $ONLY | grep -qx "$num"; then continue; fi
   comp="${entry##*:}${SUFFIX}"
   slug=$(echo "${entry##*:}" | sed 's/^V[0-9]*//')
   out="$OUTDIR/${num}_${slug}_${TAG}.mp4"

@@ -3,6 +3,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { Stage, type CameraState } from "../Stage";
 import { Solid, SurfacePoints, Wire } from "../Primitives";
 import { useModels } from "../useModels";
+import { helixTiles } from "../model";
 import { hologram } from "../materials";
 import { useStage } from "../scene";
 import { drift } from "../random";
@@ -13,8 +14,9 @@ import "../hudFont";
  * Reference: istockphoto-2228757112 — 15.0s.
  * A horizontal cyan hologram helix running the full width of frame, read
  * through a sci-fi analysis interface. The strand is the same mesh drawn three
- * ways at once: a scanline hologram body, its sharp edges as neon wire, and a
- * surface point cloud for the sparkle.
+ * ways at once: a translucent scanline hologram body, its edges as neon wire to
+ * carry the structure, and a light surface point cloud for the sparkle. Copies
+ * tile at exact spacing so the strand reads as one continuous run.
  */
 export const V05GenomeHud: React.FC = () => {
   const frame = useCurrentFrame();
@@ -26,11 +28,11 @@ export const V05GenomeHud: React.FC = () => {
     () =>
       hologram({
         color: "#2ea8e8",
-        hot: "#bff0ff",
-        scanFreq: 30,
-        scanSpeed: 2.6,
-        intensity: 1.15,
-        opacity: 0.9,
+        hot: "#cdf4ff",
+        scanFreq: 52,
+        scanSpeed: 3.2,
+        intensity: 1.3,
+        opacity: 0.72,
       }),
     [],
   );
@@ -46,9 +48,9 @@ export const V05GenomeHud: React.FC = () => {
 
   // Three repeats laid end to end read as one continuous sequence, and a slow
   // sideways crawl keeps the strand travelling through frame.
-  const crawl = ((t * 0.09) % 1) * 1.94;
+  // Exact tile spacing, so the copies read as one continuous strand.
   const spinX = t * 0.55;
-  const repeats = [-1.94, 0, 1.94, 3.88];
+  const repeats = helixTiles(6, 1, t * 0.09);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#03111d" }}>
@@ -83,8 +85,10 @@ export const V05GenomeHud: React.FC = () => {
           glow={{ blur: 24, opacity: 0.8, scale: 0.3, saturate: 1.4 }}
         >
           {repeats.map((offset, i) => {
-            const pos: [number, number, number] = [offset - crawl, 0, 0];
-            const rot: [number, number, number] = [spinX + i * 0.0, 0, 0];
+            const pos: [number, number, number] = [offset, 0, 0];
+            // Every copy shares one rotation, which is what keeps the joins
+            // continuous while the whole strand spins.
+            const rot: [number, number, number] = [spinX, 0, 0];
             return (
               <React.Fragment key={i}>
                 <Solid
@@ -96,21 +100,21 @@ export const V05GenomeHud: React.FC = () => {
                 />
                 <Wire
                   geometry={geo.dna}
-                  color="#7fe4ff"
-                  opacity={0.34}
-                  thresholdAngle={38}
+                  color="#8febff"
+                  opacity={0.6}
+                  thresholdAngle={26}
                   position={pos}
                   rotation={rot}
                   scale={1.002}
                 />
                 <SurfacePoints
                   geometry={geo.dna}
-                  count={5200}
+                  count={3200}
                   seed={500 + i}
-                  size={1.7}
-                  colorA="#4fc8ff"
+                  size={1.5}
+                  colorA="#5fd4ff"
                   colorB="#eafcff"
-                  opacity={0.8}
+                  opacity={0.55}
                   time={t}
                   twinkle={0.8}
                   position={pos}

@@ -21,7 +21,7 @@ export const V04ParticleStrand: React.FC = () => {
     position: [
       drift(t * 0.12, 23) * 0.4,
       0.15 + drift(t * 0.1, 47) * 0.25,
-      5.6 - Math.sin(t * 0.14) * 0.35,
+      4.0 - Math.sin(t * 0.14) * 0.3,
     ],
     lookAt: [0, 0, 0],
     fov: 40,
@@ -70,7 +70,7 @@ export const V04ParticleStrand: React.FC = () => {
             twinkle={0.5}
             position={[2.4, 1.5, -4.2]}
             rotation={rot(0.22, 2.2)}
-            scale={2.6}
+            scale={3.6}
           />
           <SurfacePoints
             geometry={geo.dna}
@@ -85,7 +85,7 @@ export const V04ParticleStrand: React.FC = () => {
             twinkle={0.5}
             position={[-3.0, -1.7, -5.0]}
             rotation={rot(0.19, 5.1)}
-            scale={2.3}
+            scale={3.3}
           />
         </Stage>
       </AbsoluteFill>
@@ -98,16 +98,16 @@ export const V04ParticleStrand: React.FC = () => {
           resolutionScale={resolutionScale}
           camera={camera}
           clearAlpha={0}
-          glow={{ blur: 20, opacity: 0.7, scale: 0.3, saturate: 1.3 }}
+          glow={{ blur: 20, opacity: 0.5, scale: 0.3, saturate: 1.5 }}
         >
           <SurfacePoints
             geometry={geo.dna}
-            count={30000}
+            count={38000}
             seed={401}
-            size={2.2}
-            colorA="#3f95e8"
-            colorB="#dff2ff"
-            opacity={0.95}
+            size={1.9}
+            colorA="#1f6ec4"
+            colorB="#7fc4f5"
+            opacity={0.78}
             time={t}
             rotationOrder="ZYX"
             twinkle={0.7}
@@ -115,7 +115,7 @@ export const V04ParticleStrand: React.FC = () => {
             core={0.2}
             position={[-0.15, -0.05, 0]}
             rotation={rot(0.26, 0)}
-            scale={2.35}
+            scale={3.9}
           />
           <Dust
             count={260}

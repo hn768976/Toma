@@ -183,3 +183,43 @@ export const edgesOf = (geo: THREE.BufferGeometry, thresholdAngle: number) => {
 };
 
 export { loadGeometry };
+
+/* ------------------------------------------------------------------ *
+ * Seamless tiling
+ * ------------------------------------------------------------------ */
+
+/**
+ * Length of a model along its long axis after `loadGeometry` normalises it.
+ * Every model is scaled so its longest axis is exactly this, which makes it
+ * the exact spacing for laying copies end to end.
+ */
+export const TILE_LENGTH = 2;
+
+/**
+ * The two ends of the DNA mesh are not identical — it was generated rather than
+ * modelled for tiling, and one end is far denser than the other — so butting
+ * copies at exactly TILE_LENGTH leaves a visible notch where the thin end meets
+ * the bulky one. Copies are drawn this much closer together so the heavier end
+ * closes over the lighter one. Small enough to be invisible, large enough that
+ * no gap survives.
+ */
+export const TILE_OVERLAP = 0.12;
+
+/**
+ * The DNA model's end cross-section lands back in phase with its start — its
+ * twist across the mesh is a whole turn to within measurement error — so copies
+ * tile seamlessly by translation alone, with no counter-rotation. The join is
+ * only invisible at *exactly* this spacing: a few percent short and the ends
+ * interpenetrate into a visibly thickened seam.
+ *
+ * @param count  how many copies to lay end to end
+ * @param scale  the scale the copies are rendered at
+ * @param phase  0..1 scroll position; the run shifts by one whole tile per unit
+ */
+export const helixTiles = (count: number, scale = 1, phase = 0, overlap = TILE_OVERLAP) => {
+  const step = (TILE_LENGTH - overlap) * scale;
+  const shift = (((phase % 1) + 1) % 1) * step;
+  // Centre the run on the origin so framing doesn't drift as `count` changes.
+  const first = -step * ((count - 1) / 2);
+  return Array.from({ length: count }, (_, i) => first + i * step - shift);
+};

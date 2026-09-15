@@ -39,7 +39,7 @@ export const V07DualDust: React.FC = () => {
       />
 
       {/* Far blue strand, out of focus. */}
-      <AbsoluteFill style={{ filter: `blur(${8 * resolutionScale}px)`, opacity: 0.8 }}>
+      <AbsoluteFill style={{ filter: `blur(${4.5 * resolutionScale}px)`, opacity: 1 }}>
         <Stage
           width={width}
           height={height}
@@ -49,17 +49,17 @@ export const V07DualDust: React.FC = () => {
         >
           <SurfacePoints
             geometry={geo.dna}
-            count={11000}
+            count={26000}
             seed={701}
-            size={3.6}
-            colorA="#2062ad"
-            colorB="#89c4f0"
-            opacity={0.5}
+            size={2.6}
+            colorA="#3f8fd8"
+            colorB="#b8ddff"
+            opacity={0.95}
             time={t}
             twinkle={0.55}
             position={[-1.9, 0.1, -2.6]}
             rotation={[0, t * 0.42 + 1.3, upright]}
-            scale={2.2}
+            scale={3.9}
           />
         </Stage>
       </AbsoluteFill>

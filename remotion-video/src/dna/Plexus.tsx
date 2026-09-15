@@ -119,7 +119,159 @@ export type MoleculeGlyphsProps = {
   scale: number;
 };
 
-/** Small 2D skeletal-formula marks scattered behind the strand in ref 11. */
+/**
+ * Real skeletal formulae, drawn on a 100x60 grid.
+ *
+ * Each entry is a genuine structure rather than decorative ring shapes: bonds
+ * are drawn as line segments, `double` marks a parallel inner line, and
+ * `labels` places heteroatom symbols where chemistry would show them. Vertices
+ * that carry no label are implicit carbons, as in standard notation.
+ */
+type Formula = {
+  name: string;
+  bonds: [number, number, number, number][];
+  double?: [number, number, number, number][];
+  labels?: { x: number; y: number; t: string }[];
+};
+
+const ring = (
+  cx: number,
+  cy: number,
+  r: number,
+  rot = 0,
+): [number, number][] =>
+  Array.from({ length: 6 }, (_, i) => {
+    const a = (Math.PI / 3) * i + rot;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as [number, number];
+  });
+
+const ringBonds = (
+  pts: [number, number][],
+): [number, number, number, number][] =>
+  pts.map((p, i) => {
+    const q = pts[(i + 1) % pts.length];
+    return [p[0], p[1], q[0], q[1]] as [number, number, number, number];
+  });
+
+/** Alternating double bonds inside an aromatic ring. */
+const aromatic = (
+  pts: [number, number][],
+  inset = 0.78,
+): [number, number, number, number][] => {
+  const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+  const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+  const out: [number, number, number, number][] = [];
+  for (let i = 0; i < pts.length; i += 2) {
+    const p = pts[i];
+    const q = pts[(i + 1) % pts.length];
+    out.push([
+      cx + (p[0] - cx) * inset,
+      cy + (p[1] - cy) * inset,
+      cx + (q[0] - cx) * inset,
+      cy + (q[1] - cy) * inset,
+    ]);
+  }
+  return out;
+};
+
+const benzene = ring(30, 30, 13);
+const phenol = ring(28, 30, 13);
+const pyrimidine = ring(30, 30, 13);
+const imidazole: [number, number][] = [
+  [52, 22],
+  [64, 26],
+  [64, 38],
+  [52, 42],
+  [45, 32],
+];
+
+const FORMULAS: Formula[] = [
+  {
+    // Ethanol
+    name: "ethanol",
+    bonds: [
+      [14, 40, 30, 30],
+      [30, 30, 46, 40],
+    ],
+    labels: [{ x: 50, y: 44, t: "OH" }],
+  },
+  {
+    // Acetic acid
+    name: "acetic acid",
+    bonds: [
+      [12, 40, 28, 30],
+      [28, 30, 44, 40],
+      [28, 30, 28, 14],
+    ],
+    double: [[31, 30, 31, 15]],
+    labels: [
+      { x: 25, y: 12, t: "O" },
+      { x: 48, y: 44, t: "OH" },
+    ],
+  },
+  {
+    // Benzene
+    name: "benzene",
+    bonds: ringBonds(benzene),
+    double: aromatic(benzene),
+  },
+  {
+    // Phenol
+    name: "phenol",
+    bonds: [...ringBonds(phenol), [41, 23, 55, 15]],
+    double: aromatic(phenol),
+    labels: [{ x: 58, y: 14, t: "OH" }],
+  },
+  {
+    // Pyrimidine — the ring the DNA bases are built on
+    name: "pyrimidine",
+    bonds: ringBonds(pyrimidine),
+    double: aromatic(pyrimidine),
+    labels: [
+      { x: 40, y: 20, t: "N" },
+      { x: 40, y: 46, t: "N" },
+    ],
+  },
+  {
+    // Purine — fused pyrimidine + imidazole, the adenine/guanine skeleton
+    name: "purine",
+    bonds: [...ringBonds(ring(30, 32, 13)), ...ringBonds(imidazole)],
+    double: aromatic(ring(30, 32, 13)),
+    labels: [
+      { x: 40, y: 22, t: "N" },
+      { x: 40, y: 48, t: "N" },
+      { x: 66, y: 24, t: "N" },
+      { x: 66, y: 42, t: "N" },
+    ],
+  },
+  {
+    // Glycine
+    name: "glycine",
+    bonds: [
+      [12, 32, 28, 40],
+      [28, 40, 44, 32],
+      [44, 32, 44, 16],
+    ],
+    double: [[47, 32, 47, 17]],
+    labels: [
+      { x: 4, y: 30, t: "H2N" },
+      { x: 41, y: 14, t: "O" },
+      { x: 48, y: 46, t: "OH" },
+    ],
+  },
+  {
+    // Isopropyl alcohol
+    name: "propan-2-ol",
+    bonds: [
+      [10, 40, 26, 30],
+      [26, 30, 42, 40],
+      [26, 30, 26, 14],
+    ],
+    labels: [{ x: 22, y: 12, t: "OH" }],
+  },
+];
+
+/** Real skeletal-formula marks drifting behind the strand in ref 11. */
 export const MoleculeGlyphs: React.FC<MoleculeGlyphsProps> = ({
   frame,
   fps,
@@ -135,56 +287,68 @@ export const MoleculeGlyphs: React.FC<MoleculeGlyphsProps> = ({
     return Array.from({ length: count }, () => ({
       x: rand(),
       y: rand(),
-      size: 26 + rand() * 42,
-      rot: rand() * 360,
+      size: 44 + rand() * 46,
+      rot: (rand() - 0.5) * 40,
       drift: 0.01 + rand() * 0.02,
       phase: rand() * Math.PI * 2,
-      rings: 1 + Math.floor(rand() * 3),
-      tails: 1 + Math.floor(rand() * 3),
+      formula: FORMULAS[Math.floor(rand() * FORMULAS.length)],
     }));
   }, [seed, count]);
-
-  const hexPath = (cx: number, cy: number, r: number) => {
-    const pts = Array.from({ length: 6 }, (_, i) => {
-      const a = (Math.PI / 3) * i - Math.PI / 6;
-      return `${(cx + Math.cos(a) * r).toFixed(2)},${(cy + Math.sin(a) * r).toFixed(2)}`;
-    });
-    return `M${pts.join("L")}Z`;
-  };
 
   return (
     <AbsoluteFill>
       {glyphs.map((g, i) => {
+        const f = g.formula;
         const size = g.size * scale;
         return (
           <svg
             key={i}
-            width={size * 3}
-            height={size * 2}
-            viewBox="0 0 90 60"
+            width={size * 1.7}
+            height={size}
+            viewBox="0 0 100 60"
             style={{
               position: "absolute",
               left: `${g.x * 100}%`,
               top: `${(g.y + Math.sin(t * g.drift * 6 + g.phase) * 0.012) * 100}%`,
-              transform: `rotate(${g.rot + Math.sin(t * 0.2 + g.phase) * 6}deg)`,
+              transform: `rotate(${g.rot + Math.sin(t * 0.2 + g.phase) * 4}deg)`,
               opacity,
               overflow: "visible",
             }}
           >
-            <g stroke={color} strokeWidth={1.4} fill="none" strokeLinecap="round">
-              {Array.from({ length: g.rings }, (_, r) => (
-                <React.Fragment key={r}>
-                  <path d={hexPath(20 + r * 24, 30, 12)} />
-                  <path d={hexPath(20 + r * 24, 30, 8)} opacity={0.5} />
-                </React.Fragment>
+            <g
+              stroke={color}
+              strokeWidth={1.9}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {f.bonds.map((b, k) => (
+                <line key={`b${k}`} x1={b[0]} y1={b[1]} x2={b[2]} y2={b[3]} />
               ))}
-              {Array.from({ length: g.tails }, (_, k) => (
-                <path
-                  key={k}
-                  d={`M${20 + g.rings * 24 - 12},${30 + k * 6 - 6} l14,${k % 2 ? 8 : -8} l14,0`}
+              {(f.double ?? []).map((b, k) => (
+                <line
+                  key={`d${k}`}
+                  x1={b[0]}
+                  y1={b[1]}
+                  x2={b[2]}
+                  y2={b[3]}
+                  strokeWidth={1.3}
                 />
               ))}
             </g>
+            {(f.labels ?? []).map((l, k) => (
+              <text
+                key={`l${k}`}
+                x={l.x}
+                y={l.y}
+                fill={color}
+                fontSize={12}
+                fontFamily="DnaHudSans, sans-serif"
+                dominantBaseline="middle"
+              >
+                {l.t}
+              </text>
+            ))}
           </svg>
         );
       })}

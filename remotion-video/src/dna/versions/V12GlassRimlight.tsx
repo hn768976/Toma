@@ -10,8 +10,9 @@ import { drift } from "../random";
 /**
  * Reference: istockphoto-467724646 — 20.0s.
  * A dark plate built almost entirely out of rim light: a glossy translucent
- * helix catches a hard blue key from behind while near-black silhouette
- * strands cross behind it, over a soft blue band through the middle of frame.
+ * helix catches a hard blue key from behind, over a soft blue band through the
+ * middle of frame. The hero layer holds the glass strand alone — the solid one
+ * that used to sit beside it is gone; only the defocused strands remain behind.
  */
 export const V12GlassRimlight: React.FC = () => {
   const frame = useCurrentFrame();
@@ -131,14 +132,6 @@ export const V12GlassRimlight: React.FC = () => {
           <directionalLight position={[5, -2, 3]} intensity={0.7} color="#2a5c8e" />
           <pointLight position={[0, 0.5, -3]} intensity={26} color="#5fbdff" distance={12} />
 
-          <Solid
-            geometry={geo.dna}
-            material={silhouette}
-            rotationOrder="ZYX"
-            position={[-1.9, 0.6, -2.4]}
-            rotation={spin(0.3, 1.2)}
-            scale={2.6}
-          />
           <Solid
             geometry={geo.dna}
             material={glass}

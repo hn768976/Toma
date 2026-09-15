@@ -154,6 +154,15 @@ export const V09CeramicStudio: React.FC = () => {
             rotation={spin(0.33, 0.6)}
             scale={2.25}
           />
+          {/* A second strand running into the upper right corner. */}
+          <Solid
+            geometry={geo.dna}
+            material={hero}
+            rotationOrder="ZYX"
+            position={[2.55, 1.95 + drift(t * 0.15, 307) * 0.08, -0.2]}
+            rotation={[t * 0.3 + 2.4, 0, degrees(-38)]}
+            scale={2.0}
+          />
         </Stage>
       </AbsoluteFill>
 

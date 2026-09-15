@@ -7,6 +7,7 @@ import { bandGlow, fresnelGlow } from "../materials";
 import { useStage } from "../scene";
 import { drift } from "../random";
 import { MoleculeGlyphs, Plexus } from "../Plexus";
+import "../hudFont";
 
 /**
  * Reference: istockphoto-2245117899 — 18.0s.
@@ -87,9 +88,9 @@ export const V11CrimsonNetwork: React.FC = () => {
         frame={frame}
         fps={fps}
         seed={1102}
-        count={12}
-        color="#ffc9a4"
-        opacity={0.22}
+        count={15}
+        color="#ffd2b0"
+        opacity={0.42}
         scale={resolutionScale}
       />
 

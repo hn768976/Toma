@@ -252,62 +252,89 @@ export const Hud: React.FC<HudProps> = ({ frame, fps, scale }) => {
         {HUD_COPY.footer}
       </div>
 
-      {/* Leader-line callouts onto the strand. */}
+      {/*
+        Leader-line callouts. The anchor sits ON the strand, which runs through
+        the middle band of frame, and the label is pushed out to clear it.
+      */}
       {[
-        { x: 38, y: 24, dx: 60, dy: 46, label: HUD_COPY.markers[0], at: 2.2 },
-        { x: 69, y: 74, dx: -58, dy: -44, label: HUD_COPY.markers[1], at: 4.4 },
+        { ax: 33, ay: 44, lx: 70, ly: -66, label: HUD_COPY.markers[0], at: 2.2 },
+        { ax: 67, ay: 56, lx: -70, ly: 66, label: HUD_COPY.markers[1], at: 4.4 },
       ].map((c, i) => {
         const on = interpolate(t, [c.at, c.at + 0.5], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
         });
+        const lx = s(c.lx);
+        const ly = s(c.ly);
+        const pad = s(8);
         return (
           <div
             key={i}
             style={{
               position: "absolute",
-              left: `${c.x}%`,
-              top: `${c.y}%`,
+              left: `${c.ax}%`,
+              top: `${c.ay}%`,
               opacity: on,
             }}
           >
             <svg
-              width={s(Math.abs(c.dx) + 4)}
-              height={s(Math.abs(c.dy) + 4)}
+              width={Math.abs(lx) + pad}
+              height={Math.abs(ly) + pad}
               style={{
                 position: "absolute",
-                left: c.dx < 0 ? s(c.dx) : 0,
-                top: c.dy < 0 ? s(c.dy) : 0,
+                left: Math.min(0, lx),
+                top: Math.min(0, ly),
                 overflow: "visible",
               }}
             >
+              {/* Drawn from the anchor outward, so the line grows off the strand. */}
               <line
-                x1={c.dx < 0 ? s(Math.abs(c.dx)) : 0}
-                y1={c.dy < 0 ? s(Math.abs(c.dy)) : 0}
-                x2={c.dx < 0 ? 0 : s(c.dx)}
-                y2={c.dy < 0 ? 0 : s(c.dy)}
+                x1={Math.max(0, -lx)}
+                y1={Math.max(0, -ly)}
+                x2={Math.max(0, -lx) + lx}
+                y2={Math.max(0, -ly) + ly}
                 stroke={cyan}
                 strokeWidth={Math.max(1, s(1))}
-                strokeDasharray={`${s(60 * on)} ${s(200)}`}
-                opacity={0.85}
+                strokeDasharray={`${Math.hypot(lx, ly) * on} ${s(400)}`}
+                opacity={0.9}
+              />
+              {/* Anchor ring sitting on the strand. */}
+              <circle
+                cx={Math.max(0, -lx)}
+                cy={Math.max(0, -ly)}
+                r={s(3.5)}
+                fill="none"
+                stroke={cyan}
+                strokeWidth={Math.max(1, s(1))}
               />
               <circle
-                cx={c.dx < 0 ? s(Math.abs(c.dx)) : 0}
-                cy={c.dy < 0 ? s(Math.abs(c.dy)) : 0}
-                r={s(2.5)}
+                cx={Math.max(0, -lx)}
+                cy={Math.max(0, -ly)}
+                r={s(1.4)}
                 fill={cyan}
+              />
+              {/* Short underline the label sits on. */}
+              <line
+                x1={Math.max(0, -lx) + lx}
+                y1={Math.max(0, -ly) + ly}
+                x2={Math.max(0, -lx) + lx + (lx < 0 ? -s(46) : s(46))}
+                y2={Math.max(0, -ly) + ly}
+                stroke={cyan}
+                strokeWidth={Math.max(1, s(1))}
+                opacity={0.9 * on}
               />
             </svg>
             <div
               style={{
                 ...mono,
                 position: "absolute",
-                left: c.dx < 0 ? s(c.dx) : s(c.dx),
-                top: s(c.dy - 14),
-                fontSize: s(11),
+                left: lx + (c.lx < 0 ? -s(46) : s(46)),
+                top: ly - s(16),
+                fontSize: s(12),
+                fontWeight: 700,
                 whiteSpace: "nowrap",
-                transform: c.dx < 0 ? "translateX(-100%)" : undefined,
-                textShadow: `0 0 ${s(10)}px rgba(99,214,255,0.7)`,
+                transform: c.lx < 0 ? "translateX(-100%)" : undefined,
+                textShadow: `0 0 ${s(10)}px rgba(99,214,255,0.8)`,
               }}
             >
               {c.label}

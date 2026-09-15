@@ -45,7 +45,7 @@ export const V03VioletCascade: React.FC = () => {
   );
 
   const camera: CameraState = {
-    position: [drift(t * 0.2, 19) * 0.25, 0.1 + drift(t * 0.17, 61) * 0.16, 4.3],
+    position: [drift(t * 0.2, 19) * 0.22, 0.1 + drift(t * 0.17, 61) * 0.14, 3.1],
     lookAt: [0, 0, 0],
     fov: 42,
     roll: -4 + drift(t * 0.12, 83) * 1.2,
@@ -94,7 +94,7 @@ export const V03VioletCascade: React.FC = () => {
             rotationOrder="ZYX"
             position={[-2.2, 1.6, -4.5]}
             rotation={spin(0.28, 1.2)}
-            scale={3.2}
+            scale={4.6}
           />
           <Solid
             geometry={geo.dna}
@@ -102,7 +102,7 @@ export const V03VioletCascade: React.FC = () => {
             rotationOrder="ZYX"
             position={[2.8, -1.9, -3.2]}
             rotation={spin(0.31, 4.4)}
-            scale={2.9}
+            scale={4.6}
           />
         </Stage>
       </AbsoluteFill>
@@ -127,7 +127,7 @@ export const V03VioletCascade: React.FC = () => {
             rotationOrder="ZYX"
             position={[-1.1, -1.5, -1.8]}
             rotation={spin(0.34, 2.7)}
-            scale={2.6}
+            scale={4.0}
           />
         </Stage>
       </AbsoluteFill>
@@ -155,7 +155,7 @@ export const V03VioletCascade: React.FC = () => {
             rotationOrder="ZYX"
             position={[0.35 + drift(t * 0.2, 7) * 0.12, 0.05, 0.2]}
             rotation={spin(0.38, 0)}
-            scale={2.9}
+            scale={4.6}
           />
         </Stage>
       </AbsoluteFill>

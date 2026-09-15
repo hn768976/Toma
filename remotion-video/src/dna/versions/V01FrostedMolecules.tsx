@@ -9,10 +9,10 @@ import { drift } from "../random";
 
 /**
  * Reference: istockphoto-2200844203 — 14.0s.
- * Near-black navy field. Frosted glass ball-and-stick molecules drift through
- * the foreground while a faint helix arcs through a heavily defocused
- * background. Depth of field is done by splitting the scene across two
- * canvases and blurring the far one in the compositor.
+ * Near-black navy field. Soft satin-glass molecules hold the left of frame
+ * while the helix runs down the right, close enough to read clearly rather
+ * than sitting at the edge of visibility. Depth of field is done by splitting
+ * the scene across two canvases and blurring the far one in the compositor.
  */
 export const V01FrostedMolecules: React.FC = () => {
   const frame = useCurrentFrame();
@@ -23,12 +23,15 @@ export const V01FrostedMolecules: React.FC = () => {
   const nearMaterial = useMemo(
     () =>
       frostedGlass({
-        color: "#c9dcef",
-        opacity: 0.72,
-        roughness: 0.28,
-        envIntensity: 2.1,
-        emissive: "#16324e",
-        emissiveIntensity: 0.35,
+        // Soft satin glass: high roughness keeps the highlights broad and
+        // diffuse rather than the hard specular pinpoints of polished glass.
+        color: "#cfe0f0",
+        opacity: 0.5,
+        roughness: 0.62,
+        clearcoat: 0.45,
+        envIntensity: 1.5,
+        emissive: "#1b3a58",
+        emissiveIntensity: 0.3,
       }),
     [],
   );
@@ -36,10 +39,11 @@ export const V01FrostedMolecules: React.FC = () => {
   const midMaterial = useMemo(
     () =>
       frostedGlass({
-        color: "#8fa8c0",
-        opacity: 0.5,
-        roughness: 0.45,
-        envIntensity: 1.4,
+        color: "#9db6cc",
+        opacity: 0.38,
+        roughness: 0.7,
+        clearcoat: 0.3,
+        envIntensity: 1.1,
       }),
     [],
   );
@@ -47,10 +51,12 @@ export const V01FrostedMolecules: React.FC = () => {
   const helixMaterial = useMemo(
     () =>
       frostedGlass({
-        color: "#6f90ab",
-        opacity: 0.62,
-        roughness: 0.5,
-        envIntensity: 1.1,
+        color: "#9fc2dd",
+        opacity: 0.9,
+        roughness: 0.4,
+        envIntensity: 1.9,
+        emissive: "#2a5680",
+        emissiveIntensity: 0.55,
       }),
     [],
   );
@@ -99,19 +105,23 @@ export const V01FrostedMolecules: React.FC = () => {
           <directionalLight position={[4, 6, 5]} intensity={1.5} color="#cfe3ff" />
           <directionalLight position={[-6, -2, -4]} intensity={0.7} color="#2b4a72" />
 
+          {/* The strand holds the right of frame, closer in and far more
+              present than before. */}
           <Solid
             geometry={geo.dna}
             material={helixMaterial}
-            position={[-0.4, -0.2, -5.2]}
-            rotation={[degrees(14), t * 0.1, degrees(-18)]}
-            scale={5.0}
+            rotationOrder="ZYX"
+            position={[2.6, -0.1, -2.6]}
+            rotation={[t * 0.22, 0, degrees(-24)]}
+            scale={3.6}
           />
           <Solid
-            geometry={geo.molecule}
+            geometry={geo.dna}
             material={midMaterial}
-            position={[3.1, 1.4, -3.4]}
-            rotation={spin(1, 2.1)}
-            scale={1.5}
+            rotationOrder="ZYX"
+            position={[3.4, 1.9, -5.0]}
+            rotation={[t * 0.18 + 2.1, 0, degrees(-30)]}
+            scale={3.0}
           />
           <Solid
             geometry={geo.molecule}
@@ -144,14 +154,14 @@ export const V01FrostedMolecules: React.FC = () => {
           <Solid
             geometry={geo.molecule}
             material={nearMaterial}
-            position={[-1.15 + drift(t * 0.2, 5) * 0.25, 0.1, 0.4]}
+            position={[-2.05 + drift(t * 0.2, 5) * 0.22, 0.25, 0.4]}
             rotation={spin(1, 0)}
             scale={1.5}
           />
           <Solid
             geometry={geo.molecule}
             material={nearMaterial}
-            position={[1.9, -1.0 + drift(t * 0.24, 17) * 0.3, -0.6]}
+            position={[-0.55, -1.35 + drift(t * 0.24, 17) * 0.28, -0.6]}
             rotation={spin(0.9, 3.4)}
             scale={1.1}
           />

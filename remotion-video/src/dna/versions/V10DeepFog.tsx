@@ -3,6 +3,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { Stage, type CameraState } from "../Stage";
 import { Solid } from "../Primitives";
 import { useModels } from "../useModels";
+import { helixTiles } from "../model";
 import { matteCeramic } from "../materials";
 import { useStage } from "../scene";
 import { drift } from "../random";
@@ -39,8 +40,9 @@ export const V10DeepFog: React.FC = () => {
 
   if (!geo) return <AbsoluteFill style={{ backgroundColor: "#8fa6b6" }} />;
 
-  // A long slow crawl along the axis; three repeats keep frame edges filled.
-  const crawl = ((t * 0.035) % 1) * 1.92;
+  // A long slow crawl along the axis. Exact tile spacing joins the copies into
+  // one unbroken strand running past both edges of frame.
+  const repeats = helixTiles(6, 1, t * 0.035);
 
   return (
     <AbsoluteFill
@@ -71,12 +73,12 @@ export const V10DeepFog: React.FC = () => {
           <directionalLight position={[0, 7, 3]} intensity={2.3} color="#ffffff" />
           <directionalLight position={[-4, -3, 2]} intensity={0.6} color="#7f98aa" />
 
-          {[-1.92, 0, 1.92, 3.84].map((offset, i) => (
+          {repeats.map((offset, i) => (
             <Solid
               key={i}
               geometry={geo.dna}
               material={body}
-              position={[offset - crawl, -0.05, 0]}
+              position={[offset, -0.05, 0]}
               rotation={[t * 0.22, 0, 0]}
               scale={1}
             />

@@ -3,6 +3,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { Stage, type CameraState } from "../Stage";
 import { Solid, SurfacePoints, Dust } from "../Primitives";
 import { useModels } from "../useModels";
+import { helixTiles } from "../model";
 import { fresnelGlow, frostedGlass } from "../materials";
 import { degrees, useStage } from "../scene";
 import { drift } from "../random";
@@ -13,6 +14,9 @@ import { drift } from "../random";
  * The strand is lit hottest at the top and falls away into darkness, with
  * sparkle points crawling along its surface.
  */
+const HERO_SCALE = 2.3;
+const BACK_SCALE = 3.4;
+
 export const V02NavySparkle: React.FC = () => {
   const frame = useCurrentFrame();
   const { width, height, fps, resolutionScale } = useStage();
@@ -48,8 +52,8 @@ export const V02NavySparkle: React.FC = () => {
   );
 
   const camera: CameraState = {
-    position: [1.3 + drift(t * 0.18, 13) * 0.1, drift(t * 0.15, 41) * 0.16, 3.6],
-    lookAt: [1.3, 0, 0],
+    position: [0.35 + drift(t * 0.18, 13) * 0.1, drift(t * 0.15, 41) * 0.16, 3.6],
+    lookAt: [0.35, 0, 0],
     fov: 46,
     roll: drift(t * 0.1, 77) * 0.8,
   };
@@ -58,7 +62,13 @@ export const V02NavySparkle: React.FC = () => {
 
   // A slow continuous spin plus a gentle vertical crawl.
   const spin: [number, number, number] = [0, t * 0.5, upright];
-  const rise = ((t * 0.05) % 1) * 2.28;
+  // The strand stands upright, so the tiles run along Y and spacing has to
+  // follow the rendered scale. Both strands are scaled so a single tile more
+  // than covers the visible band at its own depth, and the run does not scroll,
+  // which keeps every join comfortably outside frame — the strand reads as one
+  // unbroken helix with nothing overlapping on screen.
+  const heroTiles = helixTiles(3, HERO_SCALE, 0);
+  const backTiles = helixTiles(3, BACK_SCALE, 0);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#01050e" }}>
@@ -91,21 +101,21 @@ export const V02NavySparkle: React.FC = () => {
               and bottom of frame, as it does in the reference. Each is drawn
               as a solid body, an additive rim shell and a sparkle cloud over
               the same untouched geometry. */}
-          {[-2.28, 0, 2.28].map((offset, i) => (
+          {heroTiles.map((offset, i) => (
             <React.Fragment key={i}>
               <Solid
                 geometry={geo.dna}
                 material={body}
-                position={[1.3, offset + rise, 0]}
+                position={[1.3, offset, 0]}
                 rotation={spin}
-                scale={2.3}
+                scale={HERO_SCALE}
               />
               <Solid
                 geometry={geo.dna}
                 material={rim}
-                position={[1.3, offset + rise, 0]}
+                position={[1.3, offset, 0]}
                 rotation={spin}
-                scale={2.31}
+                scale={HERO_SCALE * 1.004}
               />
               <SurfacePoints
                 geometry={geo.dna}
@@ -118,22 +128,22 @@ export const V02NavySparkle: React.FC = () => {
                 time={t}
                 twinkle={0.85}
                 jitter={0.004}
-                position={[1.3, offset + rise, 0]}
+                position={[1.3, offset, 0]}
                 rotation={spin}
-                scale={2.32}
+                scale={HERO_SCALE * 1.008}
               />
             </React.Fragment>
           ))}
 
           {/* A second, far dimmer strand behind, as in the reference. */}
-          {[-2.0, 0.2, 2.4].map((offset, i) => (
+          {backTiles.map((offset, i) => (
             <Solid
               key={`back-${i}`}
               geometry={geo.dna}
               material={rim}
               position={[-1.4, offset, -3.6]}
               rotation={[0, t * 0.4 + 1.9, upright]}
-              scale={2.0}
+              scale={BACK_SCALE}
             />
           ))}
 
