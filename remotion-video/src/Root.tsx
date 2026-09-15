@@ -13,7 +13,6 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
-import { SmokeTest } from "./dental/SmokeTest";
 import { DENTAL_VERSIONS } from "./dental/versions";
 import {
   BASE_WIDTH,
@@ -77,14 +76,6 @@ export const RemotionRoot: React.FC = () => {
           />
         </React.Fragment>
       ))}
-      <Composition
-        id="SmokeTest"
-        component={SmokeTest}
-        durationInFrames={60}
-        fps={30}
-        width={1920}
-        height={1080}
-      />
     </>
   );
 };
