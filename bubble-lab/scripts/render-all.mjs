@@ -30,6 +30,8 @@ for (const [i, v] of list.entries()) {
       '--codec=h264',
       '--crf=16',
       '--pixel-format=yuv420p',
+      '--image-format=png',
+      '--color-space=bt709',
       '--gl=angle-egl',
       `--browser-executable=${CHROME}`,
       '--log=error',
