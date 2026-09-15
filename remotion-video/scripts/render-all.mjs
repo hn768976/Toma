@@ -52,6 +52,15 @@ for (const id of ids) {
     composition,
     serveUrl,
     codec: "h264",
+    // The references carry no audio and none is wanted here. Left alone,
+    // Remotion attaches a silent AAC track, which also pushed the container
+    // past the intended length (25.046s rather than 25.000s).
+    muted: true,
+    enforceAudioTrack: false,
+    // PNG frames rather than JPEG. JPEG intermediates come through as full
+    // range and the encoder tags the result yuvj420p; PNG yields a clean
+    // limited-range yuv420p, which is what a delivery H.264 should be.
+    imageFormat: "png",
     outputLocation: output,
     browserExecutable,
     scale,
