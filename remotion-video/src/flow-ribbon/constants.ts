@@ -4,25 +4,22 @@
 // re-times it to 30fps and 430 frames (14.333s) - the nearest whole frame
 // count at 30fps - and keeps the 16:9 framing.
 //
-// Everything here is resolution-independent: the scene is authored in world
-// units and framed by a perspective camera, so the 1080p and 4K compositions
-// are the same image at different sample counts. Only `resolutionScale` (used
-// for pixel-denominated values like minimum sprite size) varies between them.
+// Everything here is resolution-independent. The scene is authored in world
+// units and framed by a perspective camera, and nothing below is denominated
+// in pixels, so the 4K compositions are the same image as the 1080p ones,
+// sampled more finely. (Two things outside this file had to be corrected for
+// that to hold - see the bloom pyramid in scene.ts and the speck grid in
+// specks.ts.)
 
 export const FPS = 30;
 
-// 430 frames @ 30fps = 14.333s, matching the 14.32s reference.
+// 430 frames @ 30fps = 14.333s, matching the 14.32s reference. Every animated
+// term in the scene uses a temporal frequency that is an integer multiple of
+// one cycle per loop, so this frame lands exactly where frame 0 started.
 export const DURATION_IN_FRAMES = 430;
 
 export const BASE_WIDTH = 1920;
 export const BASE_HEIGHT = 1080;
-
-/**
- * Loop length in seconds. Every animated term in the scene uses a temporal
- * frequency that is an integer multiple of 1/LOOP_SECONDS, so frame
- * DURATION_IN_FRAMES lands exactly where frame 0 started.
- */
-export const LOOP_SECONDS = DURATION_IN_FRAMES / FPS;
 
 // --- Band layout, in world units ------------------------------------------
 // The band runs along +X. The camera sits on +Z looking at the origin.
@@ -106,9 +103,6 @@ export const PARTICLE_DEPTH_RANGE: readonly [number, number] = [-2.2, 3.4];
 /** Base sprite radius in world units, before depth-of-field spreading. */
 export const PARTICLE_BASE_SIZE = 0.016;
 
-/** View-space Z the lens is focused on. Particles away from it bloom into bokeh discs. */
-export const FOCUS_DISTANCE = 13.2;
-
 /** How aggressively out-of-focus particles spread. Higher = shallower depth of field. */
 export const BOKEH_STRENGTH = 0.4;
 
@@ -147,22 +141,3 @@ export const BLOOM_THRESHOLD = 0.18;
 export const VIGNETTE_STRENGTH = 0.7;
 
 export type Variant = "reference" | "cyan";
-
-export type FlowRibbonGeometry = {
-  width: number;
-  height: number;
-  resolutionScale: number;
-};
-
-/**
- * Derives render dimensions for a resolution multiple (1 = 1080p, 2 = 4K).
- * The scene itself is scale-free; this only carries the factor needed for
- * the handful of pixel-denominated values in the shaders.
- */
-export const computeGeometry = (
-  resolutionScale: number,
-): FlowRibbonGeometry => ({
-  width: BASE_WIDTH * resolutionScale,
-  height: BASE_HEIGHT * resolutionScale,
-  resolutionScale,
-});

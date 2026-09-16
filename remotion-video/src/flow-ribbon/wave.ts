@@ -117,29 +117,3 @@ export const sampleWave = (
 
   return { y, z, dydx };
 };
-
-/**
- * CPU-side evaluation of the height field, matching sampleWave().y exactly.
- * Used when placing particles so their seeded positions agree with the
- * surface the strands are drawn on.
- */
-export const sampleWaveY = (x: number, lag: number, loopT: number): number => {
-  const a = x * WAVE_K;
-  const w = loopT * TAU;
-  return (
-    0.95 * Math.sin(a * 1 - w * 1 + 0 + lag) +
-    0.34 * Math.sin(a * 2 - w * 2 + 1.7 + lag * 1.35) +
-    0.14 * Math.sin(a * 3 + w * 2 + 4.1 + lag * 0.6) +
-    0.05 * Math.sin(a * 5 - w * 3 + 2.2 + lag * 0.3)
-  );
-};
-
-/** CPU-side counterpart of sampleWave().z. */
-export const sampleWaveZ = (x: number, lag: number, loopT: number): number => {
-  const a = x * WAVE_K;
-  const w = loopT * TAU;
-  return (
-    0.62 * Math.sin(a * 1 - w * 1 + 2.4 + lag * 0.8) +
-    0.26 * Math.sin(a * 2 + w * 2 + 0.8 + lag * 0.45)
-  );
-};

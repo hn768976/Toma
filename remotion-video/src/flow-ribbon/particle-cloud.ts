@@ -174,9 +174,9 @@ export const createParticleCloud = (
   const worldZ = lifted.z.add(depth);
   const centre = vec3(lifted.x.mul(mirror), lifted.y, worldZ);
 
-  // Circle of confusion. The lens is focused on FOCUS_DISTANCE, which the
-  // camera is placed at, so the focal plane is world z = 0 and a particle's
-  // defocus is just its distance from it. coc is 1 at focus and grows outward.
+  // Circle of confusion. The lens is focused on the camera's own distance, so
+  // the focal plane is world z = 0 and a particle's defocus is simply its
+  // distance from it. coc is 1 at focus and grows outward.
   const coc = clamp(
     float(1).add(worldZ.abs().mul(BOKEH_STRENGTH * 8)),
     1,

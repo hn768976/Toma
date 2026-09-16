@@ -201,23 +201,34 @@ export const createFlowRibbonScene = async (
   // Reused across frames so a 14-second render does not churn 430 buffers.
   const pixels = new Uint8ClampedArray(width * height * 4);
 
-  return {
-    render: async (t: number) => {
-      loopT.value = t;
+  // Renders are serialised. During a batch render Remotion advances one frame
+  // at a time so calls never overlap, but scrubbing in Studio can start a
+  // second frame before the first has read back - and two passes interleaving
+  // on one renderer would blit a frame composed of both.
+  let queue: Promise<void> = Promise.resolve();
 
-      renderer.setRenderTarget(target);
+  const renderFrame = async (t: number) => {
+    loopT.value = t;
+
+    renderer.setRenderTarget(target);
       pipeline.render();
-      renderer.setRenderTarget(null);
+    renderer.setRenderTarget(null);
 
-      const read = await renderer.readRenderTargetPixelsAsync(
-        target,
-        0,
-        0,
-        width,
-        height,
-      );
-      pixels.set(read as unknown as ArrayLike<number>);
-      context.putImageData(new ImageData(pixels, width, height), 0, 0);
+    const read = await renderer.readRenderTargetPixelsAsync(
+      target,
+      0,
+      0,
+      width,
+      height,
+    );
+    pixels.set(read as unknown as ArrayLike<number>);
+    context.putImageData(new ImageData(pixels, width, height), 0, 0);
+  };
+
+  return {
+    render: (t: number) => {
+      queue = queue.then(() => renderFrame(t));
+      return queue;
     },
     getBackend: () => (hasWebGPU ? "webgpu" : "webgl"),
     dispose: () => {
