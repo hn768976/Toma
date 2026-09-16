@@ -18,6 +18,19 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  AiChipCircuit,
+  aiChipCircuitSchema,
+  aiChipCircuitDefaults,
+} from "./ai-chip/AiChipCircuit";
+import {
+  FPS as CHIP_FPS,
+  DURATION_IN_FRAMES as CHIP_DURATION_IN_FRAMES,
+  WIDTH_4K,
+  HEIGHT_4K,
+  WIDTH_1080,
+  HEIGHT_1080,
+} from "./ai-chip/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +64,26 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="AiChipCircuit4K"
+        component={AiChipCircuit}
+        durationInFrames={CHIP_DURATION_IN_FRAMES}
+        fps={CHIP_FPS}
+        width={WIDTH_4K}
+        height={HEIGHT_4K}
+        schema={aiChipCircuitSchema}
+        defaultProps={{ ...aiChipCircuitDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="AiChipCircuit1080"
+        component={AiChipCircuit}
+        durationInFrames={CHIP_DURATION_IN_FRAMES}
+        fps={CHIP_FPS}
+        width={WIDTH_1080}
+        height={HEIGHT_1080}
+        schema={aiChipCircuitSchema}
+        defaultProps={aiChipCircuitDefaults}
       />
     </>
   );
