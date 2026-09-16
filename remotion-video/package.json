@@ -29,10 +29,10 @@
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
-    "render:fiber-optics": "remotion render FiberOptics1080 out/fiber-optics-blue-1080p.mp4 --codec=h264 --muted --crf=16",
-    "render:fiber-optics-violet": "remotion render FiberOpticsViolet1080 out/fiber-optics-violet-1080p.mp4 --codec=h264 --muted --crf=16",
-    "render:fiber-optics-4k": "remotion render FiberOptics4K out/fiber-optics-blue-4k.mp4 --codec=h264 --muted --crf=16",
-    "render:fiber-optics-violet-4k": "remotion render FiberOpticsViolet4K out/fiber-optics-violet-4k.mp4 --codec=h264 --muted --crf=16"
+    "render:fiber-optics": "remotion render FiberOptics1080 out/fiber-optics-blue-1080p.mp4 --codec=h264 --muted --crf=16 --image-format=png --color-space=bt709 --pixel-format=yuv420p",
+    "render:fiber-optics-violet": "remotion render FiberOpticsViolet1080 out/fiber-optics-violet-1080p.mp4 --codec=h264 --muted --crf=16 --image-format=png --color-space=bt709 --pixel-format=yuv420p",
+    "render:fiber-optics-4k": "remotion render FiberOptics4K out/fiber-optics-blue-4k.mp4 --codec=h264 --muted --crf=16 --image-format=png --color-space=bt709 --pixel-format=yuv420p",
+    "render:fiber-optics-violet-4k": "remotion render FiberOpticsViolet4K out/fiber-optics-violet-4k.mp4 --codec=h264 --muted --crf=16 --image-format=png --color-space=bt709 --pixel-format=yuv420p"
   },
   "sideEffects": [
     "*.css",
