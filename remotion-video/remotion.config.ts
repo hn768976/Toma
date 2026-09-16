@@ -14,6 +14,16 @@ Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 
+// Every composition here is a silent motion graphic. Without this Remotion
+// muxes in an empty AAC track, which also pads the container past the video's
+// exact duration.
+Config.setMuted(true);
+
+// Encode and tag as bt709, limited range - what a delivered H.264 MP4 should
+// be. The default writes full-range yuvj420p, which players that ignore the
+// range flag expand a second time and show washed out.
+Config.setColorSpace("bt709");
+
 // Some sandboxed dev environments block downloading Remotion's own
 // Chrome Headless Shell but ship a Playwright Chromium at this path.
 // Reuse it there instead of downloading; on a normal machine this path
