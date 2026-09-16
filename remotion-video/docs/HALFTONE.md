@@ -13,7 +13,7 @@ drifting lights.
 | Delivery resolution | 1920 × 1080 |
 | Frame rate | 30 fps |
 | Duration | 450 frames = **15.000 s** (reference: 15.015 s) |
-| Codec / container | H.264 / MP4, `yuv420p` |
+| Codec / container | H.264 / MP4, `yuv420p`, CRF 21 / x264 preset `slow` (~12–13 Mbps) |
 | Loop | seamless — frame 449 hands back to frame 0 |
 
 ## Compositions
