@@ -14,10 +14,10 @@ and to GLSL on the **WebGL2** fallback.
 | --- | --- | --- |
 | `CellDivision-Mono-1080p` | Mono (reference match) | 1920×1080 |
 | `CellDivision-Mono-4K` | Mono (reference match) | 3840×2160 |
-| `CellDivision-Navy-1080p` | Deep navy | 1920×1080 |
-| `CellDivision-Navy-4K` | Deep navy | 3840×2160 |
-| `CellDivision-Violet-1080p` | Deep violet | 1920×1080 |
-| `CellDivision-Violet-4K` | Deep violet | 3840×2160 |
+| `CellDivision-Blue-1080p` | Bright blue | 1920×1080 |
+| `CellDivision-Blue-4K` | Bright blue | 3840×2160 |
+| `CellDivision-Violet-1080p` | Bright violet | 1920×1080 |
+| `CellDivision-Violet-4K` | Bright violet | 3840×2160 |
 
 All six are 30fps, 331 frames (11.03s), no audio.
 

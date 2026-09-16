@@ -70,47 +70,51 @@ export const THEMES = {
     lightDir: [-0.32, 0.72, 0.62],
   },
 
-  // 2. Deep navy: the mood inverts -- the cells become the light source.
-  navy: {
-    id: "navy",
-    label: "Deep Navy",
-    bgInner: "#102a63",
-    bgOuter: "#050d24",
-    bgCorner: "#01030b",
-    bgHotspot: [0.5, 0.08],
-    cellCore: "#050d22",
-    cellLit: "#2b60b8",
-    cellRim: "#7cc0ff",
-    rimStrength: 0.9,
-    rimFalloff: 4.6,
-    litStrength: 0.8,
-    litFalloff: 2.2,
-    fogColor: "#02060f",
-    fogDensity: 0.14,
+  // 2. Bright blue: the reference's construction held exactly -- bright
+  //    hazy backdrop, broad matte key, barely any rim -- with the whole
+  //    palette carried into blue. The cells sit at mid-tone rather than
+  //    charcoal so the frame reads light and coloured, not just tinted.
+  blue: {
+    id: "blue",
+    label: "Bright Blue",
+    bgInner: "#fbfdff",
+    bgOuter: "#cfe1f6",
+    bgCorner: "#9cbde2",
+    bgHotspot: [0.5, 0.07],
+    cellCore: "#2f528f",
+    cellLit: "#79a3dd",
+    cellRim: "#b4cff0",
+    rimStrength: 0.28,
+    rimFalloff: 2.6,
+    litStrength: 0.85,
+    litFalloff: 1.6,
+    fogColor: "#dcebfa",
+    fogDensity: 0.1,
     opacity: 1,
-    lightDir: [-0.62, 0.55, 0.26],
+    lightDir: [-0.32, 0.72, 0.62],
   },
 
-  // 3. Deep violet: same construction, shifted up the spectrum and run a
-  //    touch hotter, so it reads as its own grade and not a hue slider.
+  // 3. Bright violet: same construction again, shifted up the spectrum.
+  //    Violet reads heavier than blue at equal lightness, so the cells are
+  //    lifted a little to keep the two grades at a matching brightness.
   violet: {
     id: "violet",
-    label: "Deep Violet",
-    bgInner: "#341563",
-    bgOuter: "#100628",
-    bgCorner: "#060210",
-    bgHotspot: [0.5, 0.08],
-    cellCore: "#0c0420",
-    cellLit: "#4b2489",
-    cellRim: "#b184ff",
-    rimStrength: 0.92,
-    rimFalloff: 4.6,
-    litStrength: 0.8,
-    litFalloff: 2.2,
-    fogColor: "#060213",
-    fogDensity: 0.14,
+    label: "Bright Violet",
+    bgInner: "#fdfbff",
+    bgOuter: "#ded2f5",
+    bgCorner: "#b2a1de",
+    bgHotspot: [0.5, 0.07],
+    cellCore: "#553a99",
+    cellLit: "#9a81df",
+    cellRim: "#c9b7f2",
+    rimStrength: 0.28,
+    rimFalloff: 2.6,
+    litStrength: 0.85,
+    litFalloff: 1.6,
+    fogColor: "#e9e1f9",
+    fogDensity: 0.1,
     opacity: 1,
-    lightDir: [-0.62, 0.55, 0.26],
+    lightDir: [-0.32, 0.72, 0.62],
   },
 } satisfies Record<string, Theme>;
 

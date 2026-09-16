@@ -13,7 +13,7 @@ import { createRenderer, type Backend, type RendererHandle } from "./renderer";
 import { THEMES, type ThemeId } from "./themes";
 
 export const cellDivisionSchema = z.object({
-  theme: z.enum(["mono", "navy", "violet"]),
+  theme: z.enum(["mono", "blue", "violet"]),
   /** Reseeding gives a different colony with identical timing and look. */
   seed: z.number().int(),
   /** "auto" prefers WebGPU and falls back to WebGL2 if it is not usable. */

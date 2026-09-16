@@ -11,7 +11,7 @@
 
 This project holds several pieces. The current one is **Cell Division** — a
 3D binary-fission motion graphic built on three.js with a WebGPU renderer
-and a WebGL2 fallback, delivered in three colour grades at 1080p and 4K.
+and a WebGL2 fallback, delivered in three bright colour grades at 1080p and 4K.
 See [`src/cell-division/README.md`](src/cell-division/README.md) for its
 compositions, render commands and architecture.
 

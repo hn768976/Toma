@@ -37,7 +37,7 @@ import type { ThemeId } from "./cell-division/themes";
 // are frame-for-frame identical apart from resolution.
 const CELL_VARIANTS: { id: ThemeId; suffix: string }[] = [
   { id: "mono", suffix: "Mono" },
-  { id: "navy", suffix: "Navy" },
+  { id: "blue", suffix: "Blue" },
   { id: "violet", suffix: "Violet" },
 ];
 
