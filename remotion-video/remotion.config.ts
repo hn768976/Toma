@@ -17,6 +17,12 @@ Config.setRspack(true);
 // also makes it tag the output full-range (yuvj420p) instead of the
 // limited-range bt709 an editor expects.
 Config.setVideoImageFormat("png");
+
+// Remotion's v4 default converts RGB to YUV with a bt601 matrix, while
+// every player treats an untagged HD H.264 file as bt709. That mismatch
+// shifts the grade, which matters here because the grade is the only
+// thing separating the blue and teal versions. Tag and convert as bt709.
+Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

@@ -11,6 +11,26 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+**CodeGrid** — a 15 s, 30 fps seamless-looping flight over an endless field
+of blocks etched with glowing source code. three.js rendered through
+WebGPU. Two grades (blue, teal), each at 1080p and 4K. Read
+[`src/code-grid/README.md`](./src/code-grid/README.md) before changing it:
+the loop, the frame purity and the headless-WebGPU setup all have
+constraints that are not obvious from the code.
+
+```console
+npm i
+npm run render:blue        # 1920 x 1080, H.264
+npm run render:teal
+npm run render:blue-4k     # 3840 x 2160
+npm run render:teal-4k
+```
+
+Also in this project: `BluetoothExplainer` and `ParticleRingHalo`, from
+earlier work, unrelated to CodeGrid.
+
 ## Commands
 
 **Install Dependencies**
