@@ -32,4 +32,5 @@ zip -r -q "$out" \
 echo "Wrote $out ($(du -h "$out" | cut -f1))"
 echo
 echo "To use it:  unzip, npm install, npm run dev"
-echo "To render:  npm run render:a4k   (or render:b4k / render:a / render:b)"
+echo "To render:  npm run render:all4k   (all seven at 4K)"
+echo "            npm run render:1-4k    (one shot; 1..7, see EARTH.md)"
