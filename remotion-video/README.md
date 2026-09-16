@@ -11,6 +11,23 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+| Composition                | What it is                                              |
+| -------------------------- | ------------------------------------------------------- |
+| `BlockchainChain1080p`     | 3D blockchain data chain, reference layout (20s, 30fps) |
+| `BlockchainChain4K`        | The same, at 3840x2160                                   |
+| `BlockchainChainHero1080p` | Alternate layout: hero cube, chain across frame          |
+| `BlockchainChainHero4K`    | The same, at 3840x2160                                   |
+| `BluetoothExplainer`       | Hand-drawn Bluetooth explainer                           |
+| `ParticleRingHalo`         | Abstract particle-ring halo motion graphic               |
+| `ParticleRingHalo4K`       | The same, at 3840x2160                                   |
+
+The blockchain compositions are three.js WebGPU scenes. See
+[`src/blockchain/README.md`](./src/blockchain/README.md) for how they
+are built, how to render them, and the WebGPU constraints they work
+around -- read that before changing them or bumping `three`.
+
 ## Commands
 
 **Install Dependencies**
