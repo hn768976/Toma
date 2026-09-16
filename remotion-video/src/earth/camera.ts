@@ -60,8 +60,15 @@ export const placeCamera = (
     .normalize();
 
   const eye = zenith.clone().multiplyScalar(radius);
+
+  // Picking the up reference matters: aiming straight down the nadir makes
+  // `forward` anti-parallel to the zenith, and lookAt has no defined roll
+  // there — it would resolve arbitrarily and could flip between frames as the
+  // sway crosses vertical. The travel direction is perpendicular to forward
+  // in exactly that case, so it takes over before the zenith degenerates.
+  const reference = Math.abs(Math.cos(pitch)) < 0.25 ? travel : zenith;
   const orientation = new Quaternion().setFromRotationMatrix(
-    new Matrix4().lookAt(eye, eye.clone().add(forward), zenith),
+    new Matrix4().lookAt(eye, eye.clone().add(forward), reference),
   );
   orientation
     .multiply(new Quaternion().setFromAxisAngle(AXIS_Y, yaw))

@@ -75,6 +75,8 @@ export type ShotConfig = {
   sunIntensity: number;
   /** Boost for the NASA Black Marble city lights on the night side. */
   nightIntensity: number;
+  /** Level subtracted off the night map first. Lower it as the camera pulls back. */
+  nightFloor: number;
   /** Renders the solar disc, for shots where it clears the limb. */
   sunDisc: boolean;
 
@@ -85,6 +87,10 @@ export type ShotConfig = {
   halo: { radius: number; strength: number; falloff: number };
   /** In-scattered air laid over the disc itself. */
   surfaceHaze: number;
+  /** Ocean glint lobe: higher power is tighter. */
+  glint: { power: number; gain: number };
+  /** Baseline lift on the surface. Near zero for the pure night passes. */
+  ambient: number;
 
   /** Deep space behind the planet. */
   sky: { nebula: number; dust: number; dustDrift: number };
@@ -93,8 +99,8 @@ export type ShotConfig = {
   procedural: number;
   /** Longitudinal smear, in UV units, and how many taps pay for it. */
   motionBlur: { span: number; taps: number };
-  /** Horizontal lens streak off the brightest parts of frame. */
-  anamorphic: number;
+  /** Lens flare drawn on the sun. Size is in camera-space units. */
+  flare: { strength: number; length: number; height: number } | null;
 
   /** A single meteor pass, in camera space. */
   meteor: {
@@ -138,16 +144,19 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     sway: { pitch: 0.35, roll: 0.5, cycles: 0.75 },
     sunIntensity: 1.0,
     nightIntensity: 1.5,
+    nightFloor: 0.075,
     sunDisc: false,
     exposure: 0.95,
     bloom: { strength: 0.46, radius: 0.55, threshold: 0.7 },
     atmosphere: { rayleigh: 1.8, mie: 0.72, density: 0.62, extinction: 0.22 },
     halo: { radius: 1.045, strength: 2.6, falloff: 1.8 },
     surfaceHaze: 0.34,
+    glint: { power: 110, gain: 0.85 },
+    ambient: 0.03,
     sky: STILL_SKY,
     procedural: 1,
     motionBlur: NO_BLUR,
-    anamorphic: 0,
+    flare: null,
     meteor: null,
   },
 
@@ -174,6 +183,7 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     sway: { pitch: 0.25, roll: 0.9, cycles: 0.6 },
     sunIntensity: 1.0,
     nightIntensity: 2.6,
+    nightFloor: 0.075,
     sunDisc: true,
     exposure: 0.78,
     bloom: { strength: 0.55, radius: 0.6, threshold: 0.7 },
@@ -182,10 +192,12 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     // covers three times as much of the frame — it has to be pulled in hard.
     halo: { radius: 1.022, strength: 2.0, falloff: 1.5 },
     surfaceHaze: 0.15,
+    glint: { power: 110, gain: 0.85 },
+    ambient: 0.022,
     sky: STILL_SKY,
     procedural: 1,
     motionBlur: NO_BLUR,
-    anamorphic: 0,
+    flare: null,
     meteor: null,
   },
 
@@ -197,8 +209,8 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
   dawnReveal: {
     label: "Dawn Reveal",
     durationInFrames: 300,
-    altitude: [10.5, 2.6],
-    orbit: [0, 62],
+    altitude: [10.5, 3.2],
+    orbit: [0, 130],
     inclination: 8,
     startLongitude: 96,
     startLatitude: 18,
@@ -208,21 +220,24 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     roll: [4, -2],
     fov: [34, 34],
     spin: [0, 0],
-    sunOrbit: 96,
+    sunOrbit: 170,
     sunElevation: 12,
     sway: { pitch: 0.2, roll: 0.35, cycles: 0.5 },
     sunIntensity: 1.0,
-    nightIntensity: 3.2,
+    nightIntensity: 9.0,
+    nightFloor: 0.02,
     sunDisc: false,
     exposure: 0.95,
     bloom: { strength: 0.5, radius: 0.6, threshold: 0.66 },
     atmosphere: { rayleigh: 2.0, mie: 0.9, density: 0.6, extinction: 0.4 },
-    halo: { radius: 1.09, strength: 1.7, falloff: 2.4 },
+    halo: { radius: 1.055, strength: 1.0, falloff: 2.4 },
     surfaceHaze: 0.3,
-    sky: { nebula: 0.34, dust: 0.55, dustDrift: 0.18 },
+    glint: { power: 900, gain: 1.4 },
+    ambient: 0.03,
+    sky: { nebula: 0.22, dust: 0.55, dustDrift: 0.18 },
     procedural: 1,
     motionBlur: NO_BLUR,
-    anamorphic: 0,
+    flare: null,
     meteor: null,
   },
 
@@ -249,16 +264,19 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     sway: { pitch: 0.2, roll: 0.6, cycles: 0.6 },
     sunIntensity: 1.0,
     nightIntensity: 3.4,
+    nightFloor: 0.07,
     sunDisc: false,
     exposure: 0.82,
     bloom: { strength: 0.6, radius: 0.66, threshold: 0.66 },
-    atmosphere: { rayleigh: 1.9, mie: 0.7, density: 0.5, extinction: 0.9 },
-    halo: { radius: 1.03, strength: 2.6, falloff: 1.5 },
+    atmosphere: { rayleigh: 2.2, mie: 0.7, density: 0.5, extinction: 0.85 },
+    halo: { radius: 1.026, strength: 3.1, falloff: 1.5 },
     surfaceHaze: 0.12,
+    glint: { power: 300, gain: 0.5 },
+    ambient: 0.004,
     sky: STILL_SKY,
     procedural: 1,
     motionBlur: NO_BLUR,
-    anamorphic: 0,
+    flare: null,
     meteor: null,
   },
 
@@ -281,23 +299,26 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     roll: [0.5, -0.5],
     fov: [40, 39],
     spin: [0, 0],
-    sunOrbit: 178,
-    sunElevation: 3,
+    sunOrbit: 168,
+    sunElevation: 0,
     sway: { pitch: 0.15, roll: 0.3, cycles: 0.5 },
     sunIntensity: 1.0,
     nightIntensity: 3.0,
+    nightFloor: 0.05,
     sunDisc: false,
-    exposure: 0.9,
+    exposure: 1.05,
     bloom: { strength: 0.78, radius: 0.8, threshold: 0.55 },
     // Heavy Mie is the whole point here: the sun is behind the planet, so
     // everything you see of it is forward-scattered through the limb.
-    atmosphere: { rayleigh: 2.6, mie: 2.4, density: 0.62, extinction: 0.5 },
-    halo: { radius: 1.055, strength: 3.4, falloff: 1.7 },
+    atmosphere: { rayleigh: 4.2, mie: 1.5, density: 0.62, extinction: 0.26 },
+    halo: { radius: 1.05, strength: 2.9, falloff: 1.6 },
     surfaceHaze: 0.1,
+    glint: { power: 600, gain: 0.6 },
+    ambient: 0.013,
     sky: { nebula: 0.12, dust: 0, dustDrift: 0 },
     procedural: 1,
     motionBlur: NO_BLUR,
-    anamorphic: 0,
+    flare: null,
     meteor: null,
   },
 
@@ -324,25 +345,28 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     sway: { pitch: 0.12, roll: 0.25, cycles: 0.4 },
     sunIntensity: 1.0,
     nightIntensity: 2.6,
+    nightFloor: 0.02,
     sunDisc: false,
     exposure: 0.95,
     bloom: { strength: 0.5, radius: 0.6, threshold: 0.62 },
     atmosphere: { rayleigh: 2.0, mie: 0.8, density: 0.6, extinction: 0.35 },
-    halo: { radius: 1.1, strength: 1.5, falloff: 2.6 },
+    halo: { radius: 1.1, strength: 1.0, falloff: 2.6 },
     surfaceHaze: 0.28,
-    sky: { nebula: 1.0, dust: 0.35, dustDrift: 0.1 },
+    glint: { power: 900, gain: 0.35 },
+    ambient: 0.025,
+    sky: { nebula: 0.62, dust: 0.35, dustDrift: 0.1 },
     procedural: 1,
     motionBlur: NO_BLUR,
-    anamorphic: 0,
+    flare: null,
     meteor: {
       enter: 150,
       leave: 430,
-      from: [1.9, 1.05],
-      to: [-0.35, 0.34],
+      from: [7.4, 3.5],
+      to: [1.1, 2.15],
       depth: 14,
-      length: 1.15,
-      width: 0.05,
-      intensity: 1.35,
+      length: 2.3,
+      width: 0.1,
+      intensity: 1.5,
     },
   },
 
@@ -372,19 +396,22 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     sway: { pitch: 0.15, roll: 0.4, cycles: 0.5 },
     sunIntensity: 1.0,
     nightIntensity: 3.0,
+    nightFloor: 0.06,
     sunDisc: true,
-    exposure: 0.85,
-    bloom: { strength: 0.75, radius: 0.8, threshold: 0.6 },
-    atmosphere: { rayleigh: 1.5, mie: 1.6, density: 0.55, extinction: 1.0 },
-    halo: { radius: 1.02, strength: 2.4, falloff: 1.5 },
-    surfaceHaze: 0.14,
+    exposure: 0.62,
+    bloom: { strength: 0.5, radius: 0.62, threshold: 0.72 },
+    atmosphere: { rayleigh: 0.55, mie: 0.32, density: 0.3, extinction: 1.0 },
+    halo: { radius: 1.02, strength: 2.0, falloff: 1.5 },
+    surfaceHaze: 0.06,
+    glint: { power: 200, gain: 0.8 },
+    ambient: 0.01,
     sky: STILL_SKY,
     // The procedural detail is fixed to the sphere, not to the surface
     // textures, so at this spin rate it would sit still while everything
     // under it streaked past.
     procedural: 0,
-    motionBlur: { span: 0.021, taps: 8 },
-    anamorphic: 1.0,
+    motionBlur: { span: 0.038, taps: 12 },
+    flare: { strength: 1.0, length: 7.5, height: 1.5 },
     meteor: null,
   },
 };

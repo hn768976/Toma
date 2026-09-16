@@ -1,6 +1,5 @@
-import { anamorphic } from "three/addons/tsl/display/AnamorphicNode.js";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
-import { float, pass } from "three/tsl";
+import { pass } from "three/tsl";
 import {
   ACESFilmicToneMapping,
   AdditiveBlending,
@@ -12,6 +11,7 @@ import {
   NoColorSpace,
   PerspectiveCamera,
   PostProcessing,
+  Quaternion,
   RenderTarget,
   RepeatWrapping,
   RGBAFormat,
@@ -30,6 +30,7 @@ import { createAtmosphereMaterial } from "./tsl/atmosphereMaterial";
 import { createCloudMaterial } from "./tsl/cloudMaterial";
 import { createEarthMaterial, type EarthMaps } from "./tsl/earthMaterial";
 import { createHaloMaterial } from "./tsl/haloMaterial";
+import { createFlareMaterial } from "./tsl/flareMaterial";
 import { createMeteorMaterial } from "./tsl/meteorMaterial";
 import { createStarfieldMaterial } from "./tsl/starfieldMaterial";
 import { applyGrade } from "./tsl/grade";
@@ -109,6 +110,7 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
 
   const uniforms = createUniforms();
   uniforms.nightIntensity.value = shot.nightIntensity;
+  uniforms.nightFloor.value = shot.nightFloor;
   uniforms.sunIntensity.value = shot.sunIntensity;
   uniforms.rayleigh.value = shot.atmosphere.rayleigh;
   uniforms.mie.value = shot.atmosphere.mie;
@@ -117,6 +119,9 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
   uniforms.haloStrength.value = shot.halo.strength;
   uniforms.surfaceHaze.value = shot.surfaceHaze;
   uniforms.procedural.value = shot.procedural;
+  uniforms.glintPower.value = shot.glint.power;
+  uniforms.glintGain.value = shot.glint.gain;
+  uniforms.ambient.value = shot.ambient;
   uniforms.motionBlur.value = shot.motionBlur.span;
   uniforms.nebula.value = shot.sky.nebula;
   uniforms.dust.value = shot.sky.dust;
@@ -191,6 +196,15 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
     camera.add(meteor);
   }
 
+  const flare = new Mesh(new PlaneGeometry(1, 1), createFlareMaterial(uniforms));
+  flare.renderOrder = 21;
+  flare.frustumCulled = false;
+  flare.visible = false;
+  if (shot.flare) {
+    flare.scale.set(shot.flare.length, shot.flare.height, 1);
+    camera.add(flare);
+  }
+
   const scenePass = pass(scene, camera);
   if (options.samples > 1) {
     scenePass.renderTarget.samples = options.samples;
@@ -198,17 +212,9 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
   const bloomPass = bloom(scenePass, shot.bloom.strength, shot.bloom.radius, shot.bloom.threshold);
 
   const lit = scenePass.add(bloomPass);
-  const flared =
-    shot.anamorphic > 0
-      ? lit.add(
-          anamorphic(scenePass, float(0.82), float(shot.anamorphic * 4.5), 24).mul(
-            shot.anamorphic * 0.9,
-          ),
-        )
-      : lit;
 
   const postProcessing = new PostProcessing(renderer);
-  postProcessing.outputNode = applyGrade(flared, {
+  postProcessing.outputNode = applyGrade(lit, {
     width: options.width,
     height: options.height,
     vignette: 0.3,
@@ -235,6 +241,8 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
 
   const zenith = new Vector3();
   const sunColor = new Color();
+  const flareDirection = new Vector3();
+  const cameraInverse = new Quaternion();
 
   const update = (frame: number) => {
     const progress = options.durationInFrames > 1 ? frame / (options.durationInFrames - 1) : 0;
@@ -288,6 +296,28 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
       const brightness = Math.min(1, Math.max(0, (aboveLimb + 0.4) / 1.6)) * (0.5 + clear * 2.6);
       sunColor.setRGB(1, 0.24 + clear * 0.6, 0.06 + clear * 0.72).multiplyScalar(brightness);
       sunDiscMaterial.color.copy(sunColor);
+
+      if (shot.flare) {
+        // Sit the flare on the sun, in the camera's own space, and let it
+        // come up with the disc so it is never flaring off a hidden sun.
+        // From the disc's actual position, not the sun vector: the disc sits
+        // at a finite distance, and the parallax off a camera one Earth
+        // radius from the origin is enough to visibly separate the two.
+        flareDirection
+          .copy(sunDisc.position)
+          .sub(camera.position)
+          .normalize()
+          .applyQuaternion(cameraInverse.copy(camera.quaternion).invert());
+        const depth = 26;
+        const scale = depth / Math.max(0.05, -flareDirection.z);
+        flare.visible = flareDirection.z < 0 && clear > 0;
+        flare.position.set(
+          flareDirection.x * scale,
+          flareDirection.y * scale,
+          -depth,
+        );
+        uniforms.flareIntensity.value = clear * shot.flare.strength;
+      }
     }
   };
 

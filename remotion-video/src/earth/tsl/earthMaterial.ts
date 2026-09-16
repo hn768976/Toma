@@ -132,11 +132,13 @@ export const createEarthMaterial = (
 
     // Sun glint off the oceans, which is what sells the scale of the shot.
     const half = normalize(sun.add(view));
-    const glint = pow(saturate(dot(normal, half)), 110)
+    // The lobe has to tighten as the camera pulls back, or from a distance
+    // the highlight spreads into a blown-out blob across half an ocean.
+    const glint = pow(saturate(dot(normal, half)), u.glintPower)
       .mul(water)
       .mul(dayMask)
       .mul(cloudShadow)
-      .mul(0.85);
+      .mul(u.glintGain);
 
     // Aerial perspective: the more grazing the view, the more air in the way.
     const grazing = oneMinus(saturate(dot(geoNormal, view)));
@@ -146,8 +148,11 @@ export const createEarthMaterial = (
     // ocean floor and its JPEG chroma noise both turn into coloured confetti
     // as soon as the lights are amplified, so the hue is supplied here.
     const nightSample = smearedTexture(maps.night, vUv, options.blurTaps, u.motionBlur).rgb;
+    // The floor has to come down for the distant shots: their mips average
+    // each city into the dark ocean around it, and a threshold tuned for a
+    // close pass erases the lights entirely.
     const nightLevel = max(
-      dot(nightSample, vec3(0.2126, 0.7152, 0.0722)).sub(0.075),
+      dot(nightSample, vec3(0.2126, 0.7152, 0.0722)).sub(u.nightFloor),
       float(0),
     );
     const cityGlow = pow(nightLevel.mul(1.6), 1.45)
@@ -159,7 +164,9 @@ export const createEarthMaterial = (
       .add(sunColor.mul(glint))
       .add(vec3(0.3, 0.52, 0.92).mul(haze).mul(u.surfaceHaze))
       .add(cityGlow)
-      .add(albedo.mul(0.03));
+      // Earth has no earthshine of its own, so this stays near zero on the
+      // shots whose whole subject is the night side.
+      .add(albedo.mul(u.ambient).mul(dayMask.mul(0.9).add(0.1)));
 
     return vec4(color, 1);
   })() as unknown as Node;

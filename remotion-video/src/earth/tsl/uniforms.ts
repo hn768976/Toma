@@ -9,6 +9,8 @@ export const createUniforms = () => ({
   sunDirection: uniform(new Vector3(1, 0, 0)),
   sunIntensity: uniform(1),
   nightIntensity: uniform(1.5),
+  /** Level subtracted off the night map before the lights are amplified. */
+  nightFloor: uniform(0.075),
 
   /**
    * Rotation of the planet, in UV units. Offsetting the lookup is exactly
@@ -23,6 +25,12 @@ export const createUniforms = () => ({
   cloudEvolve: uniform(0),
   cloudOpacity: uniform(0.92),
 
+  /** Ocean glint: tighter and weaker the further out the camera sits. */
+  glintPower: uniform(110),
+  glintGain: uniform(0.85),
+  /** Baseline lift on the surface. Near zero for the pure night passes. */
+  ambient: uniform(0.03),
+
   reliefStrength: uniform(3.5),
   grainAmount: uniform(0.07),
   /** Scales all procedural detail; zero where the surface is smeared away. */
@@ -35,6 +43,9 @@ export const createUniforms = () => ({
   haloStrength: uniform(1),
   /** In-scattered air laid over the disc, strongest towards the limb. */
   surfaceHaze: uniform(0.34),
+
+  /** Fades the sun flare as the disc clears the limb. */
+  flareIntensity: uniform(0),
 
   /** Fades the meteor in and out across its pass. */
   meteorIntensity: uniform(0),
