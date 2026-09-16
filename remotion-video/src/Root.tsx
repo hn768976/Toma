@@ -18,6 +18,19 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  SpiralFlow,
+  spiralFlowSchema,
+  spiralFlowDefaults,
+} from "./spiral-flow/SpiralFlow";
+import {
+  FPS as SPIRAL_FPS,
+  DURATION_IN_FRAMES as SPIRAL_DURATION_IN_FRAMES,
+  UHD_WIDTH,
+  UHD_HEIGHT,
+  HD_WIDTH,
+  HD_HEIGHT,
+} from "./spiral-flow/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +64,52 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/*
+        Spiral Flow — 6.000 s seamless loop at 30 fps, matching the reference
+        clip's runtime exactly. UHD is the master; the HD pair exists so the
+        1080p deliverables can be checked without a downscale step. `meshDetail`
+        is the only prop that differs between them.
+      */}
+      <Composition
+        id="SpiralFlow-4K-Violet"
+        component={SpiralFlow}
+        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
+        fps={SPIRAL_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={spiralFlowSchema}
+        defaultProps={{ ...spiralFlowDefaults, grade: "violet", meshDetail: 1.4 }}
+      />
+      <Composition
+        id="SpiralFlow-4K-Blue"
+        component={SpiralFlow}
+        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
+        fps={SPIRAL_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={spiralFlowSchema}
+        defaultProps={{ ...spiralFlowDefaults, grade: "blue", meshDetail: 1.4 }}
+      />
+      <Composition
+        id="SpiralFlow-1080-Violet"
+        component={SpiralFlow}
+        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
+        fps={SPIRAL_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={spiralFlowSchema}
+        defaultProps={{ ...spiralFlowDefaults, grade: "violet" }}
+      />
+      <Composition
+        id="SpiralFlow-1080-Blue"
+        component={SpiralFlow}
+        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
+        fps={SPIRAL_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={spiralFlowSchema}
+        defaultProps={{ ...spiralFlowDefaults, grade: "blue" }}
       />
     </>
   );

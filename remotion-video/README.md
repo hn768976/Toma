@@ -11,6 +11,9 @@
 
 Welcome to your Remotion project!
 
+**Spiral Flow** — the 3D abstract loop (Three.js + WebGPU, 4K master, two colour
+grades) — is documented separately in [SPIRAL_FLOW.md](./SPIRAL_FLOW.md).
+
 ## Commands
 
 **Install Dependencies**
