@@ -11,6 +11,10 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// Tag H.264 output as limited-range BT.709, which is what HD delivery
+// expects. Without it the JPEG intermediate leaks through as full-range
+// yuvj420p with BT.470BG primaries, and players disagree about it.
+Config.setColorSpace("bt709");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

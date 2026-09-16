@@ -91,8 +91,11 @@ export const createCellMaterial = (theme: Theme): CellMaterial => {
   const vSeed = varying(aParams.y, "vSeed");
   const vFade = varying(aParams.z, "vFade");
   const vDist = varying(dist, "vDist");
-  // 1 when the cell sits in front of the focal plane, 0 behind it.
-  const vInFront = varying(defocus.negate().step(0).oneMinus(), "vInFront");
+  // 1 when the cell sits in front of the focal plane, 0 behind it, with a
+  // short ramp across the plane itself so a cell crossing focus does not
+  // switch opacity in a single frame. `defocus` is negative in front, so
+  // negating it puts "in front" at the top of the smoothstep.
+  const vInFront = varying(defocus.negate().smoothstep(-0.4, 0.4), "vInFront");
 
   const material = new THREE.MeshBasicNodeMaterial();
 
