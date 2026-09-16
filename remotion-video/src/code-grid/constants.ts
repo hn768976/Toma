@@ -113,7 +113,30 @@ export const RIPPLE_AMOUNT = 0.22;
  * cores to white and still trips the bloom threshold, so the sharp text
  * is unchanged — it only removes the energy the blur had to spread.
  */
-export const EMISSIVE_CEILING = 3.2;
+export const EMISSIVE_CEILING = 2.2;
+
+/**
+ * Near-field emissive falloff: blocks closer than NEAR_FADE_END dim
+ * towards NEAR_FADE_MIN.
+ *
+ * This is what stops the defocused foreground blowing out to white, and
+ * the ceiling above cannot do it alone. A block face is roughly a third
+ * covered in hot glyphs, so its *average* is genuinely bright; in the
+ * sharp band the eye reads that as thin strokes on black, but the
+ * depth-of-field blur turns the same energy into a flat white wash. Blur
+ * preserves the average, so no cap that leaves the sharp text looking
+ * hot can also keep the blurred version dark.
+ *
+ * Distance is the one thing that separates the two cases, hence this.
+ * The ramp is shaped to be spent by the time it reaches the focal plane
+ * (~98% at 6.4 cells) so the sharp mid-band is untouched, while the
+ * bottom of frame — around 3.6 cells out and fully defocused — lands near
+ * half. It reads as depth shading rather than as blocks dimming, because
+ * everything it touches is already soft.
+ */
+export const NEAR_FADE_MIN = 0.15;
+export const NEAR_FADE_START = 0.8;
+export const NEAR_FADE_END = 7;
 
 // --- Camera ---------------------------------------------------------------
 

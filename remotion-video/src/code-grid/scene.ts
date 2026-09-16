@@ -55,6 +55,9 @@ import {
   DURATION_IN_FRAMES,
   EMISSIVE_CEILING,
   FOG_DENSITY,
+  NEAR_FADE_END,
+  NEAR_FADE_MIN,
+  NEAR_FADE_START,
   LOOP_CELLS,
   RANDOM_SEED,
   RIPPLE_AMOUNT,
@@ -292,15 +295,25 @@ export const createScene = async (
     .mul(0.16)
     .mul(blockBrightness.add(0.15));
 
+  // Exponential fog, dissolving the field into the background well before
+  // the far plane so the horizon is never a visible edge.
+  const viewDistance = positionView.z.negate();
+
+  // See NEAR_FADE_* in constants.ts: this is what keeps the defocused
+  // foreground from blurring into a white wash.
+  const nearFade = mix(
+    float(NEAR_FADE_MIN),
+    float(1),
+    smoothstep(NEAR_FADE_START, NEAR_FADE_END, viewDistance),
+  );
+
   const lit = faceColor
     .add(glyphColor)
     .add(edgeColor)
     .add(rimColor)
-    .min(vec3(EMISSIVE_CEILING, EMISSIVE_CEILING, EMISSIVE_CEILING));
+    .min(vec3(EMISSIVE_CEILING, EMISSIVE_CEILING, EMISSIVE_CEILING))
+    .mul(nearFade);
 
-  // Exponential fog, dissolving the field into the background well before
-  // the far plane so the horizon is never a visible edge.
-  const viewDistance = positionView.z.negate();
   const fogAmount = float(1).sub(viewDistance.mul(-FOG_DENSITY).exp());
   material.colorNode = mix(lit, vec3(...palette.background), fogAmount);
 

@@ -91,19 +91,34 @@ barely moving. `MAX_BLOCK_HEIGHT` is the guard on the other end — raise
 it and grown blocks start crowding the foreground and darkening the
 frame, since the camera only sits at 2.24 cells.
 
-### 3. Emissive is capped, and it has to be
+### 3. The defocused foreground is deliberately dimmed
 
-`EMISSIVE_CEILING` clamps a block's colour before the post chain. Without
-it a hot glyph on a bright block reaches ~16, which is harmless while it
-stays a thin sharp stroke and very much not once it drifts into the
-defocused foreground: the depth-of-field blur averages a whole region of
-those values together and bloom turns the result into a white blob
-floating through the shot. The cap still clips glyph cores to white and
-still trips the bloom threshold, so sharp text is unchanged — it only
-removes the energy the blur had to spread.
+Two separate guards stop the near field blurring into a floating white
+blob, and they are not interchangeable.
 
-Raise `glyphGain` or the brightness bands in `field.ts` and you may need
-to revisit it.
+`EMISSIVE_CEILING` caps a block's colour before the post chain, which
+keeps any single value from running away (a hot glyph on a bright block
+otherwise reaches ~16).
+
+That cap alone is **not** enough, which is worth understanding before
+touching either. A block face is roughly a third covered in hot glyphs,
+so its average is genuinely bright. In the sharp band the eye reads that
+as thin strokes on black; the depth-of-field blur turns exactly the same
+energy into a flat white wash. Blur preserves the average, so there is no
+cap that leaves the sharp text looking hot while also keeping the blurred
+version dark — lowering the ceiling far enough to fix the foreground
+kills the text everywhere.
+
+Distance is the only thing that separates the two cases, so `NEAR_FADE_*`
+attenuates emissive by view distance. The ramp is spent by the focal
+plane (~98% at 6.4 cells), leaving the sharp mid-band alone, while the
+bottom of frame — ~3.6 cells out and fully defocused — lands near half.
+It reads as depth shading, not as blocks dimming, because everything it
+touches is already soft.
+
+Measured at the five worst frames in the loop, peak brightness of a
+heavily downsampled frame (which averages thin text away and leaves only
+real glows) went 196/218/209/222/203 → 101/124/163/108/120.
 
 ### 4. Nothing animates itself
 
