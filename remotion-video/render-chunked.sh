@@ -28,6 +28,13 @@ COMMON=(--sequence --image-format=png --concurrency=2 --timeout=600000 --log=err
 if [ -x /opt/pw-browsers/chromium-1194/chrome-linux/chrome ]; then
   COMMON+=(--gl=swangle --chrome-mode=chrome-for-testing
            --browser-executable=/opt/pw-browsers/chromium-1194/chrome-linux/chrome)
+  # A box reached through this branch has no GPU, so the scene's WebGPU probe
+  # has a foregone answer -- and it costs a full-size canvas per tab per chunk
+  # to reach it, which intermittently left the real canvas with no GL context at
+  # all. Pin the backend instead. The composition default stays `false`, so a
+  # machine with a GPU still gets WebGPU. Input props merge over defaultProps,
+  # so grade, meshDetail and samples are untouched.
+  COMMON+=(--props={\"forceWebGL\":true})
 fi
 
 # -x matches the process name exactly, so this cannot match the shell running

@@ -49,6 +49,27 @@ hang costs one timeout window instead of the whole render, and `deliver.sh`
 then encodes the master and the 1080p deliverable from the same lossless frames
 so neither is a re-encode of the other.
 
+On that path it also pins `forceWebGL`. A machine reached through it has no GPU,
+so the scene's WebGPU probe has a foregone answer, and the probe costs a
+full-size canvas per tab per chunk to reach it — which intermittently left the
+real canvas with no GL context at all. The composition default stays `false`, so
+a machine with a GPU still gets WebGPU.
+
+## Verifying a render
+
+```bash
+./verify.sh out/frames/violet
+```
+
+Run this before encoding. A per-frame brightness scan alone is not enough: it
+catches a frame that went black, but not a frame that is a near-copy of some
+*other* valid frame, which is what a stale canvas produces and what slipped
+through here once. So `verify.sh` also holds every step between neighbouring
+frames against the median, failing on outliers — a misplaced frame spikes the
+steps on both sides of it — and on near-duplicates. The 179 → 0 wrap is appended
+as just another step and held to the same standard, so the loop is verified by
+the same test rather than by eye.
+
 ## How the loop is built
 
 The trick is that **nothing is re-computed per frame**. The surface is a radial
