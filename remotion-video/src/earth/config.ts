@@ -149,7 +149,7 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     exposure: 0.95,
     bloom: { strength: 0.46, radius: 0.55, threshold: 0.7 },
     atmosphere: { rayleigh: 1.8, mie: 0.72, density: 0.62, extinction: 0.22 },
-    halo: { radius: 1.03, strength: 2.6, falloff: 1.8 },
+    halo: { radius: 1.02, strength: 2.6, falloff: 1.8 },
     surfaceHaze: 0.34,
     glint: { power: 110, gain: 0.85 },
     ambient: 0.03,
