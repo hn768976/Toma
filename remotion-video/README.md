@@ -37,6 +37,17 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Tile Field (3D gold tile grid loop)
+
+Three colour versions of a three.js / WebGPU tile-field loop, 30 fps, seamless
+15 s (450 frames), registered at both 1080p and 4K. See
+[`src/tile-field/README.md`](./src/tile-field/README.md) for the compositions,
+render commands and how the scene is built.
+
+```console
+npx remotion render TileFieldGold1080p out/tile-field-gold-1080p.mp4 --codec=h264 --crf=16
+```
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
