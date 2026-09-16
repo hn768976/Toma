@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  NeonLightStreaks,
+  neonLightStreaksSchema,
+  neonLightStreaksDefaults,
+} from "./light-streaks/NeonLightStreaks";
+import {
+  BASE_WIDTH as STREAK_WIDTH,
+  BASE_HEIGHT as STREAK_HEIGHT,
+  DURATION_IN_FRAMES as STREAK_DURATION_IN_FRAMES,
+  FPS as STREAK_FPS,
+} from "./light-streaks/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,48 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/* Neon light streaks. Same motion in two colour grades, each at 1080p
+          for delivery and at true vector 4K for the master. */}
+      <Composition
+        id="NeonStreaksBlue"
+        component={NeonLightStreaks}
+        durationInFrames={STREAK_DURATION_IN_FRAMES}
+        fps={STREAK_FPS}
+        width={STREAK_WIDTH}
+        height={STREAK_HEIGHT}
+        schema={neonLightStreaksSchema}
+        defaultProps={{ ...neonLightStreaksDefaults, variant: "blue" as const }}
+      />
+      <Composition
+        id="NeonStreaksBlue4K"
+        component={NeonLightStreaks}
+        durationInFrames={STREAK_DURATION_IN_FRAMES}
+        fps={STREAK_FPS}
+        width={STREAK_WIDTH * 2}
+        height={STREAK_HEIGHT * 2}
+        schema={neonLightStreaksSchema}
+        defaultProps={{ ...neonLightStreaksDefaults, variant: "blue" as const }}
+      />
+      <Composition
+        id="NeonStreaksViolet"
+        component={NeonLightStreaks}
+        durationInFrames={STREAK_DURATION_IN_FRAMES}
+        fps={STREAK_FPS}
+        width={STREAK_WIDTH}
+        height={STREAK_HEIGHT}
+        schema={neonLightStreaksSchema}
+        defaultProps={{ ...neonLightStreaksDefaults, variant: "violet" as const }}
+      />
+      <Composition
+        id="NeonStreaksViolet4K"
+        component={NeonLightStreaks}
+        durationInFrames={STREAK_DURATION_IN_FRAMES}
+        fps={STREAK_FPS}
+        width={STREAK_WIDTH * 2}
+        height={STREAK_HEIGHT * 2}
+        schema={neonLightStreaksSchema}
+        defaultProps={{ ...neonLightStreaksDefaults, variant: "violet" as const }}
       />
     </>
   );
