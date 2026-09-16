@@ -1,10 +1,10 @@
 import {
   ACESFilmicToneMapping,
-  Fog,
   AmbientLight,
-  DirectionalLight,
   Color,
+  DirectionalLight,
   Euler,
+  Fog,
   InstancedMesh,
   Matrix4,
   MeshPhysicalNodeMaterial,
@@ -68,12 +68,7 @@ const createGlassMaterial = (palette: Palette, gain: number) => {
   return material;
 };
 
-const buildLayer = (
-  material: MeshPhysicalNodeMaterial,
-  cols: number,
-  rows: number,
-  scale: number,
-) => {
+const buildLayer = (material: MeshPhysicalNodeMaterial, cols: number, rows: number) => {
   const cells = createLayerCells(cols, rows);
   const mesh = new InstancedMesh(createFrameGeometry(), material, cells.length);
   mesh.frustumCulled = false;
@@ -83,7 +78,7 @@ const buildLayer = (
   // Each frame is a square turned 45deg into a diamond; the grid itself stays
   // axis aligned, so neighbouring diamonds meet corner to corner.
   const rotation = new Quaternion().setFromEuler(new Euler(0, 0, Math.PI / 4));
-  const scaleVector = new Vector3(scale, scale, scale);
+  const scaleVector = new Vector3(1, 1, 1);
 
   cells.forEach((cell, i) => {
     position.set(cell.x, cell.y, cell.z);
@@ -102,7 +97,7 @@ export const createLatticeScene = async (
   forceWebGL: boolean,
 ): Promise<LatticeScene> => {
   // `WebGPURenderer` runs the same TSL node graph on either backend, so the
-  // WebGL2 fallback is pixel-comparable — see `resolveBackend()`.
+  // WebGL2 fallback is pixel-comparable — see `resolveForceWebGL()`.
   let renderer = new WebGPURenderer({canvas, antialias: true, forceWebGL});
   try {
     await renderer.init();
@@ -151,9 +146,9 @@ export const createLatticeScene = async (
   backMaterial.roughness = 0.16;
   backMaterial.envMapIntensity = 0.9;
 
-  group.add(buildLayer(frontMaterial, FRONT_COLS, FRONT_ROWS, 1));
+  group.add(buildLayer(frontMaterial, FRONT_COLS, FRONT_ROWS));
 
-  const back = buildLayer(backMaterial, BACK_COLS, BACK_ROWS, 1);
+  const back = buildLayer(backMaterial, BACK_COLS, BACK_ROWS);
   // Half a cell across keeps the rear lattice from lining up with the front one.
   back.position.set(0.66, 0.66, BACK_OFFSET_Z);
   group.add(back);
