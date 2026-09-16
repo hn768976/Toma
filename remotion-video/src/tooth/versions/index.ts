@@ -6,7 +6,7 @@ import { V03EnamelShield } from "./V03EnamelShield";
 import { V04MintStudio } from "./V04MintStudio";
 import { V05XRay } from "./V05XRay";
 import { V06MolecularOrbit } from "./V06MolecularOrbit";
-import { V07HudAnalysis } from "./V07HudAnalysis";
+import { V07GlassScan } from "./V07GlassScan";
 import { V08AtomCage } from "./V08AtomCage";
 import { V09BubbleShield } from "./V09BubbleShield";
 import { V10SoftBlue } from "./V10SoftBlue";
@@ -37,7 +37,7 @@ export const TOOTH_VERSIONS: readonly ToothVersion[] = [
   version("04-MintStudio", "Glossy enamel on a seamless mint cyclorama", 10.0, V04MintStudio),
   version("05-XRay", "Additive x-ray volume dissolving into a beam", 7.56, V05XRay),
   version("06-MolecularOrbit", "Pearlescent tooth inside a swarm of orbiting spheres", 13.56, V06MolecularOrbit),
-  version("07-HudAnalysis", "Dark glass tooth on a reflective floor, flanked by readouts", 13.334, V07HudAnalysis),
+  version("07-GlassScan", "Luminous glass tooth turning on a dark reflective floor", 13.334, V07GlassScan),
   version("08-AtomCage", "Orbit rings accumulating into an atomic cage", 13.6, V08AtomCage),
   version("09-BubbleShield", "Soap bubble sealing around the tooth above a mirror floor", 8.04, V09BubbleShield),
   version("10-SoftBlue", "Minimal glossy tooth on a soft powder-blue field", 12.01, V10SoftBlue),

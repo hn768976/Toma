@@ -2,38 +2,45 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import * as THREE from "three";
 import { useToothAssets, WithToothAssets } from "../assets";
-import { GlowShell, Halo, SceneBackdrop, Starfield, SurfacePoints } from "../parts";
+import { Halo, SceneBackdrop, Starfield, SurfacePoints } from "../parts";
 import { Stage, useLoop, usePxScale, wave } from "../stage";
 import { useWireMaterial } from "../shaders/materials";
 
 /**
  * Version 01 - "Wireframe Halo".
  *
- * A low-poly tooth drawn as a glowing triangulated shell on deep navy.
- * Everything is additive and double-sided so the far side of the mesh shows
- * through the near side, which is what gives the reference its x-ray quality.
+ * A low-poly tooth drawn as a glowing triangulated solid on deep navy.
+ *
+ * The mesh is opaque: front faces only, writing depth. The reference reads as a
+ * lit volume with an emissive surface mesh, not as a see-through cage, so the
+ * far side must not show through. The silhouette glow comes from a fresnel term
+ * on the surface itself plus a soft billboard behind - an inflated shell would
+ * put a hard offset outline around the tooth and make it look like a sticker.
  */
 
 const Scene: React.FC = () => {
   const { t } = useLoop();
   const px = usePxScale();
-  const { low, lowBary, points } = useToothAssets();
+  const { lowBary, points } = useToothAssets();
 
-  const wire = useWireMaterial({
-    uFill: "#0e3f91",
-    uLine: "#52c4f2",
-    uGlow: "#1d6fd2",
-    uFillAlpha: 0.11,
-    uLineWidth: 0.85,
-    uGlowStrength: 0.5,
-    uFresnelPow: 2.1,
-    uOpacity: 1,
-    uPx: px,
-    uScanY: -99,
-    uScanWidth: 0.04,
-    uScanStrength: 0,
-    uScanColor: "#ff3d8b",
-  });
+  const wire = useWireMaterial(
+    {
+      uFill: "#123f80",
+      uLine: "#61c4ec",
+      uGlow: "#6fd2ff",
+      uFillAlpha: 1,
+      uLineWidth: 0.8,
+      uGlowStrength: 1.15,
+      uFresnelPow: 1.9,
+      uOpacity: 1,
+      uPx: px,
+      uScanY: -99,
+      uScanWidth: 0.04,
+      uScanStrength: 0,
+      uScanColor: "#ff3d8b",
+    },
+    true,
+  );
 
   return (
     <>
@@ -50,6 +57,8 @@ const Scene: React.FC = () => {
         vignettePower={2.2}
       />
       <Halo color="#1b5fc0" size={9} opacity={0.34} power={2.8} position={[0, 0, -2.2]} />
+      {/* Tight, tooth-shaped bloom sitting just behind the mesh. */}
+      <Halo color="#2f8ee0" size={3.4} squash={1.5} opacity={0.5} power={2.1} position={[0, 0, -0.9]} />
       <Starfield
         count={340}
         seed={11}
@@ -60,8 +69,7 @@ const Scene: React.FC = () => {
       />
       <group rotation-y={t * Math.PI * 2} position-y={wave(t, 1) * 0.05} scale={1.34}>
         <mesh geometry={lowBary} material={wire} />
-        <GlowShell geometry={low} color="#1c6ac4" strength={0.5} power={3.2} scale={1.035} />
-        <SurfacePoints cloud={points} count={4200} color="#cdefff" size={5} opacity={0.35} />
+        <SurfacePoints cloud={points} count={2600} color="#dff4ff" size={4} opacity={0.5} />
       </group>
     </>
   );

@@ -24,10 +24,14 @@ const Scene: React.FC = () => {
   const bubble = useBubbleMaterial({
     toneMapped: false,
     uTime: t,
-    uWobble: 0.016,
-    uRim: 1.05,
-    uFilm: 0.17,
-    uTint: "#e8f6ff",
+    uWobble: 0.013,
+    // Wide, gentle falloff and almost no body haze: the reference bubble is a
+    // soft sheen with a clear interior, not a bright ring around milk.
+    uRim: 0.85,
+    uRimPower: 2.7,
+    uBase: 0.004,
+    uFilm: 0.08,
+    uTint: "#eaf7ff",
     uOpacity: 1,
   });
 
@@ -43,7 +47,7 @@ const Scene: React.FC = () => {
         radius={[0.98, 0.9]}
       />
       <StudioEnvironment spec={BLUE_STUDIO} intensity={1.2} />
-      <directionalLight position={[3, 5, 4]} intensity={1.85} color="#ffffff" />
+      <directionalLight position={[3, 5, 4]} intensity={2.15} color="#ffffff" />
       <directionalLight position={[-4, 1.5, -3]} intensity={0.55} color="#cfe6ff" />
       <ambientLight intensity={0.25} color="#d8ecff" />
 
@@ -55,11 +59,11 @@ const Scene: React.FC = () => {
           <mesh geometry={full} scale={1.0}>
             <meshPhysicalMaterial
               color="#ffffff"
-              roughness={0.2}
+              roughness={0.17}
               metalness={0}
               clearcoat={1}
               clearcoatRoughness={0.08}
-              envMapIntensity={1.4}
+              envMapIntensity={1.55}
             />
           </mesh>
         </group>

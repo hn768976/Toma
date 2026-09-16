@@ -140,8 +140,14 @@ const wireUniforms = (): Uniforms => ({
 /**
  * Draws triangle edges from barycentric coordinates rather than GL lines, which
  * WebGL cannot widen. Requires geometry carrying an `aBary` attribute.
+ *
+ * `solid` renders it as an opaque volume - front faces only, writing depth, over
+ * normal blending - so the far side of the mesh does not show through the near
+ * side. The references read as lit solids with an emissive surface mesh, not as
+ * see-through cages, and additive double-sided geometry cannot look like that
+ * however the colours are tuned.
  */
-export const useWireMaterial = (values: WireValues) =>
+export const useWireMaterial = (values: WireValues, solid = false) =>
   useMaterial(
     () =>
       new THREE.ShaderMaterial({
@@ -174,13 +180,17 @@ void main() {
   }
 
   gl_FragColor = vec4(colour, uOpacity);
+  #ifdef TOOTH_SOLID
+    gl_FragColor.a = 1.0;
+  #endif
 ${TAIL}
 }
 `,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        side: THREE.DoubleSide,
+        defines: solid ? { TOOTH_SOLID: "" } : {},
+        transparent: !solid,
+        blending: solid ? THREE.NormalBlending : THREE.AdditiveBlending,
+        depthWrite: solid,
+        side: solid ? THREE.FrontSide : THREE.DoubleSide,
       }),
     values,
   );
@@ -466,6 +476,10 @@ ${TAIL}
 export type BubbleValues = {
   readonly toneMapped?: boolean;
   readonly uTime: number;
+  /** Rim falloff. Lower spreads the sheen wider and softer. */
+  readonly uRimPower: number;
+  /** Haze across the whole shell. Keep low or the bubble turns milky. */
+  readonly uBase: number;
   readonly uWobble: number;
   readonly uRim: number;
   readonly uFilm: number;
@@ -486,6 +500,8 @@ export const useBubbleMaterial = (values: BubbleValues) =>
           uTime: { value: 0 },
           uWobble: { value: 0.02 },
           uRim: { value: 1.4 },
+          uRimPower: { value: 2.0 },
+          uBase: { value: 0.018 },
           uFilm: { value: 0.35 },
           uTint: colorUniform("#dff2ff"),
           uOpacity: { value: 1 },
@@ -505,14 +521,14 @@ ${VERTEX_BODY}
         fragmentShader: /* glsl */ `
 ${VARYINGS}
 uniform vec3 uTint;
-uniform float uRim, uFilm, uOpacity;
+uniform float uRim, uRimPower, uBase, uFilm, uOpacity;
 ${FRESNEL}
 void main() {
-  float f = fresnel(vNormalW, vPosW, 2.0);
+  float f = fresnel(vNormalW, vPosW, uRimPower);
   float film = fresnel(vNormalW, vPosW, 1.0);
   vec3 iridescence = 0.5 + 0.5 * cos(6.2831853 * (film * 3.4 + vec3(0.0, 0.33, 0.67)));
   vec3 colour = uTint * f * uRim + iridescence * uFilm * smoothstep(0.1, 0.9, film);
-  float alpha = clamp(f * 1.45 + 0.018, 0.0, 1.0) * uOpacity;
+  float alpha = clamp(f * 1.45 + uBase, 0.0, 1.0) * uOpacity;
   gl_FragColor = vec4(colour, alpha);
 ${TAIL}
 }

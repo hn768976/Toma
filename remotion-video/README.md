@@ -13,13 +13,13 @@ frame-accurately by Remotion — no pre-baked frames, no external render farm.
 
 | # | Name | Duration | Frames | What it is |
 |---|------|----------|--------|------------|
-| 01 | `WireframeHalo` | 10.000s | 300 | Low-poly glowing wireframe tooth on deep navy |
-| 02 | `ScanSweep` | 10.000s | 300 | As 01, with a magenta analysis plane travelling up through it |
+| 01 | `WireframeHalo` | 10.000s | 300 | Low-poly glowing tooth, solid, on deep navy |
+| 02 | `ScanSweep` | 10.000s | 300 | As 01, cut by a magenta analysis plane travelling up through it |
 | 03 | `EnamelShield` | 7.033s | 211 | Honeycomb shield gathers, coats the tooth, dissolves |
 | 04 | `MintStudio` | 10.000s | 300 | Glossy enamel on a seamless mint cyclorama |
 | 05 | `XRay` | 7.567s | 227 | Additive x-ray volume, roots dissolving into a beam |
 | 06 | `MolecularOrbit` | 13.567s | 407 | Pearlescent tooth inside a swarm of orbiting spheres |
-| 07 | `HudAnalysis` | 13.333s | 400 | Dark glass tooth on a reflective floor, flanked by readouts |
+| 07 | `GlassScan` | 13.333s | 400 | Luminous glass tooth turning on a dark reflective floor |
 | 08 | `AtomCage` | 13.600s | 408 | Orbit rings accumulating into an atomic cage |
 | 09 | `BubbleShield` | 8.033s | 241 | Soap bubble sealing around the tooth above a mirror floor |
 | 10 | `SoftBlue` | 12.000s | 360 | Minimal glossy tooth on a soft powder-blue field |
@@ -51,7 +51,7 @@ node scripts/render-all.mjs --concurrency=8           # more parallel tabs
 Single composition, straight from the CLI:
 
 ```console
-npx remotion render Tooth-07-HudAnalysis-4K out/hud-4k.mp4 --codec=h264 --image-format=png --crf=16 --muted
+npx remotion render Tooth-07-GlassScan-4K out/glass-4k.mp4 --codec=h264 --image-format=png --crf=16 --muted
 ```
 
 Browse and scrub everything in the Studio:
@@ -90,7 +90,7 @@ public/models/         the tooth geometry (see below)
 scripts/render-all.mjs batch renderer
 ```
 
-Five things are worth knowing before changing anything:
+Six things are worth knowing before changing anything:
 
 **Seamless looping.** Every scene is driven by `t = frame / durationInFrames`,
 and only through whole-cycle periodic functions (`wave`, `cwave`, `saw`, `ping`
@@ -99,11 +99,20 @@ number of laps; camera moves breathe in and back out. If you add motion, express
 it in `t` the same way or the loop will jar.
 
 **1080p and 4K come from one component.** Anything measured in pixels — shader
-line widths, point sprite sizes, CSS in the HUD overlay — must be multiplied by
+line widths, point sprite sizes, CSS in any DOM overlay — must be multiplied by
 `usePxScale()` (1 at 1080p, 2 at 4K) or authored inside `<ScaledDom>`, which lays
 out at 1920×1080 and scales. Otherwise the 4K render is not a true 2× of the
 1080p one: screen-space derivatives are measured in real pixels, so lines come
 out half as thick.
+
+**The holograms are solid, not additive cages.** Versions 01, 02 and 05 all
+glow, but only 05 renders additively. 01 and 02 draw front faces with depth
+writes, so the far side of the mesh never shows through the near side - the
+references read as lit volumes with an emissive surface mesh, and no amount of
+colour tuning makes a double-sided additive mesh look like that. Their silhouette
+glow comes from a fresnel term on the surface itself plus a billboard behind;
+an inflated shell puts a hard offset outline around the tooth instead, which
+reads as a sticker.
 
 **Vignettes and glows are eased, never linear.** A CSS gradient interpolates
 linearly between stops, so a two-stop fade changes slope abruptly at each end
@@ -120,7 +129,7 @@ as a full-screen quad inside WebGL. With a transparent canvas over a CSS
 backdrop there is nothing for additive glows to add to, and semi-transparent
 pixels get their alpha applied twice during page compositing — halos and ripples
 come out *darker* than the background instead of brighter. An opaque canvas makes
-every blend mode behave. DOM layers on top of the canvas (the HUD in version 07)
+every blend mode behave. DOM layers on top of the canvas (version 03's glow)
 are fine.
 
 **Assets must load before the canvas mounts.** `<ThreeCanvas>` draws the scene

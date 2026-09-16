@@ -2,18 +2,22 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import * as THREE from "three";
 import { useToothAssets, WithToothAssets } from "../assets";
-import { GlowShell, Halo, SceneBackdrop, Starfield, SurfacePoints } from "../parts";
+import { Halo, SceneBackdrop, Starfield, SurfacePoints } from "../parts";
 import { Stage, saw, useLoop, usePxScale, wave } from "../stage";
-import { useRadialMaterial, useWireMaterial } from "../shaders/materials";
+import { useWireMaterial } from "../shaders/materials";
 
 /**
  * Version 02 - "Scan Sweep".
  *
- * The wireframe tooth of version 01 with a magenta analysis plane travelling up
- * through it. The plane exists twice: as a band term inside the tooth's own
- * shader, and as a real disc in the scene - so it reads as a flat line when it
- * passes the camera's eye level and opens into an ellipse above and below,
- * exactly as a physical plane would.
+ * The solid hologram of version 01 with a magenta analysis plane travelling up
+ * through it.
+ *
+ * The band is drawn only where the plane meets the tooth's surface, in the
+ * tooth's own shader. That is what the reference shows: the line hugs the
+ * silhouette and breaks into two separate segments as it crosses the two roots.
+ * A free-standing disc cannot do that - it reads as a ring floating around the
+ * tooth rather than a cut through it. All that sits outside the silhouette is a
+ * flat billboard flare, roughly the width of the tooth.
  */
 
 const SCAN_BOTTOM = -1.52;
@@ -22,7 +26,7 @@ const SCAN_TOP = 1.56;
 const Scene: React.FC = () => {
   const { t } = useLoop();
   const px = usePxScale();
-  const { low, lowBary, points } = useToothAssets();
+  const { lowBary, points } = useToothAssets();
 
   const sweep = saw(t, 1);
   const scanY = SCAN_BOTTOM + sweep * (SCAN_TOP - SCAN_BOTTOM);
@@ -30,24 +34,22 @@ const Scene: React.FC = () => {
   // still loops cleanly even though the plane itself teleports.
   const scanStrength = Math.sin(Math.PI * sweep) ** 0.6;
 
-  const wire = useWireMaterial({
-    uFill: "#0e3f91",
-    uLine: "#52c4f2",
-    uGlow: "#1d6fd2",
-    uFillAlpha: 0.11,
-    uLineWidth: 0.85,
-    uGlowStrength: 0.5,
-    uFresnelPow: 2.1,
-    uOpacity: 1,
-    uPx: px,
-    uScanY: scanY,
-    uScanWidth: 0.05,
-    uScanStrength: 2.6 * scanStrength,
-    uScanColor: "#ff2f86",
-  });
-
-  const disc = useRadialMaterial(
-    { uColor: "#ff2f86", uOpacity: 0.5 * scanStrength, uPower: 1.4, uAspect: 1 },
+  const wire = useWireMaterial(
+    {
+      uFill: "#123f80",
+      uLine: "#61c4ec",
+      uGlow: "#6fd2ff",
+      uFillAlpha: 1,
+      uLineWidth: 0.8,
+      uGlowStrength: 1.15,
+      uFresnelPow: 1.9,
+      uOpacity: 1,
+      uPx: px,
+      uScanY: scanY,
+      uScanWidth: 0.035,
+      uScanStrength: 3.4 * scanStrength,
+      uScanColor: "#ff4f9c",
+    },
     true,
   );
 
@@ -70,27 +72,18 @@ const Scene: React.FC = () => {
 
       <group rotation-y={t * Math.PI * 2} position-y={wave(t, 1) * 0.05} scale={1.34}>
         <mesh geometry={lowBary} material={wire} />
-        <GlowShell geometry={low} color="#1c6ac4" strength={0.5} power={3.2} scale={1.035} />
-        <SurfacePoints cloud={points} count={4200} color="#cdefff" size={5} opacity={0.35} />
+        <SurfacePoints cloud={points} count={2600} color="#dff4ff" size={4} opacity={0.5} />
       </group>
 
-      <group position-y={scanY}>
-        <mesh material={disc} rotation-x={-Math.PI / 2}>
-          <circleGeometry args={[1.22, 72]} />
-        </mesh>
-        <mesh rotation-x={-Math.PI / 2}>
-          <ringGeometry args={[0.88, 0.97, 96]} />
-          <meshBasicMaterial
-            color="#ff6aae"
-            transparent
-            opacity={0.95 * scanStrength}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-            toneMapped={false}
-          />
-        </mesh>
-      </group>
+      {/* The flare the cut throws past the silhouette - nothing more. */}
+      <Halo
+        color="#ff4f9c"
+        size={2.9}
+        squash={0.075}
+        opacity={0.85 * scanStrength}
+        power={1.9}
+        position={[0, scanY, -0.15]}
+      />
     </>
   );
 };
