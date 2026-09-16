@@ -1,5 +1,6 @@
+import { anamorphic } from "three/addons/tsl/display/AnamorphicNode.js";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
-import { pass } from "three/tsl";
+import { float, pass } from "three/tsl";
 import {
   ACESFilmicToneMapping,
   AdditiveBlending,
@@ -7,6 +8,7 @@ import {
   LinearMipmapLinearFilter,
   Mesh,
   MeshBasicNodeMaterial,
+  PlaneGeometry,
   NoColorSpace,
   PerspectiveCamera,
   PostProcessing,
@@ -28,6 +30,7 @@ import { createAtmosphereMaterial } from "./tsl/atmosphereMaterial";
 import { createCloudMaterial } from "./tsl/cloudMaterial";
 import { createEarthMaterial, type EarthMaps } from "./tsl/earthMaterial";
 import { createHaloMaterial } from "./tsl/haloMaterial";
+import { createMeteorMaterial } from "./tsl/meteorMaterial";
 import { createStarfieldMaterial } from "./tsl/starfieldMaterial";
 import { applyGrade } from "./tsl/grade";
 import { createUniforms } from "./tsl/uniforms";
@@ -113,20 +116,31 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
   uniforms.extinction.value = shot.atmosphere.extinction;
   uniforms.haloStrength.value = shot.halo.strength;
   uniforms.surfaceHaze.value = shot.surfaceHaze;
+  uniforms.procedural.value = shot.procedural;
+  uniforms.motionBlur.value = shot.motionBlur.span;
+  uniforms.nebula.value = shot.sky.nebula;
+  uniforms.dust.value = shot.sky.dust;
 
   const scene = new Scene();
 
-  const starfield = new Mesh(new SphereGeometry(STAR_SPHERE, 48, 24), createStarfieldMaterial());
+  const starfield = new Mesh(
+    new SphereGeometry(STAR_SPHERE, 48, 24),
+    createStarfieldMaterial(uniforms),
+  );
   starfield.renderOrder = -100;
   scene.add(starfield);
 
-  const earth = new Mesh(new SphereGeometry(1, 384, 192), createEarthMaterial(maps, uniforms));
+  const blurTaps = shot.motionBlur.taps;
+  const earth = new Mesh(
+    new SphereGeometry(1, 384, 192),
+    createEarthMaterial(maps, uniforms, { blurTaps }),
+  );
   earth.renderOrder = 0;
   scene.add(earth);
 
   const cloudDeck = new Mesh(
     new SphereGeometry(CLOUD_RADIUS, 256, 128),
-    createCloudMaterial(maps.clouds, uniforms),
+    createCloudMaterial(maps.clouds, uniforms, { blurTaps }),
   );
   cloudDeck.renderOrder = 1;
   scene.add(cloudDeck);
@@ -167,14 +181,34 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
   const sun = sunDirection(shot);
   uniforms.sunDirection.value.copy(sun);
 
+  const meteorMaterial = createMeteorMaterial(uniforms);
+  const meteor = new Mesh(new PlaneGeometry(1, 1), meteorMaterial);
+  meteor.renderOrder = 20;
+  meteor.frustumCulled = false;
+  meteor.visible = shot.meteor !== null;
+  if (shot.meteor) {
+    meteor.scale.set(shot.meteor.length, shot.meteor.width, 1);
+    camera.add(meteor);
+  }
+
   const scenePass = pass(scene, camera);
   if (options.samples > 1) {
     scenePass.renderTarget.samples = options.samples;
   }
   const bloomPass = bloom(scenePass, shot.bloom.strength, shot.bloom.radius, shot.bloom.threshold);
 
+  const lit = scenePass.add(bloomPass);
+  const flared =
+    shot.anamorphic > 0
+      ? lit.add(
+          anamorphic(scenePass, float(0.82), float(shot.anamorphic * 4.5), 24).mul(
+            shot.anamorphic * 0.9,
+          ),
+        )
+      : lit;
+
   const postProcessing = new PostProcessing(renderer);
-  postProcessing.outputNode = applyGrade(scenePass.add(bloomPass), {
+  postProcessing.outputNode = applyGrade(flared, {
     width: options.width,
     height: options.height,
     vignette: 0.3,
@@ -212,6 +246,30 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
     uniforms.grainSeed.value = frame * 0.017;
     uniforms.cloudDrift.value = progress * 0.0014;
     uniforms.cloudEvolve.value = progress * 0.85;
+    uniforms.surfaceSpin.value =
+      (shot.spin[0] + (shot.spin[1] - shot.spin[0]) * progress) / 360;
+    uniforms.dustDrift.value = progress * shot.sky.dustDrift;
+
+    if (shot.meteor) {
+      const pass = shot.meteor;
+      const span = Math.max(1, pass.leave - pass.enter);
+      const travel = (frame - pass.enter) / span;
+      const inside = travel >= 0 && travel <= 1;
+      meteor.visible = inside;
+
+      if (inside) {
+        const x = pass.from[0] + (pass.to[0] - pass.from[0]) * travel;
+        const y = pass.from[1] + (pass.to[1] - pass.from[1]) * travel;
+        meteor.position.set(x, y, -pass.depth);
+        meteor.rotation.z = Math.atan2(
+          pass.to[1] - pass.from[1],
+          pass.to[0] - pass.from[0],
+        );
+        // Ease in and out so it never pops on or off at frame edges.
+        const fade = Math.sin(Math.min(1, Math.max(0, travel)) * Math.PI);
+        uniforms.meteorIntensity.value = Math.pow(fade, 0.55) * pass.intensity;
+      }
+    }
 
     sunDisc.position.copy(sun).multiplyScalar(SUN_DISTANCE);
 

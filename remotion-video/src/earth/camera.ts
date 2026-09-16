@@ -25,13 +25,10 @@ const easeDrift = (t: number) => t * t * (3 - 2 * t) * 0.35 + t * 0.65;
 const ramp = (r: Ramp, t: number) => r[0] + (r[1] - r[0]) * t;
 
 /**
- * Places the camera in low orbit.
+ * Places the camera in orbit.
  *
  * The rig is built in a canonical frame first — local zenith on +Z, direction
- * of travel on +X — and then swung into place by the orbit rotation. Pitch is
- * derived from geometry rather than hand-set: at radius r the limb sits
- * `90 - asin(1/r)` degrees below the local horizontal, so aiming that far down
- * puts the limb dead centre and `limbOffset` lifts it from there.
+ * of travel on +X — and then swung into place by the orbit rotation.
  */
 export const placeCamera = (
   camera: PerspectiveCamera,
@@ -41,10 +38,17 @@ export const placeCamera = (
   const eased = easeDrift(progress);
 
   const radius = 1 + ramp(shot.altitude, eased);
-  const limbBelowHorizon = 90 - Math.asin(1 / radius) / DEG;
+
+  // Aiming at the limb means pitching down past it by however far it sits
+  // below the local horizontal, which is pure geometry at this radius; aiming
+  // at the planet means straight down the nadir. Either way `framing` then
+  // lifts the subject off the centre of frame, so the composition survives
+  // the altitude ramping underneath it.
+  const base = shot.aim === "limb" ? 90 - Math.asin(1 / radius) / DEG : 90;
 
   const sway = Math.sin(progress * Math.PI * 2 * shot.sway.cycles);
-  const pitch = (limbBelowHorizon + ramp(shot.limbOffset, eased) + sway * shot.sway.pitch) * DEG;
+  const pitch = (base + ramp(shot.framing, eased) + sway * shot.sway.pitch) * DEG;
+  const yaw = ramp(shot.lateral, eased) * DEG;
   const roll = (ramp(shot.roll, eased) + sway * shot.sway.roll) * DEG;
 
   const zenith = AXIS_Z;
@@ -59,7 +63,9 @@ export const placeCamera = (
   const orientation = new Quaternion().setFromRotationMatrix(
     new Matrix4().lookAt(eye, eye.clone().add(forward), zenith),
   );
-  orientation.multiply(new Quaternion().setFromAxisAngle(AXIS_Z, roll));
+  orientation
+    .multiply(new Quaternion().setFromAxisAngle(AXIS_Y, yaw))
+    .multiply(new Quaternion().setFromAxisAngle(AXIS_Z, roll));
 
   // Orbit swings the rig along its track; inclination tilts the whole track,
   // so it has to be the outer rotation of the two.

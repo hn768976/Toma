@@ -23,6 +23,7 @@ import {
 import { MeshBasicNodeMaterial, type Node, type Texture } from "three/webgpu";
 import { CLOUD_RADIUS } from "../config";
 import { directionToUv, NORTH } from "./common";
+import { smearedTexture } from "./smear";
 import type { EarthUniforms } from "./uniforms";
 
 /** One texel of the 4096x2048 NASA maps, for the bump-derived normal. */
@@ -36,6 +37,11 @@ export type EarthMaps = {
   clouds: Texture;
 };
 
+export type EarthMaterialOptions = {
+  /** Taps taken along longitude. 1 is a plain fetch. */
+  blurTaps: number;
+};
+
 /**
  * The planet surface.
  *
@@ -45,11 +51,16 @@ export type EarthMaps = {
  * fading in behind it, cloud shadows cast from a separate shell, and haze that
  * thickens towards the limb.
  */
-export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
+export const createEarthMaterial = (
+  maps: EarthMaps,
+  u: EarthUniforms,
+  options: EarthMaterialOptions,
+) => {
   const material = new MeshBasicNodeMaterial();
 
   material.colorNode = Fn(() => {
-    const vUv = uv();
+    // The planet's own rotation is a longitude offset on every lookup.
+    const vUv = uv().add(vec2(u.surfaceSpin, 0));
     const surfacePoint = positionLocal;
     const geoNormal = normalize(surfacePoint);
     const east = normalize(cross(NORTH, geoNormal));
@@ -64,18 +75,16 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
       .sub(east.mul(hEast.sub(h).mul(u.reliefStrength)))
       .sub(north.mul(hNorth.sub(h).mul(u.reliefStrength)));
 
-    // A 4K map covers ~10 km per texel, which goes soft this close in, so a
-    // high-frequency field adds micro relief and albedo break-up on top.
     const water = texture(maps.water, vUv).r;
 
     // Near the limb a screen pixel covers kilometres of ground, so any
     // procedural detail there is far below the sampling rate and moires.
     // Fading it with the facing angle keeps it where it is actually resolved.
     const facing = saturate(dot(geoNormal, normalize(cameraPosition.sub(surfacePoint))));
-    const detailFade = pow(facing, 1.6);
+    const detailFade = pow(facing, 1.6).mul(u.procedural);
 
-    // Micro relief only belongs on land; open ocean at this range is smooth,
-    // and perturbing it just aliases into a scale pattern.
+    // A 4K map covers ~10 km per texel, which goes soft this close in, so a
+    // high-frequency field adds micro relief and albedo break-up on top.
     const micro = u.microStrength.mul(oneMinus(water.mul(0.9))).mul(detailFade);
     const q = surfacePoint.mul(380);
     const m0 = mx_noise_float(q);
@@ -100,7 +109,7 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
 
     // Blue Marble's ocean is a fairly light blue; deep water this close in
     // reads much darker, and the contrast is what the reference lives on.
-    const basemap = texture(maps.day, vUv).rgb;
+    const basemap = smearedTexture(maps.day, vUv, options.blurTaps, u.motionBlur).rgb;
     const deepened = mix(basemap, basemap.mul(vec3(0.46, 0.68, 1.05)).mul(0.82), water.mul(0.7));
     const albedo = deepened.mul(grain.mul(u.grainAmount).mul(detailFade).add(1));
 
@@ -108,7 +117,9 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
     // sampled where the sun ray leaves that shell.
     const climb = float(CLOUD_RADIUS - 1).div(max(ndlGeo, float(0.22)));
     const shadowDir = normalize(surfacePoint.add(sun.mul(climb)));
-    const shadowUv = directionToUv(shadowDir).add(vec2(u.cloudDrift, 0));
+    const shadowUv = directionToUv(shadowDir).add(
+      vec2(u.cloudDrift.add(u.surfaceSpin), 0),
+    );
     const cloudShadow = oneMinus(texture(maps.clouds, shadowUv).a.mul(0.5));
 
     // Wrapped diffuse. A hard N-dot-L drops the mid-latitudes away far too
@@ -134,7 +145,7 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
     // NASA Black Marble. Only its luminance is used: the map's dark blue
     // ocean floor and its JPEG chroma noise both turn into coloured confetti
     // as soon as the lights are amplified, so the hue is supplied here.
-    const nightSample = texture(maps.night, vUv).rgb;
+    const nightSample = smearedTexture(maps.night, vUv, options.blurTaps, u.motionBlur).rgb;
     const nightLevel = max(
       dot(nightSample, vec3(0.2126, 0.7152, 0.0722)).sub(0.075),
       float(0),

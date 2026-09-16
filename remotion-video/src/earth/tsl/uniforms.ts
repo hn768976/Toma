@@ -10,6 +10,13 @@ export const createUniforms = () => ({
   sunIntensity: uniform(1),
   nightIntensity: uniform(1.5),
 
+  /**
+   * Rotation of the planet, in UV units. Offsetting the lookup is exactly
+   * what spinning the planet does — the surface moves, the terminator does
+   * not — and it keeps every mesh at identity.
+   */
+  surfaceSpin: uniform(0),
+
   /** Longitudinal drift of the cloud deck, in UV units. */
   cloudDrift: uniform(0),
   /** Advances the noise field that breaks up the cloud texture. */
@@ -18,6 +25,8 @@ export const createUniforms = () => ({
 
   reliefStrength: uniform(3.5),
   grainAmount: uniform(0.07),
+  /** Scales all procedural detail; zero where the surface is smeared away. */
+  procedural: uniform(1),
   microStrength: uniform(0.05),
 
   /** Moves the grain pattern on every frame. */
@@ -26,6 +35,17 @@ export const createUniforms = () => ({
   haloStrength: uniform(1),
   /** In-scattered air laid over the disc, strongest towards the limb. */
   surfaceHaze: uniform(0.34),
+
+  /** Fades the meteor in and out across its pass. */
+  meteorIntensity: uniform(0),
+
+  /** Deep-space background: nebula wash and the near-field dust motes. */
+  nebula: uniform(0),
+  dust: uniform(0),
+  dustDrift: uniform(0),
+
+  /** UV span the surface smears over, for the timelapse pass. */
+  motionBlur: uniform(0),
 
   rayleigh: uniform(1),
   mie: uniform(1),

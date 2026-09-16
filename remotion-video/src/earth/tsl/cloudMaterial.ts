@@ -22,6 +22,7 @@ import {
 } from "three/tsl";
 import { MeshBasicNodeMaterial, type Node, type Texture } from "three/webgpu";
 import { NORTH } from "./common";
+import { smearedTexture } from "./smear";
 import type { EarthUniforms } from "./uniforms";
 
 /**
@@ -31,12 +32,22 @@ import type { EarthUniforms } from "./uniforms";
  * deck thickens where the view grazes it. That is what keeps the limb reading
  * as a layer of air with weather in it instead of a decal on a ball.
  */
-export const createCloudMaterial = (clouds: Texture, u: EarthUniforms) => {
+export type CloudMaterialOptions = {
+  /** Taps taken along longitude. 1 is a plain fetch. */
+  blurTaps: number;
+};
+
+export const createCloudMaterial = (
+  clouds: Texture,
+  u: EarthUniforms,
+  options: CloudMaterialOptions,
+) => {
   const material = new MeshBasicNodeMaterial();
   material.transparent = true;
   material.depthWrite = false;
 
-  const driftedUv = () => uv().add(vec2(u.cloudDrift, 0));
+  // The deck drifts over the ground, and the planet turns under both.
+  const driftedUv = () => uv().add(vec2(u.cloudDrift.add(u.surfaceSpin), 0));
 
   material.colorNode = Fn(() => {
     const point = positionLocal;
@@ -77,7 +88,7 @@ export const createCloudMaterial = (clouds: Texture, u: EarthUniforms) => {
     const normal = normalize(point);
     const view = normalize(cameraPosition.sub(point));
 
-    const base = pow(texture(clouds, driftedUv()).a, 1.3);
+    const base = pow(smearedTexture(clouds, driftedUv(), options.blurTaps, u.motionBlur).a, 1.3);
     const evolve = mx_fractal_noise_float(
       point.mul(140).add(vec3(0, 0, u.cloudEvolve)),
       3,
