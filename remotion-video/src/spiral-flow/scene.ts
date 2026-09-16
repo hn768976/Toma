@@ -49,6 +49,13 @@ export type SceneOptions = {
   samples: number;
   /** `true` pins the WebGL2 fallback backend even where WebGPU is available. */
   forceWebGL: boolean;
+  /**
+   * Called if the graphics device is lost mid-render. Software GL can run out
+   * of memory part-way through a long 4K sequence, and the canvas then keeps
+   * screenshotting as a blank frame — silently corrupt output. Renders must
+   * fail on this, not ship it.
+   */
+  onDeviceLost: (reason: string) => void;
 };
 
 export type SceneHandle = {
@@ -122,6 +129,13 @@ const buildScene = async (
   canvas.style.display = "block";
   options.container.appendChild(canvas);
 
+  canvas.addEventListener("webglcontextlost", (event) => {
+    // Without preventDefault the context can never be restored; either way the
+    // frames from here on would be blank, so the render has to stop.
+    event.preventDefault();
+    options.onDeviceLost("WebGL context lost");
+  });
+
   const surface: SurfaceParams = {
     ...DEFAULT_SURFACE,
     polarSegments: Math.round(
@@ -146,6 +160,14 @@ const buildScene = async (
   renderer.toneMappingExposure = 0.8;
 
   await renderer.init();
+
+  // The WebGPU backend reports loss through the device rather than the canvas.
+  const device = (renderer.backend as { device?: GPUDevice }).device;
+  if (device) {
+    device.lost.then((info) => {
+      options.onDeviceLost(`WebGPU device lost: ${info.message || info.reason}`);
+    });
+  }
 
   const scene = new Scene();
   scene.fog = new FogExp2(new Color(grade.fog).getHex(), 0.052);

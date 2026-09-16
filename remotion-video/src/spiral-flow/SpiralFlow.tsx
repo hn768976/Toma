@@ -82,6 +82,15 @@ export const SpiralFlow: React.FC<SpiralFlowProps> = ({
 
     createSpiralScene({
       container,
+      onDeviceLost: (reason) => {
+        cancelRender(
+          new Error(
+            `[spiral-flow] ${reason}. Every frame after this one would be ` +
+              `blank, so the render is being failed rather than allowed to ` +
+              `finish. Lower --concurrency or the meshDetail prop and retry.`,
+          ),
+        );
+      },
       width,
       height,
       grade,

@@ -68,8 +68,14 @@ export const RemotionRoot: React.FC = () => {
       {/*
         Spiral Flow — 6.000 s seamless loop at 30 fps, matching the reference
         clip's runtime exactly. UHD is the master; the HD pair exists so the
-        1080p deliverables can be checked without a downscale step. `meshDetail`
-        is the only prop that differs between them.
+        1080p deliverables can be checked without a downscale step.
+
+        The UHD pair runs fewer MSAA samples than the HD pair, not more: at 4K
+        the scene pass and its blur taps dominate memory, and a software GL
+        driver will drop the device part-way through a long sequence if pushed.
+        Four times the pixels already resolves the tube silhouettes better than
+        extra samples at 1080p would, and the delivery downscale averages four
+        rendered pixels into every output one on top of that.
       */}
       <Composition
         id="SpiralFlow-4K-Violet"
@@ -79,7 +85,12 @@ export const RemotionRoot: React.FC = () => {
         width={UHD_WIDTH}
         height={UHD_HEIGHT}
         schema={spiralFlowSchema}
-        defaultProps={{ ...spiralFlowDefaults, grade: "violet", meshDetail: 1.4 }}
+        defaultProps={{
+          ...spiralFlowDefaults,
+          grade: "violet",
+          meshDetail: 1.15,
+          samples: 2,
+        }}
       />
       <Composition
         id="SpiralFlow-4K-Blue"
@@ -89,7 +100,12 @@ export const RemotionRoot: React.FC = () => {
         width={UHD_WIDTH}
         height={UHD_HEIGHT}
         schema={spiralFlowSchema}
-        defaultProps={{ ...spiralFlowDefaults, grade: "blue", meshDetail: 1.4 }}
+        defaultProps={{
+          ...spiralFlowDefaults,
+          grade: "blue",
+          meshDetail: 1.15,
+          samples: 2,
+        }}
       />
       <Composition
         id="SpiralFlow-1080-Violet"

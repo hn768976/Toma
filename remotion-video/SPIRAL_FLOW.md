@@ -11,8 +11,8 @@ and **Blue** (electric royal blue sibling) — as a **6.000 s seamless loop at
 
 | ID | Size | Frames | Notes |
 |---|---|---|---|
-| `SpiralFlow-4K-Violet` | 3840×2160 | 180 | Master. `meshDetail: 1.4` |
-| `SpiralFlow-4K-Blue` | 3840×2160 | 180 | Master. `meshDetail: 1.4` |
+| `SpiralFlow-4K-Violet` | 3840×2160 | 180 | Master. `meshDetail: 1.15`, `samples: 2` |
+| `SpiralFlow-4K-Blue` | 3840×2160 | 180 | Master. `meshDetail: 1.15`, `samples: 2` |
 | `SpiralFlow-1080-Violet` | 1920×1080 | 180 | Preview / direct 1080p render |
 | `SpiralFlow-1080-Blue` | 1920×1080 | 180 | Preview / direct 1080p render |
 
@@ -97,6 +97,14 @@ chain first, at the real output size, and the answer picks the backend. Set the
 
 Which backend actually initialised is logged per render:
 `[spiral-flow] three.js backend: webgpu | webgl2`.
+
+### Device loss
+
+A software GL driver can run out of memory part-way through a 4K sequence. The
+canvas then keeps screenshotting, as a blank frame, and the render finishes
+"successfully" with a corrupt tail. Both backends' loss signals are therefore
+wired to `cancelRender`, so the render fails loudly instead. If you hit it, drop
+`--concurrency` or the `meshDetail` prop.
 
 ## Props
 
