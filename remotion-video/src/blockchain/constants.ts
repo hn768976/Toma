@@ -20,7 +20,7 @@ export const BACKGROUND_COLOR = "#01040c";
 
 // Cube body + edge glow. The faces sit dimmer than the edges so the
 // silhouette stays crisp once bloom is applied.
-export const CUBE_FACE_COLOR = "#2ea8ff";
+export const CUBE_FACE_COLOR = "#48b8ff";
 export const CUBE_EDGE_COLOR = "#63c6ff";
 
 // Background dot-matrix world map: desaturated, barely above the
@@ -37,12 +37,12 @@ export const ACCENT_WHITE = "#dceefc";
 // --- Chain ---------------------------------------------------------
 // Cube edge length in world units; spacing is centre-to-centre.
 export const CUBE_SIZE = 1;
-export const CUBE_SPACING = 1.62;
+export const CUBE_SPACING = 1.85;
 
 // How many cubes exist on the conveyor at once. The chain is recycled
 // (a cube that passes the camera is re-inserted at the far end), so
 // this is a steady-state count, not a total.
-export const CHAIN_LENGTH = 15;
+export const CHAIN_LENGTH = 20;
 
 // World units the chain advances per frame. Over DURATION_IN_FRAMES
 // this must land on a whole number of CUBE_SPACING steps for the

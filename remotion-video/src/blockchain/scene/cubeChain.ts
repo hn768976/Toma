@@ -30,13 +30,13 @@ const LINK_INTENSITY = 1.0;
 // The binary skin is a mostly-transparent canvas texture, so the faces
 // need lifting to sit at the reference's brightness once additive
 // blending has knocked them back.
-const FACE_INTENSITY = 1.95;
+const FACE_INTENSITY = 2.35;
 
 // Atmospheric falloff. Without it the whole 22-cube run stays equally
 // crisp to the horizon; the reference dissolves into haze after about
 // a dozen, which is what sells the depth.
-const HAZE_NEAR = 11;
-const HAZE_FAR = 31;
+const HAZE_NEAR = 8;
+const HAZE_FAR = 26;
 const HAZE_FLOOR = 0.13;
 
 // The 12 edges of a unit cube, as [axis, signA, signB] where axis is
@@ -220,7 +220,7 @@ export const createCubeChain = (
         0,
         CUBE_SPACING * 3.5,
       );
-      const nearFade = THREE.MathUtils.smoothstep(s - layout.sMin, 0, CUBE_SPACING * 2.2);
+      const nearFade = THREE.MathUtils.smoothstep(s - layout.sMin, 0, CUBE_SPACING * 1.2);
       const haze = THREE.MathUtils.lerp(
         1,
         HAZE_FLOOR,

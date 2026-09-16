@@ -53,18 +53,32 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const easeDrift = (t: number) => t * t * (3 - 2 * t);
 
 const DIAGONAL: LayoutConfig = {
-  direction: v(0.62, 0.032, -0.784).normalize(),
+  // Two things have to hold at once, and they pull against each other.
+  // The chain must stay close to flat across frame (in the reference
+  // the near cube and the far end are within a few per cent of the
+  // same height), which wants a level camera -- tilting down drives
+  // the chain's vanishing point up the frame and makes it climb. But
+  // the camera also has to sit above the cube tops, or the cubes are
+  // seen edge-on and the run merges into one continuous ribbon
+  // instead of reading as separate blocks.
+  //
+  // So: an almost level camera (about 1.5 degrees down) placed a
+  // little above the top face, and a chain axis held around 45 deg
+  // off the view direction -- shallower than that and consecutive
+  // cubes overlap each other rather than stepping apart.
+  direction: v(0.66, 0.02, -0.75).normalize(),
   origin: v(0, 0, 0),
   cubeYaw: THREE.MathUtils.degToRad(-34),
-  sMin: -4.2,
-  mapCenter: v(4.5, 1.1, -26),
+  // Cubes leave the run well outside the left edge, so the fade-out
+  // never happens on screen.
+  sMin: -6.5,
+  mapCenter: v(4.5, 0.3, -26),
   mapSize: [31, 15.5],
   mapYaw: THREE.MathUtils.degToRad(-26),
   floorY: -1.55,
   // Sharp on the second and third cube of the run, with the near cube
-  // and the far end of the chain falling off -- the reference's
-  // long-lens look.
-  focusDistance: 11.5,
+  // and the far end falling off -- the reference's long-lens look.
+  focusDistance: 9.5,
   focalLength: 9,
   bokeh: 9,
   camera: (progress) => {
@@ -75,8 +89,8 @@ const DIAGONAL: LayoutConfig = {
     const push = easeDrift(progress) * 1.3;
     const sway = Math.sin(progress * Math.PI * 2) * 0.14;
     return {
-      position: v(3.2 + push * 0.62 + sway, 1.52 + push * 0.03, 9.5 - push * 0.784),
-      target: v(2.6 + push * 0.62, 0.5 + push * 0.03, -1.2 - push * 0.784),
+      position: v(1.05 + push * 0.66 + sway, 0.64 + push * 0.02, 9.01 - push * 0.75),
+      target: v(0.52 + push * 0.66, -0.05 + push * 0.02, -0.4 - push * 0.75),
       fov: 36,
     };
   },
