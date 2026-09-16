@@ -24,7 +24,6 @@ const CABLE_LAYOUT = [
   { position: [-2.9, -0.6, 2.6], scale: 1.2, tilt: [0, 0], dim: 1.0 },
   { position: [-5.6, 2.9, -1.4], scale: 0.86, tilt: [0.05, -0.04], dim: 0.68 },
   { position: [1.6, -4.3, 1.0], scale: 0.94, tilt: [-0.04, 0.05], dim: 0.82 },
-  { position: [2.6, 3.3, -6.2], scale: 0.72, tilt: [0.03, 0.03], dim: 0.5 },
 ] as const;
 
 /** Shared direction the cables point in: to the right, up, and towards camera. */
