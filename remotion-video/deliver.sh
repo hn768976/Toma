@@ -1,37 +1,39 @@
 #!/usr/bin/env bash
-# Derives the 1080p deliverables from the 4K masters produced by render-all.sh.
+# Encodes the deliverables from the 4K PNG sequences produced by render-all.sh.
 #
-# Downscaling 3840x2160 -> 1920x1080 with Lanczos means every output pixel is an
-# average of four rendered ones, which is cheaper and cleaner than any amount of
-# MSAA at 1080p, and it keeps the two deliverables pixel-consistent with the 4K
-# master rather than being a separate render.
+# Both outputs come straight off the lossless frames, so neither is a re-encode
+# of the other. Downscaling 3840x2160 -> 1920x1080 with Lanczos averages four
+# rendered pixels into every delivered one, which resolves the tube silhouettes
+# better than any amount of MSAA at 1080p would.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-mkdir -p out/deliver
+FPS=30
+mkdir -p out/master out/deliver
 
 for VARIANT in Violet Blue; do
-  SRC="out/master/SpiralFlow_4K_${VARIANT}.mp4"
-  DST="out/deliver/SpiralFlow_1080p_${VARIANT}.mp4"
-  [ -f "$SRC" ] || { echo "missing $SRC — run ./render-all.sh first" >&2; exit 1; }
+  SRC="out/frames/$(echo "$VARIANT" | tr '[:upper:]' '[:lower:]')"
+  [ -d "$SRC" ] || { echo "missing $SRC — run ./render-all.sh first" >&2; exit 1; }
 
-  ffmpeg -v error -y -i "$SRC" \
+  COUNT=$(find "$SRC" -name 'frame_*.png' | wc -l)
+  [ "$COUNT" -eq 180 ] || { echo "$SRC has $COUNT frames, expected 180" >&2; exit 1; }
+
+  # bt709 everywhere: these are smooth wide-area gradients, and an untagged
+  # file gets guessed at differently by different players.
+  TAGS=(-color_primaries bt709 -color_trc bt709 -colorspace bt709)
+
+  ffmpeg -v error -y -framerate "$FPS" -i "$SRC/frame_%04d.png" \
+    -vf "format=yuv420p" \
+    -c:v libx264 -profile:v high -level 5.1 -preset slow -crf 15 \
+    "${TAGS[@]}" -movflags +faststart -an \
+    "out/master/SpiralFlow_4K_${VARIANT}.mp4"
+  echo "wrote out/master/SpiralFlow_4K_${VARIANT}.mp4"
+
+  ffmpeg -v error -y -framerate "$FPS" -i "$SRC/frame_%04d.png" \
     -vf "scale=1920:1080:flags=lanczos,format=yuv420p" \
     -c:v libx264 -profile:v high -level 4.0 -preset slow -crf 17 \
     -x264-params "keyint=60:min-keyint=30:bframes=3" \
-    -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
-    -movflags +faststart -an "$DST"
-  echo "wrote $DST"
-done
-
-# Re-tag the masters as bt709 limited range so they grade predictably in an NLE.
-for VARIANT in Violet Blue; do
-  SRC="out/master/SpiralFlow_4K_${VARIANT}.mp4"
-  TMP="out/master/.${VARIANT}.tmp.mp4"
-  ffmpeg -v error -y -i "$SRC" -vf "format=yuv420p" \
-    -c:v libx264 -profile:v high -level 5.1 -preset slow -crf 15 \
-    -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
-    -movflags +faststart -an "$TMP"
-  mv "$TMP" "$SRC"
-  echo "re-tagged $SRC"
+    "${TAGS[@]}" -movflags +faststart -an \
+    "out/deliver/SpiralFlow_1080p_${VARIANT}.mp4"
+  echo "wrote out/deliver/SpiralFlow_1080p_${VARIANT}.mp4"
 done

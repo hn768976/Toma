@@ -24,18 +24,30 @@ clip, which is 150 frames at 25 fps.
 ```bash
 npm install
 npm run dev                 # Remotion Studio, live-tweak every prop
-./render-all.sh             # both 4K masters -> out/master/
-./deliver.sh                # 1080p deliverables -> out/deliver/
+./render-all.sh             # both grades -> 4K PNG sequences in out/frames/
+./deliver.sh                # -> 4K masters + 1080p deliverables
 ```
 
-`render-all.sh` picks up a Playwright Chromium and software GL if it finds one,
-which is what makes it work on a headless box. On a machine with a GPU you can
-drop those flags entirely:
+On a machine with a GPU none of that scaffolding is needed — render straight to
+a video:
 
 ```bash
 npx remotion render SpiralFlow-4K-Violet out/master/SpiralFlow_4K_Violet.mp4 \
   --codec=h264 --crf=15 --muted
 ```
+
+### Why the render is chunked
+
+Without a GPU, a single browser session driving a 4K scene pass and its blur
+taps wedges the software GL driver part-way through a 180-frame sequence. It is
+reproducible but lands on an unpredictable frame, the process stays alive, and
+Remotion's own `--timeout` never fires — one run sat deadlocked for nine hours.
+
+So `render-chunked.sh` renders 30 frames per browser, under a `timeout`, with
+retries, and writes PNGs. Nothing runs long enough to wedge, a chunk that does
+hang costs one timeout window instead of the whole render, and `deliver.sh`
+then encodes the master and the 1080p deliverable from the same lossless frames
+so neither is a re-encode of the other.
 
 ## How the loop is built
 
