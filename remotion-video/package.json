@@ -8,10 +8,12 @@
   "dependencies": {
     "@remotion/cli": "4.0.515",
     "@remotion/tailwind-v4": "4.0.515",
+    "@types/three": "^0.180.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
     "tailwindcss": "4.0.0",
+    "three": "^0.180.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -26,7 +28,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:white": "remotion render HexWallMono out/hex-wall-white-1080p.mp4 --codec=h264 --image-format=png --crf=16 --pixel-format=yuv420p --muted",
+    "render:blue": "remotion render HexWallBlue out/hex-wall-blue-1080p.mp4 --codec=h264 --image-format=png --crf=16 --pixel-format=yuv420p --muted",
+    "render:white-4k": "remotion render HexWallMono4K out/hex-wall-white-4k.mp4 --codec=h264 --image-format=png --crf=16 --pixel-format=yuv420p --muted",
+    "render:blue-4k": "remotion render HexWallBlue4K out/hex-wall-blue-4k.mp4 --codec=h264 --image-format=png --crf=16 --pixel-format=yuv420p --muted"
   },
   "sideEffects": [
     "*.css",
