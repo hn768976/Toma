@@ -26,12 +26,21 @@ for frame.
 ## Rendering
 
 ```console
-npx remotion render NeonLayersViolet4K out/violet-4k.mp4 --codec=h264 --crf=16
+npx remotion render NeonLayersViolet4K out/violet-4k.mp4 \
+  --codec=h264 --crf=16 --image-format=png --pixel-format=yuv420p \
+  --color-space=bt709 --muted
 ```
 
 `remotion.config.ts` already sets everything the WebGPU path needs. On a
 machine with a real GPU the renders are much faster than on the software
 rasteriser, and nothing else changes.
+
+The encoding flags are worth keeping. The project-wide default intermediate is
+JPEG, which decodes as `yuvj420p` — full-range luma — and carries that tag
+through into the MP4, so the levels shift in most editors. `--image-format=png`
+also keeps the JPEG quantiser away from the large, near-black gradients, where
+it is the one thing that would band them. `--muted` drops the silent audio
+track that would otherwise ride along.
 
 ## Why the loop is exact
 
