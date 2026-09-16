@@ -11,6 +11,26 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+| Composition                    | Size        | Length          | Notes                                    |
+| ------------------------------ | ----------- | --------------- | ---------------------------------------- |
+| `HexWallMono` / `HexWallBlue`  | 1920 × 1080 | 271f @ 30fps    | Pulsing 3D hexagon wall, two colourways  |
+| `HexWallMono4K` / `HexWallBlue4K` | 3840 × 2160 | 271f @ 30fps | The same shots at 4K                     |
+| `BluetoothExplainer`           | 1920 × 1080 | 30s @ 30fps     | Hand-drawn Bluetooth explainer           |
+| `ParticleRingHalo` (+ `4K`)    | 1920 × 1080 | —               | Abstract particle-ring halo              |
+
+The hexagon wall is a three.js scene rendered through WebGPU - see
+[`src/hex-wall/README.md`](src/hex-wall/README.md) for how it works and
+what to watch out for when changing it.
+
+```console
+npm run render:white     # 1080p, studio white
+npm run render:blue      # 1080p, tinted blue
+npm run render:white-4k  # 4K, studio white
+npm run render:blue-4k   # 4K, tinted blue
+```
+
 ## Commands
 
 **Install Dependencies**
