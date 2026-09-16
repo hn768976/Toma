@@ -35,6 +35,13 @@ npx remotion render BlockchainChain4K out/chain-a-4k.mp4 --codec=h264 --crf=16
 npx remotion render BlockchainChainHero4K out/chain-b-4k.mp4 --codec=h264 --crf=16
 ```
 
+`remotion.config.ts` pins the delivery encode: `bt709` colour space
+(standard limited-range `yuv420p`, rather than the `yuvj420p` full-range
+tag Remotion emits by default, which lifts blacks in anything that
+ignores it) and JPEG quality 100 for the intermediate frames, since the
+default of 80 rings around this scene's fine high-contrast detail
+before x264 ever sees it.
+
 The 1080p and 4K compositions differ only in `resolutionScale`, which
 drives particle density, texture resolution and the bokeh radius, so
 the two resolutions stay visually identical rather than the 4K version
