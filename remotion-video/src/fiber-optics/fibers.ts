@@ -1,7 +1,7 @@
 import * as THREE from "three/webgpu";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { attribute, color, float, fract, mix, uniform, uv } from "three/tsl";
-import { CORE_RADIUS } from "./cable";
+import { CORE_RADIUS, SLEEVE_END } from "./cable";
 import type { Palette } from "./palette";
 import { createRng, range, type Rng } from "./rng";
 
@@ -9,6 +9,9 @@ export const FIBERS_PER_CABLE = 110;
 
 /** Where the strands start, inside the connector sleeve. */
 const FIBER_START_X = -1.6;
+
+/** Plane the strands leave the sleeve at, and start to splay from. */
+const FIBER_EXIT_X = SLEEVE_END;
 
 export type FiberBundle = {
   strands: THREE.Mesh;
@@ -18,10 +21,13 @@ export type FiberBundle = {
 };
 
 /**
- * One strand: packed tight inside the sleeve, then flaring out into the fan.
- * The flare is eased so the strands stay parallel for a moment after leaving
- * the ferrule and only then separate, which is what reads as "fiber optic"
- * rather than "bunch of sticks".
+ * One strand: two straight legs. It runs parallel to the cable axis while it is
+ * still inside the sleeve, then leaves the ferrule and goes dead straight to
+ * its tip, so the bundle reads as a cone of rods rather than a spray.
+ *
+ * Straightness is why the second leg interpolates 3D positions instead of
+ * polar ones: lerping radius and angle separately sweeps a strand around the
+ * axis as it travels, which bows it. Only lerping the endpoints is a line.
  */
 const buildStrandCurve = (rng: Rng) => {
   const angle = rng() * Math.PI * 2;
@@ -33,22 +39,37 @@ const buildStrandCurve = (rng: Rng) => {
   // Cubed, so most strands end around the same place and a handful shoot well
   // past the rest — a fan of equal-length strands reads as a brush, not fiber.
   const endX = 3.6 + Math.pow(rng(), 3) * 7.0;
-  const wobble = range(rng, -0.05, 0.05);
 
+  const root = new THREE.Vector3(
+    FIBER_START_X,
+    Math.cos(angle) * rootRadius,
+    Math.sin(angle) * rootRadius,
+  );
+  const exit = new THREE.Vector3(FIBER_EXIT_X, root.y, root.z);
+  const tip = new THREE.Vector3(
+    endX,
+    Math.cos(endAngle) * endRadius,
+    Math.sin(endAngle) * endRadius,
+  );
+
+  // Sample the two legs at a constant step along the cable axis. Collinear
+  // samples stay collinear through a centripetal Catmull-Rom, so each leg comes
+  // out straight and the only curvature is a small fillet at the ferrule — far
+  // narrower than a strand is wide, but enough to keep the tube's frames from
+  // snapping at a hard crease.
   const points: THREE.Vector3[] = [];
-  const steps = 10;
+  const steps = 16;
   for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    // Hold, then flare: 0 until ~0.15, accelerating after.
-    const flare = Math.pow(THREE.MathUtils.smoothstep(t, 0.14, 1), 1.45);
-    const radius = rootRadius + (endRadius - rootRadius) * flare;
-    const a = angle + (endAngle - angle) * flare + Math.sin(t * 3.1) * wobble;
-    const x = FIBER_START_X + (endX - FIBER_START_X) * t;
-    points.push(
-      new THREE.Vector3(x, Math.cos(a) * radius, Math.sin(a) * radius),
-    );
+    const x = FIBER_START_X + ((endX - FIBER_START_X) * i) / steps;
+    if (x <= FIBER_EXIT_X) {
+      points.push(new THREE.Vector3(x, root.y, root.z));
+    } else {
+      points.push(
+        exit.clone().lerp(tip, (x - FIBER_EXIT_X) / (endX - FIBER_EXIT_X)),
+      );
+    }
   }
-  return new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.4);
+  return new THREE.CatmullRomCurve3(points, false, "centripetal");
 };
 
 export const buildFiberBundle = ({
