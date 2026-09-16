@@ -100,6 +100,15 @@ Some specifics worth knowing if you go in to change something:
   `90 - asin(1/r)` degrees below the local horizontal, so `limbOffset` says
   where the limb should sit relative to the centre of frame and the camera
   angle follows. Change the altitude and the framing holds.
+- **The glow is two layers.** The physical atmosphere shell is about 60 km
+  thick — a hairline at this range, and on its own it does not read as the
+  glow real orbital footage has. A second, much wider shell draws that
+  spread: it shades by how close each sightline passes to the planet's
+  centre, so the glow hugs the silhouette evenly all the way round, and it
+  keeps depth testing on so the planet occludes it and it never bleeds over
+  the disc. `halo.radius` sets how far it reaches, and it has to be scaled to
+  altitude — version B flies at a third of A's height, so the same extent
+  would cover three times as much frame.
 - **The atmosphere is one draw.** A back-facing shell with depth testing off;
   the shader solves each ray against the top of the air and against the
   planet and shades the surviving segment. One pass gives both the arc
@@ -179,6 +188,8 @@ commented. The ones you will reach for first:
 | `roll` | Camera roll. Negative lifts the horizon towards the top right, as in version A. |
 | `startLongitude` / `startLatitude` | Where on Earth the shot opens. |
 | `sunOrbit` / `sunElevation` | Where the sun is, in the same frame as `orbit`. This sets the whole mood — how much terminator you see and when. |
+| `halo` | The glow standing off the limb: `radius` how far it reaches, `strength` how bright, `falloff` how fast it fades. Scale `radius` with altitude. |
+| `surfaceHaze` | In-scattered air laid over the disc itself. Raise it for a more luminous globe, lower it before it goes milky. |
 | `exposure`, `bloom`, `atmosphere` | The grade. |
 
 Durations live in the same file: `DURATION_IN_FRAMES` and `FPS`.

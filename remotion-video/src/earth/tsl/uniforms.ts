@@ -23,6 +23,10 @@ export const createUniforms = () => ({
   /** Moves the grain pattern on every frame. */
   grainSeed: uniform(0),
 
+  haloStrength: uniform(1),
+  /** In-scattered air laid over the disc, strongest towards the limb. */
+  surfaceHaze: uniform(0.34),
+
   rayleigh: uniform(1),
   mie: uniform(1),
   atmosphereDensity: uniform(1),

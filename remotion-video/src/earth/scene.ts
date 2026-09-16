@@ -27,6 +27,7 @@ import { ATMOSPHERE_RADIUS, CLOUD_RADIUS, SHOTS, type ShotId } from "./config";
 import { createAtmosphereMaterial } from "./tsl/atmosphereMaterial";
 import { createCloudMaterial } from "./tsl/cloudMaterial";
 import { createEarthMaterial, type EarthMaps } from "./tsl/earthMaterial";
+import { createHaloMaterial } from "./tsl/haloMaterial";
 import { createStarfieldMaterial } from "./tsl/starfieldMaterial";
 import { applyGrade } from "./tsl/grade";
 import { createUniforms } from "./tsl/uniforms";
@@ -34,6 +35,7 @@ import { createUniforms } from "./tsl/uniforms";
 const DEG = Math.PI / 180;
 const SUN_DISTANCE = 60;
 const STAR_SPHERE = 90;
+const HALO_SHELL = 4;
 
 export type SceneOptions = {
   /** The 2D canvas the finished frame is painted into. */
@@ -109,6 +111,8 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
   uniforms.mie.value = shot.atmosphere.mie;
   uniforms.atmosphereDensity.value = shot.atmosphere.density;
   uniforms.extinction.value = shot.atmosphere.extinction;
+  uniforms.haloStrength.value = shot.halo.strength;
+  uniforms.surfaceHaze.value = shot.surfaceHaze;
 
   const scene = new Scene();
 
@@ -135,6 +139,20 @@ export const createEarthScene = async (options: SceneOptions): Promise<EarthScen
   sunDisc.renderOrder = 2;
   sunDisc.visible = shot.sunDisc;
   scene.add(sunDisc);
+
+  // Depth testing stays on here, so the planet occludes the glow and it only
+  // shows outside the silhouette. It has to come after the Earth has written
+  // depth, hence the render order.
+  // The shell is deliberately much larger than the glow it draws: its only
+  // job is to cover the screen, while `halo.radius` sets how far the glow
+  // actually reaches. Decoupling them means the falloff can be tightened
+  // right down without the camera ending up inside the geometry.
+  const halo = new Mesh(
+    new SphereGeometry(HALO_SHELL, 64, 32),
+    createHaloMaterial(uniforms, { radius: shot.halo.radius, falloff: shot.halo.falloff }),
+  );
+  halo.renderOrder = 5;
+  scene.add(halo);
 
   const air = new Mesh(
     new SphereGeometry(ATMOSPHERE_RADIUS + 0.002, 160, 80),

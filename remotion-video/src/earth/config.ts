@@ -51,6 +51,10 @@ export type ShotConfig = {
   exposure: number;
   bloom: { strength: number; radius: number; threshold: number };
   atmosphere: { rayleigh: number; mie: number; density: number; extinction: number };
+  /** The wide glow standing off the limb, over and above the 60 km shell. */
+  halo: { radius: number; strength: number; falloff: number };
+  /** In-scattered air laid over the disc itself. */
+  surfaceHaze: number;
 };
 
 export const SHOTS: Record<ShotId, ShotConfig> = {
@@ -74,9 +78,11 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     sunIntensity: 1.0,
     nightIntensity: 1.5,
     sunDisc: false,
-    exposure: 0.8,
-    bloom: { strength: 0.3, radius: 0.35, threshold: 0.75 },
-    atmosphere: { rayleigh: 1.55, mie: 0.5, density: 0.5, extinction: 0.25 },
+    exposure: 0.95,
+    bloom: { strength: 0.46, radius: 0.55, threshold: 0.7 },
+    atmosphere: { rayleigh: 1.8, mie: 0.72, density: 0.62, extinction: 0.22 },
+    halo: { radius: 1.045, strength: 2.6, falloff: 1.8 },
+    surfaceHaze: 0.34,
   },
 
   /**
@@ -99,9 +105,13 @@ export const SHOTS: Record<ShotId, ShotConfig> = {
     sunIntensity: 1.0,
     nightIntensity: 2.6,
     sunDisc: true,
-    exposure: 0.72,
-    bloom: { strength: 0.5, radius: 0.78, threshold: 0.8 },
-    atmosphere: { rayleigh: 1.15, mie: 0.95, density: 0.5, extinction: 1.15 },
+    exposure: 0.78,
+    bloom: { strength: 0.55, radius: 0.6, threshold: 0.7 },
+    atmosphere: { rayleigh: 1.5, mie: 1.2, density: 0.55, extinction: 1.05 },
+    // Version B flies at a third of A's altitude, so the same glow extent
+    // covers three times as much of the frame — it has to be pulled in hard.
+    halo: { radius: 1.022, strength: 2.0, falloff: 1.5 },
+    surfaceHaze: 0.15,
   },
 };
 

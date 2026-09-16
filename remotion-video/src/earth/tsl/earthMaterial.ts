@@ -101,7 +101,7 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
     // Blue Marble's ocean is a fairly light blue; deep water this close in
     // reads much darker, and the contrast is what the reference lives on.
     const basemap = texture(maps.day, vUv).rgb;
-    const deepened = mix(basemap, basemap.mul(vec3(0.34, 0.55, 0.95)).mul(0.5), water.mul(0.92));
+    const deepened = mix(basemap, basemap.mul(vec3(0.46, 0.68, 1.05)).mul(0.82), water.mul(0.7));
     const albedo = deepened.mul(grain.mul(u.grainAmount).mul(detailFade).add(1));
 
     // Clouds sit on their own shell, so their shadow is the cloud alpha
@@ -111,7 +111,12 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
     const shadowUv = directionToUv(shadowDir).add(vec2(u.cloudDrift, 0));
     const cloudShadow = oneMinus(texture(maps.clouds, shadowUv).a.mul(0.5));
 
-    const lit = saturate(ndl).mul(cloudShadow).mul(u.sunIntensity);
+    // Wrapped diffuse. A hard N-dot-L drops the mid-latitudes away far too
+    // quickly for something wrapped in a scattering atmosphere; the wrap
+    // keeps the lit face reading as lit right out to the terminator.
+    const wrap = float(0.1);
+    const lambert = saturate(ndl.add(wrap).div(wrap.add(1)));
+    const lit = lambert.mul(cloudShadow).mul(u.sunIntensity);
     const diffuse = albedo.mul(lit).mul(sunColor);
 
     // Sun glint off the oceans, which is what sells the scale of the shot.
@@ -124,7 +129,7 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
 
     // Aerial perspective: the more grazing the view, the more air in the way.
     const grazing = oneMinus(saturate(dot(geoNormal, view)));
-    const haze = pow(grazing, 5.0).mul(dayMask).mul(saturate(ndlGeo.add(0.3)));
+    const haze = pow(grazing, 3.0).mul(dayMask).mul(saturate(ndlGeo.add(0.32)));
 
     // NASA Black Marble. Only its luminance is used: the map's dark blue
     // ocean floor and its JPEG chroma noise both turn into coloured confetti
@@ -141,9 +146,9 @@ export const createEarthMaterial = (maps: EarthMaps, u: EarthUniforms) => {
 
     const color = diffuse
       .add(sunColor.mul(glint))
-      .add(vec3(0.24, 0.45, 0.85).mul(haze.mul(0.14)))
+      .add(vec3(0.3, 0.52, 0.92).mul(haze).mul(u.surfaceHaze))
       .add(cityGlow)
-      .add(albedo.mul(0.014));
+      .add(albedo.mul(0.03));
 
     return vec4(color, 1);
   })() as unknown as Node;
