@@ -40,7 +40,7 @@ export const toRgb = (hex: string): [number, number, number] => {
 export const PALETTES: Record<VersionId, Palette> = {
   V01Halo: {
     background: "#020818",
-    backgroundLift: "#06214d",
+    backgroundLift: "#02091a",
     primary: "#2f7fff",
     accent: "#69bcff",
     core: "#e8f5ff",
@@ -49,7 +49,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V02Projection: {
     background: "#01040f",
-    backgroundLift: "#04165a",
+    backgroundLift: "#010719",
     primary: "#1a6bff",
     accent: "#57b6ff",
     core: "#f0f8ff",
@@ -58,7 +58,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V03Fibers: {
     background: "#01050e",
-    backgroundLift: "#04204f",
+    backgroundLift: "#010816",
     primary: "#1e7bff",
     accent: "#63b4ff",
     core: "#f4faff",
@@ -67,7 +67,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V04Pedestal: {
     background: "#040b1b",
-    backgroundLift: "#0a2550",
+    backgroundLift: "#030b1b",
     primary: "#4f9be8",
     accent: "#8cc8f5",
     core: "#f2f9ff",
@@ -76,7 +76,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V05Flythrough: {
     background: "#020a1e",
-    backgroundLift: "#052a6e",
+    backgroundLift: "#010a20",
     primary: "#2f8fff",
     accent: "#7ac4ff",
     core: "#eef7ff",
@@ -85,7 +85,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V06Amber: {
     background: "#02100e",
-    backgroundLift: "#03191a",
+    backgroundLift: "#010a0b",
     primary: "#ff4410",
     accent: "#ff6a1c",
     core: "#ff8c38",
@@ -94,7 +94,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V07Hud: {
     background: "#010a1c",
-    backgroundLift: "#032a63",
+    backgroundLift: "#010b1e",
     primary: "#1b7ff0",
     accent: "#6fd0ff",
     core: "#eaf7ff",
@@ -103,7 +103,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V08Chevron: {
     background: "#020a26",
-    backgroundLift: "#04225e",
+    backgroundLift: "#01091c",
     primary: "#1666e8",
     accent: "#5fb0ff",
     core: "#e9f4ff",
@@ -112,7 +112,7 @@ export const PALETTES: Record<VersionId, Palette> = {
   },
   V09Assembly: {
     background: "#04090f",
-    backgroundLift: "#0a1f2e",
+    backgroundLift: "#040a10",
     primary: "#7fb8cf",
     accent: "#bfe2f2",
     core: "#ffffff",

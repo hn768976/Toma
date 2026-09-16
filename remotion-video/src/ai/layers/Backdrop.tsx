@@ -22,7 +22,16 @@ export type BackdropProps = {
   focus?: [number, number];
   /** Radius of the falloff, in screen heights. */
   radius?: number;
-  /** How strongly the corners are darkened beyond `outer`. */
+  /**
+   * How strongly the corners are darkened beyond `outer`.
+   *
+   * Defaults to 0, and the versions leave it there. The reference clips have
+   * no vignette at all - their boards and particle fields run at full strength
+   * into every corner - and measuring them bore that out: reference corners sit
+   * at 6-18 luma against frame centres of 90-140, while an earlier cut of this
+   * project fell to 3-4. Darkening the corners was reading as a lens effect
+   * pasted over the frame rather than as space.
+   */
   vignette?: number;
   /** Aspect ratio, so the falloff stays circular rather than stretched. */
   aspect: number;
@@ -66,7 +75,10 @@ const FRAG = /* glsl */ `
     p.x *= uAspect;
     float d = length(p) / max(uRadius, 0.001);
 
-    vec3 colour = mix(uInner, uOuter, smoothstep(0.0, 1.0, d));
+    // Gentle, wide lift rather than a tight pool of light: a steep radial
+    // gradient reads as a blob sitting behind the subject instead of as an
+    // evenly lit field, which is what the references actually have.
+    vec3 colour = mix(uInner, uOuter, smoothstep(0.0, 1.35, d));
     colour *= 1.0 - uVignette * smoothstep(0.55, 1.65, length(vec2(vNdc.x * uAspect, vNdc.y)));
 
     // Ordered-ish dither. Wide, very dark gradients band badly in 8-bit
@@ -83,7 +95,7 @@ export const Backdrop: React.FC<BackdropProps> = ({
   outer,
   focus = [0, 0],
   radius = 1.15,
-  vignette = 0.35,
+  vignette = 0,
   aspect,
   dither = 0.006,
 }) => {

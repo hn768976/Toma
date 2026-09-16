@@ -50,29 +50,31 @@ export const V03Fibers: React.FC = () => {
             inner={palette.backgroundLift}
             outer={palette.background}
             aspect={width / height}
-            radius={1.05}
-            vignette={0.6}
+            radius={2.4}
           />
 
           {/* Board fragments flying past, well behind and out of focus by
               virtue of being small and fast rather than actually blurred. */}
           <CircuitField
-            count={170}
-            width={11}
-            height={5.5}
-            pitch={0.2}
-            steps={5}
-            horizontalBias={0.8}
-            diagonalChance={0.3}
+            count={520}
+            width={6.2}
+            height={3.5}
+            pitch={0.19}
+            steps={7}
+            horizontalBias={0.72}
+            diagonalChance={0.12}
             seed={731}
             colour={palette.primary}
             pulseColour={palette.accent}
-            base={0.12}
-            pulse={1.3}
+            base={0.2}
+            pulse={1.0}
             speed={0.5}
             pulseLength={0.45}
+            traceWidth={0.018}
+            softness={0.5}
+            clearRadius={1.6}
             opacity={0.85 * fade}
-            falloffRadius={13}
+            falloffRadius={0}
             position={[0, 0, -4.2]}
             showPads={false}
           />

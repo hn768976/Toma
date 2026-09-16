@@ -48,27 +48,30 @@ export const V06Amber: React.FC = () => {
             inner={palette.backgroundLift}
             outer={palette.background}
             aspect={width / height}
-            radius={0.85}
-            vignette={0.66}
+            radius={2.4}
           />
 
           {/* Teal board, deliberately cool against the amber hero. */}
           <CircuitField
-            count={150}
-            width={9}
-            height={5}
-            pitch={0.24}
-            steps={7}
-            horizontalBias={0.7}
+            count={300}
+            width={5.3}
+            height={3.1}
+            pitch={0.19}
+            steps={9}
+            horizontalBias={0.66}
+            diagonalChance={0.08}
             seed={661}
             colour={palette.particle}
             pulseColour={palette.signal}
-            base={0.2}
-            pulse={1.2}
+            base={0.13}
+            pulse={0.7}
             speed={0.24}
             pulseLength={0.65}
-            opacity={0.45 * fade}
-            falloffRadius={8}
+            traceWidth={0.013}
+            softness={0.55}
+            clearRadius={1.4}
+            opacity={0.42 * fade}
+            falloffRadius={0}
             position={[0, 0, -2.8]}
             padSize={30}
           />

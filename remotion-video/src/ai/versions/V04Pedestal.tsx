@@ -50,27 +50,28 @@ export const V04Pedestal: React.FC = () => {
             outer={palette.background}
             aspect={width / height}
             focus={[0, 0.15]}
-            radius={1.35}
-            vignette={0.5}
+            radius={2.4}
           />
 
           {/* Circuitry laid into the floor plane, seen in perspective. */}
           <CircuitField
-            count={130}
-            width={9}
-            height={9}
-            pitch={0.3}
-            steps={7}
+            count={420}
+            width={8}
+            height={8}
+            pitch={0.26}
+            steps={8}
             horizontalBias={0.5}
             seed={941}
             colour={palette.primary}
             pulseColour={palette.accent}
-            base={0.16}
-            pulse={1.0}
+            base={0.22}
+            pulse={0.9}
             speed={0.16}
             pulseLength={0.8}
-            opacity={0.8 * fade}
-            falloffRadius={9}
+            traceWidth={0.035}
+            softness={0.5}
+            opacity={0.9 * fade}
+            falloffRadius={0}
             position={[0, FLOOR_Y + 0.01, 0]}
             rotation={[-Math.PI / 2, 0, 0]}
             padSize={30}
@@ -120,17 +121,17 @@ export const V04Pedestal: React.FC = () => {
             height={7.5}
             count={6}
             slant={0.22}
-            intensity={0.5 * ramp(p, 0.02, 0.3)}
+            intensity={0.8 * ramp(p, 0.02, 0.3)}
             opacity={fade}
             position={[0, 1.9, -2.4]}
           />
 
           <ParticleField
-            count={820}
-            bounds={[6, 3.6, 3.2]}
+            count={1100}
+            bounds={[6, 3.8, 3.2]}
             colour={palette.particle}
-            size={105}
-            opacity={0.65 * fade}
+            size={120}
+            opacity={0.9 * fade}
             rise={-0.14}
             sway={0.14}
             twinkle={0.6}

@@ -49,29 +49,30 @@ export const V05Flythrough: React.FC = () => {
             inner={palette.backgroundLift}
             outer={palette.background}
             aspect={width / height}
-            radius={1.3}
-            vignette={0.55}
+            radius={2.4}
           />
 
           {PLANES.map((z, i) => (
             <CircuitField
               key={z}
-              count={70}
-              width={7.5}
-              height={5}
-              pitch={0.28}
-              steps={8}
+              count={130}
+              width={5.4}
+              height={3.2}
+              pitch={0.22}
+              steps={9}
               horizontalBias={i % 2 === 0 ? 0.6 : 0.4}
               diagonalChance={0.25}
               seed={1200 + i * 37}
               colour={palette.primary}
               pulseColour={palette.accent}
-              base={0.18}
-              pulse={1.25}
+              base={0.12}
+              pulse={0.65}
               speed={0.28 + i * 0.015}
               pulseLength={0.6}
-              opacity={0.9 * fade}
-              falloffRadius={9}
+              traceWidth={0.015}
+              softness={0.55}
+              opacity={0.55 * fade}
+              falloffRadius={0}
               position={[0, 0, z]}
               padSize={34}
             />
@@ -103,7 +104,7 @@ export const V05Flythrough: React.FC = () => {
             scale={0.9}
           />
 
-          <Glow strength={1.7} threshold={0.18} knee={0.32} spread={1.05} radius={2.3} />
+          <Glow strength={1.35} threshold={0.3} knee={0.3} spread={0.85} radius={2.1} />
         </>
       )}
     </NeuralCanvas>

@@ -7,7 +7,7 @@
 import React, { useMemo } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
-import { generateTraces, TraceField, TraceOptions } from "../circuitTraces";
+import { generateTraces, toRibbons, TraceField, TraceOptions } from "../circuitTraces";
 import { toRgb } from "../palette";
 
 export type CircuitFieldProps = Partial<TraceOptions> & {
@@ -26,8 +26,22 @@ export type CircuitFieldProps = Partial<TraceOptions> & {
   /** Length of the pulse head, in world units. */
   pulseLength?: number;
   opacity?: number;
-  /** Fades the field out beyond this radius, in world units. 0 disables. */
+  /** Fades the field out beyond this radius, in world units. 0 disables.
+   * Left at 0 for the board backgrounds: the reference boards run at full
+   * strength into all four corners, and any radial falloff here reads as a
+   * vignette. */
   falloffRadius?: number;
+  /**
+   * Radius, in world units, kept clear of traces at the centre of the field.
+   * The reference boards seat the hero in a dark well rather than letting
+   * copper run straight across it; without this the board and the hero
+   * compete for the same pixels and neither reads.
+   */
+  clearRadius?: number;
+  /** Trace width in world units. This is why traces are ribbons, not lines. */
+  traceWidth?: number;
+  /** Cross-ribbon falloff exponent. Lower is a flatter, more solid trace. */
+  softness?: number;
   position?: [number, number, number];
   rotation?: [number, number, number];
   /** Per-axis scale; [-1, 1, 1] mirrors the field across X. */
@@ -41,11 +55,14 @@ const VERT = /* glsl */ `
   uniform float uSpeed;
   uniform float uPulseLength;
   uniform float uFalloff;
+  uniform float uClear;
   attribute float aDist;
   attribute float aLen;
   attribute float aId;
+  attribute float aSide;
   varying float vPulse;
   varying float vFalloff;
+  varying float vSide;
 
   void main() {
     // Each run gets its own phase offset so the board does not strobe in sync.
@@ -53,11 +70,16 @@ const VERT = /* glsl */ `
                - uPulseLength;
     float d = (aDist - head) / max(uPulseLength, 0.0001);
     vPulse = exp(-d * d * 2.5);
+    vSide = aSide;
 
     vec4 world = modelMatrix * vec4(position, 1.0);
+    float r = length(world.xy);
     vFalloff = uFalloff > 0.0
-      ? 1.0 - smoothstep(uFalloff * 0.35, uFalloff, length(world.xy))
+      ? 1.0 - smoothstep(uFalloff * 0.35, uFalloff, r)
       : 1.0;
+    if (uClear > 0.0) {
+      vFalloff *= smoothstep(uClear * 0.6, uClear, r);
+    }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
@@ -70,11 +92,18 @@ const FRAG = /* glsl */ `
   uniform float uBase;
   uniform float uPulse;
   uniform float uOpacity;
+  uniform float uSoftness;
   varying float vPulse;
   varying float vFalloff;
+  varying float vSide;
 
   void main() {
-    float energy = uBase + vPulse * uPulse;
+    // Cross-ribbon profile: a bright core that falls away to the edges, so a
+    // trace reads as lit copper rather than a flat rectangle.
+    float acrossEdge = 1.0 - abs(vSide);
+    float core = pow(clamp(acrossEdge, 0.0, 1.0), uSoftness);
+
+    float energy = (uBase + vPulse * uPulse) * core;
     vec3 colour = mix(uColour, uPulseColour, clamp(vPulse, 0.0, 1.0));
     float alpha = clamp(energy, 0.0, 1.0) * uOpacity * vFalloff;
     if (alpha < 0.004) discard;
@@ -115,6 +144,9 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
   pulseLength = 0.5,
   opacity = 1,
   falloffRadius = 0,
+  clearRadius = 0,
+  traceWidth = 0.02,
+  softness = 0.55,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = [1, 1, 1],
@@ -135,11 +167,14 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
         width: traceOptions.width ?? 6,
         height: traceOptions.height ?? 4,
       });
+    const ribbons = toRibbons(built, traceWidth);
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(built.positions, 3));
-    g.setAttribute("aDist", new THREE.BufferAttribute(built.distances, 1));
-    g.setAttribute("aLen", new THREE.BufferAttribute(built.lengths, 1));
-    g.setAttribute("aId", new THREE.BufferAttribute(built.ids, 1));
+    g.setAttribute("position", new THREE.BufferAttribute(ribbons.positions, 3));
+    g.setAttribute("aDist", new THREE.BufferAttribute(ribbons.distances, 1));
+    g.setAttribute("aLen", new THREE.BufferAttribute(ribbons.lengths, 1));
+    g.setAttribute("aId", new THREE.BufferAttribute(ribbons.ids, 1));
+    g.setAttribute("aSide", new THREE.BufferAttribute(ribbons.sides, 1));
+    g.setIndex(new THREE.BufferAttribute(ribbons.indices, 1));
     const p = new THREE.BufferGeometry();
     p.setAttribute("position", new THREE.BufferAttribute(built.pads, 3));
     return { lines: g, padGeometry: p };
@@ -155,6 +190,7 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
     traceOptions.padChance,
     traceOptions.seed,
     field,
+    traceWidth,
   ]);
 
   const material = useMemo(
@@ -164,17 +200,23 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
         fragmentShader: FRAG,
         transparent: true,
         depthWrite: false,
+        // Ribbon quads wind away from camera, and V08 mirrors its field with a
+        // negative scale which flips the winding again - front-face culling
+        // would drop the whole board in both cases.
+        side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
         uniforms: {
           uTime: { value: 0 },
           uSpeed: { value: 0.18 },
           uPulseLength: { value: 0.5 },
           uFalloff: { value: 0 },
+          uClear: { value: 0 },
           uColour: { value: new THREE.Vector3() },
           uPulseColour: { value: new THREE.Vector3() },
           uBase: { value: 0.16 },
           uPulse: { value: 1.1 },
           uOpacity: { value: 1 },
+          uSoftness: { value: 0.55 },
         },
       }),
     [],
@@ -203,11 +245,13 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
   u.uSpeed.value = speed;
   u.uPulseLength.value = pulseLength;
   u.uFalloff.value = falloffRadius;
+  u.uClear.value = clearRadius;
   u.uColour.value.set(...toRgb(colour));
   u.uPulseColour.value.set(...toRgb(pulseColour));
   u.uBase.value = base;
   u.uPulse.value = pulse;
   u.uOpacity.value = opacity;
+  u.uSoftness.value = softness;
 
   const pu = padMaterial.uniforms;
   pu.uSize.value = padSize;
@@ -216,7 +260,7 @@ export const CircuitField: React.FC<CircuitFieldProps> = ({
 
   return (
     <group position={position} rotation={rotation} scale={scale}>
-      <lineSegments geometry={lines} material={material} frustumCulled={false} />
+      <mesh geometry={lines} material={material} frustumCulled={false} />
       {showPads && padGeometry.attributes.position.count > 0 ? (
         <points geometry={padGeometry} material={padMaterial} frustumCulled={false} />
       ) : null}

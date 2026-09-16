@@ -232,3 +232,92 @@ export const generateChevrons = ({
     pads: new Float32Array(pads),
   };
 };
+
+export type RibbonField = {
+  positions: Float32Array;
+  distances: Float32Array;
+  lengths: Float32Array;
+  ids: Float32Array;
+  /** -1 at one edge of the ribbon, +1 at the other. Drives the width profile. */
+  sides: Float32Array;
+  indices: Uint32Array;
+};
+
+/**
+ * Expands a line-segment trace field into ribbons of real world-space width.
+ *
+ * WebGL ignores gl.lineWidth on essentially every desktop driver, so
+ * LineSegments can only ever draw one-pixel hairlines. At 1080p - never mind
+ * 4K - that reads as a faint scratch, nothing like the thick, bright copper in
+ * the reference boards. Building each segment as a quad is the only way to get
+ * a trace whose width is authored in world units and which therefore thickens
+ * correctly as the camera moves in.
+ *
+ * Each segment is extended by half its width at both ends so that consecutive
+ * quads overlap at corners; without that, every 90-degree turn shows a notch.
+ */
+export const toRibbons = (field: TraceField, width: number): RibbonField => {
+  const segCount = field.positions.length / 6;
+  const half = width * 0.5;
+
+  const positions = new Float32Array(segCount * 4 * 3);
+  const distances = new Float32Array(segCount * 4);
+  const lengths = new Float32Array(segCount * 4);
+  const ids = new Float32Array(segCount * 4);
+  const sides = new Float32Array(segCount * 4);
+  const indices = new Uint32Array(segCount * 6);
+
+  for (let s = 0; s < segCount; s++) {
+    const p = s * 6;
+    let ax = field.positions[p];
+    let ay = field.positions[p + 1];
+    const az = field.positions[p + 2];
+    let bx = field.positions[p + 3];
+    let by = field.positions[p + 4];
+    const bz = field.positions[p + 5];
+
+    let dx = bx - ax;
+    let dy = by - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+
+    // Extend both ends so neighbouring quads overlap and fill the corner.
+    ax -= dx * half;
+    ay -= dy * half;
+    bx += dx * half;
+    by += dy * half;
+
+    // Perpendicular in the plane of the board.
+    const nx = -dy * half;
+    const ny = dx * half;
+
+    const v = s * 4;
+    const set = (i: number, x: number, y: number, z: number, side: number, dist: number) => {
+      positions[i * 3] = x;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = z;
+      sides[i] = side;
+      distances[i] = dist;
+      lengths[i] = field.lengths[s * 2];
+      ids[i] = field.ids[s * 2];
+    };
+
+    const da = field.distances[s * 2];
+    const db = field.distances[s * 2 + 1];
+    set(v + 0, ax - nx, ay - ny, az, -1, da);
+    set(v + 1, ax + nx, ay + ny, az, 1, da);
+    set(v + 2, bx + nx, by + ny, bz, 1, db);
+    set(v + 3, bx - nx, by - ny, bz, -1, db);
+
+    const i6 = s * 6;
+    indices[i6] = v;
+    indices[i6 + 1] = v + 1;
+    indices[i6 + 2] = v + 2;
+    indices[i6 + 3] = v;
+    indices[i6 + 4] = v + 2;
+    indices[i6 + 5] = v + 3;
+  }
+
+  return { positions, distances, lengths, ids, sides, indices };
+};

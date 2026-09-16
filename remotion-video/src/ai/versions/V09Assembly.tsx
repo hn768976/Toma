@@ -55,8 +55,7 @@ export const V09Assembly: React.FC = () => {
             inner={palette.backgroundLift}
             outer={palette.background}
             aspect={width / height}
-            radius={1.7}
-            vignette={0.38}
+            radius={2.4}
           />
 
           <ParticleField

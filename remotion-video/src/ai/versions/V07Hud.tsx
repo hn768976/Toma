@@ -51,30 +51,36 @@ export const V07Hud: React.FC = () => {
             inner={palette.backgroundLift}
             outer={palette.background}
             aspect={width / height}
-            radius={1.45}
-            vignette={0.5}
+            radius={2.4}
           />
 
           {/* Dense board filling the frame, the busiest of the set. */}
+          {/* The board is the background, not a texture behind it: the
+              reference runs dense, thick copper into all four corners, so this
+              is authored to cover the frame at full strength rather than to sit
+              in a pool behind the hero. */}
           <CircuitField
-            count={260}
-            width={11}
-            height={6}
-            pitch={0.22}
-            steps={9}
-            horizontalBias={0.55}
-            diagonalChance={0.18}
+            count={620}
+            width={5.8}
+            height={3.4}
+            pitch={0.2}
+            steps={10}
+            horizontalBias={0.56}
+            diagonalChance={0.06}
             seed={771}
             colour={palette.primary}
             pulseColour={palette.accent}
-            base={0.2}
-            pulse={1.15}
+            base={0.26}
+            pulse={0.8}
             speed={0.14}
-            pulseLength={0.75}
+            pulseLength={0.8}
+            traceWidth={0.019}
+            softness={0.5}
             opacity={0.9 * fade}
-            falloffRadius={11}
+            falloffRadius={0}
+            clearRadius={1.55}
             position={[0, 0, -2.6]}
-            padSize={28}
+            padSize={34}
           />
 
           <ParticleField
@@ -92,14 +98,14 @@ export const V07Hud: React.FC = () => {
           <HeroCircuitry
             geometry={geometry}
             palette={palette}
-            glow={1.0 * fade}
+            glow={1.18 * fade}
             reveal={reveal}
             scanY={-1.5 + ((t % 6.5) / 6.5) * 3.0}
             scanGain={0.5}
             pulse={0.7}
             coreHeat={0.08}
             fill={0.12}
-            scale={0.72}
+            scale={0.8}
           />
 
           {/* The reticle: fine inner scale, heavy lock ring, broken outer arcs.

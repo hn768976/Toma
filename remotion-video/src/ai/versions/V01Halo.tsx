@@ -58,27 +58,30 @@ export const V01Halo: React.FC = () => {
             inner={palette.backgroundLift}
             outer={palette.background}
             aspect={width / height}
-            radius={1.25}
-            vignette={0.5}
+            radius={2.4}
           />
 
           {/* Board detail well behind the hero, dim and slow. */}
           <CircuitField
-            count={150}
-            width={8}
-            height={4.2}
-            pitch={0.26}
-            steps={8}
-            horizontalBias={0.62}
+            count={430}
+            width={5.2}
+            height={3.0}
+            pitch={0.2}
+            steps={9}
+            horizontalBias={0.6}
+            diagonalChance={0.08}
             seed={101}
             colour={palette.primary}
             pulseColour={palette.accent}
-            base={0.2}
-            pulse={1.0}
+            base={0.22}
+            pulse={0.85}
             speed={0.1}
             pulseLength={0.7}
+            traceWidth={0.017}
+            softness={0.5}
+            clearRadius={1.5}
             opacity={0.95 * fade}
-            falloffRadius={9}
+            falloffRadius={0}
             position={[0, 0, -3.4]}
             padSize={26}
           />

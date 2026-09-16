@@ -55,8 +55,7 @@ export const V02Projection: React.FC = () => {
             outer={palette.background}
             aspect={width / height}
             focus={[0, -0.35]}
-            radius={1.4}
-            vignette={0.55}
+            radius={2.4}
           />
 
           <GridFloor

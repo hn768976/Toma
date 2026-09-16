@@ -64,10 +64,12 @@ export const V08Chevron: React.FC = () => {
         field={CHEVRONS}
         colour={palette.primary}
         pulseColour={palette.accent}
-        base={0.22}
-        pulse={1.35}
+        base={0.26}
+        pulse={1.1}
         speed={0.2}
         pulseLength={1.1}
+        traceWidth={0.034}
+        softness={0.5}
         opacity={0.95 * busIn * fade}
         falloffRadius={0}
         position={[0, 0, -1.4]}
@@ -78,10 +80,12 @@ export const V08Chevron: React.FC = () => {
         field={FINE_CHEVRONS}
         colour={palette.primary}
         pulseColour={palette.signal}
-        base={0.14}
-        pulse={1.0}
+        base={0.18}
+        pulse={0.9}
         speed={0.27}
         pulseLength={0.8}
+        traceWidth={0.02}
+        softness={0.5}
         opacity={0.6 * busIn * fade}
         falloffRadius={0}
         position={[0, 0, -2.3]}
@@ -104,8 +108,7 @@ export const V08Chevron: React.FC = () => {
             inner={palette.backgroundLift}
             outer={palette.background}
             aspect={width / height}
-            radius={1.4}
-            vignette={0.5}
+            radius={2.4}
           />
 
           {bus(false)}
