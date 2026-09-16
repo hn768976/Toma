@@ -13,7 +13,8 @@ import path from "node:path";
 
 const outDir = process.argv[2] ?? "out/1080p";
 const scale = Number(process.argv[3] ?? 0.5);
-const only = process.argv[4];
+// Comma-separated list, so a subset can be re-rendered without touching the rest.
+const only = process.argv[4] ? process.argv[4].split(",").map((v) => v.trim()) : null;
 // Quality is uniform across the set by default. V03 is the densest scene and
 // encodes largest, so it can be given a slightly higher CRF when a delivery
 // channel imposes a size ceiling - re-rendering at a new CRF rather than
@@ -44,7 +45,7 @@ const ids = [
   "V07Hud",
   "V08Chevron",
   "V09Assembly",
-].filter((id) => !only || id === only);
+].filter((id) => !only || only.includes(id));
 
 const started = Date.now();
 for (const id of ids) {
