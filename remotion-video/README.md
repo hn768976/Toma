@@ -37,6 +37,15 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Videos in this project
+
+| Composition | What it is |
+| --- | --- |
+| `BluetoothExplainer` | 30 s hand-drawn "How Bluetooth Works" explainer |
+| `ParticleRingHalo` / `ParticleRingHalo4K` | Abstract particle-ring halo motion graphic |
+| `HalftoneDots4K` / `HalftoneDotsBlue4K` | Halftone dot motion background, 4K masters — see [docs/HALFTONE.md](./docs/HALFTONE.md) |
+| `HalftoneDots1080` / `HalftoneDotsBlue1080` | The same halftone backgrounds at 1080p |
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).

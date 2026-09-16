@@ -26,7 +26,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:halftone-mono-1080": "remotion render HalftoneDots1080 out/halftone-dots-mono-1080p.mp4 --codec=h264 --crf=17",
+    "render:halftone-blue-1080": "remotion render HalftoneDotsBlue1080 out/halftone-dots-dark-blue-1080p.mp4 --codec=h264 --crf=17",
+    "render:halftone-mono-4k": "remotion render HalftoneDots4K out/halftone-dots-mono-4k.mp4 --codec=h264 --crf=16",
+    "render:halftone-blue-4k": "remotion render HalftoneDotsBlue4K out/halftone-dots-dark-blue-4k.mp4 --codec=h264 --crf=16"
   },
   "sideEffects": [
     "*.css",
