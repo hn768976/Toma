@@ -11,6 +11,15 @@
 
 Welcome to your Remotion project!
 
+## Pieces in here
+
+- **[Orbital Earth](./EARTH.md)** — a photoreal low-orbit Earth shot in two
+  layouts, 30 fps / 20.033 s, built with three.js WebGPU + TSL and NASA
+  imagery. 1080p and 4K compositions. Start there for render commands,
+  texture sources and how the scene is put together.
+- **BluetoothExplainer** — a hand-drawn 30 s explainer.
+- **ParticleRingHalo** — an abstract particle-ring motion graphic.
+
 ## Commands
 
 **Install Dependencies**
