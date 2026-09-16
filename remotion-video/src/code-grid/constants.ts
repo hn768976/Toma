@@ -65,29 +65,35 @@ export const HEIGHT_BANDS: readonly [number, number, number][] = [
   [0.72, 1.25, 0.08], // occasional towers
 ];
 
-/** Whole cycles per loop of the per-block height pulse. */
-export const HEIGHT_PULSE_CYCLES = 2;
-export const HEIGHT_PULSE_AMOUNT = 0.045;
+/** Hard floor and ceiling on an animated block height, in cells. */
+export const MIN_BLOCK_HEIGHT = 0.08;
+export const MAX_BLOCK_HEIGHT = 1.18;
 
-// --- Block bob ------------------------------------------------------------
+// --- Block height animation -----------------------------------------------
 //
-// Blocks ride up and down out of the grid plane. This is a translation,
-// not a scale: a block keeps its size and its code, and sinking one opens
-// the gap around it so the neighbouring side faces come into view.
+// Blocks extrude up and retract down. Every block's base stays welded to
+// y = 0 and only its height animates, so nothing ever floats off the
+// floor or sinks through it — the whole field reads as one surface the
+// blocks grow out of.
 //
-// Each block picks one of BOB_CYCLE_CHOICES, all whole numbers, so every
-// block is back where it started at the end of the loop no matter which
-// it drew. Amplitude is in cells, weighted so a quarter of the field
-// stays put and the movement reads as a few blocks shifting rather than
-// the whole field breathing at once.
+// Each block morphs between the height it was generated at and a second
+// target height, which is that height plus a signed delta drawn from the
+// bands below and clamped into [MIN_BLOCK_HEIGHT, MAX_BLOCK_HEIGHT].
+// Expressing the movement as an absolute distance rather than a
+// percentage is what lets a flat panel visibly rise into a tower; scaling
+// by a fraction of its own height would leave the flat majority of the
+// field barely moving.
+//
+// Cycle counts are whole numbers so every block is back at its starting
+// height at the end of the loop, whichever it drew.
 
-export const BOB_CYCLE_CHOICES: readonly number[] = [1, 2, 3];
+export const HEIGHT_CYCLE_CHOICES: readonly number[] = [1, 2, 3];
 
-/** Bob amplitude bands: [min, max, weight], in cells. */
-export const BOB_AMPLITUDE_BANDS: readonly [number, number, number][] = [
-  [0, 0.035, 0.25], // effectively still
-  [0.06, 0.2, 0.45], // gentle
-  [0.2, 0.5, 0.3], // pronounced
+/** Height change bands: [min, max, weight], in cells. */
+export const HEIGHT_DELTA_BANDS: readonly [number, number, number][] = [
+  [0, 0.03, 0.22], // effectively fixed
+  [0.08, 0.28, 0.45], // gentle
+  [0.26, 0.48, 0.33], // pronounced
 ];
 
 /** Whole cycles per loop of the brightness ripple travelling down the field. */

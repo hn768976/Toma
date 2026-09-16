@@ -43,7 +43,7 @@ than a differently-proportioned one — not a different-looking render.
 | `scene.ts`       | three.js scene, TSL material, post chain, frame driving. |
 | `CodeGrid.tsx`   | Remotion component: one scene per tab, one render per frame. |
 
-## Four things worth knowing before changing it
+## Five things worth knowing before changing it
 
 ### 1. The loop is seamless, and that constrains the motion
 
@@ -51,12 +51,12 @@ The camera travels exactly `LOOP_CELLS` (20) grid cells over the 450
 frames, and the field is generated as a tile that is 20 cells deep and then
 repeated, with the z axis wrapping during generation. So the view at frame
 450 is the view at frame 0. Every other moving part — sway, bob, yaw, roll,
-focus breathing, the block bob and height pulse, the brightness ripple —
+focus breathing, the block height animation, the brightness ripple —
 completes a **whole number of cycles per loop**.
 
 Verified by rendering frames 0, 1, 448 and 449: the last-to-first step
-(mean |Δ| 7.75 per channel) is the same size as an ordinary frame-to-frame
-step (7.67–7.79), while frames half a loop apart differ by 10.75.
+(mean |Δ| 6.77 per channel) is the same size as an ordinary frame-to-frame
+step (6.54–6.72), while frames half a loop apart differ by 9.62.
 
 If you add motion, give it an integer cycle count or the loop will jump.
 
@@ -72,7 +72,26 @@ The sway, yaw, roll and bob cycle counts are already at 1 — the slowest a
 loop allows — so their **amplitudes** are the only remaining handle on how
 busy the move feels.
 
-### 2. Emissive is capped, and it has to be
+### 2. Blocks are welded to the floor
+
+The block animation scales height about the base, never translates. The
+box geometry's origin is moved to its base, the instance sits at y = 0,
+and `grow` is strictly positive, so a block cannot lift off the floor or
+sink through it — that is a property of the construction, not something
+to check per frame.
+
+An earlier version translated the blocks instead, which floated them and
+pushed them under the floor. If you touch `positionNode`, keep the y term
+a scale of `positionGeometry.y`.
+
+Because the movement is an absolute distance in cells rather than a
+percentage of each block's own height, a flat panel can visibly rise into
+a tower; scaling by a fraction would leave the flat majority of the field
+barely moving. `MAX_BLOCK_HEIGHT` is the guard on the other end — raise
+it and grown blocks start crowding the foreground and darkening the
+frame, since the camera only sits at 2.24 cells.
+
+### 3. Emissive is capped, and it has to be
 
 `EMISSIVE_CEILING` clamps a block's colour before the post chain. Without
 it a hot glyph on a bright block reaches ~16, which is harmless while it
@@ -86,7 +105,7 @@ removes the energy the blur had to spread.
 Raise `glyphGain` or the brightness bands in `field.ts` and you may need
 to revisit it.
 
-### 3. Nothing animates itself
+### 4. Nothing animates itself
 
 `scene.update(frame)` sets the entire scene from a frame number. There is
 no clock, no `requestAnimationFrame`, no state carried between frames.
@@ -95,7 +114,7 @@ that accumulated would tear. For the same reason the field, the code sheet
 and every per-block value come from a seeded PRNG (`RANDOM_SEED`), never
 `Math.random()`.
 
-### 4. It renders to a texture, not to a canvas
+### 5. It renders to a texture, not to a canvas
 
 The frame is drawn into an offscreen `RenderTarget`, read back, and blitted
 onto a 2D canvas. Headless Chrome on a GPU-less machine cannot allocate a

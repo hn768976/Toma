@@ -13,8 +13,8 @@
 
 import {
   BLOCK_FOOTPRINT,
-  BOB_AMPLITUDE_BANDS,
-  BOB_CYCLE_CHOICES,
+  HEIGHT_CYCLE_CHOICES,
+  HEIGHT_DELTA_BANDS,
   CELL,
   EMPTY_CELL_CHANCE,
   FIELD_HALF_WIDTH,
@@ -22,6 +22,8 @@ import {
   FIELD_Z_NEAR,
   HEIGHT_BANDS,
   LOOP_CELLS,
+  MAX_BLOCK_HEIGHT,
+  MIN_BLOCK_HEIGHT,
   WIDE_BLOCK_CHANCE,
 } from "./constants";
 import { chance, mulberry32, pick, range, type Rng } from "./random";
@@ -38,10 +40,10 @@ export type Block = {
   brightness: number;
   /** Phase offsets into the loop-periodic pulses, in turns. */
   pulsePhase: number;
-  /** How far this block rides up and down, in cells (0 = still). */
-  bobAmplitude: number;
-  /** Whole bob cycles per loop, so the block lands where it started. */
-  bobCycles: number;
+  /** Second height this block morphs to, as a multiple of sy. */
+  heightRatio: number;
+  /** Whole height cycles per loop, so the block ends where it started. */
+  heightCycles: number;
   /** Random window into the code sheet, in sheet UV. */
   uvOffsetX: number;
   uvOffsetY: number;
@@ -115,16 +117,27 @@ const buildTile = (seed: number): TileBlock[] => {
       // what stops the field reading as a spreadsheet.
       const inset = BLOCK_FOOTPRINT * range(rng, 0.94, 1.02);
 
+      // The block animates between this height and `height + delta`,
+      // clamped so it can neither invert nor spike out of the field. The
+      // ratio is what the shader interpolates towards, since the base
+      // height is already baked into the instance matrix.
+      const height = pickBanded(rng, HEIGHT_BANDS);
+      const delta = pickBanded(rng, HEIGHT_DELTA_BANDS) * (chance(rng, 0.5) ? 1 : -1);
+      const target = Math.min(
+        MAX_BLOCK_HEIGHT,
+        Math.max(MIN_BLOCK_HEIGHT, height + delta),
+      );
+
       blocks.push({
         x: (cx - FIELD_HALF_WIDTH + (cellsX - 1) * 0.5 + 0.5) * CELL,
         cz: cz + (cellsZ - 1) * 0.5,
         sx: cellsX * CELL * inset,
-        sy: pickBanded(rng, HEIGHT_BANDS),
+        sy: height,
         sz: cellsZ * CELL * inset,
         brightness: pickBrightness(rng),
         pulsePhase: rng(),
-        bobAmplitude: pickBanded(rng, BOB_AMPLITUDE_BANDS),
-        bobCycles: pick(rng, BOB_CYCLE_CHOICES),
+        heightRatio: target / height,
+        heightCycles: pick(rng, HEIGHT_CYCLE_CHOICES),
         uvOffsetX: rng(),
         uvOffsetY: rng(),
       });

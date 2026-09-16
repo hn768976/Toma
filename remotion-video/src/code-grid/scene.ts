@@ -55,8 +55,6 @@ import {
   DURATION_IN_FRAMES,
   EMISSIVE_CEILING,
   FOG_DENSITY,
-  HEIGHT_PULSE_AMOUNT,
-  HEIGHT_PULSE_CYCLES,
   LOOP_CELLS,
   RANDOM_SEED,
   RIPPLE_AMOUNT,
@@ -142,8 +140,9 @@ export const createScene = async (
   const count = blocks.length;
 
   const geometry = new THREE.BoxGeometry(1, 1, 1);
-  // Move the origin to the base so the height pulse grows blocks upward
-  // out of the ground rather than about their middle.
+  // Origin at the base, not the centre. This is what makes the height
+  // animation grow the block up out of the floor instead of expanding it
+  // about its middle, which would push it through the floor.
   geometry.translate(0, 0.5, 0);
 
   const sizes = new Float32Array(count * 3);
@@ -172,8 +171,8 @@ export const createScene = async (
     uvOffsets[i * 2 + 1] = block.uvOffsetY;
     params[i * 4 + 0] = block.brightness;
     params[i * 4 + 1] = block.pulsePhase;
-    params[i * 4 + 2] = block.bobAmplitude;
-    params[i * 4 + 3] = block.bobCycles;
+    params[i * 4 + 2] = block.heightRatio;
+    params[i * 4 + 3] = block.heightCycles;
   });
   mesh.instanceMatrix.needsUpdate = true;
 
@@ -187,19 +186,21 @@ export const createScene = async (
 
   const aSize = attribute<"vec3">("aSize", "vec3");
   const aUv = attribute<"vec2">("aUv", "vec2");
-  // x: emissive gain, y: pulse phase, z: bob amplitude in cells,
-  // w: whole bob cycles per loop.
+  // x: emissive gain, y: phase, z: the height this block morphs to as a
+  // multiple of its base height, w: whole height cycles per loop.
   const aParams = attribute<"vec4">("aParams", "vec4");
 
-  // Slow breathing of the block heights, a whole number of cycles per loop.
-  const grow = float(1).add(
-    uLoop
-      .mul(HEIGHT_PULSE_CYCLES)
-      .add(aParams.y)
-      .mul(TAU)
-      .sin()
-      .mul(HEIGHT_PULSE_AMOUNT),
-  );
+  // Blocks extrude up and retract down. This scales the block about its
+  // base rather than translating it, so every base stays welded to y = 0:
+  // nothing lifts off the floor and nothing sinks through it.
+  const heightPhase = uLoop
+    .mul(aParams.w)
+    .add(aParams.y)
+    .mul(TAU)
+    .sin()
+    .mul(0.5)
+    .add(0.5);
+  const grow = mix(float(1), aParams.z, heightPhase);
 
   const localPos = vec3(
     positionGeometry.x,
@@ -207,36 +208,8 @@ export const createScene = async (
     positionGeometry.z,
   );
 
-  // Blocks ride up and down out of the grid plane. The offset is in world
-  // cells, so it is divided by the instance's own height to survive the
-  // scale baked into the instance matrix — otherwise tall blocks would
-  // travel further than flat ones for the same amplitude.
-  //
-  // The phase is derived from the same per-block value as the height
-  // pulse but scaled off it, so the two never lock into one motion.
-  const bobWorld = uLoop
-    .mul(aParams.w)
-    .add(aParams.y.mul(0.37))
-    .add(0.25)
-    .mul(TAU)
-    .sin()
-    .mul(aParams.z);
+  material.positionNode = localPos;
 
-  material.positionNode = vec3(
-    localPos.x,
-    localPos.y.add(bobWorld.div(aSize.y)),
-    localPos.z,
-  );
-
-  // Everything below is per-fragment, so the object-space position and
-  // normal are passed across as explicit varyings. Reading `positionLocal`
-  // in the fragment stage does not survive assigning `positionNode`: it
-  // resolves to a value that is constant across each face, which silently
-  // turns the edge highlight below into a flat wash over every block
-  // rather than a line along its edges.
-  // Deliberately the un-bobbed position: the code and the edge highlight
-  // are anchored to the block, so they must travel with it rather than
-  // slide across its faces as it rises.
   const vLocal = varying(localPos, "vCodeGridLocal");
   const n = varying(normalGeometry, "vCodeGridNormal");
 
