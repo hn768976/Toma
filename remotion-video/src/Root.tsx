@@ -18,6 +18,29 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  FiberOptics,
+  fiberOpticsSchema,
+  fiberOpticsDefaults,
+} from "./fiber-optics/FiberOptics";
+import {
+  FPS as FIBER_FPS,
+  DURATION_IN_FRAMES as FIBER_DURATION_IN_FRAMES,
+  HD_WIDTH,
+  HD_HEIGHT,
+  UHD_WIDTH,
+  UHD_HEIGHT,
+} from "./fiber-optics/constants";
+
+// The two colourways x the two delivery sizes. All four share one component,
+// one scene graph and one 300-frame timeline; only palette and pixel count
+// differ, so the 4K master and the 1080p deliverable cannot drift apart.
+const FIBER_OPTICS_COMPOSITIONS = [
+  { id: "FiberOptics4K", variant: "blue", width: UHD_WIDTH, height: UHD_HEIGHT },
+  { id: "FiberOptics1080", variant: "blue", width: HD_WIDTH, height: HD_HEIGHT },
+  { id: "FiberOpticsViolet4K", variant: "violet", width: UHD_WIDTH, height: UHD_HEIGHT },
+  { id: "FiberOpticsViolet1080", variant: "violet", width: HD_WIDTH, height: HD_HEIGHT },
+] as const;
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -42,6 +65,19 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={particleRingHaloDefaults}
       />
+      {FIBER_OPTICS_COMPOSITIONS.map(({ id, variant, width, height }) => (
+        <Composition
+          key={id}
+          id={id}
+          component={FiberOptics}
+          durationInFrames={FIBER_DURATION_IN_FRAMES}
+          fps={FIBER_FPS}
+          width={width}
+          height={height}
+          schema={fiberOpticsSchema}
+          defaultProps={{ ...fiberOpticsDefaults, variant }}
+        />
+      ))}
       <Composition
         id="ParticleRingHalo4K"
         component={ParticleRingHalo}

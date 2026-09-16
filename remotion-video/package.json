@@ -12,11 +12,13 @@
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
     "tailwindcss": "4.0.0",
+    "three": "0.183.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.515",
     "@types/react": "19.2.7",
+    "@types/three": "0.183.1",
     "@types/web": "0.0.166",
     "eslint": "9.19.0",
     "prettier": "3.8.1",
@@ -26,7 +28,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:fiber-optics": "remotion render FiberOptics1080 out/fiber-optics-blue-1080p.mp4 --codec=h264 --muted --crf=16",
+    "render:fiber-optics-violet": "remotion render FiberOpticsViolet1080 out/fiber-optics-violet-1080p.mp4 --codec=h264 --muted --crf=16",
+    "render:fiber-optics-4k": "remotion render FiberOptics4K out/fiber-optics-blue-4k.mp4 --codec=h264 --muted --crf=16",
+    "render:fiber-optics-violet-4k": "remotion render FiberOpticsViolet4K out/fiber-optics-violet-4k.mp4 --codec=h264 --muted --crf=16"
   },
   "sideEffects": [
     "*.css",
