@@ -1,0 +1,31 @@
+{
+  "name": "glass-lattice",
+  "version": "1.0.0",
+  "description": "Glass diamond lattice — three.js WebGPU motion graphic rendered with Remotion",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "render:blue-1080p": "remotion render GlassLattice-Blue-1080p out/glass-lattice-blue-1080p.mp4 --gl=swangle --codec=h264",
+    "render:violet-1080p": "remotion render GlassLattice-VioletMirror-1080p out/glass-lattice-violet-mirror-1080p.mp4 --gl=swangle --codec=h264",
+    "render:blue-4k": "remotion render GlassLattice-Blue-4K out/glass-lattice-blue-4k.mp4 --gl=swangle --codec=h264",
+    "render:violet-4k": "remotion render GlassLattice-VioletMirror-4K out/glass-lattice-violet-mirror-4k.mp4 --gl=swangle --codec=h264",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "^0.180.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "^0.180.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
