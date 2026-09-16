@@ -11,6 +11,14 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+- **[Flow Ribbon](./src/flow-ribbon/README.md)** - abstract 3D flowing-ribbon
+  motion graphic in two colour variants, at 1080p and 4K. three.js + TSL on
+  `WebGPURenderer`. See its README for how it is built and how to render it.
+- **Bluetooth Explainer** - hand-drawn explainer, 30s.
+- **Particle Ring Halo** - abstract particle-ring halo, at 1080p and 4K.
+
 ## Commands
 
 **Install Dependencies**

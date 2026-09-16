@@ -7,6 +7,10 @@
     "strict": true,
     "noEmit": true,
     "lib": ["es2015"],
+    // Listing `types` explicitly disables the automatic @types/* sweep, so
+    // the DOM lib has to be named alongside the WebGPU surface that three's
+    // WebGPURenderer path needs.
+    "types": ["@types/web", "@webgpu/types"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
