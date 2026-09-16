@@ -49,8 +49,8 @@ export const PLATE_RADIAL_SEGMENTS = 16;
 // reference too: its stripe pitch is ~1/7.8 of a plate's on-screen size,
 // so the loops sit nearly touching. The stack is built longer than the
 // camera can see so both ends stay off-screen.
-export const PLATE_COUNT = 46;
-export const PLATE_SPACING = 0.315;
+export const PLATE_COUNT = 36;
+export const PLATE_SPACING = 0.47;
 
 // Rotation added per plate, in radians. ~6.4 degrees means the stack turns
 // through roughly half a revolution across the visible span, which gives
@@ -62,10 +62,16 @@ export const TWIST_PER_PLATE = 0.112;
 // How many plate notches the stack advances over one full loop. Any
 // integer loops seamlessly; this controls apparent speed.
 //
-// 55 is measured from the reference clip: tracking the phase of the
-// dominant stripe frequency along the stack axis across 60 consecutive
-// reference frames gives 0.0917 notches/frame, i.e. 55.0 over 600 frames.
-export const LOOP_ADVANCE_PLATES = 55;
+// Measured from the reference clip, the bars pass at 0.0917 notches per
+// frame -- 55 over 600 frames -- at the reference's tighter spacing.
+//
+// The gaps here are deliberately wider than the reference, and notches
+// are measured in plate spacings, so holding 55 would have carried the
+// stack half again as far across the screen in the same 20s. This is
+// scaled by the same factor the spacing grew by (0.315 -> 0.47), which
+// keeps the on-screen travel speed unchanged and only thins out the
+// bars. It stays an integer, so the loop still closes exactly.
+export const LOOP_ADVANCE_PLATES = 37;
 
 // A gentle travelling bend applied across the stack so the silhouette
 // breathes instead of being a rigid straight tube. Amplitude is in world
@@ -115,4 +121,4 @@ export const AXIS_PITCH_DEG = -11;
 // Bloom, in normalised units, so it reads identically at 1080p and 4K.
 export const BLOOM_STRENGTH = 1.0;
 export const BLOOM_RADIUS = 0.42;
-export const BLOOM_THRESHOLD = 0.13;
+export const BLOOM_THRESHOLD = 0.1;

@@ -38,11 +38,41 @@ neighbour just vacated, so the image is unchanged. That means only the
 *fractional* part of `u` is ever needed: the stack stays centred, the
 pattern flows through it, and the last frame joins the first with no
 seam and no drift. `LOOP_ADVANCE_PLATES` sets how many notches pass in
-one loop, and so sets the apparent speed.
+one loop, and so sets the apparent speed. Any integer loops cleanly;
+a non-integer will not.
 
 The travelling bend is a function of world `z` plus a phase that
 completes exactly one cycle per loop, so it is seamless for the same
 reason.
+
+## Gaps and transparency
+
+These two are coupled, and the coupling is the whole reason the glass
+reads as glass.
+
+The bars are alpha-blended, not opaque, so you can see through the near
+side of a loop to its far side and through each bar to the ones behind
+it. That only holds while the bars are spaced well apart. At a tight
+pitch roughly twenty loops overlap on screen at once, blending them
+stops reading as depth, and the image collapses into a wiry lattice --
+which is why an earlier pass rendered them opaque instead. Widening
+`PLATE_SPACING` is what buys the transparency back.
+
+Two knobs matter beyond spacing:
+
+- **Ambient floor.** The studio's "dark" stops are a dim blue-grey
+  rather than true black. With pure black, any surface not catching a
+  highlight is completely unlit and reads as near-opaque dark material.
+  A low floor lights the glass all over so it looks transparent; too
+  high a floor flattens the contrast and it turns frosted.
+- **Loop advance.** Notches are measured in plate spacings, so widening
+  the gaps without changing `LOOP_ADVANCE_PLATES` speeds the on-screen
+  travel by the same factor. The two are scaled together to hold the
+  travel speed fixed and change only the density.
+
+Blending needs the bars drawn back to front, which `updateInstances()`
+handles; see the note there on why the order is derived from the axis
+rather than hard-coded.
 
 ## Mirroring
 

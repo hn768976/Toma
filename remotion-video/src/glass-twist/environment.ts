@@ -28,25 +28,30 @@ const ENV_HEIGHT = 1024;
 // Stops run top (t=0) to bottom (t=1) of the sphere:
 //   a tight rim light high up, the main key just above the horizon, and a
 //   second dimmer rail below it that gives each bar its double highlight.
+//
+// The "dark" stops are a dim blue-grey rather than true black. Pure
+// black leaves every surface not catching a highlight completely unlit,
+// which reads as near-opaque dark material; a low ambient floor is what
+// makes the glass look lit all over and therefore see-through.
 type Stop = { t: number; color: string };
 
 const gradientStops = (variant: Variant): Stop[] => [
-  { t: 0.0, color: "#000000" },
+  { t: 0.0, color: "#061114" },
   { t: 0.03, color: variant.fillColor },
   { t: 0.055, color: "#ffffff" }, // tight rim light, high up
   { t: 0.085, color: variant.fillColor },
-  { t: 0.15, color: "#010203" },
-  { t: 0.30, color: "#050a0d" },
+  { t: 0.15, color: "#071318" },
+  { t: 0.30, color: "#0b1d24" },
   { t: 0.325, color: variant.highlightColor },
   { t: 0.35, color: "#ffffff" }, // key: the main streak down every bar
   { t: 0.375, color: variant.highlightColor },
-  { t: 0.41, color: "#050a0d" },
-  { t: 0.56, color: "#020406" },
+  { t: 0.41, color: "#0b1d24" },
+  { t: 0.56, color: "#08151b" },
   { t: 0.625, color: variant.innerGlowColor },
   { t: 0.65, color: "#ffffff" }, // second rail: the double highlight
   { t: 0.675, color: variant.innerGlowColor },
-  { t: 0.72, color: "#020406" },
-  { t: 1.0, color: "#000000" },
+  { t: 0.72, color: "#071216" },
+  { t: 1.0, color: "#04090b" },
 ];
 
 const createEnvCanvas = (variant: Variant): HTMLCanvasElement => {

@@ -28,7 +28,7 @@ export type Variant = {
 export const VARIANTS: Record<VariantName, Variant> = {
   emerald: {
     name: "emerald",
-    glassColor: "#0a4a42",
+    glassColor: "#116b5d",
     highlightColor: "#d9fff2",
     fillColor: "#0a4d5e",
     glowColor: "#0b6b52",
@@ -37,7 +37,7 @@ export const VARIANTS: Record<VariantName, Variant> = {
   },
   azure: {
     name: "azure",
-    glassColor: "#0d2f62",
+    glassColor: "#184a97",
     highlightColor: "#dcebff",
     fillColor: "#123a86",
     glowColor: "#0b2a5c",

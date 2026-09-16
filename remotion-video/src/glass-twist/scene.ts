@@ -227,7 +227,7 @@ export class TwistScene {
     this.renderer.setSize(width, height, false);
     this.renderer.setClearColor(0x000000, 1);
     this.renderer.toneMapping = ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.45;
+    this.renderer.toneMappingExposure = 1.62;
     this.renderer.outputColorSpace = SRGBColorSpace;
     await this.renderer.init();
 
@@ -253,17 +253,23 @@ export class TwistScene {
       clearcoatRoughness: 0.03,
       ior: 1.52,
       reflectivity: 1,
-      envMapIntensity: 7.4,
-      // Opaque, despite being glass.
+      envMapIntensity: 9.6,
+      // Genuinely see-through glass: you can look through the near side
+      // of a loop to its far side, and through each bar to the ones
+      // stacked behind it.
       //
-      // Letting the bars blend showed the far side of every loop through
-      // the near side. With ~20 loops overlapping on screen that stops
-      // reading as depth and turns into a wiry lattice. The reference
-      // reads as solid bars with bright edges and only a hint of
-      // see-through, so the nearest bar occluding the ones behind it is
-      // much closer to the target -- and it also lets the highlights
-      // blow out properly instead of being scaled down by alpha.
-      transparent: false,
+      // This only works because the bars are spaced well apart. At the
+      // reference's tighter pitch, ~20 loops overlap on screen at once
+      // and blending them stops reading as depth -- it collapses into a
+      // wiry lattice -- which is why an earlier pass rendered them
+      // opaque. Widening the gaps is what buys the transparency back.
+      //
+      // depthWrite is off so overlapping bars blend instead of clipping
+      // each other; updateInstances() writes them back to front, which
+      // is what makes that safe.
+      transparent: true,
+      opacity: 0.52,
+      depthWrite: false,
     });
 
     this.mesh = new InstancedMesh(this.geometry, this.material, st.plateCount);
