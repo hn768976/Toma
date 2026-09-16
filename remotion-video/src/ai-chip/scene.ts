@@ -1,8 +1,9 @@
 /**
- * Builds the whole shot: substrate, routed nets, the package, and the
- * post chain. Everything is parameterised by a single normalised `progress`
- * (0 at the first frame, 1 one frame past the last) and every animated term is
- * periodic in it, so the clip loops seamlessly.
+ * Builds the whole shot: substrate, routed nets, the package, and the post
+ * chain. Everything is parameterised by a single normalised `progress` that
+ * runs 0 at the first frame to 1 at the last. The camera makes one continuous
+ * pass over that range — it trucks left and cranes up, ending on the package
+ * with its lettering readable — so the clip plays once and does not loop.
  */
 
 import {
@@ -50,27 +51,24 @@ import {
 } from "./materials";
 import type { Presentation } from "./gpu/presentation";
 
-const TAU = Math.PI * 2;
-
 /**
- * A closed Lissajous orbit. Yaw, distance, height and the look-at point each
- * peak at a different phase, so the camera never appears to stop and reverse
- * even though every channel is a sine that returns to where it started.
+ * A one-way move, not an orbit: the camera trucks left and cranes up over the
+ * whole 20 seconds and ends on the package seen from above, with the lettering
+ * fully readable. Increasing azimuth walks the camera along its own left.
  */
 const CAMERA = {
   fov: 34,
-  yaw: 0.62,
-  yawSwing: 0.4,
-  yawWobble: 0.13,
-  radius: 9.6,
-  radiusSwing: 1.5,
-  height: 3.6,
-  heightSwing: 0.62,
-  roll: 0.035,
+  startAzimuth: 0.3,
+  azimuthSweep: 0.36,
+  startRadius: 11.0,
+  endRadius: 8.6,
+  startHeight: 2.6,
+  endHeight: 6.0,
+  targetHeight: 0.18,
 };
 
 export type SceneHandle = {
-  /** Renders one frame at a normalised position in the loop. */
+  /** Renders one frame at a normalised position in the shot. */
   renderFrame: (progress: number) => Promise<void>;
   dispose: () => void;
 };
@@ -90,42 +88,61 @@ export type SceneOptions = {
 };
 
 const _target = new Vector3();
+const _position = new Vector3();
+
+const mix = (from: number, to: number, t: number) => from + (to - from) * t;
 
 /**
- * Places the camera and returns the yaw the package should take.
- *
- * The lid lettering lies flat on the board, so it only reads upright while its
- * "up" edge points away from the viewer. Turning the package to follow the
- * camera keeps the label legible and the body square-on for the whole orbit,
- * which is how the reference plate holds its chip. The package is a rounded
- * square, so the turn itself is invisible.
+ * Eased, but never fully stopped: half linear, half smoothstep. A pure
+ * smoothstep would park the move at both ends, which on a 20 second shot reads
+ * as the camera stalling rather than drifting.
  */
+const ease = (progress: number) => {
+  const smooth = progress * progress * (3 - 2 * progress);
+  return 0.5 * progress + 0.5 * smooth;
+};
+
+/**
+ * A single continuous move: the camera trucks left and cranes up.
+ *
+ * It starts low and wide, where the lid is edge-on and the lettering is barely
+ * a sliver, then rises until the package is seen from high enough to read the
+ * word in full. Increasing the azimuth walks the camera along its own left,
+ * so the board sweeps right underneath it as it climbs.
+ */
+const cameraAt = (progress: number, position: Vector3, target: Vector3) => {
+  const t = ease(progress);
+
+  const azimuth = CAMERA.startAzimuth + CAMERA.azimuthSweep * t;
+  const radius = mix(CAMERA.startRadius, CAMERA.endRadius, t);
+  const height = mix(CAMERA.startHeight, CAMERA.endHeight, t);
+
+  position.set(Math.cos(azimuth) * radius, height, Math.sin(azimuth) * radius);
+  target.set(0, CAMERA.targetHeight, 0);
+};
+
 const positionCamera = (camera: PerspectiveCamera, progress: number) => {
-  const angle = TAU * progress;
-
-  const yaw =
-    CAMERA.yaw +
-    CAMERA.yawSwing * Math.sin(angle) +
-    CAMERA.yawWobble * Math.sin(angle * 2 + 1.3);
-  const radius = CAMERA.radius + CAMERA.radiusSwing * Math.cos(angle + 0.6);
-  const height = CAMERA.height + CAMERA.heightSwing * Math.sin(angle + 2.1);
-
-  camera.position.set(Math.cos(yaw) * radius, height, Math.sin(yaw) * radius);
-
-  _target.set(
-    0.22 * Math.sin(angle + 2.6),
-    0.16 + 0.03 * Math.sin(angle + 1.0),
-    0.2 * Math.cos(angle + 1.1),
-  );
-
-  const roll = CAMERA.roll * Math.sin(angle + 0.35);
-  camera.up.set(Math.sin(roll), Math.cos(roll), 0);
+  cameraAt(progress, _position, _target);
+  camera.position.copy(_position);
+  camera.up.set(0, 1, 0);
   camera.lookAt(_target);
+};
 
-  return Math.atan2(
-    camera.position.x - _target.x,
-    camera.position.z - _target.z,
-  );
+/**
+ * The yaw to lock the package at.
+ *
+ * The lettering lies flat on the board, so it only reads upright while its top
+ * edge points away from the viewer. The package does not turn during the shot,
+ * so it is aligned to where the camera ends up — the frame the move exists to
+ * arrive at. Earlier on, the lid is steeply foreshortened and the small
+ * residual rotation is not readable.
+ */
+const restingChipYaw = () => {
+  const position = new Vector3();
+  const target = new Vector3();
+  cameraAt(1, position, target);
+
+  return Math.atan2(position.x - target.x, position.z - target.z);
 };
 
 export const createScene = async (
@@ -209,6 +226,8 @@ export const createScene = async (
   lid.renderOrder = 3;
   chip.add(lid);
 
+  // The package is fixed for the whole shot; only the camera moves.
+  chip.rotation.y = restingChipYaw();
   scene.add(chip);
 
   const shadow = new Mesh(new PlaneGeometry(6, 6), createChipShadowMaterial());
@@ -250,7 +269,7 @@ export const createScene = async (
 
   const renderFrame = async (progress: number) => {
     traceMaterial.progress.value = progress;
-    chip.rotation.y = positionCamera(camera, progress);
+    positionCamera(camera, progress);
     camera.updateMatrixWorld();
 
     await postProcessing.renderAsync();

@@ -2,9 +2,9 @@
  * TSL node materials. Everything here compiles to WGSL and runs on WebGPU.
  *
  * The animation is driven by a single `progress` uniform that runs 0 -> 1 over
- * the clip. Every time-dependent term is a function of `fract(k * progress)`
- * with an integer `k`, so the last frame lands exactly on the first and the
- * 20 second clip loops without a seam.
+ * the clip. The pulse phases are whole multiples of that, so the traffic on the
+ * nets stays evenly spaced from the first frame to the last rather than
+ * drifting out of step.
  */
 
 import {
@@ -42,8 +42,8 @@ import { PALETTE, TRACE_FADE_END, TRACE_FADE_START } from "./constants";
 /** World units between consecutive pulses on one route. */
 const PULSE_SPACING = 4.2;
 /**
- * Pulses travel `PULSE_TRAVEL * PULSE_SPACING` world units over one loop.
- * Must be a whole number for the loop to close.
+ * Pulses travel `PULSE_TRAVEL * PULSE_SPACING` world units over the clip.
+ * Whole numbers keep the spacing even end to end.
  */
 const PULSE_TRAVEL = 9;
 /** A second, slower pulse train adds traffic without visible repetition. */
@@ -186,32 +186,45 @@ export const createBoardMaterial = (substrate: Texture) => {
 };
 
 /**
- * The package body. A Fresnel term on a near-black base gives the moulded
- * epoxy its bright silhouette edge without paying for a full PBR shading pass.
+ * The package body: solid moulded epoxy, and nothing more.
+ *
+ * The only shading is a narrow neutral-grey Fresnel edge, which keeps the
+ * silhouette readable against a dark board without the package itself giving
+ * off light. The lettering is the one thing on the chip that glows.
  */
 export const createChipBodyMaterial = () => {
   const viewDirection = normalize(cameraPosition.sub(positionWorld));
   const facing = saturate(dot(normalWorld, viewDirection));
-  const fresnel = pow(oneMinus(facing), float(6.5));
+  const edge = pow(oneMinus(facing), float(9.0));
 
-  // The lid catches more light than the sides.
+  // The lid faces up, so it picks up marginally more ambient than the sides.
   const upness = saturate(normalWorld.y);
 
   const body = vec3(...new Color(PALETTE.chipBody).toArray());
-  const rim = vec3(...new Color(PALETTE.chipRim).toArray());
+  const sheen = vec3(...new Color(PALETTE.chipEdge).toArray());
 
   const material = new MeshBasicNodeMaterial();
   material.colorNode = body
-    .add(rim.mul(fresnel.mul(0.55)))
-    .add(vec3(0.01, 0.024, 0.05).mul(upness));
+    .add(sheen.mul(edge.mul(0.5)))
+    .add(vec3(0.016, 0.017, 0.019).mul(upness));
   material.toneMapped = true;
 
   return material;
 };
 
+/**
+ * Lid shading. The baked texture is already dark everywhere except the
+ * lettering, so driving the exposure off its own luminance pushes just the
+ * glyphs and their halo into HDR — far enough above the bloom threshold that
+ * the word blooms and the lid around it stays solid black.
+ */
 export const createChipLidMaterial = (lid: Texture) => {
+  const lidTexture = texture(lid);
+  const luminance = dot(lidTexture.rgb, vec3(0.2126, 0.7152, 0.0722));
+  const glyph = smoothstep(float(0.02), float(0.35), luminance);
+
   const material = new MeshBasicNodeMaterial();
-  material.colorNode = texture(lid).rgb.mul(0.95);
+  material.colorNode = lidTexture.rgb.mul(mix(float(0.16), float(2.7), glyph));
   material.toneMapped = true;
 
   return material;

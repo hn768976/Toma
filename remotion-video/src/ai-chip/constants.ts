@@ -28,6 +28,6 @@ export const PALETTE = {
   pulseBlue: "#a8dcff",
   pulseRed: "#ff3a1e",
   chipBody: "#040507",
-  /** Fresnel edge on the package, and the sheen on its lid. */
-  chipRim: "#9ddcff",
+  /** Neutral grey silhouette edge. The package is solid, so it never glows. */
+  chipEdge: "#9aa0a8",
 } as const;

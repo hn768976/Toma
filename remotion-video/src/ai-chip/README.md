@@ -1,9 +1,10 @@
 # AI Chip Circuit
 
-A 20 second, 30 fps, seamlessly looping 3D shot: a glossy "AI" package at the
-centre of a procedurally routed circuit board, with signal pulses running out
-along the nets. Built with three.js on **WebGPU** and rendered through the
-Remotion CLI.
+A 20 second, 30 fps 3D shot: a solid black "AI" package at the centre of a
+procedurally routed circuit board, with signal pulses running out along the
+nets. The camera makes one continuous move — trucking left and craning up —
+ending on the package from high enough to read the lettering in full. Built
+with three.js on **WebGPU** and rendered through the Remotion CLI.
 
 ## Compositions
 
@@ -43,7 +44,7 @@ constants.ts      dimensions, palette, world scale
 rng.ts            seeded mulberry32, so a seed always gives the same board
 traceNetwork.ts   grid random walks -> routed polylines, corners chamfered to 45°
 traceGeometry.ts  polylines -> one mitred ribbon mesh with per-route attributes
-textures.ts       canvas-baked substrate and the chrome "AI" lid
+textures.ts       canvas-baked substrate and the glowing "AI" lid
 materials.ts      TSL node materials (compiled to WGSL)
 scene.ts          scene graph, camera path, bloom + vignette post chain
 AiChipCircuit.tsx Remotion component; drives one frame per delayRender
@@ -51,19 +52,34 @@ gpu/presentation.ts  swap chain, or readback when there is no window surface
 gpu/compat.ts     three.js <-> browser WebGPU version shims
 ```
 
-### The loop
+### The move
 
-Everything animated is a function of `progress`, which runs 0 → 1 across the
-600 frames, and every term is periodic in it:
+Everything is a function of `progress`, which runs 0 → 1 across the 600 frames.
 
-- Pulses advance by a whole number of spacings per loop (`PULSE_TRAVEL`,
-  `SLOW_PULSE_TRAVEL`), so `fract()` lands back where it started.
-- The camera follows a closed Lissajous orbit. Yaw, distance, height and the
-  look-at point each peak at a different phase, so the move reads as a
-  continuous drift rather than a sine that visibly stops and reverses.
+The camera starts low and wide, where the lid is nearly edge-on and the
+lettering is only a glowing sliver, then trucks left and cranes up until the
+package is seen from about 35° above the board and the word reads in full.
+Increasing the azimuth walks the camera along its own left, so the board sweeps
+right underneath it as it climbs. The easing is half linear and half
+smoothstep: a pure smoothstep parks the move at both ends, which on a shot this
+long reads as a stall rather than a drift.
 
-Frame 600 would be identical to frame 0, so the clip cuts back to its start
-without a seam.
+This is a one-way move, so **the clip does not loop** — it plays once and ends
+on the logo.
+
+The package itself never moves. Its lettering lies flat on the board and only
+reads upright while its top edge points away from the viewer, so the package is
+locked to the yaw the camera finishes at. Earlier in the move the lid is steeply
+foreshortened and the small residual rotation is not readable.
+
+### What glows
+
+Only the lettering. The lid is a flat matte fill and the body carries nothing
+but a narrow neutral-grey Fresnel edge to keep its silhouette readable — no
+coloured rim, no glow. The glyph glow is baked as a stack of widening halo
+passes under a near-white core, and the lid material drives its exposure off the
+texture's own luminance, so only the glyphs and their halo are pushed into HDR
+and past the bloom threshold. The nets on the board keep their own glow.
 
 ### WebGPU without a GPU
 

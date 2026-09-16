@@ -207,26 +207,26 @@ const letterI = (
 };
 
 /**
- * Chrome lettering on the package lid. The vertical gradient is what sells it:
- * a bright top, a dark horizon band across the middle and a second highlight
- * below, which is how polished metal reflects a lit floor and a dark ceiling.
+ * The package lid: a solid matte black face carrying a glowing "AI".
+ *
+ * The lid itself is deliberately flat and unlit — no gradient, no blue sheen —
+ * so the lettering is the only thing on the package that gives off light. The
+ * glow is built in the texture as a stack of widening halo passes under a
+ * near-white core; the scene bloom then picks the core up and carries it past
+ * the edge of the package.
  */
 export const createChipLidTexture = (size = 1024, label: "AI" = "AI") => {
   const { canvas, context } = createCanvas(size);
 
   context.clearRect(0, 0, size, size);
 
-  // Glossy black lid.
-  const lid = context.createLinearGradient(0, 0, 0, size);
-  lid.addColorStop(0, "#14171d");
-  lid.addColorStop(0.45, "#05060a");
-  lid.addColorStop(1, "#0b0d12");
-  context.fillStyle = lid;
+  // Solid matte lid. Flat fill, not a gradient: nothing here should read as lit.
+  context.fillStyle = "#05060a";
   context.fillRect(0, 0, size, size);
 
-  // Faint moulded inset around the die area.
+  // Moulded inset around the die area, in neutral grey so it does not glow.
   const inset = size * 0.085;
-  context.strokeStyle = "rgba(122, 160, 200, 0.13)";
+  context.strokeStyle = "rgba(120, 124, 132, 0.1)";
   context.lineWidth = Math.max(1, size * 0.004);
   context.strokeRect(inset, inset, size - inset * 2, size - inset * 2);
 
@@ -238,42 +238,46 @@ export const createChipLidTexture = (size = 1024, label: "AI" = "AI") => {
   const left = (size - totalWidth) / 2;
   const top = (size - letterHeight) / 2;
 
-  const paint = (offsetY: number, style: string | CanvasGradient) => {
+  const paint = (style: string) => {
     context.fillStyle = style;
     context.beginPath();
-    letterA(context, left, top + offsetY, aWidth, letterHeight);
+    letterA(context, left, top, aWidth, letterHeight);
     context.fill("evenodd");
-    letterI(
-      context,
-      left + aWidth + gap,
-      top + offsetY,
-      iWidth,
-      letterHeight,
-    );
+    letterI(context, left + aWidth + gap, top, iWidth, letterHeight);
     context.fill("evenodd");
   };
 
-  // Extruded side wall, drawn as a stack of dark copies behind the face.
-  const depth = size * 0.02;
-  for (let i = depth; i > 0; i -= 1) {
-    const shade = 0.1 + 0.28 * (1 - i / depth);
-    paint(i, `rgb(${Math.round(shade * 90)}, ${Math.round(shade * 120)}, ${Math.round(shade * 150)})`);
+  // Halo: several passes, widest and faintest first, so the falloff is smooth
+  // rather than the single hard ring one shadowBlur would give.
+  const halo: Array<[number, number]> = [
+    [0.085, 0.13],
+    [0.045, 0.2],
+    [0.022, 0.3],
+    [0.011, 0.42],
+  ];
+
+  for (let i = 0; i < halo.length; i++) {
+    const [blur, alpha] = halo[i];
+    context.save();
+    context.shadowColor = `rgba(150, 214, 255, ${alpha})`;
+    context.shadowBlur = size * blur;
+    paint("rgba(150, 214, 255, 0.85)");
+    context.restore();
   }
 
-  const chrome = context.createLinearGradient(0, top, 0, top + letterHeight);
-  chrome.addColorStop(0.0, "#ffffff");
-  chrome.addColorStop(0.16, "#dcefff");
-  chrome.addColorStop(0.36, "#8fc0e4");
-  chrome.addColorStop(0.5, "#2c4a63");
-  chrome.addColorStop(0.58, "#6ea6d0");
-  chrome.addColorStop(0.74, "#e8f6ff");
-  chrome.addColorStop(1.0, "#ffffff");
-
-  context.save();
-  context.shadowColor = "rgba(150, 210, 255, 0.6)";
-  context.shadowBlur = size * 0.022;
-  paint(0, chrome);
-  context.restore();
+  // Core: near-white with the faintest cool falloff towards the baseline, so it
+  // still reads as an emitter rather than as flat paint.
+  const core = context.createLinearGradient(0, top, 0, top + letterHeight);
+  core.addColorStop(0.0, "#ffffff");
+  core.addColorStop(0.45, "#f2fbff");
+  core.addColorStop(1.0, "#d8f0ff");
+  paint("#ffffff");
+  context.fillStyle = core;
+  context.beginPath();
+  letterA(context, left, top, aWidth, letterHeight);
+  context.fill("evenodd");
+  letterI(context, left + aWidth + gap, top, iWidth, letterHeight);
+  context.fill("evenodd");
 
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
