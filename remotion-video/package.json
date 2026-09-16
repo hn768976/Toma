@@ -8,10 +8,12 @@
   "dependencies": {
     "@remotion/cli": "4.0.515",
     "@remotion/tailwind-v4": "4.0.515",
+    "@types/three": "^0.184.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
     "tailwindcss": "4.0.0",
+    "three": "^0.184.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -26,7 +28,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:blue": "remotion render CodeGridBlue out/code-grid-blue-1080p.mp4 --codec=h264 --crf=16 --muted",
+    "render:teal": "remotion render CodeGridTeal out/code-grid-teal-1080p.mp4 --codec=h264 --crf=16 --muted",
+    "render:blue-4k": "remotion render CodeGridBlue4K out/code-grid-blue-4k.mp4 --codec=h264 --crf=16 --muted",
+    "render:teal-4k": "remotion render CodeGridTeal4K out/code-grid-teal-4k.mp4 --codec=h264 --crf=16 --muted"
   },
   "sideEffects": [
     "*.css",
