@@ -11,6 +11,13 @@
 
 Welcome to your Remotion project!
 
+## Neon Layers
+
+The looping slab-stack motion graphic lives in [`src/neon-layers`](./src/neon-layers/README.md)
+— two themes (violet reference-match and cyan/white), at 1080p and 4K, rendered
+through three.js' WebGPU backend. See that README for the composition list,
+render commands and the headless-WebGPU setup notes.
+
 ## Commands
 
 **Install Dependencies**
