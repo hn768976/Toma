@@ -85,12 +85,25 @@ npx remotion render GlassLattice-Blue-4K out/blue-4k.mp4 \
 
 | File | Responsibility |
 | --- | --- |
-| `src/three/lattice.ts` | The extruded rounded-diamond frame and the woven grid. |
+| `src/three/lattice.ts` | The extruded rhombus ring and the woven grid. |
 | `src/three/environment.ts` | PMREM studio environment — the source of the glass reflections. |
 | `src/three/animation.ts` | Pose per frame. Every term is periodic over the 300-frame loop. |
 | `src/three/scene.ts` | Renderer, materials, lights, fog, bloom. |
+| `src/three/backend.ts` | WebGPU vs WebGL2 selection. |
 | `src/GlassLattice.tsx` | Drives one deterministic three.js render per Remotion frame. |
 | `src/theme.ts` | The two palettes and the props schema. |
+
+## Why the glass is additive rather than refractive
+
+`MeshPhysicalNodeMaterial.transmission` is a no-op on the WebGL2 backend that
+headless renders fall back to — a solid probe mesh in front of the lattice comes
+back fully opaque — so real refraction is off the table for CLI renders.
+
+Instead each slab is additively blended with a fresnel-weighted opacity: flat
+faces stay faint and let whatever is behind them through, grazing angles go
+bright. On a dark field that reads as clear glass, and because additive blending
+is order independent it handles the woven lattice correctly — every bar shows
+through every other, and crossings brighten, which is what the reference does.
 
 ## Why it loops
 

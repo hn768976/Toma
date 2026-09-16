@@ -47,12 +47,14 @@ export const createEnvironment = async (
   );
   scene.add(room);
 
-  // Key panel, lit side.
-  addPanel(scene, bottom, [3.2, 9], [-5.4, 0.5, 0], [0, -Math.PI / 2, 0]);
-  // Soft bounce from below.
-  addPanel(scene, bottom, [9, 4], [0, -5.4, 0], [-Math.PI / 2, 0, 0]);
-  // Narrow kicker behind, to put a second highlight on the far edges.
-  addPanel(scene, top, [1.4, 9], [2.6, 0, -5.4], [0, 0, 0]);
+  // Tall key panel on the lit side — the long streaks down each bar.
+  addPanel(scene, bottom, [6, 11], [-5.9, 0.5, 0], [0, -Math.PI / 2, 0]);
+  // Bounce from below.
+  addPanel(scene, bottom, [11, 5], [0, -5.9, 0], [-Math.PI / 2, 0, 0]);
+  // Overhead strip, so the top edge of every slab catches a line.
+  addPanel(scene, bottom, [11, 2.4], [0, 5.9, 0], [Math.PI / 2, 0, 0]);
+  // Narrow kicker behind, for a second highlight on the far edges.
+  addPanel(scene, bottom, [2.2, 11], [2.6, 0, -5.9], [0, 0, 0]);
 
   const pmrem = new PMREMGenerator(renderer);
   const target = await pmrem.fromSceneAsync(scene, 0.04);

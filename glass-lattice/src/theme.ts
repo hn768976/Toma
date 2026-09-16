@@ -5,8 +5,10 @@ export type Palette = {
   background: string;
   /** Soft ambient bloom behind the lattice. */
   backgroundGlow: string;
-  /** Base tint of the glass body. */
+  /** Base tint of the glass surface. */
   glass: string;
+  /** Beer-Lambert tint picked up by light travelling through the slab. */
+  attenuation: string;
   /** Broad fresnel glow through the body of the glass. */
   emissive: string;
   /** Hot, near-white silhouette line along every bevel. */
@@ -23,19 +25,21 @@ export type Palette = {
 export const PALETTES = {
   blue: {
     background: '#00030a',
-    backgroundGlow: '#0d2a55',
-    glass: '#173a70',
+    backgroundGlow: '#0a1e40',
+    glass: '#aed4ff',
+    attenuation: '#3f86e8',
     emissive: '#3d8cff',
     rimLight: '#d5e7ff',
     keyLight: '#8fc0ff',
     fillLight: '#2f6bd8',
-    envTop: '#0a1830',
-    envBottom: '#dceaff',
+    envTop: '#0d1c38',
+    envBottom: '#ffffff',
   },
   violet: {
     background: '#05000c',
-    backgroundGlow: '#280a4d',
-    glass: '#3f0d70',
+    backgroundGlow: '#1c0838',
+    glass: '#c9a4ff',
+    attenuation: '#7b34d8',
     emissive: '#9012ec',
     rimLight: '#eed4ff',
     keyLight: '#c88fff',

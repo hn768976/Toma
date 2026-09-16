@@ -1,58 +1,112 @@
 import {ExtrudeGeometry, Path, Shape} from 'three/webgpu';
 
-/** Side length of the square frame before it is rotated 45deg into a diamond. */
-export const FRAME_SIZE = 1;
-/** Width of the glass band. */
-export const BAND = 0.105;
-/** Extrusion depth — gives every frame a visible glassy side wall. */
-export const DEPTH = 0.15;
-/** Outer corner rounding. */
-export const CORNER_RADIUS = 0.2;
+/**
+ * The cell is a rhombus, not a square turned 45deg: in the reference the
+ * diamonds are distinctly taller than they are wide even where the plane is
+ * closest to the camera, so the shape carries the aspect rather than the
+ * perspective.
+ */
+export const HALF_WIDTH = 0.85;
+export const HALF_HEIGHT = 1;
+/** Width of the glass slab that forms each side of the rhombus. */
+export const BAND = 0.16;
+/** Extrusion depth. The bars read as deep slabs, with a visible inner wall. */
+export const DEPTH = 0.34;
+/** Corners are mitred with only a small fillet. */
+export const CORNER_RADIUS = 0.09;
 
 /**
- * Grid pitch. Pure corner-to-corner tiling would be `FRAME_SIZE * SQRT2`; the
- * slight squeeze makes neighbouring bands overlap so the lattice reads as woven
- * rather than as separate tiles, which is what the reference does.
+ * Pitch. Exact corner-to-corner tiling would be `2 * HALF_*`; the squeeze makes
+ * neighbouring bars cross, which is what gives the lattice its woven look.
  */
-export const PITCH = FRAME_SIZE * Math.SQRT2 * 0.94;
+export const PITCH_X = HALF_WIDTH * 2 * 0.94;
+export const PITCH_Y = HALF_HEIGHT * 2 * 0.94;
 
-/** Alternating z used to weave the lattice at the overlaps. */
-export const WEAVE = DEPTH * 0.62;
+/** Alternating z, so the bars weave over and under at every crossing. */
+export const WEAVE = DEPTH * 0.55;
 
-const roundedRect = <T extends Shape | Path>(target: T, size: number, radius: number): T => {
-  const h = size / 2;
-  const r = Math.min(radius, h);
-  target.moveTo(-h + r, -h);
-  target.lineTo(h - r, -h);
-  target.absarc(h - r, -h + r, r, -Math.PI / 2, 0, false);
-  target.lineTo(h, h - r);
-  target.absarc(h - r, h - r, r, 0, Math.PI / 2, false);
-  target.lineTo(-h + r, h);
-  target.absarc(-h + r, h - r, r, Math.PI / 2, Math.PI, false);
-  target.lineTo(-h, -h + r);
-  target.absarc(-h + r, -h + r, r, Math.PI, Math.PI * 1.5, false);
+type Point = readonly [number, number];
+
+const roundedPolygon = <T extends Shape | Path>(target: T, points: Point[], radius: number): T => {
+  const count = points.length;
+
+  for (let i = 0; i < count; i++) {
+    const previous = points[(i - 1 + count) % count];
+    const current = points[i];
+    const next = points[(i + 1) % count];
+
+    const toPrevious = [previous[0] - current[0], previous[1] - current[1]];
+    const toNext = [next[0] - current[0], next[1] - current[1]];
+    const previousLength = Math.hypot(toPrevious[0], toPrevious[1]);
+    const nextLength = Math.hypot(toNext[0], toNext[1]);
+
+    // Never eat more than half an edge, or adjacent fillets would overlap.
+    const r = Math.min(radius, previousLength / 2, nextLength / 2);
+    const enter = [
+      current[0] + (toPrevious[0] / previousLength) * r,
+      current[1] + (toPrevious[1] / previousLength) * r,
+    ];
+    const leave = [
+      current[0] + (toNext[0] / nextLength) * r,
+      current[1] + (toNext[1] / nextLength) * r,
+    ];
+
+    if (i === 0) {
+      target.moveTo(enter[0], enter[1]);
+    } else {
+      target.lineTo(enter[0], enter[1]);
+    }
+    // The corner itself is the control point, so the fillet is tangent to both edges.
+    target.quadraticCurveTo(current[0], current[1], leave[0], leave[1]);
+  }
+
+  target.closePath();
   return target;
 };
 
+const rhombus = (w: number, h: number): Point[] => [
+  [w, 0],
+  [0, h],
+  [-w, 0],
+  [0, -h],
+];
+
 /**
- * One frame of the lattice: a rounded square ring, extruded and bevelled. The
- * bevel is what catches the key light and draws the bright edge lines.
+ * One cell: a rhombus ring of flat glass slabs, extruded with a fine bevel.
+ *
+ * The inner rhombus is the outer one offset inward by BAND. For a rhombus the
+ * inward offset is a uniform scale: the distance from the centre to each edge
+ * is `w * h / hypot(w, h)`, so subtracting BAND from that distance and dividing
+ * gives the factor.
  */
 export const createFrameGeometry = (): ExtrudeGeometry => {
-  const outer = roundedRect(new Shape(), FRAME_SIZE, CORNER_RADIUS);
-  outer.holes.push(roundedRect(new Path(), FRAME_SIZE - BAND * 2, Math.max(CORNER_RADIUS - BAND, 0.02)));
+  const edgeDistance = (HALF_WIDTH * HALF_HEIGHT) / Math.hypot(HALF_WIDTH, HALF_HEIGHT);
+  const inner = 1 - BAND / edgeDistance;
 
-  const geometry = new ExtrudeGeometry(outer, {
+  const shape = roundedPolygon(new Shape(), rhombus(HALF_WIDTH, HALF_HEIGHT), CORNER_RADIUS);
+  shape.holes.push(
+    roundedPolygon(
+      new Path(),
+      rhombus(HALF_WIDTH * inner, HALF_HEIGHT * inner),
+      CORNER_RADIUS * inner,
+    ),
+  );
+
+  const geometry = new ExtrudeGeometry(shape, {
     depth: DEPTH,
-    curveSegments: 24,
+    curveSegments: 28,
+    // A bevel is what catches the key light along every edge, but ExtrudeGeometry
+    // folds it into itself at the rhombus's acute corners if it is anything but
+    // small — which showed up as a dotted seam and a creased inner wall.
     bevelEnabled: true,
-    bevelThickness: 0.02,
-    bevelSize: 0.02,
+    bevelThickness: 0.006,
+    bevelSize: 0.006,
     bevelOffset: 0,
-    bevelSegments: 3,
+    bevelSegments: 1,
   });
+  // ExtrudeGeometry already computes its own normals; recomputing here would
+  // only flatten the corner walls.
   geometry.center();
-  geometry.computeVertexNormals();
   return geometry;
 };
 
@@ -62,17 +116,13 @@ export type LatticeCell = {
   z: number;
 };
 
-/**
- * Cells of one lattice layer, laid out on a square grid and woven by parity.
- * Returned in lattice-local space; the caller rotates the whole layer 45deg.
- */
 export const createLayerCells = (cols: number, rows: number): LatticeCell[] => {
   const cells: LatticeCell[] = [];
   for (let iy = 0; iy < rows; iy++) {
     for (let ix = 0; ix < cols; ix++) {
       cells.push({
-        x: (ix - (cols - 1) / 2) * PITCH,
-        y: (iy - (rows - 1) / 2) * PITCH,
+        x: (ix - (cols - 1) / 2) * PITCH_X,
+        y: (iy - (rows - 1) / 2) * PITCH_Y,
         z: (ix + iy) % 2 === 0 ? WEAVE : -WEAVE,
       });
     }

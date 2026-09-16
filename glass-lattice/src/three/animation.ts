@@ -13,12 +13,12 @@ export type Motion = {
  * in the reference. The small roll keeps the diamonds from sitting perfectly
  * upright.
  */
-const BASE_YAW = 0.72;
+const BASE_YAW = 0.42;
 const BASE_PITCH = 0.055;
 const BASE_ROLL = -0.05;
-const BASE_X = -0.95;
+const BASE_X = -1.55;
 const BASE_Y = -0.1;
-const CAMERA_Z = 2.25;
+const CAMERA_Z = 3.0;
 
 /**
  * The reference does not pan or scroll: measured against frame 0 it drifts a

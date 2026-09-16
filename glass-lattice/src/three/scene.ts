@@ -1,9 +1,9 @@
 import {
   ACESFilmicToneMapping,
+  AdditiveBlending,
   AmbientLight,
   Color,
   DirectionalLight,
-  Euler,
   Fog,
   InstancedMesh,
   Matrix4,
@@ -18,7 +18,17 @@ import {
   Vector3,
   WebGPURenderer,
 } from 'three/webgpu';
-import {color, mix, normalView, pass, positionViewDirection, screenUV, smoothstep, vec2} from 'three/tsl';
+import {
+  color,
+  float,
+  mix,
+  normalView,
+  pass,
+  positionViewDirection,
+  screenUV,
+  smoothstep,
+  vec2,
+} from 'three/tsl';
 import {bloom} from 'three/addons/tsl/display/BloomNode.js';
 import type {Palette} from '../theme';
 import {createEnvironment} from './environment';
@@ -26,9 +36,9 @@ import {createFrameGeometry, createLayerCells} from './lattice';
 import {motionAtFrame} from './animation';
 
 const FRONT_COLS = 5;
-const FRONT_ROWS = 8;
-const BACK_COLS = 5;
-const BACK_ROWS = 6;
+const FRONT_ROWS = 6;
+const BACK_COLS = 4;
+const BACK_ROWS = 4;
 /** How far the second lattice sits behind the first, in world units. */
 const BACK_OFFSET_Z = -1.35;
 
@@ -41,29 +51,37 @@ export type LatticeScene = {
 };
 
 /**
- * Fresnel-driven emission in two bands.
+ * Glass, as additive fresnel-weighted slabs.
  *
- * A very tight term paints a near-white line along every silhouette and bevel —
- * the strongest read in the reference — and a much broader, dimmer term lets
- * colour bleed through the body of the glass. Facing surfaces stay dark, so the
- * contrast between the lit edges and the flat faces survives.
+ * `MeshPhysicalNodeMaterial.transmission` is a no-op on the WebGL2 backend used
+ * for headless renders — a solid probe mesh comes back fully opaque — so real
+ * refraction is not available here. Additive blending gets the same read on a
+ * dark field and is order independent, which matters for a woven lattice where
+ * bars cross: every slab shows through every other, and crossings brighten,
+ * exactly as in the reference.
+ *
+ * Opacity is fresnel weighted, so the flat faces stay faint and let what is
+ * behind them through, while grazing angles — the slab edges and the inner
+ * walls — go bright. That is where the reference gets its drawn-in-light look.
  */
-const createGlassMaterial = (palette: Palette, gain: number) => {
+const createGlassMaterial = (palette: Palette, options: {face: number; edge: number}) => {
   const material = new MeshPhysicalNodeMaterial({
     color: new Color(palette.glass),
     metalness: 0,
-    roughness: 0.05,
-    clearcoat: 0.85,
-    clearcoatRoughness: 0.1,
-    envMapIntensity: 3.0,
+    roughness: 0.04,
+    clearcoat: 1,
+    clearcoatRoughness: 0.03,
+    specularIntensity: 1,
+    envMapIntensity: 2.2,
   });
 
+  material.transparent = true;
+  material.depthWrite = false;
+  material.blending = AdditiveBlending;
+
   const grazing = normalView.dot(positionViewDirection).abs().clamp(0, 1).oneMinus();
-  const edge = grazing.pow(6).mul(1.5 * gain);
-  const body = grazing.pow(1.6).mul(0.22 * gain);
-  material.emissiveNode = color(palette.rimLight)
-    .mul(edge)
-    .add(color(palette.emissive).mul(body));
+  material.opacityNode = mix(float(options.face), float(options.edge), grazing.pow(1.6));
+  material.emissiveNode = color(palette.rimLight).mul(grazing.pow(3.5).mul(0.9));
 
   return material;
 };
@@ -75,9 +93,9 @@ const buildLayer = (material: MeshPhysicalNodeMaterial, cols: number, rows: numb
 
   const matrix = new Matrix4();
   const position = new Vector3();
-  // Each frame is a square turned 45deg into a diamond; the grid itself stays
-  // axis aligned, so neighbouring diamonds meet corner to corner.
-  const rotation = new Quaternion().setFromEuler(new Euler(0, 0, Math.PI / 4));
+  // The cell geometry is already a rhombus, so instances are unrotated; the
+  // axis-aligned grid then makes neighbouring diamonds meet corner to corner.
+  const rotation = new Quaternion();
   const scaleVector = new Vector3(1, 1, 1);
 
   cells.forEach((cell, i) => {
@@ -118,46 +136,45 @@ export const createLatticeScene = async (
   renderer.setPixelRatio(1);
   renderer.setSize(width, height, false);
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.22;
+  renderer.toneMappingExposure = 1.18;
   renderer.outputColorSpace = SRGBColorSpace;
 
   const scene = new Scene();
   const background = new Color(palette.background);
   // Linear fog, tuned so the near lattice is untouched and the yawed far
   // side dissolves into the backdrop — that is the empty half of the frame.
-  scene.fog = new Fog(background, 2.3, 6.0);
+  scene.fog = new Fog(background, 2.7, 5.2);
 
   // Radial falloff from a glow low on the lit side out to near black.
-  const distance = screenUV.sub(vec2(0.34, 0.46)).mul(vec2(0.78, 1)).length();
+  const distance = screenUV.sub(vec2(0.24, 0.38)).mul(vec2(0.8, 1)).length();
   scene.backgroundNode = mix(
     color(palette.backgroundGlow),
     color(background),
-    smoothstep(0.0, 0.72, distance),
+    smoothstep(0.0, 0.62, distance),
   );
 
   scene.environment = await createEnvironment(renderer, palette.envTop, palette.envBottom);
-  scene.environmentIntensity = 1;
+  scene.environmentIntensity = 1.0;
 
   const camera = new PerspectiveCamera(32, width / height, 0.1, 100);
 
   const group = new Object3D();
-  const frontMaterial = createGlassMaterial(palette, 1.2);
-  const backMaterial = createGlassMaterial(palette, 0.5);
-  backMaterial.roughness = 0.16;
-  backMaterial.envMapIntensity = 0.9;
+  const frontMaterial = createGlassMaterial(palette, {face: 0.095, edge: 0.85});
+  const backMaterial = createGlassMaterial(palette, {face: 0.045, edge: 0.3});
+  backMaterial.roughness = 0.1;
 
   group.add(buildLayer(frontMaterial, FRONT_COLS, FRONT_ROWS));
 
   const back = buildLayer(backMaterial, BACK_COLS, BACK_ROWS);
   // Half a cell across keeps the rear lattice from lining up with the front one.
-  back.position.set(0.66, 0.66, BACK_OFFSET_Z);
+  back.position.set(0.68, 0.94, BACK_OFFSET_Z);
   group.add(back);
   scene.add(group);
 
   scene.add(new AmbientLight(new Color(palette.fillLight), 0.06));
 
-  const key = new PointLight(new Color(palette.keyLight), 45, 0, 2);
-  key.position.set(-2.8, 1.8, 2.8);
+  const key = new PointLight(new Color(palette.keyLight), 55, 0, 2);
+  key.position.set(-2.7, 2.4, 2.9);
   scene.add(key);
 
   const fill = new PointLight(new Color(palette.fillLight), 14, 0, 2);
@@ -177,7 +194,7 @@ export const createLatticeScene = async (
   const postProcessing = new PostProcessing(renderer);
   const scenePass = pass(scene, camera);
   const scenePassColor = scenePass.getTextureNode('output');
-  postProcessing.outputNode = scenePassColor.add(bloom(scenePassColor, 1.0, 0.75, 0.5));
+  postProcessing.outputNode = scenePassColor.add(bloom(scenePassColor, 1.3, 0.8, 0.45));
 
   const target = new Vector3();
 
