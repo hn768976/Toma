@@ -13,6 +13,8 @@
 
 import {
   BLOCK_FOOTPRINT,
+  BOB_AMPLITUDE_BANDS,
+  BOB_CYCLE_CHOICES,
   CELL,
   EMPTY_CELL_CHANCE,
   FIELD_HALF_WIDTH,
@@ -22,7 +24,7 @@ import {
   LOOP_CELLS,
   WIDE_BLOCK_CHANCE,
 } from "./constants";
-import { chance, mulberry32, range, type Rng } from "./random";
+import { chance, mulberry32, pick, range, type Rng } from "./random";
 
 export type Block = {
   /** Centre in world units. y is the base, blocks grow upward from y = 0. */
@@ -36,19 +38,27 @@ export type Block = {
   brightness: number;
   /** Phase offsets into the loop-periodic pulses, in turns. */
   pulsePhase: number;
+  /** How far this block rides up and down, in cells (0 = still). */
+  bobAmplitude: number;
+  /** Whole bob cycles per loop, so the block lands where it started. */
+  bobCycles: number;
   /** Random window into the code sheet, in sheet UV. */
   uvOffsetX: number;
   uvOffsetY: number;
 };
 
-const pickHeight = (rng: Rng) => {
-  const total = HEIGHT_BANDS.reduce((sum, band) => sum + band[2], 0);
+/** Draws from a weighted list of [min, max, weight] bands. */
+const pickBanded = (
+  rng: Rng,
+  bands: readonly [number, number, number][],
+): number => {
+  const total = bands.reduce((sum, band) => sum + band[2], 0);
   let roll = rng() * total;
-  for (const [min, max, weight] of HEIGHT_BANDS) {
+  for (const [min, max, weight] of bands) {
     if (roll < weight) return range(rng, min, max);
     roll -= weight;
   }
-  return range(rng, HEIGHT_BANDS[0][0], HEIGHT_BANDS[0][1]);
+  return range(rng, bands[0][0], bands[0][1]);
 };
 
 const pickBrightness = (rng: Rng) => {
@@ -58,7 +68,7 @@ const pickBrightness = (rng: Rng) => {
   // glowing carpet.
   if (roll < 0.2) return range(rng, 0.05, 0.16);
   if (roll < 0.75) return range(rng, 0.3, 0.72);
-  return range(rng, 0.8, 1.25);
+  return range(rng, 0.8, 1.05);
 };
 
 /** One entry of the periodic tile, in tile-local cell coordinates. */
@@ -109,10 +119,12 @@ const buildTile = (seed: number): TileBlock[] => {
         x: (cx - FIELD_HALF_WIDTH + (cellsX - 1) * 0.5 + 0.5) * CELL,
         cz: cz + (cellsZ - 1) * 0.5,
         sx: cellsX * CELL * inset,
-        sy: pickHeight(rng),
+        sy: pickBanded(rng, HEIGHT_BANDS),
         sz: cellsZ * CELL * inset,
         brightness: pickBrightness(rng),
         pulsePhase: rng(),
+        bobAmplitude: pickBanded(rng, BOB_AMPLITUDE_BANDS),
+        bobCycles: pick(rng, BOB_CYCLE_CHOICES),
         uvOffsetX: rng(),
         uvOffsetY: rng(),
       });

@@ -53,6 +53,7 @@ import {
   DOF_FAR_RANGE,
   DOF_NEAR_RANGE,
   DURATION_IN_FRAMES,
+  EMISSIVE_CEILING,
   FOG_DENSITY,
   HEIGHT_PULSE_AMOUNT,
   HEIGHT_PULSE_CYCLES,
@@ -147,7 +148,7 @@ export const createScene = async (
 
   const sizes = new Float32Array(count * 3);
   const uvOffsets = new Float32Array(count * 2);
-  const params = new Float32Array(count * 2);
+  const params = new Float32Array(count * 4);
 
   const material = new THREE.MeshBasicNodeMaterial();
   const mesh = new THREE.InstancedMesh(geometry, material, count);
@@ -169,14 +170,16 @@ export const createScene = async (
     sizes[i * 3 + 2] = block.sz;
     uvOffsets[i * 2 + 0] = block.uvOffsetX;
     uvOffsets[i * 2 + 1] = block.uvOffsetY;
-    params[i * 2 + 0] = block.brightness;
-    params[i * 2 + 1] = block.pulsePhase;
+    params[i * 4 + 0] = block.brightness;
+    params[i * 4 + 1] = block.pulsePhase;
+    params[i * 4 + 2] = block.bobAmplitude;
+    params[i * 4 + 3] = block.bobCycles;
   });
   mesh.instanceMatrix.needsUpdate = true;
 
   geometry.setAttribute("aSize", new THREE.InstancedBufferAttribute(sizes, 3));
   geometry.setAttribute("aUv", new THREE.InstancedBufferAttribute(uvOffsets, 2));
-  geometry.setAttribute("aParams", new THREE.InstancedBufferAttribute(params, 2));
+  geometry.setAttribute("aParams", new THREE.InstancedBufferAttribute(params, 4));
 
   // --- Material ----------------------------------------------------------
 
@@ -184,7 +187,9 @@ export const createScene = async (
 
   const aSize = attribute<"vec3">("aSize", "vec3");
   const aUv = attribute<"vec2">("aUv", "vec2");
-  const aParams = attribute<"vec2">("aParams", "vec2");
+  // x: emissive gain, y: pulse phase, z: bob amplitude in cells,
+  // w: whole bob cycles per loop.
+  const aParams = attribute<"vec4">("aParams", "vec4");
 
   // Slow breathing of the block heights, a whole number of cycles per loop.
   const grow = float(1).add(
@@ -201,7 +206,27 @@ export const createScene = async (
     positionGeometry.y.mul(grow),
     positionGeometry.z,
   );
-  material.positionNode = localPos;
+
+  // Blocks ride up and down out of the grid plane. The offset is in world
+  // cells, so it is divided by the instance's own height to survive the
+  // scale baked into the instance matrix — otherwise tall blocks would
+  // travel further than flat ones for the same amplitude.
+  //
+  // The phase is derived from the same per-block value as the height
+  // pulse but scaled off it, so the two never lock into one motion.
+  const bobWorld = uLoop
+    .mul(aParams.w)
+    .add(aParams.y.mul(0.37))
+    .add(0.25)
+    .mul(TAU)
+    .sin()
+    .mul(aParams.z);
+
+  material.positionNode = vec3(
+    localPos.x,
+    localPos.y.add(bobWorld.div(aSize.y)),
+    localPos.z,
+  );
 
   // Everything below is per-fragment, so the object-space position and
   // normal are passed across as explicit varyings. Reading `positionLocal`
@@ -209,6 +234,9 @@ export const createScene = async (
   // resolves to a value that is constant across each face, which silently
   // turns the edge highlight below into a flat wash over every block
   // rather than a line along its edges.
+  // Deliberately the un-bobbed position: the code and the edge highlight
+  // are anchored to the block, so they must travel with it rather than
+  // slide across its faces as it rises.
   const vLocal = varying(localPos, "vCodeGridLocal");
   const n = varying(normalGeometry, "vCodeGridNormal");
 
@@ -291,7 +319,11 @@ export const createScene = async (
     .mul(0.16)
     .mul(blockBrightness.add(0.15));
 
-  const lit = faceColor.add(glyphColor).add(edgeColor).add(rimColor);
+  const lit = faceColor
+    .add(glyphColor)
+    .add(edgeColor)
+    .add(rimColor)
+    .min(vec3(EMISSIVE_CEILING, EMISSIVE_CEILING, EMISSIVE_CEILING));
 
   // Exponential fog, dissolving the field into the background well before
   // the far plane so the horizon is never a visible edge.

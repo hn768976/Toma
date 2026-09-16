@@ -32,14 +32,21 @@ export const CELL = 1;
  * one it started on. Every other motion (sway, bob, yaw, brightness
  * ripple) uses a whole number of cycles per loop, so frame 450 reproduces
  * frame 0 exactly and the video can run on repeat with no visible cut.
+ *
+ * It is also the only control over how fast the camera flies: the run
+ * time is fixed, so the forward speed is LOOP_CELLS / 15 s. Lowering it
+ * slows the camera but shortens the tile, and the field then repeats
+ * closer to the viewer — which is why FOG_DENSITY below is set to bury
+ * the repeat. At 20 the duplicated rows land past 20 cells out, under
+ * ~90% fog, while their originals are in the defocused foreground.
  */
-export const LOOP_CELLS = 32;
+export const LOOP_CELLS = 20;
 
 /** Half-width of the generated field, in cells. */
 export const FIELD_HALF_WIDTH = 26;
 
 /** Furthest / nearest generated cell relative to the camera start (z = 0). */
-export const FIELD_Z_FAR = -62;
+export const FIELD_Z_FAR = -50;
 export const FIELD_Z_NEAR = 6;
 
 /** Footprint of a block as a fraction of its cell, leaving the dark gutter. */
@@ -60,13 +67,47 @@ export const HEIGHT_BANDS: readonly [number, number, number][] = [
 
 /** Whole cycles per loop of the per-block height pulse. */
 export const HEIGHT_PULSE_CYCLES = 2;
-export const HEIGHT_PULSE_AMOUNT = 0.06;
+export const HEIGHT_PULSE_AMOUNT = 0.045;
+
+// --- Block bob ------------------------------------------------------------
+//
+// Blocks ride up and down out of the grid plane. This is a translation,
+// not a scale: a block keeps its size and its code, and sinking one opens
+// the gap around it so the neighbouring side faces come into view.
+//
+// Each block picks one of BOB_CYCLE_CHOICES, all whole numbers, so every
+// block is back where it started at the end of the loop no matter which
+// it drew. Amplitude is in cells, weighted so a quarter of the field
+// stays put and the movement reads as a few blocks shifting rather than
+// the whole field breathing at once.
+
+export const BOB_CYCLE_CHOICES: readonly number[] = [1, 2, 3];
+
+/** Bob amplitude bands: [min, max, weight], in cells. */
+export const BOB_AMPLITUDE_BANDS: readonly [number, number, number][] = [
+  [0, 0.035, 0.25], // effectively still
+  [0.06, 0.2, 0.45], // gentle
+  [0.2, 0.5, 0.3], // pronounced
+];
 
 /** Whole cycles per loop of the brightness ripple travelling down the field. */
 export const RIPPLE_TIME_CYCLES = 3;
 /** Whole ripple wavelengths per LOOP_CELLS, so the ripple tiles with the field. */
 export const RIPPLE_SPACE_CYCLES = 2;
-export const RIPPLE_AMOUNT = 0.3;
+export const RIPPLE_AMOUNT = 0.22;
+
+/**
+ * Ceiling on a block's emissive value, before tone mapping.
+ *
+ * A hot glyph on a bright block reaches ~16 without this, which is fine
+ * where it stays a thin sharp stroke but not where it does not: in the
+ * defocused foreground the depth-of-field blur averages a whole region of
+ * those values together, and bloom then turns the result into a white
+ * blob drifting through the frame. Capping at 3.2 still clips the glyph
+ * cores to white and still trips the bloom threshold, so the sharp text
+ * is unchanged — it only removes the energy the blur had to spread.
+ */
+export const EMISSIVE_CEILING = 3.2;
 
 // --- Camera ---------------------------------------------------------------
 
@@ -80,13 +121,13 @@ export const CAMERA_HEIGHT = 2.24;
 export const CAMERA_PITCH_DEG = -16;
 
 /** Loop-periodic drift. Amplitudes in cells / degrees, cycles are integers. */
-export const CAMERA_SWAY_X = 1.7;
+export const CAMERA_SWAY_X = 1.1;
 export const CAMERA_SWAY_CYCLES = 1;
-export const CAMERA_BOB_Y = 0.1;
-export const CAMERA_BOB_CYCLES = 2;
-export const CAMERA_YAW_DEG = 2.1;
-export const CAMERA_ROLL_DEG = 1.1;
-export const CAMERA_PITCH_DRIFT_DEG = 1.3;
+export const CAMERA_BOB_Y = 0.07;
+export const CAMERA_BOB_CYCLES = 1;
+export const CAMERA_YAW_DEG = 1.4;
+export const CAMERA_ROLL_DEG = 0.7;
+export const CAMERA_PITCH_DRIFT_DEG = 0.8;
 
 export const CAMERA_NEAR = 0.1;
 export const CAMERA_FAR = 90;
@@ -94,7 +135,7 @@ export const CAMERA_FAR = 90;
 // --- Atmosphere -----------------------------------------------------------
 
 /** Exponential fog density per cell; the field is gone by ~26 cells out. */
-export const FOG_DENSITY = 0.105;
+export const FOG_DENSITY = 0.112;
 
 // --- Depth of field -------------------------------------------------------
 
