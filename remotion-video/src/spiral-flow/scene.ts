@@ -121,6 +121,11 @@ const buildScene = async (
 ): Promise<SceneHandle> => {
   const grade = GRADES[options.grade];
 
+  // A canvas keeps whichever context type it was first given, and two live
+  // contexts in one page can leave the second without one at all. Clearing the
+  // container guarantees exactly one canvas even if the component remounts.
+  options.container.replaceChildren();
+
   const canvas = options.container.ownerDocument.createElement("canvas");
   canvas.width = options.width;
   canvas.height = options.height;
@@ -315,10 +320,6 @@ const buildScene = async (
 
     await postProcessing.renderAsync();
   };
-
-  // Warm the pipeline before handing the handle out, so the first frame the
-  // caller asks for is not also paying for shader compilation.
-  await renderFrame(0);
 
   return {
     renderFrame,

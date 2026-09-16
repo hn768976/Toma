@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   AbsoluteFill,
   cancelRender,
@@ -21,9 +21,9 @@ export const spiralFlowSchema = z.object({
   /** MSAA samples for the scene pass. */
   samples: z.number().int().min(0).max(8),
   /**
-   * Pin the WebGL2 fallback backend. `WebGPURenderer` already falls back on its
-   * own when no adapter is present; this is here so a render can be forced onto
-   * the same backend on every machine when you need byte-identical output.
+   * Pin the WebGL2 fallback backend. The scene already probes for a usable
+   * WebGPU backend; this is here so a render can be forced onto the same
+   * backend on every machine when you need byte-identical output.
    */
   forceWebGL: z.boolean(),
 });
@@ -41,9 +41,18 @@ export const spiralFlowDefaults: SpiralFlowProps = {
  * Drives the Three.js scene from Remotion's frame clock.
  *
  * Remotion screenshots a frame only once every `delayRender` handle is
- * released, so each frame opens a handle, draws, and then releases it. Nothing
- * is tied to wall-clock time or `requestAnimationFrame`, which is what keeps
- * the render deterministic and re-runnable.
+ * released, so the contract here is strict: **every** frame, including the
+ * first, opens its own handle and only releases it after that exact frame has
+ * been drawn. Nothing is tied to wall-clock time or `requestAnimationFrame`,
+ * which is what keeps the render deterministic and re-runnable.
+ *
+ * An earlier version split this in two — a setup effect that drew the first
+ * frame and a separate per-frame effect that skipped while the scene was still
+ * building. Whichever frame a tab mounted on then escaped without a handle of
+ * its own and was screenshotted showing whatever the scene had last drawn. At
+ * concurrency 2 that quietly corrupted two frames per render, and the corrupt
+ * frames were near-copies of neighbouring ones, so nothing downstream flagged
+ * them.
  */
 export const SpiralFlow: React.FC<SpiralFlowProps> = ({
   grade,
@@ -55,74 +64,77 @@ export const SpiralFlow: React.FC<SpiralFlowProps> = ({
   const { width, height, durationInFrames } = useVideoConfig();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<SceneHandle | null>(null);
-  const frameRef = useRef(frame);
-  frameRef.current = frame;
+  const sceneRef = useRef<Promise<SceneHandle> | null>(null);
 
-  const [setupHandle] = useState(() =>
-    delayRender("Initialising the Spiral Flow renderer", {
-      timeoutInMilliseconds: 240000,
-    }),
-  );
-
-  const draw = useCallback(
-    (scene: SceneHandle, at: number) =>
-      scene.renderFrame(at).catch((err: unknown) => {
-        cancelRender(err instanceof Error ? err : new Error(String(err)));
-      }),
-    [],
-  );
+  // Building the scene is expensive and must happen exactly once per page, but
+  // it is also async, so frames can arrive while it is still in flight. Holding
+  // it as a promise lets every frame await the same build rather than race it.
+  //
+  // The ref is read inside the cleanup rather than in the effect body: reading
+  // it on mount captures the value from before the scene exists, which leaks
+  // the renderer and its canvas.
+  useEffect(() => {
+    return () => {
+      const built = sceneRef.current;
+      sceneRef.current = null;
+      built?.then((scene) => scene.dispose()).catch(() => undefined);
+    };
+  }, []);
 
   useEffect(() => {
-    let disposed = false;
-    const container = containerRef.current;
-    if (!container) {
-      return;
+    const handle = delayRender(`Drawing Spiral Flow frame ${frame}`, {
+      timeoutInMilliseconds: 300000,
+    });
+    let cancelled = false;
+
+    if (sceneRef.current === null) {
+      const container = containerRef.current;
+      if (!container) {
+        cancelRender(new Error("[spiral-flow] container was not mounted"));
+        return;
+      }
+      sceneRef.current = createSpiralScene({
+        container,
+        width,
+        height,
+        grade,
+        durationInFrames,
+        meshDetail,
+        samples,
+        forceWebGL,
+        onDeviceLost: (reason) => {
+          cancelRender(
+            new Error(
+              `[spiral-flow] ${reason}. Every frame after this one would be ` +
+                `blank, so the render is being failed rather than allowed to ` +
+                `finish. Lower --concurrency or the meshDetail prop and retry.`,
+            ),
+          );
+        },
+      }).then((scene) => {
+        // Surfaces in the render log which backend actually initialised.
+        console.log(`[spiral-flow] three.js backend: ${scene.backend}`);
+        return scene;
+      });
     }
 
-    createSpiralScene({
-      container,
-      onDeviceLost: (reason) => {
-        cancelRender(
-          new Error(
-            `[spiral-flow] ${reason}. Every frame after this one would be ` +
-              `blank, so the render is being failed rather than allowed to ` +
-              `finish. Lower --concurrency or the meshDetail prop and retry.`,
-          ),
-        );
-      },
-      width,
-      height,
-      grade,
-      durationInFrames,
-      meshDetail,
-      samples,
-      forceWebGL,
-    })
+    sceneRef.current
       .then(async (scene) => {
-        if (disposed) {
-          scene.dispose();
+        if (cancelled) {
           return;
         }
-        sceneRef.current = scene;
-        // Surfaces in the render log which backend actually initialised.
-         
-        console.log(`[spiral-flow] three.js backend: ${scene.backend}`);
-        await draw(scene, frameRef.current);
-        continueRender(setupHandle);
+        await scene.renderFrame(frame);
+        continueRender(handle);
       })
       .catch((err: unknown) => {
         cancelRender(err instanceof Error ? err : new Error(String(err)));
       });
 
     return () => {
-      disposed = true;
-      sceneRef.current?.dispose();
-      sceneRef.current = null;
+      cancelled = true;
     };
-    // The scene is rebuilt only when its construction inputs change; the frame
-    // is fed in through `frameRef` so stepping never tears the scene down.
   }, [
+    frame,
     width,
     height,
     grade,
@@ -130,22 +142,7 @@ export const SpiralFlow: React.FC<SpiralFlowProps> = ({
     meshDetail,
     samples,
     forceWebGL,
-    draw,
-    setupHandle,
   ]);
-
-  useEffect(() => {
-    const scene = sceneRef.current;
-    if (!scene) {
-      // The very first frame is drawn by the setup effect above, which still
-      // holds `setupHandle`, so there is nothing to wait for here.
-      return;
-    }
-    const handle = delayRender(`Drawing Spiral Flow frame ${frame}`, {
-      timeoutInMilliseconds: 240000,
-    });
-    draw(scene, frame).then(() => continueRender(handle));
-  }, [frame, draw]);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
