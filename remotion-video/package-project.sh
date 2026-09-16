@@ -14,7 +14,7 @@ zip -r -q "$OUT" \
   package.json package-lock.json tsconfig.json remotion.config.ts \
   eslint.config.mjs .prettierrc .gitignore \
   README.md SPIRAL_FLOW.md \
-  render-all.sh deliver.sh look.sh \
+  render-all.sh render-chunked.sh deliver.sh verify.sh look.sh \
   -x '*/node_modules/*' '*/.DS_Store' '*/out/*'
 
 echo "wrote $OUT"
