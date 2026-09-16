@@ -11,6 +11,14 @@
 
 Welcome to your Remotion project!
 
+## Contents
+
+- **Digital particle wave** — seamless 15s abstract particle-wave background in
+  a blue and a monochrome grade, at 1080p and 4K. See
+  [`src/particle-wave/README.md`](./src/particle-wave/README.md).
+- **Particle ring halo** — abstract glowing particle ring, 1080p and 4K.
+- **Bluetooth explainer** — 30s hand-drawn explainer.
+
 ## Commands
 
 **Install Dependencies**

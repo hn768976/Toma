@@ -26,7 +26,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:wave:1080p": "remotion render ParticleWave1080p out/particle-wave-blue-1080p.mp4 --codec=h264 --image-format=png --crf=16",
+    "render:wave:4k": "remotion render ParticleWave4K out/particle-wave-blue-4k.mp4 --codec=h264 --image-format=png --crf=16",
+    "render:wave:mono:1080p": "remotion render ParticleWaveMono1080p out/particle-wave-mono-1080p.mp4 --codec=h264 --image-format=png --crf=16",
+    "render:wave:mono:4k": "remotion render ParticleWaveMono4K out/particle-wave-mono-4k.mp4 --codec=h264 --image-format=png --crf=16"
   },
   "sideEffects": [
     "*.css",
