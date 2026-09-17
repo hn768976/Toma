@@ -39,13 +39,22 @@ for VARIANT in "${VARIANTS[@]}"; do
       "out/master/SpiralFlow_4K_${VARIANT}.mp4"
     echo "wrote out/master/SpiralFlow_4K_${VARIANT}.mp4"
     SCALE="scale=1920:1080:flags=lanczos,format=yuv420p"
+    # The downscale averages the debanding dither 4:1 along with everything
+    # else, which leaves little for the encoder to chew on.
+    CRF=17
   else
     SCALE="format=yuv420p"
+    # Rendered at 1080p, the dither arrives at full per-pixel strength and is
+    # expensive: the same CRF that costs 3 MB downscaled costs 20 MB here. CRF
+    # 20 is the point where the file comes back to a sane size while the dither
+    # still survives quantisation -- past it the encoder smooths the dither
+    # away and the banding it exists to prevent starts to show.
+    CRF=20
   fi
 
   ffmpeg -v error -y -framerate "$FPS" -i "$SRC/frame_%04d.png" \
     -vf "$SCALE" \
-    -c:v libx264 -profile:v high -level 4.0 -preset slow -crf 17 \
+    -c:v libx264 -profile:v high -level 4.0 -preset slow -crf "$CRF" \
     -x264-params "keyint=60:min-keyint=30:bframes=3" \
     "${TAGS[@]}" -movflags +faststart -an \
     "out/deliver/SpiralFlow_1080p_${VARIANT}.mp4"
