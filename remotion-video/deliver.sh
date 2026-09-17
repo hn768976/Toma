@@ -9,9 +9,12 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 FPS=30
+# Keep in step with GRADES in src/spiral-flow/palette.ts.
+VARIANTS=(Violet Blue Emerald Ember)
+
 mkdir -p out/master out/deliver
 
-for VARIANT in Violet Blue; do
+for VARIANT in "${VARIANTS[@]}"; do
   SRC="out/frames/$(echo "$VARIANT" | tr '[:upper:]' '[:lower:]')"
   [ -d "$SRC" ] || { echo "missing $SRC — run ./render-all.sh first" >&2; exit 1; }
 

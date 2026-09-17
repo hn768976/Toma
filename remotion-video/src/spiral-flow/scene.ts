@@ -177,19 +177,23 @@ const buildScene = async (
   const scene = new Scene();
   scene.fog = new FogExp2(new Color(grade.fog).getHex(), 0.052);
 
-  // Backdrop: a diagonal three-stop wash, deep on the left and pale towards the
-  // top right where the core sits. Built as a node so it is part of the HDR
-  // render pass and therefore picks up bloom and tone mapping like the geometry.
-  const backdropA = uniform(new Color(grade.backdrop[0]));
-  const backdropB = uniform(new Color(grade.backdrop[1]));
-  const backdropC = uniform(new Color(grade.backdrop[2]));
-  // `screenUV.y` is 0 at the bottom, so this runs 0 at the bottom-right corner
-  // to 1 at the top-left — the direction the reference's sky ramps along.
-  const wash = oneMinus(screenUV.x).mul(0.55).add(screenUV.y.mul(0.45));
+  // Backdrop: a diagonal two-stop wash, deep at the top-left and light towards
+  // the bottom-right. Built as a node so it is part of the HDR render pass and
+  // therefore picks up bloom and tone mapping like the geometry.
+  //
+  // `screenUV.y` runs 0 at the *top* here. An earlier cut assumed the opposite
+  // and carried a third, much lighter corner stop meant for the top-left; it
+  // landed in the bottom-left instead, as a pale blob sitting outside the
+  // sphere's limb.
+  const backdropDeep = uniform(new Color(grade.backdrop[0]));
+  const backdropLight = uniform(new Color(grade.backdrop[1]));
+  const wash = oneMinus(screenUV.x)
+    .mul(0.55)
+    .add(oneMinus(screenUV.y).mul(0.45));
   scene.backgroundNode = mix(
-    mix(backdropC, backdropB, smoothstep(0.34, 0.78, wash)),
-    backdropA,
-    smoothstep(0.84, 1.0, wash),
+    backdropLight,
+    backdropDeep,
+    smoothstep(0.25, 0.95, wash),
   );
 
   const camera = new PerspectiveCamera(

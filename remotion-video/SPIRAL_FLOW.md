@@ -3,18 +3,26 @@
 A spiral-fluted sphere turning slowly under a hot core light, built with
 Three.js (`WebGPURenderer`) and driven frame-by-frame by Remotion.
 
-Delivered in two grades — **Violet** (matched to the supplied reference plate)
-and **Blue** (electric royal blue sibling) — as a **6.000 s seamless loop at
-30 fps**, mastered at **3840×2160** and delivered at **1920×1080**, H.264 / MP4.
+Delivered in four grades as a **6.000 s seamless loop at 30 fps**, mastered at
+**3840×2160** and delivered at **1920×1080**, H.264 / MP4.
+
+| Grade | Reads as |
+|---|---|
+| `violet` | Matched to the supplied reference plate — indigo key, violet fill |
+| `blue` | Electric royal blue |
+| `emerald` | Deep teal into mint — the coolest of the set |
+| `ember` | Crimson into amber — the warm counterweight |
 
 ## Compositions
 
+Each grade gets a UHD master and an HD sibling, both generated from the grade
+list, so adding a grade to `palette.ts` is all it takes to get its compositions
+and its entry in the schema enum:
+
 | ID | Size | Frames | Notes |
 |---|---|---|---|
-| `SpiralFlow-4K-Violet` | 3840×2160 | 180 | Master. `meshDetail: 1.15`, `samples: 2` |
-| `SpiralFlow-4K-Blue` | 3840×2160 | 180 | Master. `meshDetail: 1.15`, `samples: 2` |
-| `SpiralFlow-1080-Violet` | 1920×1080 | 180 | Preview / direct 1080p render |
-| `SpiralFlow-1080-Blue` | 1920×1080 | 180 | Preview / direct 1080p render |
+| `SpiralFlow-4K-<Grade>` | 3840×2160 | 180 | Master. `meshDetail: 1.15`, `samples: 2` |
+| `SpiralFlow-1080-<Grade>` | 1920×1080 | 180 | Preview / direct 1080p render |
 
 180 frames at 30 fps is exactly 6.000 s — the same runtime as the reference
 clip, which is 150 frames at 25 fps.
@@ -94,6 +102,17 @@ geometry work. Every other motion (camera orbit, light breathing, dither seed)
 is a full-cycle sinusoid in the normalised loop position, so it lands back on
 its starting value too. Frame 180 is frame 0.
 
+## The backdrop
+
+A two-stop diagonal wash, deep at the top-left and light towards the
+bottom-right, built as a node so it sits inside the HDR render pass and picks up
+bloom and tone mapping like the geometry.
+
+Note that `screenUV.y` runs **0 at the top**. An earlier cut assumed the
+opposite and carried a third, much lighter corner stop intended for the
+top-left; it landed in the bottom-left instead, as a pale blob sitting outside
+the sphere's limb.
+
 ## Camera
 
 The camera orbits at a fixed elevation and always aims at the sphere's centre.
@@ -163,7 +182,15 @@ src/spiral-flow/
 ## Re-grading
 
 `palette.ts` is the only file to touch for colour. Nothing is vertex-coloured —
-the look comes from coloured lights on a near-white soft-touch material — so
-changing a grade re-lights the shot rather than repainting it, and the shading
-stays physically consistent. Add a key to `GRADES` and it shows up in the
-schema's enum automatically.
+the look comes from coloured lights on a soft-touch material — so changing a
+grade re-lights the shot rather than repainting it, and the shading stays
+physically consistent. Add a key to `GRADES` and it shows up in the schema enum
+and in the composition list automatically; add its name to `VARIANTS` in
+`render-all.sh` and `deliver.sh` to get it rendered.
+
+**Match luminance, not hue.** Green and amber carry far more relative luminance
+than blue or violet at the same nominal saturation. Picking `emerald` and
+`ember` by eye blew out the core and flattened the tubes — their surface albedo
+was ~22% brighter than violet's and their fill light ~75-93% brighter. Both are
+now matched against the violet grade channel by channel, which is what makes the
+four read as one family at one exposure.

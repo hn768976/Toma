@@ -18,11 +18,13 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import React from "react";
 import {
   SpiralFlow,
   spiralFlowSchema,
   spiralFlowDefaults,
 } from "./spiral-flow/SpiralFlow";
+import { GRADE_NAMES } from "./spiral-flow/palette";
 import {
   FPS as SPIRAL_FPS,
   DURATION_IN_FRAMES as SPIRAL_DURATION_IN_FRAMES,
@@ -67,8 +69,9 @@ export const RemotionRoot: React.FC = () => {
       />
       {/*
         Spiral Flow — 6.000 s seamless loop at 30 fps, matching the reference
-        clip's runtime exactly. UHD is the master; the HD pair exists so the
-        1080p deliverables can be checked without a downscale step.
+        clip's runtime exactly. One UHD master and one HD sibling per colour
+        grade, generated from the grade list so adding a grade to palette.ts is
+        all it takes to get its compositions.
 
         The UHD pair runs fewer MSAA samples than the HD pair, not more: at 4K
         the scene pass and its blur taps dominate memory, and a software GL
@@ -77,56 +80,38 @@ export const RemotionRoot: React.FC = () => {
         extra samples at 1080p would, and the delivery downscale averages four
         rendered pixels into every output one on top of that.
       */}
-      <Composition
-        id="SpiralFlow-4K-Violet"
-        component={SpiralFlow}
-        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
-        fps={SPIRAL_FPS}
-        width={UHD_WIDTH}
-        height={UHD_HEIGHT}
-        schema={spiralFlowSchema}
-        defaultProps={{
-          ...spiralFlowDefaults,
-          grade: "violet",
-          meshDetail: 1.15,
-          samples: 2,
-        }}
-      />
-      <Composition
-        id="SpiralFlow-4K-Blue"
-        component={SpiralFlow}
-        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
-        fps={SPIRAL_FPS}
-        width={UHD_WIDTH}
-        height={UHD_HEIGHT}
-        schema={spiralFlowSchema}
-        defaultProps={{
-          ...spiralFlowDefaults,
-          grade: "blue",
-          meshDetail: 1.15,
-          samples: 2,
-        }}
-      />
-      <Composition
-        id="SpiralFlow-1080-Violet"
-        component={SpiralFlow}
-        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
-        fps={SPIRAL_FPS}
-        width={HD_WIDTH}
-        height={HD_HEIGHT}
-        schema={spiralFlowSchema}
-        defaultProps={{ ...spiralFlowDefaults, grade: "violet" }}
-      />
-      <Composition
-        id="SpiralFlow-1080-Blue"
-        component={SpiralFlow}
-        durationInFrames={SPIRAL_DURATION_IN_FRAMES}
-        fps={SPIRAL_FPS}
-        width={HD_WIDTH}
-        height={HD_HEIGHT}
-        schema={spiralFlowSchema}
-        defaultProps={{ ...spiralFlowDefaults, grade: "blue" }}
-      />
+      {GRADE_NAMES.map((grade) => {
+        const name = grade[0].toUpperCase() + grade.slice(1);
+        return (
+          <React.Fragment key={grade}>
+            <Composition
+              id={`SpiralFlow-4K-${name}`}
+              component={SpiralFlow}
+              durationInFrames={SPIRAL_DURATION_IN_FRAMES}
+              fps={SPIRAL_FPS}
+              width={UHD_WIDTH}
+              height={UHD_HEIGHT}
+              schema={spiralFlowSchema}
+              defaultProps={{
+                ...spiralFlowDefaults,
+                grade,
+                meshDetail: 1.15,
+                samples: 2,
+              }}
+            />
+            <Composition
+              id={`SpiralFlow-1080-${name}`}
+              component={SpiralFlow}
+              durationInFrames={SPIRAL_DURATION_IN_FRAMES}
+              fps={SPIRAL_FPS}
+              width={HD_WIDTH}
+              height={HD_HEIGHT}
+              schema={spiralFlowSchema}
+              defaultProps={{ ...spiralFlowDefaults, grade }}
+            />
+          </React.Fragment>
+        );
+      })}
     </>
   );
 };

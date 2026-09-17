@@ -9,8 +9,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 CHUNK="${1:-30}"
+# Keep in step with GRADES in src/spiral-flow/palette.ts.
+VARIANTS=(Violet Blue Emerald Ember)
 
-for VARIANT in Violet Blue; do
+for VARIANT in "${VARIANTS[@]}"; do
   echo "=========== SpiralFlow-4K-${VARIANT} ==========="
   ./render-chunked.sh "SpiralFlow-4K-${VARIANT}" \
     "out/frames/$(echo "$VARIANT" | tr '[:upper:]' '[:lower:]')" "$CHUNK"

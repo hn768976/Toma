@@ -9,10 +9,11 @@ import {
 } from "remotion";
 import { z } from "zod";
 import { createSpiralScene, type SceneHandle } from "./scene";
+import { GRADE_NAMES } from "./palette";
 
 export const spiralFlowSchema = z.object({
-  /** Colour grade. `violet` matches the reference plate, `blue` is the sibling. */
-  grade: z.enum(["violet", "blue"]),
+  /** Colour grade. `violet` matches the reference plate; see `palette.ts`. */
+  grade: z.enum(GRADE_NAMES),
   /**
    * Polar grid density multiplier. 1 is tuned for 1080p; UHD compositions push
    * this up so the creases between tubes stay crisp at 4x the pixel count.
