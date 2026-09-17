@@ -1,9 +1,9 @@
 # Flight grid — airliner over a wireframe globe
 
 Two 16-second 3D motion backgrounds: a white airliner silhouette flying over
-a dark lat/long wireframe globe, with great-circle route arcs, defocus, lens
-falloff and CRT scanlines. Built with three.js inside Remotion, authored at
-4K.
+a dark lat/long wireframe globe, with great-circle route arcs, a blinking
+red target-lock bracket, defocus, lens falloff and CRT scanlines. Built with
+three.js inside Remotion, authored at 4K.
 
 | Composition          | Size      | fps | Length          |
 | -------------------- | --------- | --- | --------------- |
@@ -50,6 +50,8 @@ sphere.ts         geographic <-> cartesian, local frames, great-circle slerp
 lines.ts          builds the graticule and route arcs as line-segment batches
 DepthLines.tsx    instanced screen-space line renderer, defocus in-shader
 Aircraft.tsx      loads the glTF airliner, draws it as an unlit silhouette
+reticle.ts        target-bracket geometry and its blink envelope
+TargetReticle.tsx the bracket, drawn as a glow pass plus a crisp core
 rig.ts            camera + aircraft motion, all pure functions of time
 scene-config.ts   per-version keyframes
 FlightGridScene.tsx  layer composition, companion traffic, vignette, scanlines
@@ -88,6 +90,19 @@ to a line. Aircraft that sit off the focal plane are rendered on their own
 transparent canvas and blurred in CSS by the same optics
 (`dof.ts` is shared), which is exact for one small object at one depth.
 
+**The target bracket is a square in the aircraft's horizontal plane**, not
+a screen-space box. In the references it turns with each jet's heading and
+is foreshortened by the camera's downward angle, which only happens if it
+lies flat in the world. It is drawn unfogged — it is a readout over the
+scene, not something in its atmosphere, and at the hero's ~200 unit range
+the graticule's fog would otherwise halve it and stop the red reaching the
+saturated rgb(255, 0, 0) the reference holds.
+
+It is also two passes: a wide dim ribbon under a narrow bright one. Sampled
+at 768px wide, the reference's core is about 1px but the red spreads over
+4-6px — part authored glow, part chroma bleed from a 600 kb/s proxy.
+Reproducing that spread as one fat line would just look blurry at 1080p.
+
 **Scanlines are a soft ramp, not hard bands.** Hard-edged bands at a 4px
 pitch beat against the pixel grid as the pattern drifts sub-pixel, and read
 as harsh banding on the one large bright area in frame — the aircraft. The
@@ -99,6 +114,18 @@ apparent line density rather than twice as many.
 sphere shows up as a hard horizon; too large and the grid flattens into a
 plane. The graticule is specified in arc length, so `GLOBE_RADIUS` can be
 retuned without also resizing every cell.
+
+## The blink
+
+The bracket is not continuous: it blinks on a 1.000s cycle, which is why it
+is absent from any frame sampled on a whole second — easy to miss entirely
+when checking a reference at 2s intervals.
+
+Measured off reference A at 60fps, the envelope snaps on at full
+brightness, holds briefly, decays roughly linearly to about a third of
+peak, then cuts out. It is a hard cut rather than a fade to zero: the
+sampled peak red channel drops 93 -> 36 -> 0 across two frames. Lit for
+0.71s of every second; all aircraft blink in sync.
 
 ## Determinism
 

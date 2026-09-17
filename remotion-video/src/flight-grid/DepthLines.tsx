@@ -130,6 +130,10 @@ export type DepthLinesProps = {
   color?: string;
   near: number;
   renderOrder?: number;
+  /** Optional model transform, for batches authored in a local space. */
+  position?: [number, number, number];
+  quaternion?: [number, number, number, number];
+  scale?: number;
 };
 
 export const DepthLines: React.FC<DepthLinesProps> = ({
@@ -144,6 +148,9 @@ export const DepthLines: React.FC<DepthLinesProps> = ({
   color = "#ffffff",
   near,
   renderOrder = 0,
+  position,
+  quaternion,
+  scale,
 }) => {
   const geometry = useMemo(() => {
     const geo = new THREE.InstancedBufferGeometry();
@@ -210,6 +217,9 @@ export const DepthLines: React.FC<DepthLinesProps> = ({
       material={material}
       renderOrder={renderOrder}
       frustumCulled={false}
+      position={position}
+      quaternion={quaternion}
+      scale={scale}
     />
   );
 };

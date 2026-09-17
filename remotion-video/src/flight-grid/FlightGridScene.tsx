@@ -9,6 +9,8 @@ import { DepthLines } from "./DepthLines";
 import { buildGraticule, buildRoutes } from "./lines";
 import { circleOfConfusion } from "./dof";
 import { computeRig, sampleKeyframes, type RigState } from "./rig";
+import { TargetReticle } from "./TargetReticle";
+import { reticleBlink } from "./reticle";
 import type { CompanionConfig, SceneConfig } from "./scene-config";
 import { DEG } from "./sphere";
 import {
@@ -90,7 +92,11 @@ const companionMatrix = (
 type LayerProps = {
   config: SceneConfig;
   rig: RigState;
+  /** Normalised shot time, 0..1 — drives the rig keyframes. */
   t: number;
+  /** Absolute seconds — drives the reticle blink, which is on its own
+   *  wall-clock cycle rather than a fraction of the shot. */
+  timeSec: number;
   width: number;
   height: number;
   resolutionScale: number;
@@ -102,6 +108,7 @@ const WorldLayer: React.FC<LayerProps> = ({
   config,
   rig,
   t,
+  timeSec,
   width,
   height,
   resolutionScale,
@@ -154,6 +161,14 @@ const WorldLayer: React.FC<LayerProps> = ({
         matrix={rig.planeMatrix}
         scale={PLANE_WINGSPAN * config.heroScale}
       />
+      <TargetReticle
+        matrix={rig.planeMatrix}
+        wingspan={PLANE_WINGSPAN * config.heroScale}
+        opacity={reticleBlink(timeSec)}
+        resolution={lineCommon.resolution}
+        resolutionScale={resolutionScale}
+        near={config.rig.near}
+      />
     </>
   );
 };
@@ -166,9 +181,14 @@ const CompanionLayer: React.FC<LayerProps & { companion: CompanionConfig }> = ({
   config,
   rig,
   t,
+  timeSec,
+  width,
+  height,
+  resolutionScale,
   companion,
 }) => {
   const matrix = companionMatrix(rig, companion, t, config.rig.fovDeg);
+  const fade = sampleKeyframes(companion.opacity, t);
 
   return (
     <>
@@ -188,7 +208,15 @@ const CompanionLayer: React.FC<LayerProps & { companion: CompanionConfig }> = ({
       <Aircraft
         matrix={matrix}
         scale={PLANE_WINGSPAN * companion.scale}
-        opacity={sampleKeyframes(companion.opacity, t)}
+        opacity={fade}
+      />
+      <TargetReticle
+        matrix={matrix}
+        wingspan={PLANE_WINGSPAN * companion.scale}
+        opacity={reticleBlink(timeSec) * fade}
+        resolution={[width, height]}
+        resolutionScale={resolutionScale}
+        near={config.rig.near}
       />
     </>
   );
@@ -241,6 +269,7 @@ export const FlightGridScene: React.FC<FlightGridSceneProps> = ({
     config,
     rig,
     t,
+    timeSec,
     width,
     height,
     resolutionScale,

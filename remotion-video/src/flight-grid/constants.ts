@@ -69,6 +69,38 @@ export const MAX_COC_PX = 28;
 // wingspan of 1 on load, so this is the only size dial.
 export const PLANE_WINGSPAN = 30;
 
+// Red target-lock bracket around each aircraft. Size is a multiple of the
+// wingspan; BRACKET is how much of each side is drawn in from each corner,
+// so 0.32 leaves the middle 36% of every edge open. The reference's red is
+// fully saturated — sampled peak pixel is rgb(255, 0, 2).
+export const RETICLE_SIZE = 1.35;
+export const RETICLE_BRACKET = 0.32;
+/** How far below the aircraft the bracket sits, as a fraction of the
+ *  wingspan. In the reference it is not quite centred on the jet — it
+ *  hangs slightly low, reading as a lock on the track beneath it. */
+export const RETICLE_DROP = 0.12;
+// The reference's bracket reads as a thin bright core inside a wide soft
+// halo: sampled at 768px wide, the core is about 1px but the red spreads
+// over 4-6px. Some of that is authored glow and some is chroma bleed from
+// a 600 kb/s proxy, so it is rebuilt as a crisp core plus an additive glow
+// pass rather than one fat blurry line.
+export const RETICLE_LINE_WIDTH_PX = 3.4;
+export const RETICLE_GLOW_WIDTH_PX = 12;
+export const RETICLE_GLOW_OPACITY = 0.45;
+export const RETICLE_COLOR = "#ff0000";
+export const RETICLE_OPACITY = 1;
+
+// The reticle blinks, which is why it is missing from any frame sampled on
+// a whole second. Measured off reference A at 60fps: it snaps on at full
+// brightness every 1.000s, holds, decays roughly linearly to about a third,
+// then cuts out — lit for 0.71s of every second. Phases are fractions of
+// the period; TAIL is the alpha it has decayed to when it cuts.
+export const RETICLE_BLINK_PERIOD_SEC = 1;
+export const RETICLE_BLINK_ON = 0.12;
+export const RETICLE_BLINK_OFF = 0.83;
+export const RETICLE_BLINK_HOLD = 0.18;
+export const RETICLE_BLINK_TAIL = 0.36;
+
 // CRT scanlines: a soft dark line every PITCH px, drifting down the frame.
 // The pitch is at 1x and scales with the composition, so 4K shows the same
 // apparent line density rather than twice as many.
