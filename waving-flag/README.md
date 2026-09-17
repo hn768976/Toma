@@ -107,6 +107,13 @@ A still:
 npx remotion still src/index.ts Japan-FlagPole out/Japan_FlagPole.png --frame=90 --scale=0.5
 ```
 
+**With motion blur** — this is how the three delivered clips were made; see
+[Motion blur](#motion-blur):
+
+```bash
+node scripts/render-motion-blur.mjs Japan-FlagPole out/Japan_FlagPole.mp4 --scale=0.5
+```
+
 Composition ids are `<Slug>-FlagPole` and `<Slug>-FlagCloseup` (Remotion does not
 allow `_` in a composition id; the delivered *files* use `_`). Run
 `npx remotion compositions src/index.ts` for the full list.
@@ -158,9 +165,19 @@ full-frame procedural sky becomes the dominant cost instead.
 (`license: PD` — "The source files were taken from Wikipedia and are not under
 copyright protection since flags are effectively in public domain"). They are
 rasterised to PNG **once, at build time**, by `scripts/build-textures.mjs`, never
-per frame. Each texture is 4096 px on its long edge, which is slightly above 1:1
-pixel density when the flag fills a 4K frame, so emblems stay crisp through the
-folds in the close-up.
+per frame.
+
+**Two resolution tiers.** Each flag is rasterised twice:
+
+| Tier | Long edge | File | Used by |
+| --- | --- | --- | --- |
+| `4k` | 4096 px | `public/flags/<code>.png` | V1, the pole shot |
+| `8k` | **8192 px** | `public/flags/<code>@8k.png` | V2, the close-up |
+
+In V2 the cloth fills a 4K frame edge to edge, so the emblem is sampled at
+roughly 1:1 and 4096 px is not enough for it to stay crisp through the folds.
+8192 px is also the `MAX_TEXTURE_SIZE` this renderer reports, so it is the
+ceiling rather than a chosen midpoint. Both tiers together are about 13 MB.
 
 **Proportion verification.** `scripts/build-textures.mjs` holds the officially
 specified ratio for all 30 countries in `src/data/countries.json` and compares it
@@ -208,15 +225,43 @@ accumulation anywhere in the project.
 Displacement along the cloth's local +Z comes from:
 
 1. a **primary sine** travelling from the hoist outward,
-2. a **secondary sine** at a different frequency, travelling at 22° (V1) / 25° (V2),
-3. a **low-frequency gradient noise** term for irregularity, and
-4. a **drape** term — soft vertical folds gathered near the pole (`u·e^(-u/σ)`,
-   which is zero at the attachment and peaks just outside it), plus a gentle
-   gravitational sag toward the free edge.
+2. a **secondary sine** at a different frequency, travelling at 30° (V1) / 28° (V2),
+3. a **higher-frequency, low-amplitude ripple** that puts small creases on top of
+   the broad folds,
+4. a **low-frequency gradient noise** term for irregularity,
+5. a **flutter** term weighted toward the free edge, faster than the body, and
+6. a **curl** over the last 8% of the width, rolling forward and back and varying
+   along its length.
 
-Every term is multiplied by the envelope `E(u) = u^p`, which is **exactly zero at
-the attachment and largest at the free edge**. This is the detail that decides
+The sum then passes through a **sharpening curve**, `n·(1.5 − 0.5n²)`, which
+pushes values toward their extremes so crests form ridges rather than rounded
+sine humps. It is monotonic on [−1,1], so the surface stays single valued, and
+it is differentiated through, so the normals stay closed form.
+
+On top of that:
+
+- a **drape** term — soft vertical folds gathered just outside the attachment
+  (`u·e^(-u/σ)`, zero at the attachment and peaking a little way out);
+- a **vertical edge** term that arcs the top edge and sags the bottom edge out
+  of phase with it, so the two are never straight and parallel;
+- a **pole sag**, a downward droop over the first 15% of the width and heaviest
+  at the bottom corner, so the cloth hangs from its attachment rather than
+  floating out horizontally;
+- a gentle **gravitational sag** growing toward the free edge; and
+- a **gust envelope** at one and two cycles per loop, modulating the whole wave
+  so the flag surges and settles instead of waving at a constant rate.
+
+Every wave term is multiplied by the envelope `E(u) = u^p` with **p = 2**, so it
+is **exactly zero at the attachment and grows quadratically to the free edge** —
+the outer third does almost all of the moving. This is the detail that decides
 whether the shot reads as a flag or as a floating sheet.
+
+**Fold wavelength is normalised by aspect ratio.** Amplitudes are quoted in
+flag-heights and spatial frequencies for a 3:2 flag, then scaled by
+`aspect / 1.5`. Without this, a square Swiss flag gets proportionally finer folds
+*and* steeper flanks than a 1:2 Canadian one, and a flank steep enough to turn
+edge-on compresses the texture into an unreadable sliver. With it, a fold is the
+same size in world units for all 30 countries.
 
 **Looping.** Each sine completes a whole number of cycles over the 300 frames
 (`n1`, `n2` and `drapeCycles` in `src/flag/constants.ts` are integers — keep them
@@ -234,9 +279,16 @@ displacement texture, which is what would otherwise stair-step and show as bande
 shading across the folds.
 
 **Self-shading.** The troughs of a corrugation are occluded by the crests either
-side of them, so `wf_wave()` also returns a normalised trough depth, which
-attenuates indirect and direct light in the `aomap_fragment` injection. Without
-it the cloth reads as a printed image on a curved surface.
+side of them, so `wf_wave()` also returns a normalised trough depth — taken
+*after* sharpening, so the deepened creases shade as strongly as they look —
+which attenuates indirect and direct light in the `aomap_fragment` injection.
+Without it the cloth reads as a printed image on a curved surface.
+
+The gain on that term is deliberately low (1.2, at 0.7 strength). The value it
+acts on is already normalised to [−1,1], so a high gain saturates on ordinary
+folds and drives every trough to near black — which, combined with the weave
+correctly fading out on foreshortened surfaces, leaves those regions with no
+detail at all and reads as a smear rather than as cloth.
 
 **Material.** `MeshPhysicalMaterial` at roughness 0.86 with a sheen lobe
 (`sheen: 0.45`, `sheenRoughness: 0.9`) that brightens at grazing angles, and no
@@ -245,6 +297,34 @@ the normal in the fragment shader; it is faded out by `fwidth` wherever it would
 alias, so it is barely visible at 1080p and present at 4K. Tone mapping is
 **off** (`NoToneMapping`): an ACES-style curve would shift every flag's colours,
 and the exact shade is part of the specification.
+
+---
+
+## Motion blur
+
+Remotion has **no built-in shutter sampling** — there is no frame-rate or
+shutter-angle option that accumulates sub-frames for you, and the 2D
+`@remotion/motion-blur` helpers do not apply to a WebGL canvas. So the blur is
+produced the straightforward way, by `scripts/render-motion-blur.mjs`:
+
+1. the composition is rendered once per sub-frame sample, each pass offset by a
+   fraction of a frame through the `shutterOffset` input prop;
+2. the passes are averaged frame by frame;
+3. the averaged sequence is encoded.
+
+Defaults are a **180° shutter** (samples spanning half a frame interval, centred
+on the frame's own time) and **3 samples**. Because `shutterOffset` only shifts
+the sampled time, and every wave term is still a pure function of it, the passes
+stay deterministic and can be rendered out of order like any other.
+
+```bash
+node scripts/render-motion-blur.mjs Japan-FlagPole out/Japan_FlagPole.mp4 \
+  --scale=0.5 --samples=3 --shutter=0.5 --concurrency=4
+```
+
+It costs one full render per sample, so a 3-sample pass is 3x the frame count.
+Keep it modest: the free edge is where the blur reads, and the emblem has to
+stay legible.
 
 ---
 
@@ -267,8 +347,13 @@ src/
   flag/CameraRig.tsx      explicit camera placement
   Root.tsx                generates all 60 compositions from the data set
 scripts/
-  build-textures.mjs      SVG -> PNG at build time, with proportion verification
-  verify-compositions.mjs checks all 60 configurations
+  build-textures.mjs      SVG -> PNG at build time (4k and 8k tiers), with
+                          proportion verification
+  verify-compositions.mjs checks all 60 configurations, both tiers
+  contact-sheet.mjs       renders a still from every composition and lays them
+                          out as reviewable sheets
+  render-motion-blur.mjs  sub-frame rendering, averaging and encode
+  package.mjs             builds waving-flag-project.zip
 public/flags/*.png        generated textures (not checked in by hand)
 public/grain.png          generated grain tile
 ```
