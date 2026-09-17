@@ -17,7 +17,7 @@ import {execFileSync} from 'node:child_process';
 import {chromium} from 'playwright-core';
 import {mkdirSync, rmSync, existsSync, readFileSync, writeFileSync, readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
-import {dirname, join} from 'node:path';
+import {dirname, join, resolve} from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const [id, out] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
@@ -77,6 +77,9 @@ for (let i = 0; i < samples; i++) {
       '--sequence', '--image-format=png',
       `--scale=${scale}`, `--concurrency=${concurrency}`,
       ...(frameRange ? [`--frames=${frameRange}`] : []),
+      // The 8k close-up textures take a while to decode and upload; the 30s
+      // default is not enough for the component's initial render.
+      `--timeout=${arg('timeout', '180000')}`,
       '--props', JSON.stringify({...baseProps, shutterOffset: offsets[i]}),
     ],
     {cwd: root, stdio: ['ignore', 'ignore', 'inherit']},
@@ -135,7 +138,9 @@ for (const n of frames) {
 await browser.close();
 
 // --- 3. encode ---------------------------------------------------------------
-if (existsSync(join(root, out))) rmSync(join(root, out));
+// resolve, not join: `out` may be absolute, and join would concatenate it.
+const outPath = resolve(root, out);
+if (existsSync(outPath)) rmSync(outPath);
 console.log('encoding...');
 execFileSync(
   'npx',
@@ -149,10 +154,10 @@ execFileSync(
     '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
     '-movflags', '+faststart',
     '-an',                       // no audio track, ever
-    join(root, out),
+    outPath,
   ],
   {cwd: root, stdio: 'inherit'},
 );
 
 rmSync(work, {recursive: true, force: true});
-console.log(`wrote ${out}`);
+console.log(`wrote ${outPath}`);
