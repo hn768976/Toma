@@ -190,7 +190,11 @@ void wf_wave(vec2 uv, out vec3 pos, out vec3 dPdu, out vec3 dPdv, out float cavi
 
   // Troughs are the parts occluded by the crests either side of them. Taken
   // after sharpening, so the deepened creases shade as strongly as they look.
-  float trough = clamp(-shaped * 2.1, 0.0, 1.0);
+  // Gain kept low deliberately: 'shaped' is already normalised to [-1,1], so a
+  // high gain saturates on ordinary folds and drives every trough to near
+  // black. This darkens troughs noticeably while leaving the deepest creases
+  // room to go darker still.
+  float trough = clamp(-shaped * 1.2, 0.0, 1.0);
   cavity = trough * trough * (3.0 - 2.0 * trough);
 }
 `;

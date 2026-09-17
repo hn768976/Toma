@@ -74,7 +74,7 @@ export const FlagMesh: React.FC<Props> = ({
       uPoleSag: {value: params.poleSag}, uPoleSagWidth: {value: params.poleSagWidth},
       uSag: {value: params.sag},
       // Fold self-shading. This is what separates fabric from a decal.
-      uAoStrength: {value: 0.95},
+      uAoStrength: {value: 0.7},
       // Weave: ~620 threads across the flag. Low enough to resolve at 4K
       // without aliasing, high enough to read as cloth rather than corduroy.
       uWeaveFreq: {value: new Vector2(620 * aspect, 620)},
@@ -174,9 +174,9 @@ const float WF_TAU2 = 6.283185307179586;
           '#include <aomap_fragment>',
           `float wfAo = 1.0 - uAoStrength * vCavity;
 reflectedLight.indirectDiffuse *= wfAo;
-reflectedLight.directDiffuse *= mix(1.0, wfAo, 0.72);
+reflectedLight.directDiffuse *= mix(1.0, wfAo, 0.5);
 reflectedLight.indirectSpecular *= wfAo;
-reflectedLight.directSpecular *= mix(1.0, wfAo, 0.7);`,
+reflectedLight.directSpecular *= mix(1.0, wfAo, 0.6);`,
         );
     };
 

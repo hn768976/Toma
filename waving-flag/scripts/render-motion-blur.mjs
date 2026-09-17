@@ -37,8 +37,28 @@ const samples = Number(arg('samples', '3'));
 const fps = Number(arg('fps', '30'));
 const shutter = Number(arg('shutter', '0.5'));
 const concurrency = arg('concurrency', '4');
+const frameRange = arg('frames', null); // e.g. 100-107, for smoke tests
 
-const work = join(root, '.motionblur', id);
+// --props replaces the input props for the whole registry, so a partial object
+// would leave every composition without its countryCode. Rebuild the full set
+// from the same data the compositions are generated from.
+const data = JSON.parse(readFileSync(join(root, 'src/data/countries.json'), 'utf8'));
+const match = id.match(/^(.+)-(FlagPole|FlagCloseup)$/);
+if (!match) {
+  console.error(`composition id must be <Slug>-FlagPole or <Slug>-FlagCloseup, got ${id}`);
+  process.exit(1);
+}
+const country = data.countries.find((c) => c.slug === match[1]);
+if (!country) {
+  console.error(`no country with slug ${match[1]} in src/data/countries.json`);
+  process.exit(1);
+}
+const baseProps = {
+  countryCode: country.code,
+  framing: match[2] === 'FlagPole' ? 'pole' : 'closeup',
+};
+
+const work = join(root, 'motionblur-tmp', id);
 rmSync(work, {recursive: true, force: true});
 mkdirSync(work, {recursive: true});
 
@@ -56,7 +76,8 @@ for (let i = 0; i < samples; i++) {
       'remotion', 'render', 'src/index.ts', id, dir,
       '--sequence', '--image-format=png',
       `--scale=${scale}`, `--concurrency=${concurrency}`,
-      '--props', JSON.stringify({shutterOffset: offsets[i]}),
+      ...(frameRange ? [`--frames=${frameRange}`] : []),
+      '--props', JSON.stringify({...baseProps, shutterOffset: offsets[i]}),
     ],
     {cwd: root, stdio: ['ignore', 'ignore', 'inherit']},
   );
