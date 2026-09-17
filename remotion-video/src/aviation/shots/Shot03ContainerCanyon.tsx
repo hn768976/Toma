@@ -22,7 +22,9 @@ import { drift, easeInOutSine, range, smootherstep } from "../three/easing";
  */
 
 const SKY = defaultSky({
-  sunDirection: new Vector3(0.12, 0.78, -0.61).normalize(),
+  // High and slightly towards camera, so both walls of the aisle catch light.
+  // Put the sun behind the stacks and the canyon reads as two black slabs.
+  sunDirection: new Vector3(0.3, 0.8, 0.52).normalize(),
   zenithColor: new Vector3(0.14, 0.26, 0.49),
   horizonColor: new Vector3(0.55, 0.64, 0.77),
   hazeColor: new Vector3(0.74, 0.78, 0.83),
@@ -58,9 +60,11 @@ const createFactory =
       world: {
         radius: 18000,
         sunIntensity: 3.0,
-        fillIntensity: 0.55,
-        groundColor: new Vector3(0.19, 0.18, 0.16),
-        environmentIntensity: 0.7,
+        // A real aisle between two stacks is lit almost entirely by the strip
+        // of sky above it, so the fill carries this shot rather than the key.
+        fillIntensity: 1.25,
+        groundColor: new Vector3(0.22, 0.21, 0.19),
+        environmentIntensity: 1.05,
       },
     });
 

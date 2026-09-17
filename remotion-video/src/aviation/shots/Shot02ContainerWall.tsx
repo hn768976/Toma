@@ -26,7 +26,10 @@ import { drift, easeInOutSine, range, smootherstep } from "../three/easing";
  */
 
 const SKY = defaultSky({
-  sunDirection: new Vector3(-0.36, 0.58, -0.73).normalize(),
+  // The sun has to be on the camera's side of the wall. Put it beyond the
+  // stacks and the only faces in shot are the shaded ones, which renders the
+  // whole wall as a near-black silhouette against a bright sky.
+  sunDirection: new Vector3(-0.42, 0.6, 0.68).normalize(),
   zenithColor: new Vector3(0.17, 0.28, 0.5),
   horizonColor: new Vector3(0.58, 0.66, 0.78),
   hazeColor: new Vector3(0.76, 0.79, 0.84),
@@ -81,9 +84,9 @@ const createFactory =
       world: {
         radius: 26000,
         sunIntensity: 3.2,
-        fillIntensity: 0.6,
-        groundColor: new Vector3(0.2, 0.19, 0.17),
-        environmentIntensity: 0.8,
+        fillIntensity: 1.05,
+        groundColor: new Vector3(0.22, 0.21, 0.19),
+        environmentIntensity: 0.95,
       },
     });
 
