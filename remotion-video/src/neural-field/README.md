@@ -57,6 +57,13 @@ own. Change a look parameter once and both resolutions and both colourways follo
 
 ## How the look is built
 
+The gyri carry a thin bright trace along each crest. An earlier version
+scattered beads of light along those traces with a cell-noise mask; that mask is
+constant across each of its cells, and wherever the field flattens the band term
+stops being a thin line and becomes a broad plateau, so the two together stamped
+flat rectangles ~0.6 world units across into the frame. Both backends showed it,
+because they share a software rasteriser here. It is gone with the dots.
+
 **The gyri** are a synthetic-fingerprint construction: a constant slope across x,
 bent by a domain-warped fractal noise field, sliced into contour bands. Contouring
 the noise directly spaces bands by its gradient, so flat regions open into dead

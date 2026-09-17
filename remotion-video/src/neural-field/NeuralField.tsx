@@ -76,8 +76,16 @@ export const NeuralField: React.FC<NeuralFieldProps> = ({
 
     installWebGPUCompat();
 
+    // three gets its own canvas, kept out of the DOM. A canvas can only ever
+    // hand out one kind of context, and the visible one is needed for the 2d
+    // blit in presenter.ts — on the WebGL2 fallback path three would otherwise
+    // claim it for `webgl2` first and the blit would have nowhere to go.
+    const glCanvas = document.createElement("canvas");
+    glCanvas.width = width;
+    glCanvas.height = height;
+
     const renderer = new THREE.WebGPURenderer({
-      canvas,
+      canvas: glCanvas,
       antialias: true,
       alpha: false,
       forceWebGL,

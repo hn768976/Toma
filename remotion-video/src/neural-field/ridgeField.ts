@@ -40,7 +40,6 @@ import {
   oneMinus,
   mx_fractal_noise_float,
   mx_fractal_noise_vec2,
-  mx_cell_noise_float,
 } from "three/tsl";
 
 import { FIELD_BAND_COUNT, FIELD_RELIEF } from "./constants";
@@ -210,23 +209,16 @@ export const createRidgeField = ({
 
     // The thin bright trace running along each crest, on most but not all of
     // the gyri so it reads as circuitry rather than as an outline.
+    //
+    // This used to be multiplied by a cell-noise mask to scatter beads of
+    // light along the traces. That mask is constant across each of its cells,
+    // and where the field flattens out `band` barely varies, so `core` stopped
+    // being a thin line and became a broad plateau — the two together stamped
+    // flat rectangles about 0.6 world units across into the frame. The dots
+    // are gone by request now, and the mask with them.
     const core = pow(oneMinus(band), 8.0);
     const traceMask = smoothstep(-0.3, 0.35, warp.x);
     const trace = core.mul(traceMask).mul(sharpness).toVar();
-
-    // Beads of light sitting on the traces.
-    const beads = smoothstep(
-      0.55,
-      0.95,
-      mx_cell_noise_float(
-        vec3(
-          positionLocal.x.mul(uMirror).mul(1.6),
-          positionLocal.y.mul(1.6),
-          cos(uPhase).mul(0.4),
-        ),
-      ),
-    );
-    const sparkle = trace.mul(beads).mul(1.9);
 
     // Colour ramp across the field's low frequencies: blue through teal, with
     // the green crest reserved for the very top of the range.
@@ -247,7 +239,6 @@ export const createRidgeField = ({
       .mul(falloff)
       .mul(1.05)
       .add(uFilament.mul(trace).mul(0.55))
-      .add(uFilament.mul(sparkle))
       // A little haze so the dissolving edge doesn't just vanish to black.
       .add(uHaze.mul(body).mul(mix(float(0.55), float(1.2), openness)));
 
