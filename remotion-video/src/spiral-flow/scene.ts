@@ -79,25 +79,25 @@ const DOF = { focus: 5.0, range: 4.5 };
 const CORE_Y = 8.5;
 
 /**
- * Camera rig.
+ * Camera rig. Fixed for the whole shot — set once, never animated.
  *
- * The camera orbits the core at a fixed elevation above the saucer's plane and
- * always aims straight at the core. Framing is then set by a lens shift rather
- * than by aiming off-centre: `core` says where the convergence point should sit
- * in frame as a fraction of width/height, and `setViewOffset` slides the
- * principal point to put it there. Aiming off-centre would have skewed the
- * perspective of the foreground tubes; a lens shift does not.
+ * The camera sits at a fixed elevation and distance and aims straight at the
+ * sphere's centre. Framing is then set by a lens shift rather than by aiming
+ * off-centre: `core` says where the convergence point should sit in frame as a
+ * fraction of width/height, and `setViewOffset` slides the principal point to
+ * put it there. Aiming off-centre would have skewed the perspective of the
+ * foreground tubes; a lens shift does not.
  */
 const RIG = {
-  /** Degrees above the plane of the saucer. */
+  /** Degrees above the sphere's equator. */
   elevation: 40,
   azimuth: 0,
   distance: 10.5,
   fov: 34,
   /**
-   * Camera roll, in degrees. The rim of a tilted disc projects to an ellipse;
-   * rolling the camera turns that ellipse in frame so its edge runs diagonally
-   * out of the top-left the way the reference does, leaving backdrop above it.
+   * Camera roll, in degrees. Turns the sphere's limb in frame so it runs
+   * diagonally out of the top-left the way the reference does, leaving the
+   * backdrop wedge above it.
    */
   roll: -8,
   /** Where the tubes converge, in frame. Matches the reference plate. */
@@ -109,11 +109,11 @@ const DEG = Math.PI / 180;
 /**
  * Builds the whole shot.
  *
- * Everything that moves is a pure function of the normalised loop position
- * `u = frame / durationInFrames`, and every motion is either a full-turn
- * sinusoid in `u` or a rigid spin of exactly one rib period. Both return to
- * their starting value at `u = 1`, which is what makes the render loop
- * seamlessly — the reference clip loops the same way.
+ * Exactly one thing animates: the sphere spins about its pole by one rib period
+ * across the loop. The camera, the lights and the grade are all fixed, so the
+ * globe holds its size and its place in frame throughout. The height field is
+ * rib-periodic, so that single rotation returns the mesh to its starting
+ * appearance at `u = 1` and the render loops seamlessly.
  */
 const buildScene = async (
   options: SceneOptions,
@@ -275,46 +275,43 @@ const buildScene = async (
   const postProcessing = new PostProcessing(renderer);
   postProcessing.outputNode = focused.add(glow).mul(vignette).add(grain);
 
-  const target = new Vector3();
+  // The camera is placed once and never moves again. An earlier cut drifted it
+  // through a slow orbit across the loop, but the radial component of that
+  // drift read as the globe swelling and shrinking rather than as camera move,
+  // so the rig is now locked and the spin carries the whole animation.
+  const elevation = RIG.elevation * DEG;
+  const azimuth = RIG.azimuth * DEG;
+  camera.position.set(
+    RIG.distance * Math.cos(elevation) * Math.sin(azimuth),
+    RIG.distance * Math.sin(elevation),
+    RIG.distance * Math.cos(elevation) * Math.cos(azimuth),
+  );
+  camera.lookAt(new Vector3(0, 0, 0));
+  camera.rotateZ(RIG.roll * DEG);
+
+  // Lens shift: move the principal point so the core lands where the reference
+  // puts it instead of dead centre.
+  camera.setViewOffset(
+    options.width,
+    options.height,
+    (0.5 - RIG.core.x) * options.width,
+    (0.5 - RIG.core.y) * options.height,
+    options.width,
+    options.height,
+  );
+  camera.updateProjectionMatrix();
 
   const renderFrame = async (frame: number) => {
     const wrapped = ((frame % options.durationInFrames) + options.durationInFrames) %
       options.durationInFrames;
     const u = wrapped / options.durationInFrames;
-    const turn = u * TAU;
 
     // One rib period of rigid spin across the loop. The height field is
     // rib-periodic, so the frame after the last is identical to the first.
+    //
+    // This is the only thing that moves. The camera and the lights are fixed,
+    // so the globe holds its size and its place in frame and simply turns.
     ribbon.rotation.y = -u * (TAU / surface.ribs);
-
-    // Slow orbital drift, one full cycle across the loop.
-    const azimuth = (RIG.azimuth + 2.4 * Math.sin(turn)) * DEG;
-    const elevation = (RIG.elevation + 1.3 * Math.sin(turn + 1.1)) * DEG;
-    const distance = RIG.distance + 0.35 * Math.cos(turn);
-
-    camera.position.set(
-      distance * Math.cos(elevation) * Math.sin(azimuth),
-      distance * Math.sin(elevation),
-      distance * Math.cos(elevation) * Math.cos(azimuth),
-    );
-    target.set(0, 0, 0);
-    camera.lookAt(target);
-    camera.rotateZ(RIG.roll * DEG);
-
-    // Lens shift: move the principal point so the core lands where the
-    // reference puts it instead of dead centre.
-    camera.setViewOffset(
-      options.width,
-      options.height,
-      (0.5 - RIG.core.x) * options.width,
-      (0.5 - RIG.core.y) * options.height,
-      options.width,
-      options.height,
-    );
-    camera.updateProjectionMatrix();
-
-    core.intensity = 30 * (1 + 0.07 * Math.sin(turn));
-    fill.intensity = 3.3 * (1 + 0.05 * Math.sin(turn + 2.6));
 
     grainSeed.value = (wrapped * 0.6180339887) % 1;
 
