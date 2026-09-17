@@ -10,6 +10,15 @@ import { Config } from "@remotion/cli/config";
 import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
+
+// three.js WebGPU needs Chromium's GPU process. Remotion passes
+// --single-process by default on Linux, under which the WebGPU device is
+// dropped mid-render ("Instance dropped in popErrorScope"), so opt out.
+Config.setChromiumMultiProcessOnLinux(true);
+Config.setChromiumOpenGlRenderer("swangle");
+
+// A 4K frame on a software rasteriser takes a while; don't time out on it.
+Config.setDelayRenderTimeoutInMilliseconds(300000);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
