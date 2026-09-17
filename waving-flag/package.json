@@ -1,0 +1,34 @@
+{
+  "name": "waving-flag",
+  "version": "1.0.0",
+  "description": "Waving flag template — Remotion + three.js, 30 countries x 2 versions",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio",
+    "build:textures": "node scripts/build-textures.mjs",
+    "bundle": "remotion bundle",
+    "lint": "tsc",
+    "verify": "node scripts/verify-compositions.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.186.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "@types/web": "0.0.166",
+    "playwright-core": "^1.56.1",
+    "svg-country-flags": "1.2.10",
+    "typescript": "5.9.3"
+  }
+}
