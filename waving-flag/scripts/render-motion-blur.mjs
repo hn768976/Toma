@@ -42,6 +42,8 @@ const frameRange = arg('frames', null); // e.g. 100-107, for smoke tests
 // encode, so the still is the exact frame from the clip, losslessly.
 const stillFrame = arg('still-frame', null);
 const stillOut = arg('still-out', null);
+// Reuse pass directories already on disk instead of re-rendering them.
+const reuse = flags.includes('--reuse');
 
 // --props replaces the input props for the whole registry, so a partial object
 // would leave every composition without its countryCode. Rebuild the full set
@@ -63,7 +65,7 @@ const baseProps = {
 };
 
 const work = join(root, 'motionblur-tmp', id);
-rmSync(work, {recursive: true, force: true});
+if (!reuse) rmSync(work, {recursive: true, force: true});
 mkdirSync(work, {recursive: true});
 
 // --- 1. render one pass per sub-frame sample --------------------------------
@@ -72,6 +74,10 @@ console.log(`sub-frame offsets: ${offsets.map((o) => o.toFixed(4)).join(', ')}`)
 
 for (let i = 0; i < samples; i++) {
   const dir = join(work, `pass${i}`);
+  if (reuse && existsSync(dir) && readdirSync(dir).some((f) => f.endsWith('.png'))) {
+    console.log(`pass ${i + 1}/${samples}: reusing ${readdirSync(dir).length} frames already on disk`);
+    continue;
+  }
   mkdirSync(dir, {recursive: true});
   console.log(`pass ${i + 1}/${samples} (offset ${offsets[i].toFixed(4)} frames)...`);
   execFileSync(
@@ -91,11 +97,25 @@ for (let i = 0; i < samples; i++) {
 }
 
 // --- 2. average the passes frame by frame -----------------------------------
+// Keep the real filenames. Remotion zero-pads the sequence to the digit width
+// of the largest frame number, so a 300-frame render writes element-000.png,
+// not element-0.png, and a reconstructed name would not exist.
 const frames = readdirSync(join(work, 'pass0'))
   .filter((f) => f.endsWith('.png'))
-  .map((f) => Number(f.match(/(\d+)\.png$/)[1]))
-  .sort((a, b) => a - b);
+  .map((f) => ({file: f, n: Number(f.match(/(\d+)\.png$/)[1])}))
+  .sort((a, b) => a.n - b.n);
 console.log(`averaging ${frames.length} frames across ${samples} passes...`);
+
+// Fail before spending time averaging if a pass is short or named differently.
+for (let i = 1; i < samples; i++) {
+  for (const {file} of frames) {
+    const p = join(work, `pass${i}`, file);
+    if (!existsSync(p)) {
+      console.error(`pass${i} is missing ${file} — passes do not line up`);
+      process.exit(1);
+    }
+  }
+}
 
 const avgDir = join(work, 'avg');
 mkdirSync(avgDir, {recursive: true});
@@ -106,10 +126,10 @@ const browser = await chromium.launch({
 const page = await browser.newPage();
 await page.goto('about:blank');
 
-for (const n of frames) {
+for (const {file, n} of frames) {
   const datas = [];
   for (let i = 0; i < samples; i++) {
-    const p = join(work, `pass${i}`, `element-${n}.png`);
+    const p = join(work, `pass${i}`, file);
     datas.push('data:image/png;base64,' + readFileSync(p).toString('base64'));
   }
   const dataUrl = await page.evaluate(async (srcs) => {
@@ -155,7 +175,7 @@ execFileSync(
   [
     'remotion', 'ffmpeg', '-y', '-v', 'error',
     '-framerate', String(fps),
-    '-start_number', String(frames[0]),
+    '-start_number', String(frames[0].n),
     '-i', join(avgDir, 'f%05d.png'),
     '-c:v', 'libx264', '-crf', '18', '-preset', 'slow',
     '-pix_fmt', 'yuv420p',
