@@ -38,6 +38,10 @@ const fps = Number(arg('fps', '30'));
 const shutter = Number(arg('shutter', '0.5'));
 const concurrency = arg('concurrency', '4');
 const frameRange = arg('frames', null); // e.g. 100-107, for smoke tests
+// Optionally copy one averaged frame out as a PNG still. Taken before the
+// encode, so the still is the exact frame from the clip, losslessly.
+const stillFrame = arg('still-frame', null);
+const stillOut = arg('still-out', null);
 
 // --props replaces the input props for the whole registry, so a partial object
 // would leave every composition without its countryCode. Rebuild the full set
@@ -133,6 +137,10 @@ for (const n of frames) {
     join(avgDir, `f${String(n).padStart(5, '0')}.png`),
     Buffer.from(dataUrl.split(',')[1], 'base64'),
   );
+  if (stillFrame !== null && stillOut && Number(stillFrame) === n) {
+    writeFileSync(resolve(root, stillOut), Buffer.from(dataUrl.split(',')[1], 'base64'));
+    console.log(`  still: frame ${n} -> ${stillOut}`);
+  }
   if (n % 50 === 0) console.log(`  frame ${n}`);
 }
 await browser.close();
