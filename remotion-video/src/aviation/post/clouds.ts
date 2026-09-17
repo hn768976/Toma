@@ -208,8 +208,15 @@ export const createCloudLayer = (
     // clears the threshold and the sky comes out empty.
     const coverage = clamp(weather.x.mul(u.coverage).mul(1.7), 0, 1);
 
+    // Each column of the layer gets its own ceiling, taken from the weather
+    // map's type channel. Without this every cloud tops out at exactly the same
+    // altitude and a deck seen from above reads as a flat speckled sheet rather
+    // than as rolling tops — the single biggest tell that it is not cloud.
+    const ceiling = weather.y.mul(0.6).add(0.4);
+    const shaped = clamp(h.div(ceiling), 0, 1);
+
     const shape = sampleVolume(noise.shape, p.div(u.shapeScale) as TSL);
-    const gradient = heightGradient(h) as TSL;
+    const gradient = heightGradient(shaped as TSL) as TSL;
     const base = remap(
       shape.x.mul(gradient) as TSL,
       float(1).sub(coverage) as TSL,
@@ -225,7 +232,7 @@ export const createCloudLayer = (
       .add(detailSample.y.mul(0.26))
       .add(detailSample.z.mul(0.12));
     // Wispy at the base, cauliflower at the top: the erosion inverts with height.
-    const erosion = mix(detailFbm.oneMinus(), detailFbm, h).mul(u.detailStrength);
+    const erosion = mix(detailFbm.oneMinus(), detailFbm, shaped).mul(u.detailStrength);
     const eroded = clamp(remap(withCoverage as TSL, erosion as TSL, float(1), float(0), float(1)), 0, 1);
 
     const result = mix(eroded, withCoverage, cheap);

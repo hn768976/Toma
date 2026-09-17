@@ -134,14 +134,23 @@ const createFactory =
         MathUtils.degToRad(-1.2 + smootherstep(t) * 2.4) + drift(seconds * 0.27, 7.2) * 0.001,
       );
 
-      // Down the centre line, away from camera, so it shrinks as it goes.
+      // Straight down the slot on approach, closing on the camera rather than
+      // crossing it — which is what keeps it inside the narrow strip of sky for
+      // the whole shot, and why it grows from a speck to about a tenth of frame
+      // width exactly as the reference does.
       const progress = range(frame, -20, ctx.durationInFrames + 30);
       jetPosition.set(
-        MathUtils.lerp(260, -140, progress),
-        2400,
-        MathUtils.lerp(-900, -4200, progress),
+        MathUtils.lerp(14, -18, progress),
+        MathUtils.lerp(196, 232, progress),
+        MathUtils.lerp(-900, -70, progress),
       );
-      jet.setAttitude(jetPosition, MathUtils.degToRad(186), 0.005, MathUtils.degToRad(1), seconds);
+      jet.setAttitude(
+        jetPosition,
+        MathUtils.degToRad(180),
+        MathUtils.degToRad(3),
+        MathUtils.degToRad(-1),
+        seconds,
+      );
     };
 
     return rig.toStage(update, () => {

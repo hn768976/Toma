@@ -149,15 +149,24 @@ const createFactory =
         roll + drift(seconds * 0.24, 9.4) * 0.001,
       );
 
-      // The jet needs the whole twelve seconds to cross, so it starts well off
-      // the left edge and is still travelling when the shot ends.
-      const progress = range(frame, -25, ctx.durationInFrames + 25);
+      // Same approach pass as shot 1, seen on a longer lens: about 325m out, so
+      // the aircraft spans roughly a tenth of frame width as it does in the
+      // reference. Twelve seconds at approach speed carries it right across.
+      // Raised into the open sky above the skyline, for the same reason as
+      // shot 1 — on the view axis the aircraft sits down among the containers.
+      const progress = range(frame, -30, ctx.durationInFrames + 30);
       jetPosition.set(
-        MathUtils.lerp(-3400, 3100, progress),
-        2150,
-        MathUtils.lerp(-2300, -2750, progress),
+        MathUtils.lerp(-526, 514, progress),
+        MathUtils.lerp(244, 258, progress),
+        MathUtils.lerp(-212, -232, progress),
       );
-      jet.setAttitude(jetPosition, MathUtils.degToRad(-94), 0.003, MathUtils.degToRad(-1.5), seconds);
+      jet.setAttitude(
+        jetPosition,
+        MathUtils.degToRad(-92),
+        MathUtils.degToRad(3),
+        MathUtils.degToRad(-1.5),
+        seconds,
+      );
 
       // Cloud drifts across the sky over the length of the shot.
       rig.setCloudWind(seconds * -26, 0, seconds * 9);

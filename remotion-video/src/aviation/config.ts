@@ -109,8 +109,8 @@ export type QualityProfile = {
 };
 
 export const QUALITY: Record<ResolutionKey, QualityProfile> = {
-  "1080p": { cloudSteps: 24, cloudLightSteps: 2, cloudScale: 0.5, anisotropy: 4, shadowMapSize: 2048 },
-  "4k": { cloudSteps: 30, cloudLightSteps: 3, cloudScale: 0.5, anisotropy: 8, shadowMapSize: 4096 },
+  "1080p": { cloudSteps: 34, cloudLightSteps: 3, cloudScale: 0.5, anisotropy: 4, shadowMapSize: 2048 },
+  "4k": { cloudSteps: 46, cloudLightSteps: 4, cloudScale: 0.5, anisotropy: 8, shadowMapSize: 4096 },
 };
 
 /** Model scale factors that put both GLBs into metres. */

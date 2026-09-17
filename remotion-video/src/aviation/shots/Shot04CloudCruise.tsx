@@ -26,60 +26,74 @@ import { drift, easeInOutSine, smootherstep } from "../three/easing";
  * march, not a texture, or the whole shot dies.
  */
 
-const SUN = new Vector3(-0.58, 0.2, 0.79).normalize();
+// High and well behind the aircraft. The reference has no sun in frame at all:
+// the light is diffuse, scattered through the haze above a solid deck, and the
+// brightest part of the sky is a broad glow rather than a disc.
+const SUN = new Vector3(-0.42, 0.62, 0.66).normalize();
 
 const SKY = defaultSky({
   sunDirection: SUN.clone(),
-  // Late afternoon at altitude: the zenith stays deep, the band above the deck
-  // goes gold, and everything between is haze.
-  zenithColor: new Vector3(0.06, 0.14, 0.36),
-  horizonColor: new Vector3(0.55, 0.37, 0.25),
-  hazeColor: new Vector3(0.52, 0.36, 0.25),
-  sunColor: new Vector3(1, 0.82, 0.58),
-  gradientFalloff: 1.5,
-  hazeHeight: 0.045,
-  mieStrength: 0.38,
-  mieFalloff: 4.5,
-  sunDiscIntensity: 6,
+  // Bright, high-key and almost colourless — a luminous white-grey that lifts
+  // towards the top of frame. Not the golden hour this shot used to be.
+  zenithColor: new Vector3(0.42, 0.52, 0.66),
+  horizonColor: new Vector3(0.9, 0.92, 0.94),
+  hazeColor: new Vector3(0.95, 0.96, 0.97),
+  sunColor: new Vector3(1, 0.97, 0.92),
+  gradientFalloff: 1.7,
+  hazeHeight: 0.07,
+  mieStrength: 0.5,
+  mieFalloff: 3,
+  // No disc. A sun this size in frame is the single most artificial thing the
+  // shot had, and the reference does not have one.
+  sunDiscIntensity: 0,
   sunDiscFalloff: 2600,
-  intensity: 0.95,
+  intensity: 1.05,
 });
 
 const CLOUDS = defaultCloudParams({
-  bottom: 850,
-  top: 2250,
-  coverage: 0.92,
-  density: 1.8,
-  cloudType: 0.5,
-  weatherScale: 28000,
-  shapeScale: 3000,
-  detailScale: 340,
-  detailStrength: 0.34,
+  // A solid deck the aircraft is flying just above, not a scattering of
+  // islands: coverage is effectively total, and the shapes are sized so the
+  // surface reads as a rolling carpet rather than separate clouds.
+  bottom: 2000,
+  top: 3255,
+  coverage: 1.05,
+  density: 2.6,
+  cloudType: 0.45,
+  weatherScale: 14000,
+  shapeScale: 1500,
+  detailScale: 190,
+  detailStrength: 0.3,
   sunDirection: SUN.clone(),
-  sunColor: new Vector3(1, 0.84, 0.62),
-  sunIntensity: 6,
-  ambientTop: new Vector3(0.44, 0.4, 0.44),
-  ambientBottom: new Vector3(0.15, 0.15, 0.21),
+  sunColor: new Vector3(1, 0.98, 0.94),
+  // Cloud tops have to out-read the sky behind them. The phase function
+  // normalises by 4pi, so the key needs to be numerically large before a lit
+  // top comes out brighter than the haze it sits against.
+  sunIntensity: 26,
+  // Low enough that the deck keeps its form. Lit this flat, a solid overcast
+  // top reads as white paper rather than as cloud.
+  ambientTop: new Vector3(0.36, 0.4, 0.48),
+  ambientBottom: new Vector3(0.15, 0.17, 0.24),
   forwardScatter: 0.82,
   backScatter: -0.3,
   scatterBlend: 0.7,
-  extinction: 0.1,
-  powder: 0.5,
+  extinction: 0.13,
+  powder: 0.55,
   lightMarchDistance: 1000,
   horizonFade: 0.016,
-  horizonColor: new Vector3(0.94, 0.82, 0.65),
+  horizonColor: new Vector3(0.82, 0.84, 0.87),
 });
 
 const GRADE = defaultGrade({
-  exposure: -1.1,
-  contrast: 0.24,
-  contrastPivot: 0.44,
-  saturation: 1.1,
-  // Warm highlights, cool shadows — the standard golden-hour separation.
-  lift: new Vector3(0.006, 0.012, 0.03),
-  gain: new Vector3(1.03, 0.995, 0.955),
-  gamma: new Vector3(1, 0.995, 0.985),
-  vignette: 0.2,
+  exposure: -1.15,
+  contrast: 0.2,
+  contrastPivot: 0.46,
+  // Nearly monochrome. What colour there is sits in the shadowed cloud, which
+  // goes slightly blue against the warm-white haze.
+  saturation: 0.82,
+  lift: new Vector3(0.004, 0.008, 0.016),
+  gain: new Vector3(1.0, 1.0, 1.005),
+  gamma: new Vector3(1, 1, 1),
+  vignette: 0.16,
   vignetteSoftness: 0.6,
   grain: 0.01,
   chromaticAberration: 0.6,
@@ -94,10 +108,12 @@ const createFactory = (): StageFactory => async (ctx) => {
       camera: { fov: 40, near: 1, far: 120000 },
       world: {
         radius: 55000,
-        sunIntensity: 4.6,
-        fillIntensity: 0.85,
-        groundColor: new Vector3(0.5, 0.48, 0.5),
-        environmentIntensity: 1.15,
+        sunIntensity: 3.0,
+        // The deck below is a huge white reflector, so the airframe is lit from
+        // underneath almost as much as from above.
+        fillIntensity: 1.1,
+        groundColor: new Vector3(0.78, 0.8, 0.84),
+        environmentIntensity: 1.3,
       },
     });
 
@@ -127,7 +143,7 @@ const createFactory = (): StageFactory => async (ctx) => {
 
       // Both aircraft track down −Z at cruise speed.
       const travelled = seconds * cruiseSpeed;
-      jetPosition.set(0, 3320 + drift(seconds * 0.4, 2.7) * 6, -travelled);
+      jetPosition.set(0, 3390 + drift(seconds * 0.4, 2.7) * 6, -travelled);
       jet.setAttitude(
         jetPosition,
         0,
@@ -138,9 +154,14 @@ const createFactory = (): StageFactory => async (ctx) => {
 
       // Chase position in the aircraft's own frame: bearing swings aft, the
       // camera settles a little above the wing line, and closes slightly.
-      const bearing = MathUtils.degToRad(MathUtils.lerp(96, 148, smootherstep(t)));
-      const distance = MathUtils.lerp(118, 96, easeInOutSine(t));
-      const rise = MathUtils.lerp(-4, 16, smootherstep(t));
+      // Close enough for the aircraft to be the subject. Measured against the
+      // reference it spans about three quarters of frame width, which on this
+      // lens puts the chase plane around sixty metres off the wingtip.
+      const bearing = MathUtils.degToRad(MathUtils.lerp(98, 146, smootherstep(t)));
+      const distance = MathUtils.lerp(72, 58, easeInOutSine(t));
+      // Sitting above the aircraft and looking a little under it tips the deck
+      // into the lower two thirds of frame, where the reference keeps it.
+      const rise = MathUtils.lerp(4, 16, smootherstep(t));
       cameraPosition.set(
         jetPosition.x + Math.sin(bearing) * distance,
         jetPosition.y + rise + drift(seconds * 0.55, 6.6) * 0.9,
@@ -149,7 +170,7 @@ const createFactory = (): StageFactory => async (ctx) => {
       camera.position.copy(cameraPosition);
       camera.lookAt(
         jetPosition.x + drift(seconds * 0.3, 1.1) * 1.4,
-        jetPosition.y + 1.5,
+        jetPosition.y - 1,
         jetPosition.z,
       );
       // A slow roll on the camera keeps the horizon from sitting dead level.

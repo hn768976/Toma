@@ -43,17 +43,19 @@ const SKY = defaultSky({
 });
 
 const CLOUDS = defaultCloudParams({
-  bottom: 1250,
-  top: 3100,
-  coverage: 0.85,
+  bottom: 700,
+  top: 1900,
+  coverage: 1.25,
   density: 1.5,
   cloudType: 0.82,
-  // Looking straight up, the whole frame maps to a patch of the weather map
-  // only a couple of kilometres across, so the system has to be small enough
-  // for that patch to contain both cloud and gaps.
-  weatherScale: 7000,
-  shapeScale: 2600,
-  detailScale: 260,
+  // Looking straight up, the whole frame maps to a patch of sky only a couple
+  // of kilometres across, so both the weather system and the clouds themselves
+  // have to be small enough for that patch to hold a field of them rather than
+  // one lump — which is what the reference shows: scattered cumulus across the
+  // entire frame with deep blue between.
+  weatherScale: 2600,
+  shapeScale: 750,
+  detailScale: 110,
   detailStrength: 0.45,
   sunDirection: SUN.clone(),
   sunColor: new Vector3(1, 0.98, 0.94),
@@ -132,9 +134,12 @@ const createFactory = (): StageFactory => async (ctx) => {
       // the end of the shot exactly as it does in the reference.
       const progress = range(frame, -14, ctx.durationInFrames + 22);
       jetPosition.set(
-        MathUtils.lerp(-1150, 1450, progress),
-        MathUtils.lerp(1120, 1750, progress),
-        MathUtils.lerp(520, -1150, progress),
+        // About 150m up rather than a kilometre and a half. Measured against
+        // the reference the aircraft spans a quarter of frame width, which for
+        // a 60m wingspan on this lens is a low pass almost directly overhead.
+        MathUtils.lerp(-210, 240, progress),
+        MathUtils.lerp(140, 178, progress),
+        MathUtils.lerp(96, -150, progress),
       );
       jet.setAttitude(jetPosition, MathUtils.degToRad(-58), 0.01, MathUtils.degToRad(3), seconds);
 

@@ -138,15 +138,29 @@ const createFactory =
         roll + drift(seconds * 0.3, 4.4) * 0.0012,
       );
 
-      // Jet at cruise, crossing high and slightly away from camera. It enters
-      // before frame 0 and leaves after the cut, as it does in the reference.
-      const progress = range(frame, -30, ctx.durationInFrames + 40);
+      // An aircraft on approach, not one at cruise. Measured against the
+      // reference, the jet spans about 9% of frame width — roughly 170px at
+      // 1080p — which for a 60m wingspan puts it near 320m from the lens, and
+      // it stays in shot for the full eight seconds, which only works at an
+      // approach speed of about 70m/s rather than a cruise 240. Both follow
+      // from the same reading: this is short final over the yard, and it is
+      // what makes the aircraft read as an aircraft instead of a speck.
+      // Placed against the frame, not just against the camera axis: the stacks
+      // fill the lower two thirds, so an aircraft on the view axis sits behind
+      // steel. This track runs through the band of open sky above them.
+      const progress = range(frame, -40, ctx.durationInFrames + 40);
       jetPosition.set(
-        MathUtils.lerp(-1900, 2400, progress),
-        2650,
-        MathUtils.lerp(-2600, -3500, progress),
+        MathUtils.lerp(-388, 406, progress),
+        MathUtils.lerp(315, 328, progress),
+        MathUtils.lerp(-70, -92, progress),
       );
-      jet.setAttitude(jetPosition, MathUtils.degToRad(-108), 0.004, MathUtils.degToRad(2), seconds);
+      jet.setAttitude(
+        jetPosition,
+        MathUtils.degToRad(-92),
+        MathUtils.degToRad(3),
+        MathUtils.degToRad(1.5),
+        seconds,
+      );
     };
 
     return rig.toStage(update, () => {

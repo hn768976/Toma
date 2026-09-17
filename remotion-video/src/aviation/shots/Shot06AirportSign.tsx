@@ -132,19 +132,23 @@ const createFactory =
         MathUtils.degToRad(-0.8 + smootherstep(t) * 1.8) + drift(seconds * 0.25, 1.7) * 0.0009,
       );
 
-      // Climbing out behind the sign, left to right, gear up and still turning
-      // onto its departure heading.
+      // Descending on approach, not climbing out — the reference aircraft is
+      // clearly coming down towards the field. Its heading also swings through
+      // the shot as it settles onto final, so the aspect the camera sees keeps
+      // changing instead of the aircraft sliding across at a fixed angle.
       const progress = range(frame, -18, ctx.durationInFrames + 26);
       jetPosition.set(
-        MathUtils.lerp(-470, 380, progress),
-        MathUtils.lerp(180, 430, progress),
-        MathUtils.lerp(-640, -545, progress),
+        MathUtils.lerp(-420, 340, progress),
+        MathUtils.lerp(250, 150, progress),
+        MathUtils.lerp(-500, -380, progress),
       );
       jet.setAttitude(
         jetPosition,
-        MathUtils.degToRad(-76),
-        MathUtils.degToRad(11),
-        MathUtils.degToRad(-7 + progress * 12),
+        // Turning onto final through the shot.
+        MathUtils.degToRad(MathUtils.lerp(-62, -94, easeInOutSine(progress))),
+        // Nose slightly up while descending, as an aircraft on approach is.
+        MathUtils.degToRad(2.5),
+        MathUtils.degToRad(MathUtils.lerp(9, -2, easeInOutSine(progress))),
         seconds,
       );
 
