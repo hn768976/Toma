@@ -97,7 +97,6 @@ const createFactory =
       maxTiers: 8,
       gapChance: 0.06,
       markings,
-      lod: false,
       grime: 1.15,
     });
     wall.object.rotation.y = Math.PI / 2;

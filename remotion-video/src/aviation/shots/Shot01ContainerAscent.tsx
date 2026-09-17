@@ -72,8 +72,10 @@ const createFactory =
 
     const markings = bakeContainerMarkings(quality.anisotropy);
 
-    // The near block is what the shot is actually about, so it gets the hero
-    // mesh; the blocks behind it only ever appear as silhouette and skyline.
+    // Both blocks use the reduced mesh. The camera never gets closer than a few
+    // metres, and at that distance the corrugation meshopt preserves is all
+    // that reads — the hero mesh costs two and a half times the triangles, and
+    // the yards are what this render spends most of its time rasterising.
     const nearYard = await createContainerYard({
       seed: 0x1a7,
       columns: 4,
@@ -82,7 +84,6 @@ const createFactory =
       maxTiers: 9,
       gapChance: 0.05,
       markings,
-      lod: false,
       grime: 1.1,
     });
     // Turned broadside: the reference reads the long corrugated walls, not the

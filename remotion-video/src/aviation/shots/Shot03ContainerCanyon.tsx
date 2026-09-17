@@ -99,7 +99,6 @@ const createFactory =
       maxTiers: 7,
       gapChance: 0,
       markings,
-      lod: false,
       grime: 1.1,
     });
     foreground.object.position.set(-(aisle / 2 + 1.3), 0, -10);
