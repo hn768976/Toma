@@ -7,8 +7,11 @@ Config.setOverwriteOutput(true);
 // the backend that renders this scene correctly and byte-identically every run.
 Config.setChromiumOpenGlRenderer('swangle');
 
-// This clip has no sound. Without this, Remotion muxes in a silent AAC track.
+// This clip has no sound. setEnforceAudioTrack(false) alone is not enough —
+// Remotion still muxes in a silent AAC track. setMuted(true) omits the audio
+// stream entirely, which is what `ffprobe` should show.
 Config.setEnforceAudioTrack(false);
+Config.setMuted(true);
 
 // Rec.709 limited range, so the file reports yuv420p rather than the
 // full-range yuvj420p that players and NLEs interpret inconsistently.

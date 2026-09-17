@@ -11,7 +11,8 @@
     "bundle": "remotion bundle",
     "lint": "tsc",
     "verify": "node scripts/verify-compositions.mjs",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "contact-sheet": "node scripts/contact-sheet.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
