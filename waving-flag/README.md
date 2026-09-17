@@ -113,6 +113,44 @@ allow `_` in a composition id; the delivered *files* use `_`). Run
 
 ---
 
+## Measured render time
+
+Measured on this machine: **4 vCPU, 15 GB RAM, no GPU**, SwiftShader via ANGLE
+(`--gl=swangle`), `--concurrency=4`. Wall-clock seconds per output frame.
+
+| | 1080p (`--scale=0.5`) | 4K (3840×2160) |
+| --- | --- | --- |
+| V1 — flag on a pole | **3.24 s/frame** (Japan, 300 frames in 972 s)<br>**3.30 s/frame** (Saudi Arabia, 989 s) | **10.37 s/frame** |
+| V2 — full-frame fabric | **5.48 s/frame** (Brazil, 1644 s) | **11.00 s/frame** |
+
+The 4K figures come from 8-frame samples of the same two compositions, using
+the same command and concurrency, so the two columns are comparable.
+
+**Scheduling the 57 unrendered compositions at 4K on hardware like this:**
+
+| | Compositions | Frames | Estimate |
+| --- | --- | --- | --- |
+| V1 remaining | 28 | 8,400 | ≈ 24.2 h |
+| V2 remaining | 29 | 8,700 | ≈ 26.6 h |
+| **Total** | **57** | **17,100** | **≈ 51 h** |
+
+That is the number for a **software rasteriser**. Almost all of it is fragment
+and vertex work that a real GPU does in a small fraction of the time — on a
+GPU machine with `--gl=angle`, expect roughly an order of magnitude better, and
+raise `--concurrency` to the core count. Budget from a short measured sample on
+your own hardware rather than from this table:
+
+```bash
+npx remotion render src/index.ts Japan-FlagPole /tmp/probe \
+  --sequence --image-format=png --frames=100-107 --concurrency=4
+```
+
+At 1080p, V2 costs more than V1 because of the stacked backdrop-filter passes
+that produce the depth of field; at 4K the two converge, because V1's
+full-frame procedural sky becomes the dominant cost instead.
+
+---
+
 ## Flag artwork: source and verification
 
 **Source.** The public-domain Wikimedia Commons flag SVGs, via the
@@ -265,3 +303,70 @@ All sizes and camera framing are fractions of the frame dimensions from
 No code changes. `Root.tsx` generates the compositions from the data, and
 `WavingFlag` takes the flag's aspect ratio from the same row.
 
+---
+
+## Deliverables
+
+| File | |
+| --- | --- |
+| `out/Japan_FlagPole.mp4` | V1, simple flag — the base case |
+| `out/SaudiArabia_FlagPole.mp4` | V1, text-bearing — proves the no-mirroring rule |
+| `out/Brazil_FlagCloseup.mp4` | V2, complex emblem — emblem resolution and fold distortion |
+| `out/<same>.png` | one 1080p still each |
+| `waving-flag-project.zip` | the 4K-render-ready project, all 60 compositions |
+
+All three clips verified with `ffprobe`: H.264, 1920×1080, `yuv420p` (limited
+range), 30 fps, 300 frames, 10.0 s, and **no audio stream**.
+
+---
+
+## Completion checklist
+
+All 60 compositions are configured and were **verified by rendering a still from
+every one of them** (`npm run contact-sheet`) and checking each flag's aspect
+ratio, colours and orientation against its official specification. Three are
+also rendered as 1080p clips; the other 57 ship configured and unrendered.
+
+✅ = configured, textured at the verified official ratio, and visually checked.
+
+| # | Country | Ratio | V1 `-FlagPole` | V2 `-FlagCloseup` |
+| --- | --- | --- | --- | --- |
+| 1 | United States | 10:19 | ✅ | ✅ |
+| 2 | United Kingdom | 1:2 | ✅ | ✅ |
+| 3 | Canada | 1:2 | ✅ | ✅ |
+| 4 | Germany | 3:5 | ✅ | ✅ |
+| 5 | France | 2:3 | ✅ | ✅ |
+| 6 | Italy | 2:3 | ✅ | ✅ |
+| 7 | Spain | 2:3 | ✅ | ✅ |
+| 8 | Netherlands | 2:3 | ✅ | ✅ |
+| 9 | Poland | 5:8 | ✅ | ✅ |
+| 10 | Sweden | 5:8 | ✅ | ✅ |
+| 11 | Turkey | 2:3 | ✅ | ✅ |
+| 12 | Russia | 2:3 | ✅ | ✅ |
+| 13 | Ukraine | 2:3 | ✅ | ✅ |
+| 14 | China | 2:3 | ✅ | ✅ |
+| 15 | Japan | 2:3 | ✅ **rendered** | ✅ |
+| 16 | South Korea | 2:3 | ✅ | ✅ |
+| 17 | India | 2:3 | ✅ | ✅ |
+| 18 | Indonesia | 2:3 | ✅ | ✅ |
+| 19 | Australia | 1:2 | ✅ | ✅ |
+| 20 | Brazil | 7:10 | ✅ | ✅ **rendered** |
+| 21 | Argentina ⚠️ ratio corrected | 9:14 | ✅ | ✅ |
+| 22 | Mexico | 4:7 | ✅ | ✅ |
+| 23 | South Africa | 2:3 | ✅ | ✅ |
+| 24 | Nigeria | 1:2 | ✅ | ✅ |
+| 25 | Egypt | 2:3 | ✅ | ✅ |
+| 26 | Saudi Arabia ⚠️ text-bearing | 2:3 | ✅ **rendered** | ✅ |
+| 27 | United Arab Emirates | 1:2 | ✅ | ✅ |
+| 28 | Israel | 8:11 | ✅ | ✅ |
+| 29 | Switzerland | 1:1 | ✅ | ✅ |
+| 30 | Portugal | 2:3 | ✅ | ✅ |
+
+⚠️ **Argentina** — the only flag whose source rendering did not match its
+official proportion; corrected from 8:5 to 9:14 by a viewBox crop that keeps the
+Sun of May centred and circular.
+⚠️ **Saudi Arabia** — bears the shahada in Thuluth script; confirmed to read
+correctly, never mirrored, in both versions and across folds that turn the cloth
+away from camera.
+
+Contact sheets of all 60 are written to `out/contact/sheet-1..3.png`.
