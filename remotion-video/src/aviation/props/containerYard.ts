@@ -125,7 +125,7 @@ const planStacks = (
           atlasIndex: rng.int(0, 7),
           wearSeed: rng.float(0, 64),
           // Boxes higher in a stack have been rained on from above for longer.
-          rust: Math.min(0.92, rng.float(0.08, 0.62) + tier * 0.04),
+          rust: Math.min(0.75, rng.float(0.05, 0.45) + tier * 0.035),
           bleach: rng.float(0.15, 0.9),
         });
       }

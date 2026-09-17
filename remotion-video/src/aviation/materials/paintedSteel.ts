@@ -88,10 +88,12 @@ export const createPaintedSteelMaterial = ({
   // dust film reuses the mottle field at a different weight rather than paying
   // for a third fBm of its own.
   const splash = falloff(0, height * 0.38, local.y as TSL).mul(fbm3(wearSpace.mul(2.4)).add(0.35));
+  // Note the weights: `mottle` spans 0..1 where the dedicated dust fBm it
+  // replaced was already halved, so matching the old look means halving here.
   const dirtMask = clamp(
-    splash.mul(0.72).add(mottle.mul(0.34)).mul(grimeAmount),
+    splash.mul(0.62).add(mottle.mul(0.16)).mul(grimeAmount),
     0,
-    0.9,
+    0.8,
   );
   const dirty = mix(shaded, vec3(0.135, 0.12, 0.103), dirtMask);
 

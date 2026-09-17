@@ -76,7 +76,7 @@ const createFactory =
         // rows run away from camera. Rotating the block would turn the walls
         // into a shallow slab of container ends instead.
         columns: 2,
-        rows: 6,
+        rows: 8,
         minTiers: 5,
         maxTiers: 9,
         gapChance: 0.04,

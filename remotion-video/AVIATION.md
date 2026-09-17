@@ -129,14 +129,19 @@ distributed render all agree frame for frame.
 
 ## Render cost
 
-On a machine with a real GPU these are quick. Rendered on a software rasteriser
-they are not: roughly 10s per 1080p frame, or about four hours for all six
-shots. Almost all of it is rasterising the container yards, so `--scale` does
-not help — it changes the screenshot size, not the size the scene renders at.
+On a machine with a real GPU these are quick. On a software rasteriser expect
+roughly 3-5s per 1080p frame, or about half an hour for all six shots.
 
-If you need to trim it, the yards are already sized to their frames (an
-`InstancedMesh` draws every instance it holds, visible or not), so the next
-levers are `cloudSteps` in `config.ts` and the tier counts in each shot.
+Two things to know if a render seems far slower than that. `--scale` does not
+reduce the work: it changes the size of the frame Remotion captures, not the
+size the scene renders at, because the canvas is sized from `useVideoConfig`.
+And a cancelled render can leave an orphaned Chrome GPU process behind, which
+will quietly contend for every core — a stray one made frames eight times
+slower here before it was noticed. `pgrep -f chrome-linux/chrome` is worth a
+look before concluding anything about performance.
+
+If you do need to trim the cost, the levers are `cloudSteps` in `config.ts` and
+the tier counts in each shot.
 
 ## Known limitations
 

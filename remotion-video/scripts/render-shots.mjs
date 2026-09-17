@@ -41,6 +41,9 @@ const run = (composition, output) =>
         // these shots is exactly the kind of smooth ramp that bands first.
         "--crf=18",
         "--pixel-format=yuv420p",
+        // The deliverables are silent. Without this Remotion muxes a silent AAC
+        // track, which also pads the file past its true frame duration.
+        "--muted",
         "--log=info",
       ],
       { stdio: "inherit", shell: process.platform === "win32" },

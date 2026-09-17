@@ -91,12 +91,13 @@ const createFactory =
 
     const wall = await createContainerYard({
       seed: 0x3c9,
-      columns: 2,
-      rows: 9,
+      columns: 3,
+      rows: 12,
       minTiers: 4,
       maxTiers: 8,
       gapChance: 0.06,
       markings,
+      lod: false,
       grime: 1.15,
     });
     wall.object.rotation.y = Math.PI / 2;
@@ -105,8 +106,8 @@ const createFactory =
 
     const backdrop = await createContainerYard({
       seed: 0x4da,
-      columns: 3,
-      rows: 9,
+      columns: 4,
+      rows: 14,
       minTiers: 3,
       maxTiers: 9,
       gapChance: 0.14,
