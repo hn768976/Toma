@@ -45,7 +45,7 @@ export const FOCAL_RANGE = 7.0;
 // Bokeh particle volume (world units, measured at the focal plane)
 // ---------------------------------------------------------------------------
 
-export const BOKEH_COUNT = 2800; // at 1x
+export const BOKEH_COUNT = 2800; // resolution-independent, see scene.ts
 export const BOKEH_VOLUME_WIDTH = 34;
 export const BOKEH_VOLUME_HEIGHT = 20;
 export const BOKEH_Z_NEAR = 5.5; // closest to camera -> largest, softest discs
@@ -58,7 +58,11 @@ export const SPARKLE_FRACTION = 0.82;
 // Ridge field
 // ---------------------------------------------------------------------------
 
-/** Plane subdivisions at 1x. Drives how much real relief the field has. */
+/**
+ * Plane subdivisions at 1x. Drives how finely the low-frequency relief is
+ * resolved; scaling it with resolution refines the same surface rather than
+ * changing it.
+ */
 export const FIELD_SEGMENTS_X = 220;
 export const FIELD_SEGMENTS_Y = 130;
 

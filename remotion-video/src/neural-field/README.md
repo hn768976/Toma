@@ -28,10 +28,13 @@ npx remotion render NeuralFieldAurora4K out/aurora_4k.mp4 --codec=h264 --crf=16
 npx remotion render NeuralFieldNebula4K out/nebula_4k.mp4 --codec=h264 --crf=16
 ```
 
-`resolutionScale` (1 at 1080p, 2 at 4K) scales particle counts and mesh density
-with the frame, so the 4K compositions are the same picture sampled more finely
-rather than a sparser one. Change a look parameter once and both resolutions and
-both colourways follow.
+`resolutionScale` (1 at 1080p, 2 at 4K) refines sampling-rate-dependent detail —
+mesh subdivision — so the 4K render resolves the same picture more finely. It
+deliberately does **not** scale the particle count: the bokeh live in world space
+inside a frustum that does not change with frame size, so scaling their number
+would put four times as many discs on screen at 4K, which is a different picture
+rather than a sharper one. Their sizes are in world units and sharpen on their
+own. Change a look parameter once and both resolutions and both colourways follow.
 
 ## Files
 

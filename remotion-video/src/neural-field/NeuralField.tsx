@@ -19,7 +19,7 @@ export const neuralFieldSchema = z.object({
   palette: z.enum(PALETTE_NAMES as [PaletteName, ...PaletteName[]]),
   /** false = dense side on the left, as in the reference. true = flipped. */
   mirrored: z.boolean(),
-  /** 1 at 1080p, 2 at 4K. Keeps detail density constant across resolutions. */
+  /** 1 at 1080p, 2 at 4K. Refines mesh subdivision; composition is unchanged. */
   resolutionScale: z.number().min(0.25).max(4),
   seed: z.number().int(),
   bloom: z.boolean(),

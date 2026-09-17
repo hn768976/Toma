@@ -47,8 +47,9 @@ export type SceneOptions = {
   /** +1 = dense side on the left (reference), -1 = mirrored. */
   mirror: 1 | -1;
   /**
-   * 1 at 1080p, 2 at 4K. Particle counts and mesh density scale with it so the
-   * 4K composition is the same picture at more samples, not a sparser one.
+   * 1 at 1080p, 2 at 4K. Refines sampling-rate-dependent detail (mesh
+   * subdivision) without changing the composition, so the 4K render is the
+   * same picture resolved more finely.
    */
   resolutionScale: number;
   seed: number;
@@ -100,8 +101,12 @@ export const createNeuralFieldScene = ({
   const bokeh = createBokehField({
     palette,
     mirror,
-    // Particle count tracks pixel count so density per screen area is constant.
-    count: Math.round(BOKEH_COUNT * resolutionScale * resolutionScale),
+    // Deliberately NOT scaled by resolution. Particles live in world space
+    // inside the camera frustum, which does not change with the frame size, so
+    // scaling the count would put four times as many discs on screen at 4K —
+    // a different picture rather than the same one at higher fidelity. Their
+    // sizes are in world units and so sharpen with resolution on their own.
+    count: BOKEH_COUNT,
     aspect,
     seed,
     loopPeriod: LOOP_PERIOD,
