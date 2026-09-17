@@ -37,6 +37,45 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Compositions
+
+| ID | Size | Length |
+| --- | --- | --- |
+| `CyberAttack-1080p` / `CyberAttack-4K` | 1920x1080 / 3840x2160 | 210f @ 30fps (7.00s) |
+| `SecurityBreach-1080p` / `SecurityBreach-4K` | 1920x1080 / 3840x2160 | 210f @ 30fps (7.00s) |
+| `BluetoothExplainer` | 1920x1080 | 900f @ 30fps (30s) |
+| `ParticleRingHalo` / `ParticleRingHalo4K` | 1920x1080 / 3840x2160 | 200f @ 25fps (8s) |
+
+### Cyber alert (`src/cyber-alert`)
+
+A dot-matrix LED wall running a hex dump, with a red alert badge cut into
+it, shot on a drifting camera and torn apart by signal glitches. Two
+variants share one component and differ only in their entry in `VARIANTS`
+(`src/cyber-alert/constants.ts`): the icon sprite and the two headline
+words.
+
+Everything geometric is expressed in **dot units** — one unit is one LED
+pitch — and converted to pixels once per frame by the projection. The 4K
+compositions are therefore the same picture sampled finer, not a
+separately tuned video, and a change to the layout moves both.
+
+Render the deliverables:
+
+```console
+npm run render:cyber-attack-1080p
+npm run render:cyber-attack-4k
+npm run render:security-breach-1080p
+npm run render:security-breach-4k
+```
+
+All four are H.264 in an MP4 and muted (the piece has no audio track).
+
+To re-skin, edit `VARIANTS` for the words and `src/cyber-alert/icons.ts`
+for the badge; sprites are authored as text, one character per LED, so a
+new icon needs no asset pipeline. Glitch hit points live in `BURSTS`
+(`src/cyber-alert/glitch.ts`) and the camera move in `cameraAt`
+(`src/cyber-alert/camera.ts`).
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).

@@ -25,6 +25,10 @@
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
+    "render:cyber-attack-1080p": "remotion render CyberAttack-1080p out/cyber-attack-1080p.mp4 --codec=h264 --muted",
+    "render:cyber-attack-4k": "remotion render CyberAttack-4K out/cyber-attack-4k.mp4 --codec=h264 --muted",
+    "render:security-breach-1080p": "remotion render SecurityBreach-1080p out/security-breach-1080p.mp4 --codec=h264 --muted",
+    "render:security-breach-4k": "remotion render SecurityBreach-4K out/security-breach-4k.mp4 --codec=h264 --muted",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc"
   },
