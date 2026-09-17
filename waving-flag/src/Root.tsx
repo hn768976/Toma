@@ -26,7 +26,7 @@ export const RemotionRoot: React.FC = () => (
           fps={FPS}
           width={COMP_WIDTH}
           height={COMP_HEIGHT}
-          defaultProps={{countryCode: country.code, framing}}
+          defaultProps={{countryCode: country.code, framing, shutterOffset: 0}}
         />
       )),
     )}

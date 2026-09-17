@@ -13,12 +13,14 @@ export type Country = {
 };
 
 export const COUNTRIES = data.countries as Country[];
-export const TEXTURE_LONG_EDGE = data.textureLongEdge;
+export const TEXTURE_TIERS = data.textureTiers as Record<string, number>;
 
 /** width / height */
 export const aspectOf = (c: Country) => c.ratio[1] / c.ratio[0];
 export const ratioLabel = (c: Country) => `${c.ratio[0]}:${c.ratio[1]}`;
-export const textureOf = (c: Country) => `flags/${c.code}.png`;
+/** The close-up needs the denser texture; see TEXTURE_TIER in flag/constants. */
+export const textureOf = (c: Country, tier: '4k' | '8k' = '4k') =>
+  tier === '8k' ? `flags/${c.code}@8k.png` : `flags/${c.code}.png`;
 
 export const countryByCode = (code: string): Country => {
   const found = COUNTRIES.find((c) => c.code === code);

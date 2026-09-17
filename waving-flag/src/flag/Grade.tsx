@@ -14,8 +14,10 @@ const GRAIN_TILE = 1024;
  * Photographic finish, composited over the 3D render as DOM layers.
  *
  * V1 gets a lens vignette plus a slight softening of detail and chroma toward
- * the corners. V2 gets the shallow depth of field instead: a sharp band across
- * the middle third, progressively blurred toward the top and bottom edges.
+ * the corners. V2 gets the shallow depth of field instead: the sharp band runs
+ * 30%-70% of frame height, and only the outer sixth carries real defocus. An
+ * earlier, much stronger falloff started ramping at 37% and was softening the
+ * emblem itself, which is the product in V2.
  *
  * Both get ~1.5% grain. Without it the V1 sky gradient bands badly in H.264 —
  * and that only shows in the encoded file, not the preview.
@@ -38,29 +40,30 @@ export const Grade: React.FC<{
     <>
       {framing === 'closeup' ? (
         <>
-          {/* Outer edges: strongest defocus. */}
+          {/* Outer edges only: the strongest defocus. */}
           <AbsoluteFill
             style={{
-              backdropFilter: `blur(${height * 0.0075}px)`,
-              WebkitBackdropFilter: `blur(${height * 0.0075}px)`,
+              backdropFilter: `blur(${height * 0.0055}px)`,
+              WebkitBackdropFilter: `blur(${height * 0.0055}px)`,
               maskImage:
-                'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 26%, rgba(0,0,0,0) 74%, rgba(0,0,0,1) 100%)',
+                'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 16%, rgba(0,0,0,0) 84%, rgba(0,0,0,1) 100%)',
             }}
           />
-          {/* Inner falloff, stacking onto the layer above for a smooth ramp. */}
+          {/* Gentle falloff, stacking onto the layer above. The sharp band runs
+              30%-70% of frame height, so it comfortably contains the emblem. */}
           <AbsoluteFill
             style={{
-              backdropFilter: `blur(${height * 0.0035}px)`,
-              WebkitBackdropFilter: `blur(${height * 0.0035}px)`,
+              backdropFilter: `blur(${height * 0.0022}px)`,
+              WebkitBackdropFilter: `blur(${height * 0.0022}px)`,
               maskImage:
-                'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 37%, rgba(0,0,0,0) 63%, rgba(0,0,0,1) 100%)',
+                'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 70%, rgba(0,0,0,1) 100%)',
             }}
           />
           <AbsoluteFill
             style={{
-              background: `radial-gradient(ellipse ${vignetteRadius * 0.75}px ${
-                vignetteRadius * 0.62
-              }px at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.22) 100%)`,
+              background: `radial-gradient(ellipse ${vignetteRadius * 0.8}px ${
+                vignetteRadius * 0.68
+              }px at 50% 50%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.16) 100%)`,
             }}
           />
         </>
@@ -69,18 +72,18 @@ export const Grade: React.FC<{
           {/* Lens falloff: detail and chroma soften toward the corners. */}
           <AbsoluteFill
             style={{
-              backdropFilter: `blur(${height * 0.0016}px) saturate(0.93)`,
-              WebkitBackdropFilter: `blur(${height * 0.0016}px) saturate(0.93)`,
-              maskImage: `radial-gradient(ellipse ${vignetteRadius * 0.62}px ${
-                vignetteRadius * 0.52
-              }px at 50% 50%, rgba(0,0,0,0) 45%, rgba(0,0,0,1) 100%)`,
+              backdropFilter: `blur(${height * 0.0014}px) saturate(0.94)`,
+              WebkitBackdropFilter: `blur(${height * 0.0014}px) saturate(0.94)`,
+              maskImage: `radial-gradient(ellipse ${vignetteRadius * 0.66}px ${
+                vignetteRadius * 0.56
+              }px at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,1) 100%)`,
             }}
           />
           <AbsoluteFill
             style={{
-              background: `radial-gradient(ellipse ${vignetteRadius * 0.78}px ${
-                vignetteRadius * 0.66
-              }px at 50% 48%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.34) 100%)`,
+              background: `radial-gradient(ellipse ${vignetteRadius * 0.8}px ${
+                vignetteRadius * 0.68
+              }px at 50% 48%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.3) 100%)`,
             }}
           />
         </>

@@ -2,6 +2,7 @@ import React, {useMemo} from 'react';
 import {
   DoubleSide,
   IUniform,
+  Color,
   MeshPhysicalMaterial,
   PlaneGeometry,
   Texture,
@@ -9,7 +10,7 @@ import {
 } from 'three';
 import {NOISE_GLSL} from './glsl/noise.glsl';
 import {WAVE_GLSL} from './glsl/wave.glsl';
-import {Framing, SEGMENTS, WAVE} from './constants';
+import {Framing, REFERENCE_ASPECT, SEGMENTS, WAVE} from './constants';
 
 type Props = {
   readonly texture: Texture;
@@ -46,38 +47,52 @@ export const FlagMesh: React.FC<Props> = ({
   }, [framing, aspect]);
 
   const {material, uniforms} = useMemo(() => {
+    // Keep fold wavelength constant in world units across every aspect ratio.
+    const kScale = aspect / REFERENCE_ASPECT;
     const uni: Record<string, IUniform> = {
       uTime: {value: 0},
       uFlagSize: {value: new Vector2(width, worldHeight)},
       uEnvPow: {value: params.envPow},
-      uAmp1: {value: params.amp1},
-      uK1: {value: params.k1},
-      uN1: {value: params.n1},
-      uAmp2: {value: params.amp2},
-      uK2: {value: params.k2},
-      uN2: {value: params.n2},
+      uAmp1: {value: params.amp1}, uK1: {value: params.k1 * kScale}, uN1: {value: params.n1},
+      uAmp2: {value: params.amp2}, uK2: {value: params.k2 * kScale}, uN2: {value: params.n2},
       uTheta: {value: params.theta},
-      uAmp3: {value: params.amp3},
-      uNoiseFreq: {value: new Vector2(...params.noiseFreq)},
+      uAmp3: {value: params.amp3}, uK3: {value: params.k3 * kScale}, uN3: {value: params.n3},
+      uTheta3: {value: params.theta3},
+      uAmpN: {value: params.ampN},
+      uNoiseFreq: {value: new Vector2(params.noiseFreq[0] * kScale, params.noiseFreq[1])},
       uNoiseRadius: {value: params.noiseRadius},
-      uDrapeAmp: {value: params.drapeAmp},
-      uDrapeSigma: {value: params.drapeSigma},
+      uAmpFlutter: {value: params.ampFlutter}, uKFlutter: {value: params.kFlutter * kScale},
+      uNFlutter: {value: params.nFlutter}, uFlutterStart: {value: params.flutterStart},
+      uAmpCurl: {value: params.ampCurl}, uKCurl: {value: params.kCurl},
+      uNCurl: {value: params.nCurl}, uCurlStart: {value: params.curlStart},
+      uSharpen: {value: params.sharpen},
+      uGustDepth: {value: params.gustDepth},
+      uDrapeAmp: {value: params.drapeAmp}, uDrapeSigma: {value: params.drapeSigma},
       uDrapeCycles: {value: params.drapeCycles},
+      uEdgeAmp: {value: params.edgeAmp}, uKEdge: {value: params.kEdge * kScale},
+      uNEdge: {value: params.nEdge},
+      uPoleSag: {value: params.poleSag}, uPoleSagWidth: {value: params.poleSagWidth},
       uSag: {value: params.sag},
-      uAoStrength: {value: framing === 'closeup' ? 0.9 : 0.85},
-      uWeaveFreq: {value: new Vector2(900 * aspect, 900)},
-      uWeaveAmp: {value: 0.05},
+      // Fold self-shading. This is what separates fabric from a decal.
+      uAoStrength: {value: 0.95},
+      // Weave: ~620 threads across the flag. Low enough to resolve at 4K
+      // without aliasing, high enough to read as cloth rather than corduroy.
+      uWeaveFreq: {value: new Vector2(620 * aspect, 620)},
+      uWeaveAmp: {value: 0.1},
     };
 
     const mat = new MeshPhysicalMaterial({
       map: texture,
       // Fabric, not plastic: rough, no sharp specular hotspot, and a sheen
       // lobe that brightens at grazing angles.
-      roughness: 0.86,
+      roughness: 0.84,
       metalness: 0.0,
-      sheen: 0.45,
-      sheenRoughness: 0.9,
-      specularIntensity: 0.22,
+      // Sheen is the grazing-angle lobe that makes cloth catch light along the
+      // crest of a fold without ever forming a hard specular hotspot.
+      sheen: 0.5,
+      sheenRoughness: 0.8,
+      sheenColor: new Color('#fff3e2'),
+      specularIntensity: 0.2,
       side: DoubleSide,
       envMap,
       envMapIntensity: 0.32,
@@ -144,7 +159,7 @@ const float WF_TAU2 = 6.283185307179586;
           `#include <normal_fragment_begin>
 {
   vec2 wv = fwidth(vFlagUv) * uWeaveFreq;
-  float wfFade = 1.0 - smoothstep(0.30, 0.95, max(wv.x, wv.y));
+  float wfFade = 1.0 - smoothstep(0.45, 1.20, max(wv.x, wv.y));
   if (wfFade > 0.001) {
     float wdu = cos(vFlagUv.x * uWeaveFreq.x * WF_TAU2) * uWeaveAmp * wfFade;
     float wdv = cos(vFlagUv.y * uWeaveFreq.y * WF_TAU2) * uWeaveAmp * wfFade;
@@ -159,7 +174,7 @@ const float WF_TAU2 = 6.283185307179586;
           '#include <aomap_fragment>',
           `float wfAo = 1.0 - uAoStrength * vCavity;
 reflectedLight.indirectDiffuse *= wfAo;
-reflectedLight.directDiffuse *= mix(1.0, wfAo, 0.55);
+reflectedLight.directDiffuse *= mix(1.0, wfAo, 0.72);
 reflectedLight.indirectSpecular *= wfAo;
 reflectedLight.directSpecular *= mix(1.0, wfAo, 0.7);`,
         );

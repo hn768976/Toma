@@ -12,7 +12,8 @@
     "lint": "tsc",
     "verify": "node scripts/verify-compositions.mjs",
     "package": "node scripts/package.mjs",
-    "contact-sheet": "node scripts/contact-sheet.mjs"
+    "contact-sheet": "node scripts/contact-sheet.mjs",
+    "render-blur": "node scripts/render-motion-blur.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
