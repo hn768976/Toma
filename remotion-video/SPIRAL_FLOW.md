@@ -32,9 +32,19 @@ clip, which is 150 frames at 25 fps.
 ```bash
 npm install
 npm run dev                 # Remotion Studio, live-tweak every prop
-./render-all.sh             # both grades -> 4K PNG sequences in out/frames/
-./deliver.sh                # -> 4K masters + 1080p deliverables
+./render-all.sh             # every grade -> 1080p PNG sequences in out/frames/
+./render-all.sh 4K          # ... or the 4K masters instead
+./deliver.sh                # encode whatever was rendered
 ```
+
+`deliver.sh` reads the source width and adapts: a 4K sequence gives a master
+plus a Lanczos-downscaled 1080p deliverable, both straight off the lossless
+frames; a 1080p sequence gives the deliverable alone, encoded as rendered.
+
+The 4K compositions are the masters and are what the project is built around.
+1080p is the default here only because a machine without a GPU spends roughly
+four times as long on a 4K sequence for a deliverable that is downscaled anyway
+— on a GPU, render `4K` and downscale.
 
 On a machine with a GPU none of that scaffolding is needed — render straight to
 a video:
