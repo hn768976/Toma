@@ -1,8 +1,9 @@
 # Flight grid — airliner over a wireframe globe
 
 Two 16-second 3D motion backgrounds: a white airliner silhouette flying over
-a dark lat/long wireframe globe, with great-circle route arcs, defocus and
-lens falloff. Built with three.js inside Remotion, authored at 4K.
+a dark lat/long wireframe globe, with great-circle route arcs, defocus, lens
+falloff and CRT scanlines. Built with three.js inside Remotion, authored at
+4K.
 
 | Composition          | Size      | fps | Length          |
 | -------------------- | --------- | --- | --------------- |
@@ -16,9 +17,9 @@ cells sliding past, the whole graticule rotating as the camera creeps
 around the aircraft.
 
 **V2** is the descent: opens high and wide on a fine graticule with a
-second jet large and soft in the foreground, then drops and closes in until
-it matches V1's framing on a single aircraft, with a third jet crossing
-lower right around the midpoint.
+second jet large and soft in the foreground, crossing the hero's track
+right-to-left and out of frame, while the camera drops and closes in until
+it matches V1's framing on a single aircraft.
 
 ## Rendering
 
@@ -48,13 +49,28 @@ constants.ts      every tunable value, authored at 1080p
 sphere.ts         geographic <-> cartesian, local frames, great-circle slerp
 lines.ts          builds the graticule and route arcs as line-segment batches
 DepthLines.tsx    instanced screen-space line renderer, defocus in-shader
-airliner.ts       procedural wide-body geometry, merged to one buffer
-Aircraft.tsx      unlit white silhouette mesh
+Aircraft.tsx      loads the glTF airliner, draws it as an unlit silhouette
 rig.ts            camera + aircraft motion, all pure functions of time
 scene-config.ts   per-version keyframes
-FlightGridScene.tsx  layer composition, companion traffic, vignette
+FlightGridScene.tsx  layer composition, companion traffic, vignette, scanlines
 FlightGrid.tsx    composition entry point
+
+public/models/skyliner.glb   the aircraft, geometry only
 ```
+
+## The aircraft
+
+`public/models/skyliner.glb` is the supplied "Silver Skyliner" model. It is
+drawn as an unlit white silhouette to match the references, so none of its
+maps are ever sampled — the baseColor (8192²), metallic-roughness and
+normal textures were stripped from the asset, taking it from 27.5 MB to
+5.7 MB and saving roughly 535 MB of texture memory per render worker.
+Re-export from the original upload if the look ever moves to lit metal.
+
+The model is authored nose along -X with its span on ±Z; `Aircraft.tsx`
+centres it, yaws it a quarter turn into the rig's nose-+Z convention, and
+normalises it to a wingspan of exactly 1 unit, so `PLANE_WINGSPAN` is the
+only size dial.
 
 Three decisions are worth knowing about before editing:
 
@@ -72,6 +88,13 @@ to a line. Aircraft that sit off the focal plane are rendered on their own
 transparent canvas and blurred in CSS by the same optics
 (`dof.ts` is shared), which is exact for one small object at one depth.
 
+**Scanlines are a soft ramp, not hard bands.** Hard-edged bands at a 4px
+pitch beat against the pixel grid as the pattern drifts sub-pixel, and read
+as harsh banding on the one large bright area in frame — the aircraft. The
+overlay is a triangular gradient instead, which is both closer to a real
+CRT and alias-free. Pitch scales with the composition so 4K shows the same
+apparent line density rather than twice as many.
+
 **The globe radius is the curvature dial.** Too small and the limb of the
 sphere shows up as a hard horizon; too large and the grid flattens into a
 plane. The graticule is specified in arc length, so `GLOBE_RADIUS` can be
@@ -84,9 +107,20 @@ the scene may depend on wall-clock time, render order or `Math.random()`.
 Route layouts come from a seeded PRNG (`random.ts`) and every rig value is
 a pure function of the frame.
 
-One related trap, already hit once: react-three-fiber diffs object-valued
-props by reference. A memoised `Vector3` mutated in place is treated as
-unchanged and never re-applied, which pins the mesh to its first frame
-while the camera flies away — and single-frame `remotion still` renders do
-not reveal it, because every still is a first frame. Transforms are
-therefore passed as tuples, which are compared element-wise.
+Two related traps, both already hit once, and both invisible to
+`remotion still` because every still is a first frame:
+
+_react-three-fiber diffs object-valued props by reference._ A memoised
+`Vector3` mutated in place is treated as unchanged and never re-applied,
+which pins the mesh to its first frame while the camera flies away.
+Transforms are therefore passed as tuples, which are compared
+element-wise.
+
+_Asynchronous assets have to suspend, not call `continueRender` by hand._
+`<ThreeCanvas>` only redraws from an effect keyed on the frame number, so
+releasing the render when the model finishes loading lets Remotion
+screenshot a canvas that was last drawn before the geometry existed — the
+aircraft silently goes missing from the video while stills look fine.
+`Aircraft.tsx` throws its load promise instead; `<ThreeCanvas>` already
+wraps children in a `<Suspense>` whose fallback holds the delay handle, and
+the remount draws with the model in place.

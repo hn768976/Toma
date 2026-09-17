@@ -148,59 +148,35 @@ export const VERSION_TWO: SceneConfig = {
     ],
   },
   companions: [
-    // Lead traffic: opens low and right of the hero, well in front of the
-    // focal plane so it reads large and soft, then slides out of frame
-    // bottom-left as the camera descends.
+    // The second jet from reference B, on a course that crosses the
+    // hero's. It opens low and right, well in front of the focal plane so
+    // it reads large and soft, then sweeps left across the lower frame and
+    // out of shot — passing under the hero rather than flying alongside
+    // it. The heading offset is what sells the crossing: the two are on
+    // visibly different tracks, not in formation.
     {
       screenX: [
-        [0, 0.34],
-        [0.6, -0.92],
+        [0, 0.52],
+        [0.75, -1.35],
       ],
       screenY: [
-        [0, -0.38],
-        [0.6, -1.15],
+        [0, -0.34],
+        [0.75, -0.74],
       ],
       depthRatio: [
-        [0, 0.62],
-        [0.6, 0.45],
+        [0, 0.6],
+        [0.75, 0.38],
       ],
       headingOffsetDeg: [
-        [0, -9],
-        [0.6, -20],
+        [0, -34],
+        [0.75, -48],
       ],
       scale: 1,
+      // Fully out of frame by t = 0.7, so the fade itself is never seen.
       opacity: [
         [0, 1],
-        [0.42, 1],
-        [0.58, 0],
-      ],
-    },
-    // Second aircraft crossing the lower right around the midpoint, so the
-    // sky does not empty out before the descent finishes.
-    {
-      screenX: [
-        [0.42, 0.72],
-        [1, 1.45],
-      ],
-      screenY: [
-        [0.42, -0.5],
-        [1, -0.95],
-      ],
-      depthRatio: [
-        [0.42, 0.72],
-        [1, 0.52],
-      ],
-      headingOffsetDeg: [
-        [0.42, 13],
-        [1, 22],
-      ],
-      scale: 1,
-      opacity: [
-        [0, 0],
-        [0.44, 0],
-        [0.54, 1],
-        [0.8, 1],
-        [0.9, 0],
+        [0.7, 1],
+        [0.78, 0],
       ],
     },
   ],

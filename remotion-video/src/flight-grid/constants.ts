@@ -65,7 +65,21 @@ export const FOG_DENSITY = 0.0034;
 export const BOKEH_K = 8000;
 export const MAX_COC_PX = 28;
 
-// Aircraft. Wingspan 30 units, length 22 units.
+// Aircraft wingspan in world units. The model geometry is normalised to a
+// wingspan of 1 on load, so this is the only size dial.
 export const PLANE_WINGSPAN = 30;
+
+// CRT scanlines: a soft dark line every PITCH px, drifting down the frame.
+// The pitch is at 1x and scales with the composition, so 4K shows the same
+// apparent line density rather than twice as many.
+//
+// The profile is a triangular ramp rather than hard bands. Hard edges at a
+// 4px pitch beat against the pixel grid as the pattern drifts sub-pixel,
+// and they read as harsh banding on the one large bright area in frame —
+// the aircraft. A soft ramp is both closer to a real CRT and alias-free.
+export const SCANLINE_PITCH_PX = 4;
+export const SCANLINE_OPACITY = 0.26;
+/** Downward drift of the scanline pattern, px per second at 1x. */
+export const SCANLINE_DRIFT_PX_PER_SEC = 2.5;
 
 export const BACKGROUND_COLOR = "#000000";

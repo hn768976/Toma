@@ -25,6 +25,9 @@ import {
   PLANE_WINGSPAN,
   ROUTE_LINE_INTENSITY,
   ROUTE_LINE_WIDTH_PX,
+  SCANLINE_DRIFT_PX_PER_SEC,
+  SCANLINE_OPACITY,
+  SCANLINE_PITCH_PX,
 } from "./constants";
 
 // The graticule is identical for every composition and costs a few ms to
@@ -149,7 +152,7 @@ const WorldLayer: React.FC<LayerProps> = ({
       />
       <Aircraft
         matrix={rig.planeMatrix}
-        scale={(PLANE_WINGSPAN / 30) * config.heroScale}
+        scale={PLANE_WINGSPAN * config.heroScale}
       />
     </>
   );
@@ -184,10 +187,36 @@ const CompanionLayer: React.FC<LayerProps & { companion: CompanionConfig }> = ({
       />
       <Aircraft
         matrix={matrix}
-        scale={(PLANE_WINGSPAN / 30) * companion.scale}
+        scale={PLANE_WINGSPAN * companion.scale}
         opacity={sampleKeyframes(companion.opacity, t)}
       />
     </>
+  );
+};
+
+// CRT scanlines over the finished frame: a dark band repeating down the
+// picture, drifting slowly so it reads as a live screen rather than dirt
+// baked onto the lens. Pitch and band are multiplied by resolutionScale so
+// 4K shows the same line density as 1080p instead of twice as many.
+const Scanlines: React.FC<{ resolutionScale: number; timeSec: number }> = ({
+  resolutionScale,
+  timeSec,
+}) => {
+  const pitch = SCANLINE_PITCH_PX * resolutionScale;
+  // Wrapped to one pitch: the pattern is periodic, so this drifts forever
+  // without the offset growing without bound.
+  const offset =
+    (timeSec * SCANLINE_DRIFT_PX_PER_SEC * resolutionScale) % pitch;
+  const dark = `rgba(0,0,0,${SCANLINE_OPACITY})`;
+
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundImage: `repeating-linear-gradient(to bottom, ${dark} 0px, rgba(0,0,0,0) ${pitch / 2}px, ${dark} ${pitch}px)`,
+        backgroundPosition: `0px ${offset}px`,
+        pointerEvents: "none",
+      }}
+    />
   );
 };
 
@@ -280,6 +309,8 @@ export const FlightGridScene: React.FC<FlightGridSceneProps> = ({
           pointerEvents: "none",
         }}
       />
+
+      <Scanlines resolutionScale={resolutionScale} timeSec={timeSec} />
     </AbsoluteFill>
   );
 };
