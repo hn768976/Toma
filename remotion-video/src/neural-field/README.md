@@ -65,8 +65,20 @@ The field is evaluated per fragment (vertex interpolation aliases at this band
 density); the vertex stage runs a cheaper, lower-octave version of the same field
 for the relief displacement.
 
-**The bokeh** carry their own circle of confusion rather than going through a
-depth-of-field post pass. Each particle's depth sets its disc size, its edge
+**The bokeh layer is off by default** (`particles: "none"`). The prop takes:
+
+| `particles` | draws                                            |
+| ----------- | ------------------------------------------------ |
+| `none`      | the gyri field alone — the current default        |
+| `sparkles`  | fine in-focus points, no discs                    |
+| `full`      | defocused bokeh discs plus the sparkles           |
+
+Particles the mode rejects are still drawn from the PRNG and then discarded, so
+the ones a mode keeps land exactly where they would have with the layer full.
+Skipping the draws instead would reshuffle the whole field.
+
+When it is on, **the bokeh** carry their own circle of confusion rather than
+going through a depth-of-field post pass. Each particle's depth sets its disc size, its edge
 softness and its brightness falloff, so a particle far from the focal plane is a
 large faint crisp-edged disc with a bright rim — what a real defocused highlight
 looks like — and one near it is a small soft point. Depth is derived from a target
@@ -106,6 +118,7 @@ Most art direction lives in `constants.ts` and `palettes.ts`. The rest:
 - `ridgeField.ts` — `FIELD_FREQ`, `FIELD_ANISOTROPY` (how vertically combed the
   ridges are), `WARP_STRENGTH`, `RIDGE_SLOPE`, `RIDGE_WANDER`; `presence` /
   `sharpness` control where the mass dissolves and where detail drops out.
-- `bokehField.ts` — `COC_GAIN` (how much a defocused particle grows), `COC_DIM`
-  (how fast it dims as it spreads), the `defocus` exponent (how rare big discs are).
+- `bokehField.ts` — only relevant with `particles` set to `sparkles` or `full`:
+  `COC_GAIN` (how much a defocused particle grows), `COC_DIM` (how fast it dims
+  as it spreads), the `defocus` exponent (how rare big discs are).
 - `scene.ts` — `bloom(scenePass, strength, radius, threshold)`, vignette, grain.

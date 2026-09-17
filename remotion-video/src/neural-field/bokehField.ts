@@ -52,6 +52,14 @@ const COC_DIM = 1.15;
 /** Oversize of the scatter volume vs. the frustum, so drift never pops in. */
 const FRUSTUM_OVERSIZE = 1.18;
 
+/**
+ * Which particles to emit.
+ * - `full`     — defocused bokeh discs plus the fine in-focus sparkles
+ * - `sparkles` — sparkles only; no circles
+ * - `none`     — no particle layer at all, just the gyri field
+ */
+export type ParticleMode = "full" | "sparkles" | "none";
+
 export type BokehFieldOptions = {
   palette: Palette;
   mirror: 1 | -1;
@@ -59,6 +67,7 @@ export type BokehFieldOptions = {
   aspect: number;
   seed: number;
   loopPeriod: number;
+  mode: ParticleMode;
 };
 
 export type BokehField = {
@@ -74,6 +83,7 @@ export const createBokehField = ({
   aspect,
   seed,
   loopPeriod,
+  mode,
 }: BokehFieldOptions): BokehField => {
   const rnd = createRandom(seed);
   const tanHalfFov = Math.tan((CAMERA_FOV / 2) * (Math.PI / 180));
@@ -85,7 +95,12 @@ export const createBokehField = ({
   const style = new Float32Array(count * 3);
   const tint = new Float32Array(count * 3);
 
-  for (let i = 0; i < count; i++) {
+  // Particles that the mode rejects are still drawn from the PRNG and then
+  // discarded, so the ones that survive land exactly where they did before.
+  // Dropping them from the loop instead would reshuffle the whole field.
+  let emitted = 0;
+
+  for (let n = 0; n < count; n++) {
     const isSparkle = rnd() < SPARKLE_FRACTION;
 
     // Depth is derived from how defocused we want the particle to be, rather
@@ -112,45 +127,59 @@ export const createBokehField = ({
     const x = skew * halfW * mirror;
     const y = between(rnd, -halfH, halfH);
 
+    // Every random draw happens here, in a fixed order, before anything is
+    // discarded — so the particles a mode keeps are byte-identical to the ones
+    // it kept before. Deciding earlier and skipping the draws would consume the
+    // PRNG differently and reshuffle the whole field.
+
+    // Integer drift cycles keep the wrap seamless across the clip.
+    const cycles = BOKEH_DRIFT_CYCLES * (rnd() < 0.5 ? 1 : 2);
+    const swirl = isSparkle ? between(rnd, 0.05, 0.22) : between(rnd, 0.1, 0.5);
+    const seedPhase = rnd() * Math.PI * 2;
+    const size = isSparkle ? bell(rnd, 0.010, 0.032) : bell(rnd, 0.022, 0.075);
+    const brightness = isSparkle
+      ? between(rnd, 1.0, 2.6)
+      : between(rnd, 0.7, 1.8);
+    const c = tints[weightedIndex(rnd, weights)];
+
+    // `sparkles` drops the defocused discs and keeps the fine in-focus points.
+    if (mode === "sparkles" && !isSparkle) continue;
+
+    const i = emitted;
+    emitted += 1;
+
     origin[i * 3] = x;
     origin[i * 3 + 1] = y;
     origin[i * 3 + 2] = z;
 
-    // Integer drift cycles keep the wrap seamless across the clip.
-    const cycles = BOKEH_DRIFT_CYCLES * (rnd() < 0.5 ? 1 : 2);
     motion[i * 4] = cycles;
     motion[i * 4 + 1] = halfH * 2;
-    motion[i * 4 + 2] = isSparkle ? between(rnd, 0.05, 0.22) : between(rnd, 0.1, 0.5);
-    motion[i * 4 + 3] = rnd() * Math.PI * 2;
+    motion[i * 4 + 2] = swirl;
+    motion[i * 4 + 3] = seedPhase;
 
-    style[i * 3] = isSparkle
-      ? bell(rnd, 0.010, 0.032)
-      : bell(rnd, 0.022, 0.075);
-    style[i * 3 + 1] = isSparkle
-      ? between(rnd, 1.0, 2.6)
-      : between(rnd, 0.7, 1.8);
+    style[i * 3] = size;
+    style[i * 3 + 1] = brightness;
     style[i * 3 + 2] = isSparkle ? 1 : 0;
 
-    const c = tints[weightedIndex(rnd, weights)];
     tint[i * 3] = c.r;
     tint[i * 3 + 1] = c.g;
     tint[i * 3 + 2] = c.b;
   }
 
   const aOrigin = instancedBufferAttribute<"vec3">(
-    new THREE.InstancedBufferAttribute(origin, 3),
+    new THREE.InstancedBufferAttribute(origin.subarray(0, emitted * 3), 3),
     "vec3",
   );
   const aMotion = instancedBufferAttribute<"vec4">(
-    new THREE.InstancedBufferAttribute(motion, 4),
+    new THREE.InstancedBufferAttribute(motion.subarray(0, emitted * 4), 4),
     "vec4",
   );
   const aStyle = instancedBufferAttribute<"vec3">(
-    new THREE.InstancedBufferAttribute(style, 3),
+    new THREE.InstancedBufferAttribute(style.subarray(0, emitted * 3), 3),
     "vec3",
   );
   const aTint = instancedBufferAttribute<"vec3">(
-    new THREE.InstancedBufferAttribute(tint, 3),
+    new THREE.InstancedBufferAttribute(tint.subarray(0, emitted * 3), 3),
     "vec3",
   );
 
@@ -240,7 +269,7 @@ export const createBokehField = ({
   })();
 
   const geometry = new THREE.PlaneGeometry(1, 1);
-  const mesh = new THREE.InstancedMesh(geometry, material, count);
+  const mesh = new THREE.InstancedMesh(geometry, material, emitted);
   mesh.frustumCulled = false;
 
   return {

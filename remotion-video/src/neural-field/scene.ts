@@ -34,7 +34,7 @@ import {
   LOOP_PERIOD,
 } from "./constants";
 import { createRidgeField } from "./ridgeField";
-import { createBokehField } from "./bokehField";
+import { createBokehField, type ParticleMode } from "./bokehField";
 import type { Palette } from "./palettes";
 
 const srgb = (hex: string) => new THREE.Color().setStyle(hex, THREE.SRGBColorSpace);
@@ -54,6 +54,8 @@ export type SceneOptions = {
   resolutionScale: number;
   seed: number;
   bloomEnabled: boolean;
+  /** Which particles to draw: bokeh discs + sparkles, sparkles only, or none. */
+  particles: ParticleMode;
 };
 
 export type NeuralFieldScene = {
@@ -71,6 +73,7 @@ export const createNeuralFieldScene = ({
   resolutionScale,
   seed,
   bloomEnabled,
+  particles,
 }: SceneOptions): NeuralFieldScene => {
   const aspect = width / height;
   const tanHalfFov = Math.tan((CAMERA_FOV / 2) * (Math.PI / 180));
@@ -98,20 +101,27 @@ export const createNeuralFieldScene = ({
   ridge.mesh.position.z = FIELD_Z;
   scene.add(ridge.mesh);
 
-  const bokeh = createBokehField({
-    palette,
-    mirror,
-    // Deliberately NOT scaled by resolution. Particles live in world space
-    // inside the camera frustum, which does not change with the frame size, so
-    // scaling the count would put four times as many discs on screen at 4K —
-    // a different picture rather than the same one at higher fidelity. Their
-    // sizes are in world units and so sharpen with resolution on their own.
-    count: BOKEH_COUNT,
-    aspect,
-    seed,
-    loopPeriod: LOOP_PERIOD,
-  });
-  scene.add(bokeh.mesh);
+  // Skipped entirely rather than built and left unadded: with no particles to
+  // emit there is nothing to allocate, and a zero-instance mesh is not a thing
+  // worth handing to the renderer.
+  const bokeh =
+    particles === "none"
+      ? null
+      : createBokehField({
+          palette,
+          mirror,
+          // Deliberately NOT scaled by resolution. Particles live in world space
+          // inside the camera frustum, which does not change with the frame size, so
+          // scaling the count would put four times as many discs on screen at 4K —
+          // a different picture rather than the same one at higher fidelity. Their
+          // sizes are in world units and so sharpen with resolution on their own.
+          count: BOKEH_COUNT,
+          aspect,
+          seed,
+          loopPeriod: LOOP_PERIOD,
+          mode: particles,
+        });
+  if (bokeh) scene.add(bokeh.mesh);
 
   // --- post processing ----------------------------------------------------
   const uGrainSeed = uniform(0);
@@ -158,7 +168,7 @@ export const createNeuralFieldScene = ({
       camera.updateMatrixWorld();
 
       ridge.update(timeSeconds);
-      bokeh.update(timeSeconds);
+      bokeh?.update(timeSeconds);
       uGrainSeed.value = timeSeconds * 60.0;
 
       renderer.setRenderTarget(target);
@@ -167,7 +177,7 @@ export const createNeuralFieldScene = ({
     },
     dispose: () => {
       ridge.dispose();
-      bokeh.dispose();
+      bokeh?.dispose();
       pipeline.dispose();
     },
   };

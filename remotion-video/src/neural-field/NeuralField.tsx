@@ -24,6 +24,11 @@ export const neuralFieldSchema = z.object({
   seed: z.number().int(),
   bloom: z.boolean(),
   /**
+   * `full` draws the defocused bokeh discs and the fine in-focus sparkles,
+   * `sparkles` drops the discs, `none` leaves just the gyri field.
+   */
+  particles: z.enum(["full", "sparkles", "none"]),
+  /**
    * Skip the WebGPU backend even where it exists. Only useful for A/B
    * checking that both backends of WebGPURenderer produce the same picture.
    */
@@ -38,6 +43,7 @@ export const neuralFieldDefaults: NeuralFieldProps = {
   resolutionScale: 1,
   seed: 20260917,
   bloom: true,
+  particles: "none",
   forceWebGL: false,
 };
 
@@ -50,6 +56,7 @@ export const NeuralField: React.FC<NeuralFieldProps> = ({
   resolutionScale,
   seed,
   bloom,
+  particles,
   forceWebGL,
 }) => {
   const frame = useCurrentFrame();
@@ -102,8 +109,19 @@ export const NeuralField: React.FC<NeuralFieldProps> = ({
       resolutionScale,
       seed,
       bloomEnabled: bloom,
+      particles,
     });
-  }, [palette, mirrored, resolutionScale, seed, bloom, forceWebGL, width, height]);
+  }, [
+    palette,
+    mirrored,
+    resolutionScale,
+    seed,
+    bloom,
+    particles,
+    forceWebGL,
+    width,
+    height,
+  ]);
 
   // One effect per frame. The delayRender handle is taken synchronously so
   // there is never a moment where Remotion sees zero pending work and
