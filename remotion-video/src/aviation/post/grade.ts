@@ -161,17 +161,21 @@ export const createGradeNode = (
   const centred = uv.sub(0.5);
   const radius = centred.length().mul(1.4142);
 
-  // Edge-resolve first, then split the channels: running the aberration on
-  // aliased input would just produce three aliased edges instead of one.
+  // Edge-resolve once, then fringe. Running the resolve separately per channel
+  // is the tidier expression but triples the most expensive part of the pass:
+  // fifteen dependent texture reads per pixel instead of seven, at 1080p, for a
+  // sub-pixel effect.
   const texel = float(1).div(resolution);
-  const resolved = (at: TSL) => fxaa(sample, at, texel as TSL);
+  const resolved = fxaa(sample, uv, texel as TSL);
 
   // Lateral chromatic aberration grows with distance from the optical axis.
   const shift = centred.mul(u.chromaticAberration.mul(0.001).mul(radius));
-  const red = resolved(uv.add(shift) as TSL);
-  const green = resolved(uv);
-  const blue = resolved(uv.sub(shift) as TSL);
-  const source = vec3(red.r, green.g, blue.b) as TSL;
+  const red = sample(uv.add(shift) as TSL);
+  const blue = sample(uv.sub(shift) as TSL);
+  const fringed = vec3(red.r, resolved.g, blue.b) as TSL;
+  // The fringe is only wanted where the shift is actually a shift; in the
+  // middle of frame it collapses to the resolved image.
+  const source = mix(resolved, fringed, smoothstep(0, 0.35, radius)) as TSL;
 
   // ---- Linear, scene-referred ---------------------------------------------
   const exposed = source.mul(pow(float(2), u.exposure));

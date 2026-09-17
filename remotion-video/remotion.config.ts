@@ -13,10 +13,12 @@ Config.setRspack(true);
 // The cloud march is unrolled into the shader, so first compile of a cloud shot
 // takes far longer than Remotion's 30s default allows for.
 Config.setDelayRenderTimeoutInMilliseconds(600_000);
-// PNG rather than JPEG for the intermediate frames. Every one of these shots is
-// mostly smooth sky gradient, which is exactly what JPEG's default quality
-// bands, and that banding survives into the H.264 encode.
-Config.setVideoImageFormat("png");
+// JPEG at near-maximum quality for the intermediate frames. PNG is the obvious
+// choice for skies this smooth, but capturing a 1080p page as PNG costs more
+// per frame here than rendering it does — it roughly doubled the render. At 95
+// there is no banding left to see once the H.264 encode has had its say.
+Config.setVideoImageFormat("jpeg");
+Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 
