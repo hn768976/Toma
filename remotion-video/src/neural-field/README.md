@@ -6,6 +6,11 @@ and driven frame-by-frame by Remotion.
 10.000s · 30fps · 300 frames · 16:9 · silent — the same wall-clock length as the
 reference clip, retimed from its 25fps to 30fps.
 
+`remotion.config.ts` sets `setMuted(true)`: nothing here has audio, and without
+it Remotion muxes a silent AAC track whose duration rounds up to its own frame
+grid, leaving the container 10.048s long where the video track is exactly
+10.000s.
+
 ## Compositions
 
 | Composition ID           | Size      | Treatment                              |

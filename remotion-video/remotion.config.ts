@@ -19,6 +19,11 @@ Config.setChromiumOpenGlRenderer("swangle");
 
 // A 4K frame on a software rasteriser takes a while; don't time out on it.
 Config.setDelayRenderTimeoutInMilliseconds(300000);
+// No composition in this project has audio. Without this, Remotion muxes a
+// silent AAC track whose duration is rounded up to its own frame grid, which
+// makes the container run 10.048s where the video track runs exactly 10.000s.
+Config.setMuted(true);
+
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
