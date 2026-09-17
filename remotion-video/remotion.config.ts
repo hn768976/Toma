@@ -11,6 +11,19 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+
+// Tag output as Rec.709 with limited ("tv") range, which is how broadcast
+// and stock H.264 is normally delivered. Left at the default, Remotion
+// writes the file full-range, and players that assume limited range lift
+// the blacks — very visible on near-black footage.
+// Per-render settings (CRF, muting, x264 preset) live in the npm scripts
+// rather than here, so they do not silently apply to other compositions.
+Config.setColorSpace("bt709");
+
+// The flight-grid compositions are WebGL. On a headless Linux box there is
+// no GPU, so Chrome has to be pointed at its bundled SwiftShader/ANGLE
+// software rasteriser or the canvas comes back black.
+Config.setChromiumOpenGlRenderer("swangle");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

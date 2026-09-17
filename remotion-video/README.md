@@ -11,6 +11,20 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+| Composition                                     | Size      | fps | Length  |
+| ----------------------------------------------- | --------- | --- | ------- |
+| `FlightGridV1-4K` / `FlightGridV1-1080p`        | 4K / HD   | 30  | 16.00 s |
+| `FlightGridV2-4K` / `FlightGridV2-1080p`        | 4K / HD   | 30  | 16.00 s |
+| `ParticleRingHalo` / `ParticleRingHalo4K`       | HD / 4K   | 25  | 8.00 s  |
+| `BluetoothExplainer`                            | HD        | 30  | 30.00 s |
+
+The two `FlightGrid` pieces are three.js scenes — an airliner over a
+wireframe globe, authored at 4K and delivered at 1080p. See
+[`src/flight-grid/README.md`](./src/flight-grid/README.md) for the shot
+breakdown, render commands and how the scene is built.
+
 ## Commands
 
 **Install Dependencies**
@@ -29,6 +43,14 @@ npm run dev
 
 ```console
 npx remotion render
+```
+
+**Render the flight-grid deliverables**
+
+```console
+npm run render:deliverables   # both 1080p MP4s
+npm run render:v1-4k          # 4K master, version 1
+npm run render:v2-4k          # 4K master, version 2
 ```
 
 **Upgrade Remotion**
