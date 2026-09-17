@@ -68,6 +68,12 @@ half-resolution target, then the scene at full resolution over it, then a grade.
 Because the sky arrives as a background rather than as geometry, solid objects
 occlude cloud with no depth-buffer work at all.
 
+The grade pass also carries the antialiasing. Rendering into an offscreen target
+means no MSAA, and these shots are full of hard high-contrast edges — container
+corners and an aircraft silhouette, both against bright sky — which crawl badly
+without it. An FXAA in `post/grade.ts` costs four extra taps instead of
+multiplying the rasterisation cost.
+
 ### Clouds
 
 A proper raymarched layer (`post/clouds.ts`): Perlin-Worley base shape, a height
@@ -120,6 +126,17 @@ Every shot's `update` is a pure function of the frame number. Layout noise comes
 from a seeded PRNG (`three/rng.ts`), grain is keyed to the frame index, and
 nothing reads wall-clock time — so the studio preview, a CLI render and a
 distributed render all agree frame for frame.
+
+## Render cost
+
+On a machine with a real GPU these are quick. Rendered on a software rasteriser
+they are not: roughly 10s per 1080p frame, or about four hours for all six
+shots. Almost all of it is rasterising the container yards, so `--scale` does
+not help — it changes the screenshot size, not the size the scene renders at.
+
+If you need to trim it, the yards are already sized to their frames (an
+`InstancedMesh` draws every instance it holds, visible or not), so the next
+levers are `cloudSteps` in `config.ts` and the tier counts in each shot.
 
 ## Known limitations
 

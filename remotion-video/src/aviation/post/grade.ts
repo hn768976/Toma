@@ -1,5 +1,5 @@
 import { Vector3 } from "three/webgpu";
-import { clamp, dot, float, mix, pow, screenUV, uniform, vec2, vec3 } from "three/tsl";
+import { clamp, dot, float, mix, pow, screenUV, smoothstep, uniform, vec2, vec3 } from "three/tsl";
 import { falloff, hash12 } from "../three/tsl-noise";
 import type { TSL } from "../three/tsl";
 
@@ -108,6 +108,48 @@ const acesFilmic = (x: TSL): TSL =>
  * `sample` is called with a UV so the chromatic aberration term can re-sample
  * the source at three slightly different radii.
  */
+/**
+ * A compact FXAA.
+ *
+ * Rendering into an offscreen target means no MSAA is available, and these
+ * shots are full of hard high-contrast edges — container corners and an
+ * aircraft silhouette, both against bright sky — which stair-step badly in
+ * motion without it. Multisampling would multiply the rasterisation cost;
+ * this costs four extra taps and removes most of the crawl.
+ *
+ * It is the classic luma-difference form: find the local contrast, derive a
+ * blend direction from the corner lumas, and step along it.
+ */
+const fxaa = (sample: (uv: TSL) => TSL, uv: TSL, texel: TSL): TSL => {
+  const luma = (c: TSL) => dot(c.rgb as TSL, LUMA) as TSL;
+
+  const middle = sample(uv);
+  const lumaM = luma(middle);
+  const lumaNW = luma(sample(uv.add(texel.mul(vec2(-1, -1))) as TSL));
+  const lumaNE = luma(sample(uv.add(texel.mul(vec2(1, -1))) as TSL));
+  const lumaSW = luma(sample(uv.add(texel.mul(vec2(-1, 1))) as TSL));
+  const lumaSE = luma(sample(uv.add(texel.mul(vec2(1, 1))) as TSL));
+
+  const lumaMin = lumaM.min(lumaNW.min(lumaNE).min(lumaSW.min(lumaSE)));
+  const lumaMax = lumaM.max(lumaNW.max(lumaNE).max(lumaSW.max(lumaSE)));
+  const range = lumaMax.sub(lumaMin);
+
+  const dirX = lumaNW.add(lumaNE).sub(lumaSW.add(lumaSE));
+  const dirY = lumaSW.add(lumaNW).sub(lumaSE.add(lumaNE));
+  const direction = vec2(dirX.negate(), dirY);
+  // Normalise against the local contrast so flat areas are left untouched.
+  const scale = float(1).div(direction.abs().x.min(direction.abs().y).max(0.03));
+  const offset = clamp(direction.mul(scale), -4, 4).mul(texel);
+
+  const a = sample(uv.add(offset.mul(1 / 3 - 0.5)) as TSL);
+  const b = sample(uv.add(offset.mul(2 / 3 - 0.5)) as TSL);
+  const blended = a.add(b).mul(0.5);
+
+  // Only where there is an edge worth blending.
+  const edge = smoothstep(0.02, 0.09, range);
+  return mix(middle, blended, edge) as TSL;
+};
+
 export const createGradeNode = (
   u: GradeUniforms,
   sample: (uv: TSL) => TSL,
@@ -119,11 +161,16 @@ export const createGradeNode = (
   const centred = uv.sub(0.5);
   const radius = centred.length().mul(1.4142);
 
+  // Edge-resolve first, then split the channels: running the aberration on
+  // aliased input would just produce three aliased edges instead of one.
+  const texel = float(1).div(resolution);
+  const resolved = (at: TSL) => fxaa(sample, at, texel as TSL);
+
   // Lateral chromatic aberration grows with distance from the optical axis.
   const shift = centred.mul(u.chromaticAberration.mul(0.001).mul(radius));
-  const red = sample(uv.add(shift) as TSL);
-  const green = sample(uv);
-  const blue = sample(uv.sub(shift) as TSL);
+  const red = resolved(uv.add(shift) as TSL);
+  const green = resolved(uv);
+  const blue = resolved(uv.sub(shift) as TSL);
   const source = vec3(red.r, green.g, blue.b) as TSL;
 
   // ---- Linear, scene-referred ---------------------------------------------

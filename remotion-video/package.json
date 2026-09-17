@@ -35,7 +35,8 @@
     "lint": "eslint src && tsc",
     "render:1080p": "node scripts/render-shots.mjs 1080p",
     "render:4k": "node scripts/render-shots.mjs 4k",
-    "models": "node scripts/prepare-models.mjs"
+    "models": "node scripts/prepare-models.mjs",
+    "package": "node scripts/package-project.mjs"
   },
   "sideEffects": [
     "*.css",

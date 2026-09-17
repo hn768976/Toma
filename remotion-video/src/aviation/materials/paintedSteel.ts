@@ -84,10 +84,15 @@ export const createPaintedSteelMaterial = ({
   const shaded = bleached.mul(mottle.mul(0.18).add(0.9));
 
   // ---- Grime ---------------------------------------------------------------
-  // Splash off the yard surface climbs about a third of the way up.
+  // Splash off the yard surface climbs about a third of the way up. The broader
+  // dust film reuses the mottle field at a different weight rather than paying
+  // for a third fBm of its own.
   const splash = falloff(0, height * 0.38, local.y as TSL).mul(fbm3(wearSpace.mul(2.4)).add(0.35));
-  const dust = fbm3(wearSpace.mul(0.45)).mul(0.5);
-  const dirtMask = clamp(splash.mul(0.72).add(dust.mul(0.34)).mul(grimeAmount), 0, 0.9);
+  const dirtMask = clamp(
+    splash.mul(0.72).add(mottle.mul(0.34)).mul(grimeAmount),
+    0,
+    0.9,
+  );
   const dirty = mix(shaded, vec3(0.135, 0.12, 0.103), dirtMask);
 
   // ---- Oxide ---------------------------------------------------------------

@@ -72,17 +72,21 @@ const createFactory =
 
     const markings = bakeContainerMarkings(quality.anisotropy);
 
-    // The near block is what the shot is actually about, so it gets the hero
-    // mesh; the blocks behind it only ever appear as silhouette and skyline.
+    // Both blocks use the reduced mesh. At the angle this shot works at, the
+    // corrugation that survives simplification is all that ever reads, and the
+    // hero mesh costs two and a half times the triangles for it.
     const nearYard = await createContainerYard({
       seed: 0x1a7,
-      columns: 4,
-      rows: 7,
+      // Sized to the frame, not to a plausible yard. The camera is four metres
+      // from the steel looking almost straight up, so it sees a dozen stacks at
+      // most — and an InstancedMesh draws every instance it holds, visible or
+      // not, which makes surplus bays pure cost.
+      columns: 3,
+      rows: 4,
       minTiers: 5,
-      maxTiers: 9,
+      maxTiers: 7,
       gapChance: 0.05,
       markings,
-      lod: false,
       grime: 1.1,
     });
     // Turned broadside: the reference reads the long corrugated walls, not the
@@ -93,8 +97,8 @@ const createFactory =
 
     const farYard = await createContainerYard({
       seed: 0x2b8,
-      columns: 4,
-      rows: 9,
+      columns: 3,
+      rows: 6,
       minTiers: 4,
       maxTiers: 8,
       gapChance: 0.12,

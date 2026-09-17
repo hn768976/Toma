@@ -9,10 +9,19 @@ import type { TSL, TSLInput } from "./tsl";
  * shader is the cheaper trade and avoids another texture upload.
  */
 
-/** Scalar hash of a lattice point. Deterministic and backend-independent. */
+/**
+ * Scalar hash of a lattice point.
+ *
+ * Deliberately sin-free. The familiar `fract(sin(dot(p, k)) * 43758.5)` costs a
+ * transcendental per lattice corner, and value noise needs eight of them per
+ * octave — which on a software rasteriser made the container paint the single
+ * most expensive thing in the frame, ahead of all its geometry. This is Dave
+ * Hoskins' hash: a handful of multiplies and fracts, same quality for noise.
+ */
 export const hash13 = Fn(([p]: [TSL]) => {
-  const q = floor(p);
-  return fract(sin(dot(q, vec3(127.1, 311.7, 74.7))).mul(43758.5453123));
+  const q = fract(floor(p).mul(vec3(0.1031, 0.1030, 0.0973))).toVar();
+  q.addAssign(dot(q, q.yzx.add(33.33)));
+  return fract(q.x.add(q.y).mul(q.z));
 });
 
 /** Trilinearly interpolated value noise in [0, 1]. */
@@ -39,21 +48,25 @@ export const valueNoise3 = Fn(([p]: [TSL]) => {
   return mix(mix(x00, x10, u.y), mix(x01, x11, u.y), u.z);
 });
 
-/** Four-octave fBm in [0, 1]. */
+/**
+ * Three-octave fBm in [0, 1].
+ *
+ * Three rather than four: the fourth octave lands below a texel at every
+ * distance these shots actually use, so it cost an eighth of the material's
+ * budget to produce noise no frame could resolve.
+ */
 export const fbm3 = Fn(([p]: [TSL]) => {
-  const n1 = valueNoise3(p).mul(0.5333);
-  const n2 = valueNoise3(p.mul(2.03)).mul(0.2667);
-  const n3 = valueNoise3(p.mul(4.01)).mul(0.1333);
-  const n4 = valueNoise3(p.mul(8.05)).mul(0.0667);
-  return n1.add(n2).add(n3).add(n4);
+  const n1 = valueNoise3(p).mul(0.5714);
+  const n2 = valueNoise3(p.mul(2.03)).mul(0.2857);
+  const n3 = valueNoise3(p.mul(4.01)).mul(0.1429);
+  return n1.add(n2).add(n3);
 });
 
 /** Ridged fBm — sharper crests, good for rust and salt bloom. */
 export const ridged3 = Fn(([p]: [TSL]) => {
-  const a = float(1).sub(abs(valueNoise3(p).mul(2).sub(1))).mul(0.55);
-  const b = float(1).sub(abs(valueNoise3(p.mul(2.11)).mul(2).sub(1))).mul(0.3);
-  const c = float(1).sub(abs(valueNoise3(p.mul(4.07)).mul(2).sub(1))).mul(0.15);
-  return a.add(b).add(c);
+  const a = float(1).sub(abs(valueNoise3(p).mul(2).sub(1))).mul(0.65);
+  const b = float(1).sub(abs(valueNoise3(p.mul(2.11)).mul(2).sub(1))).mul(0.35);
+  return a.add(b);
 });
 
 /**
