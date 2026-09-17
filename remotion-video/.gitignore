@@ -5,3 +5,7 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Generated from public/models-src by `npm run models`. The source GLBs are
+# tracked; their welded, simplified derivatives are not.
+public/models

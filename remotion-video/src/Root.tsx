@@ -18,10 +18,12 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import { AviationCompositions } from "./aviation";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <AviationCompositions />
       <Composition
         id="BluetoothExplainer"
         component={BluetoothExplainer}
