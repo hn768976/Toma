@@ -5,3 +5,5 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+# Packaged deliverables (renders + project zip) — reproducible from source.
+deliver
