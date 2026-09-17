@@ -40,6 +40,8 @@ for (const c of data.countries) {
     const composition = await selectComposition({
       serveUrl,
       id,
+      browserExecutable,
+      chromiumOptions: {gl: 'swangle'},
       inputProps: {countryCode: c.code, framing: v.framing},
     });
     const output = join(OUT, `${id}.png`);
