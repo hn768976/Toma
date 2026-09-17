@@ -11,6 +11,17 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+- **Neural Field** — 3D abstract tech background (three.js + WebGPU via TSL),
+  10.000s / 30fps, in two colour treatments at 1080p and 4K.
+  See [`src/neural-field/README.md`](src/neural-field/README.md) for the
+  composition list, render commands, how the look is built and what to tune.
+  - `NeuralFieldAurora` / `NeuralFieldAurora4K` — teal/cyan/green, dense side left
+  - `NeuralFieldNebula` / `NeuralFieldNebula4K` — dark blue/violet, mirrored
+- **Particle Ring Halo** — `ParticleRingHalo` / `ParticleRingHalo4K`
+- **Bluetooth Explainer** — `BluetoothExplainer`
+
 ## Commands
 
 **Install Dependencies**
