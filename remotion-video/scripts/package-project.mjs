@@ -3,7 +3,12 @@
  *
  * Includes the generated `public/models` even though git ignores them, so the
  * archive renders straight after `npm install` with no preprocessing step.
- * Excludes `node_modules` and `out`.
+ *
+ * Excludes `node_modules`, `out`, and `public/models-src`. The raw Meshy
+ * exports in models-src are only an input to `npm run models`, and the textured
+ * aircraft alone is 22MB of JPEG — carrying both them and their processed
+ * derivatives doubles the archive for no benefit to someone who just wants to
+ * render. They are tracked in git, so `npm run models` still works in a clone.
  */
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -26,6 +31,8 @@ const zip = spawn(
     "node_modules/*",
     "-x",
     "out/*",
+    "-x",
+    "public/models-src/*",
     "-x",
     ".git/*",
     "-x",
