@@ -305,17 +305,20 @@ normal is their cross product. Nothing is reconstructed from a normal or
 displacement texture, which is what would otherwise stair-step and show as banded
 shading across the folds.
 
-**Self-shading.** The troughs of a corrugation are occluded by the crests either
-side of them, so `wf_wave()` also returns a normalised trough depth — taken
-*after* sharpening, so the deepened creases shade as strongly as they look —
-which attenuates indirect and direct light in the `aomap_fragment` injection.
-Without it the cloth reads as a printed image on a curved surface.
+**Self-shading is switched off.** `wf_wave()` still returns a normalised trough
+depth, and the `aomap_fragment` injection still applies it, but `uAoStrength` is
+**0** in `FlagMesh.tsx`. The occlusion term put dark bands across the cloth that
+read as shadows dirtying the flag rather than as fabric — most obviously on
+white, where a trough turned into a grey smear.
 
-The gain on that term is deliberately low (1.2, at 0.7 strength). The value it
-acts on is already normalised to [−1,1], so a high gain saturates on ordinary
-folds and drives every trough to near black — which, combined with the weave
-correctly fading out on foreshortened surfaces, leaves those regions with no
-detail at all and reads as a smear rather than as cloth.
+The folds still shade, through the lighting model and the analytic normals: a
+flank turned away from the key is darker than one facing it. The key is also
+kept reasonably frontal for the same reason, so a fold turning away falls off
+gently instead of dropping into shadow.
+
+Raise `uAoStrength` to bring the occlusion term back. If you do, keep the gain
+low — the value it multiplies is already normalised to [−1,1], so anything much
+above 1 saturates on ordinary folds and drives every trough to near black.
 
 **Material.** `MeshPhysicalMaterial` at roughness 0.86 with a sheen lobe
 (`sheen: 0.45`, `sheenRoughness: 0.9`) that brightens at grazing angles, and no
@@ -425,22 +428,14 @@ No code changes. `Root.tsx` generates the compositions from the data, and
 
 | File | |
 | --- | --- |
-| `out/Japan_FlagPole.mp4` | V1, simple flag — the base case |
-| `out/SaudiArabia_FlagPole.mp4` | V1, text-bearing — proves the no-mirroring rule |
-| `out/Brazil_FlagCloseup.mp4` | V2, complex emblem — emblem resolution and fold distortion |
-| `out/<same>.png` | one 1080p still each — the exact averaged frame from the clip, taken before the encode |
+| `out/Japan_FlagPole.png` | V1, simple flag — the base case |
+| `out/SaudiArabia_FlagPole.png` | V1, text-bearing — proves the no-mirroring rule |
+| `out/Brazil_FlagCloseup.png` | V2, complex emblem — emblem resolution and fold distortion |
 | `waving-flag-project.zip` | the 4K-render-ready project, all 60 compositions |
 
-All three clips are rendered with 4-sample motion blur and verified with
-`ffprobe`: H.264, 1920×1080, `yuv420p` (limited range), 30 fps, 300 frames,
-exactly 10.000 s, and **no audio stream**.
-
-**Motion blur, measured.** Comparing horizontal gradient energy against an
-unblurred render of the same frame, the fly third of the flag retains **93.7%**
-of its detail while the near-static hoist third, where the emblems sit, retains
-**99.2%**. The fast free edge softens about eight times as much as the rest, and
-only modestly — which is what "subtle, and the emblem stays readable" needs to
-mean in practice.
+All three stills are 1920×1080 PNG. **No preview clips are rendered** — the
+project is delivered ready to render, and `scripts/render-motion-blur.mjs` is
+there when clips are wanted. See [Render commands](#render-commands).
 
 ---
 

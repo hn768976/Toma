@@ -15,17 +15,18 @@ import {Grade} from './Grade';
 const DEG = Math.PI / 180;
 
 /**
- * Key well off-axis from the upper front-left, so every fold has a clearly lit
- * flank and a clearly shaded one; a cool sky fill from above; a dim bounce from
- * below. The fill is kept low deliberately — a soft, frontal key is what makes
- * cloth read as a printed image on a curved surface.
+ * Key from the upper front-left, frontal enough that a fold turning away does
+ * not fall into heavy shadow — the cloth should read as evenly lit fabric, not
+ * as a flag with dark bands across it. A cool sky fill from above and a dim
+ * bounce from below, both kept low: neutral fill is what drains the colour out
+ * of a saturated flag.
  *
  * No tone mapping: an ACES-style curve would shift the flag's colours, and the
  * exact shade is part of the specification.
  */
 const Lights: React.FC = () => (
   <>
-    <directionalLight position={[-7, 4.2, 2.4]} intensity={4.0} color="#fffaf2" />
+    <directionalLight position={[-4.5, 3.6, 5.2]} intensity={4.0} color="#fffaf2" />
     <hemisphereLight args={['#cfe2f2', '#4a5a69', 0.22]} />
     <directionalLight position={[1.5, -3.5, 2.0]} intensity={0.16} color="#e6ecf2" />
   </>

@@ -73,8 +73,11 @@ export const FlagMesh: React.FC<Props> = ({
       uNEdge: {value: params.nEdge},
       uPoleSag: {value: params.poleSag}, uPoleSagWidth: {value: params.poleSagWidth},
       uSag: {value: params.sag},
-      // Fold self-shading. This is what separates fabric from a decal.
-      uAoStrength: {value: 0.5},
+      // Fold self-shading (trough darkening). Turned OFF at request: the dark
+      // bands it put across the cloth read as shadows dirtying the flag rather
+      // than as fabric. The folds still shade through the lighting model, from
+      // the analytic normals. Raise this to bring the occlusion term back.
+      uAoStrength: {value: 0.0},
       // Weave: ~620 threads across the flag. Low enough to resolve at 4K
       // without aliasing, high enough to read as cloth rather than corduroy.
       uWeaveFreq: {value: new Vector2(620 * aspect, 620)},
