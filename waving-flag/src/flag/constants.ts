@@ -11,10 +11,12 @@ export type Framing = 'pole' | 'closeup';
  * (scripts/render-motion-blur.mjs). A 180-degree shutter means the samples
  * span half a frame interval.
  */
-export const SHUTTER_ANGLE = 0.5; // fraction of a frame the shutter is open
-// At ~2.4 Hz the cloth moves far enough within one shutter that three samples
-// read as three ghosts rather than as blur. Five closes the gaps.
-export const SHUTTER_SAMPLES = 5; // sub-frames averaged per output frame
+// At ~2.4 Hz the fold pattern crosses roughly 29 screen pixels per frame at
+// 1080p, so a 180-degree shutter smears ~15px. Three samples over that span
+// read as three ghosts rather than as blur; a slightly shorter shutter with
+// four samples puts the steps under 3px, which reads as continuous.
+export const SHUTTER_ANGLE = 0.42; // fraction of a frame the shutter is open
+export const SHUTTER_SAMPLES = 4;  // sub-frames averaged per output frame
 
 /**
  * Wave speed is taken from the reference footage: the fold pattern there

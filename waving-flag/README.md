@@ -261,6 +261,12 @@ On top of that:
 - a **gust envelope** at one and two cycles per loop, modulating the whole wave
   so the flag surges and settles instead of waving at a constant rate.
 
+**Wave speed is taken from the reference footage, not guessed.** Sampling the
+reference clip every 0.067 s, the fold pattern repeats about every 0.4 s — so
+the primary wave runs at roughly **2.4 Hz**, which is 24 whole cycles over the
+300-frame loop. The close-up runs at about half that: bigger folds travelling
+more slowly are what make it read as a detail rather than a distant flag.
+
 Every wave term is multiplied by the envelope `E(u) = u^p` with **p = 2**, so it
 is **exactly zero at the attachment and grows quadratically to the free edge** —
 the outer third does almost all of the moving. This is the detail that decides
@@ -322,8 +328,12 @@ produced the straightforward way, by `scripts/render-motion-blur.mjs`:
 2. the passes are averaged frame by frame;
 3. the averaged sequence is encoded.
 
-Defaults are a **180° shutter** (samples spanning half a frame interval, centred
-on the frame's own time) and **3 samples**. Because `shutterOffset` only shifts
+Defaults are a **151° shutter** (`--shutter=0.42`, samples spanning 0.42 of a
+frame interval, centred on the frame's own time) and **4 samples**. Those come
+from the motion itself: at 2.4 Hz the fold pattern crosses about 29 screen
+pixels per frame at 1080p, so the shutter smears roughly 12 px and four samples
+put the steps under 3 px. Three samples over a full 180° shutter left visible
+steps — three ghosts rather than a blur. Because `shutterOffset` only shifts
 the sampled time, and every wave term is still a pure function of it, the passes
 stay deterministic and can be rendered out of order like any other.
 
@@ -332,7 +342,7 @@ node scripts/render-motion-blur.mjs Japan-FlagPole out/Japan_FlagPole.mp4 \
   --scale=0.5 --samples=3 --shutter=0.5 --concurrency=4
 ```
 
-It costs one full render per sample, so a 3-sample pass is 3x the frame count.
+It costs one full render per sample, so a 4-sample pass is 4x the frame count.
 Keep it modest: the free edge is where the blur reads, and the emblem has to
 stay legible.
 
@@ -350,7 +360,7 @@ src/
   flag/FlagMesh.tsx       geometry, material and all shader injection
   flag/glsl/wave.glsl.ts  the displacement function and its analytic derivatives
   flag/glsl/noise.glsl.ts gradient noise with derivatives; periodic noise for sky
-  flag/Sky.tsx            procedural gradient sky and looping clouds (V1)
+  flag/Sky.tsx            static procedural gradient sky (V1)
   flag/Pole.tsx           brushed metal pole and finial (V1)
   flag/Grade.tsx          vignette / lens falloff (V1), depth of field (V2), grain
   flag/useEnvironment.ts  procedural environment map for metal and sheen
@@ -473,3 +483,30 @@ correctly, never mirrored, in both versions and across folds that turn the cloth
 away from camera.
 
 Contact sheets of all 60 are written to `out/contact/sheet-1..3.png`.
+
+---
+
+## Colour
+
+Tone mapping is **off** (`NoToneMapping`): an ACES-style curve would shift every
+flag's colours, and the exact shade is part of the specification. That puts the
+burden on the lighting, and the failure mode is subtle — the *highlight* can
+match the flag's true colour while the midtones quietly desaturate.
+
+It is worth checking against the reference numerically rather than by eye.
+Sampling only unambiguously red fabric pixels (R > 1.8 × max(G, B)) in the
+reference clip and in a matching render of the Turkish flag:
+
+| | lit (5th pct) | mid (50th) | trough (92nd) |
+| --- | --- | --- | --- |
+| Reference footage | `#e65648` | `#9d1e1f` | `#901e21` |
+| Before | `#eb4544` | `#b83d3c` | `#892f2f` |
+| After | `#e93735` | `#a92a28` | `#641213` |
+
+The lit red was never the problem. The midtone was: its green and blue channels
+sat at roughly `0x3d` where the reference is `0x1e`, which is neutral fill light
+diluting the red rather than any lack of saturation. The fix was to cut the
+hemisphere light, the environment contribution, the sheen and the specular
+intensity, and let the key light carry the image — not to push saturation, which
+would have broken the exact shades.
+
