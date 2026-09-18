@@ -72,8 +72,8 @@ export const Grade: React.FC<{
           {/* Lens falloff: detail and chroma soften toward the corners. */}
           <AbsoluteFill
             style={{
-              backdropFilter: `blur(${height * 0.0014}px) saturate(0.94)`,
-              WebkitBackdropFilter: `blur(${height * 0.0014}px) saturate(0.94)`,
+              backdropFilter: `blur(${height * 0.0014}px)`,
+              WebkitBackdropFilter: `blur(${height * 0.0014}px)`,
               maskImage: `radial-gradient(ellipse ${vignetteRadius * 0.66}px ${
                 vignetteRadius * 0.56
               }px at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,1) 100%)`,

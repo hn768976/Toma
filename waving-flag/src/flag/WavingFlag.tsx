@@ -25,9 +25,9 @@ const DEG = Math.PI / 180;
  */
 const Lights: React.FC = () => (
   <>
-    <directionalLight position={[-7, 4.2, 2.4]} intensity={3.0} color="#fff4e4" />
-    <hemisphereLight args={['#cfe3f5', '#48596a', 0.32]} />
-    <directionalLight position={[1.5, -3.5, 2.0]} intensity={0.22} color="#dfe6ec" />
+    <directionalLight position={[-7, 4.2, 2.4]} intensity={4.0} color="#fffaf2" />
+    <hemisphereLight args={['#cfe2f2', '#4a5a69', 0.22]} />
+    <directionalLight position={[1.5, -3.5, 2.0]} intensity={0.16} color="#e6ecf2" />
   </>
 );
 
@@ -68,7 +68,7 @@ const V1Scene: React.FC<{
     <>
       <CameraRig position={[0, 0, dist]} tilt={tilt} fov={fov} />
       <Lights />
-      <Sky t={t} width={skyH * frameAspect} height={skyH} distance={skyDistance} />
+      <Sky width={skyH * frameAspect} height={skyH} distance={skyDistance} />
       <group position={[0, 0, poleZ]}>
         <Pole
           x={poleX}

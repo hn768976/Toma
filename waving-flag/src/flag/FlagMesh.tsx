@@ -74,11 +74,11 @@ export const FlagMesh: React.FC<Props> = ({
       uPoleSag: {value: params.poleSag}, uPoleSagWidth: {value: params.poleSagWidth},
       uSag: {value: params.sag},
       // Fold self-shading. This is what separates fabric from a decal.
-      uAoStrength: {value: 0.7},
+      uAoStrength: {value: 0.5},
       // Weave: ~620 threads across the flag. Low enough to resolve at 4K
       // without aliasing, high enough to read as cloth rather than corduroy.
       uWeaveFreq: {value: new Vector2(620 * aspect, 620)},
-      uWeaveAmp: {value: 0.1},
+      uWeaveAmp: {value: 0.075},
     };
 
     const mat = new MeshPhysicalMaterial({
@@ -89,13 +89,13 @@ export const FlagMesh: React.FC<Props> = ({
       metalness: 0.0,
       // Sheen is the grazing-angle lobe that makes cloth catch light along the
       // crest of a fold without ever forming a hard specular hotspot.
-      sheen: 0.5,
+      sheen: 0.28,
       sheenRoughness: 0.8,
-      sheenColor: new Color('#fff3e2'),
-      specularIntensity: 0.2,
+      sheenColor: new Color('#ffe9d2'),
+      specularIntensity: 0.11,
       side: DoubleSide,
       envMap,
-      envMapIntensity: 0.32,
+      envMapIntensity: 0.2,
     });
 
     mat.onBeforeCompile = (shader) => {
@@ -159,7 +159,7 @@ const float WF_TAU2 = 6.283185307179586;
           `#include <normal_fragment_begin>
 {
   vec2 wv = fwidth(vFlagUv) * uWeaveFreq;
-  float wfFade = 1.0 - smoothstep(0.45, 1.20, max(wv.x, wv.y));
+  float wfFade = 1.0 - smoothstep(0.28, 0.80, max(wv.x, wv.y));
   if (wfFade > 0.001) {
     float wdu = cos(vFlagUv.x * uWeaveFreq.x * WF_TAU2) * uWeaveAmp * wfFade;
     float wdv = cos(vFlagUv.y * uWeaveFreq.y * WF_TAU2) * uWeaveAmp * wfFade;
@@ -174,7 +174,7 @@ const float WF_TAU2 = 6.283185307179586;
           '#include <aomap_fragment>',
           `float wfAo = 1.0 - uAoStrength * vCavity;
 reflectedLight.indirectDiffuse *= wfAo;
-reflectedLight.directDiffuse *= mix(1.0, wfAo, 0.5);
+reflectedLight.directDiffuse *= mix(1.0, wfAo, 0.34);
 reflectedLight.indirectSpecular *= wfAo;
 reflectedLight.directSpecular *= mix(1.0, wfAo, 0.6);`,
         );

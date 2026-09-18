@@ -12,9 +12,16 @@ export type Framing = 'pole' | 'closeup';
  * span half a frame interval.
  */
 export const SHUTTER_ANGLE = 0.5; // fraction of a frame the shutter is open
-export const SHUTTER_SAMPLES = 3; // sub-frames averaged per output frame
+// At ~2.4 Hz the cloth moves far enough within one shutter that three samples
+// read as three ghosts rather than as blur. Five closes the gaps.
+export const SHUTTER_SAMPLES = 5; // sub-frames averaged per output frame
 
 /**
+ * Wave speed is taken from the reference footage: the fold pattern there
+ * repeats about every 0.4 s, so the primary wave runs at ~2.4 Hz (24 whole
+ * cycles over the 300-frame loop) for the pole shot, and about half that for
+ * the close-up, where bigger folds travelling more slowly read as a detail.
+ *
  * Wave parameters per version. Every temporal cycle count (n1, n2, n3,
  * nFlutter, nCurl, nEdge) must stay an INTEGER — that, plus the noise being
  * sampled on a circle in time and the gust using whole-number cycles, is what
@@ -50,32 +57,32 @@ export const WAVE: Record<Framing, WaveParams> = {
   // Medium shot: quicker, tighter, more creased.
   pole: {
     envPow: 2.0,
-    amp1: 0.095, k1: 1.9, n1: 3,
-    amp2: 0.04, k2: 3.0, n2: 5, theta: (30 * Math.PI) / 180,
-    amp3: 0.013, k3: 4.8, n3: 8, theta3: (-35 * Math.PI) / 180,
-    ampN: 0.038, noiseFreq: [2.4, 0.85], noiseRadius: 0.9,
-    ampFlutter: 0.016, kFlutter: 3.6, nFlutter: 9, flutterStart: 0.55,
-    ampCurl: 0.014, kCurl: 1.6, nCurl: 4, curlStart: 0.92,
-    sharpen: 0.35,
+    amp1: 0.088, k1: 2.9, n1: 24,
+    amp2: 0.026, k2: 4.4, n2: 34, theta: (30 * Math.PI) / 180,
+    amp3: 0.006, k3: 4.5, n3: 44, theta3: (-35 * Math.PI) / 180,
+    ampN: 0.018, noiseFreq: [1.6, 0.7], noiseRadius: 2.2,
+    ampFlutter: 0.01, kFlutter: 3.4, nFlutter: 52, flutterStart: 0.55,
+    ampCurl: 0.013, kCurl: 1.6, nCurl: 20, curlStart: 0.92,
+    sharpen: 0.55,
     gustDepth: 0.22,
     drapeAmp: 0.04, drapeSigma: 0.14, drapeCycles: 3,
-    edgeAmp: 0.045, kEdge: 1.3, nEdge: 2,
+    edgeAmp: 0.042, kEdge: 1.4, nEdge: 12,
     poleSag: 0.075, poleSagWidth: 0.06,
     sag: 0.045,
   },
   // Close-up: larger folds, slower travel, so it reads as a detail.
   closeup: {
     envPow: 2.0,
-    amp1: 0.1, k1: 1.2, n1: 1,
-    amp2: 0.045, k2: 2.0, n2: 2, theta: (28 * Math.PI) / 180,
-    amp3: 0.014, k3: 3.6, n3: 4, theta3: (-30 * Math.PI) / 180,
-    ampN: 0.042, noiseFreq: [1.5, 0.65], noiseRadius: 0.7,
-    ampFlutter: 0.012, kFlutter: 2.6, nFlutter: 5, flutterStart: 0.55,
-    ampCurl: 0.012, kCurl: 1.3, nCurl: 2, curlStart: 0.92,
-    sharpen: 0.32,
+    amp1: 0.105, k1: 1.8, n1: 12,
+    amp2: 0.032, k2: 2.9, n2: 17, theta: (28 * Math.PI) / 180,
+    amp3: 0.008, k3: 3.4, n3: 22, theta3: (-30 * Math.PI) / 180,
+    ampN: 0.022, noiseFreq: [1.2, 0.55], noiseRadius: 1.6,
+    ampFlutter: 0.008, kFlutter: 2.4, nFlutter: 26, flutterStart: 0.55,
+    ampCurl: 0.012, kCurl: 1.3, nCurl: 10, curlStart: 0.92,
+    sharpen: 0.5,
     gustDepth: 0.2,
     drapeAmp: 0.035, drapeSigma: 0.18, drapeCycles: 2,
-    edgeAmp: 0.04, kEdge: 1.0, nEdge: 1,
+    edgeAmp: 0.038, kEdge: 1.1, nEdge: 6,
     poleSag: 0.06, poleSagWidth: 0.07,
     sag: 0.04,
   },
