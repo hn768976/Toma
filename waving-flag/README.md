@@ -123,47 +123,58 @@ allow `_` in a composition id; the delivered *files* use `_`). Run
 ## Measured render time
 
 Measured on this machine: **4 vCPU, 15 GB RAM, no GPU**, SwiftShader via ANGLE
-(`--gl=swangle`), `--concurrency=4`. Wall-clock seconds per frame, from
-eight-frame samples run back to back with the same command, output dimensions
-verified.
+(`--gl=swangle`). Wall-clock seconds per frame.
 
-**Per rendered frame** (one pass, no motion blur):
+**Per rendered frame** (one pass, no motion blur), from 30-frame samples with
+the output frame count and dimensions checked:
 
 | | 1080p (`--scale=0.5`) | 4K (3840×2160) |
 | --- | --- | --- |
-| V1 — flag on a pole | **5.0 s/frame** | **13.0 s/frame** |
-| V2 — full-frame fabric | **5.5 s/frame** | **12.1 s/frame** |
+| V1 — flag on a pole | **2.6 s/frame** (`--concurrency=4`) | **5.6 s/frame** (`--concurrency=4`) |
+| V2 — full-frame fabric | **4.6 s/frame** (`--concurrency=4`) | **6.1 s/frame** (`--concurrency=2`, see below) |
 
-**Per delivered frame with 3-sample motion blur at 1080p**, measured end to end
-across the three clips including averaging and encode:
+> Short samples mislead here. An eight-frame run amortises Remotion's one-time
+> bundling over only eight frames and reported nearly double the true figure.
+> The 1080p numbers above are derived from the full 300-frame delivery runs.
 
-| Clip | Passes | Averaging + encode | Total | Per output frame |
-| --- | --- | --- | --- | --- |
-| `Japan_FlagPole` | 4568 s | 339 s | 4907 s | **16.4 s** |
-| `SaudiArabia_FlagPole` | 4561 s | 343 s | 4904 s | **16.4 s** |
-| `Brazil_FlagCloseup` | 4953 s | 427 s | 5380 s | **17.9 s** |
+**⚠️ V2 at 4K needs `--concurrency=2`.** The close-up uses the 8192 px texture,
+which is about 239 MB per worker once mipmapped; at 4K, four workers plus their
+framebuffers exhaust memory and the render produces **no frames at all**. It
+does not always fail loudly — a run whose output you do not check can look like
+a very fast one. Always confirm the frame count and dimensions:
 
-Motion blur costs one full render per sample, so 3 samples is a little over 3x
-the single-pass figure.
+```bash
+ls /tmp/probe | wc -l     # expected number of frames?
+python3 -c "import struct; b=open('/tmp/probe/element-100.png','rb').read(26); print(struct.unpack('>II', b[16:24]))"
+```
+
+**Per delivered frame with 4-sample motion blur at 1080p**, end to end across
+the three clips including averaging and encode:
+
+| Clip | Total | Per output frame |
+| --- | --- | --- |
+| `Japan_FlagPole` | 3649 s | **12.2 s** |
+| `SaudiArabia_FlagPole` | 3547 s | **11.8 s** |
+| `Brazil_FlagCloseup` | 6089 s | **20.3 s** |
 
 **Scheduling the 57 unrendered compositions at 4K on hardware like this:**
 
-| | Compositions | Frames | Without motion blur | With 3-sample blur |
+| | Compositions | Frames | Without motion blur | With 4-sample blur |
 | --- | --- | --- | --- | --- |
-| V1 remaining | 28 | 8,400 | ≈ 30 h | ≈ 102 h |
-| V2 remaining | 29 | 8,700 | ≈ 29 h | ≈ 99 h |
-| **Total** | **57** | **17,100** | **≈ 60 h** | **≈ 201 h** |
+| V1 remaining | 28 | 8,400 | ≈ 13 h | ≈ 67 h |
+| V2 remaining | 29 | 8,700 | ≈ 15 h | ≈ 73 h |
+| **Total** | **57** | **17,100** | **≈ 28 h** | **≈ 140 h** |
 
 Those are the numbers for a **software rasteriser**. Almost all of it is vertex
-and fragment work that a real GPU does in a fraction of the time — on a GPU
-machine with `--gl=angle`, expect roughly an order of magnitude better, and
-raise `--concurrency` to the core count. Budget from a short measured sample on
-your own hardware rather than from this table, and **check the output really is
-3840×2160** before trusting the number:
+and fragment work a real GPU does in a fraction of the time — on a GPU machine
+with `--gl=angle`, expect roughly an order of magnitude better, and raise
+`--concurrency` to the core count (except for V2 at 4K, where the memory
+ceiling, not the core count, is the limit). Budget from your own measured
+sample, over at least 30 frames, and check the frames exist:
 
 ```bash
 npx remotion render src/index.ts Japan-FlagPole /tmp/probe \
-  --sequence --image-format=png --frames=100-107 --concurrency=4
+  --sequence --image-format=png --frames=100-129 --concurrency=4
 ```
 
 ---
@@ -420,14 +431,14 @@ No code changes. `Root.tsx` generates the compositions from the data, and
 | `out/<same>.png` | one 1080p still each — the exact averaged frame from the clip, taken before the encode |
 | `waving-flag-project.zip` | the 4K-render-ready project, all 60 compositions |
 
-All three clips are rendered with 3-sample motion blur and verified with
+All three clips are rendered with 4-sample motion blur and verified with
 `ffprobe`: H.264, 1920×1080, `yuv420p` (limited range), 30 fps, 300 frames,
 exactly 10.000 s, and **no audio stream**.
 
 **Motion blur, measured.** Comparing horizontal gradient energy against an
-unblurred render of the same frame, the fly third of the flag retains **95.1%**
+unblurred render of the same frame, the fly third of the flag retains **93.7%**
 of its detail while the near-static hoist third, where the emblems sit, retains
-**99.4%**. The fast free edge softens about eight times as much as the rest, and
+**99.2%**. The fast free edge softens about eight times as much as the rest, and
 only modestly — which is what "subtle, and the emblem stays readable" needs to
 mean in practice.
 
