@@ -3,12 +3,12 @@ import { Container, Sprite } from "pixi.js";
 import { z } from "zod";
 import { PixiScene, type SceneSetup } from "./pixi/PixiScene";
 import { createBloom, createGrade, createNebulaLayer } from "./pixi/passes";
-import { glowTexture, streakTexture } from "./pixi/textures";
+import { glowTexture } from "./pixi/textures";
 import { between, betweenBiased, loopWave, loopWave01, makeRandom } from "./pixi/rng";
 
 // Plate 2 -- "Cosmic Dust".
 // A deep navy field of drifting star dust, lit from the lower left by a cold
-// teal bloom and cut on the right by a single vertical shaft of cyan.
+// teal bloom.
 
 const DUST = [0xdff4ff, 0xa9dcf5, 0x7ec8ec, 0x6fd8cf, 0x4fa9e0];
 
@@ -44,7 +44,6 @@ const setup =
 
     const softTex = glowTexture(256 * scale, 0.0, 1.6);
     const dustTex = glowTexture(16 * scale, 0.3, 2.4);
-    const beamTex = streakTexture(512, 64);
     const emberTex = glowTexture(48 * scale, 0.0, 1.9);
 
     // --- the two key lights -------------------------------------------------
@@ -70,43 +69,6 @@ const setup =
     blueWash.width = 2.0 * width;
     blueWash.height = 1.15 * height;
     glow.addChild(blueWash);
-
-    // The vertical cyan shaft on the right. Three stacked passes -- a wide
-    // haze, the shaft itself, then a tight white core -- so the edge stays
-    // soft instead of reading as a drawn line.
-    const beamHaze = new Sprite(softTex);
-    beamHaze.anchor.set(0.5);
-    beamHaze.tint = 0x1f86c8;
-    beamHaze.blendMode = "add";
-    beamHaze.x = 0.795 * width;
-    beamHaze.y = 0.78 * height;
-    beamHaze.width = 0.5 * width;
-    beamHaze.height = 1.15 * height;
-    glow.addChild(beamHaze);
-
-    const beam = new Sprite(beamTex);
-    beam.anchor.set(0.5);
-    beam.rotation = Math.PI / 2;
-    beam.tint = 0x36d7ff;
-    beam.blendMode = "add";
-    beam.x = 0.795 * width;
-    beam.y = 0.74 * height;
-    // Rotated, so width runs vertically and height runs horizontally.
-    beam.width = 1.0 * height;
-    beam.height = 0.075 * width;
-    glow.addChild(beam);
-
-    // A tight hot core inside the shaft keeps its centre reading as white.
-    const beamCore = new Sprite(beamTex);
-    beamCore.anchor.set(0.5);
-    beamCore.rotation = Math.PI / 2;
-    beamCore.tint = 0xd8f6ff;
-    beamCore.blendMode = "add";
-    beamCore.x = beam.x;
-    beamCore.y = 0.8 * height;
-    beamCore.width = 0.62 * height;
-    beamCore.height = 0.014 * width;
-    glow.addChild(beamCore);
 
     // --- star dust ----------------------------------------------------------
     type Dust = {
@@ -207,12 +169,6 @@ const setup =
         // Key lights breathe on long, offset cycles.
         tealPool.alpha = 0.34 + 0.1 * loopWave(u, 1, 0.0);
         blueWash.alpha = 0.22 + 0.07 * loopWave(u, 1, 0.37);
-        beamHaze.alpha = 0.3 + 0.1 * loopWave(u, 1, 0.55);
-        beam.alpha = 0.42 + 0.18 * loopWave(u, 2, 0.15);
-        beamCore.alpha = 0.34 + 0.24 * loopWave(u, 3, 0.62);
-        beam.x = (0.795 + 0.006 * loopWave(u, 1, 0.2)) * width;
-        beamCore.x = beam.x;
-        beamHaze.x = beam.x;
 
         for (const d of dust) {
           d.sprite.x = (d.x0 + u * d.driftX * wrapX + wrapX) % wrapX - 60 * scale;
@@ -234,7 +190,6 @@ const setup =
         bloom.destroy();
         softTex.destroy(true);
         dustTex.destroy(true);
-        beamTex.destroy(true);
         emberTex.destroy(true);
       },
     };
