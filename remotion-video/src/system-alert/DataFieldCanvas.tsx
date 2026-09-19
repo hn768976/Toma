@@ -3,7 +3,7 @@ import { AbsoluteFill, continueRender, delayRender, useCurrentFrame, useVideoCon
 import * as THREE from "three";
 import { FRAGMENT_SHADER, VERTEX_SHADER } from "./shader";
 import { glitchAt } from "./glitch";
-import { SCANLINE_COUNT } from "./constants";
+import { BACKGROUND_COVER_SCALE, SCANLINE_COUNT } from "./constants";
 
 /**
  * Renders the procedural background with three.js on a single fullscreen quad.
@@ -16,7 +16,10 @@ import { SCANLINE_COUNT } from "./constants";
  * delayRender() is held until the first draw has actually completed, so
  * Remotion never screenshots an empty canvas.
  */
-export const DataFieldCanvas: React.FC<{ columns: number }> = ({ columns }) => {
+export const DataFieldCanvas: React.FC<{ columns: number; kickPx: number }> = ({
+  columns,
+  kickPx,
+}) => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -102,8 +105,7 @@ export const DataFieldCanvas: React.FC<{ columns: number }> = ({ columns }) => {
   // A touch of optical softness. The reference field is not pixel-crisp — it
   // reads as a screen photographed slightly out of focus — and the blur radius
   // is a fraction of the frame height so 4K gets the same *apparent* softness
-  // rather than a sharper picture. The 1.01 scale hides the edge falloff the
-  // blur would otherwise pull in from outside the canvas.
+  // rather than a sharper picture.
   const blurPx = height * 0.0011;
 
   return (
@@ -117,7 +119,10 @@ export const DataFieldCanvas: React.FC<{ columns: number }> = ({ columns }) => {
           height,
           display: "block",
           filter: `blur(${blurPx.toFixed(2)}px)`,
-          transform: "scale(1.01)",
+          // Oversized so that neither the glitch kick nor the blur can pull
+          // the canvas edge into frame. translateX is written before scale so
+          // the kick stays in un-scaled frame units.
+          transform: `translateX(${kickPx.toFixed(2)}px) scale(${BACKGROUND_COVER_SCALE})`,
         }}
       />
     </AbsoluteFill>

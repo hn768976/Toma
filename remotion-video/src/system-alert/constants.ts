@@ -54,3 +54,17 @@ export const PALETTE = {
 
 /** Number of simulated CRT scanlines across the frame height, resolution independent. */
 export const SCANLINE_COUNT = 270;
+
+/**
+ * Whole-frame glitch kick.
+ *
+ * `KICK_GAIN` multiplies the glitch model's `jump` (|jump| <= 0.006) to give a
+ * displacement as a fraction of frame width, so the largest possible kick is
+ * KICK_GAIN * 0.006 of the width. `BACKGROUND_COVER_SCALE` is what the
+ * full-bleed background is scaled by so it can absorb that displacement
+ * without pulling its own edge into frame; it must stay above
+ * 1 + 2 * KICK_GAIN * 0.006, with margin for the blur that is applied at the
+ * same time.
+ */
+export const KICK_GAIN = 3;
+export const BACKGROUND_COVER_SCALE = 1.06;

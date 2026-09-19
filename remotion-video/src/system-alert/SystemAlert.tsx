@@ -4,6 +4,7 @@ import { DataFieldCanvas } from "./DataFieldCanvas";
 import { AlertBanner } from "./AlertBanner";
 import { ScreenOverlay } from "./ScreenOverlay";
 import { glitchAt } from "./glitch";
+import { KICK_GAIN } from "./constants";
 import "./load-alert-font";
 
 export const systemAlertSchema = z.object({
@@ -30,16 +31,23 @@ export const SystemAlert: React.FC<SystemAlertProps> = ({ headline, columns }) =
   const { width } = useVideoConfig();
   const g = glitchAt(frame);
 
-  // A whole-frame horizontal kick on the heaviest frames, applied once to the
-  // composite so background and banner move together.
-  const kick = g.intensity > 0.7 ? (g.jump * 6) * width : 0;
+  // A whole-frame horizontal kick on the heaviest frames, so that background
+  // and banner lurch together rather than the banner sliding over a fixed
+  // background.
+  //
+  // The kick is handed to the two layers separately rather than applied to a
+  // wrapper around both. Translating the wrapper drags the background off its
+  // own edge and exposes the black underneath — measured as a 15-25px dead
+  // bar down one side of every heavy glitch frame. The banner is a small
+  // central element and can be moved freely; only the full-bleed background
+  // needs to be oversized enough to cover its own displacement, which it
+  // handles internally.
+  const kickPx = g.intensity > 0.7 ? g.jump * KICK_GAIN * width : 0;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000000", overflow: "hidden" }}>
-      <AbsoluteFill style={{ transform: `translateX(${kick.toFixed(2)}px)` }}>
-        <DataFieldCanvas columns={columns} />
-        <AlertBanner headline={headline} />
-      </AbsoluteFill>
+      <DataFieldCanvas columns={columns} kickPx={kickPx} />
+      <AlertBanner headline={headline} kickPx={kickPx} />
       <ScreenOverlay />
     </AbsoluteFill>
   );

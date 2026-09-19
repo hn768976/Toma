@@ -16,7 +16,10 @@ import { bannerSlices, glitchAt } from "./glitch";
  *   - N clipped horizontal slices displaced sideways for the tear
  * All of them are pure functions of the frame, so workers agree.
  */
-export const AlertBanner: React.FC<{ headline: string }> = ({ headline }) => {
+export const AlertBanner: React.FC<{ headline: string; kickPx: number }> = ({
+  headline,
+  kickPx,
+}) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
 
@@ -25,7 +28,7 @@ export const AlertBanner: React.FC<{ headline: string }> = ({ headline }) => {
 
   const bannerW = width * BANNER.widthFrac;
   const bannerH = height * BANNER.heightFrac;
-  const left = width * BANNER.centerXFrac - bannerW / 2;
+  const left = width * BANNER.centerXFrac - bannerW / 2 + kickPx;
   const top = height * BANNER.centerYFrac - bannerH / 2 + height * g.jump;
 
   const fontSize = height * FONT_SIZE_FRAC;
