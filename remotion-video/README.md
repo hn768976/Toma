@@ -11,6 +11,14 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+- **Digital glitch plates** (`src/glitch`) — three abstract glitch backgrounds
+  built with PixiJS v8 and custom WebGL shaders, as 4K masters plus 1080p
+  delivery renders. See [`src/glitch/README.md`](./src/glitch/README.md).
+- **Particle ring halo** (`src/particle-ring`)
+- **Bluetooth explainer** (`src/BluetoothExplainer.tsx`)
+
 ## Commands
 
 **Install Dependencies**
