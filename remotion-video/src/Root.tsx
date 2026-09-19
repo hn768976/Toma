@@ -12,6 +12,7 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { PlateCompositions } from "./plates/PlateCompositions";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -52,6 +53,7 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      <PlateCompositions />
     </>
   );
 };

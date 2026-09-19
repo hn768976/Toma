@@ -23,3 +23,9 @@ const playwrightHeadlessShell =
 if (existsSync(playwrightHeadlessShell)) {
   Config.setBrowserExecutable(playwrightHeadlessShell);
 }
+
+// The plate compositions render a custom WebGL fragment shader through
+// PixiJS. Headless Chrome has no GPU here, so point it at ANGLE's
+// SwiftShader backend, which gives a real (software) GL2 context instead
+// of failing to create one at all.
+Config.setChromiumOpenGlRenderer("swangle");
