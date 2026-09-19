@@ -10,7 +10,8 @@ composition; both run the same code at the same design scale.
 | `Glitch-SignalDust-4K` / `-1080p` | istock 1413416777 | 3840×2160 / 1920×1080 | 8 s | 240 |
 | `Glitch-ScanlineStatic-4K` / `-1080p` | istock 925779278 | 3840×2160 / 1920×1080 | 15 s | 450 |
 
-All compositions are 30 fps and loop seamlessly.
+All compositions are 30 fps and loop seamlessly. They are paced fast — see
+[Pacing](#pacing) for the four clocks that drive that, and how to dial it back.
 
 ## Rendering
 
@@ -44,7 +45,7 @@ orientation convention across render textures and the canvas.
 | Stage | Scale | Job |
 |---|---|---|
 | `field.frag` | 1/8 | low-frequency control field (density, hue, energy, warp) |
-| `cells.frag` | 1/1 | the pixel-cell mosaic |
+| `cells.frag` | 1/1 | the pixel-cell mosaic, scroll, tears, surges |
 | `post.frag` bright | 1/2 | soft-knee bright pass, box-downsampled |
 | `post.frag` blur | 1/4, 1/8 | separable, anisotropic — wide across, tight down |
 | `post.frag` composite | 1/1 | bloom mix, aberration, scanlines, grain, vignette, tone |
@@ -78,14 +79,39 @@ Every time-driven term is periodic with period 1 in loop phase.
   must be at least a screen wide or the repetition itself shows — both hold
   only under this quantisation, which is why per-row speed comes in tiers
   (`speedSteps`) rather than being freely random.
-- **Twinkle, shear, tears and grain** advance a whole number of cycles or slots
-  per loop.
+- **Twinkle, shear, tears, surges and grain** advance a whole number of cycles
+  or slots per loop.
 
 Verified by measurement, not by eye: the frame-to-frame delta across the wrap
 matches interior frame deltas to within 0.2 dB PSNR on all three clips.
 
-Anything named `*Cycles`, `*Slots`, `speedSteps`, `period` or `driftPeriods`
-must stay a whole number, or the clip will pop on the cut back to frame 0.
+Anything named `*Cycles`, `*Slots`, `speedMin`, `speedSteps`, `period` or
+`driftPeriods` must stay a whole number, or the clip will pop on the cut back
+to frame 0.
+
+## Pacing
+
+Four independent clocks drive the sense of speed. All four are per-loop counts,
+so raising any of them keeps the loop exact.
+
+| Parameter | What it paces |
+|---|---|
+| `speedMin` / `speedSteps` | horizontal scroll, in whole screen-widths per loop |
+| `twinkleCycles` | how fast a dash breathes |
+| `tearSlots` / `tearChance` / `tearAmount` | how often blocks of rows are yanked sideways |
+| `burstSlots` / `burstAmount` / `dropAmount` | rate of signal surges and dropouts |
+| `driftPeriods` | how fast the underlying colour field sweeps and morphs |
+
+Scroll speed is not the lever it looks like. Past roughly one cell per frame
+the image decorrelates between frames, and beyond that extra speed reads as
+static rather than as motion — measured, the mean inter-frame change barely
+moves once you cross that point. What actually reads as *fast* is the rate of
+discrete events, which is why the surge/dropout term exists: it swings
+frame-to-frame brightness variation from about 10% of the mean to about 40%,
+and that is what the eye reads as energy.
+
+To calm a variant down, lower `tearSlots`, `burstAmount`/`dropAmount` and
+`twinkleCycles` first; drop `speedMin` to 1 last.
 
 ## Tuning
 

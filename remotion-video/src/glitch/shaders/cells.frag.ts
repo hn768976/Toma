@@ -27,7 +27,8 @@ uniform float uSeed;
 
 uniform vec2  uCell;       // cell size, design px
 uniform vec2  uGutter;     // dark gap as a fraction of the cell, per axis
-uniform float uSpeedSteps; // per-row speed tiers, in screen-widths per loop
+uniform float uSpeedMin;   // slowest tier, in screen-widths per loop
+uniform float uSpeedSteps; // number of per-row speed tiers above the slowest
 
 uniform float uCoverage;
 uniform float uRunCoherence;
@@ -55,6 +56,10 @@ uniform float uRowJitter;  // random row-to-row shear, uv units
 uniform float uWaveFreq;
 uniform float uWaveCycles; // whole cycles per loop
 
+uniform float uBurstSlots;  // whole slots per loop
+uniform float uBurstAmount; // extra gain on a surge slot
+uniform float uDropAmount;  // 0..1 signal loss on a dropout slot
+
 uniform float uTearChance;
 uniform float uTearAmount; // design px
 uniform float uTearBlock;  // rows per tear block
@@ -79,7 +84,7 @@ void main() {
   // screen-widths per loop, so speed is quantised into tiers rather than
   // being freely random per row.
   float cellsAcross = ceil(uRenderSize.x / uScale / uCell.x);
-  float wrapCells = cellsAcross * (1.0 + floor(rowA * uSpeedSteps));
+  float wrapCells = cellsAcross * (uSpeedMin + floor(rowA * uSpeedSteps));
   float offset = wrapCells * uCell.x * uPhase;
 
   // --- datamosh tear: blocks of rows yanked sideways for one time slot ------
@@ -101,7 +106,16 @@ void main() {
               + (rowA - 0.5) * uRowJitter;
   vec4 fld = texture(uField, clamp(vec2(vUv.x + shear, vUv.y), vec2(0.0), vec2(1.0)));
 
-  float density = fld.r * uCoverage;
+  // --- signal surges and dropouts -------------------------------------------
+  // Past roughly a cell per frame the scroll stops reading as motion and
+  // starts reading as static, so the sense of speed has to come from the
+  // rate of discrete events instead. One hash per slot drives both ends:
+  // high lands a surge, low lands a dropout.
+  float burstRand = hash11(floor(uPhase * uBurstSlots) * 3.77 + uSeed + 91.0);
+  float pulse = (1.0 + uBurstAmount * smoothstep(0.70, 1.0, burstRand))
+              * (1.0 - uDropAmount * smoothstep(0.70, 1.0, 1.0 - burstRand));
+
+  float density = fld.r * uCoverage * mix(1.0, pulse, 0.5);
 
   // --- dash runs ------------------------------------------------------------
   // Colour and brightness key off the *run*, not the cell. Keying them per
@@ -164,7 +178,7 @@ void main() {
   // a little per-cell sparkle so a dash is not a flat bar
   twinkle *= 1.0 - uCellSparkle * hash13(vec3(colW, row, 29.0) + uSeed);
 
-  float amp = uBright * twinkle * mix(0.30, 1.55, fld.b);
+  float amp = uBright * twinkle * pulse * mix(0.30, 1.55, fld.b);
   amp *= mix(1.0, uHotBoost, hot);
   amp *= mix(1.0, uStreakBoost, streak);
 

@@ -26,6 +26,7 @@ export type FieldParams = {
 export type CellParams = {
   cell: [number, number];
   gutter: [number, number];
+  speedMin: number;
   speedSteps: number;
   coverage: number;
   runCoherence: number;
@@ -48,6 +49,9 @@ export type CellParams = {
   rowJitter: number;
   waveFreq: number;
   waveCycles: number;
+  burstSlots: number;
+  burstAmount: number;
+  dropAmount: number;
   tearChance: number;
   tearAmount: number;
   tearBlock: number;
@@ -104,7 +108,7 @@ const DATA_STORM: GlitchVariant = {
   field: {
     fieldFreq: [4, 3],
     period: [4, 3, 4],
-    driftPeriods: [1, 0, 2],
+    driftPeriods: [5, 0, 11],
     densityBias: 0.45,
     densityGain: 1.6,
     bandAmount: 0.15,
@@ -113,7 +117,8 @@ const DATA_STORM: GlitchVariant = {
   cells: {
     cell: [5, 4],
     gutter: [0, 0.22],
-    speedSteps: 2,
+    speedMin: 2,
+    speedSteps: 3,
     coverage: 1.0,
     runCoherence: 0.7,
     maxRun: 8,
@@ -121,7 +126,7 @@ const DATA_STORM: GlitchVariant = {
     streakChance: 0.05,
     streakRun: 40,
     streakBoost: 1.7,
-    twinkleCycles: 8,
+    twinkleCycles: 56,
     twinkleDepth: 0.45,
     cellSparkle: 0.35,
     hotChance: 0.02,
@@ -134,19 +139,22 @@ const DATA_STORM: GlitchVariant = {
     rowWarp: 0.035,
     rowJitter: 0.02,
     waveFreq: 0.07,
-    waveCycles: 1,
-    tearChance: 0.1,
-    tearAmount: 90,
+    waveCycles: 5,
+    burstSlots: 48,
+    burstAmount: 0.9,
+    dropAmount: 0.5,
+    tearChance: 0.35,
+    tearAmount: 200,
     tearBlock: 6,
-    tearSlots: 16,
+    tearSlots: 240,
   },
   post: {
     threshold: 0.22,
     knee: 0.25,
-    bloomARadius: [1.0, 0.45],
-    bloomBRadius: [1.3, 0.5],
+    bloomARadius: [1.5, 0.4],
+    bloomBRadius: [1.5, 0.45],
     bloomAMix: 0.8,
-    bloomBMix: 0.55,
+    bloomBMix: 0.75,
     aberration: 1.2,
     scanAmount: 0.0,
     scanPeriod: 4,
@@ -179,7 +187,7 @@ const SIGNAL_DUST: GlitchVariant = {
   field: {
     fieldFreq: [3, 3],
     period: [3, 3, 4],
-    driftPeriods: [1, -1, 2],
+    driftPeriods: [5, -3, 10],
     densityBias: 0.55,
     densityGain: 1.8,
     bandAmount: 0.85,
@@ -188,7 +196,8 @@ const SIGNAL_DUST: GlitchVariant = {
   cells: {
     cell: [5, 4],
     gutter: [0.06, 0.4],
-    speedSteps: 2,
+    speedMin: 2,
+    speedSteps: 3,
     coverage: 0.7,
     runCoherence: 0.3,
     maxRun: 3,
@@ -196,7 +205,7 @@ const SIGNAL_DUST: GlitchVariant = {
     streakChance: 0.025,
     streakRun: 22,
     streakBoost: 2.0,
-    twinkleCycles: 6,
+    twinkleCycles: 48,
     twinkleDepth: 0.55,
     cellSparkle: 0.45,
     hotChance: 0.03,
@@ -209,19 +218,22 @@ const SIGNAL_DUST: GlitchVariant = {
     rowWarp: 0.02,
     rowJitter: 0.03,
     waveFreq: 0.11,
-    waveCycles: 1,
-    tearChance: 0.08,
-    tearAmount: 60,
+    waveCycles: 4,
+    burstSlots: 40,
+    burstAmount: 1.2,
+    dropAmount: 0.6,
+    tearChance: 0.3,
+    tearAmount: 160,
     tearBlock: 4,
-    tearSlots: 12,
+    tearSlots: 240,
   },
   post: {
     threshold: 0.08,
     knee: 0.22,
-    bloomARadius: [1.2, 0.5],
-    bloomBRadius: [1.6, 0.55],
+    bloomARadius: [1.5, 0.45],
+    bloomBRadius: [1.5, 0.5],
     bloomAMix: 2.0,
-    bloomBMix: 1.4,
+    bloomBMix: 1.1,
     aberration: 1.2,
     scanAmount: 0.0,
     scanPeriod: 4,
@@ -253,7 +265,7 @@ const SCANLINE_STATIC: GlitchVariant = {
   field: {
     fieldFreq: [6, 2],
     period: [6, 2, 3],
-    driftPeriods: [1, 0, 3],
+    driftPeriods: [5, 0, 14],
     densityBias: 0.45,
     densityGain: 1.6,
     bandAmount: 0.1,
@@ -262,7 +274,8 @@ const SCANLINE_STATIC: GlitchVariant = {
   cells: {
     cell: [10, 6],
     gutter: [0.08, 0.3],
-    speedSteps: 3,
+    speedMin: 2,
+    speedSteps: 4,
     coverage: 0.62,
     runCoherence: 0.7,
     maxRun: 12,
@@ -270,7 +283,7 @@ const SCANLINE_STATIC: GlitchVariant = {
     streakChance: 0.05,
     streakRun: 45,
     streakBoost: 1.6,
-    twinkleCycles: 15,
+    twinkleCycles: 105,
     twinkleDepth: 0.4,
     cellSparkle: 0.3,
     hotChance: 0.006,
@@ -283,19 +296,22 @@ const SCANLINE_STATIC: GlitchVariant = {
     rowWarp: 0.012,
     rowJitter: 0.05,
     waveFreq: 0.23,
-    waveCycles: 2,
-    tearChance: 0.05,
-    tearAmount: 40,
+    waveCycles: 8,
+    burstSlots: 90,
+    burstAmount: 0.7,
+    dropAmount: 0.45,
+    tearChance: 0.28,
+    tearAmount: 140,
     tearBlock: 3,
-    tearSlots: 30,
+    tearSlots: 450,
   },
   post: {
     threshold: 0.2,
     knee: 0.22,
-    bloomARadius: [1.6, 0.35],
-    bloomBRadius: [1.1, 0.45],
+    bloomARadius: [1.5, 0.32],
+    bloomBRadius: [1.5, 0.4],
     bloomAMix: 0.5,
-    bloomBMix: 0.3,
+    bloomBMix: 0.5,
     aberration: 1.0,
     scanAmount: 0.1,
     scanPeriod: 6,
