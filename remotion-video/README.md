@@ -11,6 +11,17 @@
 
 Welcome to your Remotion project!
 
+## Bloodstream versions (Remotion + three.js + WebGPU)
+
+Six 3D red-blood-cell flythroughs, one per supplied reference, at 30 fps in
+1080p and 4K. See **[BLOODSTREAM.md](./BLOODSTREAM.md)** for the version list,
+render commands, and how the WebGPU → WebGL2 backend negotiation works.
+
+```console
+node scripts/render.mjs          # all six, 1080p → out/deliverables
+node scripts/render.mjs --uhd    # all six, 4K
+```
+
 ## Commands
 
 **Install Dependencies**

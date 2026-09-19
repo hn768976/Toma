@@ -18,6 +18,7 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import { BloodCompositions } from "./blood/compositions";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -52,6 +53,7 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      <BloodCompositions />
     </>
   );
 };
