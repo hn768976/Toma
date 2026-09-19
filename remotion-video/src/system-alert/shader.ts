@@ -27,7 +27,7 @@ uniform float uSplit;     // chromatic aberration, fraction of width
 uniform float uPixel;     // mosaic coarsening multiplier
 uniform float uTear;      // slice displacement, fraction of width
 uniform float uFlicker;   // brightness multiplier around 1
-uniform float uCols;      // base mosaic column count
+uniform float uCols;      // binary-digit columns across the frame
 uniform float uScanlines; // scanline count across the frame
 
 float hash11(float p) {
@@ -44,46 +44,71 @@ float hash12(vec2 p) {
 }
 
 /**
- * The "data field": a grid of cells that switch on and off. Cells are grouped
- * into horizontal runs of 1-4 so the field reads as blocks of data rather than
- * as uniform static, and each column scrolls at its own rate, which is what
- * produces the vertical streaking in the reference.
+ * One binary digit, drawn in cell-local coordinates (f in 0..1 on both axes).
+ *
+ * Built from rectangles and an ellipse rather than sampled from a glyph
+ * atlas, so the digits stay sharp at 4K instead of resolving into a blurry
+ * upscale of a 1080p texture.
+ */
+float drawDigit(vec2 f, float which) {
+  vec2 p = f - 0.5;
+  if (which > 0.5) {
+    // "1" — a vertical stem with the short angled flag at its top left.
+    float stem = step(abs(p.x - 0.03), 0.060) * step(abs(p.y), 0.34);
+    float flag = step(abs(p.x + 0.10), 0.070) * step(abs(p.y + 0.22), 0.070);
+    return max(stem, flag);
+  }
+  // "0" — an elliptical ring.
+  return step(abs(length(p / vec2(0.25, 0.36)) - 1.0), 0.30);
+}
+
+/**
+ * The data field: a full wall of binary digits in regular rows.
+ *
+ * This is what the reference actually is. Viewed at the size the reference
+ * clip ships at, adjacent digits blur into what looks like a mosaic of blocks
+ * and dashes — and building it as that mosaic is wrong twice over: it misses
+ * the digits that are plainly legible when you zoom into the source, and it
+ * cannot produce them at 4K, where they resolve properly.
+ *
+ * Every cell carries a digit. The variation is in brightness, not in
+ * occupancy: most digits sit near black, a few are bright, and the
+ * regional/per-column terms group them into the passages of denser code that
+ * give the field its structure.
  */
 float dataField(vec2 uv, float t) {
   float cols = uCols / uPixel;
-  float rows = (cols / uAspect) * 1.25; // slightly wider than tall; runs make the dashes
+  float rows = (cols / uAspect) * 0.72; // digit cells are taller than wide
 
-  vec2 cellId = floor(vec2(uv.x * cols, uv.y * rows));
-
-  // Merge neighbouring cells horizontally into runs.
-  float runSeed = hash12(vec2(floor(cellId.x * 0.25), cellId.y));
-  float runWidth = 1.0 + floor(runSeed * 3.99);
-  float runId = floor(cellId.x / runWidth);
+  vec2 grid = vec2(uv.x * cols, uv.y * rows);
+  vec2 cellId = floor(grid);
+  vec2 f = fract(grid);
 
   // Per-column vertical scroll, quantised to whole cells so it steps rather
   // than slides — sliding would look like video, stepping looks like data.
   float columnSeed = hash11(cellId.x * 0.137);
-  float speed = 0.35 + columnSeed * 2.4;
-  float scroll = floor(t * speed * 6.0);
+  float scroll = floor(t * (0.3 + columnSeed * 1.9) * 3.0);
 
-  vec2 id = vec2(runId, cellId.y + scroll);
+  vec2 id = vec2(cellId.x, cellId.y + scroll);
 
-  // Some columns are dense with data, most are nearly empty.
-  float density = 0.09 + 0.42 * pow(hash11(cellId.x * 0.311 + 7.0), 1.6);
-  float on = step(1.0 - density, hash12(id * 1.7 + 3.1));
+  // Brightness of this digit. The steep power keeps most of the wall dark so
+  // the bright digits read as highlights rather than as an even grey.
+  float level = pow(hash12(id * 1.7 + 3.1), 1.8);
 
-  float level = on * (0.20 + 0.80 * pow(hash12(id + vec2(19.0, 7.0)), 2.0));
+  // Some columns run hot and some regions are denser than others.
+  level *= 0.45 + 0.70 * pow(hash11(cellId.x * 0.311 + 7.0), 1.3);
+  level *= 0.55 + 0.60 * hash12(floor(id / vec2(7.0, 4.0)) + 11.0);
 
-  // A few cells per frame blow out to near-white.
-  level += step(0.988, hash12(id + vec2(71.0, 13.0))) * 0.55;
+  // A few digits per frame blow out to near-white.
+  level += step(0.9965, hash12(id + vec2(71.0, 13.0))) * 0.75;
 
-  return level;
+  return drawDigit(f, hash12(id + vec2(5.0, 31.0))) * level;
 }
 
 /** Maps a field level to the red ramp: near-black -> blood red -> hot pink-white. */
 vec3 fieldColor(float level) {
   vec3 dark = vec3(0.024, 0.000, 0.004);
-  vec3 mid  = vec3(0.560, 0.016, 0.060);
+  vec3 mid  = vec3(0.880, 0.025, 0.094);
   vec3 hot  = vec3(1.000, 0.380, 0.390);
   vec3 c = mix(dark, mid, clamp(level, 0.0, 1.0));
   return mix(c, hot, clamp(level - 1.0, 0.0, 1.0));
@@ -103,7 +128,7 @@ void main() {
   float tear = step(0.80, sliceSeed) * (sliceSeed - 0.80) / 0.20;
   cam.x += (tear - 0.5) * uTear;
 
-  // --- Mosaic, sampled three times for chromatic aberration.
+  // --- Digit wall, sampled three times for chromatic aberration.
   float split = uSplit;
   float r = dataField(cam + vec2(split, 0.0), uTime);
   float g = dataField(cam, uTime);
@@ -133,7 +158,7 @@ void main() {
 
   // The bottom of the frame does fall away (row means 42 at y=0.7 -> 26 at
   // y=0.9), but only below the banner.
-  col *= 1.0 - 0.20 * smoothstep(0.70, 1.0, uv.y);
+  col *= 1.0 - 0.14 * smoothstep(0.72, 1.0, uv.y);
 
   // --- Light source: a hard red glow just above the top edge, centred at 49%.
   // Fitted to the reference's measured horizontal profile across the top 16%
@@ -154,7 +179,7 @@ void main() {
   col += vec3(1.0, 0.050, 0.080) * glow;
 
   // --- Ambient red lift so the black is a deep red-black, not neutral black.
-  col += vec3(0.022, 0.0, 0.004);
+  col += vec3(0.032, 0.0, 0.006);
 
   // --- CRT scanlines. Fixed count, so they scale with the canvas.
   float scan = 0.84 + 0.16 * (0.5 + 0.5 * sin(uv.y * uScanlines * 6.2831853));

@@ -1,6 +1,6 @@
 # Cyber-alert spot — "SYSTEM HACKED" / "PHISHING ATTACK"
 
-A 20.000s (600 frame @ 30fps) 16:9 motion graphic: a red digital-noise field
+A 20.000s (600 frame @ 30fps) 16:9 motion graphic: a wall of red binary code
 lit from above, a crimson alert plate, CRT scanlines and intermittent
 digital-glitch bursts.
 
@@ -40,13 +40,24 @@ prediction; that is a property of the content, not of the settings.
 |---|---|
 | `constants.ts`       | Timing, geometry and palette — all as *fractions* of the frame |
 | `glitch.ts`          | The glitch model: a pure function of frame number |
-| `shader.ts`          | GLSL for the background field, light, vignette and scanlines |
+| `shader.ts`          | GLSL for the binary-digit field, light, vignette and scanlines |
 | `DataFieldCanvas.tsx`| three.js host for the shader pass |
 | `AlertBanner.tsx`    | The red plate and headline, plus their chroma split and tearing |
 | `ScreenOverlay.tsx`  | Frame-wide scanlines, tear bars and corner falloff |
 | `SystemAlert.tsx`    | Composes the three layers |
 
-## Three things worth knowing before editing
+## Four things worth knowing before editing
+
+**The background is binary digits, not noise.** At the size the reference
+clip ships at, its background looks like a mosaic of small blocks and
+dashes, and the first version of this shader built exactly that. Zooming
+into the source shows what it really is: a dense wall of legible 0s and 1s
+in regular rows, roughly 165 digits to a frame width, blurring together at
+small sizes. `dataField()` draws real digits from two primitives — a ring
+and a stroke — so they hold up at 4K instead of being a blur that only
+works small. Building it as the apparent mosaic was wrong twice over: it
+missed the digits, and it had nothing to resolve into at higher resolution.
+
 
 **Resolution independence.** Nothing in this piece is expressed in pixels.
 Banner size, type size, mosaic cell size, scanline count, blur radius and

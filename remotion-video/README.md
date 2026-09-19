@@ -39,8 +39,8 @@ npx remotion upgrade
 
 ## Cyber-alert spot
 
-This project also contains a 20s cyber-security alert spot in four
-compositions (`SystemHacked-1080p`, `SystemHacked-4K`, `PhishingAttack-1080p`,
+This project also contains a 20s cyber-security alert spot — a wall of red
+binary code behind a glitching alert plate — in four compositions (`SystemHacked-1080p`, `SystemHacked-4K`, `PhishingAttack-1080p`,
 `PhishingAttack-4K`). It uses a three.js / GLSL background pass, so renders on
 a machine without a GPU need `--gl=angle`:
 
