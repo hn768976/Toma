@@ -31,7 +31,18 @@ and 6) it is a clean vertical gradient.
 # A single 4K shot
 npx remotion render Yard01DockWall4K out/Yard01DockWall_4K.mp4 \
   --codec=h264 --crf=17 --gl=angle --concurrency=4 --timeout=900000
+
+# A send-friendly copy of a master (smaller, and range-corrected)
+./scripts/make-delivery-copy.sh out/deliverables/Yard01DockWall_1080p.mp4 18
 ```
+
+`render-all.sh` writes CRF 17 masters. `make-delivery-copy.sh` exists for two
+reasons: the 20s shot lands around 40MB at that quality, which is over some
+transfer limits, and Remotion encodes from full-range frames and tags the
+result `yuvj420p`. The reference plates -- and what an NLE expects -- are
+limited-range `yuv420p`/`bt709`, and a player that ignores the tag shows
+crushed blacks, so the script converts the range properly rather than
+relabelling it.
 
 `--gl=angle` matters: the default headless GL backend does not expose the
 WebGL2 features the node materials compile down to.
