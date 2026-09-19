@@ -52,3 +52,16 @@ Found an issue with Remotion? [File an issue here](https://github.com/remotion-d
 ## License
 
 Note that for some entities a company license is needed. [Read the terms here](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md).
+
+## Container yard
+
+Six 3D shipping-container shots (Remotion + three.js), each recreating one of
+the supplied reference clips at its original duration, at 30fps. Registered at
+both 1080p and 4K.
+
+    ./scripts/render-all.sh          # six 1080p H.264 MP4s -> out/deliverables
+    ./scripts/package-project.sh     # zip the project for handoff
+    npm run build:lods               # rebuild the container LOD chain
+
+Full notes, including the renderer tier fallback and how the supplied mesh is
+decimated, are in [`src/yard/README.md`](src/yard/README.md).

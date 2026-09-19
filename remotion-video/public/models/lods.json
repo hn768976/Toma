@@ -1,0 +1,21 @@
+{
+  "sourceTris": 194261,
+  "levels": [
+    {
+      "level": "container-lod0",
+      "mode": "quality",
+      "tris": 24000,
+      "verts": 22603,
+      "kb": 989,
+      "error": 0.0002
+    },
+    {
+      "level": "container-lod1",
+      "mode": "quality",
+      "tris": 6800,
+      "verts": 9346,
+      "kb": 373,
+      "error": 0.0026
+    }
+  ]
+}

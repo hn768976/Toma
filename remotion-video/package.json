@@ -6,19 +6,28 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@remotion/cli": "4.0.515",
-    "@remotion/tailwind-v4": "4.0.515",
+    "@react-three/fiber": "^9.7.0",
+    "@remotion/cli": "^4.0.526",
+    "@remotion/tailwind-v4": "^4.0.526",
+    "@remotion/three": "^4.0.526",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "remotion": "4.0.515",
+    "remotion": "^4.0.526",
     "tailwindcss": "4.0.0",
+    "three": "^0.186.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@remotion/eslint-config-flat": "4.0.515",
+    "@gltf-transform/core": "^4.5.0",
+    "@gltf-transform/extensions": "^4.5.0",
+    "@gltf-transform/functions": "^4.5.0",
+    "@remotion/eslint-config-flat": "^4.0.526",
     "@types/react": "19.2.7",
+    "@types/three": "^0.186.0",
     "@types/web": "0.0.166",
+    "@webgpu/types": "^0.1.74",
     "eslint": "9.19.0",
+    "meshoptimizer": "^1.2.0",
     "prettier": "3.8.1",
     "typescript": "5.9.3"
   },
@@ -26,7 +35,10 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "build:lods": "node scripts/build-lods.mjs",
+    "render:all": "./scripts/render-all.sh",
+    "package": "./scripts/package-project.sh"
   },
   "sideEffects": [
     "*.css",
