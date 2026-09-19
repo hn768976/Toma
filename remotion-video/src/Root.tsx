@@ -18,6 +18,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  CyberAttack,
+  cyberAttackSchema,
+  cyberAttackDefaults,
+} from "./cyber-attack/CyberAttack";
+import {
+  BASE_WIDTH as CYBER_WIDTH,
+  BASE_HEIGHT as CYBER_HEIGHT,
+  DURATION_IN_FRAMES as CYBER_DURATION,
+  FPS as CYBER_FPS,
+} from "./cyber-attack/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +62,26 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="CyberAttack"
+        component={CyberAttack}
+        durationInFrames={CYBER_DURATION}
+        fps={CYBER_FPS}
+        width={CYBER_WIDTH}
+        height={CYBER_HEIGHT}
+        schema={cyberAttackSchema}
+        defaultProps={cyberAttackDefaults}
+      />
+      <Composition
+        id="CyberAttack4K"
+        component={CyberAttack}
+        durationInFrames={CYBER_DURATION}
+        fps={CYBER_FPS}
+        width={CYBER_WIDTH * 2}
+        height={CYBER_HEIGHT * 2}
+        schema={cyberAttackSchema}
+        defaultProps={cyberAttackDefaults}
       />
     </>
   );
