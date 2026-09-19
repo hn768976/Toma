@@ -14,7 +14,7 @@ custom full-frame **WebGL2 / GLSL ES 3.00** fragment shader.
 
 | # | Composition | Element | Frames @30fps | Duration | Reference |
 |---|-------------|---------|---------------|----------|-----------|
-| 01 | `DustMotes4K` / `DustMotes1080` | Fine airborne dust motes, shallow depth of field | 435 | 14.500s | istockphoto-2008506475 (14.48s) |
+| 01 | `DustMotes4K` / `DustMotes1080` | Fine falling particulate, three parallax depths | 435 | 14.500s | istockphoto-2008506475 (14.48s) |
 | 02 | `Rain4K` / `Rain1080` | Vertical rainfall, mixed length and focus | 600 | 20.000s | istockphoto-2212768742 (20.02s) |
 | 03 | `Smoke4K` / `Smoke1080` | Volumetric smoke / fog, keyed from upper left | 668 | 22.267s | istockphoto-2230909784 (22.28s) |
 | 04 | `Snow4K` / `Snow1080` | Driving diagonal snow with foreground bokeh | 873 | 29.100s | istockphoto-2247911326 (29.11s) |
@@ -33,9 +33,11 @@ seam. This is a property of the shaders, not of a crossfade applied afterwards.
 Each plate is driven by one normalised loop phase `uT` in `[0, 1)`, and every
 animated quantity is built to be periodic in it:
 
-- **Dust** — each mote's wander is a sum of two sinusoids whose periods are the
-  loop length and half the loop length, so every mote returns to its start
-  position *and* its start velocity.
+- **Dust** — the whole field *scrolls* so the fall is genuinely continuous. It
+  still closes because the cell hash is wrapped modulo `travel` on the fall
+  axis: after `travel` whole cells the field maps onto itself. `travel` is set
+  at 2.5x–4.2x the cells visible in frame, so the vertical repeat never appears
+  on screen. Lateral flutter rides on top as a periodic sinusoid.
 - **Rain / Snow** — a drop travels strictly inside its own grid cell at
   `fract(phase0 + uT * k)` where `k` is a whole number of falls per loop. Cells
   are tall and vertical neighbours are sampled, so the field reads as continuous
@@ -90,7 +92,7 @@ or via `--props` on the CLI:
 | `density` | 0–3 | Particle / detail population multiplier |
 | `brightness` | 0–4 | Output gain |
 | `seed` | 0–1000 | Decorrelates every hash — a new seed is a brand new take of the same look |
-| `speed` | 0.05–4 | How far the loop travels. Whole numbers preserve the exact loop for rain and snow |
+| `speed` | 0.05–4 | How far the loop travels. Whole numbers preserve the exact loop for dust, rain and snow |
 
 ```bash
 npx remotion render Snow1080 out/snow-heavy.mp4 \
@@ -100,8 +102,18 @@ npx remotion render Snow1080 out/snow-heavy.mp4 \
 
 > **Note on `speed`:** the smoke plate stays exactly loopable at any `speed`,
 > because the value scales drift *inside* the field rather than the loop phase.
-> For rain and snow, `speed` multiplies a whole-number fall count, so integer
-> values keep the loop exact while fractional ones will not.
+> For dust, rain and snow, `speed` multiplies a whole-number fall count, so
+> integer values keep the loop exact while fractional ones will not.
+>
+> Smoke ships at `speed: 3` rather than 1 — the reference-matched rate read as
+> too slow. Verified clean: adjacent-frame motion at mid-loop (the worst case
+> for its cross-dissolve) measures 0.99x the rate at the loop ends, so there is
+> no dissolve artifact. Above roughly 3 the two cross-dissolved branches start
+> to decorrelate and mid-loop contrast drops.
+>
+> Dust ships with each depth layer falling 2.5, 3.2 and 4.2 screen-heights per
+> loop (nearer = faster, which reads as parallax). It carries no heavily
+> defocused foreground bokeh — the plate is all fine specks, no soft circles.
 
 ## Source layout
 

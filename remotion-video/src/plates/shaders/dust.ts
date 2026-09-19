@@ -1,17 +1,22 @@
 import { GLSL_LIB } from "./lib";
 
 /**
- * Plate 01 - DUST MOTES.
+ * Plate 01 - FALLING DUST / FINE PARTICULATE.
  *
- * Reference: fine airborne particulate drifting through a shaft of light, shot
- * on a long lens so only one depth slice is in focus. Five depth layers are
- * stacked: far layers are many, tiny and near-sharp; near layers are few, large
- * and heavily defocused (and therefore dimmer, since a blur circle spreads the
- * same energy over more area).
+ * Three depth layers of fine airborne particulate falling through frame. Far
+ * layers are many, tiny and near-sharp; nearer layers are fewer, slightly
+ * larger and faster (parallax). Deliberately no heavily-defocused foreground
+ * bokeh - the plate is all fine specks.
  *
- * Looping: each mote's wander is the sum of two sinusoids whose periods are the
- * loop length and half the loop length, so every mote is exactly back where it
- * started - and moving in the same direction - at phase 1.
+ * Looping: the whole field SCROLLS rather than oscillating, so the motion is
+ * genuinely continuous. It still closes exactly because the cell hash is
+ * wrapped modulo `travel` on the fall axis: after `travel` whole cells the
+ * field maps onto itself. `travel` is chosen well above the cells visible in
+ * frame (2.5x - 4.2x), so the vertical repeat never appears on screen.
+ *
+ * (An earlier revision oscillated each mote inside its own 3x3 neighbourhood,
+ * which caps total travel below one cell - under 3% of frame height across the
+ * entire loop. That is why it read as static.)
  */
 export const DUST_FRAG = /* glsl */ `#version 300 es
 precision highp float;
@@ -28,10 +33,16 @@ uniform float uSpeed;
 
 ${GLSL_LIB}
 
+// cells  - motes per screen height
+// travel - WHOLE cells fallen per loop; also the hash wrap period on the fall
+//          axis, which is what keeps the scroll exactly loopable
+// radius - mote radius in cell units
+// sway   - lateral drift amplitude, periodic over the loop
 float dustLayer(
-  vec2 uv, float li, float cells, float radius, float wander, float keep
+  vec2 uv, float li, float cells, float travel,
+  float radius, float sway, float keep
 ) {
-  vec2 p = uv * cells;
+  vec2 p = vec2(uv.x * cells, uv.y * cells + uT * travel * uSpeed);
   vec2 ip = floor(p);
   vec2 fp = p - ip;
 
@@ -39,20 +50,20 @@ float dustLayer(
   for (int y = -1; y <= 1; y++) {
     for (int x = -1; x <= 1; x++) {
       vec2 o = vec2(float(x), float(y));
-      vec4 h = hash24(ip + o + vec2(li * 37.31, uSeed * 13.77));
+      vec2 cell = ip + o;
+      // Wrap the fall axis: cell N and cell N+travel are the same mote.
+      vec2 id = vec2(cell.x, mod(cell.y, travel));
+      vec4 h = hash24(id + vec2(li * 37.31, uSeed * 13.77));
       if (h.w > keep * uDensity) {
         continue;
       }
 
+      // Lateral flutter only - the fall itself comes from the scrolling field.
       float ph = h.z * TAU;
-      // Two harmonics of the loop frequency: organic float, exact return.
-      vec2 w = vec2(
-        sin(TAU * uT + ph) + 0.45 * sin(2.0 * TAU * uT + ph * 2.3),
-        cos(TAU * uT + ph * 1.7) + 0.40 * sin(2.0 * TAU * uT + ph * 0.7)
-      ) * wander * uSpeed;
+      float sx = (sin(TAU * uT + ph) + 0.45 * sin(2.0 * TAU * uT + ph * 2.3)) * sway;
 
-      vec2 d = fp - (o + clamp(h.xy, 0.08, 0.92) + w);
-      float r = radius * (0.45 + 1.10 * h.z);
+      vec2 d = fp - (o + vec2(clamp(h.x, 0.08, 0.92) + sx, h.y));
+      float r = radius * (0.50 + 1.00 * h.z);
       acc += exp(-dot(d, d) / (r * r)) * (0.25 + 0.75 * hash11(h.x + h.y + li));
     }
   }
@@ -63,21 +74,20 @@ void main() {
   float aspect = uRes.x / uRes.y;
   vec2 uv = vec2(vUV.x * aspect, vUV.y);
 
-  //                     li   cells  radius  wander  keep
-  float d  = 0.90 * dustLayer(uv, 0.0, 42.0, 0.055, 0.055, 0.55);
-  d += 0.75 * dustLayer(uv, 1.0, 30.0, 0.075, 0.075, 0.50);
-  d += 0.50 * dustLayer(uv, 2.0, 20.0, 0.110, 0.100, 0.42);
-  d += 0.30 * dustLayer(uv, 3.0, 13.0, 0.190, 0.130, 0.30);
-  d += 0.18 * dustLayer(uv, 4.0,  8.0, 0.320, 0.170, 0.18);
+  // travel/cells = screen heights fallen per loop: 2.5, 3.2 and 4.2. Nearer
+  // layers fall faster, which reads as parallax depth.
+  //                     li  cells travel radius  sway  keep
+  float d  = 1.00 * dustLayer(uv, 0.0, 42.0, 105.0, 0.055, 0.10, 0.62);
+  d += 0.85 * dustLayer(uv, 1.0, 30.0,  96.0, 0.075, 0.14, 0.56);
+  d += 0.62 * dustLayer(uv, 2.0, 20.0,  84.0, 0.090, 0.18, 0.44);
 
-  // Faint volumetric haze so the field is not perfectly flat black. Breathes
-  // once per loop, which is periodic by construction.
+  // Faint volumetric haze so the field is not perfectly flat black.
   float breathe = 0.85 + 0.15 * sin(TAU * uT);
   float haze = fbm3(vec3(uv * 1.35, uSeed * 3.1), 3) * breathe;
   haze = smoothstep(0.35, 0.95, haze);
 
-  // Light falls off toward the lower right, as in the reference - but gently:
-  // the dust is present across the whole frame, it is only *lit* unevenly.
+  // Light falls off toward the lower right, gently: the particulate is present
+  // across the whole frame, it is only *lit* unevenly.
   float fall = 0.52 + 0.48 * smoothstep(2.35, 0.00, uv.x * 0.62 + uv.y * 0.85);
 
   vec3 tint = vec3(1.00, 0.935, 0.880);          // warm motes

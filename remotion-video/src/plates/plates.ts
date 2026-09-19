@@ -64,7 +64,11 @@ export const PLATES: PlateDefinition[] = [
     // reference 22.28s -> 668 frames = 22.267s
     durationInFrames: 668,
     reference: "istockphoto-2230909784 (22.28s @ 25fps)",
-    defaults: { density: 1, brightness: 1, seed: 71, speed: 1 },
+    // speed 3: the reference-matched rate read as too slow. Verified clean -
+    // the cross-dissolve loop stays exact at any speed, and adjacent-frame
+    // motion at mid-loop measures 0.99x the rate at the loop ends, so there is
+    // no dissolve artifact.
+    defaults: { density: 1, brightness: 1, seed: 71, speed: 3 },
   },
   {
     id: "Snow",
