@@ -37,6 +37,23 @@ npx remotion render
 npx remotion upgrade
 ```
 
+## Cyber-alert spot
+
+This project also contains a 20s cyber-security alert spot in four
+compositions (`SystemHacked-1080p`, `SystemHacked-4K`, `PhishingAttack-1080p`,
+`PhishingAttack-4K`). It uses a three.js / GLSL background pass, so renders on
+a machine without a GPU need `--gl=angle`:
+
+```console
+npx remotion render SystemHacked-1080p out/system-hacked-1080p.mp4 \
+  --gl=angle --codec=h264 --crf=20 --muted
+```
+
+See [`src/system-alert/README.md`](src/system-alert/README.md) for the
+composition list, the structure, and the constraints to respect when editing
+it (resolution independence, determinism across parallel workers).
+
+
 ## Docs
 
 Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
