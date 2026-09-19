@@ -42,7 +42,7 @@ export const deepBlueDustDefaults: DeepBlueDustProps = {
   dustGain: 1.0,
   dustTwinkle: 0.9,
   vignetteAmount: 0.78,
-  exposure: 1.0,
+  exposure: 1.12,
   grainAmount: 0.018,
   seed: 2.0,
 };

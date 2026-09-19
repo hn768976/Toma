@@ -36,7 +36,7 @@ export const bokehCurtainDefaults: BokehCurtainProps = {
   density: 0.62,
   hotspot: 0.55,
   spill: 0.30,
-  exposure: 1.12,
+  exposure: 0.94,
   grainAmount: 0.022,
   seed: 4.0,
 };
