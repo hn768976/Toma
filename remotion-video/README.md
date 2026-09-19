@@ -24,8 +24,8 @@ Welcome to your Remotion project!
 Render any of them by ID:
 
 ```console
-npx remotion render CyberAttack   out/CyberAttack_1080p.mp4 --codec=h264 --muted
-npx remotion render CyberAttack4K out/CyberAttack_4K.mp4    --codec=h264 --muted
+npx remotion render CyberAttackV2    out/CyberAttackV2_1080p.mp4 --codec=h264 --muted
+npx remotion render CyberAttackV2-4K out/CyberAttackV2_4K.mp4    --codec=h264 --muted
 ```
 
 `--muted` matters for the glitch piece: it is a picture-only element, and

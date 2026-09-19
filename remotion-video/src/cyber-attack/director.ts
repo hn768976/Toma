@@ -124,6 +124,13 @@ const sampleMood = (t: number): MoodColor => {
 
 export type TitleKind = "hacked" | "cyber";
 
+/**
+ * Which lock-up the cues resolve to. "alternate" runs the schedule as
+ * written; the other two force every cue onto one wording, which is how a
+ * single-title cut is made without re-timing anything.
+ */
+export type TitleMode = "alternate" | "cyber" | "hacked";
+
 type TitleCue = { kind: TitleKind; from: number; to: number };
 
 /**
@@ -149,7 +156,12 @@ export type TitleState = {
   progress: number;
 } | null;
 
-const sampleTitle = (t: number, frame: number): TitleState => {
+const sampleTitle = (
+  t: number,
+  frame: number,
+  mode: TitleMode,
+  grunge: number,
+): TitleState => {
   for (const cue of TITLE_CUES) {
     if (t < cue.from || t > cue.to) continue;
     const span = cue.to - cue.from;
@@ -158,9 +170,10 @@ const sampleTitle = (t: number, frame: number): TitleState => {
     const fadeOut = Math.min(1, (cue.to - t) / 0.3);
     // A dropout every so often: the panel loses signal for a few frames
     // rather than holding a clean, video-ish fade.
-    const dropout = rand(Math.floor(frame / 2), 0x7171) < 0.09 ? 0.15 : 1;
+    const dropout =
+      rand(Math.floor(frame / 2), 0x7171) < 0.09 * grunge ? 0.15 : 1;
     return {
-      kind: cue.kind,
+      kind: mode === "alternate" ? cue.kind : mode,
       opacity: Math.max(0, fadeIn * fadeOut * dropout),
       progress,
     };
@@ -179,7 +192,23 @@ export type DirectorState = {
   invert: boolean;
 };
 
-export const direct = (frame: number): DirectorState => {
+export type DirectorOptions = {
+  /**
+   * How much damage happens, as a multiplier on the *count* of glitch
+   * events rather than their size. 1 is the v1 cut; 0.5 halves the
+   * density while leaving the rhythm and the colour edit untouched.
+   */
+  grunge: number;
+  titleMode: TitleMode;
+};
+
+export const direct = (
+  frame: number,
+  { grunge, titleMode }: DirectorOptions = {
+    grunge: 1,
+    titleMode: "alternate",
+  },
+): DirectorState => {
   const time = frame / FPS;
   const intensity = sampleNumber(INTENSITY, time);
   const block = Math.floor(frame / 3);
@@ -188,17 +217,17 @@ export const direct = (frame: number): DirectorState => {
   // land as deliberate hits rather than single-frame sparkle.
   const flashRoll = rand(block, 0x515f);
   const flash =
-    intensity > 0.55 && flashRoll < 0.12 * intensity
+    intensity > 0.55 && flashRoll < 0.12 * intensity * grunge
       ? 0.4 + rand(block, 0x9911) * 0.6
       : 0;
 
-  const invert = intensity > 0.8 && rand(block, 0x2b2b) < 0.05;
+  const invert = intensity > 0.8 && rand(block, 0x2b2b) < 0.05 * grunge;
 
   return {
     time,
     intensity,
     mood: sampleMood(time),
-    title: sampleTitle(time, frame),
+    title: sampleTitle(time, frame, titleMode, grunge),
     flash,
     invert,
   };

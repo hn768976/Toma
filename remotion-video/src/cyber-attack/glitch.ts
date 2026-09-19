@@ -41,9 +41,10 @@ const displaceSlices = (
   block: number,
   width: number,
   height: number,
+  grunge: number,
 ): void => {
   const s = scaleFor(width);
-  const count = Math.round(3 + state.intensity * 26);
+  const count = Math.max(1, Math.round((3 + state.intensity * 26) * grunge));
   const next = stream(block * 7919 + 13);
   for (let i = 0; i < count; i += 1) {
     const y = Math.floor(next() * height);
@@ -83,10 +84,11 @@ const shuffleBlocks = (
   block: number,
   width: number,
   height: number,
+  grunge: number,
 ): void => {
   if (state.intensity < 0.4) return;
   const s = scaleFor(width);
-  const count = Math.round(state.intensity * 14);
+  const count = Math.round(state.intensity * 14 * grunge);
   const next = stream(block * 104729 + 7);
   for (let i = 0; i < count; i += 1) {
     const w = (60 + next() * 420) * s;
@@ -107,8 +109,9 @@ const smear = (
   block: number,
   width: number,
   height: number,
+  grunge: number,
 ): void => {
-  if (state.intensity < 0.55 || rand(block, 0xa1) > 0.25) return;
+  if (state.intensity < 0.55 || rand(block, 0xa1) > 0.25 * grunge) return;
   const s = scaleFor(width);
   const y = randRange(height * 0.12, height * 0.82, block, 0xa2);
   const h = Math.max(2, 3 * s);
@@ -127,9 +130,12 @@ const channelSplit = (
   block: number,
   width: number,
   height: number,
+  grunge: number,
 ): void => {
   const s = scaleFor(width);
-  const mag = state.intensity * 18 * s;
+  // Fringing is character rather than clutter, so it is only softened by
+  // a lower grunge setting, never removed.
+  const mag = state.intensity * 18 * s * (0.6 + 0.4 * grunge);
   const dx = (rand(block, 0xb1) - 0.5) * 2 * mag;
   const dy = (rand(block, 0xb2) - 0.5) * mag * 0.3;
 
@@ -163,14 +169,15 @@ const tearBars = (
   block: number,
   width: number,
   height: number,
+  grunge: number,
 ): void => {
   const s = scaleFor(width);
   if (state.intensity < 0.28) return;
   // Tears arrive in bursts. Blanketing every held block with bars reads
   // as a pattern; letting most blocks through clean makes the ones that
   // do tear land like dropped data.
-  if (rand(block, 0xc0) > 0.2 + state.intensity * 0.42) return;
-  const count = Math.round(2 + state.intensity * 11);
+  if (rand(block, 0xc0) > (0.2 + state.intensity * 0.42) * grunge) return;
+  const count = Math.max(1, Math.round((2 + state.intensity * 11) * grunge));
   const next = stream(block * 15485863 + 3);
   for (let i = 0; i < count; i += 1) {
     if (next() > 0.6) continue;
@@ -274,6 +281,7 @@ export const applyGlitch = (
   frame: number,
   width: number,
   height: number,
+  grunge = 1,
 ): void => {
   const block = Math.floor(frame / GLITCH_HOLD);
 
@@ -283,14 +291,14 @@ export const applyGlitch = (
   stage.ctx.globalCompositeOperation = "source-over";
   stage.ctx.globalAlpha = 1;
   stage.ctx.drawImage(clean, 0, 0);
-  displaceSlices(stage.ctx, clean, state, block, width, height);
-  shuffleBlocks(stage.ctx, clean, state, block, width, height);
-  smear(stage.ctx, clean, state, block, width, height);
+  displaceSlices(stage.ctx, clean, state, block, width, height, grunge);
+  shuffleBlocks(stage.ctx, clean, state, block, width, height, grunge);
+  smear(stage.ctx, clean, state, block, width, height, grunge);
 
   // 2. Chromatic fringing on the displaced picture.
   const splitting = state.intensity > 0.22;
   if (splitting) {
-    channelSplit(out, stage.canvas, state, block, width, height);
+    channelSplit(out, stage.canvas, state, block, width, height, grunge);
   } else {
     out.globalCompositeOperation = "source-over";
     out.globalAlpha = 1;
@@ -298,7 +306,7 @@ export const applyGlitch = (
   }
 
   // 3. Flat data tears.
-  tearBars(out, state, block, width, height);
+  tearBars(out, state, block, width, height, grunge);
 
   // 4. Grade, then the texture that sells it as a screen.
   grade(out, state, width, height);
@@ -316,7 +324,9 @@ export const applyGlitch = (
   if (noise) {
     out.save();
     out.globalCompositeOperation = "overlay";
-    out.globalAlpha = 0.05 + state.intensity * 0.12;
+    // Grain never goes away entirely — it is what makes this read as a
+    // screen rather than as flat vector art.
+    out.globalAlpha = (0.05 + state.intensity * 0.12) * (0.4 + 0.6 * grunge);
     // Re-seat the tile every frame so the grain moves.
     out.translate(
       Math.floor(rand(frame, 0xd1) * 160),

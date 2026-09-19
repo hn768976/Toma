@@ -71,6 +71,16 @@ compositions tear in exactly the same places.
 - **Overall violence** — the `intensityScale` prop, without touching the
   edit. `0` gives the clean frame, `1` is the master, `2` is unusable on
   purpose.
+- **Grunge density** — the `grunge` prop. It scales how _many_ glitch
+  events happen, not how large they are, so lowering it thins the damage
+  out without softening the moves that survive. Two things are
+  deliberately floored rather than scaled away: chromatic fringing keeps
+  60% of its magnitude at `grunge: 0`, and grain keeps 40% of its
+  strength — both are what make the piece read as a screen rather than as
+  flat vector art.
+- **Wording** — the `titleMode` prop. `alternate` runs the schedule as
+  written; naming a lock-up forces every cue onto it, leaving the cue
+  timings alone.
 
 ## Fonts
 

@@ -20,10 +20,30 @@ export const cyberAttackSchema = z.object({
    * or pulled back without re-timing the director.
    */
   intensityScale: z.number().min(0).max(2),
+  /**
+   * How much damage happens, as a multiplier on how *many* glitch events
+   * occur rather than how large they are. 1 is the v1 cut; 0.5 halves the
+   * density while the rhythm, the colour edit and the titles stay put.
+   */
+  grunge: z.number().min(0).max(2),
+  /**
+   * "alternate" trades the two lock-ups the way v1 does. Naming one
+   * forces every cue onto that wording without re-timing anything.
+   */
+  titleMode: z.enum(["alternate", "cyber", "hacked"]),
 });
 
 export const cyberAttackDefaults: z.infer<typeof cyberAttackSchema> = {
   intensityScale: 1,
+  grunge: 1,
+  titleMode: "alternate",
+};
+
+/** v2: one lock-up, half the grunge density. */
+export const cyberAttackV2Props: z.infer<typeof cyberAttackSchema> = {
+  intensityScale: 1,
+  grunge: 0.5,
+  titleMode: "cyber",
 };
 
 /**
@@ -35,6 +55,8 @@ export const cyberAttackDefaults: z.infer<typeof cyberAttackSchema> = {
  */
 export const CyberAttack: React.FC<z.infer<typeof cyberAttackSchema>> = ({
   intensityScale,
+  grunge,
+  titleMode,
 }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
@@ -80,7 +102,7 @@ export const CyberAttack: React.FC<z.infer<typeof cyberAttackSchema>> = ({
     const outCtx = visible.getContext("2d", { alpha: false });
     if (!cleanCtx || !outCtx) return;
 
-    const state = direct(frame);
+    const state = direct(frame, { grunge, titleMode });
     const scaled = {
       ...state,
       intensity: Math.min(1, state.intensity * intensityScale),
@@ -95,9 +117,9 @@ export const CyberAttack: React.FC<z.infer<typeof cyberAttackSchema>> = ({
     cleanCtx.restore();
 
     outCtx.save();
-    applyGlitch(outCtx, clean, scaled, frame, width, height);
+    applyGlitch(outCtx, clean, scaled, frame, width, height, grunge);
     outCtx.restore();
-  }, [frame, width, height, ready, intensityScale]);
+  }, [frame, width, height, ready, intensityScale, grunge, titleMode]);
 
   return (
     <AbsoluteFill style={{ backgroundColor: PALETTE.backdrop }}>

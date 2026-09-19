@@ -28,7 +28,9 @@
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
     "render:cyber": "remotion render CyberAttack out/CyberAttack_1080p.mp4 --codec=h264 --muted",
-    "render:cyber4k": "remotion render CyberAttack4K out/CyberAttack_4K.mp4 --codec=h264 --muted"
+    "render:cyber4k": "remotion render CyberAttack4K out/CyberAttack_4K.mp4 --codec=h264 --muted",
+    "render:cyber-v2": "remotion render CyberAttackV2 out/CyberAttackV2_1080p.mp4 --codec=h264 --muted",
+    "render:cyber-v2-4k": "remotion render CyberAttackV2-4K out/CyberAttackV2_4K.mp4 --codec=h264 --muted"
   },
   "sideEffects": [
     "*.css",

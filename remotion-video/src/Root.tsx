@@ -22,6 +22,7 @@ import {
   CyberAttack,
   cyberAttackSchema,
   cyberAttackDefaults,
+  cyberAttackV2Props,
 } from "./cyber-attack/CyberAttack";
 import {
   BASE_WIDTH as CYBER_WIDTH,
@@ -82,6 +83,26 @@ export const RemotionRoot: React.FC = () => {
         height={CYBER_HEIGHT * 2}
         schema={cyberAttackSchema}
         defaultProps={cyberAttackDefaults}
+      />
+      <Composition
+        id="CyberAttackV2"
+        component={CyberAttack}
+        durationInFrames={CYBER_DURATION}
+        fps={CYBER_FPS}
+        width={CYBER_WIDTH}
+        height={CYBER_HEIGHT}
+        schema={cyberAttackSchema}
+        defaultProps={cyberAttackV2Props}
+      />
+      <Composition
+        id="CyberAttackV2-4K"
+        component={CyberAttack}
+        durationInFrames={CYBER_DURATION}
+        fps={CYBER_FPS}
+        width={CYBER_WIDTH * 2}
+        height={CYBER_HEIGHT * 2}
+        schema={cyberAttackSchema}
+        defaultProps={cyberAttackV2Props}
       />
     </>
   );
