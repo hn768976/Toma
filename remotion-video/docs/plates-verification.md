@@ -25,8 +25,8 @@ visible seam shows up as a wrap value far above the step.
 |---|---|---|---|
 | `GoldenRays` | 1.09/255 | 1.38/255 | seamless |
 | `SilverBokeh` | 0.99/255 | 0.96/255 | seamless |
-| `DeepBlueDust` | 0.97/255 | 0.94/255 | seamless |
-| `BokehCurtain` | 4.71/255 | 4.56/255 | seamless |
+| `DeepBlueDust` | 1.03/255 | 0.99/255 | seamless |
+| `BokehCurtain` | 5.41/255 | 5.30/255 | seamless |
 
 ## Grade against reference
 
@@ -38,5 +38,27 @@ frames are cropped to drop the watermark band before measurement.
 |---|---|---|---|
 | `GoldenRays` | #bfbb79 / #c9b98c | 177 / 174 | 251 / 250 |
 | `SilverBokeh` | #e0e0e2 / #e2e3e5 | 223 / 226 | 251 / 251 |
-| `DeepBlueDust` | #102e4e / #11304d | 34 / 36 | 103 / 117 |
-| `BokehCurtain` | #c0bfb2 / #7d8a93 | 195 / 136 | 250 / 219 |
+| `DeepBlueDust` | #123356 / #11304d | 37 / 36 | 114 / 117 |
+| `BokehCurtain` | #818682 / #7d8a93 | 133 / 136 | 209 / 219 |
+
+## Motion energy
+
+Mean absolute frame-to-frame difference over the whole clip, measured on
+a 96x54 greyscale reduction, alongside the same measurement on the source
+clips. Also reports net translation, estimated by searching for the
+integer shift that best aligns frames ten apart.
+
+| Plate | Delivered | Reference | Net pan |
+|---|---|---|---|
+| `BokehCurtain` | 8.09 | 5.34 | zero |
+| `GoldenRays` | 2.05 | 1.00 | zero |
+| `SilverBokeh` | 1.69 | 0.30 | zero |
+| `DeepBlueDust` | 1.35 | 0.28 | zero |
+
+All four references have **zero** net translation: their motion is
+in-place shimmer, not camera movement. Three of the four are close to
+static, so the plates sit deliberately above them - the brief called for
+blinking and shimmering, which needs more energy than the sources carry.
+
+Net pan is zero on the delivered plates by construction. Nothing
+translates; brightness does the work.
