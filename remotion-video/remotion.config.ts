@@ -12,6 +12,12 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
+
+// The woven-texture compositions draw through PixiJS/WebGL. Headless Chrome has
+// no GPU here, so route WebGL at ANGLE's SwiftShader backend -- "swangle" is the
+// renderer that actually produces pixels in a container. Without this the WebGL
+// context creation fails and the frames come out black.
+Config.setChromiumOpenGlRenderer("swangle");
 Config.overrideBundlerConfig(enableTailwind);
 
 // Some sandboxed dev environments block downloading Remotion's own
