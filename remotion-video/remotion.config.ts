@@ -11,6 +11,9 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// PixiJS needs a real WebGL context; "swangle" is the software-backed ANGLE
+// renderer that works in headless Chrome without a GPU.
+Config.setChromiumOpenGlRenderer("swangle");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 
