@@ -8,6 +8,7 @@
   "dependencies": {
     "@remotion/cli": "4.0.515",
     "@remotion/tailwind-v4": "4.0.515",
+    "pixi.js": "^8.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
@@ -26,7 +27,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:gradients": "node scripts/render-gradients.mjs",
+    "render:gradients:4k": "node scripts/render-gradients.mjs --uhd",
+    "package:project": "node scripts/package-project.mjs",
+    "check:loop": "node scripts/check-loop.mjs"
   },
   "sideEffects": [
     "*.css",
