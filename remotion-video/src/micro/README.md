@@ -28,6 +28,16 @@ The shipped 1080p MP4s are the **4K masters rendered at half scale**, not the
 1080p compositions. That way the delivered file is the master, just smaller —
 identical framing, motion and timing, with no second code path to keep in sync.
 
+The `render:micro` script wraps this:
+
+```console
+npm run render:micro            # all six, 1080p
+npm run render:micro -- v3 v5   # just those
+npm run render:micro -- --4k    # full 4K masters, roughly 4x the time
+```
+
+Or drive the CLI directly:
+
 ```console
 # 1080p delivery (what ships)
 npx remotion render Micro-V1-BlueCells-4K out/v1_1080p.mp4 \

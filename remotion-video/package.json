@@ -28,7 +28,8 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:micro": "node scripts/render-micro.mjs"
   },
   "sideEffects": [
     "*.css",
