@@ -8,6 +8,7 @@
   "dependencies": {
     "@remotion/cli": "4.0.515",
     "@remotion/tailwind-v4": "4.0.515",
+    "pixi.js": "^8.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
@@ -26,7 +27,9 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:plates": "node scripts/render-plates.mjs 1080",
+    "render:plates:4k": "node scripts/render-plates.mjs 4k"
   },
   "sideEffects": [
     "*.css",
