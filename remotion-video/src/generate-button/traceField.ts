@@ -41,6 +41,13 @@ export type Trace = {
   startRadius: number;
   /** Set when this trace carries a travelling light pulse. */
   pulse?: { period: number; phase: number; dash: number };
+  /**
+   * Every trace breathes. In the reference, a frame difference across the
+   * steady state lights up the whole skeleton, not just the traces carrying
+   * a pulse — the board shimmers. A sine averages out over time, so the
+   * field's temporal average stays as crisp as any single frame.
+   */
+  flicker: { period: number; phase: number; amp: number };
 };
 
 export type Pad = { x: number; y: number; size: number; bright: boolean };
@@ -169,6 +176,11 @@ const makeTrace = (rng: Rng, pts: Pt[], tier: 0 | 1 | 2): Trace => {
     strokeWidth: TIER_WIDTH[tier],
     length,
     startRadius: radiusOf(pts[0]),
+    flicker: {
+      period: range(rng, 18, 84),
+      phase: rng(),
+      amp: range(rng, 0.25, 0.68),
+    },
     pulse: wantsPulse
       ? {
           period: range(rng, 52, 150),

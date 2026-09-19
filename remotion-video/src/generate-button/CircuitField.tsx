@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { interpolate } from "remotion";
 import {
   BASE_HEIGHT,
@@ -35,6 +35,14 @@ const tierOpacity = (theme: Theme, tier: 0 | 1 | 2) =>
     : tier === 1
       ? theme.traceMidOpacity
       : theme.traceBrightOpacity;
+
+const TWO_PI = Math.PI * 2;
+
+/** The trace's own slow brightness breath at this frame. */
+const flickerAt = (trace: Trace, frame: number) => {
+  const { period, phase, amp } = trace.flicker;
+  return 1 + amp * Math.sin(TWO_PI * (frame / period + phase));
+};
 
 /**
  * Where each travelling pulse currently sits on its trace, as an SVG
@@ -82,6 +90,10 @@ export const CircuitField: React.FC<{
   const lit = useMemo(() => traces.filter((t) => t.tier > 0), [traces]);
   const pulsing = useMemo(() => traces.filter((t) => t.pulse), [traces]);
 
+  const baseColor = useCallback((t: Trace) => tierColor(theme, t.tier), [theme]);
+  const bloomWidth = useCallback((t: Trace) => t.strokeWidth * 1.4, []);
+  const haloWidth = useCallback((t: Trace) => t.strokeWidth * 3.4, []);
+
   const reveal = interpolate(
     frame,
     [TRACE_FADE_IN_START, TRACE_FADE_IN_END],
@@ -105,9 +117,11 @@ export const CircuitField: React.FC<{
 
   if (reveal <= 0) return null;
 
-  const baseColor = (t: Trace) => tierColor(theme, t.tier);
   const baseWidth = (t: Trace) => t.strokeWidth;
-  const baseOpacity = (t: Trace) => tierOpacity(theme, t.tier);
+  // Only the base pass depends on the frame, so the halo and bloom layers
+  // keep stable props and stay memoised across the whole render.
+  const baseOpacity = (t: Trace) =>
+    Math.min(1, tierOpacity(theme, t.tier) * flickerAt(t, frame));
 
   return (
     <>
@@ -125,7 +139,7 @@ export const CircuitField: React.FC<{
         <Strokes
           traces={lit}
           color={baseColor}
-          width={(t) => t.strokeWidth * 1.4}
+          width={bloomWidth}
         />
       </svg>
 
@@ -161,7 +175,7 @@ export const CircuitField: React.FC<{
           <Strokes
             traces={lit}
             color={baseColor}
-            width={(t) => t.strokeWidth * 3.4}
+            width={haloWidth}
           />
         </g>
 
