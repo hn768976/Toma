@@ -8,6 +8,7 @@
   "dependencies": {
     "@remotion/cli": "4.0.515",
     "@remotion/tailwind-v4": "4.0.515",
+    "pixi.js": "^8.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
@@ -26,7 +27,17 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:plates": "npm run render:gold-rain && npm run render:cosmic-dust && npm run render:magenta-nebula && npm run render:gold-band",
+    "render:gold-rain": "remotion render GoldRain out/1080p/gold-rain-1080p.mp4",
+    "render:cosmic-dust": "remotion render CosmicDust out/1080p/cosmic-dust-1080p.mp4",
+    "render:magenta-nebula": "remotion render MagentaNebula out/1080p/magenta-nebula-1080p.mp4",
+    "render:gold-band": "remotion render GoldBand out/1080p/gold-band-1080p.mp4",
+    "render:plates-4k": "npm run render:gold-rain-4k && npm run render:cosmic-dust-4k && npm run render:magenta-nebula-4k && npm run render:gold-band-4k",
+    "render:gold-rain-4k": "remotion render GoldRain4K out/4k/gold-rain-4k.mp4",
+    "render:cosmic-dust-4k": "remotion render CosmicDust4K out/4k/cosmic-dust-4k.mp4",
+    "render:magenta-nebula-4k": "remotion render MagentaNebula4K out/4k/magenta-nebula-4k.mp4",
+    "render:gold-band-4k": "remotion render GoldBand4K out/4k/gold-band-4k.mp4"
   },
   "sideEffects": [
     "*.css",

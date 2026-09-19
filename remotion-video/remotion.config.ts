@@ -14,6 +14,19 @@ Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 
+// The abstract plates are drawn with PixiJS + custom WebGL shaders, so the
+// renderer needs a real GL context. "swangle" is SwiftShader behind ANGLE: it
+// works everywhere, including headless CI and containers without a GPU. On a
+// machine with a GPU, "angle" or "egl" renders the same frames much faster --
+// override with `--gl=angle` on the command line.
+Config.setChromiumOpenGlRenderer("swangle");
+
+// Deliverables are H.264 / MP4. CRF 16 keeps the fine glitter and the dark
+// gradients clean; these plates are unforgiving of compression noise.
+Config.setCodec("h264");
+Config.setCrf(16);
+Config.setPixelFormat("yuv420p");
+
 // Some sandboxed dev environments block downloading Remotion's own
 // Chrome Headless Shell but ship a Playwright Chromium at this path.
 // Reuse it there instead of downloading; on a normal machine this path
