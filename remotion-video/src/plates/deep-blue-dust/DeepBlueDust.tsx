@@ -19,6 +19,8 @@ export const deepBlueDustSchema = z.object({
   dustGain: z.number().min(0).max(3),
   dustTwinkle: z.number().min(0).max(3),
   vignetteAmount: z.number().min(0).max(1),
+  shimmer: z.number().min(0).max(1),
+  blur: z.number().min(0).max(30),
   exposure: z.number().min(0.2).max(3),
   grainAmount: z.number().min(0).max(0.2),
   seed: z.number(),
@@ -38,10 +40,12 @@ export const deepBlueDustDefaults: DeepBlueDustProps = {
   lightCentreY: 0.30,
   nebulaGain: 0.92,
   discGain: 0.78,
-  hollow: 0.62,
+  hollow: 0.42,
   dustGain: 1.0,
-  dustTwinkle: 0.9,
+  dustTwinkle: 1.7,
   vignetteAmount: 0.78,
+  shimmer: 1.0,
+  blur: 6.0,
   exposure: 1.12,
   grainAmount: 0.018,
   seed: 2.0,
@@ -73,6 +77,8 @@ export const DeepBlueDust: React.FC<DeepBlueDustProps> = (p) => {
       name="deep-blue-dust"
       fragment={DEEP_BLUE_DUST_FRAG}
       uniforms={uniforms}
+      shimmer={p.shimmer}
+      blur={p.blur}
       exposure={p.exposure}
       grainAmount={p.grainAmount}
       seed={p.seed}

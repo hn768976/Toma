@@ -58,7 +58,7 @@ vec3 discLayer(
       vec4 r = cellRandom(cell, seed);
 
       // Sparse: the reference is mostly empty frame.
-      if (r.w > 0.55) continue;
+      if (r.w > 0.62) continue;
 
       vec2 centre = (cell + vec2(0.16 + r.x * 0.68, 0.16 + r.y * 0.68)) * cellSize;
 
@@ -69,7 +69,7 @@ vec3 discLayer(
       centre += vec2(
         cos(TAU * cycles * uT + phase),
         sin(TAU * cycles * uT + phase * 1.31)
-      ) * cellPx * 0.075;
+      ) * cellPx * 0.022;
 
       float radius = radiusPx * (0.34 + r.z * r.z * 1.5);
       float d = length(px - centre) / radius;
@@ -89,10 +89,16 @@ vec3 discLayer(
       float tealPick = step(0.82, hash11(cell.x * 2.7 + cell.y * 5.3 + seed));
       vec3 tint = mix(uDiscCool, uDiscTeal, tealPick);
 
+      // Blink. Slower here than on the curtain - this reference is the
+      // gentlest of the four - but still the dominant motion.
+      float hzA = mix(0.45, 1.9, r.y);
+      float tw = shimmer(uT, uLoopSeconds, r.x * TAU, hzA, hzA * 1.64 + 0.19,
+                         uShimmer, 2.4);
+
       // Brightness follows the nebula: discs away from the mass fall off
       // into the dark side of the frame rather than floating on black.
       float local = mix(0.10, 1.0, massMask);
-      acc += tint * shape * (0.18 + r.z * r.z * 1.0) * gain * local;
+      acc += tint * shape * (0.18 + r.z * r.z * 1.0) * max(tw, 0.0) * gain * local;
     }
   }
   return acc;
@@ -108,22 +114,23 @@ vec3 dustLayer(vec2 px, float cellPx, float seed, float massMask) {
     for (int i = -1; i <= 1; i++) {
       vec2 cell = baseCell + vec2(float(i), float(j));
       vec4 r = cellRandom(cell, seed);
-      if (r.w > 0.34) continue;
+      if (r.w > 0.44) continue;
 
       vec2 centre = (cell + vec2(0.1 + r.x * 0.8, 0.1 + r.y * 0.8)) * cellSize;
       float phase = r.y * TAU;
-      centre += vec2(cos(TAU * uT + phase), sin(TAU * uT + phase * 1.7)) * cellPx * 0.14;
+      centre += vec2(cos(TAU * uT + phase), sin(TAU * uT + phase * 1.7)) * cellPx * 0.05;
 
-      float radius = uScale * (0.9 + r.z * 1.7);
+      float radius = uScale * (2.4 + r.z * 4.8);
       float d = length(px - centre) / radius;
-      float point = exp(-d * d * 2.2);
+      float point = exp(-d * d * 2.6);
 
       // Twinkle hard - dust is the only fast-moving element in a plate
       // that is otherwise almost still.
-      float k = 3.0 + floor(r.z * 5.0);
-      float tw = 0.45 + 0.55 * pow(max(0.0, 0.5 + 0.5 * cos(TAU * k * uT + r.x * TAU)), 1.8);
+      float hzD = mix(0.9, 3.2, r.z);
+      float tw = shimmer(uT, uLoopSeconds, r.x * TAU, hzD, hzD * 1.93 + 0.4,
+                         uShimmer, 3.2);
 
-      acc += uDustColor * point * tw * uDustTwinkle * (0.35 + r.z * 0.9) * mix(0.15, 1.0, massMask);
+      acc += uDustColor * point * max(tw, 0.0) * uDustTwinkle * (0.35 + r.z * 0.9) * mix(0.15, 1.0, massMask);
     }
   }
   return acc;
@@ -150,9 +157,9 @@ void main() {
   col += uNebula * exp(-dot(md, md) * 1.15) * uNebulaGain * 0.16;
 
   // ---- discs and dust ----------------------------------------------------
-  col += discLayer(px, 168.0 * s, 62.0 * s, 0.30, 0.95, 5.3, uDiscGain, massMask);
-  col += discLayer(px, 320.0 * s, 132.0 * s, 0.44, 0.75, 12.1, uDiscGain * 0.7, massMask);
-  col += dustLayer(px, 34.0 * s, 21.7, massMask);
+  col += discLayer(px, 104.0 * s, 30.0 * s, 0.52, 0.52, 5.3, uDiscGain, massMask);
+  col += discLayer(px, 196.0 * s, 62.0 * s, 0.66, 0.38, 12.1, uDiscGain * 0.72, massMask);
+  col += dustLayer(px, 26.0 * s, 21.7, massMask);
 
   // ---- lens + grade ------------------------------------------------------
   float radial = length(uv - 0.5) * 2.0;

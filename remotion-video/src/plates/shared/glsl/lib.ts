@@ -142,6 +142,34 @@ vec4 cellRandom(vec2 cell, float layerSeed) {
   return vec4(h.x, h.y, h.z, extra);
 }
 
+// -------------------------------------------------------------- shimmer
+
+/**
+ * Per-element blink / shimmer.
+ *
+ * A plain cosine breathes: it spends as much time bright as dim and reads
+ * as a slow swell. Raising it to a power pushes the waveform down towards
+ * its floor and leaves short peaks, which is what makes a light read as
+ * BLINKING rather than pulsing. Two harmonics at different integer rates
+ * are mixed so the pattern does not repeat on an obvious beat.
+ *
+ * Both rates are integer cycles per loop, so every element returns to its
+ * starting brightness at the loop point.
+ *
+ *   phase - per-element offset, otherwise the whole field blinks in step
+ *   hzA/hzB - blink rates in Hz, converted to integer cycles per loop
+ *   depth - 0 holds steady, 1 swings from near-black to well over full
+ *   sharp - 1 breathes, 3+ snaps
+ */
+float shimmer(float t, float loopSeconds, float phase, float hzA, float hzB, float depth, float sharp) {
+  float kA = max(1.0, floor(hzA * loopSeconds + 0.5));
+  float kB = max(1.0, floor(hzB * loopSeconds + 0.5));
+  float a = pow(0.5 + 0.5 * cos(TAU * kA * t + phase), sharp);
+  float b = pow(0.5 + 0.5 * cos(TAU * kB * t + phase * 1.73 + 2.1), sharp);
+  float s = a * 0.62 + b * 0.38;
+  return mix(1.0 - depth * 0.92, 1.0 + depth * 1.25, s);
+}
+
 // --------------------------------------------------------------- grading
 
 // Filmic-ish shoulder. Keeps the blown-out cores of the bright plates from
@@ -249,4 +277,6 @@ uniform float uLoopFrames;
 uniform float uSeed;
 uniform float uGrainAmount;
 uniform float uExposure;
+uniform float uLoopSeconds;
+uniform float uShimmer;
 ` + GLSL_LIB;

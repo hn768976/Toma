@@ -56,21 +56,23 @@ vec3 bokehLayer(
       centre += vec2(
         cos(TAU * cycles * uT + phase),
         sin(TAU * cycles * uT + phase * 1.44)
-      ) * cellPx * 0.09;
+      ) * cellPx * 0.028;
 
       float radius = radiusPx * (0.55 + r.z * 0.95);
       float d = length(px - centre) / radius;
       float shape = bokehProfile(d, soft, rim);
       if (shape <= 0.0) continue;
 
-      // Leaves move in the wind, so gaps open and close: discs breathe in
-      // and out rather than holding a constant brightness.
-      float k = 1.0 + floor(r.w * 3.0);
-      float tw = 0.62 + 0.38 * cos(TAU * k * uT + r.y * TAU);
+      // Leaves move in the wind, so gaps open and close and the highlight
+      // behind them flickers rather than holding steady. Each disc gets
+      // its own rate and phase so the canopy glitters.
+      float hzA = mix(0.55, 2.2, r.y);
+      float tw = shimmer(uT, uLoopSeconds, r.x * TAU, hzA, hzA * 1.71 + 0.23,
+                         uShimmer * 0.9, 2.3);
 
       // Hotter discs nearer the sun, cooling towards the shadow side.
       vec3 tint = mix(uGold, uSunCore, clamp(lightMask * 1.3, 0.0, 1.0) * r.z);
-      acc += tint * shape * (0.4 + r.z * 0.8) * tw * gain * mix(0.16, 1.0, lightMask);
+      acc += tint * shape * (0.4 + r.z * 0.8) * max(tw, 0.0) * gain * mix(0.16, 1.0, lightMask);
     }
   }
   return acc;
@@ -124,7 +126,7 @@ void main() {
   rays = pow(clamp(rays, 0.0, 1.0), 2.3);
   // Shafts are strongest just outside the core and fade with distance.
   float rayFalloff = smoothstep(0.03, 0.26, sunDist) * exp(-sunDist * 2.05);
-  float rayPulse = 0.85 + 0.15 * cos(TAU * 2.0 * uT);
+  float rayPulse = shimmer(uT, uLoopSeconds, 0.0, 0.5, 1.3, uShimmer * 0.30, 1.8);
   col += uGold * rays * rayFalloff * uRayStrength * rayPulse;
 
   // ---- sun core ----------------------------------------------------------

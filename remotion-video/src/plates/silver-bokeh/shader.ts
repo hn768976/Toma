@@ -60,7 +60,7 @@ vec3 softLayer(
       centre += vec2(
         cos(TAU * cycles * uT + phase),
         sin(TAU * cycles * uT + phase * 1.27)
-      ) * cellPx * 0.085;
+      ) * cellPx * 0.03;
 
       float radius = radiusPx * (0.58 + r.z * 0.9);
       float d = length(px - centre) / radius;
@@ -73,11 +73,16 @@ vec3 softLayer(
       float ring = exp(-pow((d - ringPos) / ringWidth, 2.0) * 2.6) * body;
 
       float brightness = 0.35 + r.z * 0.85;
-      float pulse = 0.85 + 0.15 * cos(TAU * (1.0 + floor(r.w * 2.0)) * uT + r.y * TAU);
+      // Blink. Shallower than the darker plates - there is only a few
+      // percent of contrast to work with here, so a deep swing would read
+      // as strobing rather than shimmer.
+      float hzA = mix(0.5, 2.0, r.y);
+      float pulse = shimmer(uT, uLoopSeconds, r.x * TAU, hzA, hzA * 1.58 + 0.21,
+                            uShimmer * 0.88, 2.1);
 
       // Additive core, subtractive shoulder. The shoulder is what keeps
       // overlapping discs distinguishable in a frame with no headroom.
-      acc += uDiscTint * (body * 0.30 + ring * rim) * brightness * pulse * gain;
+      acc += uDiscTint * (body * 0.30 + ring * rim) * brightness * max(pulse, 0.0) * gain;
       acc -= uShadeTint * smoothstep(0.45, 1.0, d) * body * uShade * brightness;
     }
   }

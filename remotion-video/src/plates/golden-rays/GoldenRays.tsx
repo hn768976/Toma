@@ -17,6 +17,7 @@ export const goldenRaysSchema = z.object({
   rayDetail: z.number().min(1).max(24),
   bokehGain: z.number().min(0).max(3),
   haze: z.number().min(0).max(1),
+  shimmer: z.number().min(0).max(1),
   exposure: z.number().min(0.2).max(3),
   grainAmount: z.number().min(0).max(0.2),
   seed: z.number(),
@@ -38,6 +39,7 @@ export const goldenRaysDefaults: GoldenRaysProps = {
   rayDetail: 4.4,
   bokehGain: 0.92,
   haze: 0.19,
+  shimmer: 0.95,
   exposure: 1.34,
   grainAmount: 0.022,
   seed: 6.0,
@@ -66,6 +68,7 @@ export const GoldenRays: React.FC<GoldenRaysProps> = (p) => {
       name="golden-rays"
       fragment={GOLDEN_RAYS_FRAG}
       uniforms={uniforms}
+      shimmer={p.shimmer}
       exposure={p.exposure}
       grainAmount={p.grainAmount}
       seed={p.seed}

@@ -9,6 +9,7 @@ import {
 } from "remotion";
 import {
   autoDetectRenderer,
+  BlurFilter,
   Container,
   Filter,
   GlProgram,
@@ -47,6 +48,13 @@ export type PixiPlateProps = {
   exposure?: number;
   /** Reshuffles every hashed field without changing the motion design. */
   seed?: number;
+  /** Depth of the per-element blink, 0 steady - 1 hard blink. */
+  shimmer?: number;
+  /**
+   * Optical defocus applied over the whole plate, in 1080p-referred px.
+   * 0 skips the pass entirely.
+   */
+  blur?: number;
 };
 
 /**
@@ -66,9 +74,11 @@ export const PixiPlate: React.FC<PixiPlateProps> = ({
   grainAmount = 0.03,
   exposure = 1,
   seed = 1,
+  shimmer = 0.5,
+  blur = 0,
 }) => {
   const frame = useCurrentFrame();
-  const { width, height, durationInFrames } = useVideoConfig();
+  const { width, height, durationInFrames, fps } = useVideoConfig();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<Renderer | null>(null);
@@ -92,12 +102,16 @@ export const PixiPlate: React.FC<PixiPlateProps> = ({
       uSeed: seed,
       uGrainAmount: grainAmount,
       uExposure: exposure,
+      // Blink rates are authored in Hz; the shader converts them to whole
+      // cycles per loop, which needs the loop length in seconds.
+      uLoopSeconds: durationInFrames / fps,
+      uShimmer: shimmer,
     };
     const merged = { ...base, ...uniforms };
     return Object.fromEntries(
       Object.entries(merged).map(([key, value]) => [key, uniformDescriptor(value)]),
     );
-  }, [width, height, scale, durationInFrames, seed, grainAmount, exposure, uniforms]);
+  }, [width, height, scale, durationInFrames, fps, seed, grainAmount, exposure, shimmer, uniforms]);
 
   // Keep the spec in a ref so the per-frame draw can read the latest
   // values without re-running the (expensive) renderer setup.
@@ -174,7 +188,20 @@ export const PixiPlate: React.FC<PixiPlateProps> = ({
         const surface = new Sprite(Texture.WHITE);
         surface.width = width;
         surface.height = height;
-        surface.filters = [filter];
+
+        // Optical defocus over the finished plate. repeatEdgePixels makes
+        // the blur clamp at the frame boundary instead of pulling in
+        // transparent pixels, which would darken all four edges.
+        const chain: Filter[] = [filter];
+        if (blur > 0) {
+          const defocus = new BlurFilter({
+            strength: blur * scale,
+            quality: 4,
+          });
+          defocus.repeatEdgePixels = true;
+          chain.push(defocus);
+        }
+        surface.filters = chain;
 
         const stage = new Container();
         stage.addChild(surface);
@@ -202,7 +229,7 @@ export const PixiPlate: React.FC<PixiPlateProps> = ({
     // The renderer is built once per composition; size and shader are
     // fixed for the lifetime of a render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fragment, name, width, height]);
+  }, [fragment, name, width, height, blur, scale]);
 
   // Drawing in a layout effect puts the GL draw inside React's commit
   // phase, so the back buffer is populated before the browser paints and

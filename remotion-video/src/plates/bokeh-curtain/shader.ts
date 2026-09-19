@@ -68,13 +68,14 @@ vec3 strandLayer(
       float colGain = 0.72 + hash11(colId * 9.117 + seed * 3.4) * 0.72;
 
       // Strands are offset horizontally as a whole, so the chain stays
-      // vertical instead of zig-zagging cell to cell.
-      float colJitter = (colRand - 0.5) * 0.7;
+      // vertical instead of zig-zagging cell to cell. Kept narrow so
+      // neighbouring strands do not drift apart and open gaps.
+      float colJitter = (colRand - 0.5) * 0.42;
       // Depth: a whole strand is nearer or further, so its discs share a
       // size. Mixing sizes within one strand destroys the chain read.
-      float colSize = 0.74 + colRand2 * 0.62;
+      float colSize = 0.86 + colRand2 * 0.42;
       // Sparse strands leave the teal field visible between them.
-      float colAlive = step(0.16, colRand3);
+      float colAlive = step(0.03, colRand3);
 
       if (colAlive < 0.5) continue;
 
@@ -97,13 +98,13 @@ vec3 strandLayer(
       float shape = bokehProfile(d, soft, rim);
       if (shape <= 0.0) continue;
 
-      // Twinkle. Two superposed integer harmonics so it does not read as
-      // one mechanical pulse; per-disc phase keeps the strand alive.
-      float k1 = 2.0 + floor(r.w * 3.0);
-      float k2 = k1 + 3.0;
-      float tw = 1.0
-        + uTwinkle * 0.62 * cos(TAU * k1 * uT + r.y * TAU)
-        + uTwinkle * 0.38 * cos(TAU * k2 * uT + r.x * TAU * 1.9);
+      // Blink. Each light gets its own rate between roughly half a hertz
+      // and two and a half, and its own phase, so the curtain reads as
+      // hundreds of independently flickering bulbs rather than one field
+      // swelling in unison.
+      float hzA = mix(0.55, 2.5, r.y);
+      float tw = shimmer(uT, uLoopSeconds, r.x * TAU, hzA, hzA * 1.87 + 0.31,
+                         uTwinkle * uShimmer, 2.7);
 
       // Warmth is a property of the strand. A vertical bias pushes amber
       // low and steel blue high, matching the reference's distribution.
@@ -141,18 +142,18 @@ void main() {
   // Back: small, dense, cool. Reads as the far side of the curtain.
   // Vertical pitch under the disc diameter so the chain stays continuous.
   light += strandLayer(
-    px, vec2(86.0, 62.0) * s, 34.0 * s, 0.34, 0.20, 3.1, -0.26, 0.42
+    px, vec2(58.0, 46.0) * s, 27.0 * s, 0.34, 0.18, 3.1, -0.26, 0.40
   );
 
   // Mid: the layer that carries the read.
   light += strandLayer(
-    px, vec2(168.0, 122.0) * s, 68.0 * s, 0.26, 0.26, 8.7, 0.0, 0.92
+    px, vec2(140.0, 104.0) * s, 67.0 * s, 0.26, 0.24, 8.7, 0.0, 0.88
   );
 
   // Front: large and very soft - closest to the lens, so furthest from
   // focus and least defined.
   light += strandLayer(
-    px, vec2(310.0, 236.0) * s, 128.0 * s, 0.52, 0.12, 17.3, 0.26, 0.62
+    px, vec2(248.0, 186.0) * s, 120.0 * s, 0.52, 0.10, 17.3, 0.26, 0.58
   );
 
   // Out-of-focus amber does not stay inside its discs - it hazes the
