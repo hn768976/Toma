@@ -15,6 +15,7 @@ export const bokehCurtainSchema = z.object({
   twinkle: z.number().min(0).max(1),
   density: z.number().min(0.05).max(1),
   shimmer: z.number().min(0).max(1),
+  shimmerRate: z.number().min(0.02).max(3),
   hotspot: z.number().min(0).max(2),
   spill: z.number().min(0).max(1),
   exposure: z.number().min(0.2).max(3),
@@ -37,6 +38,7 @@ export const bokehCurtainDefaults: BokehCurtainProps = {
   density: 0.97,
   hotspot: 0.30,
   shimmer: 0.60,
+  shimmerRate: 0.15,
   spill: 0.10,
   exposure: 0.68,
   grainAmount: 0.022,
@@ -54,6 +56,7 @@ export const BokehCurtain: React.FC<BokehCurtainProps> = ({
   density,
   hotspot,
   shimmer,
+  shimmerRate,
   spill,
   exposure,
   grainAmount,
@@ -81,6 +84,7 @@ export const BokehCurtain: React.FC<BokehCurtainProps> = ({
       fragment={BOKEH_CURTAIN_FRAG}
       uniforms={uniforms}
       shimmer={shimmer}
+      shimmerRate={shimmerRate}
       exposure={exposure}
       grainAmount={grainAmount}
       seed={seed}

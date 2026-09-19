@@ -51,6 +51,13 @@ export type PixiPlateProps = {
   /** Depth of the per-element blink, 0 steady - 1 hard blink. */
   shimmer?: number;
   /**
+   * Global multiplier on every blink rate in the plate. 1 is the rate the
+   * shaders are authored at; lower values slow the whole field down
+   * without flattening the spread between its fastest and slowest
+   * elements.
+   */
+  shimmerRate?: number;
+  /**
    * Optical defocus applied over the whole plate, in 1080p-referred px.
    * 0 skips the pass entirely.
    */
@@ -75,6 +82,7 @@ export const PixiPlate: React.FC<PixiPlateProps> = ({
   exposure = 1,
   seed = 1,
   shimmer = 0.5,
+  shimmerRate = 1,
   blur = 0,
 }) => {
   const frame = useCurrentFrame();
@@ -106,12 +114,13 @@ export const PixiPlate: React.FC<PixiPlateProps> = ({
       // cycles per loop, which needs the loop length in seconds.
       uLoopSeconds: durationInFrames / fps,
       uShimmer: shimmer,
+      uShimmerRate: shimmerRate,
     };
     const merged = { ...base, ...uniforms };
     return Object.fromEntries(
       Object.entries(merged).map(([key, value]) => [key, uniformDescriptor(value)]),
     );
-  }, [width, height, scale, durationInFrames, fps, seed, grainAmount, exposure, shimmer, uniforms]);
+  }, [width, height, scale, durationInFrames, fps, seed, grainAmount, exposure, shimmer, shimmerRate, uniforms]);
 
   // Keep the spec in a ref so the per-frame draw can read the latest
   // values without re-running the (expensive) renderer setup.

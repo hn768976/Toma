@@ -162,8 +162,11 @@ vec4 cellRandom(vec2 cell, float layerSeed) {
  *   sharp - 1 breathes, 3+ snaps
  */
 float shimmer(float t, float loopSeconds, float phase, float hzA, float hzB, float depth, float sharp) {
-  float kA = max(1.0, floor(hzA * loopSeconds + 0.5));
-  float kB = max(1.0, floor(hzB * loopSeconds + 0.5));
+  // uShimmerRate scales every blink rate in the plate at once, so the
+  // speed of the whole field can be dialled without disturbing the
+  // relative spread of fast and slow elements that gives it life.
+  float kA = max(1.0, floor(hzA * uShimmerRate * loopSeconds + 0.5));
+  float kB = max(1.0, floor(hzB * uShimmerRate * loopSeconds + 0.5));
   float a = pow(0.5 + 0.5 * cos(TAU * kA * t + phase), sharp);
   float b = pow(0.5 + 0.5 * cos(TAU * kB * t + phase * 1.73 + 2.1), sharp);
   float s = a * 0.62 + b * 0.38;
@@ -279,4 +282,5 @@ uniform float uGrainAmount;
 uniform float uExposure;
 uniform float uLoopSeconds;
 uniform float uShimmer;
+uniform float uShimmerRate;
 ` + GLSL_LIB;

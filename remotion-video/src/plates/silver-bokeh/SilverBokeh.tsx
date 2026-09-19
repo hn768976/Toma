@@ -14,6 +14,7 @@ export const silverBokehSchema = z.object({
   shade: z.number().min(0).max(1),
   hotspot: z.number().min(0).max(1),
   shimmer: z.number().min(0).max(1),
+  shimmerRate: z.number().min(0.02).max(3),
   hotspotX: z.number().min(-0.5).max(1.5),
   hotspotY: z.number().min(-0.5).max(1.5),
   exposure: z.number().min(0.2).max(3),
@@ -34,6 +35,7 @@ export const silverBokehDefaults: SilverBokehProps = {
   shade: 0.11,
   hotspot: 0.10,
   shimmer: 1.0,
+  shimmerRate: 0.15,
   hotspotX: 0.24,
   hotspotY: 0.22,
   exposure: 1.015,
@@ -63,6 +65,7 @@ export const SilverBokeh: React.FC<SilverBokehProps> = (p) => {
       fragment={SILVER_BOKEH_FRAG}
       uniforms={uniforms}
       shimmer={p.shimmer}
+      shimmerRate={p.shimmerRate}
       exposure={p.exposure}
       grainAmount={p.grainAmount}
       seed={p.seed}
