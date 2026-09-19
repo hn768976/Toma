@@ -45,6 +45,13 @@ void main() {
   float aa = max(fwidth(t), 1e-5);
   float bar = smoothstep(width + aa, width - aa, s);
 
+  // At the extremes the antialiasing band straddles the stripe boundary and
+  // leaves a hairline of the opposite colour: visible as faint seams on the
+  // solid frames the contrast flips land on. Snap to fully covered / fully
+  // empty so those frames are genuinely solid and the flip stays invisible.
+  bar = max(bar, step(0.999, width));
+  bar = min(bar, 1.0 - step(width, 0.001));
+
   vec3 background = mix(vec3(0.0), vec3(0.988), uInvert);
   vec3 foreground = mix(vec3(0.988), vec3(0.0), uInvert);
 
