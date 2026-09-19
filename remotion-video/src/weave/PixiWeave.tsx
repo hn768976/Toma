@@ -70,6 +70,7 @@ const buildUniformDefs = (variant: WeaveVariant, width: number, height: number) 
     uWeftWidth: { value: variant.weftWidth, type: "f32" },
     uTwistAmp: { value: variant.twistAmp, type: "f32" },
     uTwistFreq: { value: variant.twistFreq, type: "f32" },
+    uTwistJitter: { value: variant.twistJitter, type: "f32" },
     uSlub: { value: variant.slub, type: "f32" },
     uWander: { value: variant.wander, type: "f32" },
     uWanderScale: { value: variant.wanderScale, type: "f32" },
@@ -98,6 +99,8 @@ const buildUniformDefs = (variant: WeaveVariant, width: number, height: number) 
     uExposure: { value: variant.exposure, type: "f32" },
     uContrast: { value: variant.contrast, type: "f32" },
     uLift: { value: variant.lift, type: "f32" },
+    uHighlightKnee: { value: variant.highlightKnee, type: "f32" },
+    uShoulder: { value: variant.shoulder, type: "f32" },
 
     uBloomCenter: { value: new Float32Array(variant.bloomCenter), type: "vec2<f32>" },
     uBloomRadius: { value: variant.bloomRadius, type: "f32" },

@@ -35,6 +35,11 @@ uniform float uThreadWidth;   // thread coverage of its cell, 0..1
 uniform float uWeftWidth;     // weft coverage (uneven weaves differ per axis)
 uniform float uTwistAmp;      // twist bump depth
 uniform float uTwistFreq;     // twist bumps per cell along a thread
+// 0 phase-locks every thread's twist to the cell grid, so each crossing looks
+// alike and the weave stays periodic; 1 gives each thread its own random phase,
+// which fills in mid-tones but beats against the grid and washes the two-cell
+// signal out. Tight machine weaves want this low, loose hand-feeling ones high.
+uniform float uTwistJitter;
 uniform float uSlub;          // per-thread thickness drift
 uniform float uWander;        // waviness of the thread paths
 uniform float uWanderScale;   // frequency of that waviness, in 1/cells
@@ -59,6 +64,15 @@ uniform float uRelief;        // normal z: low = domed threads, high = flat
 uniform float uExposure;
 uniform float uContrast;
 uniform float uLift;          // black lift, keeps the whites from crushing
+// Where the highlight rolloff starts. A hard clamp pinned 12% of the frame at
+// pure white, against 2.5% in the reference, which reads as blown discs rather
+// than lit cloth; film and sensors compress the top end instead of truncating
+// it, and so does this.
+uniform float uHighlightKnee;
+// How much of that rolloff to apply: 0 is a hard clip, 1 the full asymptotic
+// curve that never quite saturates. Real footage does clip -- Ref A pins 24.6%
+// of its frame at white and Ref B 2.5% -- so this is a blend, not a switch.
+uniform float uShoulder;
 // Ref B's fill light falls off down the frame: its row means run 192 at the top
 // to 163 at the bottom while local contrast *rises* (sigma 43 -> 56), which is
 // what a light raking from above does -- less fill reaching the lower cloth, so
@@ -153,7 +167,7 @@ Thread evalThread(float across, float along, float id, float baseWidth, float se
   halfWidth = clamp(halfWidth, 0.04, 0.72);
 
   // Twist: a spun thread has periodic bulges running along it.
-  float twistPhase = hash11(id * 3.77 + seed * 5.3) * 6.2831853;
+  float twistPhase = hash11(id * 3.77 + seed * 5.3) * 6.2831853 * uTwistJitter;
   float twistArg = along * uTwistFreq * 6.2831853 + twistPhase;
   float twist = sin(twistArg);
   halfWidth *= 1.0 + uTwistAmp * 0.35 * twist;
@@ -182,6 +196,25 @@ Thread evalThread(float across, float along, float id, float baseWidth, float se
 
   t.shade = 1.0 + uThreadShade * (hash11(id * 11.13 + seed * 2.7) - 0.5) * 2.0;
   return t;
+}
+
+// Smooth, asymptotic highlight compression above the knee. Anything below the
+// knee is untouched; above it, the curve approaches white without ever slamming
+// into it, so bright cells keep their gradation.
+float shoulder(float x) {
+  float knee = uHighlightKnee;
+  if (x <= knee) return x;
+  float headroom = max(1.0 - knee, 1e-4);
+  // t/(1+t) approaches 1 only as t grows without bound, so the curve nears
+  // white asymptotically instead of arriving there. Scaling it up would defeat
+  // the point: at x = 1 it would land exactly on white and compress nothing.
+  float t = (x - knee) / headroom;
+  float rolled = knee + headroom * (t / (1.0 + t));
+  return mix(x, rolled, uShoulder);
+}
+
+vec3 shoulder(vec3 c) {
+  return vec3(shoulder(c.r), shoulder(c.g), shoulder(c.b));
 }
 
 // -------------------------------------------------------------------------
@@ -331,6 +364,7 @@ void main() {
   col *= uExposure * uStateExposure;
   col = (col - 0.5) * uContrast + 0.5;
   col = col * (1.0 - uLift) + uLift;
+  col = shoulder(col);
 
   // Fine grain, reseeded per state so it flickers with the boil.
   float g = hash12(vUv * vec2(1873.0, 1051.0) + uSeed * 91.7) - 0.5;
