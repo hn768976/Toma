@@ -275,7 +275,8 @@ const roundedTrianglePath = (
   cy: number,
   width: number,
   height: number,
-  radius: number,
+  apexRadius: number,
+  baseRadius: number,
 ) => {
   const points: [number, number][] = [
     [cx, cy - height / 2], // apex
@@ -283,8 +284,11 @@ const roundedTrianglePath = (
     [cx - width / 2, cy + height / 2], // bottom left
   ];
 
+  const radii = [apexRadius, baseRadius, baseRadius];
+
   const path = new Path2D();
   for (let i = 0; i < 3; i++) {
+    const radius = radii[i];
     const prev = points[(i + 2) % 3];
     const curr = points[i];
     const next = points[(i + 1) % 3];
@@ -312,28 +316,42 @@ const roundedTrianglePath = (
  * outline, with a tapered white exclamation. Drawn onto the foreground
  * layer so the glitch pass can displace it independently of the field.
  */
-// Proportions of the alert mark, all as fractions of the outer outline
-// width `w` or height `h`, measured off the reference by scanning rows of
-// the frame and separating the outline strokes from the inner fill.
+// Proportions of the alert mark, fitted to the reference by scanning
+// frame rows, separating the outline strokes from the inner fill by run
+// count, and least-squares fitting this exact path construction against
+// the reference's measured outer-edge profile.
 //
-// The two that matter most: the fill's apex sits high (0.105h), and the
-// exclamation is chunky (0.066w at its widest). Shorten the fill or thin
-// the bar and the exclamation's dome breaks out of the red into the dark
-// gap, which is the tell that the icon is wrong.
+// The corner radius is the value that matters and the easiest to get
+// wrong: the reference's triangle is heavily rounded (0.22 of its width,
+// not the 0.07 that "slightly rounded corners" suggests by eye). Rounding
+// pulls the widest points of a triangle inward, so under-rounding it
+// makes the outline sit inside the reference's at every height and closes
+// up the dark gap around the fill, even when the fill itself is correct.
 const TRI = {
-  heightRatio: 0.982, // outline height / outline width
-  strokeWidth: 0.028, // x w
-  cornerRadius: 0.072, // x w
-  fillApexY: 0.125, // x h, from the top of the outline
-  fillBaseY: 0.88, // x h
-  fillHalfWidth: 0.378, // x w
-  barTopY: 0.27, // x h
-  barShoulderY: 0.34, // x h — where the domed top reaches full width
-  barBottomY: 0.69, // x h
-  barTopHalf: 0.066, // x w
-  barBottomHalf: 0.017, // x w
-  dotY: 0.775, // x h
-  dotRadius: 0.05, // x w
+  // Outline, in units of the *construction* width (see `w` below).
+  heightRatio: 0.917, // gives a drawn silhouette of 0.982 height/width
+  apexRadius: 0.17,
+  baseRadius: 0.22,
+  // Everything below is in units of the *visible* width, and the `Dy`
+  // values are offsets from the mark's centre. Keeping the inner geometry
+  // off the visible width means retuning the outline's rounding does not
+  // silently move the fill and the exclamation.
+  strokeWidth: 0.028,
+  // Widths are fractions of the drawn silhouette width. The `K` values
+  // are heights as a fraction of the drawn silhouette, measured DOWN FROM
+  // ITS TOP EDGE — not from its centre. Rounding the apex lowers the top
+  // of the drawn shape well below the construction triangle's centre, so
+  // centre-relative offsets drift every time the rounding is retuned.
+  fillApexK: 0.131,
+  fillBaseK: 0.883,
+  fillHalfWidth: 0.382,
+  barTopK: 0.28,
+  barShoulderK: 0.37,
+  barBottomK: 0.682,
+  barTopHalf: 0.071,
+  barBottomHalf: 0.0144,
+  dotK: 0.77,
+  dotRadius: 0.052,
 };
 
 /**
@@ -344,14 +362,40 @@ const TRI = {
 export const drawTriangle = (ctx: Ctx, scene: Scene) => {
   const cx = scene.width / 2;
   const cy = px(scene, TRIANGLE_CENTER_Y);
-  const w = px(scene, TRIANGLE_WIDTH);
+
+  // TRIANGLE_WIDTH is the width of the silhouette we want on screen.
+  // Rounding the base corners moves the widest points of the path inward
+  // along the sloped edges, so the triangle actually constructed has to
+  // be larger than that by exactly the amount the rounding eats.
+  // For a quadratic corner whose control point is the vertex, the extreme
+  // of the curve sits at R*e/(1+e) from the vertex, not at the tangent
+  // point R*e — the curve pulls away from the vertex before it gets
+  // there. Using the tangent point overshoots the correction badly.
+  const visible = px(scene, TRIANGLE_WIDTH);
+  const edgeLength = Math.hypot(0.5, TRI.heightRatio);
+  const edgeUnitX = 0.5 / edgeLength;
+  const inset = edgeUnitX / (1 + edgeUnitX);
+  const w = visible / (1 - 2 * TRI.baseRadius * inset);
   const h = w * TRI.heightRatio;
-  const top = cy - h / 2;
+
+  // The apex corner rounds the point off, so the drawn shape starts below
+  // the construction triangle's apex and is shorter than it.
+  const apexDrop = 0.5 * (TRI.heightRatio / edgeLength) * TRI.apexRadius * w;
+  const drawnTop = cy - h / 2 + apexDrop;
+  const drawnHeight = h - apexDrop;
+  const yAt = (k: number) => drawnTop + drawnHeight * k;
 
   ctx.save();
 
-  const outline = roundedTrianglePath(cx, cy, w, h, w * TRI.cornerRadius);
-  const stroke = w * TRI.strokeWidth;
+  const outline = roundedTrianglePath(
+    cx,
+    cy,
+    w,
+    h,
+    w * TRI.apexRadius,
+    w * TRI.baseRadius,
+  );
+  const stroke = visible * TRI.strokeWidth;
 
   // Glow first, as its own soft pass. Putting a large shadowBlur on the
   // outline stroke itself floods the gap between the outline and the
@@ -362,18 +406,18 @@ export const drawTriangle = (ctx: Ctx, scene: Scene) => {
   ctx.lineWidth = stroke;
   ctx.lineJoin = "round";
   ctx.shadowColor = "rgba(255, 26, 60, 0.95)";
-  ctx.shadowBlur = w * 0.038;
+  ctx.shadowBlur = visible * 0.038;
   ctx.stroke(outline);
   ctx.restore();
 
   // Inner solid triangle: hard corners against the outline's rounded
   // ones, inset far enough to leave an even dark gap all the way round.
-  const fillApex = top + h * TRI.fillApexY;
-  const fillBase = top + h * TRI.fillBaseY;
+  const fillApex = yAt(TRI.fillApexK);
+  const fillBase = yAt(TRI.fillBaseK);
   const inner = new Path2D();
   inner.moveTo(cx, fillApex);
-  inner.lineTo(cx + w * TRI.fillHalfWidth, fillBase);
-  inner.lineTo(cx - w * TRI.fillHalfWidth, fillBase);
+  inner.lineTo(cx + visible * TRI.fillHalfWidth, fillBase);
+  inner.lineTo(cx - visible * TRI.fillHalfWidth, fillBase);
   inner.closePath();
 
   const fill = ctx.createLinearGradient(0, fillApex, 0, fillBase);
@@ -391,11 +435,11 @@ export const drawTriangle = (ctx: Ctx, scene: Scene) => {
 
   // Exclamation: a domed top at full width, tapering to a narrow rounded
   // foot, with a separate dot below.
-  const barTop = top + h * TRI.barTopY;
-  const shoulder = top + h * TRI.barShoulderY;
-  const barBottom = top + h * TRI.barBottomY;
-  const topHalf = w * TRI.barTopHalf;
-  const footHalf = w * TRI.barBottomHalf;
+  const barTop = yAt(TRI.barTopK);
+  const shoulder = yAt(TRI.barShoulderK);
+  const barBottom = yAt(TRI.barBottomK);
+  const topHalf = visible * TRI.barTopHalf;
+  const footHalf = visible * TRI.barBottomHalf;
   const foot = barBottom - footHalf;
 
   const mark = new Path2D();
@@ -415,7 +459,7 @@ export const drawTriangle = (ctx: Ctx, scene: Scene) => {
   ctx.fill(mark);
 
   ctx.beginPath();
-  ctx.arc(cx, top + h * TRI.dotY, w * TRI.dotRadius, 0, Math.PI * 2);
+  ctx.arc(cx, yAt(TRI.dotK), visible * TRI.dotRadius, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
