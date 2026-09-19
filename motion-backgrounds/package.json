@@ -1,0 +1,28 @@
+{
+  "name": "toma-motion-backgrounds",
+  "version": "1.0.0",
+  "description": "4K abstract motion-background loops built with Remotion + PixiJS v8 and custom WebGL shaders",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "render:all": "node scripts/render-all.mjs",
+    "render:1080p": "node scripts/render-all.mjs --scale=0.5",
+    "render:4k": "node scripts/render-all.mjs --scale=1",
+    "bundle": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.526",
+    "pixi.js": "8.21.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.526"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
