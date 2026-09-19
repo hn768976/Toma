@@ -26,10 +26,16 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:phishing:1080p": "remotion render PhishingAttack1080p out/phishing-attack-1080p.mp4 --codec=h264 --image-format=png --crf=17 --muted",
+    "render:phishing:4k": "remotion render PhishingAttack4K   out/phishing-attack-4k.mp4   --codec=h264 --image-format=png --crf=17 --muted",
+    "render:hacked:1080p": "remotion render SystemHacked1080p  out/system-hacked-1080p.mp4  --codec=h264 --image-format=png --crf=17 --muted",
+    "render:hacked:4k": "remotion render SystemHacked4K     out/system-hacked-4k.mp4     --codec=h264 --image-format=png --crf=17 --muted",
+    "render:all": "npm run render:phishing:1080p && npm run render:hacked:1080p && npm run render:phishing:4k && npm run render:hacked:4k"
   },
   "sideEffects": [
     "*.css",
-    "./src/load-fonts.ts"
+    "./src/load-fonts.ts",
+    "./src/glitch-alert/fonts.ts"
   ]
 }
