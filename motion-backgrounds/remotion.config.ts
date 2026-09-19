@@ -1,11 +1,16 @@
 import { Config } from "@remotion/cli/config";
 
-Config.setVideoImageFormat("jpeg");
+// PNG, not JPEG. These are large smooth gradients: JPEG intermediates block
+// up in the ramps and partly destroy the sub-LSB dither the shaders apply to
+// prevent banding. PNG also keeps the frames in RGB, so the encoder tags the
+// output as limited-range yuv420p rather than full-range yuvj420p.
+Config.setVideoImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 // These are large flat gradients; a low CRF is what keeps the ramps from
 // banding once H.264 quantisation gets hold of them.
-Config.setCrf(15);
+Config.setCrf(16);
+Config.setColorSpace("bt709");
 // SwiftShader via ANGLE. Software rasterisation, but it is the only WebGL
 // backend that is reliably available on a headless Linux render host.
 Config.setChromiumOpenGlRenderer("swangle");
