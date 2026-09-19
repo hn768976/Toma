@@ -307,13 +307,33 @@ const roundedTrianglePath = (
   return path;
 };
 
-const trianglePath = (cx: number, cy: number, width: number, height: number) => {
-  const path = new Path2D();
-  path.moveTo(cx, cy - height / 2);
-  path.lineTo(cx + width / 2, cy + height / 2);
-  path.lineTo(cx - width / 2, cy + height / 2);
-  path.closePath();
-  return path;
+/**
+ * The alert mark: a filled red triangle sitting inside a rounded red
+ * outline, with a tapered white exclamation. Drawn onto the foreground
+ * layer so the glitch pass can displace it independently of the field.
+ */
+// Proportions of the alert mark, all as fractions of the outer outline
+// width `w` or height `h`, measured off the reference by scanning rows of
+// the frame and separating the outline strokes from the inner fill.
+//
+// The two that matter most: the fill's apex sits high (0.105h), and the
+// exclamation is chunky (0.066w at its widest). Shorten the fill or thin
+// the bar and the exclamation's dome breaks out of the red into the dark
+// gap, which is the tell that the icon is wrong.
+const TRI = {
+  heightRatio: 0.982, // outline height / outline width
+  strokeWidth: 0.028, // x w
+  cornerRadius: 0.072, // x w
+  fillApexY: 0.125, // x h, from the top of the outline
+  fillBaseY: 0.88, // x h
+  fillHalfWidth: 0.378, // x w
+  barTopY: 0.27, // x h
+  barShoulderY: 0.34, // x h — where the domed top reaches full width
+  barBottomY: 0.69, // x h
+  barTopHalf: 0.066, // x w
+  barBottomHalf: 0.017, // x w
+  dotY: 0.775, // x h
+  dotRadius: 0.05, // x w
 };
 
 /**
@@ -325,30 +345,38 @@ export const drawTriangle = (ctx: Ctx, scene: Scene) => {
   const cx = scene.width / 2;
   const cy = px(scene, TRIANGLE_CENTER_Y);
   const w = px(scene, TRIANGLE_WIDTH);
-  const h = w * 0.97;
+  const h = w * TRI.heightRatio;
+  const top = cy - h / 2;
 
   ctx.save();
 
-  const outline = roundedTrianglePath(cx, cy, w, h, px(scene, 24));
+  const outline = roundedTrianglePath(cx, cy, w, h, w * TRI.cornerRadius);
+  const stroke = w * TRI.strokeWidth;
 
   // Glow first, as its own soft pass. Putting a large shadowBlur on the
   // outline stroke itself floods the gap between the outline and the
   // inner fill, which is exactly the detail that has to stay readable.
   ctx.save();
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.55;
   ctx.strokeStyle = ALERT_RED_BRIGHT;
-  ctx.lineWidth = px(scene, 11);
+  ctx.lineWidth = stroke;
   ctx.lineJoin = "round";
   ctx.shadowColor = "rgba(255, 26, 60, 0.95)";
-  ctx.shadowBlur = px(scene, 16);
+  ctx.shadowBlur = w * 0.038;
   ctx.stroke(outline);
   ctx.restore();
 
-  // Inner solid triangle, inset from the outline with a clear dark gap,
-  // and with hard corners against the outline's rounded ones.
-  const innerW = w * 0.8;
-  const inner = trianglePath(cx, cy + px(scene, 12), innerW, innerW * 0.86);
-  const fill = ctx.createLinearGradient(0, cy - h / 2, 0, cy + h / 2);
+  // Inner solid triangle: hard corners against the outline's rounded
+  // ones, inset far enough to leave an even dark gap all the way round.
+  const fillApex = top + h * TRI.fillApexY;
+  const fillBase = top + h * TRI.fillBaseY;
+  const inner = new Path2D();
+  inner.moveTo(cx, fillApex);
+  inner.lineTo(cx + w * TRI.fillHalfWidth, fillBase);
+  inner.lineTo(cx - w * TRI.fillHalfWidth, fillBase);
+  inner.closePath();
+
+  const fill = ctx.createLinearGradient(0, fillApex, 0, fillBase);
   fill.addColorStop(0, "#f20f31");
   fill.addColorStop(0.6, ALERT_RED);
   fill.addColorStop(1, "#cf0122");
@@ -357,32 +385,37 @@ export const drawTriangle = (ctx: Ctx, scene: Scene) => {
 
   // Crisp outline last, so it sits on top of both the glow and the fill.
   ctx.strokeStyle = ALERT_RED_BRIGHT;
-  ctx.lineWidth = px(scene, 11);
+  ctx.lineWidth = stroke;
   ctx.lineJoin = "round";
   ctx.stroke(outline);
 
-  // Exclamation: tapered bar, wide at the top, plus a round dot.
-  const barTop = cy - h * 0.24;
-  const barBottom = cy + h * 0.1;
-  const topHalf = px(scene, 15);
-  const bottomHalf = px(scene, 7);
+  // Exclamation: a domed top at full width, tapering to a narrow rounded
+  // foot, with a separate dot below.
+  const barTop = top + h * TRI.barTopY;
+  const shoulder = top + h * TRI.barShoulderY;
+  const barBottom = top + h * TRI.barBottomY;
+  const topHalf = w * TRI.barTopHalf;
+  const footHalf = w * TRI.barBottomHalf;
+  const foot = barBottom - footHalf;
 
   const mark = new Path2D();
-  mark.moveTo(cx - topHalf, barTop);
-  mark.quadraticCurveTo(cx, barTop - topHalf * 0.8, cx + topHalf, barTop);
-  mark.lineTo(cx + bottomHalf, barBottom);
-  mark.quadraticCurveTo(cx, barBottom + bottomHalf * 1.4, cx - bottomHalf, barBottom);
+  mark.moveTo(cx - topHalf, shoulder);
+  mark.quadraticCurveTo(cx - topHalf, barTop, cx, barTop);
+  mark.quadraticCurveTo(cx + topHalf, barTop, cx + topHalf, shoulder);
+  mark.lineTo(cx + footHalf, foot);
+  mark.quadraticCurveTo(cx + footHalf, barBottom, cx, barBottom);
+  mark.quadraticCurveTo(cx - footHalf, barBottom, cx - footHalf, foot);
   mark.closePath();
 
   const markFill = ctx.createLinearGradient(0, barTop, 0, barBottom);
-  markFill.addColorStop(0, "#dbe6ff");
-  markFill.addColorStop(0.4, "#f6f9ff");
+  markFill.addColorStop(0, "#bcc6ef");
+  markFill.addColorStop(0.35, "#f6f9ff");
   markFill.addColorStop(1, "#c4d5f4");
   ctx.fillStyle = markFill;
   ctx.fill(mark);
 
   ctx.beginPath();
-  ctx.arc(cx, cy + h * 0.24, px(scene, 13), 0, Math.PI * 2);
+  ctx.arc(cx, top + h * TRI.dotY, w * TRI.dotRadius, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();

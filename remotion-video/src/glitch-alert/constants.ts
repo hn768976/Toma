@@ -32,7 +32,7 @@ export const DIGIT_BLUE = "#6f93cc"; // scattered binary/hex digits
 // Measured off the reference and scaled to 1920x1080: the triangle's
 // glow-inclusive bounding box is ~340x330 centred at (960, 435), and the
 // headline's caps run from y=694 to y=791.
-export const TRIANGLE_CENTER_Y = 432;
+export const TRIANGLE_CENTER_Y = 435;
 export const TRIANGLE_WIDTH = 356; // outer width of the rounded triangle
 export const HEADLINE_BASELINE_Y = 791;
 export const HEADLINE_FONT_SIZE = 133; // gives the reference's 97px cap height
