@@ -73,7 +73,7 @@ const v1: ShotSpec = {
       ...buildBlock({
         originX: -58,
         originZ: 0,
-        rows: 30,
+        rows: 44,
         bays: 2,
         tiers: 5,
         minTiers: 3,
@@ -84,7 +84,7 @@ const v1: ShotSpec = {
       ...buildBlock({
         originX: -56,
         originZ: 16,
-        rows: 30,
+        rows: 44,
         bays: 2,
         tiers: 5,
         minTiers: 2,
@@ -96,7 +96,7 @@ const v1: ShotSpec = {
       ...buildBlock({
         originX: -60,
         originZ: 33,
-        rows: 30,
+        rows: 44,
         bays: 1,
         tiers: 4,
         minTiers: 2,
@@ -409,11 +409,27 @@ const v6: ShotSpec = {
         seed: 6001,
       }),
     );
-    // A second block behind and to the left, seen past the corner.
+    // Fills the right background (screen-right is -X for this camera) so the
+    // arc does not swing off the end of the set. Set well back in Z and a tier
+    // lower than the hero block, so the near corner still reads as the
+    // subject and still has sky behind it.
     out.push(
       ...buildBlock({
-        originX: -34,
-        originZ: 10,
+        originX: -24,
+        originZ: 9,
+        rows: 7,
+        bays: 3,
+        tiers: 5,
+        minTiers: 4,
+        gapChance: 0.08,
+        seed: 6003,
+      }),
+    );
+    // A further block behind, seen past the corner.
+    out.push(
+      ...buildBlock({
+        originX: -46,
+        originZ: 12,
         rows: 6,
         bays: 4,
         tiers: 5,

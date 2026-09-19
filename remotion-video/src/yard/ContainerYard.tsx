@@ -114,7 +114,9 @@ export const ContainerYard: React.FC<ContainerYardProps> = ({
       const spec = SHOTS[version];
       const three = renderer.getRenderer();
       three.shadowMap.enabled = true;
-      three.shadowMap.type = THREE.PCFSoftShadowMap;
+      // WebGPURenderer dropped PCFSoft and falls back to PCF with a warning;
+      // asking for PCF directly keeps both renderer paths on the same filter.
+      three.shadowMap.type = THREE.PCFShadowMap;
       three.toneMappingExposure = spec.environment.exposure;
 
       const lods = await loadContainerLods();
