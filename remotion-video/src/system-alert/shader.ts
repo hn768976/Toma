@@ -108,7 +108,7 @@ float dataField(vec2 uv, float t) {
 /** Maps a field level to the red ramp: near-black -> blood red -> hot pink-white. */
 vec3 fieldColor(float level) {
   vec3 dark = vec3(0.024, 0.000, 0.004);
-  vec3 mid  = vec3(0.880, 0.025, 0.094);
+  vec3 mid  = vec3(0.995, 0.028, 0.106);
   vec3 hot  = vec3(1.000, 0.380, 0.390);
   vec3 c = mix(dark, mid, clamp(level, 0.0, 1.0));
   return mix(c, hot, clamp(level - 1.0, 0.0, 1.0));
@@ -128,16 +128,32 @@ void main() {
   float tear = step(0.80, sliceSeed) * (sliceSeed - 0.80) / 0.20;
   cam.x += (tear - 0.5) * uTear;
 
-  // --- Digit wall, sampled three times for chromatic aberration.
-  float split = uSplit;
-  float r = dataField(cam + vec2(split, 0.0), uTime);
-  float g = dataField(cam, uTime);
-  float b = dataField(cam - vec2(split, 0.0), uTime);
+  // --- Digit wall, plus a displaced cool ghost for the RGB split.
+  //
+  // Classic three-sample aberration (R, G and B each from a different offset)
+  // does not work on a picture this red. The green and blue channels of the
+  // ramp are almost zero, so their samples are invisible and only the red one
+  // shows — the image just shifts. Taking a max() across the samples to get
+  // the red back is worse: red then comes from two offsets at once, so every
+  // digit is drawn twice and the wall turns into garbled pseudo-glyphs that no
+  // longer read as binary.
+  //
+  // Instead the red image is sampled once, and a *cool* ghost of the field is
+  // added at the opposite offset. That is what an RGB split actually looks
+  // like here: a cyan fringe trailing each glyph, with the glyph itself
+  // undoubled. The split is also capped to a fraction of a cell, so the ghost
+  // fringes a digit rather than landing on its neighbour.
+  //
+  // The banner runs its own, much larger split in the DOM, so the heavy
+  // separation the reference shows on the alert plate is unaffected by this.
+  float cellWidth = uPixel / uCols;
+  float split = min(uSplit, cellWidth * 0.55);
 
-  vec3 col = vec3(fieldColor(r).r, fieldColor(g).g, fieldColor(b).b);
-  // Keep the red channel dominant — splitting the ramp per channel above
-  // would otherwise wash the field toward grey.
-  col = max(col, fieldColor(g) * 0.92);
+  vec3 col = fieldColor(dataField(cam, uTime));
+
+  float ghost = dataField(cam - vec2(split, 0.0), uTime);
+  col.b += ghost * 0.30;
+  col.g += ghost * 0.13;
 
   // --- Shaping of the field. Everything from here to the light source below
   // affects the FIELD only; the glow is added afterwards because it is a lamp
@@ -179,7 +195,7 @@ void main() {
   col += vec3(1.0, 0.050, 0.080) * glow;
 
   // --- Ambient red lift so the black is a deep red-black, not neutral black.
-  col += vec3(0.032, 0.0, 0.006);
+  col += vec3(0.037, 0.0, 0.007);
 
   // --- CRT scanlines. Fixed count, so they scale with the canvas.
   float scan = 0.84 + 0.16 * (0.5 + 0.5 * sin(uv.y * uScanlines * 6.2831853));
