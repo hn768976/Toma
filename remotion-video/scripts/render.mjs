@@ -94,11 +94,14 @@ for (const id of ids) {
     // The references carry no audio and neither should these; without this an
     // empty AAC track is muxed in.
     muted: true,
-    onProgress: ({ progress }) => {
+    onProgress: ({ progress, renderedFrames, encodedFrames }) => {
       const percent = Math.floor(progress * 100);
-      if (percent >= lastLogged + 10) {
+      if (percent >= lastLogged + 5) {
         lastLogged = percent;
-        process.stdout.write(`  ${id} ${percent}%\n`);
+        const elapsed = ((Date.now() - started) / 1000).toFixed(0);
+        process.stdout.write(
+          `  ${id} ${percent}% — rendered ${renderedFrames}/${composition.durationInFrames}, encoded ${encodedFrames}, ${elapsed}s\n`,
+        );
       }
     },
   });
