@@ -23,10 +23,10 @@ visible seam shows up as a wrap value far above the step.
 
 | Plate | step | wrap | Verdict |
 |---|---|---|---|
-| `GoldenRays` | 1.09/255 | 1.38/255 | seamless |
-| `SilverBokeh` | 0.99/255 | 0.96/255 | seamless |
-| `DeepBlueDust` | 1.03/255 | 0.99/255 | seamless |
-| `BokehCurtain` | 5.41/255 | 5.30/255 | seamless |
+| `GoldenRays` | 0.30/255 | 0.34/255 | seamless |
+| `SilverBokeh` | 0.23/255 | 0.26/255 | seamless |
+| `DeepBlueDust` | 0.21/255 | 0.25/255 | seamless |
+| `BokehCurtain` | 0.86/255 | 0.94/255 | seamless |
 
 ## Grade against reference
 
@@ -37,28 +37,40 @@ frames are cropped to drop the watermark band before measurement.
 | Plate | Mean (mine / ref) | p50 (mine / ref) | p95 (mine / ref) |
 |---|---|---|---|
 | `GoldenRays` | #bfbb79 / #c9b98c | 177 / 174 | 251 / 250 |
-| `SilverBokeh` | #e0e0e2 / #e2e3e5 | 223 / 226 | 251 / 251 |
+| `SilverBokeh` | #e0e0e2 / #e2e3e5 | 223 / 226 | 252 / 251 |
 | `DeepBlueDust` | #123356 / #11304d | 37 / 36 | 114 / 117 |
 | `BokehCurtain` | #818682 / #7d8a93 | 133 / 136 | 209 / 219 |
 
-## Motion energy
+## Motion speed
 
-Mean absolute frame-to-frame difference over the whole clip, measured on
-a 96x54 greyscale reduction, alongside the same measurement on the source
-clips. Also reports net translation, estimated by searching for the
-integer shift that best aligns frames ten apart.
+Frame-to-frame difference alone cannot distinguish a slow blink from a
+still frame, so speed is measured as how far the image has diverged from
+itself after a given lag. A plate that saturates within a few frames
+reads as fast; one that keeps climbing out to two seconds reads as slow.
 
-| Plate | Delivered | Reference | Net pan |
-|---|---|---|---|
-| `BokehCurtain` | 8.09 | 5.34 | zero |
-| `GoldenRays` | 2.05 | 1.00 | zero |
-| `SilverBokeh` | 1.69 | 0.30 | zero |
-| `DeepBlueDust` | 1.35 | 0.28 | zero |
+Mean absolute difference on a 96x54 greyscale reduction:
 
-All four references have **zero** net translation: their motion is
-in-place shimmer, not camera movement. Three of the four are close to
-static, so the plates sit deliberately above them - the brief called for
-blinking and shimmering, which needs more energy than the sources carry.
+| Plate | 1f | 8f | 15f | 30f | 60f |
+|---|---|---|---|---|---|
+| `BokehCurtain` | 1.30 | 9.67 | 16.22 | 23.75 | 26.35 |
+| `GoldenRays` | 0.42 | 2.55 | 4.49 | 7.39 | 9.36 |
+| `SilverBokeh` | 0.32 | 2.05 | 3.66 | 6.30 | 8.33 |
+| `DeepBlueDust` | 0.26 | 1.69 | 2.77 | 3.99 | 4.44 |
 
-Net pan is zero on the delivered plates by construction. Nothing
-translates; brightness does the work.
+Every plate is still climbing at 60 frames, so the field takes two
+seconds or more to turn over. An earlier pass saturated by frame 8 - a
+quarter of a second - which read as far too fast.
+
+Speed is controlled by the `shimmerRate` prop, a single multiplier over
+every blink rate in a plate. It is applied inside `shimmer()` rather than
+at each call site, so changing it preserves the spread between the
+fastest and slowest elements instead of collapsing the field into one
+synchronised pulse. At the delivered value of 0.15 the per-element cycle
+counts still spread across roughly 1 to 8 per loop.
+
+## Net translation
+
+Estimated by searching for the integer shift that best aligns frames ten
+apart. All four references measure **zero**: their motion is in-place
+shimmer, not camera movement. The delivered plates are zero by
+construction - nothing translates, brightness does the work.
