@@ -35,6 +35,12 @@ export const containerYardSchema = z.object({
    * and one to GLSL, and nothing in the scene or materials changes.
    */
   preferWebGPU: z.boolean(),
+  /**
+   * Multisampling. Worth measuring rather than assuming: on a software
+   * rasteriser MSAA multiplies fragment work, and these shots are fragment
+   * heavy.
+   */
+  antialias: z.boolean(),
 });
 
 export type ContainerYardProps = z.infer<typeof containerYardSchema>;
@@ -60,6 +66,7 @@ export const ContainerYard: React.FC<ContainerYardProps> = ({
   diagnostics,
   shadowMapSize,
   preferWebGPU,
+  antialias,
 }) => {
   const frame = useCurrentFrame();
   const { width, height, durationInFrames } = useVideoConfig();
@@ -96,7 +103,7 @@ export const ContainerYard: React.FC<ContainerYardProps> = ({
         canvas,
         width,
         height,
-        antialias: true,
+        antialias,
         preferWebGPU,
       });
       if (cancelled) {
@@ -151,7 +158,7 @@ export const ContainerYard: React.FC<ContainerYardProps> = ({
       liveRef.current = null;
       host.replaceChildren();
     };
-  }, [version, width, height, shadowMapSize, preferWebGPU, diagnostics, setupHandle]);
+  }, [version, width, height, shadowMapSize, preferWebGPU, antialias, diagnostics, setupHandle]);
 
   useEffect(() => {
     if (!ready || !liveRef.current) return;
@@ -226,4 +233,5 @@ export const containerYardDefaults: ContainerYardProps = {
   // this is true, but the software Dawn stack in this container cannot sustain
   // it, so the shipped compositions render on the WebGL2 backend.
   preferWebGPU: false,
+  antialias: true,
 };

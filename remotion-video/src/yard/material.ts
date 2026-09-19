@@ -85,12 +85,22 @@ export const createContainerMaterial = ({
   const stencilIndex = attribute("aStencil", "float");
 
   // One noise tile per ~3.3m, offset per instance.
+  //
+  // Single projection rather than a blended triplanar. Blending exists to hide
+  // the seam where a surface turns between axes, but a container is hard-edged
+  // -- the transition happens across one edge, not a band -- so the blend
+  // never shows while costing three texture fetches instead of one.
+  // (Measured: not the render bottleneck, which is fill rate under MSAA. Kept
+  // because it is strictly cheaper and visually identical on this geometry.)
   const s = float(0.52);
   const off = vec2(seed, seed.mul(float(1.61)));
-  const sX = texture(weather, vec2(p.z, p.y).mul(s).add(off));
-  const sY = texture(weather, vec2(p.x, p.z).mul(s).add(off));
-  const sZ = texture(weather, vec2(p.x, p.y).mul(s).add(off));
-  const W = sX.mul(w.x).add(sY.mul(w.y)).add(sZ.mul(w.z));
+  const uvX = vec2(p.z, p.y);
+  const uvY = vec2(p.x, p.z);
+  const uvZ = vec2(p.x, p.y);
+  const yOverZ = smoothstep(float(-0.001), float(0.001), w.y.sub(w.z));
+  const uvYZ = mix(uvZ, uvY, yOverZ);
+  const xWins = smoothstep(float(-0.001), float(0.001), w.x.sub(w.y.max(w.z)));
+  const W = texture(weather, mix(uvYZ, uvX, xWins).mul(s).add(off));
 
   // Height within the container drives where corrosion starts.
   const h = p.y.div(float(BOX_HEIGHT));
@@ -134,10 +144,19 @@ export const createContainerMaterial = ({
   if (corrugationBands) {
     // Ridge profile as alternating light and dark bands. Pitch matches the
     // modelled corrugation on the source mesh (0.16m) so LOD swaps do not pop.
-    const bandSide = texture(corrugation, vec2(p.z.div(float(0.16)), float(0.5))).r;
-    const bandEnd = texture(corrugation, vec2(p.x.div(float(0.16)), float(0.5))).r;
-    const bandRoof = texture(corrugation, vec2(p.x.div(float(0.3)), float(0.5))).r;
-    const band = bandSide.mul(w.x).add(bandRoof.mul(w.y)).add(bandEnd.mul(w.z));
+    // Ridges run along Z on the walls and along X on the ends and roof, and
+    // the roof ribs are coarser. Resolved to a single fetch, as above.
+    const alongX = mix(
+      p.x.div(float(0.16)),
+      p.x.div(float(0.3)),
+      smoothstep(float(-0.001), float(0.001), w.y.sub(w.z)),
+    );
+    const bandCoord = mix(
+      p.z.div(float(0.16)),
+      alongX,
+      smoothstep(float(-0.001), float(0.001), w.y.add(w.z).sub(w.x)),
+    );
+    const band = texture(corrugation, vec2(bandCoord, float(0.5))).r;
     banded = grimed.mul(float(1).add(band.sub(float(0.5)).mul(float(0.18))));
   }
 
@@ -165,20 +184,24 @@ export const createContainerMaterial = ({
     };
 
     const sideUv = vec2(col.add(sideU), row.add(sideV)).div(tile);
-    const sideMark = texture(stencilAtlas, sideUv).r
-      .mul(inUnitSquare(sideU, sideV))
-      .mul(w.x);
 
     // Door end.
     const endU = p.x.mul(sign(n.z)).add(float(1.0)).div(float(2.0));
     const endV = float(1).sub(p.y.sub(float(1.2)).div(float(0.75)));
     const endUv = vec2(col.add(endU), row.add(endV)).div(tile);
-    const endMark = texture(stencilAtlas, endUv).r
-      .mul(inUnitSquare(endU, endV))
-      .mul(w.z);
+
+    // A fragment is on a side wall or on an end, never meaningfully both, so
+    // the two placements are resolved to one lookup rather than two.
+    const endWins = smoothstep(float(-0.001), float(0.001), w.z.sub(w.x));
+    const markUv = mix(sideUv, endUv, endWins);
+    const markGate = mix(
+      inUnitSquare(sideU, sideV).mul(w.x),
+      inUnitSquare(endU, endV).mul(w.z),
+      endWins,
+    );
 
     // Paint wears off where the box has rusted through.
-    const mark = clamp(sideMark.add(endMark), float(0), float(1)).mul(
+    const mark = clamp(texture(stencilAtlas, markUv).r.mul(markGate), float(0), float(1)).mul(
       rust.mul(float(0.85)).oneMinus(),
     );
     marked = mix(banded, vec3(0.85, 0.84, 0.81), mark.mul(float(0.72)));

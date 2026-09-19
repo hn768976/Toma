@@ -17,7 +17,7 @@ for id in $SHOTS; do
     --gl=angle \
     --concurrency=4 \
     --timeout=900000 \
-    --log=error 2>&1 | tail -3
+    --log=info 2>&1 | tail -4
   echo "--- $id done $(date +%T)  $(ls -la $OUT/${id}_1080p.mp4 2>/dev/null | awk '{print $5}') bytes"
 done
 echo "ALL RENDERS COMPLETE $(date +%T)"
