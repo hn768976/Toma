@@ -19,6 +19,12 @@ export const systemAlertSchema = z.object({
    * 4K simply resolves each digit properly.
    */
   columns: z.number().min(40).max(600),
+  /**
+   * Softness on the headline, as a fraction of frame height (0 = crisp).
+   * Expressed as a fraction rather than a pixel radius so the 1080p and 4K
+   * compositions land on the same apparent focus.
+   */
+  textBlurFrac: z.number().min(0).max(0.01),
 });
 
 export type SystemAlertProps = z.infer<typeof systemAlertSchema>;
@@ -26,9 +32,14 @@ export type SystemAlertProps = z.infer<typeof systemAlertSchema>;
 export const systemAlertDefaults: SystemAlertProps = {
   headline: "SYSTEM HACKED",
   columns: 165,
+  textBlurFrac: 0.0016,
 };
 
-export const SystemAlert: React.FC<SystemAlertProps> = ({ headline, columns }) => {
+export const SystemAlert: React.FC<SystemAlertProps> = ({
+  headline,
+  columns,
+  textBlurFrac,
+}) => {
   const frame = useCurrentFrame();
   const { width } = useVideoConfig();
   const g = glitchAt(frame);
@@ -49,7 +60,7 @@ export const SystemAlert: React.FC<SystemAlertProps> = ({ headline, columns }) =
   return (
     <AbsoluteFill style={{ backgroundColor: "#000000", overflow: "hidden" }}>
       <DataFieldCanvas columns={columns} kickPx={kickPx} />
-      <AlertBanner headline={headline} kickPx={kickPx} />
+      <AlertBanner headline={headline} kickPx={kickPx} textBlurFrac={textBlurFrac} />
       <ScreenOverlay />
     </AbsoluteFill>
   );

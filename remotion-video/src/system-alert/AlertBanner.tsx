@@ -16,10 +16,11 @@ import { bannerSlices, glitchAt } from "./glitch";
  *   - N clipped horizontal slices displaced sideways for the tear
  * All of them are pure functions of the frame, so workers agree.
  */
-export const AlertBanner: React.FC<{ headline: string; kickPx: number }> = ({
-  headline,
-  kickPx,
-}) => {
+export const AlertBanner: React.FC<{
+  headline: string;
+  kickPx: number;
+  textBlurFrac: number;
+}> = ({ headline, kickPx, textBlurFrac }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
 
@@ -33,6 +34,10 @@ export const AlertBanner: React.FC<{ headline: string; kickPx: number }> = ({
 
   const fontSize = height * FONT_SIZE_FRAC;
   const splitPx = g.split * width;
+
+  // Headline softness, in px, from a frame-height fraction so it scales.
+  // Bursts push it further out of focus.
+  const textBlurPx = height * textBlurFrac * (1 + 1.6 * g.intensity * g.intensity);
 
   // Scanline period in px, derived from a fixed line count so the plate looks
   // identical at 1080p and 4K.
@@ -87,9 +92,20 @@ export const AlertBanner: React.FC<{ headline: string; kickPx: number }> = ({
           // dropping the size would have matched the width but lost the
           // cap height.
           transform: "scaleX(0.912)",
+          // Optical softness on the headline. The radius is a fraction of
+          // frame height, so 4K gets the same apparent softness rather than a
+          // sharper edge, and it opens up further during glitch bursts — a
+          // screen losing focus as it fails, rather than type that is simply
+          // out of focus.
+          filter: textBlurPx > 0.01 ? `blur(${textBlurPx.toFixed(2)}px)` : undefined,
           textShadow: tint
             ? "none"
-            : `0 ${(height * 0.0022).toFixed(2)}px 0 rgba(90,0,12,0.55)`,
+            : [
+                `0 ${(height * 0.0022).toFixed(2)}px 0 rgba(90,0,12,0.55)`,
+                // A little bloom, so softening reads as light spilling off
+                // the letters instead of just a blurry render.
+                `0 0 ${(textBlurPx * 2.4).toFixed(2)}px rgba(255,232,235,0.55)`,
+              ].join(", "),
         }}
       >
         {headline}

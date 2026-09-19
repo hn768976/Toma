@@ -87,6 +87,28 @@ a glow over a finished field instead makes the lit cells spike to 232/255
 where the reference tops out at 165 — bright light washes local detail out,
 it does not stack with it.
 
+## Tuning
+
+The compositions take props, so the common adjustments need no code change —
+edit them in the Remotion Studio sidebar, or pass `--props` on the CLI:
+
+| prop | default | what it does |
+|---|---|---|
+| `headline`      | `SYSTEM HACKED` | the copy on the plate |
+| `columns`       | `165`    | binary-digit columns across the frame; lower = larger digits |
+| `textBlurFrac`  | `0.0016` | headline softness, as a fraction of frame height; `0` is crisp |
+
+```console
+npx remotion render SystemHacked-1080p out/sharper.mp4 \
+  --gl=angle --codec=h264 --crf=18 --muted \
+  --props='{"headline":"SYSTEM HACKED","columns":165,"textBlurFrac":0.0008}'
+```
+
+`textBlurFrac` is a fraction of frame height rather than a pixel radius, so
+1080p and 4K land on the same apparent focus instead of 4K coming out twice
+as sharp. Glitch bursts scale it up on top of the base value, so the screen
+loses focus as it fails rather than sitting at one fixed softness.
+
 ## Type
 
 The headline is set in Liberation Sans Bold, which is metrically identical to
