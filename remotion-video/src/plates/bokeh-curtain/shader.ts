@@ -133,8 +133,8 @@ void main() {
   // Faint vertical structure: the out-of-focus surface the lights hang
   // against. Looped by cross-fading two flow offsets of the same field.
   float weave = loopFbm(vec2(uv.x * 30.0, uv.y * 2.6), vec2(0.0, 0.7), uT);
-  bg *= 0.78 + 0.34 * weave;
-  bg += uCool * 0.06 * smoothstep(0.4, 1.0, weave);
+  bg *= 0.72 + 0.30 * weave;
+  bg += uCool * 0.035 * smoothstep(0.45, 1.0, weave);
 
   // ---- three depth layers, back to front --------------------------------
   vec3 light = vec3(0.0);
@@ -142,18 +142,18 @@ void main() {
   // Back: small, dense, cool. Reads as the far side of the curtain.
   // Vertical pitch under the disc diameter so the chain stays continuous.
   light += strandLayer(
-    px, vec2(58.0, 46.0) * s, 27.0 * s, 0.34, 0.18, 3.1, -0.26, 0.40
+    px, vec2(58.0, 46.0) * s, 27.0 * s, 0.34, 0.18, 3.1, -0.26, 0.30
   );
 
   // Mid: the layer that carries the read.
   light += strandLayer(
-    px, vec2(140.0, 104.0) * s, 67.0 * s, 0.26, 0.24, 8.7, 0.0, 0.88
+    px, vec2(140.0, 104.0) * s, 67.0 * s, 0.26, 0.24, 8.7, 0.0, 0.68
   );
 
   // Front: large and very soft - closest to the lens, so furthest from
   // focus and least defined.
   light += strandLayer(
-    px, vec2(248.0, 186.0) * s, 120.0 * s, 0.52, 0.10, 17.3, 0.26, 0.58
+    px, vec2(248.0, 186.0) * s, 120.0 * s, 0.52, 0.10, 17.3, 0.26, 0.40
   );
 
   // Out-of-focus amber does not stay inside its discs - it hazes the
@@ -181,7 +181,7 @@ void main() {
   col *= 1.0 - vignette(uv, 0.86, 0.8) * 0.34;
 
   col *= uExposure;
-  col = tonemap(col, 0.52);
+  col = tonemap(col, 0.34);
   col = saturate3(col, 1.08);
   col = liftGammaGain(col, vec3(0.004, 0.008, 0.016), 0.98, vec3(1.0, 0.99, 0.98));
 

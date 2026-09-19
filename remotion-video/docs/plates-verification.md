@@ -23,10 +23,10 @@ visible seam shows up as a wrap value far above the step.
 
 | Plate | step | wrap | Verdict |
 |---|---|---|---|
-| `GoldenRays` | 0.20/255 | 0.24/255 | seamless |
-| `SilverBokeh` | 0.14/255 | 0.19/255 | seamless |
-| `DeepBlueDust` | 0.19/255 | 0.23/255 | seamless |
-| `BokehCurtain` | 0.44/255 | 0.51/255 | seamless |
+| `GoldenRays` | 1.09/255 | 1.38/255 | seamless |
+| `SilverBokeh` | 0.99/255 | 0.96/255 | seamless |
+| `DeepBlueDust` | 0.97/255 | 0.94/255 | seamless |
+| `BokehCurtain` | 4.71/255 | 4.56/255 | seamless |
 
 ## Grade against reference
 
@@ -36,7 +36,7 @@ frames are cropped to drop the watermark band before measurement.
 
 | Plate | Mean (mine / ref) | p50 (mine / ref) | p95 (mine / ref) |
 |---|---|---|---|
-| `GoldenRays` | #bcb775 / #c9b98c | 174 / 174 | 250 / 250 |
-| `SilverBokeh` | #e0e0e1 / #e2e3e5 | 223 / 226 | 246 / 251 |
-| `DeepBlueDust` | #103050 / #11304d | 34 / 36 | 119 / 117 |
-| `BokehCurtain` | #868f8c / #7d8a93 | 140 / 136 | 216 / 219 |
+| `GoldenRays` | #bfbb79 / #c9b98c | 177 / 174 | 251 / 250 |
+| `SilverBokeh` | #e0e0e2 / #e2e3e5 | 223 / 226 | 251 / 251 |
+| `DeepBlueDust` | #102e4e / #11304d | 34 / 36 | 103 / 117 |
+| `BokehCurtain` | #c0bfb2 / #7d8a93 | 195 / 136 | 250 / 219 |

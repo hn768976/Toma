@@ -46,7 +46,7 @@ export const deepBlueDustDefaults: DeepBlueDustProps = {
   vignetteAmount: 0.78,
   shimmer: 1.0,
   blur: 6.0,
-  exposure: 1.12,
+  exposure: 1.24,
   grainAmount: 0.018,
   seed: 2.0,
 };

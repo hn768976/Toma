@@ -27,18 +27,18 @@ export type BokehCurtainProps = z.infer<typeof bokehCurtainSchema>;
 // Sampled off the reference: teal field, amber foreground lights, steel
 // blue-white background lights.
 export const bokehCurtainDefaults: BokehCurtainProps = {
-  backTop: "#27506d",
-  backBottom: "#376d86",
+  backTop: "#0e2637",
+  backBottom: "#183b4e",
   warm: "#f7ad60",
   cool: "#c3d9e6",
-  warmBias: 0.58,
+  warmBias: 0.41,
   sway: 0.028,
   twinkle: 0.95,
   density: 0.97,
-  hotspot: 0.45,
+  hotspot: 0.30,
   shimmer: 0.60,
-  spill: 0.30,
-  exposure: 0.94,
+  spill: 0.10,
+  exposure: 0.68,
   grainAmount: 0.022,
   seed: 4.0,
 };
