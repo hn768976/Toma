@@ -9,6 +9,34 @@
   </a>
 </p>
 
+## Compositions
+
+| ID | Size | Length | Notes |
+|---|---|---|---|
+| `WovenTexture-01-CanvasWhite-1080p` | 1920x1080 | 10s / 30fps | bright cotton canvas, after reference A |
+| `WovenTexture-01-CanvasWhite-4K` | 3840x2160 | 10s / 30fps | same cloth, 4K master |
+| `WovenTexture-02-WeaveGrey-1080p` | 1920x1080 | 10s / 30fps | dense grey weave, after reference B |
+| `WovenTexture-02-WeaveGrey-4K` | 3840x2160 | 10s / 30fps | same cloth, 4K master |
+| `BluetoothExplainer` | 1920x1080 | 30s / 30fps | earlier work, unrelated |
+| `ParticleRingHalo` / `-4K` | 1920x1080 / 3840x2160 | — | earlier work, unrelated |
+
+The four `WovenTexture-*` compositions are procedural fabric, generated with
+PixiJS v8 and a custom WebGL shader. **See [`src/weave/README.md`](src/weave/README.md)**
+for how the cloth is modelled, what was measured off the reference clips, and
+why the clips loop seamlessly. Every look parameter is a validated prop, so both
+variants can be re-graded live from the Studio sidebar.
+
+Note that these need WebGL. On a machine without a GPU, `remotion.config.ts`
+already points Chromium at ANGLE's SwiftShader backend; it renders at roughly
+one 1080p frame per second at concurrency 3.
+
+```console
+npm i
+npm run verify:loop   # assert the seamless-loop properties still hold
+npm run dev           # Remotion Studio
+./package-project.sh  # rebuild the handoff zip
+```
+
 Welcome to your Remotion project!
 
 ## Commands

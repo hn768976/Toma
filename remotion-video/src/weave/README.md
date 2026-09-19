@@ -88,3 +88,47 @@ npx remotion studio    # tweak any preset value live
 
 Every look parameter is a validated prop (`presets.ts`), so both variants can be
 re-graded from the Studio sidebar without touching the shader.
+
+## Matching a new reference
+
+`tools/match-reference.mjs` is the harness these variants were tuned with. Give
+it a reference and a render and it reports both on the quantities that decide
+whether two fabrics read as the same material:
+
+```bash
+npx remotion still WovenTexture-02-WeaveGrey-1080p out/check.png --frame=0
+node tools/match-reference.mjs path/to/reference.mp4 out/check.png
+```
+
+```
+quantity           reference     render      delta
+luma mean            176.01      179.91      +3.90
+weave period px        6.00        6.00      +0.00
+regularity             0.82        0.89      +0.07
+alternation           -0.73       -0.47      +0.26   <-- outside tolerance
+...
+```
+
+Both inputs are reduced to greyscale at the reference's own resolution, so they
+are always measured on the same pixel grid -- otherwise a 1920px render would
+look finer than a 768px reference simply for being bigger.
+
+Reading the numbers:
+
+- **luma mean / sigma / percentiles** pin the tone.
+- **clipped %** is tracked on its own, because fitting the summary stats without
+  watching it is exactly how bright cells end up as blown white discs.
+- **weave period** is the first prominent autocorrelation peak, in reference
+  pixels. Divide the reference width by it and halve to get `threads`.
+- **regularity** is that peak's height: how machine-like the weave is. Lower it
+  with `wander`, `slub`, `threadShade`, `fuzz` and `twistJitter`.
+- **alternation** is the trough at half period: how cleanly light and dark cells
+  swap. Raise it with `relief` (flatter crowns) and `axisContrast`.
+- **row falloff** is the top-to-bottom lighting gradient -> `ambientRamp`.
+- **local sigma** is contrast *within* a small patch. Two textures can share a
+  global sigma and look nothing alike if one's spread is really a gradient.
+
+Current match: variant 01 is inside tolerance on 10 of 11, variant 02 on 9 of
+11. Variant 02's remaining gap is `alternation` (-0.47 against -0.73): its
+checkerboard swaps a little less crisply than the reference's. Everything else,
+including the full histogram shape, is close.

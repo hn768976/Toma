@@ -6,9 +6,13 @@
  * with its own twist, slub (thickness drift) and shade. At every crossing the
  * parity of the cell decides which of the two passes over the other, which is
  * what a plain weave actually is -- so the checkerboard emerges from the model
- * instead of being drawn. Threads are composited by height, z-buffer style, so
- * the over/under relationship, the shadow the top thread casts into the dip
- * beside it, and the dark ground showing through the gaps all fall out for free.
+ * instead of being drawn, and the dark ground shows through wherever neither
+ * thread reaches.
+ *
+ * Its contrast is a lighting result too. A cylinder lit across its axis is much
+ * brighter than the same cylinder lit along it, and warp and weft sit at right
+ * angles, so a single raking light separates the two sets. That is why the
+ * checkerboard needs no pattern of its own.
  *
  * Nothing here is sampled from the reference clips; the references only supplied
  * the measurements (thread pitch, contrast, luminance, step cadence) that the
@@ -151,7 +155,6 @@ float fbm(vec2 p, int octaves) {
 // -------------------------------------------------------------------------
 struct Thread {
   float cover;  // 0..1 coverage, antialiased at the edges
-  float height; // surface height, for compositing against the other set
   float shade;  // per-thread base brightness
   vec2  slope;  // surface gradient (across, along) for the normal
 };
@@ -182,7 +185,6 @@ Thread evalThread(float across, float along, float id, float baseWidth, float se
   // Cylindrical cross-section.
   float x = clamp(across / max(halfWidth, 1e-4), -1.0, 1.0);
   float profile = sqrt(max(0.0, 1.0 - x * x));
-  t.height = profile * halfWidth * 2.0;
 
   // Surface gradient: across the thread from the cylinder, along it from twist.
   // -x/profile is the true gradient of a circular cross-section, but it runs to
