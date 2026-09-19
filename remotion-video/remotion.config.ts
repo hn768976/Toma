@@ -11,6 +11,10 @@ import { enableTailwind } from '@remotion/tailwind-v4';
 
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
+// JPEG frames are full-range, and ffmpeg would otherwise tag the output
+// yuvj420p. Delivery masters want limited-range yuv420p so players and NLEs
+// that ignore the range tag do not crush the blacks in the dark theme.
+Config.setPixelFormat("yuv420p");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
 

@@ -21,14 +21,35 @@ light-blue button, blueprint traces) — and at two resolutions.
 ```bash
 npm install
 
-# 1080p
-npx remotion render GenerateButtonDark1080p  out/dark_1080p.mp4  --codec=h264 --crf=17
-npx remotion render GenerateButtonLight1080p out/light_1080p.mp4 --codec=h264 --crf=17
+# 1080p delivery masters (~2 min each)
+npm run render:dark:1080
+npm run render:light:1080
 
-# 4K
-npx remotion render GenerateButtonDark4K  out/dark_4k.mp4  --codec=h264 --crf=16
-npx remotion render GenerateButtonLight4K out/light_4k.mp4 --codec=h264 --crf=16
+# 4K masters (~12 min each)
+npm run render:dark:4k
+npm run render:light:4k
+
+# ...or all four
+npm run render:all
 ```
+
+Each script expands to, for example:
+
+```bash
+npx remotion render GenerateButtonDark4K out/generate-button_dark_4k.mp4 \
+  --codec=h264 --crf=16 --muted --image-format=png --color-space=bt709
+```
+
+Those flags matter for a delivery master:
+
+* `--muted` — the reference has no audio, and Remotion otherwise muxes a
+  silent AAC track that pushes the duration past 20.000s.
+* `--image-format=png` — JPEG frames are full-range, and ffmpeg tags the
+  result `yuvj420p`. PNG frames encode to limited-range `yuv420p`, which is
+  what players and NLEs expect; without it the dark theme's blacks get
+  crushed anywhere the range tag is ignored. It costs about 2x the render
+  time.
+* `--color-space=bt709` — tags the stream rather than leaving it unknown.
 
 Or open the studio and scrub: `npm run dev`.
 

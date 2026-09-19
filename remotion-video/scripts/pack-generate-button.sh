@@ -84,16 +84,21 @@ TSX
 node -e '
 const fs = require("fs");
 const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+// --muted: no silent AAC track (it would push the duration past 20.000s).
+// --image-format=png: JPEG frames are full-range and ffmpeg would tag the
+//   output yuvj420p; PNG gives limited-range yuv420p, which is what a
+//   delivery master wants. Costs roughly 2x the render time.
+const FLAGS = "--codec=h264 --muted --image-format=png --color-space=bt709";
 pkg.name = "toma-generate-button";
 pkg.description = "Generate button / circuit burst — 30fps, 20s, 1080p + 4K";
 pkg.sideEffects = ["*.css", "./src/generate-button/load-font.ts"];
 pkg.scripts = {
   dev: "remotion studio",
   lint: "eslint src && tsc",
-  "render:dark:1080": "remotion render GenerateButtonDark1080p out/generate-button_dark_1080p.mp4 --codec=h264 --crf=17",
-  "render:light:1080": "remotion render GenerateButtonLight1080p out/generate-button_light_1080p.mp4 --codec=h264 --crf=17",
-  "render:dark:4k": "remotion render GenerateButtonDark4K out/generate-button_dark_4k.mp4 --codec=h264 --crf=16",
-  "render:light:4k": "remotion render GenerateButtonLight4K out/generate-button_light_4k.mp4 --codec=h264 --crf=16",
+  "render:dark:1080": "remotion render GenerateButtonDark1080p out/generate-button_dark_1080p.mp4 " + FLAGS + " --crf=17",
+  "render:light:1080": "remotion render GenerateButtonLight1080p out/generate-button_light_1080p.mp4 " + FLAGS + " --crf=17",
+  "render:dark:4k": "remotion render GenerateButtonDark4K out/generate-button_dark_4k.mp4 " + FLAGS + " --crf=16",
+  "render:light:4k": "remotion render GenerateButtonLight4K out/generate-button_light_4k.mp4 " + FLAGS + " --crf=16",
   "render:all": "npm run render:dark:1080 && npm run render:light:1080 && npm run render:dark:4k && npm run render:light:4k",
 };
 fs.writeFileSync(process.argv[2], JSON.stringify(pkg, null, 2) + "\n");
