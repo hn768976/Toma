@@ -106,14 +106,20 @@ void main(void) {
   float core = exp(-r * r * 4.5);
   col += glow * core * 0.13;
 
-  // Thin specular streak sweeping through the cusp, gated by a periodic
-  // envelope so it flares and fades rather than sitting there constantly.
+  // Soft glint across the cusp, gated by a periodic envelope so it swells and
+  // fades rather than sitting there constantly.
+  //
+  // Deliberately broad (low perpendicular falloff), short-range (fast radial
+  // decay) and weak. A tight, long, bright version of this term reads as a
+  // hard laser beam laid over the frame, which is not what a defocused
+  // caustic does - the reference has diffuse light rays and no hard edge
+  // anywhere.
   float sa = a1 * 2.0 + 0.9 + uSeed;
   vec2 sdir = vec2(cos(sa), sin(sa));
   float perp = abs(dot(q, vec2(-sdir.y, sdir.x)));
   float along = max(0.0, dot(normalize(q + 1e-5), sdir));
-  float env = smoothstep(0.45, 0.98, sin(TAU * 2.0 * ph + uSeed) * 0.5 + 0.5);
-  float streak = exp(-perp * perp * 150.0) * exp(-r * 0.95) * along * env;
+  float env = smoothstep(0.62, 1.0, sin(TAU * 2.0 * ph + uSeed) * 0.5 + 0.5);
+  float streak = exp(-perp * perp * 34.0) * exp(-r * 2.6) * along * env;
 
   // Slight chromatic split on the streak - reads as real lens dispersion.
   col.r += glow.r * streak * uStreak * 1.10;

@@ -108,10 +108,10 @@ void main(void) {
   // there with the cloth falling away into darkness around it.
   vec2 cq = (uv - vec2(0.50, 0.60)) * vec2(aspect, 1.0);
   float core = exp(-dot(cq, cq) * 2.2);
-  col += mid * core * 0.72;
+  col += mid * core * 0.62;
   col += bright * core * 0.12;
 
-  col += bright * ridge * 0.72;
+  col += bright * ridge * 0.52;
   col += bright * sheen * 0.19;
   col += bright * rim * 0.10;
 

@@ -51,8 +51,8 @@ export const LOOKS: LookDef[] = [
     durationInFrames: 450,
     uniforms: {
       uDeep: { value: rgb("#0b0110"), type: "vec3<f32>" },
-      uMid: { value: rgb("#65157f"), type: "vec3<f32>" },
-      uBright: { value: rgb("#dd6dff"), type: "vec3<f32>" },
+      uMid: { value: rgb("#5a1275"), type: "vec3<f32>" },
+      uBright: { value: rgb("#c257e8"), type: "vec3<f32>" },
       uSeed: { value: 2.0, type: "f32" },
       uWeaveAmount: { value: 0.07, type: "f32" },
       uVignette: { value: 1.0, type: "f32" },
@@ -69,7 +69,7 @@ export const LOOKS: LookDef[] = [
       uGlow: { value: rgb("#ffd8ec"), type: "vec3<f32>" },
       uSeed: { value: 0.0, type: "f32" },
       uWarmBias: { value: 0.46, type: "f32" },
-      uStreak: { value: 0.55, type: "f32" },
+      uStreak: { value: 0.30, type: "f32" },
     },
   },
   {
@@ -83,7 +83,7 @@ export const LOOKS: LookDef[] = [
       uGlow: { value: rgb("#d8e8ff"), type: "vec3<f32>" },
       uSeed: { value: 1.3, type: "f32" },
       uWarmBias: { value: 0.52, type: "f32" },
-      uStreak: { value: 0.48, type: "f32" },
+      uStreak: { value: 0.26, type: "f32" },
     },
   },
 ];
