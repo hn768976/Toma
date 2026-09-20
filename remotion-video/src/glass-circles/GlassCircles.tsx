@@ -20,8 +20,8 @@ export const glassCirclesSchema = z.object({
   samples: z.number().int().min(1).max(8),
   /**
    * Renders at this multiple of the output size and filters back down.
-   * 2 is the delivery setting at 1080p; 4K already samples finely enough that
-   * 1 is usually the better trade against render time.
+   * FXAA already handles the rim stepping, so 1 is the default; 2 sharpens
+   * the result further and is worth it on a GPU, at 4x the fragment cost.
    */
   supersample: z.number().min(1).max(2),
   /** Overlays the active graphics backend; for checking renders, not delivery. */
@@ -34,7 +34,7 @@ export const glassCirclesDefaults: GlassCirclesProps = {
   variant: "v2",
   preferWebGPU: true,
   samples: 4,
-  supersample: 2,
+  supersample: 1,
   showBackend: false,
 };
 
@@ -60,6 +60,10 @@ export const GlassCircles: React.FC<GlassCirclesProps> = ({
   // Loop position. Frame `durationInFrames` would land back on 0, which is what
   // makes the clip seamless.
   const cycle = frame / durationInFrames;
+  // Read by the engine's warm-up, which happens inside the first frame's own
+  // effect and so needs that frame's loop position.
+  const cycleRef = useRef(cycle);
+  cycleRef.current = cycle;
 
   const getEngine = useCallback((): Promise<GlassEngine> => {
     if (!enginePromiseRef.current) {
@@ -77,6 +81,7 @@ export const GlassCircles: React.FC<GlassCirclesProps> = ({
         preferWebGPU,
         samples,
         supersample,
+        initialCycle: cycleRef.current,
       });
     }
     return enginePromiseRef.current;

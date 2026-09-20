@@ -12,6 +12,7 @@ import {
   PostProcessing,
   Scene,
   WebGPURenderer,
+  type Node,
 } from "three/webgpu";
 import {
   Fn,
@@ -23,8 +24,10 @@ import {
   uniform,
   vec2,
   vec3,
+  vec4,
 } from "three/tsl";
 import { bloom } from "three/addons/tsl/display/BloomNode.js";
+import { fxaa } from "three/addons/tsl/display/FXAANode.js";
 import { createEnvironmentTexture } from "./environment";
 import { makeLensGeometry, makeRimGeometry } from "./geometry";
 import {
@@ -68,6 +71,11 @@ export type EngineOptions = {
    * 2 gives a true 2x2 supersample of the whole chain.
    */
   supersample: number;
+  /**
+   * Loop position of the first frame this engine will be asked for, used for
+   * the warm-up so a missed paint cannot show the wrong image.
+   */
+  initialCycle: number;
 };
 
 /**
@@ -94,6 +102,12 @@ const waitForPaint = (): Promise<void> =>
       });
     });
   });
+
+/**
+ * @types/three declares FXAANode as a bare TempNode, which loses the vec4 it
+ * actually outputs. Narrow it once here rather than casting at the call site.
+ */
+const antialias = fxaa as unknown as (input: Node<"vec4">) => Node<"vec4">;
 
 const BACKDROP_Z = -4;
 const BACKDROP_WIDTH = 22;
@@ -299,8 +313,13 @@ export const createEngine = async (
     );
   })();
 
+  // FXAA runs on the tone-mapped image, which is the only place the rim's
+  // stepping actually exists: the highlight is clipped long before this, so
+  // the stair steps are an artefact of the displayed values rather than of
+  // the geometry. Grain is added afterwards so it does not get smoothed away.
   postProcessing.outputColorTransform = false;
-  postProcessing.outputNode = renderOutput(sceneColor.add(bloomPass)).add(grain);
+  const antialiased = antialias(renderOutput(sceneColor.add(bloomPass)));
+  postProcessing.outputNode = vec4(antialiased.rgb.add(grain), antialiased.a);
 
   const context = target.getContext("2d");
   if (!context) {
@@ -367,8 +386,13 @@ export const createEngine = async (
   // pipelines and does not reach the visible canvas, which would otherwise cost
   // the first frame of every parallel render tab. The blit is part of the
   // warm-up deliberately: it is the step that comes up empty.
-  await renderFrame(0);
-  await renderFrame(0);
+  //
+  // It warms up on the frame actually being asked for rather than on cycle 0,
+  // so that if the screenshot still beats the compositor the stale image it
+  // captures is the right one. Waiting on paint alone proved too sensitive to
+  // load: adding FXAA was enough to start losing the race again.
+  await renderFrame(options.initialCycle);
+  await renderFrame(options.initialCycle);
 
   const dispose = () => {
     for (const disc of discs) {
