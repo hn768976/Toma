@@ -63,9 +63,29 @@ npx remotion render BubbleDrift-PodiumLilac out/BubbleDrift_PodiumLilac.mp4 --sc
 npx remotion render BubbleDrift-PodiumMint  out/BubbleDrift_PodiumMint.mp4  --scale=1 --crf=16
 ```
 
-Codec, pixel format and CRF default to H.264 / `yuv420p` / 16 in
-`remotion.config.ts`; the `--crf=16` above is explicit so the command is
-complete on its own. Output has no audio track.
+`remotion.config.ts` supplies the rest: H.264, CRF 16, BT.709 and muted. The
+`--crf=16` above is explicit so each command reads completely on its own.
+
+Two of those defaults are worth knowing about, because they are easy to lose
+if you render through the Node APIs (where the config file does not apply) and
+must then be passed explicitly:
+
+- **`setColorSpace("bt709")`** — without it the encoder emits `yuvj420p` with
+  `color_range=pc`. That is self-consistent full-range video, but any tool
+  that ignores the range flag reads it as limited range and crushes the blacks
+  and clips the highlights. With it, output is `yuv420p`, `color_range=tv`,
+  BT.709. Note that `setPixelFormat("yuv420p")` on its own does **not** fix
+  this — it leaves the full-range tag in place.
+- **`setMuted(true)`** — these have no audio by design, but Remotion otherwise
+  muxes a silent AAC track into the output. With it, the files carry a video
+  stream and nothing else.
+
+Verify both on a delivered file:
+
+```bash
+ffprobe -v error -show_entries stream=codec_type,pix_fmt,color_range -of csv=p=0 out/BlindShadow_PodiumA.mp4
+# video,yuv420p,tv      <- one line only; no audio stream
+```
 
 ### 1080p previews
 
