@@ -325,6 +325,13 @@ export const createEngine = async (
     // drawing buffer survives; blitting into a 2D canvas guarantees Remotion's
     // screenshot captures the frame.
     context.drawImage(glCanvas, 0, 0);
+
+    // Hand the blit to the compositor before reporting the frame as ready.
+    // Without this the screenshot can capture whatever was last painted rather
+    // than what was just drawn, which shows up as a frame carrying the
+    // previous image -- most visibly on the first frame a render tab produces,
+    // where the previous image is the warm-up.
+    await waitForPaint();
   };
 
   // Warm-up. The first pass through this path builds the post-processing
@@ -332,9 +339,7 @@ export const createEngine = async (
   // the first frame of every parallel render tab. The blit is part of the
   // warm-up deliberately: it is the step that comes up empty.
   await renderFrame(0);
-  await waitForPaint();
   await renderFrame(0);
-  await waitForPaint();
 
   const dispose = () => {
     for (const disc of discs) {
