@@ -23,7 +23,6 @@ const INCLUDE = [
   'package-lock.json',
   'tsconfig.json',
   'remotion.config.ts',
-  'remotion.config.ts',
   'README.md',
   '.gitignore',
 ];
@@ -31,7 +30,7 @@ const INCLUDE = [
 fs.mkdirSync(outDir, { recursive: true });
 fs.rmSync(zipPath, { force: true });
 
-const entries = [...new Set(INCLUDE)].filter((p) => fs.existsSync(path.join(root, p)));
+const entries = INCLUDE.filter((p) => fs.existsSync(path.join(root, p)));
 
 execFileSync(
   'zip',
