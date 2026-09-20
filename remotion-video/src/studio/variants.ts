@@ -39,7 +39,11 @@ const WARM_CYC: CycloramaSpec = {
 };
 
 const COOL_LIGHT: LightSpec = {
-  ambient: 0.5495,
+  // +0.027 over the raw probe fit. The references were probed *after* their
+  // own H.264 decode, so matching them means matching after ours too - and
+  // the limited-range 8-bit round trip costs ~3 levels. This puts the
+  // delivered file on the references rather than on the PNG stills.
+  ambient: 0.5763,
   ambientTint: NEUTRAL,
   hemi: 0,
   key: 0.3921,
@@ -143,7 +147,11 @@ export const DISC: StudioSpec = {
     ambient: 0.2177,
     ambientTint: NEUTRAL,
     hemi: 0,
-    key: 0.5753,
+    // +0.042 over the raw probe fit, for the same encode round-trip reason as
+    // the cool rig. It goes on the key rather than the ambient because this
+    // backdrop's ambient is attenuated to ~0.07 high up, where the deficit
+    // shows just as strongly - only the key reaches there.
+    key: 0.6168,
     keyTint: NEUTRAL,
     keyDir: [0.1805, 0.8848, 0.4295],
     keyWrap: 0.6,
