@@ -213,11 +213,18 @@ the elliptical pocket the plinth lives in.
 
 ### Grain, vignette, bloom
 
-Grain is 1.5%, blended with `overlay`. Overlay leaves a black pixel black,
-which is what lets look 2 carry grain over its lit areas and still encode
-true 0,0,0 in the corners. It also dithers look 1's dark gradient and look
-3's soft near-white, the two banding risks in the set. Check the **encoded
-file** rather than the studio preview when judging banding.
+Grain is a 1.5% deviation blended with `overlay`. Overlay leaves a black
+pixel black, which is what lets look 2 carry grain over its lit areas and
+still encode true 0,0,0 in the corners, and it keeps look 1's dark field from
+being lifted. The cost is that overlay scales the deviation by the local
+contrast: measured on a lossless 1080p still, look 3's near-white wall (level
+205) carries about ±1.5 levels, and a midtone carries up to ±3.8. That is
+ample as a dither — banding steps are one level — and it is why the grain
+reads as a surface rather than as a layer sitting on top.
+
+Judge banding on the **encoded file**, not the studio preview. Note that
+h264 at CRF 16 smooths fine grain: the same wall measures ±1.5 levels in the
+PNG still and about ±0.25 after encoding. The stills keep the full grain.
 
 There is **no bloom pass anywhere**. Looks 1, 3 and 4 are photographic and
 should have none — look 1's glow is real light scatter in the glass. Look 2's
@@ -374,3 +381,32 @@ downscale — expect four times the render time.
 These are silent by design. `npx remotion ffprobe out/preview/<file>.mp4`
 should show exactly one stream, `codec_type=video`. If an audio stream ever
 appears, fix the render config; do not strip it afterwards.
+
+---
+
+## Completion checklist
+
+| Look | Variant | Configured | Verified in studio | 1080p preview | 1080p still |
+|---|---|---|---|---|---|
+| 1 — Duotone Glass | A · magenta / cyan | ☑ | ☑ | ☑ | ☑ |
+| 1 — Duotone Glass | B · amber / teal | ☑ | ☑ | — by design | — by design |
+| 2 — Neon Double Ring | A · electric blue | ☑ | ☑ | ☑ | ☑ |
+| 2 — Neon Double Ring | B · magenta | ☑ | ☑ | — by design | — by design |
+| 3 — Fluted Plaster | A · single fluted cylinder | ☑ | ☑ | ☑ | ☑ |
+| 3 — Fluted Plaster | B · classical column pair | ☑ | ☑ | — by design | — by design |
+| 4 — Wood and Leaf | A · cool blue-white, light oak | ☑ | ☑ | ☑ | ☑ |
+| 4 — Wood and Leaf | B · warm sand, dark walnut | ☑ | ☑ | — by design | — by design |
+
+"— by design" means the variant ships configured and verified but unrendered,
+as scoped: each look is previewed once in variant A, which is where the
+structural risk is (refraction, emissive on pure black, gobo shadow, wood
+grain). Variant B is then a palette or geometry change on a scene that has
+already been proved.
+
+All eight are 4K-render-ready with the commands at the top of this file.
+
+## What is not in here
+
+No text, no watermark, no logo, no product, no placeholder and no brand mark
+appears in any composition. No audio track. No third-party asset of any kind:
+no HDRI, no texture, no photographic plate, no font.

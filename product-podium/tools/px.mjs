@@ -17,7 +17,7 @@ import { readPng } from "./png.mjs";
  * Load an image. A PNG is read directly; any other file is treated as a
  * video and the requested frame is extracted to PNG first.
  */
-export const decode = (file, { frame = null } = {}) => {
+export const decode = (file, { frame = null, fps = 30 } = {}) => {
   if (!existsSync(file)) throw new Error(`no such file: ${file}`);
   let png;
   let tmp = null;
@@ -27,10 +27,13 @@ export const decode = (file, { frame = null } = {}) => {
     } else {
       tmp = mkdtempSync(join(tmpdir(), "px-"));
       const target = join(tmp, "frame.png");
-      const select = frame === null ? [] : ["-vf", `select=eq(n\\,${frame})`, "-vsync", "0"];
+      // Seek by timestamp rather than with a `select` filter: the filter
+      // syntax needs a comma escaped, and there is no shell here to do it.
+      // A quarter-frame offset lands safely inside the target frame.
+      const seek = frame === null ? [] : ["-ss", String((frame + 0.25) / fps)];
       execFileSync(
         "npx",
-        ["remotion", "ffmpeg", "-v", "error", "-i", file, ...select,
+        ["remotion", "ffmpeg", "-v", "error", ...seek, "-i", file,
          "-frames:v", "1", "-y", target],
         { stdio: ["ignore", "ignore", "pipe"] },
       );
