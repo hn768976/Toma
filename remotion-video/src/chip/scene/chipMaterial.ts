@@ -81,15 +81,20 @@ const injectRim = (
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vHoloPos;")
+      .replace(
+        "#include <common>",
+        "#include <common>\nvarying vec3 vHoloPos;\nvarying vec2 vChipUv;",
+      )
       .replace(
         "#include <begin_vertex>",
-        "#include <begin_vertex>\nvHoloPos = position;",
+        "#include <begin_vertex>\nvHoloPos = position;\nvChipUv = uv;",
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "#include <common>\nvarying vec3 vHoloPos;\n" + RIM_PARS + pars,
+        "#include <common>\nvarying vec3 vHoloPos;\nvarying vec2 vChipUv;\n" +
+          RIM_PARS +
+          pars,
       )
       .replace("#include <emissivemap_fragment>", rimBlock(extra));
   };
@@ -190,12 +195,12 @@ export const makeChipLidMaterial = (opts: {
   // term saturates everywhere and floods a black package to grey. Edge
   // distance is view-independent and stays a rim.
   {
-    float edgeD = min( min( vUv.x, 1.0 - vUv.x ), min( vUv.y, 1.0 - vUv.y ) );
+    float edgeD = min( min( vChipUv.x, 1.0 - vChipUv.x ), min( vChipUv.y, 1.0 - vChipUv.y ) );
     float edgeRim = 1.0 - smoothstep( 0.0, max( uEdgeWidth, 1e-4 ), edgeD );
     totalEmissiveRadiance += uRimColor * edgeRim * uEdge;
   }
 
-  vec4 lid = texture2D( uLid, vUv );
+  vec4 lid = texture2D( uLid, vChipUv );
   float die     = lid.r;
   float label   = smoothstep( 0.35, 0.75, lid.g );
   float circuit = lid.b;
@@ -206,7 +211,7 @@ export const makeChipLidMaterial = (opts: {
 
   // Anodised / holographic sheen sweeping across the package face.
   if ( uSheen > 0.001 ) {
-    float g = clamp( vUv.x * 0.65 + vUv.y * 0.35 + sin( uTime * 0.7 ) * 0.08, 0.0, 1.0 );
+    float g = clamp( vChipUv.x * 0.65 + vChipUv.y * 0.35 + sin( uTime * 0.7 ) * 0.08, 0.0, 1.0 );
     vec3 sheen = mix( uSheenA, uSheenB, g );
     diffuseColor.rgb = mix( diffuseColor.rgb, sheen, uSheen );
     totalEmissiveRadiance += sheen * uSheen * 0.22;
@@ -217,7 +222,6 @@ export const makeChipLidMaterial = (opts: {
   totalEmissiveRadiance += uLabelColor * label * uLabel;
   `;
 
-  mat.defines = { ...(mat.defines ?? {}), USE_UV: "" };
   injectRim(
     mat,
     uniforms as unknown as Record<string, { value: unknown }>,

@@ -50,11 +50,13 @@ uniform float uUvRepeat, uWorldDist, uWorldNorm;
 uniform float uRipple, uRippleRadius, uRippleWidth, uDotScale;
 uniform float uGlowGain, uFadeRadius, uIdle;
 varying vec3 vBoardWorld;
+varying vec2 vBoardUv;
 `;
 
 const VERT_HOOK = /* glsl */ `
 #include <worldpos_vertex>
 vBoardWorld = (modelMatrix * vec4( transformed, 1.0 )).xyz;
+vBoardUv = uv;
 `;
 
 export const makeBoardMaterial = (opts: {
@@ -77,10 +79,6 @@ export const makeBoardMaterial = (opts: {
     roughness: opts.roughness,
     metalness: opts.metalness,
   }) as BoardMaterial;
-
-  // Force the UV varying: we sample a map by hand rather than assigning
-  // material.map, so three would otherwise compile the varying away.
-  mat.defines = { ...(mat.defines ?? {}), USE_UV: "" };
 
   const uniforms: BoardUniforms = {
     uMap: { value: opts.map },
@@ -111,7 +109,10 @@ export const makeBoardMaterial = (opts: {
     Object.assign(shader.uniforms, uniforms);
 
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vBoardWorld;")
+      .replace(
+        "#include <common>",
+        "#include <common>\nvarying vec3 vBoardWorld;\nvarying vec2 vBoardUv;",
+      )
       .replace("#include <worldpos_vertex>", VERT_HOOK);
 
     shader.fragmentShader = shader.fragmentShader
@@ -120,7 +121,7 @@ export const makeBoardMaterial = (opts: {
         "#include <map_fragment>",
         /* glsl */ `
 #include <map_fragment>
-vec2 bUv = vUv * uUvRepeat;
+vec2 bUv = vBoardUv * uUvRepeat;
 vec4 bm = texture2D( uMap, bUv );
 float copper  = bm.r;
 float pathD   = bm.g;
@@ -166,7 +167,7 @@ roughnessFactor = mix( roughnessFactor, roughnessFactor * 0.55, traceMask );
   // Halftone ripple: a dot-matrix wave across the whole substrate, not only
   // along the copper. Drives V2's tactile "wave of tiny dots".
   if ( uRipple > 0.001 ) {
-    vec2 cell = fract( vUv * uDotScale ) - 0.5;
+    vec2 cell = fract( vBoardUv * uDotScale ) - 0.5;
     float dot = 1.0 - smoothstep( 0.14, 0.36, length( cell ) );
     float rd = length( vBoardWorld.xz ) / max( uWorldNorm, 0.0001 );
     float ring = exp( -pow( ( rd - uRippleRadius ) / max( uRippleWidth, 1e-4 ), 2.0 ) * 3.0 );
@@ -185,7 +186,8 @@ roughnessFactor = mix( roughnessFactor, roughnessFactor * 0.55, traceMask );
       );
   };
 
-  // Changing defines/compile hooks requires a program rebuild key.
+  // A compile hook needs its own program cache key, or three reuses the
+  // stock MeshStandardMaterial program and none of the above is applied.
   mat.customProgramCacheKey = () => "chip-board-v1";
   return mat;
 };
