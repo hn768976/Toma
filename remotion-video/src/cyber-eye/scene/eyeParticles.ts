@@ -234,7 +234,10 @@ export const buildEyeParticles = (
     .mul(sclera)
     .mul(fade)
     .mul(palette.light ? 0.5 : 1)
-    .add(colorVec3(palette.background).mul(fade.oneMinus()));
+    .add(colorVec3(palette.background).mul(fade.oneMinus()))
+    // light palettes: lift the surface towards the background so the eye
+    // only reads through its shading, not through a darker silhouette
+    .add(colorVec3(palette.background).mul(fade).mul(palette.light ? 0.6 : 0));
   const solid = new Mesh(geometry, skin);
   solid.frustumCulled = false;
   group.add(solid);
