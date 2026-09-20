@@ -118,22 +118,24 @@ if (look === "NeonRing") {
    * *measurably* different from 0, and the travel itself is demonstrated
    * across the clip, where it is visible.
    */
+  // Bands measured off the rendered frame: the neon line sits at the
+  // slab's rim, its reflection well below it.
   const track = (y0, y1) => FRAMES.map((f) => brightestX(imgs[f], y0, y1));
-  const top = track(0.385, 0.42);
-  const bot = track(0.62, 0.68);
+  const top = track(0.552, 0.578);
+  const bot = track(0.655, 0.702);
   const spread = (v) => Math.max(...v.slice(0, 4)) - Math.min(...v.slice(0, 4));
   const pct = (v) => v.map((x) => `${(x * 100).toFixed(1)}%`).join(" -> ");
 
-  report(spread(top) > 0.05, "top ring: bright segment travels around the ring", `frames 0/75/150/225/299: ${pct(top)}`);
-  report(spread(bot) > 0.05, "bottom ring: bright segment travels around the ring", `frames 0/75/150/225/299: ${pct(bot)}`);
+  report(spread(top) > 0.05, "neon rim: bright segment travels around the ring", `frames 0/75/150/225/299: ${pct(top)}`);
+  report(spread(bot) > 0.05, "reflection: bright segment travels around the ring", `frames 0/75/150/225/299: ${pct(bot)}`);
   report(
     Math.abs(top[4] - top[0]) > 0.001,
-    "top ring: segment position at frame 299 differs from frame 0 (by one loop step)",
+    "neon rim: segment position at frame 299 differs from frame 0 (by one loop step)",
     `${(top[0] * 100).toFixed(2)}% -> ${(top[4] * 100).toFixed(2)}%`,
   );
   report(
     Math.abs(bot[4] - bot[0]) > 0.001,
-    "bottom ring: segment position at frame 299 differs from frame 0 (by one loop step)",
+    "reflection: segment position at frame 299 differs from frame 0 (by one loop step)",
     `${(bot[0] * 100).toFixed(2)}% -> ${(bot[4] * 100).toFixed(2)}%`,
   );
   report(
