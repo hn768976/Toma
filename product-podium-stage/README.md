@@ -353,6 +353,23 @@ both of which have closed-form intersections.
 nothing in it to reflect — which is exactly why it is right for the plinth
 bevels and wrong for the floor.
 
+**A still is not a preview of the clip — be careful extending this.** Remotion
+captures frame 0 as soon as every `delayRender` handle is released, which can
+be *before* React's passive effects have run. Anything a component sets up in
+a plain `useEffect` — an environment map, a renderer setting, a global shader
+patch — may therefore be absent from frame 0 and present in frames 1 onward.
+Because `npx remotion still` and the studio only ever render frame 0, that
+failure is invisible in every check short of rendering the clip and comparing
+frames. This project hit it with the environment map: stills showed a scene
+with no image-based lighting while the clip had it, and the looks were lit
+against the wrong image.
+
+The rule this project follows: anything that must be true of the rendered
+frame is installed in a **layout** effect, and the `delayRender` handle is not
+released until it is actually in place (see `src/rig/environment.tsx`). If you
+add something similar, do the same, and sanity-check by rendering a handful of
+frames and comparing their mean pixel value — frame 0 should match frame 5.
+
 **Grain and dither are one pass, last in the chain**, keyed on the frame
 *number* rather than on `postprocessing`'s built-in `time` uniform, which
 accumulates from a clock and would make the grain depend on when a frame was
