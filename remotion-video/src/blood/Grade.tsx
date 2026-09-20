@@ -97,7 +97,9 @@ export const Grade: React.FC<{ spec: GradeSpec }> = ({ spec }) => {
     <>
       <AbsoluteFill
         style={{
-          background: `radial-gradient(circle at ${spec.bloom.x}% ${spec.bloom.y}%, ${spec.bloom.color} 0%, rgba(0,0,0,0) ${spec.bloom.size * 0.62}%)`,
+          // An ellipse rather than a circle: V2 and V6 want a wide, shallow
+          // band of light, not a round hotspot in the middle of frame.
+          background: `radial-gradient(ellipse ${spec.bloom.width}% ${spec.bloom.height}% at ${spec.bloom.x}% ${spec.bloom.y}%, ${spec.bloom.color} 0%, rgba(0,0,0,0) 100%)`,
           opacity: spec.bloom.opacity,
           mixBlendMode: "screen",
           pointerEvents: "none",

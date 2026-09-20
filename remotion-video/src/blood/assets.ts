@@ -157,13 +157,13 @@ export const createCellEmissiveTexture = (
     }),
   );
 
-/** Mottled vessel wall: layered blotches plus fine capillary streaks. */
-export const createVesselTexture = (
+/** Mottled tissue: layered blotches plus fine capillary streaks. */
+export const createTissueTexture = (
   color: string,
   mottle: number,
   seedKey: string,
 ) =>
-  memo(`vessel-${color}-${mottle.toFixed(2)}-${seedKey}`, () =>
+  memo(`tissue-${color}-${mottle.toFixed(2)}-${seedKey}`, () =>
     paint(1024, (ctx, size) => {
       const rng = mulberry32(0x5eed2);
       ctx.fillStyle = color;

@@ -24,10 +24,9 @@ const DESIGN_WIDTH = 1920;
 /**
  * One bloodstream version.
  *
- * Two 3D passes composite into the final image: a sharp main pass, and — for
- * the looks whose reference has a shallow focus — a defocused foreground layer
- * rendered small and blurred up. That is far cheaper than a real depth-of-field
- * pass and is what the big soft cells drifting past the lens actually are.
+ * A single sharp 3D pass. An earlier version composited a second, deliberately
+ * defocused foreground layer to fake a shallow depth of field; that is gone,
+ * because every cell in every version is now meant to be in focus.
  */
 export const BloodFlow: React.FC<BloodFlowProps> = ({
   lookId,
@@ -49,10 +48,6 @@ export const BloodFlow: React.FC<BloodFlowProps> = ({
   const scale = width / DESIGN_WIDTH;
   const preference = backend as BackendPreference;
 
-  const nearLayer = look.nearLayer;
-  const nearWidth = Math.round(width * 0.45);
-  const nearHeight = Math.round(height * 0.45);
-
   return (
     <AbsoluteFill style={{ backgroundColor: matte ? "#000000" : look.background }}>
       <AdaptiveThreeCanvas
@@ -60,30 +55,10 @@ export const BloodFlow: React.FC<BloodFlowProps> = ({
         height={height}
         preference={preference}
         onBackend={onBackend}
-        camera={{ fov: look.fov, near: 0.1, far: look.depth * 3, position: [0, 0, 0] }}
+        camera={{ fov: look.fov, near: 0.05, far: look.depth * 3, position: [0, 0, 0] }}
       >
-        <Scene look={look} layer="main" matte={matte} />
+        <Scene look={look} matte={matte} />
       </AdaptiveThreeCanvas>
-
-      {nearLayer ? (
-        <AbsoluteFill
-          style={{
-            filter: `blur(${nearLayer.blurPx * scale}px)`,
-            opacity: nearLayer.opacity,
-            pointerEvents: "none",
-          }}
-        >
-          <AdaptiveThreeCanvas
-            width={nearWidth}
-            height={nearHeight}
-            preference={preference}
-            camera={{ fov: look.fov, near: 0.1, far: look.depth * 3, position: [0, 0, 0] }}
-            style={{ width: "100%", height: "100%" }}
-          >
-            <Scene look={look} layer="near" matte={matte} />
-          </AdaptiveThreeCanvas>
-        </AbsoluteFill>
-      ) : null}
 
       {matte ? null : <Grade spec={look.grade} />}
 

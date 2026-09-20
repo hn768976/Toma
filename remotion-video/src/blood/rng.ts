@@ -19,10 +19,3 @@ export type Rng = ReturnType<typeof mulberry32>;
 
 export const range = (rng: Rng, min: number, max: number) =>
   min + rng() * (max - min);
-
-/** Uniform point on a disc of the given radius (area-correct, not clumped). */
-export const pointInDisc = (rng: Rng, radius: number) => {
-  const r = radius * Math.sqrt(rng());
-  const theta = rng() * Math.PI * 2;
-  return [r * Math.cos(theta), r * Math.sin(theta)] as const;
-};

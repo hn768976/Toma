@@ -2,67 +2,51 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
 import { createCellEmissiveTexture } from "./assets";
-import { createFlowField, flowFade, flowZ, frustumRadius, wobbleOffset } from "./flow";
+import { cellPosition, normalizeDirection, type Cell, type Volume } from "./flow";
 import type { BloodLook } from "./looks";
 
 type Props = {
   look: BloodLook;
   geometry: THREE.BufferGeometry;
-  count: number;
-  seed: number;
-  /** Multiplier on cell size — used by the defocused foreground layer. */
-  sizeScale?: number;
-  /** Disc thickness as a fraction of diameter. The .glb is plumper than the
-   * lathed cell, so the hero population squashes further to match. */
+  /** Pre-placed cells. Placement is done once for the whole population so the
+   * hero and swarm draw calls cannot overlap each other. */
+  cells: Cell[];
+  volume: Volume;
+  /** Disc thickness as a fraction of diameter. Always below 1, which is what
+   * keeps the bounding sphere equal to the cell radius used at placement. */
   thickness?: number;
-  /** Restricts the population to the slice of the slab nearest the camera. */
-  nearOnly?: boolean;
   /** Renders flat white on black for the alpha-matte pass. */
   matte?: boolean;
 };
 
 const scratch = new THREE.Object3D();
+const scratchPosition = new THREE.Vector3();
 
 /**
- * A population of tumbling red blood cells drifting toward the camera.
+ * A population of slowly turning red blood cells.
  *
- * All instances share one draw call; positions are recomputed from scratch each
- * frame out of the deterministic flow field, so nothing depends on the previous
- * frame having been rendered.
+ * All instances share one draw call, and every frame is recomputed from the
+ * current time alone — nothing depends on the previous frame having been
+ * rendered, which is what lets Remotion render frames out of order across
+ * several browser tabs.
+ *
+ * Note there is no per-cell size animation here. Scale is fixed at the radius
+ * the cell was placed with, so the spacing established at placement is exactly
+ * the spacing on screen.
  */
 export const CellField: React.FC<Props> = ({
   look,
   geometry,
-  count,
-  seed,
-  sizeScale = 1,
-  thickness = 0.78,
-  nearOnly = false,
+  cells,
+  volume,
+  thickness = 0.72,
   matte = false,
 }) => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
-  const aspect = width / height;
+  const { fps } = useVideoConfig();
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
-  const depth = nearOnly ? look.depth * 0.22 : look.depth;
-  // Where the cone flattens off, as a fraction of the slab depth.
-  const minDistance = Math.max(4, look.depth * 0.17);
-
-  const particles = useMemo(
-    () =>
-      createFlowField({
-        count,
-        seed,
-        depth,
-        size: look.cellSize,
-        tumble: look.tumble,
-        speedJitter: 0.35,
-        color: look.cellColor,
-        colorSpread: look.cellColorSpread,
-      }),
-    [count, seed, look.cellSize, look.tumble, look.cellColor, look.cellColorSpread, depth],
-  );
+  const direction = useMemo(() => normalizeDirection(look.flowDirection), [look.flowDirection]);
 
   const material = useMemo(() => {
     if (matte) {
@@ -92,20 +76,20 @@ export const CellField: React.FC<Props> = ({
   ]);
 
   const mesh = useMemo(() => {
-    const instanced = new THREE.InstancedMesh(geometry, material, count);
+    const instanced = new THREE.InstancedMesh(geometry, material, Math.max(1, cells.length));
     // Instances are repositioned every frame, so three's cached bounds are
-    // always stale — culling them would drop cells at the edges of frame.
+    // always stale — culling against them would drop cells at frame edges.
     instanced.frustumCulled = false;
     const color = new THREE.Color();
-    for (let i = 0; i < count; i++) {
-      color.copy(matte ? new THREE.Color("#ffffff") : particles[i].tint);
+    for (let i = 0; i < cells.length; i++) {
+      color.copy(matte ? new THREE.Color("#ffffff") : cells[i].tint);
       instanced.setColorAt(i, color);
     }
     if (instanced.instanceColor) {
       instanced.instanceColor.needsUpdate = true;
     }
     return instanced;
-  }, [geometry, material, count, particles, matte]);
+  }, [geometry, material, cells, matte]);
 
   useLayoutEffect(() => {
     return () => {
@@ -116,43 +100,32 @@ export const CellField: React.FC<Props> = ({
 
   // Layout effect, not effect: @remotion/three advances the renderer in a
   // passive effect, and layout effects flush first — so the matrices written
-  // here are the ones that get drawn for this frame, not the previous one.
+  // here are the ones drawn for this frame, not the previous one.
   useLayoutEffect(() => {
     const instanced = meshRef.current;
     if (!instanced) {
       return;
     }
     const time = frame / fps;
-    const speed = look.flowSpeed * (nearOnly ? 1.35 : 1);
 
-    for (let i = 0; i < particles.length; i++) {
-      const particle = particles[i];
-      const z = flowZ(particle, time, speed, depth) + (nearOnly ? 1.5 : 0);
-      const [dx, dy] = wobbleOffset(particle, time, look.wobble);
-      const fade = flowFade(z, depth);
-      const radius = frustumRadius(
-        z,
-        look.fov,
-        aspect,
-        look.fill * (nearOnly ? 0.85 : 1),
-        minDistance,
-      );
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      cellPosition(cell, time, direction, look.flowSpeed, volume, scratchPosition);
 
-      scratch.position.set(particle.x * radius + dx, particle.y * radius + dy, z);
+      scratch.position.copy(scratchPosition);
       scratch.rotation.set(
-        particle.rot[0] + time * particle.spin[0],
-        particle.rot[1] + time * particle.spin[1],
-        particle.rot[2] + time * particle.spin[2],
+        cell.rot[0] + time * cell.spin[0],
+        cell.rot[1] + time * cell.spin[1],
+        cell.rot[2] + time * cell.spin[2],
       );
-      const scale = particle.size * sizeScale * fade;
-      // Cells are discs: keep the face round and squash the thickness.
-      scratch.scale.set(scale, scale, scale * thickness);
+      // Round face, squashed thickness — a disc, not a ball.
+      scratch.scale.set(cell.size, cell.size, cell.size * thickness);
       scratch.updateMatrix();
       instanced.setMatrixAt(i, scratch.matrix);
     }
 
     instanced.instanceMatrix.needsUpdate = true;
-  }, [frame, fps, particles, look.flowSpeed, look.wobble, look.fov, look.fill, aspect, sizeScale, thickness, depth, nearOnly, minDistance]);
+  }, [frame, fps, cells, direction, look.flowSpeed, volume, thickness]);
 
   return <primitive ref={meshRef} object={mesh} />;
 };

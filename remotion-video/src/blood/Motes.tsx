@@ -2,37 +2,46 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
 import { createGlowTexture } from "./assets";
-import { createFlowField, flowFade, flowZ, frustumRadius, wobbleOffset } from "./flow";
+import { cellPosition, normalizeDirection, sampleCells, type Volume } from "./flow";
 import type { BloodLook, MoteSpec } from "./looks";
 
 const scratch = new THREE.Object3D();
+const scratchPosition = new THREE.Vector3();
 
 /**
- * Plasma debris: the fine sparkle in the crimson reference and the wide
- * defocused bokeh discs in the ember one, which are the same thing at different
- * softness. Camera-facing quads with additive blending, one draw call.
+ * Plasma sparkle: fine specks of light carried along with the flow.
+ *
+ * These are light, not bodies, so they are allowed to overlap each other and
+ * the cells. They are deliberately kept small and crisp — a mote wide enough to
+ * read as a defocused disc would look like a blurred cell, which is exactly
+ * what these versions must not contain.
  */
-export const Motes: React.FC<{ look: BloodLook; spec: MoteSpec; seed: number }> = ({
-  look,
-  spec,
-  seed,
-}) => {
+export const Motes: React.FC<{
+  look: BloodLook;
+  spec: MoteSpec;
+  volume: Volume;
+  seed: number;
+}> = ({ look, spec, volume, seed }) => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
-  const aspect = width / height;
+  const { fps } = useVideoConfig();
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
-  const particles = useMemo(
+  const direction = useMemo(() => normalizeDirection(look.flowDirection), [look.flowDirection]);
+
+  const motes = useMemo(
     () =>
-      createFlowField({
+      sampleCells({
         count: spec.count,
         seed,
-        depth: look.depth,
+        volume,
         size: spec.size,
+        margin: 0,
         tumble: 0,
-        speedJitter: 0.5,
+        color: spec.color,
+        colorSpread: 0,
+        enforceSpacing: false,
       }),
-    [spec.count, spec.size, seed, look.depth],
+    [spec.count, spec.size, spec.color, seed, volume],
   );
 
   const mesh = useMemo(() => {
@@ -45,7 +54,11 @@ export const Motes: React.FC<{ look: BloodLook; spec: MoteSpec; seed: number }> 
       depthWrite: false,
       toneMapped: false,
     });
-    const instanced = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), material, spec.count);
+    const instanced = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(1, 1),
+      material,
+      Math.max(1, spec.count),
+    );
     instanced.frustumCulled = false;
     // Drawn after the cells so they read as light in front of the plasma.
     instanced.renderOrder = 2;
@@ -66,27 +79,18 @@ export const Motes: React.FC<{ look: BloodLook; spec: MoteSpec; seed: number }> 
       return;
     }
     const time = frame / fps;
-    const speed = look.flowSpeed * spec.drift;
 
-    for (let i = 0; i < particles.length; i++) {
-      const particle = particles[i];
-      const z = flowZ(particle, time, speed, look.depth);
-      const [dx, dy] = wobbleOffset(particle, time, look.wobble * 1.6);
-      // Defocus grows as a mote approaches the camera, the way a real shallow
-      // depth of field swells out-of-focus highlights into discs.
-      const nearness = Math.max(0, (z + look.depth) / look.depth);
-      const scale =
-        particle.size * flowFade(z, look.depth) * (1 + nearness * nearness * spec.softness * 5);
-
-      const radius = frustumRadius(z, look.fov, aspect, look.fill * 1.1, Math.max(4, look.depth * 0.17));
-      scratch.position.set(particle.x * radius + dx, particle.y * radius + dy, z);
+    for (let i = 0; i < motes.length; i++) {
+      const mote = motes[i];
+      cellPosition(mote, time, direction, look.flowSpeed, volume, scratchPosition);
+      scratch.position.copy(scratchPosition);
       scratch.rotation.set(0, 0, 0);
-      scratch.scale.set(scale, scale, 1);
+      scratch.scale.set(mote.size, mote.size, 1);
       scratch.updateMatrix();
       instanced.setMatrixAt(i, scratch.matrix);
     }
     instanced.instanceMatrix.needsUpdate = true;
-  }, [frame, fps, particles, look.flowSpeed, look.depth, look.wobble, look.fov, look.fill, aspect, spec.drift, spec.softness]);
+  }, [frame, fps, motes, direction, look.flowSpeed, volume]);
 
   return <primitive ref={meshRef} object={mesh} />;
 };
