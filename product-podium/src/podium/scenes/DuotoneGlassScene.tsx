@@ -90,7 +90,7 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
     () =>
       studioEnvironment({
         intensity: 0.35,
-        top: [0.5, 0.52, 0.62],
+        top: [0.12, 0.13, 0.18],
         horizon: [0.1, 0.1, 0.14],
         bottom: [0.03, 0.03, 0.04],
       }),
@@ -118,16 +118,16 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
       {/* Enough ambient to keep the backdrop off zero and to stop the
           glass going black on its shaded side. The reference field is a
           dark blue-grey, not a void. */}
-      <ambientLight intensity={0.17} color="#8a90b8" />
+      <ambientLight intensity={0.42} color="#9aa0c4" />
 
       {/* Magenta key, left. Broad and slightly in front, so its falloff
           reaches past the centre of the disc and overlaps the cyan. */}
       <spotLight
-        position={[-4.6, 2.2, 3.4]}
-        angle={1.25}
+        position={[-3.9, 1.9, 3.2]}
+        angle={0.85}
         penumbra={1}
         decay={2}
-        intensity={230 * left}
+        intensity={40 * left}
         color={p.keyLeft}
         castShadow
         shadow-mapSize-width={2048}
@@ -140,11 +140,11 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
       />
       {/* Cyan key, right. */}
       <spotLight
-        position={[4.6, 2.2, 3.4]}
-        angle={1.25}
+        position={[3.9, 1.9, 3.2]}
+        angle={0.85}
         penumbra={1}
         decay={2}
-        intensity={230 * right}
+        intensity={40 * right}
         color={p.keyRight}
         castShadow
         shadow-mapSize-width={2048}
@@ -155,16 +155,11 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
         shadow-camera-far={30}
         shadow-intensity={0.55}
       />
-      {/* A soft top light so the glass reads as a lit surface from above,
-          not only from the two side keys. */}
-      <spotLight
-        position={[0, 6.5, 1.2]}
-        angle={0.5}
-        penumbra={1}
-        decay={2}
-        intensity={38 * (left + right) * 0.5}
-        color="#cfd6ff"
-      />
+      {/* Neutral frontal fill. The reference's puck is white, only tinted
+          by the gels: without white light on the same flanks the gels own
+          the material outright and it reads as two-tone plastic rather
+          than a product stage lit with colour. */}
+      <pointLight position={[0, 0.3, 5.4]} intensity={30} color="#cdd2e6" decay={2} />
       {/* Rim from behind, low, to separate the disc from the backdrop. */}
       <pointLight position={[-2.2, 2.4, -3.4]} intensity={14 * left} color={p.keyLeft} decay={2} />
       <pointLight position={[2.2, 2.4, -3.4]} intensity={14 * right} color={p.keyRight} decay={2} />
@@ -180,6 +175,13 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
         <meshStandardMaterial map={backdropMap} roughness={1} metalness={0} />
       </mesh>
 
+      {/*
+        The wall's lift towards the podium is in the backdrop's own
+        gradient, not a lamp behind the disc. A lamp there shines straight
+        through a transmissive plinth: the disc's whole middle goes white
+        and the top face ends up three times the reference's value, which
+        looks like a lighting problem on the top face and is not.
+      */}
       {/* Glossy floor carrying the coloured reflections. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[80, 80]} />
@@ -214,26 +216,13 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
           attenuationColor={new THREE.Color(p.glass.attenuationColor)}
           attenuationDistance={p.glass.attenuationDistance}
           metalness={0}
-          clearcoat={0.35}
-          clearcoatRoughness={0.28}
-          envMapIntensity={1.1}
+          clearcoat={0.05}
+          clearcoatRoughness={0.5}
+          envMapIntensity={0.25}
           specularIntensity={1}
         />
       </mesh>
 
-      {/* A whisper of scatter sitting just above the top face, so the glass
-          reads as lit from within rather than as a polished lid. */}
-      <mesh position={[0, topY + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
-        <circleGeometry args={[p.disc.radius * 0.98, 96]} />
-        <meshBasicMaterial
-          map={radialFalloff(1.6)}
-          color="#ffffff"
-          transparent
-          opacity={0.05 * (left + right) * 0.5}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
     </>
   );
 };

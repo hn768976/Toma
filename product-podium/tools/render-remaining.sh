@@ -14,4 +14,5 @@ render() {
 render NeonRing-PodiumBlue          NeonRing_PodiumBlue          96
 render FlutedPlaster-PodiumCylinder FlutedPlaster_PodiumCylinder 150
 render WoodLeaf-PodiumCool          WoodLeaf_PodiumCool          210
+render DuotoneGlass-PodiumMagentaCyan DuotoneGlass_PodiumMagentaCyan 42
 echo REMAINING_DONE

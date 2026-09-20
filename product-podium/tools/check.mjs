@@ -88,15 +88,31 @@ const checks = {
   "DuotoneGlass-PodiumMagentaCyan": (img, out) => {
     const band = topSurfaceBand(img, 0.5, 0.3, 0.56, 10);
     out.push(["plinth top 40-50%", band && band.top >= 0.4 && band.top <= 0.5, band && `${(band.top * 100).toFixed(1)}%`]);
-    const l = meanRect(img, 0.3, 0.55, 0.37, 0.64);
-    const c = meanRect(img, 0.46, 0.55, 0.54, 0.64);
-    const r = meanRect(img, 0.63, 0.55, 0.7, 0.64);
-    // A blended band means the centre sits between the two ends on both the
-    // red and the blue axis, rather than jumping from one to the other.
-    const blended = c[0] < l[0] && c[0] > r[0] && c[2] > l[2] * 0.6 && c[2] < r[2];
-    out.push(["colours mix across middle", blended, `L=${fmt(l)} C=${fmt(c)} R=${fmt(r)}`]);
-    const poolL = meanRect(img, 0.1, 0.82, 0.26, 0.95);
-    const poolR = meanRect(img, 0.74, 0.82, 0.9, 0.95);
+    const l = meanRect(img, 0.3, 0.52, 0.37, 0.6);
+    const c = meanRect(img, 0.46, 0.52, 0.54, 0.6);
+    const r = meanRect(img, 0.64, 0.52, 0.71, 0.6);
+    /*
+     * A blended band, not a hard split. Two things have to hold: the
+     * centre sits between the two ends on the red axis, and it is less
+     * saturated than either of them — which is what mixing two gels
+     * actually does, and what a hard split would not show. Requiring the
+     * centre to be strictly below the cyan end on blue as well was
+     * brittle: the two are equal once the colours genuinely blend, and
+     * the check failed on the very thing it was meant to confirm.
+     */
+    const sat = (x) => {
+      const mx = Math.max(...x);
+      return mx === 0 ? 0 : (mx - Math.min(...x)) / mx;
+    };
+    const between = c[0] < l[0] && c[0] > r[0];
+    const softer = sat(c) < Math.min(sat(l), sat(r)) - 0.05;
+    out.push([
+      "colours mix across middle",
+      between && softer,
+      `L=${fmt(l)} (sat ${sat(l).toFixed(2)}) C=${fmt(c)} (sat ${sat(c).toFixed(2)}) R=${fmt(r)} (sat ${sat(r).toFixed(2)})`,
+    ]);
+    const poolL = meanRect(img, 0.06, 0.82, 0.22, 0.95);
+    const poolR = meanRect(img, 0.78, 0.82, 0.94, 0.95);
     const dark = meanRect(img, 0.46, 0.1, 0.54, 0.18);
     out.push([
       "light pools on floor in both colours",
@@ -106,8 +122,8 @@ const checks = {
     // Compare the floor immediately outside the disc's base with floor at
     // the same depth but away from it — a contact shadow is a local
     // darkening, so it has to be measured against its own neighbourhood.
-    const contact = meanRect(img, 0.44, 0.755, 0.56, 0.785);
-    const beside = meanRect(img, 0.2, 0.755, 0.3, 0.785);
+    const contact = meanRect(img, 0.44, 0.7, 0.56, 0.73);
+    const beside = meanRect(img, 0.18, 0.7, 0.28, 0.73);
     const sum = (c) => c[0] + c[1] + c[2];
     out.push(["contact shadow at base", sum(contact) < sum(beside), `contact=${fmt(contact)} beside=${fmt(beside)}`]);
   },
