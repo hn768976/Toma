@@ -45,10 +45,12 @@ const fragmentShader = /* glsl */ `
 precision highp float;
 uniform sampler2D uScene;
 uniform vec2 uTexel;
-/** Blur radius in pixels for each of the two far-field ramps. */
-uniform vec2 uBlur;
-/** Ramp A and ramp B as (top, bottom) in frame fractions, y down. */
+/** Blur radius in pixels for each of the three ramps. */
+uniform vec3 uBlur;
+/** Ramps A and B as (top, bottom) in frame fractions, y down. */
 uniform vec4 uRamps;
+/** Ramp C, the near field. */
+uniform vec2 uRampC;
 /** Sharp pocket: centre xy, radii xy. */
 uniform vec4 uPocket;
 uniform float uFeather;
@@ -58,8 +60,16 @@ uniform float uHasPocket;
 uniform vec2 uDirection;
 varying vec2 vUv;
 
+/*
+ * Full strength at the first edge, nothing by the second. Passing them the
+ * other way round ramps the other way, which is how the near field is
+ * described: the floor closest to camera is in front of the focal plane
+ * and defocuses just as the far wall behind it does.
+ */
 float ramp( float y, float top, float bottom ) {
-  return 1.0 - smoothstep( top, bottom, y );
+  return top < bottom
+    ? 1.0 - smoothstep( top, bottom, y )
+    : smoothstep( bottom, top, y );
 }
 
 void main() {
@@ -68,7 +78,8 @@ void main() {
   vec2 f = vec2( vUv.x, 1.0 - vUv.y );
 
   float radius = uBlur.x * ramp( f.y, uRamps.x, uRamps.y )
-               + uBlur.y * ramp( f.y, uRamps.z, uRamps.w );
+               + uBlur.y * ramp( f.y, uRamps.z, uRamps.w )
+               + uBlur.z * ramp( f.y, uRampC.x, uRampC.y );
 
   if ( uHasPocket > 0.5 ) {
     // The plinth stays sharp. The pocket is an ellipse with a feathered
@@ -192,7 +203,8 @@ export const DepthOfFieldPass: React.FC<{ dof: DofConfig | null }> = ({ dof }) =
     const uniforms = {
       uScene: { value: null as THREE.Texture | null },
       uTexel: { value: new THREE.Vector2() },
-      uBlur: { value: new THREE.Vector2() },
+      uBlur: { value: new THREE.Vector3() },
+      uRampC: { value: new THREE.Vector2() },
       uRamps: { value: new THREE.Vector4() },
       uPocket: { value: new THREE.Vector4() },
       uFeather: { value: 0.4 },
@@ -244,10 +256,12 @@ export const DepthOfFieldPass: React.FC<{ dof: DofConfig | null }> = ({ dof }) =
       const layers = dof.layers ?? [];
       const a = layers[0];
       const b = layers[1];
+      const c = layers[2];
       // Blur is authored as a fraction of frame height, so it scales with
       // whatever resolution the composition is rendered at.
-      u.uBlur.value.set((a?.blur ?? 0) * h, (b?.blur ?? 0) * h);
+      u.uBlur.value.set((a?.blur ?? 0) * h, (b?.blur ?? 0) * h, (c?.blur ?? 0) * h);
       u.uRamps.value.set(a?.top ?? 0, a?.bottom ?? 0, b?.top ?? 0, b?.bottom ?? 0);
+      u.uRampC.value.set(c?.top ?? 0, c?.bottom ?? 0);
 
       if (dof.sharp) {
         u.uPocket.value.set(dof.sharp.cx, dof.sharp.cy, dof.sharp.rx, dof.sharp.ry);

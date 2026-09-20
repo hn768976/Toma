@@ -23,6 +23,6 @@
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
-    "lint": "tsc"
+    "lint": "node tools/lint-glsl.mjs && tsc"
   }
 }

@@ -241,6 +241,9 @@ export const STAGES: StageConfig[] = [
       layers: [
         { blur: 0.03, top: 0.0, bottom: 0.46 },
         { blur: 0.013, top: 0.4, bottom: 0.74 },
+        // Near field: the floor closest to camera sits in front of the
+        // focal plane and defocuses too.
+        { blur: 0.016, top: 1.0, bottom: 0.78 },
       ],
       sharp: { cx: 0.5, cy: 0.63, rx: 0.3, ry: 0.32, feather: 0.3, keepMin: 0.14 },
     },
@@ -253,9 +256,11 @@ export const STAGES: StageConfig[] = [
       // separating from the set — in the reference the stone is well below
       // the glowing field behind it. The wall is near-neutral and the
       // plinth carries the warmth.
-      wall: "#eceded",
-      plaster: "#ded5c6",
-      floor: "#d8d5cf",
+      // Near-neutral, not cream: the reference stone measures within a
+      // dozen levels of neutral, and a warm cast turns marble into clay.
+      wall: "#f3f4f4",
+      plaster: "#c3c1bd",
+      floor: "#dedddb",
       wallDistance: 3.4,
       foliage: canopy("fluted-plaster"),
     },
@@ -274,6 +279,7 @@ export const STAGES: StageConfig[] = [
       layers: [
         { blur: 0.03, top: 0.0, bottom: 0.46 },
         { blur: 0.013, top: 0.4, bottom: 0.74 },
+        { blur: 0.016, top: 1.0, bottom: 0.78 },
       ],
       sharp: { cx: 0.5, cy: 0.64, rx: 0.36, ry: 0.32, feather: 0.3, keepMin: 0.14 },
     },
@@ -286,9 +292,11 @@ export const STAGES: StageConfig[] = [
       // separating from the set — in the reference the stone is well below
       // the glowing field behind it. The wall is near-neutral and the
       // plinth carries the warmth.
-      wall: "#eceded",
-      plaster: "#ded5c6",
-      floor: "#d8d5cf",
+      // Near-neutral, not cream: the reference stone measures within a
+      // dozen levels of neutral, and a warm cast turns marble into clay.
+      wall: "#f3f4f4",
+      plaster: "#c3c1bd",
+      floor: "#dedddb",
       wallDistance: 3.4,
       foliage: canopy("fluted-plaster"),
     },

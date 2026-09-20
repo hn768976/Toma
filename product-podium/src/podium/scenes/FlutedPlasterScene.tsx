@@ -14,7 +14,7 @@ import { studioEnvironment } from "../environment";
 import { plasterNormal } from "../textures";
 import { Canopy } from "../Canopy";
 import { ContactAO } from "../ContactAO";
-import { Column, FlutedCylinder } from "../plinths/Plinths";
+import { Column, Disc, FlutedCylinder } from "../plinths/Plinths";
 import { WallFloor } from "./Stage";
 import type { FlutedPlasterParams } from "../types";
 
@@ -41,7 +41,7 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
       roughness={0.92}
       metalness={0}
       normalMap={normalMap}
-      normalScale={[0.13, 0.13] as unknown as never}
+      normalScale={[0.42, 0.42] as unknown as never}
       envMapIntensity={0.85}
     />
   );
@@ -60,7 +60,7 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
         floor={p.floor}
         wallDistance={p.wallDistance}
         roughness={0.94}
-        normalStrength={0.1}
+        normalStrength={0.26}
         seed={11}
       />
 
@@ -82,11 +82,17 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
       {p.plinth === "cylinder" ? (
         <>
           <ContactAO radius={1.3} spread={1.7} strength={0.3} />
+          {/* A plain base plate under the shaft. The reference crops its
+              base away; with the whole plinth in frame the bare fluted
+              silhouette flares like draped fabric, and a classical plinth
+              has a plate there anyway. */}
+          <Disc radius={1.36} height={0.07} bevel={0.008} material={plaster} />
           <FlutedCylinder
+            position={[0, 0.07, 0]}
             radius={1.3}
             height={1.3}
-            flutes={20}
-            fluteDepth={0.1}
+            flutes={14}
+            fluteDepth={0.11}
             fluteSharpness={2.4}
             capRadius={1.34}
             capHeight={0.055}
