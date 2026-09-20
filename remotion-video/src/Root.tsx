@@ -1,6 +1,7 @@
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
+import { ChipCompositions } from "./chip/Root.chip";
 import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
@@ -52,6 +53,7 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      <ChipCompositions />
     </>
   );
 };
