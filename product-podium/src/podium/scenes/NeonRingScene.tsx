@@ -30,7 +30,6 @@ import { useCurrentFrame } from "remotion";
 import { useMemo } from "react";
 import * as THREE from "three";
 import { discGeometry } from "../plinths/geometry";
-import { radialFalloff } from "../textures";
 import { loopPhase, loopRange } from "../loop";
 import { LOOP_FRAMES, type NeonRingParams } from "../types";
 
@@ -187,6 +186,8 @@ const NeonRing: React.FC<{
   spread: number;
   intensity: number;
   coreIntensity: number;
+  /** A reflection is a smear of light, not a second filament. */
+  showCore: boolean;
   grazing: number;
   /** Glow shells draw here — must be BEFORE the slab, so it occludes them. */
   shellOrder: number;
@@ -194,7 +195,7 @@ const NeonRing: React.FC<{
   coreOrder: number;
 }> = ({
   radius, tube, y, glow, core, segment, brightness,
-  spread, intensity, coreIntensity, grazing, shellOrder, coreOrder,
+  spread, intensity, coreIntensity, showCore, grazing, shellOrder, coreOrder,
 }) => {
   const coreUniforms = useMemo(
     () => ({
@@ -244,6 +245,7 @@ const NeonRing: React.FC<{
           />
         ))}
 
+      {showCore ? (
       <mesh position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={coreOrder}>
         <torusGeometry args={[radius, tube, 16, 320]} />
         <shaderMaterial
@@ -256,6 +258,7 @@ const NeonRing: React.FC<{
           depthTest
         />
       </mesh>
+      ) : null}
     </>
   );
 };
@@ -277,7 +280,6 @@ export const NeonRingScene: React.FC<{ params: NeonRingParams }> = ({
 
   const glow = useMemo(() => new THREE.Color(p.ring), [p.ring]);
   const core = useMemo(() => new THREE.Color(p.ringCore), [p.ringCore]);
-  const haze = useMemo(() => radialFalloff(3.2), []);
 
   const pulse = loopRange(frame, LOOP_FRAMES, p.pulseCycles, 0.88, 1.0);
   const segMain = loopPhase(frame, LOOP_FRAMES, p.travelCyclesTop, 0.0);
@@ -286,54 +288,37 @@ export const NeonRingScene: React.FC<{ params: NeonRingParams }> = ({
   // The slab floats clear of the floor, which is what separates the ring
   // from its reflection instead of fusing the two into one band.
   const lift = p.float;
-  const ringY = lift + 0.012;
-  const ringTube = 0.008;
+  // Just below the slab, with unlit gap above it: in the reference the
+  // neon sits behind and under the base rather than fused to it.
+  const ringY = lift - 0.022;
+  const ringTube = 0.0062;
 
   return (
     <>
       {/* No environment map, no fill, no floor geometry: anything that
           reaches past the podium would lift the field off true black. */}
-      <ambientLight intensity={0.07} color={p.ring} />
+      <ambientLight intensity={0.03} color={p.ring} />
       {/* A dim key from above and in front, so the slab's top face carries a
           front-to-back gradient and reads as a solid plate. */}
-      <directionalLight position={[0.3, 5, 0.5]} intensity={8.6} color="#ccd2da" />
+      <directionalLight position={[0.9, 5, -2.2]} intensity={2.9} color="#d6d2c9" />
       {/* Bounce from the ring onto the slab's underside and rim. */}
-      <pointLight position={[0, ringY + 0.02, p.disc.radius * 0.8]} intensity={0.22 * pulse} color={p.ring} decay={2} distance={2.2} />
-      <pointLight position={[0, lift + p.disc.height + 1.6, 1.8]} intensity={0.9 * pulse} color={p.ringCore} decay={2} distance={5} />
-
-      {/* A faint lift around the podium, as the reference has. Falloff
-          geometry rather than an ambient term, so it is exactly zero well
-          inside the frame edge and the corners stay at 0,0,0. */}
-      <mesh position={[0, lift + p.disc.height * 0.5, -0.4]} renderOrder={1}>
-        {/* Sized so its falloff reaches zero well inside the frame edge.
-            A larger plane keeps a residue of one level in the corners, which
-            is enough to break the screen-blend use case. */}
-        <planeGeometry args={[3.6, 2.0]} />
-        <meshBasicMaterial
-          map={haze}
-          color={p.ring}
-          transparent
-          opacity={0.08 * pulse}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          depthTest={false}
-          toneMapped={false}
-        />
-      </mesh>
+      <pointLight position={[0, ringY + 0.02, p.disc.radius * 0.8]} intensity={0.1 * pulse} color={p.ring} decay={2} distance={1.6} />
+      
 
       {/* The reflection, below: dimmer, wider, softer. */}
       <NeonRing
-        radius={p.disc.radius + ringTube * 0.6}
-        tube={ringTube * 1.15}
-        y={-ringY}
+        radius={p.disc.radius * 0.96}
+        tube={ringTube * 1.6}
+        y={-ringY * 1.15}
         glow={glow}
         core={core}
         segment={segRefl}
         brightness={pulse}
-        spread={0.05}
-        intensity={0.013}
-        coreIntensity={0.2}
-        grazing={0.9}
+        spread={0.075}
+        intensity={0.003}
+        coreIntensity={0}
+        showCore={false}
+        grazing={0.6}
         shellOrder={2}
         coreOrder={30}
       />
@@ -344,11 +329,11 @@ export const NeonRingScene: React.FC<{ params: NeonRingParams }> = ({
         <meshPhysicalMaterial
           transparent
           depthWrite
-          color="#34383e"
-          roughness={0.34}
-          metalness={0.05}
-          clearcoat={0.9}
-          clearcoatRoughness={0.18}
+          color="#34322f"
+          roughness={0.52}
+          metalness={0.02}
+          clearcoat={0.25}
+          clearcoatRoughness={0.45}
           envMapIntensity={0}
         />
       </mesh>
@@ -362,9 +347,10 @@ export const NeonRingScene: React.FC<{ params: NeonRingParams }> = ({
         core={core}
         segment={segMain}
         brightness={pulse}
-        spread={0.03}
-        intensity={0.046}
-        coreIntensity={1.15}
+        spread={0.021}
+        intensity={0.017}
+        coreIntensity={0.6}
+        showCore
         grazing={1.1}
         shellOrder={40}
         coreOrder={150}

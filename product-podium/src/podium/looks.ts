@@ -173,7 +173,7 @@ export const STAGES: StageConfig[] = [
     variant: "A",
     variantLabel: "Electric blue",
     stillFrame: 96,
-    camera: { fovDeg: LENS, height: 0.76, distance: 5.4, tiltDeg: 7.0, push: 0 },
+    camera: { fovDeg: LENS, height: 0.655, distance: 5.1, tiltDeg: 7.0, push: 0 },
     tone: { mapping: "none", exposure: 1.0 },
     // No DOF: the field is empty, so there is nothing behind the disc to
     // soften and a blur pass would only risk lifting the black.
@@ -182,11 +182,13 @@ export const STAGES: StageConfig[] = [
     clear: "#000000",
     params: {
       kind: "neon-ring",
-      ring: "#0a6bff",
-      ringCore: "#cfe6ff",
+      // Cyan-leaning: the reference core stays cyan rather than clipping
+      // to colourless white.
+      ring: "#0f8fff",
+      ringCore: "#c8f4ff",
       // Thin and wide, as the reference slab is: a thick disc reads as a
       // drum rather than a plate.
-      disc: { radius: 1.0, height: 0.13, bevel: 0.016 },
+      disc: { radius: 1.0, height: 0.055, bevel: 0.008 },
       float: 0.1,
       travelCyclesTop: 1,
       travelCyclesBottom: 2,
@@ -201,7 +203,7 @@ export const STAGES: StageConfig[] = [
     variant: "B",
     variantLabel: "Magenta",
     stillFrame: 96,
-    camera: { fovDeg: LENS, height: 0.76, distance: 5.4, tiltDeg: 7.0, push: 0 },
+    camera: { fovDeg: LENS, height: 0.655, distance: 5.1, tiltDeg: 7.0, push: 0 },
     tone: { mapping: "none", exposure: 1.0 },
     dof: null,
     grade: { grain: 0.015, vignette: 0.3 },
@@ -212,7 +214,7 @@ export const STAGES: StageConfig[] = [
       ringCore: "#ffd4ee",
       // Thin and wide, as the reference slab is: a thick disc reads as a
       // drum rather than a plate.
-      disc: { radius: 1.0, height: 0.13, bevel: 0.016 },
+      disc: { radius: 1.0, height: 0.055, bevel: 0.008 },
       float: 0.1,
       travelCyclesTop: 1,
       travelCyclesBottom: 2,

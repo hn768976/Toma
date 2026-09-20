@@ -48,13 +48,26 @@ const patternSpread = (img, x0, y0, x1, y1, cols = 8, rows = 4) => {
   return { lo, hi, spread: hi - lo };
 };
 
-/** Bright runs down a column, with near-touching runs merged. */
-const brightRuns = (img, xFrac, from, to, threshold, mergeGap = 0.012) => {
-  const x = Math.round(xFrac * img.width);
+/**
+ * Bright horizontal bands, with near-touching ones merged.
+ *
+ * Each row is reduced to its brightest pixel across the given span rather
+ * than sampled on one column. A ring seen in perspective is dimmest where
+ * it crosses the centre of frame and brightest at its left and right
+ * extremes, so a single column can miss a band that is plainly there.
+ */
+const brightRuns = (img, span, from, to, threshold, mergeGap = 0.012) => {
+  const x0 = Math.round(span[0] * img.width);
+  const x1 = Math.round(span[1] * img.width);
+  const rowPeak = (y) => {
+    let peak = 0;
+    for (let x = x0; x < x1; x++) peak = Math.max(peak, img.lum(x, y));
+    return peak;
+  };
   const runs = [];
   let start = null;
   for (let y = Math.round(from * img.height); y < Math.round(to * img.height); y++) {
-    const bright = img.lum(x, y) > threshold;
+    const bright = rowPeak(y) > threshold;
     if (bright && start === null) start = y / img.height;
     if (!bright && start !== null) {
       runs.push([start, y / img.height]);
@@ -106,7 +119,11 @@ const checks = {
     // is crossed twice — behind the top face and in front of it — and the
     // bottom ring once. What has to be true is that the bottom ring is a
     // separate structure, with unlit disc between it and the top ring.
-    const runs = brightRuns(img, 0.5, 0.3, 0.85, 120);
+    // Threshold well clear of the black field but below the reflection's
+    // peak: the reflection is meant to sit at roughly half the neon's
+    // brightness, so a high threshold would call a correct reflection
+    // missing.
+    const runs = brightRuns(img, [0.22, 0.78], 0.3, 0.9, 70);
     const gap = runs.length >= 2 ? runs[runs.length - 1][0] - runs[runs.length - 2][1] : 0;
     out.push([
       "two separate rings",
@@ -121,8 +138,8 @@ const checks = {
     // ground for a contact shadow to fall on. What marks the base instead
     // is the neon line at the slab's rim, with the slab's unlit side above
     // it, and the slab's reflection below establishing the ground plane.
-    const side = meanRect(img, 0.45, 0.505, 0.55, 0.545);
-    const ring = meanRect(img, 0.45, 0.558, 0.55, 0.572);
+    const side = meanRect(img, 0.45, 0.472, 0.55, 0.49);
+    const ring = meanRect(img, 0.45, 0.537, 0.55, 0.549);
     out.push([
       "n/a: no ground in this look — base marked by the neon rim",
       side[0] + side[1] + side[2] < ring[0] + ring[1] + ring[2],
