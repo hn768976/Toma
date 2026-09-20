@@ -165,16 +165,29 @@ if (look === "NeonRing") {
     `at frame 75: top ${(top[1] * 100).toFixed(1)}% vs bottom ${(bot[1] * 100).toFixed(1)}%`,
   );
 } else if (look === "DuotoneGlass") {
-  // The two keys breathe out of phase, so the left/right balance has to
-  // shift over the clip rather than both simply rising and falling together.
+  /*
+   * The two keys breathe out of phase, so the left/right balance has to
+   * shift over the clip rather than both rising and falling together.
+   *
+   * Sampled every 25 frames rather than at the five criteria frames. The
+   * breathing is noise on a circle in time, not a sine, so its extremes
+   * do not land on any particular frame — at five samples this reported
+   * a 2% swing on keys that are provably swinging 13% each.
+   */
   const bal = (im) => {
     const l = meanRect(im, 0.3, 0.55, 0.37, 0.64);
     const r = meanRect(im, 0.63, 0.55, 0.7, 0.64);
     return (l[0] + l[1] + l[2]) / (r[0] + r[1] + r[2]);
   };
-  const vals = FRAMES.map((f) => bal(imgs[f]));
+  const at = [];
+  for (let f = 0; f < 300; f += 25) at.push(f);
+  const vals = at.map((f) => bal(imgs[f] ?? decode(file, { frame: f })));
   const spread = Math.max(...vals) - Math.min(...vals);
-  report(spread > 0.02, "key balance shifts across the clip (keys breathe out of phase)", `L/R ratio ${vals.map((v) => v.toFixed(3)).join(" ")}`);
+  report(
+    spread > 0.02,
+    "key balance shifts across the clip (keys breathe out of phase)",
+    `L/R ratio over 12 samples: ${Math.min(...vals).toFixed(3)} to ${Math.max(...vals).toFixed(3)}, swing ${(spread * 100).toFixed(1)}%`,
+  );
 } else {
   /*
    * The gobo must actually sway. Measured as how much the wall's pixels
