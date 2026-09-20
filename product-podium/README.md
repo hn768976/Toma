@@ -205,11 +205,29 @@ same component, same generator, two data rows.
 
 ### Depth of field
 
-A masked blur over the rendered canvas, not a bokeh pass. Because the camera
-is locked, the far field occupies a fixed region of frame, so the mask is
-exact; it costs nothing per frame and cannot introduce the flicker a sampled
-DOF would. `dof.layers` ramp blur by frame height and `dof.sharp` punches out
-the elliptical pocket the plinth lives in.
+A screen-space blur whose radius varies across the frame, run as a WebGL
+pass (`src/podium/DepthOfFieldPass.tsx`). Because the camera is locked the
+far field occupies a fixed region of frame, so the radius can be a function
+of screen position alone — no depth buffer, nothing sampled temporally,
+nothing that could differ between two render threads. `dof.layers` ramp the
+blur by frame height, `dof.sharp` punches out the elliptical pocket the
+plinth lives in, and `sharp.keepMin` leaves a trace of blur inside that
+pocket so the plinth's silhouette is not razor-sharp against a soft field.
+
+**Do not reach for CSS here.** This began as a masked `backdrop-filter`,
+which is the obvious and much cheaper way to do it, and it does not work:
+Remotion's headless capture does not carry CSS paint effects applied to or
+over a WebGL canvas. Raising the blur radius 5.5× moved the wall's measured
+detail by 10%; a plain `filter: blur(20px)` wrapped round the canvas moved
+it by 8%. Both were doing nothing. DOM overlays that merely paint — the
+grain and the vignette — do survive, which is why those are still DOM.
+
+The file's header comment records the other three dead ends, all of which
+present as "the effect is just too weak": taking over the render loop with
+a priority-1 `useFrame`, `addAfterEffect` never firing, and redirecting the
+scene into a render target (which silently loses tone mapping, because
+three compiles materials with `NoToneMapping` whenever they render into
+one).
 
 ### Grain, vignette, bloom
 
