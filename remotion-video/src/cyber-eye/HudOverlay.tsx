@@ -8,6 +8,7 @@ import {
 } from "remotion";
 import type { Palette } from "./palettes";
 import { hash01 } from "./random";
+import { hudDiscRadiusPx } from "./constants";
 
 // 2D HUD chrome drawn as SVG on top of the WebGPU canvas. Coordinates are in a
 // 1920x1080 design space and scale losslessly to the 4K compositions. The
@@ -53,6 +54,9 @@ export const HudOverlay: React.FC<Props> = ({ palette }) => {
   useHudFont();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  // The layout below was designed around a 390px disc radius (1080p); scale
+  // everything that hugs the disc to the actual disc size.
+  const k = hudDiscRadiusPx(1080) / 390;
   const t = frame / fps;
   const c = palette.hud;
   const accent = palette.secondary;
@@ -119,6 +123,7 @@ export const HudOverlay: React.FC<Props> = ({ palette }) => {
       {corner(1880, 40, -1, 1)}
       {corner(40, 1040, 1, -1)}
       {corner(1880, 1040, -1, -1)}
+      <g transform={`translate(${CX} ${CY}) scale(${k.toFixed(4)}) translate(${-CX} ${-CY})`}>
 
       {/* outer guide circles and long arcs */}
       <circle cx={CX} cy={CY} r={470} stroke={c} strokeWidth={1} fill="none" opacity={0.14} strokeDasharray="4 12" />
@@ -214,6 +219,7 @@ export const HudOverlay: React.FC<Props> = ({ palette }) => {
         <rect key={`bbf-${i}`} x={1184 + i * 22} y={1004} width={4} height={4} fill={c} opacity={blink(1.3, i * 0.26, 0.5)} />
       ))}
       <line x1={1050} y1={980} x2={1290} y2={980} stroke={c} strokeWidth={1} opacity={0.35} />
+      </g>
     </svg>
   );
 };

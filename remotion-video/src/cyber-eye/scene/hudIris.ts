@@ -298,6 +298,21 @@ export const buildHudIris = (
   const disc = new Mesh(new CircleGeometry(HUD_RADIUS, 128), makeStreakMaterial(palette, time));
   group.add(disc);
 
+  // Glow halo bleeding from the disc onto the eyeball.
+  const haloMaterial = new MeshBasicNodeMaterial();
+  haloMaterial.transparent = true;
+  haloMaterial.depthWrite = false;
+  haloMaterial.blending = AdditiveBlending;
+  haloMaterial.colorNode = Fn(() => {
+    const r = length(uv().sub(0.5).mul(2));
+    const falloff = oneMinus(smoothstep(float(0.62), float(1.0), r)).mul(smoothstep(float(0.5), float(0.64), r));
+    return colorVec3(palette.primary).mul(falloff).mul(0.22);
+  })();
+  haloMaterial.opacityNode = float(1);
+  const halo = new Mesh(new CircleGeometry(HUD_RADIUS * 1.35, 96), haloMaterial);
+  halo.position.z = -0.001;
+  group.add(halo);
+
   // Opaque pupil so nothing shines through the centre.
   const pupilMaterial = new MeshBasicNodeMaterial();
   pupilMaterial.colorNode = colorVec3(palette.background);

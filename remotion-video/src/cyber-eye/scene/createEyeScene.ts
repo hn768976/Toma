@@ -1,6 +1,9 @@
 import {
   ACESFilmicToneMapping,
   Color,
+  DirectionalLight,
+  HemisphereLight,
+  PointLight,
   PerspectiveCamera,
   PostProcessing,
   Scene,
@@ -93,6 +96,17 @@ export const createEyeScene = async (
   glow.scale.set(2.6, 1.7, 1);
   glow.position.set(0.05, 0, -0.7);
   scene.add(glow);
+
+  // Lighting for the solid eyeball / lids: key from the upper left, a low
+  // fill, and the iris itself glowing onto the surrounding surfaces.
+  const key = new DirectionalLight(new Color(palette.primaryBright), palette.light ? 1.2 : 0.7);
+  key.position.set(-0.9, 1.1, 1.4);
+  scene.add(key);
+  const fill = new HemisphereLight(new Color(palette.backgroundGlow), new Color(palette.background), 0.35);
+  scene.add(fill);
+  const irisLight = new PointLight(new Color(palette.primary), palette.light ? 1.2 : 2.4, 1.6, 1.6);
+  irisLight.position.set(0, 0, 0.02);
+  scene.add(irisLight);
 
   const geometry = await loadEyeGeometry(options.modelUrl);
   const particles = buildEyeParticles(

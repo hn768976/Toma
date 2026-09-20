@@ -23,14 +23,22 @@ export const MODEL = {
 // The HUD ring system floats just in front of the sculpted iris.
 export const HUD_Z = -0.09;
 export const HUD_RADIUS = 0.27;
-// Model vertices above this height (the brow ridge) are dropped.
-export const BROW_CULL_Y = 0.21;
+// The lids fade into the background between these heights (brow ridge).
+export const BROW_FADE_BOTTOM = 0.14;
+export const BROW_FADE_TOP = 0.36;
 
-// Camera: distance chosen so the HUD disc is ~72% of the frame height, like
-// the references; the eyelids only ghost in at the edges of the frame.
+// Camera: distance chosen so the HUD disc is ~52% of the frame height and the
+// shaded eyeball and lids frame it.
 export const CAMERA = {
   fov: 30,
-  distance: 1.27,
+  distance: 1.82,
   near: 0.05,
   far: 20,
+};
+
+/** Radius of the HUD disc in pixels for a given frame height (used by the SVG overlay). */
+export const hudDiscRadiusPx = (frameHeight: number) => {
+  const visibleHeight =
+    2 * (CAMERA.distance - HUD_Z) * Math.tan((CAMERA.fov / 2) * (Math.PI / 180));
+  return (HUD_RADIUS / visibleHeight) * frameHeight;
 };

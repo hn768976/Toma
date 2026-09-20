@@ -17,6 +17,10 @@ import trimesh
 from scipy import ndimage
 
 MIN_FACES = 40
+# Small detached pieces that sit entirely below the lower lid (stray lash
+# clumps Meshy left floating in space) are dropped too.
+STRAY_MAX_FACES = 700
+STRAY_BELOW_Y = -0.22
 
 
 def find_pupil(vertices):
@@ -46,7 +50,12 @@ def find_pupil(vertices):
 def main(src, dst):
     mesh = trimesh.load(src, force="mesh")
     parts = mesh.split(only_watertight=False)
-    kept = [p for p in parts if len(p.faces) >= MIN_FACES]
+    kept = [
+        p
+        for p in parts
+        if len(p.faces) >= MIN_FACES
+        and not (len(p.faces) < STRAY_MAX_FACES and p.bounds[1][1] < STRAY_BELOW_Y)
+    ]
     print(f"components: {len(parts)} -> kept {len(kept)}")
     clean = trimesh.util.concatenate(kept)
     cx, cy, r = find_pupil(clean.vertices)

@@ -1,7 +1,9 @@
 import {
   AdditiveBlending,
   BufferGeometry,
+  DoubleSide,
   Group,
+  MeshStandardNodeMaterial,
   InstancedBufferAttribute,
   InstancedMesh,
   LineBasicNodeMaterial,
@@ -14,19 +16,25 @@ import {
 } from "three/webgpu";
 import {
   float,
+  fract,
+  hash,
+  floor,
   instancedBufferAttribute,
   length,
   positionLocal,
   sin,
   smoothstep,
+  step,
   texture,
   uv,
+  vec2,
 } from "three/tsl";
+import type { Node } from "three/webgpu";
 import { colorVec3, floatUniform, type FloatUniform } from "./tsl-helpers";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { Palette } from "../palettes";
 import { mulberry32 } from "../random";
-import { BROW_CULL_Y } from "../constants";
+import { BROW_FADE_BOTTOM, BROW_FADE_TOP } from "../constants";
 
 export type EyeParticleOptions = {
   /** Total particle budget (mesh vertices + surface samples). */
@@ -56,8 +64,17 @@ export const loadEyeGeometry = async (url: string): Promise<BufferGeometry> => {
   if (geometry === null) {
     throw new Error(`No mesh found in ${url}`);
   }
-  return geometry;
+  const found = geometry as BufferGeometry;
+  found.computeVertexNormals();
+  return found;
 };
+
+// The brow ridge and the outer lids melt into the background: 1 around the
+// eye opening, 0 above the brow / far out to the sides.
+const surroundFade = (x: Node<"float">, y: Node<"float">) =>
+  smoothstep(float(BROW_FADE_TOP), float(BROW_FADE_BOTTOM), y).mul(
+    smoothstep(float(1.0), float(0.55), length(vec2(x, y))),
+  );
 
 // Vertices alone leave the smooth eyelid surfaces sparse, so we top the cloud
 // up with area-weighted random samples on the triangles. Deterministic.
@@ -123,14 +140,7 @@ const samplePositions = (
       }
     }
   }
-  // Drop the brow ridge: only the lids, lashes and the ball should remain.
-  const kept: number[] = [];
-  for (let i = 0; i < out.length; i += 3) {
-    if (out[i + 1] <= BROW_CULL_Y) {
-      kept.push(out[i], out[i + 1], out[i + 2]);
-    }
-  }
-  return new Float32Array(kept);
+  return new Float32Array(out);
 };
 
 type LayerOptions = {
@@ -183,6 +193,7 @@ const makeSpriteLayer = ({
     .add(flicker.mul(0.45))
     .add(wave.mul(0.3))
     .mul(centreFade)
+    .mul(surroundFade(pos.x, pos.y))
     .mul(intensity);
   material.colorNode = colorVec3(hex).mul(brightness).mul(soft);
   material.opacityNode = float(1);
@@ -200,6 +211,33 @@ export const buildEyeParticles = (
 ): EyeParticles => {
   const group = new Group();
   const time = floatUniform(0);
+
+  // Solid, lit eyeball + lids underneath the dots. Dark, slightly glossy,
+  // with a faint emissive "circuit" grid on the sclera so it reads as a
+  // digital eye rather than a skin surface.
+  const skin = new MeshStandardNodeMaterial();
+  skin.roughness = 0.7;
+  skin.metalness = 0.0;
+  skin.side = DoubleSide;
+  const fade = surroundFade(positionLocal.x, positionLocal.y);
+  skin.colorNode = colorVec3(palette.skin).mul(fade);
+  const rXY = length(positionLocal.xy);
+  const lat = fract(positionLocal.y.mul(60));
+  const lon = fract(positionLocal.x.mul(60));
+  const gridLines = step(float(0.94), lat).add(step(float(0.94), lon)).min(1);
+  const cells = step(float(0.8), hash(floor(positionLocal.x.mul(60)).mul(311).add(floor(positionLocal.y.mul(60)))));
+  const sclera = smoothstep(float(0.24), float(0.3), rXY).mul(smoothstep(float(0.5), float(0.36), rXY));
+  // Where the surface fades out it glows with the background colour so it
+  // dissolves into the backdrop instead of going black.
+  skin.emissiveNode = colorVec3(palette.primary)
+    .mul(gridLines.mul(0.06).add(cells.mul(0.12)))
+    .mul(sclera)
+    .mul(fade)
+    .mul(palette.light ? 0.5 : 1)
+    .add(colorVec3(palette.background).mul(fade.oneMinus()));
+  const solid = new Mesh(geometry, skin);
+  solid.frustumCulled = false;
+  group.add(solid);
 
   const positions = samplePositions(
     geometry,
@@ -260,7 +298,7 @@ export const buildEyeParticles = (
       float(0.42),
       length(positionLocal.xy),
     )
-      .mul(smoothstep(float(BROW_CULL_Y + 0.02), float(BROW_CULL_Y - 0.03), positionLocal.y))
+      .mul(surroundFade(positionLocal.x, positionLocal.y))
       .mul(0.1 * palette.particleIntensity);
     const wire = new LineSegments(new WireframeGeometry(geometry), wireMaterial);
     wire.frustumCulled = false;
