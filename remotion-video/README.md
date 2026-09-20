@@ -11,6 +11,27 @@
 
 Welcome to your Remotion project!
 
+## Compositions
+
+| Id | What it is |
+|---|---|
+| `PodiumDisc4K` / `PodiumDisc1080` | White-studio podium backplate — thin disc, warm greige studio, 7.40s |
+| `PodiumSlab4K` / `PodiumSlab1080` | White-studio podium backplate — square plinth, cool white studio, 16.80s |
+| `PodiumCylinder4K` / `PodiumCylinder1080` | White-studio podium backplate — cylinder, cool white studio, 16.80s |
+| `BluetoothExplainer` | Hand-drawn "How Bluetooth Works" explainer, 30s |
+| `ParticleRingHalo` / `ParticleRingHalo4K` | Abstract particle-ring motion graphic |
+
+The podium compositions are a Remotion + three.js + **WebGPU** (TSL node
+materials) build — see [`src/studio/README.md`](./src/studio/README.md) for how
+the look was derived from the reference clips, and
+[`tools/reference-match/`](./tools/reference-match/README.md) for the harness
+that keeps those numbers checkable.
+
+```console
+npm run render:all       # three 1080p H.264 MP4s
+npm run render:all-4k    # the same three at 3840x2160
+```
+
 ## Commands
 
 **Install Dependencies**

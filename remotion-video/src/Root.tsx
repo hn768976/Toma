@@ -1,3 +1,4 @@
+import React from "react";
 import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
@@ -18,6 +19,12 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  StudioPodium,
+  studioPodiumSchema,
+  VARIANTS,
+  FPS as STUDIO_FPS,
+} from "./studio";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -52,6 +59,37 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      {/*
+        White-studio podium backplates, one per reference clip. Each variant is
+        registered twice: a 4K composition (the master, shipped in the project)
+        and a 1080p composition (the delivered render). Same component, same
+        seed, same scene - only the raster size differs, so the 1080p render is
+        a true downscale of the 4K master's framing rather than a re-layout.
+      */}
+      {VARIANTS.map((spec) => (
+        <React.Fragment key={spec.id}>
+          <Composition
+            id={`${spec.id}4K`}
+            component={StudioPodium}
+            durationInFrames={spec.durationInFrames}
+            fps={STUDIO_FPS}
+            width={3840}
+            height={2160}
+            schema={studioPodiumSchema}
+            defaultProps={{ variant: spec.id, forceWebGL: false }}
+          />
+          <Composition
+            id={`${spec.id}1080`}
+            component={StudioPodium}
+            durationInFrames={spec.durationInFrames}
+            fps={STUDIO_FPS}
+            width={1920}
+            height={1080}
+            schema={studioPodiumSchema}
+            defaultProps={{ variant: spec.id, forceWebGL: false }}
+          />
+        </React.Fragment>
+      ))}
     </>
   );
 };
