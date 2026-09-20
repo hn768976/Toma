@@ -15,7 +15,7 @@ import { FONT_FAMILY, FONT_WEIGHT } from '../lib/useNeonFont';
  */
 export const TEXT_TRANSFORM = {
   /** World position of the LEFT edge of the word, at its cap centre. */
-  anchor: [-3.9, 5.85, 1.4] as [number, number, number],
+  anchor: [-3.9, 5.25, 1.4] as [number, number, number],
   rotationY: 0,
   /** World height of a capital letter. */
   capHeight: 0.92,
