@@ -99,12 +99,12 @@ export const createEyeScene = async (
 
   // Lighting for the solid eyeball / lids: key from the upper left, a low
   // fill, and the iris itself glowing onto the surrounding surfaces.
-  const key = new DirectionalLight(new Color(palette.primary), palette.light ? 0.7 : 0.45);
+  const key = new DirectionalLight(new Color(palette.primary), palette.light ? 0.6 : 0.4);
   key.position.set(-0.9, 1.1, 1.4);
   scene.add(key);
-  const fill = new HemisphereLight(new Color(palette.primary), new Color(palette.background), 0.3);
+  const fill = new HemisphereLight(new Color(palette.primary), new Color(palette.background), 0.55);
   scene.add(fill);
-  const irisLight = new PointLight(new Color(palette.primary), palette.light ? 1.0 : 2.2, 1.4, 1.6);
+  const irisLight = new PointLight(new Color(palette.primary), palette.light ? 1.0 : 2.6, 1.6, 1.4);
   irisLight.position.set(0, 0, 0.02);
   scene.add(irisLight);
 

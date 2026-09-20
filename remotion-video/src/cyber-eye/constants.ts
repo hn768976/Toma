@@ -27,11 +27,11 @@ export const HUD_RADIUS = 0.27;
 export const BROW_FADE_BOTTOM = 0.14;
 export const BROW_FADE_TOP = 0.36;
 
-// Camera: distance chosen so the HUD disc is ~52% of the frame height and the
-// shaded eyeball and lids frame it.
+// Camera: distance chosen so the eye fills the frame (lids run off both
+// sides) and the HUD disc is ~62% of the frame height.
 export const CAMERA = {
   fov: 30,
-  distance: 1.82,
+  distance: 1.52,
   near: 0.05,
   far: 20,
 };

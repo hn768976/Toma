@@ -52,7 +52,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.35,
     bloomThreshold: 0.7,
     exposure: 0.85,
-    particleIntensity: 0.12,
+    particleIntensity: 0.08,
   },
   crimson: {
     id: "crimson",
@@ -71,7 +71,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.7,
     bloomThreshold: 0.35,
     exposure: 0.92,
-    particleIntensity: 0.1,
+    particleIntensity: 0.06,
   },
   navy: {
     id: "navy",
@@ -90,7 +90,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.7,
     bloomThreshold: 0.35,
     exposure: 0.92,
-    particleIntensity: 0.1,
+    particleIntensity: 0.06,
   },
   green: {
     id: "green",
@@ -109,7 +109,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.7,
     bloomThreshold: 0.35,
     exposure: 0.92,
-    particleIntensity: 0.1,
+    particleIntensity: 0.06,
   },
 };
 

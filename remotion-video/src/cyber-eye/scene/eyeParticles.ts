@@ -216,12 +216,16 @@ export const buildEyeParticles = (
   // with a faint emissive "circuit" grid on the sclera so it reads as a
   // digital eye rather than a skin surface.
   const skin = new MeshStandardNodeMaterial();
-  skin.roughness = 0.7;
+  skin.roughness = 0.92;
   skin.metalness = 0.0;
   skin.side = DoubleSide;
   const fade = surroundFade(positionLocal.x, positionLocal.y);
-  skin.colorNode = colorVec3(palette.skin).mul(fade);
   const rXY = length(positionLocal.xy);
+  // Broad, soft shading: the surface darkens away from the iris and under
+  // the upper lid so fine sculpt detail melts into gradients.
+  const radialShade = smoothstep(float(0.85), float(0.28), rXY).mul(0.7).add(0.3);
+  const lidShadow = smoothstep(float(0.3), float(0.04), positionLocal.y).mul(0.55).add(0.45);
+  skin.colorNode = colorVec3(palette.skin).mul(fade).mul(radialShade).mul(lidShadow);
   const lat = fract(positionLocal.y.mul(60));
   const lon = fract(positionLocal.x.mul(60));
   const gridLines = step(float(0.94), lat).add(step(float(0.94), lon)).min(1);
@@ -230,7 +234,7 @@ export const buildEyeParticles = (
   // Where the surface fades out it glows with the background colour so it
   // dissolves into the backdrop instead of going black.
   skin.emissiveNode = colorVec3(palette.primary)
-    .mul(gridLines.mul(0.06).add(cells.mul(0.12)))
+    .mul(gridLines.mul(0.03).add(cells.mul(0.05)))
     .mul(sclera)
     .mul(fade)
     .mul(palette.light ? 0.5 : 1)
@@ -283,8 +287,8 @@ export const buildEyeParticles = (
       positions: hazePos,
       seeds: hazeSeeds,
       color: palette.particle,
-      size: options.dotSize * 10,
-      intensity: palette.particleIntensity * 0.16,
+      size: options.dotSize * 12,
+      intensity: palette.particleIntensity * 0.2,
       dotTexture,
       time,
     }),
