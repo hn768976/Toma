@@ -87,7 +87,7 @@ a good point:
 npx remotion still BlindShadow-PodiumA     out/BlindShadow_PodiumA.png     --frame=96  --scale=1.5625
 npx remotion still HaloRing-PodiumCyan     out/HaloRing_PodiumCyan.png     --frame=38  --scale=1.5625
 npx remotion still NeonTier-PodiumCyan     out/NeonTier_PodiumCyan.png     --frame=120 --scale=1.5625
-npx remotion still BubbleDrift-PodiumLilac out/BubbleDrift_PodiumLilac.png --frame=150 --scale=1.5625
+npx remotion still BubbleDrift-PodiumLilac out/BubbleDrift_PodiumLilac.png --frame=40  --scale=1.5625
 ```
 
 `--scale=1.5625` renders **6000×3375** from the 3840×2160 composition

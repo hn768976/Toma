@@ -234,7 +234,7 @@ export const LOOKS: LookDefinition[] = [
       exposure: 1.06,
       envIntensity: 0.9,
     },
-    stillFrame: 150,
+    stillFrame: 40,
     pushIn: 0,
     palettes: [
       {
