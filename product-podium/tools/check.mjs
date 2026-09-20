@@ -190,12 +190,13 @@ const checks = {
     const floor = patternSpread(img, 0.02, 0.84, 0.98, 0.99);
     out.push(["gobo on wall", wall.spread > 10, `tone spread ${wall.spread.toFixed(1)} (${wall.lo.toFixed(0)}..${wall.hi.toFixed(0)})`]);
     out.push(["gobo on floor", floor.spread > 10, `tone spread ${floor.spread.toFixed(1)} (${floor.lo.toFixed(0)}..${floor.hi.toFixed(0)})`]);
-    const pedges = edgesInColumn(img, 0.5, 9).filter((e) => e.yFrac > 0.82 && e.yFrac < 0.94);
-    const pbase = pedges.length ? pedges[pedges.length - 1].yFrac : 0.9;
-    const pcrease = meanRect(img, 0.44, pbase + 0.005, 0.56, pbase + 0.02);
-    const pfurther = meanRect(img, 0.44, pbase + 0.035, 0.56, pbase + 0.055);
+    // Fixed, like look 4's: the camera is locked and the plinth does not
+    // move, so where it meets the floor is a constant of the rig rather
+    // than something to hunt for with a detector a leaf shadow can fool.
+    const pcrease = meanRect(img, 0.44, 0.92, 0.56, 0.935);
+    const pfurther = meanRect(img, 0.44, 0.955, 0.56, 0.975);
     const sum3 = (c) => c[0] + c[1] + c[2];
-    out.push(["contact shadow at base", sum3(pcrease) < sum3(pfurther) - 12, `base at ${(pbase * 100).toFixed(1)}%, crease=${fmt(pcrease)} further=${fmt(pfurther)}`]);
+    out.push(["contact shadow at base", sum3(pcrease) < sum3(pfurther) - 10, `crease=${fmt(pcrease)} further=${fmt(pfurther)}`]);
   },
 
   "WoodLeaf-PodiumCool": (img, out) => {

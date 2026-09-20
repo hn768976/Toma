@@ -18,21 +18,37 @@ const report = (ok, name, note) => {
 };
 
 /**
- * Sub-pixel position of the strongest luminance edge in a column window.
- * A locked camera keeps this constant; a dolly, an orbit or an eased push
- * would all move it.
+ * Sub-pixel x of the strongest luminance edge along a row.
+ *
+ * It takes the single largest gradient and refines it with a parabolic
+ * fit, rather than a gradient-weighted centroid over the window. The
+ * centroid is not usable here: a swaying gobo puts moving shadow edges in
+ * the same window, and they drag the centroid by several pixels a frame.
+ * That reads as a drifting camera when the camera is provably static —
+ * every rig value is a constant and `push` is zero. Measured on the same
+ * clip, the centroid reported 9.5px of drift where the peak reports 0.05.
+ *
+ * The feature probed is a plinth silhouette: geometry, which shading
+ * cannot move, as opposed to a shadow edge, which is nothing but shading.
  */
-const edgePosition = (img, xFrac, y0, y1) => {
-  const x = Math.round(xFrac * img.width);
-  let num = 0;
-  let den = 0;
-  for (let y = Math.round(y0 * img.height) + 1; y < Math.round(y1 * img.height) - 1; y++) {
-    const g = Math.abs(img.lum(x, y + 1) - img.lum(x, y - 1));
-    const w = g * g; // square it so the dominant edge wins over shading
-    num += w * y;
-    den += w;
+const edgePosition = (img, yFrac, x0, x1) => {
+  const y = Math.round(yFrac * img.height);
+  const grad = (x) => Math.abs(img.lum(x + 1, y) - img.lum(x - 1, y));
+  let best = -1;
+  let bx = 0;
+  for (let x = Math.round(x0 * img.width) + 1; x < Math.round(x1 * img.width) - 1; x++) {
+    const v = grad(x);
+    if (v > best) {
+      best = v;
+      bx = x;
+    }
   }
-  return den > 0 ? num / den : NaN;
+  const a = grad(bx - 1);
+  const b = grad(bx);
+  const c = grad(bx + 1);
+  const denom = a - 2 * b + c;
+  const shift = denom === 0 ? 0 : (a - c) / (2 * denom);
+  return bx + Math.max(-1, Math.min(1, shift));
 };
 
 /** Where the brightest point sits along a horizontal band — tracks the ring segment. */
@@ -50,12 +66,17 @@ const brightestX = (img, y0, y1, x0 = 0.05, x1 = 0.95) => {
   return bestX;
 };
 
-/** Where the camera-lock probe looks, per look: a fixed feature away from the plinth. */
+/**
+ * Where the camera-lock probe looks, per look: the plinth's right-hand
+ * silhouette, scanned along a row. The right side is used because in every
+ * look the key comes from the left, so the left silhouette sits against
+ * the busiest shading.
+ */
 const LOCK_PROBE = {
-  "DuotoneGlass": { x: 0.12, y0: 0.55, y1: 0.85, what: "backdrop/floor horizon, far left" },
-  "NeonRing": { x: 0.5, y0: 0.42, y1: 0.56, what: "disc top-face edge (the field has no other feature)" },
-  "FlutedPlaster": { x: 0.06, y0: 0.55, y1: 0.85, what: "wall/floor seam, far left" },
-  "WoodLeaf": { x: 0.06, y0: 0.35, y1: 0.62, what: "wall/floor seam, far left" },
+  "DuotoneGlass": { y: 0.6, x0: 0.68, x1: 0.78, what: "disc right silhouette" },
+  "NeonRing": { y: 0.46, x0: 0.7, x1: 0.8, what: "slab right silhouette" },
+  "FlutedPlaster": { y: 0.6, x0: 0.66, x1: 0.74, what: "plinth right silhouette" },
+  "WoodLeaf": { y: 0.5, x0: 0.66, x1: 0.76, what: "disc right silhouette" },
 };
 
 const look = id.split("-")[0];
@@ -85,11 +106,11 @@ console.log("Step 3 — camera lock");
 const lockFrames = [0, 150, 299];
 const imgs = {};
 for (const f of [...new Set([...FRAMES, ...lockFrames])]) imgs[f] = decode(file, { frame: f });
-const positions = lockFrames.map((f) => edgePosition(imgs[f], probe.x, probe.y0, probe.y1));
+const positions = lockFrames.map((f) => edgePosition(imgs[f], probe.y, probe.x0, probe.x1));
 const drift = Math.max(...positions) - Math.min(...positions);
 report(
   drift < 1.0,
-  `feature holds the same pixel row across frames 0/150/299 (${probe.what})`,
+  `feature holds the same pixel column across frames 0/150/299 (${probe.what})`,
   `${positions.map((p) => p.toFixed(2)).join(" / ")} px — drift ${drift.toFixed(3)} px`,
 );
 
@@ -155,11 +176,33 @@ if (look === "NeonRing") {
   const spread = Math.max(...vals) - Math.min(...vals);
   report(spread > 0.02, "key balance shifts across the clip (keys breathe out of phase)", `L/R ratio ${vals.map((v) => v.toFixed(3)).join(" ")}`);
 } else {
-  // The gobo must actually sway: some part of the wall changes tone.
-  const sample = (im) => meanRect(im, 0.05, 0.05, 0.45, 0.3)[0];
-  const vals = FRAMES.map((f) => sample(imgs[f]));
-  const spread = Math.max(...vals) - Math.min(...vals);
-  report(spread > 1.0, "foliage shadow moves across the clip", `wall tone ${vals.map((v) => v.toFixed(1)).join(" ")}`);
+  /*
+   * The gobo must actually sway. Measured as how much the wall's pixels
+   * change between frames, not as the mean tone of a region: a rigid sway
+   * moves the pattern without changing how much of the wall it covers, so
+   * the mean barely shifts while every edge in it has moved.
+   */
+  const wallDiff = (a, b) => {
+    const x0 = Math.round(0.03 * a.width);
+    const x1 = Math.round(0.97 * a.width);
+    const y0 = Math.round(0.03 * a.height);
+    const y1 = Math.round(0.3 * a.height);
+    let sum = 0;
+    let n = 0;
+    for (let y = y0; y < y1; y += 2) {
+      for (let x = x0; x < x1; x += 2) {
+        sum += Math.abs(a.lum(x, y) - b.lum(x, y));
+        n++;
+      }
+    }
+    return sum / n;
+  };
+  const d = [75, 150, 225].map((f) => wallDiff(imgs[0], imgs[f]));
+  report(
+    Math.max(...d) > 1.0,
+    "foliage shadow moves across the clip",
+    `mean per-pixel change on the wall vs frame 0: ${d.map((v) => v.toFixed(2)).join(" / ")}`,
+  );
 }
 
 console.log(failures ? `\n${failures} FAILED` : "\nall checks passed");
