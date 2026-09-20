@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { PALETTE } from '../lib/palette';
+import { useTheme } from './theme';
 import { mulberry32, range, type Rng } from '../lib/rng';
 
 const GRID = 74; // cells across, centred on the processor
@@ -52,6 +52,7 @@ const packPlates = (rng: Rng): Rect[] => {
 const toWorld = (cell: number) => (cell - GRID / 2) * CELL;
 
 export const Board: React.FC = () => {
+  const { palette, blockGlowIntensity } = useTheme();
   const { plates, blocks, glowBlocks } = useMemo(() => {
     const rng = mulberry32(20260920);
     const rects = packPlates(rng);
@@ -119,7 +120,7 @@ export const Board: React.FC = () => {
         <mesh key={p.key} position={[p.cx, p.h / 2, p.cz]} castShadow receiveShadow>
           <boxGeometry args={[p.w, p.h, p.d]} />
           <meshStandardMaterial
-            color={p.alt ? PALETTE.boardPlateAlt : PALETTE.boardPlate}
+            color={p.alt ? palette.boardPlateAlt : palette.boardPlate}
             roughness={0.72}
             metalness={0.18}
           />
@@ -130,7 +131,7 @@ export const Board: React.FC = () => {
         <mesh key={b.key} position={[b.cx, 0.3 + b.h / 2, b.cz]} castShadow receiveShadow>
           <boxGeometry args={[b.w, b.h, b.d]} />
           <meshStandardMaterial
-            color={b.alt ? PALETTE.blockAlt : PALETTE.block}
+            color={b.alt ? palette.blockAlt : palette.block}
             roughness={0.66}
             metalness={0.22}
           />
@@ -141,9 +142,9 @@ export const Board: React.FC = () => {
         <mesh key={g.key} position={[g.cx, 0.3 + g.h / 2, g.cz]}>
           <boxGeometry args={[g.s, g.h, g.s]} />
           <meshStandardMaterial
-            color={PALETTE.blockGlow}
-            emissive={new THREE.Color(PALETTE.blockGlow)}
-            emissiveIntensity={0.08}
+            color={palette.blockGlow}
+            emissive={new THREE.Color(palette.blockGlow)}
+            emissiveIntensity={blockGlowIntensity}
             roughness={0.5}
             metalness={0.05}
           />

@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, DepthOfField } from '@react-three/postprocessing';
 import { KernelSize } from 'postprocessing';
-import { PALETTE } from '../lib/palette';
-import type { NeonKey } from '../lib/palette';
+import { THEMES } from '../lib/palette';
+import type { NeonKey, ThemeKey } from '../lib/palette';
+import { ThemeProvider } from './theme';
 import { Board } from './Board';
 import { Processor } from './Processor';
 import { Traces } from './Traces';
@@ -58,23 +59,35 @@ type Props = {
   /** Scales effect radii so 4K matches 1080p visually. */
   resolutionScale: number;
   postprocessing: boolean;
+  theme: ThemeKey;
+  /** Size of the processor sitting under the word. */
+  hubScale: number;
 };
 
-export const Stage: React.FC<Props> = ({ word, variant, resolutionScale, postprocessing }) => {
+export const Stage: React.FC<Props> = ({
+  word,
+  variant,
+  resolutionScale,
+  postprocessing,
+  theme,
+  hubScale,
+}) => {
+  const { atmosphere, light } = THEMES[theme];
   return (
-    <>
+    <ThemeProvider theme={theme}>
       <Rig />
-      <color attach="background" args={['#35485f']} />
+      <color attach="background" args={[atmosphere.colour]} />
       {/* Haze hides the far edge of the board and lifts the distance, the way
-          the reference fades out toward the top of frame. */}
-      <fogExp2 attach="fog" args={['#35485f', 0.0138]} />
+          the reference fades out toward the top of frame. Background and fog
+          share a colour so the horizon has no seam. */}
+      <fogExp2 attach="fog" args={[atmosphere.colour, atmosphere.density]} />
 
-      <ambientLight intensity={0.1} color="#8fa4c8" />
-      <hemisphereLight args={['#a8bcdc', '#070a0f', 0.45]} />
+      <ambientLight intensity={light.ambient} color="#8fa4c8" />
+      <hemisphereLight args={[light.hemiSky, light.hemiGround, light.hemisphere]} />
       <directionalLight
         position={[-13, 16, 10]}
-        intensity={4.3}
-        color="#eef3ff"
+        intensity={light.key}
+        color={light.keyColour}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-22}
@@ -85,12 +98,12 @@ export const Stage: React.FC<Props> = ({ word, variant, resolutionScale, postpro
         shadow-camera-far={55}
         shadow-bias={-0.0007}
       />
-      <directionalLight position={[15, 8, -12]} intensity={0.3} color="#7f9bd6" />
-      <directionalLight position={[4, 6, 16]} intensity={0.2} color="#a8bce0" />
+      <directionalLight position={[15, 8, -12]} intensity={light.fillWarm} color="#7f9bd6" />
+      <directionalLight position={[4, 6, 16]} intensity={light.fillCool} color="#a8bce0" />
 
       <Board />
       <Traces />
-      <group scale={1.55}>
+      <group scale={hubScale}>
         <Processor />
       </group>
       <Sparks />
@@ -115,6 +128,6 @@ export const Stage: React.FC<Props> = ({ word, variant, resolutionScale, postpro
           />
         </EffectComposer>
       ) : null}
-    </>
+    </ThemeProvider>
   );
 };

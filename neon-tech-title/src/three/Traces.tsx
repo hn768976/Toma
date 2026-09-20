@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import { PALETTE } from '../lib/palette';
+import { useTheme } from './theme';
 import { mulberry32, range } from '../lib/rng';
 
 const LENGTH = 62; // long enough to run clean off both sides of frame
@@ -22,6 +22,7 @@ type Trace = {
  * scattered blocks occlude them, exactly as in the reference.
  */
 export const Traces: React.FC = () => {
+  const { palette, traceIntensity } = useTheme();
   const traces = useMemo<Trace[]>(() => {
     const rng = mulberry32(776644);
     const out: Trace[] = [];
@@ -30,7 +31,7 @@ export const Traces: React.FC = () => {
     offsets.forEach((offset, i) => {
       out.push({
         key: `x${i}`,
-        colour: i % 2 === 0 ? PALETTE.traceRed : PALETTE.traceBlue,
+        colour: i % 2 === 0 ? palette.traceRed : palette.traceBlue,
         offset,
         alongX: true,
         y: range(rng, 0.36, 0.44),
@@ -41,7 +42,7 @@ export const Traces: React.FC = () => {
     [-8.1, 0.9, 10.4].forEach((offset, i) => {
       out.push({
         key: `z${i}`,
-        colour: i % 2 === 0 ? PALETTE.traceBlue : PALETTE.traceRed,
+        colour: i % 2 === 0 ? palette.traceBlue : palette.traceRed,
         offset,
         alongX: false,
         y: range(rng, 0.36, 0.44),
@@ -67,7 +68,7 @@ export const Traces: React.FC = () => {
             <meshStandardMaterial
               color={t.colour}
               emissive={new THREE.Color(t.colour)}
-              emissiveIntensity={0.62}
+              emissiveIntensity={traceIntensity}
               roughness={0.4}
               toneMapped={false}
             />

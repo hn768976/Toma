@@ -11,6 +11,10 @@
     "render:1080:technology": "remotion render TechnologyRed1080 out/TECHNOLOGY_1080p.mp4 --muted",
     "render:4k:innovation": "remotion render InnovationBlue4K out/INNOVATION_4K.mp4 --muted",
     "render:4k:technology": "remotion render TechnologyRed4K out/TECHNOLOGY_4K.mp4 --muted",
+    "render:1080:innovation-dark": "remotion render InnovationBlueDark1080 out/INNOVATION_DARK_1080p.mp4 --muted",
+    "render:1080:technology-dark": "remotion render TechnologyRedDark1080 out/TECHNOLOGY_DARK_1080p.mp4 --muted",
+    "render:4k:innovation-dark": "remotion render InnovationBlueDark4K out/INNOVATION_DARK_4K.mp4 --muted",
+    "render:4k:technology-dark": "remotion render TechnologyRedDark4K out/TECHNOLOGY_DARK_4K.mp4 --muted",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

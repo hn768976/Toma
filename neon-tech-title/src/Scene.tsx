@@ -2,7 +2,7 @@ import React from 'react';
 import { AbsoluteFill, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
 import { ThreeWebGPUCanvas } from '@remotion/three/webgpu';
-import { PALETTE, type NeonKey } from './lib/palette';
+import { THEMES, type NeonKey, type ThemeKey } from './lib/palette';
 import { Stage } from './three/Stage';
 import { CAMERA, FAR } from './three/Stage';
 import { useBackend, type Backend } from './three/backend';
@@ -14,12 +14,24 @@ export type SceneProps = {
   /** 'auto' probes WebGPU first and falls back to WebGL2 then WebGL. */
   backend: Backend | 'auto';
   postprocessing: boolean;
+  /** 'standard' matches the reference grade; 'dark' is the deeper variant. */
+  theme: ThemeKey;
+  /** Size of the processor sitting under the word. */
+  hubScale: number;
 };
 
-export const Scene: React.FC<SceneProps> = ({ word, variant, backend, postprocessing }) => {
+export const Scene: React.FC<SceneProps> = ({
+  word,
+  variant,
+  backend,
+  postprocessing,
+  theme,
+  hubScale,
+}) => {
   const { width, height } = useVideoConfig();
   const resolved = useBackend(backend);
   const fontReady = useNeonFont();
+  const backdrop = THEMES[theme].atmosphere.colour;
 
   // The 4K comp is a straight 2x of 1080p, so effect radii are scaled to match.
   const resolutionScale = width / 1920;
@@ -32,7 +44,7 @@ export const Scene: React.FC<SceneProps> = ({ word, variant, backend, postproces
 
   // Mount the canvas only once both the backend and the font are settled.
   if (resolved === null || !fontReady) {
-    return <AbsoluteFill style={{ backgroundColor: PALETTE.bg }} />;
+    return <AbsoluteFill style={{ backgroundColor: backdrop }} />;
   }
 
   const stage = (
@@ -41,11 +53,13 @@ export const Scene: React.FC<SceneProps> = ({ word, variant, backend, postproces
       variant={variant}
       resolutionScale={resolutionScale}
       postprocessing={postprocessing}
+      theme={theme}
+      hubScale={hubScale}
     />
   );
 
   return (
-    <AbsoluteFill style={{ backgroundColor: PALETTE.bg }}>
+    <AbsoluteFill style={{ backgroundColor: backdrop }}>
       {resolved === 'webgpu' ? (
         <ThreeWebGPUCanvas
           width={width}

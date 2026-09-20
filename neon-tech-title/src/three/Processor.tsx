@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
 import { useCurrentFrame, useVideoConfig } from 'remotion';
-import { PALETTE } from '../lib/palette';
+import { usePalette } from './theme';
 import { loopAngle, loopSin } from '../lib/timing';
 
 const CHEVRON_COUNT = 30;
@@ -83,11 +83,13 @@ const Arc: React.FC<{
   length: number;
   y: number;
   opacity?: number;
-}> = ({ inner, outer, start, length, y, opacity = 0.95 }) => (
+}> = ({ inner, outer, start, length, y, opacity = 0.95 }) => {
+  const palette = usePalette();
+  return (
   <mesh position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
     <ringGeometry args={[inner, outer, 128, 1, start, length]} />
     <meshStandardMaterial
-      color={PALETTE.arc}
+      color={palette.arc}
       roughness={0.62}
       metalness={0.04}
       transparent
@@ -95,9 +97,11 @@ const Arc: React.FC<{
       side={THREE.DoubleSide}
     />
   </mesh>
-);
+  );
+};
 
 export const Processor: React.FC = () => {
+  const palette = usePalette();
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const chevronGeo = useChevronGeometry();
@@ -109,9 +113,9 @@ export const Processor: React.FC = () => {
   const dotSpin = loopAngle(frame, durationInFrames, -1);
   const pulse = loopSin(frame, durationInFrames, 6) * 0.5 + 0.5;
 
-  const L = PALETTE.metalLight;
-  const M = PALETTE.metalMid;
-  const D = PALETTE.metalDark;
+  const L = palette.metalLight;
+  const M = palette.metalMid;
+  const D = palette.metalDark;
 
   const WELL_R = 0.56;
   const WELL_FLOOR = 1.6;
@@ -150,8 +154,8 @@ export const Processor: React.FC = () => {
       <mesh position={[0, 1.58, 0]}>
         <cylinderGeometry args={[1.58, 1.58, 0.05, 96]} />
         <meshStandardMaterial
-          color={PALETTE.coreHot}
-          emissive={new THREE.Color(PALETTE.core)}
+          color={palette.coreHot}
+          emissive={new THREE.Color(palette.core)}
           emissiveIntensity={1.0 + pulse * 0.55}
           roughness={0.3}
           toneMapped={false}
@@ -178,8 +182,8 @@ export const Processor: React.FC = () => {
       <mesh position={[0, WELL_FLOOR, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[WELL_R * 0.92, 64]} />
         <meshStandardMaterial
-          color={PALETTE.coreHot}
-          emissive={new THREE.Color(PALETTE.core)}
+          color={palette.coreHot}
+          emissive={new THREE.Color(palette.core)}
           emissiveIntensity={1.8 + pulse * 1.3}
           roughness={0.2}
           toneMapped={false}
@@ -187,7 +191,7 @@ export const Processor: React.FC = () => {
       </mesh>
       <pointLight
         position={[0, 1.95, 0]}
-        color={PALETTE.core}
+        color={palette.core}
         intensity={4.5 + pulse * 3}
         distance={8}
         decay={2}
@@ -231,7 +235,7 @@ export const Processor: React.FC = () => {
         >
           <cylinderGeometry args={[0, 0.34, 0.46, 3]} />
           <meshStandardMaterial
-            color={PALETTE.arc}
+            color={palette.arc}
             roughness={0.62}
             metalness={0.04}
             transparent

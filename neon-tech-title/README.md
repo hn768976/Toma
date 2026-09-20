@@ -3,10 +3,15 @@
 Two seamless-loop 3D title cards, rebuilt from scratch to match a pair of
 reference clips:
 
-| Version | Word         | Neon      |
-|---------|--------------|-----------|
-| v1      | `INNOVATION` | ice blue  |
-| v2      | `TECHNOLOGY` | coral red |
+| Version | Word         | Neon      | Grade                      |
+|---------|--------------|-----------|----------------------------|
+| v1      | `INNOVATION` | ice blue  | standard (matches ref)     |
+| v2      | `TECHNOLOGY` | coral red | standard (matches ref)     |
+| v3      | `INNOVATION` | ice blue  | dark, smaller hub          |
+| v4      | `TECHNOLOGY` | coral red | dark, smaller hub          |
+
+v3 and v4 are variations of v1 and v2: the same scene, geometry and motion,
+graded deeper and with the processor sitting a little smaller under the word.
 
 A dark slate-blue circuit board of tiled plates and scattered blocks, a
 multi-layered processor at the centre (concentric silver rings, a glowing
@@ -53,16 +58,43 @@ near-circular `O`, barred `G`, matching the reference letterforms.
 
 ## Compositions
 
-| id                   | Resolution | Purpose           |
-|----------------------|------------|-------------------|
-| `InnovationBlue1080` | 1920×1080  | delivery          |
-| `TechnologyRed1080`  | 1920×1080  | delivery          |
-| `InnovationBlue4K`   | 3840×2160  | 4K master         |
-| `TechnologyRed4K`    | 3840×2160  | 4K master         |
+| id                        | Resolution | Version |
+|---------------------------|------------|---------|
+| `InnovationBlue1080`      | 1920×1080  | v1      |
+| `TechnologyRed1080`       | 1920×1080  | v2      |
+| `InnovationBlueDark1080`  | 1920×1080  | v3      |
+| `TechnologyRedDark1080`   | 1920×1080  | v4      |
+| `InnovationBlue4K`        | 3840×2160  | v1      |
+| `TechnologyRed4K`         | 3840×2160  | v2      |
+| `InnovationBlueDark4K`    | 3840×2160  | v3      |
+| `TechnologyRedDark4K`     | 3840×2160  | v4      |
 
-All four are 283 frames @ 30 fps. The 4K comps are a straight 2× of the 1080p
+All eight are 283 frames @ 30 fps. The 4K comps are a straight 2× of the 1080p
 ones — same scene, same camera — with effect radii scaled by `resolutionScale`
 so the bloom and depth-of-field match visually rather than doubling in pixels.
+
+### Themes and the hub
+
+Every composition is the same `Scene` driven by props, so there is one scene to
+maintain rather than four:
+
+| prop       | values                    | effect                                     |
+|------------|---------------------------|--------------------------------------------|
+| `word`     | any string                | the typed word                              |
+| `variant`  | `blue` \| `red`           | neon fill and glow                          |
+| `theme`    | `standard` \| `dark`      | palette, fog and the whole lighting rig     |
+| `hubScale` | number (1.55 / 1.3)       | size of the processor under the word        |
+
+Themes live in `src/lib/palette.ts` as complete looks — albedos, fog colour and
+density, and every light intensity — not just swapped colours, because taking
+the board down without also easing the key light just produces mud. Measured
+across a frame, `dark` lands at mean luminance 61 against `standard`'s 100,
+while keeping highlights alive (p95 167 vs 218).
+
+The theme reaches the meshes through a context provider mounted **inside** the
+three.js canvas (`src/three/theme.tsx`). React context does not cross from the
+DOM tree into the react-three-fiber reconciler on its own, so a provider placed
+around `<ThreeCanvas>` would not be seen by anything in the scene.
 
 ---
 
@@ -72,12 +104,16 @@ so the bloom and depth-of-field match visually rather than doubling in pixels.
 npm install
 
 # 1080p delivery
-npm run render:1080:innovation
-npm run render:1080:technology
+npm run render:1080:innovation        # v1
+npm run render:1080:technology        # v2
+npm run render:1080:innovation-dark   # v3
+npm run render:1080:technology-dark   # v4
 
 # 4K masters
 npm run render:4k:innovation
 npm run render:4k:technology
+npm run render:4k:innovation-dark
+npm run render:4k:technology-dark
 ```
 
 Output is H.264 / MP4, yuv420p, CRF 16.
@@ -136,12 +172,13 @@ src/
   Root.tsx               the four compositions
   Scene.tsx              backend + font gate, canvas selection
   lib/
-    palette.ts           colours sampled from the references
+    palette.ts           the standard and dark themes
     timing.ts            type-on / hold / erase, loop-safe angle helpers
     rng.ts               seeded PRNG — layout is identical every render
     useNeonFont.ts       loads Poppins before the canvas mounts
   three/
     backend.ts           WebGPU -> WebGL2 -> WebGL probe
+    theme.tsx            theme context, provided inside the canvas
     Stage.tsx            camera rig, lighting, fog, bloom + DOF
     Board.tsx            plate tiling + scattered blocks
     Processor.tsx        the hub
