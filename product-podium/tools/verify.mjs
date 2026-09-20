@@ -51,19 +51,39 @@ const edgePosition = (img, yFrac, x0, x1) => {
   return bx + Math.max(-1, Math.min(1, shift));
 };
 
-/** Where the brightest point sits along a horizontal band — tracks the ring segment. */
+/**
+ * Where the travelling segment sits along a horizontal band, to sub-pixel
+ * precision.
+ *
+ * Taking the single brightest column quantises to whole pixels, and one
+ * loop step of travel moves the segment by less than that near the ring's
+ * left and right extremes, where it is nearly tangent to the view. This
+ * takes the centroid of each column's excess over the band's median
+ * instead, which resolves the step while still tracking the segment
+ * rather than the ring.
+ */
 const brightestX = (img, y0, y1, x0 = 0.05, x1 = 0.95) => {
-  let best = -1;
-  let bestX = NaN;
-  for (let x = Math.round(x0 * img.width); x < Math.round(x1 * img.width); x++) {
+  const X0 = Math.round(x0 * img.width);
+  const X1 = Math.round(x1 * img.width);
+  const Y0 = Math.round(y0 * img.height);
+  const Y1 = Math.round(y1 * img.height);
+  const cols = [];
+  for (let x = X0; x < X1; x++) {
     let s = 0;
-    for (let y = Math.round(y0 * img.height); y < Math.round(y1 * img.height); y++) s += img.lum(x, y);
-    if (s > best) {
-      best = s;
-      bestX = x / img.width;
-    }
+    for (let y = Y0; y < Y1; y++) s += img.lum(x, y);
+    cols.push(s);
   }
-  return bestX;
+  const sorted = [...cols].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  // Square the excess so the segment dominates the ring it sits on.
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < cols.length; i++) {
+    const w = Math.max(0, cols[i] - median) ** 2;
+    num += w * (X0 + i);
+    den += w;
+  }
+  return den > 0 ? num / den / img.width : NaN;
 };
 
 /**
@@ -74,7 +94,7 @@ const brightestX = (img, y0, y1, x0 = 0.05, x1 = 0.95) => {
  */
 const LOCK_PROBE = {
   "DuotoneGlass": { y: 0.6, x0: 0.68, x1: 0.78, what: "disc right silhouette" },
-  "NeonRing": { y: 0.46, x0: 0.7, x1: 0.8, what: "slab right silhouette" },
+  "NeonRing": { y: 0.44, x0: 0.7, x1: 0.8, what: "slab right silhouette" },
   "FlutedPlaster": { y: 0.6, x0: 0.66, x1: 0.74, what: "plinth right silhouette" },
   "WoodLeaf": { y: 0.5, x0: 0.66, x1: 0.76, what: "disc right silhouette" },
 };
@@ -149,15 +169,20 @@ if (look === "NeonRing") {
 
   report(spread(top) > 0.05, "neon rim: bright segment travels around the ring", `frames 0/75/150/225/299: ${pct(top)}`);
   report(spread(bot) > 0.05, "reflection: bright segment travels around the ring", `frames 0/75/150/225/299: ${pct(bot)}`);
+  // Half a pixel of the rendered frame. One loop step is 1/300th of the
+  // travel, and near the ring's left and right extremes it maps to a
+  // fraction of a percent of frame width — real and measurable, but only
+  // if the bar is expressed in pixels rather than as a round fraction.
+  const onePixel = 1 / imgs[0].width;
   report(
-    Math.abs(top[4] - top[0]) > 0.001,
+    Math.abs(top[4] - top[0]) > onePixel * 0.5,
     "neon rim: segment position at frame 299 differs from frame 0 (by one loop step)",
-    `${(top[0] * 100).toFixed(2)}% -> ${(top[4] * 100).toFixed(2)}%`,
+    `${(top[0] * 100).toFixed(3)}% -> ${(top[4] * 100).toFixed(3)}% (${(Math.abs(top[4] - top[0]) * imgs[0].width).toFixed(1)} px)`,
   );
   report(
-    Math.abs(bot[4] - bot[0]) > 0.001,
+    Math.abs(bot[4] - bot[0]) > onePixel * 0.5,
     "reflection: segment position at frame 299 differs from frame 0 (by one loop step)",
-    `${(bot[0] * 100).toFixed(2)}% -> ${(bot[4] * 100).toFixed(2)}%`,
+    `${(bot[0] * 100).toFixed(3)}% -> ${(bot[4] * 100).toFixed(3)}% (${(Math.abs(bot[4] - bot[0]) * imgs[0].width).toFixed(1)} px)`,
   );
   report(
     Math.abs(top[1] - bot[1]) > 0.02 || Math.abs(top[2] - bot[2]) > 0.02,

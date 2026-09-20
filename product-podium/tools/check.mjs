@@ -131,15 +131,20 @@ const checks = {
   "NeonRing-PodiumBlue": (img, out) => {
     const band = topSurfaceBand(img, 0.5, 0.3, 0.56, 9);
     out.push(["plinth top 40-50%", band && band.top >= 0.4 && band.top <= 0.5, band && `${(band.top * 100).toFixed(1)}%`]);
-    // Two rings, not one thick band: down the centre of frame the top ring
-    // is crossed twice — behind the top face and in front of it — and the
-    // bottom ring once. What has to be true is that the bottom ring is a
-    // separate structure, with unlit disc between it and the top ring.
+    /*
+     * Two rings, not one thick band. Scanned down the centre of frame and
+     * only BELOW the slab, where the only things present are the neon and
+     * its reflection. Higher up, the slab's own top face is within a few
+     * levels of the reflection's brightness, so no single threshold can
+     * tell them apart; and taking each row's brightest pixel across the
+     * whole slab merges everything into one run, because the glow wraps
+     * past the slab's edges at every height.
+     */
     // Threshold well clear of the black field but below the reflection's
     // peak: the reflection is meant to sit at roughly half the neon's
     // brightness, so a high threshold would call a correct reflection
     // missing.
-    const runs = brightRuns(img, [0.22, 0.78], 0.3, 0.9, 70);
+    const runs = brightRuns(img, [0.46, 0.54], 0.5, 0.88, 20);
     const gap = runs.length >= 2 ? runs[runs.length - 1][0] - runs[runs.length - 2][1] : 0;
     out.push([
       "two separate rings",
