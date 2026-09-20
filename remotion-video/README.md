@@ -11,6 +11,12 @@
 
 Welcome to your Remotion project!
 
+## Pieces in this project
+
+- **Glass Circles (V1 / V2)** — two 10s abstract glass motion backgrounds in
+  1080p and 4K, built on three.js with WebGPU and a WebGL2 fallback.
+  See [GLASS-CIRCLES.md](./GLASS-CIRCLES.md).
+
 ## Commands
 
 **Install Dependencies**

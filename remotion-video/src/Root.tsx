@@ -2,6 +2,19 @@ import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
 import {
+  GlassCircles,
+  glassCirclesSchema,
+  glassCirclesDefaults,
+} from "./glass-circles/GlassCircles";
+import {
+  FPS as GLASS_FPS,
+  DURATION_IN_FRAMES as GLASS_DURATION,
+  HD_WIDTH,
+  HD_HEIGHT,
+  UHD_WIDTH,
+  UHD_HEIGHT,
+} from "./glass-circles/constants";
+import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
   bluetoothExplainerDefaultProps,
@@ -51,6 +64,46 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="GlassCircles-V1-1080p"
+        component={GlassCircles}
+        durationInFrames={GLASS_DURATION}
+        fps={GLASS_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v1" as const }}
+      />
+      <Composition
+        id="GlassCircles-V1-4K"
+        component={GlassCircles}
+        durationInFrames={GLASS_DURATION}
+        fps={GLASS_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v1" as const }}
+      />
+      <Composition
+        id="GlassCircles-V2-1080p"
+        component={GlassCircles}
+        durationInFrames={GLASS_DURATION}
+        fps={GLASS_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v2" as const }}
+      />
+      <Composition
+        id="GlassCircles-V2-4K"
+        component={GlassCircles}
+        durationInFrames={GLASS_DURATION}
+        fps={GLASS_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v2" as const }}
       />
     </>
   );
