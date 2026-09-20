@@ -57,15 +57,35 @@ All six are 300 frames at 30fps (10.000s) and seamlessly loopable: frame
 
 ### Rendering
 
-```console
-npx remotion render AiCodeCity   out/v1-1080p.mp4 --codec=h264 --crf=16
-npx remotion render AiCodeWall   out/v2-1080p.mp4 --codec=h264 --crf=16
-npx remotion render AiNetwork    out/v3-1080p.mp4 --codec=h264 --crf=16
+These are the exact flags the delivered 1080p files were rendered with:
 
-npx remotion render AiCodeCity4K out/v1-4k.mp4 --codec=h264 --crf=16
-npx remotion render AiCodeWall4K out/v2-4k.mp4 --codec=h264 --crf=16
-npx remotion render AiNetwork4K  out/v3-4k.mp4 --codec=h264 --crf=16
+```console
+FLAGS="--codec=h264 --crf=16 --muted --color-space=bt709 --image-format=png"
+
+npx remotion render AiCodeCity out/ai-code-v1-code-city-1080p.mp4 $FLAGS
+npx remotion render AiCodeWall out/ai-code-v2-code-wall-1080p.mp4 $FLAGS
+npx remotion render AiNetwork  out/ai-code-v3-ai-network-1080p.mp4 $FLAGS
 ```
+
+Swap the composition ID for the 4K variant to get 3840x2160:
+
+```console
+npx remotion render AiCodeCity4K out/ai-code-v1-code-city-4k.mp4 $FLAGS
+npx remotion render AiCodeWall4K out/ai-code-v2-code-wall-4k.mp4 $FLAGS
+npx remotion render AiNetwork4K  out/ai-code-v3-ai-network-4k.mp4 $FLAGS
+```
+
+Why those flags:
+
+- `--muted` drops the silent audio track Remotion adds by default. With
+  it the container is exactly 10.000s; without it the audio stream runs
+  slightly long and the file reports 10.05s.
+- `--color-space=bt709` gives limited-range `yuv420p (tv, bt709)`
+  instead of the default full-range `yuvj420p`, so levels are not
+  crushed or lifted by players and NLEs that assume broadcast range.
+- `--image-format=png` avoids JPEG banding in the intermediate frames.
+  These plates are almost entirely dark gradients, which is exactly
+  where that banding shows.
 
 The 4K compositions render the same picture, not a different one: a
 `resolutionScale` prop drives texture resolution, particle counts, blur
