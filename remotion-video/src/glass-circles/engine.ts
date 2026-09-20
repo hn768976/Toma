@@ -233,10 +233,19 @@ export const createEngine = async (
   const glassMaterial = createGlassMaterial(variant);
   const rim = createRimMaterial(variant, envTexture);
 
+  // Tessellate to the delivery resolution rather than a fixed count: a fixed
+  // count leaves the hero circle's silhouette visibly faceted at 1080p and
+  // worse at 4K, and a faceted silhouette crawls once the disc moves.
+  const pixelsPerWorldUnit =
+    height / (2 * CAMERA.distance * Math.tan((CAMERA.fov * Math.PI) / 360));
+  const segmentsFor = (radius: number) => {
+    const circumferenceInPixels = 2 * Math.PI * radius * pixelsPerWorldUnit;
+    return Math.min(4096, Math.max(256, Math.round(circumferenceInPixels / 2.5)));
+  };
+
   const discs = DISCS.map((spec) => {
     const group = new Group();
-    // Enough radial segments that even the hero circle's silhouette is smooth.
-    const segments = Math.max(128, Math.round(spec.radius * 160));
+    const segments = segmentsFor(spec.radius);
     const lens = new Mesh(
       makeLensGeometry(spec.radius, GLASS_HALF_THICKNESS, segments),
       glassMaterial,

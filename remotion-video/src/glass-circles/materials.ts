@@ -13,6 +13,7 @@ import {
   cameraPosition,
   equirectUV,
   float,
+  fwidth,
   mix,
   normalWorld,
   oneMinus,
@@ -159,18 +160,34 @@ export const createRimMaterial = (
       texture(envTexture, equirectUV(envRotation.mul(direction).normalize()));
 
     // 0 where the rim faces the camera, 1 at the silhouette.
-    const edge = oneMinus(n.dot(viewDir).abs().clamp(0, 1));
+    const facing = n.dot(viewDir).abs().clamp(0, 1);
+    const edge = oneMinus(facing);
 
-    // Outer lobe: a hard specular line right on the silhouette.
-    const specular = edge.pow(float(cfg.edgePower));
+    // A falloff of edge^p spans roughly 1/p across the rim, so cap p to
+    // whatever keeps that span at ~1.4 pixels. Below that the highlight lands
+    // sub-pixel, which multisampling cannot fix -- MSAA resolves geometry
+    // coverage, not shading detail inside a triangle -- and the hard edge
+    // crawls from frame to frame as the rim drifts.
+    const maxPower = float(1).div(fwidth(facing).max(float(1e-4)).mul(1.4));
+
+    // Widening a lobe also spreads its energy, so scale the amplitude by the
+    // same factor. A rim thinner than a pixel then gets dimmer as it widens,
+    // which is what antialiasing it properly means, and lobes that were
+    // already well resolved are left exactly as they were.
+    const shape = (power: number) => edge.pow(float(power).min(maxPower));
+    const lobe = (power: number) => {
+      const resolved = float(power).min(maxPower);
+      return edge.pow(resolved).mul(resolved.div(float(power)));
+    };
+
+    // Outer lobe: the specular line on the silhouette.
+    const specular = lobe(cfg.edgePower);
     const reflection = sampleEnv(reflect(incident, n)).rgb;
 
     // Inner lobe: light refracted through the bevel, split by wavelength.
     // Suppressing the outermost sliver sets it just inside the specular line,
     // which is the gap-then-rainbow structure both references show.
-    const crescent = edge
-      .pow(float(cfg.bandPower))
-      .mul(oneMinus(edge.pow(float(cfg.innerFalloff))));
+    const crescent = lobe(cfg.bandPower).mul(oneMinus(shape(cfg.innerFalloff)));
     const spread = float(cfg.iorSpread);
     const red = sampleEnv(refract(incident, n, float(baseEta).add(spread))).r;
     const green = sampleEnv(refract(incident, n, float(baseEta))).g;
