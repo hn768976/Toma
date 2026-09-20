@@ -4,22 +4,41 @@ import { createHazeTexture, createNoiseTexture } from "./textures";
 import { rand, randRange } from "./rng";
 import type { PixiContext, PixiScene } from "./PixiLayer";
 
-// V1's optical pass: a soft lens veil and fine grain, composited with
-// `screen` over the three.js stage so everything here only ever adds
-// light. Deliberately quiet — the cards carry this plate.
+// The code plate's optical pass: a soft lens veil and fine grain,
+// composited with `screen` over the three.js stage so everything here
+// only ever adds light. Deliberately quiet.
+//
+// The tints are a parameter because the veil is broad enough to grade
+// whatever is under it: a blue veil over green syntax pulls the whole
+// plate to teal, which is exactly what V5 must not do.
 
 const VEIL_COUNT = 4;
 
-export const createV1Optics = async ({
-  width,
-  height,
-  scale,
-}: PixiContext): Promise<PixiScene> => {
+export type OpticsPalette = {
+  /** Alternating tints across the veil blobs. */
+  readonly veilTints: readonly [number, number];
+  readonly grainTint: number;
+};
+
+export const BLUE_OPTICS: OpticsPalette = {
+  veilTints: [0x4f9bd8, 0x2f6fa8],
+  grainTint: 0x7fa8cc,
+};
+
+export const GREEN_OPTICS: OpticsPalette = {
+  veilTints: [0x49b083, 0x2d7a62],
+  grainTint: 0x8cc4a8,
+};
+
+export const createCodePlateOptics =
+  (palette: OpticsPalette) =>
+  async ({ width, height, scale }: PixiContext): Promise<PixiScene> => {
   const stage = new Container();
 
   const hazeTexture = Texture.from(
     createHazeTexture(Math.round(768 * scale), Math.round(768 * scale)),
   );
+  const [tintA, tintB] = palette.veilTints;
   const noiseTexture = Texture.from(
     createNoiseTexture(Math.round(256 * scale), 3),
   );
@@ -31,7 +50,7 @@ export const createV1Optics = async ({
     veil.blendMode = "add";
     veil.scale.set(randRange(i, 90, 0.9, 2.1));
     veil.alpha = randRange(i, 91, 0.07, 0.17);
-    veil.tint = i % 2 === 0 ? 0x4f9bd8 : 0x2f6fa8;
+    veil.tint = i % 2 === 0 ? tintA : tintB;
     stage.addChild(veil);
     veils.push(veil);
   }
@@ -43,7 +62,7 @@ export const createV1Optics = async ({
   });
   grain.blendMode = "add";
   grain.alpha = 0.05;
-  grain.tint = 0x7fa8cc;
+  grain.tint = palette.grainTint;
   stage.addChild(grain);
 
   const update = (frame: number) => {

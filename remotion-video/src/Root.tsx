@@ -4,7 +4,6 @@ import { Composition } from "remotion";
 import {
   CodeCity,
   codeCitySchema,
-  codeCityDefaults,
 } from "./ai-code/CodeCity";
 import {
   CodeWall,
@@ -40,9 +39,33 @@ import {
   FPS as RING_FPS,
 } from "./particle-ring/constants";
 
+// V1, V4 and V5 are the same composition with different props. V4 and
+// V5 are both code-only: V4 keeps the blue syntax and sits on a deeper
+// grade, V5 keeps V1's grade and turns the syntax green.
+const CODE_PLATES = [
+  { id: "AiCodeCity", showCards: true, codeTheme: "vivid", grade: "blue" },
+  { id: "AiCodeDark", showCards: false, codeTheme: "vivid", grade: "deepBlue" },
+  { id: "AiCodeGreen", showCards: false, codeTheme: "green", grade: "green" },
+] as const;
+
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {CODE_PLATES.flatMap(({ id, ...variant }) =>
+        ([1, 2] as const).map((resolutionScale) => (
+          <Composition
+            key={`${id}-${resolutionScale}`}
+            id={resolutionScale === 1 ? id : `${id}4K`}
+            component={CodeCity}
+            durationInFrames={AI_DURATION}
+            fps={AI_FPS}
+            width={AI_WIDTH * resolutionScale}
+            height={AI_HEIGHT * resolutionScale}
+            schema={codeCitySchema}
+            defaultProps={{ ...variant, resolutionScale }}
+          />
+        )),
+      )}
       <Composition
         id="BluetoothExplainer"
         component={BluetoothExplainer}
@@ -72,16 +95,6 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
-      />
-      <Composition
-        id="AiCodeCity"
-        component={CodeCity}
-        durationInFrames={AI_DURATION}
-        fps={AI_FPS}
-        width={AI_WIDTH}
-        height={AI_HEIGHT}
-        schema={codeCitySchema}
-        defaultProps={codeCityDefaults}
       />
       <Composition
         id="AiCodeWall"
@@ -121,16 +134,6 @@ export const RemotionRoot: React.FC = () => {
         width={AI_WIDTH * 2}
         height={AI_HEIGHT * 2}
         schema={aiNetworkSchema}
-        defaultProps={{ resolutionScale: 2 as const }}
-      />
-      <Composition
-        id="AiCodeCity4K"
-        component={CodeCity}
-        durationInFrames={AI_DURATION}
-        fps={AI_FPS}
-        width={AI_WIDTH * 2}
-        height={AI_HEIGHT * 2}
-        schema={codeCitySchema}
         defaultProps={{ resolutionScale: 2 as const }}
       />
     </>

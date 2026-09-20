@@ -79,7 +79,30 @@ const MUTED: CodeTheme = {
   highlightBar: "rgba(90, 200, 190, 0.09)",
 };
 
-export const THEMES = { vivid: VIVID, slate: SLATE, muted: MUTED } as const;
+// A green-terminal grade of VIVID. Kept tonally varied rather than one
+// flat green, so the syntax structure still reads at small sizes.
+const GREEN: CodeTheme = {
+  background: "rgba(5, 16, 11, 0.82)",
+  comment: "#5f8f6c",
+  string: "#c0ff86",
+  keyword: "#57f58e",
+  builtin: "#7dffcb",
+  number: "#defd7e",
+  func: "#6dfcab",
+  decorator: "#9dffbd",
+  self: "#9dffbd",
+  punct: "#6ea37c",
+  ident: "#d2ffdd",
+  lineNumber: "#2d4a38",
+  highlightBar: "rgba(74, 222, 128, 0.13)",
+};
+
+export const THEMES = {
+  vivid: VIVID,
+  slate: SLATE,
+  muted: MUTED,
+  green: GREEN,
+} as const;
 export type ThemeName = keyof typeof THEMES;
 
 const KEYWORDS = new Set([

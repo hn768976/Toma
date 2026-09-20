@@ -50,8 +50,12 @@ set of reference plates. Each exists at 1080p and at 4K UHD.
 | `AiCodeWall4K`   | 3840 x 2160 | V2 at 4K                                                                     |
 | `AiNetwork`      | 1920 x 1080 | V3 — dim code bed under a drifting graph of ringed "AI" nodes                |
 | `AiNetwork4K`    | 3840 x 2160 | V3 at 4K                                                                     |
+| `AiCodeDark`     | 1920 x 1080 | V4 — V1 with no cards, on a deeper blue grade                                |
+| `AiCodeDark4K`   | 3840 x 2160 | V4 at 4K                                                                     |
+| `AiCodeGreen`    | 1920 x 1080 | V5 — V1 with no cards and green syntax                                       |
+| `AiCodeGreen4K`  | 3840 x 2160 | V5 at 4K                                                                     |
 
-All six are 300 frames at 30fps (10.000s) and seamlessly loopable: frame
+All ten are 300 frames at 30fps (10.000s) and seamlessly loopable: frame
 300 is identical to frame 0, so they can be cut end-to-end or set to
 `loop` in a player with no visible join.
 
@@ -62,9 +66,11 @@ These are the exact flags the delivered 1080p files were rendered with:
 ```console
 FLAGS="--codec=h264 --crf=16 --muted --color-space=bt709 --image-format=png"
 
-npx remotion render AiCodeCity out/ai-code-v1-code-city-1080p.mp4 $FLAGS
-npx remotion render AiCodeWall out/ai-code-v2-code-wall-1080p.mp4 $FLAGS
-npx remotion render AiNetwork  out/ai-code-v3-ai-network-1080p.mp4 $FLAGS
+npx remotion render AiCodeCity  out/ai-code-v1-code-city-1080p.mp4 $FLAGS
+npx remotion render AiCodeWall  out/ai-code-v2-code-wall-1080p.mp4 $FLAGS
+npx remotion render AiNetwork   out/ai-code-v3-ai-network-1080p.mp4 $FLAGS
+npx remotion render AiCodeDark  out/ai-code-v4-code-dark-1080p.mp4 $FLAGS
+npx remotion render AiCodeGreen out/ai-code-v5-code-green-1080p.mp4 $FLAGS
 ```
 
 Swap the composition ID for the 4K variant to get 3840x2160:
@@ -139,6 +145,18 @@ runs out of memory.
   dead patch of frame.
 - **V3** has no free-floating lettering: every "AI" on screen belongs to
   a node and is ringed by its circle or wireframe sphere.
+- **V1, V4 and V5 are one composition** driven by props (`showCards`,
+  `codeTheme`, `grade`), not three copies — they differ only in data, and
+  copies would drift the moment any one of them is retouched. V4 and V5
+  drop the cards, and with nothing left on the card layer that band is
+  omitted from the band list entirely, saving a render pass per frame
+  rather than compositing an empty buffer.
+- **V5's background is green, not V1's navy.** The plate composites
+  additively over its grade, so green syntax over a saturated navy reads
+  teal no matter how far the palette is pushed. The lens veil is tinted
+  per variant for the same reason — it is broad enough to grade whatever
+  sits under it. Set `grade: "blue"` on `AiCodeGreen` to get green
+  syntax over V1's navy instead; it will read teal-green.
 
 ### Content and licensing
 

@@ -11,10 +11,12 @@ import {
   subTexture,
 } from "./scene-kit";
 import { rand, randRange, wrap } from "./rng";
+import type { ThemeName } from "./code-canvas";
 import type { Stage, StageContext } from "./ThreeStage";
 
-// V1 — a column of identical "AI" cards rising through frame, over a
-// quiet bed of scrolling code.
+// The shared code-plate stage, behind V1, V4 and V5: a column of
+// identical "AI" cards rising through frame over a quiet bed of
+// scrolling code. V4 drops the cards; V5 recolours the code.
 //
 // Two independent loops, both exact:
 //   - the cards travel RISE_DISTANCE upward and wrap, and because they
@@ -81,9 +83,16 @@ type Panel = {
   readonly breathPhase: number;
 };
 
-export const createCodeCityStage = async (
-  ctx: StageContext,
-): Promise<Stage> => {
+export type CodePlateOptions = {
+  /** V4 turns the rising cards off and keeps only the code bed. */
+  readonly showCards: boolean;
+  /** V5 swaps the syntax palette to green. */
+  readonly codeTheme: ThemeName;
+};
+
+export const createCodePlateStage =
+  (options: CodePlateOptions) =>
+  async (ctx: StageContext): Promise<Stage> => {
   await monoFontReady;
   const { scale } = ctx;
 
@@ -104,7 +113,7 @@ export const createCodeCityStage = async (
           fontSize: 11 * scale,
           lineHeight: 15.5 * scale,
           seed: 100 + i,
-          theme: "vivid",
+          theme: options.codeTheme,
           alpha: i % 3 === 0 ? 1 : 0.85,
           highlightRate: 0.05,
           paintBackground: false,
@@ -113,11 +122,13 @@ export const createCodeCityStage = async (
       ),
     );
   }
-  const chipTextures = CHIP_VARIANTS.map((variant, i) =>
-    makeCanvasTexture(
-      createChipTexture(Math.round(384 * scale), variant, 60 + i),
-    ),
-  );
+  const chipTextures = options.showCards
+    ? CHIP_VARIANTS.map((variant, i) =>
+        makeCanvasTexture(
+          createChipTexture(Math.round(384 * scale), variant, 60 + i),
+        ),
+      )
+    : [];
   const dotTexture = makeCanvasTexture(createDotTexture(Math.round(64 * scale)));
 
   // --- background code bed ---------------------------------------------
@@ -157,7 +168,7 @@ export const createCodeCityStage = async (
 
   // --- rising AI cards --------------------------------------------------
   const cards: Card[] = [];
-  for (let i = 0; i < CARD_COUNT; i++) {
+  for (let i = 0; options.showCards && i < CARD_COUNT; i++) {
     const material = additive(chipTextures[i % chipTextures.length], 1);
     material.opacity = randRange(i, 40, 0.85, 1);
     const baseX = randRange(i, 41, -CARD_SPREAD_X, CARD_SPREAD_X);
@@ -219,11 +230,15 @@ export const createCodeCityStage = async (
   dust.layers.set(BG_NEAR_BAND);
   scene.add(dust);
 
+  // The band list need not be contiguous: each entry names the layer it
+  // draws. With no cards there is nothing on the card layer, so omitting
+  // it saves a whole render pass per frame rather than compositing an
+  // empty buffer.
   const bands = BAND_BLUR.map((blur, layer) => ({
     layer,
     blurPx: blur * scale,
     opacity: 1,
-  }));
+  })).filter((band) => options.showCards || band.layer !== CARD_BAND);
 
   const update = (frame: number) => {
     const progress = (frame % DURATION_IN_FRAMES) / DURATION_IN_FRAMES;
