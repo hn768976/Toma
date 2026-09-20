@@ -2,6 +2,27 @@ import "./index.css";
 import "./load-fonts";
 import { Composition } from "remotion";
 import {
+  CodeCity,
+  codeCitySchema,
+  codeCityDefaults,
+} from "./ai-code/CodeCity";
+import {
+  CodeWall,
+  codeWallSchema,
+  codeWallDefaults,
+} from "./ai-code/CodeWall";
+import {
+  AiNetwork,
+  aiNetworkSchema,
+  aiNetworkDefaults,
+} from "./ai-code/AiNetwork";
+import {
+  FPS as AI_FPS,
+  DURATION_IN_FRAMES as AI_DURATION,
+  BASE_WIDTH as AI_WIDTH,
+  BASE_HEIGHT as AI_HEIGHT,
+} from "./ai-code/constants";
+import {
   BluetoothExplainer,
   bluetoothExplainerSchema,
   bluetoothExplainerDefaultProps,
@@ -51,6 +72,66 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="AiCodeCity"
+        component={CodeCity}
+        durationInFrames={AI_DURATION}
+        fps={AI_FPS}
+        width={AI_WIDTH}
+        height={AI_HEIGHT}
+        schema={codeCitySchema}
+        defaultProps={codeCityDefaults}
+      />
+      <Composition
+        id="AiCodeWall"
+        component={CodeWall}
+        durationInFrames={AI_DURATION}
+        fps={AI_FPS}
+        width={AI_WIDTH}
+        height={AI_HEIGHT}
+        schema={codeWallSchema}
+        defaultProps={codeWallDefaults}
+      />
+      <Composition
+        id="AiCodeWall4K"
+        component={CodeWall}
+        durationInFrames={AI_DURATION}
+        fps={AI_FPS}
+        width={AI_WIDTH * 2}
+        height={AI_HEIGHT * 2}
+        schema={codeWallSchema}
+        defaultProps={{ resolutionScale: 2 as const }}
+      />
+      <Composition
+        id="AiNetwork"
+        component={AiNetwork}
+        durationInFrames={AI_DURATION}
+        fps={AI_FPS}
+        width={AI_WIDTH}
+        height={AI_HEIGHT}
+        schema={aiNetworkSchema}
+        defaultProps={aiNetworkDefaults}
+      />
+      <Composition
+        id="AiNetwork4K"
+        component={AiNetwork}
+        durationInFrames={AI_DURATION}
+        fps={AI_FPS}
+        width={AI_WIDTH * 2}
+        height={AI_HEIGHT * 2}
+        schema={aiNetworkSchema}
+        defaultProps={{ resolutionScale: 2 as const }}
+      />
+      <Composition
+        id="AiCodeCity4K"
+        component={CodeCity}
+        durationInFrames={AI_DURATION}
+        fps={AI_FPS}
+        width={AI_WIDTH * 2}
+        height={AI_HEIGHT * 2}
+        schema={codeCitySchema}
+        defaultProps={{ resolutionScale: 2 as const }}
       />
     </>
   );
