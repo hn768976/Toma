@@ -76,6 +76,7 @@ const run = async () => {
   if (mode === 'still') {
     const version = (rest[0] ?? 'v3').toUpperCase();
     const frame = Number(rest[1] ?? 0);
+    // `4k` among the trailing flags shoots the still from the 4K composition.
     // Extra args become diagnostic props, e.g. `nopost` or `tex=1024`.
     const flags = rest.slice(2);
     const inputProps = { themeId: version.toLowerCase() };
@@ -83,10 +84,10 @@ const run = async () => {
     if (flags.includes('webgl')) inputProps.forceWebGL = true;
     const tex = flags.find((f) => f.startsWith('tex='));
     if (tex) inputProps.textureSize = Number(tex.slice(4));
-    const id = `${version}-1080p`;
+    const id = `${version}-${rest.includes('4k') ? '4K' : '1080p'}`;
     const composition = comps.find((c) => c.id === id);
     if (!composition) throw new Error(`No composition ${id}. Have: ${comps.map((c) => c.id).join(', ')}`);
-    const output = path.join(outDir, `still-${version.toLowerCase()}-f${frame}.png`);
+    const output = path.join(outDir, `still-${version.toLowerCase()}-${rest.includes('4k') ? '4k' : '1080p'}-f${frame}.png`);
     log(`still ${id} frame ${frame} -> ${output}`);
     const started = Date.now();
     await renderStill({
