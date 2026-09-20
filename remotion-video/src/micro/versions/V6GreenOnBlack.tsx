@@ -7,6 +7,11 @@
 // Because there is no background to hide in, this one lives or dies on the
 // silhouette and the rim light, so the cells carry more geometric displacement
 // than anywhere else in the set and the glow shell is pushed harder.
+//
+// Everything is in focus -- no depth-of-field layers. Against black, scale and
+// rim brightness are doing all the depth work anyway. The foreground cells are
+// smaller than they were behind a blur, where they could afford to be soft
+// shapes covering most of the frame height.
 
 import React from "react";
 import { AbsoluteFill, useVideoConfig } from "remotion";
@@ -25,8 +30,6 @@ const PALETTE = {
   cellBright: "#4dc257",
   rim: "#9bf08a",
 };
-
-const LAYERS = [{ blur: 24 }, { blur: 0 }, { blur: 56 }];
 
 interface Body {
   group: Group;
@@ -51,16 +54,19 @@ export const buildV6World = ({
   camera.position.set(0, 0, 20);
   camera.lookAt(0, 0, 0);
 
-  const scenes = LAYERS.map(() => new Scene());
-  for (const scene of scenes) {
+  const scene = new Scene();
+  {
     applyLightRig(scene, {
       // No fog and almost no fill: everything that is not lit stays pure black,
       // which is what gives the reference its cut-out look.
       ambient: { color: "#0d3a12", intensity: 0.35 },
-      points: [
-        { color: "#eaffd8", intensity: 700, position: [-7, 7, 9], decay: 2 },
-        { color: "#6cff8a", intensity: 420, position: [8, -5, 5], decay: 2 },
-        { color: "#2f8f3a", intensity: 520, position: [0, 0, -12], decay: 2 },
+      // Directional rather than point lights: cells fall through the whole
+      // volume, so a point light inside it eventually has a cell pass almost
+      // on top of it and inverse-square falloff blows it to white.
+      directionals: [
+        { color: "#eaffd8", intensity: 2.4, position: [-6, 6, 7] },
+        { color: "#6cff8a", intensity: 1.3, position: [7, -4, 4] },
+        { color: "#2f8f3a", intensity: 1.5, position: [0, 0, -8] },
       ],
     });
   }
@@ -80,7 +86,6 @@ export const buildV6World = ({
 
   const bodies: Body[] = [];
   const spawn = (
-    layer: number,
     count: number,
     zRange: [number, number],
     scaleRange: [number, number],
@@ -107,7 +112,7 @@ export const buildV6World = ({
       );
       group.add(makeRimGlow(geometry, PALETTE.rim, 0.3, 1.07));
       group.scale.setScalar(range(rng, scaleRange[0], scaleRange[1]));
-      scenes[layer].add(group);
+      scene.add(group);
 
       bodies.push({
         group,
@@ -123,10 +128,10 @@ export const buildV6World = ({
     }
   };
 
-  // A wide spread of sizes, from specks to cells that fill a third of frame.
-  spawn(0, 14, [-12, -6], [0.12, 0.5], 18, 11, [-0.5, -0.2]);
-  spawn(1, 16, [-3, 2], [0.18, 1.15], 12, 8, [-0.85, -0.35]);
-  spawn(2, 4, [7, 10], [0.9, 1.8], 11, 7.5, [-1.3, -0.7]);
+  // A wide spread of sizes, from specks to cells a few times larger.
+  spawn(14, [-12, -6], [0.12, 0.5], 18, 11, [-0.5, -0.2]);
+  spawn(18, [-3, 2], [0.18, 1.15], 12, 8, [-0.85, -0.35]);
+  spawn(6, [7, 10], [0.55, 1.05], 11, 7.5, [-1.3, -0.7]);
 
   const update = (frame: number) => {
     const t = frame / FPS;
@@ -151,7 +156,7 @@ export const buildV6World = ({
 
   return {
     camera,
-    layers: scenes.map((scene, i) => ({ scene, blur: LAYERS[i].blur })),
+    layers: [{ scene, blur: 0 }],
     update,
     dispose: () => {
       shells.forEach((g) => g.dispose());

@@ -2,7 +2,10 @@
 //
 // Reference: the shot travels through four moods in ten seconds. It opens in
 // amber on near-black, warms to gold, cools through olive, turns teal, and
-// finally clears into plain blue water with nothing left but a few bubbles.
+// finally clears into plain blue water.
+//
+// The tail is deliberately empty. Every body dissolves before the end, leaving
+// the last second as nothing but the blue gradient -- no bubbles, no specks.
 //
 // Both the CSS backdrop and the cell materials read from the same keyframe
 // table, so the fluid and the bodies in it always change colour together.
@@ -136,7 +139,7 @@ export const buildV4World = ({
     [0.2, -0.6, -3.6, 0.55],
   ];
   midSpecs.forEach((s, i) =>
-    addCell(1, [s[0], s[1], s[2]], s[3], i, 192 + i * 4),
+    addCell(1, [s[0], s[1], s[2]], s[3], i, 176 + i * 4),
   );
 
   const farSpecs: Array<[number, number, number, number]> = [
@@ -146,47 +149,13 @@ export const buildV4World = ({
     [7.4, -5.0, -11, 2.2],
     [0.0, 7.0, -12, 1.8],
   ];
-  farSpecs.forEach((s, i) => addCell(0, [s[0], s[1], s[2]], s[3], i + 1, 188 + i * 4));
+  farSpecs.forEach((s, i) => addCell(0, [s[0], s[1], s[2]], s[3], i + 1, 172 + i * 4));
 
   const nearSpecs: Array<[number, number, number, number]> = [
     [-8.8, -4.0, 7.0, 3.0],
     [8.4, 4.8, 6.2, 2.6],
   ];
-  nearSpecs.forEach((s, i) => addCell(2, [s[0], s[1], s[2]], s[3], i, 184 + i * 5));
-
-  // Bubbles for the clean-water tail: smooth, near-transparent, rising.
-  const bubbleGeometry = makeCellGeometry({
-    radius: 1,
-    segments: 56,
-    seed: 820,
-    lumpiness: 0.03,
-    frequency: 2,
-  });
-  const bubbles: { group: Group; mesh: Mesh; base: [number, number, number]; rise: number; phase: number }[] = [];
-  for (let i = 0; i < 9; i++) {
-    const mesh = new Mesh(
-      bubbleGeometry,
-      makeCellMaterial({
-        color: "#d8f0ff",
-        emissive: "#3f8fd0",
-        emissiveIntensity: 0.4,
-        roughness: 0.15,
-        opacity: 0,
-      }),
-    );
-    const group = new Group();
-    group.add(mesh);
-    group.add(makeRimGlow(bubbleGeometry, "#eaf8ff", 0.25, 1.1));
-    const base: [number, number, number] = [
-      range(rng, -9, 9),
-      range(rng, -7, 4),
-      range(rng, -6, 3),
-    ];
-    group.position.set(...base);
-    group.scale.setScalar(range(rng, 0.22, 0.8));
-    scenes[i % 2 === 0 ? 1 : 0].add(group);
-    bubbles.push({ group, mesh, base, rise: range(rng, 0.25, 0.75), phase: rng() * 70 });
-  }
+  nearSpecs.forEach((s, i) => addCell(2, [s[0], s[1], s[2]], s[3], i, 168 + i * 5));
 
   const tmpColor = new Color();
   const colorAt = (frame: number, table: string[]) => {
@@ -228,22 +197,6 @@ export const buildV4World = ({
       body.group.visible = fade > 0.004;
     }
 
-    for (const bubble of bubbles) {
-      const appear = interpolate(frame, [176, 236], [0, 1], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      });
-      const material = bubble.mesh.material as MeshStandardMaterial;
-      material.transparent = true;
-      material.opacity = 0.32 * appear;
-      bubble.group.visible = appear > 0.004;
-      bubble.group.position.set(
-        bubble.base[0] + noise(bubble.phase, t * 0.1, 0) * 0.6,
-        bubble.base[1] + bubble.rise * t,
-        bubble.base[2],
-      );
-    }
-
     camera.position.set(0, 0, 19 - t * 0.2);
     camera.lookAt(0, 0, 0);
   };
@@ -254,7 +207,6 @@ export const buildV4World = ({
     update,
     dispose: () => {
       shells.forEach((g) => g.dispose());
-      bubbleGeometry.dispose();
       bump.dispose();
     },
   };

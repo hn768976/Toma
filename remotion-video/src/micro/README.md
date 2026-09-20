@@ -105,8 +105,11 @@ geometry and in baked canvas bump maps rather than in shader code.
 
 ### Depth of field
 
-Each scene is split into depth layers — typically far, focus and near. Every
-layer gets its own `Scene`, its own renderer and its own canvas, and the
+V1, V2 and V4 use it. **V3, V5 and V6 are fully in focus** — every body sharp,
+no blur anywhere — so those three run as a single layer.
+
+Where it is used, the scene is split into depth layers (far, focus, near).
+Every layer gets its own `Scene`, its own renderer and its own canvas, and the
 canvases are blurred in CSS and stacked. This gives real, tunable bokeh without
 a postprocessing pass, which would have had to be written twice (GLSL for
 WebGL, TSL for WebGPU).
@@ -120,5 +123,25 @@ Two details make it hold up:
   blur has real picture to pull from at the frame edge instead of dragging in
   transparency and leaving a dark border.
 
-V3 re-parents bodies between layers every frame, since depth changes constantly
-in a flythrough; the other versions assign layers once at build time.
+Layers are assigned once at build time.
+
+### What losing the blur changed
+
+Removing depth of field from V3, V5 and V6 is not just deleting a blur value.
+A blurred near plane hides things that a sharp one does not:
+
+- **V3** recycled virions right at the lens, where the blur covered the pop. In
+  focus that would be a full-frame flash, so bodies are now pushed radially
+  outward as they approach and leave the frame through the sides before they
+  recycle. (Fading them out instead was the first attempt: a semi-transparent
+  body writes depth, so its own spikes show through it and it reads as a ghost
+  ring. A fixed exclusion tube was the second, and punched a permanent hole
+  through the middle of the corridor.)
+- **V3, V5, V6** lit their fields with point lights sitting inside the volume
+  the bodies travel through. Sooner or later a body passes within a unit or two
+  of one and inverse-square falloff blows it to white — invisible behind a
+  blur, obvious without one. Those are directional lights now, which have no
+  position to collide with.
+- **V5 and V6** carried foreground bodies big enough to fill a third of the
+  frame, which works as a soft framing shape and does not work sharp. Their
+  foreground scale ranges came down accordingly.

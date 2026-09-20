@@ -4,6 +4,12 @@
 // warm amber pool, everything falling away into a near-black vignette at the
 // corners. No event, no camera move to speak of: the shot is pure texture and
 // slow parallax, so the surface detail carries it.
+//
+// Everything is in focus -- no depth-of-field layers. Depth comes from scale,
+// fog and the warm falloff alone. The foreground population is deliberately
+// smaller than it would be behind a blur: at the old scale those bodies were
+// soft shapes filling a third of the frame, and rendered sharp they would sit
+// on top of the shot instead of framing it.
 
 import React from "react";
 import { AbsoluteFill, useVideoConfig } from "remotion";
@@ -24,8 +30,6 @@ const PALETTE = {
   glow: "#8a5410",
   surround: "#090601",
 };
-
-const LAYERS = [{ blur: 30 }, { blur: 0 }, { blur: 62 }];
 
 interface Body {
   group: Group;
@@ -51,16 +55,20 @@ export const buildV5World = ({
   camera.position.set(0, 0, 20);
   camera.lookAt(0, 0, 0);
 
-  const scenes = LAYERS.map(() => new Scene());
-  for (const scene of scenes) {
+  const scene = new Scene();
+  {
     applyLightRig(scene, {
       ambient: { color: "#5a3f18", intensity: 0.55 },
       hemisphere: { sky: "#ffd58a", ground: "#050300", intensity: 0.75 },
-      points: [
-        // The amber pool sits behind the field and rims every body.
-        { color: "#ffb347", intensity: 1100, position: [0.5, -0.5, -13], decay: 2 },
-        { color: "#ffe3ab", intensity: 240, position: [-9, 7, 9], decay: 2 },
-        { color: "#8a6a30", intensity: 180, position: [10, -7, 6], decay: 2 },
+      // Directional rather than point lights: bodies here scroll through the
+      // whole volume, so a point light inside it eventually has a body pass
+      // almost on top of it and inverse-square falloff blows it to white.
+      directionals: [
+        // The amber pool, behind the field and shining back towards the lens,
+        // which is what rims every body.
+        { color: "#ffb347", intensity: 2.6, position: [0.4, -0.3, -6] },
+        { color: "#ffe3ab", intensity: 0.55, position: [-6, 5, 5] },
+        { color: "#8a6a30", intensity: 0.4, position: [6, -5, 3] },
       ],
       fog: { color: "#140c02", density: 0.026 },
     });
@@ -82,7 +90,15 @@ export const buildV5World = ({
   ];
 
   const bodies: Body[] = [];
-  const spawn = (layer: number, count: number, zRange: [number, number], scaleRange: [number, number], spanX: number, spanY: number) => {
+  const spawn = (
+    /** Depth band this batch belongs to; `deep` bodies are tinted back. */
+    depth: "deep" | "mid" | "front",
+    count: number,
+    zRange: [number, number],
+    scaleRange: [number, number],
+    spanX: number,
+    spanY: number,
+  ) => {
     for (let i = 0; i < count; i++) {
       const variant = Math.floor(rng() * shells.length);
       const geometry = shells[variant];
@@ -91,7 +107,7 @@ export const buildV5World = ({
         new Mesh(
           geometry,
           makeCellMaterial({
-            color: layer === 0 ? PALETTE.cellDeep : PALETTE.cell,
+            color: depth === "deep" ? PALETTE.cellDeep : PALETTE.cell,
             emissive: "#2a1d05",
             emissiveIntensity: 0.55,
             roughness: 0.78,
@@ -100,9 +116,9 @@ export const buildV5World = ({
           }),
         ),
       );
-      group.add(makeRimGlow(geometry, PALETTE.rim, layer === 0 ? 0.12 : 0.2, 1.05));
+      group.add(makeRimGlow(geometry, PALETTE.rim, depth === "deep" ? 0.12 : 0.2, 1.05));
       group.scale.setScalar(range(rng, scaleRange[0], scaleRange[1]));
-      scenes[layer].add(group);
+      scene.add(group);
 
       bodies.push({
         group,
@@ -119,11 +135,10 @@ export const buildV5World = ({
     }
   };
 
-  // Deep, mid and foreground populations. The near plane is sparse on purpose:
-  // a couple of huge soft shapes are enough to sell the depth.
-  spawn(0, 22, [-16, -9], [0.9, 2.4], 20, 13);
-  spawn(1, 26, [-5, 1], [0.35, 1.3], 13, 8.5);
-  spawn(2, 5, [6, 9], [1.8, 3.2], 12, 8);
+  // Deep, mid and foreground populations.
+  spawn("deep", 22, [-16, -9], [0.9, 2.4], 20, 13);
+  spawn("mid", 26, [-5, 1], [0.35, 1.3], 13, 8.5);
+  spawn("front", 7, [6, 9], [1.0, 1.8], 12, 8);
 
   const update = (frame: number) => {
     const t = frame / FPS;
@@ -155,7 +170,7 @@ export const buildV5World = ({
 
   return {
     camera,
-    layers: scenes.map((scene, i) => ({ scene, blur: LAYERS[i].blur })),
+    layers: [{ scene, blur: 0 }],
     update,
     dispose: () => {
       shells.forEach((g) => g.dispose());
