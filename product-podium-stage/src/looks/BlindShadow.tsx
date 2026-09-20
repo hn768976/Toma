@@ -36,7 +36,20 @@ const LIGHT_POSITION = new THREE.Vector3(10, 9, 6);
 const LIGHT_TARGET = new THREE.Vector3(0, 0.5, -2);
 
 const SLAT_PITCH = 0.82;
-const SLAT_COUNT = 52;
+/**
+ * Enough slats that the rack over-covers the shadow camera.
+ *
+ * The loop works by translating the blind exactly one slat pitch, which is
+ * indistinguishable from not moving it at all - but only if the rack's ends
+ * stay outside the shadow camera for the whole drift. Otherwise a slat enters
+ * or leaves at the edge, the shadow pattern does not repeat, and the clip has
+ * a visible step at the loop point.
+ *
+ * The shadow camera is +/-18 and the blind is rolled SLAT_ANGLE relative to
+ * it, so covering its corners needs 18 * (cos + sin) of that angle ~= 23.3.
+ * 66 slats gives a half-extent of 27.1, with margin.
+ */
+const SLAT_COUNT = 66;
 const SLAT_DEPTH = 0.34;
 const SLAT_TILT = THREE.MathUtils.degToRad(24);
 const SLAT_ANGLE = THREE.MathUtils.degToRad(21);
@@ -56,8 +69,10 @@ const Blind: React.FC<{ t: number }> = ({ t }) => {
     return { position: blindPosition, rotation: helper.rotation.clone() };
   }, []);
 
+  // Long enough to over-cover the shadow camera across the roll, for the same
+  // reason SLAT_COUNT is what it is.
   const geometry = useMemo(
-    () => new THREE.BoxGeometry(44, 0.022, SLAT_DEPTH),
+    () => new THREE.BoxGeometry(58, 0.022, SLAT_DEPTH),
     [],
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
