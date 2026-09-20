@@ -189,9 +189,14 @@ export class RibbonMesh {
         const tx = scratch[next] - scratch[prev];
         const ty = scratch[next + 1] - scratch[prev + 1];
 
-        // The cross product of the tangent with the view axis reduces to the
-        // 2D perpendicular, since the camera looks down -Z in every scene
-        // here. Perspective still shrinks the ribbon with distance.
+        // Widen along the screen-space perpendicular of the tangent, i.e.
+        // the cross product with the world Z axis. That is exactly
+        // camera-facing in V1, where the camera looks down -Z; in V2 the
+        // camera is pitched down onto the layer planes, so ribbons stand
+        // roughly upright and are foreshortened by a constant factor. Since
+        // every strand there is foreshortened equally it reads as a slightly
+        // finer line weight, not as distortion -- and keeping the normal
+        // independent of the camera means width never swims as it moves.
         let nx = ty;
         let ny = -tx;
         const len = Math.hypot(nx, ny);

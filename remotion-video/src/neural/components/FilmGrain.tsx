@@ -14,10 +14,33 @@ import { mulberry32 } from "../core/noise";
  * frame can be captured before it appears. Drawing in a layout effect happens
  * before paint, which makes every frame identical to every other run.
  */
-export const FilmGrain: React.FC<{ opacity?: number; tile?: number }> = ({
-  opacity = 0.035,
-  tile = 128,
-}) => {
+const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+
+/**
+ * Per-frame tile offset. For a looping composition the stride is rounded to a
+ * multiple of `tile / gcd(loopFrames, tile)`, which is exactly the condition
+ * for `loopFrames * stride` to be a whole number of tiles -- so the grain
+ * lands back where it started and does not break the loop.
+ */
+const strideFor = (
+  preferred: number,
+  tile: number,
+  loopFrames: number | undefined,
+): number => {
+  if (!loopFrames) {
+    return preferred;
+  }
+
+  const quantum = tile / gcd(loopFrames, tile);
+  return Math.max(quantum, Math.round(preferred / quantum) * quantum);
+};
+
+export const FilmGrain: React.FC<{
+  opacity?: number;
+  tile?: number;
+  /** Set on looping compositions so the grain loops with them. */
+  loopFrames?: number;
+}> = ({ opacity = 0.035, tile = 128, loopFrames }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,11 +98,12 @@ export const FilmGrain: React.FC<{ opacity?: number; tile?: number }> = ({
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = pattern;
-    // Shifting by a different stride on each axis avoids a visible repeat
-    // cadence in the grain from frame to frame.
-    ctx.translate((frame * 37) % tile, (frame * 53) % tile);
+    // A different stride on each axis avoids a visible repeat cadence.
+    const stepX = strideFor(37, tile, loopFrames);
+    const stepY = strideFor(53, tile, loopFrames);
+    ctx.translate((frame * stepX) % tile, (frame * stepY) % tile);
     ctx.fillRect(-tile, -tile, w + tile * 2, h + tile * 2);
-  }, [frame, width, height, tile, tileCanvas]);
+  }, [frame, width, height, tile, tileCanvas, loopFrames]);
 
   return (
     <canvas

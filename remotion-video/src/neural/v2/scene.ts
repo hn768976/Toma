@@ -209,8 +209,16 @@ export const buildV2Band = (
     out.y = point.y;
     out.z = point.z;
 
+    // Packets take their strand's identity, so a warm strand carries warm
+    // packets and the spine carries mint ones.
     const strand = data.strands[strandIndex];
-    const colour = strand.warmth > 0 ? V2.fibreWarm : strand.isSpine ? V2.fibreSpine : data.strands[strandIndex].tone > 0.6 ? V2.dotWhite : V2.dotCool;
+    const colour = strand.warmth > 0
+      ? V2.fibreWarm
+      : strand.isSpine
+        ? V2.fibreSpine
+        : strand.tone > 0.6
+          ? V2.dotWhite
+          : V2.dotCool;
     out.r = colour[0];
     out.g = colour[1];
     out.b = colour[2];

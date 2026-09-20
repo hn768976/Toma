@@ -129,7 +129,7 @@ export const IsometricNeuralLayers: React.FC<
         }}
       />
 
-      <FilmGrain opacity={0.035} />
+      <FilmGrain opacity={0.035} loopFrames={V2_DURATION_IN_FRAMES} />
 
       {showBackend ? (
         <AbsoluteFill
