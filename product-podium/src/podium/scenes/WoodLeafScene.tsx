@@ -55,7 +55,12 @@ export const WoodLeafScene: React.FC<{ params: WoodLeafParams }> = ({
       {/* Cool fill against a warm key: the reference has a genuine warm sun
           pool on the wall sitting in cool shade, and without the split the
           stage reads overcast and flat. */}
-      <hemisphereLight args={["#dbe7ff", "#cddcf2", 0.55]} />
+      <hemisphereLight args={["#dbe7ff", "#cddcf2", 0.42]} />
+      {/* A warm wash from the left. The reference falls off clearly across
+          the frame — bright and near-neutral on the left, cooler and
+          darker to the right — and without it the stage reads as evenly
+          lit cyclorama rather than a room with light coming in. */}
+      <pointLight position={[-7.5, 3.2, 3.0]} intensity={70} color="#ffeccd" decay={2} />
       <ambientLight intensity={0.1} color="#dfe9ff" />
 
       <WallFloor
@@ -72,7 +77,10 @@ export const WoodLeafScene: React.FC<{ params: WoodLeafParams }> = ({
       {/* Light oak disc: low, wide, grain across the top face. The top face
           carries planar UVs from the geometry builder, so the grain runs
           across it rather than spiralling round it. */}
-      <ContactAO radius={p.disc.radius} spread={1.8} strength={0.4} />
+      {/* A wide, soft occlusion pool. Measured against the reference the
+          previous one died within a disc-radius of the base and left the
+          floor beside it unchanged, so the disc read as levitating. */}
+      <ContactAO radius={p.disc.radius} spread={2.9} strength={0.55} />
       <Disc
         radius={p.disc.radius}
         height={p.disc.height}
@@ -81,9 +89,9 @@ export const WoodLeafScene: React.FC<{ params: WoodLeafParams }> = ({
           <meshStandardMaterial
             map={wood.color}
             roughnessMap={wood.roughness}
-            roughness={0.72}
+            roughness={0.5}
             metalness={0}
-            envMapIntensity={0.55}
+            envMapIntensity={0.9}
             side={THREE.FrontSide}
           />
         }

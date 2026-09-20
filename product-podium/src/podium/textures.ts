@@ -209,11 +209,20 @@ export const woodMaps = (o: WoodOptions) => {
     const lo = hexToRgb(o.dark);
     const hi = hexToRgb(o.light);
 
-    // The rim of a disc wraps this texture right round, so every term has
-    // to be periodic in u or there is a hard vertical seam where the UVs
-    // meet. Noise is therefore sampled on a circle in u, and the ring count
-    // is an integer, which makes abs(sin(PI * ring)) periodic too.
-    const rings = Math.max(1, Math.round(o.rings));
+    // Grain runs along v, not u.
+    //
+    // On a disc's rim u goes around the circumference and v up its height,
+    // so rings that vary with u come out as vertical stripes — the disc
+    // reads as staves or end grain rather than a turned or flat-sawn
+    // board. Running the rings along v gives the horizontal tangential
+    // figure real wood has there, and it puts the grain straight across
+    // the planar-mapped top face at the same time.
+    //
+    // Everything is still sampled on a circle in u so it is periodic
+    // around the rim and cannot seam where the UVs meet. The pores and the
+    // fine figure are low-frequency in u and high-frequency in v, so they
+    // run ALONG the grain rather than across it.
+    const rings = Math.max(1, o.rings);
     const ring3 = (radius: number, x: number, y: number, oct: number, seed: number) =>
       fbm3(
         radius * Math.cos(2 * Math.PI * x),
@@ -228,13 +237,13 @@ export const woodMaps = (o: WoodOptions) => {
         const u = x / size;
         const v = y / size;
         // Cathedral figure: a slow wander in where the rings fall.
-        const warp = ring3(3.1, u, v * 1.1, 4, o.seed) * o.turbulence;
-        const fine = ring3(21, u, v * 7, 3, o.seed + 77) * 0.05;
-        const ringValue = (u * rings + warp + fine);
+        const warp = ring3(2.0, u, v * 2.2, 4, o.seed) * o.turbulence;
+        const fine = ring3(2.4, u, v * 34, 3, o.seed + 77) * 0.05;
+        const ringValue = v * rings + warp + fine;
         let t = Math.abs(Math.sin(Math.PI * ringValue));
         t = Math.pow(t, 0.5);
         // Long open pores running along the grain.
-        const pore = Math.max(0, ring3(90, u, v * 3.5, 2, o.seed + 991)) * 0.55;
+        const pore = Math.max(0, ring3(2.6, u, v * 130, 2, o.seed + 991)) * 0.55;
         const shade = Math.min(1, Math.max(0, t * 0.7 + 0.3 - pore * 0.45));
         const i = (y * size + x) * 4;
         img.data[i] = lo[0] + (hi[0] - lo[0]) * shade;
