@@ -120,8 +120,10 @@ export const V1Slab: React.FC = () => {
       const fall = easeInOutCubic(span(frame, 6.6 * f, 11.2 * f));
       const reveal = clamp(rise - fall);
 
-      // Buried: top face flush with the floor. Revealed: bottom face on it.
-      slab.position.y = lerp(-H / 2, H / 2, reveal);
+      // Buried, the top face must sit just BELOW the floor, not flush with it.
+      // Coplanar with the floor it stays visible as a lighter panel inset in
+      // the floor - the reference retracts to a completely clean surface.
+      slab.position.y = lerp(-H / 2 - 0.03, H / 2, reveal);
       edge.position.set(0, slab.position.y + H / 2, D / 2);
 
       const edgeMat = edge.material as THREE.MeshBasicMaterial;

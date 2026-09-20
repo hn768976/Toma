@@ -112,7 +112,9 @@ export const V2Cylinder: React.FC = () => {
       const fall = easeInOutCubic(span(frame, 7.6 * f, 10.4 * f));
       const reveal = clamp(rise - fall);
 
-      podium.position.y = lerp(-HEIGHT / 2, HEIGHT / 2, reveal);
+      // Buried below the floor rather than flush with it, so the retracted
+      // state is a clean floor (a coplanar top face stays visible).
+      podium.position.y = lerp(-HEIGHT / 2 - 0.03, HEIGHT / 2, reveal);
       rimRing.position.y = podium.position.y + HEIGHT / 2 - 0.007;
       const rimMat = rimRing.material as THREE.MeshBasicMaterial;
       rimMat.opacity = reveal;
