@@ -157,7 +157,10 @@ export const buildScene = (
     mesh.count = placed;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    mesh.castShadow = true;
+    // Deliberately not shadow casters: the surface-mount parts are small and
+    // numerous, and putting ~1.8k instances through the shadow pass costs far
+    // more than the contact shadows they would contribute.
+    mesh.castShadow = false;
     mesh.receiveShadow = true;
     scene.add(mesh);
     return mesh;
@@ -457,15 +460,15 @@ export const buildScene = (
   scene.add(rim);
 
   scene.add(new THREE.AmbientLight(p.ambient, p.ambientIntensity));
-  scene.add(new THREE.HemisphereLight(p.rimLight, p.board, p.ambientIntensity * 1.4));
+  scene.add(new THREE.HemisphereLight(p.rimLight, p.board, p.ambientIntensity * 0.8));
 
   // Animated practical lights that sell the pulse in 3D.
   const chipLight = new THREE.PointLight(p.chipEmissive, 0, 22, 2);
-  chipLight.position.set(0, 1.2, 0);
+  chipLight.position.set(0, 0.22, 0);
   scene.add(chipLight);
 
   const waveLight = new THREE.PointLight(p.traceEdge, 0, 40, 2);
-  waveLight.position.set(0, 0.8, 0);
+  waveLight.position.set(0, 0.3, 0);
   scene.add(waveLight);
 
   return {

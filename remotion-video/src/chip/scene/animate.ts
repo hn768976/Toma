@@ -43,16 +43,16 @@ const PATHS: Record<VariantId, CamKey[]> = {
     { t: 1.0, dist: 8.8, height: 6.4, yaw: 0.36, targetY: 0.5, fov: 33 },
   ],
   v2: [
-    { t: 0.0, dist: 11.0, height: 3.1, yaw: 0.62, targetY: 0.5, fov: 30 },
-    { t: 0.3, dist: 9.6, height: 2.6, yaw: 0.34, targetY: 0.45, fov: 29 },
-    { t: 0.65, dist: 8.6, height: 2.25, yaw: 0.02, targetY: 0.4, fov: 28 },
-    { t: 1.0, dist: 8.0, height: 2.05, yaw: -0.26, targetY: 0.38, fov: 28 },
+    { t: 0.0, dist: 10.6, height: 4.6, yaw: 0.6, targetY: 0.5, fov: 30 },
+    { t: 0.3, dist: 9.4, height: 4.1, yaw: 0.34, targetY: 0.45, fov: 29 },
+    { t: 0.65, dist: 8.5, height: 3.8, yaw: 0.02, targetY: 0.42, fov: 28 },
+    { t: 1.0, dist: 8.0, height: 3.65, yaw: -0.26, targetY: 0.4, fov: 28 },
   ],
   v3: [
-    { t: 0.0, dist: 12.6, height: 3.6, yaw: -0.22, targetY: 0.7, fov: 33 },
-    { t: 0.35, dist: 10.4, height: 3.0, yaw: -0.1, targetY: 0.6, fov: 32 },
-    { t: 0.72, dist: 8.6, height: 2.55, yaw: 0.02, targetY: 0.5, fov: 31 },
-    { t: 1.0, dist: 8.1, height: 2.42, yaw: 0.07, targetY: 0.48, fov: 31 },
+    { t: 0.0, dist: 12.2, height: 5.2, yaw: -0.22, targetY: 0.7, fov: 33 },
+    { t: 0.35, dist: 10.2, height: 4.6, yaw: -0.1, targetY: 0.6, fov: 32 },
+    { t: 0.72, dist: 8.6, height: 4.15, yaw: 0.02, targetY: 0.52, fov: 31 },
+    { t: 1.0, dist: 8.2, height: 4.0, yaw: 0.07, targetY: 0.5, fov: 31 },
   ],
 };
 
@@ -209,9 +209,11 @@ export const updateScene = (
     // A tight, bright Fresnel lip rather than a broad wash: a wide rim on a
     // smooth lid reflects the whole studio and turns the chip white.
     bodyU.uRimPower.value = mix(2.8, 5.2, transform);
-    lidU.uRimPower.value = mix(3.0, 5.6, transform);
+    lidU.uRimPower.value = 6.5;
     bodyU.uRim.value = mix(0.45, 1.5, transform) + flash * 1.2;
-    lidU.uRim.value = mix(0.35, 1.3, transform) + flash * 1.0;
+    lidU.uRim.value = 0.12 + flash * 0.4;
+    lidU.uEdge.value = mix(0.55, 1.2, transform) + flash * 0.8;
+    lidU.uEdgeWidth.value = 0.05;
     bodyU.uRimColor.value.set(0x35c0ff).lerp(new THREE.Color(0xffffff), transform);
     lidU.uRimColor.value.set(0x35c0ff).lerp(new THREE.Color(0xffffff), transform);
 
@@ -228,22 +230,26 @@ export const updateScene = (
     parts.chipLid.metalness = mix(0.35, 0.62, transform);
     // Kept off mirror-smooth so the lid stays black instead of mirroring the
     // bright ceiling panel of the studio environment.
-    parts.chipLid.roughness = mix(0.22, 0.14, transform);
+    parts.chipLid.roughness = mix(0.22, 0.34, transform);
+    parts.chipLid.clearcoat = mix(1, 0.35, transform);
+    parts.chipLid.clearcoatRoughness = mix(0.06, 0.4, transform);
+    parts.chipBody.clearcoatRoughness = mix(0.06, 0.3, transform);
 
     lidU.uDie.value = mix(0.34, 0.05, transform) * (0.35 + holo * 0.9);
     lidU.uCircuit.value = mix(0.5, 0.1, transform);
     lidU.uLabelColor.value.set(0xd6f0ff).lerp(new THREE.Color(0xffffff), transform);
     lidU.uLabel.value =
-      smoothstep(beats.descendStart, beats.seat, frame) * mix(1.15, 0.85, transform) +
-      flash * 0.9;
+      smoothstep(beats.descendStart, beats.seat, frame) * mix(1.35, 1.2, transform) +
+      flash * 0.7;
   } else if (cfg.chipStyle === "iridescent") {
     lidU.uSheen.value = 1;
     // The marking has to stay legible against a bright iridescent lid, so it
     // is driven harder here than on the dark variants.
-    lidU.uLabel.value = smoothstep(beats.descendStart, beats.seat - 8, frame) * 1.25;
+    lidU.uLabel.value = smoothstep(beats.descendStart, beats.seat - 8, frame) * 0.95;
     lidU.uLabelColor.value.set(0xffffff);
     bodyU.uRim.value = 0.55;
-    lidU.uRim.value = 0.4;
+    lidU.uRim.value = 0.12;
+    lidU.uEdge.value = 0.5;
     lidU.uDie.value = 0.12;
     lidU.uCircuit.value = 0.16;
   } else {
@@ -258,12 +264,17 @@ export const updateScene = (
     lidU.uDie.value = 0.2 + energy * 0.35;
     lidU.uCircuit.value = 0.25 + energy * 0.5;
     bodyU.uRim.value = 0.7 + flash * 2;
-    lidU.uRim.value = 0.55 + flash * 1.6;
+    lidU.uRim.value = 0.15 + flash * 0.5;
+    lidU.uEdge.value = 0.5 + energy * 0.35 + flash * 1.4;
   }
 
   // -------------------------------------------------------------- lights
-  parts.chipLight.intensity = (0.6 + energy * 2.4 + flash * 26) * (cfg.id === "v2" ? 0.45 : 1);
-  parts.chipLight.position.y = parts.chip.position.y + 0.6;
+  parts.chipLight.intensity = (0.45 + energy * 1.3 + flash * 20) * (cfg.id === "v2" ? 0.45 : 1);
+  // Kept just above the board rather than above the package. Sitting over the
+  // chip, this light throws a specular highlight onto the lid which the
+  // grazing camera stretches into a vertical beam straight through the
+  // marking; from below the lid it lights the socket and board instead.
+  parts.chipLight.position.y = 0.22;
   parts.waveLight.intensity = flash * 40 + energy * 3;
 
   // ----------------------------------------------------------- particles

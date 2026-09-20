@@ -33,6 +33,9 @@ export type LidUniforms = ChipUniforms & {
   uSheen: { value: number };
   uSheenA: { value: THREE.Color };
   uSheenB: { value: THREE.Color };
+  /** Border glow along the package face, independent of view angle. */
+  uEdge: { value: number };
+  uEdgeWidth: { value: number };
 };
 
 const RIM_PARS = /* glsl */ `
@@ -44,6 +47,7 @@ const LID_PARS = /* glsl */ `
 uniform sampler2D uLid;
 uniform float uLabel, uDie, uCircuit, uSheen;
 uniform vec3 uLabelColor, uDieColor, uSheenA, uSheenB;
+uniform float uEdge, uEdgeWidth;
 `;
 
 /** Fresnel + hologram lattice, shared by body and lid. */
@@ -172,10 +176,25 @@ export const makeChipLidMaterial = (opts: {
     uSheen: { value: 0 },
     uSheenA: { value: new THREE.Color(opts.sheenA) },
     uSheenB: { value: new THREE.Color(opts.sheenB) },
+    uEdge: { value: 0 },
+    uEdgeWidth: { value: 0.055 },
   };
   mat.userData.uniforms = uniforms;
 
   const extra = /* glsl */ `
+  // Border glow measured from the package edge in UV space.
+  //
+  // A Fresnel rim is the obvious way to do this and it is wrong here: at the
+  // low camera angles these shots use, the viewing direction is nearly
+  // perpendicular to the lid normal across the *entire* face, so a Fresnel
+  // term saturates everywhere and floods a black package to grey. Edge
+  // distance is view-independent and stays a rim.
+  {
+    float edgeD = min( min( vUv.x, 1.0 - vUv.x ), min( vUv.y, 1.0 - vUv.y ) );
+    float edgeRim = 1.0 - smoothstep( 0.0, max( uEdgeWidth, 1e-4 ), edgeD );
+    totalEmissiveRadiance += uRimColor * edgeRim * uEdge;
+  }
+
   vec4 lid = texture2D( uLid, vUv );
   float die     = lid.r;
   float label   = smoothstep( 0.35, 0.75, lid.g );

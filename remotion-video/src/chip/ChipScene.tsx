@@ -61,7 +61,7 @@ export const ChipScene: React.FC<ChipSceneProps> = ({ variant, tier, detail }) =
         // tonemapper; the dark variants keep the filmic highlight rolloff.
         toneMapping:
           variant === "v2" ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping,
-        exposure: variant === "v2" ? 1.05 : 1.45,
+        exposure: cfg.palette.exposure,
       });
 
       const boardSize = Math.round(2048 * detail);

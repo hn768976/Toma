@@ -73,15 +73,33 @@ export const createOverlay = (
   base.setSize(W, H);
   stage.addChild(base);
 
+  // Blur passes run at reduced resolution and are upscaled afterwards.
+  // Filtering a sprite that has already been scaled up makes every pass cost
+  // full-resolution pixels, which on a software rasteriser dominates the whole
+  // frame; doing the work small and stretching the result is both far cheaper
+  // and gives a smoother falloff.
+  const DOF_DOWN = 2;
+  const BLOOM_DOWN = 4;
+
   // --- depth of field ---------------------------------------------------
   const maskCanvas = makeCanvas(4, 256);
   const maskSource = new CanvasSource({ resource: maskCanvas });
   const maskTex = new Texture({ source: maskSource });
 
-  const dofBlur = new BlurFilter({ strength: 10, quality: 5 });
-  const dofSprite = new Sprite(srcTex);
+  const dofRt = RenderTexture.create({
+    width: Math.max(1, Math.ceil(W / DOF_DOWN)),
+    height: Math.max(1, Math.ceil(H / DOF_DOWN)),
+    antialias: false,
+  });
+  const dofBlur = new BlurFilter({ strength: 5, quality: 4 });
+  const dofSmall = new Sprite(srcTex);
+  dofSmall.setSize(W / DOF_DOWN, H / DOF_DOWN);
+  dofSmall.filters = [dofBlur];
+  const dofSmallHolder = new Container();
+  dofSmallHolder.addChild(dofSmall);
+
+  const dofSprite = new Sprite(dofRt);
   dofSprite.setSize(W, H);
-  dofSprite.filters = [dofBlur];
   const dofMask = new Sprite(maskTex);
   dofMask.setSize(W, H);
   const dofContainer = new Container();
@@ -116,27 +134,41 @@ export const createOverlay = (
   };
 
   // --- bloom ------------------------------------------------------------
-  const DOWN = 4;
+  const bw = Math.max(1, Math.ceil(W / BLOOM_DOWN));
+  const bh = Math.max(1, Math.ceil(H / BLOOM_DOWN));
   const bright = new ColorMatrixFilter();
-  const bloomRt = RenderTexture.create({
-    width: Math.max(1, Math.ceil(W / DOWN)),
-    height: Math.max(1, Math.ceil(H / DOWN)),
+  const brightRt = RenderTexture.create({ width: bw, height: bh, antialias: false });
+  const nearRt = RenderTexture.create({ width: bw, height: bh, antialias: false });
+  const farRt = RenderTexture.create({
+    width: Math.max(1, bw >> 1),
+    height: Math.max(1, bh >> 1),
     antialias: false,
   });
+
   const brightSprite = new Sprite(srcTex);
-  brightSprite.setSize(W / DOWN, H / DOWN);
+  brightSprite.setSize(bw, bh);
   brightSprite.filters = [bright];
   const brightHolder = new Container();
   brightHolder.addChild(brightSprite);
 
-  // Two radii: a tight core glow plus a wide halo.
-  const bloomNear = new Sprite(bloomRt);
+  // Two radii, both blurred small: a tight core glow plus a wide halo.
+  const nearSmall = new Sprite(brightRt);
+  nearSmall.setSize(bw, bh);
+  nearSmall.filters = [new BlurFilter({ strength: 3, quality: 3 })];
+  const nearHolder = new Container();
+  nearHolder.addChild(nearSmall);
+
+  const farSmall = new Sprite(brightRt);
+  farSmall.setSize(bw >> 1, bh >> 1);
+  farSmall.filters = [new BlurFilter({ strength: 5, quality: 3 })];
+  const farHolder = new Container();
+  farHolder.addChild(farSmall);
+
+  const bloomNear = new Sprite(nearRt);
   bloomNear.setSize(W, H);
-  bloomNear.filters = [new BlurFilter({ strength: 4, quality: 4 })];
   bloomNear.blendMode = "add";
-  const bloomFar = new Sprite(bloomRt);
+  const bloomFar = new Sprite(farRt);
   bloomFar.setSize(W, H);
-  bloomFar.filters = [new BlurFilter({ strength: 16, quality: 4 })];
   bloomFar.blendMode = "add";
   stage.addChild(bloomFar, bloomNear);
 
@@ -193,21 +225,26 @@ export const createOverlay = (
     draw: (o) => {
       srcSource.update();
 
-      // Bright pass: scale up, subtract the threshold, clamp at zero.
-      const k = 1 / Math.max(0.05, 1 - o.bloomThreshold);
-      const off = -o.bloomThreshold * k;
+      // Bright pass: subtract the threshold and clamp at zero, with no gain.
+      // Renormalising by 1/(1-threshold) here multiplies highlights by ~4x,
+      // which the old full-resolution blur happened to dilute; blurring at a
+      // quarter resolution preserves that energy and washes out the frame.
+      const off = -o.bloomThreshold;
       bright.matrix = [
-        k, 0, 0, 0, off,
-        0, k, 0, 0, off,
-        0, 0, k, 0, off,
+        1, 0, 0, 0, off,
+        0, 1, 0, 0, off,
+        0, 0, 1, 0, off,
         0, 0, 0, 1, 0,
       ];
-      renderer.render({ container: brightHolder, target: bloomRt, clear: true });
-      bloomNear.alpha = Math.min(1, o.bloomStrength * 0.55);
-      bloomFar.alpha = Math.min(1, o.bloomStrength * 0.38);
+      renderer.render({ container: brightHolder, target: brightRt, clear: true });
+      renderer.render({ container: nearHolder, target: nearRt, clear: true });
+      renderer.render({ container: farHolder, target: farRt, clear: true });
+      bloomNear.alpha = Math.min(1, o.bloomStrength * 0.95);
+      bloomFar.alpha = Math.min(1, o.bloomStrength * 0.75);
 
       updateMask(o.focusY, o.focusTightness);
-      dofBlur.strength = 7 * o.dofStrength;
+      dofBlur.strength = (4.5 * o.dofStrength) / DOF_DOWN;
+      renderer.render({ container: dofSmallHolder, target: dofRt, clear: true });
       dofContainer.alpha = Math.min(1, o.dofStrength);
 
       updateVignette(o.vignette);
@@ -219,7 +256,10 @@ export const createOverlay = (
       renderer.render({ container: stage, clear: true });
     },
     destroy: () => {
-      bloomRt.destroy(true);
+      brightRt.destroy(true);
+      nearRt.destroy(true);
+      farRt.destroy(true);
+      dofRt.destroy(true);
       stage.destroy({ children: true });
       srcTex.destroy(true);
       maskTex.destroy(true);

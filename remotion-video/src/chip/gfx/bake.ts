@@ -196,9 +196,9 @@ export const bakeChipLid = (
 const drawLabel = (label: string, size: number): Graphics => {
   const g = new Graphics();
   const capH = size * 0.34;
-  const stroke = capH * 0.17;
+  const stroke = capH * 0.125;
   const gap = capH * 0.2;
-  const aW = capH * 0.86;
+  const aW = capH * 0.9;
   const iW = stroke;
   const col = encode(0, 1, 0); // G channel = marking mask
 
@@ -217,29 +217,27 @@ const drawLabel = (label: string, size: number): Graphics => {
       g.rect(x, top, iW, capH).fill({ color: col, alpha: 1 });
     } else if (c === "A") {
       const cx = x + w / 2;
-      // Inner edge of each leg, as a function of height down the glyph.
-      const lIn = (t: number) => cx + (x - cx) * t + stroke;
-      const rIn = (t: number) => cx + (x + w - cx) * t - stroke;
-
-      const barTop = bottom - capH * 0.3;
-      const barBot = barTop + stroke * 0.85;
-      const tBarTop = (barTop - top) / capH;
-      const tBarBot = (barBot - top) / capH;
-
-      g.poly([cx, top, x + w, bottom, x, bottom]).fill({ color: col, alpha: 1 });
-      // Counter above the crossbar.
+      const barTop = bottom - capH * 0.34;
+      const barH = stroke * 0.82;
+      // Two leg quads plus a crossbar. Built from explicit polygons rather
+      // than a filled triangle with its counter cut out: the counter has to
+      // survive being foreshortened to a fraction of its height by the
+      // low-angle cameras, and an overlap of solid quads is unambiguous where
+      // a boolean cut is not.
+      g.poly([cx, top, cx + stroke, top, x + stroke, bottom, x, bottom]).fill({
+        color: col,
+        alpha: 1,
+      });
       g.poly([
-        cx, top + stroke * 1.45,
-        rIn(tBarTop), barTop,
-        lIn(tBarTop), barTop,
-      ]).cut();
-      // Gap between the legs below the crossbar.
-      g.poly([
-        lIn(tBarBot), barBot,
-        rIn(tBarBot), barBot,
+        cx - stroke, top,
+        cx, top,
+        x + w, bottom,
         x + w - stroke, bottom,
-        x + stroke, bottom,
-      ]).cut();
+      ]).fill({ color: col, alpha: 1 });
+      g.rect(x + stroke * 1.4, barTop, w - stroke * 2.8, barH).fill({
+        color: col,
+        alpha: 1,
+      });
     } else {
       g.rect(x, top, w, capH).fill({ color: col, alpha: 1 });
     }
