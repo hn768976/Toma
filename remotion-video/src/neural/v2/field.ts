@@ -47,6 +47,14 @@ export type Fibre = {
   curl: number;
   /** Slight out-of-plane bow, so the sheet is not perfectly flat. */
   lift: number;
+  /**
+   * How far the fibre falls below the plane by the time it reaches its tip.
+   * Rising smoothly across the sheet, this is what turns the flat comb into
+   * a cascade that opens across frame height.
+   */
+  drop: number;
+  /** Small rotation of this fibre's sweep, so neighbours separate slowly. */
+  fan: number;
   widthScale: number;
   tone: number;
   /** 0 = cool blue, 1 = the red-orange minority. */
@@ -70,7 +78,7 @@ const SHEET_SPECS: { cy: number; cz: number; rootAngle: number; scale: number; b
   // The sheet the shot is built around.
   { cy: 0, cz: 0, rootAngle: -0.66, scale: 1, brightness: 1 },
   // A second plane behind and above it, giving the stacked-layer read.
-  { cy: 4.6, cz: -14, rootAngle: -0.72, scale: 0.92, brightness: 0.5 },
+  { cy: 5.2, cz: -12, rootAngle: -0.78, scale: 0.92, brightness: 0.42 },
 ];
 
 export const v2Camera = (frame: number) => {
@@ -78,11 +86,11 @@ export const v2Camera = (frame: number) => {
   // About 25 degrees above the plane: shallow enough that the root line
   // reads as a hard edge, steep enough to see along the sheet.
   return {
-    x: 1.2 + Math.sin(TAU * f) * 0.5,
+    x: -2.4 + Math.sin(TAU * f) * 0.5,
     y: 7.2 + Math.sin(TAU * f + 1.2) * 0.28,
     z: 16 + Math.cos(TAU * f) * 0.45,
-    lookX: 3.4 + Math.sin(TAU * f + 2.1) * 0.3,
-    lookY: 0.6,
+    lookX: -2.2 + Math.sin(TAU * f + 2.1) * 0.3,
+    lookY: -1.9,
     lookZ: -1.5,
   };
 };
@@ -96,8 +104,8 @@ export const buildV2Field = (): { sheets: Sheet[]; fibres: Fibre[] } => {
     cz: spec.cz,
     rootAngle: spec.rootAngle,
     skew: 0.34 + rnd() * 0.16,
-    rootLength: 48 * spec.scale,
-    fibreCount: Math.round(200 * spec.scale),
+    rootLength: 11 * spec.scale,
+    fibreCount: Math.round(92 * spec.scale),
     brightness: spec.brightness,
     seed: i * 977,
   }));
@@ -110,7 +118,9 @@ export const buildV2Field = (): { sheets: Sheet[]; fibres: Fibre[] } => {
     // A contiguous run of bright fibres, as though a highlight is falling
     // across one part of the sheet.
     const highlightAt = 0.12 + rnd() * 0.3;
-    const highlightWidth = 0.07 + rnd() * 0.05;
+    // Narrow: in the reference the specular catch is a thin bright spine,
+    // not a wash across half the sheet.
+    const highlightWidth = 0.05 + rnd() * 0.035;
     // The warm fibres sit together in a band too, rather than being sprinkled.
     const warmAt = -0.12 + rnd() * 0.24;
     const warmWidth = 0.13 + rnd() * 0.09;
@@ -125,13 +135,17 @@ export const buildV2Field = (): { sheets: Sheet[]; fibres: Fibre[] } => {
       fibres.push({
         sheet: si,
         s,
-        // Length varies smoothly along the sheet, so the tips describe a
-        // curve rather than a ragged edge.
-        length: (14 + Math.sin((s + 0.5) * Math.PI) * 5) * (0.85 + rnd() * 0.3),
-        // Wide variation on purpose: fibres that curl at slightly different
-        // rates separate as they travel, which is what opens the far end of
-        // the sheet into a fan instead of keeping it a solid bundle.
-        curl: 0.34 + rnd() * 0.62,
+        // Sized so the whole sweep lands inside the frame: longer fibres
+        // put the entire cascade off the left edge, leaving only the packed
+        // roots visible.
+        length: (5.2 + (s + 0.5) * 2.6) * (0.85 + rnd() * 0.3),
+        // Curl rises smoothly along the root line rather than randomly.
+        // Neighbouring fibres stay neighbours -- they keep the combed look
+        // near the root -- while the far end of the sheet opens into a wide
+        // spreading fan, which is the shape the reference builds to.
+        curl: 0.2 + (s + 0.5) * 1.45 + (rnd() - 0.5) * 0.16,
+        drop: (s + 0.5) * 9.6 + (rnd() - 0.5) * 1.0,
+        fan: s * 0.78 + (rnd() - 0.5) * 0.05,
         lift: (rnd() - 0.5) * 0.5,
         widthScale: 0.7 + rnd() * 0.7,
         tone: Math.pow(rnd(), 1.5),

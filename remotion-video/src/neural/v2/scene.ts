@@ -32,8 +32,8 @@ import {
 export const V2_FOV = 34;
 
 const SAMPLES = 48;
-const BASE_WIDTH = 0.075;
-const BEADS_PER_FIBRE = 3;
+const BASE_WIDTH = 0.082;
+const BEADS_PER_FIBRE = 5;
 
 /** Defocus radius per slice, in composition pixels at 1080p. */
 export const V2_BAND_BLUR: Record<BandId, number> = { 0: 9, 1: 0, 2: 16 };
@@ -49,23 +49,20 @@ const fibrePoint = (
 ): void => {
   const sheet = sheets[fibre.sheet];
 
+  const travel = t * fibre.length;
+
   // Axes of the sheet's plane: along the root line, and the sweep direction
-  // the fibres set off in.
+  // the fibres set off in. Each fibre sweeps at its own angle, so the bundle
+  // diverges gently with distance while staying packed at the root.
   const la = sheet.rootAngle;
   const lx = Math.cos(la);
   const lz = Math.sin(la);
-  // Sweep away from the camera side of the root line, so the fibres run up
-  // and back across frame rather than spilling toward the viewer.
-  const sa = la - Math.PI / 2 - sheet.skew;
+  const sa = la - Math.PI / 2 - sheet.skew + fibre.fan;
   const sx = Math.cos(sa);
   const sz = Math.sin(sa);
 
   const root = fibre.s * sheet.rootLength;
-  const travel = t * fibre.length;
-  // Sideways drift accelerates with travel: fibres stay parallel near the
-  // root and curl hard at the far end.
-  // Negative: the tips hook back toward the near end of the root line, which
-  // is the downward curl the reference finishes each sweep with.
+  // The tips hook back toward the near end of the root line.
   const side = -fibre.curl * fibre.length * Math.pow(t, 2.2);
 
   // Two travelling waves, whole cycles per loop.
@@ -75,11 +72,15 @@ const fibrePoint = (
 
   out.x = sheet.cx + lx * (root + side) + sx * travel;
   out.z = sheet.cz + lz * (root + side) + sz * travel;
+  // Each fibre falls at its own rate, rising smoothly across the sheet. The
+  // roots stay packed on the plane's edge while the tips spread over most of
+  // frame height, which is the cascade the reference opens into. A spread
+  // confined to the horizontal plane would be crushed flat by the shallow
+  // camera instead.
   out.y =
     sheet.cy +
+    -fibre.drop * t * t +
     fibre.lift * Math.sin(t * Math.PI) +
-    // The bow grows with travel, so the sheet stays flat at the edge and
-    // ripples where it curls.
     wave * (0.15 + t * 1.5) +
     (fibre.isSpine ? 0.5 : 0);
   out.travel = t;
@@ -181,9 +182,9 @@ export const buildV2Band = (
       (1 - smoothstep(0.72, 1, t)) *
       sheets[fibre.sheet].brightness *
       fibre.dim *
-      (fibre.isSpine ? 2.2 : 1) *
-      (0.55 + 1.9 * spec) *
-      0.55;
+      (fibre.isSpine ? 2.8 : 1) *
+      (0.5 + 1.6 * spec) *
+      0.42;
   };
 
   const writeBead = (index: number, out: Dot) => {
