@@ -159,6 +159,8 @@ export type NeonRingParams = {
   /** The hot core of the tube — near white, tinted towards `ring`. */
   ringCore: string;
   disc: { radius: number; height: number; bevel: number };
+  /** How far the slab floats above the floor — what separates ring from reflection. */
+  float: number;
   /** Whole cycles the bright segment travels round each ring over the clip. */
   travelCyclesTop: number;
   travelCyclesBottom: number;

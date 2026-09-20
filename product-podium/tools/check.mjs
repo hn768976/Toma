@@ -100,9 +100,7 @@ const checks = {
   },
 
   "NeonRing-PodiumBlue": (img, out) => {
-    // Search below the top ring's glow: the surface itself starts where the
-    // ring's bright core ends.
-    const band = topSurfaceBand(img, 0.5, 0.42, 0.56, 14);
+    const band = topSurfaceBand(img, 0.5, 0.3, 0.56, 9);
     out.push(["plinth top 40-50%", band && band.top >= 0.4 && band.top <= 0.5, band && `${(band.top * 100).toFixed(1)}%`]);
     // Two rings, not one thick band: down the centre of frame the top ring
     // is crossed twice — behind the top face and in front of it — and the
@@ -121,17 +119,31 @@ const checks = {
     // reported as such rather than fudged: this look's own spec calls for
     // pure black with no visible wall, floor or horizon, so there is no
     // ground for a contact shadow to fall on. What marks the base instead
-    // is the lower ring, with the disc's unlit side between the two rings.
-    const side = meanRect(img, 0.45, 0.55, 0.55, 0.6);
-    const ring = meanRect(img, 0.45, 0.635, 0.55, 0.655);
+    // is the neon line at the slab's rim, with the slab's unlit side above
+    // it, and the slab's reflection below establishing the ground plane.
+    const side = meanRect(img, 0.45, 0.505, 0.55, 0.545);
+    const ring = meanRect(img, 0.45, 0.558, 0.55, 0.572);
     out.push([
-      "n/a: no ground in this look — base marked by the lower ring",
+      "n/a: no ground in this look — base marked by the neon rim",
       side[0] + side[1] + side[2] < ring[0] + ring[1] + ring[2],
       `unlit disc side=${fmt(side)} lower ring=${fmt(ring)}`,
     ]);
+    // The MAXIMUM channel over the corner, not the mean. A mean rounds a
+    // scatter of level-1 pixels to "0" and reports black that is not black
+    // — and one level is enough to break the screen-blend use case.
     for (const [name, r] of [["TL", [0.01, 0.02, 0.09, 0.12]], ["TR", [0.91, 0.02, 0.99, 0.12]], ["BL", [0.01, 0.88, 0.09, 0.98]], ["BR", [0.91, 0.88, 0.99, 0.98]]]) {
-      const c = meanRect(img, ...r);
-      out.push([`corner ${name} is 0,0,0`, c[0] === 0 && c[1] === 0 && c[2] === 0, fmt(c)]);
+      const [x0, y0, x1, y1] = r;
+      let peak = 0;
+      let nonZero = 0;
+      for (let y = Math.round(y0 * img.height); y < Math.round(y1 * img.height); y++) {
+        for (let x = Math.round(x0 * img.width); x < Math.round(x1 * img.width); x++) {
+          const px = img.at(x, y);
+          const v = Math.max(px[0], px[1], px[2]);
+          if (v > peak) peak = v;
+          if (v > 0) nonZero++;
+        }
+      }
+      out.push([`corner ${name} is true 0,0,0`, peak === 0, `peak channel ${peak}, ${nonZero} non-zero px`]);
     }
   },
 
