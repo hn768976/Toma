@@ -111,6 +111,7 @@ export const createEyeScene = async (
   const iris = buildHudIris(palette, {
     flare: textures.flare,
     streak: textures.streak,
+    dot: textures.dot,
   });
   scene.add(iris.group);
 

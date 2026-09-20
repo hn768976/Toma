@@ -22,13 +22,15 @@ export const MODEL = {
 
 // The HUD ring system floats just in front of the sculpted iris.
 export const HUD_Z = -0.09;
-export const HUD_RADIUS = 0.26;
+export const HUD_RADIUS = 0.27;
+// Model vertices above this height (the brow ridge) are dropped.
+export const BROW_CULL_Y = 0.21;
 
-// Camera: distance chosen so the HUD disc is ~54% of the frame height, like
-// the references, and the eyelids run off both sides of the frame.
+// Camera: distance chosen so the HUD disc is ~72% of the frame height, like
+// the references; the eyelids only ghost in at the edges of the frame.
 export const CAMERA = {
   fov: 30,
-  distance: 1.72,
+  distance: 1.27,
   near: 0.05,
   far: 20,
 };

@@ -26,6 +26,7 @@ import { colorVec3, floatUniform, type FloatUniform } from "./tsl-helpers";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { Palette } from "../palettes";
 import { mulberry32 } from "../random";
+import { BROW_CULL_Y } from "../constants";
 
 export type EyeParticleOptions = {
   /** Total particle budget (mesh vertices + surface samples). */
@@ -122,7 +123,14 @@ const samplePositions = (
       }
     }
   }
-  return new Float32Array(out);
+  // Drop the brow ridge: only the lids, lashes and the ball should remain.
+  const kept: number[] = [];
+  for (let i = 0; i < out.length; i += 3) {
+    if (out[i + 1] <= BROW_CULL_Y) {
+      kept.push(out[i], out[i + 1], out[i + 2]);
+    }
+  }
+  return new Float32Array(kept);
 };
 
 type LayerOptions = {
@@ -169,7 +177,7 @@ const makeSpriteLayer = ({
     .mul(0.5)
     .add(0.5);
   // Fade the cloud out where the HUD disc sits so the rings stay clean.
-  const centreFade = smoothstep(float(0.2), float(0.36), length(pos.xy));
+  const centreFade = smoothstep(float(0.26), float(0.42), length(pos.xy));
   const soft = texture(dotTexture, uv()).r;
   const brightness = float(0.25)
     .add(flicker.mul(0.45))
@@ -220,22 +228,22 @@ export const buildEyeParticles = (
 
   // Layer 2: every 7th dot again, much larger and dimmer, as a cheap
   // depth-of-field haze around the lids.
-  const hazeCount = Math.floor(count / 7);
+  const hazeCount = Math.floor(count / 4);
   const hazePos = new Float32Array(hazeCount * 3);
   const hazeSeeds = new Float32Array(hazeCount);
   for (let i = 0; i < hazeCount; i++) {
-    hazePos[i * 3] = positions[i * 21];
-    hazePos[i * 3 + 1] = positions[i * 21 + 1];
-    hazePos[i * 3 + 2] = positions[i * 21 + 2];
-    hazeSeeds[i] = seeds[i * 7];
+    hazePos[i * 3] = positions[i * 12];
+    hazePos[i * 3 + 1] = positions[i * 12 + 1];
+    hazePos[i * 3 + 2] = positions[i * 12 + 2];
+    hazeSeeds[i] = seeds[i * 4];
   }
   group.add(
     makeSpriteLayer({
       positions: hazePos,
       seeds: hazeSeeds,
       color: palette.particle,
-      size: options.dotSize * 6,
-      intensity: palette.particleIntensity * 0.08,
+      size: options.dotSize * 10,
+      intensity: palette.particleIntensity * 0.16,
       dotTexture,
       time,
     }),
@@ -248,10 +256,12 @@ export const buildEyeParticles = (
     wireMaterial.blending = AdditiveBlending;
     wireMaterial.colorNode = colorVec3(palette.particle);
     wireMaterial.opacityNode = smoothstep(
-      float(0.22),
-      float(0.38),
+      float(0.27),
+      float(0.42),
       length(positionLocal.xy),
-    ).mul(0.07 * palette.particleIntensity);
+    )
+      .mul(smoothstep(float(BROW_CULL_Y + 0.02), float(BROW_CULL_Y - 0.03), positionLocal.y))
+      .mul(0.1 * palette.particleIntensity);
     const wire = new LineSegments(new WireframeGeometry(geometry), wireMaterial);
     wire.frustumCulled = false;
     group.add(wire);

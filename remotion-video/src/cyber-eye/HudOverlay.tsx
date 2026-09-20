@@ -10,7 +10,8 @@ import type { Palette } from "./palettes";
 import { hash01 } from "./random";
 
 // 2D HUD chrome drawn as SVG on top of the WebGPU canvas. Coordinates are in a
-// 1920x1080 design space and scale losslessly to the 4K compositions.
+// 1920x1080 design space and scale losslessly to the 4K compositions. The
+// layout follows the reference: everything hugs the iris disc (radius ~390px).
 const FONT = "'Share Tech Mono', 'DejaVu Sans Mono', monospace";
 const CX = 960;
 const CY = 540;
@@ -56,214 +57,163 @@ export const HudOverlay: React.FC<Props> = ({ palette }) => {
   const c = palette.hud;
   const accent = palette.secondary;
 
-  // Deterministic per-frame flicker helpers.
   const blink = (period: number, offset: number, duty = 0.5) =>
     ((t + offset) % period) / period < duty ? 1 : 0.15;
   const glitch = (k: number) => (hash01(frame * 7 + k) > 0.12 ? 1 : 0.25);
 
-  // Arc scale above the iris: 00 .. 120 over -60..60 degrees.
-  const scaleR = 352;
+  // Arc scale inside the outer rings: 00 .. 120 over -48..48 degrees.
+  const scaleR = 300;
   const ticks: React.ReactNode[] = [];
-  for (let d = -60; d <= 60; d += 5) {
-    const major = d % 20 === 0;
+  for (let d = -48; d <= 48; d += 4) {
+    const major = d % 16 === 0;
     const p0 = polar(scaleR, d);
-    const p1 = polar(scaleR + (major ? 14 : 7), d);
+    const p1 = polar(scaleR + (major ? 16 : 8), d);
     ticks.push(
-      <line
-        key={`tick-${d}`}
-        x1={p0.x}
-        y1={p0.y}
-        x2={p1.x}
-        y2={p1.y}
-        stroke={c}
-        strokeWidth={major ? 2 : 1}
-        opacity={major ? 0.9 : 0.5}
-      />,
+      <line key={`tick-${d}`} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#ffffff" strokeWidth={major ? 3 : 1.5} opacity={major ? 0.95 : 0.5} />,
     );
     if (major) {
-      const p = polar(scaleR + 30, d);
+      const p = polar(scaleR + 34, d);
       ticks.push(
-        <text
-          key={`lbl-${d}`}
-          x={p.x}
-          y={p.y}
-          fill={c}
-          fontSize={15}
-          textAnchor="middle"
-          transform={`rotate(${d}, ${p.x}, ${p.y})`}
-          opacity={0.9}
-        >
-          {pad(((d + 60) / 20) * 20, 2)}
+        <text key={`lbl-${d}`} x={p.x} y={p.y} fill={c} fontSize={17} textAnchor="middle" transform={`rotate(${d}, ${p.x}, ${p.y})`} opacity={0.95}>
+          {pad(((d + 48) / 16) * 20, 2)}
         </text>,
       );
     }
   }
-  const scaleNeedle = polar(scaleR + 2, -60 + 120 * (0.5 + 0.5 * Math.sin(t * 0.5)));
+  const needleDeg = -48 + 96 * (0.5 + 0.5 * Math.sin(t * 0.5));
+  const needle = polar(scaleR + 4, needleDeg);
 
-  // Waveform on the right.
-  const wavePts: string[] = [];
-  for (let i = 0; i <= 64; i++) {
-    const x = 1350 + i * 3.6;
-    const y =
-      540 +
-      18 * Math.sin(i * 0.38 + t * 3.1) * Math.sin(i * 0.11 - t * 0.8) +
-      4 * (hash01(i * 13 + Math.floor(t * 12)) - 0.5);
-    wavePts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  // Area chart on the right.
+  const chartPts: string[] = [];
+  const chartX0 = 1500;
+  const chartY0 = 590;
+  for (let i = 0; i <= 40; i++) {
+    const x = chartX0 + i * 5.5;
+    const v = 0.35 + 0.3 * Math.sin(i * 0.5 + t * 1.2) * Math.sin(i * 0.17 - t * 0.4) + 0.15 * hash01(i * 31 + Math.floor(t * 3));
+    chartPts.push(`${x.toFixed(1)},${(chartY0 - v * 60).toFixed(1)}`);
   }
+  const chartArea = `M ${chartX0} ${chartY0} L ${chartPts.join(" L ")} L ${chartX0 + 220} ${chartY0} Z`;
 
   const progress = 0.15 + 0.72 * (0.5 + 0.5 * Math.sin(t * 0.45 - 1.2));
-  const readout = (0.0428 + 0.0041 * Math.sin(t * 1.7) + 0.0009 * Math.sin(t * 9.3)).toFixed(4);
+  const coords = `${(40.941145 + 0.00004 * Math.sin(t * 0.7)).toFixed(6)}, ${(38.943578 + 0.00003 * Math.sin(t * 0.9 + 1)).toFixed(6)}`;
   const counter = pad(Math.floor((t * 37) % 1000), 3);
 
-  const dataRows = [0, 1, 2, 3].map((row) => {
+  const barRow = (x: number, y: number, n: number, seedK: number) =>
+    Array.from({ length: n }, (_, i) => (
+      <rect key={`bar-${seedK}-${i}`} x={x + i * 9} y={y} width={5} height={8} fill={c} opacity={hash01(seedK * 17 + i + Math.floor(t * 4)) > 0.4 ? 0.9 : 0.2} />
+    ));
+
+  const dataRows = [0, 1, 2].map((row) => {
     const seed = Math.floor(t * 6) + row * 101;
-    const hex = Math.floor(hash01(seed) * 0xffff)
-      .toString(16)
-      .toUpperCase()
-      .padStart(4, "0");
-    const bars = Array.from({ length: 6 }, (_, i) =>
-      hash01(seed * 3 + i) > 0.45 ? "|" : ".",
-    ).join("");
-    return `0x${hex}  ${bars}  ${(hash01(seed + 7) * 2).toFixed(3)}`;
+    const hex = Math.floor(hash01(seed) * 0xffff).toString(16).toUpperCase().padStart(4, "0");
+    return `${hex} ${(hash01(seed + 7) * 2).toFixed(3)} ${pad(Math.floor(hash01(seed + 9) * 999), 3)}`;
   });
 
   const corner = (x: number, y: number, sx: number, sy: number) => (
-    <path
-      d={`M ${x + 36 * sx} ${y} H ${x} V ${y + 36 * sy}`}
-      stroke={c}
-      strokeWidth={2}
-      fill="none"
-      opacity={0.6}
-    />
+    <path d={`M ${x + 30 * sx} ${y} H ${x} V ${y + 30 * sy}`} stroke={c} strokeWidth={2} fill="none" opacity={0.45} />
   );
 
   return (
-    <svg
-      viewBox="0 0 1920 1080"
-      width="100%"
-      height="100%"
-      preserveAspectRatio="xMidYMid slice"
-      style={{ position: "absolute", inset: 0, fontFamily: FONT }}
-    >
-      {/* corner brackets */}
-      {corner(48, 48, 1, 1)}
-      {corner(1872, 48, -1, 1)}
-      {corner(48, 1032, 1, -1)}
-      {corner(1872, 1032, -1, -1)}
+    <svg viewBox="0 0 1920 1080" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", inset: 0, fontFamily: FONT }}>
+      {corner(40, 40, 1, 1)}
+      {corner(1880, 40, -1, 1)}
+      {corner(40, 1040, 1, -1)}
+      {corner(1880, 1040, -1, -1)}
 
-      {/* crosshair rails */}
-      <g stroke={c} strokeWidth={1.5} opacity={0.55}>
-        <line x1={110} y1={CY} x2={585} y2={CY} />
-        <line x1={1335} y1={CY} x2={1810} y2={CY} />
-        <line x1={CX} y1={70} x2={CX} y2={150} />
-        <line x1={CX} y1={930} x2={CX} y2={1010} />
-        <line x1={585} y1={CY - 10} x2={585} y2={CY + 10} />
-        <line x1={1335} y1={CY - 10} x2={1335} y2={CY + 10} />
-        <line x1={110} y1={CY - 6} x2={110} y2={CY + 6} />
-        <line x1={1810} y1={CY - 6} x2={1810} y2={CY + 6} />
+      {/* outer guide circles and long arcs */}
+      <circle cx={CX} cy={CY} r={470} stroke={c} strokeWidth={1} fill="none" opacity={0.14} strokeDasharray="4 12" />
+      <path d={arcPath(455, -75, -15)} stroke={c} strokeWidth={2} fill="none" opacity={0.35 * glitch(3)} />
+      <path d={arcPath(455, 150, 205)} stroke={c} strokeWidth={2} fill="none" opacity={0.3 * glitch(4)} />
+      <path d={arcPath(505, 235, 300)} stroke={c} strokeWidth={1.5} fill="none" opacity={0.25} />
+
+      {/* crosshair rails outside the disc */}
+      <g stroke={c} strokeWidth={1.5} opacity={0.4}>
+        <line x1={CX} y1={40} x2={CX} y2={120} />
+        <line x1={CX} y1={960} x2={CX} y2={1040} />
+        <line x1={120} y1={CY} x2={420} y2={CY} />
+        <line x1={1500} y1={CY} x2={1800} y2={CY} />
+        <line x1={420} y1={CY - 8} x2={420} y2={CY + 8} />
+        <line x1={1500} y1={CY - 8} x2={1500} y2={CY + 8} />
       </g>
-      {/* faint outer guide circle */}
-      <circle cx={CX} cy={CY} r={430} stroke={c} strokeWidth={1} fill="none" opacity={0.12} strokeDasharray="6 14" />
-      <path d={arcPath(455, 110, 160)} stroke={c} strokeWidth={2} fill="none" opacity={0.35 * glitch(3)} />
-      <path d={arcPath(455, 290, 340)} stroke={c} strokeWidth={2} fill="none" opacity={0.35 * glitch(4)} />
 
-      {/* arc scale */}
-      <path d={arcPath(scaleR, -62, 62)} stroke={c} strokeWidth={1.5} fill="none" opacity={0.7} />
+      {/* arc scale + target locked */}
+      <path d={arcPath(scaleR, -50, 50)} stroke={c} strokeWidth={1.5} fill="none" opacity={0.6} />
       {ticks}
-      <circle cx={scaleNeedle.x} cy={scaleNeedle.y} r={4} fill={accent} opacity={0.95} />
-      <text x={CX} y={CY - scaleR - 62} fill={c} fontSize={16} textAnchor="middle" letterSpacing={5} opacity={0.9 * glitch(1)}>
+      <circle cx={needle.x} cy={needle.y} r={4} fill="#ffffff" opacity={0.95} />
+      <text x={CX} y={CY - scaleR - 62} fill={c} fontSize={16} textAnchor="middle" letterSpacing={5} opacity={0.95 * glitch(1)}>
         TARGET LOCKED
       </text>
-      <text x={CX} y={CY - scaleR - 84} fill={c} fontSize={12} textAnchor="middle" letterSpacing={3} opacity={0.6}>
+      <text x={CX} y={CY - scaleR - 86} fill={c} fontSize={12} textAnchor="middle" letterSpacing={3} opacity={0.55}>
         ID {counter} // DEPTH 0.{pad(Math.floor((t * 5) % 100), 2)}
       </text>
+      {/* small angle readout below the scale, mirrored like the reference */}
+      <text x={CX} y={CY + scaleR + 40} fill={c} fontSize={12} textAnchor="middle" letterSpacing={3} opacity={0.5}>
+        {(0.2 + 0.05 * Math.sin(t)).toFixed(3)} // {(3.7 + 0.2 * Math.sin(t * 1.3)).toFixed(2)}
+      </text>
 
-      {/* top status squares */}
+      {/* top status squares in boxes */}
       {[0, 1, 2, 3].map((i) => (
-        <rect key={`top-${i}`} x={928 + i * 18} y={58} width={10} height={10} fill={c} opacity={blink(1.6, i * 0.4, 0.55)} />
+        <g key={`top-${i}`}>
+          <rect x={918 + i * 26} y={30} width={18} height={18} stroke={c} strokeWidth={1.5} fill="none" opacity={0.5} />
+          <rect x={923 + i * 26} y={35} width={8} height={8} fill={c} opacity={blink(1.6, i * 0.4, 0.55)} />
+        </g>
       ))}
 
-      {/* left bracket */}
-      <path d="M 205 455 H 150 V 625 H 205" stroke={c} strokeWidth={2} fill="none" opacity={0.75} />
+      {/* top-left dial + box */}
+      <circle cx={365} cy={165} r={34} stroke={c} strokeWidth={1.5} fill="none" opacity={0.6} />
+      <circle cx={365} cy={165} r={34} stroke={accent} strokeWidth={3} fill="none" opacity={0.9} strokeDasharray="40 174" transform={`rotate(${(t * 90) % 360}, 365, 165)`} />
+      <rect x={430} y={205} width={30} height={30} stroke={c} strokeWidth={1.5} fill="none" opacity={0.6} />
+      <text x={445} y={227} fill={c} fontSize={16} textAnchor="middle" opacity={0.9}>4</text>
+      <line x1={160} y1={165} x2={330} y2={165} stroke={c} strokeWidth={1} opacity={0.35} />
+      <line x1={160} y1={185} x2={290} y2={185} stroke={c} strokeWidth={1} opacity={0.25} />
+      <text x={160} y={150} fill={c} fontSize={12} letterSpacing={3} opacity={0.6}>SYS.04 // ACTIVE</text>
+
+      {/* left: triangle column + brackets */}
       {[0, 1, 2].map((i) => (
-        <rect key={`lb-${i}`} x={168} y={500 + i * 36} width={9} height={9} fill={c} opacity={blink(2.2, i * 0.7, 0.6)} />
+        <path key={`tri-${i}`} d={`M 150 ${545 + i * 22} l 6 -10 l 6 10 z`} fill={c} opacity={blink(2.4, i * 0.5, 0.6)} />
       ))}
-      <text x={150} y={440} fill={c} fontSize={13} letterSpacing={3} opacity={0.7}>
-        OPTIC.L
+      <path d="M 235 470 H 205 V 610 H 235" stroke={c} strokeWidth={2} fill="none" opacity={0.6} />
+      <text x={520} y={CY} fill={c} fontSize={12} letterSpacing={6} textAnchor="middle" transform={`rotate(-90, 520, ${CY})`} opacity={0.55}>
+        SECONDARY
       </text>
 
-      {/* right bracket + waveform */}
-      <path d="M 1715 455 H 1770 V 625 H 1715" stroke={c} strokeWidth={2} fill="none" opacity={0.75} />
-      <text x={1770} y={440} fill={c} fontSize={13} letterSpacing={3} textAnchor="end" opacity={0.7}>
-        OPTIC.R
+      {/* right: coordinates, chart, readouts */}
+      <text x={1440} y={CY} fill={c} fontSize={13} letterSpacing={3} textAnchor="middle" transform={`rotate(-90, 1440, ${CY})`} opacity={0.75}>
+        {coords}
       </text>
-      <g opacity={0.9}>
-        <line x1={1350} y1={CY} x2={1580} y2={CY} stroke={c} strokeWidth={1} opacity={0.3} />
-        <polyline points={wavePts.join(" ")} stroke={accent} strokeWidth={2} fill="none" opacity={0.9} />
-        <text x={1350} y={498} fill={c} fontSize={13} letterSpacing={2} opacity={0.75}>
-          SPECTRAL {readout}
-        </text>
-      </g>
-
-      {/* vertical label next to the iris */}
-      <text x={1262} y={CY} fill={c} fontSize={13} letterSpacing={6} textAnchor="middle" transform={`rotate(90, 1262, ${CY})`} opacity={0.65 * glitch(9)}>
-        RETINAL SCAN
-      </text>
-      <text x={658} y={CY} fill={c} fontSize={13} letterSpacing={6} textAnchor="middle" transform={`rotate(-90, 658, ${CY})`} opacity={0.55}>
-        BIOMETRIC LINK
-      </text>
-
-      {/* bottom-left progress */}
       <g>
-        <line x1={330} y1={760} x2={700} y2={760} stroke={c} strokeWidth={2} opacity={0.35} />
-        <line x1={330} y1={760} x2={330 + 370 * progress} y2={760} stroke={c} strokeWidth={4} opacity={0.9} />
-        <rect x={330 + 370 * progress - 5} y={753} width={10} height={14} fill={accent} />
-        {[0, 1, 2, 3, 4].map((i) => (
-          <line key={`pt-${i}`} x1={330 + i * 92.5} y1={766} x2={330 + i * 92.5} y2={772} stroke={c} strokeWidth={1} opacity={0.6} />
-        ))}
-        <text x={330} y={742} fill={c} fontSize={13} letterSpacing={3} opacity={0.8}>
-          SCANNING {Math.round(progress * 100)}%
-        </text>
-        <text x={700} y={742} fill={c} fontSize={13} letterSpacing={2} textAnchor="end" opacity={0.6}>
-          {readout}
-        </text>
+        <path d={chartArea} fill={c} opacity={0.22} />
+        <polyline points={chartPts.join(" ")} stroke={c} strokeWidth={1.5} fill="none" opacity={0.8} />
+        <line x1={chartX0} y1={chartY0} x2={chartX0 + 220} y2={chartY0} stroke={c} strokeWidth={1} opacity={0.5} />
+        <line x1={chartX0 + 220} y1={chartY0 - 70} x2={chartX0 + 220} y2={chartY0} stroke={c} strokeWidth={1} opacity={0.5} />
+      </g>
+      <line x1={1350} y1={CY + 200} x2={1600} y2={CY + 200} stroke={c} strokeWidth={1} opacity={0.4} />
+      {barRow(1352, CY + 205, 20, 1)}
+      <line x1={1610} y1={CY + 240} x2={1810} y2={CY + 240} stroke={c} strokeWidth={1} opacity={0.4} />
+      {barRow(1612, CY + 245, 14, 2)}
+      <text x={1350} y={CY + 235} fill={c} fontSize={12} letterSpacing={2} opacity={0.55}>{dataRows[0]}</text>
+      <text x={1610} y={CY + 275} fill={c} fontSize={12} letterSpacing={2} opacity={0.55 * glitch(21)}>{dataRows[1]}</text>
+
+      {/* bottom-left progress bar with square end caps */}
+      <g>
+        <rect x={585} y={CY + 218} width={14} height={14} stroke={c} strokeWidth={1.5} fill="none" opacity={0.8} />
+        <rect x={589} y={CY + 222} width={6} height={6} fill={c} opacity={0.9} />
+        <line x1={610} y1={CY + 225} x2={840} y2={CY + 225} stroke={c} strokeWidth={2} opacity={0.3} />
+        <line x1={610} y1={CY + 225} x2={610 + 230 * progress} y2={CY + 225} stroke="#ffffff" strokeWidth={5} opacity={0.9} />
+        <rect x={610 + 230 * progress - 8} y={CY + 217} width={16} height={16} stroke={c} strokeWidth={1.5} fill="none" opacity={0.9} />
+        <rect x={610 + 230 * progress - 3} y={CY + 222} width={6} height={6} fill={c} opacity={0.9} />
+        <text x={610} y={CY + 205} fill={c} fontSize={12} letterSpacing={3} opacity={0.6}>SCANNING {Math.round(progress * 100)}%</text>
       </g>
 
-      {/* bottom-right data block */}
-      <g fill={c} fontSize={13} opacity={0.7}>
-        {dataRows.map((row, i) => (
-          <text key={`row-${i}`} x={1290} y={708 + i * 18} opacity={glitch(20 + i)}>
-            {row}
-          </text>
-        ))}
-        <line x1={1290} y1={690} x2={1560} y2={690} stroke={c} strokeWidth={1} opacity={0.5} />
-      </g>
-
-      {/* bottom centre cluster */}
-      <rect x={905} y={918} width={110} height={26} stroke={c} strokeWidth={1.5} fill="none" opacity={0.6} />
-      {[0, 1, 2, 3].map((i) => (
-        <rect key={`bc-${i}`} x={922 + i * 20} y={926} width={10} height={10} fill={c} opacity={blink(1.2, i * 0.3, 0.5)} />
+      {/* bottom readouts */}
+      <text x={CX} y={1010} fill={c} fontSize={12} textAnchor="middle" letterSpacing={2} opacity={0.5}>{dataRows[2]}</text>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <rect key={`bb-${i}`} x={1180 + i * 22} y={1000} width={12} height={12} stroke={c} strokeWidth={1.5} fill="none" opacity={0.5} />
       ))}
-
-      {/* top-left status dial */}
-      <g>
-        <circle cx={170} cy={130} r={22} stroke={c} strokeWidth={1.5} fill="none" opacity={0.6} />
-        <circle cx={170} cy={130} r={22} stroke={accent} strokeWidth={3} fill="none" opacity={0.9} strokeDasharray="30 108" transform={`rotate(${(t * 90) % 360}, 170, 130)`} />
-        <text x={205} y={135} fill={c} fontSize={13} letterSpacing={3} opacity={0.8}>
-          SYS.04 // ACTIVE
-        </text>
-      </g>
-
-      {/* stray readouts around the disc */}
-      <text x={690} y={392} fill={c} fontSize={13} opacity={0.6 * glitch(30)}>
-        +{(0.24 + 0.02 * Math.sin(t * 2.2)).toFixed(3)}
-      </text>
-      <text x={1190} y={690} fill={c} fontSize={13} opacity={0.6 * glitch(31)}>
-        -{(1.08 + 0.05 * Math.sin(t * 1.4)).toFixed(3)}
-      </text>
-      <text x={1400} y={392} fill={c} fontSize={13} letterSpacing={2} opacity={0.55}>
-        LAT {((t * 3) % 180).toFixed(2)}
-      </text>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <rect key={`bbf-${i}`} x={1184 + i * 22} y={1004} width={4} height={4} fill={c} opacity={blink(1.3, i * 0.26, 0.5)} />
+      ))}
+      <line x1={1050} y1={980} x2={1290} y2={980} stroke={c} strokeWidth={1} opacity={0.35} />
     </svg>
   );
 };

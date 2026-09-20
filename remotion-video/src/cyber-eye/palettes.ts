@@ -13,6 +13,8 @@ export type Palette = {
   backgroundGlow: string;
   /** Eyelid / lash particle cloud. */
   particle: string;
+  /** Opaque base of the iris disc (sits behind all the additive detail). */
+  irisBase: string;
   /** HUD rings, iris streaks. */
   primary: string;
   /** Hottest highlights (core, bright arcs). */
@@ -38,6 +40,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     background: "#2a5fc4",
     backgroundGlow: "#4d8de6",
     particle: "#e6f4ff",
+    irisBase: "#1a4dc0",
     primary: "#0f5cff",
     primaryBright: "#dff0ff",
     secondary: "#ffb26b",
@@ -46,7 +49,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.35,
     bloomThreshold: 0.7,
     exposure: 0.85,
-    particleIntensity: 0.6,
+    particleIntensity: 0.22,
   },
   crimson: {
     id: "crimson",
@@ -55,6 +58,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     background: "#120408",
     backgroundGlow: "#4a0d1e",
     particle: "#ff8fa8",
+    irisBase: "#23060f",
     primary: "#ff3f6f",
     primaryBright: "#ffe9f0",
     secondary: "#ffd3de",
@@ -63,7 +67,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.7,
     bloomThreshold: 0.35,
     exposure: 0.92,
-    particleIntensity: 0.55,
+    particleIntensity: 0.16,
   },
   navy: {
     id: "navy",
@@ -72,6 +76,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     background: "#02050f",
     backgroundGlow: "#0b2050",
     particle: "#7fb0ff",
+    irisBase: "#061a3d",
     primary: "#2a8dff",
     primaryBright: "#e2f3ff",
     secondary: "#ff9a3c",
@@ -80,7 +85,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.7,
     bloomThreshold: 0.35,
     exposure: 0.92,
-    particleIntensity: 0.55,
+    particleIntensity: 0.16,
   },
   green: {
     id: "green",
@@ -89,6 +94,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     background: "#020f08",
     backgroundGlow: "#0a3d22",
     particle: "#8cf5bd",
+    irisBase: "#052a14",
     primary: "#27e070",
     primaryBright: "#e9fff1",
     secondary: "#dfffe6",
@@ -97,7 +103,7 @@ export const PALETTES: Record<PaletteId, Palette> = {
     bloomStrength: 0.7,
     bloomThreshold: 0.35,
     exposure: 0.92,
-    particleIntensity: 0.55,
+    particleIntensity: 0.16,
   },
 };
 
