@@ -163,8 +163,14 @@ export const HaloRing: React.FC<{
   look: LookDefinition;
   palette: StagePalette;
   t: number;
-  frame?: number;
-}> = ({ look, palette, t, frame = 0 }) => {
+  /**
+   * Required, not defaulted: this drives the raymarch's per-pixel start
+   * offset. If it is ever constant the jitter freezes into fixed speckle
+   * locked to screen coordinates instead of reading as atmosphere, and the
+   * cone loses its shimmer - a failure that is invisible in a single still.
+   */
+  frame: number;
+}> = ({ look, palette, t, frame }) => {
   const accent = palette.accent ?? "#ffffff";
   // Gentle: a pulse you notice only if you look for it. This sits under a
   // product shot for minutes at a time.

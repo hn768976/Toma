@@ -34,7 +34,7 @@ const Scene: React.FC<{
     case "blindShadow":
       return <BlindShadow look={look} palette={palette} t={t} />;
     case "haloRing":
-      return <HaloRing look={look} palette={palette} t={t} />;
+      return <HaloRing look={look} palette={palette} t={t} frame={frame} />;
     case "neonTier":
       return <NeonTier look={look} palette={palette} t={t} />;
     case "bubbleDrift":
