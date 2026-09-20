@@ -119,7 +119,7 @@ const run = async () => {
     log(`rendering ${id} (${composition.width}x${composition.height}, ${composition.durationInFrames} frames)`);
 
     const started = Date.now();
-    let lastPct = -1;
+    let lastLogged = -1;
     await renderMedia({
       composition,
       serveUrl,
@@ -138,17 +138,19 @@ const run = async () => {
       x264Preset: 'slow',
       overwrite: true,
       onProgress: ({ renderedFrames, encodedFrames }) => {
-        const pct = Math.floor((renderedFrames / composition.durationInFrames) * 100);
-        if (pct !== lastPct && pct % 5 === 0) {
-          lastPct = pct;
-          const elapsed = (Date.now() - started) / 1000;
-          const rate = renderedFrames / Math.max(elapsed, 0.001);
-          const eta = (composition.durationInFrames - renderedFrames) / Math.max(rate, 0.001);
-          log(
-            `${id} ${pct}% (${renderedFrames}/${composition.durationInFrames} rendered, ` +
-              `${encodedFrames} encoded, ${rate.toFixed(2)} fps, eta ${(eta / 60).toFixed(1)}min)`,
-          );
-        }
+        // Every 10 frames: frequent enough to spot a stall, sparse enough
+        // that the log stays readable across ~770 frames.
+        if (renderedFrames === lastLogged || renderedFrames % 10 !== 0) return;
+        lastLogged = renderedFrames;
+        const total = composition.durationInFrames;
+        const elapsed = (Date.now() - started) / 1000;
+        const secsPerFrame = elapsed / Math.max(renderedFrames, 1);
+        const eta = (total - renderedFrames) * secsPerFrame;
+        log(
+          `${id} ${Math.floor((renderedFrames / total) * 100)}% ` +
+            `(${renderedFrames}/${total} rendered, ${encodedFrames} encoded, ` +
+            `${secsPerFrame.toFixed(1)}s/frame, eta ${(eta / 60).toFixed(1)}min)`,
+        );
       },
     });
     const secs = (Date.now() - started) / 1000;
