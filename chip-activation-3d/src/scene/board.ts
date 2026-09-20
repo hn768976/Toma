@@ -104,11 +104,19 @@ export const createBoard = (theme: Theme, textureSize: number): BoardParts => {
   // Dissolve the plane's own border into the far board.
   const edgeFade = smoothstep(float(0.34), float(0.5), radius).oneMinus();
 
+  // Radial attenuation. Without it the routing sits at full brightness all
+  // the way to the frame edge and the shot reads as a flat wall of cyan; the
+  // references keep the energy concentrated around the package and let the
+  // outer board fall away. Floored rather than taken to zero so the far
+  // board still shows live traces.
+  const falloff = smoothstep(float(0.07), float(0.46), radius).oneMinus().mul(0.82).add(0.18);
+
   const glow = behind
     .mul(uEnergy)
     .mul(uSustain)
     .add(front.mul(uWaveGlow))
     .add(packet.mul(behind).mul(uEnergy).mul(0.85))
+    .mul(falloff)
     .add(uIdle);
 
   routingMat.colorNode = color(theme.board.traceColor);

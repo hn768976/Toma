@@ -4,8 +4,6 @@ import { Rng } from '../engine/rng';
 import type { Theme } from '../themes';
 import type { FrameState } from '../timeline';
 
-/** Nothing is placed closer to the origin than this — the socket lives there. */
-const KEEPOUT = 9.5;
 const FIELD = 150;
 
 export interface PartsResult {
@@ -54,6 +52,8 @@ const attachInstanceColors = (
 export const createParts = (theme: Theme): PartsResult => {
   const group = new THREE.Group();
   const rng = new Rng(theme.seed ^ 0x2b1c);
+  // Nothing is placed closer to the origin than this — the socket lives there.
+  const keepOut = theme.components.keepOut;
   const palette = theme.components.palette.map((c) => new THREE.Color(c));
 
   // --- placement --------------------------------------------------------
@@ -68,7 +68,7 @@ export const createParts = (theme: Theme): PartsResult => {
       const x = ix * cell + jx;
       const z = iz * cell + jz;
       const radius = Math.hypot(x, z);
-      if (radius < KEEPOUT) continue;
+      if (radius < keepOut) continue;
       // Thin out the far field — it is fogged and defocused anyway.
       if (radius > 55 && rng.chance(0.55)) continue;
       if (rng.chance(0.18)) continue;
@@ -135,8 +135,10 @@ export const createParts = (theme: Theme): PartsResult => {
     const r = rng.range(0.45, 1.25);
     const h = rng.range(1.1, 3.0);
     q.identity();
+    // Jittering off a body placement can nudge a capacitor back inside the
+    // keep-out, so the radius is re-checked below.
     pos.set(src.x + rng.range(-2.5, 2.5), h / 2, src.z + rng.range(-2.5, 2.5));
-    if (Math.hypot(pos.x, pos.z) < KEEPOUT) pos.x += KEEPOUT;
+    if (Math.hypot(pos.x, pos.z) < keepOut) pos.x += keepOut;
     scl.set(r, h, r);
     m.compose(pos, q, scl);
     caps.setMatrixAt(i, m);
@@ -161,7 +163,7 @@ export const createParts = (theme: Theme): PartsResult => {
   let pi = 0;
   for (let row = 0; row < pinRows; row++) {
     const ang = rng.float() * Math.PI * 2;
-    const rad = rng.range(KEEPOUT + 6, 62);
+    const rad = rng.range(keepOut + 6, 62);
     const bx = Math.cos(ang) * rad;
     const bz = Math.sin(ang) * rad;
     const along = rng.chance(0.5);

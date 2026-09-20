@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu';
+import { Rng } from '../engine/rng';
 import { color, float, mix, smoothstep, texture, uniform, uv } from 'three/tsl';
 import type { Theme } from '../themes';
 import type { FrameState } from '../timeline';
@@ -100,6 +101,57 @@ export const createChip = (theme: Theme, textureSize: number): ChipResult => {
   spreader.position.y = SUBSTRATE_H / 2 + SPREADER_H / 2;
   group.add(spreader);
 
+  // --- substrate detail -------------------------------------------------
+  // Real packages carry a ring of tiny decoupling capacitors on the exposed
+  // substrate around the lid, plus a chamfer where the lid meets it. Both
+  // are small, but they are what stops the package reading as a plain box
+  // once the camera is close.
+  const chipRng = new Rng(theme.seed ^ 0xc41d);
+  const ringInner = SPREADER / 2 + 0.28;
+  const ringOuter = CHIP_SIZE / 2 - 0.18;
+
+  const capGeo = new THREE.BoxGeometry(1, 1, 1);
+  const capMat = new THREE.MeshStandardNodeMaterial({
+    color: new THREE.Color(theme.chip.bodyColor).multiplyScalar(substrateShade * 1.5),
+    metalness: 0.5,
+    roughness: 0.42,
+  });
+  const CAP_COUNT = 56;
+  const caps = new THREE.InstancedMesh(capGeo, capMat, CAP_COUNT);
+  {
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    for (let i = 0; i < CAP_COUNT; i++) {
+      // Walk the ring, alternating sides, with a little jitter.
+      const side = i % 4;
+      const t = chipRng.range(-1, 1) * (ringOuter - 0.3);
+      const r = chipRng.range(ringInner, ringOuter);
+      const along = side < 2 ? t : r * (side === 2 ? 1 : -1);
+      const across = side < 2 ? r * (side === 0 ? 1 : -1) : t;
+      pos.set(side < 2 ? along : across, SUBSTRATE_H / 2 + 0.05, side < 2 ? across : along);
+      q.setFromAxisAngle(up, side < 2 ? 0 : Math.PI / 2);
+      scl.set(chipRng.range(0.18, 0.32), 0.1, chipRng.range(0.32, 0.55));
+      m.compose(pos, q, scl);
+      caps.setMatrixAt(i, m);
+    }
+    caps.instanceMatrix.needsUpdate = true;
+  }
+  group.add(caps);
+
+  // Chamfer: a slightly wider, very thin plate just under the lid.
+  const chamferMat = new THREE.MeshStandardNodeMaterial({
+    color: new THREE.Color(theme.chip.bodyColor).multiplyScalar(1.3),
+    metalness: theme.chip.bodyMetalness,
+    roughness: Math.max(0.05, theme.chip.bodyRoughness - 0.12),
+  });
+  const chamferGeo = new THREE.BoxGeometry(SPREADER + 0.34, 0.07, SPREADER + 0.34);
+  const chamfer = new THREE.Mesh(chamferGeo, chamferMat);
+  chamfer.position.y = SUBSTRATE_H / 2 + 0.035;
+  group.add(chamfer);
+
   // --- rim light --------------------------------------------------------
   const rimMat = new THREE.MeshBasicNodeMaterial({
     color: new THREE.Color(theme.chip.dieColorA),
@@ -195,8 +247,13 @@ export const createChip = (theme: Theme, textureSize: number): ChipResult => {
       padTex.dispose();
       glowTex.dispose();
       streakTex.dispose();
-      [substrateGeo, padGeo, spreaderGeo, rimGeo, haloGeo, beamGeo].forEach((g) => g.dispose());
-      [substrateMat, padMat, spreaderMat, dieMat, rimMat, haloMat, beamMat].forEach((mt) => mt.dispose());
+      [substrateGeo, padGeo, spreaderGeo, rimGeo, haloGeo, beamGeo, capGeo, chamferGeo].forEach((g) =>
+        g.dispose(),
+      );
+      [substrateMat, padMat, spreaderMat, dieMat, rimMat, haloMat, beamMat, capMat, chamferMat].forEach(
+        (mt) => mt.dispose(),
+      );
+      caps.dispose();
     },
   };
 };

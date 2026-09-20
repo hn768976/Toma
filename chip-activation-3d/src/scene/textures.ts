@@ -288,7 +288,15 @@ export interface DieTextures {
   dispose: () => void;
 }
 
-/** The top of the package: a die-shot style layout with the glowing label. */
+/**
+ * The top of the package: a die-shot style layout with the glowing label.
+ *
+ * Built in layers, coarse to fine, so the die still reads as silicon when
+ * the camera is close: functional blocks, regular cache banks, a bond-pad
+ * ring, two scales of interconnect, and the label last. The emissive channel
+ * carries the lit parts — lanes, pads and the glyphs — so the whole die
+ * ignites together rather than the label floating on top of it.
+ */
 export const createDieTextures = (theme: Theme, size: number): DieTextures => {
   const rng = new Rng(theme.seed ^ 0x5eed);
   const { canvas: albedoC, ctx: a } = makeCanvas(size);
@@ -304,10 +312,8 @@ export const createDieTextures = (theme: Theme, size: number): DieTextures => {
   const dieSize = size - inset * 2;
   const grad = a.createLinearGradient(inset, inset, size - inset, size - inset);
   const darken = (hex: string, k: number) =>
-    `#${new THREE.Color(hex)
-      .multiplyScalar(k)
-      .getHexString()}`;
-  // The glass V2 package keeps its full-strength gradient; the two silicon
+    `#${new THREE.Color(hex).multiplyScalar(k).getHexString()}`;
+  // The glass V2 package keeps its full-strength gradient; the silicon
   // packages get a much darker die so the lit interconnect and the label
   // stand off it instead of washing into it.
   const k = theme.chip.iridescent ? 1 : 0.38;
@@ -316,12 +322,15 @@ export const createDieTextures = (theme: Theme, size: number): DieTextures => {
   a.fillStyle = grad;
   a.fillRect(inset, inset, dieSize, dieSize);
 
-  // Functional blocks — cores, cache banks, IO.
-  for (let i = 0; i < 90; i++) {
+  // --- functional blocks: cores, uncore, IO --------------------------------
+  interface Block { x: number; y: number; w: number; h: number }
+  const blocks: Block[] = [];
+  for (let i = 0; i < 120; i++) {
     const bw = rng.range(0.05, 0.26) * dieSize;
     const bh = rng.range(0.05, 0.22) * dieSize;
     const bx = inset + rng.float() * (dieSize - bw);
     const by = inset + rng.float() * (dieSize - bh);
+    blocks.push({ x: bx, y: by, w: bw, h: bh });
     a.fillStyle = `rgba(255,255,255,${rng.range(0.015, 0.06).toFixed(3)})`;
     a.fillRect(bx, by, bw, bh);
     a.strokeStyle = `rgba(255,255,255,${rng.range(0.05, 0.18).toFixed(3)})`;
@@ -329,44 +338,99 @@ export const createDieTextures = (theme: Theme, size: number): DieTextures => {
     a.strokeRect(bx, by, bw, bh);
   }
 
-  // Interconnect lanes — these carry most of the emissive signal.
+  // --- cache banks: tight regular arrays inside some of the blocks ---------
+  for (const b of blocks) {
+    if (!rng.chance(0.34) || b.w < dieSize * 0.08) continue;
+    const vertical = rng.chance(0.5);
+    const pitch = rng.range(0.006, 0.016) * dieSize;
+    const inner = size * 0.0016;
+    a.fillStyle = `rgba(255,255,255,${rng.range(0.05, 0.12).toFixed(3)})`;
+    e.fillStyle = `rgba(255,255,255,${rng.range(0.04, 0.1).toFixed(3)})`;
+    if (vertical) {
+      for (let x = b.x + pitch; x < b.x + b.w - pitch; x += pitch) {
+        a.fillRect(x, b.y + inner, inner, b.h - inner * 2);
+        e.fillRect(x, b.y + inner, inner, b.h - inner * 2);
+      }
+    } else {
+      for (let y = b.y + pitch; y < b.y + b.h - pitch; y += pitch) {
+        a.fillRect(b.x + inner, y, b.w - inner * 2, inner);
+        e.fillRect(b.x + inner, y, b.w - inner * 2, inner);
+      }
+    }
+  }
+
+  // --- interconnect, two scales -------------------------------------------
   e.lineCap = 'butt';
-  for (let i = 0; i < 260; i++) {
-    const horizontal = rng.chance(0.5);
-    const len = rng.range(0.1, 0.62) * dieSize;
-    const x = inset + rng.float() * (dieSize - (horizontal ? len : 0));
-    const y = inset + rng.float() * (dieSize - (horizontal ? 0 : len));
-    const w = rng.range(0.0012, 0.004) * size;
-    const alpha = rng.range(0.05, 0.26);
-    e.strokeStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
-    e.lineWidth = w;
-    e.beginPath();
-    e.moveTo(x, y);
-    e.lineTo(horizontal ? x + len : x, horizontal ? y : y + len);
-    e.stroke();
+  const drawLanes = (count: number, lenMin: number, lenMax: number, wMin: number, wMax: number, aMin: number, aMax: number) => {
+    for (let i = 0; i < count; i++) {
+      const horizontal = rng.chance(0.5);
+      const len = rng.range(lenMin, lenMax) * dieSize;
+      const x = inset + rng.float() * (dieSize - (horizontal ? len : 0));
+      const y = inset + rng.float() * (dieSize - (horizontal ? 0 : len));
+      const w = rng.range(wMin, wMax) * size;
+      const alpha = rng.range(aMin, aMax);
+      const x2 = horizontal ? x + len : x;
+      const y2 = horizontal ? y : y + len;
 
-    a.strokeStyle = `rgba(255,255,255,${(alpha * 0.4).toFixed(3)})`;
-    a.lineWidth = w;
-    a.beginPath();
-    a.moveTo(x, y);
-    a.lineTo(horizontal ? x + len : x, horizontal ? y : y + len);
-    a.stroke();
+      e.strokeStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+      e.lineWidth = w;
+      e.beginPath();
+      e.moveTo(x, y);
+      e.lineTo(x2, y2);
+      e.stroke();
+
+      a.strokeStyle = `rgba(255,255,255,${(alpha * 0.4).toFixed(3)})`;
+      a.lineWidth = w;
+      a.beginPath();
+      a.moveTo(x, y);
+      a.lineTo(x2, y2);
+      a.stroke();
+    }
+  };
+  drawLanes(180, 0.12, 0.62, 0.0018, 0.004, 0.06, 0.26); // power/IO spines
+  drawLanes(520, 0.02, 0.16, 0.0006, 0.0016, 0.03, 0.14); // fine signal routing
+
+  // --- bond pad ring -------------------------------------------------------
+  const padInset = inset + dieSize * 0.028;
+  const padSpan = dieSize - dieSize * 0.056;
+  const padCount = 46;
+  for (let i = 0; i < padCount; i++) {
+    const t = (i + 0.5) / padCount;
+    const pr = size * 0.0032;
+    const spots: Array<[number, number]> = [
+      [padInset + t * padSpan, padInset],
+      [padInset + t * padSpan, padInset + padSpan],
+      [padInset, padInset + t * padSpan],
+      [padInset + padSpan, padInset + t * padSpan],
+    ];
+    for (const [px, py] of spots) {
+      a.fillStyle = 'rgba(255,255,255,0.3)';
+      a.beginPath();
+      a.arc(px, py, pr, 0, Math.PI * 2);
+      a.fill();
+      e.fillStyle = 'rgba(255,255,255,0.22)';
+      e.beginPath();
+      e.arc(px, py, pr * 0.85, 0, Math.PI * 2);
+      e.fill();
+    }
   }
 
-  // Cache-bank hatching for texture.
-  e.strokeStyle = 'rgba(255,255,255,0.045)';
-  e.lineWidth = size * 0.0012;
-  for (let x = inset; x < size - inset; x += size * 0.012) {
-    e.beginPath();
-    e.moveTo(x, inset);
-    e.lineTo(x, size - inset);
-    e.stroke();
-  }
-
-  // Heat-spreader lip.
+  // --- heat-spreader lip and pin-1 marker ---------------------------------
   a.strokeStyle = 'rgba(255,255,255,0.22)';
   a.lineWidth = size * 0.012;
   a.strokeRect(inset * 0.5, inset * 0.5, size - inset, size - inset);
+  a.strokeStyle = 'rgba(255,255,255,0.1)';
+  a.lineWidth = size * 0.003;
+  a.strokeRect(inset * 0.78, inset * 0.78, size - inset * 1.56, size - inset * 1.56);
+
+  // Pin-1 corner triangle, as on a real package.
+  a.fillStyle = 'rgba(255,255,255,0.3)';
+  a.beginPath();
+  a.moveTo(inset * 0.62, inset * 0.62);
+  a.lineTo(inset * 1.5, inset * 0.62);
+  a.lineTo(inset * 0.62, inset * 1.5);
+  a.closePath();
+  a.fill();
 
   // The label. Drawn into both channels so it reads when unlit too.
   drawAI(e, size / 2, size / 2, size * 0.42, '#ffffff', 1);
