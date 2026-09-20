@@ -35,13 +35,14 @@ Two flags matter for these pieces specifically:
   one frame against a lossless render, the JPEG path raises blockiness at
   8-pixel boundaries to 1.28 (1.0 = none) where PNG holds 1.08, and nearly
   doubles the subpixels off by more than 4/255.
-- `--enforce-audio-track=false`. Both pieces are silent; without this,
-  Remotion muxes in an empty AAC track and the container runs slightly
-  past the intended duration.
+- `--muted`. Both pieces are silent; without this, Remotion muxes in an
+  empty AAC track, which pushes the container past the intended duration
+  (15.06s instead of 15.00s). Note that `--enforce-audio-track=false` does
+  *not* do this — the track still appears.
 
 ```console
 RENDER_OPTS="--codec=h264 --crf=16 --pixel-format=yuv420p --color-space=bt709 \
-             --image-format=png --enforce-audio-track=false"
+             --image-format=png --muted"
 
 # 1080p deliverables
 npx remotion render NeuralFiberFlow1080 out/V1_neural-fiber-flow_1080p.mp4 $RENDER_OPTS
