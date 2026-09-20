@@ -75,9 +75,16 @@ export const PodiumStage: React.FC<{
         <RendererSetup
           toneMapping={look.post.toneMapping}
           exposure={look.post.exposure}
+          frame={frame}
         />
         <LockedCamera pushIn={look.pushIn} t={t} />
-        {hdr ? <EnvironmentMap texture={hdr} intensity={look.post.envIntensity} /> : null}
+        {hdr.texture ? (
+          <EnvironmentMap
+            texture={hdr.texture}
+            intensity={look.post.envIntensity}
+            renderHandle={hdr.renderHandle}
+          />
+        ) : null}
         <Scene look={look} palette={palette} t={t} frame={frame} />
         <Post
           spec={look.post}

@@ -148,12 +148,12 @@ export const NeonTier: React.FC<{
     <group>
       <StageShadows size={5} samples={16} focus={0.4} />
 
-      <ambientLight intensity={0.85} color={new THREE.Color(palette.ambient)} />
+      <ambientLight intensity={0.3} color={new THREE.Color(palette.ambient)} />
       {/* Barely there: the neon does the lighting, this just keeps the
           concrete from going pure black and gives the plinth a top edge. */}
       <directionalLight
         position={[1.2, 9.5, 7]}
-        intensity={1.5}
+        intensity={0.45}
         color={new THREE.Color(palette.key)}
         castShadow
         shadow-mapSize-width={2048}
@@ -233,7 +233,7 @@ export const NeonTier: React.FC<{
         extent={look.plinth.radius * 3.2}
         peak={0.33}
         width={0.08}
-        haze={0.3}
+        haze={0.22}
         intensity={0.3}
         position={[0, floorY + 0.006, 0]}
       />
@@ -244,7 +244,7 @@ export const NeonTier: React.FC<{
           color={palette.plinth}
           roughness={0.42}
           metalness={0.15}
-          envMapIntensity={0.45}
+          envMapIntensity={0.25}
           clearcoat={0.3}
         />
         {strips.map((strip, index) => (

@@ -119,7 +119,7 @@ export const BlindShadow: React.FC<{
           rather than dissolving, while the contact shadow stays soft. */}
       <StageShadows size={18} samples={30} focus={0.85} />
 
-      <ambientLight intensity={1.15} color={new THREE.Color(palette.ambient)} />
+      <ambientLight intensity={0.18} color={new THREE.Color(palette.ambient)} />
       {/* Sun-like: parallel rays give the slats a single consistent direction
           across wall and floor. */}
       <primitive object={target} />
@@ -142,7 +142,7 @@ export const BlindShadow: React.FC<{
       />
       {/* Bounce off the floor, keeping the shadowed side from going dead. */}
       <hemisphereLight
-        intensity={0.8}
+        intensity={0.28}
         color={new THREE.Color(palette.key)}
         groundColor={new THREE.Color(palette.backdropAlt)}
       />

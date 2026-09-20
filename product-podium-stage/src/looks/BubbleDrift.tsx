@@ -147,9 +147,9 @@ export const BubbleDrift: React.FC<{
         highY={9}
       />
 
-      <ambientLight intensity={1.15} color={new THREE.Color(palette.ambient)} />
+      <ambientLight intensity={0.5} color={new THREE.Color(palette.ambient)} />
       <hemisphereLight
-        intensity={0.9}
+        intensity={0.55}
         color={new THREE.Color(palette.key)}
         groundColor={new THREE.Color(palette.backdrop)}
       />

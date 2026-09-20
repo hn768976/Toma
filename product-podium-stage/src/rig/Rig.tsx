@@ -53,11 +53,35 @@ export const LockedCamera: React.FC<{ pushIn: number; t: number }> = ({ pushIn, 
   return null;
 };
 
-/** Renderer state that varies per look: tone curve and exposure. */
+/**
+ * Renderer state that varies per look: tone curve and exposure.
+ *
+ * Re-applied every frame, keyed on `frame`, and that is not belt-and-braces.
+ * @react-three/postprocessing's EffectComposer deliberately disables the
+ * renderer's tone mapping while it is mounted:
+ *
+ *     useEffect(() => { const prev = gl.toneMapping
+ *                       gl.toneMapping = NoToneMapping
+ *                       return () => { gl.toneMapping = prev } }, [gl])
+ *
+ * That is a passive effect, so it runs after this component's layout effect
+ * and wins. Setting the tone curve once on mount therefore applies it to the
+ * first captured frame and to nothing after that - every later frame renders
+ * untone-mapped, which lifts the blacks and blows the highlights.
+ *
+ * It is a nasty failure to catch because a single-frame render (npx remotion
+ * still, or the studio) captures before the composer's effect lands, so
+ * stills look correct while the clip does not.
+ *
+ * Re-asserting per frame costs nothing: the value only actually changes once,
+ * so three recompiles materials once rather than every frame.
+ */
 export const RendererSetup: React.FC<{
   toneMapping: "neutral" | "aces";
   exposure: number;
-}> = ({ toneMapping, exposure }) => {
+  /** Present so this re-runs every frame. */
+  frame: number;
+}> = ({ toneMapping, exposure, frame }) => {
   const gl = useThree((state) => state.gl);
 
   useLayoutEffect(() => {
@@ -70,7 +94,7 @@ export const RendererSetup: React.FC<{
           THREE.NeutralToneMapping;
     gl.toneMappingExposure = exposure;
     gl.shadowMap.type = THREE.PCFSoftShadowMap;
-  }, [gl, toneMapping, exposure]);
+  }, [gl, toneMapping, exposure, frame]);
 
   return null;
 };

@@ -42,8 +42,14 @@ const smoothstep = (a, b, x) => {
 const sample = (dx, dy, dz) => {
   // Overhead dome: peaks at straight up, falls away smoothly well before the
   // horizon so nothing reads as a rectangular softbox.
+  //
+  // Deliberately only about twice the horizon's radiance, not four times. An
+  // open sky is far brighter overhead than at the horizon, but these are
+  // rooms: every look has an upward-facing floor filling the bottom of frame,
+  // and a sky-like dome blows it out and erases the shadows falling across
+  // it while leaving the vertical surfaces correctly lit.
   const up = Math.max(0, dy);
-  const dome = Math.pow(up, 1.35) * 2.55 + smoothstep(-0.15, 0.85, dy) * 0.55;
+  const dome = Math.pow(up, 1.35) * 0.85 + smoothstep(-0.15, 0.85, dy) * 0.3;
 
   // Horizon band: keeps the sides from going flat and gives a wrap highlight.
   const horizon = Math.exp(-Math.pow(dy / 0.34, 2)) * 0.5;
