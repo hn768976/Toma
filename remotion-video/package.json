@@ -29,10 +29,10 @@
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src && tsc",
-    "render:v1": "remotion render GlassPanesRow-V1-1080p out/V1_FrostedPanes_1920x1080_30fps.mp4 --codec=h264 --image-format=png --crf=15 --gl=swangle --muted",
-    "render:v2": "remotion render GlassCardsFan-V2-1080p out/V2_GlossyFanningCards_1920x1080_30fps.mp4 --codec=h264 --image-format=png --crf=15 --gl=swangle --muted",
-    "render:v1-4k": "remotion render GlassPanesRow-V1-4K out/V1_FrostedPanes_3840x2160_30fps.mp4 --codec=h264 --image-format=png --crf=14 --gl=swangle --muted",
-    "render:v2-4k": "remotion render GlassCardsFan-V2-4K out/V2_GlossyFanningCards_3840x2160_30fps.mp4 --codec=h264 --image-format=png --crf=14 --gl=swangle --muted",
+    "render:v1": "remotion render GlassPanesRing-V1-1080p out/V1_FrostedPanesRing_1920x1080_30fps.mp4 --codec=h264 --image-format=png --crf=15 --gl=swangle --muted",
+    "render:v2": "remotion render GlassCardsRing-V2-1080p out/V2_GlossyCardsRing_1920x1080_30fps.mp4 --codec=h264 --image-format=png --crf=15 --gl=swangle --muted",
+    "render:v1-4k": "remotion render GlassPanesRing-V1-4K out/V1_FrostedPanesRing_3840x2160_30fps.mp4 --codec=h264 --image-format=png --crf=14 --gl=swangle --muted",
+    "render:v2-4k": "remotion render GlassCardsRing-V2-4K out/V2_GlossyCardsRing_3840x2160_30fps.mp4 --codec=h264 --image-format=png --crf=14 --gl=swangle --muted",
     "render:all-4k": "npm run render:v1-4k && npm run render:v2-4k"
   },
   "sideEffects": [

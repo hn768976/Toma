@@ -19,15 +19,15 @@ import {
   FPS as RING_FPS,
 } from "./particle-ring/constants";
 import {
-  GlassCardsFan,
-  glassCardsFanSchema,
-  glassCardsFanDefaults,
-} from "./glass/GlassCardsFan";
+  GlassCardsRing,
+  glassCardsRingSchema,
+  glassCardsRingDefaults,
+} from "./glass/GlassCardsRing";
 import {
-  GlassPanesRow,
-  glassPanesRowSchema,
-  glassPanesRowDefaults,
-} from "./glass/GlassPanesRow";
+  GlassPanesRing,
+  glassPanesRingSchema,
+  glassPanesRingDefaults,
+} from "./glass/GlassPanesRing";
 import {
   BASE_WIDTH as GLASS_WIDTH,
   BASE_HEIGHT as GLASS_HEIGHT,
@@ -70,44 +70,44 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
       <Composition
-        id="GlassPanesRow-V1-1080p"
-        component={GlassPanesRow}
+        id="GlassPanesRing-V1-1080p"
+        component={GlassPanesRing}
         durationInFrames={V1_DURATION_IN_FRAMES}
         fps={GLASS_FPS}
         width={GLASS_WIDTH}
         height={GLASS_HEIGHT}
-        schema={glassPanesRowSchema}
-        defaultProps={glassPanesRowDefaults}
+        schema={glassPanesRingSchema}
+        defaultProps={glassPanesRingDefaults}
       />
       <Composition
-        id="GlassPanesRow-V1-4K"
-        component={GlassPanesRow}
+        id="GlassPanesRing-V1-4K"
+        component={GlassPanesRing}
         durationInFrames={V1_DURATION_IN_FRAMES}
         fps={GLASS_FPS}
         width={GLASS_WIDTH * 2}
         height={GLASS_HEIGHT * 2}
-        schema={glassPanesRowSchema}
-        defaultProps={glassPanesRowDefaults}
+        schema={glassPanesRingSchema}
+        defaultProps={glassPanesRingDefaults}
       />
       <Composition
-        id="GlassCardsFan-V2-1080p"
-        component={GlassCardsFan}
+        id="GlassCardsRing-V2-1080p"
+        component={GlassCardsRing}
         durationInFrames={V2_DURATION_IN_FRAMES}
         fps={GLASS_FPS}
         width={GLASS_WIDTH}
         height={GLASS_HEIGHT}
-        schema={glassCardsFanSchema}
-        defaultProps={glassCardsFanDefaults}
+        schema={glassCardsRingSchema}
+        defaultProps={glassCardsRingDefaults}
       />
       <Composition
-        id="GlassCardsFan-V2-4K"
-        component={GlassCardsFan}
+        id="GlassCardsRing-V2-4K"
+        component={GlassCardsRing}
         durationInFrames={V2_DURATION_IN_FRAMES}
         fps={GLASS_FPS}
         width={GLASS_WIDTH * 2}
         height={GLASS_HEIGHT * 2}
-        schema={glassCardsFanSchema}
-        defaultProps={glassCardsFanDefaults}
+        schema={glassCardsRingSchema}
+        defaultProps={glassCardsRingDefaults}
       />
     </>
   );

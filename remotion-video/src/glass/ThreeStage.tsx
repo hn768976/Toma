@@ -44,10 +44,18 @@ export type ThreeStageProps = {
    */
   toneMapping?: ToneMappingMode;
   /**
-   * Supersampling factor. The drawing buffer is rendered this much larger
-   * than the composition and let the browser box-filter it back down on
-   * composite. MSAA under SwiftShader does not survive the long, nearly
-   * horizontal silhouettes these pieces are full of; brute-force SSAA does.
+   * Supersampling factor, forced to a whole number.
+   *
+   * The drawing buffer is rendered this much larger than the composition and
+   * the browser filters it back down on composite. MSAA under SwiftShader
+   * does not survive the long, nearly horizontal silhouettes these pieces are
+   * full of, so the anti-aliasing has to be brute force.
+   *
+   * It must be an integer: at a fractional ratio the downsample kernel covers
+   * a different number of source pixels for each destination pixel, so an
+   * edge creeping across the frame is reconstructed slightly differently on
+   * every frame and the whole silhouette crawls. At 2x every destination
+   * pixel is an exact 2x2 average and that disappears.
    */
   supersample?: number;
 };
@@ -66,14 +74,14 @@ export const ThreeStage: React.FC<ThreeStageProps> = ({
   exposure,
   background,
   toneMapping = "aces",
-  supersample = 1,
+  supersample = 2,
 }) => {
   const frame = useCurrentFrame();
   const { width: outWidth, height: outHeight, durationInFrames } = useVideoConfig();
 
-  // Cap the drawing buffer so a 4K composition does not try to allocate an
-  // 8K one; at 4K the native resolution already resolves these edges.
-  const scale = Math.max(1, Math.min(supersample, 3840 / outWidth));
+  // Cap the drawing buffer at 4K. A 4K composition therefore renders 1:1,
+  // where the native resolution already resolves these edges.
+  const scale = Math.max(1, Math.floor(Math.min(supersample, 3840 / outWidth)));
   const width = Math.round(outWidth * scale);
   const height = Math.round(outHeight * scale);
 
