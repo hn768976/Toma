@@ -15,6 +15,7 @@ import {
   pow,
   saturate,
   smoothstep,
+  sqrt,
   uniform,
   uniformArray,
   uv,
@@ -68,6 +69,11 @@ export const createBlobUniforms = (variant: Variant) => ({
   resolution: uniform(new THREE.Vector2(1920, 1080)),
   /** Fusion radius of the smooth-minimum. Larger means fatter necks. */
   blendRadius: uniform(0.62),
+  /**
+   * Sphere enclosing the whole field this frame, as (centre.xyz, radius).
+   * Rays are clipped against it before marching — see `trace`.
+   */
+  bounds: uniform(new THREE.Vector4(0, 0, -8, 12)),
 
   backgroundTop: uniform(linearColor(variant.backgroundTop)),
   backgroundBottom: uniform(linearColor(variant.backgroundBottom)),
@@ -292,37 +298,61 @@ export const createBlobFragmentNode = (
     return shoulder(colour, u.shoulderKnee);
   });
 
-  /** Traces one ray and returns the colour it sees. */
+  /**
+   * Traces one ray and returns the colour it sees.
+   *
+   * The ray is first intersected analytically with a sphere enclosing the
+   * whole field. A ray that misses it can return the backdrop immediately
+   * instead of stepping out to the far plane, and a ray that hits starts at
+   * the sphere rather than at the lens and stops when it leaves. Roughly half
+   * of every frame is backdrop and the liquid occupies a small slab of the
+   * view volume, so this removes most of the marching. The skipped intervals
+   * are ones where the field is provably positive, so no surface is missed.
+   */
   const trace = Fn(([origin, rayDir, screenUv, aspect]: [Vec3Node, Vec3Node, Vec2Node, FloatNode]) => {
-    const t = float(0.1).toVar("t");
-    const hit = float(0).toVar("hit");
-    Loop({ start: 0, end: MAX_RAY_STEPS, type: "int" }, () => {
-      const p = origin.add(rayDir.mul(t));
-      const d = map(p);
-      If(d.lessThan(MIN_HIT_DISTANCE), () => {
-        hit.assign(1);
-        Break();
-      });
-      If(t.greaterThan(MAX_RAY_DISTANCE), () => {
-        Break();
-      });
-      // Slightly under-relaxed steps: smooth-min makes the field a little
-      // optimistic near the fused necks, and full steps can tunnel through
-      // the thinnest bridges.
-      t.addAssign(d.mul(0.92));
-    });
-
     const sky = backdrop(screenUv, aspect).toVar("sky");
     const result = sky.toVar("result");
-    If(hit.greaterThan(0.5), () => {
-      const p = origin.add(rayDir.mul(t));
-      const n = calcNormal(p);
-      const lit = shade(p, n, rayDir);
-      // Let the backdrop haze the most distant blobs very slightly, which
-      // reads as atmosphere and keeps the far satellites from feeling pasted
-      // on top of the background.
-      const haze = saturate(t.sub(9.2).mul(0.028));
-      result.assign(mix(lit, sky, haze));
+
+    const oc = origin.sub(u.bounds.xyz);
+    const halfB = dot(oc, rayDir);
+    const c = dot(oc, oc).sub(u.bounds.w.mul(u.bounds.w));
+    const disc = halfB.mul(halfB).sub(c);
+
+    If(disc.greaterThan(0), () => {
+      const root = sqrt(disc);
+      const tEnter = max(halfB.negate().sub(root), float(0.1));
+      const tExit = min(halfB.negate().add(root), float(MAX_RAY_DISTANCE));
+
+      If(tExit.greaterThan(tEnter), () => {
+        const t = tEnter.toVar("t");
+        const hit = float(0).toVar("hit");
+        Loop({ start: 0, end: MAX_RAY_STEPS, type: "int" }, () => {
+          const p = origin.add(rayDir.mul(t));
+          const d = map(p);
+          If(d.lessThan(MIN_HIT_DISTANCE), () => {
+            hit.assign(1);
+            Break();
+          });
+          If(t.greaterThan(tExit), () => {
+            Break();
+          });
+          // Slightly under-relaxed steps: smooth-min makes the field a little
+          // optimistic near the fused necks, and full steps can tunnel through
+          // the thinnest bridges.
+          t.addAssign(d.mul(0.92));
+        });
+
+        If(hit.greaterThan(0.5), () => {
+          const p = origin.add(rayDir.mul(t));
+          const n = calcNormal(p);
+          const lit = shade(p, n, rayDir);
+          // Let the backdrop haze the most distant blobs very slightly, which
+          // reads as atmosphere and keeps the far satellites from feeling
+          // pasted on top of the background.
+          const haze = saturate(t.sub(9.2).mul(0.028));
+          result.assign(mix(lit, sky, haze));
+        });
+      });
     });
     return result;
   });

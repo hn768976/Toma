@@ -92,9 +92,41 @@ export class LiquidBlobsScene {
     this.uniforms.blendRadius.value = radius;
   }
 
+  /**
+   * Smallest sphere that encloses the whole field, with margin for the
+   * outward bulge the smooth-minimum adds between nearby balls. The shader
+   * clips rays against it, so it has to be conservative: too small and
+   * surfaces get cut away at the silhouette.
+   */
+  private updateBounds() {
+    const { positions, radii } = this.field;
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    for (let i = 0; i < radii.length; i++) {
+      const r = radii[i];
+      const x = positions[i * 3], y = positions[i * 3 + 1], z = positions[i * 3 + 2];
+      minX = Math.min(minX, x - r); maxX = Math.max(maxX, x + r);
+      minY = Math.min(minY, y - r); maxY = Math.max(maxY, y + r);
+      minZ = Math.min(minZ, z - r); maxZ = Math.max(maxZ, z + r);
+    }
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2, cz = (minZ + maxZ) / 2;
+    let radius = 0;
+    for (let i = 0; i < radii.length; i++) {
+      const dx = positions[i * 3] - cx;
+      const dy = positions[i * 3 + 1] - cy;
+      const dz = positions[i * 3 + 2] - cz;
+      radius = Math.max(radius, Math.hypot(dx, dy, dz) + radii[i]);
+    }
+    // A single smooth-minimum can pull the surface out by up to k/4; chained
+    // across the field, twice k is a comfortable upper bound and costs almost
+    // nothing against a radius of this size.
+    this.uniforms.bounds.value.set(cx, cy, cz, radius + 2 * this.uniforms.blendRadius.value);
+  }
+
   /** `t` is the position in the loop, as a fraction. Periodic in 1. */
   async renderAt(t: number) {
     sampleBallField(this.field, t);
+    this.updateBounds();
     const positions = this.uniforms.ballPositions.array as THREE.Vector3[];
     const radii = this.uniforms.ballRadii.array as number[];
     for (let i = 0; i < radii.length; i++) {
