@@ -5,3 +5,8 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Intermediate model files produced by `npm run model:clean` / `model:optimize`.
+# The Meshy source (assets-src/Meshy_AI_Ocean_Gaze.glb) and the final
+# public/models/eye.glb are kept.
+assets-src/eye_*.glb

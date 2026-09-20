@@ -8,13 +8,16 @@
   "dependencies": {
     "@remotion/cli": "4.0.515",
     "@remotion/tailwind-v4": "4.0.515",
+    "@types/three": "^0.186.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
     "tailwindcss": "4.0.0",
+    "three": "^0.186.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.0",
     "@remotion/eslint-config-flat": "4.0.515",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
@@ -26,7 +29,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:eye": "node scripts/render-eye.mjs",
+    "render:eye:4k": "node scripts/render-eye.mjs --4k",
+    "model:clean": "python3 tools/clean-model.py assets-src/Meshy_AI_Ocean_Gaze.glb assets-src/eye_clean_raw.glb",
+    "model:optimize": "gltf-transform weld assets-src/eye_clean_raw.glb assets-src/eye_welded.glb && gltf-transform simplify --ratio 0.6 --error 0.001 assets-src/eye_welded.glb assets-src/eye_simplified.glb && gltf-transform prune assets-src/eye_simplified.glb public/models/eye.glb"
   },
   "sideEffects": [
     "*.css",
