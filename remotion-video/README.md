@@ -28,17 +28,28 @@ Every composition is resolution-independent, so the 4K and 1080p
 compositions are the same shot at two sizes. On a machine without a usable
 hardware GPU, add `--gl=swangle` to force Chromium's software rasteriser.
 
+Two flags matter for these pieces specifically:
+
+- `--image-format=png`. Remotion's default JPEG intermediate blocks up in
+  the near-black gradients that make up most of both frames. Measured on
+  one frame against a lossless render, the JPEG path raises blockiness at
+  8-pixel boundaries to 1.28 (1.0 = none) where PNG holds 1.08, and nearly
+  doubles the subpixels off by more than 4/255.
+- `--enforce-audio-track=false`. Both pieces are silent; without this,
+  Remotion muxes in an empty AAC track and the container runs slightly
+  past the intended duration.
+
 ```console
+RENDER_OPTS="--codec=h264 --crf=16 --pixel-format=yuv420p --color-space=bt709 \
+             --image-format=png --enforce-audio-track=false"
+
 # 1080p deliverables
-npx remotion render NeuralFiberFlow1080 out/V1_neural-fiber-flow_1080p.mp4 \
-  --codec=h264 --crf=16 --pixel-format=yuv420p --color-space=bt709
+npx remotion render NeuralFiberFlow1080 out/V1_neural-fiber-flow_1080p.mp4 $RENDER_OPTS
+npx remotion render IsometricNeuralLayers1080 out/V2_isometric-neural-layers_1080p.mp4 $RENDER_OPTS
 
-npx remotion render IsometricNeuralLayers1080 out/V2_isometric-neural-layers_1080p.mp4 \
-  --codec=h264 --crf=16 --pixel-format=yuv420p --color-space=bt709
-
-# 4K masters (same commands against the 4K compositions)
-npx remotion render NeuralFiberFlow4K out/V1_neural-fiber-flow_4K.mp4 \
-  --codec=h264 --crf=16 --pixel-format=yuv420p --color-space=bt709
+# 4K masters
+npx remotion render NeuralFiberFlow4K out/V1_neural-fiber-flow_4K.mp4 $RENDER_OPTS
+npx remotion render IsometricNeuralLayers4K out/V2_isometric-neural-layers_4K.mp4 $RENDER_OPTS
 ```
 
 `--scale` also works: `npx remotion render NeuralFiberFlow4K out.mp4 --scale=0.5`
