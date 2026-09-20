@@ -132,6 +132,20 @@ float padMask   = smoothstep( 0.74, 0.96, copper );
 
 // Unpowered copper reads as a darker, slightly different solder-mask tint.
 diffuseColor.rgb = mix( diffuseColor.rgb, uTraceDark, traceMask * 0.9 );
+
+// Halftone ripple: a dot-matrix wave travelling across the whole substrate,
+// not just along the copper. Computed here rather than with the rest of the
+// emissive so it can tint the board too — on a near-white board an additive
+// glow alone does not register.
+float rippleDot = 0.0;
+if ( uRipple > 0.001 ) {
+  vec2 cell = fract( vBoardUv * uDotScale ) - 0.5;
+  float dotM = 1.0 - smoothstep( 0.16, 0.40, length( cell ) );
+  float rd = length( vBoardWorld.xz ) / max( uWorldNorm, 0.0001 );
+  float ring = exp( -pow( ( rd - uRippleRadius ) / max( uRippleWidth, 1e-4 ), 2.0 ) * 2.2 );
+  rippleDot = dotM * ring * uRipple;
+  diffuseColor.rgb = mix( diffuseColor.rgb, uTraceEdge, clamp( rippleDot * 0.85, 0.0, 1.0 ) );
+}
 `,
       )
       .replace(
@@ -164,15 +178,7 @@ roughnessFactor = mix( roughnessFactor, roughnessFactor * 0.55, traceMask );
   glow *= traceMask;
   glow += uTraceHot * padMask * lit * ( 0.45 + packet * 0.9 );
 
-  // Halftone ripple: a dot-matrix wave across the whole substrate, not only
-  // along the copper. Drives V2's tactile "wave of tiny dots".
-  if ( uRipple > 0.001 ) {
-    vec2 cell = fract( vBoardUv * uDotScale ) - 0.5;
-    float dot = 1.0 - smoothstep( 0.14, 0.36, length( cell ) );
-    float rd = length( vBoardWorld.xz ) / max( uWorldNorm, 0.0001 );
-    float ring = exp( -pow( ( rd - uRippleRadius ) / max( uRippleWidth, 1e-4 ), 2.0 ) * 3.0 );
-    glow += uTraceEdge * dot * ring * uRipple * 2.0;
-  }
+  glow += uTraceEdge * rippleDot * 1.4;
 
   glow *= max( uEnergy, uIdle > 0.0 ? 0.28 : 0.0 ) * uGlowGain;
 

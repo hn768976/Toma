@@ -198,7 +198,7 @@ export const buildScene = (
     new THREE.MeshStandardMaterial({
       color: p.socket,
       roughness: p.socketRoughness,
-      metalness: 0.95,
+      metalness: p.socketMetalness,
     }),
   );
   const frameOuter = CHIP_SIZE * 1.18;

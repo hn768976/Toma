@@ -50,6 +50,7 @@ export type Palette = {
   /** Socket frame metal. */
   socket: number;
   socketRoughness: number;
+  socketMetalness: number;
   /** Chip body. */
   chipBody: number;
   chipTop: number;
@@ -124,6 +125,7 @@ const V1: VariantConfig = {
     componentHeight: 1,
     socket: 0x9fb2c4,
     socketRoughness: 0.34,
+    socketMetalness: 0.95,
     chipBody: 0x14304d,
     chipTop: 0x1d4a75,
     chipEmissive: 0x63c8ff,
@@ -174,8 +176,9 @@ const V2: VariantConfig = {
     componentRoughness: 0.28,
     componentMetalness: 0.12,
     componentHeight: 0.45,
-    socket: 0xc4cad4,
-    socketRoughness: 0.3,
+    socket: 0xdfe3ea,
+    socketRoughness: 0.32,
+    socketMetalness: 0.45,
     chipBody: 0xb8bec8,
     chipTop: 0x6455dd,
     chipEmissive: 0xc07ce8,
@@ -234,6 +237,7 @@ const V3: VariantConfig = {
     componentHeight: 1.05,
     socket: 0xb6bcc4,
     socketRoughness: 0.28,
+    socketMetalness: 0.92,
     chipBody: 0x0c1014,
     chipTop: 0x1b6fa8,
     chipEmissive: 0x35c0ff,

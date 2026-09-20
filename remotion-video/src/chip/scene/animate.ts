@@ -185,13 +185,15 @@ export const updateScene = (
 
   // V2's halftone ripple: a dot-matrix wave instead of a hot trace front.
   if (cfg.id === "v2") {
-    const rip = Math.exp(-Math.max(0, sinceSeat) * 1.05) * smoothstep(0, 0.06, waveT);
+    const rip = Math.exp(-Math.max(0, sinceSeat) * 0.5) * smoothstep(0, 0.05, waveT);
     for (const mat of [parts.boardMat, parts.fieldMat]) {
       const u = mat.userData.uniforms;
-      u.uRipple.value = rip * 1.5;
+      u.uRipple.value = rip * 1.6;
       u.uRippleRadius.value = waveRadius / WAVE_NORM;
-      u.uRippleWidth.value = 0.14;
-      u.uDotScale.value = mat === parts.boardMat ? 120 : 420;
+      u.uRippleWidth.value = 0.26;
+      // Coarse enough that individual dots survive at 1080p; the earlier
+      // scale put them below a pixel and the ripple vanished.
+      u.uDotScale.value = mat === parts.boardMat ? 34 : 130;
     }
   }
 
