@@ -178,7 +178,6 @@ const createRenderer = async (
       const built = await build(false);
       return { ...built, backend: "webgpu" };
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.warn("WebGPU renderer failed to build, using WebGL2:", error);
     }
   }
