@@ -1,0 +1,34 @@
+{
+  "name": "neon-tech-title",
+  "version": "1.0.0",
+  "description": "Remotion + three.js 3D neon tech title loop (WebGPU with WebGL2/WebGL fallback)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "render:1080:innovation": "remotion render InnovationBlue1080 out/INNOVATION_1080p.mp4 --muted",
+    "render:1080:technology": "remotion render TechnologyRed1080 out/TECHNOLOGY_1080p.mp4 --muted",
+    "render:4k:innovation": "remotion render InnovationBlue4K out/INNOVATION_4K.mp4 --muted",
+    "render:4k:technology": "remotion render TechnologyRed4K out/TECHNOLOGY_4K.mp4 --muted",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.0.6",
+    "@react-three/fiber": "9.1.2",
+    "@react-three/postprocessing": "^3.0.4",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "postprocessing": "^6.37.8",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.175.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.175.0",
+    "typescript": "5.9.3"
+  }
+}
