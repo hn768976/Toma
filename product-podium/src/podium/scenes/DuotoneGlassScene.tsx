@@ -123,11 +123,11 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
       {/* Magenta key, left. Broad and slightly in front, so its falloff
           reaches past the centre of the disc and overlaps the cyan. */}
       <spotLight
-        position={[-3.3, 3.0, 2.4]}
-        angle={1.1}
+        position={[-4.6, 2.2, 3.4]}
+        angle={1.25}
         penumbra={1}
         decay={2}
-        intensity={150 * left}
+        intensity={230 * left}
         color={p.keyLeft}
         castShadow
         shadow-mapSize-width={2048}
@@ -140,11 +140,11 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
       />
       {/* Cyan key, right. */}
       <spotLight
-        position={[3.3, 3.0, 2.4]}
-        angle={1.1}
+        position={[4.6, 2.2, 3.4]}
+        angle={1.25}
         penumbra={1}
         decay={2}
-        intensity={150 * right}
+        intensity={230 * right}
         color={p.keyRight}
         castShadow
         shadow-mapSize-width={2048}
@@ -162,18 +162,21 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
         angle={0.5}
         penumbra={1}
         decay={2}
-        intensity={165 * (left + right) * 0.5}
+        intensity={38 * (left + right) * 0.5}
         color="#cfd6ff"
       />
       {/* Rim from behind, low, to separate the disc from the backdrop. */}
       <pointLight position={[-2.2, 2.4, -3.4]} intensity={14 * left} color={p.keyLeft} decay={2} />
       <pointLight position={[2.2, 2.4, -3.4]} intensity={14 * right} color={p.keyRight} decay={2} />
 
-      {/* Backdrop: dark, falling to near-black at the top of frame. The
-          coloured spill across it at plinth height is real light, not
-          painted into the gradient. */}
-      <mesh position={[0, 7.5, -8]} receiveShadow>
-        <planeGeometry args={[60, 30]} />
+      {/* Backdrop: a dark field that climbs continuously from the top of
+          frame down. It is hung close enough that the gradient covers the
+          whole frame — pushed back, the top of frame falls off the
+          gradient entirely and a horizon appears where the reference has
+          none. The coloured spill across it at plinth height is real
+          light, not painted into the gradient. */}
+      <mesh position={[0, 4.6, -6.2]} receiveShadow>
+        <planeGeometry args={[60, 24]} />
         <meshStandardMaterial map={backdropMap} roughness={1} metalness={0} />
       </mesh>
 

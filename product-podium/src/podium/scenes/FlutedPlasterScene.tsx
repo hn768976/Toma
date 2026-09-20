@@ -57,7 +57,7 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
 
       <WallFloor
         wall={p.wall}
-        floor={p.plaster}
+        floor={p.floor}
         wallDistance={p.wallDistance}
         roughness={0.94}
         normalStrength={0.1}
@@ -84,11 +84,12 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
           <ContactAO radius={1.3} spread={1.7} strength={0.3} />
           <FlutedCylinder
             radius={1.3}
-            height={1.27}
-            flutes={12}
-            fluteDepth={0.23}
-            capRadius={1.33}
-            capHeight={0.1}
+            height={1.3}
+            flutes={20}
+            fluteDepth={0.1}
+            fluteSharpness={2.4}
+            capRadius={1.34}
+            capHeight={0.055}
             material={plaster}
           />
         </>
@@ -103,7 +104,7 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
             plateRadius={0.44}
             baseHeight={0.1}
             capitalHeight={0.11}
-            flutes={18}
+            flutes={20}
             fluteDepth={0.03}
             taper={0.94}
             position={[-1.0, 0, 0.75]}
@@ -116,7 +117,7 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
             plateRadius={0.44}
             baseHeight={0.1}
             capitalHeight={0.11}
-            flutes={18}
+            flutes={20}
             fluteDepth={0.03}
             taper={0.94}
             position={[1.15, 0, -0.55]}

@@ -32,7 +32,7 @@ export type DiscOptions = {
  */
 export const discGeometry = (o: DiscOptions) =>
   memo(`disc:${JSON.stringify(o)}`, () => {
-    const seg = o.radialSegments ?? 160;
+    const seg = o.radialSegments ?? 256;
     const bseg = o.bevelSegments ?? 6;
     const { radius: R, height: H, bevel: b } = o;
     const pts: THREE.Vector2[] = [];
@@ -52,7 +52,10 @@ export const discGeometry = (o: DiscOptions) =>
     pts.push(new THREE.Vector2(0, H));
 
     const g = new THREE.LatheGeometry(pts, seg);
-    g.computeVertexNormals();
+    // Deliberately NOT computeVertexNormals: LatheGeometry generates its
+    // normals analytically and correctly, and averaging them instead
+    // leaves a visible crease down the silhouette where the revolve closes
+    // on itself and the duplicated seam vertices fail to wrap.
 
     // Planar UVs on the flat top face.
     const pos = g.attributes.position as THREE.BufferAttribute;

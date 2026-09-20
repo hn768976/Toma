@@ -68,6 +68,13 @@ export type DofConfig = {
     ry: number;
     /** 0..1 — how much of the ellipse is the soft edge. */
     feather: number;
+    /**
+     * Fraction of the blur that still applies inside the pocket. Zero gives
+     * a razor-sharp plinth against a soft field, which reads as a render
+     * rather than as a photographed set — a real lens diffuses the
+     * subject's silhouette slightly too.
+     */
+    keepMin: number;
   } | null;
 };
 
@@ -173,6 +180,7 @@ export type FlutedPlasterParams = {
   plinth: "cylinder" | "columns";
   wall: string;
   plaster: string;
+  floor: string;
   /** Distance from the plinth centre back to the wall. */
   wallDistance: number;
   foliage: FoliageConfig;

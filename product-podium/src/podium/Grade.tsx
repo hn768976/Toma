@@ -187,12 +187,13 @@ export const Vignette: React.FC<{ strength: number }> = ({ strength }) => {
   );
 };
 
-export const Grade: React.FC<{ dof: DofConfig | null; grade: GradeConfig }> = ({
-  dof,
-  grade,
-}) => (
+/**
+ * Grain and vignette only. Depth of field is a WebGL pass now — see
+ * DepthOfFieldPass.tsx for why. These two are plain DOM painting rather
+ * than filters, and painting does survive the headless capture.
+ */
+export const Grade: React.FC<{ grade: GradeConfig }> = ({ grade }) => (
   <>
-    <DepthOfField dof={dof} />
     <Vignette strength={grade.vignette} />
     <Grain amplitude={grade.grain} />
   </>

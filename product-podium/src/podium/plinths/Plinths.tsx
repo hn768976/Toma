@@ -16,6 +16,8 @@ export const FlutedCylinder: React.FC<{
   height: number;
   flutes: number;
   fluteDepth: number;
+  /** Above 1 the grooves narrow and the faces between them flatten — reeding rather than scalloping. */
+  fluteSharpness?: number;
   /** The top plate overhangs the fluted shaft — it is what makes the flutes read. */
   capRadius: number;
   capHeight: number;
@@ -26,17 +28,18 @@ export const FlutedCylinder: React.FC<{
   height,
   flutes,
   fluteDepth,
+  fluteSharpness = 1,
   capRadius,
   capHeight,
   position = [0, 0, 0],
   material,
 }) => {
   const shaft = useMemo(
-    () => flutedGeometry({ radius, height, flutes, fluteDepth, fluteSharpness: 1 }),
-    [radius, height, flutes, fluteDepth],
+    () => flutedGeometry({ radius, height, flutes, fluteDepth, fluteSharpness, radialSegments: 640 }),
+    [radius, height, flutes, fluteDepth, fluteSharpness],
   );
   const cap = useMemo(
-    () => discGeometry({ radius: capRadius, height: capHeight, bevel: 0.018 }),
+    () => discGeometry({ radius: capRadius, height: capHeight, bevel: 0.006 }),
     [capRadius, capHeight],
   );
 

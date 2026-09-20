@@ -52,8 +52,11 @@ export const WoodLeafScene: React.FC<{ params: WoodLeafParams }> = ({
   return (
     <>
       <primitive object={env} attach="environment" />
-      <hemisphereLight args={["#f2f7ff", "#dde5f2", 0.5]} />
-      <ambientLight intensity={0.12} color="#eaf1ff" />
+      {/* Cool fill against a warm key: the reference has a genuine warm sun
+          pool on the wall sitting in cool shade, and without the split the
+          stage reads overcast and flat. */}
+      <hemisphereLight args={["#dbe7ff", "#cddcf2", 0.55]} />
+      <ambientLight intensity={0.1} color="#dfe9ff" />
 
       <WallFloor
         wall={p.wall}

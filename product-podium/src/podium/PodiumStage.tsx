@@ -12,6 +12,7 @@ import { useThree } from "@react-three/fiber";
 import React, { useLayoutEffect } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
+import { DepthOfFieldPass } from "./DepthOfFieldPass";
 import { Grade } from "./Grade";
 import { SoftShadows } from "./SoftShadows";
 import { DuotoneGlassScene } from "./scenes/DuotoneGlassScene";
@@ -111,8 +112,10 @@ export const PodiumStage: React.FC<{ config: StageConfig }> = ({ config }) => {
         <ToneMapping tone={config.tone} />
         <RigCamera rig={config.camera} />
         <Scene config={config} />
+        {/* Must be last: it takes over the render loop. */}
+        <DepthOfFieldPass dof={config.dof} />
       </ThreeCanvas>
-      <Grade dof={config.dof} grade={config.grade} />
+      <Grade grade={config.grade} />
     </AbsoluteFill>
   );
 };
