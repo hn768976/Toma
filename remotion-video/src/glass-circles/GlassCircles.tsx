@@ -16,8 +16,14 @@ export const glassCirclesSchema = z.object({
   variant: z.enum(["v1", "v2"]),
   /** Use WebGPU when the browser exposes it; WebGL2 is the automatic fallback. */
   preferWebGPU: z.boolean(),
-  /** MSAA samples on the scene pass. 4 is the delivery setting. */
+  /** MSAA samples on the scene pass, where the backend honours them. */
   samples: z.number().int().min(1).max(8),
+  /**
+   * Renders at this multiple of the output size and filters back down.
+   * 2 is the delivery setting at 1080p; 4K already samples finely enough that
+   * 1 is usually the better trade against render time.
+   */
+  supersample: z.number().min(1).max(2),
   /** Overlays the active graphics backend; for checking renders, not delivery. */
   showBackend: z.boolean(),
 });
@@ -28,6 +34,7 @@ export const glassCirclesDefaults: GlassCirclesProps = {
   variant: "v2",
   preferWebGPU: true,
   samples: 4,
+  supersample: 2,
   showBackend: false,
 };
 
@@ -37,6 +44,7 @@ export const GlassCircles: React.FC<GlassCirclesProps> = ({
   variant,
   preferWebGPU,
   samples,
+  supersample,
   showBackend,
 }) => {
   const frame = useCurrentFrame();
@@ -68,10 +76,11 @@ export const GlassCircles: React.FC<GlassCirclesProps> = ({
         variant: VARIANTS[variant],
         preferWebGPU,
         samples,
+        supersample,
       });
     }
     return enginePromiseRef.current;
-  }, [width, height, variant, preferWebGPU, samples]);
+  }, [width, height, variant, preferWebGPU, samples, supersample]);
 
   // Created during render rather than in the effect, so the handle exists the
   // moment the frame changes and Remotion never screenshots a stale canvas.

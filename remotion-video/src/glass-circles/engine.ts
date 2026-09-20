@@ -61,8 +61,13 @@ export type EngineOptions = {
   variant: GlassVariant;
   /** Try WebGPU first; WebGL2 is used automatically when it is unavailable. */
   preferWebGPU: boolean;
-  /** MSAA samples on the scene pass. */
+  /** MSAA samples on the scene pass, where the backend honours them. */
   samples: number;
+  /**
+   * Renders at this multiple of the output size and filters back down.
+   * 2 gives a true 2x2 supersample of the whole chain.
+   */
+  supersample: number;
 };
 
 /**
@@ -202,9 +207,21 @@ export const createEngine = async (
 ): Promise<GlassEngine> => {
   const { target, width, height, variant, preferWebGPU, samples } = options;
 
+  // Supersampling is the antialiasing that actually works here. The rim
+  // highlight saturates, and a clipped signal cannot be antialiased by
+  // reshaping its falloff -- the visible edge is wherever it crosses white,
+  // and that crossing is arbitrarily steep. Multisampling does not help
+  // either: it resolves geometry coverage, not shading inside a triangle, and
+  // this backend ignores the sample count on the pass target regardless.
+  // Rendering oversized and filtering down averages the clipped result, which
+  // is the only thing that removes the stepping.
+  const scale = Math.max(1, Math.min(2, options.supersample));
+  const renderWidth = Math.round(width * scale);
+  const renderHeight = Math.round(height * scale);
+
   const { renderer, backend, canvas: glCanvas } = await createRenderer(
-    width,
-    height,
+    renderWidth,
+    renderHeight,
     preferWebGPU,
   );
 
@@ -237,7 +254,7 @@ export const createEngine = async (
   // count leaves the hero circle's silhouette visibly faceted at 1080p and
   // worse at 4K, and a faceted silhouette crawls once the disc moves.
   const pixelsPerWorldUnit =
-    height / (2 * CAMERA.distance * Math.tan((CAMERA.fov * Math.PI) / 360));
+    renderHeight / (2 * CAMERA.distance * Math.tan((CAMERA.fov * Math.PI) / 360));
   const segmentsFor = (radius: number) => {
     const circumferenceInPixels = 2 * Math.PI * radius * pixelsPerWorldUnit;
     return Math.min(4096, Math.max(256, Math.round(circumferenceInPixels / 2.5)));
@@ -276,7 +293,7 @@ export const createEngine = async (
   // Grain is applied after the tone map so its strength is perceptual rather
   // than swamping the shadows of the dark variant.
   const grain = Fn(() => {
-    const p = screenUV.mul(vec2(width, height));
+    const p = screenUV.mul(vec2(renderWidth, renderHeight));
     return vec3(mx_noise_float(vec3(p.x, p.y, grainSeed))).mul(
       float(variant.grain),
     );
@@ -289,6 +306,8 @@ export const createEngine = async (
   if (!context) {
     throw new Error("Could not acquire a 2D context for the output canvas");
   }
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
 
   const envEuler = new Matrix4();
   const envMatrix = new Matrix3();
@@ -324,7 +343,17 @@ export const createEngine = async (
     // The WebGPU/WebGL canvas is never attached to the document, so its
     // drawing buffer survives; blitting into a 2D canvas guarantees Remotion's
     // screenshot captures the frame.
-    context.drawImage(glCanvas, 0, 0);
+    context.drawImage(
+      glCanvas,
+      0,
+      0,
+      renderWidth,
+      renderHeight,
+      0,
+      0,
+      width,
+      height,
+    );
 
     // Hand the blit to the compositor before reporting the frame as ready.
     // Without this the screenshot can capture whatever was last painted rather

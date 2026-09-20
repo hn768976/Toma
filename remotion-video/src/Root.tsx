@@ -83,7 +83,7 @@ export const RemotionRoot: React.FC = () => {
         width={UHD_WIDTH}
         height={UHD_HEIGHT}
         schema={glassCirclesSchema}
-        defaultProps={{ ...glassCirclesDefaults, variant: "v1" as const }}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v1" as const, supersample: 1 }}
       />
       <Composition
         id="GlassCircles-V2-1080p"
@@ -103,7 +103,7 @@ export const RemotionRoot: React.FC = () => {
         width={UHD_WIDTH}
         height={UHD_HEIGHT}
         schema={glassCirclesSchema}
-        defaultProps={{ ...glassCirclesDefaults, variant: "v2" as const }}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v2" as const, supersample: 1 }}
       />
     </>
   );
