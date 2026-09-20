@@ -15,6 +15,19 @@ Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 
 /**
+ * No audio track.
+ *
+ * These are silent stages. Left to itself Remotion writes a silent AAC
+ * stream into the mp4, which is not only an extra stream a buyer has to
+ * strip but also pushes the container duration past the video's: AAC frames
+ * do not land on the 300th video frame, so the file reports 10.048s instead
+ * of exactly 10.000s and the loop point moves. Both go away here rather than
+ * being trimmed off the finished file afterwards.
+ */
+Config.setEnforceAudioTrack(false);
+Config.setMuted(true);
+
+/**
  * WebGL in headless Chromium. "angle" is the documented default here; on a
  * machine without a GPU, "swangle" (ANGLE over SwiftShader) is what actually
  * gets a context and is what the timings in the README were measured with.

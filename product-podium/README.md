@@ -378,9 +378,20 @@ downscale — expect four times the render time.
 
 ## No audio
 
-These are silent by design. `npx remotion ffprobe out/preview/<file>.mp4`
-should show exactly one stream, `codec_type=video`. If an audio stream ever
-appears, fix the render config; do not strip it afterwards.
+These are silent by design, and `remotion.config.ts` turns the audio track
+off explicitly (`setEnforceAudioTrack(false)` + `setMuted(true)`). Left to
+itself Remotion writes a silent AAC stream into the mp4, which costs more
+than a stream a buyer has to strip: AAC frames do not land on the 300th
+video frame, so the container reports 10.048s instead of exactly 10.000s and
+the loop point moves.
+
+```bash
+npx remotion ffprobe out/preview/<file>.mp4
+```
+
+should show exactly one stream, `codec_type=video`, and `duration=10.000000`.
+If an audio stream ever appears, fix the render config — do not trim the
+finished file.
 
 ---
 
