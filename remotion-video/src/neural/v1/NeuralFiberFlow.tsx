@@ -46,16 +46,16 @@ export const NeuralFiberFlow: React.FC<
     () =>
       createBokehStage({
         seed: 0xb0ce01,
-        count: 210,
+        count: 300,
         sizeMin: 0.005,
-        sizeMax: 0.03,
+        sizeMax: 0.032,
         colors: [V1.bokehWarm, V1.bokehCool, V1.bokehWhite, V1.bokehWarm],
-        alphaMin: 0.22,
-        alphaMax: 0.72,
+        alphaMin: 0.25,
+        alphaMax: 0.8,
         driftX: -0.011,
         driftY: 0.004,
-        softness: 1.7,
-        rim: 0.3,
+        softness: 1.9,
+        rim: 0.25,
         twinkle: 0.35,
         fadeInSeconds: 2.2,
       }),
@@ -66,12 +66,14 @@ export const NeuralFiberFlow: React.FC<
     () =>
       createBokehStage({
         seed: 0xb0ce02,
-        count: 44,
-        sizeMin: 0.04,
-        sizeMax: 0.19,
+        count: 78,
+        // Coin-sized rather than frame-filling: big enough to read as real
+        // defocused highlights, small enough not to bury the fibres.
+        sizeMin: 0.02,
+        sizeMax: 0.105,
         colors: [V1.bokehWarm, V1.bokehCool, V1.bokehWarm, V1.bokehWhite],
-        alphaMin: 0.14,
-        alphaMax: 0.46,
+        alphaMin: 0.2,
+        alphaMax: 0.62,
         driftX: -0.026,
         driftY: -0.009,
         // A near-flat disc with a bright rim: that is what a real defocused
@@ -106,7 +108,7 @@ export const NeuralFiberFlow: React.FC<
     >
       <AbsoluteFill
         style={{
-          background: `radial-gradient(105% 80% at 44% 54%, ${V1.haze} 0%, ${V1.background} 55%, #000105 100%)`,
+          background: `radial-gradient(100% 75% at 44% 52%, ${V1.haze} 0%, ${V1.background} 50%, #000004 100%)`,
         }}
       />
 
@@ -129,7 +131,7 @@ export const NeuralFiberFlow: React.FC<
       ))}
 
       <AbsoluteFill
-        style={{ filter: `blur(${blur(9)}px)`, mixBlendMode: "screen" }}
+        style={{ filter: `blur(${blur(5)}px)`, mixBlendMode: "screen" }}
       >
         <PixiLayer build={nearBokeh} />
       </AbsoluteFill>

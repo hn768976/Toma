@@ -45,12 +45,12 @@ export const IsometricNeuralLayers: React.FC<
     () =>
       createBokehStage({
         seed: 0xb0ce11,
-        count: 170,
-        sizeMin: 0.004,
-        sizeMax: 0.026,
+        count: 70,
+        sizeMin: 0.003,
+        sizeMax: 0.012,
         colors: [V2.bokehCool, V2.bokehWhite, V2.bokehCool, V2.bokehWarm],
-        alphaMin: 0.18,
-        alphaMax: 0.62,
+        alphaMin: 0.1,
+        alphaMax: 0.34,
         driftX: 0.03,
         driftY: 0.022,
         softness: 1.7,
@@ -65,12 +65,12 @@ export const IsometricNeuralLayers: React.FC<
     () =>
       createBokehStage({
         seed: 0xb0ce12,
-        count: 34,
-        sizeMin: 0.045,
-        sizeMax: 0.2,
+        count: 16,
+        sizeMin: 0.02,
+        sizeMax: 0.07,
         colors: [V2.bokehCool, V2.bokehWhite, V2.bokehWarm, V2.bokehCool],
-        alphaMin: 0.12,
-        alphaMax: 0.38,
+        alphaMin: 0.07,
+        alphaMax: 0.2,
         driftX: 0.05,
         driftY: 0.035,
         softness: 0.8,
@@ -93,7 +93,7 @@ export const IsometricNeuralLayers: React.FC<
       {/* Light pools on the left, leaving the right side of frame dark. */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(95% 85% at 28% 42%, ${V2.haze} 0%, ${V2.background} 58%, #01030a 100%)`,
+          background: `radial-gradient(85% 75% at 34% 40%, ${V2.haze} 0%, ${V2.background} 55%, #010209 100%)`,
         }}
       />
 
@@ -124,7 +124,7 @@ export const IsometricNeuralLayers: React.FC<
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(125% 100% at 42% 48%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.62) 100%)",
+            "radial-gradient(120% 100% at 40% 45%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.68) 100%)",
           pointerEvents: "none",
         }}
       />

@@ -2,49 +2,41 @@
  * three.js scene for one depth slice of V1.
  *
  * Each slice gets its own canvas so it can be blurred independently, which is
- * how the shallow depth of field is produced: a real DOF pass would need
- * post-processing (and a different implementation per backend), whereas
- * compositing three separately blurred slices is backend-agnostic and costs
- * nothing at render time.
+ * how the shallow depth of field is produced without a post-processing pass.
+ * All three slices share one camera path, so parallax stays consistent.
  *
- * All three slices share one camera path, so parallax stays consistent
- * between them.
+ * The strands are heavily beaded: in the reference every fibre is a visible
+ * line of travelling dots, and that beading carries as much of the look as
+ * the fibres themselves do.
  */
 
 import { PerspectiveCamera, Scene, type Texture } from "three";
 import { DotField, makeDotTexture, type Dot } from "../core/dots";
 import { fbm2, mulberry32 } from "../core/noise";
-import { edgeFade, smoothstep } from "../core/math";
+import { smoothstep } from "../core/math";
 import { mixRgb, V1, type Rgb } from "../core/palette";
 import { RibbonMesh, type Sample } from "../core/ribbon";
 import type { PosedScene } from "../components/ThreeLayer";
-import {
-  buildV1Field,
-  v1Camera,
-  type BandData,
-  type BandId,
-} from "./field";
+import { buildV1Field, v1Camera, type BandData, type BandId } from "./field";
 
 export const V1_FOV = 38;
 
-const SAMPLES = 44;
-const SPREAD_SCALE = 6.4;
-const BASE_WIDTH = 0.088;
+const SAMPLES = 52;
+/** Total strand width in world units, including the soft glow skirt. */
+const BASE_WIDTH = 0.26;
 /** Beyond this distance from the camera along X a strand is faded out. */
-const FADE_NEAR = 34;
-const FADE_FAR = 47;
-/**
- * The strands in the reference read as strings of beads rather than as plain
- * curves, so each one carries a lot of packets.
- */
-const DOTS_PER_STRAND = 9;
+const FADE_NEAR = 36;
+const FADE_FAR = 50;
+const DOTS_PER_STRAND = 24;
 
-type Point = { x: number; y: number; z: number; pinch: number; fan: number };
+/** Defocus radius per slice, in composition pixels at 1080p. */
+export const V1_BAND_BLUR: Record<BandId, number> = { 0: 5, 1: 0, 2: 17 };
+
+type Point = { x: number; y: number; z: number; node: number; open: number };
 
 /**
- * Position of a strand at parameter `t`, shared by the ribbon geometry and by
- * the data packets that ride along it, so packets always sit exactly on their
- * strand.
+ * Position along a strand. Shared by the ribbon geometry and by the dots that
+ * ride it, so the beads always sit exactly on their fibre.
  */
 const strandPoint = (
   data: BandData,
@@ -56,50 +48,46 @@ const strandPoint = (
   const strand = data.strands[strandIndex];
   const bundle = data.bundles[strand.bundle];
 
-  const u = (t - 0.5) * 2;
-  const along = u * bundle.length * strand.lengthScale;
-  const absU = Math.abs(u);
+  const reach = bundle.length * strand.lengthScale;
+  const along = t * reach;
+  const x = bundle.x + along * bundle.dir;
 
-  // One side of each bundle stays tight while the other opens wide.
-  const bias = u < 0 ? bundle.spreadLeft : bundle.spreadRight;
-
-  // Two separation rates: branches peel away from the pinch early, strands
-  // only leave their branch further out. That ordering is what reads as
-  // branching rather than as a plain fan.
-  const branchFan = Math.pow(absU, 1.35);
-  const strandFan = Math.pow(absU, 2.3);
+  // The fan opens over `falloff` and then flattens: tanh saturates, so past
+  // a few falloffs every strand is running parallel to its neighbours at its
+  // own height. This is the single most characteristic shape in the
+  // reference -- a starburst would keep diverging instead.
+  const falloff = bundle.falloff * strand.falloffScale;
+  const open = Math.tanh(along / falloff);
+  // A little scatter at the root keeps the strands from all passing through
+  // one mathematical point, which would read as a hard crease.
   const lateral =
-    (strand.branch * branchFan +
-      strand.withinBranch * strand.branchWidth * strandFan) *
-    bias *
-    SPREAD_SCALE;
+    strand.offset * bundle.spread * open +
+    strand.zOffset * 0.35 * (1 - open);
+  const depth = strand.zOffset * bundle.spread * 0.45 * open;
 
-  // Rotate the bundle's local axes into world space.
-  const ca = Math.cos(bundle.angle);
-  const sa = Math.sin(bundle.angle);
-  const x = bundle.x + along * ca - lateral * sa;
-  const baseY = bundle.y + along * sa + lateral * ca;
-
-  // A field-wide drape, applied purely as a function of X, is what makes
-  // separate bundles read as one continuous flow rather than as isolated
-  // objects.
+  // A field-wide drape as a function of X makes separate bundles read as one
+  // continuous flow rather than as isolated objects.
   const warpY =
-    Math.sin(x * 0.048 + 0.9 + seconds * 0.13) * 1.5 +
-    Math.sin(x * 0.019 - 2.1 - seconds * 0.08) * 2.4;
+    Math.sin(x * 0.045 + 0.9 + seconds * 0.12) * 1.7 +
+    Math.sin(x * 0.018 - 2.1 - seconds * 0.07) * 2.6;
 
-  const fan = branchFan;
-  const wanderScale = 0.3 + fan * 1.4;
-  const wanderY = fbm2(x * 0.085, strand.wanderSeed + seconds * 0.05) * 1.15;
-  const wanderZ = fbm2(x * 0.07, strand.wanderSeed + 191.3) * 0.95;
+  // Two scales of wander. The long one carries the strand across the frame;
+  // the shorter one puts an S-curve into it roughly once per screen width,
+  // which is what stops the flattened-out section reading as ruled lines.
+  const wander = 0.3 + open * 1.5;
+  const wanderY =
+    fbm2(x * 0.032, strand.wanderSeed + seconds * 0.04) * 2.4 +
+    fbm2(x * 0.095, strand.wanderSeed + 57.1 + seconds * 0.06) * 1.5;
+  const wanderZ = fbm2(x * 0.038, strand.wanderSeed + 191.3) * 1.3;
 
   out.x = x;
-  out.y = baseY + warpY + wanderY * wanderScale;
-  out.z = bundle.z + strand.zJitter * Math.abs(lateral) * 0.5 + wanderZ * wanderScale;
-  out.pinch = Math.exp(-(u * u) / 0.03);
-  out.fan = fan;
+  out.y = bundle.y + lateral + warpY + wanderY * wander;
+  out.z = bundle.z + depth + wanderZ * wander;
+  // Bright right at the node, falling away fast.
+  out.node = Math.exp(-Math.pow(along / (bundle.falloff * 0.28), 2) * 1.6);
+  out.open = open;
 };
 
-/** Fade a bundle up as it enters, and out once it is far behind the camera. */
 const bundleGain = (
   data: BandData,
   strandIndex: number,
@@ -108,13 +96,8 @@ const bundleGain = (
   cameraX: number,
 ): number => {
   const bundle = data.bundles[data.strands[strandIndex].bundle];
-  const entry = smoothstep(
-    bundle.entryTime,
-    bundle.entryTime + 1.8,
-    seconds,
-  );
-  const distance = Math.abs(x - cameraX);
-  return entry * (1 - smoothstep(FADE_NEAR, FADE_FAR, distance));
+  const entry = smoothstep(bundle.entryTime, bundle.entryTime + 1.6, seconds);
+  return entry * (1 - smoothstep(FADE_NEAR, FADE_FAR, Math.abs(x - cameraX)));
 };
 
 export const buildV1Band = (
@@ -122,8 +105,7 @@ export const buildV1Band = (
   width: number,
   height: number,
 ): PosedScene => {
-  const field = buildV1Field();
-  const data = field[band];
+  const data = buildV1Field()[band];
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(V1_FOV, width / height, 0.1, 260);
@@ -131,40 +113,49 @@ export const buildV1Band = (
   const ribbons = new RibbonMesh(data.strands.length, SAMPLES);
   scene.add(ribbons.mesh);
 
-  // Sprite sheets: a crisp packet, and a wide soft flare for the nodes.
-  const packetTexture: Texture = makeDotTexture(64, 2.6);
+  const beadTexture: Texture = makeDotTexture(64, 2.4);
   const flareTexture: Texture = makeDotTexture(128, 1.15);
 
-  const dotCount = Math.round(data.strands.length * DOTS_PER_STRAND);
-  const packetsSmall = new DotField(dotCount, 0.4, packetTexture);
-  const packetsLarge = new DotField(
-    Math.round(dotCount * 0.3),
-    0.7,
-    packetTexture,
+  const beadCount = Math.round(data.strands.length * DOTS_PER_STRAND);
+  const largeCount = Math.round(beadCount * 0.3);
+  const beadsSmall = new DotField(beadCount, 0.5, beadTexture);
+  const beadsLarge = new DotField(largeCount, 0.95, beadTexture);
+  // Every strand ends in a bright head, which is what gives the reference its
+  // scattering of sharp points among the softer beads.
+  const tips = new DotField(data.strands.length, 0.6, beadTexture);
+  const flares = new DotField(data.bundles.length, 2.0, flareTexture);
+  const flareCores = new DotField(data.bundles.length, 0.6, beadTexture);
+  scene.add(
+    beadsSmall.points,
+    beadsLarge.points,
+    tips.points,
+    flares.points,
+    flareCores.points,
   );
-  const flares = new DotField(data.bundles.length, 1.9, flareTexture);
-  const flareCores = new DotField(data.bundles.length, 0.55, packetTexture);
-  scene.add(packetsSmall.points, packetsLarge.points, flares.points, flareCores.points);
 
-  // Per-packet constants, drawn once so the animation stays deterministic.
   const rnd = mulberry32(0x1c0de + band);
-  const totalPackets = dotCount + Math.round(dotCount * 0.3);
-  const packetStrand = new Int32Array(totalPackets);
-  const packetPhase = new Float32Array(totalPackets);
-  const packetSpeed = new Float32Array(totalPackets);
-  const packetTone = new Float32Array(totalPackets);
-  const packetGain = new Float32Array(totalPackets);
-  for (let i = 0; i < totalPackets; i++) {
-    packetStrand[i] = Math.floor(rnd() * data.strands.length);
-    packetPhase[i] = rnd();
-    packetSpeed[i] = (0.006 + rnd() * 0.016) * (rnd() > 0.5 ? 1 : -1);
-    packetTone[i] = rnd();
-    packetGain[i] = 0.6 + rnd() * 1.1;
+  const totalBeads = beadCount + largeCount;
+  const beadStrand = new Int32Array(totalBeads);
+  const beadPhase = new Float32Array(totalBeads);
+  const beadSpeed = new Float32Array(totalBeads);
+  const beadTone = new Float32Array(totalBeads);
+  const beadGain = new Float32Array(totalBeads);
+  for (let i = 0; i < totalBeads; i++) {
+    beadStrand[i] = Math.floor(rnd() * data.strands.length);
+    beadPhase[i] = rnd();
+    beadSpeed[i] = (0.004 + rnd() * 0.012) * (rnd() > 0.5 ? 1 : -1);
+    beadTone[i] = rnd();
+    beadGain[i] = 0.6 + rnd() * 0.95;
   }
 
-  const point: Point = { x: 0, y: 0, z: 0, pinch: 0, fan: 0 };
+  const point: Point = { x: 0, y: 0, z: 0, node: 0, open: 0 };
   let seconds = 0;
   let cameraX = 0;
+
+  // The amber beads are a signature of the reference; they need a real share
+  // of the population, not a token few.
+  const beadColour = (tone: number): Rgb =>
+    tone > 0.62 ? V1.dotWarm : tone > 0.38 ? V1.dotWhite : V1.dotCool;
 
   const writeRibbon = (
     strandIndex: number,
@@ -178,82 +169,99 @@ export const buildV1Band = (
     out.x = point.x;
     out.y = point.y;
     out.z = point.z;
-    out.width = BASE_WIDTH * strand.widthScale * (1 + point.pinch * 0.5);
+    // Taper towards the node. Full-width ribbons all converging on one point
+    // fill in as a solid triangle; in the reference the fibres are finest
+    // where they meet and thicken as they spread.
+    out.width = BASE_WIDTH * strand.widthScale * (0.28 + 0.72 * point.open);
 
     const body: Rgb = mixRgb(V1.fibreDeep, V1.fibreBody, strand.tone);
-    const lit = mixRgb(body, V1.fibreCore, point.pinch * (0.22 + 0.45 * strand.tone));
+    const lit = mixRgb(body, V1.fibreCore, point.node * 0.42);
     out.r = lit[0];
     out.g = lit[1];
     out.b = lit[2];
 
-    const gain = bundleGain(data, strandIndex, point.x, seconds, cameraX);
-    // Dozens of strands overlap additively, so the per-strand level has to
-    // stay low or the bundles clip to white and lose their colour.
+    // Fade the far tip out, and ease the very root in. Without the root
+    // ease every strand hits full strength at the same point and the bundle
+    // reads as a solid wedge rather than a glow with fibres leaving it.
+    const tipFade = 1 - smoothstep(0.82, 1, t);
+    const rootEase = smoothstep(0, 0.05, t);
     out.a =
-      edgeFade(t, 0.13) *
-      gain *
+      tipFade *
+      rootEase *
+      bundleGain(data, strandIndex, point.x, seconds, cameraX) *
       strand.dim *
-      (0.3 + 1.2 * point.pinch) *
-      // Tips fade out, which keeps the fans feeling open rather than solid.
-      (1 - 0.45 * point.fan) *
-      0.46;
+      (0.36 + 0.7 * point.node) *
+      0.26;
   };
 
-  const writePacket = (offset: number) => (index: number, out: Dot) => {
-      const i = offset + index;
-      if (i >= totalPackets) {
-        out.brightness = 0;
-        return;
-      }
+  const writeBead = (offset: number) => (index: number, out: Dot) => {
+    const i = offset + index;
+    if (i >= totalBeads) {
+      out.brightness = 0;
+      return;
+    }
 
-      const strandIndex = packetStrand[i];
-      // Packets loop along their strand; `t` stays in 0..1 by wrapping.
-      let t = (packetPhase[i] + seconds * packetSpeed[i]) % 1;
-      if (t < 0) {
-        t += 1;
-      }
+    const strandIndex = beadStrand[i];
+    let t = (beadPhase[i] + seconds * beadSpeed[i]) % 1;
+    if (t < 0) {
+      t += 1;
+    }
 
-      strandPoint(data, strandIndex, t, seconds, point);
-      out.x = point.x;
-      out.y = point.y;
-      out.z = point.z;
+    strandPoint(data, strandIndex, t, seconds, point);
+    out.x = point.x;
+    out.y = point.y;
+    out.z = point.z;
 
-      const tone = packetTone[i];
-      const colour =
-        tone > 0.66 ? V1.dotWarm : tone > 0.42 ? V1.dotWhite : V1.dotCool;
-      out.r = colour[0];
-      out.g = colour[1];
-      out.b = colour[2];
+    const colour = beadColour(beadTone[i]);
+    out.r = colour[0];
+    out.g = colour[1];
+    out.b = colour[2];
 
-      const gain = bundleGain(data, strandIndex, point.x, seconds, cameraX);
-      out.brightness =
-        gain * packetGain[i] * edgeFade(t, 0.08) * (0.55 + 0.85 * point.pinch);
-    };
+    out.brightness =
+      bundleGain(data, strandIndex, point.x, seconds, cameraX) *
+      beadGain[i] *
+      (1 - smoothstep(0.86, 1, t)) *
+      (0.65 + 0.5 * point.node);
+  };
+
+  const writeTip = (index: number, out: Dot) => {
+    strandPoint(data, index, 0.97, seconds, point);
+    out.x = point.x;
+    out.y = point.y;
+    out.z = point.z;
+
+    const colour = beadColour((index * 0.37) % 1);
+    out.r = colour[0];
+    out.g = colour[1];
+    out.b = colour[2];
+    out.brightness =
+      bundleGain(data, index, point.x, seconds, cameraX) *
+      data.strands[index].dim *
+      0.75;
+  };
 
   const writeFlare = (scale: number) => (index: number, out: Dot) => {
-      const bundle = data.bundles[index];
-      const tint = mixRgb(V1.nodeFlare, V1.dotWarm, bundle.flareWarmth);
-      // Sample the bundle exactly at its pinch so the flare sits on the knot.
-      const strandIndex = bundle.strandOffset;
-      strandPoint(data, strandIndex, 0.5, seconds, point);
+    const bundle = data.bundles[index];
+    strandPoint(data, bundle.strandOffset, 0, seconds, point);
 
-      out.x = point.x;
-      out.y = point.y;
-      out.z = point.z;
-      out.r = tint[0];
-      out.g = tint[1];
-      out.b = tint[2];
+    out.x = point.x;
+    out.y = point.y;
+    out.z = point.z;
 
-      const entry = smoothstep(bundle.entryTime, bundle.entryTime + 1.8, seconds);
-      const distance = Math.abs(point.x - cameraX);
-      const visible = 1 - smoothstep(FADE_NEAR, FADE_FAR, distance);
-      // A slow breath keeps the nodes from looking like static highlights.
-      const breath = 0.78 + 0.22 * Math.sin(seconds * 0.9 + bundle.seed * 0.01);
-      out.brightness = entry * visible * bundle.brightness * breath * scale;
-    };
+    const tint = mixRgb(V1.nodeFlare, V1.dotWarm, bundle.flareWarmth);
+    out.r = tint[0];
+    out.g = tint[1];
+    out.b = tint[2];
 
-  const writeFlareWide = writeFlare(0.5);
-  const writeFlareCore = writeFlare(1.25);
+    const entry = smoothstep(bundle.entryTime, bundle.entryTime + 1.6, seconds);
+    const visible =
+      1 - smoothstep(FADE_NEAR, FADE_FAR, Math.abs(point.x - cameraX));
+    const breath = 0.78 + 0.22 * Math.sin(seconds * 0.9 + bundle.seed * 0.01);
+    out.brightness = entry * visible * bundle.brightness * breath * scale;
+  };
+
+  const writeFlareWide = writeFlare(0.34);
+  const writeFlareCore = writeFlare(0.85);
 
   return {
     scene,
@@ -268,25 +276,21 @@ export const buildV1Band = (
       camera.updateMatrixWorld();
 
       ribbons.update(writeRibbon);
-      packetsSmall.update(writePacket(0));
-      packetsLarge.update(writePacket(dotCount));
+      beadsSmall.update(writeBead(0));
+      beadsLarge.update(writeBead(beadCount));
+      tips.update(writeTip);
       flares.update(writeFlareWide);
       flareCores.update(writeFlareCore);
     },
     dispose: () => {
       ribbons.dispose();
-      packetsSmall.dispose();
-      packetsLarge.dispose();
+      beadsSmall.dispose();
+      beadsLarge.dispose();
+      tips.dispose();
       flares.dispose();
       flareCores.dispose();
-      packetTexture.dispose();
+      beadTexture.dispose();
       flareTexture.dispose();
     },
   };
 };
-
-/**
- * Defocus radius per depth slice, in composition pixels at 1080p. The
- * composition scales these with output height so 4K matches 1080p.
- */
-export const V1_BAND_BLUR: Record<BandId, number> = { 0: 6.5, 1: 0, 2: 19 };

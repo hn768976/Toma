@@ -1,15 +1,15 @@
 /**
  * Layout for V1, "Abstract AI neural network".
  *
- * The field is a static arrangement of fibre *bundles* -- a bundle being a
- * pinch point that a few dozen strands converge on and fan out from. The
- * camera drifts slowly along +X through the field.
+ * A bundle is a bright node with strands rooted at it. The strands leave the
+ * node as a fan and then *straighten out*: each one approaches its own
+ * horizontal line and runs roughly parallel to its neighbours from there on.
+ * That saturating fan is the shape the reference is built from -- strands
+ * that kept spreading radially would read as a starburst, which is not what
+ * the footage does.
  *
  * Density is driven by per-bundle entry times rather than by how far the
- * camera travels. Getting the sparse-to-dense ramp out of camera speed alone
- * would need a much faster push than the reference has, so instead the whole
- * field is laid out up front and bundles fade in over the 15 seconds. That
- * keeps the drift slow and cinematic while still ending crowded.
+ * camera travels, so the drift can stay slow while the frame still fills up.
  */
 
 import { mulberry32 } from "../core/noise";
@@ -25,52 +25,47 @@ type BandSpec = {
   zMin: number;
   zMax: number;
   ySpread: number;
-  /** Share of bundles allocated to this slice. */
   weight: number;
   widthScale: number;
   brightness: number;
 };
 
 const BAND_SPECS: Record<BandId, BandSpec> = {
-  0: { zMin: -27, zMax: -14, ySpread: 15, weight: 0.38, widthScale: 1.05, brightness: 0.42 },
-  1: { zMin: -6, zMax: 2.5, ySpread: 8.5, weight: 0.44, widthScale: 1.0, brightness: 1.0 },
-  2: { zMin: 8, zMax: 14.5, ySpread: 5.2, weight: 0.18, widthScale: 0.55, brightness: 0.26 },
+  0: { zMin: -24, zMax: -13, ySpread: 14, weight: 0.34, widthScale: 1.2, brightness: 0.52 },
+  1: { zMin: -5, zMax: 3, ySpread: 8, weight: 0.46, widthScale: 1.0, brightness: 1.0 },
+  2: { zMin: 8, zMax: 13, ySpread: 5, weight: 0.2, widthScale: 0.8, brightness: 0.34 },
 };
 
 export type Bundle = {
+  /** The node the strands are rooted at. */
   x: number;
   y: number;
   z: number;
   band: BandId;
-  strandCount: number;
-  /** Half-length of the bundle along its own axis. */
+  /** +1 fans to the right, -1 to the left. */
+  dir: 1 | -1;
+  /** How far the strands reach from the node. */
   length: number;
-  /** Rotation of the bundle axis within the XY plane, in radians. */
-  angle: number;
-  spreadLeft: number;
-  spreadRight: number;
-  seed: number;
+  /** Distance over which the fan flattens out; small = a tight sharp node. */
+  falloff: number;
+  /** Half-height the fan settles to once it has straightened. */
+  spread: number;
+  strandCount: number;
   brightness: number;
-  /** 0 = cool white node flare, 1 = fully warm amber. */
   flareWarmth: number;
-  /** Seconds at which this bundle starts fading in. */
   entryTime: number;
-  /** Index into the band's strand array. */
+  seed: number;
   strandOffset: number;
 };
 
 export type Strand = {
   bundle: number;
-  /**
-   * Position of this strand's branch within the fan, -1..1. Branches separate
-   * from the pinch first; strands only separate from their branch further
-   * out, which is what produces the tree-like silhouette.
-   */
-  branch: number;
-  /** Position of this strand within its branch, -1..1. */
-  withinBranch: number;
-  branchWidth: number;
-  zJitter: number;
+  /** Where this strand settles across the fan, -1..1. */
+  offset: number;
+  /** Depth spread, so a fan has thickness rather than being a flat sheet. */
+  zOffset: number;
+  /** Multiplies the bundle's fan-opening distance. */
+  falloffScale: number;
   lengthScale: number;
   widthScale: number;
   /** 0 = deep blue background strand, 1 = bright core strand. */
@@ -86,95 +81,83 @@ export type BandData = {
 };
 
 const CAMERA_START_X = 0;
-const CAMERA_SPEED_X = 2.2;
-export const V1_FIELD_X_MIN = -24;
-export const V1_FIELD_X_MAX = 58;
+const CAMERA_SPEED_X = 2.0;
+export const V1_FIELD_X_MIN = -26;
+export const V1_FIELD_X_MAX = 60;
 
-const BUNDLE_COUNT = 34;
+const BUNDLE_COUNT = 18;
 
-/** Camera pose for a given time in seconds. Pure, so frames stay independent. */
 export const v1Camera = (seconds: number) => {
   const x = CAMERA_START_X + seconds * CAMERA_SPEED_X;
   return {
     x,
-    y: Math.sin(seconds * 0.27) * 1.15 + seconds * 0.075,
-    z: 26 - seconds * 0.22,
-    // A touch of look-ahead keeps the drift from reading as a flat pan.
-    lookX: x + Math.sin(seconds * 0.19) * 2.4,
-    lookY: Math.sin(seconds * 0.23 + 1.1) * 0.7,
+    y: Math.sin(seconds * 0.27) * 1.1 + seconds * 0.06,
+    z: 26 - seconds * 0.2,
+    lookX: x + Math.sin(seconds * 0.19) * 2.2,
+    lookY: Math.sin(seconds * 0.23 + 1.1) * 0.6,
   };
 };
 
 export const buildV1Field = (): Record<BandId, BandData> => {
   const rnd = mulberry32(0x5eed01);
 
-  // Deal bundles into depth slices, then space them along the flow axis with
-  // jitter so the field never looks like a grid.
-  const bands: BandId[] = [];
+  const bandOrder: BandId[] = [];
   for (const band of BANDS) {
     const count = Math.round(BUNDLE_COUNT * BAND_SPECS[band].weight);
     for (let i = 0; i < count; i++) {
-      bands.push(band);
+      bandOrder.push(band);
     }
   }
-  // Fisher-Yates with the seeded PRNG so the interleaving is reproducible.
-  for (let i = bands.length - 1; i > 0; i--) {
+  for (let i = bandOrder.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
-    [bands[i], bands[j]] = [bands[j], bands[i]];
+    [bandOrder[i], bandOrder[j]] = [bandOrder[j], bandOrder[i]];
   }
 
   const span = V1_FIELD_X_MAX - V1_FIELD_X_MIN;
-  const step = span / bands.length;
+  const step = span / bandOrder.length;
 
-  const all: Bundle[] = bands.map((band, i) => {
+  const all: Bundle[] = bandOrder.map((band, i) => {
     const spec = BAND_SPECS[band];
-    const x = V1_FIELD_X_MIN + step * (i + 0.5) + (rnd() - 0.5) * step * 1.35;
-    // One side of a bundle stays tight while the other fans wide; that
-    // asymmetry is the most recognisable feature of the reference.
-    const wideRight = rnd() > 0.45;
-    const tight = 0.16 + rnd() * 0.22;
-    const wide = 0.85 + rnd() * 0.5;
-
     return {
-      x,
+      x: V1_FIELD_X_MIN + step * (i + 0.5) + (rnd() - 0.5) * step * 1.3,
       y: (rnd() - 0.5) * 2 * spec.ySpread,
       z: spec.zMin + rnd() * (spec.zMax - spec.zMin),
       band,
-      strandCount: 10 + Math.floor(rnd() * 9),
-      length: 9 + rnd() * 7,
-      // Fans point in a range of directions rather than all lying flat along
-      // the flow axis, which is what stops the field reading as stripes.
-      angle: (rnd() - 0.5) * 0.85,
-      spreadLeft: wideRight ? tight : wide,
-      spreadRight: wideRight ? wide : tight,
-      seed: Math.floor(rnd() * 1e6),
-      brightness: spec.brightness * (0.75 + rnd() * 0.5),
-      // A minority of nodes glow warm, which is where the reference gets its
-      // amber counterpoint to all the blue.
+      dir: rnd() > 0.5 ? 1 : -1,
+      // Long enough to cross the frame: the reference strands run off the
+      // edge rather than terminating inside it.
+      length: 46 + rnd() * 26,
+      // The fan opens over roughly a third of the strand's travel. Opening
+      // much faster than this turns the bundle into a hard wedge; the
+      // reference eases open over a long sweep.
+      falloff: 13 + rnd() * 8,
+      spread: 5.5 + rnd() * 5,
+      strandCount: 12 + Math.floor(rnd() * 8),
+      brightness: spec.brightness * (0.8 + rnd() * 0.45),
       flareWarmth: rnd() < 0.3 ? 0.55 + rnd() * 0.45 : 0,
       entryTime: 0,
+      seed: Math.floor(rnd() * 1e6),
       strandOffset: 0,
     };
   });
 
   // Entry order: whichever bundle sits nearest the centre of frame a second
-  // in goes first and holds the screen alone, exactly as the reference opens.
+  // in goes first and holds the screen alone, as the reference opens.
   const opening = v1Camera(1);
   const cost = (b: Bundle) =>
-    Math.abs(b.x - opening.x) * 1.0 + Math.abs(b.y) * 0.6 + Math.abs(b.z + 2) * 0.5;
+    Math.abs(b.x - opening.x) + Math.abs(b.y) * 0.6 + Math.abs(b.z + 1) * 0.5;
 
   const order = all.map((_, i) => i);
-  const firstIndex = order.reduce((best, i) => (cost(all[i]) < cost(all[best]) ? i : best), 0);
-  const rest = order.filter((i) => i !== firstIndex);
+  const first = order.reduce((best, i) => (cost(all[i]) < cost(all[best]) ? i : best), 0);
+  const rest = order.filter((i) => i !== first);
   for (let i = rest.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
     [rest[i], rest[j]] = [rest[j], rest[i]];
   }
 
-  const sequence = [firstIndex, ...rest];
-  sequence.forEach((bundleIndex, rank) => {
-    const p = rank / (sequence.length - 1);
-    all[bundleIndex].entryTime = rank === 0 ? 0.3 : 1.2 + Math.pow(p, 0.72) * 9.2;
+  [first, ...rest].forEach((bundleIndex, rank, seq) => {
+    const p = rank / (seq.length - 1);
+    all[bundleIndex].entryTime = rank === 0 ? 0.3 : 1.1 + Math.pow(p, 0.75) * 9.4;
   });
 
   const result = {} as Record<BandId, BandData>;
@@ -188,34 +171,22 @@ export const buildV1Field = (): Record<BandId, BandData> => {
       bundle.strandOffset = strands.length;
       const spec = BAND_SPECS[band];
 
-      // Deal the bundle's strands into a handful of branches.
-      const branchCount = 3 + Math.floor(rnd() * 3);
-      const branchCentre: number[] = [];
-      const branchWidth: number[] = [];
-      for (let k = 0; k < branchCount; k++) {
-        branchCentre.push(
-          (k / Math.max(1, branchCount - 1)) * 2 - 1 + (rnd() - 0.5) * 0.3,
-        );
-        branchWidth.push(0.18 + rnd() * 0.3);
-      }
-
       for (let s = 0; s < bundle.strandCount; s++) {
-        const k = Math.floor((s / bundle.strandCount) * branchCount);
-        const inBranch = bundle.strandCount / branchCount;
-        const local = ((s % inBranch) / Math.max(1, inBranch - 1)) * 2 - 1;
-
+        // Spread the settled offsets unevenly: evenly spaced strands look
+        // mechanical, and the reference clearly bunches some together.
+        const even = (s / (bundle.strandCount - 1)) * 2 - 1;
         strands.push({
           bundle: bi,
-          branch: branchCentre[k] + (rnd() - 0.5) * 0.08,
-          withinBranch: local + (rnd() - 0.5) * 0.25,
-          branchWidth: branchWidth[k],
-          zJitter: (rnd() - 0.5) * 2,
-          lengthScale: 0.68 + rnd() * 0.55,
-          widthScale: spec.widthScale * (0.7 + rnd() * 0.8),
-          // A minority of bright strands reads as the bundle's lit core.
-          tone: Math.pow(rnd(), 2.2),
+          offset: even + (rnd() - 0.5) * 0.38,
+          zOffset: (rnd() - 0.5) * 1.4,
+          // Per-strand variation in how fast the fan opens: a single shared
+          // rate gives the bundle a hard triangular silhouette.
+          falloffScale: 0.65 + rnd() * 0.8,
+          lengthScale: 0.45 + rnd() * 0.8,
+          widthScale: spec.widthScale * (0.75 + rnd() * 0.6),
+          tone: Math.pow(rnd(), 1.5),
           wanderSeed: rnd() * 500,
-          dim: 0.5 + rnd() * 0.7,
+          dim: 0.6 + rnd() * 0.6,
         });
       }
     }

@@ -15,11 +15,11 @@ export const scaleRgb = (c: Rgb, k: number): Rgb => [c[0] * k, c[1] * k, c[2] * 
  * rather than in the strands themselves.
  */
 export const V1 = {
-  background: "#03060d",
-  haze: "#071028",
-  fibreCore: [0.62, 0.80, 1.0] as Rgb,
-  fibreBody: [0.20, 0.42, 0.92] as Rgb,
-  fibreDeep: [0.07, 0.17, 0.50] as Rgb,
+  background: "#02040a",
+  haze: "#060e24",
+  fibreCore: [0.55, 0.75, 1.0] as Rgb,
+  fibreBody: [0.13, 0.35, 0.95] as Rgb,
+  fibreDeep: [0.05, 0.13, 0.46] as Rgb,
   nodeFlare: [0.85, 0.92, 1.0] as Rgb,
   dotCool: [0.55, 0.78, 1.0] as Rgb,
   dotWhite: [1.0, 0.98, 0.94] as Rgb,
@@ -36,10 +36,10 @@ export const V1 = {
  */
 export const V2 = {
   background: "#02050f",
-  haze: "#0b1a3d",
-  fibreCore: [0.62, 0.93, 1.0] as Rgb,
-  fibreBody: [0.16, 0.48, 0.95] as Rgb,
-  fibreDeep: [0.07, 0.17, 0.52] as Rgb,
+  haze: "#0a1a44",
+  fibreCore: [0.70, 0.95, 1.0] as Rgb,
+  fibreBody: [0.14, 0.52, 1.0] as Rgb,
+  fibreDeep: [0.05, 0.20, 0.72] as Rgb,
   fibreSpine: [0.45, 1.0, 0.86] as Rgb,
   fibreWarm: [1.0, 0.34, 0.30] as Rgb,
   nodeFlare: [0.78, 0.95, 1.0] as Rgb,

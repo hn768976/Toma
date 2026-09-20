@@ -1,19 +1,21 @@
 /**
  * three.js scene for one depth slice of V2.
  *
- * The strands of a bundle lie in a horizontal plane and the planes are
- * stacked, so lateral fan-out is in XZ and the sway is in Y -- the opposite
- * arrangement to V1, which is what produces the isometric layered read.
+ * A fibre leaves its root perpendicular to the root line and drifts sideways
+ * by a power of its travel, which bends it into the curl the reference shows
+ * while keeping neighbouring fibres parallel near the root -- the combed
+ * look. Everything time-varying is a sine of the loop phase with an integer
+ * cycle count, so frame `duration` reproduces frame 0 exactly.
  *
- * Every time-varying term is a sine of `frame / duration` with an integer
- * cycle count, so frame `duration` is bit-identical to frame 0 and the clip
- * repeats seamlessly.
+ * Depth of field is assigned per *fibre* rather than per sheet. The
+ * reference holds the middle of the sheet sharp while the near curl and the
+ * far edge fall off, which a per-sheet split cannot express.
  */
 
-import { PerspectiveCamera, Scene, type Texture } from "three";
+import { PerspectiveCamera, Scene, Vector3, type Texture } from "three";
 import { DotField, makeDotTexture, type Dot } from "../core/dots";
 import { mulberry32 } from "../core/noise";
-import { edgeFade } from "../core/math";
+import { smoothstep } from "../core/math";
 import { mixRgb, V2, type Rgb } from "../core/palette";
 import { RibbonMesh, type Sample } from "../core/ribbon";
 import type { PosedScene } from "../components/ThreeLayer";
@@ -22,77 +24,65 @@ import {
   v2Camera,
   TAU,
   V2_DURATION_IN_FRAMES,
-  type BandData,
   type BandId,
+  type Fibre,
+  type Sheet,
 } from "./field";
 
-export const V2_FOV = 32;
+export const V2_FOV = 34;
 
-const SAMPLES = 46;
+const SAMPLES = 48;
 const BASE_WIDTH = 0.075;
-const DOTS_PER_STRAND = 7;
+const BEADS_PER_FIBRE = 3;
 
 /** Defocus radius per slice, in composition pixels at 1080p. */
-export const V2_BAND_BLUR: Record<BandId, number> = { 0: 6, 1: 0, 2: 22 };
+export const V2_BAND_BLUR: Record<BandId, number> = { 0: 9, 1: 0, 2: 16 };
 
-type Point = { x: number; y: number; z: number; pinch: number; fan: number };
+type Point = { x: number; y: number; z: number; travel: number };
 
-const strandPoint = (
-  data: BandData,
-  strandIndex: number,
+const fibrePoint = (
+  sheets: Sheet[],
+  fibre: Fibre,
   t: number,
   f: number,
   out: Point,
 ): void => {
-  const strand = data.strands[strandIndex];
-  const layer = data.layers[strand.layer];
+  const sheet = sheets[fibre.sheet];
 
-  const u = (t - 0.5) * 2;
-  const absU = Math.abs(u);
+  // Axes of the sheet's plane: along the root line, and the sweep direction
+  // the fibres set off in.
+  const la = sheet.rootAngle;
+  const lx = Math.cos(la);
+  const lz = Math.sin(la);
+  // Sweep away from the camera side of the root line, so the fibres run up
+  // and back across frame rather than spilling toward the viewer.
+  const sa = la - Math.PI / 2 - sheet.skew;
+  const sx = Math.cos(sa);
+  const sz = Math.sin(sa);
 
-  // Strands arrive from the right as a tight gathered beam, pass through the
-  // pinch and open out to the left across the layer's plane.
-  const bias = u > 0 ? layer.tightBias : 1;
-  const branchFan = Math.pow(absU, 1.3);
-  const strandFan = Math.pow(absU, 2.1);
-  const lateral =
-    (strand.branch * branchFan +
-      strand.withinBranch * strand.branchWidth * strandFan) *
-    bias *
-    layer.spread;
+  const root = fibre.s * sheet.rootLength;
+  const travel = t * fibre.length;
+  // Sideways drift accelerates with travel: fibres stay parallel near the
+  // root and curl hard at the far end.
+  // Negative: the tips hook back toward the near end of the root line, which
+  // is the downward curl the reference finishes each sweep with.
+  const side = -fibre.curl * fibre.length * Math.pow(t, 2.2);
 
-  // Outer strands stop shorter than inner ones by a linear ramp, so the tips
-  // line up along a straight edge rather than a ragged arc.
-  const reach =
-    layer.length * (1 - layer.edgeSlope * ((strand.radial + 1) * 0.5));
-  // Strands that travel furthest sideways also fall furthest back along the
-  // axis, which curves the fan into a feather instead of a flat radial
-  // spray.
-  const along =
-    u * reach + (layer.curl * lateral * lateral) / layer.spread;
-
-  // Two travelling waves with whole-number cycle counts: periodic by
-  // construction, so the loop closes exactly.
+  // Two travelling waves, whole cycles per loop.
   const wave =
-    Math.sin(along * 0.42 + strand.phase + TAU * f) * 0.5 +
-    Math.sin(along * 0.23 - strand.phase * 0.7 + TAU * f * 2) * 0.28;
+    Math.sin(travel * 0.5 + fibre.phase + TAU * f) * 0.42 +
+    Math.sin(travel * 0.27 - fibre.phase * 0.7 + TAU * f * 2) * 0.22;
 
-  const ca = Math.cos(layer.angle);
-  const sa = Math.sin(layer.angle);
-
-  out.x = layer.x + along * ca - lateral * sa;
-  out.z = layer.z + along * sa + lateral * ca;
-  // Sway lifts the strands out of their plane, which is what stops the
-  // layers looking like flat cut-outs.
+  out.x = sheet.cx + lx * (root + side) + sx * travel;
+  out.z = sheet.cz + lz * (root + side) + sz * travel;
   out.y =
-    layer.y +
-    strand.yJitter * 0.22 +
-    wave * (0.35 + branchFan * 1.5) +
-    // The spine rides clear of the bundle it belongs to.
-    (strand.isSpine ? 0.55 : 0);
-
-  out.pinch = Math.exp(-(u * u) / 0.035);
-  out.fan = branchFan;
+    sheet.cy +
+    fibre.lift * Math.sin(t * Math.PI) +
+    // The bow grows with travel, so the sheet stays flat at the edge and
+    // ripples where it curls.
+    wave * (0.15 + t * 1.5) +
+    (fibre.isSpine ? 0.5 : 0);
+  out.travel = t;
 };
 
 export const buildV2Band = (
@@ -100,153 +90,164 @@ export const buildV2Band = (
   width: number,
   height: number,
 ): PosedScene => {
-  const field = buildV2Field();
-  const data = field[band];
+  const { sheets, fibres: allFibres } = buildV2Field();
+
+  // Bucket fibres by how far their midpoint sits from the camera, so the
+  // focal plane cuts across the sheet instead of following it.
+  const scratch: Point = { x: 0, y: 0, z: 0, travel: 0 };
+  const eye = v2Camera(0);
+  const eyeVec = new Vector3(eye.x, eye.y, eye.z);
+  const depths = allFibres.map((fibre) => {
+    fibrePoint(sheets, fibre, 0.55, 0, scratch);
+    return eyeVec.distanceTo(new Vector3(scratch.x, scratch.y, scratch.z));
+  });
+
+  const sorted = [...depths].sort((a, b) => a - b);
+  const nearCut = sorted[Math.floor(sorted.length * 0.22)];
+  const farCut = sorted[Math.floor(sorted.length * 0.74)];
+
+  allFibres.forEach((fibre, i) => {
+    fibre.band = depths[i] < nearCut ? 2 : depths[i] > farCut ? 0 : 1;
+  });
+
+  const fibres = allFibres.filter((fibre) => fibre.band === band);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(V2_FOV, width / height, 0.1, 260);
 
-  const ribbons = new RibbonMesh(data.strands.length, SAMPLES);
+  const ribbons = new RibbonMesh(fibres.length, SAMPLES);
   scene.add(ribbons.mesh);
 
-  const packetTexture: Texture = makeDotTexture(64, 2.6);
+  const beadTexture: Texture = makeDotTexture(64, 2.4);
   const flareTexture: Texture = makeDotTexture(128, 1.15);
 
-  const dotCount = Math.round(data.strands.length * DOTS_PER_STRAND);
-  const packetsSmall = new DotField(dotCount, 0.3, packetTexture);
-  const packetsLarge = new DotField(
-    Math.round(dotCount * 0.28),
-    0.55,
-    packetTexture,
-  );
-  const flares = new DotField(data.layers.length, 2.2, flareTexture);
-  const flareCores = new DotField(data.layers.length, 0.6, packetTexture);
-  scene.add(
-    packetsSmall.points,
-    packetsLarge.points,
-    flares.points,
-    flareCores.points,
-  );
+  const beadCount = Math.max(1, Math.round(fibres.length * BEADS_PER_FIBRE));
+  const beads = new DotField(beadCount, 0.2, beadTexture);
+  // A dot at every root: in the reference the root line reads as a dotted
+  // edge running back into the distance.
+  const roots = new DotField(Math.max(1, fibres.length), 0.22, beadTexture);
+  const glow = new DotField(Math.max(1, fibres.length), 0.9, flareTexture);
+  scene.add(beads.points, roots.points, glow.points);
 
   const rnd = mulberry32(0x2c0de + band);
-  const totalPackets = dotCount + Math.round(dotCount * 0.28);
-  const packetStrand = new Int32Array(totalPackets);
-  const packetPhase = new Float32Array(totalPackets);
-  /** Whole cycles per loop, so packets return to their start. */
-  const packetCycles = new Int32Array(totalPackets);
-  const packetGain = new Float32Array(totalPackets);
-  for (let i = 0; i < totalPackets; i++) {
-    packetStrand[i] = Math.floor(rnd() * data.strands.length);
-    packetPhase[i] = rnd();
-    packetCycles[i] = (rnd() > 0.5 ? 1 : -1) * (1 + Math.floor(rnd() * 2));
-    packetGain[i] = 0.55 + rnd() * 1.0;
+  const beadFibre = new Int32Array(beadCount);
+  const beadPhase = new Float32Array(beadCount);
+  const beadCycles = new Int32Array(beadCount);
+  const beadGain = new Float32Array(beadCount);
+  for (let i = 0; i < beadCount; i++) {
+    beadFibre[i] = Math.floor(rnd() * Math.max(1, fibres.length));
+    beadPhase[i] = rnd();
+    beadCycles[i] = (rnd() > 0.5 ? 1 : -1) * (1 + Math.floor(rnd() * 2));
+    beadGain[i] = 0.4 + rnd() * 0.8;
   }
 
-  const point: Point = { x: 0, y: 0, z: 0, pinch: 0, fan: 0 };
-  /** Loop phase, 0..1. */
+  const point: Point = { x: 0, y: 0, z: 0, travel: 0 };
   let f = 0;
 
-  const strandColour = (strand: BandData["strands"][number], pinch: number): Rgb => {
-    if (strand.isSpine) {
-      return mixRgb(V2.fibreSpine, V2.fibreCore, pinch * 0.5);
+  const fibreColour = (fibre: Fibre, t: number): Rgb => {
+    if (fibre.isSpine) {
+      return V2.fibreSpine;
     }
-    if (strand.warmth > 0) {
-      return mixRgb(V2.fibreWarm, V2.fibreCore, pinch * 0.35);
-    }
-    const body = mixRgb(V2.fibreDeep, V2.fibreBody, strand.tone);
-    return mixRgb(body, V2.fibreCore, pinch * (0.25 + 0.5 * strand.tone));
+    const body = mixRgb(V2.fibreDeep, V2.fibreBody, fibre.tone);
+    const warmed = fibre.warmth > 0 ? mixRgb(body, V2.fibreWarm, fibre.warmth) : body;
+    // The highlight is strongest partway along the fibre, as a specular
+    // band would be.
+    const spec = fibre.highlight * Math.exp(-Math.pow((t - 0.42) / 0.3, 2));
+    return mixRgb(warmed, V2.fibreCore, spec);
   };
 
   const writeRibbon = (
-    strandIndex: number,
+    fibreIndex: number,
     _sampleIndex: number,
     t: number,
     out: Sample,
   ): void => {
-    const strand = data.strands[strandIndex];
-    const layer = data.layers[strand.layer];
-    strandPoint(data, strandIndex, t, f, point);
+    const fibre = fibres[fibreIndex];
+    fibrePoint(sheets, fibre, t, f, point);
 
     out.x = point.x;
     out.y = point.y;
     out.z = point.z;
-    out.width =
-      BASE_WIDTH *
-      strand.widthScale *
-      (strand.isSpine ? 1.8 : 1) *
-      (1 + point.pinch * 0.5);
+    out.width = BASE_WIDTH * fibre.widthScale;
 
-    const colour = strandColour(strand, point.pinch);
+    const colour = fibreColour(fibre, t);
     out.r = colour[0];
     out.g = colour[1];
     out.b = colour[2];
 
+    const spec = fibre.highlight * Math.exp(-Math.pow((t - 0.42) / 0.3, 2));
     out.a =
-      edgeFade(t, 0.12) *
-      layer.brightness *
-      strand.dim *
-      (strand.isSpine ? 2.4 : 1) *
-      (0.3 + 1.2 * point.pinch) *
-      (1 - 0.4 * point.fan) *
-      0.42;
+      // Roots stay crisp; tips fade out into the dark.
+      (1 - smoothstep(0.72, 1, t)) *
+      sheets[fibre.sheet].brightness *
+      fibre.dim *
+      (fibre.isSpine ? 2.2 : 1) *
+      (0.55 + 1.9 * spec) *
+      0.55;
   };
 
-  const writePacket = (offset: number) => (index: number, out: Dot) => {
-    const i = offset + index;
-    if (i >= totalPackets) {
+  const writeBead = (index: number, out: Dot) => {
+    const fibre = fibres[beadFibre[index]];
+    if (!fibre) {
       out.brightness = 0;
       return;
     }
 
-    const strandIndex = packetStrand[i];
-    let t = (packetPhase[i] + f * packetCycles[i]) % 1;
+    let t = (beadPhase[index] + f * beadCycles[index]) % 1;
     if (t < 0) {
       t += 1;
     }
 
-    strandPoint(data, strandIndex, t, f, point);
+    fibrePoint(sheets, fibre, t, f, point);
     out.x = point.x;
     out.y = point.y;
     out.z = point.z;
 
-    // Packets take their strand's identity, so a warm strand carries warm
-    // packets and the spine carries mint ones.
-    const strand = data.strands[strandIndex];
-    const colour = strand.warmth > 0
-      ? V2.fibreWarm
-      : strand.isSpine
-        ? V2.fibreSpine
-        : strand.tone > 0.6
-          ? V2.dotWhite
-          : V2.dotCool;
+    const colour = fibre.warmth > 0.5 ? V2.fibreWarm : V2.dotWhite;
     out.r = colour[0];
     out.g = colour[1];
     out.b = colour[2];
-
     out.brightness =
-      data.layers[strand.layer].brightness *
-      packetGain[i] *
-      edgeFade(t, 0.07) *
-      (0.5 + 0.9 * point.pinch);
+      sheets[fibre.sheet].brightness *
+      beadGain[index] *
+      (1 - smoothstep(0.7, 1, t));
   };
 
-  const writeFlare = (scale: number) => (index: number, out: Dot) => {
-    const layer = data.layers[index];
-    strandPoint(data, layer.strandOffset, 0.5, f, point);
+  const writeRoot = (index: number, out: Dot) => {
+    const fibre = fibres[index];
+    if (!fibre) {
+      out.brightness = 0;
+      return;
+    }
 
+    fibrePoint(sheets, fibre, 0.012, f, point);
+    out.x = point.x;
+    out.y = point.y;
+    out.z = point.z;
+    out.r = V2.dotCool[0];
+    out.g = V2.dotCool[1];
+    out.b = V2.dotCool[2];
+    out.brightness = sheets[fibre.sheet].brightness * 1.35;
+  };
+
+  const writeGlow = (index: number, out: Dot) => {
+    const fibre = fibres[index];
+    if (!fibre || fibre.highlight <= 0.15) {
+      out.brightness = 0;
+      return;
+    }
+
+    fibrePoint(sheets, fibre, 0.42, f, point);
     out.x = point.x;
     out.y = point.y;
     out.z = point.z;
     out.r = V2.nodeFlare[0];
     out.g = V2.nodeFlare[1];
     out.b = V2.nodeFlare[2];
-
-    const breath = 0.8 + 0.2 * Math.sin(TAU * f + layer.seed * 0.01);
-    out.brightness = layer.brightness * breath * scale;
+    const breath = 0.82 + 0.18 * Math.sin(TAU * f + fibre.phase);
+    out.brightness =
+      sheets[fibre.sheet].brightness * fibre.highlight * breath * 0.28;
   };
-
-  const writeFlareWide = writeFlare(0.55);
-  const writeFlareCore = writeFlare(1.4);
 
   return {
     scene,
@@ -260,18 +261,16 @@ export const buildV2Band = (
       camera.updateMatrixWorld();
 
       ribbons.update(writeRibbon);
-      packetsSmall.update(writePacket(0));
-      packetsLarge.update(writePacket(dotCount));
-      flares.update(writeFlareWide);
-      flareCores.update(writeFlareCore);
+      beads.update(writeBead);
+      roots.update(writeRoot);
+      glow.update(writeGlow);
     },
     dispose: () => {
       ribbons.dispose();
-      packetsSmall.dispose();
-      packetsLarge.dispose();
-      flares.dispose();
-      flareCores.dispose();
-      packetTexture.dispose();
+      beads.dispose();
+      roots.dispose();
+      glow.dispose();
+      beadTexture.dispose();
       flareTexture.dispose();
     },
   };
