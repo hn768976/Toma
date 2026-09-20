@@ -22,8 +22,14 @@ import {
  *  These are small tabletop sweeps, not room-sized cycloramas. */
 const COOL_CYC: CycloramaSpec = {
   frontZ: 9,
-  curveStartZ: -2.05,
-  radius: 0.3,
+  // Solved so the wall/floor junction lands at 74.5% of frame with the cove
+  // spanning only ~14px, matching the reference's crisp step (flat backdrop to
+  // 310px, floor by 330px). An earlier, much larger cove put the junction in
+  // roughly the right place only by accident - its long shading ramp happened
+  // to be steepest there while the true junction sat 29px lower, which read as
+  // an infinite sweep rather than a floor meeting a wall.
+  curveStartZ: -4.463,
+  radius: 0.148,
   wallHeight: 14,
   halfWidth: 18,
   arcSegments: 64,
@@ -70,20 +76,24 @@ const COOL_LIGHT: LightSpec = {
 // timestamp), so both variants use one gobo.
 const COOL_GOBO: GoboSpec = {
   enabled: true,
-  contrast: 0.157,
-  poolStrength: 0.19,
+  contrast: 0.182,
+  poolStrength: 0.22,
   // Located by taking the brightness-weighted centroid of the reference
   // backdrop's top decile (38.0%, 38.8% of frame) and mapping that point
   // through the projection into the gobo plane. poolMean is the pool term's
   // actual mean over the visible backdrop, which keeps the gobo zero-mean.
-  poolCentre: [-1.799, 2.411],
+  poolCentre: [-2.483, 3.896],
   poolRadius: 3.4,
-  poolMean: 0.5874,
+  poolMean: 0.5169,
   // 26.6 deg of band tilt on the wall and ~115px of perpendicular spacing,
   // both measured off the references. The in-plane rotation that produces
   // that tilt is not the tilt itself - it depends on how the gobo plane
   // projects onto the backdrop - so both were solved for, not guessed.
-  period: 1.074,
+  // The pattern lives in world space, so moving the backdrop further away
+  // makes a given world spacing subtend less on screen; the period is scaled
+  // by the distance ratio to hold the measured ~115px. The tilt is unaffected:
+  // x and y scale together, so the projected slope is distance-independent.
+  period: 1.243,
   angleDeg: 78.94,
   lightDir: [0.46, -0.5, -0.73],
   breathe: 0.16,
