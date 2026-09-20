@@ -83,6 +83,12 @@ export type FrameState = {
   flash: number;
 };
 
+// Allocated once: updateScene runs per frame and these would otherwise churn.
+const AMBER = new THREE.Color(0xffb04a);
+const WHITE = new THREE.Color(0xffffff);
+const COOL_WHITE = new THREE.Color(0xeaf6ff);
+const GLOSS_BLACK = new THREE.Color(0x07090c);
+
 const tmpTarget = new THREE.Vector3();
 const tmpProj = new THREE.Vector3();
 const ringMat4 = new THREE.Matrix4();
@@ -168,13 +174,13 @@ export const updateScene = (
     // Traces shift from vivid blue to cool white over the transform.
     parts.boardMat.userData.uniforms.uTraceHot.value
       .set(0x2fb8ff)
-      .lerp(new THREE.Color(0xffffff), transform);
+      .lerp(WHITE, transform);
     parts.fieldMat.userData.uniforms.uTraceHot.value
       .set(0x2fb8ff)
-      .lerp(new THREE.Color(0xeaf6ff), transform);
+      .lerp(COOL_WHITE, transform);
     parts.boardMat.userData.uniforms.uTraceEdge.value
       .set(0x8fe0ff)
-      .lerp(new THREE.Color(0xffffff), transform);
+      .lerp(WHITE, transform);
   }
 
   // V2's halftone ripple: a dot-matrix wave instead of a hot trace front.
@@ -214,8 +220,8 @@ export const updateScene = (
     lidU.uRim.value = 0.12 + flash * 0.4;
     lidU.uEdge.value = mix(0.55, 1.2, transform) + flash * 0.8;
     lidU.uEdgeWidth.value = 0.05;
-    bodyU.uRimColor.value.set(0x35c0ff).lerp(new THREE.Color(0xffffff), transform);
-    lidU.uRimColor.value.set(0x35c0ff).lerp(new THREE.Color(0xffffff), transform);
+    bodyU.uRimColor.value.set(0x35c0ff).lerp(WHITE, transform);
+    lidU.uRimColor.value.set(0x35c0ff).lerp(WHITE, transform);
 
     parts.chipBody.color.setHex(0x0b0e12);
     parts.chipBody.transmission = mix(0.62, 0.0, solidify) * (1 - transform);
@@ -226,7 +232,7 @@ export const updateScene = (
 
     parts.chipLid.transparent = true;
     parts.chipLid.opacity = mix(0.55, 1, solidify);
-    parts.chipLid.color.set(0x11557f).lerp(new THREE.Color(0x07090c), transform);
+    parts.chipLid.color.set(0x11557f).lerp(GLOSS_BLACK, transform);
     parts.chipLid.metalness = mix(0.35, 0.62, transform);
     // Kept off mirror-smooth so the lid stays black instead of mirroring the
     // bright ceiling panel of the studio environment.
@@ -237,7 +243,7 @@ export const updateScene = (
 
     lidU.uDie.value = mix(0.34, 0.05, transform) * (0.35 + holo * 0.9);
     lidU.uCircuit.value = mix(0.5, 0.1, transform);
-    lidU.uLabelColor.value.set(0xd6f0ff).lerp(new THREE.Color(0xffffff), transform);
+    lidU.uLabelColor.value.set(0xd6f0ff).lerp(WHITE, transform);
     lidU.uLabel.value =
       smoothstep(beats.descendStart, beats.seat, frame) * mix(1.35, 1.2, transform) +
       flash * 0.7;
@@ -253,14 +259,15 @@ export const updateScene = (
     lidU.uDie.value = 0.12;
     lidU.uCircuit.value = 0.16;
   } else {
-    // V1: the marking ignites amber at the instant of contact, then cools to
-    // the board's electric white-blue.
-    const ignite = Math.exp(-Math.max(0, sinceSeat) * 2.1);
+    // V1: the marking is already lit on the way down, as in the reference,
+    // then spikes amber at the instant of contact and cools to the board's
+    // electric white-blue. Holds at 1 until contact, decays after it.
+    const hot = Math.exp(-Math.max(0, sinceSeat) * 2.1);
     lidU.uLabelColor.value
       .set(0xdcf2ff)
-      .lerp(new THREE.Color(0xffb04a), frame >= beats.seat ? ignite : 0);
+      .lerp(AMBER, frame >= beats.seat ? hot : 0);
     lidU.uLabel.value =
-      smoothstep(beats.descendStart, beats.seat, frame) * 1.0 + flash * 1.6 + ignite * 1.0;
+      smoothstep(beats.descendStart, beats.seat, frame) * 1.0 + flash * 1.6 + hot * 1.0;
     lidU.uDie.value = 0.2 + energy * 0.35;
     lidU.uCircuit.value = 0.25 + energy * 0.5;
     bodyU.uRim.value = 0.7 + flash * 2;
