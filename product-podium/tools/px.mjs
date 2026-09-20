@@ -29,14 +29,23 @@ export const decode = (file, { frame = null, fps = 30 } = {}) => {
       const target = join(tmp, "frame.png");
       // Seek by timestamp rather than with a `select` filter: the filter
       // syntax needs a comma escaped, and there is no shell here to do it.
-      // A quarter-frame offset lands safely inside the target frame.
-      const seek = frame === null ? [] : ["-ss", String((frame + 0.25) / fps)];
+      // The seek goes AFTER -i so it is decode-accurate — an input-side
+      // seek is keyframe-based and comes up empty on the last frame of the
+      // clip, which is exactly the frame the loop and camera-lock checks
+      // care about. An output-side seek keeps the first frame whose
+      // timestamp is at or past the mark, so the mark has to sit just
+      // BEFORE the target frame's timestamp, not inside it.
+      const seek =
+        frame === null ? [] : ["-ss", String(Math.max(0, (frame - 0.25) / fps))];
       execFileSync(
         "npx",
-        ["remotion", "ffmpeg", "-v", "error", ...seek, "-i", file,
+        ["remotion", "ffmpeg", "-v", "error", "-i", file, ...seek,
          "-frames:v", "1", "-y", target],
         { stdio: ["ignore", "ignore", "pipe"] },
       );
+      if (!existsSync(target)) {
+        throw new Error(`could not extract frame ${frame} from ${file}`);
+      }
       png = readPng(target);
     }
   } finally {

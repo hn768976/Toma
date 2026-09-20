@@ -216,8 +216,8 @@ const variantBAlias = {
   "WoodLeaf-PodiumWarmWalnut": "WoodLeaf-PodiumCool",
 };
 
-const [, , file, id] = process.argv;
-const img = decode(file);
+const [, , file, id, frame] = process.argv;
+const img = decode(file, frame === undefined ? {} : { frame: Number(frame) });
 const key = checks[id] ? id : variantBAlias[id];
 const out = [];
 if (!checks[key]) {
@@ -226,7 +226,7 @@ if (!checks[key]) {
   checks[key](img, out);
 }
 let failed = 0;
-console.log(`\n${id}  (${img.width}x${img.height})`);
+console.log(`  frame ${frame ?? 0}  (${img.width}x${img.height})`);
 for (const [name, ok, note] of out) {
   if (!ok) failed++;
   console.log(`  ${pass(ok)}  ${name}${note ? `  [${note}]` : ""}`);
