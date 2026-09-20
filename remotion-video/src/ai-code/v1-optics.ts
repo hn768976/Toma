@@ -1,19 +1,14 @@
 import { Sprite, Texture, TilingSprite, Container } from "pixi.js";
 import { DURATION_IN_FRAMES } from "./constants";
-import {
-  createBeamTexture,
-  createHazeTexture,
-  createNoiseTexture,
-} from "./textures";
+import { createHazeTexture, createNoiseTexture } from "./textures";
 import { rand, randRange } from "./rng";
 import type { PixiContext, PixiScene } from "./PixiLayer";
 
-// V1's optical pass: the soft lens veil, a pair of anamorphic streaks
-// sweeping the frame, and fine grain. Composited with `screen` over the
-// three.js stage, so everything here only ever adds light.
+// V1's optical pass: a soft lens veil and fine grain, composited with
+// `screen` over the three.js stage so everything here only ever adds
+// light. Deliberately quiet — the cards carry this plate.
 
 const VEIL_COUNT = 4;
-const FLARE_COUNT = 3;
 
 export const createV1Optics = async ({
   width,
@@ -24,14 +19,6 @@ export const createV1Optics = async ({
 
   const hazeTexture = Texture.from(
     createHazeTexture(Math.round(768 * scale), Math.round(768 * scale)),
-  );
-  const flareTexture = Texture.from(
-    createBeamTexture(
-      Math.round(1024 * scale),
-      Math.round(48 * scale),
-      7,
-      "180, 230, 255",
-    ),
   );
   const noiseTexture = Texture.from(
     createNoiseTexture(Math.round(256 * scale), 3),
@@ -47,16 +34,6 @@ export const createV1Optics = async ({
     veil.tint = i % 2 === 0 ? 0x4f9bd8 : 0x2f6fa8;
     stage.addChild(veil);
     veils.push(veil);
-  }
-
-  const flares: Sprite[] = [];
-  for (let i = 0; i < FLARE_COUNT; i++) {
-    const flare = new Sprite(flareTexture);
-    flare.anchor.set(0.5);
-    flare.blendMode = "add";
-    flare.scale.set(randRange(i, 92, 1.4, 2.6), randRange(i, 93, 0.5, 1.3));
-    stage.addChild(flare);
-    flares.push(flare);
   }
 
   const grain = new TilingSprite({
@@ -82,16 +59,6 @@ export const createV1Optics = async ({
       const phase = rand(i, 94) * Math.PI * 2;
       veil.x = width * (0.5 + 0.34 * Math.sin(tau * fx + phase));
       veil.y = height * (0.5 + 0.3 * Math.cos(tau * fy + phase));
-    });
-
-    flares.forEach((flare, i) => {
-      const phase = rand(i, 95);
-      // One full traverse per loop, entering off-frame on both sides.
-      const t = (progress * (i % 2 === 0 ? 1 : -1) + phase + 1) % 1;
-      flare.x = (t * 1.6 - 0.3) * width;
-      flare.y = height * randRange(i, 96, 0.18, 0.86);
-      flare.rotation = randRange(i, 97, -0.09, 0.09);
-      flare.alpha = 0.1 + 0.16 * Math.sin(Math.PI * t) ** 2;
     });
 
     // Grain re-tiles every frame; a whole-texture step keeps it crawling

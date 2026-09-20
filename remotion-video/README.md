@@ -44,11 +44,11 @@ set of reference plates. Each exists at 1080p and at 4K UHD.
 
 | Composition ID   | Size        | What it is                                                                  |
 | ---------------- | ----------- | --------------------------------------------------------------------------- |
-| `AiCodeCity`     | 1920 x 1080 | V1 — fly-through of code panels, glass slabs, beaded beams and "AI" chips    |
+| `AiCodeCity`     | 1920 x 1080 | V1 — identical "AI" cards rising over a bed of scrolling code                |
 | `AiCodeCity4K`   | 3840 x 2160 | V1 at 4K                                                                     |
-| `AiCodeWall`     | 1920 x 1080 | V2 — full-frame wall of scrolling code, top glow, ray fan, focus breathing   |
+| `AiCodeWall`     | 1920 x 1080 | V2 — full-frame wall of scrolling code, top glow, breathing focus plane      |
 | `AiCodeWall4K`   | 3840 x 2160 | V2 at 4K                                                                     |
-| `AiNetwork`      | 1920 x 1080 | V3 — dim code bed under a drifting graph of "AI" nodes, defocused lettering  |
+| `AiNetwork`      | 1920 x 1080 | V3 — dim code bed under a drifting graph of ringed "AI" nodes                |
 | `AiNetwork4K`    | 3840 x 2160 | V3 at 4K                                                                     |
 
 All six are 300 frames at 30fps (10.000s) and seamlessly loopable: frame
@@ -104,8 +104,8 @@ runs out of memory.
   worker processes, so anything else would flicker or drift.
 - **three.js** draws the 3D layer: code panels, chips, slabs, beams,
   nodes and lettering, all as additive emissive quads.
-- **PixiJS v8** draws the 2D optical pass on top — lens veil, anamorphic
-  flares, the ray fan, bokeh and grain — composited with `screen`.
+- **PixiJS v8** draws the 2D optical pass on top — lens veil, top glow,
+  bokeh and grain — composited with `screen`.
 - **WebGPU with a WebGL2/WebGL fallback.** `src/ai-code/gpu.ts` probes
   the backend once per page and hands the same answer to both three.js
   and Pixi, so a frame is never half one backend and half the other. The
@@ -120,6 +120,25 @@ runs out of memory.
   depth bands (`src/ai-code/ThreeStage.tsx`) rather than with a bokeh
   shader pass. Every material is additive, so summing the bands is
   equivalent to drawing them together.
+
+### Per-plate notes
+
+- **V1** keeps every card at one size on a single depth plane, so they
+  all read at exactly the same scale. Cards wrap well outside the frame,
+  which is why they need no fade to hide the join. The background code
+  never moves: it scrolls *inside* its panels by whole texture repeats,
+  so there is nothing to dissolve at a panel edge.
+- **V2** carries no overlaid graphics at all — no rays, no flicker bars,
+  not even selection bands inside the code sheets. Only the cool wash
+  across the top. Its blur is measured against the band nearest the
+  focus rather than against the focus itself: with three discrete bands
+  a continuous sweep almost never lands on a centre, and measuring
+  absolutely leaves every band slightly soft at once. Panel x, vertical
+  phase and depth are stratified on decorrelated strides, because purely
+  random placement leaves holes and a hole in the sharp band reads as a
+  dead patch of frame.
+- **V3** has no free-floating lettering: every "AI" on screen belongs to
+  a node and is ringed by its circle or wireframe sphere.
 
 ### Content and licensing
 

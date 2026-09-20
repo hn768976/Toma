@@ -173,55 +173,6 @@ export const createChipTexture = (
   return canvas;
 };
 
-/**
- * A horizontal light beam with a hot core and beads strung along it —
- * the thin travelling lines that cross the reference frames.
- */
-export const createBeamTexture = (
-  width: number,
-  height: number,
-  seed: number,
-  color = "160, 225, 255",
-): HTMLCanvasElement => {
-  const canvas = canvasOf(width, height);
-  const ctx = context2d(canvas);
-  if (!ctx) {
-    return canvas;
-  }
-  const cy = height / 2;
-
-  const grad = ctx.createLinearGradient(0, 0, width, 0);
-  grad.addColorStop(0, `rgba(${color}, 0)`);
-  grad.addColorStop(0.28, `rgba(${color}, 0.5)`);
-  grad.addColorStop(0.5, `rgba(${color}, 0.95)`);
-  grad.addColorStop(0.72, `rgba(${color}, 0.5)`);
-  grad.addColorStop(1, `rgba(${color}, 0)`);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, cy - height * 0.06, width, height * 0.12);
-
-  ctx.globalCompositeOperation = "lighter";
-  const beads = 46;
-  for (let i = 0; i < beads; i++) {
-    const t = (i + rand(seed * 17 + i, 2) * 0.6) / beads;
-    const x = t * width;
-    // Beads follow the beam's own falloff so none float past the ends.
-    const falloff = Math.sin(t * Math.PI) ** 1.6;
-    const r = randRange(seed * 17 + i, 3, height * 0.08, height * 0.26) * falloff;
-    if (r <= 0.3) {
-      continue;
-    }
-    const dot = ctx.createRadialGradient(x, cy, 0, x, cy, r);
-    dot.addColorStop(0, `rgba(255, 255, 255, ${(0.9 * falloff).toFixed(3)})`);
-    dot.addColorStop(0.4, `rgba(${color}, ${(0.6 * falloff).toFixed(3)})`);
-    dot.addColorStop(1, `rgba(${color}, 0)`);
-    ctx.fillStyle = dot;
-    ctx.beginPath();
-    ctx.arc(x, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  return canvas;
-};
-
 /** A soft round dot, used for point sprites and node glows. */
 export const createDotTexture = (
   size: number,
@@ -278,24 +229,6 @@ export const createSlabTexture = (
     ctx.fillStyle = grad;
     ctx.fillRect(0, y, width, edge);
   }
-  return canvas;
-};
-
-/** Oversized "AI" lettering for the near, heavily defocused drifters. */
-export const createLetterTexture = (
-  size: number,
-  color = "rgba(190, 245, 238, 0.92)",
-): HTMLCanvasElement => {
-  const canvas = canvasOf(size, Math.round(size * 0.6));
-  const ctx = context2d(canvas);
-  if (!ctx) {
-    return canvas;
-  }
-  ctx.font = `700 ${Math.round(size * 0.44)}px ${MONO_FONT_STACK}`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = color;
-  ctx.fillText("AI", canvas.width / 2, canvas.height / 2);
   return canvas;
 };
 

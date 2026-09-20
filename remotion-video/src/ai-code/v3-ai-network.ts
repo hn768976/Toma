@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { DURATION_IN_FRAMES } from "./constants";
 import { monoFontReady } from "./fonts";
 import { createCodeSheet } from "./code-canvas";
-import { createLetterTexture, createNodeTexture } from "./textures";
+import { createNodeTexture } from "./textures";
 import {
   additive,
   additiveLineMaterial,
@@ -14,10 +14,12 @@ import {
 import { rand, randRange, smoothstep } from "./rng";
 import type { Stage, StageContext } from "./ThreeStage";
 
-// V3 — "AI network": dim code panels underneath, an interconnected graph
-// of "AI" nodes floating over them, and oversized defocused lettering
-// drifting past the lens. The moodiest of the three, and the one built
-// to sit behind text.
+// V3 — "AI network": dim code panels underneath and an interconnected
+// graph of "AI" nodes floating over them. The moodiest of the three, and
+// the one built to sit behind text.
+//
+// Every "AI" on screen belongs to a node and is ringed by its circle or
+// wireframe sphere; there is no free-floating lettering.
 //
 // Nothing here scrolls. Every motion is a Lissajous figure on integer
 // harmonics of the clip length, so the whole plate returns to its
@@ -26,22 +28,18 @@ import type { Stage, StageContext } from "./ThreeStage";
 const PANEL_COUNT = 34;
 const NODE_COUNT = 30;
 const EDGES_PER_NODE = 2;
-const LETTER_COUNT = 5;
 const SHEET_COUNT = 5;
 
-const NEAR_BAND = 0;
-const FOCUS_BAND = 1;
-const FAR_BAND = 2;
-const BAND_BLUR = [30, 0.4, 9];
-const NEAR_EDGE = 11;
+const FOCUS_BAND = 0;
+const FAR_BAND = 1;
+const BAND_BLUR = [0.4, 9];
 const FAR_EDGE = 33;
 
+// Assigned once from the rest position, not per frame. Nodes drift a
+// little in depth, and re-banding one mid-drift would snap it between
+// blur levels.
 const bandFor = (distance: number) =>
-  distance < NEAR_EDGE
-    ? NEAR_BAND
-    : distance < FAR_EDGE
-      ? FOCUS_BAND
-      : FAR_BAND;
+  distance < FAR_EDGE ? FOCUS_BAND : FAR_BAND;
 
 type Wanderer = {
   readonly object: THREE.Object3D;
@@ -93,9 +91,6 @@ export const createAiNetworkStage = async (
   }
   const nodeTextures = [false, true].map((wire) =>
     makeCanvasTexture(createNodeTexture(Math.round(256 * scale), wire)),
-  );
-  const letterTexture = makeCanvasTexture(
-    createLetterTexture(Math.round(768 * scale)),
   );
 
   const wanderers: Wanderer[] = [];
@@ -154,6 +149,7 @@ export const createAiNetworkStage = async (
     );
     mesh.rotation.y = randRange(i, 18, -0.34, 0.34);
     mesh.rotation.z = randRange(i, 19, -0.05, 0.05);
+    mesh.layers.set(bandFor(-mesh.position.z));
     addWanderer(
       mesh,
       material,
@@ -179,6 +175,7 @@ export const createAiNetworkStage = async (
       randRange(i, 32, -15, 15),
       -randRange(i, 33, 11, 31),
     );
+    mesh.layers.set(bandFor(-mesh.position.z));
     nodes.push(
       addWanderer(
         mesh,
@@ -230,34 +227,6 @@ export const createAiNetworkStage = async (
   edges.frustumCulled = false;
   scene.add(edges);
 
-  // --- oversized defocused lettering -----------------------------------
-  const letters: Wanderer[] = [];
-  for (let i = 0; i < LETTER_COUNT; i++) {
-    const material = additive(letterTexture, 1);
-    const width = randRange(i, 40, 3.6, 8);
-    const mesh = quad(material, width, width * 0.6);
-    mesh.position.set(
-      randRange(i, 41, -12, 12),
-      randRange(i, 42, -7, 7),
-      -randRange(i, 43, 5, 10.5),
-    );
-    mesh.rotation.z = randRange(i, 44, -0.1, 0.1);
-    letters.push(
-      addWanderer(
-        mesh,
-        material,
-        i,
-        300,
-        new THREE.Vector3(
-          randRange(i, 45, 5, 11),
-          randRange(i, 46, 1.5, 4),
-          randRange(i, 47, 0.5, 1.5),
-        ),
-        randRange(i, 48, 0.22, 0.5),
-      ),
-    );
-  }
-
   const bands = BAND_BLUR.map((blur, layer) => ({
     layer,
     blurPx: blur * scale,
@@ -281,16 +250,7 @@ export const createAiNetworkStage = async (
       wanderPosition(w, tau, scratch);
       w.object.position.copy(scratch);
       w.material.opacity = w.baseOpacity;
-      w.object.layers.set(bandFor(-scratch.z));
     }
-
-    // Letters pulse as they sweep the lens, which is what sells them as
-    // out-of-focus foreground rather than flat overlay.
-    letters.forEach((letter, i) => {
-      letter.material.opacity =
-        letter.baseOpacity *
-        (0.45 + 0.55 * Math.sin(tau * (1 + (i % 2)) + i) ** 2);
-    });
 
     for (let i = 0; i < pairs.length; i++) {
       const [p, q] = pairs[i];
@@ -304,11 +264,11 @@ export const createAiNetworkStage = async (
       edgePositions[i * 6 + 5] = b.z;
       // Long links fade out, so the graph reads as proximity rather
       // than a fixed cat's cradle.
-      const alpha = 0.46 * (1 - smoothstep(9, 21, a.distanceTo(b)));
+      const alpha = 0.2 * (1 - smoothstep(9, 21, a.distanceTo(b)));
       for (let k = 0; k < 2; k++) {
-        edgeColors[i * 8 + k * 4] = 0.44;
-        edgeColors[i * 8 + k * 4 + 1] = 0.86;
-        edgeColors[i * 8 + k * 4 + 2] = 0.83;
+        edgeColors[i * 8 + k * 4] = 0.42;
+        edgeColors[i * 8 + k * 4 + 1] = 0.82;
+        edgeColors[i * 8 + k * 4 + 2] = 0.8;
         edgeColors[i * 8 + k * 4 + 3] = alpha;
       }
     }
