@@ -48,6 +48,8 @@ export type HudIris = {
 };
 
 const DEG = Math.PI / 180;
+// All radii below were designed for a 0.27 disc; the group is scaled to HUD_RADIUS.
+const DESIGN_RADIUS = 0.27;
 
 type RingSpec = {
   r: number;
@@ -289,13 +291,14 @@ export const buildHudIris = (
 ): HudIris => {
   const group = new Group();
   group.position.z = HUD_Z;
+  group.scale.setScalar(HUD_RADIUS / DESIGN_RADIUS);
   const time = floatUniform(0);
 
   // Opaque base disc, then the burst on top.
-  const base = new Mesh(new CircleGeometry(HUD_RADIUS * 1.08, 128), makeBaseMaterial(palette));
+  const base = new Mesh(new CircleGeometry(DESIGN_RADIUS * 1.08, 128), makeBaseMaterial(palette));
   base.position.z = -0.002;
   group.add(base);
-  const disc = new Mesh(new CircleGeometry(HUD_RADIUS, 128), makeStreakMaterial(palette, time));
+  const disc = new Mesh(new CircleGeometry(DESIGN_RADIUS, 128), makeStreakMaterial(palette, time));
   group.add(disc);
 
   // Glow halo bleeding from the disc onto the eyeball.
@@ -309,7 +312,7 @@ export const buildHudIris = (
     return colorVec3(palette.primary).mul(falloff).mul(0.22);
   })();
   haloMaterial.opacityNode = float(1);
-  const halo = new Mesh(new CircleGeometry(HUD_RADIUS * 1.35, 96), haloMaterial);
+  const halo = new Mesh(new CircleGeometry(DESIGN_RADIUS * 1.35, 96), haloMaterial);
   halo.position.z = -0.001;
   group.add(halo);
 

@@ -187,7 +187,7 @@ const makeSpriteLayer = ({
     .mul(0.5)
     .add(0.5);
   // Fade the cloud out where the HUD disc sits so the rings stay clean.
-  const centreFade = smoothstep(float(0.26), float(0.42), length(pos.xy));
+  const centreFade = smoothstep(float(0.21), float(0.36), length(pos.xy));
   const soft = texture(dotTexture, uv()).r;
   const brightness = float(0.25)
     .add(flicker.mul(0.45))
@@ -230,7 +230,7 @@ export const buildEyeParticles = (
   const lon = fract(positionLocal.x.mul(60));
   const gridLines = step(float(0.94), lat).add(step(float(0.94), lon)).min(1);
   const cells = step(float(0.8), hash(floor(positionLocal.x.mul(60)).mul(311).add(floor(positionLocal.y.mul(60)))));
-  const sclera = smoothstep(float(0.24), float(0.3), rXY).mul(smoothstep(float(0.5), float(0.36), rXY));
+  const sclera = smoothstep(float(0.2), float(0.25), rXY).mul(smoothstep(float(0.5), float(0.36), rXY));
   // Where the surface fades out it glows with the background colour so it
   // dissolves into the backdrop instead of going black.
   skin.emissiveNode = colorVec3(palette.primary)
@@ -301,8 +301,8 @@ export const buildEyeParticles = (
     wireMaterial.blending = AdditiveBlending;
     wireMaterial.colorNode = colorVec3(palette.particle);
     wireMaterial.opacityNode = smoothstep(
-      float(0.27),
-      float(0.42),
+      float(0.22),
+      float(0.36),
       length(positionLocal.xy),
     )
       .mul(surroundFade(positionLocal.x, positionLocal.y))

@@ -22,16 +22,16 @@ export const MODEL = {
 
 // The HUD ring system floats just in front of the sculpted iris.
 export const HUD_Z = -0.09;
-export const HUD_RADIUS = 0.27;
+export const HUD_RADIUS = 0.215;
 // The lids fade into the background between these heights (brow ridge).
 export const BROW_FADE_BOTTOM = 0.14;
 export const BROW_FADE_TOP = 0.36;
 
 // Camera: distance chosen so the eye fills the frame (lids run off both
-// sides) and the HUD disc is ~62% of the frame height.
+// sides) and the HUD disc is ~54% of the frame height.
 export const CAMERA = {
   fov: 30,
-  distance: 1.52,
+  distance: 1.4,
   near: 0.05,
   far: 20,
 };
