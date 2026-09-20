@@ -215,7 +215,8 @@ const v1: Theme = {
     clearcoat: 0.1,
     keepOut: 30,
     emissive: 0.008,
-    count: 620,
+    // Bare board: no surface-mount shapes at all, just routing and the package.
+    count: 0,
   },
 
   socket: {
@@ -559,7 +560,8 @@ const v4: Theme = {
     clearcoat: 0.35,
     keepOut: 30,
     emissive: 0.015,
-    count: 620,
+    // Bare board, as V1.
+    count: 0,
   },
 
   socket: {

@@ -108,6 +108,50 @@ const run = async () => {
     return;
   }
 
+  if (mode === 'stills') {
+    // Key beats of the sequence, as fractions of each version's duration:
+    // clean plate, mid-descent, the seating flash, the wave crossing the
+    // board, and the settled sustain.
+    const BEATS = [0.04, 0.18, 0.33, 0.46, 0.68, 0.95];
+    const use4K = rest.includes('4k');
+    const wanted = rest.filter((v) => v !== '4k').map((v) => v.toUpperCase());
+    const versions = wanted.length ? wanted : ['V1', 'V2', 'V3', 'V4'];
+
+    for (const version of versions) {
+      const id = `${version}-${use4K ? '4K' : '1080p'}`;
+      const composition = comps.find((c) => c.id === id);
+      if (!composition) throw new Error(`No composition ${id}. Have: ${comps.map((c) => c.id).join(', ')}`);
+
+      for (const beat of BEATS) {
+        const frame = Math.min(
+          composition.durationInFrames - 1,
+          Math.round(beat * composition.durationInFrames),
+        );
+        const output = path.join(
+          outDir,
+          'stills',
+          `${version.toLowerCase()}-${use4K ? '4k' : '1080p'}-f${String(frame).padStart(4, '0')}.png`,
+        );
+        fs.mkdirSync(path.dirname(output), { recursive: true });
+        const started = Date.now();
+        await renderStill({
+          composition,
+          serveUrl,
+          output,
+          frame,
+          browserExecutable,
+          chromiumOptions,
+          chromeMode,
+          timeoutInMilliseconds,
+          imageFormat: 'png',
+          overwrite: true,
+        });
+        log(`${id} frame ${frame} in ${((Date.now() - started) / 1000).toFixed(1)}s -> ${output}`);
+      }
+    }
+    return;
+  }
+
   const suffix = mode === '4k' ? '4K' : '1080p';
   const wanted = rest.length ? rest.map((v) => v.toUpperCase()) : ['V1', 'V2', 'V3'];
 

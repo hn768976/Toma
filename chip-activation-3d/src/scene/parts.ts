@@ -51,6 +51,14 @@ const attachInstanceColors = (
  */
 export const createParts = (theme: Theme): PartsResult => {
   const group = new THREE.Group();
+
+  // A count of zero means the version wants a bare board: routing and the
+  // package only, no surface-mount shapes anywhere. Returning early also
+  // keeps the pin headers out, which are laid out independently of `count`.
+  if (theme.components.count === 0) {
+    return { group, update: () => undefined, dispose: () => undefined };
+  }
+
   const rng = new Rng(theme.seed ^ 0x2b1c);
   // Nothing is placed closer to the origin than this — the socket lives there.
   const keepOut = theme.components.keepOut;
