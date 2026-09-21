@@ -224,7 +224,7 @@ export const Scene: React.FC<{ row: LookRow }> = ({ row }) => {
           t={t}
           color={speckColor}
           opacity={speckOpacity}
-          scale={height * 0.016}
+          scale={height * 0.022}
         />
       ) : null}
 

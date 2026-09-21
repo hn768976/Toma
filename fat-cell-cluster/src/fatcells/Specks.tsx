@@ -22,6 +22,8 @@ void main(){
   vec3 p = position + amp * sin(T * freq + phase);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   vFade = clamp((mv.z + 40.0) / 40.0, 0.0, 1.0);
+  // Kept generous: a speck small enough to be physically plausible is
+  // spread over so many pixels by the depth of field that it vanishes.
   gl_PointSize = size * uScale / max(1.0, -mv.z);
   gl_Position = projectionMatrix * mv;
 }

@@ -145,7 +145,7 @@ const buildSpecks = (rng: Rng, count: number, spread: number): SpeckField => {
   for (let i = 0; i < count; i++) {
     positions[i * 3] = range(rng, -1, 1) * spread;
     positions[i * 3 + 1] = range(rng, -1, 1) * spread * 0.6;
-    positions[i * 3 + 2] = range(rng, -0.42, 0.3) * spread;
+    positions[i * 3 + 2] = range(rng, -0.3, 0.26) * spread;
     // Closed path: integer frequencies, so every speck returns to its start.
     drift[i * 9] = range(rng, 0.2, 0.9);
     drift[i * 9 + 1] = range(rng, 0.2, 0.9);
@@ -156,7 +156,7 @@ const buildSpecks = (rng: Rng, count: number, spread: number): SpeckField => {
     drift[i * 9 + 6] = range(rng, 0, Math.PI * 2);
     drift[i * 9 + 7] = range(rng, 0, Math.PI * 2);
     drift[i * 9 + 8] = range(rng, 0, Math.PI * 2);
-    sizes[i] = range(rng, 1.1, 3.4);
+    sizes[i] = range(rng, 3.0, 8.5);
   }
   return { positions, drift, sizes, count };
 };
@@ -299,8 +299,8 @@ const buildLook = (row: LookRow): BuiltScene => {
         i, row.backdropCount,
       );
       clusters.push(makeCluster(rng, row, {
-        count: rangeInt(rng, 11, 20), radius: 1,
-        resolution: spot.position[2] > 2 ? 44 : 56,
+        count: rangeInt(rng, 22, 44), radius: 1,
+        resolution: spot.position[2] > 2 ? 54 : 70,
         position: spot.position,
         scale: spot.scale,
         turns: rangeInt(rng, 1, 2),
