@@ -158,13 +158,17 @@ export const ribbedNavyGlow: BladeArrayConfig = {
   azimZoom: 2.5,
   exposure: 0.38,
   keyIntensity: 1.4,
+  // Large near-black regions, same as look 3: the fill has to be a comb the
+  // encoder will keep, not a plateau it flattens.
+  fillSharp: 1,
+  ambient: 0.042,
+  grainFloor: 0.4,
   elevLo: 0.85,
   elevHi: 1.1,
   elevTilt: 0.3,
   elevFreq: 1,
   bloomIntensity: 0.6,
   bloomThreshold: 0.7,
-  ambient: 0.018,
   diffGain: 0.018,
   stops: [
     s(0.0, [0.01, 0.02, 0.09], 0.03),

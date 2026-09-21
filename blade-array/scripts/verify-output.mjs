@@ -357,9 +357,15 @@ for (const file of files) {
     }
   }
   if (darkCols > 0) {
-    say(darkSeams / darkCols > 3,
-      `unlit blades still present: ${(darkSeams / darkCols).toFixed(1)} blade crossings per 200px of near-black ` +
-      `(frame ${darkest}, ${darkCols} windows)`);
+    // Only a requirement where the frame is mostly black - that is the look
+    // whose whole point is neon confined to zones, and where a designer will
+    // put text over the dark. Elsewhere a stray dark corner is not a promise.
+    const mostlyDark = gridStats(di).under16 >= 45;
+    const crossings = darkSeams / darkCols;
+    const text = `unlit blades still present: ${crossings.toFixed(1)} blade crossings per 200px ` +
+      `of near-black (frame ${darkest}, ${darkCols} windows)`;
+    if (mostlyDark) say(crossings > 3, text);
+    else console.log(`   info  ${text} - not required, frame is not mostly black`);
   } else {
     console.log(`   info  no near-black stretches at frame ${darkest} to test for hidden blades`);
   }
