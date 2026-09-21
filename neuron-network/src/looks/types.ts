@@ -95,6 +95,10 @@ export type Look = {
     ambient: number;
     rimStrength: number;
     rimPower: number;
+    /** How strongly the soma's colour floods the base of each dendrite. */
+    somaBleed: number;
+    /** How fast that flood fades along the branch; higher is tighter. */
+    somaBleedFalloff: number;
   };
 
   palette: Palette;

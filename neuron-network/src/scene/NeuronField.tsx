@@ -84,7 +84,7 @@ const CameraRig: React.FC<{ look: Look }> = ({ look }) => {
   return null;
 };
 
-const Background: React.FC<{ look: Look; heroCenter: Vector3 }> = ({
+const Background: React.FC<{ look: Look; heroCenter: Vector3 | null }> = ({
   look,
   heroCenter,
 }) => {
@@ -104,12 +104,15 @@ const Background: React.FC<{ look: Look; heroCenter: Vector3 }> = ({
     [look],
   );
 
-  // Put the lift behind the dominant neuron rather than at frame centre.
-  const projected = heroCenter.clone().project(camera);
-  uniforms.uCenter.value.set(
-    0.5 + projected.x * 0.5,
-    0.5 + projected.y * 0.5,
-  );
+  // On a hero look the lift sits behind the dominant neuron; on a network
+  // look there is no dominant cell, so it stays centred rather than following
+  // whichever neuron happened to be placed first.
+  if (heroCenter) {
+    const projected = heroCenter.clone().project(camera);
+    uniforms.uCenter.value.set(0.5 + projected.x * 0.5, 0.5 + projected.y * 0.5);
+  } else {
+    uniforms.uCenter.value.set(0.5, 0.5);
+  }
   uniforms.uAspect.value = size.width / Math.max(1, size.height);
 
   return (
@@ -161,6 +164,9 @@ const Scene: React.FC<{ look: Look }> = ({ look }) => {
       uCellPulseDepth: { value: look.pulse.cellPulseDepth },
       uTransparent: { value: look.tube.transparent ? 1 : 0 },
       uMinAlpha: { value: look.tube.minAlpha },
+      uSomaGlow: { value: new Color(look.palette.somaGlow) },
+      uSomaBleed: { value: look.tube.somaBleed },
+      uSomaBleedFalloff: { value: look.tube.somaBleedFalloff },
       uExposure: { value: look.post.exposure },
     }),
     [look],
@@ -237,7 +243,7 @@ const Scene: React.FC<{ look: Look }> = ({ look }) => {
   // Periodic over the loop, so grain at frame 600 matches frame 0.
   grain.frame = frame % LOOP_FRAMES;
 
-  const heroCenter = field.neurons[0]?.center ?? new Vector3();
+  const heroCenter = look.field.hero ? (field.neurons[0]?.center ?? null) : null;
 
   return (
     <>

@@ -44,6 +44,15 @@ export type GrowParams = {
   /** Hard ceiling on branches per neuron, so dense looks stay renderable. */
   maxBranches: number;
   somaRadius: number;
+  /**
+   * Radius at the furthest tip as a fraction of the radius the split ratio
+   * alone would leave. Splits give step-downs at forks; this adds the
+   * continuous base-to-tip thinning that makes a branch read as a dendrite
+   * rather than as a pipe.
+   */
+  tipRadius: number;
+  /** Shapes that thinning: >1 keeps the base broad and thins late. */
+  tipTaperPower: number;
 };
 
 type PendingBranch = {

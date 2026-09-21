@@ -59,6 +59,9 @@ uniform float uCellPulse;      // 0..1, pure function of frame
 uniform float uCellPulseDepth;
 uniform float uTransparent;
 uniform float uMinAlpha;
+uniform vec3  uSomaGlow;
+uniform float uSomaBleed;
+uniform float uSomaBleedFalloff;
 uniform float uExposure;
 
 varying vec3 vNormalV;
@@ -104,6 +107,10 @@ void main() {
 
   // A junction flares as the pulse crosses it, driven by the same position.
   col += uPulseColor * glow * (1.0 + junction * uJunctionFlare);
+
+  // The soma's light floods outward through the base of every dendrite and
+  // fades with distance, so there is no seam where the branch meets the cell.
+  col += uSomaGlow * uSomaBleed * exp(-arc * uSomaBleedFalloff);
 
   // Steady nodes at the soma and branch junctions.
   col += uNodeColor * junction * uNodeStrength;

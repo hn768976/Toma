@@ -41,7 +41,7 @@ const radialFor = (radius: number, baseRadius: number, cap: number) => {
   if (f > 0.3) return Math.min(cap, 9);
   if (f > 0.15) return Math.min(cap, 6);
   if (f > 0.07) return Math.min(cap, 5);
-  return Math.min(cap, 3);
+  return Math.max(4, Math.min(cap, 4));
 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -58,6 +58,7 @@ const sweepBranch = (
   subdivisions: number,
   myelin: { amplitude: number; period: number } | null,
   baseRadius: number,
+  taper: (arcNorm: number) => number,
 ) => {
   if (points.length < 2) return;
 
@@ -80,7 +81,9 @@ const sweepBranch = (
     const f = u * (points.length - 1);
     const i0 = Math.min(points.length - 2, Math.max(0, Math.floor(f)));
     const frac = f - i0;
-    let r = lerp(radii[i0], radii[i0 + 1], frac);
+    const arc = lerp(arcNorm[i0], arcNorm[i0 + 1], frac);
+    // Continuous base-to-tip thinning, on top of the split ratio.
+    let r = lerp(radii[i0], radii[i0 + 1], frac) * taper(arc);
     if (myelin) {
       // Repeating collars rather than a smooth tube: a narrow periodic
       // swelling along the branch, read as myelin segments.
@@ -89,7 +92,7 @@ const sweepBranch = (
     }
     scalars.push({
       r,
-      a: lerp(arcNorm[i0], arcNorm[i0 + 1], frac),
+      a: arc,
       j: lerp(junction[i0], junction[i0 + 1], frac),
     });
   }
@@ -158,6 +161,9 @@ export type TubeBuildOptions = {
   subdivisions: number;
   /** Radius a primary dendrite starts at, used to scale radial resolution. */
   baseRadius: number;
+  /** Radius at the furthest tip, as a fraction of the split-ratio radius. */
+  tipRadius: number;
+  tipTaperPower: number;
   /** Ring-shaped thickenings, applied to a fraction of the branches. */
   myelinAmplitude: number;
   myelinPeriod: number;
@@ -171,6 +177,9 @@ export const buildTubeGeometry = (
   const acc = new TubeAccumulator();
   let branchCount = 0;
   let segmentCount = 0;
+
+  const taper = (arcNorm: number) =>
+    1 - (1 - options.tipRadius) * Math.pow(Math.min(1, arcNorm), options.tipTaperPower);
 
   for (const neuron of neurons) {
     // Background neurons carry fewer curve samples -- they are blurred past
@@ -198,6 +207,7 @@ export const buildTubeGeometry = (
           ? { amplitude: options.myelinAmplitude, period: options.myelinPeriod }
           : null,
         options.baseRadius,
+        taper,
       );
       branchCount++;
       segmentCount += branch.points.length - 1;
