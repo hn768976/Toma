@@ -15,8 +15,11 @@ Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 
 // These compositions carry no audio and must not be delivered with a silent
-// track. Remotion otherwise adds one, which the delivery checks reject.
+// track. `setEnforceAudioTrack(false)` only stops Remotion FORCING one -- it
+// still muxes a silent AAC stream, which the delivery checks reject.
+// `setMuted(true)` is what omits audio entirely.
 Config.setEnforceAudioTrack(false);
+Config.setMuted(true);
 
 // Software GL. ANGLE is the fastest path that still supports WebGL2 in
 // headless Chromium; SwiftShader is the fallback when ANGLE is unavailable.

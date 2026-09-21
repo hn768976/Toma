@@ -20,7 +20,7 @@ const SAMPLE_FRAMES = [0, 150, 300, 450, 599];
 const probe = (file) => {
   const out = execFileSync(FFPROBE, [
     "-v", "error",
-    "-show_entries", "stream=codec_type,codec_name,width,height,r_frame_rate,pix_fmt",
+    "-show_entries", "stream=codec_type,codec_name,width,height,r_frame_rate,pix_fmt,duration,nb_frames",
     "-show_entries", "format=duration",
     "-of", "json", file,
   ]).toString();
@@ -103,14 +103,16 @@ const decodePNG = (buf) => {
  *
  * Seeks with `-ss` AFTER `-i`, which decodes from the start and is therefore
  * frame-accurate; this ffmpeg build also has the `select` filter compiled
- * out, so picking a frame by index is not available. The timestamp is nudged
- * half a frame so it lands unambiguously inside the frame's duration.
+ * out, so picking a frame by index is not available.
  */
 const frameRGB = (file, frame, width, height, fps) => {
   const png = execFileSync(FFMPEG, [
     "-v", "error",
     "-i", file,
-    "-ss", ((frame + 0.5) / fps).toFixed(6),
+    // A quarter of a frame BEFORE the target presentation time. Seeking to
+    // the exact PTS risks landing a float hair past it, which selects the
+    // next frame -- or nothing at all on the last frame of the clip.
+    "-ss", Math.max(0, (frame - 0.25) / fps).toFixed(6),
     "-frames:v", "1",
     "-f", "image2pipe", "-vcodec", "png", "-",
   ], { maxBuffer: 1024 * 1024 * 512 });
@@ -211,7 +213,12 @@ for (const name of files) {
   const info = probe(file);
   const v = info.streams.find((s) => s.codec_type === "video");
   const hasAudio = info.streams.some((s) => s.codec_type === "audio");
-  const duration = +Number(info.format.duration).toFixed(2);
+  // The VIDEO STREAM's duration and frame count are the delivery facts.
+  // Container duration carries muxing overhead and reads a little long even
+  // when the stream holds exactly 600 frames at 30fps.
+  const duration = +Number(v.duration).toFixed(3);
+  const containerDuration = +Number(info.format.duration).toFixed(3);
+  const frames600 = Number(v.nb_frames);
 
   // Clamp to what the file actually contains, so a short or partial render
   // reports a real failure rather than throwing inside the decoder.
@@ -228,13 +235,16 @@ for (const name of files) {
     resolution: `${v.width}x${v.height}`,
     fps: v.r_frame_rate,
     duration,
+    containerDuration,
+    frameCount: frames600,
     codec: v.codec_name,
     pixFmt: v.pix_fmt,
     hasAudio,
     // Step 1 pass/fail
     ok:
       v.width === 1920 && v.height === 1080 &&
-      v.r_frame_rate === "30/1" && Math.abs(duration - 20) < 0.05 &&
+      v.r_frame_rate === "30/1" && Math.abs(duration - 20) < 0.01 &&
+      frames600 === 600 &&
       v.codec_name === "h264" && v.pix_fmt === "yuv420p" && !hasAudio,
     medianLuminance: perFrame.map((s) => s.median),
     p05: perFrame.map((s) => s.p05),
@@ -250,7 +260,7 @@ for (const name of files) {
   report.push(row);
 
   console.log(
-    `${name.padEnd(28)} ${row.ok ? "PASS" : "FAIL"}  ${row.resolution} ${row.fps} ${duration}s ` +
+    `${name.padEnd(28)} ${row.ok ? "PASS" : "FAIL"}  ${row.resolution} ${row.fps} ${duration}s ${frames600}f ` +
     `${row.codec}/${row.pixFmt} audio=${hasAudio}\n` +
     `    medianLum=${row.medianLuminance.join(",")}\n` +
     `    blown=${row.blownFraction.join(",")}  cornerMax=${row.cornerMax}  ` +

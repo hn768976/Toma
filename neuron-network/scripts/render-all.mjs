@@ -54,7 +54,10 @@ for (const comp of targets) {
     timeoutInMilliseconds: 300000,
     overwrite: true,
     // The references include one clip with an audio track; ours must not.
+    // `enforceAudioTrack: false` only stops Remotion FORCING one -- it still
+    // muxes a silent AAC track. `muted` is what omits audio entirely.
     enforceAudioTrack: false,
+    muted: true,
     onProgress: ({ renderedFrames }) => {
       if (renderedFrames - lastLogged >= 100) {
         lastLogged = renderedFrames;
