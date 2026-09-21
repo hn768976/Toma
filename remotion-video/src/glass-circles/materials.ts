@@ -1,8 +1,12 @@
 import {
   AdditiveBlending,
   Color,
+  AddEquation,
+  CustomBlending,
   Matrix3,
-  MultiplyBlending,
+  OneFactor,
+  SrcColorFactor,
+  ZeroFactor,
   MeshBasicNodeMaterial,
   MeshPhysicalNodeMaterial,
   Vector2,
@@ -260,8 +264,18 @@ export const createFilmMaterial = (
   })();
 
   material.transparent = true;
-  material.blending = MultiplyBlending;
+  // Spelled out rather than using the MultiplyBlending preset: measured
+  // against the rendered frame the preset was compositing like a normal blend
+  // at partial alpha, leaving the circles washed out instead of compounding.
+  // dst = src * dst is what a stack of gels actually does.
+  material.blending = CustomBlending;
+  material.blendEquation = AddEquation;
+  material.blendSrc = ZeroFactor;
+  material.blendDst = SrcColorFactor;
+  material.blendSrcAlpha = ZeroFactor;
+  material.blendDstAlpha = OneFactor;
   material.depthWrite = false;
+  material.opacity = 1;
 
   return material;
 };
