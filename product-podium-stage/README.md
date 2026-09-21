@@ -122,14 +122,20 @@ pixels, so each band is twice as wide.
 and the looks differ enormously in how much noise they contain. The 1080p
 10-second previews come out at:
 
-| Look | Preview size | Why |
-|---|---|---|
-| Blind Shadow | ~10 MB | |
-| Bubble Drift | ~11 MB | the look CRF 12 exists for |
-| Neon Tier | ~20 MB | |
-| **Halo Ring** | **~45 MB** | volumetric haze, grain and raymarch jitter — all noise, all preserved |
+| Look | Shipped: PNG frames, CRF 12 | Earlier: JPEG frames, CRF 18 | Why the gap |
+|---|---|---|---|
+| Bubble Drift | 11 MB | 12 MB | the look CRF 12 exists for |
+| Blind Shadow | 16 MB | — | |
+| **Halo Ring** | **45 MB** | 8 MB | volumetric haze, grain and raymarch jitter — all noise, all now preserved |
+| **Neon Tier** | **75 MB** | 15 MB | polished-floor reflections plus grain, ditto |
 
-4K masters scale roughly 4x from these.
+Those two columns are different pipelines, not just different CRFs, so the gap
+is the combined effect of both changes — but the direction is clear enough to
+act on. 4K masters scale roughly 4x, so Neon Tier's 4K master at CRF 12 is in
+the region of 300 MB for ten seconds.
+
+Note that Bubble Drift — the look this setting exists for — barely changes
+size. All the cost lands on the looks that did not need it.
 
 One setting for the whole set is the simple choice and what ships, but it is a
 simplification: **only look 4 actually needs CRF 12.** The dark looks measure
