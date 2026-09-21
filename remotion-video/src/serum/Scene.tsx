@@ -459,6 +459,10 @@ export const SerumScene: React.FC<{
             // previews render at half scale. Without this the blur is half as
             // wide relative to the frame in the preview as in the master.
             bokehScale={look.dof.bokehScale * (height / 2160)}
+            // Half-resolution bokeh: at these kernel sizes it is not
+            // distinguishable from full resolution, and this pass is the most
+            // expensive thing in the chain by a wide margin.
+            resolutionScale={0.5}
           />
         ) : (
           <></>
