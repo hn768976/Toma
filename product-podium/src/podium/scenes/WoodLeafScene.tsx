@@ -60,7 +60,7 @@ export const WoodLeafScene: React.FC<{ params: WoodLeafParams }> = ({
           the frame — bright and near-neutral on the left, cooler and
           darker to the right — and without it the stage reads as evenly
           lit cyclorama rather than a room with light coming in. */}
-      <pointLight position={[-7.5, 3.2, 3.0]} intensity={70} color="#ffeccd" decay={2} />
+      <pointLight position={[-7.5, 3.2, 3.0]} intensity={125} color="#ffe2b4" decay={2} />
       <ambientLight intensity={0.1} color="#dfe9ff" />
 
       <WallFloor
@@ -80,7 +80,7 @@ export const WoodLeafScene: React.FC<{ params: WoodLeafParams }> = ({
       {/* A wide, soft occlusion pool. Measured against the reference the
           previous one died within a disc-radius of the base and left the
           floor beside it unchanged, so the disc read as levitating. */}
-      <ContactAO radius={p.disc.radius} spread={2.9} strength={0.55} />
+      <ContactAO radius={p.disc.radius} spread={3.2} strength={0.68} />
       <Disc
         radius={p.disc.radius}
         height={p.disc.height}

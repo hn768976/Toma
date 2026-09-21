@@ -214,8 +214,8 @@ const checks = {
     // Fixed, like look 4's: the camera is locked and the plinth does not
     // move, so where it meets the floor is a constant of the rig rather
     // than something to hunt for with a detector a leaf shadow can fool.
-    const pcrease = meanRect(img, 0.44, 0.92, 0.56, 0.935);
-    const pfurther = meanRect(img, 0.44, 0.955, 0.56, 0.975);
+    const pcrease = meanRect(img, 0.44, 0.925, 0.56, 0.945);
+    const pfurther = meanRect(img, 0.44, 0.965, 0.56, 0.985);
     const sum3 = (c) => c[0] + c[1] + c[2];
     out.push(["contact shadow at base", sum3(pcrease) < sum3(pfurther) - 10, `crease=${fmt(pcrease)} further=${fmt(pfurther)}`]);
   },

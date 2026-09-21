@@ -44,7 +44,7 @@ const canopy = (seed: string, o: Partial<FoliageConfig> = {}): FoliageConfig => 
   lightPosition: [-7, 17, 9],
   lightAim: [0, 1.6, -2.2],
   lightIntensity: 420,
-  lightColor: "#fff6ec",
+  lightColor: "#fffdf9",
   lightAngle: 0.72,
   softness: 0.02,
   ...o,
@@ -57,18 +57,18 @@ const canopy = (seed: string, o: Partial<FoliageConfig> = {}): FoliageConfig => 
  */
 const WOOD_CANOPY = (lightColor: string): FoliageConfig =>
   canopy("wood-leaf", {
-    branches: 60,
-    leavesPerBranch: 7,
-    leafSize: 0.34,
-    branchSize: 0.5,
-    blur: 0.04,
-    density: 0.92,
+    branches: 130,
+    leavesPerBranch: 9,
+    leafSize: 0.2,
+    branchSize: 0.34,
+    blur: 0.022,
+    density: 0.95,
     clumping: 0.9,
     planeSize: 18,
     position: [-5.2, 4.6, 2.2],
     rotation: [-Math.PI / 2, 0, 0.5],
     lightPosition: [-6, 14, 7],
-    lightAim: [0, 0.9, -1.6],
+    lightAim: [-0.6, 2.4, -3.0],
     lightIntensity: 900,
     lightColor,
     lightAngle: 0.62,
@@ -260,7 +260,7 @@ export const STAGES: StageConfig[] = [
       // dozen levels of neutral, and a warm cast turns marble into clay.
       wall: "#f3f4f4",
       plaster: "#c3c1bd",
-      floor: "#dedddb",
+      floor: "#b6b6b4",
       wallDistance: 3.4,
       foliage: canopy("fluted-plaster"),
     },
@@ -296,7 +296,7 @@ export const STAGES: StageConfig[] = [
       // dozen levels of neutral, and a warm cast turns marble into clay.
       wall: "#f3f4f4",
       plaster: "#c3c1bd",
-      floor: "#dedddb",
+      floor: "#b6b6b4",
       wallDistance: 3.4,
       foliage: canopy("fluted-plaster"),
     },
@@ -326,14 +326,17 @@ export const STAGES: StageConfig[] = [
     clear: "#d7dde6",
     params: {
       kind: "wood-leaf",
-      wall: "#d6dfec",
-      floor: "#dde4ef",
+      // The reference's floor is the brightest surface and the wall sits
+      // below it, so light reads as falling onto the floor and the eye is
+      // led along it. Reversed, the backdrop dominates and the floor dies.
+      wall: "#b9c6da",
+      floor: "#e8edf5",
       wallDistance: 3.2,
       wood: {
         light: "#a68a6d",
         dark: "#5a4536",
-        rings: 20,
-        turbulence: 0.3,
+        rings: 9,
+        turbulence: 0.62,
       },
       disc: { radius: 1.15, height: 0.32, bevel: 0.03 },
       foliage: WOOD_CANOPY("#fff2dd"),
@@ -360,8 +363,8 @@ export const STAGES: StageConfig[] = [
     clear: "#e6dccd",
     params: {
       kind: "wood-leaf",
-      wall: "#ece1d0",
-      floor: "#e5d9c6",
+      wall: "#d8c8b0",
+      floor: "#f2e8d8",
       wallDistance: 3.2,
       wood: {
         light: "#6b4630",

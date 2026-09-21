@@ -25,8 +25,8 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
     () =>
       studioEnvironment({
         intensity: 0.56,
-        top: [0.95, 0.94, 0.92],
-        horizon: [0.66, 0.65, 0.64],
+        top: [0.94, 0.94, 0.94],
+        horizon: [0.65, 0.65, 0.65],
         bottom: [0.36, 0.36, 0.36],
       }),
     [],
@@ -53,7 +53,7 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
       {/* Low contrast overall, but the key still has to carry the flutes:
           a plinth lit only by fill reads as a plain cylinder. */}
       <hemisphereLight args={["#ffffff", "#ded9d3", 0.56]} />
-      <ambientLight intensity={0.06} color="#fff8f0" />
+      <ambientLight intensity={0.06} color="#fdfcfb" />
 
       <WallFloor
         wall={p.wall}
@@ -74,14 +74,14 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
         penumbra={1}
         decay={2}
         intensity={280}
-        color="#fffaf2"
+        color="#fdfdfc"
       />
 
       <Canopy config={p.foliage} />
 
       {p.plinth === "cylinder" ? (
         <>
-          <ContactAO radius={1.3} spread={1.7} strength={0.3} />
+          <ContactAO radius={1.36} spread={1.55} strength={0.6} />
           {/* A plain base plate under the shaft. The reference crops its
               base away; with the whole plinth in frame the bare fluted
               silhouette flares like draped fabric, and a classical plinth
@@ -102,8 +102,8 @@ export const FlutedPlasterScene: React.FC<{ params: FlutedPlasterParams }> = ({
       ) : (
         <>
           {/* Shorter, front-left. */}
-          <ContactAO radius={0.44} spread={2.2} strength={0.3} position={[-1.0, 0, 0.75]} />
-          <ContactAO radius={0.44} spread={2.2} strength={0.3} position={[1.15, 0, -0.55]} />
+          <ContactAO radius={0.44} spread={2.6} strength={0.5} position={[-1.0, 0, 0.75]} />
+          <ContactAO radius={0.44} spread={2.6} strength={0.5} position={[1.15, 0, -0.55]} />
           <Column
             height={1.4}
             shaftRadius={0.33}
