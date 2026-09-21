@@ -6,7 +6,7 @@
  * miss both.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { inflateSync } from "node:zlib";
 import path from "node:path";
 
@@ -249,7 +249,12 @@ const UNIVERSAL = [
   ["no banding plateaus", (r) => Math.max(...r.longestPlateau) < 120],
 ];
 
-const files = readdirSync(dir).filter((f) => f.endsWith(".mp4")).sort();
+// Accepts a directory of renders, or a single file while one is being checked.
+const isFile = existsSync(dir) && statSync(dir).isFile();
+const baseDir = isFile ? path.dirname(dir) : dir;
+const files = isFile
+  ? [path.basename(dir)]
+  : readdirSync(dir).filter((f) => f.endsWith(".mp4")).sort();
 if (files.length === 0) {
   console.error(`no mp4 files in ${dir}`);
   process.exit(1);
@@ -257,7 +262,7 @@ if (files.length === 0) {
 
 const report = [];
 for (const name of files) {
-  const file = path.join(dir, name);
+  const file = path.join(baseDir, name);
   const info = probe(file);
   const v = info.streams.find((s) => s.codec_type === "video");
   const hasAudio = info.streams.some((s) => s.codec_type === "audio");
@@ -332,7 +337,7 @@ for (const row of report) {
   console.log(`${stem}\n    ${results.join("\n    ")}`);
 }
 
-writeFileSync("out/verify-output.json", JSON.stringify(report, null, 2));
+writeFileSync(isFile ? "out/verify-one.json" : "out/verify-output.json", JSON.stringify(report, null, 2));
 const bad = report.filter((r) => !r.ok);
 console.log(`\n${report.length - bad.length}/${report.length} pass step 1`);
 if (bad.length) console.log("step 1 failing:", bad.map((b) => b.file).join(", "));
