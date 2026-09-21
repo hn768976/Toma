@@ -7,14 +7,17 @@
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion bundle",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "render:all": "node scripts/render-all.mjs --scale=0.5 --concurrency=2",
+    "stills": "node scripts/stills.mjs",
+    "verify:loop": "node scripts/verify-loop.mjs",
+    "verify:output": "node scripts/verify-output.mjs out/video",
+    "stats": "node scripts/stats.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.3.0",
     "@react-three/postprocessing": "3.0.4",
-    "@remotion/bundler": "^4.0.515",
     "@remotion/cli": "4.0.515",
-    "@remotion/renderer": "^4.0.515",
     "@remotion/three": "4.0.515",
     "postprocessing": "6.37.8",
     "react": "19.2.3",
@@ -23,9 +26,11 @@
     "three": "0.180.0"
   },
   "devDependencies": {
+    "@remotion/bundler": "4.0.515",
+    "@remotion/renderer": "4.0.515",
     "@types/react": "19.2.7",
     "@types/three": "0.180.0",
-    "esbuild": "^0.28.2",
+    "esbuild": "0.28.2",
     "typescript": "5.9.3"
   }
 }
