@@ -14,6 +14,10 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 
+// These compositions carry no audio and must not be delivered with a silent
+// track. Remotion otherwise adds one, which the delivery checks reject.
+Config.setEnforceAudioTrack(false);
+
 // Software GL. ANGLE is the fastest path that still supports WebGL2 in
 // headless Chromium; SwiftShader is the fallback when ANGLE is unavailable.
 Config.setChromiumOpenGlRenderer("angle");
