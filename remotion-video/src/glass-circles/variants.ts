@@ -107,7 +107,7 @@ export type GlassVariant = {
   /** Fine neutral texture over the whole frame. */
   grain: number;
 
-  toneMapping: "neutral" | "aces";
+  toneMapping: "neutral" | "aces" | "none";
   exposure: number;
   /** Clear colour behind the backdrop plane. */
   clearColor: string;
@@ -361,11 +361,11 @@ export const V3: GlassVariant = {
     thickness: 0.1,
     attenuationColor: "#7a4ad0",
     attenuationDistance: 2.0,
-    envMapIntensity: 0.25,
+    envMapIntensity: 0.06,
   },
   rim: {
-    specularGain: 0.6,
-    dispersionGain: 1.0,
+    specularGain: 1.5,
+    dispersionGain: 2.2,
     iorSpread: 0.09,
     edgePower: 6.0,
     bandPower: 2.2,
@@ -389,7 +389,7 @@ export const V4: GlassVariant = {
     top: "#0a0410",
     bottom: "#040107",
     glowColor: "#5e0c1a",
-    glowIntensity: 0.14,
+    glowIntensity: 0.07,
     glowRadius: 4.8,
     washColor: "#10030a",
     washIntensity: 0.10,
@@ -440,11 +440,11 @@ export const V4: GlassVariant = {
     thickness: 0.1,
     attenuationColor: "#3a5ad0",
     attenuationDistance: 2.0,
-    envMapIntensity: 0.25,
+    envMapIntensity: 0.06,
   },
   rim: {
-    specularGain: 0.65,
-    dispersionGain: 1.1,
+    specularGain: 1.6,
+    dispersionGain: 2.4,
     iorSpread: 0.09,
     edgePower: 6.0,
     bandPower: 2.2,
@@ -469,14 +469,14 @@ export const V4: GlassVariant = {
  * unchanged from V3 and V4.
  */
 const FILM_TINTS = [
-  { from: "#ff6f91", to: "#ffd98a" },
-  { from: "#ff9a6b", to: "#ff6b7a" },
-  { from: "#7fe0c0", to: "#7fb0ff" },
-  { from: "#ff8ad6", to: "#ffbf7f" },
-  { from: "#8fe0ff", to: "#7f9aff" },
-  { from: "#ffe08a", to: "#b8e07f" },
-  { from: "#ff7fb5", to: "#c78aff" },
-  { from: "#ffb37f", to: "#ffe89a" },
+  { from: "#ff5577", to: "#ffc44d" },
+  { from: "#ff8a4d", to: "#ff4d6a" },
+  { from: "#4dd6b0", to: "#4d96ff" },
+  { from: "#ff6ad0", to: "#ffa84d" },
+  { from: "#5fd0ff", to: "#5f7aff" },
+  { from: "#ffd45f", to: "#9fd45f" },
+  { from: "#ff5fa5", to: "#b06aff" },
+  { from: "#ffa15f", to: "#ffe07a" },
 ];
 
 const FILM_FIELD = buildField({
@@ -509,9 +509,9 @@ export const V5: GlassVariant = {
     vignette: 0.06,
   },
   environment: {
-    up: [0.7, 0.72, 0.78],
-    horizon: [0.55, 0.57, 0.62],
-    down: [0.35, 0.36, 0.4],
+    up: [0.25, 0.26, 0.3],
+    horizon: [0.18, 0.19, 0.22],
+    down: [0.1, 0.1, 0.12],
     lights: [
       {
         u: 0.18,
@@ -537,8 +537,8 @@ export const V5: GlassVariant = {
   // The rim stays, but quietly: the reference shows a thin bright catch on a
   // few edges rather than the neon arcs of the darker pieces.
   rim: {
-    specularGain: 0.5,
-    dispersionGain: 0.8,
+    specularGain: 0.22,
+    dispersionGain: 0.3,
     iorSpread: 0.06,
     edgePower: 7.0,
     bandPower: 2.6,
@@ -547,7 +547,7 @@ export const V5: GlassVariant = {
   },
   bloom: { strength: 0.0, radius: 0.5, threshold: 2.0 },
   grain: 0.008,
-  toneMapping: "neutral",
+  toneMapping: "none",
   exposure: 1.0,
   clearColor: "#ffffff",
 };

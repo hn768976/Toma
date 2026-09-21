@@ -8,6 +8,7 @@ import {
   Mesh,
   MeshBasicNodeMaterial,
   NeutralToneMapping,
+  NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
   PMREMGenerator,
@@ -241,7 +242,11 @@ export const createEngine = async (
   );
 
   renderer.toneMapping =
-    variant.toneMapping === "aces" ? ACESFilmicToneMapping : NeutralToneMapping;
+    variant.toneMapping === "aces"
+      ? ACESFilmicToneMapping
+      : variant.toneMapping === "none"
+        ? NoToneMapping
+        : NeutralToneMapping;
   renderer.toneMappingExposure = variant.exposure;
   renderer.setClearColor(new Color(variant.clearColor), 1);
 
