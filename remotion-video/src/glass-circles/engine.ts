@@ -1,6 +1,8 @@
 import {
   ACESFilmicToneMapping,
+  AmbientLight,
   Color,
+  DirectionalLight,
   Group,
   Matrix3,
   Matrix4,
@@ -260,6 +262,26 @@ export const createEngine = async (
   const envTarget = pmrem.fromEquirectangular(envTexture);
   scene.environment = envTarget.texture;
   scene.environmentIntensity = variant.environment.intensity;
+
+  // Body lighting. Kept separate from the environment so the rims can stay
+  // colour-accurate on a deliberately dim environment while the bodies still
+  // receive enough irradiance to read as solid.
+  if (variant.bodyLight.ambient.intensity > 0) {
+    scene.add(
+      new AmbientLight(
+        new Color(variant.bodyLight.ambient.color),
+        variant.bodyLight.ambient.intensity,
+      ),
+    );
+  }
+  if (variant.bodyLight.key.intensity > 0) {
+    const key = new DirectionalLight(
+      new Color(variant.bodyLight.key.color),
+      variant.bodyLight.key.intensity,
+    );
+    key.position.set(...variant.bodyLight.key.direction);
+    scene.add(key);
+  }
 
   const backdrop = createBackdropMaterial(variant, BACKDROP_WIDTH, BACKDROP_HEIGHT);
   const backdropGeometry = new PlaneGeometry(BACKDROP_WIDTH, BACKDROP_HEIGHT);

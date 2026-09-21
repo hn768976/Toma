@@ -105,6 +105,17 @@ export type GlassVariant = {
   bloom: { strength: number; radius: number; threshold: number };
 
   /**
+   * Lights that shade the disc bodies. The rim is a custom shader reading the
+   * environment texture directly, so these reach the bodies only -- which is
+   * the point: the environment has to stay dim for the rims to keep their
+   * colour, but the bodies need real irradiance to read as solid.
+   */
+  bodyLight: {
+    ambient: { color: string; intensity: number };
+    key: { color: string; intensity: number; direction: [number, number, number] };
+  };
+
+  /**
    * How the disc bodies are shaded. "glass" is physical transmission with
    * dispersion; "film" is tinted stock that multiplies where circles overlap.
    */
@@ -123,6 +134,10 @@ export type GlassVariant = {
 
 export const V1: GlassVariant = {
   id: "v1",
+  bodyLight: {
+    ambient: { color: "#ffffff", intensity: 0 },
+    key: { color: "#ffffff", intensity: 0, direction: [-0.6, 0.7, 0.5] },
+  },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Dark field, neon blue rim light",
@@ -194,7 +209,7 @@ export const V1: GlassVariant = {
     thickness: 0.1,
     attenuationColor: "#5a8cff",
     attenuationDistance: 2.0,
-    envMapIntensity: 1.2,
+    envMapIntensity: 0.5,
   },
   rim: {
     specularGain: 4.5,
@@ -214,6 +229,10 @@ export const V1: GlassVariant = {
 
 export const V2: GlassVariant = {
   id: "v2",
+  bodyLight: {
+    ambient: { color: "#ffffff", intensity: 0 },
+    key: { color: "#ffffff", intensity: 0, direction: [-0.6, 0.7, 0.5] },
+  },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Bright sky-blue field, soft prismatic glass",
@@ -314,6 +333,10 @@ const CIRCLE_FIELD = buildField({
 
 export const V3: GlassVariant = {
   id: "v3",
+  bodyLight: {
+    ambient: { color: "#6a4ad8", intensity: 1.1 },
+    key: { color: "#7fe0d0", intensity: 1.6, direction: [-0.6, 0.7, 0.5] },
+  },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Violet field, cyan and green crescent light",
@@ -385,7 +408,7 @@ export const V3: GlassVariant = {
     thickness: 0.1,
     attenuationColor: "#7a4ad0",
     attenuationDistance: 0.2,
-    envMapIntensity: 1.2,
+    envMapIntensity: 0.5,
   },
   rim: {
     specularGain: 3.0,
@@ -405,6 +428,10 @@ export const V3: GlassVariant = {
 
 export const V4: GlassVariant = {
   id: "v4",
+  bodyLight: {
+    ambient: { color: "#3f5ad0", intensity: 0.9 },
+    key: { color: "#7fd0ff", intensity: 1.8, direction: [-0.6, 0.7, 0.5] },
+  },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Near-black field, cyan crescents against crimson rims",
@@ -476,7 +503,7 @@ export const V4: GlassVariant = {
     thickness: 0.1,
     attenuationColor: "#3a5ad0",
     attenuationDistance: 0.2,
-    envMapIntensity: 1.2,
+    envMapIntensity: 0.5,
   },
   rim: {
     specularGain: 3.2,
@@ -506,13 +533,13 @@ export const V4: GlassVariant = {
  */
 const FILM_TINTS = [
   { from: "#ff5577", to: "#ffc44d" },
+  { from: "#ff8a4d", to: "#ff4d6a" },
   { from: "#4dd6b0", to: "#4d96ff" },
-  { from: "#5fd0ff", to: "#5f7aff" },
   { from: "#ffd45f", to: "#9fd45f" },
   { from: "#ff5fa5", to: "#b06aff" },
-  { from: "#7fd45f", to: "#4dd6b0" },
-  { from: "#ff8a4d", to: "#ff4d6a" },
-  { from: "#9f7aff", to: "#5fd0ff" },
+  { from: "#5fd0ff", to: "#5f7aff" },
+  { from: "#ffa15f", to: "#ffe07a" },
+  { from: "#ff6ad0", to: "#ffa84d" },
 ];
 
 const FILM_FIELD = buildField({
@@ -530,6 +557,10 @@ const FILM_FIELD = buildField({
 
 export const V5: GlassVariant = {
   id: "v5",
+  bodyLight: {
+    ambient: { color: "#ffffff", intensity: 0 },
+    key: { color: "#ffffff", intensity: 0, direction: [-0.6, 0.7, 0.5] },
+  },
   body: "film" as const,
   film: { edgeDarkness: 0.4, edgeWidth: 0.18 },
   label: "White field, overlapping coloured film",
