@@ -261,6 +261,46 @@ for (const file of files) {
   console.log(`   info  blade seams shared with frame 300: ${matched}/${both.length} (${pct.toFixed(0)}%) ` +
     `- look 1 expects nearly all, look 2 expects few`);
 
+  // Look 2: the wave. Only meaningful where the blades actually move, which is
+  // exactly what the seam-sharing figure above distinguishes.
+  if (pct < 60) {
+    // Visible widths must vary across the frame: some blades near edge-on and
+    // thin, some face-on and wide.
+    const g = sm.slice(1).map((q, i) => q - sm[i]).filter((q) => q < 200);
+    const mean = g.reduce((a, b) => a + b, 0) / Math.max(g.length, 1);
+    const sd = Math.sqrt(g.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(g.length, 1));
+    say(sd / mean > 0.18,
+      `visible blade widths vary across the frame (spread ${(sd / mean * 100).toFixed(0)}% of the mean)`);
+
+    // The crossing line, where the twist passes edge-on: per x-band, the height
+    // at which the band is darkest. It must sit somewhere else at frame 300.
+    const crossing = (img) => {
+      const out = [];
+      for (let b = 0; b < 8; b++) {
+        const x0 = Math.floor((b / 8) * img.width), x1 = Math.floor(((b + 1) / 8) * img.width);
+        let bestY = 0, bestV = Infinity;
+        for (let y = 20; y < img.height - 20; y += 4) {
+          let sum = 0, n = 0;
+          for (let x = x0; x < x1; x += 3) { sum += luma(img, x, y); n++; }
+          const v = sum / n;
+          if (v < bestV) { bestV = v; bestY = y; }
+        }
+        out.push(bestY);
+      }
+      return out;
+    };
+    const c0 = crossing(imgs[0]), c300 = crossing(imgs[300]);
+    const shift = c0.reduce((a, y, i) => a + Math.abs(y - c300[i]), 0) / c0.length;
+    say(shift > 30,
+      `crossing line sits at a different height at frame 300 ` +
+      `(mean shift ${shift.toFixed(0)}px; f0 ${c0.join(",")} -> f300 ${c300.join(",")})`);
+
+    // Dark gaps through the row.
+    const darkFrac = FRAMES.map((f) => gridStats(imgs[f]).under16);
+    say(Math.max(...darkFrac) > 8,
+      `dark gaps visible through the row (up to ${Math.max(...darkFrac).toFixed(0)}% near-black)`);
+  }
+
   // Hues present in one frame.
   const buckets = new Set();
   for (let yy = 0; yy < first.height; yy += 9) for (let xx = 0; xx < first.width; xx += 9) {
