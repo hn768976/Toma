@@ -1,45 +1,90 @@
-# Glass Circles — V1 & V2
+# Glass Circles — V1 to V7
 
-Two 10-second abstract motion backgrounds built on **Remotion + three.js**, rendering
-through **WebGPU with an automatic WebGL2 fallback**.
+Seven abstract motion backgrounds built on **Remotion + three.js**, rendering through
+**WebGPU with an automatic WebGL2 fallback**.
 
-| | V1 | V2 |
-|---|---|---|
-| Field | Near-black | Bright sky blue |
-| Lighting | Intense blue rim light, neon glow | Soft neutral key, airy |
-| Edges | Prismatic dispersion mixed into blue highlights | Rainbow chromatic aberration |
-| Composition | `GlassCircles-V1-1080p`, `GlassCircles-V1-4K` | `GlassCircles-V2-1080p`, `GlassCircles-V2-4K` |
+| | Field | Light | Rig | Length |
+|---|---|---|---|---|
+| **V1** | Near-black | Intense blue rim, neon glow | Three sheet-glass discs | 10 s |
+| **V2** | Bright sky blue | Soft neutral key, airy | Three sheet-glass discs | 10 s |
+| **V3** | Violet | Cyan and green crescents | Field of thick spheres | 15 s |
+| **V4** | Near-black | Cyan crescents, crimson rims | Field of thick spheres | 15 s |
+| **V5** | White | Overlapping coloured film | Field of sheet-glass discs | 15 s |
+| **V6** | Near-black | Violet glass light | Three sheet-glass discs | 10 s |
+| **V7** | Near-black | Soft red gradient | Three sheet-glass discs | 10 s |
 
-Both versions share one 3D rig and one animation system; only the look definition
-differs, so they read as two treatments of the same piece.
+Every piece shares one 3D rig, one animation system and one rim shader. What differs
+is the look definition in `variants.ts` and the field of discs each one puts on screen.
+
+**Three families.** V1, V2, V6 and V7 are the same three hero circles in four
+palettes — V6 and V7 are V2's layout and motion recoloured onto a dark field. V3 and
+V4 are a dense field of thick, sphere-like bodies. V5 is that same field in sheet
+glass, tinted, on white.
 
 ## Delivery specs
 
-- **30 fps, 300 frames, 10.000 s** — matching the reference clips frame for frame
+- **30 fps**, 300 frames (10.000 s) for V1/V2/V6/V7, 450 frames (15.000 s) for
+  V3/V4/V5 — each matching its reference clip frame for frame
 - **1920×1080** delivery renders, **3840×2160** compositions included
 - **H.264 / MP4**, `yuv420p`, silent (no audio track)
 - **Seamless loop** — every animated channel is a sine of the loop position at a
-  whole number of cycles, so frame 300 is exactly frame 0
+  whole number of cycles, so the last frame lands exactly on the first
 
 ## Rendering
 
 ```bash
 npm install
 
-# 1080p
-npx remotion render GlassCircles-V1-1080p out/GlassCircles_V1_1080p.mp4 \
-  --codec=h264 --muted --image-format=png --pixel-format=yuv420p --crf=16
+# Any of V1..V7, at 1080p or 4K
+npx remotion render GlassCircles-V3-1080p out/GlassCircles_V3_1080p.mp4 \
+  --codec=h264 --muted --image-format=png --pixel-format=yuv420p --crf=17
 
-# 4K
-npx remotion render GlassCircles-V2-4K out/GlassCircles_V2_4K.mp4 \
-  --codec=h264 --muted --image-format=png --pixel-format=yuv420p --crf=16
+npx remotion render GlassCircles-V7-4K out/GlassCircles_V7_4K.mp4 \
+  --codec=h264 --muted --image-format=png --pixel-format=yuv420p --crf=17
 ```
+
+Cost varies a lot between pieces. V5 renders several times faster than V3 or V4
+despite being the same length and field: tinted film needs no transmission pass at
+all, where clear glass re-renders the scene to refract it.
 
 Add `--gl=swangle` on a machine with no GPU. `--image-format=png` keeps the
 intermediate frames lossless, which matters here because the piece is mostly wide,
 smooth gradients that JPEG intermediates would band.
 
 Open the studio with `npm run dev` to art-direct interactively.
+
+
+## What each family needed
+
+**Sheet glass cannot grade a body.** A flat disc has a single normal, so a
+directional light shades it uniformly and its rim is only ever a thin band. V3 and
+V4's references are carried by a wide crescent inside each circle and a body graded
+from lit to dark, so those two use thick, sphere-like glass where the outer quarter
+of every disc is curved. V1, V2, V6 and V7 stay on sheet glass, which is what their
+own references show.
+
+**A bright field and a dark field want different light budgets.** On V2's near-white
+field a rim can carry very large values and still read as a thin line. On a dark
+field the same numbers clip to white and the colour goes with them — which is why V6
+and V7 follow V1's budget rather than V2's, and why V3 and V4's cyan and crimson only
+appeared once their peaks came down far enough for the channel ratios to survive tone
+mapping. Brightness there is carried by bloom, which spreads colour instead of
+flattening it.
+
+**Bodies and rims need separate lights.** The environment has to stay dim for the
+rims to keep their colour, but a body needs real irradiance to read as solid. Since
+the rim is a custom shader sampling the environment texture directly while the bodies
+go through the prefiltered map and the scene lights, the two can be set independently
+— `bodyLight` reaches the bodies only. A light broad enough to fill a body will also
+reach every part of a rim at once and close the crescent into a ring, so the
+environment stays directional.
+
+**Overlapping colour is a multiply, not a refraction.** V5's circles compound where
+they cross, the way gels do. Physical transmission cannot do that: a transmissive
+mesh only samples the opaque scene, so the disc in front hides the one behind rather
+than tinting it. Its bodies are tinted film blended as `dst = src * dst`, written out
+as explicit blend factors — the `MultiplyBlending` preset measured as a normal blend
+at partial alpha and left the circles washed out.
 
 ## Graphics backend
 
