@@ -222,8 +222,22 @@ for (const file of files) {
   };
   const leftLit = Math.max(...FRAMES.map((f) => colLit(imgs[f], 0.002)));
   const rightLit = Math.max(...FRAMES.map((f) => colLit(imgs[f], 0.998)));
-  say(leftLit > 80 && rightLit > 80,
-    `outermost columns lit ${leftLit.toFixed(0)}% / ${rightLit.toFixed(0)}% at their brightest frame ` +
+  // Brightness alone is the wrong test on the neon looks, where an edge column
+  // can be deliberately unlit in every sampled frame. What matters is that
+  // blades are there at all, so also accept structure: a column that varies
+  // along its length is sitting on blades, an empty one does not.
+  const colRange = (rx) => Math.max(...FRAMES.map((f) => {
+    const xx = Math.round(imgs[f].width * rx);
+    let mn = Infinity, mx = -Infinity;
+    for (let yy = 0; yy < imgs[f].height; yy += 2) {
+      const v = luma(imgs[f], xx, yy); mn = Math.min(mn, v); mx = Math.max(mx, v);
+    }
+    return mx - mn;
+  }));
+  const edgeOk = (lit, range) => lit > 80 || range > 2;
+  say(edgeOk(leftLit, colRange(0.002)) && edgeOk(rightLit, colRange(0.998)),
+    `outermost columns: lit ${leftLit.toFixed(0)}% / ${rightLit.toFixed(0)}%, ` +
+    `variation ${colRange(0.002).toFixed(0)} / ${colRange(0.998).toFixed(0)} levels ` +
     `(array runs past both edges)`);
 
   // Blades are cropped top and bottom: the first and last rows must carry the
@@ -258,12 +272,12 @@ for (const file of files) {
   const both = ea.filter((x) => pb[x] >= 12);
   const matched = both.filter((x) => eb.some((q) => Math.abs(x - q) <= 2)).length;
   const pct = both.length ? (matched / both.length) * 100 : 0;
-  console.log(`   info  blade seams shared with frame 300: ${matched}/${both.length} (${pct.toFixed(0)}%) ` +
-    `- look 1 expects nearly all, look 2 expects few`);
+  console.log(`   info  blade seams shared with frame 300: ${matched}/${both.length} (${pct.toFixed(0)}%)` +
+    `${both.length < 15 ? " - too few seams to judge" : " - look 1 expects nearly all, look 2 expects few"}`);
 
   // Look 2: the wave. Only meaningful where the blades actually move, which is
   // exactly what the seam-sharing figure above distinguishes.
-  if (pct < 60) {
+  if (pct < 60 && both.length >= 15) {
     // Visible widths must vary across the frame: some blades near edge-on and
     // thin, some face-on and wide.
     const g = sm.slice(1).map((q, i) => q - sm[i]).filter((q) => q < 200);
@@ -328,15 +342,23 @@ for (const file of files) {
       const win = v.slice(x0, x0 + 200);
       if (Math.max(...win) > 16) continue;
       darkCols++;
-      for (let i = 2; i < win.length - 2; i++) {
-        const a = Math.max(win[i - 2], win[i + 2]);
-        if (win[i] <= win[i - 1] && win[i] <= win[i + 1] && a - win[i] >= 1) darkSeams++;
+      // Count how many times the window rises through its own midpoint. That
+      // is robust to how wide a blade's lit ridge is and to a floor of exactly
+      // zero, which defeats both minimum- and maximum-finding.
+      const lo = Math.min(...win), hi = Math.max(...win);
+      if (hi - lo < 3) continue;
+      const mid = (lo + hi) / 2;
+      let above = win[0] > mid;
+      for (let i = 1; i < win.length; i++) {
+        const now = win[i] > mid;
+        if (now && !above) darkSeams++;
+        above = now;
       }
     }
   }
   if (darkCols > 0) {
     say(darkSeams / darkCols > 3,
-      `unlit blades still present: ${(darkSeams / darkCols).toFixed(1)} seams per 200px of near-black ` +
+      `unlit blades still present: ${(darkSeams / darkCols).toFixed(1)} blade crossings per 200px of near-black ` +
       `(frame ${darkest}, ${darkCols} windows)`);
   } else {
     console.log(`   info  no near-black stretches at frame ${darkest} to test for hidden blades`);
