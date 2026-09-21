@@ -26,6 +26,13 @@ Headless Chromium needs ANGLE; `remotion.config.ts` already sets
 falls through to SwiftShader, which works but is much slower — see
 **Render times** below.
 
+`remotion.config.ts` also raises the delay-render timeout to 300s. The cluster
+geometry is built once per render process at module scope, and
+`PackedTissue-Golden` carries about a million triangles, so the first frame can
+take well over the 30s default before anything is drawn. Renders fail outright
+with `Timeout (30000ms) exceeded rendering the component initially` without
+this, and 4K is slower still.
+
 ---
 
 ## The four looks
@@ -138,6 +145,13 @@ and on the diffuse shading, applied before tonemapping, and film grain at
 `Math.random()` — fed `frame % 300` on the looping compositions so it repeats
 with the loop.
 
+One thing to know before tuning `grain`: the effect stage runs on the
+composer's linear half-float buffer, not on 8-bit display values, so a given
+amplitude lands on screen about a quarter of its nominal size. The grain shader
+carries a `TO_DISPLAY` factor to compensate, and the row values are quoted as
+what actually reaches the file. Without it, 2% grain moved the output by barely
+one code value and the background plateaus survived untouched.
+
 **Check the encoded mp4, not the studio preview:**
 
 ```bash
@@ -146,10 +160,17 @@ node scripts/scanline.mjs /tmp/band.png
 ```
 
 `scripts/scanline.mjs` walks one horizontal and one vertical scanline across the
-background and prints the run length of each constant value. Stepped plateaus —
-long runs of one value with abrupt jumps — mean banding. If bands survive,
-raise `grain` in the composition's data row toward 0.025, then lower CRF toward
-14.
+background and reports the longest run of a single value, how many distinct
+values the line holds, and what fraction of neighbouring pixels differ. A
+dithered gradient changes value on most pixels; stepped plateaus — long runs of
+one value with abrupt jumps between them — mean banding.
+
+It reports clipped runs separately and does not count them. A flat run at the
+top of the range is an exposure problem, not a quantisation one, and scoring it
+as banding sends you chasing grain that cannot help.
+
+If bands survive, raise `grain` in the composition's data row toward 0.025,
+then lower CRF toward 14.
 
 ---
 
