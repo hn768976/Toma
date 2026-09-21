@@ -100,6 +100,28 @@ the set ships at one setting.
 This matters *more* at 4K, not less: the same gradient spans twice as many
 pixels, so each band is twice as wide.
 
+**The cost is file size, and it is not evenly spread.** CRF 12 preserves noise,
+and the looks differ enormously in how much noise they contain. The 1080p
+10-second previews come out at:
+
+| Look | Preview size | Why |
+|---|---|---|
+| Blind Shadow | ~10 MB | |
+| Bubble Drift | ~11 MB | the look CRF 12 exists for |
+| Neon Tier | ~20 MB | |
+| **Halo Ring** | **~45 MB** | volumetric haze, grain and raymarch jitter — all noise, all preserved |
+
+4K masters scale roughly 4x from these.
+
+One setting for the whole set is the simple choice and what ships, but it is a
+simplification: **only look 4 actually needs CRF 12.** The dark looks measure
+clean at 18 (look 3: 46 px / 45%) because they have enough detail for both the
+JPEG stage and the encoder to keep. If size matters more to you than
+uniformity, render look 4 at `--crf=12` and the rest at `--crf=18`, and check
+the result with the recipe below — Halo Ring in particular drops by roughly
+six times with no visible change, because there is no smooth gradient in it to
+protect.
+
 If you change a backdrop, re-run the check on the encoded file rather than the
 render:
 
