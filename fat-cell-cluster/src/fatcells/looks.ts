@@ -260,7 +260,7 @@ export const LOOKS: LookRow[] = [
     extent: [23, 12, 5.5],
     backdropCount: 0, backdropDepth: [-22, 2],
     drift: 0.04, specks: 60, membrane: 1, fibres: 0, tissue: "full",
-    stills: [0, 150, 299],
+    stills: [0, 110, 210],
   },
   {
     id: "PackedTissue-White",
@@ -284,7 +284,7 @@ export const LOOKS: LookRow[] = [
     extent: [13, 6.5, 3.4],
     backdropCount: 6, backdropDepth: [-24, 3],
     drift: 0.05, specks: 50, membrane: 0.5, fibres: 0, tissue: "broken",
-    stills: [0, 150, 299],
+    stills: [40, 140, 240],
   },
 
   // --- Look 3 - Shrinking Cell - NOT LOOPS --------------------------------

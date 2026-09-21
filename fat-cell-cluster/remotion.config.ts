@@ -1,10 +1,19 @@
 import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
-Config.setVideoImageFormat("jpeg");
+// PNG frames, not JPEG. JPEG puts chroma artifacts into exactly the smooth
+// warm gradients this project works to keep clean, and ffmpeg decodes it as
+// full range, which tags the output yuvj420p rather than yuv420p.
+Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 Config.setChromiumOpenGlRenderer("angle");
 // No audio track in any composition; these are silent motion graphics.
+// Without both of these Remotion writes a silent AAC track, which also
+// stretches the file past 10.000s because AAC frames do not divide the
+// duration evenly.
+Config.setMuted(true);
+Config.setEnforceAudioTrack(false);
+
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
