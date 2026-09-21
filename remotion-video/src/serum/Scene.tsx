@@ -45,6 +45,8 @@ import type { LookRow } from './types';
  */
 const TRANSMISSION_RESOLUTION_SCALE = 0.3;
 
+const FRAME_BUFFER_TYPE = THREE.HalfFloatType;
+
 const StudioEnvironment: React.FC<{ intensity: number; transmissionScale: number }> = ({
   intensity,
   transmissionScale,
@@ -88,8 +90,16 @@ const InstancedRigid: React.FC<{
   frame: number;
   /** Base colour for per-instance tinting; enables instanceColor when set. */
   tint?: string;
+  /**
+   * Write the instances back-to-front. three sorts whole objects, never the
+   * instances inside one InstancedMesh, so without this an alpha-blended
+   * layer composites in arbitrary order and the spheres stop reading as
+   * stacked glass. The sort is a pure function of the frame, so it does not
+   * threaten determinism.
+   */
+  sortByDepth?: boolean;
   children: React.ReactNode;
-}> = ({ instances, geometry, t, frame, tint, children }) => {
+}> = ({ instances, geometry, t, frame, tint, sortByDepth = false, children }) => {
   const ref = useRef<THREE.InstancedMesh>(null);
 
   // Recomputed in full from `frame` every time -- no accumulation, so the
@@ -97,28 +107,43 @@ const InstancedRigid: React.FC<{
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
-    instances.forEach((instance, i) => {
+
+    // Resolve every transform first, so the draw order can be chosen from the
+    // resulting depths rather than from array order.
+    const resolved = instances.map((instance) => {
       const { cluster } = instance;
-      clusterPosition(cluster, t, frame, scratch.position);
-      clusterQuaternion(cluster, t, scratch.quaternion, scratch.axis);
-      scratch.offset.set(instance.offset[0], instance.offset[1], instance.offset[2]);
-      scratch.offset.applyQuaternion(scratch.quaternion);
-      scratch.position.add(scratch.offset);
-      scratch.scale.setScalar(instance.radius);
-      scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
+      const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      clusterPosition(cluster, t, frame, position);
+      clusterQuaternion(cluster, t, quaternion, scratch.axis);
+      const offset = new THREE.Vector3(instance.offset[0], instance.offset[1], instance.offset[2]);
+      offset.applyQuaternion(quaternion);
+      position.add(offset);
+      return { instance, position, quaternion };
+    });
+
+    if (sortByDepth) {
+      // Camera looks down -z, so the most negative z is furthest away and has
+      // to be drawn first.
+      resolved.sort((a, b) => a.position.z - b.position.z);
+    }
+
+    resolved.forEach((r, i) => {
+      scratch.scale.setScalar(r.instance.radius);
+      scratch.matrix.compose(r.position, r.quaternion, scratch.scale);
       mesh.setMatrixAt(i, scratch.matrix);
     });
     mesh.instanceMatrix.needsUpdate = true;
 
     if (tint && instances.some((i) => i.cluster.tintScale !== undefined)) {
-      instances.forEach((instance, i) => {
-        const scale = instance.cluster.tintScale ?? 1;
+      resolved.forEach((r, i) => {
+        const scale = r.instance.cluster.tintScale ?? 1;
         tintColor.set(tint).multiplyScalar(scale);
         mesh.setColorAt(i, tintColor);
       });
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
-  }, [instances, t, frame, tint]);
+  }, [instances, t, frame, tint, sortByDepth]);
 
   if (instances.length === 0) return null;
   return (
@@ -244,20 +269,25 @@ export const SerumScene: React.FC<{
           : cluster.members.map((m) => ({ cluster, offset: m.offset, radius: m.radius })),
       );
 
+  const heroLayers: Layer[] = look.heroLayers ?? ['front', 'mid'];
+  const approxLayers: Layer[] = (['front', 'mid', 'back'] as Layer[]).filter(
+    (l) => !heroLayers.includes(l),
+  );
+
   const heroInstances = useMemo(
-    () => (heroIsBlob ? collect(['front', 'mid'], true) : collect(['front', 'mid'], false)),
+    () => (heroIsBlob ? collect(heroLayers, true) : collect(heroLayers, false)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scene, heroIsBlob],
+    [scene, heroIsBlob, look.id],
   );
   const approxInstances = useMemo(
-    () => (heroIsBlob ? collect(['front', 'mid', 'back'], false) : collect(['back'], false)),
+    () => (heroIsBlob ? collect(['front', 'mid', 'back'], false) : collect(approxLayers, false)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scene, heroIsBlob],
+    [scene, heroIsBlob, look.id],
   );
   const approxBlobInstances = useMemo(
-    () => (heroIsBlob ? collect(['back'], true) : collect(['front', 'mid', 'back'], true)),
+    () => (heroIsBlob ? collect(approxLayers, true) : collect(['front', 'mid', 'back'], true)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scene, heroIsBlob],
+    [scene, heroIsBlob, look.id],
   );
 
   // Inner bubbles are real nested spheres, not a texture. They sit inside the
@@ -334,8 +364,17 @@ export const SerumScene: React.FC<{
         geometry={heroIsBlob ? blobGeometry! : sphereGeometry}
         t={t}
         frame={motionFrame}
+        sortByDepth={mat.heroOpacity < 1}
       >
         <meshPhysicalMaterial
+          // Transmission alone refracts the background, but three excludes
+          // transmissive objects from each other's backdrop -- so without a
+          // blended pass a sphere in front simply hides the one behind it,
+          // and the whole cluster reads as opaque. Blending restores the
+          // stacked-glass look the references depend on.
+          transparent={mat.heroOpacity < 1}
+          opacity={mat.heroOpacity}
+          depthWrite={mat.heroOpacity >= 1}
           transmission={mat.transmission}
           thickness={mat.thickness}
           ior={mat.ior}
@@ -368,7 +407,7 @@ export const SerumScene: React.FC<{
           roughness={Math.min(0.5, mat.roughness + 0.1)}
           metalness={0}
           transparent
-          opacity={look.mode === 'oil' || look.mode === 'blob' ? 1 : 0.45}
+          opacity={look.mode === 'oil' || look.mode === 'blob' ? 1 : 0.72}
           clearcoat={0.8}
           clearcoatRoughness={0.1}
           ior={mat.ior}
@@ -407,12 +446,23 @@ export const SerumScene: React.FC<{
         <Bonds clusters={scene.clusters} t={t} frame={motionFrame} look={look} />
       ) : null}
 
-      <EffectComposer multisampling={0} enableNormalPass={false}>
-        <DepthOfField
-          worldFocusDistance={look.dof.worldFocusDistance}
-          worldFocusRange={look.dof.worldFocusRange}
-          bokehScale={look.dof.bokehScale}
-        />
+      <EffectComposer
+        multisampling={0}
+        enableNormalPass={false}
+        frameBufferType={FRAME_BUFFER_TYPE}
+      >
+        {shown('dof') ? (
+          <DepthOfField
+            worldFocusDistance={look.dof.worldFocusDistance}
+            worldFocusRange={look.dof.worldFocusRange}
+            // bokehScale is in pixels, but compositions are authored at 4K and
+            // previews render at half scale. Without this the blur is half as
+            // wide relative to the frame in the preview as in the master.
+            bokehScale={look.dof.bokehScale * (height / 2160)}
+          />
+        ) : (
+          <></>
+        )}
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
         <Grain
           // Periodic over the loop, so frame 300 gets frame 0's grain.

@@ -24,6 +24,7 @@ const material = (over: Partial<MaterialSpec>): MaterialSpec => ({
   iridescence: 0,
   iridescenceIOR: 1.3,
   iridescenceThicknessRange: [100, 400],
+  heroOpacity: 1,
   ...over,
 });
 
@@ -56,9 +57,9 @@ const MOLECULE_GEOMETRY_SEED = 1001;
 
 const moleculeBackground = (): BackgroundSpec => ({
   mode: 'edgeCool',
-  top: [1.32, 1.32, 1.36],
-  bottom: [1.28, 1.28, 1.33],
-  accent: 0.16,
+  top: [2.15, 2.15, 2.22],
+  bottom: [2.05, 2.05, 2.14],
+  accent: 0.1,
   accentColor: [0.86, 0.9, 1.0],
 });
 
@@ -83,10 +84,10 @@ const moleculeRow = (
     attenuationColor,
     attenuationDistance,
     chromaticAberration: 0.03,
-    envMapIntensity: 0.9,
+    envMapIntensity: 0.42,
   }),
   backTint: attenuationColor,
-  bubble: { rim: '#ffffff', core: bubbleCore, strength: 1.35 },
+  bubble: { rim: '#dfe3ff', core: bubbleCore, strength: 0.28 },
   background: moleculeBackground(),
   lighting: lighting({
     keyIntensity: 2.6,
@@ -94,7 +95,8 @@ const moleculeRow = (
     ambientIntensity: 0.9,
     ambientColor: '#ffffff',
   }),
-  dof: dof(9.4, 0.9, 16),
+  heroLayers: ['mid'],
+  dof: dof(9.4, 1.3, 30),
   grain: 0.02,
   stillFrame: 150,
   stillFrames: [40, 150, 240],
@@ -139,14 +141,14 @@ const giantRow = (
     envMapIntensity: over.envMapIntensity,
   }),
   backTint: over.backTint,
-  bubble: { rim: '#ffffff', core: over.bubbleCore, strength: 1.0 },
+  bubble: { rim: '#f2e8d2', core: over.bubbleCore, strength: 0.5 },
   background: over.background,
   lighting: lighting({
     keyIntensity: over.keyIntensity,
     fillIntensity: over.keyIntensity * 0.35,
     ambientIntensity: 0.6,
   }),
-  dof: dof(9.2, 1.8, 7),
+  dof: dof(9.2, 2.0, 16),
   grain: 0.02,
   stillFrame: 150,
   stillFrames: [30, 150, 250],
@@ -163,8 +165,8 @@ const BLOB_GEOMETRY_SEED = 3003;
 
 const blobBackground = (): BackgroundSpec => ({
   mode: 'vertical',
-  top: [1.12, 1.15, 1.18],
-  bottom: [0.62, 0.66, 0.7],
+  top: [1.6, 1.62, 1.65],
+  bottom: [0.86, 0.9, 0.95],
   accent: 0,
   accentColor: [1, 1, 1],
 });
@@ -188,7 +190,7 @@ const blobRow = (
     ior: 1.5,
     roughness: 0.08,
     attenuationColor,
-    attenuationDistance: 1.6,
+    attenuationDistance: 3.4,
     color,
     clearcoat: 1,
     clearcoatRoughness: 0.04,
@@ -205,7 +207,7 @@ const blobRow = (
     rimColor: '#ffffff',
     ambientIntensity: 0.22,
   }),
-  dof: dof(8.8, 3.4, 2.4),
+  dof: dof(8.8, 2.6, 15),
   grain: 0.018,
   stillFrame: 150,
   stillFrames: [45, 150, 255],
@@ -245,7 +247,8 @@ const fieldRow = (
   backTint,
   bubble: { rim: '#ffffff', core: '#ffffff', strength: 0 },
   background,
-  dof: dof(9.2, 0.8, 11),
+  heroLayers: ['mid'],
+  dof: dof(9.2, 1.0, 26),
   lighting: lighting({
     keyIntensity: 2.0,
     fillIntensity: 0.8,
@@ -287,18 +290,18 @@ const iridescentRow = (): LookRow => ({
   backTint: '#f6c8de',
   bubble: { rim: '#ffd9a8', core: '#f0a8d0', strength: 0.9 },
   background: {
-    mode: 'flat',
-    top: [1.5, 0.84, 1.06],
-    bottom: [1.44, 0.76, 1.0],
-    accent: 0,
-    accentColor: [1, 1, 1],
+    mode: 'radial',
+    top: [1.86, 1.12, 1.4],
+    bottom: [1.58, 0.86, 1.14],
+    accent: 0.22,
+    accentColor: [2.9, 2.0, 2.3],
   },
   lighting: lighting({
     keyIntensity: 3.4,
     fillIntensity: 1.1,
     ambientIntensity: 0.6,
   }),
-  dof: dof(9.0, 2.0, 4),
+  dof: dof(9.0, 2.4, 11),
   grain: 0.018,
   stillFrame: 120,
   stillFrames: [60, 150, 260],
@@ -355,7 +358,7 @@ const oilRow = (
     ambientColor: '#ffe4b0',
     backPanel: { color: panelColor, intensity: 1 },
   }),
-  dof: dof(8.6, 2.6, 3.2),
+  dof: dof(8.6, 3.2, 10),
   grain: 0.02,
   stillFrame: 150,
   stillFrames: [35, 150, 260],
@@ -364,9 +367,9 @@ const oilRow = (
 
 export const LOOKS: LookRow[] = [
   // Look 1 -- three colourways of one asset.
-  moleculeRow('Molecule-Lavender', 'Molecule_Lavender', 1101, '#5f66c8', 3.3, '#6068c0'),
-  moleculeRow('Molecule-Blue', 'Molecule_Blue', 1102, '#4d94c4', 3.5, '#4f96c4'),
-  moleculeRow('Molecule-Gold', 'Molecule_Gold', 1103, '#b98f3d', 3.7, '#b08a38'),
+  moleculeRow('Molecule-Lavender', 'Molecule_Lavender', 1101, '#5f66c8', 1.7, '#6068c0'),
+  moleculeRow('Molecule-Blue', 'Molecule_Blue', 1102, '#4d94c4', 1.8, '#4f96c4'),
+  moleculeRow('Molecule-Gold', 'Molecule_Gold', 1103, '#b98f3d', 1.9, '#b08a38'),
 
   // Look 2 -- soft champagne, then glossy lilac.
   giantRow('GiantSphere-Champagne', 'GiantSphere_Champagne', 2101, {
@@ -374,15 +377,15 @@ export const LOOKS: LookRow[] = [
     attenuationDistance: 3.6,
     bubbleCore: '#9c7526',
     roughness: 0.15,
-    backTint: '#d8b877',
+    backTint: '#c9a05a',
     envMapIntensity: 0.8,
     keyIntensity: 2.0,
     background: {
       mode: 'radial',
-      top: [1.02, 0.88, 0.66],
-      bottom: [0.96, 0.82, 0.6],
-      accent: 0.12,
-      accentColor: [1.1, 0.98, 0.78],
+      top: [1.5, 1.27, 0.93],
+      bottom: [1.38, 1.14, 0.8],
+      accent: 0.14,
+      accentColor: [2.1, 1.82, 1.34],
     },
   }),
   giantRow('GiantSphere-Lilac', 'GiantSphere_Lilac', 2102, {
@@ -390,21 +393,21 @@ export const LOOKS: LookRow[] = [
     attenuationDistance: 3.0,
     bubbleCore: '#5a3a94',
     roughness: 0.02,
-    backTint: '#a98ada',
+    backTint: '#8f6bc8',
     envMapIntensity: 2.3,
     keyIntensity: 3.4,
     background: {
       mode: 'radial',
-      top: [0.86, 0.72, 1.08],
-      bottom: [0.78, 0.64, 1.0],
-      accent: 0.16,
-      accentColor: [0.98, 0.88, 1.18],
+      top: [1.2, 0.97, 1.5],
+      bottom: [1.06, 0.84, 1.38],
+      accent: 0.18,
+      accentColor: [1.74, 1.5, 2.1],
     },
   }),
 
   // Look 3 -- rose, then orange.
-  blobRow('CandyBlob-Rose', 'CandyBlob_Rose', 3101, '#f0a894', '#ffeae2', '#d08770'),
-  blobRow('CandyBlob-Orange', 'CandyBlob_Orange', 3102, '#f0a552', '#ffe4c4', '#d4903c'),
+  blobRow('CandyBlob-Rose', 'CandyBlob_Rose', 3101, '#f2b6a4', '#fff0ea', '#e8a894'),
+  blobRow('CandyBlob-Orange', 'CandyBlob_Orange', 3102, '#f2b464', '#ffecd4', '#e8ae66'),
 
   // Look 4 -- dusty pink reference, plus a pale blue.
   fieldRow(
@@ -413,10 +416,10 @@ export const LOOKS: LookRow[] = [
     4101,
     {
       mode: 'radial',
-      top: [1.16, 0.76, 0.86],
-      bottom: [0.96, 0.58, 0.7],
-      accent: 0.18,
-      accentColor: [1.24, 0.9, 0.98],
+      top: [1.72, 0.95, 1.1],
+      bottom: [1.14, 0.52, 0.68],
+      accent: 0.2,
+      accentColor: [2.6, 1.5, 1.7],
     },
     '#e7a7b6',
     '#eab9c4',
@@ -427,10 +430,10 @@ export const LOOKS: LookRow[] = [
     4102,
     {
       mode: 'radial',
-      top: [0.78, 0.98, 1.16],
-      bottom: [0.6, 0.82, 1.02],
-      accent: 0.18,
-      accentColor: [0.9, 1.08, 1.24],
+      top: [0.92, 1.44, 1.74],
+      bottom: [0.55, 1.0, 1.34],
+      accent: 0.2,
+      accentColor: [1.4, 2.1, 2.6],
     },
     '#9cc2dd',
     '#aecde2',

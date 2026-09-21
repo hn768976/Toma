@@ -202,9 +202,9 @@ const buildMolecule = (rng: Rng): SceneBuild => {
   });
 
   // Foreground clusters: large on screen and very soft.
-  for (let i = 0; i < 2; i++) add('front', rng.range(3.0, 4.2), rng.range(0.6, 0.8), [0.1, 0.18], [1]);
+  for (let i = 0; i < 2; i++) add('front', rng.range(3.0, 4.2), rng.range(0.5, 0.66), [0.1, 0.18], [1]);
   // Background clusters: small and blurred to near-shapelessness.
-  for (let i = 0; i < 6; i++) add('back', rng.range(-8.5, -2.5), rng.range(0.55, 0.95), [0.12, 0.2], [1, 2]);
+  for (let i = 0; i < 4; i++) add('back', rng.range(-8.5, -2.5), rng.range(0.55, 0.95), [0.12, 0.2], [1, 2]);
 
   return { clusters, blobs: [] };
 };
@@ -242,8 +242,8 @@ const buildGiant = (rng: Rng): SceneBuild => {
   addSphere('mid', 1.0, 1.75, [0.1, 0.16], [1]);
   addSphere('front', 3.4, 2.1, [0.1, 0.15], [1]);
   addSphere('front', 2.6, 1.6, [0.1, 0.15], [1]);
-  for (let i = 0; i < 9; i++) {
-    addSphere('back', rng.range(-7.5, -1.6), rng.range(0.85, 1.9), [0.12, 0.2], [1, 2]);
+  for (let i = 0; i < 4; i++) {
+    addSphere('back', rng.range(-7.5, -1.6), rng.range(1.1, 2.2), [0.12, 0.2], [1, 2]);
   }
   return { clusters, blobs: [] };
 };
@@ -280,7 +280,7 @@ const buildBlob = (rng: Rng): SceneBuild => {
     const r = rng.range(0.72, 1.0);
     // Close enough that the smooth-min produces a real fused neck rather than
     // two balls touching at a point.
-    const distance = (anchor.radius + r) * rng.range(1.02, 1.18);
+    const distance = (anchor.radius + r) * rng.range(0.9, 1.02);
     blobMembers.push({
       offset: [
         anchor.offset[0] + dir[0] * distance,
@@ -308,14 +308,14 @@ const buildBlob = (rng: Rng): SceneBuild => {
     });
   };
 
-  addFused('mid', 0.5, 0.82);
-  addFused('mid', -0.2, 0.7);
-  addFused('front', 2.9, 0.88);
-  addSingle('mid', 0.9, 0.95);
-  addSingle('mid', -0.6, 1.05);
-  addSingle('front', 3.1, 1.15);
-  addSingle('front', 2.4, 0.98);
-  for (let i = 0; i < 4; i++) addSingle('back', rng.range(-5.5, -1.4), rng.range(0.7, 1.15));
+  addFused('mid', 0.5, 0.58);
+  addFused('mid', -0.2, 0.5);
+  addFused('front', 2.9, 0.6);
+  addSingle('mid', 0.9, 0.72);
+  addSingle('mid', -0.6, 0.8);
+  addSingle('front', 3.1, 0.86);
+  addSingle('front', 2.4, 0.74);
+  for (let i = 0; i < 6; i++) addSingle('back', rng.range(-5.5, -1.4), rng.range(0.6, 0.95));
 
   return { clusters, blobs };
 };
@@ -329,10 +329,10 @@ const buildField = (rng: Rng): SceneBuild => {
   // Deliberately no hero: an even scatter, coverage out to all four edges, at
   // enough distinct depths that the sharpness falls off gradually.
   const bands: { layer: Layer; z: [number, number]; count: number; radius: [number, number] }[] = [
-    { layer: 'front', z: [3.2, 5.0], count: 11, radius: [0.2, 0.36] },
-    { layer: 'mid', z: [0.2, 1.6], count: 16, radius: [0.14, 0.26] },
-    { layer: 'back', z: [-2.5, -0.4], count: 22, radius: [0.14, 0.3] },
-    { layer: 'back', z: [-7.0, -3.0], count: 30, radius: [0.2, 0.42] },
+    { layer: 'front', z: [3.2, 5.0], count: 5, radius: [0.26, 0.5] },
+    { layer: 'mid', z: [0.2, 1.6], count: 7, radius: [0.2, 0.42] },
+    { layer: 'back', z: [-2.5, -0.4], count: 9, radius: [0.2, 0.44] },
+    { layer: 'back', z: [-7.0, -3.0], count: 12, radius: [0.3, 0.62] },
   ];
   bands.forEach((band) => {
     for (let i = 0; i < band.count; i++) {
@@ -374,9 +374,26 @@ const buildIridescent = (rng: Rng): SceneBuild => {
       filmThickness: rng.range(180, 560),
     });
   };
-  for (let i = 0; i < 6; i++) add('front', rng.range(2.6, 4.2), rng.range(0.3, 0.58));
-  for (let i = 0; i < 11; i++) add('mid', rng.range(-0.4, 1.4), rng.range(0.26, 0.54));
-  for (let i = 0; i < 15; i++) add('back', rng.range(-6.0, -1.2), rng.range(0.22, 0.48));
+  // A tight hero group, then a few stragglers -- not an even field.
+  const cluster = (layer: Layer, z: number, cx: number, cy: number, n: number, radius: [number, number]) => {
+    for (let i = 0; i < n; i++) {
+      const r = rng.range(radius[0], radius[1]);
+      const span = halfHeightAt(z) * 2 + r * 4;
+      clusters.push({
+        members: [{ offset: [0, 0, 0], radius: r, bubbles: [] }],
+        bonds: [],
+        center: [cx + rng.range(-0.75, 0.75), cy + rng.range(-0.75, 0.75) + rng.range(-span / 2, span / 2) * 0.12, z],
+        ...driftFor(rng, r * 2, [0.08, 0.16]),
+        ...spin(rng, [1]),
+        layer,
+        rise: rng.range(0.016, 0.03),
+        filmThickness: rng.range(180, 560),
+      });
+    }
+  };
+  cluster('mid', 0.6, -0.3, 0.2, 5, [0.42, 0.82]);
+  for (let i = 0; i < 3; i++) add('front', rng.range(2.6, 4.2), rng.range(0.34, 0.6));
+  for (let i = 0; i < 5; i++) add('back', rng.range(-6.0, -1.2), rng.range(0.3, 0.56));
   return { clusters, blobs: [] };
 };
 

@@ -45,6 +45,13 @@ export type MaterialSpec = {
   iridescenceIOR: number;
   /** Nanometres; varied slightly per bubble from the seeded PRNG. */
   iridescenceThicknessRange: [number, number];
+  /**
+   * Alpha for the hero layer. Below 1 the layer is blended and depth-sorted,
+   * which is what lets overlapping spheres show through one another; three's
+   * transmission on its own cannot, because transmissive objects are left out
+   * of each other's backdrop.
+   */
+  heroOpacity: number;
 };
 
 export type LightingSpec = {
@@ -73,7 +80,8 @@ export type DofSpec = {
   worldFocusDistance: number;
   /** Depth of the in-focus slab, in world units. */
   worldFocusRange: number;
-  /** Look 1 is extreme, look 3 the mildest. */
+  /** Blur radius in pixels AT 4K; scaled down for lower-resolution renders.
+   *  Look 1 is extreme, look 3 the mildest. */
   bokehScale: number;
 };
 
@@ -115,6 +123,14 @@ export type LookRow = {
    * star on the front surface -- the "lit the wrong way round" failure.
    */
   envIntensity?: number;
+  /**
+   * Which depth layers get true transmission. Everything else falls back to
+   * the cheap approximation. Reserving transmission for the spheres large and
+   * sharp enough to show it is the main cost lever: a foreground cluster
+   * blurred to near-shapelessness looks the same either way and costs a
+   * fraction as much. Defaults to ['mid', 'front'].
+   */
+  heroLayers?: ('front' | 'mid')[];
   background: BackgroundSpec;
   lighting: LightingSpec;
   dof: DofSpec;
