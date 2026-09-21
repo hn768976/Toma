@@ -12,6 +12,7 @@ import {
   particleRingHaloSchema,
   particleRingHaloDefaults,
 } from "./particle-ring/ParticleRingHalo";
+import { VirusCompositions } from "./virus/Root.virus";
 import {
   BASE_WIDTH,
   BASE_HEIGHT,
@@ -52,6 +53,7 @@ export const RemotionRoot: React.FC = () => {
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
       />
+      <VirusCompositions />
     </>
   );
 };
