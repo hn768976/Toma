@@ -14,6 +14,12 @@ import * as THREE from "three";
 
 const fragmentShader = /* glsl */ `
 uniform float uAmount;
+// The effect stage runs on the composer's linear half-float buffer rather than
+// on 8-bit display values, so a given amplitude here lands on screen about a
+// quarter of its nominal size. Measured against the encoded file: without this
+// factor, 2% grain moved the output by barely one code value and left the
+// background plateaus intact.
+const float TO_DISPLAY = 4.0;
 uniform float uFrame;
 uniform vec2 uResolution;
 
@@ -29,7 +35,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   // Scale the grain with luminance so the darkest fields stay clean.
   float lum = dot(inputColor.rgb, vec3(0.2126, 0.7152, 0.0722));
   float w = mix(0.55, 1.0, smoothstep(0.0, 0.35, lum));
-  outputColor = vec4(inputColor.rgb + n * uAmount * w, inputColor.a);
+  outputColor = vec4(inputColor.rgb + n * uAmount * TO_DISPLAY * w, inputColor.a);
 }
 `;
 

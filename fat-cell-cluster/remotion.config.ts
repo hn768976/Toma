@@ -18,6 +18,11 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 
+// The cluster geometry is generated once per render process at module scope,
+// and the packed-tissue composition carries about a million triangles, so the
+// first frame can take well over the 30s default before anything is drawn.
+Config.setDelayRenderTimeoutInMilliseconds(300000);
+
 // Sandboxed environments often block downloading Remotion's own Chrome
 // Headless Shell but ship a Playwright Chromium. Reuse it when it is there; on
 // a normal machine this path does not exist and Remotion uses its own browser.

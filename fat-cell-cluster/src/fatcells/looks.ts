@@ -173,7 +173,7 @@ export const LOOKS: LookRow[] = [
     palette: {
       cell: "#f2dda4", deep: "#844c11", rim: "#ffc972", rimStrength: 0.46,
       sheen: "#ffe6b4", sheenStrength: 0.2,
-      bgCentre: "#f2e2d5", bgEdge: "#c3ab9c", bgFalloff: 0.8,
+      bgCentre: "#e3d2c4", bgEdge: "#b6a08f", bgFalloff: 0.8,
       bgOffset: [-0.22, 0.16],
       mottleAmp: 0.015, mottleFreq: 2.4, aoStrength: 1.0, aoGamma: 2.1,
       roughness: 0.42, specular: 0.22,
@@ -181,7 +181,7 @@ export const LOOKS: LookRow[] = [
     lighting: WARM_LIGHT,
     camera: { fov: 36, fill: 1.02 },
     dof: { focusDistance: 0, focusRange: 6.5, bokehScale: 17, resolutionScale: 0.25 },
-    grain: 0.02,
+    grain: 0.024,
     heroCells: 170, heroResolution: 168, blend: 0.075, overlap: 0.14, density: 0.92,
     extent: [1.05, 1.0, 0.95],
     backdropCount: 9, backdropDepth: [-34, 4],
@@ -223,7 +223,7 @@ export const LOOKS: LookRow[] = [
     palette: {
       cell: "#f6e5ac", deep: "#8e6018", rim: "#ffd484", rimStrength: 0.4,
       sheen: "#ffefc4", sheenStrength: 0.18,
-      bgCentre: "#f0e4cd", bgEdge: "#cbb695", bgFalloff: 0.95,
+      bgCentre: "#e5d8bf", bgEdge: "#c0aa89", bgFalloff: 0.95,
       bgOffset: [-0.2, 0.15],
       mottleAmp: 0.012, mottleFreq: 2.4, aoStrength: 1.0, aoGamma: 2.0,
       roughness: 0.44, specular: 0.2,
@@ -231,7 +231,7 @@ export const LOOKS: LookRow[] = [
     lighting: WARM_LIGHT,
     camera: { fov: 32, fill: 0.98 },
     dof: { focusDistance: 0, focusRange: 6.5, bokehScale: 15, resolutionScale: 0.25 },
-    grain: 0.018,
+    grain: 0.022,
     heroCells: 76, heroResolution: 152, blend: 0.09, overlap: 0.15, density: 0.92,
     extent: [1.0, 1.0, 0.92],
     // Quietest composition of the four: one cluster, a couple of small cells
@@ -291,7 +291,7 @@ export const LOOKS: LookRow[] = [
     lighting: { ...WARM_LIGHT, keyIntensity: 1.0, fillIntensity: 0.45, ambientIntensity: 0.42 },
     camera: { fov: 42, fill: 2.0 },
     dof: { focusDistance: 3.6, focusRange: 3.0, bokehScale: 8, resolutionScale: 0.25 },
-    grain: 0.016,
+    grain: 0.02,
     // Higher key, and the masses are broken up so white shows between them.
     heroCells: 165, heroResolution: 240, blend: 0.08, overlap: 0.2, density: 0.88,
     extent: [13, 6.5, 3.2],
@@ -318,7 +318,7 @@ export const LOOKS: LookRow[] = [
     lighting: WARM_LIGHT,
     camera: { fov: 40, fill: 2.35 },
     dof: { focusDistance: 0, focusRange: 4.2, bokehScale: 12, resolutionScale: 0.25 },
-    grain: 0.02,
+    grain: 0.023,
     // Starts as a packed field of large smooth cells filling the frame.
     heroCells: 60, heroResolution: 36, blend: 0.14, overlap: 0.12, density: 0.66,
     extent: [8.0, 4.3, 1.7],

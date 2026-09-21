@@ -57,20 +57,32 @@ const decodePng = (path) => {
 };
 
 const report = (label, values) => {
-  let longest = 1, run = 1, at = 0, steps = 0;
+  // A run of identical values only means banding if the value is inside the
+  // representable range. A clipped highlight is flat because it is clipped,
+  // which is an exposure problem, not a quantisation one, and counting it as
+  // banding sends you chasing grain that cannot help.
+  let longest = 1, run = 1, at = 0, steps = 0, clipped = 0;
   for (let i = 1; i < values.length; i++) {
-    if (values[i] === values[i - 1]) {
+    if (values[i] === 0 || values[i] === 255) clipped++;
+    const flat = values[i] === values[i - 1];
+    const inRange = values[i] > 0 && values[i] < 255;
+    if (flat && inRange) {
       run++;
       if (run > longest) { longest = run; at = i - run + 1; }
     } else {
-      if (run >= 12) steps++;
+      if (run >= 12 && inRange) steps++;
       run = 1;
     }
   }
+  const changes = values.reduce((n, v, i) => n + (i > 0 && v !== values[i - 1] ? 1 : 0), 0);
+  const distinct = new Set(values).size;
   const verdict = longest >= 24 ? "BANDING" : longest >= 12 ? "marginal" : "clean";
   console.log(
     `${label.padEnd(12)} longest flat run ${String(longest).padStart(4)}px ` +
-    `at ${at}, plateaus>=12px: ${steps}  -> ${verdict}`,
+    `at ${String(at).padStart(4)}, plateaus>=12px: ${String(steps).padStart(3)}, ` +
+    `distinct ${String(distinct).padStart(3)}, ` +
+    `neighbour changes ${String(Math.round((100 * changes) / values.length)).padStart(3)}%, ` +
+    `clipped ${String(Math.round((100 * clipped) / values.length)).padStart(3)}%  -> ${verdict}`,
   );
 };
 
