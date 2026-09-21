@@ -167,7 +167,11 @@ for (const file of files) {
     const [l, c, r] = [at(0.2), at(0.5), at(0.8)];
     if (Math.max(...c) < 40) continue;
     const hs = [hue(l), hue(c), hue(r)].filter((h) => h >= 0);
-    const spread = hs.length < 2 ? 0 : Math.max(...hs) - Math.min(...hs);
+    // Hue is circular: 350 and 11 degrees are 21 apart, not 339.
+    const arc = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+    let spread = 0;
+    for (let a = 0; a < hs.length; a++)
+      for (let b = a + 1; b < hs.length; b++) spread = Math.max(spread, arc(hs[a], hs[b]));
     const lums = [l, c, r].map((q) => 0.2126 * q[0] + 0.7152 * q[1] + 0.0722 * q[2]);
     const lumRange = Math.max(...lums) - Math.min(...lums);
     if (!best || spread > best.spread) best = { l, c, r, spread, lumRange };
