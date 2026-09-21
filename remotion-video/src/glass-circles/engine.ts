@@ -4,7 +4,9 @@ import {
   Group,
   Matrix3,
   Matrix4,
+  Material,
   Mesh,
+  MeshBasicNodeMaterial,
   NeutralToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
@@ -39,6 +41,7 @@ import {
 } from "./layout";
 import {
   createBackdropMaterial,
+  createFilmMaterial,
   createGlassMaterial,
   createRimMaterial,
 } from "./materials";
@@ -259,7 +262,10 @@ export const createEngine = async (
   backdropMesh.position.z = BACKDROP_Z;
   scene.add(backdropMesh);
 
+  // Clear glass shares one material across every disc; tinted film cannot,
+  // since each circle carries its own colour pair.
   const glassMaterial = createGlassMaterial(variant);
+  const filmMaterials: MeshBasicNodeMaterial[] = [];
   const rim = createRimMaterial(variant, envTexture);
 
   // Tessellate to the delivery resolution rather than a fixed count: a fixed
@@ -275,9 +281,15 @@ export const createEngine = async (
   const discs = variant.discs.map((spec) => {
     const group = new Group();
     const segments = segmentsFor(spec.radius);
+    let bodyMaterial: Material = glassMaterial;
+    if (variant.body === "film" && spec.tint) {
+      const film = createFilmMaterial(variant, spec.radius, spec.tint);
+      filmMaterials.push(film);
+      bodyMaterial = film;
+    }
     const lens = new Mesh(
       makeLensGeometry(spec.radius, spec.halfThickness, segments),
-      glassMaterial,
+      bodyMaterial,
     );
     const rimMesh = new Mesh(
       makeRimGeometry(spec.radius, spec.halfThickness, segments),
@@ -401,6 +413,9 @@ export const createEngine = async (
     backdrop.material.dispose();
     rim.material.dispose();
     glassMaterial.dispose();
+    for (const film of filmMaterials) {
+      film.dispose();
+    }
     envTexture.dispose();
     envTarget.dispose();
     pmrem.dispose();

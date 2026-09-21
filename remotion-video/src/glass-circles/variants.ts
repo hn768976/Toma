@@ -37,7 +37,7 @@ import {
 } from "./layout";
 
 export type GlassVariant = {
-  id: "v1" | "v2" | "v3" | "v4";
+  id: "v1" | "v2" | "v3" | "v4" | "v5";
   label: string;
   /** The discs this variant puts on screen, and how they move. */
   discs: DiscSpec[];
@@ -96,6 +96,14 @@ export type GlassVariant = {
 
   bloom: { strength: number; radius: number; threshold: number };
 
+  /**
+   * How the disc bodies are shaded. "glass" is physical transmission with
+   * dispersion; "film" is tinted stock that multiplies where circles overlap.
+   */
+  body: "glass" | "film";
+  /** Only read when body is "film". */
+  film: { edgeDarkness: number; edgeWidth: number };
+
   /** Fine neutral texture over the whole frame. */
   grain: number;
 
@@ -107,6 +115,8 @@ export type GlassVariant = {
 
 export const V1: GlassVariant = {
   id: "v1",
+  body: "glass" as const,
+  film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Dark field, neon blue rim light",
   discs: THREE_CIRCLE_LAYOUT,
   backdrop: {
@@ -194,6 +204,8 @@ export const V1: GlassVariant = {
 
 export const V2: GlassVariant = {
   id: "v2",
+  body: "glass" as const,
+  film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Bright sky-blue field, soft prismatic glass",
   discs: THREE_CIRCLE_LAYOUT,
   backdrop: {
@@ -280,62 +292,64 @@ const CIRCLE_FIELD = buildField({
   columns: 5,
   rows: 3,
   spread: [3.6, 2.3],
-  radius: [0.62, 1.15],
+  radius: [0.5, 1.3],
   depth: [-1.1, 1.1],
   halfThickness: SHEET_HALF_THICKNESS,
-  jitter: 0.85,
+  jitter: 1.0,
   drift: [0.18, 0.16, 0.12],
   seed: 20240921,
 });
 
 export const V3: GlassVariant = {
   id: "v3",
+  body: "glass" as const,
+  film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Violet field, cyan and green crescent light",
   discs: CIRCLE_FIELD,
   backdrop: {
-    top: "#3b1b6b",
-    bottom: "#1a0730",
-    glowColor: "#6a2ea8",
-    glowIntensity: 0.34,
+    top: "#2e1257",
+    bottom: "#160726",
+    glowColor: "#5a2596",
+    glowIntensity: 0.12,
     glowRadius: 5.4,
-    washColor: "#2a0f52",
-    washIntensity: 0.22,
-    vignette: 0.42,
+    washColor: "#24094a",
+    washIntensity: 0.12,
+    vignette: 0.45,
   },
   environment: {
-    up: [0.05, 0.03, 0.12],
-    horizon: [0.03, 0.02, 0.08],
-    down: [0.015, 0.008, 0.035],
+    up: [0.03, 0.02, 0.07],
+    horizon: [0.02, 0.012, 0.05],
+    down: [0.01, 0.005, 0.022],
     lights: [
       // Cyan-green key: the bright crescent through the body of each sphere.
       {
         u: 0.17,
         v: 0.62,
-        width: 0.13,
-        height: 0.05,
+        width: 0.08,
+        height: 0.025,
         tilt: 0.05,
         color: [0.25, 1.0, 0.85],
-        intensity: 26,
+        intensity: 8,
       },
       // Electric blue fill, which is what most of the crescents read as.
       {
         u: 0.33,
         v: 0.5,
-        width: 0.18,
-        height: 0.07,
+        width: 0.15,
+        height: 0.05,
         tilt: -0.03,
-        color: [0.3, 0.45, 1.0],
-        intensity: 16,
+        color: [0.25, 0.4, 1.0],
+        intensity: 1.2,
       },
       // Magenta counter-light on the opposite edge.
       {
         u: 0.74,
         v: 0.44,
-        width: 0.12,
-        height: 0.045,
+        width: 0.07,
+        height: 0.022,
         tilt: 0.07,
         color: [1.0, 0.25, 0.85],
-        intensity: 12,
+        intensity: 2.5,
       },
     ],
     intensity: 1.0,
@@ -347,72 +361,74 @@ export const V3: GlassVariant = {
     thickness: 0.1,
     attenuationColor: "#7a4ad0",
     attenuationDistance: 2.0,
-    envMapIntensity: 0.3,
+    envMapIntensity: 0.25,
   },
   rim: {
-    specularGain: 4.5,
-    dispersionGain: 7.0,
+    specularGain: 0.6,
+    dispersionGain: 1.0,
     iorSpread: 0.09,
     edgePower: 6.0,
     bandPower: 2.2,
     innerFalloff: 6.0,
     tint: "#ffffff",
   },
-  bloom: { strength: 0.5, radius: 0.7, threshold: 0.8 },
+  bloom: { strength: 0.35, radius: 0.7, threshold: 0.8 },
   grain: 0.014,
   toneMapping: "aces",
   exposure: 1.0,
-  clearColor: "#1a0730",
+  clearColor: "#160726",
 };
 
 export const V4: GlassVariant = {
   id: "v4",
+  body: "glass" as const,
+  film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Near-black field, cyan crescents against crimson rims",
   discs: CIRCLE_FIELD,
   backdrop: {
     top: "#0a0410",
-    bottom: "#050108",
-    glowColor: "#6b0f1e",
-    glowIntensity: 0.42,
+    bottom: "#040107",
+    glowColor: "#5e0c1a",
+    glowIntensity: 0.14,
     glowRadius: 4.8,
-    washColor: "#12030a",
-    washIntensity: 0.25,
+    washColor: "#10030a",
+    washIntensity: 0.10,
     vignette: 0.5,
   },
   environment: {
-    up: [0.02, 0.025, 0.05],
-    horizon: [0.012, 0.014, 0.032],
-    down: [0.006, 0.005, 0.014],
+    up: [0.015, 0.018, 0.035],
+    horizon: [0.01, 0.011, 0.024],
+    down: [0.005, 0.004, 0.011],
     lights: [
       // Cool key: the wide cyan-white crescent.
       {
         u: 0.2,
         v: 0.64,
-        width: 0.14,
-        height: 0.055,
+        width: 0.085,
+        height: 0.026,
         tilt: 0.04,
         color: [0.45, 0.85, 1.0],
-        intensity: 30,
+        intensity: 9,
       },
       // Deep blue fill so the bodies do not go flat black.
       {
         u: 0.36,
         v: 0.5,
-        width: 0.2,
-        height: 0.08,
+        width: 0.16,
+        height: 0.05,
         tilt: -0.03,
         color: [0.2, 0.32, 1.0],
-        intensity: 10,
+        intensity: 1.0,
       },
       // Crimson counter-light: the hot thin line on the far silhouette.
       {
         u: 0.72,
         v: 0.42,
-        width: 0.1,
-        height: 0.04,
+        width: 0.06,
+        height: 0.02,
         tilt: 0.08,
         color: [1.0, 0.1, 0.22],
-        intensity: 22,
+        intensity: 6,
       },
     ],
     intensity: 1.0,
@@ -424,22 +440,116 @@ export const V4: GlassVariant = {
     thickness: 0.1,
     attenuationColor: "#3a5ad0",
     attenuationDistance: 2.0,
-    envMapIntensity: 0.3,
+    envMapIntensity: 0.25,
   },
   rim: {
-    specularGain: 5.0,
-    dispersionGain: 7.5,
+    specularGain: 0.65,
+    dispersionGain: 1.1,
     iorSpread: 0.09,
     edgePower: 6.0,
     bandPower: 2.2,
     innerFalloff: 6.0,
     tint: "#ffffff",
   },
-  bloom: { strength: 0.6, radius: 0.72, threshold: 0.75 },
+  bloom: { strength: 0.38, radius: 0.7, threshold: 0.8 },
   grain: 0.016,
   toneMapping: "aces",
   exposure: 1.05,
-  clearColor: "#050108",
+  clearColor: "#040107",
+};
+
+
+/**
+ * V5 is the same round glass again, but as coloured stock on a white field.
+ *
+ * The reference's defining behaviour is that overlaps compound: two circles
+ * crossing make a third, darker colour, the way gels do. That is a multiply,
+ * not a refraction, so the bodies here are tinted film rather than clear glass
+ * -- see createFilmMaterial. The geometry, the field and the motion are
+ * unchanged from V3 and V4.
+ */
+const FILM_TINTS = [
+  { from: "#ff6f91", to: "#ffd98a" },
+  { from: "#ff9a6b", to: "#ff6b7a" },
+  { from: "#7fe0c0", to: "#7fb0ff" },
+  { from: "#ff8ad6", to: "#ffbf7f" },
+  { from: "#8fe0ff", to: "#7f9aff" },
+  { from: "#ffe08a", to: "#b8e07f" },
+  { from: "#ff7fb5", to: "#c78aff" },
+  { from: "#ffb37f", to: "#ffe89a" },
+];
+
+const FILM_FIELD = buildField({
+  columns: 5,
+  rows: 3,
+  spread: [3.6, 2.3],
+  radius: [0.5, 1.3],
+  depth: [-1.1, 1.1],
+  halfThickness: SHEET_HALF_THICKNESS,
+  jitter: 1.0,
+  drift: [0.18, 0.16, 0.12],
+  tints: FILM_TINTS,
+  seed: 20240922,
+});
+
+export const V5: GlassVariant = {
+  id: "v5",
+  body: "film" as const,
+  film: { edgeDarkness: 0.55, edgeWidth: 0.28 },
+  label: "White field, overlapping coloured film",
+  discs: FILM_FIELD,
+  backdrop: {
+    top: "#ffffff",
+    bottom: "#f4f6f9",
+    glowColor: "#ffffff",
+    glowIntensity: 0.04,
+    glowRadius: 5.5,
+    washColor: "#eef2f7",
+    washIntensity: 0.05,
+    vignette: 0.06,
+  },
+  environment: {
+    up: [0.7, 0.72, 0.78],
+    horizon: [0.55, 0.57, 0.62],
+    down: [0.35, 0.36, 0.4],
+    lights: [
+      {
+        u: 0.18,
+        v: 0.66,
+        width: 0.1,
+        height: 0.04,
+        tilt: 0.04,
+        color: [1.0, 1.0, 1.0],
+        intensity: 6,
+      },
+    ],
+    intensity: 1.0,
+  },
+  glass: {
+    ior: 1.5,
+    dispersion: 0,
+    roughness: 0.12,
+    thickness: 0.1,
+    attenuationColor: "#ffffff",
+    attenuationDistance: 4.0,
+    envMapIntensity: 0.1,
+  },
+  // The rim stays, but quietly: the reference shows a thin bright catch on a
+  // few edges rather than the neon arcs of the darker pieces.
+  rim: {
+    specularGain: 0.5,
+    dispersionGain: 0.8,
+    iorSpread: 0.06,
+    edgePower: 7.0,
+    bandPower: 2.6,
+    innerFalloff: 8.0,
+    tint: "#ffffff",
+  },
+  bloom: { strength: 0.0, radius: 0.5, threshold: 2.0 },
+  grain: 0.008,
+  toneMapping: "neutral",
+  exposure: 1.0,
+  clearColor: "#ffffff",
 };
 
 export const VARIANTS: Record<GlassVariant["id"], GlassVariant> = {
@@ -447,4 +557,5 @@ export const VARIANTS: Record<GlassVariant["id"], GlassVariant> = {
   v2: V2,
   v3: V3,
   v4: V4,
+  v5: V5,
 };

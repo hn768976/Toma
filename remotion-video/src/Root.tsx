@@ -146,6 +146,26 @@ export const RemotionRoot: React.FC = () => {
         schema={glassCirclesSchema}
         defaultProps={{ ...glassCirclesDefaults, variant: "v4" as const }}
       />
+      <Composition
+        id="GlassCircles-V5-1080p"
+        component={GlassCircles}
+        durationInFrames={DURATION_15S}
+        fps={GLASS_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v5" as const }}
+      />
+      <Composition
+        id="GlassCircles-V5-4K"
+        component={GlassCircles}
+        durationInFrames={DURATION_15S}
+        fps={GLASS_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v5" as const }}
+      />
     </>
   );
 };

@@ -24,6 +24,11 @@ export type DiscSpec = {
    */
   halfThickness: number;
   center: [number, number, number];
+  /**
+   * Colour pair for the tinted-film body, as a gradient across the disc.
+   * Null for the clear-glass variants, which take their colour from the light.
+   */
+  tint: { from: string; to: string } | null;
   /** Drift amplitudes and whole-cycle frequencies, per axis. */
   drift: {
     amplitude: [number, number, number];
@@ -44,6 +49,7 @@ export type DiscSpec = {
 export const THREE_CIRCLE_LAYOUT: DiscSpec[] = [
   {
     name: "hero",
+    tint: null,
     radius: 1.95,
     halfThickness: SHEET_HALF_THICKNESS,
     center: [0.25, -0.12, 0],
@@ -61,6 +67,7 @@ export const THREE_CIRCLE_LAYOUT: DiscSpec[] = [
   },
   {
     name: "small",
+    tint: null,
     radius: 0.56,
     halfThickness: SHEET_HALF_THICKNESS,
     center: [-2.05, 1.18, 0.62],
@@ -78,6 +85,7 @@ export const THREE_CIRCLE_LAYOUT: DiscSpec[] = [
   },
   {
     name: "edge",
+    tint: null,
     radius: 1.55,
     halfThickness: SHEET_HALF_THICKNESS,
     center: [2.95, -0.75, -0.55],
@@ -121,6 +129,8 @@ export type FieldOptions = {
   jitter: number;
   /** Drift amplitude per axis. */
   drift: [number, number, number];
+  /** Colour pairs for tinted-film variants, handed out across the field. */
+  tints?: Array<{ from: string; to: string }>;
   seed: number;
 };
 
@@ -156,8 +166,14 @@ export const buildField = (options: FieldOptions): DiscSpec[] => {
       // Frequencies stay whole so the drift closes the loop exactly.
       const frequency = (): number => (random() < 0.7 ? 1 : 2);
 
+      const tints = options.tints;
+      const tint = tints
+        ? tints[Math.floor(random() * tints.length) % tints.length]
+        : null;
+
       discs.push({
         name: `field-${row}-${column}`,
+        tint,
         radius,
         halfThickness: options.halfThickness,
         center: [x, y, z],

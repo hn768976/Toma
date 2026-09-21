@@ -2,6 +2,7 @@ import {
   AdditiveBlending,
   Color,
   Matrix3,
+  MultiplyBlending,
   MeshBasicNodeMaterial,
   MeshPhysicalNodeMaterial,
   Vector2,
@@ -20,6 +21,7 @@ import {
   positionWorld,
   reflect,
   refract,
+  positionLocal,
   smoothstep,
   texture,
   uniform,
@@ -212,4 +214,54 @@ export const createRimMaterial = (
       envRotation.value.copy(m);
     },
   };
+};
+
+/**
+ * A body of tinted transparent film, for the variant whose circles are coloured
+ * rather than clear.
+ *
+ * It blends by multiplication over a white field, which is the whole point:
+ * where two circles overlap, the colours compound and darken exactly as two
+ * gels laid over each other would. Physical transmission cannot do that -- a
+ * transmissive mesh only samples the opaque scene, so the disc in front would
+ * simply hide the one behind instead of tinting it.
+ *
+ * Each disc carries its own colour pair, graded across the face, with the
+ * silhouette darkening into the thin outline the reference draws around every
+ * circle.
+ */
+export const createFilmMaterial = (
+  variant: GlassVariant,
+  radius: number,
+  tint: { from: string; to: string },
+): MeshBasicNodeMaterial => {
+  const cfg = variant.film;
+  const from = uniform(new Color(tint.from));
+  const to = uniform(new Color(tint.to));
+
+  const material = new MeshBasicNodeMaterial();
+  material.colorNode = Fn(() => {
+    // Disc-local coordinates, so the gradient travels with the circle.
+    const local = positionLocal.xy.div(float(radius));
+    const across = local.y.mul(0.8).add(local.x.mul(0.6)).mul(0.5).add(0.5);
+    const graded = mix(from, to, smoothstep(float(0), float(1), across));
+
+    // The rim turns away from the camera and reads as a darker outline.
+    const facing = normalWorld.normalize().dot(
+      cameraPosition.sub(positionWorld).normalize(),
+    );
+    const outline = mix(
+      float(cfg.edgeDarkness),
+      float(1),
+      smoothstep(float(0), float(cfg.edgeWidth), facing.abs()),
+    );
+
+    return graded.mul(outline);
+  })();
+
+  material.transparent = true;
+  material.blending = MultiplyBlending;
+  material.depthWrite = false;
+
+  return material;
 };
