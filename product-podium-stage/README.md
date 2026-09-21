@@ -312,6 +312,29 @@ anything accumulated would both flicker and break the loop.
   to below the bottom, so every sphere resets off-screen, staggered.
 - **The travelling glow** on look 3's wall line completes exactly one pass.
 
+### Checking a loop, and the trap in checking it
+
+The useful measure is not whether frame 299 equals frame 0 - it should not,
+they are one step apart - but whether the step *from* 299 *to* 0 is the same
+size as any other step. Compare the mean absolute difference across the wrap
+against the difference between two ordinary adjacent frames; a ratio near 1
+means the wrap is indistinguishable from a normal frame advance.
+
+**Measure it on losslessly rendered frames, not on the encoded file.** Frame 0
+is an IDR keyframe, encoded independently of everything around it, so a
+299-to-0 comparison in an H.264 file always includes a quantisation delta that
+299-to-298 does not. On this project that confound alone reads as roughly 5x,
+which is large enough to look exactly like a real seam:
+
+```bash
+npx remotion still <id> /tmp/f0.png   --frame=0   --scale=0.25
+npx remotion still <id> /tmp/f298.png --frame=298 --scale=0.25
+npx remotion still <id> /tmp/f299.png --frame=299 --scale=0.25
+# then compare mean |f299 - f0| against mean |f299 - f298|
+```
+
+Measured that way, all four looks sit at about 1.0x.
+
 ---
 
 ## Adding a new look
