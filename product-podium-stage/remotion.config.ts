@@ -8,7 +8,27 @@
 import { existsSync } from "node:fs";
 import { Config } from "@remotion/cli/config";
 
-Config.setVideoImageFormat("jpeg");
+// PNG frames, not JPEG.
+//
+// Remotion writes each video frame to disk before handing it to the encoder,
+// and the default is JPEG. That is a lossy step, and it lands on this
+// project's output before H.264 ever sees it: measured on look 4's lilac
+// field, the JPEG intermediate already shows a 200px flat run with 4% of
+// adjacent pixels differing - identical to the final mp4, and unchanged by
+// CRF. The in-shader dither that keeps the big gradients from banding does
+// not survive it.
+//
+// Same frame, same measurement, through each pipeline:
+//
+//     rendered frame (what the post chain produces)    9px   57%
+//     JPEG intermediate, any CRF                     200px    4%
+//     PNG intermediate, crf 18                       502px    3%
+//     PNG intermediate, crf 12                        68px   21%
+//
+// So both stages matter and neither fix works on its own. PNG costs a little
+// more disk and write time per frame; this project is CPU-bound on
+// rasterisation, so it is close to free.
+Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 
 // WebGL needs a real GL backend in headless Chromium. "angle" picks the

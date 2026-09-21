@@ -66,39 +66,47 @@ npx remotion render BubbleDrift-PodiumMint  out/BubbleDrift_PodiumMint.mp4  --sc
 `remotion.config.ts` supplies the rest: H.264, CRF 12, BT.709 and muted. The
 `--crf=12` above is explicit so each command reads completely on its own.
 
-### Why CRF 12 and not 16
+### Why CRF 12 *and* PNG frames
 
 The post chain dithers every gradient before it is written, which is what stops
-the large smooth backdrops banding. H.264 then throws that away: x264 quantises
-low-amplitude noise in flat areas to nothing, and the banding the dither existed
-to prevent comes back in the encode. So the encoded file has to be checked, not
-the render.
+the large smooth backdrops banding. Two separate stages then throw that away,
+and fixing either one alone achieves almost nothing.
 
-Measured on look 4's lilac field, the worst case in the set — the longest run of
-identical pixel values down a 900 px slice, and the share of adjacent pixels
+**Remotion writes each video frame to disk before encoding it, and the default
+format is JPEG** — a lossy step that lands on the output before H.264 sees it.
+**Then x264 quantises what low-amplitude noise remains** in flat areas to
+nothing.
+
+Measured on look 4's lilac field, the worst case in the set — the longest run
+of identical pixel values down a 900 px slice, and the share of adjacent pixels
 that differ at all:
 
-| encode | longest flat run | adjacent pixels differing |
+| pipeline | longest flat run | adjacent pixels differing |
 |---|---|---|
-| source frame (lossless PNG) | 9 px | 57% — dither intact |
-| h264 crf 18 | 506 px | 3% — dither gone, visible bands |
-| **h264 crf 16** | **506 px** | **3% — no better than 18** |
-| h264 crf 16 `-tune grain` | 426 px | 3% — does not help |
-| **h264 crf 12** | **43 px** | **27% — dither largely survives** |
+| rendered frame (what the post chain produces) | 9 px | 57% — dither intact |
+| JPEG frames, crf 18 | 200 px | 4% |
+| JPEG frames, crf 12 | 200 px | 4% — CRF makes no difference at all |
+| PNG frames, crf 18 | 502 px | 3% — worse; the encoder now does the damage |
+| **PNG frames, crf 12** | **68 px** | **21% — most of the dither survives** |
 
-CRF 16 is indistinguishable from 18 on this content, so the usual "16 is the
-archival setting" reasoning does not hold here. The dark looks band far less
-(look 3 measures 46 px / 45% at crf 18) because there is enough detail for the
-encoder to keep, but the set ships at one setting.
+The JPEG row is the important one: with JPEG frames the CRF is irrelevant,
+because the damage is already done by the time the encoder runs. That is why
+the project sets **both** `setVideoImageFormat("png")` and `setCrf(12)`.
+
+The dark looks are far less affected — look 3 measures 46 px / 45% even through
+the JPEG path — because there is enough detail for both stages to preserve. But
+the set ships at one setting.
 
 This matters *more* at 4K, not less: the same gradient spans twice as many
 pixels, so each band is twice as wide.
 
-If you change the look of a backdrop, re-run the check on the encoded file:
+If you change a backdrop, re-run the check on the encoded file rather than the
+render:
 
 ```bash
 ffmpeg -i out/BubbleDrift_PodiumLilac.mp4 -vf "select='eq(n\,40)'" -frames:v 1 /tmp/f.png
-# then compare a slice of /tmp/f.png against the same slice of the PNG still
+# compare a vertical slice of /tmp/f.png against the same slice of the PNG still;
+# a long run of identical values is a band
 ```
 
 ### Settings that are easy to lose
