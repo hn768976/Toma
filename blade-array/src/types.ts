@@ -97,6 +97,12 @@ export type BladeArrayConfig = {
    *  across each blade, and how tight that ramp is. */
   shadeMix: number;
   shadePow: number;
+  /**
+   * Tightens the fill light's falloff across a blade, so unlit blades read as a
+   * comb rather than an even plateau. Needed where the frame is mostly black:
+   * a plateau is both uglier and the first thing the encoder throws away.
+   */
+  fillSharp: number;
   /** 3C: confines light to one horizontal band. null = off. */
   band: null | {
     /** Half-width of the band, in normalised elevation. */
@@ -121,4 +127,10 @@ export type BladeArrayConfig = {
   bloomThreshold: number;
   /** Film grain, as a fraction of full scale. */
   grain: number;
+  /**
+   * How much of that grain survives into the darks, as a fraction. Low keeps a
+   * black field clean; high forces the encoder to keep spending bits there, so
+   * the faint blade comb in a large black region is not flattened away.
+   */
+  grainFloor: number;
 };

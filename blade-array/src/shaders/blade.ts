@@ -118,6 +118,7 @@ uniform float uElevFreq;
 uniform float uElevSym;
 uniform float uShadeMix;
 uniform float uShadePow;
+uniform float uFillSharp;
 uniform float uBandHalf;
 uniform float uBandSoft;
 uniform float uBandAmp;
@@ -225,12 +226,16 @@ void main() {
   col += lut(u, 0.25) * (uKeyInt * h * gain);
 
   // Fill. Keeps unlit blades physically present in the black regions: brighten
-  // an extracted frame heavily and the ribbing is still there. The floor is
-  // small on purpose, so the seams stay at zero and the field reads as
-  // genuinely black rather than as a grey haze - and so that what survives is
-  // a comb the encoder can hold rather than a uniform level it crushes away.
+  // an extracted frame heavily and the ribbing is still there.
+  //
+  // What survives quantisation is contrast, not level - a uniform lift just
+  // turns the black field grey and x264 flattens it anyway. uFillSharp tightens
+  // the falloff across the blade so the fill is a comb rather than a plateau:
+  // bright along the blade's lit face, zero at the seams. At 0 this is the
+  // plain wrap term, which is all the looks that are lit edge to edge need.
   const vec3 fillDir = vec3(0.7191, 0.2197, 0.6592);
-  col += uAmbient * uBaseColor * (0.06 + 0.94 * max(dot(N, fillDir), 0.0));
+  float fillShape = mix(max(dot(N, fillDir), 0.0), ndp * ndp, uFillSharp);
+  col += uAmbient * uBaseColor * (0.06 + 0.94 * fillShape);
 
   // Tonemap here rather than in a post pass: the composer's frame buffer is
   // 8-bit sRGB, which is far cheaper than half-float in software rasterisation

@@ -52,12 +52,14 @@ const base = {
   elevSym: 0,
   shadeMix: 0.45,
   shadePow: 2.0,
+  fillSharp: 0,
   band: null,
   backdrop: 0,
   exposure: 0.45,
   bloomIntensity: 0.35,
   bloomThreshold: 0.8,
   grain: 0.02,
+  grainFloor: 0.22,
 } satisfies Omit<BladeArrayConfig, "id" | "outName" | "stops">;
 
 // ---------------------------------------------------------------------------
@@ -290,16 +292,19 @@ const neonBase = {
   bladesPerFrame: 40,
   fill: 1.0,
   arcDeg: 24,
-  ambient: 0.020,
+  ambient: 0.055,
   keyIntensity: 1.3,
   // Strong bright-core-to-dark-edge ramp: each blade has to read as a
   // separately lit object with a dark seam, not as one even corrugation.
   shadeMix: 0.78,
   shadePow: 2.6,
+  fillSharp: 1,
   diffGain: 0.012,
   bloomIntensity: 0.5,
   bloomThreshold: 0.72,
   grain: 0.018,
+  // Mostly black field: without this the encoder flattens the unlit blades.
+  grainFloor: 0.45,
 };
 
 export const neonColumns: BladeArrayConfig = {
@@ -315,7 +320,7 @@ export const neonColumns: BladeArrayConfig = {
   bowCenters: [0.26, 0.74],
   bowWidth: 0.17,
   azimZoom: 2.08,
-  exposure: 0.3,
+  exposure: 0.32,
   // Hourglass: glowing top and bottom, dark waist.
   elevSym: 1,
   elevLo: 0.45,

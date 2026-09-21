@@ -13,12 +13,17 @@ import { Uniform, Vector2 } from "three";
  * `Math.random()` - and the frame index handed in is already `frame % 600`, so
  * frame 600 gets frame 0's grain and the loop closes.
  *
- * The grain is weighted down in the darks: look 3's black field has to stay
- * genuinely black, and the dither alone is enough to break banding there.
+ * The grain is weighted down in the darks, so a black field stays black - but
+ * not too far down. x264 spends no bits on a large near-static dark area and
+ * will flatten the faint blade comb in it to nothing; grain is what forces it
+ * to keep coding there. uGrainFloor is per-composition for that reason: the
+ * neon looks, which are mostly black field, need a higher floor than the ones
+ * that are lit edge to edge.
  */
 const fragmentShader = /* glsl */ `
 uniform float uFrame;
 uniform float uGrain;
+uniform float uGrainFloor;
 uniform vec2 uResolution;
 
 float hash13(vec3 p3) {
@@ -41,7 +46,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 
   float g = hash13(vec3(P * 1.7 + 3.1, uFrame + 57.0)) * 2.0 - 1.0;
   float l = dot(s, vec3(0.2126, 0.7152, 0.0722));
-  s += g * uGrain * mix(0.22, 1.0, sqrt(clamp(l, 0.0, 1.0)));
+  s += g * uGrain * mix(uGrainFloor, 1.0, sqrt(clamp(l, 0.0, 1.0)));
 
   s = clamp(s, 0.0, 1.0);
   outputColor = vec4(s * s, inputColor.a);
@@ -49,12 +54,13 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 `;
 
 export class GradeEffect extends Effect {
-  constructor(grain: number) {
+  constructor(grain: number, grainFloor: number) {
     super("GradeEffect", fragmentShader, {
       blendFunction: BlendFunction.NORMAL,
       uniforms: new Map<string, Uniform<unknown>>([
         ["uFrame", new Uniform(0)],
         ["uGrain", new Uniform(grain)],
+        ["uGrainFloor", new Uniform(grainFloor)],
         ["uResolution", new Uniform(new Vector2(1, 1))],
       ]),
     });

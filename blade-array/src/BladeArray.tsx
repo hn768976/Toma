@@ -81,6 +81,7 @@ const Blades: React.FC<{ cfg: BladeArrayConfig }> = ({ cfg }) => {
         uElevSym: { value: cfg.elevSym },
         uShadeMix: { value: cfg.shadeMix },
         uShadePow: { value: cfg.shadePow },
+        uFillSharp: { value: cfg.fillSharp },
         uBandHalf: { value: band ? band.half : 0 },
         uBandSoft: { value: band ? band.soft : 1 },
         uBandAmp: { value: band ? band.amp : 0 },
@@ -129,8 +130,12 @@ const Blades: React.FC<{ cfg: BladeArrayConfig }> = ({ cfg }) => {
   );
 };
 
-const Grade: React.FC<{ grain: number; frame: number }> = ({ grain, frame }) => {
-  const effect = useMemo(() => new GradeEffect(grain), [grain]);
+const Grade: React.FC<{ grain: number; grainFloor: number; frame: number }> = ({
+  grain,
+  grainFloor,
+  frame,
+}) => {
+  const effect = useMemo(() => new GradeEffect(grain, grainFloor), [grain, grainFloor]);
   effect.setFrame(frame);
   return <primitive object={effect} dispose={null} />;
 };
@@ -150,7 +155,7 @@ const Post: React.FC<{ cfg: BladeArrayConfig }> = ({ cfg }) => {
         kernelSize={KernelSize.LARGE}
         resolutionY={216}
       />
-      <Grade grain={cfg.grain} frame={f} />
+      <Grade grain={cfg.grain} grainFloor={cfg.grainFloor} frame={f} />
     </EffectComposer>
   );
 };
