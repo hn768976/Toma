@@ -35,6 +35,8 @@ export type CellMaterialConfig = {
   sheenColor?: THREE.ColorRepresentation;
   sheenStrength?: number;
   roughness?: number;
+  /** Strength of the broad specular highlight on each cell. */
+  specular?: number;
   /** How far light wraps past the terminator. 0.5 in every look here. */
   wrap?: number;
   /** Surface mottling, as a fraction of mean cell radius. */
@@ -147,6 +149,7 @@ uniform float uRoughness;
 uniform float uWrap;
 uniform float uAoStrength;
 uniform float uAoGamma;
+uniform float uSpecular;
 uniform float uGloss;
 uniform float uOpacity;
 
@@ -213,10 +216,15 @@ void main(){
   color += uSheenColor * sheen * uSheenStrength * wrapped(N, L1, uWrap) * ao;
 
   // Broad specular. Roughness sits around 0.45, metalness is zero throughout.
+  // A waxy surface still carries a soft highlight per cell; without it the
+  // cells read as clay rather than as something with a little fat in it.
+  // Deliberately a wide lobe. A physically tight highlight puts a hard white
+  // dot on every cell and the cluster reads as polished plastic; what these
+  // surfaces want is a soft brightening across the whole lit side.
   vec3 H = normalize(L1 + V);
-  float gloss = 2.0 / max(1e-3, uRoughness * uRoughness * uRoughness * uRoughness) - 2.0;
-  float spec = pow(max(0.0, dot(N, H)), gloss) * (gloss + 8.0) / 25.0;
-  color += uKeyColor * spec * 0.06 * ao;
+  float gloss = mix(4.0, 22.0, clamp(1.0 - uRoughness, 0.0, 1.0));
+  float spec = pow(max(0.0, dot(N, H)), gloss);
+  color += uKeyColor * spec * uSpecular * ao;
   if (uGloss > 0.0) {
     float tight = pow(max(0.0, dot(N, H)), 220.0);
     color += uKeyColor * tight * uGloss;
@@ -252,6 +260,7 @@ export const createCellMaterial = (
     uWrap: { value: cfg.wrap ?? 0.5 },
     uAoStrength: { value: cfg.aoStrength ?? 1 },
     uAoGamma: { value: cfg.aoGamma ?? 1 },
+    uSpecular: { value: cfg.specular ?? 0.26 },
     uGloss: { value: cfg.gloss ?? 0 },
     uOpacity: { value: cfg.opacity ?? 1 },
     uMottleAmp: { value: (cfg.mottleAmp ?? 0.015) * cfg.cellRadius },

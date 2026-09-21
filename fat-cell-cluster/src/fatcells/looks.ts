@@ -28,12 +28,20 @@ export type Palette = {
   bgCentre: string;
   bgEdge: string;
   bgFalloff: number;
+  /**
+   * Where the lift sits, as a fraction of the frame away from centre. The
+   * references run the light diagonally — brightest toward the key, darkest in
+   * the opposite corner — rather than as a halo centred on the subject.
+   */
+  bgOffset?: [number, number];
   /** Surface mottling as a fraction of cell radius. */
   mottleAmp: number;
   mottleFreq: number;
   aoStrength: number;
   aoGamma: number;
   roughness: number;
+  /** Broad specular highlight per cell. */
+  specular?: number;
 };
 
 export type DofSpec = {
@@ -163,19 +171,20 @@ export const LOOKS: LookRow[] = [
     seed: "floating-beige-01",
     loops: true,
     palette: {
-      cell: "#f2dda4", deep: "#a86c22", rim: "#ffc972", rimStrength: 0.46,
+      cell: "#f2dda4", deep: "#844c11", rim: "#ffc972", rimStrength: 0.46,
       sheen: "#ffe6b4", sheenStrength: 0.2,
-      bgCentre: "#e7dbd0", bgEdge: "#cdbcae", bgFalloff: 1.15,
-      mottleAmp: 0.015, mottleFreq: 2.4, aoStrength: 1.0, aoGamma: 1.6,
-      roughness: 0.45,
+      bgCentre: "#eee3d8", bgEdge: "#c4b3a6", bgFalloff: 0.8,
+      bgOffset: [-0.22, 0.16],
+      mottleAmp: 0.015, mottleFreq: 2.4, aoStrength: 1.0, aoGamma: 2.1,
+      roughness: 0.42, specular: 0.16,
     },
     lighting: WARM_LIGHT,
-    camera: { fov: 36, fill: 0.82 },
+    camera: { fov: 36, fill: 1.02 },
     dof: { focusDistance: 0, focusRange: 6.5, bokehScale: 17, resolutionScale: 0.25 },
     grain: 0.02,
-    heroCells: 46, heroResolution: 140, blend: 0.13, overlap: 0.13, density: 0.8,
+    heroCells: 120, heroResolution: 152, blend: 0.13, overlap: 0.17, density: 0.9,
     extent: [1.05, 1.0, 0.95],
-    backdropCount: 7, backdropDepth: [-30, 8],
+    backdropCount: 9, backdropDepth: [-34, 4],
     drift: 0.11, specks: 90, membrane: 0, fibres: 0,
     stills: [40, 150, 250],
   },
@@ -188,19 +197,20 @@ export const LOOKS: LookRow[] = [
     palette: {
       // The cells are deliberately warmer and more orange here; the opposition
       // against the cool field is the whole point of this variant.
-      cell: "#ffce84", deep: "#a85a17", rim: "#ffab48", rimStrength: 0.55,
+      cell: "#ffce84", deep: "#8c3f08", rim: "#ffab48", rimStrength: 0.55,
       sheen: "#ffd79a", sheenStrength: 0.24,
-      bgCentre: "#6c7d8b", bgEdge: "#2e3740", bgFalloff: 0.95,
-      mottleAmp: 0.018, mottleFreq: 2.2, aoStrength: 1.0, aoGamma: 1.8,
-      roughness: 0.44,
+      bgCentre: "#7a8b98", bgEdge: "#2a333b", bgFalloff: 0.85,
+      bgOffset: [-0.2, 0.14],
+      mottleAmp: 0.018, mottleFreq: 2.2, aoStrength: 1.0, aoGamma: 2.0,
+      roughness: 0.42, specular: 0.2,
     },
     lighting: COOL_LIGHT,
-    camera: { fov: 34, fill: 1.0 },
+    camera: { fov: 34, fill: 1.12 },
     dof: { focusDistance: 0, focusRange: 6.0, bokehScale: 19, resolutionScale: 0.25 },
     grain: 0.022,
-    heroCells: 26, heroResolution: 132, blend: 0.15, overlap: 0.15, density: 0.82,
+    heroCells: 34, heroResolution: 136, blend: 0.15, overlap: 0.18, density: 0.9,
     extent: [1.0, 1.0, 0.95],
-    backdropCount: 6, backdropDepth: [-26, 7],
+    backdropCount: 8, backdropDepth: [-30, 4],
     drift: 0.1, specks: 130, membrane: 0, fibres: 0,
     stills: [30, 150, 260],
   },
@@ -211,17 +221,18 @@ export const LOOKS: LookRow[] = [
     seed: "floating-minimal-33",
     loops: true,
     palette: {
-      cell: "#f6e5ac", deep: "#b88a35", rim: "#ffd484", rimStrength: 0.4,
+      cell: "#f6e5ac", deep: "#8e6018", rim: "#ffd484", rimStrength: 0.4,
       sheen: "#ffefc4", sheenStrength: 0.18,
-      bgCentre: "#e9dcc4", bgEdge: "#d2bf9f", bgFalloff: 1.3,
-      mottleAmp: 0.012, mottleFreq: 2.4, aoStrength: 1.0, aoGamma: 1.75,
-      roughness: 0.46,
+      bgCentre: "#f0e4cd", bgEdge: "#cbb695", bgFalloff: 0.95,
+      bgOffset: [-0.2, 0.15],
+      mottleAmp: 0.012, mottleFreq: 2.4, aoStrength: 1.0, aoGamma: 2.0,
+      roughness: 0.44, specular: 0.15,
     },
     lighting: WARM_LIGHT,
-    camera: { fov: 32, fill: 0.86 },
+    camera: { fov: 32, fill: 0.98 },
     dof: { focusDistance: 0, focusRange: 6.5, bokehScale: 15, resolutionScale: 0.25 },
     grain: 0.018,
-    heroCells: 30, heroResolution: 132, blend: 0.17, overlap: 0.17, density: 0.84,
+    heroCells: 56, heroResolution: 140, blend: 0.16, overlap: 0.19, density: 0.9,
     extent: [1.0, 1.0, 0.92],
     // Quietest composition of the four: one cluster, a couple of small cells
     // at the frame edges, and a large clear region to put text beside.
@@ -238,11 +249,12 @@ export const LOOKS: LookRow[] = [
     seed: "tissue-golden-11",
     loops: true,
     palette: {
-      cell: "#f8c95f", deep: "#5e2703", rim: "#ffa93c", rimStrength: 0.3,
+      cell: "#f8c95f", deep: "#7d3c07", rim: "#ffa93c", rimStrength: 0.3,
       sheen: "#ffd98e", sheenStrength: 0.3,
       bgCentre: "#c07a28", bgEdge: "#7d4610", bgFalloff: 1.0,
-      mottleAmp: 0.016, mottleFreq: 2.6, aoStrength: 1.0, aoGamma: 3.0,
-      roughness: 0.42,
+      bgOffset: [-0.18, 0.14],
+      mottleAmp: 0.016, mottleFreq: 2.6, aoStrength: 1.0, aoGamma: 2.2,
+      roughness: 0.42, specular: 0.2,
     },
     lighting: {
       ...WARM_LIGHT,
@@ -251,13 +263,13 @@ export const LOOKS: LookRow[] = [
       ambientColor: "#c98b3c",
       ambientIntensity: 0.16,
     },
-    camera: { fov: 42, fill: 2.72 },
+    camera: { fov: 42, fill: 3.05 },
     dof: { focusDistance: 4.6, focusRange: 3.0, bokehScale: 7, resolutionScale: 0.25 },
     grain: 0.02,
     // A wide, shallow slab: the frame has to read as roughly a dozen cells
     // across, which needs a couple of hundred of them at this framing.
-    heroCells: 487, heroResolution: 310, blend: 0.1, overlap: 0.2, density: 0.72,
-    extent: [23, 12, 5.5],
+    heroCells: 620, heroResolution: 320, blend: 0.11, overlap: 0.27, density: 0.9,
+    extent: [23, 12.5, 5.0],
     backdropCount: 0, backdropDepth: [-22, 2],
     drift: 0.04, specks: 60, membrane: 1, fibres: 0, tissue: "full",
     stills: [0, 110, 210],
@@ -269,19 +281,20 @@ export const LOOKS: LookRow[] = [
     seed: "tissue-white-42",
     loops: true,
     palette: {
-      cell: "#fdf0cf", deep: "#b4813d", rim: "#ffdd9e", rimStrength: 0.22,
+      cell: "#fdf0cf", deep: "#9c6a2c", rim: "#ffdd9e", rimStrength: 0.22,
       sheen: "#fffaef", sheenStrength: 0.26,
       bgCentre: "#f7f5f1", bgEdge: "#e6e3de", bgFalloff: 1.4,
+      bgOffset: [-0.15, 0.12],
       mottleAmp: 0.014, mottleFreq: 2.8, aoStrength: 1.0, aoGamma: 1.9,
-      roughness: 0.4,
+      roughness: 0.4, specular: 0.18,
     },
     lighting: { ...WARM_LIGHT, keyIntensity: 1.0, fillIntensity: 0.45, ambientIntensity: 0.42 },
     camera: { fov: 42, fill: 2.0 },
     dof: { focusDistance: 3.6, focusRange: 3.0, bokehScale: 8, resolutionScale: 0.25 },
     grain: 0.016,
     // Higher key, and the masses are broken up so white shows between them.
-    heroCells: 130, heroResolution: 230, blend: 0.1, overlap: 0.18, density: 0.66,
-    extent: [13, 6.5, 3.4],
+    heroCells: 165, heroResolution: 240, blend: 0.11, overlap: 0.24, density: 0.84,
+    extent: [13, 6.5, 3.2],
     backdropCount: 6, backdropDepth: [-24, 3],
     drift: 0.05, specks: 50, membrane: 0.5, fibres: 0, tissue: "broken",
     stills: [40, 140, 240],
@@ -298,8 +311,9 @@ export const LOOKS: LookRow[] = [
       cell: "#f5e4bc", deep: "#b08a52", rim: "#ffd694", rimStrength: 0.26,
       sheen: "#fff0d2", sheenStrength: 0.2,
       bgCentre: "#e8d9bd", bgEdge: "#b99a72", bgFalloff: 1.0,
+      bgOffset: [-0.18, 0.12],
       mottleAmp: 0.012, mottleFreq: 2.2, aoStrength: 1.0, aoGamma: 1.7,
-      roughness: 0.46,
+      roughness: 0.46, specular: 0.15,
     },
     lighting: WARM_LIGHT,
     camera: { fov: 40, fill: 2.35 },
@@ -322,8 +336,9 @@ export const LOOKS: LookRow[] = [
       cell: "#f6dfa6", deep: "#a8813c", rim: "#ffcd7c", rimStrength: 0.3,
       sheen: "#ffeec6", sheenStrength: 0.22,
       bgCentre: "#9fb0bd", bgEdge: "#232a31", bgFalloff: 0.8,
+      bgOffset: [-0.24, 0.2],
       mottleAmp: 0.012, mottleFreq: 2.2, aoStrength: 1.0, aoGamma: 1.75,
-      roughness: 0.45,
+      roughness: 0.45, specular: 0.16,
     },
     lighting: COOL_LIGHT,
     camera: { fov: 34, fill: 0.72 },
@@ -349,7 +364,7 @@ export const LOOKS: LookRow[] = [
       bgCentre: "#28333d", bgEdge: "#0a0e13", bgFalloff: 0.85,
       // Visibly bumpier and more irregular than the other looks.
       mottleAmp: 0.034, mottleFreq: 2.9, aoStrength: 1.0, aoGamma: 2.0,
-      roughness: 0.4,
+      roughness: 0.4, specular: 0.3,
     },
     lighting: DARK_LIGHT,
     camera: { fov: 34, fill: 0.86 },
@@ -372,7 +387,7 @@ export const LOOKS: LookRow[] = [
       sheen: "#ffeaa8", sheenStrength: 0.26,
       bgCentre: "#122a2c", bgEdge: "#04090a", bgFalloff: 0.8,
       mottleAmp: 0.036, mottleFreq: 2.8, aoStrength: 1.0, aoGamma: 2.0,
-      roughness: 0.42,
+      roughness: 0.42, specular: 0.28,
     },
     lighting: { ...DARK_LIGHT, rimLightColor: "#ffe08a", rimLightIntensity: 0.85,
       fillColor: "#6ea0a4", ambientColor: "#1d3436" },

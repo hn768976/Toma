@@ -45,7 +45,7 @@ export const Background: React.FC<{
   edge: string;
   falloff: number;
   /** Where the lift sits, as a fraction of the frame away from centre. */
-  offset?: [number, number];
+  offset?: [number, number] | undefined;
   distance: number;
   fov: number;
   aspect: number;

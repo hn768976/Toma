@@ -199,16 +199,20 @@ const placeBackdrop = (
     const rs = (clusterRadiusWorld * scale) / halfH;
     // Aim at the ring just outside the hero, out to where the cluster only
     // partly crops into frame.
+    // Screen position in half-height units on both axes, so the exclusion
+    // zone around the hero is round. Measuring x in half-WIDTH units instead
+    // stretches it by the aspect ratio and pushes every background cluster off
+    // the sides of the frame.
     const angle = range(rng, 0, Math.PI * 2);
-    const reach = range(rng, heroScreenRadius * 0.92 + rs * 0.55, 1.1 + rs);
-    const sx = Math.cos(angle) * reach * aspect;
+    const reach = range(rng, heroScreenRadius * 0.95 + rs * 0.6, 1.55 + rs);
+    const sx = Math.cos(angle) * reach;
     const sy = Math.sin(angle) * reach;
     const candidate = {
       position: [sx * halfH, sy * halfH, z] as [number, number, number],
       scale,
     };
     last = candidate;
-    const screenGap = Math.hypot(sx / aspect, sy);
+    const screenGap = Math.hypot(sx, sy);
     if (screenGap < heroScreenRadius + rs) continue;
     // And it has to be at least partly on screen to be worth building.
     if (Math.abs(sx) > aspect + rs || Math.abs(sy) > 1 + rs) continue;
@@ -239,7 +243,7 @@ const makeCluster = (
     extent: opts.extent,
     overlap: row.overlap,
     density: row.density,
-    lumpiness: opts.hero ? 0.24 : 0.3,
+    lumpiness: row.kind === "tissue" ? 0.06 : opts.hero ? 0.14 : 0.28,
   });
   const iso = buildIsosurface(cells, {
     blend: row.blend * opts.radius,

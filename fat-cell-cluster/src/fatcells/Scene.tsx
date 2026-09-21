@@ -142,6 +142,7 @@ export const Scene: React.FC<{ row: LookRow }> = ({ row }) => {
               sheenColor: row.palette.sheen,
               sheenStrength: row.palette.sheenStrength,
               roughness: row.palette.roughness,
+              specular: row.palette.specular,
               mottleAmp: row.palette.mottleAmp,
               mottleFreq: row.palette.mottleFreq,
               aoStrength: row.palette.aoStrength,
@@ -161,7 +162,7 @@ export const Scene: React.FC<{ row: LookRow }> = ({ row }) => {
   const membraneMaterial = useMemo(
     () =>
       built.membrane
-        ? createMembraneMaterial(row.palette.sheen, 0.5 * row.membrane, row.lighting)
+        ? createMembraneMaterial(row.palette.sheen, 0.34 * row.membrane, row.lighting)
         : null,
     [built, row],
   );
@@ -177,6 +178,7 @@ export const Scene: React.FC<{ row: LookRow }> = ({ row }) => {
         centre={row.palette.bgCentre}
         edge={row.palette.bgEdge}
         falloff={row.palette.bgFalloff}
+        offset={row.palette.bgOffset}
         distance={camZ + 70}
         fov={row.camera.fov}
         aspect={aspect}
