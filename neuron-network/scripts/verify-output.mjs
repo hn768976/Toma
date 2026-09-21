@@ -147,19 +147,31 @@ const stats = ({ buf, width, height }) => {
   };
 };
 
-/** Darkest pixel in a corner block -- look 6 must encode true black. */
-const cornerMax = ({ buf, width, height }, block = 24) => {
-  let worst = 0;
+/**
+ * Corner background, for look 6's true-black requirement.
+ *
+ * Reports the DARKEST corner pixel and what fraction of the corner blocks sit
+ * at exactly 0,0,0. Taking the brightest instead is meaningless here: a fibre
+ * reaching into a corner block makes it bright while the background around it
+ * is still pure black, which is what the check is actually about.
+ */
+const cornerBlack = ({ buf, width, height }, block = 48) => {
+  let darkest = 255;
+  let zero = 0;
+  let total = 0;
   const corners = [[0, 0], [width - block, 0], [0, height - block], [width - block, height - block]];
   for (const [cx, cy] of corners) {
     for (let y = cy; y < cy + block; y++) {
       for (let x = cx; x < cx + block; x++) {
         const i = (y * width + x) * 3;
-        worst = Math.max(worst, buf[i], buf[i + 1], buf[i + 2]);
+        const peak = Math.max(buf[i], buf[i + 1], buf[i + 2]);
+        darkest = Math.min(darkest, peak);
+        if (peak === 0) zero++;
+        total++;
       }
     }
   }
-  return worst;
+  return { darkest, zeroFraction: +(zero / total).toFixed(3) };
 };
 
 /**
@@ -252,7 +264,7 @@ for (const name of files) {
     blownFraction: perFrame.map((s) => s.blownFraction),
     // Mid-clip frame where available, so the corners are sampled with the
     // structure fully lit rather than at a quiet point in the loop.
-    cornerMax: cornerMax(frames[Math.min(2, frames.length - 1)]),
+    corner: cornerBlack(frames[Math.min(2, frames.length - 1)]),
     sampledFrames: sample,
     longestPlateau: frames.map(longestPlateau),
     frameDeltas: deltas,
@@ -263,7 +275,8 @@ for (const name of files) {
     `${name.padEnd(28)} ${row.ok ? "PASS" : "FAIL"}  ${row.resolution} ${row.fps} ${duration}s ${frames600}f ` +
     `${row.codec}/${row.pixFmt} audio=${hasAudio}\n` +
     `    medianLum=${row.medianLuminance.join(",")}\n` +
-    `    blown=${row.blownFraction.join(",")}  cornerMax=${row.cornerMax}  ` +
+    `    blown=${row.blownFraction.join(",")}  cornerDarkest=${row.corner.darkest} ` +
+    `cornerBlack=${(row.corner.zeroFraction * 100).toFixed(0)}%  ` +
     `maxPlateau=${Math.max(...row.longestPlateau)}px  frameDeltas=${deltas.join(",")}`,
   );
 }

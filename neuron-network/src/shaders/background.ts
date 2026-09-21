@@ -46,7 +46,7 @@ void main() {
 
   // +/- half a code value, gated so pure black is left alone.
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
-  float gate = smoothstep(0.0, 0.02, lum);
+  float gate = smoothstep(0.0, 0.008, lum);
   col += (hash12(gl_FragCoord.xy) - 0.5) * (1.0 / 255.0) * gate;
 
   gl_FragColor = vec4(max(col, 0.0), 1.0);

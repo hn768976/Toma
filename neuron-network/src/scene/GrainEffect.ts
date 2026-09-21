@@ -12,7 +12,9 @@
  * grain pattern is identical at frame 0 and frame 600.
  *
  * Both terms are gated on luminance, so a look whose background is meant to
- * be pure black encodes as pure black instead of being lifted off zero.
+ * be pure black encodes as pure black instead of being lifted off zero. The
+ * gate is deliberately tight: a wider one also throttles dither across the
+ * dark end of a navy gradient, which is precisely where 8-bit H.264 bands.
  */
 
 import { BlendFunction, Effect } from "postprocessing";
@@ -31,7 +33,7 @@ float hash13(vec3 p3) {
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 col = inputColor.rgb;
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
-  float gate = smoothstep(0.0, 0.05, lum);
+  float gate = smoothstep(0.0, 0.012, lum);
 
   float g = hash13(vec3(gl_FragCoord.xy, uFrame)) - 0.5;
   col += g * uAmount * gate;
