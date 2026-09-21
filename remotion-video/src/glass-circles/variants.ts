@@ -67,6 +67,14 @@ export type GlassVariant = {
   };
 
   glass: {
+    /**
+     * 1 is perfectly clear. Below that the body keeps some diffuse base colour,
+     * which is what makes a disc read as a solid body rather than vanishing
+     * into a background of the same tone.
+     */
+    transmission: number;
+    /** Base colour, only visible to the extent the glass is not transmissive. */
+    color: string;
     ior: number;
     /** Strength of the wavelength split inside the glass body. */
     dispersion: number;
@@ -178,13 +186,15 @@ export const V1: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
+    transmission: 1,
+    color: "#ffffff",
     ior: 1.55,
     dispersion: 7.5,
     roughness: 0.10,
     thickness: 0.1,
     attenuationColor: "#5a8cff",
     attenuationDistance: 2.0,
-    envMapIntensity: 0.15,
+    envMapIntensity: 1.2,
   },
   rim: {
     specularGain: 4.5,
@@ -257,6 +267,8 @@ export const V2: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
+    transmission: 1,
+    color: "#ffffff",
     ior: 1.52,
     dispersion: 5.5,
     roughness: 0.05,
@@ -351,17 +363,29 @@ export const V3: GlassVariant = {
         color: [1.0, 0.25, 0.85],
         intensity: 2.5,
       },
+      // Broad ambient fill: what lifts the bodies off the field.
+      {
+        u: 0.5,
+        v: 0.56,
+        width: 0.45,
+        height: 0.25,
+        tilt: 0.0,
+        color: [0.45, 0.35, 1.0],
+        intensity: 0.5,
+      },
     ],
     intensity: 1.0,
   },
   glass: {
+    transmission: 0.7,
+    color: "#6a4ad8",
     ior: 1.55,
     dispersion: 7.0,
-    roughness: 0.1,
+    roughness: 0.28,
     thickness: 0.1,
     attenuationColor: "#7a4ad0",
     attenuationDistance: 0.2,
-    envMapIntensity: 0.015,
+    envMapIntensity: 1.2,
   },
   rim: {
     specularGain: 3.0,
@@ -389,7 +413,7 @@ export const V4: GlassVariant = {
     top: "#0a0410",
     bottom: "#040107",
     glowColor: "#5e0c1a",
-    glowIntensity: 0.07,
+    glowIntensity: 0.03,
     glowRadius: 4.8,
     washColor: "#10030a",
     washIntensity: 0.10,
@@ -430,17 +454,29 @@ export const V4: GlassVariant = {
         color: [1.0, 0.1, 0.22],
         intensity: 6,
       },
+      // Broad ambient fill: what lifts the bodies off the field.
+      {
+        u: 0.5,
+        v: 0.56,
+        width: 0.45,
+        height: 0.25,
+        tilt: 0.0,
+        color: [0.35, 0.45, 1.0],
+        intensity: 0.45,
+      },
     ],
     intensity: 1.0,
   },
   glass: {
+    transmission: 0.7,
+    color: "#3f5ad0",
     ior: 1.55,
     dispersion: 7.0,
-    roughness: 0.1,
+    roughness: 0.28,
     thickness: 0.1,
     attenuationColor: "#3a5ad0",
     attenuationDistance: 0.2,
-    envMapIntensity: 0.015,
+    envMapIntensity: 1.2,
   },
   rim: {
     specularGain: 3.2,
@@ -470,32 +506,32 @@ export const V4: GlassVariant = {
  */
 const FILM_TINTS = [
   { from: "#ff5577", to: "#ffc44d" },
-  { from: "#ff8a4d", to: "#ff4d6a" },
   { from: "#4dd6b0", to: "#4d96ff" },
-  { from: "#ff6ad0", to: "#ffa84d" },
   { from: "#5fd0ff", to: "#5f7aff" },
   { from: "#ffd45f", to: "#9fd45f" },
   { from: "#ff5fa5", to: "#b06aff" },
-  { from: "#ffa15f", to: "#ffe07a" },
+  { from: "#7fd45f", to: "#4dd6b0" },
+  { from: "#ff8a4d", to: "#ff4d6a" },
+  { from: "#9f7aff", to: "#5fd0ff" },
 ];
 
 const FILM_FIELD = buildField({
-  columns: 5,
+  columns: 4,
   rows: 3,
-  spread: [3.6, 2.3],
-  radius: [0.5, 1.3],
+  spread: [3.9, 2.5],
+  radius: [0.38, 1.25],
   depth: [-1.1, 1.1],
   halfThickness: SHEET_HALF_THICKNESS,
-  jitter: 1.0,
+  jitter: 0.8,
   drift: [0.18, 0.16, 0.12],
   tints: FILM_TINTS,
-  seed: 20240922,
+  seed: 7,
 });
 
 export const V5: GlassVariant = {
   id: "v5",
   body: "film" as const,
-  film: { edgeDarkness: 0.55, edgeWidth: 0.28 },
+  film: { edgeDarkness: 0.4, edgeWidth: 0.18 },
   label: "White field, overlapping coloured film",
   discs: FILM_FIELD,
   backdrop: {
@@ -526,6 +562,8 @@ export const V5: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
+    transmission: 1,
+    color: "#ffffff",
     ior: 1.5,
     dispersion: 0,
     roughness: 0.12,
