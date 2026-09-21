@@ -371,7 +371,7 @@ concurrency, 1920×1080 (`--scale=0.5`), including bundle and encode:
 | `NeonRing-PodiumBlue` | 3.5 | 17 min | ~1h 10m |
 | `WoodLeaf-PodiumCool` | 4.6 | 23 min | ~1h 30m |
 | `FlutedPlaster-PodiumCylinder` | 7.5 | 38 min | ~2h 30m |
-| `DuotoneGlass-PodiumMagentaCyan` | 9.9 | 49 min | ~3h 20m |
+| `DuotoneGlass-PodiumMagentaCyan` | 10.0 | 50 min | ~3h 20m |
 
 Measured on the shipped builds, wall-clock, including bundle and encode.
 
