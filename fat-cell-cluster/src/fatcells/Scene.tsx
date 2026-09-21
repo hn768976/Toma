@@ -23,7 +23,7 @@ import { deflationAt, driftAt, spinAt } from "./motion";
 import { Specks } from "./Specks";
 
 /** Folds at full collapse, as a fraction of what is left of the cell. */
-const FOLD_AMPLITUDE = 0.52;
+const FOLD_AMPLITUDE = 0.44;
 /** Whole turns of the fold field over the clip, so the folds travel. */
 const FOLD_TURNS = 1;
 
@@ -168,7 +168,8 @@ export const Scene: React.FC<{ row: LookRow }> = ({ row }) => {
   );
 
   const camZ = built.cameraDistance;
-  const speckColor = row.kind === "fibre" ? "#cfe2ee" : "#fffaf0";
+  // Warm motes on the warm fields, cool on the dark ones.
+  const speckColor = row.kind === "fibre" ? "#cfe2ee" : "#ffeccb";
   // Specks read against a dark or cool field and wash out against a pale one.
   const speckOpacity = row.palette.bgCentre === "#9fb0bd" ? 0.95 : 0.65;
 

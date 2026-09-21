@@ -409,13 +409,13 @@ const buildLook = (row: LookRow): BuiltScene => {
         const iso = buildCellSurface(cell, cells, {
           soften: row.blend * 1.6,
           resolution,
-          aoStrength: 1.15,
+          aoStrength: 1.35,
         });
         return {
           geometry: toBufferGeometry(iso, [cell]),
           cell,
           deflation: deflation[i],
-          residual: survivors.has(i) ? range(rng, 0.34, 0.46) : range(rng, 0.14, 0.22),
+          residual: survivors.has(i) ? range(rng, 0.42, 0.56) : range(rng, 0.2, 0.3),
           drift: makeDrift(rng, range(rng, 1.0, 2.4), 1),
           tumbleAxis: onSphere(rng),
           tumbleRate: range(rng, -2.4, 2.4),
@@ -481,10 +481,10 @@ const buildLook = (row: LookRow): BuiltScene => {
       // behind it and sharper. Mostly diagonal, never parallel.
       const z = range(rng, -14, 9);
       fibres.push({
-        geometry: buildFibre(rng, range(rng, 36, 62), range(rng, 0.025, 0.075)),
+        geometry: buildFibre(rng, range(rng, 40, 70), range(rng, 0.012, 0.05)),
         position: [range(rng, -6, 6), range(rng, -5, 5), z],
         drift: makeDrift(rng, range(rng, 0.25, 0.8), 1),
-        opacity: z > 1 ? range(rng, 0.1, 0.2) : range(rng, 0.14, 0.3),
+        opacity: z > 1 ? range(rng, 0.07, 0.15) : range(rng, 0.1, 0.22),
       });
     }
   }

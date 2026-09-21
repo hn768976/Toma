@@ -276,7 +276,7 @@ export const createCellMaterial = (
 
   if (deflating) {
     uniforms.uCrumple = { value: 0 };
-    uniforms.uFoldFreq = { value: 1.5 / cfg.cellRadius };
+    uniforms.uFoldFreq = { value: 0.95 / cfg.cellRadius };
     uniforms.uFoldAngle = { value: 0 };
     uniforms.uFoldAxis = { value: new THREE.Vector3(0, 1, 0) };
   }
