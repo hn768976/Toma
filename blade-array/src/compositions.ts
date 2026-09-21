@@ -13,18 +13,11 @@ import type { BladeArrayConfig, GradientStop } from "./types";
 
 const s = (p: number, c: [number, number, number], i: number): GradientStop => ({ p, c, i });
 
-/** Repeat one lit zone at `count` evenly spaced positions around the gradient. */
-const repeatZone = (
-  count: number,
+/** Place one lit zone, given as offsets from its centre, at `centre`. */
+const zoneAt = (
+  centre: number,
   zone: { at: number; c: [number, number, number]; i: number }[],
-): GradientStop[] => {
-  const out: GradientStop[] = [];
-  for (let k = 0; k < count; k++) {
-    const centre = k / count;
-    for (const z of zone) out.push(s((centre + z.at + 1) % 1, z.c, z.i));
-  }
-  return out.sort((a, b) => a.p - b.p);
-};
+): GradientStop[] => zone.map((z) => s((centre + z.at + 1) % 1, z.c, z.i));
 
 /** Shared defaults. A row only states what makes it different. */
 const base = {
@@ -328,20 +321,70 @@ export const neonColumns: BladeArrayConfig = {
   elevLo: 0.45,
   elevHi: 1.2,
   elevTilt: 0.2,
-  // Four lit zones around the gradient, so the half-turn that is visible at
-  // any moment always holds two of them with a genuinely black band between.
-  // Each zone runs cool to warm on its own - the columns are not one hue.
-  stops: repeatZone(4, [
-    { at: -0.0588, c: [0, 0, 0], i: 0 },
-    { at: -0.045, c: [0.04, 0.12, 1.0], i: 0.7 },
-    { at: -0.03, c: [0.12, 0.9, 1.0], i: 2.2 },
-    { at: -0.015, c: [0.8, 1.0, 1.0], i: 2.9 },
-    { at: 0.0, c: [1.0, 0.08, 0.14], i: 2.7 },
-    { at: 0.0156, c: [1.0, 0.45, 0.04], i: 2.5 },
-    { at: 0.0312, c: [1.0, 0.1, 0.7], i: 1.9 },
-    { at: 0.0468, c: [0.32, 0.04, 0.9], i: 0.6 },
-    { at: 0.06, c: [0, 0, 0], i: 0 },
-  ]),
+  // Five lit zones around the gradient at irregular spacing. The half-turn
+  // visible at any moment always holds at least two of them with a genuinely
+  // black band between, because no gap is wider than half the window - and
+  // because the spacing does not divide the scroll evenly, no column ever
+  // returns to a position it held earlier in the loop. Four evenly spaced
+  // zones did, which turned the 20s loop into a 5s one played four times.
+  // Each zone runs cool to warm on its own, and all five differ.
+  stops: [
+    ...zoneAt(0, [
+      { at: -0.047, c: [0, 0, 0], i: 0 },
+      { at: -0.0362, c: [0.04, 0.12, 1], i: 0.7 },
+      { at: -0.0235, c: [0.12, 0.9, 1], i: 2.2 },
+      { at: -0.0118, c: [0.8, 1, 1], i: 2.9 },
+      { at: 0, c: [1, 0.08, 0.14], i: 2.7 },
+      { at: 0.0127, c: [1, 0.45, 0.04], i: 2.5 },
+      { at: 0.0249, c: [1, 0.1, 0.7], i: 1.9 },
+      { at: 0.0367, c: [0.32, 0.04, 0.9], i: 0.6 },
+      { at: 0.047, c: [0, 0, 0], i: 0 },
+    ]),
+    ...zoneAt(0.19, [
+      { at: -0.047, c: [0, 0, 0], i: 0 },
+      { at: -0.0362, c: [0.35, 0.06, 0.95], i: 0.6 },
+      { at: -0.0235, c: [1, 0.08, 0.85], i: 2.3 },
+      { at: -0.0118, c: [1, 0.25, 0.55], i: 2.8 },
+      { at: 0, c: [1, 0.6, 0.1], i: 2.6 },
+      { at: 0.0127, c: [1, 0.85, 0.6], i: 2.2 },
+      { at: 0.0249, c: [1, 0.12, 0.1], i: 1.8 },
+      { at: 0.0367, c: [0.45, 0.03, 0.12], i: 0.5 },
+      { at: 0.047, c: [0, 0, 0], i: 0 },
+    ]),
+    ...zoneAt(0.41, [
+      { at: -0.047, c: [0, 0, 0], i: 0 },
+      { at: -0.0362, c: [0.1, 0.06, 0.8], i: 0.5 },
+      { at: -0.0235, c: [0.06, 0.35, 1], i: 1.8 },
+      { at: -0.0118, c: [0.1, 0.95, 1], i: 2.5 },
+      { at: 0, c: [0.7, 1, 0.95], i: 2.3 },
+      { at: 0.0127, c: [0.2, 1, 0.7], i: 1.7 },
+      { at: 0.0249, c: [0.06, 0.3, 1], i: 1.2 },
+      { at: 0.0367, c: [0.12, 0.04, 0.7], i: 0.4 },
+      { at: 0.047, c: [0, 0, 0], i: 0 },
+    ]),
+    ...zoneAt(0.6, [
+      { at: -0.047, c: [0, 0, 0], i: 0 },
+      { at: -0.0362, c: [0.4, 0.02, 0.1], i: 0.5 },
+      { at: -0.0235, c: [1, 0.06, 0.2], i: 2.1 },
+      { at: -0.0118, c: [1, 0.55, 0.45], i: 2.7 },
+      { at: 0, c: [1, 0.4, 0.03], i: 2.6 },
+      { at: 0.0127, c: [1, 0.1, 0.6], i: 2.2 },
+      { at: 0.0249, c: [0.45, 0.05, 1], i: 1.4 },
+      { at: 0.0367, c: [0.08, 0.1, 0.8], i: 0.4 },
+      { at: 0.047, c: [0, 0, 0], i: 0 },
+    ]),
+    ...zoneAt(0.79, [
+      { at: -0.047, c: [0, 0, 0], i: 0 },
+      { at: -0.0362, c: [0.05, 0.1, 0.55], i: 0.4 },
+      { at: -0.0235, c: [0.3, 0.1, 1], i: 1.6 },
+      { at: -0.0118, c: [0.9, 0.4, 1], i: 2.6 },
+      { at: 0, c: [1, 0.15, 0.55], i: 2.8 },
+      { at: 0.0127, c: [0.6, 0.1, 1], i: 2 },
+      { at: 0.0249, c: [0.1, 0.55, 1], i: 1.5 },
+      { at: 0.0367, c: [0.06, 0.12, 0.6], i: 0.4 },
+      { at: 0.047, c: [0, 0, 0], i: 0 },
+    ]),
+  ].sort((a, b) => a.p - b.p),
 };
 
 export const neonBarrel: BladeArrayConfig = {
