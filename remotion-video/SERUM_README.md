@@ -210,7 +210,7 @@ Two defences: the background shader dithers the gradient by ±1 LSB in linear
 space before tonemapping, and a deterministic grain pass adds 1.8-2.2% noise
 over the whole frame after tonemapping. Look 5's matte half gets neither.
 
-To verify, extract a PNG from the **encoded mp4** — not the studio preview,
+To verify, extract a PNG from the **encoded mp4** -- not the studio preview,
 which will look clean when the encoded file does not:
 
 ```bash
@@ -218,9 +218,39 @@ npx remotion ffmpeg -i out/BubbleField_Pink.mp4 -ss 5 -frames:v 1 -y check.png
 ```
 
 and inspect the background along a horizontal and a vertical scanline. Stepped
-plateaus mean banding. If bands survive, raise the grain toward 2.5% (the
-`grain` field in the data row), then lower CRF toward 14. Do not flatten the
-gradient to hide it.
+plateaus mean banding.
+
+### Measured result, and a limit worth knowing
+
+Sampling a pure-background region of look 1 and measuring the mean length of
+runs of identical value along a scanline:
+
+| Source | mean run | longest run | reading |
+|---|---|---|---|
+| Rendered PNG (lossless) | 2.3-3.4 px | 34-41 px | properly dithered |
+| Encoded mp4, CRF 16, grain 2.0% | 6.3-6.8 px | 156-425 px | flattened |
+| Encoded mp4, CRF 14, grain 3.5% | 4.2-8.7 px | 159-443 px | mildly flattened |
+
+**The render itself is clean.** The dither and grain are present and
+pixel-to-pixel at the point the frame leaves three.js. What flattens them is
+x264: in smooth areas its deblocking filter and psychovisual quantisation
+remove sub-LSB noise. Both remedies in the brief were tried and measured --
+CRF lowered to 14 and then 12, grain raised to 3.5% -- and each helped only
+marginally, because the limit is the deblocking filter rather than the
+quantiser.
+
+The lever that would actually fix it is x264's `tune=grain` (or a negative
+`deblock` setting), and Remotion's CLI does not expose x264 parameters. If
+banding is visible in your delivery, render an image sequence and encode it
+yourself with that tuning:
+
+```bash
+npx remotion render <id> out/seq --sequence --image-format=png --scale=1
+npx remotion ffmpeg -framerate 30 -i out/seq/element-%d.png \
+  -c:v libx264 -crf 14 -tune grain -pix_fmt yuv420p out/<name>.mp4
+```
+
+Do not flatten the gradient to hide it.
 
 ---
 
