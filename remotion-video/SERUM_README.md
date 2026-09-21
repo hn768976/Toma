@@ -84,15 +84,43 @@ rendering this was worth roughly a 3x speed-up over the default.
 ## Measured render cost
 
 Transmission is the most expensive material in three.js: the scene behind every
-transmissive surface is re-rendered into a backdrop buffer each frame. Look 6 is
-the heaviest by a distance, because frame-filling spheres in contact mean almost
-every pixel is seen through several transmissive surfaces at once.
+transmissive surface is re-rendered into a backdrop buffer each frame.
 
-Measured on the build machine — **4 vCPU, no GPU, SwiftShader software
-rendering**. A machine with a real GPU will be very substantially faster; treat
-these as a worst case, not a target.
+Measured on the build machine: **4 vCPU, no GPU, ANGLE falling back to
+SwiftShader software rendering**, `--concurrency=4`, output 1920x1080. A machine
+with a real GPU will be very substantially faster -- treat these as a worst
+case, not a target.
 
-<!--TIMINGS-->
+| Composition | s/frame @1080p | wall clock | 4K estimate |
+|---|---|---|---|
+| IridescentRise-Pink | 1.934 | 19.3 min (600f) | ~7.7 s/frame |
+| BubbleField-Pink | 3.863 | 19.3 min | ~15.5 s/frame |
+| BubbleField-Blue | 3.868 | 19.3 min | ~15.5 s/frame |
+| CandyBlob-Orange | 4.287 | 21.4 min | ~17.1 s/frame |
+| CandyBlob-Rose | 4.319 | 21.6 min | ~17.3 s/frame |
+| Molecule-Lavender | 4.761 | 23.8 min | ~19.0 s/frame |
+| Molecule-Gold | 4.792 | 24.0 min | ~19.2 s/frame |
+| Molecule-Blue | 4.803 | 24.0 min | ~19.2 s/frame |
+| GiantSphere-Lilac | 5.799 | 29.0 min | ~23.2 s/frame |
+| GiantSphere-Champagne | 5.970 | 29.9 min | ~23.9 s/frame |
+| GoldenOil-Amber | 9.707 | 48.5 min | ~38.8 s/frame |
+| GoldenOil-Olive | 9.716 | 48.6 min | ~38.9 s/frame |
+
+**Whole batch of twelve: 5 h 29 min** at 1080p. The 4K estimate is the 1080p
+figure scaled by the 4x pixel count; these scenes are fragment-bound, so that
+scaling is close to linear. A 4K batch on this hardware would be roughly 22
+hours, which is the honest answer to whether it is practical here: it is not,
+and it wants a GPU.
+
+Two things the numbers show:
+
+- **Look 6 is the heaviest by 2.5x**, exactly as expected. Frame-filling
+  spheres in contact mean almost every pixel is seen through several
+  transmissive surfaces at once.
+- **Sibling colourways land within ~1% of each other** across every look
+  (3.863/3.868, 4.287/4.319, 9.707/9.716). That is a useful side-effect of
+  colourways sharing a `geometrySeed`: identical geometry, identical cost.
+
 
 The 4K estimate is the 1080p figure scaled by the 4x pixel count. It is close to
 linear here because these scenes are fragment-bound.
