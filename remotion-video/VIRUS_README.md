@@ -87,8 +87,8 @@ much faster and these numbers are close to a worst case.
 
 | Target                  | Per frame (wall, `--concurrency=4`) | 600 frames | All ten |
 |-------------------------|-------------------------------------|------------|---------|
-| 1080p (`--scale=0.5`)   | **≈3.5s**                           | ≈35 min    | ≈5.8 h  |
-| 4K (`--scale=1`)        | ≈14s (extrapolated, ×4 pixels)      | ≈2.3 h     | ≈23 h   |
+| 1080p (`--scale=0.5`)   | **≈3.8s**                           | ≈38 min    | ≈6.4 h  |
+| 4K (`--scale=1`)        | ≈15s (extrapolated, ×4 pixels)      | ≈2.5 h     | ≈25 h   |
 | 6000×3375 still         | ≈34s                                | —          | ≈17 min for 30 |
 
 The 4K figure is extrapolated from the 1080p measurement by pixel count, which
@@ -102,7 +102,7 @@ react-three-fiber clamps its `dpr` prop to `[1, 2]` by default. Remotion's
 composition still drew a full 3840×2160 buffer, three quarters of which was
 thrown away on the downscale. `VirusScene` passes `window.devicePixelRatio`
 explicitly. That alone took a 1080p frame from 17.2s to 5.5s; rendering the
-bokeh and bloom buffers at half resolution took it to 3.5s.
+bokeh and bloom buffers at half resolution took it to 3.8s.
 
 Depth of field is by far the most expensive pass — around 90% of frame cost
 under software WebGL. If you need to trim further, `resolutionScale` on
@@ -151,6 +151,27 @@ the corners. There is no gradient in it to band, so it loses nothing.
 
 Its reference clip actually carries a faint navy ambient haze and some dust.
 That is deliberately not reproduced — the pure-black requirement wins.
+
+---
+
+## Packaging
+
+```bash
+./scripts/package-virus-zip.sh      # builds out/virus-particle-field-project.zip
+./scripts/harvest-virus-stills.sh   # 30 stills at 6000x3375 + one 1080p PNG per look
+```
+
+The zip is a standalone project: only the virus sources, its own
+`remotion.config.ts`, a `package.json` with pinned versions, and this README.
+`node_modules`, `.git` and render output are excluded.
+
+Verified from a clean copy: `npm install` succeeds, `npx tsc --noEmit` is
+clean, and `npx remotion compositions` lists all ten at 3840x2160 / 30fps /
+600 frames.
+
+If your environment blocks Remotion's Chromium download, uncomment
+`Config.setBrowserExecutable(...)` in `remotion.config.ts` and point it at a
+Chromium headless shell you already have.
 
 ---
 
