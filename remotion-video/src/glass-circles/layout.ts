@@ -115,8 +115,8 @@ export type FieldOptions = {
   /** Radius is picked per disc from this range. */
   radius: [number, number];
   depth: [number, number];
-  /** Half-thickness as a fraction of radius. ~0.35 reads as a sphere. */
-  thicknessRatio: number;
+  /** Half the glass thickness, in world units. Constant across the field. */
+  halfThickness: number;
   /** How far a disc may wander from its cell centre, as a fraction of the cell. */
   jitter: number;
   /** Drift amplitude per axis. */
@@ -159,7 +159,7 @@ export const buildField = (options: FieldOptions): DiscSpec[] => {
       discs.push({
         name: `field-${row}-${column}`,
         radius,
-        halfThickness: radius * options.thicknessRatio,
+        halfThickness: options.halfThickness,
         center: [x, y, z],
         drift: {
           amplitude: [

@@ -29,7 +29,12 @@ export type EnvLight = {
   intensity: number;
 };
 
-import { THREE_CIRCLE_LAYOUT, buildField, type DiscSpec } from "./layout";
+import {
+  SHEET_HALF_THICKNESS,
+  THREE_CIRCLE_LAYOUT,
+  buildField,
+  type DiscSpec,
+} from "./layout";
 
 export type GlassVariant = {
   id: "v1" | "v2" | "v3" | "v4";
@@ -266,23 +271,18 @@ export const V2: GlassVariant = {
 
 
 /**
- * V3 and V4 are the same rig as each other in two palettes, and a different rig
- * from V1/V2: instead of three thin sheet-glass discs they are a dense field of
- * thick, sphere-like bodies filling the frame edge to edge.
- *
- * Their signature is a wide crescent of light inside each body -- light caught
- * by the fat rounded rim -- with a thin contrasting line hugging the outer
- * silhouette on the opposite side. That is the same two-lobe rim shader V1/V2
- * use, opened right up: a low band power widens the crescent from a hairline to
- * a third of the body.
+ * V3 and V4 are the same rig as each other in two palettes. They use exactly
+ * the glass of V1 and V2 -- the same round sheet-glass discs at the same
+ * constant thickness, with the same thin two-lobe rim -- but many of them,
+ * filling the frame edge to edge instead of three hero circles.
  */
-const SPHERE_FIELD = buildField({
+const CIRCLE_FIELD = buildField({
   columns: 5,
   rows: 3,
   spread: [3.6, 2.3],
   radius: [0.62, 1.15],
   depth: [-1.1, 1.1],
-  thicknessRatio: 0.36,
+  halfThickness: SHEET_HALF_THICKNESS,
   jitter: 0.85,
   drift: [0.18, 0.16, 0.12],
   seed: 20240921,
@@ -291,7 +291,7 @@ const SPHERE_FIELD = buildField({
 export const V3: GlassVariant = {
   id: "v3",
   label: "Violet field, cyan and green crescent light",
-  discs: SPHERE_FIELD,
+  discs: CIRCLE_FIELD,
   backdrop: {
     top: "#3b1b6b",
     bottom: "#1a0730",
@@ -341,22 +341,21 @@ export const V3: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
-    ior: 1.48,
-    dispersion: 2.5,
-    roughness: 0.08,
-    thickness: 0.5,
+    ior: 1.55,
+    dispersion: 7.0,
+    roughness: 0.1,
+    thickness: 0.1,
     attenuationColor: "#7a4ad0",
-    attenuationDistance: 1.6,
-    envMapIntensity: 0.55,
+    attenuationDistance: 2.0,
+    envMapIntensity: 0.3,
   },
   rim: {
-    specularGain: 2.2,
-    dispersionGain: 5.0,
-    iorSpread: 0.05,
-    edgePower: 5.0,
-    // A low band power is what turns the hairline into a broad crescent.
-    bandPower: 1.0,
-    innerFalloff: 3.0,
+    specularGain: 4.5,
+    dispersionGain: 7.0,
+    iorSpread: 0.09,
+    edgePower: 6.0,
+    bandPower: 2.2,
+    innerFalloff: 6.0,
     tint: "#ffffff",
   },
   bloom: { strength: 0.5, radius: 0.7, threshold: 0.8 },
@@ -369,7 +368,7 @@ export const V3: GlassVariant = {
 export const V4: GlassVariant = {
   id: "v4",
   label: "Near-black field, cyan crescents against crimson rims",
-  discs: SPHERE_FIELD,
+  discs: CIRCLE_FIELD,
   backdrop: {
     top: "#0a0410",
     bottom: "#050108",
@@ -419,21 +418,21 @@ export const V4: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
-    ior: 1.5,
-    dispersion: 2.0,
-    roughness: 0.07,
-    thickness: 0.5,
+    ior: 1.55,
+    dispersion: 7.0,
+    roughness: 0.1,
+    thickness: 0.1,
     attenuationColor: "#3a5ad0",
-    attenuationDistance: 1.4,
-    envMapIntensity: 0.5,
+    attenuationDistance: 2.0,
+    envMapIntensity: 0.3,
   },
   rim: {
-    specularGain: 2.6,
-    dispersionGain: 5.5,
-    iorSpread: 0.05,
-    edgePower: 5.5,
-    bandPower: 1.0,
-    innerFalloff: 3.0,
+    specularGain: 5.0,
+    dispersionGain: 7.5,
+    iorSpread: 0.09,
+    edgePower: 6.0,
+    bandPower: 2.2,
+    innerFalloff: 6.0,
     tint: "#ffffff",
   },
   bloom: { strength: 0.6, radius: 0.72, threshold: 0.75 },
