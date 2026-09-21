@@ -31,24 +31,32 @@ const report = (ok, name, note) => {
  * The feature probed is a plinth silhouette: geometry, which shading
  * cannot move, as opposed to a shadow edge, which is nothing but shading.
  */
-const edgePosition = (img, yFrac, x0, x1) => {
-  const y = Math.round(yFrac * img.height);
-  const grad = (x) => Math.abs(img.lum(x + 1, y) - img.lum(x - 1, y));
+const edgePosition = (img, probe) => {
+  const vertical = probe.vertical === true;
+  const fixed = Math.round((vertical ? probe.x : probe.y) * (vertical ? img.width : img.height));
+  const span = vertical ? img.height : img.width;
+  const from = Math.round(probe.from * span) + 1;
+  const to = Math.round(probe.to * span) - 1;
+  const grad = (i) =>
+    vertical
+      ? Math.abs(img.lum(fixed, i + 1) - img.lum(fixed, i - 1))
+      : Math.abs(img.lum(i + 1, fixed) - img.lum(i - 1, fixed));
+
   let best = -1;
-  let bx = 0;
-  for (let x = Math.round(x0 * img.width) + 1; x < Math.round(x1 * img.width) - 1; x++) {
-    const v = grad(x);
+  let bi = from;
+  for (let i = from; i < to; i++) {
+    const v = grad(i);
     if (v > best) {
       best = v;
-      bx = x;
+      bi = i;
     }
   }
-  const a = grad(bx - 1);
-  const b = grad(bx);
-  const c = grad(bx + 1);
+  const a = grad(bi - 1);
+  const b = grad(bi);
+  const c = grad(bi + 1);
   const denom = a - 2 * b + c;
   const shift = denom === 0 ? 0 : (a - c) / (2 * denom);
-  return bx + Math.max(-1, Math.min(1, shift));
+  return bi + Math.max(-1, Math.min(1, shift));
 };
 
 /**
@@ -93,10 +101,14 @@ const brightestX = (img, y0, y1, x0 = 0.05, x1 = 0.95) => {
  * the busiest shading.
  */
 const LOCK_PROBE = {
-  "DuotoneGlass": { y: 0.6, x0: 0.68, x1: 0.78, what: "disc right silhouette" },
-  "NeonRing": { y: 0.44, x0: 0.7, x1: 0.8, what: "slab right silhouette" },
-  "FlutedPlaster": { y: 0.6, x0: 0.66, x1: 0.74, what: "plinth right silhouette" },
-  "WoodLeaf": { y: 0.5, x0: 0.66, x1: 0.76, what: "disc right silhouette" },
+  // Look 1's disc sits against a floor of nearly its own brightness, so
+  // its silhouette is a gentle ramp with no peak to lock onto. Its
+  // backdrop/floor seam is a hard step well away from the plinth, so that
+  // is what gets measured — scanned down a column rather than across a row.
+  "DuotoneGlass": { vertical: true, x: 0.12, from: 0.33, to: 0.47, what: "backdrop/floor seam, far left" },
+  "NeonRing": { y: 0.44, from: 0.7, to: 0.8, what: "slab right silhouette" },
+  "FlutedPlaster": { y: 0.6, from: 0.66, to: 0.74, what: "plinth right silhouette" },
+  "WoodLeaf": { y: 0.5, from: 0.66, to: 0.76, what: "disc right silhouette" },
 };
 
 const look = id.split("-")[0];
@@ -126,7 +138,7 @@ console.log("Step 3 — camera lock");
 const lockFrames = [0, 150, 299];
 const imgs = {};
 for (const f of [...new Set([...FRAMES, ...lockFrames])]) imgs[f] = decode(file, { frame: f });
-const positions = lockFrames.map((f) => edgePosition(imgs[f], probe.y, probe.x0, probe.x1));
+const positions = lockFrames.map((f) => edgePosition(imgs[f], probe));
 const drift = Math.max(...positions) - Math.min(...positions);
 report(
   drift < 1.0,
@@ -205,13 +217,13 @@ if (look === "NeonRing") {
     return (l[0] + l[1] + l[2]) / (r[0] + r[1] + r[2]);
   };
   const at = [];
-  for (let f = 0; f < 300; f += 25) at.push(f);
+  for (let f = 0; f < 300; f += 15) at.push(f);
   const vals = at.map((f) => bal(imgs[f] ?? decode(file, { frame: f })));
   const spread = Math.max(...vals) - Math.min(...vals);
   report(
     spread > 0.02,
     "key balance shifts across the clip (keys breathe out of phase)",
-    `L/R ratio over 12 samples: ${Math.min(...vals).toFixed(3)} to ${Math.max(...vals).toFixed(3)}, swing ${(spread * 100).toFixed(1)}%`,
+    `L/R ratio over 20 samples: ${Math.min(...vals).toFixed(3)} to ${Math.max(...vals).toFixed(3)}, swing ${(spread * 100).toFixed(1)}%`,
   );
 } else {
   /*

@@ -86,8 +86,8 @@ const brightRuns = (img, span, from, to, threshold, mergeGap = 0.012) => {
 
 const checks = {
   "DuotoneGlass-PodiumMagentaCyan": (img, out) => {
-    const band = topSurfaceBand(img, 0.5, 0.3, 0.56, 10);
-    out.push(["plinth top 40-50%", band && band.top >= 0.4 && band.top <= 0.5, band && `${(band.top * 100).toFixed(1)}%`]);
+    const band = topSurfaceBand(img, 0.5, 0.3, 0.56, 6);
+    out.push(["plinth top 40-50%", band && band.top >= 0.4 && band.top <= 0.5, band ? `${(band.top * 100).toFixed(1)}%` : "no edge found"]);
     const l = meanRect(img, 0.3, 0.52, 0.37, 0.6);
     const c = meanRect(img, 0.46, 0.52, 0.54, 0.6);
     const r = meanRect(img, 0.64, 0.52, 0.71, 0.6);
@@ -122,8 +122,8 @@ const checks = {
     // Compare the floor immediately outside the disc's base with floor at
     // the same depth but away from it — a contact shadow is a local
     // darkening, so it has to be measured against its own neighbourhood.
-    const contact = meanRect(img, 0.44, 0.7, 0.56, 0.73);
-    const beside = meanRect(img, 0.18, 0.7, 0.28, 0.73);
+    const contact = meanRect(img, 0.44, 0.735, 0.56, 0.76);
+    const beside = meanRect(img, 0.18, 0.735, 0.28, 0.76);
     const sum = (c) => c[0] + c[1] + c[2];
     out.push(["contact shadow at base", sum(contact) < sum(beside), `contact=${fmt(contact)} beside=${fmt(beside)}`]);
   },

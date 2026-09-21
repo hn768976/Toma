@@ -105,8 +105,13 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
   // The two keys breathe out of phase with each other, so the colour balance
   // across the disc shifts over the clip without either key ever pumping.
   // Both are noise sampled on a circle in time, so both are exactly periodic.
-  const left = loopNoiseRange(frame, LOOP_FRAMES, 0.0, 0.8, 1.2, 1, 17);
-  const right = loopNoiseRange(frame, LOOP_FRAMES, 31.7, 0.8, 1.2, 1, 53);
+  // Wider than it looks like it needs to be. The keys now share the disc
+  // with a neutral fill and a floor wash, so their share of what lands on
+  // the flanks is smaller than it was — at +/-20% the colour balance moved
+  // barely 2% across the clip, which is less shift than "subtly" ought to
+  // mean.
+  const left = loopNoiseRange(frame, LOOP_FRAMES, 0.0, 0.7, 1.3, 1, 17);
+  const right = loopNoiseRange(frame, LOOP_FRAMES, 31.7, 0.7, 1.3, 1, 53);
 
   const topY = p.disc.height;
 

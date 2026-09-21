@@ -91,7 +91,7 @@ export const STAGES: StageConfig[] = [
     variant: "A",
     variantLabel: "Magenta / cyan",
     stillFrame: 42,
-    camera: { fovDeg: LENS, height: 0.945, distance: 5.4, tiltDeg: 7.0, push: 0 },
+    camera: { fovDeg: LENS, height: 0.985, distance: 5.4, tiltDeg: 7.0, push: 0 },
     tone: { mapping: "neutral", exposure: 0.5 },
     dof: {
       layers: [
@@ -130,7 +130,7 @@ export const STAGES: StageConfig[] = [
     variant: "B",
     variantLabel: "Amber / teal",
     stillFrame: 42,
-    camera: { fovDeg: LENS, height: 0.945, distance: 5.4, tiltDeg: 7.0, push: 0 },
+    camera: { fovDeg: LENS, height: 0.985, distance: 5.4, tiltDeg: 7.0, push: 0 },
     tone: { mapping: "neutral", exposure: 0.5 },
     dof: {
       layers: [
