@@ -105,28 +105,27 @@ const VolumetricStage: React.FC<{
 
   useEffect(() => () => material.dispose(), [material]);
 
-  // Both fields translate by exactly one world period across the loop, so
-  // frame 300 samples the same noise as frame 0 while never stopping.
-  const conePeriodWorld = NOISE_PERIOD / CONE_NOISE_FREQ;
-  const fogPeriodWorld = NOISE_PERIOD / FOG_NOISE_FREQ;
+  // Both fields translate by exactly one noise period across the loop, so
+  // frame 300 samples the same field as frame 0 while never stopping.
+  //
+  // The drift uniforms are added to the sample point *after* it is scaled by
+  // the frequency, so they are in lattice units and each component must be a
+  // whole multiple of NOISE_PERIOD. Scaling a period by a direction vector's
+  // components - the obvious way to aim the drift - breaks exactly that, and
+  // the field then lands somewhere mid-period at the loop point. It is a
+  // quiet failure: the fog still drifts and still looks right in any single
+  // frame, it just does not come back.
   material.uniforms.uFrame.value = frame;
   material.uniforms.uConeIntensity.value = 0.15 * coneIntensity;
   // Kept low: the ring's own halo comes from bloom on the emissive mesh,
   // and the volumetric glow term assumes a horizontal ring, so leaning on it
   // would misplace the halo now that the ring is tipped.
   material.uniforms.uGlowIntensity.value = 0.16 * coneIntensity;
-  // Cone shimmer drifts downward, with the beam.
-  (material.uniforms.uConeDrift.value as THREE.Vector3).set(
-    0,
-    -t * conePeriodWorld * CONE_NOISE_FREQ,
-    0,
-  );
-  // Ground fog rolls sideways and slightly toward camera.
-  (material.uniforms.uFogDrift.value as THREE.Vector3).set(
-    t * fogPeriodWorld * FOG_NOISE_FREQ * 0.88,
-    0,
-    t * fogPeriodWorld * FOG_NOISE_FREQ * 0.48,
-  );
+  // Cone shimmer drifts downward, with the beam: one period on Y.
+  (material.uniforms.uConeDrift.value as THREE.Vector3).set(0, -t * NOISE_PERIOD, 0);
+  // Ground fog rolls sideways: one period on X. In world units that is
+  // NOISE_PERIOD / FOG_NOISE_FREQ, about 9 units over the clip.
+  (material.uniforms.uFogDrift.value as THREE.Vector3).set(t * NOISE_PERIOD, 0, 0);
 
   const onBeforeRender = useMemo(
     () =>
