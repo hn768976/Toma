@@ -123,8 +123,18 @@ export type FieldOptions = {
   /** Radius is picked per disc from this range. */
   radius: [number, number];
   depth: [number, number];
-  /** Half the glass thickness, in world units. Constant across the field. */
-  halfThickness: number;
+  /**
+   * Half the glass thickness, in world units, constant across the field --
+   * sheet glass, as V1 and V2 use.
+   */
+  halfThickness?: number;
+  /**
+   * Half-thickness as a fraction of each disc's radius, for bodies that should
+   * read as spheres. Around 0.36 leaves the outer third of the disc curved,
+   * which is the band the wide crescent highlight lives in. Takes precedence
+   * over halfThickness.
+   */
+  thicknessRatio?: number;
   /** How far a disc may wander from its cell centre, as a fraction of the cell. */
   jitter: number;
   /** Drift amplitude per axis. */
@@ -175,7 +185,10 @@ export const buildField = (options: FieldOptions): DiscSpec[] => {
         name: `field-${row}-${column}`,
         tint,
         radius,
-        halfThickness: options.halfThickness,
+        halfThickness:
+          options.thicknessRatio !== undefined
+            ? radius * options.thicknessRatio
+            : (options.halfThickness ?? SHEET_HALF_THICKNESS),
         center: [x, y, z],
         drift: {
           amplitude: [

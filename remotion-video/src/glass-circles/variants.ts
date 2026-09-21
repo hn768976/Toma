@@ -314,18 +314,23 @@ export const V2: GlassVariant = {
 
 
 /**
- * V3 and V4 are the same rig as each other in two palettes. They use exactly
- * the glass of V1 and V2 -- the same round sheet-glass discs at the same
- * constant thickness, with the same thin two-lobe rim -- but many of them,
- * filling the frame edge to edge instead of three hero circles.
+ * V3 and V4 share a field of thick, sphere-like bodies.
+ *
+ * Their references get their signature from a wide crescent of light inside
+ * each circle and a body graded from lit to dark across its face. Neither is
+ * reachable with sheet glass: a flat disc has a single normal, so it shades
+ * uniformly, and its rim is only ever a thin band. At this thickness the outer
+ * third of every disc is curved, which is the band the crescent lives in.
+ *
+ * V1, V2, V6 and V7 keep the thin sheet glass.
  */
-const CIRCLE_FIELD = buildField({
+const SPHERE_FIELD = buildField({
   columns: 5,
   rows: 3,
   spread: [3.6, 2.3],
   radius: [0.5, 1.3],
   depth: [-1.1, 1.1],
-  halfThickness: SHEET_HALF_THICKNESS,
+  thicknessRatio: 0.36,
   jitter: 1.0,
   drift: [0.18, 0.16, 0.12],
   seed: 20240921,
@@ -334,13 +339,13 @@ const CIRCLE_FIELD = buildField({
 export const V3: GlassVariant = {
   id: "v3",
   bodyLight: {
-    ambient: { color: "#6a4ad8", intensity: 0.5 },
-    key: { color: "#7fe0d0", intensity: 1.4, direction: [-0.6, 0.7, 0.5] },
+    ambient: { color: "#6a4ad8", intensity: 0.35 },
+    key: { color: "#7fe0d0", intensity: 2.0, direction: [-0.6, 0.7, 0.5] },
   },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Violet field, cyan and green crescent light",
-  discs: CIRCLE_FIELD,
+  discs: SPHERE_FIELD,
   backdrop: {
     top: "#3a1a68",
     bottom: "#1c0a34",
@@ -400,7 +405,7 @@ export const V3: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
-    transmission: 0.88,
+    transmission: 0.72,
     color: "#4e35a8",
     ior: 1.55,
     dispersion: 7.0,
@@ -411,12 +416,12 @@ export const V3: GlassVariant = {
     envMapIntensity: 0.5,
   },
   rim: {
-    specularGain: 0.8,
-    dispersionGain: 1.4,
+    specularGain: 0.9,
+    dispersionGain: 1.8,
     iorSpread: 0.09,
-    edgePower: 6.0,
-    bandPower: 2.2,
-    innerFalloff: 6.0,
+    edgePower: 5.0,
+    bandPower: 1.0,
+    innerFalloff: 3.0,
     tint: "#ffffff",
   },
   bloom: { strength: 1.0, radius: 0.75, threshold: 0.55 },
@@ -429,13 +434,13 @@ export const V3: GlassVariant = {
 export const V4: GlassVariant = {
   id: "v4",
   bodyLight: {
-    ambient: { color: "#3f5ad0", intensity: 0.4 },
-    key: { color: "#7fd0ff", intensity: 1.5, direction: [-0.6, 0.7, 0.5] },
+    ambient: { color: "#3f5ad0", intensity: 0.3 },
+    key: { color: "#7fd0ff", intensity: 2.2, direction: [-0.6, 0.7, 0.5] },
   },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
   label: "Near-black field, cyan crescents against crimson rims",
-  discs: CIRCLE_FIELD,
+  discs: SPHERE_FIELD,
   backdrop: {
     top: "#0a0410",
     bottom: "#040107",
@@ -495,7 +500,7 @@ export const V4: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
-    transmission: 0.88,
+    transmission: 0.72,
     color: "#2a3f96",
     ior: 1.55,
     dispersion: 7.0,
@@ -506,12 +511,12 @@ export const V4: GlassVariant = {
     envMapIntensity: 0.5,
   },
   rim: {
-    specularGain: 0.85,
-    dispersionGain: 1.5,
+    specularGain: 0.95,
+    dispersionGain: 1.9,
     iorSpread: 0.09,
-    edgePower: 6.0,
-    bandPower: 2.2,
-    innerFalloff: 6.0,
+    edgePower: 5.0,
+    bandPower: 1.0,
+    innerFalloff: 3.0,
     tint: "#ffffff",
   },
   bloom: { strength: 1.0, radius: 0.75, threshold: 0.55 },
