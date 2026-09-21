@@ -368,10 +368,12 @@ concurrency, 1920×1080 (`--scale=0.5`), including bundle and encode:
 
 | Composition | 1080p s/frame | 1080p, 300 frames | 4K estimate |
 |---|---|---|---|
-| `NeonRing-PodiumBlue` | 2.5 | ~13 min | ~50 min |
-| `FlutedPlaster-PodiumCylinder` | 5.5 | ~28 min | ~1h 50m |
-| `WoodLeaf-PodiumCool` | 7.0 | ~35 min | ~2h 20m |
-| `DuotoneGlass-PodiumMagentaCyan` | 11.1 | ~55 min | ~3h 40m |
+| `NeonRing-PodiumBlue` | 3.5 | 17 min | ~1h 10m |
+| `WoodLeaf-PodiumCool` | 4.6 | 23 min | ~1h 30m |
+| `FlutedPlaster-PodiumCylinder` | 7.5 | 38 min | ~2h 30m |
+| `DuotoneGlass-PodiumMagentaCyan` | 9.9 | 49 min | ~3h 20m |
+
+Measured on the shipped builds, wall-clock, including bundle and encode.
 
 The 4K column is the 1080p figure ×4, since these are fill-rate bound under
 software rasterisation — PCSS taps, the transmission pass and the shell stack
@@ -433,6 +435,51 @@ grain). Variant B is then a palette or geometry change on a scene that has
 already been proved.
 
 All eight are 4K-render-ready with the commands at the top of this file.
+
+---
+
+## Known differences from the reference clips
+
+Each look was compared against its reference by a separate pass that was
+given only the two frames and no idea what had been built, and its findings
+were acted on. What follows is what remains, and why — checked by measuring
+the reference rather than by eye.
+
+**Framing, on every look.** The references sit the plinth low and crop it at
+the bottom edge — look 3's reference shows only the top third of its
+plinth, look 4's puts its base at 90% of frame height. The brief asks for
+the podium top between 40% and 50% of frame height *and* a contact shadow
+where the plinth meets the ground, which together require the whole plinth
+in frame with floor below it. The brief wins; the difference is deliberate.
+It also caps how large the plinth can be: a wider disc opens its top ellipse
+vertically, and past about 55% of frame width the ellipse no longer fits
+inside the 10% band.
+
+**Look 3 and look 4 show a floor; their references do not.** Same cause —
+the brief asks for the gobo to fall on wall *and* floor and bend at the
+seam, and names the seam as a scale cue.
+
+**The gobo crosses the plinth.** No reference lets a shadow touch its
+podium. The brief explicitly asks the gobo to wrap over the plinth where it
+crosses it, and that is one of the things separating a real gobo from a
+painted overlay.
+
+**No bloom or haze on looks 1, 3 and 4.** All three references carry some
+atmospheric glow. The brief says bloom only on look 2's rings.
+
+**Look 4's top face is wood, not a pale plate.** The reference podium is two
+materials — a dark wood rim with a near-white inset top. The brief asks for
+grain running across the top face and checks for it, so the top stays wood.
+This is the single most conspicuous divergence in the set.
+
+**Look 2 has no ground.** Its own spec calls for pure black with no visible
+wall, floor or horizon, so the all-looks contact-shadow criterion cannot
+apply. `tools/check.mjs` reports it as not applicable rather than passing it
+on a technicality; what marks the base is the neon at the slab's rim with
+its reflection below.
+
+**Camera push is 0 on every row.** A linear push and a seamless loop are
+mutually exclusive. See the camera section above.
 
 ## What is not in here
 
