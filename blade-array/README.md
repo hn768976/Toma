@@ -188,7 +188,23 @@ will not close.
 
 ## Verification
 
-### Objective checks
+### Everything that can be checked against the encoded file
+
+```sh
+node scripts/verify-output.mjs              # every mp4 in out/
+node scripts/verify-output.mjs out/NeonDark_Columns.mp4
+```
+
+It probes the container, extracts frames 0/150/300/450/599 **from the encoded
+mp4** and checks: resolution, frame rate, duration, codec, pixel format and the
+absence of an audio track; that colour varies across the width of a single
+blade; that the row runs past both side edges; that the colour has moved between
+frames 0 and 300; and that no smooth ramp has stepped into plateaus. It also
+prints blade pitch, how many seams are shared with frame 300 (look 1 keeps
+nearly all of them, look 2 keeps few), hue count, and the near-black percentage
+per frame.
+
+The raw probe, if you want it by hand:
 
 ```sh
 npx remotion ffprobe -v error \
@@ -277,6 +293,8 @@ scripts/
   preview-stills.mjs   one 1080p still each
   stills-export.mjs    the 6000x3375 harvest
   verify-loop.mjs      loop closure + determinism
+  verify-output.mjs    container, per-look and banding checks on the mp4s
+  png.mjs              small PNG reader the checks use
   ids.mjs              id -> output name, read from the data rows
 ```
 
@@ -286,6 +304,7 @@ scripts/
 
 - [ ] `npm install && npx remotion studio src/index.ts` works from a clean copy
 - [ ] `ffprobe`: 1920x1080, 30/1, 20.0 s, h264, yuv420p, **no audio stream**
+- [ ] `node scripts/verify-output.mjs` - container, per-look and banding checks
 - [ ] `node scripts/verify-loop.mjs` - loop closure and determinism, all ten
 - [ ] Banding: sample a column through the smoothest region of the encoded
       `NeonDark_Columns.mp4`, then `RibbedPanel_NavyGlow.mp4`
