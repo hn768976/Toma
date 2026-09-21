@@ -166,6 +166,46 @@ export const RemotionRoot: React.FC = () => {
         schema={glassCirclesSchema}
         defaultProps={{ ...glassCirclesDefaults, variant: "v5" as const }}
       />
+      <Composition
+        id="GlassCircles-V6-1080p"
+        component={GlassCircles}
+        durationInFrames={DURATION_10S}
+        fps={GLASS_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v6" as const }}
+      />
+      <Composition
+        id="GlassCircles-V6-4K"
+        component={GlassCircles}
+        durationInFrames={DURATION_10S}
+        fps={GLASS_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v6" as const }}
+      />
+      <Composition
+        id="GlassCircles-V7-1080p"
+        component={GlassCircles}
+        durationInFrames={DURATION_10S}
+        fps={GLASS_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v7" as const }}
+      />
+      <Composition
+        id="GlassCircles-V7-4K"
+        component={GlassCircles}
+        durationInFrames={DURATION_10S}
+        fps={GLASS_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v7" as const }}
+      />
     </>
   );
 };

@@ -37,7 +37,7 @@ import {
 } from "./layout";
 
 export type GlassVariant = {
-  id: "v1" | "v2" | "v3" | "v4" | "v5";
+  id: "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7";
   label: string;
   /** The discs this variant puts on screen, and how they move. */
   discs: DiscSpec[];
@@ -334,8 +334,8 @@ const CIRCLE_FIELD = buildField({
 export const V3: GlassVariant = {
   id: "v3",
   bodyLight: {
-    ambient: { color: "#6a4ad8", intensity: 0.32 },
-    key: { color: "#7fe0d0", intensity: 2.4, direction: [-0.6, 0.7, 0.5] },
+    ambient: { color: "#6a4ad8", intensity: 0.5 },
+    key: { color: "#7fe0d0", intensity: 1.4, direction: [-0.6, 0.7, 0.5] },
   },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
@@ -345,7 +345,7 @@ export const V3: GlassVariant = {
     top: "#2e1257",
     bottom: "#160726",
     glowColor: "#5a2596",
-    glowIntensity: 0.12,
+    glowIntensity: 0.3,
     glowRadius: 5.4,
     washColor: "#24094a",
     washIntensity: 0.12,
@@ -400,7 +400,7 @@ export const V3: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
-    transmission: 0.7,
+    transmission: 0.88,
     color: "#4e35a8",
     ior: 1.55,
     dispersion: 7.0,
@@ -429,8 +429,8 @@ export const V3: GlassVariant = {
 export const V4: GlassVariant = {
   id: "v4",
   bodyLight: {
-    ambient: { color: "#3f5ad0", intensity: 0.22 },
-    key: { color: "#7fd0ff", intensity: 2.6, direction: [-0.6, 0.7, 0.5] },
+    ambient: { color: "#3f5ad0", intensity: 0.4 },
+    key: { color: "#7fd0ff", intensity: 1.5, direction: [-0.6, 0.7, 0.5] },
   },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
@@ -440,7 +440,7 @@ export const V4: GlassVariant = {
     top: "#0a0410",
     bottom: "#040107",
     glowColor: "#5e0c1a",
-    glowIntensity: 0.03,
+    glowIntensity: 0.1,
     glowRadius: 4.8,
     washColor: "#10030a",
     washIntensity: 0.10,
@@ -495,7 +495,7 @@ export const V4: GlassVariant = {
     intensity: 1.0,
   },
   glass: {
-    transmission: 0.7,
+    transmission: 0.88,
     color: "#2a3f96",
     ior: 1.55,
     dispersion: 7.0,
@@ -621,10 +621,211 @@ export const V5: GlassVariant = {
   clearColor: "#ffffff",
 };
 
+
+/**
+ * V6 and V7 are V2's piece recoloured onto a dark field: the same three round
+ * sheet-glass discs, the same layout and the same motion, lit violet and warm
+ * red instead of sky blue.
+ *
+ * Their light budget follows V1 rather than V2. On a bright field a rim can
+ * carry very large values and still read as a thin line against near-white;
+ * on a dark one the same numbers clip to white and lose the colour entirely.
+ */
+export const V6: GlassVariant = {
+  id: "v6",
+  bodyLight: {
+    ambient: { color: "#ffffff", intensity: 0 },
+    key: { color: "#ffffff", intensity: 0, direction: [-0.6, 0.7, 0.5] },
+  },
+  body: "glass" as const,
+  film: { edgeDarkness: 1, edgeWidth: 1 },
+  label: "Dark field, violet glass light",
+  discs: THREE_CIRCLE_LAYOUT,
+  backdrop: {
+    top: "#0a0614",
+    bottom: "#040209",
+    glowColor: "#3a1a7a",
+    glowIntensity: 0.1,
+    glowRadius: 5.2,
+    washColor: "#12082a",
+    washIntensity: 0.1,
+    vignette: 0.6,
+  },
+  environment: {
+    up: [0.02, 0.014, 0.04],
+    horizon: [0.012, 0.008, 0.026],
+    down: [0.005, 0.003, 0.01],
+    lights: [
+      // Violet key: the bright arc along each rim.
+      {
+        u: 0.2,
+        v: 0.6,
+        width: 0.09,
+        height: 0.024,
+        tilt: 0.06,
+        color: [0.55, 0.25, 1.0],
+        intensity: 45,
+      },
+      // Deep purple fill so the far side of a rim is not dead black.
+      {
+        u: 0.34,
+        v: 0.48,
+        width: 0.16,
+        height: 0.05,
+        tilt: -0.04,
+        color: [0.25, 0.08, 0.7],
+        intensity: 3.5,
+      },
+      // Magenta accent, which the dispersion splits out along the edge.
+      {
+        u: 0.72,
+        v: 0.38,
+        width: 0.05,
+        height: 0.016,
+        tilt: 0.1,
+        color: [1.0, 0.3, 0.7],
+        intensity: 3,
+      },
+      {
+        u: 0.88,
+        v: 0.66,
+        width: 0.1,
+        height: 0.035,
+        tilt: 0.0,
+        color: [0.4, 0.3, 1.0],
+        intensity: 1.5,
+      },
+    ],
+    intensity: 1.0,
+  },
+  glass: {
+    transmission: 1,
+    color: "#ffffff",
+    ior: 1.55,
+    dispersion: 7.5,
+    roughness: 0.1,
+    thickness: 0.1,
+    attenuationColor: "#8a5aff",
+    attenuationDistance: 2.0,
+    envMapIntensity: 0.15,
+  },
+  rim: {
+    specularGain: 4.5,
+    dispersionGain: 7.0,
+    iorSpread: 0.1,
+    edgePower: 6.0,
+    bandPower: 2.2,
+    innerFalloff: 6.0,
+    tint: "#ffffff",
+  },
+  bloom: { strength: 0.75, radius: 0.72, threshold: 0.7 },
+  grain: 0.018,
+  toneMapping: "aces",
+  exposure: 1.0,
+  clearColor: "#040209",
+};
+
+export const V7: GlassVariant = {
+  id: "v7",
+  bodyLight: {
+    ambient: { color: "#ffffff", intensity: 0 },
+    key: { color: "#ffffff", intensity: 0, direction: [-0.6, 0.7, 0.5] },
+  },
+  body: "glass" as const,
+  film: { edgeDarkness: 1, edgeWidth: 1 },
+  label: "Dark field, soft red gradient glass light",
+  discs: THREE_CIRCLE_LAYOUT,
+  backdrop: {
+    top: "#140606",
+    bottom: "#070202",
+    glowColor: "#7a2018",
+    glowIntensity: 0.14,
+    glowRadius: 5.4,
+    washColor: "#2a0a08",
+    washIntensity: 0.12,
+    vignette: 0.55,
+  },
+  environment: {
+    up: [0.035, 0.015, 0.012],
+    horizon: [0.022, 0.01, 0.008],
+    down: [0.01, 0.004, 0.003],
+    lights: [
+      // Warm red key.
+      {
+        u: 0.2,
+        v: 0.6,
+        width: 0.095,
+        height: 0.026,
+        tilt: 0.06,
+        color: [1.0, 0.32, 0.22],
+        intensity: 42,
+      },
+      // Broad orange fill: the soft gradient across the glass.
+      {
+        u: 0.35,
+        v: 0.48,
+        width: 0.17,
+        height: 0.055,
+        tilt: -0.04,
+        color: [1.0, 0.5, 0.25],
+        intensity: 4,
+      },
+      // Deep crimson at the far edge.
+      {
+        u: 0.72,
+        v: 0.38,
+        width: 0.07,
+        height: 0.02,
+        tilt: 0.1,
+        color: [1.0, 0.12, 0.18],
+        intensity: 5,
+      },
+      // A cool sliver, so the dispersion has something to split against.
+      {
+        u: 0.88,
+        v: 0.66,
+        width: 0.09,
+        height: 0.03,
+        tilt: 0.0,
+        color: [0.4, 0.5, 1.0],
+        intensity: 1.2,
+      },
+    ],
+    intensity: 1.0,
+  },
+  glass: {
+    transmission: 1,
+    color: "#ffffff",
+    ior: 1.55,
+    dispersion: 7.5,
+    roughness: 0.1,
+    thickness: 0.1,
+    attenuationColor: "#ff7a5a",
+    attenuationDistance: 2.0,
+    envMapIntensity: 0.15,
+  },
+  rim: {
+    specularGain: 4.5,
+    dispersionGain: 7.0,
+    iorSpread: 0.1,
+    edgePower: 6.0,
+    bandPower: 2.2,
+    innerFalloff: 6.0,
+    tint: "#ffffff",
+  },
+  bloom: { strength: 0.7, radius: 0.72, threshold: 0.72 },
+  grain: 0.018,
+  toneMapping: "aces",
+  exposure: 1.0,
+  clearColor: "#070202",
+};
+
 export const VARIANTS: Record<GlassVariant["id"], GlassVariant> = {
   v1: V1,
   v2: V2,
   v3: V3,
   v4: V4,
   v5: V5,
+  v6: V6,
+  v7: V7,
 };
