@@ -292,6 +292,7 @@ export const VirusField: React.FC<{
       ? look.post.focusDistance
       : CAMERA_Z - transforms[heroIndex].pos.z;
 
+
   const { lighting: L } = look;
 
   return (

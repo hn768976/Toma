@@ -132,23 +132,43 @@ const rawSpike = (archetype: SpikeArchetype): RawSpike => {
         capHeight: 0.087,
       };
 
+    case "club": {
+      // Swells above the stalk and rounds off, rather than sitting on it as a
+      // sphere. Seen end-on it still reads as a modelled knob with shading,
+      // where a bare sphere flattens into a painted dot.
+      const cap = lathe(
+        [
+          [0.026, 0.0],
+          [0.052, 0.016],
+          [0.076, 0.042],
+          [0.086, 0.072],
+          [0.082, 0.104],
+          [0.06, 0.13],
+          [0.026, 0.147],
+          [0.0005, 0.153],
+        ],
+        16,
+      );
+      return { stalk: cyl(0.021, 0.028, 0.26, 8), stalkHeight: 0.26, cap, capHeight: 0.155 };
+    }
+
     case "stalk-teardrop": {
       // Wide at the outer end, tapering back to the stalk: the heart-shaped
       // cap that carries look 7.
       const cap = lathe(
         [
-          [0.005, 0.0],
-          [0.058, 0.014],
-          [0.098, 0.034],
-          [0.114, 0.058],
-          [0.104, 0.082],
-          [0.068, 0.104],
-          [0.026, 0.118],
-          [0.0005, 0.123],
+          [0.004, 0.0],
+          [0.042, 0.011],
+          [0.070, 0.026],
+          [0.080, 0.045],
+          [0.072, 0.064],
+          [0.046, 0.080],
+          [0.018, 0.090],
+          [0.0005, 0.094],
         ],
         16,
       );
-      return { stalk: cyl(0.0105, 0.014, 0.34, 7), stalkHeight: 0.34, cap, capHeight: 0.125 };
+      return { stalk: cyl(0.009, 0.012, 0.38, 7), stalkHeight: 0.38, cap, capHeight: 0.095 };
     }
 
     case "cluster": {
@@ -168,7 +188,7 @@ const rawSpike = (archetype: SpikeArchetype): RawSpike => {
         lobes.map(([r, x, y, z]) => sphereAt(r, x, y, z, 10)),
         false,
       ) as THREE.BufferGeometry;
-      return { stalk: cyl(0.032, 0.042, 0.13, 7), stalkHeight: 0.13, cap, capHeight: 0.17 };
+      return { stalk: cyl(0.028, 0.038, 0.185, 7), stalkHeight: 0.185, cap, capHeight: 0.17 };
     }
 
     case "mushroom": {
@@ -191,18 +211,20 @@ const rawSpike = (archetype: SpikeArchetype): RawSpike => {
       // Flares outward and dishes slightly at the mouth.
       const cap = lathe(
         [
-          [0.028, 0.0],
-          [0.04, 0.03],
-          [0.062, 0.062],
-          [0.086, 0.09],
-          [0.09, 0.105],
-          [0.07, 0.1],
-          [0.04, 0.094],
-          [0.0005, 0.09],
+          [0.026, 0.0],
+          [0.038, 0.028],
+          [0.064, 0.062],
+          [0.092, 0.098],
+          [0.101, 0.118],
+          [0.086, 0.112],
+          [0.062, 0.09],
+          [0.038, 0.072],
+          [0.018, 0.062],
+          [0.0005, 0.058],
         ],
         16,
       );
-      return { stalk: cyl(0.03, 0.036, 0.14, 8), stalkHeight: 0.14, cap, capHeight: 0.11 };
+      return { stalk: cyl(0.029, 0.037, 0.14, 8), stalkHeight: 0.14, cap, capHeight: 0.125 };
     }
 
     case "stub-cone": {

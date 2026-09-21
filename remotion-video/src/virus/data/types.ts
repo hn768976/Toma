@@ -10,6 +10,12 @@
 export type SpikeArchetype =
   /** Thin cylinder with a small spherical knob. Delicate, hair-like at distance. */
   | "stalk-knob"
+  /**
+   * Narrow stalk swelling into a rounded, bulbous dome wider than its base.
+   * The shape most of the references actually use, and the one a plain
+   * ball-on-a-stick reads wrong against.
+   */
+  | "club"
   /** Thin stalk with a large teardrop cap; the cap carries the read. */
   | "stalk-teardrop"
   /** Short stub topped with overlapping spheres — a broccoli-floret knot. */
@@ -108,6 +114,16 @@ export interface LookSpec {
     spread: number;
     /** Spikes per particle. */
     spikeCount: [number, number];
+    /**
+     * Radius multiplier applied to the hero particle, against radiusRange[1].
+     * The references are built around one dominant subject with the rest
+     * receding; without this the field reads as evenly-sized confetti.
+     */
+    heroScale: number;
+    /** Where the hero sits, as a fraction of the frustum at its depth. */
+    heroAt: [number, number];
+    /** Depth the hero is moved to. The focus plane follows it. */
+    heroDepth: number;
   };
 
   /** The particle the focus plane sits on. Index into the built field. */

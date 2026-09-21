@@ -187,7 +187,23 @@ export const buildField = (
     });
   }
 
+  // Promote one particle to hero: bigger, placed deliberately, and sitting on
+  // the focus plane. Every reference is composed around a dominant subject
+  // with the rest supporting it, which an evenly-sampled field never produces.
+  const heroIndex = Math.min(look.heroIndex, particles.length - 1);
+  const hero = particles[heroIndex];
+  hero.radius = radiusRange[1] * look.particles.heroScale;
+  const heroHalfH = frustumHalfHeight(look.particles.heroDepth, cameraZ, fovDeg);
+  hero.base.set(
+    look.particles.heroAt[0] * heroHalfH * (16 / 9),
+    look.particles.heroAt[1] * heroHalfH,
+    look.particles.heroDepth,
+  );
+  // A hero this size must not wander far, or it drifts out of its own focus
+  // band and the frame loses its anchor.
+  hero.amp.multiplyScalar(0.45);
+  hero.turns = 1;
+
   const spikeTotal = particles.reduce((a, p) => a + p.spikes.length, 0);
-  const hero = particles[Math.min(look.heroIndex, particles.length - 1)];
   return { particles, spikeTotal, hero };
 };
