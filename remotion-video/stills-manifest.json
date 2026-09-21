@@ -1,0 +1,14 @@
+[
+  {"id":"Molecule-Lavender","name":"Molecule_Lavender","stillFrame":150,"stillFrames":[40,150,240]},
+  {"id":"Molecule-Blue","name":"Molecule_Blue","stillFrame":150,"stillFrames":[40,150,240]},
+  {"id":"Molecule-Gold","name":"Molecule_Gold","stillFrame":150,"stillFrames":[40,150,240]},
+  {"id":"GiantSphere-Champagne","name":"GiantSphere_Champagne","stillFrame":150,"stillFrames":[30,150,250]},
+  {"id":"GiantSphere-Lilac","name":"GiantSphere_Lilac","stillFrame":150,"stillFrames":[30,150,250]},
+  {"id":"CandyBlob-Rose","name":"CandyBlob_Rose","stillFrame":150,"stillFrames":[45,150,255]},
+  {"id":"CandyBlob-Orange","name":"CandyBlob_Orange","stillFrame":150,"stillFrames":[45,150,255]},
+  {"id":"BubbleField-Pink","name":"BubbleField_Pink","stillFrame":150,"stillFrames":[50,150,245]},
+  {"id":"BubbleField-Blue","name":"BubbleField_Blue","stillFrame":150,"stillFrames":[50,150,245]},
+  {"id":"IridescentRise-Pink","name":"IridescentRise_Pink","stillFrame":120,"stillFrames":[60,150,260]},
+  {"id":"GoldenOil-Amber","name":"GoldenOil_Amber","stillFrame":150,"stillFrames":[35,150,260]},
+  {"id":"GoldenOil-Olive","name":"GoldenOil_Olive","stillFrame":150,"stillFrames":[35,150,260]}
+]
