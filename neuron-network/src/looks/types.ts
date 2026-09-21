@@ -163,6 +163,11 @@ export type Look = {
     bloomSmoothing: number;
     grain: number;
     exposure: number;
+    /**
+     * Encoder quality for this look. A near-flat, high-key field quantises
+     * into visible contours at the CRF the dark looks are fine with.
+     */
+    crf: number;
     /** Background vignette / centre lift. */
     bgLift: number;
     /** Scales the background before tone mapping; a high-key look needs >1. */
