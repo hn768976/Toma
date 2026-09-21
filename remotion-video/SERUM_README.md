@@ -254,6 +254,43 @@ Do not flatten the gradient to hide it.
 
 ---
 
+## Known limitations
+
+### Spheres do not refract one another
+
+In the reference clips, where two spheres overlap you can see the rear one
+through the front one, distorted by it. In these compositions a hero sphere in
+front **occludes** the one behind instead.
+
+This is a direct consequence of the determinism requirement, and it is worth
+understanding before trying to "fix" it:
+
+- three's transmission builds its backdrop from the **opaque** objects only, so
+  transmissive objects are excluded from each other's backdrop by design.
+- drei's `MeshTransmissionMaterial` would give inter-sphere refraction, but it
+  keeps its framebuffer between frames. Frame 150 rendered cold then differs
+  from frame 150 of a sequential render -- it fails the determinism check
+  outright, and Remotion renders frames out of order across threads.
+- Alpha-blending the hero layer to fake the see-through was tried and reverted.
+  Transmission already outputs the transmitted background, so blending it again
+  double-counts and washes the frame out.
+
+What the spheres *do* refract is the background and the approximated layers,
+which is why look 6's packed back mass still produces its dark elongated lens
+shapes. The approximated layers are stateless, so they stay deterministic.
+
+If you have a GPU budget and are willing to give up frame-order independence,
+the fix is one transmission material per depth group and a matching relaxation
+of the determinism guarantee. Do not make that change if frames will be
+rendered in parallel.
+
+### Banding in the encoded previews
+
+Mild, and caused by x264 rather than the render. See the banding section above
+for the measurements and an encode recipe that avoids it.
+
+---
+
 ## Credits and licence
 
 **HDRI** — the studio environment is `studio_small` from
