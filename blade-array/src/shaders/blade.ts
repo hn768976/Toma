@@ -224,9 +224,13 @@ void main() {
   h *= h; h *= h; h *= h; h *= h; h *= h; h *= h; h *= h; h *= h;
   col += lut(u, 0.25) * (uKeyInt * h * gain);
 
-  // Fill. Keeps unlit blades physically present in the black regions.
+  // Fill. Keeps unlit blades physically present in the black regions: brighten
+  // an extracted frame heavily and the ribbing is still there. The floor is
+  // small on purpose, so the seams stay at zero and the field reads as
+  // genuinely black rather than as a grey haze - and so that what survives is
+  // a comb the encoder can hold rather than a uniform level it crushes away.
   const vec3 fillDir = vec3(0.7191, 0.2197, 0.6592);
-  col += uAmbient * uBaseColor * (0.25 + 0.75 * max(dot(N, fillDir), 0.0));
+  col += uAmbient * uBaseColor * (0.06 + 0.94 * max(dot(N, fillDir), 0.0));
 
   // Tonemap here rather than in a post pass: the composer's frame buffer is
   // 8-bit sRGB, which is far cheaper than half-float in software rasterisation

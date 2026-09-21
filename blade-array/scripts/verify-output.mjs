@@ -118,6 +118,37 @@ function banding(img, W = 120) {
   return { worst, windows, noise: noiseN ? noiseSum / noiseN : null };
 }
 
+/** The same scan, over the dark ramps that the mid-tone one skips. */
+function bandingDark(img, W = 120) {
+  let worst = 0, windows = 0, noiseSum = 0, noiseN = 0;
+  const step = Math.max(1, Math.floor(img.width / 160));
+  for (let x = 0; x < img.width; x += step) {
+    for (let ch = 0; ch < 3; ch++) {
+      const v = []; for (let y = 0; y < img.height; y++) v.push(px(img, x, y)[ch]);
+      for (let s = 0; s + W < v.length; s += W >> 1) {
+        const win = v.slice(s, s + W);
+        const mn = Math.min(...win), mx = Math.max(...win);
+        const mean = win.reduce((a, b) => a + b, 0) / W;
+        if (mean < 3 || mean > 26 || mx - mn < 2 || mx - mn > 18) continue;
+        let edgy = false;
+        for (let i = 1; i < W; i++) if (Math.abs(win[i] - win[i - 1]) > 3) { edgy = true; break; }
+        if (edgy) continue;
+        windows++;
+        for (let i = 2; i < W - 2; i++) {
+          const m5 = (win[i - 2] + win[i - 1] + win[i] + win[i + 1] + win[i + 2]) / 5;
+          noiseSum += Math.abs(win[i] - m5); noiseN++;
+        }
+        let run = 1;
+        for (let i = 1; i <= W; i++) {
+          if (i < W && win[i] === win[i - 1]) run++;
+          else { if (run > worst) worst = run; run = 1; }
+        }
+      }
+    }
+  }
+  return { worst, windows, noise: noiseN ? noiseSum / noiseN : 0 };
+}
+
 function gridStats(img) {
   const v = [];
   for (let gy = 0; gy < 16; gy++) for (let gx = 0; gx < 28; gx++)
@@ -181,14 +212,37 @@ for (const file of files) {
       `(hue spread ${best.spread.toFixed(0)}deg, luma range ${best.lumRange.toFixed(0)})`
       : "could not isolate a lit blade");
 
-  // The row runs past both side edges; blades are cropped top and bottom.
-  const colLit = (rx) => {
-    let n = 0; const xx = Math.round(first.width * rx);
-    for (let yy = 0; yy < first.height; yy += 2) if (luma(first, xx, yy) > 3) n++;
-    return (n / (first.height / 2)) * 100;
+  // The row runs past both side edges. Measured over all five frames: on the
+  // darkest compositions an edge column can sit inside a black band at one
+  // moment, which says nothing about whether blades are there.
+  const colLit = (img, rx) => {
+    let n = 0; const xx = Math.round(img.width * rx);
+    for (let yy = 0; yy < img.height; yy += 2) if (luma(img, xx, yy) > 3) n++;
+    return (n / (img.height / 2)) * 100;
   };
-  say(colLit(0.002) > 80 && colLit(0.998) > 80,
-    `outermost columns lit ${colLit(0.002).toFixed(0)}% / ${colLit(0.998).toFixed(0)}% (array runs past both edges)`);
+  const leftLit = Math.max(...FRAMES.map((f) => colLit(imgs[f], 0.002)));
+  const rightLit = Math.max(...FRAMES.map((f) => colLit(imgs[f], 0.998)));
+  say(leftLit > 80 && rightLit > 80,
+    `outermost columns lit ${leftLit.toFixed(0)}% / ${rightLit.toFixed(0)}% at their brightest frame ` +
+    `(array runs past both edges)`);
+
+  // Blades are cropped top and bottom: the first and last rows must carry the
+  // same blade comb as the middle, not blade ends or empty background.
+  const combAt = (img, ry) => {
+    const yy = Math.round((img.height - 1) * ry);
+    const v = []; for (let x = 0; x < img.width; x++) v.push(luma(img, x, yy));
+    let turns = 0;
+    for (let x = 2; x < v.length - 2; x++) {
+      const a = Math.max(v[x - 2], v[x + 2]);
+      if (v[x] <= v[x - 1] && v[x] <= v[x + 1] && a - v[x] > Math.max(3, a * 0.08)) turns++;
+    }
+    return turns;
+  };
+  const brightest = FRAMES.reduce((b, f) => (gridStats(imgs[f]).p50 > gridStats(imgs[b]).p50 ? f : b), FRAMES[0]);
+  const bi = imgs[brightest];
+  say(combAt(bi, 0) > 8 && combAt(bi, 1) > 8,
+    `blade comb present on the very first and last rows (${combAt(bi, 0)} / ${combAt(bi, 1)} seams) ` +
+    `- blades are cropped, no ends visible`);
 
   // The colour has moved.
   let diff = 0, n = 0;
@@ -220,6 +274,47 @@ for (const file of files) {
   const stats = FRAMES.map((f) => gridStats(imgs[f]));
   console.log(`   info  median luma per frame: ${stats.map((s) => s.p50).join(" ")}` +
     `   near-black (<16): ${stats.map((s) => s.under16.toFixed(0) + "%").join(" ")}`);
+
+  // Unlit blades must still be physically there: brighten the near-black
+  // regions heavily and look for the blade comb.
+  const darkest = FRAMES.reduce((b, f) => (gridStats(imgs[f]).p50 < gridStats(imgs[b]).p50 ? f : b), FRAMES[0]);
+  const di = imgs[darkest];
+  let darkSeams = 0, darkCols = 0;
+  for (const ry of [0.25, 0.5, 0.75]) {
+    const yy = Math.round(di.height * ry);
+    const v = []; for (let x = 0; x < di.width; x++) v.push(luma(di, x, yy));
+    // Only the stretches that are near-black to begin with.
+    for (let x0 = 0; x0 + 200 < v.length; x0 += 200) {
+      const win = v.slice(x0, x0 + 200);
+      if (Math.max(...win) > 16) continue;
+      darkCols++;
+      for (let i = 2; i < win.length - 2; i++) {
+        const a = Math.max(win[i - 2], win[i + 2]);
+        if (win[i] <= win[i - 1] && win[i] <= win[i + 1] && a - win[i] >= 1) darkSeams++;
+      }
+    }
+  }
+  if (darkCols > 0) {
+    say(darkSeams / darkCols > 3,
+      `unlit blades still present: ${(darkSeams / darkCols).toFixed(1)} seams per 200px of near-black ` +
+      `(frame ${darkest}, ${darkCols} windows)`);
+  } else {
+    console.log(`   info  no near-black stretches at frame ${darkest} to test for hidden blades`);
+  }
+
+  // Banding in the dark, which is where it shows first. Same scan, lower floor.
+  let darkBand = null;
+  for (const f of FRAMES) {
+    const b = bandingDark(imgs[f]);
+    if (!darkBand || b.worst > darkBand.worst) darkBand = { ...b, f };
+  }
+  if (darkBand.windows > 0) {
+    say(darkBand.worst <= 150,
+      `banding in the dark: longest flat run ${darkBand.worst}px (frame ${darkBand.f}, ` +
+      `${darkBand.windows} windows), surviving dither ${darkBand.noise.toFixed(2)} lsb`);
+  } else {
+    console.log(`   info  no dark smooth ramps to scan for banding`);
+  }
 
   // Banding, on the worst frame of the five.
   let worstBand = null;

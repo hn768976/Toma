@@ -169,7 +169,7 @@ export const ribbedNavyGlow: BladeArrayConfig = {
   elevFreq: 1,
   bloomIntensity: 0.6,
   bloomThreshold: 0.7,
-  ambient: 0.008,
+  ambient: 0.018,
   diffGain: 0.018,
   stops: [
     s(0.0, [0.01, 0.02, 0.09], 0.03),
@@ -297,7 +297,7 @@ const neonBase = {
   bladesPerFrame: 40,
   fill: 1.0,
   arcDeg: 24,
-  ambient: 0.010,
+  ambient: 0.020,
   keyIntensity: 1.3,
   // Strong bright-core-to-dark-edge ramp: each blade has to read as a
   // separately lit object with a dark seam, not as one even corrugation.
@@ -354,7 +354,7 @@ export const neonBarrel: BladeArrayConfig = {
   bowAmp: 0.055,
   bowCenters: [],
   azimZoom: 2.2,
-  ambient: 0.012,
+  ambient: 0.028,
   diffGain: 0.03,
   elevSym: 1,
   elevLo: 0.6,
