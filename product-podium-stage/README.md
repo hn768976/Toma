@@ -53,22 +53,58 @@ environment map is generated into `public/hdri/` and is committed.
 ### 4K masters (the delivery render)
 
 ```bash
-npx remotion render BlindShadow-PodiumA     out/BlindShadow_PodiumA.mp4     --scale=1 --crf=16
-npx remotion render BlindShadow-PodiumB     out/BlindShadow_PodiumB.mp4     --scale=1 --crf=16
-npx remotion render HaloRing-PodiumCyan     out/HaloRing_PodiumCyan.mp4     --scale=1 --crf=16
-npx remotion render HaloRing-PodiumMagenta  out/HaloRing_PodiumMagenta.mp4  --scale=1 --crf=16
-npx remotion render NeonTier-PodiumCyan     out/NeonTier_PodiumCyan.mp4     --scale=1 --crf=16
-npx remotion render NeonTier-PodiumAmber    out/NeonTier_PodiumAmber.mp4    --scale=1 --crf=16
-npx remotion render BubbleDrift-PodiumLilac out/BubbleDrift_PodiumLilac.mp4 --scale=1 --crf=16
-npx remotion render BubbleDrift-PodiumMint  out/BubbleDrift_PodiumMint.mp4  --scale=1 --crf=16
+npx remotion render BlindShadow-PodiumA     out/BlindShadow_PodiumA.mp4     --scale=1 --crf=12
+npx remotion render BlindShadow-PodiumB     out/BlindShadow_PodiumB.mp4     --scale=1 --crf=12
+npx remotion render HaloRing-PodiumCyan     out/HaloRing_PodiumCyan.mp4     --scale=1 --crf=12
+npx remotion render HaloRing-PodiumMagenta  out/HaloRing_PodiumMagenta.mp4  --scale=1 --crf=12
+npx remotion render NeonTier-PodiumCyan     out/NeonTier_PodiumCyan.mp4     --scale=1 --crf=12
+npx remotion render NeonTier-PodiumAmber    out/NeonTier_PodiumAmber.mp4    --scale=1 --crf=12
+npx remotion render BubbleDrift-PodiumLilac out/BubbleDrift_PodiumLilac.mp4 --scale=1 --crf=12
+npx remotion render BubbleDrift-PodiumMint  out/BubbleDrift_PodiumMint.mp4  --scale=1 --crf=12
 ```
 
-`remotion.config.ts` supplies the rest: H.264, CRF 16, BT.709 and muted. The
-`--crf=16` above is explicit so each command reads completely on its own.
+`remotion.config.ts` supplies the rest: H.264, CRF 12, BT.709 and muted. The
+`--crf=12` above is explicit so each command reads completely on its own.
 
-Two of those defaults are worth knowing about, because they are easy to lose
-if you render through the Node APIs (where the config file does not apply) and
-must then be passed explicitly:
+### Why CRF 12 and not 16
+
+The post chain dithers every gradient before it is written, which is what stops
+the large smooth backdrops banding. H.264 then throws that away: x264 quantises
+low-amplitude noise in flat areas to nothing, and the banding the dither existed
+to prevent comes back in the encode. So the encoded file has to be checked, not
+the render.
+
+Measured on look 4's lilac field, the worst case in the set — the longest run of
+identical pixel values down a 900 px slice, and the share of adjacent pixels
+that differ at all:
+
+| encode | longest flat run | adjacent pixels differing |
+|---|---|---|
+| source frame (lossless PNG) | 9 px | 57% — dither intact |
+| h264 crf 18 | 506 px | 3% — dither gone, visible bands |
+| **h264 crf 16** | **506 px** | **3% — no better than 18** |
+| h264 crf 16 `-tune grain` | 426 px | 3% — does not help |
+| **h264 crf 12** | **43 px** | **27% — dither largely survives** |
+
+CRF 16 is indistinguishable from 18 on this content, so the usual "16 is the
+archival setting" reasoning does not hold here. The dark looks band far less
+(look 3 measures 46 px / 45% at crf 18) because there is enough detail for the
+encoder to keep, but the set ships at one setting.
+
+This matters *more* at 4K, not less: the same gradient spans twice as many
+pixels, so each band is twice as wide.
+
+If you change the look of a backdrop, re-run the check on the encoded file:
+
+```bash
+ffmpeg -i out/BubbleDrift_PodiumLilac.mp4 -vf "select='eq(n\,40)'" -frames:v 1 /tmp/f.png
+# then compare a slice of /tmp/f.png against the same slice of the PNG still
+```
+
+### Settings that are easy to lose
+
+Two of the config defaults are easy to lose if you render through the Node APIs
+(where the config file does not apply) and must then be passed explicitly:
 
 - **`setColorSpace("bt709")`** — without it the encoder emits `yuvj420p` with
   `color_range=pc`. That is self-consistent full-range video, but any tool
@@ -94,7 +130,7 @@ so this renders a genuine 1920×1080 buffer from the 3840×2160 composition
 rather than downscaling a 4K frame:
 
 ```bash
-npx remotion render BlindShadow-PodiumA out/BlindShadow_PodiumA.mp4 --scale=0.5 --crf=18
+npx remotion render BlindShadow-PodiumA out/BlindShadow_PodiumA.mp4 --scale=0.5 --crf=12
 ```
 
 ### Stills

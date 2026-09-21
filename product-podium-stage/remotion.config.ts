@@ -16,10 +16,30 @@ Config.setOverwriteOutput(true);
 // fallback and is much slower but works on a headless box with no GPU.
 Config.setChromiumOpenGlRenderer("angle");
 
-// H.264 defaults for the 4K masters. --crf is overridden per command in the
-// README; 16 is the archival setting used for delivery.
 Config.setCodec("h264");
-Config.setCrf(16);
+
+// CRF 12, not the more usual 16.
+//
+// The post chain dithers every gradient before it is written, which is what
+// keeps the large smooth backdrops from banding. H.264 then throws that away:
+// x264 quantises low-amplitude noise in flat areas to nothing, and the
+// banding the dither existed to prevent comes back in the encode.
+//
+// Measured on look 4's lilac field - the worst case in the set - as the
+// longest run of identical pixel values down a 900px slice, and the
+// percentage of adjacent pixels that differ at all:
+//
+//     source frame (lossless PNG)   9px   57%     <- dither intact
+//     h264 crf 18                 506px    3%     <- dither gone, visible bands
+//     h264 crf 16                 506px    3%     <- no better than 18
+//     h264 crf 16 -tune grain     426px    3%     <- tune=grain does not help
+//     h264 crf 12                  43px   27%     <- dither largely survives
+//
+// 16 is indistinguishable from 18 here, so the usual "16 is the archival
+// setting" reasoning does not apply to this content. The dark looks band far
+// less (look 3 measures 46px / 45% at crf 18) because there is enough detail
+// for the encoder to keep, but the set is delivered at one setting.
+Config.setCrf(12);
 
 // Broadcast-range BT.709.
 //
