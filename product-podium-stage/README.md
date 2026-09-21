@@ -176,7 +176,41 @@ Measured on the build machine for this delivery: **4 cores, 15 GB RAM, no
 GPU** — Chromium fell back to `ANGLE (Vulkan 1.3.0 SwiftShader Device)`, i.e.
 CPU rasterisation. At 1080p, `--concurrency=3`:
 
-<!--TIMINGS-->
+| Look | Per frame (1080p) | Whole 300-frame clip | Still |
+|---|---|---|---|
+| Bubble Drift | 5.5 s | 28 min | 16 s |
+| Blind Shadow | 9.3 s | 46 min | 21 s |
+| Neon Tier | 11.1 s | 55 min | 28 s |
+| **Halo Ring** | **30.7 s** | **2 h 33 min** | 66 s |
+
+Whole preview set: about 4 h 40 min on this machine.
+
+Measured at `--scale=0.5 --concurrency=3`. Note that concurrency buys almost
+nothing here: SwiftShader already saturates every core on a single frame, so
+three tabs each take three times as long and throughput is unchanged. On a
+machine with a GPU, raise it.
+
+The profile is lopsided, and worth understanding before scheduling a 4K run:
+
+- **Halo Ring is 3-6x every other look**, entirely because of the raymarched
+  light cone. If the cost is unworkable, lower `volumetricSteps` on its data
+  row before touching fog quality - the cone is the point of the look, the
+  ground haze is not. It is a compile-time constant in the shader, so the
+  saving is close to linear: 48 -> 32 steps is roughly a third off.
+- **Neon Tier** is next, because the polished floor is a real planar reflector
+  and re-renders the scene every frame.
+- 4K is 4x the pixels of 1080p. On hardware like this that puts a single 4K
+  Halo Ring master in the region of ten hours, which is really a statement
+  about rendering WebGL on a CPU rather than about the project - a GPU changes
+  the picture completely.
+
+One more thing worth knowing if you profile this yourself: **the 3D scene is
+not the expensive part.** With the post chain disabled the scene renders in
+about 0.2 s per frame; depth of field alone accounted for roughly 87% of the
+total. That is why `DOF_RESOLUTION_SCALE` in `src/post/Post.tsx` is the single
+most effective performance dial in the project, and why the shadow sample
+count and shadow map size - the obvious suspects - turned out not to matter
+measurably.
 
 These are a worst case. On a machine with a real GPU the same renders are
 substantially faster, and the ratios between looks matter more than the
