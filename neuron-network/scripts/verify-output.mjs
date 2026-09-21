@@ -213,6 +213,42 @@ const frameDelta = (a, b) => {
   return +(sum / a.buf.length / 255).toFixed(5);
 };
 
+/**
+ * The measurable half of step 4, per look. The rest of step 4 -- taper,
+ * occlusion, sharpness gradient, whether a soma reads as faceted -- is
+ * visual and is judged on extracted frames, not here.
+ */
+const CRITERIA = {
+  DenseMesh_Violet: [
+    // The inversion IS the look: background lighter than the structure.
+    ["background lighter than dendrites", (r) => r.medianLuminance[0] > 0.45],
+    ["dendrites read as dark silhouettes", (r) => r.medianLuminance[0] - r.p05[0] > 0.2],
+  ],
+  DenseMesh_Teal: [
+    ["background lighter than dendrites", (r) => r.medianLuminance[0] > 0.45],
+    ["dendrites read as dark silhouettes", (r) => r.medianLuminance[0] - r.p05[0] > 0.2],
+  ],
+  FibrousField_Blue: [
+    ["corners encode true black", (r) => r.corner.darkest === 0],
+    ["background is predominantly black", (r) => r.medianLuminance[0] < 0.12],
+  ],
+  ClearLight_Gold: [["background is near-white", (r) => r.medianLuminance[0] > 0.75]],
+  ClearLight_Cool: [["background is near-white", (r) => r.medianLuminance[0] > 0.75]],
+  PulseNetwork_Gold: [["pulses move between frames", (r) => Math.min(...r.frameDeltas) > 0.005]],
+  PulseNetwork_Magenta: [["pulses move between frames", (r) => Math.min(...r.frameDeltas) > 0.005]],
+};
+
+/** Applies to every composition. */
+const UNIVERSAL = [
+  // Sampled away from any soma or pulse the mid-tube must not be blown out;
+  // a large clipped fraction means the bloom threshold is too low.
+  ["bloom contained", (r) => Math.max(...r.blownFraction) < 0.01],
+  // Near and far elements shift against each other, so frames differ.
+  ["parallax present", (r) => Math.min(...r.frameDeltas) > 0.002],
+  // Stepped plateaus in a gradient are what banding looks like.
+  ["no banding plateaus", (r) => Math.max(...r.longestPlateau) < 120],
+];
+
 const files = readdirSync(dir).filter((f) => f.endsWith(".mp4")).sort();
 if (files.length === 0) {
   console.error(`no mp4 files in ${dir}`);
@@ -281,7 +317,23 @@ for (const name of files) {
   );
 }
 
+console.log("\n--- step 4, measurable criteria ---");
+let failures = 0;
+for (const row of report) {
+  const stem = row.file.replace(/\.mp4$/, "");
+  const checks = [...UNIVERSAL, ...(CRITERIA[stem] ?? [])];
+  const results = checks.map(([name, fn]) => {
+    let pass = false;
+    try { pass = Boolean(fn(row)); } catch { pass = false; }
+    if (!pass) failures++;
+    return `${pass ? "PASS" : "FAIL"} ${name}`;
+  });
+  row.criteria = results;
+  console.log(`${stem}\n    ${results.join("\n    ")}`);
+}
+
 writeFileSync("out/verify-output.json", JSON.stringify(report, null, 2));
 const bad = report.filter((r) => !r.ok);
 console.log(`\n${report.length - bad.length}/${report.length} pass step 1`);
-if (bad.length) console.log("failing:", bad.map((b) => b.file).join(", "));
+if (bad.length) console.log("step 1 failing:", bad.map((b) => b.file).join(", "));
+console.log(`${failures === 0 ? "all" : failures + " failing"} step 4 criteria`);
