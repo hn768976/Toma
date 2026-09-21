@@ -15,19 +15,37 @@ setup and post chain are fixed, and each stage is a data row in
 
 ## Completion checklist
 
-| # | Look | Palette A | Palette B |
-|---|------|-----------|-----------|
-| 1 | **Blind Shadow** — warm plaster wall, venetian blind gobo drifting across wall and floor, matte charcoal disc | ✅ `BlindShadow-PodiumA` (Terracotta) — configured, checked, **preview + still rendered** | ✅ `BlindShadow-PodiumB` (Grey-green) — configured, checked, **not rendered** |
-| 2 | **Halo Ring** — glowing neon ring over a dark disc in a fogged void, volumetric light cone | ✅ `HaloRing-PodiumCyan` (Cyan / blue) — configured, checked, **preview + still rendered** | ✅ `HaloRing-PodiumMagenta` (Magenta / violet) — configured, checked, **not rendered** |
-| 3 | **Neon Tier** — two-tier black plinth with neon edge strips, polished floor, slab wall | ✅ `NeonTier-PodiumCyan` (Cyan neon) — configured, checked, **preview + still rendered** | ✅ `NeonTier-PodiumAmber` (Amber neon) — configured, checked, **not rendered** |
-| 4 | **Bubble Drift** — high-key lilac void, white cylinder plinth, translucent spheres drifting down | ✅ `BubbleDrift-PodiumLilac` (Lilac) — configured, checked, **preview + still rendered** | ✅ `BubbleDrift-PodiumMint` (Mint) — configured, checked, **not rendered** |
+All eight compositions are configured, rendered and visually checked — both
+palettes of every look. The four palette-A compositions additionally ship as
+1080p preview clips and 1080p stills.
 
-All eight are configured and were rendered and visually checked at reduced
-scale. The four palette-A compositions additionally ship as 1080p preview
-clips and 1080p stills. The four palette-B compositions ship configured and
-render-ready but unrendered, as specified — each is a colour change on a
-verified scene, sharing its look's geometry, lighting and seeded layout
-exactly.
+| # | Look | Palette A | Palette B |
+|---|---|---|---|
+| 1 | **Blind Shadow** — warm plaster wall, venetian blind gobo drifting across wall and floor, matte charcoal disc | ✅ `BlindShadow-PodiumA` (Terracotta) — **preview + still rendered** | ✅ `BlindShadow-PodiumB` (Grey-green) — configured, checked, not rendered |
+| 2 | **Halo Ring** — glowing neon ring over a dark disc in a fogged void, volumetric light cone | ✅ `HaloRing-PodiumCyan` (Cyan / blue) — **preview + still rendered** | ✅ `HaloRing-PodiumMagenta` (Magenta / violet) — configured, checked, not rendered |
+| 3 | **Neon Tier** — two-tier black plinth with neon edge strips, polished floor, slab wall | ✅ `NeonTier-PodiumCyan` (Cyan neon) — **preview + still rendered** | ✅ `NeonTier-PodiumAmber` (Amber neon) — configured, checked, not rendered |
+| 4 | **Bubble Drift** — high-key lilac void, white cylinder plinth, translucent spheres drifting down | ✅ `BubbleDrift-PodiumLilac` (Lilac) — **preview + still rendered** | ✅ `BubbleDrift-PodiumMint` (Mint) — configured, checked, not rendered |
+
+The palette-B set ships render-ready but unrendered, as specified. Each is a
+colour change on a verified scene: it shares its look's geometry, lighting and
+seeded arrangement exactly, because the PRNG is keyed on the look id and never
+on the palette.
+
+### What "verified" means here
+
+Every delivered clip was checked on the encoded file, not on the render:
+
+- **Container** — 1920×1080, 30 fps, exactly 300 frames, 10.000 s, one stream
+  and no audio track.
+- **Colour** — `yuv420p`, `color_range=tv`, BT.709.
+- **Frame consistency** — mean pixel value sampled across the clip, to catch
+  anything that differs between the first captured frame and the rest (see the
+  frame-0 note below; this is how the missing image-based lighting was found).
+- **Loop** — the 299→0 step compared against ordinary adjacent-frame steps, on
+  *losslessly rendered* frames rather than the encoded file. All four measure
+  about 1.0x, i.e. the wrap is indistinguishable from any other frame advance.
+- **Banding** — longest run of identical pixel values down a slice of the
+  largest gradient, against the same slice of the lossless still.
 
 **A note on composition ids.** Remotion only accepts `a-z A-Z 0-9 -` in a
 composition id, so the ids are hyphenated (`HaloRing-PodiumCyan`) while the
