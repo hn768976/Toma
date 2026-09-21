@@ -91,22 +91,34 @@ you.
 ### Measured render time
 
 Measured on this delivery's machine: 4 vCPUs, **no GPU**, SwiftShader via ANGLE,
-Remotion concurrency 4.
+Remotion concurrency 4, `--scale=0.5`. Per 600-frame composition:
 
-| | per frame | 600-frame loop | all ten |
-|---|---|---|---|
-| 1080p (`--scale=0.5`) | **~1.0 s** | ~10 min | ~1 h 45 m |
-| 4K (`--scale=1`), estimated | ~3.5-4 s | ~35-40 min | ~6-7 h |
+| | per frame | per composition |
+|---|---|---|
+| Look 1 - Ribbed Panel | 1.39 - 1.44 s | ~14 min |
+| Look 2 - Wave Blades | 1.65 - 1.67 s | ~16.5 min |
+| Look 3 - Neon Dark | 1.47 - 1.62 s | ~15 min |
 
-The 4K figure is an extrapolation: this is fragment-bound, so cost tracks pixel
-count (4x), with the fixed per-frame browser and PNG cost unchanged. On any
-machine with a real GPU and `--gl=angle`, expect an order of magnitude better.
+All ten at 1080p: **about 2h 30m**. Look 2 is the slowest because its blades
+carry 168 vertical segments for the twist against look 1's 6.
 
-If a render is much slower than this, the usual causes are: the blades are not
-instanced (they should be one draw call), shadow casting is on (it must not be),
-a depth-of-field pass has been added (there should not be one), or the
-`EffectComposer` frame buffer has been switched back to `HalfFloatType` - on
-software rasterisation that alone costs more than the entire rest of the frame.
+**4K (`--scale=1`) is an extrapolation, not a measurement**: this is
+fragment-bound, so cost tracks pixel count (4x) with the fixed per-frame
+browser and PNG cost unchanged - roughly **5-6 s/frame, ~55 min per
+composition, ~9 h for all ten** on the same hardware. On any machine with a
+real GPU and `--gl=angle`, expect an order of magnitude better.
+
+For comparison with the rest of the library: this batch is cheap. There is no
+transmission, no shadow map, no depth of field and no particles; the whole array
+is one instanced draw call, and the environment is a lookup table rather than a
+PMREM-filtered probe.
+
+If a render is much slower than the table above, the usual causes are: the
+blades are not instanced (they should be one draw call), shadow casting is on
+(it must not be), a depth-of-field pass has been added (there should not be
+one), or the `EffectComposer` frame buffer has been switched back to
+`HalfFloatType` - on software rasterisation that alone costs more than the
+entire rest of the frame.
 
 ---
 
@@ -321,3 +333,26 @@ scripts/
       unlit blades still present when the frame is brightened heavily
 - [ ] `RibbedPanel-NavyGlow` and all of look 3 keep their copy space at every
       frame
+
+---
+
+## Known deviations from the brief
+
+Three, all deliberate and all one line to change back.
+
+**Blade count.** The brief asks for 120-200 blades across the frame. Measured on
+the reference clips, the seam pitch is 20-23px on an 898px frame - about 39-47
+blades. These sit at 38-48 (`bladesPerFrame` per data row) to match what the
+references actually do. Raise it in the data rows for finer blades.
+
+**Cross-section arc.** The brief asks for 20-30 degrees. Look 1 uses 18 and look
+3 uses 24; look 2 uses 22. A deeper arc swings the reflection further across
+each blade, and past about 20 degrees on the finer looks the gradient starts
+cycling inside a single blade instead of sweeping across the array.
+
+**Environment.** The brief describes an equirectangular gradient in a shader.
+This is an analytic light *cylinder* of finite radius, evaluated per fragment
+rather than baked to a texture and PMREM-filtered. Same idea - all colour comes
+from an environment the blades reflect, not from the blades - but the finite
+radius is what supplies parallax, and the analytic form avoids re-filtering an
+environment probe on every one of 600 frames.
