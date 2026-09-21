@@ -303,8 +303,8 @@ export const LOOKS: Look[] = [
       soma: { displacement: 0.07, frequency: 5 },
       tube: { radialCap: 8, subdivisions: 3, ambient: 0.3, rimStrength: 0.35, somaBleed: 0.65, somaBleedFalloff: 5.5, rimPower: 2.6 },
       palette: {
-        bgInner: "#071827",
-        bgOuter: "#01060b",
+        bgInner: "#17282f",
+        bgOuter: "#0c1319",
         tube: "#7d6a68",
         rim: "#cbb3aa",
         somaCore: "#ffffff",
