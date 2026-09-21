@@ -32,8 +32,6 @@ import { createEnvironmentTexture } from "./environment";
 import { makeLensGeometry, makeRimGeometry } from "./geometry";
 import {
   CAMERA,
-  DISCS,
-  GLASS_HALF_THICKNESS,
   backdropGlow,
   cameraOffset,
   discTransform,
@@ -274,15 +272,15 @@ export const createEngine = async (
     return Math.min(4096, Math.max(256, Math.round(circumferenceInPixels / 2.5)));
   };
 
-  const discs = DISCS.map((spec) => {
+  const discs = variant.discs.map((spec) => {
     const group = new Group();
     const segments = segmentsFor(spec.radius);
     const lens = new Mesh(
-      makeLensGeometry(spec.radius, GLASS_HALF_THICKNESS, segments),
+      makeLensGeometry(spec.radius, spec.halfThickness, segments),
       glassMaterial,
     );
     const rimMesh = new Mesh(
-      makeRimGeometry(spec.radius, GLASS_HALF_THICKNESS, segments),
+      makeRimGeometry(spec.radius, spec.halfThickness, segments),
       rim.material,
     );
     rimMesh.renderOrder = 10;

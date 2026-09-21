@@ -8,7 +8,8 @@ import {
 } from "./glass-circles/GlassCircles";
 import {
   FPS as GLASS_FPS,
-  DURATION_IN_FRAMES as GLASS_DURATION,
+  DURATION_10S,
+  DURATION_15S,
   HD_WIDTH,
   HD_HEIGHT,
   UHD_WIDTH,
@@ -68,7 +69,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="GlassCircles-V1-1080p"
         component={GlassCircles}
-        durationInFrames={GLASS_DURATION}
+        durationInFrames={DURATION_10S}
         fps={GLASS_FPS}
         width={HD_WIDTH}
         height={HD_HEIGHT}
@@ -78,7 +79,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="GlassCircles-V1-4K"
         component={GlassCircles}
-        durationInFrames={GLASS_DURATION}
+        durationInFrames={DURATION_10S}
         fps={GLASS_FPS}
         width={UHD_WIDTH}
         height={UHD_HEIGHT}
@@ -88,7 +89,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="GlassCircles-V2-1080p"
         component={GlassCircles}
-        durationInFrames={GLASS_DURATION}
+        durationInFrames={DURATION_10S}
         fps={GLASS_FPS}
         width={HD_WIDTH}
         height={HD_HEIGHT}
@@ -98,12 +99,52 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="GlassCircles-V2-4K"
         component={GlassCircles}
-        durationInFrames={GLASS_DURATION}
+        durationInFrames={DURATION_10S}
         fps={GLASS_FPS}
         width={UHD_WIDTH}
         height={UHD_HEIGHT}
         schema={glassCirclesSchema}
         defaultProps={{ ...glassCirclesDefaults, variant: "v2" as const }}
+      />
+      <Composition
+        id="GlassCircles-V3-1080p"
+        component={GlassCircles}
+        durationInFrames={DURATION_15S}
+        fps={GLASS_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v3" as const }}
+      />
+      <Composition
+        id="GlassCircles-V3-4K"
+        component={GlassCircles}
+        durationInFrames={DURATION_15S}
+        fps={GLASS_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v3" as const }}
+      />
+      <Composition
+        id="GlassCircles-V4-1080p"
+        component={GlassCircles}
+        durationInFrames={DURATION_15S}
+        fps={GLASS_FPS}
+        width={HD_WIDTH}
+        height={HD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v4" as const }}
+      />
+      <Composition
+        id="GlassCircles-V4-4K"
+        component={GlassCircles}
+        durationInFrames={DURATION_15S}
+        fps={GLASS_FPS}
+        width={UHD_WIDTH}
+        height={UHD_HEIGHT}
+        schema={glassCirclesSchema}
+        defaultProps={{ ...glassCirclesDefaults, variant: "v4" as const }}
       />
     </>
   );

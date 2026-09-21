@@ -1,11 +1,12 @@
 /**
  * Timing and delivery sizes for the glass-circles pieces.
  *
- * The two reference clips are both exactly 300 frames at 30fps (10.000s),
- * so the compositions match that frame-for-frame.
+ * Each piece matches its reference clip frame for frame: the V1/V2 references
+ * are 300 frames at 30fps, the V3/V4 references 450.
  */
 export const FPS = 30;
-export const DURATION_IN_FRAMES = 300;
+export const DURATION_10S = 300;
+export const DURATION_15S = 450;
 
 export const HD_WIDTH = 1920;
 export const HD_HEIGHT = 1080;

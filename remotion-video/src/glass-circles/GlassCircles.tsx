@@ -12,8 +12,11 @@ import { createEngine, type GlassEngine } from "./engine";
 import { VARIANTS } from "./variants";
 
 export const glassCirclesSchema = z.object({
-  /** v1 = dark field with neon blue rims, v2 = bright sky-blue field. */
-  variant: z.enum(["v1", "v2"]),
+  /**
+   * v1/v2 are the three-disc sheet-glass rig (dark blue / bright sky blue);
+   * v3/v4 are the sphere-field rig (violet / near-black with crimson).
+   */
+  variant: z.enum(["v1", "v2", "v3", "v4"]),
   /** Use WebGPU when the browser exposes it; WebGL2 is the automatic fallback. */
   preferWebGPU: z.boolean(),
   /** MSAA samples on the scene pass, where the backend honours them. */
