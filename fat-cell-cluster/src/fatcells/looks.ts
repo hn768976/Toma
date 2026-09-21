@@ -291,7 +291,7 @@ export const LOOKS: LookRow[] = [
     lighting: { ...WARM_LIGHT, keyIntensity: 1.0, fillIntensity: 0.45, ambientIntensity: 0.42 },
     camera: { fov: 42, fill: 2.0 },
     dof: { focusDistance: 3.6, focusRange: 3.0, bokehScale: 8, resolutionScale: 0.25 },
-    grain: 0.02,
+    grain: 0.03,
     // Higher key, and the masses are broken up so white shows between them.
     heroCells: 165, heroResolution: 240, blend: 0.08, overlap: 0.2, density: 0.88,
     extent: [13, 6.5, 3.2],
