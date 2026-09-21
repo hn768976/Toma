@@ -334,8 +334,8 @@ const CIRCLE_FIELD = buildField({
 export const V3: GlassVariant = {
   id: "v3",
   bodyLight: {
-    ambient: { color: "#6a4ad8", intensity: 1.1 },
-    key: { color: "#7fe0d0", intensity: 1.6, direction: [-0.6, 0.7, 0.5] },
+    ambient: { color: "#6a4ad8", intensity: 0.32 },
+    key: { color: "#7fe0d0", intensity: 2.4, direction: [-0.6, 0.7, 0.5] },
   },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
@@ -401,7 +401,7 @@ export const V3: GlassVariant = {
   },
   glass: {
     transmission: 0.7,
-    color: "#6a4ad8",
+    color: "#4e35a8",
     ior: 1.55,
     dispersion: 7.0,
     roughness: 0.28,
@@ -429,8 +429,8 @@ export const V3: GlassVariant = {
 export const V4: GlassVariant = {
   id: "v4",
   bodyLight: {
-    ambient: { color: "#3f5ad0", intensity: 0.9 },
-    key: { color: "#7fd0ff", intensity: 1.8, direction: [-0.6, 0.7, 0.5] },
+    ambient: { color: "#3f5ad0", intensity: 0.22 },
+    key: { color: "#7fd0ff", intensity: 2.6, direction: [-0.6, 0.7, 0.5] },
   },
   body: "glass" as const,
   film: { edgeDarkness: 1, edgeWidth: 1 },
@@ -496,7 +496,7 @@ export const V4: GlassVariant = {
   },
   glass: {
     transmission: 0.7,
-    color: "#3f5ad0",
+    color: "#2a3f96",
     ior: 1.55,
     dispersion: 7.0,
     roughness: 0.28,
