@@ -118,7 +118,7 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
       {/* Enough ambient to keep the backdrop off zero and to stop the
           glass going black on its shaded side. The reference field is a
           dark blue-grey, not a void. */}
-      <ambientLight intensity={0.42} color="#9aa0c4" />
+      <ambientLight intensity={0.5} color="#9aa0c4" />
 
       {/* Magenta key, left. Broad and slightly in front, so its falloff
           reaches past the centre of the disc and overlaps the cyan. */}
@@ -155,6 +155,20 @@ export const DuotoneGlassScene: React.FC<{ params: DuotoneGlassParams }> = ({
         shadow-camera-far={30}
         shadow-intensity={0.55}
       />
+      {/* A broad wash over the floor. The reference's ground plane is a lit
+          mid-tone the podium stands on — and once it is lit, the disc's
+          reflection and its cast shadow appear on it for free. Left dark,
+          the floor is a void with two coloured bars on it, which is the
+          spot cones and nothing else. */}
+      <spotLight
+        position={[0, 7.5, 5.5]}
+        angle={1.15}
+        penumbra={1}
+        decay={2}
+        intensity={90}
+        color="#b9bed8"
+      />
+
       {/* Neutral frontal fill. The reference's puck is white, only tinted
           by the gels: without white light on the same flanks the gels own
           the material outright and it reads as two-tone plastic rather

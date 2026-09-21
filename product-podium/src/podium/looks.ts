@@ -91,8 +91,8 @@ export const STAGES: StageConfig[] = [
     variant: "A",
     variantLabel: "Magenta / cyan",
     stillFrame: 42,
-    camera: { fovDeg: LENS, height: 0.91, distance: 5.4, tiltDeg: 7.0, push: 0 },
-    tone: { mapping: "neutral", exposure: 0.72 },
+    camera: { fovDeg: LENS, height: 0.945, distance: 5.4, tiltDeg: 7.0, push: 0 },
+    tone: { mapping: "neutral", exposure: 0.5 },
     dof: {
       layers: [
         { blur: 0.007, top: 0.0, bottom: 0.4 },
@@ -106,9 +106,9 @@ export const STAGES: StageConfig[] = [
       kind: "duotone-glass",
       keyLeft: "#ff2fb4",
       keyRight: "#17c8ff",
-      backdropTop: "#191826",
-      backdropBase: "#443f55",
-      floorColor: "#332f3c",
+      backdropTop: "#38354a",
+      backdropBase: "#837796",
+      floorColor: "#b3adc4",
       floorRoughness: 0.2,
       disc: { radius: 1.0, height: 0.38, bevel: 0.04 },
       glass: {
@@ -130,8 +130,8 @@ export const STAGES: StageConfig[] = [
     variant: "B",
     variantLabel: "Amber / teal",
     stillFrame: 42,
-    camera: { fovDeg: LENS, height: 0.91, distance: 5.4, tiltDeg: 7.0, push: 0 },
-    tone: { mapping: "neutral", exposure: 0.72 },
+    camera: { fovDeg: LENS, height: 0.945, distance: 5.4, tiltDeg: 7.0, push: 0 },
+    tone: { mapping: "neutral", exposure: 0.5 },
     dof: {
       layers: [
         { blur: 0.007, top: 0.0, bottom: 0.4 },
@@ -145,9 +145,9 @@ export const STAGES: StageConfig[] = [
       kind: "duotone-glass",
       keyLeft: "#ffa321",
       keyRight: "#12d6c0",
-      backdropTop: "#181c1b",
-      backdropBase: "#3a4b47",
-      floorColor: "#343029",
+      backdropTop: "#333b39",
+      backdropBase: "#6d8781",
+      floorColor: "#b6b09c",
       floorRoughness: 0.2,
       disc: { radius: 1.0, height: 0.38, bevel: 0.04 },
       glass: {
