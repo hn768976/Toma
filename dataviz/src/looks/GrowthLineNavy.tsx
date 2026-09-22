@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { ONESHOT_FRAMES } from "../lib/loop";
-import { NeonFilter } from "../lib/glow";
+import { NeonFilter, SoftFilter } from "../lib/glow";
 import { Grain, DitherPatch } from "../lib/grain";
 import { alongPolyline, polylinePath } from "../lib/geom";
 import { DESIGN_W, DESIGN_H } from "../lib/layout";
@@ -56,9 +56,13 @@ export const GrowthLineNavy: React.FC = () => {
         style={{ position: "absolute", inset: 0 }}
       >
         <defs>
-          <NeonFilter id="navyHero" r={9} stops={[1.15 * pulse, 1.75 * pulse, 2.3 * pulse]} />
+          <NeonFilter id="navyHero" r={6} stops={[1.35 * pulse, 1.45 * pulse, 1.3 * pulse]} />
           <NeonFilter id="navySecond" r={5} stops={[0.8, 0.9, 0.8]} />
-          <NeonFilter id="navyArrow" r={7} stops={[1.0 * pulse, 1.35 * pulse, 1.5 * pulse]} />
+          <NeonFilter id="navyArrow" r={5} stops={[1.05 * pulse, 1.15 * pulse, 0.95 * pulse]} />
+          {/* Specks keep their own tight filter — under the arrow bloom they
+              smear into soft discs and read as bokeh, which the reference
+              has none of. */}
+          <SoftFilter id="navySpeck" r={2.2} slope={0.85} />
           <linearGradient id="arrowBody" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#c9f6ff" stopOpacity="0.92" />
             <stop offset="0.09" stopColor={CY} stopOpacity="0.85" />
@@ -107,14 +111,29 @@ export const GrowthLineNavy: React.FC = () => {
                     fill="url(#arrowBody)"
                   />
                   <rect
-                    x={a.x - a.shaftW / 2}
+                    x={a.x - a.shaftW * 0.3}
                     y={a.topY + headH * 0.88}
-                    width={a.shaftW}
+                    width={a.shaftW * 0.6}
                     height={a.len - headH * 0.88}
                     fill="url(#arrowBody)"
+                    opacity={0.55}
                   />
                 </g>
-                {/* The shower of specks the shaft dissolves into. */}
+              </g>
+            );
+          })}
+        </g>
+
+        {/* ---- the particles the shafts are made of ---- */}
+        <g filter="url(#navySpeck)">
+          {NAVY_ARROWS.map((a, i) => {
+            const reveal = interpolate(tip.x, [a.x - 40, a.x + 130], [0, 1], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+            });
+            if (reveal <= 0.001) return null;
+            return (
+              <g key={i} opacity={reveal}>
                 {a.specks.map((s, j) => {
                   const t = (s.off + frame * s.v) % 1;
                   const rise = t * a.len * 0.34;
@@ -125,12 +144,13 @@ export const GrowthLineNavy: React.FC = () => {
                   const op = s.a * fade * Math.max(0, 1 - depth * 0.55);
                   if (op <= 0.01) return null;
                   return (
-                    <circle
+                    <rect
                       key={j}
-                      cx={a.x + s.dx}
-                      cy={y}
-                      r={s.r}
-                      fill={depth < 0.4 ? CY_HOT : CY}
+                      x={a.x + s.dx - s.r}
+                      y={y - s.r}
+                      width={s.r * 2}
+                      height={s.r * 2}
+                      fill={depth < 0.35 ? CY_HOT : CY}
                       opacity={op}
                     />
                   );
@@ -181,22 +201,42 @@ export const GrowthLineNavy: React.FC = () => {
           />
           {/* Arrowhead riding the tip. */}
           <g transform={`translate(${tip.x} ${tip.y}) rotate(${tip.angle})`}>
-            <path d="M96,0 L-34,-52 L-12,0 L-34,52 Z" fill={CY_HOT} />
+            <path d="M74,0 L-26,-38 L-9,0 L-26,38 Z" fill="#b9f3ff" />
           </g>
         </g>
+
+        {/* Convergent origin spark: a hot point with a short fan. */}
+        {progress > 0.01 ? (
+          <g filter="url(#navyHero)">
+            {[-26, -8, 12].map((deg, i) => (
+              <line
+                key={i}
+                x1={NAVY_MAIN[0].x}
+                y1={NAVY_MAIN[0].y}
+                x2={NAVY_MAIN[0].x + Math.cos((deg * Math.PI) / 180) * (150 + i * 70)}
+                y2={NAVY_MAIN[0].y + Math.sin((deg * Math.PI) / 180) * (150 + i * 70)}
+                stroke={CY}
+                strokeOpacity={0.4 - i * 0.09}
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+            ))}
+            <circle cx={NAVY_MAIN[0].x} cy={NAVY_MAIN[0].y} r={9} fill={CY_HOT} />
+          </g>
+        ) : null}
 
         {/* Placeholder axis ticks — generic, short, easy to replace. */}
         <g
           fill="#8fd8ef"
           fillOpacity={0.34}
           fontFamily={UI_FONT}
-          fontSize={26}
+          fontSize={34}
           fontWeight={500}
           letterSpacing={3}
           style={NUM as React.CSSProperties}
         >
           {["Q1", "Q2", "Q3", "Q4"].map((q, i) => (
-            <text key={q} x={0.33 * DESIGN_W + i * 0.175 * DESIGN_W} y={0.945 * DESIGN_H}>
+            <text key={q} x={0.33 * DESIGN_W + i * 0.175 * DESIGN_W} y={0.955 * DESIGN_H}>
               {q}
             </text>
           ))}

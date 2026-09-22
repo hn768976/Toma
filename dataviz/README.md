@@ -104,6 +104,28 @@ screen is a pure function of `useCurrentFrame()`.
 - No mutable state between frames, no `useState` driving visuals, no refs
   updated per frame.
 
+### Byte-level reproducibility: what actually holds
+
+The React output is a pure function of the frame, and repeated single-frame
+renders of the same frame are byte-identical across separate processes. That
+is the property the rules above protect, and it holds for all nine
+compositions.
+
+What does **not** hold in a container is byte-identical output between two
+separate *sequence* renders of the same frame. Chromium's rasterisation of
+small SVG Gaussian-blur filters — the gauge arcs in look 3, the origin spark
+in look 1, overlapping blurred panels in look 5 — varies by up to ~11/255 on a
+few hundred pixels (roughly 0.05% of the frame). Measured: three cold stills
+plus one sequence render of the same frame produced one identical hash, and a
+second sequence render produced another. It persists at `--concurrency=1` and
+under both the `angle` and `swiftshader` renderers, so it is a property of the
+rasteriser rather than of thread scheduling or of this project. It is
+invisible at 1/255–11/255 on isolated pixels and does not affect the encode.
+
+If you need bit-exact reproducibility for an archival master, render to a PNG
+sequence and keep the sequence, rather than re-rendering and expecting the
+same bytes.
+
 ### The loop period is a constant, not `durationInFrames`
 
 `src/lib/loop.ts` exports `LOOP_FRAMES = 600`. Every periodic quantity divides

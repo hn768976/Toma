@@ -16,6 +16,14 @@ export const staircase = (opts: {
   y1: number;
   /** >1 accelerates the rise toward the right */
   curve?: number;
+  /**
+   * Normalised height per step (0 at the start, 1 at the end). Supplying this
+   * is what stops the staircase reading as a straight diagonal with notches:
+   * a real trend plateaus and dips on the way up.
+   */
+  profile?: readonly number[];
+  /** Finish on a rise rather than a flat run, so the arrowhead points up. */
+  endOnRise?: boolean;
   /** fraction of each step spent rising rather than running flat */
   riseFrac?: number;
   jitter?: number;
@@ -30,11 +38,13 @@ export const staircase = (opts: {
     curve = 1.18,
     riseFrac = 0.55,
     jitter = 0.14,
+    profile,
+    endOnRise = false,
   } = opts;
   const rnd = mulberry32(seed);
   const level = (k: number) => {
     const p = k / steps;
-    const shaped = Math.pow(p, curve);
+    const shaped = profile ? profile[Math.min(k, profile.length - 1)] : Math.pow(p, curve);
     return y0 + (y1 - y0) * shaped;
   };
   const xs: number[] = [];
@@ -49,7 +59,7 @@ export const staircase = (opts: {
     const rf = riseFrac * (0.8 + rnd() * 0.4);
     const riseX = xs[k] + segW * rf;
     pts.push({ x: riseX, y: level(k + 1) });
-    pts.push({ x: xs[k + 1], y: level(k + 1) });
+    if (!(endOnRise && k === steps - 1)) pts.push({ x: xs[k + 1], y: level(k + 1) });
   }
   return pts;
 };
@@ -76,21 +86,22 @@ export const NAVY_MAIN = staircase({
   seed: 20240101,
   steps: 9,
   x0: 0.3 * DESIGN_W,
-  x1: 0.875 * DESIGN_W,
-  y0: 0.875 * DESIGN_H,
-  y1: 0.165 * DESIGN_H,
-  curve: 1.2,
+  x1: 0.86 * DESIGN_W,
+  y0: 0.845 * DESIGN_H,
+  y1: 0.155 * DESIGN_H,
   riseFrac: 0.56,
+  endOnRise: true,
+  profile: [0, 0.15, 0.29, 0.37, 0.395, 0.345, 0.42, 0.58, 0.79, 1],
 });
 
 /** The fainter companion line that runs above the hero line on the right. */
 export const NAVY_SECOND = staircase({
   seed: 77120033,
   steps: 7,
-  x0: 0.335 * DESIGN_W,
-  x1: 0.9 * DESIGN_W,
-  y0: 0.79 * DESIGN_H,
-  y1: 0.105 * DESIGN_H,
+  x0: 0.322 * DESIGN_W,
+  x1: 0.78 * DESIGN_W,
+  y0: 0.8 * DESIGN_H,
+  y1: 0.2 * DESIGN_H,
   curve: 1.35,
   riseFrac: 0.78,
   jitter: 0.2,
@@ -116,20 +127,20 @@ export const buildArrows = (line: Pt[], count: number, seed: number): SpeckArrow
     const lineY = yAtX(line, x);
     const topY = lineY + range(rnd, 34, 74);
     // Arrows get taller toward the right, echoing the growth they sit under.
-    const len = (0.155 + 0.185 * t) * DESIGN_H * range(rnd, 0.88, 1.12);
+    const len = (0.12 + 0.145 * t) * DESIGN_H * range(rnd, 0.9, 1.1);
     const headW = (0.0235 + 0.0115 * t) * DESIGN_W;
     const shaftW = headW * range(rnd, 0.26, 0.33);
     const specks: SpeckArrow["specks"] = [];
-    const speckCount = 60;
+    const speckCount = 130;
     for (let s = 0; s < speckCount; s++) {
       const u = rnd();
       // Density rises toward the base: the arrow dissolves downward.
-      const dy = (0.3 + 0.75 * Math.pow(u, 0.55)) * len;
-      const spread = headW * (0.22 + 1.05 * Math.pow(dy / len, 1.7));
+      const dy = (0.12 + 0.95 * Math.pow(u, 0.62)) * len;
+      const spread = headW * (0.16 + 0.95 * Math.pow(dy / len, 1.6));
       specks.push({
         dx: range(rnd, -spread, spread),
         dy,
-        r: range(rnd, 3.2, 9.5),
+        r: range(rnd, 1.6, 4.4),
         v: range(rnd, 0.0045, 0.013),
         off: rnd(),
         a: range(rnd, 0.35, 1),

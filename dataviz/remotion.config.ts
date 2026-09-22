@@ -10,6 +10,13 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// These are 2D scenes, so there is nothing for the GPU path to do. Note on
+// byte-level reproducibility: the React output is a pure function of the
+// frame and repeated single-frame renders are byte-identical, but Chromium's
+// rasterisation of small SVG Gaussian-blur filters varies by up to ~11/255 on
+// a few hundred pixels between separate *sequence* renders in a container.
+// That happens at any concurrency and under both "angle" and "swiftshader",
+// so it is a property of the rasteriser, not of this project. See README.
 Config.setChromiumOpenGlRenderer("angle");
 
 // Some sandboxed environments block Remotion's own Chrome Headless Shell

@@ -6,7 +6,7 @@ import { Grain } from "../lib/grain";
 import { DESIGN_W, DESIGN_H } from "../lib/layout";
 import { windowStart } from "../lib/series";
 import { MONO_FONT, UI_FONT } from "../lib/fonts";
-import { arcPath, smoothPath } from "../lib/geom";
+import { arcPath, polylinePath, smoothPath } from "../lib/geom";
 import {
   BIN_ROWS,
   CODE_ROWS,
@@ -36,9 +36,9 @@ export type DashTheme = {
 };
 
 export const TEAL_THEME: DashTheme = {
-  bg: "#04090a",
-  panel: "#070f0f",
-  border: "#18352f",
+  bg: "#000000",
+  panel: "#030908",
+  border: "#123028",
   bright: "#37e5b5",
   mid: "#17a487",
   dim: "#0d5f52",
@@ -46,13 +46,13 @@ export const TEAL_THEME: DashTheme = {
   text: "#c2ece0",
   textDim: "#5e8f85",
   glowHex: "#37e5b5",
-  donut: ["#5cf0c6", "#2bbf98", "#17886f", "#0f6152", "#0a3b33"],
+  donut: ["#2bbf98", "#8fbdb0", "#15806a", "#0d564a", "#093730"],
 };
 
 export const BLUE_THEME: DashTheme = {
-  bg: "#05080e",
-  panel: "#080e17",
-  border: "#17283e",
+  bg: "#000000",
+  panel: "#04080e",
+  border: "#11223a",
   bright: "#52b8ff",
   mid: "#2277cb",
   dim: "#13456f",
@@ -60,14 +60,14 @@ export const BLUE_THEME: DashTheme = {
   text: "#c7def6",
   textDim: "#6a89a8",
   glowHex: "#52b8ff",
-  donut: ["#7fcdff", "#3f9ae0", "#2570b4", "#184b7c", "#102f4e"],
+  donut: ["#3f9ae0", "#93b4cd", "#22689f", "#16436c", "#0d2a45"],
 };
 
 /* --------------------------------------------------------------- layout */
 
 const MONTHS3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-const M = 44;
+const M = 54;
 const G = 22;
 const TOP_Y = M;
 const TOP_H = 1215;
@@ -79,7 +79,7 @@ const COL_L_W = 660;
 const COL_C_X = COL_L_X + COL_L_W + G;
 const COL_C_W = 1850;
 const COL_R_X = COL_C_X + COL_C_W + G;
-const COL_R_W = DESIGN_W - M - COL_R_X;
+const COL_R_W = DESIGN_W - M * 2.8 - COL_R_X;
 
 const METER_H = 350;
 const AREA_Y = BOT_Y + METER_H + G;
@@ -154,9 +154,9 @@ const Gauge: React.FC<{
         y={cy + r * 0.08}
         textAnchor="middle"
         fontFamily={MONO_FONT}
-        fontWeight={700}
+        fontWeight={500}
         fontSize={r * 0.56}
-        fill={t.text}
+        fill={t.bright}
         style={{ fontVariantNumeric: "tabular-nums" }}
       >
         {Math.round(value)}
@@ -190,7 +190,7 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
   const plotW = COL_C_W - 200;
   const plotH = TOP_H - 330;
   const slot = plotW / BARS;
-  const barW = slot * 0.3;
+  const barW = slot * 0.34;
 
   /* ---- donut ---- */
   const dCx = COL_R_X + COL_R_W / 2;
@@ -211,10 +211,12 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
   const aY = AREA_Y + 110;
   const aW = COL_C_W - 200;
   const aH = AREA_H - 200;
+  // Sampling the series at whole-index steps (rather than fractions of one)
+  // gives the high-frequency, spiky waveform the reference has.
   const areaPts = (s: typeof S_AREA_A, scale: number) =>
-    Array.from({ length: 41 }, (_, i) => ({
-      x: aX + (aW * i) / 40,
-      y: aY + aH - s.norm(ws + i * 0.75) * aH * scale,
+    Array.from({ length: 49 }, (_, i) => ({
+      x: aX + (aW * i) / 48,
+      y: aY + aH - s.norm(ws + i * 3) * aH * scale,
     }));
 
   /* ---- scrolls: integer lines per cycle, so they close ---- */
@@ -225,7 +227,7 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
     <AbsoluteFill style={{ backgroundColor: t.bg }}>
       <AbsoluteFill
         style={{
-          background: `radial-gradient(120% 100% at 50% 40%, ${t.bg} 0%, #02050699 60%, #000000 100%)`,
+          background: t.bg,
         }}
       />
       <svg
@@ -235,7 +237,7 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
         style={{ position: "absolute", inset: 0 }}
       >
         <defs>
-          <SoftFilter id="dashSoft" r={5} slope={0.55} />
+          <SoftFilter id="dashSoft" r={2.5} slope={0.3} />
           <SoftFilter id="dashSoftSm" r={3} slope={0.5} />
           <linearGradient id="areaFillA" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor={t.bright} stopOpacity="0.55" />
@@ -303,8 +305,8 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
             const va = S_BAR_A.norm(ws + i);
             const vb = S_BAR_B.norm(ws + i);
             const ramp = (i / (BARS - 1)) * 0.45;
-            const ha = (0.1 + (va * 0.55 + ramp) * 0.82) * plotH;
-            const hb = (0.13 + (vb * 0.55 + ramp) * 0.82) * plotH;
+            const ha = (0.16 + (va * 0.62 + ramp) * 0.86) * plotH;
+            const hb = (0.2 + (vb * 0.62 + ramp) * 0.86) * plotH;
             const cx = plotX + slot * (i + 0.5);
             return (
               <g key={i}>
@@ -319,7 +321,7 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
                   fill={t.textDim}
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                  {(20 + (vb * 0.55 + ramp) * 105).toFixed(2)}
+                  {(20 + (vb * 0.62 + ramp) * 98).toFixed(2)}
                 </text>
               </g>
             );
@@ -328,7 +330,7 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
           {(() => {
             const pts = Array.from({ length: BARS }, (_, i) => ({
               x: plotX + slot * (i + 0.5),
-              y: plotY + plotH - (0.3 + (S_LINE.norm(ws + i) * 0.36 + (i / (BARS - 1)) * 0.5) * 0.78) * plotH,
+              y: plotY + plotH - (0.18 + (S_LINE.norm(ws + i * 2) * 0.46 + (i / (BARS - 1)) * 0.52) * 0.82) * plotH,
             }));
             const last = pts[pts.length - 1];
             const prev = pts[pts.length - 2];
@@ -339,8 +341,8 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
             }));
             return (
               <g>
-                <path d={smoothPath(dash, 0.3)} fill="none" stroke={t.textDim} strokeOpacity={0.5} strokeWidth={BW * 1.5} strokeDasharray="14 14" />
-                <path d={smoothPath(pts, 0.3)} fill="none" stroke={t.bright} strokeWidth={5} filter="url(#dashSoftSm)" />
+                <path d={polylinePath(dash)} fill="none" stroke={t.textDim} strokeOpacity={0.5} strokeWidth={BW * 1.5} strokeDasharray="14 14" />
+                <path d={polylinePath(pts)} fill="none" stroke={t.bright} strokeWidth={5} strokeLinejoin="miter" filter="url(#dashSoftSm)" />
                 <g transform={`translate(${last.x} ${last.y}) rotate(${ang})`}>
                   <path d="M34,0 L-14,-19 L-4,0 L-14,19 Z" fill={t.bright} />
                 </g>
@@ -369,7 +371,7 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
               const ly = dCy + Math.sin(mid) * (dRo + 78);
               return (
                 <g key={i}>
-                  <path d={arcPath(dCx, dCy, dRo, dRi, a0, a1 - 0.012)} fill={donutCols[i]} />
+                  <path d={arcPath(dCx, dCy, dRo, dRi, a0, a1)} fill={donutCols[i]} />
                   <text
                     x={lx}
                     y={ly}
@@ -480,14 +482,14 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
             const pa = areaPts(S_AREA_A, 0.92);
             const pb = areaPts(S_AREA_B, 0.6);
             const close = (p: { x: number; y: number }[]) =>
-              `${smoothPath(p, 0.35)} L${aX + aW},${aY + aH} L${aX},${aY + aH} Z`;
+              `${polylinePath(p)} L${aX + aW},${aY + aH} L${aX},${aY + aH} Z`;
             return (
               <g>
                 <path d={close(pa)} fill="url(#areaFillA)" />
-                <path d={smoothPath(pa, 0.35)} fill="none" stroke={t.bright} strokeWidth={4} />
+                <path d={polylinePath(pa)} fill="none" stroke={t.bright} strokeWidth={4} />
                 <path d={close(pb)} fill="url(#areaFillB)" />
-                <path d={smoothPath(pb, 0.35)} fill="none" stroke={t.mid} strokeWidth={3} />
-                {pa.filter((_, i) => i % 8 === 0).map((p, i) => (
+                <path d={polylinePath(pb)} fill="none" stroke={t.mid} strokeWidth={3} />
+                {pa.filter((_, i) => i % 12 === 0).map((p, i) => (
                   <g key={i}>
                     <circle cx={p.x} cy={p.y} r={6} fill={t.bright} />
                     <text
@@ -507,50 +509,83 @@ export const DarkDashboard: React.FC<{ theme: DashTheme }> = ({ theme: t }) => {
             );
           })()}
           <line x1={aX} y1={aY + aH} x2={aX + aW} y2={aY + aH} stroke={t.dim} strokeWidth={BW * 1.5} />
+          {/* Tick labels down both sides, as the reference has. */}
+          <g fontFamily={MONO_FONT} fontSize={17} fill={t.textDim} opacity={0.75} style={{ fontVariantNumeric: "tabular-nums" }}>
+            {[0, 1, 2, 3, 4].map((i) => {
+              const yy = aY + (aH * i) / 4;
+              return (
+                <g key={i}>
+                  <text x={aX - 14} y={yy + 6} textAnchor="end">{(4 - i) * 120}</text>
+                  <text x={aX + aW + 14} y={yy + 6}>{(4 - i) * 120}</text>
+                </g>
+              );
+            })}
+          </g>
         </g>
 
         {/* ===================== monospace binary block ===================== */}
-        <g clipPath="url(#binClip)" fontFamily={MONO_FONT} fontSize={19} fill={t.mid}>
-          {[0, 1].map((col) =>
-            Array.from({ length: 30 }, (_, r) => {
-              const idx = (r + binScroll + col * 7) % BIN_ROWS.length;
-              return (
-                <text
-                  key={`${col}-${r}`}
-                  x={COL_L_X + 46 + col * 316}
-                  y={BOT_Y + 56 + r * 28}
-                  opacity={0.45 + ((idx * 37) % 10) / 18}
-                >
-                  {BIN_ROWS[idx]}
-                </text>
-              );
-            }),
+        <g clipPath="url(#binClip)" fontFamily={MONO_FONT} fontSize={14} fill={t.mid} opacity={0.8}>
+          {[0, 1, 2].map((blk) =>
+            [0, 1].map((col) => (
+              <g key={`${blk}-${col}`}>
+                <rect
+                  x={COL_L_X + 32 + col * 300}
+                  y={BOT_Y + 32 + blk * 280}
+                  width={276}
+                  height={252}
+                  fill="none"
+                  stroke={t.border}
+                  strokeWidth={BW}
+                />
+                <line
+                  x1={COL_L_X + 32 + col * 300 + 138}
+                  y1={BOT_Y + 32 + blk * 280}
+                  x2={COL_L_X + 32 + col * 300 + 138}
+                  y2={BOT_Y + 32 + blk * 280 + 252}
+                  stroke={t.border}
+                  strokeWidth={BW}
+                />
+                {Array.from({ length: 12 }, (_, r) => {
+                  const idx = (r + binScroll + col * 7 + blk * 13) % BIN_ROWS.length;
+                  return (
+                    <text
+                      key={r}
+                      x={COL_L_X + 42 + col * 300}
+                      y={BOT_Y + 54 + blk * 280 + r * 20}
+                      opacity={0.4 + ((idx * 37) % 10) / 22}
+                    >
+                      {BIN_ROWS[idx]}
+                    </text>
+                  );
+                })}
+              </g>
+            )),
           )}
         </g>
 
         {/* ======================== code / log panel ======================== */}
-        <g clipPath="url(#codeClip)" fontFamily={MONO_FONT} fontSize={21}>
+        <g clipPath="url(#codeClip)" fontFamily={MONO_FONT} fontSize={19} opacity={0.62}>
           <text x={COL_R_X + 46} y={BOT_Y + 56} fill={t.textDim} fontSize={19}>
             {"// log output"}
           </text>
-          {Array.from({ length: 24 }, (_, r) => {
+          {Array.from({ length: 14 }, (_, r) => {
             const row = CODE_ROWS[(r + codeScroll) % CODE_ROWS.length];
             return (
               <g key={r}>
-                <text x={COL_R_X + 46} y={BOT_Y + 116 + r * 32} fill={t.dim}>
+                <text x={COL_R_X + 46} y={BOT_Y + 124 + r * 44} fill={t.dim}>
                   {/* Modulo the row count, not 100 — otherwise the line
                       numbers do not return to their frame-0 values and the
                       loop does not close. */}
                   {String(((r + codeScroll) % CODE_ROWS.length) + 1).padStart(2, "0")}
                 </text>
-                <text x={COL_R_X + 110} y={BOT_Y + 116 + r * 32} fill={t.text} opacity={0.8}>
+                <text x={COL_R_X + 110} y={BOT_Y + 124 + r * 44} fill={t.textDim}>
                   {row.head}
                 </text>
                 <text
                   x={COL_R_X + COL_R_W - 46}
-                  y={BOT_Y + 116 + r * 32}
+                  y={BOT_Y + 124 + r * 44}
                   textAnchor="end"
-                  fill={row.ok ? t.bright : t.textDim}
+                  fill={row.ok ? t.mid : t.textDim}
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
                   {row.val}

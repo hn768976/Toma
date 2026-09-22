@@ -33,7 +33,7 @@ export const WARM_THEME: LightTheme = {
   border: "#dde6ec",
   text: "#1e2c37",
   textDim: "#7b8b98",
-  cat: ["#27b79c", "#f0b63f", "#2b4a63", "#ef6f5d"],
+  cat: ["#52c3af", "#e8c069", "#3d5f78", "#e08b7d"],
   bar: "#2b4a63",
   barAlt: "#9fb2c1",
   tint: "rgba(120,170,195,0.13)",
@@ -48,7 +48,7 @@ export const SLATE_THEME: LightTheme = {
   border: "#dae2ec",
   text: "#1b2633",
   textDim: "#75838f",
-  cat: ["#3a7bd5", "#8fb6e8", "#1f3a5f", "#5b718d"],
+  cat: ["#5f93da", "#a8c6ec", "#365474", "#7d8fa6"],
   bar: "#1f3a5f",
   barAlt: "#a8b8c9",
   tint: "rgba(120,150,195,0.12)",
@@ -68,7 +68,7 @@ const DONUT_VALS = [0.452, 0.226, 0.226, 0.096];
 
 const GANTT = (() => {
   const rnd = mulberry32(90210);
-  return Array.from({ length: 6 }, (_, i) => {
+  return Array.from({ length: 8 }, (_, i) => {
     const start = range(rnd, 0, 0.5);
     return {
       label: `Item ${i + 1}`,
@@ -197,12 +197,12 @@ const DashboardBody: React.FC<{ t: LightTheme; frame: number; dur: number }> = (
       })}
 
       {/* ------------------------------ donut ------------------------------ */}
-      <Card t={t} x={2700} y={150} w={1850} h={1000} />
+      <Card t={t} x={2560} y={140} w={1700} h={1140} />
       {(() => {
-        const cx = 3350;
-        const cy = 650;
-        const ro = 340;
-        const ri = 212;
+        const cx = 3120;
+        const cy = 690;
+        const ro = 430;
+        const ri = 268;
         let acc = -Math.PI / 2;
         return (
           <g>
@@ -241,7 +241,7 @@ const DashboardBody: React.FC<{ t: LightTheme; frame: number; dur: number }> = (
               );
             })}
             {CATS.map((c, i) => (
-              <g key={c} transform={`translate(4000 ${360 + i * 110})`}>
+              <g key={c} transform={`translate(3760 ${430 + i * 128})`}>
                 <circle cx={0} cy={-16} r={24} fill={t.cat[i]} />
                 <text x={62} y={0} fontFamily={UI_FONT} fontSize={58} fill={t.text}>
                   {c}
@@ -254,6 +254,9 @@ const DashboardBody: React.FC<{ t: LightTheme; frame: number; dur: number }> = (
 
       {/* --------------------------- column chart --------------------------- */}
       <Card t={t} x={150} y={830} w={780} h={1320} />
+      <text x={220} y={1030} fontFamily={UI_FONT} fontWeight={400} fontSize={50} fill={t.textDim}>
+        Series 1 by group
+      </text>
       <text x={220} y={950} fontFamily={UI_FONT} fontWeight={500} fontSize={62} fill={t.text}>
         Series 1
       </text>
@@ -282,22 +285,22 @@ const DashboardBody: React.FC<{ t: LightTheme; frame: number; dur: number }> = (
           >
             {w}
           </text>
-          <line x1={1290 + i * 470} y1={1660} x2={1290 + i * 470} y2={2740} stroke={t.border} strokeWidth={BW} />
+          <line x1={1290 + i * 470} y1={1660} x2={1290 + i * 470} y2={2740} stroke={t.border} strokeWidth={BW} strokeOpacity={0.45} />
         </g>
       ))}
       {GANTT.map((g, i) => {
         const x0 = 1290 + g.start * 2900;
         const w = g.len * 2900;
-        const y = 1730 + i * 170;
+        const y = 1710 + i * 138;
         return (
           <g key={i}>
-            <rect x={x0} y={y} width={w} height={92} rx={46} fill={t.cat[2]} />
+            <rect x={x0} y={y} width={w} height={78} rx={39} fill={t.cat[2]} />
             <text
               x={x0 + w / 2}
-              y={y + 60}
+              y={y + 52}
               textAnchor="middle"
               fontFamily={MONO_FONT}
-              fontSize={42}
+              fontSize={36}
               fill="#ffffff"
               opacity={0.92}
               style={{ fontVariantNumeric: "tabular-nums" }}
@@ -308,12 +311,27 @@ const DashboardBody: React.FC<{ t: LightTheme; frame: number; dur: number }> = (
         );
       })}
 
-      {/* ------------------- part-row cropped by the frame ------------------- */}
-      <Card t={t} x={150} y={2240} w={780} h={620} alt />
-      <text x={220} y={2380} fontFamily={UI_FONT} fontWeight={500} fontSize={58} fill={t.textDim}>
-        Series 2
-      </text>
-      <Card t={t} x={2700} y={2880} w={1850} h={600} alt />
+      {/* ------ second stat strip, cropped by the frame as the reference is ------ */}
+      {[0, 1, 2].map((i) => (
+        <g key={`s2${i}`}>
+          <Card t={t} x={150 + i * 840} y={2240} w={780} h={560} alt={i > 0} />
+          <text
+            x={220 + i * 840}
+            y={2450}
+            fontFamily={UI_FONT}
+            fontWeight={300}
+            fontSize={150}
+            fill={t.text}
+            style={{ fontVariantNumeric: "tabular-nums" }}
+          >
+            {[62, 38, 17][i]}
+          </text>
+          <text x={220 + i * 840} y={2560} fontFamily={UI_FONT} fontSize={52} fill={t.textDim}>
+            {["Series 1", "Series 2", "Series 3"][i]}
+          </text>
+        </g>
+      ))}
+      <Card t={t} x={2560} y={2860} w={1700} h={600} alt />
     </g>
   );
 };
@@ -338,7 +356,7 @@ export const LightDashboard: React.FC<{ theme: LightTheme }> = ({ theme: t }) =>
   const Body = <DashboardBody t={t} frame={frame} dur={LOOP_FRAMES} />;
 
   const Tilted: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <AbsoluteFill style={{ perspective: `${4600 * k}px`, perspectiveOrigin: "48% 42%" }}>
+    <AbsoluteFill style={{ perspective: `${6400 * k}px`, perspectiveOrigin: "52% 44%" }}>
       <div
         style={{
           position: "absolute",
@@ -348,7 +366,7 @@ export const LightDashboard: React.FC<{ theme: LightTheme }> = ({ theme: t }) =>
           height: `${DH * k * 0.93}px`,
           marginLeft: `${-DW * k * 0.465}px`,
           marginTop: `${-DH * k * 0.465}px`,
-          transform: "rotateX(9deg) rotateY(-12deg) rotateZ(-2.6deg)",
+          transform: "rotateX(5deg) rotateY(7deg) rotateZ(2.6deg)",
           transformStyle: "preserve-3d",
         }}
       >
@@ -435,21 +453,21 @@ export const LightDashboard: React.FC<{ theme: LightTheme }> = ({ theme: t }) =>
                   <rect
                     x={tip.x}
                     y={tip.y}
-                    width={tip.label.length * 30 + 110}
-                    height={130}
+                    width={tip.label.length * 22 + 76}
+                    height={96}
                     rx={16}
                     fill={t.panel}
                     stroke={t.border}
                     strokeWidth={BW}
                   />
                 </g>
-                <circle cx={tip.x + 52} cy={tip.y + 65} r={18} fill={t.cat[i === 0 ? 1 : 2]} />
+                <circle cx={tip.x + 38} cy={tip.y + 48} r={13} fill={t.cat[i === 0 ? 1 : 2]} />
                 <text
-                  x={tip.x + 92}
-                  y={tip.y + 84}
+                  x={tip.x + 66}
+                  y={tip.y + 64}
                   fontFamily={UI_FONT}
                   fontWeight={500}
-                  fontSize={54}
+                  fontSize={40}
                   fill={t.text}
                   style={{ fontVariantNumeric: "tabular-nums" }}
                 >
@@ -459,7 +477,7 @@ export const LightDashboard: React.FC<{ theme: LightTheme }> = ({ theme: t }) =>
             ),
           )}
 
-          <g transform={`translate(${cursor.x} ${cursor.y}) scale(3.1)`}>
+          <g transform={`translate(${cursor.x} ${cursor.y}) scale(2.5)`}>
             <path
               d="M0,0 L0,34 L8.4,26 L14,40 L21,37 L15.2,23.4 L25,23 Z"
               fill="#ffffff"
@@ -492,6 +510,17 @@ export const LightDashboard: React.FC<{ theme: LightTheme }> = ({ theme: t }) =>
       {/* Cool tint and edge falloff — the reference reads as a screen filmed
           through glass, not a flat export. */}
       <AbsoluteFill style={{ background: t.tint, pointerEvents: "none" }} />
+      {/* A gentle veiling glare, so it reads as a screen filmed through glass
+          rather than a flat export. Kept light on purpose: the reference's
+          grade crushes its luminance to a mid blue-grey, and a light-mode
+          dashboard that is actually light is the thing worth selling. */}
+      <AbsoluteFill
+        style={{
+          background:
+            "radial-gradient(90% 88% at 44% 34%, rgba(226,240,246,0.30) 0%, rgba(206,226,236,0.16) 46%, rgba(180,205,220,0.05) 100%)",
+          pointerEvents: "none",
+        }}
+      />
       <AbsoluteFill
         style={{
           background:

@@ -13,7 +13,7 @@ import { smoothPath } from "../lib/geom";
 
 /** Series length. The window advances exactly N positions over the loop. */
 export const N = 48;
-const BAR_SERIES = seededSeries(8812001, N, [1, 2, 3, 5], [1, 0.52, 0.3, 0.16], 0);
+const BAR_SERIES = seededSeries(8812001, N, [1, 2, 3, 5, 11, 17], [1, 0.52, 0.42, 0.38, 0.5, 0.34], 0);
 const LINE_SERIES = seededSeries(4471902, N, [1, 2, 4, 7], [1, 0.45, 0.28, 0.22], 0);
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -30,7 +30,7 @@ const TILT = 74;
  */
 const PX_PER_UNIT = 0.36;
 /** Where the bars stand on the plane, 0 = far edge, 1 = near edge. */
-const BAR_Z = 0.46;
+const BAR_Z = 0.6;
 const BAR_SPACING = 1950;
 const BAR_W = 570;
 
@@ -61,18 +61,18 @@ const gridPaths = (() => {
 
 const BOKEH = (() => {
   const rnd = mulberry32(31337);
-  return Array.from({ length: 30 }, () => ({
+  return Array.from({ length: 44 }, () => ({
     x: rnd(),
     y: range(rnd, 0, 0.8),
-    r: range(rnd, 60, 300),
+    r: range(rnd, 26, 130),
     ax: range(rnd, 0.012, 0.05),
     ay: range(rnd, 0.008, 0.035),
     fx: Math.round(range(rnd, 1, 3)),
     fy: Math.round(range(rnd, 1, 4)),
     px: rnd(),
     py: rnd(),
-    blur: range(rnd, 24, 90),
-    a: range(rnd, 0.07, 0.3),
+    blur: range(rnd, 10, 40),
+    a: range(rnd, 0.14, 0.5),
   }));
 })();
 
@@ -125,12 +125,12 @@ export const AMBER_THEME: BarTheme = {
 /* ------------------------------------------------------------ component */
 
 const Plane: React.FC<{ k: number; children: React.ReactNode }> = ({ k, children }) => (
-  <AbsoluteFill style={{ perspective: `${2400 * k}px`, perspectiveOrigin: "50% 27%" }}>
+  <AbsoluteFill style={{ perspective: `${2400 * k}px`, perspectiveOrigin: "50% 40%" }}>
     <div
       style={{
         position: "absolute",
         left: "50%",
-        top: "63%",
+        top: "72%",
         width: `${PLANE_W * PX_PER_UNIT * k}px`,
         height: `${PLANE_D * PX_PER_UNIT * k}px`,
         transform: `translate(-50%, -50%) rotateX(${TILT}deg)`,
@@ -157,7 +157,7 @@ export const BarChart: React.FC<{ theme: BarTheme }> = ({ theme }) => {
   for (let i = i0; i <= i1; i++) {
     const planeX = PLANE_W / 2 + (i - ws) * BAR_SPACING;
     if (planeX < -BAR_SPACING || planeX > PLANE_W + BAR_SPACING) continue;
-    bars.push({ i, planeX, h: 820 + BAR_SERIES.norm(i) * 2150 });
+    bars.push({ i, planeX, h: 1250 + BAR_SERIES.norm(i) * 3250 });
   }
 
   const pulse = 1 + 0.07 * Math.sin((Math.PI * 2 * 2 * frame) / LOOP_FRAMES);
@@ -172,6 +172,16 @@ export const BarChart: React.FC<{ theme: BarTheme }> = ({ theme }) => {
     return {
       x: u * LINE_W,
       y: LINE_H - (0.16 + LINE_SERIES.norm(idx) * 0.78) * LINE_H,
+    };
+  });
+
+  // Angular companion series with sharp vertices, alongside the smooth arc.
+  const zigPts = Array.from({ length: 13 }, (_, j) => {
+    const u = j / 12;
+    const idx = ws - 6 + u * 12;
+    return {
+      x: u * LINE_W,
+      y: LINE_H - (0.1 + BAR_SERIES.norm(idx * 2 + 3) * 0.72) * LINE_H,
     };
   });
 
@@ -203,6 +213,23 @@ export const BarChart: React.FC<{ theme: BarTheme }> = ({ theme }) => {
             />
           );
         })}
+      </AbsoluteFill>
+
+      {/* ---- background lattice wall, dim and defocused ----
+          In the reference a blurred grid covers the whole frame, including
+          above and behind the bars. Without it the upper third is dead space
+          and the bars stop reading as data floating inside a lattice. */}
+      <AbsoluteFill style={{ filter: `blur(${9 * k}px)`, opacity: 0.5 }}>
+        <svg viewBox="0 0 2400 1400" width="100%" height="100%" preserveAspectRatio="none">
+          <g stroke={theme.gridBright} strokeOpacity={0.32} strokeWidth={3} fill="none">
+            {Array.from({ length: 19 }, (_, i) => (
+              <path key={`lv${i}`} d={`M${(2400 * i) / 18 + 16},0 L${(2400 * i) / 18 - 16},1400`} />
+            ))}
+            {Array.from({ length: 13 }, (_, i) => (
+              <path key={`lh${i}`} d={`M0,${(1400 * i) / 12} L2400,${(1400 * i) / 12 + 20}`} />
+            ))}
+          </g>
+        </svg>
       </AbsoluteFill>
 
       {/* ---- ground plane in depth-of-field bands ----
@@ -259,15 +286,23 @@ export const BarChart: React.FC<{ theme: BarTheme }> = ({ theme }) => {
                 transformOrigin: "50% 100%",
               }}
             >
-              <svg viewBox="0 0 100 1000" width="100%" height="100%" preserveAspectRatio="none">
+              <svg viewBox="0 0 100 1000" width="100%" height="100%" preserveAspectRatio="none" style={{ overflow: "visible" }}>
                 <defs>
+                  {/* The whole bar blooms, not just its cap: in the reference
+                      the bar itself acts as a light source. */}
+                  <NeonFilter
+                    id={`bb${b.i}`}
+                    r={6}
+                    stops={[0.7 * pulse, 1.15 * pulse, 1.3 * pulse]}
+                    region={{ x: -280, y: -180, w: 660, h: 1360 }}
+                  />
                   <linearGradient id={`bg${b.i}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor={theme.barTop} stopOpacity="0.96" />
-                    <stop offset="0.22" stopColor={theme.barMid} stopOpacity="0.82" />
-                    <stop offset="1" stopColor={theme.barLow} stopOpacity="0.5" />
+                    <stop offset="0" stopColor={theme.barTop} stopOpacity="0.98" />
+                    <stop offset="0.14" stopColor={theme.barMid} stopOpacity="0.95" />
+                    <stop offset="1" stopColor={theme.barMid} stopOpacity="0.86" />
                   </linearGradient>
                 </defs>
-                <rect x="0" y="0" width="100" height="1000" fill={`url(#bg${b.i})`} />
+                <rect x="0" y="0" width="100" height="1000" fill={`url(#bg${b.i})`} filter={`url(#bb${b.i})`} />
               </svg>
               {/* Bright top edge — the part that actually glows. Thin bright
                   core, halo from the filter stack. */}
@@ -363,11 +398,30 @@ export const BarChart: React.FC<{ theme: BarTheme }> = ({ theme }) => {
                 d={smoothPath(linePts, 0.35)}
                 fill="none"
                 stroke={theme.line}
-                strokeWidth={14}
+                strokeOpacity={0.5}
+                strokeWidth={11}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 filter="url(#barLine)"
               />
+              <polyline
+                points={zigPts.map((p) => `${p.x.toFixed(3)},${p.y.toFixed(3)}`).join(" ")}
+                fill="none"
+                stroke={theme.edge}
+                strokeWidth={12}
+                strokeLinejoin="miter"
+                filter="url(#barLine)"
+              />
+              {/* Crosshair marker terminating the angular series. */}
+              <g
+                transform={`translate(${zigPts[zigPts.length - 1].x.toFixed(3)} ${zigPts[zigPts.length - 1].y.toFixed(3)})`}
+                stroke={theme.edge}
+                strokeWidth={9}
+                filter="url(#barLine)"
+              >
+                <line x1={-100} y1={-100} x2={100} y2={100} />
+                <line x1={-100} y1={100} x2={100} y2={-100} />
+              </g>
             </svg>
           </div>
         </Plane>
@@ -376,7 +430,7 @@ export const BarChart: React.FC<{ theme: BarTheme }> = ({ theme }) => {
       {/* Slight lift in the focus band so the bars sit in air. */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(64% 34% at 50% 52%, ${theme.bokeh}22 0%, ${theme.bokeh}00 70%)`,
+          background: `radial-gradient(88% 80% at 24% 14%, ${theme.bokeh}26 0%, ${theme.bokeh}0d 36%, rgba(0,0,0,0.48) 86%, rgba(0,0,0,0.7) 100%)`,
           pointerEvents: "none",
         }}
       />
