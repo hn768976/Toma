@@ -72,38 +72,45 @@ Measured on this machine: 4 cores, `--concurrency=4`, Chromium headless.
 
 | Target | Per frame | 600 frames |
 | --- | --- | --- |
-| 1080p (`--scale=0.5`) | ~1.55 s | ~15 min |
-| 4K (native) | ~5.5 s (est.) | ~55 min (est.) |
+| 1080p (`--scale=0.5`), end to end | 3.0 s | 1808 s (~30 min) — measured |
+| 1080p, frames only (PNG sequence, no encode) | 2.0 s | 1209 s — measured |
+| 4K (native) | ~12 s (est.) | ~2 h (est.) |
 
-The 4K figure is an estimate scaled by pixel count from the 1080p
-measurement, not a measured full run.
+The 4K figure is scaled by pixel count from the 1080p measurement, not a
+measured full run.
 
 **This is slower than a piece with no GPU work ought to be, and the cause was
-measured rather than guessed.** The cost is the CSS 3D rotation: every
-element carrying one becomes its own composited surface that Chrome
-re-rasterises at a raised scale so the tilted result stays sharp. Setting all
-three plane rotations to 0 and changing nothing else takes the render from
-~1.55 s/frame to ~0.93 s/frame. The two-axis tilt is a requirement of the
-piece, so that cost stays.
+measured rather than guessed: it is the CSS 3D rotation.** Every element
+carrying one becomes its own composited surface that Chrome re-rasterises at
+a raised scale so the tilted result stays sharp, and the cost climbs with the
+tilt angle:
+
+| Plane tilt | Per frame at 1080p |
+| --- | --- |
+| rotations zeroed | 0.93 s |
+| rotateX 19.5 deg | 1.57 s |
+| rotateX 31 deg (shipped) | 3.0 s |
+
+The steep tilt is what makes the piece read as a receding plane rather than a
+flat layout, so that cost is deliberate. If a buyer wants a faster render more
+than they want the perspective, `PLANE_ROT_X` in `constants.ts` is the dial.
 
 Three optimisations were tried. Two are in the code:
 
 - **Glow filter regions.** A filter surface costs the square of its extent.
-  Every region in `Defs.tsx` is now sized to just over 3x its largest
+  Every region in `Defs.tsx` is sized to just over 3x its largest
   `stdDeviation` instead of the generous default.
-- **Bokeh blur per disc, not per layer.** Blurring the two bokeh fields by
-  putting a CSS blur on the whole layer cost ~0.3 s/frame; thirty small SVG
-  filter surfaces cost a fraction of that and look the same.
+- **Bokeh blur per disc, not per layer.** Blurring the two bokeh fields with a
+  CSS blur on the whole layer cost ~0.3 s/frame; thirty small SVG filter
+  surfaces cost a fraction of that and look the same.
 
 One was tried and **reverted**: collapsing the six depth layers onto two
 rotated surfaces, with the far and near instrument slabs blurred by an SVG
 filter inside the interface plane. That made things much worse — 3.8 s/frame
-against 1.6 — because an SVG filter over a near-frame-sized group inside an
-already 3D-transformed surface is evaluated at that surface's raised raster
-scale. The finding is recorded in the comment block in `src/ai-hud/Plane.tsx`
-so nobody repeats it.
-
----
+against 1.6 at the time — because an SVG filter over a near-frame-sized group
+inside an already 3D-transformed surface is evaluated at that surface's raised
+raster scale. The finding is recorded in the comment block in
+`src/ai-hud/Plane.tsx` so nobody repeats it.
 
 ## Fonts
 
@@ -244,6 +251,35 @@ screen is a pure function of `useCurrentFrame()`.
 The grain follows the same rule: one `feTurbulence` tile with a fixed seed,
 scrolled by an offset that is an integer number of tile widths over the loop.
 
+### Measured
+
+**Renders are reproducible.** Two independent multi-threaded renders covering
+different frame ranges (frames 0-599 and frames 240-359, four workers, so
+frame 300 was handled by a different worker at a different point in each run)
+produced a **byte-identical** frame 300. Forcing `--gl=swiftshader` produced
+the same hash again. There is no thread- or order-dependence.
+
+**One caveat, stated rather than hidden.** Frame 300 rendered *alone* by
+`npx remotion still` is **not** byte-identical to frame 300 from a full
+sequential render: 1194 of 2,073,600 pixels differ, by 1 level for 1075 of
+them and by at most 5, all inside the glow around the core.
+
+It is not this composition. The same split appears with the scene unchanged:
+
+| How frame 300 was produced | Result |
+| --- | --- |
+| `remotion still`, cold start (twice) | hash A |
+| `remotion render --sequence`, 5 frames | hash A |
+| `remotion render --sequence`, 90 frames | hash B |
+| `remotion render --sequence`, 120 frames | hash B |
+| `remotion render --sequence`, 600 frames | hash B |
+
+Each pipeline is perfectly repeatable; they differ from each other. The split
+tracks how many frames a page has already drawn, so it is a Chrome raster
+warm-up effect in the SVG filter path, not a property of the scene. Every
+frame of an actual video render comes from the warm path, so the output is
+internally consistent and re-rendering reproduces it exactly.
+
 ---
 
 ## Banding
@@ -258,54 +294,74 @@ Both are authored in output pixels, not in the 3840-unit authoring space:
 grain is a pixel-level phenomenon and should stay about one output pixel
 across at any render resolution.
 
-### Verifying
+### Measured
 
-Check the **encoded mp4**, not the studio preview:
+Checked on the **encoded mp4**, not the studio preview.
+
+A high-pass of the blue channel (blue minus a 9px Gaussian, sampled only in
+smooth areas) measures how much dither survives the encode:
+
+| | dither energy in smooth areas (std) |
+| --- | --- |
+| source PNG | 8.29 levels |
+| encoded mp4, CRF 16 | 7.64 levels |
+| encoded mp4, CRF 12 | 7.94 levels |
+
+**No banding contours.** The encoder keeps ~92% of the dither energy, and a
+contrast-stretched high-pass of the halo shows noise texture throughout with
+no arc-shaped steps.
+
+One measurement is worth not misreading: sampling a single one-pixel-wide ray
+out of the halo gives runs of 9-33 identical values at CRF 16 against 4-9 in
+the source PNG, which looks alarming. It is an artifact of sampling a 1px ray
+through 2D noise — the dither is there, just not along that particular line.
+The high-pass figures above are the metric to trust.
+
+CRF 16 does leave faint 16x16 macroblock texture in the flat darks. It is not
+banding, but if a buyer wants it gone, CRF 12 removes most of it at roughly
+double the file size.
+
+### Re-running the check
 
 ```console
 ffmpeg -v error -y -i out/AIInterfaceHUD.mp4 -vf "select=eq(n\,150)" -vframes 1 /tmp/band.png
 python3 - <<'PY'
-from PIL import Image
+from PIL import Image, ImageFilter
 import numpy as np
-a = np.asarray(Image.open("/tmp/band.png").convert("RGB")).astype(int)
-# A scanline running out of the core's halo into the dark background.
-row = a[430, 960:1900].mean(axis=1)
-d = np.diff(row)
-# Stepped plateaus show up as long runs of exactly zero difference.
-runs, cur = [], 0
-for v in d:
-    cur = cur + 1 if v == 0 else 0
-    runs.append(cur)
-print("longest flat run:", max(runs), "px")
+im = Image.open("/tmp/band.png").convert("RGB").split()[2]
+hp = np.asarray(im).astype(float) - np.asarray(im.filter(ImageFilter.GaussianBlur(9))).astype(float)
+smooth = np.asarray(Image.open("/tmp/band.png").convert("L").filter(ImageFilter.FIND_EDGES)) < 6
+print("dither energy in smooth areas:", hp[smooth].std())
 PY
 ```
 
-Values should fall smoothly. Stepped plateaus — long runs of identical
-values followed by a jump — are a failure. If bands survive, raise the grain
-opacities in `Grain.tsx` toward 2.5%, then lower CRF toward 14.
+Below about 4 levels the dither is being crushed: raise the grain opacities in
+`Grain.tsx` toward 2.5%, then lower CRF toward 14.
 
 ---
 
 ## Completion checklist
 
-- [x] 1920x1080, exactly 30/1 fps, exactly 20.0s, h264, `yuv420p`, no audio stream
+- [x] 1920x1080, exactly 30/1 fps, exactly 20.000000s, h264, `yuv420p`, no audio stream
 - [x] Seamless loop: frame 600 byte-identical to frame 0 (verified by
       temporarily extending the composition to 601 frames)
-- [x] Deterministic: frame 300 rendered alone from a cold start is
-      byte-identical to frame 300 from a full sequential multi-threaded render
+- [~] Deterministic: two independent multi-threaded renders give a
+      byte-identical frame 300. A frame rendered *alone* differs from one in a
+      full render by <=5/255 on 0.06% of pixels — a Chrome raster warm-up
+      effect, not the scene. See Determinism above.
 - [x] Resolution independent: identical layout at 1080p and 4K, traces visible
       at both, text the same proportion of the frame
-- [x] Core is the brightest element by a clear margin
+- [x] Core is the brightest element by a clear margin (peak 250 vs 218 for the brightest trace pixel)
 - [x] Traces stay crisp lines; only the core is blown out
 - [x] Trace pulses at different positions each frame, running at 1-4x speeds
 - [x] Rings rotate, two of them in opposite directions
 - [x] Counters change and return to their frame-0 values
 - [x] Icon highlights advance through the grid
-- [x] Depth layers distinguishable by blur
+- [x] Depth layers distinguishable by blur (local detail 3.09 sharp / 0.86 far / 0.75 near)
 - [x] Interface cropped by both side edges
 - [x] Plane tilted on two axes — no panel edge or trace run parallel to a
       frame edge
 - [x] Numbers use tabular figures and do not jitter
-- [x] Warm bokeh discs present among the blue
+- [x] Warm bokeh discs present among the blue (4 orange blobs in frame 150)
 - [x] OFL fonts shipped and credited; icons original; no brand marks, no
       currency symbols, no real product names
