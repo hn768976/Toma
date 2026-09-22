@@ -89,6 +89,82 @@ tooltip is mid-fade.
 
 ---
 
+## Measured render times
+
+1080p previews (`--scale=0.5`), measured on the machine this batch was built
+on. The 4K column scales by the 4x pixel count and is an estimate.
+
+| Composition | s/frame @1080p | 20s clip @1080p | s/frame @4K (est.) | clip @4K (est.) |
+|---|---|---|---|---|
+| DarkDashboard-Teal | 0.16 | 1m 38s | ~0.65 | ~6.5 min |
+| DarkDashboard-Blue | 0.16 | 1m 37s | ~0.65 | ~6.5 min |
+| GrowthLine-Navy | 0.42 | 2m 05s (10s clip) | ~1.7 | ~8.5 min (10s clip) |
+| FinancialMontage-Blue | 1.25 | 12m 28s | ~5.0 | ~50 min |
+| GrowthLine-Black | 1.37 | 6m 50s (10s clip) | ~5.5 | ~27 min (10s clip) |
+| LightDashboard-Slate | 1.48 | 14m 49s | ~5.9 | ~59 min |
+| LightDashboard-Warm | 1.50 | 15m 02s | ~6.0 | ~60 min |
+| BarChart-Amber | 1.54 | 15m 22s | ~6.1 | ~61 min |
+| BarChart-Cyan | 1.65 | 16m 27s | ~6.6 | ~66 min |
+
+All nine at 1080p: **86 minutes**.
+
+### Why the spread is 10x, and what to do about it
+
+The two dark dashboards are pure SVG with no blur anywhere and run at 0.16
+s/frame — genuinely near encode speed. Everything slower is slower for one
+reason: **full-frame `filter: blur()` layers, re-rasterised every frame.**
+
+- BarChart: 5 depth-of-field bands + 1 lattice = 6 full-frame blurred layers
+- LightDashboard: 4 full-frame copies of the dashboard, each blurred
+- FinancialMontage: 4 full-frame blurred parallax layers
+- GrowthLine-Black: 2 (the grid, the foreground curve)
+
+The blur is in screen space on purpose: each depth band is a separate
+perspective container, and blurring after the projection rather than inside it
+is what keeps the bands in register. Blurring inside the 3D transform squashes
+the blur along with the content and leaves visible seams where bands meet.
+
+The fix, not implemented here, is to clip each blurred wrapper to the
+screen-space rectangle its band actually occupies instead of to the whole
+frame. That needs the projected bounds of each band computed in JS rather than
+left to CSS. It should recover most of the gap, since the blur cost is
+proportional to the area being filtered and most of each full-frame layer is
+empty.
+
+If you are rendering 4K and want it faster without touching the layer
+structure, drop the DOF band count (`STRIPS` in `BarChart.tsx`, `BANDS` in
+`LightDashboard.tsx`) from 5 and 4 to 3. That trades some smoothness in the
+focus falloff for a roughly linear saving.
+
+---
+
+## Verification results
+
+Every check below was run against this build. Scripts: `verify-loops.sh`
+(steps 3 and 4), `verify-outputs.sh` (steps 1, 5, 6, 7), `analyze-banding.py`,
+`check-looks.py`.
+
+| Step | Result |
+|---|---|
+| 1 — ffprobe | **9/9 pass.** 1920x1080, 30/1, h264, yuv420p, exactly 10.000000s / 20.000000s, no audio stream |
+| 3 — loop closure | **7/7 pass**, byte-identical frame 0 vs frame 600 at 601 frames. Look 1 exempt |
+| 4 — determinism | Scene-level pass; see the reproducibility note above for what the rasteriser does |
+| 5 — resolution scaling | Pass. 1080p vs 4K-downsampled differ on 0.134% (look 3) and 0.083% (look 4) of pixels above 40/255 — antialiasing, not reflow |
+| 6 — banding | **9/9 pass**, sampled from frames extracted from the encoded mp4 |
+| 7 — per-look | Pass; measurable criteria in `check-looks.py` |
+
+The banding detector is validated against synthetic controls on every run: a
+20-level ramp with no dither scores 1.40 and fails, the same ramp with noise
+scores 0.01 and passes. Note that the two dark dashboards report "no shallow
+ramp" rather than a positive pass — their background gradient was removed to
+match the reference, so they are flat fills with nothing that can band.
+
+Worst real reading in the batch is look 1A's glow halo at ratio 0.41 (against
+a 0.5 threshold), which is the case the brief predicts: dark navy under a
+bright glow.
+
+---
+
 ## Determinism
 
 Remotion renders frames out of order across multiple threads, so every value on
