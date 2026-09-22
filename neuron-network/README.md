@@ -281,9 +281,28 @@ roll, particle paths, grain (`frame % 600`).
 Measured in this project's environment: 4 CPU cores, **no GPU**, headless
 Chromium on software GL (ANGLE). A machine with a real GPU will be far faster.
 
-Per-frame timings are written to `out/render-timings.json` by
-`scripts/render-all.mjs`. See **Report** in the delivery notes for the measured
-figures and the 4K estimate.
+Measured 1080p previews (`--scale=0.5`, concurrency 2), 600 frames each:
+
+| composition | s/frame | total | tube triangles |
+|---|---|---|---|
+| NetworkDrift_Navy | 2.62 | 26.2 min | 158k |
+| NetworkDrift_Teal | 2.67 | 26.7 min | 268k |
+| HeroNeuron_Crystalline | 2.70 | 27.0 min | 264k |
+| HeroNeuron_Matted | 2.83 | 28.3 min | 348k |
+| ClearLight_Gold | 2.93 | 29.3 min | 743k |
+| ClearLight_Cool | 2.94 | 29.4 min | 743k |
+| PulseNetwork_Magenta | 2.96 | 29.6 min | 342k |
+| PulseNetwork_Gold | 3.34 | 33.4 min | 588k |
+| DenseMesh_Violet | 4.06 | 40.6 min | 1.72M |
+| DenseMesh_Teal | 4.22 | 42.2 min | 1.66M |
+| FibrousField_Blue | 4.73 | 47.3 min | 693k |
+
+**Total 6.0 hours for the set; mean 3.27 s/frame.** Per-composition timings are
+written to `out/render-timings.json` by `scripts/render-all.mjs`.
+
+Rendering at `--scale=1` quadruples the pixel count. These figures are
+fragment-bound, so expect roughly that factor on the same hardware; the
+measured 4K figure is in the delivery notes.
 
 Geometry counts per composition come from `node scripts/stats.mjs`. The number
 that matters is **draw calls per frame: 3–4 for every composition** —
