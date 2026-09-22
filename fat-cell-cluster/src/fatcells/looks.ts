@@ -283,7 +283,7 @@ export const LOOKS: LookRow[] = [
     palette: {
       cell: "#fdf0cf", deep: "#9c6a2c", rim: "#ffdd9e", rimStrength: 0.22,
       sheen: "#fffaef", sheenStrength: 0.26,
-      bgCentre: "#dedbd4", bgEdge: "#c6c2ba", bgFalloff: 1.4,
+      bgCentre: "#f3f0e9", bgEdge: "#dedad2", bgFalloff: 1.4,
       bgOffset: [-0.15, 0.12],
       mottleAmp: 0.014, mottleFreq: 2.8, aoStrength: 1.0, aoGamma: 1.9,
       roughness: 0.4, specular: 0.18,
