@@ -9,6 +9,12 @@ Config.setStillImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+
+// No audio stream in the output. Remotion adds a silent AAC track by default,
+// which also pads the duration past the exact 10.000s / 20.000s (the audio
+// frame granularity is what makes a 600-frame clip measure 20.053s).
+Config.setEnforceAudioTrack(false);
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 // These are 2D scenes, so there is nothing for the GPU path to do. Note on
 // byte-level reproducibility: the React output is a pure function of the
