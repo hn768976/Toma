@@ -117,16 +117,25 @@ PNG, no compression artifacts, dither kept.
 Measured on this build at **1920x1080** (`--scale=0.5`), headless Chromium on
 **SwiftShader — software rasterisation, no GPU**, 4 cores, concurrency 3:
 
-| | per frame | per 300-frame composition |
+| Composition | Wall clock | Per frame |
 |---|---|---|
-| 1080p, SwiftShader | see `out/render.log` | see `out/render.log` |
+| FloatingCluster_Beige | 1170 s | 3.90 s |
+| FloatingCluster_CoolGrey | 1137 s | 3.79 s |
+| FloatingCluster_Minimal | 1056 s | 3.52 s |
+| PackedTissue_Golden | 1628 s | 5.43 s |
+| PackedTissue_White | 1313 s | 4.38 s |
+| ShrinkingCell_Warm | 1183 s | 3.94 s |
+| ShrinkingCell_Cool | 1044 s | 3.48 s |
+| DarkFibre_Orange | 1057 s | 3.52 s |
+| DarkFibre_Teal | 1172 s | 3.91 s |
+| **All nine** | **2 h 58 m** | **4.0 s mean** |
 
-`out/render.log` in this repository records the wall-clock time of each of the
-nine preview renders from the batch that produced the delivered files, and the
-figures quoted in the delivery notes come from it. Cost scales close to the
-pixel count, so a 4K frame is roughly **4x** a 1080p frame on the same machine;
-on a real GPU both drop by an order of magnitude. Measure on your own hardware
-before planning a 4K batch.
+`PackedTissue_Golden` is the outlier: it carries roughly a million triangles.
+
+Cost scales close to the pixel count, so a 4K frame is about **4x** a 1080p
+frame on the same machine — call it **16 s a frame, 80 minutes a composition,
+12 hours for all nine** on hardware like this. On a real GPU both figures drop
+by an order of magnitude. Measure on your own hardware before planning a batch.
 
 The build-time geometry pass (cell packing and marching cubes) runs once per
 render process, not per frame. It costs under a second for most compositions
