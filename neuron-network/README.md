@@ -300,9 +300,29 @@ Measured 1080p previews (`--scale=0.5`, concurrency 2), 600 frames each:
 **Total 6.0 hours for the set; mean 3.27 s/frame.** Per-composition timings are
 written to `out/render-timings.json` by `scripts/render-all.mjs`.
 
-Rendering at `--scale=1` quadruples the pixel count. These figures are
-fragment-bound, so expect roughly that factor on the same hardware; the
-measured 4K figure is in the delivery notes.
+### Measured 4K
+
+Rendering at `--scale=1` quadruples the pixel count, but costs rather more
+than 4x: the bokeh kernel and the bloom mip chain scale with frame height too,
+so the post chain gets more expensive per pixel as well as covering more of
+them.
+
+Measured on `HeroNeuronMatted` at 3840x2160, concurrency 2, same machine:
+
+| | s/frame | 600 frames |
+|---|---|---|
+| 1080p (`--scale=0.5`) | 2.83 | 28 min |
+| 4K (`--scale=1`), steady state | **14.1** | **2.4 h** |
+
+Steady state is measured between frame 12 and frame 48 of a 48-frame run, so
+it excludes the one-off browser start and shader compile (the whole 48-frame
+run averaged 15.25 s/frame including those). `FibrousField_Blue`, the heaviest
+composition, measured 19.9 s/frame over a shorter sample.
+
+So the 4K rate is roughly **5x** the 1080p rate, putting the full set at
+**around 30 hours on four cores with no GPU**. A machine with a real GPU will
+be very substantially faster -- this figure is a software-rasteriser
+worst case, not a property of the scenes.
 
 Geometry counts per composition come from `node scripts/stats.mjs`. The number
 that matters is **draw calls per frame: 3–4 for every composition** —
