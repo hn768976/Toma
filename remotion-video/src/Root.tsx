@@ -1,5 +1,6 @@
 import "./index.css";
 import "./load-fonts";
+import "./ai-hud/fonts";
 import { Composition } from "remotion";
 import {
   BluetoothExplainer,
@@ -18,6 +19,17 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  AIInterfaceHUD,
+  aiInterfaceHudSchema,
+  aiInterfaceHudDefaults,
+} from "./ai-hud/AIInterfaceHUD";
+import {
+  BASE_WIDTH as HUD_WIDTH,
+  BASE_HEIGHT as HUD_HEIGHT,
+  DURATION_IN_FRAMES as HUD_DURATION,
+  FPS as HUD_FPS,
+} from "./ai-hud/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +63,16 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      <Composition
+        id="AIInterfaceHUD"
+        component={AIInterfaceHUD}
+        durationInFrames={HUD_DURATION}
+        fps={HUD_FPS}
+        width={HUD_WIDTH}
+        height={HUD_HEIGHT}
+        schema={aiInterfaceHudSchema}
+        defaultProps={aiInterfaceHudDefaults}
       />
     </>
   );
