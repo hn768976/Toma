@@ -49,9 +49,9 @@ Verified from a clean copy of this archive.
 ### Rendering
 
 ```bash
-npm run render:previews          # all six at 1920×1080
-npm run render:previews -- "" SinglePill-CapsuleGrey   # just one
-npm run render:stills            # 1080p still + 6000×3375 harvest per comp
+npm run render:previews                                   # all six at 1920×1080
+npm run render:previews -- --only=SinglePill-CapsuleGrey  # just one
+npm run render:stills                                     # 1080p still + 6000×3375 harvest
 ```
 
 The 4K render command per composition, run directly:
@@ -206,7 +206,7 @@ row's own `loopFrames`. These are **verification-only** and are not part of the
 delivery.
 
 ```bash
-npm run verify:loop
+npm run verify:loop          # add -- 0.5 to check at half resolution
 ```
 
 It renders frame 0 and the last frame of each check composition and compares
@@ -237,8 +237,8 @@ screen is a pure function of `useCurrentFrame()`.
   Look 1's contact shadow is PCSS (`<SoftShadows>`), which is per-frame.
 
 ```bash
-npm run verify:determinism                       # FallingPills-BlueCapsule
-npm run verify:determinism SinglePill-CapsuleGrey
+npm run verify:determinism                          # FallingPills-BlueCapsule
+npm run verify:determinism -- SinglePill-CapsuleGrey
 ```
 
 Renders frame 150 alone from a cold start, renders a sequential range

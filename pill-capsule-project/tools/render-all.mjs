@@ -3,7 +3,7 @@
 // Compositions are defined at 3840x2160; the previews render at --scale=0.5,
 // which is exactly 1920x1080. The 4K render commands are in README.md.
 //
-// Usage: node tools/render-all.mjs previews|stills|previews-4k [compositionId]
+// Usage: node tools/render-all.mjs previews|stills|previews-4k [--only=<id>]
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 
@@ -19,8 +19,9 @@ const FALLING = [
 ];
 const ALL = [...SINGLE, ...FALLING];
 
-const mode = process.argv[2] ?? "previews";
-const only = process.argv[3];
+const args = process.argv.slice(2);
+const mode = args.find((a) => !a.startsWith("--")) ?? "previews";
+const only = args.find((a) => a.startsWith("--only="))?.slice("--only=".length);
 const rows = only ? ALL.filter((r) => r.id === only) : ALL;
 if (!rows.length) {
   console.error(`No composition matches "${only}"`);
