@@ -34,10 +34,10 @@ export const Counters: React.FC = () => {
               x={c.x}
               y={c.y}
               fontFamily={FONT_MONO}
-              fontSize={c.size * 0.84}
+              fontSize={c.size * 0.72}
               fontWeight={500}
               fill={c.warm ? PALETTE.warm : PALETTE.text}
-              opacity={0.64}
+              opacity={0.55}
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               {clamped.toFixed(2)}

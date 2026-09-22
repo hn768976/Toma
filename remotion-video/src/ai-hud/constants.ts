@@ -55,33 +55,33 @@ export const CORE_R = 252;
 // The interface plane is rotated on two axes so that neither the panel edges
 // nor the axis-aligned trace runs end up parallel to the frame edges.
 export const PERSPECTIVE = 3000; // base units
-export const PLANE_ROT_X = 19.5; // deg — tilts the top of the plane away
-export const PLANE_ROT_Y = -15.5; // deg — swings the right-hand side away
-export const PLANE_ROT_Z = 5.0; // deg — in-plane skew
+export const PLANE_ROT_X = 31; // deg — tilts the top of the plane away
+export const PLANE_ROT_Y = -13; // deg — swings the right-hand side away
+export const PLANE_ROT_Z = 7.5; // deg — in-plane skew
 
 // --- Palette --------------------------------------------------------------
 // Swap these to re-theme. `cyan` drives the traces and panel furniture,
 // `coreHot` is the blown-out centre of the disc, `warm` is the handful of
 // orange accents that keep the frame from going monochrome.
 export const PALETTE = {
-  bgCentre: "#062658",
-  bgMid: "#030F28",
-  bgEdge: "#010610",
-  cyan: "#3FD2F2",
+  bgCentre: "#052461",
+  bgMid: "#010F31",
+  bgEdge: "#030C1E",
+  cyan: "#28CBF6",
   cyanDim: "#1E7FAE",
   cyanDeep: "#11557F",
   coreFill: "#12C6F4",
-  coreHot: "#DFFAFF",
+  coreHot: "#A8EFFF",
   coreInk: "#03243F",
   line: "#63B4DE",
-  text: "#B6DEF5",
-  textDim: "#6FA6CC",
+  text: "#9FD2F2",
+  textDim: "#5E9CC8",
   warm: "#F0913A",
   warmDim: "#B3672A",
 };
 
 /** The blue haze band the reference lays across the middle of the frame. */
-export const HAZE = "#063C96";
+export const HAZE = "#0742AE";
 
 export const FONT_SANS = "HudSans";
 export const FONT_MONO = "HudMono";

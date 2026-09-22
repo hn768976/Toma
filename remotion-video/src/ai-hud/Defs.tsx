@@ -67,18 +67,17 @@ export const Defs: React.FC = () => (
   >
     <defs>
       {/* The core: wide and hot. The only genuinely blown-out thing in frame. */}
-      <GlowStack id="glowCore" radii={[9, 40, 155]} alphas={[1, 0.88, 0.8]} region={72} />
+      <GlowStack id="glowCore" radii={[10, 46, 185]} alphas={[1, 0.95, 1]} region={80} />
       {/* Traces: a tight stack so the line itself stays a crisp 1px-at-1080p run. */}
       <GlowStack id="glowTrace" radii={[2.5, 9, 26]} alphas={[0.6, 0.26, 0.12]} region={15} />
       {/* Icons and gauges: barely more than a lift off the background. */}
       <GlowStack id="glowSoft" radii={[2, 7, 20]} alphas={[0.42, 0.18, 0.07]} region={20} />
 
       <radialGradient id="coreFillGrad" cx="42%" cy="34%" r="80%">
-        <stop offset="0%" stopColor="#FFFFFF" />
-        <stop offset="20%" stopColor={PALETTE.coreHot} />
-        <stop offset="46%" stopColor="#62E3FB" />
-        <stop offset="76%" stopColor={PALETTE.coreFill} />
-        <stop offset="100%" stopColor="#0894C6" />
+        <stop offset="0%" stopColor={PALETTE.coreHot} />
+        <stop offset="32%" stopColor="#4FD9FA" />
+        <stop offset="66%" stopColor={PALETTE.coreFill} />
+        <stop offset="100%" stopColor="#0680B8" />
       </radialGradient>
 
       {/*
@@ -89,10 +88,10 @@ export const Defs: React.FC = () => (
         source rather than a flat ball.
       */}
       <radialGradient id="coreBloomGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#CFF7FF" stopOpacity={0.62} />
-        <stop offset="58%" stopColor="#8AE9FF" stopOpacity={0.42} />
-        <stop offset="82%" stopColor="#3EC8F2" stopOpacity={0.14} />
-        <stop offset="100%" stopColor="#1C9AD0" stopOpacity={0} />
+        <stop offset="0%" stopColor="#5FD9F8" stopOpacity={0.6} />
+        <stop offset="58%" stopColor="#2FB8EC" stopOpacity={0.44} />
+        <stop offset="82%" stopColor="#1690CC" stopOpacity={0.18} />
+        <stop offset="100%" stopColor="#0C6FAA" stopOpacity={0} />
       </radialGradient>
 
       {/*

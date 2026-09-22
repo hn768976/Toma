@@ -19,8 +19,8 @@ import { makeRng } from "./random";
  * the eye away from the core, and a short inner set that thickens the
  * circuitry immediately around it. Raise either count for a busier hub.
  */
-export const TRACE_COUNT = 24;
-export const SHORT_TRACE_COUNT = 15;
+export const TRACE_COUNT = 30;
+export const SHORT_TRACE_COUNT = 18;
 export const BOKEH_COUNT = 34;
 
 export type Trace = {
@@ -266,7 +266,7 @@ export const buildTickRows = (
   width: number,
   rows: number,
   rowGap: number,
-  barH = 7,
+  barH = 5,
 ): { rows: TickRow[]; barH: number } => {
   const rng = makeRng(seed);
   const out: TickRow[] = [];
@@ -275,10 +275,10 @@ export const buildTickRows = (
     let x = 0;
     const limit = width * rng.range(0.55, 1);
     while (x < limit) {
-      const w = rng.range(14, 54);
+      const w = rng.range(9, 36);
       if (x + w > width) break;
       bars.push({ x, w });
-      x += w + rng.range(9, 20);
+      x += w + rng.range(6, 13);
     }
     out.push({ y: r * rowGap, bars });
   }

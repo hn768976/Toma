@@ -152,18 +152,18 @@ render.
 
 ```ts
 export const PALETTE = {
-  bgCentre: "#07254E",  // navy immediately around the core
-  bgMid:    "#030F24",
-  bgEdge:   "#01060F",  // corners
-  cyan:     "#3FD2F2",  // traces, panel furniture, gauges
+  bgCentre: "#042A6B",  // navy immediately around the core
+  bgMid:    "#02143A",
+  bgEdge:   "#030F26",  // corners — deliberately not black
+  cyan:     "#28CBF6",  // traces, panel furniture, gauges
   cyanDim:  "#1E7FAE",
-  cyanDeep: "#0E4A72",  // filled panel bodies
+  cyanDeep: "#11557F",  // filled panel bodies
   coreFill: "#12C6F4",  // the disc
-  coreHot:  "#DFFAFF",  // blown-out centre and the pulses
+  coreHot:  "#A8EFFF",  // hot centre of the disc, and the trace pulses
   coreInk:  "#03243F",  // the AI lettering
   line:     "#63B4DE",  // panel strokes
-  text:     "#A9D6F0",
-  textDim:  "#5E93BA",
+  text:     "#9FD2F2",
+  textDim:  "#5E9CC8",
   warm:     "#F0913A",  // the handful of orange accents
   warmDim:  "#B3672A",
 };
@@ -180,8 +180,8 @@ roughly complementary so the orange bokeh still reads as contrast.
 `src/ai-hud/geometry.ts`:
 
 ```ts
-export const TRACE_COUNT = 20;        // long runs, 2.2-3.85x the core radius
-export const SHORT_TRACE_COUNT = 13;  // short runs, 1.38-2.05x
+export const TRACE_COUNT = 30;        // long runs, 1.95-3.15x the core radius
+export const SHORT_TRACE_COUNT = 18;  // short runs, 1.42-1.92x
 ```
 
 Both bands regenerate deterministically from fixed seeds, so changing a count

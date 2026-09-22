@@ -41,14 +41,14 @@ export const BackgroundWash: React.FC = () => (
         the plane, and without it the core reads as a sprite pasted on black.
       */}
       <radialGradient id="bgHaze" cx="0.5" cy="0.5" r="0.5">
-        <stop offset="0%" stopColor={HAZE} stopOpacity={0.34} />
-        <stop offset="40%" stopColor={HAZE} stopOpacity={0.17} />
+        <stop offset="0%" stopColor={HAZE} stopOpacity={0.2} />
+        <stop offset="40%" stopColor={HAZE} stopOpacity={0.1} />
         <stop offset="72%" stopColor={HAZE} stopOpacity={0.05} />
         <stop offset="100%" stopColor={HAZE} stopOpacity={0} />
       </radialGradient>
       <radialGradient id="bgVignette" cx="0.5" cy="0.5" r="0.72">
         <stop offset="34%" stopColor="#000000" stopOpacity={0} />
-        <stop offset="100%" stopColor="#000000" stopOpacity={0.8} />
+        <stop offset="100%" stopColor="#000000" stopOpacity={0.66} />
       </radialGradient>
     </defs>
     <rect width={BASE_WIDTH} height={BASE_HEIGHT} fill="url(#bgWash)" />

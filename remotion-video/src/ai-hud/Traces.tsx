@@ -38,7 +38,7 @@ export const Traces: React.FC = () => {
             d={t.d}
             stroke={PALETTE.cyan}
             strokeWidth={t.width}
-            opacity={t.opacity * 0.5}
+            opacity={t.opacity * 0.66}
           />
         ))}
         {TRACES.map((t, i) =>

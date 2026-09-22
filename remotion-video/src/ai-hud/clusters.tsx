@@ -44,17 +44,17 @@ const FramedIcon: React.FC<{ index: number; x: number; y: number }> = ({ index, 
         height={ICON_BOX}
         fill="none"
         stroke={PALETTE.line}
-        strokeWidth={2.8}
-        opacity={0.45 + lit * 0.5}
+        strokeWidth={3.2}
+        opacity={0.5 + lit * 0.5}
       />
       <Icon
         def={def}
         x={x + (ICON_BOX - ICON_GLYPH) / 2}
         y={y + (ICON_BOX - ICON_GLYPH) / 2}
         size={ICON_GLYPH}
-        color={lit > 0.35 ? PALETTE.coreHot : PALETTE.text}
-        stroke={4.4}
-        opacity={0.62 + lit * 0.38}
+        color={lit > 0.35 ? "#F2FCFF" : "#D2ECFB"}
+        stroke={5.6}
+        opacity={0.82 + lit * 0.18}
       />
     </g>
   );
@@ -86,11 +86,11 @@ export const FarFurniture: React.FC = () => (
     <Panel x={3560} y={520} w={700} h={230} title="CHANNEL">
       <TickRows x={3580} y={590} w={660} rows={4} seed={4102} />
     </Panel>
-    <Panel x={-420} y={92} w={620} h={240} title="MODULE A">
-      <TickRows x={-400} y={162} w={576} rows={5} seed={4103} />
-    </Panel>
     <Panel x={1980} y={92} w={560} h={150} filled={false}>
       <TickRows x={1998} y={116} w={520} rows={3} seed={4104} opacity={0.4} />
+    </Panel>
+    <Panel x={2262} y={1562} w={660} h={230} title="OUTPUT">
+      <TickRows x={2284} y={1632} w={616} rows={4} seed={4108} />
     </Panel>
     <Panel x={3222} y={1040} w={640} h={470} title="ANALYSIS">
       <TickRows x={3244} y={1114} w={596} rows={11} seed={4107} gap={22} />
@@ -102,6 +102,32 @@ export const FarFurniture: React.FC = () => (
     <Panel x={3240} y={1660} w={720} h={300} title="SEGMENT">
       <TickRows x={3262} y={1732} w={676} rows={6} seed={4105} />
     </Panel>
+    {/* A run of plates along the very top — that band was reading as an
+        empty gradient across the whole width. */}
+    {[
+      { x: -180, y: -170, w: 520 },
+      { x: 430, y: -140, w: 390 },
+      { x: 930, y: -120, w: 460 },
+      { x: 1500, y: -96, w: 420 },
+      { x: 2020, y: -74, w: 500 },
+      { x: 2620, y: -48, w: 430 },
+      { x: 3160, y: -24, w: 540 },
+    ].map((b, i) => (
+      <g key={`top${i}`} opacity={0.5}>
+        <rect
+          x={b.x}
+          y={b.y}
+          width={b.w}
+          height={150}
+          fill="url(#panelGrad)"
+          stroke={PALETTE.line}
+          strokeWidth={2.2}
+          opacity={0.45}
+        />
+        <TickRows x={b.x + 14} y={b.y + 22} w={b.w - 28} rows={4} seed={7100 + i} gap={20} />
+      </g>
+    ))}
+
     {/* Micro-detail across the areas that would otherwise read as bare
         black: small plates, silkscreen digits and bracket marks. */}
     {[
@@ -195,9 +221,9 @@ export const MidCluster: React.FC = () => {
     <g>
       {/* ---- Left: gauges, meters, grid block ---- */}
       <g filter="url(#glowSoft)">
-        <Gauge cx={186} cy={452} r={86} cycles={2} shift={0.0} lo={18} hi={74} label="LEVEL" />
-        <Gauge cx={452} cy={492} r={86} cycles={3} shift={0.31} lo={26} hi={92} label="RATE" />
-        <Gauge cx={286} cy={742} r={70} cycles={4} shift={0.62} lo={12} hi={58} />
+        <Gauge cx={186} cy={452} r={70} cycles={2} shift={0.0} lo={18} hi={74} label="LEVEL" />
+        <Gauge cx={420} cy={486} r={70} cycles={3} shift={0.31} lo={26} hi={92} label="RATE" />
+        <Gauge cx={272} cy={702} r={58} cycles={4} shift={0.62} lo={12} hi={58} />
         <Gauge
           cx={566}
           cy={790}
@@ -209,6 +235,10 @@ export const MidCluster: React.FC = () => {
           color={PALETTE.warm}
         />
       </g>
+
+      <Panel x={-420} y={92} w={620} h={240} title="MODULE A">
+        <TickRows x={-400} y={162} w={576} rows={5} seed={4103} />
+      </Panel>
 
       <Panel x={700} y={330} w={470} h={300} title="PROCESS">
         <BarMeter x={722} y={418} w={420} cycles={3} shift={0.12} label="A" />
@@ -231,7 +261,7 @@ export const MidCluster: React.FC = () => {
         x={1004}
         y={1704}
         fontFamily={FONT_MONO}
-        fontSize={96}
+        fontSize={78}
         fontWeight={500}
         fill={PALETTE.text}
         opacity={0.78}
@@ -286,10 +316,6 @@ export const MidCluster: React.FC = () => {
           />
         </g>
       ))}
-
-      <Panel x={2262} y={1562} w={660} h={230} title="OUTPUT">
-        <TickRows x={2284} y={1632} w={616} rows={4} seed={4108} />
-      </Panel>
 
       <Label x={2286} y={548} size={21} opacity={0.42}>
         NODE MAP

@@ -93,8 +93,8 @@ export const Core: React.FC = () => {
         r={R * 2.34}
         fill="none"
         stroke={PALETTE.cyanDim}
-        strokeWidth={3}
-        opacity={0.11}
+        strokeWidth={3.6}
+        opacity={0.26}
       />
       <circle
         cx={CORE_X}
@@ -102,8 +102,8 @@ export const Core: React.FC = () => {
         r={R * 1.96}
         fill="none"
         stroke={PALETTE.cyanDim}
-        strokeWidth={2.4}
-        opacity={0.07}
+        strokeWidth={3}
+        opacity={0.18}
       />
 
       {/* A ring of small dots, counter-rotating with ring B. */}
@@ -117,7 +117,7 @@ export const Core: React.FC = () => {
               cy={CORE_Y + Math.sin(a) * R * 2.06}
               r={i % 7 === 0 ? 5.5 : 3.2}
               fill={PALETTE.cyan}
-              opacity={i % 7 === 0 ? 0.5 : 0.26}
+              opacity={i % 7 === 0 ? 0.72 : 0.42}
             />
           );
         })}
@@ -131,8 +131,8 @@ export const Core: React.FC = () => {
           r={R * 1.6}
           fill="none"
           stroke={PALETTE.cyanDim}
-          strokeWidth={3.2}
-          opacity={0.38}
+          strokeWidth={3.6}
+          opacity={0.52}
         />
         <Ticks
           radius={R * 1.6}
@@ -140,7 +140,7 @@ export const Core: React.FC = () => {
           len={R * 0.07}
           width={3}
           color={PALETTE.cyan}
-          opacity={0.34}
+          opacity={0.46}
           skip={(i) => i % 6 === 0}
         />
         <Ticks
@@ -171,7 +171,7 @@ export const Core: React.FC = () => {
           radius={R * 1.4}
           width={4}
           color={PALETTE.cyan}
-          opacity={0.42}
+          opacity={0.56}
           segments={[
             [8, 78],
             [96, 166],
