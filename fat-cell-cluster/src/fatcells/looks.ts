@@ -361,7 +361,7 @@ export const LOOKS: LookRow[] = [
     palette: {
       cell: "#ff9e2e", deep: "#c25516", rim: "#ff7a10", rimStrength: 0.46,
       sheen: "#ffb060", sheenStrength: 0.28,
-      bgCentre: "#2b3641", bgEdge: "#141a21", bgFalloff: 0.95,
+      bgCentre: "#3d4b59", bgEdge: "#2b3542", bgFalloff: 0.95,
       // Visibly bumpier and more irregular than the other looks.
       mottleAmp: 0.03, mottleFreq: 2.4, aoStrength: 1.0, aoGamma: 1.5,
       roughness: 0.4, specular: 0.3,
@@ -385,7 +385,7 @@ export const LOOKS: LookRow[] = [
     palette: {
       cell: "#f2cd5c", deep: "#a2761c", rim: "#ffc85a", rimStrength: 0.44,
       sheen: "#ffeaa8", sheenStrength: 0.26,
-      bgCentre: "#15302f", bgEdge: "#0d1617", bgFalloff: 0.9,
+      bgCentre: "#224442", bgEdge: "#1b2b2c", bgFalloff: 0.9,
       mottleAmp: 0.032, mottleFreq: 2.3, aoStrength: 1.0, aoGamma: 1.5,
       roughness: 0.42, specular: 0.28,
     },
