@@ -52,8 +52,14 @@ const fragmentShader = /* glsl */ `
     // screen-blend overlays and have to encode as #000000 away from the
     // strands; ungated grain would lift every empty pixel off zero. The gate
     // opens by ~4/255, so the halo where banding actually shows is unaffected.
-    float luma = dot(display, vec3(0.2126, 0.7152, 0.0722));
-    float gate = smoothstep(0.0, 0.016, luma);
+    //
+    // This keys on the strongest channel, not on luma. Luma weights green
+    // roughly ten times blue, so a luma gate opened on a green strand's faint
+    // halo while staying shut on an identical blue one -- the green colourway
+    // came back with 8% of the frame sitting at value 1 instead of 0, and the
+    // blue one was under-dithered for the same reason.
+    float level = max(display.r, max(display.g, display.b));
+    float gate = smoothstep(0.0, 0.016, level);
 
     display += (grain * uGrain + dither * uDither) * gate;
     display = clamp(display, 0.0, 1.0);

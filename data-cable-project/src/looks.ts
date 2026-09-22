@@ -269,7 +269,7 @@ const RIBBON_CAMERA = {
  */
 const RIBBON_SHADING = {
   baseIntensity: 0.45,
-  digitIntensity: 5.5,
+  digitIntensity: 7.4,
   rimIntensity: 1.5,
   rimPower: 1.9,
   maskSoftness: 0.16,
@@ -279,7 +279,7 @@ const RIBBON_SHADING = {
 
 const CABLE_SHADING = {
   baseIntensity: 0.38,
-  digitIntensity: 5.2,
+  digitIntensity: 7.0,
   rimIntensity: 1.5,
   rimPower: 2.8,
   maskSoftness: 0.05,
@@ -310,11 +310,11 @@ const BANDS_1B: BandRow[] = [
 const BANDS_1C: BandRow[] = [
   // The sharp band is kept nearly flat in depth so the focal plane can hold a
   // long readable stretch rather than a sliver at one edge.
-  { angleDeg: 12, length: 46, center: [0.0, -2.6, 4.6], bow: 2.8, zBow: 0.6, zTilt: -0.8, width: 1.5, rowsAcross: 12, scrollRepeats: 3 },
-  { angleDeg: 21, length: 50, center: [-1.6, 0.6, -5.5], bow: 3.2, zBow: 2.0, zTilt: 3.5, width: 1.95, rowsAcross: 13, scrollRepeats: 1 },
-  { angleDeg: -34, length: 48, center: [2.0, 3.4, -2.2], bow: -2.9, zBow: 3.0, zTilt: 2.5, width: 1.66, rowsAcross: 12, scrollRepeats: 2 },
-  { angleDeg: -26, length: 54, center: [3.2, -0.8, -9.5], bow: -3.4, zBow: 1.6, zTilt: -3.5, width: 2.3, rowsAcross: 14, scrollRepeats: 2 },
-  { angleDeg: -18, length: 58, center: [-2.2, 4.6, -18.0], bow: -3.0, zBow: 1.2, zTilt: 3, width: 1.4, rowsAcross: 13, scrollRepeats: 3 },
+  { angleDeg: 12, length: 46, center: [0.0, -2.6, 4.6], bow: 2.8, zBow: 0.6, zTilt: -0.8, width: 1.5, rowsAcross: 9, scrollRepeats: 3 },
+  { angleDeg: 21, length: 50, center: [-1.6, 0.6, -5.5], bow: 3.2, zBow: 2.0, zTilt: 3.5, width: 1.95, rowsAcross: 9, scrollRepeats: 1 },
+  { angleDeg: -34, length: 48, center: [2.0, 3.4, -2.2], bow: -2.9, zBow: 3.0, zTilt: 2.5, width: 1.66, rowsAcross: 9, scrollRepeats: 2 },
+  { angleDeg: -26, length: 54, center: [3.2, -0.8, -9.5], bow: -3.4, zBow: 1.6, zTilt: -3.5, width: 2.3, rowsAcross: 10, scrollRepeats: 2 },
+  { angleDeg: -18, length: 58, center: [-2.2, 4.6, -18.0], bow: -3.0, zBow: 1.2, zTilt: 3, width: 1.4, rowsAcross: 9, scrollRepeats: 3 },
 ];
 
 const RACK_BASE: RackOptions = {
@@ -348,9 +348,9 @@ export const LOOKS: LookConfig[] = [
     strands: buildRibbons(BANDS_1A),
     camera: RIBBON_CAMERA,
     dof: { worldFocusDistance: 13.1, worldFocusRange: 2.8, bokehScale: 8.5 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.78 },
+    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
     shading: RIBBON_SHADING,
-    bokeh: { count: 92, spread: [34, 22], z: [-26, -1.5], radius: [0.22, 1.15] },
+    bokeh: { count: 150, spread: [36, 24], z: [-26, -1.5], radius: [0.3, 1.5] },
     ground: null,
     pureBlack: false,
     stillFrames: [60, 250, 470],
@@ -362,7 +362,7 @@ export const LOOKS: LookConfig[] = [
     strands: buildRibbons(BANDS_1B),
     camera: RIBBON_CAMERA,
     dof: { worldFocusDistance: 13.6, worldFocusRange: 3.6, bokehScale: 11 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.76 },
+    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
     shading: RIBBON_SHADING,
     bokeh: null,
     ground: null,
@@ -376,7 +376,7 @@ export const LOOKS: LookConfig[] = [
     strands: buildRibbons(BANDS_1C),
     camera: RIBBON_CAMERA,
     dof: { worldFocusDistance: 13.2, worldFocusRange: 2.8, bokehScale: 11 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.77 },
+    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
     shading: RIBBON_SHADING,
     bokeh: null,
     ground: null,
@@ -390,7 +390,11 @@ export const LOOKS: LookConfig[] = [
     strands: buildRibbons(BANDS_1C),
     camera: RIBBON_CAMERA,
     dof: { worldFocusDistance: 13.2, worldFocusRange: 2.8, bokehScale: 11 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.77 },
+    // Green carries ~1.3x blue's luminance for the same intensity, so at the
+    // shared threshold far more of it blooms, and the wider halo lifted this
+    // composition off the true black it is sold as. The threshold is scaled to
+    // match, which is what keeps the colourway a one-row change in practice.
+    bloom: { threshold: 4.1, smoothing: 0.35, intensity: 0.8, radius: 0.62 },
     shading: RIBBON_SHADING,
     bokeh: null,
     ground: null,
@@ -404,7 +408,7 @@ export const LOOKS: LookConfig[] = [
     strands: buildRack(DIAGONAL_BASE),
     camera: { position: [-7.5, 3.55, 9.0], lookAt: [4.6, -0.85, -1.2], fov: 30 },
     dof: { worldFocusDistance: 11.8, worldFocusRange: 3.0, bokehScale: 5.5 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.76 },
+    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: { y: -0.78, intensity: 0.22, fade: 1.5 },
@@ -417,8 +421,8 @@ export const LOOKS: LookConfig[] = [
     palette: BLUE,
     strands: buildRack(RACK_BASE),
     camera: { position: [-8.2, 1.75, 6.9], lookAt: [5.5, -0.45, -5.0], fov: 34 },
-    dof: { worldFocusDistance: 11.5, worldFocusRange: 7.0, bokehScale: 4.0 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.74 },
+    dof: { worldFocusDistance: 8.5, worldFocusRange: 6.0, bokehScale: 4.5 },
+    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: null,
@@ -432,7 +436,7 @@ export const LOOKS: LookConfig[] = [
     strands: buildRack(RACK_BASE),
     camera: { position: [-2.0, 0.6, 7.6], lookAt: [5.2, -0.1, 3.6], fov: 26 },
     dof: { worldFocusDistance: 4.3, worldFocusRange: 1.5, bokehScale: 11 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.76 },
+    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: { y: -0.72, intensity: 0.26, fade: 1.3 },
@@ -445,8 +449,8 @@ export const LOOKS: LookConfig[] = [
     palette: AMBER,
     strands: buildRack(RACK_BASE),
     camera: { position: [-8.2, 1.75, 6.9], lookAt: [5.5, -0.45, -5.0], fov: 34 },
-    dof: { worldFocusDistance: 11.5, worldFocusRange: 7.0, bokehScale: 4.0 },
-    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.74 },
+    dof: { worldFocusDistance: 8.5, worldFocusRange: 6.0, bokehScale: 4.5 },
+    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: null,
