@@ -5,7 +5,7 @@
 // frame 150 on its own from a cold start, render a sequential range that
 // contains frame 150, and compare. They must be identical.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, renameSync } from "node:fs";
+import { mkdirSync, readdirSync, renameSync } from "node:fs";
 import { readPNG, diff } from "./png.mjs";
 
 const OUT = "out/verify/determinism";
@@ -34,8 +34,16 @@ execFileSync(
   { stdio: ["ignore", "ignore", "inherit"] },
 );
 
-const padded = String(FRAME).padStart(8, "0");
-renameSync(`${OUT}/seq/element-${padded}.png`, `${OUT}/sequential.png`);
+// Remotion's sequence filenames are zero-padded to the composition's frame
+// count, so the width depends on the composition. Match on the number rather
+// than assuming a padding.
+const files = readdirSync(`${OUT}/seq`).filter((f) => f.endsWith(".png"));
+const match = files.find((f) => Number(f.replace(/\D/g, "")) === FRAME);
+if (!match) {
+  console.error(`No frame ${FRAME} among the sequence output: ${files.join(", ")}`);
+  process.exit(1);
+}
+renameSync(`${OUT}/seq/${match}`, `${OUT}/sequential.png`);
 
 const d = diff(readPNG(`${OUT}/alone.png`), readPNG(`${OUT}/sequential.png`));
 const ok = d.max === 0;

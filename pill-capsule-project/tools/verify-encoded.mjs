@@ -64,11 +64,17 @@ for (const spec of EXPECTED) {
     ? pass(`${dur.toFixed(3)}s`)
     : fail(`duration ${dur.toFixed(3)}s, expected ${spec.duration}s`);
 
+  // Keep only lines that are a bare stream index; the CLI wrapper can print
+  // unrelated notices on stdout.
   const audio = ffprobe([
     "-v", "error", "-select_streams", "a",
     "-show_entries", "stream=index", "-of", "csv=p=0", spec.file,
-  ]);
-  audio === "" ? pass("no audio stream") : fail(`audio stream present: ${audio}`);
+  ])
+    .split("\n")
+    .filter((l) => /^\d+$/.test(l.trim()));
+  audio.length === 0
+    ? pass("no audio stream")
+    : fail(`audio stream present (index ${audio.join(", ")})`);
 
   if (spec.pureBlack) {
     // Look 2 ships as an overlay, so its black has to survive the encode.
