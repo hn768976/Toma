@@ -283,7 +283,7 @@ export const LOOKS: LookRow[] = [
     palette: {
       cell: "#fdf0cf", deep: "#9c6a2c", rim: "#ffdd9e", rimStrength: 0.22,
       sheen: "#fffaef", sheenStrength: 0.26,
-      bgCentre: "#f7f5f1", bgEdge: "#e6e3de", bgFalloff: 1.4,
+      bgCentre: "#dedbd4", bgEdge: "#c6c2ba", bgFalloff: 1.4,
       bgOffset: [-0.15, 0.12],
       mottleAmp: 0.014, mottleFreq: 2.8, aoStrength: 1.0, aoGamma: 1.9,
       roughness: 0.4, specular: 0.18,
@@ -291,7 +291,7 @@ export const LOOKS: LookRow[] = [
     lighting: { ...WARM_LIGHT, keyIntensity: 1.0, fillIntensity: 0.45, ambientIntensity: 0.42 },
     camera: { fov: 42, fill: 2.0 },
     dof: { focusDistance: 3.6, focusRange: 3.0, bokehScale: 8, resolutionScale: 0.25 },
-    grain: 0.03,
+    grain: 0.024,
     // Higher key, and the masses are broken up so white shows between them.
     heroCells: 165, heroResolution: 240, blend: 0.08, overlap: 0.2, density: 0.88,
     extent: [13, 6.5, 3.2],

@@ -63,9 +63,12 @@ const report = (label, values) => {
   // banding sends you chasing grain that cannot help.
   let longest = 1, run = 1, at = 0, steps = 0, clipped = 0;
   for (let i = 1; i < values.length; i++) {
-    if (values[i] === 0 || values[i] === 255) clipped++;
+    if (values[i] <= 2 || values[i] >= 253) clipped++;
     const flat = values[i] === values[i - 1];
-    const inRange = values[i] > 0 && values[i] < 255;
+    // Treat the top and bottom couple of code values as clipped, not as
+    // plateaus: grain cannot dither a value with no headroom above it,
+    // because half the samples clamp.
+    const inRange = values[i] > 2 && values[i] < 253;
     if (flat && inRange) {
       run++;
       if (run > longest) { longest = run; at = i - run + 1; }
