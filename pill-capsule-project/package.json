@@ -1,0 +1,38 @@
+{
+  "name": "pill-capsule-project",
+  "version": "1.0.0",
+  "description": "Pills & Capsules \u2014 6 compositions (Remotion + three.js, 30fps)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "eslint src tools && tsc",
+    "render:previews": "node tools/render-all.mjs previews",
+    "render:stills": "node tools/render-all.mjs stills",
+    "verify:loop": "node tools/verify-loop.mjs",
+    "verify:encoded": "node tools/verify-encoded.mjs",
+    "verify:determinism": "node tools/verify-determinism.mjs",
+    "package": "node tools/package.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "9.122.0",
+    "@react-three/fiber": "8.18.0",
+    "@react-three/postprocessing": "2.19.1",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "postprocessing": "6.36.4",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.515",
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.515",
+    "@types/react": "18.3.12",
+    "@types/three": "0.170.0",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "typescript": "5.9.3"
+  }
+}
