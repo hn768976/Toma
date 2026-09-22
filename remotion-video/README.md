@@ -58,9 +58,29 @@ npx remotion still AIInterfaceHUD out/still-6000.png \
   --frame=150 --scale=1.5625 --image-format=png
 ```
 
-`--scale=1.5625` takes the 3840-wide composition to 6000x3375. Change
-`--frame` for the other stills; 150, 275, 400 and 520 are well separated in
-counter values, lit grid cells, icon highlight and camera position.
+`--scale=1.5625` takes the 3840-wide composition to 6000x3375. The four
+shipped stills are frames **129, 241, 352 and 463**.
+
+Those frames are not arbitrary. The icon highlight is a smooth pulse — three
+passes over the nine icons across the loop — so most frames catch one icon
+part-way through a fade, which looks like a rendering error in a still. These
+four are the well-separated frames at which exactly one icon is at full
+brightness and every other is fully off. To find them for a different cycle
+count:
+
+```js
+const frac = (x) => x - Math.floor(x);
+const pulse = (f, cycles, shift, width) => {
+  const p = frac(frac((f * cycles) / 600) - shift);
+  return p > width ? 0 : 0.5 - 0.5 * Math.cos((p / width) * 2 * Math.PI);
+};
+// a frame is clean when no icon sits mid-fade
+const clean = (f) =>
+  Math.max(...[...Array(9).keys()].map((i) => {
+    const v = pulse(f, 3, i / 9, 0.2);
+    return Math.min(v, 1 - v);
+  })) < 0.03;
+```
 
 A 1080p still is the same command with `--scale=0.5`.
 
@@ -356,7 +376,7 @@ Below about 4 levels the dither is being crushed: raise the grain opacities in
 - [x] Trace pulses at different positions each frame, running at 1-4x speeds
 - [x] Rings rotate, two of them in opposite directions
 - [x] Counters change and return to their frame-0 values
-- [x] Icon highlights advance through the grid
+- [x] Icon highlights advance through the grid; the four stills are at frames where none is mid-fade
 - [x] Depth layers distinguishable by blur (local detail 3.09 sharp / 0.86 far / 0.75 near)
 - [x] Interface cropped by both side edges
 - [x] Plane tilted on two axes — no panel edge or trace run parallel to a
