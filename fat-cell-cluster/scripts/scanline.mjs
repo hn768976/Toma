@@ -63,12 +63,13 @@ const report = (label, values) => {
   // banding sends you chasing grain that cannot help.
   let longest = 1, run = 1, at = 0, steps = 0, clipped = 0;
   for (let i = 1; i < values.length; i++) {
-    if (values[i] <= 2 || values[i] >= 253) clipped++;
+    const ch = channels(values[i]);
+    if (ch.every((c) => c >= 253) || ch.every((c) => c <= 2)) clipped++;
     const flat = values[i] === values[i - 1];
-    // Treat the top and bottom couple of code values as clipped, not as
-    // plateaus: grain cannot dither a value with no headroom above it,
-    // because half the samples clamp.
-    const inRange = values[i] > 2 && values[i] < 253;
+    // Grain cannot dither a value with no headroom above it: half the samples
+    // clamp, so a run at the top of the range is an exposure problem and not a
+    // quantisation one.
+    const inRange = !(ch.every((c) => c >= 253) || ch.every((c) => c <= 2));
     if (flat && inRange) {
       run++;
       if (run > longest) { longest = run; at = i - run + 1; }
@@ -92,7 +93,17 @@ const report = (label, values) => {
 const path = process.argv[2];
 if (!path) { console.error("usage: node scripts/scanline.mjs <frame.png>"); process.exit(1); }
 const img = decodePng(path);
-const px = (x, y) => img.data[(y * img.w + x) * img.bpp];
+// Whole pixels, not one channel and not a luminance average. Reading red
+// alone reports a well-exposed amber frame as a quarter clipped, because red
+// saturates on a warm surface long before any detail is lost; rounding a
+// luminance average invents plateaus of its own, since two pixels with
+// different colours can share one rounded average. A step is only visible
+// where all three channels hold still together.
+const px = (x, y) => {
+  const o = (y * img.w + x) * img.bpp;
+  return (img.data[o] << 16) | (img.data[o + 1] << 8) | img.data[o + 2];
+};
+const channels = (v) => [(v >> 16) & 255, (v >> 8) & 255, v & 255];
 
 const row = [], col = [];
 // A scanline through the upper-left eighth, which is background on every look.
