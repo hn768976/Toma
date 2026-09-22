@@ -422,7 +422,10 @@ export const LOOKS: LookConfig[] = [
     strands: buildRack(RACK_BASE),
     camera: { position: [-8.2, 1.75, 6.9], lookAt: [5.5, -0.45, -5.0], fov: 34 },
     dof: { worldFocusDistance: 8.5, worldFocusRange: 6.0, bokehScale: 4.5 },
-    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
+    // Tighter than the rest of the set. The rack's far cables throw enough
+    // halo at some scroll positions to lift every quadrant off true black,
+    // and this composition is sold as a screen-blend overlay.
+    bloom: { threshold: 3.8, smoothing: 0.3, intensity: 0.8, radius: 0.55 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: null,
@@ -450,7 +453,10 @@ export const LOOKS: LookConfig[] = [
     strands: buildRack(RACK_BASE),
     camera: { position: [-8.2, 1.75, 6.9], lookAt: [5.5, -0.45, -5.0], fov: 34 },
     dof: { worldFocusDistance: 8.5, worldFocusRange: 6.0, bokehScale: 4.5 },
-    bloom: { threshold: 3.0, smoothing: 0.35, intensity: 0.85, radius: 0.7 },
+    // Tighter than the rest of the set. The rack's far cables throw enough
+    // halo at some scroll positions to lift every quadrant off true black,
+    // and this composition is sold as a screen-blend overlay.
+    bloom: { threshold: 3.8, smoothing: 0.3, intensity: 0.8, radius: 0.55 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: null,

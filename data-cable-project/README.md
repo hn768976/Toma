@@ -77,14 +77,18 @@ WebGL (SwiftShader through ANGLE). Numbers from a real render, not an estimate.
 | WebGL | 2.0 (OpenGL ES 3.0 Chromium) |
 | Max texture size | 8192 |
 | Digit texture | 8192×2048, 96×16 character grid, 118px glyphs |
-| **Per-frame at 1080p — ribbons (look 1)** | **~0.5 s** (concurrency 4) |
-| **Per-frame at 1080p — cables (look 2)** | **~3.5 s** (concurrency 4) |
-| Per composition at 1080p | ~5 min (look 1) / ~35 min (look 2) |
-| **4K estimate** | **~2 s/frame (look 1), ~14 s/frame (look 2)** |
-| 4K per composition | ~20 min (look 1) / ~2.3 h (look 2) |
+| **Per-frame at 1080p — ribbons (look 1)** | **~2.6 s** (concurrency 4) |
+| **Per-frame at 1080p — cables (look 2)** | **~3.3 s** (concurrency 4) |
+| Per composition at 1080p | ~26 min (look 1) / ~30-38 min (look 2) |
+| **4K estimate** | **~10.5 s/frame (look 1), ~13.2 s/frame (look 2)** |
+| 4K per composition | ~1.8 h (look 1) / ~2.2 h (look 2) |
 
-Look 2 costs roughly seven times look 1: 26 tube meshes with collars and, on
-2A and 2C, a mirrored reflection pass, against four thin ribbons.
+Measured over the full 600-frame renders, not extrapolated from a sample.
+Look 2 is only modestly dearer than look 1 once the ribbons carry five wide
+bands and, on 1A, a 150-disc bokeh layer; the 8192x2048 digit texture costs
+about the same in both. The 4K figures scale by pixel count and assume the
+same software rasteriser -- a real GPU changes them by more than an order of
+magnitude.
 
 Anisotropy 16 is the useful maximum. This is the single most important value
 in the project: these surfaces are seen at extreme glancing angles, and had it
@@ -255,6 +259,28 @@ renders until they matched. Three things that only showed up that way:
   and bloom is left to carry the cores to white.
 - Row counts differ per composition and are data, not a constant: the reference
   clips genuinely differ (1B ≈ 2.3% glyph height, 1C ≈ 1.4%, 1A ≈ 1.2%).
+
+## Known differences from the references
+
+Two gaps survived the verify loop and are stated here rather than left to be
+discovered.
+
+**Highlight clipping.** The references blow out 22-37% of their pixels to 250+;
+these clip around 1%. Most of that reference clipping comes from *defocused*
+strands washing to white, and buying it costs one of two things the brief
+treats as non-negotiable. Three attempts are on record: raising exposure far
+enough to reach 2.3% dropped 1B's pure black to 29%, under the 50% required of
+a screen-blend overlay, and going further flattens the digit-to-gap contrast
+that makes the glyphs readable at all. The balance shipped keeps the black
+level and the legibility. To trade the other way, raise `digitIntensity` in
+`looks.ts` and re-render -- it is one number.
+
+**2B's upper frame.** In the reference the top third is filled with unlit grey
+cylinders continuing into the dark; here it is empty black. That is deliberate:
+2B is one of the four compositions sold as a pure-black overlay, and filling
+the frame would cost it that. The rack still recedes to a vanishing point and
+the far cables still go unlit; they simply end against black rather than
+against more hardware.
 
 ## Post chain
 

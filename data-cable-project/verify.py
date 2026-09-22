@@ -120,9 +120,13 @@ def band(path):
     row = luma[y]
     # Walk toward whichever side has more room.
     seg = row[x:] if (len(row) - x) > x else row[:x][::-1]
-    halo = seg[(seg < seg.max() * 0.6) & (seg > 0.5)]
+    # Measure the gradient, not the floor. Banding is a stepped contour in a
+    # falloff; a long run at value 1 just before black is the natural end of
+    # the ramp where the grain gate has closed, and counting it reported a
+    # failure for something invisible at 1/255.
+    halo = seg[(seg < seg.max() * 0.6) & (seg >= 8)]
     if halo.size < 40:
-        halo = seg[:400]
+        halo = seg[seg >= 8][:400]
     runs, cur, longest = 1, halo[0] if halo.size else 0, 1
     for v in halo[1:]:
         if v == cur:
