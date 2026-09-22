@@ -59,7 +59,7 @@ export const LightRig: React.FC<{ rig: Rig }> = ({ rig }) => {
         />
       ) : null}
 
-      <Environment resolution={256} frames={1} environmentIntensity={rig.environmentIntensity}>
+      <Environment resolution={384} frames={1} environmentIntensity={rig.environmentIntensity}>
         <color attach="background" args={["#000000"]} />
         {cards.map((c) => (
           <Lightformer

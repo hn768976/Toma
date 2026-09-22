@@ -103,7 +103,11 @@ export type SingleRow = {
   backdrop: CycSpec | null;
   rig: Rig;
   dof: DofSpec;
-  /** Film grain, as a fraction. The matte pass always gets zero. */
+  /** Film grain, nominal. Calibrated against the standard deviation actually
+   *  measured on the encoded frame, which comes out around half this: the
+   *  passes after it attenuate high-frequency noise. 0.04 nominal delivers
+   *  ~1.8% on the backdrop, inside the brief's 1.5-2.5% band. The matte pass
+   *  always gets zero. */
   grain: number;
   material: { roughness: number; clearcoat: number };
   /** Frames to harvest as stills. */
@@ -159,7 +163,7 @@ const STUDIO_RIG: Rig = {
       target: [0, 0, 0],
       scale: [8, 17],
       intensity: 10,
-      color: "#fffaf6",
+      color: "#f7fbff",
     },
     {
       form: "rect",
@@ -186,7 +190,7 @@ const STUDIO_RIG: Rig = {
       color: "#fff8f2",
     },
   ],
-  ambient: { intensity: 0.8, color: "#eff3ff" },
+  ambient: { intensity: 0.6, color: "#e9f0ff" },
   // Nearly overhead, so the contact shadow sits under the pill rather than
   // thrown off to one side. Shaping comes from the light cards; this one is
   // here for the shadow.
@@ -202,7 +206,7 @@ const STUDIO_RIG: Rig = {
     normalBias: 0.02,
     mapSize: 1024,
   },
-  softShadows: { size: 95, samples: 24, focus: 0.22 },
+  softShadows: { size: 140, samples: 24, focus: 0.18 },
   environmentIntensity: 1,
 };
 
@@ -217,8 +221,8 @@ const BLACK_RIG: Rig = {
       form: "rect",
       position: [-5.5, 4.5, 7],
       target: [0, 0, 0],
-      scale: [9, 14],
-      intensity: 2.7,
+      scale: [7.5, 12],
+      intensity: 3.8,
       color: "#fff3e8",
     },
     {
@@ -226,7 +230,7 @@ const BLACK_RIG: Rig = {
       position: [3.2, 2.4, -7],
       target: [0, 0, 0],
       scale: [2.2, 7],
-      intensity: 18,
+      intensity: 12,
       color: "#ffffff",
     },
     {
@@ -325,9 +329,9 @@ export const SINGLE_ROWS: SingleRow[] = [
     shape: "capsule",
     scored: false,
     colourway: { cap: "#0072cc", body: "#f7f7f6" },
-    sizeFraction: 0.4,
-    positionFraction: [-0.19, 0.03],
-    tiltDeg: [10, 0, 19],
+    sizeFraction: 0.45,
+    positionFraction: [-0.19, 0.0],
+    tiltDeg: [10, 0, 12],
     turns: [0, 1, 0],
     bobFraction: 0.02,
     camera: { fovDeg: 22, z: 20, near: 2, far: 34 },
@@ -345,10 +349,10 @@ export const SINGLE_ROWS: SingleRow[] = [
     },
     rig: STUDIO_RIG,
     dof: { worldFocusDistance: 20, worldFocusRange: 4, bokehScale: 3.6 },
-    grain: 0.018,
+    grain: 0.036,
     // Softer than the falling field on purpose: look 1's reference is a broad
     // satin sheen down the cap, not the tight glint a falling pill catches.
-    material: { roughness: 0.27, clearcoat: 0.55 },
+    material: { roughness: 0.34, clearcoat: 0.5 },
     stillFrames: [42, 148, 246],
   },
   {
@@ -361,8 +365,8 @@ export const SINGLE_ROWS: SingleRow[] = [
     shape: "tablet",
     scored: true,
     colourway: { cap: "#f3f2ee", body: "#f3f2ee" },
-    sizeFraction: 0.4,
-    positionFraction: [-0.185, 0.02],
+    sizeFraction: 0.45,
+    positionFraction: [-0.185, 0.0],
     tiltDeg: [0, 0, 18],
     // Two axes, one and two turns: a tumble that never repeats on screen but
     // still closes exactly.
@@ -383,8 +387,8 @@ export const SINGLE_ROWS: SingleRow[] = [
     },
     rig: STUDIO_RIG,
     dof: { worldFocusDistance: 20, worldFocusRange: 4, bokehScale: 3.6 },
-    grain: 0.02,
-    material: { roughness: 0.27, clearcoat: 0.55 },
+    grain: 0.04,
+    material: { roughness: 0.34, clearcoat: 0.5 },
     stillFrames: [36, 155, 262],
   },
   {
@@ -396,18 +400,18 @@ export const SINGLE_ROWS: SingleRow[] = [
     hasMattePass: true,
     shape: "capsule",
     scored: false,
-    colourway: { cap: "#b8352c", body: "#e6e6e6" },
+    colourway: { cap: "#bb3630", body: "#d6d6d6" },
     sizeFraction: 0.68,
     positionFraction: [0.015, 0.0],
-    tiltDeg: [10, 0, -34],
+    tiltDeg: [26, 0, -30],
     turns: [0, 1, 0],
     bobFraction: 0.015,
     camera: { fovDeg: 22, z: 20, near: 2, far: 34 },
     backdrop: null,
     rig: BLACK_RIG,
     dof: { worldFocusDistance: 20, worldFocusRange: 5, bokehScale: 1.6 },
-    grain: 0.014,
-    material: { roughness: 0.3, clearcoat: 0.55 },
+    grain: 0.026,
+    material: { roughness: 0.23, clearcoat: 0.68 },
     stillFrames: [55, 140, 265],
   },
 ];
@@ -467,7 +471,7 @@ export const FALLING_ROWS: FallingRow[] = [
     backdrop: TEAL_BACKDROP,
     rig: FIELD_RIG,
     dof: { worldFocusDistance: 13, worldFocusRange: 2, bokehScale: 23 },
-    grain: 0.02,
+    grain: 0.04,
     material: COATING,
     stillFrames: [30, 190, 355],
   },
@@ -490,7 +494,7 @@ export const FALLING_ROWS: FallingRow[] = [
     },
     rig: FIELD_RIG,
     dof: { worldFocusDistance: 13, worldFocusRange: 2, bokehScale: 23 },
-    grain: 0.02,
+    grain: 0.04,
     material: COATING,
     stillFrames: [30, 190, 355],
   },
@@ -508,7 +512,7 @@ export const FALLING_ROWS: FallingRow[] = [
     backdrop: TEAL_BACKDROP,
     rig: FIELD_RIG,
     dof: { worldFocusDistance: 13, worldFocusRange: 2, bokehScale: 23 },
-    grain: 0.02,
+    grain: 0.04,
     material: COATING,
     stillFrames: [30, 190, 355],
   },

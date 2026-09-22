@@ -49,8 +49,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 
   vec2 px = uv * resolution;
   // Two hashes summed give a triangular distribution, which dithers far more
-  // cleanly than a single uniform sample.
-  float n = hash13(vec3(px, frameIndex)) + hash13(vec3(px.yx + 19.7, frameIndex + 71.3)) - 1.0;
+  // cleanly than a single uniform sample. TRIANGULAR_NORM divides out that
+  // distribution's own standard deviation (1/sqrt(6)), so grainAmount means
+  // the grain's standard deviation as a fraction of the signal — otherwise a
+  // a "2% grain" lands at 0.8% and the backdrop stays glassy.
+  const float TRIANGULAR_NORM = 2.44949;
+  float n = (hash13(vec3(px, frameIndex)) + hash13(vec3(px.yx + 19.7, frameIndex + 71.3)) - 1.0) * TRIANGULAR_NORM;
   float d = hash13(vec3(px + 3.7, frameIndex * 1.7 + 11.0)) +
             hash13(vec3(px.yx + 57.1, frameIndex * 0.9 + 133.0)) - 1.0;
 
@@ -75,7 +79,8 @@ class GrainEffectImpl extends Effect {
 }
 
 export type GrainProps = {
-  /** 0.015-0.025 is the useful band. 0 disables. */
+  /** The grain's standard deviation as a fraction of the signal.
+   *  0.015-0.025 is the useful band. 0 disables. */
   amount: number;
   /** In display units; 1/255 is one output code value. */
   dither?: number;

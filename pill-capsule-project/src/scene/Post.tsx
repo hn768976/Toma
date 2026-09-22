@@ -65,7 +65,10 @@ export const Post: React.FC<{
   >
     <TunedDepthOfField {...dof} />
     <ToneMapping mode={ToneMappingMode.AGX} />
-    <Grain amount={grain} frameIndex={frameIndex} />
+    {/* SMAA runs BEFORE the grain. After it, it treats the grain as aliasing
+        and filters most of it back out — the backdrop came out almost clean,
+        which is exactly the flat gradient the grain is there to break up. */}
     <SMAA />
+    <Grain amount={grain} frameIndex={frameIndex} />
   </EffectComposer>
 );

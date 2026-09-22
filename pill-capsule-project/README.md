@@ -256,11 +256,23 @@ H.264, and looks 1B, 3A and 3B are mostly gradient. Three defences:
    is a fifth of the red channel and reads as noise rather than dither.
 2. **`material.dithering` on the lit surfaces**, which is three's own ±1/255
    ordered dither on the shading.
-3. **Film grain, ~2%**, as the last pass, applied in display space together
+3. **Film grain, ~2% as measured on the encoded frame**, applied in display
+   space together
    with a true 1-LSB dither. It is a hash of screen coordinates and frame index
    — never `Math.random()` — and is fed `frame % loopFrames` so it is periodic
    over the loop and the loop still closes. Look 2's matte half gets no grain,
    and the grain is luminance-gated everywhere so pure black stays pure black.
+
+   The `grain` value in the data rows is nominal and roughly twice what lands
+   on the frame, because the passes after it attenuate high-frequency noise.
+   Calibrate against the encoded output, not the number:
+
+   ```bash
+   node -e "import('./tools/png.mjs').then(({readPNG,pixel})=>{const i=readPNG('out/verify/band.png');
+     let v=[];for(let y=100;y<160;y++)for(let x=1500;x<1560;x++)v.push(pixel(i,x,y)[0]);
+     const m=v.reduce((a,b)=>a+b)/v.length;
+     console.log('std',Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/v.length).toFixed(2),'mean',m.toFixed(1))})"
+   ```
 
 **Verify on the encoded mp4, not the preview.** Extract a PNG from the rendered
 file and inspect the backdrop along a horizontal and a vertical scanline;

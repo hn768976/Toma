@@ -144,8 +144,8 @@ class CycMaterial extends THREE.MeshStandardMaterial {
         "cyc varying declaration (vertex)",
       ),
       "#include <begin_vertex>",
-      "#include <begin_vertex>\nvCycY = ( modelMatrix * vec4( position, 1.0 ) ).y;",
-      "cyc world height",
+      "#include <begin_vertex>\nvec4 cycWorld = modelMatrix * vec4( position, 1.0 );\nvCycY = cycWorld.y;\nvCycX = cycWorld.x;",
+      "cyc world position",
     );
 
     const lo = this.span[0].toFixed(4);
@@ -183,10 +183,11 @@ export const Cyclorama: React.FC<CycOptions> = (props) => {
       new CycMaterial(
         props.floorColor,
         props.wallColor,
-        // Ramp over the floor-to-wall curve, not the whole sweep: on a real
-        // cyclorama the falloff lives in the curve and the wall above it is
-        // flat.
-        [props.floorY, props.floorY + props.curveRadius * 0.8],
+        // Ramp over the whole sweep rather than just the curve. Confining it
+        // to the curve puts a visible horizon band across the frame; a real
+        // seamless falls off continuously from the top of the wall to the
+        // floor.
+        [props.floorY, props.floorY + props.curveRadius + props.wallHeight * 0.35],
         props.envMapIntensity ?? 1,
         props.sideFalloff ?? [1, 1],
         props.width * 0.5,
