@@ -24,6 +24,21 @@ const fragmentShader = /* glsl */ `
     return fract((p3.x + p3.y) * p3.z);
   }
 
+  // The real sRGB transfer function, not a gamma-2.2 approximation of it.
+  // Approximating costs a visible tone shift in the shadows -- exactly where
+  // this effect is supposed to be working -- and crushes the dither there.
+  vec3 toSrgb(vec3 c) {
+    return mix(c * 12.92,
+               1.055 * pow(max(c, vec3(1e-8)), vec3(1.0 / 2.4)) - 0.055,
+               step(vec3(0.0031308), c));
+  }
+
+  vec3 toLinear(vec3 c) {
+    return mix(c / 12.92,
+               pow((c + 0.055) / 1.055, vec3(2.4)),
+               step(vec3(0.04045), c));
+  }
+
   void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
     vec3 seed = vec3(gl_FragCoord.xy, uFrame);
     float grain  = hash13(seed) - 0.5;
@@ -31,11 +46,19 @@ const fragmentShader = /* glsl */ `
 
     // Work in display space so the dither really is +/- 1/255 of what the
     // encoder sees, then hand back a linear value for the composer to encode.
-    vec3 display = pow(clamp(inputColor.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
-    display += grain * uGrain + dither * uDither;
+    vec3 display = toSrgb(clamp(inputColor.rgb, 0.0, 1.0));
+
+    // Gate the noise off at true black. Four of these compositions are sold as
+    // screen-blend overlays and have to encode as #000000 away from the
+    // strands; ungated grain would lift every empty pixel off zero. The gate
+    // opens by ~4/255, so the halo where banding actually shows is unaffected.
+    float luma = dot(display, vec3(0.2126, 0.7152, 0.0722));
+    float gate = smoothstep(0.0, 0.016, luma);
+
+    display += (grain * uGrain + dither * uDither) * gate;
     display = clamp(display, 0.0, 1.0);
 
-    outputColor = vec4(pow(display, vec3(2.2)), inputColor.a);
+    outputColor = vec4(toLinear(display), inputColor.a);
   }
 `;
 

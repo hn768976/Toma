@@ -97,8 +97,8 @@ export const collarRadius = (config: LookConfig) => {
   return cable ? cable.size : 0.34;
 };
 
-export const COLLAR_RADIUS_SCALE = 1.3;
-export const COLLAR_LENGTH_SCALE = 1.75;
+export const COLLAR_RADIUS_SCALE = 1.16;
+export const COLLAR_LENGTH_SCALE = 1.5;
 
 export const makeCollarGeometry = (radius: number) =>
   new CylinderGeometry(
@@ -118,9 +118,9 @@ export const makeCollarGeometry = (radius: number) =>
  */
 export const makeCollarRingGeometry = (radius: number) =>
   new CylinderGeometry(
-    radius * (COLLAR_RADIUS_SCALE + 0.08),
-    radius * (COLLAR_RADIUS_SCALE + 0.08),
-    radius * 0.2,
+    radius * (COLLAR_RADIUS_SCALE + 0.05),
+    radius * (COLLAR_RADIUS_SCALE + 0.05),
+    radius * 0.11,
     28,
     1,
     true,
@@ -128,8 +128,8 @@ export const makeCollarRingGeometry = (radius: number) =>
 
 /** Offsets of the two glowing rings, just inside either end of a collar. */
 export const collarRingOffsets = (radius: number): number[] => [
-  -radius * (COLLAR_LENGTH_SCALE / 2 - 0.17),
-  radius * (COLLAR_LENGTH_SCALE / 2 - 0.17),
+  -radius * (COLLAR_LENGTH_SCALE / 2 - 0.1),
+  radius * (COLLAR_LENGTH_SCALE / 2 - 0.1),
 ];
 
 export { DoubleSide, Euler, Matrix4 };

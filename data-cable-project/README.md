@@ -76,10 +76,15 @@ WebGL (SwiftShader through ANGLE). Numbers from a real render, not an estimate.
 | **Max anisotropy reported by the renderer** | **16** |
 | WebGL | 2.0 (OpenGL ES 3.0 Chromium) |
 | Max texture size | 8192 |
-| Digit texture | 4096×2048, 112×32 character grid |
-| **Per-frame at 1080p** | **~3.5 s** (concurrency 4) |
-| Per composition at 1080p | ~35 min (600 frames) |
-| **4K estimate** | **~14 s/frame, ~2.3 h per composition** |
+| Digit texture | 8192×2048, 96×16 character grid, 118px glyphs |
+| **Per-frame at 1080p — ribbons (look 1)** | **~0.5 s** (concurrency 4) |
+| **Per-frame at 1080p — cables (look 2)** | **~3.5 s** (concurrency 4) |
+| Per composition at 1080p | ~5 min (look 1) / ~35 min (look 2) |
+| **4K estimate** | **~2 s/frame (look 1), ~14 s/frame (look 2)** |
+| 4K per composition | ~20 min (look 1) / ~2.3 h (look 2) |
+
+Look 2 costs roughly seven times look 1: 26 tube meshes with collars and, on
+2A and 2C, a mirrored reflection pass, against four thin ribbons.
 
 Anisotropy 16 is the useful maximum. This is the single most important value
 in the project: these surfaces are seen at extreme glancing angles, and had it
@@ -105,8 +110,12 @@ to 3.5 s/frame.
 
 The whole subject is the digits, and the failure mode is that they turn to mush.
 
-- Built **once, at module level** (`digitField.ts` → `digitTexture.ts`) as a
-  4096×2048 canvas: a 112×32 grid of `0`/`1` in JetBrains Mono at 50px.
+- Built **once, at module level** (`digitField.ts` → `digitTexture.ts`) as an
+  8192×2048 canvas: a 96×16 grid of `0`/`1` in JetBrains Mono at 118px.
+- `ROWS` is the important one: it is how many rows of digits wrap around a
+  cylinder's circumference, so it sets glyph size. `COLS` is the tiling period
+  along a strand, kept high (and the texture correspondingly wide) so the field
+  does not visibly repeat along a cable.
 - Glyph choice and per-character brightness come from a `mulberry32` seeded at
   module scope and drawn once — never per frame. Brightness is deliberately
   uneven (10% near-dark, 72% mid, 18% hot) with ~1.4% solid bright squares,
@@ -228,6 +237,24 @@ screen is a pure function of `useCurrentFrame()`.
 
 Verified: frame 300 rendered alone from a cold start is byte-identical to frame
 300 from a full sequential render.
+
+## Calibrating against the references
+
+Glyph size, band width, black coverage and highlight clipping were not set by
+eye. Each was measured on the reference frames — connected-component blob
+analysis for glyph height, lit-run scans for strand width, and channel
+histograms for clipping and colour — and then measured the same way on the
+renders until they matched. Three things that only showed up that way:
+
+- Glyphs were **3-4× too small**. The measured target is roughly 1-2% of frame
+  height on the sharp strand, and 32 rows around a cylinder put them at a third
+  of that. `ROWS` dropped to 16 and the cables thickened.
+- Lit pixels averaged **(80, 113, 192)** against the references' **(7, 97, 218)**
+  — far too much red. A near-white glow reads as washed periwinkle, not as the
+  electric cyan-blue of the references, so the glow colour is tinted toward cyan
+  and bloom is left to carry the cores to white.
+- Row counts differ per composition and are data, not a constant: the reference
+  clips genuinely differ (1B ≈ 2.3% glyph height, 1C ≈ 1.4%, 1A ≈ 1.2%).
 
 ## Post chain
 

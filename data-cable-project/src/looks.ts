@@ -28,21 +28,27 @@ export type Palette = {
   accent: string;
 };
 
+/**
+ * Lit pixels in the references average close to (7, 97, 218) -- effectively no
+ * red at all. A near-white glow put mean red near 60 and the whole thing read
+ * as washed periwinkle, so the digits are tinted toward cyan and let bloom,
+ * not the base colour, carry them to white.
+ */
 export const BLUE: Palette = {
-  base: "#1454d8",
-  glow: "#cfe8ff",
-  rim: "#57bbff",
+  base: "#0a3ad2",
+  glow: "#4fd8ff",
+  rim: "#2f9cff",
   accent: "#2f8fff",
 };
 export const GREEN: Palette = {
   base: "#067a33",
-  glow: "#9dffbe",
+  glow: "#3dffa4",
   rim: "#1fff84",
   accent: "#1fd06e",
 };
 export const AMBER: Palette = {
   base: "#c86a0a",
-  glow: "#fff1da",
+  glow: "#ffb347",
   rim: "#ffb04d",
   accent: "#ff9426",
 };
@@ -103,7 +109,7 @@ const buildRibbons = (rows: readonly BandRow[]): StrandDef[] =>
       kind: "ribbon" as const,
       curve,
       size: row.width,
-      arcDeg: 34,
+      arcDeg: 60,
       repeatU,
       repeatV,
       scrollRepeats: row.scrollRepeats,
@@ -262,9 +268,9 @@ const RIBBON_CAMERA = {
  * otherwise the whole strand blooms and the digits stop being readable.
  */
 const RIBBON_SHADING = {
-  baseIntensity: 0.62,
-  digitIntensity: 1.66,
-  rimIntensity: 0.95,
+  baseIntensity: 0.45,
+  digitIntensity: 5.5,
+  rimIntensity: 1.5,
   rimPower: 1.9,
   maskSoftness: 0.16,
   shadeAmount: 0.8,
@@ -272,47 +278,54 @@ const RIBBON_SHADING = {
 };
 
 const CABLE_SHADING = {
-  baseIntensity: 0.5,
-  digitIntensity: 1.5,
-  rimIntensity: 0.9,
+  baseIntensity: 0.38,
+  digitIntensity: 5.2,
+  rimIntensity: 1.5,
   rimPower: 2.8,
   maskSoftness: 0.05,
-  shadeAmount: 0.5,
+  shadeAmount: 0.92,
   maskBias: 0.12,
 };
 
 /* --- 1A: gentle S-curves with a bokeh field ----------------------- */
 const BANDS_1A: BandRow[] = [
-  { angleDeg: -7, length: 26, center: [0, -0.2, 4.6], bow: 1.1, zBow: 1.6, zTilt: -3, width: 1.28, rowsAcross: 14, scrollRepeats: 2 },
-  { angleDeg: 9, length: 26, center: [1.6, 4.1, -2.2], bow: -1.8, zBow: 1.8, zTilt: 4, width: 1.42, rowsAcross: 15, scrollRepeats: 3 },
-  { angleDeg: -17, length: 27, center: [-4.6, -4.6, -1.4], bow: 1.4, zBow: -1.2, zTilt: 2.5, width: 1.3, rowsAcross: 14, scrollRepeats: 1 },
-  { angleDeg: 5, length: 30, center: [0.8, 6.6, -9.5], bow: 2.4, zBow: 0.5, zTilt: 0, width: 1.72, rowsAcross: 16, scrollRepeats: 2 },
+  // As in 1C, the sharp band is held nearly flat in depth so the focal plane
+  // can keep a long readable stretch of digits.
+  { angleDeg: -7, length: 46, center: [0.0, -1.2, 4.6], bow: 1.6, zBow: 0.5, zTilt: -0.8, width: 1.45, rowsAcross: 12, scrollRepeats: 2 },
+  { angleDeg: 11, length: 48, center: [1.8, 4.8, -3.0], bow: -2.6, zBow: 2.0, zTilt: 4, width: 2.0, rowsAcross: 13, scrollRepeats: 3 },
+  { angleDeg: -19, length: 50, center: [-5.2, -5.4, -1.6], bow: 2.2, zBow: -1.2, zTilt: 2.5, width: 1.75, rowsAcross: 12, scrollRepeats: 1 },
+  { angleDeg: 5, length: 54, center: [0.8, 7.4, -10.0], bow: 3.0, zBow: 0.5, zTilt: 0, width: 2.6, rowsAcross: 14, scrollRepeats: 2 },
+  { angleDeg: -13, length: 56, center: [-1.5, 2.0, -18.0], bow: 3.4, zBow: 1.0, zTilt: 3, width: 1.5, rowsAcross: 13, scrollRepeats: 3 },
 ];
 
 /* --- 1B: three diagonals, mostly black ---------------------------- */
 const BANDS_1B: BandRow[] = [
-  { angleDeg: 31, length: 28, center: [-3.6, 3.4, -3.5], bow: 0.7, zBow: 1.1, zTilt: 3, width: 1.34, rowsAcross: 14, scrollRepeats: 1 },
-  { angleDeg: 27, length: 25, center: [0.5, -0.1, 4.2], bow: 0.5, zBow: 0.9, zTilt: -2, width: 1.12, rowsAcross: 14, scrollRepeats: 3 },
-  { angleDeg: 24, length: 29, center: [4.6, -4.4, -4.5], bow: 0.8, zBow: 1.3, zTilt: 3, width: 1.55, rowsAcross: 15, scrollRepeats: 2 },
+  { angleDeg: 31, length: 50, center: [-5.6, 5.2, -3.5], bow: 1.4, zBow: 1.6, zTilt: 3, width: 1.95, rowsAcross: 6, scrollRepeats: 1 },
+  { angleDeg: 27, length: 44, center: [0.5, -0.3, 4.4], bow: 1.0, zBow: 1.2, zTilt: -2, width: 1.72, rowsAcross: 6, scrollRepeats: 3 },
+  { angleDeg: 24, length: 52, center: [6.4, -6.2, -4.5], bow: 1.6, zBow: 1.8, zTilt: 3, width: 2.25, rowsAcross: 6, scrollRepeats: 2 },
+  { angleDeg: 29, length: 56, center: [-7.5, -2.0, -17.0], bow: 2.2, zBow: 0.8, zTilt: 2, width: 1.25, rowsAcross: 6, scrollRepeats: 2 },
 ];
 
 /* --- 1C: two families of arcs crossing in an X -------------------- */
 const BANDS_1C: BandRow[] = [
-  { angleDeg: 14, length: 26, center: [-0.6, -1.2, 3.8], bow: 3.1, zBow: 2.2, zTilt: -2.5, width: 1.12, rowsAcross: 14, scrollRepeats: 3 },
-  { angleDeg: 20, length: 28, center: [-1.8, 2.6, -4.0], bow: 3.6, zBow: 1.4, zTilt: 3, width: 1.45, rowsAcross: 15, scrollRepeats: 1 },
-  { angleDeg: -38, length: 27, center: [1.6, 0.8, -1.5], bow: -3.2, zBow: 2.6, zTilt: 2, width: 1.3, rowsAcross: 14, scrollRepeats: 2 },
-  { angleDeg: -30, length: 29, center: [3.4, -3.4, -7.0], bow: -2.6, zBow: 1.0, zTilt: -3, width: 1.66, rowsAcross: 16, scrollRepeats: 2 },
+  // The sharp band is kept nearly flat in depth so the focal plane can hold a
+  // long readable stretch rather than a sliver at one edge.
+  { angleDeg: 12, length: 46, center: [0.0, -2.6, 4.6], bow: 2.8, zBow: 0.6, zTilt: -0.8, width: 1.5, rowsAcross: 12, scrollRepeats: 3 },
+  { angleDeg: 21, length: 50, center: [-1.6, 0.6, -5.5], bow: 3.2, zBow: 2.0, zTilt: 3.5, width: 1.95, rowsAcross: 13, scrollRepeats: 1 },
+  { angleDeg: -34, length: 48, center: [2.0, 3.4, -2.2], bow: -2.9, zBow: 3.0, zTilt: 2.5, width: 1.66, rowsAcross: 12, scrollRepeats: 2 },
+  { angleDeg: -26, length: 54, center: [3.2, -0.8, -9.5], bow: -3.4, zBow: 1.6, zTilt: -3.5, width: 2.3, rowsAcross: 14, scrollRepeats: 2 },
+  { angleDeg: -18, length: 58, center: [-2.2, 4.6, -18.0], bow: -3.0, zBow: 1.2, zTilt: 3, width: 1.4, rowsAcross: 13, scrollRepeats: 3 },
 ];
 
 const RACK_BASE: RackOptions = {
-  count: 22,
-  spacing: 1.02,
-  radius: 0.34,
+  count: 26,
+  spacing: 1.16,
+  radius: 0.46,
   halfLength: 22,
   zStart: 5.0,
   y: 0,
   sag: 0.12,
-  litCount: 13,
+  litCount: 16,
   collarCount: 5,
   withCollars: true,
 };
@@ -320,8 +333,8 @@ const RACK_BASE: RackOptions = {
 const DIAGONAL_BASE: RackOptions = {
   ...RACK_BASE,
   count: 12,
-  spacing: 0.83,
-  radius: 0.36,
+  spacing: 1.02,
+  radius: 0.44,
   zStart: 3.2,
   litCount: 12,
   withCollars: false,
@@ -334,10 +347,10 @@ export const LOOKS: LookConfig[] = [
     palette: BLUE,
     strands: buildRibbons(BANDS_1A),
     camera: RIBBON_CAMERA,
-    dof: { worldFocusDistance: 13.4, worldFocusRange: 2.6, bokehScale: 7.5 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.72 },
+    dof: { worldFocusDistance: 13.1, worldFocusRange: 2.8, bokehScale: 8.5 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.78 },
     shading: RIBBON_SHADING,
-    bokeh: { count: 46, spread: [30, 19], z: [-24, -1.5], radius: [0.16, 0.72] },
+    bokeh: { count: 92, spread: [34, 22], z: [-26, -1.5], radius: [0.22, 1.15] },
     ground: null,
     pureBlack: false,
     stillFrames: [60, 250, 470],
@@ -348,8 +361,8 @@ export const LOOKS: LookConfig[] = [
     palette: BLUE,
     strands: buildRibbons(BANDS_1B),
     camera: RIBBON_CAMERA,
-    dof: { worldFocusDistance: 13.7, worldFocusRange: 1.9, bokehScale: 11 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.7 },
+    dof: { worldFocusDistance: 13.6, worldFocusRange: 3.6, bokehScale: 11 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.76 },
     shading: RIBBON_SHADING,
     bokeh: null,
     ground: null,
@@ -362,8 +375,8 @@ export const LOOKS: LookConfig[] = [
     palette: BLUE,
     strands: buildRibbons(BANDS_1C),
     camera: RIBBON_CAMERA,
-    dof: { worldFocusDistance: 13.6, worldFocusRange: 1.5, bokehScale: 11 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.71 },
+    dof: { worldFocusDistance: 13.2, worldFocusRange: 2.8, bokehScale: 11 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.77 },
     shading: RIBBON_SHADING,
     bokeh: null,
     ground: null,
@@ -376,8 +389,8 @@ export const LOOKS: LookConfig[] = [
     palette: GREEN,
     strands: buildRibbons(BANDS_1C),
     camera: RIBBON_CAMERA,
-    dof: { worldFocusDistance: 13.6, worldFocusRange: 1.5, bokehScale: 11 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.71 },
+    dof: { worldFocusDistance: 13.2, worldFocusRange: 2.8, bokehScale: 11 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.77 },
     shading: RIBBON_SHADING,
     bokeh: null,
     ground: null,
@@ -391,7 +404,7 @@ export const LOOKS: LookConfig[] = [
     strands: buildRack(DIAGONAL_BASE),
     camera: { position: [-7.5, 3.55, 9.0], lookAt: [4.6, -0.85, -1.2], fov: 30 },
     dof: { worldFocusDistance: 11.8, worldFocusRange: 3.0, bokehScale: 5.5 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.7 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.76 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: { y: -0.78, intensity: 0.22, fade: 1.5 },
@@ -403,9 +416,9 @@ export const LOOKS: LookConfig[] = [
     outName: "CableBundle_Rack",
     palette: BLUE,
     strands: buildRack(RACK_BASE),
-    camera: { position: [-11.5, 3.1, 8.6], lookAt: [6.5, -0.8, -6.5], fov: 34 },
-    dof: { worldFocusDistance: 13.0, worldFocusRange: 4.5, bokehScale: 5.0 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.68 },
+    camera: { position: [-8.2, 1.75, 6.9], lookAt: [5.5, -0.45, -5.0], fov: 34 },
+    dof: { worldFocusDistance: 11.5, worldFocusRange: 7.0, bokehScale: 4.0 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.74 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: null,
@@ -417,9 +430,9 @@ export const LOOKS: LookConfig[] = [
     outName: "CableBundle_Macro",
     palette: BLUE,
     strands: buildRack(RACK_BASE),
-    camera: { position: [-2.2, 0.72, 7.3], lookAt: [5.2, -0.15, 3.4], fov: 26 },
-    dof: { worldFocusDistance: 6.2, worldFocusRange: 0.9, bokehScale: 13 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.7 },
+    camera: { position: [-2.0, 0.6, 7.6], lookAt: [5.2, -0.1, 3.6], fov: 26 },
+    dof: { worldFocusDistance: 4.3, worldFocusRange: 1.5, bokehScale: 11 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.76 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: { y: -0.72, intensity: 0.26, fade: 1.3 },
@@ -431,9 +444,9 @@ export const LOOKS: LookConfig[] = [
     outName: "CableBundle_RackAmber",
     palette: AMBER,
     strands: buildRack(RACK_BASE),
-    camera: { position: [-11.5, 3.1, 8.6], lookAt: [6.5, -0.8, -6.5], fov: 34 },
-    dof: { worldFocusDistance: 13.0, worldFocusRange: 4.5, bokehScale: 5.0 },
-    bloom: { threshold: 0.92, smoothing: 0.12, intensity: 0.55, radius: 0.68 },
+    camera: { position: [-8.2, 1.75, 6.9], lookAt: [5.5, -0.45, -5.0], fov: 34 },
+    dof: { worldFocusDistance: 11.5, worldFocusRange: 7.0, bokehScale: 4.0 },
+    bloom: { threshold: 2.6, smoothing: 0.6, intensity: 1.1, radius: 0.74 },
     shading: CABLE_SHADING,
     bokeh: null,
     ground: null,

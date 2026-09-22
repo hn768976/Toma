@@ -119,7 +119,7 @@ const Collars: React.FC<{ config: LookConfig }> = ({ config }) => {
       // Matte black hardware with a low-roughness sheen, so it catches a
       // highlight and reads as a fitting rather than as a shadow.
       new MeshStandardMaterial({
-        color: new Color("#0a0c12").convertSRGBToLinear(),
+        color: new Color("#141a26").convertSRGBToLinear(),
         metalness: 0.3,
         roughness: 0.55,
       }),
@@ -129,7 +129,7 @@ const Collars: React.FC<{ config: LookConfig }> = ({ config }) => {
     const offsets = collarRingOffsets(radius);
     const rings = new InstancedMesh(
       makeCollarRingGeometry(radius),
-      makeEmissiveMaterial(config.palette.rim, 1.9),
+      makeEmissiveMaterial(config.palette.rim, 1.25),
       placements.length * offsets.length,
     );
 
@@ -208,7 +208,7 @@ const BokehField: React.FC<{ config: LookConfig; frame: number }> = ({
           ? BOKEH_BLUE[Math.floor(rng() * BOKEH_BLUE.length) % BOKEH_BLUE.length]
           : BOKEH_ACCENT[Math.floor(rng() * BOKEH_ACCENT.length) % BOKEH_ACCENT.length];
       col.set(hex).convertSRGBToLinear();
-      const scale = 0.34 + rng() * 0.5;
+      const scale = 0.5 + rng() * 0.72;
       colors[i * 3] = col.r * scale;
       colors[i * 3 + 1] = col.g * scale;
       colors[i * 3 + 2] = col.b * scale;
