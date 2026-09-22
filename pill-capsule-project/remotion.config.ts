@@ -19,6 +19,13 @@ Config.setCrf(16);
 Config.setOverwriteOutput(true);
 Config.setChromiumDisableWebSecurity(false);
 
+// None of these compositions has audio, but Remotion still muxes a silent AAC
+// track by default. That fails the "no audio stream" check, and because the
+// silent track runs a little longer than the video it also pushes the
+// container duration past the exact 10.000 / 15.000 / 20.000 seconds the
+// delivery calls for. The video stream itself is exact either way.
+Config.setMuted(true);
+
 // Some sandboxed environments block Remotion's own Chrome Headless Shell
 // download but ship a Playwright Chromium. Use it when it is there; on a
 // normal machine this path does not exist and Remotion uses its own browser.

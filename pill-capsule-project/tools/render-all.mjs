@@ -4,8 +4,12 @@
 // which is exactly 1920x1080. The 4K render commands are in README.md.
 //
 // Usage: node tools/render-all.mjs previews|stills|previews-4k [--only=<id>]
+//                                  [--skip-existing]
+//
+// --skip-existing passes over compositions whose output is already there,
+// which is what you want when resuming a long batch.
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 
 const SINGLE = [
   { id: "SinglePill-CapsuleGrey", file: "SinglePill_CapsuleGrey", stills: [42, 148, 246] },
@@ -22,6 +26,7 @@ const ALL = [...SINGLE, ...FALLING];
 const args = process.argv.slice(2);
 const mode = args.find((a) => !a.startsWith("--")) ?? "previews";
 const only = args.find((a) => a.startsWith("--only="))?.slice("--only=".length);
+const skipExisting = args.includes("--skip-existing");
 const rows = only ? ALL.filter((r) => r.id === only) : ALL;
 if (!rows.length) {
   console.error(`No composition matches "${only}"`);
@@ -40,10 +45,16 @@ for (const row of rows) {
   if (mode === "previews" || mode === "previews-4k") {
     const is4k = mode === "previews-4k";
     const out = `out/${row.file}${is4k ? "_4K" : ""}.mp4`;
+    if (skipExisting && existsSync(out)) {
+      console.log(`${out}  (already rendered, skipped)`);
+      continue;
+    }
     const seconds = run([
       "render", row.id, out,
       ...(is4k ? [] : ["--scale=0.5"]),
       "--codec=h264", "--crf=16", "--pixel-format=yuv420p",
+      // --muted: no silent audio track. See remotion.config.ts.
+      "--muted",
       "--image-format=png", "--timeout=300000", "--concurrency=4", "--log=error",
     ]);
     console.log(`${out}  ${seconds.toFixed(0)}s`);

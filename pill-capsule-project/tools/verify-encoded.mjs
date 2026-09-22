@@ -60,7 +60,7 @@ for (const spec of EXPECTED) {
   get("pix_fmt") === "yuv420p" ? pass("yuv420p") : fail(`pixel format ${get("pix_fmt")}`);
 
   const dur = Number(get("duration"));
-  Math.abs(dur - spec.duration) < 0.05
+  Math.abs(dur - spec.duration) < 0.02
     ? pass(`${dur.toFixed(3)}s`)
     : fail(`duration ${dur.toFixed(3)}s, expected ${spec.duration}s`);
 
