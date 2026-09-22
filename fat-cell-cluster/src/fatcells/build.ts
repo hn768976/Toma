@@ -438,11 +438,17 @@ const buildLook = (row: LookRow): BuiltScene => {
     ));
     cameraDistance = heroDistance(row, clusters[0].radius);
     if (row.tissue === "full") {
-      // A second field behind the first, so the frame is covered while the
-      // front cells are still at full size.
+      // Two fields behind the first, so the frame reads as packed tissue
+      // while the front cells are still at full size. The hero count is kept
+      // low so the fragments stay large once it collapses, which leaves the
+      // covering to these.
       clusters.push(makeShrinking(
-        Math.round(row.heroCells * 0.6), row.extent,
-        Math.round(row.heroResolution * 0.8), [0, 0, -7], 1.45, false,
+        Math.round(row.heroCells * 1.1), row.extent,
+        Math.round(row.heroResolution * 0.85), [0, 0, -7], 1.7, false,
+      ));
+      clusters.push(makeShrinking(
+        Math.round(row.heroCells * 0.9), row.extent,
+        Math.round(row.heroResolution * 0.7), [0, 0, -15], 2.3, false,
       ));
     }
     for (let i = 0; i < row.backdropCount; i++) {
