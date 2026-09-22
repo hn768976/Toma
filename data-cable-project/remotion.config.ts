@@ -1,6 +1,10 @@
 import { Config } from "@remotion/cli/config";
 
-Config.setVideoImageFormat("jpeg");
+// PNG, not JPEG. The default JPEG intermediate puts a lossy stage in front of
+// H.264, and fine 0/1 glyphs are exactly what it smears -- they are the whole
+// subject here. It also makes ffmpeg tag the output yuvj420p (full range)
+// instead of the yuv420p a stock clip is expected to carry.
+Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
 
 // H.264 / yuv420p, high quality. CRF is also passed explicitly on the CLI.

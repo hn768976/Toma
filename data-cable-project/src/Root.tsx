@@ -33,16 +33,6 @@ export const RemotionRoot: React.FC = () => (
       height={HEIGHT}
       defaultProps={{ lookId: LOOKS[0].id }}
     />
-    {/* Small-canvas twin of the rack, used only for bring-up diagnostics. */}
-    <Composition
-      id="TestSmall"
-      component={DataCable}
-      durationInFrames={DURATION}
-      fps={FPS}
-      width={640}
-      height={360}
-      defaultProps={{ lookId: "CableBundle-Rack" }}
-    />
     <Still id="Diagnostics" component={Diagnostics} width={1920} height={1080} />
   </>
 );

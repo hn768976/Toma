@@ -63,15 +63,39 @@ def probe(path):
 
 
 def black(path):
-    """Corner pixels well away from any strand must survive encoding as 0,0,0."""
-    worst = 0
+    """Does the black survive encoding as a true 0,0,0?
+
+    Fixed corners are the wrong probe -- a band legitimately crosses a corner
+    in several of these compositions. What matters for a screen-blend overlay
+    is that pixels away from the strands encode as exact zero rather than
+    sitting on a lifted floor, so this finds the darkest patch in each quadrant
+    and checks the near-black population as a whole.
+    """
+    good = True
     for n in (0, 150, 300, 450, 599):
         a = frame(path, n)
         h, w, _ = a.shape
-        patches = [a[0:40, 0:40], a[0:40, w - 40:w], a[h - 40:h, 0:40], a[h - 40:h, w - 40:w]]
-        worst = max(worst, max(int(p.max()) for p in patches))
-    good = worst == 0
-    print(f"  [{OK if good else BAD}] corners pure #000000    max channel: {worst}")
+        lum = a.max(axis=2)
+
+        # Darkest 40x40 patch per quadrant, i.e. "well away from any cable".
+        worst = 0
+        for qy in (0, h // 2):
+            for qx in (0, w // 2):
+                q = lum[qy:qy + h // 2, qx:qx + w // 2]
+                best = None
+                for yy in range(0, q.shape[0] - 40, max(1, q.shape[0] // 12)):
+                    for xx in range(0, q.shape[1] - 40, max(1, q.shape[1] // 12)):
+                        v = int(q[yy:yy + 40, xx:xx + 40].max())
+                        if best is None or v < best:
+                            best = v
+                worst = max(worst, best or 0)
+
+        near = lum <= 6
+        exact = float((lum == 0).sum()) / max(1.0, float(near.sum()))
+        ok = worst == 0 and exact > 0.9
+        good &= ok
+        print(f"  [{OK if ok else BAD}] frame {n:3d}: darkest quadrant patch max={worst}, "
+              f"{100*exact:.1f}% of near-black pixels are exactly 0")
     return good
 
 
