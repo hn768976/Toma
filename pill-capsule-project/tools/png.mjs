@@ -2,8 +2,10 @@
 // or RGBA, which is everything Remotion and ffmpeg's png encoder produce.
 // Zero dependencies on purpose — the verification tooling ships with the
 // project and should not need an install to run.
-import { inflateSync } from "node:zlib";
-import { readFileSync } from "node:fs";
+import * as zlib from "node:zlib";
+import { readFileSync, writeFileSync } from "node:fs";
+
+const { inflateSync } = zlib;
 
 const CHANNELS = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
 
@@ -112,4 +114,76 @@ export const diff = (a, b) => {
     }
   }
   return { max, mean: sum / count, worst };
+};
+
+/** Encode an image back to PNG (8-bit RGB, filter 0). */
+export const writePNG = (file, img) => {
+  const { deflateSync } = zlib;
+  const stride = img.width * 3;
+  const raw = Buffer.alloc((stride + 1) * img.height);
+  for (let y = 0; y < img.height; y++) {
+    raw[y * (stride + 1)] = 0;
+    for (let x = 0; x < img.width; x++) {
+      const p = pixel(img, x, y);
+      const o = y * (stride + 1) + 1 + x * 3;
+      raw[o] = p[0];
+      raw[o + 1] = p[1];
+      raw[o + 2] = p[2];
+    }
+  }
+  const chunk = (type, body) => {
+    const out = Buffer.alloc(body.length + 12);
+    out.writeUInt32BE(body.length, 0);
+    out.write(type, 4, "ascii");
+    body.copy(out, 8);
+    out.writeUInt32BE(crc32(out.subarray(4, 8 + body.length)) >>> 0, 8 + body.length);
+    return out;
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(img.width, 0);
+  ihdr.writeUInt32BE(img.height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  writeFileSync(file, Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]));
+};
+
+const CRC_TABLE = (() => {
+  const t = new Int32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c;
+  }
+  return t;
+})();
+
+const crc32 = (buf) => {
+  let c = -1;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return c ^ -1;
+};
+
+/** Crop, then nearest-neighbour zoom, for inspecting a detail at 1:1 or larger. */
+export const crop = (img, x, y, w, h, zoom = 1) => {
+  const out = {
+    width: w * zoom,
+    height: h * zoom,
+    channels: 3,
+    data: Buffer.alloc(w * zoom * h * zoom * 3),
+  };
+  for (let j = 0; j < out.height; j++) {
+    for (let i = 0; i < out.width; i++) {
+      const p = pixel(img, x + Math.floor(i / zoom), y + Math.floor(j / zoom));
+      const o = (j * out.width + i) * 3;
+      out.data[o] = p[0];
+      out.data[o + 1] = p[1];
+      out.data[o + 2] = p[2];
+    }
+  }
+  return out;
 };
