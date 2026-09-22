@@ -163,7 +163,7 @@ class CycMaterial extends THREE.MeshStandardMaterial {
       {
         float cycT = clamp( ( vCycY - ${lo} ) / ( ${hi} - ${lo} ), 0.0, 1.0 );
         diffuseColor.rgb *= mix( ${v(this.floor)}, ${v(this.wall)}, sqrt( cycT ) );
-        float cycS = clamp( vCycX / ${(this.halfWidth * 2).toFixed(4)} + 0.5, 0.0, 1.0 );
+        float cycS = clamp( vCycX / ${(this.halfWidth * 0.9).toFixed(4)} + 0.5, 0.0, 1.0 );
         diffuseColor.rgb *= mix( ${this.sides[0].toFixed(4)}, ${this.sides[1].toFixed(4)}, cycS );
       }`,
       "cyc vertical ramp",

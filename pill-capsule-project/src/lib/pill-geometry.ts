@@ -32,7 +32,7 @@ const DOME_Y = HALF_L - BODY_R;
 const CAP_SCALE = 1.06;
 const CAP_R = BODY_R * CAP_SCALE;
 /** Where the cap rim sits: a little past the midpoint, toward the body end. */
-const RIM_Y = -0.055 * (HALF_L * 2);
+const RIM_Y = -0.025 * (HALF_L * 2);
 
 /**
  * Body: a plain capsule (cylinder + two hemispheres). Its upper half is hidden

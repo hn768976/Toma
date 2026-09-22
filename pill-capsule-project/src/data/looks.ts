@@ -157,9 +157,9 @@ const STUDIO_RIG: Rig = {
       form: "rect",
       position: [-7.5, 7.5, 9],
       target: [0, 0, 0],
-      scale: [4.5, 13],
-      intensity: 16,
-      color: "#fff4ea",
+      scale: [8, 17],
+      intensity: 10,
+      color: "#fffaf6",
     },
     {
       form: "rect",
@@ -186,22 +186,23 @@ const STUDIO_RIG: Rig = {
       color: "#fff8f2",
     },
   ],
-  ambient: { intensity: 0.7, color: "#f4f1ff" },
+  ambient: { intensity: 0.8, color: "#eff3ff" },
   // Nearly overhead, so the contact shadow sits under the pill rather than
   // thrown off to one side. Shaping comes from the light cards; this one is
   // here for the shadow.
   shadowLight: {
-    position: [-2.2, 12, 2.4],
-    // Carries most of the floor's light as well as the shadow. Too weak
-    // against the top card and the contact shadow simply vanishes.
-    intensity: 9,
+    // Nearly overhead so the shadow sits under the pill, and carrying most of
+    // the floor's light as well: too weak against the top card and the contact
+    // shadow simply vanishes.
+    position: [-1.2, 14, 1.2],
+    intensity: 8,
     color: "#fff6ee",
     cameraSize: 13,
     bias: -0.0005,
     normalBias: 0.02,
     mapSize: 1024,
   },
-  softShadows: { size: 46, samples: 20, focus: 0.3 },
+  softShadows: { size: 95, samples: 24, focus: 0.22 },
   environmentIntensity: 1,
 };
 
@@ -216,8 +217,8 @@ const BLACK_RIG: Rig = {
       form: "rect",
       position: [-5.5, 4.5, 7],
       target: [0, 0, 0],
-      scale: [6.5, 11],
-      intensity: 4.6,
+      scale: [9, 14],
+      intensity: 2.7,
       color: "#fff3e8",
     },
     {
@@ -225,7 +226,7 @@ const BLACK_RIG: Rig = {
       position: [3.2, 2.4, -7],
       target: [0, 0, 0],
       scale: [2.2, 7],
-      intensity: 26,
+      intensity: 18,
       color: "#ffffff",
     },
     {
@@ -262,8 +263,18 @@ const FIELD_RIG: Rig = {
       position: [-8, 9, 11],
       target: [0, 0, 0],
       scale: [7, 9],
-      intensity: 17,
+      intensity: 24,
       color: "#fffaf4",
+    },
+    // Small and very bright: this is the one that puts a tight hotspot on the
+    // coating. Broad cards alone give soft square patches, which read as clay.
+    {
+      form: "rect",
+      position: [-4, 7, 9],
+      target: [0, 0, 0],
+      scale: [1.6, 2.6],
+      intensity: 90,
+      color: "#ffffff",
     },
     {
       form: "rect",
@@ -278,7 +289,7 @@ const FIELD_RIG: Rig = {
       position: [0, -9, 8],
       target: [0, 0, 0],
       scale: [16, 10],
-      intensity: 2.2,
+      intensity: 1.4,
       color: "#fff6ef",
     },
     // Kept low on purpose: a bright card directly behind the field puts a
@@ -293,13 +304,13 @@ const FIELD_RIG: Rig = {
       color: "#dfeaff",
     },
   ],
-  ambient: { intensity: 0.5, color: "#eef4ff" },
+  ambient: { intensity: 0.22, color: "#eef4ff" },
   shadowLight: null,
   softShadows: null,
   environmentIntensity: 1,
 };
 
-const COATING = { roughness: 0.21, clearcoat: 0.75 };
+const COATING = { roughness: 0.14, clearcoat: 0.85 };
 
 // --- look 1 and 2 ----------------------------------------------------------
 
@@ -313,29 +324,31 @@ export const SINGLE_ROWS: SingleRow[] = [
     hasMattePass: false,
     shape: "capsule",
     scored: false,
-    colourway: { cap: "#0069b5", body: "#f4f3f0" },
-    sizeFraction: 0.32,
-    positionFraction: [-0.19, 0.02],
-    tiltDeg: [13, 0, 30],
+    colourway: { cap: "#0072cc", body: "#f7f7f6" },
+    sizeFraction: 0.4,
+    positionFraction: [-0.19, 0.03],
+    tiltDeg: [10, 0, 19],
     turns: [0, 1, 0],
     bobFraction: 0.02,
     camera: { fovDeg: 22, z: 20, near: 2, far: 34 },
     backdrop: {
       floorColor: "#fffdf9",
-      wallColor: "#ccd6cc",
-      floorY: -3.5,
+      wallColor: "#dcdcdc",
+      floorY: -3.0,
       curveZ: -6,
       curveRadius: 2.3,
       floorDepth: 20,
       wallHeight: 22,
       width: 54,
       envMapIntensity: 1,
-      sideFalloff: [1.06, 0.8],
+      sideFalloff: [1.1, 0.74],
     },
     rig: STUDIO_RIG,
     dof: { worldFocusDistance: 20, worldFocusRange: 4, bokehScale: 3.6 },
     grain: 0.018,
-    material: COATING,
+    // Softer than the falling field on purpose: look 1's reference is a broad
+    // satin sheen down the cap, not the tight glint a falling pill catches.
+    material: { roughness: 0.27, clearcoat: 0.55 },
     stillFrames: [42, 148, 246],
   },
   {
@@ -348,8 +361,8 @@ export const SINGLE_ROWS: SingleRow[] = [
     shape: "tablet",
     scored: true,
     colourway: { cap: "#f3f2ee", body: "#f3f2ee" },
-    sizeFraction: 0.32,
-    positionFraction: [-0.185, 0.015],
+    sizeFraction: 0.4,
+    positionFraction: [-0.185, 0.02],
     tiltDeg: [0, 0, 18],
     // Two axes, one and two turns: a tumble that never repeats on screen but
     // still closes exactly.
@@ -359,19 +372,19 @@ export const SINGLE_ROWS: SingleRow[] = [
     backdrop: {
       floorColor: "#00d4ff",
       wallColor: "#0075ff",
-      floorY: -3.5,
+      floorY: -3.0,
       curveZ: -6,
       curveRadius: 2.3,
       floorDepth: 20,
       wallHeight: 22,
       width: 54,
       envMapIntensity: 0.26,
-      sideFalloff: [1.05, 0.86],
+      sideFalloff: [1.08, 0.82],
     },
     rig: STUDIO_RIG,
     dof: { worldFocusDistance: 20, worldFocusRange: 4, bokehScale: 3.6 },
     grain: 0.02,
-    material: COATING,
+    material: { roughness: 0.27, clearcoat: 0.55 },
     stillFrames: [36, 155, 262],
   },
   {
@@ -383,7 +396,7 @@ export const SINGLE_ROWS: SingleRow[] = [
     hasMattePass: true,
     shape: "capsule",
     scored: false,
-    colourway: { cap: "#9c1410", body: "#e9e8e4" },
+    colourway: { cap: "#b8352c", body: "#e6e6e6" },
     sizeFraction: 0.68,
     positionFraction: [0.015, 0.0],
     tiltDeg: [10, 0, -34],
@@ -394,7 +407,7 @@ export const SINGLE_ROWS: SingleRow[] = [
     rig: BLACK_RIG,
     dof: { worldFocusDistance: 20, worldFocusRange: 5, bokehScale: 1.6 },
     grain: 0.014,
-    material: { roughness: 0.18, clearcoat: 0.8 },
+    material: { roughness: 0.3, clearcoat: 0.55 },
     stillFrames: [55, 140, 265],
   },
 ];
@@ -405,14 +418,14 @@ export const SINGLE_ROWS: SingleRow[] = [
 const UNIFORM_CAPSULE_FIELD = {
   seed: 20240917,
   shapes: [{ shape: "capsule" as const, weight: 1 }],
-  count: 78,
+  count: 50,
   period: 9,
   zNear: 5,
   zFar: -12,
   // Matches the visible half-width at zNear; buildField scales it with depth
   // so the far plane stays filled edge to edge.
   halfWidth: 2.72,
-  scale: 0.56,
+  scale: 0.72,
   sizeJitter: 0.05,
   turnCounts: [1, 2, 3],
 };
@@ -433,7 +446,7 @@ export const FALLING_ROWS: FallingRow[] = [
     label: "Look 3A - mixed white capsules, tablets and caplets on deep teal-blue",
     durationInFrames: 450,
     loopFrames: 450,
-    colourway: { cap: "#fbfaf7", body: "#fbfaf7" },
+    colourway: { cap: "#ffffff", body: "#ffffff" },
     field: {
       seed: 771103,
       shapes: [
@@ -441,19 +454,19 @@ export const FALLING_ROWS: FallingRow[] = [
         { shape: "tablet", weight: 0.33 },
         { shape: "caplet", weight: 0.33 },
       ],
-      count: 96,
+      count: 62,
       period: 9,
       zNear: 5,
       zFar: -12,
       halfWidth: 2.72,
-      scale: 0.52,
+      scale: 0.66,
       sizeJitter: 0.05,
       turnCounts: [1, 2, 3],
     },
     camera: { fovDeg: 34, z: 10, near: 1, far: 30 },
     backdrop: TEAL_BACKDROP,
     rig: FIELD_RIG,
-    dof: { worldFocusDistance: 13, worldFocusRange: 2.6, bokehScale: 18 },
+    dof: { worldFocusDistance: 13, worldFocusRange: 2, bokehScale: 23 },
     grain: 0.02,
     material: COATING,
     stillFrames: [30, 190, 355],
@@ -464,19 +477,19 @@ export const FALLING_ROWS: FallingRow[] = [
     label: "Look 3B - uniform blue/white capsules on bright light blue",
     durationInFrames: 450,
     loopFrames: 450,
-    colourway: { cap: "#0f2ede", body: "#fbfaf7" },
+    colourway: { cap: "#1436ea", body: "#ffffff" },
     field: UNIFORM_CAPSULE_FIELD,
     camera: { fovDeg: 34, z: 10, near: 1, far: 30 },
     backdrop: {
-      colorA: "#84aef8",
-      colorB: "#b6cbfc",
-      center: [0.5, 0.55],
-      spread: 1.05,
-      vignette: 0.06,
+      colorA: "#72a3f3",
+      colorB: "#a4c1fb",
+      center: [0.5, 0.68],
+      spread: 0.98,
+      vignette: 0.16,
       z: -16,
     },
     rig: FIELD_RIG,
-    dof: { worldFocusDistance: 13, worldFocusRange: 2.6, bokehScale: 18 },
+    dof: { worldFocusDistance: 13, worldFocusRange: 2, bokehScale: 23 },
     grain: 0.02,
     material: COATING,
     stillFrames: [30, 190, 355],
@@ -494,7 +507,7 @@ export const FALLING_ROWS: FallingRow[] = [
     camera: { fovDeg: 34, z: 10, near: 1, far: 30 },
     backdrop: TEAL_BACKDROP,
     rig: FIELD_RIG,
-    dof: { worldFocusDistance: 13, worldFocusRange: 2.6, bokehScale: 18 },
+    dof: { worldFocusDistance: 13, worldFocusRange: 2, bokehScale: 23 },
     grain: 0.02,
     material: COATING,
     stillFrames: [30, 190, 355],

@@ -1,5 +1,4 @@
 import { Composition } from "remotion";
-import { Smoke } from "./comps/Smoke";
 import { SinglePillComp } from "./comps/SinglePill";
 import { FallingPillsComp } from "./comps/FallingPills";
 import { FALLING_ROWS, FPS, HEIGHT, SINGLE_ROWS, WIDTH } from "./data/looks";
@@ -16,7 +15,6 @@ import { FALLING_ROWS, FPS, HEIGHT, SINGLE_ROWS, WIDTH } from "./data/looks";
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {[0,1,2,3,4,5,6,7,8,9].map((v)=>(<Composition key={"Smoke"+v} id={"Smoke"+v} component={Smoke} durationInFrames={60} fps={30} width={1920} height={1080} defaultProps={{variant:v}} />))}
       {SINGLE_ROWS.map((row) => (
         <Composition
           key={row.id}
