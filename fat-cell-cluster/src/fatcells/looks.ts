@@ -263,13 +263,13 @@ export const LOOKS: LookRow[] = [
       ambientColor: "#c98b3c",
       ambientIntensity: 0.16,
     },
-    camera: { fov: 42, fill: 3.05 },
+    camera: { fov: 42, fill: 3.3 },
     dof: { focusDistance: 4.6, focusRange: 3.0, bokehScale: 7, resolutionScale: 0.25 },
     grain: 0.02,
     // A wide, shallow slab: the frame has to read as roughly a dozen cells
     // across, which needs a couple of hundred of them at this framing.
-    heroCells: 620, heroResolution: 320, blend: 0.075, overlap: 0.22, density: 0.92,
-    extent: [23, 12.5, 5.0],
+    heroCells: 700, heroResolution: 330, blend: 0.075, overlap: 0.22, density: 0.92,
+    extent: [26, 14.5, 5.0],
     backdropCount: 0, backdropDepth: [-22, 2],
     drift: 0.04, specks: 60, membrane: 1, fibres: 0, tissue: "full",
     stills: [0, 110, 210],
