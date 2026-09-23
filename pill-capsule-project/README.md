@@ -95,7 +95,37 @@ there.
 
 ### Measured render time
 
-See **Performance** at the end of this file.
+Measured on the machine these previews were rendered on: 4 vCPU, **no GPU**,
+so headless Chromium falls back to SwiftShader (software WebGL). Wall clock,
+`--concurrency=4`, 1920x1080:
+
+| Composition | Frames | Wall clock | s/frame |
+|---|---|---|---|
+| `SinglePill-CapsuleGrey` | 300 | 52 min | 10.4 |
+| `SinglePill-TabletBlue` | 300 | 52 min | 10.4 |
+| `SinglePill-BlackMatte` | 600 | 38 min | 3.8 avg |
+| `FallingPills-MixedWhite` | 450 | 79 min | 10.5 |
+| `FallingPills-BlueCapsule` | 450 | 77 min | 10.3 |
+| `FallingPills-RedCapsule` | 450 | 57 min | 7.6 |
+
+**All six: about 6 hours at 1080p.**
+
+Look 2 is the cheapest per frame despite having the most frames, because its
+matte half runs no lighting, no depth of field and no post chain at all — only
+its first 300 frames cost anything.
+
+**4K estimate: roughly 4x, so ~24 hours for all six** on this hardware. 3840x2160
+is 4x the pixels of 1080p and this chain is fragment-bound (depth of field,
+tone mapping, SMAA and grain are all full-frame passes), so the per-frame time
+scales close to linearly with pixel count.
+
+These numbers are dominated by the absence of a GPU. With hardware WebGL,
+expect roughly an order of magnitude better; treat the table as a floor, not a
+forecast.
+
+The stills harvest is much cheaper than it looks: 24 stills at 6000x3375 took
+about 8 minutes in total, because each one is a single frame rather than a
+sequence.
 
 ---
 
