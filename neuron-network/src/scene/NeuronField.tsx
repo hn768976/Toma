@@ -98,6 +98,7 @@ const Background: React.FC<{ look: Look; heroCenter: Vector3 | null }> = ({
       uCenter: { value: new Vector2(0.5, 0.5) },
       uLift: { value: look.post.bgLift },
       uGain: { value: look.post.bgGain },
+      uBlackGate: { value: look.post.blackGate },
       uAspect: { value: 1 },
       uExposure: { value: look.post.exposure },
     }),
@@ -245,6 +246,7 @@ const Scene: React.FC<{ look: Look }> = ({ look }) => {
   );
   // Periodic over the loop, so grain at frame 600 matches frame 0.
   grain.saturation = look.post.saturation;
+  grain.blackGate = look.post.blackGate;
   grain.frame = frame % LOOP_FRAMES;
 
   const heroCenter = look.field.hero ? (field.neurons[0]?.center ?? null) : null;

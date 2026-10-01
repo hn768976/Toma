@@ -25,6 +25,7 @@ uniform vec3  uOuter;
 uniform vec2  uCenter;    // screen-space centre of the lift, in UV
 uniform float uLift;
 uniform float uGain;
+uniform float uBlackGate;
 uniform float uAspect;
 uniform float uExposure;
 
@@ -46,7 +47,7 @@ void main() {
 
   // +/- half a code value, gated so pure black is left alone.
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
-  float gate = smoothstep(0.0, 0.008, lum);
+  float gate = smoothstep(0.0, uBlackGate, lum);
   col += (hash12(gl_FragCoord.xy) - 0.5) * (1.0 / 255.0) * gate;
 
   gl_FragColor = vec4(max(col, 0.0), 1.0);

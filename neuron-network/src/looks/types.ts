@@ -197,6 +197,13 @@ export type Look = {
     toneMapping: "agx" | "aces";
     /** Saturation grade after tone mapping; 1 leaves colour unchanged. */
     saturation: number;
+    /**
+     * Luminance below which grain and dither fade out. Only a look whose
+     * background must encode as exact 0,0,0 needs this above a sliver: on a
+     * dark navy look a wide gate throttles dither across the darkest end of
+     * the gradient, which is exactly where 8-bit H.264 bands.
+     */
+    blackGate: number;
     grain: number;
     exposure: number;
     /**
