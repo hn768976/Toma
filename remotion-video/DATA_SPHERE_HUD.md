@@ -24,12 +24,12 @@ same frame at half resolution.
 npm i
 
 # 4K masters (H.264 MP4)
-npx remotion render DataSphereHUD-Mono-4K  out/DataSphereHUD-Mono-4K.mp4  --codec=h264 --crf=16
-npx remotion render DataSphereHUD-Ember-4K out/DataSphereHUD-Ember-4K.mp4 --codec=h264 --crf=16
+npx remotion render DataSphereHUD-Mono-4K  out/DataSphereHUD-Mono-4K.mp4  --codec=h264 --crf=16 --muted
+npx remotion render DataSphereHUD-Ember-4K out/DataSphereHUD-Ember-4K.mp4 --codec=h264 --crf=16 --muted
 
 # 1080p
-npx remotion render DataSphereHUD-Mono-1080p  out/DataSphereHUD-Mono-1080p.mp4  --codec=h264 --crf=16
-npx remotion render DataSphereHUD-Ember-1080p out/DataSphereHUD-Ember-1080p.mp4 --codec=h264 --crf=16
+npx remotion render DataSphereHUD-Mono-1080p  out/DataSphereHUD-Mono-1080p.mp4  --codec=h264 --crf=16 --muted
+npx remotion render DataSphereHUD-Ember-1080p out/DataSphereHUD-Ember-1080p.mp4 --codec=h264 --crf=16 --muted
 
 # Preview / tweak in Remotion Studio
 npm run dev

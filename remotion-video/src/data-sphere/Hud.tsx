@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
-import { mulberry32, seededRandom } from "../particle-ring/random";
+import { mulberry32, seededRandom } from "./random";
 import { MONO_FONT_FAMILY } from "../load-fonts";
 import { DESIGN_HEIGHT, DESIGN_WIDTH, type Palette } from "./constants";
 import { tangleAmount } from "./geometry";

@@ -1,4 +1,4 @@
-import { mulberry32 } from "../particle-ring/random";
+import { mulberry32 } from "./random";
 import {
   DOT_COUNT,
   STRAND_COUNT,
