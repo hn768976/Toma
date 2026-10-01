@@ -23,3 +23,24 @@ fontFace
     console.error("Failed to load Patrick Hand font", err);
     continueRender(handle);
   });
+
+// Monospace face for the data-sphere HUD labels, self-hosted for the same
+// reason as above.
+export const MONO_FONT_FAMILY = "JetBrains Mono";
+
+const monoHandle = delayRender("Loading JetBrains Mono font");
+
+new FontFace(
+  MONO_FONT_FAMILY,
+  `url(${staticFile("fonts/JetBrainsMono-Regular.woff2")}) format("woff2")`,
+  { weight: "400", style: "normal" },
+)
+  .load()
+  .then((loaded) => {
+    document.fonts.add(loaded);
+    continueRender(monoHandle);
+  })
+  .catch((err) => {
+    console.error("Failed to load JetBrains Mono font", err);
+    continueRender(monoHandle);
+  });
