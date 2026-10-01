@@ -60,7 +60,7 @@ const referenceMove = (frame: number): CameraState => {
     Easing.inOut(Easing.sin),
   );
   return {
-    tx: interpolate(t, [0, 1], [3050, 3800]) + sway(frame, 1) * 18,
+    tx: interpolate(t, [0, 1], [3150, 4300]) + sway(frame, 1) * 18,
     ty: interpolate(t, [0, 1], [2200, 2240]) + sway(frame, 2) * 12,
     z: interpolate(t, [0, 1], [-20, 170]),
     rx: 24 + sway(frame, 3) * 0.35,

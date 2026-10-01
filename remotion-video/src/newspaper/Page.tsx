@@ -5,10 +5,9 @@ import {
   BODY_FONT,
   BODY_FONT_SIZE,
   COLORS,
-  HEADLINE_BIG_SIZE,
   HEADLINE_FONT,
   HEADLINE_LEFT,
-  HEADLINE_SMALL_SIZE,
+  HEADLINE_SIZE,
   HEADLINE_TOP,
   SHEET_TOP,
   WORLD_HEIGHT,
@@ -123,6 +122,7 @@ export const Page: React.FC<{ copy: HeadlineCopy }> = ({ copy }) => {
             left: HEADLINE_LEFT - 60,
             top: HEADLINE_TOP - SHEET_TOP,
             fontFamily: HEADLINE_FONT,
+            fontSize: HEADLINE_SIZE,
             fontWeight: 700,
             color: COLORS.ink,
             whiteSpace: "nowrap",
@@ -130,15 +130,10 @@ export const Page: React.FC<{ copy: HeadlineCopy }> = ({ copy }) => {
             letterSpacing: "0.005em",
           }}
         >
-          <div style={{ display: "flex", alignItems: "baseline", gap: 70 }}>
-            <span style={{ fontSize: HEADLINE_BIG_SIZE }}>
-              {copy.lineOneBig}
-            </span>
-            <span style={{ fontSize: HEADLINE_SMALL_SIZE }}>
-              {copy.lineOneSmall}
-            </span>
+          <div>
+            {copy.lineOneBig} {copy.lineOneSmall}
           </div>
-          <div style={{ fontSize: HEADLINE_BIG_SIZE }}>{copy.lineTwo}</div>
+          <div>{copy.lineTwo}</div>
         </div>
 
         {/* Lead photo placeholder + kicker label. */}

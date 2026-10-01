@@ -21,8 +21,8 @@ export const PERSPECTIVE_PX = 3400;
 export const SHEET_TOP = 1500; // top edge of the headline sheet
 export const HEADLINE_LEFT = 900;
 export const HEADLINE_TOP = 1720;
-export const HEADLINE_BIG_SIZE = 430;
-export const HEADLINE_SMALL_SIZE = 250;
+// Every headline word shares one size.
+export const HEADLINE_SIZE = 360;
 export const BODY_COLUMN_LEFT = 4300;
 export const BODY_FONT_SIZE = 96;
 
