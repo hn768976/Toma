@@ -114,7 +114,7 @@ const FilmGrain: React.FC<{ frame: number }> = ({ frame }) => (
     height={HEIGHT}
     offsetX={Math.floor(random(`gx${frame}`) * 1536)}
     offsetY={Math.floor(random(`gy${frame}`) * 1536)}
-    style={{ mixBlendMode: "overlay", opacity: 0.15 }}
+    style={{ mixBlendMode: "overlay", opacity: 0.12 }}
   />
 );
 
