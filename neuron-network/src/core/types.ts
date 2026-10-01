@@ -31,6 +31,8 @@ export type Neuron = {
   somaPhase: number;
   /** 1 for foreground neurons, lower for blurred background ones. */
   detail: number;
+  /** 1 for the cell that should carry the frame's dominant light. */
+  lead: number;
 };
 
 /** Pulse parameters for one primary dendrite. Up to three simultaneous. */

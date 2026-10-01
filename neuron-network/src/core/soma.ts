@@ -39,7 +39,7 @@ export const buildSomaGeometry = (
   const noise = makeNoise3D(mulberry32(seed));
   const positions: number[] = [];
   const normals: number[] = [];
-  /** x = idle glow phase, y = surface noise -1..1, z = per-cell brightness */
+  /** x = idle glow phase, y = surface noise -1..1, z = lead (1 = dominant cell) */
   const attrs: number[] = [];
 
   const dir = new Vector3();
@@ -163,7 +163,7 @@ export const buildSomaGeometry = (
         useNormals[i * 3 + 1],
         useNormals[i * 3 + 2],
       );
-      attrs.push(neuron.somaPhase, noiseValues[i], neuron.detail);
+      attrs.push(neuron.somaPhase, noiseValues[i], neuron.lead);
     }
 
     geo.dispose();

@@ -50,6 +50,23 @@ export type PulseStyle = {
    * thinner than the other looks', so the threshold has to be per-look.
    */
   nodeGate: [number, number];
+  /**
+   * Narrows each junction node to a pinpoint. 1 leaves the baked falloff;
+   * higher values turn a lit stretch of branch into a single bright dot,
+   * which is how the references read -- a few hot points on a dark cell.
+   */
+  nodeSharpness: number;
+  /**
+   * Fraction of primary dendrites that carry a travelling pulse at all.
+   * 1 puts a pulse on every dendrite; a small value leaves one or two
+   * signals moving through an otherwise quiet cell.
+   */
+  treeFraction: number;
+  /**
+   * Thickness, as a fraction of a primary dendrite's radius, above which
+   * pulses fade out. Above 1 leaves every branch eligible.
+   */
+  maxThickness: number;
 };
 
 export type Look = {
@@ -99,6 +116,13 @@ export type Look = {
     somaBleed: number;
     /** How fast that flood fades along the branch; higher is tighter. */
     somaBleedFalloff: number;
+    /**
+     * Extra radius where each dendrite leaves the soma, as a multiple, so
+     * the cell body reads as a star of merging cones rather than a sphere.
+     */
+    baseFlare: number;
+    /** Reach of that flare beyond the soma surface, in soma radii. */
+    baseFlareLength: number;
   };
 
   palette: Palette;
@@ -113,6 +137,12 @@ export type Look = {
      * the glow colour, which is what makes a teal soma read as teal.
      */
     corePower: number;
+    /**
+     * Brightness of every soma other than the nearest, as a fraction. A
+     * reference frame has one dominant light; equally bright somas across
+     * the field read as a string of beads.
+     */
+    backgroundSoma: number;
   };
 
   pulse: PulseStyle;
@@ -161,6 +191,12 @@ export type Look = {
     bloomIntensity: number;
     bloomThreshold: number;
     bloomSmoothing: number;
+    /** Spread of the bloom halo, 0..1. Larger reads as glow in the air. */
+    bloomRadius: number;
+    /** Tone mapping operator. ACES holds saturation that AgX gives up. */
+    toneMapping: "agx" | "aces";
+    /** Saturation grade after tone mapping; 1 leaves colour unchanged. */
+    saturation: number;
     grain: number;
     exposure: number;
     /**

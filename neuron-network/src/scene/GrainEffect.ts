@@ -23,6 +23,7 @@ import { Uniform } from "three";
 const FRAGMENT = /* glsl */ `
 uniform float uFrame;
 uniform float uAmount;
+uniform float uSaturation;
 
 float hash13(vec3 p3) {
   p3 = fract(p3 * 0.1031);
@@ -33,6 +34,8 @@ float hash13(vec3 p3) {
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 col = inputColor.rgb;
   float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  // Grade before the noise, so the dither still lands on the final values.
+  col = max(mix(vec3(lum), col, uSaturation), 0.0);
   float gate = smoothstep(0.0, 0.012, lum);
 
   float g = hash13(vec3(gl_FragCoord.xy, uFrame)) - 0.5;
@@ -53,12 +56,17 @@ export class GrainEffect extends Effect {
       uniforms: new Map<string, Uniform>([
         ["uAmount", new Uniform(amount)],
         ["uFrame", new Uniform(frame)],
+        ["uSaturation", new Uniform(1)],
       ]),
     });
   }
 
   set amount(value: number) {
     (this.uniforms.get("uAmount") as Uniform).value = value;
+  }
+
+  set saturation(value: number) {
+    (this.uniforms.get("uSaturation") as Uniform).value = value;
   }
 
   set frame(value: number) {

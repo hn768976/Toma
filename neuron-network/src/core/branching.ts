@@ -100,7 +100,7 @@ export const growNeuron = (
   center: Vector3,
   seed: number,
   depthLimitOverride?: number,
-): Omit<Neuron, "trees" | "somaPhase" | "detail"> => {
+): Omit<Neuron, "trees" | "somaPhase" | "detail" | "lead"> => {
   const rng = mulberry32(seed);
   const maxDepth = depthLimitOverride ?? params.maxDepth;
   const minRadius = params.baseRadius * params.minRadiusFraction;

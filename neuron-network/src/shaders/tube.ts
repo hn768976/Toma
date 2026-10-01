@@ -53,6 +53,8 @@ uniform float uHardness;
 uniform float uJunctionFlare;
 uniform float uNodeStrength;
 uniform vec2  uNodeGate;
+uniform float uNodeSharpness;
+uniform float uPulseMaxThickness;
 uniform float uFlashCycles;
 uniform float uFlashStrength;
 uniform float uCellPulse;      // 0..1, pure function of frame
@@ -98,12 +100,17 @@ void main() {
   float arc = vMisc.x;
   // Confine nodes to branches thick enough to plausibly carry one. Without
   // this every terminal twig sprouts a bright spot and the look turns spiky.
-  float junction = vMisc.z * smoothstep(uNodeGate.x, uNodeGate.y, vMisc.y);
+  float junction = pow(vMisc.z, uNodeSharpness) * smoothstep(uNodeGate.x, uNodeGate.y, vMisc.y);
 
   float glow =
       pulseAt(vPulseN.x, vPulseOff.x, vPulseAmp.x, arc)
     + pulseAt(vPulseN.y, vPulseOff.y, vPulseAmp.y, arc)
     + pulseAt(vPulseN.z, vPulseOff.z, vPulseAmp.z, arc);
+
+  // On a trunk many times thicker than a twig, a pulse wraps the whole
+  // circumference and reads as a painted sleeve. Fade pulses out above a
+  // thickness so they stay sparks on the finer branches.
+  glow *= 1.0 - smoothstep(uPulseMaxThickness * 0.6, uPulseMaxThickness, vMisc.y);
 
   // A junction flares as the pulse crosses it, driven by the same position.
   col += uPulseColor * glow * (1.0 + junction * uJunctionFlare);

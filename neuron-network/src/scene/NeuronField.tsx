@@ -158,6 +158,8 @@ const Scene: React.FC<{ look: Look }> = ({ look }) => {
       uJunctionFlare: { value: look.pulse.junctionFlare },
       uNodeStrength: { value: look.pulse.nodeStrength },
       uNodeGate: { value: new Vector2(...look.pulse.nodeGate) },
+      uNodeSharpness: { value: look.pulse.nodeSharpness },
+      uPulseMaxThickness: { value: look.pulse.maxThickness },
       uFlashCycles: { value: look.pulse.flashCycles },
       uFlashStrength: { value: look.pulse.flashStrength },
       uCellPulse: { value: 0 },
@@ -180,6 +182,7 @@ const Scene: React.FC<{ look: Look }> = ({ look }) => {
       uBrightness: { value: look.emissive.soma },
       uRimStrength: { value: look.emissive.somaRim },
       uCorePower: { value: look.emissive.corePower },
+      uBackgroundSoma: { value: look.emissive.backgroundSoma },
       uGrain: { value: look.soma.displacement * 2.2 },
       uCellPulse: { value: 0 },
       uCellPulseDepth: { value: look.pulse.cellPulseDepth },
@@ -241,6 +244,7 @@ const Scene: React.FC<{ look: Look }> = ({ look }) => {
     [look.post.grain],
   );
   // Periodic over the loop, so grain at frame 600 matches frame 0.
+  grain.saturation = look.post.saturation;
   grain.frame = frame % LOOP_FRAMES;
 
   const heroCenter = look.field.hero ? (field.neurons[0]?.center ?? null) : null;
@@ -317,9 +321,12 @@ const Scene: React.FC<{ look: Look }> = ({ look }) => {
           intensity={look.post.bloomIntensity}
           luminanceThreshold={look.post.bloomThreshold}
           luminanceSmoothing={look.post.bloomSmoothing}
+          radius={look.post.bloomRadius}
           mipmapBlur
         />
-        <ToneMapping mode={ToneMappingMode.AGX} />
+        <ToneMapping
+          mode={look.post.toneMapping === "aces" ? ToneMappingMode.ACES_FILMIC : ToneMappingMode.AGX}
+        />
         <primitive object={grain} />
       </EffectComposer>
     </>

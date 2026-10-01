@@ -27,6 +27,7 @@ uniform float uT;
 uniform vec3  uCore;
 uniform vec3  uGlow;
 uniform float uBrightness;
+uniform float uBackgroundSoma;
 uniform float uRimStrength;
 uniform float uCorePower;
 uniform float uGrain;
@@ -43,7 +44,10 @@ void main() {
   vec3 V = normalize(vViewDir);
   float ndv = clamp(abs(dot(N, V)), 0.0, 1.0);
 
-  vec3 col = mix(uGlow, uCore, pow(ndv, uCorePower)) * uBrightness;
+  // vSoma.z marks the cell that carries the frame's dominant light.
+  float lead = smoothstep(0.9, 1.0, vSoma.z);
+  vec3 col = mix(uGlow, uCore, pow(ndv, uCorePower)) * uBrightness
+           * mix(uBackgroundSoma, 1.0, lead);
   col += uGlow * pow(1.0 - ndv, 2.5) * uRimStrength;
 
   // Surface grain, from the same noise that displaced the geometry.

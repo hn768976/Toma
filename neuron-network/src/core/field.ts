@@ -134,11 +134,20 @@ export const buildField = (look: Look): BuiltField => {
       1,
       ...grown.branches.map((b) => b.treeIndex + 1),
     );
-    const trees = Array.from({ length: treeCount }, () =>
-      makeTreePulse(rng, look.pulse.slots, look.pulse.counts, look.pulse.amplitude),
-    );
+    // Drawn for every dendrite either way, so changing treeFraction does
+    // not reshuffle which pulse lands where on the dendrites that keep one.
+    const trees = Array.from({ length: treeCount }, () => {
+      const carries = rng() < look.pulse.treeFraction;
+      return makeTreePulse(
+        rng,
+        carries ? look.pulse.slots : 0,
+        look.pulse.counts,
+        look.pulse.amplitude,
+      );
+    });
 
-    return { ...grown, trees, somaPhase: rng() * Math.PI * 2, detail };
+    const lead = f.hero ? (i === 0 ? 1 : 0) : detail;
+    return { ...grown, trees, somaPhase: rng() * Math.PI * 2, detail, lead };
   });
 
   const { geometry: tubes, stats: tubeStats } = buildTubeGeometry(neurons, {
@@ -147,6 +156,8 @@ export const buildField = (look: Look): BuiltField => {
     baseRadius: look.grow.baseRadius,
     tipRadius: look.grow.tipRadius,
     tipTaperPower: look.grow.tipTaperPower,
+    baseFlare: look.tube.baseFlare,
+    baseFlareLength: look.tube.baseFlareLength,
     myelinAmplitude: look.tube.myelinAmplitude,
     myelinPeriod: look.tube.myelinPeriod,
     myelinFraction: look.tube.myelinFraction,

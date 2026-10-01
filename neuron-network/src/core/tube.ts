@@ -58,7 +58,7 @@ const sweepBranch = (
   subdivisions: number,
   myelin: { amplitude: number; period: number } | null,
   baseRadius: number,
-  taper: (arcNorm: number) => number,
+  taper: (arcNorm: number, point: Vector3) => { thin: number; flare: number },
 ) => {
   if (points.length < 2) return;
 
@@ -68,7 +68,7 @@ const sweepBranch = (
 
   const positions: Vector3[] = [];
   const tangents: Vector3[] = [];
-  const scalars: { r: number; a: number; j: number }[] = [];
+  const scalars: { r: number; base: number; a: number; j: number }[] = [];
 
   let localArc = 0;
   for (let i = 0; i <= steps; i++) {
@@ -83,7 +83,12 @@ const sweepBranch = (
     const frac = f - i0;
     const arc = lerp(arcNorm[i0], arcNorm[i0 + 1], frac);
     // Continuous base-to-tip thinning, on top of the split ratio.
-    let r = lerp(radii[i0], radii[i0 + 1], frac) * taper(arc);
+    const shape = taper(arc, point);
+    let r = lerp(radii[i0], radii[i0 + 1], frac) * shape.thin;
+    // Thickness before the flare: node gating and glass alpha read this, so
+    // widening a dendrite base where it meets the soma does not light it up.
+    const base = r;
+    r *= shape.flare;
     if (myelin) {
       // Repeating collars rather than a smooth tube: a narrow periodic
       // swelling along the branch, read as myelin segments.
@@ -92,6 +97,7 @@ const sweepBranch = (
     }
     scalars.push({
       r,
+      base,
       a: arc,
       j: lerp(junction[i0], junction[i0 + 1], frac),
     });
@@ -123,7 +129,7 @@ const sweepBranch = (
     const p = positions[i];
     const n = normals[i];
     binormal.copy(tangents[i]).cross(n).normalize();
-    const { r, a, j } = scalars[i];
+    const { r, base, a, j } = scalars[i];
 
     for (let k = 0; k < radialSegments; k++) {
       const theta = (k / radialSegments) * Math.PI * 2;
@@ -135,7 +141,7 @@ const sweepBranch = (
 
       acc.position.push(p.x + nx * r, p.y + ny * r, p.z + nz * r);
       acc.normal.push(nx, ny, nz);
-      acc.misc.push(a, Math.min(1, r / baseRadius), j, junctionPhase);
+      acc.misc.push(a, Math.min(1, base / baseRadius), j, junctionPhase);
       acc.pulseN.push(pulse.counts[0], pulse.counts[1], pulse.counts[2]);
       acc.pulseOff.push(pulse.offsets[0], pulse.offsets[1], pulse.offsets[2]);
       acc.pulseAmp.push(pulse.amps[0], pulse.amps[1], pulse.amps[2]);
@@ -164,6 +170,20 @@ export type TubeBuildOptions = {
   /** Radius at the furthest tip, as a fraction of the split-ratio radius. */
   tipRadius: number;
   tipTaperPower: number;
+  /**
+   * Extra radius where a dendrite leaves the soma, as a multiple. The
+   * reference cell bodies are stars -- every dendrite leaves as a broad cone
+   * that merges into the body -- and a sphere with constant-width tubes stuck
+   * into it reads as a bulb on wires instead.
+   */
+  baseFlare: number;
+  /**
+   * How far the flare reaches, in soma radii beyond the soma surface. Keyed
+   * to distance from the cell body rather than to arc length: normalised arc
+   * length runs over the whole dendrite tree, so on a large cell the soma
+   * surface already sits well into the decay and the cone never shows.
+   */
+  baseFlareLength: number;
   /** Ring-shaped thickenings, applied to a fraction of the branches. */
   myelinAmplitude: number;
   myelinPeriod: number;
@@ -178,10 +198,22 @@ export const buildTubeGeometry = (
   let branchCount = 0;
   let segmentCount = 0;
 
-  const taper = (arcNorm: number) =>
-    1 - (1 - options.tipRadius) * Math.pow(Math.min(1, arcNorm), options.tipTaperPower);
+  let center = new Vector3();
+  let somaRadius = 1;
+  const taper = (arcNorm: number, point: Vector3) => {
+    const a = Math.min(1, arcNorm);
+    const thin = 1 - (1 - options.tipRadius) * Math.pow(a, options.tipTaperPower);
+    if (options.baseFlare <= 0) return { thin, flare: 1 };
+    // Distance beyond the soma surface, in soma radii; inside it, full flare.
+    const out = Math.max(0, point.distanceTo(center) / somaRadius - 1);
+    const flare =
+      1 + options.baseFlare * Math.exp(-out / Math.max(1e-4, options.baseFlareLength));
+    return { thin, flare };
+  };
 
   for (const neuron of neurons) {
+    center = neuron.center;
+    somaRadius = Math.max(1e-6, neuron.somaRadius);
     // Background neurons carry fewer curve samples -- they are blurred past
     // recognition and full detail there is wasted render time.
     const subdiv = Math.max(1, Math.round(options.subdivisions * neuron.detail));
