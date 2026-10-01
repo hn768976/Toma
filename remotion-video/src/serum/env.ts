@@ -12,15 +12,16 @@
  * Remotion screenshots a frame as soon as React settles -- a suspended
  * environment would show up as an unlit frame.
  *
- * HDRI: "studio_small" (Poly Haven, CC0), shipped via the @pmndrs/assets npm
- * package so the project stays self-contained. See README for credit.
+ * HDRI: "studio_small" (Poly Haven, CC0), vendored into
+ * src/serum/assets/studio-hdri.js so the project stays self-contained and
+ * needs no network at render time. See README for credit.
  */
 import * as THREE from 'three';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
-// The generated .d.ts for this module inlines the entire base64 payload as a
-// string literal type, which makes tsc crawl. Import the JS path directly and
-// widen the type so the compiler never has to look at that literal.
-import studioExrDataUriTyped from '@pmndrs/assets/hdri/studio.exr.js';
+// Vendored into the project so the zip is self-contained and the render path
+// needs no network. See src/serum/assets/studio-hdri.js for provenance.
+// @ts-expect-error -- plain JS module, no types needed for a string export
+import studioExrDataUriTyped from './assets/studio-hdri.js';
 
 const studioExrDataUri: string = studioExrDataUriTyped as string;
 

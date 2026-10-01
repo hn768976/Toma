@@ -322,10 +322,14 @@ for the measurements and an encode recipe that avoids it.
 ## Credits and licence
 
 **HDRI** — the studio environment is `studio_small` from
-[Poly Haven](https://polyhaven.com/), **CC0**. It ships with the project through
-the [`@pmndrs/assets`](https://www.npmjs.com/package/@pmndrs/assets) npm
-package, which self-hosts it as a base64 module, so the project has no runtime
-download. It is decoded once at module level in `src/serum/env.ts`.
+[Poly Haven](https://polyhaven.com/), licensed **CC0** (public domain).
+
+It is **vendored into the project** at `src/serum/assets/studio-hdri.js` as a
+base64 data URI, so the zip is self-contained and nothing is downloaded at
+render time. It is decoded once at module level in `src/serum/env.ts` and
+handed to three as an equirectangular `DataTexture`. The asset was originally
+obtained through the `@pmndrs/assets` npm package, which packs the same CC0
+file; that dependency has been removed since the asset now ships directly.
 
 The molecule clusters are **decorative, not real molecular structures** — the
 topology is arbitrary branching and no compound is named anywhere in this
