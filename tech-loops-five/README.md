@@ -101,7 +101,7 @@ amortised over the range (≈ +0.2 s/frame on the 10-frame 4K runs).
 | 2 Soft Spinner | 315 | 1 579 | ≈ 16 min | 603 / 510 ms/frame |
 | 3 Security Dashboard | 371 | 1 636 | ≈ 16 min | 1 004 / 617 ms/frame |
 | 4 Model Training UI | 227 | 1 015 | ≈ 10 min | 418 / 443 ms/frame |
-| 5 AI Core Tunnel | 1 890 | 7 859 | ≈ 79 min on CPU (SwiftShader) | 2 544 / 2 553 ms/frame |
+| 5 AI Core Tunnel | 1 826 | 7 295 | ≈ 73 min on CPU (SwiftShader) | 2 454 / 2 453 ms/frame |
 
 \* the previews were rendered as 3–4 render processes in parallel on the same
 4 vCPUs, so those wall-clock numbers (A / B version) are higher than the
@@ -183,8 +183,8 @@ must fall smoothly (no plateaus with 1-level steps). Results:
 |---|---|---:|---:|---|
 | SoftSpinner_Amber | ray y=540, x=1230→1800 (petal tip → background 13.6), falloff 113.6 → 15.6 over 70 px | 0 | 5 px | PASS |
 | SoftSpinner_IceBlue | same ray, falloff 110.1 → 14.2 over 64 px | 0 | 4 px | PASS |
-| AICoreTunnel_Cyan | radial median r=120→520 px around the emblem, 192.6 → 31.8 | 0 | 8 px | PASS |
-| AICoreTunnel_Violet | radial median r=120→520 px, 109.9 → 14.2 | 0 | 3 px | PASS |
+| AICoreTunnel_Cyan | radial median r=120→520 px around the emblem, 174.6 → 25.6 (falloff 329 px) | 0 | 5 px | PASS |
+| AICoreTunnel_Violet | radial median r=120→520 px, 109.3 → 12.7 (falloff 278 px) | 0 | 6 px | PASS |
 
 Full profiles: `out/banding/banding_report.json` after running the check.
 The grain survives encoding (spinner background σ 1.45 in the PNG frame,
@@ -236,6 +236,25 @@ Verified on the delivered 1080p previews (see `scripts/verify.py`):
 - [x] `npm install && npx remotion studio` works from a clean copy of the zip.
 
 ---
+
+## Look notes
+
+- **Look 1** draws ~8 000 digits per frame with `fillText` on one canvas; the
+  word is drawn once to an offscreen canvas and sampled per cell. Inside the
+  word the digits sit on a half-row sub-grid (denser, overlapping into
+  vertical streaks like the reference) — that doubles the vertical resolution
+  of the mask so the word stays readable at 1080p.
+- **Look 2** blur: petal bodies use σ = 0.75 % of frame width (≈ 1.5 % blur
+  diameter); the halo is one SVG filter with three stacked Gaussian blurs at
+  1 : 4 : 12.
+- **Look 3** board is 9600 × 4320 px (2.5 × 2 frames) of HTML/SVG, tilted with
+  `perspective` + `rotateX(25°) rotateY(−12°)`; depth of field is a masked
+  `backdrop-filter` blur on the far and near edges.
+- **Look 5** bloom (three.js `UnrealBloomPass`) always runs on a 1920×1080 mip
+  chain and is upsampled into the frame, so 1080p previews, 4K renders and
+  6000-px stills bloom identically. The crisp "AI" letters are composited
+  after bloom (only their blurred accent copy blooms), so they stay readable
+  at the pulse peak.
 
 ## Content notes
 

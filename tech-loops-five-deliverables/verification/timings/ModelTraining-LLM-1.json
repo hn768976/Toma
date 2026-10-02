@@ -1,0 +1,8 @@
+{
+  "id": "ModelTraining-LLM",
+  "scale": 1,
+  "concurrency": 2,
+  "frames": 10,
+  "seconds": 10.2,
+  "msPerFrame": 1015
+}

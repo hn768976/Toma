@@ -1,0 +1,8 @@
+{
+  "id": "SoftSpinner-Amber",
+  "scale": 0.5,
+  "concurrency": 2,
+  "frames": 60,
+  "seconds": 18.9,
+  "msPerFrame": 315
+}

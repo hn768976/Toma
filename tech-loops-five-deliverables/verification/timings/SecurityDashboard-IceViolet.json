@@ -1,0 +1,9 @@
+{
+  "frames": 600,
+  "scale": 0.5,
+  "concurrency": 2,
+  "renderSeconds": 369.9,
+  "wallMsPerFrame": 617,
+  "threadMsPerFrame": 1233,
+  "encodeSeconds": 72
+}

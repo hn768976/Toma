@@ -1,0 +1,8 @@
+{
+  "id": "SecurityDashboard-Teal",
+  "scale": 0.5,
+  "concurrency": 2,
+  "frames": 60,
+  "seconds": 22.2,
+  "msPerFrame": 371
+}
