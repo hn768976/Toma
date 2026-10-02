@@ -61,10 +61,10 @@ picked by `scripts/analyze.ts` (card square-on, no near-lens object over it,
 frames ≥ 200 apart):
 
 ```bash
-npx remotion still CardRain-Gold     out/CardRain_Gold_still_A.png     --frame=GOLD_A --scale=1.5625 --gl=angle --image-format=png
-npx remotion still CardRain-Gold     out/CardRain_Gold_still_B.png     --frame=GOLD_B --scale=1.5625 --gl=angle --image-format=png
-npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_A.png --frame=ROSE_A --scale=1.5625 --gl=angle --image-format=png
-npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_B.png --frame=ROSE_B --scale=1.5625 --gl=angle --image-format=png
+npx remotion still CardRain-Gold     out/CardRain_Gold_still_f304.png     --frame=304 --scale=1.5625 --gl=angle --image-format=png
+npx remotion still CardRain-Gold     out/CardRain_Gold_still_f538.png     --frame=538 --scale=1.5625 --gl=angle --image-format=png
+npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_f058.png --frame=58 --scale=1.5625 --gl=angle --image-format=png
+npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_f337.png --frame=337 --scale=1.5625 --gl=angle --image-format=png
 ```
 
 All size-dependent effects (bokeh radius, CoC blur) scale with the drawing
@@ -72,7 +72,19 @@ buffer height, so the look is the same at 1080p, 4K and 6000 px.
 
 ## Render time
 
-RENDER_TIME_SECTION
+Measured on the build machine: 4 vCPU, 15 GB RAM, **no GPU** (Chromium's
+ANGLE → SwiftShader software WebGL2), `--concurrency=1` (2 and 4 were slower:
+one SwiftShader tab already uses every core).
+
+| | Gold Rush | Rose Card |
+|---|---|---|
+| 1080p preview, 600 frames, whole command | 2458 s (attempt 2, machine otherwise idle) | 2606 s (attempt 1); final run 2959 s while other checks shared the CPU |
+| **per frame at 1080p** | **≈ 4.1 s** | **≈ 4.3 s** |
+
+**4K estimate (3840×2160, 4× the pixels):** FOURK_SECTION
+
+With any real GPU expect a small fraction of that; the scene is ~60 draw
+calls plus six full-screen post passes.
 
 ---
 
@@ -161,17 +173,43 @@ All scripts are in `scripts/` and run with `npx tsx`.
 
 | Step | How | Result |
 |---|---|---|
-| 1. File checks | `ffprobe -v error -show_entries stream=codec_type,width,height,r_frame_rate,pix_fmt -show_entries format=duration -of default=noprint_wrappers=1 out/CardRain_Gold.mp4` | STEP1 |
-| 2. Loop check | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=0,600 --props='{"loopCheck":true}'` (601-frame comp), then `cmp` the PNGs | STEP2 |
-| 3. Determinism | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=300 --cold --scale=0.5` vs frame 300 of a full PNG-sequence render | STEP3 |
-| 4. No popping | `npx tsx scripts/analyze.ts` checks every wrap of every object with the exact drifting camera; plus 1-in-10 frame contact sheets | STEP4 |
-| 5. Banding | `npx tsx scripts/banding.ts out/CardRain_RoseGold.mp4 150` reads backdrop pixels from the **encoded** mp4 | STEP5 |
-| 6. Look checks | five evenly spaced frames per look | STEP6 |
+| 1. File checks | `ffprobe -v error -show_entries stream=codec_type,width,height,r_frame_rate,pix_fmt -show_entries format=duration -of default=noprint_wrappers=1 out/CardRain_Gold.mp4` | 1920×1080, 30/1, 20.000 s, h264, yuv420p, 600 frames, video stream only — both |
+| 2. Loop check | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=0,600 --props='{"loopCheck":true}'` (601-frame comp), then `cmp` the PNGs | byte-identical — both |
+| 3. Determinism | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=300 --cold --scale=0.5` vs frame 300 of `npx remotion render ... --sequence --frames=240-300 --image-format=png --scale=0.5` (same page, 60 frames of history) | byte-identical (same pixel MD5) — both |
+| 4. No popping | `npx tsx scripts/analyze.ts` checks every wrap of every object with the exact drifting camera; plus 1-in-10 frame contact sheets | 0 pops; worst off-screen margin 120 px (gold) / 115 px (rose) |
+| 5. Banding | `npx tsx scripts/banding.ts out/CardRain_RoseGold.mp4 150` reads backdrop pixels from the **encoded** mp4 | smooth: 7–10 code values per 64-px window, no plateaus — both |
+| 6. Look checks | five evenly spaced frames per look | pass — see report |
+| extra: clipping | `npx tsx scripts/clipping.ts out/CardRain_Gold.mp4 5` | 0.000 % flat-white pixels — both |
 
 `--props='{"disable":{"coins":true}}'` (also `bars`, `card`, `camera`,
 `grain`, `dof`) switches groups off for bisecting a loop or determinism issue.
 
-COMPLETION_SECTION
+## Completion checklist
+
+- [x] Two compositions, 3840×2160, 30 fps, 600 frames, shared scene code
+- [x] 3D: `@remotion/three` / R3F, WebGL2, `--gl=angle`
+- [x] Lens 58 mm, card ≈ 37.5 % of frame width, camera slightly below looking up
+- [x] Camera drift: closed path, a few degrees, whole-number frequencies
+- [x] Card 85.6 × 53.98 × 0.8 mm, rounded corners, visible edge, tilt ≤ 22.1°
+- [x] One `InstancedMesh` per object type (coins, bars)
+- [x] Three depths: near-lens (blurred, large), mid (sharp), far (soft)
+- [x] ~10 % of coins pass in front of the card (gold 5/45, rose 5–7/55)
+- [x] Raised rim + reeded edge (normal map); edge-on flashes
+- [x] Poly Haven CC0 studio HDRI + soft key / fill / rim, `delayRender` loading
+- [x] ACES tonemapping; highlights roll off (0.000 % flat-white pixels over 120 sampled frames per video)
+- [x] `DepthOfField` focused on the card; no dark outline / halo at sharp-over-blurred edges
+- [x] No motion blur, no TAA / temporal AO / accumulative shadows
+- [x] Seeded `mulberry32` at module level; no `Math.random()`, no clock, no state
+- [x] Dither ±1/255 after tonemapping + ~2 % grain from (pixel, `frame % 600`)
+- [x] Loop: frame 600 == frame 0, byte for byte (both looks)
+- [x] Determinism: cold frame 300 == in-sequence frame 300, byte for byte (both looks)
+- [x] No popping: every wrap of every object checked off-screen (≥ 115 px margin at 1080p incl. blur) + 1-in-10 contact sheets
+- [x] Banding: encoded-mp4 backdrop reads smooth (no 1–2 value plateaus)
+- [x] Gold: crinkled foil card, gold chip, no text, gold bars, warm beige set
+- [x] Rose: rose-gold satin card, chip, "Bank Card", `0123 4567 8910 1112` (crisp at 6000 px), rose-gold / copper / silver coins, dusty pink set
+- [x] No logos, card-network marks, currency, denominations, portraits, refinery stamps
+- [x] Inter (OFL) and the HDRI (CC0) shipped with licences
+- [x] `npm install && npx remotion studio` works from a clean unzip
 
 ## Project layout
 
