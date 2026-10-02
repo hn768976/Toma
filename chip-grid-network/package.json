@@ -8,7 +8,9 @@
     "studio": "remotion studio",
     "dev": "remotion studio",
     "build": "remotion bundle",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "render:previews": "scripts/render-previews.sh",
+    "verify:spread": "esbuild scripts/verify/spread-check.ts --bundle --platform=node --format=esm --log-level=warning --outfile=renders/verify/spread-check.mjs && node renders/verify/spread-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",
@@ -25,6 +27,7 @@
   "devDependencies": {
     "@types/react": "19.2.7",
     "@types/three": "0.186.0",
+    "esbuild": "0.28.1",
     "typescript": "5.9.3"
   }
 }
