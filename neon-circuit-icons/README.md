@@ -107,13 +107,15 @@ Measured in a 4-core cloud container with **no GPU** (Chromium WebGL on
 SwiftShader, i.e. software rendering), 1080p (`--scale=0.5`), full 600-frame
 render:
 
-| | per frame | 600 frames |
+| | per frame | 600 frames (one composition) |
 |---|---|---|
-| 1080p, measured | **RENDER_1080_PER_FRAME s** | RENDER_1080_TOTAL |
-| 4K, estimate on the same machine (4× the pixels) | ~RENDER_4K_PER_FRAME s | ~RENDER_4K_TOTAL |
+| 1080p, measured (full `Warning` render, 2 tabs) | **2.13 s** | 21 min 18 s |
+| 1080p, measured (12-frame sample, after ~10 s startup) | 2.2 s | |
+| 4K, measured on a 12-frame sample | **≈ 9.2 s** | **≈ 1 h 32 min** (estimate) |
+| 4K, all 10 compositions | | ≈ 15 h on this machine (estimate) |
 
-Concurrency barely matters on a CPU-only machine (SwiftShader already uses
-every core: 2.4 s/frame at concurrency 1 vs 2.4 s at 2 and 3.5 s at 4). On a
+Concurrency doesn't help on a CPU-only machine, because SwiftShader already
+uses every core. 24-frame tests: concurrency 1 ≈ 2.4 s/frame, 4 ≈ 3.5 s/frame. On a
 machine with a real GPU and `--gl=angle`, expect a large speed-up (typically
 10× or more). Benchmark one composition with `--frames=0-59` before batching.
 
@@ -152,7 +154,19 @@ node scripts/banding-check.mjs out/previews/NeonIcon_AIChat.mp4 150
   flat plateaus followed by one-level jumps, and every 8-bit code inside smooth
   ranges must occur (missing codes mean posterisation).
 
-BANDING_RESULTS
+Results on the delivered previews (frame 150, decoded from the mp4):
+
+| | beam falloff (blue, centre → 480 px out) | dark board (blue, bottom-left) |
+|---|---|---|
+| `AIChat` grain-free range | 2.9 → 177.2 | 8.0 → 20.0 |
+| `AIChat` staircase steps / missing codes | 0 / none | 0 / none |
+| `Warning` grain-free range | 3.1 → 176.9 | 7.9 → 18.4 |
+| `Warning` staircase steps / missing codes | 0 / none | 0 / none |
+
+Raw single pixels in the beam tail look like `25 25 25 26 28 28 33 34 33 30 35 …`:
+neighbouring codes are mixed by grain and dither instead of forming flat bands.
+As a negative control, a deliberately posterised copy of a frame (6-level
+steps) fails the check with 21 missing codes in the beam.
 
 ## How to add an icon
 
@@ -197,7 +211,24 @@ scripts/                stills, preview render, loop/determinism/banding checks
 
 ## Completion checklist
 
-COMPLETION_CHECKLIST
+- [x] 3D with `@remotion/three` / react-three-fiber, WebGL2 (`--gl=angle`), built entirely in code
+- [x] 10 compositions from 10 data rows (`id`, `svgPath`, `label`, `iconScale`), 3840×2160, 30 fps, 600 frames
+- [x] Self-drawn SVG icons (stroke ≈ 8% of icon height, round joins), `ExtrudeGeometry` with depth 12% of height and a rounded bevel
+- [x] Emissive gradient shader (OKLab), brighter bevels, faint white core, glints, strong bloom
+- [x] Labels in Montserrat Bold (OFL, shipped) for ActiveProtection / Warning / SystemAlert / DataLock, same gradient, dimmer
+- [x] Glossy reflective board (`MeshReflectorMaterial`), icon and label reflections
+- [x] Seeded traces (45° bends) fanning from connector chips, pads and vias (some blinking), sparks, dark blocks, all instanced or merged
+- [x] Blue light beam (additive cones and planes, looping noise) with a floor spot
+- [x] 37 mm lens, 30° down, ±25° yaw sway with height change, depth of field, bloom, subtle chromatic edge, ACES, sRGB
+- [x] Colour cycle magenta/cyan → hot pink/blue → red/pink → pink-white/magenta, one cycle per loop
+- [x] Seamless loop: frame 0 ≡ frame 600 (pixel-identical) for `AIChat` and `Warning`
+- [x] Deterministic: cold frame 300 ≡ full-render frame 300, byte for byte, for `AIChat` and `Warning`
+- [x] Banding: dither ±1/255 + ~2% grain after tonemapping, checked on the encoded mp4
+- [x] 1080p previews `NeonIcon_AIChat.mp4`, `NeonIcon_Warning.mp4`: 1920×1080, 30/1, 20.0 s, h264, yuv420p, no audio
+- [x] 6000×3375 stills: frame 0 for all 10, plus frame 300 for `AIChat` and `Warning`
+- [x] 1080p stills at frames 0 and 300 for the other eight
+- [x] Render time measured (1080p) and 4K estimated
+- [x] `npm install && npx remotion studio` checked from a clean copy
 
 ## Licences
 
