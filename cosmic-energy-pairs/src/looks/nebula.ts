@@ -139,12 +139,13 @@ const CORE_FRAG = /* glsl */ `
 precision highp float;
 uniform vec3 uCoreCol;
 uniform vec3 uColB;
+uniform vec4 uAmp; // tight peak, glow, wide glow, coloured halo
 in vec2 vUv;
 out vec4 outColor;
 void main() {
   float r2 = dot(vUv, vUv);
-  float c = 40.0 * exp(-r2 * 300.0) + 7.0 * exp(-r2 * 40.0) + 1.2 * exp(-r2 * 8.0);
-  vec3 col = uCoreCol * c + uColB * 0.6 * exp(-r2 * 5.0);
+  float c = uAmp.x * exp(-r2 * 300.0) + uAmp.y * exp(-r2 * 40.0) + uAmp.z * exp(-r2 * 8.0);
+  vec3 col = uCoreCol * c + uColB * uAmp.w * exp(-r2 * 5.0);
   col *= 1.0 - smoothstep(0.8, 1.0, sqrt(r2));
   outColor = vec4(col, 0.0); // pure emission, no absorption
 }
@@ -282,7 +283,7 @@ export class NebulaLook implements Look {
         // Core sits between the last far layer and the first near layer.
         const core = new THREE.Mesh(
           new THREE.PlaneGeometry(9, 9),
-          rawMat(CORE_FRAG, { ...this.u }, over, CORE_VERT),
+          rawMat(CORE_FRAG, { ...this.u, uAmp: { value: new THREE.Vector4(9, 2.2, 0.7, 0.6) } }, over, CORE_VERT),
         );
         core.position.copy(CORE);
         core.renderOrder = i * 2 + 1;
@@ -317,6 +318,20 @@ export class NebulaLook implements Look {
     };
     this.farStarScene.add(mk(Math.round(STARS * 0.85), -60, -6, 0.62));
     this.nearStarScene.add(mk(Math.round(STARS * 0.15), -4, 4, 0.62));
+    // The star itself, unoccluded by the front dust layers: a crisp glint.
+    const glint = new THREE.Mesh(
+      new THREE.PlaneGeometry(3, 3),
+      rawMat(
+        CORE_FRAG,
+        { ...this.u, uAmp: { value: new THREE.Vector4(10, 1.2, 0.15, 0) } },
+        { transparent: true, blending: THREE.AdditiveBlending },
+        CORE_VERT,
+      ),
+    );
+    glint.position.copy(CORE);
+    glint.name = "glint";
+    glint.frustumCulled = false;
+    this.nearStarScene.add(glint);
   }
 
   render(gl: THREE.WebGLRenderer, pipe: PostPipeline, f: FrameInfo) {
@@ -332,6 +347,7 @@ export class NebulaLook implements Look {
     this.u.uCamPos.value.copy(pos);
     // Core billboard faces the camera.
     this.cloudScene.getObjectByName("core")?.quaternion.copy(this.camera.quaternion);
+    this.nearStarScene.getObjectByName("glint")?.quaternion.copy(this.camera.quaternion);
 
     // 1) Background + far stars, full res, into the HDR target.
     this.quad.render(gl, this.bgMat);

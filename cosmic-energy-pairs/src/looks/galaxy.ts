@@ -194,7 +194,7 @@ out vec4 outColor;
 void main() {
   float r = length(vUv) * 13.0; // world radius
   float haze = 0.16 * exp(-r / 3.2) + 0.035 * exp(-r / 8.0);
-  float core = 2.6 * exp(-r * r / 0.5) + 0.7 * exp(-r * r / 3.0);
+  float core = 0.7 * exp(-r * r / 0.5) + 0.3 * exp(-r * r / 3.0);
   outColor = vec4(uHaze * haze + uCore * core, 1.0);
 }
 `;
@@ -207,7 +207,7 @@ out vec4 outColor;
 void main() {
   vec2 p = vUv * vec2(1.0, 1.75); // horizontal stretch
   float r2 = dot(p, p);
-  float c = 14.0 * exp(-r2 * 70.0) + 3.0 * exp(-r2 * 14.0) + 0.6 / (1.0 + r2 * 40.0);
+  float c = 3.2 * exp(-r2 * 90.0) + 1.1 * exp(-r2 * 16.0) + 0.35 / (1.0 + r2 * 40.0);
   c *= 1.0 - smoothstep(0.7, 1.0, sqrt(r2));
   outColor = vec4(uCore * c, 1.0);
 }
