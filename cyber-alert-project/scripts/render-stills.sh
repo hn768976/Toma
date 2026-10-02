@@ -9,7 +9,7 @@ mkdir -p renders/stills
 declare -A FRAMES=(
   [ChipAlert-Red]="60 270 480" [ChipAlert-Amber]="60 270 480"
   [GlitchWord-Warning]="${GW_FRAMES:-5 240 500}" [GlitchWord-AccessDenied]="${GW_FRAMES:-5 240 500}"
-  [BreachHUD-Blue]="${HUD_FRAMES:-100 300 520}" [BreachHUD-Green]="${HUD_FRAMES:-100 300 520}"
+  [BreachHUD-Blue]="${HUD_FRAMES:-100 283 510}" [BreachHUD-Green]="${HUD_FRAMES:-100 283 510}"
 )
 for c in "${!FRAMES[@]}"; do
   set -- ${FRAMES[$c]}
