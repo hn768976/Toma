@@ -26,20 +26,22 @@ const LAYERS = [
 const TILT_Y = -12;
 const TILT_X = 3;
 
-type Kind = "code" | "login" | "map" | "mosaic" | "frame" | "dust";
+type Kind = "code" | "login" | "map" | "mosaic" | "frame" | "dust" | "square";
 type Item = { layer: number; kind: Kind; x: number; y: number; w: number; h: number; seed: number; alt: boolean; flag?: { period: number; phase: number }; markers?: boolean };
 
 // Even spread: each layer is a jittered grid over an area larger than the
 // frame; kinds are dealt to the cells in a seeded shuffle.
 const AREA = { x0: -700, x1: 2350, y0: -260, y1: 1300 };
 const MIX: Record<Kind, number>[] = [
-  { code: 22, login: 6, map: 5, mosaic: 4, frame: 3, dust: 2 },
-  { code: 22, login: 8, map: 4, mosaic: 4, frame: 3, dust: 2 },
-  { code: 16, login: 8, map: 3, mosaic: 3, frame: 3, dust: 2 },
-  { code: 5, login: 2, map: 1, mosaic: 2, frame: 1, dust: 1 },
-  { code: 3, login: 1, map: 0, mosaic: 2, frame: 0, dust: 1 },
+  { code: 24, login: 5, map: 5, mosaic: 2, frame: 3, dust: 1, square: 4 },
+  { code: 24, login: 7, map: 4, mosaic: 2, frame: 3, dust: 0, square: 4 },
+  { code: 18, login: 7, map: 3, mosaic: 1, frame: 3, dust: 1, square: 3 },
+  { code: 6, login: 1, map: 1, mosaic: 1, frame: 1, dust: 0, square: 2 },
+  { code: 3, login: 0, map: 0, mosaic: 1, frame: 0, dust: 0, square: 2 },
 ];
 const PERIODS = [60, 75, 100, 120, 150, 200];
+// The field reads as one sheet turned away to the right: blur rises with x.
+const rightBlur = (x: number, layer: number) => (layer >= 3 ? 0 : Math.min(1, Math.max(0, (x - 1150) / 750)) * 4.5);
 
 const buildItems = (): Item[] => {
   const r = mulberry32(0x13320502);
@@ -58,14 +60,15 @@ const buildItems = (): Item[] => {
     const rows = Math.ceil(n / cols);
     const cw = (AREA.x1 - AREA.x0) / cols;
     const ch = (AREA.y1 - AREA.y0) / rows;
-    const near = layer >= 3 ? 1.5 : 1;
+    const near = layer >= 3 ? 1.15 : 1;
     kinds.forEach((kind, i) => {
       const cx = AREA.x0 + ((i % cols) + range(r, 0.15, 0.85)) * cw;
       const cy = AREA.y0 + (Math.floor(i / cols) + range(r, 0.15, 0.85)) * ch;
       let w = 0;
       let h = 0;
       if (kind === "code") [w, h] = [range(r, 190, 360) * near, range(r, 110, 260) * near];
-      else if (kind === "login") [w, h] = [range(r, 150, 210) * near, 0];
+      else if (kind === "login") [w, h] = [range(r, 160, 190) * near, 0];
+      else if (kind === "square") [w, h] = [range(r, 120, 320) * near, range(r, 100, 260) * near];
       else if (kind === "map") [w, h] = [range(r, 240, 480) * near, 0];
       else if (kind === "mosaic") [w, h] = [range(r, 220, 420) * near, range(r, 140, 300) * near];
       else if (kind === "frame") [w, h] = [range(r, 120, 200) * near, range(r, 95, 150) * near];
@@ -113,7 +116,7 @@ const DUST = new Map(
     const r = mulberry32(it.seed);
     return [
       it.seed,
-      Array.from({ length: 40 }, () => ({ x: range(r, 0, it.w), y: range(r, 0, it.h), a: range(r, 6, 26), k: 1 + Math.floor(r() * 2), ph: r(), s: range(r, 1, 2.6), o: range(r, 0.25, 0.8) })),
+      Array.from({ length: 12 }, () => ({ x: range(r, 0, it.w), y: range(r, 0, it.h), a: range(r, 6, 26), k: 1 + Math.floor(r() * 2), ph: r(), s: range(r, 1, 2), o: range(r, 0.12, 0.35) })),
     ];
   }),
 );
@@ -122,17 +125,17 @@ const DUST = new Map(
 // segments re-shuffle every 3 frames (200 times per loop).
 const STREAKS = (() => {
   const r = mulberry32(0x5e7ea4);
-  return Array.from({ length: 34 }, () => ({ y: range(r, 0, 330), x0: range(r, 1250, 1700), len: range(r, 120, 700), h: range(r, 1.2, 4), o: range(r, 0.25, 0.8), salt: Math.floor(r() * 9999) }));
+  return Array.from({ length: 20 }, () => ({ y: range(r, 0, 330), x0: range(r, 1250, 1700), len: range(r, 120, 700), h: range(r, 1.2, 4), o: range(r, 0.25, 0.8), salt: Math.floor(r() * 9999) }));
 })();
 
-const RedFrame: React.FC<{ p: HudPalette; u: number; w: number; h: number; id: string; strength?: number }> = ({ p, u, w, h, id, strength = 0.5 }) => {
+const RedFrame: React.FC<{ p: HudPalette; u: number; w: number; h: number; id: string; strength?: number; fill?: number }> = ({ p, u, w, h, id, strength = 0.8, fill = 0 }) => {
   const m = 30;
   return (
     <svg viewBox={`${-m} ${-m} ${w + 2 * m} ${h + 2 * m}`} style={{ position: "absolute", left: -m * u, top: -m * u, width: (w + 2 * m) * u, height: (h + 2 * m) * u, overflow: "visible" }}>
       <defs>
-        <GlowFilter id={id} base={1} gain={strength} weights={[0.8, 0.35, 0.12]} />
+        <GlowFilter id={id} base={1.4} gain={strength} weights={[0.9, 0.6, 0.35]} />
       </defs>
-      <rect x={0} y={0} width={w} height={h} fill="none" stroke={p.alert} strokeWidth={1.6} filter={`url(#${id})`} />
+      <rect x={0} y={0} width={w} height={h} fill={p.alert} fillOpacity={fill} stroke={p.alert} strokeOpacity={0.8} strokeWidth={1.8} filter={`url(#${id})`} />
     </svg>
   );
 };
@@ -140,7 +143,7 @@ const RedFrame: React.FC<{ p: HudPalette; u: number; w: number; h: number; id: s
 const renderItem = (it: Item, p: HudPalette, u: number, f: number, id: string) => {
   switch (it.kind) {
     case "code": {
-      const size = it.layer >= 3 ? 9 : 7.2;
+      const size = it.layer >= 3 ? 9 : 8;
       return (
         <CodeText
           lines={CODE.get(it.seed)!}
@@ -160,7 +163,14 @@ const renderItem = (it: Item, p: HudPalette, u: number, f: number, id: string) =
     case "map":
       return (
         <div style={{ position: "absolute", inset: 0, maskImage: "radial-gradient(ellipse 50% 50% at 50% 50%, black 55%, transparent 100%)", WebkitMaskImage: "radial-gradient(ellipse 50% 50% at 50% 50%, black 55%, transparent 100%)" }}>
-          <ThreatMap p={p} f={f} mode="fill" labels={false} opacity={0.85} dot={2.6} />
+          {/* chromatic fringe: cyan and red copies offset either side */}
+          <div style={{ position: "absolute", inset: 0, transform: `translateX(${-2.5 * u}px)`, opacity: 0.45, mixBlendMode: "screen", filter: "sepia(1) hue-rotate(150deg) saturate(4)" }}>
+            <ThreatMap p={p} f={f} mode="fill" labels={false} opacity={0.6} dot={2.6} />
+          </div>
+          <div style={{ position: "absolute", inset: 0, transform: `translateX(${2.5 * u}px)`, opacity: 0.35, mixBlendMode: "screen", filter: "sepia(1) hue-rotate(-50deg) saturate(5)" }}>
+            <ThreatMap p={p} f={f} mode="fill" labels={false} opacity={0.6} dot={2.6} />
+          </div>
+          <ThreatMap p={p} f={f} mode="fill" labels={false} opacity={0.9} dot={2.6} />
         </div>
       );
     case "mosaic": {
@@ -169,7 +179,7 @@ const renderItem = (it: Item, p: HudPalette, u: number, f: number, id: string) =
         <svg viewBox={`0 0 ${it.w} ${it.h}`} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
           {m.cells.map((c, k) => {
             const on = c.blink < 0 || (f + c.blink) % 30 < 20;
-            return on ? <rect key={k} x={c.x} y={c.y} width={m.cell - 2} height={m.cell - 2} fill={p.alert} fillOpacity={c.a * 0.55} /> : null;
+            return on ? <rect key={k} x={c.x} y={c.y} width={m.cell - 2} height={m.cell - 2} fill={p.alert} fillOpacity={c.a * 0.4} /> : null;
           })}
         </svg>
       );
@@ -181,13 +191,15 @@ const renderItem = (it: Item, p: HudPalette, u: number, f: number, id: string) =
       const pulse = 0.7 + 0.3 * osc(f, 6 + (it.seed % 5), (it.seed % 100) / 100);
       return (
         <>
-          <RedFrame p={p} u={u} w={it.w} h={it.h} id={`rf-${id}`} />
+          <RedFrame p={p} u={u} w={it.w} h={it.h} id={`rf-${id}`} fill={it.alt ? 0.14 : 0} />
           <div style={{ position: "absolute", left: ((it.w - tri) / 2) * u, top: ((it.h - tri) / 2) * u, width: tri * u, height: tri * u, opacity: pulse }}>
-            <WarningIcon p={p} id={`rw-${id}`} glow={0.6} />
+            <WarningIcon p={p} id={`rw-${id}`} glow={0.9} filled />
           </div>
         </>
       );
     }
+    case "square":
+      return <div style={{ position: "absolute", inset: 0, background: p.alert, opacity: it.alt ? 0.2 : 0.11 }} />;
     case "dust": {
       const pts = DUST.get(it.seed)!;
       return (
@@ -238,7 +250,10 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
                       top: it.y * u,
                       width: it.w * u,
                       height: it.h * u,
-                      filter: L.blur ? `blur(${L.blur * u}px)` : undefined,
+                      filter: (() => {
+                        const b = L.blur + rightBlur(it.x + it.w / 2, li);
+                        return b > 0.05 ? `blur(${b * u}px)` : undefined;
+                      })(),
                     }}
                   >
                     {renderItem(it, p, u, f, id)}
@@ -263,12 +278,15 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
                       height: box * u,
                       transform: `scale(${st.scale})`,
                       opacity: st.opacity,
-                      filter: L.blur ? `blur(${L.blur * u}px)` : undefined,
+                      filter: (() => {
+                        const b = L.blur + rightBlur(q.x, li);
+                        return b > 0.05 ? `blur(${b * u}px)` : undefined;
+                      })(),
                     }}
                   >
-                    {q.framed ? <RedFrame p={p} u={u} w={box} h={box * 0.8} id={`pf${k}`} /> : null}
+                    {q.framed ? <RedFrame p={p} u={u} w={box} h={box * 0.8} id={`pf${k}`} fill={k % 3 === 0 ? 0.12 : 0} /> : null}
                     <div style={{ position: "absolute", left: ((box - q.size) / 2) * u, top: (box * 0.4 - q.size / 2) * u, width: q.size * u, height: q.size * u }}>
-                      <WarningIcon p={p} id={`pw${k}`} glow={0.8} />
+                      <WarningIcon p={p} id={`pw${k}`} glow={1.1} filled />
                     </div>
                   </div>
                 );
@@ -297,9 +315,11 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
           );
         })}
       </svg>
-      {/* Faint scanlines and deep vignette */}
-      <AbsoluteFill style={{ backgroundImage: `repeating-linear-gradient(to bottom, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) ${u}px, rgba(0,0,0,0) ${u}px, rgba(0,0,0,0) ${3 * u}px)` }} />
-      <AbsoluteFill style={{ background: "radial-gradient(ellipse 80% 75% at 50% 50%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.75) 100%)" }} />
+      {/* Defocused pink-red haze along the top-right and right edge */}
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse 30% 26% at 92% 6%, ${p.alert}66 0%, ${p.alert}00 100%), radial-gradient(ellipse 14% 42% at 100% 55%, ${p.alert}40 0%, ${p.alert}00 100%)`, mixBlendMode: "screen" }} />
+      {/* Faint scanlines and vignette */}
+      <AbsoluteFill style={{ backgroundImage: `repeating-linear-gradient(to bottom, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) ${u}px, rgba(0,0,0,0) ${u}px, rgba(0,0,0,0) ${3 * u}px)` }} />
+      <AbsoluteFill style={{ background: "radial-gradient(ellipse 80% 75% at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%)" }} />
       <Grain opacity={0.024} salt={9} />
     </AbsoluteFill>
   );

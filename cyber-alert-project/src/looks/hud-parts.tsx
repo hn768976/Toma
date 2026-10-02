@@ -119,7 +119,7 @@ const triD = (cx: number, cy: number, s: number) => {
   return `M${cx} ${cy - h * 0.58}L${cx + s / 2} ${cy + h * 0.42}L${cx - s / 2} ${cy + h * 0.42}Z`;
 };
 
-export const WarningIcon: React.FC<{ p: HudPalette; id: string; glow?: number; label?: string }> = ({ p, id, glow = 1, label }) => {
+export const WarningIcon: React.FC<{ p: HudPalette; id: string; glow?: number; label?: string; filled?: boolean }> = ({ p, id, glow = 1, label, filled }) => {
   const s = 100;
   const h = (s * Math.sqrt(3)) / 2;
   const mark = (stroke: string, w: number, dx = 0) => (
@@ -131,19 +131,32 @@ export const WarningIcon: React.FC<{ p: HudPalette; id: string; glow?: number; l
   return (
     <svg viewBox="0 0 120 120" width="100%" height="100%" style={{ overflow: "visible", display: "block" }}>
       <defs>
-        <GlowFilter id={id} base={1.3} gain={glow} weights={[0.9, 0.45, 0.2]} />
+        <GlowFilter id={id} base={1.6} gain={glow} weights={[1, 0.7, 0.45]} />
       </defs>
       {/* chromatic fringe */}
       <g opacity={0.35} style={{ mixBlendMode: "screen" }}>
         <path d={triD(58.6, 60, s)} fill="none" stroke="#00e5ff" strokeWidth={3} strokeLinejoin="round" />
         <path d={triD(61.4, 60, s)} fill="none" stroke="#ff00aa" strokeWidth={3} strokeLinejoin="round" />
       </g>
-      <g filter={`url(#${id})`}>
-        <path d={triD(60, 60, s)} fill={`${p.alert}22`} stroke={p.alert} strokeWidth={6} strokeLinejoin="round" />
-        {mark(p.alert, 11)}
-      </g>
-      <path d={triD(60, 60, s)} fill="none" stroke={p.alertCore} strokeWidth={2} strokeLinejoin="round" opacity={0.85} />
-      {mark(p.alertCore, 4.5)}
+      {filled ? (
+        <>
+          {/* solid sign with a dark exclamation mark cut out */}
+          <g filter={`url(#${id})`}>
+            <path d={triD(60, 60, s)} fill={p.alert} stroke={p.alert} strokeWidth={8} strokeLinejoin="round" />
+          </g>
+          <path d={triD(60, 60, s * 0.9)} fill={p.alertCore} fillOpacity={0.18} />
+          {mark("#1a0208", 10)}
+        </>
+      ) : (
+        <>
+          <g filter={`url(#${id})`}>
+            <path d={triD(60, 60, s)} fill={`${p.alert}22`} stroke={p.alert} strokeWidth={6} strokeLinejoin="round" />
+            {mark(p.alert, 11)}
+          </g>
+          <path d={triD(60, 60, s)} fill="none" stroke={p.alertCore} strokeWidth={2} strokeLinejoin="round" opacity={0.85} />
+          {mark(p.alertCore, 4.5)}
+        </>
+      )}
       {label ? (
         <text x={60} y={128} textAnchor="middle" fontFamily={MONO} fontWeight={700} fontSize={11} letterSpacing={1.5} fill={p.alert}>
           {label}
@@ -304,12 +317,12 @@ export const Label: React.FC<{ p: HudPalette; u: number; text: string; size?: nu
 /** Compact login widget: label above a field, as in the reference. */
 export const MiniLogin: React.FC<{ p: HudPalette; u: number; f: number; offset: number; w: number }> = ({ p, u, f, offset, w }) => {
   const cf = (f + offset) % CYCLE;
-  const typed = USER.slice(0, Math.max(0, Math.min(USER.length, Math.floor((cf - 12) / 3))));
-  const dots = Math.max(0, Math.min(PASS_LEN, Math.floor((cf - 58) / 3)));
+  const typed = USER.slice(0, Math.max(0, Math.min(USER.length, Math.floor((cf - 6) / 2))));
+  const dots = Math.max(0, Math.min(PASS_LEN, Math.floor((cf - 40) / 2)));
   const cursorOn = Math.floor(f / 10) % 2 === 0;
-  const inUser = cf < 54;
+  const inUser = cf < 36;
   const fs = w * 0.06;
-  const lab: React.CSSProperties = { fontFamily: MONO, fontWeight: 700, fontSize: fs * u, letterSpacing: fs * 0.08 * u, color: p.text, lineHeight: 1.1 };
+  const lab: React.CSSProperties = { fontFamily: MONO, fontWeight: 700, fontSize: fs * u, letterSpacing: fs * 0.08 * u, color: p.accent, lineHeight: 1.1 };
   const box = (content: React.ReactNode, active: boolean): React.ReactNode => (
     <div
       style={{
@@ -317,7 +330,7 @@ export const MiniLogin: React.FC<{ p: HudPalette; u: number; f: number; offset: 
         marginBottom: fs * 0.7 * u,
         height: fs * 1.75 * u,
         background: p.field,
-        border: `${Math.max(1, fs * 0.09 * u)}px solid ${p.line}`,
+        border: `${Math.max(1, fs * 0.11 * u)}px solid ${p.accent}`,
         borderRadius: fs * 0.15 * u,
         fontFamily: MONO,
         fontSize: fs * 1.05 * u,

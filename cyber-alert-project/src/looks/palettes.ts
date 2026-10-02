@@ -18,17 +18,17 @@ export type ChipPalette = {
 };
 
 export const CHIP_RED: ChipPalette = {
-  bgCenter: "#081466",
-  bgEdge: "#01020c",
-  board: "#01041a",
-  trace: "#2446ff",
-  traceBright: "#6f9dff",
-  chipFill: "#020722",
-  chipEdge: "#3550ff",
-  alert: "#ff3d12",
-  alertCore: "#ffc65c",
-  alertRgb: "255,61,18",
-  alertDeep: "rgba(120,10,0,0.35)",
+  bgCenter: "#06125a",
+  bgEdge: "#000108",
+  board: "#00020f",
+  trace: "#1d48ff",
+  traceBright: "#7cc0ff",
+  chipFill: "#01041a",
+  chipEdge: "#2456ff",
+  alert: "#ff3a14",
+  alertCore: "#ffe2b8",
+  alertRgb: "255,58,20",
+  alertDeep: "#5a0800",
   warm: "255,110,25",
 };
 
@@ -41,9 +41,9 @@ export const CHIP_AMBER: ChipPalette = {
   chipFill: "#01201c",
   chipEdge: "#16c9b4",
   alert: "#ffb300",
-  alertCore: "#fff0a8",
+  alertCore: "#fff6d0",
   alertRgb: "255,179,0",
-  alertDeep: "rgba(110,60,0,0.35)",
+  alertDeep: "#4a2a00",
   warm: "255,140,20",
 };
 
@@ -79,18 +79,18 @@ export type HudPalette = {
 };
 
 export const HUD_BLUE: HudPalette = {
-  bgCenter: "#0a1c44",
-  bgEdge: "#010309",
+  bgCenter: "#173c74",
+  bgEdge: "#030916",
   panel: "rgba(14,40,90,0.55)",
   line: "#eaf3ff",
-  text: "#d8eaff",
-  textAlt: "#7fdcf2",
-  dim: "#6f93c9",
-  map: "#dde9ff",
-  field: "rgba(2,8,22,0.85)",
+  text: "#c4ecff",
+  textAlt: "#66e2f4",
+  dim: "#7aa8d8",
+  map: "#e4f0ff",
+  field: "rgba(2,10,28,0.8)",
   accent: "#ffffff",
-  alert: "#e2263c",
-  alertCore: "#ffb8bf",
+  alert: "#ff3358",
+  alertCore: "#ffc2cc",
 };
 
 export const HUD_GREEN: HudPalette = {
