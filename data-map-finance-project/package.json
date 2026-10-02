@@ -1,0 +1,26 @@
+{
+  "name": "data-map-finance-project",
+  "version": "1.0.0",
+  "description": "Dot Globe, Data Matrix, Finance Depth, Hologram Map, Finance Overlay — Remotion motion graphics",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.532",
+    "@remotion/three": "4.0.532",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  }
+}

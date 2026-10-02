@@ -1,0 +1,9 @@
+# id                      file                    frames  still_a  still_b
+DotMapGlobe-SilverNavy    DotMapGlobe_SilverNavy  600     90       420
+DotMapGlobe-Teal          DotMapGlobe_Teal        600     90       420
+DataMatrix-BlueOrange     DataMatrix_BlueOrange   450     150      430
+DataMatrix-GreenCyan      DataMatrix_GreenCyan    450     150      430
+FinanceDepth-Blue         FinanceDepth_Blue       600     60       380
+FinanceDepth-Gold         FinanceDepth_Gold       600     60       380
+HologramMap-IceBlue       HologramMap_IceBlue     600     40       330
+FinanceOverlay-Teal       FinanceOverlay_Teal     600     80       400
