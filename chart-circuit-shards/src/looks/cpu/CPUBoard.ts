@@ -245,7 +245,17 @@ export const makeCpuFactory =
     const sub2 = sub.clone();
     sub2.color.multiplyScalar(0.7);
     const dark = new THREE.MeshStandardMaterial({ color: 0x0c1022, roughness: 0.5, metalness: 0.3, envMapIntensity: 0.1 });
-    const silver = new THREE.MeshPhysicalMaterial({ color: 0xa8b4d8, metalness: 0.9, roughness: 0.35, envMapIntensity: 0.1 });
+    // rough brushed lid with a faint cool self-glow so it reads as bright silver
+    // from every angle of the sway (a mirror lid turned black when it caught a
+    // dark part of the HDRI)
+    const silver = new THREE.MeshPhysicalMaterial({
+      color: 0xa8b4d8,
+      metalness: 0.85,
+      roughness: 0.55,
+      envMapIntensity: 0.12,
+      emissive: new THREE.Color(0x9aa6cc),
+      emissiveIntensity: 0.55,
+    });
     const layer = (w: number, h: number, y: number, mat: THREE.Material, r = 0.02) => {
       const g = new RoundedBoxGeometry(w, h, w, 2, r);
       const m = new THREE.Mesh(g, mat);

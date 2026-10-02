@@ -229,7 +229,8 @@ export const makePanelsFactory =
     // colour grade derived from the version's laser colour (cyan -> teal grade,
     // orange -> warm grade), so the two versions differ only in colour
     const lm = Math.max(laserCol.x, laserCol.y, laserCol.z);
-    const g = [laserCol.x / lm, laserCol.y / lm, laserCol.z / lm].map((c) => 0.62 + 0.53 * c);
+    const cool = [0.96, 0.96, 1.1]; // shared by every version
+    const g = [laserCol.x / lm, laserCol.y / lm, laserCol.z / lm].map((c, i) => (0.62 + 0.53 * c) * cool[i]);
     const gLum = 0.2126 * g[0] + 0.7152 * g[1] + 0.0722 * g[2];
     const gradeTint: [number, number, number] = [g[0] / gLum, g[1] / gLum, g[2] / gLum];
     const trimCol = new THREE.Color().setRGB(...hexToLinear(v.trim));

@@ -112,45 +112,70 @@ def determinism(d):
     return ok_all
 
 
-def profile_smoothness(img, axis, start, length, fixed, band=24):
-    """Mean of a `band`-wide strip along a line; returns the profile and the
-    largest step between neighbouring samples after a 9-tap box filter (to
-    average out grain/dither, which is what hides banding)."""
-    if axis == 0:  # vertical line: rows start..start+length at column `fixed`
-        strip = img[start:start + length, fixed - band // 2: fixed + band // 2].astype(float).mean(axis=(1, 2))
-    else:
-        strip = img[fixed - band // 2: fixed + band // 2, start:start + length].astype(float).mean(axis=(0, 2))
-    k = np.ones(9) / 9
-    sm = np.convolve(strip, k, mode="valid")
-    steps = np.abs(np.diff(sm))
-    return strip, float(steps.max()), float(np.abs(np.diff(strip)).max())
+def box(x, n):
+    return np.convolve(x, np.ones(n) / n, mode="same")
+
+
+def find_gradient_segments(gray, n=4, seg=160, band=8):
+    """Smooth, detail-free horizontal segments that still carry a gradient
+    (glow halos, haze, sky): low high-frequency energy, >= 3 levels of range."""
+    cands = []
+    h, w = gray.shape
+    for y in range(band, h - band, 12):
+        row = gray[y - band // 2: y + band // 2].mean(axis=0)
+        for x in range(0, w - seg, 40):
+            s = row[x:x + seg]
+            sm = box(s, 31)[16:-16]
+            hf = float(np.std(s[16:-16] - sm))
+            rng = float(sm.max() - sm.min())
+            if rng >= 3 and hf < 1.2:
+                cands.append((hf / rng, y, x))
+    cands.sort()
+    out = []
+    for _, y, x in cands:
+        if all(abs(y - y2) > 40 or abs(x - x2) > seg for y2, x2 in out):
+            out.append((y, x))
+        if len(out) == n:
+            break
+    return out
+
+
+def plateau_stats(img, y, x, seg=160, band=8):
+    """Band-averaged profile across a gradient. Quantisation banding shows as
+    runs where every row in the band has the same integer value (average is an
+    exact integer and constant); dithered gradients never sit on one integer."""
+    g = img[y - band // 2: y + band // 2, x:x + seg].astype(float).mean(axis=2)  # mean of RGB per pixel
+    col = g.mean(axis=0)
+    flat_exact = np.all(np.abs(g - np.round(g[0:1])) < 1e-9, axis=0)  # whole column one identical value
+    longest, run = 0, 0
+    for i in range(1, seg):
+        if flat_exact[i] and flat_exact[i - 1] and abs(col[i] - col[i - 1]) < 1e-9:
+            run += 1
+            longest = max(longest, run)
+        else:
+            run = 0
+    steps = np.abs(np.diff(box(col, 5)[3:-3]))
+    return col, longest, float(steps.max())
 
 
 def banding():
-    cases = [
-        ("GrowthChart3D_Up", 300, [(0, 0, 260, 120, "sky, vertical, left"), (0, 0, 260, 1150, "sky, vertical, right"), (1, 0, 1280, 60, "sky, horizontal")]),
-        ("CircuitFlythrough_Blue", 300, [(0, 0, 720, 640, "board + glows, vertical centre"), (1, 0, 1280, 120, "far haze / bokeh band")]),
-        ("CPUBoard_BlueSilver", 300, [(0, 0, 720, 640, "vertical through chip glow"), (1, 0, 1280, 60, "far board")]),
-        ("LaserPanels_CyanPurple", 300, [(0, 0, 720, 400, "vertical, hot spot + lasers"), (1, 0, 1280, 300, "horizontal through hot spot")]),
-    ]
+    cases = [("GrowthChart3D_Up", 300), ("CircuitFlythrough_Blue", 300), ("CPUBoard_BlueSilver", 300), ("LaserPanels_CyanPurple", 300)]
     ok_all = True
     OUTC = OUT / "check"
     OUTC.mkdir(parents=True, exist_ok=True)
-    for i, fr, lines in cases:
+    for i, fr in cases:
         img = decode_frame(OUT / f"{i}.mp4", fr)
         Image.fromarray(img).save(OUTC / f"{i}_decoded_{fr}.png")
-        for axis, start, length, fixed, label in lines:
-            strip, step_sm, step_raw = profile_smoothness(img, axis, start, length, fixed)
-            # smooth = after averaging out grain, no neighbouring samples jump by >= 1.5 levels
-            # outside of real edges; we report the 99th percentile step too
-            k = np.ones(9) / 9
-            sm = np.convolve(strip, k, mode="valid")
-            p99 = float(np.percentile(np.abs(np.diff(sm)), 99))
-            uniq = len(np.unique(np.round(strip, 1)))
-            ok = p99 < 1.5
+        gray = img.astype(float).mean(axis=2)
+        segs = find_gradient_segments(gray)
+        if i.startswith("GrowthChart3D"):
+            segs = [(30, 40), (90, 40), (60, 1040), (150, 1080)] + segs[:2]  # sky + haze, plus auto picks
+        for y, x in segs:
+            col, longest, step = plateau_stats(img, y, x)
+            ok = longest < 6
             ok_all &= ok
-            print(f"{'PASS' if ok else 'FAIL'} {i} f{fr} [{label}]: smoothed step p99={p99:.2f} max={step_sm:.2f} levels, "
-                  f"raw max step={step_raw:.2f}, distinct values={uniq}; first values {np.round(strip[:6], 1).tolist()}")
+            print(f"{'PASS' if ok else 'FAIL'} {i} f{fr} row {y} x {x}-{x + 160}: values {np.round(col[::20], 2).tolist()} | "
+                  f"longest identical-integer plateau {longest} px, max smoothed step {step:.2f}")
     return ok_all
 
 
