@@ -4,8 +4,10 @@ which legitimately change by many levels per pixel).
 Usage: banding.py frame.png "x0,y0,x1,y1" [...]   (pixel coords)
 For each segment: samples every pixel; reports
   - smoothed profile (7x7 box mean, removes grain) at 11 points,
-  - largest step between neighbouring smoothed samples (8-bit levels),
+  - staircase residual: smoothed luma minus its 21-px moving mean (a band
+    edge shows as a plateau + jump, i.e. a large residual),
   - longest run of identical raw luma values (a long flat run then a jump = band).
+PASS per segment: residual <= 1.5 levels and flat run <= 24 px.
 """
 import sys
 import numpy as np
@@ -26,14 +28,17 @@ for seg in sys.argv[2:]:
     ys = np.round(np.linspace(y0, y1, n)).astype(int)
     prof = box[ys, xs]
     raw = np.round(luma[ys, xs]).astype(int)
-    steps = np.abs(np.diff(prof, axis=0)).max()
+    lum = prof @ np.array([0.2126, 0.7152, 0.0722])
+    k = 21
+    sm = np.convolve(lum, np.ones(k) / k, mode="valid")
+    steps = np.abs(lum[k // 2 : -(k // 2)] - sm).max()
     run = best = 1
     for a, b in zip(raw[:-1], raw[1:]):
         run = run + 1 if a == b else 1
         best = max(best, run)
     pts = [tuple(int(round(v)) for v in prof[i]) for i in np.linspace(0, n - 1, 11).astype(int)]
-    verdict = "smooth" if steps <= 2.0 and best <= 24 else "CHECK"
+    verdict = "smooth" if steps <= 1.5 and best <= 24 else "CHECK"
     ok &= verdict == "smooth"
-    print(f"  seg {seg}: max smoothed step {steps:.2f} lvl, longest flat raw run {best}px -> {verdict}")
+    print(f"  seg {seg}: staircase residual {steps:.2f} lvl, longest flat raw run {best}px -> {verdict}")
     print(f"    profile RGB: {pts}")
 print("RESULT:", "PASS" if ok else "FAIL")
