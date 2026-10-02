@@ -33,9 +33,13 @@ export const PostFX: React.FC<Props> = ({ grainFrame, bloomIntensity = 1.1, bloo
   const outH = useThree((s) => s.size.height * s.viewport.dpr);
   const k = outH / 1080;
   const bloomLevels = 7 + Math.max(0, Math.round(Math.log2(k)));
+  // The mip chain always starts at full resolution, so extra (finer) levels
+  // would attenuate the coarse halo by radius^extra. Compensate so the halo
+  // keeps its 1080p strength (identity at 1080p).
+  const bloomRadiusScaled = Math.pow(bloomRadius, 7 / bloomLevels);
   const hasDof = dof !== undefined;
   const dofEffect = useMemo(
-    () => (hasDof ? new DepthOfFieldEffect(camera, { worldFocusDistance: 18, worldFocusRange: 6, bokehScale: 4, resolutionScale: 0.5 }) : null),
+    () => (hasDof ? new DepthOfFieldEffect(camera, { worldFocusDistance: 18, worldFocusRange: 6, bokehScale: 4, resolutionY: 540 }) : null),
     [camera, hasDof],
   );
   useLayoutEffect(() => {
@@ -71,7 +75,7 @@ export const PostFX: React.FC<Props> = ({ grainFrame, bloomIntensity = 1.1, bloo
         luminanceThreshold={1.0}
         luminanceSmoothing={0.15}
         intensity={bloomIntensity}
-        radius={bloomRadius}
+        radius={bloomRadiusScaled}
         levels={bloomLevels}
       />}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />

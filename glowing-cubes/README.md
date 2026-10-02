@@ -95,10 +95,26 @@ npx remotion still CubeAssembly-Blue out/CubeAssembly_Blue_f250.png --frame=250 
 ## Measured render time
 
 Measured in this build environment: 4 vCPU, **no GPU** (Chromium SwiftShader
-through ANGLE), Remotion concurrency 3. A GPU machine will be much faster —
+through ANGLE), Remotion concurrency 3, CPU fully saturated. A GPU machine will be much faster —
 treat these as an upper bound.
 
-<!-- TIMING-TABLE -->
+| | 1080p (`--scale=0.5`) measured | 4K measured | 4K full composition (this machine) |
+|---|---|---|---|
+| **Look 1 — Cube Cluster** | **2.5 s / frame** (Violet 2.51, Blue 2.48; Green 4.37 while the machine was shared with other jobs) | **≈ 8.5 s / frame** | 600 frames ≈ 85 min per palette |
+| **Look 2 — Cube Assembly** | **≈ 4.0 s / frame** (Blue 4.36, Violet 4.00, Green 3.95) | **≈ 12.8 s / frame** | 300 frames ≈ 64 min per palette |
+| 6000×3375 still | — | — | ≈ 15–25 s each (after ~10 s browser start) |
+
+4K was measured by rendering 12 frames at `--scale=1` (first frame / browser
+start excluded). 4K costs about 3.4× the 1080p frame (4× the pixels; some
+passes run at fixed resolution). **Estimate on a machine with a real GPU:
+roughly 5–20× faster than this.**
+
+Where the time goes (look 2, 1080p, one tab, measured with
+`scripts/bench.mjs` switching parts off): everything on 4.75 s;
+without depth of field 3.12 s (DoF ≈ 1.6 s); without bloom 4.33 s;
+without SMAA 4.68 s; without the floor reflection 4.46 s; with all four
+off 2.03 s. 4× MSAA was tried first and cost ≈ 2.8 s/frame, so SMAA is used
+instead.
 
 ---
 
@@ -282,10 +298,58 @@ Scripts (run from the project root):
 | `python3 scripts/verify-renders.py` | Steps 1, 3–6 on the encoded previews: ffprobe; cold frame 150 vs frame 150 of the full render (byte compare); every 15th frame (contact sheet + outlier test); banding profile from the encoded mp4; five-frame sheets; palette layout overlays. Writes `out/verify/`. |
 | `node scripts/bench.mjs <id> <from> <to> [nodof,nobloom,nosmaa,norefl]` | Per-frame render time, optionally with parts switched off. |
 
-<!-- VERIFY-RESULTS -->
+### Results of the verify loop (all on the delivered 1080p previews)
+
+All checks passed on the **first full render** — no composition needed a
+second attempt. What was found and fixed *before* the full renders is listed
+under "Changes made during the build".
+
+| Step | Result |
+|---|---|
+| 1 · File checks | All six: h264, yuv420p, 1920×1080, 30/1, no audio. Look 1: 600 frames, 20.000 s. Look 2: 300 frames, 10.000 s. |
+| 2 · Loop (look 1) | Green / Violet / Blue: frame 600 vs frame 0 **0 differing pixels**, both as delivered and with the `% 600` wrap disabled. Numerically: poses at t = 0 and t = 1 agree to 3e-15; the 599→600 step (0.0880) equals an ordinary step (0.0881). |
+| 3 · Same result every time | All six: frame 150 rendered alone from a cold start is **byte-identical** to frame 150 of the full render. (Encoded mp4 vs source PNG: 40.1–40.3 dB PSNR.) |
+| 4 · Loading | Every 15th frame of all six checked (contact sheets in `out/verify/*_every15.png`): no unlit, flat or reflection-less frames. Look-1 frame-to-frame mean luma varies ≤ 1.2 levels; look 2's larger changes follow the build-up. |
+| 5 · Banding | Read from frames decoded **from the mp4**. Look 1 floor, lit centre → frame edge (luma 84 → 16): smooth ramp, longest run of one value in a row 6–7 px. Look 2 haze, floor → horizon → sky (luma 8–36): smooth, longest flat run 5–9 px, largest step in the smoothed profile 0.08–0.12 levels. No steps. Profiles: `out/verify/*_banding*.png`. |
+| 6 · Content | All four cube types visible in every composition; only cube cores and edges bloom; floor reflects. Look 1: cluster turns, outline changes, tiny cubes drift. Palette overlays (`out/verify/*_overlay_*.png`, luminance of each palette in R/G/B) show every edge coinciding — only colour differs. Look 2: frame 0 empty, 4×4×4 complete and still from frame 190 (checked numerically every frame, and visually), no cube passes through another (separating-axis test at 1/16-frame steps, closest approach 0.026), same timing in all palettes, floor and background take each palette's colour. |
+
+### Changes made during the build (and why)
+
+* **Frames were captured before post-processing existed.** The effect
+  composer builds its passes asynchronously after mount; the first test
+  render was a blank background. Added the per-frame `<FrameGate>` that
+  waits for readiness checks before rendering.
+* **drei `MeshReflectorMaterial` showed no reflection** on the dark floors
+  (it multiplies the reflection into the albedo). Replaced with the
+  project's own additive planar reflector.
+* **Look 2 cubes intersected in flight** (first version: 1,203 colliding
+  samples). The generator now tests and re-draws flights, so the layout is
+  collision-free by construction.
+* **Render cost**: 4× MSAA (≈ 2.8 s/frame) → SMAA; depth of field at half
+  resolution.
+* **4K / 6000-px looked less glowy than 1080p**: bloom radius is
+  compensated for the extra mip levels, depth of field and the reflection
+  blur run at fixed resolution. Verified as a no-op at 1080p (cold frames
+  still byte-identical to the delivered previews).
 
 ---
 
 ## Completion checklist
 
-<!-- CHECKLIST -->
+- [x] 6 compositions at 3840×2160, 30 fps; look 1 600 frames, look 2 300 frames
+- [x] 3D with `@remotion/three`, WebGL2, `--gl=angle`
+- [x] Four cube types, rounded edges, 40/30/15/15, seeded
+- [x] One `InstancedMesh` per cube type
+- [x] Fake glass (no transmission); bloom only on glowing cubes / bright edges
+- [x] Glossy reflective floor; charcoal spotlight floor (look 1); deep palette floor + haze (look 2)
+- [x] ACES tone mapping, sRGB output
+- [x] Look 1: one full turn, whole-cycle slides / pulses / drift / camera; frame 600 = frame 0
+- [x] Look 2: fly-in with overshoot, bottom-to-top, nothing passes through anything, still from frame 190, push-in 4.5 %; **does not loop**
+- [x] Same layout/motion/timing across palettes; palettes are one data row each
+- [x] Grain 1.75 % + ±1/255 dither after bloom, from pixel + frame (`frame % 600` in look 1)
+- [x] No `Math.random()` at render time, no clocks, no physics, no temporal effects; HDRI behind `delayRender`
+- [x] Cold frame 150 byte-identical to the full render (all six)
+- [x] CC0 Poly Haven studio HDRI shipped and credited
+- [x] 1080p previews (H.264, yuv420p, CRF 16), 1080p stills, 2 × 6000×3375 stills per composition
+- [x] Render time measured at 1080p and 4K
+- [x] `npm install && npx remotion studio` works from a clean copy of the zip
