@@ -10,6 +10,6 @@ export type NeuralVersion = {
 };
 
 export const NEURAL_VERSIONS: NeuralVersion[] = [
-  { id: "NeuralLayers-IceBlue", node: "#9FD0F0", link: "#9FD0F0", edge: "#FFFFFF", pulse: "#FFFFFF", bg: "#0A1428", grid: "#1A2C4A" },
+  { id: "NeuralLayers-IceBlue", node: "#9FD0F0", link: "#B4CFE2", edge: "#FFFFFF", pulse: "#FFFFFF", bg: "#0A1428", grid: "#16243C" },
   { id: "NeuralLayers-Violet", node: "#B89CFF", link: "#B89CFF", edge: "#F2EAFF", pulse: "#FF6FD8", bg: "#0A1428", grid: "#1E2448" },
 ];

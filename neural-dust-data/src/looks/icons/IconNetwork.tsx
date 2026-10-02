@@ -5,6 +5,7 @@ import { DOF_GLSL, PostPipeline } from "../../lib/three/post";
 import { LineBuilder, makeLineMaterial, makeLineMesh } from "../../lib/three/lines";
 import { mulberry32 } from "../../lib/random";
 import { bakeInstances } from "../../lib/three/bake";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { hexToRgb } from "../../lib/color";
 import { CHECK_PATH, ICON_PATHS } from "./icons";
 import { IconVersion } from "./versions";
@@ -14,9 +15,9 @@ export const ICON_FRAMES = 450;
 // ---------------------------------------------------------------------------
 // Tile field, built once at module level from a fixed seed.
 // ---------------------------------------------------------------------------
-const SP = 2.3; // lattice spacing
-const NX = 100;
-const NZ = 118;
+const SP = 2.9; // lattice spacing
+const NX = 84;
+const NZ = 96;
 const Z0 = 22; // nearest row z
 type Tile = { x: number; z: number; i: number; j: number; icon: number; act: number; house: boolean };
 
@@ -27,11 +28,11 @@ const FIELD = (() => {
   for (let j = 0; j < NZ; j++) {
     index.push([]);
     for (let i = 0; i < NX; i++) {
-      const x = (i - NX / 2) * SP + (rnd() - 0.5) * 1.0;
-      const z = Z0 - j * SP + (rnd() - 0.5) * 1.0;
+      const x = (i - NX / 2) * SP + (rnd() - 0.5) * 1.5;
+      const z = Z0 - j * SP + (rnd() - 0.5) * 1.5;
       // activation: spreads outward from the tile nearest the origin, + seeded jitter
       const d = Math.hypot(x, z) / SP;
-      const willAct = d < 0.8 || rnd() < 0.24;
+      const willAct = d < 0.8 || rnd() < 0.2;
       const act = willAct ? 18 + d * 2.6 + rnd() * 34 : 1e6;
       index[j].push(tiles.length);
       tiles.push({ x, z, i, j, icon: Math.floor(rnd() * ICON_PATHS.length), act, house: rnd() < 0.08 });
@@ -57,10 +58,10 @@ const FIELD = (() => {
 // ---------------------------------------------------------------------------
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerp3 = (a: number[], b: number[], t: number) => a.map((v, k) => v + (b[k] - v) * t);
-const CLOSE_POS = [1.8, 3.9, 6.0];
+const CLOSE_POS = [3.4, 6.6, 4.4];
 const CLOSE_TGT = [0.4, 0, -0.6];
-const WIDE_POS = [-10, 40, 44];
-const WIDE_TGT = [-2, 0, -24];
+const WIDE_POS = [20, 60, 22];
+const WIDE_TGT = [-2, 0, -20];
 export const cameraAt = (f: number) => {
   let pos: number[];
   let tgt: number[];
@@ -152,9 +153,14 @@ const tileGeometry = () => {
   shape.quadraticCurveTo(-s, s, -s, s - r);
   shape.lineTo(-s, -s + r);
   shape.quadraticCurveTo(-s, -s, -s + r, -s);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: false, curveSegments: 4 });
-  geo.rotateX(-Math.PI / 2);
-  return geo;
+  // two stacked glass plates: the icon plate on top, a thinner ghost plate under it
+  const top = new THREE.ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: false, curveSegments: 4 });
+  top.rotateX(-Math.PI / 2);
+  top.translate(0, 0.1, 0);
+  const under = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false, curveSegments: 4 });
+  under.rotateX(-Math.PI / 2);
+  under.scale(0.97, 1, 0.97);
+  return mergeGeometries([top, under])!;
 };
 
 const houseGeometry = () => {
@@ -187,7 +193,7 @@ export const createIconNetwork =
     const v = version;
     const post = new PostPipeline(gl, w, h, {
       slices: [0, 5, 12, 24, 42],
-      bloomWeights: [0.35, 0.35, 0.28, 0.2, 0.12, 0.06],
+      bloomWeights: [0.25, 0.2, 0.14, 0.08, 0.05, 0.03],
       bloomThreshold: 0.1,
       exposure: 1.0,
       vignette: 0.4,
@@ -197,7 +203,7 @@ export const createIconNetwork =
     const fog = fogUniforms();
     const frameU = { value: 0 };
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 600);
+    const camera = new THREE.PerspectiveCamera(34, w / h, 0.1, 900);
     const atlas = drawIconAtlas(v);
     const C = (hex: string) => new THREE.Color(...hexToRgb(hex));
 
@@ -230,9 +236,16 @@ export const createIconNetwork =
             if (w <= 0.0) discard;
             float n = vn(vW * 0.35) * 0.6 + vn(vW * 1.3) * 0.4;
             vec3 c = uFloor * (0.75 + 0.5 * n);
-            // faint fine grid
-            vec2 g = abs(fract(vW / 0.575) - 0.5);
-            c += uHorizon * 0.12 * step(0.47, max(g.x, g.y)) * (1.0 - fogOf(vDepth));
+            // small clusters of tiny dots scattered over the floor
+            vec2 cell = floor(vW / 1.45);
+            float on = step(0.82, h21(cell + 7.0));
+            vec2 dg = fract(vW / 0.16) - 0.5;
+            vec2 inCell = fract(vW / 1.45);
+            float inBox = step(0.25, inCell.x) * step(inCell.x, 0.65) * step(0.3, inCell.y) * step(inCell.y, 0.55);
+            c += vec3(0.35, 0.6, 1.0) * 0.35 * on * inBox * smoothstep(0.2, 0.08, length(dg)) * (1.0 - fogOf(vDepth));
+            // soft light from the far upper right
+            vec2 lp = vW - vec2(70.0, -90.0);
+            c += uHorizon * 0.9 * exp(-dot(lp, lp) / 9000.0);
             c = mix(c, uHorizon, pow(fogOf(vDepth), 1.4));
             gl_FragColor = vec4(c * w, 1.0);
           }`,
@@ -247,7 +260,7 @@ export const createIconNetwork =
     const tiles = FIELD.tiles;
     const tgeo = bakeInstances(
       tileGeometry(),
-      tiles.map((t) => new THREE.Matrix4().makeTranslation(t.x, 0.12, t.z)),
+      tiles.map((t) => new THREE.Matrix4().makeTranslation(t.x, 0.06, t.z)),
       { aIcon: tiles.map((t) => t.icon), aAct: tiles.map((t) => t.act) },
     );
     const tileMat = new THREE.ShaderMaterial({
@@ -289,7 +302,8 @@ export const createIconNetwork =
           vec2 p = vec2(vLocal.x, vLocal.z);
           float sd = sdRound(p, 0.5, 0.16);
           float edge = exp(-abs(sd) / 0.035);
-          bool top = vLocal.y > 0.155;
+          bool top = vLocal.y > 0.255;
+          bool under = vLocal.y < 0.055;
           vec3 c;
           if (top) {
             vec2 uv = vec2(vLocal.x, vLocal.z) / 0.64 + 0.5;
@@ -301,10 +315,11 @@ export const createIconNetwork =
             }
             // frosted top: brighter towards the far edge, icon lines on top
             float grad = 0.55 + 0.45 * smoothstep(0.5, -0.5, vLocal.z);
-            c = col * (0.30 * grad + 0.25 * fres) + col * edge * 0.9 + mix(uIcon, vec3(1.0), 0.3 * vAct) * ic * 0.95;
+            c = col * (0.2 * grad + 0.18 * fres) + col * edge * 0.6 + mix(uIcon, vec3(1.0), 0.3 * vAct) * ic * 0.8;
           } else {
             // glass sides: thin, bright rim
-            c = col * (0.55 + 0.6 * fres) + col * 0.6 * smoothstep(0.08, 0.16, vLocal.y);
+            c = col * (0.32 + 0.4 * fres) + col * 0.4 * smoothstep(0.18, 0.26, vLocal.y);
+            if (under) c = col * (0.12 + 0.3 * fres);
           }
           c *= 1.0 + 0.15 * vAct;
           c *= 1.0 - 0.75 * fogOf(vDepth);
@@ -350,7 +365,7 @@ export const createIconNetwork =
           vec3 n = normalize(vN);
           // light faces pale, side faces in the house colour
           float lit = clamp(0.5 + 0.5 * n.y + 0.35 * n.z, 0.0, 1.0);
-          vec3 c = mix(uHouse * 0.8, vec3(0.92, 0.94, 1.0), lit * 0.75);
+          vec3 c = mix(uHouse * 0.8, vec3(0.94, 0.95, 1.0), lit * 0.9);
           c *= 1.0 - 0.75 * fogOf(vDepth);
           gl_FragColor = vec4(c * w, 1.0);
         }`,
@@ -359,7 +374,7 @@ export const createIconNetwork =
     hmesh.frustumCulled = false;
     scene.add(hmesh);
 
-    const haloBase = new THREE.PlaneGeometry(2.6, 2.6);
+    const haloBase = new THREE.PlaneGeometry(1.7, 1.7);
     haloBase.rotateX(-Math.PI / 2);
     const haloGeo = bakeInstances(
       haloBase,
@@ -386,11 +401,11 @@ export const createIconNetwork =
           if (w <= 0.0) discard;
           float r = length(vP);
           // halftone dots on a fine grid, bigger towards a soft ring
-          vec2 g = fract(vP / 0.085) - 0.5;
-          float ring = exp(-pow((r - 0.55) / 0.42, 2.0));
+          vec2 g = fract(vP / 0.075) - 0.5;
+          float ring = exp(-pow((r - 0.36) / 0.28, 2.0));
           float dotR = 0.12 + 0.3 * ring;
           float d = smoothstep(dotR, dotR - 0.12, length(g));
-          vec3 c = mix(uHalo, vec3(1.0, 0.45, 0.85), 0.35 * ring) * d * ring * 0.9;
+          vec3 c = mix(uHalo, vec3(1.0, 0.45, 0.85), 0.25 * ring) * d * ring * 0.55;
           c *= 1.0 - 0.8 * fogOf(vDepth);
           gl_FragColor = vec4(c * w, 1.0);
         }`,
@@ -403,6 +418,7 @@ export const createIconNetwork =
     scene.add(halo);
 
     // check marks: camera-facing badges that pop above activated tiles
+    const checkScale = { value: 1 };
     const actTiles = tiles.filter((t) => t.act < ICON_FRAMES + 20);
     const quad = new THREE.BufferGeometry();
     quad.setAttribute("position", new THREE.BufferAttribute(new Float32Array([-0.5, -0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, 0.5, 0]), 3));
@@ -414,17 +430,17 @@ export const createIconNetwork =
       iAct: actTiles.map((t) => t.act),
     });
     const checkMat = new THREE.ShaderMaterial({
-      uniforms: { ...post.dof, ...fog, uFrame: frameU, uAtlas: { value: atlas } },
+      uniforms: { ...post.dof, ...fog, uFrame: frameU, uAtlas: { value: atlas }, uCheckScale: checkScale },
       vertexShader: /* glsl */ `
         attribute float iX; attribute float iZ; attribute float iAct; attribute vec3 aLocal;
-        uniform float uFrame;
+        uniform float uFrame; uniform float uCheckScale;
         varying vec2 vUv; varying float vDepth; varying float vA;
         void main() {
           float k = clamp((uFrame - iAct) / 9.0, 0.0, 1.0);
           // pop: scale from 0.9 with a small overshoot, then settle
           float ob = 1.0 + 2.2 * pow(k - 1.0, 3.0) + 1.2 * pow(k - 1.0, 2.0);
-          float s = (0.9 + 0.1 * ob) * 0.62;
-          vec4 vp = viewMatrix * vec4(iX, 0.92 + 0.18 * (1.0 - k), iZ, 1.0);
+          float s = (0.9 + 0.1 * ob) * 0.62 * uCheckScale;
+          vec4 vp = viewMatrix * vec4(iX, 0.62 + 0.4 * uCheckScale + 0.18 * (1.0 - k), iZ, 1.0);
           vp.xy += aLocal.xy * s;
           vUv = aLocal.xy + 0.5;
           vDepth = -vp.z;
@@ -458,7 +474,7 @@ export const createIconNetwork =
     for (const [a, b] of FIELD.links) {
       const A = tiles[a];
       const B = tiles[b];
-      lb.add([A.x, 0.05, A.z, B.x, 0.05, B.z], lc, 0.55, [0, 0, 0, 1]);
+      lb.add([A.x, 0.05, A.z, B.x, 0.05, B.z], lc, 0.9, [0, 0, 0, 1]);
     }
     const lineMat = makeLineMaterial(post.dof, post.view, { width: 2.2, pulseColor: C(v.active), loop: ICON_FRAMES });
     // fade links into the haze like everything else
@@ -520,7 +536,9 @@ export const createIconNetwork =
         camera.updateMatrixWorld();
         const wide = ease(Math.min(1, Math.max(0, (f - 90) / 270)));
         post.dof.uFocus.value = camera.position.distanceTo(tgt) * (1 - 0.25 * wide);
-        post.dof.uAperture.value = 46 - 30 * wide;
+        post.dof.uAperture.value = 20 - 14 * wide;
+        checkScale.value = 1 + 0.5 * wide;
+        lineMat.uniforms.uGain.value = 1 - 0.55 * wide;
         fog.uFogNear.value = 25 + 30 * wide;
         fog.uFogFar.value = 140 + 110 * wide;
         post.render(scene, camera, frame);

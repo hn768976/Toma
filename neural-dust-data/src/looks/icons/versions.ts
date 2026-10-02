@@ -12,5 +12,5 @@ export type IconVersion = {
 };
 
 export const ICON_VERSIONS: IconVersion[] = [
-  { id: "IconNetwork", tile: "#3F8CFF", icon: "#DDEBFF", active: "#3FE8A0", house: "#7C74FF", halo: "#B05CFF", line: "#3FA8E8", floor: "#030A22", horizon: "#0A2A6A" },
+  { id: "IconNetwork", tile: "#3F8CFF", icon: "#DDEBFF", active: "#3FE8A0", house: "#7C74FF", halo: "#B05CFF", line: "#3FB8C8", floor: "#030A22", horizon: "#071A48" },
 ];

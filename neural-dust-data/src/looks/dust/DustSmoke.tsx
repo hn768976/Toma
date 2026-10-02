@@ -76,11 +76,12 @@ const SPECK = (() => {
     const d0 = (sw / (2 * z * TANH)) * 2160; // in-focus diameter, 4K px
     const coc = COC_K * Math.abs(1 / z - 1 / ZF);
     const D = Math.sqrt(d0 * d0 + coc * coc);
-    const b = 0.12 + 0.6 * Math.pow(rnd(), 2.6);
+    const b = 0.12 + 0.42 * Math.pow(rnd(), 3.0);
     level[i] = Math.min(LEVELS - 1, Math.floor((coc / D) * LEVELS * 0.999 + (D > 40 ? 1 : 0)));
     diam[i] = D;
     // lower alpha as discs grow so near motes don't over-brighten
-    alpha[i] = b * Math.pow(Math.min(1, d0 / D), 1.1);
+    // lower alpha as discs grow so near motes don't over-brighten
+    alpha[i] = b * Math.pow(Math.min(1, d0 / D), 1.4) * (D > 24 ? 0.45 : 1);
   }
   return { xn0, yn0, inv, level, diam, alpha, cs, wob };
 })();
@@ -201,32 +202,34 @@ float snoise(vec2 v) {
 }
 float fbm(vec2 p) {
   float s = 0.0, a = 0.5;
-  for (int i = 0; i < 5; i++) { s += a * snoise(p); p = p * 2.07 + vec2(17.1, 9.2); a *= 0.42; }
+  for (int i = 0; i < 5; i++) { s += a * snoise(p); p = p * 2.07 + vec2(17.1, 9.2); a *= 0.36; }
   return s;
 }
 void main() {
   vec2 uv = vUV; // 0..1 over the frame, y down
-  vec2 p = vec2(uv.x * 1.7778, uv.y) * 0.55;
+  vec2 p = vec2(uv.x * 1.7778, uv.y) * 0.26;
   vec2 t1 = vec2(uC1, uS1);
   vec2 t2 = vec2(uC2, uS2);
-  float smoke = 0.0;
-  // three layers of domain-warped fbm, each looping around a circle in time
-  for (int l = 0; l < 2; l++) {
-    float fl = float(l);
-    vec2 pl = p * (1.0 + 0.8 * fl) + vec2(3.1 * fl, 1.7 * fl);
-    vec2 q = vec2(fbm(pl + 0.3 * t1 + vec2(0.0, fl)), fbm(pl + vec2(5.2, 1.3) - 0.3 * t1.yx));
-    vec2 r = vec2(fbm(pl + 1.1 * q + vec2(1.7, 9.2) + 0.2 * t2), fbm(pl + 1.1 * q + vec2(8.3, 2.8) - 0.2 * t2.yx));
-    float f = fbm(pl + 1.3 * r);
-    // billows: broad soft body plus thinner curling wisps along warped ridges
-    float body = smoothstep(0.0, 0.9, f);
-    float ridge = 1.0 - abs(fbm(pl * 1.7 + 2.0 * r));
-    float wisps = body * 0.8 + pow(clamp(ridge, 0.0, 1.0), 6.0) * 0.35 * smoothstep(-0.3, 0.3, f);
-    smoke += wisps * (0.7 - 0.25 * fl);
-  }
-  // more smoke low-left, thinning towards the upper right
-  float mask = smoothstep(1.25, 0.15, length((uv - vec2(0.12, 0.8)) * vec2(1.0, 1.3)));
-  mask = 0.25 + 0.75 * mask;
-  float a = clamp(smoke * mask * uAmount, 0.0, 1.0);
+  // warp field, looping around a circle in time
+  vec2 q = vec2(fbm(p * 2.0 + 0.35 * t1), fbm(p * 2.0 + vec2(5.2, 1.3) - 0.35 * t1.yx));
+  vec2 r = vec2(fbm(p * 2.0 + 1.4 * q + vec2(1.7, 9.2) + 0.25 * t2), fbm(p * 2.0 + 1.4 * q + vec2(8.3, 2.8) - 0.25 * t2.yx));
+  // main cloud: billowing out of the lower-left, edge broken up by the warp
+  vec2 wp = uv + 0.16 * q + 0.06 * r;
+  float d = length((wp - vec2(-0.02, 0.98)) * vec2(1.0, 1.25));
+  float cloud = smoothstep(0.62, 0.05, d + 0.2 * fbm(p * 1.6 + 1.2 * r));
+  float inner = 0.5 + 0.5 * smoothstep(-0.5, 0.6, fbm(p * 1.5 + 0.8 * r));
+  // faint secondary haze elsewhere, with darker voids between
+  float haze = smoothstep(0.0, 0.8, fbm(p * 1.1 + 0.7 * q - 0.2 * t2)) * 0.3;
+  // a curling plume in the upper middle and a soft lit haze on the right edge
+  vec2 sw = uv - vec2(0.5, 0.32) + 0.08 * r;
+  float ang = atan(sw.y, sw.x * 1.4);
+  float rad = length(sw * vec2(1.4, 1.0));
+  float swirl = smoothstep(0.13, 0.0, abs(rad - 0.17 - 0.06 * sin(ang * 2.0 + 3.0 * q.x))) * smoothstep(0.34, 0.08, rad)
+    * smoothstep(-0.3, 0.5, fbm(p * 2.2 + 1.5 * r + vec2(ang * 0.6, 0.0))) * 0.2;
+  float right = smoothstep(0.7, 1.0, uv.x) * smoothstep(0.75, 0.25, abs(uv.y - 0.38) * 2.0) * 0.28 * (0.6 + 0.4 * fbm(p * 2.0 + q));
+  haze += swirl + right;
+  float smoke = cloud * inner + haze * (1.0 - cloud);
+  float a = clamp(smoke * uAmount, 0.0, 1.0);
   finalColor = vec4(uSmoke * a, a);
 }
 `;
@@ -300,7 +303,7 @@ export const createDust =
               uC2: { value: 1, type: "f32" },
               uS2: { value: 0, type: "f32" },
               uSmoke: { value: hexToRgb(v.smokeColor), type: "vec3<f32>" },
-              uAmount: { value: 0.85 * v.smoke, type: "f32" },
+              uAmount: { value: 0.72 * v.smoke, type: "f32" },
             },
           },
         });
@@ -318,12 +321,12 @@ export const createDust =
       if (v.beam > 0) {
         beam = new Sprite(makeBeamTexture());
         beam.anchor.set(0.5);
-        beam.width = W * 0.55;
+        beam.width = W * 1.05;
         beam.height = H * 2.6;
         beam.rotation = -0.42;
         beam.position.set(W * 0.3, H * 0.35);
         beam.tint = v.speck;
-        beam.alpha = 0.09 * v.beam;
+        beam.alpha = 0.045 * v.beam;
         beam.blendMode = "add";
         scene.addChild(beam);
       }
@@ -420,8 +423,8 @@ export const createDust =
               // distance from the beam axis (screen space, 4K px)
               const ddx = px - W * 0.3;
               const ddy = py - H * 0.35;
-              const across = (ddx * bnx + ddy * bny) / (W * 0.16);
-              a *= 0.55 + 1.1 * beamOn * Math.exp(-across * across);
+              const across = (ddx * bnx + ddy * bny) / (W * 0.32);
+              a *= 0.6 + 0.8 * beamOn * Math.exp(-across * across);
             }
             const a8 = a >= 1 ? 255 : (a * 255) | 0;
             p.color = tint + (a8 << 24);
@@ -432,7 +435,7 @@ export const createDust =
             x = ((((x + 1.8) % 3.6) + 3.6) % 3.6) - 1.8;
             const y = m.y0 + m.bob * Math.sin(th + m.ph);
             s.position.set(hw + x * hw * (1 + D / W), hh - y * hh);
-            s.alpha = 0.22 * m.b;
+            s.alpha = 0.05 * m.b;
           }
           if (smokeShader) {
             const u = smokeShader.resources.smokeUniforms.uniforms;

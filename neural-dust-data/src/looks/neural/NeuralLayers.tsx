@@ -14,9 +14,9 @@ export const NEURAL_LOOP = 600;
 // Network layout — built once at module level from a fixed seed.
 // ---------------------------------------------------------------------------
 const COL_COUNTS = [7, 9, 11, 12, 12, 11, 10, 9, 8];
-const COL_DX = 2.3;
+const COL_DX = 3.0;
 const NODE_DY = 0.7;
-const NODE = 0.27;
+const NODE = 0.36;
 
 type Node = { x: number; y: number; z: number; col: number };
 type Curve = { pts: number[]; from: number; to: number; pulse: [number, number, number, number] };
@@ -54,7 +54,7 @@ const buildNetwork = () => {
           const p3 = [B.x - NODE * 0.5, B.y + (rnd() - 0.5) * NODE * 0.5, B.z + (rnd() - 0.5) * 0.08];
           const p1 = [A.x + COL_DX * 0.5, A.y + bulgeY * 0.5 + jy, bulgeZ + jz];
           const p2 = [B.x - COL_DX * 0.5, B.y + bulgeY * 0.5 - jy, bulgeZ - jz];
-          const pulsed = rnd() < 0.13;
+          const pulsed = rnd() < 0.07;
           curves.push({
             pts: bezier(p0, p1, p2, p3, 22),
             from: a,
@@ -107,8 +107,9 @@ const nodeMaterial = (dof: PostPipeline["dof"], v: NeuralVersion) =>
         float mid = q.x + q.y + q.z - mx - mn;
         float edge = smoothstep(0.72, 0.98, mid);
         float fres = pow(1.0 - abs(dot(vN, vView)), 2.0);
-        vec3 c = uNode * (0.42 + 0.5 * fres) + uEdge * edge * 0.95;
-        c += mix(uEdge, uPulse, 0.5) * vFlash * 1.6;
+        // hollow glass tile: dim frosted face, bright rim
+        vec3 c = uNode * (0.22 + 0.35 * fres) + uEdge * edge * 1.5;
+        c += mix(uEdge, uPulse, 0.5) * vFlash * 0.7;
         gl_FragColor = vec4(c * w, 1.0);
       }`,
     blending: THREE.AdditiveBlending,
@@ -148,15 +149,16 @@ const bgMaterial = (dof: PostPipeline["dof"], v: NeuralVersion) =>
         // large soft brightness variation + faint circuit-like grid
         float glow = 0.9 + 0.5 * exp(-dot(vW - vec2(-4.0, 2.0), vW - vec2(-4.0, 2.0)) / 160.0);
         vec3 c = uBg * glow;
-        float g1 = gridLine(vW, 1.6, 0.05);
-        float g2 = gridLine(vW + 0.4, 6.4, 0.08);
+        // circuit-board traces: short straight runs in random cells
+        float g1 = gridLine(vW, 0.8, 0.03);
+        float g2 = 0.0;
         // grid lines only in some cells, like a faint board
-        vec2 cell = floor(vW / 3.2);
-        float on = step(0.45, h21(cell));
-        c = mix(c, uGrid * 1.6, (g1 * 0.5 * on + g2 * 0.7));
+        vec2 cell = floor(vW / 0.8);
+        float on = step(0.72, h21(cell)) * step(0.5, h21(floor(vW / 4.0) + 3.0));
+        c = mix(c, uGrid * 1.6, g1 * 0.55 * on + g2);
         // tiny specks
         vec2 sc = floor(vW * 6.0);
-        float sp = step(0.985, h21(sc + 17.0));
+        float sp = step(0.975, h21(sc + 17.0));
         vec2 f = fract(vW * 6.0) - 0.5;
         c += uGrid * 2.2 * sp * smoothstep(0.22, 0.0, length(f));
         gl_FragColor = vec4(c * w, 1.0);
@@ -169,15 +171,15 @@ export const createNeural =
   (gl, w, h) => {
     const post = new PostPipeline(gl, w, h, {
       slices: [0, 4, 10, 20, 36],
-      bloomWeights: [0.25, 0.22, 0.18, 0.14, 0.1, 0.06],
-      bloomThreshold: 0.2,
+      bloomWeights: [0.3, 0.2, 0.12, 0.07, 0.04, 0.02],
+      bloomThreshold: 0.25,
       exposure: 1.0,
       vignette: 0.35,
       grain: 0.02,
       loop: NEURAL_LOOP,
     });
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(48, w / h, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(44, w / h, 0.1, 200);
 
     // background plane behind the network
     const bg = new THREE.Mesh(new THREE.PlaneGeometry(400, 200), bgMaterial(post.dof, version));
@@ -189,9 +191,9 @@ export const createNeural =
     // links
     const lb = new LineBuilder();
     const linkRgb = hexToRgb(version.link);
-    for (const c of NET.curves) lb.add(c.pts, linkRgb, 0.3, c.pulse);
+    for (const c of NET.curves) lb.add(c.pts, linkRgb, 0.42, c.pulse);
     const lineMat = makeLineMaterial(post.dof, post.view, {
-      width: 1.9,
+      width: 1.5,
       pulseColor: new THREE.Color(...hexToRgb(version.pulse)),
       loop: NEURAL_LOOP,
     });
@@ -215,12 +217,12 @@ export const createNeural =
       render(frame) {
         const th = (TAU * frame) / NEURAL_LOOP;
         // closed camera path, drifting along the layers
-        camera.position.set(-0.8 + 1.3 * Math.sin(th), 3.0 + 0.35 * Math.sin(2 * th), 7.2 + 0.6 * Math.cos(th));
-        target.set(7.4 + 0.9 * Math.sin(th + 0.6), 0.6 + 0.25 * Math.cos(2 * th), -1.0);
+        camera.position.set(1.2 + 1.2 * Math.sin(th), 3.9 + 0.3 * Math.sin(2 * th), 10.8 + 0.5 * Math.cos(th));
+        target.set(8.4 + 0.8 * Math.sin(th + 0.6), -2.4 + 0.2 * Math.cos(2 * th), -6.5);
         camera.lookAt(target);
         camera.updateMatrixWorld();
-        post.dof.uFocus.value = camera.position.distanceTo(new THREE.Vector3(3.0, 0, 0));
-        post.dof.uAperture.value = 30;
+        post.dof.uFocus.value = camera.position.distanceTo(new THREE.Vector3(7.0, 0, 0));
+        post.dof.uAperture.value = 28;
         lineMat.uniforms.uFrame.value = frame % NEURAL_LOOP;
 
         // node flashes: pure function of frame (time since last pulse arrival)

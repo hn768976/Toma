@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { ThreeLook, WorldFactory } from "../../lib/three/ThreeLook";
 import { DOF_GLSL, PostPipeline } from "../../lib/three/post";
 import { LineBuilder, bezier, makeLineMaterial, makeLineMesh } from "../../lib/three/lines";
+import { makeDots } from "../../lib/three/dots";
 import { hash01, mulberry32 } from "../../lib/random";
 import { hexToRgb } from "../../lib/color";
 import { useFontsReady } from "../../lib/fonts";
@@ -10,38 +11,41 @@ import { DataVersion } from "./versions";
 
 export const DATA_LOOP = 600;
 // The layout repeats every L along x; the camera tracks exactly one L per loop.
-const L = 18;
+const L = 15;
 const COPIES = [-2, -1, 0, 1, 2, 3];
 const CELL_W = 0.15; // world size of one digit cell
 const CELL_D = 0.16;
 
 type Panel = { x: number; z: number; w: number; d: number; seed: number };
 const PANELS: Panel[] = [
-  { x: 2.0, z: -1.2, w: 2.6, d: 4.4 },
-  { x: 2.5, z: -7.6, w: 3.0, d: 4.8 },
-  { x: 1.6, z: -14.0, w: 3.2, d: 4.6 },
-  { x: 8.0, z: -0.4, w: 3.4, d: 3.6 },
-  { x: 8.3, z: -5.4, w: 3.6, d: 4.2 },
-  { x: 7.7, z: -11.0, w: 3.4, d: 4.4 },
-  { x: 14.0, z: -2.2, w: 3.0, d: 5.0 },
-  { x: 14.4, z: -8.4, w: 3.4, d: 4.6 },
-  { x: 13.9, z: -14.6, w: 3.0, d: 4.4 },
+  // column A: tall main panels
+  { x: 2.0, z: -1.2, w: 3.0, d: 5.2 },
+  { x: 2.2, z: -6.2, w: 2.6, d: 4.2 },
+  { x: 1.8, z: -11.4, w: 2.6, d: 4.2 },
+  // column B: dense cluster
+  { x: 6.8, z: 0.4, w: 3.4, d: 2.4 },
+  { x: 6.9, z: -2.4, w: 3.4, d: 2.6 },
+  { x: 6.7, z: -5.4, w: 3.4, d: 2.6 },
+  { x: 6.9, z: -8.4, w: 3.4, d: 2.6 },
+  { x: 6.6, z: -11.4, w: 3.4, d: 2.6 },
+  // column C
+  { x: 10.7, z: -0.9, w: 3.4, d: 2.6 },
+  { x: 10.9, z: -3.9, w: 3.4, d: 2.6 },
+  { x: 10.6, z: -6.9, w: 3.4, d: 2.6 },
+  { x: 10.8, z: -9.9, w: 3.4, d: 2.6 },
 ].map((p, i) => ({ ...p, seed: 1000 + i * 77 }));
 
-// bundles: [from, to (index, +period offset), colour B?]
+// bundles: from -> to (dk = period offset of the target)
 const BUNDLES: { from: number; to: number; dk: number; red: boolean }[] = [
   { from: 0, to: 3, dk: 0, red: false },
   { from: 0, to: 4, dk: 0, red: true },
-  { from: 1, to: 4, dk: 0, red: false },
+  { from: 0, to: 5, dk: 0, red: false },
   { from: 1, to: 5, dk: 0, red: false },
-  { from: 2, to: 5, dk: 0, red: true },
-  { from: 3, to: 6, dk: 0, red: false },
-  { from: 4, to: 6, dk: 0, red: true },
-  { from: 4, to: 7, dk: 0, red: false },
-  { from: 5, to: 8, dk: 0, red: false },
-  { from: 6, to: 0, dk: 1, red: false },
-  { from: 7, to: 1, dk: 1, red: true },
-  { from: 8, to: 2, dk: 1, red: false },
+  { from: 1, to: 6, dk: 0, red: true },
+  { from: 2, to: 6, dk: 0, red: false },
+  { from: 2, to: 7, dk: 0, red: false },
+  { from: 4, to: 9, dk: 0, red: false },
+  { from: 6, to: 10, dk: 0, red: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -112,13 +116,19 @@ const drawPanel = (
   const W = ctx.canvas.width;
   const H = ctx.canvas.height;
   ctx.globalAlpha = 1;
-  ctx.fillStyle = "#06191C";
+  ctx.fillStyle = "#020A0B";
   ctx.fillRect(0, 0, W, H);
   // faint cell grid
   ctx.fillStyle = v.grid;
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) ctx.fillRect(c * cw + cw * 0.15, r * ch + ch * 0.15, cw * 0.7, ch * 0.7);
+  ctx.globalAlpha = 0.45;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) ctx.fillRect(c * cw + cw * 0.3, r * ch + ch * 0.3, cw * 0.4, ch * 0.4);
+  ctx.globalAlpha = 1;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
+      // glyphs grouped into short words with dark gaps, like rows of text
+      const wl = 3 + Math.floor(hash01(p.seed, r, 31) * 4);
+      const off = Math.floor(hash01(p.seed, r, 37) * 7);
+      if ((c + off) % (wl + 1) === wl || hash01(p.seed, r, 41) < 0.08) continue;
       const s = cellState(p.seed, r * cols + c, frame);
       if (s.empty) continue;
       ctx.drawImage(atlas.canvas, s.glyph * cw, s.color * ch, cw, ch, c * cw, r * ch, cw, ch);
@@ -126,7 +136,7 @@ const drawPanel = (
   }
   // thin bright border
   ctx.strokeStyle = v.teal;
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = 0.22;
   ctx.lineWidth = Math.max(1, cw * 0.08);
   ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, W - ctx.lineWidth, H - ctx.lineWidth);
   ctx.globalAlpha = 1;
@@ -206,7 +216,7 @@ export const createDataPanels =
       loop: DATA_LOOP,
     });
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 300);
+    const camera = new THREE.PerspectiveCamera(21, w / h, 0.1, 300);
 
     // texture resolution: as large as a cell appears on screen at this render size
     const cellPx = Math.max(14, Math.round(40 * post.pxScale));
@@ -243,6 +253,8 @@ export const createDataPanels =
     // fibre bundles + ground data lines
     const rnd = mulberry32(3968318407);
     const lbA = new LineBuilder();
+    const dotPos: number[] = [];
+    const dotCol: number[] = [];
     const colA = hexToRgb(v.fibreA);
     const colB = hexToRgb(v.fibreB);
     const colT = hexToRgb(v.teal);
@@ -251,26 +263,33 @@ export const createDataPanels =
       const Q = PANELS[b.to];
       const n = 20 + Math.floor(rnd() * 21);
       const zs = P.z + (rnd() - 0.5) * P.d * 0.5;
+      // bright node where the bundle leaves the panel
+      for (const k of COPIES) dotPos.push(P.x + P.w / 2 + k * L, 0.09, zs);
+      dotCol.push(...COPIES.flatMap(() => (b.red ? colB : colA)));
       const zMid = Q.z + (rnd() - 0.5) * Q.d * 0.3;
       for (let i = 0; i < n; i++) {
         const x0 = P.x + P.w / 2;
         const x3 = Q.x + b.dk * L - Q.w / 2;
         const dx = x3 - x0;
         const z0 = zs + (rnd() - 0.5) * 0.18;
-        const z3 = zMid + ((i / (n - 1)) - 0.5) * Q.d * 0.75 + (rnd() - 0.5) * 0.1;
+        const z3 = zMid + ((i / (n - 1)) - 0.5) * Q.d * 0.9 + (rnd() - 0.5) * 0.12;
         const arch = 0.15 + rnd() * 0.5;
         const pts = bezier([x0, 0.08, z0], [x0 + dx * 0.4, 0.08 + arch, z0], [x3 - dx * 0.45, 0.08 + arch * 0.4, z3], [x3, 0.08, z3], 26);
-        const red = b.red ? rnd() < 0.75 : rnd() < 0.08;
+        const red = b.red ? rnd() < 0.9 : rnd() < 0.06;
+        // and a small dot where each strand plugs into the target row
+        for (const k of COPIES) dotPos.push(x3 + k * L, 0.09, z3);
+        dotCol.push(...COPIES.flatMap(() => (red ? colB : colA).map((c) => c * 0.7)));
         const pulse: [number, number, number, number] = rnd() < 0.3 ? [rnd(), 1 + Math.floor(rnd() * 3), 1.6, 0.06] : [0, 0, 0, 1];
         for (const k of COPIES) {
           const sh = pts.map((val, j) => (j % 3 === 0 ? val + k * L : val));
-          lbA.add(sh, red ? colB : colA, 0.55 + rnd() * 0.3, pulse);
+          lbA.add(sh, red ? colB : colA, 0.5 + rnd() * 0.4, pulse);
         }
       }
     }
     // ground data lines leading into the first-column panels
     const strips: { x0: number; x1: number; z: number; seed: number }[] = [];
     for (const pi of [0, 1, 2]) {
+        // (strips sit in the gap left of column A)
       const P = PANELS[pi];
       for (let s = 0; s < 3; s++) {
         const z = P.z + (s - 1) * P.d * 0.28 + (rnd() - 0.5) * 0.3;
@@ -287,8 +306,9 @@ export const createDataPanels =
         }
       }
     }
-    const lineMat = makeLineMaterial(post.dof, post.view, { width: 2.0, pulseColor: new THREE.Color(...hexToRgb(v.white)), loop: DATA_LOOP });
+    const lineMat = makeLineMaterial(post.dof, post.view, { width: 1.4, pulseColor: new THREE.Color(...hexToRgb(v.white)), loop: DATA_LOOP });
     scene.add(makeLineMesh(lbA.build(), lineMat));
+    scene.add(makeDots(post.dof, post.view, dotPos, dotCol, 9));
 
     // strips: one shared texture holding every strip as a row
     const stripCols = 40;
@@ -338,14 +358,15 @@ export const createDataPanels =
         stripTex.needsUpdate = true;
 
         // camera: track sideways exactly one period L per loop
-        const cx = -1.0 + (L * f) / DATA_LOOP;
-        camera.position.set(cx, 4.6, 5.2);
-        target.set(cx + 5.2, 0, -4.2);
+        const cx = -0.4 + (L * f) / DATA_LOOP;
+        // long lens from high up, framed on the hero panel (fitted to the reference framing)
+        camera.position.set(cx - 1.42, 15.6, 8.15);
+        target.set(cx + 1.08, 0, -0.95);
         camera.lookAt(target);
         camera.updateMatrixWorld();
-        focusPt.set(cx + 4.6, 0, -3.0);
+        focusPt.set(cx + 2.4, 0, -1.2);
         post.dof.uFocus.value = camera.position.distanceTo(focusPt);
-        post.dof.uAperture.value = 34;
+        post.dof.uAperture.value = 70;
         lineMat.uniforms.uFrame.value = f;
         post.render(scene, camera, frame);
       },

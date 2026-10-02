@@ -18,8 +18,9 @@ const STARS: Star[] = (() => {
   const push = (x: number, y: number) => {
     const u = rnd();
     // mostly tiny, a few brighter
-    const r = 1.6 + Math.pow(u, 6) * 5.5 + rnd() * 1.0;
-    const a = 0.25 + Math.pow(rnd(), 2.2) * 0.75;
+    const r = 2.0 + Math.pow(u, 8) * 5.0 + rnd() * 1.4;
+    // most stars are barely there; roughly one in eight reads clearly
+    const a = 0.03 + Math.pow(rnd(), 6.0) * 0.95;
     const tw = rnd() < 0.18 ? 0.35 + rnd() * 0.5 : 0;
     out.push({ x, y, r, a, tw, n: 2 + Math.floor(rnd() * 10), ph: rnd() * TAU });
   };
@@ -36,9 +37,9 @@ const STARS: Star[] = (() => {
 type Meteor = { start: number; dur: number; x0: number; y0: number; x1: number; y1: number; len: number };
 // fixed times, none crossing the loop point (600)
 const METEORS: Meteor[] = [
-  { start: 40, dur: 30, x0: 0.04 * W, y0: 0.06 * H, x1: 0.42 * W, y1: 0.26 * H, len: 0.24 * W },
-  { start: 250, dur: 32, x0: 0.46 * W, y0: 0.1 * H, x1: 0.86 * W, y1: 0.42 * H, len: 0.22 * W },
-  { start: 470, dur: 28, x0: 0.14 * W, y0: 0.42 * H, x1: 0.5 * W, y1: 0.64 * H, len: 0.2 * W },
+  { start: 40, dur: 30, x0: -0.06 * W, y0: 0.1 * H, x1: 0.3 * W, y1: 0.24 * H, len: 0.15 * W },
+  { start: 250, dur: 32, x0: 0.46 * W, y0: 0.1 * H, x1: 0.86 * W, y1: 0.34 * H, len: 0.15 * W },
+  { start: 470, dur: 28, x0: 0.14 * W, y0: 0.42 * H, x1: 0.5 * W, y1: 0.58 * H, len: 0.14 * W },
 ];
 
 type Spark = { m: number; t0: number; s: number; vx: number; vy: number; life: number; r: number };
@@ -68,7 +69,7 @@ const skyGradient = (pw: number, ph: number, v: NightSkyVersion) => {
       const vv = y / ph;
       // light pool at upper-left, falling off to near-black at lower-right
       const d = Math.hypot(u * 1.0 + 0.02, (vv + 0.05) * 0.9);
-      let t = Math.min(1, Math.max(0, (d - 0.02) / 1.05));
+      let t = Math.min(1, Math.max(0, (d - 0.02) / 0.8));
       t = t * t * (3 - 2 * t);
       t = Math.pow(t, 0.8);
       const i = (y * pw + x) * 3;
@@ -165,10 +166,10 @@ export const NightSkyMeteor: React.FC<{ version: NightSkyVersion; durationOverri
           const ny = ux;
           // tail: tapering wedge, layered for a soft glow
           for (const [wdt, al] of [
-            [26, 0.07],
-            [12, 0.18],
-            [5, 0.55],
-            [2.2, 0.9],
+            [70, 0.05],
+            [32, 0.14],
+            [15, 0.45],
+            [7, 0.95],
           ] as const) {
             const gr = ctx.createLinearGradient(hx, hy, tx, ty);
             gr.addColorStop(0, `rgba(${head},${al * env})`);
@@ -185,6 +186,12 @@ export const NightSkyMeteor: React.FC<{ version: NightSkyVersion; durationOverri
             ctx.fill();
           }
           // head glow
+          // wide soft haze around the streak, then the head glow
+          const hz = ctx.createRadialGradient(hx - ux * len * 0.4, hy - uy * len * 0.4, 0, hx - ux * len * 0.4, hy - uy * len * 0.4, 560);
+          hz.addColorStop(0, `rgba(${tail},${0.12 * env})`);
+          hz.addColorStop(1, `rgba(${tail},0)`);
+          ctx.fillStyle = hz;
+          ctx.fillRect(hx - ux * len * 0.4 - 560, hy - uy * len * 0.4 - 560, 1120, 1120);
           const hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, 60);
           hg.addColorStop(0, `rgba(${head},${0.95 * env})`);
           hg.addColorStop(0.12, `rgba(${head},${0.5 * env})`);
