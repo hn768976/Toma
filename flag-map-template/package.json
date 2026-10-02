@@ -1,0 +1,39 @@
+{
+  "name": "flag-map-template",
+  "version": "1.0.0",
+  "description": "3D Flag Map template: 13 regions + 25 countries (Remotion + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc --noEmit",
+    "data": "node scripts/extract-ne.mjs",
+    "sheets": "node scripts/contact-sheets.mjs"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.8.1",
+    "@remotion/bundler": "4.0.515",
+    "@remotion/cli": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "d3-geo": "3.1.1",
+    "polylabel": "2.1.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0",
+    "topojson-client": "3.1.0",
+    "topojson-server": "3.0.1",
+    "topojson-simplify": "3.0.3"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.0",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "@types/topojson-client": "3.1.5",
+    "@types/topojson-server": "3.0.4",
+    "@types/topojson-simplify": "3.0.3",
+    "typescript": "5.9.3"
+  }
+}
