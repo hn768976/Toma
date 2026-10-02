@@ -16,12 +16,15 @@ export type LineData = {
   pulse: Float32Array; // phase, k (repeats per loop), amplitude, pulse length per segment
 };
 
-export const makeLineMaterial = (dof: DofUniforms, opts: { width: number; pulseColor: THREE.Color; loop: number }) =>
+export const makeLineMaterial = (
+  dof: DofUniforms,
+  view: { uRes: THREE.IUniform<THREE.Vector2>; uPxScale: THREE.IUniform<number> },
+  opts: { width: number; pulseColor: THREE.Color; loop: number },
+) =>
   new THREE.ShaderMaterial({
     uniforms: {
       ...dof,
-      uRes: { value: new THREE.Vector2(1280, 720) },
-      uPxScale: { value: 1 / 3 },
+      ...view,
       uWidth: { value: opts.width },
       uFrame: { value: 0 },
       uLoop: { value: opts.loop },
@@ -79,21 +82,48 @@ export const makeLineMaterial = (dof: DofUniforms, opts: { width: number; pulseC
     depthTest: true,
   });
 
+/**
+ * Plain (non-instanced) geometry: 4 vertices per segment, each carrying the
+ * segment's data. Software GL (SwiftShader) has a large per-instance cost, so
+ * this is several times faster than instancing for tens of thousands of segments.
+ */
 export const makeLineMesh = (data: LineData, material: THREE.ShaderMaterial) => {
   const n = data.a.length / 3;
-  const geo = new THREE.InstancedBufferGeometry();
-  // quad: x along 0..1, y side -1..1
-  geo.setAttribute(
-    "position",
-    new THREE.BufferAttribute(new Float32Array([0, -1, 0, 1, -1, 0, 1, 1, 0, 0, 1, 0]), 3),
-  );
-  geo.setIndex([0, 1, 2, 0, 2, 3]);
-  geo.setAttribute("iA", new THREE.InstancedBufferAttribute(data.a, 3));
-  geo.setAttribute("iB", new THREE.InstancedBufferAttribute(data.b, 3));
-  geo.setAttribute("iT", new THREE.InstancedBufferAttribute(data.t, 2));
-  geo.setAttribute("iC", new THREE.InstancedBufferAttribute(data.color, 4));
-  geo.setAttribute("iP", new THREE.InstancedBufferAttribute(data.pulse, 4));
-  geo.instanceCount = n;
+  const corner = new Float32Array(n * 4 * 3);
+  const A = new Float32Array(n * 4 * 3);
+  const B = new Float32Array(n * 4 * 3);
+  const T = new Float32Array(n * 4 * 2);
+  const Cc = new Float32Array(n * 4 * 4);
+  const P = new Float32Array(n * 4 * 4);
+  const idx = new Uint32Array(n * 6);
+  const cx = [0, 1, 1, 0];
+  const cy = [-1, -1, 1, 1];
+  for (let i = 0; i < n; i++) {
+    for (let k = 0; k < 4; k++) {
+      const v = i * 4 + k;
+      corner[v * 3] = cx[k];
+      corner[v * 3 + 1] = cy[k];
+      for (let j = 0; j < 3; j++) {
+        A[v * 3 + j] = data.a[i * 3 + j];
+        B[v * 3 + j] = data.b[i * 3 + j];
+      }
+      T[v * 2] = data.t[i * 2];
+      T[v * 2 + 1] = data.t[i * 2 + 1];
+      for (let j = 0; j < 4; j++) {
+        Cc[v * 4 + j] = data.color[i * 4 + j];
+        P[v * 4 + j] = data.pulse[i * 4 + j];
+      }
+    }
+    idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(corner, 3));
+  geo.setAttribute("iA", new THREE.BufferAttribute(A, 3));
+  geo.setAttribute("iB", new THREE.BufferAttribute(B, 3));
+  geo.setAttribute("iT", new THREE.BufferAttribute(T, 2));
+  geo.setAttribute("iC", new THREE.BufferAttribute(Cc, 4));
+  geo.setAttribute("iP", new THREE.BufferAttribute(P, 4));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
   const mesh = new THREE.Mesh(geo, material);
   mesh.frustumCulled = false;
   return mesh;

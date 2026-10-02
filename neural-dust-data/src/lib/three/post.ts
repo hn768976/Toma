@@ -203,6 +203,10 @@ export class PostPipeline {
   readonly pxScale: number;
   readonly dof = dofUniforms();
   private slice: THREE.WebGLRenderTarget;
+  /** reduced-size slice targets (with depth) for blurred slices */
+  private sliceLv: THREE.WebGLRenderTarget[] = [];
+  /** Shared by materials whose size is in pixels (lines, points): the current slice target. */
+  readonly view = { uRes: { value: new THREE.Vector2(1, 1) }, uPxScale: { value: 1 } };
   private accum: THREE.WebGLRenderTarget;
   private levels: Level[] = [];
   private bloomLevels: Level[] = [];
@@ -222,7 +226,7 @@ export class PostPipeline {
     this.w = w;
     this.h = h;
     this.pxScale = h / 2160;
-    this.slice = makeRT(w, h, 4, true);
+    this.slice = makeRT(w, h, 0, true);
     this.accum = makeRT(w, h);
     let lw = w;
     let lh = h;
@@ -230,6 +234,7 @@ export class PostPipeline {
       lw = Math.max(1, Math.ceil(lw / 2));
       lh = Math.max(1, Math.ceil(lh / 2));
       this.levels.push({ w: lw, h: lh, a: makeRT(lw, lh), b: makeRT(lw, lh) });
+      this.sliceLv.push(makeRT(lw, lh, 0, true));
       this.bloomLevels.push({ w: lw, h: lh, a: makeRT(lw, lh), b: makeRT(lw, lh) });
     }
     this.dof.uCocMax.value = settings.slices[settings.slices.length - 1];
@@ -258,33 +263,60 @@ export class PostPipeline {
     this.pass(this.mGauss, l.a);
   }
 
-  /** Blur this.slice by sigma (render px) and add it into accum. */
-  private blurAdd(sigma: number) {
-    if (sigma < 0.6) {
-      this.mAdd.uniforms.tSrc.value = this.slice.texture;
-      this.pass(this.mAdd, this.accum);
-      return;
-    }
-    // go down until the remaining sigma is in [1.5, 3)
+  /**
+   * Render one DOF slice and add it, blurred by sigma (render px), into accum.
+   * Blurred slices are rendered straight into a smaller target (1/2^n size)
+   * so that the remaining blur there is 1.5..3 px: much less fill, same look.
+   */
+  private renderSlice(scene: THREE.Scene, camera: THREE.Camera, sigma: number) {
+    const gl = this.gl;
     let n = 0;
-    while (n < this.levels.length - 1 && sigma / Math.pow(2, n + 1) >= 1.5) n++;
-    let src: THREE.Texture = this.slice.texture;
-    let sw = this.w;
-    let sh = this.h;
-    // each 2x tent downsample adds ~0.6 px blur at its own level; account roughly
-    for (let i = 0; i <= n; i++) {
-      const l = this.levels[i];
-      this.down(src, sw, sh, l.a);
-      src = l.a.texture;
-      sw = l.w;
-      sh = l.h;
+    while (n < this.levels.length && sigma / Math.pow(2, n + 1) >= 1.5) n++;
+    const target = n === 0 ? this.slice : this.sliceLv[n - 1];
+    const tw = n === 0 ? this.w : this.levels[n - 1].w;
+    const th = n === 0 ? this.h : this.levels[n - 1].h;
+    this.view.uRes.value.set(tw, th);
+    this.view.uPxScale.value = this.pxScale * (th / this.h);
+    gl.setRenderTarget(target);
+    gl.clear(true, true, true);
+    gl.render(scene, camera);
+    let src: THREE.Texture = target.texture;
+    if (sigma >= 0.6) {
+      const rem = sigma / Math.pow(2, n);
+      if (n === 0) {
+        // small blur at full res
+        this.gaussFull(rem);
+        src = this.fullTmpA.texture;
+      } else {
+        const l = this.levels[n - 1];
+        this.mGauss.uniforms.uSigma.value = rem;
+        this.mGauss.uniforms.tSrc.value = target.texture;
+        this.mGauss.uniforms.uDir.value.set(1 / l.w, 0);
+        this.pass(this.mGauss, l.b);
+        this.mGauss.uniforms.tSrc.value = l.b.texture;
+        this.mGauss.uniforms.uDir.value.set(0, 1 / l.h);
+        this.pass(this.mGauss, l.a);
+        src = l.a.texture;
+      }
     }
-    const l = this.levels[n];
-    const scale = Math.pow(2, n + 1);
-    const rem = Math.sqrt(Math.max(0.25, (sigma / scale) ** 2 - 0.6 ** 2));
-    this.gauss(l, rem);
-    this.mAdd.uniforms.tSrc.value = l.a.texture;
+    this.mAdd.uniforms.tSrc.value = src;
     this.pass(this.mAdd, this.accum);
+  }
+
+  private fullTmpA!: THREE.WebGLRenderTarget;
+  private fullTmpB!: THREE.WebGLRenderTarget;
+  private gaussFull(sigma: number) {
+    if (!this.fullTmpA) {
+      this.fullTmpA = makeRT(this.w, this.h);
+      this.fullTmpB = makeRT(this.w, this.h);
+    }
+    this.mGauss.uniforms.uSigma.value = sigma;
+    this.mGauss.uniforms.tSrc.value = this.slice.texture;
+    this.mGauss.uniforms.uDir.value.set(1 / this.w, 0);
+    this.pass(this.mGauss, this.fullTmpB);
+    this.mGauss.uniforms.tSrc.value = this.fullTmpB.texture;
+    this.mGauss.uniforms.uDir.value.set(0, 1 / this.h);
+    this.pass(this.mGauss, this.fullTmpA);
   }
 
   render(scene: THREE.Scene, camera: THREE.Camera, frame: number) {
@@ -299,10 +331,7 @@ export class PostPipeline {
       this.dof.uSliceLo.value = k === 0 ? -1 : L[k - 1];
       this.dof.uSliceMid.value = L[k];
       this.dof.uSliceHi.value = k === L.length - 1 ? L[k] + 1 : L[k + 1];
-      gl.setRenderTarget(this.slice);
-      gl.clear(true, true, true);
-      gl.render(scene, camera);
-      this.blurAdd(L[k] * this.pxScale);
+      this.renderSlice(scene, camera, L[k] * this.pxScale);
     }
     // bloom mip chain
     let src: THREE.Texture = this.accum.texture;
@@ -337,6 +366,9 @@ export class PostPipeline {
   dispose() {
     this.slice.dispose();
     this.accum.dispose();
+    for (const t of this.sliceLv) t.dispose();
+    this.fullTmpA?.dispose();
+    this.fullTmpB?.dispose();
     for (const l of [...this.levels, ...this.bloomLevels]) {
       l.a.dispose();
       l.b.dispose();

@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useMemo } from "react";
 import * as THREE from "three";
 import { ThreeLook, WorldFactory } from "../../lib/three/ThreeLook";
 import { DOF_GLSL, PostPipeline } from "../../lib/three/post";
@@ -192,172 +192,171 @@ const groundMaterial = (dof: PostPipeline["dof"], v: DataVersion) =>
     depthWrite: true,
   });
 
+export const createDataPanels =
+  (version: DataVersion): WorldFactory =>
+  (gl, w, h) => {
+    const v = version;
+    const post = new PostPipeline(gl, w, h, {
+      slices: [0, 5, 12, 24, 42, 66],
+      bloomWeights: [0.3, 0.3, 0.22, 0.14, 0.08, 0.04],
+      bloomThreshold: 0.12,
+      exposure: 1.0,
+      vignette: 0.45,
+      grain: 0.02,
+      loop: DATA_LOOP,
+    });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 300);
+
+    // texture resolution: as large as a cell appears on screen at this render size
+    const cellPx = Math.max(14, Math.round(40 * post.pxScale));
+    const atlas = makeGlyphAtlas(cellPx, Math.round(cellPx * (CELL_D / CELL_W) * 0.92), v);
+
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 200), groundMaterial(post.dof, v));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(L * 0.5, 0, -60);
+    scene.add(ground);
+
+    const faces = PANELS.map((p) => {
+      const cols = Math.round(p.w / CELL_W);
+      const rows = Math.round(p.d / CELL_D);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.min(2048, cols * atlas.cw);
+      canvas.height = Math.min(2048, rows * atlas.ch);
+      const ctx = canvas.getContext("2d")!;
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.NoColorSpace;
+      tex.anisotropy = 4;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.generateMipmaps = true;
+      const mat = panelMaterial(post.dof, tex);
+      const geo = new THREE.PlaneGeometry(p.w, p.d);
+      for (const k of COPIES) {
+        const m = new THREE.Mesh(geo, mat);
+        m.rotation.x = -Math.PI / 2;
+        m.position.set(p.x + k * L, 0.06, p.z);
+        scene.add(m);
+      }
+      return { p, cols, rows, ctx, tex };
+    });
+
+    // fibre bundles + ground data lines
+    const rnd = mulberry32(3968318407);
+    const lbA = new LineBuilder();
+    const colA = hexToRgb(v.fibreA);
+    const colB = hexToRgb(v.fibreB);
+    const colT = hexToRgb(v.teal);
+    for (const b of BUNDLES) {
+      const P = PANELS[b.from];
+      const Q = PANELS[b.to];
+      const n = 20 + Math.floor(rnd() * 21);
+      const zs = P.z + (rnd() - 0.5) * P.d * 0.5;
+      const zMid = Q.z + (rnd() - 0.5) * Q.d * 0.3;
+      for (let i = 0; i < n; i++) {
+        const x0 = P.x + P.w / 2;
+        const x3 = Q.x + b.dk * L - Q.w / 2;
+        const dx = x3 - x0;
+        const z0 = zs + (rnd() - 0.5) * 0.18;
+        const z3 = zMid + ((i / (n - 1)) - 0.5) * Q.d * 0.75 + (rnd() - 0.5) * 0.1;
+        const arch = 0.15 + rnd() * 0.5;
+        const pts = bezier([x0, 0.08, z0], [x0 + dx * 0.4, 0.08 + arch, z0], [x3 - dx * 0.45, 0.08 + arch * 0.4, z3], [x3, 0.08, z3], 26);
+        const red = b.red ? rnd() < 0.75 : rnd() < 0.08;
+        const pulse: [number, number, number, number] = rnd() < 0.3 ? [rnd(), 1 + Math.floor(rnd() * 3), 1.6, 0.06] : [0, 0, 0, 1];
+        for (const k of COPIES) {
+          const sh = pts.map((val, j) => (j % 3 === 0 ? val + k * L : val));
+          lbA.add(sh, red ? colB : colA, 0.55 + rnd() * 0.3, pulse);
+        }
+      }
+    }
+    // ground data lines leading into the first-column panels
+    const strips: { x0: number; x1: number; z: number; seed: number }[] = [];
+    for (const pi of [0, 1, 2]) {
+      const P = PANELS[pi];
+      for (let s = 0; s < 3; s++) {
+        const z = P.z + (s - 1) * P.d * 0.28 + (rnd() - 0.5) * 0.3;
+        const x1 = P.x - P.w / 2 - 0.9 - rnd() * 0.8;
+        const x0 = x1 - 1.5 - rnd() * 2.5;
+        strips.push({ x0, x1, z, seed: 5000 + pi * 10 + s });
+        // short fibre from the strip end into the panel edge
+        const zEnd = P.z + (s - 1) * P.d * 0.22;
+        const pts = bezier([x1, 0.04, z], [x1 + 0.5, 0.04, z], [P.x - P.w / 2 - 0.4, 0.06, zEnd], [P.x - P.w / 2, 0.06, zEnd], 16);
+        const red = rnd() < 0.3;
+        for (const k of COPIES) {
+          const sh = pts.map((val, j) => (j % 3 === 0 ? val + k * L : val));
+          lbA.add(sh, red ? colB : colT, 0.9, [rnd(), 2, 1.2, 0.08]);
+        }
+      }
+    }
+    const lineMat = makeLineMaterial(post.dof, post.view, { width: 2.0, pulseColor: new THREE.Color(...hexToRgb(v.white)), loop: DATA_LOOP });
+    scene.add(makeLineMesh(lbA.build(), lineMat));
+
+    // strips: one shared texture holding every strip as a row
+    const stripCols = 40;
+    const stripCanvas = document.createElement("canvas");
+    stripCanvas.width = stripCols * atlas.cw;
+    stripCanvas.height = strips.length * atlas.ch;
+    const sctx = stripCanvas.getContext("2d")!;
+    const stripTex = new THREE.CanvasTexture(stripCanvas);
+    stripTex.colorSpace = THREE.NoColorSpace;
+    stripTex.anisotropy = 4;
+    const stripMat = panelMaterial(post.dof, stripTex);
+    strips.forEach((s, i) => {
+      const len = s.x1 - s.x0;
+      const n = Math.max(4, Math.round(len / CELL_W));
+      const geo = new THREE.PlaneGeometry(len, CELL_D);
+      const uv = geo.attributes.uv as THREE.BufferAttribute;
+      for (let j = 0; j < uv.count; j++) {
+        uv.setXY(j, uv.getX(j) * (n / stripCols), (strips.length - 1 - i + uv.getY(j)) / strips.length);
+      }
+      for (const k of COPIES) {
+        const m = new THREE.Mesh(geo, stripMat);
+        m.rotation.x = -Math.PI / 2;
+        m.position.set((s.x0 + s.x1) / 2 + k * L, 0.03, s.z);
+        scene.add(m);
+      }
+    });
+
+    const target = new THREE.Vector3();
+    const focusPt = new THREE.Vector3();
+    return {
+      render(frame) {
+        const f = ((frame % DATA_LOOP) + DATA_LOOP) % DATA_LOOP;
+        // digits: every panel texture redrawn from the frame
+        for (const fc of faces) {
+          drawPanel(fc.ctx, fc.p, fc.cols, fc.rows, atlas, f, v);
+          fc.tex.needsUpdate = true;
+        }
+        sctx.fillStyle = "#000";
+        sctx.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
+        strips.forEach((s, i) => {
+          for (let c = 0; c < stripCols; c++) {
+            const st = cellState(s.seed, c, f);
+            if (st.empty) continue;
+            sctx.drawImage(atlas.canvas, st.glyph * atlas.cw, st.color * atlas.ch, atlas.cw, atlas.ch, c * atlas.cw, i * atlas.ch, atlas.cw, atlas.ch);
+          }
+        });
+        stripTex.needsUpdate = true;
+
+        // camera: track sideways exactly one period L per loop
+        const cx = -1.0 + (L * f) / DATA_LOOP;
+        camera.position.set(cx, 4.6, 5.2);
+        target.set(cx + 5.2, 0, -4.2);
+        camera.lookAt(target);
+        camera.updateMatrixWorld();
+        focusPt.set(cx + 4.6, 0, -3.0);
+        post.dof.uFocus.value = camera.position.distanceTo(focusPt);
+        post.dof.uAperture.value = 34;
+        lineMat.uniforms.uFrame.value = f;
+        post.render(scene, camera, frame);
+      },
+      dispose() {
+        post.dispose();
+      },
+    };
+  };
+
 export const DataPanels: React.FC<{ version: DataVersion; durationOverride?: number }> = ({ version }) => {
   const fontsReady = useFontsReady();
-  const create = useCallback<WorldFactory>(
-    (gl, w, h) => {
-      const v = version;
-      const post = new PostPipeline(gl, w, h, {
-        slices: [0, 5, 12, 24, 42, 66],
-        bloomWeights: [0.3, 0.3, 0.22, 0.14, 0.08, 0.04],
-        bloomThreshold: 0.12,
-        exposure: 1.0,
-        vignette: 0.45,
-        grain: 0.02,
-        loop: DATA_LOOP,
-      });
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 300);
-
-      // texture resolution: as large as a cell appears on screen at this render size
-      const cellPx = Math.max(14, Math.round(40 * post.pxScale));
-      const atlas = makeGlyphAtlas(cellPx, Math.round(cellPx * (CELL_D / CELL_W) * 0.92), v);
-
-      const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 200), groundMaterial(post.dof, v));
-      ground.rotation.x = -Math.PI / 2;
-      ground.position.set(L * 0.5, 0, -60);
-      scene.add(ground);
-
-      const faces = PANELS.map((p) => {
-        const cols = Math.round(p.w / CELL_W);
-        const rows = Math.round(p.d / CELL_D);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.min(2048, cols * atlas.cw);
-        canvas.height = Math.min(2048, rows * atlas.ch);
-        const ctx = canvas.getContext("2d")!;
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.colorSpace = THREE.NoColorSpace;
-        tex.anisotropy = 4;
-        tex.minFilter = THREE.LinearMipmapLinearFilter;
-        tex.generateMipmaps = true;
-        const mat = panelMaterial(post.dof, tex);
-        const geo = new THREE.PlaneGeometry(p.w, p.d);
-        for (const k of COPIES) {
-          const m = new THREE.Mesh(geo, mat);
-          m.rotation.x = -Math.PI / 2;
-          m.position.set(p.x + k * L, 0.06, p.z);
-          scene.add(m);
-        }
-        return { p, cols, rows, ctx, tex };
-      });
-
-      // fibre bundles + ground data lines
-      const rnd = mulberry32(3968318407);
-      const lbA = new LineBuilder();
-      const colA = hexToRgb(v.fibreA);
-      const colB = hexToRgb(v.fibreB);
-      const colT = hexToRgb(v.teal);
-      for (const b of BUNDLES) {
-        const P = PANELS[b.from];
-        const Q = PANELS[b.to];
-        const n = 20 + Math.floor(rnd() * 21);
-        const zs = P.z + (rnd() - 0.5) * P.d * 0.5;
-        const zMid = Q.z + (rnd() - 0.5) * Q.d * 0.3;
-        for (let i = 0; i < n; i++) {
-          const x0 = P.x + P.w / 2;
-          const x3 = Q.x + b.dk * L - Q.w / 2;
-          const dx = x3 - x0;
-          const z0 = zs + (rnd() - 0.5) * 0.18;
-          const z3 = zMid + ((i / (n - 1)) - 0.5) * Q.d * 0.75 + (rnd() - 0.5) * 0.1;
-          const arch = 0.15 + rnd() * 0.5;
-          const pts = bezier([x0, 0.08, z0], [x0 + dx * 0.4, 0.08 + arch, z0], [x3 - dx * 0.45, 0.08 + arch * 0.4, z3], [x3, 0.08, z3], 26);
-          const red = b.red ? rnd() < 0.75 : rnd() < 0.08;
-          const pulse: [number, number, number, number] = rnd() < 0.3 ? [rnd(), 1 + Math.floor(rnd() * 3), 1.6, 0.06] : [0, 0, 0, 1];
-          for (const k of COPIES) {
-            const sh = pts.map((val, j) => (j % 3 === 0 ? val + k * L : val));
-            lbA.add(sh, red ? colB : colA, 0.55 + rnd() * 0.3, pulse);
-          }
-        }
-      }
-      // ground data lines leading into the first-column panels
-      const strips: { x0: number; x1: number; z: number; seed: number }[] = [];
-      for (const pi of [0, 1, 2]) {
-        const P = PANELS[pi];
-        for (let s = 0; s < 3; s++) {
-          const z = P.z + (s - 1) * P.d * 0.28 + (rnd() - 0.5) * 0.3;
-          const x1 = P.x - P.w / 2 - 0.9 - rnd() * 0.8;
-          const x0 = x1 - 1.5 - rnd() * 2.5;
-          strips.push({ x0, x1, z, seed: 5000 + pi * 10 + s });
-          // short fibre from the strip end into the panel edge
-          const zEnd = P.z + (s - 1) * P.d * 0.22;
-          const pts = bezier([x1, 0.04, z], [x1 + 0.5, 0.04, z], [P.x - P.w / 2 - 0.4, 0.06, zEnd], [P.x - P.w / 2, 0.06, zEnd], 16);
-          const red = rnd() < 0.3;
-          for (const k of COPIES) {
-            const sh = pts.map((val, j) => (j % 3 === 0 ? val + k * L : val));
-            lbA.add(sh, red ? colB : colT, 0.9, [rnd(), 2, 1.2, 0.08]);
-          }
-        }
-      }
-      const lineMat = makeLineMaterial(post.dof, { width: 2.0, pulseColor: new THREE.Color(...hexToRgb(v.white)), loop: DATA_LOOP });
-      lineMat.uniforms.uRes.value.set(w, h);
-      lineMat.uniforms.uPxScale.value = post.pxScale;
-      scene.add(makeLineMesh(lbA.build(), lineMat));
-
-      // strips: one shared texture holding every strip as a row
-      const stripCols = 40;
-      const stripCanvas = document.createElement("canvas");
-      stripCanvas.width = stripCols * atlas.cw;
-      stripCanvas.height = strips.length * atlas.ch;
-      const sctx = stripCanvas.getContext("2d")!;
-      const stripTex = new THREE.CanvasTexture(stripCanvas);
-      stripTex.colorSpace = THREE.NoColorSpace;
-      stripTex.anisotropy = 4;
-      const stripMat = panelMaterial(post.dof, stripTex);
-      strips.forEach((s, i) => {
-        const len = s.x1 - s.x0;
-        const n = Math.max(4, Math.round(len / CELL_W));
-        const geo = new THREE.PlaneGeometry(len, CELL_D);
-        const uv = geo.attributes.uv as THREE.BufferAttribute;
-        for (let j = 0; j < uv.count; j++) {
-          uv.setXY(j, uv.getX(j) * (n / stripCols), (strips.length - 1 - i + uv.getY(j)) / strips.length);
-        }
-        for (const k of COPIES) {
-          const m = new THREE.Mesh(geo, stripMat);
-          m.rotation.x = -Math.PI / 2;
-          m.position.set((s.x0 + s.x1) / 2 + k * L, 0.03, s.z);
-          scene.add(m);
-        }
-      });
-
-      const target = new THREE.Vector3();
-      const focusPt = new THREE.Vector3();
-      return {
-        render(frame) {
-          const f = ((frame % DATA_LOOP) + DATA_LOOP) % DATA_LOOP;
-          // digits: every panel texture redrawn from the frame
-          for (const fc of faces) {
-            drawPanel(fc.ctx, fc.p, fc.cols, fc.rows, atlas, f, v);
-            fc.tex.needsUpdate = true;
-          }
-          sctx.fillStyle = "#000";
-          sctx.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
-          strips.forEach((s, i) => {
-            for (let c = 0; c < stripCols; c++) {
-              const st = cellState(s.seed, c, f);
-              if (st.empty) continue;
-              sctx.drawImage(atlas.canvas, st.glyph * atlas.cw, st.color * atlas.ch, atlas.cw, atlas.ch, c * atlas.cw, i * atlas.ch, atlas.cw, atlas.ch);
-            }
-          });
-          stripTex.needsUpdate = true;
-
-          // camera: track sideways exactly one period L per loop
-          const cx = -1.0 + (L * f) / DATA_LOOP;
-          camera.position.set(cx, 4.6, 5.2);
-          target.set(cx + 5.2, 0, -4.2);
-          camera.lookAt(target);
-          camera.updateMatrixWorld();
-          focusPt.set(cx + 4.6, 0, -3.0);
-          post.dof.uFocus.value = camera.position.distanceTo(focusPt);
-          post.dof.uAperture.value = 34;
-          lineMat.uniforms.uFrame.value = f;
-          post.render(scene, camera, frame);
-        },
-        dispose() {
-          post.dispose();
-        },
-      };
-    },
-    [version],
-  );
+  const create = useMemo(() => createDataPanels(version), [version]);
   return fontsReady ? <ThreeLook create={create} /> : null;
 };

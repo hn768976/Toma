@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useMemo } from "react";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { ThreeLook, WorldFactory } from "../../lib/three/ThreeLook";
@@ -164,88 +164,87 @@ const bgMaterial = (dof: PostPipeline["dof"], v: NeuralVersion) =>
     depthWrite: true,
   });
 
+export const createNeural =
+  (version: NeuralVersion): WorldFactory =>
+  (gl, w, h) => {
+    const post = new PostPipeline(gl, w, h, {
+      slices: [0, 4, 10, 20, 36],
+      bloomWeights: [0.25, 0.22, 0.18, 0.14, 0.1, 0.06],
+      bloomThreshold: 0.2,
+      exposure: 1.0,
+      vignette: 0.35,
+      grain: 0.02,
+      loop: NEURAL_LOOP,
+    });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(48, w / h, 0.1, 200);
+
+    // background plane behind the network
+    const bg = new THREE.Mesh(new THREE.PlaneGeometry(400, 200), bgMaterial(post.dof, version));
+    bg.position.set(14, 0, -9);
+    bg.lookAt(-1.6, 3.4, 9.0);
+    bg.renderOrder = -1;
+    scene.add(bg);
+
+    // links
+    const lb = new LineBuilder();
+    const linkRgb = hexToRgb(version.link);
+    for (const c of NET.curves) lb.add(c.pts, linkRgb, 0.3, c.pulse);
+    const lineMat = makeLineMaterial(post.dof, post.view, {
+      width: 1.9,
+      pulseColor: new THREE.Color(...hexToRgb(version.pulse)),
+      loop: NEURAL_LOOP,
+    });
+    scene.add(makeLineMesh(lb.build(), lineMat));
+
+    // nodes
+    const geo = new RoundedBoxGeometry(NODE, NODE, 0.14, 2, 0.03);
+    const flash = new Float32Array(NET.nodes.length);
+    const flashAttr = new THREE.InstancedBufferAttribute(flash, 1);
+    geo.setAttribute("iFlash", flashAttr);
+    const nodes = new THREE.InstancedMesh(geo, nodeMaterial(post.dof, version), NET.nodes.length);
+    const m = new THREE.Matrix4();
+    NET.nodes.forEach((n, i) => nodes.setMatrixAt(i, m.makeTranslation(n.x, n.y, n.z)));
+    nodes.frustumCulled = false;
+    scene.add(nodes);
+
+    const pulsed = NET.curves.filter((c) => c.pulse[2] > 0);
+    const target = new THREE.Vector3();
+
+    return {
+      render(frame) {
+        const th = (TAU * frame) / NEURAL_LOOP;
+        // closed camera path, drifting along the layers
+        camera.position.set(-0.8 + 1.3 * Math.sin(th), 3.0 + 0.35 * Math.sin(2 * th), 7.2 + 0.6 * Math.cos(th));
+        target.set(7.4 + 0.9 * Math.sin(th + 0.6), 0.6 + 0.25 * Math.cos(2 * th), -1.0);
+        camera.lookAt(target);
+        camera.updateMatrixWorld();
+        post.dof.uFocus.value = camera.position.distanceTo(new THREE.Vector3(3.0, 0, 0));
+        post.dof.uAperture.value = 30;
+        lineMat.uniforms.uFrame.value = frame % NEURAL_LOOP;
+
+        // node flashes: pure function of frame (time since last pulse arrival)
+        flash.fill(0);
+        for (const c of pulsed) {
+          const k = c.pulse[1];
+          const s = (((c.pulse[0] + (k * frame) / NEURAL_LOOP) % 1) + 1) % 1;
+          const since = (s * NEURAL_LOOP) / k; // frames since the head wrapped (arrived)
+          const f = Math.exp(-since / 7);
+          if (f > flash[c.to]) flash[c.to] = f;
+          const pre = Math.exp(-((1 - s) * NEURAL_LOOP) / k / 3); // light up just before arrival
+          if (pre * 0.6 > flash[c.to]) flash[c.to] = pre * 0.6;
+        }
+        flashAttr.needsUpdate = true;
+        post.render(scene, camera, frame);
+      },
+      dispose() {
+        post.dispose();
+        geo.dispose();
+      },
+    };
+  };
+
 export const NeuralLayers: React.FC<{ version: NeuralVersion; durationOverride?: number }> = ({ version }) => {
-  const create = useCallback<WorldFactory>(
-    (gl, w, h) => {
-      const post = new PostPipeline(gl, w, h, {
-        slices: [0, 4, 10, 20, 36],
-        bloomWeights: [0.25, 0.22, 0.18, 0.14, 0.1, 0.06],
-        bloomThreshold: 0.2,
-        exposure: 1.0,
-        vignette: 0.35,
-        grain: 0.02,
-        loop: NEURAL_LOOP,
-      });
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(48, w / h, 0.1, 200);
-
-      // background plane behind the network
-      const bg = new THREE.Mesh(new THREE.PlaneGeometry(400, 200), bgMaterial(post.dof, version));
-      bg.position.set(14, 0, -9);
-      bg.lookAt(-1.6, 3.4, 9.0);
-      bg.renderOrder = -1;
-      scene.add(bg);
-
-      // links
-      const lb = new LineBuilder();
-      const linkRgb = hexToRgb(version.link);
-      for (const c of NET.curves) lb.add(c.pts, linkRgb, 0.3, c.pulse);
-      const lineMat = makeLineMaterial(post.dof, {
-        width: 1.9,
-        pulseColor: new THREE.Color(...hexToRgb(version.pulse)),
-        loop: NEURAL_LOOP,
-      });
-      lineMat.uniforms.uRes.value.set(w, h);
-      lineMat.uniforms.uPxScale.value = post.pxScale;
-      scene.add(makeLineMesh(lb.build(), lineMat));
-
-      // nodes
-      const geo = new RoundedBoxGeometry(NODE, NODE, 0.14, 2, 0.03);
-      const flash = new Float32Array(NET.nodes.length);
-      const flashAttr = new THREE.InstancedBufferAttribute(flash, 1);
-      geo.setAttribute("iFlash", flashAttr);
-      const nodes = new THREE.InstancedMesh(geo, nodeMaterial(post.dof, version), NET.nodes.length);
-      const m = new THREE.Matrix4();
-      NET.nodes.forEach((n, i) => nodes.setMatrixAt(i, m.makeTranslation(n.x, n.y, n.z)));
-      nodes.frustumCulled = false;
-      scene.add(nodes);
-
-      const pulsed = NET.curves.filter((c) => c.pulse[2] > 0);
-      const target = new THREE.Vector3();
-
-      return {
-        render(frame) {
-          const th = (TAU * frame) / NEURAL_LOOP;
-          // closed camera path, drifting along the layers
-          camera.position.set(-0.8 + 1.3 * Math.sin(th), 3.0 + 0.35 * Math.sin(2 * th), 7.2 + 0.6 * Math.cos(th));
-          target.set(7.4 + 0.9 * Math.sin(th + 0.6), 0.6 + 0.25 * Math.cos(2 * th), -1.0);
-          camera.lookAt(target);
-          camera.updateMatrixWorld();
-          post.dof.uFocus.value = camera.position.distanceTo(new THREE.Vector3(3.0, 0, 0));
-          post.dof.uAperture.value = 30;
-          lineMat.uniforms.uFrame.value = frame % NEURAL_LOOP;
-
-          // node flashes: pure function of frame (time since last pulse arrival)
-          flash.fill(0);
-          for (const c of pulsed) {
-            const k = c.pulse[1];
-            const s = (((c.pulse[0] + (k * frame) / NEURAL_LOOP) % 1) + 1) % 1;
-            const since = (s * NEURAL_LOOP) / k; // frames since the head wrapped (arrived)
-            const f = Math.exp(-since / 7);
-            if (f > flash[c.to]) flash[c.to] = f;
-            const pre = Math.exp(-((1 - s) * NEURAL_LOOP) / k / 3); // light up just before arrival
-            if (pre * 0.6 > flash[c.to]) flash[c.to] = pre * 0.6;
-          }
-          flashAttr.needsUpdate = true;
-          post.render(scene, camera, frame);
-        },
-        dispose() {
-          post.dispose();
-          geo.dispose();
-        },
-      };
-    },
-    [version],
-  );
+  const create = useMemo(() => createNeural(version), [version]);
   return <ThreeLook create={create} />;
 };
