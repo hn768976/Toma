@@ -13,6 +13,8 @@ import { AbsoluteFill, continueRender, delayRender, getRemotionEnvironment, useC
 export type PixiScene = {
   world: Container;
   update: (frame: number, info: { width: number; height: number; px: number }) => void;
+  // optional per-frame bloom strengths [tight, wide], overriding post.bloomA/B
+  bloomAt?: (frame: number) => [number, number];
 };
 
 export type PixiPost = {
@@ -181,6 +183,9 @@ export const PixiStage: React.FC<{ build: () => PixiScene; post: PixiPost }> = (
           fb.blur(rd, rtB, tmpB, 2.0);
           const gp = post.grainPeriod;
           composite.resources.u.uniforms.uFrame = ((f % gp) + gp) % gp;
+          const bl = scene.bloomAt ? scene.bloomAt(f) : [post.bloomA, post.bloomB];
+          composite.resources.u.uniforms.uBloomAk = bl[0];
+          composite.resources.u.uniforms.uBloomBk = bl[1];
           app.render();
         };
         setReady(() => draw);

@@ -70,8 +70,9 @@ const TopRings: React.FC<Ctx & { x: number; y: number }> = ({ x, y, t, P }) => (
       const pct = 0.3 + 0.6 * osc(t, 1 + i, phases[i]);
       return (
         <g key={i}>
-          <Ring cx={cx} cy={y + 30} r={20} w={4} pct={pct} col={[P[0], P[6], P[0]][i]} />
-          <circle cx={cx} cy={y + 30} r={11} fill="none" stroke={[P[6], P[7], P[7]][i]} strokeWidth={2} />
+          <Ring cx={cx} cy={y + 30} r={20} w={2} pct={pct} col={[P[0], P[5], P[0]][i]} track="#0d1830" />
+          <circle cx={cx} cy={y + 30} r={13} fill="none" stroke={[P[5], P[7], P[4]][i]} strokeWidth={1.5} />
+          <text x={cx + 26} y={y + 22} fontSize={7} fill="#8a8f99" fontFamily={MONO}>{pad(tableNums[i + 55], 3)}</text>
           <rect x={cx - 26} y={y + 64} width={52} height={20} fill={[P[0], P[3], P[4]][i]} rx={2} />
           <Icon name={["lock", "shield", "globe"][i]} x={cx} y={y + 74} s={14} c="#fff" />
         </g>
@@ -81,26 +82,36 @@ const TopRings: React.FC<Ctx & { x: number; y: number }> = ({ x, y, t, P }) => (
 );
 
 const MeshBlob: React.FC<Ctx & { cx: number; cy: number; r: number }> = ({ cx, cy, r, t }) => {
-  const dots: React.ReactNode[] = [];
-  const rings = 16;
+  const paths: React.ReactNode[] = [];
+  const rings = 14;
+  const N = 64;
   for (let k = 1; k <= rings; k++) {
     const kr = k / rings;
-    const n = 14 + k * 5;
     const ph = phases[300 + k] * TAU;
-    for (let j = 0; j < n; j++) {
-      const a = (j / n) * TAU + TAU * t * (k % 2 ? 1 : -1) * 0.5;
-      const wob = 1 + 0.13 * Math.sin(5 * a + ph + TAU * t * 2) + 0.06 * Math.sin(9 * a - ph);
+    let d = "";
+    for (let j = 0; j <= N; j++) {
+      const a = (j / N) * TAU;
+      const wob = 1 + 0.07 * Math.sin(5 * a + ph + TAU * t * 2) + 0.04 * Math.sin(9 * a - ph - TAU * t);
       const rr = r * kr * wob;
-      const x = cx + Math.cos(a) * rr;
-      const y = cy + Math.sin(a) * rr * 0.92;
-      const lum = 0.35 + 0.65 * (1 - kr) + 0.2 * Math.sin(a * 3 + ph);
-      dots.push(<circle key={`${k}_${j}`} cx={x} cy={y} r={0.9} fill="#d8d8d8" opacity={Math.max(0.15, Math.min(1, lum))} />);
+      d += `${j ? "L" : "M"}${(cx + Math.cos(a) * rr).toFixed(1)},${(cy + Math.sin(a) * rr * 0.95).toFixed(1)}`;
     }
+    paths.push(<path key={`r${k}`} d={d} fill="none" stroke="#cfcfcf" strokeWidth={0.6} strokeOpacity={0.35 + 0.5 * (1 - kr)} />);
+  }
+  for (let j = 0; j < 24; j++) {
+    const a = (j / 24) * TAU + TAU * t * 0.5;
+    let d = "";
+    for (let k = 0; k <= rings; k++) {
+      const kr = k / rings;
+      const wob = 1 + 0.07 * Math.sin(5 * a + phases[300 + Math.max(1, k)] * TAU + TAU * t * 2);
+      const aa = a + 0.35 * Math.sin(kr * 3 + TAU * t);
+      d += `${k ? "L" : "M"}${(cx + Math.cos(aa) * r * kr * wob).toFixed(1)},${(cy + Math.sin(aa) * r * kr * wob * 0.95).toFixed(1)}`;
+    }
+    paths.push(<path key={`m${j}`} d={d} fill="none" stroke="#cfcfcf" strokeWidth={0.5} strokeOpacity={0.4} />);
   }
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r * 0.22} fill="#ffffff" opacity={0.18} />
-      {dots}
+      <circle cx={cx} cy={cy} r={r * 0.25} fill="#ffffff" opacity={0.12} />
+      {paths}
     </g>
   );
 };
@@ -142,7 +153,7 @@ const NumTable: React.FC<Ctx & { x: number; y: number; rows: number; cols: numbe
     <g>
       {Array.from({ length: rows }, (_, r) =>
         Array.from({ length: cols }, (_, c) => (
-          <T key={`${r}_${c}`} x={x + c * 52} y={y + r * 15} s={9} c={r === 0 ? "#fff" : dim} mono>
+          <T key={`${r}_${c}`} x={x + c * 52} y={y + r * 15} s={8.5} c={r === 0 ? "#c8c8c8" : dim} mono>
             {pad(counters[(seed + r * cols + c) % 24][(s + r) % SEQ] / 1e4, 5)}
           </T>
         )),
@@ -151,11 +162,11 @@ const NumTable: React.FC<Ctx & { x: number; y: number; rows: number; cols: numbe
   );
 };
 
-const HBars: React.FC<Ctx & { x: number; y: number; n: number; w: number; h: number; gap: number; seed: number }> = ({ x, y, n, w, h, gap, seed, t, P }) => (
+const HBars: React.FC<Ctx & { x: number; y: number; n: number; w: number; h: number; gap: number; seed: number; order?: number[] }> = ({ x, y, n, w, h, gap, seed, t, P, order }) => (
   <g>
     {Array.from({ length: n }, (_, i) => {
       const v = 0.35 + 0.65 * osc(t, 1 + ((i + seed) % 3), phases[40 + i + seed]);
-      return <rect key={i} x={x} y={y + i * (h + gap)} width={w * v} height={h} fill={P[(i + seed) % 8]} />;
+      return <rect key={i} x={x} y={y + i * (h + gap)} width={w * v} height={h} fill={order ? P[order[i % order.length]] : P[(i + seed) % 8]} />;
     })}
   </g>
 );
@@ -168,8 +179,9 @@ const Pills: React.FC<Ctx & { x: number; y: number; seed: number }> = ({ x, y, s
       const col = P[[0, 1, 3, 6, 7, 4][i]];
       return (
         <g key={i}>
-          <rect x={x + i * 28} y={y + H * (1 - v) * 0.5} width={18} height={H - H * (1 - v) * 0.5} rx={9} fill={col} />
-          <circle cx={x + i * 28 + 9} cy={y + H * (1 - v) * 0.5 + 9} r={6} fill="#fff" />
+          <rect x={x + i * 28} y={y} width={18} height={H} rx={9} fill={col} opacity={0.75 + 0.25 * v} />
+          <circle cx={x + i * 28 + 9} cy={y + 9} r={6} fill="#fff" />
+          <rect x={x + i * 28 + 4} y={y + 22} width={10} height={(H - 30) * v} rx={2} fill="#ffffff" opacity={0.25} />
         </g>
       );
     })}
@@ -199,7 +211,7 @@ const WorldMap: React.FC<Ctx & { x: number; y: number; w: number; h: number; dot
   return (
     <g>
       {dots.map((d, i) => (
-        <circle key={i} cx={px(d.lon)} cy={py(d.lat)} r={r} fill={col} />
+        <rect key={i} x={px(d.lon) - r * 1.4} y={py(d.lat) - r * 0.45} width={r * 2.8} height={r * 0.9} fill={col} />
       ))}
       {mapBlinks.map((b, i) => {
         const on = osc(t, b.k * 2, b.ph);
@@ -215,7 +227,7 @@ const WorldMap: React.FC<Ctx & { x: number; y: number; w: number; h: number; dot
 };
 
 const BigDonut: React.FC<Ctx & { cx: number; cy: number }> = ({ cx, cy, t, P }) => {
-  const segs = [P[0], P[1], P[3], P[4], P[5]];
+  const segs = [P[1], P[4], P[3], P[0]];
   const rot = TAU * t; // one turn per loop
   const weights = segs.map((_, i) => 0.6 + 0.4 * osc(t, 1, phases[100 + i]));
   const total = weights.reduce((a, b) => a + b, 0);
@@ -224,7 +236,7 @@ const BigDonut: React.FC<Ctx & { cx: number; cy: number }> = ({ cx, cy, t, P }) 
     <g>
       {segs.map((c, i) => {
         const span = (weights[i] / total) * TAU;
-        const p = <path key={i} d={arcPath(cx, cy, 86, a + 0.012, a + span - 0.012)} fill="none" stroke={c} strokeWidth={38} />;
+        const p = <path key={i} d={arcPath(cx, cy, 86, a, a + span + 0.004)} fill="none" stroke={c} strokeWidth={38} />;
         a += span;
         return p;
       })}
@@ -274,7 +286,7 @@ const AreaChart: React.FC<Ctx & { x: number; y: number; w: number; h: number; co
   const n = 140;
   const pts = Array.from({ length: n }, (_, i) => {
     const u = i / (n - 1);
-    const v = 0.5 + 0.08 * Math.sin(TAU * (u * 3 + t * 2)) + 0.1 * Math.sin(TAU * (u * 11 - t * 3) + 1) + 0.12 * Math.sin(TAU * (u * 29 + t * 5)) + 0.08 * Math.sin(TAU * (u * 47 - t * 7) + 2);
+    const v = 0.5 + 0.14 * Math.sin(TAU * (u * 3 + t * 2)) + 0.1 * Math.sin(TAU * (u * 8 - t * 3) + 1) + 0.05 * Math.sin(TAU * (u * 19 + t * 5)) + 0.025 * Math.sin(TAU * (u * 41 - t * 7) + 2);
     return `${x + u * w},${y + h - v * h}`;
   });
   return (
@@ -282,7 +294,7 @@ const AreaChart: React.FC<Ctx & { x: number; y: number; w: number; h: number; co
       <defs>
         <linearGradient id="areaG" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor={col} stopOpacity={1} />
-          <stop offset="1" stopColor={col} stopOpacity={0.8} />
+          <stop offset="1" stopColor={col} stopOpacity={0.25} />
         </linearGradient>
       </defs>
       <polygon points={`${x},${y + h} ${pts.join(" ")} ${x + w},${y + h}`} fill="url(#areaG)" />
@@ -295,12 +307,12 @@ const Spirals: React.FC<Ctx & { cx: number; cy: number }> = ({ cx, cy, t, P }) =
   <g>
     {[0, 1].map((k) => {
       const c = [P[1], P[6]][k];
-      const y0 = cy + k * 92;
+      const y0 = cy + k * 112;
       return (
         <g key={k}>
-          {[36, 27, 18].map((r, i) => {
+          {[48, 36, 24].map((r, i) => {
             const a = TAU * (t * (k ? -1 : 1) * (i + 1)) + i;
-            return <path key={i} d={arcPath(cx, y0, r, a, a + 4.6 - i * 0.6)} fill="none" stroke={c} strokeWidth={6} />;
+            return <path key={i} d={arcPath(cx, y0, r, a, a + 4.6 - i * 0.6)} fill="none" stroke={c} strokeWidth={8} />;
           })}
         </g>
       );
@@ -311,7 +323,7 @@ const Spirals: React.FC<Ctx & { cx: number; cy: number }> = ({ cx, cy, t, P }) =
 const CrossBox: React.FC<{ x: number; y: number; s: number; t: number }> = ({ x, y, s, t }) => {
   const c = 10;
   const pulse = 0.6 + 0.4 * osc(t, 4, 0.2);
-  const st = { stroke: "#fff", strokeWidth: 1.5, fill: "none", strokeOpacity: 0.85 };
+  const st = { stroke: "#bdbdbd", strokeWidth: 3, fill: "none", strokeOpacity: 0.8 };
   return (
     <g>
       <path d={`M${x},${y + c}V${y}H${x + c} M${x + s - c},${y}H${x + s}V${y + c} M${x + s},${y + s - c}V${y + s}H${x + s - c} M${x + c},${y + s}H${x}V${y + s - c}`} {...st} />
@@ -322,11 +334,13 @@ const CrossBox: React.FC<{ x: number; y: number; s: number; t: number }> = ({ x,
 
 const TreeList: React.FC<Ctx & { x: number; y: number }> = ({ x, y, f, P, dim }) => (
   <g>
-    <line x1={x} x2={x} y1={y} y2={y + 120} stroke={P[4]} strokeWidth={1} />
+    <line x1={x} x2={x} y1={y} y2={y + 120} stroke="#ffffff" strokeWidth={1} />
+    <circle cx={x} cy={y} r={3} fill={P[4]} />
     {[0, 1, 2].map((i) => (
       <g key={i}>
         <circle cx={x} cy={y + 20 + i * 44} r={3} fill={P[4]} />
-        <line x1={x} x2={x + 22} y1={y + 20 + i * 44} y2={y + 20 + i * 44} stroke={P[4]} strokeWidth={1} />
+        <line x1={x} x2={x + 20} y1={y + 20 + i * 44} y2={y + 20 + i * 44} stroke={P[4]} strokeWidth={1} />
+        <path d={`M${x + 18},${y + 16 + i * 44} L${x + 25},${y + 20 + i * 44} L${x + 18},${y + 24 + i * 44} Z`} fill={P[4]} />
         <T x={x + 30} y={y + 24 + i * 44} s={11} mono c="#fff">
           {pad(counters[10 + i][step(f)], 4)} {pad(counters[13 + i][step(f)], 2)} {pad(counters[16 + i][step(f)] / 7, 3)} {pad(counters[19 + i][step(f)], 9)}
         </T>
@@ -338,7 +352,7 @@ const TreeList: React.FC<Ctx & { x: number; y: number }> = ({ x, y, f, P, dim })
   </g>
 );
 
-const ProgressRows: React.FC<Ctx & { x: number; y: number; w: number; n: number; seed: number }> = ({ x, y, w, n, seed, t, P, dim }) => (
+const ProgressRows: React.FC<Ctx & { x: number; y: number; w: number; n: number; seed: number; thick?: boolean }> = ({ x, y, w, n, seed, t, P, dim, thick }) => (
   <g>
     {Array.from({ length: n }, (_, i) => {
       const v = 0.45 + 0.55 * osc(t, 1 + (i % 2), phases[160 + i + seed]);
@@ -348,8 +362,8 @@ const ProgressRows: React.FC<Ctx & { x: number; y: number; w: number; n: number;
           <T x={x + 12} y={y + i * 20 + 6} s={9} mono>
             {pad(counters[(i + seed) % 24][0] / 1000, 3)} {pad(counters[(i + seed + 1) % 24][0] / 10, 7)} {pad(counters[(i + seed + 2) % 24][0] / 10, 7)} {pad(tableNums[i + seed], 2)}
           </T>
-          <rect x={x} y={y + i * 20 + 10} width={w} height={3} fill="#1d3b3b" />
-          <rect x={x} y={y + i * 20 + 10} width={w * v} height={3} fill="#2DE0C0" />
+          <rect x={x} y={y + i * (thick ? 26 : 20) + 10} width={w} height={thick ? 6 : 3} fill="#2a2a2a" />
+          <rect x={x} y={y + i * (thick ? 26 : 20) + 10} width={w * v} height={thick ? 6 : 3} fill="#2DE0C0" />
           <rect x={x + w + 6} y={y + i * 20 + 7} width={5} height={8} fill={i % 2 ? P[1] : P[2]} />
           <T x={x + w + 16} y={y + i * 20 + 14} s={7} c={dim} mono>
             {pad(tableNums[40 + i], 4)}
@@ -503,7 +517,7 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
         </g>
         {/* ---- column 1, top */}
         <TopRings {...ctx} x={20} y={14} />
-        <MeshBlob {...ctx} cx={150} cy={230} r={82} />
+        <MeshBlob {...ctx} cx={160} cy={230} r={74} />
         <LegendRows {...ctx} x={30} y={360} n={6} w={110} />
         <PillCounters {...ctx} x={30} y={480} />
         {/* ---- column 2, top */}
@@ -513,7 +527,7 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
             {pad(tableNums[11 + k], 5)} {pad(tableNums[13 + k], 5)} {pad(tableNums[15 + k], 5)} {pad(tableNums[17 + k], 5)}
           </T>
         ))}
-        <HBars {...ctx} x={540} y={30} n={8} w={220} h={9} gap={6} seed={0} />
+        <HBars {...ctx} x={540} y={30} n={8} w={240} h={9} gap={6} seed={0} order={[4, 4, 3, 3, 1, 1, 0, 0]} />
         <Pills {...ctx} x={365} y={170} seed={0} />
         <SmallRings {...ctx} x={545} y={198} n={5} seed={1} r={13} />
         <SmallRings {...ctx} x={365} y={290} n={4} seed={3} r={15} />
@@ -553,7 +567,7 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
         </g>
         {/* ---- column 4, top */}
         <g transform="translate(58,0)">
-        <T x={1270} y={42} s={30} w={500} ls={3}>
+        <T x={1270} y={42} s={30} w={300} ls={3}>
           BIG DATA
         </T>
         <T x={1270} y={66} s={11} mono>
@@ -574,18 +588,16 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
         <T x={1620} y={274} s={8} mono c={version.dim}>
           {pad(tableNums[7], 6)} 24 {pad(tableNums[8], 9)}
         </T>
-        <T x={1270} y={350} s={24} w={400} ls={2.5}>
+        <T x={1270} y={350} s={24} w={300} ls={2.5}>
           Data Sector : 7950{" "}
-          <tspan fontFamily={MONO} fontSize={20}>
-            {pad(counters[0][s] / 1e4, 5)} {pad(counters[1][s] / 1e7, 2)}
-          </tspan>
+          {pad(counters[0][s] / 1e4, 4)} {pad(counters[1][s] / 1e7, 2)}
         </T>
         <rect x={1276} y={381} width={8} height={8} fill="none" stroke="#fff" strokeWidth={1} strokeDasharray="2 2" />
         <T x={1292} y={389} s={13} ls={1}>
           ANALYSIS DATA NODE
         </T>
         <rect x={1460} y={378} width={6} height={12} fill={P[1]} opacity={osc(t, 10, 0) > 0.5 ? 1 : 0.2} />
-        <ProgressRows {...ctx} x={1350} y={418} w={240} n={4} seed={2} />
+        <ProgressRows {...ctx} x={1350} y={418} w={240} n={2} seed={2} thick />
         </g>
         {/* ---- column 1, bottom */}
         <defs><linearGradient id="tmG" x1="0" x2="1"><stop offset="0" stopColor={P[5]} /><stop offset="1" stopColor={P[4]} /></linearGradient><linearGradient id="sgG" x1="0" x2="1"><stop offset="0" stopColor={P[6]} /><stop offset="1" stopColor="#ff8ac8" /></linearGradient></defs>
@@ -617,7 +629,7 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
         })}
         {/* ---- column 2, bottom */}
         <NumTable {...ctx} x={360} y={562} rows={6} cols={3} seed={9} />
-        <HBars {...ctx} x={545} y={552} n={9} w={220} h={9} gap={5} seed={3} />
+        <HBars {...ctx} x={545} y={552} n={9} w={240} h={9} gap={5} seed={3} order={[5, 4, 3, 3, 2, 1, 0, 6, 7]} />
         <Pills {...ctx} x={365} y={700} seed={3} />
         <SmallRings {...ctx} x={545} y={728} n={5} seed={4} r={13} />
         <T x={370} y={810} s={11} mono>
@@ -636,12 +648,12 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
         </T>
         {/* ---- column 3, bottom */}
         <g transform="translate(38,0)">
-        <Spirals {...ctx} cx={850} cy={600} />
+        <Spirals {...ctx} cx={858} cy={604} />
         <LineChart {...ctx} x={960} y={570} w={270} h={220} col={P[4]} seed={30} grid n={12} />
         <AreaChart {...ctx} x={800} y={810} w={430} h={90} col={P[6]} />
         {Array.from({ length: 6 }, (_, i) => (
           <g key={i}>
-            <rect x={800} y={928 + i * 22} width={430} height={18} fill={i === 0 ? "#3a0f22" : "#0f0f0f"} />
+            <rect x={800} y={928 + i * 22} width={430} height={18} fill={i === 0 ? "#3a0f22" : "#000"} />
             <circle cx={812} cy={937 + i * 22} r={3} fill={P[6]} opacity={0.4 + 0.6 * osc(t, 3, phases[380 + i])} />
             <T x={825} y={941 + i * 22} s={8} mono c={version.dim}>
               {pad(counters[i][(s + i) % SEQ] / 10, 8)}
@@ -660,18 +672,18 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
         </g>
         {/* ---- column 4, bottom */}
         <g transform="translate(58,0)">
-        <T x={1270} y={575} s={26} w={400} ls={3}>
+        <T x={1270} y={575} s={26} w={300} ls={3}>
           ANALYSIS DATA NODE: 44
         </T>
         <rect x={1272} y={600} width={14} height={14} fill="none" stroke="#fff" strokeWidth={1.4} strokeDasharray="3 3" />
-        <T x={1294} y={614} s={22} w={400} ls={2}>
+        <T x={1294} y={614} s={22} w={300} ls={2}>
           Data Sector : 001
         </T>
         <rect x={1520} y={600} width={7} height={15} fill={P[1]} />
         <ProgressRows {...ctx} x={1275} y={640} w={260} n={2} seed={7} />
         <CrossBox x={1640} y={600} s={100} t={t} />
         <rect x={1272} y={735} width={14} height={14} fill="none" stroke="#fff" strokeWidth={1.4} strokeDasharray="3 3" />
-        <T x={1294} y={750} s={24} w={500} ls={2.5}>
+        <T x={1294} y={750} s={24} w={400} ls={2.5}>
           BIG DATA:
         </T>
         <T x={1360} y={800} s={34} mono>

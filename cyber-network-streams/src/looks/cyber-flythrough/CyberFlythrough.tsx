@@ -38,7 +38,7 @@ void main(){
   vec4 mv = modelViewMatrix * vec4(wp, 1.0);
   float z = max(-mv.z, 0.05);
   float core = 0.0065 * uFocal / z;
-  float coc = cocPx(z) * (z < 4.0 ? 1.6 : 0.8);
+  float coc = min(cocPx(z) * 0.3, 3.0 * uPx);
   float sz = max(core, 1.0) + coc;
   gl_PointSize = sz * 2.2;
   vSoft = clamp(coc / sz, 0.0, 1.0);
@@ -47,7 +47,7 @@ void main(){
   float lat = abs(position.x);
   float k = aKind; // 1 = major line, 0 = plain dot
   vec3 col = mix(uBlue, uTeal, 0.25 + 0.75*k);
-  float inten = (0.4 + 1.5*k) * (1.0 - smoothstep(8.0, 30.0, lat)*0.8) * (position.x < 0.0 ? 1.25 : 0.8) * (aY > 0.01 ? 0.75 : 1.0);
+  float inten = (0.6 + 1.7*k) * (1.0 - smoothstep(8.0, 30.0, lat)*0.8) * (position.x < 0.0 ? 1.3 : 0.65) * (aY > 0.01 ? 0.8 : 1.0);
   // horizon brightening: far dots pile up into the glow; keep them teal-white
   col = mix(col, uTeal, smoothstep(30.0, 90.0, d)*0.3);
   inten *= 1.0 - smoothstep(25.0, 80.0, d)*0.55;
@@ -81,7 +81,7 @@ void main(){
   vUv = uv;
   vAtlas = aCell + uPadUv + uv * (uCellUv - 2.0*uPadUv);
   vCoc = cocPx(z);
-  float fade = smoothstep(uFar, uFar*0.6, d) * smoothstep(1.2, 4.5, z);
+  float fade = smoothstep(uFar, uFar*0.6, d) * smoothstep(3.0, 7.5, z);
   vA = aInt * fade;
   gl_Position = projectionMatrix * mv;
 }`;
@@ -131,7 +131,7 @@ const STREAK_FRAG = /* glsl */ `
 varying vec2 vUv; varying vec4 vCol; varying float vDot; varying float vLen;
 void main(){
   float across = exp(-vUv.y*vUv.y*3.5);
-  float along = smoothstep(1.0, 0.75, vUv.x) * smoothstep(0.0, 0.08, vUv.x) * (0.3 + 0.7*(1.0 - vUv.x));
+  float along = smoothstep(1.0, 0.75, vUv.x) * smoothstep(0.0, 0.02, vUv.x) * (0.25 + 0.75*(1.0 - vUv.x)) + 2.5 * exp(-vUv.x * 60.0);
   // most trails are dotted: a dash pattern in world units along the streak
   float dots = vDot > 0.5 ? smoothstep(0.55, 0.2, abs(fract(vUv.x * vLen * 2.2) - 0.5) * 2.0) * 1.6 : 1.0;
   gl_FragColor = vec4(vCol.rgb * vCol.a * across * along * dots, 1.0);
@@ -169,7 +169,11 @@ void main(){
   vec3 c = y > 0.0 ? mix(uTop*1.35, uTop*0.7, smoothstep(0.0, 1.6, y)) : mix(uTop*0.9, uBottom, smoothstep(0.0, 1.2, -y));
   float g = exp(-abs(y)*5.0) * (0.55 + 0.45*exp(-vNdc.x*vNdc.x*1.2));
   float c0 = exp(-(vNdc.x*vNdc.x*uAspect*uAspect*0.6 + y*y*14.0));
-  c += uGlow * (g*0.12 + c0*0.1);
+  c += uGlow * (g*0.08);
+  c *= 1.0 - 0.55 * c0;
+  vec2 gq = abs(fract(vNdc * vec2(9.0, 7.0)) - 0.5);
+  float grid = (1.0 - smoothstep(0.0, 0.012, min(gq.x, gq.y))) * smoothstep(0.2, -0.8, vNdc.x) * smoothstep(-0.1, 0.8, vNdc.y);
+  c += uGlow * grid * 0.05;
   c *= 1.15 - 0.45 * smoothstep(-0.6, 1.0, vNdc.x);
   gl_FragColor = vec4(c, 1.0);
 }`;
@@ -185,8 +189,8 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
     uCamD: { value: 0 },
     uWin: { value: W },
     uBack: { value: BACK },
-    uFocus: { value: 9 },
-    uCocK: { value: 130 },
+    uFocus: { value: 13 },
+    uCocK: { value: 190 },
     uPx: { value: 1 },
     uFocal: { value: 1000 },
     uFar: { value: W - BACK - 2 },
@@ -242,27 +246,35 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
       fKind[n] = gx % 8 === 0 ? 1 : iz % 20 === 0 ? 0.5 : 0;
       n++;
     }
-  // tilted dotted side planes (tunnel walls), left and right
-  const wallRows = Math.round(W / 0.32);
-  const wallCols = 14;
-  const NW = wallRows * wallCols * 2;
+  // layered, wavy dotted "data terrain" surfaces at different heights and tilts
+  const surfaces = [
+    { x0: -13, x1: -2.2, y: (x: number, z: number) => 0.25 + (-x - 2.2) * 0.17 + 0.12 * Math.sin(z * ((2 * Math.PI) / 24) + x) },
+    { x0: 2.4, x1: 12, y: (x: number, z: number) => 0.2 + (x - 2.4) * 0.12 + 0.1 * Math.sin(z * ((2 * Math.PI) / 32) - x * 0.7) },
+    { x0: -11, x1: -3.5, y: (x: number, z: number) => 2.6 + (-x - 3.5) * 0.12 + 0.15 * Math.sin(z * ((2 * Math.PI) / 48) + x * 0.5) },
+  ];
+  const SSP = 0.3;
+  const sRows = Math.round(W / SSP);
+  let NW = 0;
+  for (const sf of surfaces) NW += sRows * Math.round((sf.x1 - sf.x0) / SSP);
   const allPos = new Float32Array((n + NW) * 3);
   const allKind = new Float32Array(n + NW);
   const allY = new Float32Array(n + NW);
   allPos.set(fPos.subarray(0, n * 3));
   allKind.set(fKind.subarray(0, n));
   let m = n;
-  for (const side of [-1, 1])
-    for (let iz = 0; iz < wallRows; iz++)
-      for (let k2 = 0; k2 < wallCols; k2++) {
-        // plane leaning outward: starts at |x|=3.2 on the floor, rises to y≈3.6 at |x|≈7
-        const u = k2 / (wallCols - 1);
-        allPos[m * 3] = side * (3.2 + u * 3.8);
-        allPos[m * 3 + 2] = iz * 0.32;
-        allY[m] = 0.35 + u * 3.3;
-        allKind[m] = k2 % 4 === 0 ? 0.8 : iz % 12 === 0 ? 0.5 : 0;
+  surfaces.forEach((sf) => {
+    const cols2 = Math.round((sf.x1 - sf.x0) / SSP);
+    for (let iz = 0; iz < sRows; iz++)
+      for (let k2 = 0; k2 < cols2; k2++) {
+        const x = sf.x0 + k2 * SSP;
+        const z = iz * SSP;
+        allPos[m * 3] = x;
+        allPos[m * 3 + 2] = z;
+        allY[m] = sf.y(x, z);
+        allKind[m] = k2 % 6 === 0 ? 0.9 : iz % 14 === 0 ? 0.5 : 0;
         m++;
       }
+  });
   const fg = new THREE.BufferGeometry();
   fg.setAttribute("position", new THREE.BufferAttribute(allPos, 3));
   fg.setAttribute("aKind", new THREE.BufferAttribute(allKind, 1));
@@ -280,15 +292,15 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
     pInt = new Float32Array(NPAN);
   for (let i = 0; i < NPAN; i++) {
     const label = i >= 140; // small frameless number labels
-    const side = r() < 0.62 ? -1 : 1;
+    const side = r() < 0.72 ? -1 : 1;
     let x = side * (1.2 + Math.pow(r(), 1.1) * 10);
     let y = 0.25 + Math.abs(gauss(r)) * 1.1 + (r() < 0.35 ? range(r, 1.0, 4.5) : 0);
     let cell = i % (COLS * ROWS);
     let s = range(r, 0.7, 1.5) * (r() < 0.08 ? 1.4 : 1);
     if (i % 15 === 0) {
       // ring-gauge panels near the vanishing line
-      x = range(r, -0.7, 0.7);
-      y = range(r, 0.5, 0.9);
+      x = range(r, -0.5, 0.5);
+      y = range(r, 0.35, 0.5);
       cell = 1 + 9 * Math.floor(r() * 7);
       s = 0.8;
     }
@@ -334,7 +346,7 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
   void CELL_H;
 
   // ---- streaks (along z) and vertical shafts
-  const NST = 260;
+  const NST = 320;
   const sPos = new Float32Array(NST * 3),
     sLWS = new Float32Array(NST * 3),
     sCol = new Float32Array(NST * 4),

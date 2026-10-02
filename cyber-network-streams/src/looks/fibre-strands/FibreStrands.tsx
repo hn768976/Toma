@@ -5,7 +5,7 @@ import { PixiScene, PixiStage } from "../../lib/pixi/PixiStage";
 import { StripBatch } from "../../lib/pixi/StripBatch";
 import { Projector } from "../../lib/pixi/projector";
 import { makeNoise3 } from "../../lib/noise";
-import { gauss, mulberry32, range } from "../../lib/random";
+import { gauss, hash2, mulberry32, range } from "../../lib/random";
 import { FibreStrandsVersion } from "../../versions";
 
 // Look 5 — Fibre Strands (20 s loop, pure black). ~200 glowing fibres follow
@@ -14,7 +14,7 @@ import { FibreStrandsVersion } from "../../versions";
 
 export const FS_DURATION = 600;
 const NSTR = 200;
-const NPTS = 84;
+const NPTS = 120;
 const NHEADS = 40;
 const FOV = 50;
 const TAU = Math.PI * 2;
@@ -40,7 +40,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
       rad: Math.sqrt(r()) * (0.6 + 0.4 * r()),
       ang: r() * TAU,
       mix: Math.pow(r(), 3),
-      br: r() < 0.28 ? range(r, 0.9, 1.6) : range(r, 0.08, 0.25),
+      br: r() < 0.22 ? range(r, 1.0, 1.8) : range(r, 0.05, 0.18),
       wig: range(r, 0.1, 0.9),
       ph: r() * 100,
       u0: r() * 0.12,
@@ -60,7 +60,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
   const world = new Container();
   const strip = new StripBatch((NSTR + 8) * NPTS + NHEADS * 24);
   world.addChild(strip.mesh);
-  const glows = new GlowBatch(NHEADS + 4);
+  const glows = new GlowBatch(NHEADS * 2 + 4);
   world.addChild(glows.mesh);
   const cam = new Projector();
   const spine = new Float32Array(NPTS * 3);
@@ -87,27 +87,29 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
     const N = [0, 1, 2].map((a) => frN[j * 3 + a]);
     const B = [0, 1, 2].map((a) => frB[j * 3 + a]);
     // bundle radius fans out toward the far end; twisting offset
-    const rho = 0.5 + 3.4 * Math.pow(u, 1.3);
+    const pinch = Math.min(1, Math.abs(u - 0.33) * 2.6);
+    const rho = (0.6 + 1.2 * (1 - u) * 0 + 5.5 * Math.max(0, u - 0.33)) * (0.2 + 0.8 * pinch) + 1.2 * Math.max(0, 0.33 - u);
     const tw = s.ang + 2.2 * u + 0.8 * nz(u * 1.5 + 7, ct * 0.6 + i * 0.013, st * 0.6);
     let a = Math.cos(tw) * s.rad * rho,
       b = Math.sin(tw) * s.rad * rho;
     a += s.wig * Math.sin(u * 9 + s.ph + ct * 1.3) * (0.4 + u);
     b += s.wig * Math.cos(u * 7 + s.ph * 1.7 + st * 1.3) * (0.4 + u);
     // sub-bundles peel away from each other toward the far end
-    const gA = 10 * Math.pow(u, 1.1);
-    a += gA * nz(u * 1.8 + s.g * 17.3, ct * 0.8, st * 0.8 + s.g);
-    b += gA * nz(u * 1.8 + s.g * 17.3 + 50, ct * 0.8 + s.g, st * 0.8);
+    const gA = 9 * pinch * (0.4 + u);
+    a += gA * nz(u * 1.5 + s.g * 17.3, ct * 0.8, st * 0.8 + s.g);
+    b += gA * nz(u * 1.5 + s.g * 17.3 + 50, ct * 0.8 + s.g, st * 0.8);
+    // some sub-bundles throw big open loops up above the knot
+    if (s.g % 3 === 0) b += (6 + 3 * nz(s.g * 3.1, ct * 0.4, st * 0.4)) * Math.sin(Math.PI * Math.min(1, Math.max(0, (u - 0.33) / 0.5)));
     // each fibre also strays on its own
-    const iA = 3.2 * Math.pow(u, 1.2);
+    const iA = 2.6 * Math.pow(u, 1.2) * pinch;
     a += iA * nz(u * 2.4 + s.ph, ct * 0.5 + s.ph * 0.1, st * 0.5);
     b += iA * nz(u * 2.4 + s.ph + 90, ct * 0.5, st * 0.5 + s.ph * 0.1);
     if (s.near) {
       // near strands: pulled toward the camera and off to a side
-      a += (s.near % 2 ? -1 : 1) * (2.5 + s.near);
-      b += 1.5;
+      a += (s.near % 2 ? -1 : 1) * (1.2 + s.near * 0.6);
       out[0] = P[0] + N[0] * a + B[0] * b;
       out[1] = P[1] + N[1] * a + B[1] * b;
-      out[2] = P[2] + N[2] * a + B[2] * b + 9 + s.near * 1.5;
+      out[2] = P[2] + N[2] * a + B[2] * b + 3 + s.near * 0.8;
       return;
     }
     out[0] = P[0] + N[0] * a + B[0] * b;
@@ -130,10 +132,11 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
       for (let i = 0; i < NPTS; i++) {
         const u = i / (NPTS - 1);
         // rises from the lower left to a crest, then fans down to the right toward the camera
-        const bx = -9 + 30 * u,
-          by = -14 + 21 * Math.sin(Math.PI * Math.min(1, u * 1.35)) * (1 - 0.3 * u) - 3 * u,
-          bz = -3 + 9 * u * u;
-        const A = 3.5 + 3 * u;
+        // rises from the lower left into a knot left of centre, then spreads right and down toward the camera
+        const bx = -11 + 30 * u,
+          by = -15 + 13.5 * Math.sin(Math.PI * Math.min(1, u / 0.72)),
+          bz = -3 + 11 * u * u;
+        const A = 2.5 + 2 * u;
         spine[i * 3] = bx + A * nz(u * 2.2, ct, st);
         spine[i * 3 + 1] = by + A * 1.8 * nz(u * 2.2 + 31.7, ct, st);
         spine[i * 3 + 2] = bz + A * 1.4 * nz(u * 2.2 + 63.1, ct, st);
@@ -187,8 +190,9 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
           // brightness along the strand: fade at the ends, brighter toward the light end
           const uu = i / (NPTS - 1);
           const endFade = Math.min(1, uu / 0.12) * Math.min(1, (1 - uu) / 0.2);
-          const bright = s.br * endFade * (0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, u * 1.1))) * (s.near ? 1.1 : 1);
-          const m = Math.min(1, s.mix * 0.6);
+          const grain = 0.45 + 0.55 * hash2(si * 977 + i, Math.floor(f / 2));
+          const bright = s.br * endFade * (0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, u * 1.1))) * (s.near ? 0.45 : 1) * (s.near ? 1 : grain);
+          const m = Math.min(1, s.mix * 0.35);
           const k = 0.32 * bright * (0.35 + 0.65 * e);
           xs[n] = cam.x;
           ys[n] = cam.y;
@@ -217,7 +221,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
           if (!cam.project(pt[0], pt[1], pt[2], 0.5)) break;
           const z = cam.z;
           const tail = 1 - k / 23;
-          const w = Math.max(2 * px, (s.w * 3.2 * focal) / z) * (0.5 + 0.5 * tail);
+          const w = Math.max(2.5 * px, (s.w * 4.5 * focal) / z) * (0.5 + 0.5 * tail);
           const kk = 1.6 * h.br * vis * tail * tail;
           hx[n] = cam.x;
           hy[n] = cam.y;
@@ -232,16 +236,17 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
         strip.strip(n, hx, hy, hw, hc, hs);
         if (n > 0) {
           const size = Math.max(9 * px, (0.3 * focal) / Math.max(1, cam.z));
-          glows.add(hx[0], hy[0], size * 3.2, head[0], head[1], head[2], vis * h.br * 1.4, 1);
+          glows.add(hx[0], hy[0], size * 4.5, head[0], head[1], head[2], vis * h.br * 1.6, 1);
+          glows.add(hx[0], hy[0], size * 6, deep[0], deep[1], deep[2], vis * h.br * 0.35, 0);
         }
         void hi;
       });
 
       // ---- soft coloured light behind the bundle, "sometimes"
       for (let i = 0; i < 2; i++) {
-        const a = Math.max(0, Math.sin(TAU * (t * (i + 1) + i * 0.37))) ** 4 * 0.12;
+        const a = Math.max(0, Math.sin(TAU * (t * (i + 1) + i * 0.37))) ** 6 * 0.08;
         strandPoint(strands[0], 0, 0.35 + 0.4 * i, pt, ct, st);
-        if (cam.project(pt[0], pt[1], pt[2] - 4, 0.5)) glows.add(cam.x, cam.y, height * 0.4, back[0], back[1], back[2], a * 0.8, 0);
+        if (cam.project(pt[0], pt[1], pt[2] - 4, 0.5)) glows.add(cam.x, cam.y, height * 0.3, back[0], back[1], back[2], a, 0);
       }
       glows.end();
       strip.end();
@@ -251,7 +256,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
 
 export const FibreStrands: React.FC<{ version: FibreStrandsVersion }> = ({ version }) => {
   const post = useMemo(
-    () => ({ bloomA: 0.55, bloomB: 0.4, exposure: 1.0, grain: 0, dither: true, blackSafe: true, bg: [0, 0, 0] as [number, number, number], grainPeriod: FS_DURATION }),
+    () => ({ bloomA: 0.5, bloomB: 0.22, exposure: 1.0, grain: 0, dither: true, blackSafe: true, bg: [0, 0, 0] as [number, number, number], grainPeriod: FS_DURATION }),
     [],
   );
   const build = useMemo(() => () => buildScene(version), [version]);

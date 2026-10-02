@@ -14,8 +14,8 @@ export type HubNode = {
   arrive: number; // frame the arrow reaches this node (node pops)
 };
 
-const MIN_NODE_DIST = 2.6;
-const LINK_CLEAR = 0.95;
+const MIN_NODE_DIST = 3.2;
+const LINK_CLEAR = 1.2;
 const TRAVEL = 40;
 
 const segPointDist = (ax: number, az: number, bx: number, bz: number, px: number, pz: number) => {
@@ -59,7 +59,7 @@ const build = (): HubNode[] => {
       const d = dist * (k ? range(r, 0.85, 1.2) : 1);
       const x = nodes[p].x + Math.cos(a) * d;
       const z = nodes[p].z + Math.sin(a) * d;
-      if (Math.abs(x) > 12.5 || Math.abs(z) > 7.5) continue;
+      if (Math.abs(x) > 15 || Math.abs(z) > 9) continue;
       if (ok(p, x, z)) {
         const len = d;
         nodes.push({ x, z, gen, parent: p, launch, arrive: launch + Math.round(TRAVEL * (0.7 + len / 10)) });
@@ -72,7 +72,7 @@ const build = (): HubNode[] => {
   const g1: number[] = [];
   const base = r() * Math.PI * 2;
   for (let i = 0; i < 7; i++) {
-    const id = add(0, base + (i / 7) * Math.PI * 2 + range(r, -0.15, 0.15), range(r, 3.6, 4.6), 1, 16 + i * 4);
+    const id = add(0, base + (i / 7) * Math.PI * 2 + range(r, -0.15, 0.15), range(r, 4.2, 5.4), 1, 16 + i * 4);
     if (id > 0) g1.push(id);
   }
   // generation 2: one or two children each, pointing roughly outward
@@ -83,7 +83,7 @@ const build = (): HubNode[] => {
     const kids = r() < 0.2 ? 2 : 1;
     for (let k = 0; k < kids; k++) {
       const a = out + (kids === 2 ? (k ? 0.55 : -0.55) : range(r, -0.3, 0.3));
-      const id = add(p, a, range(r, 3.3, 4.3), 2, n.arrive + 22 + Math.floor(r() * 22));
+      const id = add(p, a, range(r, 3.9, 5.0), 2, n.arrive + 22 + Math.floor(r() * 22));
       if (id > 0) g2.push(id);
     }
   }
@@ -93,7 +93,7 @@ const build = (): HubNode[] => {
     if (nodes.length >= 20) break;
     const n = nodes[p];
     const out = Math.atan2(n.z - nodes[n.parent].z, n.x - nodes[n.parent].x);
-    add(p, out + range(r, -0.4, 0.4), range(r, 3.0, 3.8), 3, n.arrive + 25 + Math.floor(r() * 25));
+    add(p, out + range(r, -0.4, 0.4), range(r, 3.6, 4.4), 3, n.arrive + 25 + Math.floor(r() * 25));
   }
   return nodes;
 };

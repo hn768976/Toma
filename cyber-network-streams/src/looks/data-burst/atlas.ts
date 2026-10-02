@@ -1,5 +1,5 @@
 import { Rectangle, Texture } from "pixi.js";
-import { drawIcon, NETWORK_ICONS } from "../../lib/icons";
+import { drawIcon, ICONS, NETWORK_ICONS } from "../../lib/icons";
 
 // One canvas atlas (single TextureSource → usable by a ParticleContainer):
 // 8 bokeh discs, 4 dashes, icons at 3 blur levels, squares, glow, chip.
@@ -78,6 +78,17 @@ export const buildBurstAtlas = (): BurstAtlas => {
       c.save();
       c.filter = b ? `blur(${b}px)` : "none";
       drawIcon(c, name, x + 64, y + 64, 84, "white", bi === 0 ? 3.0 : 2.4);
+      if (["heart", "user", "users", "phone", "chat"].includes(name)) {
+        c.globalAlpha = 0.85;
+        c.fill(new Path2D(""));
+        c.save();
+        c.translate(x + 64 - 42, y + 64 - 42);
+        c.scale(84 / 24, 84 / 24);
+        c.fillStyle = "white";
+        c.fill(new Path2D(ICONS[name].d));
+        c.restore();
+        c.globalAlpha = 1;
+      }
       c.restore();
       rects[`icon${bi}_${ii}`] = new Rectangle(x, y, 128, 128);
     });
@@ -128,42 +139,40 @@ export const buildBurstAtlas = (): BurstAtlas => {
     c.fillRect(1152, 640, 256, 256);
     rects.glow = new Rectangle(1152, 640, 256, 256);
   }
-  // chip: soft glowing square with a 3×3 grid of round cells and fine traces
+  // chip: sharp-cornered silver CPU die, 3×3 soft square pads, fine circuit traces
   {
     const x = 1536,
       y = 640;
     c.save();
-    c.filter = "blur(3px)";
-    c.fillStyle = "rgba(255,255,255,0.28)";
-    c.beginPath();
-    c.roundRect(x + 36, y + 36, 184, 184, 16);
-    c.fill();
-    c.strokeStyle = "rgba(255,255,255,0.9)";
-    c.lineWidth = 6;
-    c.stroke();
-    c.restore();
-    c.save();
-    c.filter = "blur(1.5px)";
+    c.fillStyle = "rgba(205,215,228,0.42)";
+    c.fillRect(x + 34, y + 34, 188, 188);
+    c.strokeStyle = "rgba(255,255,255,0.95)";
+    c.lineWidth = 5;
+    c.strokeRect(x + 36, y + 36, 184, 184);
+    c.filter = "blur(2px)";
     for (let gx = 0; gx < 3; gx++)
       for (let gy = 0; gy < 3; gy++) {
-        const cx = x + 80 + gx * 48,
-          cy = y + 80 + gy * 48;
-        const g = c.createRadialGradient(cx, cy, 0, cx, cy, 20);
-        g.addColorStop(0, "rgba(255,255,255,1)");
-        g.addColorStop(0.6, "rgba(255,255,255,0.85)");
-        g.addColorStop(1, "rgba(255,255,255,0)");
-        c.fillStyle = g;
-        c.fillRect(cx - 20, cy - 20, 40, 40);
+        c.fillStyle = "rgba(255,255,255,0.95)";
+        c.fillRect(x + 62 + gx * 50, y + 62 + gy * 50, 32, 32);
       }
-    c.strokeStyle = "rgba(0,0,0,0.6)";
+    c.filter = "none";
     c.globalCompositeOperation = "destination-out";
-    c.lineWidth = 2;
+    c.strokeStyle = "rgba(0,0,0,0.75)";
+    c.lineWidth = 1.5;
+    for (let k = 0; k < 9; k++) {
+      c.beginPath();
+      c.moveTo(x + 46 + k * 20, y + 46);
+      c.lineTo(x + 46 + k * 20, y + 56 + ((k * 37) % 30));
+      c.moveTo(x + 46 + k * 20, y + 210);
+      c.lineTo(x + 46 + k * 20, y + 200 - ((k * 23) % 30));
+      c.stroke();
+    }
     for (let k = 0; k < 4; k++) {
       c.beginPath();
-      c.moveTo(x + 56 + k * 48, y + 56);
-      c.lineTo(x + 56 + k * 48, y + 200);
-      c.moveTo(x + 56, y + 56 + k * 48);
-      c.lineTo(x + 200, y + 56 + k * 48);
+      c.moveTo(x + 58 + k * 50, y + 58);
+      c.lineTo(x + 58 + k * 50, y + 198);
+      c.moveTo(x + 58, y + 58 + k * 50);
+      c.lineTo(x + 198, y + 58 + k * 50);
       c.stroke();
     }
     c.restore();

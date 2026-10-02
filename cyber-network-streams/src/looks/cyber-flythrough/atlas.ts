@@ -233,12 +233,13 @@ export const drawCell = (ctx: CanvasRenderingContext2D, idx: number, step: numbe
       break;
     }
     default: {
-      // small shield + big percentage
-      shield(ctx, x + 80, y + 90, 90, p.teal);
+      // single big ring gauge + percentage
+      const pct = 0.55 + 0.4 * (0.5 + 0.5 * Math.sin(step * 0.17 + c.seed));
+      ring(ctx, x + 90, y + h / 2, 62, pct, p);
       ctx.fillStyle = "rgba(150,245,245,0.98)";
       ctx.font = `500 76px ${MONO}`;
-      ctx.fillText(`${(60 + v(2) * 39.9).toFixed(1)}%`, x + 150, y + 118);
-      textLines(ctx, x + 30, y + 175, w - 60, 4, c.seed, step);
+      ctx.fillText(`${(pct * 100).toFixed(1)}%`, x + 175, y + h / 2 + 26);
+      textLines(ctx, x + 175, y + h / 2 + 60, w - 210, 3, c.seed, step);
     }
   }
   ctx.restore();

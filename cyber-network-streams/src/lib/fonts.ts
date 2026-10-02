@@ -6,6 +6,7 @@ export const INTER = "Inter";
 export const MONO = "JetBrains Mono";
 
 const FACES: [string, string, string][] = [
+  [INTER, "fonts/inter-latin-300-normal.woff2", "300"],
   [INTER, "fonts/inter-latin-400-normal.woff2", "400"],
   [INTER, "fonts/inter-latin-500-normal.woff2", "500"],
   [INTER, "fonts/inter-latin-600-normal.woff2", "600"],

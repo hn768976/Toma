@@ -49,14 +49,16 @@ void main(){
   vec3 P,T,Nn,U; frameAt(sRel, P,T,Nn,U);
   vec3 c = P + Nn*aLatH.x + U*aLatH.y;
   vec2 q = (uv - 0.5) * aSize;
+  float isWall = step(9.5, aType);
+  float ty = aType - 10.0 * isWall;
   vec3 wp;
-  if (aType < 0.5) wp = c + T*q.x + U*q.y;        // wall
-  else if (aType < 1.5) wp = c + Nn*q.x + U*q.y;  // facing
+  if (ty < 0.5) wp = c + T*q.x + U*q.y;        // lengthwise
+  else if (ty < 1.5) wp = c + Nn*q.x + U*q.y;  // facing
   else wp = c + T*q.x + Nn*q.y;                    // floor / ceiling
   vec4 mv = modelViewMatrix * vec4(wp, 1.0);
   float z = -mv.z;
   vUv = uv;
-  float fade = smoothstep(uFar*0.85, uFar*0.35, sRel) * smoothstep(0.25, 1.2, z);
+  float fade = smoothstep(uFar*0.85, uFar*0.35, sRel) * mix(smoothstep(12.0, 22.0, z), smoothstep(0.25, 1.2, z), isWall);
   vCol = vec4(aCol.rgb, aCol.a * fade);
   vCoc = uCocK * abs(1.0/max(z,0.2) - 1.0/uFocus) * uPx;
   gl_Position = projectionMatrix * mv;
@@ -121,7 +123,7 @@ void main(){
   float sz = max(core + coc, 1.5*uPx) * 3.0;
   gl_PointSize = sz;
   vSoft = clamp(coc / (core + coc + 1e-3), 0.0, 1.0);
-  float fade = smoothstep(uFar, uFar*0.6, sRel) * smoothstep(0.4, 2.0, z);
+  float fade = smoothstep(uFar, uFar*0.6, sRel) * smoothstep(2.5, 7.0, z);
   float area = (core + 1.0) / (core + coc + 1.0);
   vCol = vec4(aCol.rgb, aCol.a * fade * area * area);
   gl_Position = projectionMatrix * mv;
@@ -163,7 +165,8 @@ const buildData = (v: LightStreamsVersion) => {
       // the field further out that converges into the band
       const side = r() < 0.5 ? -1 : 1;
       lat = side * (3 + Math.pow(r(), 1.3) * 20);
-      h = gauss(r) * (0.25 + Math.abs(lat) * 0.012);
+      // far tiles sit in loose horizontal rows
+      h = Math.round(gauss(r) * 1.4) * 0.32 * (1 + Math.abs(lat) * 0.02);
     }
     aLatH[i * 2] = lat;
     aLatH[i * 2 + 1] = h;
@@ -171,15 +174,24 @@ const buildData = (v: LightStreamsVersion) => {
     const wall = roll < 0.62;
     // the mosaic wall is made of tiles facing the camera; the far field mixes orientations
     const type = wall ? (tRoll < 0.8 ? 1 : 0) : tRoll < 0.7 ? 0 : tRoll < 0.93 ? 1 : 2;
-    aType[i] = type;
+    aType[i] = type + (wall ? 10 : 0);
     const len = type === 1 ? range(r, 0.35, 1.7) : range(r, 0.5, 3.6);
     const hh = type === 2 ? range(r, 0.3, 1.0) : range(r, 0.12, 0.6) * (r() < 0.12 ? 1.8 : 1);
     aSize[i * 2] = len;
     aSize[i * 2 + 1] = hh;
     const bright = Math.pow(r(), 4);
-    const col = mix(bright * 0.9 + r() * 0.2);
+    const col = mix(bright * 0.7 + r() * 0.12);
     const inten = range(r, 0.13, 0.32) * (1 + bright * 3.5) * (wall ? 1.15 : 1);
     aCol.set([col.r, col.g, col.b, inten], i * 4);
+    if (i >= NP - 60) {
+      // faint tall vertical light columns above and below the band
+      aLatH[i * 2] = (r() < 0.5 ? -1 : 1) * range(r, 3, 18);
+      aLatH[i * 2 + 1] = 0;
+      aType[i] = 1;
+      aSize[i * 2] = range(r, 0.05, 0.18);
+      aSize[i * 2 + 1] = range(r, 5, 11);
+      aCol.set([cA.r, cA.g, cA.b, range(r, 0.02, 0.05)], i * 4);
+    }
   }
 
   // ---- streaks
@@ -192,12 +204,13 @@ const buildData = (v: LightStreamsVersion) => {
   for (let i = 0; i < NS; i++) {
     sS[i] = r() * L;
     const side = r() < 0.5 ? -1 : 1;
-    sLatH[i * 2] = (r() < 0.55 ? -1 : side) * (0.9 + Math.pow(r(), 1.5) * 14);
-    sLatH[i * 2 + 1] = gauss(r) * 0.5 + (r() < 0.2 ? range(r, -2.5, 2.5) : 0);
-    sLenW[i * 2] = range(r, 5, 26);
+    const nearWall = r() < 0.65;
+    sLatH[i * 2] = nearWall ? -range(r, 0.7, 3.0) : side * range(r, 2, 10);
+    sLatH[i * 2 + 1] = gauss(r) * (nearWall ? 0.45 : 0.25);
+    sLenW[i * 2] = range(r, 3, 12);
     sLenW[i * 2 + 1] = range(r, 0.004, 0.016);
-    const col = mix(0.55 + r() * 0.45);
-    sCol.set([col.r, col.g, col.b, range(r, 1.2, 3.5) * (r() < 0.25 ? 2.2 : 1)], i * 4);
+    const col = mix(0.45 + r() * 0.4);
+    sCol.set([col.r, col.g, col.b, range(r, 0.8, 2.2)], i * 4);
     // whole number of extra block passes per loop → seamless
     sSpeed[i] = Math.floor(r() * 3) * 1; // 0,1,2 blocks per loop
   }
@@ -213,7 +226,7 @@ const buildData = (v: LightStreamsVersion) => {
     const side = r() < 0.5 ? -1 : 1;
     kLatH[i * 2] = side * (0.5 + Math.pow(r(), 1.2) * 24);
     kLatH[i * 2 + 1] = gauss(r) * 2.2;
-    kSize[i] = range(r, 0.02, 0.06);
+    kSize[i] = range(r, 0.012, 0.035);
     const col = mix(0.6 + r() * 0.4).lerp(new THREE.Color(1, 1, 1), 0.35);
     kCol.set([col.r, col.g, col.b, range(r, 1.0, 4.0)], i * 4);
   }
@@ -235,7 +248,7 @@ const buildScene = (v: LightStreamsVersion): BuiltScene => {
     uBack: { value: BACK },
     uFar: { value: FAR },
     uFocus: { value: 22 },
-    uCocK: { value: 45 },
+    uCocK: { value: 75 },
     uPx: { value: 1 },
     uFocal: { value: 1000 },
     uT: { value: 0 },
@@ -293,7 +306,7 @@ const buildScene = (v: LightStreamsVersion): BuiltScene => {
     camera,
     clear: bg,
     grainPeriod: LS_DURATION,
-    post: { ...defaultPost, exposure: 1.0, bloomStrength: 0.6, bloomRadius: 0.55, bloomThreshold: 0.4, toneMap: "aces", vignette: 0.3, grain: 0.02, saturation: 1.15 },
+    post: { ...defaultPost, exposure: 1.0, bloomStrength: 0.5, bloomRadius: 0.55, bloomThreshold: 0.5, toneMap: "aces", vignette: 0.3, grain: 0.02, saturation: 1.15 },
     update: (frame, info) => {
       const t = (frame % LS_DURATION) / LS_DURATION; // 0..1, loop-exact
       const camS = t * N * L;
@@ -303,7 +316,7 @@ const buildScene = (v: LightStreamsVersion): BuiltScene => {
       const look = pathOffJS(camS + 18);
       look.x += 0.5;
       camera.up.set(Math.sin(TAU * t) * 0.04, 1, 0).normalize();
-      camera.lookAt(look.x + 0.8, look.y * 0.6, -18);
+      camera.lookAt(look.x - 9, look.y * 0.6, -18);
       common.uCamS.value = camS;
       common.uCamPos.value.copy(camera.position);
       common.uPx.value = info.pxScale;
