@@ -12,7 +12,6 @@ export const CODE = `class Node:
         self.left = None
         self.right = None
 
-
 class BinarySearchTree:
     def __init__(self):
         self.root = None
@@ -64,7 +63,6 @@ class BinarySearchTree:
             node = stack.pop()
             yield node.key
             node = node.right
-
 
 if __name__ == "__main__":
     tree = BinarySearchTree()

@@ -10,12 +10,13 @@ export const SPHERE_POINTS: Array<{ x: number; y: number; z: number; size: numbe
     const y = 1 - ((i + 0.5) / n) * 2;
     const r = Math.sqrt(1 - y * y);
     const th = golden * i;
-    const shell = 1 + (rng() - 0.5) * 0.08;
+    const shell = 1 + (rng() - 0.5) * 0.14;
     return {
       x: Math.cos(th) * r * shell,
       y: y * shell,
       z: Math.sin(th) * r * shell,
-      size: 0.6 + rng() * 0.9,
+      // Uneven, clumpy sizes: mostly small, a few large bokeh-like blobs.
+      size: 0.45 + Math.pow(rng(), 3) * 2.4,
       tint: rng(),
     };
   });

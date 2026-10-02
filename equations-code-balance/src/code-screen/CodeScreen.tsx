@@ -17,11 +17,11 @@ export type CodeScreenProps = { variant: "dark" | "light"; loopCheck?: boolean }
 // Screen surface, in design px before the camera transform.
 const SW = 3600;
 const SH = 2300;
-const FONT = 50;
-const LH = 82;
+const FONT = 42;
+const LH = 66;
 const BLOCK_H = CODE_LINES.length * LH;
 const EDITOR = { x: 610, y: 150, w: 1560, h: 1500 };
-const SPHERE = { cx: 2780, cy: 860, r: 700 };
+const SPHERE = { cx: 2860, cy: 1060, r: 1000 };
 
 const lerpColor = (a: string, b: string, t: number) => {
   const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
@@ -163,10 +163,10 @@ const Screen: React.FC<{
                   whiteSpace: "pre",
                 }}
               >
-                <span style={{ width: u(120), textAlign: "right", paddingRight: u(40), color: theme.gutterText, fontSize: u(FONT * 0.8) }}>{lineNo + 1}</span>
+                <span style={{ width: u(120), flexShrink: 0, textAlign: "right", paddingRight: u(40), color: theme.gutterText, fontSize: u(FONT * 0.8) }}>{lineNo + 1}</span>
                 <span>
                   {CODE_LINES[lineNo].map((t, i) => (
-                    <span key={i} style={{ color: theme.tokens[t.kind], fontWeight: t.kind === "keyword" || t.kind === "fn" ? 700 : 400 }}>{t.text}</span>
+                    <span key={i} style={{ color: theme.tokens[t.kind], fontWeight: 700 }}>{t.text}</span>
                   ))}
                 </span>
               </div>
@@ -179,8 +179,9 @@ const Screen: React.FC<{
       <div style={{ position: "absolute", left: u(SPHERE.cx - SPHERE.r * 1.6), top: u(SPHERE.cy - SPHERE.r * 1.6), width: u(SPHERE.r * 3.2), height: u(SPHERE.r * 3.2), borderRadius: "50%", background: `radial-gradient(circle, ${theme.bloom} 0%, transparent 62%)` }} />
       <svg width={u(SW)} height={u(SH)} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
         <defs>
-          <linearGradient id={`ai-grad-${copy}`} x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={`ai-grad-${copy}`} x1="0" y1="0" x2="0.4" y2="1">
             <stop offset="0" stopColor={theme.aiGradient[0]} />
+            <stop offset="0.55" stopColor={theme.sphereDot[0]} />
             <stop offset="1" stopColor={theme.aiGradient[1]} />
           </linearGradient>
           <GlowFilter id={`ai-glow-${copy}`} base={u(5)} strength={[0.8 * theme.aiGlow, 0.5 * theme.aiGlow, 0.35 * theme.aiGlow]} />
@@ -192,7 +193,7 @@ const Screen: React.FC<{
               key={i}
               cx={u(SPHERE.cx + x * SPHERE.r)}
               cy={u(SPHERE.cy + y * SPHERE.r)}
-              r={u((3.5 + 6 * near) * p.size)}
+              r={u((4 + 8 * near) * p.size)}
               fill={lerpColor(theme.sphereDot[0], theme.sphereDot[1], p.tint * 0.6 + (1 - near) * 0.4)}
               opacity={(0.18 + 0.82 * near) * theme.sphereOpacity}
             />
@@ -200,11 +201,11 @@ const Screen: React.FC<{
         })}
         <text
           x={u(SPHERE.cx)}
-          y={u(SPHERE.cy + 190)}
+          y={u(SPHERE.cy + 300)}
           textAnchor="middle"
           fontFamily={INTER}
           fontWeight={600}
-          fontSize={u(540)}
+          fontSize={u(860)}
           letterSpacing={u(10)}
           fill={`url(#ai-grad-${copy})`}
           filter={`url(#ai-glow-${copy})`}
@@ -230,15 +231,15 @@ const COPIES: Array<{ blur: number; mask?: string }> = [
   { blur: 30 },
   {
     blur: 14,
-    mask: "radial-gradient(ellipse 66% 70% at 36% 54%, #000 45%, transparent 100%)",
+    mask: "radial-gradient(ellipse 70% 80% at 34% 50%, #000 50%, transparent 100%)",
   },
   {
     blur: 5,
-    mask: "radial-gradient(ellipse 52% 48% at 36% 56%, #000 35%, transparent 100%)",
+    mask: "radial-gradient(ellipse 50% 62% at 32% 50%, #000 42%, transparent 100%)",
   },
   {
     blur: 0,
-    mask: "radial-gradient(ellipse 38% 30% at 34% 54%, #000 30%, transparent 100%)",
+    mask: "radial-gradient(ellipse 34% 46% at 30% 48%, #000 40%, transparent 100%)",
   },
 ];
 
@@ -254,7 +255,7 @@ export const CodeScreen: React.FC<CodeScreenProps> = ({ variant }) => {
 
   const screenTransform =
     `translate(-50%, -50%) translate3d(${u(260 - camX)}px, ${u(-80 - camY)}px, ${u(380)}px) ` +
-    `rotateZ(-4deg) rotateY(26deg) rotateX(6deg)`;
+    `rotateZ(-2deg) rotateY(24deg) rotateX(2deg)`;
 
   return (
     <AbsoluteFill style={{ background: theme.backdrop, overflow: "hidden" }}>

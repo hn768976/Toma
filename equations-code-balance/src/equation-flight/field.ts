@@ -19,7 +19,7 @@ export const BLOCKS = 3;
 /** Planes nearer than this are behind the lens and never drawn. */
 export const NEAR = 160;
 export const FAR = NEAR + BLOCKS * BLOCK_DEPTH;
-export const FORMULAS_PER_BLOCK = 52;
+export const FORMULAS_PER_BLOCK = 66;
 export const GRAPHS_PER_BLOCK = 14;
 
 export type GraphPath = { d: string; width: number; opacity: number };
@@ -217,8 +217,8 @@ const buildField = (): PlaneSpec[] => {
     let x = 0;
     let y = 0;
     for (;;) {
-      x = range(rng, -2900, 2900);
-      y = range(rng, -1650, 1650);
+      x = range(rng, -3600, 3600);
+      y = range(rng, -2050, 2050);
       if ((x / 380) ** 2 + (y / 230) ** 2 > 1) break;
     }
     const base = {
@@ -226,8 +226,9 @@ const buildField = (): PlaneSpec[] => {
       x,
       y,
       z: depths[i],
-      rotX: range(rng, -16, 16),
-      rotY: range(rng, -38, 38),
+      rotX: range(rng, -30, 30),
+      // Steep receding rows, like chalk lines on walls of a tunnel.
+      rotY: (rng() < 0.5 ? -1 : 1) * range(rng, 12, 50),
       rotZ: range(rng, -6, 6),
     };
     if (i < FORMULAS_PER_BLOCK) {
@@ -235,16 +236,16 @@ const buildField = (): PlaneSpec[] => {
       // two more, which makes the field dense without adding planes.
       const formula = order[i];
       const star = FORMULAS[formula].star;
-      const extra = rng() < 0.55 ? (rng() < 0.45 ? 2 : 1) : 0;
+      const extra = rng() < 0.8 ? 1 + Math.floor(rng() * 3) : 0;
       const formulas = [formula];
       for (let e = 0; e < extra; e++) formulas.push(Math.floor(rng() * FORMULAS.length));
       planes.push({
         ...base,
         kind: "formula",
         formulas,
-        fontSize: star ? range(rng, 60, 100) : range(rng, 44, 80),
+        fontSize: star ? range(rng, 46, 72) : range(rng, 34, 60),
         // Some lines carry a long hand-drawn underline / construction stroke.
-        underline: rng() < 0.3 ? range(rng, 0.6, 1.3) : 0,
+        underline: rng() < 0.4 ? range(rng, 0.7, 1.6) : 0,
       });
     } else {
       planes.push({ ...base, kind: "graph", graph: makeGraph(rng, i) });
@@ -262,7 +263,7 @@ export type Streak = { x: number; y: number; z: number; len: number; w: number }
 
 export const STREAKS: Streak[] = (() => {
   const rng = mulberry32(7741);
-  return Array.from({ length: 90 }, () => {
+  return Array.from({ length: 50 }, () => {
     let x = 0;
     let y = 0;
     for (;;) {

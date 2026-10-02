@@ -33,12 +33,12 @@ export type EquationFlightProps = {
  * so its focus never jumps. Blur is in design px (4K).
  */
 const BANDS = [
-  { until: 560, blur: 34 }, // rushing past, very soft
-  { until: 1250, blur: 11 },
-  { until: 3500, blur: 0 }, // the sharp band
-  { until: 5600, blur: 2.6 },
-  { until: 8200, blur: 5.5 },
-  { until: Infinity, blur: 10 },
+  { until: 900, blur: 40 }, // rushing past, very soft
+  { until: 1750, blur: 14 },
+  { until: 3900, blur: 0 }, // the sharp band
+  { until: 5600, blur: 3 },
+  { until: 7600, blur: 7.5 },
+  { until: Infinity, blur: 13 },
 ];
 const SHARP_BAND = 2;
 const BAND_SOFTNESS = 0.09; // half-width of a cross-fade, in ln(distance)
@@ -92,6 +92,15 @@ const rayGradient = (color: string, turn: number, cx: number, cy: number) => {
 const rayMask = (cx: number, cy: number, r: number) =>
   `radial-gradient(circle at ${cx}px ${cy}px, #000 0px, rgba(0,0,0,0.55) ${(r * 0.1).toFixed(0)}px, rgba(0,0,0,0.18) ${(r * 0.38).toFixed(0)}px, rgba(0,0,0,0.04) ${(r * 0.7).toFixed(0)}px, transparent ${r.toFixed(0)}px)`;
 
+/** Soft blown-out light source: white-hot core, long smooth falloff. */
+const bloomGradient = (color: string, cx: number, cy: number, w: number, h: number) => {
+  const c = hexToRgb(color);
+  return (
+    `radial-gradient(ellipse ${w * 0.05}px ${h * 0.075}px at ${cx}px ${cy}px, rgba(${c}, 1) 0%, rgba(${c}, 0.85) 30%, rgba(${c}, 0.45) 60%, rgba(${c}, 0.15) 82%, rgba(${c}, 0) 100%), ` +
+    `radial-gradient(ellipse ${w * 0.2}px ${h * 0.26}px at ${cx}px ${cy}px, rgba(${c}, 0.5) 0%, rgba(${c}, 0.3) 18%, rgba(${c}, 0.13) 42%, rgba(${c}, 0.04) 70%, rgba(${c}, 0) 100%)`
+  );
+};
+
 type Placed = { plane: PlaneSpec; dist: number; key: string; opacity: number };
 
 const PALETTE = {
@@ -119,7 +128,7 @@ const Plane: React.FC<{
   const tz = PERSPECTIVE - p.dist;
   const content =
     plane.kind === "formula" ? (
-      <div style={{ fontSize: u(plane.fontSize), whiteSpace: "nowrap", lineHeight: 1, display: "flex", alignItems: "center", gap: u(plane.fontSize * 1.4) }}>
+      <div style={{ fontSize: u(plane.fontSize), WebkitTextStroke: `${u(plane.fontSize * 0.022)}px currentColor`, whiteSpace: "nowrap", lineHeight: 1, display: "flex", alignItems: "center", gap: u(plane.fontSize * 1.4) }}>
         {plane.formulas.map((f, i) => (
           <span key={i} dangerouslySetInnerHTML={{ __html: FORMULA_HTML[f] }} />
         ))}
@@ -130,7 +139,7 @@ const Plane: React.FC<{
               left: `${-10 * plane.underline}%`,
               width: `${100 * plane.underline + 20}%`,
               bottom: u(-plane.fontSize * 0.35),
-              height: u(Math.max(2.4, plane.fontSize * 0.045)),
+              height: u(Math.max(3, plane.fontSize * 0.07)),
               borderRadius: u(4),
               background: "currentColor",
               opacity: 0.85,
@@ -203,7 +212,7 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
       const farFade = smoothstep(FAR, FAR - 3200, dist);
       const nearFade = smoothstep(NEAR + 60, NEAR + 700, dist);
       // Atmospheric falloff: distant planes are dimmer.
-      const fog = 1 - 0.5 * smoothstep(3500, FAR, dist);
+      const fog = 1 - 0.3 * smoothstep(3300, FAR, dist);
       const opacity = farFade * nearFade * fog;
       if (opacity < 0.004) continue;
       placed.push({ plane, dist, key: `${plane.id}-${k}`, opacity });
@@ -227,9 +236,9 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
     cy + u((y - camY) * (PERSPECTIVE / dist)),
   ];
 
-  const rayCx = width * 0.53;
-  const rayCy = height * 0.46;
-  const rayR = width * 0.78;
+  const rayCx = width * 0.8;
+  const rayCy = height * 0.48;
+  const rayR = width * 0.9;
 
   return (
     <AbsoluteFill style={{ background: pal.background, overflow: "hidden" }}>
@@ -266,7 +275,7 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
                   x2={x1}
                   y2={y1}
                   stroke={pal.ink}
-                  strokeOpacity={0.32 * o}
+                  strokeOpacity={0.2 * o}
                   strokeWidth={u(s.w * clamp(PERSPECTIVE / dist, 0.4, 3))}
                   strokeLinecap="round"
                 />
@@ -318,11 +327,19 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
           turn per loop. Each ray is a soft-edged wedge of a conic gradient
           (no blur filter needed), faded with distance by a radial mask.
           Screen-blended so empty black stays black. */}
+      {/* The light source the rays fan from: a large blown-out bloom, right of
+          centre. A radial gradient that reaches zero well inside the frame. */}
+      <AbsoluteFill
+        style={{
+          mixBlendMode: "screen",
+          background: bloomGradient(pal.ray, rayCx, rayCy, width, height),
+        }}
+      />
       {off("rays") ? null : (
         <AbsoluteFill
           style={{
             mixBlendMode: "screen",
-            opacity: variant === "black" ? 0.3 : 0.36,
+            opacity: variant === "black" ? 0.42 : 0.46,
             background: rayGradient(pal.ray, phase * 360, rayCx, rayCy),
             WebkitMaskImage: rayMask(rayCx, rayCy, rayR),
             maskImage: rayMask(rayCx, rayCy, rayR),
