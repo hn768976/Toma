@@ -2,7 +2,9 @@
 
 Every flag is an SVG at its official proportions. Flags are cropped only when
 they are mapped onto a map shape (cover the shape's bounding box, with the
-row's `focus` point placed on the shape's most interior point).
+row's `focus` point placed on the shape's most interior point). One exception:
+the EU flag is drawn at 40% of cover size with its own blue field extended
+around it, so the whole ring of 12 stars stays inside the EU shape.
 
 ## Drawn in code (`src/flags/flags.ts`)
 

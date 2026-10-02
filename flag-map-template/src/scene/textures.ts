@@ -105,7 +105,7 @@ export const makeTopTexture = (row: Row, shape: ShapeData, flagImg: HTMLImageEle
   rctx.globalCompositeOperation = 'destination-out';
   outline(rctx, off, off);
   rctx.fill('evenodd');
-  ctx.globalAlpha = 0.45;
+  ctx.globalAlpha = 0.22;
   ctx.drawImage(rim, 0, 0);
   ctx.globalAlpha = 1;
 
@@ -133,6 +133,10 @@ export const makeLabelTexture = (text: string) => {
   ctx.font = `500 ${px}px ${FONT_FAMILY}`;
   ctx.fillStyle = '#2A2E35';
   ctx.textBaseline = 'alphabetic';
+  // soft contact shadow under the letters
+  ctx.shadowColor = 'rgba(20,28,45,0.28)';
+  ctx.shadowBlur = px * 0.08;
+  ctx.shadowOffsetY = px * 0.05;
   // cap band centred vertically: baseline at centre + capHeight/2
   const baseline = ch / 2 + (0.727 * px) / 2;
   ctx.fillText(text, pad + m.actualBoundingBoxLeft, baseline);

@@ -10,7 +10,7 @@ export const DURATION = 360;
 export const LOOK = {
   fov: 24, // vertical, degrees (fairly long lens, as in the reference)
   elevationStart: 42, // camera angle above the floor at frame 0, degrees
-  elevationEnd: 64, // ... at the last frame (the drift rises slightly, as in the reference)
+  elevationEnd: 58, // ... at the last frame (the drift rises slightly, as in the reference)
   distance: 10, // camera-target distance at the start (world units)
   pushIn: 0.9, // distance multiplier reached at the last frame
   azimuthStart: -14, // degrees; negative = camera to the left of the shape
@@ -19,9 +19,12 @@ export const LOOK = {
   fitHeight: 0.5, // ... or 50% of frame height, whichever is tighter
   groupCenterY: 0.45, // vertical centre of shape + label (fraction of frame height from top)
   maxShapeCenterY: 0.4, // ...but the shape's own centre never sits lower than this
-  labelCapHeight: 0.055, // cap height of the label, fraction of frame height (≈5% with descenders)
+  labelCapHeight: 0.05, // cap height of the label, fraction of frame height (≈5% with descenders)
   labelGap: 0.03, // gap between shape bbox front and label, fraction of frame height
   depthRatio: 0.04, // extrusion depth, fraction of shape width
+  // Floor dots: > 0 darkens the dots (as the brief asks); a negative value
+  // (e.g. -0.12) makes them lighter than the floor, as in the reference clip.
+  dotDarken: 0.06,
 };
 
 const ease = {
@@ -78,8 +81,9 @@ export type Layout = {
   labelZ: number; // world z of the label's centre line
   labelHeight: number; // world size of the label's em box (font size)
   labelMaxWidth: number; // world
-  focusNear: number;
-  focusFar: number;
+  /** World points bounding the sharp zone: label front edge and shape back edge. */
+  focusNearPoint: THREE.Vector3;
+  focusFarPoint: THREE.Vector3;
   shapeRect: ReturnType<typeof screenRect>;
 };
 
@@ -135,9 +139,8 @@ export const computeLayout = (shape: ShapeData, aspect: number): Layout => {
   const labelHeight = capWorld / 0.727; // Inter cap height = 0.727 em
   const labelZ = (capTopZ + capBottomZ) / 2;
 
-  const camDist = (p: THREE.Vector3) => cam.position.distanceTo(p);
-  const focusNear = camDist(new THREE.Vector3(0, 0, capBottomZ + labelHeight * 0.3)) - 0.05;
-  const focusFar = camDist(new THREE.Vector3(0, 0, -(shape.h / 2) * scale)) + 0.1;
+  const focusNearPoint = new THREE.Vector3(0, 0, capBottomZ + labelHeight * 0.3);
+  const focusFarPoint = new THREE.Vector3(0, depth * scale, -(shape.h / 2) * scale);
   return {
     scale,
     depth,
@@ -145,11 +148,17 @@ export const computeLayout = (shape: ShapeData, aspect: number): Layout => {
     labelZ,
     labelHeight,
     labelMaxWidth: Math.max(shape.w * scale, 0.3 * 2 * LOOK.distance * Math.tan(THREE.MathUtils.degToRad(LOOK.fov / 2)) * aspect),
-    focusNear,
-    focusFar,
+    focusNearPoint,
+    focusFarPoint,
     shapeRect: rect,
   };
 };
+
+/** Sharp zone for the depth of field at this camera position (world distances). */
+export const focusBand = (layout: Layout, camPos: THREE.Vector3) => ({
+  near: camPos.distanceTo(layout.focusNearPoint) - 0.05,
+  far: Math.max(camPos.distanceTo(layout.focusFarPoint), camPos.distanceTo(new THREE.Vector3(layout.focusFarPoint.x, 0, layout.focusFarPoint.z))) + 0.1,
+});
 
 /** Every animated value, from the frame number alone. */
 export const animate = (frame: number) => {

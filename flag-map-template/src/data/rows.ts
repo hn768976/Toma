@@ -97,7 +97,7 @@ export const REGIONS: Row[] = [
   {
     id: 'EuropeanUnion', label: 'European Union', kind: 'region',
     members: [...EU27, ...EU_EXTRA], within: [-11, 34, 35, 71], minIsland: 0.0005, keepAllMembers: true,
-    top: {flag: 'EU', focus: {x: 0.5, y: 0.5}, zoom: 0.36, pad: '#003399'},
+    top: {flag: 'EU', focus: {x: 0.5, y: 0.54}, zoom: 0.4, pad: '#003399'},
   },
   {id: 'Africa', label: 'Africa', kind: 'region', continent: 'Africa', top: {fill: '#E8A33A'}},
   {

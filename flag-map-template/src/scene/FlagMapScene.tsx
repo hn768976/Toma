@@ -8,14 +8,14 @@ import {cancelRender} from 'remotion';
 import * as THREE from 'three';
 import type {Row} from '../data/rows';
 import type {ShapeData} from '../geo/buildShape';
-import {animate, cameraPose, computeLayout, LOOK} from './layout';
+import {animate, cameraPose, computeLayout, focusBand, LOOK} from './layout';
 import {addGlint, floorFragment, floorVertex, postFragment, postVertex} from './shaders';
 import {makeDotsTexture, makeLabelTexture, makeTopTexture, sideColor} from './textures';
 import type {Dots} from './assets';
 
 // Floor look (display sRGB). Albedo #E6E9EE under a cool studio light.
 const FLOOR_ALBEDO = new THREE.Color('#E6E9EE');
-const FLOOR_LIGHT = [0.845, 0.862, 0.895];
+const FLOOR_LIGHT = [0.835, 0.857, 0.905];
 const HAZE = new THREE.Color('#D3D8E1');
 
 const srgbArr = (c: THREE.Color) => {
@@ -112,10 +112,10 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
       // the far floor (top of frame) shows latitudes north of the origin: keep land there
       uMapOrigin: {value: new THREE.Vector2(shape.center[0], Math.max(-35, Math.min(22, shape.center[1])))},
       uUnitsPerDeg: {value: unitsPerDeg},
-      uDotRadius: {value: dots.step * unitsPerDeg * 0.3},
-      uDotDarken: {value: 0.075},
-      uMajor: {value: visW / 9.5},
-      uMinor: {value: visW / 9.5 / 4},
+      uDotRadius: {value: dots.step * unitsPerDeg * 0.26},
+      uDotDarken: {value: LOOK.dotDarken},
+      uMajor: {value: visW / 8},
+      uMinor: {value: visW / 8 / 4},
       uMajorWidth: {value: visW * 0.0019},
       uMinorWidth: {value: visW * 0.0008},
       uMajorAlpha: {value: 0.24},
@@ -143,7 +143,7 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
       m.blendSrcAlpha = THREE.ZeroFactor;
       m.blendDstAlpha = THREE.OneFactor;
     };
-    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#101a30'), opacity: 0.55});
+    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#101a30'), opacity: 0.6});
     keepAlpha(shadowMat);
     shadowMat.polygonOffset = true;
     shadowMat.polygonOffsetFactor = -4;
@@ -168,7 +168,7 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
 
     // key light from the upper left (behind-left of the shape)
     const key = new THREE.DirectionalLight('#ffffff', 0.55);
-    const lightDir = new THREE.Vector3(-0.42, 1.0, -0.36).normalize();
+    const lightDir = new THREE.Vector3(-0.62, 0.8, -0.5).normalize();
     key.position.copy(lightDir.clone().multiplyScalar(layout.scale * 4));
     key.target.position.set(0, 0, 0);
     key.castShadow = true;
@@ -233,12 +233,12 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
       uRes: {value: new THREE.Vector2(w, h)},
       uNear: {value: 1},
       uFar: {value: 500},
-      uFocusNear: {value: layout.focusNear},
-      uFocusFar: {value: layout.focusFar},
+      uFocusNear: {value: 0},
+      uFocusFar: {value: 0},
       uFarRange: {value: LOOK.distance * 0.07},
       uNearRange: {value: LOOK.distance * 0.04},
-      uMaxCoc: {value: h * 0.0095},
-      uExposure: {value: 0.27},
+      uMaxCoc: {value: h * 0.012},
+      uExposure: {value: 0.3},
       uFrame: {value: 0},
       uFlare: {value: 0},
       uFlarePos: {value: new THREE.Vector2(0.5, 1.02)},
@@ -289,6 +289,9 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
     objs.labelMat.opacity = a.label;
     objs.label.position.z = layout.labelZ + (1 - a.label) * objs.labelEm * 0.9;
 
+    const band = focusBand(layout, pos);
+    post.uniforms.uFocusNear.value = band.near;
+    post.uniforms.uFocusFar.value = band.far;
     post.uniforms.uFrame.value = f;
     post.uniforms.uFlare.value = a.flare;
 

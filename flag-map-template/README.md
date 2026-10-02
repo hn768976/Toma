@@ -75,7 +75,22 @@ that a test still matches before switching.
 
 ## Render time
 
-__RENDER_TIME__
+Measured on the build machine: 4 vCPUs, **no GPU** (Chromium's ANGLE falls
+back to SwiftShader, i.e. WebGL on the CPU), `FlagMap-EuropeanUnion`, PNG
+frames, startup time subtracted:
+
+| Resolution | One worker | Full 12 s clip, 4 workers |
+|-----------|-----------|---------------------------|
+| 720p (`--scale=0.333…`) | **0.69 s / frame** | 4 min 01 s (EU), 4 min 33 s (USA), incl. encoding |
+| 1080p (`--scale=0.5`) | 1.44 s / frame | — |
+| **4K (estimate)** | **≈ 5.5 s / frame** | ≈ 30–35 min per composition, ≈ 20 h for all 38 |
+
+Time grows linearly with pixel count (720p → 1080p: 2.25× pixels, 2.1×
+time), so 4K (9× the pixels of 720p) is extrapolated, not measured — 4K was
+not rendered here. SwiftShader already uses every core, so more Remotion
+concurrency barely helps on a CPU-only machine. With a real GPU (`--gl=angle`
+on a GPU host, or `--gl=angle-egl`/`vulkan`), expect roughly 0.5–1 s per 4K
+frame, mostly screenshot and PNG encoding.
 
 ## Data and boundaries
 
@@ -138,24 +153,40 @@ is placed on the shape's most interior point (or its bbox centre with
 
 ## Look (shared by all 38 — `src/scene/layout.ts`, `FlagMapScene.tsx`, `shaders.ts`)
 
-- Floor: albedo #E6E9EE under a cool studio light, grid (major + fine),
+- Floor: albedo #E6E9EE under a cool studio light, soft-glow grid (major + fine),
+  faint mottling and light streaks,
   dotted world map from Natural Earth land, haze and depth of field into the
   distance. Rendered display-referred (not tonemapped) so its colour is exact.
 - Shape: extrusion depth 4% of its width; glossy top (clearcoat), matte sides
   in a darker shade of the main colour; PCSS soft shadow.
 - Lighting: Poly Haven "Studio Small 03" HDRI (CC0) + a key light from the
   upper left. ACES tonemapping, sRGB.
-- Label: Inter Medium, #2A2E35, lying on the floor, cap height ≈ 4.6% of frame
-  height (≈ 5% with descenders), scaled down to the shape's width for long names.
-- Camera: starts 42° above the floor, from the left; over 12 s it orbits 15°
-  and rises to 62°, pushing in 10%.
+- Label: Inter Medium, #2A2E35, lying on the floor with a faint contact
+  shadow, cap height ≈ 5% of frame height, scaled down to the shape's width for
+  long names.
+- Camera: 24° vertical field of view (a fairly long lens, as in the reference).
+  Starts 42° above the floor, 14° to the left; over 12 s it orbits to 5° right
+  (19° in all, ending with the reference's slight clockwise roll), rises to
+  58° and pushes in 10%.
+- Depth of field: the sharp zone runs from the label to the back of the shape,
+  recomputed every frame from the camera position; the far and near floor and
+  the frame corners soften.
 - Timeline: floor + flare fade in 0–20; shape rises 10–50; label slides in
   30–60; glint sweeps once around frame 150.
 
 Deviations from the brief, on purpose:
-- The **camera rises** from 42° to 62° during the drift. The brief says it
-  starts at about 40°; the reference's late frames are clearly steeper (≈ 60°),
-  so the drift ends there.
+- The **camera rises** from 42° to 58° during the drift, and the orbit is 19°
+  rather than 15°. The brief says it starts at about 40° from the left; the
+  reference's late frames are steeper and seen slightly from the right.
+- **EU flag stars:** "cover the bounding box" makes the EU's star ring as tall
+  as two thirds of the whole EU, so most stars fall in the sea. Because the EU
+  flag is a ring on a plain field, its row uses `zoom: 0.4` with `pad: '#003399'`:
+  the flag is drawn at 40% of cover size and the rest of the top face is filled
+  with the same Reflex Blue, so all 12 stars land inside the shape. Every other
+  flag uses plain cover.
+- **Floor dots are slightly darker than the floor**, as the brief asks. The
+  reference clip's dots are lighter; to match it instead, set
+  `LOOK.dotDarken` to a negative value (e.g. `-0.12`) in `src/scene/layout.ts`.
 - **No geometric bevel**: three.js bevels spike at the sharp concave vertices
   real coastlines have (fjords, narrow straits). The bevel's edge catch-light
   is painted into the top texture instead.
@@ -179,7 +210,43 @@ Every value on screen comes from `useCurrentFrame()`:
 
 ## Checks
 
-__CHECKS__
+Run before delivery (results in the delivery report):
+
+- **Files:** `ffprobe` on both previews: 1280×720, 30/1, 12.000 s, 360
+  frames, h264, yuv420p, video stream only (`Config.setMuted(true)`; Remotion
+  otherwise adds a silent AAC track).
+- **Determinism:** each preview rendered in full as a PNG sequence (4 workers,
+  frames out of order) and frame 200 rendered alone from a cold start:
+  byte-identical (md5 equal) for both EU and USA.
+- **Every composition renders:** `npm run sheets` renders frame 300 of all 38
+  (each in about 4 s at 720p, no errors) into the shapes contact sheet, and
+  every flag alone into the flags contact sheet (`out/`).
+- **Banding:** a frame decoded from the encoded mp4, read along a vertical line
+  through the flare glow and a horizontal line across the floor (5×5 averaged
+  to remove grain): values change smoothly. The largest step between
+  neighbouring samples is about 2 levels, apart from isolated +3–5 spikes where
+  the line crosses a grid line; there are no flat plateaus or steps. What
+  prevents banding: ±1/255 TPDF dither after tonemapping and 1.5% (peak to
+  peak) grain from an integer hash of pixel and frame, in the final pass;
+  half-float render target; PNG (not JPEG) intermediate frames.
+- **Motion:** frames 0/30/90/150/240/359 of both previews: floor fades in, the
+  shape rises from flat, the label slides in, the camera drifts, the glint
+  passes once around frame 150.
+- **Clean copy:** `npm install && npx remotion studio` from a fresh copy of the
+  project (no `node_modules`) starts the studio.
+
+### Completion checklist
+
+- [x] 38 compositions (13 regions + 25 countries) from data rows, 3840×2160, 30 fps, 360 frames
+- [x] 3D extrusion (WebGL2, `@remotion/three`), depth 4% of width, fit to 45% width / 50% height
+- [x] Flags: 19 drawn in code + EU in code, 6 public-domain Wikimedia (`FLAG_SOURCES.md`); Saudi Arabia omitted
+- [x] Natural Earth 1:50m (1:10m for NLD, CHE, ARE); India and Pakistan worldviews
+- [x] Per-shape projection; antimeridian (Russia, Oceania) and polar (Antarctica) handled
+- [x] Region fills with faint member borders
+- [x] Floor grid + dotted world map, flare, label (Inter Medium), HDRI + key light, PCSS shadow, DOF, ACES
+- [x] Dither + grain, no `Math.random()`, no clocks, no temporal effects; byte-identical cold frames
+- [x] Licences shipped: Natural Earth (PD), Inter (OFL), HDRI (CC0), flags (PD)
+- [x] 720p previews of EU and USA; contact sheets of flags and shapes
 
 ## How to add a country or region
 
