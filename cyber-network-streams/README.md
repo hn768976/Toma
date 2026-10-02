@@ -49,20 +49,26 @@ Looks 1–5 need WebGL2. Headless Chromium has to be started with ANGLE:
 the CLI commands below pick it up automatically. The flag is also passed
 explicitly in the commands so they work with the Node APIs. WebGPU is not used.
 
+`remotion.config.ts` also sets PNG intermediates, H.264 / yuv420p / CRF 16, x264 preset
+`slow`, `Config.setMuted(true)` (no audio stream), and
+`-x264-params aq-mode=3:aq-strength=1.6:fast-pskip=0` (black-safe, see Banding).
+If you render through `@remotion/renderer` instead of the CLI, pass the same options
+(`chromiumOptions: { gl: "angle" }`, `muted: true`, `ffmpegOverride`).
+
 ## 4K render commands
 
 Each command writes a 3840×2160 H.264 file (yuv420p, CRF 16, PNG intermediates):
 
 ```bash
-npx remotion render CyberFlythrough      out/CyberFlythrough.mp4      --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render NetworkHub-DarkBlue  out/NetworkHub_DarkBlue.mp4  --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render NetworkHub-Light     out/NetworkHub_Light.mp4     --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render LightStreams-Blue    out/LightStreams_Blue.mp4    --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render LightStreams-Amber   out/LightStreams_Amber.mp4   --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render DataBurst            out/DataBurst.mp4            --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render FibreStrands-Blue    out/FibreStrands_Blue.mp4    --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render FibreStrands-Gold    out/FibreStrands_Gold.mp4    --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
-npx remotion render BigDataHUD           out/BigDataHUD.mp4           --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png
+npx remotion render CyberFlythrough      out/CyberFlythrough.mp4      --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render NetworkHub-DarkBlue  out/NetworkHub_DarkBlue.mp4  --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render NetworkHub-Light     out/NetworkHub_Light.mp4     --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render LightStreams-Blue    out/LightStreams_Blue.mp4    --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render LightStreams-Amber   out/LightStreams_Amber.mp4   --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render DataBurst            out/DataBurst.mp4            --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render FibreStrands-Blue    out/FibreStrands_Blue.mp4    --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render FibreStrands-Gold    out/FibreStrands_Gold.mp4    --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
+npx remotion render BigDataHUD           out/BigDataHUD.mp4           --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --image-format=png --muted
 ```
 
 On a machine with a real GPU you can add `--concurrency=<n>`. With a software
@@ -85,7 +91,27 @@ sizes, line widths, canvas resolutions, SVG), so it stays sharp at any scale.
 
 ## Measured render times
 
-RENDER_TIMES_PLACEHOLDER
+Measured on the build machine: 4 vCPU, **no GPU**, so Chromium runs WebGL through
+SwiftShader (software). "Marginal" means (time for 5 frames − time for 1 frame) / 4,
+which removes the browser/bundle start-up cost. "Full render" is the wall time of the
+actual preview render (`--concurrency=2`, start-up included) divided by frame count.
+
+| Look | 720p marginal (s/frame) | 720p full render | 4K marginal (s/frame) |
+|---|---|---|---|
+| 1 Cyber Flythrough | 0.63 | 443 s / 600 f = 0.74 | **3.67** |
+| 2 Network Hub (each version) | 0.60 | 172 s / 360 f = 0.48 | (est. ≈3.6) |
+| 3 Light Streams (each version) | 0.41 | 178 s / 600 f = 0.30 | (est. ≈2.5) |
+| 4 Data Burst | 0.33 | 115 s / 450 f = 0.26 | **2.32** |
+| 5 Fibre Strands (each version) | 0.38 | 136 s / 600 f = 0.23 | **1.88** |
+| 6 Big Data HUD | 0.07 | 76 s / 600 f = 0.13 | (est. ≈0.35) |
+
+**4K estimate (this CPU-only machine):** Cyber Flythrough ≈ 37 min, Data Burst ≈ 17 min,
+each Fibre Strands ≈ 19 min. Network Hub and Light Streams are estimated at ≈ 6× their
+720p marginal time: about 22 min and 25 min per version. The HUD is about 4 min. All nine
+come to about 3¼ hours. The 4K/720p ratio was 4.9–7.0× in the three measured looks
+(fill-bound software rasterisation). On a workstation GPU with hardware ANGLE, expect
+a small fraction of this; the JS-side work per frame (Pixi projection of ~60k
+particles, atlas redraws) is well under 50 ms.
 
 ## Determinism
 
@@ -143,7 +169,22 @@ so frame 600 can be rendered and compared with frame 0.
   near-zero output is forced to exactly 0,0,0.
 - Look 6 is flat UI on black, with no grain or dither.
 
-BANDING_RESULTS_PLACEHOLDER
+**Banding check (done on frames decoded from the encoded mp4s, not the preview).**
+Frames 300 of looks 1, 2A, 2B and 3A, and frames 20 and 440 of look 4, were decoded
+to PNG. Luminance was read along rows and columns crossing the darkest gradients and
+the glows, with a 16 px band average and a 9 px box filter to remove grain/dither.
+
+| Probe | Max step between neighbours (8-bit levels) |
+|---|---|
+| Network Hub dark floor gradient | 0.23–0.46 |
+| Network Hub light vignette | 0.27–0.35 |
+| Light Streams sky (0.7–5.9 levels) | 0.14 |
+| Data Burst background | 0.20 |
+
+The only larger steps were where a probe crossed real content edges: streaks, the sphere
+limb, panels. Contrast-stretched crops (×4–×12) of those dark areas show no contour
+lines. The previews are encoded with `aq-mode=3:aq-strength=1.6:fast-pskip=0`; the
+same parameters are injected for CLI renders by `remotion.config.ts`.
 
 ## Fibre Strands blending
 
@@ -196,4 +237,28 @@ scripts/render-previews.sh
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+- [x] 9 compositions in one project, all 3840×2160 at 30 fps, one data row per version.
+- [x] Lengths: Network Hub 360 frames, Data Burst 450, all others 600.
+- [x] Engines as specified: three.js (`@remotion/three`) for looks 1–3, PixiJS 8 WebGL2
+  for looks 4–5 (`preference: 'webgl'`, `autoStart: false`, `preserveDrawingBuffer`,
+  ticker stopped, one `app.render()` per frame, `ParticleContainer`, mesh lines, 8
+  pre-made bokeh discs, custom dither/grain `Filter` with `uFrame`), SVG/HTML + Canvas
+  2D for look 6.
+- [x] Fonts (Inter, JetBrains Mono), OFL, shipped and loaded behind `delayRender`.
+  Icons are self-drawn SVG. Natural Earth data shipped with its licence. Numbers are
+  made up.
+- [x] No `Math.random()`, no `Date.now()`, no CSS keyframes or transitions, no stepped
+  simulation, no TAA or temporal effects.
+- [x] 720p previews 1280×720, H.264, yuv420p, 30/1, no audio, correct durations
+  (ffprobe).
+- [x] Loop check: frame 0 = frame 600 pixel for pixel. Cyber Flythrough, Light Streams
+  ×2, Fibre Strands ×2 and the HUD all passed (601-frame `loopCheck` mode).
+- [x] Determinism: frame 300 (Network Hub: 200), rendered alone from a cold start, is
+  **byte-identical** to the same frame from the full render, for all 9 compositions.
+- [x] Black check from the encoded mp4: Fibre Strands Gold and the HUD give empty areas
+  of 0–1. **Fibre Strands Blue has a residual:** 34 isolated pixels (single 2×2 chroma
+  blocks, blue = 2–3) out of about 21 million empty pixels across 60 sampled frames,
+  measured ≥16 px from any content. The PNG frames themselves are exactly 0,0,0. These
+  are x264 chroma artefacts that remain at CRF 16 (several encoder settings were tried).
+- [x] Banding check on decoded frames (see above).
+- [x] `npm install && npx remotion studio` checked from a clean copy of this project.

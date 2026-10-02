@@ -31,7 +31,7 @@ const segsCross = (a: number[], b: number[], c: number[], d: number[]) => {
 
 const build = (): HubNode[] => {
   const r = mulberry32(0x4e7b0b);
-  const nodes: HubNode[] = [{ x: 0, z: 0, gen: 0, parent: -1, launch: -1, arrive: 4 }];
+  const nodes: HubNode[] = [{ x: 0, z: 0, gen: 0, parent: -1, launch: -1, arrive: -8 }]; // the hub is already rising at frame 0
   const ok = (p: number, x: number, z: number) => {
     const P = nodes[p];
     for (let i = 0; i < nodes.length; i++) {
