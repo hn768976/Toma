@@ -28,7 +28,9 @@ for id in "${IDS[@]}"; do
   npx remotion render out/bundle "$id" "$OUT/frames/$n" --sequence --image-format=png \
     --scale=0.3333333333333333 --gl=angle --concurrency=${CONCURRENCY:-2} --log=error
   end=$(date +%s)
-  ffmpeg -v error -y -framerate 30 -i "$OUT/frames/$n/element-%03d.png" \
+  first=$(ls "$OUT/frames/$n" | sort | head -1)
+  PADW=$(echo "$first" | sed -E 's/^element-([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
+  ffmpeg -v error -y -framerate 30 -i "$OUT/frames/$n/element-%0${PADW}d.png" \
     -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart "$OUT/$n.mp4"
   frames=$(ls "$OUT/frames/$n" | wc -l)
   echo "$id: $frames frames in $((end - start)) s" | tee -a "$OUT/timings.txt"
