@@ -41,6 +41,8 @@ const BANDS = [
   { until: Infinity, blur: 13 },
 ];
 const SHARP_BAND = 2;
+/** Black version: levels at or below this are set to pure black. */
+const BLACK_CRUSH = 3.5 / 255;
 const BAND_SOFTNESS = 0.09; // half-width of a cross-fade, in ln(distance)
 
 const bandWeights = (dist: number): Array<[number, number]> => {
@@ -241,7 +243,15 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
   const rayR = width * 0.9;
 
   return (
-    <AbsoluteFill style={{ background: pal.background, overflow: "hidden" }}>
+    <AbsoluteFill
+      style={{
+        background: pal.background,
+        overflow: "hidden",
+        // Black version: crush the faintest haze (≤ 3/255) to exactly 0 so
+        // empty areas stay pure 0,0,0 for screen-blend use.
+        filter: variant === "black" && !off("crush") ? "url(#ef-black-crush)" : undefined,
+      }}
+    >
       <svg width={0} height={0} style={{ position: "absolute" }}>
         <defs>
           {/* Subtle hand-drawn wobble with a fixed seed, one pass over the
@@ -250,6 +260,13 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
           <filter id="ef-wobble" x="0" y="0" width="100%" height="100%">
             <feTurbulence type="fractalNoise" baseFrequency={0.035 / u(1)} numOctaves={2} seed={11} />
             <feDisplacementMap in="SourceGraphic" scale={u(3.2)} xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+          <filter id="ef-black-crush" x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+            <feComponentTransfer>
+              <feFuncR type="linear" slope={1 / (1 - BLACK_CRUSH)} intercept={-BLACK_CRUSH / (1 - BLACK_CRUSH)} />
+              <feFuncG type="linear" slope={1 / (1 - BLACK_CRUSH)} intercept={-BLACK_CRUSH / (1 - BLACK_CRUSH)} />
+              <feFuncB type="linear" slope={1 / (1 - BLACK_CRUSH)} intercept={-BLACK_CRUSH / (1 - BLACK_CRUSH)} />
+            </feComponentTransfer>
           </filter>
           <GlowFilter id="ef-glow" base={u(1.6)} strength={[0.75, 0.42, 0.22]} margin={0} />
         </defs>
