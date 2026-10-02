@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
-import { loadStudioEnv } from "../../lib/assets";
+import { canvasTexture, loadStudioEnv, makeCanvas } from "../../lib/assets";
 import { flatRibbon, mergeSimple, offsetPolyline, Path } from "../../lib/geom";
 import { PostFX } from "../../lib/post";
 import { mulberry32 } from "../../lib/random";
@@ -14,14 +14,14 @@ export const CLOUD_FRAMES = 600;
 // World: y up. The camera looks from +x+z, so -x is upper-left on screen,
 // +z lower-left, +x lower-right and -z upper-right.
 type Rack = { x: number; z: number; w: number; h: number; pad: number; outline: number; rows: number; seed: number };
-const MAIN: Rack = { x: 0, z: 0, w: 2.8, h: 4.0, pad: 3.4, outline: 3.45, rows: 11, seed: 1 };
+const MAIN: Rack = { x: 0, z: 0, w: 2.5, h: 4.6, pad: 3.4, outline: 3.45, rows: 11, seed: 1 };
 const SMALL: Rack[] = [
   { x: -8.6, z: 0.9, w: 1.45, h: 2.45, pad: 2.1, outline: 1.7, rows: 6, seed: 2 },
   { x: -0.9, z: 8.6, w: 1.45, h: 2.45, pad: 2.1, outline: 1.7, rows: 6, seed: 3 },
   { x: 9.0, z: 0.6, w: 1.45, h: 2.45, pad: 2.1, outline: 1.7, rows: 6, seed: 4 },
 ];
 const SLAB_H = 0.22;
-const CLOUD_POS = new THREE.Vector3(1.5, 6.6, -4.6);
+const CLOUD_POS = new THREE.Vector3(1.5, 6.1, -4.6);
 const CLOUD_LINES_X = [0.9, 1.15, 1.4, 1.65, 1.9];
 const CLOUD_LINE_Z = -4.6;
 
@@ -70,7 +70,7 @@ void main() {
   float sp = step(0.72, h) * (1.0 - smoothstep(0.0, 0.035, length(p - c)));
   float fade = exp(-r * 0.065);
   vec3 col = uBase * (0.75 + 0.5 * fade);
-  col += uGrid * g * (0.08 + 0.22 * fade);
+  col += uGrid * g * (0.14 + 0.3 * fade);
   col += uLine * sp * (0.35 + 1.2 * hash(cell + 1.3)) * (0.4 + fade);
   // soft blue haze around the centre of the scene
   col += uLine * 0.02 * exp(-r * 0.12);
@@ -167,11 +167,17 @@ if (fuv.z > 0.0) {
     rowMask = 1.0;
     // recessed unit faces with a bright lip on top of each unit
     float lip = smoothstep(0.86, 0.93, inRow.y) * (1.0 - smoothstep(0.93, 1.0, inRow.y));
-    float gap = 1.0 - smoothstep(0.0, 0.08, inRow.y);
-    diffuseColor.rgb *= mix(0.62, 1.0, lip) * (1.0 - 0.6 * gap);
+    float gap = 1.0 - smoothstep(0.0, 0.1, inRow.y);
+    // vent slots on the right of each drawer
+    float vent = step(0.55, inRow.x) * step(inRow.x, 0.93) * step(0.25, inRow.y) * step(inRow.y, 0.7)
+               * step(fract(inRow.x * 26.0), 0.42);
+    diffuseColor.rgb *= mix(0.62, 1.0, lip) * (1.0 - 0.85 * gap) * (1.0 - 0.55 * vent);
   } else {
     diffuseColor.rgb *= 1.15;
   }
+} else {
+  // lighter steel-blue top
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.35, 0.45, 0.62), 0.45) * 1.25;
 }
 `,
       )
@@ -188,7 +194,8 @@ if (rowMask > 0.5) {
   float ci = floor(sx);
   vec4 h = hash4(vec3(rc.x * 13.0 + ci, rc.y * 7.0 + uSeed * 31.0, uSeed));
   vec4 h2 = hash4(vec3(ci + 3.1, rc.x + 11.7, rc.y + uSeed));
-  if (h.x < 0.78) {
+  // LED cluster at the left end of each drawer
+  if (h.x < 0.82 && inRow.x < 0.42) {
     vec2 d = vec2((fract(sx) - 0.5) * uSize.x / slots, (inRow.y - 0.45) * uSize.y / uRows);
     float r = length(d) / 0.045;
     float dotm = 1.0 - smoothstep(0.55, 1.0, r);
@@ -209,15 +216,15 @@ if (rowMask > 0.5) {
 
 function cloudGeometry(): THREE.ExtrudeGeometry {
   // union of circles + a flat-bottomed slab, traced as a star-shaped outline
+  // classic three-lobed cloud icon: small left lobe, big centre, medium right
   const circles = [
-    [-1.2, -0.05, 0.75],
-    [-0.45, 0.42, 0.85],
-    [0.55, 0.62, 1.12],
-    [1.45, -0.02, 0.78],
+    [-1.05, -0.08, 0.68],
+    [0.1, 0.42, 1.02],
+    [1.12, 0.0, 0.74],
   ];
-  const bottom = -0.8;
+  const bottom = -0.75;
   const inside = (x: number, y: number) => {
-    if (y >= bottom && y <= 0 && x >= -1.2 && x <= 1.45) return true;
+    if (y >= bottom && y <= 0 && x >= -1.05 && x <= 1.12) return true;
     return circles.some(([cx, cy, r]) => (x - cx) ** 2 + (y - cy) ** 2 <= r * r);
   };
   const cx = 0.15, cy = 0.0;
@@ -308,7 +315,9 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
     });
   const nodeMat = new THREE.MeshBasicMaterial({ color: hdr(LINE, 3.2) });
   const nodeGeo = new THREE.CircleGeometry(0.075, 20).rotateX(-Math.PI / 2);
+  const nodePos: THREE.Vector3[] = [];
   const node = (x: number, z: number, s = 1) => {
+    nodePos.push(new THREE.Vector3(x, 0.08, z));
     const n = new THREE.Mesh(nodeGeo, nodeMat);
     n.position.set(x, 0.025, z);
     n.scale.setScalar(s);
@@ -320,12 +329,12 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
   racks.forEach((r) => {
     // glowing slab
     const slabMats = [
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.6) }), // +x
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.6) }), // -x
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.2) }), // top
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.25) }), // +x
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.25) }), // -x
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.0) }), // top
       new THREE.MeshBasicMaterial({ color: hdr(LINE, 0.3) }), // bottom
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.6) }), // +z
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.6) }), // -z
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.25) }), // +z
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.25) }), // -z
     ];
     const slab = new THREE.Mesh(new THREE.BoxGeometry(r.pad, SLAB_H, r.pad), slabMats);
     slab.position.set(r.x, SLAB_H / 2, r.z);
@@ -353,7 +362,7 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
       }
     });
     sq.push(sq[0].clone());
-    scene.add(new THREE.Mesh(flatRibbon(sq, 0.06), lineMat(2.4)));
+    scene.add(new THREE.Mesh(flatRibbon(sq, 0.035), lineMat(1.8)));
     // rack body
     const rack = new THREE.Mesh(new RoundedBoxGeometry(r.w, r.h, r.w, 4, 0.09), rackMaterial(row, r, env, uFrame));
     rack.position.set(r.x, SLAB_H + r.h / 2, r.z);
@@ -379,7 +388,7 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
         node(p2[p2.length - 1][0], p2[p2.length - 1][1]);
         for (let i = 1; i < p2.length - 1; i++) node(p2[i][0], p2[i][1], 0.7);
       } else node(p2[0][0], p2[0][1]);
-      const ndots = b.fade ? 1 : 1 + (k % 2);
+      const ndots = 1;
       paths.push({ path: new Path(pts.map((p) => p.clone().setY(0.06))), spec: Array.from({ length: ndots }, dotSpec) });
     }
   });
@@ -401,20 +410,25 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
     envMapIntensity: 0.05,
   });
   cloudMat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying float vCloudY;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvCloudY = position.y;");
     sh.uniforms.uRim = { value: hdr(cloudCol.clone().lerp(new THREE.Color(1, 1, 1), 0.3), 1.1) };
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform vec3 uRim;")
+      .replace("#include <common>", "#include <common>\nuniform vec3 uRim; varying float vCloudY;")
       .replace(
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
 float fr = pow(1.0 - clamp(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0, 1.0), 2.5);
-totalEmissiveRadiance += uRim * fr;`,
+totalEmissiveRadiance += uRim * fr;
+// brighter upper lobes, deeper body towards the base
+totalEmissiveRadiance *= mix(0.6, 1.45, smoothstep(-0.9, 1.3, vCloudY));`,
       );
   };
   const cloud = new THREE.Mesh(cloudGeometry(), cloudMat);
   cloud.scale.setScalar(1.3);
   cloud.position.copy(CLOUD_POS);
-  cloud.rotation.y = Math.PI / 4 + 0.12;
+  cloud.rotation.y = Math.PI / 4 - 0.5; // turned so its thickness shows on the right
   scene.add(cloud);
   const cloudLight = new THREE.PointLight(cloudCol, 1.5, 10, 2);
   cloudLight.position.set(CLOUD_POS.x + 2, CLOUD_POS.y - 0.5, CLOUD_POS.z + 2.5);
@@ -437,6 +451,60 @@ totalEmissiveRadiance += uRim * fr;`,
     paths.push({ path: p, spec: [{ phase: k * 0.37, dir: 1, laps: 2 + (k % 2) }] });
   });
   scene.add(new THREE.Mesh(mergeSimple(vRibbons), lineMat(2.0)));
+
+  // star flares on some trace end nodes, and a field of floating blue particles
+  const flareTex = (() => {
+    const [c, ctx] = makeCanvas(128, 128);
+    const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.12, "rgba(255,255,255,0.5)");
+    g.addColorStop(0.35, "rgba(255,255,255,0.06)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.globalCompositeOperation = "lighter";
+    [0, Math.PI / 2].forEach((a) => {
+      const lg = ctx.createLinearGradient(64 - 64 * Math.cos(a), 64 - 64 * Math.sin(a), 64 + 64 * Math.cos(a), 64 + 64 * Math.sin(a));
+      lg.addColorStop(0, "rgba(255,255,255,0)");
+      lg.addColorStop(0.5, "rgba(255,255,255,0.9)");
+      lg.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.strokeStyle = lg;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(64 - 64 * Math.cos(a), 64 - 64 * Math.sin(a));
+      ctx.lineTo(64 + 64 * Math.cos(a), 64 + 64 * Math.sin(a));
+      ctx.stroke();
+    });
+    return canvasTexture(c, false);
+  })();
+  const frng = mulberry32(0xf1a2e);
+  nodePos.forEach((p) => {
+    if (frng() > 0.35) return;
+    const sp = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: flareTex, color: hdr(LINE.clone().lerp(new THREE.Color(1, 1, 1), 0.4), 2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    sp.position.copy(p);
+    sp.scale.setScalar(0.6 + frng() * 0.6);
+    scene.add(sp);
+  });
+  const dotTex = (() => {
+    const [c, ctx] = makeCanvas(64, 64);
+    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.5, "rgba(255,255,255,0.6)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    return canvasTexture(c, false);
+  })();
+  for (let k = 0; k < 220; k++) {
+    const sp = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: dotTex, color: hdr(LINE.clone().lerp(new THREE.Color(row.rack), 0.75), 0.5 + frng() * 1.2), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    sp.position.set((frng() - 0.5) * 50, 0.3 + frng() * 9, (frng() - 0.5) * 50);
+    sp.scale.setScalar(0.04 + Math.pow(frng(), 4) * 0.25);
+    scene.add(sp);
+  }
 
   // data dots (instanced), positions are a pure function of the frame
   const dotCount = paths.reduce((a, p) => a + p.spec.length, 0);
@@ -464,7 +532,7 @@ totalEmissiveRadiance += uRim * fr;`,
     grain: 0.02,
     vignette: 0.35,
     clearColor: new THREE.Color(row.floor),
-    dof: { focus: 86, nearK: 3, farK: 3, maxBlur: 0.004 },
+    dof: { focus: 86, nearK: 4, farK: 5, maxBlur: 0.007 },
   });
 
   return {
@@ -485,7 +553,7 @@ totalEmissiveRadiance += uRim * fr;`,
       // closed camera sway
       const a = Math.PI * 2 * t;
       const az = Math.PI / 4 + 0.035 * Math.sin(a);
-      const el = THREE.MathUtils.degToRad(33 + 0.8 * Math.sin(a + 1.2));
+      const el = THREE.MathUtils.degToRad(29 + 0.8 * Math.sin(a + 1.2));
       const R = 86;
       camera.position.set(
         target.x + R * Math.cos(el) * Math.sin(az),

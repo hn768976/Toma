@@ -18,6 +18,7 @@ const R_IN = 11;
 const R_OUT = 32;
 const PHI0 = 2.6;
 const PHI1 = 5.55;
+const N_LANES = 14;
 
 type Trail = {
   r: number;
@@ -38,8 +39,10 @@ const rng = mulberry32(0x7a11);
 const TRAILS: Trail[] = Array.from({ length: N_TRAILS }, () => {
   // denser towards the middle of the band
   const t = rng();
-  const r = R_IN + (R_OUT - R_IN) * (0.5 + 0.5 * Math.sign(t - 0.5) * Math.pow(Math.abs(2 * t - 1), 1.25));
-  const m1 = 2 + Math.floor(rng() * 4);
+  // trails are grouped into lanes with dark gaps between them
+  const lane = Math.floor(t * N_LANES);
+  const r = R_IN + ((lane + 0.5) / N_LANES) * (R_OUT - R_IN) + (rng() - 0.5) * 0.7 * ((R_OUT - R_IN) / N_LANES);
+  const m1 = 3 + Math.floor(rng() * 6);
   const m2 = 3 + Math.floor(rng() * 5);
   // ~1 in 7 trails is a bold 'hero' strand: thicker, brighter, white-cyan core
   const hero = rng() < 0.15;
@@ -55,7 +58,7 @@ const TRAILS: Trail[] = Array.from({ length: N_TRAILS }, () => {
     base: hero ? 0.45 + 0.35 * rng() : 0.02 + Math.pow(rng(), 3) * 0.25,
     m1,
     n1: m1 * (1 + Math.floor(rng() * 3)) + Math.floor(rng() * 3), // whole cells per loop
-    l1: 0.06 + rng() * 0.2,
+    l1: 0.03 + rng() * 0.1,
     p1: rng(),
     b1: (hero ? 1.8 : 0.6) + Math.pow(rng(), 2) * 3,
     m2,
@@ -68,8 +71,11 @@ const TRAILS: Trail[] = Array.from({ length: N_TRAILS }, () => {
 });
 
 function trailPoint(tr: Trail, u: number, out: THREE.Vector3) {
-  const phi = PHI0 + (PHI1 - PHI0) * u;
-  const r = tr.r + 0.6 * Math.sin(u * 3.1 + tr.wobP * 0.3) + 16 * u * u * u;
+  // outer lanes spiral away into the distance; inner lanes keep curling round
+  // and come back towards the camera on the right (horseshoe)
+  const outer = THREE.MathUtils.smoothstep(tr.r, R_IN + 3, R_IN + 8);
+  const phi = PHI0 + (THREE.MathUtils.lerp(6.35, PHI1, outer) - PHI0) * u;
+  const r = tr.r + 0.6 * Math.sin(u * 3.1 + tr.wobP * 0.3) + 16 * outer * u * u * u;
   out.set(C.x + r * Math.cos(phi), tr.y + tr.wobA * Math.sin(u * Math.PI * 2 * tr.wobF + tr.wobP), C.z + r * Math.sin(phi));
   return out;
 }
@@ -222,8 +228,8 @@ export const createLightTrails: LookFactory<TrailsRow> = async ({ gl, width, hei
     bloomThreshold: 0.12,
     bloomKnee: 0.25,
     // long tail on the low mips = wide blue haze around the bright band
-    bloomWeights: [0.5, 0.7, 1.0, 1.2, 1.4, 1.5],
-    dof: { focus: 14, nearK: 0.5, farK: 0.0, maxBlur: 0.006 },
+    bloomWeights: [0.6, 0.8, 1.0, 1.0, 0.9, 0.8],
+    dof: { focus: 14, nearK: 0.3, farK: 0.0, maxBlur: 0.005 },
     grain: 0,
     protectBlack: true,
     vignette: 0,

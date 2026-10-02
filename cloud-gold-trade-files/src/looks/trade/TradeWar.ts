@@ -71,7 +71,9 @@ vec3 slate = mix(vec3(0.02, 0.021, 0.025), vec3(0.065, 0.065, 0.07), n1);
 slate *= 0.75 + 0.5 * n2;
 slate += vec3(0.02) * step(0.93, h21(floor(gp * 60.0))) ;
 float cm = crackMask(gp);
-slate *= 1.0 - 0.85 * cm;
+slate *= 1.0 - 0.9 * cm;
+// split colour wash: cool on the left, warm on the right
+slate *= mix(vec3(0.75, 0.9, 1.45), vec3(1.5, 0.82, 0.85), smoothstep(-5.0, 5.0, gp.x)) * 1.25;
 diffuseColor.rgb = slate;
 `,
       )
@@ -187,7 +189,7 @@ function planCracks(): Crack[] {
   });
   const cracks: Crack[] = [{ pts: main, wmax: wmain, t0: 120, t1: 300, widen: 1 }];
   // branches
-  const branchAt = [0.22, 0.38, 0.55, 0.7, 0.84];
+  const branchAt = [0.12, 0.22, 0.3, 0.38, 0.47, 0.55, 0.63, 0.7, 0.78, 0.86];
   branchAt.forEach((bs, k) => {
     const i0 = Math.round(bs * N);
     const dir = k % 2 === 0 ? 1 : -1;
@@ -199,7 +201,7 @@ function planCracks(): Crack[] {
       const p = pts[j - 1];
       pts.push(new THREE.Vector2(p.x + Math.sin(ang) * 0.09 * -1, p.y + Math.cos(ang) * 0.09));
     }
-    const wm = pts.map((_, j) => 0.075 * (1 - j / len) * (0.6 + 0.4 * rng()));
+    const wm = pts.map((_, j) => 0.11 * (1 - j / len) * (0.6 + 0.4 * rng()));
     const tStart = 120 + bs * 180 + 10;
     cracks.push({ pts, wmax: wm, t0: tStart, t1: tStart + 70, widen: 0.6 });
   });
@@ -229,7 +231,7 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
   const shadows: THREE.Mesh[] = [];
   for (const sd of sides) {
     const { shapes, w, h } = await countryShape(sd.def.iso, MAP_W);
-    const depth = 0.04 * w;
+    const depth = 0.05 * w;
     const uvOf = (x: number, y: number) => new THREE.Vector2((x + w / 2) / w, (y + h / 2) / h);
     const UVGenerator = {
       generateTopUV(_g: unknown, v: number[], a: number, b: number, c: number) {
@@ -298,12 +300,12 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
   const stack = (base: THREE.Vector3, color: string, t0: number, flip: number) => {
     const mat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color),
-      roughness: 0.42,
-      metalness: 0.55,
+      roughness: 0.6,
+      metalness: 0.35,
       normalMap: corr,
-      normalScale: new THREE.Vector2(0.6, 0.6),
+      normalScale: new THREE.Vector2(0.4, 0.4),
       envMap: env,
-      envMapIntensity: 0.6,
+      envMapIntensity: 0.25,
     });
     const endMat = mat.clone();
     endMat.normalMap = null;
@@ -312,18 +314,18 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
     const slots = [
       [0, 0, 0],
       [0, 0, 1.06],
-      [0.08 * flip, 1, 0.5],
+      [-0.35 * flip, 1, 0.35], // top box set back: stepped stack
     ];
     slots.forEach(([dx, layer, dz], k) => {
       const m = new THREE.Mesh(cGeo, mats);
       m.castShadow = true;
       m.receiveShadow = true;
       scene.add(m);
-      boxes.push({ mesh: m, x: base.x + dx, y: layer * 0.97 + 0.475, z: base.z + dz, ry: (k - 1) * 0.015 * flip, t0: t0 + k * 22 });
+      boxes.push({ mesh: m, x: base.x + dx, y: layer * 0.952 + 0.475, z: base.z + dz, ry: (k - 1) * 0.015 * flip, t0: t0 + k * 22 });
     });
   };
-  stack(new THREE.Vector3(-3.5, 0, -2.3), row.left.containers, 40, 1);
-  stack(new THREE.Vector3(1.9, 0, -4.4), row.right.containers, 52, -1);
+  stack(new THREE.Vector3(-3.6, 0, -1.9), row.left.containers, 40, 1);
+  stack(new THREE.Vector3(2.4, 0, -3.9), row.right.containers, 52, -1);
 
   // ---- cracks (rebuilt from the frame each time; fixed topology)
   const cracks = planCracks();
@@ -370,7 +372,7 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
 
   // ---- debris + dust: seeded, pure functions of frame
   const drng = mulberry32(0xdeb2);
-  const debris: Debris[] = Array.from({ length: 45 }, () => ({
+  const debris: Debris[] = Array.from({ length: 25 }, () => ({
     crack: drng() < 0.75 ? 0 : 1 + Math.floor(drng() * (cracks.length - 1)),
     s: 0.05 + drng() * 0.85,
     vx: (drng() - 0.5) * 0.05,
@@ -432,16 +434,16 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
   front.position.set(0, 10, 12);
   scene.add(front);
 
-  const camera = new THREE.PerspectiveCamera(46, width / height, 0.3, 200);
+  const camera = new THREE.PerspectiveCamera(40, width / height, 0.3, 200);
   const post = new PostFX(gl, width, height, {
     exposure: 1.0,
     bloomStrength: 0.06,
     bloomThreshold: 1.0,
     bloomKnee: 0.6,
-    dof: { focus: 16, nearK: 2.2, farK: 3.0, maxBlur: 0.016 },
+    dof: { focus: 16, nearK: 1.0, farK: 1.4, maxBlur: 0.008 },
     grain: 0.02,
     grainPeriod: TRADE_FRAMES,
-    vignette: 0.8,
+    vignette: 0.45,
     clearColor: 0x050506,
   });
 
@@ -538,10 +540,10 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
       });
       // camera: ~50 degrees above, slow push and drift
       const c = easeInOutCubic(f / (TRADE_FRAMES - 1)) * 0.7 + (f / (TRADE_FRAMES - 1)) * 0.3;
-      const dist = lerp(10.4, 9.2, c);
-      const el = THREE.MathUtils.degToRad(lerp(43, 40, c));
+      const dist = lerp(11.2, 10.0, c);
+      const el = THREE.MathUtils.degToRad(lerp(52, 49, c));
       const az = lerp(-0.07, 0.06, c);
-      const tgt = new THREE.Vector3(0.2, 0, -1.0);
+      const tgt = new THREE.Vector3(-0.2, 0, -0.9);
       camera.position.set(tgt.x + dist * Math.cos(el) * Math.sin(az), dist * Math.sin(el), tgt.z + dist * Math.cos(el) * Math.cos(az));
       camera.lookAt(tgt);
       camera.updateMatrixWorld();
