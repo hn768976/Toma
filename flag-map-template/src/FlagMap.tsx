@@ -6,6 +6,7 @@ import {ROW_BY_ID} from './data/rows';
 import {buildShape, type ShapeData} from './geo/buildShape';
 import {loadDots, loadFlagImage, loadFont, loadHdri, loadSources, type Dots} from './scene/assets';
 import {FlagMapScene} from './scene/FlagMapScene';
+import {LOOK} from './scene/layout';
 
 type Loaded = {shape: ShapeData; flagImg: HTMLImageElement | null; hdri: THREE.Texture; dots: Dots};
 
@@ -52,7 +53,7 @@ export const FlagMap: React.FC<{id: string}> = ({id}) => {
           linear
           shadows="basic"
           gl={{antialias: false, alpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance', stencil: false}}
-          camera={{fov: 36, near: 1, far: 500, position: [0, 6, 8]}}
+          camera={{fov: LOOK.fov, near: 1, far: 500, position: [0, 6, 8]}}
         >
           <FlagMapScene row={row} shape={loaded.shape} flagImg={loaded.flagImg} hdri={loaded.hdri} dots={loaded.dots} frame={frame} />
         </ThreeCanvas>
