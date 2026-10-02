@@ -2,12 +2,12 @@ import * as THREE from "three";
 import Delaunator from "delaunator";
 import { createNoise4D } from "simplex-noise";
 import { mulberry32, TAU } from "../lib/random";
-import { glowPointsMaterial, hdrColor, makeEnv, pxScale } from "../lib/three-util";
+import { glowPointsMaterial, hdrColor, makeEnv } from "../lib/three-util";
 import type { Look } from "../lib/look";
 
 export type LowPolyParams = {
-  edge: string; // edge glow colour
-  face: string; // base colour of the metal faces
+  edge: string; // colour of the metal rails
+  face: string; // base colour of the glossy faces
   sparkle: string;
   envTint: string; // tint of the faces' reflections (warm / cool)
 };
@@ -17,18 +17,19 @@ const rng = mulberry32(0x10f1);
 const noise = createNoise4D(mulberry32(0x5eed));
 const noise2 = createNoise4D(mulberry32(0xbeef));
 
-const SPACING = 1.35;
-const X0 = -12, X1 = 12, Y0 = -7, Y1 = 9;
+// fairly regular, geodesic-like triangulation
+const SPACING = 1.75;
+const X0 = -13, X1 = 13, Y0 = -8.5, Y1 = 8.5;
 const base: number[] = [];
-for (let y = Y0; y <= Y1 + 1e-6; y += SPACING * 0.87) {
-  const row = Math.round((y - Y0) / (SPACING * 0.87));
+for (let y = Y0; y <= Y1 + 1e-6; y += SPACING * 0.866) {
+  const row = Math.round((y - Y0) / (SPACING * 0.866));
   for (let x = X0 + (row % 2) * SPACING * 0.5; x <= X1 + 1e-6; x += SPACING) {
-    base.push(x + (rng() - 0.5) * SPACING * 0.62, y + (rng() - 0.5) * SPACING * 0.55);
+    base.push(x + (rng() - 0.5) * SPACING * 0.36, y + (rng() - 0.5) * SPACING * 0.32);
   }
 }
 const NV = base.length / 2;
 const tri = new Delaunator(base).triangles;
-// unique edges
+const NT = tri.length / 3;
 const edgeSet = new Set<number>();
 const edges: [number, number][] = [];
 for (let i = 0; i < tri.length; i += 3) {
@@ -42,28 +43,34 @@ for (let i = 0; i < tri.length; i += 3) {
   }
 }
 
-// sparkles
-const N_EDGE_SPARK = 2400;
-const N_FREE_SPARK = 900;
+// sparkles: strung along the rails like fairy lights, a few drifting free
+const N_EDGE_SPARK = 3400;
+const N_FREE_SPARK = 220;
 type Spark = { e: number; u: number; ua: number; k: number; ph: number; tk: number; tph: number; size: number; bright: number;
-  x: number; y: number; z: number; ax: number; ay: number; az: number; kx: number; ky: number; kz: number; px: number; py: number; pz: number };
+  x: number; y: number; z: number; ax: number; ay: number; kx: number; ky: number; px: number; py: number };
 const sparks: Spark[] = [];
 for (let i = 0; i < N_EDGE_SPARK + N_FREE_SPARK; i++) {
-  const big = rng() < 0.08;
+  const hot = rng() < 0.06;
   sparks.push({
     e: Math.floor(rng() * edges.length),
-    u: rng(), ua: 0.05 + rng() * 0.25, k: 1 + Math.floor(rng() * 3), ph: rng() * TAU,
+    u: rng(), ua: 0.03 + rng() * 0.12, k: 1 + Math.floor(rng() * 2), ph: rng() * TAU,
     tk: 2 + Math.floor(rng() * 14), tph: rng() * TAU,
-    size: big ? 12 + rng() * 10 : 5 + rng() * 5,
-    bright: big ? 10 + rng() * 10 : 5 + rng() * 8,
-    x: X0 + rng() * (X1 - X0), y: Y0 + rng() * (Y1 - Y0), z: 0.15 + Math.pow(rng(), 1.6) * 2.4,
-    ax: 0.1 + rng() * 0.4, ay: 0.1 + rng() * 0.4, az: rng() * 0.2,
-    kx: 1 + Math.floor(rng() * 2), ky: 1 + Math.floor(rng() * 2), kz: 1 + Math.floor(rng() * 3),
-    px: rng() * TAU, py: rng() * TAU, pz: rng() * TAU,
+    size: hot ? 5.5 + rng() * 2 : 3 + rng() * 1.6,
+    bright: hot ? 14 + rng() * 8 : 6 + rng() * 8,
+    x: X0 + rng() * (X1 - X0), y: Y0 + rng() * (Y1 - Y0), z: 0.2 + rng() * 0.9,
+    ax: 0.05 + rng() * 0.2, ay: 0.05 + rng() * 0.2,
+    kx: 1 + Math.floor(rng() * 2), ky: 1 + Math.floor(rng() * 2),
+    px: rng() * TAU, py: rng() * TAU,
   });
 }
 
-const EDGE_W = 0.06;
+// rail cross-section (fractions of SPACING): gap between neighbouring frames,
+// rail width, ridge height
+const GAP = 0.016, RAIL = 0.038, RIDGE = 0.024;
+const HUB_R = 0.045;
+// convex bulge toward the camera: the surface curves away at the frame edges
+const BULGE = 0.022;
+const surfZ = (x: number, y: number) => 2.2 - BULGE * (x * x + y * y * 1.3);
 
 export const LowPolyLuxe: Look<LowPolyParams> = {
   assets: ["hdri"],
@@ -72,23 +79,22 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     scene.background = new THREE.Color(0, 0, 0);
     const env = makeEnv(gl, assets.hdri!);
     scene.environment = env.texture;
-    scene.environmentRotation.set(-0.55, 0.25, 0);
+    scene.environmentRotation.set(-0.35, 0.9, 0);
 
-    const camera = new THREE.PerspectiveCamera(44, 16 / 9, 0.3, 80);
+    const camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.3, 80);
 
-    // ---- faces (non-indexed, flat shaded) ----
+    // ---- glossy black faces (non-indexed, flat shaded) ----
     const faceGeo = new THREE.BufferGeometry();
     const facePos = new Float32Array(tri.length * 3);
     faceGeo.setAttribute("position", new THREE.BufferAttribute(facePos, 3));
     const faceMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(params.face),
-      metalness: 0.9,
-      roughness: 0.3,
+      metalness: 0.85,
+      roughness: 0.16,
       flatShading: true,
       side: THREE.DoubleSide,
-      envMapIntensity: 0.5,
+      envMapIntensity: 0.45,
     });
-    // tint reflections warm/cool without touching the base colour's darkness
     faceMat.onBeforeCompile = (s) => {
       s.uniforms.envTint = { value: new THREE.Color(params.envTint) };
       s.fragmentShader = s.fragmentShader
@@ -98,67 +104,35 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     const faces = new THREE.Mesh(faceGeo, faceMat);
     faces.frustumCulled = false;
     scene.add(faces);
-    const key = new THREE.DirectionalLight(new THREE.Color(params.envTint), 0.12);
-    key.position.set(-3, 5, 6);
-    scene.add(key);
 
-    // ---- edges: camera-facing ribbons, slightly in front ----
-    const NE = edges.length;
-    const ePos = new Float32Array(NE * 4 * 3);
-    const eUv = new Float32Array(NE * 4 * 2);
-    const eLen = new Float32Array(NE * 4);
-    const eBr = new Float32Array(NE * 4);
-    const eIdx: number[] = [];
-    for (let i = 0; i < NE; i++) {
-      eUv.set([0, -1, 0, 1, 1, -1, 1, 1], i * 8);
-      eIdx.push(i * 4, i * 4 + 2, i * 4 + 1, i * 4 + 1, i * 4 + 2, i * 4 + 3);
-    }
-    const edgeGeo = new THREE.BufferGeometry();
-    edgeGeo.setAttribute("position", new THREE.BufferAttribute(ePos, 3));
-    edgeGeo.setAttribute("uv", new THREE.BufferAttribute(eUv, 2));
-    edgeGeo.setAttribute("len", new THREE.BufferAttribute(eLen, 1));
-    edgeGeo.setAttribute("bright", new THREE.BufferAttribute(eBr, 1));
-    edgeGeo.setIndex(eIdx);
-    const edgeCol = hdrColor(params.edge, 1);
-    const edgeMat = new THREE.ShaderMaterial({
-      uniforms: { col: { value: edgeCol }, ext: { value: EDGE_W * 0.5 } },
-      vertexShader: /* glsl */ `
-        attribute float len; attribute float bright;
-        varying vec2 vUv; varying float vLen; varying float vBr;
-        void main() { vUv = uv; vLen = len; vBr = bright;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: /* glsl */ `
-        uniform vec3 col; uniform float ext;
-        varying vec2 vUv; varying float vLen; varying float vBr;
-        void main() {
-          float v = abs(vUv.y);
-          // bevelled metal bar: bright ridge, darker flanks, soft outer edge
-          float ridge = exp(-v * v * 6.0);
-          float flank = 0.55 + 0.45 * (1.0 - v);
-          float a = 1.0 - smoothstep(0.75, 1.0, v);
-          float d = min(vUv.x, 1.0 - vUv.x) * vLen - ext; // distance to the vertex
-          float node = exp(-max(d, 0.0) * max(d, 0.0) / 0.012);
-          float k = vBr * (0.4 * flank + 1.0 * ridge) * (1.0 + 1.4 * node);
-          gl_FragColor = vec4(col * k * a, 1.0);
-          if (a < 0.02) discard;
-        }`,
+    // ---- bevelled metal rails: every triangle gets its own inset frame, so
+    // neighbouring panels show two parallel rails with a dark gap between ----
+    const railVerts = NT * 3 * 2 * 6; // 3 edges x 2 bevel quads x 6 verts
+    const railPos = new Float32Array(railVerts * 3);
+    const railGeo = new THREE.BufferGeometry();
+    railGeo.setAttribute("position", new THREE.BufferAttribute(railPos, 3));
+    const gold = new THREE.Color(params.edge);
+    const railMat = new THREE.MeshStandardMaterial({
+      color: gold,
+      metalness: 1,
+      roughness: 0.38,
+      flatShading: true,
       side: THREE.DoubleSide,
+      envMapIntensity: 0.8,
+      emissive: gold.clone().multiplyScalar(0.06),
     });
-    const edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
-    edgeMesh.frustumCulled = false;
-    scene.add(edgeMesh);
+    const rails = new THREE.Mesh(railGeo, railMat);
+    rails.frustumCulled = false;
+    scene.add(rails);
+    const fill = new THREE.DirectionalLight(new THREE.Color(params.envTint), 0.6);
+    fill.position.set(-4, 6, 8);
+    scene.add(fill);
 
-    // ---- vertex glows ----
-    const vgPos = new Float32Array(NV * 3);
-    const vgSize = new Float32Array(NV);
-    const vgCol = new Float32Array(NV * 3);
-    const vgGeo = new THREE.BufferGeometry();
-    vgGeo.setAttribute("position", new THREE.BufferAttribute(vgPos, 3));
-    vgGeo.setAttribute("size", new THREE.BufferAttribute(vgSize, 1));
-    vgGeo.setAttribute("pcolor", new THREE.BufferAttribute(vgCol, 3));
-    const vg = new THREE.Points(vgGeo, glowPointsMaterial(height));
-    vg.frustumCulled = false;
-    scene.add(vg);
+    // ---- vertex hubs ----
+    const hubGeo = new THREE.IcosahedronGeometry(HUB_R * SPACING, 1);
+    const hubs = new THREE.InstancedMesh(hubGeo, railMat, NV);
+    hubs.frustumCulled = false;
+    scene.add(hubs);
 
     // ---- sparkles ----
     const NS = sparks.length;
@@ -169,37 +143,49 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
     sGeo.setAttribute("size", new THREE.BufferAttribute(sSize, 1));
     sGeo.setAttribute("pcolor", new THREE.BufferAttribute(sCol, 3));
-    const sp = new THREE.Points(sGeo, glowPointsMaterial(height, { sharp: 0.15 }));
+    const sp = new THREE.Points(sGeo, glowPointsMaterial(height, { sharp: 0.55 }));
     sp.frustumCulled = false;
     scene.add(sp);
     const sparkCol = hdrColor(params.sparkle, 1);
 
     const vx = new Float32Array(NV * 3);
-    const camPos = new THREE.Vector3();
-    const A = new THREE.Vector3(), B = new THREE.Vector3(), D = new THREE.Vector3(), S = new THREE.Vector3(), V = new THREE.Vector3();
-    void pxScale;
+    const vn = new Float32Array(NV * 3); // approximate vertex normals
+    const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3(), N = new THREE.Vector3();
+    const U = new THREE.Vector3(), W = new THREE.Vector3(), M = new THREE.Vector3();
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+    const ins = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+    const mid = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+    const inn = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+
+    // inset of corner P (neighbours Q, R) by distance d inside the triangle plane
+    const inset = (out: THREE.Vector3, P: THREE.Vector3, Q: THREE.Vector3, R: THREE.Vector3, d: number) => {
+      U.subVectors(Q, P);
+      const lq = U.length();
+      U.divideScalar(lq);
+      W.subVectors(R, P);
+      const lr = W.length();
+      W.divideScalar(lr);
+      M.addVectors(U, W).normalize();
+      const sinHalf = Math.max(0.15, new THREE.Vector3().crossVectors(U, M).length());
+      out.copy(P).addScaledVector(M, Math.min(d / sinHalf, 0.42 * Math.min(lq, lr)));
+    };
 
     const update = (frame: number) => {
       const t = (frame % period) / period; // 0..1, loops
       const c = Math.cos(TAU * t), s = Math.sin(TAU * t);
 
-      // camera on a closed path
-      camera.position.set(0.45 * Math.sin(TAU * t), -2.6 + 0.25 * Math.sin(TAU * 2 * t + 0.6), 7.6 + 0.25 * Math.cos(TAU * t));
-      camera.lookAt(0.25 * Math.sin(TAU * t + 1.2), 0.9, 0);
-      camera.rotateZ(0.06 + 0.02 * Math.sin(TAU * t));
-      camera.updateMatrixWorld();
-      camPos.copy(camera.position);
+      // camera on a closed path, close to the bulge
+      camera.position.set(0.35 * Math.sin(TAU * t), 0.2 * Math.sin(TAU * 2 * t + 0.6), 8.6 + 0.2 * Math.cos(TAU * t));
+      camera.lookAt(0.2 * Math.sin(TAU * t + 1.2), 0.1 * Math.cos(TAU * t), 0);
 
       // vertex displacement: noise sampled around a circle in time
       const R1 = 0.55, R2 = 0.3;
       for (let i = 0; i < NV; i++) {
         const x = base[i * 2], y = base[i * 2 + 1];
-        const z =
-          0.85 * noise(x * 0.62, y * 0.62, R1 * c, R1 * s) +
-          1.1 * noise2(x * 0.12 + 3.1, y * 0.12, R2 * c, R2 * s);
         vx[i * 3] = x;
         vx[i * 3 + 1] = y;
-        vx[i * 3 + 2] = z;
+        vx[i * 3 + 2] =
+          surfZ(x, y) + 0.7 * noise(x * 0.55, y * 0.55, R1 * c, R1 * s) + 0.6 * noise2(x * 0.15 + 3.1, y * 0.15, R2 * c, R2 * s);
       }
       for (let i = 0; i < tri.length; i++) {
         facePos[i * 3] = vx[tri[i] * 3];
@@ -209,63 +195,64 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
       faceGeo.attributes.position.needsUpdate = true;
       faceGeo.computeVertexNormals();
 
-      for (let i = 0; i < NE; i++) {
-        const [a, b] = edges[i];
-        A.fromArray(vx, a * 3);
-        B.fromArray(vx, b * 3);
-        D.subVectors(B, A);
-        const len = D.length();
-        D.divideScalar(len);
-        V.addVectors(A, B).multiplyScalar(0.5).sub(camPos).normalize();
-        S.crossVectors(D, V).normalize().multiplyScalar(EDGE_W * 0.5);
-        // nudge toward camera so edges sit in front of the faces
-        const push = 0.035;
-        const ex = D.clone().multiplyScalar(EDGE_W * 0.5);
-        const o = i * 12;
-        ePos[o] = A.x - ex.x - S.x + V.x * -push; ePos[o + 1] = A.y - ex.y - S.y + V.y * -push; ePos[o + 2] = A.z - ex.z - S.z + V.z * -push;
-        ePos[o + 3] = A.x - ex.x + S.x + V.x * -push; ePos[o + 4] = A.y - ex.y + S.y + V.y * -push; ePos[o + 5] = A.z - ex.z + S.z + V.z * -push;
-        ePos[o + 6] = B.x + ex.x - S.x + V.x * -push; ePos[o + 7] = B.y + ex.y - S.y + V.y * -push; ePos[o + 8] = B.z + ex.z - S.z + V.z * -push;
-        ePos[o + 9] = B.x + ex.x + S.x + V.x * -push; ePos[o + 10] = B.y + ex.y + S.y + V.y * -push; ePos[o + 11] = B.z + ex.z + S.z + V.z * -push;
-        const L = len + EDGE_W;
-        const mx = (base[a * 2] + base[b * 2]) * 0.5, my = (base[a * 2 + 1] + base[b * 2 + 1]) * 0.5;
-        const br = 0.75 + 0.55 * noise(mx * 0.35 + 9.0, my * 0.35, 0.8 * c, 0.8 * s);
-        for (let k = 0; k < 4; k++) { eLen[i * 4 + k] = L; eBr[i * 4 + k] = br; }
+      vn.fill(0);
+      let o = 0;
+      const push = (v: THREE.Vector3) => { railPos[o++] = v.x; railPos[o++] = v.y; railPos[o++] = v.z; };
+      for (let f = 0; f < NT; f++) {
+        const ia = tri[f * 3], ib = tri[f * 3 + 1], ic = tri[f * 3 + 2];
+        A.fromArray(vx, ia * 3); B.fromArray(vx, ib * 3); C.fromArray(vx, ic * 3);
+        N.subVectors(B, A).cross(W.subVectors(C, A)).normalize();
+        if (N.z < 0) N.negate();
+        for (const i of [ia, ib, ic]) { vn[i * 3] += N.x; vn[i * 3 + 1] += N.y; vn[i * 3 + 2] += N.z; }
+        const P = [A, B, C];
+        for (let k = 0; k < 3; k++) {
+          const p = P[k], q1 = P[(k + 1) % 3], q2 = P[(k + 2) % 3];
+          inset(ins[k], p, q1, q2, GAP * SPACING);
+          inset(mid[k], p, q1, q2, (GAP + RAIL * 0.5) * SPACING);
+          mid[k].addScaledVector(N, RIDGE * SPACING);
+          inset(inn[k], p, q1, q2, (GAP + RAIL) * SPACING);
+          ins[k].addScaledVector(N, 0.004);
+          inn[k].addScaledVector(N, 0.004);
+        }
+        for (let k = 0; k < 3; k++) {
+          const k2 = (k + 1) % 3;
+          // outer bevel quad
+          push(ins[k]); push(ins[k2]); push(mid[k2]);
+          push(ins[k]); push(mid[k2]); push(mid[k]);
+          // inner bevel quad
+          push(mid[k]); push(mid[k2]); push(inn[k2]);
+          push(mid[k]); push(inn[k2]); push(inn[k]);
+        }
       }
-      edgeGeo.attributes.position.needsUpdate = true;
-      edgeGeo.attributes.len.needsUpdate = true;
-      edgeGeo.attributes.bright.needsUpdate = true;
+      railGeo.attributes.position.needsUpdate = true;
+      railGeo.computeVertexNormals();
 
       for (let i = 0; i < NV; i++) {
-        V.fromArray(vx, i * 3).sub(camPos).normalize();
-        vgPos[i * 3] = vx[i * 3] - V.x * 0.04;
-        vgPos[i * 3 + 1] = vx[i * 3 + 1] - V.y * 0.04;
-        vgPos[i * 3 + 2] = vx[i * 3 + 2] - V.z * 0.04;
-        const tw = 0.6 + 0.4 * noise(base[i * 2] * 0.5, base[i * 2 + 1] * 0.5, c, s);
-        vgSize[i] = 13;
-        vgCol[i * 3] = edgeCol.r * 0.7 * tw; vgCol[i * 3 + 1] = edgeCol.g * 0.7 * tw; vgCol[i * 3 + 2] = edgeCol.b * 0.7 * tw;
+        N.fromArray(vn, i * 3).normalize();
+        A.fromArray(vx, i * 3).addScaledVector(N, RIDGE * SPACING * 0.4);
+        m4.compose(A, q.identity(), one);
+        hubs.setMatrixAt(i, m4);
       }
-      vgGeo.attributes.position.needsUpdate = true;
-      vgGeo.attributes.size.needsUpdate = true;
-      vgGeo.attributes.pcolor.needsUpdate = true;
+      hubs.instanceMatrix.needsUpdate = true;
 
       for (let i = 0; i < NS; i++) {
         const p = sparks[i];
         if (i < N_EDGE_SPARK) {
           const [a, b] = edges[p.e];
-          const u = Math.min(1, Math.max(0, p.u + p.ua * Math.sin(TAU * p.k * t + p.ph)));
+          const u = Math.min(0.97, Math.max(0.03, p.u + p.ua * Math.sin(TAU * p.k * t + p.ph)));
           A.fromArray(vx, a * 3);
           B.fromArray(vx, b * 3);
           A.lerp(B, u);
-          V.copy(A).sub(camPos).normalize();
-          sPos[i * 3] = A.x - V.x * 0.08; sPos[i * 3 + 1] = A.y - V.y * 0.08; sPos[i * 3 + 2] = A.z - V.z * 0.08;
+          N.fromArray(vn, a * 3).add(C.fromArray(vn, b * 3)).normalize();
+          A.addScaledVector(N, RIDGE * SPACING * 1.2);
+          sPos[i * 3] = A.x; sPos[i * 3 + 1] = A.y; sPos[i * 3 + 2] = A.z;
         } else {
-          sPos[i * 3] = p.x + p.ax * Math.sin(TAU * p.kx * t + p.px);
-          sPos[i * 3 + 1] = p.y + p.ay * Math.sin(TAU * p.ky * t + p.py);
-          sPos[i * 3 + 2] = p.z + p.az * Math.sin(TAU * p.kz * t + p.pz);
+          const x = p.x + p.ax * Math.sin(TAU * p.kx * t + p.px), y = p.y + p.ay * Math.sin(TAU * p.ky * t + p.py);
+          sPos[i * 3] = x; sPos[i * 3 + 1] = y; sPos[i * 3 + 2] = surfZ(x, y) + p.z;
         }
         const tw = Math.pow(0.5 + 0.5 * Math.sin(TAU * p.tk * t + p.tph), 3);
-        const br = p.bright * (0.15 + 0.85 * tw);
-        sSize[i] = p.size * (0.7 + 0.3 * tw);
+        const br = p.bright * (0.2 + 0.8 * tw);
+        sSize[i] = p.size;
         sCol[i * 3] = sparkCol.r * br; sCol[i * 3 + 1] = sparkCol.g * br; sCol[i * 3 + 2] = sparkCol.b * br;
       }
       sGeo.attributes.position.needsUpdate = true;
@@ -280,15 +267,16 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
       post: {
         exposure: 1.0,
         tonemap: "aces",
-        bloom: { strength: 1.4, threshold: 0.6, knee: 0.5, radius: 0.5 },
-        dof: { focus: 8.2, range: 6, nearRange: 4, maxBlur: 0.004, maxNearBlur: 0.007 },
+        bloom: { strength: 0.8, threshold: 0.8, knee: 0.4, radius: 0.35 },
+        // focus on the crown of the bulge; the receding edges go soft
+        dof: { focus: 6.6, range: 3, nearRange: 3, maxBlur: 0.009, maxNearBlur: 0.006 },
         grain: 0.02,
         grainPeriod: period,
-        grade: { vignette: 0.35 },
+        grade: { vignette: 0.3 },
       },
       dispose: () => {
         env.dispose();
-        [faceGeo, edgeGeo, vgGeo, sGeo].forEach((g) => g.dispose());
+        [faceGeo, railGeo, sGeo, hubGeo].forEach((g) => g.dispose());
       },
     };
   },
