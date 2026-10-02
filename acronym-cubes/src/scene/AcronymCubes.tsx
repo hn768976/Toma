@@ -49,6 +49,7 @@ import {
   keyLightAt,
 } from "../lib/world";
 import { PAPER_RGB } from "../textures/paper";
+import { CONTACT_SIZE } from "../textures/wood";
 import { loadSceneAssets, type SceneAssets } from "./assets";
 import { addShaderDither, GrainEffect } from "./grain";
 import { installPCSS, PCSS_SHADOW_TYPE } from "./pcss";
@@ -71,7 +72,6 @@ const DOF_FOCUS_RANGE = 3.4;
 const DOF_BOKEH_AT_2160 = 1.8;
 const GRAIN = 0.0175; // 1.75% film grain (sd, display space)
 
-const CONTACT_SIZE = CUBE * 1.42;
 
 type Props = { row: AcronymRow; assets: SceneAssets };
 
@@ -114,7 +114,7 @@ const Scene: React.FC<Props> = ({ row, assets }) => {
 
   const contact = useMemo(() => {
     const t = new CanvasTexture(assets.contact);
-    const geom = new PlaneGeometry(CONTACT_SIZE, CONTACT_SIZE);
+    const geom = new PlaneGeometry(CONTACT_SIZE * CUBE, CONTACT_SIZE * CUBE);
     geom.rotateX(-Math.PI / 2);
     return { t, geom };
   }, [assets.contact]);
@@ -268,7 +268,7 @@ const Cube: React.FC<{
   );
   const flat = Math.pow(Math.min(Math.max((align - 0.9) / 0.1, 0), 1), 1.5);
   const ground = Math.max(0, 1 - pose.lift / 0.25);
-  contactMat.opacity = pose.visible ? 0.55 * flat * ground : 0;
+  contactMat.opacity = pose.visible ? 0.62 * flat * ground : 0;
   return (
     <>
       <mesh

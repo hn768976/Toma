@@ -167,20 +167,24 @@ export const cubeFaces = (
   });
 };
 
-// Soft square used as a contact-darkening decal under each cube.
+// Contact-darkening decal under each cube: dark across the cube's footprint,
+// fading out ~0.1 cube widths beyond it, so a dark line shows where the
+// cube meets the paper. The decal spans CONTACT_SIZE cube widths.
+export const CONTACT_SIZE = 1.3;
 let contact: HTMLCanvasElement | null = null;
 export const contactCanvas = () => {
   if (contact) return contact;
-  const S = 256;
+  const S = 512;
   const c = document.createElement("canvas");
   c.width = S;
   c.height = S;
   const ctx = c.getContext("2d")!;
-  ctx.filter = `blur(${S * 0.06}px)`;
+  const pxPerCube = S / CONTACT_SIZE;
+  const half = 0.5 * pxPerCube; // footprint half-width in px
+  ctx.filter = `blur(${0.035 * pxPerCube}px)`;
   ctx.fillStyle = "rgba(0,0,0,1)";
-  const inset = S * 0.2;
   ctx.beginPath();
-  ctx.roundRect(inset, inset, S - 2 * inset, S - 2 * inset, S * 0.05);
+  ctx.roundRect(S / 2 - half, S / 2 - half, 2 * half, 2 * half, 0.07 * pxPerCube);
   ctx.fill();
   contact = c;
   return c;
