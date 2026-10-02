@@ -1,0 +1,32 @@
+{
+  "name": "colon-cutaway",
+  "version": "1.0.0",
+  "description": "Colon cutaway 3D animations (Remotion + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc",
+    "render:previews": "bash scripts/render_previews.sh",
+    "check": "bash scripts/run_checks.sh",
+    "check:inside": "esbuild scripts/check_inside.ts --bundle --platform=node --format=esm --outfile=out/check_inside.mjs --log-level=warning && node out/check_inside.mjs"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "esbuild": "0.28.1",
+    "typescript": "5.9.3"
+  }
+}
