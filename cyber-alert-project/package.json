@@ -1,0 +1,22 @@
+{
+  "name": "cyber-alert-project",
+  "version": "1.0.0",
+  "description": "Cyber Security Alerts: three 2D alert looks x two versions, Remotion, 20s seamless loops",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "build:assets": "node scripts/build-map.mjs && node scripts/build-noise.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
