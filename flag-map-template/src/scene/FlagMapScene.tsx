@@ -82,7 +82,7 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
     addGlint(topMat, glint);
     // Sides: matte, darker shade of the main colour. A self-lit term keeps them a
     // rich dark colour (as in the reference) instead of falling into ACES' toe.
-    const sideMat = new THREE.MeshStandardMaterial({color: sideColor(row), emissive: sideColor(row), emissiveIntensity: 1.9, roughness: 1, metalness: 0, envMapIntensity: 0.25});
+    const sideMat = new THREE.MeshStandardMaterial({color: sideColor(row), emissive: sideColor(row), emissiveIntensity: 1.3, roughness: 1, metalness: 0, envMapIntensity: 0.25});
     const mesh = new THREE.Mesh(geo, [topMat, sideMat]);
     mesh.castShadow = true;
     mesh.receiveShadow = false;
@@ -98,7 +98,7 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
     const base = srgbArr(FLOOR_ALBEDO);
     const haze = srgbArr(HAZE);
     const visW = 2 * LOOK.distance * Math.tan(THREE.MathUtils.degToRad(LOOK.fov / 2)) * (size.width / size.height);
-    const unitsPerDeg = (2.2 * visW) / 360;
+    const unitsPerDeg = visW / (95 * dots.step); // ~95 dots across the frame
     const floorUniforms = {
       uBase: {value: new THREE.Vector3(base.r * FLOOR_LIGHT[0], base.g * FLOOR_LIGHT[1], base.b * FLOOR_LIGHT[2])},
       uHaze: {value: new THREE.Vector3(haze.r, haze.g, haze.b)},
@@ -109,15 +109,16 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
       uDots: {value: makeDotsTexture(dots.cols, dots.rows, dots.mask)},
       uDotsSize: {value: new THREE.Vector2(dots.cols, dots.rows)},
       uDegStep: {value: dots.step},
-      uMapOrigin: {value: new THREE.Vector2(shape.center[0], Math.max(-55, Math.min(60, shape.center[1])))},
+      // the far floor (top of frame) shows latitudes north of the origin: keep land there
+      uMapOrigin: {value: new THREE.Vector2(shape.center[0], Math.max(-35, Math.min(22, shape.center[1])))},
       uUnitsPerDeg: {value: unitsPerDeg},
-      uDotRadius: {value: dots.step * unitsPerDeg * 0.28},
+      uDotRadius: {value: dots.step * unitsPerDeg * 0.3},
       uDotDarken: {value: 0.075},
       uMajor: {value: visW / 9.5},
       uMinor: {value: visW / 9.5 / 4},
       uMajorWidth: {value: visW * 0.0019},
       uMinorWidth: {value: visW * 0.0008},
-      uMajorAlpha: {value: 0.3},
+      uMajorAlpha: {value: 0.24},
       uMinorAlpha: {value: 0.06},
       uDepthDim: {value: 0.025},
     };
@@ -142,7 +143,7 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
       m.blendSrcAlpha = THREE.ZeroFactor;
       m.blendDstAlpha = THREE.OneFactor;
     };
-    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#101a30'), opacity: 0.62});
+    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#101a30'), opacity: 0.55});
     keepAlpha(shadowMat);
     shadowMat.polygonOffset = true;
     shadowMat.polygonOffsetFactor = -4;
@@ -234,10 +235,10 @@ export const FlagMapScene: React.FC<SceneProps> = ({row, shape, flagImg, hdri, d
       uFar: {value: 500},
       uFocusNear: {value: layout.focusNear},
       uFocusFar: {value: layout.focusFar},
-      uFarRange: {value: LOOK.distance * 0.22},
-      uNearRange: {value: LOOK.distance * 0.3},
-      uMaxCoc: {value: h * 0.012},
-      uExposure: {value: 0.28},
+      uFarRange: {value: LOOK.distance * 0.07},
+      uNearRange: {value: LOOK.distance * 0.04},
+      uMaxCoc: {value: h * 0.0095},
+      uExposure: {value: 0.27},
       uFrame: {value: 0},
       uFlare: {value: 0},
       uFlarePos: {value: new THREE.Vector2(0.5, 1.02)},

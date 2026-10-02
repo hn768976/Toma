@@ -9,10 +9,10 @@ import * as THREE from 'three';
 // The per-pixel rotation comes from gl_FragCoord only: no time, no randomness.
 // --------------------------------------------------------------------------
 const PCSS_SIZE = 22;
-const PCSS_SAMPLES = 24;
+const PCSS_SAMPLES = 32;
 // Minimum filter radius in shadow-map texels: the extrusion is thin, so pure
 // contact-hardening would give an almost hard shadow; the studio look is soft.
-const PCSS_MIN_RADIUS = 22;
+const PCSS_MIN_RADIUS = 40;
 const pcss = `
 #define PENUMBRA_FILTER_SIZE float(${PCSS_SIZE})
 vec3 pcssRandRGB(vec2 uv) {
@@ -222,7 +222,7 @@ float viewDist(vec2 uv) {
 }
 float coc(float dist) {
   float far = smoothstep(uFocusFar, uFocusFar + uFarRange, dist);
-  float near = smoothstep(uFocusNear, uFocusNear - uNearRange, dist) * 0.7;
+  float near = smoothstep(uFocusNear, uFocusNear - uNearRange, dist) * 0.8;
   return uMaxCoc * max(far, near);
 }
 
@@ -283,10 +283,10 @@ void main() {
   // soft light flare at the top centre (display space, screen blend)
   vec2 d = (vUv - uFlarePos) * vec2(uRes.x / uRes.y, 1.0);
   float core = exp(-dot(d / vec2(0.11, 0.08), d / vec2(0.11, 0.08)));
-  float glow = exp(-dot(d / vec2(0.36, 0.26), d / vec2(0.36, 0.26)));
+  float glow = exp(-dot(d / vec2(0.34, 0.2), d / vec2(0.34, 0.2)));
   float wide = exp(-dot(d / vec2(0.9, 0.55), d / vec2(0.9, 0.55)));
   float streak = exp(-pow(d.y / 0.02, 2.0)) * exp(-pow(d.x / 0.6, 2.0));
-  float flare = clamp((core * 1.0 + glow * 0.5 + wide * 0.2 + streak * 0.2) * uFlare, 0.0, 1.0);
+  float flare = clamp((core * 1.0 + glow * 0.5 + wide * 0.12 + streak * 0.2) * uFlare, 0.0, 1.0);
   col = 1.0 - (1.0 - col) * (1.0 - flare);
 
   // very light vignette
@@ -321,7 +321,7 @@ export const addGlint = (material: THREE.MeshPhysicalMaterial, uniforms: {uGlint
           outgoingLight += vec3(1.0, 0.985, 0.96) * gb * uGlintStrength;
           // faint grey studio sheen (soft overhead reflection), stronger at grazing angles
           float fres = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
-          outgoingLight += vec3(0.93, 0.95, 1.0) * (0.09 + 0.06 * fres);
+          outgoingLight += vec3(0.93, 0.95, 1.0) * (0.05 + 0.04 * fres);
         }
         #include <opaque_fragment>`,
       );

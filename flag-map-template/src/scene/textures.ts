@@ -69,8 +69,15 @@ export const makeTopTexture = (row: Row, shape: ShapeData, flagImg: HTMLImageEle
     const [ax, ay] = row.top.anchor === 'center' ? [0, 0] : shape.anchor;
     let left = ax - row.top.focus.x * FW;
     let top = ay + row.top.focus.y * FH;
-    left = Math.min(-shape.w / 2, Math.max(shape.w / 2 - FW, left));
-    top = Math.max(shape.h / 2, Math.min(-shape.h / 2 + FH, top));
+    if (zoom >= 1) {
+      // keep the flag covering the whole bbox
+      left = Math.min(-shape.w / 2, Math.max(shape.w / 2 - FW, left));
+      top = Math.max(shape.h / 2, Math.min(-shape.h / 2 + FH, top));
+    } else {
+      // plain-field flag shown smaller: the field colour covers the rest
+      ctx.fillStyle = row.top.pad ?? def.main;
+      ctx.fillRect(0, 0, cw, ch);
+    }
     const [px, py] = toPx(left, top);
     ctx.drawImage(flagImg!, px, py, (FW / shape.w) * cw, (FH / shape.h) * ch);
   }
@@ -112,7 +119,7 @@ export const makeTopTexture = (row: Row, shape: ShapeData, flagImg: HTMLImageEle
 
 /** Label text texture; returns the texture and the text's world width per world unit of font size. */
 export const makeLabelTexture = (text: string) => {
-  const px = 256;
+  const px = 384;
   const probe = document.createElement('canvas').getContext('2d')!;
   probe.font = `500 ${px}px ${FONT_FAMILY}`;
   const m = probe.measureText(text);
@@ -131,7 +138,7 @@ export const makeLabelTexture = (text: string) => {
   ctx.fillText(text, pad + m.actualBoundingBoxLeft, baseline);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
+  tex.anisotropy = 16;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   return {tex, widthPerEm: cw / px, heightPerEm: ch / px, inkWidthPerEm: (m.actualBoundingBoxLeft + m.actualBoundingBoxRight) / px};
 };

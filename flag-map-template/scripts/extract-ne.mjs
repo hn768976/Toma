@@ -45,7 +45,7 @@ write(
 
 // Dotted world map for the floor: a land mask on a regular lon/lat grid,
 // sampled from 1:110m land with an even-odd point-in-polygon test.
-const STEP = 1.5; // degrees between dots
+const STEP = 0.75; // degrees between dots
 const cols = Math.round(360 / STEP);
 const rows = Math.round(180 / STEP);
 const land = read('ne_110m_land.geojson').features;

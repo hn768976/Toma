@@ -19,8 +19,8 @@ export const LOOK = {
   fitHeight: 0.5, // ... or 50% of frame height, whichever is tighter
   groupCenterY: 0.45, // vertical centre of shape + label (fraction of frame height from top)
   maxShapeCenterY: 0.4, // ...but the shape's own centre never sits lower than this
-  labelCapHeight: 0.051, // cap height of the label, fraction of frame height (≈5% with descenders)
-  labelGap: 0.022, // gap between shape bbox front and label, fraction of frame height
+  labelCapHeight: 0.055, // cap height of the label, fraction of frame height (≈5% with descenders)
+  labelGap: 0.03, // gap between shape bbox front and label, fraction of frame height
   depthRatio: 0.04, // extrusion depth, fraction of shape width
 };
 
@@ -136,8 +136,8 @@ export const computeLayout = (shape: ShapeData, aspect: number): Layout => {
   const labelZ = (capTopZ + capBottomZ) / 2;
 
   const camDist = (p: THREE.Vector3) => cam.position.distanceTo(p);
-  const focusNear = camDist(new THREE.Vector3(0, 0, capBottomZ + labelHeight * 0.3)) - 0.3;
-  const focusFar = camDist(new THREE.Vector3(0, 0, -(shape.h / 2) * scale)) + 0.15;
+  const focusNear = camDist(new THREE.Vector3(0, 0, capBottomZ + labelHeight * 0.3)) - 0.05;
+  const focusFar = camDist(new THREE.Vector3(0, 0, -(shape.h / 2) * scale)) + 0.1;
   return {
     scale,
     depth,

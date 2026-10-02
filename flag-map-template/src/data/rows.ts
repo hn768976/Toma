@@ -27,8 +27,13 @@ export type Top =
       focus: {x: number; y: number};
       /** Where in the shape the focus point goes: its most interior point (default) or its bbox centre. */
       anchor?: 'interior' | 'center';
-      /** Extra zoom on top of "cover" (>= 1). */
+      /**
+       * Scale relative to "cover" (default 1). Below 1 only for flags whose
+       * emblem sits on a plain field: the field is extended with `pad` (its
+       * own colour) so the whole emblem fits inside the shape (EU stars).
+       */
       zoom?: number;
+      pad?: string;
     }
   | {fill: string; side?: string};
 
@@ -92,7 +97,7 @@ export const REGIONS: Row[] = [
   {
     id: 'EuropeanUnion', label: 'European Union', kind: 'region',
     members: [...EU27, ...EU_EXTRA], within: [-11, 34, 35, 71], minIsland: 0.0005, keepAllMembers: true,
-    top: {flag: 'EU', focus: {x: 0.5, y: 0.5}},
+    top: {flag: 'EU', focus: {x: 0.5, y: 0.5}, zoom: 0.36, pad: '#003399'},
   },
   {id: 'Africa', label: 'Africa', kind: 'region', continent: 'Africa', top: {fill: '#E8A33A'}},
   {
