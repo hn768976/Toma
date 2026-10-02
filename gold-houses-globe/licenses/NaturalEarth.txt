@@ -1,0 +1,7 @@
+data-src/ne_50m_land.geojson
+data-src/ne_10m_populated_places_simple.geojson
+public/data/globe.json   (derived: scripts/build-globe-data.mjs)
+
+Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+Natural Earth data is in the public domain - https://www.naturalearthdata.com/about/terms-of-use/
+GeoJSON copies from https://github.com/nvkelso/natural-earth-vector (v5.x).

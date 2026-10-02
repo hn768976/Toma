@@ -1,0 +1,10 @@
+public/hdri/studio_small_03_1k.hdr
+
+"Studio Small 03" from Poly Haven (https://polyhaven.com/a/studio_small_03).
+License: CC0 1.0 Universal (public domain dedication) - https://creativecommons.org/publicdomain/zero/1.0/
+No attribution required; credited here for provenance.
+
+The 1k .hdr file was fetched from the pmndrs/drei-assets mirror of the Poly Haven
+file (https://github.com/pmndrs/drei-assets/blob/master/hdri/studio_small_03_1k.hdr)
+because polyhaven.com was not reachable from the build machine. The file is the
+unmodified Poly Haven asset.
