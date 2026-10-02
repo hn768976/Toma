@@ -1,6 +1,7 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { Frame } from "../lib/Frame";
+import { Circle } from "../lib/shapes";
 import { GlowFilter } from "../lib/Glow";
 import { Grain } from "../lib/Grain";
 import { DESIGN_H, DESIGN_W, LOOP_FRAMES, TAU } from "../lib/constants";
@@ -163,14 +164,14 @@ const ChannelStrip: React.FC<{ ch: Channel; y: number; p: number; index: number 
     <g>
       <rect x={STRIP_X0} y={y} width={STRIP_W} height={STRIP_H} fill="url(#ae-strip)" />
       <g clipPath={`url(#ae-clip-${index})`}>
-        <g filter="url(#ae-bokeh)" display={qaOff("haze") ? "none" : undefined}>
+        <g display={qaOff("haze") ? "none" : undefined}>
           {ch.bokeh.map((b, i) => {
             const x = STRIP_X0 + ((((b.x - drift) % STRIP_W) + STRIP_W) % STRIP_W);
             return (
               <React.Fragment key={i}>
-                <circle cx={x} cy={y + b.y} r={b.r} fill={C.bokeh} opacity={b.o} />
-                <circle cx={x - STRIP_W} cy={y + b.y} r={b.r} fill={C.bokeh} opacity={b.o} />
-                <circle cx={x + STRIP_W} cy={y + b.y} r={b.r} fill={C.bokeh} opacity={b.o} />
+                <Circle cx={x} cy={y + b.y} r={b.r + 5} fill="url(#ae-bokeh-disc)" opacity={b.o} />
+                <Circle cx={x - STRIP_W} cy={y + b.y} r={b.r + 5} fill="url(#ae-bokeh-disc)" opacity={b.o} />
+                <Circle cx={x + STRIP_W} cy={y + b.y} r={b.r + 5} fill="url(#ae-bokeh-disc)" opacity={b.o} />
               </React.Fragment>
             );
           })}
@@ -188,7 +189,7 @@ const ChannelStrip: React.FC<{ ch: Channel; y: number; p: number; index: number 
           {ch.specks.map((s, i) => {
             const j = (((s.i - offset) % n) + n) % n;
             if (j > ch.visible) return null;
-            return <circle key={i} cx={STRIP_X0 + j * dx} cy={cy + s.y * STRIP_H} r={1.3} opacity={s.o} />;
+            return <Circle key={i} cx={STRIP_X0 + j * dx} cy={cy + s.y * STRIP_H} r={1.3} opacity={s.o} />;
           })}
         </g>
       </g>
@@ -238,13 +239,14 @@ const LevelMeters: React.FC<{ p: number }> = ({ p }) => {
 };
 
 const TopRow: React.FC<{ t: number; p: number }> = ({ t, p }) => {
+  const fresh = (t * 0.618034) % 1; // see lib/shapes.tsx: static circles get per-frame geometry
   const eqX0 = 548;
   const eqDx = 46;
   return (
     <g>
       <Label x={284} y={30}>DOTS_INF</Label>
       {DOTS.map((d, i) => (
-        <circle key={i} display={qaOff("indicators") ? "none" : undefined} cx={d.x} cy={d.y} r={1.6} fill={C.dot} opacity={d.o * (0.55 + 0.45 * Math.sin(TAU * d.k * p + d.ph))} />
+        <Circle key={i} phase={fresh} display={qaOff("indicators") ? "none" : undefined} cx={d.x} cy={d.y} r={1.6} fill={C.dot} opacity={d.o * (0.55 + 0.45 * Math.sin(TAU * d.k * p + d.ph))} />
       ))}
       <Label x={eqX0 - 18} y={30}>EQ_SET</Label>
       {EQ_LEVELS.map((lv, i) => {
@@ -273,15 +275,16 @@ const TopRow: React.FC<{ t: number; p: number }> = ({ t, p }) => {
 };
 
 const BottomRow: React.FC<{ t: number }> = ({ t }) => {
+  const fresh = (t * 0.618034) % 1; // see lib/shapes.tsx
   const y = 1005;
   const btn = 52;
   const bx0 = 500;
   return (
     <g>
       {/* status lights: one green, three grey */}
-      <circle cx={52} cy={y} r={20} fill={C.statusOn} filter="url(#ae-glow-soft)" />
+      <Circle phase={fresh} cx={52} cy={y} r={20} fill={C.statusOn} filter="url(#ae-glow-soft)" />
       {[108, 162, 216].map((x) => (
-        <circle key={x} cx={x} cy={y} r={20} fill={C.statusOff} />
+        <Circle key={x} phase={fresh} cx={x} cy={y} r={20} fill={C.statusOff} />
       ))}
       {/* transport buttons */}
       {ICONS.map((d, i) => {
@@ -326,9 +329,13 @@ export const AudioEditor: React.FC = () => {
           <stop offset="0" stopColor={C.panelTop} />
           <stop offset="1" stopColor={C.background} />
         </linearGradient>
-        <filter id="ae-bokeh" x="0" y="0" width={DESIGN_W} height={DESIGN_H} filterUnits="userSpaceOnUse">
-          <feGaussianBlur stdDeviation={5} />
-        </filter>
+        {/* soft-edged bokeh disc: a gradient instead of a blur filter (cheaper, and rasterises identically every render) */}
+        <radialGradient id="ae-bokeh-disc">
+          <stop offset="0" stopColor={C.bokeh} stopOpacity={0.85} />
+          <stop offset="0.55" stopColor={C.bokeh} stopOpacity={0.7} />
+          <stop offset="0.85" stopColor={C.bokeh} stopOpacity={0.25} />
+          <stop offset="1" stopColor={C.bokeh} stopOpacity={0} />
+        </radialGradient>
         <GlowFilter id="ae-glow" base={2} strength={[1, 1, 0.75]} region={{ x: 0, y: 0, width: DESIGN_W, height: DESIGN_H }} />
         <GlowFilter id="ae-glow-soft" base={1.2} strength={[0.7, 0.4, 0.2]} />
         <GlowFilter id="ae-glow-red" base={1.2} strength={[0.8, 0.5, 0.25]} />

@@ -1,12 +1,14 @@
 import React from "react";
 import { Easing, interpolate, useCurrentFrame } from "remotion";
 import { Frame } from "../lib/Frame";
+import { Circle, Ellipse } from "../lib/shapes";
 import { GlowFilter } from "../lib/Glow";
 import { Grain } from "../lib/Grain";
 import { DESIGN_H, DESIGN_W, OPENER_FRAMES, TAU } from "../lib/constants";
 import { FONT_TITLE } from "../lib/fonts";
 import { int, mulberry32, range } from "../lib/random";
 import { BreakingNewsProps } from "./theme";
+import { qaOff } from "../lib/qa";
 
 /*
  * Look 2 — Breaking News Opener. 450 frames, NOT a loop.
@@ -133,10 +135,15 @@ const Gauges: React.FC<{ frame: number; p: BreakingNewsProps }> = ({ frame, p })
   const wedges = Array.from({ length: 14 }, (_, i) => i);
   const needle = -Math.PI / 2 + 0.9 * Math.sin(frame * 0.021) + 0.35 * Math.sin(frame * 0.067 + 1.3);
   const pulse = 0.5 + 0.5 * Math.sin(frame * 0.12);
+  // Static curved geometry is re-generated every frame (polygon start angle,
+  // sub-0.01 px radius nudge) so Chrome never re-uses a cached raster of it;
+  // cached re-use made static rings rasterise differently between renders.
+  const fresh = (frame * 0.618034) % 1;
+  const eps = (frame % 97) * 0.00005;
   return (
     <g filter="url(#bn-glow-soft)">
       {/* 1: radar with rotating sweep */}
-      <circle cx={g1} cy={GAUGE_Y} r={GAUGE_R} fill="url(#bn-disc)" />
+      <Circle phase={fresh} cx={g1} cy={GAUGE_Y} r={GAUGE_R} fill="url(#bn-disc)" />
       {wedges.map((i) => {
         const a1 = sweep - i * 0.06;
         const a0 = a1 - 0.07;
@@ -152,37 +159,37 @@ const Gauges: React.FC<{ frame: number; p: BreakingNewsProps }> = ({ frame, p })
       <line x1={g1} y1={GAUGE_Y} x2={g1 + GAUGE_R * 0.96 * Math.cos(sweep)} y2={GAUGE_Y + GAUGE_R * 0.96 * Math.sin(sweep)} stroke={p.gaugeColor} strokeWidth={2.5} />
       {BLIPS.map((b, i) => {
         const since = (((sweep - b.a) % TAU) + TAU) % TAU;
-        return <circle key={i} cx={g1 + b.r * GAUGE_R * Math.cos(b.a)} cy={GAUGE_Y + b.r * GAUGE_R * Math.sin(b.a)} r={4} fill={p.gaugeColor} opacity={Math.exp(-since * 1.6)} />;
+        return <Circle key={i} cx={g1 + b.r * GAUGE_R * Math.cos(b.a)} cy={GAUGE_Y + b.r * GAUGE_R * Math.sin(b.a)} r={4} fill={p.gaugeColor} opacity={Math.exp(-since * 1.6)} />;
       })}
-      <circle cx={g1} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={2.5} opacity={0.75} />
-      <path d={arc(g1, GAUGE_Y, GAUGE_R + 9, -2.6, -1.1)} stroke={p.gaugeColor} strokeWidth={3} fill="none" opacity={0.55} />
+      <Circle phase={fresh} cx={g1} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={2.5} opacity={0.75} />
+      <path d={arc(g1, GAUGE_Y, GAUGE_R + 9 + eps, -2.6, -1.1)} stroke={p.gaugeColor} strokeWidth={3} fill="none" opacity={0.55} />
 
       {/* 2: concentric rings, green and orange */}
-      <circle cx={g2} cy={GAUGE_Y} r={GAUGE_R} fill="url(#bn-disc)" />
-      <circle cx={g2} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={5} />
+      <Circle phase={fresh} cx={g2} cy={GAUGE_Y} r={GAUGE_R} fill="url(#bn-disc)" />
+      <Circle phase={fresh} cx={g2} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={5} />
       <path d={arc(g2, GAUGE_Y, GAUGE_R + 9, frame * 0.04, frame * 0.04 + 2.4)} stroke={p.gaugeAccent} strokeWidth={6} fill="none" strokeLinecap="round" />
       <path d={arc(g2, GAUGE_Y, GAUGE_R + 9, frame * 0.04 + 3.3, frame * 0.04 + 4.6)} stroke={p.accentColor} strokeWidth={6} fill="none" strokeLinecap="round" />
-      <circle cx={g2} cy={GAUGE_Y} r={GAUGE_R * 0.66} fill="none" stroke={p.gaugeColor} strokeWidth={2} opacity={0.6} />
-      <circle cx={g2} cy={GAUGE_Y} r={GAUGE_R * (0.36 + 0.06 * pulse)} fill={p.gaugeColor} opacity={0.22 + 0.2 * pulse} />
-      <circle cx={g2} cy={GAUGE_Y} r={GAUGE_R * 0.2} fill="none" stroke={p.gaugeColor} strokeWidth={3} />
+      <Circle phase={fresh} cx={g2} cy={GAUGE_Y} r={GAUGE_R * 0.66} fill="none" stroke={p.gaugeColor} strokeWidth={2} opacity={0.6} />
+      <Circle phase={fresh} cx={g2} cy={GAUGE_Y} r={GAUGE_R * (0.36 + 0.06 * pulse)} fill={p.gaugeColor} opacity={0.22 + 0.2 * pulse} />
+      <Circle phase={fresh} cx={g2} cy={GAUGE_Y} r={GAUGE_R * 0.2} fill="none" stroke={p.gaugeColor} strokeWidth={3} />
 
       {/* 3: spiral */}
-      <circle cx={g3} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={9} />
-      <circle cx={g3} cy={GAUGE_Y} r={GAUGE_R * 0.84} fill="none" stroke={p.gaugeColor} strokeWidth={2} opacity={0.7} />
+      <Circle phase={fresh} cx={g3} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={9} />
+      <Circle phase={fresh} cx={g3} cy={GAUGE_Y} r={GAUGE_R * 0.84} fill="none" stroke={p.gaugeColor} strokeWidth={2} opacity={0.7} />
       <path d={spiralPath(g3, GAUGE_Y, GAUGE_R * 0.74, 4.5, -frame * 0.09)} stroke={p.gaugeColor} strokeWidth={2.2} fill="none" />
       <path d={spiralPath(g3, GAUGE_Y, GAUGE_R * 0.6, 3, frame * 0.05 + 1)} stroke={p.gaugeColor} strokeWidth={1.4} fill="none" opacity={0.5} />
 
       {/* 4: dim dial */}
-      <circle cx={g4} cy={GAUGE_Y} r={GAUGE_R} fill="url(#bn-disc-dim)" />
-      <circle cx={g4} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={2} opacity={0.35} />
+      <Circle phase={fresh} cx={g4} cy={GAUGE_Y} r={GAUGE_R} fill="url(#bn-disc-dim)" />
+      <Circle phase={fresh} cx={g4} cy={GAUGE_Y} r={GAUGE_R} fill="none" stroke={p.gaugeColor} strokeWidth={2} opacity={0.35} />
       {Array.from({ length: 36 }, (_, i) => {
         const a = (i / 36) * TAU;
         const r0 = GAUGE_R * (i % 3 === 0 ? 0.82 : 0.88);
         return <line key={i} x1={g4 + r0 * Math.cos(a)} y1={GAUGE_Y + r0 * Math.sin(a)} x2={g4 + GAUGE_R * 0.94 * Math.cos(a)} y2={GAUGE_Y + GAUGE_R * 0.94 * Math.sin(a)} stroke={p.gaugeColor} strokeWidth={1.5} opacity={0.3} />;
       })}
-      <path d={arc(g4, GAUGE_Y, GAUGE_R + 8, -1.5, -0.4)} stroke={p.gaugeColor} strokeWidth={3} fill="none" opacity={0.7} />
+      <path d={arc(g4, GAUGE_Y, GAUGE_R + 8 + eps, -1.5, -0.4)} stroke={p.gaugeColor} strokeWidth={3} fill="none" opacity={0.7} />
       <line x1={g4} y1={GAUGE_Y} x2={g4 + GAUGE_R * 0.8 * Math.cos(needle)} y2={GAUGE_Y + GAUGE_R * 0.8 * Math.sin(needle)} stroke={p.gaugeColor} strokeWidth={2.5} opacity={0.85} />
-      <circle cx={g4} cy={GAUGE_Y} r={6} fill={p.gaugeColor} opacity={0.6} />
+      <Circle phase={fresh} cx={g4} cy={GAUGE_Y} r={6} fill={p.gaugeColor} opacity={0.6} />
     </g>
   );
 };
@@ -247,17 +254,19 @@ const Streak: React.FC<{ frame: number; color: string }> = ({ frame, color }) =>
   const head = interpolate(u, [0, 1], [-0.15 * DESIGN_W, 1.15 * DESIGN_W], { easing: Easing.inOut(Easing.quad) });
   const y = TITLE.ruleY + 8;
   return (
-    <g style={{ mixBlendMode: "screen" }} opacity={env}>
+    <g opacity={env} clipPath="url(#bn-frame-clip)">
+      {/* plain "over" compositing (mix-blend-mode varied by a level between renders);
+          clipped to the frame so off-screen parts of the moving head are cut identically */}
       {/* broad orange-red band */}
       <rect x={0} y={y - 130} width={DESIGN_W} height={260} fill="url(#bn-streak-band)" opacity={0.9} />
       {/* trail behind the head */}
       <rect x={head - 1500} y={y - 55} width={1500} height={110} fill="url(#bn-streak-trail)" />
       {/* bright head */}
-      <ellipse cx={head} cy={y} rx={760} ry={70} fill="url(#bn-streak-head)" />
+      <Ellipse cx={head} cy={y} rx={760} ry={70} fill="url(#bn-streak-head)" />
       {/* hot white centre line + flare */}
       <rect x={0} y={y - 3} width={DESIGN_W} height={6} fill="#fff" opacity={0.8} filter="url(#bn-soft)" />
-      <ellipse cx={head} cy={y} rx={520} ry={12} fill="#fff" filter="url(#bn-soft)" />
-      <circle cx={head} cy={y} r={150} fill="url(#bn-flare)" />
+      <Ellipse cx={head} cy={y} rx={520} ry={12} fill="#fff" filter="url(#bn-soft)" />
+      <Circle cx={head} cy={y} r={150} fill="url(#bn-flare)" />
       {[-70, -40, 36, 64].map((dy, i) => (
         <rect key={i} x={0} y={y + dy} width={DESIGN_W} height={2.5} fill={color} opacity={0.75} />
       ))}
@@ -289,8 +298,8 @@ export const BreakingNewsOpener: React.FC<BreakingNewsProps> = (p) => {
     <Frame background="#000000">
       <defs>
         <GlowFilter id="bn-glow" base={1.4} strength={[1, 0.6, 0.35]} region={{ x: -50, y: 0, width: DESIGN_W + 100, height: DESIGN_H }} />
-        <GlowFilter id="bn-glow-soft" base={1.2} strength={[0.8, 0.45, 0.22]} />
-        <filter id="bn-soft" x="-20%" y="-200%" width="140%" height="500%">
+        <GlowFilter id="bn-glow-soft" base={1.2} strength={[0.8, 0.45, 0.22]} region={{ x: 0, y: 0, width: DESIGN_W, height: DESIGN_H }} />
+        <filter id="bn-soft" filterUnits="userSpaceOnUse" x={0} y={0} width={DESIGN_W} height={DESIGN_H}>
           <feGaussianBlur stdDeviation={3} />
         </filter>
         <filter id="bn-dash-blur" x="-50%" y="-200%" width="200%" height="500%">
@@ -351,6 +360,9 @@ export const BreakingNewsOpener: React.FC<BreakingNewsProps> = (p) => {
           <stop offset="0.35" stopColor="#ffffff" stopOpacity={0.7} />
           <stop offset="1" stopColor="#ffffff" stopOpacity={0} />
         </radialGradient>
+        <clipPath id="bn-frame-clip">
+          <rect x={0} y={0} width={DESIGN_W} height={DESIGN_H} />
+        </clipPath>
         <clipPath id="bn-slot-clip">
           {Array.from({ length: SLOTS }, (_, i) => (
             <rect key={i} x={SLOT_X0 + i * SLOT_DX - 40} y={DIGIT_BAR.y - SLOT_H / 2} width={80} height={SLOT_H} />
@@ -359,6 +371,7 @@ export const BreakingNewsOpener: React.FC<BreakingNewsProps> = (p) => {
       </defs>
 
       {/* ---- top tier: red-tinted bar with rolling digits ---- */}
+      <g display={qaOff("top") ? "none" : undefined}>
       <rect x={DIGIT_BAR.x0} y={DIGIT_BAR.y - 32} width={DIGIT_BAR.x1 - DIGIT_BAR.x0} height={64} fill="url(#bn-digit-bar)" />
       <rect x={DIGIT_BAR.x0} y={DIGIT_BAR.y - 32} width={DIGIT_BAR.x1 - DIGIT_BAR.x0} height={64} fill="url(#bn-digit-bar-v)" />
       <g filter="url(#bn-dash-blur)" fill="#d8a0a0" opacity={0.35}>
@@ -393,7 +406,9 @@ export const BreakingNewsOpener: React.FC<BreakingNewsProps> = (p) => {
         })}
       </g>
 
+      </g>
       {/* ---- middle tier: grid, light lines, dense waveform ---- */}
+      <g display={qaOff("zone") ? "none" : undefined}>
       <rect x={0} y={ZONE.y0} width={DESIGN_W} height={ZONE.y1 - ZONE.y0} fill="#06104a" opacity={0.55} />
       <g stroke={p.gridColor} strokeWidth={1} opacity={0.28}>{gridLines}</g>
       <rect x={0} y={ZONE.y0 - 2} width={DESIGN_W} height={ZONE.y1 - ZONE.y0 + 4} fill="url(#bn-zone)" />
@@ -402,13 +417,15 @@ export const BreakingNewsOpener: React.FC<BreakingNewsProps> = (p) => {
           <line key={i} x1={0} x2={DESIGN_W} y1={y} y2={y} stroke={p.gridColor} strokeWidth={i % 3 === 0 ? 2 : 1.2} opacity={0.45 + 0.35 * Math.sin(frame * 0.09 + LINE_PH[i])} />
         ))}
       </g>
-      <g filter="url(#bn-glow)" fill="none" strokeLinejoin="bevel">
+      </g>
+      <g filter="url(#bn-glow)" fill="none" strokeLinejoin="bevel" display={qaOff("wave") ? "none" : undefined}>
         <path d={densePath(DENSE_B, waveOffset + 1700, 175, flicker, 34, frame)} stroke={p.waveColorB} strokeWidth={1.4} opacity={0.85} />
         <path d={densePath(DENSE_A, waveOffset, 190, 1.7 - flicker, 18, frame)} stroke={p.waveColorA} strokeWidth={1.3} opacity={0.8} />
       </g>
 
       {/* ---- title ---- */}
-      <ellipse cx={TITLE.cx} cy={TITLE.ruleY} rx={720} ry={190} fill="url(#bn-title-shade)" opacity={wordsOpacity} />
+      <g display={qaOff("title") ? "none" : undefined}>
+      <Ellipse cx={TITLE.cx} cy={TITLE.ruleY} rx={720} ry={190} fill="url(#bn-title-shade)" opacity={wordsOpacity} />
       <g opacity={wordsOpacity}>
         <TitleWord text={p.titleTop} x={topX} y={TITLE.topBaseline} anchor="middle" color={p.titleColor} />
         <TitleWord text={p.titleBottom} x={botX} y={TITLE.bottomBaseline} anchor="start" color={p.titleColor} />
@@ -422,11 +439,12 @@ export const BreakingNewsOpener: React.FC<BreakingNewsProps> = (p) => {
         </g>
       ) : null}
 
+      </g>
       <Streak frame={frame} color={p.streakColor} />
 
       {/* ---- bottom tier ---- */}
-      <Gauges frame={frame} p={p} />
-      <LevelBars frame={frame} color={p.levelColor} />
+      {!qaOff("gauges") && <Gauges frame={frame} p={p} />}
+      {!qaOff("levels") && <LevelBars frame={frame} color={p.levelColor} />}
 
       <Grain seed={frame} amount={0.04} />
     </Frame>
