@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Img, staticFile } from "remotion";
+import { AbsoluteFill, staticFile } from "remotion";
 import { hash01 } from "./random";
 import { loopFrame, useLoopFrame, useUnits } from "./loop";
 
@@ -36,8 +36,3 @@ export const Grain: React.FC<{ opacity?: number; salt?: number; animated?: boole
     />
   );
 };
-
-// Preload so the first frame never renders without the tile.
-export const GrainPreload: React.FC = () => (
-  <Img src={staticFile("noise/grain.png")} style={{ display: "none" }} />
-);

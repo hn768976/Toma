@@ -5,15 +5,22 @@ import { GlowFilter } from "../lib/Glow";
 import { Grain } from "../lib/Grain";
 import { osc, useLoopFrame, useUnits } from "../lib/loop";
 import { hash01, mulberry32, range } from "../lib/random";
-import { CodeText, MiniLogin, ThreatMap, WarningIcon, popState } from "./hud-parts";
+import { CodeText, MapMask, MiniLogin, ThreatMap, WarningIcon, popState } from "./hud-parts";
 import { POPS } from "./schedules";
 import type { HudPalette } from "./palettes";
 
 // ---------------------------------------------------------------------------
-// Depth layers, far to near. Every layer is a flat plane, turned by the same
-// mild rotateY/rotateX and pushed to its own z. Blur grows with distance from
-// the focus layer (index 2). Each layer is pre-scaled by (P - z) / P so its
-// content is authored at screen size; the camera drift gives the parallax.
+// Depth layers, far to near. Every layer is a flat plane at its own depth z,
+// all turned by the same mild yaw/pitch, seen through a perspective camera at
+// distance P. Blur grows with distance from the focus layer (index 2). Each
+// layer is pre-scaled by (P - z) / P so its content is authored at screen size;
+// the camera drift gives the parallax.
+//
+// The projection is computed here (project() below) and applied to each
+// panel as a 2D translate + scale. Real CSS 3D on these layers rendered
+// blurred panels very slightly differently from one render to the next under
+// load (+-1 level on ~40 px), which breaks the byte-for-byte determinism
+// requirement; per-panel 2D transforms from the same 3D maths are exact.
 // ---------------------------------------------------------------------------
 const P = 1000;
 const LAYERS = [
@@ -25,6 +32,24 @@ const LAYERS = [
 ];
 const TILT_Y = -12;
 const TILT_X = 3;
+const RAD = Math.PI / 180;
+
+/** Projects a point of layer `li` (authored in 1080p screen units) through
+ *  the tilted sheet and the perspective camera. Returns the screen position
+ *  and the panel's scale at that point. */
+const project = (x: number, y: number, z: number, camX: number, camY: number, yawDeg: number) => {
+  const s = (P - z) / P;
+  const X = (x - 960) * s - camX;
+  const Y = (y - 540) * s - camY;
+  const ty = (TILT_Y + yawDeg) * RAD;
+  const tx = TILT_X * RAD;
+  const X1 = X * Math.cos(ty) + z * Math.sin(ty);
+  const Z1 = -X * Math.sin(ty) + z * Math.cos(ty);
+  const Y2 = Y * Math.cos(tx) - Z1 * Math.sin(tx);
+  const Z2 = Y * Math.sin(tx) + Z1 * Math.cos(tx);
+  const k = P / (P - Z2);
+  return { x: 960 + X1 * k, y: 540 + Y2 * k, scale: s * k };
+};
 
 type Kind = "code" | "login" | "map" | "mosaic" | "frame" | "dust" | "square";
 type Item = { layer: number; kind: Kind; x: number; y: number; w: number; h: number; seed: number; alt: boolean; flag?: { period: number; phase: number }; markers?: boolean };
@@ -162,16 +187,15 @@ const renderItem = (it: Item, p: HudPalette, u: number, f: number, id: string) =
       return <MiniLogin p={p} u={u} f={f} offset={it.seed % 120} w={it.w} />;
     case "map":
       return (
-        <div style={{ position: "absolute", inset: 0, maskImage: "radial-gradient(ellipse 50% 50% at 50% 50%, black 55%, transparent 100%)", WebkitMaskImage: "radial-gradient(ellipse 50% 50% at 50% 50%, black 55%, transparent 100%)" }}>
+        <>
           {/* chromatic fringe: cyan and red copies offset either side */}
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${-2.5 * u}px)`, opacity: 0.45, mixBlendMode: "screen", filter: "sepia(1) hue-rotate(150deg) saturate(4)" }}>
-            <ThreatMap p={p} f={f} mode="fill" labels={false} opacity={0.6} dot={2.6} />
+          <MapMask color="#3fe0ff" opacity={0.3} dx={-2.5 * u} blend />
+          <MapMask color="#ff3b5c" opacity={0.25} dx={2.5 * u} blend />
+          <MapMask color={p.map} opacity={0.9} />
+          <div style={{ position: "absolute", inset: 0 }}>
+            <ThreatMap p={p} f={f} mode="none" labels={false} />
           </div>
-          <div style={{ position: "absolute", inset: 0, transform: `translateX(${2.5 * u}px)`, opacity: 0.35, mixBlendMode: "screen", filter: "sepia(1) hue-rotate(-50deg) saturate(5)" }}>
-            <ThreatMap p={p} f={f} mode="fill" labels={false} opacity={0.6} dot={2.6} />
-          </div>
-          <ThreatMap p={p} f={f} mode="fill" labels={false} opacity={0.9} dot={2.6} />
-        </div>
+        </>
       );
     case "mosaic": {
       const m = MOSAIC.get(it.seed)!;
@@ -225,17 +249,16 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
 
   return (
     <AbsoluteFill style={{ background: `radial-gradient(ellipse 70% 65% at 45% 50%, ${p.bgCenter} 0%, ${p.bgEdge} 100%)`, overflow: "hidden" }}>
-      <AbsoluteFill style={{ perspective: P * u, perspectiveOrigin: "50% 50%" }}>
+      <AbsoluteFill>
         {LAYERS.map((L, li) => {
-          const s = (P - L.z) / P;
+          // 2D transform that puts a panel centred at (cx, cy) where the 3D
+          // projection puts it, at the projected scale.
+          const place = (cx: number, cy: number, extraScale = 1) => {
+            const q = project(cx, cy, L.z, camX, camY, yaw);
+            return `translate(${(q.x - cx) * u}px, ${(q.y - cy) * u}px) scale(${q.scale * extraScale})`;
+          };
           return (
-            <AbsoluteFill
-              key={li}
-              style={{
-                transform: `rotateY(${TILT_Y + yaw}deg) rotateX(${TILT_X}deg) translate3d(${-camX * u}px, ${-camY * u}px, ${L.z * u}px) scale(${s})`,
-                transformOrigin: "50% 50%",
-              }}
-            >
+            <AbsoluteFill key={li}>
               {ITEMS.map((it, k) => {
                 if (it.layer !== li) return null;
                 const id = `i${k}`;
@@ -250,6 +273,7 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
                       top: it.y * u,
                       width: it.w * u,
                       height: it.h * u,
+                      transform: place(it.x + it.w / 2, it.y + it.h / 2),
                       filter: (() => {
                         const b = L.blur + rightBlur(it.x + it.w / 2, li);
                         return b > 0.05 ? `blur(${b * u}px)` : undefined;
@@ -276,7 +300,7 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
                       top: (q.y - box / 2) * u,
                       width: box * u,
                       height: box * u,
-                      transform: `scale(${st.scale})`,
+                      transform: place(q.x, q.y, st.scale),
                       opacity: st.opacity,
                       filter: (() => {
                         const b = L.blur + rightBlur(q.x, li);
@@ -296,7 +320,9 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
         })}
       </AbsoluteFill>
       {/* Red glitch streaks, top-right */}
-      <svg viewBox="0 0 1920 1080" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", filter: `blur(${0.6 * u}px)` }}>
+      {/* Confined to its own corner and unblurred: a full-frame blurred layer
+          was slow and not bit-identical between cold and sequence renders. */}
+      <svg viewBox="1160 0 760 350" style={{ position: "absolute", left: 1160 * u, top: 0, width: 760 * u, height: 350 * u, overflow: "hidden" }}>
         {STREAKS.map((s, k) => {
           const segs = [];
           let x = s.x0 + (hash01(streakStep, s.salt) - 0.5) * 120;
@@ -304,7 +330,7 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
           let j = 0;
           while (x < end) {
             const L = 10 + hash01(streakStep * 31 + j, s.salt + 1) * 90;
-            if (hash01(streakStep * 17 + j, s.salt + 2) < 0.62) segs.push(<rect key={j} x={x} y={s.y} width={L} height={s.h} />);
+            if (hash01(streakStep * 17 + j, s.salt + 2) < 0.62) segs.push(<rect key={j} x={x} y={s.y} width={L} height={s.h} rx={s.h / 2} />);
             x += L + 4 + hash01(streakStep * 13 + j, s.salt + 3) * 30;
             j++;
           }
@@ -315,8 +341,10 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
           );
         })}
       </svg>
-      {/* Defocused pink-red haze along the top-right and right edge */}
-      <AbsoluteFill style={{ background: `radial-gradient(ellipse 30% 26% at 92% 6%, ${p.alert}66 0%, ${p.alert}00 100%), radial-gradient(ellipse 14% 42% at 100% 55%, ${p.alert}40 0%, ${p.alert}00 100%)`, mixBlendMode: "screen" }} />
+      {/* Defocused pink-red haze along the top-right and right edge. Plain alpha,
+          not mix-blend-mode: a screen-blended full-frame layer over the 3D
+          layers was not bit-identical between cold and sequence renders. */}
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse 30% 26% at 92% 6%, ${p.alert}5c 0%, ${p.alert}00 100%), radial-gradient(ellipse 14% 42% at 100% 55%, ${p.alert}38 0%, ${p.alert}00 100%)` }} />
       {/* Faint scanlines and vignette */}
       <AbsoluteFill style={{ backgroundImage: `repeating-linear-gradient(to bottom, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) ${u}px, rgba(0,0,0,0) ${u}px, rgba(0,0,0,0) ${3 * u}px)` }} />
       <AbsoluteFill style={{ background: "radial-gradient(ellipse 80% 75% at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.6) 100%)" }} />

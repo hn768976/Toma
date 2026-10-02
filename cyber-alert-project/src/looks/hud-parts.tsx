@@ -1,4 +1,5 @@
 import React from "react";
+import { staticFile } from "remotion";
 import world from "../data/world.json";
 import { MONO } from "../lib/fonts";
 import { GlowFilter } from "../lib/Glow";
@@ -14,14 +15,14 @@ export const project = (lon: number, lat: number): [number, number] => [
 ];
 
 export const WorldMap: React.FC<{
-  mode: "dots" | "outline" | "fill";
+  mode: "dots" | "outline" | "fill" | "none";
   color: string;
   opacity?: number;
   dot?: number;
   children?: React.ReactNode;
 }> = ({ mode, color, opacity = 1, dot = 2.2, children }) => (
   <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ display: "block", overflow: "visible" }}>
-    {mode === "fill" ? (
+    {mode === "none" ? null : mode === "fill" ? (
       <>
         <path d={world.outline} fill={color} fillOpacity={opacity * 0.42} stroke={color} strokeOpacity={opacity * 0.5} strokeWidth={0.6} strokeLinejoin="round" />
         <path d={world.dots} stroke={color} strokeOpacity={opacity * 0.9} strokeWidth={dot} strokeLinecap="round" fill="none" />
@@ -117,7 +118,7 @@ const LINKS: [number, number, number][] = [
   [0, 1, 1], [1, 5, 2], [5, 2, 1], [7, 2, 2], [4, 6, 1], [2, 3, 3], [0, 4, 2], [1, 6, 1],
 ];
 
-export const ThreatMap: React.FC<{ p: HudPalette; f: number; mode: "dots" | "outline" | "fill"; labels?: boolean; dot?: number; opacity?: number }> = ({ p, f, mode, labels = true, dot, opacity = 0.8 }) => (
+export const ThreatMap: React.FC<{ p: HudPalette; f: number; mode: "dots" | "outline" | "fill" | "none"; labels?: boolean; dot?: number; opacity?: number }> = ({ p, f, mode, labels = true, dot, opacity = 0.8 }) => (
   <WorldMap mode={mode} color={p.map} opacity={opacity} dot={dot}>
     <g fill="none" strokeLinecap="round">
       {LINKS.map(([a, b, cyc], i) => {
@@ -211,5 +212,32 @@ export const CodeText: React.FC<{ lines: string[]; laps: number; f: number; u: n
         })}
       </div>
     </div>
+  );
+};
+
+/**
+ * Natural Earth map drawn from the pre-rendered texture (public/map/world-fill.png,
+ * built by scripts/build-map-texture.sh) as a mask tinted with `color`, faded
+ * at the edges. A bitmap mask renders identically in every render, unlike
+ * the very large map paths. `dx` offsets it (for the chromatic fringe).
+ */
+export const MapMask: React.FC<{ color: string; opacity: number; dx?: number; blend?: boolean }> = ({ color, opacity, dx = 0, blend }) => {
+  const tex = `url(${staticFile("map/world-fill.png")}) center / contain no-repeat`;
+  const fade = "radial-gradient(ellipse 50% 50% at 50% 50%, black 55%, transparent 100%)";
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        transform: dx ? `translateX(${dx}px)` : undefined,
+        background: color,
+        opacity,
+        mixBlendMode: blend ? "screen" : undefined,
+        mask: `${tex}, ${fade}`,
+        WebkitMask: `${tex}, ${fade}`,
+        maskComposite: "intersect",
+        WebkitMaskComposite: "source-in",
+      }}
+    />
   );
 };
