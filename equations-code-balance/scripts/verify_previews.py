@@ -25,14 +25,18 @@ def probe(f):
                          capture_output=True, text=True, check=True).stdout
     return json.loads(out)
 
-def frame(f, t, out):
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.4f}", "-i", str(f), "-frames:v", "1", str(out)], check=True)
+def frame(f, n, out):
+    """Decode frame number n (exact, by index) to a PNG and return it as an array."""
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(f), "-vf", f"select=eq(n\\,{n})",
+                    "-vsync", "0", "-frames:v", "1", str(out)], check=True)
     return np.asarray(Image.open(out).convert("RGB")).astype(int)
 
-def main(d):
+def main(d, only=None):
     d = Path(d); chk = d / "checks"; chk.mkdir(exist_ok=True)
     ok_all = True
     for name, dur in EXPECT.items():
+        if only and name not in only:
+            continue
         f = d / f"{name}.mp4"
         if not f.exists():
             print(f"{name}: MISSING"); ok_all = False; continue
@@ -52,7 +56,7 @@ def main(d):
         tiles = []
         for i in range(5):
             fr = int(i * (n - 1) / 4)
-            img = frame(f, fr / 30 + 0.001, chk / f"{name}_f{fr:03d}.png")
+            img = frame(f, fr, chk / f"{name}_f{fr:03d}.png")
             tiles.append(Image.fromarray(img.astype(np.uint8)).resize((640, 360)))
         sheet = Image.new("RGB", (640 * 5, 360))
         for i, t in enumerate(tiles):
@@ -64,7 +68,7 @@ def main(d):
             # must be exactly 0,0,0 after decoding.
             zeros = []
             for fr in (0, 150, 300, 450, 599):
-                img = frame(f, fr / 30 + 0.001, chk / f"black_{fr}.png")
+                img = frame(f, fr, chk / f"black_{fr}.png")
                 lum = img.sum(2)
                 thr = np.percentile(lum, 2)
                 dark = img[lum <= thr]
@@ -79,7 +83,7 @@ def main(d):
         f = d / f"{name}.mp4"
         if not f.exists():
             continue
-        img = frame(f, 5.0, chk / f"band_{name}.png")
+        img = frame(f, 150, chk / f"band_{name}.png")
         line = img[row, x0:x1 + 1].mean(1)
         # Plateaus longer than 40 px followed by a jump >= 1 level would be
         # visible steps. Grain makes adjacent values vary, so smooth first and
@@ -101,4 +105,4 @@ def main(d):
     print("ALL BASIC CHECKS PASS" if ok_all else "SOME CHECKS FAILED")
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "out/previews")
+    main(sys.argv[1] if len(sys.argv) > 1 else "out/previews", sys.argv[2:] or None)

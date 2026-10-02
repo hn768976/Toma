@@ -6,8 +6,8 @@ set -e
 ENTRY=${1:-src/index.ts}
 mkdir -p out/stills
 declare -A FRAMES=(
-  [EquationFlight-Black]="40 260 470"
-  [EquationFlight-Navy]="40 260 470"
+  [EquationFlight-Black]="0 150 450"
+  [EquationFlight-Navy]="0 150 450"
   [AICodeScreen-Dark]="0 200 400"
   [AICodeScreen-Light]="0 200 400"
   [BalanceScreen-Drain]="0 120 299"   # start value, mid-count, 0.00
@@ -18,7 +18,7 @@ for id in "${!FRAMES[@]}"; do
   for f in ${FRAMES[$id]}; do
     npx remotion still "$ENTRY" "$id" "out/stills/${name}_f$(printf %03d $f)_6000x3375.png" --frame=$f --scale=1.5625
   done
-  first=${FRAMES[$id]%% *}
+  first=${FRAMES[$id]%% *}; [[ $id == EquationFlight* ]] && first=150
   [ "$id" = "BalanceScreen-Drain" ] && first=299
   npx remotion still "$ENTRY" "$id" "out/stills/${name}_1080p.png" --frame=$first --scale=0.5
 done
