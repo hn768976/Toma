@@ -271,17 +271,17 @@ void main() {
   float kIn = 1.0 - smoothstep(uLiningEdge - aa, uLiningEdge + aa, s);
   float kOut = smoothstep(0.55, 0.8, s);
   float kRim = max(0.0, 1.0 - kOut - kIn);
-  vec3 c = vec3(0.0);
-  if (kOut > 0.0) c += kOut * outerShade(Ng, V);
-  if (kIn > 0.0) c += kIn * liningShade(normalize(mix(Ng, vOffN, 0.4)), V);
-  if (kRim > 0.0) {
-    // cut face: pink, with a thin cream line along its inner edge
-    float line = 1.0 - smoothstep(uLineEdge - aa, uLineEdge + aa, s);
-    vec3 col = mix(uCapCol, uLineCol, line);
-    float h = vnoise(vPos * 18.0);
-    vec3 N = bumpNormal(vPos, Ng, h, 0.004);
-    c += kRim * shade(col, N, V, 0.7, 0.06, 14.0, 0.25, vec3(1.0, 0.8, 0.75), vec3(0.0));
-  }
+  // All three looks are evaluated for every fragment (no branches): they use
+  // screen-space derivatives, which are undefined in divergent control flow
+  // and would make results depend on what the rasteriser ran before.
+  vec3 cOut = outerShade(Ng, V);
+  vec3 cIn = liningShade(normalize(mix(Ng, vOffN, 0.4)), V);
+  // cut face: pink, with a thin cream line along its inner edge
+  float line = 1.0 - smoothstep(uLineEdge - aa, uLineEdge + aa, s);
+  vec3 col = mix(uCapCol, uLineCol, line);
+  vec3 Nr = bumpNormal(vPos, Ng, vnoise(vPos * 18.0), 0.004);
+  vec3 cRim = shade(col, Nr, V, 0.7, 0.06, 14.0, 0.25, vec3(1.0, 0.8, 0.75), vec3(0.0));
+  vec3 c = kOut * cOut + kIn * cIn + kRim * cRim;
   if (any(isnan(c)) || any(isinf(c))) c = uCapCol * 0.5;
   gl_FragColor = vec4(max(c, vec3(0.0)), 1.0);
 }
