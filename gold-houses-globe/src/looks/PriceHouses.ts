@@ -8,8 +8,9 @@ export type HousesParams = { symbol: string; glow: string; dark: string };
 // ---- layout -------------------------------------------------------------
 const S = 1.8; // house spacing (front row)
 const N = 3; // camera slides exactly N*S per loop
-const FOV = 30;
-const CAM_Y = 1.35, CAM_Z = 6.25, LOOK_Y = 1.0;
+// long lens: rows behind barely shrink, as in a telephoto shot
+const FOV = 15.2;
+const CAM_Y = 1.0, CAM_Z = 12, LOOK_Y = 1.0;
 
 // house silhouette, width 1, base at y = 0, chimney on the right
 const houseShape = () => {
@@ -30,10 +31,9 @@ const pat = (n: number, a: number, b: number) => Array.from({ length: n }, () =>
 // spacing * pattern length must divide N*S so every row repeats over the loop
 const ROWS: Row[] = [
   { z: 0, spacing: S, offset: 0, scale: 1, pattern: [1, 1, 1], lift: 0 },
-  { z: -1.4, spacing: S, offset: S * 0.5, scale: 1.3, pattern: pat(3, 0.96, 1.08), lift: 0 },
-  { z: -3.0, spacing: S * 0.75, offset: S * 0.2, scale: 1.45, pattern: pat(4, 0.9, 1.15), lift: 0.02 },
-  { z: -4.8, spacing: S * 0.6, offset: S * 0.45, scale: 1.6, pattern: pat(5, 0.85, 1.2), lift: 0.04 },
-  { z: -6.8, spacing: S * 0.5, offset: S * 0.1, scale: 1.6, pattern: pat(6, 0.85, 1.25), lift: 0.06 },
+  { z: -0.7, spacing: S, offset: S * 0.5, scale: 1.04, pattern: pat(3, 0.97, 1.05), lift: 0 },
+  { z: -3.0, spacing: S, offset: S * 0.22, scale: 1.5, pattern: pat(3, 0.92, 1.08), lift: 0 },
+  { z: -6.5, spacing: S * 0.75, offset: S * 0.6, scale: 1.9, pattern: pat(4, 0.9, 1.1), lift: 0 },
 ];
 
 const faceTexture = (symbol: string, font: string) => {
@@ -48,12 +48,15 @@ const faceTexture = (symbol: string, font: string) => {
   grad.addColorStop(1, "#d9d2c8");
   g.fillStyle = grad;
   g.fillRect(0, 0, W, Hh);
-  g.fillStyle = "#4e3f33";
-  g.font = `700 ${Math.round(W * 0.62)}px ${font}`;
+  // the symbol reads as a soft shadow seen through backlit paper
+  g.filter = "blur(3px)";
+  g.fillStyle = "#33241a";
+  g.font = `700 ${Math.round(W * 0.6)}px ${font}`;
   g.textAlign = "center";
   g.textBaseline = "middle";
   // canvas y is down; the body centre sits at y = 0.42 house units
-  g.fillText(symbol, W / 2, Hh * (1 - 0.4 / H_TOTAL));
+  g.fillText(symbol, W / 2, Hh * (1 - 0.37 / H_TOTAL));
+  g.filter = "none";
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
@@ -78,7 +81,7 @@ export const PriceHouses: Look<HousesParams> = {
       uniforms: { dark: { value: dark } },
       vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: `uniform vec3 dark; varying vec3 vW;
-        void main(){ float h = exp(-max(vW.y, 0.0) / 1.6); gl_FragColor = vec4(dark * (0.12 + 0.7 * h), 1.0); }`,
+        void main(){ float h = exp(-max(vW.y, 0.0) / 1.6); gl_FragColor = vec4(dark * (0.03 + 0.35 * h), 1.0); }`,
     });
     const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(200, 40), bdMat);
     backdrop.position.set(0, 10, -14);
@@ -90,18 +93,18 @@ export const PriceHouses: Look<HousesParams> = {
     spill.position.set(0, 1.2, 4);
     scene.add(spill);
 
-    const geo = new THREE.ExtrudeGeometry(houseShape(), { depth: 0.07, bevelEnabled: false, curveSegments: 1 });
-    geo.translate(0, 0, -0.07);
+    const geo = new THREE.ExtrudeGeometry(houseShape(), { depth: 0.04, bevelEnabled: false, curveSegments: 1 });
+    geo.translate(0, 0, -0.04);
     const faceMat = new THREE.MeshBasicMaterial({
       map: faceTexture(params.symbol, assets.font!),
-      color: glow.clone().multiplyScalar(4.5),
+      color: glow.clone().multiplyScalar(5.5),
     });
-    const sideMat = new THREE.MeshBasicMaterial({ color: glow.clone().multiplyScalar(0.5) });
+    const sideMat = new THREE.MeshBasicMaterial({ color: glow.clone().multiplyScalar(5) });
     // unlit back rows: warm brown, lighter toward the roof, darker at the
     // base; deeper rows dimmer so the blurred silhouettes stay separate
     const backMats = ROWS.map((_, ri) =>
       new THREE.ShaderMaterial({
-        uniforms: { col: { value: new THREE.Color("#a08068").multiplyScalar([1, 0.62, 0.42, 0.3, 0.2][ri]) } },
+        uniforms: { col: { value: new THREE.Color("#a07450").multiplyScalar([1, 0.4, 0.28, 0.18][ri]) } },
         vertexShader: `varying float vY; varying vec3 vN; void main(){ vY = position.y; vN = normal; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
         fragmentShader: `uniform vec3 col; varying float vY; varying vec3 vN;
           void main(){ float g = 0.3 + 0.7 * smoothstep(0.0, 1.15, vY); float side = abs(vN.z) > 0.5 ? 1.0 : 0.55;
@@ -125,7 +128,7 @@ export const PriceHouses: Look<HousesParams> = {
     });
 
     // floor
-    const reflector = new GlossyReflector(width, height, 0.5, 0.06, 3);
+    const reflector = new GlossyReflector(width, height, 0.5, 0.1, 3);
     const floorMat = new THREE.ShaderMaterial({
       uniforms: {
         tReflect: { value: reflector.texture },
@@ -140,8 +143,10 @@ export const PriceHouses: Look<HousesParams> = {
         void main() {
           vec3 r = sampleReflection(vW, vec2(0.0));
           // light pooling on the floor in front of the glowing row
-          float pool = exp(-pow(max(vW.z, 0.0) / 1.4, 2.0)) * step(-0.05, vW.z);
-          vec3 c = dark * 0.3 + glow * 0.05 * pool + r * 0.08;
+          // broad diffuse light pools in front of each glowing house (period S)
+          float px = cos(6.2831853 * vW.x / ${S.toFixed(4)}) * 0.5 + 0.5;
+          float pool = exp(-pow(max(vW.z, 0.0) / 1.6, 2.0)) * step(-0.05, vW.z) * (0.35 + 0.65 * px * px);
+          vec3 c = dark * 0.35 + glow * 0.5 * pool + r * 0.02;
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -154,7 +159,7 @@ export const PriceHouses: Look<HousesParams> = {
       const t = (frame % period) / period;
       const x = t * camTravel; // exactly N*S per loop
       camera.position.set(x, CAM_Y + 0.02 * Math.sin(TAU * t), CAM_Z);
-      camera.lookAt(x + 0.05, LOOK_Y, 0);
+      camera.lookAt(x, LOOK_Y, 0);
     };
 
     return {
@@ -165,11 +170,11 @@ export const PriceHouses: Look<HousesParams> = {
       post: {
         exposure: 1.0,
         tonemap: "aces",
-        bloom: { strength: 2.6, threshold: 0.5, knee: 0.6, radius: 0.7 },
-        dof: { focus: CAM_Z + 0.05, range: 3.0, nearRange: 3, maxBlur: 0.016, maxNearBlur: 0.006 },
+        bloom: { strength: 2.8, threshold: 0.6, knee: 0.6, radius: 0.75 },
+        dof: { focus: CAM_Z, range: 3.5, nearRange: 4, maxBlur: 0.02, maxNearBlur: 0.004 },
         grain: 0.02,
         grainPeriod: period,
-        grade: { saturation: 0.55, tint: [1.0, 0.94, 0.84], vignette: 0.25 },
+        grade: { saturation: 0.8, tint: [1.0, 0.87, 0.7], vignette: 0.45 },
       },
     };
   },
