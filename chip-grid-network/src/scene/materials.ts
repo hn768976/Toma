@@ -101,7 +101,9 @@ export const createGlassMaterial = (opacity: number, rimStrength: number) => {
     clearcoatRoughness: 0.16,
     transparent: true,
     depthWrite: false,
-    side: THREE.DoubleSide,
+    // Front faces only: lit double-sided panes intermittently flipped their
+    // facing under SwiftShader, popping a whole pane bright for one frame.
+    side: THREE.FrontSide,
   });
   m.blending = THREE.CustomBlending;
   m.blendSrc = THREE.OneFactor;
@@ -461,7 +463,7 @@ export const createPostMaterial = () =>
   new THREE.MeshStandardMaterial({ color: "#1c2027", metalness: 0.8, roughness: 0.32 });
 
 export const createSocketMaterial = () =>
-  new THREE.MeshStandardMaterial({ color: "#20252c", metalness: 0.8, roughness: 0.34, side: THREE.DoubleSide });
+  new THREE.MeshStandardMaterial({ color: "#20252c", metalness: 0.8, roughness: 0.34 });
 
 export const createTopFrameMaterial = () => {
   const { map, rough } = getBrushedTextures();

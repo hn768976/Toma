@@ -6,6 +6,7 @@ import {
   Effect,
   EffectComposer,
   EffectPass,
+  FXAAEffect,
   RenderPass,
   ToneMappingEffect,
   ToneMappingMode,
@@ -114,7 +115,7 @@ export const usePostFX = (dofSettings: DofSettings): PostFXHandle => {
       focusDistance: 30,
       focusRange: dofSettings.rangeFactor * 30,
       bokehScale: dofSettings.bokehScale,
-      resolutionScale: 0.5,
+      resolutionScale: 1.0,
     });
     const bloom = new BloomEffect({
       mipmapBlur: true,
@@ -126,9 +127,13 @@ export const usePostFX = (dofSettings: DofSettings): PostFXHandle => {
     });
     const tone = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
     const finish = new FinishEffect();
-    composer.addPass(new EffectPass(camera, new ClampEffect(16)));
-    composer.addPass(new EffectPass(camera, dof));
-    composer.addPass(new EffectPass(camera, bloom, tone, finish));
+    const q = getQuality();
+    composer.addPass(new EffectPass(camera, new ClampEffect(q.maxLum)));
+    if (q.dof) composer.addPass(new EffectPass(camera, dof));
+    composer.addPass(new EffectPass(camera, bloom, tone));
+    // FXAA on the tone-mapped image (it samples its pass input directly, so
+    // it gets a pass of its own), then dither + grain.
+    composer.addPass(new EffectPass(camera, new FXAAEffect(), finish));
     return { composer, dof, finish };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gl, scene, camera]);

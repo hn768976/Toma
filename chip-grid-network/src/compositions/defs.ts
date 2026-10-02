@@ -52,7 +52,7 @@ export const SHIELD_SWEEP_TOP: CompDef = {
   to: "safe",
   shield: "top",
   spread: { sources: [[9, 9]], tStart: 24, stepFrames: 30, metric: "manhattan", jitter: 0.2, seed: 0xc0ffee01 },
-  dof: { rangeFactor: 0.6, bokehScale: 1.5 },
+  dof: { rangeFactor: 0.6, bokehScale: 0.9 },
   // screen-up on the floor for yaw 45 (see orbit's up vector)
   shieldUpXZ: [-Math.SQRT1_2, -Math.SQRT1_2],
   camera: (f) => {
@@ -72,7 +72,7 @@ export const ATTACK_PULLBACK: CompDef = {
   to: "compromised",
   shield: "none",
   spread: { sources: [[9, 9]], tStart: 60, stepFrames: 38, metric: "radial", jitter: 0.15, seed: 0xc0ffee02 },
-  dof: { rangeFactor: 0.2, bokehScale: 3.5 },
+  dof: { rangeFactor: 0.26, bokehScale: 2.0 },
   camera: (f) => {
     const t = ease(f, 14, 274);
     const drift = ease(f, 274, DURATION, Easing.inOut(Easing.sin));
@@ -108,7 +108,7 @@ export const ATTACK_SPREAD: CompDef = {
   to: "compromised",
   shield: "none",
   spread: { sources: [c3Source], tStart: 20, stepFrames: 16, metric: "manhattan", jitter: 0.2, seed: 0xc0ffee03 },
-  dof: { rangeFactor: 0.22, bokehScale: 3.2 },
+  dof: { rangeFactor: 0.3, bokehScale: 1.8 },
   camera: (f) => orbit(c3Target(f), C3.dist, C3.pitch, C3.yaw, C3.fov),
 };
 
@@ -122,7 +122,7 @@ export const SHIELD_RECOVERY: CompDef = {
   to: "safe",
   shield: "float",
   spread: { sources: [[9, 9]], tStart: 30, stepFrames: 33, metric: "radial", jitter: 0.15, seed: 0xc0ffee04 },
-  dof: { rangeFactor: 0.22, bokehScale: 3.2 },
+  dof: { rangeFactor: 0.3, bokehScale: 1.8 },
   camera: (f) => {
     const t = ease(f, 0, 380, Easing.inOut(Easing.cubic));
     const drift = ease(f, 380, DURATION, Easing.inOut(Easing.sin));
