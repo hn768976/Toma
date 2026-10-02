@@ -11,7 +11,7 @@ for c in sys.argv[1:]:
         a = np.asarray(Image.open(OUT / f"{c}_f{n}.png").convert("RGB")).astype(float)
         R, G, B = a[..., 0], a[..., 1], a[..., 2]
         lum = 0.2126 * R + 0.7152 * G + 0.0722 * B
-        warm = (R > G * 1.5) & (R > B * 1.5)          # triangle hue (red/amber), not the blue/teal board
+        warm = (R > B * 1.6) & (R > 90)                 # warm triangle hue (red or amber), not the blue/teal board
         tri = np.zeros_like(warm); tri[150:560, 600:1320] = True
         w = warm & tri
         tri_energy = (R + G + B)[w].sum() / 1e6       # total triangle light
