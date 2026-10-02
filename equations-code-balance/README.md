@@ -261,6 +261,27 @@ cmp out/loop0.png out/loop600.png && echo identical
   * Equation Flight uses typeset KaTeX with a slight chalk weight and wobble. The reference's
     lettering is more hand-written.
 
+
+### Step 8: differences still open after three fix rounds
+
+A fresh reviewer compared one final frame per look with the reference. These differences remain.
+They were **not fixed** because each look has had its three attempts:
+
+* **Equation Flight:** the reference's bloom is larger (about 25–30% of the width) and washes out
+  nearby text, while ours is about 8–10%. The reference is blurrier overall (about half the frame
+  is bokeh; ours is about 30–40%). Its tunnel perspective is steeper, and its lettering is
+  hand-drawn chalk where ours is typeset KaTeX. The reference also has a large parabola and
+  bar-like shapes in the foreground.
+* **AI Code Screen:** the reference's particle orb is denser and brighter, with a glowing
+  magenta ring. Ours is sparser and fainter. The reference has a blurred top menu bar, and its
+  sharp band is narrower. Text size was judged differently in each round (too large, then too
+  small, then too large), because the reference camera moves and each round compared against a
+  different reference frame.
+* **Balance Screen:** the reference tilt is milder (heading at about 9° vs about 17° here), and
+  the screen fills more of the frame. The reference bezel is a thick gold band with a warm
+  bloom, and it shows a strip of screen below the button. The reference digits are slightly
+  smaller (about 9% of frame height vs about 11%) and set in a wider, heavier face.
+
 ## Completion checklist
 
 - [x] Six compositions, 3840×2160, 30 fps, sizes as fractions of the frame
@@ -277,5 +298,5 @@ cmp out/loop0.png out/loop600.png && echo identical
 - [x] Six 1080p previews (H.264, yuv420p, CRF 16, 30 fps, no audio) plus a 1080p still of each
 - [x] 18 stills at 6000×3375 (3 per composition)
 - [x] No real product, bank, app or company names or logos. Code and interface designs are original. Generic phone.
-- [x] Side-by-side comparison by a separate reviewer (two rounds per look). Remaining differences are listed above.
+- [x] Side-by-side comparison by a separate reviewer (three rounds per look). **Open differences are listed above. Not every difference was closed.**
 - [x] `npm install && npx remotion studio` works from a clean copy
