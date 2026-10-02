@@ -112,11 +112,51 @@ possible.
 
 ## Measured render time
 
-RENDER_TIMES_PLACEHOLDER
+Measured on the build machine: a 4-vCPU cloud container with **no GPU**,
+Chromium 141 headless shell, `--gl=angle` (ANGLE falls back to SwiftShader,
+i.e. software WebGL2). Wall-clock, including Chromium start-up (~15 s) and
+texture generation:
+
+| Render | Frames | Wall time | Per frame |
+|---|---|---|---|
+| `Cubes-ETF` 1080p mp4, `--concurrency=1` | 300 | 929 s | **3.1 s** |
+| `Cubes-401K` 1080p mp4, `--concurrency=1` | 300 | 953 s | **3.2 s** |
+| `Cubes-ETF` 1080p PNG sequence, `--concurrency=2` | 300 | 852 s | 2.8 s |
+| `Cubes-ETF` 1080p, `--concurrency=4` (aborted) | — | — | ~7 s (tabs fight over the CPU) |
+| `Cubes-ETF` **4K**, `--concurrency=1`, frames 190–209 vs 190–194 | 15 (difference) | 167 s | **11.1 s** |
+| 6000×3375 still | 1 | ~75 s | — |
+
+**4K estimate.** On this kind of CPU-only machine, about 11 s/frame (measured
+above), so ~56 min per 300-frame composition plus about a minute of encoding,
+and about 12–13 h for all 13. On a machine with a real GPU, `--gl=angle`
+renders on the GPU. The scene is small (four cubes and one plane; the cost is
+PCSS, DoF and 4× MSAA fill-rate), so expect well under a second per 4K frame:
+a few minutes per composition. That GPU figure is an estimate; it was not
+measured, because no GPU was available.
 
 ## Banding check
 
-BANDING_PLACEHOLDER
+Pale paper under soft light spots is a gentle gradient everywhere, so three
+things break up 8-bit steps: ±1/255 hashed noise in the paper and cube
+shaders, half-float buffers through the whole post chain, and 1.75% film
+grain added last (hashed from pixel position and frame, never
+`Math.random()`). Frames go to the encoder as PNG, not JPEG.
+
+Check on the **encoded mp4**, not the preview:
+
+```bash
+python3 scripts/verify.py frame out/Cubes_ETF.mp4 200 out/f200.png   # save a frame as PNG
+python3 scripts/verify.py band  out/Cubes_ETF.mp4 200 1380 868 1416 868
+```
+
+`band` reads luma along a line from a light spot's centre across its soft
+edge on bare paper. It prints the raw values and the same line averaged with
+8 parallel neighbours (to see the ramp under the grain), then flags flat runs
+and jumps. Steps would show as runs of equal values separated by single
+jumps. Result on the delivered previews (frame 200, 37 px line, ramp of
+about 214 → 189 luma): no flat run longer than 1 px; the largest step in the
+5-px-smoothed profile is about 2 levels, which is grain. The ramp is smooth;
+no banding.
 
 ## Determinism
 
@@ -228,4 +268,22 @@ seed. Available shapes are listed at the top of the same file.
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+- [x] 13 compositions from one template + 13 data rows (`npx remotion compositions`)
+- [x] 3D: react-three-fiber via `@remotion/three`, WebGL2, `--gl=angle`
+- [x] 3840×2160, 30 fps, 300 frames, not a loop
+- [x] Cubes 11.5% of frame height, gap 12% of cube width, same size for 401K
+- [x] Rounded edges (bevel 7% of the cube), pale procedural birch/beech wood, roughness 0.6
+- [x] Archivo Black (OFL) letters printed into the wood; digits in the same font
+- [x] Seeded side-face letters; no lookalikes; no words with neighbours (`npm run check`)
+- [x] Tumble written as motion: drop, 1–3 exact 90° rolls about the paper edge, decaying-sine settle, still by frame 120
+- [x] No cube through the paper or another cube (`npm run check`, every frame, all 13)
+- [x] Dappled key through a projected pattern (`SpotLight.map`), slow drift, warm 40% fill, PCSS shadows lower-right, contact darkening
+- [x] Camera 10° off vertical, 2.5% straight push-in, real DoF
+- [x] ACES tone mapping, sRGB output, shader dither, 1.75% hashed grain
+- [x] Chart paper generated at 8192 px; paper/grid/dashed rule identical in all 13 (pixel-checked); no numbers/labels/tickers
+- [x] Per-acronym chart line shapes and volume bars
+- [x] No physics, no `Math.random()`, no clock, all textures behind `delayRender`
+- [x] Frame 100 from a cold start == frame 100 of the full out-of-order render, byte for byte (ETF and 401K)
+- [x] Previews `Cubes_ETF.mp4`, `Cubes_401K.mp4`: 1920×1080, 30/1, 10.0 s, H.264, yuv420p, CRF 16, no audio
+- [x] 13 frame-200 stills at 1080p; 6000×3375 stills via `scripts/render-stills.ts --hires`
+- [x] `npm install && npx remotion studio` from a clean unzip
