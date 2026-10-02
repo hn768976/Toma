@@ -17,7 +17,7 @@ const rng = mulberry32(0xc10d);
 
 // fibres: fan out across the floor toward the camera, gather at a base in
 // front of the cloud, then rise in a bell-shaped bundle into the arrow.
-const N_FIB = 200;
+const N_FIB = 90;
 type Fibre = { pts: THREE.Vector3[]; sBend: number; rep: number; speed: number; ph: number; br: number; floor: number };
 const fibres: Fibre[] = [];
 const bez = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3, t: number) => {
@@ -30,13 +30,13 @@ const bez = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vect
 for (let i = 0; i < N_FIB; i++) {
   const u = (i + rng()) / N_FIB; // 0..1 across
   const side = u - 0.5;
-  const inStem = Math.abs(side) < 0.22;
-  const xt = inStem ? (side / 0.22) * 0.24 : side * 1.9; // x at the cloud's underside
+  const inStem = Math.abs(side) < 0.1;
+  const xt = inStem ? (side / 0.1) * 0.22 : side * 1.9; // x at the cloud's underside
   const zt = CLOUD_Z - 0.06 - rng() * 0.1;
   const xb = side * 7.0 + (rng() - 0.5) * 0.3; // where the fibre leaves the floor
   const zb = 0.9 + rng() * 0.8;
-  const x0 = side * 30 + (rng() - 0.5) * 2;
-  const z0 = 10.5 + rng() * 2.0;
+  const x0 = side * 22 + (rng() - 0.5) * 1.5;
+  const z0 = 9.6 + rng() * 1.6;
   const yEnd = inStem ? CLOUD_Y + 0.5 - Math.abs(xt) * 1.1 - rng() * 0.3 : CLOUD_Y - 0.6;
   const yTop = CLOUD_Y - 1.35;
   const pts: THREE.Vector3[] = [];
@@ -66,27 +66,27 @@ for (let i = 0; i < N_FIB; i++) {
   fibres.push({
     pts,
     sBend: floorLen / total,
-    rep: 1 + Math.floor(rng() * 3),
+    rep: 3 + Math.floor(rng() * 4),
     speed: 2 + Math.floor(rng() * 4),
     ph: rng(),
     br: 0.6 + rng() * 0.8,
-    floor: rng() < 0.3 ? 1 : 0, // only some fibres are visible along the floor
+    floor: 1,
   });
 }
 
 // floating squares
-const N_SQ = 420;
+const N_SQ = 230;
 const squares = Array.from({ length: N_SQ }, () => {
-  const near = rng() < 0.12;
+  const near = rng() < 0.03;
   const z = near ? -6 + rng() * 14 : -40 + rng() * 34;
   const spread = (CAM.z - z) * 0.75;
-  const bright = near ? rng() < 0.2 : rng() < 0.03;
+  const bright = false;
   return {
     x: (rng() - 0.5) * 2 * spread,
-    y: 0.25 + Math.pow(rng(), 0.8) * (2 + (CAM.z - z) * 0.55),
+    y: 0.25 + Math.pow(rng(), 0.45) * (2 + (CAM.z - z) * 0.55),
     z,
-    s: (bright ? 0.1 : 0.12) + rng() * (bright ? 0.2 : 0.3),
-    b: bright ? 0.8 + rng() * 1.6 : 0.03 + rng() * 0.12,
+    s: (bright ? 0.1 : 0.16) + rng() * 0.3,
+    b: 0.04 + rng() * 0.1,
     ax: 0.1 + rng() * 0.5, ay: 0.1 + rng() * 0.4,
     kx: 1 + Math.floor(rng() * 2), ky: 1 + Math.floor(rng() * 2), tk: 1 + Math.floor(rng() * 5),
     px: rng() * TAU, py: rng() * TAU, tp: rng() * TAU,
@@ -118,7 +118,7 @@ float cloudSD(vec2 p) {
 }
 float arrowSD(vec2 p) {
   float stem = sdRoundBox(p - vec2(0.0, -1.0), vec2(0.27, 0.9), 0.0);
-  float head = sdTri(p, vec2(0.0, 0.62), vec2(-0.74, -0.18), vec2(0.74, -0.18));
+  float head = sdTri(p, vec2(0.0, 0.36), vec2(-0.7, -0.36), vec2(0.7, -0.36));
   return min(stem, head);
 }
 float shapeSD(vec2 p) { return max(cloudSD(p), -arrowSD(p)); }
@@ -142,10 +142,10 @@ export const CloudUpload: Look<CloudParams> = {
         void main() {
           float y = vW.y;
           vec3 c = navy * 0.4;
-          c += vec3(0.004, 0.06, 0.3) * exp(-max(y, 0.0) / 22.0);
-          c += vec3(0.0, 0.05, 0.2) * exp(-max(y, 0.0) / 7.0);
-          c += accent * 0.12 * exp(-abs(y) / 1.5);
-          c += accent * 0.25 * exp(-abs(y) / 0.25);
+          c += vec3(0.002, 0.03, 0.16) * exp(-max(y, 0.0) / 12.0);
+          c += vec3(0.0, 0.04, 0.16) * exp(-max(y, 0.0) / 5.0);
+          c += accent * 0.06 * exp(-abs(y) / 1.5);
+          c += accent * 0.06 * exp(-abs(y) / 0.3);
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -170,7 +170,7 @@ export const CloudUpload: Look<CloudParams> = {
           vec3 r = sampleReflection(vW, vec2(0.0));
           float far = smoothstep(-10.0, -70.0, vW.z);
           vec3 c = navy * 0.8 + vec3(0.0, 0.025, 0.09) * far + accent * 0.08 * pow(far, 6.0);
-          c += r * 0.45;
+          c += r * 0.18;
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -211,7 +211,7 @@ export const CloudUpload: Look<CloudParams> = {
           // body: soft vertical gradient, brighter towards the rim
           float g = smoothstep(-1.4, 1.8, vP.y);
           vec3 tone = mix(accent, vec3(0.08, 0.45, 1.0), 0.3);
-          vec3 body = mix(tone * 0.45, mix(tone, vec3(1.0), 0.1) * 0.85, g);
+          vec3 body = mix(tone * 0.6, tone * 1.0, g);
           body *= 0.9 + 0.3 * smoothstep(-0.25, 0.0, d);
           // the arrow's cut edges read darker (depth of the cut)
           body *= 1.0 - 0.25 * exp(-max(arrowSD(vP), 0.0) * 18.0);
@@ -224,10 +224,10 @@ export const CloudUpload: Look<CloudParams> = {
           float glyph = step(0.25, h21(cell)) * inWord * rowOn;
           vec2 f = fract(tp);
           glyph *= step(0.12, f.x) * step(f.x, 0.88) * step(0.3, f.y) * step(f.y, 0.7);
-          float textMask = smoothstep(-0.12, -0.3, d) * (step(0.95, abs(vP.x)) );
-          body += mix(accent, vec3(1.0), 0.5) * glyph * textMask * 0.12;
+          float textMask = smoothstep(-0.12, -0.3, d) * step(1.15, abs(vP.x)) * step(abs(vP.x), 2.3) * step(-0.75, vP.y) * step(vP.y, 0.2);
+          body += mix(accent, vec3(1.0), 0.5) * glyph * textMask * 0.09;
           // halo outside
-          float halo = exp(-max(d, 0.0) * 2.2) * 0.12 + exp(-max(d, 0.0) * 9.0) * 0.18;
+          float halo = exp(-max(d, 0.0) * 4.0) * 0.06 + exp(-max(d, 0.0) * 14.0) * 0.16;
           vec3 col = body * glow * inside + accent * halo * glow * (1.0 - inside);
           gl_FragColor = vec4(col, inside);
         }`,
@@ -248,7 +248,7 @@ export const CloudUpload: Look<CloudParams> = {
     const side = new THREE.Mesh(cloudGeo, sideMat);
     side.position.set(0, -0.07, -0.18);
     const cloudGroup = new THREE.Group();
-    cloudGroup.add(side, cloudDepth, cloud);
+    cloudGroup.add(cloudDepth, cloud);
     cloudGroup.position.set(0, CLOUD_Y, CLOUD_Z);
     cloud.renderOrder = 5;
     scene.add(cloudGroup);
@@ -260,7 +260,7 @@ export const CloudUpload: Look<CloudParams> = {
         const f = fibres[p];
         const k = Math.min(1, Math.max(0, (s - f.sBend) / 0.06));
         const near = Math.max(0, 1 - s / Math.max(f.sBend, 1e-3)); // 1 at the camera end
-        return (0.03 + 0.07 * near * near) * (1 - k) + 0.012 * k;
+        return (0.04 + 0.1 * near * near) * (1 - k) + 0.022 * k;
       },
       CAM,
     );
@@ -294,10 +294,10 @@ export const CloudUpload: Look<CloudParams> = {
           float q = fract(s * vRep - t * vSpd + vPh);
           float pulse = exp(-pow((q - 0.5) / mix(0.03, 0.02, step(vSb, s)), 2.0)) * mix(7.0, 4.0, step(vSb, s));
           float rise = smoothstep(vSb, vSb + 0.08, s);
-          float base = mix(0.07, 0.28, rise);
+          float base = mix(0.22, 0.45, rise);
           pulse *= mix(1.0, 0.7, rise);
           float fade = mix(smoothstep(vSb - 0.06, vSb + 0.02, s), smoothstep(0.0, 0.03, s), vFl) * (1.0 - smoothstep(0.93, 1.0, s));
-          vec3 c = mix(accent, vec3(0.75, 1.0, 1.0), 0.05 + 0.1 * rise);
+          vec3 c = accent;
           gl_FragColor = vec4(c * (base + pulse) * vBr * across * fade, 1.0);
         }`,
       blending: THREE.AdditiveBlending,
@@ -321,7 +321,16 @@ export const CloudUpload: Look<CloudParams> = {
     sq.renderOrder = 10;
     sq.frustumCulled = false;
     scene.add(sq);
-    const sqColor = hdrColor(params.accent, 1).lerp(new THREE.Color(0.6, 0.9, 1.0), 0.3);
+    const sqColor = hdrColor(params.accent, 1).lerp(new THREE.Color(0.05, 0.3, 1.0), 0.45);
+    // one bright glass cube drifting on the right
+    const cube = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.6, 0.6),
+      new THREE.MeshStandardMaterial({ color: accent, emissive: accent.clone().multiplyScalar(0.9), roughness: 0.4 }),
+    );
+    scene.add(cube);
+    const cubeLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    cubeLight.position.set(-2, 4, 6);
+    scene.add(cubeLight);
 
     const update = (frame: number) => {
       const t = (frame % period) / period;
@@ -333,6 +342,8 @@ export const CloudUpload: Look<CloudParams> = {
       const breathe = Math.sin(TAU * 2 * t);
       cloudGroup.scale.setScalar(1.13 * (1 + 0.012 * breathe));
       cloudU.glow.value = 1 + 0.06 * breathe;
+      cube.position.set(4.3 + 0.25 * Math.sin(TAU * t), 2.5 + 0.2 * Math.sin(TAU * 2 * t), 4.0);
+      cube.rotation.set(0.35 + 0.1 * Math.sin(TAU * t), 0.6 + TAU * t, 0.1);
       squares.forEach((s, i) => {
         sqPos[i * 3] = s.x + s.ax * Math.sin(TAU * s.kx * t + s.px);
         sqPos[i * 3 + 1] = s.y + s.ay * Math.sin(TAU * s.ky * t + s.py);
@@ -355,10 +366,10 @@ export const CloudUpload: Look<CloudParams> = {
         exposure: 1.0,
         tonemap: "aces",
         bloom: { strength: 1.2, threshold: 0.5, knee: 0.5, radius: 0.55 },
-        dof: { focus: 15, range: 30, nearRange: 9, maxBlur: 0.003, maxNearBlur: 0.008 },
+        dof: { focus: 15, range: 40, nearRange: 9, maxBlur: 0.0015, maxNearBlur: 0.009 },
         grain: 0.02,
         grainPeriod: period,
-        grade: { saturation: 1.25 },
+        grade: { saturation: 1.4 },
       },
     };
   },
