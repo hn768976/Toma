@@ -5,14 +5,16 @@
 //
 // Extracts <frame> from the H.264 file with ffmpeg (saved as a PNG next to
 // the video), then for each rectangle reports, on 8-bit luma:
-//   - codes filled: share of the code values between the 1st and 99th
+//   - codes filled: share of the code values between the 5th and 95th
 //     percentile that actually occur. Banding leaves gaps (whole codes
 //     missing across a smooth area); dither + grain fill them.
 //   - max / mean run: longest and average run of identical values along the
 //     rows. Bands show up as long flat runs that end in a 1-code jump.
 //   - profile: the rectangle averaged into 16 columns (grain averages out);
 //     a smooth falloff changes gradually, a banded one in visible steps.
-// A region passes with codes filled >= 0.95 and max run <= 24 px.
+// A region passes with codes filled >= 0.95, max run <= 24 px and mean run
+// <= 1.6 px. (Control: the same frame with grain/dither blurred away gives
+// mean runs of 2.2-3.1 px and max runs of 21-35 px, and fails.)
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
@@ -70,8 +72,11 @@ for (const r of rects) {
   const sorted = [...vals].sort((a, b) => a - b);
   const p1 = sorted[Math.floor(sorted.length * 0.01)];
   const p99 = sorted[Math.floor(sorted.length * 0.99)];
-  const present = new Set(vals.filter((v) => v >= p1 && v <= p99));
-  const filled = present.size / (p99 - p1 + 1);
+  // coverage over the bulk of the values; the tails of a steep falloff are
+  // always sparse, so they are left out
+  const p5 = sorted[Math.floor(sorted.length * 0.05)];
+  const p95 = sorted[Math.floor(sorted.length * 0.95)];
+  const filled = new Set(vals.filter((v) => v >= p5 && v <= p95)).size / (p95 - p5 + 1);
   const cols = 16;
   const profile = [];
   for (let c = 0; c < cols; c++) {
@@ -85,7 +90,7 @@ for (const r of rects) {
     }
     profile.push(s / n);
   }
-  const pass = filled >= 0.95 && maxRun <= 24;
+  const pass = filled >= 0.95 && maxRun <= 24 && runTotal / runs <= 1.6;
   allPass &&= pass;
   console.log(
     `  [${r}] luma ${p1}-${p99}  codes filled ${(filled * 100).toFixed(0)}%  max run ${maxRun}px  mean run ${(runTotal / runs).toFixed(2)}px  ${pass ? "PASS" : "FAIL"}`,
