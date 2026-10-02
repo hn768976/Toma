@@ -234,7 +234,7 @@ const Board: React.FC<{ p: ChipPalette; f: number; id: string }> = ({ p, f, id }
             <g transform={`translate(0 ${-WALL * WALL_STEP})`}>
               <Neon d={rr(w, h, r)} c={p.chipEdge} w={sw} a={1} />
               <path d={rr(w, h, r)} stroke={p.traceBright} strokeWidth={sw * 0.4} />
-              <path d={rr(w, h, r)} stroke="#e6f2ff" strokeOpacity={0.55} strokeWidth={sw * 0.12} />
+              <path d={rr(w, h, r)} stroke="#cfe6ff" strokeOpacity={0.35} strokeWidth={sw * 0.12} />
             </g>
           </g>
         ) : (
@@ -255,7 +255,7 @@ const Board: React.FC<{ p: ChipPalette; f: number; id: string }> = ({ p, f, id }
       <rect key={i} {...q} rx={4} fill={i % 3 ? p.traceBright : p.chipEdge} fillOpacity={0.9} />
     ))}
     {sparkles.map((d, i) => (
-      <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="#d7ecff" fillOpacity={0.9} />
+      <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="#a9d2ff" fillOpacity={0.75} />
     ))}
     <g fill="none" strokeLinecap="round">
       {pulses.map((q, i) => {
@@ -372,7 +372,7 @@ const Triangle: React.FC<{ p: ChipPalette; breath: number }> = ({ p, breath }) =
         <path d={triPath} fill="none" stroke={p.alert} strokeWidth={32} />
         <g stroke={p.alert} strokeWidth={44} fill="none">{mark}</g>
       </g>
-      <g fill="none" strokeLinejoin="round" strokeLinecap="round" opacity={0.8 + 0.2 * breath}>
+      <g fill="none" strokeLinejoin="round" strokeLinecap="round" opacity={0.93 + 0.07 * breath}>
         <path d={triPath} stroke={p.alertCore} strokeWidth={9} />
         <g stroke={p.alertCore} strokeWidth={22}>{mark}</g>
       </g>

@@ -22,7 +22,7 @@ export const CHIP_RED: ChipPalette = {
   bgEdge: "#000108",
   board: "#00020f",
   trace: "#1d48ff",
-  traceBright: "#7cc0ff",
+  traceBright: "#68a8ff",
   chipFill: "#01041a",
   chipEdge: "#2456ff",
   alert: "#ff3a14",
