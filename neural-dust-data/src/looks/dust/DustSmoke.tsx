@@ -266,7 +266,7 @@ void main() {
   uint f = uint(uFrame);
   float g = hash3(uvec3(p, f)) - 0.5;
   float lum = dot(c, vec3(0.299, 0.587, 0.114));
-  c += g * uGrain * (0.4 + 0.6 * sqrt(clamp(lum * 3.0, 0.0, 1.0)));
+  c += g * uGrain * (0.85 + 0.3 * sqrt(clamp(lum * 3.0, 0.0, 1.0)));
   float d = hash3(uvec3(p, f + 7919u)) + hash3(uvec3(p.yx, f + 104729u)) - 1.0;
   c += d / 255.0;
   finalColor = vec4(clamp(c, 0.0, 1.0), 1.0);
@@ -430,7 +430,8 @@ export const createDust =
               const across = (ddx * bnx + ddy * bny) / (W * 0.32);
               a *= 0.6 + 0.8 * beamOn * Math.exp(-across * across);
             }
-            const a8 = a >= 1 ? 255 : (a * 255) | 0;
+            let a8 = a >= 1 ? 255 : (a * 255) | 0;
+            if (a8 < v.minAlpha8) a8 = 0;
             p.color = tint + (a8 << 24);
           }
           for (const { m, s, D } of motes) {

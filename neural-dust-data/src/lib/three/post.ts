@@ -171,9 +171,9 @@ const finalMat = () =>
         uvec2 p = uvec2(gl_FragCoord.xy);
         uint f = uint(uFrame);
         float g = hash3(uvec3(p, f)) - 0.5;
-        // grain mostly in mids, a touch in darks
+        // ~uniform grain: strong enough in the darks to survive H.264 (prevents encoder banding)
         float lum = dot(c, vec3(0.299, 0.587, 0.114));
-        c += g * uGrain * (0.35 + 0.65 * sqrt(clamp(lum, 0.0, 1.0)));
+        c += g * uGrain * (0.85 + 0.3 * sqrt(clamp(lum, 0.0, 1.0)));
         // triangular dither, +-1/255
         float d = hash3(uvec3(p, f + 7919u)) + hash3(uvec3(p.yx, f + 104729u)) - 1.0;
         c += d / 255.0;
