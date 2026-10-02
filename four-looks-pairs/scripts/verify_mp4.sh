@@ -34,10 +34,12 @@ for n in HexMosaic_Blue HexMosaic_Gold; do
 done
 
 echo "== Step 5: banding (frames from the mp4)"
-for nf in GrainGlow_Violet:300 GrainGlow_Sunset:300 PlexusSphere_BlueViolet:420 NeonBadge_MadeByHuman:200; do
-  n=${nf%%:*}; fr=${nf##*:}
+# name:frame:profile-lines (profiles run through smooth gradient / background areas)
+for spec in "GrainGlow_Violet:300:row 540 0 1920 col 1500 0 1080" "GrainGlow_Sunset:300:row 540 0 1920 col 1500 0 1080" \
+            "PlexusSphere_BlueViolet:420:col 60 0 1080 col 1860 0 1080" "NeonBadge_MadeByHuman:200:col 40 0 1080 row 1060 0 1920"; do
+  n=${spec%%:*}; rest=${spec#*:}; fr=${rest%%:*}; lines=${rest#*:}
   ffmpeg -v error -y -i "$V/$n.mp4" -vf "select=eq(n\,$fr)" -frames:v 1 "out/verify/frames/${n}_band_$fr.png"
-  python3 scripts/banding.py "out/verify/frames/${n}_band_$fr.png"
+  python3 scripts/banding.py "out/verify/frames/${n}_band_$fr.png" $lines
 done
 
 echo "== Step 6: five evenly spaced frames per preview -> out/verify/sheets"

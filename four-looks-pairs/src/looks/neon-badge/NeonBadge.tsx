@@ -17,10 +17,10 @@ export const NEON_BADGE_LOOP = 600;
 
 /** Glitch windows [start, length] inside one loop (all end before frame 600). */
 export const GLITCHES: Array<[number, number]> = [
-  [95, 20],
-  [240, 16],
-  [372, 24],
-  [515, 18],
+  [88, 18],
+  [292, 22],
+  [418, 16],
+  [528, 20],
 ];
 
 export const glitchAmount = (frame: number) => {
