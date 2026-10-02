@@ -17,6 +17,23 @@ Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
 
+// Grain-preserving x264 settings. The looks carry ~2-4% fine grain + ±1/255
+// dither against banding; default x264 settings smooth that away in deep
+// shadows (looks 1 and 3) and plateaus reappear. Keep it: tune=grain, no
+// deadzones, no DCT decimation, dark-biased adaptive quantisation.
+Config.overrideFfmpegCommand(({ args }) => {
+  const i = args.indexOf("libx264");
+  if (i === -1) return args;
+  return [
+    ...args.slice(0, i + 1),
+    "-tune",
+    "grain",
+    "-x264-params",
+    "aq-mode=3:deadzone-inter=0:deadzone-intra=0:no-dct-decimate=1",
+    ...args.slice(i + 1),
+  ];
+});
+
 // Some sandboxes block Remotion's own Chrome Headless Shell download but ship
 // a Playwright one. Use it when present; elsewhere Remotion downloads its own.
 const playwrightHeadlessShell =

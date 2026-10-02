@@ -329,7 +329,10 @@ void main() {
   col *= 1.0 - 0.35 * smoothstep(0.15, 0.75, length(c * vec2(1.0, 0.75)));
   vec3 srgb = toSRGB(aces(col));
   uvec3 key = uvec3(uint(gl_FragCoord.x), uint(gl_FragCoord.y), uFrame);
-  srgb += 0.02 * 0.5 * tri(key);                          // ~2% grain (peak-to-peak)
+  // ~2% grain (peak-to-peak). In deep shadow half of it clips at 0, so it is
+  // doubled there to keep enough dither to survive H.264 (no dark plateaus).
+  float shadow = 1.0 - smoothstep(0.0, 0.06, dot(srgb, vec3(0.2126, 0.7152, 0.0722)));
+  srgb += 0.02 * 0.5 * (1.0 + shadow) * tri(key);
   srgb += (hash3u(key + uvec3(101u, 211u, 307u)) - 0.5) * (2.0 / 255.0); // ±1/255 dither
   outColor = vec4(clamp(srgb, 0.0, 1.0), 1.0);
 }
