@@ -18,12 +18,12 @@ const ROW_Y = 3380;
 const PIVOT_X = ANCHOR_X - 640;
 
 // Camera: a low, glancing view over a phone lying almost flat.
-const TX = -120;
+const TX = -170;
 const TY = 60;
-const TZ = 600;
-const RX = 44;
-const RY = -6;
-const RZ = -9;
+const TZ = 420;
+const RX = 27;
+const RY = -8;
+const RZ = -8;
 
 const Screen: React.FC<{ cents: number; currency: string; u: (n: number) => number }> = ({ cents, currency, u }) => (
   <div
@@ -37,7 +37,7 @@ const Screen: React.FC<{ cents: number; currency: string; u: (n: number) => numb
   >
     {/* Glass / display */}
     <div style={{ position: "absolute", inset: 0, borderRadius: u(150), background: "linear-gradient(170deg, #f3f3f9 0%, #efeff6 55%, #e9e9f2 100%)", overflow: "hidden" }}>
-      <div style={{ position: "absolute", left: u(550), top: u(ROW_Y - 800), fontSize: u(150), fontWeight: 700, letterSpacing: u(6) }}>Account Summary</div>
+      <div style={{ position: "absolute", left: u(420), top: u(ROW_Y - 1000), fontSize: u(185), fontWeight: 700, letterSpacing: u(6) }}>Account Summary</div>
       <div style={{ position: "absolute", left: 0, right: 0, top: u(ROW_Y - 260), textAlign: "center", fontSize: u(118), fontWeight: 700, letterSpacing: u(5), paddingLeft: u(580) }}>Available Balance</div>
       <div
         style={{
@@ -55,9 +55,9 @@ const Screen: React.FC<{ cents: number; currency: string; u: (n: number) => numb
       >
         {formatCents(cents)}
       </div>
-      <div style={{ position: "absolute", left: u(ANCHOR_X + 14), top: u(ROW_Y + 80), fontSize: u(92), fontWeight: 500, letterSpacing: u(3) }}>{currency}</div>
+      <div style={{ position: "absolute", left: u(ANCHOR_X + 6), top: u(ROW_Y + 50), fontSize: u(108), fontWeight: 500, letterSpacing: u(3) }}>{currency}</div>
       {/* Pale button */}
-      <div style={{ position: "absolute", left: u(-40), right: u(-40), top: u(ROW_Y + 420), height: u(300), background: "#cdcdd8", display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: u(660), fontSize: u(118), fontWeight: 700, color: "#ececf3", letterSpacing: u(6) }}>
+      <div style={{ position: "absolute", left: u(-40), right: u(-40), top: u(ROW_Y + 460), height: u(230), background: "#d3d3dd", display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: u(660), fontSize: u(112), fontWeight: 700, color: "#f4f4f9", letterSpacing: u(6) }}>
         Make a transfer
       </div>
     </div>
@@ -72,8 +72,8 @@ const Edge: React.FC<{ u: (n: number) => number }> = ({ u }) => (
 );
 
 const COPIES: Array<{ blur: number; mask?: string }> = [
-  { blur: 18 },
-  { blur: 8, mask: "linear-gradient(172deg, #000 0%, #000 66%, transparent 86%)" },
+  { blur: 12 },
+  { blur: 5, mask: "linear-gradient(172deg, #000 0%, #000 70%, transparent 90%)" },
   { blur: 3, mask: "linear-gradient(172deg, transparent 0%, #000 18%, #000 60%, transparent 74%)" },
   { blur: 0, mask: "linear-gradient(172deg, transparent 22%, #000 34%, #000 54%, transparent 64%)" },
 ];

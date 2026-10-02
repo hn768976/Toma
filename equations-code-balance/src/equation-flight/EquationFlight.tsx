@@ -98,8 +98,8 @@ const rayMask = (cx: number, cy: number, r: number) =>
 const bloomGradient = (color: string, cx: number, cy: number, w: number, h: number) => {
   const c = hexToRgb(color);
   return (
-    `radial-gradient(ellipse ${w * 0.05}px ${h * 0.075}px at ${cx}px ${cy}px, rgba(${c}, 1) 0%, rgba(${c}, 0.85) 30%, rgba(${c}, 0.45) 60%, rgba(${c}, 0.15) 82%, rgba(${c}, 0) 100%), ` +
-    `radial-gradient(ellipse ${w * 0.2}px ${h * 0.26}px at ${cx}px ${cy}px, rgba(${c}, 0.5) 0%, rgba(${c}, 0.3) 18%, rgba(${c}, 0.13) 42%, rgba(${c}, 0.04) 70%, rgba(${c}, 0) 100%)`
+    `radial-gradient(ellipse ${w * 0.085}px ${h * 0.13}px at ${cx}px ${cy}px, rgba(${c}, 1) 0%, rgba(${c}, 0.85) 30%, rgba(${c}, 0.45) 60%, rgba(${c}, 0.15) 82%, rgba(${c}, 0) 100%), ` +
+    `radial-gradient(ellipse ${w * 0.32}px ${h * 0.42}px at ${cx}px ${cy}px, rgba(${c}, 0.5) 0%, rgba(${c}, 0.3) 18%, rgba(${c}, 0.13) 42%, rgba(${c}, 0.04) 70%, rgba(${c}, 0) 100%)`
   );
 };
 
@@ -214,7 +214,7 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
       const farFade = smoothstep(FAR, FAR - 3200, dist);
       const nearFade = smoothstep(NEAR + 60, NEAR + 700, dist);
       // Atmospheric falloff: distant planes are dimmer.
-      const fog = 1 - 0.3 * smoothstep(3300, FAR, dist);
+      const fog = 1 - 0.12 * smoothstep(3300, FAR, dist);
       const opacity = farFade * nearFade * fog;
       if (opacity < 0.004) continue;
       placed.push({ plane, dist, key: `${plane.id}-${k}`, opacity });

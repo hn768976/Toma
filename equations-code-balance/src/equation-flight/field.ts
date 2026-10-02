@@ -186,6 +186,14 @@ const makeGraph = (rng: Rng, type: number): GraphSpec => {
 // Plane placement
 // ---------------------------------------------------------------------------
 
+const tunnelTilt = (rng: Rng, x: number, y: number) => {
+  const wall = Math.abs(x) / 3600 > Math.abs(y) / 2050;
+  const steep = range(rng, 28, 66);
+  return wall
+    ? { rotY: Math.sign(x) * -steep, rotX: range(rng, -10, 10) }
+    : { rotX: Math.sign(y) * steep, rotY: range(rng, -12, 12) };
+};
+
 const buildField = (): PlaneSpec[] => {
   const rng = mulberry32(483571667);
   const total = FORMULAS_PER_BLOCK + GRAPHS_PER_BLOCK;
@@ -226,9 +234,10 @@ const buildField = (): PlaneSpec[] => {
       x,
       y,
       z: depths[i],
-      rotX: range(rng, -30, 30),
-      // Steep receding rows, like chalk lines on walls of a tunnel.
-      rotY: (rng() < 0.5 ? -1 : 1) * range(rng, 12, 50),
+      // Tunnel: planes to the left/right of the line of sight are turned like
+      // walls, planes above/below like a ceiling/floor, all receding toward
+      // the vanishing point at the centre.
+      ...tunnelTilt(rng, x, y),
       rotZ: range(rng, -6, 6),
     };
     if (i < FORMULAS_PER_BLOCK) {
@@ -243,7 +252,7 @@ const buildField = (): PlaneSpec[] => {
         ...base,
         kind: "formula",
         formulas,
-        fontSize: star ? range(rng, 46, 72) : range(rng, 34, 60),
+        fontSize: star ? range(rng, 58, 96) : range(rng, 42, 76),
         // Some lines carry a long hand-drawn underline / construction stroke.
         underline: rng() < 0.4 ? range(rng, 0.7, 1.6) : 0,
       });

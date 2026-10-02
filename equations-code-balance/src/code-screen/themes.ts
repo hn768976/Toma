@@ -23,22 +23,24 @@ export type CodeTheme = {
   sphereOpacity: number;
   bloom: string; // soft halo behind the AI mark
   grain: number;
+  /** Soft halo on code text (CSS text-shadow alpha). */
+  codeGlow: number;
 };
 
 export const DARK: CodeTheme = {
-  backdrop: "#0a1f5e",
-  screen: "linear-gradient(160deg, #12348a 0%, #0e2a78 50%, #0b2266 100%)",
-  panel: "rgba(120, 140, 255, 0.07)",
+  backdrop: "#071440",
+  screen: "linear-gradient(160deg, #0a1d5c 0%, #0b2163 45%, #091a50 100%)",
+  panel: "rgba(4, 10, 40, 0.45)",
   panelBorder: "rgba(150, 175, 255, 0.28)",
-  editor: "rgba(8, 28, 96, 0.55)",
-  gutterText: "#4c5888",
+  editor: "rgba(6, 22, 80, 0.5)",
+  gutterText: "#34427a",
   activeLine: "rgba(120, 140, 255, 0.10)",
   uiText: "#c9d2ff",
   uiMuted: "#6d79ad",
   accent: "#7c8cff",
-  promptBar: "linear-gradient(90deg, rgba(70, 80, 210, 0.55), rgba(120, 80, 230, 0.45))",
-  promptBorder: "rgba(170, 160, 255, 0.85)",
-  promptText: "#c7cdf5",
+  promptBar: "linear-gradient(90deg, rgba(40, 150, 255, 0.55), rgba(60, 200, 255, 0.6))",
+  promptBorder: "rgba(140, 220, 255, 0.9)",
+  promptText: "#eef8ff",
   cursor: "#d8ddff",
   tokens: {
     plain: "#f1f4ff",
@@ -52,12 +54,13 @@ export const DARK: CodeTheme = {
     comment: "#7088cc",
     op: "#cbd4ff",
   },
-  aiGradient: ["#8af5ff", "#ff6fd8"],
+  aiGradient: ["#b9a4ff", "#7ef3ff"],
   aiGlow: 1.5,
-  sphereDot: ["#9a7bff", "#e45cff"],
+  sphereDot: ["#7f86ff", "#b46cff"],
   sphereOpacity: 1,
-  bloom: "rgba(170, 80, 255, 0.38)",
+  bloom: "rgba(80, 90, 255, 0.22)",
   grain: 0.022,
+  codeGlow: 0.45,
 };
 
 export const LIGHT: CodeTheme = {
@@ -87,10 +90,11 @@ export const LIGHT: CodeTheme = {
     comment: "#8a91ad",
     op: "#475079",
   },
-  aiGradient: ["#1497b8", "#c03aa8"],
+  aiGradient: ["#6a45e0", "#1497b8"],
   aiGlow: 0.55,
-  sphereDot: ["#5a4fe0", "#c03aa8"],
+  sphereDot: ["#4a4fe0", "#7a3fd6"],
   sphereOpacity: 0.85,
   bloom: "rgba(110, 90, 230, 0.16)",
   grain: 0.018,
+  codeGlow: 0,
 };

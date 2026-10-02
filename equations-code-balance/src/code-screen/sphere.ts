@@ -4,7 +4,7 @@ import { mulberry32 } from "../common/random";
  * seeded jitter so it reads as particles rather than a grid. Built once. */
 export const SPHERE_POINTS: Array<{ x: number; y: number; z: number; size: number; tint: number }> = (() => {
   const rng = mulberry32(2279658788);
-  const n = 1500;
+  const n = 2600;
   const golden = Math.PI * (3 - Math.sqrt(5));
   return Array.from({ length: n }, (_, i) => {
     const y = 1 - ((i + 0.5) / n) * 2;
@@ -16,7 +16,7 @@ export const SPHERE_POINTS: Array<{ x: number; y: number; z: number; size: numbe
       y: y * shell,
       z: Math.sin(th) * r * shell,
       // Uneven, clumpy sizes: mostly small, a few large bokeh-like blobs.
-      size: 0.45 + Math.pow(rng(), 3) * 2.4,
+      size: 0.45 + Math.pow(rng(), 4) * 1.3,
       tint: rng(),
     };
   });

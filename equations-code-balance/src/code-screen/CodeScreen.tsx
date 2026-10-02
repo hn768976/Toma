@@ -17,8 +17,8 @@ export type CodeScreenProps = { variant: "dark" | "light"; loopCheck?: boolean }
 // Screen surface, in design px before the camera transform.
 const SW = 3600;
 const SH = 2300;
-const FONT = 42;
-const LH = 66;
+const FONT = 48;
+const LH = 72;
 const BLOCK_H = CODE_LINES.length * LH;
 const EDITOR = { x: 610, y: 150, w: 1560, h: 1500 };
 const SPHERE = { cx: 2860, cy: 1060, r: 1000 };
@@ -166,7 +166,7 @@ const Screen: React.FC<{
                 <span style={{ width: u(120), flexShrink: 0, textAlign: "right", paddingRight: u(40), color: theme.gutterText, fontSize: u(FONT * 0.8) }}>{lineNo + 1}</span>
                 <span>
                   {CODE_LINES[lineNo].map((t, i) => (
-                    <span key={i} style={{ color: theme.tokens[t.kind], fontWeight: 700 }}>{t.text}</span>
+                    <span key={i} style={{ color: theme.tokens[t.kind], fontWeight: 700, textShadow: theme.codeGlow ? `0 0 ${u(14)}px ${theme.tokens[t.kind]}${Math.round(theme.codeGlow * 255).toString(16).padStart(2, "0")}` : undefined }}>{t.text}</span>
                   ))}
                 </span>
               </div>
@@ -193,9 +193,9 @@ const Screen: React.FC<{
               key={i}
               cx={u(SPHERE.cx + x * SPHERE.r)}
               cy={u(SPHERE.cy + y * SPHERE.r)}
-              r={u((4 + 8 * near) * p.size)}
+              r={u((3.6 + 5.6 * near) * p.size)}
               fill={lerpColor(theme.sphereDot[0], theme.sphereDot[1], p.tint * 0.6 + (1 - near) * 0.4)}
-              opacity={(0.18 + 0.82 * near) * theme.sphereOpacity}
+              opacity={Math.min(1, (0.3 + 0.9 * near) * theme.sphereOpacity)}
             />
           );
         })}
@@ -215,7 +215,7 @@ const Screen: React.FC<{
       </svg>
 
       {/* Prompt bar */}
-      <div style={{ position: "absolute", left: u(EDITOR.x + 40), right: u(140), top: u(1690), height: u(170), borderRadius: u(85), background: theme.promptBar, border: `${u(3)}px solid ${theme.promptBorder}`, display: "flex", alignItems: "center", paddingLeft: u(760), fontSize: u(58), color: theme.promptText }}>
+      <div style={{ position: "absolute", left: u(EDITOR.x + 40), right: u(140), top: u(1690), height: u(170), borderRadius: u(85), background: theme.promptBar, border: `${u(3)}px solid ${theme.promptBorder}`, display: "flex", alignItems: "center", paddingLeft: u(700), fontSize: u(70), fontWeight: 500, color: theme.promptText }}>
         <div style={{ width: u(5), height: u(62), background: theme.cursor, marginRight: u(14), opacity: cursorOn ? 1 : 0 }} />
         Type your prompt
         <div style={{ position: "absolute", right: u(22), top: u(22), width: u(100), height: u(100), borderRadius: "50%", background: `linear-gradient(135deg, ${theme.aiGradient[0]}, ${theme.aiGradient[1]})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -231,15 +231,15 @@ const COPIES: Array<{ blur: number; mask?: string }> = [
   { blur: 30 },
   {
     blur: 14,
-    mask: "radial-gradient(ellipse 70% 80% at 34% 50%, #000 50%, transparent 100%)",
+    mask: "radial-gradient(ellipse 72% 84% at 34% 56%, #000 50%, transparent 100%)",
   },
   {
     blur: 5,
-    mask: "radial-gradient(ellipse 50% 62% at 32% 50%, #000 42%, transparent 100%)",
+    mask: "radial-gradient(ellipse 40% 58% at 30% 46%, #000 40%, transparent 100%)",
   },
   {
     blur: 0,
-    mask: "radial-gradient(ellipse 34% 46% at 30% 48%, #000 40%, transparent 100%)",
+    mask: "radial-gradient(ellipse 24% 40% at 28% 42%, #000 40%, transparent 100%)",
   },
 ];
 
@@ -255,7 +255,7 @@ export const CodeScreen: React.FC<CodeScreenProps> = ({ variant }) => {
 
   const screenTransform =
     `translate(-50%, -50%) translate3d(${u(260 - camX)}px, ${u(-80 - camY)}px, ${u(380)}px) ` +
-    `rotateZ(-2deg) rotateY(24deg) rotateX(2deg)`;
+    `rotateZ(-8deg) rotateY(20deg) rotateX(4deg)`;
 
   return (
     <AbsoluteFill style={{ background: theme.backdrop, overflow: "hidden" }}>
