@@ -17,15 +17,20 @@ const rng = mulberry32(0x10f1);
 const noise = createNoise4D(mulberry32(0x5eed));
 const noise2 = createNoise4D(mulberry32(0xbeef));
 
-// fairly regular, geodesic-like triangulation
-const SPACING = 1.75;
+// irregular low-poly triangulation: seeded dart throwing with a varying
+// minimum distance gives mixed facet sizes and no rows
+const SPACING = 2.0;
 const X0 = -13, X1 = 13, Y0 = -8.5, Y1 = 8.5;
 const base: number[] = [];
-for (let y = Y0; y <= Y1 + 1e-6; y += SPACING * 0.866) {
-  const row = Math.round((y - Y0) / (SPACING * 0.866));
-  for (let x = X0 + (row % 2) * SPACING * 0.5; x <= X1 + 1e-6; x += SPACING) {
-    base.push(x + (rng() - 0.5) * SPACING * 0.36, y + (rng() - 0.5) * SPACING * 0.32);
+for (let tries = 0; tries < 60000 && base.length < 2 * 900; tries++) {
+  const x = X0 + rng() * (X1 - X0), y = Y0 + rng() * (Y1 - Y0);
+  const minD = SPACING * (0.55 + 0.5 * rng());
+  let ok = true;
+  for (let j = 0; j < base.length; j += 2) {
+    const dx = base[j] - x, dy = base[j + 1] - y;
+    if (dx * dx + dy * dy < minD * minD) { ok = false; break; }
   }
+  if (ok) base.push(x, y);
 }
 const NV = base.length / 2;
 const tri = new Delaunator(base).triangles;
@@ -44,19 +49,20 @@ for (let i = 0; i < tri.length; i += 3) {
 }
 
 // sparkles: strung along the rails like fairy lights, a few drifting free
-const N_EDGE_SPARK = 3400;
+const N_EDGE_SPARK = 3000;
+const N_VERT_SPARK = 900; // clustered at the vertices
 const N_FREE_SPARK = 220;
 type Spark = { e: number; u: number; ua: number; k: number; ph: number; tk: number; tph: number; size: number; bright: number;
   x: number; y: number; z: number; ax: number; ay: number; kx: number; ky: number; px: number; py: number };
 const sparks: Spark[] = [];
-for (let i = 0; i < N_EDGE_SPARK + N_FREE_SPARK; i++) {
+for (let i = 0; i < N_EDGE_SPARK + N_FREE_SPARK + N_VERT_SPARK; i++) {
   const hot = rng() < 0.06;
   sparks.push({
     e: Math.floor(rng() * edges.length),
     u: rng(), ua: 0.03 + rng() * 0.12, k: 1 + Math.floor(rng() * 2), ph: rng() * TAU,
     tk: 2 + Math.floor(rng() * 14), tph: rng() * TAU,
-    size: hot ? 5.5 + rng() * 2 : 3 + rng() * 1.6,
-    bright: hot ? 14 + rng() * 8 : 6 + rng() * 8,
+    size: hot ? 10 + rng() * 4 : 5 + rng() * 3,
+    bright: hot ? 22 + rng() * 10 : 8 + rng() * 8,
     x: X0 + rng() * (X1 - X0), y: Y0 + rng() * (Y1 - Y0), z: 0.2 + rng() * 0.9,
     ax: 0.05 + rng() * 0.2, ay: 0.05 + rng() * 0.2,
     kx: 1 + Math.floor(rng() * 2), ky: 1 + Math.floor(rng() * 2),
@@ -66,7 +72,7 @@ for (let i = 0; i < N_EDGE_SPARK + N_FREE_SPARK; i++) {
 
 // rail cross-section (fractions of SPACING): gap between neighbouring frames,
 // rail width, ridge height
-const GAP = 0.016, RAIL = 0.038, RIDGE = 0.024;
+const GAP = 0.011, RAIL = 0.018, RIDGE = 0.015;
 const HUB_R = 0.045;
 // convex bulge toward the camera: the surface curves away at the frame edges
 const BULGE = 0.022;
@@ -89,17 +95,17 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     faceGeo.setAttribute("position", new THREE.BufferAttribute(facePos, 3));
     const faceMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(params.face),
-      metalness: 0.85,
-      roughness: 0.16,
+      metalness: 0.8,
+      roughness: 0.14,
       flatShading: true,
       side: THREE.DoubleSide,
-      envMapIntensity: 0.45,
+      envMapIntensity: 0.9,
     });
     faceMat.onBeforeCompile = (s) => {
       s.uniforms.envTint = { value: new THREE.Color(params.envTint) };
       s.fragmentShader = s.fragmentShader
         .replace("#include <common>", "#include <common>\nuniform vec3 envTint;")
-        .replace("#include <opaque_fragment>", "outgoingLight *= envTint;\n#include <opaque_fragment>");
+        .replace("#include <opaque_fragment>", "outgoingLight *= envTint;\n  // soft-clamp reflections: grey sheens, never blown-out panels\n  outgoingLight = outgoingLight / (1.0 + 2.2 * max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b)));\n#include <opaque_fragment>");
     };
     const faces = new THREE.Mesh(faceGeo, faceMat);
     faces.frustumCulled = false;
@@ -113,12 +119,12 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     railGeo.setAttribute("position", new THREE.BufferAttribute(railPos, 3));
     const gold = new THREE.Color(params.edge);
     const railMat = new THREE.MeshStandardMaterial({
-      color: gold,
+      color: gold.clone().lerp(new THREE.Color(0.5, 0.3, 0.15), 0.3),
       metalness: 1,
-      roughness: 0.38,
+      roughness: 0.62,
       flatShading: true,
       side: THREE.DoubleSide,
-      envMapIntensity: 0.8,
+      envMapIntensity: 0.4,
       emissive: gold.clone().multiplyScalar(0.06),
     });
     const rails = new THREE.Mesh(railGeo, railMat);
@@ -132,7 +138,7 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     const hubGeo = new THREE.IcosahedronGeometry(HUB_R * SPACING, 1);
     const hubs = new THREE.InstancedMesh(hubGeo, railMat, NV);
     hubs.frustumCulled = false;
-    scene.add(hubs);
+    hubs.visible = false; // the reference has no hub nodes
 
     // ---- sparkles ----
     const NS = sparks.length;
@@ -143,7 +149,7 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
     sGeo.setAttribute("size", new THREE.BufferAttribute(sSize, 1));
     sGeo.setAttribute("pcolor", new THREE.BufferAttribute(sCol, 3));
-    const sp = new THREE.Points(sGeo, glowPointsMaterial(height, { sharp: 0.55 }));
+    const sp = new THREE.Points(sGeo, glowPointsMaterial(height, { sharp: 0.3 }));
     sp.frustumCulled = false;
     scene.add(sp);
     const sparkCol = hdrColor(params.sparkle, 1);
@@ -237,9 +243,11 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
 
       for (let i = 0; i < NS; i++) {
         const p = sparks[i];
-        if (i < N_EDGE_SPARK) {
+        if (i < N_EDGE_SPARK || i >= N_EDGE_SPARK + N_FREE_SPARK) {
           const [a, b] = edges[p.e];
-          const u = Math.min(0.97, Math.max(0.03, p.u + p.ua * Math.sin(TAU * p.k * t + p.ph)));
+          const near = i >= N_EDGE_SPARK + N_FREE_SPARK;
+          const u0 = near ? (p.u < 0.5 ? 0.02 + p.u * 0.12 : 0.98 - (1 - p.u) * 0.12) : p.u;
+          const u = Math.min(0.99, Math.max(0.01, u0 + (near ? 0.02 : p.ua) * Math.sin(TAU * p.k * t + p.ph)));
           A.fromArray(vx, a * 3);
           B.fromArray(vx, b * 3);
           A.lerp(B, u);
@@ -267,12 +275,12 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
       post: {
         exposure: 1.0,
         tonemap: "aces",
-        bloom: { strength: 0.8, threshold: 0.8, knee: 0.4, radius: 0.35 },
+        bloom: { strength: 1.3, threshold: 0.6, knee: 0.5, radius: 0.5 },
         // focus on the crown of the bulge; the receding edges go soft
-        dof: { focus: 6.6, range: 3, nearRange: 3, maxBlur: 0.009, maxNearBlur: 0.006 },
+        dof: { focus: 6.4, range: 2.2, nearRange: 3, maxBlur: 0.012, maxNearBlur: 0.006 },
         grain: 0.02,
         grainPeriod: period,
-        grade: { vignette: 0.3 },
+        grade: { vignette: 0.55 },
       },
       dispose: () => {
         env.dispose();
