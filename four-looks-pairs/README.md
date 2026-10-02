@@ -42,6 +42,10 @@ For a mastering codec instead of H.264 add e.g. `--codec=prores --prores-profile
 
 1080p previews: add `--scale=0.5` (or run `scripts/render_previews.sh`).
 
+File sizes: CRF 16 keeps per-pixel grain, so the previews are large: GrainGlow ≈ 450 MB
+(≈ 180 Mbit/s), NeonBadge ≈ 240 MB, PlexusSphere ≈ 195 MB, HexMosaic ≈ 30 MB per 1080p file.
+4K at CRF 16 will be several times bigger; that is the cost of keeping the grain intact.
+
 Stills (6000×3375 = 3840×2160 × 1.5625):
 
 ```bash
@@ -55,7 +59,24 @@ follow `devicePixelRatio`), so a 6000 px still is rendered at 6000 px, not upsca
 
 ## Measured render time
 
-TIMING_TABLE
+Measured in this project's build machine: 4 vCPU, **no GPU** (Chromium's ANGLE falls back to
+SwiftShader software WebGL), one browser tab (`--concurrency=1`), start-up time subtracted.
+`scripts/time_looks.sh 0.5 30` (1080p) and `scripts/time_looks.sh 1 8` (4K) reproduce it.
+
+| Look | 1080p (`--scale=0.5`) | 4K measured (`--scale=1`) | 4K full composition (one comp, this machine) |
+|------|-----------------------|---------------------------|-----------------------------------------------|
+| 1 Grain Glow | 0.57 s / frame | 2.06 s / frame | 600 f ≈ 21 min |
+| 2 Plexus Sphere | 1.71 s / frame | 5.13 s / frame | 450 f ≈ 38 min |
+| 3 Hex Mosaic | 0.11 s / frame | 0.32 s / frame | 240 f ≈ 1.3 min |
+| 4 Neon Badge | 1.79 s / frame | 5.88 s / frame | 600 f ≈ 59 min |
+
+All eight 4K masters on this machine: ≈ 4 h. Wall-clock for the 1080p previews matched the
+per-frame cost (e.g. Neon Badge 600 frames in 1,035 s); more tabs did not help because
+software WebGL already uses every core. On a machine with a GPU (`--gl=angle` on real
+hardware) the 3D looks should be several times faster; that was not measurable here.
+
+If a single 4K/6000 px frame takes longer than Remotion's 30 s default on a slow machine,
+add `--timeout=300000` (the 6000 px stills script does).
 
 ## How it is built
 
@@ -116,11 +137,60 @@ The other looks work the same way: `grain-glow/versions.ts` (5 ramp stops),
 
 ## Banding check
 
-BANDING_SECTION
+Run on frames decoded **from the encoded 1080p mp4s**, not from the preview:
+
+```bash
+ffmpeg -i out/previews/GrainGlow_Violet.mp4 -vf "select=eq(n\,300)" -frames:v 1 f300.png
+python3 scripts/banding.py f300.png row 540 0 1920 col 1500 0 1080
+```
+
+`scripts/banding.py` (Pillow + numpy) does two tests:
+
+1. **Block test** – every 16×16 block gets a plane fit; a banded gradient leaves blocks that are
+   flat runs of one code value (residual sd < 0.3 levels). Result: **0 % flat blocks** in all four
+   frames checked (median residual sd: 1A 16.6, 1B 16.0 levels – the intended grain; 2A 5.3,
+   4A 5.1 levels – the 2 % grain + dither).
+2. **Profile test** – a grain-free profile (17 px box average) through smooth gradient /
+   background areas, looking for flat-run | jump | flat-run staircases. Result: **0 band edges**;
+   the profiles change by fractions of a level per pixel (e.g. plexus background 20.6 → 25.1 → 21.2,
+   max slope 0.36 lvl/px; badge background max slope 0.41 lvl/px).
+
+The detector was validated on a synthetic pair: an 8-bit gradient without dither is flagged by
+both tests (100 % flat blocks, 10 band edges); the same gradient with ±1 LSB dither passes.
+
+| Frame (from mp4) | Flat blocks | Band edges | Verdict |
+|------------------|-------------|------------|---------|
+| GrainGlow_Violet f300 | 0 / 8040 | 0 | smooth |
+| GrainGlow_Sunset f300 | 0 / 8040 | 0 | smooth |
+| PlexusSphere_BlueViolet f420 | 0 / 8040 | 0 | smooth |
+| NeonBadge_MadeByHuman f200 | 0 / 7619 | 0 | smooth |
 
 ## Completion checklist
 
-CHECKLIST_SECTION
+All checks were run on the final code; scripts are in `scripts/`.
+
+- [x] 8 compositions, 3840×2160, 30 fps; lengths 600 / 450 / 240 / 600 frames.
+- [x] Fonts shipped (Montserrat, Inter, OFL texts included), loaded behind `delayRender`.
+- [x] Icons self-drawn (dove = SVG path data in `icons.ts`); no icon libraries, logos or brands.
+- [x] 2D looks: no CSS keyframes/transitions; every value from `useCurrentFrame()`.
+- [x] No `Math.random()`, `Date.now()`, R3F clock, `useState`-driven visuals or temporal effects.
+- [x] **Step 1** file checks (`scripts/verify_mp4.sh`): all 8 previews 1920×1080, 30/1, h264,
+      yuv420p, video only, durations 20.0 / 15.0 / 8.0 / 20.0 s.
+- [x] **Step 2** loop check (`scripts/verify_loops.sh`, `{"loopCheck":true}` → 601 frames):
+      frame 600 == frame 0 pixel for pixel for GrainGlow ×2 and NeonBadge ×2.
+- [x] **Step 3** black check from the mp4: HexMosaic frames 0 and 230 are 0,0,0 everywhere
+      (max 0); the four corners at frame 50 are 0,0,0.
+- [x] **Step 4** determinism (`scripts/verify_determinism.sh`): the full composition rendered as
+      a PNG sequence (two tabs, frames out of order) vs. the self-check frame rendered alone in a
+      fresh process (frame 300; 120 for look 3): **byte-identical for all 8** (file SHA-256 equal).
+- [x] **Step 5** banding: see above, no banding in 1A, 1B, 2A, 4A.
+- [x] **Step 6** five evenly spaced frames per preview (`out/verify/sheets/`): blobs move,
+      streaks + grain present; strand → column → sphere with links and edge strays; hex spreads,
+      fills, clears from the centre, ends black, white flashes at both fronts; badge text readable,
+      red strip + ring text present, camera swings, frame 299 shows the glitch smear, dove in 4B,
+      `100%` in 4A; each pair differs only in the listed colours / texts.
+- [x] 1080p PNG still per composition; two 6000×3375 PNG stills per composition.
+- [x] `npm install && npx remotion studio` works from a clean copy of the zip.
 
 ## Project layout
 
