@@ -35,7 +35,7 @@ export type PlaneSpec = {
   rotY: number;
   rotZ: number;
 } & (
-  | { kind: "formula"; formula: number; fontSize: number }
+  | { kind: "formula"; formulas: number[]; fontSize: number; underline: number }
   | { kind: "graph"; graph: GraphSpec }
 );
 
@@ -219,25 +219,32 @@ const buildField = (): PlaneSpec[] => {
     for (;;) {
       x = range(rng, -2900, 2900);
       y = range(rng, -1650, 1650);
-      if ((x / 520) ** 2 + (y / 320) ** 2 > 1) break;
+      if ((x / 380) ** 2 + (y / 230) ** 2 > 1) break;
     }
     const base = {
       id: i,
       x,
       y,
       z: depths[i],
-      rotX: range(rng, -14, 14),
-      rotY: range(rng, -22, 22),
-      rotZ: range(rng, -7, 7),
+      rotX: range(rng, -16, 16),
+      rotY: range(rng, -38, 38),
+      rotZ: range(rng, -6, 6),
     };
     if (i < FORMULAS_PER_BLOCK) {
+      // A chalkboard line: the main formula, sometimes followed by one or
+      // two more, which makes the field dense without adding planes.
       const formula = order[i];
       const star = FORMULAS[formula].star;
+      const extra = rng() < 0.55 ? (rng() < 0.45 ? 2 : 1) : 0;
+      const formulas = [formula];
+      for (let e = 0; e < extra; e++) formulas.push(Math.floor(rng() * FORMULAS.length));
       planes.push({
         ...base,
         kind: "formula",
-        formula,
-        fontSize: star ? range(rng, 62, 104) : range(rng, 44, 84),
+        formulas,
+        fontSize: star ? range(rng, 60, 100) : range(rng, 44, 80),
+        // Some lines carry a long hand-drawn underline / construction stroke.
+        underline: rng() < 0.3 ? range(rng, 0.6, 1.3) : 0,
       });
     } else {
       planes.push({ ...base, kind: "graph", graph: makeGraph(rng, i) });

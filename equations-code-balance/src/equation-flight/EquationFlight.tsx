@@ -22,6 +22,8 @@ import { FORMULA_HTML } from "./katex-cache";
 export type EquationFlightProps = {
   variant: "black" | "navy";
   loopCheck?: boolean;
+  /** Profiling only: comma list of features to switch off. */
+  dbg?: string;
 };
 
 /**
@@ -57,6 +59,39 @@ const bandWeights = (dist: number): Array<[number, number]> => {
   return [[BANDS.length - 1, 1]];
 };
 
+
+/** Same 1:4:12 glow built from CSS drop-shadows (profiling alternative). */
+const glowCss = (u: (n: number) => number, color: string) => {
+  const rgb = hexToRgb(color);
+  return `drop-shadow(0 0 ${u(1.6)}px rgba(${rgb}, 0.6)) drop-shadow(0 0 ${u(6.4)}px rgba(${rgb}, 0.3)) drop-shadow(0 0 ${u(19)}px rgba(${rgb}, 0.18))`;
+};
+
+const hexToRgb = (hex: string) =>
+  [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ");
+
+/** Conic gradient with one soft wedge per ray; `turn` rotates the fan. */
+const rayGradient = (color: string, turn: number, cx: number, cy: number) => {
+  const rgb = hexToRgb(color);
+  const stops: string[] = [];
+  const sorted = [...RAYS].sort((a, b) => a.angle - b.angle);
+  for (const r of sorted) {
+    const soft = r.halfWidth * 1.6;
+    stops.push(
+      `rgba(${rgb}, 0) ${(r.angle - r.halfWidth - soft).toFixed(2)}deg`,
+      `rgba(${rgb}, ${(0.55 * r.strength).toFixed(3)}) ${r.angle.toFixed(2)}deg`,
+      `rgba(${rgb}, 0) ${(r.angle + r.halfWidth + soft).toFixed(2)}deg`,
+    );
+  }
+  return (
+    `radial-gradient(circle at ${cx}px ${cy}px, rgba(${rgb}, 0.45) 0px, rgba(${rgb}, 0) ${(cx * 0.2).toFixed(0)}px), ` +
+    `conic-gradient(from ${turn.toFixed(3)}deg at ${cx}px ${cy}px, rgba(${rgb}, 0) 0deg, ${stops.join(", ")}, rgba(${rgb}, 0) 360deg)`
+  );
+};
+
+/** Rays fade out with distance from their source; reach zero before the corners. */
+const rayMask = (cx: number, cy: number, r: number) =>
+  `radial-gradient(circle at ${cx}px ${cy}px, #000 0px, rgba(0,0,0,0.55) ${(r * 0.1).toFixed(0)}px, rgba(0,0,0,0.18) ${(r * 0.38).toFixed(0)}px, rgba(0,0,0,0.04) ${(r * 0.7).toFixed(0)}px, transparent ${r.toFixed(0)}px)`;
+
 type Placed = { plane: PlaneSpec; dist: number; key: string; opacity: number };
 
 const PALETTE = {
@@ -84,10 +119,25 @@ const Plane: React.FC<{
   const tz = PERSPECTIVE - p.dist;
   const content =
     plane.kind === "formula" ? (
-      <div
-        style={{ fontSize: u(plane.fontSize), whiteSpace: "nowrap", lineHeight: 1 }}
-        dangerouslySetInnerHTML={{ __html: FORMULA_HTML[plane.formula] }}
-      />
+      <div style={{ fontSize: u(plane.fontSize), whiteSpace: "nowrap", lineHeight: 1, display: "flex", alignItems: "center", gap: u(plane.fontSize * 1.4) }}>
+        {plane.formulas.map((f, i) => (
+          <span key={i} dangerouslySetInnerHTML={{ __html: FORMULA_HTML[f] }} />
+        ))}
+        {plane.underline > 0 ? (
+          <div
+            style={{
+              position: "absolute",
+              left: `${-10 * plane.underline}%`,
+              width: `${100 * plane.underline + 20}%`,
+              bottom: u(-plane.fontSize * 0.35),
+              height: u(Math.max(2.4, plane.fontSize * 0.045)),
+              borderRadius: u(4),
+              background: "currentColor",
+              opacity: 0.85,
+            }}
+          />
+        ) : null}
+      </div>
     ) : (
       <svg
         width={u(plane.graph.w + 24)}
@@ -128,7 +178,8 @@ const Plane: React.FC<{
   );
 };
 
-export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
+export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "" }) => {
+  const off = (k: string) => dbg.split(",").includes(k);
   const frame = useCurrentFrame();
   const { u, width, height } = useUnit();
   const pal = PALETTE[variant];
@@ -191,18 +242,14 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
             <feTurbulence type="fractalNoise" baseFrequency={0.035 / u(1)} numOctaves={2} seed={11} />
             <feDisplacementMap in="SourceGraphic" scale={u(3.2)} xChannelSelector="R" yChannelSelector="G" />
           </filter>
-          <GlowFilter id="ef-glow" base={u(1.6)} strength={[0.75, 0.42, 0.22]} />
-          <GlowFilter id="ef-ray-glow" base={u(4)} strength={[0.5, 0.4, 0.35]} />
-          <filter id="ef-ray-soft" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation={u(9)} />
-          </filter>
+          <GlowFilter id="ef-glow" base={u(1.6)} strength={[0.75, 0.42, 0.22]} margin={0} />
         </defs>
       </svg>
 
       <AbsoluteFill style={{ transform: `rotate(${roll}deg) scale(1.04)`, color: pal.ink }}>
         {/* Speed streaks, drawn behind the planes. */}
         <svg width={width} height={height} style={{ position: "absolute", filter: `blur(${u(1.2)}px)` }}>
-          {STREAKS.flatMap((s, i) => {
+          {off("streaks") ? null : STREAKS.flatMap((s, i) => {
             const base = mod(s.z - travel, BLOCK_DEPTH);
             return Array.from({ length: BLOCKS }, (_, k) => {
               const dist = NEAR + base + k * BLOCK_DEPTH;
@@ -235,8 +282,8 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
           const renderBand = (band: number) => {
             const blur = BANDS[band].blur;
             const filters: string[] = [];
-            if (blur > 0) filters.push(`blur(${u(blur)}px)`);
-            if (band === SHARP_BAND) filters.push("url(#ef-wobble)");
+            if (blur > 0 && !off("blur")) filters.push(`blur(${u(blur)}px)`);
+            if (band === SHARP_BAND && !off("wobble")) filters.push("url(#ef-wobble)");
             return (
               <AbsoluteFill
                 key={band}
@@ -258,7 +305,7 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
           return (
             <>
               {far.map(renderBand)}
-              <AbsoluteFill style={{ filter: variant === "navy" ? "url(#ef-glow)" : undefined }}>
+              <AbsoluteFill style={{ filter: variant === "navy" && !off("glow") ? (off("svgglow") ? glowCss(u, pal.ink) : "url(#ef-glow)") : undefined }}>
                 {glowing.map(renderBand)}
               </AbsoluteFill>
               {near.map(renderBand)}
@@ -268,44 +315,22 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
       </AbsoluteFill>
 
       {/* Light rays: a flat overlay fanning from near the centre, one full
-          turn per loop. Screen-blended so empty black stays black. */}
-      <AbsoluteFill style={{ mixBlendMode: "screen", opacity: variant === "black" ? 0.34 : 0.4 }}>
-        <svg width={width} height={height}>
-          <defs>
-            <radialGradient id="ef-ray-fade" cx={rayCx} cy={rayCy} r={rayR} gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor={pal.ray} stopOpacity={0.55} />
-              <stop offset="0.08" stopColor={pal.ray} stopOpacity={0.32} />
-              <stop offset="0.35" stopColor={pal.ray} stopOpacity={0.1} />
-              <stop offset="0.7" stopColor={pal.ray} stopOpacity={0.025} />
-              <stop offset="1" stopColor={pal.ray} stopOpacity={0} />
-            </radialGradient>
-            <radialGradient id="ef-core" cx={rayCx} cy={rayCy} r={width * 0.1} gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor={pal.ray} stopOpacity={0.35} />
-              <stop offset="1" stopColor={pal.ray} stopOpacity={0} />
-            </radialGradient>
-          </defs>
-          <g filter="url(#ef-ray-glow)">
-          <g filter="url(#ef-ray-soft)" transform={`rotate(${phase * 360} ${rayCx} ${rayCy})`}>
-            {RAYS.map((r, i) => {
-              const a0 = ((r.angle - r.halfWidth) * Math.PI) / 180;
-              const a1 = ((r.angle + r.halfWidth) * Math.PI) / 180;
-              const len = rayR * r.length;
-              return (
-                <path
-                  key={i}
-                  d={`M${rayCx},${rayCy} L${rayCx + Math.cos(a0) * len},${rayCy + Math.sin(a0) * len} L${rayCx + Math.cos(a1) * len},${rayCy + Math.sin(a1) * len} Z`}
-                  fill="url(#ef-ray-fade)"
-                  fillOpacity={r.strength}
-                />
-              );
-            })}
-          </g>
-          </g>
-          <circle cx={rayCx} cy={rayCy} r={width * 0.1} fill="url(#ef-core)" />
-        </svg>
-      </AbsoluteFill>
+          turn per loop. Each ray is a soft-edged wedge of a conic gradient
+          (no blur filter needed), faded with distance by a radial mask.
+          Screen-blended so empty black stays black. */}
+      {off("rays") ? null : (
+        <AbsoluteFill
+          style={{
+            mixBlendMode: "screen",
+            opacity: variant === "black" ? 0.3 : 0.36,
+            background: rayGradient(pal.ray, phase * 360, rayCx, rayCy),
+            WebkitMaskImage: rayMask(rayCx, rayCy, rayR),
+            maskImage: rayMask(rayCx, rayCy, rayR),
+          }}
+        />
+      )}
 
-      {variant === "navy" ? <Grain id="ef" seed={mod(frame, LOOP)} amount={0.02} /> : null}
+      {variant === "navy" && !off("grain") ? <Grain id="ef" seed={mod(frame, LOOP)} amount={0.02} /> : null}
     </AbsoluteFill>
   );
 };

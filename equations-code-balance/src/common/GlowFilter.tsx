@@ -14,13 +14,15 @@ export const GlowFilter: React.FC<{
   base: number;
   /** Opacity of the three halos, small → large. */
   strength?: [number, number, number];
-}> = ({ id, base, strength = [0.8, 0.45, 0.25] }) => (
+  /** Filter region in % of the element; full-frame layers use 0..100. */
+  margin?: number;
+}> = ({ id, base, strength = [0.8, 0.45, 0.25], margin = 50 }) => (
   <filter
     id={id}
-    x="-50%"
-    y="-50%"
-    width="200%"
-    height="200%"
+    x={`-${margin}%`}
+    y={`-${margin}%`}
+    width={`${100 + 2 * margin}%`}
+    height={`${100 + 2 * margin}%`}
     colorInterpolationFilters="sRGB"
   >
     {[1, 4, 12].map((k, i) => (
