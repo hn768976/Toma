@@ -11,7 +11,7 @@ import {
 } from "three";
 import { CARD_H, CARD_W } from "../lib/loop";
 import { COIN_EDGE_V } from "./geometry";
-import { fbm, heightToNormal, vnoise, worley } from "./noise";
+import { fbm, fbmRot, heightToNormal, vnoise, worley } from "./noise";
 
 const dataTex = (data: Uint8Array, w: number, h: number, repeat = false) => {
   const t = new DataTexture(data, w, h, RGBAFormat, UnsignedByteType);
@@ -41,9 +41,12 @@ const grayTex = (values: Float32Array, w: number, h: number, repeat = false) => 
 
 const ridged = (n: number) => 1 - Math.abs(2 * n - 1);
 
-/** Crinkled gold foil: creased ridged noise at two scales (+ a little fine grain). */
+/**
+ * Crinkled gold foil: creased ridged noise at two scales. Baked at 3072 px so
+ * the creases stay smooth when the card is ~2300 px wide (6000-px stills).
+ */
 export const makeFoilTextures = () => {
-  const w = 2048;
+  const w = 3072;
   const h = Math.round((w * CARD_H) / CARD_W);
   const height = new Float32Array(w * h);
   const rough = new Float32Array(w * h);
@@ -52,15 +55,15 @@ export const makeFoilTextures = () => {
     for (let x = 0; x < w; x++) {
       const u = (x / w) * ax;
       const v = y / h;
-      const big = ridged(fbm(u * 3.4, v * 3.4, 11, 4));
-      const small = ridged(fbm(u * 12 + 3.1, v * 12 + 7.7, 23, 3));
-      const fine = vnoise(u * 140, v * 140, 41);
-      height[y * w + x] = 0.7 * big * big + 0.22 * small + 0.015 * fine;
+      const big = ridged(fbmRot(u * 3.4, v * 3.4, 11, 4));
+      const small = ridged(fbmRot(u * 12 + 3.1, v * 12 + 7.7, 23, 3));
+      height[y * w + x] = 0.7 * big * big + 0.22 * small;
       rough[y * w + x] = 0.72 + 0.28 * fbm(u * 9, v * 9, 57, 3);
     }
   }
   return {
-    normal: dataTex(heightToNormal(height, w, h, 30), w, h),
+    // heightToNormal works in texels: scale strength with resolution.
+    normal: dataTex(heightToNormal(height, w, h, 30 * (w / 2048)), w, h),
     roughness: grayTex(rough, w, h),
   };
 };

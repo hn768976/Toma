@@ -93,3 +93,27 @@ export const heightToNormal = (h: Float32Array, w: number, hgt: number, strength
   }
   return out;
 };
+
+/**
+ * fbm with every octave rotated (~37 deg steps) and offset: hides the
+ * axis-aligned lattice that plain value noise shows in its finer octaves.
+ */
+export const fbmRot = (x: number, y: number, seed: number, octaves = 4) => {
+  let sum = 0;
+  let amp = 0.5;
+  let norm = 0;
+  let px = x;
+  let py = y;
+  const c = Math.cos(0.65);
+  const s = Math.sin(0.65);
+  for (let o = 0; o < octaves; o++) {
+    sum += amp * vnoise(px, py, seed + o * 101);
+    norm += amp;
+    amp *= 0.5;
+    const nx = (c * px - s * py) * 2 + 17.3;
+    const ny = (s * px + c * py) * 2 + 9.1;
+    px = nx;
+    py = ny;
+  }
+  return sum / norm;
+};
