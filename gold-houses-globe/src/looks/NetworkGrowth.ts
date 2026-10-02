@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { mulberry32, smoothstep, TAU } from "../lib/random";
-import { easeInOutCubic, easeOutBack } from "../lib/three-util";
+import { mulberry32, smoothstep } from "../lib/random";
+import { easeInOutCubic, easeOutBack, glowPointsMaterial } from "../lib/three-util";
 import { GlossyReflector, REFLECT_GLSL } from "../lib/reflector";
 import type { Look } from "../lib/look";
 
@@ -26,6 +26,13 @@ const free = (x: number, z: number) => {
   return Math.hypot(x, z) > 1.6;
 };
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+// nodes gather in a few seeded clusters, leaving open floor between them
+const CLUSTERS = Array.from({ length: 8 }, (_, i) => {
+  const a = (i / 8) * Math.PI * 2 + rng() * 0.6, r = 4 + rng() * 10;
+  return { x: Math.cos(a) * r, z: Math.sin(a) * r, s: 2.2 + rng() * 2 };
+});
+const clusterW = (x: number, z: number) =>
+  Math.max(...CLUSTERS.map((c) => Math.exp(-((x - c.x) ** 2 + (z - c.z) ** 2) / (2 * c.s * c.s))), Math.exp(-(x * x + z * z) / 8));
 const outward = (x: number, z: number, d: number[]) => (x * d[0] + z * d[1]) / (Math.hypot(x, z) + 1e-6);
 
 const grow = (x: number, z: number, dir: number[], d: number, depth: number) => {
@@ -51,10 +58,10 @@ const grow = (x: number, z: number, dir: number[], d: number, depth: number) => 
     for (let k = 1; k <= Math.round(len / LAT); k++) used.add(`${Math.round((x + dir[0] * k * LAT) / LAT)},${Math.round((z + dir[1] * k * LAT) / LAT)}`);
     x = nx; z = nz; d += len;
     pts.push({ x, z, d });
-    if (rng() < 0.7 && free(x, z)) {
+    if (rng() < 0.08 + 0.92 * clusterW(x, z) && free(x, z)) {
       taken.add(key(x, z));
       const r = rng();
-      sites.push({ x, z, d, kind: r < 0.45 ? 0 : r < 0.7 ? 1 : r < 0.92 ? 2 : 3, lime: rng() < 0.06 });
+      sites.push({ x, z, d, kind: r < 0.4 ? 0 : r < 0.6 ? 1 : r < 0.88 ? 2 : 3, lime: false });
     }
     if (depth < 4 && rng() < 0.4) {
       const side = rng() < 0.5 ? 1 : -1;
@@ -68,9 +75,9 @@ const grow = (x: number, z: number, dir: number[], d: number, depth: number) => 
   }
   // every trace ends at a node
   const last = pts[pts.length - 1];
-  if (pts.length > 1 && free(last.x, last.z)) {
+  if (pts.length > 1 && free(last.x, last.z) && rng() < 0.2 + 0.8 * clusterW(last.x, last.z)) {
     taken.add(key(last.x, last.z));
-    sites.push({ x: last.x, z: last.z, d: last.d, kind: rng() < 0.6 ? 0 : 1, lime: rng() < 0.06 });
+    sites.push({ x: last.x, z: last.z, d: last.d, kind: rng() < 0.6 ? 0 : 1, lime: rng() < 0.04 });
   }
   if (pts.length > 1) lines.push(pts);
 };
@@ -83,7 +90,7 @@ for (const off of [0, -1, 1]) {
   }
 }
 // keep sprouting side branches from existing traces until the network is dense enough
-for (let attempt = 0; attempt < 4000 && sites.length < 175; attempt++) {
+for (let attempt = 0; attempt < 500 && sites.length < 110; attempt++) {
   const l = lines[Math.floor(rng() * lines.length)];
   const i = Math.floor(rng() * (l.length - 1));
   const a = l[i], b = l[i + 1];
@@ -101,7 +108,7 @@ const pads: { x: number; z: number; s: number; pop: number; lime: boolean }[] = 
 const boxTint = (n: number) => Array.from({ length: n }, () => rng());
 for (const s of sites) {
   const pop = LINE_START + s.d * FRAMES_PER_UNIT;
-  const base = 0.26 + rng() * 0.14;
+  const base = 0.42 + rng() * 0.26;
   if (s.kind === 0) {
     boxes.push({ x: s.x, y: 0, z: s.z, sx: base, sy: base, sz: base, pop, lime: s.lime });
   } else if (s.kind === 1) {
@@ -120,10 +127,11 @@ for (const s of sites) {
     const n = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) boxes.push({ x: s.x, y: i * base * 0.9, z: s.z, sx: base, sy: base * 0.82, sz: base, pop: pop + i * 4, lime: s.lime });
   }
-  pads.push({ x: s.x, z: s.z, s: base * (s.kind === 2 ? 2.4 : 1.6), pop, lime: s.lime });
+  pads.push({ x: s.x, z: s.z, s: base * (s.kind === 2 ? 2.6 : 1.9), pop, lime: s.lime });
 }
 
 const tints = boxTint(boxes.length);
+const dims = boxTint(boxes.length).map((v) => v < 0.33); // a third are dim deep-blue glass
 
 // floor ribbon with rounded 90-degree corners; returns pts with distance
 const fillet = (pts: P[], r: number) => {
@@ -149,13 +157,13 @@ const camAt = (f: number) => {
   let dist: number, elev: number, az: number, ty: number;
   if (f < 60) {
     const t = f / 60;
-    dist = 5.0 - 0.35 * t; elev = 27; az = 38 - 1.5 * t; ty = 0.45;
+    dist = 5.0 - 0.35 * t; elev = 33; az = 46 - 1.5 * t; ty = 0.45;
   } else if (f < 330) {
     const t = easeInOutCubic((f - 60) / 270);
-    dist = 4.65 + (24 - 4.65) * t; elev = 27 + (41 - 27) * t; az = 36.5 + (24 - 36.5) * t; ty = 0.45 * (1 - t);
+    dist = 4.65 + (24 - 4.65) * t; elev = 33 + (37 - 33) * t; az = 44.5 + (34 - 44.5) * t; ty = 0.45 * (1 - t);
   } else {
     const t = (f - 330) / 120;
-    dist = 24 + 1.6 * t; elev = 41 + 0.6 * t; az = 24 - 3.5 * t; ty = 0;
+    dist = 24 + 1.6 * t; elev = 37 + 0.5 * t; az = 34 - 3.5 * t; ty = 0;
   }
   const e = (elev * Math.PI) / 180, a = (az * Math.PI) / 180;
   return { pos: new THREE.Vector3(dist * Math.cos(e) * Math.sin(a), dist * Math.sin(e) + ty, dist * Math.cos(e) * Math.cos(a)), target: new THREE.Vector3(0, ty, 0), dist };
@@ -192,14 +200,14 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const scene = new THREE.Scene();
     const cyan = new THREE.Color(params.cyan), lime = new THREE.Color(params.lime), floorCol = new THREE.Color(params.floor);
     scene.background = floorCol.clone().multiplyScalar(0.3);
-    const camera = new THREE.PerspectiveCamera(35, 16 / 9, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.1, 200);
 
     // ---- floor tiles ----
-    const reflector = new GlossyReflector(width, height, 0.5, 0.02, 2);
+    const reflector = new GlossyReflector(width, height, 0.5, 0.04, 2);
     const floorMat = new THREE.ShaderMaterial({
       uniforms: {
         tReflect: { value: reflector.texture }, textureMatrix: { value: reflector.textureMatrix },
-        base: { value: floorCol }, cyan: { value: cyan }, tile: { value: 3.4 },
+        base: { value: floorCol }, cyan: { value: cyan }, tile: { value: 4.2 },
       },
       vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: /* glsl */ `
@@ -207,21 +215,22 @@ export const NetworkGrowth: Look<NetworkParams> = {
         uniform vec3 base; uniform vec3 cyan; uniform float tile; varying vec3 vW;
         float h(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
         void main() {
-          vec2 g = vW.xz / tile + 0.5;
+          vec2 g = vW.xz / tile; // seams cross under the core cube
           vec2 id = floor(g);
           vec2 f = fract(g);
           vec2 dd = min(f, 1.0 - f) * tile;
           float seam = min(dd.x, dd.y);
           float aa = fwidth(seam) + 1e-4;
-          float groove = smoothstep(0.035 - aa, 0.035 + aa, seam);
-          float bevel = smoothstep(0.035 - aa, 0.035 + aa, seam) * (1.0 - smoothstep(0.075 - aa, 0.075 + aa, seam));
+          float groove = smoothstep(0.04 - aa, 0.04 + aa, seam);
+          float bevel = smoothstep(0.1 - aa, 0.1 + aa, seam) * (1.0 - smoothstep(0.125 - aa, 0.125 + aa, seam));
           float r = length(vW.xz);
-          vec3 c = base * (0.85 + 0.25 * h(id));
-          c *= 0.25 + 0.75 * groove;
-          c += base * 1.2 * bevel;
+          // broad satin gradient across each slab
+          vec3 c = base * (1.35 + 0.3 * h(id)) * (0.85 + 0.3 * f.x * f.y);
+          c *= 0.12 + 0.88 * groove;
+          c += base * 0.9 * bevel;
           c += cyan * 0.05 * exp(-r / 3.0);
-          c += sampleReflection(vW, vec2(0.0)) * 0.16;
-          c *= mix(1.0, 0.45, smoothstep(14.0, 40.0, r));
+          c += sampleReflection(vW, vec2(0.0)) * 0.025;
+          c *= mix(1.0, 0.6, smoothstep(16.0, 45.0, r));
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -232,7 +241,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
     // ---- traces ----
     const pos: number[] = [], uvs: number[] = [], dist: number[] = [], idx: number[] = [];
     let vbase = 0;
-    const W = 0.06;
+    const W = 0.045;
     const addRibbon = (pts: P[], w: number, y: number) => {
       for (let i = 0; i < pts.length; i++) {
         const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
@@ -264,12 +273,13 @@ export const NetworkGrowth: Look<NetworkParams> = {
           float across = exp(-vUv.y * vUv.y * 2.0);
           float head = exp(-max(front - vD, 0.0) / 0.35) * 4.0;
           float run = exp(-pow((fract(vD / 2.2 - frame * 0.03) - 0.5) / 0.025, 2.0)) * 3.0;
-          vec3 c = cyan * (2.2 + head + run) * across;
+          vec3 c = cyan * (1.3 + head + run) * across;
           gl_FragColor = vec4(c, 1.0);
         }`,
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
+      side: THREE.DoubleSide,
     });
     const lineMesh = new THREE.Mesh(lineGeo, lineMat);
     lineMesh.frustumCulled = false;
@@ -278,12 +288,12 @@ export const NetworkGrowth: Look<NetworkParams> = {
     // ---- glowing pads under nodes (+ core outline) ----
     const padGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     const padMat = new THREE.ShaderMaterial({
-      vertexShader: `attribute vec3 iColor; varying vec2 vUv; varying vec3 vCol; void main(){ vUv = uv; vCol = iColor; gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position,1.0); }`,
-      fragmentShader: `varying vec2 vUv; varying vec3 vCol;
+      vertexShader: `attribute vec3 iColor; attribute float iRing; varying float vRing; varying vec2 vUv; varying vec3 vCol; void main(){ vRing = iRing; vUv = uv; vCol = iColor; gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position,1.0); }`,
+      fragmentShader: `varying float vRing; varying vec2 vUv; varying vec3 vCol;
         void main(){ vec2 q = abs(vUv * 2.0 - 1.0); float e = max(q.x, q.y);
-          float ring = smoothstep(0.72, 0.8, e) * (1.0 - smoothstep(0.86, 0.94, e));
-          float fill = (1.0 - smoothstep(0.55, 1.0, e)) * 0.6;
-          gl_FragColor = vec4(vCol * (ring * 2.2 + fill), 1.0); }`,
+          float ring = smoothstep(0.78, 0.84, e) * (1.0 - smoothstep(0.88, 0.94, e));
+          float fill = exp(-dot(q, q) * 2.5) * 0.45;
+          gl_FragColor = vec4(vCol * (ring * 2.4 * vRing + fill), 1.0); }`,
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
@@ -292,6 +302,9 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const padMesh = new THREE.InstancedMesh(padGeo, padMat, NP);
     const padCol = new Float32Array(NP * 3);
     padMesh.geometry.setAttribute("iColor", new THREE.InstancedBufferAttribute(padCol, 3));
+    const padRing = new Float32Array(NP);
+    padRing[NP - 1] = 1;
+    padMesh.geometry.setAttribute("iRing", new THREE.InstancedBufferAttribute(padRing, 1));
     padMesh.frustumCulled = false;
     scene.add(padMesh);
 
@@ -306,49 +319,93 @@ export const NetworkGrowth: Look<NetworkParams> = {
     boxMesh.frustumCulled = false;
     scene.add(boxMesh);
     boxes.forEach((b, i) => {
-      const c = b.lime ? lime : cyan.clone().lerp(new THREE.Color(0.1, 0.35, 1.0), tints[i] * 0.35);
+      const c = b.lime ? lime : dims[i] ? new THREE.Color(0.02, 0.12, 0.6) : cyan.clone().lerp(new THREE.Color(0.1, 0.45, 1.0), tints[i] * 0.4);
       bCol.set([c.r, c.g, c.b], i * 3);
     });
 
-    // ---- core cube ----
-    const coreGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
-    const coreMesh = new THREE.InstancedMesh(coreGeo, new THREE.ShaderMaterial({ uniforms: { frameW: { value: 0.06 } }, vertexShader: GLASS_VERT, fragmentShader: GLASS_FRAG }), 1);
-    const cc = cyan.clone().multiplyScalar(1.0);
-    coreMesh.geometry.setAttribute("iColor", new THREE.InstancedBufferAttribute(new Float32Array([cc.r, cc.g, cc.b]), 3));
-    coreMesh.geometry.setAttribute("iGlow", new THREE.InstancedBufferAttribute(new Float32Array([2.4]), 1));
-    coreMesh.setMatrixAt(0, new THREE.Matrix4().makeScale(1, 1, 1));
-    scene.add(coreMesh);
-
-    // short wires from the core
-    const wirePts: P[][] = [];
-    for (let k = 0; k < 4; k++) {
-      const a0 = (k / 4) * TAU + 0.6;
-      const pts: P[] = [];
-      for (let i = 0; i <= 16; i++) {
-        const t = i / 16;
-        pts.push({ x: Math.cos(a0) * (0.5 + t * 0.9), z: Math.sin(a0) * (0.5 + t * 0.9) + 0.15 * Math.sin(t * 6 + k), d: 0 });
-      }
-      wirePts.push(pts);
+    // ---- core cube: silver metal frame around glowing panels ----
+    const core = new THREE.Group();
+    scene.add(core);
+    const panel = new THREE.Mesh(
+      new THREE.BoxGeometry(0.94, 0.94, 0.94).translate(0, 0.5, 0),
+      new THREE.MeshBasicMaterial({ color: cyan.clone().lerp(new THREE.Color(0.1, 0.5, 1), 0.35).multiplyScalar(1.0) }),
+    );
+    core.add(panel);
+    const metal = new THREE.MeshStandardMaterial({ color: new THREE.Color("#eef6ff"), metalness: 0.3, roughness: 0.35, emissive: new THREE.Color("#5f8fb0") });
+    const BW = 0.075; // beam width
+    const beam = new THREE.BoxGeometry(1, 1, 1);
+    const edgesL: [number, number, number, number, number, number][] = [];
+    for (const a of [-0.5, 0.5]) for (const b2 of [-0.5, 0.5]) {
+      edgesL.push([0, 0.5 + a, b2, 1 + BW, BW, BW]); // along x
+      edgesL.push([a, 0.5, b2, BW, 1 + BW, BW]); // vertical
+      edgesL.push([a, 0.5 + b2, 0, BW, BW, 1 + BW]); // along z
     }
-    const wPos: number[] = [], wIdx: number[] = [];
-    wirePts.forEach((pts, k) => {
-      const b = (wPos.length / 3);
-      pts.forEach((p, i) => {
-        const y = 0.75 + 0.2 * Math.sin(i * 0.4 + k) * (1 - i / 16) - (i / 16) * 0.7;
-        const nx = -Math.sin((k / 4) * TAU + 0.6) * 0.008, nz = Math.cos((k / 4) * TAU + 0.6) * 0.008;
-        wPos.push(p.x - nx, Math.max(0.02, y) + 0.008, p.z - nz, p.x + nx, Math.max(0.02, y) - 0.008, p.z + nz);
-        if (i > 0) { const q = b + i * 2; wIdx.push(q - 2, q, q - 1, q - 1, q, q + 1); }
-      });
+    edgesL.forEach(([x, y, z, sx, sy, sz]) => {
+      const m = new THREE.Mesh(beam, metal);
+      m.position.set(x, y, z);
+      m.scale.set(sx, sy, sz);
+      core.add(m);
+    });
+    scene.add(new THREE.HemisphereLight(new THREE.Color("#cfefff"), new THREE.Color("#0a2a50"), 1.4));
+    const key = new THREE.DirectionalLight(0xffffff, 1.6);
+    key.position.set(3, 6, 4);
+    scene.add(key);
+
+    // short electric sparks around the core (seeded jagged polylines + bright tips)
+    const sparkRng = mulberry32(0x5a7c);
+    const SPARKS: [number, number, number, number, number, number, number][] = [
+      // start xyz, direction xyz, length
+      [0, 1.05, 0, 0, 1, 0, 0.45],
+      [0.45, 1.0, -0.45, 0.6, 0.5, -0.3, 0.4],
+      [0.55, 0.55, 0.2, 1, 0.05, 0.2, 0.7],
+      [0.4, 0.15, 0.55, 0.8, -0.1, 0.6, 1.0],
+      [0.1, 1.02, 0.2, 0.3, 1, 0.5, 0.3],
+    ];
+    const wPos: number[] = [], wIdx: number[] = [], tipPos: number[] = [];
+    SPARKS.forEach(([x, y, z, dx, dy, dz, len]) => {
+      const d = new THREE.Vector3(dx, dy, dz).normalize();
+      const side = new THREE.Vector3().crossVectors(d, new THREE.Vector3(0.3, 0.2, 1)).normalize();
+      const up = new THREE.Vector3().crossVectors(d, side).normalize();
+      const N = 10;
+      const b0 = wPos.length / 3;
+      let p = new THREE.Vector3(x, y, z);
+      for (let i = 0; i <= N; i++) {
+        if (i > 0) p = p.clone().addScaledVector(d, len / N).addScaledVector(side, (sparkRng() - 0.5) * 0.06).addScaledVector(up, (sparkRng() - 0.5) * 0.06);
+        const w = 0.007 * (1 - i / N) + 0.003;
+        // two crossed ribbons so the spark reads from any angle
+        wPos.push(p.x - side.x * w, p.y - side.y * w, p.z - side.z * w, p.x + side.x * w, p.y + side.y * w, p.z + side.z * w);
+        wPos.push(p.x - up.x * w, p.y - up.y * w, p.z - up.z * w, p.x + up.x * w, p.y + up.y * w, p.z + up.z * w);
+        if (i > 0) {
+          const q0 = b0 + (i - 1) * 4, q1 = b0 + i * 4;
+          wIdx.push(q0, q1, q0 + 1, q0 + 1, q1, q1 + 1, q0 + 2, q1 + 2, q0 + 3, q0 + 3, q1 + 2, q1 + 3);
+        }
+      }
+      tipPos.push(p.x, p.y, p.z);
     });
     const wireGeo = new THREE.BufferGeometry();
     wireGeo.setAttribute("position", new THREE.Float32BufferAttribute(wPos, 3));
     wireGeo.setIndex(wIdx);
-    const wires = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: cyan.clone().multiplyScalar(2.5), side: THREE.DoubleSide }));
+    const wires = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: cyan.clone().lerp(new THREE.Color(0.2, 0.5, 1), 0.3).multiplyScalar(3), side: THREE.DoubleSide }));
     scene.add(wires);
+    const tipGeo = new THREE.BufferGeometry();
+    tipGeo.setAttribute("position", new THREE.Float32BufferAttribute(tipPos, 3));
+    tipGeo.setAttribute("size", new THREE.Float32BufferAttribute(tipPos.map(() => 7).slice(0, tipPos.length / 3), 1));
+    tipGeo.setAttribute("pcolor", new THREE.Float32BufferAttribute(tipPos.map(() => 2.5), 3));
+    const tips = new THREE.Points(tipGeo, glowPointsMaterial(height, { sharp: 0.4 }));
+    tips.frustumCulled = false;
+    scene.add(tips);
 
     // ---- lime accents: tiny glowing tags hovering beside some nodes ----
     const tagSites = sites.filter((_, i) => i % 9 === 4);
-    const tagMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.22, 0.07), new THREE.MeshBasicMaterial({ color: lime.clone().multiplyScalar(1.6), side: THREE.DoubleSide }), tagSites.length);
+    const tagMat = new THREE.ShaderMaterial({
+      uniforms: { cyan: { value: cyan.clone().multiplyScalar(1.6) }, lime: { value: lime.clone().multiplyScalar(1.6) } },
+      vertexShader: `varying vec2 vUv; varying float vId; void main(){ vUv = uv; vId = float(gl_InstanceID); gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position,1.0); }`,
+      fragmentShader: `uniform vec3 cyan; uniform vec3 lime; varying vec2 vUv; varying float vId;
+        void main(){ vec2 g = fract(vUv * 3.0) - 0.5; if (length(g) > 0.32) discard;
+          gl_FragColor = vec4(mod(vId, 4.0) < 1.0 ? lime : cyan, 1.0); }`,
+      side: THREE.DoubleSide,
+    });
+    const tagMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.16, 0.16), tagMat, tagSites.length);
     tagMesh.frustumCulled = false;
     scene.add(tagMesh);
 
@@ -356,7 +413,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const post = {
       exposure: 1.0,
       tonemap: "aces" as const,
-      bloom: { strength: 1.5, threshold: 0.55, knee: 0.5, radius: 0.55 },
+      bloom: { strength: 1.9, threshold: 0.5, knee: 0.5, radius: 0.7 },
       dof: { focus: 5, range: 6, nearRange: 3, maxBlur: 0.008, maxNearBlur: 0.006 },
       grain: 0.02,
       grainPeriod: 0,
@@ -368,7 +425,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
       camera.position.copy(cam.pos);
       camera.lookAt(cam.target);
       // DOF follows the core cube; shallow when close, nearly none when wide
-      const wide = smoothstep(5, 12, cam.dist);
+      const wide = smoothstep(5, 11, cam.dist);
       post.dof.focus = cam.dist;
       post.dof.range = 4 + 30 * wide;
       post.dof.maxBlur = 0.012 * (1 - wide) + 0.002 * wide;
@@ -393,7 +450,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
         sc.set(b.sx * sxz + 1e-4, b.sy * sy + 1e-4, b.sz * sxz + 1e-4);
         m4.compose(v, q, sc);
         boxMesh.setMatrixAt(i, m4);
-        bGlow[i] = glow * 1.15;
+        bGlow[i] = glow * (dims[i] ? 0.8 : 1.9);
       });
       boxMesh.instanceMatrix.needsUpdate = true;
       (boxMesh.geometry.attributes.iGlow as THREE.BufferAttribute).needsUpdate = true;
@@ -407,8 +464,8 @@ export const NetworkGrowth: Look<NetworkParams> = {
         const b = k * (1 + 1.5 * Math.exp(-Math.max(age, 0) / 10));
         padCol.set([c.r * b, c.g * b, c.b * b], i * 3);
       });
-      const coreGlow = 1.6 + 0.2 * Math.sin(frame * 0.15);
-      m4.compose(v.set(0, 0.006, 0), q.identity(), sc.set(1.5, 1, 1.5));
+      const coreGlow = 3.2 + 0.3 * Math.sin(frame * 0.15);
+      m4.compose(v.set(0, 0.006, 0), q.identity(), sc.set(1.22, 1, 1.22));
       padMesh.setMatrixAt(pads.length, m4);
       padCol.set([cyan.r * coreGlow, cyan.g * coreGlow, cyan.b * coreGlow], pads.length * 3);
       padMesh.instanceMatrix.needsUpdate = true;
