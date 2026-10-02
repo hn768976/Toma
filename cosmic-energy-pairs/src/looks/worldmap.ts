@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { MapColours } from "../colourways";
-import { lin } from "../lib/color";
+import { bg, lin } from "../lib/color";
 import { FullScreenQuad, PostPipeline, PostSettings, rawMat } from "../lib/pipeline";
 import { GRID_COLS, GRID_ROWS, LandCell } from "../lib/landGrid";
 import { gauss, mulberry32 } from "../lib/random";
@@ -391,7 +391,7 @@ export class WorldMapLook implements Look {
       uCamZ: { value: 20 },
       uRes: { value: new THREE.Vector2(1, 1) },
     };
-    this.bgMat = rawMat(BG_FRAG, { uBg: { value: lin(c.bg) }, uTop: { value: lin(c.bgTop) }, uAspect: { value: 16 / 9 } });
+    this.bgMat = rawMat(BG_FRAG, { uBg: { value: bg(c.bg) }, uTop: { value: lin(c.bgTop) }, uAspect: { value: 16 / 9 } });
     const add = { blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true };
 
     // Starfield.

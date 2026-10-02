@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GalaxyColours } from "../colourways";
-import { lin } from "../lib/color";
+import { bg, lin } from "../lib/color";
 import { FullScreenQuad, PostPipeline, PostSettings, rawMat } from "../lib/pipeline";
 import { gauss, mulberry32 } from "../lib/random";
 import { FrameInfo, Look } from "../lib/Stage";
@@ -365,7 +365,7 @@ export class GalaxyLook implements Look {
       uPx: { value: 1 },
       uFocus: { value: dist },
     };
-    this.bgMat = rawMat(BG_FRAG, { uTop: { value: lin(c.bgTop) }, uBottom: { value: lin(c.bgBottom) } });
+    this.bgMat = rawMat(BG_FRAG, { uTop: { value: bg(c.bgTop) }, uBottom: { value: bg(c.bgBottom) } });
 
     const add = { blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true };
 

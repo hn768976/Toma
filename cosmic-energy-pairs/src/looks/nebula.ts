@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { NebulaColours } from "../colourways";
-import { lin } from "../lib/color";
+import { bg, lin } from "../lib/color";
 import { NOISE } from "../lib/glsl";
 import { FullScreenQuad, PostPipeline, PostSettings, rawMat } from "../lib/pipeline";
 import { mulberry32 } from "../lib/random";
@@ -226,7 +226,7 @@ export class NebulaLook implements Look {
       uDust: { value: lin(c.dust) },
       uCoreCol: { value: lin(c.core) },
     };
-    this.bgMat = rawMat(BG_FRAG, { uSpace: { value: lin(c.space) }, uColA: this.u.uColA });
+    this.bgMat = rawMat(BG_FRAG, { uSpace: { value: bg(c.space) }, uColA: this.u.uColA });
     // Premultiplied "over" onto the HDR image: out = cloud.rgb + dst·(1 − cloud.a).
     this.compMat = rawMat(
       COMPOSITE_FRAG,

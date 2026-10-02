@@ -13,10 +13,10 @@ grep -E "$FILTER" scripts/comps.txt | while read -r ID NAME FRAMES KIND; do
   SEQ="renders/seq/$NAME"
   rm -rf "$SEQ"
   START=$(date +%s)
-  npx remotion render "$ID" "$SEQ" --sequence --scale=0.5 --image-format=png --concurrency="$CONC" --log=error
+  npx remotion render "$ID" "$SEQ" --sequence --scale=0.5 --image-format=png --concurrency="$CONC" --log=error < /dev/null
   END=$(date +%s)
   echo "$ID: $FRAMES frames in $((END - START)) s (concurrency $CONC)" | tee -a renders/render-times.txt
-  ffmpeg -v error -y -framerate 30 -i "$SEQ/element-%03d.png" \
+  ffmpeg -nostdin -v error -y -framerate 30 -i "$SEQ/element-%03d.png" \
     -vf "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" \
     -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p \
     -colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv \
