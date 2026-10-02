@@ -16,6 +16,8 @@ Config.setVideoImageFormat('png');
 Config.setPixelFormat('yuv420p');
 Config.setCodec('h264');
 Config.setCrf(16);
+// Video only: no (silent) audio stream.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 // Each tab holds a WebGL context plus 4K render targets; keep tabs modest.
 Config.setConcurrency(4);

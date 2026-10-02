@@ -1,5 +1,6 @@
-// Seeded PRNG. Seeded once at module level so every Remotion worker thread
-// produces the same sequence; never call Math.random() at render time.
+// Seeded PRNG. Always create it with a fixed seed where the values are built
+// (once per composition), so every Remotion worker thread produces the same
+// sequence; never call Math.random() at render time.
 export const mulberry32 = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -11,4 +12,7 @@ export const mulberry32 = (seed: number) => {
   };
 };
 
-export const moduleRandom = mulberry32(0x5eed1234);
+/** Module-level seed for the whole project. */
+export const SEED = 0x5eed1234;
+/** A fresh generator for one consumer, derived from the module-level seed. */
+export const seeded = (salt: number) => mulberry32(SEED ^ salt);

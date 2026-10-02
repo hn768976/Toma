@@ -12,7 +12,7 @@ const PCSS_SIZE = 22;
 const PCSS_SAMPLES = 24;
 // Minimum filter radius in shadow-map texels: the extrusion is thin, so pure
 // contact-hardening would give an almost hard shadow; the studio look is soft.
-const PCSS_MIN_RADIUS = 14;
+const PCSS_MIN_RADIUS = 22;
 const pcss = `
 #define PENUMBRA_FILTER_SIZE float(${PCSS_SIZE})
 vec3 pcssRandRGB(vec2 uv) {
@@ -123,6 +123,17 @@ float gridCoverage(vec2 p, float spacing, float width) {
   return max(cov.x, cov.y);
 }
 
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5453);
+  float b = fract(sin(dot(i + vec2(1.0, 0.0), vec2(127.1, 311.7))) * 43758.5453);
+  float c = fract(sin(dot(i + vec2(0.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+  float d = fract(sin(dot(i + vec2(1.0, 1.0), vec2(127.1, 311.7))) * 43758.5453);
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
 vec3 srgbToLinear(vec3 c) {
   return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 }
@@ -133,6 +144,11 @@ void main() {
   vec3 col = uBase;
   // gentle large-scale light: a touch darker toward the camera
   col *= 1.0 - uDepthDim * smoothstep(-2.0, 8.0, p.y);
+  // soft studio unevenness: low-frequency mottling plus faint diagonal light streaks
+  float mottle = vnoise(p * 0.35) * 0.6 + vnoise(p * 0.9 + 7.3) * 0.4;
+  float streak = pow(0.5 + 0.5 * sin((p.x * 0.8 - p.y * 0.55) * 1.3 + vnoise(p * 0.2) * 3.0), 6.0);
+  col *= 1.0 + (mottle - 0.5) * 0.035 * uFade;
+  col = mix(col, vec3(1.0), streak * 0.05 * uFade);
 
   // dotted world map (lon wraps; north = -z)
   float lon = uMapOrigin.x + p.x / uUnitsPerDeg;
@@ -206,7 +222,7 @@ float viewDist(vec2 uv) {
 }
 float coc(float dist) {
   float far = smoothstep(uFocusFar, uFocusFar + uFarRange, dist);
-  float near = smoothstep(uFocusNear, uFocusNear - uNearRange, dist) * 0.5;
+  float near = smoothstep(uFocusNear, uFocusNear - uNearRange, dist) * 0.7;
   return uMaxCoc * max(far, near);
 }
 
@@ -305,7 +321,7 @@ export const addGlint = (material: THREE.MeshPhysicalMaterial, uniforms: {uGlint
           outgoingLight += vec3(1.0, 0.985, 0.96) * gb * uGlintStrength;
           // faint grey studio sheen (soft overhead reflection), stronger at grazing angles
           float fres = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
-          outgoingLight += vec3(0.93, 0.95, 1.0) * (0.11 + 0.08 * fres);
+          outgoingLight += vec3(0.93, 0.95, 1.0) * (0.09 + 0.06 * fres);
         }
         #include <opaque_fragment>`,
       );

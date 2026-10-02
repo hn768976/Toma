@@ -4,6 +4,7 @@ import {FLAGS} from '../flags/flags';
 import type {ShapeData} from '../geo/buildShape';
 import type {Row} from '../data/rows';
 import {FONT_FAMILY} from './assets';
+import {seeded} from '../lib/random';
 
 const TOP_TEX = 4096;
 
@@ -73,22 +74,33 @@ export const makeTopTexture = (row: Row, shape: ShapeData, flagImg: HTMLImageEle
     const [px, py] = toPx(left, top);
     ctx.drawImage(flagImg!, px, py, (FW / shape.w) * cw, (FH / shape.h) * ch);
   }
-  // Edge catch-light standing in for a small bevel.
-  ctx.save();
-  ctx.beginPath();
-  for (const poly of shape.polygons)
-    for (const ring of poly)
-      ring.forEach(([x, y], i) => {
-        const [px, py] = toPx(x, y);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-  ctx.clip('evenodd');
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-  ctx.lineWidth = Math.max(cw, ch) * 0.0035;
-  ctx.lineJoin = 'round';
-  ctx.stroke();
-  ctx.restore();
+  // Edge catch-light standing in for a small bevel: a thin light rim on the
+  // edges that face the key light (upper left), i.e. the part of the shape not
+  // covered by a copy of itself shifted toward the lower right.
+  const outline = (c: CanvasRenderingContext2D, dx: number, dy: number) => {
+    c.beginPath();
+    for (const poly of shape.polygons)
+      for (const ring of poly)
+        ring.forEach(([x, y], i) => {
+          const [px, py] = toPx(x, y);
+          if (i === 0) c.moveTo(px + dx, py + dy);
+          else c.lineTo(px + dx, py + dy);
+        });
+  };
+  const rim = document.createElement('canvas');
+  rim.width = cw;
+  rim.height = ch;
+  const rctx = rim.getContext('2d')!;
+  const off = Math.max(cw, ch) * 0.0028;
+  rctx.fillStyle = '#ffffff';
+  outline(rctx, 0, 0);
+  rctx.fill('evenodd');
+  rctx.globalCompositeOperation = 'destination-out';
+  outline(rctx, off, off);
+  rctx.fill('evenodd');
+  ctx.globalAlpha = 0.45;
+  ctx.drawImage(rim, 0, 0);
+  ctx.globalAlpha = 1;
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -124,10 +136,17 @@ export const makeLabelTexture = (text: string) => {
   return {tex, widthPerEm: cw / px, heightPerEm: ch / px, inkWidthPerEm: (m.actualBoundingBoxLeft + m.actualBoundingBoxRight) / px};
 };
 
-/** One texel per dot of the floor's dotted world map. */
+/**
+ * One texel per dot of the floor's dotted world map; land dots get a slight,
+ * seeded brightness variation (same seed every build, so every worker agrees).
+ */
 export const makeDotsTexture = (cols: number, rows: number, mask: string) => {
+  const rand = seeded(0xd07);
   const data = new Uint8Array(cols * rows);
-  for (let i = 0; i < data.length; i++) data[i] = mask[i] === '1' ? 255 : 0;
+  for (let i = 0; i < data.length; i++) {
+    const r = rand();
+    data[i] = mask[i] === '1' ? Math.round(255 * (0.7 + 0.3 * r)) : 0;
+  }
   const tex = new THREE.DataTexture(data, cols, rows, THREE.RedFormat, THREE.UnsignedByteType);
   tex.minFilter = THREE.NearestFilter;
   tex.magFilter = THREE.NearestFilter;

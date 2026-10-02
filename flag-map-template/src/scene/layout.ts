@@ -8,18 +8,18 @@ export const DURATION = 360;
 
 // ------------------------------------------------------------------ look settings (shared by all 38)
 export const LOOK = {
-  fov: 36, // vertical, degrees
+  fov: 24, // vertical, degrees (fairly long lens, as in the reference)
   elevationStart: 42, // camera angle above the floor at frame 0, degrees
-  elevationEnd: 62, // ... at the last frame (the drift rises slightly, as in the reference)
+  elevationEnd: 64, // ... at the last frame (the drift rises slightly, as in the reference)
   distance: 10, // camera-target distance at the start (world units)
   pushIn: 0.9, // distance multiplier reached at the last frame
-  azimuthStart: -16, // degrees; negative = camera to the left of the shape
-  azimuthEnd: -1,
+  azimuthStart: -14, // degrees; negative = camera to the left of the shape
+  azimuthEnd: 5,
   fitWidth: 0.45, // bbox <= 45% of frame width ...
   fitHeight: 0.5, // ... or 50% of frame height, whichever is tighter
   groupCenterY: 0.45, // vertical centre of shape + label (fraction of frame height from top)
   maxShapeCenterY: 0.4, // ...but the shape's own centre never sits lower than this
-  labelCapHeight: 0.046, // cap height of the label, fraction of frame height (≈5% with descenders)
+  labelCapHeight: 0.051, // cap height of the label, fraction of frame height (≈5% with descenders)
   labelGap: 0.022, // gap between shape bbox front and label, fraction of frame height
   depthRatio: 0.04, // extrusion depth, fraction of shape width
 };
@@ -137,7 +137,7 @@ export const computeLayout = (shape: ShapeData, aspect: number): Layout => {
 
   const camDist = (p: THREE.Vector3) => cam.position.distanceTo(p);
   const focusNear = camDist(new THREE.Vector3(0, 0, capBottomZ + labelHeight * 0.3)) - 0.3;
-  const focusFar = camDist(new THREE.Vector3(0, 0, -(shape.h / 2) * scale)) + 0.5;
+  const focusFar = camDist(new THREE.Vector3(0, 0, -(shape.h / 2) * scale)) + 0.15;
   return {
     scale,
     depth,
