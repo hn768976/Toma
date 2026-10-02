@@ -20,7 +20,7 @@ const STARS: Star[] = (() => {
     // mostly tiny, a few brighter
     const r = 2.0 + Math.pow(u, 8) * 5.0 + rnd() * 1.4;
     // most stars are barely there; roughly one in eight reads clearly
-    const a = 0.03 + Math.pow(rnd(), 6.0) * 0.95;
+    const a = 0.025 + Math.pow(rnd(), 9.0) * 0.95;
     const tw = rnd() < 0.18 ? 0.35 + rnd() * 0.5 : 0;
     out.push({ x, y, r, a, tw, n: 2 + Math.floor(rnd() * 10), ph: rnd() * TAU });
   };
@@ -68,7 +68,7 @@ const skyGradient = (pw: number, ph: number, v: NightSkyVersion) => {
       const u = x / pw;
       const vv = y / ph;
       // light pool at upper-left, falling off to near-black at lower-right
-      const d = Math.hypot(u * 1.0 + 0.02, (vv + 0.05) * 0.9);
+      const d = Math.hypot(u * 1.15 + 0.02, (vv + 0.05) * 0.5);
       let t = Math.min(1, Math.max(0, (d - 0.02) / 0.8));
       t = t * t * (3 - 2 * t);
       t = Math.pow(t, 0.8);
@@ -99,8 +99,8 @@ const starSprite = (rgb: string) => {
   const g = c.getContext("2d")!;
   const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, `rgba(${rgb},1)`);
-  gr.addColorStop(0.18, `rgba(${rgb},0.9)`);
-  gr.addColorStop(0.4, `rgba(${rgb},0.25)`);
+  gr.addColorStop(0.18, `rgba(${rgb},0.7)`);
+  gr.addColorStop(0.45, `rgba(${rgb},0.25)`);
   gr.addColorStop(1, `rgba(${rgb},0)`);
   g.fillStyle = gr;
   g.fillRect(0, 0, 64, 64);
@@ -166,10 +166,10 @@ export const NightSkyMeteor: React.FC<{ version: NightSkyVersion; durationOverri
           const ny = ux;
           // tail: tapering wedge, layered for a soft glow
           for (const [wdt, al] of [
-            [70, 0.05],
-            [32, 0.14],
-            [15, 0.45],
-            [7, 0.95],
+            [60, 0.05],
+            [26, 0.14],
+            [11, 0.5],
+            [5, 0.95],
           ] as const) {
             const gr = ctx.createLinearGradient(hx, hy, tx, ty);
             gr.addColorStop(0, `rgba(${head},${al * env})`);
@@ -179,16 +179,15 @@ export const NightSkyMeteor: React.FC<{ version: NightSkyVersion; durationOverri
             ctx.globalAlpha = 1;
             ctx.beginPath();
             ctx.moveTo(hx + nx * wdt, hy + ny * wdt);
-            ctx.lineTo(hx + ux * wdt * 0.6, hy + uy * wdt * 0.6);
+            ctx.quadraticCurveTo(hx + ux * wdt * 1.0, hy + uy * wdt * 1.0, hx - nx * wdt, hy - ny * wdt);
             ctx.lineTo(hx - nx * wdt, hy - ny * wdt);
             ctx.lineTo(tx, ty);
             ctx.closePath();
             ctx.fill();
           }
-          // head glow
           // wide soft haze around the streak, then the head glow
           const hz = ctx.createRadialGradient(hx - ux * len * 0.4, hy - uy * len * 0.4, 0, hx - ux * len * 0.4, hy - uy * len * 0.4, 560);
-          hz.addColorStop(0, `rgba(${tail},${0.12 * env})`);
+          hz.addColorStop(0, `rgba(${tail},${0.06 * env})`);
           hz.addColorStop(1, `rgba(${tail},0)`);
           ctx.fillStyle = hz;
           ctx.fillRect(hx - ux * len * 0.4 - 560, hy - uy * len * 0.4 - 560, 1120, 1120);

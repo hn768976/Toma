@@ -58,7 +58,7 @@ const FIELD = (() => {
 // ---------------------------------------------------------------------------
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerp3 = (a: number[], b: number[], t: number) => a.map((v, k) => v + (b[k] - v) * t);
-const CLOSE_POS = [3.4, 6.6, 4.4];
+const CLOSE_POS = [4.2, 8.4, 5.6];
 const CLOSE_TGT = [0.4, 0, -0.6];
 const WIDE_POS = [20, 60, 22];
 const WIDE_TGT = [-2, 0, -20];
@@ -196,7 +196,7 @@ export const createIconNetwork =
       bloomWeights: [0.25, 0.2, 0.14, 0.08, 0.05, 0.03],
       bloomThreshold: 0.1,
       exposure: 1.0,
-      vignette: 0.4,
+      vignette: 0.6,
       grain: 0.02,
       loop: ICON_FRAMES,
     });
@@ -321,7 +321,7 @@ export const createIconNetwork =
             c = col * (0.32 + 0.4 * fres) + col * 0.4 * smoothstep(0.18, 0.26, vLocal.y);
             if (under) c = col * (0.12 + 0.3 * fres);
           }
-          c *= 1.0 + 0.15 * vAct;
+          c *= 1.0 + 0.35 * vAct;
           c *= 1.0 - 0.75 * fogOf(vDepth);
           gl_FragColor = vec4(c * w, 1.0);
         }`,
@@ -340,7 +340,7 @@ export const createIconNetwork =
       houses.map((t) =>
         new THREE.Matrix4()
           .makeRotationY(((t.i * 7 + t.j * 3) % 8) * 0.25 - 1.0)
-          .setPosition(t.x + 0.18, 0.28, t.z + 0.12),
+          .setPosition(t.x + 0.85, 0.0, t.z + 0.6),
       ),
     );
     const houseMat = new THREE.ShaderMaterial({
@@ -378,7 +378,7 @@ export const createIconNetwork =
     haloBase.rotateX(-Math.PI / 2);
     const haloGeo = bakeInstances(
       haloBase,
-      houses.map((t) => new THREE.Matrix4().makeTranslation(t.x + 0.18, 0.01, t.z + 0.12)),
+      houses.map((t) => new THREE.Matrix4().makeTranslation(t.x + 0.85, 0.01, t.z + 0.6)),
     );
     const haloMat = new THREE.ShaderMaterial({
       uniforms: { ...post.dof, ...fog, uHalo: { value: C(v.halo) } },
@@ -474,7 +474,7 @@ export const createIconNetwork =
     for (const [a, b] of FIELD.links) {
       const A = tiles[a];
       const B = tiles[b];
-      lb.add([A.x, 0.05, A.z, B.x, 0.05, B.z], lc, 0.9, [0, 0, 0, 1]);
+      lb.add([A.x, 0.05, A.z, B.x, 0.05, B.z], lc, 1.15, [0, 0, 0, 1]);
     }
     const lineMat = makeLineMaterial(post.dof, post.view, { width: 2.2, pulseColor: C(v.active), loop: ICON_FRAMES });
     // fade links into the haze like everything else
@@ -536,9 +536,9 @@ export const createIconNetwork =
         camera.updateMatrixWorld();
         const wide = ease(Math.min(1, Math.max(0, (f - 90) / 270)));
         post.dof.uFocus.value = camera.position.distanceTo(tgt) * (1 - 0.25 * wide);
-        post.dof.uAperture.value = 20 - 14 * wide;
-        checkScale.value = 1 + 0.5 * wide;
-        lineMat.uniforms.uGain.value = 1 - 0.55 * wide;
+        post.dof.uAperture.value = 30 - 22 * wide;
+        checkScale.value = 1 + 0.15 * wide;
+        lineMat.uniforms.uGain.value = 1 - 0.8 * wide;
         fog.uFogNear.value = 25 + 30 * wide;
         fog.uFogFar.value = 140 + 110 * wide;
         post.render(scene, camera, frame);

@@ -37,12 +37,10 @@ const PANELS: Panel[] = [
 
 // bundles: from -> to (dk = period offset of the target)
 const BUNDLES: { from: number; to: number; dk: number; red: boolean }[] = [
+  // three wide fans from the hero panel's right edge
   { from: 0, to: 3, dk: 0, red: false },
   { from: 0, to: 4, dk: 0, red: true },
   { from: 0, to: 5, dk: 0, red: false },
-  { from: 1, to: 5, dk: 0, red: false },
-  { from: 1, to: 6, dk: 0, red: true },
-  { from: 2, to: 6, dk: 0, red: false },
   { from: 2, to: 7, dk: 0, red: false },
   { from: 4, to: 9, dk: 0, red: false },
   { from: 6, to: 10, dk: 0, red: true },
@@ -59,11 +57,11 @@ const cellState = (seed: number, i: number, frame: number) => {
   const step = Math.floor((frame + off) / pk) % (DATA_LOOP / pk);
   const h = hash01(seed, i, step + 11);
   const h2 = hash01(seed, i, step + 97);
-  const empty = h < 0.14 || (hash01(seed, Math.floor(i / 7), 5) < 0.1 && h < 0.6);
+  const empty = h < 0.06 || (hash01(seed, Math.floor(i / 7), 5) < 0.1 && h < 0.6);
   // glyph: favour 0 and ○ like the reference
   const glyph = h2 < 0.35 ? 0 : h2 < 0.55 ? 1 : h2 < 0.85 ? 2 : 3;
   const c = hash01(seed, i, step + 503);
-  const color = c < 0.1 ? 1 : c < 0.16 ? 2 : c < 0.42 ? 3 : 0; // 0 teal, 1 red, 2 white, 3 dim teal
+  const color = c < 0.09 ? 1 : c < 0.12 ? 2 : c < 0.4 ? 3 : 0; // 0 teal, 1 red, 2 white, 3 dim teal
   return { empty, glyph, color };
 };
 
@@ -126,9 +124,9 @@ const drawPanel = (
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       // glyphs grouped into short words with dark gaps, like rows of text
-      const wl = 3 + Math.floor(hash01(p.seed, r, 31) * 4);
+      const wl = 4 + Math.floor(hash01(p.seed, r, 31) * 5);
       const off = Math.floor(hash01(p.seed, r, 37) * 7);
-      if ((c + off) % (wl + 1) === wl || hash01(p.seed, r, 41) < 0.08) continue;
+      if ((c + off) % (wl + 1) === wl || hash01(p.seed, r, 41) < 0.04) continue;
       const s = cellState(p.seed, r * cols + c, frame);
       if (s.empty) continue;
       ctx.drawImage(atlas.canvas, s.glyph * cw, s.color * ch, cw, ch, c * cw, r * ch, cw, ch);
@@ -261,7 +259,7 @@ export const createDataPanels =
     for (const b of BUNDLES) {
       const P = PANELS[b.from];
       const Q = PANELS[b.to];
-      const n = 20 + Math.floor(rnd() * 21);
+      const n = b.from === 0 ? 34 + Math.floor(rnd() * 8) : 20 + Math.floor(rnd() * 12);
       const zs = P.z + (rnd() - 0.5) * P.d * 0.5;
       // bright node where the bundle leaves the panel
       for (const k of COPIES) dotPos.push(P.x + P.w / 2 + k * L, 0.09, zs);
@@ -287,7 +285,7 @@ export const createDataPanels =
       }
     }
     // ground data lines leading into the first-column panels
-    const strips: { x0: number; x1: number; z: number; seed: number }[] = [];
+    const strips: { x0: number; x1: number; z: number; seed: number; red: boolean }[] = [];
     for (const pi of [0, 1, 2]) {
         // (strips sit in the gap left of column A)
       const P = PANELS[pi];
@@ -295,11 +293,12 @@ export const createDataPanels =
         const z = P.z + (s - 1) * P.d * 0.28 + (rnd() - 0.5) * 0.3;
         const x1 = P.x - P.w / 2 - 0.9 - rnd() * 0.8;
         const x0 = x1 - 1.5 - rnd() * 2.5;
-        strips.push({ x0, x1, z, seed: 5000 + pi * 10 + s });
+        strips.push({ x0, x1, z, seed: 5000 + pi * 10 + s, red: pi === 0 && s === 1 });
         // short fibre from the strip end into the panel edge
         const zEnd = P.z + (s - 1) * P.d * 0.22;
         const pts = bezier([x1, 0.04, z], [x1 + 0.5, 0.04, z], [P.x - P.w / 2 - 0.4, 0.06, zEnd], [P.x - P.w / 2, 0.06, zEnd], 16);
-        const red = rnd() < 0.3;
+        // the middle strip into the hero panel is the red dashed input line
+        const red = (pi === 0 && s === 1) || rnd() < 0.2;
         for (const k of COPIES) {
           const sh = pts.map((val, j) => (j % 3 === 0 ? val + k * L : val));
           lbA.add(sh, red ? colB : colT, 0.9, [rnd(), 2, 1.2, 0.08]);
@@ -352,7 +351,7 @@ export const createDataPanels =
           for (let c = 0; c < stripCols; c++) {
             const st = cellState(s.seed, c, f);
             if (st.empty) continue;
-            sctx.drawImage(atlas.canvas, st.glyph * atlas.cw, st.color * atlas.ch, atlas.cw, atlas.ch, c * atlas.cw, i * atlas.ch, atlas.cw, atlas.ch);
+            sctx.drawImage(atlas.canvas, (s.red ? 1 : st.glyph) * atlas.cw, (s.red ? 1 : st.color) * atlas.ch, atlas.cw, atlas.ch, c * atlas.cw, i * atlas.ch, atlas.cw, atlas.ch);
           }
         });
         stripTex.needsUpdate = true;
@@ -366,7 +365,7 @@ export const createDataPanels =
         camera.updateMatrixWorld();
         focusPt.set(cx + 2.4, 0, -1.2);
         post.dof.uFocus.value = camera.position.distanceTo(focusPt);
-        post.dof.uAperture.value = 70;
+        post.dof.uAperture.value = 105;
         lineMat.uniforms.uFrame.value = f;
         post.render(scene, camera, frame);
       },

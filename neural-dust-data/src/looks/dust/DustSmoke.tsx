@@ -81,7 +81,7 @@ const SPECK = (() => {
     diam[i] = D;
     // lower alpha as discs grow so near motes don't over-brighten
     // lower alpha as discs grow so near motes don't over-brighten
-    alpha[i] = b * Math.pow(Math.min(1, d0 / D), 1.4) * (D > 24 ? 0.45 : 1);
+    alpha[i] = b * Math.pow(Math.min(1, d0 / D), 1.4) * (D > 24 ? 0.3 : 1);
   }
   return { xn0, yn0, inv, level, diam, alpha, cs, wob };
 })();
@@ -215,11 +215,15 @@ void main() {
   vec2 r = vec2(fbm(p * 2.0 + 1.4 * q + vec2(1.7, 9.2) + 0.25 * t2), fbm(p * 2.0 + 1.4 * q + vec2(8.3, 2.8) - 0.25 * t2.yx));
   // main cloud: billowing out of the lower-left, edge broken up by the warp
   vec2 wp = uv + 0.16 * q + 0.06 * r;
-  float d = length((wp - vec2(-0.02, 0.98)) * vec2(1.0, 1.25));
-  float cloud = smoothstep(0.62, 0.05, d + 0.2 * fbm(p * 1.6 + 1.2 * r));
+  float d = length((wp - vec2(-0.04, 0.95)) * vec2(1.9, 1.0));
+  // narrow, frayed plume up the left edge with a pale hot core
+  float cloud = smoothstep(0.62, 0.0, d + 0.3 * fbm(p * 2.4 + 1.6 * r));
+  cloud *= 1.0 + 0.6 * smoothstep(0.35, 0.0, d);
   float inner = 0.5 + 0.5 * smoothstep(-0.5, 0.6, fbm(p * 1.5 + 0.8 * r));
   // faint secondary haze elsewhere, with darker voids between
-  float haze = smoothstep(0.0, 0.8, fbm(p * 1.1 + 0.7 * q - 0.2 * t2)) * 0.3;
+  float haze = smoothstep(-0.3, 1.0, fbm(p * 1.1 + 0.7 * q - 0.2 * t2)) * 0.32;
+  // hazy band across the top
+  haze += smoothstep(0.35, 0.0, uv.y) * 0.18 * (0.5 + 0.5 * fbm(p * 1.8 - q));
   // a curling plume in the upper middle and a soft lit haze on the right edge
   vec2 sw = uv - vec2(0.5, 0.32) + 0.08 * r;
   float ang = atan(sw.y, sw.x * 1.4);

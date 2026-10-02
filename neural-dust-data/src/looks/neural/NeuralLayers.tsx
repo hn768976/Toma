@@ -78,7 +78,7 @@ const nodeMaterial = (dof: PostPipeline["dof"], v: NeuralVersion) =>
       uNode: { value: new THREE.Color(...hexToRgb(v.node)) },
       uEdge: { value: new THREE.Color(...hexToRgb(v.edge)) },
       uPulse: { value: new THREE.Color(...hexToRgb(v.pulse)) },
-      uHalf: { value: new THREE.Vector3(NODE / 2, NODE / 2, 0.07) },
+      uHalf: { value: new THREE.Vector3(NODE / 2, NODE / 2, NODE * 0.4) },
     },
     vertexShader: /* glsl */ `
       attribute float iFlash;
@@ -108,8 +108,8 @@ const nodeMaterial = (dof: PostPipeline["dof"], v: NeuralVersion) =>
         float edge = smoothstep(0.72, 0.98, mid);
         float fres = pow(1.0 - abs(dot(vN, vView)), 2.0);
         // hollow glass tile: dim frosted face, bright rim
-        vec3 c = uNode * (0.22 + 0.35 * fres) + uEdge * edge * 1.5;
-        c += mix(uEdge, uPulse, 0.5) * vFlash * 0.7;
+        vec3 c = uNode * (0.38 + 0.4 * fres) + uEdge * edge * 1.3;
+        c += mix(uEdge, uPulse, 0.5) * vFlash * 0.4;
         gl_FragColor = vec4(c * w, 1.0);
       }`,
     blending: THREE.AdditiveBlending,
@@ -147,7 +147,7 @@ const bgMaterial = (dof: PostPipeline["dof"], v: NeuralVersion) =>
         float w = sliceWeight(vDepth);
         if (w <= 0.0) discard;
         // large soft brightness variation + faint circuit-like grid
-        float glow = 0.9 + 0.5 * exp(-dot(vW - vec2(-4.0, 2.0), vW - vec2(-4.0, 2.0)) / 160.0);
+        float glow = 1.15 + 0.5 * exp(-dot(vW - vec2(-4.0, 2.0), vW - vec2(-4.0, 2.0)) / 160.0);
         vec3 c = uBg * glow;
         // circuit-board traces: short straight runs in random cells
         float g1 = gridLine(vW, 0.8, 0.03);
@@ -155,7 +155,7 @@ const bgMaterial = (dof: PostPipeline["dof"], v: NeuralVersion) =>
         // grid lines only in some cells, like a faint board
         vec2 cell = floor(vW / 0.8);
         float on = step(0.72, h21(cell)) * step(0.5, h21(floor(vW / 4.0) + 3.0));
-        c = mix(c, uGrid * 1.6, g1 * 0.55 * on + g2);
+        c = mix(c, uGrid * 2.0, g1 * 0.7 * on + g2);
         // tiny specks
         vec2 sc = floor(vW * 6.0);
         float sp = step(0.975, h21(sc + 17.0));
@@ -171,7 +171,7 @@ export const createNeural =
   (gl, w, h) => {
     const post = new PostPipeline(gl, w, h, {
       slices: [0, 4, 10, 20, 36],
-      bloomWeights: [0.3, 0.2, 0.12, 0.07, 0.04, 0.02],
+      bloomWeights: [0.35, 0.28, 0.2, 0.12, 0.06, 0.03],
       bloomThreshold: 0.25,
       exposure: 1.0,
       vignette: 0.35,
@@ -191,16 +191,16 @@ export const createNeural =
     // links
     const lb = new LineBuilder();
     const linkRgb = hexToRgb(version.link);
-    for (const c of NET.curves) lb.add(c.pts, linkRgb, 0.42, c.pulse);
+    for (const c of NET.curves) lb.add(c.pts, linkRgb, 0.5, c.pulse);
     const lineMat = makeLineMaterial(post.dof, post.view, {
-      width: 1.5,
+      width: 1.1,
       pulseColor: new THREE.Color(...hexToRgb(version.pulse)),
       loop: NEURAL_LOOP,
     });
     scene.add(makeLineMesh(lb.build(), lineMat));
 
     // nodes
-    const geo = new RoundedBoxGeometry(NODE, NODE, 0.14, 2, 0.03);
+    const geo = new RoundedBoxGeometry(NODE, NODE, NODE * 0.8, 2, 0.03);
     const flash = new Float32Array(NET.nodes.length);
     const flashAttr = new THREE.InstancedBufferAttribute(flash, 1);
     geo.setAttribute("iFlash", flashAttr);
@@ -217,12 +217,14 @@ export const createNeural =
       render(frame) {
         const th = (TAU * frame) / NEURAL_LOOP;
         // closed camera path, drifting along the layers
-        camera.position.set(1.2 + 1.2 * Math.sin(th), 3.9 + 0.3 * Math.sin(2 * th), 10.8 + 0.5 * Math.cos(th));
+        camera.position.set(1.2 + 1.2 * Math.sin(th), 3.9 + 0.3 * Math.sin(2 * th), 11.0 + 0.5 * Math.cos(th));
         target.set(8.4 + 0.8 * Math.sin(th + 0.6), -2.4 + 0.2 * Math.cos(2 * th), -6.5);
+        // slight roll: columns lean and the network slopes down to the right
+        camera.up.set(Math.sin(0.2), Math.cos(0.2), 0);
         camera.lookAt(target);
         camera.updateMatrixWorld();
         post.dof.uFocus.value = camera.position.distanceTo(new THREE.Vector3(7.0, 0, 0));
-        post.dof.uAperture.value = 28;
+        post.dof.uAperture.value = 18;
         lineMat.uniforms.uFrame.value = frame % NEURAL_LOOP;
 
         // node flashes: pure function of frame (time since last pulse arrival)
