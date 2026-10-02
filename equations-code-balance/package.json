@@ -1,0 +1,23 @@
+{
+  "name": "equations-code-balance",
+  "version": "1.0.0",
+  "description": "Equation Flight, AI Code Screen and Balance Screen — six Remotion compositions",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "katex": "0.16.22",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/katex": "0.16.7",
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
