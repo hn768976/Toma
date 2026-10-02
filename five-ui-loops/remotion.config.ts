@@ -16,6 +16,8 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// Previews and 4K masters carry no audio stream.
+Config.setMuted(true);
 
 // Grain-preserving x264 settings. The looks carry ~2-4% fine grain + ±1/255
 // dither against banding; default x264 settings smooth that away in deep
