@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # Two 6000x3375 PNG stills per composition (3840x2160 x 1.5625).
+# Optional args: only render compositions whose id contains one of them (e.g. NeonBadge).
+# --timeout: a single 6000px frame of the 3D looks can take well over Remotion's default
+# 30s per frame on software WebGL (SwiftShader).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p out/stills6000
+FILTER=("$@")
 while read -r id frames; do
+  if [ ${#FILTER[@]} -gt 0 ]; then
+    keep=0; for k in "${FILTER[@]}"; do [[ "$id" == *"$k"* ]] && keep=1; done
+    [ $keep = 1 ] || continue
+  fi
   for f in $frames; do
-    npx remotion still "$id" "out/stills6000/${id/-/_}_f$f.png" --frame="$f" --scale=1.5625 --log=error
+    npx remotion still "$id" "out/stills6000/${id/-/_}_f$f.png" --frame="$f" --scale=1.5625 --timeout=300000 --log=error
     echo "STILL ${id/-/_}_f$f.png"
   done
 done <<'LIST'
