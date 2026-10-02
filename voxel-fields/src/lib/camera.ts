@@ -10,6 +10,8 @@ export const CAM = {
   elevation: (38 * Math.PI) / 180,
   azimuth: (-45 * Math.PI) / 180,
   focalLength: 50,
+  near: 5,
+  far: 260,
   // Closed drift path, a couple of percent of the frame width.
   drift: 0.7,
 };

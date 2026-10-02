@@ -51,8 +51,8 @@ const Rig: React.FC = () => {
     camera.filmGauge = 35;
     camera.aspect = size.width / size.height;
     camera.setFocalLength(CAM.focalLength);
-    camera.near = 5;
-    camera.far = 260;
+    camera.near = CAM.near;
+    camera.far = CAM.far;
     camera.position.copy(position);
     camera.lookAt(target);
     camera.updateProjectionMatrix();
@@ -87,8 +87,8 @@ const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
         castShadow
         shadow-mapSize-width={SHADOW_MAP}
         shadow-mapSize-height={SHADOW_MAP}
-        shadow-bias={-0.0004}
-        shadow-normalBias={0.02}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.06}
       />
       {/* Cool sky fill. */}
       <hemisphereLight args={[palette.sky, "#9aa3ad", 1.15]} />
@@ -329,6 +329,9 @@ export const VoxelField: React.FC<VoxelFieldProps> = ({ paletteId }) => {
       width={width}
       height={height}
       dpr={dpr}
+      // near/far must be set at creation: the depth-of-field effect copies them
+      // once, when the camera is attached, and ignores later changes.
+      camera={{ near: CAM.near, far: CAM.far }}
       shadows={{ type: THREE.PCFShadowMap }}
       gl={{
         antialias: false,
