@@ -1,0 +1,31 @@
+{
+  "name": "cyber-network-streams",
+  "version": "1.0.0",
+  "description": "Cyber Flythrough, Network Hub, Light Streams, Data Burst, Fibre Strands and Big Data HUD motion graphics (Remotion, 30fps, 3840x2160).",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.4.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "pixi.js": "8.14.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "5.2.8",
+    "@fontsource/jetbrains-mono": "5.2.8",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
