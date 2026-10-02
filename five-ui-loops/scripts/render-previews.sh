@@ -24,7 +24,7 @@ for id in "${IDS[@]}"; do
     rm -rf "$dir"; mkdir -p "$dir"
     start=$(date +%s.%N)
     npx remotion render "$id" "$dir" --sequence --image-format=png --scale=0.5 \
-      --gl="$GL" --concurrency="$CONC" --log=error
+      --gl="$GL" --concurrency="$CONC" --timeout=120000 --log=error
     end=$(date +%s.%N)
     files=("$dir"/*.png); n=${#files[@]}
     echo "$id frames=$n wall=$(echo "$end - $start" | bc) conc=$CONC" | tee out/timing/$id.txt
