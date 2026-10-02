@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="22" y="22" width="56" height="56" rx="8"/>
+  <!-- pins -->
+  <path d="M36,22 V8 M50,22 V8 M64,22 V8"/>
+  <path d="M36,78 V92 M50,78 V92 M64,78 V92"/>
+  <path d="M22,36 H8 M22,50 H8 M22,64 H8"/>
+  <path d="M78,36 H92 M78,50 H92 M78,64 H92"/>
+  <!-- "AI" -->
+  <path d="M35,61 L43,39 L51,61"/>
+  <path d="M37.9,53.5 H48.1"/>
+  <path d="M63,39 V61"/>
+</svg>

@@ -1,0 +1,31 @@
+{
+  "name": "neon-circuit-icons",
+  "version": "1.0.0",
+  "description": "Neon Circuit Icons — Remotion + three.js template, 10 icons, 20s seamless loops",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.1",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "clipper-lib": "6.4.2",
+    "opentype.js": "1.3.4",
+    "postprocessing": "6.39.5",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/opentype.js": "1.3.8",
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+  <!-- back bubble with three text lines -->
+  <path d="M17,6 H49 A11,11 0 0 1 60,17 V41 A11,11 0 0 1 49,52 H28 L12,63 L15,51.8 A11,11 0 0 1 6,41 V17 A11,11 0 0 1 17,6 Z"/>
+  <path d="M17,18 H48"/>
+  <path d="M17,29 H42"/>
+  <path d="M17,40 H28"/>
+  <!-- front bubble with "AI"; knocks a gap out of the back bubble -->
+  <g data-knockout="4.5">
+    <path d="M51,38 H82 A12,12 0 0 1 94,50 V73 L95,95 L79,85 H51 A12,12 0 0 1 39,73 V50 A12,12 0 0 1 51,38 Z"/>
+  </g>
+  <path d="M51.5,74 L59.5,49 L67.5,74"/>
+  <path d="M54.6,65 H64.4"/>
+  <path d="M79,49 V74"/>
+</svg>

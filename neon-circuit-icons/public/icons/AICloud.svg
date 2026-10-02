@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+  <!-- cloud: the filled shapes are merged and only their outline is kept -->
+  <g data-outline="1" fill="#fff">
+    <circle cx="26" cy="61" r="17"/>
+    <circle cx="51" cy="42" r="24"/>
+    <circle cx="76" cy="58" r="19"/>
+    <rect x="26" y="50" width="50" height="27"/>
+  </g>
+  <!-- circuit traces ending in dots -->
+  <g stroke-width="5.5">
+    <path d="M30,46 H42 L50,38"/>
+    <path d="M20,58 H56 L62,52"/>
+    <path d="M38,67 H62"/>
+  </g>
+  <g fill="#fff" stroke="none">
+    <circle cx="54.5" cy="33.5" r="5"/>
+    <circle cx="66.5" cy="47.5" r="5"/>
+    <circle cx="67" cy="67" r="4.6"/>
+    <circle cx="33" cy="67" r="4.6"/>
+  </g>
+</svg>
+

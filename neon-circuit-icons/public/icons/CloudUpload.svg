@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+  <g data-outline="1" fill="#fff">
+    <circle cx="26" cy="55" r="17"/>
+    <circle cx="51" cy="36" r="24"/>
+    <circle cx="76" cy="52" r="19"/>
+    <rect x="26" y="44" width="50" height="27"/>
+  </g>
+  <!-- up arrow; knocks a gap out of the cloud's bottom edge -->
+  <g data-knockout="5">
+    <path d="M50,92 V48"/>
+    <path d="M36,62 L50,48 L64,62"/>
+  </g>
+</svg>
