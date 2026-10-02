@@ -110,8 +110,8 @@ const Columns: React.FC<{ palette: Palette }> = ({ palette }) => {
   const { geometry, material, info } = useMemo(() => {
     const g = new THREE.BoxGeometry(1, 1, 1);
     g.translate(0, 0.5, 0); // unit column from y = 0 to 1, stretched per instance
-    const infoArr = new Float32Array(DRAWN.length * 2);
-    const infoAttr = new THREE.InstancedBufferAttribute(infoArr, 2);
+    const infoArr = new Float32Array(DRAWN.length * 3);
+    const infoAttr = new THREE.InstancedBufferAttribute(infoArr, 3);
     infoAttr.setUsage(THREE.DynamicDrawUsage);
     g.setAttribute("aInfo", infoAttr);
     const m = makeVoxelMaterial({
@@ -160,8 +160,9 @@ const Columns: React.FC<{ palette: Palette }> = ({ palette }) => {
         mat.makeScale(1, top - base, 1);
         mat.setPosition(columnX(i), base, columnZ(j));
         m.setMatrixAt(n, mat);
-        arr[n * 2] = top;
-        arr[n * 2 + 1] = rims[k];
+        arr[n * 3] = top;
+        arr[n * 3 + 1] = rims[k];
+        arr[n * 3 + 2] = lows[k];
       }
     }
     m.instanceMatrix.needsUpdate = true;

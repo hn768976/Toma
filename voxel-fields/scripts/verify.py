@@ -179,7 +179,7 @@ def step_frames():
         subprocess.run(["ffmpeg", "-v", "error", "-y", *sum([["-i", p] for p in paths], []),
                         "-f", "lavfi", "-i", "color=black:s=1920x1080",
                         "-filter_complex", "[0][1][2][3][4][5]xstack=inputs=6:layout=0_0|w0_0|0_h0|w0_h0|0_h0+h1|w0_h0+h1,scale=1920:-1",
-                        "-update", "1", sheet], check=True)
+                        "-frames:v", "1", "-update", "1", sheet], check=True)
 
 
 # --- heights identical across palettes ----------------------------------------------

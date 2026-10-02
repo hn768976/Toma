@@ -52,11 +52,11 @@ export const makeVoxelMaterial = (o: VoxelMaterialOptions) => {
       .replace(
         "#include <common>",
         `#include <common>
-        ${o.localGrid ? "" : "attribute vec2 aInfo; // x: column top, y: rim (max top of 3x3 neighbourhood)"}
+        ${o.localGrid ? "" : "attribute vec3 aInfo; // x: column top, y: rim (max top of 3x3), z: lowest top of 3x3"}
         varying vec3 vVfWorld;
         varying vec3 vVfLocal;
         varying vec3 vVfNormal;
-        varying vec2 vVfInfo;`,
+        varying vec3 vVfInfo;`,
       )
       .replace(
         "#include <begin_vertex>",
@@ -69,7 +69,7 @@ export const makeVoxelMaterial = (o: VoxelMaterialOptions) => {
           vVfWorld = (modelMatrix * vfW).xyz;
           vVfLocal = position;
           vVfNormal = normal;
-          ${o.localGrid ? "vVfInfo = vec2(0.0);" : "vVfInfo = aInfo;"}
+          ${o.localGrid ? "vVfInfo = vec3(0.0);" : "vVfInfo = aInfo;"}
         }`,
       );
 
@@ -87,7 +87,7 @@ export const makeVoxelMaterial = (o: VoxelMaterialOptions) => {
         varying vec3 vVfWorld;
         varying vec3 vVfLocal;
         varying vec3 vVfNormal;
-        varying vec2 vVfInfo;
+        varying vec3 vVfInfo;
 
         // Coverage of a line of width w (world units) centred on whole values of x.
         float vfLine(float x, float w) {
@@ -150,7 +150,15 @@ export const makeVoxelMaterial = (o: VoxelMaterialOptions) => {
           // rim (narrow holes go dark fast) and with absolute depth.
           float v = max(smoothstep(uVoid.x, uVoid.y, vVfWorld.y),
                         uVoidRim.z * smoothstep(uVoidRim.x, uVoidRim.y, vfDepth));
-          outgoingLight = mix(outgoingLight, uDeep * 0.35, v);
+          // Walls of a hole into the void (a neighbour has fallen through): only
+          // a few cubes of them are visible, so they go to black within ~6 cubes.
+          ${
+            o.localGrid
+              ? ""
+              : `float voidNear = smoothstep(uVoid.x, uVoid.x - 8.0, vVfInfo.z);
+          v = max(v, uVoidRim.z * voidNear * smoothstep(0.5, 6.0, vfDepth));`
+          }
+          outgoingLight = mix(outgoingLight, uDeep * 0.25, v);
         }
         #include <opaque_fragment>`,
       );
