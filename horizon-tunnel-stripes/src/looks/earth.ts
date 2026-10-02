@@ -100,14 +100,14 @@ const buildRays = () => {
     base: number;
     hot: number;
   }[] = [];
-  for (let i = 0; i < 190; i++) {
+  for (let i = 0; i < 110; i++) {
     let x: number;
-    if (rng() < 0.3) x = gauss(rng) * halfW * 0.35;
+    if (rng() < 0.6) x = gauss(rng) * halfW * 0.28;
     else x = range(rng, -halfW, halfW);
     const centre = Math.exp(-Math.pow(x / (halfW * 0.38), 2));
     const yh = horizonY(x);
     const maxL = (0.8 + 0.3 * centre) * (halfH - yh + 0.3);
-    const L = maxL * (0.35 + 0.75 * Math.pow(rng(), 0.4));
+    const L = maxL * (0.15 + 0.85 * rng());
     const hot = rng() < 0.08 ? 1 : 0;
     rays.push({
       x,
@@ -172,11 +172,11 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
       float v = smoothstep(1.1, 0.25, uv.y);
       vec3 col = mix(uTop, uHorizon, v);
       // darker toward the sides
-      col *= mix(1.0, 0.35, smoothstep(0.25, 1.0, length(p * vec2(1.0, 1.4))));
+      col *= mix(1.0, 0.18, smoothstep(0.12, 0.85, length(p * vec2(1.0, 1.2))));
       // centre light column, brightest at the horizon
       float h = max(uv.y - 0.22, 0.0);
       float colW = 0.2 + h * 0.06;
-      float column = exp(-pow(p.x / colW, 2.0)) * (0.1 * exp(-h / 0.2) + 0.22 * smoothstep(0.0, 0.25, h) * exp(-h / 1.4));
+      float column = exp(-pow(p.x / colW, 2.0)) * (0.16 * exp(-h / 0.2) + 0.3 * smoothstep(0.0, 0.2, h) * exp(-h / 1.1));
       float wide = exp(-pow(p.x / 0.6, 2.0)) * 0.1;
       col += uRim * (column + wide);
       return col;
@@ -255,7 +255,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
         vec3 V = normalize(cameraPosition - vWorldPos);
         float facing = clamp(dot(N, V), 0.0, 1.0);
         float limb = 1.0 - facing;
-        vec3 col = mix(uOcean, uLand * 0.22, 0.45) * (0.9 + 0.3 * ls);
+        vec3 col = mix(uOcean, uLand * 0.2, 0.3) * (0.9 + 0.3 * ls);
         vec3 landCol = uLand * (0.3 + 0.08 * ls) + uLand * coast * 0.15;
         col = mix(col, landCol, l);
         // brighter toward the horizon, darker close to camera
@@ -285,7 +285,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
         a: [p0.x, p0.y, p0.z],
         b: [p1.x, p1.y, p1.z],
         color: rimSoft,
-        intensity: 0.32 + 0.25 * ((k * 7919) % 13) / 13,
+        intensity: 0.12 + 0.12 * ((k * 7919) % 13) / 13,
         widthA: 0.0011,
       });
     }
@@ -294,7 +294,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
   const plexDots: Dot[] = PLEXUS.pts.map((p, i) => {
     const dp = PLEXUS.dotParams[i];
     const q = p.clone().multiplyScalar(R * 1.004);
-    const bright = dp.bright > 0.9;
+    const bright = dp.bright > 0.8;
     return {
       p: [q.x, q.y, q.z],
       color: bright ? lin("#FFF2E0") : rimSoft,
@@ -327,7 +327,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
   // Warm bokeh and cyan sparkles floating in the sky.
   const bokehRng = mulberry32(0xb0e4);
   const bokeh: Dot[] = [];
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 34; i++) {
     const z = range(bokehRng, -30, -9);
     const hh = Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * -z;
     const isWarm = bokehRng() < 0.55;
@@ -335,11 +335,11 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
       p: [range(bokehRng, -hh * 1.6, hh * 1.6), range(bokehRng, -hh * 0.3, hh), z],
       color: isWarm ? lin("#FFC48A") : lin("#8FE0FF"),
       intensity: isWarm ? range(bokehRng, 0.6, 1.8) : range(bokehRng, 0.8, 2.2),
-      size: isWarm ? range(bokehRng, 0.003, 0.009) : range(bokehRng, 0.0018, 0.003),
+      size: isWarm ? range(bokehRng, 0.0018, 0.0035) : range(bokehRng, 0.0014, 0.0026),
       param: [bokehRng(), [1, 2, 3][Math.floor(bokehRng() * 3)], 0.5, 0],
     });
   }
-  scene.add(makeDots(bokeh, { dotMod: TWINKLE, uniforms: { uT }, softness: 0.85, minPx: 1.2 }));
+  scene.add(makeDots(bokeh, { dotMod: TWINKLE, uniforms: { uT }, softness: 0.45, minPx: 1.2 }));
 
   // Atmosphere: analytic ray/sphere distance gives a thin crisp rim line,
   // an inner limb glow and an outer haze.
@@ -360,7 +360,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
       float outer = x > 0.0 ? exp(-x / 0.14) * 0.55 + exp(-x / 0.6) * 0.12 : 0.0;
       float inner = x < 0.0 ? exp(x / 0.10) * 0.65 + exp(x / 0.7) * 0.22 : 0.0;
       float centre = 1.0 + 0.6 * exp(-pow(p.x / 0.35, 2.0));
-      return uRim * (line * 1.6 + outer * 0.45 + inner * 0.5) * mix(1.0, centre, 0.4);
+      return uRim * (line * 1.0 + outer * 0.6 + inner * 0.55) * (1.0 + 0.5 * smoothstep(0.3, 0.8, abs(p.x)));
     }
   `,
     { uCenter: { value: CENTER }, uR: { value: R }, uRim: { value: rim } },
@@ -402,33 +402,37 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
   rays.renderOrder = 5;
   scene.add(rays);
 
-  // Two faint dotted orbit arcs around the globe.
-  const arcDots: Dot[] = [];
-  const arcs = [
-    { r: R * 1.75, tiltX: 82, tiltZ: -12, n: 700, inten: 0.6 },
-    { r: R * 1.95, tiltX: 80, tiltZ: 14, n: 760, inten: 0.45 },
+  // Two faint dotted orbit arcs framing the sky: halves of large ellipses
+  // behind the globe, so they rise from the horizon up the left and right
+  // sides. A soft brightness pulse runs along each arc in whole cycles.
+  const arcDefs = [
+    { z: -16, a: 0.86, b: 1.5, cy: -0.55, n: 520, inten: 0.85, k: 3 },
+    { z: -20, a: 0.95, b: 1.7, cy: -0.6, n: 600, inten: 0.6, k: -2 },
   ];
-  const arcGroups: THREE.Group[] = [];
-  arcs.forEach((a) => {
-    const g = new THREE.Group();
-    g.position.copy(CENTER);
-    g.rotation.set(THREE.MathUtils.degToRad(a.tiltX), 0, THREE.MathUtils.degToRad(a.tiltZ));
-    const inner = new THREE.Group();
-    g.add(inner);
+  arcDefs.forEach((d) => {
+    const hh = Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * -d.z;
+    const hw = hh * (16 / 9);
     const dots: Dot[] = [];
-    for (let i = 0; i < a.n; i++) {
-      const th = (i / a.n) * Math.PI * 2;
+    for (let i = 0; i < d.n; i++) {
+      const th = (i / d.n) * Math.PI * 2;
       dots.push({
-        p: [Math.cos(th) * a.r, 0, Math.sin(th) * a.r],
+        p: [Math.cos(th) * d.a * hw, (d.cy + Math.sin(th) * d.b) * hh, d.z],
         color: rimSoft,
-        intensity: a.inten * (i % 7 === 0 ? 2.2 : 1),
-        size: 0.0015,
+        intensity: d.inten,
+        size: 0.0014,
+        param: [i / d.n, d.k, 0, 0],
       });
     }
-    arcDots.push(...dots);
-    inner.add(makeDots(dots, { softness: 0.5, minPx: 0.8 }));
-    scene.add(g);
-    arcGroups.push(inner);
+    scene.add(
+      makeDots(dots, {
+        softness: 0.5,
+        minPx: 0.8,
+        uniforms: { uT },
+        // gentle pulse running along the arc; whole cycles per loop
+        dotMod: `uniform float uT;
+float dotMod(vec4 p) { return 0.55 + 0.45 * sin(6.28318530718 * (p.x * 3.0 - uT * p.y)); }`,
+      }),
+    );
   });
 
   const update = (frame: number) => {
@@ -436,10 +440,6 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
     uT.value = t;
     // Exactly one full turn per loop.
     spin.rotation.y = THREE.MathUtils.degToRad(-75) + t * Math.PI * 2;
-    // Orbit arcs: one whole revolution each (dots are uniform, so this is
-    // a gentle crawl that closes the loop).
-    arcGroups[0].rotation.y = t * Math.PI * 2;
-    arcGroups[1].rotation.y = -t * Math.PI * 2;
   };
 
   return { scene, camera, update };

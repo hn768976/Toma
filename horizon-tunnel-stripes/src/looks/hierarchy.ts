@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { makeBackdrop } from "../engine/backdrop";
 import { Dot, makeDots } from "../engine/dots";
 import { makeLines, Seg } from "../engine/lines";
+import { mulberry32 } from "../engine/random";
 import { LookFactory } from "../engine/Stage";
 import { HierarchyColors } from "../versions";
 
@@ -29,7 +30,7 @@ const L3: Node[] = L2.flatMap((p, pi) =>
   L3X.map((dx, i) => ({ x: p.x + dx, z: 2.9, pop: 232 + i * 6 + pi * 3 })),
 );
 const NODES = [ROOT, ...L2, ...L3];
-const PAD = 0.62; // half size of the pad outline
+const PAD = 0.5; // half size of the pad outline
 
 const PATHS: Path[] = [
   // root -> level 2: out sideways from the pad, 90 degree turn toward camera
@@ -72,7 +73,7 @@ float lineMod(float u, vec4 p) {
   float vis = smoothstep(prog + 0.004, prog - 0.004, s);
   float head = exp(-pow((s - prog) / 0.025, 2.0)) * 3.0 * (1.0 - uDone[id]);
   float run = fract(s * p.w * 0.9 - uTime * 0.9);
-  float dots = exp(-pow((run - 0.5) / 0.035, 2.0)) * 2.2 * uDone[id];
+  float dots = exp(-pow((run - 0.5) / 0.03, 2.0)) * 1.2 * uDone[id] * step(0.5, p.w);
   return vis * (1.0 + dots) + head * step(0.0005, prog);
 }
 `;
@@ -81,7 +82,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
   const c = params.colors;
   const lineCol = new THREE.Color(c.line);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.5, 200);
+  const camera = new THREE.PerspectiveCamera(24, 16 / 9, 0.5, 300);
 
   // Studio HDRI for glossy reflections on cubes and surface.
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -107,8 +108,50 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     envMap: env,
     envMapIntensity: 0.015,
   });
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), floorMat);
+  // Soft light patches and darker diagonal bands painted into an emissive
+  // map (seeded, drawn once); DOF turns them into out-of-focus haze.
+  const hazeCanvas = document.createElement("canvas");
+  hazeCanvas.width = 512;
+  hazeCanvas.height = 512;
+  {
+    const g = hazeCanvas.getContext("2d")!;
+    const hr = mulberry32(0x4a2e);
+    g.fillStyle = "#000";
+    g.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 14; i++) {
+      const x = hr() * 512;
+      const y = hr() * 512;
+      const rad = 80 + hr() * 170;
+      const a = 0.55 + hr() * 0.45;
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, `rgba(255,255,255,${a})`);
+      gr.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 512, 512);
+    }
+    // darker diagonal streaks
+    g.globalCompositeOperation = "multiply";
+    for (let i = 0; i < 7; i++) {
+      g.save();
+      g.translate(hr() * 512, hr() * 512);
+      g.rotate(-0.7);
+      const w = 30 + hr() * 70;
+      const gr = g.createLinearGradient(0, -w, 0, w);
+      gr.addColorStop(0, "rgb(255,255,255)");
+      gr.addColorStop(0.5, `rgb(${60 + hr() * 60},${60 + hr() * 60},${60 + hr() * 60})`);
+      gr.addColorStop(1, "rgb(255,255,255)");
+      g.fillStyle = gr;
+      g.fillRect(-700, -w, 1400, 2 * w);
+      g.restore();
+    }
+  }
+  const hazeTex = new THREE.CanvasTexture(hazeCanvas);
+  hazeTex.colorSpace = THREE.SRGBColorSpace;
+  floorMat.emissive = new THREE.Color(c.surface).multiplyScalar(5.0);
+  floorMat.emissiveMap = hazeTex;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
   floor.rotation.x = -Math.PI / 2;
+  floor.rotation.z = 0.4;
   scene.add(floor);
   scene.add(new THREE.HemisphereLight(0x2a6ad0, 0x041030, 1.8));
   const patches: [number, number, number, number][] = [
@@ -123,36 +166,36 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     sp.target.position.set(tx * 0.3 + x * 0.4, 0, z + tx * 0.2);
     scene.add(sp, sp.target);
   });
-  const key = new THREE.DirectionalLight(0x5f9cff, 1.1);
+  const key = new THREE.DirectionalLight(0x5f9cff, 0.6);
   key.position.set(-4, 8, 6);
   scene.add(key);
 
   // Nodes: a glossy rounded cube over a narrower base, on a pad outline.
   const cubeMat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(c.cube),
-    roughness: 0.28,
-    metalness: 0.2,
-    clearcoat: 0.8,
-    clearcoatRoughness: 0.25,
+    roughness: 0.32,
+    metalness: 0.1,
+    clearcoat: 0.25,
+    clearcoatRoughness: 0.3,
     envMap: env,
-    envMapIntensity: 0.08,
+    envMapIntensity: 0.035,
   });
   const baseMat = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(c.cube).multiplyScalar(0.45),
+    color: new THREE.Color(c.cube).multiplyScalar(0.18),
     roughness: 0.35,
     metalness: 0.2,
     envMap: env,
-    envMapIntensity: 0.25,
+    envMapIntensity: 0.04,
   });
-  const topGeo = new RoundedBoxGeometry(0.72, 0.36, 0.72, 4, 0.07);
-  const baseGeo = new RoundedBoxGeometry(0.5, 0.28, 0.5, 3, 0.05);
+  const topGeo = new RoundedBoxGeometry(0.62, 0.62, 0.62, 4, 0.08);
+  const baseGeo = new RoundedBoxGeometry(0.86, 0.12, 0.86, 2, 0.03);
   const nodeGroups = NODES.map((n) => {
     const g = new THREE.Group();
     g.position.set(n.x, 0, n.z);
     const top = new THREE.Mesh(topGeo, cubeMat);
-    top.position.y = 0.46;
+    top.position.y = 0.12 + 0.31;
     const base = new THREE.Mesh(baseGeo, baseMat);
-    base.position.y = 0.14;
+    base.position.y = 0.06;
     g.add(top, base);
     scene.add(g);
     return g;
@@ -161,7 +204,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
   // Pad outlines (rounded squares) drawn as path segments too.
   const segs: Seg[] = [];
   const pathLen: number[] = [];
-  const addPath = (pts: [number, number][], id: number, width: number) => {
+  const addPath = (pts: [number, number][], id: number, width: number, dots = true) => {
     let total = 0;
     for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
     let acc = 0;
@@ -171,15 +214,15 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
         a: [pts[i - 1][0], Y, pts[i - 1][1]],
         b: [pts[i][0], Y, pts[i][1]],
         color: lineCol,
-        intensity: 1.5,
+        intensity: 1.1,
         widthA: width,
-        param: [acc / total, (acc + d) / total, id, total],
+        param: [acc / total, (acc + d) / total, id, dots ? total : 0],
       });
       acc += d;
     }
     pathLen[id] = total;
   };
-  PATHS.forEach((p, i) => addPath(p.pts, i, 0.035));
+  PATHS.forEach((p, i) => addPath(p.pts, i, 0.022));
   // Pads: ids 8.. (one per node), animated with the node pop.
   const padIds: number[] = [];
   NODES.forEach((n, i) => {
@@ -204,7 +247,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
       }
     });
     pts.push([n.x, n.z + h]);
-    addPath(pts, id, 0.03);
+    addPath(pts, id, 0.022, false);
   });
   const uProg = { value: new Array(24).fill(0) };
   const uDone = { value: new Array(24).fill(0) };
@@ -263,7 +306,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
   sparks.visible = false;
   scene.add(sparks);
 
-  const target = new THREE.Vector3(0, 0, 0.5);
+  const target = new THREE.Vector3(0.3, 0, 0.4);
 
   const update = (frame: number) => {
     uTime.value = frame / 30;
@@ -286,15 +329,16 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
       const id = padIds[i];
       const pk = (frame - n.pop + 4) / 22;
       uProg.value[id] = pk <= 0 ? 0 : ease(pk) * 1.0005;
-      uDone.value[id] = 0;
+      uDone.value[id] = Math.min(1, Math.max(0, (frame - n.pop - 18) / 10));
     });
 
     // Camera: ~45 degrees above, slow 25 degree orbit with slight pull back.
     const t = frame / 359;
+    // (orbit: yaw 2 -> 27 degrees, high angle, long lens)
     const e = t * t * (3 - 2 * t) * 0.6 + t * 0.4;
-    const az = THREE.MathUtils.degToRad(-14 + 25 * e);
-    const el = THREE.MathUtils.degToRad(44 - 3 * e);
-    const dist = 12.2 + 1.5 * e;
+    const az = THREE.MathUtils.degToRad(2 + 25 * e);
+    const el = THREE.MathUtils.degToRad(48 - 3 * e);
+    const dist = 18.5 + 2.2 * e;
     camera.position.set(
       target.x + Math.sin(az) * Math.cos(el) * dist,
       target.y + Math.sin(el) * dist,

@@ -16,7 +16,7 @@ import { SlatColors } from "../versions";
 export type SlatParams = { colors: SlatColors };
 
 const LOOP = 600;
-const ANGLE = THREE.MathUtils.degToRad(35);
+const ANGLE = THREE.MathUtils.degToRad(38);
 const LENGTH = 26;
 const THICK = 0.22;
 
@@ -26,11 +26,11 @@ const buildSlats = () => {
   // Cover the frame's extent perpendicular to the slats (~10 units).
   let y = -5.8;
   while (y < 5.8) {
-    const w = range(rng, 0.38, 1.0);
+    const w = rng() < 0.3 ? range(rng, 0.12, 0.25) : range(rng, 0.45, 1.15);
     const r = rng();
-    const z = r < 0.4 ? 0 : r < 0.7 ? 0.07 : r < 0.9 ? 0.14 : 0.21;
+    const z = r < 0.3 ? 0 : r < 0.6 ? 0.12 : r < 0.85 ? 0.24 : 0.38;
     // a small tilt about the long axis lifts one edge, like louvres
-    slats.push({ y: y + w / 2, w, z, bevel: range(rng, 0.02, 0.04), tilt: range(rng, 0.06, 0.16) });
+    slats.push({ y: y + w / 2, w, z, bevel: range(rng, 0.02, 0.04), tilt: range(rng, 0.08, 0.2) });
     y += w + 0.008;
   }
   const glints = [3, 7, 11, 14, 17].map((i, k) => ({
@@ -86,7 +86,7 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
 
   const mat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(c.slat),
-    roughness: 0.4,
+    roughness: 0.5,
     metalness: 0.0,
     clearcoat: 0.0,
     clearcoatRoughness: 0.35,
@@ -116,8 +116,8 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
   scene.add(sweep2);
 
   // Grazing key light with soft shadows separates the depth layers.
-  const key = new THREE.DirectionalLight(lightCol, white ? 1.8 : 0.9);
-  key.position.set(-3, 6, 4);
+  const key = new THREE.DirectionalLight(lightCol, white ? 1.8 : 1.4);
+  key.position.set(-4, 7, 2.6);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.left = -9;
@@ -126,11 +126,11 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
   key.shadow.camera.bottom = -9;
   key.shadow.camera.near = 1;
   key.shadow.camera.far = 25;
-  key.shadow.radius = 6;
+  key.shadow.radius = 14;
   key.shadow.bias = -0.0006;
   key.shadow.normalBias = 0.01;
   scene.add(key);
-  scene.add(new THREE.AmbientLight(lightCol, white ? 0.2 : 0.45));
+  scene.add(new THREE.AmbientLight(lightCol, white ? 0.2 : 1.6));
 
   // Glints travelling along a few slat edges.
   const uT = { value: 0 };
@@ -142,8 +142,8 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
       a: [-LENGTH / 2, y, z + 0.002],
       b: [LENGTH / 2, y, z + 0.002],
       color: new THREE.Color(c.glint),
-      intensity: white ? 0.9 : 1.2,
-      widthA: 0.0016,
+      intensity: white ? 0.5 : 0.4,
+      widthA: 0.0022,
       param: [g.phase, g.cycles, g.dir, 0],
     };
   });

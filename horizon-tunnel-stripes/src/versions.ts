@@ -44,8 +44,8 @@ export const EARTH_VERSIONS: Record<"Blue" | "Gold", EarthColors> = {
     rim: "#4FB8FF",
     land: "#3A78C8",
     ocean: "#05163A",
-    skyTop: "#030C24",
-    skyHorizon: "#0C3A8A",
+    skyTop: "#020818",
+    skyHorizon: "#0B3488",
     star: "#CFE6FF",
   },
   Gold: {
@@ -79,15 +79,15 @@ export const HIERARCHY_VERSIONS: Record<"Blue", HierarchyColors> = {
   Blue: {
     line: "#4FE8FF",
     surface: "#0E2A50",
-    cube: "#1F5FB0",
+    cube: "#2C6FD6",
   },
 };
 
 export const SLAT_VERSIONS: Record<"Black" | "White", SlatColors> = {
   Black: {
     slat: "#141416",
-    light: "#DDE4F0",
-    backdrop: "#050506",
+    light: "#E4E6EA",
+    backdrop: "#08080A",
     exposure: 1.0,
     grain: 0.02,
     glint: "#E8F0FF",

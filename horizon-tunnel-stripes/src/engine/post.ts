@@ -42,6 +42,9 @@ export type PostSettings = {
   vignette: number;
   samples: number;
   dof?: DofSettings;
+  // Radial zoom blur toward the frame centre (fraction of the distance to
+  // the centre that one pixel is smeared over). 0 = off.
+  radialBlur?: number;
 };
 
 const FULLSCREEN_VERT = /* glsl */ `
@@ -257,11 +260,22 @@ uniform float uDither;
 uniform float uBlackPreserve;
 uniform uint uFrame;
 uniform vec2 uRes;
+uniform float uRadial;
 in vec2 vUv;
 ${HASH_GLSL}
 ${ACES_GLSL}
 void main() {
   vec3 c = texture(tSrc, vUv).rgb;
+  if (uRadial > 0.0) {
+    vec2 toC = vUv - 0.5;
+    // strongest in the middle distance, fading at the centre and edges
+    float w = smoothstep(0.02, 0.15, length(toC)) * smoothstep(0.7, 0.3, length(toC));
+    vec3 acc = c;
+    for (int i = 1; i < 10; i++) {
+      acc += texture(tSrc, vUv - toC * uRadial * w * float(i) / 9.0).rgb;
+    }
+    c = acc / 10.0;
+  }
   vec2 t = uBloomTexel;
   vec3 bl = texture(tBloom, vUv).rgb * 4.0;
   bl += (texture(tBloom, vUv + t * vec2(-0.5, 0.0)).rgb + texture(tBloom, vUv + t * vec2(0.5, 0.0)).rgb
@@ -358,6 +372,7 @@ export class PostPipeline {
     uBlackPreserve: { value: 0 },
     uFrame: { value: 0 },
     uRes: { value: new THREE.Vector2() },
+    uRadial: { value: 0 },
   });
 
   constructor(settings: PostSettings) {
@@ -499,6 +514,7 @@ export class PostPipeline {
     const loop = Math.max(1, s.loopFrames);
     mcmp.uniforms.uFrame.value = ((frame % loop) + loop) % loop;
     mcmp.uniforms.uRes.value.set(w, h);
+    mcmp.uniforms.uRadial.value = s.radialBlur ?? 0;
     this.draw(renderer, mcmp, null);
   }
 

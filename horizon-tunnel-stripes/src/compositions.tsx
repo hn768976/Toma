@@ -54,20 +54,22 @@ const TUNNEL_POST: Record<keyof typeof TUNNEL_VERSIONS, PostSettings> = {
   Blue: {
     ...BASE_POST,
     clearColor: TUNNEL_VERSIONS.Blue.background,
-    exposure: 0.85,
-    bloomStrength: 2.2,
+    exposure: 1.0,
+    bloomStrength: 2.0,
     bloomRadius: 0.9,
-    bloomThreshold: 0.2,
-    vignette: 0.3,
+    bloomThreshold: 0.25,
+    vignette: 0.35,
+    radialBlur: 0.02,
   },
   Magenta: {
     ...BASE_POST,
     clearColor: TUNNEL_VERSIONS.Magenta.background,
-    exposure: 0.85,
-    bloomStrength: 2.2,
+    exposure: 1.0,
+    bloomStrength: 2.0,
     bloomRadius: 0.9,
-    bloomThreshold: 0.2,
-    vignette: 0.3,
+    bloomThreshold: 0.25,
+    vignette: 0.35,
+    radialBlur: 0.02,
   },
 };
 export const NeonGridTunnel: React.FC<{ version: keyof typeof TUNNEL_VERSIONS } & LoopProps> = ({
@@ -85,7 +87,7 @@ const HIERARCHY_POST: PostSettings = {
   bloomRadius: 0.7,
   bloomThreshold: 0.7,
   vignette: 0.35,
-  dof: { focus: 12.5, range: 6, maxBlur: 0.018 },
+  dof: { focus: 19.5, range: 5, maxBlur: 0.03 },
 };
 export const HierarchyNetwork: React.FC<{ version: keyof typeof HIERARCHY_VERSIONS }> = ({ version }) => {
   const params = useMemo(() => ({ colors: HIERARCHY_VERSIONS[version] }), [version]);
@@ -120,9 +122,9 @@ export const DiagonalSlats: React.FC<{ version: keyof typeof SLAT_VERSIONS } & L
 const TRAILS_POST: PostSettings = {
   ...BASE_POST,
   clearColor: "#000000",
-  bloomStrength: 1.2,
-  bloomRadius: 0.8,
-  bloomThreshold: 0.45,
+  bloomStrength: 1.8,
+  bloomRadius: 0.95,
+  bloomThreshold: 0.3,
   grain: 0,
   blackPreserve: true,
   vignette: 0,
