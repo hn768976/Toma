@@ -10,8 +10,8 @@ import type { ChipPalette } from "./palettes";
 // Board geometry, generated once at module level (seeded).
 // Board space is BW x BH units. The board is a flat plane tilted with CSS 3D.
 // ---------------------------------------------------------------------------
-const BW = 2600;
-const BH = 1900;
+const BW = 3400;
+const BH = 2700;
 const CX = BW / 2;
 const CY = BH / 2;
 
@@ -27,14 +27,16 @@ const toD = (pts: Pt[]) => pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)}
 
 // Nested rounded rectangles of the chip: [w, h, rx, stroke, brightness 0..1]
 const RINGS: [number, number, number, number, number][] = [
-  [1320, 1080, 90, 9, 0.75],
-  [1220, 990, 74, 14, 1],
-  [1000, 800, 56, 6, 0.55],
-  [880, 700, 46, 12, 0.95],
-  [700, 560, 34, 4, 0.5],
+  [1300, 1340, 100, 9, 0.75],
+  [1200, 1240, 84, 16, 1],
+  [1000, 1030, 64, 6, 0.55],
+  [880, 900, 52, 14, 0.95],
+  [700, 720, 38, 4, 0.5],
 ];
-const DIE_W = 620;
-const DIE_H = 490;
+const DIE_W = 600;
+const DIE_H = 620;
+const WALL = 7; // stacked copies that build the raised walls of the bright rings
+const WALL_STEP = 9; // board units per copy
 
 const rng = mulberry32(0xc41f);
 
@@ -85,7 +87,7 @@ for (const t of traces) t.len = lenOf(t.pts);
 
 // Filler traces and component clusters out on the board.
 const filler: Trace[] = [];
-for (let i = 0; i < 160; i++) {
+for (let i = 0; i < 120; i++) {
   let x = range(rng, 0, BW);
   let y = range(rng, 0, BH);
   if (Math.abs(x - CX) < PKG_W * 0.6 && Math.abs(y - CY) < PKG_H * 0.6) continue;
@@ -110,20 +112,20 @@ for (let i = 0; i < 160; i++) {
 // Component blocks: columns along the package's left/right, plus scattered.
 const parts: { x: number; y: number; w: number; h: number; bright: boolean }[] = [];
 for (const sx of [-1, 1]) {
-  for (let i = 0; i < 26; i++) {
-    const x = CX + sx * (PKG_W / 2 + range(rng, 70, 260));
+  for (let i = 0; i < 44; i++) {
+    const x = CX + sx * (PKG_W / 2 + range(rng, 60, 340));
     const y = CY + range(rng, -PKG_H / 2, PKG_H / 2);
     parts.push({ x, y, w: range(rng, 18, 46), h: range(rng, 10, 26), bright: rng() < 0.6 });
   }
 }
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 260; i++) {
   const x = range(rng, 60, BW - 60);
   const y = range(rng, 60, BH - 60);
   if (Math.abs(x - CX) < PKG_W * 0.55 && Math.abs(y - CY) < PKG_H * 0.55) continue;
   parts.push({ x, y, w: range(rng, 20, 60), h: range(rng, 12, 34), bright: rng() < 0.4 });
 }
 // Bright dots (become bokeh once blurred).
-const dots = Array.from({ length: 140 }, () => ({ x: range(rng, 0, BW), y: range(rng, 0, BH), r: range(rng, 5, 12) })).filter(
+const dots = Array.from({ length: 380 }, () => ({ x: range(rng, 0, BW), y: range(rng, 0, BH), r: range(rng, 6, 17) })).filter(
   (d) => !(Math.abs(d.x - CX) < PKG_W * 0.5 && Math.abs(d.y - CY) < PKG_H * 0.5),
 );
 
@@ -160,12 +162,12 @@ const Board: React.FC<{ p: ChipPalette; f: number; id: string }> = ({ p, f, id }
     <rect width={BW} height={BH} fill={`url(#bd-${id})`} />
     <g fill="none" strokeLinecap="round" strokeLinejoin="round">
       {filler.map((t, i) => (
-        <Neon key={i} d={toD(t.pts)} c={t.bright ? p.traceBright : p.trace} w={t.w} a={t.bright ? 0.7 : 0.8} />
+        <Neon key={i} d={toD(t.pts)} c={t.bright ? p.traceBright : p.trace} w={t.w * 0.8} a={t.bright ? 0.5 : 0.55} />
       ))}
       {traces.map((t, i) => (
         <Neon key={i} d={toD(t.pts)} c={t.bright ? p.traceBright : p.trace} w={t.w} a={t.bright ? 0.85 : 0.9} />
       ))}
-      {[...traces, ...filler].map((t, i) => {
+      {traces.map((t, i) => {
         const e = t.pts[t.pts.length - 1];
         return <circle key={i} cx={e[0]} cy={e[1]} r={t.pad} stroke={t.bright ? p.traceBright : p.trace} strokeWidth={t.w * 0.9} />;
       })}
@@ -174,7 +176,7 @@ const Board: React.FC<{ p: ChipPalette; f: number; id: string }> = ({ p, f, id }
       <rect key={i} x={c.x - c.w / 2} y={c.y - c.h / 2} width={c.w} height={c.h} rx={3} fill={c.bright ? p.traceBright : p.trace} fillOpacity={c.bright ? 0.85 : 0.6} />
     ))}
     {dots.map((d, i) => (
-      <circle key={i} cx={d.x} cy={d.y} r={d.r} fill={p.traceBright} fillOpacity={0.75} />
+      <circle key={i} cx={d.x} cy={d.y} r={d.r} fill={i % 3 ? p.traceBright : p.chipEdge} fillOpacity={0.85} />
     ))}
     {/* chip: nested rounded rectangles */}
     <path d={rr(RINGS[0][0], RINGS[0][1], RINGS[0][2])} fill={p.chipFill} />
@@ -183,10 +185,22 @@ const Board: React.FC<{ p: ChipPalette; f: number; id: string }> = ({ p, f, id }
     ))}
     <g fill="none">
       {RINGS.map(([w, h, r, sw, b], i) => (
-        <React.Fragment key={i}>
-          <Neon d={rr(w, h, r)} c={p.chipEdge} w={sw} a={0.45 + 0.55 * b} />
-          {b > 0.8 ? <path d={rr(w, h, r)} stroke={p.traceBright} strokeWidth={sw * 0.35} /> : null}
-        </React.Fragment>
+        b > 0.8 ? (
+          // Raised wall: stacked copies stepping toward the far side, dim at the
+          // base, bright rim with a pale specular line on top.
+          <g key={i}>
+            {Array.from({ length: WALL }, (_, k) => (
+              <path key={k} d={rr(w, h, r)} transform={`translate(0 ${-k * WALL_STEP})`} stroke={p.chipEdge} strokeWidth={sw} strokeOpacity={0.22 + (0.5 * k) / WALL} />
+            ))}
+            <g transform={`translate(0 ${-WALL * WALL_STEP})`}>
+              <Neon d={rr(w, h, r)} c={p.chipEdge} w={sw} a={1} />
+              <path d={rr(w, h, r)} stroke={p.traceBright} strokeWidth={sw * 0.4} />
+              <path d={rr(w, h, r)} stroke="#e6f2ff" strokeOpacity={0.55} strokeWidth={sw * 0.12} />
+            </g>
+          </g>
+        ) : (
+          <Neon key={i} d={rr(w, h, r)} c={p.chipEdge} w={sw} a={0.45 + 0.55 * b} />
+        )
       ))}
     </g>
     <path d={rr(DIE_W, DIE_H, 26)} fill={p.board} stroke={p.chipEdge} strokeWidth={4} strokeOpacity={0.6} />
@@ -212,12 +226,12 @@ const Board: React.FC<{ p: ChipPalette; f: number; id: string }> = ({ p, f, id }
 // chip centre. Strips overlap and fade in over the one before, so blur rises
 // smoothly. Total blurred area is about one board, not one board per level.
 // ---------------------------------------------------------------------------
-const STRIPS = 14;
+const STRIPS = 18;
 const FOCUS_Y = CY;
 const SHARP = 150; // half-height of the sharp band, board units
 const blurAt = (y: number) => {
   const d = Math.max(0, Math.abs(y - FOCUS_Y) - SHARP);
-  return Math.min(22, Math.pow(d / 760, 1.15) * 22); // 1080p px
+  return Math.min(24, Math.pow(d / 640, 1.1) * 24); // 1080p px
 };
 const STRIP_H = BH / STRIPS;
 
@@ -245,27 +259,28 @@ const Triangle: React.FC<{ p: ChipPalette; breath: number }> = ({ p, breath }) =
     <>
       <defs>
         <GlowFilter id="triGlow" base={4} gain={gain} weights={[1.2, 0.9, 0.65]} />
-        <linearGradient id="triFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={p.alert} stopOpacity={0.32} />
-          <stop offset="100%" stopColor={p.alert} stopOpacity={0.14} />
-        </linearGradient>
+        <radialGradient id="triFill" cx="50%" cy="62%" r="60%">
+          <stop offset="0%" stopColor={p.alertCore} stopOpacity={0.55} />
+          <stop offset="55%" stopColor={p.alert} stopOpacity={0.6} />
+          <stop offset="100%" stopColor={p.alert} stopOpacity={0.42} />
+        </radialGradient>
       </defs>
       {/* Reflection: flat stacked copies of the base, fading downward */}
       <g filter="url(#triGlow)" opacity={0.95}>
         {Array.from({ length: 9 }, (_, i) => {
-          const y = triBase + 18 + i * 15;
+          const y = triBase + 20 + i * 12.5;
           const w = TRI_SIDE * (1 - i * 0.012);
-          return <rect key={i} x={TRI_CX - w / 2} y={y} width={w} height={6} rx={3} fill={p.alert} opacity={(0.75 * Math.pow(0.78, i)) * (0.75 + 0.25 * breath)} />;
+          return <rect key={i} x={TRI_CX - w / 2} y={y} width={w} height={9} rx={4.5} fill={p.alert} opacity={(0.75 * Math.pow(0.78, i)) * (0.75 + 0.25 * breath)} />;
         })}
       </g>
       <path d={triPath} fill="url(#triFill)" />
       <g filter="url(#triGlow)" strokeLinejoin="round" strokeLinecap="round">
-        <path d={triPath} fill="none" stroke={p.alert} strokeWidth={20} />
-        <g stroke={p.alert} strokeWidth={34} fill="none">{mark}</g>
+        <path d={triPath} fill="none" stroke={p.alert} strokeWidth={30} />
+        <g stroke={p.alert} strokeWidth={46} fill="none">{mark}</g>
       </g>
       <g fill="none" strokeLinejoin="round" strokeLinecap="round" opacity={0.8 + 0.2 * breath}>
-        <path d={triPath} stroke={p.alertCore} strokeWidth={6} />
-        <g stroke={p.alertCore} strokeWidth={16}>{mark}</g>
+        <path d={triPath} stroke={p.alertCore} strokeWidth={9} />
+        <g stroke={p.alertCore} strokeWidth={22}>{mark}</g>
       </g>
     </>
   );
@@ -284,14 +299,14 @@ export const ChipAlert: React.FC<{ palette: ChipPalette }> = ({ palette: p }) =>
   // Triangle pulse: 5 smooth breaths per loop.
   const breath = 0.5 - 0.5 * Math.cos(2 * Math.PI * saw(f, 5));
 
-  const boardW = BW * u * 0.84;
-  const boardH = BH * u * 0.84;
+  const boardW = BW * u * 0.9;
+  const boardH = BH * u * 0.9;
   const k = boardH / BH; // px per board unit
 
   return (
     <AbsoluteFill style={{ background: p.bgEdge, overflow: "hidden" }}>
       <AbsoluteFill style={{ transform: `translate(${swayX}px, ${swayY}px) scale(${push})` }}>
-        <AbsoluteFill style={{ perspective: 1500 * u, perspectiveOrigin: `${originX}% 30%` }}>
+        <AbsoluteFill style={{ perspective: 1050 * u, perspectiveOrigin: `${originX}% 28%` }}>
           <div
             style={{
               position: "absolute",
@@ -299,7 +314,7 @@ export const ChipAlert: React.FC<{ palette: ChipPalette }> = ({ palette: p }) =>
               top: height * 0.53 - boardH / 2,
               width: boardW,
               height: boardH,
-              transform: "rotateX(34deg)",
+              transform: "rotateX(40deg)",
               transformOrigin: "50% 50%",
             }}
           >
@@ -307,7 +322,7 @@ export const ChipAlert: React.FC<{ palette: ChipPalette }> = ({ palette: p }) =>
               const y0 = i * STRIP_H;
               const y1 = y0 + STRIP_H;
               const b = blurAt(Math.abs(y0 + STRIP_H / 2 - FOCUS_Y) < Math.abs(y1 - FOCUS_Y) ? y0 + STRIP_H / 2 : y0 + STRIP_H / 2);
-              const ext = 3 * Math.max(b, blurAt(y0 - STRIP_H / 2)) / (u * 0.84) * u + 30; // board units
+              const ext = (3 * Math.max(b, blurAt(y0 - STRIP_H / 2))) / 0.9 + 30; // board units
               const fade = 40;
               const top = i === 0 ? 0 : y0 - fade - ext;
               const bottom = i === STRIPS - 1 ? BH : y1 + fade + ext;
@@ -338,8 +353,8 @@ export const ChipAlert: React.FC<{ palette: ChipPalette }> = ({ palette: p }) =>
             })}
           </div>
         </AbsoluteFill>
-        {/* Soft dark pool behind the triangle so it sits on the die */}
-        <AbsoluteFill style={{ background: `radial-gradient(ellipse 20% 26% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%)` }} />
+        {/* Red light spilling from the triangle onto the chip */}
+        <AbsoluteFill style={{ background: `radial-gradient(ellipse 30% 36% at 50% 50%, rgba(${p.alertRgb},${0.3 + 0.18 * breath}) 0%, rgba(${p.alertRgb},0.1) 55%, rgba(${p.alertRgb},0) 100%)`, mixBlendMode: "screen" }} />
         {/* Triangle: nearer to the camera, slightly more parallax */}
         <AbsoluteFill style={{ transform: `translate(${swayX * 0.3}px, ${swayY * 0.3}px)` }}>
           <svg viewBox="0 0 1920 1080" width={width} height={height} style={{ position: "absolute", overflow: "visible" }}>
@@ -348,7 +363,7 @@ export const ChipAlert: React.FC<{ palette: ChipPalette }> = ({ palette: p }) =>
         </AbsoluteFill>
       </AbsoluteFill>
       {/* Warm glow leaking into the bottom-left corner */}
-      <AbsoluteFill style={{ background: `radial-gradient(ellipse 38% 45% at 0% 100%, rgba(${p.warm},0.6) 0%, rgba(${p.warm},0.2) 38%, rgba(${p.warm},0) 75%)`, mixBlendMode: "screen" }} />
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse 42% 50% at 0% 100%, rgba(${p.warm},0.75) 0%, rgba(${p.warm},0.25) 38%, rgba(${p.warm},0) 75%)`, mixBlendMode: "screen" }} />
       <AbsoluteFill style={{ background: "radial-gradient(ellipse 80% 78% at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%)" }} />
       <Grain opacity={0.022} salt={3} />
     </AbsoluteFill>

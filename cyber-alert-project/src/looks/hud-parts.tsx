@@ -131,15 +131,15 @@ export const WarningIcon: React.FC<{ p: HudPalette; id: string; glow?: number; l
   return (
     <svg viewBox="0 0 120 120" width="100%" height="100%" style={{ overflow: "visible", display: "block" }}>
       <defs>
-        <GlowFilter id={id} base={1.6} gain={glow} weights={[1.1, 0.75, 0.45]} />
+        <GlowFilter id={id} base={1.3} gain={glow} weights={[0.9, 0.45, 0.2]} />
       </defs>
       {/* chromatic fringe */}
-      <g opacity={0.55} style={{ mixBlendMode: "screen" }}>
+      <g opacity={0.35} style={{ mixBlendMode: "screen" }}>
         <path d={triD(58.6, 60, s)} fill="none" stroke="#00e5ff" strokeWidth={3} strokeLinejoin="round" />
         <path d={triD(61.4, 60, s)} fill="none" stroke="#ff00aa" strokeWidth={3} strokeLinejoin="round" />
       </g>
       <g filter={`url(#${id})`}>
-        <path d={triD(60, 60, s)} fill={`${p.alert}2a`} stroke={p.alert} strokeWidth={6} strokeLinejoin="round" />
+        <path d={triD(60, 60, s)} fill={`${p.alert}22`} stroke={p.alert} strokeWidth={6} strokeLinejoin="round" />
         {mark(p.alert, 11)}
       </g>
       <path d={triD(60, 60, s)} fill="none" stroke={p.alertCore} strokeWidth={2} strokeLinejoin="round" opacity={0.85} />
@@ -164,13 +164,13 @@ export const popState = (f: number, start: number, len: number) => {
 };
 
 const USER = "admin_console";
-const PASS_LEN = 10;
+const PASS_LEN = 12;
 const CYCLE = 150; // 4 typing cycles per loop
 
 export const LoginBox: React.FC<{ p: HudPalette; u: number; f: number; offset: number; w: number; h: number; title: string; id: string }> = ({ p, u, f, offset, w, h, title, id }) => {
   const cf = (f + offset) % CYCLE;
   const typed = USER.slice(0, Math.max(0, Math.min(USER.length, Math.floor((cf - 12) / 3))));
-  const dots = Math.max(0, Math.min(PASS_LEN, Math.floor((cf - 58) / 4)));
+  const dots = Math.max(0, Math.min(PASS_LEN, Math.floor((cf - 58) / 3)));
   const cursorOn = Math.floor(f / 10) % 2 === 0;
   const inUser = cf < 54;
   const verifying = cf >= 98 && cf < 112;
@@ -305,7 +305,7 @@ export const Label: React.FC<{ p: HudPalette; u: number; text: string; size?: nu
 export const MiniLogin: React.FC<{ p: HudPalette; u: number; f: number; offset: number; w: number }> = ({ p, u, f, offset, w }) => {
   const cf = (f + offset) % CYCLE;
   const typed = USER.slice(0, Math.max(0, Math.min(USER.length, Math.floor((cf - 12) / 3))));
-  const dots = Math.max(0, Math.min(PASS_LEN, Math.floor((cf - 58) / 4)));
+  const dots = Math.max(0, Math.min(PASS_LEN, Math.floor((cf - 58) / 3)));
   const cursorOn = Math.floor(f / 10) % 2 === 0;
   const inUser = cf < 54;
   const fs = w * 0.06;

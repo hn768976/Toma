@@ -59,7 +59,7 @@ type Pop = { start: number; len: number; layer: number; x: number; y: number; si
 const buildPops = (): Pop[] => {
   const r = mulberry32(0x1332);
   const pops: Pop[] = [];
-  const LANES = 10;
+  const LANES = 8;
   for (let lane = 0; lane < LANES; lane++) {
     let t = Math.floor((lane / LANES) * 80);
     while (t < LOOP - 1) {
@@ -71,10 +71,10 @@ const buildPops = (): Pop[] => {
           start: t,
           len,
           layer,
-          x: range(r, -300, 1860),
+          x: range(r, -150, 1800),
           y: range(r, 60, 1020),
-          size: layer === 3 ? range(r, 110, 170) : layer === 1 ? range(r, 55, 85) : range(r, 70, 120),
-          framed: r() < 0.6,
+          size: layer === 3 ? range(r, 80, 110) : layer === 1 ? range(r, 42, 60) : range(r, 55, 85),
+          framed: r() < 0.7,
         });
       }
       t += len + Math.floor(range(r, 3, 20));

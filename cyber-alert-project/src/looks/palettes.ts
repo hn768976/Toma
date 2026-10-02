@@ -12,20 +12,22 @@ export type ChipPalette = {
   chipEdge: string;
   alert: string; // main triangle colour
   alertCore: string; // hot core of the neon stroke
+  alertRgb: string; // triangle colour as "r,g,b" for the light spill
   alertDeep: string; // dark fill inside the triangle
   warm: string; // corner glow, rgb triplet "r,g,b"
 };
 
 export const CHIP_RED: ChipPalette = {
-  bgCenter: "#061a5c",
-  bgEdge: "#01030f",
-  board: "#020826",
-  trace: "#1d4dff",
-  traceBright: "#5f93ff",
-  chipFill: "#030a2c",
-  chipEdge: "#2a62ff",
-  alert: "#ff3a1c",
-  alertCore: "#fff0e6",
+  bgCenter: "#081466",
+  bgEdge: "#01020c",
+  board: "#01041a",
+  trace: "#2446ff",
+  traceBright: "#6f9dff",
+  chipFill: "#020722",
+  chipEdge: "#3550ff",
+  alert: "#ff3d12",
+  alertCore: "#ffc65c",
+  alertRgb: "255,61,18",
   alertDeep: "rgba(120,10,0,0.35)",
   warm: "255,110,25",
 };
@@ -39,7 +41,8 @@ export const CHIP_AMBER: ChipPalette = {
   chipFill: "#01201c",
   chipEdge: "#16c9b4",
   alert: "#ffb300",
-  alertCore: "#fff6d6",
+  alertCore: "#fff0a8",
+  alertRgb: "255,179,0",
   alertDeep: "rgba(110,60,0,0.35)",
   warm: "255,140,20",
 };
@@ -66,6 +69,7 @@ export type HudPalette = {
   panel: string; // panel fill
   line: string; // panel borders, map outlines
   text: string; // code text, labels
+  textAlt: string; // second code tint (cyan cast in the blue version)
   dim: string; // secondary text
   map: string; // map dots
   field: string; // field fill
@@ -75,29 +79,31 @@ export type HudPalette = {
 };
 
 export const HUD_BLUE: HudPalette = {
-  bgCenter: "#0b2a5e",
-  bgEdge: "#020814",
+  bgCenter: "#0a1c44",
+  bgEdge: "#010309",
   panel: "rgba(14,40,90,0.55)",
-  line: "#7fb2ff",
-  text: "#cfe2ff",
+  line: "#eaf3ff",
+  text: "#d8eaff",
+  textAlt: "#7fdcf2",
   dim: "#6f93c9",
-  map: "#a9c9ff",
-  field: "rgba(4,16,40,0.85)",
-  accent: "#e8f2ff",
-  alert: "#ff2a2a",
-  alertCore: "#ffd6d0",
+  map: "#dde9ff",
+  field: "rgba(2,8,22,0.85)",
+  accent: "#ffffff",
+  alert: "#e2263c",
+  alertCore: "#ffb8bf",
 };
 
 export const HUD_GREEN: HudPalette = {
-  bgCenter: "#062612",
-  bgEdge: "#000302",
+  bgCenter: "#04200e",
+  bgEdge: "#000201",
   panel: "rgba(6,40,16,0.55)",
-  line: "#3dff7a",
+  line: "#7dffa8",
   text: "#7dffa6",
+  textAlt: "#3ce07a",
   dim: "#1f9b4a",
-  map: "#4dff86",
-  field: "rgba(0,14,4,0.88)",
-  accent: "#c8ffd9",
-  alert: "#ff2a2a",
-  alertCore: "#ffd6d0",
+  map: "#5dff92",
+  field: "rgba(0,10,3,0.9)",
+  accent: "#d4ffe2",
+  alert: "#ff2a36",
+  alertCore: "#ffc2c6",
 };
