@@ -35,9 +35,11 @@ export type Look = {
     text: boolean;
   };
   /** HDRI grade: tint, gain, and a lift toward the set colour. */
-  env: { tint: string; gain: number; ambient: string; ambientAmount: number };
+  /** peak: soft white point for HDRI highlights (0 = off). */
+  env: { tint: string; gain: number; peak: number; ambient: string; ambientAmount: number };
   light: {
     key: number;
+    keySize: number;
     fill: number;
     rim: number;
     front: number;
@@ -71,8 +73,8 @@ export const GOLD: Look = {
   bars: { near: 2, mid: 3, far: 1 },
   backdrop: { center: "#E9DCC4", edge: "#CDBB9C", corner: "#9F8D70" },
   card: { front: "goldFoil", text: false },
-  env: { tint: "#FFF1DC", gain: 1.0, ambient: "#D8C6A6", ambientAmount: 0.42 },
-  light: { key: 5, fill: 1.2, rim: 6, front: 1.6, env: 1.0, exposure: 1 },
+  env: { tint: "#FFF1DC", gain: 1.0, peak: 16, ambient: "#D8C6A6", ambientAmount: 0.5 },
+  light: { key: 3, keySize: 32, fill: 1.2, rim: 6, front: 1.8, env: 1.0, exposure: 1 },
   dof: { bokehPx1080: 34, nearGain: 1.05, farGain: 1.1, farMax: 0.42 },
   grain: 0.02,
 };
@@ -94,8 +96,8 @@ export const ROSE: Look = {
   bars: null,
   backdrop: { center: "#E9BAB4", edge: "#D9A3A0", corner: "#BE8783" },
   card: { front: "roseSatin", text: true },
-  env: { tint: "#FFE6E0", gain: 1.0, ambient: "#E2AEA8", ambientAmount: 0.4 },
-  light: { key: 5.5, fill: 2.2, rim: 5, front: 2.4, env: 1.0, exposure: 1 },
+  env: { tint: "#FFE6E0", gain: 1.0, peak: 0, ambient: "#E2AEA8", ambientAmount: 0.4 },
+  light: { key: 5.5, keySize: 22, fill: 2.2, rim: 5, front: 2.4, env: 1.0, exposure: 1 },
   dof: { bokehPx1080: 34, nearGain: 1.05, farGain: 1.1, farMax: 0.42 },
   grain: 0.02,
 };

@@ -61,7 +61,7 @@ const loadHdri = () => {
 };
 
 /**
- * Grade the studio HDRI toward each look's set: tint it, and lift its black
+ * Grade the studio HDRI toward each look's set: compress its peaks, tint it, lift its black
  * surroundings toward the backdrop colour, so the metals reflect a warm
  * beige (or pink) room instead of a dark grey one. Stored as half float.
  */
@@ -72,10 +72,15 @@ const gradeEnv = (src: DataTexture, look: Look) => {
   const amb = new Color(look.env.ambient);
   const k = look.env.ambientAmount;
   const out = new Uint16Array(w * h * 4);
+  const white = look.env.peak;
   for (let i = 0; i < w * h; i++) {
-    const r = data[i * 4] * tint.r * look.env.gain + amb.r * k;
-    const g = data[i * 4 + 1] * tint.g * look.env.gain + amb.g * k;
-    const b = data[i * 4 + 2] * tint.b * look.env.gain + amb.b * k;
+    // Soft-compress the softbox peaks (~3400 in the raw file): at the
+    // roughness of a flat ingot face they otherwise fill it with flat white.
+    const l = 0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2];
+    const c = white > 0 ? (look.env.gain * (1 + l / (white * white))) / (1 + l / white) : look.env.gain;
+    const r = data[i * 4] * tint.r * c + amb.r * k;
+    const g = data[i * 4 + 1] * tint.g * c + amb.g * k;
+    const b = data[i * 4 + 2] * tint.b * c + amb.b * k;
     out[i * 4] = DataUtils.toHalfFloat(r);
     out[i * 4 + 1] = DataUtils.toHalfFloat(g);
     out[i * 4 + 2] = DataUtils.toHalfFloat(b);

@@ -194,6 +194,7 @@ const useInstanced = (
   items: Falling[],
   geometry: BufferGeometry,
   material: MeshPhysicalMaterial,
+  roughnessOffset = 0,
 ) =>
   useMemo(() => {
     const mesh = new InstancedMesh(geometry, material, Math.max(1, items.length));
@@ -202,12 +203,12 @@ const useInstanced = (
     const rough = new Float32Array(Math.max(1, items.length));
     items.forEach((it, i) => {
       mesh.setColorAt(i, it.color);
-      rough[i] = it.roughness;
+      rough[i] = it.roughness + roughnessOffset;
     });
     geometry.setAttribute("instRough", new InstancedBufferAttribute(rough, 1));
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     return mesh;
-  }, [items, geometry, material]);
+  }, [items, geometry, material, roughnessOffset]);
 
 const _e = new Euler();
 const _q = new Quaternion();
@@ -388,14 +389,16 @@ export const Scene: React.FC<{ look: Look; assets: Assets; disable: Disable }> =
           metalness: 1,
           roughness: 0.35,
           normalMap: assets.bar?.normal ?? null,
-          normalScale: new Vector2(0.55, 0.55),
+          normalScale: new Vector2(0.9, 0.9),
           roughnessMap: assets.bar?.roughness ?? null,
         }),
       ),
     [assets],
   );
   const coinMesh = useInstanced(coins, coinGeom, coinMat);
-  const barMesh = useInstanced(bars, barGeom, barMat);
+  // Ingots have big flat faces: rougher than coins so a mirrored softbox
+  // rolls off instead of filling a face with flat white.
+  const barMesh = useInstanced(bars, barGeom, barMat, 0.16);
 
   const backdrop = useMemo(() => {
     const m = new Mesh(new PlaneGeometry(1, 1), backdropMaterial(look));
@@ -464,7 +467,7 @@ export const Scene: React.FC<{ look: Look; assets: Assets; disable: Disable }> =
       {bars.length ? <primitive object={barMesh} /> : null}
 
       {/* Soft key, upper left */}
-      <rectAreaLight position={[-40, 44, 52]} width={22} height={22} intensity={k.key} onUpdate={(l) => l.lookAt(0, 0, 0)} />
+      <rectAreaLight position={[-40, 44, 52]} width={k.keySize} height={k.keySize} intensity={k.key} onUpdate={(l) => l.lookAt(0, 0, 0)} />
       {/* Soft fill, right and a little low */}
       <rectAreaLight position={[52, -6, 44]} width={26} height={18} intensity={k.fill} onUpdate={(l) => l.lookAt(0, 0, 0)} />
       {/* Big soft panel behind/above the camera: what the card mirrors as it tilts */}
