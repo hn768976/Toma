@@ -321,6 +321,10 @@ export const MarketDashboard: React.FC<{ version: MarketVersion }> = ({ version:
             width: UW * 3,
             height: WALL_H,
             transformOrigin: `${UW * 1.5}px ${WALL_H / 2}px`,
+            // Own compositing layer: contents are rasterised flat at a fixed
+            // scale every frame and the perspective is applied when compositing,
+            // so glyph/path raster caches never depend on earlier frames.
+            willChange: "transform",
             transform: `rotateX(46deg) rotateZ(${-7 + sway}deg) translateX(${-glide + 900}px)`,
           }}
         >

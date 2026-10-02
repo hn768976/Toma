@@ -23,20 +23,22 @@ export const CircuitTree: React.FC<{ version: TreeVersion }> = ({ version: v }) 
     return { t, i, p };
   });
 
-  const traceEls = (glow: boolean) =>
+  // Glow is built from stacked translucent strokes (no CSS/SVG blur filters,
+  // which Chromium may rasterise differently depending on prior frames).
+  const traceEls = (widthK: number, opacity: number, color = v.trace) =>
     traces.map(({ t, i, p }) =>
       p <= 0 ? null : (
         <path
           key={i}
           d={t.d}
           fill="none"
-          stroke={v.trace}
-          strokeWidth={glow ? t.width * 3.2 : t.width}
+          stroke={color}
+          strokeWidth={t.width * widthK}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray={`${t.len + 2} ${t.len + 2}`}
           strokeDashoffset={(t.len + 2) * (1 - p)}
-          opacity={glow ? 0.55 : 0.95}
+          opacity={opacity}
         />
       ),
     );
@@ -58,6 +60,14 @@ export const CircuitTree: React.FC<{ version: TreeVersion }> = ({ version: v }) 
             <stop offset="0" stopColor={v.glow} stopOpacity={0.16} />
             <stop offset="1" stopColor={v.glow} stopOpacity={0} />
           </radialGradient>
+          <radialGradient id="padGlow">
+            <stop offset="0" stopColor={v.trace} stopOpacity={0.45} />
+            <stop offset="1" stopColor={v.trace} stopOpacity={0} />
+          </radialGradient>
+          <radialGradient id="padGlowPink">
+            <stop offset="0" stopColor={v.pad} stopOpacity={0.55} />
+            <stop offset="1" stopColor={v.pad} stopOpacity={0} />
+          </radialGradient>
           <linearGradient id="grassFade" x1="0" y1={H} x2="0" y2={H - 620} gradientUnits="userSpaceOnUse">
             <stop offset="0" stopColor={v.grass} stopOpacity={0.9} />
             <stop offset="1" stopColor={v.grass} stopOpacity={0} />
@@ -73,27 +83,14 @@ export const CircuitTree: React.FC<{ version: TreeVersion }> = ({ version: v }) 
         <ellipse cx={1920} cy={1150} rx={1150} ry={820} fill="url(#crown)" opacity={smooth(60, 240, f)} />
 
         {/* traces: blurred glow copy + sharp copy */}
-        <g style={{ filter: "blur(10px)" }}>{traceEls(true)}</g>
-        <g>{traceEls(false)}</g>
-        <g style={{ filter: "blur(3px)" }} opacity={0.9}>
-          {traces.map(({ t, i, p }) =>
-            p <= 0 ? null : (
-              <path
-                key={i}
-                d={t.d}
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth={t.width * 0.7}
-                strokeDasharray={`${t.len + 2} ${t.len + 2}`}
-                strokeDashoffset={(t.len + 2) * (1 - p)}
-                opacity={0.25}
-              />
-            ),
-          )}
-        </g>
+        <g>{traceEls(7, 0.07)}</g>
+        <g>{traceEls(4.2, 0.12)}</g>
+        <g>{traceEls(2.2, 0.25)}</g>
+        <g>{traceEls(1, 0.95)}</g>
+        <g>{traceEls(0.45, 0.35, "#FFFFFF")}</g>
 
         {/* light pulses running up the traces (hold section, loop-safe) */}
-        <g style={{ filter: "blur(2px)" }}>
+        <g>
           {traces.map(({ t, i }) => {
             if (!t.pulse) return null;
             const on = smooth(t.t1, t.t1 + 25, f);
@@ -102,17 +99,25 @@ export const CircuitTree: React.FC<{ version: TreeVersion }> = ({ version: v }) 
             const ph = holdPhase(f, t.pulse.period, t.pulse.off);
             const s = ph * (t.len + L) - L;
             return (
-              <path
-                key={i}
-                d={t.d}
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth={t.width * 1.4}
-                strokeLinecap="round"
-                strokeDasharray={`${L} ${t.len + L * 3}`}
-                strokeDashoffset={-s}
-                opacity={on * 0.9}
-              />
+              <g key={i}>
+                {[
+                  [4, 0.12],
+                  [2.2, 0.3],
+                  [1.1, 0.95],
+                ].map(([wk, op]) => (
+                  <path
+                    key={wk}
+                    d={t.d}
+                    fill="none"
+                    stroke="#FFFFFF"
+                    strokeWidth={t.width * wk}
+                    strokeLinecap="round"
+                    strokeDasharray={`${L} ${t.len + L * 3}`}
+                    strokeDashoffset={-s}
+                    opacity={on * op}
+                  />
+                ))}
+              </g>
             );
           })}
         </g>
@@ -130,7 +135,7 @@ export const CircuitTree: React.FC<{ version: TreeVersion }> = ({ version: v }) 
           const tw = pink ? 0.75 + 0.25 * Math.sin(TAU * 2 * holdPhase(f, HOLD) + i) : 1;
           return (
             <g key={i} opacity={a}>
-              <circle cx={t.end[0]} cy={t.end[1]} r={22} fill={pink ? v.pad : v.trace} opacity={0.25 * tw} style={{ filter: "blur(6px)" }} />
+              <circle cx={t.end[0]} cy={t.end[1]} r={30} fill={pink ? "url(#padGlowPink)" : "url(#padGlow)"} opacity={tw} />
               <circle cx={t.end[0]} cy={t.end[1]} r={9} fill={v.bgTop} stroke={pink ? v.pad : v.trace} strokeWidth={4} />
               <circle cx={t.end[0]} cy={t.end[1]} r={4} fill={pink ? v.pad : "#FFFFFF"} opacity={tw} />
             </g>

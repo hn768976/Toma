@@ -85,7 +85,24 @@ any single frame can be compared byte for byte with a separately rendered still.
 
 ## Render time per frame
 
-__TIMINGS__
+Measured in the build container: 4 vCPU, **no GPU**. WebGL ran on ANGLE →
+SwiftShader (software). Each figure is wall-clock time for the whole render
+(PNG frames, concurrency 4) divided by the frame count. The ~10 s of bundling
+and browser start-up is included.
+
+| Look | 720p measured (s/frame) | 4K measured, 8-frame sample (s/frame) | 4K full composition, same machine |
+|---|---|---|---|
+| Keyword Globe (TechBlue / BusinessGold) | 1.37 / 1.39 | ≈ 8.6 | ≈ 86 min each |
+| Circuit Tree (Blue / EcoGreen) | 0.20 / 0.21 | ≤ 1.5 (sample was dominated by start-up) | ≈ 5–15 min each |
+| Market Dashboard | 0.84 | ≈ 4.5 | ≈ 45 min |
+| Blockchain Panels | 0.89 | ≈ 9.2 | ≈ 92 min |
+| Blockchain Build (450 frames) | 0.92 | ≈ 10.8 | ≈ 81 min |
+
+The 4K rate for the three WebGL looks is about 6–8× the 720p rate (9× the
+pixels). Concurrency did not help here: every tab shares one software-GL GPU
+process, and 1 vs 4 tabs measured the same. On a machine with a real GPU and
+`--gl=angle`, expect the WebGL looks to be several times faster. The 2D looks
+scale with CPU cores.
 
 ## Adding a version (one data row)
 
@@ -144,7 +161,56 @@ python3 scripts/verify.py banding      # Step 4 pixel profiles read from the enc
 python3 scripts/verify.py contact      # Step 5 five evenly spaced frames per preview
 ```
 
-__VERIFY__
+### Results of the verification loop (720p previews)
+
+| Check | Result |
+|---|---|
+| 1. ffprobe | **PASS**, all 7: 1280×720, 30/1, h264, yuv420p, no audio. 20.000 s each, BlockchainBuild 15.000 s. |
+| 2. Loop | **PASS**, all 6 loops: frame 0 ≡ 600 (looks 1, 3, 4) and 240 ≡ 600 (look 2) are identical pixel for pixel (max diff 0). |
+| 3. Determinism | **PASS**, all 7: a cold-start frame 150 is byte-identical (md5) to frame 150 of the full render. The dashboard was also checked at frames 37 and 421, and a frame rendered from a fresh `npm install` copy matched too. |
+| 4. Banding | **PASS**: 1A, 2A, 3 and 4 were read from the encoded mp4 luma plane. The longest run of identical values in smooth glow/gradient regions is 12–23 px, below the 32 px limit. Profiles through the globe beam glow rise smoothly (68 → 246 → 77). |
+| 5. Content | **PASS**: checked on five evenly spaced frames per preview (`out/check/*-contact.png`). |
+
+### Banding check (method)
+
+Grain is about 2% and comes from a fixed hash of (x, y, frame), so a smooth
+area should never contain long runs of one value. `verify.py banding` decodes
+frame 150 of the mp4 to raw luma. It masks smooth regions (low 15×15 gradient,
+not clipped) and reports the longest identical-value run, plus raw and smoothed
+profiles across a glow or gradient. Steps would show as long flat runs and
+jumps in the smoothed profile.
+
+## Completion checklist
+
+- [x] 7 compositions, 3840×2160 / 30 fps, lengths 600 (450 for Blockchain Build)
+- [x] Built entirely in code, no MCP servers. Icons are self-drawn SVG. No logos, brands, coin names or real tickers (invented codes `IDX-01`, `SEC-A`, `FND-7`…)
+- [x] Fonts shipped (Inter, JetBrains Mono, Montserrat, OFL). Natural Earth shipped (public domain). Both load behind `delayRender`.
+- [x] 2D looks: no CSS `@keyframes` or transitions. Every value comes from `useCurrentFrame()`. The tree uses no filters; the dashboard's depth of field is a masked `backdrop-filter`, verified deterministic.
+- [x] `@remotion/three` with WebGL2 and ANGLE (`--gl=angle`). No WebGPU, no TAA.
+- [x] Dither ±1/255 after bloom (looks 1, 4, 5). 2% hash grain in all looks. No `Math.random()`.
+- [x] Loops whole-cycle and verified, frame 150 byte-identical, banding checked on the encoded mp4
+- [x] One data row per version (`src/versions.ts`)
+- [x] 720p previews and a 720p still for each composition. Two 6000×3375 stills per composition.
+- [x] Render time per frame measured at 720p, with a 4K estimate
+- [x] `npm install && npx remotion studio` works from a clean copy
+
+## Notes and fixes made during verification
+
+- **Blockchain Build:** where the glass pieces stack (corner seams), the shader
+  produced extreme HDR values. Bloom spread them into white discs. Fixed by
+  clamping each glass fragment's output. A separate bug let the board glow
+  multiply the red lights; the glow is now modulated by the trace texture only.
+- **Circuit Tree:** some canopy icons were still fading in at frame 240, so 240
+  and 600 differed. All growth now settles by frame 220. The glow used CSS
+  `filter: blur()`, which Chromium could rasterise differently depending on
+  earlier frames (frame 150 differed by up to 26/255). It is now built from
+  stacked translucent strokes and radial gradients, with no filters.
+- **Market Dashboard:** text and paths inside the perspective-transformed wall
+  could hit Chromium raster caches built at a slightly different transform
+  (≤ 2/255 on a few pixels). The wall now has its own compositing layer
+  (`will-change: transform`), so it rasterises flat at a fixed scale.
+- **Grain in 2D looks:** it is added with `plus-lighter`, so it only lifts
+  values (mean about +1%). The WebGL looks use symmetric grain.
 
 ## Licences
 

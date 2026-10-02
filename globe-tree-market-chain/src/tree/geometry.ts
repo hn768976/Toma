@@ -154,7 +154,7 @@ export const makeIcons = (v: TreeVersion): Icon[] => {
       shape: pickShape(),
       color: Math.floor(rnd() * v.canopy.length),
       rot: (rnd() - 0.5) * 50,
-      t: Math.min(GROW_END - 12, t),
+      t: Math.min(GROW_END - 20, t), // fully settled before the hold starts
       tw: { k: 1 + Math.floor(rnd() * 3), ph: rnd() * Math.PI * 2, amp: 0.25 + rnd() * 0.45 },
       drift: isDrift
         ? { period: [120, 180, 360][Math.floor(rnd() * 3)], off: Math.floor(rnd() * 360), rise: 160 + rnd() * 320, sway: 10 + rnd() * 30 }

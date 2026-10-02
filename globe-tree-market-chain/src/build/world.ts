@@ -49,7 +49,7 @@ void main(){
   float k = body + fres * 0.22 + edge + text * (0.18 + 0.3 * lit);
   k *= intensity * 0.6 * (1.0 + lit * colorMix * 0.5);
   vec3 c = col * k + vec3(1.0) * flash * (0.6 * edge + 0.25);
-  o = vec4(c, 1.0);
+  o = vec4(min(c, vec3(1.6)), 1.0);
 }`;
 
 const makePiece = (size: THREE.Vector3Tuple, v: BuildVersion, seed: number) => {
@@ -207,6 +207,7 @@ const boardMesh = (tex: THREE.Texture, v: BuildVersion) => {
       float h21(vec2 p){ p = fract(p * vec2(233.34, 851.73)); p += dot(p, p + 23.45); return fract(p.x * p.y); }
       void main(){
         vec3 c = texture(map, vW.xz / tile).rgb * 2.6;
+        float traceK = min(dot(c, vec3(0.3333)), 0.25);
         // a few red lights
         vec2 cell = floor(vW.xz / 1.7);
         float r = h21(cell);
@@ -216,7 +217,7 @@ const boardMesh = (tex: THREE.Texture, v: BuildVersion) => {
         for (int i = 0; i < 5; i++) {
           vec2 d = vW.xz - glow[i].xy;
           float dd = dot(d, d);
-          c += cLit * glow[i].z * (exp(-dd / (glow[i].w * glow[i].w)) * 0.5 + exp(-dd / (glow[i].w * glow[i].w * 9.0)) * 0.08) * (0.25 + c * 5.0);
+          c += cLit * glow[i].z * (exp(-dd / (glow[i].w * glow[i].w)) * 0.5 + exp(-dd / (glow[i].w * glow[i].w * 9.0)) * 0.08) * (0.25 + traceK * 5.0);
         }
         float fog = exp(-max(vDist - 8.0, 0.0) * 0.045);
         o = vec4(c * fog, 1.0);

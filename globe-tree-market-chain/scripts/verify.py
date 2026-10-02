@@ -95,41 +95,46 @@ def determinism(ids):
 
 
 def banding():
-    # Look for flat steps along profiles through glows/gradients in frames decoded from the mp4.
+    """Read the luma plane of frame 150 straight from the encoded mp4.
+    In smooth regions (glows, gradients: low local gradient, not clipped),
+    banding shows up as long runs of identical values. With the grain and
+    dither in place, runs stay short. FAIL if any run in a smooth region is
+    32 px or longer. Also prints sample values across one glow/gradient."""
     probes = {
-        "KeywordGlobe_TechBlue": [("row", 360), ("col", 640), ("col", 160)],
-        "CircuitTree_Blue": [("col", 200), ("row", 700), ("col", 640)],
-        "MarketDashboard": [("col", 640), ("row", 40)],
-        "BlockchainPanels_IceBlue": [("col", 640), ("row", 60)],
+        "KeywordGlobe_TechBlue": ("row", 24, 440, 840, "beam glow at the top edge"),
+        "CircuitTree_Blue": ("col", 90, 0, 560, "sky gradient"),
+        "MarketDashboard": ("col", 1270, 0, 300, "vignette / background falloff"),
+        "BlockchainPanels_IceBlue": ("col", 640, 0, 200, "far background falloff"),
     }
     ok = True
-    for name, lines in probes.items():
-        png = f"out/check/{name}-mp4-150.png"
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", f"out/previews/{name}.mp4", "-vf", "select=eq(n\\,150)", "-frames:v", "1", png], check=True)
-        img = pix(png).astype(np.float64)
-        lum = img @ np.array([0.2126, 0.7152, 0.0722])
-        for kind, idx in lines:
-            prof = lum[idx, :] if kind == "row" else lum[:, idx]
-            # smooth with a 9px box to remove grain, then look at the longest run of identical
-            # quantised values (a band) inside a region whose overall slope is non-zero.
-            k = np.ones(15) / 15
-            sm = np.convolve(prof, k, mode="valid")
-            steps = np.abs(np.diff(sm))
-            raw_runs, run = [], 1
-            q = np.round(prof)
-            for i in range(1, len(q)):
-                if q[i] == q[i - 1]:
+    for name, (kind, idx, a, b, what) in probes.items():
+        raw = f"out/check/{name}-mp4-150.y"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", f"out/previews/{name}.mp4", "-vf", "select=eq(n\\,150)",
+                        "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "gray", raw], check=True)
+        Y = np.fromfile(raw, dtype=np.uint8).reshape(720, 1280).astype(np.float64)
+        # smooth-region mask: 15x15 box-filtered gradient magnitude is small
+        from numpy.lib.stride_tricks import sliding_window_view as swv
+        pad = np.pad(Y, 7, mode="edge")
+        box = swv(pad, (15, 15)).mean(axis=(2, 3))
+        gy, gx = np.gradient(box)
+        smooth = (np.hypot(gx, gy) < 1.5) & (Y > 3) & (Y < 250)
+        longest = 0
+        for y in range(720):
+            row, m = Y[y], smooth[y]
+            run = 1
+            for x in range(1, 1280):
+                if m[x] and m[x - 1] and row[x] == row[x - 1]:
                     run += 1
+                    longest = max(longest, run)
                 else:
-                    raw_runs.append(run)
                     run = 1
-            raw_runs.append(run)
-            longest = max(raw_runs)
-            maxjump = steps.max()
-            good = longest < 24 and maxjump < 6
-            ok &= good
-            print(f"{'PASS' if good else 'FAIL'} banding {name} {kind} {idx}: longest flat run {longest}px, max smoothed step {maxjump:.2f}, range {prof.min():.0f}-{prof.max():.0f}")
-            print("    sample:", " ".join(f"{v:.0f}" for v in prof[:: max(1, len(prof) // 24)]))
+        prof = Y[idx, a:b] if kind == "row" else Y[a:b, idx]
+        good = longest < 32
+        ok &= good
+        print(f"{'PASS' if good else 'FAIL'} banding {name}: smooth-region pixels {smooth.mean()*100:.0f}%, longest identical run {longest}px (limit 32)")
+        print(f"    {what} ({kind} {idx}, {a}-{b}), every 10th px, raw luma:", " ".join(f"{v:.0f}" for v in prof[::10]))
+        sm = np.convolve(prof, np.ones(9) / 9, mode="valid")
+        print(f"    same profile, 9px-smoothed, every 10th px:", " ".join(f"{v:.1f}" for v in sm[::10]))
     return ok
 
 
