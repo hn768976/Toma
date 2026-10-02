@@ -80,14 +80,25 @@ npx remotion still ChipGrid-ShieldSweepTop out/ChipGrid_ShieldSweepTop_mid_6000.
 npx remotion still ChipGrid-ShieldSweepTop out/ChipGrid_ShieldSweepTop_1080.png --frame=300 --scale=0.5 --gl=angle
 ```
 
-Frames used for the delivered stills are listed under *Stills* below.
+`npm run render:stills` (= `scripts/render-stills.sh`) renders every
+delivered still:
+
+| Composition | 6000 × 3375 mid-spread | 6000 × 3375 end | 1080p |
+|---|---|---|---|
+| ShieldSweepTop | frame 110 | frame 440 | frame 110 |
+| AttackPullback | frame 200 | frame 440 | frame 200 |
+| AttackSpread | frame 180 | frame 440 | frame 180 |
+| ShieldRecovery | frame 150 | frame 440 | frame 150 |
+
+A 6000 × 3375 still took 97 s in the software-GL build environment.
 
 ### Quality knobs (optional)
 
-`--props='{"msaa":4,"reflectRes":1024,"shadows":true}'` overrides the
-defaults: MSAA samples on the main pass (4), floor-reflection render-target
-size (default scales with output: 512 at 1080p, 1024 at 4K, 2048 at 6000 px)
-and the key-light shadow map (on).
+`--props='{"reflectRes":1024,"shadows":true,"dof":true,"maxLum":16,"msaa":0}'`
+overrides the defaults: floor-reflection render-target size (default scales
+with output: 512 at 1080p, 1024 at 4K, 2048 at 6000 px), key-light shadow
+map (on), depth of field (on), firefly clamp (max HDR luminance 16) and MSAA
+samples (0 — anti-aliasing is FXAA; see *Why FXAA* below).
 
 ---
 
@@ -128,10 +139,14 @@ MEASURED_TIMING_PLACEHOLDER
   soft-compressed on load; the softboxes peak at ~3400 and otherwise blow out
   every glossy surface), cool overhead key with soft shadows, dim hemisphere
   fill, light haze (fog).
-- **Post:** depth of field → bloom (threshold 1.35 on HDR values, so only
-  emissive parts bloom) → **ACES filmic** tone mapping → dither + grain → sRGB.
+- **Post:** firefly clamp (caps HDR luminance at 16) → depth of field (full
+  resolution) → bloom (threshold 1.35 on HDR values, so only emissive parts
+  bloom) → **ACES filmic** tone mapping → FXAA → dither + grain → sRGB.
   DOF is mild in comp 1 and stronger in comps 2–4; the in-focus range is a
   fraction of the camera's focus distance, so it scales as cameras move.
+- **Fake glass:** `MeshPhysicalMaterial` without transmission: low base
+  opacity, alpha rising with Fresnel, and reflections/specular written
+  premultiplied so rims stay bright. Front faces only.
 - **Instancing:** one `InstancedMesh` per part (plinths, foot lines, posts,
   inner traces, walls, tops, PCB insets, frosted insets, dies, sockets, cores,
   tube glass, shields). Per-instance attributes carry switch times, so the
@@ -168,6 +183,19 @@ density of the references only 6–8 grid steps are visible from the source.
 At 8–12 frames per step the visible spread would be over in 2–3 s. The values
 were tuned so the visible spread takes 6–8 s (see the spread check below).
 
+### Why FXAA, front-face glass and full-resolution DOF
+
+The first full renders failed the one-frame flicker check (see Verification).
+Under SwiftShader three things produced isolated single-frame pops:
+multisampled (MSAA) HDR rendering left bright specks inside flat faces; lit
+double-sided glass panes sometimes flipped their facing for one frame; and
+the half-resolution DOF near field shimmered at the frame edge. The fixes:
+FXAA instead of MSAA (post-process, no texture loading, so it stays
+deterministic), glass and sockets render front faces only, DOF at full
+resolution with the bokeh retuned to keep the look, plus rougher glass and an
+HDR firefly clamp so a sub-pixel specular glint can never bloom into a blob.
+On a GPU, `--props='{"msaa":4}'` brings MSAA back if wanted.
+
 ### Determinism
 
 - No `Math.random()`, `Date.now()`, `useFrame` clock or state-driven visuals.
@@ -188,7 +216,34 @@ were tuned so the visible spread takes 6–8 s (see the spread check below).
 
 ## Verification
 
-VERIFY_PLACEHOLDER
+Run in this order; every script is in `scripts/verify/`. Full results for
+the delivered renders: `VERIFY.md` (copied from `renders/verify/SUMMARY.md`).
+
+| Step | What | How |
+|---|---|---|
+| 1 | File checks | `ffprobe -v error -show_entries stream=codec_type,width,height,r_frame_rate,pix_fmt -show_entries format=duration -of default=noprint_wrappers=1 <file>` |
+| 2 | Determinism | `scripts/verify/determinism.sh <CompositionId> 300` — cold single-frame still vs frame 300 of the full multi-threaded render, `cmp` byte for byte |
+| 3 | Spread | `npm run verify:spread` (logic: causality, front direction/speed, front shape, end state, source placement) + `scripts/verify/contact-sheets.sh <mp4>` (every 10th frame) |
+| 4 | Banding | `node scripts/verify/banding-check.mjs <mp4> 300 x,y,w,h ...` on the encoded file |
+| 5 | Content | `contact-sheets.sh` also writes five evenly spaced frames |
+| + | One-frame pops | `node scripts/verify/flicker-check.mjs <mp4> 40` (run automatically by `render:previews`) |
+
+### Banding check
+
+The frame is taken **from the encoded mp4**, saved as a PNG, and the
+analysis reads the frame's Y plane exactly as encoded (converting limited-range
+video to full-range RGB skips about every 7th code value, which would look
+like gaps). For each rectangle — dark floor areas plus a glow falloff — it
+reports code coverage between the 5th and 95th percentile, the longest and
+mean run of identical neighbouring values, and a 16-column averaged profile.
+Pass: coverage ≥ 95 %, max run ≤ 24 px, mean run ≤ 1.6 px.
+
+Control: the same frame with grain and dither blurred away, re-encoded the
+same way, **fails** every region (max runs 20–40 px, mean runs 2.3–3.3 px),
+while the delivered frames measure max runs 4–10 px and mean runs
+1.12–1.26 px. Dither is ±1/255 (triangular) and grain ±2 %, both from an
+integer hash of pixel position and frame, applied in sRGB after tone mapping
+and bloom.
 
 ---
 

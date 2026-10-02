@@ -10,7 +10,8 @@
     "build": "remotion bundle",
     "typecheck": "tsc --noEmit",
     "render:previews": "scripts/render-previews.sh",
-    "verify:spread": "esbuild scripts/verify/spread-check.ts --bundle --platform=node --format=esm --log-level=warning --outfile=renders/verify/spread-check.mjs && node renders/verify/spread-check.mjs"
+    "verify:spread": "esbuild scripts/verify/spread-check.ts --bundle --platform=node --format=esm --log-level=warning --outfile=renders/verify/spread-check.mjs && node renders/verify/spread-check.mjs",
+    "render:stills": "scripts/render-stills.sh"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",

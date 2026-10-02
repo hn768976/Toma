@@ -4,7 +4,11 @@
 //   node scripts/verify/banding-check.mjs <video.mp4> <frame> <x,y,w,h> [<x,y,w,h> ...]
 //
 // Extracts <frame> from the H.264 file with ffmpeg (saved as a PNG next to
-// the video), then for each rectangle reports, on 8-bit luma:
+// the video for viewing) and reads the frame's Y (luma) plane exactly as
+// encoded. The Y plane is used rather than the PNG's RGB because converting
+// limited-range video (16-235) to full-range RGB stretches values by
+// 255/219 and skips about every 7th code, which would look like gaps.
+// For each rectangle it reports, on the 8-bit Y values:
 //   - codes filled: share of the code values between the 5th and 95th
 //     percentile that actually occur. Banding leaves gaps (whole codes
 //     missing across a smooth area); dither + grain fill them.
@@ -33,12 +37,12 @@ const [W, H] = probe;
 const png = path.join(path.dirname(video), `${path.basename(video, ".mp4")}_banding_f${frame}.png`);
 const select = ["-vf", `select=eq(n\\,${frame})`, "-vsync", "0", "-frames:v", "1"];
 execFileSync("ffmpeg", ["-v", "error", "-y", "-i", video, ...select, png]);
-const raw = execFileSync("ffmpeg", ["-v", "error", "-i", png, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { maxBuffer: W * H * 3 + 1024 });
-
-const luma = (x, y) => {
-  const o = (y * W + x) * 3;
-  return Math.round(0.2126 * raw[o] + 0.7152 * raw[o + 1] + 0.0722 * raw[o + 2]);
-};
+const raw = execFileSync(
+  "ffmpeg",
+  ["-v", "error", "-i", video, "-vf", `select=eq(n\\,${frame}),extractplanes=y`, "-vsync", "0", "-frames:v", "1", "-f", "rawvideo", "-"],
+  { maxBuffer: W * H + 1024 },
+);
+const luma = (x, y) => raw[y * W + x];
 
 let allPass = true;
 console.log(`${path.basename(video)} frame ${frame} -> ${path.basename(png)} (${W}x${H})`);
