@@ -1,8 +1,8 @@
 import React from "react";
 import world from "../data/world.json";
-import { INTER, MONO } from "../lib/fonts";
+import { MONO } from "../lib/fonts";
 import { GlowFilter } from "../lib/Glow";
-import { LOOP, easeOutBack, osc, phase, saw } from "../lib/loop";
+import { easeOutBack, phase, saw } from "../lib/loop";
 import type { HudPalette } from "./palettes";
 
 // World map from Natural Earth 1:110m (public domain), see scripts/build-map.mjs.
@@ -34,84 +34,6 @@ export const WorldMap: React.FC<{
     {children}
   </svg>
 );
-
-// Corner-bracketed panel. All sizes in 1080p px, multiplied by u.
-export const Panel: React.FC<{
-  p: HudPalette;
-  u: number;
-  title?: string;
-  w: number;
-  h: number;
-  children?: React.ReactNode;
-  bare?: boolean;
-}> = ({ p, u, title, w, h, children, bare }) => {
-  const c = 16 * u;
-  const bw = Math.max(1, 1.4 * u);
-  const corner = (s: React.CSSProperties) => (
-    <div style={{ position: "absolute", width: c, height: c, borderColor: p.line, borderStyle: "solid", borderWidth: 0, ...s }} />
-  );
-  return (
-    <div style={{ position: "absolute", inset: 0, width: w * u, height: h * u, background: bare ? undefined : p.panel, border: `${bw * 0.6}px solid ${p.line}55` }}>
-      {corner({ left: -bw, top: -bw, borderLeftWidth: bw * 2, borderTopWidth: bw * 2 })}
-      {corner({ right: -bw, top: -bw, borderRightWidth: bw * 2, borderTopWidth: bw * 2 })}
-      {corner({ left: -bw, bottom: -bw, borderLeftWidth: bw * 2, borderBottomWidth: bw * 2 })}
-      {corner({ right: -bw, bottom: -bw, borderRightWidth: bw * 2, borderBottomWidth: bw * 2 })}
-      {title ? (
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 26 * u,
-            borderBottom: `${bw * 0.6}px solid ${p.line}66`,
-            background: `${p.line}1f`,
-            fontFamily: MONO,
-            fontWeight: 700,
-            fontSize: 13 * u,
-            letterSpacing: 2 * u,
-            lineHeight: `${26 * u}px`,
-            paddingLeft: 12 * u,
-            color: p.text,
-          }}
-        >
-          {title}
-        </div>
-      ) : null}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: title ? 26 * u : 0, overflow: "hidden" }}>{children}</div>
-    </div>
-  );
-};
-
-export const CodeScroll: React.FC<{
-  lines: string[];
-  laps: number;
-  f: number;
-  u: number;
-  color: string;
-  dim: string;
-  size?: number;
-  rows: number;
-}> = ({ lines, laps, f, u, color, dim, size = 12.5, rows }) => {
-  const L = lines.length;
-  const lh = size * 1.45;
-  const off = phase(f) * L * laps; // whole content lengths per loop
-  const base = Math.floor(off);
-  const frac = off - base;
-  return (
-    <div style={{ position: "absolute", left: 10 * u, top: (6 - frac * lh) * u, fontFamily: MONO, fontSize: size * u, lineHeight: `${lh * u}px`, whiteSpace: "pre", fontVariantLigatures: "none" }}>
-      {Array.from({ length: rows + 2 }, (_, k) => {
-        const i = (base + k) % L;
-        return (
-          <div key={k} style={{ color: i % 5 === 0 ? dim : color }}>
-            <span style={{ color: dim }}>{String(i * 4 + 100).padStart(4, "0")}  </span>
-            {lines[i]}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 // Warning triangle symbol, drawn here. `s` = side length in local units.
 const triD = (cx: number, cy: number, s: number) => {
@@ -178,70 +100,7 @@ export const popState = (f: number, start: number, len: number) => {
 
 const USER = "admin_console";
 const PASS_LEN = 12;
-const CYCLE = 150; // 4 typing cycles per loop
-
-export const LoginBox: React.FC<{ p: HudPalette; u: number; f: number; offset: number; w: number; h: number; title: string; id: string }> = ({ p, u, f, offset, w, h, title, id }) => {
-  const cf = (f + offset) % CYCLE;
-  const typed = USER.slice(0, Math.max(0, Math.min(USER.length, Math.floor((cf - 12) / 3))));
-  const dots = Math.max(0, Math.min(PASS_LEN, Math.floor((cf - 58) / 3)));
-  const cursorOn = Math.floor(f / 10) % 2 === 0;
-  const inUser = cf < 54;
-  const verifying = cf >= 98 && cf < 112;
-  const denied = cf >= 112;
-  const deniedOn = denied && Math.floor((cf - 112) / 5) % 2 === 0;
-  const field = (label: string, value: React.ReactNode, active: boolean) => (
-    <div style={{ marginTop: 14 * u }}>
-      <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 12 * u, letterSpacing: 2.5 * u, color: p.dim }}>{label}</div>
-      <div
-        style={{
-          marginTop: 6 * u,
-          height: 38 * u,
-          background: p.field,
-          border: `${Math.max(1, 1.3 * u)}px solid ${active ? p.accent : p.line}88`,
-          fontFamily: MONO,
-          fontSize: 18 * u,
-          lineHeight: `${38 * u}px`,
-          paddingLeft: 12 * u,
-          color: p.accent,
-          letterSpacing: 1 * u,
-        }}
-      >
-        {value}
-        {active && cursorOn ? <span style={{ display: "inline-block", width: 9 * u, height: 20 * u, background: p.accent, verticalAlign: "middle", marginLeft: 2 * u }} /> : null}
-      </div>
-    </div>
-  );
-  return (
-    <Panel p={p} u={u} w={w} h={h} title={title}>
-      <div style={{ position: "absolute", left: 22 * u, right: 22 * u, top: 4 * u }}>
-        {field("USERNAME", typed, inUser)}
-        {field("PASSWORD", "●".repeat(dots), !inUser && dots < PASS_LEN)}
-        <div style={{ display: "flex", alignItems: "center", marginTop: 18 * u, gap: 14 * u }}>
-          <div
-            style={{
-              padding: `${6 * u}px ${18 * u}px`,
-              border: `${Math.max(1, 1.3 * u)}px solid ${p.line}`,
-              fontFamily: MONO,
-              fontWeight: 700,
-              fontSize: 13 * u,
-              letterSpacing: 3 * u,
-              color: p.text,
-              background: `${p.line}22`,
-            }}
-          >
-            LOGIN
-          </div>
-          <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 13 * u, letterSpacing: 2 * u, color: denied ? p.alert : p.dim, opacity: denied ? (deniedOn ? 1 : 0.35) : 1 }}>
-            {denied ? "ACCESS DENIED" : verifying ? "VERIFYING" + ".".repeat(1 + (Math.floor(cf / 4) % 3)) : "AWAITING INPUT"}
-          </div>
-        </div>
-      </div>
-      <div style={{ position: "absolute", right: 14 * u, top: 6 * u, width: 40 * u, height: 40 * u, opacity: 0.75 + 0.25 * osc(f, 15) }}>
-        <WarningIcon p={p} id={`lw-${id}`} glow={0.8} />
-      </div>
-    </Panel>
-  );
-};
+const CYCLE = 120; // 5 typing cycles per loop (120 does not divide the 150-frame check spacing)
 
 /** Map panel with markers, connection arcs and documentation-range IPs. */
 const NODES: { lon: number; lat: number; ip: string }[] = [
@@ -292,26 +151,6 @@ export const ThreatMap: React.FC<{ p: HudPalette; f: number; mode: "dots" | "out
       );
     })}
   </WorldMap>
-);
-
-export const FlagFrame: React.FC<{ p: HudPalette; f: number; w: number; h: number; u: number; period: number; phaseOff: number; id: string }> = ({ p, f, w, h, u, period, phaseOff, id }) => {
-  if (LOOP % period !== 0) throw new Error("flag period must divide the loop");
-  const t = (f + phaseOff) % period;
-  const on = t < 24 && Math.floor(t / 4) % 2 === 0;
-  if (!on) return null;
-  const m = 8;
-  return (
-    <svg viewBox={`${-m} ${-m} ${w + 2 * m} ${h + 2 * m}`} style={{ position: "absolute", left: -m * u, top: -m * u, width: (w + 2 * m) * u, height: (h + 2 * m) * u, overflow: "visible" }}>
-      <defs>
-        <GlowFilter id={id} base={1.5} gain={1} />
-      </defs>
-      <rect x={-4} y={-4} width={w + 8} height={h + 8} fill="none" stroke={p.alert} strokeWidth={3} filter={`url(#${id})`} />
-    </svg>
-  );
-};
-
-export const Label: React.FC<{ p: HudPalette; u: number; text: string; size?: number; color?: string }> = ({ p, u, text, size = 22, color }) => (
-  <div style={{ fontFamily: INTER, fontWeight: 900, fontSize: size * u, letterSpacing: size * 0.12 * u, color: color ?? p.text, whiteSpace: "nowrap" }}>{text}</div>
 );
 
 /** Compact login widget: label above a field, as in the reference. */

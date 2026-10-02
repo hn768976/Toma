@@ -159,7 +159,7 @@ const renderItem = (it: Item, p: HudPalette, u: number, f: number, id: string) =
       );
     }
     case "login":
-      return <MiniLogin p={p} u={u} f={f} offset={it.seed % 150} w={it.w} />;
+      return <MiniLogin p={p} u={u} f={f} offset={it.seed % 120} w={it.w} />;
     case "map":
       return (
         <div style={{ position: "absolute", inset: 0, maskImage: "radial-gradient(ellipse 50% 50% at 50% 50%, black 55%, transparent 100%)", WebkitMaskImage: "radial-gradient(ellipse 50% 50% at 50% 50%, black 55%, transparent 100%)" }}>
