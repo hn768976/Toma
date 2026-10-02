@@ -170,7 +170,9 @@ python3 scripts/verify.py same out/seq/element-100.png out/cold_100.png
   only, never O/0/I/1, never the acronym's own characters. The pick is
   repaired until no combination of faces that neighbouring cubes show the
   camera, at any frame from the first drop until everything is still, forms
-  a 2–4 letter English word, a rude word or a known acronym.
+  a 2–4 letter English word, a rude word or a known acronym. Lookalike
+  glyphs count as the letters they resemble (a target `0` beside a `P` reads
+  "OP").
 - `src/lib/chart.ts`: per-acronym price line (seeded random-walk bridge over
   the shape, scaled to pass under the cube row) and volume-bar clusters.
 - `src/textures/paper.ts`: the 8192×4608 sheet. Paper, grid and dashed rule

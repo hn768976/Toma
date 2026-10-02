@@ -59,6 +59,11 @@ const BLOCK = new Set<string>([
 
 export type CubeFaces = string[]; // 6 chars, BoxGeometry group order
 
+// Glyphs a viewer reads as letters: a zero next to a P reads "OP".
+const LOOKALIKE: Record<string, string> = { "0": "O", "1": "I", "2": "Z", "5": "S", "8": "B" };
+const asRead = (s: string) => [...s].map((c) => LOOKALIKE[c] ?? c).join("");
+const blocked = (s: string) => BLOCK.has(s) || BLOCK.has(asRead(s));
+
 const VIS_DOT = 0.1; // a face counts as readable if it faces the camera at all
 
 export const visibleFaces = (plan: CubePlan, frame: number): number[] => {
@@ -88,7 +93,7 @@ export const findWordViolations = (plans: CubePlan[], faces: CubeFaces[]) => {
         if (vis.slice(i, j + 1).some((v) => v.length === 0)) break;
         const walk = (k: number, s: string, used: [number, number][]) => {
           if (k > j) {
-            if (used.length && BLOCK.has(s)) {
+            if (used.length && blocked(s)) {
               const key = s + used.map((u) => u.join(".")).join(",");
               if (!seen.has(key)) {
                 seen.add(key);
