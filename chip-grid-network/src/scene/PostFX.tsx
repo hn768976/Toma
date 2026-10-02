@@ -55,6 +55,27 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 }
 `;
 
+// Firefly clamp: caps HDR luminance before DOF and bloom so a single
+// extreme pixel (a sub-pixel specular glint) can never bloom into a blob.
+// Emissive parts peak around 12; the cap sits above that.
+const clampFrag = /* glsl */ `
+uniform float uMaxLum;
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec3 c = max(inputColor.rgb, vec3(0.0));
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  outputColor = vec4(l > uMaxLum ? c * (uMaxLum / l) : c, inputColor.a);
+}
+`;
+
+class ClampEffect extends Effect {
+  constructor(maxLum: number) {
+    super("ClampEffect", clampFrag, {
+      blendFunction: BlendFunction.SET,
+      uniforms: new Map<string, THREE.Uniform>([["uMaxLum", new THREE.Uniform(maxLum)]]),
+    });
+  }
+}
+
 class FinishEffect extends Effect {
   constructor() {
     super("FinishEffect", finishFrag, {
@@ -105,6 +126,7 @@ export const usePostFX = (dofSettings: DofSettings): PostFXHandle => {
     });
     const tone = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
     const finish = new FinishEffect();
+    composer.addPass(new EffectPass(camera, new ClampEffect(16)));
     composer.addPass(new EffectPass(camera, dof));
     composer.addPass(new EffectPass(camera, bloom, tone, finish));
     return { composer, dof, finish };

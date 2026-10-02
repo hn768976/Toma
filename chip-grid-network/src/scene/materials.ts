@@ -91,12 +91,14 @@ export const createGlassMaterial = (opacity: number, rimStrength: number) => {
   const m = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color("#c9d6e4"),
     metalness: 0,
-    roughness: 0.06,
+    // Not too glossy: below ~0.15 the key light's glint on the thin tubes is
+    // sub-pixel and pops on single frames (specular aliasing).
+    roughness: 0.18,
     ior: 1.5,
     specularIntensity: 1,
     envMapIntensity: 1.6,
     clearcoat: 0.6,
-    clearcoatRoughness: 0.05,
+    clearcoatRoughness: 0.16,
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,

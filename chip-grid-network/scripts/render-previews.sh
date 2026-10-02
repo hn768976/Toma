@@ -32,6 +32,7 @@ for COMP in "${COMPS[@]}"; do
     -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart \
     "$OUT/$NAME.mp4"
   END=$(date +%s)
+  node scripts/verify/flicker-check.mjs "$OUT/$NAME.mp4" 40 >> "$OUT/render.log" 2>&1 || true
   echo "[$(date -u +%T)] $COMP: done; frames $((MID - START))s ($(awk "BEGIN{printf \"%.2f\", ($MID-$START)/450}") s/frame wall), encode $((END - MID))s" >> "$OUT/render.log"
 done
 echo "ALL DONE" >> "$OUT/render.log"
