@@ -1,4 +1,6 @@
 """Banding check on a frame decoded from the encoded mp4.
+Pick segments that run ALONG gradients or glows (not across hard/soft edges,
+which legitimately change by many levels per pixel).
 Usage: banding.py frame.png "x0,y0,x1,y1" [...]   (pixel coords)
 For each segment: samples every pixel; reports
   - smoothed profile (7x7 box mean, removes grain) at 11 points,
