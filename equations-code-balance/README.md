@@ -6,7 +6,7 @@ Three looks × two versions = six compositions, all defined at **3840×2160, 30 
 |---|---|---|---|---|
 | `EquationFlight-Black` | Equation Flight | white on pure black `#000000` (screen-blend overlay) | 600 f / 20 s | **yes** |
 | `EquationFlight-Navy` | Equation Flight | pale cyan glow on deep navy | 600 f / 20 s | **yes** |
-| `AICodeScreen-Dark` | AI Code Screen | dark royal-blue editor | 600 f / 20 s | **yes** |
+| `AICodeScreen-Dark` | AI Code Screen | dark navy editor | 600 f / 20 s | **yes** |
 | `AICodeScreen-Light` | AI Code Screen | light editor | 600 f / 20 s | **yes** |
 | `BalanceScreen-Drain` | Balance Screen | 230,908.43 → **0.00** USD | 300 f / 10 s | **NO** |
 | `BalanceScreen-Grow` | Balance Screen | **0.00** → 248,560.00 USD | 300 f / 10 s | **NO** |
@@ -65,11 +65,35 @@ Balance Screen that means the start value, mid-count and the end value.
 
 ## Render time
 
-__RENDER_TIMES__
+Measured on the build machine: 4 vCPU, no GPU, Chrome Headless Shell with the SwiftShader GL
+backend, `--concurrency=4`. "s/frame" is total wall-clock time divided by frame count, so it
+includes encoding.
+
+| Look | 1080p preview: total | 1080p s/frame | 4K ÷ 1080p (single-frame test) | **4K estimate** s/frame | 4K estimate, whole clip |
+|---|---|---|---|---|---|
+| EquationFlight-Black | 3035 s / 600 f | **5.1** | ×3.8 | ~19 | ~3.2 h |
+| EquationFlight-Navy | 5092 s / 600 f | **8.5** | ×4.7 | ~40 | ~6.7 h |
+| AICodeScreen-Dark | 1185 s / 600 f | **2.0** | ×4.1 | ~8 | ~1.4 h |
+| AICodeScreen-Light | 1164 s / 600 f | **1.9** | ×4.1 | ~8 | ~1.3 h |
+| BalanceScreen-Drain | 762 s / 300 f | **2.5** | ×5.0 | ~13 | ~1.1 h |
+| BalanceScreen-Grow | 766 s / 300 f | **2.6** | ×5.0 | ~13 | ~1.1 h |
+
+The 4K ratio comes from rendering frame 200 as a still at `--scale=0.5` and at `--scale=1` and
+subtracting about 4 s of browser start-up from each. It is an estimate: a machine with more cores
+or a real GPU will be much faster. Look 1 is the heaviest, because of its six blurred depth bands
+and the SVG glow on the navy version. The CSS blur and SVG filter cost scales with pixel count.
 
 ## Motion blur
 
-__MOTION_BLUR__
+**Motion blur is OFF.** `@remotion/motion-blur` is not installed and not used.
+
+`<CameraMotionBlur>` renders N sub-frames per frame, so it multiplies render time by N. At 4–6
+samples, Look 1 would cost about 20–34 s/frame (black) or 34–51 s/frame (navy) at 1080p, and
+roughly 4× that at 4K. That is about 1–2 days of CPU time per 4K clip on this machine. This is an
+estimate from the measured times above, not a separate measurement.
+
+The sense of speed comes from deterministic speed streaks: faint dust motes drawn from their
+current depth to a slightly further depth, so they smear along the direction of travel.
 
 ---
 
@@ -78,7 +102,7 @@ __MOTION_BLUR__
 ### Equation Flight
 * `src/equation-flight/formulas.ts`: the formula list (KaTeX syntax).
 * `src/equation-flight/field.ts`: the seeded field. One block of depth `D = 3700` holds 80 planes:
-  66 "chalkboard lines" of one to four formulas each, plus 14 hand-drawn graphs (bell curves,
+  66 "chalkboard lines" of one to four formulas each, turned like the walls, ceiling and floor of a tunnel, plus 14 hand-drawn graphs (bell curves,
   parabolas, sine curves, construction triangles, line fits). The block is repeated **3×** along the
   view axis, giving 240 planes. The camera travels **exactly `D` in 600 frames**, so frame 600 is
   identical to frame 0.
@@ -103,9 +127,9 @@ __MOTION_BLUR__
   highlighter.
 * The code is one fixed block of lines repeated. It scrolls **exactly one block height per 600
   frames**, and line numbers repeat with the block, so the loop closes.
-* Particle sphere: a seeded Fibonacci lattice of 1,500 points, one full turn per loop, drawn as 2D
+* Particle sphere: a seeded Fibonacci lattice of 2,600 points, one full turn per loop, drawn as 2D
   dots. Nearer dots are larger and brighter.
-* The `AI` mark is upright plain sans (Inter SemiBold, capitals) with a cyan → violet → pink
+* The `AI` mark is upright plain sans (Inter SemiBold, capitals) with a violet → cyan
   gradient and the stacked glow.
 * Prompt bar: `Type your prompt`, with a cursor that blinks 20 times per loop (15 frames on,
   15 off), computed from the frame.
@@ -153,11 +177,34 @@ __MOTION_BLUR__
 
 ## Verification
 
-__VERIFICATION__
+All checks below were run on the **encoded mp4 files** (and on PNG frames for the byte-level
+tests). The script is `python3 scripts/verify_previews.py out/previews`.
+
+| Step | Check | Result |
+|---|---|---|
+| 1 | 1920×1080, 30/1, h264, yuv420p, 20.0 s / 10.0 s, no audio stream | **PASS** for all six |
+| 1 | EquationFlight_Black empty areas are exactly 0,0,0 after decoding | **PASS**: the darkest 2% of pixels are 0 in frames 0, 150, 300, 450 and 599 (28–38% of each frame is exactly 0,0,0) |
+| 3 | Loop: frame 600 = frame 0 (601-frame test composition) | **PASS**: PNGs byte-identical for all four loops |
+| 4 | Determinism: frame 150 rendered alone from a cold start vs frame 150 from a 4-thread `--sequence` render of frames 140–160 | **PASS**: byte-identical for all six |
+| 4 | Source grep for `@keyframes`, `transition`, `Math.random`, `Date.now`, `requestAnimationFrame`, `useState` | none present |
+| 5 | Frame 150 at 1080p vs 4K (downscaled) | **PASS**: same layout and text proportion, graph axes and borders visible in both; correlation 0.989 / 0.998 / 0.998 |
+| 6 | Banding (see below) | **PASS** |
+| 7 | Look 1: ≥3 blur levels, a readable formula in every sampled frame, parallax, no popping (30 consecutive frames: frame-to-frame change in the far region 3.2–3.5, max/median 1.03), rays no brighter than the equations | **PASS** |
+| 7 | Look 2: sharp centre → soft edges with no hard seam, code scrolls, AI inside the rotating sphere, `Type your prompt` bar, cursor on at frame 0 and off at frame 15, 2B light and readable | **PASS** |
+| 7 | Look 3: 3A frame 0 = `230,908.43 USD`, frames ≥210 = `0.00 USD`; 3B frame 0 = `0.00 USD`, frames ≥210 = `248,560.00 USD`; separators correct mid-count (`75,249.81`, `3,045.57`, `167,557.79`, `245,281.61`); adjacent-frame overlay shows no sideways digit shift; the figure is the sharpest element | **PASS** |
 
 ## Banding check
 
-__BANDING__
+Frame 150 was extracted from the encoded mp4 and read along the smoothest gradient, with rows
+averaged to remove grain:
+
+* **EquationFlight-Navy**, bloom falloff toward the right edge: 170 → 121 → 91 → 71 → 58 → 47 → 39 → 32 → 28. Monotonic, with no plateau-then-jump.
+* **AICodeScreen-Dark**, blue screen area: values change by at most 0.19 levels per pixel (smoothed), with no steps.
+* **AICodeScreen-Light** and **BalanceScreen**: smooth, with steps of at most 1.4 levels and no plateaus.
+
+Contrast-stretched crops of the same areas show no contour lines. Grain is 1.8–2.2%, from
+`feTurbulence` with a per-frame seed (`frame % 600` on the loops). EquationFlight-Black has **no
+grain**, so its black stays 0,0,0.
 
 ## Loop check (how to repeat it)
 
@@ -192,8 +239,43 @@ cmp out/loop0.png out/loop600.png && echo identical
 
 ## Deviations from the brief
 
-__DEVIATIONS__
+* **Light rays** use soft conic-gradient wedges, not an SVG-blurred group with the stacked glow.
+  The SVG version cost about 9 s/frame at 1080p on its own. The wedges are soft by construction.
+  The stacked 1 : 4 : 12 glow is used on the navy equations and the AI mark, as specified.
+* **Hand-drawn wobble** is one fixed-seed displacement pass over the sharp depth band, not one
+  filter per plane, for speed. Because the pass is in screen space, strokes shimmer very slightly
+  as they travel. The blurred bands don't need it.
+* **EquationFlight-Black black level:** the dense blurred depth left a faint 1–3/255 haze over
+  "empty" areas. A levels crush (≤ 3.5/255 → 0) is applied to the black version only, so empty
+  black is exactly 0,0,0 for screen-blend use.
+* **GL renderer:** SwiftShader (`remotion.config.ts`). It measured about 2× faster than the
+  default here. Use the same renderer for every render of a clip.
+* **Known differences from the reference clips** that remain after the side-by-side reviews,
+  kept on purpose because the brief requires them:
+  * AI Code Screen uses **JetBrains Mono** with line numbers. The reference uses a bold
+    proportional sans with no gutter.
+  * AI Code Screen also blurs toward the **top and bottom**, as the brief asks. The reference
+    keeps the whole code column sharp.
+  * AI Code Screen has the **"Type your prompt"** bar, which the reference does not show.
+  * Balance Screen uses **Inter**. The reference uses a wider Verdana-like face.
+  * Equation Flight uses typeset KaTeX with a slight chalk weight and wobble. The reference's
+    lettering is more hand-written.
 
 ## Completion checklist
 
-__CHECKLIST__
+- [x] Six compositions, 3840×2160, 30 fps, sizes as fractions of the frame
+- [x] Looks 1 and 2: 600-frame seamless loops (frame 600 ≡ frame 0, byte-identical)
+- [x] Look 3: 300 frames, one-way, **not a loop**
+- [x] No `@remotion/three` and no WebGL. CSS 3D only.
+- [x] KaTeX rendered once at module load. Fonts (Inter, JetBrains Mono, KaTeX) shipped in `public/`.
+- [x] Seeded `mulberry32` at module level. No `Math.random`, `@keyframes`, transitions, `Date.now`, rAF or `useState` visuals.
+- [x] Determinism: frame 150 cold == frame 150 from a multi-thread render, byte for byte
+- [x] Glow: stacked SVG blur ×3 (1 : 4 : 12) with the SourceGraphic on top
+- [x] Grain 1.8–2.2% from `feTurbulence` with a fixed seed per frame. None on the black version.
+- [x] 1A black is 0,0,0 in the encoded file
+- [x] Banding checked on the encoded mp4
+- [x] Six 1080p previews (H.264, yuv420p, CRF 16, 30 fps, no audio) plus a 1080p still of each
+- [x] 18 stills at 6000×3375 (3 per composition)
+- [x] No real product, bank, app or company names or logos. Code and interface designs are original. Generic phone.
+- [x] Side-by-side comparison by a separate reviewer (two rounds per look). Remaining differences are listed above.
+- [x] `npm install && npx remotion studio` works from a clean copy
