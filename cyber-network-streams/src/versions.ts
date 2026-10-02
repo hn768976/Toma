@@ -73,7 +73,7 @@ export type BigDataHudVersion = {
 export const bigDataHudVersions: BigDataHudVersion[] = [
   {
     id: "BigDataHUD",
-    palette: ["#FF2D3D", "#FF8A1F", "#FFD21F", "#22D36B", "#19D3F0", "#2F6BFF", "#FF2D9A", "#9B4DFF"],
+    palette: ["#F01E1E", "#FF6A00", "#FFD000", "#00B050", "#00B4FF", "#1E5BFF", "#FF1FA0", "#8A3CFF"],
     text: "#FFFFFF",
     dim: "#8A8F99",
   },

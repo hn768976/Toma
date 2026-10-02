@@ -60,7 +60,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
   const world = new Container();
   const strip = new StripBatch((NSTR + 8) * NPTS + NHEADS * 24);
   world.addChild(strip.mesh);
-  const glows = new GlowBatch(NHEADS * 2 + 4);
+  const glows = new GlowBatch(NHEADS * 2 + 8);
   world.addChild(glows.mesh);
   const cam = new Projector();
   const spine = new Float32Array(NPTS * 3);
@@ -88,7 +88,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
     const B = [0, 1, 2].map((a) => frB[j * 3 + a]);
     // bundle radius fans out toward the far end; twisting offset
     const pinch = Math.min(1, Math.abs(u - 0.33) * 2.6);
-    const rho = (0.6 + 1.2 * (1 - u) * 0 + 5.5 * Math.max(0, u - 0.33)) * (0.2 + 0.8 * pinch) + 1.2 * Math.max(0, 0.33 - u);
+    const rho = (0.5 + 5.5 * Math.max(0, u - 0.33)) * (0.08 + 0.92 * pinch) + 1.4 * Math.max(0, 0.33 - u);
     const tw = s.ang + 2.2 * u + 0.8 * nz(u * 1.5 + 7, ct * 0.6 + i * 0.013, st * 0.6);
     let a = Math.cos(tw) * s.rad * rho,
       b = Math.sin(tw) * s.rad * rho;
@@ -99,7 +99,10 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
     a += gA * nz(u * 1.5 + s.g * 17.3, ct * 0.8, st * 0.8 + s.g);
     b += gA * nz(u * 1.5 + s.g * 17.3 + 50, ct * 0.8 + s.g, st * 0.8);
     // some sub-bundles throw big open loops up above the knot
-    if (s.g % 3 === 0) b += (6 + 3 * nz(s.g * 3.1, ct * 0.4, st * 0.4)) * Math.sin(Math.PI * Math.min(1, Math.max(0, (u - 0.33) / 0.5)));
+    // big open loops thrown upward (world +y) out of the knot by some sub-bundles
+    let loopY = 0;
+    if (s.g % 2 === 0) loopY = (4 + 6 * (0.5 + 0.5 * nz(s.g * 3.1, ct * 0.4, st * 0.4))) * Math.sin(Math.PI * Math.min(1, Math.max(0, (u - 0.33) / (0.35 + 0.05 * s.g)))) ** 1.5;
+    b *= 0.45; // keep the depth spread modest so strands don't rush the lens
     // each fibre also strays on its own
     const iA = 2.6 * Math.pow(u, 1.2) * pinch;
     a += iA * nz(u * 2.4 + s.ph, ct * 0.5 + s.ph * 0.1, st * 0.5);
@@ -113,7 +116,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
       return;
     }
     out[0] = P[0] + N[0] * a + B[0] * b;
-    out[1] = P[1] + N[1] * a + B[1] * b;
+    out[1] = P[1] + N[1] * a + B[1] * b + loopY;
     out[2] = P[2] + N[2] * a + B[2] * b;
   };
 
@@ -134,7 +137,7 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
         // rises from the lower left to a crest, then fans down to the right toward the camera
         // rises from the lower left into a knot left of centre, then spreads right and down toward the camera
         const bx = -11 + 30 * u,
-          by = -15 + 13.5 * Math.sin(Math.PI * Math.min(1, u / 0.72)),
+          by = -14 + 15 * Math.sin(Math.PI * Math.min(1, u / 0.72)),
           bz = -3 + 11 * u * u;
         const A = 2.5 + 2 * u;
         spine[i * 3] = bx + A * nz(u * 2.2, ct, st);
@@ -191,9 +194,9 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
           const uu = i / (NPTS - 1);
           const endFade = Math.min(1, uu / 0.12) * Math.min(1, (1 - uu) / 0.2);
           const grain = 0.45 + 0.55 * hash2(si * 977 + i, Math.floor(f / 2));
-          const bright = s.br * endFade * (0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, u * 1.1))) * (s.near ? 0.45 : 1) * (s.near ? 1 : grain);
-          const m = Math.min(1, s.mix * 0.35);
-          const k = 0.32 * bright * (0.35 + 0.65 * e);
+          const bright = s.br * endFade * (0.45 + 0.55 * Math.sin(Math.PI * Math.min(1, u * 1.1))) * (s.near ? 0.8 : 1) * (s.near ? 1 : grain);
+          const m = Math.min(1, s.mix * 0.25);
+          const k = 0.26 * bright * (0.35 + 0.65 * e);
           xs[n] = cam.x;
           ys[n] = cam.y;
           zs[n] = z;
@@ -243,6 +246,10 @@ const buildScene = (v: FibreStrandsVersion): PixiScene => {
       });
 
       // ---- soft coloured light behind the bundle, "sometimes"
+      for (const uu of [0.33, 0.55, 0.75, 0.92]) {
+        strandPoint(strands[0], 0, uu, pt, ct, st);
+        if (cam.project(pt[0], pt[1], pt[2], 0.5)) glows.add(cam.x, cam.y, height * 0.22, deep[0], deep[1], deep[2], 0.05, 0);
+      }
       for (let i = 0; i < 2; i++) {
         const a = Math.max(0, Math.sin(TAU * (t * (i + 1) + i * 0.37))) ** 6 * 0.08;
         strandPoint(strands[0], 0, 0.35 + 0.4 * i, pt, ct, st);

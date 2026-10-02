@@ -68,7 +68,7 @@ varying vec2 vUv; varying vec4 vCol; varying float vCoc;
 void main(){
   vec2 d = min(vUv, 1.0 - vUv);
   vec2 fw = max(fwidth(vUv), vec2(1e-5));
-  vec2 soft = min(fw * (1.2 + vCoc), vec2(0.5));
+  vec2 soft = min(fw * (2.5 + vCoc), vec2(0.5));
   float a = smoothstep(0.0, soft.x, d.x) * smoothstep(0.0, soft.y, d.y);
   // brighter rim, a little brighter towards one end
   float rim = 1.0 - smoothstep(0.0, 2.5, min(d.x/fw.x, d.y/fw.y));
@@ -156,10 +156,10 @@ const buildData = (v: LightStreamsVersion) => {
     aS[i] = r() * L;
     const roll = r();
     let lat: number, h: number;
-    if (roll < 0.62) {
+    if (roll < 0.72) {
       // the dense mosaic wall beside the camera (mostly on the left)
       const side = r() < 0.78 ? -1 : 1;
-      lat = side * (side < 0 ? range(r, 1.1, 3.2) : range(r, 2.0, 4.5));
+      lat = side * (side < 0 ? range(r, 1.6, 3.6) : range(r, 2.4, 4.8));
       h = gauss(r) * 0.85;
     } else {
       // the field further out that converges into the band
@@ -171,11 +171,11 @@ const buildData = (v: LightStreamsVersion) => {
     aLatH[i * 2] = lat;
     aLatH[i * 2 + 1] = h;
     const tRoll = r();
-    const wall = roll < 0.62;
+    const wall = roll < 0.72;
     // the mosaic wall is made of tiles facing the camera; the far field mixes orientations
     const type = wall ? (tRoll < 0.8 ? 1 : 0) : tRoll < 0.7 ? 0 : tRoll < 0.93 ? 1 : 2;
     aType[i] = type + (wall ? 10 : 0);
-    const len = type === 1 ? range(r, 0.35, 1.7) : range(r, 0.5, 3.6);
+    const len = type === 1 ? range(r, 0.35, 1.4) * (wall ? 1 : 1.4) : range(r, 0.5, 3.6);
     const hh = type === 2 ? range(r, 0.3, 1.0) : range(r, 0.12, 0.6) * (r() < 0.12 ? 1.8 : 1);
     aSize[i * 2] = len;
     aSize[i * 2 + 1] = hh;
@@ -195,7 +195,7 @@ const buildData = (v: LightStreamsVersion) => {
   }
 
   // ---- streaks
-  const NS = 340;
+  const NS = 70;
   const sS = new Float32Array(NS),
     sLatH = new Float32Array(NS * 2),
     sLenW = new Float32Array(NS * 2),
@@ -216,7 +216,7 @@ const buildData = (v: LightStreamsVersion) => {
   }
 
   // ---- specks
-  const NK = 900;
+  const NK = 260;
   const kS = new Float32Array(NK),
     kLatH = new Float32Array(NK * 2),
     kSize = new Float32Array(NK),
@@ -313,10 +313,12 @@ const buildScene = (v: LightStreamsVersion): BuiltScene => {
       const cam = pathOffJS(camS);
       const sway = Math.sin(TAU * t * 2) * 0.25;
       camera.position.set(cam.x - 0.4, cam.y + 0.05 + sway * 0.4, 0);
-      const look = pathOffJS(camS + 18);
-      look.x += 0.5;
+      const ahead = pathOffJS(camS + 1);
+      const tx = ahead.x - cam.x;
+      const yawL = 0.5; // ≈29° left of the direction of travel
+      const look = new THREE.Vector3(cam.x + (tx * Math.cos(yawL) - Math.sin(yawL)) * 18, pathOffJS(camS + 18).y, 0);
       camera.up.set(Math.sin(TAU * t) * 0.04, 1, 0).normalize();
-      camera.lookAt(look.x - 9, look.y * 0.6, -18);
+      camera.lookAt(look.x, look.y * 0.6, -18 * Math.cos(yawL) - tx * Math.sin(yawL) * 18);
       common.uCamS.value = camS;
       common.uCamPos.value.copy(camera.position);
       common.uPx.value = info.pxScale;

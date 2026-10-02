@@ -146,14 +146,13 @@ export const buildBurstAtlas = (): BurstAtlas => {
     c.save();
     c.fillStyle = "rgba(205,215,228,0.42)";
     c.fillRect(x + 34, y + 34, 188, 188);
-    c.strokeStyle = "rgba(255,255,255,0.95)";
-    c.lineWidth = 5;
-    c.strokeRect(x + 36, y + 36, 184, 184);
-    c.filter = "blur(2px)";
+    c.filter = "blur(2.5px)";
     for (let gx = 0; gx < 3; gx++)
       for (let gy = 0; gy < 3; gy++) {
         c.fillStyle = "rgba(255,255,255,0.95)";
-        c.fillRect(x + 62 + gx * 50, y + 62 + gy * 50, 32, 32);
+        c.beginPath();
+        c.arc(x + 78 + gx * 50, y + 78 + gy * 50, 15, 0, Math.PI * 2);
+        c.fill();
       }
     c.filter = "none";
     c.globalCompositeOperation = "destination-out";

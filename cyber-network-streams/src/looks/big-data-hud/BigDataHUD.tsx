@@ -236,7 +236,7 @@ const BigDonut: React.FC<Ctx & { cx: number; cy: number }> = ({ cx, cy, t, P }) 
     <g>
       {segs.map((c, i) => {
         const span = (weights[i] / total) * TAU;
-        const p = <path key={i} d={arcPath(cx, cy, 86, a, a + span + 0.004)} fill="none" stroke={c} strokeWidth={38} />;
+        const p = <path key={i} d={arcPath(cx, cy, i === 3 ? 92 : 86, a, a + span + 0.004)} fill="none" stroke={c} strokeWidth={i === 3 ? 46 : 38} />;
         a += span;
         return p;
       })}
@@ -278,6 +278,12 @@ const LineChart: React.FC<Ctx & { x: number; y: number; w: number; h: number; co
       {pts.slice(0, vis).map((p, i) => (
         <circle key={i} cx={p[0]} cy={p[1]} r={2.5} fill={col} />
       ))}
+      {grid &&
+        pts.slice(0, vis).map((p, i) => (
+          <text key={`vl${i}`} x={p[0]} y={p[1] - 6} fontSize={6.5} fill="#cfd3da" fontFamily={MONO} textAnchor="middle">
+            {Math.round(500 - ((p[1] - y) / h) * 500)}
+          </text>
+        ))}
     </g>
   );
 };
@@ -391,8 +397,8 @@ const BAR_SPECS: BarSpec[] = [
         c.fillStyle = "#0b1633";
         c.fillRect(i * bw + bw * 0.18, h * 0.08, bw * 0.64, h * 0.92);
         const g = c.createLinearGradient(0, h, 0, h - v * h);
-        g.addColorStop(0, "#14306e");
-        g.addColorStop(1, P[5]);
+        g.addColorStop(0, P[4]);
+        g.addColorStop(1, "#0d2a70");
         c.fillStyle = g;
         c.fillRect(i * bw + bw * 0.18, h - v * h, bw * 0.64, v * h);
       }
@@ -466,7 +472,7 @@ const BAR_SPECS: BarSpec[] = [
       const bw = w / n;
       for (let i = 0; i < n; i++) {
         const v = 0.2 + 0.75 * osc(t, 1 + (i % 3), phases[330 + i]);
-        c.fillStyle = P[[7, 6, 5, 4][i % 4]];
+        c.fillStyle = P[[5, 7, 1, 7, 5][Math.floor(i / 3.2)]];
         c.fillRect(i * bw + bw * 0.25, h - v * h, bw * 0.5, v * h);
       }
     },
@@ -580,7 +586,7 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
         {[0, 1, 2, 3, 4, 5, 6].map((i) => {
           const v = 0.4 + 0.55 * osc(t, 1 + (i % 2), phases[360 + i]);
           const col = P[[5, 7, 1, 7, 5, 3, 0][i]];
-          return <rect key={i} x={1275 + i * 42} y={290 - v * 170} width={30} height={v * 170} fill={col} fillOpacity={0.28} stroke={col} strokeWidth={1.4} />;
+          return <rect key={i} x={1275 + i * 42} y={290 - v * 120} width={30} height={v * 120} fill={col} fillOpacity={0.45} />;
         })}
         <T x={1620} y={262} s={8} mono c={version.dim}>
           {pad(tableNums[5], 6)} 83 {pad(tableNums[6], 9)}
@@ -622,7 +628,9 @@ const HUD: React.FC<{ version: BigDataHudVersion }> = ({ version }) => {
           {pad(counters[5][s], 9)} {pad(tableNums[27], 5)} {pad(tableNums[28], 5)}
         </T>
         <WorldMap {...ctx} x={20} y={612} w={300} h={160} dots={dots} r={1.15} col="#7a7a7a" />
-        <LineChart {...ctx} x={40} y={880} w={230} h={80} col={P[2]} seed={20} n={8} />
+        <line x1={30} x2={30} y1={870} y2={982} stroke="#6a6a6a" strokeWidth={1} />
+        <line x1={30} x2={285} y1={982} y2={982} stroke="#6a6a6a" strokeWidth={1} />
+        <LineChart {...ctx} x={40} y={880} w={230} h={80} col={P[3]} seed={20} n={8} />
         {[0.75, 0.85, 0.95].map((p0, i) => {
           const p = p0 + 0.03 * Math.sin(TAU * (t * 2 + i * 0.3));
           return <Ring key={i} cx={58 + i * 92} cy={1028} r={24} w={4} pct={p} col={[P[7], P[1], P[0]][i]} label track="#3a3a3a" textSize={13} />;

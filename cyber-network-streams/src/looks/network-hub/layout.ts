@@ -59,10 +59,13 @@ const build = (): HubNode[] => {
       const d = dist * (k ? range(r, 0.85, 1.2) : 1);
       const x = nodes[p].x + Math.cos(a) * d;
       const z = nodes[p].z + Math.sin(a) * d;
-      if (Math.abs(x) > 15 || Math.abs(z) > 9) continue;
+      if (Math.abs(x) > 9.6 || Math.abs(z) > 8.6) continue;
       if (ok(p, x, z)) {
         const len = d;
-        nodes.push({ x, z, gen, parent: p, launch, arrive: launch + Math.round(TRAVEL * (0.7 + len / 10)) });
+        const travel = Math.round(TRAVEL * (0.7 + len / 10));
+        // the whole network has grown by frame 240
+        const l2 = Math.min(launch, 238 - travel);
+        nodes.push({ x, z, gen, parent: p, launch: l2, arrive: l2 + travel });
         return nodes.length - 1;
       }
     }

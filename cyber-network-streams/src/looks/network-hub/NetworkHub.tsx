@@ -14,10 +14,10 @@ import { HUB_NODES } from "./layout";
 
 export const NH_DURATION = 360;
 const MAXN = 24;
-const BASE = 1.5; // base square size
-const CUBE = 0.86;
-const CUBE_H = 0.8;
-const LINE_W = 0.055;
+const BASE = 1.75; // base square size
+const CUBE = 1.05;
+const CUBE_H = 0.95;
+const LINE_W = 0.08;
 
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 // pop: 0.9 → overshoot → 1
@@ -47,6 +47,7 @@ void main(){
   vec2 sc = gl_FragCoord.xy / uRes; sc.x *= uRes.x / uRes.y;
   float pool = exp(-dot(sc - vec2(0.0, 0.0), sc - vec2(0.0, 0.0)) / 0.12);
   c += (uLight > 0.5 ? vec3(0.0) : vec3(0.03, 0.22, 0.42)) * pool;
+  c += (uLight > 0.5 ? vec3(0.0) : uFloor * 0.7) * smoothstep(0.9, 2.2, sc.x + sc.y * 1.4);
   // soft sheen: a wide highlight that follows the view (glossy floor)
   vec3 V = normalize(uCamPos - vW);
   vec3 H = normalize(V + normalize(uKeyDir));
@@ -64,7 +65,7 @@ void main(){
     sh = max(sh, n.w * (0.65*exp(-max(d,0.0)/0.10) + 0.35*exp(-max(d,0.0)/0.55)));
     // glow spill from the emissive base outline
     float e = abs(sdBox(q, vec2(${(BASE / 2).toFixed(3)})*s, 0.1));
-    gl += n.w * exp(-e/0.07) * 0.35 + n.w * exp(-e/0.35) * 0.08;
+    gl += n.w * exp(-e/0.12) * 0.4 + n.w * exp(-e/0.5) * 0.1;
   }
   c *= 1.0 - uShadow * clamp(sh, 0.0, 1.0);
   c += uLine * gl * uGlow;
@@ -147,7 +148,7 @@ const buildScene = (v: NetworkHubVersion, gl: THREE.WebGLRenderer): BuiltScene =
   const cubeGeo = new RoundedBoxGeometry(CUBE, CUBE_H, CUBE, 3, 0.04);
   cubeGeo.translate(0, CUBE_H / 2 + 0.07, 0);
   const cubeMat = new THREE.MeshPhysicalMaterial({
-    color: nodeCol.clone().multiplyScalar(light ? 0.85 : 0.6),
+    color: nodeCol.clone().multiplyScalar(light ? 0.85 : 0.42),
     envMapIntensity: light ? 1 : 1.6,
     roughness: 0.18,
     metalness: 0.1,
@@ -161,8 +162,8 @@ const buildScene = (v: NetworkHubVersion, gl: THREE.WebGLRenderer): BuiltScene =
   plateGeo.translate(0, 0.03, 0);
   const plateMat: THREE.Material = light
     ? new THREE.MeshPhysicalMaterial({ color: new THREE.Color("#E8EDF3"), roughness: 0.4, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.4 })
-    : new THREE.MeshBasicMaterial({ color: linColor(v.floor).multiplyScalar(0.55) });
-  const ringGeo = outlineGeo(BASE, 0.05, 0.08);
+    : new THREE.MeshBasicMaterial({ color: linColor(v.floor).multiplyScalar(1.35) });
+  const ringGeo = outlineGeo(BASE, 0.075, 0.1);
   ringGeo.translate(0, 0.064, 0);
   const ringBase = lineCol.clone().multiplyScalar(light ? 1.4 : 1.7);
 
@@ -210,7 +211,7 @@ const buildScene = (v: NetworkHubVersion, gl: THREE.WebGLRenderer): BuiltScene =
         new THREE.ShaderMaterial({
           vertexShader: PULSE_VERT,
           fragmentShader: PULSE_FRAG,
-          uniforms: { uCol: { value: lineCol.clone().multiplyScalar(light ? 1.2 : 1.5) }, uA: { value: 0 } },
+          uniforms: { uCol: { value: lineCol.clone().multiplyScalar(light ? 1.3 : 2.4) }, uA: { value: 0 } },
           transparent: true,
           depthWrite: false,
           blending: light ? THREE.NormalBlending : THREE.AdditiveBlending,
@@ -236,17 +237,17 @@ const buildScene = (v: NetworkHubVersion, gl: THREE.WebGLRenderer): BuiltScene =
     grainPeriod: 100000,
     post: light
       ? { ...defaultPost, exposure: 1.0, bloomStrength: 0.35, bloomRadius: 0.5, bloomThreshold: 0.9, toneMap: "linear", vignette: 0.12, grain: 0.012, saturation: 1 }
-      : { ...defaultPost, exposure: 1.0, bloomStrength: 0.45, bloomRadius: 0.3, bloomThreshold: 0.75, toneMap: "aces", vignette: 0.32, grain: 0.02, saturation: 1.05 },
+      : { ...defaultPost, exposure: 1.0, bloomStrength: 0.6, bloomRadius: 0.5, bloomThreshold: 0.7, toneMap: "aces", vignette: 0.5, grain: 0.02, saturation: 1.1 },
     update: (frame, info) => {
       const f = frame;
       floorU.uRes.value.set(info.width, info.height);
       // ---- camera: close at ~35°, pull back + rise over 0–240, then drift
       const k = easeInOut(clamp01(f / 240));
       const drift = Math.max(0, f - 240) / 120;
-      const dist = 8 + (46 - 8) * k + drift * 1.2;
-      const elev = ((33 + (37 - 33) * k) * Math.PI) / 180;
+      const dist = 9 + (48 - 9) * k + drift * 1.0;
+      const elev = ((33 + (29 - 33) * k) * Math.PI) / 180;
       const az = ((-34 + 12 * k + drift * 3) * Math.PI) / 180;
-      target.set(-0.3 * k, 0.25 * (1 - k), 0.3 * k);
+      target.set(-3.6 * k, 0.25 * (1 - k), 0.8 * k);
       camera.position.set(target.x + Math.sin(az) * Math.cos(elev) * dist, target.y + Math.sin(elev) * dist, target.z + Math.cos(az) * Math.cos(elev) * dist);
       camera.lookAt(target);
       floorU.uCamPos.value.copy(camera.position);

@@ -25,8 +25,8 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 // --- camera z: monotone cubic (Fritsch–Carlson) through fixed keys
 const KEYS: [number, number][] = [
-  [0, 21],
-  [50, 19],
+  [0, 20],
+  [50, 18.2],
   [110, -4],
   [180, -120],
   [270, -300],
@@ -83,7 +83,7 @@ const build = (v: DataBurstVersion) => {
     const a = r() * Math.PI * 2;
     const s = Math.sqrt(1 - z * z);
     const roll = r();
-    const col = roll < 0.48 ? C.teal : roll < 0.63 ? C.blue : roll < 0.73 ? C.white : roll < 0.85 ? C.pink : roll < 0.93 ? C.orange : C.green;
+    const col = roll < 0.42 ? C.teal : roll < 0.72 ? C.blue : roll < 0.82 ? C.white : roll < 0.92 ? C.pink : roll < 0.96 ? C.orange : C.green;
     // front of the sphere (towards camera, +z) bursts first
     dashes.push({ ux: s * Math.cos(a), uy: s * Math.sin(a), uz: z, r0: R * (1 + gauss(r) * 0.025), col, tb: 52 + (1 - z) * 14 + r() * 16, v: range(r, 0.5, 2.2), kind: r() < 0.3 ? 1 : 0, icon: Math.floor(r() * 9) });
   }
@@ -99,9 +99,9 @@ const build = (v: DataBurstVersion) => {
       pts.push({ x, y, z: -10 - r() * (kind === 2 ? 190 : 250), col: cols[Math.floor(r() * cols.length)], size: range(r, size[0], size[1]), kind, icon: Math.floor(r() * 9), ph: r() });
     }
   };
-  box(9000, 0, [C.teal, C.teal, C.white, C.teal, C.pink, C.blue, C.blue], [0.05, 0.13]); // data squares
+  box(12000, 0, [C.teal, C.blue, C.blue, C.teal, C.pink, C.blue, C.white], [0.04, 0.11]); // data squares
   box(3500, 1, [C.white, C.teal, C.white], [0.05, 0.12]); // network nodes (points)
-  box(300, 2, [C.pink, C.teal, C.white, C.pink, C.teal, C.green, C.blue], [0.6, 1.9]); // icons
+  box(300, 2, [C.teal, C.blue, C.teal, C.white, C.pink, C.blue, C.teal], [0.4, 1.3]); // icons
   // links between nearby nodes (k nearest within reach), computed once
   const nodes = pts.map((p, i) => [p, i] as const).filter(([p]) => p.kind === 1 || p.kind === 2);
   const cell = 7;
@@ -137,8 +137,8 @@ const build = (v: DataBurstVersion) => {
   // long straight rays roughly along the flight axis (they converge on the vanishing point)
   const rays: { x: number; y: number; z: number; len: number; dx: number; dy: number; col: number; a: number; dash: number }[] = [];
   const warm = hexToBgr("#F2DFC0");
-  for (let i = 0; i < 420; i++) {
-    const dash = i >= 90 ? 1 : 0;
+  for (let i = 0; i < 560; i++) {
+    const dash = i >= 220 ? 1 : 0;
     const ang = r() * Math.PI * 2;
     const rad = dash ? 1.5 + Math.pow(r(), 0.8) * 20 : 3 + Math.pow(r(), 0.7) * 30;
     rays.push({
@@ -146,8 +146,8 @@ const build = (v: DataBurstVersion) => {
       y: Math.sin(ang) * rad * 0.7,
       z: -15 - r() * 260,
       len: dash ? range(r, 1.2, 3.5) : range(r, 30, 110),
-      dx: dash ? 0 : range(r, -0.45, 0.45),
-      dy: dash ? 0 : range(r, -0.35, 0.35),
+      dx: dash ? 0 : r() < 0.6 ? range(r, -0.04, 0.04) : range(r, -0.45, 0.45),
+      dy: dash ? 0 : r() < 0.6 ? range(r, -0.04, 0.04) : range(r, -0.35, 0.35),
       col: dash ? C.white : [warm, warm, C.teal, C.blue][Math.floor(r() * 4)],
       a: dash ? range(r, 0.15, 0.4) : range(r, 0.1, 0.28),
       dash,
@@ -170,7 +170,7 @@ const build = (v: DataBurstVersion) => {
   // warp streaks (camera-relative cylinder)
   const warp: { a: number; rad: number; z0: number; col: number; w: number; dash: number }[] = [];
   const sky = hexToBgr("#2AB0E0"), royal = hexToBgr("#1565C8");
-  for (let i = 0; i < 2200; i++) { const dash = i >= 1850; const k = i % 18; warp.push({ a: dash ? (k / 18) * Math.PI * 2 + range(r, -0.03, 0.03) : r() * Math.PI * 2, rad: dash ? 2 + (Math.floor(i / 18) % 4) * 3.5 : 0.8 + Math.pow(r(), 0.75) * 22, z0: dash ? ((Math.floor(i / 72) * 37) % 420) : r() * 420, col: dash ? C.white : r() < 0.5 ? sky : r() < 0.7 ? royal : C.teal, w: dash ? range(r, 0.1, 0.18) : range(r, 0.02, 0.06), dash: dash ? 1 : 0 }); }
+  for (let i = 0; i < 2200; i++) { const dash = i >= 1850; const k = i % 18; const rowDash = dash && i < 2050; warp.push({ a: rowDash ? (k / 18) * Math.PI * 2 + range(r, -0.03, 0.03) : r() * Math.PI * 2, rad: rowDash ? 2 + (Math.floor(i / 18) % 4) * 3.5 : 0.8 + Math.pow(r(), 0.75) * 22, z0: rowDash ? ((Math.floor(i / 72) * 37) % 420) : r() * 420, col: dash ? C.white : r() < 0.5 ? sky : r() < 0.7 ? royal : C.teal, w: dash ? range(r, 0.1, 0.18) : range(r, 0.02, 0.06), dash: dash ? 1 : 0 }); }
   return { dashes, pts, links, tun, warp, rays, dust, C, HW, HH };
 };
 
@@ -181,7 +181,7 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
   const A = buildBurstAtlas();
   const world = new Container();
   const lines = new LineBatch(16000);
-  const glows = new GlowBatch(64);
+  const glows = new GlowBatch(96);
   world.addChild(glows.mesh);
   world.addChild(lines.mesh);
   const pc = new ParticleContainer({ dynamicProperties: { position: true, rotation: true, vertex: true, uvs: true, color: true } });
@@ -248,10 +248,15 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
       void haze;
       // vertical gradient: navy toward the top, near-black at the bottom
       glows.add(width / 2, -height * 0.25, height * 1.25, 0.004, 0.012, 0.04, 1, 0);
+      const sphereGlow = 1 - sstep(60, 120, f);
+      if (sphereGlow > 0 && cam.project(0, 0, 0, 0.5)) {
+        glows.add(cam.x, cam.y, height * 0.62, blueRgb[0] * 0.5, blueRgb[1] * 0.5, blueRgb[2] * 0.5, sphereGlow * 0.5, 0);
+        glows.add(cam.x, cam.y, height * 0.2, blueRgb[0], blueRgb[1], blueRgb[2], sphereGlow * 0.35, 0);
+      }
       const c = camAt(f);
       cam.set([c.x, c.y, c.z], c.yaw, c.pitch, c.roll, FOV, width, height);
       const focal = cam.focal;
-      const ap = lerp(lerp(0.09, 0.05, sstep(100, 140, f)), 0.07, sstep(45, 70, f) * (1 - sstep(115, 140, f))); // aperture → strength of defocus (narrower during the burst so streaks stay crisp)
+      const ap = lerp(lerp(0.09, 0.035, sstep(100, 140, f)), 0.07, sstep(45, 70, f) * (1 - sstep(115, 140, f))); // aperture → strength of defocus (narrower during the burst so streaks stay crisp)
       const zf = lerp(lerp(13, 18, sstep(55, 140, f)), 34, sstep(250, 320, f));
       const coc = (z: number) => ap * focal * Math.abs(1 / z - 1 / zf);
       const fogFar = 170;
@@ -301,15 +306,15 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
             const rad = Math.hypot(rx, ry);
             // depth cue: interior points small and sparse, rim points larger and denser
             const rimness = 1 - Math.max(0, facing);
-            const tile = ((0.09 + 0.1 * rimness) * focal) / zz;
-            const smear = rad * 0.04 * rimness;
+            const tile = ((0.11 + 0.02 * rimness) * focal) / zz;
+            const smear = rad * 0.03;
             const twinkle = hash2(Math.floor(d.r0 * 9973) + d.icon, 7) < 0.45 ? 1 : 0.3;
-            const aa = 0.5 * side * sphereA * near * (0.35 + 0.4 * rimness * rimness) * twinkle;
+            const aa = 0.5 * side * sphereA * near * (0.25 + 0.75 * Math.max(0, facing)) * twinkle;
             if (smear > tile * 1.3) {
               const Ls = smear + tile;
-              put(A.dashes[2], sx, sy, (Ls * 1.28) / 128, (tile * 3.2) / 32, Math.atan2(ry, rx), d.col, aa * Math.min(1, (tile * 1.6) / Ls + 0.15));
+              put(A.dashes[2], sx, sy, (Ls * 1.28) / 128, (tile * 3.2) / 32, Math.atan2(ry, rx), d.col, aa * Math.min(1, (tile * 1.4) / Ls + 0.08));
             } else if (d.kind === 1) {
-              put(A.icons[0][d.icon], sx, sy, (tile * 1.7) / 128, (tile * 1.7) / 128, 0, d.col, aa * 1.2);
+              put(A.icons[1][d.icon], sx, sy, (tile * 1.9) / 128, (tile * 1.9) / 128, 0, d.col, aa * 1.3);
             } else {
               put(A.squares[1], sx, sy, (tile * 1.9) / 64, (tile * 1.9) / 64, 0, d.col, aa);
             }
@@ -371,7 +376,7 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
         }
       }
 
-      const rayA = Math.max(netA, 0.3 * (1 - sstep(60, 120, f)));
+      const rayA = netA;
       if (rayA > 0) {
         // rays and dashed motion streaks
         for (const ry of D.rays) {
@@ -407,7 +412,7 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
         // small intense point flare at the vanishing point
         if (cam.project(c.x, c.y, c.z - 500, 0.5)) {
           glows.add(cam.x, cam.y, height * 0.06, 1, 1, 1, netA * 0.9, 1);
-          glows.add(cam.x, cam.y, height * 0.18, blueRgb[0], blueRgb[1], blueRgb[2], netA * 0.12, 0);
+          glows.add(cam.x, cam.y, height * 0.75, blueRgb[0] * 0.6, blueRgb[1] * 0.6, blueRgb[2] * 0.6, netA * 0.3, 0);
         }
       }
 
@@ -478,6 +483,7 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
       const wA = sstep(335, 380, f);
       if (wA > 0) {
         const tt = Math.max(0, f - 335);
+        glows.add(width / 2, height / 2, height * 1.1, blueRgb[0] * 0.7, blueRgb[1] * 0.7, blueRgb[2] * 0.7, wA * 0.35, 0);
         const S = 4 * tt + 0.11 * tt * tt;
         const Lw = 10 + 2.4 * tt;
         for (const w of D.warp) {
@@ -498,12 +504,22 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
           const scr = Math.hypot(x2 - width / 2, y2 - height / 2) / height;
           const fade = sstep(420, 200, zr) * sstep(0.5, 6, zr) * wA * (0.6 + 0.4 * sstep(0.02, 0.15, scr));
           const [rr, gg, bb] = bgrToRgb01(w.col);
-          const zoom = 1 + 14 * scr * scr; // radial zoom blur: softer and wider toward the edges
+          const zoom = 1 + (w.dash ? 6 : 30) * scr * scr; // radial zoom blur: softer and wider toward the edges
           const k1 = (fade * (w.dash ? 0.5 : 0.6)) / Math.sqrt(zoom),
             k2 = (fade * (w.dash ? 0.5 : 0.1)) / Math.sqrt(zoom);
           const w1 = Math.max(1.2 * px, (w.w * focal) / z1) * zoom,
             w2 = Math.max(1 * px, (w.w * focal) / z2) * zoom;
           lines.add(x1, y1, x2, y2, w1, w2, rr * k1, gg * k1, bb * k1, k1, rr * k2, gg * k2, bb * k2, k2);
+        }
+        // a few big soft out-of-focus blobs sliding outward
+        for (let k = 0; k < 8; k++) {
+          const u = (k / 8 + tt * 0.006) % 1;
+          const ang = k * 2.4 + 0.5;
+          const rr2 = (0.15 + u * 0.7) * height;
+          const bx = width / 2 + Math.cos(ang) * rr2 * 1.5,
+            by = height / 2 + Math.sin(ang) * rr2;
+          const col2 = k % 4 ? blueRgb : whiteRgb;
+          glows.add(bx, by, height * (0.03 + 0.05 * u), col2[0], col2[1], col2[2], wA * 0.22 * Math.sin(Math.PI * u), 0);
         }
         // chip at the vanishing point
         const ch = sstep(360, 420, f);
@@ -517,9 +533,10 @@ const buildScene = (v: DataBurstVersion): PixiScene => {
           // vertical dashed line through the chip, dashes moving outward
           for (let k = 0; k < 14; k++) {
             const u = (k / 14 + tt * 0.012) % 1;
-            const off = size * 0.75 + u * u * height * 0.5;
+            const off = size * 0.8 + u * u * height * 0.32;
             const len = 4 * px + u * 30 * px;
-            for (const sg of [-1, 1]) lines.add(cx, cy + sg * off, cx, cy + sg * (off + len), 3 * px, 3 * px, 0.8 * ch, 0.9 * ch, ch, ch, 0.8 * ch, 0.9 * ch, ch, ch);
+            const ka = ch * 0.45 * (1 - u);
+            for (const sg of [-1, 1]) lines.add(cx, cy + sg * off, cx, cy + sg * (off + len), 5 * px, 5 * px, 0.8 * ka, 0.9 * ka, ka, ka, 0.8 * ka, 0.9 * ka, ka, ka);
           }
           chipPlate.position.set(cx, cy);
           chipPlate.width = chipPlate.height = size * 1.05;

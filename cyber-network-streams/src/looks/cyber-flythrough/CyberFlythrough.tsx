@@ -44,6 +44,8 @@ void main(){
   vSoft = clamp(coc / sz, 0.0, 1.0);
   float area = min(1.0, core*core) / (1.0 + 0.04*coc*coc);
   float fade = smoothstep(uFar, uFar*0.2, d) * smoothstep(-uBack, 0.5, d);
+  // the fine centre strip only exists near the camera (it would pile up at the horizon)
+  if (abs(aKind - 0.15) < 0.01) fade *= smoothstep(6.0, 2.0, d) * 0.5;
   float lat = abs(position.x);
   float k = aKind; // 1 = major line, 0 = plain dot
   vec3 col = mix(uBlue, uTeal, 0.25 + 0.75*k);
@@ -103,7 +105,7 @@ const STREAK_VERT = /* glsl */ `
 ${COMMON_GLSL}
 uniform float uT; uniform vec3 uCamPos;
 attribute vec3 aPos; attribute vec3 aLenWSpeed; attribute vec4 aCol; attribute float aVert;
-varying vec2 vUv; varying vec4 vCol; varying float vDot; varying float vLen;
+varying vec2 vUv; varying vec4 vCol; varying float vDot; varying float vLen; varying float vHead;
 void main(){
   float zb = aPos.z + uT * aLenWSpeed.z * uWin; // moves toward the camera
   float len = aLenWSpeed.x;
@@ -124,14 +126,15 @@ void main(){
   vUv = vec2(uv.x, uv.y*2.0-1.0);
   vDot = aVert < 0.5 && fract(aPos.z * 7.31) < 0.7 ? 1.0 : 0.0;
   vLen = len;
+  vHead = smoothstep(30.0, 8.0, dd);
   vCol = vec4(aCol.rgb, aCol.a * fade * (aLenWSpeed.y / w));
   gl_Position = projectionMatrix * modelViewMatrix * vec4(wp, 1.0);
 }`;
 const STREAK_FRAG = /* glsl */ `
-varying vec2 vUv; varying vec4 vCol; varying float vDot; varying float vLen;
+varying vec2 vUv; varying vec4 vCol; varying float vDot; varying float vLen; varying float vHead;
 void main(){
   float across = exp(-vUv.y*vUv.y*3.5);
-  float along = smoothstep(1.0, 0.75, vUv.x) * smoothstep(0.0, 0.02, vUv.x) * (0.25 + 0.75*(1.0 - vUv.x)) + 2.5 * exp(-vUv.x * 60.0);
+  float along = smoothstep(1.0, 0.75, vUv.x) * smoothstep(0.0, 0.02, vUv.x) * (0.25 + 0.75*(1.0 - vUv.x)) + 2.5 * exp(-vUv.x * 60.0) * vHead;
   // most trails are dotted: a dash pattern in world units along the streak
   float dots = vDot > 0.5 ? smoothstep(0.55, 0.2, abs(fract(vUv.x * vLen * 2.2) - 0.5) * 2.0) * 1.6 : 1.0;
   gl_FragColor = vec4(vCol.rgb * vCol.a * across * along * dots, 1.0);
@@ -148,7 +151,7 @@ void main(){
   vec4 mv = modelViewMatrix * vec4(wp, 1.0);
   float z = max(-mv.z, 0.05);
   float core = aSize * uFocal / z;
-  float coc = cocPx(z) * 1.2;
+  float coc = min(cocPx(z) * 0.5, 9.0 * uPx);
   float sz = max(core, 1.2*uPx) + coc;
   gl_PointSize = sz * 2.2;
   vSoft = clamp(coc / sz, 0.0, 1.0);
@@ -174,7 +177,7 @@ void main(){
   vec2 gq = abs(fract(vNdc * vec2(9.0, 7.0)) - 0.5);
   float grid = (1.0 - smoothstep(0.0, 0.012, min(gq.x, gq.y))) * smoothstep(0.2, -0.8, vNdc.x) * smoothstep(-0.1, 0.8, vNdc.y);
   c += uGlow * grid * 0.05;
-  c *= 1.15 - 0.45 * smoothstep(-0.6, 1.0, vNdc.x);
+  c *= 1.4 - 0.95 * smoothstep(-0.8, 1.0, vNdc.x);
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -190,7 +193,7 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
     uWin: { value: W },
     uBack: { value: BACK },
     uFocus: { value: 13 },
-    uCocK: { value: 190 },
+    uCocK: { value: 260 },
     uPx: { value: 1 },
     uFocal: { value: 1000 },
     uFar: { value: W - BACK - 2 },
@@ -235,9 +238,18 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
   // ---- floor dots
   const cols = Math.round(38.4 / SP);
   const rows = Math.round(W / SP);
-  const fPos = new Float32Array(cols * rows * 3);
-  const fKind = new Float32Array(cols * rows);
+  const fineCols = Math.round(8 / 0.12);
+  const fineRows = Math.round(W / 0.12);
+  const fPos = new Float32Array((cols * rows + fineCols * fineRows) * 3);
+  const fKind = new Float32Array(cols * rows + fineCols * fineRows);
   let n = 0;
+  for (let iz = 0; iz < fineRows; iz++)
+    for (let ix = 0; ix < fineCols; ix++) {
+      fPos[n * 3] = (ix - fineCols / 2) * 0.12 + 0.06;
+      fPos[n * 3 + 2] = iz * 0.12 + 0.06;
+      fKind[n] = 0.15;
+      n++;
+    }
   for (let iz = 0; iz < rows; iz++)
     for (let ix = 0; ix < cols; ix++) {
       const gx = ix - cols / 2;
@@ -296,13 +308,13 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
     let x = side * (1.2 + Math.pow(r(), 1.1) * 10);
     let y = 0.25 + Math.abs(gauss(r)) * 1.1 + (r() < 0.35 ? range(r, 1.0, 4.5) : 0);
     let cell = i % (COLS * ROWS);
-    let s = range(r, 0.7, 1.5) * (r() < 0.08 ? 1.4 : 1);
+    let s = range(r, 0.55, 1.15) * (r() < 0.08 ? 1.4 : 1);
     if (i % 15 === 0) {
       // ring-gauge panels near the vanishing line
       x = range(r, -0.5, 0.5);
-      y = range(r, 0.35, 0.5);
+      y = i % 30 === 0 ? range(r, 3.2, 4.2) : range(r, 0.35, 0.5);
       cell = 1 + 9 * Math.floor(r() * 7);
-      s = 0.8;
+      s = 1.0;
     }
     if (label) {
       cell = 3 + 9 * Math.floor(r() * 7);
@@ -313,7 +325,7 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
     pSize.set([s * 1.6, s], i * 2);
     pCell.set([(cell % COLS) / COLS, 1 - (Math.floor(cell / COLS) + 1) / ROWS], i * 2);
     pYaw[i] = -side * range(r, 0.0, 0.35);
-    pInt[i] = range(r, 0.55, 1.1) * (label ? 0.6 : 1) * (side < 0 ? 1.15 : 0.85);
+    pInt[i] = range(r, 0.55, 1.1) * (label ? 0.6 : 1) * (side < 0 ? 1.15 : 0.85) * (i % 15 === 0 ? 1.8 : 1);
   }
   const canvas = document.createElement("canvas");
   canvas.width = ATLAS_W;
@@ -354,8 +366,8 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
   for (let i = 0; i < NST; i++) {
     const vert = i < 9;
     const side = r() < 0.62 ? -1 : 1;
-    sPos.set([side * (0.3 + Math.pow(r(), 1.4) * 16), vert ? 0 : 0.05 + Math.pow(r(), 2) * 5, r() * W], i * 3);
-    sLWS.set([vert ? range(r, 2, 9) : range(r, 3, 14), vert ? range(r, 0.003, 0.008) : range(r, 0.003, 0.01), vert ? 0 : 1 + Math.floor(r() * 3)], i * 3);
+    sPos.set([side * (0.3 + Math.pow(r(), 1.4) * 14), vert ? 0 : r() < 0.35 ? range(r, 0.02, 0.12) : 0.1 + Math.pow(r(), 2) * 4, r() * W], i * 3);
+    sLWS.set([vert ? range(r, 2, 9) : range(r, 2, 7), vert ? range(r, 0.003, 0.008) : range(r, 0.003, 0.01), vert ? 0 : 1 + Math.floor(r() * 3)], i * 3);
     const c = teal.clone().lerp(blue, r() * 0.3).lerp(new THREE.Color(1, 1, 1), r() * 0.2);
     sCol.set([c.r, c.g, c.b, range(r, 1.0, 4) * (vert ? 0.5 : 1)], i * 4);
     sVert[i] = vert ? 1 : 0;
@@ -377,8 +389,8 @@ const buildScene = (v: CyberFlythroughVersion): BuiltScene => {
     bCol = new Float32Array(NB * 4),
     bDrift = new Float32Array(NB * 2);
   for (let i = 0; i < NB; i++) {
-    bPos.set([gauss(r) * 7, 0.1 + Math.pow(r(), 1.5) * 6, r() * W], i * 3);
-    bSize[i] = range(r, 0.008, 0.03);
+    bPos.set([range(r, -11, 11), 0.1 + Math.pow(r(), 1.5) * 6, r() * W], i * 3);
+    bSize[i] = range(r, 0.005, 0.016);
     const c = teal.clone().lerp(new THREE.Color(1, 1, 1), r() * 0.5).lerp(blue, r() * 0.3);
     bCol.set([c.r, c.g, c.b, range(r, 0.8, 3.5)], i * 4);
     bDrift.set([1 + Math.floor(r() * 2), 1 + Math.floor(r() * 2)], i * 2);
