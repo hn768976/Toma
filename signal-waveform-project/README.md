@@ -56,7 +56,21 @@ Grain stays in the stills.
 
 ## Render time
 
-__RENDER_TIMES__
+Measured on a 4-core cloud Linux container (Chromium headless shell, software
+GL, 15 GB RAM), default concurrency. Per-frame cost = (90-frame render − 1-frame
+render) ÷ 89, so Remotion's ~6 s start-up and bundling are excluded.
+
+| Composition | 1080p (`--scale=0.5`) | 4K | Full 4K render (estimate) |
+|---|---|---|---|
+| SignalReadout | 0.95 s/frame | 4.0 s/frame | ≈ 40 min (600 frames) |
+| BreakingNewsOpener | 0.72 s/frame | 2.7 s/frame | ≈ 20 min (450 frames) |
+| AudioEditor | 0.79 s/frame | 2.9 s/frame | ≈ 30 min (600 frames) |
+
+The full 1080p preview renders took 534 s, 345 s and 507 s including encoding.
+4K costs about 3.8–4.3× the 1080p time, in line with 4× the pixels. The stacked
+glow filters are the main per-frame cost (about 60% of it in SignalReadout). A
+desktop with more cores scales roughly linearly: try `--concurrency=8` on an
+8-core machine.
 
 ## Changing the title text and the colours
 
@@ -119,10 +133,61 @@ words: the title size is set by `TITLE.size` in
 `--props='{"loopCheck":true}'` makes the two loops 601 frames long, so frame
 600 can be rendered and compared with frame 0.
 `--props='{"qaOff":["grain","glow"]}'` turns off groups for isolation and
-profiling. Groups: `grain`, `glow`, `waveforms`, `digits`, `haze`, `faders`,
-`indicators`, `leds`.
+profiling. Groups: `grain`, `glow`, `waveforms`, `digits`, `haze` (look 3:
+bokeh), `faders`, `indicators`, `leds`; look 2 also has `top`, `zone`, `wave`,
+`title`, `gauges`, `levels`.
 
-__CHECKS__
+## Verification (completion checklist)
+
+All checks were run on the delivered build. ✅ = passed.
+
+- ✅ **Files:** all three previews are 1920×1080, `30/1`, h264, `yuv420p`, no audio
+  stream. Durations: 20.000 s, 15.000 s, 20.000 s.
+- ✅ **Text and asset audit (read at 4K):** the title reads exactly `BREAKING NEWS`. The only
+  other text is placeholder labels (`LEVEL_L_R`, `DOTS_INF`, `EQ_SET`, `MIX_BUS`,
+  `CTRL_SET`, `WAV_01`–`WAV_04`) and random digits. There are no names or logos. All icons, dials and
+  buttons are SVG paths in `src/`, and `package.json` has no icon library.
+- ✅ **Loops:** with `loopCheck` on, frame 600 is **byte-identical** to frame 0 for
+  `SignalReadout` and `AudioEditor`. `BreakingNewsOpener` is deliberately *not* a loop.
+- ✅ **Determinism:**
+  - Frame 300 rendered alone from a cold start is **byte-identical** to frame 300 of a
+    full multi-threaded PNG-sequence render, for all three compositions. Also checked
+    on frames 13, 35 and 60 of the opener.
+  - Stress test: the same 60 frames rendered twice *at the same time* (CPU contention, out-of-order
+    scheduling) gave 0/60 differing frames for each composition.
+  - No `Math.random`, `Date.now`, CSS `@keyframes`, transitions,
+    `requestAnimationFrame` or React state anywhere in `src/`.
+- ✅ **1080p vs 4K:** frame 300 rendered at 4K and scaled to 1080p matches the 1080p
+  render (mean difference ≈ 2/255, mostly grain; bright-core overlap 0.94–0.97; lit area
+  ratio 1.00–1.08). Lines keep their relative thickness, and digits and labels take the
+  same share of the frame. The layout is identical.
+- ✅ **Banding:** frame 300 was pulled from the *encoded* SignalReadout mp4 and read along
+  a vertical line (x=1500) through the haze, between grid lines. Blue falls smoothly
+  from about 65 to 38 with no plateaus; the longest run of identical values is 4 px
+  (grain-level). The only jumps are the deliberate rule lines at y≈530/550.
+- ✅ **Content (5 frames each):**
+  - Look 1: two bands with four overlapping traces each, noise and swells, digits
+    changing with dim groups, traces moving.
+  - Look 2: no title at frame 0; the streak crosses the title zone in frames 20–50 and is
+    gone from frame 50; full title, rule and three chevrons after frame 70; the radar
+    rotates; top digits mid-roll in some frames and settled in others.
+  - Look 3: four different labelled waveforms with burst packets; faders, EQ indicators and
+    LEDs change between frames.
+
+### Determinism notes (for anyone editing the code)
+
+Chrome can rasterise some things slightly differently from render to render,
+depending on scheduling. To keep frames byte-identical, this project:
+
+- draws circles and ellipses as polygon paths (`src/lib/shapes.tsx`) and
+  regenerates static curved shapes every frame (the `phase` prop and a tiny radius nudge).
+  Chrome otherwise re-uses cached rasters of unchanged native circles and arcs,
+  which shifted their anti-aliasing by up to 40 levels between renders.
+- avoids `mix-blend-mode` and filters sized to their own bounding box on
+  moving content, and clips the light streak to the frame.
+- draws bokeh as gradient discs instead of passing it through a blur filter.
+
+Keep to these rules when adding new elements.
 
 ## Fonts and licences
 

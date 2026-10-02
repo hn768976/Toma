@@ -1,0 +1,3 @@
+# Large render outputs (each mp4 > 100 MB GitHub limit; 6K stills ~25-30 MB)
+*.mp4
+stills/*6000x3375*.png
