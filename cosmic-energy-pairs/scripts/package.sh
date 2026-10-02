@@ -7,5 +7,5 @@ rm -f "$DEST"
 cd ..
 zip -qr "$DEST" cosmic-energy-pairs \
   -x 'cosmic-energy-pairs/node_modules/*' 'cosmic-energy-pairs/out/*' 'cosmic-energy-pairs/renders/*' \
-     'cosmic-energy-pairs/.git/*' 'cosmic-energy-pairs/dist/*' '*/.DS_Store'
+     'cosmic-energy-pairs/.git/*' 'cosmic-energy-pairs/dist/*' '*/.DS_Store' '*/__pycache__/*'
 echo "wrote $DEST"; unzip -l "$DEST" | tail -1
