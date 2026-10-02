@@ -1,0 +1,32 @@
+{
+  "name": "card-coin-rain",
+  "version": "1.0.0",
+  "description": "Card & Coin Rain: two seamless 20s 3D loops (Remotion + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.1",
+    "@react-three/postprocessing": "3.0.4",
+    "@remotion/cli": "4.0.532",
+    "@remotion/three": "4.0.532",
+    "postprocessing": "6.39.5",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "4.0.532",
+    "@remotion/renderer": "4.0.532",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,17 @@
+public/hdri/studio_small_03_1k.hdr
+
+Asset:    "Studio Small 03" HDRI, 1k equirectangular (.hdr)
+Source:   Poly Haven (https://polyhaven.com/a/studio_small_03)
+License:  CC0 1.0 Universal (public domain dedication)
+          https://creativecommons.org/publicdomain/zero/1.0/
+          Poly Haven license page: https://polyhaven.com/license
+
+Provenance: polyhaven.com was not reachable from the build environment, so the
+file was taken byte-for-byte from the pmndrs/drei-assets mirror of Poly Haven
+HDRIs (https://github.com/pmndrs/drei-assets, hdri/studio_small_03_1k.hdr),
+which is the same Poly Haven asset used by drei's "studio" environment preset.
+If you want the original, download the 1k .hdr from the Poly Haven page above;
+it is a drop-in replacement.
+
+The scene grades this HDRI at load time (tint + lift toward the backdrop
+colour, see src/three/assets.ts). The file on disk is unmodified.
