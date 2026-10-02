@@ -78,10 +78,14 @@ one SwiftShader tab already uses every core).
 
 | | Gold Rush | Rose Card |
 |---|---|---|
-| 1080p preview, 600 frames, whole command | 2458 s (attempt 2, machine otherwise idle) | 2606 s (attempt 1); final run 2959 s while other checks shared the CPU |
+| 1080p preview, 600 frames, whole command | 2458 s on an idle machine; final run 2500 s | 2606 s on an idle machine; final run 2959 s (other checks shared the CPU) |
 | **per frame at 1080p** | **≈ 4.1 s** | **≈ 4.3 s** |
 
-**4K estimate (3840×2160, 4× the pixels):** FOURK_SECTION
+**4K (3840×2160), measured:** a 20-frame 4K render of `CardRain-Gold`
+(frames 300–319) minus a 2-frame run (startup) gives **≈ 13.6 s per frame**,
+so a full 600-frame 4K master takes **≈ 2 h 15 min per composition** on this
+CPU-only machine (≈ 3.3× the 1080p time for 4× the pixels: part of each frame
+is fixed cost). A 6000×3375 still takes ≈ 2 min including startup.
 
 With any real GPU expect a small fraction of that; the scene is ~60 draw
 calls plus six full-screen post passes.
