@@ -1,0 +1,5 @@
+studio_small_03_1k.hdr
+"Studio Small 03" by Sergej Majboroda — Poly Haven (https://polyhaven.com/a/studio_small_03)
+License: CC0 1.0 Universal (public domain dedication) — https://creativecommons.org/publicdomain/zero/1.0/
+Obtained from the pmndrs/drei-assets mirror of the Poly Haven 1k HDR file:
+https://raw.githubusercontent.com/pmndrs/drei-assets/master/hdri/studio_small_03_1k.hdr

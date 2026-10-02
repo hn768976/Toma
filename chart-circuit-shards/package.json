@@ -1,0 +1,29 @@
+{
+  "name": "chart-circuit-shards",
+  "version": "1.0.0",
+  "description": "3D Growth Chart, Circuit Flythrough, Neon Shards, CPU Board, Laser Panels — Remotion + @remotion/three",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  }
+}
