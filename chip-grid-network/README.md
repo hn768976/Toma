@@ -104,7 +104,39 @@ samples (0 — anti-aliasing is FXAA; see *Why FXAA* below).
 
 ## Render time
 
-MEASURED_TIMING_PLACEHOLDER
+Measured in the build environment: **4 vCPU, no GPU — Chromium WebGL on
+SwiftShader (CPU)**, grid **18 × 18 in all four compositions**, delivery
+settings (FXAA, full-res DOF, 512² floor reflection at 1080p, shadows on).
+
+| Output | Composition | Time per frame |
+|---|---|---|
+| 1080p (`--scale=0.5`), full 450-frame render, 2 tabs | ShieldSweepTop | 4.53 s |
+| | AttackPullback | 4.71 s |
+| | AttackSpread | 5.29 s |
+| | ShieldRecovery | 5.43 s |
+| 4K (`--scale=1`), 4-frame bench, 1 tab | AttackSpread | 15.9 s |
+| | ShieldRecovery | 16.7 s |
+| 6000 × 3375 still (`--scale=1.5625`) | ShieldSweepTop | 97 s incl. ~15 s start-up |
+
+Encoding a 450-frame 1080p PNG sequence with x264 (preset slow, CRF 16) took
+~70–80 s per composition.
+
+**4K estimate.** On this kind of CPU-only machine: ~16–17 s/frame →
+**~2–2.1 h per composition, ~8.5 h for all four**. SwiftShader already uses
+every core, so extra Remotion tabs (`--concurrency`) did not help
+(1 tab 7.2 s/frame vs 4 tabs 7.3 s/frame on an earlier build). On a machine
+with a real GPU (`--gl=angle`) this scene should be GPU-bound and far faster
+(an estimate, not measured here): expect roughly 0.5–2 s/frame at 4K, i.e.
+5–15 minutes per composition.
+
+**Grid size.** The brief suggests cutting the grid for the close-up comps
+first if rendering is slow. Measurement showed the cost is pixel fill and
+post-processing, not geometry: cutting the socket geometry (about a million
+vertices across the grid) changed 7.2 → 7.1 s/frame, while MSAA alone cost
+~1.9 s/frame and the floor reflection at 1024² ~0.8 s/frame. So the grid
+stays 18 × 18 everywhere; the reflection resolution now scales with output
+size and MSAA was replaced by FXAA (which also fixed one-frame sparkles, see
+below).
 
 ---
 
@@ -262,4 +294,28 @@ scripts/                     preview render, stills, bench, verification
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+- [x] One project, one shared scene, four compositions (`ChipGrid-ShieldSweepTop`, `-AttackPullback`, `-AttackSpread`, `-ShieldRecovery`), 3840 × 2160, 30 fps, 450 frames, not loops
+- [x] 3D with `@remotion/three` / react-three-fiber on WebGL2; all models and textures built in code (no Meshy)
+- [x] 18 × 18 grid, spacing 4; chamfered nodes with plinth + glowing foot line, fake-glass walls with glowing inner traces, brushed top plate with PCB + die, 8 % frosted white tops (seeded), sockets with three holes
+- [x] Three-tube glass cable bundles with emissive cores, brighter ends, travelling pulses
+- [x] Tiled glossy floor with sub-grid and `MeshReflectorMaterial`; coloured light spill following the front
+- [x] Self-drawn SVG shield → `SVGLoader` → `ShapeGeometry` (flat on tops in comp 1, floating billboards in comp 4)
+- [x] Poly Haven CC0 studio HDRI shipped with licence, loaded behind `delayRender` / `continueRender`
+- [x] Bloom on emissive only (high threshold), DOF (mild in 1, stronger in 2–4), ACES filmic tone mapping, sRGB output
+- [x] One `InstancedMesh` per part, spread driven by per-instance attributes + `uFrame`
+- [x] Spread from grid distance + seeded jitter; cables fill from the earlier node; 6-frame switch flash; pure function of the frame
+- [x] Dither ±1/255 + ~2 % grain from a fixed hash of pixel and frame; no `Math.random()`
+- [x] Determinism: frame 300 cold still == frame 300 of the full render, byte for byte, for all four
+- [x] No text, logos or real chip branding
+- [x] 1080p previews: 1920 × 1080, H.264, yuv420p, 30 fps, CRF 16, 15.0 s, no audio
+- [x] Stills: two 6000 × 3375 PNGs per composition (mid-spread + end) and one 1080p PNG each
+- [x] Verify loop steps 1–5 passed for all four (details in `VERIFY.md`)
+- [x] Render time per frame measured and recorded, grid size and 4K estimate stated
+- [x] `npm install && npx remotion studio` checked from a clean copy of the zip
+- [ ] 4K renders — not done here, by design (render commands above)
+
+Deviations from the brief, on purpose:
+- Composition ids use `-` (Remotion rejects `_`); output files use the `_` names.
+- `stepFrames` 16–38 instead of 8–12, so the visible spread lasts ~6–8 s (see *Spread*).
+- Comp 2 and 4 use a straight-line distance (circle-ish front) instead of BFS, to get the requested front shapes; comps 1 and 3 use BFS.
+- FXAA instead of MSAA, front-face-only glass (see *Why FXAA*).
