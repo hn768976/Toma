@@ -16,7 +16,7 @@ import { SlatColors } from "../versions";
 export type SlatParams = { colors: SlatColors };
 
 const LOOP = 600;
-const ANGLE = THREE.MathUtils.degToRad(38);
+const ANGLE = THREE.MathUtils.degToRad(41);
 const LENGTH = 26;
 const THICK = 0.22;
 
@@ -26,11 +26,11 @@ const buildSlats = () => {
   // Cover the frame's extent perpendicular to the slats (~10 units).
   let y = -5.8;
   while (y < 5.8) {
-    const w = rng() < 0.3 ? range(rng, 0.12, 0.25) : range(rng, 0.45, 1.15);
-    const r = rng();
-    const z = r < 0.3 ? 0 : r < 0.6 ? 0.12 : r < 0.85 ? 0.24 : 0.38;
-    // a small tilt about the long axis lifts one edge, like louvres
-    slats.push({ y: y + w / 2, w, z, bevel: range(rng, 0.02, 0.04), tilt: range(rng, 0.08, 0.2) });
+    const w = rng() < 0.15 ? range(rng, 0.2, 0.32) : range(rng, 0.5, 1.15);
+    const z = range(rng, 0, 0.08);
+    // tilted about the long axis and overlapping the next slat, like
+    // louvres/shingles: each raised lower edge shades the slat below
+    slats.push({ y: y + w / 2, w, z, bevel: range(rng, 0.02, 0.035), tilt: range(rng, 0.2, 0.3) });
     y += w + 0.008;
   }
   const glints = [3, 7, 11, 14, 17].map((i, k) => ({
@@ -90,14 +90,14 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
     metalness: 0.0,
     clearcoat: 0.0,
     clearcoatRoughness: 0.35,
-    sheen: 0.3,
-    sheenRoughness: 0.5,
+    sheen: 0.0,
+    sheenRoughness: 0.6,
     sheenColor: new THREE.Color(c.light),
     envMap: env,
-    envMapIntensity: white ? 0.25 : 0.05,
+    envMapIntensity: white ? 0.15 : 0.0,
   });
   SLATS.slats.forEach((s) => {
-    const geo = new RoundedBoxGeometry(LENGTH, s.w, THICK, 4, s.bevel);
+    const geo = new RoundedBoxGeometry(LENGTH, s.w * 1.25, THICK * 0.6, 4, s.bevel);
     const m = new THREE.Mesh(geo, mat);
     m.position.set(0, s.y, s.z);
     m.rotation.x = -s.tilt;
@@ -117,7 +117,8 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
 
   // Grazing key light with soft shadows separates the depth layers.
   const key = new THREE.DirectionalLight(lightCol, white ? 1.8 : 1.4);
-  key.position.set(-4, 7, 2.6);
+  // low, from the slats' upper side (perpendicular to their length)
+  key.position.set(-Math.sin(ANGLE) * 7, Math.cos(ANGLE) * 7, 2.2);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.left = -9;
@@ -162,9 +163,9 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
     const a = t * Math.PI * 2;
     // Sweep: across the frame and back once per loop, travelling along a
     // diagonal perpendicular-ish to the slats.
-    sweep.position.set(Math.sin(a) * 7.5, Math.sin(a) * -1.6 + 0.6, 3.2);
+    sweep.position.set(1.2 + Math.sin(a) * 5.5, 1.0 + Math.sin(a) * 0.8, 3.2);
     sweep.lookAt(sweep.position.x * 0.6, sweep.position.y * 0.6, 0);
-    sweep2.position.set(-Math.sin(a * 2 + 1.1) * 6, Math.cos(a) * 1.8 - 0.6, 3.6);
+    sweep2.position.set(0.8 - Math.sin(a * 2 + 1.1) * 4, 1.2 + Math.cos(a) * 1.2, 3.6);
     sweep2.lookAt(sweep2.position.x * 0.5, sweep2.position.y * 0.5, 0);
     uT.value = t;
     camera.position.set(0.12 * Math.sin(a), 0.08 * Math.cos(a), 12);

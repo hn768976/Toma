@@ -36,31 +36,33 @@ type Bundle = {
 // shoots out to the right; the lower bundle mirrors it from below.
 const BUNDLES: Bundle[] = [
   {
-    // tight C-curl: drops near-vertically from the top centre, bends, exits upper right
+    // drops near-vertically from the top, curls tightly near the vanishing
+    // point and fans out to the upper right
     pts: [
-      [0.47, -0.15, 30, 0.05],
-      [0.45, 0.1, 20, 0.04],
-      [0.47, 0.3, 13, 0.035],
-      [0.53, 0.42, 9, 0.03],
-      [0.63, 0.4, 6.5, 0.04],
-      [0.79, 0.3, 4.5, 0.06],
-      [0.99, 0.18, 3, 0.09],
-      [1.25, 0.05, 1.8, 0.13],
+      [0.46, -0.15, 30, 0.05],
+      [0.44, 0.1, 20, 0.04],
+      [0.46, 0.3, 13, 0.03],
+      [0.51, 0.44, 9, 0.022],
+      [0.61, 0.42, 6.5, 0.05],
+      [0.77, 0.32, 4.5, 0.1],
+      [0.97, 0.18, 3, 0.17],
+      [1.25, 0.02, 1.8, 0.26],
     ],
-    count: 11,
+    count: 18,
   },
   {
-    // broad, flatter sweep from the bottom centre out to the right edge
+    // rises from the bottom centre, pinches near the vanishing point and
+    // spreads into a wide fan toward the bottom-right corner
     pts: [
-      [0.3, 1.25, 26, 0.08],
-      [0.36, 0.95, 16, 0.07],
-      [0.44, 0.76, 10, 0.06],
-      [0.56, 0.68, 7, 0.07],
-      [0.72, 0.72, 5, 0.1],
-      [0.92, 0.82, 3.3, 0.15],
-      [1.2, 0.95, 2, 0.2],
+      [0.36, 1.2, 26, 0.06],
+      [0.4, 0.86, 15, 0.04],
+      [0.46, 0.63, 9.5, 0.025],
+      [0.56, 0.6, 7, 0.05],
+      [0.72, 0.7, 5, 0.11],
+      [0.9, 0.88, 3.2, 0.2],
+      [1.15, 1.1, 2, 0.3],
     ],
-    count: 13,
+    count: 20,
   },
 ];
 
@@ -103,17 +105,17 @@ const buildTrails = () => {
       const len = [0];
       for (let s = 1; s < pts.length; s++) len.push(len[s - 1] + pts[s].distanceTo(pts[s - 1]));
       const r = rng();
-      const color = r < 0.45 ? "main" : r < 0.75 ? "deep" : r < 0.9 ? "warm" : "hot";
+      const color = r < 0.42 ? "main" : r < 0.66 ? "deep" : r < 0.88 ? "warm" : "hot";
       trails.push({
         pts,
         len,
         total: len[len.length - 1],
         color,
-        intensity: range(rng, 0.7, 1.4) * (color === "hot" ? 0.8 : 1),
-        width: range(rng, 0.035, 0.07),
+        intensity: range(rng, 0.6, 1.15) * (color === "hot" ? 0.8 : 1),
+        width: rng() < 0.35 ? range(rng, 0.045, 0.075) : range(rng, 0.012, 0.028),
         phase: rng(),
         k: Math.floor(range(rng, 14, 30)),
-        dashes: Math.floor(range(rng, 1, 3)),
+        dashes: Math.floor(range(rng, 2, 6)),
       });
     }
   });
@@ -121,9 +123,10 @@ const buildTrails = () => {
   const near: { a: THREE.Vector3; b: THREE.Vector3; w: number; color: "main" | "deep" | "warm" | "hot"; inten: number; phase: number; k: number }[] = [];
   const nearDefs: [number, number, number, number, number, number, number, "main" | "deep" | "warm" | "hot"][] = [
     // x0, y0, d0, x1, y1, d1, width, colour
-    [0.72, 0.3, 5.0, 0.95, 0.17, 3.0, 0.32, "main"],
-    [0.64, 0.38, 5.5, 0.86, 0.26, 3.6, 0.26, "hot"],
-    [0.8, 0.64, 4.6, 1.04, 0.66, 2.8, 0.3, "deep"],
+    [0.6, 0.38, 5.0, 0.92, 0.18, 2.6, 0.9, "main"],
+    [0.64, 0.4, 5.5, 0.9, 0.28, 3.0, 0.7, "hot"],
+    [0.62, 0.66, 4.6, 1.05, 0.72, 2.4, 1.1, "hot"],
+    [0.7, 0.72, 4.0, 1.05, 0.9, 2.2, 0.8, "deep"],
   ];
   nearDefs.forEach(([x0, y0, d0, x1, y1, d1, w, col]) => {
     near.push({
@@ -131,7 +134,7 @@ const buildTrails = () => {
       b: toWorld(x1, y1, d1),
       w,
       color: col,
-      inten: range(rng, 1.0, 1.5),
+      inten: range(rng, 0.35, 0.55),
       phase: rng(),
       k: Math.floor(range(rng, 3, 6)),
     });
@@ -150,10 +153,10 @@ float lineMod(float u, vec4 p) {
   float dashes = floor(p.w / 64.0);
   float q = fract(s * dashes - uT * k + p.z);
   // q runs 0..1 inside a dash cell; head at q = 1, tail fading back.
-  float body = smoothstep(0.35, 0.98, q) * (1.0 - smoothstep(0.985, 1.0, q));
+  float body = smoothstep(0.15, 0.98, q) * (1.0 - smoothstep(0.985, 1.0, q));
   float head = exp(-pow((q - 0.975) / 0.012, 2.0)) * 1.6;
   // faint continuous filament so the bundle reads even between dashes
-  float fil = 0.3;
+  float fil = 0.1;
   // fade in from far away
   float far = smoothstep(0.0, 0.12, s);
   return (fil + body + head) * far;

@@ -45,6 +45,8 @@ export type PostSettings = {
   // Radial zoom blur toward the frame centre (fraction of the distance to
   // the centre that one pixel is smeared over). 0 = off.
   radialBlur?: number;
+  // Display-space saturation after tonemapping (1 = unchanged).
+  saturation?: number;
 };
 
 const FULLSCREEN_VERT = /* glsl */ `
@@ -261,6 +263,7 @@ uniform float uBlackPreserve;
 uniform uint uFrame;
 uniform vec2 uRes;
 uniform float uRadial;
+uniform float uSat;
 in vec2 vUv;
 ${HASH_GLSL}
 ${ACES_GLSL}
@@ -289,6 +292,8 @@ void main() {
   c *= 1.0 - uVignette * smoothstep(0.2, 1.2, dot(p, p));
   float lin = max(c.r, max(c.g, c.b));
   vec3 o = linearToSRGB(acesFilmic(c));
+  float ol = dot(o, vec3(0.2126, 0.7152, 0.0722));
+  o = clamp(mix(vec3(ol), o, uSat), 0.0, 1.0);
   float keep = mix(1.0, smoothstep(0.0, 0.004, lin), uBlackPreserve);
   uvec2 px = uvec2(gl_FragCoord.xy);
   vec3 n1 = hash3(uvec3(px, uFrame));
@@ -373,6 +378,7 @@ export class PostPipeline {
     uFrame: { value: 0 },
     uRes: { value: new THREE.Vector2() },
     uRadial: { value: 0 },
+    uSat: { value: 1 },
   });
 
   constructor(settings: PostSettings) {
@@ -515,6 +521,7 @@ export class PostPipeline {
     mcmp.uniforms.uFrame.value = ((frame % loop) + loop) % loop;
     mcmp.uniforms.uRes.value.set(w, h);
     mcmp.uniforms.uRadial.value = s.radialBlur ?? 0;
+    mcmp.uniforms.uSat.value = s.saturation ?? 1;
     this.draw(renderer, mcmp, null);
   }
 

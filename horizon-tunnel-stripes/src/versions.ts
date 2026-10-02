@@ -79,16 +79,16 @@ export const HIERARCHY_VERSIONS: Record<"Blue", HierarchyColors> = {
   Blue: {
     line: "#4FE8FF",
     surface: "#0E2A50",
-    cube: "#2C6FD6",
+    cube: "#3F7FC8",
   },
 };
 
 export const SLAT_VERSIONS: Record<"Black" | "White", SlatColors> = {
   Black: {
     slat: "#141416",
-    light: "#E4E6EA",
+    light: "#EEE2EE",
     backdrop: "#08080A",
-    exposure: 1.0,
+    exposure: 1.8,
     grain: 0.02,
     glint: "#E8F0FF",
   },

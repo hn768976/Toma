@@ -3,7 +3,6 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { makeBackdrop } from "../engine/backdrop";
 import { Dot, makeDots } from "../engine/dots";
 import { makeLines, Seg } from "../engine/lines";
-import { mulberry32 } from "../engine/random";
 import { LookFactory } from "../engine/Stage";
 import { HierarchyColors } from "../versions";
 
@@ -73,7 +72,7 @@ float lineMod(float u, vec4 p) {
   float vis = smoothstep(prog + 0.004, prog - 0.004, s);
   float head = exp(-pow((s - prog) / 0.025, 2.0)) * 3.0 * (1.0 - uDone[id]);
   float run = fract(s * p.w * 0.9 - uTime * 0.9);
-  float dots = exp(-pow((run - 0.5) / 0.03, 2.0)) * 1.2 * uDone[id] * step(0.5, p.w);
+  float dots = exp(-pow((run - 0.5) / 0.03, 2.0)) * 0.6 * uDone[id] * step(0.5, p.w);
   return vis * (1.0 + dots) + head * step(0.0005, prog);
 }
 `;
@@ -108,48 +107,39 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     envMap: env,
     envMapIntensity: 0.015,
   });
-  // Soft light patches and darker diagonal bands painted into an emissive
-  // map (seeded, drawn once); DOF turns them into out-of-focus haze.
-  const hazeCanvas = document.createElement("canvas");
-  hazeCanvas.width = 512;
-  hazeCanvas.height = 512;
-  {
-    const g = hazeCanvas.getContext("2d")!;
-    const hr = mulberry32(0x4a2e);
-    g.fillStyle = "#000";
-    g.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 14; i++) {
-      const x = hr() * 512;
-      const y = hr() * 512;
-      const rad = 80 + hr() * 170;
-      const a = 0.55 + hr() * 0.45;
-      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
-      gr.addColorStop(0, `rgba(255,255,255,${a})`);
-      gr.addColorStop(1, "rgba(255,255,255,0)");
-      g.fillStyle = gr;
-      g.fillRect(0, 0, 512, 512);
-    }
-    // darker diagonal streaks
-    g.globalCompositeOperation = "multiply";
-    for (let i = 0; i < 7; i++) {
-      g.save();
-      g.translate(hr() * 512, hr() * 512);
-      g.rotate(-0.7);
-      const w = 30 + hr() * 70;
-      const gr = g.createLinearGradient(0, -w, 0, w);
-      gr.addColorStop(0, "rgb(255,255,255)");
-      gr.addColorStop(0.5, `rgb(${60 + hr() * 60},${60 + hr() * 60},${60 + hr() * 60})`);
-      gr.addColorStop(1, "rgb(255,255,255)");
-      g.fillStyle = gr;
-      g.fillRect(-700, -w, 1400, 2 * w);
-      g.restore();
-    }
-  }
-  const hazeTex = new THREE.CanvasTexture(hazeCanvas);
-  hazeTex.colorSpace = THREE.SRGBColorSpace;
-  floorMat.emissive = new THREE.Color(c.surface).multiplyScalar(5.0);
-  floorMat.emissiveMap = hazeTex;
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
+  // Surface: dark blue with large soft light patches and darker diagonal
+  // bands (smooth value noise in world space); the DOF pass turns it into
+  // out-of-focus haze like the reference.
+  const floorShader = new THREE.ShaderMaterial({
+    uniforms: { uSurf: { value: new THREE.Color(c.surface) } },
+    vertexShader: /* glsl */ `
+      out vec3 vW;
+      void main() {
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        vW = w.xyz;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uSurf;
+      in vec3 vW;
+      float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vnoise(vec2 p) {
+        vec2 i = floor(p), f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(h(i), h(i + vec2(1, 0)), f.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), f.x), f.y);
+      }
+      void main() {
+        vec2 p = vW.xz;
+        float n = vnoise(p / 7.0) * 0.65 + vnoise(p / 3.2 + 7.3) * 0.35;
+        float band = 0.5 + 0.5 * sin((p.x * 0.8 - p.y * 0.6) * 0.55 + vnoise(p / 9.0) * 3.0);
+        float k = 1.0 + 3.4 * smoothstep(0.3, 0.85, n) * (0.4 + 0.6 * band);
+        gl_FragColor = vec4(uSurf * k, 1.0);
+      }
+    `,
+  });
+  void floorMat;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), floorShader);
   floor.rotation.x = -Math.PI / 2;
   floor.rotation.z = 0.4;
   scene.add(floor);
@@ -161,7 +151,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     [-4, 4, 10, 55],
   ];
   patches.forEach(([x, z, tx, inten]) => {
-    const sp = new THREE.SpotLight(0x3f8cff, inten * 1.4, 0, 0.6, 1, 2);
+    const sp = new THREE.SpotLight(0x3f8cff, inten * 0.25, 0, 0.6, 1, 2);
     sp.position.set(x, 9, z);
     sp.target.position.set(tx * 0.3 + x * 0.4, 0, z + tx * 0.2);
     scene.add(sp, sp.target);
@@ -173,19 +163,19 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
   // Nodes: a glossy rounded cube over a narrower base, on a pad outline.
   const cubeMat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(c.cube),
-    roughness: 0.32,
+    roughness: 0.25,
     metalness: 0.1,
-    clearcoat: 0.25,
-    clearcoatRoughness: 0.3,
+    clearcoat: 0.3,
+    clearcoatRoughness: 0.35,
     envMap: env,
-    envMapIntensity: 0.035,
+    envMapIntensity: 0.015,
   });
   const baseMat = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(c.cube).multiplyScalar(0.18),
+    color: new THREE.Color(c.cube).multiplyScalar(0.08),
     roughness: 0.35,
     metalness: 0.2,
     envMap: env,
-    envMapIntensity: 0.04,
+    envMapIntensity: 0.0,
   });
   const topGeo = new RoundedBoxGeometry(0.62, 0.62, 0.62, 4, 0.08);
   const baseGeo = new RoundedBoxGeometry(0.86, 0.12, 0.86, 2, 0.03);
@@ -214,7 +204,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
         a: [pts[i - 1][0], Y, pts[i - 1][1]],
         b: [pts[i][0], Y, pts[i][1]],
         color: lineCol,
-        intensity: 1.1,
+        intensity: 1.5,
         widthA: width,
         param: [acc / total, (acc + d) / total, id, dots ? total : 0],
       });
@@ -222,7 +212,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     }
     pathLen[id] = total;
   };
-  PATHS.forEach((p, i) => addPath(p.pts, i, 0.022));
+  PATHS.forEach((p, i) => addPath(p.pts, i, 0.026));
   // Pads: ids 8.. (one per node), animated with the node pop.
   const padIds: number[] = [];
   NODES.forEach((n, i) => {
@@ -278,7 +268,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
   const arrowGeo = new THREE.BufferGeometry();
   arrowGeo.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0.16, -0.11, 0, -0.04, 0.11, 0, -0.04], 3));
   const arrowMat = new THREE.MeshBasicMaterial({
-    color: lineCol.clone().multiplyScalar(2.2),
+    color: lineCol.clone().multiplyScalar(1.2),
     blending: THREE.AdditiveBlending,
     transparent: true,
     depthWrite: false,
@@ -295,21 +285,36 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     return a;
   });
 
-  // Small sparkle at each node's pad when it lands.
-  const sparkDots: Dot[] = NODES.map((n) => ({
-    p: [n.x, 0.05, n.z],
-    color: lineCol,
-    intensity: 0,
-    size: 0.05,
-  }));
-  const sparks = makeDots(sparkDots, { softness: 1 });
-  sparks.visible = false;
-  scene.add(sparks);
+  // Bright point flares at line corners and junctions, lit once the
+  // drawing head has passed them.
+  const uFrame = { value: 0 };
+  const flareDots: Dot[] = [];
+  PATHS.forEach((p) => {
+    let total = 0;
+    for (let i = 1; i < p.pts.length; i++) total += Math.hypot(p.pts[i][0] - p.pts[i - 1][0], p.pts[i][1] - p.pts[i - 1][1]);
+    let acc = 0;
+    for (let i = 1; i < p.pts.length - 1; i++) {
+      acc += Math.hypot(p.pts[i][0] - p.pts[i - 1][0], p.pts[i][1] - p.pts[i - 1][1]);
+      // frame at which the eased head reaches this corner (approx, linear)
+      const at = p.start + (acc / total) * (p.end - p.start);
+      flareDots.push({ p: [p.pts[i][0], Y * 3, p.pts[i][1]], color: lineCol, intensity: 2.2, size: 0.0035, param: [at, 0, 0, 0] });
+    }
+    flareDots.push({ p: [p.pts[0][0], Y * 3, p.pts[0][1]], color: lineCol, intensity: 1.6, size: 0.003, param: [p.start + 2, 0, 0, 0] });
+  });
+  scene.add(
+    makeDots(flareDots, {
+      softness: 0.8,
+      uniforms: { uFrame },
+      dotMod: `uniform float uFrame;
+float dotMod(vec4 p) { return smoothstep(p.x - 2.0, p.x + 6.0, uFrame); }`,
+    }),
+  );
 
-  const target = new THREE.Vector3(0.3, 0, 0.4);
+  const target = new THREE.Vector3(0.3, 0, 1.1);
 
   const update = (frame: number) => {
     uTime.value = frame / 30;
+    uFrame.value = frame;
     PATHS.forEach((p, i) => {
       const x = (frame - p.start) / (p.end - p.start);
       uProg.value[i] = x <= 0 ? 0 : ease(x) * 1.0005;
@@ -337,8 +342,8 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     // (orbit: yaw 2 -> 27 degrees, high angle, long lens)
     const e = t * t * (3 - 2 * t) * 0.6 + t * 0.4;
     const az = THREE.MathUtils.degToRad(2 + 25 * e);
-    const el = THREE.MathUtils.degToRad(48 - 3 * e);
-    const dist = 18.5 + 2.2 * e;
+    const el = THREE.MathUtils.degToRad(39 - 3 * e);
+    const dist = 19.5 + 2.2 * e;
     camera.position.set(
       target.x + Math.sin(az) * Math.cos(el) * dist,
       target.y + Math.sin(el) * dist,

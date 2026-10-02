@@ -9,8 +9,7 @@ import { TunnelColors } from "../versions";
 // A tunnel whose walls, floor and ceiling are flat modules of glowing tile
 // outlines (bars) with a seeded pattern of brightness, depth steps and gaps,
 // plus a soft reflection of the grid in the glossy floor.
-// HALF_X / HALF_Y set the cross-section: equal values give a square tunnel;
-// the default is wider than tall, which matches the reference clip.
+// HALF_X / HALF_Y set the cross-section (square by default).
 //
 // Loop: the tunnel is built from a repeating segment of length L and the
 // camera travels exactly N*L in 600 frames. Roll sway is a whole sine cycle.
@@ -18,14 +17,14 @@ import { TunnelColors } from "../versions";
 export type TunnelParams = { colors: TunnelColors };
 
 const LOOP = 600;
-const HALF_X = 4.6; // half width of the cross-section
-const HALF_Y = 2.6; // half height (set equal to HALF_X for a square tunnel)
-const CELL = 0.95; // tile size across a face
-const CELL_Z = 0.7; // tile length along the tunnel
-const ROWS = 24; // rows per repeating segment
+const HALF_X = 3.2; // half width of the cross-section
+const HALF_Y = 3.2; // half height (square tunnel)
+const CELL = 0.55; // tile size across a face
+const CELL_Z = 0.55; // tile length along the tunnel
+const ROWS = 28; // rows per repeating segment
 const L = ROWS * CELL_Z; // segment length
 const N = 2; // segments travelled per loop
-const COPIES = 5; // segments drawn ahead of the camera
+const COPIES = 6; // segments drawn ahead of the camera
 
 type Face = { origin: THREE.Vector3; u: THREE.Vector3; n: THREE.Vector3 };
 // Each face: a point at the face's (-u) edge, u = across direction, n = outward normal.
@@ -45,20 +44,22 @@ type Bar = { a: THREE.Vector3; b: THREE.Vector3; level: number; accent: boolean;
 // flat modules (3 cells across x 4 rows) of closed rectangular cells. A
 // module has its own depth step, brightness and may be missing entirely,
 // which gives the stepped, uneven panelling and the dark gaps.
-const MOD_U = 3;
+const MOD_U = 4;
 const MOD_K = 4;
 const buildSegment = () => {
   const rng = mulberry32(0x7e11);
   const bars: Bar[] = [];
-  const inset = 0.06;
+  // dim glossy panel surfaces behind the bars, and a dimmer second layer
+  const fills: { a: THREE.Vector3; b: THREE.Vector3; width: number; level: number }[] = [];
+  const inset = 0.04;
   FACES.forEach((f, fi) => {
     const sideWall = fi >= 2;
     for (let mu = 0; mu < f.cells; mu += MOD_U) {
       for (let mk = 0; mk < ROWS; mk += MOD_K) {
         const r = rng();
-        if (r < 0.26) continue; // missing module: dark gap
-        const depth = r < 0.7 ? 0 : r < 0.88 ? 0.2 : 0.42;
-        const modLevel = rng() < 0.25 ? range(rng, 1.0, 1.4) : range(rng, 0.35, 0.65);
+        if (r < 0.08) continue; // missing module: dark gap
+        const depth = r < 0.7 ? 0 : r < 0.88 ? 0.15 : 0.3;
+        const modLevel = rng() < 0.3 ? range(rng, 1.1, 1.6) : range(rng, 0.35, 0.7);
         const accent = rng() < 0.5;
         const P = (u: number, k: number) =>
           f.origin
@@ -71,11 +72,22 @@ const buildSegment = () => {
         const k0 = mk * CELL_Z + inset;
         const k1 = (mk + MOD_K) * CELL_Z - inset;
         const bar = (a: THREE.Vector3, b: THREE.Vector3, emph: boolean) => {
-          if (rng() < 0.18) return; // some missing bars
+          if (rng() < 0.12) return; // some missing bars
           const hot = rng() < 0.12;
           const level = modLevel * (hot ? 2.2 : range(rng, 0.7, 1.1)) * (emph ? 1.25 : 1);
-          bars.push({ a, b, level, accent, width: hot || emph ? 0.075 : 0.05 });
+          bars.push({ a, b, level, accent, width: hot || emph ? 0.06 : 0.04 });
         };
+        {
+          const um = (u0 + u1) / 2;
+          fills.push({ a: P(um, k0), b: P(um, k1), width: u1 - u0, level: range(rng, 0.03, 0.08) });
+          // secondary layer: small dim cells a little further out
+          for (let j = 0; j < 3; j++) {
+            const uu = range(rng, u0, u1);
+            const kk = range(rng, k0, k1 - 0.3);
+            const back = f.n.clone().multiplyScalar(0.5 + rng() * 0.6);
+            fills.push({ a: P(uu, kk).add(back), b: P(uu, kk + range(rng, 0.15, 0.35)).add(back), width: range(rng, 0.12, 0.3), level: range(rng, 0.08, 0.2) });
+          }
+        }
         // across bars (vertical on the side walls: emphasised)
         for (let k = 0; k <= MOD_K; k++) {
           const kz = Math.min(k1, Math.max(k0, mk * CELL_Z + k * CELL_Z));
@@ -89,7 +101,7 @@ const buildSegment = () => {
       }
     }
   });
-  return { bars };
+  return { bars, fills };
 };
 const SEGMENT = buildSegment();
 
@@ -106,7 +118,7 @@ export const tunnelLook: LookFactory<TunnelParams> = ({ params }) => {
   const bar = new THREE.Color(c.bar);
   const accent = new THREE.Color(c.accent);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 140);
+  const camera = new THREE.PerspectiveCamera(62, 16 / 9, 0.1, 140);
 
   const bg = makeBackdrop(
     /* glsl */ `
@@ -154,6 +166,22 @@ export const tunnelLook: LookFactory<TunnelParams> = ({ params }) => {
       }
     });
   }
+  const fillSegs: Seg[] = [];
+  for (let copy = 0; copy < COPIES; copy++) {
+    const dz = -copy * L;
+    SEGMENT.fills.forEach((f) => {
+      fillSegs.push({
+        a: [f.a.x, f.a.y, f.a.z + dz],
+        b: [f.b.x, f.b.y, f.b.z + dz],
+        color: bar,
+        intensity: f.level,
+        widthA: f.width,
+      });
+    });
+  }
+  const fills = makeLines(fillSegs, { worldWidth: true, softness: 0.6, feather: 1.2, fog: 0.04 });
+  fills.renderOrder = 0;
+  world.add(fills);
   const refl = makeLines(reflSegs, { worldWidth: true, softness: 1, feather: 1.8, lineMod: BAR_MOD, fog: 0.05 });
   refl.renderOrder = 1;
   world.add(refl);
@@ -175,7 +203,7 @@ export const tunnelLook: LookFactory<TunnelParams> = ({ params }) => {
     world.position.z = travel % L;
     const s = Math.sin(t * Math.PI * 2);
     const s2 = Math.sin(t * Math.PI * 4 + 0.7);
-    camera.position.set(0.2 * s2, 0.3 + 0.08 * s, 0);
+    camera.position.set(0.15 * s2, 0.12 + 0.06 * s, 0);
     camera.rotation.set(0, 0, THREE.MathUtils.degToRad(3.0) * s);
   };
 
