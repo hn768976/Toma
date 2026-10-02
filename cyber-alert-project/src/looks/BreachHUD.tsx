@@ -249,6 +249,8 @@ export const BreachHUD: React.FC<{ palette: HudPalette }> = ({ palette: p }) => 
 
   return (
     <AbsoluteFill style={{ background: `radial-gradient(ellipse 70% 65% at 45% 50%, ${p.bgCenter} 0%, ${p.bgEdge} 100%)`, overflow: "hidden" }}>
+      {/* ±1/255 static noise on the background gradient (tile at 0.8 %), under everything */}
+      <Grain opacity={0.008} salt={11} animated={false} />
       <AbsoluteFill>
         {LAYERS.map((L, li) => {
           // 2D transform that puts a panel centred at (cx, cy) where the 3D

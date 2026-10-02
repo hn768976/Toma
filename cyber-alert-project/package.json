@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "studio": "remotion studio",
-    "build:assets": "node scripts/build-map.mjs && node scripts/build-noise.mjs",
+    "build:assets": "node scripts/build-map.mjs && node scripts/build-noise.mjs && bash scripts/build-map-texture.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

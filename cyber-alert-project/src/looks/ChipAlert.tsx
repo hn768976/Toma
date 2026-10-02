@@ -484,6 +484,8 @@ export const ChipAlert: React.FC<{ palette: ChipPalette }> = ({ palette: p }) =>
             })}
           </div>
         </AbsoluteFill>
+        {/* ±1/255 static noise over the board's background gradients (tile at 0.8 %), under the triangle and its glow */}
+        <Grain opacity={0.008} salt={11} animated={false} />
         {/* Red light spilling from the triangle onto the chip */}
         <AbsoluteFill style={{ background: `radial-gradient(ellipse 19% 26% at 50% 47%, rgba(${p.alertRgb},${0.16 + 0.12 * breath}) 0%, rgba(${p.alertRgb},0.05) 60%, rgba(${p.alertRgb},0) 100%)`, mixBlendMode: "screen" }} />
         {/* Triangle: nearer to the camera, slightly more parallax */}
