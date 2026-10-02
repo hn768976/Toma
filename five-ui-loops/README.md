@@ -65,7 +65,26 @@ PNG each.
 
 ## Render time
 
-@@TIMING@@
+| Look | 1080p, 1 thread (s/frame) | 1080p, 4 threads (wall s/frame) | 6000×3375 still (s/frame) | **4K estimate, 1 thread (s/frame)** | 4K estimate, full comp @4 threads |
+|---|---|---|---|---|---|
+| AIDiagnosis | 1.54 | 1.30 | 23.4 | **9.0** | ~57 min (450 frames) |
+| CartCounter | 1.05 | 0.88 | 12.0 | **4.8** | ~20 min (300 frames) |
+| DataStack | 1.27 | 1.14 | 20.3 | **7.8** | ~42 min (360 frames) |
+| DotWorldMap | 0.19 | 0.12 | 1.3 | **0.6** | ~4 min (600 frames) |
+| GradientOrb | 0.33 | 0.22 | 3.3 | **1.3** | ~9 min (600 frames) |
+
+Machine: 4 vCPU cloud container, no GPU (ANGLE → SwiftShader), Chromium headless shell 1194.
+4K estimate = linear fit of per-frame time vs pixel count through the measured 1080p and 6000×3375 points, evaluated at 3840×2160.
+
+Notes:
+- "1 thread" = `--concurrency=1`, 60 frames (100–159), bundle/browser start-up
+  subtracted. "4 threads" = whole composition at `--concurrency=4`.
+- Without a GPU, SwiftShader is itself multi-threaded, so 4 render threads only
+  gain 15–35 %. **On a machine with a real GPU (`--gl=angle`) looks 3 and 5 will be
+  far faster**; looks 1 and 2 are bound by Chromium's CSS blur/compositing and
+  scale mostly with CPU cores.
+- Preview command used: `scripts/render-previews.sh` (PNG sequence at
+  `--scale=0.5`, then x264 `-preset slow -crf 16 -pix_fmt yuv420p`).
 
 ## Determinism
 
@@ -91,11 +110,80 @@ is a pure function of `useCurrentFrame()`:
 
 ## Banding
 
-@@BANDING@@
+Risky looks: 1, 3, 4 (dark backgrounds + glows) and 5 (large soft gradients).
+
+Counter-measures, all deterministic (fixed function of pixel position + frame,
+never `Math.random()`):
+- Look 5: ±1/255 shader dither + ~4 % monochrome grain keyed on `frame % 600`.
+- Look 3: ±1/255 dither + ~2 % grain in the composite shader, doubled in deep
+  shadow (half of it would otherwise clip at 0).
+- Looks 1 and 4: ~2 % grain (look 1 as a canvas overlay, look 4 on the map dots
+  only; the background stays pure black).
+- **Encoder**: default x264 settings at CRF 16 smoothed the grain away in near-black
+  areas of looks 1 and 3 and left plateaus (found in the check below). Fixed with
+  `-tune grain` + `aq-mode=3:deadzone-inter=0:deadzone-intra=0:no-dct-decimate=1`.
+  It is set in `remotion.config.ts` (`overrideFfmpegCommand`) so the 4K renders use it too.
+
+How it was checked (on frames **decoded from the encoded mp4**, not the preview):
+1. `scripts/banding.py frame.png "x0,y0,x1,y1" ...` reads pixel values along
+   segments that run along glows/gradients. It prints the 7×7-smoothed RGB
+   profile, the *staircase residual* (smoothed luma minus its 21-px moving mean;
+   a band shows as plateau + jump) and the longest run of identical raw values.
+2. `scripts/banding_tiles.py frame.png` checks the whole frame. It finds every 32×32
+   tile that is a gentle gradient and fails if raw pixels there form plateaus
+   longer than 24 px (i.e. the dither has gone).
+
+Results (final previews):
+
+| Frame (from mp4) | Whole-frame tiles | Segment profiles |
+|---|---|---|
+| 1A f112 / f224 / f336 | 0 plateau tiles of 1287 / 1223 / 1185 (longest run 13–17 px) | 5 segments, residual ≤ 1.48, runs ≤ 10 px |
+| 1B f112 / f224 / f336 | 0 of 1255 / 1206 / 1174 | — |
+| 3A f179 / f269 / f359 | 0 of 524 / 485 / 500 (longest 13–17 px) | glow falloff above the stack 71→18 levels, every step negative, no flat runs > 4 px |
+| 3B f179 / f269 / f359 | 0 of 621 / 570 / 583 | — |
+| 5A f299 | 0 of 1855 (longest 13 px) | 5 segments (orb interior ×2, halo ×2, background), residual ≤ 0.96, runs ≤ 7 px |
+| 5B f299 | 0 of 1831 (longest 10 px) | 5 segments, residual ≤ 1.23, runs ≤ 6 px |
+
+Before the encoder fix, 3A had 14 plateau tiles at f269 and 1A had 2, all near
+black (luma 2.5–5.7); the lossless PNG of the same frame had 0. In 3A, the only
+tiles that still flag are clipped highlights inside the stack core (≥250 on every
+channel). Those are excluded as not-a-gradient.
 
 ## Verification / completion checklist
 
-@@CHECKLIST@@
+All run on the final 1080p previews. Helpers live in `scripts/` (`verify.sh`,
+`loop-check.sh`, `banding.py`, `banding_tiles.py`, `pxdiff.py`).
+
+| Check | Result |
+|---|---|
+| **1. File checks** (`ffprobe`): 1920×1080, 30/1, h264, yuv420p, no audio; 15.0 / 10.0 / 12.0 / 20.0 / 20.0 s | ✅ all 10 |
+| **2. Loop** (looks 4, 5): `--props='{"loopCheck":true}'` → 601 frames; frame 600 vs frame 0 | ✅ byte-identical PNGs, all 4 loops |
+| **3. Determinism**: frame 150 rendered alone (cold `remotion still`) vs frame 150 of the full render | ✅ byte-identical PNGs, all 10 |
+| **4. Banding** on frames decoded from the mp4 (1A, 3A, 5A, 5B; also 1B, 3B) | ✅ see *Banding* above (needed an encoder fix) |
+| **5. Content**, 5 evenly spaced frames from each mp4 (`out/verify/<id>/sheet.png`) | ✅ all 10 |
+| AI Diagnosis: title, ID, AI badge sharp; bar further along each frame; "Complete" at the end; helix replaces body in 1B | ✅ |
+| Cart Counter: count and price both rising, in step; ends at 45 / $3,486.40 and 3.486,40 €; no store name or logo | ✅ |
+| Data Stack: outline lines first, then layers bottom→top, then finished glowing stack; board blurred away from it | ✅ |
+| Dot World Map: continents recognisable, square dots, different dots bright per frame (30.0 ± 0.3 % bright), no Antarctica | ✅ |
+| Gradient Orb: gradient has rotated between frames; soft edge and halo; grain visible | ✅ |
+| Pairs differ only as listed (colours, text/ID, backdrop, currency/format) | ✅ |
+| Fonts shipped (OFL) and loaded behind `delayRender`; map data shipped (public domain) behind `delayRender` | ✅ |
+| No `Math.random()`, no CSS keyframes/transitions, no clock-driven state; no TAA | ✅ |
+| Clean copy: `npm install && npx remotion studio` from the zip; `npx remotion compositions` lists all 10 | ✅ |
+| 2 stills per composition at 6000×3375 + one 1080p still each | ✅ |
+
+What failed on the first attempt and was fixed:
+- **Cart Counter, "in step"** (attempt 1): the badge reached 45 at frame ~200,
+  but the price was still rolling until frame 252. Each price roll now completes in
+  the first 35 % of its count interval, still from the same single curve.
+  Passed on attempt 2.
+- **Banding in looks 1 and 3** (attempt 1): near-black plateaus after H.264
+  encoding (the lossless frames were clean). Fixed with grain-preserving x264
+  settings, plus doubled shadow grain in look 3. Passed on attempt 2.
+- **Data Stack** (development, before the previews): a NaN from the outline-box
+  shader spread through the bloom chain as black blocks. Also fixed over-exposure.
+- **Audio**: Remotion's own mp4 output added a silent AAC track; `Config.setMuted(true)`
+  removes it, so the 4K renders have no audio stream either.
 
 ## Adding a version (one data row)
 
