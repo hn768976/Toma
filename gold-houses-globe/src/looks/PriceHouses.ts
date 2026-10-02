@@ -33,7 +33,6 @@ const ROWS: Row[] = [
   { z: 0, spacing: S, offset: 0, scale: 1, pattern: [1, 1, 1], lift: 0 },
   { z: -0.7, spacing: S, offset: S * 0.5, scale: 1.04, pattern: pat(3, 0.97, 1.05), lift: 0 },
   { z: -3.0, spacing: S, offset: S * 0.22, scale: 1.5, pattern: pat(3, 0.92, 1.08), lift: 0 },
-  { z: -6.5, spacing: S * 0.75, offset: S * 0.6, scale: 1.9, pattern: pat(4, 0.9, 1.1), lift: 0 },
 ];
 
 const faceTexture = (symbol: string, font: string) => {
@@ -49,8 +48,8 @@ const faceTexture = (symbol: string, font: string) => {
   g.fillStyle = grad;
   g.fillRect(0, 0, W, Hh);
   // the symbol reads as a soft shadow seen through backlit paper
-  g.filter = "blur(3px)";
-  g.fillStyle = "#33241a";
+  g.filter = "blur(1.5px)";
+  g.fillStyle = "#2a1d14";
   g.font = `700 ${Math.round(W * 0.6)}px ${font}`;
   g.textAlign = "center";
   g.textBaseline = "middle";
@@ -81,7 +80,7 @@ export const PriceHouses: Look<HousesParams> = {
       uniforms: { dark: { value: dark } },
       vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: `uniform vec3 dark; varying vec3 vW;
-        void main(){ float h = exp(-max(vW.y, 0.0) / 1.6); gl_FragColor = vec4(dark * (0.03 + 0.35 * h), 1.0); }`,
+        void main(){ float h = exp(-max(vW.y, 0.0) / 2.6); gl_FragColor = vec4(dark * (0.05 + 0.45 * h), 1.0); }`,
     });
     const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(200, 40), bdMat);
     backdrop.position.set(0, 10, -14);
@@ -104,10 +103,10 @@ export const PriceHouses: Look<HousesParams> = {
     // base; deeper rows dimmer so the blurred silhouettes stay separate
     const backMats = ROWS.map((_, ri) =>
       new THREE.ShaderMaterial({
-        uniforms: { col: { value: new THREE.Color("#a07450").multiplyScalar([1, 0.4, 0.28, 0.18][ri]) } },
+        uniforms: { col: { value: new THREE.Color("#a89080").multiplyScalar([1, 0.5, 0.36][ri]) } },
         vertexShader: `varying float vY; varying vec3 vN; void main(){ vY = position.y; vN = normal; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
         fragmentShader: `uniform vec3 col; varying float vY; varying vec3 vN;
-          void main(){ float g = 0.3 + 0.7 * smoothstep(0.0, 1.15, vY); float side = abs(vN.z) > 0.5 ? 1.0 : 0.55;
+          void main(){ float g = 0.62 + 0.38 * smoothstep(0.0, 1.15, vY); float side = abs(vN.z) > 0.5 ? 1.0 : 0.55;
             gl_FragColor = vec4(col * g * side, 1.0); }`,
       }),
     );
@@ -145,8 +144,8 @@ export const PriceHouses: Look<HousesParams> = {
           // light pooling on the floor in front of the glowing row
           // broad diffuse light pools in front of each glowing house (period S)
           float px = cos(6.2831853 * vW.x / ${S.toFixed(4)}) * 0.5 + 0.5;
-          float pool = exp(-pow(max(vW.z, 0.0) / 1.6, 2.0)) * step(-0.05, vW.z) * (0.35 + 0.65 * px * px);
-          vec3 c = dark * 0.35 + glow * 0.5 * pool + r * 0.02;
+          float pool = exp(-pow(max(vW.z, 0.0) / 4.0, 2.0)) * step(-0.05, vW.z) * (0.35 + 0.65 * px * px);
+          vec3 c = dark * 0.6 + glow * 0.26 * pool + r * 0.06;
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -157,7 +156,7 @@ export const PriceHouses: Look<HousesParams> = {
 
     const update = (frame: number) => {
       const t = (frame % period) / period;
-      const x = t * camTravel; // exactly N*S per loop
+      const x = t * camTravel - 0.2 * S; // exactly N*S per loop
       camera.position.set(x, CAM_Y + 0.02 * Math.sin(TAU * t), CAM_Z);
       camera.lookAt(x, LOOK_Y, 0);
     };
@@ -170,11 +169,11 @@ export const PriceHouses: Look<HousesParams> = {
       post: {
         exposure: 1.0,
         tonemap: "aces",
-        bloom: { strength: 2.8, threshold: 0.6, knee: 0.6, radius: 0.75 },
-        dof: { focus: CAM_Z, range: 3.5, nearRange: 4, maxBlur: 0.02, maxNearBlur: 0.004 },
+        bloom: { strength: 2.0, threshold: 0.65, knee: 0.6, radius: 0.88 },
+        dof: { focus: CAM_Z, range: 3.5, nearRange: 4, maxBlur: 0.011, maxNearBlur: 0.004 },
         grain: 0.02,
         grainPeriod: period,
-        grade: { saturation: 0.8, tint: [1.0, 0.87, 0.7], vignette: 0.45 },
+        grade: { saturation: 0.7, tint: [1.0, 0.9, 0.77], vignette: 0.35 },
       },
     };
   },
