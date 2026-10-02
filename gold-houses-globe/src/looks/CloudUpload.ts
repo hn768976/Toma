@@ -17,7 +17,7 @@ const rng = mulberry32(0xc10d);
 
 // fibres: fan out across the floor toward the camera, gather at a base in
 // front of the cloud, then rise in a bell-shaped bundle into the arrow.
-const N_FIB = 90;
+const N_FIB = 48;
 type Fibre = { pts: THREE.Vector3[]; sBend: number; rep: number; speed: number; ph: number; br: number; floor: number };
 const fibres: Fibre[] = [];
 const bez = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3, t: number) => {
@@ -30,8 +30,8 @@ const bez = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vect
 for (let i = 0; i < N_FIB; i++) {
   const u = (i + rng()) / N_FIB; // 0..1 across
   const side = u - 0.5;
-  const inStem = Math.abs(side) < 0.1;
-  const xt = inStem ? (side / 0.1) * 0.22 : side * 1.9; // x at the cloud's underside
+  const inStem = Math.abs(side) < 0.12;
+  const xt = inStem ? (side / 0.12) * 0.22 : side * 2.7; // x at the cloud's underside
   const zt = CLOUD_Z - 0.06 - rng() * 0.1;
   const xb = side * 7.0 + (rng() - 0.5) * 0.3; // where the fibre leaves the floor
   const zb = 0.9 + rng() * 0.8;
@@ -52,7 +52,7 @@ for (let i = 0; i < N_FIB; i++) {
   const dir = new THREE.Vector3(xb - x0, 0, zb - z0).normalize();
   const P1 = P0.clone().add(dir.multiplyScalar(1.1 + rng() * 0.5));
   const P3 = new THREE.Vector3(xt, yTop, zt);
-  const P2 = new THREE.Vector3(xt, yTop - 1.6 - rng() * 0.6, zt);
+  const P2 = new THREE.Vector3(xt, yTop - 2.3 - rng() * 0.5, zt); // long straight drop before fanning out
   let curveLen = 0;
   let prev = P0;
   for (let k = 1; k <= 30; k++) {
@@ -66,7 +66,7 @@ for (let i = 0; i < N_FIB; i++) {
   fibres.push({
     pts,
     sBend: floorLen / total,
-    rep: 3 + Math.floor(rng() * 4),
+    rep: 4 + Math.floor(rng() * 4),
     speed: 2 + Math.floor(rng() * 4),
     ph: rng(),
     br: 0.6 + rng() * 0.8,
@@ -75,18 +75,17 @@ for (let i = 0; i < N_FIB; i++) {
 }
 
 // floating squares
-const N_SQ = 230;
+const N_SQ = 130;
 const squares = Array.from({ length: N_SQ }, () => {
   const near = rng() < 0.03;
   const z = near ? -6 + rng() * 14 : -40 + rng() * 34;
   const spread = (CAM.z - z) * 0.75;
-  const bright = false;
   return {
     x: (rng() - 0.5) * 2 * spread,
     y: 0.25 + Math.pow(rng(), 0.45) * (2 + (CAM.z - z) * 0.55),
     z,
-    s: (bright ? 0.1 : 0.16) + rng() * 0.3,
-    b: 0.04 + rng() * 0.1,
+    s: 0.3 + rng() * 0.5,
+    b: 0.05 + rng() * 0.12,
     ax: 0.1 + rng() * 0.5, ay: 0.1 + rng() * 0.4,
     kx: 1 + Math.floor(rng() * 2), ky: 1 + Math.floor(rng() * 2), tk: 1 + Math.floor(rng() * 5),
     px: rng() * TAU, py: rng() * TAU, tp: rng() * TAU,
@@ -142,10 +141,10 @@ export const CloudUpload: Look<CloudParams> = {
         void main() {
           float y = vW.y;
           vec3 c = navy * 0.4;
-          c += vec3(0.002, 0.03, 0.16) * exp(-max(y, 0.0) / 12.0);
-          c += vec3(0.0, 0.04, 0.16) * exp(-max(y, 0.0) / 5.0);
+          c += vec3(0.004, 0.06, 0.2) * exp(-max(y, 0.0) / 20.0);
+          c += vec3(0.0, 0.07, 0.2) * exp(-max(y, 0.0) / 7.0);
           c += accent * 0.06 * exp(-abs(y) / 1.5);
-          c += accent * 0.06 * exp(-abs(y) / 0.3);
+          c += accent * 0.03 * exp(-abs(y) / 0.6);
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -169,8 +168,8 @@ export const CloudUpload: Look<CloudParams> = {
         void main() {
           vec3 r = sampleReflection(vW, vec2(0.0));
           float far = smoothstep(-10.0, -70.0, vW.z);
-          vec3 c = navy * 0.8 + vec3(0.0, 0.025, 0.09) * far + accent * 0.08 * pow(far, 6.0);
-          c += r * 0.18;
+          vec3 c = navy * 1.2 + vec3(0.0, 0.04, 0.13) * (0.5 + 0.5 * far) + accent * 0.05 * pow(far, 6.0);
+          c += r * 0.35;
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -211,10 +210,15 @@ export const CloudUpload: Look<CloudParams> = {
           // body: soft vertical gradient, brighter towards the rim
           float g = smoothstep(-1.4, 1.8, vP.y);
           vec3 tone = mix(accent, vec3(0.08, 0.45, 1.0), 0.3);
-          vec3 body = mix(tone * 0.6, tone * 1.0, g);
-          body *= 0.9 + 0.3 * smoothstep(-0.25, 0.0, d);
-          // the arrow's cut edges read darker (depth of the cut)
-          body *= 1.0 - 0.25 * exp(-max(arrowSD(vP), 0.0) * 18.0);
+          vec3 pale = mix(tone, vec3(1.0), 0.14);
+          vec3 body = mix(pale * 0.62, pale * 0.95, g);
+          body += pale * 0.5 * (1.0 - smoothstep(0.0, 0.035, -d)); // thin bright rim
+          // two darker translucent HUD panels
+          vec2 pl = abs(vP - vec2(-1.45, -0.28)) - vec2(0.55, 0.32);
+          vec2 pr = abs(vP - vec2(1.5, -0.22)) - vec2(0.5, 0.42);
+          float panel = max(step(max(pl.x, pl.y), 0.0), step(max(pr.x, pr.y), 0.0));
+          float pedge = max(1.0 - smoothstep(0.0, 0.015, abs(max(pl.x, pl.y))), 1.0 - smoothstep(0.0, 0.015, abs(max(pr.x, pr.y))));
+          body = mix(body, body * 0.72, panel) + pale * 0.25 * pedge;
           // faint rows of tiny "data text"
           vec2 tp = vP * vec2(9.0, 14.0);
           vec2 cell = floor(tp);
@@ -224,12 +228,15 @@ export const CloudUpload: Look<CloudParams> = {
           float glyph = step(0.25, h21(cell)) * inWord * rowOn;
           vec2 f = fract(tp);
           glyph *= step(0.12, f.x) * step(f.x, 0.88) * step(0.3, f.y) * step(f.y, 0.7);
-          float textMask = smoothstep(-0.12, -0.3, d) * step(1.15, abs(vP.x)) * step(abs(vP.x), 2.3) * step(-0.75, vP.y) * step(vP.y, 0.2);
-          body += mix(accent, vec3(1.0), 0.5) * glyph * textMask * 0.09;
+          float textMask = panel * smoothstep(-0.12, -0.3, d);
+          body += mix(accent, vec3(1.0), 0.6) * glyph * textMask * 0.16;
           // halo outside
-          float halo = exp(-max(d, 0.0) * 4.0) * 0.06 + exp(-max(d, 0.0) * 14.0) * 0.16;
+          float halo = exp(-max(d, 0.0) * 7.0) * 0.04 + exp(-max(d, 0.0) * 24.0) * 0.14;
           vec3 col = body * glow * inside + accent * halo * glow * (1.0 - inside);
-          gl_FragColor = vec4(col, inside);
+          // bevel: the arrow cut shows a dark side wall just inside its edge
+          float bev = step(cloudSD(vP), 0.0) * step(-0.075, arrowSD(vP)) * step(arrowSD(vP), 0.0);
+          col = mix(col, tone * 0.12 + pale * 0.08 * smoothstep(-0.075, 0.0, arrowSD(vP)), bev);
+          gl_FragColor = vec4(col, max(inside, bev));
         }`,
       transparent: true,
       depthWrite: false,
@@ -260,7 +267,7 @@ export const CloudUpload: Look<CloudParams> = {
         const f = fibres[p];
         const k = Math.min(1, Math.max(0, (s - f.sBend) / 0.06));
         const near = Math.max(0, 1 - s / Math.max(f.sBend, 1e-3)); // 1 at the camera end
-        return (0.04 + 0.1 * near * near) * (1 - k) + 0.022 * k;
+        return (0.06 + 0.1 * near * near) * (1 - k) + 0.034 * k;
       },
       CAM,
     );
@@ -295,7 +302,7 @@ export const CloudUpload: Look<CloudParams> = {
           float pulse = exp(-pow((q - 0.5) / mix(0.03, 0.02, step(vSb, s)), 2.0)) * mix(7.0, 4.0, step(vSb, s));
           float rise = smoothstep(vSb, vSb + 0.08, s);
           float base = mix(0.22, 0.45, rise);
-          pulse *= mix(1.0, 0.7, rise);
+          pulse *= mix(1.0, 1.3, rise);
           float fade = mix(smoothstep(vSb - 0.06, vSb + 0.02, s), smoothstep(0.0, 0.03, s), vFl) * (1.0 - smoothstep(0.93, 1.0, s));
           vec3 c = accent;
           gl_FragColor = vec4(c * (base + pulse) * vBr * across * fade, 1.0);
@@ -324,8 +331,8 @@ export const CloudUpload: Look<CloudParams> = {
     const sqColor = hdrColor(params.accent, 1).lerp(new THREE.Color(0.05, 0.3, 1.0), 0.45);
     // one bright glass cube drifting on the right
     const cube = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6, 0.6, 0.6),
-      new THREE.MeshStandardMaterial({ color: accent, emissive: accent.clone().multiplyScalar(0.9), roughness: 0.4 }),
+      new THREE.BoxGeometry(0.4, 0.4, 0.4),
+      new THREE.MeshStandardMaterial({ color: accent, emissive: accent.clone().lerp(new THREE.Color(1, 1, 1), 0.2).multiplyScalar(2.2), roughness: 0.4 }),
     );
     scene.add(cube);
     const cubeLight = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -342,8 +349,8 @@ export const CloudUpload: Look<CloudParams> = {
       const breathe = Math.sin(TAU * 2 * t);
       cloudGroup.scale.setScalar(1.13 * (1 + 0.012 * breathe));
       cloudU.glow.value = 1 + 0.06 * breathe;
-      cube.position.set(4.3 + 0.25 * Math.sin(TAU * t), 2.5 + 0.2 * Math.sin(TAU * 2 * t), 4.0);
-      cube.rotation.set(0.35 + 0.1 * Math.sin(TAU * t), 0.6 + TAU * t, 0.1);
+      cube.position.set(5.6 + 0.2 * Math.sin(TAU * t), 1.95 + 0.12 * Math.sin(TAU * 2 * t), 1.5);
+      cube.rotation.set(0.12 + 0.05 * Math.sin(TAU * t), 0.25 + 0.15 * Math.sin(TAU * t), 0.05);
       squares.forEach((s, i) => {
         sqPos[i * 3] = s.x + s.ax * Math.sin(TAU * s.kx * t + s.px);
         sqPos[i * 3 + 1] = s.y + s.ay * Math.sin(TAU * s.ky * t + s.py);
@@ -365,11 +372,11 @@ export const CloudUpload: Look<CloudParams> = {
       post: {
         exposure: 1.0,
         tonemap: "aces",
-        bloom: { strength: 1.2, threshold: 0.5, knee: 0.5, radius: 0.55 },
-        dof: { focus: 15, range: 40, nearRange: 9, maxBlur: 0.0015, maxNearBlur: 0.009 },
+        bloom: { strength: 1.6, threshold: 0.45, knee: 0.5, radius: 0.7 },
+        dof: { focus: 15, range: 30, nearRange: 7, maxBlur: 0.004, maxNearBlur: 0.022 },
         grain: 0.02,
         grainPeriod: period,
-        grade: { saturation: 1.4 },
+        grade: { saturation: 1.2 },
       },
     };
   },
