@@ -38,6 +38,7 @@ const BANDS = [
   { until: 8200, blur: 5.5 },
   { until: Infinity, blur: 10 },
 ];
+const SHARP_BAND = 2;
 const BAND_SOFTNESS = 0.09; // half-width of a cross-fade, in ln(distance)
 
 const bandWeights = (dist: number): Array<[number, number]> => {
@@ -78,8 +79,7 @@ const Plane: React.FC<{
   camY: number;
   u: (n: number) => number;
   opacity: number;
-  wobble: boolean;
-}> = ({ p, camX, camY, u, opacity, wobble }) => {
+}> = ({ p, camX, camY, u, opacity }) => {
   const { plane } = p;
   const tz = PERSPECTIVE - p.dist;
   const content =
@@ -120,7 +120,6 @@ const Plane: React.FC<{
           `translate3d(${u(plane.x - camX)}px, ${u(plane.y - camY)}px, ${u(tz)}px) ` +
           `rotateX(${plane.rotX}deg) rotateY(${plane.rotY}deg) rotateZ(${plane.rotZ}deg) ` +
           `translate(-50%, -50%)`,
-        filter: wobble ? "url(#ef-wobble)" : undefined,
         padding: u(10),
       }}
     >
@@ -185,9 +184,10 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
     <AbsoluteFill style={{ background: pal.background, overflow: "hidden" }}>
       <svg width={0} height={0} style={{ position: "absolute" }}>
         <defs>
-          {/* Subtle hand-drawn wobble with a fixed seed. Applied per plane in
-              the plane's own space, so it travels with the chalk. */}
-          <filter id="ef-wobble" x="-5%" y="-10%" width="110%" height="120%">
+          {/* Subtle hand-drawn wobble with a fixed seed, one pass over the
+              sharp band. Static in frame space, so lines shimmer very slightly
+              as they travel, like chalk under moving light. */}
+          <filter id="ef-wobble" x="0" y="0" width="100%" height="100%">
             <feTurbulence type="fractalNoise" baseFrequency={0.035 / u(1)} numOctaves={2} seed={11} />
             <feDisplacementMap in="SourceGraphic" scale={u(3.2)} xChannelSelector="R" yChannelSelector="G" />
           </filter>
@@ -228,15 +228,15 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
           })}
         </svg>
 
-        {/* One layer per depth band, far to near. */}
-        {layers
-          .map((items, band) => ({ items, band }))
-          .reverse()
-          .map(({ items, band }) => {
+        {/* One layer per depth band, far to near. Each band is blurred once
+            as a whole. The sharp band gets the hand-drawn wobble, and in the
+            navy version the middle bands share a single glow pass. */}
+        {(() => {
+          const renderBand = (band: number) => {
             const blur = BANDS[band].blur;
             const filters: string[] = [];
             if (blur > 0) filters.push(`blur(${u(blur)}px)`);
-            if (variant === "navy" && band >= 1 && band <= 4) filters.push("url(#ef-glow)");
+            if (band === SHARP_BAND) filters.push("url(#ef-wobble)");
             return (
               <AbsoluteFill
                 key={band}
@@ -246,20 +246,25 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant }) => {
                   filter: filters.length ? filters.join(" ") : undefined,
                 }}
               >
-                {items.map(({ p, w }) => (
-                  <Plane
-                    key={p.key}
-                    p={p}
-                    camX={camX}
-                    camY={camY}
-                    u={u}
-                    opacity={p.opacity * w}
-                    wobble={band >= 1 && band <= 3}
-                  />
+                {layers[band].map(({ p, w }) => (
+                  <Plane key={p.key} p={p} camX={camX} camY={camY} u={u} opacity={p.opacity * w} />
                 ))}
               </AbsoluteFill>
             );
-          })}
+          };
+          const far = [5];
+          const glowing = [4, 3, 2, 1];
+          const near = [0];
+          return (
+            <>
+              {far.map(renderBand)}
+              <AbsoluteFill style={{ filter: variant === "navy" ? "url(#ef-glow)" : undefined }}>
+                {glowing.map(renderBand)}
+              </AbsoluteFill>
+              {near.map(renderBand)}
+            </>
+          );
+        })()}
       </AbsoluteFill>
 
       {/* Light rays: a flat overlay fanning from near the centre, one full
