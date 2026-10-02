@@ -1,0 +1,41 @@
+{
+  "Colon-ConstipationRelief": {
+    "instancesChecked": 24072,
+    "outsideWall": 0,
+    "worstReachOverWallRadius": 0.973,
+    "worstAt": {
+      "frame": 280,
+      "group": "molecule3",
+      "u": 0.144
+    },
+    "midColonPops": 0,
+    "popExamples": [],
+    "clumpBreakSwapFrames": 86
+  },
+  "Colon-HealthyFlora": {
+    "instancesChecked": 24547,
+    "outsideWall": 0,
+    "worstReachOverWallRadius": 0.891,
+    "worstAt": {
+      "frame": 20,
+      "group": "molecule3",
+      "u": 0.172
+    },
+    "midColonPops": 0,
+    "popExamples": [],
+    "clumpBreakSwapFrames": 0
+  },
+  "Colon-InflammationRelief": {
+    "instancesChecked": 13352,
+    "outsideWall": 0,
+    "worstReachOverWallRadius": 0.942,
+    "worstAt": {
+      "frame": 320,
+      "group": "cool1",
+      "u": 0.149
+    },
+    "midColonPops": 0,
+    "popExamples": [],
+    "clumpBreakSwapFrames": 0
+  }
+}

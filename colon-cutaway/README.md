@@ -52,7 +52,21 @@ npx remotion still Colon-InflammationRelief out/stills/c3_healed.png  --frame=44
 
 ## Render time
 
-RENDER_TIME_SECTION
+Measured in this build environment — a 4-core cloud container with **no GPU**
+(Chromium falls back to SwiftShader software WebGL), concurrency 2:
+
+| | per frame | whole job |
+|---|---|---|
+| 1080p preview (`--scale=0.5`), full renders | **4.14–4.42 s** (ConstipationRelief 4.42, HealthyFlora 4.14, InflammationRelief 4.40) | 1,500 frames ≈ 1 h 50 min |
+| 4K (`--scale=1`), 20-frame sample incl. start-up | **≈ 12.6 s** | 1,500 frames ≈ 5 h 15 min |
+| 6000×3375 still | ≈ 60–85 s each | — |
+
+Of the 1080p time, MSAA ×4 is about 40 % and wall shading about 35 % (measured
+by switching each off). **4K estimate on a machine with a real GPU** (any
+recent discrete card, `--gl=angle`): the GPU work is light (≈ 0.3–0.5 M
+triangles, a handful of full-screen passes), so expect roughly **1–2 s per
+frame**, dominated by Remotion's screenshot + PNG encode at 3840×2160 —
+about 25–50 min for all three. Rendering at 4K here on CPU works, it is just slow.
 
 ## Which colon route was used
 
@@ -113,7 +127,7 @@ assets-src/meshy/                 raw Meshy downloads (inputs to the prep script
   radius (and shrunk where the lumen narrows).
 - **Materials**: outer wall `#E8837C` with wrapped diffuse + Fresnel rim + a
   warm terminator band (fake subsurface, no transmission); lining `#E8C497`
-  (≈ `#E9C9A0` after tonemapping) with haustral folds, fine noise folds and
+  (a touch warmer than the brief's `#E9C9A0`, offsetting ACES' desaturation) with haustral folds, fine noise folds and
   darker sides; cut rim pink with a cream inner line; clumps `#4A3226`, rough,
   lighter on high points. One `InstancedMesh` per particle type; bacteria are
   "translucent" via Fresnel + opacity.
@@ -139,7 +153,24 @@ scripts, never at render time.
 
 ## Checks
 
-CHECKS_SECTION
+Run `npm run render:previews`, then `npm run check` (and `npm run check:inside`).
+Results for the delivered previews (`deliverables/colon-cutaway/checks/`):
+
+| # | Check | Result |
+|---|---|---|
+| 1 | ffprobe: 1920×1080, 30/1, h264, yuv420p, no audio; 15.0 / 20.0 / 15.0 s | **pass** (all three) |
+| 2 | model: one continuous tube; cut clean along the whole length incl. sigmoid; rim solid pink + cream line; inner surface never through the outer; centreline centred | **pass** — see `model-check/` (12 views + `12_centreline-debug.png`) |
+| 3 | loop: comp 2 at 601 frames, frame 0 vs 600 | **pass** — pixel-identical (same md5) |
+| 4 | frame 300 rendered alone from a cold start vs frame 300 of the full (2-tab, out-of-order) render | **pass** — byte-identical PNGs for all three |
+| 5 | everything inside, no pops (all frames evaluated; containment at 1 frame in 10, 62k instance checks) | **pass** — 0 outside the measured inner wall (worst reach 97 % of wall radius); no mid-colon pops (only the intended clump break-up swaps); every-10th-frame sheets reviewed |
+| 6 | banding, read from the encoded mp4 | **pass** — backdrop rows: raw run length mean 1.6 px (p99 6), 21-row profile minus smooth fit ≈ ±0.5–1 code, no staircase; lining box run length mean 1.6 px |
+| 7 | five evenly spaced frames per composition | reviewed — `*_5frames.png` |
+
+Two determinism bugs were found by check 4 and fixed (then everything was
+re-rendered): three.js derived the particle groups' depth-sort key from the
+instance positions of the first frame a tab happened to draw, and the pre-cut
+wall shader took screen-space derivatives inside divergent branches. Both made
+a frame depend on what the tab rendered before it.
 
 ## Re-preparing the models
 

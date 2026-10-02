@@ -1,0 +1,45 @@
+== Step 1: ffprobe
+-- out/Colon_ConstipationRelief.mp4
+codec_name=h264
+codec_type=video
+width=1920
+height=1080
+pix_fmt=yuv420p
+r_frame_rate=30/1
+duration=15.000000
+audio streams: 0
+-- out/Colon_HealthyFlora.mp4
+codec_name=h264
+codec_type=video
+width=1920
+height=1080
+pix_fmt=yuv420p
+r_frame_rate=30/1
+duration=20.000000
+audio streams: 0
+-- out/Colon_InflammationRelief.mp4
+codec_name=h264
+codec_type=video
+width=1920
+height=1080
+pix_fmt=yuv420p
+r_frame_rate=30/1
+duration=15.000000
+audio streams: 0
+== Step 3: loop (Colon-HealthyFlora-601, frame 0 vs 600)
+frame 0 vs 600: identical pixels = True | differing pixels: 0 | max diff: 0
+md5: c8a992ee9ee3397abf8c34796a58deb3 c8a992ee9ee3397abf8c34796a58deb3
+== Step 4: frame 300 cold start vs full render
+Colon-ConstipationRelief: byte-identical PNG = True | pixel-identical = True | max diff 0
+Colon-HealthyFlora: byte-identical PNG = True | pixel-identical = True | max diff 0
+Colon-InflammationRelief: byte-identical PNG = True | pixel-identical = True | max diff 0
+== Step 6: banding (encoded mp4)
+{"video": "out/Colon_ConstipationRelief.mp4", "frame": 440, "row": 540, "x": [0, 576], "raw_run_length_mean": 1.6, "raw_run_length_p99": 6, "raw_run_length_max": 14, "profile_range_codes": 31.11, "profile_residual_rms": 0.323, "profile_residual_max": 1.054, "residual_spectrum_peak_over_median": 5.05}
+{"video": "out/Colon_ConstipationRelief.mp4", "frame": 40, "row": 540, "x": [691, 1190], "raw_run_length_mean": 1.08, "raw_run_length_p99": 2, "raw_run_length_max": 5, "profile_range_codes": 58.21, "profile_residual_rms": 10.576, "profile_residual_max": 38.015, "residual_spectrum_peak_over_median": 22.97, "lining_box_run_length_mean": 1.56, "lining_box_run_length_p99": 5, "lining_box_values_R": [189, 230]}
+{"video": "out/Colon_HealthyFlora.mp4", "frame": 300, "row": 540, "x": [0, 576], "raw_run_length_mean": 1.61, "raw_run_length_p99": 6, "raw_run_length_max": 15, "profile_range_codes": 35.4, "profile_residual_rms": 0.48, "profile_residual_max": 6.399, "residual_spectrum_peak_over_median": 4.84}
+{"video": "out/Colon_InflammationRelief.mp4", "frame": 440, "row": 540, "x": [1382, 1920], "raw_run_length_mean": 1.63, "raw_run_length_p99": 6, "raw_run_length_max": 19, "profile_range_codes": 33.38, "profile_residual_rms": 0.622, "profile_residual_max": 8.535, "residual_spectrum_peak_over_median": 3.88}
+== Step 7: five evenly spaced frames per composition
+Colon-ConstipationRelief: 450 frames -> Colon-ConstipationRelief_5frames.png, every-10th sheets
+Colon-HealthyFlora: 600 frames -> Colon-HealthyFlora_5frames.png, every-10th sheets
+Colon-InflammationRelief: 450 frames -> Colon-InflammationRelief_5frames.png, every-10th sheets
+done
