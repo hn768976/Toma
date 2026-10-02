@@ -25,9 +25,9 @@ for id in "${IDS[@]}"; do
   npx remotion render "$id" "$dir" --sequence --image-format=png --scale=0.5 \
     --gl="$GL" --concurrency="$CONC" --log=error
   end=$(date +%s.%N)
-  n=$(ls "$dir" | wc -l)
+  files=("$dir"/*.png); n=${#files[@]}
   echo "$id frames=$n wall=$(echo "$end - $start" | bc) conc=$CONC" | tee out/timing/$id.txt
-  first=$(ls "$dir" | head -1); pattern="${first%%[0-9]*.png}"
+  first=$(basename "${files[0]}"); pattern="${first%%[0-9]*.png}"
   digits=$(echo "$first" | sed -E 's/^[^0-9]*([0-9]+)\.png$/\1/' | wc -c); digits=$((digits-1))
   ffmpeg -v error -y -framerate 30 -start_number 0 -i "$dir/${pattern}%0${digits}d.png" \
     -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 \
