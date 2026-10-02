@@ -1,0 +1,27 @@
+{
+  "name": "neural-dust-data",
+  "version": "1.0.0",
+  "description": "Neural Layers, Dust & Smoke, Data Panels, Night Sky Meteor, Icon Network — Remotion motion graphics",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.8.1",
+    "@remotion/cli": "4.0.532",
+    "@remotion/three": "4.0.532",
+    "pixi.js": "8.22.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "typescript": "5.9.3"
+  }
+}
