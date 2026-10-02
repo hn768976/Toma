@@ -100,7 +100,7 @@ of those objects, change the hex values, and register a new `<Composition>` in `
 - Every value on screen comes from `useCurrentFrame()` wrapped to `frame % 600` (`src/lib/loop.ts`). There is no
   `Math.random()`, `Date.now()`, `requestAnimationFrame` or `useState`, and no CSS `@keyframes` or transitions.
 - Anything that repeats completes a whole number of cycles in 600 frames. `osc()` and `saw()` throw if given a
-  non-integer cycle count. Code scrolls by whole content lengths, so whole lines. Typing cycles are 150 frames,
+  non-integer cycle count. Code scrolls by whole content lengths, so whole lines. Typing cycles are 120 frames,
   blinks have a period of 10, flag flashes use periods that divide 600, and the camera paths are 1 or 2 sine cycles.
 - Random-looking things (circuit layout, code text, plexus points, the glitch schedule, the pop-up schedule) are
   generated once at module level from a seeded `mulberry32` (`src/lib/random.ts`, `src/looks/schedules.ts`). Every
