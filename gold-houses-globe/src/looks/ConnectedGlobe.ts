@@ -5,10 +5,11 @@ import type { Look } from "../lib/look";
 
 export type GlobeParams = { ocean: string; rim: string; city: string; land: string };
 
-const FOV = 30;
-const CAM = new THREE.Vector3(0, 0, 2.66);
-const LOOK = new THREE.Vector3(0.02, 0.4, 0);
-const LON0 = 118; // longitude facing the camera at frame 0 (Asia)
+// long lens: nearly a full hemisphere is visible, as in the reference
+const FOV = 9.45;
+const CAM = new THREE.Vector3(0, 0, 8.0);
+const LOOK = new THREE.Vector3(0, 0, 0);
+const LON0 = 105; // longitude facing the camera at frame 0 (Asia)
 
 // lon/lat (deg) -> unit vector; lon 0 faces +z, east is +x
 const ll = (lon: number, lat: number, r = 1) => {
@@ -18,10 +19,14 @@ const ll = (lon: number, lat: number, r = 1) => {
 
 // streak orbits (seeded at module level)
 const srng = mulberry32(0x91be);
-type Streak = { straight: boolean; c: THREE.Vector3; d: THREE.Vector3; len: number; r: number; normal: THREE.Vector3; u: THREE.Vector3; v: THREE.Vector3; ph: number; k: number; tail: number; w: number; br: number; orb: boolean };
+type Streak = { rad: boolean; theta: number; straight: boolean; c: THREE.Vector3; d: THREE.Vector3; len: number; r: number; normal: THREE.Vector3; u: THREE.Vector3; v: THREE.Vector3; ph: number; k: number; tail: number; w: number; br: number; orb: boolean };
 const streaks: Streak[] = [];
-for (let i = 0; i < 130; i++) {
-  const orb = i >= 112;
+for (let i = 0; i < 300; i++) {
+  const orb = i >= 112 && i < 130;
+  // i >= 130: dense field of streaks fanning out from behind the globe
+  const rad = i >= 130;
+  const side = srng() < 0.5 ? 0 : Math.PI;
+  const theta = side + (srng() - 0.5) * 1.5;
   // orbit planes share a diagonal tilt (lower-left -> upper-right on screen)
   const tiltZ = 0.32 + (srng() - 0.5) * 0.22;
   const tiltX = (srng() - 0.5) * 1.1;
@@ -35,7 +40,7 @@ for (let i = 0; i < 130; i++) {
   const front = srng() < 0.7;
   const c = new THREE.Vector3((srng() - 0.5) * 1.0, (srng() - 0.5) * 1.5 + 0.35, front ? 1.05 + srng() * 0.75 : -0.8 + srng() * 1.6);
   streaks.push({
-    straight, c, d, len: 0.5 + srng() * 1.3,
+    rad, theta, straight, c, d, len: 0.5 + srng() * 1.3,
     r: orb ? 1.06 + srng() * 0.25 : 1.04 + Math.pow(srng(), 1.2) * 1.1,
     normal, u, v,
     ph: srng() * TAU,
@@ -59,7 +64,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
 
     // the globe group: tilt is fixed, spin is per frame
     const tilt = new THREE.Group();
-    tilt.rotation.set(0.02, 0, -0.1);
+    tilt.rotation.set(0.22, 0, -0.1); // ~15N faces the camera
     const spin = new THREE.Group();
     tilt.add(spin);
     scene.add(tilt);
@@ -93,7 +98,8 @@ export const ConnectedGlobe: Look<GlobeParams> = {
           vec3 oc = -cameraPosition;
           float h = length(cross(v, oc)); // closest approach of the view ray to the centre
           float d = max(h - 1.0, 0.0);
-          float g = 1.6 * exp(-d / 0.006) + 0.5 * exp(-d / 0.04) + 0.2 * exp(-d / 0.25);
+          float g = 1.5 * exp(-d / 0.005) + 0.35 * exp(-d / 0.022) + 0.08 * exp(-d / 0.12)
+            + 0.35 * exp(-abs(h - 1.016) / 0.008); // outer edge of the glass shell
           gl_FragColor = vec4(rim * g, 1.0);
         }`,
       side: THREE.BackSide,
@@ -113,13 +119,13 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       const p = ll(lon, lat, R);
       pos.push(p.x, p.y, p.z);
       // only some dots in populated areas become city lights
-      const lit = light > 0.35 && rng() < 0.18 + 0.5 * light ? light : 0;
-      const c = lit > 0 ? city.clone().multiplyScalar(1.2 + 2.8 * lit) : landC.clone().multiplyScalar(0.85);
+      const lit = (light > 0.05 && rng() < 0.22) || rng() < 0.025 ? Math.max(light, 0.5) : 0;
+      const c = lit > 0 ? city.clone().multiplyScalar(2.6 + 3 * lit) : landC.clone().multiplyScalar(1.7);
       col.push(c.r, c.g, c.b);
       size.push(lit > 0 ? 0.8 : 0.85);
       // extra small amber dots scattered around the brightest areas
-      if (light > 0.65) {
-        const extra = Math.floor(rng() * 2.2);
+      if (light > 0.5) {
+        const extra = Math.floor(rng() * 1.4);
         for (let e = 0; e < extra; e++) {
           const q = ll(lon + (rng() - 0.5) * 1.6, lat + (rng() - 0.5) * 1.2, R + 0.0005);
           pos.push(q.x, q.y, q.z);
@@ -134,7 +140,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     dotGeo.setAttribute("pcolor", new THREE.Float32BufferAttribute(col, 3));
     dotGeo.setAttribute("dsize", new THREE.Float32BufferAttribute(size, 1));
     const dotMat = new THREE.ShaderMaterial({
-      uniforms: { uProj: { value: height / (2 * Math.tan((FOV * Math.PI) / 360)) }, step: { value: ((data.step * Math.PI) / 180) * 0.6 } },
+      uniforms: { uProj: { value: height / (2 * Math.tan((FOV * Math.PI) / 360)) }, step: { value: ((data.step * Math.PI) / 180) * 0.72 } },
       vertexShader: /* glsl */ `
         attribute vec3 pcolor; attribute float dsize; uniform float uProj; uniform float step;
         varying vec3 vColor; varying float vFacing;
@@ -167,12 +173,12 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     // city-light glow sprites on the brightest cities
     const gPos: number[] = [], gCol: number[] = [], gSize: number[] = [];
     for (let i = 0; i < n; i++) {
-      if (dots[i * 3 + 2] < 0.7 || rng() > 0.35) continue;
+      if (dots[i * 3 + 2] < 0.85 || rng() > 0.12) continue;
       const p = ll(dots[i * 3], dots[i * 3 + 1], 1.003);
       gPos.push(p.x, p.y, p.z);
       const b = 0.25 + rng() * 0.35;
       gCol.push(city.r * b, city.g * b, city.b * b);
-      gSize.push(9 + rng() * 9);
+      gSize.push(5 + rng() * 4);
     }
     const glowGeo = new THREE.BufferGeometry();
     glowGeo.setAttribute("position", new THREE.Float32BufferAttribute(gPos, 3));
@@ -186,41 +192,42 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     const pinGroup = new THREE.Group();
     spin.add(pinGroup);
     const ringMat = new THREE.ShaderMaterial({
-      uniforms: { col: { value: rim.clone().lerp(new THREE.Color(0.3, 1, 0.9), 0.3) }, pulse: { value: 0 } },
+      uniforms: { col: { value: new THREE.Color(0.15, 1.0, 0.7) }, pulse: { value: 0 } },
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `uniform vec3 col; uniform float pulse; varying vec2 vUv;
         void main(){ float r = length(vUv * 2.0 - 1.0);
-          float ring = smoothstep(0.7, 0.78, r) * (1.0 - smoothstep(0.86, 0.94, r));
-          float dotc = 1.0 - smoothstep(0.12, 0.2, r);
+          float ring = smoothstep(0.74, 0.8, r) * (1.0 - smoothstep(0.86, 0.92, r));
+          float dotc = 1.0 - smoothstep(0.14, 0.22, r);
           gl_FragColor = vec4(col * (ring * 2.2 + dotc * 2.6) * pulse, 1.0); }`,
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
+      depthTest: false, // billboards would otherwise be half-buried in the sphere
       side: THREE.DoubleSide,
     });
     const lineMat = new THREE.MeshBasicMaterial({ color: rim.clone().lerp(new THREE.Color(1, 1, 1), 0.5).multiplyScalar(1.3), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
     const headMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 1, 1).multiplyScalar(2.2) });
     const pinRng = mulberry32(0x7172);
-    type Pin = { ring: THREE.Mesh; mat: THREE.ShaderMaterial; k: number; ph: number };
+    const ringGroup = new THREE.Group(); // rings face the camera, placed per frame
+    scene.add(ringGroup);
+    type Pin = { ring: THREE.Mesh; local: THREE.Vector3; mat: THREE.ShaderMaterial; k: number; ph: number };
     const pins: Pin[] = data.pins.map(([lon, lat]) => {
       const p = ll(lon, lat, 1.0025);
       const nrm = p.clone().normalize();
       const s = 0.045 + pinRng() * 0.02;
       const m = ringMat.clone();
       const ring = new THREE.Mesh(new THREE.PlaneGeometry(s, s), m);
-      ring.position.copy(p);
-      ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), nrm);
-      pinGroup.add(ring);
+      ringGroup.add(ring);
       const len = 0.05 + pinRng() * 0.07;
-      const line = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, len, 6, 1, true), lineMat);
+      const line = new THREE.Mesh(new THREE.CylinderGeometry(0.0007, 0.0007, len, 6, 1, true), lineMat);
       line.position.copy(nrm.clone().multiplyScalar(1 + len / 2));
       line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm);
       pinGroup.add(line);
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, 0.008), headMat);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.006, 0.006), headMat);
       head.position.copy(nrm.clone().multiplyScalar(1 + len));
       head.quaternion.copy(line.quaternion);
       pinGroup.add(head);
-      return { ring, mat: m, k: 1 + Math.floor(pinRng() * 4), ph: pinRng() * TAU };
+      return { ring, local: p, mat: m, k: 1 + Math.floor(pinRng() * 4), ph: pinRng() * TAU };
     });
 
     // ---- streaks (camera-facing ribbons rebuilt each frame) ----
@@ -241,11 +248,13 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     stGeo.setAttribute("br", new THREE.BufferAttribute(sBr, 1));
     stGeo.setIndex(sIdx);
     const stMat = new THREE.ShaderMaterial({
-      uniforms: { col: { value: rim.clone().lerp(new THREE.Color(1, 1, 1), 0.45) } },
+      uniforms: { col: { value: rim.clone().lerp(new THREE.Color(1, 1, 1), 0.45) }, blue: { value: new THREE.Color(0.08, 0.4, 1.0) } },
       vertexShader: `attribute float br; varying vec2 vUv; varying float vBr; void main(){ vUv = uv; vBr = br; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-      fragmentShader: `uniform vec3 col; varying vec2 vUv; varying float vBr;
+      fragmentShader: `uniform vec3 col; uniform vec3 blue; varying vec2 vUv; varying float vBr;
         void main(){ float a = exp(-vUv.y * vUv.y * 3.0); float s = vUv.x; float t = s * s * s;
-          gl_FragColor = vec4(col * (0.15 + 3.0 * t) * a * vBr * s, 1.0); }`,
+          // tails run from blue to white toward the head; background fan is blue
+          vec3 c = vBr < 0.0 ? blue : mix(blue, col, 0.35 + 0.65 * s);
+          gl_FragColor = vec4(c * (0.15 + 3.0 * t) * a * abs(vBr) * s, 1.0); }`,
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
@@ -264,6 +273,21 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     heads.frustumCulled = false;
     scene.add(heads);
     const headCol = rim.clone().lerp(new THREE.Color(1, 1, 1), 0.6);
+    // out-of-focus foreground orbs (bokeh) drifting on the left
+    const bRng = mulberry32(0xb0ce);
+    const NB = 9;
+    const bok = Array.from({ length: NB }, () => ({
+      x: -0.17 + bRng() * 0.07, y: -0.1 + bRng() * 0.16, z: 6.4 + bRng() * 0.3,
+      k: 1 + Math.floor(bRng() * 2), ph: bRng() * TAU, size: 22 + bRng() * 30, amber: bRng() < 0.6, b: 0.25 + bRng() * 0.35,
+    }));
+    const bPos = new Float32Array(NB * 3), bCol = new Float32Array(NB * 3), bSize = new Float32Array(NB);
+    const bGeo = new THREE.BufferGeometry();
+    bGeo.setAttribute("position", new THREE.BufferAttribute(bPos, 3));
+    bGeo.setAttribute("pcolor", new THREE.BufferAttribute(bCol, 3));
+    bGeo.setAttribute("size", new THREE.BufferAttribute(bSize, 1));
+    const bokehPts = new THREE.Points(bGeo, glowPointsMaterial(height, { sharp: 0.75 }));
+    bokehPts.frustumCulled = false;
+    scene.add(bokehPts);
     void pxScale;
 
     const P = new THREE.Vector3(), Pn = new THREE.Vector3(), T = new THREE.Vector3(), Vv = new THREE.Vector3(), S = new THREE.Vector3();
@@ -274,11 +298,26 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       // exactly one full turn per loop; surface moves right -> left
       spin.rotation.y = -((LON0 * Math.PI) / 180 + TAU * t);
       atmoMat.uniforms.camPos.value.copy(camera.position);
+      bok.forEach((o, i) => {
+        bPos.set([o.x + 0.03 * Math.sin(TAU * o.k * t + o.ph), o.y + 0.04 * Math.sin(TAU * t + o.ph), o.z], i * 3);
+        const c = o.amber ? city : headCol;
+        const b = o.b * (0.7 + 0.3 * Math.sin(TAU * o.k * t + o.ph * 2));
+        bCol.set([c.r * b, c.g * b, c.b * b], i * 3);
+        bSize[i] = o.size;
+      });
+      bGeo.attributes.position.needsUpdate = true;
+      bGeo.attributes.pcolor.needsUpdate = true;
+      bGeo.attributes.size.needsUpdate = true;
 
+      tilt.updateMatrixWorld(true);
       pins.forEach((p) => {
         const s = 0.5 + 0.5 * Math.sin(TAU * p.k * t + p.ph);
         p.mat.uniforms.pulse.value = 0.55 + 0.6 * s * s;
-        p.ring.scale.setScalar(0.85 + 0.3 * s);
+        p.ring.position.copy(p.local).applyMatrix4(spin.matrixWorld);
+        p.ring.quaternion.copy(camera.quaternion);
+        const facing = Pn.copy(p.ring.position).normalize().dot(Vv.subVectors(camera.position, p.ring.position).normalize());
+        p.ring.visible = facing > 0.05;
+        p.ring.scale.setScalar((0.85 + 0.3 * s) * Math.min(1, facing * 4));
       });
 
       for (let i = 0; i < NSt; i++) {
@@ -291,7 +330,12 @@ export const ConnectedGlobe: Look<GlobeParams> = {
         const hu = ((((st.ph / TAU + Math.abs(st.k) * t) % 1) + 1) % 1) * 2 * L - L;
         for (let k = 0; k <= SEG; k++) {
           const s = k / SEG; // 0 tail -> 1 head
-          if (st.straight) {
+          if (st.rad) {
+            // fans outward behind the globe; radius wraps once per cycle
+            const rr = 0.95 + 2.6 * ((((st.ph / TAU + Math.abs(st.k) * t) % 1) + 1) % 1) - st.len * 0.5 * (1 - s);
+            T.set(Math.cos(st.theta), Math.sin(st.theta) * 0.55, 0).normalize();
+            P.copy(T).multiplyScalar(rr).setZ(-0.35);
+          } else if (st.straight) {
             P.copy(st.c).addScaledVector(st.d, hu - st.len * (1 - s));
             T.copy(st.d);
           } else {
@@ -308,13 +352,13 @@ export const ConnectedGlobe: Look<GlobeParams> = {
           Pn.copy(P).add(S);
           sPos.set([Pn.x, Pn.y, Pn.z], o * 3 + 3);
           sUv.set([s, -1, s, 1], o * 2);
-          sBr[o] = sBr[o + 1] = st.orb ? 0 : st.br;
+          sBr[o] = sBr[o + 1] = st.orb ? 0 : st.rad ? -0.9 * st.br : st.br;
           if (k === SEG) {
             hPos.set([P.x, P.y, P.z], i * 3);
-            const hb = st.orb ? 1.2 * st.br : 0.9 * st.br;
+            const hb = st.orb ? 1.4 * st.br : 2.2 * st.br;
             const c = st.orb && i % 3 === 0 ? city : headCol;
             hCol.set([c.r * hb, c.g * hb, c.b * hb], i * 3);
-            hSize[i] = st.orb ? 7 + 4 * st.br : 6 + 3 * st.br;
+            hSize[i] = st.rad ? 0 : st.orb ? 8 + 5 * st.br : 9 + 5 * st.br;
           }
         }
       }
@@ -334,10 +378,10 @@ export const ConnectedGlobe: Look<GlobeParams> = {
         exposure: 1.0,
         tonemap: "aces",
         bloom: { strength: 1.5, threshold: 0.6, knee: 0.5, radius: 0.55 },
-        dof: { focus: 1.75, range: 3, nearRange: 0.7, maxBlur: 0.002, maxNearBlur: 0.008 },
+        dof: { focus: 7.0, range: 1.2, nearRange: 0.8, maxBlur: 0.005, maxNearBlur: 0.01 },
         grain: 0.02,
         grainPeriod: period,
-        grade: { vignette: 0.3 },
+        grade: { vignette: 0.3, saturation: 1.35 },
       },
     };
   },
