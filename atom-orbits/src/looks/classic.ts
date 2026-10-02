@@ -1,0 +1,55 @@
+import type { LookConfig } from "./types";
+
+/** Look 1 — Classic Atom (reference 473385547). */
+export const classicLook: LookConfig = {
+  id: "ClassicAtom",
+  seed: 473385547,
+  atomHeightFraction: 0.44,
+  fov: 32,
+  background: "navy-nebula",
+  colors: {
+    orbit: "#5fb4ff",
+    electronCore: "#f2f8ff",
+    electronHalo: "#3d8bff",
+    nucleus: "#ff5a1f",
+    nucleusGlow: "#ff2a10",
+    bgCenter: "#061032",
+    bgEdge: "#01020a",
+    nebulaA: "#1c2470",
+    nebulaB: "#3a1e6e",
+    nebulaWarm: "#26307a",
+    smoke: "#000000",
+    smoke2: "#000000",
+  },
+  orbitGroups: [
+    { count: 3, laps: [4, 5, 6], radius: [0.97, 1.0], flatness: [0.94, 1.0], tilt: "classic" },
+  ],
+  strands: 1,
+  wispAmount: 0,
+  trail: 0.25,
+  trailWidth: 0.0042,
+  baseWidth: 0.0014,
+  baseIntensity: 0.22,
+  trailIntensity: 3.2,
+  electron: { size: 0.6, coreIntensity: 30, haloIntensity: 3.0, star: 0.7 },
+  nucleus: "cluster",
+  motion: {
+    // one full turn about the view axis + a closed sway out of the picture
+    // plane, so the ring shapes keep changing but the atom symbol stays readable
+    spinTurns: 1,
+    spinAxis: [0, 0, 1],
+    swayX: [0.3, 1],
+    swayY: [0.32, 2],
+    cameraDrift: [0, 0],
+    cameraDriftCycles: [1, 1],
+    bgDriftCycles: 1,
+  },
+  bloom: { threshold: 0.45, smoothing: 0.15, intensity: 1.3, radius: 0.72, levels: 8 },
+  dof: null,
+  toneMapping: "aces",
+  grain: 0.02,
+  blackSafe: false,
+  smoke: null,
+  bokeh: null,
+  stars: { count: 520, brightness: 0.16 },
+};

@@ -1,0 +1,56 @@
+import type { LookConfig } from "./types";
+
+/** Look 2 — Energy Atom (reference 498336063). Pure black: screen-blend overlay. */
+export const energyLook: LookConfig = {
+  id: "EnergyAtom",
+  seed: 498336063,
+  atomHeightFraction: 0.46,
+  fov: 32,
+  background: "black",
+  colors: {
+    orbit: "#c8f07a",
+    electronCore: "#f6ffe8",
+    electronHalo: "#a8f070",
+    nucleus: "#d8ffff",
+    nucleusGlow: "#7fffe8",
+    bgCenter: "#000000",
+    bgEdge: "#000000",
+    nebulaA: "#000000",
+    nebulaB: "#000000",
+    nebulaWarm: "#000000",
+    smoke: "#2fbf7a",
+    smoke2: "#38c8d8",
+  },
+  orbitGroups: [
+    // short, tight, fast rings hugging the core
+    { count: 3, laps: [21, -24, 27], radius: [0.2, 0.27], flatness: [0.5, 0.85], tilt: "random" },
+    // the big energetic orbits
+    { count: 5, laps: [11, -13, 12, 14, -10], radius: [0.78, 1.0], flatness: [0.38, 0.72], tilt: "random" },
+  ],
+  strands: 4,
+  wispAmount: 0.022,
+  trail: 0.5,
+  trailWidth: 0.0016,
+  baseWidth: 0.0009,
+  baseIntensity: 0.14,
+  trailIntensity: 4.2,
+  electron: { size: 0.32, coreIntensity: 22, haloIntensity: 2.2, star: 0.0 },
+  nucleus: "energy-core",
+  motion: {
+    spinTurns: 2,
+    spinAxis: [0.3, 1, 0.2],
+    swayX: [0.45, 1],
+    swayY: [0.35, 2],
+    cameraDrift: [0, 0],
+    cameraDriftCycles: [1, 1],
+    bgDriftCycles: 1,
+  },
+  bloom: { threshold: 0.5, smoothing: 0.2, intensity: 1.5, radius: 0.75, levels: 6 },
+  dof: null,
+  toneMapping: "agx",
+  grain: 0,
+  blackSafe: true,
+  smoke: { size: 1.7, intensity: 0.42, breathCycles: 4 },
+  bokeh: null,
+  stars: { count: 0, brightness: 0 },
+};
