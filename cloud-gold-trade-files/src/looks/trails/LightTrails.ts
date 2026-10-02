@@ -4,6 +4,7 @@ import { ribbonVertex } from "../../lib/glsl";
 import { mulberry32 } from "../../lib/random";
 import type { LookFactory } from "../../lib/Stage";
 import type { TrailsRow } from "../../versions";
+import { richer } from "../../lib/color";
 
 export const TRAILS_FRAMES = 600;
 
@@ -13,7 +14,7 @@ const SEGS = 220;
 // Trails are concentric arcs around C, so they run parallel and sweep in a
 // wide curve; the camera sits low on the band looking along it.
 const C = new THREE.Vector3(18, 0, -2);
-const R_IN = 17;
+const R_IN = 11;
 const R_OUT = 32;
 const PHI0 = 2.6;
 const PHI1 = 5.55;
@@ -48,7 +49,7 @@ const TRAILS: Trail[] = Array.from({ length: N_TRAILS }, () => {
     wobP: rng() * Math.PI * 2,
     width: 0.006 + Math.pow(rng(), 4) * 0.026,
     mix: rng(),
-    base: 0.03 + Math.pow(rng(), 2) * 0.25,
+    base: 0.02 + Math.pow(rng(), 3) * 0.5,
     m1,
     n1: m1 * (1 + Math.floor(rng() * 3)) + Math.floor(rng() * 3), // whole cells per loop
     l1: 0.06 + rng() * 0.2,
@@ -159,7 +160,7 @@ void main() {
   float ends = smoothstep(0.0, 0.03, vU) * (1.0 - smoothstep(0.75, 1.0, vU));
   float d1 = dash(vU, vPA) * vPC.x;
   float d2 = dash(vU, vPB) * vPC.y;
-  vec3 col = base * (0.12 + vP0.z * 0.9);
+  vec3 col = base * (0.2 + vP0.z * 1.2);
   vec3 dashCol = mix(base, uHead, 0.1);
   if (vP0.w > 0.5) { col += uAccent * d2 * 1.4; d2 = 0.0; }
   col += dashCol * d1 + mix(base, uHead, 0.25) * d2 * d2;
@@ -173,13 +174,12 @@ export const createLightTrails: LookFactory<TrailsRow> = async ({ gl, width, hei
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 200);
   const geo = buildGeometry();
-  const lin = (hex: string) => new THREE.Color(hex); // Color() converts sRGB hex -> linear
   const uniforms = {
     uT: { value: 0 },
-    uFrom: { value: lin(props.from) },
-    uTo: { value: lin(props.to) },
-    uAccent: { value: lin(props.accent) },
-    uHead: { value: lin(props.head) },
+    uFrom: { value: richer(props.from, 0.7) },
+    uTo: { value: richer(props.to, 0.55) },
+    uAccent: { value: richer(props.accent, 0.4) },
+    uHead: { value: new THREE.Color(props.head) },
     uViewH: { value: height },
     uMinPx: { value: 1.1 / 720 },
   };
@@ -213,11 +213,11 @@ export const createLightTrails: LookFactory<TrailsRow> = async ({ gl, width, hei
 
   const post = new PostFX(gl, width, height, {
     exposure: 1.0,
-    bloomStrength: 0.9,
-    bloomThreshold: 0.35,
+    bloomStrength: 1.2,
+    bloomThreshold: 0.25,
     bloomKnee: 0.3,
     bloomWeights: [0.6, 0.8, 1.0, 1.0, 0.8, 0.6],
-    dof: { focus: 16, nearK: 0.9, farK: 0.0, maxBlur: 0.012 },
+    dof: { focus: 14, nearK: 0.5, farK: 0.0, maxBlur: 0.006 },
     grain: 0,
     protectBlack: true,
     vignette: 0,
@@ -231,7 +231,8 @@ export const createLightTrails: LookFactory<TrailsRow> = async ({ gl, width, hei
       const a = Math.PI * 2 * t;
       // closed drift: whole sine periods over the loop
       camera.position.set(0.3 * Math.sin(a), 3.2 + 0.08 * Math.sin(2 * a), 3 + 0.3 * Math.cos(a));
-      camera.lookAt(6 + 0.4 * Math.cos(a), -3.0, -20);
+      camera.lookAt(10 + 0.4 * Math.cos(a), -1.0, -20);
+      camera.rotateZ(-0.13);
       camera.updateMatrixWorld();
       post.render(scene, camera, frame);
     },

@@ -5,13 +5,14 @@ import { mulberry32 } from "../../lib/random";
 import { screenLines } from "../../lib/screenLines";
 import type { LookFactory } from "../../lib/Stage";
 import type { FilesRow } from "../../versions";
+import { richer } from "../../lib/color";
 
 export const FILES_FRAMES = 600;
 
 // ---- layout --------------------------------------------------------------------
 const N_ITEMS = 60;
-const SPACING = 0.3;
-const ROW_LEN = N_ITEMS * SPACING; // the row is treated as periodic with this length
+const SPACING_DOC = 0.4;
+const SPACING_FOLDER = 0.46;
 const ITEM_W = 1.0;
 const ITEM_H = 1.32;
 const ROW2_Z = -2.3;
@@ -33,7 +34,7 @@ void main() {
 // kind: 0 = page (lines + checkboxes), 1 = folder panel (with tab), 2 = paper sheet, 3 = plain panel
 const glassFrag = /* glsl */ `
 uniform vec3 uGlass; uniform vec3 uEdge; uniform float uGlow; uniform float uAlpha; uniform float uKind;
-uniform vec2 uSize; uniform float uSeed; uniform float uFade;
+uniform vec2 uSize; uniform float uSeed; uniform float uFade; uniform vec3 uTint;
 varying vec2 vUv; varying vec3 vN; varying vec3 vV;
 float sdRound(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 float h1(float x) { return fract(sin(x * 91.7 + uSeed * 13.1) * 43758.5); }
@@ -42,8 +43,8 @@ void main() {
   float d;
   if (uKind > 0.5 && uKind < 1.5) {
     // folder back: body + tab on the top-left
-    float body = sdRound(p - vec2(0.0, -0.05 * uSize.y), uSize * vec2(0.5, 0.45), 0.05);
-    float tab = sdRound(p - vec2(-0.22 * uSize.x, 0.43 * uSize.y), vec2(0.17 * uSize.x, 0.07 * uSize.y), 0.035);
+    float body = sdRound(p - vec2(0.0, -0.06 * uSize.y), uSize * vec2(0.5, 0.44), 0.05);
+    float tab = sdRound(p - vec2(-0.26 * uSize.x, 0.42 * uSize.y), vec2(0.16 * uSize.x, 0.08 * uSize.y), 0.04);
     d = min(body, tab);
   } else {
     d = sdRound(p, uSize * 0.5, uKind > 1.5 ? 0.012 : 0.045);
@@ -56,8 +57,8 @@ void main() {
   float fres = pow(1.0 - clamp(abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 2.0);
   // fake environment: brighter towards the top of the item
   float sky = 0.6 + 0.4 * smoothstep(-0.5, 0.5, p.y / uSize.y);
-  vec3 col = uGlass * (0.2 + 0.3 * fres) * sky;
-  float a = uAlpha * (0.55 + 0.3 * fres);
+  vec3 col = uGlass * uTint * (0.55 + 0.35 * fres) * sky;
+  float a = uAlpha * (0.6 + 0.3 * fres);
   float marks = 0.0;
   if (uKind < 0.5) {
     // page print: checkbox squares + rounded text lines
@@ -86,8 +87,8 @@ void main() {
     col = mix(uGlass, vec3(1.0), 0.6) * (0.22 + 0.25 * fres) * sky;
     a = uAlpha * 0.6;
   }
-  col += mix(uGlass, uEdge, 0.5) * edge * 0.7;
-  col += uGlass * marks * 0.55;
+  col += mix(uGlass, uEdge, 0.25) * edge * 0.85;
+  col += mix(uGlass, uEdge, 0.15) * marks * 0.6;
   a = max(a, edge * 0.9);
   a = max(a, marks * 0.85);
   col *= uGlow * uFade;
@@ -125,7 +126,7 @@ type Item = { group: THREE.Group; s0: number; row: number; parts: Part[] };
 
 export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height, props: row }) => {
   const scene = new THREE.Scene();
-  const glass = new THREE.Color(row.glass);
+  const glass = richer(row.glass, 0.6);
   const edge = new THREE.Color(row.edge);
   const gridC = new THREE.Color(row.grid);
 
@@ -142,6 +143,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
         uSize: { value: new THREE.Vector2(w, h) },
         uSeed: { value: seed },
         uFade: { value: 1 },
+        uTint: { value: new THREE.Vector3(1, 1, 1) },
       },
       transparent: true,
       depthWrite: true,
@@ -153,6 +155,8 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   };
 
   // items: planes standing on edge, facing along the row (+x)
+  const SPACING = row.item === "folder" ? SPACING_FOLDER : SPACING_DOC;
+  const ROW_LEN = N_ITEMS * SPACING; // the row is treated as periodic with this length
   const items: Item[] = [];
   for (let r = 0; r < 2; r++) {
     for (let i = 0; i < N_ITEMS; i++) {
@@ -165,16 +169,22 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
         parts.push(p);
       } else {
         // folder: back panel with tab, two paper sheets, front panel
-        const FW = 1.12, FH = 1.0;
-        const back = makePart(1, FW, FH * 1.12, 0.5, seed);
-        back.mesh.position.set(0, (FH * 1.12) / 2, 0);
-        const p1 = makePart(2, FW * 0.92, FH * 1.0, 0.75, seed + 0.3);
-        p1.mesh.position.set(0.012, FH * 0.5 + 0.06, -0.035);
-        const p2 = makePart(2, FW * 0.9, FH * 0.98, 0.75, seed + 0.6);
-        p2.mesh.position.set(-0.01, FH * 0.49 + 0.035, -0.07);
-        const front = makePart(3, FW, FH * 0.86, 0.5, seed + 0.9);
-        front.mesh.position.set(0, FH * 0.43, -0.11);
-        front.mesh.rotation.x = 0.06;
+        // back panel with tab, two paper sheets, front panel (deeper blue)
+        const FW = 1.2, FH = 1.0;
+        const deep = new THREE.Vector3(0.55, 0.75, 1.25);
+        const back = makePart(1, FW, FH * 1.2, 0.7, seed);
+        back.mesh.position.set(0, (FH * 1.2) / 2, 0);
+        back.mat.uniforms.uTint.value.copy(deep);
+        const p1 = makePart(2, FW * 0.9, FH * 0.92, 0.8, seed + 0.3);
+        p1.mesh.position.set(0.015, FH * 0.46 + 0.07, -0.04);
+        p1.mesh.rotation.x = -0.05;
+        const p2 = makePart(2, FW * 0.88, FH * 0.9, 0.8, seed + 0.6);
+        p2.mesh.position.set(-0.01, FH * 0.45 + 0.05, -0.08);
+        p2.mesh.rotation.x = -0.1;
+        const front = makePart(3, FW, FH * 0.8, 0.72, seed + 0.9);
+        front.mesh.position.set(0, FH * 0.4, -0.14);
+        front.mesh.rotation.x = -0.14;
+        front.mat.uniforms.uTint.value.copy(deep);
         parts.push(back, p1, p2, front);
       }
       parts.forEach((p) => group.add(p.mesh));
@@ -210,7 +220,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   // floor lines under the rows
   for (let k = -12; k <= 12; k++) segs.push({ a: new THREE.Vector3(-30, -0.06, k * 0.9), b: new THREE.Vector3(30, -0.06, k * 0.9), i: 0.18 });
   for (let k = -30; k <= 30; k++) segs.push({ a: new THREE.Vector3(k * 0.9, -0.06, -16), b: new THREE.Vector3(k * 0.9, -0.06, 10), i: 0.12 });
-  const lines = screenLines(segs, gridC.clone().multiplyScalar(2.6), 1.2 / 1080, height, { depthWrite: true, fadeFar: 40 });
+  const lines = screenLines(segs, richer(row.grid, 0.4).multiplyScalar(4.0), 1.3 / 1080, height, { depthWrite: true, fadeFar: 40 });
   (lines.material as THREE.ShaderMaterial).uniforms.uAspect.value = width / height;
   scene.add(lines);
 
@@ -219,7 +229,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   const bTex = bokehTexture();
   const pointMat = (tex: THREE.Texture, c: THREE.Color, o: number) =>
     new THREE.SpriteMaterial({ map: tex, color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: o });
-  const pc = new THREE.Color(row.glass).lerp(new THREE.Color(1, 1, 1), 0.3).multiplyScalar(2.5);
+  const pc = richer(row.glass, 0.5).lerp(new THREE.Color(1, 1, 1), 0.2).multiplyScalar(4);
   for (let k = 0; k < 90; k++) {
     const x = (Math.floor(rng() * 21) - 10) * GS, y = -0.05 + Math.floor(rng() * 4) * GS * 0.8, z = (Math.floor(rng() * 8) - 5) * GS;
     const s = new THREE.Sprite(pointMat(pTex, pc, 0.6 + 0.4 * rng()));
@@ -274,10 +284,10 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
       });
       // camera ~25 degrees above, looking along the row; closed drift
       const a = Math.PI * 2 * t;
-      camera.position.set(-7.2 + 0.3 * Math.sin(a), 3.1 + 0.12 * Math.sin(2 * a), 4.6 + 0.25 * Math.cos(a));
-      camera.lookAt(0.2 + 0.15 * Math.cos(a), 0.75, -0.8);
+      camera.position.set(-4.2 + 0.25 * Math.sin(a), 2.5 + 0.1 * Math.sin(2 * a), 4.4 + 0.2 * Math.cos(a));
+      camera.lookAt(1.2 + 0.12 * Math.cos(a), 0.75, -0.8);
       camera.updateMatrixWorld();
-      post.opts.dof!.focus = camera.position.distanceTo(new THREE.Vector3(-1.0, 0.7, 0));
+      post.opts.dof!.focus = camera.position.distanceTo(new THREE.Vector3(0.0, 0.7, 0));
       post.render(scene, camera, f);
     },
   };

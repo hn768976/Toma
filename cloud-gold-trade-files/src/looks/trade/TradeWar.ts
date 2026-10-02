@@ -10,9 +10,9 @@ import { drawFlag } from "./flags";
 
 export const TRADE_FRAMES = 450;
 
-const MAP_W = 5.7;
-const LEFT_C = new THREE.Vector3(-3.35, 0, 1.1);
-const RIGHT_C = new THREE.Vector3(3.45, 0, 0.6);
+const MAP_W = 5.3;
+const LEFT_C = new THREE.Vector3(-3.05, 0, 1.5);
+const RIGHT_C = new THREE.Vector3(3.35, 0, -0.5);
 
 // ---- ground shader: slate with fine static cracks, fully procedural so it holds
 // up at any resolution --------------------------------------------------------------
@@ -259,8 +259,8 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
       boxes.push({ mesh: m, x: base.x + dx, y: layer * 0.97 + 0.475, z: base.z + dz, ry: (k - 1) * 0.015 * flip, t0: t0 + k * 22 });
     });
   };
-  stack(new THREE.Vector3(-3.0, 0, -3.6), row.left.containers, 40, 1);
-  stack(new THREE.Vector3(3.8, 0, -4.1), row.right.containers, 52, -1);
+  stack(new THREE.Vector3(-3.5, 0, -2.3), row.left.containers, 40, 1);
+  stack(new THREE.Vector3(1.9, 0, -4.4), row.right.containers, 52, -1);
 
   // ---- cracks (rebuilt from the frame each time; fixed topology)
   const cracks = planCracks();
@@ -469,15 +469,15 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
         const sz = p.size * (0.4 + 1.6 * easeOutCubic(s));
         p.sprite.scale.set(sz, sz * 0.7, 1);
         p.sprite.position.set(p.x + p.drift * 0.6 * s, 0.15 + 0.45 * easeOutCubic(s), p.z);
-        p.sprite.material.opacity = 0.55 * smoothstep(0, 0.08, s) * (1 - smoothstep(0.25, 1, s));
+        p.sprite.material.opacity = 0.32 * smoothstep(0, 0.08, s) * (1 - smoothstep(0.25, 1, s));
         p.sprite.material.rotation = p.drift * 2 * s;
       });
       // camera: ~50 degrees above, slow push and drift
       const c = easeInOutCubic(f / (TRADE_FRAMES - 1)) * 0.7 + (f / (TRADE_FRAMES - 1)) * 0.3;
-      const dist = lerp(15.5, 13.3, c);
+      const dist = lerp(15.2, 13.4, c);
       const el = THREE.MathUtils.degToRad(lerp(52, 49, c));
       const az = lerp(-0.07, 0.06, c);
-      const tgt = new THREE.Vector3(0.1, 0, -0.5);
+      const tgt = new THREE.Vector3(0.2, 0, -1.0);
       camera.position.set(tgt.x + dist * Math.cos(el) * Math.sin(az), dist * Math.sin(el), tgt.z + dist * Math.cos(el) * Math.cos(az));
       camera.lookAt(tgt);
       camera.updateMatrixWorld();

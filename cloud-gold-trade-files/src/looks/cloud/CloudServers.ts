@@ -116,10 +116,10 @@ void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(
 function rackMaterial(row: CloudRow, rack: Rack, env: THREE.Texture, uFrame: { value: number }) {
   const m = new THREE.MeshStandardMaterial({
     color: new THREE.Color(row.rack),
-    metalness: 0.7,
-    roughness: 0.3,
+    metalness: 0.6,
+    roughness: 0.28,
     envMap: env,
-    envMapIntensity: 0.3,
+    envMapIntensity: 0.9,
   });
   const lc = row.lights.map((c) => new THREE.Color(c));
   m.onBeforeCompile = (sh) => {
@@ -251,6 +251,13 @@ function cloudGeometry(): THREE.ExtrudeGeometry {
   return g;
 }
 
+/** Same hue, full saturation: ACES desaturates bright colours, so glows start richer. */
+function saturated(c: THREE.Color): THREE.Color {
+  const hsl = { h: 0, s: 0, l: 0 };
+  c.getHSL(hsl);
+  return new THREE.Color().setHSL(hsl.h, 1, 0.5);
+}
+
 export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, height, props: row }) => {
   const env = await loadStudioEnv(gl);
   const scene = new THREE.Scene();
@@ -266,7 +273,7 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
       fragmentShader: floorFrag,
       uniforms: {
         uBase: { value: new THREE.Color(row.floor) },
-        uGrid: { value: hdr(new THREE.Color(row.line).lerp(new THREE.Color(row.rack), 0.6), 0.5) },
+        uGrid: { value: hdr(new THREE.Color(row.line).lerp(new THREE.Color(row.rack), 0.85), 0.6) },
         uLine: { value: LINE },
       },
       extensions: { derivatives: true } as never,
@@ -275,8 +282,8 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
   scene.add(floor);
 
   // lights
-  scene.add(new THREE.AmbientLight(0x6080c0, 0.25));
-  const key = new THREE.DirectionalLight(0xbcd4ff, 0.9);
+  scene.add(new THREE.AmbientLight(0x7090d0, 0.3));
+  const key = new THREE.DirectionalLight(0xbcd4ff, 1.6);
   key.position.set(-6, 14, 9);
   scene.add(key);
   const rim = new THREE.DirectionalLight(LINE, 0.6);
@@ -316,12 +323,12 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
   racks.forEach((r) => {
     // glowing slab
     const slabMats = [
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.4) }), // +x
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.4) }), // -x
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.6) }), // top
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 0.4) }), // bottom
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.4) }), // +z
-      new THREE.MeshBasicMaterial({ color: hdr(LINE, 2.4) }), // -z
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.5) }), // +x
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.5) }), // -x
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 0.9) }), // top
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 0.3) }), // bottom
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.5) }), // +z
+      new THREE.MeshBasicMaterial({ color: hdr(LINE, 1.5) }), // -z
     ];
     const slab = new THREE.Mesh(new THREE.BoxGeometry(r.pad, SLAB_H, r.pad), slabMats);
     slab.position.set(r.x, SLAB_H / 2, r.z);
@@ -383,19 +390,19 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
   // cloud
   const cloudCol = new THREE.Color(row.cloud);
   const cloudMat = new THREE.MeshPhysicalMaterial({
-    color: cloudCol,
+    color: cloudCol.clone().multiplyScalar(0.12),
     roughness: 0.12,
     metalness: 0.0,
-    clearcoat: 1,
-    clearcoatRoughness: 0.08,
+    clearcoat: 0.0,
+    specularIntensity: 0.6,
     transparent: true,
     opacity: 0.93,
-    emissive: hdr(cloudCol, 0.3),
+    emissive: hdr(saturated(cloudCol), 0.75),
     envMap: env,
-    envMapIntensity: 0.35,
+    envMapIntensity: 0.12,
   });
   cloudMat.onBeforeCompile = (sh) => {
-    sh.uniforms.uRim = { value: hdr(cloudCol.clone().lerp(new THREE.Color(1, 1, 1), 0.3), 1.3) };
+    sh.uniforms.uRim = { value: hdr(cloudCol.clone().lerp(new THREE.Color(1, 1, 1), 0.3), 1.1) };
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", "#include <common>\nuniform vec3 uRim;")
       .replace(
@@ -410,7 +417,7 @@ totalEmissiveRadiance += uRim * fr;`,
   cloud.position.copy(CLOUD_POS);
   cloud.rotation.y = Math.PI / 4 + 0.32;
   scene.add(cloud);
-  const cloudLight = new THREE.PointLight(cloudCol, 6, 10, 2);
+  const cloudLight = new THREE.PointLight(cloudCol, 1.5, 10, 2);
   cloudLight.position.set(CLOUD_POS.x + 2, CLOUD_POS.y - 0.5, CLOUD_POS.z + 2.5);
   scene.add(cloudLight);
 
@@ -446,18 +453,18 @@ totalEmissiveRadiance += uRim * fr;`,
   const mtx = new THREE.Matrix4();
 
   const camera = new THREE.PerspectiveCamera(2 * THREE.MathUtils.radToDeg(Math.atan(12 / 85)), width / height, 1, 400);
-  const target = new THREE.Vector3(0.6, 3.4, 0.6);
+  const target = new THREE.Vector3(1.4, 3.0, 0.4);
 
   const post = new PostFX(gl, width, height, {
     exposure: 1.0,
-    bloomStrength: 0.55,
-    bloomThreshold: 0.6,
+    bloomStrength: 0.75,
+    bloomThreshold: 0.35,
     bloomKnee: 0.6,
     bloomWeights: [0.5, 0.8, 1.0, 1.0, 0.8, 0.6],
     grain: 0.02,
     vignette: 0.35,
     clearColor: new THREE.Color(row.floor),
-    dof: { focus: 58, nearK: 3, farK: 3, maxBlur: 0.004 },
+    dof: { focus: 57, nearK: 3, farK: 3, maxBlur: 0.004 },
   });
 
   return {
@@ -478,8 +485,8 @@ totalEmissiveRadiance += uRim * fr;`,
       // closed camera sway
       const a = Math.PI * 2 * t;
       const az = Math.PI / 4 + 0.035 * Math.sin(a);
-      const el = THREE.MathUtils.degToRad(37 + 0.8 * Math.sin(a + 1.2));
-      const R = 58;
+      const el = THREE.MathUtils.degToRad(41 + 0.8 * Math.sin(a + 1.2));
+      const R = 57;
       camera.position.set(
         target.x + R * Math.cos(el) * Math.sin(az),
         target.y + R * Math.sin(el),

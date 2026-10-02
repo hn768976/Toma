@@ -22,7 +22,7 @@ export const CLOUD_ROWS: CloudRow[] = [
     rack: "#2A5AA8",
     cloud: "#6FB8FF",
     lights: ["#4FF0F0", "#FFFFFF", "#FF9A3F", "#FF3A3A"],
-    floor: "#040A1C",
+    floor: "#071230",
   },
   {
     id: "CloudServers_Violet",
@@ -30,7 +30,7 @@ export const CLOUD_ROWS: CloudRow[] = [
     rack: "#3A2A78",
     cloud: "#B89CFF",
     lights: ["#A87CFF", "#FFFFFF", "#FF4FD8", "#FF3AA0"],
-    floor: "#08061C",
+    floor: "#0E0A2C",
   },
 ];
 
