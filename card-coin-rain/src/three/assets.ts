@@ -77,7 +77,8 @@ const gradeEnv = (src: DataTexture, look: Look) => {
     // Soft-compress the softbox peaks (~3400 in the raw file): at the
     // roughness of a flat ingot face they otherwise fill it with flat white.
     const l = 0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2];
-    const c = white > 0 ? (look.env.gain * (1 + l / (white * white))) / (1 + l / white) : look.env.gain;
+    // L -> L / (1 + L / white): ~linear well below `white`, saturates at it.
+    const c = white > 0 ? look.env.gain / (1 + l / white) : look.env.gain;
     const r = data[i * 4] * tint.r * c + amb.r * k;
     const g = data[i * 4 + 1] * tint.g * c + amb.g * k;
     const b = data[i * 4 + 2] * tint.b * c + amb.b * k;
