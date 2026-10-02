@@ -41,26 +41,29 @@ const TRAILS: Trail[] = Array.from({ length: N_TRAILS }, () => {
   const r = R_IN + (R_OUT - R_IN) * (0.5 + 0.5 * Math.sign(t - 0.5) * Math.pow(Math.abs(2 * t - 1), 1.25));
   const m1 = 2 + Math.floor(rng() * 4);
   const m2 = 3 + Math.floor(rng() * 5);
+  // ~1 in 7 trails is a bold 'hero' strand: thicker, brighter, white-cyan core
+  const hero = rng() < 0.15;
+  const accent = rng() < 0.2 ? 1 : 0;
   return {
     r,
     y: -0.05 + Math.pow(rng(), 1.6) * 0.75,
     wobA: 0.04 + rng() * 0.12,
     wobF: 1 + Math.floor(rng() * 3),
     wobP: rng() * Math.PI * 2,
-    width: 0.006 + Math.pow(rng(), 4) * 0.026,
-    mix: rng(),
-    base: 0.02 + Math.pow(rng(), 3) * 0.5,
+    width: hero ? 0.022 + rng() * 0.03 : 0.006 + Math.pow(rng(), 4) * 0.02,
+    mix: Math.pow(rng(), 1.8),
+    base: hero ? 0.45 + 0.35 * rng() : 0.02 + Math.pow(rng(), 3) * 0.25,
     m1,
     n1: m1 * (1 + Math.floor(rng() * 3)) + Math.floor(rng() * 3), // whole cells per loop
     l1: 0.06 + rng() * 0.2,
     p1: rng(),
-    b1: 0.8 + Math.pow(rng(), 2) * 4,
+    b1: (hero ? 1.8 : 0.6) + Math.pow(rng(), 2) * 3,
     m2,
     n2: 2 + Math.floor(rng() * 9),
     l2: 0.05 + rng() * 0.12,
     p2: rng(),
-    b2: rng() < 0.3 ? 1.5 + rng() * 4 : 0,
-    accent: rng() < 0.09 ? 1 : 0,
+    b2: rng() < 0.3 || accent ? 1.5 + rng() * 4 : 0,
+    accent,
   };
 });
 
@@ -160,7 +163,9 @@ void main() {
   float ends = smoothstep(0.0, 0.03, vU) * (1.0 - smoothstep(0.75, 1.0, vU));
   float d1 = dash(vU, vPA) * vPC.x;
   float d2 = dash(vU, vPB) * vPC.y;
-  vec3 col = base * (0.2 + vP0.z * 1.2);
+  vec3 col = base * (0.2 + vP0.z * 1.4);
+  // hero strands get a whitened core
+  col = mix(col, uHead * vP0.z * 1.2, step(0.42, vP0.z) * pow(core, 8.0) * 0.25);
   vec3 dashCol = mix(base, uHead, 0.1);
   if (vP0.w > 0.5) { col += uAccent * d2 * 1.4; d2 = 0.0; }
   col += dashCol * d1 + mix(base, uHead, 0.25) * d2 * d2;
@@ -212,11 +217,12 @@ export const createLightTrails: LookFactory<TrailsRow> = async ({ gl, width, hei
   scene.add(depthMesh);
 
   const post = new PostFX(gl, width, height, {
-    exposure: 1.0,
-    bloomStrength: 1.2,
-    bloomThreshold: 0.25,
-    bloomKnee: 0.3,
-    bloomWeights: [0.6, 0.8, 1.0, 1.0, 0.8, 0.6],
+    exposure: 0.95,
+    bloomStrength: 1.5,
+    bloomThreshold: 0.12,
+    bloomKnee: 0.25,
+    // long tail on the low mips = wide blue haze around the bright band
+    bloomWeights: [0.5, 0.7, 1.0, 1.2, 1.4, 1.5],
     dof: { focus: 14, nearK: 0.5, farK: 0.0, maxBlur: 0.006 },
     grain: 0,
     protectBlack: true,
@@ -230,8 +236,8 @@ export const createLightTrails: LookFactory<TrailsRow> = async ({ gl, width, hei
       uniforms.uT.value = t;
       const a = Math.PI * 2 * t;
       // closed drift: whole sine periods over the loop
-      camera.position.set(0.3 * Math.sin(a), 3.2 + 0.08 * Math.sin(2 * a), 3 + 0.3 * Math.cos(a));
-      camera.lookAt(10 + 0.4 * Math.cos(a), -1.0, -20);
+      camera.position.set(0.3 * Math.sin(a), 2.2 + 0.08 * Math.sin(2 * a), 1.5 + 0.3 * Math.cos(a));
+      camera.lookAt(10 + 0.4 * Math.cos(a), 0.9, -20);
       camera.rotateZ(-0.13);
       camera.updateMatrixWorld();
       post.render(scene, camera, frame);

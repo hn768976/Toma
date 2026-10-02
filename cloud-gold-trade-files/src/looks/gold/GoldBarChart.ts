@@ -11,12 +11,14 @@ export const GOLD_FRAMES = 360;
 // ---- bar + layout constants ------------------------------------------------------
 const BAR_L = 2.1; // along z (towards camera)
 const BAR_W = 0.95; // along x
-const BAR_H = 0.42;
-const BASE_TAPER = 0.84; // bottom face is 84% of the top face (bars lie big face up)
+const BAR_H = 0.58;
+const BASE_TAPER = 0.88; // bottom face is 88% of the top face (bars lie big face up)
 const COL_DX = 1.3;
 const COL_DZ = -0.38; // each column a little further back
 const BAR_YAW = 0.5; // bars turned so their end faces catch the camera
 const GOLD = "#E8B04A";
+const ENV_ROT = 1.57; // studio HDRI yaw for the bars: softboxes land in their faces
+const ARROW_ENV_ROT = 0; // the curved arrow catches them at a different yaw
 
 type BarPlan = { col: number; layer: number; jx: number; jz: number; ry: number; start: number; var: number };
 
@@ -131,7 +133,7 @@ function goldMaterial(env: THREE.Texture, maps: { rough: THREE.Texture; normal: 
     normalMap: maps.normal,
     normalScale: new THREE.Vector2(0.35, 0.35),
     envMap: env,
-    envMapIntensity: 0.95,
+    envMapIntensity: 1.0,
   });
   return m;
 }
@@ -164,8 +166,8 @@ const arrowClip = (m: THREE.MeshPhysicalMaterial, uP: { value: number }, reverse
 };
 
 function arrowCurve(columns: number[], dir: "rising" | "falling", z: number, x0 = -0.75, y0 = 0.3): THREE.CatmullRomCurve3 {
-  const x1 = (columns.length - 1) * COL_DX + 0.55;
-  const top = Math.max(...columns) * BAR_H * 0.78;
+  const x1 = (columns.length - 1) * COL_DX - 0.15; // head overlaps the tallest stack
+  const top = Math.max(...columns) * BAR_H * 0.72;
   const pts: THREE.Vector3[] = [];
   const k = 2.7;
   for (let i = 0; i <= 24; i++) {
@@ -278,7 +280,7 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   const ingot = ingotGeometry();
   const aVar = new THREE.InstancedBufferAttribute(new Float32Array(bars.map((b) => b.var)), 1);
   ingot.setAttribute("aVar", aVar);
-  const goldMat = goldMaterial(env, maps, 0.27);
+  const goldMat = goldMaterial(env, maps, 0.3);
   addRoughnessVariation(goldMat);
   const mesh = new THREE.InstancedMesh(ingot, goldMat, bars.length);
   mesh.castShadow = true;
@@ -304,17 +306,17 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   const zArrow = BAR_L / 2 + 0.55;
   // falling: the head ends a little higher and further in, so it stays in frame
   const curve = falling ? arrowCurve(columns, "rising", zArrow, 0.25, 0.75) : arrowCurve(columns, "rising", zArrow);
-  const arrowMat = goldMaterial(env, maps, 0.22);
+  const arrowMat = goldMaterial(env, maps, 0.3);
   arrowMat.envMapIntensity = 0.55;
   arrowMat.normalScale.set(0.12, 0.12);
   arrowClip(arrowMat, uP, falling);
-  const band = new THREE.Mesh(bandGeometry(curve, 0.3, 0.1), arrowMat);
+  const band = new THREE.Mesh(bandGeometry(curve, 0.55, 0.075), arrowMat);
   band.castShadow = true;
   // head is never clipped; it rides the drawing tip
-  const headMat = goldMaterial(env, maps, 0.22);
+  const headMat = goldMaterial(env, maps, 0.3);
   headMat.envMapIntensity = arrowMat.envMapIntensity;
   headMat.normalScale.set(0.12, 0.12);
-  const head = new THREE.Mesh(headGeometry(1.0, 0.9, 0.1), headMat);
+  const head = new THREE.Mesh(headGeometry(1.45, 1.35, 0.075), headMat);
   head.castShadow = true;
   const arrow = new THREE.Group();
   arrow.add(band, head);
@@ -331,7 +333,7 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
       roughness: 0.45,
       metalness: 0,
       transparent: true,
-      opacity: 0.84,
+      opacity: 0.9,
       envMap: env,
       envMapIntensity: 0.0,
     }),
@@ -348,21 +350,21 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   root.add(bg);
 
   // ---- lights
-  const key = new THREE.SpotLight(0xffc27a, 70, 60, 0.5, 0.75, 2);
+  const key = new THREE.SpotLight(0xffb868, 90, 60, 0.55, 0.8, 2);
   key.position.set(-6, 11, 9);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.bias = -0.0004;
   key.shadow.radius = 4;
   root.add(key, key.target);
-  const rim = new THREE.SpotLight(0xffb060, 180, 60, 0.6, 0.8, 2);
+  const rim = new THREE.SpotLight(0xffa850, 70, 60, 0.6, 0.8, 2);
   rim.position.set(14, 6, -8);
   root.add(rim, rim.target);
   rim.target.position.set(5, 2, 0);
   const glint = new THREE.PointLight(0xfff0d0, 0, 12, 2);
   root.add(glint);
 
-  const camera = new THREE.PerspectiveCamera(30, width / height, 0.3, 200);
+  const camera = new THREE.PerspectiveCamera(24, width / height, 0.3, 200);
   // the last column on screen is local column 0 when mirrored
   const lastCol = falling ? 0 : columns.length - 1;
   const tumbleN = falling ? 2 : 0;
@@ -374,7 +376,7 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   const post = new PostFX(gl, width, height, {
     exposure: 1.05,
     bloomStrength: 0.12,
-    bloomThreshold: 1.2,
+    bloomThreshold: 2.5,
     bloomKnee: 0.8,
     bloomWeights: [0.6, 0.8, 1, 1, 0.8, 0.6],
     dof: { focus: 9, nearK: 1.0, farK: 1.6, maxBlur: 0.011 },
@@ -464,26 +466,26 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
       const ls = easeInOutCubic(f / 70);
       key.target.position.set(lerp(-4, 3.6, ls), 0, lerp(3, 0, ls));
       key.target.updateMatrixWorld();
-      key.intensity = lerp(40, 70, ls);
+      key.intensity = lerp(50, 90, ls);
       // glint sweeps across the bars 270..360
       const g = clamp((f - 270) / 90);
       glint.position.set(lerp(-2, (columns.length - 1) * COL_DX + 2, g), 6.5, 4.5);
       glint.intensity = 30 * Math.sin(Math.PI * g);
-      scene.environmentRotation.y = sgn * 0.35 * easeInOutCubic(g);
+      scene.environmentRotation.y = sgn * (ENV_ROT + 0.35 * easeInOutCubic(g));
       goldMat.envMapRotation.y = scene.environmentRotation.y;
-      arrowMat.envMapRotation.y = scene.environmentRotation.y;
-      headMat.envMapRotation.y = scene.environmentRotation.y;
+      arrowMat.envMapRotation.y = sgn * (ARROW_ENV_ROT + 0.35 * easeInOutCubic(g));
+      headMat.envMapRotation.y = arrowMat.envMapRotation.y;
 
       // camera: slow push in with a sideways drift
       const c = easeInOutCubic(f / (GOLD_FRAMES - 1)) * 0.8 + (f / (GOLD_FRAMES - 1)) * 0.2;
       if (falling) {
         // mirrored framing, slightly wider and lower so the arrow head and the
         // tumbling bars (bottom right) stay in frame
-        camera.position.set(-lerp(0.2, 0.9, c), lerp(6.6, 6.3, c), lerp(12.4, 11.2, c));
-        camera.lookAt(-lerp(3.1, 3.5, c), lerp(1.6, 1.8, c), -1.0);
+        camera.position.set(-lerp(-1.0, -0.2, c), lerp(7.4, 7.1, c), lerp(19.4, 17.8, c));
+        camera.lookAt(-lerp(3.3, 3.7, c), lerp(3.0, 3.2, c), -1.0);
       } else {
-        camera.position.set(lerp(1.0, 1.8, c), lerp(6.4, 6.1, c), lerp(9.6, 8.6, c));
-        camera.lookAt(lerp(4.3, 4.7, c), lerp(2.5, 2.7, c), -1.2);
+        camera.position.set(lerp(-1.0, -0.2, c), lerp(7.6, 7.3, c), lerp(18.6, 17.0, c));
+        camera.lookAt(lerp(3.6, 4.0, c), lerp(3.3, 3.5, c), -1.2);
       }
       camera.updateMatrixWorld();
       post.opts.dof!.focus = camera.position.distanceTo(new THREE.Vector3(sgn * 0.6, 1.0, 1.0));

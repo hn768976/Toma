@@ -7,6 +7,7 @@ import type { LookFactory } from "../../lib/Stage";
 import type { TradeRow } from "../../versions";
 import { countryShape } from "./countries";
 import { drawFlag } from "./flags";
+import { richer } from "../../lib/color";
 
 export const TRADE_FRAMES = 450;
 
@@ -45,7 +46,9 @@ float crackMask(vec2 p) {
   float e2 = vedge(w * 0.9 + 3.0);
   float c1 = (1.0 - smoothstep(0.0, 0.014, e1)) * smoothstep(0.35, 0.5, vnoise(p * 0.35 + 2.0));
   float c2 = (1.0 - smoothstep(0.0, 0.01, e2)) * smoothstep(0.6, 0.72, vnoise(p * 0.6));
-  return max(c1, c2 * 0.8);
+  float e3 = vedge(w * 2.2 + 7.0);
+  float c3 = (1.0 - smoothstep(0.0, 0.02, e3)) * smoothstep(0.55, 0.7, vnoise(p * 1.1 + 4.0));
+  return max(max(c1, c2 * 0.85), c3 * 0.6);
 }
 float groundH(vec2 p) { return fbm(p * 2.2) * 0.6 + fbm(p * 9.0) * 0.25 - crackMask(p) * 0.6; }
 `;
@@ -64,7 +67,7 @@ function groundMaterial(env: THREE.Texture) {
 vec2 gp = vWP.xz;
 float n1 = fbm(gp * 0.8);
 float n2 = fbm(gp * 4.0 + 5.0);
-vec3 slate = mix(vec3(0.013, 0.014, 0.017), vec3(0.04, 0.04, 0.045), n1);
+vec3 slate = mix(vec3(0.02, 0.021, 0.025), vec3(0.065, 0.065, 0.07), n1);
 slate *= 0.75 + 0.5 * n2;
 slate += vec3(0.02) * step(0.93, h21(floor(gp * 60.0))) ;
 float cm = crackMask(gp);
@@ -115,6 +118,38 @@ function corrugationNormal(): THREE.Texture {
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(30, 1);
   return t;
+}
+
+/** Container end: door frame, centre seam and locking rods (no writing). */
+function doorTexture(): THREE.Texture {
+  const [c, ctx] = makeCanvas(256, 256);
+  ctx.fillStyle = "rgb(205,205,205)";
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = "rgb(90,90,90)";
+  ctx.lineWidth = 14;
+  ctx.strokeRect(7, 7, 242, 242);
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(128, 10);
+  ctx.lineTo(128, 246);
+  ctx.stroke();
+  ctx.strokeStyle = "rgb(245,245,245)";
+  ctx.lineWidth = 4;
+  [50, 100, 156, 206].forEach((x) => {
+    ctx.beginPath();
+    ctx.moveTo(x, 18);
+    ctx.lineTo(x, 238);
+    ctx.stroke();
+  });
+  ctx.strokeStyle = "rgb(140,140,140)";
+  ctx.lineWidth = 2;
+  for (let x = 20; x < 240; x += 9) {
+    ctx.beginPath();
+    ctx.moveTo(x, 20);
+    ctx.lineTo(x, 236);
+    ctx.stroke();
+  }
+  return canvasTexture(c, true);
 }
 
 function dustTexture(): THREE.Texture {
@@ -191,6 +226,7 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
     { def: row.right, c: RIGHT_C },
   ];
   const mapGroups: THREE.Group[] = [];
+  const shadows: THREE.Mesh[] = [];
   for (const sd of sides) {
     const { shapes, w, h } = await countryShape(sd.def.iso, MAP_W);
     const depth = 0.04 * w;
@@ -229,30 +265,57 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
     g.position.copy(sd.c);
     scene.add(g);
     mapGroups.push(g);
+    // soft contact shadow under the map (blurred silhouette), fades in as it rises
+    const S = 512, pad = 0.6;
+    const [sc, sx] = makeCanvas(S, Math.round((S * (h + 2 * pad)) / (w + 2 * pad)));
+    const toC = (v: THREE.Vector2) => [((v.x + w / 2 + pad) / (w + 2 * pad)) * sc.width, (1 - (v.y + h / 2 + pad) / (h + 2 * pad)) * sc.height];
+    sx.filter = "blur(9px)";
+    sx.fillStyle = "#fff";
+    sx.beginPath();
+    shapes[0].getPoints().forEach((v, i) => {
+      const [x, y] = toC(v);
+      if (i === 0) sx.moveTo(x, y);
+      else sx.lineTo(x, y);
+    });
+    sx.closePath();
+    sx.fill();
+    const shadowTex = canvasTexture(sc, false);
+    const shadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(w + 2 * pad, h + 2 * pad).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x000000, alphaMap: shadowTex, transparent: true, opacity: 0.45, depthWrite: false }),
+    );
+    shadow.position.set(sd.c.x, 0.003, sd.c.z);
+    scene.add(shadow);
+    shadows.push(shadow);
   }
 
   // ---- containers
   const corr = corrugationNormal();
+  const doors = doorTexture();
   const cGeo = new RoundedBoxGeometry(2.5, 0.95, 1.0, 2, 0.03);
   type Box = { mesh: THREE.Mesh; x: number; y: number; z: number; ry: number; t0: number };
   const boxes: Box[] = [];
   const stack = (base: THREE.Vector3, color: string, t0: number, flip: number) => {
     const mat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color),
-      roughness: 0.62,
-      metalness: 0.3,
+      roughness: 0.42,
+      metalness: 0.55,
       normalMap: corr,
-      normalScale: new THREE.Vector2(0.45, 0.45),
+      normalScale: new THREE.Vector2(0.6, 0.6),
       envMap: env,
-      envMapIntensity: 0.2,
+      envMapIntensity: 0.6,
     });
+    const endMat = mat.clone();
+    endMat.normalMap = null;
+    endMat.map = doors;
+    const mats = [endMat, endMat, mat, mat, mat, mat];
     const slots = [
       [0, 0, 0],
       [0, 0, 1.06],
       [0.08 * flip, 1, 0.5],
     ];
     slots.forEach(([dx, layer, dz], k) => {
-      const m = new THREE.Mesh(cGeo, mat);
+      const m = new THREE.Mesh(cGeo, mats);
       m.castShadow = true;
       m.receiveShadow = true;
       scene.add(m);
@@ -307,13 +370,13 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
 
   // ---- debris + dust: seeded, pure functions of frame
   const drng = mulberry32(0xdeb2);
-  const debris: Debris[] = Array.from({ length: 70 }, () => ({
+  const debris: Debris[] = Array.from({ length: 45 }, () => ({
     crack: drng() < 0.75 ? 0 : 1 + Math.floor(drng() * (cracks.length - 1)),
     s: 0.05 + drng() * 0.85,
     vx: (drng() - 0.5) * 0.05,
     vy: 0.03 + drng() * 0.06,
     vz: (drng() - 0.5) * 0.03,
-    size: 0.025 + Math.pow(drng(), 2) * 0.08,
+    size: 0.02 + Math.pow(drng(), 2) * 0.05,
     spin: new THREE.Vector3(drng() - 0.5, drng() - 0.5, drng() - 0.5).multiplyScalar(0.4),
     side: drng() < 0.5 ? -1 : 1,
   }));
@@ -350,14 +413,14 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
 
   // ---- lights: cool on the left, warm red on the right
   scene.add(new THREE.HemisphereLight(0x8090a8, 0x101010, 0.15));
-  const cool = new THREE.SpotLight(new THREE.Color(row.left.light), 380, 60, 0.62, 0.7, 2);
+  const cool = new THREE.SpotLight(richer(row.left.light, 0.5), 950, 60, 0.62, 0.7, 2);
   cool.position.set(-12, 12, 6);
   cool.target.position.set(-3, 0, 0);
   cool.castShadow = true;
   cool.shadow.mapSize.set(2048, 2048);
   cool.shadow.bias = -0.0003;
   cool.shadow.radius = 5;
-  const warm = new THREE.SpotLight(new THREE.Color(row.right.light), 380, 60, 0.62, 0.7, 2);
+  const warm = new THREE.SpotLight(richer(row.right.light, 0.5), 950, 60, 0.62, 0.7, 2);
   warm.position.set(12, 11, 5);
   warm.target.position.set(3, 0, 0);
   warm.castShadow = true;
@@ -365,20 +428,20 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
   warm.shadow.bias = -0.0003;
   warm.shadow.radius = 5;
   scene.add(cool, cool.target, warm, warm.target);
-  const front = new THREE.DirectionalLight(0xfff4ea, 0.35);
+  const front = new THREE.DirectionalLight(0xfff4ea, 0.2);
   front.position.set(0, 10, 12);
   scene.add(front);
 
-  const camera = new THREE.PerspectiveCamera(32, width / height, 0.3, 200);
+  const camera = new THREE.PerspectiveCamera(46, width / height, 0.3, 200);
   const post = new PostFX(gl, width, height, {
     exposure: 1.0,
     bloomStrength: 0.06,
     bloomThreshold: 1.0,
     bloomKnee: 0.6,
-    dof: { focus: 16, nearK: 1.0, farK: 1.0, maxBlur: 0.006 },
+    dof: { focus: 16, nearK: 2.2, farK: 3.0, maxBlur: 0.016 },
     grain: 0.02,
     grainPeriod: TRADE_FRAMES,
-    vignette: 0.5,
+    vignette: 0.8,
     clearColor: 0x050506,
   });
 
@@ -400,6 +463,7 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
         const rock = clamp((f - 330) / 120);
         const amp = 0.006 * Math.sin(Math.PI * rock);
         g.rotation.set(amp * Math.sin(f * 0.11 + k * 2), 0, amp * Math.cos(f * 0.09 + k));
+        (shadows[k].material as THREE.MeshBasicMaterial).opacity = 0.45 * r;
       });
       // containers drop 40..120
       boxes.forEach((b) => {
@@ -474,8 +538,8 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
       });
       // camera: ~50 degrees above, slow push and drift
       const c = easeInOutCubic(f / (TRADE_FRAMES - 1)) * 0.7 + (f / (TRADE_FRAMES - 1)) * 0.3;
-      const dist = lerp(15.2, 13.4, c);
-      const el = THREE.MathUtils.degToRad(lerp(52, 49, c));
+      const dist = lerp(10.4, 9.2, c);
+      const el = THREE.MathUtils.degToRad(lerp(43, 40, c));
       const az = lerp(-0.07, 0.06, c);
       const tgt = new THREE.Vector3(0.2, 0, -1.0);
       camera.position.set(tgt.x + dist * Math.cos(el) * Math.sin(az), dist * Math.sin(el), tgt.z + dist * Math.cos(el) * Math.cos(az));

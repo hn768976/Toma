@@ -11,14 +11,13 @@ export const FILES_FRAMES = 600;
 
 // ---- layout --------------------------------------------------------------------
 const N_ITEMS = 60;
-const SPACING_DOC = 0.4;
-const SPACING_FOLDER = 0.46;
+const SPACING_DOC = 0.42;
+const SPACING_FOLDER = 0.72;
 const ITEM_W = 1.0;
 const ITEM_H = 1.32;
 const ROW2_Z = -2.3;
 const WAVE_LAPS = 2; // whole row lengths travelled per 600-frame loop
-const WAVE_SIGMA = 1.15;
-const WAVE_LIFT = 0.62;
+const WAVE_SIGMA = 1.5;
 
 const glassVert = /* glsl */ `
 varying vec2 vUv; varying vec3 vN; varying vec3 vV;
@@ -34,7 +33,7 @@ void main() {
 // kind: 0 = page (lines + checkboxes), 1 = folder panel (with tab), 2 = paper sheet, 3 = plain panel
 const glassFrag = /* glsl */ `
 uniform vec3 uGlass; uniform vec3 uEdge; uniform float uGlow; uniform float uAlpha; uniform float uKind;
-uniform vec2 uSize; uniform float uSeed; uniform float uFade; uniform vec3 uTint;
+uniform vec2 uSize; uniform float uSeed; uniform float uFade; uniform vec3 uTint; uniform float uEdgeAmt;
 varying vec2 vUv; varying vec3 vN; varying vec3 vV;
 float sdRound(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 float h1(float x) { return fract(sin(x * 91.7 + uSeed * 13.1) * 43758.5); }
@@ -52,13 +51,14 @@ void main() {
   float px = fwidth(d);
   float inside = 1.0 - smoothstep(-px, px, d);
   if (inside < 0.002) discard;
-  float edgeW = 0.018;
+  float edgeW = 0.014;
   float edge = 1.0 - smoothstep(edgeW - px, edgeW + px, abs(d + edgeW * 0.6));
   float fres = pow(1.0 - clamp(abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 2.0);
-  // fake environment: brighter towards the top of the item
-  float sky = 0.6 + 0.4 * smoothstep(-0.5, 0.5, p.y / uSize.y);
-  vec3 col = uGlass * uTint * (0.55 + 0.35 * fres) * sky;
-  float a = uAlpha * (0.6 + 0.3 * fres);
+  // frosted glass: lit from above, soft inner falloff towards the rim
+  float sky = 0.5 + 0.5 * smoothstep(-0.55, 0.5, p.y / uSize.y);
+  float inner = 0.8 + 0.2 * smoothstep(0.0, -0.12, d);
+  vec3 col = uGlass * uTint * (0.72 + 0.3 * fres) * sky * inner;
+  float a = uAlpha * (0.72 + 0.25 * fres);
   float marks = 0.0;
   if (uKind < 0.5) {
     // page print: checkbox squares + rounded text lines
@@ -69,28 +69,26 @@ void main() {
     float rf = fract(rv);
     if (ri >= 0.0 && ri < rows) {
       float yc = (rf - 0.5) * (0.74 / rows) * uSize.y;
-      // checkbox at left
       vec2 cb = vec2(p.x + 0.33 * uSize.x, yc);
-      float box = abs(sdRound(cb, vec2(0.045), 0.012));
-      float hasBox = step(0.25, h1(ri + 0.5));
-      marks = max(marks, (1.0 - smoothstep(0.006, 0.006 + px * 1.5, box)) * hasBox);
-      // text line(s)
-      float len = mix(0.28, 0.56, h1(ri));
+      float box = abs(sdRound(cb, vec2(0.04), 0.012));
+      float hasBox = step(0.4, h1(ri + 0.5));
+      marks = max(marks, (1.0 - smoothstep(0.007, 0.007 + px * 1.5, box)) * hasBox * 0.8);
+      float len = mix(0.3, 0.58, h1(ri));
       float x0 = -0.22 * uSize.x;
       vec2 lp = vec2(p.x - (x0 + len * 0.5 * uSize.x * 0.9), yc);
-      float line = sdRound(lp, vec2(len * 0.5 * uSize.x * 0.9, 0.024), 0.024);
+      float line = sdRound(lp, vec2(len * 0.5 * uSize.x * 0.9, 0.028), 0.028);
       marks = max(marks, 1.0 - smoothstep(-px, px, line));
     }
   }
   if (uKind > 1.5 && uKind < 2.5) {
-    // paper: whiter, more opaque
-    col = mix(uGlass, vec3(1.0), 0.6) * (0.22 + 0.25 * fres) * sky;
-    a = uAlpha * 0.6;
+    // paper: matte off-white, nearly opaque, slightly darker towards the bottom
+    col = vec3(0.78, 0.86, 1.0) * (0.5 + 0.12 * fres) * (0.55 + 0.45 * smoothstep(-0.5, 0.5, p.y / uSize.y));
+    a = uAlpha;
   }
-  col += mix(uGlass, uEdge, 0.25) * edge * 0.85;
-  col += mix(uGlass, uEdge, 0.15) * marks * 0.6;
-  a = max(a, edge * 0.9);
-  a = max(a, marks * 0.85);
+  col += mix(uGlass, uEdge, 0.4) * edge * uEdgeAmt;
+  col += mix(uGlass, vec3(1.0), 0.55) * marks * 0.5;
+  a = max(a, edge * uEdgeAmt);
+  a = max(a, marks * 0.8);
   col *= uGlow * uFade;
   gl_FragColor = vec4(col, a * inside * uFade);
 }
@@ -144,6 +142,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
         uSeed: { value: seed },
         uFade: { value: 1 },
         uTint: { value: new THREE.Vector3(1, 1, 1) },
+        uEdgeAmt: { value: kind === 2 ? 0.15 : 0.45 },
       },
       transparent: true,
       depthWrite: true,
@@ -157,6 +156,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   // items: planes standing on edge, facing along the row (+x)
   const SPACING = row.item === "folder" ? SPACING_FOLDER : SPACING_DOC;
   const ROW_LEN = N_ITEMS * SPACING; // the row is treated as periodic with this length
+  const WAVE_LIFT = row.item === "folder" ? 0.5 : 0.95;
   const items: Item[] = [];
   for (let r = 0; r < 2; r++) {
     for (let i = 0; i < N_ITEMS; i++) {
@@ -168,24 +168,28 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
         p.mesh.position.y = ITEM_H / 2;
         parts.push(p);
       } else {
-        // folder: back panel with tab, two paper sheets, front panel
-        // back panel with tab, two paper sheets, front panel (deeper blue)
+        // folder: back panel with tab, a fan of paper sheets, front panel
+        // tilted forward so the folder reads as open (deeper blue panels)
         const FW = 1.2, FH = 1.0;
-        const deep = new THREE.Vector3(0.55, 0.75, 1.25);
-        const back = makePart(1, FW, FH * 1.2, 0.7, seed);
+        const deep = new THREE.Vector3(0.5, 0.72, 1.25);
+        const back = makePart(1, FW, FH * 1.2, 0.78, seed);
         back.mesh.position.set(0, (FH * 1.2) / 2, 0);
         back.mat.uniforms.uTint.value.copy(deep);
-        const p1 = makePart(2, FW * 0.9, FH * 0.92, 0.8, seed + 0.3);
-        p1.mesh.position.set(0.015, FH * 0.46 + 0.07, -0.04);
-        p1.mesh.rotation.x = -0.05;
-        const p2 = makePart(2, FW * 0.88, FH * 0.9, 0.8, seed + 0.6);
-        p2.mesh.position.set(-0.01, FH * 0.45 + 0.05, -0.08);
-        p2.mesh.rotation.x = -0.1;
-        const front = makePart(3, FW, FH * 0.8, 0.72, seed + 0.9);
-        front.mesh.position.set(0, FH * 0.4, -0.14);
-        front.mesh.rotation.x = -0.14;
+        back.mat.uniforms.uEdgeAmt.value = 0.3;
+        parts.push(back);
+        for (let k = 0; k < 4; k++) {
+          const sh = makePart(2, FW * (0.9 - k * 0.012), FH * (0.98 - k * 0.025), 0.92, seed + 0.2 * (k + 1));
+          const tilt = -0.04 - k * 0.055;
+          sh.mesh.position.set((k - 1.5) * 0.008, FH * 0.47 + 0.06 - k * 0.012, -0.035 - k * 0.03);
+          sh.mesh.rotation.x = tilt;
+          parts.push(sh);
+        }
+        const front = makePart(3, FW, FH * 0.78, 0.8, seed + 0.9);
+        front.mesh.position.set(0, FH * 0.37, -0.2);
+        front.mesh.rotation.x = -0.3;
         front.mat.uniforms.uTint.value.copy(deep);
-        parts.push(back, p1, p2, front);
+        front.mat.uniforms.uEdgeAmt.value = 0.6;
+        parts.push(front);
       }
       parts.forEach((p) => group.add(p.mesh));
       // planes face +z by default; turn them to face along the row (+x)
@@ -220,7 +224,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   // floor lines under the rows
   for (let k = -12; k <= 12; k++) segs.push({ a: new THREE.Vector3(-30, -0.06, k * 0.9), b: new THREE.Vector3(30, -0.06, k * 0.9), i: 0.18 });
   for (let k = -30; k <= 30; k++) segs.push({ a: new THREE.Vector3(k * 0.9, -0.06, -16), b: new THREE.Vector3(k * 0.9, -0.06, 10), i: 0.12 });
-  const lines = screenLines(segs, richer(row.grid, 0.4).multiplyScalar(4.0), 1.3 / 1080, height, { depthWrite: true, fadeFar: 40 });
+  const lines = screenLines(segs, richer(row.grid, 0.5).multiplyScalar(6.0), 1.5 / 1080, height, { depthWrite: true, fadeFar: 40 });
   (lines.material as THREE.ShaderMaterial).uniforms.uAspect.value = width / height;
   scene.add(lines);
 
@@ -229,30 +233,37 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   const bTex = bokehTexture();
   const pointMat = (tex: THREE.Texture, c: THREE.Color, o: number) =>
     new THREE.SpriteMaterial({ map: tex, color: c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: o });
-  const pc = richer(row.glass, 0.5).lerp(new THREE.Color(1, 1, 1), 0.2).multiplyScalar(4);
-  for (let k = 0; k < 90; k++) {
+  const pc = richer(row.glass, 0.7).lerp(new THREE.Color(1, 1, 1), 0.15).multiplyScalar(6);
+  for (let k = 0; k < 220; k++) {
     const x = (Math.floor(rng() * 21) - 10) * GS, y = -0.05 + Math.floor(rng() * 4) * GS * 0.8, z = (Math.floor(rng() * 8) - 5) * GS;
     const s = new THREE.Sprite(pointMat(pTex, pc, 0.6 + 0.4 * rng()));
     s.position.set(x, y, z);
-    s.scale.setScalar(0.12 + 0.12 * rng());
+    s.scale.setScalar(0.14 + 0.16 * rng());
     scene.add(s);
   }
-  const bc = new THREE.Color(row.glass).lerp(new THREE.Color(row.grid), 0.4);
+  const bc = richer(row.glass, 0.8).lerp(richer(row.grid, 0.6), 0.3);
   for (let k = 0; k < 70; k++) {
-    const s = new THREE.Sprite(pointMat(bTex, bc, 0.08 + 0.2 * rng()));
+    const s = new THREE.Sprite(pointMat(bTex, bc, 0.1 + 0.25 * rng()));
     s.position.set((rng() - 0.5) * 30, -0.5 + rng() * 6, -12 + rng() * 18);
     s.scale.setScalar(0.08 + Math.pow(rng(), 2) * 0.5);
+    scene.add(s);
+  }
+  // foreground bokeh between the camera and the row (lower right of frame)
+  for (let k = 0; k < 18; k++) {
+    const s = new THREE.Sprite(pointMat(bTex, bc, 0.12 + 0.25 * rng()));
+    s.position.set(-2.5 + rng() * 6, -0.3 + rng() * 1.2, 1.2 + rng() * 2.2);
+    s.scale.setScalar(0.04 + rng() * 0.1);
     scene.add(s);
   }
 
   const camera = new THREE.PerspectiveCamera(30, width / height, 0.2, 120);
   const post = new PostFX(gl, width, height, {
     exposure: 1.0,
-    bloomStrength: 0.45,
-    bloomThreshold: 0.5,
+    bloomStrength: 0.75,
+    bloomThreshold: 0.35,
     bloomKnee: 0.5,
     bloomWeights: [0.6, 0.9, 1, 1, 0.8, 0.6],
-    dof: { focus: 10, nearK: 1.8, farK: 0.55, maxBlur: 0.018 },
+    dof: { focus: 10, nearK: 2.2, farK: 0.45, maxBlur: 0.03 },
     grain: 0.02,
     vignette: 0.35,
     clearColor: new THREE.Color(row.background),
@@ -276,7 +287,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
         it.group.rotateX(-0.12 * bump * Math.sign(d) * Math.min(1, Math.abs(d)));
         // fade at the row ends so the periodic wrap never shows
         const endFade = Math.min(1, (x + ROW_LEN / 2) / 1.5, (ROW_LEN / 2 - x) / 4);
-        const glow = (0.75 + 1.4 * bump) * (it.row ? 0.45 : 1);
+        const glow = (0.8 + 1.3 * bump) * (it.row ? 0.3 : 1);
         it.parts.forEach((p) => {
           p.mat.uniforms.uGlow.value = glow;
           p.mat.uniforms.uFade.value = Math.max(0, endFade);
@@ -284,10 +295,10 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
       });
       // camera ~25 degrees above, looking along the row; closed drift
       const a = Math.PI * 2 * t;
-      camera.position.set(-4.2 + 0.25 * Math.sin(a), 2.5 + 0.1 * Math.sin(2 * a), 4.4 + 0.2 * Math.cos(a));
-      camera.lookAt(1.2 + 0.12 * Math.cos(a), 0.75, -0.8);
+      camera.position.set(-3.6 + 0.25 * Math.sin(a), 1.75 + 0.08 * Math.sin(2 * a), 4.0 + 0.2 * Math.cos(a));
+      camera.lookAt(1.4 + 0.12 * Math.cos(a), 0.95, -0.8);
       camera.updateMatrixWorld();
-      post.opts.dof!.focus = camera.position.distanceTo(new THREE.Vector3(0.0, 0.7, 0));
+      post.opts.dof!.focus = camera.position.distanceTo(new THREE.Vector3(0.6, 0.8, 0));
       post.render(scene, camera, f);
     },
   };
