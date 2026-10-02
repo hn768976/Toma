@@ -76,7 +76,7 @@ npx remotion render DataCity-GoldViolet      out/DataCity_GoldViolet.mp4      --
 npx remotion still ParticleSphere-Blue out/ParticleSphere_Blue_f120.png --frame=120 --scale=1.5625 --image-format=png --gl=angle
 ```
 
-`scripts/stills-6k.sh` renders 2 stills per composition (frames 120 and 420).
+`scripts/stills-6k.sh` renders 2 stills per composition (frames 120 and 450).
 
 ---
 
@@ -172,4 +172,61 @@ npx remotion still ParticleWaves-Blue b.png --frame=600 --props='{"loopCheck":tr
 cmp a.png b.png
 ```
 
-<!-- RESULTS -->
+## Measured render times, counts, 4K estimate
+
+Measured in this repo's build machine: **4 CPU cores, no GPU (Chromium SwiftShader via
+ANGLE)**. "Per frame" = marginal single-tab time (startup subtracted, concurrency 1).
+
+| Look | 720p per frame | 4K per frame (measured) | 720p preview wall time (600 f, concurrency 4) | 4K estimate, 600 frames, concurrency 1 / 4 |
+|---|---|---|---|---|
+| Pulse Rings | 0.09 s | 0.25 s | 24 s | ~2.5 min / ~1 min |
+| Cyber Network | 0.34 s | 1.85 s | 173 s | ~19 min / ~8 min |
+| Particle Sphere | 0.27 s | 1.84 s | 145-150 s | ~18 min / ~8 min |
+| Particle Waves | 0.32 s | 1.79 s | 173-178 s | ~18 min / ~8 min |
+| Data City | 0.28 s | 2.12 s | 134-137 s | ~21 min / ~9 min |
+
+The 4K estimate also includes encoding. On a machine with a real GPU (ANGLE on GPU) expect it
+to be several times faster.
+
+**Particle counts — none reduced** (all looks were fast enough at the spec counts):
+
+* Cyber Network: 760 nodes in the repeating block (a few hundred in view at a time), 606 links + 9 long bright lines, 40 badges
+* Particle Sphere: 80,000 shell points + 9,000 surrounding dust
+* Particle Waves: 200,000 (4 layers × 40,000 surface + 2 × 20,000 crest-line points)
+* Data City: 420 towers (20,337 dots) + up to 250 ground streams (~12 % left empty) and 5 crossing streams (114,333 dash points)
+
+## Banding check (done on the encoded mp4, not the preview)
+
+`scripts/analyze.py` decodes frame 150 of each **encoded** preview to PNG and reads median
+luma profiles (41-px bands) across the glow falloffs and sky gradients:
+
+| Composition | Profile | Range | Max step (9-px smoothed) | Result |
+|---|---|---|---|---|
+| CyberNetwork_Blue | sky gradient, full height | 77 levels | 2.3 (where a soft line crosses; no stair steps) | smooth |
+| ParticleSphere_Blue | glow, centre column upward | 39 levels | 1.1 | smooth |
+| ParticleSphere_Blue | glow, centre row to edge | 88 levels | 8.1 = the bright rim arc at x≈964, not a step | smooth |
+| ParticleWaves_Blue | upper-left light | 101 levels | 0.75 | smooth |
+| ParticleWaves_Blue | sky under the light | 37 levels | 0.54 | smooth |
+| DataCity_TealOrange | sky gradient | 36 levels | 0.91 | smooth |
+
+No plateau/jump staircase anywhere (the longest flat runs are in the near-black areas, 1-3
+levels, where the gradient is flatter than one level over the run). Look 1: corners and the
+whole area outside the rings are exactly **0,0,0** in the encoded mp4.
+
+## Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, 600 frames, seamless loops
+- [x] Look 1 SVG, no CSS animation/transitions, every value from `useCurrentFrame()`, background 0,0,0, no grain
+- [x] Looks 2-5: `@remotion/three`, WebGL2, `Points` / instanced quads, moving camera, depth of field
+- [x] JetBrains Mono shipped (OFL) and loaded with `delayRender` / `continueRender`
+- [x] Self-drawn SVG icon (padlock); no icon libraries, logos or brands
+- [x] Dither ±1/255 after bloom + ~2 % grain from (pixel, frame % 600) in Looks 2-5
+- [x] No `Math.random()` at render time, no stepped simulation, no clocks/state/TAA
+- [x] One data row per version (`src/versions.ts`)
+- [x] 720p previews: h264, 1280×720, 30/1, 20.000 s, yuv420p, no audio stream (ffprobe)
+- [x] Loop check: 601-frame variant, frame 0 == frame 600 byte for byte (all 8)
+- [x] Determinism: cold-start frame 300 == frame 300 of a full 4-thread sequence render, byte for byte (all 8)
+- [x] Black check (Look 1), banding check (Looks 2-5) on the encoded mp4
+- [x] 2 stills per composition at 6000×3375 (frames 120 and 450), PNG
+- [x] Render times measured at 720p; nothing reduced
+
