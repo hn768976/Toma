@@ -1,0 +1,29 @@
+{
+  "name": "security-ai-interfaces",
+  "version": "1.0.0",
+  "description": "Security & AI Interfaces: ten 20s seamless-loop 2D interface animations (Remotion, 30fps, 3840x2160)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc --noEmit",
+    "render:previews": "bash tools/render-previews.sh",
+    "render:4k": "bash tools/render-4k.sh",
+    "stills": "bash tools/render-stills.sh"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  },
+  "sideEffects": [
+    "./src/lib/fonts.ts"
+  ]
+}
