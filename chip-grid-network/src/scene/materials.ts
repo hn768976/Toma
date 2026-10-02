@@ -21,6 +21,8 @@ export type SharedUniforms = {
   uShieldTop: { value: number };
   /** Gentle breathing of the light level, a function of frame. */
   uPulse: { value: number };
+  /** Minimum cable travel time in frames (MIN_GAP x stepFrames). */
+  uMinFill: { value: number };
 };
 
 export const SAFE = new THREE.Color("#8EC8FF");
@@ -32,6 +34,7 @@ export const createSharedUniforms = (): SharedUniforms => ({
   uColNew: { value: new THREE.Color() },
   uShieldTop: { value: 0 },
   uPulse: { value: 1 },
+  uMinFill: { value: 10 },
 });
 
 /** Fog uniforms (cloned) + the shared uniforms (by reference) + extras. */
@@ -42,6 +45,7 @@ const uniformsFor = (u: SharedUniforms, extra: Record<string, THREE.IUniform> = 
   uColOld: u.uColOld,
   uColNew: u.uColNew,
   uPulse: u.uPulse,
+  uMinFill: u.uMinFill,
 });
 
 const COMMON_GLSL = /* glsl */ `
@@ -56,6 +60,26 @@ float flashAmt(float t) {
   return (d >= 0.0 && d < 6.0) ? pow(1.0 - d / 6.0, 2.0) : 0.0;
 }
 vec3 nodeColour(float t) { return mix(uColOld, uColNew, switched(t)); }
+
+uniform float uMinFill;
+// Cable colour state at position s (0 = earlier node, 1 = later node) for a
+// link whose ends switch at t0 <= t1. Front A leaves the earlier node at t0
+// and reaches the later node exactly at t1. If t1 - t0 is shorter than the
+// minimum travel time, front A travels at that minimum and a second front
+// leaves the later node at t1; they meet in between.
+// Returns (amount of new colour, front-head intensity).
+vec2 cableState(float t0, float t1, float s, float edge, float headW) {
+  float dA = max(t1 - t0, uMinFill);
+  float fA = clamp((uFrame - t0) / dA, 0.0, 1.0);
+  float fB = clamp((uFrame - t1) / uMinFill, 0.0, 1.0);
+  float pB = 1.0 - fB;
+  if (fA >= pB) return vec2(1.0, 0.0);
+  float mA = fA <= 0.0 ? 0.0 : 1.0 - smoothstep(fA - edge, fA + edge, s);
+  float mB = fB <= 0.0 ? 0.0 : smoothstep(pB - edge, pB + edge, s);
+  float head = (fA > 0.0 ? exp(-pow((s - fA) / headW, 2.0)) : 0.0)
+             + (fB > 0.0 ? exp(-pow((s - pB) / headW, 2.0)) : 0.0);
+  return vec2(max(mA, mB), head);
+}
 `;
 
 // ---------------------------------------------------------------------------
@@ -220,16 +244,10 @@ export const createCoreMaterial = (u: SharedUniforms) =>
       #include <fog_pars_fragment>
       void main() {
         float s = vLink.z > 0.5 ? 1.0 - vU : vU;      // 0 at the earlier node
-        float dur = max(vLink.y - vLink.x, 0.001);
-        float fill = clamp((uFrame - vLink.x) / dur, 0.0, 1.0);
-        float edge = 0.02;
-        float m = 1.0 - smoothstep(fill - edge, fill + edge, s);
-        if (fill <= 0.0) m = 0.0;
-        if (fill >= 1.0) m = 1.0;
-        vec3 c = mix(uColOld, uColNew, m);
-        // bright head on the moving front
-        float moving = (fill > 0.0 && fill < 1.0) ? 1.0 : 0.0;
-        float head = moving * exp(-pow((s - fill) / 0.05, 2.0));
+        vec2 st = cableState(vLink.x, vLink.y, s, 0.02, 0.05);
+        vec3 c = mix(uColOld, uColNew, st.x);
+        // bright head on the moving front(s)
+        float head = st.y;
         // brighter where the tube enters the sockets
         float ends = 1.0 + 1.1 * (exp(-vU * 16.0) + exp(-(1.0 - vU) * 16.0));
         // faint pulses running along the core
@@ -284,13 +302,9 @@ export const createSpillMaterial = (u: SharedUniforms, times: THREE.DataTexture)
         float t1 = max(ta, tb);
         float sf = ta <= tb ? s : 1.0 - s;
         float u = clamp((sf - C0) / (1.0 - 2.0 * C0), 0.0, 1.0);
-        float fill = clamp((uFrame - t0) / max(t1 - t0, 0.001), 0.0, 1.0);
-        float m = 1.0 - smoothstep(fill - 0.03, fill + 0.03, u);
-        if (fill <= 0.0) m = 0.0;
-        if (fill >= 1.0) m = 1.0;
-        float moving = (fill > 0.0 && fill < 1.0) ? 1.0 : 0.0;
-        frontGlow = moving * exp(-pow((u - fill) / 0.09, 2.0));
-        return mix(uColOld, uColNew, m);
+        vec2 st = cableState(t0, t1, u, 0.03, 0.09);
+        frontGlow = st.y;
+        return mix(uColOld, uColNew, st.x);
       }
 
       void main() {

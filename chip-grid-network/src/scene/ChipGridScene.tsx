@@ -14,7 +14,7 @@ import {
   TOP_Y,
   TUBE_LENGTH,
 } from "../lib/grid";
-import { computeSpread, SpreadTiming } from "../lib/spread";
+import { computeSpread, MIN_GAP, SpreadTiming } from "../lib/spread";
 import type { CompDef } from "../lib/types";
 import { getQuality } from "../lib/quality";
 import { buildNodeGeometries, buildShieldGeometry, buildSocketGeometry, buildTubeGeometry } from "./geometry";
@@ -207,6 +207,7 @@ export const ChipGridScene: React.FC<{ def: CompDef; hdri: THREE.DataTexture }> 
     s.uColOld.value.copy(def.from === "safe" ? SAFE : COMPROMISED);
     s.uColNew.value.copy(def.to === "safe" ? SAFE : COMPROMISED);
     s.uShieldTop.value = def.shield === "top" ? 1 : 0;
+    s.uMinFill.value = MIN_GAP * def.spread.stepFrames;
     return s;
   }, [def]);
 

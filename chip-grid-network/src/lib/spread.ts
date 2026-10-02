@@ -38,8 +38,14 @@ export type SpreadTiming = {
   tLast: number;
 };
 
-/** Shortest cable travel between two linked nodes, as a fraction of a step. */
-const MIN_GAP = 0.45;
+/**
+ * Shortest cable travel, as a fraction of a step. Causality guarantees every
+ * node an incoming cable at least this long. A link whose two ends switch
+ * closer together than this (tangential links in the radial comps) fills
+ * from both ends at this travel time and the two fronts meet in the middle,
+ * so no cable ever flips colour without a visible front.
+ */
+export const MIN_GAP = 0.45;
 
 const bfs = (sources: number[]): Float32Array => {
   const d = new Float32Array(NODE_COUNT).fill(Infinity);
