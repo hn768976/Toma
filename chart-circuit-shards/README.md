@@ -92,7 +92,32 @@ npx remotion render src/index.ts NeonShards-Blue out/NeonShards_Blue.mp4 --scale
 
 ## Render time
 
-RENDER_TIME_TABLE
+Measured in the build container: headless Chromium with ANGLE falling back
+to **SwiftShader (software WebGL on 4 CPU cores, no GPU)**. A real GPU will
+be far faster; treat these as an upper bound.
+
+| Look (version A) | 720p, per frame (sequence, concurrency 1, steady state) | 4K, per frame (measured: warm single-frame render incl. 4K PNG write) | 4K full composition, this machine, concurrency 1 (estimate) |
+|---|---|---|---|
+| 3D Growth Chart | 1.24 s | ~28 s | 360 × ~26 s ≈ 2.6 h |
+| Circuit Flythrough | 1.20 s | ~19.5 s | 600 × ~17 s ≈ 2.8 h |
+| Neon Shards | 0.39 s | ~7.4 s | 600 × ~6 s ≈ 1 h |
+| CPU Board | 2.01 s | ~17.3 s | 600 × ~15 s ≈ 2.5 h |
+| Laser Panels | 1.52 s | ~26 s | 600 × ~24 s ≈ 4 h |
+
+* 720p method: `scripts/time-per-frame.sh` renders 10 and 40 frames
+  (frames 100+) and divides the difference by 30, which removes browser
+  start-up and asset loading.
+* 4K method: `node scripts/stills.mjs <comp> out/k4 100,101,102 1` (the 2nd
+  and 3rd frames are warm; each includes writing a 3840×2160 PNG, roughly
+  2–3 s, so the per-frame sequence cost is a little lower).
+* The 720p previews were rendered with concurrency 4 (wall-clock per
+  composition: Growth ~470 s, Circuit ~650 s, Shards ~185 s, CPU ~1170 s,
+  Panels ~920 s). On SwiftShader concurrency 4 gives about 1.5–2× over
+  concurrency 1, so a full 4K set of all 8 is roughly 10–12 h on a 4-core
+  CPU-only box. On a desktop GPU expect well under 1 s per 4K frame (not
+  measured here); use `--concurrency` equal to the number of GPU-backed
+  tabs your machine handles.
+
 
 ## How it is built
 
@@ -144,12 +169,26 @@ RENDER_TIME_TABLE
    block; every shard turns 1 or 2 whole turns.
 4. **CPU Board** — layered chip (blue substrate steps, dark die, silver top,
    blue corner indicators) on a routed board that fans out from the chip in
-   all directions, SMD parts, and ~30k data points streaming along traces.
+   all directions (~5,000 routed traces), SMD parts, and ~65,000 data points
+   streaming along the traces.
    Camera: closed ±25° sway orbit with a gentle push in and back.
 5. **Laser Panels** — seeded subdivision of a 10×10 tile into framed /
    nested / stacked blocks, glowing trim strips, two families of lasers
    whose streaks slide by whole periods, laser light injected into the panel
    shader, moving hot-spot light, colour grade derived from the laser colour.
+
+### Where the build departs from the written brief (to match the references)
+
+* **Circuit Flythrough camera** is ~31° above the board, not ~15°: the
+  reference shows no horizon (the board fills the frame to the top edge with
+  bokeh), which a 15° camera cannot do with any usable lens. It still glides
+  low and forward with sway.
+* **CPU Board camera** is ~28° (±2°) rather than exactly 25°, for the same
+  reason (the board reaches the top edge in the reference).
+* **Neon Shards** stays on pure black as required; the reference has a faint
+  navy haze, which was deliberately not reproduced.
+* **Grain** is ~2 % as required; the references are clean compressed video,
+  so the previews look slightly grainier than them.
 
 ### Loops (looks 2–5)
 
@@ -194,7 +233,42 @@ so frame 600 exists; nothing else changes.
 
 ### Banding check
 
-VERIFY_RESULTS
+Results on the delivered previews (`out/`), exact output of the scripts:
+
+**Step 1 — ffprobe.** All 8: `h264`, 1280×720, `30/1`, `yuv420p`, no audio
+stream; Growth Chart 12.000 s (360 frames), all others 20.000 s (600 frames).
+
+**Step 2 — loop.** Frames 0 and 600 of the 601-frame variant are identical
+pixel for pixel for all six looping compositions (max diff 0).
+
+**Step 3 — black (Neon Shards, decoded from the mp4).** The lossless render
+is exactly 0,0,0 everywhere that is empty. In the decoded H.264, frames 0
+and 150 are exactly 0 in all empty areas; frames 300 and 450 contain a few
+pixels (≈0.005 % of empty pixels) at **2** in the blue/red channel. The
+encoded YUV is at most one code value off (Y 16→17, U 128→127/129) — x264's
+lossy inter-frame residue — and BT.709 → RGB turns a ±1 chroma step into 2.
+Three rounds of encoder settings at CRF 16 (dead-zones, chroma QP offset,
+AQ, psy/mbtree) reduced it ~30× but not to ≤1; the Shards encodes use the
+best one (`psy=0:mbtree=0:no-fast-pskip=1:aq-mode=3`). Strictly, this check
+does **not** pass the ≤1 tolerance.
+
+**Step 4 — determinism.** Frame 150 rendered on its own from a cold start
+(new browser, new bundle) vs frame 150 of the full multi-threaded render:
+identical decoded pixels **and** identical PNG file bytes for all 8.
+
+**Step 5 — banding.** `verify.py banding` decodes frame 300 of 1A, 2, 4
+and 5A from the mp4, picks smooth gradient segments (the look 1 sky and
+horizon haze; glow halos, bloom fall-off and haze in the dark looks:
+segments with ≥3 levels of range and little detail), and reads 8-row
+band-averaged pixel values along each. Quantisation bands show up as runs
+where a whole band sits on one integer value; every sampled segment has
+**0 px** of such plateaus (the values move in fractional steps, e.g. sky
+`184.5, 184.9, 185.4, 186.9, …`, CPU glow `16.3, 17.3, 20.1, 20.5, …`).
+One encode setting was rejected because of this check: the `psy=0`
+options that help the black check also flattened the grain on CPU Board
+into a 10-px plateau, so only the Shards use them; the other looks use
+x264 defaults, which keep the grain/dither.
+
 
 ## Assets and licences
 
@@ -207,4 +281,24 @@ VERIFY_RESULTS
 
 ## Completion checklist
 
-CHECKLIST
+- [x] 5 looks, 8 compositions, one project; 3840×2160, 30 fps; look 1 = 360 frames, others 600
+- [x] All 3D through `@remotion/three`, WebGL2 (`--gl=angle`); no WebGPU
+- [x] Built in code; no MCP servers; no text, logos, brands or chip markings
+- [x] Natural Earth map data and Poly Haven CC0 HDRI shipped, with licences
+- [x] ACES (Hill fit) tonemapping, sRGB output
+- [x] Shader dither ±1/255 after bloom and tonemapping in every look
+- [x] Grain ~2 % from a fixed hash of pixel position and frame in looks 1, 2, 4, 5; none in look 3
+- [x] No `Math.random()`, no `Date.now()`, no `useFrame` clock, no `useState` driving visuals, no TAA / temporal AO / AccumulativeShadows; `mulberry32` seeds at module level
+- [x] HDRI and map data behind `delayRender` / `continueRender`
+- [x] One data row per version (`src/versions.ts`)
+- [x] Step 1 ffprobe — all 8 pass
+- [x] Step 2 loop — all 6 looping comps pixel-identical at frame 600
+- [ ] Step 3 black — lossless render exactly 0; decoded mp4 has a few pixels at 2 (see above)
+- [x] Step 4 cold frame 150 = full render, byte for byte — all 8
+- [x] Step 5 banding — no quantisation plateaus in sky, glows or haze
+- [x] Step 6 content — checked on 5 evenly spaced frames per composition (`out/check/*_sheet.png`)
+- [x] Steps 7–8 — three rounds of independent visual comparison per look (see delivery notes)
+- [x] 720p previews (1280×720 exactly at `--scale=1/3`), CRF 16, plus a 720p PNG still of each
+- [x] Render time per frame measured at 720p (and 4K) per look
+- [x] `npm install && npx remotion studio` checked from a clean copy of the zip
+

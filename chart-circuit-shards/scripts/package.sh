@@ -10,7 +10,7 @@ mkdir -p "$(dirname "$DEST")"
 rm -f "$DEST"
 TMP=$(mktemp -d)
 mkdir "$TMP/$NAME"
-tar -cf - --exclude=node_modules --exclude=.git --exclude=refs --exclude=build --exclude=out \
+tar -cf - --exclude=node_modules --exclude=.git --exclude=refs --exclude='build*' --exclude=out \
   --exclude='*.zip' --exclude=__pycache__ . | tar -xf - -C "$TMP/$NAME"
 (cd "$TMP" && zip -qr "$OLDPWD/$DEST" "$NAME")
 rm -rf "$TMP"
