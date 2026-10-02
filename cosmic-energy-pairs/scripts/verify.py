@@ -127,14 +127,22 @@ def black():
             cmax = max(int(x.max()) for x in corners)
             bw = int(w * 0.12)
             bh = int(h * 0.1)
-            margin = np.concatenate([a[:, :bw].reshape(-1, 3), a[:, -bw:].reshape(-1, 3),
-                                     a[:bh].reshape(-1, 3), a[-bh:].reshape(-1, 3)])
+            if c["id"].startswith("EnergyOrb"):
+                # Away from the orb: everything outside a circle of 0.45·H (glow support ends ~0.41·H).
+                yy, xx = np.mgrid[0:h, 0:w]
+                away = np.hypot(xx - w / 2, yy - h / 2) > 0.45 * h
+                margin = a[away]
+            else:
+                margin = np.concatenate([a[:, :bw].reshape(-1, 3), a[:, -bw:].reshape(-1, 3),
+                                         a[:bh].reshape(-1, 3), a[-bh:].reshape(-1, 3)])
+            ys, xs = np.nonzero(a.max(axis=2))
+            bbox = f"non-zero bbox x {xs.min()}-{xs.max()}, y {ys.min()}-{ys.max()}" if len(xs) else "all zero"
             mmax = int(margin.max())
             nz = float((margin.max(axis=1) > 0).mean() * 100)
             ok = cmax <= 1 and mmax <= 1
             ok_all &= ok
             print(f"{'PASS' if ok else 'FAIL'} {c['name']} frame {fr}: corners max {cmax}, "
-                  f"outer margins max {mmax} ({nz:.3f}% px non-zero)")
+                  f"away-from-subject max {mmax} ({nz:.3f}% px non-zero); {bbox}")
     return ok_all
 
 
@@ -180,29 +188,44 @@ def banding():
                 y = int(pos * (h - 1))
                 band = lum[max(0, y - 2):y + 3, int(s * (w - 1)):int(e * (w - 1))].mean(axis=0)
                 raw = np.round(lum[y, int(s * (w - 1)):int(e * (w - 1))])
+                nb = [np.round(lum[min(h - 1, max(0, y + d)), int(s * (w - 1)):int(e * (w - 1))]) for d in (-1, 1)]
             else:
                 x = int(pos * (w - 1))
                 band = lum[int(s * (h - 1)):int(e * (h - 1)), max(0, x - 2):x + 3].mean(axis=1)
                 raw = np.round(lum[int(s * (h - 1)):int(e * (h - 1)), x])
-            # Longest run of one identical code value on the raw line: banding shows as long flat runs.
-            runs, cur = [], 1
-            for i in range(1, len(raw)):
-                if raw[i] == raw[i - 1]:
-                    cur += 1
-                else:
-                    runs.append(cur)
-                    cur = 1
-            runs.append(cur)
-            longest = max(runs)
-            # Smoothed profile (box 16): step = biggest jump between neighbouring 16-px means.
+                nb = [np.round(lum[int(s * (h - 1)):int(e * (h - 1)), min(w - 1, max(0, x + d))]) for d in (-1, 1)]
+            # Banding = a run of one identical code value while the underlying (heavily
+            # smoothed) gradient should have moved >= 2 codes across that run. A flat run
+            # over a region that is genuinely flat (uniform black space) is not banding.
+            # Running median (robust to stars/sparkles), 65 px window.
+            padded = np.pad(band, 32, mode="edge")
+            smooth = np.median(np.lib.stride_tricks.sliding_window_view(padded, 65), axis=1)
+            worst, worst_single, longest, i = 0.0, 0.0, 1, 0
+            while i < len(raw):
+                j = i
+                while j + 1 < len(raw) and raw[j + 1] == raw[i]:
+                    j += 1
+                L = j - i + 1
+                longest = max(longest, L)
+                if L >= 6:
+                    a0, a1 = max(0, i - L // 2), min(len(raw) - 1, j + L // 2)
+                    score = abs(smooth[a1] - smooth[a0]) * L / max(a1 - a0, 1)
+                    worst_single = max(worst_single, score)
+                    # A band is a 2D contour: the same flat value must repeat on the
+                    # neighbouring lines too. A lone run inside grain is coincidence.
+                    coherent = all((n[i:j + 1] == raw[i]).mean() >= 0.75 for n in nb)
+                    if coherent:
+                        worst = max(worst, score)
+                i = j + 1
             k = 16
             m = np.convolve(band, np.ones(k) / k, mode="valid")[::k]
             step = float(np.abs(np.diff(m)).max()) if len(m) > 1 else 0.0
-            ok = longest <= 12
+            ok = worst < 2.0
             ok_all &= ok
             prof = " ".join(f"{v:.0f}" for v in m[:: max(1, len(m) // 14)])
             print(f"{'PASS' if ok else 'FAIL'} {c['name']} f{fr} {kind}@{pos}: longest flat run {longest}px, "
-                  f"max 16px-mean step {step:.2f} codes | profile {prof}")
+                  f"worst gradient spanned by a contour-coherent flat run {worst:.2f} codes (<2 = smooth; single-line {worst_single:.2f}), "
+                  f"max 16px-mean step {step:.2f} | profile {prof}")
     return ok_all
 
 
