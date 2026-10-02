@@ -131,7 +131,7 @@ export const ASSISTANT_PALETTES = {
     screenTo: "#041208",
     line: "#7dffa0",
     glow: "#1fdc55",
-    text: "#b8ffc8",
+    text: "#72ff94",
     dotStrength: 0.5,
     dot: "#2fa34f",
     bezel: "#000000",

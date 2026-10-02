@@ -6,6 +6,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 c=$1; range=$2; B=${3:-out/bundle-final}
+[ -d "$B" ] || npx remotion bundle --out-dir="$B" --log=error >/dev/null 2>&1
 d=out/verify/determinism/$c; rm -rf "$d"; mkdir -p "$d/seq"
 npx remotion render "$B" "$c" "$d/seq" --sequence --image-format=png --frames=$range --scale=0.5 --concurrency=${CONC:-4} --log=error >/dev/null 2>&1 || echo "sequence render failed"
 npx remotion still "$B" "$c" "$d/cold150.png" --frame=150 --scale=0.5 --log=error >/dev/null 2>&1 || echo "still failed"

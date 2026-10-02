@@ -167,12 +167,25 @@ const ScreenSvg: React.FC<{ frame: number; pal: AssistantPalette }> = ({ frame, 
   );
 };
 
-/** The whole screen surface: gradient, content, pixel dot grid. */
-const Screen: React.FC<{ frame: number; pal: AssistantPalette; width: number }> = ({ frame, pal, width }) => {
+type ScreenPart = "content" | "gridDark" | "gridDots";
+
+/**
+ * The screen surface. `content` is the gradient + SVG; the two grid parts are
+ * the pixel dot pattern. The grid is drawn once, on top of the soft-focus
+ * stack and unblurred, so it stays visible across the whole screen (it is
+ * also what hides any banding in the gradient).
+ */
+const Screen: React.FC<{ frame: number; pal: AssistantPalette; width: number; part: ScreenPart }> = ({
+  frame,
+  pal,
+  width,
+  part,
+}) => {
   const sw = width * SCREEN_W_FRAC;
   const sh = (sw * VB_H) / VB_W;
   const dot = width / 300; // pixel pitch: a fraction of the frame
   const s = pal.dotStrength;
+  const g = Math.round(255 * (1 - s));
   return (
     <div
       style={{
@@ -181,44 +194,30 @@ const Screen: React.FC<{ frame: number; pal: AssistantPalette; width: number }> 
         height: sh,
         left: -sw * 0.04,
         top: -sh * 0.02,
-        background: `linear-gradient(115deg, ${pal.screenFrom} 0%, ${pal.screenTo} 100%)`,
+        background:
+          part === "content"
+            ? `linear-gradient(115deg, ${pal.screenFrom} 0%, ${pal.screenTo} 100%)`
+            : part === "gridDark"
+              ? // dark gaps between pixels (blended with multiply)
+                `radial-gradient(circle at 50% 50%, rgb(255,255,255) 0%, rgb(255,255,255) 34%, rgb(${g},${g},${g}) 62%)`
+              : // a faint bright dot in each pixel (blended with screen)
+                `radial-gradient(circle at 50% 50%, ${pal.dot} 0%, rgba(0,0,0,0) 32%)`,
+        backgroundSize: part === "content" ? undefined : `${dot}px ${dot}px`,
         overflow: "hidden",
       }}
     >
-      <ScreenSvg frame={frame} pal={pal} />
-      {/* pixel grid: dark gaps between pixels (multiply) ... */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage: `radial-gradient(circle at 50% 50%, rgb(255,255,255) 0%, rgb(255,255,255) 34%, rgb(${Math.round(
-            255 * (1 - s),
-          )},${Math.round(255 * (1 - s))},${Math.round(255 * (1 - s))}) 62%)`,
-          backgroundSize: `${dot}px ${dot}px`,
-          mixBlendMode: "multiply",
-        }}
-      />
-      {/* ... and a faint bright dot in each pixel (screen) */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage: `radial-gradient(circle at 50% 50%, ${pal.dot} 0%, transparent 32%)`,
-          backgroundSize: `${dot}px ${dot}px`,
-          mixBlendMode: "screen",
-          opacity: 0.18 + s * 0.35,
-        }}
-      />
+      {part === "content" ? <ScreenSvg frame={frame} pal={pal} /> : null}
     </div>
   );
 };
 
 /** One copy of the tilted screen. */
-const Tilted: React.FC<{ frame: number; pal: AssistantPalette; width: number; height: number }> = ({
+const Tilted: React.FC<{ frame: number; pal: AssistantPalette; width: number; height: number; part: ScreenPart }> = ({
   frame,
   pal,
   width,
   height,
+  part,
 }) => (
   <AbsoluteFill style={{ perspective: width * 1.1, perspectiveOrigin: "40% 30%" }}>
     <div
@@ -231,7 +230,7 @@ const Tilted: React.FC<{ frame: number; pal: AssistantPalette; width: number; he
         transform: `rotateX(16deg) rotateY(-11deg) rotateZ(8deg) scale(1.02)`,
       }}
     >
-      <Screen frame={frame} pal={pal} width={width} />
+      <Screen frame={frame} pal={pal} width={width} part={part} />
     </div>
   </AbsoluteFill>
 );
@@ -273,9 +272,15 @@ export const AIAssistant: React.FC<AssistantProps> = ({ palette }) => {
             maskImage: masks[i] ?? undefined,
           }}
         >
-          <Tilted frame={frame} pal={pal} width={width} height={height} />
+          <Tilted frame={frame} pal={pal} width={width} height={height} part="content" />
         </AbsoluteFill>
       ))}
+      <AbsoluteFill style={{ mixBlendMode: "multiply" }}>
+        <Tilted frame={frame} pal={pal} width={width} height={height} part="gridDark" />
+      </AbsoluteFill>
+      <AbsoluteFill style={{ mixBlendMode: "screen", opacity: 0.18 + pal.dotStrength * 0.35 }}>
+        <Tilted frame={frame} pal={pal} width={width} height={height} part="gridDots" />
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
