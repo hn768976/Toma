@@ -64,12 +64,12 @@ times cover full 600-frame renders at 1080p (`--scale=0.5`), including encoding.
 
 | Composition | 1080p, full 600 frames | per frame |
 |---|---|---|
-| ChipAlert-Red | 532 s | **0.89 s** |
-| ChipAlert-Amber | 551 s | **0.92 s** |
+| ChipAlert-Red | 588 s | **0.98 s** |
+| ChipAlert-Amber | 564 s | **0.94 s** |
 | GlitchWord-Warning | 221 s | **0.37 s** |
 | GlitchWord-AccessDenied | 224 s | **0.37 s** |
-| BreachHUD-Blue | 455 s | **0.76 s** |
-| BreachHUD-Green | 455 s | **0.76 s** |
+| BreachHUD-Blue | 416 s | **0.69 s** |
+| BreachHUD-Green | 429 s | **0.71 s** |
 
 Measured 4K vs 1080p on the same 30 frames (startup excluded): Chip 3.5 s vs 0.93 s per frame (3.8×),
 Glitch 1.28 s vs 0.30 s (4.3×), HUD 2.5 s vs 0.60 s (4.1×).
@@ -190,7 +190,7 @@ line from the brightest glow into dark background.
 - **ChipAlert-Amber**: longest identical run 5 px. **GlitchWord**: 14 px, inside the flat dark backing panel.
   **BreachHUD**: 11–13 px, inside flat translucent red blocks; a ×4 stretch of the background gradient shows no bands.
 - What prevents banding: a 2.2–2.4 % animated grain added last, over every glow; a static ±1/255 noise layer
-  under the Chip Alert background; PNG (not JPEG) intermediate frames; CRF 16.
+  over the background gradients (Chip Alert and Breach HUD); PNG (not JPEG) intermediate frames; CRF 16.
 
 ## Completion checklist
 
@@ -215,7 +215,7 @@ line from the brightest glow into dark background.
       `admin_consol` at frames 0 / 150 / 300 / 450); near panels slide past far ones; 3B green code, maps and fields
       with red warnings
 - [x] 1080p previews rendered (H.264, yuv420p, CRF 16, no audio) and a 1080p PNG still of each
-- [x] 3 × 6000×3375 PNG stills per composition (`scripts/render-stills.sh`)
+- [x] 3 × 6000×3375 PNG stills per composition (`scripts/render-stills.sh`; all 24 stills render in about 5 min)
 
 ## Deviations from the brief
 
