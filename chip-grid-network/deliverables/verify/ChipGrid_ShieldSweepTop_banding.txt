@@ -1,0 +1,9 @@
+ChipGrid_ShieldSweepTop.mp4 frame 300 -> ChipGrid_ShieldSweepTop_banding_f300.png (1920x1080)
+  [1203,372,80,46] luma 39-65  codes filled 100%  max run 7px  mean run 1.17px  PASS
+      profile: 52.8 51.6 49.8 48.9 48.6 48.1 47.9 49.0 50.3 52.2 52.9 54.3 56.3 57.2 58.4 59.8
+  [920,372,80,46] luma 41-73  codes filled 100%  max run 5px  mean run 1.16px  PASS
+      profile: 70.0 68.5 65.8 64.1 62.0 58.9 57.3 55.7 52.6 53.1 52.8 53.5 53.1 53.9 55.7 56.7
+  [1488,372,80,46] luma 40-69  codes filled 100%  max run 5px  mean run 1.14px  PASS
+      profile: 49.7 48.7 49.1 49.8 49.3 50.0 50.1 51.6 53.0 54.6 56.7 57.7 58.7 60.3 62.4 65.9
+  [1150,385,95,20] luma 39-116  codes filled 100%  max run 4px  mean run 1.12px  PASS
+      profile: 107.4 80.0 67.6 59.2 55.5 54.7 55.8 56.0 54.9 52.9 51.4 49.1 48.6 46.7 46.4 50.3

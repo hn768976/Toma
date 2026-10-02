@@ -1,0 +1,9 @@
+control_nodither.mp4 frame 0 -> control_nodither_banding_f0.png (1920x1080)
+  [1203,372,80,46] luma 45-60  codes filled 100%  max run 40px  mean run 3.32px  FAIL
+      profile: 51.8 50.2 48.9 48.1 47.8 47.3 47.3 48.1 49.5 50.8 51.9 53.3 54.8 56.1 57.2 58.9
+  [920,372,80,46] luma 49-69  codes filled 100%  max run 20px  mean run 2.87px  FAIL
+      profile: 68.2 67.1 65.0 62.8 60.5 58.1 56.2 54.1 52.5 52.1 52.0 52.0 52.1 53.3 54.8 55.7
+  [1488,372,80,46] luma 45-67  codes filled 100%  max run 39px  mean run 3.18px  FAIL
+      profile: 48.6 48.1 48.3 48.5 48.6 48.9 49.4 50.5 51.9 53.4 55.3 56.3 57.8 59.4 62.0 65.3
+  [1150,385,95,20] luma 45-107  codes filled 100%  max run 20px  mean run 2.31px  FAIL
+      profile: 101.7 81.4 67.5 59.6 55.4 54.5 54.7 55.0 53.9 51.7 49.6 48.2 47.2 46.1 46.5 48.6
