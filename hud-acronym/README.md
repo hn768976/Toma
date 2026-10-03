@@ -96,13 +96,13 @@ Measured on the build machine: **4 vCPU, no GPU** (ANGLE → SwiftShader softwar
 
 | Composition | Wall time | Per frame (wall) | Per frame per render thread |
 |---|---|---|---|
-| HudAcronym-DEFI | 553 s | **0.92 s** | ~3.7 s |
-| HudAcronym-AGI | 556 s | **0.93 s** | ~3.7 s |
-| HudAcronym-AI | 560 s | **0.93 s** | ~3.7 s |
+| HudAcronym-DEFI | 483 s | **0.80 s** | ~3.2 s |
+| HudAcronym-AGI | 462 s | **0.77 s** | ~3.1 s |
+| HudAcronym-AI | 460 s | **0.77 s** | ~3.1 s |
 
 **4K estimate.** 4K is 9× the pixels of 720p, and the cost is almost entirely per-pixel
-shading (the scene geometry is small). On the same CPU-only machine that is **about 8–9 s per
-frame**, or roughly 80–90 min per composition and 12–14 h for all 9. This is an estimate;
+shading (the scene geometry is small). On the same CPU-only machine that is **about 7–8 s per
+frame**, or roughly 70–80 min per composition and 11–12 h for all 9. This is an estimate;
 4K was not rendered here.
 
 On a machine with a real GPU behind ANGLE, expect well under 1 s per frame at 4K. A 4K
