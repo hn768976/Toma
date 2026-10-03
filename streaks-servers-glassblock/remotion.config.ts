@@ -16,6 +16,8 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// Silent loops: no audio stream at all (otherwise Remotion adds silent AAC).
+Config.setMuted(true);
 
 // Some sandboxed environments block downloading Remotion's own Chrome
 // Headless Shell but ship a Playwright one here. On a normal machine this

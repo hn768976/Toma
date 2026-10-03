@@ -54,7 +54,15 @@ npx remotion still <id> out/<id>-6k.png --frame=300 --scale=1.5625 --gl=angle
 
 ## Render time
 
-RENDER_TIME_TABLE
+Measured on the build machine: a cloud container with 4 CPU cores, **no GPU** (ANGLE fell back to SwiftShader, so all WebGL ran on the CPU), and `--concurrency=2`. Times are full 600-frame 720p renders (wall clock including browser start, divided by 600).
+
+| Look | 720p measured (s/frame) | 4K estimate, same CPU-only machine | 4K estimate, any desktop GPU |
+|---|---|---|---|
+| Glass Block (both) | 0.22 | ~1.8 s/frame (~18 min/loop) | ~0.3 s/frame |
+| Horizon Streaks | 0.96 | ~6 s/frame (~1 h/loop) | ~0.4 s/frame |
+| Server Bokeh (each) | 2.2 | ~18 s/frame (~3 h/loop) | ~0.6 s/frame |
+
+How the 4K estimates were made: 4K has 9× the pixels of 720p. On SwiftShader the fragment work scales almost linearly with pixel count, while vertex work (3,000 ribbons, 9,000 LED sprites) and browser overhead do not. Most of the cost is per-pixel: the procedural rack shader, the 64-tap DoF gather and the per-pixel glass shader. With a real GPU the shaders are cheap, and the remaining cost is mostly screenshot, PNG and encode overhead in Remotion. The GPU column is an estimate and was not measured here.
 
 ## How it works
 
@@ -79,11 +87,11 @@ Every value on screen comes from `useCurrentFrame()`, and nothing else:
 - **Horizon Streaks** (`src/horizon`)
   - 3,000 instanced ribbons, each with 72 segments. They are expanded in screen space in the vertex shader. Ribbon width = physical width + a depth-dependent circle of confusion, and intensity is energy-conserving, so near streaks are very soft and far ones are hairline.
   - Moving dashes are computed in the shader.
-  - About 1,400 head sprites, 26 bokeh discs, a sky/horizon shader, mip-chain bloom, and a hue-preserving tone curve.
+  - Several hundred head sprites, 6 large soft bokeh discs, a sky/horizon shader, mip-chain bloom, and a hue-preserving tone curve.
 - **Server Bokeh** (`src/server`)
   - Procedural rack fronts: rails, screw heads, made-up tick marks, switches with LED sockets and SFP cages, drive bays, and lit fibre bundles. There are two rows across an aisle.
   - The scene renders rgb plus CoC. A half-res mip-mapped copy feeds a 64-tap golden-angle gather DoF.
-  - About 9,000 LEDs are drawn as sprites. Near focus they are round hot dots at full res. Out of focus they become **hexagonal** bokeh sized by CoC, with alpha falling as size grows, drawn at quarter res for speed.
+  - About 36,000 LEDs (18 racks × 2 rows) are drawn as sprites. Near focus they are round hot dots at full res. Out of focus they become **hexagonal** bokeh sized by CoC, with alpha falling as size grows, drawn at quarter res for speed.
   - Bloom, vignette and grain finish the image.
 - **Glass Block** (`src/glass`)
   - Six drifting blobs plus looping fbm feed a colour ramp.
@@ -91,7 +99,14 @@ Every value on screen comes from `useCurrentFrame()`, and nothing else:
 
 ## Banding check
 
-BANDING_SECTION
+- All looks render into half-float targets. Every look ends with a ±1/255 triangular dither applied after tonemapping and sRGB encoding, plus about 2% monochrome grain. The grain is an integer hash of pixel position and `frame % 600`.
+- The check ran on the **encoded mp4s**, not the preview. For each preview, frame 300 was decoded with ffmpeg. 1D profiles were read across the blue sky (Horizon), the blurred left racks and the near-right blur (Server, both colourways) and the blobs (Glass, both). Contrast-stretched crops of the same regions were also inspected.
+- Results:
+  - Sky: blue rises 187 → 228 over 150 rows, with a mean step of 0.49 code values.
+  - Server blurs: mean step 0.33–0.8.
+  - No plateau-and-jump staircase was visible in any stretched crop.
+  - Glass profiles step only at the glass-block edges, which is the intended pattern.
+- The stretched crops looked smooth, with no contour lines.
 
 ## Adding a colourway
 
@@ -106,7 +121,21 @@ For example, a green server room:
 
 ## Completion checklist
 
-CHECKLIST
+- [x] Five compositions in one Remotion project, 30 fps, 600 frames, 3840×2160.
+- [x] Built entirely in code. No MCP servers, no assets, no logos or brand marks, no readable text (rack marks are tiny bars and dots).
+- [x] Remotion with `@remotion/three` on WebGL2 (not WebGPU), and `--gl=angle` set in the config.
+- [x] One data row per colourway (`src/colorways.ts`).
+- [x] Deterministic. All randomness is seeded `mulberry32` at module level; no `Math.random()`, `Date.now()`, R3F clock or `useState` visuals; no TAA, temporal AO or accumulation.
+- [x] **Step 1** (ffprobe): all 5 previews are 1280×720, 30/1, 20.000 s, h264, yuv420p, 600 frames, no audio.
+  - Did not pass first time. Remotion had muxed a silent AAC track, which also made the duration 20.053 s.
+  - Fixed by remuxing the video stream with `-c:v copy -an`, so the video was not re-encoded, and adding `Config.setMuted(true)` for future renders.
+- [x] **Step 2** (loop): with `--props='{"loopTest":true}'`, frame 600 is pixel-identical to frame 0 for all 5. Wrap smoothness was also checked on PNGs: Glass 599→0 differs by 0.98, against 0.97 for 0→1 and 300→301. In the mp4 the wrap shows a small bump from the keyframe only.
+- [x] **Step 3** (determinism): for all 5, frame 300 rendered alone from a cold start is **byte-identical** to frame 300 from a 3-thread sequence render, and to the still from the preview run.
+- [x] **Step 4** (banding): measured on frames from the encoded mp4s; see above.
+- [x] **Step 5** (content): 5 evenly spaced frames per preview were inspected.
+- [x] **Steps 6 and 7**: self-comparison, then three rounds of fresh-sub-agent comparison against the references (see the delivery notes).
+- [x] 720p previews and PNG stills of all 5.
+- [x] Project zip without `node_modules`, `.git`, `refs/` or render output. `npm install && npx remotion studio` was tested from a clean copy.
 
 ## Project layout
 
