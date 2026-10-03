@@ -133,7 +133,8 @@ void main() {
   vec2 q = abs(vUv - 0.5) * 2.0;
   float m = max(q.x, q.y);
   float aa = fwidth(m) * 1.5;
-  float sq = 1.0 - smoothstep(0.86 - aa, 0.86 + aa, m);
+  // soft-edged pad (light spills a little past the square)
+  float sq = 1.0 - smoothstep(0.7 - aa, 0.95 + aa, m);
   float core = 1.0 - smoothstep(0.0, 0.9, m);
   vec3 col = vColor * (0.55 * sq + 0.6 * core * sq);
   // tiles sit on dark block tops; outside the square, show nothing (discard
@@ -157,6 +158,7 @@ in vec4 aLine;    // x, z, y(base), height
 in vec4 aLook;    // r, g, b (* intensity), pulse cycles
 in float aPhase;
 in vec2 aOrigin;
+in vec2 aBlink;   // the tile's blink: cycles, phase
 uniform float uPhase;
 uniform float uPxWorld; // world size of one output pixel at distance 1
 out vec2 vUv;
@@ -170,7 +172,7 @@ void main() {
   vec3 toCam = cameraPosition - base;
   float d = length(toCam);
   vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), toCam));
-  float wWorld = 0.03;
+  float wWorld = 0.055;
   float wMin = uPxWorld * d * 1.4;
   float w = max(wWorld, wMin);
   vec3 world = base + right * position.x * w * 3.0 + vec3(0.0, (position.y + 0.5) * aLine.w, 0.0);
@@ -178,7 +180,13 @@ void main() {
   float pulse = -10.0;
   if (aLook.w > 0.5) pulse = fract(aLook.w * uPhase + aPhase);
   vPulse = pulse;
-  vColor = aLook.rgb * (wWorld / w);
+  // the beam is only as bright as the tile it rises from (same blink)
+  float blink = 1.0;
+  if (aBlink.x > 0.5) {
+    float s = 0.5 + 0.5 * sin(TAU * fract(aBlink.x * uPhase + aBlink.y));
+    blink = 0.12 + 0.88 * s * s * s;
+  }
+  vColor = aLook.rgb * (wWorld / w) * blink;
   vFog = fogAmount(distance(world, cameraPosition));
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }
@@ -194,11 +202,12 @@ out vec4 outColor;
 uniform vec3 uHaze;
 void main() {
   float u = (vUv.x - 0.5) * 3.0; // quad is 3x the line width
-  float across = exp(-u * u * 5.5);
+  // soft profile: a gentle core inside a wide, faint glow
+  float across = exp(-u * u * 3.2) * 0.75 + exp(-u * u * 0.9) * 0.25;
   float v = vUv.y;
-  // brightest at the base, fading upwards
-  float along = pow(1.0 - v, 1.3) * smoothstep(0.0, 0.015, v);
-  float p = exp(-pow((v - vPulse) / 0.07, 2.0)) * 1.8 * (1.0 - v * 0.6);
+  // brightest at the base, fading smoothly upwards to nothing
+  float along = pow(1.0 - v, 1.6) * smoothstep(0.0, 0.06, v) * (1.0 - smoothstep(0.7, 1.0, v));
+  float p = exp(-pow((v - vPulse) / 0.13, 2.0)) * 0.9 * (1.0 - v * 0.7);
   vec3 col = vColor * across * (along + p);
   col = mix(col, uHaze * across * (along + p) * 0.35, vFog);
   outColor = vec4(col, 0.0);

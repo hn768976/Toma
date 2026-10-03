@@ -41,6 +41,8 @@ export type Line = {
   intensity: number;
   pulseCycles: number; // 0 = no pulse
   pulsePhase: number;
+  blinkCycles: number; // the tile's blink (0 = steady)
+  blinkPhase: number;
 };
 
 export type Spark = { x: number; y: number; z: number; color: number; size: number; phase: number; cycles: number };
@@ -106,22 +108,8 @@ const build = () => {
     for (let cx = Math.floor(bl.x0); cx < bl.x1; cx++) {
       for (let cz = Math.floor(bl.z0); cz < bl.z1; cz++) {
         if (cx + 0.5 < bl.x0 || cx + 0.5 > bl.x1 || cz + 0.5 < bl.z0 || cz + 0.5 > bl.z1) continue;
-        if (rnd() > 0.34) {
-          // no tile here: sometimes a bare light line rising from a small dot
-          if (rnd() < 0.55) {
-            lines.push({
-              x: cx + 0.2 + rnd() * 0.6,
-              z: cz + 0.2 + rnd() * 0.6,
-              y: bl.h,
-              height: 0.6 + Math.pow(rnd(), 1.4) * 1.5,
-              color: rnd() < 0.85 ? 0 : 1,
-              intensity: 0.35 + rnd() * 0.7,
-              pulseCycles: rnd() < 0.4 ? 1 + Math.floor(rnd() * 5) : 0,
-              pulsePhase: rnd(),
-            });
-          }
-          continue;
-        }
+        // light only comes from lit tiles: empty panels emit nothing
+        if (rnd() > 0.4) continue;
         const cr = rnd();
         // 0 cyan, 4 sky blue, 1 white, 2 pink, 3 red
         const color = cr < 0.3 ? 0 : cr < 0.82 ? 4 : cr < 0.92 ? 1 : cr < 0.96 ? 2 : 3;
@@ -138,17 +126,21 @@ const build = () => {
           blinkPhase: rnd(),
         };
         tiles.push(t);
-        if ((color <= 1 || color === 4) && rnd() < 0.75) {
-          const pulse = rnd() < 0.45;
+        // most lit tiles send a soft beam straight up from their centre, in
+        // the tile's own colour, blinking with the tile
+        if (rnd() < 0.85) {
+          const pulse = rnd() < 0.4;
           lines.push({
-            x: t.x + (rnd() - 0.5) * 0.25,
-            z: t.z + (rnd() - 0.5) * 0.25,
+            x: t.x,
+            z: t.z,
             y: t.y,
             height: 0.6 + Math.pow(rnd(), 1.4) * 1.6,
-            color: rnd() < 0.85 ? 0 : 1,
-            intensity: 0.5 + rnd() * 0.9,
-            pulseCycles: pulse ? 1 + Math.floor(rnd() * 5) : 0,
+            color,
+            intensity: 0.5 + rnd() * 0.8,
+            pulseCycles: pulse ? 1 + Math.floor(rnd() * 4) : 0,
             pulsePhase: rnd(),
+            blinkCycles: t.blinkCycles,
+            blinkPhase: t.blinkPhase,
           });
         }
       }

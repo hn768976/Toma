@@ -204,14 +204,18 @@ const buildScene = (pal: DataCityPalette) => {
     const aLine = new Float32Array(n * 4);
     const aLook = new Float32Array(n * 4);
     const aPhase = new Float32Array(n);
+    const aBlink = new Float32Array(n * 2);
     const aOrigin = new Float32Array(n * 2);
     let i = 0;
     for (const [ox, oz] of C) {
       for (const l of CITY.lines) {
-        const col = lin(l.color === 0 ? pal.line : pal.tileWhite, l.intensity * 4.0, 1.8);
+        // beam colour = its tile's colour (cyan tiles use the softer line cyan)
+        const warm = l.color === 2 || l.color === 3 ? 0.55 : 1;
+        const col = lin(l.color === 0 ? pal.line : tileColor(pal, l.color), l.intensity * 3.0 * warm, 1.8);
         aLine.set([l.x, l.z, l.y, l.height], i * 4);
         aLook.set([col.x, col.y, col.z, l.pulseCycles], i * 4);
         aPhase[i] = l.pulsePhase;
+        aBlink.set([l.blinkCycles, l.blinkPhase], i * 2);
         aOrigin.set([ox, oz], i * 2);
         i++;
       }
@@ -219,6 +223,7 @@ const buildScene = (pal: DataCityPalette) => {
     g.setAttribute("aLine", new THREE.InstancedBufferAttribute(aLine, 4));
     g.setAttribute("aLook", new THREE.InstancedBufferAttribute(aLook, 4));
     g.setAttribute("aPhase", new THREE.InstancedBufferAttribute(aPhase, 1));
+    g.setAttribute("aBlink", new THREE.InstancedBufferAttribute(aBlink, 2));
     g.setAttribute("aOrigin", new THREE.InstancedBufferAttribute(aOrigin, 2));
     g.instanceCount = n;
     const mat = new THREE.ShaderMaterial({
@@ -301,7 +306,7 @@ const buildPipeline = (pal: DataCityPalette) => {
   const final = pass(FINAL_FRAG, {
     tScene: { value: null },
     tBloom: { value: null },
-    uBloom: { value: 0.09 },
+    uBloom: { value: 0.15 },
     uExposure: { value: 1.0 },
     uFrame: { value: 0 },
     uGrain: { value: 0.02 },
