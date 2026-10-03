@@ -30,7 +30,7 @@ does not allow `_` in ids; the render commands below still write
 
 | Composition | Cubes | Chart line (`shape`) | Mid-tumble still frame |
 |---|---|---|---|
-| `Cubes-ETF` | 3 | steady rise with small wobbles (`steadyRise`) | 53 |
+| `Cubes-ETF` | 3 | the reference clip's own line: highs, a plunge under the cubes, recovery (`reference`) | 53 |
 | `Cubes-IPO` | 3 | flat, then a sharp listing pop (`listingPop`) | 44 |
 | `Cubes-ROI` | 3 | clear rise (`clearRise`) | 54 |
 | `Cubes-GDP` | 3 | rise, dip, recovery (`dipRecovery`) | 54 |
@@ -213,24 +213,39 @@ python3 scripts/verify.py same out/seq/element-100.png out/cold_100.png
   a 2–4 letter English word, a rude word or a known acronym. Lookalike
   glyphs count as the letters they resemble (a target `0` beside a `P` reads
   "OP").
-- `src/lib/chart.ts`: per-acronym price line (seeded random-walk bridge over
-  the shape, scaled to pass under the cube row) and volume-bar clusters.
+- `src/lib/chart.ts`: per-acronym price line and volume-bar clusters, laid
+  out in frame fractions like the reference (line within 14–87% of frame
+  height, bar clusters every ~23% of the width) and projected onto the paper
+  through the camera (`src/lib/screen.ts`). ETF uses the reference's price
+  line, traced column by column (`src/data/referenceLine.ts`), with fine ticks
+  added for 4K; the other shapes are a seeded random walk over the row's
+  shape.
 - `src/textures/paper.ts`: the 8192×4608 sheet. Paper, grid and dashed rule
   use a fixed seed, so they are identical in all 13. No numbers, labels,
   tickers or currency.
-- `src/textures/wood.ts`: procedural pale birch/beech grain, per-cube tint,
+- `src/textures/wood.ts`: procedural flat-sawn beech: fine growth-ring
+  figure that arches along the grain, rays and streaks, per-cube tint,
   letters printed into the wood (multiplied ink, darker rim, grain showing
   through).
-- `src/textures/lightPattern.ts`: soft round spots in curved rows (perforated
-  / woven screen), dimmed by lattice bars and foliage.
+- `src/textures/lightPattern.ts`: window light designed in frame fractions to
+  match the reference, then projected back through the key light's own
+  camera into `SpotLight.map`. Most of the sheet sits in cool skylight; warm
+  sun arrives as soft spots through a perforated screen (in patches, left and
+  upper right), as soft diagonal bands through a lattice, and as an open
+  patch over the cube row.
 - `src/scene/AcronymCubes.tsx`: the scene.
   - **Key:** a `SpotLight` from upper-left with `SpotLight.map` = the pattern,
     so the dapple falls on the paper and the cubes and bends over their edges.
     The light and its target translate together 0.42 units over the clip: the
     pattern drifts slowly sideways while the shadow direction stays put.
-  - **Fill:** warm, from the opposite side, at 40% of the key.
-  - **Shadows:** PCSS toward lower-right, plus a contact-darkening decal under
-    each resting cube.
+  - **Fill:** warm, from the opposite side, plus a cool sky. Levels were
+    calibrated by sampling the reference frame (sunlit paper, skylit paper,
+    cube shadow, sunlit wood). **Deviation from the brief:** the fill lands
+    at about 25% of the key on the paper, not 40%; at 40% the shadows came
+    out much paler than the reference's.
+  - **Shadows:** soft PCSS toward lower-right (penumbra widened to match the
+    reference's diffuse shadows), plus a contact-darkening decal under each
+    resting cube.
   - **Post:** real depth-of-field (postprocessing `DepthOfFieldEffect`,
     focused on the cube tops), ACES filmic tone mapping, sRGB output, ±1/255
     shader noise on paper and cubes, and 1.75% film grain hashed from
@@ -272,12 +287,12 @@ seed. Available shapes are listed at the top of the same file.
 - [x] 3D: react-three-fiber via `@remotion/three`, WebGL2, `--gl=angle`
 - [x] 3840×2160, 30 fps, 300 frames, not a loop
 - [x] Cubes 11.5% of frame height, gap 12% of cube width, same size for 401K
-- [x] Rounded edges (bevel 7% of the cube), pale procedural birch/beech wood, roughness 0.6
+- [x] Rounded edges (bevel 7% of the cube), procedural beech wood with visible grain, roughness 0.55
 - [x] Archivo Black (OFL) letters printed into the wood; digits in the same font
 - [x] Seeded side-face letters; no lookalikes; no words with neighbours (`npm run check`)
 - [x] Tumble written as motion: drop, 1–3 exact 90° rolls about the paper edge, decaying-sine settle, still by frame 120
 - [x] No cube through the paper or another cube (`npm run check`, every frame, all 13)
-- [x] Dappled key through a projected pattern (`SpotLight.map`), slow drift, warm 40% fill, PCSS shadows lower-right, contact darkening
+- [x] Dappled key through a projected pattern (`SpotLight.map`), slow drift, warm fill (~25% of key, calibrated to the reference), soft PCSS shadows lower-right, contact darkening
 - [x] Camera 10° off vertical, 2.5% straight push-in, real DoF
 - [x] ACES tone mapping, sRGB output, shader dither, 1.75% hashed grain
 - [x] Chart paper generated at 8192 px; paper/grid/dashed rule identical in all 13 (pixel-checked); no numbers/labels/tickers
