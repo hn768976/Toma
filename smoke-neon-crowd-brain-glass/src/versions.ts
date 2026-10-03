@@ -38,7 +38,7 @@ export const glitterSmokeVersions: { id: string; colors: GlitterSmokeColors }[] 
       glitter: [
         { color: "#FFD27A", weight: 3 }, // gold
         { color: "#FF9EC4", weight: 2 }, // pink
-        { color: "#FFFFFF", weight: 3 }, // white
+        { color: "#FFFFFF", weight: 1.6 }, // white
         { color: "#6FE6E0", weight: 1.5 }, // teal
       ],
     },

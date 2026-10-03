@@ -17,9 +17,9 @@ import type { GlitterSmokeColors } from "../../versions";
 import { GRAIN_FRAG, GRAIN_VERT, SMOKE_FRAG, SMOKE_VERT } from "./smokeShader";
 
 const LOOP = 600;
-const M = 4; // flow symmetry: one 90° sector per loop
+const M = 2; // flow symmetry: one half turn per loop
 const SECTOR = TAU / M;
-const CENTER = { x: -1.3, y: -1.15 }; // flow centre, screen-height units, y up, origin = frame centre
+const CENTER = { x: 0.18, y: 0.1 }; // flow centre (the dark void), screen-height units, y up, origin = frame centre
 const N = 80000;
 const LEVELS = 8; // bokeh disc textures
 const DENS_W = 192;
@@ -39,6 +39,7 @@ type Data = {
   wob: Float32Array; // wobble amplitude
   wk: Uint8Array; // wobble cycles per loop
   wph: Float32Array;
+  win: Uint8Array; // visible half-plane: 0 = left (smoke), 1 = right (void)
 };
 const buildData = (weights: number[]): Data => {
   const rand = mulberry32(0x61177e5);
@@ -54,6 +55,7 @@ const buildData = (weights: number[]): Data => {
     wob: new Float32Array(N),
     wk: new Uint8Array(N),
     wph: new Float32Array(N),
+    win: new Uint8Array(N),
   };
   const wsum = weights.reduce((a, b) => a + b, 0);
   const gauss = () => {
@@ -63,21 +65,23 @@ const buildData = (weights: number[]): Data => {
   };
   for (let i = 0; i < N; i++) {
     const u = rand();
-    // 72% packed in the smoke band, the rest floating free in the dark
-    d.r[i] = u < 0.72 ? 1.05 + gauss() * 0.36 : 0.45 + rand() * 2.5;
+    // 85% packed in the smoke crescent (left half-plane around the void), the rest are sparse stars
+    const inSmoke = u < 0.93;
+    d.win[i] = inSmoke ? 0 : 1;
+    d.r[i] = inSmoke ? 0.5 + Math.pow(rand(), 0.8) * 1.4 + gauss() * 0.05 : 0.25 + rand() * 1.9;
     d.phi[i] = rand() * SECTOR;
     const zr = rand();
-    // mostly mid/far (sharp specks); a few near the lens → bokeh
-    d.z[i] = zr < 0.035 ? 0.28 + rand() * 0.35 : zr < 0.12 ? 0.63 + rand() * 0.3 : 0.92 + rand() * 1.1;
-    d.size[i] = 0.6 + Math.pow(rand(), 3) * 1.6;
+    // mostly mid/far (sharp specks); a few near the lens → soft bokeh
+    d.z[i] = zr < 0.012 ? 0.4 + rand() * 0.3 : zr < 0.08 ? 0.72 + rand() * 0.22 : 0.94 + rand() * 1.0;
+    d.size[i] = 0.5 + Math.pow(rand(), 2.5) * 2.4;
     let c = rand() * wsum;
     let k = 0;
     while (k < weights.length - 1 && c > weights[k]) c -= weights[k++];
     d.col[i] = k;
     d.tk[i] = TWINKLE_K[Math.floor(rand() * TWINKLE_K.length)];
     d.tph[i] = rand() * TAU;
-    d.bright[i] = 0.35 + Math.pow(rand(), 2) * 0.9;
-    d.wob[i] = 0.004 + rand() * 0.012;
+    d.bright[i] = inSmoke ? (rand() < 0.12 ? 1.0 + rand() * 0.8 : 0.07 + rand() * 0.22) : 0.5 + rand() * 0.6;
+    d.wob[i] = 0.003 + rand() * 0.01;
     d.wk[i] = 1 + Math.floor(rand() * 3);
     d.wph[i] = rand() * TAU;
   }
@@ -221,9 +225,14 @@ const createEngine = async (host: HTMLDivElement, width: number, height: number,
     const tw = TAU * t;
     for (let i = 0; i < N; i++) {
       const z = data.z[i];
-      // the copy of this speck currently inside the visible 90° window [0, SECTOR)
-      let ang = data.phi[i] + rot;
-      if (ang >= SECTOR) ang -= SECTOR;
+      // Each speck has two copies 180° apart; only the one inside its half-plane window
+      // (left: 90°..270°, right: 270°..450°) is drawn, faded at the window ends so the
+      // hand-over at the top/bottom of the void is invisible.
+      let u = data.phi[i] + rot;
+      if (u >= SECTOR) u -= SECTOR;
+      const ang = u + (data.win[i] === 0 ? Math.PI / 2 : -Math.PI / 2);
+      const env = Math.sin((Math.PI * u) / SECTOR);
+      const fade = Math.sqrt(env);
       const wob = data.wob[i] * Math.sin(tw * data.wk[i] + data.wph[i]);
       const rr = data.r[i] + wob;
       // 2.5D: world point on the flow plane, small depth parallax around the frame centre
@@ -244,11 +253,11 @@ const createEngine = async (host: HTMLDivElement, width: number, height: number,
       const twk = 0.25 + 0.75 * s * s * s;
       // circle of confusion → bokeh level
       // near side blurs strongly, far side only a little (background specks stay crisp)
-      const coc = z < FOCUS ? (1 / z - 1 / FOCUS) * 3.2 : (1 - FOCUS / z) * 1.2;
+      const coc = z < FOCUS ? (1 / z - 1 / FOCUS) * 2.6 : (1 - FOCUS / z) * 1.0;
       const level = Math.min(LEVELS - 1, Math.floor(coc));
-      const sizePx = (5 + data.size[i] * 4) * (1 / z) * (1 + coc * 2.4);
-      let a = data.bright[i] * twk * (0.3 + 1.6 * dens);
-      if (level > 0) a *= 0.55 / (1 + coc * 0.9); // alpha lowered as discs grow
+      const sizePx = (7 + data.size[i] * 6) * (data.bright[i] > 0.9 ? 1.5 : 1) * (1 / z) * (1 + coc * 1.8);
+      let a = fade * data.bright[i] * twk * (data.win[i] === 0 ? 0.15 + 1.9 * dens : 0.55);
+      if (level > 0) a *= 0.4 / (1 + coc * 1.2); // alpha lowered as discs grow
       a = Math.min(1, a * (level === 0 ? 1 : 1.0));
       const p = parts[i];
       p.x = px;

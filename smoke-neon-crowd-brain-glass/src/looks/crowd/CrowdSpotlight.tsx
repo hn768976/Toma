@@ -5,13 +5,13 @@ import { SceneFactory, ThreeStage } from "../../lib/three/ThreeStage";
 import { createDofPass, createLinearDepthMaterial } from "../../lib/three/dof";
 import { radialTexture } from "../../lib/three/textures";
 import { keyed3, monotoneCubic } from "../../lib/curve";
-import { clamp, mulberry32, smoothstep } from "../../lib/rng";
+import { mulberry32, smoothstep } from "../../lib/rng";
 import type { CrowdColors } from "../../versions";
 
 const COLS = 15;
 const ROWS = 14;
-const SX = 2.0; // spacing across
-const SZ = 1.85; // spacing in depth
+const SX = 2.35; // spacing across
+const SZ = 2.3; // spacing in depth
 const FX_LAYER = 1; // additive glow sprites/rings — excluded from the depth pass
 
 /** Bust icon: extruded shoulders + head, shirt "V" and tie inset on the front.
@@ -19,40 +19,55 @@ const FX_LAYER = 1; // additive glow sprites/rings — excluded from the depth p
 const buildBust = () => {
   const bevel = { bevelEnabled: true, bevelSegments: 3, steps: 1, curveSegments: 18 };
   const body = new THREE.Shape();
-  body.moveTo(-0.8, 0);
-  body.lineTo(0.8, 0);
-  body.lineTo(0.8, 0.4);
-  body.quadraticCurveTo(0.8, 0.7, 0.5, 0.74);
-  body.lineTo(0.2, 0.8);
-  body.lineTo(-0.2, 0.8);
-  body.lineTo(-0.5, 0.74);
-  body.quadraticCurveTo(-0.8, 0.7, -0.8, 0.4);
+  body.moveTo(-0.76, 0);
+  body.lineTo(0.76, 0);
+  body.lineTo(0.76, 0.38);
+  body.quadraticCurveTo(0.76, 0.68, 0.48, 0.73);
+  body.lineTo(0.17, 0.8);
+  body.lineTo(-0.17, 0.8);
+  body.lineTo(-0.48, 0.73);
+  body.quadraticCurveTo(-0.76, 0.68, -0.76, 0.38);
   body.closePath();
   const D = 0.34;
   const gBody = new THREE.ExtrudeGeometry(body, { ...bevel, depth: D, bevelSize: 0.05, bevelThickness: 0.06 });
   gBody.translate(0, 0, -D / 2);
-  const head = new THREE.Shape();
-  head.absellipse(0, 0, 0.29, 0.35, 0, Math.PI * 2, false, 0);
-  const gHead = new THREE.ExtrudeGeometry(head, { ...bevel, depth: 0.26, bevelSize: 0.06, bevelThickness: 0.08 });
-  gHead.translate(0, 1.2, -0.13);
-  const neck = new THREE.CylinderGeometry(0.13, 0.15, 0.3, 16);
-  neck.translate(0, 0.86, 0);
+  // oval head on a visible neck
+  const gHead = new THREE.SphereGeometry(1, 36, 24);
+  gHead.scale(0.3, 0.38, 0.27);
+  gHead.translate(0, 1.25, 0);
+  const neck = new THREE.CylinderGeometry(0.115, 0.135, 0.34, 20);
+  neck.translate(0, 0.9, 0);
   const front = D / 2 + 0.06;
+  // shirt V
   const vee = new THREE.Shape();
-  vee.moveTo(-0.21, 0.79);
-  vee.lineTo(0.21, 0.79);
-  vee.lineTo(0, 0.2);
+  vee.moveTo(-0.2, 0.79);
+  vee.lineTo(0.2, 0.79);
+  vee.lineTo(0, 0.18);
   vee.closePath();
   const gVee = new THREE.ExtrudeGeometry(vee, { bevelEnabled: false, depth: 0.02 });
   gVee.translate(0, 0, front - 0.012);
+  // jacket lapels framing the V (raised, darker edge)
+  const lapel = (sx: number) => {
+    const l = new THREE.Shape();
+    l.moveTo(sx * 0.2, 0.8);
+    l.lineTo(sx * 0.36, 0.74);
+    l.lineTo(sx * 0.27, 0.56);
+    l.lineTo(sx * 0.33, 0.5);
+    l.lineTo(sx * 0.02, 0.16);
+    l.lineTo(sx * 0.0, 0.18);
+    l.closePath();
+    const g = new THREE.ExtrudeGeometry(l, { bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 1, depth: 0.03 });
+    g.translate(0, 0, front - 0.005);
+    return g;
+  };
   const tie = new THREE.Shape();
-  tie.moveTo(-0.045, 0.74);
-  tie.lineTo(0.045, 0.74);
-  tie.lineTo(0.03, 0.66);
-  tie.lineTo(0.075, 0.3);
+  tie.moveTo(-0.045, 0.75);
+  tie.lineTo(0.045, 0.75);
+  tie.lineTo(0.03, 0.67);
+  tie.lineTo(0.07, 0.3);
   tie.lineTo(0, 0.2);
-  tie.lineTo(-0.075, 0.3);
-  tie.lineTo(-0.03, 0.66);
+  tie.lineTo(-0.07, 0.3);
+  tie.lineTo(-0.03, 0.67);
   tie.closePath();
   const gTie = new THREE.ExtrudeGeometry(tie, { bevelEnabled: false, depth: 0.02 });
   gTie.translate(0, 0, front + 0.004);
@@ -62,13 +77,12 @@ const buildBust = () => {
     g.setAttribute("color", new THREE.BufferAttribute(c, 3));
     return g.index ? g.toNonIndexed() : g;
   };
-  const parts = [paint(gBody, 1), paint(gHead, 1), paint(neck, 0.8), paint(gVee, 1.45), paint(gTie, 0.32)].map((g) => {
+  const parts = [paint(gBody, 1), paint(gHead, 1.05), paint(neck, 0.75), paint(gVee, 1.5), paint(lapel(1), 0.78), paint(lapel(-1), 0.78), paint(gTie, 0.3)].map((g) => {
     g.deleteAttribute("uv");
     return g;
   });
-  const merged = mergeGeometries(parts)!;
-  merged.computeVertexNormals();
-  return merged;
+  // every part already carries smooth normals; don't recompute on the non-indexed merge (that would facet the heads)
+  return mergeGeometries(parts)!;
 };
 
 const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
@@ -77,7 +91,7 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   const glow = new THREE.Color(colors.glow);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(colors.bg);
-  scene.fog = new THREE.Fog(new THREE.Color(colors.bg), 14, 34);
+  scene.fog = new THREE.Fog(new THREE.Color(colors.bg), 13, 30);
   const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 80);
   camera.layers.enable(FX_LAYER);
 
@@ -85,12 +99,10 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   const crowdMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(colors.crowd),
     vertexColors: true,
-    roughness: 0.5,
+    roughness: 0.32,
     metalness: 0.1,
   });
-  const mirrorMat = crowdMat.clone();
-  mirrorMat.side = THREE.BackSide;
-  mirrorMat.color.multiplyScalar(0.35);
+  const mirrorMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(colors.crowd).multiplyScalar(0.16), vertexColors: true, side: THREE.BackSide });
 
   // grid: chosen figure = front row, centre column, at the origin
   const chosenCol = Math.floor(COLS / 2);
@@ -137,10 +149,8 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   scene.add(chosenMir);
 
   // glossy dark floor: semi-transparent over the mirrored crowd
-  const floorMat = new THREE.MeshStandardMaterial({
+  const floorMat = new THREE.MeshBasicMaterial({
     color: new THREE.Color(colors.bg),
-    roughness: 0.32,
-    metalness: 0.6,
     transparent: true,
     opacity: 0.8,
   });
@@ -149,15 +159,15 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   scene.add(floor);
 
   // lights: soft top light + a little front fill; glow light at the chosen figure
-  const top = new THREE.DirectionalLight(0xdfe8ff, 2.2);
+  const top = new THREE.DirectionalLight(0xdfe8ff, 2.6);
   top.position.set(1.5, 10, 3);
   scene.add(top);
-  scene.add(new THREE.HemisphereLight(new THREE.Color(colors.crowd), 0x000000, 0.55));
-  const front = new THREE.DirectionalLight(new THREE.Color(colors.crowd), 0.5);
+  scene.add(new THREE.HemisphereLight(new THREE.Color(colors.crowd), 0x000000, 0.8));
+  const front = new THREE.DirectionalLight(new THREE.Color(colors.crowd).lerp(new THREE.Color(1, 1, 1), 0.4), 1.7);
   front.position.set(0, 2, 10);
   scene.add(front);
   const glowLight = new THREE.PointLight(glow, 0, 7, 1.6);
-  glowLight.position.set(0, 0.9, 0.6);
+  glowLight.position.set(0, 1.0, 0.9);
   scene.add(glowLight);
 
   // FX: floor rings, halo above head, beam
@@ -197,7 +207,23 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   };
   const staticRings = [mkRing(), mkRing()];
   const pulseRings = [mkRing(), mkRing(), mkRing()];
-  const floorPool = new THREE.Mesh(ringGeo, fxMat(tex));
+  // hologram disc: flat translucent fill with a crisp bright edge
+  const discTex = (() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 512;
+    const g = c.getContext("2d")!;
+    const grd = g.createRadialGradient(256, 256, 0, 256, 256, 256);
+    grd.addColorStop(0, "rgba(255,255,255,0.55)");
+    grd.addColorStop(0.7, "rgba(255,255,255,0.28)");
+    grd.addColorStop(0.9, "rgba(255,255,255,0.35)");
+    grd.addColorStop(0.95, "rgba(255,255,255,1)");
+    grd.addColorStop(0.985, "rgba(255,255,255,0.3)");
+    grd.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 512, 512);
+    return new THREE.CanvasTexture(c);
+  })();
+  const floorPool = new THREE.Mesh(ringGeo, fxMat(discTex));
   floorPool.position.y = 0.01;
   floorPool.layers.set(FX_LAYER);
   scene.add(floorPool);
@@ -219,30 +245,31 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   dof.uniforms.tDepth.value = depthRT.texture;
 
   const pipe = new Pipeline(gl, scene, camera, {
-    bloom: { strength: 0.7, radius: 0.4, threshold: 0.9 },
+    bloom: { strength: 0.55, radius: 0.35, threshold: 0.95 },
     grain: 0.02,
     vignette: 0.35,
+    clampHDR: 4,
     extraPasses: [dof],
   });
 
   // camera path — chosen figure at the origin, crowd stretching to -z
   const KF = [0, 120, 200, 300, 360];
   const camPos = keyed3(KF, [
-    [0.8, 6.2, 5.2],
-    [0.25, 2.7, 2.2],
-    [0.05, 1.45, 7.6],
-    [0, 1.0, 10.8],
-    [0, 0.98, 11.0],
+    [0.8, 8.6, 6.5],
+    [0.3, 3.4, 2.6],
+    [0.05, 2.2, 9.5],
+    [0, 2.0, 15.2],
+    [0, 1.98, 15.45],
   ]);
   const camLook = keyed3(KF, [
-    [0, 0.0, -7.5],
-    [0, 0.5, -6],
+    [0, 0.0, -8.5],
+    [0, 0.4, -7],
     [0, 0.85, -0.5],
-    [0, 0.78, 0],
-    [0, 0.78, 0],
+    [0, 0.82, 0],
+    [0, 0.82, 0],
   ]);
-  const focusZ = monotoneCubic([0, 110, 200, 300], [-5, -3.5, 0, 0]);
-  const fovK = monotoneCubic([0, 150, 300], [34, 32, 27]);
+  const focusZ = monotoneCubic([0, 110, 200, 300], [-6, -4.5, 0, 0]);
+  const fovK = monotoneCubic([0, 150, 300], [36, 32, 26]);
 
   const tmp = new THREE.Vector3();
   return {
@@ -260,28 +287,28 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
       // glow timeline
       const g = smoothstep(100, 180, frame);
       const flicker = 1 + 0.06 * Math.sin(frame * 0.21);
-      chosenMat.emissiveIntensity = 0.75 * g * flicker;
-      chosenMat.color.set(colors.crowd).lerp(glow, g * 0.6);
-      chosenMirMat.emissiveIntensity = 0.35 * g;
-      chosenMirMat.color.copy(chosenMat.color).multiplyScalar(0.4);
-      glowLight.intensity = 5 * g;
-      (halo.material as THREE.SpriteMaterial).opacity = 0.16 * g;
-      halo.scale.setScalar(2.6 + 0.3 * g);
-      (haloMir.material as THREE.SpriteMaterial).opacity = 0.06 * g;
+      chosenMat.emissiveIntensity = 0.3 * g * flicker;
+      chosenMat.color.set(colors.crowd).lerp(glow, g * 0.75);
+      chosenMirMat.emissiveIntensity = 0.22 * g;
+      chosenMirMat.color.copy(chosenMat.color).multiplyScalar(0.25);
+      glowLight.intensity = 3.5 * g;
+      (halo.material as THREE.SpriteMaterial).opacity = 0.09 * g;
+      halo.scale.setScalar(2.4 + 0.2 * g);
+      (haloMir.material as THREE.SpriteMaterial).opacity = 0.025 * g;
       haloMir.scale.setScalar(2.6);
-      (floorPool.material as THREE.MeshBasicMaterial).opacity = 0.12 * g;
-      floorPool.scale.setScalar(4.2);
+      (floorPool.material as THREE.MeshBasicMaterial).opacity = 0.55 * g * smoothstep(120, 175, frame);
+      floorPool.scale.set(3.4, 1, 3.4);
       staticRings.forEach((r, i) => {
-        (r.material as THREE.MeshBasicMaterial).opacity = (i === 0 ? 1.0 : 0.55) * smoothstep(130 + i * 12, 185 + i * 12, frame);
-        r.scale.setScalar(i === 0 ? 3.2 : 4.4);
+        (r.material as THREE.MeshBasicMaterial).opacity = (i === 0 ? 1.1 : 0.8) * smoothstep(130 + i * 12, 185 + i * 12, frame);
+        r.scale.setScalar(i === 0 ? 3.5 : 5.8);
       });
       // rings pulse outward: period 72 frames, staggered
       pulseRings.forEach((r, i) => {
         const start = 120 + i * 24;
         const ph = frame < start ? -1 : ((frame - start) % 72) / 72;
         const vis = ph < 0 ? 0 : Math.pow(1 - ph, 1.6) * smoothstep(0, 0.1, ph);
-        (r.material as THREE.MeshBasicMaterial).opacity = 0.8 * vis * g;
-        r.scale.setScalar(2.0 + ph * 5.0);
+        (r.material as THREE.MeshBasicMaterial).opacity = 0.35 * vis * g;
+        r.scale.setScalar(3.0 + ph * 4.0);
       });
 
       // depth pass (opaque geometry only), then DoF focused on the chosen figure
@@ -290,8 +317,8 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
       tmp.set(0, 0.9, fz);
       const focusDist = tmp.applyMatrix4(camera.matrixWorldInverse).z * -1;
       dof.uniforms.uFocus.value = focusDist;
-      dof.uniforms.uAperture.value = 0.075 * h * clamp(1.4 - frame / 600, 0.9, 1.4);
-      dof.uniforms.uMaxR.value = 0.024 * h;
+      dof.uniforms.uAperture.value = 0.052 * h;
+      dof.uniforms.uMaxR.value = 0.017 * h;
       dof.uniforms.uRes.value.set(w, h);
       camera.layers.set(0);
       const prevBg = scene.background;

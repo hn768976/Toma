@@ -1,12 +1,14 @@
 /**
  * Smoke field — GLSL ES 3.00 for a PixiJS 8 Mesh.
  *
- * Flow: everything sweeps around an off-screen centre C (lower left). Noise is
- * sampled in polar coordinates with the angle folded M = 4 times, so the field
- * is exactly periodic under a 90° rotation. Each layer rotates by a whole
- * number of 90° sectors over the 600-frame loop → frame 600 ≡ frame 0, and the
- * motion is a real, continuous curving sweep (not a back-and-forth wobble).
- * Domain warping is applied to (r, φ) so it stays periodic too.
+ * Flow: everything swirls around a centre C (the dark void, upper middle).
+ * Noise is sampled in polar coordinates with the angle folded M = 2 times, so
+ * the field is exactly periodic under a 180° rotation. Each layer rotates by a
+ * whole number of half turns over the 600-frame loop → frame 600 ≡ frame 0,
+ * and the motion is a continuous curving sweep (not a back-and-forth wobble).
+ * Domain warping is applied to (r, φ) so it stays periodic too. A static
+ * (screen-fixed) crescent mask decides where smoke is visible — static, so it
+ * cannot break the loop — and hides the 180° repeat of the noise.
  */
 export const SMOKE_VERT = /* glsl */ `#version 300 es
 in vec2 aPosition;
@@ -35,7 +37,7 @@ uniform vec3 uSmokeEdge;
 uniform vec3 uBgDeep;
 uniform vec2 uCenter;      // flow centre in screen-height units (y up, origin at frame centre)
 
-const float M = 4.0;
+const float M = 2.0;
 const float TAU = 6.28318530718;
 
 // --- 3D simplex noise (Stefan Gustavson / Ashima Arts, MIT) ---
@@ -100,48 +102,60 @@ vec3 pol(float r, float phi, float fa, float fr, float seed) {
   return vec3(rho * cos(M * phi), rho * sin(M * phi), r * fr + seed);
 }
 
+// static crescent mask around the void: dense on the left, sweeping along the bottom,
+// a fainter sweep to the lower right, empty above/right of the centre.
+float crescent(float r, float phi) {
+  float ang = mod(phi, TAU);                         // 0 = right, PI/2 = up, PI = left
+  float left = smoothstep(1.55, 2.15, ang) * (1.0 - smoothstep(4.55, 5.0, ang));
+  float lowRight = smoothstep(4.4, 4.9, ang) * (1.0 - smoothstep(5.6, 6.1, ang)) * 0.45;
+  float inner = smoothstep(0.38, 0.62, r);
+  float outer = 1.0 - smoothstep(1.5, 2.0, r);
+  float innerLR = smoothstep(0.55, 0.8, r) * (1.0 - smoothstep(0.95, 1.3, r));
+  return left * inner * outer + lowRight * innerLR;
+}
+
 void main() {
   vec2 p = vec2((vUV.x - 0.5) * uAspect, 0.5 - vUV.y);
   vec2 d = p - uCenter;
   float r = length(d);
   float phi = atan(d.y, d.x);
-  float a = TAU / M * uT;      // one 90° sector per loop
+  float a = TAU / M * uT;      // one half turn per loop
 
-  // domain warp (rotates two sectors per loop → morphs against the main flow)
-  vec3 qw = pol(r, phi - 2.0 * a, 1.3, 1.6, 0.0);
+  // domain warp (rotates a full turn per loop → morphs against the main flow)
+  vec3 qw = pol(r, phi - 2.0 * a, 2.0, 2.2, 0.0);
   vec2 w = vec2(fbm(qw, 3), fbm(qw + vec3(5.2, 1.3, 7.7), 3));
-  float r2 = r + 0.09 * w.y;
-  float ph2 = phi + 0.12 * w.x / max(r, 0.3);
+  float r2 = r + 0.07 * w.y;
+  float ph2 = phi + 0.09 * w.x / max(r, 0.25);
 
-  // big curving body of smoke: an arc band around the flow centre
-  float body = fbm(pol(r2, ph2 - a, 1.1, 2.0, 3.1), 4);
-  float band = exp(-pow((r2 - 0.95) / 0.5, 2.0)) + 0.1 * exp(-pow((r2 - 2.0) / 0.28, 2.0));
-  float m = smoothstep(-0.35, 0.55, body) * band;
-  // fine hair-like fibres along the flow (low along-flow, very high across-flow frequency)
-  float fib = 0.5 + 0.5 * fbm(pol(r2 + 0.03 * body, ph2 - a, 1.6, 34.0, 9.0), 5);
-  // curling wisps (faster: two sectors per loop), thin filaments in the gaps
-  float wisp = fbm(pol(r2 + 0.04 * body, ph2 - 2.0 * a, 2.2, 11.0, 21.0), 4);
-  float fil = pow(clamp(1.0 - abs(wisp) * 3.2, 0.0, 1.0), 5.0);
-  // faint veil (counter-rotating) for depth
-  float veil = smoothstep(-0.1, 0.7, fbm(pol(r, phi + a, 0.8, 1.1, 40.0), 3));
+  // static crescent, its edge feathered by the flowing noise
+  float body = fbm(pol(r2, ph2 - a, 1.6, 2.6, 3.1), 4);
+  float mask = crescent(r2 + 0.06 * body, phi);
+  // long curved streaks following the flow (very low along-flow, moderate across-flow freq)
+  float st1 = fbm(pol(r2 + 0.03 * body, ph2 - a, 0.9, 9.0, 9.0), 3);
+  float st2 = fbm(pol(r2 + 0.02 * body, ph2 - a, 1.4, 22.0, 17.0), 3);
+  float streaks = smoothstep(-0.35, 0.55, st1) * (0.6 + 0.4 * smoothstep(-0.4, 0.6, st2));
+  float sheet = smoothstep(-0.6, 0.5, body);
+  // feathery wisps peeling off (faster: a full turn per loop)
+  float wisp = fbm(pol(r2 + 0.05 * body, ph2 - 2.0 * a, 2.0, 8.0, 21.0), 4);
+  float fil = pow(clamp(1.0 - abs(wisp) * 3.0, 0.0, 1.0), 4.0);
+  float near = crescent(r2 * 0.72 + 0.1 * body, phi) * (1.0 - mask);  // just outside the crescent
 
-  float fibK = pow(fib, 1.6);
-  float dens = m * (0.35 + 0.9 * fibK) + 0.24 * fil * (0.08 + band) * smoothstep(-0.3, 0.3, body) + 0.06 * veil * (0.3 + band);
-  dens = clamp(dens, 0.0, 1.0);
-
+  float vol = mask * sheet * (0.3 + 0.7 * streaks);
+  float dens = clamp(vol + 0.4 * fil * (mask * 0.4 + near) * sheet, 0.0, 1.0);
   if (uMode > 0.5) {
     finalColor = vec4(dens, dens, dens, 1.0);
     return;
   }
 
-  // brighter edges of the mass / fibres, dark gaps between
-  float edge = m * (1.0 - m) * 4.0;
-  vec3 col = uSmoke * dens * 1.25;
-  col += uSmokeEdge * (0.22 * edge * fibK + 0.18 * m * m * fibK + 0.12 * fil * band);
+  // milky, glowing smoke: saturated blue, pale blue-white where dense, soft inner glow
+  float glow = crescent(r, phi) * smoothstep(-0.7, 0.4, body);
+  vec3 col = mix(uSmoke * vec3(0.78, 0.92, 1.12), uSmokeEdge, smoothstep(0.6, 1.15, dens)) * dens * 1.15;
+  col += uSmoke * 0.22 * glow;
+  col += uSmokeEdge * 0.12 * fil * near;
   // background: near-black with deep blue, a touch lighter low-left
-  float g = clamp(0.6 - 0.35 * p.y - 0.18 * p.x, 0.0, 1.0);
-  vec3 bg = uBgDeep * (0.55 + 0.6 * g);
-  vec3 c = bg + col * 0.85;
+  float g = clamp(0.5 - 0.3 * p.y - 0.25 * p.x, 0.0, 1.0);
+  vec3 bg = uBgDeep * (0.4 + 0.7 * g);
+  vec3 c = bg + col;
   // soft filmic shoulder so dense smoke never clips
   c = 1.0 - exp(-c * 1.15);
   finalColor = vec4(c, 1.0);

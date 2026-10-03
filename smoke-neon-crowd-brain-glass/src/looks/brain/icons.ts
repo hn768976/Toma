@@ -28,15 +28,20 @@ const roundRect = (w: number, h: number, r: number, x = -w / 2, y = 0) => {
   s.quadraticCurveTo(x, y, x + r, y);
   return s;
 };
-const clean = (gs: THREE.BufferGeometry[]) => {
+const ACCENT: [number, number, number] = [0.25, 0.62, 1.0];
+/** Merge parts; parts listed in `accents` get a blue vertex colour, the rest white. */
+const clean = (gs: THREE.BufferGeometry[], accents: THREE.BufferGeometry[] = []) => {
   const ng = gs.map((g) => {
     const n = g.index ? g.toNonIndexed() : g;
     n.deleteAttribute("uv");
+    const c = accents.includes(g) ? ACCENT : [1, 1, 1];
+    const cnt = n.getAttribute("position").count;
+    const col = new Float32Array(cnt * 3);
+    for (let i = 0; i < cnt; i++) col.set(c, i * 3);
+    n.setAttribute("color", new THREE.BufferAttribute(col, 3));
     return n;
   });
-  const m = mergeGeometries(ng)!;
-  m.computeVertexNormals();
-  return m;
+  return mergeGeometries(ng)!;
 };
 
 export const documentIcon = () => {
@@ -54,7 +59,7 @@ export const documentIcon = () => {
     b.translate(i === 0 ? -0.05 : 0, y + 0.02, 0.07);
     return b;
   });
-  return clean([page, ...lines]);
+  return clean([page, ...lines], lines);
 };
 
 export const barChartIcon = () =>
@@ -80,29 +85,29 @@ export const flagIcon = () => {
 };
 
 export const gaugeIcon = () => {
-  const disc = new THREE.CylinderGeometry(0.36, 0.38, 0.12, 40);
-  disc.translate(0, 0.06, 0);
-  const dome = new THREE.SphereGeometry(0.34, 40, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-  dome.scale(1, 0.32, 1);
-  dome.translate(0, 0.12, 0);
-  // zig-zag trend line on top
+  const disc = new THREE.CylinderGeometry(0.4, 0.42, 0.14, 48);
+  disc.translate(0, 0.07, 0);
+  const dome = new THREE.SphereGeometry(0.38, 48, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+  dome.scale(1, 0.3, 1);
+  dome.translate(0, 0.14, 0);
+  // bold trend line across the top
   const pts = [
-    [-0.2, 0.05],
-    [-0.07, 0.05],
-    [0.02, -0.06],
-    [0.2, 0.08],
+    [-0.24, 0.06],
+    [-0.08, 0.06],
+    [0.02, -0.07],
+    [0.24, 0.1],
   ];
   const segs: THREE.BufferGeometry[] = [];
   for (let i = 0; i < pts.length - 1; i++) {
-    const a = new THREE.Vector3(pts[i][0], 0.235, -pts[i][1]);
-    const b = new THREE.Vector3(pts[i + 1][0], 0.235, -pts[i + 1][1]);
+    const a = new THREE.Vector3(pts[i][0], 0.25, -pts[i][1]);
+    const b = new THREE.Vector3(pts[i + 1][0], 0.25, -pts[i + 1][1]);
     const len = a.distanceTo(b);
-    const box = new THREE.BoxGeometry(len + 0.03, 0.025, 0.03);
+    const box = new THREE.BoxGeometry(len + 0.045, 0.04, 0.05);
     box.rotateY(-Math.atan2(b.z - a.z, b.x - a.x));
     box.translate((a.x + b.x) / 2, a.y, (a.z + b.z) / 2);
     segs.push(box);
   }
-  return clean([disc, dome, ...segs]);
+  return clean([disc, dome, ...segs], segs);
 };
 
 export const chatIcon = () => {
@@ -118,22 +123,34 @@ export const chatIcon = () => {
     c.translate(x, 0.41, 0.07);
     return c;
   });
-  return clean([ext(s, 0.1), ext(tail, 0.1), ...dots]);
+  return clean([ext(s, 0.1), ext(tail, 0.1), ...dots], dots);
 };
 
 export const gearIcon = () => {
   const s = new THREE.Shape();
-  const teeth = 8, ro = 0.36, ri = 0.28;
+  const teeth = 8, ro = 0.4, ri = 0.31;
   for (let i = 0; i < teeth * 4; i++) {
     const a = (i / (teeth * 4)) * Math.PI * 2;
     const r = i % 4 < 2 ? ro : ri;
-    const x = Math.cos(a) * r, y = Math.sin(a) * r + 0.4;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r + 0.44;
     if (i === 0) s.moveTo(x, y);
     else s.lineTo(x, y);
   }
   s.closePath();
-  const hole = new THREE.Path();
-  hole.absarc(0, 0.4, 0.12, 0, Math.PI * 2, true);
-  s.holes.push(hole);
-  return clean([ext(s, 0.12, 0.02)]);
+  const gear = ext(s, 0.12, 0.02);
+  // "</>" code glyph in the middle
+  const bar = (x: number, y: number, ang: number, len: number) => {
+    const b = new THREE.BoxGeometry(len, 0.045, 0.05);
+    b.rotateZ(ang);
+    b.translate(x, y, 0.1);
+    return b;
+  };
+  const glyph = [
+    bar(-0.13, 0.48, 0.65, 0.12),
+    bar(-0.13, 0.4, -0.65, 0.12),
+    bar(0.13, 0.48, -0.65, 0.12),
+    bar(0.13, 0.4, 0.65, 0.12),
+    bar(0, 0.44, 1.25, 0.2),
+  ];
+  return clean([gear, ...glyph], glyph);
 };
