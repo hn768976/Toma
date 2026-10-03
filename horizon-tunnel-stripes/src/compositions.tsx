@@ -126,9 +126,9 @@ export const DiagonalSlats: React.FC<{ version: keyof typeof SLAT_VERSIONS } & L
 const TRAILS_POST: PostSettings = {
   ...BASE_POST,
   clearColor: "#000000",
-  bloomStrength: 1.6,
-  bloomRadius: 0.85,
-  bloomThreshold: 0.45,
+  bloomStrength: 2.0,
+  bloomRadius: 0.9,
+  bloomThreshold: 0.35,
   grain: 0,
   blackPreserve: true,
   vignette: 0,

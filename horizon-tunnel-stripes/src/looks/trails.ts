@@ -111,7 +111,7 @@ const buildTrails = () => {
         len,
         total: len[len.length - 1],
         color,
-        intensity: range(rng, 0.6, 1.15) * (color === "hot" ? 0.8 : 1),
+        intensity: range(rng, 1.0, 1.7) * (color === "hot" ? 0.8 : 1),
         width: range(rng, 0.035, 0.075),
         phase: rng(),
         k: Math.floor(range(rng, 14, 30)),
@@ -156,7 +156,7 @@ float lineMod(float u, vec4 p) {
   float body = smoothstep(0.15, 0.98, q) * (1.0 - smoothstep(0.985, 1.0, q));
   float head = exp(-pow((q - 0.975) / 0.012, 2.0)) * 1.6;
   // faint continuous filament so the bundle reads even between dashes
-  float fil = 0.1;
+  float fil = 0.4;
   // fade in from far away
   float far = smoothstep(0.0, 0.12, s);
   return (fil + body + head) * far;
