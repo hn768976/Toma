@@ -56,11 +56,11 @@ void main() {
   float rad0 = aProps.x * uPxScale * 0.55;
   float rad = max(rad0, 0.62);               // never thinner than ~1 px: no shimmer
   float b = aProps.y * fade * (rad0 * rad0) / (rad * rad);
-  if (!far) b *= clamp(160.0 / dist, 0.8, 2.6);
+  if (!far) b *= clamp(180.0 / dist, 1.0, 2.6);
   // a long streak spreads the same light along its length, but stays visible
   b *= mix(1.0, 0.8, smoothstep(2.0, 60.0, len / uPxScale));
-  rad *= 1.0 + 1.1 * smoothstep(2.0, 30.0, len / uPxScale);
-  if (far) b *= 1.0 - 0.4 * uWarp;
+  rad *= 1.0 + 0.6 * smoothstep(2.0, 30.0, len / uPxScale);
+  if (far) b *= 1.0 - 0.75 * uWarp;
 
   float ext = rad * 3.2;
   float along = position.x < 0.0 ? -ext : len + ext;
@@ -69,7 +69,7 @@ void main() {
   vLen = len;
   vRad = rad;
   vBright = b;
-  vColor = mix(aColor, vec3(1.0, 0.86, 0.64), 0.85 * smoothstep(2.0, 20.0, len / uPxScale));
+  vColor = mix(aColor, vec3(1.0, 0.94, 0.82), 0.6 * smoothstep(2.0, 20.0, len / uPxScale));
   gl_Position = vec4(px / uRes * 2.0 - 1.0, 0.0, 1.0);
 }
 `;
@@ -125,7 +125,7 @@ vec3 body(int i, vec2 fc) {
   float flux = max((rPx * rPx) / (R * R), 0.12);
   vec2 dv = fc - b.xy;
   float d = length(dv) / R;
-  float aa = max(1.0 / R, 0.08);
+  float aa = max(1.0 / R, 0.11);
   float disc = 1.0 - smoothstep(1.0 - aa * 1.5, 1.0 + aa, d);
   float mu = sqrt(max(0.0, 1.0 - d * d));
   float limb = mix(1.0, 0.6 + 0.4 * mu, smoothstep(3.0, 12.0, rPx));
@@ -166,7 +166,7 @@ vec3 skyDust(vec3 dir, float pxAngle) {
     vec3 sd = normalize(sp) * K;
     float dd = length(g - sd);
     float m = hash3(h + 51u);
-    float b = 0.07 + 0.65 * m * m * m;
+    float b = 0.045 + 0.5 * m * m * m;
     vec3 tint = m > 0.85 ? vec3(0.8, 0.88, 1.0) : (m < 0.08 ? vec3(1.0, 0.85, 0.7) : vec3(1.0));
     acc += tint * b * exp(-dd * dd / (sig * sig));
   }

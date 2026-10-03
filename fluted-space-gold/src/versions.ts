@@ -12,7 +12,7 @@ export const FLUTED_VERSIONS: { id: string; props: FlutedGlassProps }[] = [
     props: {
       // magenta, violet, coral, cream, teal, warm yellow, + a second cream for balance
       colors: ["#E0207A", "#8A3FC8", "#FF6A4A", "#FFF0D0", "#3FC8C8", "#FFD860", "#FFF0D0"],
-      weights: [1.6, 1.3, 0.55, 1.0, 1.1, 0.5, 0.8],
+      weights: [1.6, 1.0, 0.55, 1.3, 1.2, 0.5, 1.1],
       ribs: 90,
       background: "#E0207A",
     },

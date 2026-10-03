@@ -50,7 +50,7 @@ vec3 gradientAt(vec2 p, float ph, float aspect) {
     // Shepard-style weight: soft, painterly blends with no hard Voronoi edges
     // blobs 7..10 repeat colours 0, 1, 4, 0 (the dominant hues)
     int ci = i < 7 ? i : (i == 9 ? 4 : (i == 8 ? 1 : 0));
-    float wt = uWeights[ci] / pow(r2 + 0.03, 1.55);
+    float wt = uWeights[ci] / pow(r2 + 0.04, 1.5);
     acc += uCols[ci] * wt;
     wsum += wt;
   }
@@ -82,9 +82,9 @@ void main() {
   // rounded glass rib: soft sheen on one side, deeper colour on the other,
   // low contrast and soft edges (no engraved lines)
   float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  vec3 deep = clamp(mix(vec3(lum), col, 1.3), 0.0, 1.0) * 0.84;
+  vec3 deep = clamp(mix(vec3(lum), col, 1.4), 0.0, 1.0) * 0.8;
   float sheen = 0.5 + 0.5 * cos(3.14159 * smoothstep(0.05, 0.95, f));
-  col = mix(deep, mix(col, vec3(1.0, 0.97, 0.95), 0.35), sheen * uHighlight);
+  col = mix(deep, mix(col, vec3(1.0, 0.97, 0.95), 0.5), sheen * uHighlight);
   // soft seam: a gentle darkening over the last ~12% of the rib, blurred over 2 px
   float px = fwidth(s);
   float sh = smoothstep(0.82 - px, 1.0 + px, f);

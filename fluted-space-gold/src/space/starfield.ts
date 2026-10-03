@@ -8,8 +8,8 @@
 import * as THREE from "three";
 import { mulberry32 } from "../shared/random";
 
-export const NEAR_COUNT = 20000;
-export const FAR_COUNT = 20000;
+export const NEAR_COUNT = 26000;
+export const FAR_COUNT = 14000;
 export const HALF = 500; // near-field half size (world units); wrap period = 2*HALF
 export const BAND_NORMAL = new THREE.Vector3(0.32, 0.86, 0.4).normalize();
 
@@ -77,7 +77,7 @@ const generate = () => {
       const mag = Math.pow(rand(), 4.0);
       // a few standout bright stars
       const big = rand() < 0.012;
-      props.set([big ? 1.6 + rand() : 0.6 + 0.5 * rand(), big ? 2.4 : 0.3 + 1.6 * mag, rand(), 0], i * 4);
+      props.set([big ? 1.6 + rand() : 0.6 + 0.5 * rand(), big ? 1.7 : 0.3 + 1.6 * mag, rand(), 0], i * 4);
     }
     color.set(pickColor(), i * 3);
   }
