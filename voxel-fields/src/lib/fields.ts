@@ -71,9 +71,9 @@ const canyonBase = (x: number, z: number, c: number, s: number) => {
 // a low percentile of the in-frame base noise (fixed sample cells) sits just
 // under the void threshold, so a few holes are always open. A percentile of a
 // continuous field is continuous and periodic in t: motion and loop are kept.
-const BALANCE_PERCENTILE = 0.05;
+const BALANCE_PERCENTILE = 0.08;
 const BALANCE_MID = 0.02;
-const BALANCE_LO = -0.46;
+const BALANCE_LO = -0.56;
 const balanceCells: [number, number][] = [];
 type Balance = { lo: number; mid: number };
 const balanceCache = new Map<number, Balance>();

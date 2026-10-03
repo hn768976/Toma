@@ -120,9 +120,9 @@ const Columns: React.FC<{ palette: Palette }> = ({ palette }) => {
       aoDepth: palette.look === "canyon" ? 3.2 : 2.2,
       aoFloor: palette.look === "canyon" ? 0.5 : 0.78,
       voidStart: CANYON.voidTop + 4,
-      voidEnd: CANYON.voidTop - 16,
+      voidEnd: CANYON.voidTop - 3,
       rimStart: 3,
-      rimEnd: 14,
+      rimEnd: 11,
       rimAmount: palette.look === "canyon" ? 0.9 : 0,
     });
     return { geometry: g, material: m, info: infoAttr };
@@ -193,9 +193,9 @@ const FloatingCubes: React.FC<{ palette: Palette }> = ({ palette }) => {
         aoDepth: 3.2,
         aoFloor: 0.5,
         voidStart: CANYON.voidTop + 4,
-        voidEnd: CANYON.voidTop - 16,
+        voidEnd: CANYON.voidTop - 3,
         rimStart: 3,
-        rimEnd: 14,
+        rimEnd: 11,
         rimAmount: 0.9,
       }),
     }),

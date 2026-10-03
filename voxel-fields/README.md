@@ -60,8 +60,8 @@ npx remotion still VoxelCanyon-Green out/stills/VoxelCanyon_Green_f0180.png --fr
   - **Canyon motion (slow):**
     - The noise moves slowly around a small time circle (radius 0.1).
     - Each column's height is its target averaged over a centred 36-frame triangular window, wrapping around the loop. A column crossing a slab edge glides up or down over about a second instead of snapping.
-    - Measured speed of visible columns (`scripts/motion-stats.ts`): p99 about 0.17 cubes/frame and max about 0.24 above the canyon floor; typical columns hold still or drift at under 0.03.
-  - **Balance:** each frame, the in-frame noise is normalised so its median sits on the plateau and its 5th percentile sits past the void threshold. Holes stay open in every frame (5–9% of the frame) while canyons cover 20–32%. It's a continuous, periodic function of the frame.
+    - Measured speed of visible columns (`scripts/motion-stats.ts`): p99 about 0.18 cubes/frame and max about 0.3 above the canyon floor; typical columns hold still or drift at under 0.04.
+  - **Balance:** each frame, the in-frame noise is normalised so its median sits on the plateau and its 8th percentile sits well past the void threshold, so holes are wide enough to see into from this camera angle. About 10–15% of the in-frame columns are in the void at any time. It's a continuous, periodic function of the frame.
   - **Wave:** a travelling ridge profile (stepped rise, steep face, wide flat trough). It moves exactly 2 wavelengths per loop, and its height varies along each ridge with circle-in-time noise.
 - **Shading:**
   - Light: a soft key from the upper left, plus a cool hemisphere sky fill.
