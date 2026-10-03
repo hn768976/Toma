@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify loop for the 1080p previews. Run after scripts/render-previews.sh.
+"""Verify loop for the 1080p previews. Run after scripts/render-previews.py.
 
   python3 scripts/verify.py [step ...]     steps: probe loop determinism banding frames heights
 
@@ -36,7 +36,7 @@ def mp4(c):
 
 def seq_frame(c, f):
     d = f"out/frames/{c}"
-    names = sorted(os.listdir(d))
+    names = sorted(n for n in os.listdir(d) if n.endswith(".png"))
     return os.path.join(d, names[f])
 
 

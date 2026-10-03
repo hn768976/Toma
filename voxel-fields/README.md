@@ -32,7 +32,7 @@ npx remotion render VoxelWave-Mint    out/VoxelWave_Mint.mp4    --gl=angle --cod
 
 - **Timeout.** On a machine without a GPU, add `--timeout=900000`. Software WebGL is slow, and a frame can take longer than the default 30 s.
 - **Concurrency.** `--concurrency` speeds things up on a real GPU. With software GL it doesn't help, because SwiftShader already uses every core.
-- **1080p previews.** These used the same compositions with `--scale=0.5`. See `scripts/render-previews.sh`: it renders a PNG sequence, then encodes H.264, yuv420p, CRF 16, 30 fps, with no audio.
+- **1080p previews.** These used the same compositions with `--scale=0.5`. See `scripts/render-previews.py`: it renders a PNG sequence, then encodes H.264, yuv420p, CRF 16, 30 fps, with no audio.
 
 ## Stills (6000×3375 PNG)
 
@@ -119,7 +119,7 @@ Add one object to `PALETTES` in `src/lib/palettes.ts`. It becomes a new composit
 ## Verification
 
 ```bash
-scripts/render-previews.sh        # 1080p previews + PNG sequences, logs timing
+scripts/render-previews.py        # 1080p previews + PNG sequences, logs timing
 python3 scripts/verify.py         # probe, loop, determinism, banding, frames, heights
 ```
 
