@@ -18,8 +18,10 @@ type Slat = { mesh: THREE.Mesh; i: number; row: 0 | 1; base: number; phase: numb
 const factory: SceneFactory<{ colors: GlassColors }> = ({ gl, assets, props }) => {
   const { colors } = props;
   const rand = mulberry32(0x91a55);
-  gl.shadowMap.enabled = true;
-  gl.shadowMap.type = THREE.PCFSoftShadowMap;
+  // No shadow maps: three.js's shadow pass carried state between frames here
+  // (frame N depended on the frames rendered before it in the same tab), which
+  // breaks frame-exact determinism. Soft shading comes from the HDRI instead.
+  gl.shadowMap.enabled = false;
 
   const scene = new THREE.Scene();
   const bg = new THREE.Color(colors.background).multiplyScalar(1.6);
@@ -33,7 +35,6 @@ const factory: SceneFactory<{ colors: GlassColors }> = ({ gl, assets, props }) =
 
   const key = new THREE.DirectionalLight(0xffffff, 2.3);
   key.position.set(-3, 10, 7);
-  key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.left = -14;
   key.shadow.camera.right = 14;
