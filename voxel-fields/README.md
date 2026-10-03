@@ -109,7 +109,7 @@ Measured on the build machine: 4 vCPU, no GPU. WebGL ran as ANGLE on SwiftShader
 | | Canyon (×3) | Wave (×2) |
 |---|---|---|
 | 1080p (`--scale=0.5`, concurrency 2), full 600-frame render incl. start-up | **8.27–8.77 s/frame** (≈ 85 min per composition) | **3.11 s/frame** (≈ 31 min) |
-| 1080p steady state (6-frame minus 1-frame run) | **4K measured** (`--scale=1`, concurrency 2, 6-frame minus 1-frame run) | **35.9 s/frame** → ≈ 6.0 h per composition | **12.5 s/frame** → ≈ 2.1 h per composition |
+| **4K measured** (`--scale=1`, concurrency 2, 6-frame minus 1-frame run) | **35.9 s/frame** → ≈ 6.0 h per composition | **12.5 s/frame** → ≈ 2.1 h per composition |
 
 - **Grid:** 88×88 bounding grid (7,744 columns), of which 3,815 are drawn (the visible footprint plus a 4-cell margin). One `InstancedMesh` holds all of them.
 - **Biggest costs:** PCSS soft shadows (10 samples) on software GL. For the canyon, also the slow-motion smoothing: each column's height is averaged over 10 time samples, about 380k noise evaluations per frame on the CPU. That part doesn't grow with resolution.
