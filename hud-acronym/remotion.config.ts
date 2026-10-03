@@ -16,6 +16,10 @@ Config.setCrf(16);
 Config.setPixelFormat("yuv420p");
 Config.setOverwriteOutput(true);
 
+// Software WebGL (no GPU) can take a while to build the scene on first load;
+// the 30 s default occasionally times out when the CPU is busy.
+Config.setDelayRenderTimeoutInMilliseconds(120000);
+
 // Sandboxed environments that can't download Remotion's Chrome Headless Shell
 // but ship a Playwright one: reuse it. On a normal machine this path doesn't
 // exist and Remotion uses its own managed browser.
