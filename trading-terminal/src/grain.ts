@@ -8,6 +8,7 @@ import { mulberry32 } from "./rng";
 export const GRAIN_TILES = 8;
 export const GRAIN_TILE = 128;
 export const GRAIN_AMP = 0.015 * 255;
+export const GRAIN_CELL = 2;
 
 const r = mulberry32(0x6a7f31);
 const tiles: Float32Array[] = Array.from({ length: GRAIN_TILES }, () => {
@@ -47,8 +48,11 @@ export const drawGrain = (canvas: HTMLCanvasElement, frame: number, sign: 1 | -1
   const pattern = ctx.createPattern(tileCanvas(frame % GRAIN_TILES, sign), "repeat")!;
   const ox = (frame * 37) % GRAIN_TILE;
   const oy = (frame * 71) % GRAIN_TILE;
-  ctx.setTransform(1, 0, 0, 1, -ox, -oy);
+  // 2x2-pixel grain cells: single-pixel noise this faint is dropped by
+  // x264 in dark areas, 2-pixel cells survive the encode.
+  ctx.imageSmoothingEnabled = false;
+  ctx.setTransform(GRAIN_CELL, 0, 0, GRAIN_CELL, -ox * GRAIN_CELL, -oy * GRAIN_CELL);
   ctx.fillStyle = pattern;
-  ctx.fillRect(0, 0, canvas.width + GRAIN_TILE, canvas.height + GRAIN_TILE);
+  ctx.fillRect(0, 0, canvas.width / GRAIN_CELL + GRAIN_TILE, canvas.height / GRAIN_CELL + GRAIN_TILE);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 };
