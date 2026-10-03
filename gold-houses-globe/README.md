@@ -78,7 +78,12 @@ frame height, so 720p, 4K and 6K frames look the same.)
 ```bash
 scripts/render-all.sh                 # all seven
 scripts/render-all.sh CloudUpload     # just one
+scripts/verify.sh                     # file, loop and determinism checks
 ```
+
+Set `BROWSER_EXECUTABLE=/path/to/chrome` if Remotion should not use its own
+headless shell. `verify.sh` / `banding.py` / `compare.py` need Python 3 with
+`numpy` and `pillow`.
 
 Each preview is rendered with `--scale=0.3333333333333333` to a lossless PNG
 sequence (exactly 1280×720 — the canvas size is rounded so 1/3 never truncates
@@ -87,7 +92,26 @@ audio. The script also saves a 720p PNG still per composition.
 
 ## Render time
 
-MEASURED_TIMES
+Measured on the build machine: 4 CPU cores, **no GPU** (WebGL through
+ANGLE → SwiftShader, i.e. software rendering), `--concurrency=2`.
+Per-frame times exclude startup (bundling, browser launch, asset load and the
+~10 s per-tab GPU pipeline warm-up), which was measured separately and
+subtracted (`scripts/measure-timing.sh`, 60 frames at 720p, 10 frames at 4K).
+
+| Look | 720p s/frame | Full 720p preview (wall clock) | 4K s/frame measured (software GL) | 4K estimate, 600 frames, this machine |
+|------|-------------:|------------------------------:|----------------------------------:|------------------------------------:|
+| Low-Poly Luxe (per version) | 0.57 | 334 s (Gold), 319 s (Silver) | 7.7 | ≈ 77 min |
+| Cloud Upload | 0.48 | 299 s | 7.0 | ≈ 70 min |
+| Price Houses (per version) | 0.72 | 421 s ($), 419 s (€) | 7.7 | ≈ 77 min |
+| Network Growth (450 frames) | 0.50 | 214 s | 6.6 | ≈ 50 min |
+| Connected Globe | 1.01 | 555 s | 7.1 | ≈ 71 min |
+
+**4K estimate:** with software GL, all seven 4K renders take about **8.5 hours**
+on a 4-core machine (render time is fill-bound, so 4K costs ~9× the pixels but
+the fixed per-frame CPU work does not scale, giving 7–15× the 720p time). On a
+machine with a real GPU (ANGLE uses it automatically) expect roughly an order
+of magnitude less, around 0.3–1 s per 4K frame, i.e. 3–10 minutes per
+composition — an estimate, not measured here.
 
 ## Determinism
 
@@ -150,7 +174,23 @@ python3 scripts/banding.py /tmp/ph.png "col:640:0:330" "row:120:0:1280"
 (banding = long flat runs) and the largest step in a strip-averaged profile
 (banding = steps of a full code value or more).
 
-BANDING_RESULTS
+Results on frames extracted from the encoded 720p mp4s (`out/previews/*.mp4`,
+frame at 8 s). "Flat run" = longest run of identical 8-bit values along the
+line; "avg step" = largest step of the strip-averaged profile *inside* the
+gradient (steps where a probe line crosses an object edge are excluded).
+
+| Look | Probe | Range (luma) | Longest flat run | Avg step in gradient | Result |
+|------|-------|-------------:|-----------------:|---------------------:|--------|
+| 1A Low-Poly Gold | glossy facet sheen, row 450 | 10–96 | 4 px | < 1 | smooth |
+| 2 Cloud Upload | sky gradient, col 1000 | 5–116 | 15 px (darkest band, grain present, row σ ≈ 3) | 0.27 | smooth |
+| 2 Cloud Upload | cloud halo, row 180 | 16–25 | 6 px | 0.26 | smooth |
+| 3A Price Houses | sepia haze into black, col 250 | 0–15 | 10 px | < 1 | smooth |
+| 3A Price Houses | floor reflection falloff, col 1000 | 82–167 | 5 px | 1.45 (over a 85-value ramp) | smooth |
+| 4 Network Growth | glow fall-off around core, row 330 | 31–95 | 8 px | < 1 | smooth |
+| 5 Connected Globe | atmosphere halo, row 300 | 19–156 | 12 px | < 1 | smooth |
+| 5 Connected Globe | near-black ocean, col 640 | 5–9 | 11 px | 0.17 | smooth |
+
+No stepping was found in any dark gradient or glow.
 
 ## How to add a version (one data row)
 
@@ -195,6 +235,9 @@ scripts/
   build-globe-data.mjs  regenerates public/data/globe.json (npm run prepare-data)
   render-preview.sh     720p preview of one composition
   render-all.sh         all seven previews
+  verify.sh             steps 1-3 + contact sheets for the rendered previews
+  measure-timing.sh     per-frame render time at 720p and 4K
+  package.sh            builds the project zip
   compare.py            pixel/byte comparison of two PNGs
   banding.py            banding probe on a decoded frame
 licenses/               Inter OFL, HDRI CC0, Natural Earth terms
@@ -202,4 +245,19 @@ licenses/               Inter OFL, HDRI CC0, Natural Earth terms
 
 ## Completion checklist
 
-CHECKLIST
+- [x] 7 compositions in one Remotion project, 3840×2160, 30 fps; 600 frames (looks 1, 2, 3, 5) / 450 frames (look 4)
+- [x] three.js via `@remotion/three`, WebGL2 through ANGLE (`--gl=angle`), no WebGPU, no PixiJS
+- [x] One data row per version (`src/versions.ts`): Gold/Silver, Cyan, Dollar/Euro, Blue, Blue & Amber
+- [x] Built entirely in code; no MCP servers; no logos/brands/text except `$` / `€`
+- [x] Poly Haven CC0 HDRI, Natural Earth (public domain) data and Inter Bold (OFL) shipped with licences
+- [x] ACES tonemapping, sRGB output, ±1/255 dither after tonemapping, ~2 % grain from a fixed pixel/frame hash
+- [x] No `Math.random()`, no `useFrame` clock, no `Date.now()`, no state carried between frames, no TAA/temporal AO/accumulative shadows
+- [x] Glass is faked (Fresnel, emission, reflections); no transmission
+- [x] Step 1: all seven previews 1280×720, h264, yuv420p, 30/1, no audio, 20.0 s / 15.0 s
+- [x] Step 2: frame 600 == frame 0 byte for byte for all six looping compositions
+- [x] Step 3: cold frame 200 == frame 200 of the full render, byte for byte, all seven
+- [x] Step 4: banding probes on frames from the encoded mp4s (table above)
+- [x] Step 5: five evenly spaced frames per composition checked
+- [x] Steps 6–7: side-by-side checks and independent sub-agent comparisons (3 rounds per look)
+- [x] 720p mp4 + 720p PNG still for each composition
+- [x] README: 4K commands, still command, GL flag, timings, banding check, how to add a version
