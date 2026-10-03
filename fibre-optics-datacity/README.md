@@ -118,11 +118,16 @@ The canvases render natively at the scaled size; it is not an upscale. These
   a skewed lattice (`src/city/data.ts`). Over the 600 frames the camera travels
   exactly one lattice vector: 26 cells forward and 10 cells sideways. Frame 600
   therefore sees exactly the same city as frame 0.
-- **Geometry.** The scene uses four instanced meshes:
+- **Geometry.** The scene uses a dark floor (so the trenches read as deep,
+  near-black gaps) and four instanced meshes:
   - blocks, with panel seams and side ribs drawn in the shader;
   - emissive glow tiles, some of them blinking;
-  - camera-facing vertical light lines, some with pulses;
+  - camera-facing vertical light lines, brightest at the base, some with
+    pulses;
   - pinpoint sparkles.
+
+  The camera is about 27° above the board, yawed 30° to the grid with a slight
+  roll, so blocks run diagonally across frame.
 - **Render chain.** Rendering is manual (`useFrame` with priority 1, reading
   only the Remotion frame):
   - a sky pass, then the scene into a 4×MSAA half-float target, with HDR colour
@@ -133,8 +138,9 @@ The canvases render natively at the scaled size; it is not an upscale. These
 
 ### 3. Growing Fibre Strands (three.js)
 
-- **Strands.** There are 240 root strands in six tree-like bundles, plus
-  branches that split near the top (about 310 strands in total).
+- **Strands.** There are 284 root strands in ten overlapping, outward-splaying
+  clumps across the full width. Another 104 branches split off near the top,
+  for 388 in total.
 - **Per-frame shape.** Every frame, each strand's visible polyline is evaluated
   in closed form (`src/strands/data.ts`):
   - growth = an eased function of `(frame − start) / duration`, seeded per strand;
@@ -153,7 +159,7 @@ The canvases render natively at the scaled size; it is not an upscale. These
   |---------|---------------------------------------------------------------------|
   | 0–30    | Black                                                               |
   | 20–300  | Strands grow in from below frame, bundle by bundle                  |
-  | 300–450 | Fully grown, swaying, heads twinkling; the top ~45% of frame stays empty |
+  | 300–450 | Fully grown, swaying, heads twinkling; the top quarter of frame stays exactly black |
 
 ## Determinism
 
@@ -182,12 +188,119 @@ For example, a red fibre-optic version needs a row such as
 
 ## Measured render times and 4K estimate
 
-RENDER_TIMES_PLACEHOLDER
+Measured in this sandbox: 4 vCPU, **no GPU** (ANGLE → SwiftShader software
+WebGL2), one render worker (`--concurrency=1`). Per-frame time is
+`(time for N frames − time for 1 frame) / (N − 1)`, which removes browser
+start-up and bundling.
+
+| Composition                   | 720p (measured)  | 4K (measured)            |
+|-------------------------------|------------------|--------------------------|
+| Fibre Optic (PixiJS)          | **0.86 s/frame** | **4.1 s/frame**          |
+| Data Block City (three.js)    | **3.5 s/frame**  | 12.6 s/frame (extra measurement) |
+| Growing Fibres (three.js)     | **0.52 s/frame** | 3.7 s/frame (extra measurement)  |
+
+Wall-clock times for the full 720p previews, with three workers on the same
+4 cores (shared with other jobs at times): Fibre Blue 7.6 min, Fibre
+Multicolour 8.9 min, City 34.7 min, Growing Fibres 3.0–4.5 min each.
+
+**4K estimate, all five compositions:**
+
+| Composition            | Calculation               | Time     |
+|------------------------|---------------------------|----------|
+| Fibre Optic, ×2        | 4.1 s × 600 × 2           | ≈ 82 min |
+| Data Block City        | 12.6 s × 600              | ≈ 126 min |
+| Growing Fibres, ×2     | 3.7 s × 450 × 2           | ≈ 55 min |
+| **Total, one worker**  |                           | **≈ 4.4 h** |
+
+- **This machine type:** expect roughly **3–3.5 h** with `--concurrency=3`.
+  SwiftShader already uses several threads, so extra workers scale poorly.
+- **Machine with a real GPU:** the scenes are fill-rate bound and run on the
+  GPU there, so expect roughly **10–20× faster**: well under an hour for all
+  five at 4K. This part is an estimate, not a measurement.
 
 ## Banding check
 
-BANDING_PLACEHOLDER
+Grain and dither are a fixed integer hash (PCG) of pixel position and frame
+(`src/lib/glsl.ts`); `Math.random()` is never used.
+
+- **Dither:** ±1/255 TPDF, applied after tone mapping in every look. In
+  Look 3 it is applied only where there is signal; black stays exactly 0.
+- **Grain:** about 2% in Looks 1 and 2, none in Look 3.
+
+**Checked on decoded frames of the encoded mp4s, not on the PNG renders:**
+
+- **Fibre Optic 1A / 1B** (navy background and bokeh glow, frame 200) and
+  **City** (distant haze band, frame 150): rows of pixel values across the
+  glows and gradients were read and contrast-stretched (×8–10).
+- **Result:** smooth, with grain texture and no contour steps. The longest
+  plateaus in the haze are 4–9 px.
+
+**An encoder problem found and fixed along the way:**
+
+- **Symptom:** at default x264 settings (CRF 16), the deep-navy gradient in
+  Look 1 came out with 1-level contour bands. The PNGs were smooth; the bands
+  appeared only after encoding.
+- **Cause:** in saturated dark blues most of the gradient lives in the 4:2:0
+  chroma planes. x264's coarse chroma quantiser and deadzones threw away the
+  small chroma variation.
+- **Fixes, both in this project:**
+  1. Grain has a per-channel part generated on 2×2 blocks, so it survives
+     chroma subsampling.
+  2. `remotion.config.ts` passes
+     `-x264-params deadzone-inter=0:deadzone-intra=0:no-dct-decimate=1:chroma-qp-offset=-6:aq-mode=3`
+     to every H.264 encode. CRF is still 16.
+- **Side effect:** the files are about twice the size.
+- **ProRes/4444 masters** are not affected by this problem.
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+**Step 1: file checks (ffprobe).** All five previews pass: 1280×720, 30/1,
+h264, yuv420p, no audio stream. Durations: 20.0 s (Looks 1–2), 15.0 s
+(Look 3).
+
+**Step 2: loop check (601-frame version, frames 0 vs 600).** Passes.
+
+| Composition  | As delivered        | Phase reduction off (`noWrap`)                    |
+|--------------|---------------------|---------------------------------------------------|
+| 1A, 1B       | Identical           | Also identical                                    |
+| City         | Identical           | 52 isolated pixels differ by >2 levels (float sub-pixel jitter); no missing geometry |
+
+So the camera's travel really is one lattice period.
+
+**Step 3: black check (decoded mp4).** Passes for 3A and 3B.
+- Frames 0–28 are exactly 0,0,0; the first light is at frame 29.
+- The top 25% of frame is 0,0,0 in all 450 frames.
+- No lift from encoding.
+
+**Step 4: same result every time.** Passes for all five. Frame 200 rendered
+alone from a cold start is byte-identical to frame 200 from a multi-threaded,
+out-of-order sequence render (24–60 frames around it).
+
+**Step 4: banding.** Passes for 1A, 1B and City; see above.
+
+**Step 5: content.** Passes; five evenly spaced frames per preview were
+reviewed.
+- **Fibre Optic:** a fan of fibres with mostly soft bokeh tips and sharp tips
+  along the top edge; sway, twinkle and focus breathing. 1B shows multicoloured,
+  hue-drifting tips.
+- **City:** a diagonal grid of blocks with square glow tiles, beams and
+  sparkle dust; a gliding camera; blur and haze in the distance.
+- **Growing Fibres:** strands grow up from the bottom with glowing heads, then
+  sway and twinkle. 3B is green-gold.
+
+**Steps 6–7: visual match.** Three rounds per look, each with fresh comparison
+agents; Look 3 was compared at mid-growth and fully grown. The final round used
+frames from the encoded previews.
+
+**Delivery checks.**
+- **Pinned versions:** `package.json` pins exact versions, and
+  `package-lock.json` is included.
+- **Clean copy:** `npm install && npx remotion studio` was run from a copy
+  without `node_modules`. The Studio builds and serves, and all five
+  compositions are listed at 3840×2160, 30 fps.
+
+**Spec items not followed:** none. Two reference features were deliberately
+**not** copied because the spec overrides them, for Growing Fibres:
+1. The reference's navy background: the spec requires pure black.
+2. Strands reaching the top of frame: the spec says the lower two-thirds, with
+   the top area black.
