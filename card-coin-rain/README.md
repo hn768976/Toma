@@ -1,15 +1,16 @@
 # Card & Coin Rain — Remotion + three.js
 
-Two seamless 20 s loops (600 frames @ 30 fps, 16:9) of a metallic bank card
+Three seamless 20 s loops (two looks; Gold Rush in two versions) (600 frames @ 30 fps, 16:9) of a metallic bank card
 floating in a soft studio while coins (and, in look 1, gold bars) fall and
 tumble around it, with strong depth of field.
 
 | Composition id | Look | Output name |
 |---|---|---|
-| `CardRain-Gold` | Gold Rush — crinkled gold-foil card, gold coins + bars, warm beige set | `CardRain_Gold.mp4` |
+| `CardRain-Gold` | Gold Rush, version 1 — crinkled gold-foil card, gold coins + bars, warm beige set | `CardRain_Gold.mp4` |
+| `CardRain-GoldPlain` | Gold Rush, version 2 — identical scene (same seed, coins, bars, camera, timing), but a plain polished gold card | `CardRain_GoldPlain.mp4` |
 | `CardRain-RoseGold` | Rose Card — satin rose-gold card with print, rose-gold / copper / silver coins, dusty pink set | `CardRain_RoseGold.mp4` |
 
-Both compositions are defined at **3840×2160**. They share all scene code;
+All compositions are defined at **3840×2160**. They share all scene code;
 everything that differs between the looks is in `src/lib/looks.ts`.
 
 **3D**: `@remotion/three` (react-three-fiber), WebGL2, `MeshPhysicalMaterial`
@@ -40,7 +41,8 @@ were measured on).
 ### 4K masters (3840×2160)
 
 ```bash
-npx remotion render CardRain-Gold     out/CardRain_Gold_4K.mp4     --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
+npx remotion render CardRain-Gold      out/CardRain_Gold_4K.mp4      --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
+npx remotion render CardRain-GoldPlain out/CardRain_GoldPlain_4K.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
 npx remotion render CardRain-RoseGold out/CardRain_RoseGold_4K.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
 ```
 
@@ -50,7 +52,8 @@ on SwiftShader one tab already uses every core, so `1` was fastest.
 ### 1080p previews (what was delivered)
 
 ```bash
-npx remotion render CardRain-Gold     out/CardRain_Gold.mp4     --scale=0.5 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
+npx remotion render CardRain-Gold      out/CardRain_Gold.mp4      --scale=0.5 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
+npx remotion render CardRain-GoldPlain out/CardRain_GoldPlain.mp4 --scale=0.5 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
 npx remotion render CardRain-RoseGold out/CardRain_RoseGold.mp4 --scale=0.5 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png --concurrency=1
 ```
 
@@ -61,10 +64,12 @@ picked by `scripts/analyze.ts` (card square-on, no near-lens object over it,
 frames ≥ 200 apart):
 
 ```bash
-npx remotion still CardRain-Gold     out/CardRain_Gold_still_f304.png     --frame=304 --scale=1.5625 --gl=angle --image-format=png
-npx remotion still CardRain-Gold     out/CardRain_Gold_still_f538.png     --frame=538 --scale=1.5625 --gl=angle --image-format=png
-npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_f058.png --frame=58 --scale=1.5625 --gl=angle --image-format=png
-npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_f337.png --frame=337 --scale=1.5625 --gl=angle --image-format=png
+npx remotion still CardRain-Gold     out/CardRain_Gold_still_f304.png     --frame=304 --scale=1.5625 --gl=angle --image-format=png --timeout=900000
+npx remotion still CardRain-Gold     out/CardRain_Gold_still_f538.png     --frame=538 --scale=1.5625 --gl=angle --image-format=png --timeout=900000
+npx remotion still CardRain-GoldPlain out/CardRain_GoldPlain_still_f304.png --frame=304 --scale=1.5625 --gl=angle --image-format=png --timeout=900000
+npx remotion still CardRain-GoldPlain out/CardRain_GoldPlain_still_f538.png --frame=538 --scale=1.5625 --gl=angle --image-format=png --timeout=900000
+npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_f058.png --frame=58 --scale=1.5625 --gl=angle --image-format=png --timeout=900000
+npx remotion still CardRain-RoseGold out/CardRain_RoseGold_still_f337.png --frame=337 --scale=1.5625 --gl=angle --image-format=png --timeout=900000
 ```
 
 All size-dependent effects (bokeh radius, CoC blur) scale with the drawing
@@ -85,7 +90,9 @@ one SwiftShader tab already uses every core).
 (frames 300–319) minus a 2-frame run (startup) gives **≈ 13.6 s per frame**,
 so a full 600-frame 4K master takes **≈ 2 h 15 min per composition** on this
 CPU-only machine (≈ 3.3× the 1080p time for 4× the pixels: part of each frame
-is fixed cost). A 6000×3375 still takes ≈ 2 min including startup.
+is fixed cost). A 6000×3375 still takes ≈ 2 min including startup, which is
+Remotion's default per-frame timeout, hence `--timeout=900000` on the still
+commands.
 
 With any real GPU expect a small fraction of that; the scene is ~60 draw
 calls plus six full-screen post passes.
@@ -177,20 +184,20 @@ All scripts are in `scripts/` and run with `npx tsx`.
 
 | Step | How | Result |
 |---|---|---|
-| 1. File checks | `ffprobe -v error -show_entries stream=codec_type,width,height,r_frame_rate,pix_fmt -show_entries format=duration -of default=noprint_wrappers=1 out/CardRain_Gold.mp4` | 1920×1080, 30/1, 20.000 s, h264, yuv420p, 600 frames, video stream only — both |
-| 2. Loop check | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=0,600 --props='{"loopCheck":true}'` (601-frame comp), then `cmp` the PNGs | byte-identical — both |
-| 3. Determinism | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=300 --cold --scale=0.5` vs frame 300 of `npx remotion render ... --sequence --frames=240-300 --image-format=png --scale=0.5` (same page, 60 frames of history) | byte-identical (same pixel MD5) — both |
+| 1. File checks | `ffprobe -v error -show_entries stream=codec_type,width,height,r_frame_rate,pix_fmt -show_entries format=duration -of default=noprint_wrappers=1 out/CardRain_Gold.mp4` | 1920×1080, 30/1, 20.000 s, h264, yuv420p, 600 frames, video stream only — all three |
+| 2. Loop check | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=0,600 --props='{"loopCheck":true}'` (601-frame comp), then `cmp` the PNGs | byte-identical — all three |
+| 3. Determinism | `npx tsx scripts/stills.ts --comp=CardRain-Gold --frames=300 --cold --scale=0.5` vs frame 300 of `npx remotion render ... --sequence --frames=240-300 --image-format=png --scale=0.5` (same page, 60 frames of history) | byte-identical (same pixel MD5) — all three |
 | 4. No popping | `npx tsx scripts/analyze.ts` checks every wrap of every object with the exact drifting camera; plus 1-in-10 frame contact sheets | 0 pops; worst off-screen margin 120 px (gold) / 115 px (rose) |
-| 5. Banding | `npx tsx scripts/banding.ts out/CardRain_RoseGold.mp4 150` reads backdrop pixels from the **encoded** mp4 | smooth: 7–10 code values per 64-px window, no plateaus — both |
+| 5. Banding | `npx tsx scripts/banding.ts out/CardRain_RoseGold.mp4 150` reads backdrop pixels from the **encoded** mp4 | smooth: 7–10 code values per 64-px window, no plateaus — all three |
 | 6. Look checks | five evenly spaced frames per look | pass — see report |
-| extra: clipping | `npx tsx scripts/clipping.ts out/CardRain_Gold.mp4 5` | 0.000 % flat-white pixels — both |
+| extra: clipping | `npx tsx scripts/clipping.ts out/CardRain_Gold.mp4 5` | 0.000 % flat-white pixels — all three |
 
 `--props='{"disable":{"coins":true}}'` (also `bars`, `card`, `camera`,
 `grain`, `dof`) switches groups off for bisecting a loop or determinism issue.
 
 ## Completion checklist
 
-- [x] Two compositions, 3840×2160, 30 fps, 600 frames, shared scene code
+- [x] Three compositions (Gold foil, Gold plain, Rose), 3840×2160, 30 fps, 600 frames, shared scene code
 - [x] 3D: `@remotion/three` / R3F, WebGL2, `--gl=angle`
 - [x] Lens 58 mm, card ≈ 37.5 % of frame width, camera slightly below looking up
 - [x] Camera drift: closed path, a few degrees, whole-number frequencies
@@ -205,11 +212,12 @@ All scripts are in `scripts/` and run with `npx tsx`.
 - [x] No motion blur, no TAA / temporal AO / accumulative shadows
 - [x] Seeded `mulberry32` at module level; no `Math.random()`, no clock, no state
 - [x] Dither ±1/255 after tonemapping + ~2 % grain from (pixel, `frame % 600`)
-- [x] Loop: frame 600 == frame 0, byte for byte (both looks)
-- [x] Determinism: cold frame 300 == in-sequence frame 300, byte for byte (both looks)
+- [x] Loop: frame 600 == frame 0, byte for byte (all three)
+- [x] Determinism: cold frame 300 == in-sequence frame 300, byte for byte (all three)
 - [x] No popping: every wrap of every object checked off-screen (≥ 115 px margin at 1080p incl. blur) + 1-in-10 contact sheets
 - [x] Banding: encoded-mp4 backdrop reads smooth (no 1–2 value plateaus)
 - [x] Gold: crinkled foil card, gold chip, no text, gold bars, warm beige set
+- [x] Gold plain: same scene, plain polished gold card with a slight bow (half-float normal map, no 8-bit stepping in the reflection)
 - [x] Rose: rose-gold satin card, chip, "Bank Card", `0123 4567 8910 1112` (crisp at 6000 px), rose-gold / copper / silver coins, dusty pink set
 - [x] No logos, card-network marks, currency, denominations, portraits, refinery stamps
 - [x] Inter (OFL) and the HDRI (CC0) shipped with licences
@@ -219,7 +227,7 @@ All scripts are in `scripts/` and run with `npx tsx`.
 
 ```
 remotion.config.ts        GL flag, PNG frames, H.264 / CRF 16 / yuv420p
-src/Root.tsx              the two compositions (3840×2160, 600 frames)
+src/Root.tsx              the three compositions (3840×2160, 600 frames)
 src/CardRain.tsx          asset loading (delayRender) + ThreeCanvas
 src/lib/loop.ts           camera, card and track formulas (pure functions of frame)
 src/lib/objects.ts        seeded object lists (mulberry32, module level)
