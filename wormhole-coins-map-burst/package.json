@@ -1,0 +1,27 @@
+{
+  "name": "wormhole-coins-map-burst",
+  "version": "1.0.0",
+  "description": "Hyperspace Wormhole, Coin Growth, Hologram Threat Map and Sparkle Burst motion graphics (Remotion, 30fps)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "dev": "remotion studio",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.532",
+    "@remotion/three": "4.0.532",
+    "pixi.js": "8.22.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  }
+}
