@@ -95,6 +95,7 @@ export type Indicators = {
   bbU: number[];
   bbL: number[];
   ema: number[];
+  ema2: number[];
   stK: number[];
   stD: number[];
   macd: number[];
@@ -107,17 +108,17 @@ export const indicators = (c: number[], h: number[], l: number[]): Indicators =>
   const m = sma(c, 20);
   const sd = stdev(c, m, 20);
   const raw = c.map((x, i) => {
-    if (i < 8) return 50;
+    if (i < 5) return 50;
     let hh = -Infinity;
     let ll = Infinity;
-    for (let j = i - 8; j <= i; j++) {
+    for (let j = i - 5; j <= i; j++) {
       hh = Math.max(hh, h[j]);
       ll = Math.min(ll, l[j]);
     }
     return hh === ll ? 50 : ((x - ll) / (hh - ll)) * 100;
   });
-  const stK = sma(raw, 3);
-  const stD = sma(stK.map((x) => (Number.isNaN(x) ? 50 : x)), 3);
+  const stK = sma(raw, 2);
+  const stD = sma(stK.map((x) => (Number.isNaN(x) ? 50 : x)), 2);
   const e26 = ema(c, 26);
   const macd = ema(c, 12).map((x, i) => x - e26[i]);
   const sig = ema(macd, 9);
@@ -127,6 +128,7 @@ export const indicators = (c: number[], h: number[], l: number[]): Indicators =>
     bbU: m.map((x, i) => x + 2 * sd[i]),
     bbL: m.map((x, i) => x - 2 * sd[i]),
     ema: ema(c, 50),
+    ema2: ema(c, 40),
     stK,
     stD,
     macd,

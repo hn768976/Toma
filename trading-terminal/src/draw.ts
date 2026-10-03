@@ -24,9 +24,9 @@ export const SCREEN_H = 1160;
 const C = {
   bg: "#0E1A2E",
   bgDark: "#0A1424",
-  bgRight: "#080E19",
-  rowHi: "#18233A",
-  grid: "rgba(130,160,210,0.1)",
+  bgRight: "#05080E",
+  rowHi: "#262E3D",
+  grid: "rgba(130,165,220,0.16)",
   div: "#1F2E4A",
   text: "#D5DDEA",
   dim: "#6E7E99",
@@ -43,8 +43,8 @@ const SANS = "Inter, sans-serif";
 const HEADER_H = 56;
 const LEFT_W = 1880; // left column incl. price axis
 const PLOT_R = 1700; // plot area right edge (axis to the right)
-const SP = 34; // candle spacing
-const BODY_W = 21;
+const SP = 27; // candle spacing
+const BODY_W = 17;
 const RIGHT_SLOT = PLOT_R - 80; // x of the newest closed candle once scrolled
 
 const MAIN = { y0: HEADER_H, y1: 560, ct: 86, cb: 432, vt: 440, vb: 556 };
@@ -121,7 +121,7 @@ const glowLine = (ctx: Ctx, pts: [number, number][], color: string, w: number, g
   ctx.lineCap = "round";
   if (glow > 0) {
     ctx.globalAlpha = 0.14 * glow;
-    ctx.lineWidth = w * 6;
+    ctx.lineWidth = w * 4.5;
     ctx.stroke();
     ctx.globalAlpha = 0.28 * glow;
     ctx.lineWidth = w * 2.6;
@@ -220,8 +220,8 @@ const drawTags = (ctx: Ctx, tags: Tag[], x: number, yMin: number, yMax: number, 
   });
 };
 
-const axisText = (ctx: Ctx, s: string, x: number, y: number, color = C.text, size = 26) => {
-  ctx.font = `500 ${size}px ${MONO}`;
+const axisText = (ctx: Ctx, s: string, x: number, y: number, color = "#EEF2F8", size = 27) => {
+  ctx.font = `600 ${size}px ${MONO}`;
   ctx.fillStyle = color;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
@@ -275,7 +275,7 @@ const drawSignal = (ctx: Ctx, l: SignalLabel, x: number, y: number) => {
   }
   if (l === "Sell") chevron(ctx, ix, y + 2, 11, false);
   if (l === "Neutral") ctx.fillRect(ix - 11, y - 2.5, 22, 5);
-  label(ctx, l, x + 54, y + 1, col, 46, 500);
+  label(ctx, l, x + 50, y + 1, col, 38, 600);
 };
 
 // ---------------------------------------------------------------------------
@@ -299,7 +299,7 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
   // Faint backlight falloff across the chart column.
   const bgGlow = ctx.createRadialGradient(PLOT_R * 0.6, MAIN.cb, 0, PLOT_R * 0.6, MAIN.cb, 1400);
-  bgGlow.addColorStop(0, "rgba(40,80,150,0.16)");
+  bgGlow.addColorStop(0, "rgba(45,90,170,0.24)");
   bgGlow.addColorStop(1, "rgba(40,80,150,0)");
   ctx.fillStyle = bgGlow;
   ctx.fillRect(0, 0, LEFT_W, SCREEN_H);
@@ -375,8 +375,8 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   for (const i of idx) {
     const hgt = (s.v[i] / vMax) * (MAIN.vb - MAIN.vt) * 0.95;
     ctx.fillStyle = s.c[i] >= s.o[i] ? up : dn;
-    ctx.globalAlpha = 0.78;
-    ctx.fillRect(xOf(i) - 13, MAIN.vb - hgt, 26, hgt);
+    ctx.globalAlpha = 0.92;
+    ctx.fillRect(xOf(i) - 11.5, MAIN.vb - hgt, 23, hgt);
   }
   ctx.globalAlpha = 1;
 
@@ -387,10 +387,10 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   bu.forEach(([x, y], j) => (j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
   for (let j = bl.length - 1; j >= 0; j--) ctx.lineTo(bl[j][0], bl[j][1]);
   ctx.closePath();
-  ctx.fillStyle = "rgba(79,156,255,0.16)";
+  ctx.fillStyle = "rgba(79,156,255,0.22)";
   ctx.fill();
-  glowLine(ctx, bu, C.blue, 4.6, 1.2);
-  glowLine(ctx, bl, C.blue, 4.6, 1.2);
+  glowLine(ctx, bu, C.blue, 5.6, 1.5);
+  glowLine(ctx, bl, C.blue, 5.6, 1.5);
 
   // candles
   for (const i of idx) {
@@ -404,7 +404,8 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   }
 
   glowLine(ctx, pts(ind.sma, yP), "#7DB6FF", 2.6, 0.6);
-  glowLine(ctx, pts(ind.ema, yP), C.orange, 4.6, 1.2);
+  glowLine(ctx, pts(ind.ema2, yP), "#FF5B4A", 4.2, 1.3);
+  glowLine(ctx, pts(ind.ema, yP), C.orange, 5.6, 1.5);
 
   // live price line
   const livePrice = s.c[s.live];
@@ -462,11 +463,11 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
 
   // --- oscillator --------------------------------------------------------
   const yO = (x: number) => OSC.pb - (x / 100) * (OSC.pb - OSC.pt);
-  ctx.fillStyle = "rgba(79,156,255,0.09)";
+  ctx.fillStyle = "rgba(79,156,255,0.2)";
   ctx.fillRect(0, yO(80), PLOT_R, yO(20) - yO(80));
   ctx.setLineDash([7, 9]);
-  ctx.strokeStyle = "rgba(220,230,245,0.5)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(230,238,250,0.75)";
+  ctx.lineWidth = 3;
   for (const lv of [80, 20]) {
     ctx.beginPath();
     ctx.moveTo(0, yO(lv));
@@ -479,10 +480,10 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   ctx.beginPath();
   ctx.rect(0, OSC.y0 + 2, PLOT_R, OSC.y1 - OSC.y0 - 4);
   ctx.clip();
-  glowLine(ctx, pts(ind.stK, yO), C.blue, 4.6, 1.2);
-  glowLine(ctx, pts(ind.stD, yO), C.orange, 4.6, 1.2);
+  glowLine(ctx, pts(ind.stK, yO), C.blue, 5.6, 1.5);
+  glowLine(ctx, pts(ind.stD, yO), C.orange, 5.6, 1.5);
   ctx.restore();
-  label(ctx, "Stoch 9 3 3", 22, OSC.y0 + 28, C.dim, 24);
+  label(ctx, "Stoch 6 2 2", 22, OSC.y0 + 28, C.dim, 24);
   drawTags(
     ctx,
     [
@@ -558,8 +559,8 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   ctx.beginPath();
   ctx.rect(0, MACD.y0 + 2, PLOT_R, MACD.y1 - MACD.y0 - 4);
   ctx.clip();
-  glowLine(ctx, pts(ind.macd, yM), C.blue, 4.6, 1.2);
-  glowLine(ctx, pts(ind.sig, yM), C.orange, 4.6, 1.2);
+  glowLine(ctx, pts(ind.macd, yM), C.blue, 5.6, 1.5);
+  glowLine(ctx, pts(ind.sig, yM), C.orange, 5.6, 1.5);
   ctx.restore();
   const mStep = niceStep(mHi - mLo + 1e-6, 2);
   for (let p = Math.ceil(mLo / mStep) * mStep; p <= mHi; p += mStep) axisLabel(fmt(p), yM(p));
@@ -598,10 +599,10 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   // --- signal panel -------------------------------------------------------
   const sigTop = SIG.y0 + 8;
   label(ctx, "Oscillators", RX + 40, sigTop + SIG.head / 2, C.dim, 26);
-  label(ctx, "Moving averages", RX + 40 + (SCREEN_W - RX) / 2, sigTop + SIG.head / 2, C.dim, 26);
+  label(ctx, "Moving averages", RX + 40 + 395, sigTop + SIG.head / 2, C.dim, 26);
   const rowsTop = sigTop + SIG.head;
   const rowH = (SIG.y1 - rowsTop) / 5;
-  const colW = (SCREEN_W - RX) / 2;
+  const colW = 395;
   ctx.fillStyle = C.rowHi;
   ctx.fillRect(RX, rowsTop, SCREEN_W - RX, rowH);
   for (let r = 0; r <= 5; r++) hline(ctx, RX, SCREEN_W, rowsTop + r * rowH, C.div, 2.5);
