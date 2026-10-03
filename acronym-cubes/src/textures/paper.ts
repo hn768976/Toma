@@ -13,19 +13,18 @@ import {
   PAPER_TEX_W,
   PAPER_W,
   PAPER_Z0,
-  VOLUME_BASE_Z,
 } from "../lib/world";
 
 const PX = PAPER_TEX_W / PAPER_W; // canvas pixels per world unit
 const px = (x: number) => (x + PAPER_W / 2) * PX;
 const py = (z: number) => (z - (PAPER_Z0 - PAPER_H / 2)) * PX;
 
-export const PAPER_RGB = [210, 224, 236] as const; // pale blue-grey
+export const PAPER_RGB = [196, 210, 216] as const; // pale blue-grey
 const RULE = "rgba(150, 166, 182, 0.55)";
 const DOT = "rgba(138, 154, 170, 0.5)";
 const DASH = "rgba(104, 116, 128, 0.9)";
-const LINE = "#33a07b";
-const BAR = "rgba(126, 136, 147, 0.8)";
+const LINE = "#1f9070"; // teal green, sampled off the reference
+const BAR = "rgba(104, 110, 116, 0.9)";
 export const RULE_SPACING = 0.98;
 
 const drawPaperBase = (ctx: CanvasRenderingContext2D) => {
@@ -155,7 +154,7 @@ const drawChart = (ctx: CanvasRenderingContext2D, row: AcronymRow) => {
   ctx.save();
   ctx.fillStyle = BAR;
   for (const b of volumeBars(row)) {
-    ctx.fillRect(px(b.x) - 4, py(VOLUME_BASE_Z - b.h), 8, b.h * PX + 400);
+    ctx.fillRect(px(b.x) - 5, py(b.zTop), 10, py(b.zBase) - py(b.zTop));
   }
   ctx.restore();
 
@@ -169,14 +168,14 @@ const drawChart = (ctx: CanvasRenderingContext2D, row: AcronymRow) => {
   ctx.save();
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.strokeStyle = "rgba(47,157,116,0.22)";
-  ctx.lineWidth = 22;
-  ctx.filter = "blur(4px)";
+  ctx.strokeStyle = "rgba(30,140,110,0.18)";
+  ctx.lineWidth = 26;
+  ctx.filter = "blur(2px)";
   path();
   ctx.stroke();
   ctx.filter = "none";
   ctx.strokeStyle = LINE;
-  ctx.lineWidth = 13;
+  ctx.lineWidth = 17;
   path();
   ctx.stroke();
   ctx.restore();

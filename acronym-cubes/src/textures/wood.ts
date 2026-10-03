@@ -24,42 +24,55 @@ const smoothstep = (a: number, b: number, x: number) => {
 
 export const woodSheet = (): HTMLCanvasElement => {
   if (sheet) return sheet;
-  const rng = seeded("wood-sheet", 7);
+  const rng = seeded("wood-sheet", 11);
   const nWarp = makeNoise2D(rng);
   const nRing = makeNoise2D(rng);
-  const nPore = makeNoise2D(rng);
+  const nStreak = makeNoise2D(rng);
   const nTone = makeNoise2D(rng);
   const c = document.createElement("canvas");
   c.width = SHEET_W;
   c.height = SHEET_H;
   const ctx = c.getContext("2d")!;
   const img = ctx.createImageData(SHEET_W, SHEET_H);
-  // sRGB colours: light early wood, slightly darker/warmer late wood.
-  const light = [246, 219, 170];
-  const dark = [214, 170, 110];
-  const pore = [178, 136, 88];
+  // Pale beech, sRGB. One cube face is ~700 px of this sheet (~20 mm), so a
+  // growth ring of ~1 mm is ~35 px.
+  const early = [252, 212, 132];
+  const late = [212, 150, 78];
   for (let y = 0; y < SHEET_H; y++) {
     for (let x = 0; x < SHEET_W; x++) {
-      // Long grain runs along x; growth rings are wavy bands across y.
-      const warp = 42 * fbm2(nWarp, x / 620, y / 260, 3) + 7 * nWarp(x / 90, y / 17);
-      const g = (y + warp) / 21;
-      const ring = g - Math.floor(g);
-      const width = 0.55 + 0.35 * nRing(x / 400, Math.floor(g) * 0.37);
-      const late =
-        smoothstep(1 - 0.3 * width, 1 - 0.08 * width, ring) * (1 - smoothstep(0.94, 1, ring));
-      const pores = Math.pow(nPore(x / 34, y / 1.6), 6) * 0.9;
-      const tone = fbm2(nTone, x / 700, y / 300, 3) - 0.5;
-      const k = Math.min(0.62 * late + 0.06 * tone + 0.5, 1) - 0.5;
+      // Flat-sawn board: the face is a plane cutting the log's growth rings
+      // at a slight tilt, which gives arching ("cathedral") figure along the
+      // grain (x) rather than parallel stripes.
+      const yy = y - 260 + 45 * fbm2(nWarp, x / 520, y / 480, 3);
+      const zz = 1350 + (x - SHEET_W / 2) * 0.17 + 30 * fbm2(nWarp, x / 900 + 7, y / 900, 2);
+      const r = Math.sqrt(yy * yy + zz * zz);
+      const rp = r / 34 + 0.6 * fbm2(nRing, x / 300, y / 300, 3);
+      const ring = rp - Math.floor(rp);
+      const lateWood = smoothstep(0.7, 0.88, ring) * (1 - smoothstep(0.9, 1.0, ring));
+      // Fine streaks along the grain and slow tonal drift.
+      const streak = Math.pow(nStreak(x / 160, y / 1.8), 4);
+      const tone = fbm2(nTone, x / 800, y / 400, 3) - 0.5;
+      const k = Math.min(Math.max(0.5 * lateWood + 0.3 * streak + 0.1 * tone, 0), 1);
       const i = (y * SHEET_W + x) * 4;
       for (let ch = 0; ch < 3; ch++) {
-        let v = light[ch] + (dark[ch] - light[ch]) * Math.max(k * 1.6, 0) + tone * 14;
-        v += (pore[ch] - v) * pores * 0.55;
-        img.data[i + ch] = v;
+        img.data[i + ch] = early[ch] + (late[ch] - early[ch]) * k + tone * 10;
       }
       img.data[i + 3] = 255;
     }
   }
   ctx.putImageData(img, 0, 0);
+  // Beech rays: tiny short flecks along the grain.
+  ctx.save();
+  for (let n = 0; n < 2600; n++) {
+    const x = rng() * SHEET_W;
+    const y = rng() * SHEET_H;
+    const len = 8 + rng() * 26;
+    ctx.fillStyle = rng() < 0.75 ? "rgba(176,128,84,0.16)" : "rgba(255,240,210,0.18)";
+    ctx.beginPath();
+    ctx.ellipse(x, y, len / 2, 0.9 + rng() * 1.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
   sheet = c;
   return c;
 };
@@ -104,7 +117,7 @@ const inkLayer = (char: string, tint: string) => {
   ictx.save();
   ictx.font = g.font;
   ictx.lineJoin = "round";
-  ictx.strokeStyle = "rgba(0,0,0,0.55)";
+  ictx.strokeStyle = "rgba(0,0,0,0.3)";
   ictx.lineWidth = FACE_PX * 0.016;
   ictx.filter = `blur(${FACE_PX * 0.0025}px)`;
   ictx.strokeText(char, g.x, g.y);
@@ -160,8 +173,8 @@ export const cubeFaces = (
     // shows through the ink.
     ctx.save();
     ctx.globalCompositeOperation = "multiply";
-    ctx.globalAlpha = 0.93;
-    ctx.drawImage(inkLayer(char, "rgb(30,25,21)"), 0, 0);
+    ctx.globalAlpha = 0.97;
+    ctx.drawImage(inkLayer(char, "rgb(17,15,14)"), 0, 0);
     ctx.restore();
     return c;
   });

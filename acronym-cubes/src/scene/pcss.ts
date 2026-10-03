@@ -9,7 +9,7 @@
 
 import * as THREE from "three";
 
-const pcss = (size: number, samples: number) => `
+const pcss = (size: number, samples: number, spread: number) => `
 #define PCSS_FILTER_SIZE float(${size})
 vec3 pcssRand(vec2 uv) {
   return vec3(
@@ -52,13 +52,15 @@ float PCSS(sampler2D shadowMap, vec4 coords) {
   float blocker = pcssFindBlocker(shadowMap, coords.xy, coords.z, angle);
   if (blocker == -1.0) return 1.0;
   float penumbra = (coords.z - blocker) / blocker;
-  return pcssFilter(shadowMap, coords.xy, coords.z, 1.25 * penumbra, angle);
+  // spread converts the (tiny, perspective-depth) blocker/receiver ratio
+  // into a penumbra matching a large, soft window light.
+  return pcssFilter(shadowMap, coords.xy, coords.z, min(1.25 * penumbra * float(${spread}), 1.5), angle);
 }
 `;
 
 let installed = false;
 
-export const installPCSS = (size = 18, samples = 16) => {
+export const installPCSS = (size = 18, samples = 16, spread = 1) => {
   if (installed) return;
   const original = THREE.ShaderChunk.shadowmap_pars_fragment;
   // Newer three uses a comparison sampler for PCF; PCSS needs raw depth,
@@ -75,7 +77,7 @@ export const installPCSS = (size = 18, samples = 16) => {
     : "return PCSS( shadowMap, shadowCoord );";
   THREE.ShaderChunk.shadowmap_pars_fragment = (
     original.slice(0, end) + "\n" + ret + original.slice(end)
-  ).replace("#ifdef USE_SHADOWMAP", "#ifdef USE_SHADOWMAP\n" + pcss(size, samples));
+  ).replace("#ifdef USE_SHADOWMAP", "#ifdef USE_SHADOWMAP\n" + pcss(size, samples, spread));
   installed = true;
 };
 

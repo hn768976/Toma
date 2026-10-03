@@ -49,23 +49,27 @@ import {
   keyLightAt,
 } from "../lib/world";
 import { PAPER_RGB } from "../textures/paper";
+import { KEY_ANGLE } from "../textures/lightPattern";
 import { CONTACT_SIZE } from "../textures/wood";
 import { loadSceneAssets, type SceneAssets } from "./assets";
 import { addShaderDither, GrainEffect } from "./grain";
 import { installPCSS, PCSS_SHADOW_TYPE } from "./pcss";
 
 // Patch the shadow shader before anything compiles (see pcss.ts).
-installPCSS(14, 16);
+installPCSS(40, 32, 12);
 
-// Lighting levels (physically based units, linear).
-// Irradiance budget on bare paper (relative): spot 0.8, gap between spots
-// ~0.53, cube shadow 0.3 (= fill + ambient), as measured off the reference.
-const KEY_COLOR = new Color(1.0, 0.64, 0.38);
-const KEY_INTENSITY = 5.3; // candela, decay 0 (no distance falloff)
-const KEY_ANGLE = 0.64; // cone half-angle (rad), covers the whole sheet
-const FILL_COLOR = new Color(1.0, 0.95, 0.88);
-const FILL_INTENSITY = 0.4 * KEY_INTENSITY; // 40% of the key
-const AMBIENT = 0.3;
+// Lighting levels (physically based units, linear), calibrated by sampling
+// the reference with ACES tone mapping: most of the sheet sits in cool
+// skylight (~(170,187,182) in the reference), sun-lit paper is warm
+// (~(220,212,206)), the cube shadow ~(130-150), sunlit wood ~(247,212,142).
+// The sun (key) arrives through the light pattern (see lightPattern.ts).
+// The warm fill lands at ~25% of the key's irradiance: the brief's 40% washed
+// the shadows out compared with the reference.
+const KEY_COLOR = new Color(1.0, 0.54, 0.27);
+const KEY_INTENSITY = 5.7; // candela, decay 0 (no distance falloff)
+const FILL_COLOR = new Color(1.0, 0.93, 0.84);
+const FILL_INTENSITY = 1.2;
+const AMBIENT = 0.86; // cool sky / neutral bounce
 const EXPOSURE = 1.0;
 
 const DOF_FOCUS_RANGE = 3.4;
@@ -104,7 +108,7 @@ const Scene: React.FC<Props> = ({ row, assets }) => {
           t.colorSpace = SRGBColorSpace;
           t.anisotropy = maxAniso;
           t.minFilter = LinearMipmapLinearFilter;
-          const m = new MeshStandardMaterial({ map: t, roughness: 0.6, metalness: 0 });
+          const m = new MeshStandardMaterial({ map: t, roughness: 0.55, metalness: 0 });
           addShaderDither(m, frameUniform);
           return m;
         }),
@@ -163,7 +167,7 @@ const Scene: React.FC<Props> = ({ row, assets }) => {
     return l;
   }, []);
   const ambient = useMemo(
-    () => new HemisphereLight(new Color(0.84, 0.92, 1.0), new Color(0.96, 0.93, 0.88), AMBIENT),
+    () => new HemisphereLight(new Color(0.66, 0.84, 1.0), new Color(0.9, 0.92, 0.92), AMBIENT),
     [],
   );
 

@@ -6,6 +6,7 @@
 // `seed`. `shape` picks the story the price line tells (see chartShapes.ts).
 
 export type ChartShape =
+  | "reference" // the reference clip's line: plateau, plunge, recovery to a high
   | "steadyRise" // steady rise with small wobbles
   | "listingPop" // flat, then a sharp jump upward
   | "clearRise" // clear rise
@@ -25,7 +26,7 @@ export type AcronymRow = {
 };
 
 export const ACRONYMS: AcronymRow[] = [
-  { id: "ETF", shape: "steadyRise", seed: 1101 },
+  { id: "ETF", shape: "reference", seed: 1101 },
   { id: "IPO", shape: "listingPop", seed: 2202 },
   { id: "ROI", shape: "clearRise", seed: 3303 },
   { id: "GDP", shape: "dipRecovery", seed: 4404 },
