@@ -17,7 +17,7 @@ type Blob = { bx: number; by: number; amp: number; r: number; w: number; nx: num
 // wanders around its home on a loop-safe noise path.
 const HOMES: [number, number, number, number][] = [
   // x, y, radius, weight (negative = dark)
-  [0.72, 0.5, 0.22, -0.75],
+  [0.65, 0.58, 0.19, -0.62],
   [0.4, 0.0, 0.3, 0.75],
   [1.15, -0.04, 0.28, 0.6],
   [0.05, 0.62, 0.3, 0.3],
@@ -36,7 +36,7 @@ const BLOBS: Blob[] = HOMES.map(([bx, by, r, w]) => ({
 }));
 
 /** Squares across the frame. */
-const CELLS_ACROSS = 70;
+const CELLS_ACROSS = 64;
 
 const FRAG = /* glsl */ `
 precision highp float;
@@ -80,7 +80,7 @@ float fbm(vec2 p) {
 float field(vec2 p) {
   // Gentle domain warp: integer-frequency sin/cos of the loop phase.
   p += 0.035 * vec2(sin(p.y * 3.1 + uWarp.x * 1.7), cos(p.x * 2.7 + uWarp.y * 1.9));
-  float f = 0.4 + 0.6 * (fbm(p * 3.2) - 0.5);
+  float f = 0.5 + 0.55 * (fbm(p * 3.2) - 0.5);
   for (int i = 0; i < ${BLOB_COUNT}; i++) {
     vec2 d = p - uBlob[i].xy;
     f += uBlobW[i] * exp(-dot(d, d) / (uBlob[i].z * uBlob[i].z));
@@ -105,7 +105,7 @@ void main() {
   vec2 p = vec2(vUv.x * aspect, vUv.y);
 
   // ---- glass block grid (gently rippled, as if the panel is not quite flat)
-  vec2 pg = p + 0.006 * vec2(sin(p.y * 4.3 + uWarp.x * 1.3), sin(p.x * 3.1 + uWarp.y * 1.1));
+  vec2 pg = p + 0.011 * vec2(sin(p.y * 4.3 + uWarp.x * 1.3), sin(p.x * 3.1 + uWarp.y * 1.1));
   vec2 g = pg / uCell;
   vec2 id = floor(g);
   vec2 c = fract(g) - 0.5;                    // [-0.5, 0.5]
@@ -114,7 +114,7 @@ void main() {
   // Bevelled pyramid: four facets meeting at a small rounded top. n2 is the
   // (smoothed) facet slope direction.
   vec2 ac = abs(c);
-  float kx = smoothstep(-0.16, 0.16, ac.x - ac.y);
+  float kx = smoothstep(-0.32, 0.32, ac.x - ac.y);
   vec2 n2 = vec2(sign(c.x) * kx, sign(c.y) * (1.0 - kx));
   float slope = smoothstep(0.0, 0.3, max(ac.x, ac.y));
   n2 *= slope;
@@ -128,15 +128,19 @@ void main() {
   // Shading lit from the top-left: one corner bright, the opposite one near black.
   float diag = clamp(0.5 + (-c.x + c.y) * 0.95, 0.0, 1.0);
   float facet = dot(n2, normalize(vec2(-1.0, 1.0)));       // -1..1
-  float shade = mix(diag, 0.5 + 0.5 * facet, 0.45);
-  col *= mix(0.14, 1.3, shade);
+  float shade = mix(diag, 0.5 + 0.5 * facet, 0.3);
+  col *= mix(0.12, 1.2, shade);
+  // Soft lens hotspot: a blurred bright dot up-left of each block's centre.
+  vec2 hs = c - vec2(-0.13, 0.13);
+  float hot = exp(-dot(hs, hs) / 0.022);
+  col += mix(cMid, cBright, smoothstep(0.45, 1.0, f)) * hot * 0.55 * smoothstep(0.1, 0.6, f);
   // Specular glint on the lit bevel, stronger where the light behind is bright.
   float spec = pow(max(facet, 0.0), 3.0) * slope;
   col += mix(cMid, cBright, smoothstep(0.5, 1.0, f)) * spec * 0.35 * smoothstep(0.15, 0.7, f);
 
   // Soft glow of the bright light bleeding through the blocks.
-  float glow = smoothstep(0.6, 1.2, field(p));
-  col += cBright * glow * 0.28 + cMid * glow * 0.1;
+  float glow = smoothstep(0.55, 1.15, field(p));
+  col += cBright * glow * 0.35 + cMid * glow * 0.12;
   // Dark gaps between blocks (the bevels meet in a shadowed groove).
   float rimD = 0.5 - max(ac.x, ac.y);
   col *= mix(0.22, 1.0, smoothstep(0.0, 0.09, rimD));

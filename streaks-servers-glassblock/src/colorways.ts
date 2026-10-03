@@ -54,7 +54,7 @@ export const GLASS_COLORWAYS: GlassColorway[] = [
     dark: "#2A0A5A",
     mid: "#3FD8C0",
     bright: "#E8FFB0",
-    upper: "#9AF0D0",
+    upper: "#B4FAC0",
   },
   {
     id: "GlassBlock-CoralPink",

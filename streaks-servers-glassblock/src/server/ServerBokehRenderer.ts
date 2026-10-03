@@ -32,7 +32,7 @@ const CAM_X0 = 0.0;
 const YAW = THREE.MathUtils.degToRad(46); // looking left, along the rack row
 const VFOV = 34;
 const FOCUS = (0.84 * CAM_Z) / Math.cos(YAW); // just in front of where the centre ray meets the wall
-const COC_K_FAR = 40; // px at 720p, behind focus:   K_far  * (1 - focus / depth)
+const COC_K_FAR = 55; // px at 720p, behind focus:   K_far  * (1 - focus / depth)
 const COC_K_NEAR = 300; // px at 720p, in front:     K_near * (focus / depth - 1)
 const COC_MAX = 130; // px at 720p
 const BAND_LO = 9; // sprite radius (720p px) where LEDs move to the low-res bokeh pass
@@ -156,9 +156,9 @@ void main() {
         for (int r = 0; r < 2; r++) {
           float py = uh * (r == 0 ? 0.7 : 0.3);
           float b = sdBox(vec2(u - px, uv0 - py), vec2(0.0055, 0.0042));
-          col = mix(col, vec3(0.03, 0.035, 0.05) + cLight * 0.05, fillAA(abs(b) - 0.0006, aa));
+          col = mix(col, vec3(0.012, 0.014, 0.02) + cLight * 0.02, fillAA(abs(b) - 0.0006, aa));
           col = mix(col, vec3(0.0015), fillAA(b + 0.0006, aa));
-          float cable = step(0.85, h1(pi + float(r) * 31.0, seed * 97.0));
+          float cable = step(0.97, h1(pi + float(r) * 31.0, seed * 97.0));
           emit += cLight * 0.6 * cable * fillAA(b + 0.0015, aa);
         }
       }
@@ -181,7 +181,7 @@ void main() {
       float mask = smoothstep(0.03, 0.1, x) * (1.0 - smoothstep(iw - 0.12, iw - 0.05, x))
                  * smoothstep(0.0, uh * 0.25, uv0) * (1.0 - smoothstep(uh * 0.75, uh, uv0));
       float bundle = 0.6 + 0.4 * sin(x * 22.0 + seed * 9.0);
-      emit += mix(cLight, vec3(0.75, 0.9, 1.0), 0.25) * 4.5 * line * mask * bundle + cLight * 0.9 * mask;
+      emit += mix(cLight, vec3(0.75, 0.9, 1.0), 0.25) * 4.5 * line * mask * bundle + cLight * 0.45 * mask;
     } else if (type == 4) {
       // ---- 1U server: horizontal bays
       float bw = 0.12;
@@ -333,7 +333,7 @@ void main() {
   float f = mod(uFrame + aBlink.y, aBlink.x);
   float on = f < aBlink.z * aBlink.x ? 1.0 : 0.0;
   float I = aLed.z * on * wBand * uGain * pow(clamp(phys / r, 0.0, 1.0), uFalloff);
-  float haze = exp(-max(d - 0.7, 0.0) * 0.22);
+  float haze = exp(-max(d - 0.7, 0.0) * 0.4);
   vec3 base = aLed.y < 0.5 ? cLed : (aLed.y < 1.5 ? cAlt : cBlue);
   vCol = base * I * haze;
   float ext = uBand < 0.5 ? 2.2 : 1.12;               // room for the glow of small dots
@@ -433,7 +433,7 @@ export class ServerBokehRenderer implements LoopRenderer {
       uMaxCoc: { value: COC_MAX },
       uPx: { value: 1 },
       cLight: { value: light },
-      cHaze: { value: light.clone().multiplyScalar(0.3) },
+      cHaze: { value: light.clone().multiplyScalar(0.42) },
       cWhite: { value: new THREE.Vector3(0.8, 0.85, 1.0) },
     };
 

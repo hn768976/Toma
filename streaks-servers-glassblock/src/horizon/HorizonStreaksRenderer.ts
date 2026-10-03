@@ -17,7 +17,7 @@ const Z_NEAR = 30; // ribbons run from z = Z_NEAR (behind camera) ...
 const Z_FAR = -520; // ... to z = Z_FAR (towards the vanishing point)
 const HEADS_LINES = 340; // lines that carry bright head points
 const HEAD_WINDOW = 16; // world units along the line where heads are drawn
-const BOKEH = 14;
+const BOKEH = 6;
 
 const rng = mulberry32(0x5eed1234);
 
@@ -43,8 +43,8 @@ const STREAK_DATA: Streak[] = Array.from({ length: STREAKS }, () => {
     y: range(rng, -0.09, 0.03),
     base: rng() < 0.65 ? range(rng, 0.0, 0.02) : range(rng, 0.03, 0.09),
     width: range(rng, 0.0035, 0.009),
-    period: range(rng, 2.5, 12),
-    duty: range(rng, 0.2, 0.7),
+    period: range(rng, 3, 18),
+    duty: range(rng, 0.25, 0.85),
     speed: 2 + Math.floor(rng() * 4), // 2..5 whole repeats per 20 s
     seed: rng(),
     hot: Math.pow(rng(), 2.5),
@@ -88,7 +88,7 @@ const BOKEH_DATA: Bokeh[] = Array.from({ length: BOKEH }, () => {
     px: rng() * Math.PI * 2,
     py: rng() * Math.PI * 2,
     r: range(rng, 18, 42), // px at 720p
-    a: range(rng, 0.07, 0.16),
+    a: range(rng, 0.04, 0.09),
   };
 });
 
@@ -127,10 +127,10 @@ void main() {
     col = mix(col, cGround * 0.55, smoothstep(0.45, 0.8, g));
   }
   // Horizon line: thin hot core + soft glow, brightest left of centre.
-  float lineI = 0.1 + 1.35 * exp(-pow((along - 0.27) / 0.2, 2.0));
+  float lineI = 0.08 + 1.9 * exp(-pow((along - 0.28) / 0.17, 2.0));
   float core = exp(-pow(dh / 0.0045, 2.0));
-  float glow = exp(-abs(dh) / 0.012) * 0.3 * (dh > 0.0 ? 1.0 : 0.6);
-  col += cHorizon * (core * 1.8 + glow) * lineI;
+  float glow = exp(-abs(dh) / 0.008) * 0.22 * (dh > 0.0 ? 1.0 : 0.6);
+  col += mix(cHorizon, vec3(1.0), 0.35 * core) * (core * 2.6 + glow) * lineI;
   outColor = vec4(col, 1.0);
 }
 `;
@@ -177,7 +177,7 @@ void main() {
   float corePx = max(physPx, 0.65 * uPx);
   // Circle of confusion: strong in front of the focus plane, mild far away.
   float nearT = clamp((uFocus - depth) / (uFocus - uNear), 0.0, 1.0);
-  float coc = uBlurPx * uPx * pow(nearT, 1.6) + 0.6 * uPx * clamp((depth - uFocus) / 80.0, 0.0, 1.0);
+  float coc = uBlurPx * uPx * pow(nearT, 1.9) + 0.6 * uPx * clamp((depth - uFocus) / 80.0, 0.0, 1.0);
   float halfW = corePx + coc;
   // Energy conservation: total light per unit length ~ physical width.
   vEnergy = physPx / halfW;
@@ -218,9 +218,9 @@ void main() {
   dash = mix(dash, duty * 0.37, smoothstep(0.04, 0.25, w));
   float prof = exp(-2.2 * vAcross * vAcross) * mix(1.0, 0.75, smoothstep(0.0, 1.0, 1.0 - vEnergy));
   float fog = 1.0 / (1.0 + pow(vDepth / 14.0, 1.7));
-  float I = (vBase + dash * 1.5) * vEnergy * prof * fog * uGain;
+  float I = (vBase * 0.7 + dash * 2.2) * vEnergy * prof * fog * uGain;
   // Only the very tip of a bright dash goes towards the hot (white-cyan) colour.
-  vec3 col = mix(cStreak, cHot, clamp((0.6 * dash + pow(dash, 4.0) * vHot) * smoothstep(40.0, 8.0, vDepth), 0.0, 1.0));
+  vec3 col = mix(cStreak, cHot, clamp((0.75 * dash + pow(dash, 3.0) * (0.4 + vHot)) * smoothstep(40.0, 8.0, vDepth) * smoothstep(0.5, 1.6, vDepth), 0.0, 1.0));
   outColor = vec4(col * I, 1.0);
 }
 `;
@@ -336,6 +336,10 @@ void main() {
   float over = max(peak - 1.0, 0.0);
   c *= shoulder(peak) / max(peak, 1e-5);
   c = mix(c, vec3(0.55, 0.9, 1.0), clamp(over * 0.05, 0.0, 0.3));
+  // Corner vignette: the lower corners fall towards near-black navy.
+  vec2 q = vUv - vec2(0.5, 0.6);
+  vec2 qs = q * vec2(1.0, 1.3);
+  c *= clamp(1.0 - 0.55 * dot(qs, qs), 0.0, 1.0);
   outColor = vec4(grainDither(linearToSrgb(c)), 1.0);
 }
 `;
@@ -423,7 +427,7 @@ export class HorizonStreaksRenderer implements LoopRenderer {
       uZNear: { value: Z_NEAR },
       uZFar: { value: Z_FAR },
       uPhase: { value: 0 },
-      uFocus: { value: 1.8 },
+      uFocus: { value: 1.3 },
       uBlurPx: { value: 60 },
       uGain: { value: 0.36 },
       cStreak: { value: v3(cw.streak) },
