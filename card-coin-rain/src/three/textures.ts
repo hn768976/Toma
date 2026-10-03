@@ -1,6 +1,8 @@
 import {
   CanvasTexture,
   DataTexture,
+  DataUtils,
+  HalfFloatType,
   LinearFilter,
   LinearMipmapLinearFilter,
   RepeatWrapping,
@@ -66,6 +68,43 @@ export const makeFoilTextures = () => {
     normal: dataTex(heightToNormal(height, w, h, 30 * (w / 2048)), w, h),
     roughness: grayTex(rough, w, h),
   };
+};
+
+/**
+ * Plain polished gold: no relief, just a very slight bow (a few degrees
+ * across the card, like a real pressed metal card) so a soft gradient always
+ * runs across the face, plus a gentle large-scale roughness drift.
+ */
+export const makePlainTextures = () => {
+  const w = 1024;
+  const h = Math.round((w * CARD_H) / CARD_W);
+  // Half float: an 8-bit map has only ~15 steps across such a gentle slope,
+  // which shows up as stripes in the mirror reflection.
+  const nd = new Uint16Array(w * h * 4);
+  const rough = new Float32Array(w * h);
+  const ax = CARD_W / CARD_H;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const u = (x / w) * ax;
+      const v = y / h;
+      // Bow: surface normal tilts up to ~6 deg toward the edges.
+      const nx = (x / w - 0.5) * 0.22;
+      const ny = (y / h - 0.5) * 0.16;
+      const l = Math.hypot(nx, ny, 1);
+      const o = (y * w + x) * 4;
+      nd[o] = DataUtils.toHalfFloat(nx / l * 0.5 + 0.5);
+      nd[o + 1] = DataUtils.toHalfFloat(ny / l * 0.5 + 0.5);
+      nd[o + 2] = DataUtils.toHalfFloat(1 / l * 0.5 + 0.5);
+      nd[o + 3] = DataUtils.toHalfFloat(1);
+      rough[y * w + x] = 0.84 + 0.16 * fbmRot(u * 1.6 + 4.2, v * 1.6 + 1.3, 71, 3);
+    }
+  }
+  const normal = new DataTexture(nd, w, h, RGBAFormat, HalfFloatType);
+  normal.generateMipmaps = false;
+  normal.minFilter = LinearFilter;
+  normal.magFilter = LinearFilter;
+  normal.needsUpdate = true;
+  return { normal, roughness: grayTex(rough, w, h) };
 };
 
 /** Faint horizontal brushing for the satin rose card. */

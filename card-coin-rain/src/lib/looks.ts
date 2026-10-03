@@ -15,7 +15,7 @@ export type Finish = {
 };
 
 export type Look = {
-  id: "gold" | "rose";
+  id: "gold" | "goldPlain" | "rose";
   seed: number;
   coins: {
     total: number;
@@ -31,7 +31,7 @@ export type Look = {
     corner: string;
   };
   card: {
-    front: "goldFoil" | "roseSatin";
+    front: "goldFoil" | "goldPlain" | "roseSatin";
     text: boolean;
   };
   /** HDRI grade: tint, gain, and a lift toward the set colour. */
@@ -102,4 +102,15 @@ export const ROSE: Look = {
   grain: 0.02,
 };
 
-export const LOOKS = { gold: GOLD, rose: ROSE } as const;
+/**
+ * Gold Rush, version 2: identical scene (same seed, so the same coins, bars,
+ * camera and timing), but the card is plain, smooth polished gold instead of
+ * crinkled foil.
+ */
+export const GOLD_PLAIN: Look = {
+  ...GOLD,
+  id: "goldPlain",
+  card: { front: "goldPlain", text: false },
+};
+
+export const LOOKS = { gold: GOLD, goldPlain: GOLD_PLAIN, rose: ROSE } as const;

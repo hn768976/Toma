@@ -20,6 +20,16 @@ export const RemotionRoot: React.FC = () => (
       calculateMetadata={metadata}
     />
     <Composition
+      id="CardRain-GoldPlain"
+      component={CardRain}
+      durationInFrames={LOOP}
+      fps={FPS}
+      width={3840}
+      height={2160}
+      defaultProps={{ look: "goldPlain" } as CardRainProps}
+      calculateMetadata={metadata}
+    />
+    <Composition
       id="CardRain-RoseGold"
       component={CardRain}
       durationInFrames={LOOP}

@@ -113,11 +113,21 @@ const Card: React.FC<{ look: Look; assets: Assets; groupRef: React.RefObject<Gro
   groupRef,
 }) => {
   const parts = useMemo(() => {
-    const gold = look.id === "gold";
+    const gold = look.card.front !== "roseSatin";
+    const plain = look.card.front === "goldPlain";
     const body = makeCardBodyGeometry(CARD_W, CARD_H, CARD_CORNER, CARD_T);
     const face = makeFaceGeometry(CARD_W, CARD_H, CARD_CORNER);
     const chipFace = makeFaceGeometry(CHIP_W, CHIP_H, CHIP_R, 12);
-    const front = gold
+    const front = plain
+      ? new MeshPhysicalMaterial({
+          color: "#E8B84A",
+          metalness: 1,
+          roughness: 0.26,
+          normalMap: assets.cardFront.normal,
+          normalScale: new Vector2(1, 1),
+          roughnessMap: assets.cardFront.roughness,
+        })
+      : gold
       ? new MeshPhysicalMaterial({
           color: "#E8B84A",
           metalness: 1,
@@ -142,7 +152,7 @@ const Card: React.FC<{ look: Look; assets: Assets; groupRef: React.RefObject<Gro
           color: "#EFD593",
           metalness: 1,
           roughness: 0.28,
-          normalMap: assets.cardFront.normal,
+          normalMap: plain ? null : assets.cardFront.normal,
           normalScale: new Vector2(0.25, 0.25),
         })
       : front.clone();

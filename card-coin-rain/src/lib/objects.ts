@@ -189,5 +189,6 @@ const build = (look: Look): Falling[] => {
   return out;
 };
 
-/** Seeded once, at module level. */
-export const OBJECTS = { gold: build(GOLD), rose: build(ROSE) } as const;
+const gold = build(GOLD);
+/** Seeded once, at module level. The plain-card Gold version shares Gold's objects. */
+export const OBJECTS = { gold, goldPlain: gold, rose: build(ROSE) } as const;

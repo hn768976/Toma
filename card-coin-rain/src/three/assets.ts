@@ -21,11 +21,12 @@ import {
   makeChipTextures,
   makeCoinTextures,
   makeFoilTextures,
+  makePlainTextures,
 } from "./textures";
 
 export type Assets = {
   hdri: DataTexture;
-  cardFront: { normal: Texture; roughness: Texture };
+  cardFront: { normal: Texture | null; roughness: Texture };
   coin: { normal: Texture; roughness: Texture };
   bar: { normal: Texture; roughness: Texture } | null;
   chip: { color: Texture; bump: Texture };
@@ -113,10 +114,15 @@ export const loadAssets = (look: Look): Promise<Assets> => {
     }
     const [raw] = await Promise.all([loadHdri(), loadFonts()]);
     const hdri = gradeEnv(raw, look);
-    const gold = look.id === "gold";
+    const gold = look.card.front !== "roseSatin";
     return {
       hdri,
-      cardFront: gold ? makeFoilTextures() : makeBrushedTextures(),
+      cardFront:
+        look.card.front === "goldFoil"
+          ? makeFoilTextures()
+          : look.card.front === "goldPlain"
+            ? makePlainTextures()
+            : makeBrushedTextures(),
       coin: makeCoinTextures(),
       bar: look.bars ? makeBarTextures() : null,
       chip: gold
