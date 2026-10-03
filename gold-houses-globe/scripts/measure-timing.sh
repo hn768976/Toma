@@ -10,7 +10,8 @@ OUT=out/timing-measure.txt
 : > "$OUT"
 npx remotion bundle src/index.ts --out-dir out/bundle --log=error >/dev/null 2>&1
 t() { # comp scale frames
-  local d; d=$(mktemp -d)
+  local d=out/bench_run # no dot in the name: Remotion reads it as an extension
+  rm -rf "$d"
   local s; s=$(date +%s.%N)
   npx remotion render out/bundle "$1" "$d" --sequence --image-format=png --scale="$2" --frames="$3" \
     --gl=angle --concurrency=2 "${BX[@]}" --log=error >/dev/null 2>&1
