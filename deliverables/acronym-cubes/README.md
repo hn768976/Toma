@@ -11,7 +11,11 @@
 
       bash previews/join.sh
 
-Or re-render them:
+- `previews/Cubes_ETF_720p.mp4` (CRF 16, 49 MB) and
+  `previews/Cubes_ETF_720p_crf20.mp4` (CRF 20, 20 MB): ETF rendered natively at
+  1280×720 (`--scale=0.3333333333333333`), 30 fps, 10.0 s, H.264 yuv420p, no audio.
+
+Or re-render the 1080p previews:
 
     cd acronym-cubes
     npx remotion render Cubes-ETF  out/Cubes_ETF.mp4  --scale=0.5
