@@ -285,7 +285,7 @@ const FILL_FRAG = /* glsl */ `
 uniform vec3 color;
 varying float vGlow;
 void main() {
-  float g = 0.05 + 0.2 * vGlow * vGlow;
+  float g = 0.08 + 0.16 * vGlow * vGlow;
   gl_FragColor = vec4(color * g, 1.0);
 }`;
 const LINE_VERT = /* glsl */ `
@@ -305,7 +305,7 @@ void main() {
   } else {                 // edge ribbon
     a = exp(-vProf.y * vProf.y * 3.0) * k;
   }
-  gl_FragColor = vec4(color * a * 0.95, 1.0);
+  gl_FragColor = vec4(color * a * 0.5, 1.0);
 }`;
 const SPRITE_VERT = /* glsl */ `
 attribute float bright;
@@ -342,7 +342,7 @@ varying vec2 vUv;
 void main() {
   vec3 c = mix(bottom, top, smoothstep(0.0, 1.0, vUv.y));
   float g = exp(-pow(length((vUv - vec2(0.5, 0.5)) * vec2(1.6, 2.4)), 2.0) * 1.5);
-  c *= 0.85 + 1.0 * g;
+  c *= 0.9 + 0.45 * g;
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -355,12 +355,12 @@ const GLINTS = Array.from({ length: 12 }, (_, i) => ({
   speed: [1, -1, 2, 1, -2, 1][i % 6], // whole laps of the outline per loop
   size: range(rngFx, 0.12, 0.2),
 }));
-const SPECKS = Array.from({ length: 650 }, () => ({
+const SPECKS = Array.from({ length: 900 }, () => ({
   x: range(rngFx, -20, 20),
   y: range(rngFx, -10, 10),
   z: range(rngFx, -2.5, -0.4),
   s: range(rngFx, 0.01, 0.024),
-  b: range(rngFx, 0.6, 2.4),
+  b: range(rngFx, 1.0, 3.2),
   tw: Math.floor(range(rngFx, 1, 5)),
   ph: rngFx(),
 }));
@@ -369,8 +369,8 @@ const CAM_DIST = 9.6;
 
 const POST: PostConfig = {
   exposure: 1.05,
-  bloom: { strength: 0.48, threshold: 0.55, knee: 0.6, spread: 0.92 },
-  dof: { focus: CAM_DIST, farBlur: 4, nearBlur: 1.0, maxCoc: 18 },
+  bloom: { strength: 0.3, threshold: 0.6, knee: 0.6, spread: 0.85 },
+  dof: { focus: CAM_DIST, farBlur: 8, nearBlur: 1.0, maxCoc: 18 },
   vignette: 0.35,
   grain: 0.02,
   msaa: 4,

@@ -109,7 +109,7 @@ export const VERSIONS: VersionRow[] = [
   },
   { look: "gears", id: "WireframeGears-Blue", edge: "#7FD8FF", bgTop: "#041428", bgBottom: "#0A2A4A" },
   { look: "gears", id: "WireframeGears-Amber", edge: "#FFB050", bgTop: "#140802", bgBottom: "#2A1408" },
-  { look: "ring", id: "GoldRingFrame-Gold", edge: "#E8B860", band: "#120E0A", metal: "#E8A24E" },
+  { look: "ring", id: "GoldRingFrame-Gold", edge: "#E8B860", band: "#120E0A", metal: "#E6BE84" },
   { look: "ring", id: "GoldRingFrame-Silver", edge: "#D8DEE8", band: "#0E1014", metal: "#DDE3EC" },
   { look: "terraces", id: "DarkTerraces", top: "#2A2C30", bottom: "#08090A" },
 ];

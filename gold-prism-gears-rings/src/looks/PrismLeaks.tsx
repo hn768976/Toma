@@ -62,11 +62,11 @@ void main() {
   float E = smoothstep(-0.35, 0.5, env);
 
   // soft streak body, long along the rays
-  float b = 0.5 + 0.5 * fbm3(vec4(thw * 4.2, rho * 0.3, tc * 0.75 + vec2(1.0, 4.0)));
+  float b = 0.5 + 0.5 * fbm3(vec4(thw * 3.0, rho * 0.3, tc * 0.75 + vec2(1.0, 4.0)));
   b = smoothstep(0.22, 0.95, b);
   float L = E * (0.3 + 0.7 * b);
   L *= smoothstep(0.75, 1.2, rho);
-  L *= 1.0 - 0.75 * smoothstep(0.3, 0.8, abs(p.x));
+  L *= 1.0 - 0.85 * smoothstep(0.18, 0.6, abs(p.x));
   // brightest toward the top centre, sides fall off
   L *= 0.55 + 0.6 * smoothstep(-0.45, 0.4, p.y) * (1.0 - 0.45 * smoothstep(0.35, 0.95, abs(p.x)));
 
@@ -81,7 +81,7 @@ void main() {
   // diffuse veil of light under the streaks
   col += cBody * E * E * 0.05;
   // a thin, brighter core ray near the centre
-  col += mix(cAccent, vec3(0.4, 0.9, 1.0), 0.6 - 0.6 * warmth) * exp(-abs(thw - 0.03 * sin(T)) * 70.0) * 0.5 * smoothstep(1.0, 1.4, rho);
+  col += mix(cAccent, vec3(0.4, 0.9, 1.0), 0.6 - 0.6 * warmth) * exp(-abs(thw - 0.03 * sin(T)) * 28.0) * 0.28 * smoothstep(1.0, 1.4, rho);
 
   // thin filaments split into a spectrum (rainbow fringes on their edges)
   vec3 coolSpec[6] = vec3[6](vec3(0.55, 0.0, 1.0), vec3(0.0, 0.35, 1.0), vec3(0.0, 0.95, 0.9),
@@ -95,7 +95,7 @@ void main() {
   for (int k = 0; k < 6; k++) {
     float off = (float(k) - 2.5) * 0.011 * fringeWidth * (0.5 + 0.6 * rho);
     float n = fbm2(vec4((thw + off) * 4.0 + 11.0, rho * 0.28, tc * 0.7 + vec2(13.0, 5.0)));
-    float f = exp(-abs(n) * 5.0);
+    float f = exp(-abs(n) * 3.5);
     vec3 sp = mix(coolSpec[k], warmSpec[k], warmth);
     rain += sp * f;
     norm += sp;
@@ -104,8 +104,11 @@ void main() {
   rain = rain / norm;
   filC /= 6.0;
   vec3 tint = mix(vec3(1.0), cAccent / max(max(cAccent.r, cAccent.g), cAccent.b), 0.5);
-  col += (filC * tint * 0.3 + (rain - filC) * 0.5) * fringe * E2 * smoothstep(0.85, 1.25, rho);
+  col += (filC * tint * 0.22 + (rain - filC) * 0.28) * fringe * E2 * smoothstep(0.85, 1.25, rho);
 
+  // warm and green glows low in the centre (dispersion pooling near the source)
+  col += vec3(1.0, 0.42, 0.08) * exp(-(pow(p.x + 0.03 + 0.04 * sin(T), 2.0) / 0.012 + pow(p.y + 0.48, 2.0) / 0.03)) * 0.35;
+  col += vec3(0.15, 0.9, 0.35) * exp(-(pow(p.x - 0.22 - 0.03 * cos(T), 2.0) / 0.006 + pow(p.y + 0.5, 2.0) / 0.02)) * 0.22;
   // a few hot spots that bloom
   float hs = snoise(vec4(p * 0.9 + vec2(0.0, 0.3), tc * 0.5 + vec2(11.0, 3.0)));
   col += mix(cHigh, cAccent, 0.3) * pow(max(hs, 0.0), 2.5) * 3.0 * E;
@@ -131,9 +134,9 @@ void main() { gl_FragColor = vec4(textureBicubic(tLeak, vUv, leakSize).rgb, 1.0)
 const lin = (hex: string) => new THREE.Color(hex); // THREE.Color parses sRGB hex to linear
 
 const POST: PostConfig = {
-  exposure: 1.0,
+  exposure: 0.72,
   bloom: { strength: 0.32, threshold: 0.75, knee: 0.6, spread: 0.92 },
-  vignette: 0.25,
+  vignette: 0.6,
   grain: 0.03,
   msaa: 0,
 };

@@ -28,11 +28,11 @@ const BANDS: [number, number, number, number][] = [
 ];
 // gold rings sit between bands: [radius, tube radius, z, base glow, glint laps]
 const RINGS: [number, number, number, number, number[]][] = [
-  [0.95, 0.0075, 0.02, 0.12, [1, -2]],
-  [1.285, 0.0045, 0.035, 0.015, [-1, 1]],
-  [1.545, 0.0045, 0.025, 0.015, [2, -1]],
-  [1.73, 0.004, 0.03, 0.012, [-2]],
-  [1.92, 0.0045, 0.025, 0.012, [1, 3]],
+  [0.95, 0.0062, 0.02, 0.035, [1, -2]],
+  [1.285, 0.0036, 0.035, 0.0, [-1, 1]],
+  [1.545, 0.0036, 0.025, 0.0, [2, -1]],
+  [1.73, 0.0032, 0.03, 0.0, [-2]],
+  [1.92, 0.0036, 0.025, 0.0, [1, 3]],
 ];
 
 const rngG = mulberry32(0x60_1d_f);
@@ -55,11 +55,11 @@ void ringPattern(vec3 P, out float dotMask, out float spark, out float ao) {
   ${ringBandsGlsl()}
   dotMask = 0.0; spark = 0.0;
   if (dotted > 0.5) {
-    float dr = 0.027;
+    float dr = 0.034;
     float rr = (r - rIn) / dr;
     float row = floor(rr);
     float rc = rIn + (row + 0.5) * dr;
-    float nPer = floor(6.2831853 * rc / 0.027 + 0.5);
+    float nPer = floor(6.2831853 * rc / 0.034 + 0.5);
     float off = mod(row, 2.0) * 0.5;
     float a = (th / 6.2831853 + 0.5) * nPer + off;
     float cell = floor(a);
@@ -67,7 +67,7 @@ void ringPattern(vec3 P, out float dotMask, out float spark, out float ao) {
     float d = length(dd);
     float aa = max(fwidth(r) * 0.75, 1e-5);
     uint id0 = hh(uint(row + 1.0) * 92821u + uint(mod(cell, nPer)) * 7919u + uint(band) * 104729u + 5u);
-    float rad = 0.0021 + 0.0022 * float(id0 & 0xffu) / 255.0;
+    float rad = 0.0015 + 0.0016 * float(id0 & 0xffu) / 255.0;
     // keep the outermost rows of each band empty near the edges
     float edgeOk = step(rIn + 0.6 * dr, rc) * step(rc, rOut - 0.6 * dr);
     dotMask = (1.0 - smoothstep(rad - aa, rad + aa, d)) * edgeOk;
@@ -79,8 +79,8 @@ void ringPattern(vec3 P, out float dotMask, out float spark, out float ao) {
     spark = tw * step(0.72, hr) * dotMask;
   }
   float w = 0.035;
-  ao = (1.0 - 0.6 * exp(-(r - rIn) / w)) * (1.0 - 0.45 * exp(-(rOut - r) / w));
-  if (band == 0) ao = (1.0 - 0.75 * exp(-(rOut - r) / 0.06)) * (0.85 + 0.15 * smoothstep(0.0, 0.9, r));
+  ao = (1.0 - 0.85 * exp(-(r - rIn) / w)) * (1.0 - 0.6 * exp(-(rOut - r) / w));
+  if (band == 0) ao = (1.0 - 0.9 * exp(-(rOut - r) / 0.07)) * (0.85 + 0.15 * smoothstep(0.0, 0.9, r)) * (0.7 + 0.3 * smoothstep(-0.9, 0.9, P.y));
   ao = clamp(ao, 0.0, 1.0);
 }
 `;
@@ -92,7 +92,7 @@ const CAM_D_FOCUS = 3.85;
 
 const POST: PostConfig = {
   exposure: 1.0,
-  bloom: { strength: 0.22, threshold: 1.0, knee: 0.6, spread: 0.75 },
+  bloom: { strength: 0.12, threshold: 1.1, knee: 0.6, spread: 0.7 },
   dof: { focus: CAM_D_FOCUS, farBlur: 12, nearBlur: 0.5, maxCoc: 6 },
   vignette: 0.75,
   grain: 0.02,
@@ -111,10 +111,10 @@ const Scene: React.FC<{ row: RingRow }> = ({ row }) => {
 
     // ---- plates
     const bandMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(row.band).multiplyScalar(2.6),
+      color: new THREE.Color(row.band).multiplyScalar(2.2),
       roughness: 0.55,
       metalness: 0.1,
-      envMapIntensity: 0.22,
+      envMapIntensity: 0.12,
     });
     bandMat.userData.ownEnvIntensity = true;
     const wallMat = new THREE.MeshStandardMaterial({
@@ -139,11 +139,11 @@ const Scene: React.FC<{ row: RingRow }> = ({ row }) => {
           `#include <roughnessmap_fragment>
   float gDot, gSpark, gAo;
   ringPattern(vLathe, gDot, gSpark, gAo);
-  diffuseColor.rgb = mix(diffuseColor.rgb * gAo, uDotColor * (0.6 + 0.4 * gAo), gDot);
+  diffuseColor.rgb = mix(diffuseColor.rgb * gAo, mix(uDotColor, vec3(1.0), 0.3) * (0.45 + 0.35 * gAo), gDot);
   roughnessFactor = mix(roughnessFactor, 0.45, gDot);`,
         )
         .replace("#include <metalnessmap_fragment>", "#include <metalnessmap_fragment>\n  metalnessFactor = mix(metalnessFactor, 1.0, gDot);")
-        .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n  totalEmissiveRadiance += uSparkle * gSpark * 7.0 + uDotColor * gDot * 0.18;");
+        .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n  totalEmissiveRadiance += mix(uSparkle, vec3(1.0), 0.3) * gSpark * 5.0 + uDotColor * gDot * 0.08;");
     };
     // flat annular plates (normals +z) plus open cylinders for the step walls
     BANDS.forEach(([r0, r1, z]) => {
@@ -178,7 +178,7 @@ const Scene: React.FC<{ row: RingRow }> = ({ row }) => {
   for (int i = 0; i < ${GLINTS.length}; i++) {
     if (abs(uGl[i].y - ${ri}.0) < 0.5) {
       float d = atan(sin(th - uGl[i].x), cos(th - uGl[i].x));
-      g += exp(-d * d / 0.01) * 3.0 + exp(-d * d / 0.12) * 0.5;
+      g += exp(-d * d / 0.008) * 2.2 + exp(-d * d / 0.1) * 0.25;
     }
   }
   float facing = 0.5 + 0.5 * normalize(vRingPos - vec3(normalize(vRingPos.xy) * ${R.toFixed(4)}, 0.0)).z;
