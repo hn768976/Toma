@@ -203,7 +203,7 @@ start-up and bundling.
 
 Wall-clock times for the full 720p previews, with three workers on the same
 4 cores (shared with other jobs at times): Fibre Blue 7.6 min, Fibre
-Multicolour 8.9 min, City 34.7 min, Growing Fibres 3.0–4.5 min each.
+Multicolour 8.9 min, City 47.8 min (after the soft-beam change; 34.7 min before), Growing Fibres 3.0–4.5 min each.
 
 **4K estimate, all five compositions:**
 
