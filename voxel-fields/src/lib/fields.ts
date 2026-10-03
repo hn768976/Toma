@@ -47,8 +47,10 @@ export const CANYON = {
   /** Below this, a column is "in the void" and keeps falling. */
   voidTop: -10,
   // Thresholds on the combined noise value (tuned from its distribution).
-  plateauFrom: -0.08,
-  voidBelow: -0.27,
+  plateauFrom: -0.16,
+  voidBelow: -0.38,
+  /** Radius of the circle in time the noise is sampled on: sets the speed. */
+  timeRadius: 0.1,
 };
 
 /** Combined 3-scale noise for the canyon at grid cell (x, z) and loop phase t. */
@@ -56,8 +58,11 @@ const canyonBase = (x: number, z: number, c: number, s: number) => {
   const { noise4 } = canyonNoise;
   // Each layer samples time around its own circle: at t = 1 the circle closes.
   // Stretched along the grid rows (x), so slabs and canyons form long trenches.
-  const n1 = noise4(x * 0.028, z * 0.1, c * 0.5, s * 0.5);
-  const n2 = noise4(x * 0.06 + 17.3, z * 0.2 - 9.1, c * 0.7 + 4.2, s * 0.7 - 3.3);
+  // Radii of the time circles set the speed: small radius = slow drift.
+  const r1 = CANYON.timeRadius;
+  const r2 = CANYON.timeRadius * 1.3;
+  const n1 = noise4(x * 0.028, z * 0.1, c * r1, s * r1);
+  const n2 = noise4(x * 0.06 + 17.3, z * 0.2 - 9.1, c * r2 + 4.2, s * r2 - 3.3);
   return 0.7 * n1 + 0.3 * n2;
 };
 
@@ -67,8 +72,11 @@ const canyonBase = (x: number, z: number, c: number, s: number) => {
 // under the void threshold, so a few holes are always open. A percentile of a
 // continuous field is continuous and periodic in t: motion and loop are kept.
 const BALANCE_PERCENTILE = 0.05;
+const BALANCE_MID = 0.02;
+const BALANCE_LO = -0.46;
 const balanceCells: [number, number][] = [];
-const balanceCache = new Map<number, number>();
+type Balance = { lo: number; mid: number };
+const balanceCache = new Map<number, Balance>();
 const canyonBalance = (t: number, c: number, s: number) => {
   const hit = balanceCache.get(t);
   if (hit !== undefined) return hit;
@@ -78,8 +86,9 @@ const canyonBalance = (t: number, c: number, s: number) => {
         if (inFrameCore(columnX(i), columnZ(j))) balanceCells.push([i, j]);
   }
   const vals = balanceCells.map(([i, j]) => canyonBase(i, j, c, s)).sort((a, b) => a - b);
-  const q = vals[Math.floor(BALANCE_PERCENTILE * (vals.length - 1))];
-  const v = 0.8 * (q - (CANYON.voidBelow - 0.03));
+  const lo = vals[Math.floor(BALANCE_PERCENTILE * (vals.length - 1))];
+  const mid = vals[Math.floor(0.5 * (vals.length - 1))];
+  const v: Balance = { lo, mid };
   if (balanceCache.size > 2000) balanceCache.clear();
   balanceCache.set(t, v);
   return v;
@@ -89,35 +98,66 @@ const canyonBalance = (t: number, c: number, s: number) => {
 export const canyonNoiseAt = (x: number, z: number, t: number) => {
   const c = Math.cos(TAU * t);
   const s = Math.sin(TAU * t);
-  const base = canyonBase(x, z, c, s) - canyonBalance(t, c, s);
+  // Per-frame normalisation: the in-frame median maps to BALANCE_MID (plateau)
+  // and the low percentile to BALANCE_LO (just past the void threshold).
+  const b = canyonBalance(t, c, s);
+  const scale = (BALANCE_MID - BALANCE_LO) / Math.max(0.05, b.mid - b.lo);
+  const base = BALANCE_MID + (canyonBase(x, z, c, s) - b.mid) * scale;
   // Column-scale layer: makes canyon rims ragged, columns stepping individually.
   // Only acts near and below the rim, so plateau tops stay flat.
-  const n3 = canyonNoise.noise4(x * 0.55 - 41.7, z * 0.55 + 23.9, c * 0.9 - 7.7, s * 0.9 + 2.1);
+  const r3 = CANYON.timeRadius * 1.1;
+  const n3 = canyonNoise.noise4(x * 0.55 - 41.7, z * 0.55 + 23.9, c * r3 - 7.7, s * r3 + 2.1);
   const rugged = smoothstep(CANYON.plateauFrom + 0.07, CANYON.plateauFrom - 0.03, base);
   return base + 0.1 * rugged * n3;
 };
 
-/** Height of the column top (in cubes; plateau = 0) from the noise value. */
+/**
+ * Target height of a column top (in cubes; plateau = 0) from the noise value.
+ * Deliberately steep: flat slabs and sheer canyon walls. The motion is made
+ * slow by canyonHeightAt, which averages this over a window of frames.
+ */
 export const canyonHeightFromNoise = (n: number) => {
   const { plateauFrom, voidBelow } = CANYON;
   if (n >= plateauFrom) {
-    // Plateau slabs: level 0 over a wide band, then +1, +2 on the highest ground.
-    return terrace((n - plateauFrom) / 0.4, 0.12);
+    // Flat slabs: level 0 over a wide band, +1 / +2 on the highest ground.
+    return terrace((n - plateauFrom) / 0.6, 0.1);
   }
-  // Canyon: drops in 4-cube steps to the mid levels, then into the void.
-  const steps = (n - plateauFrom) / ((plateauFrom - voidBelow) / 2); // 0 .. -2
-  const canyon = 4 * terrace(Math.max(steps, -2), 0.2);
-  // Past the threshold the column keeps falling, accelerating into the dark.
-  const d = Math.min(1, Math.max(0, (voidBelow - n) / 0.22));
-  const fall = d * d * (2 - d);
-  return canyon + fall * (CANYON.bottom + 6 - canyon);
+  // Canyon wall: a sheer drop to 5 cubes down, then a gentle floor to 7 cubes
+  // at the void threshold.
+  const wall = 0.05;
+  if (n >= plateauFrom - wall) return -5 * smoothstep(plateauFrom, plateauFrom - wall, n);
+  const floor = -5 - (2 * (plateauFrom - wall - n)) / (plateauFrom - wall - voidBelow);
+  if (n >= voidBelow) return floor;
+  // Past the threshold the column keeps sinking into the dark.
+  const d = (voidBelow - n) / 0.2;
+  return Math.max(CANYON.bottom + 6, -7 - 50 * d * d);
+};
+
+/** Frames averaged on each side, and the step between samples (frames). */
+export const CANYON_SMOOTH = { half: 18, step: 4 };
+
+/**
+ * Column height at grid cell (x, z) and frame: the steep target height
+ * averaged over a centred window of frames (wrapping round the loop), so a
+ * column crossing a slab edge glides up or down over ~1.2 s instead of
+ * snapping. Pure function of the frame; frame 600 is frame 0.
+ */
+export const canyonHeightAt = (x: number, z: number, frame: number) => {
+  const { half, step } = CANYON_SMOOTH;
+  let sum = 0;
+  let n = 0;
+  for (let k = -half; k <= half; k += step) {
+    const w = 1 - Math.abs(k) / (half + step); // triangular window: eases in/out
+    sum += w * canyonHeightFromNoise(canyonNoiseAt(x, z, loopPhase(frame + k)));
+    n += w;
+  }
+  return sum / n;
 };
 
 export const canyonHeights = (frame: number, out: Float32Array) => {
-  const t = loopPhase(frame);
   for (let j = 0; j < GRID_Z; j++) {
     for (let i = 0; i < GRID_X; i++) {
-      out[j * GRID_X + i] = canyonHeightFromNoise(canyonNoiseAt(i, j, t));
+      out[j * GRID_X + i] = canyonHeightAt(i, j, frame);
     }
   }
   return out;
@@ -200,9 +240,7 @@ export const floatingCubeState = (cube: FloatingCube, frame: number) => {
   const z = cube.az + cube.oz * Math.sin(TAU * cube.fz * t + cube.pz);
   const y = cube.y + cube.bob * Math.sin(TAU * cube.fy * t + cube.py);
   // Visible only while the cell under the cube is open into the void.
-  const below = canyonHeightFromNoise(
-    canyonNoiseAt(Math.round(x), Math.round(z), t),
-  );
+  const below = canyonHeightAt(Math.round(x), Math.round(z), frame);
   const open = smoothstep(-5, -22, below);
   return {
     x,

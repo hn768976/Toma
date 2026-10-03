@@ -3,6 +3,7 @@
 import {
   canyonNoiseAt,
   canyonHeightFromNoise,
+  canyonHeightAt,
   GRID_X,
   GRID_Z,
   waveHeightAt,
@@ -41,7 +42,7 @@ for (const f of [0, 300]) {
   console.log(`canyon frame ${f}  (space=void .=deep :=mid o=plateau O=+1 #=+2)`);
   console.log(
     ascii((i, j) => {
-      const h = canyonHeightFromNoise(canyonNoiseAt(i, j, f / 600));
+      const h = canyonHeightAt(i, j, f);
       return h <= CANYON.voidTop ? " " : h < -4 ? "." : h < -1 ? ":" : h < 0.5 ? "o" : h < 1.5 ? "O" : "#";
     }),
   );
@@ -52,7 +53,7 @@ console.log("floating cubes", floatingCubes.length);
 
 // Seam: the jump across the loop point should be no bigger than a normal step.
 for (const [name, fn] of [
-  ["canyon", (i: number, j: number, t: number) => canyonHeightFromNoise(canyonNoiseAt(i, j, t))],
+  ["canyon", (i: number, j: number, t: number) => canyonHeightAt(i, j, Math.round(t * 600))],
   ["wave", waveHeightAt],
 ] as const) {
   let seam = 0;
@@ -81,7 +82,7 @@ for (let f = 0; f < 600; f += 20) {
     for (let i = 0; i < GRID_X; i++) {
       if (!inFrameCore(columnX(i), columnZ(j))) continue;
       n++;
-      if (canyonHeightFromNoise(canyonNoiseAt(i, j, f / 600)) <= CANYON.voidTop) v++;
+      if (canyonHeightAt(i, j, f) <= CANYON.voidTop) v++;
     }
   minShare = Math.min(minShare, v / n);
   per.push(`${f}:${((100 * v) / n).toFixed(1)}%`);
@@ -97,7 +98,7 @@ console.log("min void share", (100 * minShare).toFixed(1) + "%");
       for (let i = 0; i < GRID_X; i++) {
         if (!inFrameCore(columnX(i), columnZ(j))) continue;
         n++;
-        if (canyonHeightFromNoise(canyonNoiseAt(i, j, f / 600)) < -0.5) c++;
+        if (canyonHeightAt(i, j, f) < -0.5) c++;
       }
     out.push(`${f}:${((100 * c) / n).toFixed(0)}%`);
   }
