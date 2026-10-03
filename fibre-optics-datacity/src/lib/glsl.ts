@@ -23,4 +23,18 @@ float grain(uvec2 p, uint frame, float amp) {
   float g = hash3(p, frame, 7u) + hash3(p, frame, 8u) - 1.0; // triangular -1..1
   return g * amp;
 }
+// Film grain with a mono part and an independent per-channel part. The
+// per-channel part matters for delivery: in saturated dark blues most of the
+// gradient lives in the 4:2:0 chroma planes, and mono-only grain leaves the
+// chroma noise-free, which the H.264 encoder then flattens into contours.
+vec3 grainRGB(uvec2 p, uint frame, float amp) {
+  float m = grain(p, frame, amp * 0.75);
+  // chroma part on 2x2 blocks so it survives 4:2:0 subsampling
+  uvec2 q = p >> 1u;
+  vec3 c = vec3(
+    hash3(q, frame, 9u) + hash3(q, frame, 10u) - 1.0,
+    hash3(q, frame, 11u) + hash3(q, frame, 12u) - 1.0,
+    hash3(q, frame, 13u) + hash3(q, frame, 14u) - 1.0) * amp * 0.6;
+  return vec3(m) + c;
+}
 `;

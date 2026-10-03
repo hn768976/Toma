@@ -7,7 +7,7 @@ export const FIBRE_COUNT = 2500;
 export const LOOP_FRAMES = 600;
 
 // Bundle origin (world units), below the bottom edge of frame.
-export const BASE = { x: 0.85, y: -3.1, z: 0.0 };
+export const BASE = { x: 0.6, y: -3.1, z: 0.0 };
 
 export type FibreData = {
   // base offset inside the bundle
@@ -60,7 +60,7 @@ const build = (): FibreData => {
     // fan direction: polar angle from vertical, denser towards the rim of the
     // dome so the tips form a full arc; azimuth uniform.
     const u = rnd();
-    let polar = 0.72 * Math.pow(u, 0.62); // narrow bundle: up to ~41 deg
+    let polar = 0.92 * Math.pow(u, 0.62); // up to ~53 deg
     const az = ba + (rnd() - 0.5) * 1.2; // fibres keep roughly their side
     // lengths: most fibres long (the dome), a share shorter (fills inside)
     const lr = rnd();

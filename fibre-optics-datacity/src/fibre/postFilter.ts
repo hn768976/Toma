@@ -53,7 +53,7 @@ void main(void) {
   float gy = smoothstep(0.0, 1.0, 1.0 - uv.y * 0.85 - uv.x * 0.25);
   vec3 bg = mix(uBgBottom, uBgTop, gy);
   // light from the bundle below frame (soft, wide)
-  vec2 q = (uv - vec2(0.52, 1.12)) * vec2(1.0, 1.55);
+  vec2 q = (uv - vec2(0.68, 1.1)) * vec2(1.0, 1.55);
   float glow = exp(-dot(q, q) / 0.11);
   vec3 c = bg + scene + uGlow * glow;
 
@@ -66,7 +66,7 @@ void main(void) {
   uint f = uint(uFrame + 0.5);
   float luma = dot(mapped, vec3(0.2126, 0.7152, 0.0722));
   // grain ~2% of full scale, slightly weaker in the deepest blacks
-  mapped += grain(p, f, uGrain) * (0.35 + 0.65 * smoothstep(0.0, 0.25, luma));
+  mapped += grainRGB(p, f, uGrain) * (0.35 + 0.65 * smoothstep(0.0, 0.25, luma));
   mapped += ditherTPDF(p, f);
   finalColor = vec4(clamp(mapped, 0.0, 1.0), 1.0);
 }

@@ -323,7 +323,7 @@ void main() {
   uvec2 p = uvec2(gl_FragCoord.xy);
   uint f = uint(uFrame + 0.5);
   float l = dot(m, vec3(0.2126, 0.7152, 0.0722));
-  m += grain(p, f, uGrain) * (0.4 + 0.6 * smoothstep(0.0, 0.2, l));
+  m += grainRGB(p, f, uGrain) * (0.4 + 0.6 * smoothstep(0.0, 0.2, l));
   m += ditherTPDF(p, f);
   outColor = vec4(clamp(m, 0.0, 1.0), 1.0);
 }

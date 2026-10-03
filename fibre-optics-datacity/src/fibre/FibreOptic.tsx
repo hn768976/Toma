@@ -51,10 +51,10 @@ const FOCAL = H / 2 / Math.tan(FOV / 2);
 const COC_K = 160;
 // Tilted focal plane: the lower in frame, the nearer the lens (macro shot
 // looking along the bundle), so blur grows towards the bottom.
-const TILT = 120; // extra CoC px at 4K at the bottom of frame // px at 4K per unit of |zc - zf| / zc
-const R_MIN = 7; // smallest tip radius (near-sharp), px at 4K
+const TILT = 85; // extra CoC px at 4K at the bottom of frame // px at 4K per unit of |zc - zf| / zc
+const R_MIN = 5; // smallest tip radius (near-sharp), px at 4K
 const R_MAX = 150;
-const LEVEL_BASE = 8;
+const LEVEL_BASE = 6;
 const LEVEL_STEP = Math.log(1.5);
 
 // Intensities are scaled by GAIN in the sprites and 1/GAIN in the post
@@ -229,10 +229,12 @@ const updateScene = (
     tip.scaleY = sc;
     const sharp = 1 - level / (BOKEH_LEVELS - 1);
     const whiten = 0.7 * Math.pow(sharp, 3) * Math.min(1, twinkle);
-    const energy = Math.pow(R_MIN / r, 1.05);
+    // defocused discs lose brightness faster than area alone would suggest,
+    // so the image reads as fibres with occasional soft orbs
+    const energy = Math.pow(R_MIN / r, 1.2);
     // in-focus tips get up to HOT x the energy of the defocused field
     const hot = 1 + (HOT - 1) * Math.pow(sharp, 4) * F.bright[i];
-    const I = GAIN * F.bright[i] * twinkle * (0.12 + 0.88 * energy) * 1.15 * hot;
+    const I = GAIN * F.bright[i] * twinkle * (0.06 + 0.94 * energy) * 2.0 * hot;
     setColor(
       tip,
       cr + (1 - cr) * whiten,
@@ -264,7 +266,7 @@ const updateScene = (
       const bx = proj.x;
       const by = proj.y;
       bez((s0 + s1) / 2);
-      const wdt = Math.max(minStreak, coc(proj.zc, proj.y) * 0.55);
+      const wdt = Math.max(minStreak, coc(proj.zc, proj.y) * 0.38);
       const dxs = bx - ax;
       const dys = by - ay;
       const len = Math.hypot(dxs, dys) + 1e-3;
@@ -274,7 +276,7 @@ const updateScene = (
       st.rotation = Math.atan2(dys, dxs) - Math.PI / 2;
       st.scaleX = (wdt * 2.2) / STREAK_W;
       st.scaleY = (len * 1.18) / STREAK_H;
-      const si = GAIN * 2.0 * pal.strandGain * (0.08 + F.bright[i] * F.bright[i] * 1.6) * sBright * (minStreak / wdt) * 0.75 * (0.75 + 0.25 * twinkle);
+      const si = GAIN * 1.7 * pal.strandGain * (0.08 + F.bright[i] * F.bright[i] * 1.6) * sBright * (minStreak / wdt) * 0.75 * (0.75 + 0.25 * twinkle);
       setColor(st, sr, sg, sb, si);
     }
   }
@@ -385,7 +387,7 @@ export const FibreOptic: React.FC<{
       (u.uBgTop as Float32Array).set(hexToRgb(pal.bgTop));
       (u.uBgBottom as Float32Array).set(hexToRgb(pal.bgBottom));
       const g = lin(hexToRgb(pal.glow));
-      (u.uGlow as Float32Array).set([g[0] * 0.08, g[1] * 0.08, g[2] * 0.08]);
+      (u.uGlow as Float32Array).set([g[0] * 0.22, g[1] * 0.22, g[2] * 0.22]);
       u.uExposure = pal.exposure / GAIN;
       u.uGrain = 0.02;
       const post = new Container();
