@@ -27,7 +27,7 @@ const SLOPE = 0.08;
 const CAM_Z = 40;
 
 const wave = (x: number) =>
-  3.0 * Math.sin((TAU * x) / L) + 0.75 * Math.sin((2 * TAU * x) / L + 1.3) + 0.35 * Math.sin((3 * TAU * x) / L + 0.4);
+  3.4 * Math.sin((TAU * x) / L) + 0.45 * Math.sin((2 * TAU * x) / L + 1.3) + 0.2 * Math.sin((3 * TAU * x) / L + 0.4);
 
 const wrap = (x: number) => ((((x + S / 2) % S) + S) % S) - S / 2;
 
@@ -48,7 +48,7 @@ const rngCandles = mulberry32(0xca_d1e);
 const CANDLES: Candle[] = Array.from({ length: CANDLE_COUNT }, (_, i) => {
   // depth layers: far / behind bars / just in front / near (big, very blurred)
   const layer = i % 10 < 4 ? 0 : i % 10 < 7 ? 1 : i % 10 < 9 ? 2 : 3;
-  const z = [range(rngCandles, -40, -18), range(rngCandles, -16, -7), range(rngCandles, 7, 14), range(rngCandles, 16, 26)][layer];
+  const z = [range(rngCandles, -42, -20), range(rngCandles, -22, -11), range(rngCandles, 10, 17), range(rngCandles, 17, 27)][layer];
   const h = range(rngCandles, 0.25, 1.5) * (rngCandles() < 0.15 ? 1.6 : 1);
   return {
     x: rngCandles() * S,
@@ -84,9 +84,9 @@ const TAG_PERIOD = 30; // frames per value change; divides 600
 const ingotGeometry = () => {
   type Ring = { z: number; hw: number; top: number; bot: number; cr: number };
   const rings: Ring[] = [
-    { z: -0.18, hw: 0.5, top: 1.05, bot: -1.42, cr: 0.07 },
-    { z: 0.12, hw: 0.42, top: 0.96, bot: -0.96, cr: 0.05 },
-    { z: 0.18, hw: 0.39, top: 0.93, bot: -0.93, cr: 0.04 },
+    { z: -0.16, hw: 0.44, top: 1.06, bot: -1.4, cr: 0.06 },
+    { z: 0.1, hw: 0.36, top: 0.97, bot: -0.97, cr: 0.045 },
+    { z: 0.15, hw: 0.335, top: 0.945, bot: -0.945, cr: 0.035 },
   ];
   const ringPts = (r: Ring) => {
     const pts: THREE.Vector3[] = [];
@@ -200,7 +200,7 @@ void main() {
 
 const POST: PostConfig = {
   exposure: 1.0,
-  bloom: { strength: 0.42, threshold: 0.8, knee: 0.7, spread: 0.92 },
+  bloom: { strength: 0.32, threshold: 1.0, knee: 0.7, spread: 0.92 },
   dof: { focus: CAM_Z, farBlur: 16, nearBlur: 1.1, maxCoc: 30 },
   vignette: 0.3,
   grain: 0.02,
@@ -220,7 +220,7 @@ const Scene: React.FC<{ row: GoldMarketRow; camera: THREE.PerspectiveCamera }> =
       color: new THREE.Color(row.gold),
       metalness: 1,
       roughness: 0.55,
-      emissive: new THREE.Color(row.gold).multiplyScalar(0.12),
+      emissive: new THREE.Color(row.gold).multiplyScalar(0.04),
       envMapIntensity: 1,
     });
     const bars = new THREE.InstancedMesh(ingotGeometry(), gold, BAR_COUNT);
@@ -250,7 +250,7 @@ const Scene: React.FC<{ row: GoldMarketRow; camera: THREE.PerspectiveCamera }> =
     const down = new THREE.Color(row.downColor);
     CANDLES.forEach((c, i) => {
       const isUp = c.r < row.upShare;
-      const col = (isUp ? up : down).clone().multiplyScalar(isUp ? 0.75 : 1.1);
+      const col = (isUp ? up : down).clone().multiplyScalar(isUp ? 0.6 : 0.85);
       bodies.setColorAt(i, col);
       wicks.setColorAt(i, col.clone().multiplyScalar(0.8));
     });
@@ -347,7 +347,7 @@ export const GoldMarket: React.FC<{ row: GoldMarketRow }> = ({ row }) => {
   if (!fontReady) return null;
   return (
     <LookCanvas post={POST} camera={camera}>
-      <StudioEnvironment url={staticFile("hdri/studio.exr")} intensity={0.34} rotation={envRot} />
+      <StudioEnvironment url={staticFile("hdri/studio.exr")} intensity={0.24} rotation={envRot} />
       <Scene row={row} camera={camera} />
     </LookCanvas>
   );

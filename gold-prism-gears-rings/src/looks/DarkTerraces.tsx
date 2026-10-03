@@ -13,7 +13,7 @@ import { TerraceRow } from "../versions";
  * drifts on a closed loop too.
  */
 
-const PLATES = 18;
+const PLATES = 14;
 const STEP = 0.22;
 
 const outline = (i: number) => {
@@ -40,8 +40,8 @@ const outline = (i: number) => {
 const POST: PostConfig = {
   exposure: 1.0,
   bloom: { strength: 0.12, threshold: 1.2, knee: 0.8, spread: 0.7 },
-  dof: { focus: 7.2, farBlur: 9, nearBlur: 0.6, maxCoc: 12 },
-  vignette: 0.55,
+  dof: { focus: 8.8, farBlur: 7, nearBlur: 0.6, maxCoc: 10 },
+  vignette: 0.45,
   grain: 0.02,
   msaa: 4,
 };
@@ -52,9 +52,9 @@ const Scene: React.FC<{ row: TerraceRow }> = ({ row }) => {
     const root = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(row.top),
-      roughness: 0.6,
+      roughness: 0.7,
       metalness: 0.05,
-      envMapIntensity: 0.1,
+      envMapIntensity: 0.04,
     });
     mat.userData.ownEnvIntensity = true;
     // fine pebbled (leather-like) grain: a bump from 3D value noise in world space
@@ -71,15 +71,15 @@ float gNoise(vec3 x) {
   return mix(mix(mix(gHash(i), gHash(i + vec3(1, 0, 0)), f.x), mix(gHash(i + vec3(0, 1, 0)), gHash(i + vec3(1, 1, 0)), f.x), f.y),
              mix(mix(gHash(i + vec3(0, 0, 1)), gHash(i + vec3(1, 0, 1)), f.x), mix(gHash(i + vec3(0, 1, 1)), gHash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
 }
-float gHeight(vec3 p) { return 0.65 * gNoise(p * 26.0) + 0.35 * gNoise(p * 57.0 + 3.1); }`)
+float gHeight(vec3 p) { return 0.6 * gNoise(p * 70.0) + 0.4 * gNoise(p * 150.0 + 3.1); }`)
         .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
   {
-    float e = 0.006;
+    float e = 0.0025;
     float h0 = gHeight(vGrainW);
     vec3 gw = vec3(gHeight(vGrainW + vec3(e, 0.0, 0.0)) - h0, gHeight(vGrainW + vec3(0.0, e, 0.0)) - h0, gHeight(vGrainW + vec3(0.0, 0.0, e)) - h0) / e;
     vec3 gv = (viewMatrix * vec4(gw, 0.0)).xyz;
     gv -= normal * dot(gv, normal);
-    normal = normalize(normal - 0.0018 * gv);
+    normal = normalize(normal - 0.0007 * gv);
   }`);
     };
     for (let i = 0; i < PLATES; i++) {
@@ -88,9 +88,9 @@ float gHeight(vec3 p) { return 0.65 * gNoise(p * 26.0) + 0.35 * gNoise(p * 57.0 
       const geo = new THREE.ExtrudeGeometry(shape, {
         depth: STEP - 0.12,
         bevelEnabled: true,
-        bevelThickness: 0.06,
-        bevelSize: 0.07,
-        bevelSegments: 8,
+        bevelThickness: 0.08,
+        bevelSize: 0.08,
+        bevelSegments: 10,
         curveSegments: 1,
         steps: 1,
       });
@@ -101,7 +101,8 @@ float gHeight(vec3 p) { return 0.65 * gNoise(p * 26.0) + 0.35 * gNoise(p * 57.0 
       m.receiveShadow = true;
       root.add(m);
     }
-    const key = new THREE.DirectionalLight(0xfff0e4, 1.7);
+    const key = new THREE.DirectionalLight(0xfff2ea, 1.2);
+    key.shadow.intensity = 0.7;
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.radius = 8;
@@ -116,9 +117,9 @@ float gHeight(vec3 p) { return 0.65 * gNoise(p * 26.0) + 0.35 * gNoise(p * 57.0 
     sc.near = 1;
     sc.far = 40;
     root.add(key, key.target);
-    const fill = new THREE.PointLight(0xfff6ee, 40, 0, 1.3);
+    const fill = new THREE.PointLight(0xfff4ec, 42, 0, 1.3);
     root.add(fill);
-    const amb = new THREE.HemisphereLight(0xa0a0a0, 0x000000, 0.06);
+    const amb = new THREE.HemisphereLight(0xb4b0aa, 0x0a0a0a, 0.14);
     root.add(amb);
     return { root, key, fill };
   }, [row]);
@@ -139,14 +140,14 @@ float gHeight(vec3 p) { return 0.65 * gNoise(p * 26.0) + 0.35 * gNoise(p * 57.0 
 
 export const DarkTerraces: React.FC<{ row: TerraceRow }> = ({ row }) => {
   const frame = useCurrentFrame();
-  const camera = useMemo(() => new THREE.PerspectiveCamera(46, ASPECT, 0.5, 80), []);
+  const camera = useMemo(() => new THREE.PerspectiveCamera(38, ASPECT, 0.5, 80), []);
   useLayoutEffect(() => {
     const t = loopPhase(frame);
     const a = TAU * t;
     const target = new THREE.Vector3(2.4 + 0.3 * Math.sin(a), 0.6, 2.2 + 0.2 * Math.cos(a));
     const pitch = (50 * Math.PI) / 180; // camera tilted ~40° off top-down
     const yaw = (-28 * Math.PI) / 180 + 0.035 * Math.sin(a);
-    const dist = 8.6 + 0.2 * Math.cos(a);
+    const dist = 10.2 + 0.2 * Math.cos(a);
     camera.position.set(
       target.x + dist * Math.cos(pitch) * Math.sin(yaw),
       target.y + dist * Math.sin(pitch),

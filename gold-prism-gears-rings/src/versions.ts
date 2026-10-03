@@ -70,7 +70,7 @@ export const VERSIONS: VersionRow[] = [
     downColor: "#FF3F4A",
     tagColor: "#3FE8B0",
     tagArrow: "▲",
-    gold: "#FFC872",
+    gold: "#E8A848",
   },
   {
     look: "goldMarket",
@@ -81,7 +81,7 @@ export const VERSIONS: VersionRow[] = [
     downColor: "#FF3F4A",
     tagColor: "#FF4A55",
     tagArrow: "▼",
-    gold: "#FFC872",
+    gold: "#E8A848",
   },
   {
     look: "prism",
