@@ -43,8 +43,9 @@ npx remotion render TradingTerminal-Bear out/TradingTerminal_Bear.mp4 --scale=0.
 
 `--scale` sets the browser's device pixel ratio. The screen canvases size their
 backing store from it, so a 4K render gets 4K-crisp canvases and a preview
-doesn't pay for them. Text and 1-px lines are drawn at about 2.6 canvas pixels
-per screen unit at 4K, so they stay crisp after the camera's ~2.4–2.6× push-in.
+doesn't pay for them. At 4K the screen canvas is drawn at 2.8 canvas pixels per
+screen unit (8120×3248), so text and 1-unit lines stay crisp after the camera's
+2.2–2.4× zoom plus perspective.
 
 ## Stills (6000×3375)
 
@@ -57,25 +58,43 @@ npx remotion still TradingTerminal-Bull out/TradingTerminal_Bull_6k.png --frame=
 
 ## Render time
 
-RENDER_TIME_SECTION
+Measured here: 4 vCPUs, 15 GB RAM, Chromium headless shell (software
+rendering, no GPU), `--concurrency=4`, PNG intermediate frames, 720p
+(`--scale=0.3333333333333333`):
+
+| Composition | 450 frames, wall time | Per frame (wall) | Per frame per thread |
+|-------------|-----------------------|------------------|----------------------|
+| Bear        | 290.7 s               | 0.65 s           | ≈2.6 s               |
+| Bull        | 276.8 s               | 0.62 s           | ≈2.5 s               |
+
+A single cold `remotion still` of one frame takes about 2.1 s plus bundling.
+
+**4K estimate.** Nearly all the cost scales with pixel count: canvas raster,
+the three composited blur layers and PNG capture. 4K has 9× the pixels of
+720p, so expect about **5.5–6 s per frame wall time at concurrency 4** on a
+similar 4-core machine (≈23 thread-seconds per frame). That is roughly **40–45
+minutes per composition**, and it scales down with more cores and a GPU.
+No 4K frames were rendered to measure this.
 
 ## How it is built
 
 * **2.5D.** The screen is one flat UI drawn with **Canvas 2D** (all charts and
-  text) and tilted with **CSS 3D**: `perspective(9000px) rotateY(−20°→−17.5°)
-  rotateX(15°→13.8°)` plus a slow pan from the main chart toward the signal
-  panel and a push-in from 2.40× to 2.58×. Yaw is applied before pitch so
-  horizontal chart lines stay level and vertical lines lean, as on a real
-  screen filmed from the side. No WebGL.
-* **Depth of field.** The canvas is shown three times: sharp, lightly blurred
-  (5.5 px) and strongly blurred (15 px). The two sharper copies are masked by a
-  linear gradient that runs along the line of constant depth through the focus
-  point (computed from the rotation each frame), so the sharp band follows the
-  camera. Blurred copies are drawn from a ⅓-resolution copy of the canvas.
+  text) and tilted with **CSS 3D**: `rotateZ(−4.2°→−3.6°) perspective(2700px)
+  rotateY(−20°→−17.5°) rotateX(15°→13.8°)`, a slow pan from the main chart
+  toward the signal panel and a push-in from 2.20× to 2.38×. The small roll
+  keeps the panel divider near vertical, as in the reference. No WebGL.
+* **Depth of field.** The canvas is shown three times: near-sharp (0.8 px),
+  lightly blurred (5.5 px) and strongly blurred (14 px), in 4K CSS pixels. The
+  two sharper copies are masked by a linear gradient that runs along the line
+  of constant depth (computed from the rotation each frame) and sits slightly
+  toward the near side, so the sharp band follows the camera and the far side
+  falls off hardest. Blurred copies are drawn from a ⅓-resolution copy of the
+  canvas.
 * **Data.** Every series comes from a seeded `mulberry32` random walk with drift
   (negative for Bear, positive for Bull), generated once at module level
   (`src/data.ts`). Indicators: Bollinger band (20, 2) with its middle line,
-  EMA 50, stochastic (9, 3, 3), MACD (12, 26, 9) and its histogram.
+  EMA 40 and 50 (a two-strand ribbon), stochastic (6, 2, 2), MACD (12, 26, 9)
+  and its histogram with a signal line.
 * **Candles.** A new candle forms at the right edge every 45 frames (1.5 s). Its
   live price follows a fixed path open → high/low → low/high → close, sampled in
   4-frame ticks; the wick grows to the extremes reached so far. When it closes,
@@ -103,18 +122,29 @@ Everything on screen is a pure function of `useCurrentFrame()`:
 * Fonts load through `FontFace` behind `delayRender` / `continueRender`, and
   the canvases are drawn only after they are ready.
 
-DETERMINISM_SECTION
+**Checked.** For both compositions, frame 300 rendered alone by a cold
+`remotion still` is **byte-identical** to frame 300 from a full
+`remotion render --sequence` (4 threads, out of order). SHA-256: Bear
+`3397080f…f5c4`, Bull `cde0e116…433c`.
 
 ## Banding
 
 The dark background is blurred, so it can band. A grain of about ±1.5 %
-(triangular noise, peak ±3.8 levels of 255) is added over the final image. It
-comes from 8 pre-generated 128×128 noise tiles (seeded `mulberry32`), picked by
-`frame % 8` and offset by a frame-based shift. It is split into a positive half
+(triangular noise, peak ±3.8 levels of 255) is added over the final image in
+2×2-pixel cells. It comes from 8 pre-generated 128×128 noise tiles (seeded
+`mulberry32`), picked by `frame % 8` and offset by a frame-based shift.
+Single-pixel grain this faint was dropped by x264 in the dark areas (it left
+blotchy flat patches); 2×2 cells survive CRF 16. It is split into a positive half
 (`mix-blend-mode: plus-lighter`) and a negative half (`difference`), so it adds
 no average brightness. The grain canvas is sized to the output pixel grid.
 
-BANDING_SECTION
+**Checked on the encoded mp4, not the preview.** Frame 0 of each mp4 was
+extracted and the luma read across the blurred, dark navy area between the
+histogram and MACD panels in the far (top-left) corner (x 0–400, y 600–625 at
+720p). Averaged over 25 rows, the values climb smoothly from about 27 to 37,
+with no flat runs ending in a step; the largest step between neighbouring
+pixels after light smoothing is 0.56 levels. A ×6 contrast stretch of the
+same crop shows even grain and no contour bands.
 
 ## Fonts
 
@@ -153,4 +183,20 @@ public/fonts/    fonts and licences
 
 ## Completion checklist
 
-CHECKLIST_SECTION
+- [x] 2 compositions, 3840×2160, 30 fps, 450 frames, not looping
+- [x] Bear: price falls with bounces, red dominant, mostly Sell, area chart falls
+- [x] Bull: price rises with dips, green dominant, mostly Strong buy, area chart rises
+- [x] Main chart: candles, two MAs plus a shaded band, axis tags, volume
+- [x] Oscillator, histogram with signal line, red and green area charts, signal panel with self-drawn icons
+- [x] A candle every 1.5 s, scrolling one slot on close; tags roll; signals switch
+- [x] Tilted 2.5D camera gliding from the main chart to the signal panel with push-in; tilt-shift DOF
+- [x] Canvas 2D for every chart, HTML/CSS layout, no WebGL, no MCP
+- [x] Grain from fixed noise tiles indexed by frame; no `Math.random()`
+- [x] Deterministic: frame 300 cold equals frame 300 in a full render, byte for byte (both)
+- [x] Fonts behind `delayRender`; OFL licences included
+- [x] 720p previews: 1280×720, 30/1, 15.0 s, H.264, yuv420p, no audio (ffprobe)
+- [x] Banding checked on the encoded mp4
+- [x] 720p PNG still of each
+- [x] `npm install && npx remotion studio` works from a clean copy
+- [x] Render time measured at 720p; 4K estimated
+- [x] No tickers, company, exchange or platform names, or logos
