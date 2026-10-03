@@ -46,7 +46,7 @@ const TRAILS: Trail[] = Array.from({ length: N_TRAILS }, () => {
   const m2 = 3 + Math.floor(rng() * 5);
   // ~1 in 7 trails is a bold 'hero' strand: thicker, brighter, white-cyan core
   const hero = rng() < 0.15;
-  const accent = rng() < 0.2 ? 1 : 0;
+  const accent = rng() < 0.08 ? 1 : 0;
   return {
     r,
     y: -0.05 + Math.pow(rng(), 1.6) * 0.75,
@@ -54,13 +54,13 @@ const TRAILS: Trail[] = Array.from({ length: N_TRAILS }, () => {
     wobF: 1 + Math.floor(rng() * 3),
     wobP: rng() * Math.PI * 2,
     width: hero ? 0.022 + rng() * 0.03 : 0.006 + Math.pow(rng(), 4) * 0.02,
-    mix: Math.pow(rng(), 1.8),
-    base: hero ? 0.45 + 0.35 * rng() : 0.02 + Math.pow(rng(), 3) * 0.25,
+    mix: Math.pow(rng(), 3),
+    base: hero ? 0.45 + 0.35 * rng() : 0.01 + Math.pow(rng(), 3) * 0.08,
     m1,
     n1: m1 * (1 + Math.floor(rng() * 3)) + Math.floor(rng() * 3), // whole cells per loop
     l1: 0.03 + rng() * 0.1,
     p1: rng(),
-    b1: (hero ? 1.8 : 0.6) + Math.pow(rng(), 2) * 3,
+    b1: hero ? 2.2 + Math.pow(rng(), 2) * 3 : 0.15 + Math.pow(rng(), 3) * 1.2,
     m2,
     n2: 2 + Math.floor(rng() * 9),
     l2: 0.05 + rng() * 0.12,
@@ -228,8 +228,8 @@ export const createLightTrails: LookFactory<TrailsRow> = async ({ gl, width, hei
     bloomThreshold: 0.12,
     bloomKnee: 0.25,
     // long tail on the low mips = wide blue haze around the bright band
-    bloomWeights: [0.6, 0.8, 1.0, 1.0, 0.9, 0.8],
-    dof: { focus: 14, nearK: 0.3, farK: 0.0, maxBlur: 0.005 },
+    bloomWeights: [0.5, 0.7, 1.0, 1.1, 1.25, 1.25],
+    dof: { focus: 14, nearK: 0.9, farK: 0.0, maxBlur: 0.012 },
     grain: 0,
     protectBlack: true,
     vignette: 0,

@@ -13,7 +13,7 @@ const BAR_L = 2.1; // along z (towards camera)
 const BAR_W = 0.95; // along x
 const BAR_H = 0.58;
 const TOP_TAPER = 0.8; // classic ingot: top face ~80% of the base, sloped sides
-const COL_DX = 1.3;
+const COL_DX = 1.75;
 const COL_DZ = -0.38; // each column a little further back
 const BAR_YAW = 0.5; // bars turned so their end faces catch the camera
 const GOLD = "#E8B04A";
@@ -36,9 +36,10 @@ function planBars(columns: number[], reverseOrder: boolean): BarPlan[] {
       bars.push({
         col,
         layer,
-        jx: (rng() - 0.5) * 0.14,
+        jx: (rng() - 0.5) * 0.06,
         jz: (rng() - 0.5) * 0.12,
-        ry: BAR_YAW + (rng() - 0.5) * 0.14,
+        // the top bar of each column is the 'cap': turned further towards the camera
+        ry: BAR_YAW + (rng() - 0.5) * 0.06 + (layer === n - 1 ? 0.3 : 0),
         // drops land between frames 20 and 210, left to right, bottom to top
         start: 20 + (k / Math.max(1, total - 1)) * 176,
         var: rng(),
@@ -282,7 +283,7 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   const aVar = new THREE.InstancedBufferAttribute(new Float32Array(bars.map((b) => b.var)), 1);
   ingot.setAttribute("aVar", aVar);
   const goldMat = goldMaterial(env, maps, 0.3);
-  if (falling) goldMat.envMapIntensity = 0.8;
+  if (falling) goldMat.envMapIntensity = 0.55;
   addRoughnessVariation(goldMat);
   const mesh = new THREE.InstancedMesh(ingot, goldMat, bars.length);
   mesh.castShadow = true;
@@ -309,7 +310,8 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   // falling: the head ends a little higher and further in, so it stays in frame
   const curve = falling ? arrowCurve(columns, "rising", zArrow, 0.25, 0.75) : arrowCurve(columns, "rising", zArrow);
   const arrowMat = goldMaterial(env, maps, 0.3);
-  arrowMat.envMapIntensity = 0.32;
+  arrowMat.envMapIntensity = 0.2;
+  arrowMat.roughness = 0.38;
   arrowMat.normalScale.set(0.12, 0.12);
   arrowClip(arrowMat, uP, falling);
   const band = new THREE.Mesh(bandGeometry(curve, 0.42, 0.075), arrowMat);
@@ -317,6 +319,7 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   // head is never clipped; it rides the drawing tip
   const headMat = goldMaterial(env, maps, 0.3);
   headMat.envMapIntensity = arrowMat.envMapIntensity;
+  headMat.roughness = 0.38;
   headMat.normalScale.set(0.12, 0.12);
   const head = new THREE.Mesh(headGeometry(1.45, 1.35, 0.075), headMat);
   head.castShadow = true;
@@ -346,7 +349,7 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
   // ---- background warm glow
   const bg = new THREE.Mesh(
     new THREE.PlaneGeometry(120, 60),
-    new THREE.ShaderMaterial({ vertexShader: bgVert, fragmentShader: bgFrag, uniforms: { uWarm: { value: new THREE.Color(0.018, 0.012, 0.007) } }, depthWrite: false }),
+    new THREE.ShaderMaterial({ vertexShader: bgVert, fragmentShader: bgFrag, uniforms: { uWarm: { value: new THREE.Color(0.035, 0.022, 0.011) } }, depthWrite: false }),
   );
   bg.position.set(10, 10, -30);
   root.add(bg);
@@ -381,7 +384,7 @@ export const createGoldBarChart: LookFactory<GoldRow> = async ({ gl, width, heig
     bloomThreshold: 2.5,
     bloomKnee: 0.8,
     bloomWeights: [0.6, 0.8, 1, 1, 0.8, 0.6],
-    dof: { focus: 9, nearK: 1.6, farK: 1.4, maxBlur: 0.02 },
+    dof: { focus: 9, nearK: 1.4, farK: 0.8, maxBlur: 0.016 },
     grain: 0.02,
     grainPeriod: GOLD_FRAMES,
     vignette: 0.45,

@@ -14,11 +14,11 @@ export const CLOUD_FRAMES = 600;
 // World: y up. The camera looks from +x+z, so -x is upper-left on screen,
 // +z lower-left, +x lower-right and -z upper-right.
 type Rack = { x: number; z: number; w: number; h: number; pad: number; outline: number; rows: number; seed: number };
-const MAIN: Rack = { x: 0, z: 0, w: 2.5, h: 4.6, pad: 3.4, outline: 3.45, rows: 11, seed: 1 };
+const MAIN: Rack = { x: 0, z: 0, w: 2.9, h: 4.4, pad: 3.4, outline: 3.45, rows: 11, seed: 1 };
 const SMALL: Rack[] = [
   { x: -8.6, z: 0.9, w: 1.45, h: 2.45, pad: 2.1, outline: 1.7, rows: 6, seed: 2 },
   { x: -0.9, z: 8.6, w: 1.45, h: 2.45, pad: 2.1, outline: 1.7, rows: 6, seed: 3 },
-  { x: 9.0, z: 0.6, w: 1.45, h: 2.45, pad: 2.1, outline: 1.7, rows: 6, seed: 4 },
+  { x: 10.0, z: 0.6, w: 1.45, h: 2.45, pad: 2.1, outline: 1.7, rows: 6, seed: 4 },
 ];
 const SLAB_H = 0.22;
 const CLOUD_POS = new THREE.Vector3(1.5, 6.1, -4.6);
@@ -30,7 +30,7 @@ const BUNDLES: Bundle[] = [
   // straight bundles: satellite pad frame -> central frame
   { path: [[-6.9, 0.9], [-3.45, 0.9]], n: 5, gap: 0.2 },
   { path: [[-0.9, 6.9], [-0.9, 3.45]], n: 5, gap: 0.2 },
-  { path: [[7.3, 0.6], [3.45, 0.6]], n: 5, gap: 0.2 },
+  { path: [[8.3, 0.6], [3.45, 0.6]], n: 5, gap: 0.2 },
   // main outline -> slab, short stubs on each side
   { path: [[-3.45, -0.6], [-1.9, -0.6]], n: 3, gap: 0.22 },
   { path: [[-0.6, 3.45], [-0.6, 1.9]], n: 3, gap: 0.22 },
@@ -67,8 +67,8 @@ void main() {
   vec2 cell = floor(p * 2.5);
   float h = hash(cell);
   vec2 c = (cell + 0.2 + 0.6 * vec2(hash(cell + 7.1), hash(cell + 3.7))) / 2.5;
-  float sp = step(0.72, h) * (1.0 - smoothstep(0.0, 0.035, length(p - c)));
-  float fade = exp(-r * 0.065);
+  float sp = step(0.5, h) * (1.0 - smoothstep(0.0, 0.022, length(p - c)));
+  float fade = exp(-r * 0.03);
   vec3 col = uBase * (0.75 + 0.5 * fade);
   col += uGrid * g * (0.14 + 0.3 * fade);
   col += uLine * sp * (0.35 + 1.2 * hash(cell + 1.3)) * (0.4 + fade);
@@ -188,6 +188,8 @@ if (rowMask > 0.5) {
   // thin light strip along each unit
   float strip = smoothstep(0.80, 0.84, inRow.y) * (1.0 - smoothstep(0.84, 0.88, inRow.y));
   totalEmissiveRadiance += uLine * strip * 0.9;
+  // faint self-lit blue body, like the reference's glowing racks
+  totalEmissiveRadiance += uLine * 0.05;
   // LEDs: 9 slots per unit, each its own colour, period (dividing 600) and phase
   float slots = 12.0;
   float sx = inRow.x * slots;
@@ -195,7 +197,7 @@ if (rowMask > 0.5) {
   vec4 h = hash4(vec3(rc.x * 13.0 + ci, rc.y * 7.0 + uSeed * 31.0, uSeed));
   vec4 h2 = hash4(vec3(ci + 3.1, rc.x + 11.7, rc.y + uSeed));
   // LED cluster at the left end of each drawer
-  if (h.x < 0.82 && inRow.x < 0.42) {
+  if (h.x < 0.85 && inRow.x < 0.72) {
     vec2 d = vec2((fract(sx) - 0.5) * uSize.x / slots, (inRow.y - 0.45) * uSize.y / uRows);
     float r = length(d) / 0.045;
     float dotm = 1.0 - smoothstep(0.55, 1.0, r);
@@ -266,7 +268,8 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
   const env = await loadStudioEnv(gl);
   const scene = new THREE.Scene();
   const uFrame = { value: 0 };
-  const LINE = richer(row.line, 0.45);
+  // a touch towards blue: ACES pushes bright cyan towards mint otherwise
+  const LINE = richer(row.line, 0.45).multiply(new THREE.Color(0.8, 0.9, 1.15));
   const hdr = (c: THREE.Color, k: number) => c.clone().multiplyScalar(k);
 
   // floor
@@ -315,9 +318,7 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
     });
   const nodeMat = new THREE.MeshBasicMaterial({ color: hdr(LINE, 3.2) });
   const nodeGeo = new THREE.CircleGeometry(0.075, 20).rotateX(-Math.PI / 2);
-  const nodePos: THREE.Vector3[] = [];
   const node = (x: number, z: number, s = 1) => {
-    nodePos.push(new THREE.Vector3(x, 0.08, z));
     const n = new THREE.Mesh(nodeGeo, nodeMat);
     n.position.set(x, 0.025, z);
     n.scale.setScalar(s);
@@ -363,6 +364,17 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
     });
     sq.push(sq[0].clone());
     scene.add(new THREE.Mesh(flatRibbon(sq, 0.035), lineMat(1.8)));
+    // inner second outline (double border)
+    const inner = sq.map((v) => new THREE.Vector3(r.x + (v.x - r.x) * 0.86, v.y, r.z + (v.z - r.z) * 0.86));
+    scene.add(new THREE.Mesh(flatRibbon(inner, 0.025), lineMat(1.1)));
+    // short L-shaped circuit traces off two corners, ending in nodes
+    [[1, -1], [-1, 1]].forEach(([sx, sz]) => {
+      const c0 = new THREE.Vector3(r.x + sx * o * 0.92, 0.02, r.z + sz * o * 0.92);
+      const c1 = c0.clone().add(new THREE.Vector3(sx * o * 0.45, 0, 0));
+      const c2 = c1.clone().add(new THREE.Vector3(0, 0, sz * o * 0.35));
+      scene.add(new THREE.Mesh(flatRibbon([c0, c1, c2], 0.03), lineMat(1.6)));
+      node(c2.x, c2.z, 0.8);
+    });
     // rack body
     const rack = new THREE.Mesh(new RoundedBoxGeometry(r.w, r.h, r.w, 4, 0.09), rackMaterial(row, r, env, uFrame));
     rack.position.set(r.x, SLAB_H + r.h / 2, r.z);
@@ -405,7 +417,7 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
     specularIntensity: 0.6,
     transparent: true,
     opacity: 0.93,
-    emissive: hdr(saturated(cloudCol), 1.0),
+    emissive: hdr(saturated(cloudCol), 1.3),
     envMap: env,
     envMapIntensity: 0.05,
   });
@@ -413,7 +425,7 @@ export const createCloudServers: LookFactory<CloudRow> = async ({ gl, width, hei
     sh.vertexShader = sh.vertexShader
       .replace("#include <common>", "#include <common>\nvarying float vCloudY;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\nvCloudY = position.y;");
-    sh.uniforms.uRim = { value: hdr(cloudCol.clone().lerp(new THREE.Color(1, 1, 1), 0.3), 1.1) };
+    sh.uniforms.uRim = { value: hdr(cloudCol.clone().lerp(new THREE.Color(1, 1, 1), 0.3), 1.8) };
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", "#include <common>\nuniform vec3 uRim; varying float vCloudY;")
       .replace(
@@ -452,41 +464,8 @@ totalEmissiveRadiance *= mix(0.6, 1.45, smoothstep(-0.9, 1.3, vCloudY));`,
   });
   scene.add(new THREE.Mesh(mergeSimple(vRibbons), lineMat(2.0)));
 
-  // star flares on some trace end nodes, and a field of floating blue particles
-  const flareTex = (() => {
-    const [c, ctx] = makeCanvas(128, 128);
-    const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    g.addColorStop(0, "rgba(255,255,255,1)");
-    g.addColorStop(0.12, "rgba(255,255,255,0.5)");
-    g.addColorStop(0.35, "rgba(255,255,255,0.06)");
-    g.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 128, 128);
-    ctx.globalCompositeOperation = "lighter";
-    [0, Math.PI / 2].forEach((a) => {
-      const lg = ctx.createLinearGradient(64 - 64 * Math.cos(a), 64 - 64 * Math.sin(a), 64 + 64 * Math.cos(a), 64 + 64 * Math.sin(a));
-      lg.addColorStop(0, "rgba(255,255,255,0)");
-      lg.addColorStop(0.5, "rgba(255,255,255,0.9)");
-      lg.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.strokeStyle = lg;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(64 - 64 * Math.cos(a), 64 - 64 * Math.sin(a));
-      ctx.lineTo(64 + 64 * Math.cos(a), 64 + 64 * Math.sin(a));
-      ctx.stroke();
-    });
-    return canvasTexture(c, false);
-  })();
+  // a field of small floating blue particles
   const frng = mulberry32(0xf1a2e);
-  nodePos.forEach((p) => {
-    if (frng() > 0.35) return;
-    const sp = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: flareTex, color: hdr(LINE.clone().lerp(new THREE.Color(1, 1, 1), 0.4), 2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
-    );
-    sp.position.copy(p);
-    sp.scale.setScalar(0.6 + frng() * 0.6);
-    scene.add(sp);
-  });
   const dotTex = (() => {
     const [c, ctx] = makeCanvas(64, 64);
     const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -532,7 +511,7 @@ totalEmissiveRadiance *= mix(0.6, 1.45, smoothstep(-0.9, 1.3, vCloudY));`,
     grain: 0.02,
     vignette: 0.35,
     clearColor: new THREE.Color(row.floor),
-    dof: { focus: 86, nearK: 4, farK: 5, maxBlur: 0.007 },
+    dof: null,
   });
 
   return {
