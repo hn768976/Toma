@@ -120,11 +120,11 @@ const glowLine = (ctx: Ctx, pts: [number, number][], color: string, w: number, g
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   if (glow > 0) {
-    ctx.globalAlpha = 0.14 * glow;
+    ctx.globalAlpha = 0.18 * glow;
     ctx.lineWidth = w * 4.5;
     ctx.stroke();
-    ctx.globalAlpha = 0.28 * glow;
-    ctx.lineWidth = w * 2.6;
+    ctx.globalAlpha = 0.36 * glow;
+    ctx.lineWidth = w * 2.4;
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -299,7 +299,7 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
   // Faint backlight falloff across the chart column.
   const bgGlow = ctx.createRadialGradient(PLOT_R * 0.6, MAIN.cb, 0, PLOT_R * 0.6, MAIN.cb, 1400);
-  bgGlow.addColorStop(0, "rgba(45,90,170,0.24)");
+  bgGlow.addColorStop(0, "rgba(50,100,185,0.34)");
   bgGlow.addColorStop(1, "rgba(40,80,150,0)");
   ctx.fillStyle = bgGlow;
   ctx.fillRect(0, 0, LEFT_W, SCREEN_H);
@@ -375,8 +375,8 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
   for (const i of idx) {
     const hgt = (s.v[i] / vMax) * (MAIN.vb - MAIN.vt) * 0.95;
     ctx.fillStyle = s.c[i] >= s.o[i] ? up : dn;
-    ctx.globalAlpha = 0.92;
-    ctx.fillRect(xOf(i) - 12.5, MAIN.vb - hgt, 25, hgt);
+    ctx.globalAlpha = 0.72;
+    ctx.fillRect(xOf(i) - 13, MAIN.vb - hgt, 26, hgt);
   }
   ctx.globalAlpha = 1;
 

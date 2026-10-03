@@ -8,7 +8,7 @@ import { drawGrain } from "./grain";
 // ---------------------------------------------------------------------------
 // Camera — a pure function of the frame.
 // ---------------------------------------------------------------------------
-const PERSPECTIVE = 2100;
+const PERSPECTIVE = 2700;
 
 export const cameraAt = (frame: number) => {
   const t = frame / (DURATION - 1);
@@ -16,10 +16,11 @@ export const cameraAt = (frame: number) => {
   const s = 0.55 * t + 0.45 * (0.5 - 0.5 * Math.cos(Math.PI * t));
   return {
     tx: 1430 + (2030 - 1430) * s,
-    ty: 545 + (610 - 545) * s,
+    ty: 585 + (640 - 585) * s,
     scale: 2.2 + 0.18 * t,
     rx: 15 - 1.2 * t,
     ry: -20 + 2.5 * t,
+    roll: -4.2 + 0.6 * t,
   };
 };
 
@@ -97,6 +98,8 @@ export const Terminal: React.FC<Props> = ({ versionId }) => {
   const cam = cameraAt(frame);
   const transform = [
     `translate(${width / 2}px, ${height / 2}px)`,
+    // Slight camera roll: verticals lean like a hand-held shot of a monitor.
+    `rotateZ(${cam.roll}deg)`,
     `perspective(${PERSPECTIVE}px)`,
     // Yaw then pitch: horizontal lines stay level, verticals lean.
     `rotateY(${cam.ry}deg)`,
@@ -106,7 +109,7 @@ export const Terminal: React.FC<Props> = ({ versionId }) => {
   ].join(" ");
 
   const ang = dofAngle(cam.rx, cam.ry);
-  const sharpMask = `linear-gradient(${ang}deg, transparent 33%, black 47%, black 66%, transparent 81%)`;
+  const sharpMask = `linear-gradient(${ang}deg, transparent 36%, black 49%, black 64%, transparent 79%)`;
   const midMask = `linear-gradient(${ang}deg, transparent 16%, black 36%, black 80%, transparent 100%)`;
 
   const screenStyle: React.CSSProperties = {
@@ -135,13 +138,13 @@ export const Terminal: React.FC<Props> = ({ versionId }) => {
       <div style={layer(5.5, midMask)}>
         <canvas ref={midRef} width={bw} height={bh} style={screenStyle} />
       </div>
-      <div style={layer(0, sharpMask)}>
+      <div style={layer(0.8, sharpMask)}>
         <canvas ref={sharpRef} width={cw} height={ch} style={screenStyle} />
       </div>
       <AbsoluteFill
         style={{
           background:
-            "radial-gradient(ellipse 75% 70% at 52% 50%, rgba(0,0,0,0) 65%, rgba(2,4,9,0.25) 100%)",
+            "radial-gradient(ellipse 75% 70% at 52% 50%, rgba(0,0,0,0) 68%, rgba(2,4,9,0.2) 100%)",
         }}
       />
       <canvas
