@@ -122,8 +122,10 @@ The canvases render natively at the scaled size; it is not an upscale. These
   near-black gaps) and four instanced meshes:
   - blocks, with panel seams and side ribs drawn in the shader;
   - emissive glow tiles, some of them blinking;
-  - camera-facing vertical light lines, brightest at the base, some with
-    pulses;
+  - soft vertical light beams, camera-facing, that rise **only from lit
+    tiles**. Each beam starts at its tile's centre, takes the tile's colour
+    and blinks with it. Beams are brightest at the base, fade smoothly to
+    nothing, and some carry a slow soft pulse;
   - pinpoint sparkles.
 
   The camera is about 27° above the board, yawed 30° to the grid with a slight
