@@ -83,7 +83,7 @@ const near = (lon, lat) => {
 };
 
 // ---- dot grid ----------------------------------------------------------
-const STEP = 0.42; // degrees between rows / along rows (at the equator)
+const STEP = 0.66; // degrees between rows / along rows (at the equator)
 const dots = []; // [lon, lat, cityIntensity]
 for (let lat = -84 + STEP / 2; lat < 84; lat += STEP) {
   const n = Math.max(1, Math.round((360 / STEP) * Math.cos((lat * Math.PI) / 180)));

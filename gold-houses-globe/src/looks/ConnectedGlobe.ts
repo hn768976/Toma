@@ -9,7 +9,7 @@ export type GlobeParams = { ocean: string; rim: string; city: string; land: stri
 const FOV = 9.45;
 const CAM = new THREE.Vector3(0, 0, 8.0);
 const LOOK = new THREE.Vector3(0, 0, 0);
-const LON0 = 105; // longitude facing the camera at frame 0 (Asia)
+const LON0 = 100; // longitude facing the camera at frame 0 (Asia)
 
 // lon/lat (deg) -> unit vector; lon 0 faces +z, east is +x
 const ll = (lon: number, lat: number, r = 1) => {
@@ -37,7 +37,7 @@ for (let i = 0; i < 300; i++) {
   // ~60% are straight diagonal fly-bys at many depths, the rest orbit
   const straight = !orb && srng() < 0.6;
   const d = new THREE.Vector3(1, 0.3 + (srng() - 0.5) * 0.12, (srng() - 0.5) * 0.5).normalize();
-  const front = srng() < 0.7;
+  const front = srng() < 0.45;
   const c = new THREE.Vector3((srng() - 0.5) * 1.0, (srng() - 0.5) * 1.5 + 0.35, front ? 1.05 + srng() * 0.75 : -0.8 + srng() * 1.6);
   streaks.push({
     rad, theta, straight, c, d, len: 0.5 + srng() * 1.3,
@@ -46,7 +46,7 @@ for (let i = 0; i < 300; i++) {
     ph: srng() * TAU,
     k: (1 + Math.floor(srng() * 3)) * (srng() < 0.85 ? -1 : 1), // whole turns per loop
     tail: 0.4 + srng() * 1.1,
-    w: 0.0016 + srng() * 0.0028,
+    w: 0.0012 + srng() * 0.0018,
     br: 0.6 + srng() * 1.2,
     orb,
   });
@@ -57,31 +57,50 @@ export const ConnectedGlobe: Look<GlobeParams> = {
   create: ({ height, assets, params, period }) => {
     const data = assets.globe!;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(params.ocean).multiplyScalar(0.03);
+    scene.background = new THREE.Color(params.rim).multiplyScalar(0.035); // steel-blue haze, not black
     const camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 0.05, 50);
     const ocean = new THREE.Color(params.ocean), rim = new THREE.Color(params.rim), city = new THREE.Color(params.city), landC = new THREE.Color(params.land);
     const rng = mulberry32(0x6106e); // scatter around cities (fixed per data set)
 
     // the globe group: tilt is fixed, spin is per frame
     const tilt = new THREE.Group();
-    tilt.rotation.set(0.22, 0, -0.1); // ~15N faces the camera
+    tilt.rotation.set(0.3, 0, -0.06); // ~17N faces the camera
     const spin = new THREE.Group();
     tilt.add(spin);
     scene.add(tilt);
 
+    // ---- translucent blue fill under the land (blurred dot mask, equirect) ----
+    const LW = 2048, LH = 1024;
+    const lc = document.createElement("canvas");
+    lc.width = LW; lc.height = LH;
+    const lg = lc.getContext("2d")!;
+    lg.fillStyle = "#000"; lg.fillRect(0, 0, LW, LH);
+    lg.fillStyle = "#fff";
+    for (let i = 0; i < data.dots.length; i += 3) {
+      const x = ((((data.dots[i] + 90) / 360) % 1) + 1) % 1 * LW, y = (0.5 - data.dots[i + 1] / 180) * LH;
+      lg.fillRect(x - 2, y - 2, 4, 4);
+    }
+    const lc2 = document.createElement("canvas");
+    lc2.width = LW; lc2.height = LH;
+    const lg2 = lc2.getContext("2d")!;
+    lg2.filter = "blur(3px)";
+    lg2.drawImage(lc, 0, 0);
+    const landTex = new THREE.CanvasTexture(lc2);
+
     // ---- ocean sphere with fresnel rim ----
     const oceanMat = new THREE.ShaderMaterial({
-      uniforms: { ocean: { value: ocean }, rim: { value: rim } },
-      vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
+      uniforms: { ocean: { value: ocean }, rim: { value: rim }, land: { value: landTex } },
+      vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position,1.0); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: /* glsl */ `
-        uniform vec3 ocean; uniform vec3 rim; varying vec3 vN; varying vec3 vV;
+        uniform vec3 ocean; uniform vec3 rim; uniform sampler2D land; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
         void main() {
           float ndv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
           float f = 1.0 - ndv;
-          vec3 c = ocean * (0.012 + 0.22 * pow(f, 2.6));
+          vec3 c = vec3(0.004, 0.012, 0.018) + mix(ocean, rim, 0.4) * 0.35 * pow(f, 2.2); // dark charcoal-teal, glassy toward the limb
+          c += mix(ocean, rim, 0.5) * 0.09 * texture2D(land, vUv).r;
           // soft blue sheen from the lower left
           c += ocean * 0.12 * pow(max(dot(normalize(vN), normalize(vec3(-0.8, -0.35, 0.5))), 0.0), 3.0);
-          c += rim * (0.2 * pow(f, 5.0) + 2.2 * pow(f, 16.0));
+          c += rim * (0.3 * pow(f, 5.0) + 0.9 * pow(f, 16.0));
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -98,9 +117,9 @@ export const ConnectedGlobe: Look<GlobeParams> = {
           vec3 oc = -cameraPosition;
           float h = length(cross(v, oc)); // closest approach of the view ray to the centre
           float d = max(h - 1.0, 0.0);
-          float g = 1.5 * exp(-d / 0.005) + 0.35 * exp(-d / 0.022) + 0.08 * exp(-d / 0.12)
-            + 0.35 * exp(-abs(h - 1.016) / 0.008); // outer edge of the glass shell
-          gl_FragColor = vec4(rim * g, 1.0);
+          float g = 0.6 * exp(-d / 0.006) + 0.55 * exp(-d / 0.035) + 0.22 * exp(-d / 0.25)
+            + 0.25 * exp(-abs(h - 1.016) / 0.012); // outer edge of the glass shell
+          gl_FragColor = vec4(mix(rim, vec3(0.25, 0.55, 1.0), 0.45) * g, 1.0);
         }`,
       side: THREE.BackSide,
       blending: THREE.AdditiveBlending,
@@ -119,10 +138,10 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       const p = ll(lon, lat, R);
       pos.push(p.x, p.y, p.z);
       // only some dots in populated areas become city lights
-      const lit = (light > 0.05 && rng() < 0.22) || rng() < 0.025 ? Math.max(light, 0.5) : 0;
-      const c = lit > 0 ? city.clone().multiplyScalar(2.6 + 3 * lit) : landC.clone().multiplyScalar(1.7);
+      const lit = (light > 0.05 && rng() < 0.32) || rng() < 0.04 ? Math.max(light, 0.5) : 0;
+      const c = lit > 0 ? city.clone().lerp(new THREE.Color(1, 1, 1), 0.25).multiplyScalar(5 + 4 * lit) : landC.clone().lerp(rim, 0.35).multiplyScalar(1.7);
       col.push(c.r, c.g, c.b);
-      size.push(lit > 0 ? 0.8 : 0.85);
+      size.push(lit > 0 ? 1.0 : 0.85);
       // extra small amber dots scattered around the brightest areas
       if (light > 0.5) {
         const extra = Math.floor(rng() * 1.4);
@@ -140,7 +159,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     dotGeo.setAttribute("pcolor", new THREE.Float32BufferAttribute(col, 3));
     dotGeo.setAttribute("dsize", new THREE.Float32BufferAttribute(size, 1));
     const dotMat = new THREE.ShaderMaterial({
-      uniforms: { uProj: { value: height / (2 * Math.tan((FOV * Math.PI) / 360)) }, step: { value: ((data.step * Math.PI) / 180) * 0.72 } },
+      uniforms: { uProj: { value: height / (2 * Math.tan((FOV * Math.PI) / 360)) }, step: { value: ((data.step * Math.PI) / 180) * 0.62 } },
       vertexShader: /* glsl */ `
         attribute vec3 pcolor; attribute float dsize; uniform float uProj; uniform float step;
         varying vec3 vColor; varying float vFacing;
@@ -161,9 +180,9 @@ export const ConnectedGlobe: Look<GlobeParams> = {
         varying vec3 vColor; varying float vFacing;
         void main() {
           vec2 q = gl_PointCoord * 2.0 - 1.0;
-          float r = max(abs(q.x), abs(q.y)) * 0.6 + length(q) * 0.4; // rounded square
+          float r = length(q); // round LED
           if (r > 1.0) discard;
-          gl_FragColor = vec4(vColor * (1.0 - smoothstep(0.75, 1.0, r) * 0.5), 1.0);
+          gl_FragColor = vec4(vColor * (1.0 - smoothstep(0.55, 1.0, r) * 0.6), 1.0);
         }`,
     });
     const dotPoints = new THREE.Points(dotGeo, dotMat);
@@ -196,7 +215,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `uniform vec3 col; uniform float pulse; varying vec2 vUv;
         void main(){ float r = length(vUv * 2.0 - 1.0);
-          float ring = smoothstep(0.74, 0.8, r) * (1.0 - smoothstep(0.86, 0.92, r));
+          float ring = smoothstep(0.66, 0.74, r) * (1.0 - smoothstep(0.86, 0.94, r));
           float dotc = 1.0 - smoothstep(0.14, 0.22, r);
           gl_FragColor = vec4(col * (ring * 2.2 + dotc * 2.6) * pulse, 1.0); }`,
       blending: THREE.AdditiveBlending,
@@ -211,14 +230,14 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     const ringGroup = new THREE.Group(); // rings face the camera, placed per frame
     scene.add(ringGroup);
     type Pin = { ring: THREE.Mesh; local: THREE.Vector3; mat: THREE.ShaderMaterial; k: number; ph: number };
-    const pins: Pin[] = data.pins.map(([lon, lat]) => {
+    const pins: Pin[] = data.pins.filter((_, i) => i % 3 !== 2).map(([lon, lat]) => {
       const p = ll(lon, lat, 1.0025);
       const nrm = p.clone().normalize();
-      const s = 0.045 + pinRng() * 0.02;
+      const s = 0.055 + pinRng() * 0.02;
       const m = ringMat.clone();
       const ring = new THREE.Mesh(new THREE.PlaneGeometry(s, s), m);
       ringGroup.add(ring);
-      const len = 0.05 + pinRng() * 0.07;
+      const len = 0.1 + pinRng() * 0.15;
       const line = new THREE.Mesh(new THREE.CylinderGeometry(0.0007, 0.0007, len, 6, 1, true), lineMat);
       line.position.copy(nrm.clone().multiplyScalar(1 + len / 2));
       line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm);
@@ -248,7 +267,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     stGeo.setAttribute("br", new THREE.BufferAttribute(sBr, 1));
     stGeo.setIndex(sIdx);
     const stMat = new THREE.ShaderMaterial({
-      uniforms: { col: { value: rim.clone().lerp(new THREE.Color(1, 1, 1), 0.45) }, blue: { value: new THREE.Color(0.08, 0.4, 1.0) } },
+      uniforms: { col: { value: rim.clone().lerp(new THREE.Color(1, 1, 1), 0.45) }, blue: { value: new THREE.Color(0.35, 0.65, 1.0) } },
       vertexShader: `attribute float br; varying vec2 vUv; varying float vBr; void main(){ vUv = uv; vBr = br; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `uniform vec3 col; uniform vec3 blue; varying vec2 vUv; varying float vBr;
         void main(){ float a = exp(-vUv.y * vUv.y * 3.0); float s = vUv.x; float t = s * s * s;
@@ -269,7 +288,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     hGeo.setAttribute("position", new THREE.BufferAttribute(hPos, 3));
     hGeo.setAttribute("pcolor", new THREE.BufferAttribute(hCol, 3));
     hGeo.setAttribute("size", new THREE.BufferAttribute(hSize, 1));
-    const heads = new THREE.Points(hGeo, glowPointsMaterial(height, { sharp: 0.2 }));
+    const heads = new THREE.Points(hGeo, glowPointsMaterial(height, { sharp: 0 }));
     heads.frustumCulled = false;
     scene.add(heads);
     const headCol = rim.clone().lerp(new THREE.Color(1, 1, 1), 0.6);
@@ -277,8 +296,8 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     const bRng = mulberry32(0xb0ce);
     const NB = 9;
     const bok = Array.from({ length: NB }, () => ({
-      x: -0.17 + bRng() * 0.07, y: -0.1 + bRng() * 0.16, z: 6.4 + bRng() * 0.3,
-      k: 1 + Math.floor(bRng() * 2), ph: bRng() * TAU, size: 22 + bRng() * 30, amber: bRng() < 0.6, b: 0.25 + bRng() * 0.35,
+      x: -0.225 + bRng() * 0.025, y: -0.07 + bRng() * 0.14, z: 6.4 + bRng() * 0.3,
+      k: 1 + Math.floor(bRng() * 2), ph: bRng() * TAU, size: 10 + bRng() * 10, amber: bRng() < 0.6, b: 0.25 + bRng() * 0.35,
     }));
     const bPos = new Float32Array(NB * 3), bCol = new Float32Array(NB * 3), bSize = new Float32Array(NB);
     const bGeo = new THREE.BufferGeometry();
@@ -352,13 +371,13 @@ export const ConnectedGlobe: Look<GlobeParams> = {
           Pn.copy(P).add(S);
           sPos.set([Pn.x, Pn.y, Pn.z], o * 3 + 3);
           sUv.set([s, -1, s, 1], o * 2);
-          sBr[o] = sBr[o + 1] = st.orb ? 0 : st.rad ? -0.9 * st.br : st.br;
+          sBr[o] = sBr[o + 1] = st.orb ? 0 : st.rad ? -0.5 * st.br : st.br;
           if (k === SEG) {
             hPos.set([P.x, P.y, P.z], i * 3);
-            const hb = st.orb ? 1.4 * st.br : 2.2 * st.br;
+            const hb = st.orb ? 1.4 * st.br : 1.8 * st.br;
             const c = st.orb && i % 3 === 0 ? city : headCol;
             hCol.set([c.r * hb, c.g * hb, c.b * hb], i * 3);
-            hSize[i] = st.rad ? 0 : st.orb ? 8 + 5 * st.br : 9 + 5 * st.br;
+            hSize[i] = st.rad ? 0 : st.orb ? 7 + 4 * st.br : 9 + 5 * st.br;
           }
         }
       }
@@ -377,8 +396,8 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       post: {
         exposure: 1.0,
         tonemap: "aces",
-        bloom: { strength: 1.5, threshold: 0.6, knee: 0.5, radius: 0.55 },
-        dof: { focus: 7.0, range: 1.2, nearRange: 0.8, maxBlur: 0.005, maxNearBlur: 0.01 },
+        bloom: { strength: 1.9, threshold: 0.5, knee: 0.5, radius: 0.65 },
+        dof: { focus: 7.0, range: 1.0, nearRange: 0.8, maxBlur: 0.008, maxNearBlur: 0.01 },
         grain: 0.02,
         grainPeriod: period,
         grade: { vignette: 0.3, saturation: 1.35 },
