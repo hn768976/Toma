@@ -108,6 +108,13 @@ on screen is a pure function of `useCurrentFrame()`:
 - Grain and dither come from an integer PCG hash of `(pixel x, pixel y, frame mod 600)`.
 - The HDRI, Natural Earth data and the font load behind `delayRender` /
   `continueRender`.
+- GPU pipeline warm-up: ANGLE first draws with quickly linked pipelines and
+  later swaps in optimised ones compiled in the background, and the two can
+  differ in the last bit. When rendering, each browser tab therefore draws
+  8 frames spread over the loop and waits ~1.2 s after each before the first
+  real frame (about 10 s per tab, not per frame). Without this, a frame
+  rendered cold could differ by 1 code value on a few dozen pixels from the
+  same frame rendered mid-sequence.
 
 **Check:** render frame 200 alone from a cold start and compare it to frame 200
 of the full sequence:
