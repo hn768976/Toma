@@ -1,0 +1,22 @@
+{
+  "name": "trading-terminal",
+  "version": "1.0.0",
+  "description": "Trading Terminal Close-Up — two 15s 2.5D Remotion compositions (Bear / Bull)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
