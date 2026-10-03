@@ -289,7 +289,6 @@ export const Globe: React.FC<Ctx & Box & { framed?: boolean }> = (p) => {
           ))}
       </g>
       <circle cx={cx} cy={cy} r={R} fill="none" stroke={th.globeLand} strokeWidth={1} opacity={0.2} />
-      <ellipse cx={cx} cy={cy} rx={R * 1.28} ry={R * 0.3} fill="none" stroke={th.globeLand} strokeWidth={1} opacity={0.25} transform={`rotate(-14 ${cx} ${cy})`} />
       <circle
         cx={cx}
         cy={cy}
