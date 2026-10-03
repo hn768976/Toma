@@ -66,10 +66,19 @@ for id in DEFI CBDC DAO AGI RAG NPU MFA KYC AI; do
 done
 ```
 
-720p preview (as delivered):
+720p preview (`--scale=1/3` gives exactly 1280×720):
 
 ```bash
 npx remotion render HudAcronym-DEFI out/HudAcronym_DEFI.mp4 --gl=angle --scale=0.3333333333333333
+```
+
+The delivered previews were made with the same renderer, as a PNG sequence that was then
+encoded with x264. That way frame 300 of the full render could be compared byte for byte
+with a cold still:
+
+```bash
+npx remotion render HudAcronym-DEFI out/seq/DEFI --sequence --image-format=png --scale=0.3333333333333333 --concurrency=4
+ffmpeg -framerate 30 -i out/seq/DEFI/element-%03d.png -c:v libx264 -crf 16 -pix_fmt yuv420p -preset slow -movflags +faststart out/HudAcronym_DEFI.mp4
 ```
 
 ## Stills (6000×3375)
@@ -82,7 +91,23 @@ npx remotion still HudAcronym-DEFI out/HudAcronym_DEFI_6K.png --frame=300 --scal
 
 ## Render time
 
-RENDER_TIME_SECTION
+Measured on the build machine: **4 vCPU, no GPU** (ANGLE → SwiftShader software WebGL2),
+720p (`--scale=0.3333333333333333`), `--concurrency=4`, 600 frames:
+
+| Composition | Wall time | Per frame (wall) | Per frame per render thread |
+|---|---|---|---|
+| HudAcronym-DEFI | 553 s | **0.92 s** | ~3.7 s |
+| HudAcronym-AGI | 556 s | **0.93 s** | ~3.7 s |
+| HudAcronym-AI | 560 s | **0.93 s** | ~3.7 s |
+
+**4K estimate.** 4K is 9× the pixels of 720p, and the cost is almost entirely per-pixel
+shading (the scene geometry is small). On the same CPU-only machine that is **about 8–9 s per
+frame**, or roughly 80–90 min per composition and 12–14 h for all 9. This is an estimate;
+4K was not rendered here.
+
+On a machine with a real GPU behind ANGLE, expect well under 1 s per frame at 4K. A 4K
+still with SwiftShader can need more than the 30 s default page timeout, which is why
+`remotion.config.ts` raises the delayRender timeout to 120 s.
 
 ## Add an acronym
 
@@ -180,7 +205,25 @@ full `--sequence --image-format=png` render.
 
 ## Completion checklist
 
-CHECKLIST_SECTION
+- [x] 9 compositions from data rows, 3840×2160, 30 fps, 600 frames; same seed, board, rings and camera
+- [x] 3D with `@remotion/three` and WebGL2 (`--gl=angle`); no WebGPU, no PixiJS, no MCP servers
+- [x] DSEG14 Classic font (OFL, shipped with its licence), drawn into a 4096 px texture,
+      with faint unlit segments and per-segment flicker at fixed frames
+- [x] Word sizing: 60% of the inner ring's width for 3 or more letters, 45% for 1–2 letters
+- [x] Rings: bright inner ring and hairline; dashed, long-arc and tick middle rings at
+      different depths; 2 faint, defocused outer arcs past the frame edge
+- [x] Board: `#03131A`, seeded 45° routing with pads and vias, brighter near the centre,
+      data pulses travelling toward the rings, depth-of-field blur
+- [x] Camera: closed sway path (yaw ±3°, pitch ±2°, slight push in/out), viewed slightly from below
+- [x] Bloom on emissive only; ACES tonemapping; ±1/255 dither; about 2% grain from (pixel, frame % 600)
+- [x] No `Math.random()`, `Date.now()`, R3F clock, `useState`-driven visuals or temporal effects
+- [x] Loop check: frame 0 == frame 600, pixel for pixel (DEFI, AGI, AI)
+- [x] Determinism: cold frame 300 == frame 300 of a full multi-threaded render, byte for
+      byte (DEFI, AGI, AI)
+- [x] Banding: glow falloff read from the encoded mp4 changes smoothly (DEFI, AGI, AI)
+- [x] All 9 words render, read correctly and are centred at frame 300
+- [x] Previews: 1280×720, h264, yuv420p, 30/1, 20.0 s, no audio
+- [x] `npm install && npx remotion studio` works from a clean copy
 
 ## Licences
 
