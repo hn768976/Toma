@@ -11,18 +11,20 @@ import { GoldMarketRow } from "../versions";
 /**
  * Look 1 — Gold Market.
  *
- * Loop: everything lives on a strip of length S = 6·L that repeats every L
- * (L = wave period). Over 600 frames the world slides by exactly N·L (N = 2)
- * past a static camera, and the rising/falling trend is followed by sliding
- * along y as well, so frame 600 == frame 0 exactly.
+ * Loop: everything lives on a strip of length S = 6·L that wraps off-screen.
+ * Over 600 frames the world slides by exactly TRAVEL = 3·L past a static
+ * camera (and along y with the trend). Every layout — wave, bar jitter,
+ * candles, tags — is periodic with period TRAVEL, so the arrangement after one
+ * loop is the arrangement at the start: frame 599 -> 0 is an ordinary step.
  */
 
 const L = 14; // wave period (world units)
 const S = 6 * L; // strip length, wraps off-screen
-const TRAVEL = 2 * L; // N·L per loop
-const BAR_COUNT = 60;
-const CANDLE_COUNT = 300;
-const TAG_COUNT = 30;
+const TRAVEL = 3 * L; // world units per loop; S = 2·TRAVEL
+const COPIES = S / TRAVEL;
+const BAR_COUNT = 60; // 30 unique, repeated every TRAVEL
+const CANDLE_COUNT = 300; // 150 unique, repeated every TRAVEL
+const TAG_COUNT = 30; // 15 unique, repeated every TRAVEL
 const SLOPE = 0.08;
 const CAM_Z = 40;
 
@@ -35,23 +37,27 @@ const wrap = (x: number) => ((((x + S / 2) % S) + S) % S) - S / 2;
 // Generated once at module level from fixed seeds.
 
 const rngBars = mulberry32(0x60_1d);
-const BARS = Array.from({ length: BAR_COUNT }, (_, i) => ({
-  x: i * (S / BAR_COUNT),
+const BARS_PER_PERIOD = BAR_COUNT / COPIES;
+const BAR_UNIQUE = Array.from({ length: BARS_PER_PERIOD }, (_, i) => ({
   dy: range(rngBars, -0.18, 0.18),
-  z: 0.7 * Math.sin((2 * TAU * i) / BAR_COUNT * 3 + 1) + range(rngBars, -0.35, 0.35),
+  z: 0.7 * Math.sin((TAU * i * 3) / BARS_PER_PERIOD + 1) + range(rngBars, -0.35, 0.35),
   ry: range(rngBars, -0.08, 0.08),
   rz: range(rngBars, -0.03, 0.03),
+}));
+const BARS = Array.from({ length: BAR_COUNT }, (_, i) => ({
+  x: i * (S / BAR_COUNT),
+  ...BAR_UNIQUE[i % BARS_PER_PERIOD],
 }));
 
 type Candle = { x: number; y: number; z: number; h: number; w: number; wickUp: number; wickDown: number; r: number };
 const rngCandles = mulberry32(0xca_d1e);
-const CANDLES: Candle[] = Array.from({ length: CANDLE_COUNT }, (_, i) => {
+const CANDLE_UNIQUE: Candle[] = Array.from({ length: CANDLE_COUNT / COPIES }, (_, i) => {
   // depth layers: far / behind bars / just in front / near (big, very blurred)
   const layer = i % 10 < 4 ? 0 : i % 10 < 7 ? 1 : i % 10 < 9 ? 2 : 3;
   const z = [range(rngCandles, -42, -20), range(rngCandles, -22, -11), range(rngCandles, 10, 17), range(rngCandles, 17, 27)][layer];
   const h = range(rngCandles, 0.25, 1.5) * (rngCandles() < 0.15 ? 1.6 : 1);
   return {
-    x: rngCandles() * S,
+    x: rngCandles() * TRAVEL,
     y: range(rngCandles, -6.0, 3.0),
     z,
     h,
@@ -62,10 +68,12 @@ const CANDLES: Candle[] = Array.from({ length: CANDLE_COUNT }, (_, i) => {
   };
 });
 
+const CANDLES: Candle[] = Array.from({ length: COPIES }, (_, k) => CANDLE_UNIQUE.map((c) => ({ ...c, x: c.x + k * TRAVEL }))).flat();
+
 const rngTags = mulberry32(0x7a_95);
 const TAG_VALUES = Array.from({ length: 40 }, () => range(rngTags, 0.4, 9.6).toFixed(2));
-const TAGS = Array.from({ length: TAG_COUNT }, (_, i) => {
-  const bar = Math.floor((i / TAG_COUNT) * BAR_COUNT + range(rngTags, 0, 2));
+const TAG_UNIQUE = Array.from({ length: TAG_COUNT / COPIES }, (_, i) => {
+  const bar = Math.floor((i / (TAG_COUNT / COPIES)) * BARS_PER_PERIOD + range(rngTags, 0, 2));
   return {
     bar,
     dx: range(rngTags, -0.9, 0.2),
@@ -76,6 +84,7 @@ const TAGS = Array.from({ length: TAG_COUNT }, (_, i) => {
     size: range(rngTags, 0.85, 1.15),
   };
 });
+const TAGS = Array.from({ length: COPIES }, (_, k) => TAG_UNIQUE.map((t) => ({ ...t, bar: t.bar + k * BARS_PER_PERIOD }))).flat();
 const TAG_PERIOD = 30; // frames per value change; divides 600
 
 // -------------------------------------------------------------- geometry --
