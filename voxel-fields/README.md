@@ -97,7 +97,22 @@ The raw values should vary pixel to pixel (dither and grain), and the row-averag
 
 ## Measured render time (this build machine)
 
-RESULTS_PLACEHOLDER
+Measured on the build machine: 4 vCPU, no GPU. WebGL ran as ANGLE on SwiftShader, which is software rendering. All times are wall-clock.
+
+| | Canyon (×3) | Wave (×2) |
+|---|---|---|
+| 1080p (`--scale=0.5`, concurrency 2), full 600-frame render incl. start-up | **5.04–5.08 s/frame** (≈ 50 min per composition) | **3.11 s/frame** (≈ 31 min) |
+| 1080p steady state (6-frame minus 1-frame run) | ≈ 7.4 s/frame at concurrency 1 (development benchmark) | ≈ 3.0 s/frame at concurrency 1 (development benchmark) |
+| **4K measured** (`--scale=1`, concurrency 2, 6-frame minus 1-frame run) | **24.4 s/frame** → ≈ 4.1 h per composition | **12.5 s/frame** → ≈ 2.1 h per composition |
+
+- **Grid:** 88×88 bounding grid (7,744 columns), of which 3,815 are drawn (the visible footprint plus a 4-cell margin). One `InstancedMesh` holds all of them.
+- **Biggest cost:** PCSS soft shadows (10 samples), about 40% of canyon frame time on software GL.
+- **All five at 4K on CPU only:** ≈ 16–17 hours.
+- **On a GPU (not measured here):**
+  - Expect well under a second per 4K frame.
+  - Raise `--concurrency`.
+  - Keep `--gl=angle`, which uses the GPU through ANGLE when one exists.
+  - On Linux servers with an NVIDIA GPU, `--gl=vulkan` or `--gl=egl` may be faster. Check that frame 300 still matches a cold still afterwards.
 
 ## How to add a palette (one data row)
 
@@ -119,7 +134,7 @@ Add one object to `PALETTES` in `src/lib/palettes.ts`. It becomes a new composit
 ## Verification
 
 ```bash
-scripts/render-previews.py        # 1080p previews + PNG sequences, logs timing
+python3 scripts/render-previews.py   # 1080p previews + PNG sequences, logs timing
 python3 scripts/verify.py         # probe, loop, determinism, banding, frames, heights
 ```
 
@@ -129,4 +144,21 @@ python3 scripts/verify.py         # probe, loop, determinism, banding, frames, h
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+Status of the 1080p previews in `out/previews` and the final source:
+
+- [x] Five compositions, 3840×2160, 30 fps, 600 frames, seamless 20 s loops
+- [x] Look 1 Canyon: Green / White / Blue, identical heights. Depth-only renders at frame 300 are byte-identical.
+- [x] Look 2 Wave: Pale Blue / Mint, identical heights (same check)
+- [x] One `InstancedMesh` per field. Cube lines are drawn by the shader in world space, constant width, antialiased.
+- [x] Neighbouring columns share colours in bands. Colours are chosen once, from a seeded `mulberry32` and noise.
+- [x] Soft key light from the upper left plus a cool sky fill, PCSS soft shadows, height-based gap darkening, roughness 0.6 with sheen on the tops
+- [x] Real depth of field: sharp middle band, soft near and far. ACES Filmic tone mapping, sRGB output.
+- [x] No accumulating effects (no TAA, `AccumulativeShadows` or temporal AO). No `Math.random()`, `Date.now()` or clock at render time.
+- [x] **Step 1 – file checks:** 1920×1080, 30/1, 20.0 s, h264, yuv420p, 600 frames, no audio (all five)
+- [x] **Step 2 – loop:** frame 600 equals frame 0 byte for byte, rendered at 601 frames (all five). The 599→0 step is no larger than an ordinary frame step.
+- [x] **Step 3 – determinism:** a cold still of frame 300 is byte-identical to frame 300 of the full multi-tab render (all five)
+- [x] **Step 4 – banding:** in Canyon White and Wave Blue mp4 frames, the row-averaged profile across a flat top changes by at most 0.58 of an 8-bit level per pixel; the raw values are dithered, with flat runs of 3–4 px only
+- [x] **Step 5 – frames:** columns move between picks. Canyon: 1.3–2.8% near-black void pixels in every pick. Wave: zero dark pixels. Rows run diagonally. Contact sheets are in `out/verify/*-sheet.png`.
+- [x] Stills: 2 per composition at 6000×3375, plus a 1080p PNG of each
+- [x] Measured render time recorded above
+- [ ] **Known minor artifact:** at a few inner corners where a lit top meets the foot of a taller column, PCSS leaves a very faint dotted pattern, a few pixels at 1080p. It's only visible when zoomed in.
