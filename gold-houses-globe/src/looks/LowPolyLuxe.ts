@@ -49,20 +49,20 @@ for (let i = 0; i < tri.length; i += 3) {
 }
 
 // sparkles: strung along the rails like fairy lights, a few drifting free
-const N_EDGE_SPARK = 3000;
-const N_VERT_SPARK = 900; // clustered at the vertices
+const N_EDGE_SPARK = 4600;
+const N_VERT_SPARK = 1400; // clustered at the vertices
 const N_FREE_SPARK = 220;
 type Spark = { e: number; u: number; ua: number; k: number; ph: number; tk: number; tph: number; size: number; bright: number;
   x: number; y: number; z: number; ax: number; ay: number; kx: number; ky: number; px: number; py: number };
 const sparks: Spark[] = [];
 for (let i = 0; i < N_EDGE_SPARK + N_FREE_SPARK + N_VERT_SPARK; i++) {
-  const hot = rng() < 0.06;
+  const hot = rng() < 0.03;
   sparks.push({
     e: Math.floor(rng() * edges.length),
     u: rng(), ua: 0.03 + rng() * 0.12, k: 1 + Math.floor(rng() * 2), ph: rng() * TAU,
     tk: 2 + Math.floor(rng() * 14), tph: rng() * TAU,
-    size: hot ? 10 + rng() * 4 : 5 + rng() * 3,
-    bright: hot ? 22 + rng() * 10 : 8 + rng() * 8,
+    size: hot ? 8 + rng() * 3 : 3.5 + rng() * 2.5,
+    bright: hot ? 12 + rng() * 6 : 5 + rng() * 6,
     x: X0 + rng() * (X1 - X0), y: Y0 + rng() * (Y1 - Y0), z: 0.2 + rng() * 0.9,
     ax: 0.05 + rng() * 0.2, ay: 0.05 + rng() * 0.2,
     kx: 1 + Math.floor(rng() * 2), ky: 1 + Math.floor(rng() * 2),
@@ -72,7 +72,7 @@ for (let i = 0; i < N_EDGE_SPARK + N_FREE_SPARK + N_VERT_SPARK; i++) {
 
 // rail cross-section (fractions of SPACING): gap between neighbouring frames,
 // rail width, ridge height
-const GAP = 0.011, RAIL = 0.018, RIDGE = 0.015;
+const GAP = 0.012, RAIL = 0.03, RIDGE = 0.024;
 const HUB_R = 0.045;
 // convex bulge toward the camera: the surface curves away at the frame edges
 const BULGE = 0.022;
@@ -96,7 +96,7 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     const faceMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(params.face),
       metalness: 0.8,
-      roughness: 0.14,
+      roughness: 0.07,
       flatShading: true,
       side: THREE.DoubleSide,
       envMapIntensity: 0.9,
@@ -119,13 +119,13 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     railGeo.setAttribute("position", new THREE.BufferAttribute(railPos, 3));
     const gold = new THREE.Color(params.edge);
     const railMat = new THREE.MeshStandardMaterial({
-      color: gold.clone().lerp(new THREE.Color(0.5, 0.3, 0.15), 0.3),
+      color: gold.clone().lerp(new THREE.Color(0.55, 0.25, 0.06), 0.4),
       metalness: 1,
-      roughness: 0.62,
+      roughness: 0.42,
       flatShading: true,
       side: THREE.DoubleSide,
-      envMapIntensity: 0.4,
-      emissive: gold.clone().multiplyScalar(0.06),
+      envMapIntensity: 0.65,
+      emissive: gold.clone().multiplyScalar(0.015),
     });
     const rails = new THREE.Mesh(railGeo, railMat);
     rails.frustumCulled = false;
@@ -149,7 +149,7 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
     sGeo.setAttribute("size", new THREE.BufferAttribute(sSize, 1));
     sGeo.setAttribute("pcolor", new THREE.BufferAttribute(sCol, 3));
-    const sp = new THREE.Points(sGeo, glowPointsMaterial(height, { sharp: 0.3 }));
+    const sp = new THREE.Points(sGeo, glowPointsMaterial(height, { sharp: 0.2 }));
     sp.frustumCulled = false;
     scene.add(sp);
     const sparkCol = hdrColor(params.sparkle, 1);
@@ -275,9 +275,9 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
       post: {
         exposure: 1.0,
         tonemap: "aces",
-        bloom: { strength: 1.3, threshold: 0.6, knee: 0.5, radius: 0.5 },
+        bloom: { strength: 1.3, threshold: 0.8, knee: 0.4, radius: 0.4 },
         // focus on the crown of the bulge; the receding edges go soft
-        dof: { focus: 6.4, range: 2.2, nearRange: 3, maxBlur: 0.012, maxNearBlur: 0.006 },
+        dof: { focus: 6.4, range: 3.5, nearRange: 3, maxBlur: 0.0035, maxNearBlur: 0.004 },
         grain: 0.02,
         grainPeriod: period,
         grade: { vignette: 0.55 },
