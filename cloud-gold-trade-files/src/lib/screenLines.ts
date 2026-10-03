@@ -10,7 +10,7 @@ export function screenLines(
   color: THREE.Color,
   widthFrac: number,
   viewH: number,
-  opts: { depthWrite?: boolean; fadeNear?: number; fadeFar?: number } = {},
+  opts: { depthWrite?: boolean; fadeNear?: number; fadeFar?: number; minWidth?: number } = {},
 ): THREE.Mesh {
   const n = segs.length;
   const A = new Float32Array(n * 4 * 3);
@@ -39,7 +39,7 @@ export function screenLines(
     uniforms: {
       uColor: { value: color },
       uW: { value: widthFrac },
-      uMinW: { value: 1.0 / 720 },
+      uMinW: { value: opts.minWidth ?? 1.0 / 720 },
       uViewH: { value: viewH },
       uAspect: { value: 16 / 9 },
       uFadeNear: { value: opts.fadeNear ?? 0 },

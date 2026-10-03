@@ -14,6 +14,8 @@ export type DofOptions = {
   farK: number;
   /** maximum blur radius as a fraction of frame height */
   maxBlur: number;
+  /** depth assigned to empty background pixels (default: the far plane) */
+  skyZ?: number;
 };
 
 export type PostOptions = {
@@ -34,6 +36,8 @@ export type PostOptions = {
   clearColor: THREE.ColorRepresentation;
   samples: number;
   dofSamples: number;
+  /** DOF working resolution cap (lines); higher = steadier blur edges in motion */
+  dofWorkH: number;
 };
 
 export const defaultPost = (): PostOptions => ({
@@ -50,6 +54,7 @@ export const defaultPost = (): PostOptions => ({
   clearColor: 0x000000,
   samples: 4,
   dofSamples: 128,
+  dofWorkH: 540,
 });
 
 const quadVert = /* glsl */ `
@@ -59,15 +64,15 @@ void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 
 const dofPrepFrag = /* glsl */ `
 // downsample to the DOF working resolution (4 bilinear taps) + linear depth
-uniform sampler2D tColor; uniform sampler2D tDepth; uniform float near; uniform float far; uniform vec2 texelW;
+uniform sampler2D tColor; uniform sampler2D tDepth; uniform float near; uniform float far; uniform vec2 texelW; uniform float skyZ;
 varying vec2 vUv;
 void main() {
   vec2 o = texelW * 0.25;
   vec3 c = texture2D(tColor, vUv + vec2(-o.x, -o.y)).rgb + texture2D(tColor, vUv + vec2(o.x, -o.y)).rgb
          + texture2D(tColor, vUv + vec2(-o.x, o.y)).rgb + texture2D(tColor, vUv + vec2(o.x, o.y)).rgb;
   float d = texture2D(tDepth, vUv).x;
-  float z = near * far / (far - d * (far - near));
-  gl_FragColor = vec4(c * 0.25, z);
+  float z = d > 0.99999 ? skyZ : near * far / (far - d * (far - near));
+  gl_FragColor = vec4(min(c * 0.25, vec3(256.0)), z);
 }
 `;
 
@@ -111,11 +116,11 @@ void main() {
 // full-res: blend the sharp frame with the blurred working-res result
 const dofMixFrag = /* glsl */ `
 uniform sampler2D tColor; uniform sampler2D tDepth; uniform sampler2D tBlur;
-uniform float near; uniform float far; uniform float focus; uniform float nearK; uniform float farK; uniform float maxBlur;
+uniform float near; uniform float far; uniform float focus; uniform float nearK; uniform float farK; uniform float maxBlur; uniform float skyZ;
 varying vec2 vUv;
 void main() {
   float d = texture2D(tDepth, vUv).x;
-  float z = near * far / (far - d * (far - near));
+  float z = d > 0.99999 ? skyZ : near * far / (far - d * (far - near));
   float c = z < focus ? (focus - z) / z * nearK : (z - focus) / z * farK;
   c = clamp(c, 0.0, 1.0) * maxBlur;
   vec4 b = texture2D(tBlur, vUv);
@@ -186,7 +191,7 @@ uvec3 pcg3d(uvec3 v) {
   return v;
 }
 void main() {
-  vec3 hdr = texture2D(tColor, vUv).rgb + texture2D(tBloom, vUv).rgb * bloomStrength;
+  vec3 hdr = min(texture2D(tColor, vUv).rgb, vec3(256.0)) + min(texture2D(tBloom, vUv).rgb, vec3(256.0)) * bloomStrength;
   vec2 q = vUv - 0.5; q.x *= res.x / res.y;
   hdr *= exposure * mix(1.0, 1.0 - smoothstep(0.35, 1.25, length(q)), vignette);
   vec3 c = toSRGB(aces(hdr));
@@ -249,7 +254,7 @@ export class PostFX {
       depthTexture,
     });
     // DOF works at <=540 lines with a fixed tap budget, so quality is the same at 720p and 4K
-    this.workH = Math.min(height, 540);
+    this.workH = Math.min(height, this.opts.dofWorkH);
     const workW = Math.round((width * this.workH) / height);
     this.prepRT = new THREE.WebGLRenderTarget(workW, this.workH, { ...hf, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
     this.blurRT = new THREE.WebGLRenderTarget(workW, this.workH, { ...hf, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
@@ -263,10 +268,10 @@ export class PostFX {
       this.ups.push(new THREE.WebGLRenderTarget(w, h, o));
     }
     this.mPrep = makeMat(dofPrepFrag, {
-      tColor: { value: null }, tDepth: { value: null }, near: { value: 0.1 }, far: { value: 100 }, texelW: { value: new THREE.Vector2() },
+      tColor: { value: null }, tDepth: { value: null }, near: { value: 0.1 }, far: { value: 100 }, texelW: { value: new THREE.Vector2() }, skyZ: { value: 100 },
     });
     this.mDofMix = makeMat(dofMixFrag, {
-      tColor: { value: null }, tDepth: { value: null }, tBlur: { value: null }, near: { value: 0.1 }, far: { value: 100 },
+      tColor: { value: null }, tDepth: { value: null }, tBlur: { value: null }, near: { value: 0.1 }, far: { value: 100 }, skyZ: { value: 100 },
       focus: { value: 10 }, nearK: { value: 1 }, farK: { value: 1 }, maxBlur: { value: 1 },
     });
     this.mDof = makeMat(
@@ -319,6 +324,7 @@ export class PostFX {
       u.tDepth.value = this.sceneRT.depthTexture;
       u.near.value = camera.near;
       u.far.value = camera.far;
+      u.skyZ.value = opts.dof.skyZ ?? camera.far;
       u.texelW.value.set(1 / wW, 1 / wH);
       this.pass(this.mPrep, this.prepRT);
       const d = this.mDof.uniforms;
@@ -338,6 +344,7 @@ export class PostFX {
       x.tBlur.value = this.blurRT.texture;
       x.near.value = camera.near;
       x.far.value = camera.far;
+      x.skyZ.value = opts.dof.skyZ ?? camera.far;
       x.focus.value = opts.dof.focus;
       x.nearK.value = opts.dof.nearK;
       x.farK.value = opts.dof.farK;

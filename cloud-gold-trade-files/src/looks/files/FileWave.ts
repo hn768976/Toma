@@ -16,6 +16,8 @@ const SPACING_FOLDER = 0.95;
 const ITEM_W = 1.0;
 const ITEM_H = 1.5;
 const ROW2_Z = -3.2;
+// items turned this far (rad) towards the camera, as in the references
+const ITEM_TURN = 0.3;
 const WAVE_LAPS = 2; // whole row lengths travelled per 600-frame loop
 const WAVE_SIGMA_DOC = 0.75;
 const WAVE_SIGMA_FOLDER = 1.3;
@@ -52,8 +54,10 @@ void main() {
   float px = fwidth(d);
   float inside = 1.0 - smoothstep(-px, px, d);
   if (inside < 0.002) discard;
-  float edgeW = 0.014;
-  float edge = 1.0 - smoothstep(edgeW - px, edgeW + px, abs(d + edgeW * 0.6));
+  // edge band never thinner than ~1.6 px, dimmed by the same factor, so far
+  // items don't sparkle as they move
+  float edgeW = max(0.014, 1.6 * px);
+  float edge = (1.0 - smoothstep(edgeW * 0.5, edgeW, abs(d + edgeW * 0.6))) * (0.014 / edgeW);
   float fres = pow(1.0 - clamp(abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 2.0);
   // frosted glass: lit from above, soft inner falloff towards the rim
   float sky = 0.5 + 0.5 * smoothstep(-0.55, 0.5, p.y / uSize.y);
@@ -76,7 +80,8 @@ void main() {
       vec2 cb = vec2(p.x + 0.33 * uSize.x, yc);
       float box = abs(sdRound(cb, vec2(0.04), 0.012));
       float hasBox = step(0.4, h1(ri + 0.5));
-      marks = max(marks, (1.0 - smoothstep(0.007, 0.007 + px * 1.5, box)) * hasBox * 0.8);
+      float bw = max(0.008, 1.3 * px);
+      marks = max(marks, (1.0 - smoothstep(bw * 0.5, bw, box)) * hasBox * 0.8 * (0.008 / bw));
       float len = mix(0.3, 0.58, h1(ri));
       float x0 = -0.22 * uSize.x;
       vec2 lp = vec2(p.x - (x0 + len * 0.5 * uSize.x * 0.9), yc);
@@ -129,7 +134,7 @@ type Item = { group: THREE.Group; s0: number; row: number; parts: Part[] };
 export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height, props: row }) => {
   const scene = new THREE.Scene();
   // documents read as pale icy cyan, folders as deeper blue
-  const glass = richer(row.glass, row.item === "folder" ? 0.8 : 0.4);
+  const glass = richer(row.glass, row.item === "folder" ? 0.8 : 0.85);
   const edge = new THREE.Color(row.edge);
   const gridC = new THREE.Color(row.grid);
 
@@ -164,7 +169,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   const ROW_LEN = N_ITEMS * SPACING; // the row is treated as periodic with this length
   const WAVE_LIFT = row.item === "folder" ? 0.45 : 1.15;
   const WAVE_SIGMA = row.item === "folder" ? WAVE_SIGMA_FOLDER : WAVE_SIGMA_DOC;
-  const baseGlow = row.item === "folder" ? 0.8 : 1.5;
+  const baseGlow = row.item === "folder" ? 0.8 : 1.2;
   const items: Item[] = [];
   for (let r = 0; r < 2; r++) {
     for (let i = 0; i < N_ITEMS; i++) {
@@ -201,7 +206,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
       }
       parts.forEach((p) => group.add(p.mesh));
       // planes face +z by default; turn them to face along the row (+x)
-      group.rotation.y = Math.PI / 2;
+      group.rotation.y = Math.PI / 2 + ITEM_TURN;
       scene.add(group);
       items.push({ group, s0: i * SPACING, row: r, parts });
     }
@@ -238,7 +243,9 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
     for (let k = -8; k <= 4; k++) segs.push({ a: new THREE.Vector3(-30, -0.06, k * 1.2), b: new THREE.Vector3(30, -0.06, k * 1.2), i: 0.14 });
     for (let k = -20; k <= 25; k++) segs.push({ a: new THREE.Vector3(k * 1.2, -0.06, -16), b: new THREE.Vector3(k * 1.2, -0.06, 8), i: 0.1 });
   }
-  const lines = screenLines(segs, richer(row.grid, 0.5).multiplyScalar(9.0), 1.3 / 1080, height, { depthWrite: true, fadeFar: 40 });
+  // lines: >= ~2 px soft quads, no depth writes (no z-fighting where they cross),
+  // occluded by the glass; with a moderate 'sky' depth for DOF they stay steady
+  const lines = screenLines(segs, richer(row.grid, 0.5).multiplyScalar(3.2), 1.6 / 1080, height, { depthWrite: false, fadeFar: 40, minWidth: 1.7 / 720 });
   (lines.material as THREE.ShaderMaterial).uniforms.uAspect.value = width / height;
   scene.add(lines);
 
@@ -250,15 +257,17 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
   for (let gx = -8; gx <= 12; gx++)
     for (let gy = 0; gy < LY.length; gy++)
       for (let gz = -6; gz <= 1; gz++) {
-        if (!xLines.has(`${gy},${gz}`) || !zLines.has(`${gx},${gy}`) || rng() < 0.25) continue;
+        if (!xLines.has(`${gy},${gz}`) || !zLines.has(`${gx},${gy}`) || rng() < 0.05) continue;
         const sp = new THREE.Sprite(pointMat(pTex, pc, 0.7 + 0.3 * rng()));
         sp.position.set(gx * GS, LY[gy], gz * GS);
-        sp.scale.setScalar(0.12 + 0.1 * rng());
+        sp.scale.setScalar(0.14 + 0.12 * rng());
         scene.add(sp);
       }
   // a few extra sparks riding along the lines
+  // (only on lines well behind the row, never near the lens)
+  const farSegs = segs.filter((sg) => Math.max(sg.a.z, sg.b.z) < 0.5 || (sg.a.z < -1 && sg.b.z < -1));
   for (let k = 0; k < 40; k++) {
-    const sg = segs[Math.floor(rng() * segs.length)];
+    const sg = farSegs[Math.floor(rng() * farSegs.length)];
     const sp = new THREE.Sprite(pointMat(pTex, pc, 0.5 + 0.4 * rng()));
     sp.position.lerpVectors(sg.a, sg.b, 0.2 + 0.6 * rng());
     sp.scale.setScalar(0.06 + 0.08 * rng());
@@ -290,6 +299,7 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
     grain: 0.02,
     vignette: 0.35,
     clearColor: new THREE.Color(row.background),
+    dofWorkH: 720,
   });
 
   const wrap = (d: number) => d - ROW_LEN * Math.round(d / ROW_LEN);
@@ -306,22 +316,27 @@ export const createFileWave: LookFactory<FilesRow> = async ({ gl, width, height,
         const x = s - ROW_LEN / 2;
         it.group.position.set(x, WAVE_LIFT * bump * (it.row ? 0.8 : 1), it.row ? ROW2_Z : 0);
         // tilt slightly as the wave passes (sign follows the wave slope)
-        it.group.rotation.set(0, Math.PI / 2, 0);
+        it.group.rotation.set(0, Math.PI / 2 + ITEM_TURN, 0);
         it.group.rotateX(-0.12 * bump * Math.sign(d) * Math.min(1, Math.abs(d)));
         // fade at the row ends so the periodic wrap never shows
         const endFade = Math.min(1, (x + ROW_LEN / 2) / 1.5, (ROW_LEN / 2 - x) / 4);
-        const glow = (baseGlow + 1.3 * bump) * (it.row ? (row.item === "folder" ? 0.1 : 0.55) : 1);
+        const glow = (baseGlow + 1.3 * bump) * (it.row ? (row.item === "folder" ? 0.35 : 0.55) : 1);
         it.parts.forEach((p) => {
           p.mat.uniforms.uGlow.value = glow;
-          p.mat.uniforms.uFade.value = Math.max(0, endFade);
+          // the back row is a faint, see-through echo of the front row
+          p.mat.uniforms.uFade.value = Math.max(0, endFade) * (it.row ? (row.item === "folder" ? 0.25 : 0.75) : 1);
         });
       });
       // camera ~25 degrees above, looking along the row; closed drift
       const a = Math.PI * 2 * t;
-      camera.position.set(-4.6 + 0.25 * Math.sin(a), 3.5 + 0.08 * Math.sin(2 * a), 5.2 + 0.2 * Math.cos(a));
-      camera.lookAt(1.2 + 0.12 * Math.cos(a), 0.7, -0.8);
+      const cy = row.item === "folder" ? 2.5 : 3.5;
+      const cd = row.item === "folder" ? 1.0 : 1;
+      camera.position.set(-4.6 * cd + 0.25 * Math.sin(a), cy + 0.08 * Math.sin(2 * a), 5.2 * cd + 0.2 * Math.cos(a));
+      camera.lookAt(1.2 + 0.12 * Math.cos(a), row.item === "folder" ? 0.8 : 0.7, -0.8);
       camera.updateMatrixWorld();
       post.opts.dof!.focus = camera.position.distanceTo(new THREE.Vector3(-0.2, 0.8, 0));
+      // empty background counts as just behind focus, so lines/nodes drawn on it get a light, stable blur
+      post.opts.dof!.skyZ = post.opts.dof!.focus * 1.25;
       post.render(scene, camera, f);
     },
   };
