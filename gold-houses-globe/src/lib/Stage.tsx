@@ -16,6 +16,7 @@ function Runner<P>({ look, params, assets, dpr, period }: { look: Look<P>; param
   const { width: compW, height: compH } = useVideoConfig();
   const gl = useThree((s) => s.gl);
   const { delayRender, continueRender } = useDelayRender();
+  const { isRendering } = useRemotionEnvironment();
   const width = Math.floor(compW * dpr);
   const height = Math.floor(compH * dpr);
 
@@ -38,17 +39,41 @@ function Runner<P>({ look, params, assets, dpr, period }: { look: Look<P>; param
     };
   }, [frame, handle, delayRender, continueRender]);
 
+  const [warm] = useState<{ done: boolean; p: Promise<void> | null }>(() => ({ done: false, p: null }));
   useEffect(() => {
-    inst.update(frame);
-    inst.scene.updateMatrixWorld(true);
-    inst.camera.updateMatrixWorld(true);
-    inst.beforeRender?.(gl);
-    post.render(inst.scene, inst.camera, frame);
-    if (handle.h !== null) {
-      continueRender(handle.h);
-      handle.h = null;
+    const draw = (f: number) => {
+      inst.update(f);
+      inst.scene.updateMatrixWorld(true);
+      inst.camera.updateMatrixWorld(true);
+      inst.beforeRender?.(gl);
+      post.render(inst.scene, inst.camera, f);
+    };
+    const finish = () => {
+      draw(frame);
+      if (handle.h !== null) {
+        continueRender(handle.h);
+        handle.h = null;
+      }
+    };
+    if (warm.done || !isRendering) return finish();
+    // Pipeline warm-up, once per browser tab. ANGLE first draws with quickly
+    // linked GPU pipelines and swaps in optimised ones compiled in the
+    // background; the two can differ in the last bit. Drawing a spread of
+    // frames and waiting lets the optimised pipelines land before the first
+    // real frame, so a frame rendered cold matches the same frame rendered
+    // mid-sequence byte for byte. Costs ~10 s per tab, not per frame.
+    if (!warm.p) {
+      warm.p = (async () => {
+        for (let i = 0; i < 8; i++) {
+          draw(Math.floor((i * period) / 8));
+          gl.getContext().finish();
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+        warm.done = true;
+      })();
     }
-  }, [frame, inst, post, gl, handle, continueRender]);
+    warm.p.then(finish);
+  }, [frame, inst, post, gl, handle, continueRender, warm, period, isRendering]);
   return null;
 }
 

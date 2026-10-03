@@ -134,3 +134,53 @@ export const worldPointsMaterial = (height: number, fovDeg: number, square: bool
     blending: THREE.AdditiveBlending,
     transparent: false,
   });
+
+/**
+ * Same look as glowPointsMaterial, but drawn as camera-facing instanced quads
+ * instead of GL point sprites. Returns a mesh plus the per-instance arrays
+ * (position xyz, pcolor rgb, size px@720p) to fill each frame.
+ */
+export const glowSprites = (count: number, height: number, sharp = 0) => {
+  const geo = new THREE.InstancedBufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0], 3));
+  geo.setIndex([0, 1, 2, 0, 2, 3]);
+  const pos = new Float32Array(count * 3), col = new Float32Array(count * 3), size = new Float32Array(count);
+  geo.setAttribute("iPos", new THREE.InstancedBufferAttribute(pos, 3));
+  geo.setAttribute("iCol", new THREE.InstancedBufferAttribute(col, 3));
+  geo.setAttribute("iSize", new THREE.InstancedBufferAttribute(size, 1));
+  geo.instanceCount = count;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uPx: { value: pxScale(height) }, uSharp: { value: sharp }, uRes: { value: new THREE.Vector2(height * 16 / 9, height) } },
+    vertexShader: /* glsl */ `
+      attribute vec3 iPos; attribute vec3 iCol; attribute float iSize;
+      uniform float uPx; uniform vec2 uRes;
+      varying vec3 vColor; varying vec2 vQ;
+      void main() {
+        float s = iSize * uPx;
+        float S = max(s, 4.0 * uPx);
+        vColor = iCol * (s * s) / (S * S);
+        vQ = position.xy;
+        vec4 clip = projectionMatrix * modelViewMatrix * vec4(iPos, 1.0);
+        clip.xy += position.xy * S / uRes * clip.w; // S px wide quad
+        gl_Position = iSize <= 0.0 ? vec4(2.0, 2.0, 2.0, 1.0) : clip;
+      }`,
+    fragmentShader: /* glsl */ `
+      varying vec3 vColor; varying vec2 vQ; uniform float uSharp;
+      void main() {
+        float r2 = dot(vQ, vQ);
+        float a = mix(exp(-r2 * 5.0), 1.0 - smoothstep(0.6, 1.0, r2), uSharp) * step(r2, 1.0);
+        gl_FragColor = vec4(vColor * a, 1.0);
+      }`,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false;
+  const update = () => {
+    (geo.attributes.iPos as THREE.BufferAttribute).needsUpdate = true;
+    (geo.attributes.iCol as THREE.BufferAttribute).needsUpdate = true;
+    (geo.attributes.iSize as THREE.BufferAttribute).needsUpdate = true;
+  };
+  return { mesh, pos, col, size, update };
+};

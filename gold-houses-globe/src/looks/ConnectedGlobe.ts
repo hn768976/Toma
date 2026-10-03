@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mulberry32, TAU } from "../lib/random";
-import { glowPointsMaterial, pxScale } from "../lib/three-util";
+import { glowSprites, pxScale } from "../lib/three-util";
 import type { Look } from "../lib/look";
 
 export type GlobeParams = { ocean: string; rim: string; city: string; land: string };
@@ -157,38 +157,48 @@ export const ConnectedGlobe: Look<GlobeParams> = {
         }
       }
     }
-    const dotGeo = new THREE.BufferGeometry();
-    dotGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    dotGeo.setAttribute("pcolor", new THREE.Float32BufferAttribute(col, 3));
-    dotGeo.setAttribute("dsize", new THREE.Float32BufferAttribute(size, 1));
+    // land dots as instanced screen-aligned quads (GL points were not bit-stable
+    // over long renders in software GL)
+    const dotGeo = new THREE.InstancedBufferGeometry();
+    dotGeo.setAttribute("position", new THREE.Float32BufferAttribute([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0], 3));
+    dotGeo.setIndex([0, 1, 2, 0, 2, 3]);
+    dotGeo.setAttribute("iPos", new THREE.InstancedBufferAttribute(new Float32Array(pos), 3));
+    dotGeo.setAttribute("pcolor", new THREE.InstancedBufferAttribute(new Float32Array(col), 3));
+    dotGeo.setAttribute("dsize", new THREE.InstancedBufferAttribute(new Float32Array(size), 1));
+    dotGeo.instanceCount = size.length;
     const dotMat = new THREE.ShaderMaterial({
-      uniforms: { uProj: { value: height / (2 * Math.tan((FOV * Math.PI) / 360)) }, step: { value: ((data.step * Math.PI) / 180) * 0.72 } },
+      uniforms: {
+        uProj: { value: height / (2 * Math.tan((FOV * Math.PI) / 360)) },
+        step: { value: ((data.step * Math.PI) / 180) * 0.72 },
+        uRes: { value: new THREE.Vector2((height * 16) / 9, height) },
+      },
       vertexShader: /* glsl */ `
-        attribute vec3 pcolor; attribute float dsize; uniform float uProj; uniform float step;
-        varying vec3 vColor; varying float vFacing;
+        attribute vec3 iPos; attribute vec3 pcolor; attribute float dsize; uniform float uProj; uniform float step; uniform vec2 uRes;
+        varying vec3 vColor; varying vec2 vQ;
         void main() {
-          vec4 w = modelMatrix * vec4(position, 1.0);
-          vec3 nrm = normalize(mat3(modelMatrix) * position);
+          vec4 w = modelMatrix * vec4(iPos, 1.0);
+          vec3 nrm = normalize(mat3(modelMatrix) * iPos);
           vec3 vd = normalize(cameraPosition - w.xyz);
-          vFacing = dot(nrm, vd);
+          float facing = dot(nrm, vd);
           vec4 mv = viewMatrix * w;
-          gl_Position = projectionMatrix * mv;
+          vec4 clip = projectionMatrix * mv;
           // foreshortening: dots flatten toward the limb, so shrink them
-          gl_PointSize = max(1.5, step * dsize * uProj / -mv.z * (0.45 + 0.55 * clamp(vFacing, 0.0, 1.0)));
+          float px = max(1.5, step * dsize * uProj / -mv.z * (0.45 + 0.55 * clamp(facing, 0.0, 1.0)));
+          clip.xy += position.xy * px / uRes * clip.w;
+          vQ = position.xy;
           // brighter toward the limb (rim light), as in the reference
-          vColor = pcolor * (0.75 + 0.6 * pow(1.0 - clamp(vFacing, 0.0, 1.0), 2.0));
-          if (vFacing < -0.02) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+          vColor = pcolor * (0.75 + 0.6 * pow(1.0 - clamp(facing, 0.0, 1.0), 2.0));
+          gl_Position = facing < -0.02 ? vec4(2.0, 2.0, 2.0, 1.0) : clip;
         }`,
       fragmentShader: /* glsl */ `
-        varying vec3 vColor; varying float vFacing;
+        varying vec3 vColor; varying vec2 vQ;
         void main() {
-          vec2 q = gl_PointCoord * 2.0 - 1.0;
-          float r = mix(max(abs(q.x), abs(q.y)), length(q), 0.5); // rounded-square LED
+          float r = mix(max(abs(vQ.x), abs(vQ.y)), length(vQ), 0.5); // rounded-square LED
           if (r > 1.0) discard;
           gl_FragColor = vec4(vColor * (1.0 - smoothstep(0.55, 1.0, r) * 0.6), 1.0);
         }`,
     });
-    const dotPoints = new THREE.Points(dotGeo, dotMat);
+    const dotPoints = new THREE.Mesh(dotGeo, dotMat);
     dotPoints.frustumCulled = false;
     spin.add(dotPoints);
 
@@ -202,13 +212,11 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       gCol.push(city.r * b, city.g * b, city.b * b);
       gSize.push(5 + rng() * 4);
     }
-    const glowGeo = new THREE.BufferGeometry();
-    glowGeo.setAttribute("position", new THREE.Float32BufferAttribute(gPos, 3));
-    glowGeo.setAttribute("pcolor", new THREE.Float32BufferAttribute(gCol, 3));
-    glowGeo.setAttribute("size", new THREE.Float32BufferAttribute(gSize, 1));
-    const cityGlow = new THREE.Points(glowGeo, glowPointsMaterial(height));
-    cityGlow.frustumCulled = false;
-    spin.add(cityGlow);
+    // (instanced quads, not GL points: large point sprites were not bit-stable
+    // across a long render in software GL)
+    const cityGlow = glowSprites(gSize.length, height, 0);
+    cityGlow.pos.set(gPos); cityGlow.col.set(gCol); cityGlow.size.set(gSize);
+    spin.add(cityGlow.mesh);
 
     // ---- pins: ring on the surface + short radial line + dot on top ----
     const pinGroup = new THREE.Group();
@@ -286,14 +294,9 @@ export const ConnectedGlobe: Look<GlobeParams> = {
     stMesh.frustumCulled = false;
     scene.add(stMesh);
     // heads / orbs
-    const hPos = new Float32Array(NSt * 3), hCol = new Float32Array(NSt * 3), hSize = new Float32Array(NSt);
-    const hGeo = new THREE.BufferGeometry();
-    hGeo.setAttribute("position", new THREE.BufferAttribute(hPos, 3));
-    hGeo.setAttribute("pcolor", new THREE.BufferAttribute(hCol, 3));
-    hGeo.setAttribute("size", new THREE.BufferAttribute(hSize, 1));
-    const heads = new THREE.Points(hGeo, glowPointsMaterial(height, { sharp: 0 }));
-    heads.frustumCulled = false;
-    scene.add(heads);
+    const headSprites = glowSprites(NSt, height, 0);
+    const hPos = headSprites.pos, hCol = headSprites.col, hSize = headSprites.size;
+    scene.add(headSprites.mesh);
     const headCol = rim.clone().lerp(new THREE.Color(1, 1, 1), 0.6);
     // out-of-focus foreground orbs (bokeh) drifting on the left
     const bRng = mulberry32(0xb0ce);
@@ -302,12 +305,9 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       x: -0.225 + bRng() * 0.025, y: -0.07 + bRng() * 0.14, z: 6.4 + bRng() * 0.3,
       k: 1 + Math.floor(bRng() * 2), ph: bRng() * TAU, size: 16 + bRng() * 14, amber: bRng() < 0.6, b: 0.25 + bRng() * 0.35,
     }));
-    const bPos = new Float32Array(NB * 3), bCol = new Float32Array(NB * 3), bSize = new Float32Array(NB);
-    const bGeo = new THREE.BufferGeometry();
-    bGeo.setAttribute("position", new THREE.BufferAttribute(bPos, 3));
-    bGeo.setAttribute("pcolor", new THREE.BufferAttribute(bCol, 3));
-    bGeo.setAttribute("size", new THREE.BufferAttribute(bSize, 1));
-    const bokehPts = new THREE.Points(bGeo, glowPointsMaterial(height, { sharp: 0.75 }));
+    const bokeh = glowSprites(NB, height, 0.75);
+    const bPos = bokeh.pos, bCol = bokeh.col, bSize = bokeh.size;
+    const bokehPts = bokeh.mesh;
     bokehPts.frustumCulled = false;
     scene.add(bokehPts);
     void pxScale;
@@ -327,9 +327,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
         bCol.set([c.r * b, c.g * b, c.b * b], i * 3);
         bSize[i] = o.size;
       });
-      bGeo.attributes.position.needsUpdate = true;
-      bGeo.attributes.pcolor.needsUpdate = true;
-      bGeo.attributes.size.needsUpdate = true;
+      bokeh.update();
 
       tilt.updateMatrixWorld(true);
       pins.forEach((p) => {
@@ -387,9 +385,7 @@ export const ConnectedGlobe: Look<GlobeParams> = {
       stGeo.attributes.position.needsUpdate = true;
       stGeo.attributes.uv.needsUpdate = true;
       stGeo.attributes.br.needsUpdate = true;
-      hGeo.attributes.position.needsUpdate = true;
-      hGeo.attributes.pcolor.needsUpdate = true;
-      hGeo.attributes.size.needsUpdate = true;
+      headSprites.update();
     };
 
     return {

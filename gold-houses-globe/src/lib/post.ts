@@ -28,6 +28,8 @@ export type PostOptions = {
     /** max blur in front of focus, fraction of frame height */
     maxNearBlur?: number;
   };
+  /** MSAA samples for the scene render (default 4) */
+  msaa?: number;
   /** grain amplitude, fraction of full scale (0.02 = 2%) */
   grain: number;
   /** grain pattern period in frames (loop length), 0 = never repeats */
@@ -326,7 +328,7 @@ export class Post {
     public opts: PostOptions,
   ) {
     const depthTexture = new THREE.DepthTexture(width, height, THREE.UnsignedIntType);
-    this.scene = rt(width, height, { samples: 4, depthBuffer: true, depthTexture });
+    this.scene = rt(width, height, { samples: opts.msaa ?? 4, depthBuffer: true, depthTexture });
     if (opts.dof) {
       const dh = Math.min(DOF_HEIGHT, height);
       this.dofRT = rt(Math.round((dh * width) / height), dh);
@@ -346,7 +348,7 @@ export class Post {
     this.quadScene.add(this.quad);
 
     const dofU = () => ({
-      tDepth: { value: depthTexture },
+      tDepth: { value: this.scene.depthTexture },
       cameraNear: { value: 0.1 },
       cameraFar: { value: 100 },
       focus: { value: 1 },
