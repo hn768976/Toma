@@ -71,8 +71,8 @@ includes encoding.
 
 | Look | 1080p preview: total | 1080p s/frame | 4K ÷ 1080p (single-frame test) | **4K estimate** s/frame | 4K estimate, whole clip |
 |---|---|---|---|---|---|
-| EquationFlight-Black | 3035 s / 600 f | **5.1** | ×3.8 | ~19 | ~3.2 h |
-| EquationFlight-Navy | 5092 s / 600 f | **8.5** | ×4.7 | ~40 | ~6.7 h |
+| EquationFlight-Black | 1470 s / 600 f | **2.5** | ×3.8 | ~10 | ~1.6 h |
+| EquationFlight-Navy | 2534 s / 600 f | **4.2** | ×4.7 | ~20 | ~3.3 h |
 | AICodeScreen-Dark | 1185 s / 600 f | **2.0** | ×4.1 | ~8 | ~1.4 h |
 | AICodeScreen-Light | 1164 s / 600 f | **1.9** | ×4.1 | ~8 | ~1.3 h |
 | BalanceScreen-Drain | 762 s / 300 f | **2.5** | ×5.0 | ~13 | ~1.1 h |
@@ -88,7 +88,7 @@ and the SVG glow on the navy version. The CSS blur and SVG filter cost scales wi
 **Motion blur is OFF.** `@remotion/motion-blur` is not installed and not used.
 
 `<CameraMotionBlur>` renders N sub-frames per frame, so it multiplies render time by N. At 4–6
-samples, Look 1 would cost about 20–34 s/frame (black) or 34–51 s/frame (navy) at 1080p, and
+samples, Look 1 would cost about 10–15 s/frame (black) or 17–25 s/frame (navy) at 1080p, and
 roughly 4× that at 4K. That is about 1–2 days of CPU time per 4K clip on this machine. This is an
 estimate from the measured times above, not a separate measurement.
 
@@ -117,7 +117,9 @@ current depth to a slightly further depth, so they smear along the direction of 
 * The glow (navy version) is the stacked SVG filter `feGaussianBlur ×3 (1 : 4 : 12) → feMerge →
   SourceGraphic on top` in `src/common/GlowFilter.tsx`. It is applied in one pass over the middle
   bands, and the cores stay sharp.
-* The light rays are soft conic-gradient wedges fanning from a blown-out bloom right of centre.
+* The light rays are soft conic-gradient wedges fanning from a point right of centre. They fade
+  in away from that point, so there is no bright blob where they meet (the bloom was removed on
+  request).
   They are screen-blended, so empty black stays `0,0,0`. See "Deviations" for why the rays use a
   gradient instead of an SVG blur.
 
@@ -183,7 +185,7 @@ tests). The script is `python3 scripts/verify_previews.py out/previews`.
 | Step | Check | Result |
 |---|---|---|
 | 1 | 1920×1080, 30/1, h264, yuv420p, 20.0 s / 10.0 s, no audio stream | **PASS** for all six |
-| 1 | EquationFlight_Black empty areas are exactly 0,0,0 after decoding | **PASS**: the darkest 2% of pixels are 0 in frames 0, 150, 300, 450 and 599 (28–38% of each frame is exactly 0,0,0) |
+| 1 | EquationFlight_Black empty areas are exactly 0,0,0 after decoding | **PASS**: the darkest 2% of pixels are 0 in frames 0, 150, 300, 450 and 599 (39–48% of each frame is exactly 0,0,0) |
 | 3 | Loop: frame 600 = frame 0 (601-frame test composition) | **PASS**: PNGs byte-identical for all four loops |
 | 4 | Determinism: frame 150 rendered alone from a cold start vs frame 150 from a 4-thread `--sequence` render of frames 140–160 | **PASS**: byte-identical for all six |
 | 4 | Source grep for `@keyframes`, `transition`, `Math.random`, `Date.now`, `requestAnimationFrame`, `useState` | none present |
@@ -198,7 +200,7 @@ tests). The script is `python3 scripts/verify_previews.py out/previews`.
 Frame 150 was extracted from the encoded mp4 and read along the smoothest gradient, with rows
 averaged to remove grain:
 
-* **EquationFlight-Navy**, bloom falloff toward the right edge: 170 → 121 → 91 → 71 → 58 → 47 → 39 → 32 → 28. Monotonic, with no plateau-then-jump.
+* **EquationFlight-Navy**, navy background toward the right edge: 51.9 → 44.0 → 40.4 → 36.7 → 36.0 → 34.5 → 32.6 → 31.2 → 30.6 → 29.7 → 28.6 → 27.1 → 25.7, with a largest smoothed step of 0.39 levels. Monotonic, with no plateau-then-jump.
 * **AICodeScreen-Dark**, blue screen area: values change by at most 0.19 levels per pixel (smoothed), with no steps.
 * **AICodeScreen-Light** and **BalanceScreen**: smooth, with steps of at most 1.4 levels and no plateaus.
 
@@ -267,8 +269,8 @@ cmp out/loop0.png out/loop600.png && echo identical
 A fresh reviewer compared one final frame per look with the reference. These differences remain.
 They were **not fixed** because each look has had its three attempts:
 
-* **Equation Flight:** the reference's bloom is larger (about 25–30% of the width) and washes out
-  nearby text, while ours is about 8–10%. The reference is blurrier overall (about half the frame
+* **Equation Flight:** the reference has a large blown-out light bloom. Ours has none, because
+  it was removed on request. The reference is blurrier overall (about half the frame
   is bokeh; ours is about 30–40%). Its tunnel perspective is steeper, and its lettering is
   hand-drawn chalk where ours is typeset KaTeX. The reference also has a large parabola and
   bar-like shapes in the foreground.
