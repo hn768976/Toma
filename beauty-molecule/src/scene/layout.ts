@@ -61,10 +61,10 @@ const atScreen = (sx: number, sy: number, dist: number) =>
 
 export type Hero = {atoms: Atom[]; bonds: Bond[]};
 
-export const makeHero = (scale: number): Hero => {
+export const makeHero = (scale: number, bondLength: number, bondRadius: number): Hero => {
   const rc = 0.237 * scale; // ~9.5% of frame height at the focus distance
   const ro = 0.215 * scale;
-  const len = 1.0 * scale;
+  const len = bondLength * scale;
   const dirs = [v(1, 1, 1), v(1, -1, -1), v(-1, 1, -1), v(-1, -1, 1)].map((d) =>
     d.normalize(),
   );
@@ -72,7 +72,7 @@ export const makeHero = (scale: number): Hero => {
   // slightly uneven bond lengths read as a real molecule, not a jack
   const lens = [1.0, 1.04, 0.97, 1.02];
   dirs.forEach((d, k) => atoms.push({p: d.multiplyScalar(len * lens[k]), r: ro}));
-  const bonds = [1, 2, 3, 4].map((j) => ({i: 0, j, r: 0.03 * scale}));
+  const bonds = [1, 2, 3, 4].map((j) => ({i: 0, j, r: bondRadius * scale}));
   return {atoms, bonds};
 };
 
@@ -163,8 +163,8 @@ const makeRing = (rng: Rng, atomR: number): Pick<Body, 'atoms' | 'bonds'> => {
   return {atoms, bonds};
 };
 
-const paleForDist = (dist: number) => Math.min(0.3, Math.max(0, (dist - 14) * 0.01));
-const opacityForDist = (dist: number) => Math.max(0.7, 1 - (dist - 11) * 0.012);
+const paleForDist = (dist: number) => Math.min(0.22, Math.max(0, (dist - 14) * 0.008));
+const opacityForDist = (dist: number) => Math.max(0.8, 1 - (dist - 11) * 0.008);
 
 const body = (
   rng: Rng,
@@ -222,7 +222,7 @@ const particles = (rng: Rng, count: number, distRange: [number, number]): Body[]
   for (let k = 0; k < count; k++) {
     const dist = range(rng, distRange[0], distRange[1]);
     const center = atScreen(range(rng, -1.1, 1.1), range(rng, -1.1, 1.1), dist);
-    const r = range(rng, 0.008, 0.02) * (dist / 12);
+    const r = range(rng, 0.012, 0.026) * (dist / 12);
     out.push(
       body(rng, {atoms: [{p: v(0, 0, 0), r}], bonds: []}, center, dist, {
         ampSin: randomUnit(rng).multiplyScalar(range(rng, 0.1, 0.35) * (dist / 15)),
@@ -230,7 +230,7 @@ const particles = (rng: Rng, count: number, distRange: [number, number]): Body[]
         driftFreq: rng() < 0.7 ? 1 : 2,
         pale: 0.15,
         opacity: range(rng, 0.55, 0.9),
-        glow: range(rng, 0.6, 1.4),
+        glow: range(rng, 1.2, 2.5),
         foreground: dist < FOCUS_DIST - 1,
       }),
     );
@@ -252,19 +252,21 @@ const buildDna = (heroScale: number): Body[] => {
     pairs: number;
     turns: number;
   }[] = [
-    {sx: -0.3, sy: 0.42, dist: 13, dir: v(1, 0.42, -0.3), pairs: 32, turns: 1},
-    {sx: 0.62, sy: -0.5, dist: 14.5, dir: v(1, 0.5, 0.22), pairs: 32, turns: -1},
-    {sx: 0.72, sy: 0.75, dist: 19, dir: v(1, -0.55, 0.1), pairs: 30, turns: 1},
-    {sx: -0.6, sy: -0.62, dist: 21, dir: v(1, -0.28, 0.2), pairs: 36, turns: -1},
-    {sx: -0.85, sy: 0.1, dist: 27, dir: v(0.35, 1, 0.1), pairs: 30, turns: 1},
+    // mostly parallel, rising lower-left -> upper-right, at several depths
+    {sx: -0.35, sy: 0.4, dist: 13.5, dir: v(1, 0.55, -0.25), pairs: 40, turns: 1},
+    {sx: 0.62, sy: -0.55, dist: 12.5, dir: v(1, 0.5, 0.15), pairs: 34, turns: -1},
+    {sx: 0.55, sy: 0.55, dist: 17, dir: v(1, 0.6, 0.1), pairs: 40, turns: 1},
+    {sx: -0.55, sy: -0.75, dist: 16, dir: v(1, 0.45, 0.2), pairs: 40, turns: -1},
+    {sx: -0.2, sy: 0.95, dist: 22, dir: v(1, 0.5, 0.0), pairs: 46, turns: 1},
+    {sx: 0.95, sy: 0.0, dist: 21, dir: v(1, 0.65, -0.1), pairs: 40, turns: -1},
   ];
   for (const h of helices) {
     const shape = makeHelix(
       rng,
       h.pairs,
-      range(rng, 0.75, 0.95),
-      range(rng, 0.5, 0.6),
-      range(rng, 0.17, 0.2),
+      range(rng, 0.55, 0.68),
+      range(rng, 0.38, 0.44),
+      range(rng, 0.12, 0.14),
       range(rng, -1, 1),
     );
     const q0 = new Quaternion().setFromUnitVectors(v(1, 0, 0), h.dir.clone().normalize());
@@ -281,12 +283,16 @@ const buildDna = (heroScale: number): Body[] => {
   }
   const placed = helices.map((h) => ({sx: h.sx, sy: h.sy}));
   bodies.push(
-    ...scatter(rng, 14, [11.5, 26], heroScale, 0.26, placed, (d) =>
+    ...scatter(rng, 16, [11.5, 22], heroScale, 0.22, placed, (d) =>
       makeSmallMolecule(rng, 0.0095 * d, 3 + Math.floor(rng() * 3)),
     ),
   );
   bodies.push(
-    ...scatter(rng, 3, [12, 22], heroScale, 0.3, placed, (d) => makeRing(rng, 0.009 * d)),
+    ...scatter(rng, 3, [11.5, 15], heroScale, 0.25, placed, (d) => makeRing(rng, 0.0085 * d), () => ({
+      // rings face the camera so they read as hexagons
+      spinAxis: v(0, 0, 1),
+      q0: new Quaternion().setFromEuler(new Euler(range(rng, -0.5, 0.5), range(rng, -0.5, 0.5), 0)),
+    })),
   );
   bodies.push(...particles(rng, 70, [12, 34]));
   bodies.push(...particles(rng, 7, [3.5, 7.5]));
@@ -310,8 +316,8 @@ const buildStructures = (heroScale: number): Body[] => {
         spinTurns: 0,
         ampSin: v(0.12, 0.08, 0),
         ampCos: v(0.04, -0.1, 0.08),
-        pale: 0.05,
-        opacity: 0.95,
+        pale: 0,
+        opacity: 1,
       }),
     );
     placed.push({sx, sy});
@@ -320,7 +326,7 @@ const buildStructures = (heroScale: number): Body[] => {
     ...scatter(rng, 2, [17, 26], heroScale, 0.45, placed, (d) => makeRing(rng, 0.0095 * d)),
   );
   bodies.push(
-    ...scatter(rng, 21, [11.5, 24], heroScale, 0.33, placed, (d) =>
+    ...scatter(rng, 17, [12, 20], heroScale, 0.4, placed, (d) =>
       makeSmallMolecule(rng, 0.012 * d, 3 + Math.floor(rng() * 5)),
     ),
   );
@@ -340,5 +346,5 @@ export const BACKGROUND_BODIES = Object.fromEntries(
 ) as Record<BackgroundId, Body[]>;
 
 export const HEROES = Object.fromEntries(
-  BACKGROUNDS.map((b) => [b.id, makeHero(b.heroScale)]),
+  BACKGROUNDS.map((b) => [b.id, makeHero(b.heroScale, b.heroBondLength, b.heroBondRadius)]),
 ) as Record<BackgroundId, Hero>;

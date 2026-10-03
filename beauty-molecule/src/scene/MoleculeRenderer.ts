@@ -63,7 +63,7 @@ const ATOM_TWISTS = [0, 1.7, 3.1, 4.4, 5.6].map((a, k) =>
 
 // Look parameters (shared by all compositions).
 export const LOOK = {
-  cocK: 0.011, // circle of confusion (world units) per unit of depth from focus
+  cocK: 0.009, // circle of confusion (world units) per unit of depth from focus
   envStrength: 0.3, // HDRI reflection level relative to the background
   specLevel: 2.6, // key highlight level relative to the background
   grain: 0.015, // +-1.5 % film grain
@@ -270,7 +270,7 @@ export class MoleculeRenderer {
         ...blending,
       });
     this.heroMat = heroMat(0, 1, 1);
-    this.heroBondMat = heroMat(0.25, 0.75, 0);
+    this.heroBondMat = heroMat(0.05, 0.8, 0);
     const sphere = new SphereGeometry(1, 128, 96);
     const cyl = new CylinderGeometry(1, 1, 1, 48, 1, true);
     cyl.translate(0, 0.5, 0); // base at origin, extends +y

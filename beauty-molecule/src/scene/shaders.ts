@@ -45,7 +45,7 @@ vec4 glass(vec3 N, vec3 V, float blur, float pale, float opacity) {
   // Body: clear and light in the middle, saturated toward the silhouette;
   // the lower half reads a little deeper (light comes from above).
   float tilt = clamp(0.5 - N.y * 0.5, 0.0, 1.0);
-  float f = smoothstep(0.03, 0.55, rim + tilt * 0.2 - 0.07);
+  float f = smoothstep(0.05, 0.62, rim + tilt * 0.12 - 0.05);
   vec3 body = mix(center, edge, f);
 
   // Fake refraction: the studio seen through the glass, flipped like a lens,
@@ -53,14 +53,14 @@ vec4 glass(vec3 N, vec3 V, float blur, float pale, float opacity) {
   vec3 Tr = refract(-V, N, 0.69);
   vec3 seen = envLookup(normalize(Tr - N * 0.75), min(uEnvLodMax, 1.5 + blur * 6.0));
   float lumSeen = dot(seen, vec3(0.2126, 0.7152, 0.0722)) * uEnvNorm;
-  float pat = clamp(log2(lumSeen + 0.08) * 0.3, -0.75, 0.6) * (1.0 - wash) * smoothstep(0.0, 0.35, ndv);
+  float pat = clamp(log2(lumSeen + 0.08) * 0.3, -0.75, 0.3) * (1.0 - wash) * smoothstep(0.0, 0.35, ndv);
   vec3 lightBody = mix(center, uBgMid, 0.4);
   body = pat < 0.0 ? mix(body, edge * 0.7, -pat) : mix(body, lightBody, pat);
 
   // deeper, saturated outline right at the silhouette
-  body = mix(body, edge * 0.55, smoothstep(0.72, 0.985, rim) * (1.0 - wash));
+  body = mix(body, edge * 0.72, smoothstep(0.75, 0.985, rim) * (1.0 - wash));
   // the very middle lets the bright background through
-  float alpha = mix(0.45, 1.0, smoothstep(0.0, 0.16, rim)) * opacity;
+  float alpha = mix(0.38, 1.0, smoothstep(0.0, 0.2, rim)) * opacity;
 
   // Transmitted light: a glow focused opposite the key light (lower inside),
   // plus a bright crescent hugging the inside of the rim on that side.
@@ -85,7 +85,7 @@ vec4 glass(vec3 N, vec3 V, float blur, float pale, float opacity) {
 
   // Small sharp specular highlights: key, a top-edge kicker, a lower window.
   vec3 H = normalize(uLight + V);
-  float spec = lobe(N, H, 0.0006, blur) * 1.1 + lobe(N, H, 0.006, blur) * 0.12;
+  float spec = lobe(N, H, 0.0006, blur) * 1.1 + lobe(N, H, 0.006, blur) * 0.05;
   vec3 H3 = normalize(normalize(vec3(0.15, 0.95, 0.25)) + V);
   spec += lobe(N, H3, 0.0005, blur) * 0.5;
   vec3 H2 = normalize(normalize(vec3(0.55, -0.45, 0.7)) + V);
@@ -147,7 +147,7 @@ void main() {
       float ring = smoothstep(r * 0.55, r * 0.85, dist) * (1.0 - smoothstep(r * 0.85, r * 1.05, dist));
       float glint = 1.0 - smoothstep(0.0, r * 0.3, length(on - d - vec3(-0.35, 0.35, 0.0) * r));
       float vis = smoothstep(0.15, 0.5, ndv) * uBubbles;
-      c.rgb = mix(c.rgb, uEdge * c.a, ring * 0.45 * vis);
+      c.rgb = mix(c.rgb, uEdge * 0.6 * c.a, ring * 0.7 * vis);
       c.rgb += vec3(uSpecLevel * 0.25) * glint * vis;
     }
   }
@@ -258,7 +258,7 @@ in vec2 vUv;
 out vec4 fragColor;
 void main() {
   // lightest toward the upper left, deepening toward the edges
-  vec2 p = (vUv - vec2(0.22, 0.84)) * vec2(16.0 / 9.0, 1.0);
+  vec2 p = (vUv - vec2(0.3, 0.95)) * vec2(16.0 / 9.0, 1.2);
   float t = smoothstep(0.1, 1.75, length(p));
   t = t * t * (3.0 - 2.0 * t) * 0.85 + t * 0.15;
   // interpolate in log space so the falloff reads evenly after AgX
@@ -345,7 +345,7 @@ void main() {
   bl += max(textureLod(uScene, vUv, 6.0).rgb - uBloomThreshold, 0.0) * 0.15;
   c += bl * uBloom;
   // soft vignette, weighted away from the bright upper-left
-  vec2 p = (vUv - vec2(0.42, 0.58)) * vec2(16.0 / 9.0, 1.0);
+  vec2 p = (vUv - vec2(0.42, 0.7)) * vec2(16.0 / 9.0, 1.0);
   c *= 1.0 - uVignette * smoothstep(0.5, 1.45, length(p));
   c = toSRGB(agxWithLook(c));
 

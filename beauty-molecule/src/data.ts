@@ -12,6 +12,9 @@ export type BackgroundRow = {
   /** Hero centre offset from frame centre, world units at the focus plane
    * (frame is 8.87 x 4.99 there). */
   heroOffset: [number, number];
+  /** Bond length and bond radius, relative to heroScale. */
+  heroBondLength: number;
+  heroBondRadius: number;
 };
 
 export type ColourRow = {
@@ -25,8 +28,22 @@ export type ColourRow = {
 };
 
 export const BACKGROUNDS: BackgroundRow[] = [
-  {id: 'dna', name: 'DNA', heroScale: 1.25, heroOffset: [0.3, -0.35]},
-  {id: 'structures', name: 'Structures', heroScale: 1.7, heroOffset: [-0.05, -0.05]},
+  {
+    id: 'dna',
+    name: 'DNA',
+    heroScale: 1.25,
+    heroOffset: [0.3, -0.35],
+    heroBondLength: 1.0,
+    heroBondRadius: 0.03,
+  },
+  {
+    id: 'structures',
+    name: 'Structures',
+    heroScale: 1.9,
+    heroOffset: [-0.05, 0.0],
+    heroBondLength: 0.8,
+    heroBondRadius: 0.05,
+  },
 ];
 
 export const COLOURS: ColourRow[] = [
