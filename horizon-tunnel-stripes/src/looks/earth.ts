@@ -100,21 +100,22 @@ const buildRays = () => {
     base: number;
     hot: number;
   }[] = [];
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 64; i++) {
     let x: number;
     if (rng() < 0.6) x = gauss(rng) * halfW * 0.28;
     else x = range(rng, -halfW, halfW);
     const centre = Math.exp(-Math.pow(x / (halfW * 0.38), 2));
     const yh = horizonY(x);
-    const maxL = (0.8 + 0.3 * centre) * (halfH - yh + 0.3);
-    const L = maxL * (0.15 + 0.85 * rng());
+    const maxL = halfH - yh + 0.3;
+    // most reach the top edge; a second group stops mid-frame
+    const L = maxL * (rng() < 0.6 ? range(rng, 0.9, 1.0) : range(rng, 0.35, 0.65));
     const hot = rng() < 0.08 ? 1 : 0;
     rays.push({
       x,
       y0: yh - 0.4,
       y1: yh + L,
-      w: hot ? range(rng, 0.0018, 0.0026) : range(rng, 0.0009, 0.0018),
-      intensity: (hot ? range(rng, 0.9, 1.4) : range(rng, 0.35, 0.8)) * (0.8 + 0.2 * centre),
+      w: hot ? range(rng, 0.0026, 0.0034) : range(rng, 0.0016, 0.0026),
+      intensity: (hot ? range(rng, 0.7, 1.0) : range(rng, 0.35, 0.65)) * (0.8 + 0.2 * centre),
       phase: rng(),
       cycles: [1, 2, 2, 3, 3, 4, 5][Math.floor(rng() * 7)],
       streak: range(rng, 0.08, 0.35),
@@ -131,7 +132,7 @@ const buildStars = () => {
   const z = -90;
   const halfH = Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * Math.abs(z);
   const halfW = halfH * (16 / 9);
-  return Array.from({ length: 120 }, () => ({
+  return Array.from({ length: 45 }, () => ({
     p: [range(rng, -halfW, halfW), range(rng, -halfH * 0.5, halfH), z] as [number, number, number],
     size: Math.pow(rng(), 3) * 0.0028 + 0.0011,
     intensity: Math.pow(rng(), 2.2) * 2.2 + 0.25,
@@ -175,8 +176,8 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
       col *= mix(1.0, 0.18, smoothstep(0.12, 0.85, length(p * vec2(1.0, 1.2))));
       // centre light column, brightest at the horizon
       float h = max(uv.y - 0.22, 0.0);
-      float colW = 0.2 + h * 0.06;
-      float column = exp(-pow(p.x / colW, 2.0)) * (0.16 * exp(-h / 0.2) + 0.3 * smoothstep(0.0, 0.2, h) * exp(-h / 1.1));
+      float colW = 0.13;
+      float column = exp(-pow(p.x / colW, 2.0)) * (0.12 * exp(-h / 0.2) + 0.3 * smoothstep(0.0, 0.1, h) * exp(-h / 3.0));
       float wide = exp(-pow(p.x / 0.6, 2.0)) * 0.1;
       col += uRim * (column + wide);
       return col;
@@ -255,8 +256,8 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
         vec3 V = normalize(cameraPosition - vWorldPos);
         float facing = clamp(dot(N, V), 0.0, 1.0);
         float limb = 1.0 - facing;
-        vec3 col = mix(uOcean, uLand * 0.2, 0.3) * (0.9 + 0.3 * ls);
-        vec3 landCol = uLand * (0.3 + 0.08 * ls) + uLand * coast * 0.15;
+        vec3 col = mix(uOcean, uLand * 0.3, 0.5) * (0.9 + 0.3 * ls);
+        vec3 landCol = uLand * (0.42 + 0.08 * ls) + uLand * coast * 0.2;
         col = mix(col, landCol, l);
         // brighter toward the horizon, darker close to camera
         col *= mix(0.7, 1.2, smoothstep(0.0, 0.9, limb));
@@ -285,7 +286,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
         a: [p0.x, p0.y, p0.z],
         b: [p1.x, p1.y, p1.z],
         color: rimSoft,
-        intensity: 0.12 + 0.12 * ((k * 7919) % 13) / 13,
+        intensity: 0.05 + 0.05 * ((k * 7919) % 13) / 13,
         widthA: 0.0011,
       });
     }
@@ -310,7 +311,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
   const spikeSegs: Seg[] = [];
   const tipDots: Dot[] = [];
   const warm = lin(c.star).lerp(lin("#FFB070"), 0.6);
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 260; i++) {
     const p = PLEXUS.pts[Math.floor(spikeRng() * PLEXUS.pts.length)];
     const len = range(spikeRng, 0.25, 1.1);
     const lean = new THREE.Vector3(range(spikeRng, -0.4, 0.4), 0, range(spikeRng, -0.4, 0.4));
@@ -356,9 +357,9 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
       if (tca < 0.0) return vec3(0.0);
       float b = sqrt(max(dot(oc, oc) - tca * tca, 0.0));
       float x = b - uR;
-      float line = exp(-pow(x / 0.016, 2.0));
+      float line = exp(-pow(x / 0.03, 2.0));
       float outer = x > 0.0 ? exp(-x / 0.14) * 0.55 + exp(-x / 0.6) * 0.12 : 0.0;
-      float inner = x < 0.0 ? exp(x / 0.10) * 0.65 + exp(x / 0.7) * 0.22 : 0.0;
+      float inner = x < 0.0 ? exp(x / 0.18) * 0.9 + exp(x / 1.0) * 0.35 : 0.0;
       float centre = 1.0 + 0.6 * exp(-pow(p.x / 0.35, 2.0));
       return uRim * (line * 1.0 + outer * 0.6 + inner * 0.55) * (1.0 + 0.5 * smoothstep(0.3, 0.8, abs(p.x)));
     }
@@ -372,13 +373,13 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
   const rayMod = /* glsl */ `
     uniform float uT;
     float lineMod(float u, vec4 p) {
-      float body = p.w * (0.55 + 0.45 * (1.0 - u)) * smoothstep(0.0, 0.15, u) * smoothstep(1.0, 0.8, u);
+      float body = (0.5 + p.w) * smoothstep(0.0, 0.12, u) * smoothstep(1.0, 0.9, u);
       float pos = fract(p.x + uT * p.y);
       float d = pos - u;
       float tail = d >= 0.0 ? exp(-d / p.z) : 0.0;
       float head = exp(-d * d / 0.00018);
       float life = smoothstep(0.0, 0.1, pos) * smoothstep(1.0, 0.7, pos);
-      return body + (tail * 0.6 + head * 1.6) * life;
+      return body + (tail * 0.35 + head * 0.8) * life;
     }
   `;
   const raySegs: Seg[] = RAYS.rays.map((r) => {
@@ -406,8 +407,8 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
   // behind the globe, so they rise from the horizon up the left and right
   // sides. A soft brightness pulse runs along each arc in whole cycles.
   const arcDefs = [
-    { z: -16, a: 0.86, b: 1.5, cy: -0.55, n: 520, inten: 0.85, k: 3 },
-    { z: -20, a: 0.95, b: 1.7, cy: -0.6, n: 600, inten: 0.6, k: -2 },
+    { z: -16, a: 0.86, b: 1.5, cy: -0.55, n: 520, inten: 1.5, k: 3 },
+    { z: -20, a: 0.95, b: 1.7, cy: -0.6, n: 600, inten: 1.0, k: -2 },
   ];
   arcDefs.forEach((d) => {
     const hh = Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * -d.z;
@@ -430,7 +431,7 @@ export const earthLook: LookFactory<EarthParams> = ({ assets, params }) => {
         uniforms: { uT },
         // gentle pulse running along the arc; whole cycles per loop
         dotMod: `uniform float uT;
-float dotMod(vec4 p) { return 0.55 + 0.45 * sin(6.28318530718 * (p.x * 3.0 - uT * p.y)); }`,
+float dotMod(vec4 p) { float seg = step(0.35, fract(p.x * 7.0)); return seg * (0.6 + 0.4 * sin(6.28318530718 * (p.x * 3.0 - uT * p.y))); }`,
       }),
     );
   });

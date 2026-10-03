@@ -79,7 +79,7 @@ export const HIERARCHY_VERSIONS: Record<"Blue", HierarchyColors> = {
   Blue: {
     line: "#4FE8FF",
     surface: "#0E2A50",
-    cube: "#3F7FC8",
+    cube: "#4A90D8",
   },
 };
 

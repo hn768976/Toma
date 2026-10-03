@@ -133,7 +133,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
         vec2 p = vW.xz;
         float n = vnoise(p / 7.0) * 0.65 + vnoise(p / 3.2 + 7.3) * 0.35;
         float band = 0.5 + 0.5 * sin((p.x * 0.8 - p.y * 0.6) * 0.55 + vnoise(p / 9.0) * 3.0);
-        float k = 1.0 + 3.4 * smoothstep(0.3, 0.85, n) * (0.4 + 0.6 * band);
+        float k = 0.9 + 4.6 * smoothstep(0.25, 0.85, n) * (0.35 + 0.65 * band);
         gl_FragColor = vec4(uSurf * k, 1.0);
       }
     `,
@@ -143,7 +143,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
   floor.rotation.x = -Math.PI / 2;
   floor.rotation.z = 0.4;
   scene.add(floor);
-  scene.add(new THREE.HemisphereLight(0x2a6ad0, 0x041030, 1.8));
+  scene.add(new THREE.HemisphereLight(0x7aa8e0, 0x0a2040, 1.6));
   const patches: [number, number, number, number][] = [
     [-9, 3, 7, 110],
     [8, 2, -6, 80],
@@ -156,7 +156,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     sp.target.position.set(tx * 0.3 + x * 0.4, 0, z + tx * 0.2);
     scene.add(sp, sp.target);
   });
-  const key = new THREE.DirectionalLight(0x5f9cff, 0.6);
+  const key = new THREE.DirectionalLight(0xb0d0ff, 0.35);
   key.position.set(-4, 8, 6);
   scene.add(key);
 
@@ -177,16 +177,17 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
     envMap: env,
     envMapIntensity: 0.0,
   });
-  const topGeo = new RoundedBoxGeometry(0.62, 0.62, 0.62, 4, 0.08);
+  const topGeo = new RoundedBoxGeometry(0.58, 0.58, 0.58, 4, 0.075);
   const baseGeo = new RoundedBoxGeometry(0.86, 0.12, 0.86, 2, 0.03);
   const nodeGroups = NODES.map((n) => {
     const g = new THREE.Group();
     g.position.set(n.x, 0, n.z);
     const top = new THREE.Mesh(topGeo, cubeMat);
-    top.position.y = 0.12 + 0.31;
+    top.position.y = 0.29;
     const base = new THREE.Mesh(baseGeo, baseMat);
     base.position.y = 0.06;
-    g.add(top, base);
+    void base; // cube sits straight on the glowing pad
+    g.add(top);
     scene.add(g);
     return g;
   });
@@ -297,7 +298,7 @@ export const hierarchyLook: LookFactory<HierarchyParams> = ({ assets, params, re
       acc += Math.hypot(p.pts[i][0] - p.pts[i - 1][0], p.pts[i][1] - p.pts[i - 1][1]);
       // frame at which the eased head reaches this corner (approx, linear)
       const at = p.start + (acc / total) * (p.end - p.start);
-      flareDots.push({ p: [p.pts[i][0], Y * 3, p.pts[i][1]], color: lineCol, intensity: 2.2, size: 0.0035, param: [at, 0, 0, 0] });
+      flareDots.push({ p: [p.pts[i][0], Y * 3, p.pts[i][1]], color: lineCol, intensity: 4.0, size: 0.005, param: [at, 0, 0, 0] });
     }
     flareDots.push({ p: [p.pts[0][0], Y * 3, p.pts[0][1]], color: lineCol, intensity: 1.6, size: 0.003, param: [p.start + 2, 0, 0, 0] });
   });

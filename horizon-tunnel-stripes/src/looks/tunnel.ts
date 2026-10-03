@@ -17,11 +17,11 @@ import { TunnelColors } from "../versions";
 export type TunnelParams = { colors: TunnelColors };
 
 const LOOP = 600;
-const HALF_X = 3.2; // half width of the cross-section
-const HALF_Y = 3.2; // half height (square tunnel)
-const CELL = 0.55; // tile size across a face
-const CELL_Z = 0.55; // tile length along the tunnel
-const ROWS = 28; // rows per repeating segment
+const HALF_X = 4.4; // half width of the cross-section
+const HALF_Y = 4.4; // half height (square tunnel)
+const CELL = 1.45; // tile size across a face
+const CELL_Z = 0.85; // tile length along the tunnel
+const ROWS = 20; // rows per repeating segment
 const L = ROWS * CELL_Z; // segment length
 const N = 2; // segments travelled per loop
 const COPIES = 6; // segments drawn ahead of the camera
@@ -57,7 +57,7 @@ const buildSegment = () => {
     for (let mu = 0; mu < f.cells; mu += MOD_U) {
       for (let mk = 0; mk < ROWS; mk += MOD_K) {
         const r = rng();
-        if (r < 0.08) continue; // missing module: dark gap
+        if (r < 0.22) continue; // missing module: dark gap
         const depth = r < 0.7 ? 0 : r < 0.88 ? 0.15 : 0.3;
         const modLevel = rng() < 0.3 ? range(rng, 1.1, 1.6) : range(rng, 0.35, 0.7);
         const accent = rng() < 0.5;
@@ -72,14 +72,14 @@ const buildSegment = () => {
         const k0 = mk * CELL_Z + inset;
         const k1 = (mk + MOD_K) * CELL_Z - inset;
         const bar = (a: THREE.Vector3, b: THREE.Vector3, emph: boolean) => {
-          if (rng() < 0.12) return; // some missing bars
+          if (rng() < 0.25) return; // broken outlines: missing segments
           const hot = rng() < 0.12;
-          const level = modLevel * (hot ? 2.2 : range(rng, 0.7, 1.1)) * (emph ? 1.25 : 1);
-          bars.push({ a, b, level, accent, width: hot || emph ? 0.06 : 0.04 });
+          const level = modLevel * (hot ? 2.6 : range(rng, 0.6, 1.1)) * (emph ? 1.6 : 1);
+          bars.push({ a, b, level, accent, width: hot || emph ? 0.09 : 0.06 });
         };
         {
           const um = (u0 + u1) / 2;
-          fills.push({ a: P(um, k0), b: P(um, k1), width: u1 - u0, level: range(rng, 0.03, 0.08) });
+          fills.push({ a: P(um, k0), b: P(um, k1), width: u1 - u0, level: range(rng, 0.0, 0.015) });
           // secondary layer: small dim cells a little further out
           for (let j = 0; j < 3; j++) {
             const uu = range(rng, u0, u1);
@@ -88,15 +88,23 @@ const buildSegment = () => {
             fills.push({ a: P(uu, kk).add(back), b: P(uu, kk + range(rng, 0.15, 0.35)).add(back), width: range(rng, 0.12, 0.3), level: range(rng, 0.08, 0.2) });
           }
         }
-        // across bars (vertical on the side walls: emphasised)
-        for (let k = 0; k <= MOD_K; k++) {
-          const kz = Math.min(k1, Math.max(k0, mk * CELL_Z + k * CELL_Z));
-          bar(P(u0, kz), P(u1, kz), sideWall);
-        }
-        // along bars
-        for (let u = 0; u <= Math.min(MOD_U, f.cells - mu); u++) {
-          const uu = Math.min(u1, Math.max(u0, (mu + u) * CELL));
-          bar(P(uu, k0), P(uu, k1), false);
+        // Each cell is its own inset rectangle outline, so tiles read as
+        // separate floating neon cells with dark gaps between them.
+        const gap = 0.07;
+        for (let cu = mu; cu < Math.min(mu + MOD_U, f.cells); cu++) {
+          for (let ck = mk; ck < mk + MOD_K; ck++) {
+            if (rng() < 0.3) continue; // missing cell
+            const ua = cu * CELL + gap;
+            const ub = (cu + 1) * CELL - gap;
+            const ka = ck * CELL_Z + gap;
+            const kb = (ck + 1) * CELL_Z - gap;
+            // across edges (vertical on the side walls: emphasised)
+            bar(P(ua, ka), P(ub, ka), sideWall);
+            bar(P(ua, kb), P(ub, kb), sideWall);
+            // along edges
+            bar(P(ua, ka), P(ua, kb), false);
+            bar(P(ub, ka), P(ub, kb), false);
+          }
         }
       }
     }

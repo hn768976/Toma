@@ -37,10 +37,12 @@ const BASE_POST: PostSettings = {
 // ---- Look 1: Earth Horizon Rays ---------------------------------------
 const EARTH_POST: PostSettings = {
   ...BASE_POST,
-  bloomStrength: 1.1,
-  bloomRadius: 0.85,
-  bloomThreshold: 0.55,
-  vignette: 0.25,
+  exposure: 0.75,
+  bloomStrength: 1.5,
+  bloomRadius: 0.9,
+  bloomThreshold: 0.4,
+  vignette: 0.3,
+  saturation: 1.2,
 };
 export const EarthHorizon: React.FC<{ version: keyof typeof EARTH_VERSIONS } & LoopProps> = ({
   version,
@@ -54,23 +56,23 @@ const TUNNEL_POST: Record<keyof typeof TUNNEL_VERSIONS, PostSettings> = {
   Blue: {
     ...BASE_POST,
     clearColor: TUNNEL_VERSIONS.Blue.background,
-    exposure: 0.5,
-    bloomStrength: 2.2,
+    exposure: 0.36,
+    bloomStrength: 3.0,
     bloomRadius: 0.95,
-    bloomThreshold: 0.3,
+    bloomThreshold: 0.2,
     vignette: 0.3,
-    radialBlur: 0.035,
+    radialBlur: 0.03,
     saturation: 1.35,
   },
   Magenta: {
     ...BASE_POST,
     clearColor: TUNNEL_VERSIONS.Magenta.background,
-    exposure: 0.5,
-    bloomStrength: 2.2,
+    exposure: 0.36,
+    bloomStrength: 3.0,
     bloomRadius: 0.95,
-    bloomThreshold: 0.3,
+    bloomThreshold: 0.2,
     vignette: 0.3,
-    radialBlur: 0.035,
+    radialBlur: 0.03,
     saturation: 1.35,
   },
 };
@@ -85,11 +87,11 @@ export const NeonGridTunnel: React.FC<{ version: keyof typeof TUNNEL_VERSIONS } 
 const HIERARCHY_POST: PostSettings = {
   ...BASE_POST,
   loopFrames: HIERARCHY_FRAMES,
-  bloomStrength: 1.0,
-  bloomRadius: 0.7,
-  bloomThreshold: 0.7,
+  bloomStrength: 1.7,
+  bloomRadius: 0.85,
+  bloomThreshold: 0.45,
   vignette: 0.35,
-  dof: { focus: 20.5, range: 4, maxBlur: 0.035 },
+  dof: { focus: 20.5, range: 3, maxBlur: 0.035 },
 };
 export const HierarchyNetwork: React.FC<{ version: keyof typeof HIERARCHY_VERSIONS }> = ({ version }) => {
   const params = useMemo(() => ({ colors: HIERARCHY_VERSIONS[version] }), [version]);
@@ -104,7 +106,7 @@ const SLAT_POST: Record<keyof typeof SLAT_VERSIONS, PostSettings> = {
     grain: SLAT_VERSIONS.Black.grain,
     bloomStrength: 0.35,
     bloomThreshold: 0.8,
-    vignette: 0.25,
+    vignette: 0.5,
   },
   White: {
     ...BASE_POST,
@@ -124,9 +126,9 @@ export const DiagonalSlats: React.FC<{ version: keyof typeof SLAT_VERSIONS } & L
 const TRAILS_POST: PostSettings = {
   ...BASE_POST,
   clearColor: "#000000",
-  bloomStrength: 1.8,
-  bloomRadius: 0.95,
-  bloomThreshold: 0.3,
+  bloomStrength: 1.6,
+  bloomRadius: 0.85,
+  bloomThreshold: 0.45,
   grain: 0,
   blackPreserve: true,
   vignette: 0,

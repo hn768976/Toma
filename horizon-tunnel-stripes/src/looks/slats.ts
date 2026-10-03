@@ -26,11 +26,11 @@ const buildSlats = () => {
   // Cover the frame's extent perpendicular to the slats (~10 units).
   let y = -5.8;
   while (y < 5.8) {
-    const w = rng() < 0.15 ? range(rng, 0.2, 0.32) : range(rng, 0.5, 1.15);
+    const w = range(rng, 0.4, 0.75);
     const z = range(rng, 0, 0.08);
     // tilted about the long axis and overlapping the next slat, like
     // louvres/shingles: each raised lower edge shades the slat below
-    slats.push({ y: y + w / 2, w, z, bevel: range(rng, 0.02, 0.035), tilt: range(rng, 0.2, 0.3) });
+    slats.push({ y: y + w / 2, w, z, bevel: range(rng, 0.02, 0.035), tilt: range(rng, 0.13, 0.19) });
     y += w + 0.008;
   }
   const glints = [3, 7, 11, 14, 17].map((i, k) => ({
@@ -46,9 +46,12 @@ const SLATS = buildSlats();
 const GLINT_MOD = /* glsl */ `
 uniform float uT;
 float lineMod(float u, vec4 p) {
+  // static bevel highlight, brighter toward the middle of the frame
+  float base = p.w * (0.35 + 0.65 * exp(-pow((u - 0.5) / 0.22, 2.0)));
+  if (p.y < 0.5) return base;
   float pos = fract(p.x + uT * p.y * p.z);
   float d = abs(fract(u - pos + 0.5) - 0.5);
-  return exp(-pow(d / 0.045, 2.0)) + 0.25 * exp(-pow(d / 0.16, 2.0));
+  return base + exp(-pow(d / 0.045, 2.0)) + 0.25 * exp(-pow(d / 0.16, 2.0));
 }
 `;
 
@@ -127,7 +130,7 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
   key.shadow.camera.bottom = -9;
   key.shadow.camera.near = 1;
   key.shadow.camera.far = 25;
-  key.shadow.radius = 14;
+  key.shadow.radius = 8;
   key.shadow.bias = -0.0006;
   key.shadow.normalBias = 0.01;
   scene.add(key);
@@ -135,17 +138,22 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
 
   // Glints travelling along a few slat edges.
   const uT = { value: 0 };
-  const glintSegs: Seg[] = SLATS.glints.map((g) => {
-    const s = SLATS.slats[g.slat];
-    const y = s.y + s.w / 2 - s.bevel * 0.6;
-    const z = s.z + THICK / 2 - s.bevel * 0.35;
+  // A thin bevel highlight along the raised (lower) edge of every slat,
+  // with a few of them also carrying a travelling glint.
+  const glintSegs: Seg[] = SLATS.slats.map((s, i) => {
+    const g = SLATS.glints.find((q) => q.slat === i);
+    const hw = (s.w * 1.25) / 2;
+    const edge = new THREE.Vector3(0, -hw + s.bevel * 0.7, (THICK * 0.6) / 2 - s.bevel * 0.3);
+    edge.applyAxisAngle(new THREE.Vector3(1, 0, 0), -s.tilt);
+    const y = s.y + edge.y;
+    const z = s.z + edge.z + 0.012;
     return {
-      a: [-LENGTH / 2, y, z + 0.002],
-      b: [LENGTH / 2, y, z + 0.002],
+      a: [-LENGTH / 2, y, z],
+      b: [LENGTH / 2, y, z],
       color: new THREE.Color(c.glint),
-      intensity: white ? 0.5 : 0.4,
-      widthA: 0.0022,
-      param: [g.phase, g.cycles, g.dir, 0],
+      intensity: white ? 0.35 : 0.22,
+      widthA: 0.0016,
+      param: [g ? g.phase : 0, g ? g.cycles : 0, g ? g.dir : 0, 0.18 + 0.12 * ((i * 7) % 5) / 4],
     };
   });
   const glints = makeLines(glintSegs, {
@@ -163,9 +171,9 @@ export const slatsLook: LookFactory<SlatParams> = ({ assets, params, renderer })
     const a = t * Math.PI * 2;
     // Sweep: across the frame and back once per loop, travelling along a
     // diagonal perpendicular-ish to the slats.
-    sweep.position.set(1.2 + Math.sin(a) * 5.5, 1.0 + Math.sin(a) * 0.8, 3.2);
+    sweep.position.set(0.6 + Math.sin(a) * 4.5, 1.6 + Math.sin(a) * 0.4, 3.2);
     sweep.lookAt(sweep.position.x * 0.6, sweep.position.y * 0.6, 0);
-    sweep2.position.set(0.8 - Math.sin(a * 2 + 1.1) * 4, 1.2 + Math.cos(a) * 1.2, 3.6);
+    sweep2.position.set(0.5 - Math.sin(a * 2 + 1.1) * 3, 0.6 + Math.cos(a) * 0.8, 3.6);
     sweep2.lookAt(sweep2.position.x * 0.5, sweep2.position.y * 0.5, 0);
     uT.value = t;
     camera.position.set(0.12 * Math.sin(a), 0.08 * Math.cos(a), 12);

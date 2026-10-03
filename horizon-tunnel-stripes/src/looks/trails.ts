@@ -39,16 +39,16 @@ const BUNDLES: Bundle[] = [
     // drops near-vertically from the top, curls tightly near the vanishing
     // point and fans out to the upper right
     pts: [
-      [0.46, -0.15, 30, 0.05],
-      [0.44, 0.1, 20, 0.04],
-      [0.46, 0.3, 13, 0.03],
-      [0.51, 0.44, 9, 0.022],
+      [0.52, -0.15, 30, 0.2],
+      [0.47, 0.1, 20, 0.1],
+      [0.47, 0.3, 13, 0.04],
+      [0.51, 0.43, 9, 0.016],
       [0.61, 0.42, 6.5, 0.05],
       [0.77, 0.32, 4.5, 0.1],
       [0.97, 0.18, 3, 0.17],
       [1.25, 0.02, 1.8, 0.26],
     ],
-    count: 18,
+    count: 9,
   },
   {
     // rises from the bottom centre, pinches near the vanishing point and
@@ -56,13 +56,13 @@ const BUNDLES: Bundle[] = [
     pts: [
       [0.36, 1.2, 26, 0.06],
       [0.4, 0.86, 15, 0.04],
-      [0.46, 0.63, 9.5, 0.025],
-      [0.56, 0.6, 7, 0.05],
+      [0.44, 0.62, 9.5, 0.016],
+      [0.56, 0.62, 7, 0.04],
       [0.72, 0.7, 5, 0.11],
       [0.9, 0.88, 3.2, 0.2],
       [1.15, 1.1, 2, 0.3],
     ],
-    count: 20,
+    count: 10,
   },
 ];
 
@@ -105,14 +105,14 @@ const buildTrails = () => {
       const len = [0];
       for (let s = 1; s < pts.length; s++) len.push(len[s - 1] + pts[s].distanceTo(pts[s - 1]));
       const r = rng();
-      const color = r < 0.42 ? "main" : r < 0.66 ? "deep" : r < 0.88 ? "warm" : "hot";
+      const color = r < 0.36 ? "main" : r < 0.68 ? "deep" : r < 0.94 ? "warm" : "hot";
       trails.push({
         pts,
         len,
         total: len[len.length - 1],
         color,
         intensity: range(rng, 0.6, 1.15) * (color === "hot" ? 0.8 : 1),
-        width: rng() < 0.35 ? range(rng, 0.045, 0.075) : range(rng, 0.012, 0.028),
+        width: range(rng, 0.035, 0.075),
         phase: rng(),
         k: Math.floor(range(rng, 14, 30)),
         dashes: Math.floor(range(rng, 2, 6)),
@@ -123,10 +123,10 @@ const buildTrails = () => {
   const near: { a: THREE.Vector3; b: THREE.Vector3; w: number; color: "main" | "deep" | "warm" | "hot"; inten: number; phase: number; k: number }[] = [];
   const nearDefs: [number, number, number, number, number, number, number, "main" | "deep" | "warm" | "hot"][] = [
     // x0, y0, d0, x1, y1, d1, width, colour
-    [0.6, 0.38, 5.0, 0.92, 0.18, 2.6, 0.9, "main"],
-    [0.64, 0.4, 5.5, 0.9, 0.28, 3.0, 0.7, "hot"],
-    [0.62, 0.66, 4.6, 1.05, 0.72, 2.4, 1.1, "hot"],
-    [0.7, 0.72, 4.0, 1.05, 0.9, 2.2, 0.8, "deep"],
+    [0.74, 0.36, 4.2, 0.95, 0.16, 2.4, 0.7, "main"],
+    [0.78, 0.38, 4.0, 0.94, 0.26, 2.6, 0.5, "hot"],
+    [0.66, 0.68, 4.6, 1.05, 0.72, 2.4, 0.8, "deep"],
+    [0.74, 0.78, 4.0, 1.05, 0.92, 2.2, 0.6, "warm"],
   ];
   nearDefs.forEach(([x0, y0, d0, x1, y1, d1, w, col]) => {
     near.push({
@@ -207,7 +207,7 @@ export const trailsLook: LookFactory<TrailParams> = ({ params }) => {
     lineMod: TRAIL_MOD,
     uniforms: { uT },
     minHalfPx: 0.55,
-    dof: { focus: 9, range: 6, maxBlur: 0.004, nearOnly: true },
+    dof: { focus: 9, range: 5, maxBlur: 0.018, nearOnly: true },
   });
   scene.add(lines);
 
@@ -222,7 +222,7 @@ export const trailsLook: LookFactory<TrailParams> = ({ params }) => {
   const near = makeLines(nearSegs, {
     worldWidth: true,
     softness: 1,
-    feather: 1.7,
+    feather: 2.6,
     lineMod: NEAR_MOD,
     uniforms: { uT },
   });
