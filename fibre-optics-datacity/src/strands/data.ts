@@ -45,16 +45,20 @@ const build = () => {
   // tree-like bundles: a tight trunk of near-parallel strands that fans out
   // and droops near the top; edge bundles lean outwards; jagged skyline
   const clumps = [
-    { x: -5.7, n: 22, h: 2.9, sp: 1.3, lean: -0.7 },
-    { x: -3.5, n: 50, h: 4.6, sp: 1.9, lean: -0.35 },
-    { x: -0.7, n: 58, h: 4.8, sp: 2.0, lean: 0.1 },
-    { x: 1.9, n: 44, h: 3.6, sp: 1.7, lean: 0.35 },
-    { x: 4.2, n: 42, h: 3.1, sp: 1.8, lean: 0.55 },
-    { x: 5.9, n: 24, h: 2.5, sp: 1.2, lean: 0.8 },
+    { x: -6.0, n: 20, h: 2.4, sp: 0.8, lean: -0.8 },
+    { x: -4.6, n: 30, h: 3.4, sp: 0.9, lean: -0.55 },
+    { x: -3.2, n: 40, h: 4.6, sp: 1.0, lean: -0.35 },
+    { x: -1.7, n: 22, h: 3.0, sp: 0.8, lean: -0.15 },
+    { x: -0.4, n: 44, h: 4.8, sp: 1.0, lean: 0.0 },
+    { x: 1.0, n: 24, h: 3.3, sp: 0.8, lean: 0.15 },
+    { x: 2.3, n: 34, h: 4.1, sp: 0.95, lean: 0.35 },
+    { x: 3.7, n: 28, h: 3.1, sp: 0.9, lean: 0.55 },
+    { x: 5.0, n: 26, h: 3.6, sp: 0.9, lean: 0.75 },
+    { x: 6.2, n: 16, h: 2.5, sp: 0.8, lean: 0.95 },
   ];
-  const order = [2, 1, 3, 4, 0, 5];
+  const order = [4, 2, 6, 1, 8, 3, 5, 0, 7, 9];
   clumps.forEach((c, ci) => {
-    const clumpStart = 22 + order.indexOf(ci) * 14 + rnd() * 10;
+    const clumpStart = 22 + order.indexOf(ci) * 9 + rnd() * 10;
     for (let k = 0; k < c.n; k++) {
       const t0 = clumpStart + Math.pow(rnd(), 1.4) * 120;
       const dur = 85 + rnd() * 80;
@@ -65,12 +69,12 @@ const build = () => {
         lean: c.lean * (0.8 + rnd() * 0.4),
         leanK: 1.8 + rnd() * 0.5,
         branchAt: 0,
-        bx: c.x + (rnd() - 0.5) * 0.4,
-        bz: (rnd() - 0.5) * 1.2,
+        bx: c.x + (rnd() - 0.5) * 1.3, // overlapping bases: no gaps along the bottom
+        bz: (rnd() - 0.5) * 2.6,
         height: Math.min(hRaw, MAX_TIP_Y - BASE_Y - 0.05),
         spread,
         // wide-flung strands droop like willow branches
-        droop: 0.05 + Math.min(0.5, Math.abs(spread) / c.sp) * (0.25 + rnd() * 0.25),
+        droop: rnd() * 0.12,
         curlA: (rnd() - 0.5) * 0.35,
         curlK: 0.8 + rnd() * 1.2,
         curlP: rnd() * TAU,
@@ -81,8 +85,8 @@ const build = () => {
         swayP1: rnd() * TAU,
         swayP2: rnd() * TAU,
         width: 0.8 + rnd() * 0.4,
-        bright: 0.6 + rnd() * 0.5,
-        headSize: 0.75 + rnd() * 0.35,
+        bright: 0.7 + rnd() * 0.5,
+        headSize: 0.6 + Math.pow(rnd(), 1.5) * 0.9,
         twC: 0.6 + rnd() * 1.6,
         twP: rnd() * TAU,
       };
@@ -162,7 +166,7 @@ export const strandPoint = (
   // mostly in the upper part, so bundles stay tight low down
   const x =
     s.lean * Math.pow(u, s.leanK) +
-    s.spread * Math.pow(u, s.parent >= 0 ? 1.4 : 2.8) +
+    s.spread * Math.pow(u, s.parent >= 0 ? 1.4 : 2.0) +
     s.curlA * Math.sin(Math.PI * s.curlK * u + s.curlP) * u * u;
   const y = s.height * (u - s.droop * u * u * u);
   const z = s.dz * u;

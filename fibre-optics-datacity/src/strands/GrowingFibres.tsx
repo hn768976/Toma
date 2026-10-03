@@ -48,7 +48,8 @@ uniform vec3 uBase;
 uniform vec3 uTip;
 void main() {
   float across = exp(-vSide * vSide * 4.5);
-  vec3 col = mix(uBase, uTip, smoothstep(0.3, 1.0, vCol));
+  // pink low down, pale blue-white for most of the length
+  vec3 col = mix(uBase, uTip, smoothstep(0.05, 0.5, vCol));
   outColor = vec4(col * across * vBright, 1.0);
 }
 `;
@@ -81,12 +82,12 @@ void main() {
   float r = length(vUv);
   float edge = 1.0 - smoothstep(0.75, 1.0, r);
   // defocus spreads the core into a soft disc of the same energy
-  float rc = mix(0.07, 0.24, vSoft);
-  float k = (0.07 * 0.07) / (rc * rc);
+  float rc = mix(0.085, 0.26, vSoft);
+  float k = (0.085 * 0.085) / (rc * rc);
   float core = exp(-pow(r / rc, 2.0)) * k;
   float mid = exp(-pow(r / mix(0.17, 0.3, vSoft), 2.0)) * mix(1.0, 0.5, vSoft);
-  float halo = exp(-pow(r / 0.3, 2.0));
-  vec3 col = mix(uHead, vec3(1.0), 0.3) * core * 4.5 + uHead * mid * 1.0 + uHalo * halo * 0.5;
+  float halo = exp(-pow(r / 0.42, 2.0));
+  vec3 col = mix(uHead, vec3(1.0), 0.3) * core * 4.5 + uHead * mid * 1.0 + uHalo * halo * 0.95;
   outColor = vec4(col * edge * vGlow, 1.0);
 }
 `;
@@ -263,9 +264,9 @@ const buildPipeline = (pal: GrowingFibresPalette) => {
         const cc = c0 + u * (1 - c0);
         // tint by absolute height in the strand; slightly dimmer right at
         // the growth front so the head reads as the bright point
-        const front = 1 - 0.5 * smoothstep(0.85, 1, j / (POINTS - 1));
+        const front = 1 - 0.3 * smoothstep(0.85, 1, j / (POINTS - 1));
         colA[v] = colA[v + 1] = cc;
-        bright[v] = bright[v + 1] = (s.bright * 0.5 * front) / (1 + 2.2 * soft);
+        bright[v] = bright[v + 1] = (s.bright * 0.7 * front) / (1 + 2.2 * soft);
       }
       const tip = pts[POINTS - 1];
       aHead[i * 4] = tip[0];
@@ -273,7 +274,7 @@ const buildPipeline = (pal: GrowingFibresPalette) => {
       aHead[i * 4 + 2] = tip[2];
       const hs = Math.min(1, Math.max(0, (tip[2] - 0.6) / 1.6, (-tip[2] - 1.2) / 2.5));
       aSoft[i] = hs;
-      aHead[i * 4 + 3] = 0.42 * s.headSize * (1 + 0.8 * hs);
+      aHead[i * 4 + 3] = 0.5 * s.headSize * (1 + 0.8 * hs);
       const tw = 0.72 + 0.28 * Math.sin((frame / 30) * s.twC * Math.PI + s.twP);
       const appear = smoothstep(0, 0.04, g);
       aGlow[i] = appear * (1 - settled + settled * tw) * (s.parent >= 0 ? 0.85 : 1);
@@ -289,9 +290,9 @@ const buildPipeline = (pal: GrowingFibresPalette) => {
   const final = pass(FINAL_FRAG, {
     tScene: { value: null },
     tBloom: { value: null },
-    uBloom: { value: 0.32 },
+    uBloom: { value: 0.5 },
     tHaze: { value: null },
-    uHazeColor: { value: lin(pal.halo, 1.1) },
+    uHazeColor: { value: lin(pal.halo, 2.2) },
     uExposure: { value: 1.0 },
     uFrame: { value: 0 },
   });
