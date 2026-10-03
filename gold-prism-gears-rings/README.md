@@ -97,7 +97,22 @@ The table below was measured in the build sandbox: 4 vCPU, no GPU, so WebGL
 ran on SwiftShader, at `--concurrency=1`. Times are wall-clock for 600 frames
 at 1280×720, browser start-up included.
 
-RENDER_TIME_TABLE
+| Composition | s / frame at 720p (measured) | 600 frames | 4K estimate, SwiftShader (×9) | 4K estimate, GPU |
+|---|---|---|---|---|
+| GoldMarket-Bull | 1.01 | 10.1 min | ≈ 9 s/frame (≈ 1.5 h) | ≈ 0.3–0.6 s/frame |
+| GoldMarket-Bear | 1.02 | 10.2 min | ≈ 9 s/frame (≈ 1.5 h) | ≈ 0.3–0.6 s/frame |
+| PrismLeaks-Cool | 0.61 | 6.1 min | ≈ 5.5 s/frame (≈ 55 min) | ≈ 0.2–0.4 s/frame |
+| PrismLeaks-Warm | 0.56 | 5.6 min | ≈ 5 s/frame (≈ 50 min) | ≈ 0.2–0.4 s/frame |
+| WireframeGears-Blue | 1.10 | 11.0 min | ≈ 10 s/frame (≈ 1.7 h) | ≈ 0.3–0.6 s/frame |
+| WireframeGears-Amber | 1.09 | 10.9 min | ≈ 10 s/frame (≈ 1.7 h) | ≈ 0.3–0.6 s/frame |
+| GoldRingFrame-Gold | 1.42 | 14.2 min | ≈ 13 s/frame (≈ 2.1 h) | ≈ 0.3–0.7 s/frame |
+| GoldRingFrame-Silver | 1.45 | 14.5 min | ≈ 13 s/frame (≈ 2.2 h) | ≈ 0.3–0.7 s/frame |
+| DarkTerraces | 4.38 | 43.8 min | ≈ 39 s/frame (≈ 6.6 h) | ≈ 0.5–1.0 s/frame |
+
+Dark Terraces is the heaviest: MSAA + variance shadow maps (2048², blurred) +
+depth of field + the per-pixel grain bump. Gold Market renders its scene at
+2× supersampling (see "Determinism"). Prism is one shader evaluated at reduced
+resolution, hence the fastest.
 
 **4K estimate.** 4K has 9× the pixels of 720p. On SwiftShader, time scales
 almost linearly with pixels, so expect about 9× the figures above. On a real
@@ -120,6 +135,10 @@ is a function of `useCurrentFrame()` only:
   that `ThreeCanvas`' `advance()` calls (`src/lib/LookCanvas.tsx`).
 - There is no TAA, temporal AO, accumulation or history buffers. DoF, bloom,
   ACES, dither and grain are single-frame passes (`src/lib/post.ts`).
+- Gold Market uses 2× supersampling instead of MSAA. Under SwiftShader, MSAA
+  combined with 300 instanced candles gave renders that differed by one level
+  in about 150 pixels depending on where a render sequence started. The other
+  looks keep 4× MSAA and pass the check.
 - The HDRI, PMREM and Inter font load behind `delayRender` / `continueRender`.
   The canvas is advanced once more after the environment is ready.
 - Grain and dither are a fixed hash (PCG) of pixel position and `frame % 600`.
@@ -134,9 +153,11 @@ sequence render, pixel for pixel.
 function of the phase with whole-number cycles:
 
 - **Gold Market:** bars, candles and tags sit on a strip of length S = 6·L
-  that repeats every L (L = the wave period). Over the loop the world slides
-  by exactly 2·L past the camera, and along the trend in y. Tag values step
-  every 30 frames through a fixed cycle.
+  (L = the wave period). Every layout is periodic with TRAVEL = 3·L: bar
+  jitter repeats every 30 bars, and candles and tags are 150 and 15 unique
+  items repeated twice. Over the loop the world slides by exactly TRAVEL past
+  the camera, and along the trend in y. Tag values step every 30 frames
+  through a fixed cycle.
 - **Prism:** `noise(p, cos(2πt)·r, sin(2πt)·r)` with 4D simplex noise,
   `t = frame / 600`.
 - **Gears:** the driver advances P = 36 tooth pitches. Tooth counts are 12
@@ -150,7 +171,10 @@ function of the phase with whole-number cycles:
 
 **Self-check:** `scripts/loop-check.sh <Id>` sets `loopCheck: true`, which
 makes the composition 601 frames long. It then renders frames 0 and 600 and
-compares them pixel for pixel.
+compares them pixel for pixel. Because the phase wraps, that test alone cannot
+catch a layout that isn't periodic. `scripts/seam-check.py <file.mp4>` also
+compares the 599 → 0 step of the encoded preview with the ordinary
+frame-to-frame steps.
 
 ## Banding check
 
@@ -212,13 +236,38 @@ src/lib/constants.ts    30 fps, 600 frames, 3840×2160, loopPhase()
 src/lib/random.ts       mulberry32
 src/looks/*.tsx         the five looks
 src/glsl/*.ts           4D simplex noise, bicubic upsampling
-scripts/                preview render, loop / determinism / banding checks
+scripts/                preview render, loop / seam / determinism / banding / gear checks
+                        (Python checks need numpy + Pillow; the gear check needs shapely)
 ```
 
 ## Completion checklist
 
-COMPLETION_CHECKLIST
+- [x] 9 compositions in one Remotion project, 3840×2160, 30 fps, 600 frames, one data row each (`src/versions.ts`)
+- [x] Engines as specified: three.js 3D (looks 1, 3, 4, 5) and a three.js full-screen shader quad (look 2), WebGL2, no WebGPU, no PixiJS
+- [x] Everything built in code; no MCP servers
+- [x] Poly Haven studio HDRI (CC0) and Inter (OFL) shipped, with licences
+- [x] No logos, brands, stamps or real tickers; numbers made up
+- [x] ACES tonemapping, sRGB output, ±1/255 dither after tonemapping, about 2 % grain (3 % on look 2) from a fixed hash
+- [x] Deterministic: seeded at module level; no `Math.random()`, clock or carried state; assets behind `delayRender`
+- [x] Frame 300 rendered cold matches frame 300 of the full render, byte for byte (all 9)
+- [x] Frames 0 and 600 identical (all 9); the 599 → 0 step is an ordinary step (all 9)
+- [x] Gear teeth never overlap (`scripts/gear-overlap-check.py`, 600 phases, all pairings)
+- [x] Banding checked on frames decoded from the encoded mp4
+- [x] 720p previews: 1280×720, 30/1, 20.0 s, h264, yuv420p, no audio (all 9)
+- [x] Render time per frame at 720p measured and recorded; 4K estimate given
+- [x] 4K render commands, 6K still command, Chromium GL flag, blend-mode note and how to add a colourway documented
+- [x] `npm install && npx remotion studio` tested from a clean copy (Studio served HTTP 200; `remotion compositions` lists all 9)
 
 ## Verification results
 
-VERIFICATION_RESULTS
+All results were measured on the delivered previews and the final code.
+
+| Check | Result |
+|---|---|
+| Step 1 — ffprobe | all 9: 1280×720, 30/1, 20.000 s, h264, yuv420p, a single video stream |
+| Step 2 — frame 0 vs 600 (601-frame comp) | all 9 identical, 0 differing pixels |
+| Seam 599 → 0 vs ordinary steps | all 9 seamless (e.g. GoldMarket-Bull 5.96 vs 5.00–6.64; Prism-Cool 1.16 vs 0.67–1.88) |
+| Step 3 — frame 300 cold vs full render | all 9 identical; the PNG files are byte-identical |
+| Step 4 — banding on mp4 frames | smooth everywhere. Gradients change by a few levels per 16 px (ring disc 2.4 → 28.6, terrace plate 65.5 → 54.7, gear background 2.5 → 8.2). Identical raw runs are at most 17 px, and only in near-black areas. The large jumps are real object edges. |
+| Gear interference | worst overlap area 0.000000 over 600 phases |
+
