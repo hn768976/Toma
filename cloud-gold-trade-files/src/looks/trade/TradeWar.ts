@@ -13,7 +13,7 @@ export const TRADE_FRAMES = 450;
 
 const MAP_W = 5.3;
 const LEFT_C = new THREE.Vector3(-3.05, 0, 1.5);
-const RIGHT_C = new THREE.Vector3(3.35, 0, -0.5);
+const RIGHT_C = new THREE.Vector3(3.35, 0, -1.5);
 
 // ---- ground shader: slate with fine static cracks, fully procedural so it holds
 // up at any resolution --------------------------------------------------------------
@@ -73,7 +73,7 @@ slate += vec3(0.02) * step(0.93, h21(floor(gp * 60.0))) ;
 float cm = crackMask(gp);
 slate *= 1.0 - 0.9 * cm;
 // split colour wash: cool on the left, warm on the right
-slate *= mix(vec3(0.75, 0.9, 1.45), vec3(1.5, 0.82, 0.85), smoothstep(-5.0, 5.0, gp.x)) * 1.25;
+slate *= mix(vec3(0.7, 0.95, 1.8), vec3(1.9, 0.75, 0.95), smoothstep(-5.0, 5.0, gp.x)) * 1.6;
 diffuseColor.rgb = slate;
 `,
       )
@@ -118,7 +118,7 @@ function corrugationNormal(): THREE.Texture {
   ctx.putImageData(img, 0, 0);
   const t = canvasTexture(c, false);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(30, 1);
+  t.repeat.set(16, 1);
   return t;
 }
 
@@ -303,7 +303,7 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
       roughness: 0.6,
       metalness: 0.35,
       normalMap: corr,
-      normalScale: new THREE.Vector2(0.4, 0.4),
+      normalScale: new THREE.Vector2(0.75, 0.75),
       envMap: env,
       envMapIntensity: 0.25,
     });
@@ -314,7 +314,7 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
     const slots = [
       [0, 0, 0],
       [0, 0, 1.06],
-      [-0.35 * flip, 1, 0.35], // top box set back: stepped stack
+      [0, 1, 0.53], // top box flush on the pair below
     ];
     slots.forEach(([dx, layer, dz], k) => {
       const m = new THREE.Mesh(cGeo, mats);
@@ -324,8 +324,28 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
       boxes.push({ mesh: m, x: base.x + dx, y: layer * 0.952 + 0.475, z: base.z + dz, ry: (k - 1) * 0.015 * flip, t0: t0 + k * 22 });
     });
   };
+  // soft contact shadows under the stacks (fade in as the boxes land)
+  const stackShadow = (() => {
+    const [c, ctx] = makeCanvas(256, 256);
+    ctx.filter = "blur(14px)";
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(40, 50, 176, 156);
+    return canvasTexture(c, false);
+  })();
+  const stackShadows: { m: THREE.Mesh; t0: number }[] = [];
+  const addStackShadow = (base: THREE.Vector3, t0: number) => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.6, 3.0).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x000000, alphaMap: stackShadow, transparent: true, opacity: 0, depthWrite: false }),
+    );
+    m.position.set(base.x, 0.004, base.z + 0.53);
+    scene.add(m);
+    stackShadows.push({ m, t0 });
+  };
+  addStackShadow(new THREE.Vector3(-3.6, 0, -1.9), 40);
+  addStackShadow(new THREE.Vector3(2.6, 0, -5.0), 52);
   stack(new THREE.Vector3(-3.6, 0, -1.9), row.left.containers, 40, 1);
-  stack(new THREE.Vector3(2.4, 0, -3.9), row.right.containers, 52, -1);
+  stack(new THREE.Vector3(2.6, 0, -5.0), row.right.containers, 52, -1);
 
   // ---- cracks (rebuilt from the frame each time; fixed topology)
   const cracks = planCracks();
@@ -437,13 +457,13 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
   const camera = new THREE.PerspectiveCamera(40, width / height, 0.3, 200);
   const post = new PostFX(gl, width, height, {
     exposure: 1.0,
-    bloomStrength: 0.06,
+    bloomStrength: 0.12,
     bloomThreshold: 1.0,
     bloomKnee: 0.6,
-    dof: { focus: 16, nearK: 1.0, farK: 1.4, maxBlur: 0.008 },
+    dof: { focus: 16, nearK: 1.4, farK: 2.0, maxBlur: 0.011 },
     grain: 0.02,
     grainPeriod: TRADE_FRAMES,
-    vignette: 0.45,
+    vignette: 0.25,
     clearColor: 0x050506,
   });
 
@@ -484,6 +504,7 @@ export const createTradeWar: LookFactory<TradeRow> = async ({ gl, width, height,
         b.mesh.rotation.set(0, b.ry, 0);
         b.mesh.visible = tau >= 0;
       });
+      stackShadows.forEach((sh) => ((sh.m.material as THREE.MeshBasicMaterial).opacity = 0.7 * smoothstep(sh.t0 + 6, sh.t0 + 16, f)));
       // cracks
       cracks.forEach((c, ci) => {
         const pos = crackMeshes[ci].geometry.attributes.position as THREE.BufferAttribute;
