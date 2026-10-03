@@ -9,6 +9,8 @@ Config.setChromiumOpenGlRenderer("angle");
 // to the soft glows before the H.264 encode.
 Config.setVideoImageFormat("png");
 Config.setOverwriteOutput(true);
+// Software-GL (CPU) machines can take a while per 4K frame; be patient.
+Config.setDelayRenderTimeoutInMilliseconds(180000);
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
