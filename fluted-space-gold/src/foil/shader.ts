@@ -46,14 +46,34 @@ float frostH(vec2 q) {
   return 0.75 * w * sqrt(w) + 0.25 * b * b;
 }
 
-float foilField(vec2 p, vec2 cs) {
-  // vertical waves: blobs stretched vertically
-  float a = snoise4(vec4(p.x * 0.95, p.y * 0.38, cs));
-  // horizontal waves
-  float b = snoise4(vec4(p.x * 0.55 + 9.1, p.y * 1.1 - 3.7, cs * 1.0 + 5.3));
-  // crumple detail
-  float c = snoise4(vec4(p * 2.6 + 21.0, cs * 1.3 + 1.9));
-  return 0.66 * a + 0.36 * b + 0.08 * c;
+// slow vertical and horizontal waves; integer temporal harmonics keep the loop
+float waves(vec2 q, float ph) {
+  float v1 = sin(q.x * 4.3 + 0.8 * sin(q.y * 2.2 + ph) + ph + 1.3);
+  float v2 = sin(q.x * 2.6 - q.y * 0.9 - 2.0 * ph + 4.0);
+  float h1 = sin(q.y * 3.7 + 0.6 * sin(q.x * 1.7 - ph) + ph + 2.2);
+  float h2 = sin(q.y * 2.1 + q.x * 0.6 + 2.0 * ph + 0.4);
+  return 0.42 * v1 + 0.26 * v2 + 0.24 * h1 + 0.16 * h2;
+}
+
+float foilField(vec2 p, vec2 cs, float ph, float aspect) {
+  // Frame statistics of the wave sum, from a fixed 6x4 grid: subtracting the
+  // mean and dividing by the spread keeps the gold/bronze balance steady
+  // through the loop (still a pure function of the frame).
+  float m = 0.0, m2 = 0.0;
+  for (int j = 0; j < 4; j++) {
+    for (int i = 0; i < 6; i++) {
+      vec2 g = vec2((float(i) + 0.5) / 6.0 * aspect, (float(j) + 0.5) / 4.0);
+      float v = waves(g, ph);
+      m += v; m2 += v * v;
+    }
+  }
+  m /= 24.0;
+  float sd = sqrt(max(m2 / 24.0 - m * m, 1e-4));
+  // organic warp from looping 4D noise (noise sampled on a circle in time)
+  vec2 w = vec2(snoise4(vec4(p * 0.9, cs)), snoise4(vec4(p * 0.9 + 7.3, cs + 3.7)));
+  vec2 q = p + w * 0.16;
+  float crumple = snoise4(vec4(q * 2.4 + 21.0, cs * 1.3 + 1.9));
+  return (waves(q, ph) - m) / sd * 0.42 + 0.12 * crumple;
 }
 
 vec3 ramp(float t) {
@@ -61,8 +81,8 @@ vec3 ramp(float t) {
   // olive-khaki mid: the gold toned toward the dark/light blend (no orange ring)
   vec3 midTone = mix(uMid, mix(uDark, uLight, 0.55), 0.6);
   c = mix(c, midTone, smoothstep(0.12, 0.38, t));
-  c = mix(c, uLight, smoothstep(0.3, 0.68, t));
-  c = mix(c, mix(uLight, vec3(1.0), 0.45), smoothstep(0.72, 1.0, t));
+  c = mix(c, uLight, smoothstep(0.32, 0.85, t));
+  c = mix(c, mix(uLight, vec3(1.0), 0.45), smoothstep(0.86, 1.0, t));
   return c;
 }
 
@@ -85,8 +105,8 @@ void main() {
   vec2 p = vec2(uv.x * aspect, uv.y) + grad * 0.0075;
 
   // ---- foil base ----
-  float n = foilField(p, cs);
-  float t = clamp(0.63 + 1.1 * n, 0.0, 1.0);
+  float n = foilField(p, cs, ph, aspect);
+  float t = clamp(0.47 + 0.72 * n, 0.0, 1.0);
   vec3 col = ramp(t);
 
   // drifting soft hot spots
@@ -97,10 +117,10 @@ void main() {
       (0.5 + 0.42 * sin(ph * (1.0 + fi) + fi * 2.1)) * aspect,
       0.5 + 0.38 * cos(ph * (2.0 - mod(fi, 2.0)) + fi * 1.3)
     );
-    vec2 d = (p - c) / vec2(0.30, 0.42);
+    vec2 d = (p - c) / vec2(0.24, 0.32);
     hot += exp(-dot(d, d)) * (0.55 + 0.45 * sin(ph + fi * 2.0));
   }
-  col = mix(col, mix(uLight, vec3(1.0), 0.55), clamp(hot * 0.95 * smoothstep(0.2, 0.7, t), 0.0, 0.92));
+  col = mix(col, mix(uLight, vec3(1.0), 0.55), clamp(hot * 0.8 * smoothstep(0.35, 0.8, t), 0.0, 0.85));
 
   // ---- frost texture over everything ----
   // relief shading: lit from upper-left

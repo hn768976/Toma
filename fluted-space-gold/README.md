@@ -63,7 +63,21 @@ drawing-buffer size, so a 6K still is sharp, not upscaled. For the space look,
 
 ## Measured render time (720p, this machine)
 
-__RENDER_TIMES__
+Measured on this build machine: 4 vCPU, **no GPU** (Chromium falls back to
+SwiftShader, which runs WebGL on the CPU), `--concurrency=2`, full 600-frame
+renders at 1280×720. The figures are wall-clock time, including bundling and
+H.264 encoding.
+
+| Look | 600 frames @720p | Per frame @720p | 4K estimate, this machine (×9 pixels) | 4K estimate, any recent GPU |
+|---|---|---|---|---|
+| Fluted Glass (1A / 1B) | 101 s / 100 s | **0.17 s** | ~1.5 s/frame, ~15 min per comp | ~0.2–0.4 s/frame (capture + encode bound) |
+| Sun to Alpha Centauri (2A / 2B) | 595 s / 601 s | **1.0 s** | ~7–9 s/frame, ~75–90 min per comp | ~0.3–0.6 s/frame |
+| Frosted Foil (3A / 3B) | 248 s / 246 s | **0.41 s** | ~3.7 s/frame, ~37 min per comp | ~0.2–0.4 s/frame |
+
+The 4K estimates scale the per-pixel shader cost by 9 (3840×2160 is 9× the pixels
+of 1280×720). No 4K render was run here, so treat these as estimates. On a machine
+with a GPU, WebGL runs on the GPU and the per-frame time is dominated by page
+capture and encoding.
 
 ## Determinism
 
@@ -83,7 +97,13 @@ __RENDER_TIMES__
   integer harmonics of the loop phase. Grain uses `frame % 600`. The foil twinkle
   has a period of 120 frames, which divides 600. The loop phase is computed on the
   CPU as `frame % 600`, so frame 600 is exactly frame 0.
-- Self-checks that were run: __DETERMINISM__
+- Self-checks that were run: 
+  - **Loop:** with `--props='{"loopCheck":true}'` (601 frames), frame 600 equals
+    frame 0 **pixel for pixel** for all four looping comps.
+  - **Same every time:** frame 300 rendered alone in a fresh process
+    (`npx remotion still … --frame=300`) is **byte-identical** to frame 300 of a
+    multi-threaded (`--concurrency=4`, frames rendered out of order) image-sequence
+    render, for all six comps.
 
 ## Banding check
 
@@ -91,11 +111,38 @@ All shaders add a triangular ±1/255 dither after tonemapping, plus grain: 2% in
 Fluted, the frost texture in Foil, and 1.5% in Space. Grain is a fixed function of
 pixel position and frame.
 
-__BANDING__
+The check was run on frames decoded **from the encoded 720p mp4s**, not the
+preview:
+
+- **1A / 1B frame 300, vertical lines through the gradient:** after 9-px smoothing,
+  no step is larger than 0.9 of an 8-bit level. The longest run of one identical
+  value is 10–34 px. That is shorter than the natural spacing of levels on those
+  gradients (1B spans only about 12 levels over 720 px, i.e. a level every 60 px),
+  so the dither survives encoding and there are no visible steps.
+- **2A frame 30, radial lines out of the Sun's glow:** in the glow (r = 75–330 px),
+  the longest identical run is 4–5 px. Rings at r = 80, 110, 140 and 170 have
+  smooth means of 130 → 41 → 15 → 7 with noise σ ≈ 5–8, and there are no
+  plateaus.
+- **3A frame 300:** the longest identical run is 3–8 px per channel. The frost
+  texture fully breaks up the gradients.
+
+To repeat: `ffmpeg -i out/FrostedFoil_Gold.mp4 -vf "select=eq(n\,300)" -frames:v 1 f.png`,
+then read pixel columns, or use `python3 scripts/check.py banding f.png`.
 
 ## Completion checklist
 
-__CHECKLIST__
+- [x] 6 compositions, 3840×2160, 30 fps, 600 frames; one data row per version
+- [x] WebGL2 via three.js / `@remotion/three`; `--gl=angle`; no WebGPU, no PixiJS, no MCP
+- [x] Inter (OFL) shipped and loaded behind `delayRender`
+- [x] No `Math.random()`, `Date.now()`, R3F clock, `useState`-driven visuals, or TAA
+- [x] Dither ±1/255 after tonemapping in every shader; grain from pixel and frame
+- [x] Loop check (frames 0 = 600) passes for 1A, 1B, 3A and 3B
+- [x] Frame-300 cold start vs sequence render: byte-identical for all six
+- [x] 720p previews: 1280×720, h264, yuv420p, 30/1, 20.0 s, no audio (ffprobe)
+- [x] Banding read from the encoded mp4s: smooth
+- [x] 2B labels spelled exactly; counter ends at 4.24
+- [x] README with 4K commands, the still command, the GL flag, timings, banding, colourway how-to and the accuracy note
+- [x] Clean copy: `npm install && npx remotion studio` works
 
 ## How to add a colourway
 
