@@ -1,0 +1,200 @@
+# Glitter Smoke · Neon Polygon Frame · Crowd Spotlight · AI Brain Paths · Glass Twist
+
+One Remotion project, five looks, **8 compositions**, all defined at
+**3840×2160, 30 fps**. Everything is built in code (no MCP servers, no stock
+assets except the shipped OFL fonts and a CC0 HDRI).
+
+| # | Composition id | Look | Engine | Length | Loop |
+|---|---|---|---|---|---|
+| 1A | `GlitterSmoke-Blue` | Glitter Smoke, blue (as ref) | **PixiJS 8** (WebGL2) | 600 f / 20 s | yes |
+| 1B | `GlitterSmoke-VioletGold` | Glitter Smoke, violet-gold | **PixiJS 8** (WebGL2) | 600 f / 20 s | yes |
+| 2 | `NeonPolygonFrame` | Neon Polygon Frame, blue & magenta | three.js via `@remotion/three` | 600 f / 20 s | yes |
+| 3A | `CrowdSpotlight-Blue` | Crowd Spotlight, blue (as ref) | three.js via `@remotion/three` | 360 f / 12 s | no |
+| 3B | `CrowdSpotlight-Gold` | Crowd Spotlight, gold | three.js via `@remotion/three` | 360 f / 12 s | no |
+| 4 | `AIBrainPaths` | AI Brain Paths, blue | three.js via `@remotion/three` | 360 f / 12 s | no |
+| 5A | `GlassTwist-IceBlue` | Glass Twist, ice blue (as ref) | three.js via `@remotion/three` | 600 f / 20 s | yes |
+| 5B | `GlassTwist-Blush` | Glass Twist, blush | three.js via `@remotion/three` | 600 f / 20 s | yes |
+
+WebGL2 everywhere (never WebGPU). The three.js looks use **ACES filmic**
+tonemapping (in our own final pass), half-float HDR targets with 4× MSAA,
+bloom, and — for looks 3 and 4 — a depth-of-field pass.
+
+## Setup
+
+```bash
+npm install
+npx remotion studio          # preview in the browser
+```
+
+Node 18+ (built and tested with Node 22). Versions are pinned in
+`package.json` (`remotion` / `@remotion/cli` / `@remotion/three` 4.0.515,
+`three` 0.180.0, `@react-three/fiber` 9.4.2, `pixi.js` 8.13.2, React 19.2.3).
+
+### Chromium GL flag
+
+Headless Chromium must use ANGLE: **`--gl=angle`**. It is already set in
+`remotion.config.ts` (`Config.setChromiumOpenGlRenderer("angle")`), so every
+`npx remotion render|still` picks it up. If you call the renderer from Node
+APIs instead, pass `chromiumOptions: { gl: "angle" }`.
+
+On a machine with a GPU, ANGLE uses it; on a GPU-less server it falls back to
+SwiftShader (CPU) — that is what the measured times below were taken on.
+
+## 4K render commands (one per composition)
+
+```bash
+npx remotion render GlitterSmoke-Blue       out/GlitterSmoke_Blue_4K.mp4       --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render GlitterSmoke-VioletGold out/GlitterSmoke_VioletGold_4K.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render NeonPolygonFrame        out/NeonPolygonFrame_4K.mp4        --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render CrowdSpotlight-Blue     out/CrowdSpotlight_Blue_4K.mp4     --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render CrowdSpotlight-Gold     out/CrowdSpotlight_Gold_4K.mp4     --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render AIBrainPaths            out/AIBrainPaths_4K.mp4            --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render GlassTwist-IceBlue      out/GlassTwist_IceBlue_4K.mp4      --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render GlassTwist-Blush        out/GlassTwist_Blush_4K.mp4        --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+```
+
+(`--gl`, codec, CRF, pixel format and PNG intermediate frames are also the
+defaults in `remotion.config.ts`; the flags above just make the commands
+self-explanatory. Add `--concurrency=N` to tune for your machine.)
+
+## Stills (6000×3375)
+
+The compositions are 3840×2160, so a 6000×3375 still is `--scale=1.5625`:
+
+```bash
+npx remotion still GlitterSmoke-Blue out/GlitterSmoke_Blue_6K.png --frame=300 --scale=1.5625 --image-format=png --gl=angle
+```
+
+Swap the composition id and frame (e.g. `CrowdSpotlight-Blue --frame=340`,
+`AIBrainPaths --frame=340`). Canvas backing stores follow the render scale, so
+the still is rendered natively at 6000×3375 (not upscaled). Not rendered here.
+
+## 720p previews
+
+```bash
+./scripts/render-previews.sh            # all 8, or pass composition ids
+```
+
+Renders each composition with Remotion at `--scale=0.3333333333333333`
+(exactly 1280×720) as a full PNG sequence, then encodes H.264 / yuv420p /
+30 fps / CRF 16 / no audio with ffmpeg. The PNG sequence is kept so the
+determinism check can compare frame 200 byte-for-byte.
+
+## Measured render times
+
+Machine: 4 vCPU cloud container, **no GPU** (ANGLE → SwiftShader, CPU only).
+
+| Look | 720p, s/frame (full sequence render) |
+|---|---|
+| 1 Glitter Smoke (A / B) | 2.88 / 2.85 |
+| 2 Neon Polygon Frame | 0.51 |
+| 3 Crowd Spotlight (A / B) | 2.78 / 2.78 |
+| 4 AI Brain Paths | 2.09 |
+| 5 Glass Twist (A / B) | 1.56 / __BLUSH__ |
+
+**Look 1 at 4K (one frame, `remotion still`, same machine): __G4K__.**
+
+4K estimate: cost is dominated by per-pixel shading (smoke fbm, bloom, DoF
+taps, shadows), which scales with pixel count — 4K is 9× the pixels of 720p.
+On this CPU-only box that means roughly 9× the 720p times (≈ 26 s/frame for
+looks 1 and 3, ≈ 4.6 s/frame for look 2), i.e. about 4.5 h for one 20 s
+Glitter Smoke at 4K. On a workstation GPU (ANGLE on D3D/Metal/Vulkan) the same
+shaders run 20–50× faster than SwiftShader; expect roughly **0.5–1.5 s/frame
+at 4K** for every look (the 80k-speck JS update in look 1 is ~20 ms and does
+not scale with resolution), i.e. **5–15 minutes per composition** with
+default concurrency.
+
+## How each look is built
+
+* **1 Glitter Smoke (PixiJS 8).** One `Application` per composition
+  (`preference: 'webgl'`, `autoStart: false`, `preserveDrawingBuffer: true`,
+  ticker stopped, one `app.render()` per Remotion frame, init + textures
+  behind `delayRender`). Smoke is a full-screen `Mesh` with a custom GLSL ES 3
+  shader: domain-warped simplex fbm in **polar coordinates folded M = 2 times
+  around a tilted elliptical swirl centre**, so the field is exactly periodic
+  under a half turn; each layer turns a whole number of half turns per 600
+  frames (smoke flows in a continuous curving sweep and still loops exactly).
+  A static crescent mask places the mass. 80 000 specks (`Float32Array`s
+  built once from a module-level `mulberry32`) live in a `ParticleContainer`
+  per bokeh level (8 pre-made disc textures, additive), move with the same
+  swirl, are projected each frame, take brightness from the smoke density
+  (the same shader rendered at 192×108 and read back), and twinkle on cycles
+  that divide 600. Grain + ±1/255 dither are a custom Pixi `Filter` with a
+  `uFrame` uniform.
+* **2 Neon Polygon Frame.** 30 large flat polygons / shallow open prisms in a
+  ring just outside the frame, dark glossy faces, thin tube edges with
+  per-vertex colour blending blue→magenta, soft hot glows at some corners,
+  faint diagonal light rays. Every rotation is a whole-cycle sine over 600
+  frames.
+* **3 Crowd Spotlight.** ~210 instanced bust icons (extruded shoulders,
+  oval head slab, shirt V, lapels, tie — vertex-colour shaded), satin
+  material, top + rim light, mirrored instanced crowd under a semi-transparent
+  floor for reflections, emissive chosen figure, hologram disc + rings,
+  reflection streak, haze column; camera on a monotone-cubic keyed path;
+  gather depth of field from a linear-depth pass.
+* **4 AI Brain Paths.** Extruded brain outline (two superellipse hemispheres,
+  glossy rim, circuit-textured face), "AI" chip (Montserrat Bold drawn to a
+  canvas texture after the font loads), flat glowing path ribbons drawn by a
+  distance-along-tree shader (bright head, flowing dots, pulses at the end),
+  glowing pads with six self-designed extruded icons that rise and pop
+  (scale 0.9 → overshoot → 1). Circuit floor, data bits, light depth of field.
+* **5 Glass Twist.** 48 rounded glass bars (`MeshPhysicalMaterial`: clearcoat,
+  sheen + iridescence tint on edges, Fresnel from the HDRI, translucent fill —
+  **no transmission**), a travelling sine that turns each bar about its
+  vertical axis and leans it about the row axis, so a twist ripples through
+  the row; long-lens frontal camera; studio HDRI, soft shadows. The wave
+  travels exactly one wavelength per 600 frames; camera drift is closed.
+
+## Determinism
+
+Every value on screen is a function of `useCurrentFrame()` only:
+no `Math.random()` at render time (module-level / per-scene seeded
+`mulberry32`), no simulation stepped frame by frame, no R3F clock, no
+`Date.now()`, no state carried between frames, no TAA / temporal AO /
+accumulation. Grain and dither are integer hashes of pixel position and
+`frame % loopLength`. Fonts and HDRI load behind `delayRender`.
+
+## Checks (all scripts in `scripts/`)
+
+* `check-loop.sh` — renders frames 0 and 600 with
+  `--props='{"durationOverride":601}'` and compares the PNGs.
+* `check-determinism.sh` — cold `remotion still --frame=200` vs frame 200 of
+  the full sequence render, byte for byte.
+* `check-banding.py` — decodes frames **from the encoded mp4s** and prints
+  32-row-averaged luma profiles across gradients/glows plus the residual noise.
+
+__CHECKS__
+
+## Completion checklist
+
+__CHECKLIST__
+
+## Adding a colourway
+
+All colours live in `src/versions.ts`, one row per version. Copy a row in the
+relevant array, give it a new `id` (letters, digits, `-`), change the colours,
+and it appears as a new composition (Root.tsx maps over the arrays). Example:
+
+```ts
+export const glassVersions = [
+  // …
+  {
+    id: "GlassTwist-Mint",
+    colors: {
+      tintA: "#9FE0C8", tintB: "#CFEFE2", white: "#F4FBF8",
+      background: "#EEF7F3", iridescence: ["#A8E8F5", "#C8F5B0"],
+    },
+  },
+];
+```
+
+Then add its output name to `scripts/render-previews.sh` if you want it in the
+preview batch.
+
+## Licences
+
+* Fonts: Inter and Montserrat — SIL Open Font License 1.1
+  (`public/fonts/*-OFL.txt`).
+* HDRI: "Studio Small 03" by Sergej Majboroda, Poly Haven — CC0
+  (`public/hdri/LICENSE.txt`).
+* Simplex noise GLSL: Stefan Gustavson / Ashima Arts — MIT (credited inline).
