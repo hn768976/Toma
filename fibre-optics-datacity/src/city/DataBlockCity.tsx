@@ -21,6 +21,8 @@ import { CITY, LOOP_FRAMES, LX, LZ, SHIFT } from "./data";
 import {
   BLOCK_FRAG,
   BLOCK_VERT,
+  GROUND_FRAG,
+  GROUND_VERT,
   DOF_FRAG,
   FINAL_FRAG,
   LINE_FRAG,
@@ -34,7 +36,8 @@ import {
 
 // Camera
 const CAM_H = 8.0;
-const CAM_PITCH = (-21 * Math.PI) / 180;
+const CAM_PITCH = (-27 * Math.PI) / 180;
+const CAM_ROLL = (-6 * Math.PI) / 180;
 // yawed ~30 deg off the grid so blocks run diagonally; the glide heading is
 // ~21 deg, so the camera moves forward and slightly sideways
 const CAM_YAW = (-30 * Math.PI) / 180;
@@ -43,9 +46,9 @@ const CAM_X0 = 0.3;
 const CAM_Z0 = 0;
 
 // Lens
-const FOCUS = 27;
-const COC_SCALE = 0.034; // fraction of output height per unit |d-f|/d
-const MAX_COC = 0.0125; // fraction of output height
+const FOCUS = 24;
+const COC_SCALE = 0.024; // fraction of output height per unit |d-f|/d
+const MAX_COC = 0.009; // fraction of output height
 
 // Region covered by tile copies (all frames of the loop)
 const REGION = { x0: -60, x1: 150, z0: -LZ - 110, z1: 12 };
@@ -74,8 +77,8 @@ const tileColor = (pal: DataCityPalette, c: number) =>
 
 const sharedUniforms = (pal: DataCityPalette) => ({
   uHaze: { value: lin(pal.haze, 0.6) },
-  uFogStart: { value: 30.0 },
-  uFogDist: { value: 42.0 },
+  uFogStart: { value: 40.0 },
+  uFogDist: { value: 70.0 },
   uPhase: { value: 0 },
   uPxWorld: { value: 0.001 },
 });
@@ -113,11 +116,28 @@ const buildScene = (pal: DataCityPalette) => {
       glslVersion: THREE.GLSL3,
       vertexShader: BLOCK_VERT,
       fragmentShader: BLOCK_FRAG,
-      uniforms: { ...shared, uBlock: { value: lin(pal.block, 1.9, 1.5) } },
+      uniforms: { ...shared, uBlock: { value: lin(pal.block, 1.25, 1.5) } },
     });
     const mesh = new THREE.Mesh(g, mat);
     mesh.frustumCulled = false;
     mesh.renderOrder = 0;
+    scene.add(mesh);
+  }
+
+  // ---- dark floor (moves with the camera so it always covers the view;
+  // it is uniform, so this does not affect the loop)
+  {
+    const g = new THREE.PlaneGeometry(600, 600);
+    g.rotateX(-Math.PI / 2);
+    const mat = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: GROUND_VERT,
+      fragmentShader: GROUND_FRAG,
+      uniforms: { ...shared, uBlock: { value: lin(pal.block, 1.5) } },
+    });
+    const mesh = new THREE.Mesh(g, mat);
+    mesh.position.set(40, -0.6, -60);
+    mesh.frustumCulled = false;
     scene.add(mesh);
   }
 
@@ -152,7 +172,7 @@ const buildScene = (pal: DataCityPalette) => {
       glslVersion: THREE.GLSL3,
       vertexShader: TILE_VERT,
       fragmentShader: TILE_FRAG,
-      uniforms: { ...shared, uBlock: { value: lin(pal.block, 1.9, 1.5) } },
+      uniforms: { ...shared, uBlock: { value: lin(pal.block, 1.25, 1.5) } },
       side: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(g, mat);
@@ -188,7 +208,7 @@ const buildScene = (pal: DataCityPalette) => {
     let i = 0;
     for (const [ox, oz] of C) {
       for (const l of CITY.lines) {
-        const col = lin(l.color === 0 ? pal.line : pal.tileWhite, l.intensity * 3.2, 1.3);
+        const col = lin(l.color === 0 ? pal.line : pal.tileWhite, l.intensity * 4.0, 1.8);
         aLine.set([l.x, l.z, l.y, l.height], i * 4);
         aLook.set([col.x, col.y, col.z, l.pulseCycles], i * 4);
         aPhase[i] = l.pulsePhase;
@@ -229,7 +249,7 @@ const buildScene = (pal: DataCityPalette) => {
     let i = 0;
     for (const [ox, oz] of C) {
       for (const s of CITY.sparks) {
-        const col = lin([pal.tileCyan, pal.tileWhite, pal.tilePink][s.color], 1.8);
+        const col = lin([pal.tileCyan, pal.tileWhite, pal.tilePink, pal.tileRed][s.color], 3.2);
         aSpark.set([s.x, s.z, s.y, s.size], i * 4);
         aLook.set([col.x, col.y, col.z, s.cycles], i * 4);
         aPhase[i] = s.phase;
@@ -258,7 +278,7 @@ const buildScene = (pal: DataCityPalette) => {
 
   const camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 0.2, 400);
   camera.rotation.order = "YXZ";
-  camera.rotation.set(CAM_PITCH, CAM_YAW, 0);
+  camera.rotation.set(CAM_PITCH, CAM_YAW, CAM_ROLL);
 
   return { scene, camera, shared };
 };

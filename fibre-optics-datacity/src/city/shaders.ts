@@ -170,7 +170,7 @@ void main() {
   vec3 toCam = cameraPosition - base;
   float d = length(toCam);
   vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), toCam));
-  float wWorld = 0.016;
+  float wWorld = 0.03;
   float wMin = uPxWorld * d * 1.4;
   float w = max(wWorld, wMin);
   vec3 world = base + right * position.x * w * 3.0 + vec3(0.0, (position.y + 0.5) * aLine.w, 0.0);
@@ -196,9 +196,8 @@ void main() {
   float u = (vUv.x - 0.5) * 3.0; // quad is 3x the line width
   float across = exp(-u * u * 5.5);
   float v = vUv.y;
-  float along = pow(1.0 - v, 0.8) * smoothstep(0.0, 0.03, v);
-  // small bright dot at the top of each line
-  along += exp(-pow((v - 0.985) / 0.012, 2.0)) * 2.2 * exp(-u * u * 1.0) / max(across, 1e-3) * across;
+  // brightest at the base, fading upwards
+  float along = pow(1.0 - v, 1.3) * smoothstep(0.0, 0.015, v);
   float p = exp(-pow((v - vPulse) / 0.07, 2.0)) * 1.8 * (1.0 - v * 0.6);
   vec3 col = vColor * across * (along + p);
   col = mix(col, uHaze * across * (along + p) * 0.35, vFog);
@@ -326,5 +325,28 @@ void main() {
   m += grainRGB(p, f, uGrain) * (0.4 + 0.6 * smoothstep(0.0, 0.2, l));
   m += ditherTPDF(p, f);
   outColor = vec4(clamp(m, 0.0, 1.0), 1.0);
+}
+`;
+
+// ------------------------------------------------------------------ ground
+// Dark floor under the blocks so the trenches read as deep, near-black gaps.
+export const GROUND_VERT = /* glsl */ `
+out vec3 vWorld;
+void main() {
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vWorld = w.xyz;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}
+`;
+export const GROUND_FRAG = /* glsl */ `
+precision highp float;
+in vec3 vWorld;
+out vec4 outColor;
+uniform vec3 uBlock;
+${FOG}
+void main() {
+  float d = distance(vWorld, cameraPosition);
+  vec3 col = mix(uBlock * 0.04, uHaze, fogAmount(d));
+  outColor = vec4(col, d);
 }
 `;

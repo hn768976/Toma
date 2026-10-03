@@ -124,13 +124,14 @@ const build = () => {
         }
         const cr = rnd();
         // 0 cyan, 4 sky blue, 1 white, 2 pink, 3 red
-        const color = cr < 0.46 ? 0 : cr < 0.83 ? 4 : cr < 0.93 ? 1 : cr < 0.975 ? 2 : 3;
+        const color = cr < 0.3 ? 0 : cr < 0.82 ? 4 : cr < 0.92 ? 1 : cr < 0.96 ? 2 : 3;
         const blink = rnd() < 0.22;
         const t: Tile = {
           x: cx + 0.5,
           z: cz + 0.5,
           y: bl.h,
-          size: 0.3 + rnd() * 0.2,
+          // mostly small, a few large accent tiles
+          size: rnd() < 0.07 ? 0.62 + rnd() * 0.2 : 0.26 + rnd() * 0.26,
           color,
           intensity: 0.45 + Math.pow(rnd(), 1.5) * 1.6,
           blinkCycles: blink ? 3 + Math.floor(rnd() * 14) : 0,
@@ -176,8 +177,8 @@ const build = () => {
       x,
       z,
       y: top + 0.02,
-      color: cr < 0.5 ? 1 : cr < 0.9 ? 0 : 2,
-      size: 0.012 + rnd() * 0.018,
+      color: cr < 0.4 ? 1 : cr < 0.8 ? 0 : cr < 0.9 ? 3 : 2,
+      size: 0.016 + rnd() * 0.02,
       phase: rnd(),
       cycles: 2 + Math.floor(rnd() * 10),
     });
