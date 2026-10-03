@@ -151,7 +151,9 @@ const makeTagAtlas = (values: string[], arrow: "▲" | "▼") => {
   const canvas = document.createElement("canvas");
   canvas.width = cw * cols;
   canvas.height = ch * rows;
-  const ctx = canvas.getContext("2d")!;
+  // willReadFrequently forces Chrome's software 2D rasteriser: GPU-accelerated
+  // canvas text can anti-alias differently depending on when the canvas is made.
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#fff";
   ctx.font = '500 40px "Inter"';
@@ -192,7 +194,8 @@ uniform vec3 color;
 varying vec2 vUv;
 void main() {
   float a = texture2D(map, rect.xy + vUv * rect.zw).a;
-  gl_FragColor = vec4(color * a, a);
+  if (a < 0.02) discard; // keeps empty quad area out of the depth buffer
+  gl_FragColor = vec4(color * a, 1.0);
 }`;
 
 const POST: PostConfig = {
@@ -201,7 +204,8 @@ const POST: PostConfig = {
   dof: { focus: CAM_Z, farBlur: 16, nearBlur: 1.1, maxCoc: 30 },
   vignette: 0.3,
   grain: 0.02,
-  msaa: 4,
+  msaa: 0, // MSAA + instancing was not bit-reproducible in SwiftShader; supersample instead
+  ssaa: 2,
 };
 
 // ------------------------------------------------------------------ scene --
@@ -224,9 +228,22 @@ const Scene: React.FC<{ row: GoldMarketRow; camera: THREE.PerspectiveCamera }> =
     group.add(bars);
 
     const body = new THREE.BoxGeometry(1, 1, 0.12);
-    const candleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    // minimal unlit shader: emissive candle colour straight from instanceColor
+    const candleMat = new THREE.ShaderMaterial({
+      vertexShader: /* glsl */ `
+        varying vec3 vCol;
+        void main() {
+          vCol = instanceColor;
+          gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        varying vec3 vCol;
+        void main() { gl_FragColor = vec4(vCol, 1.0); }`,
+    });
     const bodies = new THREE.InstancedMesh(body, candleMat, CANDLE_COUNT);
-    const wicks = new THREE.InstancedMesh(body, candleMat, CANDLE_COUNT);
+    // separate geometry objects: instanced meshes sharing one geometry can share
+    // cached vertex-array bindings across draws
+    const wicks = new THREE.InstancedMesh(body.clone(), candleMat, CANDLE_COUNT);
     bodies.frustumCulled = false;
     wicks.frustumCulled = false;
     const up = new THREE.Color(row.upColor);
@@ -247,7 +264,8 @@ const Scene: React.FC<{ row: GoldMarketRow; camera: THREE.PerspectiveCamera }> =
         vertexShader: TAG_VERT,
         fragmentShader: TAG_FRAG,
         uniforms: { map: { value: atlas.tex }, rect: { value: new THREE.Vector4() }, color: { value: tagColor } },
-        alphaToCoverage: true,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
       });
       const m = new THREE.Mesh(tagGeo, mat);
       group.add(m);

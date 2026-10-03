@@ -37,6 +37,12 @@ export type PostConfig = {
   /** Grain amplitude in display units (0.02 = 2 %). */
   grain: number;
   msaa: number;
+  /**
+   * Supersampling factor for the scene pass (1 = off). 2 renders the scene at
+   * 2x width/height; every later pass reads it with bilinear filtering at
+   * pixel centres, i.e. an exact 2x2 box downsample.
+   */
+  ssaa?: number;
   /** Optional colour lift added before tonemapping (linear). */
   lift?: THREE.Color;
 };
@@ -422,10 +428,11 @@ export class Post {
     this.w = w;
     this.h = h;
     const dof = !!this.cfg.dof;
-    this.sceneRT = rt(w, h, {
+    const ss = this.cfg.ssaa ?? 1;
+    this.sceneRT = rt(w * ss, h * ss, {
       samples: this.cfg.msaa,
       depthBuffer: true,
-      ...(dof ? { depthTexture: new THREE.DepthTexture(w, h, THREE.UnsignedIntType) } : {}),
+      ...(dof ? { depthTexture: new THREE.DepthTexture(w * ss, h * ss, THREE.UnsignedIntType) } : {}),
     });
     const wh = Math.min(WORK_H, h);
     const ww = Math.round((w / h) * wh);
