@@ -53,8 +53,15 @@ npx remotion still VoxelCanyon-Green out/stills/VoxelCanyon_Green_f0180.png --fr
   - Grid size: heights are computed on an 88×88 bounding grid. Only the 3,815 columns inside the camera's visible footprint (plus a 4-cell margin) are drawn (`src/lib/frameArea.ts`).
   - The camera is closer than "140 columns" would imply, to match the references: about 30 columns across the frame. A 140×90 grid would be about 80% off screen.
 - **Heights** are pure functions of the frame number (`src/lib/fields.ts`):
-  - **Canyon:** two layers of 4D simplex noise, stretched along the rows so slabs and canyons form long trenches. A third, column-scale layer is active only below the rim, so canyon walls are ragged while plateau tops stay flat. A gentle terrace step makes groups of columns move as slabs: plateau 0, raised slabs +1/+2, canyon steps −4/−8. Below the void threshold a column keeps falling, to −90.
-  - **Balance:** each frame, the field is shifted so that a low percentile of the in-frame noise sits just under the void threshold. This keeps one or more holes open in every frame. It's a continuous, periodic function of the frame.
+  - **Canyon shape:** two layers of 4D simplex noise, stretched along the rows so slabs and canyons form long trenches. A third, column-scale layer is active only below the rim, so canyon walls are ragged while plateau tops stay flat. The target height is deliberately steep:
+    - flat slabs at 0, with raised slabs at +1/+2
+    - a sheer wall down to −5, then a floor sloping to −7 at the void threshold
+    - below that, columns sink into the dark, down to −84
+  - **Canyon motion (slow):**
+    - The noise moves slowly around a small time circle (radius 0.1).
+    - Each column's height is its target averaged over a centred 36-frame triangular window, wrapping around the loop. A column crossing a slab edge glides up or down over about a second instead of snapping.
+    - Measured speed of visible columns (`scripts/motion-stats.ts`): p99 about 0.17 cubes/frame and max about 0.24 above the canyon floor; typical columns hold still or drift at under 0.03.
+  - **Balance:** each frame, the in-frame noise is normalised so its median sits on the plateau and its 5th percentile sits past the void threshold. Holes stay open in every frame (5–9% of the frame) while canyons cover 20–32%. It's a continuous, periodic function of the frame.
   - **Wave:** a travelling ridge profile (stepped rise, steep face, wide flat trough). It moves exactly 2 wavelengths per loop, and its height varies along each ridge with circle-in-time noise.
 - **Shading:**
   - Light: a soft key from the upper left, plus a cool hemisphere sky fill.
@@ -71,7 +78,7 @@ npx remotion still VoxelCanyon-Green out/stills/VoxelCanyon_Green_f0180.png --fr
 ## Loop
 
 - `t = (frame mod 600) / 600`, so frame 600 is frame 0 exactly.
-- **Canyon:** the noise is sampled around circles in time, `noise(x, z, cos 2πt·r, sin 2πt·r)`, so the motion through the loop point is as smooth as anywhere else.
+- **Canyon:** the noise is sampled around circles in time, `noise(x, z, cos 2πt·r, sin 2πt·r)`, and the smoothing window wraps around the loop, so the motion through the loop point is as smooth as anywhere else.
 - **Wave:** the ridges travel a whole number of wavelengths, 2 per loop.
 - **Floating cubes:** closed paths with whole-number frequencies.
 - **Camera:** a closed drift path with frequencies 1 and 2 and an amplitude of 0.7 units, about 2% of the frame. It's a translation only, never an orbit.
