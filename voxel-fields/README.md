@@ -108,13 +108,12 @@ Measured on the build machine: 4 vCPU, no GPU. WebGL ran as ANGLE on SwiftShader
 
 | | Canyon (×3) | Wave (×2) |
 |---|---|---|
-| 1080p (`--scale=0.5`, concurrency 2), full 600-frame render incl. start-up | **5.04–5.08 s/frame** (≈ 50 min per composition) | **3.11 s/frame** (≈ 31 min) |
-| 1080p steady state (6-frame minus 1-frame run) | ≈ 7.4 s/frame at concurrency 1 (development benchmark) | ≈ 3.0 s/frame at concurrency 1 (development benchmark) |
-| **4K measured** (`--scale=1`, concurrency 2, 6-frame minus 1-frame run) | **24.4 s/frame** → ≈ 4.1 h per composition | **12.5 s/frame** → ≈ 2.1 h per composition |
+| 1080p (`--scale=0.5`, concurrency 2), full 600-frame render incl. start-up | **8.27–8.77 s/frame** (≈ 85 min per composition) | **3.11 s/frame** (≈ 31 min) |
+| 1080p steady state (6-frame minus 1-frame run) | **4K measured** (`--scale=1`, concurrency 2, 6-frame minus 1-frame run) | **35.9 s/frame** → ≈ 6.0 h per composition | **12.5 s/frame** → ≈ 2.1 h per composition |
 
 - **Grid:** 88×88 bounding grid (7,744 columns), of which 3,815 are drawn (the visible footprint plus a 4-cell margin). One `InstancedMesh` holds all of them.
-- **Biggest cost:** PCSS soft shadows (10 samples), about 40% of canyon frame time on software GL.
-- **All five at 4K on CPU only:** ≈ 16–17 hours.
+- **Biggest costs:** PCSS soft shadows (10 samples) on software GL. For the canyon, also the slow-motion smoothing: each column's height is averaged over 10 time samples, about 380k noise evaluations per frame on the CPU. That part doesn't grow with resolution.
+- **All five at 4K on CPU only:** ≈ 22 hours.
 - **On a GPU (not measured here):**
   - Expect well under a second per 4K frame.
   - Raise `--concurrency`.
@@ -164,8 +163,8 @@ Status of the 1080p previews in `out/previews` and the final source:
 - [x] **Step 1 – file checks:** 1920×1080, 30/1, 20.0 s, h264, yuv420p, 600 frames, no audio (all five)
 - [x] **Step 2 – loop:** frame 600 equals frame 0 byte for byte, rendered at 601 frames (all five). The 599→0 step is no larger than an ordinary frame step.
 - [x] **Step 3 – determinism:** a cold still of frame 300 is byte-identical to frame 300 of the full multi-tab render (all five)
-- [x] **Step 4 – banding:** in Canyon White and Wave Blue mp4 frames, the row-averaged profile across a flat top changes by at most 0.58 of an 8-bit level per pixel; the raw values are dithered, with flat runs of 3–4 px only
-- [x] **Step 5 – frames:** columns move between picks. Canyon: 1.3–2.8% near-black void pixels in every pick. Wave: zero dark pixels. Rows run diagonally. Contact sheets are in `out/verify/*-sheet.png`.
+- [x] **Step 4 – banding:** in Canyon White and Wave Blue mp4 frames, the row-averaged profile across a flat top changes by at most 0.62 of an 8-bit level per pixel; the raw values are dithered, with flat runs of 3–6 px only
+- [x] **Step 5 – frames:** columns move between picks. Canyon: 1.6–7.3% near-black void pixels in every pick, with motion slow and gliding (see `scripts/motion-stats.ts`). Wave: zero dark pixels. Rows run diagonally. Contact sheets are in `out/verify/*-sheet.png`.
 - [x] Stills: 2 per composition at 6000×3375, plus a 1080p PNG of each
 - [x] Measured render time recorded above
 - [ ] **Known minor artifact:** at a few inner corners where a lit top meets the foot of a taller column, PCSS leaves a very faint dotted pattern, a few pixels at 1080p. It's only visible when zoomed in.
