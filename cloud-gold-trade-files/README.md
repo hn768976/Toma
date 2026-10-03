@@ -85,7 +85,7 @@ time / frames, so it includes the ~8 s browser start-up.
 | Light Trails | Blue / RedOrange | 1.02 / 1.01 | ~8 s | ~0.3–0.6 s |
 | Gold Bar Chart | Rising / Falling | 1.45 / 1.63 | ~12 s | ~0.5–1 s |
 | Trade War Maps | USA vs China | 3.01 | ~22 s | ~0.6–1.2 s |
-| File Wave | Documents / Folders | 0.82 / 0.93 | ~7 s | ~0.4–0.8 s |
+| File Wave | Documents / Folders | 1.01 / 1.19 | ~8 s | ~0.4–0.8 s |
 
 How the 4K figures were estimated: 4K has 9× the pixels of 720p. Scene
 drawing, MSAA, bloom and grain scale with pixel count, but depth of field
