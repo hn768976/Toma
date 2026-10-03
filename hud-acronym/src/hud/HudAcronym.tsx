@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AbsoluteFill, continueRender, delayRender, getRemotionEnvironment, staticFile, useVideoConfig } from "remotion";
 import { ThreeCanvas } from "@remotion/three";
 import { HudScene } from "./HudScene";
-import { FONT_FAMILY } from "./wordTexture";
+import { FONT_FAMILY, FONT_WEIGHT } from "./wordTexture";
 
 export type HudAcronymProps = { text: string; loopCheck?: boolean };
 
@@ -10,7 +10,9 @@ export type HudAcronymProps = { text: string; loopCheck?: boolean };
 let fontPromise: Promise<void> | null = null;
 const loadFont = () => {
   if (!fontPromise) {
-    const face = new FontFace(FONT_FAMILY, `url(${staticFile("fonts/DSEG14Classic-Regular.woff2")}) format("woff2")`);
+    const face = new FontFace(FONT_FAMILY, `url(${staticFile("fonts/Oxanium-SemiBold.woff2")}) format("woff2")`, {
+      weight: String(FONT_WEIGHT),
+    });
     fontPromise = face.load().then((f) => {
       (document.fonts as unknown as Set<FontFace>).add(f);
     });
@@ -21,7 +23,7 @@ const loadFont = () => {
 export const HudAcronym: React.FC<HudAcronymProps> = ({ text }) => {
   const { width, height } = useVideoConfig();
   const [ready, setReady] = useState(false);
-  const [handle] = useState(() => delayRender("Loading DSEG14 font"));
+  const [handle] = useState(() => delayRender("Loading Oxanium font"));
 
   useEffect(() => {
     loadFont()

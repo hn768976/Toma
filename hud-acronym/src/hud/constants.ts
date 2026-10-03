@@ -37,6 +37,8 @@ export const LAYOUT = {
   // Word ink width as a fraction of the inner ring's diameter.
   wordFrac: 0.6,
   wordFracShort: 0.45, // 1–2 letter words
-  // Segment glyphs are drawn taller than DSEG's native proportions (tall, narrow display cells).
-  wordStretchY: 1.45,
+  // Letters are drawn slightly taller than the font's native proportions (tall, narrow HUD look).
+  wordStretchY: 1.28,
+  // Letter (cap) height never exceeds this fraction of the inner ring radius.
+  maxCapHeight: 0.5,
 };

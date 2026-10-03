@@ -1,11 +1,11 @@
 /**
- * Segment flicker schedule: fixed frames inside the 600-frame loop (seeded, module level).
- * Each event dims one segment region of one letter for a few frames.
+ * Flicker schedule: fixed frames inside the 600-frame loop (seeded, module level).
+ * Each event dims one stroke region (bar, stem, diagonal) of one letter for a few frames.
  */
 import { mulberry32 } from "./random";
 import { LOOP, SEED } from "./constants";
 
-// Segment regions inside a 14-segment cell, (u0, v0, u1, v1) with top-left origin.
+// Stroke regions inside a letter's ink box, (u0, v0, u1, v1) with top-left origin.
 const SEGMENTS: [number, number, number, number][] = [
   [0.1, 0.0, 0.9, 0.11], // top
   [0.1, 0.89, 0.9, 1.0], // bottom

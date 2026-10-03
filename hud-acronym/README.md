@@ -1,6 +1,6 @@
 # HUD Acronym Rings — Remotion + three.js template
 
-A trending tech/finance acronym in glowing 14-segment display letters (DSEG14 Classic)
+A trending tech/finance acronym in glowing angular HUD letters (Oxanium SemiBold)
 inside rotating HUD rings, floating over a glowing circuit board in perspective, with a
 gentle camera sway, depth of field and bloom.
 
@@ -119,10 +119,12 @@ Add one row to `src/acronyms.ts`:
 
 That creates the composition `HudAcronym-ZKP`. `id` may contain only letters, digits and `-`.
 The word is upper-cased and auto-sized:
-- 3 or more letters: the full segment cells fill 60% of the inner ring's diameter.
+- 3 or more letters: the word's ink width fills 60% of the inner ring's diameter.
 - 1–2 letters: capped at 45%.
+- Letter (cap) height is also capped at half the inner ring radius
+  (`LAYOUT.maxCapHeight`), so narrow words like AI don't grow oversized.
 
-Any character in the DSEG14 font works (A–Z, 0–9 and some symbols).
+Any Latin character works (A–Z, 0–9, punctuation; the shipped file is the Latin subset of Oxanium).
 
 ## How it's built
 
@@ -134,8 +136,8 @@ Any character in the DSEG14 font works (A–Z, 0–9 and some symbols).
 | `src/hud/HudScene.tsx` | scene graph and the post chain; `LOOK` holds all look-dev values |
 | `src/hud/board.ts` | seeded PCB routing: 8-direction grid, 45° bends, pads, vias, pulse traces |
 | `src/hud/rings.ts` | ring/arc/tick definitions and anti-aliased line geometry |
-| `src/hud/wordTexture.ts` | DSEG14 word drawn into a 4096 px RGBA texture (lit / ghost segments / glow) |
-| `src/hud/flicker.ts` | fixed segment-flicker events |
+| `src/hud/wordTexture.ts` | word drawn in Oxanium into a 4096 px RGBA texture (letters / wide halo / tight glow) |
+| `src/hud/flicker.ts` | fixed flicker events (dims one stroke of one letter for a few frames) |
 | `src/hud/shaders.ts` | all GLSL |
 
 **Render passes**, all in half-float targets:
@@ -151,10 +153,12 @@ Any character in the DSEG14 font works (A–Z, 0–9 and some symbols).
 Bloom only picks up emissive content, because the board base is far below the threshold.
 There is no TAA or any other temporal effect.
 
-**The word.** It uses DSEG14 Classic Regular, drawn with a slightly tighter letter advance
-and stretched to 1.45× height so the cells read tall and narrow, like the reference. Unlit
-segments are shown faintly (the `~` glyph, all segments on). The core colour is `#D8FFFF`
-with a `#4FE0F0` glow.
+**The word.** It uses Oxanium SemiBold (SIL OFL), an angular, chamfered display face that
+matches the squared HUD lettering in the reference while staying clearly readable. It is
+laid out per character with slight extra tracking and stretched to 1.28× height, so the
+letters read tall like the reference. The texture holds the sharp letters, a tight glow
+and a wide halo. The core colour is `#D8FFFF` with a `#4FE0F0` glow. "Now and then", one
+stroke of one letter briefly flickers at fixed frames.
 
 ### Seamless loop (600 frames)
 
@@ -207,8 +211,8 @@ full `--sequence --image-format=png` render.
 
 - [x] 9 compositions from data rows, 3840×2160, 30 fps, 600 frames; same seed, board, rings and camera
 - [x] 3D with `@remotion/three` and WebGL2 (`--gl=angle`); no WebGPU, no PixiJS, no MCP servers
-- [x] DSEG14 Classic font (OFL, shipped with its licence), drawn into a 4096 px texture,
-      with faint unlit segments and per-segment flicker at fixed frames
+- [x] Oxanium SemiBold font (OFL, shipped with its licence), drawn into a 4096 px texture,
+      with brief flicker on single strokes at fixed frames
 - [x] Word sizing: 60% of the inner ring's width for 3 or more letters, 45% for 1–2 letters
 - [x] Rings: bright inner ring and hairline; dashed, long-arc and tick middle rings at
       different depths; 2 faint, defocused outer arcs past the frame edge
@@ -227,4 +231,4 @@ full `--sequence --image-format=png` render.
 
 ## Licences
 
-DSEG14 Classic © keshikan, SIL Open Font License 1.1. See `public/fonts/DSEG-LICENSE.txt`.
+Oxanium © 2019 The Oxanium Project Authors, SIL Open Font License 1.1. See `public/fonts/Oxanium-OFL.txt`.

@@ -45,7 +45,7 @@ export const LOOK = {
   pulseGain: 0.9,
   wordCore: 1.25,
   wordGlow: 0.6,
-  wordGhost: 0.035,
+  wordHalo: 0.1,
   centreGain: 2.4,
   falloff: 1.25,
   haze: 0.011,
@@ -199,7 +199,8 @@ const buildWord = (text: string) => {
   const n = text.length;
   const frac = n <= 2 ? LAYOUT.wordFracShort : LAYOUT.wordFrac;
   const inkW = frac * 2 * LAYOUT.innerR;
-  const k = inkW / wt.inkWidth;
+  // Width rule above; short words are additionally capped in letter height.
+  const k = Math.min(inkW / wt.inkWidth, (LAYOUT.maxCapHeight * LAYOUT.innerR) / (wt.capHeight * LAYOUT.wordStretchY));
   const mat = lineMat(
     S.wordVert,
     S.wordFrag,
@@ -209,7 +210,7 @@ const buildWord = (text: string) => {
       uGlow: { value: v3(COLORS.glow) },
       uCoreGain: { value: LOOK.wordCore },
       uGlowGain: { value: LOOK.wordGlow },
-      uGhostGain: { value: LOOK.wordGhost },
+      uHaloGain: { value: LOOK.wordHalo },
       uFlRect: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] },
       uFlAmt: { value: [1, 1, 1] },
     },

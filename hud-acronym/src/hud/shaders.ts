@@ -101,13 +101,13 @@ void main() {
   gl_FragColor = vec4(uColor * vI * uGain * centreBoost(vLocal) * a, 0.0);
 }`;
 
-/** Segmented-display word: lit core, glow and faint unlit ghost segments, with per-segment flicker. */
+/** Word: lit core, tight glow and wide halo, with brief flicker on parts of individual letters. */
 export const wordVert = /* glsl */ `
 varying vec2 vUv;
 void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 export const wordFrag = /* glsl */ `
 uniform sampler2D uTex; uniform vec3 uCore; uniform vec3 uGlow;
-uniform float uCoreGain; uniform float uGlowGain; uniform float uGhostGain;
+uniform float uCoreGain; uniform float uGlowGain; uniform float uHaloGain;
 uniform vec4 uFlRect[3]; uniform float uFlAmt[3];
 varying vec2 vUv;
 void main() {
@@ -122,7 +122,7 @@ void main() {
   float lit = t.r * m;
   vec3 c = uCore * lit * uCoreGain
          + uGlow * t.b * mix(1.0, m, 0.8) * uGlowGain
-         + uGlow * t.g * (1.0 - t.r) * uGhostGain;
+         + uGlow * t.g * mix(1.0, m, 0.5) * uHaloGain;
   gl_FragColor = vec4(c, 0.0);
 }`;
 
