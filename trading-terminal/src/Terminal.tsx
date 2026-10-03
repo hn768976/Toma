@@ -8,7 +8,7 @@ import { drawGrain } from "./grain";
 // ---------------------------------------------------------------------------
 // Camera — a pure function of the frame.
 // ---------------------------------------------------------------------------
-const PERSPECTIVE = 3400;
+const PERSPECTIVE = 2100;
 
 export const cameraAt = (frame: number) => {
   const t = frame / (DURATION - 1);
@@ -17,7 +17,7 @@ export const cameraAt = (frame: number) => {
   return {
     tx: 1430 + (2030 - 1430) * s,
     ty: 545 + (610 - 545) * s,
-    scale: 2.45 + 0.2 * t,
+    scale: 2.2 + 0.18 * t,
     rx: 15 - 1.2 * t,
     ry: -20 + 2.5 * t,
   };
@@ -25,7 +25,8 @@ export const cameraAt = (frame: number) => {
 
 // Depth of field: the sharp band is the line of constant depth through the
 // focus point. Depth on the tilted plane grows along (sin -ry, sin rx·cos ry)
-// in screen coordinates, so the band runs perpendicular to that.
+// in screen coordinates, so the band runs perpendicular to that. The band
+// sits a little toward the near side, so the far edge falls off hardest.
 const dofAngle = (rx: number, ry: number) => {
   const dx = Math.sin((-ry * Math.PI) / 180);
   const dy = Math.sin((rx * Math.PI) / 180) * Math.cos((ry * Math.PI) / 180);
@@ -105,8 +106,8 @@ export const Terminal: React.FC<Props> = ({ versionId }) => {
   ].join(" ");
 
   const ang = dofAngle(cam.rx, cam.ry);
-  const sharpMask = `linear-gradient(${ang}deg, transparent 12%, black 34%, black 62%, transparent 84%)`;
-  const midMask = `linear-gradient(${ang}deg, transparent 0%, black 22%, black 76%, transparent 98%)`;
+  const sharpMask = `linear-gradient(${ang}deg, transparent 33%, black 47%, black 66%, transparent 81%)`;
+  const midMask = `linear-gradient(${ang}deg, transparent 16%, black 36%, black 80%, transparent 100%)`;
 
   const screenStyle: React.CSSProperties = {
     position: "absolute",
@@ -128,10 +129,10 @@ export const Terminal: React.FC<Props> = ({ versionId }) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#04070D", overflow: "hidden" }}>
-      <div style={layer(11, null)}>
+      <div style={layer(14, null)}>
         <canvas ref={farRef} width={bw} height={bh} style={screenStyle} />
       </div>
-      <div style={layer(4, midMask)}>
+      <div style={layer(5.5, midMask)}>
         <canvas ref={midRef} width={bw} height={bh} style={screenStyle} />
       </div>
       <div style={layer(0, sharpMask)}>

@@ -44,7 +44,7 @@ const HEADER_H = 56;
 const LEFT_W = 1880; // left column incl. price axis
 const PLOT_R = 1700; // plot area right edge (axis to the right)
 const SP = 27; // candle spacing
-const BODY_W = 17;
+const BODY_W = 20;
 const RIGHT_SLOT = PLOT_R - 80; // x of the newest closed candle once scrolled
 
 const MAIN = { y0: HEADER_H, y1: 560, ct: 86, cb: 432, vt: 440, vb: 556 };
@@ -52,9 +52,9 @@ const OSC = { y0: 560, y1: 770, pt: 586, pb: 754 };
 const HIST = { y0: 770, y1: 950 };
 const MACD = { y0: 950, y1: 1124 };
 const RX = LEFT_W + 10; // right column x
-const AREA = { x0: RX, x1: 2560, y0: HEADER_H, y1: 404, pl: RX + 10, pr: 2462, pt: 124, pb: 316 };
-const AREA2 = { x0: 2568, x1: SCREEN_W, pl: 2580, pr: 2880 };
-const SIG = { y0: 412, y1: SCREEN_H, head: 58 };
+const AREA = { x0: RX, x1: 2420, y0: HEADER_H, y1: 404, pl: RX + 10, pr: 2330, pt: 110, pb: 316 };
+const AREA2 = { x0: 2428, x1: SCREEN_W, pl: 2440, pr: 2880 };
+const SIG = { y0: 412, y1: SCREEN_H, head: 0 };
 
 // ---------------------------------------------------------------------------
 // Frame -> data snapshot (pure)
@@ -206,16 +206,16 @@ const drawTags = (ctx: Ctx, tags: Tag[], x: number, yMin: number, yMax: number, 
     if (x < LEFT_W) tagYs.push(y);
     const n = Math.max(g.text.length, g.prev?.length ?? 0);
     const w = n * cw + 22;
-    ctx.fillStyle = g.style.filled ? g.style.color : "#0B1526";
+    ctx.fillStyle = g.style.filled ? `${g.style.color}38` : "#0B1526";
     ctx.beginPath();
     ctx.roundRect(x, y - TAG_H / 2, w, TAG_H, 5);
     ctx.fill();
-    if (!g.style.filled) {
+    {
       ctx.strokeStyle = g.style.color;
       ctx.lineWidth = 2.2;
       ctx.stroke();
     }
-    ctx.fillStyle = g.style.filled ? "#07101E" : g.style.color;
+    ctx.fillStyle = g.style.filled ? "#FFFFFF" : g.style.color;
     rollText(ctx, g.text, g.prev, p, x + w - 11, y + 1, TAG_SIZE);
   });
 };
@@ -275,7 +275,7 @@ const drawSignal = (ctx: Ctx, l: SignalLabel, x: number, y: number) => {
   }
   if (l === "Sell") chevron(ctx, ix, y + 2, 11, false);
   if (l === "Neutral") ctx.fillRect(ix - 11, y - 2.5, 22, 5);
-  label(ctx, l, x + 50, y + 1, col, 38, 600);
+  label(ctx, l, x + 48, y + 1, col, 35, 600);
 };
 
 // ---------------------------------------------------------------------------
@@ -376,7 +376,7 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
     const hgt = (s.v[i] / vMax) * (MAIN.vb - MAIN.vt) * 0.95;
     ctx.fillStyle = s.c[i] >= s.o[i] ? up : dn;
     ctx.globalAlpha = 0.92;
-    ctx.fillRect(xOf(i) - 11.5, MAIN.vb - hgt, 23, hgt);
+    ctx.fillRect(xOf(i) - 12.5, MAIN.vb - hgt, 25, hgt);
   }
   ctx.globalAlpha = 1;
 
@@ -598,11 +598,9 @@ export const drawScreen = (ctx: Ctx, d: VersionData, frame: number) => {
 
   // --- signal panel -------------------------------------------------------
   const sigTop = SIG.y0 + 8;
-  label(ctx, "Oscillators", RX + 40, sigTop + SIG.head / 2, C.dim, 26);
-  label(ctx, "Moving averages", RX + 40 + 395, sigTop + SIG.head / 2, C.dim, 26);
   const rowsTop = sigTop + SIG.head;
   const rowH = (SIG.y1 - rowsTop) / 5;
-  const colW = 395;
+  const colW = 335;
   ctx.fillStyle = C.rowHi;
   ctx.fillRect(RX, rowsTop, SCREEN_W - RX, rowH);
   for (let r = 0; r <= 5; r++) hline(ctx, RX, SCREEN_W, rowsTop + r * rowH, C.div, 2.5);

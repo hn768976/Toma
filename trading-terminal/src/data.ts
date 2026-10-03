@@ -24,7 +24,7 @@ export const VISIBLE = 30;
 export const AREA_N = 420;
 export const AREA_START = 320;
 export const AREA_STEP = 6;
-export const AREA_VISIBLE = 175;
+export const AREA_VISIBLE = 120;
 export const AREA_SMALL_VISIBLE = 80;
 
 // ---------------------------------------------------------------------------
@@ -275,9 +275,9 @@ export const build = (v: Version): VersionData => {
     rangeHi.push(hi + pad);
     volMax.push(vm);
   }
-  const area = genArea(AREA_N, v.startPrice * 0.4, v.areaDrift, 0.017, r);
+  const area = genArea(AREA_N, v.startPrice * 0.4, v.areaDrift, 0.028, r);
   const areaVol = area.map(() => 0.25 + r() * 0.75);
-  const areaSmall = genArea(AREA_N, 80, v.areaSmallDrift, 0.02, r);
+  const areaSmall = genArea(AREA_N, 80, v.areaSmallDrift, 0.026, r);
   return {
     version: v,
     candles,
