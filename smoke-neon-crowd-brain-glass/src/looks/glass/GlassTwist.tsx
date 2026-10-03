@@ -9,7 +9,7 @@ const LOOP = 600;
 const N_FRONT = 48;
 const CENTRE = (N_FRONT - 1) / 2;
 const N_BACK = 0;
-const SPACING = 0.5;
+const SPACING = 0.44;
 const WAVE_SLATS = 30; // wavelength in slats
 const WAVE_CYCLES = 1; // whole wavelengths travelled per 600-frame loop
 
@@ -142,7 +142,7 @@ const factory: SceneFactory<{ colors: GlassColors }> = ({ gl, assets, props }) =
         // (seen face-on through a long lens, the lean foreshortens each bar symmetrically:
         // tops dip and bottoms rise where the ribbon twists)
         const lean = Math.sin(TAU * k + s.phase + Math.PI / 2);
-        s.mesh.rotation.set(1.0 * lean, s.base + 0.3 * wv, 0.06 * wv, "XYZ");
+        s.mesh.rotation.set(1.12 * lean, s.base + 0.3 * wv, 0.06 * wv, "XYZ");
         s.mesh.position.y = 0;
       }
       // closed camera drift

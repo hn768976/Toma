@@ -10,8 +10,8 @@ import type { CrowdColors } from "../../versions";
 
 const COLS = 15;
 const ROWS = 14;
-const SX = 2.2; // spacing across
-const SZ = 2.2; // spacing in depth
+const SX = 2.5; // spacing across
+const SZ = 2.4; // spacing in depth
 const FX_LAYER = 1; // additive glow sprites/rings — excluded from the depth pass
 
 /** Bust icon: extruded shoulders + head, shirt "V" and tie inset on the front.
@@ -99,10 +99,10 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   const crowdMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(colors.crowd),
     vertexColors: true,
-    roughness: 0.32,
-    metalness: 0.1,
+    roughness: 0.45,
+    metalness: 0.05,
   });
-  const mirrorMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(colors.crowd).multiplyScalar(0.3), vertexColors: true, side: THREE.BackSide });
+  const mirrorMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(colors.crowd).multiplyScalar(0.45), vertexColors: true, side: THREE.BackSide });
 
   // grid: chosen figure = front row, centre column, at the origin
   const chosenCol = Math.floor(COLS / 2);
@@ -162,12 +162,12 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   const top = new THREE.DirectionalLight(0xdfe8ff, 2.6);
   top.position.set(1.5, 10, 3);
   scene.add(top);
-  scene.add(new THREE.HemisphereLight(new THREE.Color(colors.crowd), 0x000000, 1.0));
+  scene.add(new THREE.HemisphereLight(new THREE.Color(colors.crowd), 0x000000, 0.7));
   // cool rim / back light picking out shoulders and crowns
   const rim = new THREE.DirectionalLight(new THREE.Color(colors.crowd).lerp(new THREE.Color(1, 1, 1), 0.55), 2.4);
   rim.position.set(0.5, 6, -10);
   scene.add(rim);
-  const front = new THREE.DirectionalLight(new THREE.Color(colors.crowd).lerp(new THREE.Color(1, 1, 1), 0.4), 1.7);
+  const front = new THREE.DirectionalLight(new THREE.Color(colors.crowd).lerp(new THREE.Color(1, 1, 1), 0.3), 1.2);
   front.position.set(0, 2, 10);
   scene.add(front);
   const glowLight = new THREE.PointLight(glow, 0, 7, 1.6);
@@ -262,16 +262,16 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
     g.fillRect(0, 0, 64, 256);
     return new THREE.CanvasTexture(c);
   })();
-  const streakGeo = new THREE.PlaneGeometry(1.1, 8);
+  const streakGeo = new THREE.PlaneGeometry(0.75, 16);
   streakGeo.rotateX(-Math.PI / 2);
-  streakGeo.translate(0, 0.008, 4.2);
+  streakGeo.translate(0, 0.008, 8.2);
   const streak = new THREE.Mesh(streakGeo, fxMat(streakTex));
   streak.layers.set(FX_LAYER);
   scene.add(streak);
   // wide blue haze rising behind the crowd
-  const haze = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: glow.clone().multiplyScalar(0.09), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0, fog: false }));
-  haze.position.set(0, 2.2, -7);
-  haze.scale.set(26, 12, 1);
+  const haze = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: glow.clone().multiplyScalar(0.14), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0, fog: false }));
+  haze.position.set(0, 4.2, -3);
+  haze.scale.set(7, 14, 1);
 
   haze.layers.set(FX_LAYER);
   scene.add(haze);
@@ -334,8 +334,8 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
       halo.scale.setScalar(2.4 + 0.2 * g);
       (haloMir.material as THREE.SpriteMaterial).opacity = 0.025 * g;
       haloMir.scale.setScalar(2.6);
-      (floorPool.material as THREE.MeshBasicMaterial).opacity = 0.35 * g * smoothstep(120, 175, frame);
-      (streak.material as THREE.MeshBasicMaterial).opacity = 0.5 * g;
+      (floorPool.material as THREE.MeshBasicMaterial).opacity = 0.6 * g * smoothstep(120, 175, frame);
+      (streak.material as THREE.MeshBasicMaterial).opacity = 0.32 * g;
       (haze.material as THREE.SpriteMaterial).opacity = 0.35 + 0.65 * g;
       floorPool.scale.set(3.4, 1, 3.4);
       staticRings.forEach((r, i) => {

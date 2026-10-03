@@ -42,10 +42,10 @@ const buildShapes = () => {
       const k = i % 11;
       const top = i < 11 ? 1 : -1;
       x = -12 + k * 2.4 + (rand() - 0.5) * 1.2;
-      y = top * (4.95 + rand() * 1.0);
+      y = top * (5.3 + rand() * 1.0);
     } else {
       const k = i - 22;
-      x = (k % 2 ? 1 : -1) * (10.0 + rand() * 0.9);
+      x = (k % 2 ? 1 : -1) * (10.5 + rand() * 0.9);
       y = (Math.floor(k / 2) - 0.5) * 3.2 + (rand() - 0.5) * 0.8;
     }
     const len = Math.hypot(x / 11.5, y / 6.6);
@@ -147,7 +147,7 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
   const lineA = sat(colA);
   const lineB = sat(colB);
   const glowTex = radialTexture();
-  const TUBE_R = 0.0135;
+  const TUBE_R = 0.012;
   const LINE_I = 2.6;
 
   const root = new THREE.Group();
@@ -160,7 +160,7 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
       new THREE.SpriteMaterial({ map: glowTex, color: (i % 2 ? colB : colA).clone().multiplyScalar(0.03), blending: THREE.AdditiveBlending, depthWrite: false }),
     );
     const a = (i / 6) * TAU + 0.4;
-    s.position.set(Math.cos(a) * 9, Math.sin(a) * 4.8, -8);
+    s.position.set(Math.cos(a) * (i % 3 === 0 ? 4 : 9), Math.sin(a) * (i % 3 === 0 ? 1.2 : 4.8), -8);
     s.scale.setScalar(7 + rand() * 4);
     scene.add(s);
   }
@@ -235,10 +235,10 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
     g.add(new THREE.Mesh(merged, new THREE.MeshBasicMaterial({ vertexColors: true })));
     // star glints at a few vertices
     corners.forEach((cp) => {
-      if (rand() < 0.82) return;
+      if (rand() < 0.78) return;
       v.copy(cp).applyMatrix4(g.matrix);
       const col = colA.clone().lerp(colB, blend(v.x, v.y, d.bias)).lerp(new THREE.Color(1, 1, 1), 0.55);
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col.multiplyScalar(1.1), blending: THREE.AdditiveBlending, depthWrite: false }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col.multiplyScalar(2.2), blending: THREE.AdditiveBlending, depthWrite: false }));
       s.position.copy(cp);
       s.scale.setScalar(0.35 + rand() * 0.25);
       g.add(s);

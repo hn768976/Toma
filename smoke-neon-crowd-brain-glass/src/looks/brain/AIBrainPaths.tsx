@@ -167,8 +167,8 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
     g.fillStyle = "#000";
     g.fillRect(0, 0, S, S);
     // faint grid
-    g.strokeStyle = "rgba(120,190,255,0.42)";
-    g.lineWidth = 1.6;
+    g.strokeStyle = "rgba(130,200,255,0.55)";
+    g.lineWidth = 2.4;
     for (let i = 0; i <= 16; i++) {
       g.beginPath();
       g.moveTo((i / 16) * S, 0);
@@ -179,9 +179,9 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
       g.lineTo(S, (i / 16) * S);
       g.stroke();
     }
-    drawTraces(g, rand, 300, [0, 0, S, S], S / 90, 1.8, "rgba(120,200,255,0.6)");
+    drawTraces(g, rand, 160, [0, 0, S, S], S / 90, 1.6, "rgba(120,200,255,0.4)");
     // short bright data dashes
-    for (let i = 0; i < 260; i++) {
+    for (let i = 0; i < 120; i++) {
       g.fillStyle = `rgba(170,240,255,${0.4 + rand() * 0.6})`;
       const x = rand() * S, y = rand() * S;
       if (rand() < 0.5) g.fillRect(x, y, 6 + rand() * 18, 2.5);
@@ -198,7 +198,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(60, 60),
     new THREE.MeshPhysicalMaterial({
-      color: surfaceCol.clone().lerp(new THREE.Color("#3a6a9a"), 0.35).multiplyScalar(2.2),
+      color: surfaceCol.clone().lerp(new THREE.Color("#3a6a9a"), 0.2).multiplyScalar(1.5),
       roughness: 0.75,
       specularIntensity: 0.25,
       envMapIntensity: 0,
@@ -223,7 +223,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   brain.position.set(BRAIN_C.x, 0, BRAIN_C.y);
   brain.scale.setScalar(BRAIN_S);
   scene.add(brain);
-  const rimMat = new THREE.MeshPhysicalMaterial({ color: 0xc8dcf2, transparent: true, opacity: 0.88, roughness: 0.18, clearcoat: 0.8, clearcoatRoughness: 0.15, metalness: 0, envMap: envTex, envMapIntensity: 0.18, envMapRotation: new THREE.Euler(0.9, 0.4, 0), emissive: glow.clone(), emissiveIntensity: 0.12 });
+  const rimMat = new THREE.MeshPhysicalMaterial({ color: 0xc8dcf2, transparent: true, opacity: 0.88, roughness: 0.18, clearcoat: 0.8, clearcoatRoughness: 0.15, metalness: 0, envMap: envTex, envMapIntensity: 0.18, envMapRotation: new THREE.Euler(0.9, 0.4, 0), emissive: glow.clone(), emissiveIntensity: 0.3 });
   const faceTex = circuitCanvas((g, S) => {
     // maps brain-local x∈[-2.4,2.4], y∈[-2.4,2.4]
     g.fillStyle = "#000";
@@ -273,7 +273,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   });
   for (const side of [-1, 1] as const) {
     const outer = hemi(side, 1);
-    const inner = hemi(side, 0.94);
+    const inner = hemi(side, 0.955);
     const rimShape = new THREE.Shape(outer);
     rimShape.holes.push(new THREE.Path([...inner].reverse()));
     const rim = new THREE.ExtrudeGeometry(rimShape, { depth: 0.34, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 3, curveSegments: 4 });
@@ -345,14 +345,14 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   // ------------------------------------------------------------- scattered data bits on the floor
   // (tiny glowing dashes, densest around the brain; a few spill out of it like sparks)
   {
-    const N = 1300;
+    const N = 700;
     const bitGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-    const bitMat = new THREE.MeshBasicMaterial({ color: glow.clone().lerp(new THREE.Color(1, 1, 1), 0.2).multiplyScalar(0.9), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending });
+    const bitMat = new THREE.MeshBasicMaterial({ color: glow.clone().multiplyScalar(1.3), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending });
     const bits = new THREE.InstancedMesh(bitGeo, bitMat, N);
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     for (let i = 0; i < N; i++) {
-      const near = rand() < 0.6;
+      const near = rand() < 0.85;
       const r = near ? 1.6 + Math.pow(rand(), 1.5) * 3 : rand() * 16;
       const a = rand() * TAU;
       const x = (near ? BRAIN_C.x : -2) + Math.cos(a) * r * (near ? 1.2 : 1.4);
@@ -533,7 +533,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
     extraPasses: [dof],
     bloom: { strength: 0.6, radius: 0.35, threshold: 2.2 },
     grain: 0.02,
-    vignette: 0.45,
+    vignette: 0.65,
     clampHDR: 4,
   });
 

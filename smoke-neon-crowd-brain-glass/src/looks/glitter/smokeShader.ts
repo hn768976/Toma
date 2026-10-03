@@ -154,7 +154,7 @@ void main() {
 
   // milky, glowing smoke: saturated blue, pale blue-white where dense, soft inner glow
   float glow = crescent(r, phi) * smoothstep(-0.7, 0.4, body);
-  vec3 col = mix(uSmoke * vec3(0.8, 0.94, 1.12), uSmokeEdge * 1.15, smoothstep(0.45, 1.0, dens)) * dens * 1.35;
+  vec3 col = mix(uSmoke * vec3(0.72, 0.95, 1.18), uSmokeEdge, smoothstep(0.55, 1.1, dens)) * dens * 1.4;
   col += uSmoke * 0.22 * glow;
   col += uSmokeEdge * 0.12 * fil * near;
   // background: near-black with deep blue, a touch lighter low-left

@@ -86,7 +86,8 @@ const buildData = (weights: number[]): Data => {
     let c = rand() * wsum;
     let k = 0;
     while (k < weights.length - 1 && c > weights[k]) c -= weights[k++];
-    d.col[i] = k;
+    // bright specks inside the smoke lean warm (gold / pink: palette entries 0 and 1)
+    d.col[i] = inSmoke && rand() < 0.45 ? (rand() < 0.6 ? 0 : 1) : k;
     d.tk[i] = TWINKLE_K[Math.floor(rand() * TWINKLE_K.length)];
     d.tph[i] = rand() * TAU;
     d.bright[i] = inSmoke ? (rand() < 0.2 ? 1.0 + rand() * 0.9 : 0.07 + rand() * 0.2) : 0.5 + rand() * 0.6;
