@@ -62,7 +62,8 @@ The config already sets H.264, `yuv420p`, CRF 16 and PNG intermediate frames
 720p previews (what was delivered): `scripts/render-previews.sh`, which runs
 `npx remotion render <id> out/previews/<name>.mp4 --scale=0.3333333333333333`
 for each composition (1280×720 exactly; checked with ffprobe) and saves a
-720p PNG still of each.
+720p PNG still of each. `remotion.config.ts` sets `muted`, so the mp4 has no
+audio stream.
 
 ## Stills (6K)
 
@@ -76,7 +77,26 @@ ratio, which the canvas follows), it is not an upscale.
 
 ## Render time
 
-__RENDER_TIMES__
+Measured on the machine that built this project: 4 vCPU cloud container,
+**no GPU** (Chromium falls back to SwiftShader, i.e. WebGL on the CPU),
+`--concurrency=2`, wall-clock time of the full 720p render divided by frames.
+
+| Composition | 720p, s/frame (measured) | 4K, s/frame on this CPU box (estimate) | 4K full length (estimate) |
+|---|---|---|---|
+| EarthHorizon-Blue | 0.47 | ~7.4 | ~74 min |
+| EarthHorizon-Gold | 0.47 | ~7.4 | ~74 min |
+| NeonGridTunnel-Blue | 0.53 | ~7.1 | ~71 min |
+| NeonGridTunnel-Magenta | 0.52 | ~7.1 | ~71 min |
+| HierarchyNetwork | 0.93 | ~7.2 | ~43 min (360 f) |
+| DiagonalSlats-Black | 0.89 | ~11.6 | ~116 min |
+| DiagonalSlats-White | 0.89 | ~11.6 | ~116 min |
+| SpeedTrails | 0.30 | ~4.7 | ~47 min |
+
+How the 4K estimate was made: one 4K still and one 720p still of each look
+were timed on the same box; the difference (4.4–10.7 s) is the extra cost of a
+4K frame, added to the measured 720p per-frame time. It includes PNG encoding
+of the 8.3 MP frame. On a machine with a real GPU (ANGLE on Metal/D3D/Vulkan)
+expect roughly an order of magnitude faster; the CPU numbers are a worst case.
 
 ## How it is built
 
@@ -137,7 +157,7 @@ python3 scripts/verify.py same out/f0.png out/f600.png
 * Earth: the globe turns exactly 360° per 600 frames; ray streaks move by whole
   repeats; twinkles and orbit arcs use whole cycles.
 * Tunnel: built from a repeating segment of length L; camera travels exactly
-  3·L; roll and sway are whole sine cycles.
+  2·L; roll and sway are whole sine cycles.
 * Slats: light sweeps, glints and camera drift are whole cycles.
 * Speed Trails: dashes move by whole repeats along their ribbons.
 
@@ -155,7 +175,18 @@ run. Banding shows as long flat runs separated by 1-level jumps; with the
 ±1/255 dither (after bloom and tonemapping) plus 2 % grain (1.5 % in the white
 slats) the profile changes smoothly.
 
-__BANDING__
+Results on the delivered 720p previews (frame 200, values are Rec.709 luma 0–255):
+
+| Clip | Line | Range | Max step (smoothed) | Longest flat run |
+|---|---|---|---|---|
+| EarthHorizon_Blue (1A) | sky, vertical, x=120 | 4.8 → 18.8 | 1.47 | 13 px |
+| NeonGridTunnel_Blue (2A) | centre → left edge | 4.2 → 98.5 | 5.2 (bar edges) | 18 px |
+| DiagonalSlats_Black (4A) | along a slat through the light sweep | 4.3 → 20.6 | 0.61 | 18 px |
+| DiagonalSlats_White (4B) | along a slat through the light sweep | 203 → 230 | 0.38 | 12 px |
+
+An undithered 14-level ramp over ~480 px would show ~32 px plateaus with
+1-level jumps; the profiles above change smoothly. Contrast-stretched crops
+(×4–7) of the encoded frames also show no contour lines.
 
 ## Adding a colourway
 
@@ -188,4 +219,16 @@ __BANDING__
 
 ## Completion checklist
 
-__CHECKLIST__
+- [x] 8 compositions, 3840×2160, 30 fps, one Remotion project, three.js via `@remotion/three`, WebGL2 (ANGLE).
+- [x] Lengths: HierarchyNetwork 360 frames, all others 600 frames.
+- [x] 720p previews: 1280×720, H.264, yuv420p, 30/1, CRF 16, no audio; 12.0 s / 20.0 s (ffprobe).
+- [x] One 720p PNG still per composition.
+- [x] Loops: frame 600 == frame 0 byte-for-byte for all 7 looping compositions.
+- [x] Speed Trails background exactly 0,0,0 in the encoded mp4 (no grain/dither on black).
+- [x] Determinism: frame 200 rendered alone from a cold start == frame 200 from a multi-tab range render, byte-for-byte, all 8.
+- [x] Banding: dither ±1/255 after bloom + tonemapping; grain 2 % (1.5 % in 4B) from pixel position and frame; checked on the encoded mp4.
+- [x] ACES filmic tonemapping, sRGB output.
+- [x] No `Math.random()`, no `Date.now()`, no R3F clock, no TAA / temporal AO / accumulated shadows.
+- [x] HDRI (Poly Haven, CC0) and Natural Earth (public domain) shipped with licences, loaded behind `delayRender`.
+- [x] No text, logos or brands.
+- [x] Render time per frame at 720p measured and recorded above, with a 4K estimate.

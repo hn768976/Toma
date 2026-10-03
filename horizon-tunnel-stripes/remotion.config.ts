@@ -13,6 +13,8 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// Silent backgrounds: no audio stream in the output.
+Config.setMuted(true);
 Config.setDelayRenderTimeoutInMilliseconds(120000);
 
 // Some sandboxed environments block downloading Remotion's Chrome Headless
