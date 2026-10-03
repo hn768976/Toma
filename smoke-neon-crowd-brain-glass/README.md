@@ -90,19 +90,31 @@ Machine: 4 vCPU cloud container, **no GPU** (ANGLE → SwiftShader, CPU only).
 | 2 Neon Polygon Frame | 0.51 |
 | 3 Crowd Spotlight (A / B) | 2.78 / 2.78 |
 | 4 AI Brain Paths | 2.09 |
-| 5 Glass Twist (A / B) | 1.56 / __BLUSH__ |
+| 5 Glass Twist (A / B) | 1.38 / 1.38 |
 
-**Look 1 at 4K (one frame, `remotion still`, same machine): __G4K__.**
+**Look 1 at 4K, same machine:** one cold `remotion still` (bundle + browser
+start + 1 frame) takes 9.2 s vs 7.9 s at 720p; the marginal cost per frame
+inside a sequence render is **3.45 s/frame at 4K** vs 2.86 s/frame at 720p
+(20-frame runs). Look 1 barely scales with resolution on this box: its frame
+time is dominated by fixed work (80k-speck update in JS, the 192×108 density
+read-back, Remotion's screenshot), not by pixels.
 
-4K estimate: cost is dominated by per-pixel shading (smoke fbm, bloom, DoF
-taps, shadows), which scales with pixel count — 4K is 9× the pixels of 720p.
-On this CPU-only box that means roughly 9× the 720p times (≈ 26 s/frame for
-looks 1 and 3, ≈ 4.6 s/frame for look 2), i.e. about 4.5 h for one 20 s
-Glitter Smoke at 4K. On a workstation GPU (ANGLE on D3D/Metal/Vulkan) the same
-shaders run 20–50× faster than SwiftShader; expect roughly **0.5–1.5 s/frame
-at 4K** for every look (the 80k-speck JS update in look 1 is ~20 ms and does
-not scale with resolution), i.e. **5–15 minutes per composition** with
-default concurrency.
+For comparison, look 3 (heaviest per-pixel shading: DoF gather + bloom) at 4K:
+**21.7 s/frame** (marginal, 10-frame run) vs 2.78 s/frame at 720p — 7.8×,
+i.e. the three.js looks scale roughly with pixel count.
+
+### 4K estimate
+
+CPU-only (this box): look 1 ≈ 3.5 s/frame, look 2 ≈ 3–4 s/frame, look 3 ≈ 22
+s/frame, look 4 ≈ 15 s/frame, look 5 ≈ 10 s/frame →
+GlitterSmoke ≈ 35 min each, NeonPolygonFrame ≈ 35 min, CrowdSpotlight ≈ 2.2 h
+each, AIBrainPaths ≈ 1.5 h, GlassTwist ≈ 1.7 h each — **about 11 h for all 8**.
+
+On a machine with a real GPU (ANGLE on D3D11 / Metal / Vulkan) the shading is
+typically 20–50× faster than SwiftShader, so expect roughly **0.5–1.5 s/frame
+at 4K for every look** (look 1 is then bound by its fixed ~0.3 s of JS +
+capture), i.e. **~5–15 min per composition, ~1–1.5 h for all 8** with default
+concurrency. (Not measured — no GPU available here.)
 
 ## How each look is built
 
@@ -163,11 +175,35 @@ accumulation. Grain and dither are integer hashes of pixel position and
 * `check-banding.py` — decodes frames **from the encoded mp4s** and prints
   32-row-averaged luma profiles across gradients/glows plus the residual noise.
 
-__CHECKS__
+Results on the delivered previews:
+
+| Check | Result |
+|---|---|
+| 1 ffprobe: 1280×720, 30/1, h264, yuv420p, no audio; 12.0 s (looks 3, 4) / 20.0 s (others) | all 8 pass |
+| 2 loop: frame 0 vs frame 600 (601-frame override) | identical PNGs for GlitterSmoke A/B, NeonPolygonFrame, GlassTwist A/B |
+| 3 determinism: cold frame 200 vs full render frame 200 | byte-identical for all 8 (GlassTwist after removing shadow maps, see below) |
+| 4 banding (from the encoded mp4) | gradients move in fractional code steps, no plateaus; dither/grain noise survives encoding (σ ≈ 0.6–1 code in dark areas) |
+
+GlassTwist originally used a PCF soft shadow map; frame N then depended on
+which frames the same browser tab had rendered before (drift grew with
+history: Δmean 0.03 after 1 prior frame, 1.3 after 50, 2.5 in the full
+render). Shadows were removed from that look (the HDRI does the soft shading);
+it is now byte-exact.
 
 ## Completion checklist
 
-__CHECKLIST__
+- [x] 8 compositions, 3840×2160, 30 fps; 600 f (looks 1, 2, 5) / 360 f (looks 3, 4)
+- [x] Look 1 in PixiJS 8 (WebGL, ticker stopped, one `app.render()` per frame, ParticleContainer, 80k specks, 8 bokeh discs, custom smoke shader, grain/dither Filter with `uFrame`)
+- [x] Looks 2–5 in three.js via `@remotion/three`, ACES tonemapping, WebGL2 (`--gl=angle`)
+- [x] One data row per version (`src/versions.ts`)
+- [x] Loops close exactly (whole cycles over 600 frames; smoke/glitter on whole half-turns)
+- [x] Deterministic: frame 200 cold == frame 200 from full render, byte for byte, all 8
+- [x] ±1/255 dither after tonemapping/bloom + grain from a fixed hash of pixel and frame (2 %, 1.5 % in look 5); never `Math.random()`
+- [x] Fonts (Inter, Montserrat, OFL) and HDRI (CC0) shipped with licences; icons self-drawn; only text is "AI"
+- [x] Fonts, HDRI, Pixi init behind `delayRender` / `continueRender`
+- [x] No TAA / temporal AO / accumulation; no `useFrame` clock, `Date.now()` or carried state
+- [x] 720p previews + 720p PNG stills of all 8; render times measured (720p each look, 4K look 1)
+- [x] Visual comparison against the references with fresh sub-agents (3 rounds per look; see report)
 
 ## Adding a colourway
 
