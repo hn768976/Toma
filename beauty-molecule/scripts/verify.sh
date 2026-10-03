@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 SCALE=0.3333333333333333
 OUT=out/verify
 mkdir -p $OUT
-for comp in DNA-Coral Structures-Coral DNA-Aqua Structures-Aqua; do
+for comp in ${COMPS:-DNA-Coral Structures-Coral DNA-Aqua Structures-Aqua}; do
   id="BeautyMolecule-$comp"
   name="BeautyMolecule_$(echo "$comp" | tr - _)"
   mp4="out/previews/$name.mp4"
