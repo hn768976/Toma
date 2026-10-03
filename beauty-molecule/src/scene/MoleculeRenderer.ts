@@ -63,11 +63,10 @@ const ATOM_TWISTS = [0, 1.7, 3.1, 4.4, 5.6].map((a, k) =>
 
 // Look parameters (shared by all compositions).
 export const LOOK = {
-  cocK: 0.009, // circle of confusion (world units) per unit of depth from focus
   envStrength: 0.3, // HDRI reflection level relative to the background
   specLevel: 2.6, // key highlight level relative to the background
   grain: 0.015, // +-1.5 % film grain
-  vignette: 0.5,
+  vignette: 0.35,
   bloom: 0.8,
   heroBob: 0.05,
 };
@@ -173,7 +172,8 @@ export class MoleculeRenderer {
   constructor(env: DataTexture, background: BackgroundId, colour: ColourRow) {
     this.bodies = BACKGROUND_BODIES[background];
     this.hero = HEROES[background];
-    this.heroOffset = BACKGROUNDS.find((b) => b.id === background)!.heroOffset;
+    const bgRow = BACKGROUNDS.find((b) => b.id === background)!;
+    this.heroOffset = bgRow.heroOffset;
     this.camera.position.set(0, 0, CAM_Z);
     this.camera.lookAt(0, 0, 0);
     this.camera.updateMatrixWorld();
@@ -230,7 +230,7 @@ export class MoleculeRenderer {
         fragmentShader: IMPOSTOR_FRAG,
         uniforms: {
           ...this.glassUniforms,
-          uCocK: {value: LOOK.cocK},
+          uCocK: {value: bgRow.cocK},
           uFocus: {value: FOCUS_DIST},
           uPixelScale: {value: 0},
         },
@@ -369,9 +369,9 @@ export class MoleculeRenderer {
       const from = world[b.i];
       const to = world[b.j];
       const dir = to.clone().sub(from).normalize();
-      // end the tubes just inside the atoms: only a hint shows through the glass
-      const start = from.clone().addScaledVector(dir, this.hero.atoms[b.i].r * 0.75);
-      const end = to.clone().addScaledVector(dir, -this.hero.atoms[b.j].r * 0.75);
+      // the rods run on into the atoms, seen through the glass
+      const start = from.clone().addScaledVector(dir, this.hero.atoms[b.i].r * 0.2);
+      const end = to.clone().addScaledVector(dir, -this.hero.atoms[b.j].r * 0.2);
       m.position.copy(start);
       m.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), dir);
       m.scale.set(b.r, end.distanceTo(start), b.r);

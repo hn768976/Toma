@@ -15,6 +15,9 @@ export type BackgroundRow = {
   /** Bond length and bond radius, relative to heroScale. */
   heroBondLength: number;
   heroBondRadius: number;
+  /** Depth of field: circle of confusion (world units) per unit of depth
+   * away from the focus plane. */
+  cocK: number;
 };
 
 export type ColourRow = {
@@ -35,14 +38,16 @@ export const BACKGROUNDS: BackgroundRow[] = [
     heroOffset: [0.3, -0.35],
     heroBondLength: 1.0,
     heroBondRadius: 0.03,
+    cocK: 0.013,
   },
   {
     id: 'structures',
     name: 'Structures',
-    heroScale: 1.9,
-    heroOffset: [-0.05, 0.0],
-    heroBondLength: 0.8,
-    heroBondRadius: 0.05,
+    heroScale: 1.75,
+    heroOffset: [-0.05, 0.05],
+    heroBondLength: 1.08,
+    heroBondRadius: 0.04,
+    cocK: 0.007,
   },
 ];
 

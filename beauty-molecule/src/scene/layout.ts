@@ -135,7 +135,7 @@ const makeSmallMolecule = (
     const p = atoms[parent].p.clone().addScaledVector(dir, bondLen * range(rng, 0.85, 1.1));
     if (atoms.some((a) => a.p.distanceTo(p) < bondLen * 0.8)) continue;
     atoms.push({p, r: atomR * range(rng, 0.7, 1.0)});
-    bonds.push({i: parent, j: atoms.length - 1, r: atomR * 0.2});
+    bonds.push({i: parent, j: atoms.length - 1, r: atomR * 0.26});
   }
   // centre the molecule on its centroid so it spins in place
   const c = atoms.reduce((s, a) => s.add(a.p), v(0, 0, 0)).multiplyScalar(1 / atoms.length);
@@ -222,7 +222,8 @@ const particles = (rng: Rng, count: number, distRange: [number, number]): Body[]
   for (let k = 0; k < count; k++) {
     const dist = range(rng, distRange[0], distRange[1]);
     const center = atScreen(range(rng, -1.1, 1.1), range(rng, -1.1, 1.1), dist);
-    const r = range(rng, 0.012, 0.026) * (dist / 12);
+    const r =
+      dist < FOCUS_DIST - 1 ? range(rng, 0.05, 0.1) : range(rng, 0.01, 0.022) * (dist / 12);
     out.push(
       body(rng, {atoms: [{p: v(0, 0, 0), r}], bonds: []}, center, dist, {
         ampSin: randomUnit(rng).multiplyScalar(range(rng, 0.1, 0.35) * (dist / 15)),
@@ -230,7 +231,7 @@ const particles = (rng: Rng, count: number, distRange: [number, number]): Body[]
         driftFreq: rng() < 0.7 ? 1 : 2,
         pale: 0.15,
         opacity: range(rng, 0.55, 0.9),
-        glow: range(rng, 1.2, 2.5),
+        glow: dist < FOCUS_DIST - 1 ? 0 : range(rng, 0.5, 1.2),
         foreground: dist < FOCUS_DIST - 1,
       }),
     );
@@ -252,21 +253,20 @@ const buildDna = (heroScale: number): Body[] => {
     pairs: number;
     turns: number;
   }[] = [
-    // mostly parallel, rising lower-left -> upper-right, at several depths
-    {sx: -0.35, sy: 0.4, dist: 13.5, dir: v(1, 0.55, -0.25), pairs: 40, turns: 1},
-    {sx: 0.62, sy: -0.55, dist: 12.5, dir: v(1, 0.5, 0.15), pairs: 34, turns: -1},
-    {sx: 0.55, sy: 0.55, dist: 17, dir: v(1, 0.6, 0.1), pairs: 40, turns: 1},
-    {sx: -0.55, sy: -0.75, dist: 16, dir: v(1, 0.45, 0.2), pairs: 40, turns: -1},
-    {sx: -0.2, sy: 0.95, dist: 22, dir: v(1, 0.5, 0.0), pairs: 46, turns: 1},
-    {sx: 0.95, sy: 0.0, dist: 21, dir: v(1, 0.65, -0.1), pairs: 40, turns: -1},
+    // mostly parallel, rising lower-left -> upper-right: one large and
+    // nearly sharp near strand, the others progressively softer
+    {sx: 0.6, sy: -0.62, dist: 11.6, dir: v(1, 0.48, 0.15), pairs: 30, turns: -1},
+    {sx: -0.45, sy: 0.35, dist: 15, dir: v(1, 0.55, -0.25), pairs: 36, turns: 1},
+    {sx: -0.1, sy: 0.92, dist: 24, dir: v(1, 0.45, 0.0), pairs: 44, turns: 1},
+    {sx: -0.7, sy: -0.55, dist: 26, dir: v(1, 0.5, 0.2), pairs: 40, turns: -1},
   ];
   for (const h of helices) {
     const shape = makeHelix(
       rng,
       h.pairs,
-      range(rng, 0.55, 0.68),
-      range(rng, 0.38, 0.44),
-      range(rng, 0.12, 0.14),
+      range(rng, 0.6, 0.72),
+      range(rng, 0.4, 0.46),
+      range(rng, 0.13, 0.15),
       range(rng, -1, 1),
     );
     const q0 = new Quaternion().setFromUnitVectors(v(1, 0, 0), h.dir.clone().normalize());
@@ -283,12 +283,12 @@ const buildDna = (heroScale: number): Body[] => {
   }
   const placed = helices.map((h) => ({sx: h.sx, sy: h.sy}));
   bodies.push(
-    ...scatter(rng, 16, [11.5, 22], heroScale, 0.22, placed, (d) =>
+    ...scatter(rng, 10, [12, 20], heroScale, 0.3, placed, (d) =>
       makeSmallMolecule(rng, 0.0095 * d, 3 + Math.floor(rng() * 3)),
     ),
   );
   bodies.push(
-    ...scatter(rng, 3, [11.5, 15], heroScale, 0.25, placed, (d) => makeRing(rng, 0.0085 * d), () => ({
+    ...scatter(rng, 2, [12, 14], heroScale, 0.3, placed, (d) => makeRing(rng, 0.0085 * d), () => ({
       // rings face the camera so they read as hexagons
       spinAxis: v(0, 0, 1),
       q0: new Quaternion().setFromEuler(new Euler(range(rng, -0.5, 0.5), range(rng, -0.5, 0.5), 0)),
@@ -305,19 +305,19 @@ const buildStructures = (heroScale: number): Body[] => {
   const placed: {sx: number; sy: number}[] = [];
   // two large rings at the hero's depth, half hidden behind it
   const bigRings: [number, number, number, Euler][] = [
-    [0.3, 0.3, 13, new Euler(0.25, -0.45, 0.25)],
-    [-0.05, -0.62, 13.8, new Euler(-0.9, 0.2, -0.3)],
+    [0.32, 0.28, 15.5, new Euler(0.25, -0.45, 0.25)],
+    [-0.05, -0.66, 15, new Euler(-0.9, 0.2, -0.3)],
   ];
   for (const [sx, sy, dist, e] of bigRings) {
     bodies.push(
-      body(rng, makeRing(rng, 0.2), atScreen(sx, sy, dist), dist, {
+      body(rng, makeRing(rng, 0.17), atScreen(sx, sy, dist), dist, {
         q0: new Quaternion().setFromEuler(e),
         spinAxis: v(0, 0, 1),
         spinTurns: 0,
         ampSin: v(0.12, 0.08, 0),
         ampCos: v(0.04, -0.1, 0.08),
-        pale: 0,
-        opacity: 1,
+        pale: 0.08,
+        opacity: 0.95,
       }),
     );
     placed.push({sx, sy});
@@ -326,7 +326,7 @@ const buildStructures = (heroScale: number): Body[] => {
     ...scatter(rng, 2, [17, 26], heroScale, 0.45, placed, (d) => makeRing(rng, 0.0095 * d)),
   );
   bodies.push(
-    ...scatter(rng, 17, [12, 20], heroScale, 0.4, placed, (d) =>
+    ...scatter(rng, 22, [12.5, 19], heroScale * 0.8, 0.36, placed, (d) =>
       makeSmallMolecule(rng, 0.012 * d, 3 + Math.floor(rng() * 5)),
     ),
   );

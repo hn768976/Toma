@@ -45,7 +45,7 @@ vec4 glass(vec3 N, vec3 V, float blur, float pale, float opacity) {
   // Body: clear and light in the middle, saturated toward the silhouette;
   // the lower half reads a little deeper (light comes from above).
   float tilt = clamp(0.5 - N.y * 0.5, 0.0, 1.0);
-  float f = smoothstep(0.05, 0.62, rim + tilt * 0.12 - 0.05);
+  float f = smoothstep(0.03, 0.58, rim + tilt * 0.15 - 0.05);
   vec3 body = mix(center, edge, f);
 
   // Fake refraction: the studio seen through the glass, flipped like a lens,
@@ -53,14 +53,14 @@ vec4 glass(vec3 N, vec3 V, float blur, float pale, float opacity) {
   vec3 Tr = refract(-V, N, 0.69);
   vec3 seen = envLookup(normalize(Tr - N * 0.75), min(uEnvLodMax, 1.5 + blur * 6.0));
   float lumSeen = dot(seen, vec3(0.2126, 0.7152, 0.0722)) * uEnvNorm;
-  float pat = clamp(log2(lumSeen + 0.08) * 0.3, -0.75, 0.3) * (1.0 - wash) * smoothstep(0.0, 0.35, ndv);
+  float pat = clamp(log2(lumSeen + 0.08) * 0.3, -0.6, 0.15) * (1.0 - wash) * smoothstep(0.0, 0.35, ndv);
   vec3 lightBody = mix(center, uBgMid, 0.4);
   body = pat < 0.0 ? mix(body, edge * 0.7, -pat) : mix(body, lightBody, pat);
 
   // deeper, saturated outline right at the silhouette
   body = mix(body, edge * 0.72, smoothstep(0.75, 0.985, rim) * (1.0 - wash));
   // the very middle lets the bright background through
-  float alpha = mix(0.38, 1.0, smoothstep(0.0, 0.2, rim)) * opacity;
+  float alpha = mix(0.45, 1.0, smoothstep(0.0, 0.2, rim)) * opacity;
 
   // Transmitted light: a glow focused opposite the key light (lower inside),
   // plus a bright crescent hugging the inside of the rim on that side.
@@ -68,7 +68,7 @@ vec4 glass(vec3 N, vec3 V, float blur, float pale, float opacity) {
   float caus = lobe(N, cdir, 0.05, blur);
   float cres = smoothstep(0.45, 0.8, rim) * (1.0 - smoothstep(0.84, 0.96, rim))
              * smoothstep(0.0, 0.85, dot(normalize(N.xy + 1e-4), -normalize(uLight.xy)));
-  vec3 glow = lightBody * (caus * 1.6 + cres * 1.2 / (1.0 + blur * 2.0));
+  vec3 glow = lightBody * (caus * 2.0 + cres * 1.4 / (1.0 + blur * 2.0));
 
   vec3 avgBody = mix(center, edge, 0.5);
   body = mix(body, avgBody, wash);
@@ -87,7 +87,7 @@ vec4 glass(vec3 N, vec3 V, float blur, float pale, float opacity) {
   vec3 H = normalize(uLight + V);
   float spec = lobe(N, H, 0.0006, blur) * 1.1 + lobe(N, H, 0.006, blur) * 0.05;
   vec3 H3 = normalize(normalize(vec3(0.15, 0.95, 0.25)) + V);
-  spec += lobe(N, H3, 0.0005, blur) * 0.5;
+  spec += lobe(N, H3, 0.0005, blur) * 0.2;
   vec3 H2 = normalize(normalize(vec3(0.55, -0.45, 0.7)) + V);
   spec += lobe(N, H2, 0.0012, blur) * 0.2 / (1.0 + blur * 4.0);
   col += vec3(spec) * uSpecLevel * (1.0 - pale * 0.55);
@@ -123,13 +123,16 @@ out vec4 fragColor;
 
 // Tiny air bubbles trapped in the glass, fixed in the atom's own frame so
 // they turn with it. Each is a thin darker ring with a pin-point glint.
-const int NB = 9;
+const int NB = 16;
 const vec4 BUB[NB] = vec4[NB](
   vec4( 0.31, -0.52,  0.79, 0.075), vec4(-0.22, -0.61,  0.76, 0.055),
   vec4( 0.05, -0.35,  0.94, 0.045), vec4( 0.55, -0.15,  0.82, 0.05),
   vec4(-0.48,  0.10,  0.87, 0.04),  vec4( 0.12,  0.25,  0.96, 0.035),
   vec4(-0.70, -0.40, -0.59, 0.06),  vec4( 0.40,  0.60, -0.69, 0.05),
-  vec4(-0.10, -0.80, -0.59, 0.065)
+  vec4(-0.10, -0.80, -0.59, 0.065), vec4( 0.85, -0.30, -0.43, 0.055),
+  vec4(-0.60,  0.70,  0.38, 0.045), vec4( 0.20, -0.95, -0.20, 0.06),
+  vec4(-0.90, -0.20,  0.30, 0.05),  vec4( 0.60,  0.30,  0.74, 0.04),
+  vec4(-0.30,  0.40, -0.87, 0.055), vec4( 0.70, -0.65,  0.30, 0.05)
 );
 
 void main() {
