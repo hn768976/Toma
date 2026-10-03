@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mulberry32, smoothstep } from "../lib/random";
-import { easeInOutCubic, easeOutBack, glowPointsMaterial } from "../lib/three-util";
+import { easeInOutCubic, easeOutBack, glowPointsMaterial, makeEnv } from "../lib/three-util";
 import { GlossyReflector, REFLECT_GLSL } from "../lib/reflector";
 import type { Look } from "../lib/look";
 
@@ -90,7 +90,7 @@ for (const off of [0, -1, 1]) {
   }
 }
 // keep sprouting side branches from existing traces until the network is dense enough
-for (let attempt = 0; attempt < 220 && sites.length < 90; attempt++) {
+for (let attempt = 0; attempt < 90 && sites.length < 70; attempt++) {
   const l = lines[Math.floor(rng() * lines.length)];
   const i = Math.floor(rng() * (l.length - 1));
   const a = l[i], b = l[i + 1];
@@ -108,7 +108,7 @@ const pads: { x: number; z: number; s: number; pop: number; lime: boolean }[] = 
 const boxTint = (n: number) => Array.from({ length: n }, () => rng());
 for (const s of sites) {
   const first = boxes.length;
-  const dim = rng() < 0.22; // a few whole sites are deeper blue glass
+  const dim = rng() < 0.12; // a few whole sites are deeper blue glass
   const pop = LINE_START + s.d * FRAMES_PER_UNIT;
   const base = 0.42 + rng() * 0.26;
   if (s.kind === 0) {
@@ -126,7 +126,7 @@ for (const s of sites) {
     }
   } else {
     // tall tower
-    const n = 2 + Math.floor(rng() * 3);
+    const n = 3 + Math.floor(rng() * 4);
     for (let i = 0; i < n; i++) boxes.push({ x: s.x, y: i * base * 0.9, z: s.z, sx: base, sy: base * 0.82, sz: base, pop: pop + i * 4, lime: s.lime });
   }
   for (let i = first; i < boxes.length; i++) boxes[i].dim = dim;
@@ -160,13 +160,13 @@ const camAt = (f: number) => {
   let dist: number, elev: number, az: number, ty: number, fov: number;
   if (f < 60) {
     const t = f / 60;
-    dist = 11.0 - 0.6 * t; elev = 38; az = 46 - 1.5 * t; ty = 0.45; fov = 17;
+    dist = 7.6 - 0.4 * t; elev = 32; az = 46 - 1.5 * t; ty = 0.45; fov = 25;
   } else if (f < 330) {
     const t = easeInOutCubic((f - 60) / 270);
-    dist = 10.4 + (30 - 10.4) * t; elev = 38 + (44 - 38) * t; az = 44.5 + (34 - 44.5) * t; ty = 0.45 * (1 - t); fov = 17 + (30 - 17) * t;
+    dist = 7.2 + (34 - 7.2) * t; elev = 32 + (47 - 32) * t; az = 44.5 + (34 - 44.5) * t; ty = 0.45 * (1 - t); fov = 25 + (27 - 25) * t;
   } else {
     const t = (f - 330) / 120;
-    dist = 30 + 1.8 * t; elev = 44 + 0.5 * t; az = 34 - 3.5 * t; ty = 0; fov = 30;
+    dist = 34 + 1.8 * t; elev = 47 + 0.5 * t; az = 34 - 3.5 * t; ty = 0; fov = 27;
   }
   const e = (elev * Math.PI) / 180, a = (az * Math.PI) / 180;
   return { pos: new THREE.Vector3(dist * Math.cos(e) * Math.sin(a), dist * Math.sin(e) + ty, dist * Math.cos(e) * Math.cos(a)), target: new THREE.Vector3(0, ty, 0), dist, fov };
@@ -192,15 +192,17 @@ const GLASS_FRAG = /* glsl */ `
     float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
     float top = smoothstep(0.5, 0.9, vN.y);
     // frosted glass: lit from inside (brighter low down), top face milky
-    vec3 body = vCol * (0.45 + 0.75 * (1.0 - vY)) + mix(vCol, vec3(1.0), 0.3) * top * 0.35;
+    vec3 body = vCol * (0.35 + 0.5 * (1.0 - vY)) * (1.0 - 0.35 * top) + mix(vCol, vec3(1.0), 0.2) * top * 0.6;
     vec3 c = body * vGlow + mix(vCol, vec3(1.0), 0.25) * fr * vGlow * 0.8 + vCol * fres * 0.6 * vGlow;
     gl_FragColor = vec4(c, 1.0);
   }`;
 
 export const NetworkGrowth: Look<NetworkParams> = {
-  assets: [],
-  create: ({ width, height, params }) => {
+  assets: ["hdri"],
+  create: ({ gl, width, height, assets, params }) => {
     const scene = new THREE.Scene();
+    const env = makeEnv(gl, assets.hdri!);
+    scene.environment = env.texture;
     const cyan = new THREE.Color(params.cyan), lime = new THREE.Color(params.lime), floorCol = new THREE.Color(params.floor);
     scene.background = floorCol.clone().multiplyScalar(0.3);
     const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.1, 200);
@@ -210,7 +212,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const floorMat = new THREE.ShaderMaterial({
       uniforms: {
         tReflect: { value: reflector.texture }, textureMatrix: { value: reflector.textureMatrix },
-        base: { value: floorCol }, cyan: { value: cyan }, tile: { value: 5.6 },
+        base: { value: floorCol }, cyan: { value: cyan }, tile: { value: 4.4 },
       },
       vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: /* glsl */ `
@@ -228,14 +230,12 @@ export const NetworkGrowth: Look<NetworkParams> = {
           float bevel = smoothstep(0.07 - aa, 0.07 + aa, seam) * (1.0 - smoothstep(0.085 - aa, 0.085 + aa, seam));
           float r = length(vW.xz);
           // broad satin gradient across each slab
-          vec3 c = base * (1.35 + 0.3 * h(id)) * (0.85 + 0.3 * f.x * f.y);
+          vec3 c = base * (1.05 + 0.25 * h(id)) * (0.85 + 0.3 * f.x * f.y) + vec3(0.006, 0.004, 0.0);
           c *= 0.12 + 0.88 * groove;
-          c += cyan * 0.14 * bevel; // thin bright line beside each groove
-          float inset = 1.0 - smoothstep(0.0, aa * 1.5, abs(seam - 0.45)); // panel inset line
-          c += cyan * 0.04 * inset;
+          c += base * 0.8 * bevel; // faint bevel highlight beside each dark groove
           c += cyan * 0.12 * exp(-r / 2.2);
-          c += sampleReflection(vW, vec2(0.0)) * 0.012;
-          c *= 1.15;
+          c += sampleReflection(vW, vec2(0.0)) * 0.025;
+          c *= 1.0;
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -246,7 +246,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
     // ---- traces ----
     const pos: number[] = [], uvs: number[] = [], dist: number[] = [], idx: number[] = [];
     let vbase = 0;
-    const W = 0.045;
+    const W = 0.03;
     const addRibbon = (pts: P[], w: number, y: number) => {
       for (let i = 0; i < pts.length; i++) {
         const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
@@ -262,7 +262,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
       }
       vbase += pts.length * 2;
     };
-    lines.forEach((l) => addRibbon(fillet(l, 0.9), W, 0.012));
+    lines.forEach((l) => addRibbon(fillet(l, 1.6), W, 0.012));
     const lineGeo = new THREE.BufferGeometry();
     lineGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     lineGeo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
@@ -278,7 +278,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
           float across = exp(-vUv.y * vUv.y * 2.0);
           float head = exp(-max(front - vD, 0.0) / 0.35) * 4.0;
           float run = exp(-pow((fract(vD / 2.2 - frame * 0.03) - 0.5) / 0.025, 2.0)) * 3.0;
-          vec3 c = cyan * (1.3 + head + run) * across;
+          vec3 c = cyan * (1.1 + head + run) * across;
           gl_FragColor = vec4(c, 1.0);
         }`,
       blending: THREE.AdditiveBlending,
@@ -324,7 +324,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
     boxMesh.frustumCulled = false;
     scene.add(boxMesh);
     boxes.forEach((b, i) => {
-      const c = b.lime ? lime : dims[i] ? new THREE.Color(0.05, 0.3, 1.0) : cyan.clone().lerp(new THREE.Color(0.02, 0.5, 1.0), 0.25 + tints[i] * 0.35);
+      const c = b.lime ? lime : dims[i] ? new THREE.Color(0.04, 0.18, 0.85) : cyan.clone().lerp(new THREE.Color(0.02, 0.5, 1.0), 0.25 + tints[i] * 0.35);
       bCol.set([c.r, c.g, c.b], i * 3);
     });
 
@@ -333,10 +333,10 @@ export const NetworkGrowth: Look<NetworkParams> = {
     scene.add(core);
     const panel = new THREE.Mesh(
       new THREE.BoxGeometry(0.94, 0.94, 0.94).translate(0, 0.5, 0),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(0.05, 0.62, 1.0).multiplyScalar(1.15) }),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0.12, 0.85, 1.0).multiplyScalar(1.6) }),
     );
     core.add(panel);
-    const metal = new THREE.MeshStandardMaterial({ color: new THREE.Color("#e6eef6"), metalness: 0.6, roughness: 0.18, emissive: new THREE.Color("#4a7090") });
+    const metal = new THREE.MeshStandardMaterial({ color: new THREE.Color("#eef4fa"), metalness: 1.0, roughness: 0.22, envMapIntensity: 1.4, emissive: new THREE.Color("#3a8aa8") });
     const BW = 0.05; // beam width
     const beam = new THREE.BoxGeometry(1, 1, 1);
     const edgesL: [number, number, number, number, number, number][] = [];
@@ -390,12 +390,12 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const wireGeo = new THREE.BufferGeometry();
     wireGeo.setAttribute("position", new THREE.Float32BufferAttribute(wPos, 3));
     wireGeo.setIndex(wIdx);
-    const wires = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: cyan.clone().lerp(new THREE.Color(0.2, 0.5, 1), 0.3).multiplyScalar(3), side: THREE.DoubleSide }));
+    const wires = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0.15, 0.75, 1.0).multiplyScalar(2.2), side: THREE.DoubleSide }));
     scene.add(wires);
     const tipGeo = new THREE.BufferGeometry();
     tipGeo.setAttribute("position", new THREE.Float32BufferAttribute(tipPos, 3));
-    tipGeo.setAttribute("size", new THREE.Float32BufferAttribute(tipPos.map(() => 7).slice(0, tipPos.length / 3), 1));
-    tipGeo.setAttribute("pcolor", new THREE.Float32BufferAttribute(tipPos.map(() => 2.5), 3));
+    tipGeo.setAttribute("size", new THREE.Float32BufferAttribute(tipPos.map(() => 3.5).slice(0, tipPos.length / 3), 1));
+    tipGeo.setAttribute("pcolor", new THREE.Float32BufferAttribute(tipPos.map((_, i) => (i % 3 === 0 ? 0.3 : i % 3 === 1 ? 1.4 : 2.0)), 3));
     const tips = new THREE.Points(tipGeo, glowPointsMaterial(height, { sharp: 0.4 }));
     tips.frustumCulled = false;
     scene.add(tips);
@@ -418,11 +418,11 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const post = {
       exposure: 1.0,
       tonemap: "aces" as const,
-      bloom: { strength: 2.8, threshold: 0.45, knee: 0.5, radius: 0.85 },
+      bloom: { strength: 2.4, threshold: 0.5, knee: 0.5, radius: 0.6 },
       dof: { focus: 5, range: 6, nearRange: 3, maxBlur: 0.008, maxNearBlur: 0.006 },
       grain: 0.02,
       grainPeriod: 0,
-      grade: { saturation: 1.4 },
+      grade: { saturation: 1.25, vignette: 0.35 },
     };
 
     const update = (frame: number) => {
@@ -432,7 +432,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
       camera.updateProjectionMatrix();
       camera.lookAt(cam.target);
       // DOF follows the core cube; shallow when close, nearly none when wide
-      const wide = smoothstep(11, 22, cam.dist);
+      const wide = smoothstep(9, 24, cam.dist);
       post.dof.focus = cam.dist;
       // long lens close-up: little visible blur; wide shot: shallow band of focus
       post.dof.range = 6 + 6 * wide;
@@ -470,12 +470,12 @@ export const NetworkGrowth: Look<NetworkParams> = {
         padMesh.setMatrixAt(i, m4);
         const c = p.lime ? lime : cyan;
         const b = k * (1 + 1.5 * Math.exp(-Math.max(age, 0) / 10));
-        padCol.set([c.r * b, c.g * b, c.b * b], i * 3);
+        padCol.set([c.r * b * 1.6, c.g * b * 1.6, c.b * b * 1.6], i * 3);
       });
-      const coreGlow = 5 + 0.4 * Math.sin(frame * 0.15);
+      const coreGlow = 2.0 + 0.2 * Math.sin(frame * 0.15);
       m4.compose(v.set(0, 0.006, 0), q.identity(), sc.set(1.22, 1, 1.22));
       padMesh.setMatrixAt(pads.length, m4);
-      padCol.set([cyan.r * coreGlow, cyan.g * coreGlow, cyan.b * coreGlow], pads.length * 3);
+      padCol.set([0.05 * coreGlow, 0.6 * coreGlow, 1.0 * coreGlow], pads.length * 3); // electric-blue neon
       padMesh.instanceMatrix.needsUpdate = true;
       (padMesh.geometry.attributes.iColor as THREE.BufferAttribute).needsUpdate = true;
 
