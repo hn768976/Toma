@@ -85,23 +85,16 @@ const rayGradient = (color: string, turn: number, cx: number, cy: number) => {
     );
   }
   return (
-    `radial-gradient(circle at ${cx}px ${cy}px, rgba(${rgb}, 0.45) 0px, rgba(${rgb}, 0) ${(cx * 0.2).toFixed(0)}px), ` +
     `conic-gradient(from ${turn.toFixed(3)}deg at ${cx}px ${cy}px, rgba(${rgb}, 0) 0deg, ${stops.join(", ")}, rgba(${rgb}, 0) 360deg)`
   );
 };
 
-/** Rays fade out with distance from their source; reach zero before the corners. */
+/**
+ * Rays fade in away from their source (so the overlapping wedges never form a
+ * bright spot at the origin) and fade out before the corners.
+ */
 const rayMask = (cx: number, cy: number, r: number) =>
-  `radial-gradient(circle at ${cx}px ${cy}px, #000 0px, rgba(0,0,0,0.55) ${(r * 0.1).toFixed(0)}px, rgba(0,0,0,0.18) ${(r * 0.38).toFixed(0)}px, rgba(0,0,0,0.04) ${(r * 0.7).toFixed(0)}px, transparent ${r.toFixed(0)}px)`;
-
-/** Soft blown-out light source: white-hot core, long smooth falloff. */
-const bloomGradient = (color: string, cx: number, cy: number, w: number, h: number) => {
-  const c = hexToRgb(color);
-  return (
-    `radial-gradient(ellipse ${w * 0.085}px ${h * 0.13}px at ${cx}px ${cy}px, rgba(${c}, 1) 0%, rgba(${c}, 0.85) 30%, rgba(${c}, 0.45) 60%, rgba(${c}, 0.15) 82%, rgba(${c}, 0) 100%), ` +
-    `radial-gradient(ellipse ${w * 0.32}px ${h * 0.42}px at ${cx}px ${cy}px, rgba(${c}, 0.5) 0%, rgba(${c}, 0.3) 18%, rgba(${c}, 0.13) 42%, rgba(${c}, 0.04) 70%, rgba(${c}, 0) 100%)`
-  );
-};
+  `radial-gradient(circle at ${cx}px ${cy}px, transparent 0px, rgba(0,0,0,0.25) ${(r * 0.05).toFixed(0)}px, rgba(0,0,0,0.55) ${(r * 0.1).toFixed(0)}px, rgba(0,0,0,0.18) ${(r * 0.38).toFixed(0)}px, rgba(0,0,0,0.04) ${(r * 0.7).toFixed(0)}px, transparent ${r.toFixed(0)}px)`;
 
 type Placed = { plane: PlaneSpec; dist: number; key: string; opacity: number };
 
@@ -340,18 +333,10 @@ export const EquationFlight: React.FC<EquationFlightProps> = ({ variant, dbg = "
         })()}
       </AbsoluteFill>
 
-      {/* Light rays: a flat overlay fanning from near the centre, one full
+      {/* Light rays: a flat overlay fanning from right of centre, one full
           turn per loop. Each ray is a soft-edged wedge of a conic gradient
           (no blur filter needed), faded with distance by a radial mask.
           Screen-blended so empty black stays black. */}
-      {/* The light source the rays fan from: a large blown-out bloom, right of
-          centre. A radial gradient that reaches zero well inside the frame. */}
-      <AbsoluteFill
-        style={{
-          mixBlendMode: "screen",
-          background: bloomGradient(pal.ray, rayCx, rayCy, width, height),
-        }}
-      />
       {off("rays") ? null : (
         <AbsoluteFill
           style={{
