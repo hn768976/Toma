@@ -169,7 +169,7 @@ export class MoleculeRenderer {
   private heroOffset: [number, number];
   private disposables: {dispose: () => void}[] = [];
 
-  constructor(env: DataTexture, background: BackgroundId, colour: ColourRow) {
+  constructor(env: DataTexture, background: BackgroundId, colour: ColourRow, bgOnly = false) {
     this.bodies = BACKGROUND_BODIES[background];
     this.hero = HEROES[background];
     const bgRow = BACKGROUNDS.find((b) => b.id === background)!;
@@ -307,6 +307,11 @@ export class MoleculeRenderer {
     const post = new Mesh(fullscreenTriangle(), this.finalMat);
     post.frustumCulled = false;
     this.postScene.add(post);
+
+    if (bgOnly) {
+      // testing only: everything but the background gradient hidden
+      this.scene.children.forEach((o) => (o.visible = o === bgQuad));
+    }
 
     this.disposables.push(sphere, cyl, bgMat, this.heroMat, this.heroBondMat, this.finalMat);
   }

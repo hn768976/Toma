@@ -19,6 +19,8 @@ export type BeautyMoleculeProps = {
   background: BackgroundId;
   colour: string;
   loopCheck?: boolean;
+  /** Testing only: draw the background gradient alone (banding check). */
+  bgOnly?: boolean;
 };
 
 // Studio Small 03 by Sergej Majboroda, Poly Haven (CC0). See public/hdri/LICENSE.txt
@@ -35,7 +37,7 @@ const Driver: React.FC<{renderer: MoleculeRenderer}> = ({renderer}) => {
   return null;
 };
 
-export const BeautyMolecule: React.FC<BeautyMoleculeProps> = ({background, colour}) => {
+export const BeautyMolecule: React.FC<BeautyMoleculeProps> = ({background, colour, bgOnly}) => {
   const {width, height} = useVideoConfig();
   const [env, setEnv] = useState<DataTexture | null>(null);
   const [handle] = useState(() => delayRender('Loading HDRI'));
@@ -51,8 +53,8 @@ export const BeautyMolecule: React.FC<BeautyMoleculeProps> = ({background, colou
 
   const colourRow = COLOURS.find((c) => c.id === colour) ?? COLOURS[0];
   const renderer = useMemo(
-    () => (env ? new MoleculeRenderer(env, background, colourRow) : null),
-    [env, background, colourRow],
+    () => (env ? new MoleculeRenderer(env, background, colourRow, Boolean(bgOnly)) : null),
+    [env, background, colourRow, bgOnly],
   );
   useEffect(() => () => renderer?.dispose(), [renderer]);
 
