@@ -9,8 +9,8 @@ import type { GlobeParams } from "./looks/ConnectedGlobe";
 export type Version<P> = { id: string; params: P };
 
 export const LOW_POLY: Version<LowPolyParams>[] = [
-  { id: "LowPolyLuxe-Gold", params: { edge: "#E8B860", face: "#3a3027", sparkle: "#FFC870", envTint: "#FFE2B8" } },
-  { id: "LowPolyLuxe-Silver", params: { edge: "#D8DEE8", face: "#30343b", sparkle: "#FFFFFF", envTint: "#DCE6F4" } },
+  { id: "LowPolyLuxe-Gold", params: { edge: "#E8B860", face: "#3a3027", envTint: "#FFE2B8" } },
+  { id: "LowPolyLuxe-Silver", params: { edge: "#D8DEE8", face: "#30343b", envTint: "#DCE6F4" } },
 ];
 
 export const CLOUD: Version<CloudParams>[] = [{ id: "CloudUpload", params: { accent: "#5FE8FF", bg: "#020A20" } }];

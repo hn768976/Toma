@@ -209,7 +209,7 @@ Parameters per look:
 
 | Look | Row fields |
 |------|------------|
-| Low-Poly Luxe | `edge`, `face`, `sparkle`, `envTint` |
+| Low-Poly Luxe | `edge`, `face`, `envTint` |
 | Cloud Upload | `accent`, `bg` |
 | Price Houses | `symbol`, `glow`, `dark` |
 | Network Growth | `cyan`, `lime`, `floor` |

@@ -2,13 +2,12 @@ import * as THREE from "three";
 import Delaunator from "delaunator";
 import { createNoise4D } from "simplex-noise";
 import { mulberry32, TAU } from "../lib/random";
-import { glowPointsMaterial, hdrColor, makeEnv } from "../lib/three-util";
+import { makeEnv } from "../lib/three-util";
 import type { Look } from "../lib/look";
 
 export type LowPolyParams = {
   edge: string; // colour of the metal rails
   face: string; // base colour of the glossy faces
-  sparkle: string;
   envTint: string; // tint of the faces' reflections (warm / cool)
 };
 
@@ -46,28 +45,6 @@ for (let i = 0; i < tri.length; i += 3) {
       edges.push([Math.min(a, b), Math.max(a, b)]);
     }
   }
-}
-
-// sparkles: strung along the rails like fairy lights, a few drifting free
-const N_EDGE_SPARK = 4600;
-const N_VERT_SPARK = 1400; // clustered at the vertices
-const N_FREE_SPARK = 220;
-type Spark = { e: number; u: number; ua: number; k: number; ph: number; tk: number; tph: number; size: number; bright: number;
-  x: number; y: number; z: number; ax: number; ay: number; kx: number; ky: number; px: number; py: number };
-const sparks: Spark[] = [];
-for (let i = 0; i < N_EDGE_SPARK + N_FREE_SPARK + N_VERT_SPARK; i++) {
-  const hot = rng() < 0.03;
-  sparks.push({
-    e: Math.floor(rng() * edges.length),
-    u: rng(), ua: 0.03 + rng() * 0.12, k: 1 + Math.floor(rng() * 2), ph: rng() * TAU,
-    tk: 2 + Math.floor(rng() * 14), tph: rng() * TAU,
-    size: hot ? 8 + rng() * 3 : 3.5 + rng() * 2.5,
-    bright: hot ? 12 + rng() * 6 : 5 + rng() * 6,
-    x: X0 + rng() * (X1 - X0), y: Y0 + rng() * (Y1 - Y0), z: 0.2 + rng() * 0.9,
-    ax: 0.05 + rng() * 0.2, ay: 0.05 + rng() * 0.2,
-    kx: 1 + Math.floor(rng() * 2), ky: 1 + Math.floor(rng() * 2),
-    px: rng() * TAU, py: rng() * TAU,
-  });
 }
 
 // rail cross-section (fractions of SPACING): gap between neighbouring frames,
@@ -139,20 +116,6 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
     const hubs = new THREE.InstancedMesh(hubGeo, railMat, NV);
     hubs.frustumCulled = false;
     hubs.visible = false; // the reference has no hub nodes
-
-    // ---- sparkles ----
-    const NS = sparks.length;
-    const sPos = new Float32Array(NS * 3);
-    const sSize = new Float32Array(NS);
-    const sCol = new Float32Array(NS * 3);
-    const sGeo = new THREE.BufferGeometry();
-    sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
-    sGeo.setAttribute("size", new THREE.BufferAttribute(sSize, 1));
-    sGeo.setAttribute("pcolor", new THREE.BufferAttribute(sCol, 3));
-    const sp = new THREE.Points(sGeo, glowPointsMaterial(height, { sharp: 0.2 }));
-    sp.frustumCulled = false;
-    scene.add(sp);
-    const sparkCol = hdrColor(params.sparkle, 1);
 
     const vx = new Float32Array(NV * 3);
     const vn = new Float32Array(NV * 3); // approximate vertex normals
@@ -240,32 +203,6 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
         hubs.setMatrixAt(i, m4);
       }
       hubs.instanceMatrix.needsUpdate = true;
-
-      for (let i = 0; i < NS; i++) {
-        const p = sparks[i];
-        if (i < N_EDGE_SPARK || i >= N_EDGE_SPARK + N_FREE_SPARK) {
-          const [a, b] = edges[p.e];
-          const near = i >= N_EDGE_SPARK + N_FREE_SPARK;
-          const u0 = near ? (p.u < 0.5 ? 0.02 + p.u * 0.12 : 0.98 - (1 - p.u) * 0.12) : p.u;
-          const u = Math.min(0.99, Math.max(0.01, u0 + (near ? 0.02 : p.ua) * Math.sin(TAU * p.k * t + p.ph)));
-          A.fromArray(vx, a * 3);
-          B.fromArray(vx, b * 3);
-          A.lerp(B, u);
-          N.fromArray(vn, a * 3).add(C.fromArray(vn, b * 3)).normalize();
-          A.addScaledVector(N, RIDGE * SPACING * 1.2);
-          sPos[i * 3] = A.x; sPos[i * 3 + 1] = A.y; sPos[i * 3 + 2] = A.z;
-        } else {
-          const x = p.x + p.ax * Math.sin(TAU * p.kx * t + p.px), y = p.y + p.ay * Math.sin(TAU * p.ky * t + p.py);
-          sPos[i * 3] = x; sPos[i * 3 + 1] = y; sPos[i * 3 + 2] = surfZ(x, y) + p.z;
-        }
-        const tw = Math.pow(0.5 + 0.5 * Math.sin(TAU * p.tk * t + p.tph), 3);
-        const br = p.bright * (0.2 + 0.8 * tw);
-        sSize[i] = p.size;
-        sCol[i * 3] = sparkCol.r * br; sCol[i * 3 + 1] = sparkCol.g * br; sCol[i * 3 + 2] = sparkCol.b * br;
-      }
-      sGeo.attributes.position.needsUpdate = true;
-      sGeo.attributes.size.needsUpdate = true;
-      sGeo.attributes.pcolor.needsUpdate = true;
     };
 
     return {
@@ -284,7 +221,7 @@ export const LowPolyLuxe: Look<LowPolyParams> = {
       },
       dispose: () => {
         env.dispose();
-        [faceGeo, railGeo, sGeo, hubGeo].forEach((g) => g.dispose());
+        [faceGeo, railGeo, hubGeo].forEach((g) => g.dispose());
       },
     };
   },
