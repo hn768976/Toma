@@ -90,7 +90,7 @@ for (const off of [0, -1, 1]) {
   }
 }
 // keep sprouting side branches from existing traces until the network is dense enough
-for (let attempt = 0; attempt < 500 && sites.length < 110; attempt++) {
+for (let attempt = 0; attempt < 220 && sites.length < 90; attempt++) {
   const l = lines[Math.floor(rng() * lines.length)];
   const i = Math.floor(rng() * (l.length - 1));
   const a = l[i], b = l[i + 1];
@@ -102,11 +102,13 @@ for (let attempt = 0; attempt < 500 && sites.length < 110; attempt++) {
   grow(a.x + tx * k * LAT, a.z + tz * k * LAT, [Math.round(tz * side), Math.round(-tx * side)], a.d + k * LAT, 2);
 }
 // nodes: each site becomes 1..4 boxes
-type Box = { x: number; y: number; z: number; sx: number; sy: number; sz: number; pop: number; lime: boolean };
+type Box = { x: number; y: number; z: number; sx: number; sy: number; sz: number; pop: number; lime: boolean; dim?: boolean };
 const boxes: Box[] = [];
 const pads: { x: number; z: number; s: number; pop: number; lime: boolean }[] = [];
 const boxTint = (n: number) => Array.from({ length: n }, () => rng());
 for (const s of sites) {
+  const first = boxes.length;
+  const dim = rng() < 0.22; // a few whole sites are deeper blue glass
   const pop = LINE_START + s.d * FRAMES_PER_UNIT;
   const base = 0.42 + rng() * 0.26;
   if (s.kind === 0) {
@@ -127,11 +129,12 @@ for (const s of sites) {
     const n = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) boxes.push({ x: s.x, y: i * base * 0.9, z: s.z, sx: base, sy: base * 0.82, sz: base, pop: pop + i * 4, lime: s.lime });
   }
+  for (let i = first; i < boxes.length; i++) boxes[i].dim = dim;
   pads.push({ x: s.x, z: s.z, s: base * (s.kind === 2 ? 2.6 : 1.9), pop, lime: s.lime });
 }
 
 const tints = boxTint(boxes.length);
-const dims = boxTint(boxes.length).map((v) => v < 0.33); // a third are dim deep-blue glass
+const dims = boxes.map((b) => !!b.dim);
 
 // floor ribbon with rounded 90-degree corners; returns pts with distance
 const fillet = (pts: P[], r: number) => {
@@ -154,19 +157,19 @@ const fillet = (pts: P[], r: number) => {
 
 // camera keyframes
 const camAt = (f: number) => {
-  let dist: number, elev: number, az: number, ty: number;
+  let dist: number, elev: number, az: number, ty: number, fov: number;
   if (f < 60) {
     const t = f / 60;
-    dist = 5.0 - 0.35 * t; elev = 33; az = 46 - 1.5 * t; ty = 0.45;
+    dist = 11.0 - 0.6 * t; elev = 38; az = 46 - 1.5 * t; ty = 0.45; fov = 17;
   } else if (f < 330) {
     const t = easeInOutCubic((f - 60) / 270);
-    dist = 4.65 + (24 - 4.65) * t; elev = 33 + (37 - 33) * t; az = 44.5 + (34 - 44.5) * t; ty = 0.45 * (1 - t);
+    dist = 10.4 + (30 - 10.4) * t; elev = 38 + (44 - 38) * t; az = 44.5 + (34 - 44.5) * t; ty = 0.45 * (1 - t); fov = 17 + (30 - 17) * t;
   } else {
     const t = (f - 330) / 120;
-    dist = 24 + 1.6 * t; elev = 37 + 0.5 * t; az = 34 - 3.5 * t; ty = 0;
+    dist = 30 + 1.8 * t; elev = 44 + 0.5 * t; az = 34 - 3.5 * t; ty = 0; fov = 30;
   }
   const e = (elev * Math.PI) / 180, a = (az * Math.PI) / 180;
-  return { pos: new THREE.Vector3(dist * Math.cos(e) * Math.sin(a), dist * Math.sin(e) + ty, dist * Math.cos(e) * Math.cos(a)), target: new THREE.Vector3(0, ty, 0), dist };
+  return { pos: new THREE.Vector3(dist * Math.cos(e) * Math.sin(a), dist * Math.sin(e) + ty, dist * Math.cos(e) * Math.cos(a)), target: new THREE.Vector3(0, ty, 0), dist, fov };
 };
 
 const GLASS_VERT = /* glsl */ `
@@ -190,7 +193,7 @@ const GLASS_FRAG = /* glsl */ `
     float top = smoothstep(0.5, 0.9, vN.y);
     // frosted glass: lit from inside (brighter low down), top face milky
     vec3 body = vCol * (0.45 + 0.75 * (1.0 - vY)) + mix(vCol, vec3(1.0), 0.3) * top * 0.35;
-    vec3 c = body * vGlow + mix(vCol, vec3(1.0), 0.45) * fr * vGlow * 0.9 + vCol * fres * 0.5 * vGlow;
+    vec3 c = body * vGlow + mix(vCol, vec3(1.0), 0.25) * fr * vGlow * 0.8 + vCol * fres * 0.6 * vGlow;
     gl_FragColor = vec4(c, 1.0);
   }`;
 
@@ -207,7 +210,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const floorMat = new THREE.ShaderMaterial({
       uniforms: {
         tReflect: { value: reflector.texture }, textureMatrix: { value: reflector.textureMatrix },
-        base: { value: floorCol }, cyan: { value: cyan }, tile: { value: 4.2 },
+        base: { value: floorCol }, cyan: { value: cyan }, tile: { value: 5.6 },
       },
       vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: /* glsl */ `
@@ -222,15 +225,17 @@ export const NetworkGrowth: Look<NetworkParams> = {
           float seam = min(dd.x, dd.y);
           float aa = fwidth(seam) + 1e-4;
           float groove = smoothstep(0.04 - aa, 0.04 + aa, seam);
-          float bevel = smoothstep(0.1 - aa, 0.1 + aa, seam) * (1.0 - smoothstep(0.125 - aa, 0.125 + aa, seam));
+          float bevel = smoothstep(0.07 - aa, 0.07 + aa, seam) * (1.0 - smoothstep(0.085 - aa, 0.085 + aa, seam));
           float r = length(vW.xz);
           // broad satin gradient across each slab
           vec3 c = base * (1.35 + 0.3 * h(id)) * (0.85 + 0.3 * f.x * f.y);
           c *= 0.12 + 0.88 * groove;
-          c += base * 0.9 * bevel;
-          c += cyan * 0.05 * exp(-r / 3.0);
-          c += sampleReflection(vW, vec2(0.0)) * 0.025;
-          c *= mix(1.0, 0.6, smoothstep(16.0, 45.0, r));
+          c += cyan * 0.14 * bevel; // thin bright line beside each groove
+          float inset = 1.0 - smoothstep(0.0, aa * 1.5, abs(seam - 0.45)); // panel inset line
+          c += cyan * 0.04 * inset;
+          c += cyan * 0.12 * exp(-r / 2.2);
+          c += sampleReflection(vW, vec2(0.0)) * 0.012;
+          c *= 1.15;
           gl_FragColor = vec4(c, 1.0);
         }`,
     });
@@ -257,7 +262,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
       }
       vbase += pts.length * 2;
     };
-    lines.forEach((l) => addRibbon(fillet(l, 0.3), W, 0.012));
+    lines.forEach((l) => addRibbon(fillet(l, 0.9), W, 0.012));
     const lineGeo = new THREE.BufferGeometry();
     lineGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     lineGeo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
@@ -291,8 +296,8 @@ export const NetworkGrowth: Look<NetworkParams> = {
       vertexShader: `attribute vec3 iColor; attribute float iRing; varying float vRing; varying vec2 vUv; varying vec3 vCol; void main(){ vRing = iRing; vUv = uv; vCol = iColor; gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position,1.0); }`,
       fragmentShader: `varying float vRing; varying vec2 vUv; varying vec3 vCol;
         void main(){ vec2 q = abs(vUv * 2.0 - 1.0); float e = max(q.x, q.y);
-          float ring = smoothstep(0.78, 0.84, e) * (1.0 - smoothstep(0.88, 0.94, e));
-          float fill = exp(-dot(q, q) * 2.5) * 0.45;
+          float ring = smoothstep(0.78, 0.82, e) * (1.0 - smoothstep(0.84, 0.88, e)) + vRing * smoothstep(0.9, 0.93, e) * (1.0 - smoothstep(0.95, 0.98, e));
+          float fill = exp(-dot(q, q) * 2.0) * 0.7;
           gl_FragColor = vec4(vCol * (ring * 2.4 * vRing + fill), 1.0); }`,
       blending: THREE.AdditiveBlending,
       transparent: true,
@@ -319,7 +324,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
     boxMesh.frustumCulled = false;
     scene.add(boxMesh);
     boxes.forEach((b, i) => {
-      const c = b.lime ? lime : dims[i] ? new THREE.Color(0.02, 0.12, 0.6) : cyan.clone().lerp(new THREE.Color(0.1, 0.45, 1.0), tints[i] * 0.4);
+      const c = b.lime ? lime : dims[i] ? new THREE.Color(0.05, 0.3, 1.0) : cyan.clone().lerp(new THREE.Color(0.02, 0.5, 1.0), 0.25 + tints[i] * 0.35);
       bCol.set([c.r, c.g, c.b], i * 3);
     });
 
@@ -328,11 +333,11 @@ export const NetworkGrowth: Look<NetworkParams> = {
     scene.add(core);
     const panel = new THREE.Mesh(
       new THREE.BoxGeometry(0.94, 0.94, 0.94).translate(0, 0.5, 0),
-      new THREE.MeshBasicMaterial({ color: cyan.clone().lerp(new THREE.Color(0.1, 0.5, 1), 0.35).multiplyScalar(1.0) }),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(0.05, 0.62, 1.0).multiplyScalar(1.15) }),
     );
     core.add(panel);
-    const metal = new THREE.MeshStandardMaterial({ color: new THREE.Color("#eef6ff"), metalness: 0.3, roughness: 0.35, emissive: new THREE.Color("#5f8fb0") });
-    const BW = 0.075; // beam width
+    const metal = new THREE.MeshStandardMaterial({ color: new THREE.Color("#e6eef6"), metalness: 0.6, roughness: 0.18, emissive: new THREE.Color("#4a7090") });
+    const BW = 0.05; // beam width
     const beam = new THREE.BoxGeometry(1, 1, 1);
     const edgesL: [number, number, number, number, number, number][] = [];
     for (const a of [-0.5, 0.5]) for (const b2 of [-0.5, 0.5]) {
@@ -357,8 +362,8 @@ export const NetworkGrowth: Look<NetworkParams> = {
       // start xyz, direction xyz, length
       [0, 1.05, 0, 0, 1, 0, 0.45],
       [0.45, 1.0, -0.45, 0.6, 0.5, -0.3, 0.4],
-      [0.55, 0.55, 0.2, 1, 0.05, 0.2, 0.7],
-      [0.4, 0.15, 0.55, 0.8, -0.1, 0.6, 1.0],
+      [0.52, 0.62, 0.0, 1, 0.08, -0.1, 0.75],
+      [0.52, 0.3, 0.25, 1, 0.12, 0.3, 0.6],
       [0.1, 1.02, 0.2, 0.3, 1, 0.5, 0.3],
     ];
     const wPos: number[] = [], wIdx: number[] = [], tipPos: number[] = [];
@@ -413,24 +418,27 @@ export const NetworkGrowth: Look<NetworkParams> = {
     const post = {
       exposure: 1.0,
       tonemap: "aces" as const,
-      bloom: { strength: 1.9, threshold: 0.5, knee: 0.5, radius: 0.7 },
+      bloom: { strength: 2.8, threshold: 0.45, knee: 0.5, radius: 0.85 },
       dof: { focus: 5, range: 6, nearRange: 3, maxBlur: 0.008, maxNearBlur: 0.006 },
       grain: 0.02,
       grainPeriod: 0,
-      grade: { saturation: 1.25 },
+      grade: { saturation: 1.4 },
     };
 
     const update = (frame: number) => {
       const cam = camAt(frame);
       camera.position.copy(cam.pos);
+      camera.fov = cam.fov;
+      camera.updateProjectionMatrix();
       camera.lookAt(cam.target);
       // DOF follows the core cube; shallow when close, nearly none when wide
-      const wide = smoothstep(5, 11, cam.dist);
+      const wide = smoothstep(11, 22, cam.dist);
       post.dof.focus = cam.dist;
-      post.dof.range = 4 + 30 * wide;
-      post.dof.maxBlur = 0.012 * (1 - wide) + 0.002 * wide;
-      post.dof.nearRange = 2 + 14 * wide;
-      post.dof.maxNearBlur = 0.006 * (1 - wide) + 0.0012 * wide;
+      // long lens close-up: little visible blur; wide shot: shallow band of focus
+      post.dof.range = 6 + 6 * wide;
+      post.dof.maxBlur = 0.004 + 0.004 * wide;
+      post.dof.nearRange = 4 + 5 * wide;
+      post.dof.maxNearBlur = 0.003 + 0.005 * wide;
 
       const front = (frame - LINE_START) / FRAMES_PER_UNIT;
       lineMat.uniforms.front.value = front;
@@ -450,7 +458,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
         sc.set(b.sx * sxz + 1e-4, b.sy * sy + 1e-4, b.sz * sxz + 1e-4);
         m4.compose(v, q, sc);
         boxMesh.setMatrixAt(i, m4);
-        bGlow[i] = glow * (dims[i] ? 0.8 : 1.9);
+        bGlow[i] = glow * (dims[i] ? 0.9 : 1.5);
       });
       boxMesh.instanceMatrix.needsUpdate = true;
       (boxMesh.geometry.attributes.iGlow as THREE.BufferAttribute).needsUpdate = true;
@@ -464,7 +472,7 @@ export const NetworkGrowth: Look<NetworkParams> = {
         const b = k * (1 + 1.5 * Math.exp(-Math.max(age, 0) / 10));
         padCol.set([c.r * b, c.g * b, c.b * b], i * 3);
       });
-      const coreGlow = 3.2 + 0.3 * Math.sin(frame * 0.15);
+      const coreGlow = 5 + 0.4 * Math.sin(frame * 0.15);
       m4.compose(v.set(0, 0.006, 0), q.identity(), sc.set(1.22, 1, 1.22));
       padMesh.setMatrixAt(pads.length, m4);
       padCol.set([cyan.r * coreGlow, cyan.g * coreGlow, cyan.b * coreGlow], pads.length * 3);
