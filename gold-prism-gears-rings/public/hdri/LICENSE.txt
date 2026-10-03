@@ -1,0 +1,11 @@
+studio.exr — studio HDRI from Poly Haven (https://polyhaven.com), licensed CC0 1.0
+(public domain dedication, https://creativecommons.org/publicdomain/zero/1.0/).
+
+This copy is the "studio" HDRI as redistributed (CC0) in the npm package
+@pmndrs/assets@1.7.0 (hdri/studio.exr.js): the Poly Haven original resized to
+512x256 and stored as a DWAB-compressed OpenEXR. It was decoded from that
+package's base64 module to a plain .exr file; pixels are unchanged.
+
+Poly Haven itself could not be reached from the build sandbox (network policy),
+so the CC0 npm mirror was used. To swap in a full-resolution Poly Haven studio
+HDRI (e.g. studio_small_09_2k.exr), replace this file with the same name.
