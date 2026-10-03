@@ -35,8 +35,8 @@ const NUMBERS = Array.from({ length: 12 }, (_, i) => {
     return v;
   });
   return {
-    x: [2380, 2900, 3330, 1720, 3120, 1950, 3450, 3080, 1620, 1880, 3250, 2150][i],
-    y: [760, 640, 900, 1250, 1300, 1500, 1120, 1700, 1980, 1760, 2020, 2040][i],
+    x: [2350, 2800, 3250, 2550, 3000, 3420, 1600, 1900, 1600, 1950, 3300, 3300][i],
+    y: [820, 800, 830, 1020, 1000, 1060, 1480, 1580, 1760, 1860, 1400, 1640][i],
     size: rand.range(46, 96),
     period,
     offset: rand.int(0, period),
@@ -55,7 +55,7 @@ const LIST = CODES.map((code) => ({
   ph: rand.next(),
 }));
 
-const BARS = Array.from({ length: 11 }, () => ({ base: rand.range(0.35, 1), c: rand.int(1, 4), ph: rand.next() }));
+const BARS = Array.from({ length: 8 }, () => ({ base: rand.range(0.35, 1), c: rand.int(1, 4), ph: rand.next() }));
 
 const lineData = (n: number, seed: number) => {
   const r = makeRand(seed);
@@ -110,8 +110,8 @@ const GuideLines: React.FC<{ frame: number; pal: OverlayPalette }> = ({ frame, p
       const label = (3.2 - i * 0.25 + 0.04 * wave(frame, LOOP, 2, i * 0.13)).toFixed(2);
       return (
         <g key={i}>
-          <line x1={0} x2={2200} y1={y} y2={y} stroke={pal.white} strokeOpacity={0.55} strokeWidth={2.5} strokeDasharray="14 12" strokeDashoffset={-(phase(frame, LOOP, 4) * 26 * 10)} />
-          <text x={2220} y={y + 12} fill={pal.white} fillOpacity={0.8} fontFamily={INTER} fontSize={34}>
+          <line x1={0} x2={1850} y1={y} y2={y} stroke={pal.white} strokeOpacity={0.55} strokeWidth={2.5} strokeDasharray="14 12" strokeDashoffset={-(phase(frame, LOOP, 4) * 26 * 10)} />
+          <text x={1870} y={y + 12} fill={pal.white} fillOpacity={0.8} fontFamily={INTER} fontSize={34}>
             {label}
           </text>
         </g>
@@ -267,28 +267,28 @@ export const FinanceOverlay: React.FC<{ palette: OverlayPalette }> = ({ palette:
   // little differently from a cold render of the same frame.
   return (
     <AbsoluteFill key={frame} style={{ background: "#000", overflow: "hidden" }}>
-      {/* left group: tilted candle chart + guides */}
-      <div style={{ position: "absolute", inset: 0, perspective: 2600 }}>
-        <div style={{ position: "absolute", left: 140, top: 300, transform: "rotateY(24deg) rotateX(4deg)", transformOrigin: "0 50%" }}>
-          <Panel x={-40} y={-60} w={2000} h={1140} color={pal.light} o={0.28} />
+      {/* left group: candle chart + guides */}
+      <div style={{ position: "absolute", inset: 0 }}>
+        <div style={{ position: "absolute", left: 140, top: 300 }}>
+          <Panel x={-40} y={-60} w={2000} h={1260} color={pal.light} o={0.28} />
           <GuideLines frame={frame} pal={pal} />
           <div style={{ position: "absolute", left: 40, top: 80 }}>
             <CandleChart frame={frame} pal={pal} />
           </div>
         </div>
-        {/* right group: tilted the other way */}
-        <div style={{ position: "absolute", left: 2250, top: 200, transform: "rotateY(-18deg)", transformOrigin: "100% 50%" }}>
+        {/* right group: list, gauges, numbers, bars */}
+        <div style={{ position: "absolute", left: 2250, top: 200 }}>
           <Panel x={0} y={0} w={1450} h={1650} color={pal.main} o={0.25} />
-          <Panel x={60} y={1080} w={820} h={520} color={pal.light} o={0.3} />
-          <div style={{ position: "absolute", left: 100, top: 1120 }}>
+          <Panel x={60} y={1060} w={820} h={560} color={pal.light} o={0.3} />
+          <div style={{ position: "absolute", left: 100, top: 1090 }}>
             <BarStack frame={frame} pal={pal} />
           </div>
         </div>
       </div>
-      <div style={{ position: "absolute", left: 1500, top: 60 }}>
+      <div style={{ position: "absolute", left: 2900, top: 250 }}>
         <Gauges frame={frame} pal={pal} />
       </div>
-      <div style={{ position: "absolute", left: 2480, top: 120 }}>
+      <div style={{ position: "absolute", left: 2330, top: 300 }}>
         <Panel x={-30} y={-20} w={560} h={470} color={pal.white} o={0.22} />
         <CodeList frame={frame} pal={pal} />
       </div>
