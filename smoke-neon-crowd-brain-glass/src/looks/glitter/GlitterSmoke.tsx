@@ -19,7 +19,16 @@ import { GRAIN_FRAG, GRAIN_VERT, SMOKE_FRAG, SMOKE_VERT } from "./smokeShader";
 const LOOP = 600;
 const M = 2; // flow symmetry: one half turn per loop
 const SECTOR = TAU / M;
-const CENTER = { x: 0.18, y: 0.1 }; // flow centre (the dark void), screen-height units, y up, origin = frame centre
+const CENTER = { x: 0.2, y: 0.12 }; // flow centre (the dark void), screen-height units, y up, origin = frame centre
+// The swirl is a tilted ellipse (a vortex seen at an angle): swirl space = S·(p − C),
+// S = diag(1/AX, 1/AY)·R(−TILT). Rotating in swirl space keeps the loop exact.
+const AX = 1.4;
+const AY = 0.9;
+const TILT = -0.32;
+const ct = Math.cos(TILT), st = Math.sin(TILT);
+// screen → swirl (row-major) and its inverse
+const S = [ct / AX, st / AX, -st / AY, ct / AY];
+const SI = [ct * AX, -st * AY, st * AX, ct * AY];
 const N = 80000;
 const LEVELS = 8; // bokeh disc textures
 const DENS_W = 192;
@@ -66,13 +75,13 @@ const buildData = (weights: number[]): Data => {
   for (let i = 0; i < N; i++) {
     const u = rand();
     // 85% packed in the smoke crescent (left half-plane around the void), the rest are sparse stars
-    const inSmoke = u < 0.93;
+    const inSmoke = u < 0.96;
     d.win[i] = inSmoke ? 0 : 1;
     d.r[i] = inSmoke ? 0.5 + Math.pow(rand(), 0.8) * 1.4 + gauss() * 0.05 : 0.25 + rand() * 1.9;
     d.phi[i] = rand() * SECTOR;
     const zr = rand();
     // mostly mid/far (sharp specks); a few near the lens → soft bokeh
-    d.z[i] = zr < 0.012 ? 0.4 + rand() * 0.3 : zr < 0.08 ? 0.72 + rand() * 0.22 : 0.94 + rand() * 1.0;
+    d.z[i] = zr < 0.008 ? 0.4 + rand() * 0.3 : zr < 0.08 ? 0.72 + rand() * 0.22 : 0.94 + rand() * 1.0;
     d.size[i] = 0.5 + Math.pow(rand(), 2.5) * 2.4;
     let c = rand() * wsum;
     let k = 0;
@@ -80,7 +89,7 @@ const buildData = (weights: number[]): Data => {
     d.col[i] = k;
     d.tk[i] = TWINKLE_K[Math.floor(rand() * TWINKLE_K.length)];
     d.tph[i] = rand() * TAU;
-    d.bright[i] = inSmoke ? (rand() < 0.12 ? 1.0 + rand() * 0.8 : 0.07 + rand() * 0.22) : 0.5 + rand() * 0.6;
+    d.bright[i] = inSmoke ? (rand() < 0.2 ? 1.0 + rand() * 0.9 : 0.07 + rand() * 0.2) : 0.5 + rand() * 0.6;
     d.wob[i] = 0.003 + rand() * 0.01;
     d.wk[i] = 1 + Math.floor(rand() * 3);
     d.wph[i] = rand() * TAU;
@@ -158,6 +167,8 @@ const createEngine = async (host: HTMLDivElement, width: number, height: number,
     uSmokeEdge: { value: new Float32Array(hexToRgb(colors.smokeEdge)), type: "vec3<f32>" as const },
     uBgDeep: { value: new Float32Array(hexToRgb(colors.bgDeep)), type: "vec3<f32>" as const },
     uCenter: { value: new Float32Array([CENTER.x, CENTER.y]), type: "vec2<f32>" as const },
+    // column-major for GLSL
+    uSwirl: { value: new Float32Array([S[0], S[2], S[1], S[3]]), type: "mat2x2<f32>" as const },
   };
   const shader = Shader.from({ gl: { vertex: SMOKE_VERT, fragment: SMOKE_FRAG }, resources: { smokeUniforms } });
   const smoke = new Mesh({ geometry, shader });
@@ -230,14 +241,16 @@ const createEngine = async (host: HTMLDivElement, width: number, height: number,
       // hand-over at the top/bottom of the void is invisible.
       let u = data.phi[i] + rot;
       if (u >= SECTOR) u -= SECTOR;
-      const ang = u + (data.win[i] === 0 ? Math.PI / 2 : -Math.PI / 2);
+      const ang = u + (data.win[i] === 0 ? Math.PI * 0.38 : -Math.PI * 0.62);
       const env = Math.sin((Math.PI * u) / SECTOR);
       const fade = Math.sqrt(env);
       const wob = data.wob[i] * Math.sin(tw * data.wk[i] + data.wph[i]);
       const rr = data.r[i] + wob;
       // 2.5D: world point on the flow plane, small depth parallax around the frame centre
-      const wx = CENTER.x + rr * Math.cos(ang);
-      const wy = CENTER.y + rr * Math.sin(ang) + wob * 0.6;
+      const qx = rr * Math.cos(ang);
+      const qy = rr * Math.sin(ang) + wob * 0.6;
+      const wx = CENTER.x + SI[0] * qx + SI[1] * qy;
+      const wy = CENTER.y + SI[2] * qx + SI[3] * qy;
       const persp = 1 + (1 - z) * 0.35; // nearer specks spread out slightly
       const sx = wx * persp;
       const sy = wy * persp;
@@ -255,7 +268,7 @@ const createEngine = async (host: HTMLDivElement, width: number, height: number,
       // near side blurs strongly, far side only a little (background specks stay crisp)
       const coc = z < FOCUS ? (1 / z - 1 / FOCUS) * 2.6 : (1 - FOCUS / z) * 1.0;
       const level = Math.min(LEVELS - 1, Math.floor(coc));
-      const sizePx = (7 + data.size[i] * 6) * (data.bright[i] > 0.9 ? 1.5 : 1) * (1 / z) * (1 + coc * 1.8);
+      const sizePx = (7 + data.size[i] * 6) * (data.bright[i] > 0.9 ? 1.2 : 1) * (1 / z) * (1 + coc * 1.8);
       let a = fade * data.bright[i] * twk * (data.win[i] === 0 ? 0.15 + 1.9 * dens : 0.55);
       if (level > 0) a *= 0.4 / (1 + coc * 1.2); // alpha lowered as discs grow
       a = Math.min(1, a * (level === 0 ? 1 : 1.0));

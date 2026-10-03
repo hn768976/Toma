@@ -42,21 +42,21 @@ const buildShapes = () => {
       const k = i % 11;
       const top = i < 11 ? 1 : -1;
       x = -12 + k * 2.4 + (rand() - 0.5) * 1.2;
-      y = top * (4.7 + rand() * 1.1);
+      y = top * (4.95 + rand() * 1.0);
     } else {
       const k = i - 22;
-      x = (k % 2 ? 1 : -1) * (9.6 + rand() * 1.0);
+      x = (k % 2 ? 1 : -1) * (10.0 + rand() * 0.9);
       y = (Math.floor(k / 2) - 0.5) * 3.2 + (rand() - 0.5) * 0.8;
     }
     const len = Math.hypot(x / 11.5, y / 6.6);
     const ex = x / 11.5 / len, ey = y / 6.6 / len;
     const z = -2.5 - rand() * 4;
-    const kind = i % 5 === 2 ? "prism" : "poly";
+    const kind = i % 10 === 2 ? "prism" : "poly";
     const n = kind === "prism" ? 3 : rand() < 0.6 ? 3 : 4;
     shapes.push({
       kind,
       pts: polygon(n, 4.2 + rand() * 2.4),
-      depth: 0.5 + rand() * 0.6,
+      depth: 0.18 + rand() * 0.12,
       pos: new THREE.Vector3(x, y, z),
       // lean toward the frame centre (shared perspective), plus a little variety
       rot: new THREE.Euler(-ey * (0.75 + rand() * 0.35), ex * (0.75 + rand() * 0.35), rand() * TAU),
@@ -74,8 +74,8 @@ const buildShapes = () => {
 };
 const SHAPES = buildShapes();
 
-/** four-point star glint for the hot vertices */
-const glintTexture = () => {
+/** four-point star glint (kept for reference; round glows are used) */
+export const glintTexture = () => {
   const S = 256;
   const c = document.createElement("canvas");
   c.width = c.height = S;
@@ -136,7 +136,7 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
   const { colors } = props;
   const rand = mulberry32(0xface); // local stream: identical every time the scene is built
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(colors.bg).multiplyScalar(0.6);
+  scene.background = new THREE.Color(colors.bg).multiplyScalar(0.45);
   const camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.1, 100);
   camera.position.set(0, 0, 12);
 
@@ -147,18 +147,17 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
   const lineA = sat(colA);
   const lineB = sat(colB);
   const glowTex = radialTexture();
-  const glint = glintTexture();
-  const TUBE_R = 0.014;
-  const LINE_I = 2.8;
+  const TUBE_R = 0.0135;
+  const LINE_I = 2.6;
 
   const root = new THREE.Group();
   scene.add(root);
-  scene.add(new THREE.HemisphereLight(0x2a1a70, 0x300a50, 0.12));
+  scene.add(new THREE.HemisphereLight(0x2a1a70, 0x300a50, 0.05));
 
   // faint coloured haze near the edges + a few diagonal light rays from the bottom left
   for (let i = 0; i < 6; i++) {
     const s = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: glowTex, color: (i % 2 ? colB : colA).clone().multiplyScalar(0.035), blending: THREE.AdditiveBlending, depthWrite: false }),
+      new THREE.SpriteMaterial({ map: glowTex, color: (i % 2 ? colB : colA).clone().multiplyScalar(0.03), blending: THREE.AdditiveBlending, depthWrite: false }),
     );
     const a = (i / 6) * TAU + 0.4;
     s.position.set(Math.cos(a) * 9, Math.sin(a) * 4.8, -8);
@@ -168,10 +167,10 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
   const rayTex = rayTexture();
   const rays: { m: THREE.Mesh; base: number; ph: number }[] = [];
   for (let i = 0; i < 4; i++) {
-    const mat = new THREE.MeshBasicMaterial({ map: rayTex, color: (i === 2 ? colB : colA).clone().multiplyScalar(0.07), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const mat = new THREE.MeshBasicMaterial({ map: rayTex, color: (i === 2 ? colB : colA).clone().multiplyScalar(0.09), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.6 + rand() * 0.6, 12), mat);
-    m.position.set(-7.5 + i * 1.6 + rand(), -7.5, -5);
-    m.rotation.z = -0.55 - rand() * 0.2;
+    m.position.set(-9.5 + i * 0.9 + rand() * 0.5, -7.5, -5);
+    m.rotation.z = -0.35 - i * 0.12 - rand() * 0.08;
     m.geometry.translate(0, 6, 0);
     scene.add(m);
     rays.push({ m, base: 0.14, ph: rand() * TAU });
@@ -179,7 +178,7 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
 
   const groups: { g: THREE.Group; d: ShapeDef }[] = [];
   const blend = (wx: number, wy: number, bias: number) =>
-    THREE.MathUtils.smoothstep(wx / 30 + 0.5 + bias + 0.2 * Math.sin(wy * 0.6 + wx * 0.2), 0.2, 0.8);
+    THREE.MathUtils.smoothstep(wx / 26 - wy / 16 + 0.42 + bias * 0.45 + 0.12 * Math.sin(wy * 0.6 + wx * 0.2), 0.2, 0.8);
   SHAPES.forEach((d, si) => {
     const g = new THREE.Group();
     g.position.copy(d.pos);
@@ -236,12 +235,12 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
     g.add(new THREE.Mesh(merged, new THREE.MeshBasicMaterial({ vertexColors: true })));
     // star glints at a few vertices
     corners.forEach((cp) => {
-      if (rand() < 0.72) return;
+      if (rand() < 0.82) return;
       v.copy(cp).applyMatrix4(g.matrix);
       const col = colA.clone().lerp(colB, blend(v.x, v.y, d.bias)).lerp(new THREE.Color(1, 1, 1), 0.55);
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glint, color: col.multiplyScalar(1.4), blending: THREE.AdditiveBlending, depthWrite: false }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: col.multiplyScalar(1.1), blending: THREE.AdditiveBlending, depthWrite: false }));
       s.position.copy(cp);
-      s.scale.setScalar(0.55 + rand() * 0.4);
+      s.scale.setScalar(0.35 + rand() * 0.25);
       g.add(s);
     });
     // dim coloured light on every third shape: glow reflected on the dark faces
@@ -256,7 +255,7 @@ const factory: SceneFactory<{ colors: NeonColors }> = ({ gl, props }) => {
   });
 
   const pipe = new Pipeline(gl, scene, camera, {
-    bloom: { strength: 1.1, radius: 0.2, threshold: 0.3 },
+    bloom: { strength: 1.0, radius: 0.14, threshold: 0.35 },
     grain: 0.02,
     vignette: 0.3,
   });

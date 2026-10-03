@@ -36,10 +36,10 @@ export const glitterSmokeVersions: { id: string; colors: GlitterSmokeColors }[] 
       smokeEdge: "#C9D8F2",
       bgDeep: "#050A1C",
       glitter: [
-        { color: "#FFD27A", weight: 3 }, // gold
-        { color: "#FF9EC4", weight: 2 }, // pink
-        { color: "#FFFFFF", weight: 1.6 }, // white
-        { color: "#6FE6E0", weight: 1.5 }, // teal
+        { color: "#FFC85A", weight: 4 }, // gold
+        { color: "#FF8FBE", weight: 3 }, // pink
+        { color: "#FFFFFF", weight: 1.2 }, // white
+        { color: "#6FE6E0", weight: 0.7 }, // teal
       ],
     },
   },
@@ -63,8 +63,8 @@ export const neonVersions: { id: string; colors: NeonColors }[] = [
 ];
 
 export const crowdVersions: { id: string; colors: CrowdColors }[] = [
-  { id: "CrowdSpotlight-Blue", colors: { crowd: "#4A6A9A", glow: "#5FE8FF", bg: "#02040C" } },
-  { id: "CrowdSpotlight-Gold", colors: { crowd: "#6A6E76", glow: "#FFC860", bg: "#050404" } },
+  { id: "CrowdSpotlight-Blue", colors: { crowd: "#4A6A9A", glow: "#5FE8FF", bg: "#050A1E" } },
+  { id: "CrowdSpotlight-Gold", colors: { crowd: "#6A6E76", glow: "#FFC860", bg: "#0C0907" } },
 ];
 
 export const brainVersions: { id: string; colors: BrainColors }[] = [

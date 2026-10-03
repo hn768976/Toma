@@ -48,7 +48,7 @@ const PLATFORMS: { node: string; icon: () => THREE.BufferGeometry; rotY: number 
   { node: "CHAT", icon: chatIcon, rotY: 0 },
   { node: "GEAR", icon: gearIcon, rotY: 0 },
 ];
-const CAM_END: [number, number, number] = [-0.6, 12.7, 13.4];
+const CAM_END: [number, number, number] = [0.85, 16.0, 17.8];
 const PLATFORM_R = 0.72;
 
 // cumulative path distance from the brain to every node
@@ -66,13 +66,16 @@ const MAX_DIST = Math.max(...Object.values(DIST));
 const hemi = (side: 1 | -1, scale: number) => {
   const pts: THREE.Vector2[] = [];
   const N = 160;
-  const cx = side * 0.9;
+  const cx = side * 0.98;
   for (let i = 0; i < N; i++) {
     const a = (i / N) * TAU;
-    const bump = 1 + 0.03 * Math.sin(10 * a + side) + 0.018 * Math.sin(17 * a + 2 * side);
-    let x = cx + Math.cos(a) * 0.88 * bump * scale;
-    const y = Math.sin(a) * 1.72 * bump * scale * (1 - 0.1 * Math.cos(a) * side);
-    const gap = 0.045 + (1 - scale) * 0.75;
+    const bump = 1 + 0.028 * Math.sin(9 * a + side) + 0.012 * Math.sin(15 * a + 2 * side);
+    // superellipse: flat inner side so the halves meet along a straight fissure
+    const c = Math.cos(a), sn = Math.sin(a);
+    const sx = Math.sign(c) * Math.pow(Math.abs(c), 0.75), sy = Math.sign(sn) * Math.pow(Math.abs(sn), 0.9);
+    let x = cx + sx * 0.98 * bump * scale;
+    const y = sy * 1.36 * bump * scale * (1 - 0.08 * c * side);
+    const gap = 0.035 + (1 - scale) * 0.75;
     if (side * x < gap) x = side * gap;
     pts.push(new THREE.Vector2(x, y));
   }
@@ -147,7 +150,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
 
   const scene = new THREE.Scene();
   scene.background = surfaceCol.clone().multiplyScalar(0.5);
-  scene.fog = new THREE.Fog(surfaceCol.clone().multiplyScalar(0.3), 14, 30);
+  scene.fog = new THREE.Fog(surfaceCol.clone().lerp(new THREE.Color("#3a6a9a"), 0.35).multiplyScalar(0.9), 22, 55);
   const pmrem = new THREE.PMREMGenerator(gl);
   // The studio HDRI is used only as a reflection map on the glossy parts (rim, icons,
   // pucks) — assigned per material so it never floods the diffuse lighting.
@@ -195,7 +198,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(60, 60),
     new THREE.MeshPhysicalMaterial({
-      color: surfaceCol.clone().multiplyScalar(2.1),
+      color: surfaceCol.clone().lerp(new THREE.Color("#3a6a9a"), 0.35).multiplyScalar(2.2),
       roughness: 0.75,
       specularIntensity: 0.25,
       envMapIntensity: 0,
@@ -220,7 +223,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   brain.position.set(BRAIN_C.x, 0, BRAIN_C.y);
   brain.scale.setScalar(BRAIN_S);
   scene.add(brain);
-  const rimMat = new THREE.MeshPhysicalMaterial({ color: 0xc4d4ea, roughness: 0.25, clearcoat: 0.6, clearcoatRoughness: 0.15, metalness: 0, envMap: envTex, envMapIntensity: 0.18, envMapRotation: new THREE.Euler(0.9, 0.4, 0), emissive: glow.clone(), emissiveIntensity: 0.12 });
+  const rimMat = new THREE.MeshPhysicalMaterial({ color: 0xc8dcf2, transparent: true, opacity: 0.88, roughness: 0.18, clearcoat: 0.8, clearcoatRoughness: 0.15, metalness: 0, envMap: envTex, envMapIntensity: 0.18, envMapRotation: new THREE.Euler(0.9, 0.4, 0), emissive: glow.clone(), emissiveIntensity: 0.12 });
   const faceTex = circuitCanvas((g, S) => {
     // maps brain-local x∈[-2.4,2.4], y∈[-2.4,2.4]
     g.fillStyle = "#000";
@@ -228,9 +231,9 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
     // traces radiating out from the chip, 45° bends, pads at the ends
     g.strokeStyle = "rgba(150,235,255,0.95)";
     g.fillStyle = "rgba(170,240,255,1)";
-    g.lineWidth = 2.6;
+    g.lineWidth = 1.8;
     g.lineCap = "round";
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 60; i++) {
       const a0 = rand() * TAU;
       let x = S / 2 + Math.cos(a0) * S * 0.1;
       let y = S / 2 + Math.sin(a0) * S * 0.1;
@@ -250,7 +253,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
       g.arc(x, y, 4, 0, TAU);
       g.fill();
     }
-    drawTraces(g, rand, 120, [S * 0.05, S * 0.15, S * 0.95, S * 0.85], S / 80, 1.6, "rgba(120,210,255,0.6)");
+    drawTraces(g, rand, 320, [S * 0.05, S * 0.1, S * 0.95, S * 0.9], S / 90, 1.4, "rgba(130,215,255,0.7)");
     for (let i = 0; i < 400; i++) {
       g.fillStyle = `rgba(160,240,255,${0.3 + rand() * 0.6})`;
       g.beginPath();
@@ -261,11 +264,11 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   faceTex.repeat.set(1 / 4.8, 1 / 4.8);
   faceTex.offset.set(0.5, 0.5);
   const faceMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(colors.surface).lerp(new THREE.Color("#2a7bff"), 0.3).multiplyScalar(0.5),
-    roughness: 0.6,
+    color: new THREE.Color(colors.surface).lerp(new THREE.Color("#4a8ee0"), 0.55).multiplyScalar(0.85),
+    roughness: 0.45,
     metalness: 0.0,
     envMapIntensity: 0.15,
-    emissive: glow.clone().multiplyScalar(1.5),
+    emissive: glow.clone().multiplyScalar(1.1),
     emissiveMap: faceTex,
   });
   for (const side of [-1, 1] as const) {
@@ -308,7 +311,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
     g.textBaseline = "middle";
     g.fillText("AI", S * 0.5, S * 0.53);
   }, 512);
-  const chipSide = new THREE.MeshStandardMaterial({ color: 0x2a6fd0, roughness: 0.3, metalness: 0.4, emissive: glow.clone().multiplyScalar(0.5) });
+  const chipSide = new THREE.MeshStandardMaterial({ color: 0x2a6fd0, roughness: 0.3, metalness: 0.4, emissive: glow.clone().multiplyScalar(1.4) });
   const chipTop = new THREE.MeshStandardMaterial({ map: chipTex, emissiveMap: chipEmis, emissive: glow.clone().multiplyScalar(1.1), roughness: 0.4, metalness: 0.0, envMapIntensity: 0.1 });
   const chip = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.16, 0.95), [chipSide, chipSide, chipTop, chipSide, chipSide, chipSide]);
   chip.position.set(0, 0.4, 0.05);
@@ -330,9 +333,38 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   shadow.scale.set(5.6, 1, 3.9);
   shadow.position.set(0.1, 0.006, 0.15);
   brain.add(shadow);
+  // chip halo
+  const chipHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: glow.clone().multiplyScalar(0.55), blending: THREE.AdditiveBlending, depthWrite: false }));
+  chipHalo.position.set(0, 0.55, 0.05);
+  chipHalo.scale.setScalar(2.4);
+  brain.add(chipHalo);
   const brainLight = new THREE.PointLight(glow, 1.5, 5, 1.5);
   brainLight.position.set(0, 1.0, 0);
   brain.add(brainLight);
+
+  // ------------------------------------------------------------- scattered data bits on the floor
+  // (tiny glowing dashes, densest around the brain; a few spill out of it like sparks)
+  {
+    const N = 1300;
+    const bitGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+    const bitMat = new THREE.MeshBasicMaterial({ color: glow.clone().lerp(new THREE.Color(1, 1, 1), 0.2).multiplyScalar(0.9), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending });
+    const bits = new THREE.InstancedMesh(bitGeo, bitMat, N);
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    for (let i = 0; i < N; i++) {
+      const near = rand() < 0.6;
+      const r = near ? 1.6 + Math.pow(rand(), 1.5) * 3 : rand() * 16;
+      const a = rand() * TAU;
+      const x = (near ? BRAIN_C.x : -2) + Math.cos(a) * r * (near ? 1.2 : 1.4);
+      const z = (near ? BRAIN_C.y : -1) + Math.sin(a) * r * (near ? 0.9 : 0.8);
+      const along = rand() < 0.5;
+      const len = 0.03 + Math.pow(rand(), 4) * 0.22;
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), along ? 0 : Math.PI / 2);
+      m4.compose(new THREE.Vector3(x, 0.02, z), q, new THREE.Vector3(len, 1, 0.014));
+      bits.setMatrixAt(i, m4);
+    }
+    scene.add(bits);
+  }
 
   // ------------------------------------------------------------- glowing paths
   const pos: number[] = [];
@@ -340,7 +372,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   const side: number[] = [];
   for (const e of EDGES) {
     // the trunk leaving the brain is wider than the branches
-    const W = e.from === "R" || (e.from === "J0" && e.to === "J1") ? 0.32 : 0.21;
+    const W = e.from === "R" || (e.from === "J0" && e.to === "J1") ? 0.24 : 0.15;
     const pts = [NODES[e.from], ...e.via, NODES[e.to]].map((p) => new THREE.Vector2(p[0], p[1]));
     const isPlat = PLATFORMS.some((p) => p.node === e.to);
     if (isPlat) {
@@ -384,6 +416,8 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
       uPulse: { value: 0 },
       uPulseAmt: { value: 0 },
       uFlow: { value: 0 },
+      uTrunkEnd: { value: DIST.J1 },
+      uTrunkK: { value: 1 },
       uGlow: { value: glow.clone() },
     },
     vertexShader: /* glsl */ `
@@ -393,6 +427,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
     `,
     fragmentShader: /* glsl */ `
       uniform float uHead; uniform float uPulse; uniform float uPulseAmt; uniform float uFlow; uniform vec3 uGlow;
+      uniform float uTrunkEnd; uniform float uTrunkK;
       varying float vDist; varying float vSide;
       void main() {
         if (vDist > uHead) discard;
@@ -402,7 +437,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
         float dash = smoothstep(0.2, 0.05, abs(ph - 0.5)) * (1.0 - smoothstep(0.1, 0.4, abs(vSide)));
         float head = exp(-(uHead - vDist) * 5.0);
         float pulse = uPulseAmt * exp(-pow((mod(vDist - uPulse, 3.2) - 0.25) * 3.5, 2.0));
-        vec3 base = uGlow * (0.55 + 2.4 * edge) + mix(uGlow, vec3(1.0), 0.5) * 3.2 * dash;
+        vec3 base = uGlow * (0.5 + 1.8 * edge) * (1.0 + 1.6 * uTrunkK * (1.0 - smoothstep(uTrunkEnd - 0.3, uTrunkEnd, vDist))) + mix(uGlow, vec3(1.0), 0.4) * 1.6 * dash;
         vec3 c = base * (1.0 + 2.5 * pulse) + vec3(1.0) * head * 5.0 + uGlow * head * 4.0;
         gl_FragColor = vec4(c, 1.0);
       }
@@ -438,7 +473,7 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
   };
 
   // ------------------------------------------------------------- platforms + icons
-  const iconMat = new THREE.MeshPhysicalMaterial({ color: 0xdce8fa, vertexColors: true, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.15, envMap: envTex, envMapIntensity: 0.4, envMapRotation: new THREE.Euler(0.9, 0.4, 0), transparent: true });
+  const iconMat = new THREE.MeshPhysicalMaterial({ color: 0xc4d4ea, vertexColors: true, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.15, envMap: envTex, envMapIntensity: 0.4, envMapRotation: new THREE.Euler(0.9, 0.4, 0), transparent: true });
   const ringTex = (() => {
     const c = document.createElement("canvas");
     c.width = c.height = 512;
@@ -467,23 +502,25 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
     rimP.rotation.x = Math.PI / 2;
     rimP.position.y = 0.165;
     grp.add(rimP);
-    const innerRing = new THREE.Mesh(new THREE.TorusGeometry(PLATFORM_R * 0.45, 0.012, 6, 64), rimMatP);
-    innerRing.rotation.x = Math.PI / 2;
-    innerRing.position.y = 0.165;
-    grp.add(innerRing);
-    const ringMat = new THREE.MeshBasicMaterial({ map: ringTex, color: glow.clone().multiplyScalar(1.3), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    if (p.node === "FLAG") {
+      // the "active" node: glowing centre
+      const hot = new THREE.Mesh(new THREE.CircleGeometry(PLATFORM_R * 0.35, 48).rotateX(-Math.PI / 2), rimMatP);
+      hot.position.y = 0.168;
+      grp.add(hot);
+    }
+    const ringMat = new THREE.MeshBasicMaterial({ map: ringTex, color: glow.clone().multiplyScalar(0.7), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
     const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), ringMat);
     ring.scale.setScalar(PLATFORM_R * 2.75);
     ring.position.y = 0.012;
     grp.add(ring);
-    const pad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, color: glow.clone().multiplyScalar(0.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const pad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, color: glow.clone().multiplyScalar(0.25), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     pad.scale.setScalar(PLATFORM_R * 4);
     pad.position.y = 0.011;
     grp.add(pad);
     const icon = new THREE.Mesh(p.icon(), iconMat.clone());
     // face the final camera position
     icon.rotation.y = Math.atan2(CAM_END[0] - x, CAM_END[2] - z) + p.rotY;
-    icon.userData.base = p.node === "FLAG" ? 1.55 : 1.3;
+    icon.userData.base = p.node === "FLAG" ? 1.15 : 0.95;
     grp.add(icon);
     return { grp, disc, discMat, rimMatP, ringMat, pad, icon, d: DIST[p.node] };
   });
@@ -496,27 +533,27 @@ const factory: SceneFactory<{ colors: BrainColors }> = ({ gl, assets, props }) =
     extraPasses: [dof],
     bloom: { strength: 0.6, radius: 0.35, threshold: 2.2 },
     grain: 0.02,
-    vignette: 0.62,
+    vignette: 0.45,
     clampHDR: 4,
   });
 
   // ------------------------------------------------------------- camera
   const KF = [0, 40, 150, 300, 360];
   const camPos = keyed3(KF, [
-    [-4.15, 5.6, 2.9],
-    [-3.95, 5.7, 3.2],
-    [-1.0, 13.3, 14.2],
-    [-0.65, 12.8, 13.55],
+    [-3.95, 5.4, 2.4],
+    [-3.85, 5.5, 2.7],
+    [0.6, 16.8, 18.8],
+    [0.82, 16.1, 17.95],
     CAM_END,
   ]);
   const camLook = keyed3(KF, [
-    [-2.85, 0, -0.05],
-    [-2.7, 0, -0.1],
-    [0.35, 0, -0.05],
-    [0.48, 0, 0.02],
-    [0.5, 0, 0.03],
+    [-3.45, 0, 0.0],
+    [-3.35, 0, -0.05],
+    [-0.45, 0, -0.5],
+    [-0.29, 0, -0.57],
+    [-0.27, 0, -0.58],
   ]);
-  const fovK = monotoneCubic([0, 40, 150, 300], [38, 38, 25, 23]);
+  const fovK = monotoneCubic([0, 40, 150, 300], [36, 36, 22, 20]);
   const headK = monotoneCubic([55, 120, 250], [0, 0.42 * MAX_DIST, MAX_DIST + 0.2]);
 
   return {

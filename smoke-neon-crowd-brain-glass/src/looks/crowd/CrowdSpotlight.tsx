@@ -10,8 +10,8 @@ import type { CrowdColors } from "../../versions";
 
 const COLS = 15;
 const ROWS = 14;
-const SX = 2.35; // spacing across
-const SZ = 2.3; // spacing in depth
+const SX = 2.2; // spacing across
+const SZ = 2.2; // spacing in depth
 const FX_LAYER = 1; // additive glow sprites/rings — excluded from the depth pass
 
 /** Bust icon: extruded shoulders + head, shirt "V" and tie inset on the front.
@@ -19,24 +19,24 @@ const FX_LAYER = 1; // additive glow sprites/rings — excluded from the depth p
 const buildBust = () => {
   const bevel = { bevelEnabled: true, bevelSegments: 3, steps: 1, curveSegments: 18 };
   const body = new THREE.Shape();
-  body.moveTo(-0.76, 0);
-  body.lineTo(0.76, 0);
-  body.lineTo(0.76, 0.38);
-  body.quadraticCurveTo(0.76, 0.68, 0.48, 0.73);
-  body.lineTo(0.17, 0.8);
-  body.lineTo(-0.17, 0.8);
-  body.lineTo(-0.48, 0.73);
-  body.quadraticCurveTo(-0.76, 0.68, -0.76, 0.38);
+  body.moveTo(-0.68, 0);
+  body.lineTo(0.68, 0);
+  body.lineTo(0.68, 0.42);
+  body.quadraticCurveTo(0.68, 0.7, 0.42, 0.75);
+  body.lineTo(0.18, 0.8);
+  body.lineTo(-0.18, 0.8);
+  body.lineTo(-0.42, 0.75);
+  body.quadraticCurveTo(-0.68, 0.7, -0.68, 0.42);
   body.closePath();
   const D = 0.34;
   const gBody = new THREE.ExtrudeGeometry(body, { ...bevel, depth: D, bevelSize: 0.05, bevelThickness: 0.06 });
   gBody.translate(0, 0, -D / 2);
-  // oval head on a visible neck
-  const gHead = new THREE.SphereGeometry(1, 36, 24);
-  gHead.scale(0.3, 0.38, 0.27);
-  gHead.translate(0, 1.25, 0);
-  const neck = new THREE.CylinderGeometry(0.115, 0.135, 0.34, 20);
-  neck.translate(0, 0.9, 0);
+  // big oval head sitting straight on the shoulders (icon bust, no neck)
+  // (an extruded oval slab with a deep rounded bevel, like the shoulders — icon style)
+  const headShape = new THREE.Shape();
+  headShape.absellipse(0, 0, 0.27, 0.34, 0, Math.PI * 2, false, 0);
+  const gHead = new THREE.ExtrudeGeometry(headShape, { ...bevel, depth: 0.16, bevelSize: 0.07, bevelThickness: 0.1, bevelSegments: 5 });
+  gHead.translate(0, 1.16, -0.08);
   const front = D / 2 + 0.06;
   // shirt V
   const vee = new THREE.Shape();
@@ -77,7 +77,7 @@ const buildBust = () => {
     g.setAttribute("color", new THREE.BufferAttribute(c, 3));
     return g.index ? g.toNonIndexed() : g;
   };
-  const parts = [paint(gBody, 1), paint(gHead, 1.05), paint(neck, 0.75), paint(gVee, 1.5), paint(lapel(1), 0.78), paint(lapel(-1), 0.78), paint(gTie, 0.3)].map((g) => {
+  const parts = [paint(gBody, 1), paint(gHead, 1.05), paint(gVee, 1.5), paint(lapel(1), 0.78), paint(lapel(-1), 0.78), paint(gTie, 0.3)].map((g) => {
     g.deleteAttribute("uv");
     return g;
   });
@@ -91,7 +91,7 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   const glow = new THREE.Color(colors.glow);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(colors.bg);
-  scene.fog = new THREE.Fog(new THREE.Color(colors.bg), 13, 30);
+  scene.fog = new THREE.Fog(new THREE.Color(colors.bg), 11, 25);
   const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 80);
   camera.layers.enable(FX_LAYER);
 
@@ -102,7 +102,7 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
     roughness: 0.32,
     metalness: 0.1,
   });
-  const mirrorMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(colors.crowd).multiplyScalar(0.16), vertexColors: true, side: THREE.BackSide });
+  const mirrorMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(colors.crowd).multiplyScalar(0.3), vertexColors: true, side: THREE.BackSide });
 
   // grid: chosen figure = front row, centre column, at the origin
   const chosenCol = Math.floor(COLS / 2);
@@ -152,7 +152,7 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   const floorMat = new THREE.MeshBasicMaterial({
     color: new THREE.Color(colors.bg),
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.72,
   });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -162,7 +162,11 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   const top = new THREE.DirectionalLight(0xdfe8ff, 2.6);
   top.position.set(1.5, 10, 3);
   scene.add(top);
-  scene.add(new THREE.HemisphereLight(new THREE.Color(colors.crowd), 0x000000, 0.8));
+  scene.add(new THREE.HemisphereLight(new THREE.Color(colors.crowd), 0x000000, 1.0));
+  // cool rim / back light picking out shoulders and crowns
+  const rim = new THREE.DirectionalLight(new THREE.Color(colors.crowd).lerp(new THREE.Color(1, 1, 1), 0.55), 2.4);
+  rim.position.set(0.5, 6, -10);
+  scene.add(rim);
   const front = new THREE.DirectionalLight(new THREE.Color(colors.crowd).lerp(new THREE.Color(1, 1, 1), 0.4), 1.7);
   front.position.set(0, 2, 10);
   scene.add(front);
@@ -238,6 +242,40 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   haloMir.position.y = -1.3;
   scene.add(haloMir);
 
+  // long blurred reflection streak on the glossy floor, running from the hero toward camera
+  const streakTex = (() => {
+    const c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 256;
+    const g = c.getContext("2d")!;
+    const lg = g.createLinearGradient(0, 0, 64, 0);
+    lg.addColorStop(0, "rgba(255,255,255,0)");
+    lg.addColorStop(0.5, "rgba(255,255,255,1)");
+    lg.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = lg;
+    g.fillRect(0, 0, 64, 256);
+    g.globalCompositeOperation = "destination-in";
+    const vg = g.createLinearGradient(0, 0, 0, 256);
+    vg.addColorStop(0, "rgba(0,0,0,1)");
+    vg.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = vg;
+    g.fillRect(0, 0, 64, 256);
+    return new THREE.CanvasTexture(c);
+  })();
+  const streakGeo = new THREE.PlaneGeometry(1.1, 8);
+  streakGeo.rotateX(-Math.PI / 2);
+  streakGeo.translate(0, 0.008, 4.2);
+  const streak = new THREE.Mesh(streakGeo, fxMat(streakTex));
+  streak.layers.set(FX_LAYER);
+  scene.add(streak);
+  // wide blue haze rising behind the crowd
+  const haze = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: glow.clone().multiplyScalar(0.09), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0, fog: false }));
+  haze.position.set(0, 2.2, -7);
+  haze.scale.set(26, 12, 1);
+
+  haze.layers.set(FX_LAYER);
+  scene.add(haze);
+
   // depth of field
   const dof = createDofPass();
   const depthRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
@@ -255,8 +293,8 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
   // camera path — chosen figure at the origin, crowd stretching to -z
   const KF = [0, 120, 200, 300, 360];
   const camPos = keyed3(KF, [
-    [0.8, 8.6, 6.5],
-    [0.3, 3.4, 2.6],
+    [0.6, 5.8, 4.6],
+    [0.3, 3.0, 2.4],
     [0.05, 2.2, 9.5],
     [0, 2.0, 15.2],
     [0, 1.98, 15.45],
@@ -296,10 +334,12 @@ const factory: SceneFactory<{ colors: CrowdColors }> = ({ gl, props }) => {
       halo.scale.setScalar(2.4 + 0.2 * g);
       (haloMir.material as THREE.SpriteMaterial).opacity = 0.025 * g;
       haloMir.scale.setScalar(2.6);
-      (floorPool.material as THREE.MeshBasicMaterial).opacity = 0.55 * g * smoothstep(120, 175, frame);
+      (floorPool.material as THREE.MeshBasicMaterial).opacity = 0.35 * g * smoothstep(120, 175, frame);
+      (streak.material as THREE.MeshBasicMaterial).opacity = 0.5 * g;
+      (haze.material as THREE.SpriteMaterial).opacity = 0.35 + 0.65 * g;
       floorPool.scale.set(3.4, 1, 3.4);
       staticRings.forEach((r, i) => {
-        (r.material as THREE.MeshBasicMaterial).opacity = (i === 0 ? 1.1 : 0.8) * smoothstep(130 + i * 12, 185 + i * 12, frame);
+        (r.material as THREE.MeshBasicMaterial).opacity = (i === 0 ? 0.75 : 0.4) * smoothstep(130 + i * 12, 185 + i * 12, frame);
         r.scale.setScalar(i === 0 ? 3.5 : 5.8);
       });
       // rings pulse outward: period 72 frames, staggered

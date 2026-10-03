@@ -36,6 +36,7 @@ uniform vec3 uSmoke;
 uniform vec3 uSmokeEdge;
 uniform vec3 uBgDeep;
 uniform vec2 uCenter;      // flow centre in screen-height units (y up, origin at frame centre)
+uniform mat2 uSwirl;       // screen → swirl space (tilted ellipse); rotations there stay exact
 
 const float M = 2.0;
 const float TAU = 6.28318530718;
@@ -106,7 +107,7 @@ vec3 pol(float r, float phi, float fa, float fr, float seed) {
 // a fainter sweep to the lower right, empty above/right of the centre.
 float crescent(float r, float phi) {
   float ang = mod(phi, TAU);                         // 0 = right, PI/2 = up, PI = left
-  float left = smoothstep(1.55, 2.15, ang) * (1.0 - smoothstep(4.55, 5.0, ang));
+  float left = smoothstep(1.15, 1.75, ang) * (1.0 - smoothstep(4.55, 5.0, ang));
   float lowRight = smoothstep(4.4, 4.9, ang) * (1.0 - smoothstep(5.6, 6.1, ang)) * 0.45;
   float inner = smoothstep(0.38, 0.62, r);
   float outer = 1.0 - smoothstep(1.5, 2.0, r);
@@ -116,7 +117,7 @@ float crescent(float r, float phi) {
 
 void main() {
   vec2 p = vec2((vUV.x - 0.5) * uAspect, 0.5 - vUV.y);
-  vec2 d = p - uCenter;
+  vec2 d = uSwirl * (p - uCenter);
   float r = length(d);
   float phi = atan(d.y, d.x);
   float a = TAU / M * uT;      // one half turn per loop
@@ -140,8 +141,12 @@ void main() {
   float fil = pow(clamp(1.0 - abs(wisp) * 3.0, 0.0, 1.0), 4.0);
   float near = crescent(r2 * 0.72 + 0.1 * body, phi) * (1.0 - mask);  // just outside the crescent
 
-  float vol = mask * sheet * (0.3 + 0.7 * streaks);
-  float dens = clamp(vol + 0.4 * fil * (mask * 0.4 + near) * sheet, 0.0, 1.0);
+  // fine silky fibres along the flow
+  float fib = 0.5 + 0.5 * fbm(pol(r2 + 0.02 * body, ph2 - a, 2.2, 30.0, 33.0), 3);
+  float vol = mask * sheet * (0.3 + 0.7 * streaks) * (0.75 + 0.45 * fib);
+  // faint tendrils drifting through the dark void too
+  float voidW = 0.07 * fil * smoothstep(-0.2, 0.5, body) * (1.0 - mask);
+  float dens = clamp(vol + 0.4 * fil * (mask * 0.4 + near) * sheet + voidW, 0.0, 1.0);
   if (uMode > 0.5) {
     finalColor = vec4(dens, dens, dens, 1.0);
     return;
@@ -149,7 +154,7 @@ void main() {
 
   // milky, glowing smoke: saturated blue, pale blue-white where dense, soft inner glow
   float glow = crescent(r, phi) * smoothstep(-0.7, 0.4, body);
-  vec3 col = mix(uSmoke * vec3(0.78, 0.92, 1.12), uSmokeEdge, smoothstep(0.6, 1.15, dens)) * dens * 1.15;
+  vec3 col = mix(uSmoke * vec3(0.8, 0.94, 1.12), uSmokeEdge * 1.15, smoothstep(0.45, 1.0, dens)) * dens * 1.35;
   col += uSmoke * 0.22 * glow;
   col += uSmokeEdge * 0.12 * fil * near;
   // background: near-black with deep blue, a touch lighter low-left
