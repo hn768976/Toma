@@ -74,15 +74,53 @@ Any composition id and frame work the same way. (Not rendered here.)
 
 ## Measured render time per frame (720p) and 4K estimate
 
-RENDER_TIMES
+Measured on the build machine: 4 vCPU, **no GPU** (WebGL2 through ANGLE's
+SwiftShader software backend), Remotion `--concurrency=2`, 720p
+(`--scale=0.3333333333333333`), PNG frames. Seconds per frame = whole render
+time / frames, so it includes the ~8 s browser start-up.
+
+| Look | Composition | 720p s/frame | 4K estimate, same CPU-only machine | 4K estimate, with a GPU |
+|---|---|---|---|---|
+| Cloud Servers | Blue / Violet | 0.40 / 0.40 | ~3 s | ~0.3–0.6 s |
+| Light Trails | Blue / RedOrange | 1.02 / 1.01 | ~8 s | ~0.3–0.6 s |
+| Gold Bar Chart | Rising / Falling | 1.45 / 1.63 | ~12 s | ~0.5–1 s |
+| Trade War Maps | USA vs China | 3.01 | ~22 s | ~0.6–1.2 s |
+| File Wave | Documents / Folders | 0.82 / 0.93 | ~7 s | ~0.4–0.8 s |
+
+How the 4K figures were estimated: 4K has 9× the pixels of 720p. Scene
+drawing, MSAA, bloom and grain scale with pixel count, but depth of field
+runs at a fixed ≤540-line working size and setup time does not grow, so on
+this CPU-only machine a 4K frame should cost ~7–8× a 720p frame. On a GPU
+the drawing is a small part of the time; PNG readback and encoding of a 4K
+frame (~0.2–0.4 s) dominate. These 4K numbers are estimates; 4K was not
+rendered here, as the brief asked.
 
 ## Banding check
 
-BANDING
+- Every look applies a ±1/255 triangular dither after bloom and tone mapping
+  (`src/lib/post.ts`), from an integer hash of pixel position and frame. Light
+  Trails skips it on pixels that are exactly black.
+- Looks 1, 3, 4 and 5 add ~2% grain from the same fixed formula of pixel and
+  frame (never `Math.random()`). Light Trails has no grain.
+- Checked on the **encoded mp4s**, not the preview. For Cloud Servers Blue,
+  Gold Rising, Trade War and File Wave Documents, frame 300 was decoded, and
+  the dark range (0–48) was stretched ~5× and inspected.
+  Pixel rows across dark gradients and glows were also read
+  (`scripts/verify.py`). Glow falloffs and dark backgrounds change smoothly,
+  with at most 3 levels between neighbouring pixels in dark ramps and no
+  visible contour steps. Repeat with `python3 scripts/verify.py`.
 
 ## Verification results
 
-VERIFY
+`scripts/verify.py` was run against the final 720p previews:
+
+| Check | Result |
+|---|---|
+| 1. ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, 12.0 / 15.0 / 20.0 s | all 9 pass |
+| 2. Loop: frame 0 vs frame 600 (composition temporarily 601 frames via `--props='{"loopCheck":true}'`) | Cloud ×2, Trails ×2, File Wave ×2: identical, max diff 0, PNG bytes equal |
+| 3. Black: Light Trails top 20% of decoded mp4 frames 0/200/400 | max value 0 for both versions |
+| 4. Frame 200 rendered alone from a cold start vs frame 200 of the full render | all 9 byte-for-byte identical |
+| 5. Banding on decoded mp4 (looks 1, 3, 4, 5A) | smooth, no steps (see above) |
 
 ## How to add a version (one data row)
 
@@ -146,7 +184,20 @@ compares it with frame 200 of the full render (byte for byte).
 
 ## Completion checklist
 
-CHECKLIST
+- [x] 9 compositions, 3840×2160, 30 fps; looks 1, 2, 5 600 frames (seamless loops), look 3 360, look 4 450
+- [x] three.js through `@remotion/three`, WebGL2 (`--gl=angle`), no WebGPU, no MCP servers, everything built in code
+- [x] One data row per version in `src/versions.ts`; new versions and country pairs are one row each
+- [x] Studio HDRI from Poly Haven (CC0) and Natural Earth 1:50m countries (public domain, default worldview) shipped with licences
+- [x] US flag 13 stripes / 50 stars (9 rows of 6 and 5); China flag with five stars, small stars pointing at the big one; drawn in code
+- [x] No banknotes, currency, logos, brands or text; gold bars are plain
+- [x] ACES filmic tone mapping, sRGB output; ±1/255 dither everywhere (not on the trails' black); ~2% fixed-formula grain in looks 1, 3, 4, 5
+- [x] Glass faked (Fresnel, opacity, edge glow); no transmission
+- [x] Deterministic: seeded mulberry32, no physics, no clocks, no temporal effects; assets behind `delayRender`
+- [x] Verify loop steps 1–5 pass on the final previews (table above)
+- [x] Steps 7–8: side-by-side self-check plus three rounds of independent sub-agent comparison per look (reports summarised in the delivery notes)
+- [x] 720p previews and one 720p PNG still per composition
+- [x] Clean copy: `npm install && npx remotion studio` starts; a still renders from the clean copy
+- [ ] 4K masters and 6K stills: not rendered here (by design); commands above
 
 ## Project layout
 
