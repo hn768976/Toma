@@ -6,7 +6,7 @@ Everything is built in code with three.js on WebGL2, inside `@remotion/three`'s 
 | Composition id | Delivered file | Look | Engine |
 |---|---|---|---|
 | `HorizonStreaks` | `HorizonStreaks.mp4` | Horizon Light Streaks, blue | three.js 3D: instanced ribbons, head sprites, bokeh, bloom |
-| `ServerBokeh-BlueLime` | `ServerBokeh_BlueLime.mp4` | Defocused Server Rack, blue and lime | three.js 3D: procedural racks, CoC gather DoF, hexagonal bokeh sprites |
+| `ServerBokeh-BlueLime` | `ServerBokeh_BlueLime.mp4` | Defocused Server Rack, blue and lime | three.js 3D: procedural racks, CoC gather DoF, soft round bokeh sprites |
 | `ServerBokeh-BlueAmber` | `ServerBokeh_BlueAmber.mp4` | Defocused Server Rack, blue and amber | same |
 | `GlassBlock-TealViolet` | `GlassBlock_TealViolet.mp4` | Glass Block Gradient, teal and violet | full-screen fragment shader |
 | `GlassBlock-CoralPink` | `GlassBlock_CoralPink.mp4` | Glass Block Gradient, coral and pink | same |
@@ -91,7 +91,7 @@ Every value on screen comes from `useCurrentFrame()`, and nothing else:
 - **Server Bokeh** (`src/server`)
   - Procedural rack fronts: rails, screw heads, made-up tick marks, switches with LED sockets and SFP cages, drive bays, and lit fibre bundles. There are two rows across an aisle.
   - The scene renders rgb plus CoC. A half-res mip-mapped copy feeds a 64-tap golden-angle gather DoF.
-  - About 36,000 LEDs (18 racks × 2 rows) are drawn as sprites. Near focus they are round hot dots at full res. Out of focus they become **hexagonal** bokeh sized by CoC, with alpha falling as size grows, drawn at quarter res for speed.
+  - About 36,000 LEDs (18 racks × 2 rows) are drawn as sprites. Near focus they are round hot dots at full res. Out of focus they become **soft round** bokeh discs sized by CoC (the edge softens and a gaussian core blends in as blur grows, so big discs melt together), with alpha falling as size grows, drawn at quarter res for speed. (The original brief asked for hexagonal bokeh; it was changed to soft circles on a follow-up request.)
   - Bloom, vignette and grain finish the image.
 - **Glass Block** (`src/glass`)
   - Six drifting blobs plus looping fbm feed a colour ramp.

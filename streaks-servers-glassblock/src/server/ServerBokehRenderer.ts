@@ -300,7 +300,7 @@ void main() {
 `;
 
 // =============================================================================
-// LED sprites: in-focus dots / out-of-focus hexagonal bokeh.
+// LED sprites: in-focus dots / out-of-focus soft round bokeh.
 // =============================================================================
 const LED_VERT = /* glsl */ `
 precision highp float;
@@ -354,21 +354,13 @@ in vec3 vCol;
 in float vCoc;
 in float vR;
 out vec4 outColor;
-float hexDist(vec2 p) {
-  // Rotated so the aperture blades are slightly off-axis.
-  const float c = 0.9659, s = 0.2588;
-  p = vec2(c * p.x - s * p.y, s * p.x + c * p.y);
-  p = abs(p);
-  return max(p.x * 0.866025 + p.y * 0.5, p.y) / 0.866025 * 0.93;
-}
 void main() {
   float dc = length(vQ);
-  float hexMix = smoothstep(2.0, 6.0, vCoc);
-  float dd = mix(dc, hexDist(vQ), hexMix);
-  float soft = clamp(1.3 / vR + 0.04 + 0.3 * smoothstep(4.0, 40.0, vCoc), 0.04, 0.5);
-  float disc = 1.0 - smoothstep(1.0 - soft, 1.0 + soft * 0.3, dd);
-  float rim = smoothstep(0.55, 0.97, dd) * disc;
-  float bokeh = disc * (0.8 + 0.45 * rim);
+  // Out of focus: a round, very soft disc. The edge softens as the blur grows,
+  // and a gaussian core blends in so large discs melt into each other.
+  float soft = clamp(1.3 / vR + 0.1 + 0.55 * smoothstep(4.0, 40.0, vCoc), 0.1, 0.75);
+  float disc = 1.0 - smoothstep(1.0 - soft, 1.0 + soft * 0.12, dc);
+  float bokeh = mix(disc, exp(-2.6 * dc * dc) * 1.35, 0.4);
   // In focus: hot core + soft glow.
   float dot_ = exp(-2.2 * dc * dc) * 1.4 + exp(-1.8 * dc) * 0.1;
   float shape = mix(dot_, bokeh, smoothstep(0.8, 3.5, vCoc));
