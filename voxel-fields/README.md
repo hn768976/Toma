@@ -40,7 +40,7 @@ npx remotion render VoxelWave-Mint    out/VoxelWave_Mint.mp4    --gl=angle --cod
 npx remotion still VoxelCanyon-Green out/stills/VoxelCanyon_Green_f0180.png --frame=180 --scale=1.5625 --gl=angle --image-format=png --timeout=900000
 ```
 
-3840 × 1.5625 = 6000 and 2160 × 1.5625 = 3375. The chosen frames, two per composition, are in `scripts/render-stills.sh`. For look 1 they're frames with a clear hole into the void.
+3840 × 1.5625 = 6000 and 2160 × 1.5625 = 3375. The chosen frames, two far-apart frames per composition, are in `scripts/render-stills.sh`.
 
 ## How it's built
 
@@ -55,23 +55,23 @@ npx remotion still VoxelCanyon-Green out/stills/VoxelCanyon_Green_f0180.png --fr
 - **Heights** are pure functions of the frame number (`src/lib/fields.ts`):
   - **Canyon shape:** two layers of 4D simplex noise, stretched along the rows so slabs and canyons form long trenches. A third, column-scale layer is active only below the rim, so canyon walls are ragged while plateau tops stay flat. The target height is deliberately steep:
     - flat slabs at 0, with raised slabs at +1/+2
-    - a sheer wall down to −5, then a floor sloping to −7 at the void threshold
-    - below that, columns sink into the dark, down to −84
+    - a sheer wall down to −5, then a solid floor sloping gently to −8
+    - no column ever goes below −8: canyons never open into an empty void, and there are no floating cubes
   - **Canyon motion (slow):**
     - The noise moves slowly around a small time circle (radius 0.1).
     - Each column's height is its target averaged over a centred 36-frame triangular window, wrapping around the loop. A column crossing a slab edge glides up or down over about a second instead of snapping.
     - Measured speed of visible columns (`scripts/motion-stats.ts`): p99 about 0.18 cubes/frame and max about 0.3 above the canyon floor; typical columns hold still or drift at under 0.04.
-  - **Balance:** each frame, the in-frame noise is normalised so its median sits on the plateau and its 8th percentile sits well past the void threshold, so holes are wide enough to see into from this camera angle. About 10–15% of the in-frame columns are in the void at any time. It's a continuous, periodic function of the frame.
+  - **Balance:** each frame, the in-frame noise is normalised so its median sits on the plateau and its 5th percentile sits on the canyon floor. Canyons cover 21–32% of the frame in every part of the loop. It's a continuous, periodic function of the frame.
   - **Wave:** a travelling ridge profile (stepped rise, steep face, wide flat trough). It moves exactly 2 wavelengths per loop, and its height varies along each ridge with circle-in-time noise.
 - **Shading:**
   - Light: a soft key from the upper left, plus a cool hemisphere sky fill.
   - Shadows: PCSS, using the same shader as drei's `<SoftShadows>`. It's patched into three's shader chunk at module load rather than in a React effect, so the very first frame a render thread draws already has soft shadows (`src/three/pcss.ts`).
-  - Gaps: the shader shifts walls toward a saturated tint and darkens them with depth below the surrounding tops. That's computed from heights, with no screen-space or temporal AO. Holes fade to each palette's deep colour.
+  - Gaps: the shader shifts walls toward a saturated tint and darkens them with depth below the surrounding tops. That's computed from heights, with no screen-space or temporal AO.
   - Materials: matte, roughness 0.6, and 0.42 on top faces for a faint sheen.
   - Post: `DepthOfField` with real depth blur, then ACES Filmic tone mapping, sRGB output, and grain.
   - Nothing accumulates over frames: no TAA, no `AccumulativeShadows`, no temporal AO.
 - **Determinism:**
-  - No `Math.random()` at render time. `mulberry32` is seeded at module level for noise permutations, column colours and floating-cube paths.
+  - No `Math.random()` at render time. `mulberry32` is seeded at module level for noise permutations and column colours.
   - No `useFrame` clock, `Date.now()` or carried-over state. `useFrame` is only used to trigger the draw and release the frame.
   - A `RenderGate` holds each frame with `delayRender` until R3F has drawn it with that frame's data.
 
@@ -80,7 +80,6 @@ npx remotion still VoxelCanyon-Green out/stills/VoxelCanyon_Green_f0180.png --fr
 - `t = (frame mod 600) / 600`, so frame 600 is frame 0 exactly.
 - **Canyon:** the noise is sampled around circles in time, `noise(x, z, cos 2πt·r, sin 2πt·r)`, and the smoothing window wraps around the loop, so the motion through the loop point is as smooth as anywhere else.
 - **Wave:** the ridges travel a whole number of wavelengths, 2 per loop.
-- **Floating cubes:** closed paths with whole-number frequencies.
 - **Camera:** a closed drift path with frequencies 1 and 2 and an amplitude of 0.7 units, about 2% of the frame. It's a translation only, never an orbit.
 - **Grain:** a fixed integer hash of the pixel and `frame % 600`.
 
@@ -132,7 +131,7 @@ Add one object to `PALETTES` in `src/lib/palettes.ts`. It becomes a new composit
   weights: [3.4, 3, 2.4, 1.6, 0.9, 0.5], // share of each colour
   accent: { color: "#ffd166", amount: 0.05 }, // optional: a few small patches
   tint: "#f0603f",                  // saturated colour walls shift toward in gaps
-  deep: "#2a0c06",                  // deepest gaps / void
+  deep: "#2a0c06",                  // dark tone for the deepest gaps
   sky: "#fff1ea",                   // sky fill light
 },
 ```

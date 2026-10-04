@@ -1,7 +1,7 @@
 // The two height fields. Pure functions of the frame number: no state is carried
 // from one frame to the next, so any frame can be rendered on its own.
 
-import { makeNoise, mulberry32 } from "./random";
+import { makeNoise } from "./random";
 import { inFrameCore } from "./frameArea";
 
 import { loopPhase } from "./time";
@@ -42,13 +42,12 @@ const terrace = (v: number, soft: number) => {
 const canyonNoise = makeNoise(0x5eed1);
 
 export const CANYON = {
-  /** Column bottoms sit here: deep enough that holes read as a bottomless void. */
-  bottom: -90,
-  /** Below this, a column is "in the void" and keeps falling. */
-  voidTop: -10,
+  /** Column bottoms: just below the deepest canyon floor (-8). */
+  bottom: -10,
   // Thresholds on the combined noise value (tuned from its distribution).
   plateauFrom: -0.16,
-  voidBelow: -0.38,
+  /** Noise value where the canyon floor reaches its full depth. */
+  floorAt: -0.38,
   /** Radius of the circle in time the noise is sampled on: sets the speed. */
   timeRadius: 0.1,
 };
@@ -67,13 +66,13 @@ const canyonBase = (x: number, z: number, c: number, s: number) => {
 };
 
 // Balance: the frame only shows ~30 x 25 columns, so the big noise layer can
-// leave it with no holes for seconds at a time. Each frame shifts the field so
-// a low percentile of the in-frame base noise (fixed sample cells) sits just
-// under the void threshold, so a few holes are always open. A percentile of a
+// leave it with no canyons (or all canyon) for seconds at a time. Each frame
+// normalises the in-frame base noise (fixed sample cells) so its median sits on
+// the plateau and a low percentile sits at the canyon floor. A percentile of a
 // continuous field is continuous and periodic in t: motion and loop are kept.
-const BALANCE_PERCENTILE = 0.08;
+const BALANCE_PERCENTILE = 0.05;
 const BALANCE_MID = 0.02;
-const BALANCE_LO = -0.56;
+const BALANCE_LO = -0.46;
 const balanceCells: [number, number][] = [];
 type Balance = { lo: number; mid: number };
 const balanceCache = new Map<number, Balance>();
@@ -117,20 +116,17 @@ export const canyonNoiseAt = (x: number, z: number, t: number) => {
  * slow by canyonHeightAt, which averages this over a window of frames.
  */
 export const canyonHeightFromNoise = (n: number) => {
-  const { plateauFrom, voidBelow } = CANYON;
+  const { plateauFrom, floorAt } = CANYON;
   if (n >= plateauFrom) {
     // Flat slabs: level 0 over a wide band, +1 / +2 on the highest ground.
     return terrace((n - plateauFrom) / 0.6, 0.1);
   }
-  // Canyon wall: a sheer drop to 5 cubes down, then a gentle floor to 7 cubes
-  // at the void threshold.
+  // Canyon wall: a sheer drop to 5 cubes down, then a solid floor sloping
+  // gently to 8 cubes down. Canyons never open into an empty void.
   const wall = 0.05;
   if (n >= plateauFrom - wall) return -5 * smoothstep(plateauFrom, plateauFrom - wall, n);
-  const floor = -5 - (2 * (plateauFrom - wall - n)) / (plateauFrom - wall - voidBelow);
-  if (n >= voidBelow) return floor;
-  // Past the threshold the column keeps sinking into the dark.
-  const d = (voidBelow - n) / 0.2;
-  return Math.max(CANYON.bottom + 6, -7 - 50 * d * d);
+  const floor = (plateauFrom - wall - n) / (plateauFrom - wall - floorAt);
+  return -5 - 3 * smoothstep(0, 1.6, floor);
 };
 
 /** Frames averaged on each side, and the step between samples (frames). */
@@ -161,94 +157,6 @@ export const canyonHeights = (frame: number, out: Float32Array) => {
     }
   }
   return out;
-};
-
-// Floating cubes: drift on closed paths (whole-number frequencies) above cells
-// that often open into the void. Their size follows how open the hole below is.
-
-export type FloatingCube = {
-  ax: number; // anchor grid cell
-  az: number;
-  ox: number; // orbit radius
-  oz: number;
-  fx: number; // whole-number cycles per loop
-  fz: number;
-  fy: number;
-  fr: number;
-  px: number; // phases
-  pz: number;
-  py: number;
-  y: number; // base height
-  bob: number;
-  size: number;
-  axis: [number, number, number];
-};
-
-const FLOAT_COUNT = 34;
-
-export const floatingCubes: FloatingCube[] = (() => {
-  const rand = mulberry32(0xf10a7);
-  // Score cells near the middle of the grid by how often they're in the void.
-  const samples = 40;
-  const cand: { i: number; j: number; score: number }[] = [];
-  for (let j = 0; j < GRID_Z; j += 1) {
-    for (let i = 0; i < GRID_X; i += 1) {
-      if (!inFrameCore(columnX(i), columnZ(j))) continue;
-      let score = 0;
-      for (let k = 0; k < samples; k++) {
-        const h = canyonHeightFromNoise(canyonNoiseAt(i, j, k / samples));
-        if (h < CANYON.voidTop) score++;
-      }
-      if (score > 0) cand.push({ i, j, score: score + rand() * 0.5 });
-    }
-  }
-  cand.sort((a, b) => b.score - a.score);
-  const chosen: { i: number; j: number }[] = [];
-  for (const c of cand) {
-    if (chosen.length >= FLOAT_COUNT) break;
-    if (chosen.some((o) => Math.hypot(o.i - c.i, o.j - c.j) < 4)) continue;
-    chosen.push(c);
-  }
-  return chosen.map(({ i, j }) => {
-    const ax = rand() * 2 - 1;
-    const ay = rand() * 2 - 1;
-    const az = rand() * 2 - 1;
-    const al = Math.hypot(ax, ay, az) || 1;
-    return {
-      ax: i,
-      az: j,
-      ox: 0.4 + rand() * 0.8,
-      oz: 0.4 + rand() * 0.8,
-      fx: 1 + Math.floor(rand() * 2),
-      fz: 1 + Math.floor(rand() * 2),
-      fy: 1 + Math.floor(rand() * 3),
-      fr: rand() < 0.5 ? 1 : -1,
-      px: rand() * TAU,
-      pz: rand() * TAU,
-      py: rand() * TAU,
-      y: -7 + rand() * 6,
-      bob: 0.3 + rand() * 0.5,
-      size: 0.55 + rand() * 0.4,
-      axis: [ax / al, ay / al, az / al],
-    };
-  });
-})();
-
-export const floatingCubeState = (cube: FloatingCube, frame: number) => {
-  const t = loopPhase(frame);
-  const x = cube.ax + cube.ox * Math.cos(TAU * cube.fx * t + cube.px);
-  const z = cube.az + cube.oz * Math.sin(TAU * cube.fz * t + cube.pz);
-  const y = cube.y + cube.bob * Math.sin(TAU * cube.fy * t + cube.py);
-  // Visible only while the cell under the cube is open into the void.
-  const below = canyonHeightAt(Math.round(x), Math.round(z), frame);
-  const open = smoothstep(-5, -22, below);
-  return {
-    x,
-    y,
-    z,
-    angle: cube.fr * TAU * t,
-    scale: cube.size * open,
-  };
 };
 
 // ---------------------------------------------------------------------------

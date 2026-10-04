@@ -17,8 +17,6 @@ import {
   COLUMN_COUNT,
   columnX,
   columnZ,
-  floatingCubes,
-  floatingCubeState,
   GRID_OFFSET_X,
   GRID_OFFSET_Z,
   GRID_X,
@@ -119,11 +117,12 @@ const Columns: React.FC<{ palette: Palette }> = ({ palette }) => {
       deep: palette.deep,
       aoDepth: palette.look === "canyon" ? 3.2 : 2.2,
       aoFloor: palette.look === "canyon" ? 0.5 : 0.78,
-      voidStart: CANYON.voidTop + 4,
-      voidEnd: CANYON.voidTop - 3,
+      // Solid canyon floors: no fade into a void (floors are at most 8 deep).
+      voidStart: CANYON.bottom - 20,
+      voidEnd: CANYON.bottom - 30,
       rimStart: 3,
       rimEnd: 11,
-      rimAmount: palette.look === "canyon" ? 0.9 : 0,
+      rimAmount: 0,
     });
     return { geometry: g, material: m, info: infoAttr };
   }, [palette]);
@@ -173,62 +172,6 @@ const Columns: React.FC<{ palette: Palette }> = ({ palette }) => {
     <instancedMesh
       ref={mesh}
       args={[geometry, material, DRAWN.length]}
-      castShadow
-      receiveShadow
-      frustumCulled={false}
-    />
-  );
-};
-
-const FloatingCubes: React.FC<{ palette: Palette }> = ({ palette }) => {
-  const frame = useCurrentFrame();
-  const mesh = useRef<THREE.InstancedMesh>(null);
-  const { geometry, material } = useMemo(
-    () => ({
-      geometry: new THREE.BoxGeometry(1, 1, 1),
-      material: makeVoxelMaterial({
-        tint: palette.tint,
-        deep: palette.deep,
-        localGrid: true,
-        aoDepth: 3.2,
-        aoFloor: 0.5,
-        voidStart: CANYON.voidTop + 4,
-        voidEnd: CANYON.voidTop - 3,
-        rimStart: 3,
-        rimEnd: 11,
-        rimAmount: 0.9,
-      }),
-    }),
-    [palette],
-  );
-  useLayoutEffect(() => {
-    const m = mesh.current!;
-    const cols = columnColors(palette);
-    const col = new THREE.Color();
-    const q = new THREE.Quaternion();
-    const mat = new THREE.Matrix4();
-    floatingCubes.forEach((cube, n) => {
-      const s = floatingCubeState(cube, frame);
-      const wx = columnX(0) + s.x;
-      const wz = columnZ(0) + s.z;
-      q.setFromAxisAngle(new THREE.Vector3(...cube.axis), s.angle);
-      mat.compose(
-        new THREE.Vector3(wx, s.y, wz),
-        q,
-        new THREE.Vector3(1, 1, 1).multiplyScalar(Math.max(s.scale, 1e-4)),
-      );
-      m.setMatrixAt(n, mat);
-      const k = cube.az * GRID_X + cube.ax;
-      col.setRGB(cols[k * 3], cols[k * 3 + 1], cols[k * 3 + 2]);
-      m.setColorAt(n, col);
-    });
-    m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
-  }, [frame, palette]);
-  return (
-    <instancedMesh
-      ref={mesh}
-      args={[geometry, material, floatingCubes.length]}
       castShadow
       receiveShadow
       frustumCulled={false}
@@ -344,7 +287,6 @@ export const VoxelField: React.FC<VoxelFieldProps> = ({ paletteId }) => {
       <Rig />
       <Lights palette={palette} />
       <Columns palette={palette} />
-      {palette.look === "canyon" && <FloatingCubes palette={palette} />}
       {DEPTH_ONLY ? <DepthOnly /> : <Post />}
       <RenderGate />
     </ThreeCanvas>

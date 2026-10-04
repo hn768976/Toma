@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# 6000x3375 PNG stills (2 per composition, far-apart frames) and one 1080p PNG
-# still per composition. Canyon frames are ones with the most void in frame
-# (see scripts/field-stats.ts): 180 and 390.
+# 6000x3375 PNG stills (2 per composition) and one 1080p PNG
+# still per composition, at far-apart frames.
 # Usage: scripts/render-stills.sh [big|small|all]
 set -euo pipefail
 cd "$(dirname "$0")/.."

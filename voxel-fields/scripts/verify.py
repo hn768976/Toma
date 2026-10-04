@@ -169,11 +169,7 @@ def step_frames():
         dark = [float((l < 40).mean()) for l in lum]
         report(f"frames moved {c}", min(moved) > 2,
                f"mean |diff| between picks: {', '.join(f'{m:.1f}' for m in moved)}")
-        if c.startswith("VoxelCanyon"):
-            n = sum(d > 0.002 for d in dark)
-            report(f"void visible {c}", n >= 4, f"dark (<40) pixel share per pick: {', '.join(f'{100*d:.2f}%' for d in dark)}")
-        else:
-            report(f"no void {c}", max(dark) < 0.001, f"dark (<40) pixel share per pick: {', '.join(f'{100*d:.3f}%' for d in dark)}")
+        report(f"no void {c}", max(dark) < 0.001, f"dark (<40) pixel share per pick: {', '.join(f'{100*d:.3f}%' for d in dark)}")
         # Contact sheet for the visual checks.
         sheet = f"{OUT}/{c}-sheet.png"
         subprocess.run(["ffmpeg", "-v", "error", "-y", *sum([["-i", p] for p in paths], []),
@@ -195,8 +191,18 @@ def step_heights():
                "depth renders " + ("byte-identical" if ok else "DIFFER") + ": " + ", ".join(f"{k}={v[:8]}" for k, v in sums.items()))
 
 
+# --- stills: no empty holes in the delivered stills -------------------------------
+def step_stills():
+    import glob as g
+    for p in sorted(g.glob("out/stills-1080/*.png")) + sorted(g.glob("out/stills/*.png")):
+        a = img(p).mean(axis=2)
+        dark = float((a < 40).mean())
+        report(f"no void {os.path.basename(p)}", dark < 0.001, f"dark (<40) pixel share {100*dark:.3f}%")
+
+
 STEPS = {"probe": step_probe, "loop": step_loop, "determinism": step_determinism,
-         "banding": step_banding, "frames": step_frames, "heights": step_heights}
+         "banding": step_banding, "frames": step_frames, "heights": step_heights,
+         "stills": step_stills}
 
 if __name__ == "__main__":
     todo = sys.argv[1:] or list(STEPS)

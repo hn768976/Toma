@@ -7,7 +7,6 @@ import {
   GRID_X,
   GRID_Z,
   waveHeightAt,
-  floatingCubes,
   CANYON,
 } from "../src/lib/fields";
 
@@ -26,8 +25,7 @@ const frac = (fn: (h: number) => boolean) => (hs.filter(fn).length / hs.length).
 console.log(
   "plateau", frac((h) => h >= -0.5 && h <= 0.5),
   "above", frac((h) => h > 0.5),
-  "canyon", frac((h) => h < -0.5 && h > CANYON.voidTop),
-  "void", frac((h) => h <= CANYON.voidTop),
+  "canyon", frac((h) => h < -0.5),
 );
 
 const ascii = (fn: (i: number, j: number) => string) => {
@@ -39,17 +37,16 @@ const ascii = (fn: (i: number, j: number) => string) => {
   return s;
 };
 for (const f of [0, 300]) {
-  console.log(`canyon frame ${f}  (space=void .=deep :=mid o=plateau O=+1 #=+2)`);
+  console.log(`canyon frame ${f}  (.=floor :=wall o=plateau O=+1 #=+2)`);
   console.log(
     ascii((i, j) => {
       const h = canyonHeightAt(i, j, f);
-      return h <= CANYON.voidTop ? " " : h < -4 ? "." : h < -1 ? ":" : h < 0.5 ? "o" : h < 1.5 ? "O" : "#";
+      return h < -4 ? "." : h < -1 ? ":" : h < 0.5 ? "o" : h < 1.5 ? "O" : "#";
     }),
   );
 }
 console.log("wave frame 0");
 console.log(ascii((i, j) => " .:oO#@"[Math.min(6, Math.round(waveHeightAt(i, j, 0)))]));
-console.log("floating cubes", floatingCubes.length);
 
 // Seam: the jump across the loop point should be no bigger than a normal step.
 for (const [name, fn] of [
@@ -70,25 +67,17 @@ for (const [name, fn] of [
   console.log(`${name}: max |h(599)-h(0)|,|h(t=1)-h(0)| = ${seam.toFixed(4)}   max |h(1)-h(0)| = ${step.toFixed(4)}`);
 }
 
-// Holes in frame: share of in-frame columns that are in the void, per frame.
+// No empty holes: every in-frame column stays at or above the canyon floor.
 import { columnX, columnZ } from "../src/lib/fields";
 import { inFrameCore } from "../src/lib/frameArea";
-const per: string[] = [];
-let minShare = 1;
-for (let f = 0; f < 600; f += 20) {
-  let n = 0;
-  let v = 0;
+let lowest = Infinity;
+for (let f = 0; f < 600; f += 10)
   for (let j = 0; j < GRID_Z; j++)
     for (let i = 0; i < GRID_X; i++) {
       if (!inFrameCore(columnX(i), columnZ(j))) continue;
-      n++;
-      if (canyonHeightAt(i, j, f) <= CANYON.voidTop) v++;
+      lowest = Math.min(lowest, canyonHeightAt(i, j, f));
     }
-  minShare = Math.min(minShare, v / n);
-  per.push(`${f}:${((100 * v) / n).toFixed(1)}%`);
-}
-console.log("void share in frame core:", per.join(" "));
-console.log("min void share", (100 * minShare).toFixed(1) + "%");
+console.log(`lowest in-frame column top over the loop: ${lowest.toFixed(2)} (floor limit -8) -> ${lowest >= -8.001 ? "OK, no holes" : "HOLE"}`);
 {
   // Canyon share (below plateau) in frame core.
   const out: string[] = [];
