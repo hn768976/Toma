@@ -1,0 +1,36 @@
+{
+  "name": "vintage-map-cream-smoke",
+  "version": "1.0.0",
+  "description": "Vintage Map, Cream Swirl and Particle Smoke motion backgrounds (Remotion, 30fps, 4K)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "prepare-data": "node scripts/prepare-data.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.8.1",
+    "@remotion/cli": "4.0.532",
+    "@remotion/three": "4.0.532",
+    "d3-geo": "3.1.1",
+    "pixi.js": "8.22.0",
+    "polylabel": "2.1.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532",
+    "three": "0.186.1",
+    "topojson-client": "3.1.0"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.1",
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "@types/topojson-client": "3.1.5",
+    "@types/geojson": "7946.0.16",
+    "topojson-server": "3.0.1",
+    "typescript": "5.9.3"
+  }
+}

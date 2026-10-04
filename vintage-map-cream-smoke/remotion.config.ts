@@ -1,0 +1,27 @@
+/**
+ * Remotion CLI configuration. (The Node.js render APIs ignore this file; pass
+ * the same options directly there.)
+ */
+import { existsSync } from "node:fs";
+import { Config } from "@remotion/cli/config";
+
+Config.setVideoImageFormat("png");
+Config.setOverwriteOutput(true);
+// All three looks are WebGL2. "angle" uses the GPU through ANGLE; on a machine
+// without a GPU, pass --gl=swangle (ANGLE + SwiftShader, CPU) instead.
+Config.setChromiumOpenGlRenderer("angle");
+Config.setCodec("h264");
+Config.setPixelFormat("yuv420p");
+Config.setCrf(16);
+// The map textures and the 3M-particle buffer are large; a few tabs at once
+// is plenty.
+Config.setConcurrency(2);
+Config.setDelayRenderTimeoutInMilliseconds(300000);
+
+// Sandboxed environments that block Remotion's own Chrome Headless Shell
+// download but ship a Playwright Chromium can use it instead.
+const playwrightHeadlessShell =
+  "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell";
+if (existsSync(playwrightHeadlessShell)) {
+  Config.setBrowserExecutable(playwrightHeadlessShell);
+}
