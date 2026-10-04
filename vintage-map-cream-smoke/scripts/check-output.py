@@ -100,7 +100,9 @@ for f in sorted(DIR.glob("*.mp4")):
         lines = {"background right edge top->bottom": ((1260, 5), (1260, 714)), "background top-left->corner": ((300, 40), (5, 5))}
     for label, (a, b) in lines.items():
         st = profile_stats(img, a, b)
-        smooth = st["longest_run"] <= 12 and st["max_curvature"] < 3.0
+        # map profiles cross coastlines and labels, so only the run length
+        # (flat plateaus = banding) is meaningful there
+        smooth = st["longest_run"] <= 12 and (name.startswith("VintageMap") or st["max_curvature"] < 3.0)
         print(f"  banding {label}: {st} -> {'smooth' if smooth else 'CHECK'}")
         ok_all &= smooth
 

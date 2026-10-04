@@ -434,7 +434,7 @@ export const buildMapTexture = (region: MapRegion, data: MapData, screenWidthPx:
       bump("stateSkippedAnchor");
       continue;
     }
-    const size = Math.min(14 * mv, Math.max(8 * mv, 0.07 * Math.sqrt(s.area))) * ls;
+    const size = Math.min(15 * mv, Math.max(9 * mv, 0.075 * Math.sqrt(s.area))) * ls;
     const names = [String(p.name).toUpperCase()];
     if (p.postal) names.push(String(p.postal).toUpperCase());
     const res = tryPlace(names, sizeSteps(size, 7.5 * mv * ls), 0.14, false, anchor, (r, n) => {
@@ -561,10 +561,10 @@ export const buildMapTexture = (region: MapRegion, data: MapData, screenWidthPx:
       ctx.save();
       ctx.clip(landPath);
       if (data.stateLines.length) {
-        ctx.globalAlpha = 0.55;
+        ctx.globalAlpha = 0.85;
         ctx.strokeStyle = MAP_COLORS.border;
-        ctx.lineWidth = 0.6 * mv;
-        ctx.setLineDash([3 * mv, 1.6 * mv]);
+        ctx.lineWidth = 1.5 * mv;
+        ctx.setLineDash([5 * mv, 2.5 * mv]);
         ctx.stroke(stateLinePath);
         ctx.setLineDash([]);
       }

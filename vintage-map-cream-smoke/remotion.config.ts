@@ -13,6 +13,13 @@ Config.setChromiumOpenGlRenderer("angle");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// Keep grain and dither through H.264 (otherwise x264 smooths them away in
+// dark, saturated gradients and the Particle Smoke background bands).
+Config.overrideFfmpegCommand(({ args }) => {
+  const i = args.indexOf("libx264");
+  if (args.includes("-tune")) return args;
+  return i === -1 ? args : [...args.slice(0, i + 1), "-tune", "grain", ...args.slice(i + 1)];
+});
 // The map textures and the 3M-particle buffer are large; a few tabs at once
 // is plenty.
 Config.setConcurrency(2);

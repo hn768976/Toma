@@ -179,8 +179,10 @@ void main() {
   // hot, near-white cores where the sheet folds edge-on
   c += uColHigh * 0.55 * smoothstep(2.0, 6.0, d);
   c = softClip(c);
+  // 2% grain: half shared, half per channel (keeps the dark blue gradient
+  // dithered after 4:2:0 encoding)
   float g = grainNoise(gl_FragCoord.xy, uGrainFrame);
-  c += g * uGrainAmount * (0.6 + 0.4 * clamp(dot(c, vec3(0.3, 0.6, 0.1)) * 3.0, 0.0, 1.0));
+  c += (g * 0.6 + grainRGB(gl_FragCoord.xy, uGrainFrame) * 0.6) * uGrainAmount;
   c += ditherRGB(gl_FragCoord.xy, uGrainFrame);
   finalColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }

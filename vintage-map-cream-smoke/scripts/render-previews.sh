@@ -15,16 +15,21 @@ mkdir -p "$OUT/previews" "$OUT/stills" "$OUT/frame300" "$OUT/logs"
 for id in "${IDS[@]}"; do
   name="${id/-/_}"
   frames="$OUT/frames/$name"
-  rm -rf "$frames"
   start=$(date +%s)
+  if [ "${RESUME:-0}" = 1 ] && [ -d "$frames" ] && [ "$(find "$frames" -name '*.png' | wc -l)" -ge 600 ]; then
+    echo "$id: reusing rendered frames in $frames"
+  else
+  rm -rf "$frames"
   npx remotion render "$id" "$frames" --sequence --image-format=png \
     --scale=0.3333333333333333 --gl="$GL" --concurrency="$CONC" --log=info > "$OUT/logs/$name.log" 2>&1
+  fi
   end=$(date +%s)
-  n=$(ls "$frames" | wc -l)
-  first=$(ls "$frames" | head -1)
+  files=("$frames"/*.png)
+  n=${#files[@]}
+  first="${files[0]##*/}"
   digits=$(echo "$first" | sed -E 's/^[^0-9]*([0-9]+)\.png$/\1/')
   pattern="$frames/$(echo "$first" | sed -E 's/[0-9]+\.png$//')%0${#digits}d.png"
-  ffmpeg -v error -y -framerate 30 -start_number 0 -i "$pattern" -c:v libx264 -preset slow -crf 16 \
+  ffmpeg -v error -y -framerate 30 -start_number 0 -i "$pattern" -c:v libx264 -preset slow -tune grain -crf 16 \
     -pix_fmt yuv420p -r 30 -an -movflags +faststart "$OUT/previews/$name.mp4"
   f300=$(printf "$pattern" 300)
   cp "$f300" "$OUT/frame300/$name.png"

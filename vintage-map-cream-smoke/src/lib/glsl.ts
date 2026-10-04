@@ -16,6 +16,15 @@ float grainNoise(vec2 fragCoord, float frame) {
   uvec3 p = uvec3(uint(fragCoord.x), uint(fragCoord.y), uint(frame));
   return hash3u(p) + hash3u(p + uvec3(7919u, 104729u, 613u)) - 1.0;
 }
+// Independent grain per channel: also dithers chroma, which survives 4:2:0
+// subsampling better than grey grain in saturated dark gradients.
+vec3 grainRGB(vec2 fragCoord, float frame) {
+  uvec3 p = uvec3(uint(fragCoord.x), uint(fragCoord.y), uint(frame) + 2000u);
+  return vec3(
+    hash3u(p) + hash3u(p + uvec3(7919u, 1u, 0u)) - 1.0,
+    hash3u(p + uvec3(0u, 104729u, 3u)) + hash3u(p + uvec3(13u, 7u, 613u)) - 1.0,
+    hash3u(p + uvec3(4241u, 0u, 9u)) + hash3u(p + uvec3(5u, 3571u, 11u)) - 1.0);
+}
 // Triangular dither, +-1/255.
 vec3 ditherRGB(vec2 fragCoord, float frame) {
   uvec3 p = uvec3(uint(fragCoord.x), uint(fragCoord.y), uint(frame) + 1000u);

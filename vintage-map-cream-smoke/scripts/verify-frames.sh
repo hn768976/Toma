@@ -33,6 +33,11 @@ from PIL import Image
 a, b, c = (np.asarray(Image.open(p).convert("RGB")).astype(float) for p in sys.argv[1:4])
 seam = np.abs(a - b).mean(); step = np.abs(b - c).mean()
 print(f"{sys.argv[4]} seam 599->0 mean abs diff {seam:.3f} vs 0->1 {step:.3f}: {'PASS' if seam < step * 1.5 + 0.3 else 'FAIL'}")
+# the same on 8x-downsampled frames, where grain averages out and only motion is left
+small = lambda p: np.asarray(Image.open(p).convert("RGB").resize((160, 90), Image.BOX)).astype(float)
+a, b, c = (small(p) for p in sys.argv[1:4])
+seam = np.abs(a - b).mean(); step = np.abs(b - c).mean()
+print(f"{sys.argv[4]} seam (downsampled) {seam:.3f} vs 0->1 {step:.3f}: {'PASS' if seam < step * 1.5 + 0.05 else 'FAIL'}")
 PY
       ;;
   esac
