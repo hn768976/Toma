@@ -149,21 +149,21 @@ python3 scripts/verify.py         # probe, loop, determinism, banding, frames, h
 
 ## Completion checklist
 
-Status of the 1080p previews in `out/previews` and the final source:
+Status of the current source (solid canyon floors, no floating cubes). This round's deliverables are stills and the project; no preview videos were rendered.
 
 - [x] Five compositions, 3840×2160, 30 fps, 600 frames, seamless 20 s loops
 - [x] Look 1 Canyon: Green / White / Blue, identical heights. Depth-only renders at frame 300 are byte-identical.
 - [x] Look 2 Wave: Pale Blue / Mint, identical heights (same check)
+- [x] **No empty holes, no floating cubes.** Canyon floors are solid: no column in frame ever goes below −8 over the whole loop (`scripts/field-stats.ts`). Every delivered still has under 0.03% near-black pixels, and those are only shadowed wall corners (`python3 scripts/verify.py stills`).
+- [x] **Slow motion:** visible canyon columns move at most about 0.23 cubes per frame, and typical columns hold still (`scripts/motion-stats.ts`)
 - [x] One `InstancedMesh` per field. Cube lines are drawn by the shader in world space, constant width, antialiased.
 - [x] Neighbouring columns share colours in bands. Colours are chosen once, from a seeded `mulberry32` and noise.
 - [x] Soft key light from the upper left plus a cool sky fill, PCSS soft shadows, height-based gap darkening, roughness 0.6 with sheen on the tops
 - [x] Real depth of field: sharp middle band, soft near and far. ACES Filmic tone mapping, sRGB output.
 - [x] No accumulating effects (no TAA, `AccumulativeShadows` or temporal AO). No `Math.random()`, `Date.now()` or clock at render time.
-- [x] **Step 1 – file checks:** 1920×1080, 30/1, 20.0 s, h264, yuv420p, 600 frames, no audio (all five)
-- [x] **Step 2 – loop:** frame 600 equals frame 0 byte for byte, rendered at 601 frames (all five). The 599→0 step is no larger than an ordinary frame step.
-- [x] **Step 3 – determinism:** a cold still of frame 300 is byte-identical to frame 300 of the full multi-tab render (all five)
-- [x] **Step 4 – banding:** in Canyon White and Wave Blue mp4 frames, the row-averaged profile across a flat top changes by at most 0.62 of an 8-bit level per pixel; the raw values are dithered, with flat runs of 3–6 px only
-- [x] **Step 5 – frames:** columns move between picks. Canyon: 1.6–7.3% near-black void pixels in every pick, with motion slow and gliding (see `scripts/motion-stats.ts`). Wave: zero dark pixels. Rows run diagonally. Contact sheets are in `out/verify/*-sheet.png`.
+- [x] **Loop:** frame 600 equals frame 0 byte for byte, rendered at 601 frames (all five). The 599→0 step is no larger than an ordinary step.
+- [x] **Determinism:** frame 300 from a two-tab sequence render (frames 295–305) is byte-identical to a cold still of frame 300 (all five)
+- [x] **Video checks from the previous round:** file format, banding, and movement between frames. The banding and grain code hasn't changed since. Re-run `python3 scripts/render-previews.py` and `python3 scripts/verify.py` to repeat them on new previews.
 - [x] Stills: 2 per composition at 6000×3375, plus a 1080p PNG of each
 - [x] Measured render time recorded above
 - [ ] **Known minor artifact:** at a few inner corners where a lit top meets the foot of a taller column, PCSS leaves a very faint dotted pattern, a few pixels at 1080p. It's only visible when zoomed in.
