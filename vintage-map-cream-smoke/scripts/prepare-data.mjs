@@ -77,7 +77,8 @@ const COUNTRY_KEYS = ["NAME", "NAME_LONG", "ABBREV", "ADM0_A3", "TYPE", "LABELRA
 {
   const na = (f) => ["USA", "CAN"].includes(f.properties.adm0_a3);
   const states = pick(await load("ne_50m_admin_1_states_provinces"), ["name", "postal", "adm0_a3", "labelrank", "latitude", "longitude", "area_sqkm"], na);
-  const lines = pick(await load("ne_50m_admin_1_states_provinces_lines"), ["adm0_a3"], na);
+  // the lines file spells the field ADM0_A3
+  const lines = pick(await load("ne_50m_admin_1_states_provinces_lines"), ["ADM0_A3"], (f) => ["USA", "CAN"].includes(f.properties.ADM0_A3), { ADM0_A3: "adm0_a3" });
   write("ne_50m_admin1_na.json", { states, lines }, 1e6);
 }
 

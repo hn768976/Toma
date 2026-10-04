@@ -83,7 +83,25 @@ of every render is kept in `out/frame300/` for the determinism check.
 The measurements were taken in this build's container: 4 vCPUs, **no GPU**,
 so WebGL ran on SwiftShader on the CPU.
 
-<!-- TIMINGS -->
+Steady state, one tab (`--concurrency=1`), measured with
+`scripts/measure-timing.sh`:
+
+| Look | 720p | 4K (measured) |
+|---|---|---|
+| Vintage Map | **1.04 s/frame** | **13.7 s/frame** (+ ~30 s one-off texture build per tab) |
+| Cream Swirl | **1.72 s/frame** | **29.6 s/frame** |
+| Particle Smoke | **2.19 s/frame** | **6.5 s/frame** (bound by 3 M vertices, so it scales less than ×9) |
+
+The full 720p preview renders (2 tabs, PNG sequence) took 520–580 s per
+map, 980–1000 s per cream, and 1300–1400 s per smoke clip.
+
+**4K estimate, this kind of CPU-only machine:** about 2.3 h per map clip,
+4.9 h per cream clip and 1.1 h per smoke clip with one tab. Two tabs roughly
+halve the map times; cream and smoke gain less, because SwiftShader already
+uses every core. **On a GPU** (ANGLE on real hardware) these shaders are
+expected to run one to two orders of magnitude faster, roughly 0.3–1.5
+s/frame at 4K, where PNG capture and encoding dominate. That GPU figure is an
+estimate; it was **not measured**, because this container has no GPU.
 
 ## How each look is built
 
@@ -206,7 +224,60 @@ The `MapTexture-*` compositions (Debug folder) show the whole flat map
 texture. For the loop check, `--props='{"loopCheck":true}'` makes a looping
 composition 601 frames long.
 
-<!-- RESULTS -->
+### Results of the last run
+
+The mp4s are 720p previews.
+
+| Check | Result |
+|---|---|
+| ffprobe (1280×720, 30/1, 20.000 s, h264, yuv420p, no audio) | all 8 PASS |
+| Frame 300 cold vs full render | all 8 byte-identical |
+| Loop: frame 600 == frame 0 | all 5 looping clips byte-identical |
+| Loop seam (599→0 vs 0→1, grain averaged out) | Cream 0.297 vs 0.301 · Blush 0.296 vs 0.301 · Caramel 0.311 vs 0.317 · Blue 1.221 vs 1.217 · Gold 1.449 vs 1.450 |
+| Banding (frames decoded from the mp4) | longest run of one 8-bit value ≤ 12 px on every gradient profile; smoke's darkest corner 7–8 px |
+| Particle Smoke exposure | form visible in every sampled frame (12–26% of pixels above luma 60), 0 clipped pixels |
+| Cream Swirl clipping | 0 pure-white pixels, gap included |
+| Map labels vs Natural Earth (d3 `geoContains`) | every country, sea and state anchor inside its own polygon; no overlaps; none on disputed areas; 10-label samples all PASS |
+
+**Banding fix found by this check.** With plain x264 the Particle Smoke's
+near-black navy background showed 1-level chroma steps after encoding; the
+PNG frames were smooth. The fix has two parts: per-channel grain in the smoke
+shader, and `-tune grain` (still CRF 16). The tune is used in
+`render-previews.sh` and added to the Remotion encode in
+`remotion.config.ts`. The World and Cream previews were encoded before this
+switch and pass without it.
+
+## Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, 600 frames, one data row per version
+- [x] Engines as specified: three.js (`@remotion/three`) for looks 1–2,
+      PixiJS 8 point-list mesh + custom shader/filter for look 3; WebGL2 only
+- [x] Everything built in code; no photos or scanned textures; no MCP servers
+- [x] Fonts (IM Fell English, OFL) and Natural Earth data shipped with licences
+- [x] Map: rust land, parchment sea, coast ink edge, pale borders, dashed
+      disputed lines, curved 10° graticule, cream country caps, italic sea
+      names, ringed city dots, collision-free labels, no labels on disputed
+      territories, procedural paper, ≥1.5 texels/px at the nearest point,
+      mipmaps + 16× anisotropy, tilt-shift from depth, vignette, exposure
+      breathing, 3% grain
+- [x] Cream: SDF surface (sheet + twisted torus roll + folds + noise, domain
+      warped), wrap diffuse, satin sheen, SDF AO, fake subsurface glow, depth
+      of field, AgX, bright top-left gap, 1.5% grain, seamless loop
+- [x] Smoke: 3 M particles from module-level `mulberry32`, positions and
+      projection in the vertex shader, 3 sheets + 10% dust, ±12.5° closed
+      orbit, additive float accumulation, custom glow filter, radial
+      background, 2% grain, seamless loop
+- [x] ±1/255 dither in every final pass; grain from pixel position and
+      `frame % 600`
+- [x] Determinism: frame 300 cold == full render, byte for byte (all 8)
+- [x] Loops: frame 600 == frame 0, byte for byte (all 5)
+- [x] Banding checked on frames decoded from the encoded mp4s
+- [x] 720p previews (1280×720, H.264, yuv420p, CRF 16) and a 720p still of each
+
+**Interpretation note.** "Tilt about 35–40° from flat" is implemented as the
+paper tilted 40° from facing the camera, which is a camera elevation of 50°
+(`MAP_CAMERA.elevationDeg`). An elevation of 40° was visibly more foreshortened
+than the reference. Change the one constant to taste.
 
 ## Adding a map region
 

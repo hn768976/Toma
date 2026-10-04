@@ -120,6 +120,16 @@ const hexRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2
 
 const DISPUTED_TYPES = new Set(["Disputed", "Indeterminate", "Breakaway"]);
 const SOLID_BORDER = "International boundary (verify)";
+// English names for places Natural Earth gives in a local or outdated form.
+const CITY_NAMES: Record<string, string> = {
+  "Nur-Sultan": "Astana",
+  København: "Copenhagen",
+  Banghazi: "Benghazi",
+  Zaporizhzhya: "Zaporizhzhia",
+  Antwerpen: "Antwerp",
+  "Nürnberg": "Nuremberg",
+  "Ft. Worth": "Fort Worth",
+};
 // Natural Earth names that are not printed-atlas sea names.
 const SEA_EXCLUDE = new Set(["Inner Seas"]);
 
@@ -466,7 +476,8 @@ export const buildMapTexture = (region: MapRegion, data: MapData, screenWidthPx:
     const dotRect = rectAt(xy[0], xy[1], dotR * 2.6, dotR * 2.6);
     if (collider.hits(dotRect)) continue;
     const size = (c.cap === 2 ? 16.5 : 14) * mv * ls;
-    const spec: Spec = { lines: [c.name.replace(/\s+/g, " ")], size, spacing: 0.01, italic: false };
+    const cityName = c.name.replace(/\s+/g, " ");
+    const spec: Spec = { lines: [CITY_NAMES[cityName] ?? cityName], size, spacing: 0.01, italic: false };
     const m = measure(spec);
     const gap = dotR * 1.5;
     const options: [number, number][] = [
