@@ -380,7 +380,7 @@ export class Post {
       this.mDofDown.uniforms.tSrc.value = this.sceneRT.texture;
       this.mDofDown.uniforms.texel.value.set(1 / this.w, 1 / this.h);
       this.pass(gl, this.mDofDown, this.dofDown);
-      // a second 2x2 box on top of the first gives a 4x4 average
+      // four bilinear taps at +/-1 texel = a 4x4 box average at quarter res
       const qh = this.dofDown.height;
       this.mDofBlur.uniforms.tSrc.value = this.dofDown.texture;
       this.mDofBlur.uniforms.texel.value.set(1 / this.dofDown.width, 1 / qh);

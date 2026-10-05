@@ -15,6 +15,20 @@ Three looks, six compositions, one Remotion project. Built entirely in code
 All compositions are 3840×2160, 30 fps. (Remotion ids cannot contain `_`, so the
 ids use `-`; the preview files use `_`, e.g. `CircuitChip_Blue.mp4`.)
 
+## References
+
+Reference clips go in `refs/<referenceID>.mp4`. They were used only for visual
+comparison and are not part of this package.
+
+| Look | Reference(s) |
+|------|--------------|
+| Holo City | `1020170812` |
+| Neon Ribbons | `1077857705` |
+| Circuit Chip | `3503768559` (low glide over the traces) and `1067060245` (chip with edge flare) |
+
+The Circuit Chip brief names `1101145185`, but that clip was not supplied, so
+the two clips above were used in its place.
+
 ## Setup
 
 ```bash
@@ -57,7 +71,7 @@ copy use `--codec=prores --prores-profile=4444`.
 output size, so a 6K still is rendered natively, not upscaled.
 
 ```bash
-npx remotion still CircuitChip-Blue out/CircuitChip_Blue_6K.png --frame=420 --scale=1.5625 --gl=angle
+npx remotion still CircuitChip-Blue out/CircuitChip_Blue_6K.png --frame=420 --scale=1.5625 --gl=angle --timeout=300000
 npx remotion still HoloCity-Green   out/HoloCity_Green_6K.png   --frame=300 --scale=1.5625 --gl=angle
 npx remotion still NeonRibbons-Purple out/NeonRibbons_Purple_6K.png --frame=300 --scale=1.5625 --gl=angle
 ```
@@ -76,7 +90,35 @@ The PNG frames are kept in `out/frames/` for the determinism and banding checks.
 
 ## Render time
 
-RENDER_TIME_TABLE
+Measured in this build environment: **4 vCPU, no GPU**. Chromium fell back to
+SwiftShader (software WebGL via ANGLE). Times are steady-state seconds per frame
+for one render worker. The method: render 6 frames and 21 frames, then take the
+difference ÷ 15, so browser start-up and scene build are excluded.
+
+| Look | 720p (measured) | 1080p (measured) | 4K (estimate) |
+|------|-----------------|------------------|---------------|
+| Circuit Chip | 0.94 s | 1.68 s | **≈ 5.7 s** |
+| Holo City    | 3.77 s | 5.94 s | **≈ 17.6 s** |
+| Neon Ribbons | 0.94 s | 1.84 s | **≈ 6.7 s** |
+
+The 4K estimate fits time = a + b × megapixels through the 720p and 1080p
+measurements and evaluates it at 8.29 MP. On the same kind of CPU-only machine
+the whole 4K renders would take, with one worker:
+
+| Look | 4K render time (estimate) |
+|------|---------------------------|
+| Circuit Chip, 450 frames | ≈ 43 min |
+| Holo City, 600 frames | ≈ 2.9 h |
+| Neon Ribbons, 600 frames | ≈ 67 min |
+
+Software WebGL runs every tab through one GPU process, so raising
+`--concurrency` helps little. Running several compositions as separate
+processes does help. On a machine with a real GPU, expect these numbers to drop
+by an order of magnitude or more; the output is identical.
+
+Start-up note: Holo City builds about 427k points and compiles its shaders
+before the first frame. Under software GL that can take more than Remotion's
+default 30 s, so the config sets `setDelayRenderTimeoutInMilliseconds(300000)`.
 
 ## How it is built
 
@@ -118,11 +160,36 @@ RENDER_TIME_TABLE
 
 Frames were extracted **from the encoded mp4s** and pixel rows/columns were read
 across the dark gradients and glow falloffs (sky above the ribbons, Holo City
-fog, Circuit Chip haze and the flare falloff). BANDING_RESULT
+fog, Circuit Chip haze and the flare falloff). Each region was checked twice. First, the
+tones were stretched 3–8× to look for visible contour steps. Second, row-mean
+profiles were read across each region. All six encoded previews are smooth: no
+steps or plateaus, and the per-row noise from grain and dither is present
+everywhere (row std ≈ 1.3–1.7 levels in the empty ribbon sky). The 2% grain and
+±1/255 dither are applied after tonemapping, in the final pass.
 
 ## Completion checklist
 
-CHECKLIST
+| Check | CircuitChip Blue / Gold | HoloCity Green / Blue | NeonRibbons Purple / Gold |
+|-------|------------------------|------------------------|---------------------------|
+| 1. ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, exact duration | ✅ / ✅ (15.0 s) | ✅ / ✅ (20.0 s) | ✅ / ✅ (20.0 s) |
+| 2. Loop: frame 600 == frame 0 (601-frame build), pixel for pixel | n/a (story) | ✅ / ✅ | ✅ / ✅ |
+| 3. Cold-start frame 300 == full-render frame 300, byte for byte | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ |
+| 4. Banding, read from the encoded mp4 | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ |
+| 5. Contact sheet shows the required content | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ |
+| 6. Frames 299/300/301: no pops, flicker or shimmer | ✅ / ✅ | ✅ / ✅ | ✅ / ✅ |
+| `npm install && npx remotion studio` from a clean copy | ✅ | | |
+
+What each look's contact sheet shows:
+
+- **Circuit Chip:** a very low view over glowing traces, with pulses running
+  toward the chip and the horizon. The chip emerges, focus is pulled onto it,
+  and its edges and pins flare. The chip has no markings.
+- **Holo City:** dot-lattice towers with light lines, scanning rings and squares
+  at the tower bases, crossing light lines, fog and depth. The camera moves
+  forward between frames.
+- **Neon Ribbons:** 12 curved glossy bands in the lower half. Highlights and
+  magenta glints move along the bands between frames, and the upper half stays
+  dark and empty.
 
 ## Adding a colourway
 
