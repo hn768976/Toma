@@ -36,6 +36,8 @@ export type PostParams = {
   grainFrame: number; // frame % 600
   // soft additive haze / flare in display space (uv position, colour * strength)
   haze: {x: number; y: number; radius: number; color: THREE.Color} | null;
+  // atmospheric lift in display space: d + lift * (1 - d)
+  lift: THREE.Color;
 };
 
 export const defaultPostParams = (): PostParams => ({
@@ -61,6 +63,7 @@ export const defaultPostParams = (): PostParams => ({
   saturation: 1,
   grainFrame: 0,
   haze: null,
+  lift: new THREE.Color(0, 0, 0),
 });
 
 const VERT = /* glsl */ `
@@ -242,6 +245,7 @@ uniform vec3 tint;
 uniform float grainFrame;
 uniform vec4 hazePos;
 uniform vec3 hazeColor;
+uniform vec3 lift;
 uniform vec2 resolution;
 varying vec2 vUv;
 
@@ -298,6 +302,7 @@ void main() {
     vec2 hp = (vUv - hazePos.xy) * vec2(resolution.x / resolution.y, 1.0);
     d += hazeColor * exp(-dot(hp, hp) / (hazePos.z * hazePos.z));
   }
+  d += lift * (1.0 - d);
   // vignette + vertical falloff
   vec2 p = vUv - 0.5;
   p.x *= resolution.x / resolution.y;
@@ -372,7 +377,7 @@ export class PostPipeline {
     grain: {value: 0}, overlayStrength: {value: 1}, saturation: {value: 1}, overlayProtect: {value: 0},
     toneMap: {value: 0}, hasOverlay: {value: 0}, overlayMode: {value: 0},
     tint: {value: new THREE.Color(1, 1, 1)}, grainFrame: {value: 0}, resolution: {value: new THREE.Vector2()},
-    hazePos: {value: new THREE.Vector4(0, 0, 0.1, 0)}, hazeColor: {value: new THREE.Color(0, 0, 0)},
+    hazePos: {value: new THREE.Vector4(0, 0, 0.1, 0)}, hazeColor: {value: new THREE.Color(0, 0, 0)}, lift: {value: new THREE.Color(0, 0, 0)},
   });
   private blackTex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
 
@@ -522,6 +527,7 @@ export class PostPipeline {
     f.overlayMode.value = p.overlayMode;
     f.overlayProtect.value = p.overlayProtect;
     f.resolution.value.set(w, h);
+    f.lift.value.copy(p.lift);
     if (p.haze) {
       f.hazePos.value.set(p.haze.x, p.haze.y, p.haze.radius, 0);
       f.hazeColor.value.copy(p.haze.color);

@@ -107,7 +107,7 @@ void main() {
     // speckled: individual tiles flare, like dense city lights
     hot += hotColors[i] * k * mix(0.5 + hv, (0.15 + 2.2 * hv * hv * hv) * step(0.25, hv), hotSpeckle);
     // white-hot core at the centre of each hub
-    hot += vec3(1.0, 0.85, 0.6) * smoothstep(0.55, 0.95, k / max(h.w, 1e-3)) * h.w * 0.6 * (0.4 + hv);
+    hot += vec3(1.0, 0.75, 0.4) * smoothstep(0.6, 0.95, k / max(h.w, 1e-3)) * h.w * 0.25 * (0.4 + hv);
   }
   vec3 dotsCol = (landCol + glow + hot) * dotA * landC;
 

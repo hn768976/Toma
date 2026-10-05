@@ -75,6 +75,7 @@ export type MapVersion = {
   haze?: {x: number; y: number; radius: number; color: string; strength: number};
   minorColor?: string;
   iconWhite?: string;
+  lift?: string; // display-space atmospheric lift (hazy, non-black blacks)
   streaks?: {lon: number; lat: number; height: number; length: number; width: number; angle: number; color: string; gain: number}[];
   routes: RouteDef[];
   staticIcons: StaticIconDef[];
@@ -106,7 +107,7 @@ export const WORLD: MapVersion = {
   accent: '#FF8A2A',
   accentGain: 1.7,
   camera: {target: [4, -2], dist: 38.5, tilt: 27, yaw: 0, fov: 30, push: 0.06, side: 0.6, yawDrift: 0.8, roll: 0},
-  look: {...baseLook, cityStrength: 0.12, reliefBase: 0.58, reliefContrast: 3.2, coast: ['#4FD0DA', 0.8], tileBevel: 0.5, hotSpeckle: 0.6, landSpec: 0.5},
+  look: {...baseLook, dotPitch: 0.62, cityStrength: 0.12, reliefBase: 0.42, reliefContrast: 3.2, coast: ['#4FD0DA', 1.1], tileBevel: 0.5, hotSpeckle: 0.6, landSpec: 0.5},
   hotspots: [
     {lon: -80, lat: 40, radius: 10, intensity: 0.94, color: '#FF8A2A'},
     {lon: 2, lat: 50, radius: 7, intensity: 0.94, color: '#FF8A2A'},
@@ -164,10 +165,11 @@ export const WORLD: MapVersion = {
   arcRadius: 0.014,
   iconSize: 1,
   hudSize: 3.0,
-  post: {aperture: 0.05, maxBlur: 0.005, bloomStrength: 0.3, bloomThreshold: 0.5, vignette: 0.7, topLight: 0.25, exposure: 1},
+  post: {aperture: 0.05, maxBlur: 0.005, bloomStrength: 0.22, bloomThreshold: 0.6, vignette: 0.7, topLight: 0.25, exposure: 1},
   hudExtras: {diagonals: 3, sliders: [[118, -42, 30]], dashBars: 6},
   haze: {x: 0.82, y: 0.98, radius: 0.35, color: '#3D8FB0', strength: 0.32},
-  minorColor: '#B8DCE8',
+  minorColor: '#8FD8E6',
+  lift: '#0C2A33',
 };
 
 export const ASIA: MapVersion = {
@@ -175,7 +177,7 @@ export const ASIA: MapVersion = {
   accent: '#5FE8FF',
   accentGain: 1.25,
   camera: {target: [66, 26], dist: 21, tilt: 47, yaw: 16, fov: 32, push: 0.03, side: 1.4, yawDrift: 2, roll: 0},
-  look: {...baseLook, dotPitch: 0.85, dotSize: 0.4, reliefBase: 0.55, city: ['#FF6A4A', 0.9], cityStrength: 0, coast: ['#4FD8E4', 0.4], tileBevel: 0.9, landSpec: 0.5, grid: ['#1C4A52', 0.1], reliefContrast: 3.0},
+  look: {...baseLook, dotPitch: 0.85, dotSize: 0.4, reliefBase: 0.38, city: ['#FF6A4A', 0.9], cityStrength: 0, coast: ['#4FD8E4', 0.4], tileBevel: 0.9, landSpec: 0.15, grid: ['#1C4A52', 0.1], reliefContrast: 3.0},
   hotspots: [
     {lon: 8, lat: 50, radius: 4, intensity: 2.24, color: '#5FE8FF'},
     {lon: -4, lat: 8, radius: 4, intensity: 2.56, color: '#5FE8FF'},
@@ -183,7 +185,6 @@ export const ASIA: MapVersion = {
     {lon: 121, lat: 14, radius: 3, intensity: 1.92, color: '#5FE8FF'},
     {lon: 77, lat: 22, radius: 6, intensity: 0.56, color: '#5FE8FF'},
     {lon: 40, lat: 52, radius: 8, intensity: 0.40, color: '#5FE8FF'},
-    {lon: 105, lat: 45, radius: 9, intensity: 0.3, color: '#7AD8FF'},
   ],
   pins: [
     {lon: 8, lat: 50, kind: 'badge', code: 'HUB-01', labelDx: -22, labelDy: 2},
@@ -224,6 +225,7 @@ export const ASIA: MapVersion = {
     {lon: 70, lat: -12, text: 'EXT 3 940 KM', alpha: 0.5},
     {lon: 126, lat: 28, text: '588/365', size: 1.2},
   ],
+  lift: '#0D2836',
   hudExtras: {diagonals: 6, boxes: [[30, -28, 62, -6], [-12, 0, 18, 22]], badges: [[8, 26, '25%']], dashBars: 5},
   haze: {x: 0.5, y: 0.55, radius: 0.7, color: '#1E5466', strength: 0.22},
   routes: [],
@@ -239,7 +241,7 @@ export const ROUTES: MapVersion = {
   id: 'LogisticsMap-Routes',
   accent: '#FF8A2A',
   accentGain: 1.6,
-  camera: {target: [14, 41], dist: 5.0, tilt: 58, yaw: 10, fov: 32, push: 0.04, side: 0.7, yawDrift: 2.5, roll: 0},
+  camera: {target: [14, 41], dist: 4.6, tilt: 58, yaw: 24, fov: 32, push: 0.04, side: 0.7, yawDrift: 2.5, roll: 0},
   look: {...baseLook, dotPitch: 0.2, dotSize: 0.34, landLit: '#2A6A70', landShadow: '#061416', reliefBase: 0.28, reliefContrast: 3.4, coast: ['#46E0F0', 0.4], tileBevel: 0.4, hotSpeckle: 1, landSpec: 0.6, city: ['#FF6A1A', 2.0], cityStrength: 0.12, gridStep: 2.5, reliefHeight: 0.02},
   hotspots: [
     {lon: -3.7, lat: 40.4, radius: 3.64, intensity: 3.52, color: '#FF5A14'},
@@ -270,7 +272,7 @@ export const ROUTES: MapVersion = {
     {from: 3, to: 1, period: 150, offset: 10, height: 0.35, draw: [0, 300]},
   ],
   counters: [
-    {lon: 4, lat: 33.6, prefix: 'EXT [', seed: 21, digits: 6, step: 3, size: 2.4},
+    {lon: 2, lat: 32.2, prefix: 'EXT [', seed: 21, digits: 6, step: 3, size: 2.8},
     {lon: 18, lat: 34.5, prefix: '#02 /// ', seed: 22, digits: 6, step: 4},
     {lon: 26, lat: 46, prefix: '[ ', seed: 23, digits: 6, step: 5},
   ],
@@ -297,6 +299,7 @@ export const ROUTES: MapVersion = {
   ],
   hudExtras: {diagonals: 7, dashBars: 9},
   iconWhite: '#BFEFFF',
+  lift: '#081A20',
   streaks: [{lon: 10, lat: 39.5, height: 0.05, length: 3.2, width: 0.25, angle: 0.15, color: '#5FD8FF', gain: 1.3}],
   staticIcons: [
     {lon: -9, lat: 48.5, icon: 'crane', color: 'white'},

@@ -43,16 +43,16 @@ export const CYAN: DigitalVersion = {
   id: 'DigitalWorldMap-Cyan',
   line: 0x5fd8f0,
   node: 0xbff6ff,
-  scale: 14.6,
-  centerLon: -4,
+  scale: 15.6,
+  centerLon: -10,
   centerLat: 14,
   nodeCount: 40,
   streakCount: 30,
   curveCount: 6,
   glow: 18,
   grain: 0.02,
-  background: [0x02 / 255, 0x0a / 255, 0x10 / 255],
-  haze: [0.02, 0.11, 0.14],
+  background: [0x01 / 255, 0x06 / 255, 0x0b / 255],
+  haze: [0.0, 0.07, 0.1],
 };
 
 // Final pass: analytic background + haze (float precision, so no banding from
@@ -193,7 +193,7 @@ export class DigitalMapScene {
         grid.lineTo(x, y);
       }
     }
-    grid.stroke({width: 3, color: v.line, alpha: 0.36});
+    grid.stroke({width: 3.5, color: v.line, alpha: 0.5});
     // rule lines with tick marks
     for (let i = 0; i < 3; i++) {
       const y = H * (0.18 + i * 0.32);
@@ -276,7 +276,7 @@ export class DigitalMapScene {
         coast.closePath();
       }
     }
-    coast.stroke({width: 2, color: v.line, alpha: 0.45, join: 'round'});
+    coast.stroke({width: 2, color: v.line, alpha: 0.15, join: 'round'});
     content.addChild(coast);
     // pixel-dot coastline on top of the faint line
     const coastDots = new ParticleContainer({dynamicProperties: {position: false}});
@@ -314,7 +314,7 @@ export class DigitalMapScene {
         coastGlow.closePath();
       }
     }
-    coastGlow.stroke({width: 8, color: v.line, alpha: 0.7, join: 'round'});
+    coastGlow.stroke({width: 7, color: v.line, alpha: 0.4, join: 'round'});
     glowLayer.addChild(coastGlow);
 
     // --- curves (latitude-style sweeps) --------------------------------------
@@ -346,10 +346,11 @@ export class DigitalMapScene {
       if (x < 80 || x > W - 80 || y < 80 || y > H - 80) continue;
       if (chosen.some(([cx, cy]) => Math.hypot(cx - x, cy - y) < 230)) continue;
       chosen.push([x, y]);
-      if (chosen.length >= v.nodeCount - 8) break;
+      if (chosen.length >= v.nodeCount - 14) break;
     }
     // a few nodes off the coast / in empty space, like the reference
-    for (let i = 0; i < 12; i++) chosen.push([200 + rng() * (W - 400), 150 + rng() * (H - 300)]);
+    // nodes in open ocean / off the map, as in the reference
+    for (let i = 0; i < 14; i++) chosen.push([100 + rng() * (W - 200), 120 + rng() * (H - 240)]);
     const periods = [60, 75, 100, 120, 150];
     const stalks = new Graphics();
     chosen.forEach(([x, y], i) => {
@@ -360,7 +361,7 @@ export class DigitalMapScene {
         if (rng() < 0.75) stalks.moveTo(x, y).lineTo(x, y + dir * len);
         else stalks.moveTo(x, y).lineTo(x + dir * len, y);
       }
-      const halo = new Sprite({texture: haloTex, anchor: 0.5, x, y, tint: v.node, blendMode: 'add'});
+      const halo = new Sprite({texture: haloTex, anchor: 0.5, x, y, tint: v.line, blendMode: 'add'});
       const core = new Sprite({texture: coreTex, anchor: 0.5, x, y, tint: v.node, blendMode: 'add'});
       content.addChild(halo, core);
       this.nodes.push({x, y, halo, core, period: periods[i % periods.length], offset: Math.floor(rng() * 150), size});
@@ -374,7 +375,7 @@ export class DigitalMapScene {
         .map((m, j) => ({m, j, d: Math.hypot(m.x - n.x, m.y - n.y)}))
         .filter((o) => o.j > i && o.d < 900)
         .sort((a, b) => a.d - b.d)
-        .slice(0, rng() < 0.5 ? 1 : 0);
+        .slice(0, rng() < 0.28 ? 1 : 0);
       for (const {m} of near) {
         const draw: [number, number] | undefined = rng() < 0.45 ? [Math.floor(rng() * 300), 300] : undefined;
         this.links.push({a: n, b: m, draw, elbow: rng() < 0.45});
@@ -402,7 +403,7 @@ export class DigitalMapScene {
       const sprite = new Sprite({texture: sTex, anchor: {x: 0, y: 0.5}, tint: rng() < 0.7 ? v.line : 0xd8f8ff, blendMode: 'add'});
       sprite.width = len;
       sprite.height = thick;
-      sprite.alpha = 0.14 + rng() * 0.36;
+      sprite.alpha = 0.12 + rng() * 0.3;
       content.addChild(sprite);
       this.streaks.push({sprite, y: H * (0.04 + rng() * 0.92), len, k, x0: rng()});
     }
@@ -417,7 +418,7 @@ export class DigitalMapScene {
           uBg: {value: new Float32Array(v.background), type: 'vec3<f32>'},
           uHaze: {value: new Float32Array(v.haze), type: 'vec3<f32>'},
           uScreen: {value: new Float32Array([W, H]), type: 'vec2<f32>'},
-          uBlur: {value: 0.0035, type: 'f32'},
+          uBlur: {value: 0.0055, type: 'f32'},
         }),
       },
     });
@@ -437,9 +438,9 @@ export class DigitalMapScene {
     for (const n of this.nodes) {
       const p = phase(f, n.period, n.offset);
       const pulse = 0.5 + 0.5 * Math.cos(TAU * p);
-      n.halo.scale.set((0.8 + 0.35 * pulse) * n.size * 1.2);
-      n.halo.alpha = 0.7 + 0.3 * pulse;
-      n.core.scale.set(0.5 * n.size);
+      n.halo.scale.set((0.85 + 0.35 * pulse) * n.size * 2.0);
+      n.halo.alpha = 0.75 + 0.25 * pulse;
+      n.core.scale.set(0.42 * n.size);
     }
 
     const g = this.dynLines;

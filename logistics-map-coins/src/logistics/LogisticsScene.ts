@@ -253,6 +253,7 @@ export class LogisticsScene implements SceneController {
     p.exposure = v.post.exposure;
     p.toneMap = 'none';
     p.grain = 0.02;
+    if (v.lift) p.lift.set(v.lift);
     if (v.haze) p.haze = {x: v.haze.x, y: v.haze.y, radius: v.haze.radius, color: new THREE.Color(v.haze.color).multiplyScalar(v.haze.strength)};
     void gl;
   }
