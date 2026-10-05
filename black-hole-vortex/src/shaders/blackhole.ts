@@ -141,7 +141,7 @@ vec4 discField(vec3 p, vec3 rd, float fp) {
     vec3 col = temp > 0.5 ? mix(uColMid, uColHot, smoothstep(0.55, 0.92, temp))
                           : mix(uColOuter, uColMid, smoothstep(0.12, 0.5, temp));
     // white-hot inner rim
-    col += uColHot * 2.5 * exp(-(r - uRin) / (0.08 * uRin)) * step(uRin, r);
+    col += uColHot * 2.5 * exp(-(r - uRin) / (0.15 * uRin)) * step(uRin, r);
 
     // relativistic beaming (strength scaled for art direction)
     vec3 vdir = normalize(vec3(-p.z, 0.0, p.x));
@@ -388,7 +388,11 @@ void main() {
         float inc = max(abs(nv.y), 0.08);
         float sq = s + tc * dt;
         // higher-order (lensed) images are squeezed: widen their footprint
-        float fp = sq * uPixAngle / inc * (1.0 + 3.0 * float(crossings));
+        // the filaments vary along the radius: use the screen footprint of a
+        // radial step (foreshortened only where the radius points along the view)
+        vec3 rhat = normalize(vec3(q.x, 0.0, q.z));
+        float proj = max(length(rhat - dot(rhat, nv) * nv), 0.06);
+        float fp = sq * uPixAngle / proj * (1.0 + 3.0 * float(crossings));
         vec4 f = discField(vec3(q.x, 0.0, q.z), nv, fp);
         float colH = discH(rq) * 1.77 / inc;   // gaussian column length
         // third and later images (rays that wound round the hole) are dimmer
