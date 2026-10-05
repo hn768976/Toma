@@ -99,7 +99,7 @@ Remotion renders frames out of order on several tabs, so:
   base is `phase = (frame % 600) / 600`, and everything animated is a
   periodic function of it with a **whole number of cycles**:
   - the flow morph and the noise fields are sampled **around a circle in time**;
-  - packets do whole laps; ring beats are 10 per loop; sparkles do 1-3 flashes per loop;
+  - packets do whole laps; ring beats are 12 per loop; sparkles do 1-3 flashes per loop;
   - the camera orbit and drift run on closed paths;
   - the moon makes one orbit and the planet one spin per loop.
   So frame 600 equals frame 0 and 599 → 600 is continuous.

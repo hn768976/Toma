@@ -29,7 +29,7 @@ uniform float uT;          // loop phase [0,1)
 uniform vec3 uCore, uA, uB, uC, uDark, uDeep;
 varying vec2 vUv;
 const float TAU = 6.28318530718;
-const float BEATS = 10.0;  // ring beats per loop (one every 2 s)
+const float BEATS = 12.0;  // ring beats per loop (one every 50 frames)
 
 float fbm(vec2 p, vec2 tc) {
   float s = 0.0, a = 0.5;
