@@ -65,8 +65,8 @@ const stairsCam: CoinVersion['camera'] = {
 };
 
 const pileCam: CoinVersion['camera'] = {
-  pos: [0.6, 4.6, 30],
-  target: [0.6, 3.0, -0.5],
+  pos: [0.9, 3.6, 22.5],
+  target: [0.9, 2.4, -0.5],
   fov: 21,
   dolly: [0.2, 0.0, -1.6],
   drift: [0.2, 0.05, -0.5],

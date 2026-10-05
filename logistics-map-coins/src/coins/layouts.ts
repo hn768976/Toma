@@ -80,8 +80,8 @@ export const pileLayout = (seed: number, mixed: boolean): CoinSpec[] => {
   // [x, z, count, phase] phase 0 = first wave
   // one tight, overlapping, off-centre heap with a dominant tall stack
   const plan: [number, number, number, number][] = [
-    [-D * 0.35, -1.0, 30, 0],
-    [D * 0.62, -0.5, 21, 0],
+    [-D * 0.35, -1.0, 22, 0],
+    [D * 0.62, -0.5, 16, 0],
     [-D * 1.05, 0.4, 12, 0],
     [D * 0.15, D * 0.8, 9, 1],
     [D * 1.35, -1.6, 15, 1],
@@ -101,15 +101,15 @@ export const pileLayout = (seed: number, mixed: boolean): CoinSpec[] => {
   });
   const loose: LooseDef[] = [];
   const looseSpots: [number, number, number, number][] = [
-    [-D * 2.1, D * 1.3, 0.0, 0.0],
-    [D * 2.0, D * 1.15, 0.0, 0.0],
-    [-D * 0.2, D * 1.75, 0.0, 0.0],
+    [-D * 1.55, D * 1.35, 0.0, 0.0],
+    [D * 1.45, D * 1.2, 0.0, 0.0],
+    [-D * 0.15, D * 1.6, 0.0, 0.0],
   ];
   looseSpots.forEach(([x, z, tx, tz], i) => {
     loose.push({x, z, tiltX: tx, tiltZ: tz, metal: metalAt(x, z), land: 170 + i * 16 + Math.round(rng() * 10)});
   });
   // a small second layer of flat coins on top of some loose ones
-  loose.push({x: D * 2.0 + 0.2, z: D * 1.15 - 0.1, y: COIN_T, tiltX: 0, tiltZ: 0, metal: metalAt(D * 2.0, 0), land: 300});
+  loose.push({x: D * 1.45 + 0.2, z: D * 1.2 - 0.1, y: COIN_T, tiltX: 0, tiltZ: 0, metal: metalAt(D * 2.0, 0), land: 300});
   return stackCoins(stacks, loose, seed);
 };
 
