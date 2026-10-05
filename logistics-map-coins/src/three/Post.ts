@@ -16,6 +16,7 @@ export type PostParams = {
   aperture: number;
   maxBlur: number;
   nearScale: number; // multiplier for points in front of the focus plane
+  dofFullRes: boolean; // gather at full resolution (no half-res upsampling halos)
   bloomStrength: number;
   bloomThreshold: number;
   bloomRadius: number; // 0..1, how much the wide mips contribute
@@ -43,6 +44,7 @@ export const defaultPostParams = (): PostParams => ({
   aperture: 0.02,
   maxBlur: 0.012,
   nearScale: 1,
+  dofFullRes: false,
   bloomStrength: 0.6,
   bloomThreshold: 0.6,
   bloomRadius: 0.8,
@@ -118,13 +120,13 @@ ${COMMON}
 uniform sampler2D tHalf;
 uniform sampler2D tDepth;
 uniform vec2 texel; // half-res texel
-uniform float near, far, maxRadius, radScale;
+uniform float near, far, maxRadius, radScale, cocScale;
 varying vec2 vUv;
 const float GOLDEN = 2.39996323;
 void main() {
   vec4 center = texture2D(tHalf, vUv);
   float centerDepth = viewZ(texture2D(tDepth, vUv).r, near, far);
-  float centerSize = center.a * 0.5;
+  float centerSize = center.a * cocScale;
   vec3 color = center.rgb;
   float tot = 1.0;
   float radius = radScale;
@@ -133,7 +135,7 @@ void main() {
     vec2 tc = vUv + vec2(cos(ang), sin(ang)) * texel * radius;
     vec4 s = texture2D(tHalf, tc);
     float sampleDepth = viewZ(texture2D(tDepth, tc).r, near, far);
-    float sampleSize = s.a * 0.5;
+    float sampleSize = s.a * cocScale;
     if (sampleDepth > centerDepth) sampleSize = clamp(sampleSize, 0.0, centerSize * 2.0);
     float m = smoothstep(radius - 0.5, radius + 0.5, sampleSize);
     color += mix(color / tot, s.rgb, m);
@@ -150,6 +152,7 @@ uniform sampler2D tColor;
 uniform sampler2D tBlur;
 uniform sampler2D tDepth;
 uniform float near, far, focus, aperture, maxBlur, nearScale, heightPx;
+uniform float m0, m1;
 varying vec2 vUv;
 void main() {
   float z = viewZ(texture2D(tDepth, vUv).r, near, far);
@@ -157,7 +160,7 @@ void main() {
   if (z < focus) c *= nearScale;
   c = min(c, maxBlur) * heightPx;
   vec4 blur = texture2D(tBlur, vUv);
-  float m = smoothstep(0.8, 2.5, c);
+  float m = smoothstep(m0, m1, c);
   vec3 sharp = texture2D(tColor, vUv).rgb;
   gl_FragColor = vec4(mix(sharp, blur.rgb, m), 1.0);
 }
@@ -338,6 +341,8 @@ export class PostPipeline {
   sceneRT!: THREE.WebGLRenderTarget;
   private halfRT!: THREE.WebGLRenderTarget;
   private bokehRT!: THREE.WebGLRenderTarget;
+  private fullCocRT!: THREE.WebGLRenderTarget;
+  private fullBokehRT!: THREE.WebGLRenderTarget;
   private dofRT!: THREE.WebGLRenderTarget;
   private mips: THREE.WebGLRenderTarget[] = [];
   private ups: THREE.WebGLRenderTarget[] = [];
@@ -351,12 +356,12 @@ export class PostPipeline {
   });
   private bokehMat = pass(BOKEH_FRAG, {
     tHalf: {value: null}, tDepth: {value: null}, texel: {value: new THREE.Vector2()},
-    near: {value: 0.1}, far: {value: 100}, maxRadius: {value: 8}, radScale: {value: 0.6},
+    near: {value: 0.1}, far: {value: 100}, maxRadius: {value: 8}, radScale: {value: 0.6}, cocScale: {value: 0.5},
   });
   private dofMat = pass(DOF_COMPOSITE_FRAG, {
     tColor: {value: null}, tBlur: {value: null}, tDepth: {value: null},
     near: {value: 0.1}, far: {value: 100}, focus: {value: 10}, aperture: {value: 0}, maxBlur: {value: 0},
-    nearScale: {value: 1}, heightPx: {value: 1},
+    nearScale: {value: 1}, heightPx: {value: 1}, m0: {value: 0.8}, m1: {value: 2.5},
   });
   private preMat = pass(PREFILTER_FRAG, {tColor: {value: null}, texel: {value: new THREE.Vector2()}, threshold: {value: 1}});
   private downMat = pass(DOWN_FRAG, {tSrc: {value: null}, texel: {value: new THREE.Vector2()}});
@@ -390,6 +395,8 @@ export class PostPipeline {
     this.halfRT = makeRT(hw, hh);
     this.bokehRT = makeRT(hw, hh);
     this.dofRT = makeRT(w, h);
+    this.fullCocRT = makeRT(w, h);
+    this.fullBokehRT = makeRT(w, h);
     this.mips = [];
     this.ups = [];
     let mw = hw;
@@ -435,22 +442,29 @@ export class PostPipeline {
       u.maxBlur.value = p.maxBlur;
       u.nearScale.value = p.nearScale;
       u.heightPx.value = h;
-      this.draw(this.cocMat, this.halfRT);
+      const cocRT = p.dofFullRes ? this.fullCocRT : this.halfRT;
+      const outRT = p.dofFullRes ? this.fullBokehRT : this.bokehRT;
+      const k = p.dofFullRes ? 1 : 0.5;
+      if (p.dofFullRes) u.texel.value.set(0.5 / w, 0.5 / h);
+      this.draw(this.cocMat, cocRT);
 
       const b = this.bokehMat.uniforms;
-      b.tHalf.value = this.halfRT.texture;
+      b.tHalf.value = cocRT.texture;
       b.tDepth.value = depth;
-      b.texel.value.set(1 / this.halfRT.width, 1 / this.halfRT.height);
+      b.texel.value.set(1 / cocRT.width, 1 / cocRT.height);
       b.near.value = camera.near;
       b.far.value = camera.far;
-      b.maxRadius.value = Math.max(1.5, p.maxBlur * h * 0.5);
+      b.cocScale.value = k;
+      b.maxRadius.value = Math.max(1.5, p.maxBlur * h * k);
       // Keep the sample count roughly constant across resolutions.
-      b.radScale.value = Math.max(0.5, (p.maxBlur * h * 0.5) / 10);
-      this.draw(this.bokehMat, this.bokehRT);
+      b.radScale.value = Math.max(0.5, (p.maxBlur * h * k) / 10);
+      this.draw(this.bokehMat, outRT);
 
       const d = this.dofMat.uniforms;
       d.tColor.value = color;
-      d.tBlur.value = this.bokehRT.texture;
+      d.tBlur.value = p.dofFullRes ? this.fullBokehRT.texture : this.bokehRT.texture;
+      d.m0.value = p.dofFullRes ? 0.25 : 0.8;
+      d.m1.value = p.dofFullRes ? 1.0 : 2.5;
       d.tDepth.value = depth;
       d.near.value = camera.near;
       d.far.value = camera.far;

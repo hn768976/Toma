@@ -203,7 +203,7 @@ export class CoinScene implements SceneController {
         roughness: 0.22,
         roughnessMap: rough,
         normalMap: face ? normalMap : null,
-        normalScale: new THREE.Vector2(0.9, 0.9),
+        normalScale: new THREE.Vector2(0.5, 0.5),
         transparent: fadeIn,
       });
       return fadeIn ? withInstanceOpacity(m) : m;
@@ -255,8 +255,9 @@ export class CoinScene implements SceneController {
     this.scene.add(this.shadows);
 
     // Table and backdrop
-    const hw = Math.max(1, Math.round(width / 2));
-    const hh = Math.max(1, Math.round(height / 2));
+    // full-resolution planar reflection (half-res showed blocky contact edges)
+    const hw = width;
+    const hh = height;
     this.reflRT = new THREE.WebGLRenderTarget(hw, hh, {type: THREE.HalfFloatType, samples: 0});
     this.reflRT.depthTexture = new THREE.DepthTexture(hw, hh);
     this.reflRT.depthTexture.type = THREE.FloatType;
@@ -273,8 +274,8 @@ export class CoinScene implements SceneController {
         reflFar: {value: 400},
         camHeight: {value: 3},
         reflectivity: {value: v.reflectivity},
-        fadeHeight: {value: 7},
-        blurPerCm: {value: (0.25 * hh) / 360},
+        fadeHeight: {value: 3.2},
+        blurPerCm: {value: (0.18 * hh) / 720},
         nearColor: {value: sceneColor(v.table[0], v.exposure)},
         farColor: {value: sceneColor(v.table[1], v.exposure)},
         camPos: {value: new THREE.Vector3()},
@@ -324,6 +325,7 @@ export class CoinScene implements SceneController {
     p.aperture = v.aperture;
     p.maxBlur = v.maxBlur;
     p.nearScale = 1;
+    p.dofFullRes = true;
     p.bloomStrength = v.bloom;
     p.bloomThreshold = 1.2;
     p.bloomRadius = 0.6;

@@ -70,9 +70,9 @@ const financeBlueStatic = (w: number, h: number) => {
   ctx.scale(s, s);
   const rng = mulberry32(0xb1e);
   const g = ctx.createLinearGradient(0, 0, LW, LH);
-  g.addColorStop(0, 'rgba(60,150,200,0.9)');
-  g.addColorStop(0.5, 'rgba(80,165,215,0.85)');
-  g.addColorStop(1, 'rgba(120,190,230,0.9)');
+  g.addColorStop(0, 'rgba(110,190,225,0.9)');
+  g.addColorStop(0.5, 'rgba(150,210,235,0.85)');
+  g.addColorStop(1, 'rgba(200,235,250,0.92)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, LW, LH);
   // screen tiles: darker navy panels and bright cyan/white light patches
@@ -98,8 +98,16 @@ const financeBlueStatic = (w: number, h: number) => {
   ctx.filter = `blur(${10 * s}px)`;
   ctx.drawImage(c, 0, 0, LW, LH);
   ctx.filter = 'none';
+  // haze: blown-out light patches upper right / centre
+  for (const [hx, hy, hr] of [[2900, 250, 900], [1900, 150, 700]]) {
+    const hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, hr);
+    hg.addColorStop(0, 'rgba(255,255,255,0.75)');
+    hg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(hx - hr, hy - hr, hr * 2, hr * 2);
+  }
   // white bar chart, left-middle
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
   for (let i = 0; i < 16; i++) {
     const bh = 90 + Math.abs(Math.sin(i * 1.9)) * 160 + i * 6;
     ctx.fillRect(40 + i * 46, 1180 - bh, 30, bh);
@@ -428,7 +436,8 @@ export class Overlay {
       ctx.arc(p.x, p.y, 34, 0, Math.PI * 2);
       ctx.stroke();
       // invented index codes, not prices
-      if (i >= 3) ctx.fillText(`#${String(400 + i * 37).padStart(4, '0')}`, p.x - 40, p.y - 56);
+      // invented 6-digit node codes (no currency, no decimals: not prices)
+      if (i >= 3) ctx.fillText(String(100000 + ((i * 7919 * 37) % 899999)), p.x - 70, p.y - 56);
       ctx.globalAlpha = 1;
     });
     // second, lower line with nodes
@@ -437,7 +446,7 @@ export class Overlay {
     ctx.beginPath();
     pts.forEach((p, i) => {
       if (i > head + 0.01) return;
-      const y = p.y + 420 + Math.sin(i * 1.3) * 40;
+      const y = p.y + 260 + Math.sin(i * 1.3) * 40;
       if (i === 0) ctx.moveTo(p.x, y);
       else ctx.lineTo(p.x, y);
     });
@@ -445,18 +454,18 @@ export class Overlay {
     pts.forEach((p, i) => {
       if (i > head) return;
       ctx.beginPath();
-      ctx.arc(p.x, p.y + 420 + Math.sin(i * 1.3) * 40, 11, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y + 260 + Math.sin(i * 1.3) * 40, 14, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
     // up arrows behind the middle stacks
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
     [0.35, 0.55, 0.7].forEach((k, i) => {
       const a = smoothstep(0.2 + i * 0.2, 0.4 + i * 0.2, f.progress);
       if (a <= 0) return;
       const idx = Math.min(pts.length - 1, Math.round(k * n));
       ctx.globalAlpha = a * 0.8;
-      arrow(ctx, pts[idx].x - 140, pts[idx].y - 260 - a * 60, 70);
+      arrow(ctx, pts[idx].x - 140, pts[idx].y - 260 - a * 60, 110);
       ctx.globalAlpha = 1;
     });
     // final rising trend line with arrow head

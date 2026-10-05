@@ -38,9 +38,9 @@ export type CoinVersion = {
 
 const base: Omit<CoinVersion, 'id' | 'layout' | 'seed' | 'camera'> = {
   aperture: 0.06,
-  maxBlur: 0.022,
+  maxBlur: 0.014,
   wall: ['#F2F3F4', '#DADDE0'],
-  table: ['#F3F4F5', '#D3D6D9'],
+  table: ['#F4F5F5', '#E1E3E4'],
   reflectivity: 0.9,
   overlay: null,
   overlayStrength: 1,
@@ -52,21 +52,21 @@ const base: Omit<CoinVersion, 'id' | 'layout' | 'seed' | 'camera'> = {
   metalTint: '#FFFFFF',
   overlayProtect: 0,
   bloom: 0,
-  saturation: 0.92,
+  saturation: 0.86,
 };
 
 const stairsCam: CoinVersion['camera'] = {
-  pos: [2.0, 3.3, 30],
-  target: [-0.6, 2.7, -2],
+  pos: [2.6, 4.4, 27],
+  target: [0.2, 2.9, -2],
   fov: 22,
   dolly: [-0.3, 0.15, -2.0],
   drift: [-0.25, 0.05, -0.6],
-  focus: [4.6, 4.0, 3.2],
+  focus: [2.2, 3.4, -1.8],
 };
 
 const pileCam: CoinVersion['camera'] = {
-  pos: [0.3, 5.4, 34],
-  target: [0.2, 2.7, -0.5],
+  pos: [0.6, 4.6, 30],
+  target: [0.6, 3.0, -0.5],
   fov: 21,
   dolly: [0.2, 0.0, -1.6],
   drift: [0.2, 0.05, -0.5],
@@ -74,20 +74,20 @@ const pileCam: CoinVersion['camera'] = {
 };
 
 export const COIN_VERSIONS: Record<string, CoinVersion> = {
-  StairsWhite: {...base, id: 'CoinGrowth-StairsWhite', layout: 'stairs', seed: 101, camera: stairsCam, aperture: 0.045},
+  StairsWhite: {...base, id: 'CoinGrowth-StairsWhite', layout: 'stairs', seed: 101, camera: stairsCam, aperture: 0.035},
   StairsFinance: {
     ...base,
     id: 'CoinGrowth-StairsFinance',
     layout: 'stairs',
     seed: 101,
     camera: stairsCam,
-    aperture: 0.045,
-    wall: ['#3E5568', '#4A6275'],
-    table: ['#A9B7C4', '#566C80'],
+    aperture: 0.035,
+    wall: ['#7C95AA', '#8AA2B5'],
+    table: ['#C8D4DE', '#8FA4B6'],
     overlay: 'financeBlue',
-    overlayStrength: 0.85,
-    overlayProtect: 0.65,
-    saturation: 1.15,
+    overlayStrength: 1.0,
+    overlayProtect: 0.55,
+    saturation: 1.1,
   },
   PileWhite: {...base, id: 'CoinGrowth-PileWhite', layout: 'pile', seed: 202, camera: pileCam, aperture: 0.035},
   PileWarmFinance: {
