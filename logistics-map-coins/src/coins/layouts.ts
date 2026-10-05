@@ -29,8 +29,8 @@ export const stackCoins = (stacks: StackDef[], loose: LooseDef[], seed: number):
     for (let k = 0; k < s.count; k++) {
       const u = s.count === 1 ? 0 : k / (s.count - 1);
       const land = Math.round(s.start + (s.end - s.start) * (0.5 - 0.5 * Math.cos(Math.PI * u)) * 0.6 + (s.end - s.start) * u * 0.4);
-      lean += (rng() - 0.5) * 0.004;
-      const pos = new THREE.Vector3(s.x + (rng() - 0.5) * 0.07 + lean * k, COIN_T * (k + 0.5) + 0.002 * k, s.z + (rng() - 0.5) * 0.07);
+      lean += (rng() - 0.5) * 0.0015;
+      const pos = new THREE.Vector3(s.x + (rng() - 0.5) * 0.035 + lean * k, COIN_T * (k + 0.5) + 0.002 * k, s.z + (rng() - 0.5) * 0.035);
       const quat = new THREE.Quaternion().setFromEuler(tmpE.set((rng() - 0.5) * 0.012, rng() * Math.PI * 2, (rng() - 0.5) * 0.012));
       out.push({pos, quat, metal: s.metal, land, wobbleAxis: randomAxis(rng), stack: si, level: k});
     }
@@ -53,12 +53,12 @@ const randomAxis = (rng: Rng) => {
 // Staircase: n stacks on a line receding from near-right to far-left, each
 // taller than the one behind it.
 export const stairsLayout = (seed: number): CoinSpec[] => {
-  const counts = [2, 4, 6, 9, 13, 17, 22, 28];
+  const counts = [2, 4, 7, 10, 14, 18, 23, 28];
   const near = new THREE.Vector2(4.6, 3.2);
-  const far = new THREE.Vector2(-6.8, -26);
+  const far = new THREE.Vector2(-12.5, -24);
   const stacks: StackDef[] = counts.map((count, i) => {
     const t = i / (counts.length - 1);
-    const p = far.clone().lerp(near, Math.pow(t, 0.8));
+    const p = far.clone().lerp(near, Math.pow(t, 0.9));
     return {x: p.x, z: p.y, count, metal: 'gold', start: 30 + (counts.length - 1 - i) * 4, end: 300 + i * 4};
   });
   return stackCoins(stacks, [], seed);
@@ -79,8 +79,8 @@ export const pileLayout = (seed: number, mixed: boolean): CoinSpec[] => {
   };
   // [x, z, count, phase] phase 0 = first wave
   const plan: [number, number, number, number][] = [
-    [0, -1.2, 26, 0],
-    [D * 1.05, -0.4, 18, 0],
+    [-D * 0.45, -1.2, 25, 0],
+    [D * 0.65, -0.6, 19, 0],
     [-D * 1.0, 0.2, 9, 0],
     [D * 0.2, D * 0.95, 11, 1],
     [-D * 1.85, -1.6, 15, 1],
@@ -114,8 +114,8 @@ export const pileLayout = (seed: number, mixed: boolean): CoinSpec[] => {
     [D * 0.05, D * 2.8, 0.0, 0.0],
     [-D * 3.4, -0.4, 0.0, 0.0],
     [D * 3.7, -0.2, 0.0, 0.0],
-    [-D * 0.85, D * 1.95, 0.35, 0.1],
-    [D * 1.25, D * 1.65, -0.3, 0.2],
+    [-D * 0.85, D * 2.05, 0.0, 0.0],
+    [D * 1.25, D * 2.25, 0.0, 0.0],
   ];
   looseSpots.forEach(([x, z, tx, tz], i) => {
     loose.push({x, z, tiltX: tx, tiltZ: tz, metal: metalAt(x, z), land: 170 + i * 16 + Math.round(rng() * 10)});

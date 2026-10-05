@@ -33,6 +33,8 @@ uniform sampler2D cityTex;
 uniform float dotPitch;
 uniform float dotSize;
 uniform float reliefBase;
+uniform float tileBevel;
+uniform float hotSpeckle;
 uniform float reliefContrast;
 uniform vec3 landLit;
 uniform vec3 landShadow;
@@ -82,6 +84,9 @@ void main() {
   float hv = hash2(cell);
 
   vec3 landCol = mix(landShadow, landLit, shade) * (0.7 + 0.6 * hv);
+  // raised-tile look: lit top edge, darker lower edge on each square
+  float bevel = smoothstep(dotSize * 0.45, dotSize * 0.95, f.y) - 0.5 * smoothstep(dotSize * 0.45, dotSize * 0.95, -f.y);
+  landCol *= 1.0 + tileBevel * bevel * 1.4;
   // coastline: land cells whose neighbourhood is part ocean
   float blur = textureLod(landBlur, cuv, max(0.0, lod8k - 2.0)).r;
   float coast = landC * (1.0 - smoothstep(0.55, 0.92, blur));
@@ -96,13 +101,14 @@ void main() {
     vec4 h = hotspots[i];
     float dd = length((cll - h.xy) * vec2(cos(radians(cll.y)), 1.0)) / h.z;
     float k = exp(-dd * dd * 2.5) * h.w;
-    hot += hotColors[i] * k * (0.5 + hv);
+    // speckled: individual tiles flare, like dense city lights
+    hot += hotColors[i] * k * mix(0.5 + hv, (0.15 + 2.2 * hv * hv * hv) * step(0.25, hv), hotSpeckle);
   }
   vec3 dotsCol = (landCol + glow + hot) * dotA * landC;
 
   // faint smooth land underneath the dots
   float landSmooth = smoothstep(0.3, 0.7, texture2D(landMask, uv).r) * inWorld * step(-60.0, ll.y);
-  vec3 base = oceanColor + landShadow * 0.22 * landSmooth + (glow + hot) * 0.10 * landSmooth;
+  vec3 base = oceanColor + landShadow * 0.22 * landSmooth + (glow + hot) * 0.10 * (1.0 - hotSpeckle * 0.7) * landSmooth;
 
   // ocean grid
   vec2 gg = ll / gridStep;
@@ -133,6 +139,8 @@ export type MapLook = {
   reliefHeight: number;
   reliefBase: number;
   reliefContrast: number;
+  tileBevel?: number;
+  hotSpeckle?: number;
 };
 
 export type Hotspot = {lon: number; lat: number; radius: number; intensity: number; color: string};
@@ -164,6 +172,8 @@ export const makeMapMaterial = (
       dotPitch: {value: look.dotPitch},
       dotSize: {value: look.dotSize},
       reliefBase: {value: look.reliefBase},
+      tileBevel: {value: look.tileBevel ?? 0},
+      hotSpeckle: {value: look.hotSpeckle ?? 0},
       reliefContrast: {value: look.reliefContrast},
       landLit: {value: linear(look.landLit)},
       landShadow: {value: linear(look.landShadow)},

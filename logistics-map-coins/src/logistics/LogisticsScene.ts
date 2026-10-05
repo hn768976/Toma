@@ -113,7 +113,7 @@ export class LogisticsScene implements SceneController {
     // Pins
     v.pins.forEach((p, i) => {
       const t = iconTexture(p.kind);
-      const isMain = p.kind !== 'pinMinor';
+      const isMain = p.kind !== 'pinMinor' && p.kind !== 'badge';
       const color = isMain ? accent.clone() : hdr('#D9E6EA', 0.9);
       const mat = new THREE.SpriteMaterial({map: t, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true});
       const s = new THREE.Sprite(mat);
@@ -238,6 +238,7 @@ export class LogisticsScene implements SceneController {
     p.exposure = v.post.exposure;
     p.toneMap = 'none';
     p.grain = 0.02;
+    if (v.haze) p.haze = {x: v.haze.x, y: v.haze.y, radius: v.haze.radius, color: new THREE.Color(v.haze.color).multiplyScalar(v.haze.strength)};
     void gl;
   }
 
@@ -329,6 +330,77 @@ export class LogisticsScene implements SceneController {
       ctx.lineTo(X(l.lon) + w * 0.3, Y(l.lat) + size * 0.25);
       ctx.stroke();
     }
+    const ex = v.hudExtras ?? {};
+    ctx.lineWidth = Math.max(1, fs * 0.05);
+    for (let i = 0; i < (ex.diagonals ?? 0); i++) {
+      ctx.strokeStyle = 'rgba(170,225,235,0.22)';
+      ctx.beginPath();
+      const x0 = rng() * W;
+      const y0 = rng() < 0.5 ? 0 : rng() * H * 0.3;
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x0 + (rng() - 0.3) * W * 1.2, y0 + H * (0.7 + rng() * 0.5));
+      ctx.stroke();
+    }
+    for (const [a0, b0, a1, b1] of ex.boxes ?? []) {
+      const x0 = X(a0);
+      const y0 = Y(b1);
+      const x1 = X(a1);
+      const y1 = Y(b0);
+      ctx.strokeStyle = 'rgba(190,235,245,0.32)';
+      ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+      const k = fs * 0.9;
+      ctx.strokeStyle = accentCss;
+      ctx.globalAlpha = 0.7;
+      ctx.lineWidth = Math.max(1, fs * 0.09);
+      for (const [cx, cy, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + dx * k, cy);
+        ctx.lineTo(cx, cy);
+        ctx.lineTo(cx, cy + dy * k);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = Math.max(1, fs * 0.05);
+    }
+    for (const [lon, lat, text] of ex.badges ?? []) {
+      const r = fs * 1.1;
+      ctx.strokeStyle = soft;
+      ctx.lineWidth = Math.max(1, fs * 0.08);
+      ctx.beginPath();
+      ctx.arc(X(lon), Y(lat), r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      label(X(lon), Y(lat) + fs * 0.3, text, fs * 0.8, soft, 0.9);
+      ctx.textAlign = 'start';
+    }
+    for (const [lon, lat, len] of ex.sliders ?? []) {
+      const x0 = X(lon);
+      const x1 = X(lon + len);
+      const y = Y(lat);
+      ctx.strokeStyle = 'rgba(200,235,240,0.6)';
+      ctx.lineWidth = Math.max(1, fs * 0.08);
+      ctx.beginPath();
+      ctx.moveTo(x0, y);
+      ctx.lineTo(x1, y);
+      ctx.stroke();
+      const mx = x0 + (x1 - x0) * 0.62;
+      ctx.fillStyle = soft;
+      ctx.beginPath();
+      ctx.moveTo(mx, y - fs * 0.15);
+      ctx.lineTo(mx - fs * 0.35, y - fs * 0.65);
+      ctx.lineTo(mx + fs * 0.35, y - fs * 0.65);
+      ctx.closePath();
+      ctx.fill();
+    }
+    for (let i = 0; i < (ex.dashBars ?? 0); i++) {
+      const x = rng() * W;
+      const y = rng() * H;
+      ctx.fillStyle = accentCss;
+      ctx.globalAlpha = 0.55 + rng() * 0.35;
+      const n = 4 + Math.floor(rng() * 6);
+      for (let k = 0; k < n; k++) ctx.fillRect(x + k * fs * 0.9, y, fs * 0.6, fs * 0.16);
+      ctx.globalAlpha = 1;
+    }
     // small tick clusters and dashes
     for (let i = 0; i < 26; i++) {
       const x = rng() * W;
@@ -378,7 +450,7 @@ export class LogisticsScene implements SceneController {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
     const mat = new THREE.MeshBasicMaterial({map: tex, color: new THREE.Color(1, 1, 1).multiplyScalar(1.4), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, depthTest: false});
-    const hDeg = v.hudSize * 1.35;
+    const hDeg = v.hudSize * 1.35 * (c.size ?? 1);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry((hDeg * 8) / 10, hDeg / 10).rotateX(-Math.PI / 2), mat);
     const p = lonLatToWorld(c.lon + hDeg * 4, c.lat, v.look.reliefHeight);
     mesh.position.copy(p);

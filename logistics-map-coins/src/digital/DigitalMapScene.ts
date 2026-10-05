@@ -43,16 +43,16 @@ export const CYAN: DigitalVersion = {
   id: 'DigitalWorldMap-Cyan',
   line: 0x5fd8f0,
   node: 0xbff6ff,
-  scale: 13.6,
-  centerLon: 4,
-  centerLat: 12,
+  scale: 16.5,
+  centerLon: -18,
+  centerLat: 16,
   nodeCount: 40,
   streakCount: 30,
-  curveCount: 5,
+  curveCount: 6,
   glow: 14,
   grain: 0.02,
   background: [0x02 / 255, 0x0a / 255, 0x10 / 255],
-  haze: [0.02, 0.1, 0.12],
+  haze: [0.01, 0.06, 0.08],
 };
 
 // Final pass: analytic background + haze (float precision, so no banding from
@@ -69,6 +69,7 @@ uniform float uGrain;
 uniform vec3 uBg;
 uniform vec3 uHaze;
 uniform vec2 uScreen;
+uniform float uBlur; // max defocus radius as a fraction of frame height
 
 // Float-only hash (D. Hoskins, "hash without sine"): uint arithmetic is not
 // reliable through Pixi's GL program path, so the grain uses this instead.
@@ -78,9 +79,26 @@ float hash13(vec3 p3) {
   return fract((p3.x + p3.y) * p3.z);
 }
 void main() {
-  vec4 c = texture(uTexture, vTextureCoord);
   vec2 px = vTextureCoord * uInputSize.xy + uOutputFrame.xy;
   vec2 uv = px / uScreen;
+  // shallow-focus look: sharp band through the centre-right, defocus towards
+  // the left edge and the bottom (fixed function of position)
+  vec2 q = (uv - vec2(0.56, 0.42)) * vec2(1.0, 1.35);
+  float rad = uBlur * smoothstep(0.28, 0.72, length(q));
+  vec4 c = texture(uTexture, vTextureCoord);
+  if (rad > 0.0005) {
+    vec2 step = vec2(rad * uScreen.y) * uInputSize.zw;
+    vec4 acc = c;
+    float n = 1.0;
+    for (int i = 0; i < 24; i++) {
+      float fi = float(i);
+      float r = sqrt((fi + 0.5) / 24.0);
+      float a = fi * 2.39996323;
+      acc += texture(uTexture, vTextureCoord + vec2(cos(a), sin(a)) * r * step);
+      n += 1.0;
+    }
+    c = acc / n;
+  }
   vec2 p = uv - 0.5;
   p.x *= uScreen.x / uScreen.y;
   float r = length(p);
@@ -165,7 +183,7 @@ export class DigitalMapScene {
     for (let y = 0; y <= H; y += 160) grid.moveTo(0, y).lineTo(W, y);
     grid.stroke({width: 1.5, color: v.line, alpha: 0.05});
     // circuit-like right-angle segments
-    for (let i = 0; i < 46; i++) {
+    for (let i = 0; i < 60; i++) {
       let x = Math.round((rng() * W) / 40) * 40;
       let y = Math.round((rng() * H) / 40) * 40;
       grid.moveTo(x, y);
@@ -175,7 +193,7 @@ export class DigitalMapScene {
         grid.lineTo(x, y);
       }
     }
-    grid.stroke({width: 2.5, color: v.line, alpha: 0.13});
+    grid.stroke({width: 3, color: v.line, alpha: 0.3});
     // rule lines with tick marks
     for (let i = 0; i < 3; i++) {
       const y = H * (0.18 + i * 0.32);
@@ -228,6 +246,19 @@ export class DigitalMapScene {
         this.dots.push({p, base, col: ci});
       }
     }
+    for (let i = 0; i < 26; i++) {
+      const x = 10 + Math.floor(rng() * (W / 20)) * 20;
+      const y0 = rng() * H;
+      const n = 6 + Math.floor(rng() * 22);
+      for (let k = 0; k < n; k++) {
+        const y = y0 + k * 13;
+        if (y > H || isLand(x, y)) continue;
+        const base = 0.25 + rng() * 0.45;
+        const p = new Particle({texture: dotTex, x, y, anchorX: 0.5, anchorY: 0.5, scaleX: 0.24, scaleY: 0.24, alpha: base, tint: v.line});
+        dotsPC.addParticle(p);
+        this.dots.push({p, base, col: Math.floor(x / 20)});
+      }
+    }
     content.addChild(dotsPC);
 
     // --- coastlines ----------------------------------------------------------
@@ -245,8 +276,32 @@ export class DigitalMapScene {
         coast.closePath();
       }
     }
-    coast.stroke({width: 3.5, color: v.line, alpha: 1, join: 'round'});
+    coast.stroke({width: 2, color: v.line, alpha: 0.45, join: 'round'});
     content.addChild(coast);
+    // pixel-dot coastline on top of the faint line
+    const coastDots = new ParticleContainer({dynamicProperties: {position: false}});
+    const cDotTex = radialTexture(16, [[0, 1], [0.6, 1], [1, 0]]);
+    for (const poly of land) {
+      for (const ring of poly) {
+        if (ring.length < 16) continue;
+        let carry = 0;
+        for (let i = 2; i < ring.length; i += 2) {
+          const x0 = X(ring[i - 2]);
+          const y0 = Y(ring[i - 1]);
+          const x1 = X(ring[i]);
+          const y1 = Y(ring[i + 1]);
+          const len = Math.hypot(x1 - x0, y1 - y0);
+          let d = carry;
+          while (d < len) {
+            const t = d / len;
+            coastDots.addParticle(new Particle({texture: cDotTex, x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, anchorX: 0.5, anchorY: 0.5, scaleX: 0.42, scaleY: 0.42, tint: v.line}));
+            d += 7;
+          }
+          carry = d - len;
+        }
+      }
+    }
+    content.addChild(coastDots);
     // glow copy: same coastline geometry, drawn wider, then blurred and added
     const coastGlow = new Graphics();
     for (const poly of land) {
@@ -259,7 +314,7 @@ export class DigitalMapScene {
         coastGlow.closePath();
       }
     }
-    coastGlow.stroke({width: 9, color: v.line, alpha: 0.8, join: 'round'});
+    coastGlow.stroke({width: 8, color: v.line, alpha: 0.7, join: 'round'});
     glowLayer.addChild(coastGlow);
 
     // --- curves (latitude-style sweeps) --------------------------------------
@@ -267,16 +322,19 @@ export class DigitalMapScene {
       const y0 = H * (0.1 + 0.85 * rng());
       const pts: [number, number][] = [];
       const dir = rng() < 0.5 ? -1 : 1;
-      const tilt = (0.25 + rng() * 0.45) * dir;
+      const tilt = (0.35 + rng() * 0.5) * dir;
+      const waves = 0.8 + rng() * 0.9;
+      const amp = H * (0.12 + rng() * 0.14);
       for (let s = 0; s <= 64; s++) {
         const t = s / 64;
-        const x = -200 + t * (W + 400);
-        const y = y0 + tilt * (x - W / 2) * 0.5 + Math.sin(t * Math.PI * (1.2 + rng() * 0.0)) * H * 0.18 * dir;
+        const x = -300 + t * (W + 600);
+        const y = y0 + tilt * (x - W / 2) * 0.55 + Math.sin(t * Math.PI * 2 * waves + i) * amp;
         pts.push([x, y]);
       }
-      this.curves.push({pts, amp: 30 + rng() * 50, k: 1 + (i % 2), off: rng(), alpha: 0.35 + rng() * 0.3});
+      this.curves.push({pts, amp: 30 + rng() * 50, k: 1 + (i % 2), off: rng(), alpha: 0.5 + rng() * 0.3});
     }
     content.addChild(this.curveG);
+    glowLayer.addChild(new Graphics(this.curveG.context));
 
     // --- nodes ---------------------------------------------------------------
     const haloTex = radialTexture(128, [[0, 1], [0.15, 0.55], [0.4, 0.12], [1, 0]]);
@@ -291,15 +349,25 @@ export class DigitalMapScene {
       if (chosen.length >= v.nodeCount - 8) break;
     }
     // a few nodes off the coast / in empty space, like the reference
-    for (let i = 0; i < 8; i++) chosen.push([200 + rng() * (W - 400), 150 + rng() * (H - 300)]);
+    for (let i = 0; i < 12; i++) chosen.push([200 + rng() * (W - 400), 150 + rng() * (H - 300)]);
     const periods = [60, 75, 100, 120, 150];
+    const stalks = new Graphics();
     chosen.forEach(([x, y], i) => {
       const size = 0.7 + rng() * 0.7;
+      if (rng() < 0.6) {
+        const len = 150 + rng() * 550;
+        const dir = rng() < 0.5 ? 1 : -1;
+        if (rng() < 0.75) stalks.moveTo(x, y).lineTo(x, y + dir * len);
+        else stalks.moveTo(x, y).lineTo(x + dir * len, y);
+      }
       const halo = new Sprite({texture: haloTex, anchor: 0.5, x, y, tint: v.node, blendMode: 'add'});
-      const core = new Sprite({texture: coreTex, anchor: 0.5, x, y, tint: 0xffffff, blendMode: 'add'});
+      const core = new Sprite({texture: coreTex, anchor: 0.5, x, y, tint: v.node, blendMode: 'add'});
       content.addChild(halo, core);
       this.nodes.push({x, y, halo, core, period: periods[i % periods.length], offset: Math.floor(rng() * 150), size});
     });
+    stalks.stroke({width: 3, color: v.line, alpha: 0.8});
+    content.addChildAt(stalks, content.getChildIndex(this.nodes[0].halo));
+    glowLayer.addChild(new Graphics(stalks.context));
     // links to nearest neighbours; some draw on and fade
     this.nodes.forEach((n, i) => {
       const near = this.nodes
@@ -349,6 +417,7 @@ export class DigitalMapScene {
           uBg: {value: new Float32Array(v.background), type: 'vec3<f32>'},
           uHaze: {value: new Float32Array(v.haze), type: 'vec3<f32>'},
           uScreen: {value: new Float32Array([W, H]), type: 'vec2<f32>'},
+          uBlur: {value: 0.006, type: 'f32'},
         }),
       },
     });
@@ -368,9 +437,9 @@ export class DigitalMapScene {
     for (const n of this.nodes) {
       const p = phase(f, n.period, n.offset);
       const pulse = 0.5 + 0.5 * Math.cos(TAU * p);
-      n.halo.scale.set((0.9 + 0.5 * pulse) * n.size * 2.2);
-      n.halo.alpha = 0.55 + 0.45 * pulse;
-      n.core.scale.set(0.32 * n.size);
+      n.halo.scale.set((0.8 + 0.35 * pulse) * n.size * 1.2);
+      n.halo.alpha = 0.7 + 0.3 * pulse;
+      n.core.scale.set(0.5 * n.size);
     }
 
     const g = this.dynLines;
@@ -403,7 +472,7 @@ export class DigitalMapScene {
         if (i === 0) c.moveTo(x, yy);
         else c.lineTo(x, yy);
       });
-      c.stroke({width: 3, color: this.v.line, alpha: cv.alpha});
+      c.stroke({width: 5, color: this.v.line, alpha: cv.alpha});
     }
 
     for (const s of this.streaks) {

@@ -28,10 +28,13 @@ export type PostParams = {
   overlay: THREE.Texture | null;
   overlayStrength: number;
   overlayMode: 0 | 1; // 0 = screen, 1 = screen + soft-light tint
+  overlayProtect: number; // 0..1 reduce the screen blend over saturated pixels
   // Display-space colour tint multiplied in before the overlay (1,1,1 = none).
   tint: THREE.Color;
   saturation: number;
   grainFrame: number; // frame % 600
+  // soft additive haze / flare in display space (uv position, colour * strength)
+  haze: {x: number; y: number; radius: number; color: THREE.Color} | null;
 };
 
 export const defaultPostParams = (): PostParams => ({
@@ -51,9 +54,11 @@ export const defaultPostParams = (): PostParams => ({
   overlay: null,
   overlayStrength: 1,
   overlayMode: 0,
+  overlayProtect: 0,
   tint: new THREE.Color(1, 1, 1),
   saturation: 1,
   grainFrame: 0,
+  haze: null,
 });
 
 const VERT = /* glsl */ `
@@ -228,10 +233,12 @@ const FINAL_FRAG = /* glsl */ `
 uniform sampler2D tColor;
 uniform sampler2D tBloom;
 uniform sampler2D tOverlay;
-uniform float bloomStrength, exposure, vignette, topLight, grain, overlayStrength, saturation;
+uniform float bloomStrength, exposure, vignette, topLight, grain, overlayStrength, saturation, overlayProtect;
 uniform int toneMap, hasOverlay, overlayMode;
 uniform vec3 tint;
 uniform float grainFrame;
+uniform vec4 hazePos;
+uniform vec3 hazeColor;
 uniform vec2 resolution;
 varying vec2 vUv;
 
@@ -278,7 +285,15 @@ void main() {
   if (hasOverlay == 1) {
     vec4 o = texture2D(tOverlay, vUv);
     vec3 ov = o.rgb * o.a * overlayStrength;
+    // keep saturated subjects (gold coins) rich under the double exposure
+    float mx = max(d.r, max(d.g, d.b));
+    float sat = (mx - min(d.r, min(d.g, d.b))) / max(mx, 1e-4);
+    ov *= 1.0 - overlayProtect * smoothstep(0.15, 0.45, sat);
     d = 1.0 - (1.0 - d) * (1.0 - ov);
+  }
+  {
+    vec2 hp = (vUv - hazePos.xy) * vec2(resolution.x / resolution.y, 1.0);
+    d += hazeColor * exp(-dot(hp, hp) / (hazePos.z * hazePos.z));
   }
   // vignette + vertical falloff
   vec2 p = vUv - 0.5;
@@ -349,9 +364,10 @@ export class PostPipeline {
   private finalMat = pass(FINAL_FRAG, {
     tColor: {value: null}, tBloom: {value: null}, tOverlay: {value: null},
     bloomStrength: {value: 0}, exposure: {value: 1}, vignette: {value: 0}, topLight: {value: 0},
-    grain: {value: 0}, overlayStrength: {value: 1}, saturation: {value: 1},
+    grain: {value: 0}, overlayStrength: {value: 1}, saturation: {value: 1}, overlayProtect: {value: 0},
     toneMap: {value: 0}, hasOverlay: {value: 0}, overlayMode: {value: 0},
     tint: {value: new THREE.Color(1, 1, 1)}, grainFrame: {value: 0}, resolution: {value: new THREE.Vector2()},
+    hazePos: {value: new THREE.Vector4(0, 0, 0.1, 0)}, hazeColor: {value: new THREE.Color(0, 0, 0)},
   });
   private blackTex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
 
@@ -490,7 +506,12 @@ export class PostPipeline {
     f.tOverlay.value = p.overlay ?? this.blackTex;
     f.overlayStrength.value = p.overlayStrength;
     f.overlayMode.value = p.overlayMode;
+    f.overlayProtect.value = p.overlayProtect;
     f.resolution.value.set(w, h);
+    if (p.haze) {
+      f.hazePos.value.set(p.haze.x, p.haze.y, p.haze.radius, 0);
+      f.hazeColor.value.copy(p.haze.color);
+    } else f.hazeColor.value.setRGB(0, 0, 0);
     this.draw(this.finalMat, null);
   }
 }

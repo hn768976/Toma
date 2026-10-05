@@ -11,7 +11,11 @@ export type IconKind =
   | 'tanker'
   | 'plane'
   | 'truck'
-  | 'factory';
+  | 'factory'
+  | 'badge'
+  | 'crane'
+  | 'building'
+  | 'pump';
 
 const S = 256;
 
@@ -53,13 +57,26 @@ const drawIcon = (ctx: CanvasRenderingContext2D, kind: IconKind) => {
   ctx.lineCap = 'round';
   const w = S;
   const h = kind.startsWith('pin') ? S * 1.25 : S;
+  if (kind === 'badge') {
+    // ring badge: thin circle with a small star, like a map marker seen flat
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, w * 0.4, 0, Math.PI * 2);
+    glowStroke(ctx, 7, 8);
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, w * 0.27, 0, Math.PI * 2);
+    glowStroke(ctx, 4, 4);
+    starPath(ctx, w / 2, h / 2, w * 0.15);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    return;
+  }
   if (kind === 'pin' || kind === 'pinChart' || kind === 'pinMinor') {
     const cx = w / 2;
     const cy = h * 0.36;
     const r = w * 0.3;
     teardrop(ctx, cx, cy, r, h * 0.95);
     if (kind !== 'pinMinor') {
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
       ctx.fill();
     }
     glowStroke(ctx, kind === 'pinMinor' ? 9 : 13, kind === 'pinMinor' ? 10 : 22);
@@ -157,11 +174,57 @@ const drawIcon = (ctx: CanvasRenderingContext2D, kind: IconKind) => {
       ctx.rect(0, 30, 18, 14);
       break;
     }
+    case 'crane': {
+      ctx.moveTo(-60, 90);
+      ctx.lineTo(-60, -80);
+      ctx.lineTo(-30, -80);
+      ctx.lineTo(-30, 90);
+      ctx.moveTo(-100, -80);
+      ctx.lineTo(100, -80);
+      ctx.lineTo(100, -60);
+      ctx.lineTo(-100, -60);
+      ctx.closePath();
+      ctx.moveTo(-45, -80);
+      ctx.lineTo(-45, -110);
+      ctx.lineTo(60, -80);
+      ctx.moveTo(80, -60);
+      ctx.lineTo(80, 10);
+      ctx.rect(66, 10, 28, 20);
+      ctx.moveTo(-100, 90);
+      ctx.lineTo(20, 90);
+      break;
+    }
+    case 'building': {
+      ctx.rect(-70, -100, 70, 190);
+      ctx.rect(0, -40, 70, 130);
+      for (let r = 0; r < 6; r++) {
+        ctx.rect(-55, -80 + r * 26, 14, 12);
+        ctx.rect(-28, -80 + r * 26, 14, 12);
+      }
+      for (let r = 0; r < 4; r++) ctx.rect(18, -22 + r * 26, 34, 10);
+      break;
+    }
+    case 'pump': {
+      ctx.moveTo(-90, 80);
+      ctx.lineTo(90, 80);
+      ctx.moveTo(-50, 80);
+      ctx.lineTo(-10, -20);
+      ctx.lineTo(30, 80);
+      ctx.moveTo(-95, -55);
+      ctx.lineTo(70, -5);
+      ctx.lineTo(80, -35);
+      ctx.lineTo(-85, -85);
+      ctx.closePath();
+      ctx.moveTo(-90, -40);
+      ctx.lineTo(-90, 50);
+      ctx.rect(-100, 50, 20, 20);
+      break;
+    }
     default:
       break;
   }
   ctx.restore();
-  glowStroke(ctx, 9, 14);
+  glowStroke(ctx, 6, 8);
 };
 
 const cache = new Map<IconKind, THREE.Texture>();

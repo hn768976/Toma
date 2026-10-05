@@ -70,11 +70,20 @@ const financeBlueStatic = (w: number, h: number) => {
   ctx.scale(s, s);
   const rng = mulberry32(0xb1e);
   const g = ctx.createLinearGradient(0, 0, LW, LH);
-  g.addColorStop(0, 'rgba(120,175,215,0.85)');
-  g.addColorStop(0.5, 'rgba(150,195,228,0.75)');
-  g.addColorStop(1, 'rgba(185,215,240,0.8)');
+  g.addColorStop(0, 'rgba(60,150,200,0.9)');
+  g.addColorStop(0.5, 'rgba(80,165,215,0.85)');
+  g.addColorStop(1, 'rgba(120,190,230,0.9)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, LW, LH);
+  // screen tiles: darker navy panels and bright cyan/white light patches
+  for (let i = 0; i < 30; i++) {
+    const x = rng() * LW;
+    const y = rng() * LH * 0.8;
+    const tw = 160 + rng() * 520;
+    const th = 90 + rng() * 300;
+    ctx.fillStyle = rng() < 0.45 ? `rgba(10,40,75,${0.25 + rng() * 0.3})` : `rgba(200,240,255,${0.12 + rng() * 0.25})`;
+    ctx.fillRect(x, y, tw, th);
+  }
   // city-block silhouettes (abstract)
   ctx.fillStyle = 'rgba(225,240,250,0.18)';
   for (let i = 0; i < 26; i++) {
@@ -89,8 +98,14 @@ const financeBlueStatic = (w: number, h: number) => {
   ctx.filter = `blur(${10 * s}px)`;
   ctx.drawImage(c, 0, 0, LW, LH);
   ctx.filter = 'none';
+  // white bar chart, left-middle
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let i = 0; i < 16; i++) {
+    const bh = 90 + Math.abs(Math.sin(i * 1.9)) * 160 + i * 6;
+    ctx.fillRect(40 + i * 46, 1180 - bh, 30, bh);
+  }
   // grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.26)';
   ctx.lineWidth = 2;
   for (let x = 0; x < LW; x += 120) {
     ctx.beginPath();
@@ -159,21 +174,23 @@ const candlesWarmStatic = (w: number, h: number, land: Polygon[] | null) => {
   const s = w / LW;
   ctx.scale(s, s);
   const g = ctx.createLinearGradient(0, 0, LW, 0);
-  g.addColorStop(0, 'rgba(250,175,110,0.95)');
-  g.addColorStop(0.35, 'rgba(235,170,140,0.8)');
-  g.addColorStop(0.6, 'rgba(150,185,215,0.8)');
-  g.addColorStop(1, 'rgba(105,165,215,0.95)');
+  g.addColorStop(0, 'rgba(235,120,40,0.95)');
+  g.addColorStop(0.35, 'rgba(220,140,90,0.85)');
+  g.addColorStop(0.6, 'rgba(70,140,190,0.85)');
+  g.addColorStop(1, 'rgba(40,120,200,0.95)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, LW, LH);
   // soft warm/cool light blobs
   const rng = mulberry32(0xca5d);
-  for (let i = 0; i < 18; i++) {
+  const bokeh = ['rgba(255,200,90,0.6)', 'rgba(255,150,120,0.5)', 'rgba(120,220,170,0.45)', 'rgba(110,200,255,0.5)', 'rgba(255,230,140,0.55)'];
+  for (let i = 0; i < 34; i++) {
     const x = rng() * LW;
     const y = rng() * LH;
-    const r = 120 + rng() * 380;
+    const r = 90 + rng() * 300;
     const warm = x < LW * 0.45;
+    const col = warm ? bokeh[rng() < 0.5 ? 0 : rng() < 0.5 ? 1 : 4] : bokeh[rng() < 0.3 ? 2 : 3];
     const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
-    rg.addColorStop(0, warm ? 'rgba(255,215,160,0.45)' : 'rgba(200,230,255,0.35)');
+    rg.addColorStop(0, y < LH * 0.3 && x > LW * 0.3 && x < LW * 0.6 ? bokeh[2] : col);
     rg.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = rg;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
@@ -182,10 +199,10 @@ const candlesWarmStatic = (w: number, h: number, land: Polygon[] | null) => {
   if (land) {
     ctx.save();
     ctx.translate(250, 160);
-    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+    ctx.fillStyle = 'rgba(150,215,255,0.28)';
     tracePolygons(ctx, land, 3400, 1700, [-170, 190, -60, 85]);
     ctx.fill('evenodd');
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = 'rgba(220,245,255,0.35)';
     ctx.lineWidth = 3;
     ctx.stroke();
     ctx.restore();
@@ -194,19 +211,42 @@ const candlesWarmStatic = (w: number, h: number, land: Polygon[] | null) => {
   ctx.drawImage(c, 0, 0, LW, LH);
   ctx.filter = 'none';
   // grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
-  ctx.lineWidth = 2.5;
-  for (let x = 0; x < LW; x += 150) {
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 3;
+  for (let x = 0; x < LW; x += 330) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, LH);
     ctx.stroke();
   }
-  for (let y = 30; y < LH; y += 150) {
+  for (let y = 30; y < LH; y += 340) {
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(LW, y);
     ctx.stroke();
+  }
+  // a second, static candle band along the top (background screen)
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  let v = 0.5;
+  for (let i = 0; i < 90; i++) {
+    const x = i * 44;
+    const o = v;
+    v = Math.min(0.95, Math.max(0.05, v + (rng() - 0.48) * 0.12));
+    const top = 60 + (1 - Math.max(o, v)) * 700;
+    const bot = 60 + (1 - Math.min(o, v)) * 700;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, top - 40 * rng());
+    ctx.lineTo(x, bot + 40 * rng());
+    ctx.stroke();
+    ctx.fillRect(x - 9, top, 18, Math.max(5, bot - top));
+  }
+  // volume bars along the bottom
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  for (let i = 0; i < 90; i++) {
+    const hgt = 40 + rng() * 200;
+    ctx.fillRect(i * 44 - 10, LH - hgt, 20, hgt);
   }
   return c;
 };
@@ -218,10 +258,32 @@ const barsBlueStatic = (w: number, h: number) => {
   ctx.scale(s, s);
   const rng = mulberry32(0xba25);
   const g = ctx.createLinearGradient(0, 0, 0, LH);
-  g.addColorStop(0, 'rgba(150,190,222,0.9)');
-  g.addColorStop(1, 'rgba(95,140,185,0.75)');
+  g.addColorStop(0, 'rgba(120,170,210,0.9)');
+  g.addColorStop(1, 'rgba(60,110,160,0.8)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, LW, LH);
+  // abstract glass towers with window grids (double exposure)
+  for (let i = 0; i < 12; i++) {
+    const bw = 220 + rng() * 420;
+    const x = -100 + rng() * LW;
+    const top = rng() * LH * 0.5;
+    ctx.fillStyle = `rgba(${rng() < 0.5 ? '20,45,80' : '200,230,250'},${0.18 + rng() * 0.22})`;
+    ctx.fillRect(x, top, bw, LH - top);
+    ctx.strokeStyle = 'rgba(230,245,255,0.28)';
+    ctx.lineWidth = 3;
+    for (let wy = top + 30; wy < LH; wy += 46) {
+      ctx.beginPath();
+      ctx.moveTo(x, wy);
+      ctx.lineTo(x + bw, wy);
+      ctx.stroke();
+    }
+    for (let wx = x + 40; wx < x + bw; wx += 60) {
+      ctx.beginPath();
+      ctx.moveTo(wx, top);
+      ctx.lineTo(wx, LH);
+      ctx.stroke();
+    }
+  }
   // large faint architectural panels
   ctx.fillStyle = 'rgba(235,245,255,0.16)';
   for (let i = 0; i < 9; i++) {
@@ -242,9 +304,37 @@ const barsBlueStatic = (w: number, h: number) => {
     ctx.lineTo(x + (rng() - 0.5) * 500, LH);
     ctx.stroke();
   }
-  ctx.filter = `blur(${12 * s}px)`;
+  ctx.filter = `blur(${5 * s}px)`;
   ctx.drawImage(c, 0, 0, LW, LH);
   ctx.filter = 'none';
+  // full-frame grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 2;
+  for (let x = 0; x < LW; x += 160) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, LH);
+    ctx.stroke();
+  }
+  for (let y = 0; y < LH; y += 160) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(LW, y);
+    ctx.stroke();
+  }
+  // secondary line graph with dot markers, upper left
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  const sec = [[1050, 470], [1250, 600], [1500, 380], [1700, 450], [1950, 300]];
+  sec.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+  ctx.stroke();
+  for (const [x, y] of sec) {
+    ctx.beginPath();
+    ctx.arc(x, y, 16, 0, Math.PI * 2);
+    ctx.fill();
+  }
   // small charts top-left
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   for (let i = 0; i < 18; i++) ctx.fillRect(140 + i * 38, 560 - (40 + rng() * 260), 20, 40 + rng() * 260);
@@ -325,6 +415,7 @@ export class Overlay {
       ctx.lineTo(pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t, pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t);
     }
     ctx.stroke();
+    ctx.font = '500 40px "JetBrains Mono"';
     pts.forEach((p, i) => {
       const a = smoothstep(i - 0.3, i, head);
       if (a <= 0) return;
@@ -336,8 +427,28 @@ export class Overlay {
       ctx.lineWidth = 4;
       ctx.arc(p.x, p.y, 34, 0, Math.PI * 2);
       ctx.stroke();
+      // invented index codes, not prices
+      if (i >= 3) ctx.fillText(`#${String(400 + i * 37).padStart(4, '0')}`, p.x - 40, p.y - 56);
       ctx.globalAlpha = 1;
     });
+    // second, lower line with nodes
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      if (i > head + 0.01) return;
+      const y = p.y + 420 + Math.sin(i * 1.3) * 40;
+      if (i === 0) ctx.moveTo(p.x, y);
+      else ctx.lineTo(p.x, y);
+    });
+    ctx.stroke();
+    pts.forEach((p, i) => {
+      if (i > head) return;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y + 420 + Math.sin(i * 1.3) * 40, 11, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
     // up arrows behind the middle stacks
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     [0.35, 0.55, 0.7].forEach((k, i) => {
@@ -367,13 +478,13 @@ export class Overlay {
     const shown = f.progress * n;
     const x0 = 0;
     const step = LW / (n - 4);
-    const y = (v: number) => LH * 0.9 - v * LH * 0.8;
+    const y = (v: number) => LH * 0.72 - v * LH * 0.62;
     for (let i = 0; i < n; i++) {
       const a = clamp(shown - i);
       if (a <= 0) break;
       const c = this.candles[i];
       const x = x0 + i * step;
-      ctx.globalAlpha = 0.85 * a;
+      ctx.globalAlpha = 0.95 * a;
       ctx.strokeStyle = '#fff';
       ctx.fillStyle = '#fff';
       ctx.lineWidth = 4;
@@ -383,10 +494,10 @@ export class Overlay {
       ctx.stroke();
       const top = y(Math.max(c.o, c.c));
       const bot = y(Math.min(c.o, c.c));
-      if (c.c >= c.o) ctx.fillRect(x - 13, top, 26, Math.max(6, bot - top));
+      if (c.c >= c.o) ctx.fillRect(x - 16, top, 32, Math.max(8, bot - top));
       else {
         ctx.lineWidth = 3;
-        ctx.strokeRect(x - 13, top, 26, Math.max(6, bot - top));
+        ctx.strokeRect(x - 16, top, 32, Math.max(8, bot - top));
       }
     }
     ctx.globalAlpha = 1;
@@ -411,7 +522,10 @@ export class Overlay {
       const grow = easeInOut(clamp(f.progress * 1.25 - i * 0.03));
       const hgt = this.bars[i] * (base - 200) * grow;
       const x = left + i * step + (step - bw) / 2;
-      ctx.fillStyle = 'rgba(255,255,255,0.42)';
+      const bg = ctx.createLinearGradient(0, base - hgt, 0, base);
+      bg.addColorStop(0, 'rgba(255,255,255,0.75)');
+      bg.addColorStop(1, 'rgba(255,255,255,0.4)');
+      ctx.fillStyle = bg;
       ctx.fillRect(x, base - hgt, bw, hgt);
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.fillRect(x, base - hgt, bw, 8);

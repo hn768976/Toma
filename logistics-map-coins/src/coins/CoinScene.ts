@@ -200,7 +200,7 @@ export class CoinScene implements SceneController {
       const m = new THREE.MeshPhysicalMaterial({
         color: 0xffffff,
         metalness: 1,
-        roughness: 0.32,
+        roughness: 0.22,
         roughnessMap: rough,
         normalMap: face ? normalMap : null,
         normalScale: new THREE.Vector2(0.9, 0.9),
@@ -273,8 +273,8 @@ export class CoinScene implements SceneController {
         reflFar: {value: 400},
         camHeight: {value: 3},
         reflectivity: {value: v.reflectivity},
-        fadeHeight: {value: 4.5},
-        blurPerCm: {value: (0.5 * hh) / 360},
+        fadeHeight: {value: 7},
+        blurPerCm: {value: (0.25 * hh) / 360},
         nearColor: {value: sceneColor(v.table[0], v.exposure)},
         farColor: {value: sceneColor(v.table[1], v.exposure)},
         camPos: {value: new THREE.Vector3()},
@@ -336,6 +336,7 @@ export class CoinScene implements SceneController {
     p.saturation = v.saturation;
     p.overlay = this.overlayTex;
     p.overlayStrength = v.overlayStrength;
+    p.overlayProtect = v.overlayProtect;
   }
 
   private placeCamera(f: number) {
@@ -393,9 +394,9 @@ export class CoinScene implements SceneController {
     let nFade = 0;
     let nShadow = 0;
     const addShadow = (x: number, z: number, height: number, scale: number) => {
-      const a = 0.22 * Math.exp(-height / 1.2);
+      const a = 0.3 * Math.exp(-height / 1.2);
       if (a < 0.01) return;
-      m.compose(new THREE.Vector3(x, 0.003, z), new THREE.Quaternion(), new THREE.Vector3(COIN_R * 2.25 * scale, 1, COIN_R * 2.25 * scale));
+      m.compose(new THREE.Vector3(x, 0.003, z), new THREE.Quaternion(), new THREE.Vector3(COIN_R * 2.05 * scale, 1, COIN_R * 2.05 * scale));
       this.shadows.setMatrixAt(nShadow, m);
       this.shadowAlpha.setX(nShadow, a);
       nShadow++;
