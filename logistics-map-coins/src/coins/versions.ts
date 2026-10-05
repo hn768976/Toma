@@ -61,7 +61,7 @@ const stairsCam: CoinVersion['camera'] = {
   fov: 22,
   dolly: [-0.3, 0.15, -2.0],
   drift: [-0.25, 0.05, -0.6],
-  focus: [2.2, 3.4, -1.8],
+  focus: [4.6, 3.2, 3.2], // nearest / tallest stack (per brief)
 };
 
 const pileCam: CoinVersion['camera'] = {
@@ -74,14 +74,14 @@ const pileCam: CoinVersion['camera'] = {
 };
 
 export const COIN_VERSIONS: Record<string, CoinVersion> = {
-  StairsWhite: {...base, id: 'CoinGrowth-StairsWhite', layout: 'stairs', seed: 101, camera: stairsCam, aperture: 0.035},
+  StairsWhite: {...base, id: 'CoinGrowth-StairsWhite', layout: 'stairs', seed: 101, camera: stairsCam, aperture: 0.03},
   StairsFinance: {
     ...base,
     id: 'CoinGrowth-StairsFinance',
     layout: 'stairs',
     seed: 101,
     camera: stairsCam,
-    aperture: 0.035,
+    aperture: 0.03,
     wall: ['#7C95AA', '#8AA2B5'],
     table: ['#C8D4DE', '#8FA4B6'],
     overlay: 'financeBlue',

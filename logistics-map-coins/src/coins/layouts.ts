@@ -53,7 +53,7 @@ const randomAxis = (rng: Rng) => {
 // Staircase: n stacks on a line receding from near-right to far-left, each
 // taller than the one behind it.
 export const stairsLayout = (seed: number): CoinSpec[] => {
-  const counts = [2, 4, 7, 10, 14, 18, 23, 28];
+  const counts = [1, 2, 6, 10, 14, 18, 23, 28];
   const near = new THREE.Vector2(4.6, 3.2);
   const far = new THREE.Vector2(-12.5, -24);
   const stacks: StackDef[] = counts.map((count, i) => {
