@@ -194,7 +194,7 @@ const basePost: PostRow = {
 
 const bhQuality = {
   preview: { steps: 160, stepScale: 0.07, deckSteps: 64, deckBisect: 6, octaves: 5, layers: 1, marchSteps: 1 },
-  high: { steps: 360, stepScale: 0.03, deckSteps: 64, deckBisect: 7, octaves: 7, layers: 1, marchSteps: 1 },
+  high: { steps: 360, stepScale: 0.03, deckSteps: 160, deckBisect: 8, octaves: 7, layers: 1, marchSteps: 1 },
 };
 const vxQuality = {
   preview: { steps: 1, stepScale: 1, deckSteps: 1, deckBisect: 1, octaves: 5, layers: 3, marchSteps: 40 },
