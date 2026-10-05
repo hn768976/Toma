@@ -60,7 +60,7 @@ for (let i = 0; i < COINS; i++) {
   const depth = Math.pow(rng(), 0.8);
   spawns.push({
     frame,
-    pos: [rnd(-13, 13) * (0.6 + depth * 0.9), rnd(14, 26), 7 - depth * 34],
+    pos: [rnd(-17, 17) * (0.7 + depth * 1.0), rnd(14, 26), 4 - depth * 46],
     euler: [rnd(-1.4, 1.4), rnd(0, Math.PI * 2), rnd(-1.4, 1.4)],
     vel: [rnd(-12, 12), rnd(-60, 0), rnd(-10, 10)],
     ang: [rnd(-25, 25), rnd(-8, 8), rnd(-25, 25)],

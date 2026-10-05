@@ -107,7 +107,7 @@ const financeBlueStatic = (w: number, h: number) => {
     ctx.fillRect(hx - hr, hy - hr, hr * 2, hr * 2);
   }
   // white bar chart, left-middle
-  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
   for (let i = 0; i < 16; i++) {
     const bh = 90 + Math.abs(Math.sin(i * 1.9)) * 160 + i * 6;
     ctx.fillRect(40 + i * 46, 1180 - bh, 30, bh);
@@ -157,7 +157,8 @@ const financeBlueStatic = (w: number, h: number) => {
   }
   ctx.stroke();
   // axis on the right
-  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
   ctx.beginPath();
   ctx.moveTo(3330, 60);
   ctx.lineTo(3330, 1900);
@@ -443,12 +444,8 @@ export class Overlay {
       if (a <= 0) return;
       ctx.globalAlpha = a;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 30, 0, Math.PI * 2);
       ctx.fill();
-      ctx.beginPath();
-      ctx.lineWidth = 4;
-      ctx.arc(p.x, p.y, 34, 0, Math.PI * 2);
-      ctx.stroke();
       // invented index codes, not prices
       // invented 6-digit node codes (no currency, no decimals: not prices)
       if (i >= 3) ctx.fillText(String(100000 + ((i * 7919 * 37) % 899999)), p.x - 70, p.y - 56);
