@@ -36,8 +36,9 @@ script only).
 
 All looks use **WebGL2** (not WebGPU). Headless Chromium needs
 `--gl=angle` (set in `remotion.config.ts`, so `npx remotion render` uses it by
-default). On a machine **without a GPU**, ANGLE falls back to SwiftShader; you
-can request that explicitly with `--gl=swangle`. If Remotion cannot download its
+default). On a machine **without a GPU**, ANGLE falls back to SwiftShader
+(software WebGL2) — that is how the previews here were rendered; you can also
+request it explicitly with `--gl=swangle`. If Remotion cannot download its
 own headless shell, point it at any Chromium with
 `--browser-executable=/path/to/chrome-headless-shell`.
 
@@ -91,7 +92,24 @@ Earth shapefiles and the GRAY_50M_SR raster to the files in `public/data`.
 
 ## Measured render time (720p, this machine)
 
-MEASURED_TIMES
+Measured on the build machine: 4 vCPU, **no GPU** (Chromium's ANGLE fell back to
+SwiftShader software WebGL2), `--concurrency=2`, 1280×720 (`--scale=1/3`),
+PNG frames. Wall-clock time divided by frame count, including startup.
+
+| Look | Engine | s / frame at 720p | Notes |
+|---|---|---|---|
+| 1 Logistics Map (World / Asia / Routes) | three.js | **0.73 / 0.80 / 0.84** (uncontended); 0.79–1.01 in the final pass | 600 frames ≈ 8–10 min |
+| 2 Digital World Map | PixiJS 8 | **2.3–2.5** | blur filters + 24-tap defocus in the final filter |
+| 3 Coin Growth (6 versions) | three.js | **2.2–3.8** (final code: full-res DoF gather + full-res planar reflection) | PileWarm/Pile slowest, Silver fastest |
+
+**4K estimate.** 4K has 9× the pixels of 720p and every pass here is
+fill-rate bound, so on this same GPU-less machine expect roughly 9×: about
+7–9 s/frame for the maps (600 frames ≈ 1.2–1.5 h each), ~22 s/frame for the
+Digital World Map (~3.7 h) and 20–35 s/frame for the coins (450 frames ≈
+2.5–4.4 h each). On a machine with a real GPU (ANGLE on hardware) the GL work
+becomes small and frame time is dominated by readback, PNG encoding and the
+browser; a reasonable expectation is ~0.5–1.5 s/frame for every composition,
+but that was **not measured** here.
 
 ## Determinism
 
@@ -116,7 +134,31 @@ value is computed from `useCurrentFrame()` alone:
 
 ## Verification (what was checked, see `scripts/verify.sh`)
 
-VERIFICATION_REPORT
+Run on the delivered 720p previews (`out/` is not part of the zip):
+
+1. **File checks** — `scripts/verify.sh probe`: all 10 are 1280×720, 30/1,
+   h264, yuv420p, no audio, 20.0 s (maps) / 15.0 s (coins). Every file also
+   decodes with zero ffmpeg errors.
+2. **Loop check** (maps) — rendered with `--props='{"loopCheck":true}'`
+   (601 frames); frame 0 and frame 600 are **byte-identical PNGs** for all 4.
+3. **Same result every time** — frame 300 rendered alone from a cold start is
+   **byte-identical** to frame 300 of the full render for all 10; for 3F also
+   frame 120 (mid-fall).
+4. **Banding / exposure** — frames decoded from the encoded mp4s; profiles
+   across the map vignettes, the white table falloff and the overlay gradients
+   change smoothly (no 1-level steps, longest identical run on a raw line
+   5–10 px, grain visible). Coin versions: **0 pixels** at pure #FFFFFF.
+5. **Coins are generic** — 3A frame 400 and 3F frame 400 inspected: reeded
+   edge, raised rim, abstract star-in-circle emblem; no text, numbers,
+   portraits or real coin design.
+6. **Content** — 5-frame contact sheets per composition (push-in/drift,
+   pulses, arcs drawing on, moving icons and counters, growing stacks, chart
+   draw-on, falling and settling coins).
+7. **Motion** — frames 299/300/301 (and 100–102 for 3F) compared: equal
+   frame-to-frame differences, no snapping or teleporting (icons that reverse
+   direction squash through zero instead of mirroring instantly).
+8./9. **Look vs reference** — compared by eye and by fresh sub-agents (three
+   rounds per composition, see the delivery report).
 
 ## Banding check
 
@@ -132,7 +174,16 @@ ffmpeg -v error -i /tmp/f.png -vf "crop=1:720:200:0" -f rawvideo -pix_fmt gray -
 
 ## Completion checklist
 
-CHECKLIST
+- [x] 10 compositions, 3840×2160, 30 fps, 600 / 450 frames, one data row per version
+- [x] three.js looks via `@remotion/three`, PixiJS 8 look, WebGL2 only
+- [x] Everything built in code; fonts, Natural Earth data/raster and HDRI shipped with licences
+- [x] Generic coins; invented map codes; no logos, brands, tickers or price-like numbers
+- [x] No `Math.random`, CSS animation, clocks or carried state; coin rain is pre-computed playback
+- [x] Grain from (pixel, frame % 600) — ~2 % maps, ~1 % coins; ±1/255 dither after tone mapping
+- [x] Loops: frame 600 == frame 0 (byte-identical) for the 4 maps
+- [x] Cold-start frame 300 == full-render frame 300 (byte-identical) for all 10
+- [x] 720p previews pass ffprobe checks; no banding; no clipped white backgrounds
+- [x] `npm install && npx remotion studio` works from a clean copy
 
 ## Adding a map framing
 
