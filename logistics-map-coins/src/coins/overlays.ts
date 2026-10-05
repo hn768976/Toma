@@ -275,8 +275,9 @@ const barsBlueStatic = (w: number, h: number) => {
   ctx.scale(s, s);
   const rng = mulberry32(0xba25);
   const g = ctx.createLinearGradient(0, 0, 0, LH);
-  g.addColorStop(0, 'rgba(120,170,210,0.9)');
-  g.addColorStop(1, 'rgba(60,110,160,0.8)');
+  g.addColorStop(0, 'rgba(215,232,245,0.95)');
+  g.addColorStop(0.5, 'rgba(160,195,225,0.85)');
+  g.addColorStop(1, 'rgba(110,150,190,0.8)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, LW, LH);
   // abstract glass towers with window grids (double exposure)
@@ -321,7 +322,7 @@ const barsBlueStatic = (w: number, h: number) => {
     ctx.lineTo(x + (rng() - 0.5) * 500, LH);
     ctx.stroke();
   }
-  ctx.filter = `blur(${5 * s}px)`;
+  ctx.filter = `blur(${1.5 * s}px)`;
   ctx.drawImage(c, 0, 0, LW, LH);
   ctx.filter = 'none';
   // full-frame grid
@@ -352,10 +353,14 @@ const barsBlueStatic = (w: number, h: number) => {
     ctx.arc(x, y, 16, 0, Math.PI * 2);
     ctx.fill();
   }
-  // small charts top-left
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  for (let i = 0; i < 18; i++) ctx.fillRect(140 + i * 38, 560 - (40 + rng() * 260), 20, 40 + rng() * 260);
-  for (let r = 0; r < 8; r++) glyphRow(ctx, 160, 640 + r * 40, 520, 12, rng);
+  // small hollow circle markers scattered over the towers
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 4;
+  for (let i = 0; i < 14; i++) {
+    ctx.beginPath();
+    ctx.arc(rng() * LW, rng() * LH * 0.6, 14 + rng() * 14, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   ctx.strokeStyle = 'rgba(255,255,255,0.5)';
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -551,9 +556,11 @@ export class Overlay {
     }
     // rising line chart with dots, drawing on, ending in an arrow
     const head = clamp((f.progress - 0.1) / 0.85) * (n - 1);
-    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.lineWidth = 7;
+    ctx.strokeStyle = 'rgba(255,255,255,1)';
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.shadowColor = 'rgba(255,255,255,0.9)';
+    ctx.shadowBlur = 24 * this.s;
+    ctx.lineWidth = 14;
     ctx.beginPath();
     ctx.moveTo(pts[0][0], pts[0][1]);
     let end = pts[0];
@@ -585,5 +592,6 @@ export class Overlay {
       ctx.fill();
       ctx.restore();
     }
+    ctx.shadowBlur = 0;
   }
 }

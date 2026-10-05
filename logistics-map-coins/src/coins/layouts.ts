@@ -117,12 +117,14 @@ export const pileLayout = (seed: number, mixed: boolean): CoinSpec[] => {
 
 // Silver stacks for 3E: a few tall stacks, large in frame.
 export const silverLayout = (seed: number): CoinSpec[] => {
+  // a dominant tall stack in the centre, a wide stack to its right, a stack
+  // behind on the left and two short, defocused stacks in the foreground
   const stacks: StackDef[] = [
-    {x: -0.6, z: -3.5, count: 24, metal: 'silver', start: 30, end: 320},
-    {x: 2.7, z: -0.8, count: 15, metal: 'silver', start: 60, end: 300},
-    {x: -3.9, z: 1.5, count: 7, metal: 'silver', start: 90, end: 260},
-    {x: 0.9, z: 2.6, count: 5, metal: 'silver', start: 110, end: 250},
-    {x: 5.4, z: -5.0, count: 11, metal: 'silver', start: 70, end: 290},
+    {x: 0.6, z: -2.6, count: 32, metal: 'silver', start: 30, end: 320},
+    {x: 3.5, z: -1.2, count: 19, metal: 'silver', start: 60, end: 300},
+    {x: -3.4, z: -5.5, count: 14, metal: 'silver', start: 80, end: 290},
+    {x: -1.5, z: 3.4, count: 8, metal: 'silver', start: 100, end: 270},
+    {x: 2.0, z: 4.0, count: 6, metal: 'silver', start: 120, end: 260},
   ];
   return stackCoins(stacks, [], seed);
 };
