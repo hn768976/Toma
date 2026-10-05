@@ -83,7 +83,23 @@ same data. No per-frame random jitter is used anywhere.
 
 ## Measured render times
 
-MEASURED_TIMES
+Measured in this build environment: 4-core cloud container, **no GPU**, so
+WebGL ran on SwiftShader (ANGLE's CPU fallback), `--concurrency=1`. A real GPU
+will be many times faster; these numbers are an upper bound.
+
+| Composition | 720p preview (s/frame, whole render incl. bundling) | 4K `high` (s/frame, steady state) | 4K estimate, 600 frames |
+|---|---|---|---|
+| BlackHole_EdgeOnPink | 1.55 (928 s total) | 21.2 | ≈ 3.5 h |
+| BlackHole_GoldFlare | 1.59 (955 s) | 23.6 | ≈ 3.9 h |
+| BlackHole_DiscSkim | 3.68 (2210 s) | 66.0 | ≈ 11.0 h |
+| Vortex_PurpleEye | 0.65 (387 s) | 4.6 | ≈ 0.8 h |
+| Vortex_BlueFunnel | 2.59 (1556 s) | 24.4 | ≈ 4.1 h |
+| Vortex_NebulaSwirl | 0.83 (496 s) | 8.2 | ≈ 1.4 h |
+| **Total** | ≈ 1.8 h | | **≈ 24.7 h** (CPU / SwiftShader) |
+
+4K steady-state = mean over 3 consecutive frames after page load and shader
+compile (`scripts/bench.mjs 1 high <ID> 3`). A single cold 4K still adds about
+5–8 s of page load + compile.
 
 ## How it works
 
@@ -142,4 +158,34 @@ stars/specks use an integer PCG hash. No `Math.random()`, `Date.now()`,
 
 ## Verification
 
-VERIFICATION
+Run in this environment on the delivered build:
+
+| Check | How | Result |
+|---|---|---|
+| 1. File checks | `ffprobe` on each mp4 | all six: h264, 1280×720, 30/1, 20.000 s, 600 frames, yuv420p, no audio stream |
+| 2. Loop | `durationOverride: 601`, render frames 0 and 600 as PNG, compare | all six pixel-identical |
+| 3. Determinism | frame 300 rendered mid-sequence (frames 290–310 in one tab) vs. a cold-start `remotion still` of frame 300 | all six pixel-identical |
+| 4. Banding | `scripts/banding.py`: luma along glow falloffs into the dark background, on frame 300 decoded **from the encoded mp4** | smooth: dither interleaves neighbouring values (e.g. 16/17/18 → 8/9 → 6/7), no staircases; max local step ≤ 10 on bright structure, < 1 in dark falloff |
+| 4. 4K stepping / noise | one 4K `high` frame per composition at 100 % | no raymarch stepping bands or noise; small jag on the DiscSkim horizon at grazing angles |
+| 5. Content | contact sheets of 5 evenly spaced frames | motion visible in all six (disc flow, rotation, drift) |
+| 6. Smoothness | frames 299/300/301, `scripts/flicker.py` | shots 1, 2, 4 at the grain floor; shots 3, 5, 6 show fast-moving fine detail (moving deck crests, motion-blurred specks, streaks) rather than flicker |
+
+### Banding check, how to repeat
+
+```bash
+python3 scripts/banding.py out/Vortex_PurpleEye.mp4 640 360 1270 710   # eye -> dark corner
+```
+
+### Completion checklist
+
+- [x] six compositions, 3840×2160 definitions, 30 fps, 600 frames, seamless loop
+- [x] one data row per composition (camera, colours, disc/vortex params, quality)
+- [x] WebGL2 via `@remotion/three`, `--gl=angle`
+- [x] deterministic (no Math.random / Date.now / temporal state)
+- [x] grain (~2 %) + ±1/255 dither after tonemapping
+- [x] 720p previews + PNG stills, ffprobe-verified
+- [x] measured 720p and 4K timings, 4K test frames deleted
+- [ ] visual match to every reference — see the delivery report for the
+      differences that remain after three comparison rounds per composition;
+      `1405885287` (Nebula Swirl) was not supplied, so shot 6 was built from
+      the written brief only
