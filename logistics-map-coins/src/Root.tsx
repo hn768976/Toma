@@ -1,6 +1,7 @@
 import React from 'react';
 import {Composition} from 'remotion';
 import {LogisticsMap, LogisticsMapProps} from './logistics/LogisticsMap';
+import {DigitalWorldMap} from './digital/DigitalWorldMap';
 
 const W = 3840;
 const H = 2160;
@@ -25,5 +26,15 @@ export const RemotionRoot: React.FC = () => (
         calculateMetadata={loopLength}
       />
     ))}
+    <Composition
+      id="DigitalWorldMap-Cyan"
+      component={DigitalWorldMap}
+      durationInFrames={600}
+      fps={FPS}
+      width={W}
+      height={H}
+      defaultProps={{loopCheck: false}}
+      calculateMetadata={loopLength}
+    />
   </>
 );
