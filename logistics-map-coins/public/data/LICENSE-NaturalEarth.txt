@@ -1,0 +1,15 @@
+Natural Earth — public domain.
+
+Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+"All versions of Natural Earth raster + vector map data found on this website
+are in the public domain. You may use the maps in any manner, including
+modifying the content and design, electronic dissemination, and offset
+printing." — https://www.naturalearthdata.com/about/terms-of-use/
+
+Files in this folder (converted by scripts/prepare-data.mjs):
+  ne_50m_land.json               <- ne_50m_land (v5.1.1 physical)
+  ne_110m_land.json              <- ne_110m_land
+  ne_50m_admin_0_countries.json  <- ne_50m_admin_0_countries (admin-0 countries)
+  ne_10m_populated_places.json   <- ne_10m_populated_places_simple (lon, lat, pop_max, scalerank; names dropped)
+  gray_50m_sr.png                <- GRAY_50M_SR (gray shaded relief, 1:50m), resized 10800x5400 -> 8192x4096
+Source: https://naturalearth.s3.amazonaws.com/

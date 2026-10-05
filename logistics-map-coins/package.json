@@ -1,0 +1,31 @@
+{
+  "name": "logistics-map-coins",
+  "version": "1.0.0",
+  "description": "Logistics Map, Digital World Map and Coin Growth motion graphics (Remotion, 30fps)",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "dev": "remotion studio",
+    "build:coinrain": "node scripts/build-coinrain.mjs",
+    "build:data": "node scripts/prepare-data.mjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.8.1",
+    "@remotion/cli": "4.0.532",
+    "@remotion/three": "4.0.532",
+    "pixi.js": "8.22.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "cannon-es": "0.20.0",
+    "typescript": "5.9.3"
+  }
+}
