@@ -193,7 +193,7 @@ const basePost: PostRow = {
 };
 
 const bhQuality = {
-  preview: { steps: 160, stepScale: 0.07, deckSteps: 48, deckBisect: 5, octaves: 5, layers: 1, marchSteps: 1 },
+  preview: { steps: 160, stepScale: 0.07, deckSteps: 64, deckBisect: 6, octaves: 5, layers: 1, marchSteps: 1 },
   high: { steps: 360, stepScale: 0.03, deckSteps: 64, deckBisect: 7, octaves: 7, layers: 1, marchSteps: 1 },
 };
 const vxQuality = {
@@ -334,7 +334,7 @@ export const SHOTS: ShotRow[] = [
     deck: {
       enabled: true,
       top: 0.52,
-      amp: 0.25,
+      amp: 0.15,
       r0: 5,
       freq: 2.0,
       fog: 16,
@@ -399,7 +399,7 @@ export const SHOTS: ShotRow[] = [
     zoom: { base: 1, amp: 0 },
     drift: [4, 1],
     twist: 4.0,
-    turns: [1, 1, 2],
+    turns: [1, 1, 1],
     freq: [4.0, 1.4],
     streak: 16,
     streakMix: 0.9,
@@ -437,11 +437,11 @@ export const SHOTS: ShotRow[] = [
     zoom: { base: 1, amp: 0.05 },
     drift: [0.004, 0.002],
     twist: 2.0,
-    turns: [1, 1, 2],
+    turns: [1, 1, 1],
     freq: [1.8, 2.2],
     streak: 3.5,
     streakMix: 0.1,
-    contrast: [0.25, 0.85],
+    contrast: [0.15, 0.95],
     tilt: [0, 1],
     arms: [2, 0.35],
     glow: [0, 0.1],

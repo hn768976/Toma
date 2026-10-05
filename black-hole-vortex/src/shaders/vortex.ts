@@ -118,19 +118,33 @@ vec3 starField(vec2 p, float scale, float pxSize) {
 }
 
 // Gold-white specks on the funnel plane. Cells live in plane coordinates
-// that turn rigidly with the gas (whole turns per loop), so the specks stay
-// round, move with the flow and never sparkle.
+// that turn rigidly with the gas (whole turns per loop), so the specks move
+// with the flow. Each speck is a gaussian stretched along its direction of
+// travel by its per-frame motion (analytic motion blur), so fast specks read
+// as short streaks instead of strobing. 3x3 neighbour cells so streaks are
+// never clipped at a cell border.
 float specks(vec2 xz, float fp, float K, int seed) {
-  float ang = -TAU * uTurns.z * uPhase;
+  float ang = -TAU * uTurns.x * uPhase;
   vec2 q = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * xz * K;
-  ivec2 cell = ivec2(floor(q));
-  vec3 h = hash33i(ivec3(cell, seed));
-  if (h.z > uStarDensity) return 0.0;
-  vec2 f = fract(q) - (0.25 + 0.5 * h.xy);
+  vec2 tng = normalize(vec2(-q.y, q.x) + 1e-6);
+  float L = TAU * uTurns.x / 600.0 * length(q);       // travel per frame, cell units
   float r0 = 0.07;
   float rad = max(r0, fp * K * 0.7);
-  float flux = r0 * r0 / (rad * rad);
-  return exp(-dot(f, f) / (rad * rad)) * flux * (0.3 + 3.0 * pow(hash13i(ivec3(cell, 7)), 3.0));
+  float radT2 = rad * rad + 0.25 * L * L;
+  float flux = r0 * r0 / (rad * sqrt(radT2));
+  ivec2 c0 = ivec2(floor(q));
+  float sum = 0.0;
+  for (int j = -1; j <= 1; j++)
+  for (int i = -1; i <= 1; i++) {
+    ivec2 cell = c0 + ivec2(i, j);
+    vec3 h = hash33i(ivec3(cell, seed));
+    if (h.z > uStarDensity) continue;
+    vec2 f = q - (vec2(cell) + 0.25 + 0.5 * h.xy);
+    float ft = dot(f, tng);
+    float fr = dot(f, vec2(-tng.y, tng.x));
+    sum += exp(-fr * fr / (rad * rad) - ft * ft / radT2) * (0.3 + 3.0 * pow(hash13i(ivec3(cell, 7)), 3.0));
+  }
+  return sum * flux;
 }
 
 vec3 rampGas(float v) {
