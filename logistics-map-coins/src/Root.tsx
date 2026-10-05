@@ -2,6 +2,8 @@ import React from 'react';
 import {Composition} from 'remotion';
 import {LogisticsMap, LogisticsMapProps} from './logistics/LogisticsMap';
 import {DigitalWorldMap} from './digital/DigitalWorldMap';
+import {CoinGrowth, CoinGrowthProps} from './coins/CoinGrowth';
+import {COIN_VERSIONS} from './coins/versions';
 
 const W = 3840;
 const H = 2160;
@@ -36,5 +38,17 @@ export const RemotionRoot: React.FC = () => (
       defaultProps={{loopCheck: false}}
       calculateMetadata={loopLength}
     />
+    {Object.keys(COIN_VERSIONS).map((v) => (
+      <Composition
+        key={v}
+        id={COIN_VERSIONS[v].id}
+        component={CoinGrowth}
+        durationInFrames={450}
+        fps={FPS}
+        width={W}
+        height={H}
+        defaultProps={{version: v} satisfies CoinGrowthProps}
+      />
+    ))}
   </>
 );
