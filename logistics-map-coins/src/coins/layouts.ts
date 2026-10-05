@@ -74,7 +74,7 @@ export const pileLayout = (seed: number, mixed: boolean): CoinSpec[] => {
     // gold/copper on the left, silver on the right, mixed at the seam
     // mostly gold on the left and silver on the right, but mixed through the heap
     const v = x + (rng() - 0.5) * 5 - z * 0.1;
-    if (v < -2.2) return rng() < 0.35 ? 'copper' : 'gold';
+    if (v < -2.2) return rng() < 0.55 ? 'copper' : 'gold';
     if (v > 1.4) return rng() < 0.8 ? 'silver' : 'gold';
     const r = rng();
     return r < 0.45 ? 'gold' : r < 0.85 ? 'silver' : 'copper';
