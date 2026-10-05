@@ -122,9 +122,9 @@ export const silverLayout = (seed: number): CoinSpec[] => {
   const stacks: StackDef[] = [
     {x: 0.6, z: -2.6, count: 32, metal: 'silver', start: 30, end: 320},
     {x: 3.5, z: -1.2, count: 19, metal: 'silver', start: 60, end: 300},
-    {x: -3.4, z: -5.5, count: 14, metal: 'silver', start: 80, end: 290},
-    {x: -1.5, z: 3.4, count: 8, metal: 'silver', start: 100, end: 270},
-    {x: 2.0, z: 4.0, count: 6, metal: 'silver', start: 120, end: 260},
+    {x: 5.6, z: -4.5, count: 14, metal: 'silver', start: 80, end: 290},
+    {x: 0.2, z: 3.2, count: 8, metal: 'silver', start: 100, end: 270},
+    {x: 3.0, z: 3.6, count: 6, metal: 'silver', start: 120, end: 260},
   ];
   return stackCoins(stacks, [], seed);
 };

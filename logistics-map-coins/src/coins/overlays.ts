@@ -286,7 +286,7 @@ const barsBlueStatic = (w: number, h: number) => {
     const bw = 220 + rng() * 420;
     const x = -100 + rng() * LW;
     const top = rng() * LH * 0.5;
-    ctx.fillStyle = `rgba(${rng() < 0.5 ? '20,45,80' : '200,230,250'},${0.18 + rng() * 0.22})`;
+    ctx.fillStyle = `rgba(${rng() < 0.5 ? '15,35,65' : '200,230,250'},${0.25 + rng() * 0.25})`;
     ctx.fillRect(x, top, bw, LH - top);
     ctx.strokeStyle = 'rgba(230,245,255,0.28)';
     ctx.lineWidth = 3;
@@ -543,8 +543,8 @@ export class Overlay {
       const hgt = this.bars[i] * (base - 200) * grow;
       const x = left + i * step + (step - bw) / 2;
       const bg = ctx.createLinearGradient(0, base - hgt, 0, base);
-      bg.addColorStop(0, 'rgba(255,255,255,0.75)');
-      bg.addColorStop(1, 'rgba(255,255,255,0.4)');
+      bg.addColorStop(0, 'rgba(255,255,255,0.95)');
+      bg.addColorStop(1, 'rgba(255,255,255,0.6)');
       ctx.fillStyle = bg;
       ctx.fillRect(x, base - hgt, bw, hgt);
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
