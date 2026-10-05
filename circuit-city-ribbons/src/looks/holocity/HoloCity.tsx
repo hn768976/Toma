@@ -58,12 +58,12 @@ void main() {
   vec4 clip = projectionMatrix * mv;
   gl_Position = clip;
   if (d < 0.2) { gl_PointSize = 0.0; vCol = vec3(0.0); return; }
-  float sharp = 0.075 * uFocal / d;
+  float sharp = 0.07 * uFocal / d;
   float coc = cocPx(d) + uMirror * 3.0 * uRes.y / 720.0;
   float sz = sqrt(sharp * sharp + coc * coc);
   float hs = max(sz * 0.5, 0.5);
   // horizontal smear: speed-streaked, wider than tall
-  float smear = 1.0 + 0.5 * clamp(sharp / (6.0 * uRes.y / 720.0), 0.0, 1.0) + 0.8 * coc / max(sz, 1e-3);
+  float smear = 1.0 + 0.4 * coc / max(sz, 1e-3);
   float hx = hs * smear;
   float energy = min(sharp * sharp, 4.0 * hs * hs) / (4.0 * hs * hx);
   vHs = hs;
@@ -77,7 +77,8 @@ void main() {
   float kind = aInfo.w;
   // colour: teal accents low on the towers and on accent rows
   vec3 lime = uCol * vec3(1.3, 1.0, 0.45);
-  vec3 col = mix(uAccent, mix(uCol, lime, smoothstep(0.3, 0.8, hf)), smoothstep(0.08, 0.4, hf));
+  vec3 col = mix(uAccent, mix(uCol, lime, smoothstep(0.35, 0.85, hf)), smoothstep(0.02, 0.45, hf));
+  col = mix(col, uAccent, 0.5 * step(0.8, fract(seed * 13.0)) * (1.0 - smoothstep(0.1, 0.5, hf)));
   float b = aInfo.z * (0.9 + 0.5 * (1.0 - hf));
   // stacked ring bands: every few rows brighter, with darker rows between
   float row = floor(position.y / 0.35 + 0.5);
@@ -104,8 +105,11 @@ in float vHx;
 out vec4 outColor;
 void main() {
   vec2 dp = gl_FragCoord.xy - vCenter;
-  float sq = clamp(vHx + 0.5 - abs(dp.x), 0.0, 1.0) * clamp(vHs + 0.5 - abs(dp.y), 0.0, 1.0);
   vec2 e = dp / vec2(vHx + 0.5, vHs + 0.5);
+  // small dots round, large near dots blocky squares
+  float rnd = clamp((1.0 - length(e)) * (vHs + 0.5), 0.0, 1.0) * 1.27;
+  float box = clamp(vHx + 0.5 - abs(dp.x), 0.0, 1.0) * clamp(vHs + 0.5 - abs(dp.y), 0.0, 1.0);
+  float sq = mix(rnd, box, smoothstep(1.5, 3.5, vHs));
   float soft = clamp(1.0 - dot(e, e), 0.0, 1.0);
   float cov = mix(sq, soft * soft * 2.2, vBlur);
   if (cov <= 0.0) discard;
@@ -144,8 +148,8 @@ void main() {
     float y = f * iE.y;
     a.y = y; b.y = y;
     vis = smoothstep(0.0, 0.06, f) * pow(1.0 - f, 1.6);
-    col = uAccent;
-    inten *= 3.0;
+    col = mix(uAccent, uCol * vec3(1.3, 1.0, 0.45), step(0.6, fract(iP.x * 0.37)));
+    inten *= 3.5;
   } else if (kind < 0.5) {
     col = mix(uCol, uCol * vec3(1.3, 1.0, 0.45), 0.5);
   } else if (kind > 2.5) {               // crossing light line, draws on then fades
@@ -177,7 +181,7 @@ void main() {
   vec4 cp = mix(ca, cb, corner.x);
   vec4 vp = mix(va, vb, corner.x);
   float d = max(-vp.z, 0.2);
-  float sharp = max((kind > 1.5 && kind < 2.5 ? 0.06 : (kind < 0.5 ? 0.035 : 0.02)) * uFocal / d, 0.0);
+  float sharp = max((kind > 1.5 && kind < 2.5 ? 0.05 : (kind < 0.5 ? 0.03 : 0.02)) * uFocal / d, 0.0);
   float coc = cocPx(d) + uMirror * 3.0 * uRes.y / 720.0;
   float w = sqrt(sharp * sharp + coc * coc);
   float hw = max(w * 0.5, 0.5);
@@ -193,7 +197,7 @@ void main() {
   vAlong = mix(along0, along1, corner.x);
   vBlur = clamp(coc / max(w, 1e-3), 0.0, 1.0);
   float fog = fogF(d);
-  vCol = col * inten * vis * energy * fog * (uMirror > 0.5 ? 0.25 : 1.0);
+  vCol = col * inten * vis * energy * fog * (uMirror > 0.5 ? 0.25 : 1.0) * smoothstep(1.5, 4.5, d);
 }`;
 
 const LINE_FRAG = /* glsl */ `
@@ -281,7 +285,7 @@ void main() {
   float g1 = gridLine(p, 2.0, 0.012);
   float g2 = gridLine(p, 10.0, 0.03);
   vec3 c = uFloor + uCol * (g1 * 0.05 + g2 * 0.11) * fog;
-  c = mix(uFogCol * 2.5, c, fog);
+  c = mix(uFogCol * 1.8, c, fog);
   // glossy: reflection shows through, more at grazing angles
   float alpha = mix(0.55, 0.85, smoothstep(5.0, 40.0, vD));
   outColor = vec4(c, alpha);
@@ -294,7 +298,7 @@ in vec2 vUv;
 out vec4 outColor;
 void main() {
   float h = vUv.y;
-  vec3 c = uFogCol * mix(4.0, 1.4, smoothstep(0.3, 1.0, h));
+  vec3 c = uFogCol * mix(3.0, 1.1, smoothstep(0.3, 1.0, h));
   outColor = vec4(c, 1.0);
 }`;
 const BG_VERT = /* glsl */ `
@@ -353,12 +357,12 @@ class HoloWorld implements World {
       uRes: { value: new THREE.Vector2(1280, 720) },
       uFocal: { value: 600 },
       uFocus: { value: 11 },
-      uAper: { value: 0.0045 },
+      uAper: { value: 0.003 },
       uMaxCoc: { value: 0.022 },
       uFog: { value: 0.03 },
       uCol: { value: v3(v.point) },
       uAccent: { value: v3(v.accent) },
-      uGlass: { value: v3(v.glass).multiplyScalar(1.4) },
+      uGlass: { value: v3(v.glass).multiplyScalar(0.8) },
       uFloor: { value: v3(v.floor) },
       uFogCol: { value: v3(v.fog) },
     };
@@ -443,10 +447,10 @@ class HoloWorld implements World {
       dof: false,
       maxCoc: 0,
       bloomStrength: 1.0,
-      bloomSpread: 0.85,
-      threshold: 0.15,
-      knee: 0.2,
-      exposure: 0.62,
+      bloomSpread: 0.8,
+      threshold: 0.2,
+      knee: 0.25,
+      exposure: 0.55,
       vignette: 0.35,
       grain: 0.02,
     });
@@ -471,11 +475,11 @@ class HoloWorld implements World {
         s.uFocal.value = H / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
         // gentle sway, bank and tilt: whole cycles per loop
         const x = 0.3 * Math.sin(TAU * u) + 0.1 * Math.sin(TAU * 3 * u + 1.0);
-        const y = 2.4 + 0.25 * Math.sin(TAU * 2 * u + 0.5);
+        const y = 2.0 + 0.2 * Math.sin(TAU * 2 * u + 0.5);
         cam.position.set(x, y, 0);
         cam.rotation.set(0, 0, 0, "YXZ");
         cam.rotation.y = -0.05 * Math.sin(TAU * u + 0.6);
-        cam.rotation.x = 0.16 + 0.03 * Math.sin(TAU * 2 * u + 2.0);
+        cam.rotation.x = 0.22 + 0.03 * Math.sin(TAU * 2 * u + 2.0);
         cam.rotation.z = 0.035 * Math.sin(TAU * u + 0.3);
         cam.updateMatrixWorld(true);
 

@@ -252,7 +252,7 @@ export const BOARD: BoardData = (() => {
       if (diag) {
         cur = main;
         lastWasDiag = true;
-      } else if (r() < 0.55 && !lastWasDiag) {
+      } else if (r() < 0.72 && !lastWasDiag) {
         cur = (main + (r() < 0.5 ? 1 : 7)) % 8;
       } else {
         lastWasDiag = false;
@@ -263,10 +263,10 @@ export const BOARD: BoardData = (() => {
     for (let q = 1; q < pts.length; q++) {
       grid.seg(pts[q - 1][0], pts[q - 1][1], pts[q][0], pts[q][1], hw, true);
     }
-    const stagger = r() < 0.85;
+    const stagger = r() < 0.95;
     const stagDir = r() < 0.5 ? 1 : -1;
     const kind = r() < 0.18 ? 1 : 0;
-    const pad = r() < 0.92;
+    const pad = r() < 0.97;
     for (let k = 0; k < n; k++) {
       const o = (k - (n - 1) / 2) * spacing;
       let lp = offsetPolyline(pts, o);
@@ -278,8 +278,8 @@ export const BOARD: BoardData = (() => {
         pts: lp,
         seed: r(),
         kind: kind || (r() < 0.04 ? 1 : 0),
-        padStart: pad ? (r() < 0.3 ? 2 : 1) : 0,
-        padEnd: pad ? (r() < 0.3 ? 2 : 1) : 0,
+        padStart: pad ? (r() < 0.55 ? 2 : 1) : 0,
+        padEnd: pad ? (r() < 0.55 ? 2 : 1) : 0,
       });
     }
     return true;
@@ -306,8 +306,11 @@ export const BOARD: BoardData = (() => {
       const xx = range(r, X0 + 1, X1 - 1);
       // start far from the chip and route toward it
       let dir = dirToward(xx, zz);
-      if (r() < 0.38) dir = (dir + (r() < 0.5 ? 2 : 6)) % 8; // cross runs
-      const n = Math.floor(range(r, lo, hi + 0.999));
+      let n = Math.floor(range(r, lo, hi + 0.999));
+      if (r() < 0.14) {
+        dir = (dir + (r() < 0.5 ? 2 : 6)) % 8; // cross runs: narrower bundles
+        n = Math.min(n, 3);
+      }
       tryBus(xx, zz, dir, n, range(r, maxL * 0.4, maxL), PITCH);
     }
   }

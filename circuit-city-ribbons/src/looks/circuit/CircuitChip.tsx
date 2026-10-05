@@ -100,7 +100,7 @@ void main() {
   float edgeF = 1.0 - N.y;
   // outline look: darker core on top, bright bevelled edges
   vec3 col = uTrace * (0.25 + 0.45 * diff) * laneVar + uPulse * (spec * 0.4 + fres * 0.12)
-           + (uTrace * 2.2 + uPulse * 0.12) * edgeF * laneVar;
+           + (uTrace * 1.8 + uPulse * 0.35) * edgeF * laneVar;
   // some traces glow softly all over
   col += uPulse * kind * 0.5;
 
@@ -187,7 +187,7 @@ void main() {
   } else if (m < 1.5) {
     // thin bright metal edge
     col = mix(uTrace, vec3(0.8), 0.35) * (0.4 + 0.8 * diff) + uPulse * (0.6 + 1.2 * spec) + uPulse * fres;
-    col += (uPulse * 3.0 + uCore * 1.0) * uFlare;
+    col += (uPulse * 2.4 + uCore * 0.5) * uFlare;
   } else if (m < 2.5) {
     // pins
     col = mix(uTrace, vec3(0.7), 0.3) * (0.4 + 0.8 * diff) + uPulse * spec * 0.8;
@@ -332,7 +332,7 @@ const buildTraces = () => {
     // pads
     const pad = (p: [number, number], s: number, type: number) => {
       if (!type) return;
-      const R = type === 2 ? PITCH * 0.55 : PITCH * 0.42;
+      const R = type === 2 ? PITCH * 0.6 : PITCH * 0.5;
       const seg = 14;
       const y = H * 1.15;
       for (let k = 0; k < seg; k++) {
@@ -440,21 +440,27 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+const YAW = THREE.MathUtils.degToRad(16);
+
 export const circuitState = (frame: number) => {
   const t = frame / FPS;
   // dolly: slow glide that eases out toward the end
   const k = t / 15;
-  const z = 24 - 17 * (k * (1.45 - 0.45 * k));
-  const x = 0.35 * Math.sin(t * 0.37 + 0.4) * (1 - smooth(8, 14, t)) + 0.08 * Math.sin(t * 0.9);
+  // distance to the chip along a slightly diagonal approach (YAW), so the
+  // buses run across the frame on a gentle diagonal
+  const dist = 25 - 17 * (k * (1.45 - 0.45 * k));
+  const drift = 0.35 * Math.sin(t * 0.37 + 0.4) * (1 - smooth(8, 14, t)) + 0.08 * Math.sin(t * 0.9);
+  const x = dist * Math.sin(YAW) + drift * Math.cos(YAW);
+  const z = dist * Math.cos(YAW) - drift * Math.sin(YAW);
   const y = 1.5 + 0.06 * Math.sin(t * 0.5);
   // focus: mid-distance traces, then a pull onto the chip at 9-11 s
-  const chipDist = Math.hypot(z, y - 0.3);
+  const chipDist = Math.hypot(dist, y - 0.3);
   const focus = 5.0 + (chipDist - 5.0) * smooth(9, 11, t);
   const converge = smooth(10.6, 11.6, t) * (1 - 0.5 * smooth(13, 15, t));
   const flare =
     smooth(11.3, 12.4, t) * 2.2 * (1 - 0.55 * smooth(12.6, 13.6, t)) +
     0.08 * Math.sin(t * 6.0) * smooth(13, 13.5, t);
-  return { t, x, y, z, focus, converge, flare };
+  return { t, x, y, z, drift, focus, converge, flare };
 };
 
 class CircuitWorld implements World {
@@ -516,11 +522,11 @@ class CircuitWorld implements World {
     this.post = new Post({
       dof: true,
       maxCoc: 0.03,
-      bloomStrength: 1.6,
+      bloomStrength: 1.35,
       bloomSpread: 0.9,
-      threshold: 0.3,
+      threshold: 0.45,
       knee: 0.35,
-      exposure: 0.6,
+      exposure: 0.56,
       vignette: 0.45,
       grain: 0.02,
     });
@@ -537,7 +543,7 @@ class CircuitWorld implements World {
         cam.position.set(s.x, s.y, s.z);
         cam.rotation.set(0, 0, 0, "YXZ");
         cam.rotation.x = THREE.MathUtils.degToRad(-17.5);
-        cam.rotation.y = 0.03 * Math.sin(s.t * 0.31 + 1.0) * (1 - smooth(8, 13, s.t)) - s.x * 0.02;
+        cam.rotation.y = YAW + 0.03 * Math.sin(s.t * 0.31 + 1.0) * (1 - smooth(8, 13, s.t)) - s.drift * 0.02;
         cam.rotation.z = 0.01 * Math.sin(s.t * 0.27);
         cam.updateMatrixWorld(true);
         const u = this.uniforms;

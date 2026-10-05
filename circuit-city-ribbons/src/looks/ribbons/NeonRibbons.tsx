@@ -35,29 +35,29 @@ const BANDS: Band[] = (() => {
   // bottom. kind: 0 glossy convex, 1 inverted (edge-lit), 2 thin neon line.
   const spec: [number, number, number, number][] = [
     // width, colour index, kind, gap after
-    [0.0075, 1.0, 2, 0.05],
-    [0.07, 1.9, 0, 0.008],
-    [0.05, 1.45, 1, 0.006],
-    [0.012, 2.6, 0, 0.01],
-    [0.065, 1.75, 0, 0.007],
-    [0.045, 1.15, 1, 0.006],
-    [0.085, 0.25, 0, 0.007],
-    [0.05, 0.6, 0, 0.006],
-    [0.011, 0.05, 2, 0.008],
-    [0.06, 0.4, 1, 0.007],
-    [0.065, 2.0, 0, 0.007],
-    [0.08, 2.45, 0, 0.0],
+    [0.006, 1.0, 2, 0.006],
+    [0.004, 0.9, 2, 0.04],
+    [0.02, 1.8, 0, 0.007],
+    [0.012, 1.6, 0, 0.009],
+    [0.06, 1.75, 0, 0.003],
+    [0.045, 1.3, 1, 0.008],
+    [0.055, 1.05, 0, 0.002],
+    [0.07, 0.75, 0, 0.006],
+    [0.03, 1.85, 1, 0.003],
+    [0.065, 0.95, 0, 0.007],
+    [0.05, 1.95, 1, 0.003],
+    [0.08, 2.25, 0, 0.0],
   ];
-  let rad = 0.93;
+  let rad = 0.935;
   spec.forEach(([w, ci, kind, gap]) => {
     out.push({
       r: rad,
       w,
       ci,
       kind,
-      bright: kind === 2 ? range(r, 1.3, 1.6) : range(r, 0.6, 0.85),
+      bright: kind === 2 ? range(r, 0.9, 1.1) : range(r, 0.6, 0.85),
       hl: [Math.floor(range(r, 1, 3.999)), r(), Math.floor(range(r, 1, 2.999)), r()],
-      fl: [Math.floor(range(r, 1, 3.999)), r(), r() < 0.5 ? range(r, 0.9, 1.4) : 0],
+      fl: [Math.floor(range(r, 1, 3.999)), r(), kind === 2 ? 0 : range(r, 1.2, 1.8)],
       wob: [r() * Math.PI * 2, range(r, 0.6, 1.0)],
     });
     rad += w + gap;
@@ -95,7 +95,7 @@ void main() {
   // Breathing: centre and radius move on whole-cycle sinusoids of u.
   vec2 c = vec2(0.26 + 0.012 * sin(TAU * u), 1.40 + 0.010 * sin(TAU * 2.0 * u + 1.0));
   vec2 q = uv - c;
-  q.x *= 1.14 + 0.015 * sin(TAU * u + 2.0);
+  q.x *= mix(0.78, 1.16, smoothstep(-0.25, 0.35, q.x)) + 0.015 * sin(TAU * u + 2.0);
   q.y *= 0.95;
   float d = length(q);
   float th = atan(q.x, -q.y);   // 0 straight down, + toward right
@@ -106,12 +106,13 @@ void main() {
   // background gradient: dark top, warmer near the band arc
   float above = max(0.93 - d, 0.0);
   vec3 col = mix(bgNear, bgTop, smoothstep(0.0, 0.75, above));
-  col *= 0.6 + 0.55 * smoothstep(0.0, 1.0, uv.x * 0.7 + 0.3 * (1.0 - uv.y));
+  col *= 0.5 + 0.6 * smoothstep(0.0, 1.0, uv.x * 0.7 + 0.3 * (1.0 - uv.y));
+  col += pal[3] * 0.012 * smoothstep(0.4, 1.0, uv.x) * smoothstep(0.3, 1.0, uv.y);
   // faint brushed streaks in the sky, along the arc direction (static)
   float streak = fract(sin(floor(d * 420.0) * 12.9898) * 43758.5453);
-  col *= 1.0 + 0.06 * (streak - 0.5) * smoothstep(0.0, 0.1, above);
+  col *= 1.0 + 0.14 * (streak - 0.5) * smoothstep(0.0, 0.1, above);
   // faint glow above the top band
-  col += palette(1.4) * exp(-above / 0.07) * 0.10;
+  col += mix(palette(1.6), palette(2.4), 0.4) * exp(-above / 0.16) * 0.09;
 
   vec3 glow = vec3(0.0);
   float occl = 0.0;
@@ -142,33 +143,36 @@ void main() {
     float st2 = exp(-pow((s - h2) / 0.28, 2.0)) * 0.6;
     float hl = st1 + st2;
     // magenta flashes travelling along some bands
-    float fpos = fract(C.z + C.y * u) * 3.0 - 1.0;
-    float flash = C.w * exp(-pow((s - fpos) / 0.06, 2.0));
+    float fpos = fract(C.z + C.y * u) * 1.6 - 0.3;
+    float fpos2 = fract(C.z + 0.5 - (C.y + 1.0) * u) * 1.6 - 0.3;
+    float flash = C.w * (exp(-pow((s - fpos) / 0.035, 2.0)) + 0.8 * exp(-pow((s - fpos2) / 0.025, 2.0)));
 
     float nrm = sqrt(max(1.0 - x * x, 0.0));
-    // glossy metal strip: dark shaded sides, sharp specular highlight
+    // flat glassy slat: gentle shading, fine slat lines inside, crisp edges
     float shade;
     float specL;
-    if (A.w < 0.5) {
-      shade = 0.10 + 0.55 * pow(nrm, 1.4);
-      specL = exp(-pow((x + 0.45) / 0.12, 2.0));
-    } else if (A.w < 1.5) {
-      shade = 0.08 + 0.6 * pow(1.0 - nrm, 1.2) * (0.6 + 0.4 * step(0.0, -x));
-      specL = exp(-pow((x - 0.55) / 0.15, 2.0)) * 0.7;
+    if (A.w < 1.5) {
+      float flip = A.w < 0.5 ? 1.0 : -1.0;
+      shade = 0.38 + 0.22 * flip * (-x) + 0.12 * nrm;
+      specL = exp(-pow((x + 0.6 * flip) / 0.1, 2.0));
+      // 3-4 hairline sub-strips per band
+      float k = 1.0 + mod(fi, 2.0);
+      float sub = abs(fract((x * 0.5 + 0.5) * k) - 0.5) * w / k * 2.0;
+      float hair = exp(-pow(sub / (0.0007 + pxd), 2.0));
+      specL += hair * 0.12;
+      shade *= 0.93 + 0.07 * smoothstep(0.0, 0.004, sub);
     } else {
       shade = 0.9 + 0.3 * nrm;
       specL = 0.0;
     }
     shade *= B.x * (0.85 + 0.15 * sin(th * 4.0 + fi * 2.1));
     vec3 body = bc * shade * (1.0 + 0.8 * hl);
-    body += bc * 1.4 * specL * (0.35 + 1.6 * hl);
-    body += flashCol * flash * 1.3 * (0.4 + 0.8 * specL + 0.3 * nrm);
-    // thin edge line: bright for the neon line, a subtle bevel otherwise
-    float rimW = 0.0010 / w * 2.0;
+    body += mix(bc, vec3(1.0), 0.15) * 1.3 * specL * (0.45 + 1.4 * hl);
+    body += flashCol * flash * 1.4 * (0.5 + 0.8 * specL + 0.3 * nrm);
+    // crisp bright edge line on every strip
+    float rimW = 0.0008 / w * 2.0;
     float rim = exp(-pow((1.0 - ax) / (rimW + aa), 2.0));
-    body += bc * rim * (A.w > 1.5 ? 0.0 : 0.25) * B.x;
-    // dark separation line at the lower edge of each strip
-    body *= 1.0 - 0.6 * smoothstep(0.7, 1.0, x);
+    body += mix(bc, vec3(1.0), 0.2) * rim * (A.w > 1.5 ? 0.0 : 0.5) * B.x;
 
     // bands lower in the stack sit "behind" the ones above (occlusion)
     col = mix(col, body, cover * (1.0 - occl * 0.0));
@@ -181,7 +185,7 @@ void main() {
   }
   col += glow;
   // lower edge of the frame recedes into shadow
-  col *= mix(0.6, 1.0, smoothstep(0.0, 0.25, uv.y));
+  col *= mix(0.75, 1.0, smoothstep(0.0, 0.2, uv.y));
   outColor = vec4(col, 1.0);
 }`;
 
@@ -223,11 +227,11 @@ class RibbonsWorld implements World {
     this.post = new Post({
       dof: false,
       maxCoc: 0,
-      bloomStrength: 0.55,
+      bloomStrength: 0.45,
       bloomSpread: 0.8,
       threshold: 0.35,
       knee: 0.3,
-      exposure: 0.95,
+      exposure: 1.05,
       vignette: 0.25,
       grain: 0.015,
     });

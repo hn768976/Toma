@@ -7,7 +7,7 @@ import { mulberry32, range } from "../../lib/random";
  */
 
 export const TILE = 80; // tile length (world units); camera travels this per loop
-export const STREET = 2.1; // half width of the main street
+export const STREET = 2.7; // half width of the main street
 const LOT = 5; // lot pitch in x and z (divides TILE)
 
 export type Tower = {
@@ -48,7 +48,7 @@ export const LINE_CROSS = 3;
 export const CITY: CityData = (() => {
   const r = mulberry32(1020170812);
   const towers: Tower[] = [];
-  const cols = [5.6, 10.6, 15.6, 20.6, 25.6, 30.6, 36, 42, 48, 54];
+  const cols = [5.6, 10.6, 15.6, 20.6, 25.6, 30.6, 36, 42, 48];
   for (let iz = 0; iz < TILE / LOT; iz++) {
     const crossStreet = iz % 6 === 3;
     for (const side of [-1, 1]) {
@@ -56,7 +56,7 @@ export const CITY: CityData = (() => {
         if (crossStreet && r() < 0.85) return;
         const p = ci === 0 ? 0.95 : ci < 3 ? 0.88 : 0.8;
         if (r() > p) return;
-        const round = r() < 0.42;
+        const round = r() < 0.65;
         const maxF = ci === 0 ? 3.6 : 4.2;
         const w = round ? range(r, 2.0, maxF) : range(r, 1.8, maxF);
         const d = round ? w : range(r, 1.8, 4.3);
@@ -67,7 +67,7 @@ export const CITY: CityData = (() => {
             : range(r, 5, 12) + tall * tall * tall * 18;
         const x = side * (cx + range(r, -0.5, 0.5) - (ci === 0 ? 0.6 : 0)) ;
         const dense = r() < 0.25;
-        const sx = dense ? range(r, 0.17, 0.2) : range(r, 0.22, 0.32);
+        const sx = dense ? range(r, 0.18, 0.21) : range(r, 0.23, 0.31);
         towers.push({
           x: Math.sign(x) * Math.max(Math.abs(x), STREET + w / 2 + 0.4),
           z: iz * LOT + LOT / 2 + range(r, -0.6, 0.6),
@@ -77,9 +77,9 @@ export const CITY: CityData = (() => {
           round,
           seed: r(),
           sx,
-          sy: dense ? range(r, 0.3, 0.36) : range(r, 0.34, 0.5),
+          sy: dense ? range(r, 0.26, 0.3) : range(r, 0.3, 0.42),
           glass: r() < 0.45,
-          scan: r() < 0.45,
+          scan: r() < 0.6,
           flicker: r() < 0.25,
         });
       });
@@ -132,12 +132,12 @@ export const CITY: CityData = (() => {
         }
       }
       // vertical light strands
-      const strands = Math.round(n / 6);
+      const strands = Math.round(n / 14);
       for (let i = 0; i < strands; i++) {
         const a = (i / strands) * Math.PI * 2 + 0.2;
         const px = t.x + Math.cos(a) * rad;
         const pz = t.z + Math.sin(a) * rad;
-        line([px, 0, pz], [px, t.h, pz], t.z, LINE_EDGE, r(), 0.6);
+        line([px, 0, pz], [px, t.h, pz], t.z, LINE_EDGE, r(), 0.3);
       }
     } else {
       const hw = t.w / 2;
@@ -159,12 +159,12 @@ export const CITY: CityData = (() => {
           }
         }
         // corner edge line
-        line([x0, 0, z0], [x0, t.h, z0], t.z, LINE_EDGE, r(), 1.6);
+        line([x0, 0, z0], [x0, t.h, z0], t.z, LINE_EDGE, r(), 0.9);
         // roof outline
         line([x0, t.h, z0], [x1, t.h, z1], t.z, LINE_EDGE, r(), 0.5);
         // some vertical light lines on the face
-        if (r() < 0.5) {
-          const k = 1 + Math.floor(r() * 3);
+        if (r() < 0.15) {
+          const k = 1 + Math.floor(r() * 2);
           for (let i = 1; i <= k; i++) {
             const f = i / (k + 1);
             const px = x0 + (x1 - x0) * f;
@@ -188,11 +188,11 @@ export const CITY: CityData = (() => {
       for (let i = 0; i < 4; i++) {
         const a = c[i];
         const b = c[(i + 1) % 4];
-        line([a[0], 0.02, a[1]], [b[0], 0.02, b[1]], t.z, LINE_BASE, 0, 1.0);
+        line([a[0], 0.02, a[1]], [b[0], 0.02, b[1]], t.z, LINE_BASE, 0, 0.5);
       }
     }
     // scanning rings: rise from the base and fade (cycles per loop in e.x)
-    if (t.scan) {
+    if (t.scan && t.round) {
       const nr = 5;
       const cyc = [2, 3, 4, 5][Math.floor(r() * 4)];
       const top = t.h * range(r, 0.2, 0.45);
@@ -232,7 +232,7 @@ export const CITY: CityData = (() => {
   }
 
   // long thin bright lines crossing the scene at angles, drawing on and fading
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < 24; i++) {
     const z0 = r() * TILE;
     const len = range(r, 10, 30);
     const ang = range(r, -1.2, 1.2);
@@ -244,11 +244,21 @@ export const CITY: CityData = (() => {
     const cyc = [1, 2, 3, 4][Math.floor(r() * 4)];
     line(a, b, (a[2] + b[2]) / 2, LINE_CROSS, r(), range(r, 0.8, 1.6), [cyc, range(r, 0.25, 0.5), 0, 0]);
   }
+  // thin white traces on the floor, running along the street
+  for (let i = 0; i < 36; i++) {
+    const z0 = r() * TILE;
+    const x0 = range(r, -2.4, 2.4);
+    const len = range(r, 4, 14);
+    const ang = range(r, -0.5, 0.5);
+    const a = [x0, 0.02, z0];
+    const b = [x0 + Math.sin(ang) * len, 0.02, z0 - Math.cos(ang) * len];
+    line(a, b, (a[2] + b[2]) / 2, LINE_CROSS, r(), range(r, 0.5, 1.0), [[1, 2, 3][Math.floor(r() * 3)], range(r, 0.3, 0.6), 0, 0]);
+  }
   // a few tall thin vertical light lines in the gaps
   for (let i = 0; i < 40; i++) {
     const z = r() * TILE;
     const x = r() < 0.5 ? range(r, -1.8, 1.8) : (r() < 0.5 ? -1 : 1) * range(r, STREET + 0.2, 30);
-    line([x, 0, z], [x, range(r, 8, 30), z], z, LINE_EDGE, r(), 0.5);
+    line([x, 0, z], [x, range(r, 8, 30), z], z, LINE_EDGE, r(), 0.22);
   }
 
   return {
