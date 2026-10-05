@@ -161,7 +161,7 @@ void main() {
   vec2 g = swirl(lr, th, fpL);
 
   float env = exp(-pow(r / uCoreR, 1.15)) * 1.6 + 0.35 * exp(-r / uOuterR);
-  float wisp = 1.0 - smoothstep(uOuterR * 0.6, uOuterR * 1.8, r);
+  float wisp = 1.0 - smoothstep(uOuterR * 0.5, uOuterR * 1.4, r);
 
   #if MODE == 0
     float gas = g.x * env * wisp + 0.35 * g.y * g.x * env;
@@ -179,6 +179,8 @@ void main() {
     float ring = exp(-pow((r - uEyeR) / rw, 2.0)) * (1.0 - uRim.x + uRim.x * (0.5 + 0.5 * cos(th - uRim.y)));
     col += vec3(1.0, 0.97, 1.0) * uRingBright * (ring + 0.35 * exp(-abs(r - uEyeR) / (uEyeR * 0.6)));
     col += starField(uvH, 1.0, px) * (1.0 - smoothstep(0.0, 0.25, gas));
+    // faint purple nebulosity that carries the haze out to the frame edges
+    col += uColGas * 0.05 * smoothstep(0.3, 0.8, g.x) * exp(-r / (uOuterR * 1.5));
   #else
     // nebula: dark empty centre, thick arms with bright rims lit from inside
     float hole = smoothstep(uDarkR * 0.6, uDarkR * 2.0, r);
@@ -239,13 +241,16 @@ void main() {
     float near = smoothstep(0.0, 0.9, dot(q.xz / r, normalize(uCamPos.xz + 1e-4))) * smoothstep(0.8, 2.2, r);
     outer *= 1.0 - uNearFade * near;
     float dens = g.x * holeM * outer * (l == 0 ? 1.0 : 0.6);
-    float bright = (0.35 + 1.4 * g.y) * mix(1.15, 0.25, depthF * depthF) * (1.0 + uSide.x * cos(th - uSide.y));
+    // brightest on the lip and upper throat wall, fading to black at the bottom
+    float lip = smoothstep(0.05, 0.45, depthF) * (1.0 - smoothstep(0.75, 0.98, depthF));
+    float bright = (0.35 + 1.4 * g.y) * (0.55 + 1.3 * lip) * (1.0 + uSide.x * cos(th - uSide.y));
     vec3 c = rampGas(dens * bright * uGain);
     float a = clamp(dens * (l == 0 ? 1.6 : 1.0), 0.0, 1.0);
-    float sp = specks(q.xz, sh * pixAng, 9.0, 4242) * holeM;
+    float cluster = smoothstep(0.45, 0.75, vnoise(vec3(q.xz * 0.7, 3.3)));
+    float sp = specks(q.xz, sh * pixAng, 14.0, 4242) * holeM * (0.25 + 1.5 * cluster);
     c += uColAccent * sp * (0.6 + 0.4 * (1.0 - depthF));
     // fine white-blue glitter riding in the gas
-    float gl = specks(q.xz, sh * pixAng, 22.0, 977) * holeM * outer * (0.3 + g.x);
+    float gl = specks(q.xz, sh * pixAng, 30.0, 977) * holeM * outer * (0.3 + g.x) * 1.5;
     c += mix(uColGas, uColHi, 0.7) * gl * 3.0;
     if (l == 0) {
       // bottom shell is opaque: gas over a dark funnel wall, black throat

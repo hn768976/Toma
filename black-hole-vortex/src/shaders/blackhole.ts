@@ -175,7 +175,7 @@ vec4 discField(vec3 p, vec3 rd, float fp) {
       float fb = fbmLod(qb, OCTAVES, fp * 0.35);
       float f = mix(fa, fb, t);
       f = 0.5 + (f - 0.5) / sqrt((1.0 - t) * (1.0 - t) + t * t);
-      float d = m * smoothstep(0.38, 0.85, f);
+      float d = m * smoothstep(0.22, 0.85, f);
       em += uDustCol * d * uDust;
       ext += d * uAbsorb * 0.6;
     }
@@ -392,7 +392,7 @@ void main() {
         vec4 f = discField(vec3(q.x, 0.0, q.z), nv, fp);
         float colH = discH(rq) * 1.77 / inc;   // gaussian column length
         // third and later images (rays that wound round the hole) are dimmer
-        float order = crossings >= 2 ? 0.15 : 1.0;
+        float order = crossings >= 2 ? 0.0 : (crossings == 1 ? 0.45 : 1.0);
         col += T * f.rgb * colH * order;
         T *= exp(-f.a * colH);
       }
