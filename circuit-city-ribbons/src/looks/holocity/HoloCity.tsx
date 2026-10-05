@@ -18,6 +18,7 @@ const Z_MIN = -70;
 
 const COMMON = /* glsl */ `
 uniform float uU;
+uniform float uDu;     // half shutter, in loop phase
 uniform float uFrame;
 uniform float uTile;
 uniform float uZMin;
@@ -49,6 +50,17 @@ out vec2 vCenter;
 out float vHs;
 out float vBlur;
 out float vHx;
+out vec2 vC0;
+out vec2 vC1;
+// screen position (px) of this point at loop phase uu
+vec2 screenAt(float uu, out float zc) {
+  vec3 p = position;
+  zc = mod(aAnchor + uu * uTile - uZMin, uTile) + uZMin;
+  p.z += zc - aAnchor;
+  if (uMirror > 0.5) p.y = -p.y;
+  vec4 c = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  return (c.xy / max(c.w, 0.05) * 0.5 + 0.5) * uRes;
+}
 void main() {
   vec3 p = position;
   p.z += wrapZ(aAnchor) - aAnchor;
@@ -69,8 +81,20 @@ void main() {
   vHs = hs;
   vHx = hx;
   vBlur = clamp(coc / max(sz, 1e-3) * 1.4, 0.0, 1.0);
-  gl_PointSize = 2.0 * hx + 2.0;
   vCenter = (clip.xy / clip.w * 0.5 + 0.5) * uRes;
+  // Motion streak over a full-frame (360°) shutter, from the point's own path at
+  // u -/+ uDu (a pure function of the frame; no history).
+  float z0, z1;
+  vec2 s0 = screenAt(uU - uDu, z0);
+  vec2 s1 = screenAt(uU + uDu, z1);
+  if (abs(z1 - z0) > 1.0 || d < 1.0) { s0 = vCenter; s1 = vCenter; }
+  vec2 sd = s1 - s0;
+  float L = min(length(sd), 6.0 * uRes.y / 72.0);
+  sd = L > 1e-4 ? normalize(sd) * L : vec2(0.0);
+  vC0 = vCenter - sd * 0.5;
+  vC1 = vCenter + sd * 0.5;
+  energy *= 2.0 * hx / (2.0 * hx + L);
+  gl_PointSize = 2.0 * hx + L + 2.0;
 
   float seed = aInfo.x;
   float hf = aInfo.y;
@@ -102,9 +126,14 @@ in vec2 vCenter;
 in float vHs;
 in float vBlur;
 in float vHx;
+in vec2 vC0;
+in vec2 vC1;
 out vec4 outColor;
 void main() {
-  vec2 dp = gl_FragCoord.xy - vCenter;
+  // distance to the motion segment (swept dot)
+  vec2 ab = vC1 - vC0;
+  float t = clamp(dot(gl_FragCoord.xy - vC0, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+  vec2 dp = gl_FragCoord.xy - (vC0 + ab * t);
   vec2 e = dp / vec2(vHx + 0.5, vHs + 0.5);
   // small dots round, large near dots blocky squares
   float rnd = clamp((1.0 - length(e)) * (vHs + 0.5), 0.0, 1.0) * 1.27;
@@ -351,6 +380,7 @@ class HoloWorld implements World {
     const v3 = (h: string) => new THREE.Vector3(...lin(h));
     this.shared = {
       uU: { value: 0 },
+      uDu: { value: 0.5 / HOLO_LOOP },
       uFrame: { value: 0 },
       uTile: { value: TILE },
       uZMin: { value: Z_MIN },
