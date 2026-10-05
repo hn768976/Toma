@@ -81,7 +81,16 @@ The PNG sequence is kept so that frame 300 can be compared byte for byte (step 3
 The previews were rendered on a 4-vCPU cloud container with **no GPU** (WebGL2 on
 SwiftShader through `--gl=angle`), `--concurrency=4`:
 
-RENDER_TIME_TABLE
+| Look | Single tab, s/frame at 720p | Single tab, s/frame at 1080p | Full 600-frame preview, `--concurrency=4` |
+|---|---|---|---|
+| Light Streams | 1.07 | 1.79 | Blue 710 s (1.18 s/frame) · Emerald 578 s (0.96) |
+| Pixel Burst | 0.99 | 1.80 | Neon 517 s (0.86) · Gold 509 s (0.85) |
+| Gravity Well | 0.56 (3B) | 1.07 (3B) | Grid 226 s (0.38) · Planet 278 s (0.46) |
+| Fabric Waves | 0.89 | 1.51 | Violet-Teal 470 s (0.78) · Amber-Rose 491 s (0.82) |
+
+Single-tab numbers are (time for 20 frames − time for 1 frame) / 19, so they
+exclude browser start-up. They include the PNG screenshot. SwiftShader already
+spreads one frame over all cores, so `--concurrency=4` gains little on this box.
 
 **4K estimate.** 4K has 9× the pixels of 720p. These looks are almost entirely
 fill-bound (full-screen passes, DoF and bloom all scale with pixel count), so
@@ -89,7 +98,19 @@ on the same CPU-only box expect roughly 8-9× the per-frame time. On any
 discrete GPU, the same 4K frames take well under a second each; the scenes are
 small (≤ 1.2 M triangles, ~10 full-screen passes).
 
-FOUR_K_TABLE
+Measured scaling from 720p to 1080p (2.25× the pixels) fits
+`t = fixed + per-pixel`. Extrapolated to 4K (9× the pixels), same CPU-only box:
+
+| Look | 4K estimate, s/frame | 600 frames |
+|---|---|---|
+| Light Streams | ~5.7 | ~57 min |
+| Pixel Burst | ~6.2 | ~62 min |
+| Gravity Well | ~3.8 | ~38 min |
+| Fabric Waves | ~4.8 | ~48 min |
+
+These are CPU (SwiftShader) figures. On a machine with a GPU, `--gl=angle` runs
+the same shaders in hardware, and frame time is then dominated by the 4K
+screenshot and encode (typically well under 1 s/frame).
 
 ## How it stays deterministic
 
@@ -122,11 +143,38 @@ Remotion renders frames out of order on several tabs, so:
   glow falloffs and dark gradients (see the checklist). The values must change in
   small irregular steps, with no plateaus.
 
-BANDING_RESULTS
+Result on the delivered previews (frame 300, decoded from the mp4,
+`scripts/banding.py`): on dark gradient tiles the residual noise after H.264 is
+0.45-0.55 LSB in the darkest areas (luma 4-20) and 1-9 LSB elsewhere. That means
+grain and dither survive encoding. I also checked crops of every look stretched
+×6-8 around their mean: the throat glow, the burst falloff, the dark navy/green
+fields and the fabric shadows. None shows contour steps.
 
 ## Completion checklist
 
-CHECKLIST
+Run on the delivered 720p previews. Scripts are in `scripts/`.
+
+- [x] **1. File checks** (`check-file.sh`): all 8 are 1280×720, h264, yuv420p,
+  30/1, 20.000 s, 600 frames, no audio stream.
+- [x] **2. Loop** (`verify-loop.sh`): with the composition extended to 601 frames,
+  frame 0 == frame 600 pixel for pixel on all 8. The seam is also continuous:
+  the 599→600 step equals the 0→1 step, except on Pixel Burst, where frame 0
+  is a beat flash. There the seam step equals every other beat step (49→50).
+- [x] **3. Determinism** (`verify-determinism.sh`): frame 300 rendered alone
+  from a cold start is byte-identical (pixel data, SHA-256) to frame 300 of the
+  full multi-tab render, on all 8.
+- [x] **4. Banding:** see above.
+- [x] **5. Contact sheets** (`contact-sheet.sh`, frames 0/120/240/360/480) show the
+  required features for each look, including the 3B moon in a different place in
+  every frame.
+- [x] **6. Motion and aliasing:** frames 299/300/301 inspected at 2× zoom. No
+  shimmer or crawl on the thin grid lines, the light-stream ribbons, the
+  fabric ribs or the dot grid. Lines use an energy-conserving filtered profile
+  (≥ ~1 px), and the fabric micro texture fades out once its period drops
+  below ~3 px, at 720p and at 4K alike.
+- [x] **7/8. Reference match:** three rounds of side-by-side comparison per look
+  by fresh sub-agents (see the report).
+- [x] `npm install && npx remotion studio` works from a clean copy of this folder.
 
 ## Adding a colourway
 
@@ -174,4 +222,20 @@ scripts/                  preview render and verification helpers
 
 ## Notes and deliberate choices
 
-NOTES
+- **Pixel Burst grid density.** The spec asks for ~220 columns at 4K, and that
+  is what is used. The reference clip's tiles are bigger (~84 columns). Every
+  reviewer flagged this as the largest difference. It is one number per
+  version row (`cols`).
+- **Gravity Well rotation.** "Whole turns" of rotation would be 18°/s for a
+  20 s loop, which is not slow. Instead the grid turns by exactly one
+  radial-line step (360°/64) per loop. Because the grid is 64-fold symmetric,
+  that is visually identical to a whole number of turns, and the motion is
+  slow.
+- **Gravity Well radial count** is 64 instead of ~72: a closer match to the
+  reference's cell size.
+- **Gravity Well line colour** stays at the specified `#5FA8E8`, which brightens
+  toward `#BFE8FF` deeper in the funnel. The reference reads paler and whiter
+  at the edges; change `line` in the row if you prefer that.
+- **Pixel Burst beats:** 12 per loop (one every 50 frames). With 10, frames
+  spaced 120 apart all landed on the same beat phase.
+- The reference fades in from black; the loops do not, as specified.
