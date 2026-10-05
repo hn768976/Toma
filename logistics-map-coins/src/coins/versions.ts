@@ -33,6 +33,7 @@ export type CoinVersion = {
   key: number; // directional key light intensity
   metalTint: string; // multiplies the metal colour (e.g. cool tint for 3E)
   overlayProtect: number; // 0..1: keep saturated pixels (the coins) out of the screen blend
+  lift?: string; // display-space milky haze: d + lift * (1 - d)
   bloom: number;
 };
 
@@ -96,12 +97,13 @@ export const COIN_VERSIONS: Record<string, CoinVersion> = {
     layout: 'pileMixed',
     seed: 202,
     camera: pileCam,
-    aperture: 0.03,
+    aperture: 0.045,
     wall: ['#4C4440', '#4A4A50'],
     table: ['#9C928C', '#5A585C'],
     overlay: 'candlesWarm',
     overlayStrength: 0.85,
-    overlayProtect: 0.55,
+    overlayProtect: 0.2,
+    lift: '#2E2A28',
     saturation: 1.1,
   },
   SilverStacksChart: {

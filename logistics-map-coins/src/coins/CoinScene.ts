@@ -339,6 +339,7 @@ export class CoinScene implements SceneController {
     p.overlay = this.overlayTex;
     p.overlayStrength = v.overlayStrength;
     p.overlayProtect = v.overlayProtect;
+    if (v.lift) p.lift.set(v.lift);
   }
 
   private placeCamera(f: number) {

@@ -250,6 +250,15 @@ const candlesWarmStatic = (w: number, h: number, land: Polygon[] | null) => {
     ctx.stroke();
     ctx.fillRect(x - 9, top, 18, Math.max(5, bot - top));
   }
+  // dense field of tall thin bars forming jagged ridges across the upper frame
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  let ridge = 0.5;
+  for (let x = 0; x < LW; x += 11) {
+    ridge = Math.min(1, Math.max(0.1, ridge + (rng() - 0.5) * 0.14));
+    const top = 120 + (1 - ridge) * 700;
+    const len = 120 + rng() * 380;
+    ctx.fillRect(x, top, 4, len);
+  }
   // volume bars along the bottom
   ctx.fillStyle = 'rgba(255,255,255,0.35)';
   for (let i = 0; i < 90; i++) {
@@ -385,7 +394,7 @@ export class Overlay {
       kind === 'financeBlue' ? financeBlueStatic(w, h) : kind === 'candlesWarm' ? candlesWarmStatic(w, h, land) : barsBlueStatic(w, h);
     const rng = mulberry32(0x0c4d1e);
     let v = 0.25;
-    for (let i = 0; i < 64; i++) {
+    for (let i = 0; i < 110; i++) {
       const o = v;
       v = clamp(v + (rng() - 0.42) * 0.09 + Math.sin(i * 0.35) * 0.012, 0.05, 0.95);
       const c = v;
@@ -503,10 +512,10 @@ export class Overlay {
       ctx.stroke();
       const top = y(Math.max(c.o, c.c));
       const bot = y(Math.min(c.o, c.c));
-      if (c.c >= c.o) ctx.fillRect(x - 16, top, 32, Math.max(8, bot - top));
+      if (c.c >= c.o) ctx.fillRect(x - 9, top, 18, Math.max(8, bot - top));
       else {
         ctx.lineWidth = 3;
-        ctx.strokeRect(x - 16, top, 32, Math.max(8, bot - top));
+        ctx.strokeRect(x - 9, top, 18, Math.max(8, bot - top));
       }
     }
     ctx.globalAlpha = 1;
