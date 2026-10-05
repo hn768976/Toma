@@ -22,8 +22,11 @@ echo "$comp: $n frames in $((end - start)) s -> $(echo "scale=3; ($end - $start)
 first=$(ls "$frames" | head -1)
 pattern=$(echo "$first" | sed -E 's/[0-9]+\.png$//')
 digits=$(echo "$first" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | wc -c); digits=$((digits - 1))
-ffmpeg -v error -y -framerate 30 -start_number 0 -i "$frames/${pattern}%0${digits}d.png" \
-  -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart "$out/$name.mp4"
+encode() {
+  ffmpeg -v error -y -framerate 30 -start_number 0 -i "$frames/${pattern}%0${digits}d.png" \
+    -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart "$out/$name.mp4"
+}
+encode || { echo "encode failed (exit $?), retrying once"; encode; }
 # 720p still (STILL_FRAME, default: middle of the clip)
 mid=$(printf "%0${digits}d" "${STILL_FRAME:-$(( n / 2 ))}")
 cp "$frames/${pattern}${mid}.png" "$out/$name.png"

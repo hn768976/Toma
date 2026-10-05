@@ -10,6 +10,8 @@ export type PinDef = {
   kind: 'pin' | 'pinMinor' | 'pinChart' | 'badge';
   code?: string; // invented label code
   sub?: string; // small second line (made-up figures)
+  scale?: number; // size multiplier
+  ring?: number; // pulse-ring size multiplier
   labelDx?: number; // label offset in degrees
   labelDy?: number;
 };
@@ -71,6 +73,9 @@ export type MapVersion = {
     dashBars?: number; // dashed accent tick bars
   };
   haze?: {x: number; y: number; radius: number; color: string; strength: number};
+  minorColor?: string;
+  iconWhite?: string;
+  streaks?: {lon: number; lat: number; height: number; length: number; width: number; angle: number; color: string; gain: number}[];
   routes: RouteDef[];
   staticIcons: StaticIconDef[];
   pinSize: number; // world units (scaled by camera distance)
@@ -101,14 +106,14 @@ export const WORLD: MapVersion = {
   accent: '#FF8A2A',
   accentGain: 1.7,
   camera: {target: [4, -2], dist: 38.5, tilt: 27, yaw: 0, fov: 30, push: 0.06, side: 0.6, yawDrift: 0.8, roll: 0},
-  look: {...baseLook, cityStrength: 0.4, reliefBase: 0.6, coast: ['#4FD0DA', 0.95], tileBevel: 0.5, hotSpeckle: 0.6},
+  look: {...baseLook, cityStrength: 0.12, reliefBase: 0.58, reliefContrast: 3.2, coast: ['#4FD0DA', 0.8], tileBevel: 0.5, hotSpeckle: 0.6, landSpec: 0.5},
   hotspots: [
-    {lon: -80, lat: 40, radius: 10, intensity: 0.55, color: '#FF8A2A'},
-    {lon: 2, lat: 50, radius: 7, intensity: 0.55, color: '#FF8A2A'},
-    {lon: -46, lat: -18, radius: 6, intensity: 0.4, color: '#FF8A2A'},
-    {lon: 27, lat: -27, radius: 5, intensity: 0.35, color: '#FF8A2A'},
-    {lon: 110, lat: -6, radius: 6, intensity: 0.4, color: '#FF8A2A'},
-    {lon: 148, lat: -32, radius: 4, intensity: 0.35, color: '#FF8A2A'},
+    {lon: -80, lat: 40, radius: 10, intensity: 0.94, color: '#FF8A2A'},
+    {lon: 2, lat: 50, radius: 7, intensity: 0.94, color: '#FF8A2A'},
+    {lon: -46, lat: -18, radius: 6, intensity: 0.68, color: '#FF8A2A'},
+    {lon: 27, lat: -27, radius: 5, intensity: 0.59, color: '#FF8A2A'},
+    {lon: 110, lat: -6, radius: 6, intensity: 0.68, color: '#FF8A2A'},
+    {lon: 148, lat: -32, radius: 4, intensity: 0.59, color: '#FF8A2A'},
   ],
   pins: [
     {lon: -150, lat: 62, kind: 'pin', code: 'HUB-01', sub: '[ 36/97 ]', labelDx: 5, labelDy: 5},
@@ -128,7 +133,7 @@ export const WORLD: MapVersion = {
     {lon: 2, lat: -38, kind: 'pinMinor'},
   ],
   arcs: [
-    {from: 0, to: 1, period: 150, offset: 0, height: 0.35},
+    {from: 0, to: 1, period: 150, offset: 0, height: 0.22},
     {from: 1, to: 2, period: 120, offset: 40, height: 0.45},
     {from: 2, to: 3, period: 150, offset: 75, height: 0.4},
     {from: 3, to: 4, period: 100, offset: 20, height: 0.35},
@@ -158,18 +163,19 @@ export const WORLD: MapVersion = {
   pinSize: 1.0,
   arcRadius: 0.014,
   iconSize: 1,
-  hudSize: 2.5,
-  post: {aperture: 0.08, maxBlur: 0.007, bloomStrength: 0.45, bloomThreshold: 0.4, vignette: 0.75, topLight: 0.25, exposure: 1},
+  hudSize: 3.0,
+  post: {aperture: 0.05, maxBlur: 0.005, bloomStrength: 0.3, bloomThreshold: 0.5, vignette: 0.7, topLight: 0.25, exposure: 1},
   hudExtras: {diagonals: 3, sliders: [[118, -42, 30]], dashBars: 6},
-  haze: {x: 0.92, y: 0.95, radius: 0.22, color: '#3D7FA0', strength: 0.35},
+  haze: {x: 0.82, y: 0.98, radius: 0.35, color: '#3D8FB0', strength: 0.32},
+  minorColor: '#B8DCE8',
 };
 
 export const ASIA: MapVersion = {
   id: 'LogisticsMap-Asia',
   accent: '#5FE8FF',
   accentGain: 1.25,
-  camera: {target: [62, 20], dist: 27, tilt: 38, yaw: 18, fov: 32, push: 0.03, side: 1.4, yawDrift: 2, roll: 0},
-  look: {...baseLook, dotPitch: 0.85, dotSize: 0.4, reliefBase: 0.55, city: ['#FF6A4A', 0.9], cityStrength: 0, coast: ['#4FD8E4', 1.0], tileBevel: 0.9},
+  camera: {target: [66, 26], dist: 21, tilt: 47, yaw: 16, fov: 32, push: 0.03, side: 1.4, yawDrift: 2, roll: 0},
+  look: {...baseLook, dotPitch: 0.85, dotSize: 0.4, reliefBase: 0.55, city: ['#FF6A4A', 0.9], cityStrength: 0, coast: ['#4FD8E4', 0.4], tileBevel: 0.9, landSpec: 0.5, grid: ['#1C4A52', 0.1], reliefContrast: 3.0},
   hotspots: [
     {lon: 8, lat: 50, radius: 4, intensity: 2.24, color: '#5FE8FF'},
     {lon: -4, lat: 8, radius: 4, intensity: 2.56, color: '#5FE8FF'},
@@ -180,12 +186,12 @@ export const ASIA: MapVersion = {
     {lon: 105, lat: 45, radius: 9, intensity: 0.3, color: '#7AD8FF'},
   ],
   pins: [
-    {lon: 8, lat: 50, kind: 'pin', code: 'HUB-01', labelDx: -22, labelDy: 2},
-    {lon: -4, lat: 8, kind: 'pin', code: 'PORT-03', labelDx: 3, labelDy: -5},
-    {lon: 78, lat: 21, kind: 'pin', code: 'HUB-07', sub: '#01 /// 510074', labelDx: -14, labelDy: -6},
+    {lon: 8, lat: 50, kind: 'badge', code: 'HUB-01', labelDx: -22, labelDy: 2},
+    {lon: -4, lat: 8, kind: 'badge', code: 'PORT-03', labelDx: 3, labelDy: -5},
+    {lon: 78, lat: 21, kind: 'badge', code: 'HUB-07', sub: '#01 /// 510074', labelDx: -14, labelDy: -6},
     {lon: 103, lat: 6, kind: 'pinChart', code: 'NODE 4', labelDx: 5, labelDy: -6},
-    {lon: 92, lat: 56, kind: 'pin', code: 'HUB-09', labelDx: 4, labelDy: 5},
-    {lon: 135, lat: -24, kind: 'pin', code: 'HUB-12'},
+    {lon: 92, lat: 56, kind: 'badge', code: 'HUB-09', labelDx: 4, labelDy: 5},
+    {lon: 135, lat: -24, kind: 'badge', code: 'HUB-12', scale: 1.8, ring: 1.8},
     {lon: 46, lat: 30, kind: 'badge'},
     {lon: 72, lat: -8, kind: 'badge'},
     {lon: -14, lat: -22, kind: 'badge'},
@@ -199,8 +205,8 @@ export const ASIA: MapVersion = {
     {from: 1, to: 2, period: 150, offset: 50, height: 0.18},
     {from: 0, to: 3, period: 200, offset: 100, height: 0.16, draw: [60, 300]},
     {from: 2, to: 3, period: 100, offset: 30, height: 0.25},
-    {from: 3, to: 5, period: 150, offset: 70, height: 0.25, draw: [200, 300]},
-    {from: 2, to: 4, period: 120, offset: 15, height: 0.22},
+    
+    
   ],
   counters: [
     {lon: 52, lat: 14, prefix: '#01 /// ', seed: 11, digits: 6, step: 3},
@@ -210,14 +216,16 @@ export const ASIA: MapVersion = {
   ],
   hudBox: [-40, 170, -45, 80],
   freeLabels: [
-    {lon: 106, lat: 68, text: 'INDEX [ m ]', alpha: 0.7},
+    {lon: 104, lat: 70, text: '8080837383_index [ m ]', alpha: 0.85, size: 1.1},
+    {lon: -24, lat: 50, text: 'GRID 14 / A', alpha: 0.6},
+    {lon: 40, lat: -20, text: 'ZONE F-08', alpha: 0.55},
     {lon: -20, lat: 60, text: 'ROUTE A-7', alpha: 0.6},
     {lon: 0, lat: 38, text: 'ZONE C-3', alpha: 0.5},
     {lon: 70, lat: -12, text: 'EXT 3 940 KM', alpha: 0.5},
     {lon: 126, lat: 28, text: '588/365', size: 1.2},
   ],
   hudExtras: {diagonals: 6, boxes: [[30, -28, 62, -6], [-12, 0, 18, 22]], badges: [[8, 26, '25%']], dashBars: 5},
-  haze: {x: 0.1, y: 0.9, radius: 0.3, color: '#2E7F9A', strength: 0.25},
+  haze: {x: 0.5, y: 0.55, radius: 0.7, color: '#1E5466', strength: 0.22},
   routes: [],
   staticIcons: [],
   pinSize: 0.95,
@@ -231,8 +239,8 @@ export const ROUTES: MapVersion = {
   id: 'LogisticsMap-Routes',
   accent: '#FF8A2A',
   accentGain: 1.6,
-  camera: {target: [14, 42], dist: 5.0, tilt: 48, yaw: 10, fov: 32, push: 0.04, side: 0.7, yawDrift: 2.5, roll: 0},
-  look: {...baseLook, dotPitch: 0.2, dotSize: 0.34, landLit: '#2A6A70', landShadow: '#061416', reliefBase: 0.28, reliefContrast: 3.4, coast: ['#46E0F0', 0.55], tileBevel: 0.4, hotSpeckle: 1, city: ['#FF6A1A', 2.0], cityStrength: 0.12, gridStep: 2.5, reliefHeight: 0.02},
+  camera: {target: [14, 41], dist: 5.0, tilt: 58, yaw: 10, fov: 32, push: 0.04, side: 0.7, yawDrift: 2.5, roll: 0},
+  look: {...baseLook, dotPitch: 0.2, dotSize: 0.34, landLit: '#2A6A70', landShadow: '#061416', reliefBase: 0.28, reliefContrast: 3.4, coast: ['#46E0F0', 0.4], tileBevel: 0.4, hotSpeckle: 1, landSpec: 0.6, city: ['#FF6A1A', 2.0], cityStrength: 0.12, gridStep: 2.5, reliefHeight: 0.02},
   hotspots: [
     {lon: -3.7, lat: 40.4, radius: 3.64, intensity: 3.52, color: '#FF5A14'},
     {lon: 2.3, lat: 48.8, radius: 2.86, intensity: 2.56, color: '#FF5A14'},
@@ -255,15 +263,14 @@ export const ROUTES: MapVersion = {
     {lon: 16, lat: 52, kind: 'pinMinor'},
   ],
   arcs: [
-    {from: 0, to: 2, period: 100, offset: 0, height: 0.3},
-    {from: 1, to: 3, period: 150, offset: 30, height: 0.3},
-    {from: 2, to: 4, period: 120, offset: 60, height: 0.35},
-    {from: 0, to: 1, period: 120, offset: 20, height: 0.35, draw: [0, 300]},
-    {from: 2, to: 3, period: 100, offset: 80, height: 0.3, draw: [150, 300]},
-    {from: 3, to: 4, period: 150, offset: 10, height: 0.4},
+    {from: 0, to: 1, period: 100, offset: 0, height: 0.45},
+    {from: 1, to: 2, period: 150, offset: 30, height: 0.4},
+    {from: 2, to: 4, period: 120, offset: 60, height: 0.5},
+    {from: 4, to: 3, period: 100, offset: 80, height: 0.45},
+    {from: 3, to: 1, period: 150, offset: 10, height: 0.35, draw: [0, 300]},
   ],
   counters: [
-    {lon: 0, lat: 36.2, prefix: 'EXT [', seed: 21, digits: 6, step: 3, size: 2.4},
+    {lon: 4, lat: 33.6, prefix: 'EXT [', seed: 21, digits: 6, step: 3, size: 2.4},
     {lon: 18, lat: 34.5, prefix: '#02 /// ', seed: 22, digits: 6, step: 4},
     {lon: 26, lat: 46, prefix: '[ ', seed: 23, digits: 6, step: 5},
   ],
@@ -276,7 +283,7 @@ export const ROUTES: MapVersion = {
   ],
   routes: [
     // sea lanes (ships / tankers)
-    {path: [[-6, 36], [0, 37.2], [5, 37.6], [11, 37.4], [15, 36.2], [20, 35.2], [26, 34.2], [31, 32.2]], icon: 'ship', count: 3, laps: 1, offset: 0},
+    {path: [[-6, 36], [0, 37.2], [5, 37.6], [11, 37.4], [15, 36.2], [20, 35.2], [26, 34.2], [31, 32.2]], icon: 'ship', count: 2, laps: 1, offset: 0},
     {path: [[32.4, 31.6], [28, 33.6], [23, 35.6], [18, 37], [14, 38.6], [10, 40], [7, 41.5], [5.4, 43.1]], icon: 'tanker', count: 2, laps: 1, offset: 0.25},
     {path: [[12.6, 44.5], [14.8, 42.6], [17.4, 41], [19.4, 39.4], [20.5, 37.5], [22, 36.2], [25, 36.6], [26.4, 39.4]], icon: 'ship', count: 2, laps: 1, offset: 0.55},
     {path: [[-9.6, 43.8], [-6, 44.4], [-3, 45.8], [-2.2, 47.6], [-5, 48.6], [-3, 50], [1.3, 50.6], [3.4, 52.4]], icon: 'tanker', count: 1, laps: 1, offset: 0.1},
@@ -289,6 +296,8 @@ export const ROUTES: MapVersion = {
     {path: [[2.3, 48.8], [29, 41]], icon: 'plane', count: 1, laps: 1, offset: 0.6, altitude: 0.7, color: 'white'},
   ],
   hudExtras: {diagonals: 7, dashBars: 9},
+  iconWhite: '#BFEFFF',
+  streaks: [{lon: 10, lat: 39.5, height: 0.05, length: 3.2, width: 0.25, angle: 0.15, color: '#5FD8FF', gain: 1.3}],
   staticIcons: [
     {lon: -9, lat: 48.5, icon: 'crane', color: 'white'},
     {lon: 6.5, lat: 52.5, icon: 'building', color: 'white'},
@@ -297,9 +306,6 @@ export const ROUTES: MapVersion = {
     {lon: -5, lat: 34, icon: 'pump'},
     {lon: 20, lat: 31.5, icon: 'building'},
     {lon: 33, lat: 37, icon: 'crane', color: 'white'},
-    {lon: 13, lat: 55, icon: 'pump', color: 'white'},
-    {lon: -2, lat: 44.5, icon: 'building'},
-    {lon: 24, lat: 44, icon: 'building', color: 'white'},
     {lon: -8.5, lat: 42.2, icon: 'factory'},
     {lon: 4.8, lat: 45.7, icon: 'factory'},
     {lon: 9.6, lat: 45.2, icon: 'factory', color: 'white'},
@@ -310,9 +316,9 @@ export const ROUTES: MapVersion = {
   ],
   pinSize: 1.9,
   arcRadius: 0.015,
-  iconSize: 1.6,
+  iconSize: 1.3,
   hudSize: 0.5,
-  post: {aperture: 0.016, maxBlur: 0.004, bloomStrength: 0.6, bloomThreshold: 0.45, vignette: 0.75, topLight: -0.15, exposure: 1},
+  post: {aperture: 0.03, maxBlur: 0.006, bloomStrength: 0.6, bloomThreshold: 0.45, vignette: 0.75, topLight: -0.15, exposure: 1},
 };
 
 export const MAP_VERSIONS = {World: WORLD, Asia: ASIA, Routes: ROUTES};

@@ -34,6 +34,7 @@ uniform float dotPitch;
 uniform float dotSize;
 uniform float reliefBase;
 uniform float tileBevel;
+uniform float landSpec;
 uniform float hotSpeckle;
 uniform float reliefContrast;
 uniform vec3 landLit;
@@ -87,6 +88,8 @@ void main() {
   // raised-tile look: lit top edge, darker lower edge on each square
   float bevel = smoothstep(dotSize * 0.45, dotSize * 0.95, f.y) - 0.5 * smoothstep(dotSize * 0.45, dotSize * 0.95, -f.y);
   landCol *= 1.0 + tileBevel * bevel * 1.4;
+  // specular sheen on sunlit slopes (reads as a lit 3D relief surface)
+  landCol += vec3(0.55, 0.95, 1.0) * pow(shade, 5.0) * landSpec * (0.6 + 0.8 * hv);
   // coastline: land cells whose neighbourhood is part ocean
   float blur = textureLod(landBlur, cuv, max(0.0, lod8k - 2.0)).r;
   float coast = landC * (1.0 - smoothstep(0.55, 0.92, blur));
@@ -103,6 +106,8 @@ void main() {
     float k = exp(-dd * dd * 2.5) * h.w;
     // speckled: individual tiles flare, like dense city lights
     hot += hotColors[i] * k * mix(0.5 + hv, (0.15 + 2.2 * hv * hv * hv) * step(0.25, hv), hotSpeckle);
+    // white-hot core at the centre of each hub
+    hot += vec3(1.0, 0.85, 0.6) * smoothstep(0.55, 0.95, k / max(h.w, 1e-3)) * h.w * 0.6 * (0.4 + hv);
   }
   vec3 dotsCol = (landCol + glow + hot) * dotA * landC;
 
@@ -140,6 +145,7 @@ export type MapLook = {
   reliefBase: number;
   reliefContrast: number;
   tileBevel?: number;
+  landSpec?: number;
   hotSpeckle?: number;
 };
 
@@ -173,6 +179,7 @@ export const makeMapMaterial = (
       dotSize: {value: look.dotSize},
       reliefBase: {value: look.reliefBase},
       tileBevel: {value: look.tileBevel ?? 0},
+      landSpec: {value: look.landSpec ?? 0},
       hotSpeckle: {value: look.hotSpeckle ?? 0},
       reliefContrast: {value: look.reliefContrast},
       landLit: {value: linear(look.landLit)},

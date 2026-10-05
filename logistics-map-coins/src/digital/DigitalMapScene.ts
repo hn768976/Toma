@@ -43,16 +43,16 @@ export const CYAN: DigitalVersion = {
   id: 'DigitalWorldMap-Cyan',
   line: 0x5fd8f0,
   node: 0xbff6ff,
-  scale: 16.5,
-  centerLon: -18,
-  centerLat: 16,
+  scale: 14.6,
+  centerLon: -4,
+  centerLat: 14,
   nodeCount: 40,
   streakCount: 30,
   curveCount: 6,
-  glow: 14,
+  glow: 18,
   grain: 0.02,
   background: [0x02 / 255, 0x0a / 255, 0x10 / 255],
-  haze: [0.01, 0.06, 0.08],
+  haze: [0.02, 0.11, 0.14],
 };
 
 // Final pass: analytic background + haze (float precision, so no banding from
@@ -193,7 +193,7 @@ export class DigitalMapScene {
         grid.lineTo(x, y);
       }
     }
-    grid.stroke({width: 3, color: v.line, alpha: 0.3});
+    grid.stroke({width: 3, color: v.line, alpha: 0.36});
     // rule lines with tick marks
     for (let i = 0; i < 3; i++) {
       const y = H * (0.18 + i * 0.32);
@@ -321,8 +321,8 @@ export class DigitalMapScene {
     for (let i = 0; i < v.curveCount; i++) {
       const y0 = H * (0.1 + 0.85 * rng());
       const pts: [number, number][] = [];
-      const dir = rng() < 0.5 ? -1 : 1;
-      const tilt = (0.35 + rng() * 0.5) * dir;
+      const dir = i % 3 === 2 ? -1 : 1;
+      const tilt = (0.4 + rng() * 0.15) * dir;
       const waves = 0.8 + rng() * 0.9;
       const amp = H * (0.12 + rng() * 0.14);
       for (let s = 0; s <= 64; s++) {
@@ -353,7 +353,7 @@ export class DigitalMapScene {
     const periods = [60, 75, 100, 120, 150];
     const stalks = new Graphics();
     chosen.forEach(([x, y], i) => {
-      const size = 0.7 + rng() * 0.7;
+      const size = i % 5 === 0 ? 2.2 + rng() * 0.8 : 0.7 + rng() * 0.7;
       if (rng() < 0.6) {
         const len = 150 + rng() * 550;
         const dir = rng() < 0.5 ? 1 : -1;
@@ -374,7 +374,7 @@ export class DigitalMapScene {
         .map((m, j) => ({m, j, d: Math.hypot(m.x - n.x, m.y - n.y)}))
         .filter((o) => o.j > i && o.d < 900)
         .sort((a, b) => a.d - b.d)
-        .slice(0, 1 + Math.floor(rng() * 2));
+        .slice(0, rng() < 0.5 ? 1 : 0);
       for (const {m} of near) {
         const draw: [number, number] | undefined = rng() < 0.45 ? [Math.floor(rng() * 300), 300] : undefined;
         this.links.push({a: n, b: m, draw, elbow: rng() < 0.45});
@@ -402,7 +402,7 @@ export class DigitalMapScene {
       const sprite = new Sprite({texture: sTex, anchor: {x: 0, y: 0.5}, tint: rng() < 0.7 ? v.line : 0xd8f8ff, blendMode: 'add'});
       sprite.width = len;
       sprite.height = thick;
-      sprite.alpha = 0.1 + rng() * 0.3;
+      sprite.alpha = 0.14 + rng() * 0.36;
       content.addChild(sprite);
       this.streaks.push({sprite, y: H * (0.04 + rng() * 0.92), len, k, x0: rng()});
     }
@@ -417,7 +417,7 @@ export class DigitalMapScene {
           uBg: {value: new Float32Array(v.background), type: 'vec3<f32>'},
           uHaze: {value: new Float32Array(v.haze), type: 'vec3<f32>'},
           uScreen: {value: new Float32Array([W, H]), type: 'vec2<f32>'},
-          uBlur: {value: 0.006, type: 'f32'},
+          uBlur: {value: 0.0035, type: 'f32'},
         }),
       },
     });

@@ -113,11 +113,11 @@ export class LogisticsScene implements SceneController {
     // Pins
     v.pins.forEach((p, i) => {
       const t = iconTexture(p.kind);
-      const isMain = p.kind !== 'pinMinor' && p.kind !== 'badge';
-      const color = isMain ? accent.clone() : hdr('#D9E6EA', 0.9);
+      const isMain = p.kind !== 'pinMinor' && !(p.kind === 'badge' && !p.code);
+      const color = isMain ? accent.clone() : hdr(v.minorColor ?? '#D9E6EA', 0.9);
       const mat = new THREE.SpriteMaterial({map: t, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true});
       const s = new THREE.Sprite(mat);
-      const sz = v.pinSize * this.scale * (isMain ? 1 : 0.62) * 41 / 41;
+      const sz = v.pinSize * this.scale * (isMain ? 1 : 0.62) * (p.scale ?? 1);
       s.center.set(0.5, 0.02);
       s.scale.set(sz, sz * iconAspect(p.kind), 1);
       s.position.copy(lonLatToWorld(p.lon, p.lat, lift));
@@ -145,7 +145,7 @@ export class LogisticsScene implements SceneController {
         ring.renderOrder = 4;
         this.scene.add(ring);
         const periods = [75, 100, 120, 150];
-        this.rings.push({mesh: ring, mat: ringMat, period: periods[i % periods.length], offset: i * 37, size: sz * 1.6});
+        this.rings.push({mesh: ring, mat: ringMat, period: periods[i % periods.length], offset: i * 37, size: sz * 1.6 * (p.ring ?? 1)});
       }
     });
 
@@ -185,6 +185,21 @@ export class LogisticsScene implements SceneController {
       this.arcs.push({def: a, obj: {core: core.mesh, halo: halo.mesh, mats: [core.m, halo.m]}});
     }
 
+    // Out-of-focus light streaks on the map plane
+    for (const st of v.streaks ?? []) {
+      const m = new THREE.ShaderMaterial({
+        vertexShader: PLAIN_VERT, fragmentShader: GLOW_FRAG,
+        uniforms: {color: {value: hdr(st.color, st.gain)}, alpha: {value: 1}},
+        blending: THREE.AdditiveBlending, depthWrite: false, transparent: true,
+      });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), m);
+      mesh.position.copy(lonLatToWorld(st.lon, st.lat, st.height));
+      mesh.scale.set(st.length / 10, 1, st.width / 10);
+      mesh.rotation.y = st.angle;
+      mesh.renderOrder = 6;
+      this.scene.add(mesh);
+    }
+
     // Counters
     for (const c of v.counters) this.counters.push(this.buildCounter(c));
 
@@ -194,7 +209,7 @@ export class LogisticsScene implements SceneController {
       const cum = [0];
       for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
       const sprites: THREE.Sprite[] = [];
-      const col = r.color === 'white' ? hdr('#DDF4FF', 1.5) : accent.clone();
+      const col = r.color === 'white' ? hdr(v.iconWhite ?? '#DDF4FF', 1.5) : accent.clone();
       for (let i = 0; i < r.count; i++) {
         const mat = new THREE.SpriteMaterial({map: iconTexture(r.icon), color: col.clone(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true});
         const s = new THREE.Sprite(mat);
@@ -213,7 +228,7 @@ export class LogisticsScene implements SceneController {
       }
     }
     v.staticIcons.forEach((si, i) => {
-      const base = si.color === 'white' ? hdr('#DDF4FF', 1.4) : accent.clone();
+      const base = si.color === 'white' ? hdr(v.iconWhite ?? '#DDF4FF', 1.4) : accent.clone();
       const mat = new THREE.SpriteMaterial({map: iconTexture(si.icon), color: base.clone(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true});
       const s = new THREE.Sprite(mat);
       s.center.set(0.5, 0.1);
@@ -541,14 +556,16 @@ export class LogisticsScene implements SceneController {
       r.sprites.forEach((s, i) => {
         const u = phase(f * r.def.laps, LOOP, (r.def.offset + i / r.def.count) * LOOP);
         const pos = this.along(r, u, tmpA);
-        const ahead = this.along(r, Math.min(1, u + 0.01), tmpB);
         s.position.copy(pos);
-        // face the direction of travel on screen
-        const a = pos.clone().project(this.camera);
-        const b = ahead.clone().project(this.camera);
-        const flip = b.x < a.x ? -1 : 1;
+        // face the direction of travel on screen; when a path turns back the
+        // icon squashes through zero over a few frames instead of mirroring
+        // instantly (no pop)
+        const behind = this.along(r, Math.max(0, u - 0.04), tmpB).clone().project(this.camera);
+        const ahead = this.along(r, Math.min(1, u + 0.04), tmpB).project(this.camera);
+        const dx = (ahead.x - behind.x) / Math.max(1e-4, Math.hypot(ahead.x - behind.x, ahead.y - behind.y));
+        const facing = THREE.MathUtils.clamp(dx / 0.35, -1, 1);
         const sz = this.v.iconSize * this.scale;
-        s.scale.set(sz * flip, sz * r.aspect, 1);
+        s.scale.set(sz * (Math.abs(facing) < 0.08 ? 0.08 * Math.sign(facing || 1) : facing), sz * r.aspect, 1);
         const fade = smoothstep(0, 0.07, u) * (1 - smoothstep(0.93, 1, u));
         (s.material as THREE.SpriteMaterial).opacity = fade;
         s.visible = fade > 0.001;
