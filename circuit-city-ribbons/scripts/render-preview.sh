@@ -15,7 +15,7 @@ mkdir -p out/frames/"$NAME" out/previews out/bundle
 start=$(date +%s)
 npx remotion render out/bundle "$ID" out/frames/"$NAME" \
   --sequence --image-format=png --scale=0.3333333333333333 \
-  --concurrency="$CONC" --log=error
+  --concurrency="$CONC" --timeout=300000 --log=error
 end=$(date +%s)
 ffmpeg -v error -y -framerate 30 -start_number 0 -i out/frames/"$NAME"/element-%03d.png \
   -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p \

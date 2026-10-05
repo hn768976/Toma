@@ -11,6 +11,8 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setMuted(true);
+// Software GL (no GPU) needs time to build ~427k points and compile shaders.
+Config.setDelayRenderTimeoutInMilliseconds(300000);
 
 // WebGL2 in headless Chromium: use ANGLE (equivalent to `--gl=angle`).
 Config.setChromiumOpenGlRenderer("angle");
