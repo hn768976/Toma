@@ -30,7 +30,7 @@ const C_MID = "#5AA8E8";
 const C_BG = "#061A5A";
 
 const TILE = 8192; // canvas px
-const TILE_W = 10.5; // world units per tile
+const TILE_W = 8.5; // world units per tile
 const K = TILE_W / TILE;
 
 const WORDS = [
@@ -50,7 +50,7 @@ const SMALL_PATTERNS = ["+##", ".##", "##", "## ##", "+#.#", "###"];
 // Layout, generated at module level from a fixed seed.
 
 type Block = {
-  kind: "digits" | "bars" | "list" | "gauge" | "small" | "meter" | "frame" | "wave";
+  kind: "digits" | "bars" | "stair" | "list" | "hatch" | "gauge" | "small" | "meter" | "frame" | "wave";
   x: number;
   y: number;
   w: number;
@@ -65,9 +65,9 @@ const layoutRng = mulberry32(0x5eed01);
 const BLOCKS: Block[] = (() => {
   // scattered placement (rejection sampling, no overlaps), not a grid
   const out: Block[] = [];
-  const kinds: Block["kind"][] = ["digits", "digits", "digits", "digits", "digits", "small", "small", "small", "small", "bars", "list", "list", "gauge", "meter", "frame"];
+  const kinds: Block["kind"][] = ["digits", "digits", "digits", "digits", "digits", "small", "small", "small", "small", "bars", "stair", "stair", "list", "hatch", "hatch", "gauge", "meter"];
   let guard = 0;
-  while (out.length < 72 && guard++ < 20000) {
+  while (out.length < 58 && guard++ < 20000) {
     const kind = pick(layoutRng, kinds);
     const w = range(layoutRng, 520, 1000) * (kind === "small" ? 0.6 : 1);
     const h = range(layoutRng, 380, 640) * (kind === "small" ? 0.6 : 1);
@@ -155,7 +155,59 @@ const drawTile = () => {
     ctx.stroke();
   }
 
+  // large translucent light-blue panels that overlap (layered-sheet look)
+  const pr = mulberry32(4711);
+  for (let i = 0; i < 46; i++) {
+    const w = range(pr, 900, 2600);
+    const h = range(pr, 500, 1500);
+    const x = range(pr, 0, TILE - w);
+    const y = range(pr, 0, TILE - h);
+    ctx.fillStyle = `rgba(50,120,230,${range(pr, 0.07, 0.16).toFixed(3)})`;
+    ctx.fillRect(x, y, w, h);
+    if (pr() < 0.6) {
+      ctx.strokeStyle = `rgba(150,210,255,${range(pr, 0.25, 0.5).toFixed(3)})`;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x, y, w, h);
+    }
+  }
+  // long thin bright border lines across the plane (both axes)
+  for (let i = 0; i < 26; i++) {
+    const horiz = pr() < 0.6;
+    const p = range(pr, 100, TILE - 100);
+    const a = range(pr, 0, TILE * 0.4);
+    const b = a + range(pr, TILE * 0.3, TILE * 0.6);
+    ctx.fillStyle = `rgba(170,225,255,${range(pr, 0.35, 0.7).toFixed(3)})`;
+    if (horiz) ctx.fillRect(a, p, b - a, 4);
+    else ctx.fillRect(p, a, 4, b - a);
+    ctx.beginPath();
+    ctx.arc(horiz ? b : p + 2, horiz ? p + 2 : b, 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // big faint rings (ellipses once seen in perspective)
+  for (let i = 0; i < 7; i++) {
+    const x = range(pr, 800, TILE - 800);
+    const y = range(pr, 800, TILE - 800);
+    const r = range(pr, 260, 520);
+    ctx.strokeStyle = "rgba(150,210,255,0.4)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(150,210,255,0.2)";
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.8, 0.3, Math.PI * 1.6);
+    ctx.stroke();
+  }
+  // vertical columns of digits (one digit per line)
+  ctx.font = `500 54px ${MONO}`;
   ctx.textBaseline = "middle";
+  for (let i = 0; i < 14; i++) {
+    const x = range(pr, 100, TILE - 100);
+    const y = range(pr, 100, TILE - 900);
+    ctx.fillStyle = "rgba(191,232,255,0.6)";
+    for (let k = 0; k < irange(pr, 4, 9); k++) ctx.fillText(String(irange(pr, 0, 9)), x, y + k * 70);
+  }
   for (const s of STRAYS) {
     if (s.rule) {
       ctx.fillStyle = "rgba(90,168,232,0.35)";
@@ -240,6 +292,26 @@ const drawTile = () => {
           ctx.globalAlpha = 0.2;
           ctx.fillRect(b.w * 0.32, 84 + i * 46, b.w * 0.42, 10);
         }
+        break;
+      }
+      case "hatch": {
+        // barcode / dot-matrix / dashed-text field
+        ctx.fillText(b.label, 0, 24);
+        const mode = br() < 0.5;
+        for (let gy = 70; gy < b.h; gy += mode ? 28 : 22) {
+          for (let gx = 0; gx < b.w; ) {
+            const w = mode ? range(br, 6, 18) : range(br, 30, 140);
+            ctx.globalAlpha = range(br, 0.35, 0.85);
+            ctx.fillRect(gx, gy, w, mode ? 18 : 10);
+            gx += w + (mode ? range(br, 6, 14) : range(br, 14, 40));
+          }
+        }
+        break;
+      }
+      case "stair": {
+        ctx.fillText(b.label, 0, 24);
+        ctx.globalAlpha = 0.5;
+        ctx.fillRect(0, 60, 3, b.h - 80);
         break;
       }
       case "gauge": {
@@ -338,7 +410,7 @@ const drawDynamic = (B: Batch2D, f: number) => {
     switch (b.kind) {
       case "digits": {
         const str = rollingDigits(b.pattern, s, f, LOOP, 5);
-        B.text(str, b.x, b.y + 165, 175, C_HI, 1, { i: 1.9 });
+        B.text(str, b.x, b.y + 165, 175, C_HI, 1, { i: 2.0, spacing: 1.35 });
         if (blink(1, 10)) B.dot(b.x - 60, b.y + 165, 12, C_HI, 1, { i: 2.2 });
         const p = beatValue(f, s + 3, 50, LOOP);
         B.rect(b.x, b.y + 230, b.w * 0.6 * (0.2 + 0.8 * p), 8, C_MID, 0.9, { i: 1.2 });
@@ -357,6 +429,18 @@ const drawDynamic = (B: Batch2D, f: number) => {
         }
         break;
       }
+      case "stair": {
+        // staircase of horizontal bars, lengths step down
+        const n = Math.min(9, Math.floor((b.h - 90) / 34));
+        for (let i = 0; i < n; i++) {
+          const base = 1 - i / (n + 1);
+          const v = base * (0.75 + 0.25 * beatValue(f, s + i * 11, 40, LOOP));
+          B.rect(b.x + 10, b.y + 70 + i * 34, (b.w - 20) * v, 24, i % 3 === 0 ? C_HI : C_MID, 0.7, { i: 1.25 });
+        }
+        break;
+      }
+      case "hatch":
+        break;
       case "list": {
         const rows = Math.min(8, Math.floor((b.h - 80) / 46));
         for (let i = 0; i < rows; i++) {
@@ -376,7 +460,7 @@ const drawDynamic = (B: Batch2D, f: number) => {
       }
       case "small": {
         const str = rollingDigits(b.pattern, s, f, LOOP, 15);
-        B.text(str, b.x, b.y + 60, 96, C_HI, 1, { i: 1.9 });
+        B.text(str, b.x, b.y + 60, 110, C_HI, 1, { i: 2.0, spacing: 1.3 });
         if (blink(2, 20)) B.dot(b.x - 34, b.y + 60, 9, C_HI, 1, { i: 2 });
         break;
       }
@@ -422,14 +506,14 @@ const build: BuildFn = () => {
   const camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.5, 140);
   const tex = canvasTexture(drawTile(), { repeat: true });
   const FOG: [number, number, number] = [11, 30, 0.85];
-  const fogColor = "#03134a";
+  const fogColor = "#0a2470";
 
   const makeFloor = (opts: { tint: number; uvOff: [number, number]; y: number; withDyn: boolean }) => {
     const floor = new THREE.Group();
     floor.position.y = opts.y;
     floor.rotation.x = -Math.PI / 2;
     const inner = new THREE.Group();
-    inner.rotation.z = THREE.MathUtils.degToRad(-36);
+    inner.rotation.z = THREE.MathUtils.degToRad(-44);
     floor.add(inner);
     const REP = 5;
     const mat = texPlaneMaterial(tex, {
@@ -461,7 +545,7 @@ const build: BuildFn = () => {
   };
 
   // main plane + its dimmer copy below
-  const main = makeFloor({ tint: 1, uvOff: [0, 0], y: 0, withDyn: true });
+  const main = makeFloor({ tint: 1.3, uvOff: [0, 0], y: 0, withDyn: true });
   const under = makeFloor({ tint: 0.75, uvOff: [0.37, 0.61], y: -1.3, withDyn: false });
 
   const sMain = new THREE.Scene();
@@ -475,7 +559,7 @@ const build: BuildFn = () => {
   const target = new THREE.Vector3();
   const layers = [
     { scene: sUnder, blur: 0.006 },
-    { scene: sMain, depth: { focus: 8.6, band: 1.1, range: 4.2, maxBlur: 0.0095, nearMul: 1.2 } },
+    { scene: sMain, depth: { focus: 7.2, band: 0.9, range: 3.4, maxBlur: 0.0105, nearMul: 1.8 } },
   ];
 
   return {
@@ -483,19 +567,19 @@ const build: BuildFn = () => {
     layers,
     pipeline: {
       background: fogColor,
-      bloomThreshold: 0.95,
+      bloomThreshold: 0.6,
       bloomKnee: 0.5,
-      bloomIntensity: 0.9,
-      bloomRadius: 0.55,
-      vignette: 0.45,
+      bloomIntensity: 1.5,
+      bloomRadius: 0.85,
+      vignette: 0.6,
       saturation: 1.05,
     },
     update: (f) => {
       // camera glides diagonally across the plane
       const t = f / BIGDATA_FRAMES;
       target.set(-1.6 + 3.6 * t, 0, 1.0 - 2.4 * t);
-      const dist = 8.6;
-      const elev = THREE.MathUtils.degToRad(36);
+      const dist = 7.2;
+      const elev = THREE.MathUtils.degToRad(33);
       const az = THREE.MathUtils.degToRad(-6);
       camera.position.set(
         target.x + Math.sin(az) * Math.cos(elev) * dist,
