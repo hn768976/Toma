@@ -17,6 +17,7 @@ export type PostParams = {
   grain: number; // display-space amplitude, ~0.015
   saturation?: number;
   lift?: [number, number, number]; // added before tonemap, for black level tint
+  tonemap?: boolean; // default true; light scenes keep their whites linear
 };
 
 export const defaultPost: PostParams = {
@@ -82,7 +83,7 @@ void main() {
 
 const COMPOSITE = /* glsl */ `
 uniform sampler2D tScene; uniform sampler2D tBloom;
-uniform float uExposure, uBloom, uVignette, uGrain, uSat;
+uniform float uExposure, uBloom, uVignette, uGrain, uSat, uTone;
 uniform vec3 uBloomTint, uLift;
 uniform vec2 uRes; uniform float uFrame;
 varying vec2 vUv;
@@ -110,7 +111,7 @@ void main() {
   c = max(mix(vec3(l), c, uSat), 0.0);
   vec2 q = vUv - 0.5; q.x *= uRes.x / uRes.y;
   c *= 1.0 - uVignette * smoothstep(0.35, 1.25, length(q));
-  c = toSRGB(tonemap(c));
+  c = toSRGB(uTone > 0.5 ? tonemap(c) : c);
   uvec2 px = uvec2(gl_FragCoord.xy);
   uint f = uint(uFrame);
   vec3 h1 = hash33u(uvec3(px, f * 2u + 1u));
@@ -151,7 +152,7 @@ export class PostFX {
     this.composite = mk(COMPOSITE, {
       tScene: { value: null }, tBloom: { value: null }, uExposure: { value: 1 }, uBloom: { value: 1 },
       uVignette: { value: 0 }, uGrain: { value: 0.015 }, uSat: { value: 1 }, uBloomTint: { value: new THREE.Vector3(1, 1, 1) },
-      uLift: { value: new THREE.Vector3() }, uRes: { value: new THREE.Vector2() }, uFrame: { value: 0 },
+      uLift: { value: new THREE.Vector3() }, uTone: { value: 1 }, uRes: { value: new THREE.Vector2() }, uFrame: { value: 0 },
     });
     this.quad = new THREE.Mesh(g, this.composite);
     this.quad.frustumCulled = false;
@@ -222,6 +223,7 @@ export class PostFX {
     u.uLift.value.set(...(p.lift ?? [0, 0, 0]));
     u.uRes.value.set(this.w, this.h);
     u.uFrame.value = frame;
+    u.uTone.value = p.tonemap === false ? 0 : 1;
     this.pass(r, this.composite, null);
   }
 }

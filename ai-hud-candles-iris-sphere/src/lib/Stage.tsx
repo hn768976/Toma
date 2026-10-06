@@ -1,7 +1,7 @@
 import { ThreeCanvas } from "@remotion/three";
 import { useFrame, useThree } from "@react-three/fiber";
 import React, { useMemo, useRef } from "react";
-import { cancelRender, useCurrentFrame, useVideoConfig } from "remotion";
+import { cancelRender, useCurrentFrame, useRemotionEnvironment, useVideoConfig } from "remotion";
 import * as THREE from "three";
 import { PostFX, PostParams } from "./post";
 
@@ -58,9 +58,12 @@ export const Stage: React.FC<{
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   const clearColor = useMemo(() => new THREE.Color(clear), [clear]);
-  // Render at exactly the composition size times the render scale
-  // (window.devicePixelRatio is the --scale factor while rendering).
-  const dpr = typeof window === "undefined" ? 1 : Math.min(1, window.devicePixelRatio || 1);
+  // While rendering, window.devicePixelRatio is the --scale factor, so the
+  // canvas is exactly composition size × scale (0.333 → 720p, 1.5625 → 6K).
+  // In the Studio, cap at 1 so a Retina screen doesn't double the 4K canvas.
+  const { isRendering } = useRemotionEnvironment();
+  const sysDpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+  const dpr = isRendering ? sysDpr : Math.min(1, sysDpr);
   return (
     <ThreeCanvas
       width={width}

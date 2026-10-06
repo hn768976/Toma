@@ -9,7 +9,7 @@ SEQ=renders/${ID}_png
 rm -rf "$SEQ"
 start=$(date +%s)
 npx remotion render "$ID" "$SEQ" --sequence --image-format=png \
-  --scale=0.3333333333333333 --gl="$GL" --log=error
+  --scale=0.3333333333333333 --gl="$GL" --concurrency="${CONCURRENCY:-1}" --log=error
 end=$(date +%s)
 N=$(ls "$SEQ" | wc -l)
 FIRST=$(ls "$SEQ" | head -1 | sed -E 's/element-0*([0-9]+)\.png/\1/'); FIRST=${FIRST:-0}

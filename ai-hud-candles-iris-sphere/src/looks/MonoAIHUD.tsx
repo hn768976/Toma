@@ -15,10 +15,23 @@ import { makeShared, Shared, Stage } from "../lib/Stage";
 // ticking numbers, mint bar meters. Build-in 1.5–4s, then live hold.
 
 export type HudPalette = {
-  bg: string;
-  white: string;
-  grey: string;
-  mint: string;
+  light: boolean; // light interface (dark ink on an off-white plate)
+  bg: string; // plate
+  panel: string; // panel fill (light theme)
+  white: string; // primary text / highlights
+  grey: string; // secondary text
+  line: string; // neutral line work (alpha applied per element)
+  mint: string; // bar meters
+  trace: string; // chip circuit traces
+  traceDot: string; // trace terminals
+  accent: string; // small bullets / markers
+  amber: string; // tiny warm ticks
+};
+
+const hexA = (hex: string, a: number) => {
+  const c = new THREE.Color(hex);
+  c.convertLinearToSRGB();
+  return `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${a})`;
 };
 
 const lin = (hex: string) => new THREE.Color(hex);
@@ -93,11 +106,12 @@ const buildHud = (pal: HudPalette) => {
 
   const white = pal.white;
   const grey = pal.grey;
+  const ink = (a: number) => hexA(pal.line, a);
   redraw(base, "static", (ctx) => {
     ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, TW, TH);
     // faint large grid
-    ctx.strokeStyle = "rgba(120,128,136,0.10)";
+    ctx.strokeStyle = ink(0.10);
     ctx.lineWidth = 2;
     for (let x = 0; x < TW; x += 256) {
       ctx.beginPath();
@@ -119,7 +133,7 @@ const buildHud = (pal: HudPalette) => {
       if (reserved.some((z) => overlaps(z, r))) {
         // keep the edges near reserved areas sparse: a few rules only
         if (rnd() < 0.5) {
-          ctx.strokeStyle = "rgba(160,168,176,0.25)";
+          ctx.strokeStyle = ink(0.25);
           ctx.lineWidth = 3;
           ctx.beginPath();
           ctx.moveTo(r.x, r.y);
@@ -135,10 +149,10 @@ const buildHud = (pal: HudPalette) => {
       ctx.rect(r.x, r.y, r.w, r.h);
       ctx.clip();
       // panel frame: thin full border, corner brackets
-      ctx.strokeStyle = "rgba(150,158,166,0.22)";
+      ctx.strokeStyle = ink(0.22);
       ctx.lineWidth = 2;
       ctx.strokeRect(r.x - 15, r.y - 15, r.w + 30, r.h + 30);
-      ctx.strokeStyle = "rgba(180,188,196,0.35)";
+      ctx.strokeStyle = ink(0.35);
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(r.x, r.y + 40);
@@ -148,7 +162,10 @@ const buildHud = (pal: HudPalette) => {
       ctx.lineTo(r.x + r.w, r.y + r.h);
       ctx.lineTo(r.x + r.w, r.y + r.h - 40);
       ctx.stroke();
-      if (rnd() < 0.25) {
+      if (pal.light) {
+        ctx.fillStyle = pal.panel;
+        ctx.fillRect(r.x - 15, r.y - 15, r.w + 30, r.h + 30);
+      } else if (rnd() < 0.25) {
         ctx.fillStyle = "rgba(140,148,156,0.05)";
         ctx.fillRect(r.x, r.y, r.w, r.h);
       }
@@ -176,7 +193,7 @@ const buildHud = (pal: HudPalette) => {
           ctx.fillStyle = rnd() < 0.3 ? white : grey;
           ctx.fillText(digits(6, 73, y, r.x), r.x + r.w * 0.6, y);
           if (rnd() < 0.08) {
-            ctx.fillStyle = "#E8963A";
+            ctx.fillStyle = pal.amber;
             ctx.fillRect(r.x + r.w - 40, y - 18, 10, 20);
           }
         }
@@ -185,17 +202,17 @@ const buildHud = (pal: HudPalette) => {
         const n = Math.floor(r.h / 50);
         for (let i = 0; i < n; i++) {
           const w = (0.2 + rnd() * 0.75) * (r.w - 60);
-          ctx.fillStyle = i % 3 === 0 ? "rgba(220,226,232,0.65)" : "rgba(110,118,126,0.6)";
+          ctx.fillStyle = i % 3 === 0 ? hexA(pal.white, 0.65) : ink(0.6);
           ctx.fillRect(r.x + 30, r.y + 40 + i * 50, w, 22);
         }
       } else if (type === 3) {
         // button cluster: rows of small keys with a lit dot
         for (let y = r.y + 40; y < r.y + r.h - 50; y += 70) {
           for (let x = r.x + 30; x < r.x + r.w - 140; x += 160) {
-            ctx.strokeStyle = "rgba(170,178,186,0.5)";
+            ctx.strokeStyle = ink(0.5);
             ctx.lineWidth = 3;
             ctx.strokeRect(x, y, 130, 46);
-            ctx.fillStyle = rnd() < 0.3 ? white : "rgba(120,128,136,0.6)";
+            ctx.fillStyle = rnd() < 0.3 ? white : ink(0.6);
             ctx.beginPath();
             ctx.arc(x + 24, y + 23, 7, 0, Math.PI * 2);
             ctx.fill();
@@ -208,7 +225,7 @@ const buildHud = (pal: HudPalette) => {
         for (let y = r.y + 30; y < r.y + r.h - 20; y += 22) {
           for (let x = r.x + 30; x < r.x + r.w - 20; x += 22) {
             const k = rnd();
-            ctx.fillStyle = k > 0.93 ? white : `rgba(120,128,136,${0.25 + k * 0.3})`;
+            ctx.fillStyle = k > 0.93 ? white : ink(0.25 + k * 0.3);
             ctx.fillRect(x, y, 7, 7);
           }
         }
@@ -225,7 +242,7 @@ const buildHud = (pal: HudPalette) => {
         for (let i = 0; i < 6; i++) {
           const x = r.x + 30 + rnd() * (r.w - 120);
           const y = r.y + 40 + rnd() * (r.h - 100);
-          ctx.fillStyle = rnd() < 0.25 ? white : "rgba(120,128,136,0.5)";
+          ctx.fillStyle = rnd() < 0.25 ? white : ink(0.5);
           ctx.fillRect(x, y, 30 + rnd() * 90, 12 + rnd() * 18);
         }
         if (rnd() < 0.4) {
@@ -241,13 +258,13 @@ const buildHud = (pal: HudPalette) => {
     const cy = CHIP_Y;
     // square mesh pad
     const pad = 620;
-    ctx.fillStyle = "rgba(4,5,6,0.9)";
+    ctx.fillStyle = pal.light ? pal.panel : "rgba(4,5,6,0.9)";
     ctx.fillRect(cx - pad, cy - pad, pad * 2, pad * 2);
     for (let y = -pad; y <= pad; y += 16) {
       for (let x = -pad; x <= pad; x += 16) {
         const e = Math.max(Math.abs(x), Math.abs(y)) / pad;
         const a = 0.28 * (1 - Math.pow(e, 3));
-        ctx.fillStyle = `rgba(150,158,166,${a})`;
+        ctx.fillStyle = ink(a);
         ctx.fillRect(cx + x - 2.5, cy + y - 2.5, 5, 5);
       }
     }
@@ -272,12 +289,12 @@ const buildHud = (pal: HudPalette) => {
         const rot = ([x, y]: [number, number]): [number, number] =>
           side === 0 ? [cx + x, cy - y] : side === 1 ? [cx + y, cy + x] : side === 2 ? [cx - x, cy + y] : [cx - y, cy - x];
         const P = pts.map(rot);
-        ctx.strokeStyle = "rgba(120,236,226,0.95)";
+        ctx.strokeStyle = hexA(pal.trace, 0.95);
         ctx.beginPath();
         P.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
         ctx.stroke();
         const [ex, ey] = P[P.length - 1];
-        ctx.fillStyle = trnd() < 0.6 ? "#A8FFF0" : white;
+        ctx.fillStyle = trnd() < 0.6 ? pal.traceDot : white;
         ctx.beginPath();
         ctx.arc(ex, ey, 12, 0, Math.PI * 2);
         ctx.fill();
@@ -285,26 +302,26 @@ const buildHud = (pal: HudPalette) => {
     }
     // soft shadow under the raised chip
     const sh = ctx.createRadialGradient(cx + 40, cy + 60, 50, cx + 40, cy + 60, 520);
-    sh.addColorStop(0, "rgba(0,0,0,0.85)");
-    sh.addColorStop(1, "rgba(0,0,0,0)");
+    sh.addColorStop(0, pal.light ? hexA(pal.line, 0.3) : "rgba(0,0,0,0.85)");
+    sh.addColorStop(1, pal.light ? hexA(pal.line, 0) : "rgba(0,0,0,0)");
     ctx.fillStyle = sh;
     ctx.fillRect(cx - 600, cy - 600, 1300, 1300);
     // ANALYSIS DATA panel (static filler)
     ctx.fillStyle = white;
     ctx.font = "500 64px Rajdhani";
     ctx.fillText("ANALYSIS DATA N", analysis.x + 60, analysis.y + 80);
-    ctx.fillStyle = "#3AE8D0";
+    ctx.fillStyle = pal.accent;
     ctx.fillRect(analysis.x + 10, analysis.y + 130, 22, 22);
     ctx.fillStyle = white;
     ctx.font = "500 56px Rajdhani";
     ctx.fillText("Data Sector : 001", analysis.x + 60, analysis.y + 160);
-    ctx.fillStyle = "#E8963A";
+    ctx.fillStyle = pal.amber;
     ctx.fillRect(analysis.x + 560, analysis.y + 125, 12, 36);
     ctx.font = "400 26px 'JetBrains Mono'";
     ctx.fillStyle = grey;
     for (let k = 0; k < 4; k++) ctx.fillText(digits(28, 91, k), analysis.x + 60, analysis.y + 220 + k * 36);
     // globe ring on the plate
-    ctx.strokeStyle = "rgba(170,178,186,0.3)";
+    ctx.strokeStyle = ink(0.3);
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.ellipse(globeZone.x + 850, globeZone.y + 550, 600, 600, 0, 0, Math.PI * 2);
@@ -329,12 +346,27 @@ const buildHud = (pal: HudPalette) => {
 
 // ---------- materials ----------
 
-const hudMaterial = (shared: Shared, map: THREE.Texture, delay: THREE.Texture) =>
+// Theme uniforms shared by the HUD materials. uLight = 0 keeps the graphite
+// formulas exactly; uLight = 1 switches to dark ink on a light plate.
+type Theme = {
+  uLight: THREE.IUniform<number>;
+  uBg: THREE.IUniform<THREE.Color>;
+  uPanel: THREE.IUniform<THREE.Color>;
+  uInk: THREE.IUniform<THREE.Color>;
+};
+const makeTheme = (pal: HudPalette): Theme => ({
+  uLight: { value: pal.light ? 1 : 0 },
+  uBg: { value: lin(pal.bg) },
+  uPanel: { value: lin(pal.panel) },
+  uInk: { value: lin(pal.white) },
+});
+
+const hudMaterial = (shared: Shared, th: Theme, map: THREE.Texture, delay: THREE.Texture) =>
   new THREE.ShaderMaterial({
-    uniforms: { ...shared, tMap: { value: map }, tDelay: { value: delay }, uReveal: { value: 0 } },
+    uniforms: { ...shared, ...th, tMap: { value: map }, tDelay: { value: delay }, uReveal: { value: 0 } },
     vertexShader: STD_VERT,
     fragmentShader: /* glsl */ `
-      uniform sampler2D tMap, tDelay; uniform float uReveal;
+      uniform sampler2D tMap, tDelay; uniform float uReveal, uLight; uniform vec3 uBg;
       varying vec2 vUv; varying float vDepth;
       ${HASH}
       ${DOF_UNIFORMS}
@@ -347,23 +379,26 @@ const hudMaterial = (shared: Shared, map: THREE.Texture, delay: THREE.Texture) =
         float fl = 1.0 - 0.5 * step(0.5, hash33u(uvec3(uvec2(vUv * 40.0), uint(uReveal * 60.0))).x) * (1.0 - smoothstep(0.0, 0.08, uReveal - d * 0.75 - 0.25)) * step(d * 0.75, uReveal);
         // fade to black at the plate's far edges
         float edge = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.92, vUv.x) * smoothstep(0.0, 0.06, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
-        gl_FragColor = vec4(c.rgb * on * fl * edge, 1.0);
+        // graphite fades up from black; the light theme fades up from its plate
+        vec3 col = uLight > 0.5 ? mix(uBg, c.rgb, on * fl * edge) : c.rgb * on * fl * edge;
+        gl_FragColor = vec4(col, 1.0);
       }`,
   });
 
-const overlayMaterial = (shared: Shared, map: THREE.Texture) =>
+const overlayMaterial = (shared: Shared, th: Theme, map: THREE.Texture) =>
   new THREE.ShaderMaterial({
-    uniforms: { ...shared, tMap: { value: map }, uOpacity: { value: 0 } },
+    uniforms: { ...shared, ...th, tMap: { value: map }, uOpacity: { value: 0 } },
     vertexShader: STD_VERT,
     fragmentShader: /* glsl */ `
-      uniform sampler2D tMap; uniform float uOpacity;
+      uniform sampler2D tMap; uniform float uOpacity, uLight;
       varying vec2 vUv; varying float vDepth;
       ${HASH}
       ${DOF_UNIFORMS}
       ${DOF_TEXTURE}
       void main() {
         vec4 c = dofTexture(tMap, vUv, cocFrac(vDepth) * uRes.y);
-        gl_FragColor = c * uOpacity * vec4(vec3(1.25), 1.0);
+        // white text glows a little on graphite; dark ink stays flat on light
+        gl_FragColor = c * uOpacity * vec4(vec3(uLight > 0.5 ? 1.0 : 1.25), 1.0);
       }`,
     ...premulBlend,
     polygonOffset: true,
@@ -371,12 +406,12 @@ const overlayMaterial = (shared: Shared, map: THREE.Texture) =>
     polygonOffsetUnits: -2,
   });
 
-const meterMaterial = (shared: Shared, mint: THREE.Color, bars: number, seed: number, vertical: boolean) =>
+const meterMaterial = (shared: Shared, th: Theme, mint: THREE.Color, bars: number, seed: number, vertical: boolean) =>
   new THREE.ShaderMaterial({
-    uniforms: { ...shared, uMint: { value: mint }, uBars: { value: bars }, uSeed: { value: seed }, uVertical: { value: vertical ? 1 : 0 }, uOpacity: { value: 0 } },
+    uniforms: { ...shared, ...th, uMint: { value: mint }, uBars: { value: bars }, uSeed: { value: seed }, uVertical: { value: vertical ? 1 : 0 }, uOpacity: { value: 0 } },
     vertexShader: STD_VERT,
     fragmentShader: /* glsl */ `
-      uniform vec3 uMint; uniform float uBars, uSeed, uVertical, uOpacity, uTime;
+      uniform vec3 uMint, uPanel; uniform float uBars, uSeed, uVertical, uOpacity, uTime, uLight;
       varying vec2 vUv; varying float vDepth;
       ${HASH}
       ${DOF_UNIFORMS}
@@ -394,7 +429,9 @@ const meterMaterial = (shared: Shared, mint: THREE.Color, bars: number, seed: nu
         float by = smoothstep(0.5 - hb - fw.y * uBars, 0.5 - hb + fw.y * uBars, fy) * (1.0 - smoothstep(0.5 + hb - fw.y * uBars, 0.5 + hb + fw.y * uBars, fy));
         float track = by * 0.12;
         float a = max(bx * by, track);
-        vec3 col = mix(vec3(0.25), uMint * 1.4, step(track + 0.001, bx * by));
+        vec3 col = uLight > 0.5
+          ? mix(uPanel * 0.8, uMint, step(track + 0.001, bx * by))
+          : mix(vec3(0.25), uMint * 1.4, step(track + 0.001, bx * by));
         gl_FragColor = vec4(col * a, a) * uOpacity;
       }`,
     ...premulBlend,
@@ -441,14 +478,14 @@ const drawDyn = (ct: CanvasTex, d: Dyn, frame: number, pal: HudPalette) => {
         if (y > H - 10) break;
         ctx.fillText(`${digits(4, d.seed, r, step)}  ${digits(2, d.seed, r)}  ${digits(3, d.seed + 2, r, step)}  ${digits(10, d.seed + 3, r)}`, 120, y);
         // cyan triangle bullets
-        ctx.fillStyle = "#5AE8F0";
+        ctx.fillStyle = pal.accent;
         ctx.beginPath();
         ctx.moveTo(56, y - 28);
         ctx.lineTo(84, y - 14);
         ctx.lineTo(56, y);
         ctx.fill();
       }
-      ctx.strokeStyle = "rgba(200,206,212,0.6)";
+      ctx.strokeStyle = hexA(pal.line, 0.6);
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(60, 150);
@@ -456,7 +493,7 @@ const drawDyn = (ct: CanvasTex, d: Dyn, frame: number, pal: HudPalette) => {
       ctx.stroke();
       // cursor tag
       if (hash(d.seed, step) > 0.5) {
-        ctx.fillStyle = "#E8A040";
+        ctx.fillStyle = pal.amber;
         ctx.fillRect(W - 60, H - 100, 14, 40);
       }
     }
@@ -479,7 +516,7 @@ const chipFace = () => {
   return ct;
 };
 
-const chipMesh = (shared: Shared, size: number) => {
+const chipMesh = (shared: Shared, th: Theme, size: number) => {
   const r = size * 0.12;
   const s = new THREE.Shape();
   const h = size / 2;
@@ -495,7 +532,7 @@ const chipMesh = (shared: Shared, size: number) => {
   const g = new THREE.ExtrudeGeometry(s, { depth: size * 0.025, bevelEnabled: true, bevelThickness: size * 0.025, bevelSize: size * 0.025, bevelSegments: 4, curveSegments: 10 });
   const face = chipFace();
   const m = new THREE.ShaderMaterial({
-    uniforms: { ...shared, tFace: { value: face.tex }, uSize: { value: size }, uTop: { value: size * 0.05 }, uOn: { value: 0 } },
+    uniforms: { ...shared, ...th, tFace: { value: face.tex }, uSize: { value: size }, uTop: { value: size * 0.05 }, uOn: { value: 0 } },
     vertexShader: /* glsl */ `
       uniform float uSize;
       varying vec2 vFace; varying vec3 vN; varying float vZ; varying vec3 vView;
@@ -508,7 +545,7 @@ const chipMesh = (shared: Shared, size: number) => {
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform sampler2D tFace; uniform float uTop, uOn;
+      uniform sampler2D tFace; uniform float uTop, uOn, uLight; uniform vec3 uInk;
       varying vec2 vFace; varying vec3 vN; varying float vZ; varying vec3 vView;
       void main() {
         vec3 n = normalize(vN);
@@ -522,6 +559,17 @@ const chipMesh = (shared: Shared, size: number) => {
         topCol = mix(topCol, vec3(0.03), txt * top);
         vec3 side = vec3(0.32) * (0.5 + 0.5 * max(dot(n, L), 0.0)) + spec * 0.3;
         vec3 col = mix(side, topCol, top);
+        if (uLight > 0.5) {
+          // light theme: white face, charcoal "AI", charcoal outline and walls
+          float e = min(min(vFace.x, 1.0 - vFace.x), min(vFace.y, 1.0 - vFace.y));
+          float outline = 1.0 - smoothstep(0.012, 0.022, e);
+          vec3 face = mix(vec3(0.97), uInk, txt);
+          face = mix(face, uInk, outline);
+          vec3 wall = mix(uInk, vec3(0.45), 0.35) * (0.7 + 0.3 * max(dot(n, L), 0.0));
+          col = mix(wall, face, top);
+          gl_FragColor = vec4(col * uOn, uOn);
+          return;
+        }
         gl_FragColor = vec4(col * 1.15 * uOn, uOn);
       }`,
     ...premulBlend,
@@ -530,7 +578,7 @@ const chipMesh = (shared: Shared, size: number) => {
   return new THREE.Mesh(g, m);
 };
 
-const globeMesh = (shared: Shared, land: Land) => {
+const globeMesh = (shared: Shared, th: Theme, land: Land) => {
   const W = 2048;
   const H = 1024;
   const mask = landMask(land, W, H);
@@ -555,7 +603,7 @@ const globeMesh = (shared: Shared, land: Land) => {
   });
   ct.tex.wrapS = THREE.RepeatWrapping;
   const m = new THREE.ShaderMaterial({
-    uniforms: { ...shared, tLand: { value: ct.tex }, uRot: { value: 0 }, uOn: { value: 0 } },
+    uniforms: { ...shared, ...th, tLand: { value: ct.tex }, uRot: { value: 0 }, uOn: { value: 0 } },
     vertexShader: /* glsl */ `
       varying vec3 vP; varying vec3 vN; varying vec3 vView; varying float vDepth;
       void main() {
@@ -567,7 +615,7 @@ const globeMesh = (shared: Shared, land: Land) => {
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform sampler2D tLand; uniform float uRot, uOn;
+      uniform sampler2D tLand; uniform float uRot, uOn, uLight; uniform vec3 uInk, uPanel;
       varying vec3 vP; varying vec3 vN; varying vec3 vView; varying float vDepth;
       ${HASH}
       ${DOF_UNIFORMS}
@@ -597,6 +645,12 @@ const globeMesh = (shared: Shared, land: Land) => {
         float rim = pow(1.0 - ndv, 3.0);
         float sp = step(0.7, hash33u(uvec3(uvec2(gl_FragCoord.xy * 0.5), 3u)).x);
         col += vec3(1.3) * rim * (0.3 + 1.4 * sp);
+        if (uLight > 0.5) {
+          // charcoal wireframe globe on a pale disc
+          col = mix(uPanel, uInk, clamp(land * light * 0.75, 0.0, 1.0));
+          col = mix(col, uInk, clamp(gl * 7.0, 0.0, 1.0));
+          col = mix(col, uInk, clamp(rim * (0.6 + 0.4 * sp), 0.0, 1.0));
+        }
         float edgeSoft = 0.05 + coc * 0.004;
         float a = smoothstep(0.0, edgeSoft, ndv) * uOn;
         gl_FragColor = vec4(col * a, a);
@@ -611,6 +665,7 @@ const globeMesh = (shared: Shared, land: Land) => {
 
 const build = (land: Land, pal: HudPalette) => {
   const shared = makeShared();
+  const th = makeTheme(pal);
   const group = new THREE.Group();
   const camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 100);
   const hud = buildHud(pal);
@@ -621,7 +676,7 @@ const build = (land: Land, pal: HudPalette) => {
   group.add(plate);
   const toLocal = (x: number, y: number) => new THREE.Vector3(x / PX - PW / 2, PH / 2 - y / PX, 0);
 
-  const hudMat = hudMaterial(shared, hud.base.tex, hud.delayTex.tex);
+  const hudMat = hudMaterial(shared, th, hud.base.tex, hud.delayTex.tex);
   const base = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), hudMat);
   base.renderOrder = -10;
   plate.add(base);
@@ -629,7 +684,7 @@ const build = (land: Land, pal: HudPalette) => {
   const overlays: { ct: CanvasTex; d: Dyn; mat: THREE.ShaderMaterial }[] = [];
   for (const d of hud.dyn) {
     const ct = makeCanvasTex(Math.round(d.rect.w), Math.round(d.rect.h), true);
-    const mat = overlayMaterial(shared, ct.tex);
+    const mat = overlayMaterial(shared, th, ct.tex);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(d.rect.w / PX, d.rect.h / PX), mat);
     mesh.position.copy(toLocal(d.rect.x + d.rect.w / 2, d.rect.y + d.rect.h / 2)).setZ(0.002);
     mesh.renderOrder = -5;
@@ -638,7 +693,7 @@ const build = (land: Land, pal: HudPalette) => {
   }
   const meterMats: { mat: THREE.ShaderMaterial; delay: number }[] = [];
   for (const m of hud.meters) {
-    const mat = meterMaterial(shared, lin(pal.mint), m.bars, m.seed, m.vertical);
+    const mat = meterMaterial(shared, th, lin(pal.mint), m.bars, m.seed, m.vertical);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(m.rect.w / PX, m.rect.h / PX), mat);
     mesh.position.copy(toLocal(m.rect.x + m.rect.w / 2, m.rect.y + m.rect.h / 2)).setZ(0.002);
     mesh.renderOrder = -5;
@@ -647,12 +702,12 @@ const build = (land: Land, pal: HudPalette) => {
   }
 
   const chipSize = CHIP_PX / PX;
-  const chip = chipMesh(shared, chipSize);
+  const chip = chipMesh(shared, th, chipSize);
   chip.position.copy(toLocal(CHIP_X, CHIP_Y)).setZ(0.12);
   chip.renderOrder = 1;
   plate.add(chip);
 
-  const globe = globeMesh(shared, land);
+  const globe = globeMesh(shared, th, land);
   const gz = hud.globeZone;
   globe.position.copy(toLocal(gz.x + 850, gz.y + 550)).setZ(0.3);
   globe.scale.set(1.1, 1.1, 0.34);
@@ -700,13 +755,24 @@ const build = (land: Land, pal: HudPalette) => {
   return { group, camera, shared, update };
 };
 
-const post: PostParams = {
+const graphitePost: PostParams = {
   exposure: 1.0,
   bloomStrength: 1.0,
   bloomThreshold: 0.45,
   bloomKnee: 0.4,
   vignette: 0.45,
   grain: 0.015,
+};
+// Light theme: almost no bloom (it washes out white), no tonemap shoulder so
+// the off-white plate stays at its colour, a whisper of vignette.
+const lightPost: PostParams = {
+  exposure: 1.0,
+  bloomStrength: 0.12,
+  bloomThreshold: 0.98,
+  bloomKnee: 0.1,
+  vignette: 0.12,
+  grain: 0.015,
+  tonemap: false,
 };
 
 const Scene: React.FC<{ land: Land; palette: HudPalette }> = ({ land, palette }) => {
@@ -715,7 +781,7 @@ const Scene: React.FC<{ land: Land; palette: HudPalette }> = ({ land, palette })
   const built = useMemo(() => build(land, palette), [land, palette]);
   built.update(frame, fps);
   return (
-    <Stage camera={built.camera} post={post} clear={palette.bg} shared={built.shared}>
+    <Stage camera={built.camera} post={palette.light ? lightPost : graphitePost} clear={palette.bg} shared={built.shared}>
       <primitive object={built.group} />
     </Stage>
   );

@@ -282,7 +282,7 @@ const ringMaterial = (shared: Shared, pal: IrisPalette) =>
 
 const planetMaterial = (shared: Shared, pal: IrisPalette) =>
   new THREE.ShaderMaterial({
-    uniforms: { ...shared, uOuter: { value: lin(pal.rimOuter) }, uInner: { value: lin(pal.rimInner) } },
+    uniforms: { ...shared, uOuter: { value: lin(pal.rimOuter) }, uInner: { value: lin(pal.rimInner) }, uSide: { value: 1 } },
     vertexShader: /* glsl */ `
       varying vec3 vN; varying vec3 vV;
       void main() {
@@ -292,13 +292,13 @@ const planetMaterial = (shared: Shared, pal: IrisPalette) =>
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uOuter, uInner;
+      uniform vec3 uOuter, uInner; uniform float uSide; // which limb is lit (+1 right, -1 left)
       varying vec3 vN; varying vec3 vV;
       void main() {
         float ndv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
         float f = 1.0 - ndv;
         float rim = pow(f, 4.5);
-        float side = smoothstep(-0.15, 0.75, normalize(vN).x);
+        float side = smoothstep(-0.15, 0.75, uSide * normalize(vN).x);
         vec3 col = mix(uInner, uOuter, smoothstep(0.6, 0.95, f)) * (rim * 3.6 + pow(f, 10.0) * 3.0) * side;
         col += vec3(0.0008, 0.002, 0.004);
         gl_FragColor = vec4(col, 1.0);
@@ -307,7 +307,7 @@ const planetMaterial = (shared: Shared, pal: IrisPalette) =>
 
 const haloMaterial = (pal: IrisPalette) =>
   new THREE.ShaderMaterial({
-    uniforms: { uOuter: { value: lin(pal.rimOuter) }, uInner: { value: lin(pal.rimInner) } },
+    uniforms: { uOuter: { value: lin(pal.rimOuter) }, uInner: { value: lin(pal.rimInner) }, uSide: { value: 1 } },
     vertexShader: /* glsl */ `
       varying vec3 vN; varying vec3 vV;
       void main() {
@@ -317,20 +317,25 @@ const haloMaterial = (pal: IrisPalette) =>
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uOuter, uInner;
+      uniform vec3 uOuter, uInner; uniform float uSide; // which limb is lit (+1 right, -1 left)
       varying vec3 vN; varying vec3 vV;
       void main() {
         // back faces of a slightly larger shell: glow fading outward
         float ndv = abs(dot(normalize(vN), normalize(vV)));
         float g = pow(smoothstep(0.0, 0.42, ndv), 2.5);
-        float side = smoothstep(-0.1, 0.8, normalize(vN).x);
+        float side = smoothstep(-0.1, 0.8, uSide * normalize(vN).x);
         gl_FragColor = vec4(mix(uInner, uOuter, 0.75) * pow(g, 2.0) * 1.2 * side, 1.0);
       }`,
     ...addBlend,
     side: THREE.BackSide,
   });
 
-const build = (pal: IrisPalette) => {
+// side = 1: ring left of centre, planet arc on the right (as the reference).
+// side = -1: the scene layout is mirrored — ring, planet and camera path all
+// reflect across x = 0. Strand data, colours, seeds and timing are unchanged.
+export type IrisLayout = { side: 1 | -1 };
+
+const build = (pal: IrisPalette, layout: IrisLayout) => {
   const shared = makeShared();
   const group = new THREE.Group();
   const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 200);
@@ -340,16 +345,20 @@ const build = (pal: IrisPalette) => {
   const planet = new THREE.Mesh(new THREE.SphereGeometry(PR, 128, 96), planetMaterial(shared, pal));
   planet.position.set(0.5, -0.1, -11.2);
   planet.renderOrder = -5;
-  group.add(planet);
+  const world = new THREE.Group();
+  world.scale.x = layout.side; // mirrors every position in the scene
+  group.add(world);
+  world.add(planet);
   const halo = new THREE.Mesh(new THREE.SphereGeometry(PR * 1.075, 128, 96), haloMaterial(pal));
   halo.position.copy(planet.position);
   halo.renderOrder = -4;
-  group.add(halo);
+  world.add(halo);
+  for (const m of [planet.material, halo.material] as THREE.ShaderMaterial[]) m.uniforms.uSide.value = layout.side;
 
   // the iris, tilted ~35° off-axis
   const iris = new THREE.Group();
   iris.rotation.set(THREE.MathUtils.degToRad(10), THREE.MathUtils.degToRad(60), THREE.MathUtils.degToRad(12));
-  group.add(iris);
+  world.add(iris);
   const ringMat = ringMaterial(shared, pal);
   const ring = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5), ringMat);
   ring.renderOrder = 1;
@@ -379,8 +388,8 @@ const build = (pal: IrisPalette) => {
     const k = easeInOutSine(progress(t, 0, 15));
     const dist = 9.2 - 3.9 * k;
     const tx = 1.25 - 1.15 * k;
-    camera.position.set(tx - 0.35, 0.05, dist);
-    camera.lookAt(tx, 0.0, 0);
+    camera.position.set(layout.side * (tx - 0.35), 0.05, dist);
+    camera.lookAt(layout.side * tx, 0.0, 0);
     camera.updateMatrixWorld();
     shared.uDof.value.set(dist, 0.02, 0.025);
   };
@@ -397,10 +406,10 @@ const post: PostParams = {
   grain: 0.015,
 };
 
-const Scene: React.FC<{ palette: IrisPalette }> = ({ palette }) => {
+const Scene: React.FC<{ palette: IrisPalette; layout: IrisLayout }> = ({ palette, layout }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const built = useMemo(() => build(palette), [palette]);
+  const built = useMemo(() => build(palette, layout), [palette, layout]);
   built.update(frame, fps);
   return (
     <Stage camera={built.camera} post={post} clear={palette.bg} shared={built.shared}>
@@ -409,7 +418,7 @@ const Scene: React.FC<{ palette: IrisPalette }> = ({ palette }) => {
   );
 };
 
-export const IrisBurst: React.FC<{ palette: IrisPalette }> = ({ palette }) => {
+export const IrisBurst: React.FC<{ palette: IrisPalette; layout?: IrisLayout }> = ({ palette, layout = { side: 1 } }) => {
   const assets = useAssets(false);
-  return <AbsoluteFill style={{ backgroundColor: "#000" }}>{assets ? <Scene palette={palette} /> : null}</AbsoluteFill>;
+  return <AbsoluteFill style={{ backgroundColor: "#000" }}>{assets ? <Scene palette={palette} layout={layout} /> : null}</AbsoluteFill>;
 };

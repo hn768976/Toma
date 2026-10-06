@@ -14,7 +14,7 @@ export const RemotionRoot: React.FC = () => (
         fps={30}
         width={3840}
         height={2160}
-        defaultProps={{ palette: v.palette }}
+        defaultProps={v.layout ? { palette: v.palette, layout: v.layout } : { palette: v.palette }}
       />
     ))}
   </>

@@ -13,6 +13,15 @@ import { makeShared, Shared, Stage } from "../lib/Stage";
 // Look 1 — AI Agents Chip. A glowing "AI" chip with circuit traces over a
 // dotted Natural Earth map; glitch build-in 1–3.5s, then a live hold.
 
+// Framing: where the chip group sits in the frame. The scene is never
+// mirrored; the camera is offset so the chip lands at chipScreenX.
+export type ChipLayout = {
+  chipScreenX: number; // 0..1 across the frame (0.5 = centred)
+  mapShiftX: number; // world units, slides the map under the chip
+  rightDim: number; // rain / speck brightness on the right side (1 = none)
+};
+export const centredChip: ChipLayout = { chipScreenX: 0.5, mapShiftX: 0, rightDim: 1 };
+
 export type ChipPalette = {
   bgLow: string;
   bgHigh: string;
@@ -442,6 +451,7 @@ const rainMaterial = (shared: Shared, glyphs: THREE.Texture, pal: ChipPalette, c
     uniforms: {
       ...shared,
       tGlyph: { value: glyphs },
+      uRightDim: { value: 1 },
       uColor: { value: lin(pal.rain) },
       uGrid: { value: new THREE.Vector2(cols, rows) },
       uSeed: { value: seed },
@@ -450,7 +460,7 @@ const rainMaterial = (shared: Shared, glyphs: THREE.Texture, pal: ChipPalette, c
     },
     vertexShader: STD_VERT,
     fragmentShader: /* glsl */ `
-      uniform sampler2D tGlyph; uniform vec3 uColor; uniform vec2 uGrid; uniform float uSeed, uAmp, uFade, uTime;
+      uniform sampler2D tGlyph; uniform vec3 uColor; uniform vec2 uGrid; uniform float uSeed, uAmp, uFade, uTime, uRightDim;
       varying vec2 vUv; varying float vDepth;
       ${HASH}
       ${DOF_UNIFORMS}
@@ -475,6 +485,7 @@ const rainMaterial = (shared: Shared, glyphs: THREE.Texture, pal: ChipPalette, c
         float trail = behind > 0.0 ? exp(-behind / (8.0 + hc.x * 18.0)) : 0.0;
         float base = 0.18 + 0.2 * hash33u(uvec3(uint(c + 5000.0), uint(r + 90000.0), 9u)).x;
         float a = gl * (base + trail * 1.4) * uAmp * uFade / (1.0 + coc * 0.08);
+        a *= mix(1.0, uRightDim, smoothstep(0.42, 0.62, gl_FragCoord.x / uRes.x));
         gl_FragColor = vec4(uColor * a, 0.0);
       }`,
     ...addBlend,
@@ -503,7 +514,7 @@ const speckGeometry = (n: number) => {
 
 const speckMaterial = (shared: Shared, pal: ChipPalette) =>
   new THREE.ShaderMaterial({
-    uniforms: { ...shared, uColor: { value: lin(pal.speck) }, uAccent: { value: lin(pal.accent) }, uFade: { value: 0 }, uFovScale: { value: 1 } },
+    uniforms: { ...shared, uColor: { value: lin(pal.speck) }, uAccent: { value: lin(pal.accent) }, uFade: { value: 0 }, uFovScale: { value: 1 }, uRightDim: { value: 1 } },
     vertexShader: /* glsl */ `
       attribute vec4 aData;
       uniform float uTime, uFovScale;
@@ -526,7 +537,8 @@ const speckMaterial = (shared: Shared, pal: ChipPalette) =>
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uColor, uAccent; uniform float uFade;
+      uniform vec3 uColor, uAccent; uniform float uFade, uRightDim;
+      uniform vec2 uRes;
       varying float vAlpha; varying float vWarm; varying float vSoft;
       void main() {
         vec2 p = gl_PointCoord * 2.0 - 1.0;
@@ -535,7 +547,8 @@ const speckMaterial = (shared: Shared, pal: ChipPalette) =>
         float shape = 1.0 - smoothstep(mix(0.75, 0.35, clamp(vSoft, 0.0, 1.0)), 1.0, sq);
         vec3 c = mix(uColor, uAccent, vWarm) * 2.4;
         if (vWarm > 0.5 && vSoft > 0.3) c *= 0.0;
-        gl_FragColor = vec4(c * shape * vAlpha * uFade, 0.0);
+        float side = mix(1.0, uRightDim, smoothstep(0.42, 0.62, gl_FragCoord.x / uRes.x));
+        gl_FragColor = vec4(c * shape * vAlpha * uFade * side, 0.0);
       }`,
     ...addBlend,
   });
@@ -549,7 +562,7 @@ type Built = {
   update: (frame: number, fps: number) => void;
 };
 
-const build = (land: Land, pal: ChipPalette): Built => {
+const build = (land: Land, pal: ChipPalette, layout: ChipLayout): Built => {
   const shared = makeShared();
   const group = new THREE.Group();
   const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 100);
@@ -568,7 +581,7 @@ const build = (land: Land, pal: ChipPalette): Built => {
   const dotMap = drawDotMap(land);
   const mapMat = mapMaterial(shared, dotMap.tex, pal);
   const mapMesh = new THREE.Mesh(marginPlane(MAP_W, MAP_W / MAP_ASPECT, 0.02), mapMat);
-  mapMesh.position.set(-0.05, -0.36, -0.45);
+  mapMesh.position.set(-0.05 + layout.mapShiftX, -0.36, -0.45);
   mapMesh.renderOrder = -5;
   group.add(mapMesh);
 
@@ -648,6 +661,7 @@ const build = (land: Land, pal: ChipPalette): Built => {
   group.add(rainNear);
 
   const glitchMats = [mapMat, traceMat, chipMat];
+  for (const m of [rainFar.material, rainNear.material, specks.material] as THREE.ShaderMaterial[]) m.uniforms.uRightDim.value = layout.rightDim;
   const fovScale = 1 / (2 * Math.tan(THREE.MathUtils.degToRad(15)));
   (specks.material as THREE.ShaderMaterial).uniforms.uFovScale.value = fovScale;
 
@@ -705,8 +719,11 @@ const build = (land: Land, pal: ChipPalette): Built => {
     });
 
     const drift = Math.sin(t * 0.25) * 0.06;
-    camera.position.set(drift, -0.43 + 0.03 * Math.sin(t * 0.19), camZ);
-    camera.lookAt(drift * 0.6, -0.43, 0);
+    // offset the camera so the chip (at x = 0) lands at layout.chipScreenX
+    const halfW = camZ * Math.tan(THREE.MathUtils.degToRad(15)) * (16 / 9);
+    const camX = (0.5 - layout.chipScreenX) * 2 * halfW;
+    camera.position.set(camX + drift, -0.43 + 0.03 * Math.sin(t * 0.19), camZ);
+    camera.lookAt(camX + drift * 0.6, -0.43, 0);
     camera.updateMatrixWorld();
   };
 
@@ -722,10 +739,10 @@ const post: PostParams = {
   grain: 0.015,
 };
 
-const Scene: React.FC<{ land: Land; palette: ChipPalette }> = ({ land, palette }) => {
+const Scene: React.FC<{ land: Land; palette: ChipPalette; layout: ChipLayout }> = ({ land, palette, layout }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const built = useMemo(() => build(land, palette), [land, palette]);
+  const built = useMemo(() => build(land, palette, layout), [land, palette, layout]);
   built.update(frame, fps);
   return (
     <Stage camera={built.camera} post={post} clear={palette.bgLow} shared={built.shared}>
@@ -734,11 +751,11 @@ const Scene: React.FC<{ land: Land; palette: ChipPalette }> = ({ land, palette }
   );
 };
 
-export const AIAgentsChip: React.FC<{ palette: ChipPalette }> = ({ palette }) => {
+export const AIAgentsChip: React.FC<{ palette: ChipPalette; layout?: ChipLayout }> = ({ palette, layout = centredChip }) => {
   const assets = useAssets(true);
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {assets?.land ? <Scene land={assets.land} palette={palette} /> : null}
+      {assets?.land ? <Scene land={assets.land} palette={palette} layout={layout} /> : null}
     </AbsoluteFill>
   );
 };
