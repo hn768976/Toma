@@ -59,14 +59,14 @@ const makeRain = (seed: number, gapMin: number, gapRnd: number, sizeMin: number,
       speed: 6 + r() * 12,
       offset: r() * 5000,
       len: 18 + Math.floor(r() * 40),
-      alpha: 0.25 + r() * 0.55 * (0.5 + edge),
+      alpha: 0.35 + r() * 0.6 * (0.55 + edge),
       size: sizeMin + Math.floor(r() * sizeRnd),
     });
   }
   return out;
 };
-const RAIN_FAR = makeRain(7331, 12, 12, 16, 7, 0.7);
-const RAIN_NEAR = makeRain(9137, 70, 90, 30, 14, 0.4);
+const RAIN_FAR = makeRain(7331, 12, 10, 20, 8, 0.9);
+const RAIN_NEAR = makeRain(9137, 40, 50, 30, 16, 0.75);
 
 // Small square specks (mid) and big soft bokeh squares (foreground).
 const SPECKS = (() => {
@@ -192,7 +192,7 @@ const drawRain = (ctx: CanvasRenderingContext2D, cols: RainCol[], frame: number,
       if (y < -40 || y > H + 40) continue;
       const slot = Math.floor(y / step);
       // brighter toward the bottom of the frame, like the reference
-      const lower = 0.55 + 0.6 * (y / H);
+      const lower = 0.75 + 0.4 * (y / H);
       const ch = hash(seed, ci, slot, Math.floor(frame / 5) + k) < 0.5 ? "0" : "1";
       const fade = k === 0 ? 1 : Math.pow(1 - k / col.len, 1.2) * 0.85;
       ctx.fillStyle = k === 0 ? "#D2F4FF" : k < 4 ? "#86DCFF" : "#56B4E6";
@@ -258,9 +258,10 @@ export const BoardCanvas: React.FC<{ row: BoardRow; lift: number }> = ({ row, li
         const pulse = 0.9 + 0.1 * Math.sin((frame / 60) * Math.PI * 2);
         ctx.globalAlpha = clamp01(glowIn * 0.55 * pulse);
         ctx.drawImage(getGlow(2400 * s, 2000 * s, [20, 150, 200]), CENTER.x - 1200, CENTER.y - 1000, 2400, 2000);
-        ctx.globalAlpha = clamp01(glowIn * 0.85 * pulse);
-        ctx.drawImage(getGlow(1500 * s, 90 * s, [70, 220, 255]), CENTER.x - 750, CENTER.y + 160 - 45, 1500, 90);
-        ctx.drawImage(getGlow(560 * s, 34 * s, [200, 250, 255]), CENTER.x - 280, CENTER.y + 160 - 17, 560, 34);
+        ctx.globalAlpha = clamp01(glowIn * pulse);
+        ctx.drawImage(getGlow(1500 * s, 110 * s, [90, 230, 255]), CENTER.x - 750, CENTER.y + 160 - 55, 1500, 110);
+        ctx.drawImage(getGlow(1320 * s, 40 * s, [160, 240, 255]), CENTER.x - 660, CENTER.y + 160 - 20, 1320, 40);
+        ctx.drawImage(getGlow(700 * s, 30 * s, [230, 252, 255]), CENTER.x - 350, CENTER.y + 160 - 15, 700, 30);
         ctx.drawImage(getGlow(500 * s, 260 * s, [60, 200, 255]), CENTER.x - 250, CENTER.y + 90, 500, 260);
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = 1;
@@ -285,10 +286,10 @@ export const BoardCanvas: React.FC<{ row: BoardRow; lift: number }> = ({ row, li
         }
         const tw = 0.88 + 0.12 * Math.sin(frame * 0.07 + cell.i * 0.4 + cell.j * 0.7);
         // fade the lower map into the rain, like the reference
-        const low = 1 - 0.45 * clamp01((cell.y - 1350) / 600);
+        const low = 1;
         const a = (0.6 + 0.5 * cell.shade) * alpha * tw * low;
         ctx.globalAlpha = Math.min(1, a + flash * 0.5);
-        ctx.fillStyle = flash > 0.3 ? "#9FE6FF" : cell.shade > 0.78 ? "#7FA9C8" : row.map;
+        ctx.fillStyle = flash > 0.3 ? "#9FE6FF" : row.map;
         ctx.fillRect(cell.x - 4.5 + ox, cell.y - 4.5, 9, 9);
       }
       for (let i = 0; i < SPECKS.length; i++) {
@@ -326,8 +327,8 @@ export const BoardCanvas: React.FC<{ row: BoardRow; lift: number }> = ({ row, li
   return (
     <>
       <canvas ref={backRef} style={layerStyle(2)} />
-      <canvas ref={midRef} style={layerStyle(2.5)} />
-      <canvas ref={frontRef} style={layerStyle(9)} />
+      <canvas ref={midRef} style={layerStyle(0.8)} />
+      <canvas ref={frontRef} style={layerStyle(12)} />
     </>
   );
 };
