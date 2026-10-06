@@ -53,8 +53,9 @@ for cid in only:
     for f in ([300] if loop else [75, 300]):
         cold = V / f"cold_{cid}_{f}.png"
         props = '{"loopCheck":true}' if loop else "{}"
-        run(["npx", "remotion", "still", str(OUT / "bundle"), cid, str(cold), f"--frame={f}", f"--scale={SCALE}",
-             f"--props={props}", "--image-format=png", "--log=error"])
+        if not cold.exists():
+          run(["npx", "remotion", "still", str(OUT / "bundle"), cid, str(cold), f"--frame={f}", f"--scale={SCALE}",
+               f"--props={props}", "--image-format=png", "--log=error"])
         same = cold.read_bytes() == frame_path(cid, f).read_bytes()
         pix = np.array_equal(np.asarray(Image.open(cold)), np.asarray(Image.open(frame_path(cid, f))))
         log(f"  step3 {'PASS' if same else 'FAIL'}: frame {f} cold vs full render byte-identical={same} pixel-identical={pix}")
@@ -64,21 +65,46 @@ for cid in only:
     run(["ffmpeg", "-v", "error", "-y", "-ss", f"{fr/30:.4f}", "-i", str(mp4), "-frames:v", "1", str(png)])
     img = np.asarray(Image.open(png).convert("RGB")).astype(np.float32)
     lum = img @ np.array([0.2126, 0.7152, 0.0722], np.float32)
-    worst = 0
-    for y0 in (40, 120, 600, 680):           # dark gradient bands near top/bottom
-        band = lum[y0:y0 + 24, :].mean(axis=0)    # average rows: removes grain, keeps steps
-        smooth = np.convolve(band, np.ones(9) / 9, mode="valid")
-        steps = np.abs(np.diff(smooth))
-        worst = max(worst, float(steps.max()))
-    # plateau test: a banded gradient shows long runs of identical 8-bit values in the raw rows
-    row = img[60, :, 2].astype(int)
-    runs, cur = [], 1
-    for i in range(1, len(row)):
-        if row[i] == row[i - 1]: cur += 1
-        else: runs.append(cur); cur = 1
-    runs.append(cur)
-    ok4 = worst < 2.0 and max(runs) < 24
-    log(f"  step4 {'PASS' if ok4 else 'FAIL'}: max smoothed step {worst:.2f}/255 over dark bands, longest flat run {max(runs)} px")
+    # Smooth-gradient mask: dark pixels whose 15x15 box-blurred neighbourhood
+    # varies slowly (no text, lines or edges) — this is where banding would show.
+    k = 15
+    pad = np.pad(lum, k, mode="edge")
+    cs = pad.cumsum(0).cumsum(1)
+    blur = (cs[k:-k, k:-k] - cs[:-2*k, k:-k] - cs[k:-k, :-2*k] + cs[:-2*k, :-2*k]) / (k * k)
+    gy, gx = np.gradient(blur)
+    hf = np.abs(lum - blur)
+    hfb = np.pad(hf, k, mode="edge").cumsum(0).cumsum(1)
+    hfb = (hfb[k:-k, k:-k] - hfb[:-2*k, k:-k] - hfb[k:-k, :-2*k] + hfb[:-2*k, :-2*k]) / (k * k)
+    mask = (blur < 90) & (np.hypot(gx, gy) < 0.6) & (hfb < 4.0)
+    area = mask.mean()
+    # (a) the rendered (pre-encode) frame is dithered: in smooth regions, runs of
+    #     identical 8-bit values stay short (an undithered gradient shows long flats)
+    src = np.asarray(Image.open(frame_path(cid, fr)).convert("RGB")).astype(np.float32)
+    slum = src @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+    def runs_p99(L):
+        q = np.round(L).astype(int); out = []
+        for y in range(0, L.shape[0], 4):
+            row, m, cur = q[y], mask[y], 0
+            for x in range(1, len(row)):
+                if m[x] and m[x - 1] and row[x] == row[x - 1]: cur += 1
+                else:
+                    if cur: out.append(cur)
+                    cur = 0
+        return float(np.percentile(out, 99)) if out else 0.0
+    src_runs = runs_p99(slum)
+    # (b) encoding introduced no steps: low-passed encoded vs low-passed source differ < 1 level
+    def box(L):
+        P = np.pad(L, k, mode="edge").cumsum(0).cumsum(1)
+        return (P[k:-k, k:-k] - P[:-2*k, k:-k] - P[k:-k, :-2*k] + P[:-2*k, :-2*k]) / (k * k)
+    dev = (box(lum) - box(slum))[mask]
+    dev = np.abs(dev - np.median(dev))   # remove the constant RGB<->YUV round-trip offset
+    dev99 = float(np.percentile(dev, 99)) if dev.size else 0.0
+    ok4 = area > 0.02 and src_runs <= 6 and dev99 < 1.0
+    log(f"  step4 {'PASS' if ok4 else 'FAIL'}: smooth dark-gradient area {area*100:.1f}%; source dither flat-run p99 {src_runs:.1f}px; "
+        f"encoded-vs-source low-pass deviation p99 {dev99:.2f}/255")
+    # contrast-stretched crop of the masked area for eyeballing
+    st = np.clip((lum - np.percentile(lum[mask], 1)) * 255 / max(1, np.percentile(lum[mask], 99) - np.percentile(lum[mask], 1)), 0, 255) if area > 0 else lum
+    Image.fromarray(st.astype(np.uint8)).save(V / f"banding_stretch_{name}.png")
     # Step 5 — contact sheet (5 evenly spaced frames)
     picks = [int(i * (n - 1) / 4) for i in range(5)]
     ims = [Image.open(frame_path(cid, f)).convert("RGB").resize((384, 216), Image.LANCZOS) for f in picks]

@@ -31,6 +31,6 @@ for id in "${IDS[@]}"; do
   pat=$(echo "$first" | sed -E 's/[0-9]+\.png$//')
   digits=$(echo "$first" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
   ffmpeg -v error -y -framerate 30 -start_number 0 -i "out/frames/$id/${pat}%0${digits}d.png" -frames:v $n \
-    -c:v libx264 -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart "out/previews/$name.mp4"
+    -c:v libx264 -crf 16 -tune grain -pix_fmt yuv420p -r 30 -an -movflags +faststart "out/previews/$name.mp4"
   cp "out/frames/$id/${pat}$(printf "%0${digits}d" $still).png" "out/stills/$name.png"
 done
