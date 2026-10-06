@@ -11,8 +11,8 @@ import { useAssets } from "../../lib/useAssets";
 import type { NetworkRow } from "../../versions";
 
 // Panel layout (panel-local units; panel lies on the ground plane) -------------
-const PANEL_W = 6.4;
-const PANEL_H = 4.2;
+const PANEL_W = 5.1;
+const PANEL_H = 3.4;
 const CENTER_R = 0.56;
 const NODE_R = 0.3;
 
@@ -22,9 +22,12 @@ const NODES: { icon: IconName; x: number; y: number }[] = (() => {
   const radial = [1.0, 0.86, 0.78, 0.9, 1.0, 0.98, 0.84, 0.76, 0.88, 0.95];
   return icons.map((icon, i) => {
     const a = (angles[i] * Math.PI) / 180;
-    return { icon, x: Math.cos(a) * 2.5 * radial[i], y: Math.sin(a) * 1.58 * radial[i] };
+    return { icon, x: Math.cos(a) * 2.0 * radial[i], y: Math.sin(a) * 1.3 * radial[i] };
   });
 })();
+
+// Short node-to-node links that make the graph read as a mesh.
+const CHAINS: [number, number][] = [[0, 1], [3, 4], [5, 6], [8, 9], [1, 2]];
 
 // Build-in timing (frames)
 const SPOKE_START = 92;
@@ -73,9 +76,9 @@ const panelCanvas = (row: NetworkRow) => {
   const c = makeCanvas(w, h);
   const ctx = c.getContext("2d")!;
   const g = ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, w * 0.6);
-  g.addColorStop(0, rgba(row.panel, 0.26));
-  g.addColorStop(0.6, rgba(row.panel, 0.14));
-  g.addColorStop(1, rgba(row.panel, 0.08));
+  g.addColorStop(0, rgba(row.panel, 0.08));
+  g.addColorStop(0.6, rgba(row.panel, 0.04));
+  g.addColorStop(1, rgba(row.panel, 0.025));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = "rgba(180,210,255,0.08)";
@@ -92,9 +95,23 @@ const panelCanvas = (row: NetworkRow) => {
     ctx.lineTo(w, y);
     ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(190,215,255,0.35)";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(190,215,255,0.12)";
+  ctx.lineWidth = 3;
   ctx.strokeRect(2, 2, w - 4, h - 4);
+  // thin bright-cyan accent lines
+  ctx.strokeStyle = "rgba(60,200,255,0.85)";
+  ctx.lineWidth = 5;
+  for (const [x0, y0, x1, y1] of [
+    [w * 0.36, h * 0.08, w * 0.5, h * 0.08],
+    [w * 0.08, h * 0.62, w * 0.08, h * 0.8],
+    [w * 0.7, h * 0.92, w * 0.86, h * 0.92],
+    [w * 0.93, h * 0.2, w * 0.93, h * 0.3],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+  }
   // a few faint readouts on the panel
   ctx.font = `400 34px ${MONO}`;
   ctx.fillStyle = "rgba(190,215,255,0.35)";
@@ -109,7 +126,7 @@ const centerCanvas = () => {
   const ctx = c.getContext("2d")!;
   ctx.translate(S / 2, S / 2);
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 26;
+  ctx.lineWidth = 34;
   ctx.beginPath();
   ctx.arc(0, 0, S * 0.4, 0, TAU);
   ctx.stroke();
@@ -120,7 +137,7 @@ const centerCanvas = () => {
   ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.fillStyle = "#fff";
-  ctx.font = `800 ${S * 0.28}px ${INTER}`;
+  ctx.font = `800 ${S * 0.42}px ${INTER}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("AI", 0, S * 0.02);
@@ -177,7 +194,7 @@ const bracketCanvas = () => {
   const c = makeCanvas(S, S);
   const ctx = c.getContext("2d")!;
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 16;
+  ctx.lineWidth = 30;
   ctx.lineCap = "square";
   ctx.beginPath();
   ctx.moveTo(S - 20, 12);
@@ -269,9 +286,10 @@ const quadMat = (tex: THREE.Texture, color: THREE.Vector3, additive = true) =>
 
 const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(34, aspect, 0.2, 120);
+  const camera = new THREE.PerspectiveCamera(26, aspect, 0.2, 160);
   const white = hexToVec3(row.diagram);
   const rnd = mulberry32(4545);
+  let decalMat: THREE.ShaderMaterial | null = null;
 
   // ground
   const groundTex = canvasTexture(groundCanvas(row), renderer);
@@ -366,7 +384,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
   ].map((t, i) => {
     const tex = canvasTexture(tagCanvas(row, t.text, 30 + i), renderer);
     const mat = quadMat(tex, new THREE.Vector3(1, 1, 1), false);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.6 * t.s, 0.5 * t.s), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.95 * t.s, 0.3 * t.s), mat);
     m.rotation.x = -Math.PI / 2;
     m.position.set(t.x, 0.05 + hash(i, 4) * 0.3, t.z);
     scene.add(m);
@@ -403,6 +421,93 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     scene.add(new THREE.Mesh(geo, mat));
   }
 
+  // HUD decal around the panel: keypad grids, readout boxes, binary strings, cyan traces
+  {
+    const DW = 15;
+    const DH = 10;
+    const c = makeCanvas(4096, Math.round((4096 * DH) / DW));
+    const ctx = c.getContext("2d")!;
+    const k = 4096 / DW; // px per world unit
+    const r = mulberry32(2626);
+    const toPx = (x: number, z: number): [number, number] => [(x + DW / 2) * k, (z + DH / 2) * k];
+    const inPanel = (x: number, z: number) => Math.abs(x) < PANEL_W / 2 + 0.25 && Math.abs(z) < PANEL_H / 2 + 0.25;
+    // cyan / blue circuit traces
+    for (let i = 0; i < 70; i++) {
+      const x = (r() - 0.5) * DW;
+      const z = (r() - 0.5) * DH;
+      if (inPanel(x, z)) continue;
+      const [px, py] = toPx(x, z);
+      const L = (0.4 + r() * 1.8) * k;
+      const bright = r() < 0.3;
+      ctx.strokeStyle = bright ? "rgba(60,190,255,0.85)" : "rgba(70,120,200,0.45)";
+      ctx.lineWidth = bright ? 5 : 3;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      if (r() < 0.5) {
+        ctx.lineTo(px + L, py);
+        ctx.lineTo(px + L + 60, py + 60);
+      } else {
+        ctx.lineTo(px, py + L * 0.6);
+        ctx.lineTo(px + 60, py + L * 0.6 + 60);
+      }
+      ctx.stroke();
+    }
+    // keypad grids of small white rectangles
+    for (const [x, z, cols, rows] of [[-4.6, -2.4, 7, 4], [4.4, 2.6, 5, 3], [-4.9, 2.9, 6, 3]] as number[][]) {
+      const [px, py] = toPx(x, z);
+      for (let a = 0; a < rows; a++)
+        for (let b = 0; b < cols; b++) {
+          ctx.fillStyle = `rgba(230,240,255,${0.45 + 0.5 * r()})`;
+          ctx.fillRect(px + b * 70, py + a * 52, 50, 32);
+        }
+    }
+    // readout boxes with text
+    ctx.font = `600 64px ${MONO}`;
+    for (const [x, z, t] of [[4.0, 0.9, "C0226 00193"], [-5.0, -0.2, "R4 0071"], [2.2, -3.9, "NX 5521 08"]] as [number, number, string][]) {
+      const [px, py] = toPx(x, z);
+      ctx.strokeStyle = "rgba(200,220,255,0.55)";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(px - 20, py - 70, 520, 300);
+      ctx.fillStyle = "rgba(235,242,255,0.9)";
+      ctx.fillText(t, px, py);
+      ctx.font = `400 36px ${MONO}`;
+      ctx.fillStyle = "rgba(170,195,235,0.6)";
+      for (let q = 0; q < 4; q++)
+        ctx.fillText(Array.from({ length: 12 }, () => Math.floor(r() * 10)).join(" "), px, py + 60 + q * 44);
+      ctx.font = `600 64px ${MONO}`;
+    }
+    // binary strings and short labels near the panel
+    ctx.font = `500 44px ${MONO}`;
+    ctx.fillStyle = "rgba(200,220,255,0.7)";
+    for (const [x, z, t] of [
+      [-1.4, -PANEL_H / 2 - 0.55, "0101101101 0110"],
+      [-0.6, PANEL_H / 2 + 0.6, "T-80"],
+      [1.6, PANEL_H / 2 + 0.55, "• • •  0412"],
+      [-PANEL_W / 2 - 1.6, 0.6, "SEC 09"],
+    ] as [number, number, string][]) {
+      const [px, py] = toPx(x, z);
+      ctx.fillText(t, px, py);
+    }
+    // small grey blocks and tick marks
+    for (let i = 0; i < 120; i++) {
+      const x = (r() - 0.5) * DW;
+      const z = (r() - 0.5) * DH;
+      if (inPanel(x, z)) continue;
+      const [px, py] = toPx(x, z);
+      ctx.fillStyle = `rgba(150,170,210,${0.15 + r() * 0.35})`;
+      if (r() < 0.5) ctx.fillRect(px, py, 30 + r() * 140, 14 + r() * 40);
+      else for (let q = 0; q < 6; q++) ctx.fillRect(px + q * 26, py, 6, 24);
+    }
+    const tex = canvasTexture(c, renderer);
+    const mat = quadMat(tex, new THREE.Vector3(1, 1, 1), false);
+    decalMat = mat;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(DW, DH), mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.y = 0.012;
+    m.renderOrder = 0;
+    scene.add(m);
+  }
+
   // ---- the panel and diagram
   const panel = new THREE.Group();
   panel.rotation.x = -Math.PI / 2;
@@ -426,14 +531,14 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
   panel.add(centerMesh);
 
   const arcsMat = quadMat(canvasTexture(ringArcsCanvas(), renderer), white);
-  const arcs = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.3), arcsMat);
+  const arcs = new THREE.Mesh(new THREE.PlaneGeometry(1.75, 1.75), arcsMat);
   arcs.position.z = 0.008;
   arcs.renderOrder = 5;
   panel.add(arcs);
 
   // spokes: ribbons rebuilt each frame from draw-on progress
   const spokeGeo = new THREE.BufferGeometry();
-  const spokePos = new Float32Array(NODES.length * 6 * 3);
+  const spokePos = new Float32Array((NODES.length + CHAINS.length) * 6 * 3);
   spokeGeo.setAttribute("position", new THREE.BufferAttribute(spokePos, 3).setUsage(THREE.DynamicDrawUsage));
   const spokeMat = premulBlend(
     new THREE.ShaderMaterial({
@@ -464,7 +569,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
 
   // pulses along spokes
   const pulses = NODES.map(() => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.26), quadMat(glowTex, new THREE.Vector3(0.8, 0.85, 1)));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 0.15), quadMat(glowTex, new THREE.Vector3(0.8, 0.85, 1)));
     m.renderOrder = 8;
     panel.add(m);
     return m;
@@ -479,7 +584,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     [-1, -1],
   ].map(([sx, sy], i) => {
     const mat = quadMat(brTex, white);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.72), mat);
     m.rotation.z = [0, -Math.PI / 2, Math.PI, Math.PI / 2][i];
     m.renderOrder = 6;
     panel.add(m);
@@ -491,12 +596,13 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
   const update = (frame: number) => {
     const env = easeOutCubic(range(frame, 30, 90));
     envFade.value = 0.15 + 0.85 * env;
+    if (decalMat) decalMat.uniforms.uA.value = env;
 
     // camera: pitch 40° (panel tilted ~50° to the view), yawed, slow drift
     const t = frame / 600;
     const yaw = 0.5 + 0.06 * Math.sin(TAU * t * 0.8) - 0.08 * t;
-    const pitch = ((40 + 2 * Math.sin(TAU * t * 0.6)) * Math.PI) / 180;
-    const dist = 11.8 - 0.7 * easeOutCubic(range(frame, 0, 240)) - 0.35 * t;
+    const pitch = ((47 + 2 * Math.sin(TAU * t * 0.6)) * Math.PI) / 180;
+    const dist = 15.8 - 1.0 * easeOutCubic(range(frame, 0, 240)) - 0.5 * t;
     camera.position.set(
       target.x + Math.sin(yaw) * Math.cos(pitch) * dist,
       target.y + Math.sin(pitch) * dist,
@@ -510,7 +616,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     const centerA = 0.28 * range(frame, 40, 80) + 0.72 * range(frame, SPOKE_START - 6, SPOKE_START + 6);
     centerMat.uniforms.uA.value = centerA;
     (centerGlow.material as THREE.ShaderMaterial).uniforms.uA.value = centerA * (0.85 + 0.15 * Math.sin(frame * 0.08));
-    arcsMat.uniforms.uA.value = range(frame, SPOKE_START, SPOKE_START + 20) * 0.85;
+    arcsMat.uniforms.uA.value = range(frame, SPOKE_START, SPOKE_START + 20) * 0.5;
     arcs.rotation.z = frame * 0.004;
 
     // spokes draw out, nodes pop in one by one
@@ -548,8 +654,29 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
         const u = ((frame - spokeT0(i)) / per + hash(i, 3)) % 1;
         const s = s0 + (L - NODE_R - s0) * u;
         pm.position.set(ux * s, uy * s, 0.011);
-        (pm.material as THREE.ShaderMaterial).uniforms.uA.value = Math.sin(Math.PI * u) * 0.9;
+        (pm.material as THREE.ShaderMaterial).uniforms.uA.value = Math.sin(Math.PI * u) * 0.45;
       } else (pm.material as THREE.ShaderMaterial).uniforms.uA.value = 0;
+    });
+    CHAINS.forEach(([ia, ib], k) => {
+      const A = NODES[ia];
+      const B = NODES[ib];
+      const t0 = Math.max(spokeT0(ia), spokeT0(ib)) + SPOKE_DUR;
+      const p = easeOutCubic(range(frame, t0, t0 + 14));
+      const dx = B.x - A.x;
+      const dy = B.y - A.y;
+      const L = Math.hypot(dx, dy);
+      const ux = dx / L;
+      const uy = dy / L;
+      const x0 = A.x + ux * NODE_R;
+      const y0 = A.y + uy * NODE_R;
+      const x1 = x0 + ux * (L - 2 * NODE_R) * p;
+      const y1 = y0 + uy * (L - 2 * NODE_R) * p;
+      const w = 0.015;
+      const v = [
+        [x0 - uy * w, y0 + ux * w], [x0 + uy * w, y0 - ux * w], [x1 - uy * w, y1 + ux * w],
+        [x1 - uy * w, y1 + ux * w], [x0 + uy * w, y0 - ux * w], [x1 + uy * w, y1 - ux * w],
+      ];
+      v.forEach(([x, y], q) => spokePos.set(p > 0 ? [x, y, 0.009] : [0, 0, 0], ((NODES.length + k) * 6 + q) * 3));
     });
     spokeGeo.attributes.position.needsUpdate = true;
 
@@ -572,14 +699,14 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     });
     tags.forEach((tg) => {
       const blink = hash(tg.i, Math.floor(frame / 20)) < 0.15 ? 0.35 : 1;
-      tg.mat.uniforms.uA.value = env * blink;
+      tg.mat.uniforms.uA.value = env * blink * 0.7;
     });
 
     const focus = camera.position.distanceTo(target);
     return {
       frame,
       bloom: { strength: 0.95, threshold: 0.5, knee: 0.3, radius: 1.0 },
-      dof: { focus, aperture: 0.022, maxBlur: 0.012, nearScale: 0.7 },
+      dof: { focus, aperture: 0.012, maxBlur: 0.008, nearScale: 0.7 },
       exposure: range(frame, 20, 60),
       vignette: 0.6,
       grain: 0.015,
