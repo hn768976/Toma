@@ -32,7 +32,7 @@ const circuitTile = (seed: number, size: number, density: number, blur: number, 
     const kind = r();
     const x0 = Math.floor(r() * size);
     const y0 = Math.floor(r() * size);
-    const lw = r() < 0.8 ? 2 : 4;
+    const lw = r() < 0.6 ? 3 : 5;
     if (kind < 0.4) {
       // orthogonal trace with 1–3 bends, mostly horizontal runs
       const pts: [number, number][] = [[x0, y0]];
@@ -226,7 +226,7 @@ const RINGS: RingDef[] = [
         ctx.arc(0, 0, r1, a0, a1);
         ctx.arc(0, 0, r0, a1, a0, true);
         ctx.closePath();
-        ctx.fillStyle = `rgba(42,92,210,${0.68 + 0.12 * hash(i, 4)})`;
+        ctx.fillStyle = `rgba(80,130,220,${0.5 + 0.1 * hash(i, 4)})`;
         ctx.fill();
         ctx.strokeStyle = "rgba(120,180,255,0.55)";
         ctx.lineWidth = 3;
@@ -251,7 +251,8 @@ const RINGS: RingDef[] = [
       for (let i = 0; i < 420; i++) {
         const a = (i / 420) * TAU;
         const len = hash(i, 9) < 0.25 ? 0.2 : 0.12;
-        ctx.strokeStyle = `rgba(190,232,255,${0.65 + 0.35 * hash(i, 2)})`;
+        ctx.strokeStyle = `rgba(200,238,255,${0.8 + 0.2 * hash(i, 2)})`;
+        ctx.lineWidth = 5;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(Math.cos(a) * R * (0.95 - len), Math.sin(a) * R * (0.95 - len));
@@ -391,7 +392,7 @@ const LAYERS = [
   { z: -22, blur: 4, density: 1.1, kx: -1, ky: 0, repeat: 3, alpha: 0.7, seed: 12 },
   { z: -13, blur: 1.6, density: 1.0, kx: 1, ky: 1, repeat: 3, alpha: 0.95, seed: 13 },
   { z: -6, blur: 0.6, density: 0.8, kx: -1, ky: 0, repeat: 3, alpha: 1.0, seed: 14 },
-  { z: 5.5, blur: 9, density: 0.3, kx: 1, ky: 0, repeat: 2, alpha: 0.35, seed: 15 },
+  { z: 5.5, blur: 14, density: 0.45, kx: 1, ky: 0, repeat: 2, alpha: 0.55, seed: 15 },
 ];
 
 const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
@@ -435,7 +436,7 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
           void main(){
             vec4 c = texture(tMap, vUv * uRep + uOff);
             float edge = smoothstep(0.0, 0.12, vUv.x) * smoothstep(1.0, 0.88, vUv.x) * smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.88, vUv.y);
-            gl_FragColor = c * uA * edge * 0.75;
+            gl_FragColor = c * uA * edge * 0.78;
           }`,
       }),
       true,
@@ -455,7 +456,7 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
   // HUD group: rings, padlock, icons — slightly tilted so it reads as 3D
   const hud = new THREE.Group();
   hud.position.set(-0.15, -0.3, 0);
-  hud.rotation.set(0.22, 0.55, -0.12);
+  hud.rotation.set(0.24, 0.72, -0.12);
   scene.add(hud);
 
   const ringMeshes = RINGS.map((rd, i) => {
@@ -481,8 +482,8 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
     const c = makeCanvas(512, 512);
     const ctx = c.getContext("2d")!;
     const g = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
-    g.addColorStop(0, "rgba(2,8,40,0.75)");
-    g.addColorStop(0.8, "rgba(2,8,40,0.6)");
+    g.addColorStop(0, "rgba(2,8,40,0.45)");
+    g.addColorStop(0.8, "rgba(2,8,40,0.4)");
     g.addColorStop(1, "rgba(2,8,40,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 512, 512);
@@ -523,7 +524,7 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
         void main(){
           vec4 c = texture(tMap, vUv);
           float scan = exp(-pow((vUv.y - uScan) * 9.0, 2.0));
-          gl_FragColor = c * 0.75 * (uPulse + scan * 0.6);
+          gl_FragColor = c * 1.05 * (uPulse + scan * 0.6);
         }`,
     }),
     true,
