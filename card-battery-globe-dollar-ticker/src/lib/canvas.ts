@@ -25,13 +25,16 @@ export const canvasTexture = (
 ): Texture => {
   const t = new CanvasTexture(c);
   t.colorSpace = opts.srgb === false ? NoColorSpace : SRGBColorSpace;
+  // Canvas glow (shadowBlur) leaves bright RGB under tiny alpha; premultiply so
+  // additive shaders can use rgb directly.
+  t.premultiplyAlpha = true;
   t.generateMipmaps = true;
   t.minFilter = LinearMipmapLinearFilter;
   t.magFilter = LinearFilter;
   t.anisotropy = Math.min(opts.aniso ?? 1, gl.capabilities.getMaxAnisotropy());
   if (opts.repeat) {
+    // horizontal strips scroll in u only; v stays clamped
     t.wrapS = RepeatWrapping;
-    t.wrapT = RepeatWrapping;
   }
   t.needsUpdate = true;
   return t;

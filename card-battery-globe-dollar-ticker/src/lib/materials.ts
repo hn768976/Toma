@@ -322,16 +322,17 @@ export const makeTexPlane = (o: TexPlaneOptions) => {
         float coc = cocPx(vDist);
         vec2 dx = dFdx(vUv);
         vec2 dy = dFdy(vUv);
-        float uvPerPx = max(length(dx), length(dy));
         vec4 c = texture2D(uMap, vUv);
-        // DoF: 4 rotated taps at the mip whose texel matches the blur radius
-        // (fetch count kept low — every branch runs on software GL).
-        float rUv = coc * 0.5 * uvPerPx;
-        float texels = rUv * max(uTexSize.x, uTexSize.y);
-        float lod = log2(max(texels * 0.75, 1.0));
-        vec2 asp = vec2(1.0, uTexSize.x / uTexSize.y) * rUv * 0.6;
-        vec4 acc = textureLod(uMap, vUv + vec2(0.8, 0.3) * asp, lod) + textureLod(uMap, vUv + vec2(-0.3, 0.8) * asp, lod)
-                 + textureLod(uMap, vUv + vec2(-0.8, -0.3) * asp, lod) + textureLod(uMap, vUv + vec2(0.3, -0.8) * asp, lod);
+        // DoF: 4 rotated taps (offsets in screen pixels, mapped through the uv
+        // derivatives) at the mip whose texel matches the tap spacing.
+        // Fetch count kept low — software GL runs every branch.
+        float rpx = coc * 0.5;
+        float texPerPx = max(length(dx * uTexSize), length(dy * uTexSize));
+        float lod = log2(max(rpx * texPerPx * 0.7, 1.0));
+        vec2 o1 = (dx * 0.8 + dy * 0.3) * rpx * 0.65;
+        vec2 o2 = (dx * -0.3 + dy * 0.8) * rpx * 0.65;
+        vec4 acc = textureLod(uMap, vUv + o1, lod) + textureLod(uMap, vUv - o1, lod)
+                 + textureLod(uMap, vUv + o2, lod) + textureLod(uMap, vUv - o2, lod);
         c = mix(c, acc * 0.25, smoothstep(0.75, 2.0, coc));
         ${o.fragHook ?? ""}
         c *= uOpacity;

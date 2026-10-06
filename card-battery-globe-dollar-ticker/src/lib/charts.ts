@@ -63,6 +63,8 @@ export interface CandleStyle {
   wick?: number; // px
   body?: number; // fraction of slot
   glow?: number; // shadowBlur px
+  /** Optional per-candle colour override. */
+  color?: (i: number, up: boolean) => string;
 }
 
 /** Draw candles across [x0, x0 + w] (one slot each), mapping [lo, hi] → [y0 + h, y0]. */
@@ -83,7 +85,7 @@ export const drawCandles = (
   ctx.shadowBlur = st.glow ?? 0;
   cs.forEach((c, i) => {
     const up = c.c >= c.o;
-    const col = up ? st.up : st.down;
+    const col = st.color ? st.color(i, up) : up ? st.up : st.down;
     ctx.strokeStyle = col;
     ctx.fillStyle = col;
     ctx.shadowColor = col;

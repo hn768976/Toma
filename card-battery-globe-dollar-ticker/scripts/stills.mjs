@@ -7,6 +7,8 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 const [id, outDir, framesArg, scaleArg] = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const propsArg = process.argv.find((a) => a.startsWith("--props="));
+const inputProps = propsArg ? JSON.parse(propsArg.slice(8)) : {};
 const scale = Number(scaleArg ?? 1 / 3);
 const frames = framesArg.split(",").map(Number);
 const bundleDir = path.resolve("build/bundle");
@@ -18,12 +20,12 @@ const browser = await openBrowser("chrome", {
   browserExecutable: existsSync(pw) ? pw : null,
   chromiumOptions: { gl: "angle" },
 });
-const composition = await selectComposition({ serveUrl: bundleDir, id, puppeteerInstance: browser });
+const composition = await selectComposition({ serveUrl: bundleDir, id, puppeteerInstance: browser, inputProps });
 mkdirSync(outDir, { recursive: true });
 for (const frame of frames) {
   const t0 = Date.now();
   await renderStill({
-    composition, serveUrl: bundleDir, frame, scale, imageFormat: "png",
+    composition, serveUrl: bundleDir, frame, scale, imageFormat: "png", inputProps,
     output: path.join(outDir, `${id}_${String(frame).padStart(3, "0")}.png`),
     puppeteerInstance: browser, timeoutInMilliseconds: 180000,
     onBrowserLog: (l) => { if (process.env.LOGS && !/GPU stall|GroupMarker/.test(l.text)) console.log("[browser]", l.type, l.text.slice(0, 2000)); },

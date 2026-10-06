@@ -2,6 +2,9 @@ import React from "react";
 import { Composition } from "remotion";
 import { LookCanvas, LookFactory } from "./lib/LookCanvas";
 import { circuitBattery } from "./looks/circuitBattery";
+import { dollarGlobe } from "./looks/dollarGlobe";
+import { mapTicker } from "./looks/mapTicker";
+import { marketGlobe } from "./looks/marketGlobe";
 import { paymentNetwork } from "./looks/paymentNetwork";
 import { Version, VERSIONS } from "./versions";
 
@@ -13,6 +16,9 @@ const FRAMES = 600;
 const FACTORIES: Record<Version["look"], LookFactory<never>> = {
   payment: paymentNetwork as LookFactory<never>,
   battery: circuitBattery as LookFactory<never>,
+  marketGlobe: marketGlobe as LookFactory<never>,
+  dollarGlobe: dollarGlobe as LookFactory<never>,
+  mapTicker: mapTicker as LookFactory<never>,
 };
 
 const LookComp: React.FC<{ look: Version["look"]; params: Version["params"] }> = ({ look, params }) => (
