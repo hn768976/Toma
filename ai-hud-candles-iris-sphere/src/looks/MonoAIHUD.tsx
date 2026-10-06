@@ -193,7 +193,7 @@ const buildHud = (pal: HudPalette) => {
           ctx.fillText(digits(8, 78, r.x, y), r.x + 20, y);
           ctx.fillStyle = rnd() < 0.3 ? white : grey;
           ctx.fillText(digits(6, 73, y, r.x), r.x + r.w * 0.6, y);
-          if (rnd() < 0.08) {
+          if (rnd() < (pal.light ? 0.08 : 0.2)) {
             ctx.fillStyle = pal.amber;
             ctx.fillRect(r.x + r.w - 40, y - 18, 10, 20);
           }
@@ -757,15 +757,15 @@ const build = (land: Land, pal: HudPalette) => {
     camera.updateMatrixWorld();
     const focus = camera.position.distanceTo(chipWorld);
     // the light theme is read as a document: keep it a touch crisper
-    shared.uDof.value.set(focus, pal.light ? 0.006 : 0.012, pal.light ? 0.006 : 0.012);
+    shared.uDof.value.set(focus, pal.light ? 0.006 : 0.008, pal.light ? 0.006 : 0.008);
   };
   return { group, camera, shared, update };
 };
 
 const graphitePost: PostParams = {
   exposure: 1.0,
-  bloomStrength: 1.0,
-  bloomThreshold: 0.45,
+  bloomStrength: 0.6,
+  bloomThreshold: 0.7,
   bloomKnee: 0.4,
   vignette: 0.45,
   grain: 0.015,

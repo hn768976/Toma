@@ -220,7 +220,7 @@ const drawChipFace = () => {
     ctx.strokeStyle = "rgb(255,0,0)";
     ctx.lineWidth = 12;
     ctx.lineJoin = "round";
-    ctx.font = "500 350px Inter";
+    ctx.font = "500 430px Inter";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.strokeText("AI", S / 2, S * 0.47);
@@ -291,7 +291,7 @@ const mapMaterial = (shared: Shared, map: THREE.Texture, pal: ChipPalette) =>
         vec2 q = (vUv - vec2(0.5, 0.45)) * vec2(1.69, 1.0);
         float center = 0.55 + 0.75 * exp(-dot(q, q) * 2.2);
         float drift = 0.85 + 0.3 * fbm(vUv * vec2(3.0, 1.8) + vec2(uTime * 0.03, -uTime * 0.02));
-        vec3 col = c.rgb * center * drift * 0.95;
+        vec3 col = c.rgb * center * drift * 0.78;
         // split-channel ghost while glitching
         col += vec3(0.0, 0.25, 0.6) * g.z * c.a;
         float a = c.a * g.x;
@@ -334,7 +334,7 @@ const traceMaterial = (shared: Shared, look: THREE.Texture, param: THREE.Texture
         // pulses running outward
         float s = fract(along * 1.6 - uTime * 0.42 + ph * 7.0);
         float pulse = smoothstep(0.0, 0.08, s) * (1.0 - smoothstep(0.08, 0.22, s));
-        vec3 base = uEdge * 0.55;
+        vec3 base = mix(uEdge, vec3(0.75, 0.9, 1.0), 0.5) * 0.55;
         vec3 col = line * (base + uEdge * pulse * 3.2);
         float tw = 0.75 + 0.25 * sin(uTime * 2.3 + ph * 40.0);
         col += dot_ * mix(uEdge, vec3(1.0), 0.75) * (1.5 + 0.8 * tw);
@@ -414,7 +414,7 @@ const glowMaterial = (shared: Shared, color: THREE.Color) =>
         vec2 p = (vUv - 0.5) * 2.0;
         float core = exp(-dot(p * vec2(9.0, 14.0), p * vec2(9.0, 14.0)));
         float soft = exp(-dot(p * vec2(2.2, 3.0), p * vec2(2.2, 3.0))) * 0.3;
-        float streak = exp(-abs(p.y) * 60.0) * exp(-abs(p.x) * 3.5) * 0.7;
+        float streak = exp(-abs(p.y) * 45.0) * exp(-abs(p.x) * 2.4) * 0.35; // long, soft anamorphic streak
         float ang = atan(p.y * 3.0, p.x);
         float star = pow(abs(cos(ang * 3.0)), 24.0) * exp(-length(p * vec2(2.0, 6.0)) * 3.0) * 0.8;
         vec3 col = uColor * (soft + streak * 1.4 + star) + mix(uColor, vec3(1.0), 0.8) * core * 4.0;
@@ -434,7 +434,7 @@ const bgMaterial = (shared: Shared, pal: ChipPalette) =>
       void main() {
         vec2 q = (vUv - vec2(0.5, 0.58)) * vec2(1.78, 1.0);
         float g = exp(-dot(q, q) * 3.2);
-        vec3 col = mix(uLow * 0.35, uHigh * 0.85 + vec3(0.0, 0.002, 0.03), g);
+        vec3 col = mix(uLow * 0.28, uHigh * 0.75 + vec3(0.0, 0.002, 0.025), g);
         // faint vertical light streaks
         float col_ = floor(vUv.x * 160.0);
         float s = hash11(col_);
@@ -486,7 +486,9 @@ const rainMaterial = (shared: Shared, glyphs: THREE.Texture, pal: ChipPalette, c
         float base = 0.18 + 0.2 * hash33u(uvec3(uint(c + 5000.0), uint(r + 90000.0), 9u)).x;
         float a = gl * (base + trail * 1.4) * uAmp * uFade / (1.0 + coc * 0.08);
         a *= mix(1.0, uRightDim, smoothstep(0.42, 0.62, gl_FragCoord.x / uRes.x));
-        gl_FragColor = vec4(uColor * a, 0.0);
+        // a few amber sparks ride in the rain
+        float spark = step(0.992, hash33u(uvec3(uint(c + 5000.0), uint(r + 90000.0), 31u)).x);
+        gl_FragColor = vec4(mix(uColor, vec3(1.0, 0.45, 0.1) * 2.0, spark) * a, 0.0);
       }`,
     ...addBlend,
   });
@@ -603,7 +605,7 @@ const build = (land: Land, pal: ChipPalette, layout: ChipLayout): Built => {
   chip.renderOrder = -1;
   group.add(chip);
 
-  const pool = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.9), glowMaterial(shared, lin(pal.chipEdge)));
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 0.9), glowMaterial(shared, lin(pal.chipEdge)));
   pool.position.set(0, -CHIP / 2 + 0.02, 0.05);
   pool.renderOrder = 2;
   group.add(pool);
@@ -671,7 +673,7 @@ const build = (land: Land, pal: ChipPalette, layout: ChipLayout): Built => {
     // mild depth of field, focus on the chip
     const push = easeInOutSine(progress(t, 2.5, 20));
     const camZ = 10.2 - 1.25 * push;
-    shared.uDof.value.set(camZ, 0.02, 0.035);
+    shared.uDof.value.set(camZ, 0.03, 0.045);
 
     const fade = progress(t, 0.0, 1.2);
     (bg.material as THREE.ShaderMaterial).uniforms.uFade.value = 0.35 + 0.65 * fade;
@@ -735,7 +737,7 @@ const post: PostParams = {
   bloomStrength: 1.1,
   bloomThreshold: 0.75,
   bloomKnee: 0.45,
-  vignette: 0.75,
+  vignette: 0.9,
   grain: 0.015,
 };
 

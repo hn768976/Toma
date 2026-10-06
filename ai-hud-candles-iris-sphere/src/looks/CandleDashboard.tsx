@@ -114,8 +114,8 @@ const drawPanel = (ws: Widget[], pal: CandlePalette, seed: number) => {
   redraw(ct, "static", (ctx) => {
     // panel glass
     const g = ctx.createLinearGradient(0, 0, 0, TEX_H);
-    g.addColorStop(0, "rgba(6,40,66,0.62)");
-    g.addColorStop(1, "rgba(3,22,40,0.62)");
+    g.addColorStop(0, "rgba(10,62,88,0.72)");
+    g.addColorStop(1, "rgba(5,36,58,0.72)");
     ctx.fillStyle = g;
     roundRect(ctx, 6, 6, TEX_W - 12, TEX_H - 12, 26);
     ctx.fill();
@@ -373,8 +373,8 @@ const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: numb
     mats.push(pm);
   }
   const toL = (u: number, v: number) => [(u - 0.5) * PANEL_W, (0.5 - v) * PANEL_H] as const;
-  const up = lin(pal.up).multiplyScalar(1.35);
-  const down = lin(pal.down).multiplyScalar(1.35);
+  const up = lin(pal.up).multiplyScalar(1.7);
+  const down = lin(pal.down).multiplyScalar(1.7);
   const barC = lin(pal.bar).multiplyScalar(0.9);
   const updaters: ((frame: number, t: number) => void)[] = [];
 
@@ -411,7 +411,7 @@ const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: numb
           const isUp = c >= d.o;
           const bodyTop = yy(Math.max(d.o, c));
           const bodyBot = yy(Math.min(d.o, c));
-          rect.setXYZW(i * 2, x, (bodyTop + bodyBot) / 2, step * 0.19, Math.max(0.006, (bodyTop - bodyBot) / 2));
+          rect.setXYZW(i * 2, x, (bodyTop + bodyBot) / 2, step * 0.15, Math.max(0.006, (bodyTop - bodyBot) / 2));
           rect.setXYZW(i * 2 + 1, x, (yy(h) + yy(l)) / 2, step * 0.045, (yy(h) - yy(l)) / 2);
           const cc = isUp ? up : down;
           const flash = live ? 1.25 : 1;
@@ -567,10 +567,11 @@ const build = (pal: CandlePalette) => {
 };
 
 const post: PostParams = {
-  exposure: 0.82,
-  bloomStrength: 1.1,
-  bloomThreshold: 0.75,
-  saturation: 0.95,
+  exposure: 0.95,
+  bloomStrength: 1.4,
+  bloomThreshold: 0.62,
+  saturation: 1.12,
+  lift: [0.0, 0.006, 0.01],
   bloomKnee: 0.4,
   vignette: 0.8,
   grain: 0.015,

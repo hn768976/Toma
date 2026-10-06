@@ -73,7 +73,7 @@ const strandGeometry = () => {
     const lift = inward ? -(1.0 + rnd() * 0.35) : Math.pow(rnd(), 2.0) * 0.6; // radians toward the viewer
     const long = rnd() < 0.12;
     const len = inward ? 0.6 + rnd() * 0.8 : long ? 2.6 + rnd() * 2.2 : 0.9 + Math.pow(rnd(), 1.3) * 2.0;
-    const curv = 0.5 + (rnd() - 0.5) * 0.3; // mostly one way: combed, swept curves
+    const curv = 0.8 + (rnd() - 0.5) * 0.3; // mostly one way: combed, swept curves
     a.set([theta, lift, len, curv], i * 4);
     b.set([0.004 + rnd() * 0.006, rnd() * 0.9, rnd() * 100, inward ? 2 : pickColour(theta, rnd())], i * 4);
     c.set([(rnd() - 0.5) * 0.08, (inward ? 0.04 : 1) * (0.16 + rnd() * 0.34), 1.6 + rnd() * 1.4, 0], i * 4);
@@ -115,7 +115,7 @@ const strandMaterial = (shared: Shared, pal: IrisPalette) =>
       uPurple: { value: lin(pal.purple) },
       uGold: { value: lin(pal.gold) },
       uBlue: { value: lin(pal.blue) },
-      uEdgeBlur: { value: 0.003 },
+      uEdgeBlur: { value: 0.002 },
       uPxScale: { value: 1 },
     },
     vertexShader: /* glsl */ `
@@ -161,13 +161,13 @@ const strandMaterial = (shared: Shared, pal: IrisPalette) =>
         float energy = max(px, 0.9) / hw;
         float tip = exp(-(1.0 - s) * 22.0) * (0.9 + 2.0 * (1.0 - g));
         float rootGlow = exp(-s * 30.0) * 0.25;
-        vec3 col = palette(aB.w) * (aB.w > 1.5 && aB.w < 2.5 ? 1.2 : (aB.w > 2.5 ? 1.5 : 1.0));
+        vec3 col = palette(aB.w) * (aB.w > 1.5 && aB.w < 2.5 ? 1.25 : (aB.w > 2.5 ? 1.6 : (aB.w > 0.5 ? 0.6 : 1.0)));
         col = mix(col, vec3(1.0, 0.95, 0.7), rootGlow * 0.5 + tip * 0.2);
         float fadeOut = 1.0 - smoothstep(0.75, 1.0, s) * 0.4;
         vA = aC.y * energy * (0.75 + rootGlow + tip) * fadeOut * step(1e-4, grow);
         vA *= 0.85 + 0.15 * sin(uTime * 3.0 + aB.z * 13.0 + s * 6.0);
         // thousands of roots overlap at the ring: keep that zone from burning to white
-        vA *= mix(0.22, 1.0, smoothstep(0.0, 0.3, s));
+        vA *= mix(0.12, 1.0, smoothstep(0.0, 0.3, s)) * 0.85;
         vCol = col;
         vSide = side;
         vS = s;
@@ -297,9 +297,9 @@ const planetMaterial = (shared: Shared, pal: IrisPalette) =>
       void main() {
         float ndv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
         float f = 1.0 - ndv;
-        float rim = pow(f, 4.5);
+        float rim = pow(f, 7.0);
         float side = smoothstep(-0.15, 0.75, uSide * normalize(vN).x);
-        vec3 col = mix(uInner, uOuter, smoothstep(0.6, 0.95, f)) * (rim * 3.6 + pow(f, 10.0) * 3.0) * side;
+        vec3 col = mix(uInner, uOuter, smoothstep(0.6, 0.95, f)) * (rim * 4.2 + pow(f, 16.0) * 3.0) * side;
         col += vec3(0.0008, 0.002, 0.004);
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -382,7 +382,7 @@ const build = (pal: IrisPalette, layout: IrisLayout) => {
     const t = frame / fps;
     shared.uTime.value = t;
     // the ring is alone at first, then hands over to the strand roots
-    ringMat.uniforms.uAmp.value = (0.25 + 0.45 * smooth(progress(t, 0, 1.4)) + 0.3 * smooth(progress(t, 1.4, 2.2))) * (1 - 0.55 * smooth(progress(t, 2.2, 4.5)));
+    ringMat.uniforms.uAmp.value = (0.25 + 0.45 * smooth(progress(t, 0, 1.4)) + 0.3 * smooth(progress(t, 1.4, 2.2))) * (1 - 0.88 * smooth(progress(t, 2.2, 4.5)));
     ringMat.uniforms.uHot.value = smooth(progress(t, 1.5, 2.6));
     // camera pushes in through the whole piece, the ring drifts toward centre
     const k = easeInOutSine(progress(t, 0, 15));
@@ -391,7 +391,7 @@ const build = (pal: IrisPalette, layout: IrisLayout) => {
     camera.position.set(layout.side * (tx - 0.35), 0.05, dist);
     camera.lookAt(layout.side * tx, 0.0, 0);
     camera.updateMatrixWorld();
-    shared.uDof.value.set(dist, 0.02, 0.025);
+    shared.uDof.value.set(dist, 0.012, 0.016);
   };
   return { group, camera, shared, update };
 };
