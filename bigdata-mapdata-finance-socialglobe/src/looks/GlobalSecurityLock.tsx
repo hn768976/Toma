@@ -18,7 +18,7 @@ const EDGE = "#9FECFF";
 const GLOW = "#1FA0FF";
 const DIGIT = "#7FD4FF";
 const LANDC = "#071A3C";
-const MAP_TINT = 0.75;
+const MAP_TINT = 0.6;
 const BG = "#020C24";
 
 const CAM_Z = 20;
@@ -149,7 +149,7 @@ const lockMaterial = () => {
           // keyhole interior: dark
           float kIn = (1.0 - smoothstep(-fw, fw, dK)) * clamp(uFill * 3.0, 0.0, 1.0);
           alpha = max(fillA, kIn * 0.9);
-          col = mix(col, vec3(0.01, 0.05, 0.16), kIn); // solid dark keyhole
+          col = mix(col, uGlowCol * 0.9 + uEdgeCol * 0.25, kIn); // solid bright keyhole
           col += uEdgeCol * eK * 2.0 * kIn;
           fragOut = vec4(col, alpha);
         }`,
@@ -195,7 +195,7 @@ const burstMaterial = () =>
             float fl = 0.75 + 0.25 * sin(uFrame * (0.02 + 0.05 * h1(id + 5000.0)) + 6.2831 * h1(id + 9000.0));
             rays += prof * str * fl * (o == 0 ? 1.0 : (o == 1 ? 0.7 : 0.5));
           }
-          float fall = (exp(-r * 2.0) * 0.8 + 0.1) * smoothstep(0.0, 0.05, r);
+          float fall = (exp(-r * 1.8) * 0.95 + 0.12) * smoothstep(0.0, 0.05, r);
           float glow = exp(-r * r * 22.0) * 1.1 + exp(-r * 5.0) * 0.35;
           vec3 c = uCol * (rays * fall * 1.3 + glow * 0.7) + uCore * exp(-r * r * 160.0) * 0.6;
           c *= uAmt;
@@ -229,11 +229,11 @@ const gridMaterial = () =>
         }
         void main(){
           vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
-          float ny = vUv.y * 38.0;
+          float ny = vUv.y * 52.0;
           float hy = lineAA(ny, 1.3) * (0.3 + 0.7 * pow(h1(floor(ny + 0.5)), 2.0));
           float nx = vUv.x * 40.0;
-          float vx = lineAA(nx, 1.0) * 0.55 * step(0.35, h1(floor(nx + 0.5) + 300.0));
-          float center = exp(-dot(p, p) * 1.6) * 0.7 + 0.3;
+          float vx = lineAA(nx, 1.0) * 0.25 * step(0.75, h1(floor(nx + 0.5) + 300.0));
+          float center = exp(-pow(p.y / 0.18, 2.0)) * 0.8 + exp(-dot(p, p) * 1.6) * 0.3 + 0.15;
           float a = (hy * 0.42 + vx * 0.16) * center * uAmt;
           fragOut = vec4(uCol * a, 0.0);
         }`,
@@ -262,12 +262,12 @@ const streakMaterial = () =>
           vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
           float ay = abs(p.y);
           float x = abs(p.x);
-          float core = exp(-ay * 900.0) * (exp(-x * 1.4) * 0.9 + 0.25);
+          float core = exp(-ay * 420.0) * (exp(-x * 1.4) * 0.35 + 0.12);
           float wide = exp(-ay * 120.0) * exp(-x * 1.1) * 0.6;
           float haze = exp(-ay * 22.0) * exp(-x * 2.2) * 0.25;
           // faint secondary lines above and below
           float sec = (exp(-abs(p.y - 0.035) * 1500.0) + exp(-abs(p.y + 0.03) * 1500.0)) * exp(-x * 2.5) * 0.35;
-          float band = exp(-pow(p.y / 0.03, 2.0)) * (0.55 + 0.45 * exp(-x * 1.2)) * 0.5;
+          float band = exp(-pow(p.y / 0.04, 2.0)) * (0.55 + 0.45 * exp(-x * 1.2)) * 0.32;
           float yb = p.y + 0.105;   // weaker band at the lock base
           float band2 = (exp(-pow(yb / 0.016, 2.0)) * 0.3 + exp(-abs(yb) * 1100.0) * 0.35) * exp(-x * 1.4);
           float flash = exp(-(x * x * 260.0 + (yb + 0.012) * (yb + 0.012) * 4000.0));
@@ -284,7 +284,7 @@ const drawMap = (assets: Assets) => {
   const W = 4096;
   const H = 2304;
   const { c, ctx } = makeCanvas(W, H);
-  ctx.fillStyle = "#0E3060"; // ocean lighter than the land
+  ctx.fillStyle = "#0B2E52"; // ocean lighter than the land
   ctx.fillRect(0, 0, W, H);
   const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.55);
   g.addColorStop(0, "rgba(30,80,170,0.32)");
@@ -343,7 +343,7 @@ const BINS: [number, number][] = [
   [7, 12],
 ];
 const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
-  Array.from({ length: [12, 16, 6, 0][b] }, () => {
+  Array.from({ length: [12, 22, 6, 3][b] }, () => {
     const z = range(rng, z0, z1);
     const sc = (CAM_Z - z) / CAM_Z;
     let x = 0;
@@ -352,7 +352,7 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
     do {
       x = range(rng, -0.55, 0.55) * VIS_W * sc;
       y = range(rng, -0.55, 0.55) * VIS_H * sc;
-    } while (Math.abs(x / sc) < 3.6 + (b === 1 ? 1.4 : 0) && Math.abs(y / sc) < 3.2);
+    } while (Math.abs(x / sc) < 3.0 && Math.abs(y / sc) < 2.8);
     return {
       name: pick(rng, ICON_SET),
       x,
@@ -371,7 +371,7 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
 const SPECKS = Array.from({ length: 160 }, () => ({
   x: range(rng, -1, 1),
   y: range(rng, -1, 1),
-  z: rng() < 0.92 ? range(rng, -4, 2.5) : range(rng, 2.5, 4),
+  z: range(rng, -4, 2.5),
   s: range(rng, 0.012, 0.028),
   a: range(rng, 0.2, 0.55),
   vx: range(rng, -0.01, 0.01),
@@ -381,7 +381,7 @@ const SPECKS = Array.from({ length: 160 }, () => ({
 
 // floating binary digits on two depth planes (panel px, 1920 x 1080 frame)
 const FLOAT_DIGITS = [0, 1].map(() =>
-  Array.from({ length: 150 }, () => ({
+  Array.from({ length: 80 }, () => ({
     x: range(rng, 0, 1920),
     y: range(rng, 0, 1080),
     size: range(rng, 9, 17),
@@ -391,7 +391,7 @@ const FLOAT_DIGITS = [0, 1].map(() =>
   })),
 );
 
-const DASHES = Array.from({ length: 90 }, () => ({
+const DASHES = Array.from({ length: 220 }, () => ({
   ang: rng() * Math.PI * 2,
   period: range(rng, 60, 160),
   ph: rng(),
@@ -411,7 +411,7 @@ const build: BuildFn = (assets) => {
   const map = new THREE.Mesh(new THREE.PlaneGeometry(VIS_W * ms * 1.06, VIS_H * ms * 1.06), mapMat);
   map.position.z = mapZ;
   sMap.add(map);
-  layers.push({ scene: sMap, blur: 0.0022 });
+  layers.push({ scene: sMap, blur: 0.0055 });
 
   // icon bins + specks
   const binScenes = BINS.map(() => new THREE.Scene());
@@ -470,14 +470,14 @@ const build: BuildFn = (assets) => {
     o.renderOrder = 4;
     sLock.add(o);
   }
-  layers.push({ scene: sLock, blur: 0 });
+  layers.push({ scene: sLock, blur: 0.0009 });
   layers.push({ scene: binScenes[2], blur: 0.0055 });
   layers.push({ scene: binScenes[3], blur: 0.013 });
 
   return {
     camera,
     layers,
-    pipeline: { background: BG, bloomThreshold: 0.6, bloomKnee: 0.5, bloomIntensity: 0.9, bloomRadius: 0.8, vignette: 0.85, saturation: 1.3 },
+    pipeline: { background: BG, bloomThreshold: 0.55, bloomKnee: 0.5, bloomIntensity: 0.95, bloomRadius: 0.9, vignette: 0.9, saturation: 1.05 },
     update: (f) => {
       camera.position.set(0.15 * Math.sin(f * 0.004), 0.08 * Math.sin(f * 0.003 + 1), CAM_Z - f * 0.0015);
       camera.lookAt(0, 0, 0);
@@ -511,7 +511,7 @@ const build: BuildFn = (assets) => {
         const c = Math.cos(d.ang);
         const s = Math.sin(d.ang);
         const a = d.a * burstAmt * Math.sin(Math.PI * t);
-        dashes.seg(c * r0, s * r0 + lock.position.y * 0.6, -0.3, c * r1, s * r1 + lock.position.y * 0.6, -0.3, 1.0, "#8FD8FF", a * 0.55, 1.2);
+        dashes.seg(c * r0, s * r0 + lock.position.y * 0.6, -0.3, c * r1, s * r1 + lock.position.y * 0.6, -0.3, 1.0, "#8FD8FF", a * 0.9, 1.4);
       }
       dashes.end();
 
@@ -551,7 +551,7 @@ const build: BuildFn = (assets) => {
         for (const d of FLOAT_DIGITS[k]) {
           const y = (((d.y - d.vy * f) % 1080) + 1080) % 1080;
           const ch = hash2(d.seed, stepIndex(f, 12, 600)) < 0.5 ? "0" : "1";
-          b.text(ch, d.x, y, d.size * (k === 1 ? 1.4 : 1), "#9FE2FF", d.a * fadeIn, { i: 1.3, align: "center" });
+          b.text(ch, d.x, y, d.size * (k === 1 ? 1.4 : 1), "#9FE2FF", d.a * 0.55 * fadeIn, { i: 1.2, align: "center" });
         }
         b.end();
       });
