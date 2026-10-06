@@ -76,9 +76,9 @@ const panelCanvas = (row: NetworkRow) => {
   const c = makeCanvas(w, h);
   const ctx = c.getContext("2d")!;
   const g = ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, w * 0.6);
-  g.addColorStop(0, rgba(row.panel, 0.18));
-  g.addColorStop(0.6, rgba(row.panel, 0.12));
-  g.addColorStop(1, rgba(row.panel, 0.09));
+  g.addColorStop(0, rgba(row.panel, 0.12));
+  g.addColorStop(0.6, rgba(row.panel, 0.06));
+  g.addColorStop(1, rgba(row.panel, 0.03));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = "rgba(180,210,255,0.11)";
@@ -143,15 +143,18 @@ const centerCanvas = () => {
   const ctx = c.getContext("2d")!;
   ctx.translate(S / 2, S / 2);
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 34;
+  ctx.lineWidth = 16;
   ctx.beginPath();
-  ctx.arc(0, 0, S * 0.4, 0, TAU);
+  ctx.arc(0, 0, S * 0.43, 0, TAU);
   ctx.stroke();
-  ctx.lineWidth = 8;
-  ctx.globalAlpha = 0.6;
+  // inner ring of ticks
+  ctx.lineWidth = 10;
+  ctx.globalAlpha = 0.85;
+  ctx.setLineDash([S * 0.035, S * 0.02]);
   ctx.beginPath();
-  ctx.arc(0, 0, S * 0.33, 0, TAU);
+  ctx.arc(0, 0, S * 0.36, 0, TAU);
   ctx.stroke();
+  ctx.setLineDash([]);
   ctx.globalAlpha = 1;
   ctx.fillStyle = "#fff";
   ctx.font = `800 ${S * 0.42}px ${INTER}`;
@@ -196,13 +199,13 @@ const nodeCanvas = (icon: IconName) => {
   const c = makeCanvas(S, S);
   const ctx = c.getContext("2d")!;
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 20;
+  ctx.lineWidth = 24;
   ctx.beginPath();
   ctx.arc(S / 2, S / 2, S * 0.4, 0, TAU);
   ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   ctx.fill();
-  drawIcon(ctx, icon, S / 2, S / 2, S * 0.48, "#fff", 1.8);
+  drawIcon(ctx, icon, S / 2, S / 2, S * 0.56, "#fff", 2.4);
   return c;
 };
 
@@ -211,7 +214,7 @@ const bracketCanvas = () => {
   const c = makeCanvas(S, S);
   const ctx = c.getContext("2d")!;
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 14;
+  ctx.lineWidth = 22;
   ctx.lineCap = "square";
   ctx.beginPath();
   ctx.moveTo(S - 20, 12);
@@ -600,10 +603,11 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     [1, -1],
     [-1, -1],
   ].map(([sx, sy], i) => {
-    const mat = quadMat(brTex, white);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), mat);
+    const mat = quadMat(brTex, white.clone().multiplyScalar(1.6));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), mat);
     m.rotation.z = [0, -Math.PI / 2, Math.PI, Math.PI / 2][i];
     m.renderOrder = 6;
+    mat.depthTest = false; // always on top of the panel
     panel.add(m);
     return { m, mat, sx, sy };
   });
@@ -644,7 +648,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
       const uy = n.y / L;
       const s0 = CENTER_R * 1.02;
       const s1 = s0 + (L - NODE_R - s0) * p;
-      const w = 0.019;
+      const w = 0.012;
       const nx = -uy * w;
       const ny = ux * w;
       const v = [
@@ -688,7 +692,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
       const y0 = A.y + uy * NODE_R;
       const x1 = x0 + ux * (L - 2 * NODE_R) * p;
       const y1 = y0 + uy * (L - 2 * NODE_R) * p;
-      const w = 0.015;
+      const w = 0.01;
       const v = [
         [x0 - uy * w, y0 + ux * w], [x0 + uy * w, y0 - ux * w], [x1 - uy * w, y1 + ux * w],
         [x1 - uy * w, y1 + ux * w], [x0 + uy * w, y0 - ux * w], [x1 + uy * w, y1 - ux * w],
@@ -722,10 +726,10 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     const focus = camera.position.distanceTo(target);
     return {
       frame,
-      bloom: { strength: 0.85, threshold: 0.62, knee: 0.3, radius: 1.0 },
+      bloom: { strength: 1.0, threshold: 0.55, knee: 0.3, radius: 1.0 },
       dof: { focus, aperture: 0.022, maxBlur: 0.011, nearScale: 0.8 },
       exposure: range(frame, 20, 60),
-      vignette: 0.6,
+      vignette: 0.85,
       grain: 0.015,
     };
   };
