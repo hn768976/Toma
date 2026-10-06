@@ -107,7 +107,7 @@ const buildHud = (pal: HudPalette) => {
   const white = pal.white;
   const grey = pal.grey;
   // dark ink on a light plate needs roughly twice the opacity to read
-  const ink = (a: number) => hexA(pal.line, pal.light ? Math.min(1, a * 2.1) : a);
+  const ink = (a: number) => hexA(pal.line, pal.light ? Math.min(1, a * 2.7) : a);
   redraw(base, "static", (ctx) => {
     ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, TW, TH);
@@ -185,7 +185,7 @@ const buildHud = (pal: HudPalette) => {
       } else if (type === 1) {
         // header + rows of label/value
         ctx.font = mono(40, 500);
-        ctx.fillStyle = pal.light ? pal.mint : white; // mint headers give the light theme hierarchy
+        ctx.fillStyle = pal.light ? "#0B7A5A" : white; // deep-mint headers give the light theme hierarchy
         ctx.fillText(`${digits(2, 77, r.x)}.${digits(4, 77, r.y)}`, r.x + 20, r.y + 70);
         ctx.font = mono(24);
         for (let y = r.y + 130; y < r.y + r.h - 10; y += 40) {
@@ -259,11 +259,11 @@ const buildHud = (pal: HudPalette) => {
     const cy = CHIP_Y;
     // square mesh pad
     const pad = 620;
-    ctx.fillStyle = pal.light ? "#D3D8DF" : "rgba(4,5,6,0.9)";
+    ctx.fillStyle = pal.light ? "#C9CFD7" : "rgba(4,5,6,0.9)";
     ctx.fillRect(cx - pad, cy - pad, pad * 2, pad * 2);
     if (pal.light) {
-      ctx.strokeStyle = hexA(pal.line, 0.55);
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = hexA(pal.line, 0.8);
+      ctx.lineWidth = 6;
       ctx.strokeRect(cx - pad, cy - pad, pad * 2, pad * 2);
     }
     for (let y = -pad; y <= pad; y += 16) {
@@ -328,7 +328,7 @@ const buildHud = (pal: HudPalette) => {
     for (let k = 0; k < 4; k++) ctx.fillText(digits(28, 91, k), analysis.x + 60, analysis.y + 220 + k * 36);
     // globe ring on the plate
     ctx.strokeStyle = ink(0.3);
-    ctx.lineWidth = 4;
+    ctx.lineWidth = pal.light ? 8 : 4;
     ctx.beginPath();
     ctx.ellipse(globeZone.x + 850, globeZone.y + 550, 600, 600, 0, 0, Math.PI * 2);
     ctx.stroke();
@@ -757,7 +757,7 @@ const build = (land: Land, pal: HudPalette) => {
     camera.updateMatrixWorld();
     const focus = camera.position.distanceTo(chipWorld);
     // the light theme is read as a document: keep it a touch crisper
-    shared.uDof.value.set(focus, pal.light ? 0.008 : 0.012, pal.light ? 0.008 : 0.012);
+    shared.uDof.value.set(focus, pal.light ? 0.006 : 0.012, pal.light ? 0.006 : 0.012);
   };
   return { group, camera, shared, update };
 };

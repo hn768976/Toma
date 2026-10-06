@@ -122,7 +122,7 @@ export const versions: AnyRow[] = [
       trace: "#2A2E34",
       traceDot: "#1AB88A",
       accent: "#1AB88A",
-      amber: "#D07A1A",
+      amber: "#B85A00",
     } satisfies HudPalette,
   },
   {
