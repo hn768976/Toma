@@ -1,0 +1,12 @@
+Natural Earth — land polygons, 1:50m
+https://www.naturalearthdata.com/
+
+"All versions of Natural Earth raster + vector map data found on this website
+are in the public domain. You may use the maps in any manner, including
+modifying the content and design, electronic dissemination, and offset
+printing." — Natural Earth terms of use.
+
+File: ne_50m_land.json — derived from the TopoJSON in the npm package
+world-atlas@2.0.2 (https://github.com/topojson/world-atlas, ISC licence,
+Copyright 2013-2019 Michael Bostock), converted to plain polygons with
+coordinates rounded to 0.01 degrees. Data: Natural Earth, public domain.
