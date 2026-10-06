@@ -67,15 +67,19 @@ const BLOCKS: Block[] = (() => {
   const out: Block[] = [];
   const kinds: Block["kind"][] = ["digits", "digits", "digits", "digits", "digits", "small", "small", "small", "small", "bars", "stair", "list", "hatch", "hatch", "meter"];
   let guard = 0;
-  while (out.length < 58 && guard++ < 20000) {
+  while (out.length < 48 && guard++ < 20000) {
     const kind = pick(layoutRng, kinds);
     const k = kind === "small" ? 0.6 : kind === "bars" ? 1.35 : 1;
     const w = range(layoutRng, 520, 1000) * k;
     const h = range(layoutRng, 380, 640) * k;
     const x = range(layoutRng, 80, TILE - w - 80);
     const y = range(layoutRng, 80, TILE - h - 80);
-    const pad = 60;
-    if (out.some((o) => x < o.x + o.w + pad && x + w + pad > o.x && y < o.y + o.h + pad && y + h + pad > o.y)) continue;
+    const pad = 160;
+    // big digit strings run wider than their block: reserve their real width
+    const ew = (k: Block["kind"], bw: number) => (k === "digits" ? Math.max(bw, 1800) : k === "small" ? Math.max(bw, 700) : bw);
+    const wx = ew(kind, w);
+    if (x + wx > TILE - 80) continue;
+    if (out.some((o) => x < o.x + ew(o.kind, o.w) + pad && x + wx + pad > o.x && y < o.y + o.h + pad && y + h + pad > o.y)) continue;
     out.push({
       kind,
       x,
@@ -92,7 +96,7 @@ const BLOCKS: Block[] = (() => {
 })();
 
 // Stray scattered digits and rules between blocks
-const STRAYS = Array.from({ length: 420 }, () => ({
+const STRAYS = Array.from({ length: 220 }, () => ({
   x: range(layoutRng, 100, TILE - 300),
   y: range(layoutRng, 100, TILE - 100),
   s: range(layoutRng, 22, 48),
@@ -101,9 +105,9 @@ const STRAYS = Array.from({ length: 420 }, () => ({
   len: range(layoutRng, 200, 900),
 }));
 
-const VLINES = Array.from({ length: 10 }, () => ({
-  x: range(layoutRng, -9, 9),
-  z: range(layoutRng, -10, -1),
+const VLINES = Array.from({ length: 12 }, () => ({
+  x: range(layoutRng, 2.5, 7),
+  z: range(layoutRng, -6, -1),
   h: range(layoutRng, 1.2, 4),
   a: range(layoutRng, 0.15, 0.4),
 }));
@@ -145,7 +149,7 @@ const drawTile = () => {
     ctx.lineTo(TILE, i);
     ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(90,168,232,0.1)";
+  ctx.strokeStyle = "rgba(90,168,232,0.0)";
   ctx.lineWidth = 3;
   for (let i = 0; i <= TILE; i += 1024) {
     ctx.beginPath();
@@ -173,7 +177,7 @@ const drawTile = () => {
   }
   // long thin bright border lines across the plane (both axes)
   for (let i = 0; i < 14; i++) {
-    const horiz = pr() < 0.6;
+    const horiz = pr() < 2;
     const p = range(pr, 100, TILE - 100);
     const a = range(pr, 0, TILE * 0.4);
     const b = a + range(pr, TILE * 0.3, TILE * 0.6);
@@ -268,7 +272,7 @@ const drawTile = () => {
         ctx.font = `700 120px ${SANS}`;
         ctx.globalAlpha = 1;
         ctx.fillStyle = "#9FD4FF";
-        ctx.fillText(b.label === "BIG DATA" || br() < 0.5 ? "BIG DATA" : b.label, 0, -10);
+        ctx.fillText("BIG DATA", 0, -10);
         ctx.fillStyle = C_MID;
         ctx.globalAlpha = 0.5;
         ctx.fillRect(0, 62, b.w * 0.6, 3);
@@ -440,8 +444,8 @@ const drawDynamic = (B: Batch2D, f: number) => {
           const v = 0.15 + 0.85 * beatValue(f, s + i * 13, 30, LOOP, 0.6);
           const hgt = hmax * v;
           const x = b.x + (i * b.w) / b.n + ((b.w / b.n) - bw) / 2;
-          B.rect(x, base - hgt, bw, hgt, C_MID, 0.95, { i: 1.5 });
-          B.rect(x, base - hgt, bw, Math.min(16, hgt), C_HI, 1, { i: 2.0 });
+          B.rect(x, base - hgt, bw, hgt, "#8FC4F0", 0.7, { i: 1.1 });
+          B.rect(x, base - hgt, bw, Math.min(16, hgt), C_HI, 0.9, { i: 1.5 });
         }
         break;
       }
@@ -575,7 +579,7 @@ const build: BuildFn = () => {
   const target = new THREE.Vector3();
   const layers = [
     { scene: sUnder, blur: 0.006 },
-    { scene: sMain, depth: { focus: 7.2, band: 1.25, range: 4.2, maxBlur: 0.009, nearMul: 2.4 } },
+    { scene: sMain, depth: { focus: 7.2, band: 1.1, range: 3.8, maxBlur: 0.0105, nearMul: 2.4 } },
   ];
 
   return {
@@ -587,8 +591,8 @@ const build: BuildFn = () => {
       bloomKnee: 0.5,
       bloomIntensity: 1.35,
       bloomRadius: 0.75,
-      vignette: 0.85,
-      saturation: 1.05,
+      vignette: 1.0,
+      saturation: 1.3,
     },
     update: (f) => {
       // camera glides diagonally across the plane
@@ -610,7 +614,7 @@ const build: BuildFn = () => {
 
       lines.begin();
       for (const v of VLINES) {
-        lines.seg(v.x, 0, v.z, v.x, v.h, v.z, 0.8, C_HI, v.a, 1);
+        lines.seg(target.x + v.x, 0, target.z + v.z, target.x + v.x, v.h, target.z + v.z, 0.8, C_HI, v.a, 1);
       }
       lines.end();
 
