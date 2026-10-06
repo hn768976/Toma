@@ -25,7 +25,7 @@ const lin = (hex: string) => new THREE.Color(hex);
 
 const TW = 8192;
 const TH = 4608;
-const PW = 18; // plane width in units
+const PW = 20; // plane width in units
 const PH = (PW * TH) / TW;
 const PX = TW / PW; // texture px per unit
 // chip position on the texture (px)
@@ -41,7 +41,6 @@ const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y
 
 // ---------- static HUD texture ----------
 
-const FILLER = ["ANALYSIS DATA", "Data Sector : 001", "SYS NODE", "STREAM", "INDEX", "LAYER 07", "MATRIX", "SCAN", "QUEUE", "VECTOR", "CORE LOAD", "SIGNAL"];
 
 const buildHud = (pal: HudPalette) => {
   const rnd = mulberry32(7301);
@@ -52,7 +51,7 @@ const buildHud = (pal: HudPalette) => {
   const meters: Meter[] = [];
 
   const chipZone: Rect = { x: CHIP_X - 900, y: CHIP_Y - 620, w: 1800, h: 1240 };
-  const globeZone: Rect = { x: CHIP_X - 3500, y: CHIP_Y - 1000, w: 1700, h: 1100 };
+  const globeZone: Rect = { x: CHIP_X - 3050, y: CHIP_Y - 1250, w: 1700, h: 1100 };
 
   // hand-placed key panels around the chip (match the reference's layout)
   const bigData: Rect = { x: CHIP_X + 1000, y: CHIP_Y - 420, w: 1500, h: 760 };
@@ -69,7 +68,6 @@ const buildHud = (pal: HudPalette) => {
   meters.push({ rect: { x: CHIP_X + 2900, y: CHIP_Y - 950, w: 700, h: 420 }, bars: 6, seed: 21, delay: 0.45, vertical: false });
   meters.push({ rect: { x: 600, y: CHIP_Y + 300, w: 500, h: 380 }, bars: 5, seed: 23, delay: 0.6, vertical: false });
   meters.push({ rect: { x: CHIP_X + 2300, y: CHIP_Y + 1000, w: 800, h: 500 }, bars: 9, seed: 25, delay: 0.6, vertical: true });
-  meters.push({ rect: { x: CHIP_X - 2600, y: CHIP_Y - 1650, w: 650, h: 300 }, bars: 5, seed: 27, delay: 0.35, vertical: false });
 
   const analysis: Rect = { x: CHIP_X + 1350, y: CHIP_Y - 1450, w: 1500, h: 380 };
   const reserved: Rect[] = [chipZone, globeZone, analysis, ...dyn.map((d) => d.rect), ...meters.map((m) => m.rect)];
@@ -77,7 +75,7 @@ const buildHud = (pal: HudPalette) => {
   // free panels: subdivide the texture into cells and fill the free ones
   const panels: { r: Rect; delay: number }[] = [];
   const split = (r: Rect, depth: number) => {
-    if (depth > 8 || (r.w < 1000 && r.h < 640) || (r.w < 1800 && r.h < 1100 && rnd() < 0.3)) {
+    if (depth > 10 || (r.w < 760 && r.h < 480) || (r.w < 1200 && r.h < 760 && rnd() < 0.3)) {
       panels.push({ r, delay: rnd() });
       return;
     }
@@ -170,11 +168,11 @@ const buildHud = (pal: HudPalette) => {
         // header + rows of label/value
         ctx.font = mono(40, 500);
         ctx.fillStyle = white;
-        ctx.fillText(FILLER[Math.floor(rnd() * FILLER.length)], r.x + 20, r.y + 70);
+        ctx.fillText(`${digits(2, 77, r.x)}.${digits(4, 77, r.y)}`, r.x + 20, r.y + 70);
         ctx.font = mono(24);
         for (let y = r.y + 130; y < r.y + r.h - 10; y += 40) {
           ctx.fillStyle = grey;
-          ctx.fillText(FILLER[Math.floor(rnd() * FILLER.length)].toLowerCase(), r.x + 20, y);
+          ctx.fillText(digits(8, 78, r.x, y), r.x + 20, y);
           ctx.fillStyle = rnd() < 0.3 ? white : grey;
           ctx.fillText(digits(6, 73, y, r.x), r.x + r.w * 0.6, y);
           if (rnd() < 0.08) {
@@ -191,25 +189,19 @@ const buildHud = (pal: HudPalette) => {
           ctx.fillRect(r.x + 30, r.y + 40 + i * 50, w, 22);
         }
       } else if (type === 3) {
-        // line chart
-        ctx.strokeStyle = "rgba(200,206,212,0.7)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        let v = 0.5;
-        for (let x = 0; x <= r.w - 40; x += 24) {
-          v = Math.min(0.95, Math.max(0.05, v + (rnd() - 0.5) * 0.2));
-          const y = r.y + 30 + (1 - v) * (r.h - 60);
-          if (x === 0) ctx.moveTo(r.x + 20 + x, y);
-          else ctx.lineTo(r.x + 20 + x, y);
-        }
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(120,128,136,0.25)";
-        ctx.lineWidth = 2;
-        for (let y = r.y + 30; y < r.y + r.h; y += 60) {
-          ctx.beginPath();
-          ctx.moveTo(r.x + 20, y);
-          ctx.lineTo(r.x + r.w - 20, y);
-          ctx.stroke();
+        // button cluster: rows of small keys with a lit dot
+        for (let y = r.y + 40; y < r.y + r.h - 50; y += 70) {
+          for (let x = r.x + 30; x < r.x + r.w - 140; x += 160) {
+            ctx.strokeStyle = "rgba(170,178,186,0.5)";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, 130, 46);
+            ctx.fillStyle = rnd() < 0.3 ? white : "rgba(120,128,136,0.6)";
+            ctx.beginPath();
+            ctx.arc(x + 24, y + 23, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = mono(18);
+            ctx.fillText(digits(4, 81, x, y), x + 44, y + 30);
+          }
         }
       } else if (type === 4) {
         // dot matrix
@@ -249,19 +241,16 @@ const buildHud = (pal: HudPalette) => {
     const cy = CHIP_Y;
     // square mesh pad
     const pad = 620;
-    ctx.strokeStyle = "rgba(150,158,166,0.16)";
-    ctx.lineWidth = 2;
-    for (let k = -pad; k <= pad; k += 22) {
-      ctx.beginPath();
-      ctx.moveTo(cx + k, cy - pad);
-      ctx.lineTo(cx + k, cy + pad);
-      ctx.moveTo(cx - pad, cy + k);
-      ctx.lineTo(cx + pad, cy + k);
-      ctx.stroke();
+    ctx.fillStyle = "rgba(4,5,6,0.9)";
+    ctx.fillRect(cx - pad, cy - pad, pad * 2, pad * 2);
+    for (let y = -pad; y <= pad; y += 16) {
+      for (let x = -pad; x <= pad; x += 16) {
+        const e = Math.max(Math.abs(x), Math.abs(y)) / pad;
+        const a = 0.28 * (1 - Math.pow(e, 3));
+        ctx.fillStyle = `rgba(150,158,166,${a})`;
+        ctx.fillRect(cx + x - 2.5, cy + y - 2.5, 5, 5);
+      }
     }
-    ctx.strokeStyle = "rgba(200,206,212,0.45)";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(cx - pad, cy - pad, pad * 2, pad * 2);
     const half = CHIP_PX / 2;
     const trnd = mulberry32(7411);
     ctx.lineWidth = 3.5;
@@ -451,8 +440,13 @@ const drawDyn = (ct: CanvasTex, d: Dyn, frame: number, pal: HudPalette) => {
         const y = 330 + r * 58;
         if (y > H - 10) break;
         ctx.fillText(`${digits(4, d.seed, r, step)}  ${digits(2, d.seed, r)}  ${digits(3, d.seed + 2, r, step)}  ${digits(10, d.seed + 3, r)}`, 120, y);
-        ctx.fillStyle = r % 2 ? pal.mint : pal.grey;
-        ctx.fillRect(60, y - 26, 26, 26);
+        // cyan triangle bullets
+        ctx.fillStyle = "#5AE8F0";
+        ctx.beginPath();
+        ctx.moveTo(56, y - 28);
+        ctx.lineTo(84, y - 14);
+        ctx.lineTo(56, y);
+        ctx.fill();
       }
       ctx.strokeStyle = "rgba(200,206,212,0.6)";
       ctx.lineWidth = 4;
@@ -498,10 +492,10 @@ const chipMesh = (shared: Shared, size: number) => {
   s.quadraticCurveTo(-h, h, -h, h - r);
   s.lineTo(-h, -h + r);
   s.quadraticCurveTo(-h, -h, -h + r, -h);
-  const g = new THREE.ExtrudeGeometry(s, { depth: size * 0.07, bevelEnabled: true, bevelThickness: size * 0.025, bevelSize: size * 0.025, bevelSegments: 4, curveSegments: 10 });
+  const g = new THREE.ExtrudeGeometry(s, { depth: size * 0.025, bevelEnabled: true, bevelThickness: size * 0.025, bevelSize: size * 0.025, bevelSegments: 4, curveSegments: 10 });
   const face = chipFace();
   const m = new THREE.ShaderMaterial({
-    uniforms: { ...shared, tFace: { value: face.tex }, uSize: { value: size }, uTop: { value: size * 0.095 }, uOn: { value: 0 } },
+    uniforms: { ...shared, tFace: { value: face.tex }, uSize: { value: size }, uTop: { value: size * 0.05 }, uOn: { value: 0 } },
     vertexShader: /* glsl */ `
       uniform float uSize;
       varying vec2 vFace; varying vec3 vN; varying float vZ; varying vec3 vView;
@@ -592,7 +586,7 @@ const globeMesh = (shared: Shared, land: Land) => {
         vec3 n = normalize(vN);
         float ndv = max(dot(n, normalize(vView)), 0.0);
         float light = 0.45 + 0.55 * max(dot(n, normalize(vec3(-0.5, 0.4, 0.75))), 0.0);
-        vec3 col = vec3(0.07) + vec3(0.75) * land * light;
+        vec3 col = vec3(0.04) + vec3(0.5) * land * light;
         // grid lines (wireframe)
         float gl = 0.0;
         vec2 g = vec2(lon * 12.0 / 6.2831853, lat * 9.0 / 3.14159265);
@@ -602,7 +596,7 @@ const globeMesh = (shared: Shared, land: Land) => {
         // sparkling rim
         float rim = pow(1.0 - ndv, 3.0);
         float sp = step(0.7, hash33u(uvec3(uvec2(gl_FragCoord.xy * 0.5), 3u)).x);
-        col += vec3(0.9) * rim * (0.6 + 0.8 * sp);
+        col += vec3(1.3) * rim * (0.3 + 1.4 * sp);
         float edgeSoft = 0.05 + coc * 0.004;
         float a = smoothstep(0.0, edgeSoft, ndv) * uOn;
         gl_FragColor = vec4(col * a, a);
@@ -660,8 +654,8 @@ const build = (land: Land, pal: HudPalette) => {
 
   const globe = globeMesh(shared, land);
   const gz = hud.globeZone;
-  globe.position.copy(toLocal(gz.x + 850, gz.y + 550)).setZ(0.12);
-  globe.scale.set(1.25, 1.25, 0.12);
+  globe.position.copy(toLocal(gz.x + 850, gz.y + 550)).setZ(0.3);
+  globe.scale.set(1.1, 1.1, 0.34);
   globe.renderOrder = 2;
   plate.add(globe);
 
@@ -681,7 +675,7 @@ const build = (land: Land, pal: HudPalette) => {
     for (const m of meterMats) m.mat.uniforms.uOpacity.value = smooth(progress(reveal, m.delay * 0.75, m.delay * 0.75 + 0.25));
     const chipOn = smooth(progress(t, 2.3, 3.1));
     (chip.material as THREE.ShaderMaterial).uniforms.uOn.value = chipOn;
-    chip.position.z = 0.06 + (1 - chipOn) * 0.4;
+    chip.position.z = 0.02 + (1 - chipOn) * 0.4;
     (globe.material as THREE.ShaderMaterial).uniforms.uOn.value = smooth(progress(t, 2.0, 3.2));
     (globe.material as THREE.ShaderMaterial).uniforms.uRot.value = t * 0.22;
 
@@ -689,7 +683,7 @@ const build = (land: Land, pal: HudPalette) => {
     const drift = easeInOutSine(progress(t, 0, 20));
     const yaw = THREE.MathUtils.degToRad(26 - 7 * drift);
     const pitch = THREE.MathUtils.degToRad(43 - 2 * drift);
-    const dist = 9.8 - 0.6 * drift;
+    const dist = 8.9 - 0.55 * drift;
     const target = chipWorld.clone().add(new THREE.Vector3(0.35 - 0.25 * drift, 0, -0.1));
     camera.position.set(
       target.x + Math.sin(yaw) * Math.cos(pitch) * dist,
@@ -701,15 +695,15 @@ const build = (land: Land, pal: HudPalette) => {
     camera.rotateZ(THREE.MathUtils.degToRad(5));
     camera.updateMatrixWorld();
     const focus = camera.position.distanceTo(chipWorld);
-    shared.uDof.value.set(focus, 0.022, 0.018);
+    shared.uDof.value.set(focus, 0.012, 0.012);
   };
   return { group, camera, shared, update };
 };
 
 const post: PostParams = {
   exposure: 1.0,
-  bloomStrength: 0.75,
-  bloomThreshold: 0.6,
+  bloomStrength: 1.0,
+  bloomThreshold: 0.45,
   bloomKnee: 0.4,
   vignette: 0.45,
   grain: 0.015,

@@ -29,7 +29,7 @@ const lin = (hex: string) => new THREE.Color(hex);
 const MAP_W = 6.7;
 const MAP_ASPECT = 1.69;
 const TRACE_SIZE = 3.4; // units covered by the trace texture
-const CHIP = 1.3;
+const CHIP = 1.18;
 
 // ---------- static textures (deterministic, built once per tab) ----------
 
@@ -84,9 +84,9 @@ const buildTraces = (): Trace[] => {
       const s = -half * 0.8 + (i / (n - 1)) * half * 1.6;
       const bendDir = Math.abs(s) < 0.05 ? 0 : Math.sign(s);
       // short orthogonal circuitry: out, sideways jog, out again
-      const out1 = 0.05 + rnd() * 0.12;
-      const jog = bendDir * (0.03 + rnd() * 0.12);
-      const out2 = 0.06 + rnd() * (side === 0 ? 0.26 : side === 2 ? 0.14 : 0.18);
+      const out1 = 0.08 + rnd() * 0.18;
+      const jog = bendDir * (0.04 + rnd() * 0.16);
+      const out2 = 0.1 + rnd() * (side === 0 ? 0.42 : side === 2 ? 0.2 : 0.3);
       const local: [number, number][] = [
         [s, half],
         [s, half + out1],
@@ -282,7 +282,7 @@ const mapMaterial = (shared: Shared, map: THREE.Texture, pal: ChipPalette) =>
         vec2 q = (vUv - vec2(0.5, 0.45)) * vec2(1.69, 1.0);
         float center = 0.55 + 0.75 * exp(-dot(q, q) * 2.2);
         float drift = 0.85 + 0.3 * fbm(vUv * vec2(3.0, 1.8) + vec2(uTime * 0.03, -uTime * 0.02));
-        vec3 col = c.rgb * center * drift * 1.15;
+        vec3 col = c.rgb * center * drift * 0.95;
         // split-channel ghost while glitching
         col += vec3(0.0, 0.25, 0.6) * g.z * c.a;
         float a = c.a * g.x;
@@ -370,9 +370,9 @@ const chipMaterial = (shared: Shared, face: THREE.Texture, pal: ChipPalette) =>
         float m = fbm(w + vec2(warp * 2.2, -warp * 1.6) + vec2(-uTime * 0.04, uTime * 0.06));
         float wisps = pow(smoothstep(0.42, 0.9, m), 2.4);
         float veins = pow(1.0 - abs(fbm(w * 1.7 + warp * 3.0 - uTime * 0.05) - 0.5) * 2.0, 10.0);
-        vec3 glass = mix(uGlass * 1.3, vec3(0.05, 0.32, 0.45), 0.55) * (0.8 + 0.3 * (1.0 - uv.y));
+        vec3 glass = mix(uGlass * 1.2, vec3(0.03, 0.22, 0.38), 0.45) * (0.75 + 0.3 * (1.0 - uv.y));
         float bottom = exp(-pow(length((uv - vec2(0.5, 0.0)) * vec2(2.6, 4.0)), 2.0) * 3.0);
-        glass += vec3(0.3, 0.75, 1.0) * wisps * (0.45 + 0.6 * bottom);
+        glass += vec3(0.3, 0.75, 1.0) * wisps * (0.3 + 0.6 * bottom);
         glass += vec3(0.35, 0.8, 1.0) * veins * 0.22;
         glass += uEdge * bottom * 0.7;
         // shimmer sweep across the face every few seconds
@@ -406,7 +406,9 @@ const glowMaterial = (shared: Shared, color: THREE.Color) =>
         float core = exp(-dot(p * vec2(9.0, 14.0), p * vec2(9.0, 14.0)));
         float soft = exp(-dot(p * vec2(2.2, 3.0), p * vec2(2.2, 3.0))) * 0.3;
         float streak = exp(-abs(p.y) * 60.0) * exp(-abs(p.x) * 3.5) * 0.7;
-        vec3 col = uColor * (soft + streak) + mix(uColor, vec3(1.0), 0.7) * core * 2.5;
+        float ang = atan(p.y * 3.0, p.x);
+        float star = pow(abs(cos(ang * 3.0)), 24.0) * exp(-length(p * vec2(2.0, 6.0)) * 3.0) * 0.8;
+        vec3 col = uColor * (soft + streak * 1.4 + star) + mix(uColor, vec3(1.0), 0.8) * core * 4.0;
         gl_FragColor = vec4(col * uAmp, 0.0);
       }`,
     ...addBlend,
@@ -423,7 +425,7 @@ const bgMaterial = (shared: Shared, pal: ChipPalette) =>
       void main() {
         vec2 q = (vUv - vec2(0.5, 0.58)) * vec2(1.78, 1.0);
         float g = exp(-dot(q, q) * 3.2);
-        vec3 col = mix(uLow * 0.5, uHigh * 1.1 + vec3(0.0, 0.004, 0.022), g);
+        vec3 col = mix(uLow * 0.35, uHigh * 0.85 + vec3(0.0, 0.002, 0.03), g);
         // faint vertical light streaks
         float col_ = floor(vUv.x * 160.0);
         float s = hash11(col_);
@@ -488,9 +490,9 @@ const speckGeometry = (n: number) => {
     pos[i * 3] = (rnd() - 0.5) * 16;
     pos[i * 3 + 1] = (rnd() - 0.5) * 9;
     pos[i * 3 + 2] = -6 + rnd() * 12;
-    data[i * 4] = 0.006 + Math.pow(rnd(), 3) * 0.05; // size
+    data[i * 4] = 0.006 + Math.pow(rnd(), 3) * 0.04; // size
     data[i * 4 + 1] = rnd(); // phase
-    data[i * 4 + 2] = rnd() < 0.1 ? 1 : 0; // warm accent
+    data[i * 4 + 2] = rnd() < 0.08 ? 1 : 0; // warm accent
     data[i * 4 + 3] = rnd(); // brightness
   }
   const g = new THREE.BufferGeometry();
@@ -530,8 +532,9 @@ const speckMaterial = (shared: Shared, pal: ChipPalette) =>
         vec2 p = gl_PointCoord * 2.0 - 1.0;
         float sq = max(abs(p.x), abs(p.y));
         float disk = length(p);
-        float shape = mix(1.0 - smoothstep(0.75, 1.0, sq), 1.0 - smoothstep(0.6, 1.0, disk), clamp(vSoft * 1.5, 0.0, 1.0));
+        float shape = 1.0 - smoothstep(mix(0.75, 0.35, clamp(vSoft, 0.0, 1.0)), 1.0, sq);
         vec3 c = mix(uColor, uAccent, vWarm) * 2.4;
+        if (vWarm > 0.5 && vSoft > 0.3) c *= 0.0;
         gl_FragColor = vec4(c * shape * vAlpha * uFade, 0.0);
       }`,
     ...addBlend,
@@ -557,7 +560,7 @@ const build = (land: Land, pal: ChipPalette): Built => {
   group.add(bg);
 
   const glyphs = drawGlyphs();
-  const rainFar = new THREE.Mesh(new THREE.PlaneGeometry(20, 11.5), rainMaterial(shared, glyphs.tex, pal, 330, 230, 5, 0.34));
+  const rainFar = new THREE.Mesh(new THREE.PlaneGeometry(20, 11.5), rainMaterial(shared, glyphs.tex, pal, 330, 230, 5, 0.55));
   rainFar.position.set(0.14, -0.43, -4);
   rainFar.renderOrder = -9;
   group.add(rainFar);
@@ -565,7 +568,7 @@ const build = (land: Land, pal: ChipPalette): Built => {
   const dotMap = drawDotMap(land);
   const mapMat = mapMaterial(shared, dotMap.tex, pal);
   const mapMesh = new THREE.Mesh(marginPlane(MAP_W, MAP_W / MAP_ASPECT, 0.02), mapMat);
-  mapMesh.position.set(-0.05, -0.21, -0.25);
+  mapMesh.position.set(-0.05, -0.36, -0.45);
   mapMesh.renderOrder = -5;
   group.add(mapMesh);
 
@@ -639,8 +642,8 @@ const build = (land: Land, pal: ChipPalette): Built => {
   specks.renderOrder = 5;
   group.add(specks);
 
-  const rainNear = new THREE.Mesh(new THREE.PlaneGeometry(11, 6.2), rainMaterial(shared, glyphs.tex, pal, 130, 90, 9, 0.1));
-  rainNear.position.set(0.14, -0.43, 3.2);
+  const rainNear = new THREE.Mesh(new THREE.PlaneGeometry(13, 7.4), rainMaterial(shared, glyphs.tex, pal, 260, 190, 9, 0.22));
+  rainNear.position.set(0.0, -0.43, 1.2);
   rainNear.renderOrder = 6;
   group.add(rainNear);
 
@@ -715,7 +718,7 @@ const post: PostParams = {
   bloomStrength: 1.1,
   bloomThreshold: 0.75,
   bloomKnee: 0.45,
-  vignette: 0.55,
+  vignette: 0.75,
   grain: 0.015,
 };
 

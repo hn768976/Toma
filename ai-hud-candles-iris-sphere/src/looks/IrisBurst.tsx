@@ -39,10 +39,10 @@ const pickColour = (theta: number, r: number) => {
   const a = ((theta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const band = Math.floor((a / (Math.PI * 2)) * 70);
   const x = r < 0.7 ? hash(band, 17) : r;
-  const gold = Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(-45))) ** 0.9 * 1.15 + 0.08;
-  const purple = Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(160))) ** 1.4 * 0.3 + 0.06;
-  const cyan = 0.22;
-  const blue = 0.36;
+  const gold = 0.14 + 0.3 * Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(-45)));
+  const purple = 0.07 + 0.1 * Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(160)));
+  const cyan = 0.28;
+  const blue = 0.5;
   const sum = gold + purple + cyan + blue;
   const v = x * sum;
   return v < blue ? 3 : v < blue + cyan ? 0 : v < blue + cyan + purple ? 1 : 2;
@@ -69,14 +69,14 @@ const strandGeometry = () => {
   for (let i = 0; i < STRANDS; i++) {
     const theta = (i / STRANDS) * Math.PI * 2 + (rnd() - 0.5) * 0.02;
     // a few strands fall back into the pupil: dim warm streaks inside the hole
-    const inward = rnd() < 0.07;
+    const inward = rnd() < 0.0;
     const lift = inward ? -(1.0 + rnd() * 0.35) : Math.pow(rnd(), 2.0) * 0.6; // radians toward the viewer
     const long = rnd() < 0.12;
-    const len = inward ? 0.6 + rnd() * 0.8 : long ? 2.2 + rnd() * 2.2 : 0.5 + Math.pow(rnd(), 1.6) * 2.0;
-    const curv = 0.35 + (rnd() - 0.5) * 0.5; // mostly one way: an iris swirl
+    const len = inward ? 0.6 + rnd() * 0.8 : long ? 2.6 + rnd() * 2.2 : 0.9 + Math.pow(rnd(), 1.3) * 2.0;
+    const curv = 0.5 + (rnd() - 0.5) * 0.3; // mostly one way: combed, swept curves
     a.set([theta, lift, len, curv], i * 4);
     b.set([0.004 + rnd() * 0.006, rnd() * 0.9, rnd() * 100, inward ? 2 : pickColour(theta, rnd())], i * 4);
-    c.set([(rnd() - 0.5) * 0.35, (inward ? 0.04 : 1) * (0.16 + rnd() * 0.34), 1.6 + rnd() * 1.4, 0], i * 4);
+    c.set([(rnd() - 0.5) * 0.08, (inward ? 0.04 : 1) * (0.16 + rnd() * 0.34), 1.6 + rnd() * 1.4, 0], i * 4);
   }
   g.setAttribute("aA", new THREE.InstancedBufferAttribute(a, 4));
   g.setAttribute("aB", new THREE.InstancedBufferAttribute(b, 4));
@@ -161,7 +161,7 @@ const strandMaterial = (shared: Shared, pal: IrisPalette) =>
         float energy = max(px, 0.9) / hw;
         float tip = exp(-(1.0 - s) * 22.0) * (0.9 + 2.0 * (1.0 - g));
         float rootGlow = exp(-s * 30.0) * 0.25;
-        vec3 col = palette(aB.w) * (aB.w > 1.5 && aB.w < 2.5 ? 1.45 : 1.0);
+        vec3 col = palette(aB.w) * (aB.w > 1.5 && aB.w < 2.5 ? 1.2 : (aB.w > 2.5 ? 1.5 : 1.0));
         col = mix(col, vec3(1.0, 0.95, 0.7), rootGlow * 0.5 + tip * 0.2);
         float fadeOut = 1.0 - smoothstep(0.75, 1.0, s) * 0.4;
         vA = aC.y * energy * (0.75 + rootGlow + tip) * fadeOut * step(1e-4, grow);
@@ -221,7 +221,7 @@ const speckMaterial = (shared: Shared, pal: IrisPalette) =>
         vec3 radial = vec3(cos(theta), sin(theta), 0.0);
         vec3 d = normalize(radial * cos(lift) + vec3(0.0, 0.0, sin(lift)));
         float since = max(uTime - ${BURST.toFixed(2)} - 0.1, 0.0);
-        float range = 4.0;
+        float range = 3.4;
         // spray: an eased burst, then a steady outward drift that wraps
         float burst = (1.0 - exp(-since * 1.6)) * (0.3 + aA.x * 2.6);
         float r = mod(burst + aA.y * since * 0.55 + aA.x * 0.2, range);
@@ -271,7 +271,9 @@ const ringMaterial = (shared: Shared, pal: IrisPalette) =>
         float glow = exp(-abs(r - 1.0) / 0.05) * 0.35;
         float ang = atan(p.y, p.x);
         float sparkle = pow(vnoise(vec2(ang * 40.0, uTime * 2.0)), 6.0) * 3.0;
-        vec3 col = uColor * (core * (1.5 + uHot * 0.6) + glow * (1.0 - 0.6 * uHot)) + mix(uColor, vec3(1.0, 0.95, 0.6), 0.6) * core * sparkle * uHot;
+        // after the burst the rim turns into a thin golden lip
+        vec3 rc = mix(uColor, vec3(1.0, 0.72, 0.2), uHot * 0.85);
+        vec3 col = rc * (core * (1.5 + uHot * 0.6) + glow * (1.0 - 0.6 * uHot)) + mix(uColor, vec3(1.0, 0.95, 0.6), 0.6) * core * sparkle * uHot;
         gl_FragColor = vec4(col * uAmp, 1.0);
       }`,
     ...addBlend,
@@ -295,9 +297,9 @@ const planetMaterial = (shared: Shared, pal: IrisPalette) =>
       void main() {
         float ndv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
         float f = 1.0 - ndv;
-        float rim = pow(f, 2.6);
+        float rim = pow(f, 4.5);
         float side = smoothstep(-0.15, 0.75, normalize(vN).x);
-        vec3 col = mix(uInner, uOuter, smoothstep(0.45, 0.9, f)) * (rim * 3.2 + pow(f, 8.0) * 4.0) * side;
+        vec3 col = mix(uInner, uOuter, smoothstep(0.6, 0.95, f)) * (rim * 3.6 + pow(f, 10.0) * 3.0) * side;
         col += vec3(0.0008, 0.002, 0.004);
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -322,7 +324,7 @@ const haloMaterial = (pal: IrisPalette) =>
         float ndv = abs(dot(normalize(vN), normalize(vV)));
         float g = pow(smoothstep(0.0, 0.42, ndv), 2.5);
         float side = smoothstep(-0.1, 0.8, normalize(vN).x);
-        gl_FragColor = vec4(mix(uInner, uOuter, 0.75) * g * 1.4 * side, 1.0);
+        gl_FragColor = vec4(mix(uInner, uOuter, 0.75) * pow(g, 2.0) * 1.2 * side, 1.0);
       }`,
     ...addBlend,
     side: THREE.BackSide,
@@ -346,7 +348,7 @@ const build = (pal: IrisPalette) => {
 
   // the iris, tilted ~35° off-axis
   const iris = new THREE.Group();
-  iris.rotation.set(THREE.MathUtils.degToRad(8), THREE.MathUtils.degToRad(55), THREE.MathUtils.degToRad(4));
+  iris.rotation.set(THREE.MathUtils.degToRad(10), THREE.MathUtils.degToRad(60), THREE.MathUtils.degToRad(12));
   group.add(iris);
   const ringMat = ringMaterial(shared, pal);
   const ring = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5), ringMat);
@@ -371,7 +373,7 @@ const build = (pal: IrisPalette) => {
     const t = frame / fps;
     shared.uTime.value = t;
     // the ring is alone at first, then hands over to the strand roots
-    ringMat.uniforms.uAmp.value = (0.25 + 0.45 * smooth(progress(t, 0, 1.4)) + 0.3 * smooth(progress(t, 1.4, 2.2))) * (1 - 0.8 * smooth(progress(t, 2.2, 4.5)));
+    ringMat.uniforms.uAmp.value = (0.25 + 0.45 * smooth(progress(t, 0, 1.4)) + 0.3 * smooth(progress(t, 1.4, 2.2))) * (1 - 0.55 * smooth(progress(t, 2.2, 4.5)));
     ringMat.uniforms.uHot.value = smooth(progress(t, 1.5, 2.6));
     // camera pushes in through the whole piece, the ring drifts toward centre
     const k = easeInOutSine(progress(t, 0, 15));
@@ -380,15 +382,15 @@ const build = (pal: IrisPalette) => {
     camera.position.set(tx - 0.35, 0.05, dist);
     camera.lookAt(tx, 0.0, 0);
     camera.updateMatrixWorld();
-    shared.uDof.value.set(dist, 0.014, 0.02);
+    shared.uDof.value.set(dist, 0.02, 0.025);
   };
   return { group, camera, shared, update };
 };
 
 const post: PostParams = {
   exposure: 1.0,
-  bloomStrength: 1.0,
-  bloomThreshold: 0.85,
+  bloomStrength: 0.75,
+  bloomThreshold: 0.9,
   saturation: 1.2,
   bloomKnee: 0.4,
   vignette: 0.3,

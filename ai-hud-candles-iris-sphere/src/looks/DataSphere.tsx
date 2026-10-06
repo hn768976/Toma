@@ -29,7 +29,7 @@ const EL = 1.04; // the ring stack is slightly taller than wide
 
 // ---------- data cloud points ----------
 const clusterPoint = (rnd: () => number, sigma: number) => {
-  if (rnd() < 0.18) {
+  if (rnd() < 0.4) {
     // sparse points through the whole sphere
     const u = rnd() * 2 - 1;
     const a = rnd() * Math.PI * 2;
@@ -41,7 +41,7 @@ const clusterPoint = (rnd: () => number, sigma: number) => {
 };
 // built once at module level from fixed seeds
 const cloudRnd = mulberry32(9090);
-const TAG_POS = Array.from({ length: TAGS }, () => clusterPoint(cloudRnd, 2.0));
+const TAG_POS = Array.from({ length: TAGS }, () => clusterPoint(cloudRnd, 2.8));
 const NODE_POS = Array.from({ length: 260 }, () => clusterPoint(cloudRnd, 1.8));
 
 // ---------- tag atlas: 8 x 16 cells of 128 x 64 ----------
@@ -89,10 +89,10 @@ const drawAtlas = (pal: SpherePalette) => {
 // plus the atlas sampled with widened gradients.
 const tagMaterial = (shared: Shared, atlas: THREE.Texture) =>
   new THREE.ShaderMaterial({
-    uniforms: { ...shared, tAtlas: { value: atlas }, uOpacity: { value: 1 }, uFrameStep: { value: 0 } },
+    uniforms: { ...shared, tAtlas: { value: atlas }, uOpacity: { value: 1 }, uFrameStep: { value: 0 }, uTagScale: { value: 1 } },
     vertexShader: /* glsl */ `
       attribute vec3 aPos; attribute vec4 aInfo; // size, cell, phase, white
-      uniform float uFrameStep, uTime;
+      uniform float uFrameStep, uTime, uTagScale;
       varying vec2 vL; varying vec2 vH; varying float vB; varying vec2 vUv; varying float vA; varying float vGrad;
       ${DOF_UNIFORMS}
       ${HASH}
@@ -102,7 +102,7 @@ const tagMaterial = (shared: Shared, atlas: THREE.Texture) =>
         float pxPerUnit = uRes.y * projectionMatrix[1][1] * 0.5 / max(depth, 0.05);
         float coc = cocFrac(depth) * uRes.y;
         float b = max(coc * 0.5, 0.6) / pxPerUnit;
-        vec2 h = vec2(aInfo.x * 1.0, aInfo.x * 0.42);
+        vec2 h = vec2(aInfo.x, aInfo.x * 0.42) * uTagScale;
         vec2 ext = h + b;
         vec2 off = position.xy * ext;
         mv.xy += off;
@@ -133,7 +133,7 @@ const tagMaterial = (shared: Shared, atlas: THREE.Texture) =>
         float inside = step(abs(vL.x), vH.x) * step(abs(vL.y), vH.y);
         float alpha = mix(a * 0.75, t.a, inside * clamp(1.0 / vGrad, 0.0, 1.0));
         alpha = max(alpha, a * 0.6) * vA * uOpacity;
-        vec3 c = col * 1.9;
+        vec3 c = col * 1.5;
         if (dot(c, c) < 0.01) c = vec3(1.7, 1.0, 0.35);
         gl_FragColor = vec4(c * alpha, alpha);
       }`,
@@ -308,7 +308,7 @@ const build = (pal: SpherePalette) => {
     const phi = ((i + 0.5) / RINGS) * Math.PI;
     const y = Math.cos(phi) * R * EL;
     const pole = Math.abs(Math.cos(phi)) ** 3;
-    for (const [scale, al] of [[1, 0.45 + 0.55 * pole], [1.03, 0.35 * pole]] as const) {
+    for (const [scale, al] of [[1, 0.5 + 0.3 * pole]] as const) {
       if (al < 0.02) continue;
       const rr = Math.sin(phi) * R * scale;
       for (let k = 0; k < N; k++) {
@@ -324,7 +324,7 @@ const build = (pal: SpherePalette) => {
     }
   }
   // orbit rings outside the sphere near the equator
-  const ORBITS = [[0, R * 1.62], [-2.6, R * 1.45], [2.7, R * 1.42], [-5.4, R * 1.22], [5.6, R * 1.2], [-8.0, R * 0.95], [8.1, R * 0.92]] as const;
+  const ORBITS = [[0, R * 1.42], [-2.6, R * 1.3], [2.7, R * 1.28], [-5.4, R * 1.12], [5.6, R * 1.1], [-7.6, R * 0.82], [7.7, R * 0.8]] as const;
   for (const [y, rr] of ORBITS) {
     for (let k = 0; k < N; k++) {
       const a0 = (k / N) * Math.PI * 2;
@@ -361,12 +361,12 @@ const build = (pal: SpherePalette) => {
   const triPhase: number[] = [];
   for (let i = 0; i < TRIS; i++) {
     const a = NODE_POS[Math.floor(r() * NODE_POS.length)];
-    const s = 0.18 + Math.pow(r(), 2.5) * 0.6;
+    const s = 0.12 + Math.pow(r(), 2.5) * 0.4;
     const b = a.clone().add(new THREE.Vector3(gaussian(r), gaussian(r), gaussian(r)).normalize().multiplyScalar(s));
     const c = a.clone().add(new THREE.Vector3(gaussian(r), gaussian(r), gaussian(r)).normalize().multiplyScalar(s * (0.6 + r() * 0.6)));
     triPos.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
     triBary.push(1, 0, 0, 0, 1, 0, 0, 0, 1);
-    const al = 0.1 + r() * 0.25;
+    const al = 0.08 + r() * 0.2;
     const ph = r() * 30;
     triAlpha.push(al, al, al);
     triPhase.push(ph, ph, ph);
@@ -401,7 +401,7 @@ const build = (pal: SpherePalette) => {
     for (let k = 0; k < 26; k++) {
       const a = r() * Math.PI * 2;
       dPos.push(Math.cos(a) * rr, y, Math.sin(a) * rr);
-      dInfo.push(0.035 + r() * 0.03, 1);
+      dInfo.push(0.018 + r() * 0.015, 1);
     }
   }
   const dg = new THREE.BufferGeometry();
@@ -428,7 +428,9 @@ const build = (pal: SpherePalette) => {
       const a = r() * Math.PI * 2;
       tp.set([Math.cos(a) * rr, y + 0.12, Math.sin(a) * rr], i * 3);
     } else tp.set([p.x, p.y, p.z], i * 3);
-    ti.set([0.035 + r() * 0.04, Math.floor(r() * ATLAS_C * ATLAS_R), r() * 50, 0], i * 4);
+    const cell = Math.floor(r() * ATLAS_C * ATLAS_R);
+    // white boxed labels (every third atlas cell) are drawn larger so they read
+    ti.set([(0.035 + r() * 0.04) * (cell % 3 === 0 ? 1.7 : 1), cell, r() * 50, 0], i * 4);
   });
   tagG.setAttribute("aPos", new THREE.InstancedBufferAttribute(tp, 3));
   tagG.setAttribute("aInfo", new THREE.InstancedBufferAttribute(ti, 4));
@@ -440,7 +442,7 @@ const build = (pal: SpherePalette) => {
   world.add(tags);
 
   // soft top-down light shaft for the end
-  const shaft = new THREE.Mesh(new THREE.PlaneGeometry(26, 30), shaftMaterial(white.clone().multiplyScalar(0.06)));
+  const shaft = new THREE.Mesh(new THREE.PlaneGeometry(26, 30), shaftMaterial(white.clone().multiplyScalar(0.03)));
   shaft.position.set(0, 3, -2);
   shaft.renderOrder = 0;
   group.add(shaft);
@@ -449,7 +451,7 @@ const build = (pal: SpherePalette) => {
   const flyA = new THREE.Vector3(3.6, 1.4, 4.6);
   const flyB = new THREE.Vector3(-0.8, -0.5, 3.8);
   const elev = THREE.MathUtils.degToRad(2);
-  const D = 23.0;
+  const D = 39.0;
   const endPos = new THREE.Vector3(0, Math.sin(elev) * D, Math.cos(elev) * D);
   const camPos = (t: number) => {
     const f = easeInOutSine(progress(t, 0, 8));
@@ -474,6 +476,11 @@ const build = (pal: SpherePalette) => {
     // keep a curved path out: swing upward as we pull back
     pos.y += Math.sin(pb * Math.PI) * 1.2;
     const look = new THREE.Vector3().lerpVectors(camLook(Math.min(t, 8)), new THREE.Vector3(0, 0, 0), smooth(progress(t, 8, 12)));
+    // lens lengthens during the pull-back, so the finished sphere reads flat-on
+    camera.fov = lerp(40, 24, pb);
+    camera.updateProjectionMatrix();
+    dm.uniforms.uPxScale.value = 1 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+    tagMat.uniforms.uTagScale.value = lerp(1, 1.45, pb);
     camera.position.copy(pos);
     camera.lookAt(look);
     camera.updateMatrixWorld();

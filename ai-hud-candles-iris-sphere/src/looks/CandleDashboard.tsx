@@ -373,8 +373,8 @@ const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: numb
     mats.push(pm);
   }
   const toL = (u: number, v: number) => [(u - 0.5) * PANEL_W, (0.5 - v) * PANEL_H] as const;
-  const up = lin(pal.up).multiplyScalar(1.9);
-  const down = lin(pal.down).multiplyScalar(1.9);
+  const up = lin(pal.up).multiplyScalar(1.35);
+  const down = lin(pal.down).multiplyScalar(1.35);
   const barC = lin(pal.bar).multiplyScalar(0.9);
   const updaters: ((frame: number, t: number) => void)[] = [];
 
@@ -411,7 +411,7 @@ const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: numb
           const isUp = c >= d.o;
           const bodyTop = yy(Math.max(d.o, c));
           const bodyBot = yy(Math.min(d.o, c));
-          rect.setXYZW(i * 2, x, (bodyTop + bodyBot) / 2, step * 0.26, Math.max(0.006, (bodyTop - bodyBot) / 2));
+          rect.setXYZW(i * 2, x, (bodyTop + bodyBot) / 2, step * 0.19, Math.max(0.006, (bodyTop - bodyBot) / 2));
           rect.setXYZW(i * 2 + 1, x, (yy(h) + yy(l)) / 2, step * 0.045, (yy(h) - yy(l)) / 2);
           const cc = isUp ? up : down;
           const flash = live ? 1.25 : 1;
@@ -531,9 +531,9 @@ const build = (pal: CandlePalette) => {
   });
   // free-floating candle layers in front of and behind the panels
   const floating = [
-    { x: -6.2, y: 0.4, z: 0.8, seed: 61 },
-    { x: 2.2, y: -0.3, z: 0.6, seed: 62 },
-    { x: 7.5, y: 0.6, z: 0.9, seed: 63 },
+    { x: -6.2, y: 0.4, z: 0.45, seed: 61 },
+    { x: 2.2, y: -0.3, z: 0.35, seed: 62 },
+    { x: 7.5, y: 0.6, z: 0.4, seed: 63 },
     { x: -2.5, y: 0.2, z: -1.0, seed: 64 },
     { x: 5.2, y: 0.0, z: -1.2, seed: 65 },
   ].map((f, i) => {
@@ -567,12 +567,12 @@ const build = (pal: CandlePalette) => {
 };
 
 const post: PostParams = {
-  exposure: 0.95,
-  bloomStrength: 1.6,
-  bloomThreshold: 0.7,
-  saturation: 1.2,
+  exposure: 0.82,
+  bloomStrength: 1.1,
+  bloomThreshold: 0.75,
+  saturation: 0.95,
   bloomKnee: 0.4,
-  vignette: 0.5,
+  vignette: 0.8,
   grain: 0.015,
 };
 
