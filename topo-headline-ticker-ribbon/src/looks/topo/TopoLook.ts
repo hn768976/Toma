@@ -358,9 +358,9 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       labels.end();
 
       return {
-        focusNear: 17,
+        focusNear: 20,
         focusFar: 42,
-        nearBlurAt: 9,
+        nearBlurAt: 11,
         farBlurAt: 120,
         nearCoc: 0.0075,
         farCoc: 0.0055,

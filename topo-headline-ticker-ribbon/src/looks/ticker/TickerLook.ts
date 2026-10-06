@@ -87,10 +87,15 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
       g.save();
       g.translate(0, y + RH * 0.5);
       g.scale(1, 1.9); // pre-stretch: the floor is seen at a grazing angle
+      // shrink the text if it would not fit the tile
+      const str = kind < 0.66 ? `${kind < 0.33 ? "+" : "\u2212"} ${val} %` : `${val} %`;
       g.font = font;
+      const need = g.measureText(str).width + (kind < 0.66 ? RH * 0.3 : 0);
+      const fit = Math.min(1, (w * 0.82) / need);
+      const fs = RH * 0.3 * fit;
+      g.font = `700 ${Math.round(fs)}px ${FONT_INTER}`;
       g.fillStyle = "rgba(255,255,255,0.96)";
       g.textBaseline = "middle";
-      const fs = RH * 0.3;
       let tx = x + w * 0.1;
       if (kind < 0.66) {
         const up = kind < 0.33;
@@ -107,9 +112,9 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
         g.closePath();
         g.fill();
         tx += fs * 1.0;
-        g.fillText(`${up ? "+" : "−"} ${val} %`, tx, 0);
+        g.fillText(str, tx, 0);
       } else {
-        g.fillText(`${val} %`, tx + w * 0.08, 0);
+        g.fillText(str, tx + w * 0.08, 0);
       }
       g.restore();
       g.restore();

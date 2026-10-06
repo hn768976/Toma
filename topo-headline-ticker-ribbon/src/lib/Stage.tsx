@@ -39,7 +39,6 @@ const Driver: React.FC<{ factory: LookFactory; assets: Assets }> = ({ factory, a
     const height = Math.round(size.y);
     const look = factory({ assets, width, height, pxScale: height / 2160, renderer: gl });
     const post = new Post(width, height);
-    console.warn("drawing buffer", width, height, "dpr", window.devicePixelRatio, "css", gl.domElement.clientWidth);
     return { look, post };
   }, [gl, factory, assets]);
   useEffect(() => () => {

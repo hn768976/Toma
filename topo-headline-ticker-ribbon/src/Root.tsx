@@ -19,7 +19,7 @@ const ENTRIES: Entry[] = [
 ];
 
 // Stable component per composition (factory identity never changes).
-const components = new Map<string, React.FC>(
+const components = new Map<string, React.FC<{ loopCheck: boolean }>>(
   ENTRIES.map((e) => [e.id, () => <Stage factory={e.factory} />]),
 );
 
@@ -31,6 +31,9 @@ export const RemotionRoot: React.FC = () => (
         id={e.id}
         component={components.get(e.id)!}
         durationInFrames={e.frames}
+        defaultProps={{ loopCheck: false }}
+        // loopCheck: true renders one extra frame (frame 600 must equal frame 0)
+        calculateMetadata={({ props }) => ({ durationInFrames: props.loopCheck ? e.frames + 1 : e.frames })}
         fps={FPS}
         width={W}
         height={H}
