@@ -75,7 +75,7 @@ const LABELS: Label[] = (() => {
         : ((row + 0.2 + r() * 0.6) / rows - 0.5) * 1.12 + 0.5;
       // the field leans back: rows higher in frame sit further away
       const d0 = CAM_Z - (z + (r() - 0.5) * (focal ? 0.3 : 1.4));
-      const dist = d0 * (1 + 0.55 * (0.5 - v));
+      const dist = d0 * (1 + 0.65 * (0.5 - v));
       const zz = CAM_Z - dist;
       const x = (u - 0.5) * 2 * dist * TAN * (16 / 9);
       const y = (0.5 - v) * 2 * dist * TAN;
@@ -83,8 +83,8 @@ const LABELS: Label[] = (() => {
         x,
         y,
         z: zz,
-        h: 0.05 * (CAM_Z - zz) * (0.75 + r() * 0.6) * (focal ? 1.6 : 1),
-        tinted: z < -12 ? r() < 0.6 : r() < 0.36,
+        h: 0.05 * (CAM_Z - zz) * (0.75 + r() * 0.6) * (focal ? 1.45 : 1),
+        tinted: z < -12 ? r() < 0.6 : r() < (focal ? 0.12 : 0.36),
         bright: 0.7 + r() * 0.3,
         period: periods[Math.floor(r() * periods.length)],
         offset: Math.floor(r() * 600),
@@ -108,7 +108,7 @@ const getAtlas = () => {
   const ctx = c.getContext("2d")!;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `700 66px Inter`;
+  ctx.font = `600 64px Inter`;
   ctx.fillStyle = "#fff";
   BLUR_LEVELS.forEach((b, li) => {
     STRINGS.forEach((s, si) => {
@@ -121,7 +121,7 @@ const getAtlas = () => {
       ctx.clip();
       ctx.filter = b > 0 ? `blur(${b}px)` : "none";
       // letter-spaced like a terminal readout
-      const spaced = s.split("").join(String.fromCharCode(0x200a));
+      const spaced = s.replace(" %", String.fromCharCode(0x2009) + "%").split("").join(String.fromCharCode(0x200a));
       ctx.fillText(spaced, cx, cy + 2);
       ctx.restore();
     });
@@ -141,14 +141,14 @@ const screenToWorld = (sx: number, sy: number, z: number, aspect: number): THREE
 
 const arrowPath = (dir: "down" | "up", aspect: number): THREE.Vector2[] => {
   const pts: [number, number][] = [
-    [-0.06, 0.2],
-    [0.05, 0.43],
-    [0.39, 0.12],
+    [-0.05, 0.24],
+    [0.05, 0.44],
+    [0.38, 0.16],
     [0.78, 0.83],
   ];
   return pts.map(([x, y]) => screenToWorld(x, dir === "down" ? y : 1 - y, ARROW_Z, aspect));
 };
-const ARROW_Z = 0.6;
+const ARROW_Z = -1.3; // behind the sharp number plane, so white numbers sit over it
 
 const buildArrowShape = (path: THREE.Vector2[], progress: number, shaftW: number, headW: number, headL: number) => {
   const lens: number[] = [0];
@@ -230,7 +230,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
       const x = r() * 2048;
       const w = 14 + r() * 40;
       const h = 150 + r() * 700;
-      ctx.fillStyle = rgba(r() < 0.5 ? row.tint : "#ffffff", 0.05 + r() * 0.1);
+      ctx.fillStyle = rgba(r() < 0.5 ? row.tint : "#ffffff", 0.025 + r() * 0.05);
       ctx.fillRect(x, 1152 - h - r() * 200, w, h);
     }
     // faint out-of-focus arrows echoing the main one
@@ -240,7 +240,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
       const y = 150 + r() * 700;
       const sz = 90 + r() * 140;
       const dir = row.direction === "down" ? 1 : -1;
-      ctx.fillStyle = rgba(row.tint, 0.1 + r() * 0.12);
+      ctx.fillStyle = rgba(row.tint, 0.28 + r() * 0.16);
       ctx.beginPath();
       ctx.moveTo(x - sz * 0.18, y - dir * sz);
       ctx.lineTo(x + sz * 0.18, y - dir * sz);
@@ -336,7 +336,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
           float d = dot(q, q);
           float a = smoothstep(1.0, 0.55, d);
           float face = 0.25 + 0.75 * pow(vFace, 0.7);
-          vec3 c = uTint * vB * face * 0.55 + vec3(1.0, 0.8, 0.8) * vB * face * 0.03;
+          vec3 c = uTint * vB * face * 0.75 + vec3(1.0, 0.8, 0.8) * vB * face * 0.04;
           gl_FragColor = vec4(c * uFade, a);
         }`,
       transparent: true,
@@ -365,7 +365,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
             float f = 1.0 - clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
             float rim = pow(f, 2.6);
             float lit = clamp(dot(normalize(vN), normalize(vec3(-0.4, 0.5, 0.75))), 0.0, 1.0);
-            vec3 c = uTint * (0.02 + 0.04 * lit) + uTint * rim * 0.14;
+            vec3 c = uTint * (0.05 + 0.1 * lit) + uTint * rim * 0.3;
             gl_FragColor = vec4(c, 1.0);
           }`,
         transparent: true,
@@ -409,7 +409,8 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
         out vec2 vUv; out vec3 vCell; out float vTint;
         void main() {
           vUv = uv; vCell = iCell; vTint = iTint;
-          vec3 p = iOffset + vec3(position.xy * iSize, 0.0);
+          // quads lie on the receding plane: top edge tilted away from camera
+          vec3 p = iOffset + vec3(position.x * iSize.x, position.y * iSize.y * 0.9, -position.y * iSize.y * 0.45);
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }`,
       fragmentShader: /* glsl */ `
@@ -464,10 +465,10 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
         float spec = pow(clamp(dot(n, h), 0.0, 1.0), 40.0);
         float fres = pow(1.0 - clamp(dot(n, normalize(vV)), 0.0, 1.0), 3.0);
         float front = smoothstep(0.85, 0.99, n.z);
-        vec3 c = uTint * (0.85 + 0.45 * diff);
-        c = mix(c * 0.7, c, front);
+        vec3 c = uTint * (0.7 + 0.55 * diff);
+        c = mix(c * 0.55, c, front);
         c += mix(uTint, vec3(1.0), 0.3) * (spec * 0.3 + fres * 0.15);
-        c *= 1.08; // slightly emissive: feeds the bloom like light on a display
+        c *= 0.95;
         gl_FragColor = vec4(c * uAlpha, uAlpha);
       }`,
     transparent: true,
@@ -508,7 +509,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
 
     // labels
     const camZ = camera.position.z;
-    const focus = camZ - ARROW_Z;
+    const focus = camZ; // sharp plane at z = 0
     LABELS.forEach((l, i) => {
       const x = l.x + l.sx * Math.sin(TAU * (ph + l.ph));
       const y = l.y + l.sy * Math.sin(TAU * (2 * ph + l.ph));
@@ -522,7 +523,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
       // circle of confusion → atlas blur level
       const dist = camZ - l.z;
       const k = Math.abs(1 - focus / dist);
-      const cocFrac = Math.min(0.03, k * (l.z > ARROW_Z ? 0.04 : 0.018)); // fraction of frame height
+      const cocFrac = Math.min(0.03, k * (l.z > 0 ? 0.04 : 0.018)); // fraction of frame height
       const screenH = l.h / (2 * dist * TAN);
       const blurAtlas = (cocFrac / screenH) * CELL_H * 0.42;
       let lv = 0;
@@ -533,7 +534,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
           : lv + (blurAtlas - BLUR_LEVELS[lv]) / (BLUR_LEVELS[lv + 1] - BLUR_LEVELS[lv]);
       const depthFade = dist > 13 ? Math.max(0.12, 0.6 - (dist - 13) / 45) : 1;
       const hazeCut = 1 - 0.45 * Math.min(1, Math.max(0, lvf - 1.5) / 2.5);
-      const tintDim = l.tinted ? 0.85 : 1;
+      const tintDim = l.tinted ? 0.6 : 1;
       iCell.setXYZ(i, str, Math.min(5, Math.max(0, lvf)), l.bright * depthFade * hazeCut * flick * tintDim);
     });
     iOffset.needsUpdate = true;
@@ -566,7 +567,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
       frame: f,
       bloom: { strength: 0.7, threshold: 0.68, knee: 0.35, radius: 1.0 },
       exposure: 1.0,
-      vignette: 0.75,
+      vignette: 0.8,
       grain: 0.015,
     };
   };
