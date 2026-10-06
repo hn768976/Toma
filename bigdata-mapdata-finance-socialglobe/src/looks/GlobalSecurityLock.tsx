@@ -516,7 +516,8 @@ const build: BuildFn = (assets) => {
       dashes.end();
 
       // icons drifting; a few flicker
-      const fadeIn = remap(f, 0, 14);
+      // 0-1.5s: dark map with icons drifting, visible from the first frame
+      const fadeIn = 1;
       ICONS_BY_BIN.forEach((list, b) => {
         const bb = binIcons[b];
         bb.begin();
