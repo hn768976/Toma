@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { Assets, MONO, SANS, landMask } from "../lib/assets";
 import { Batch2D, texPlaneMaterial } from "../lib/batch2d";
 import { canvasTexture, makeCanvas } from "../lib/canvas";
-import { beatValue, cyc, hash2, irange, mulberry32, pick, range, rollingDigits, stepIndex, Rng } from "../lib/random";
+import { beatValue, cyc, hash2, hash3, irange, mulberry32, pick, range, rollingDigits, stepIndex, Rng } from "../lib/random";
 import { BuildFn, LookProps, Stage } from "../lib/Stage";
 import { LayerSpec } from "../lib/pipeline";
 
@@ -29,14 +29,14 @@ const PX_PER_UNIT_4K = 2160 / VIS_H; // screen px per unit at the map plane, 4K
 // Map extents
 const LAT_TOP = 84;
 const LAT_BOT = -58;
-const MAP_W = VIS_W * 1.1;
+const MAP_W = VIS_W * 1.25;
 const MAP_H = (MAP_W * (LAT_TOP - LAT_BOT)) / 360;
 
 // ---------------------------------------------------------------------------
 // Clusters (layout at module level)
 
 type Cluster = {
-  kind: "bars" | "chips" | "chart" | "digits" | "tree" | "codes" | "blocks";
+  kind: "bars" | "column" | "strip" | "panel" | "chips" | "chart" | "digits" | "tree" | "codes" | "blocks";
   x: number;
   y: number;
   n: number;
@@ -55,7 +55,7 @@ const genClusters = (r: Rng, Wpx: number, Hpx: number, count: number, scale: num
       kind,
       x: range(r, 30 * scale, Wpx - w - 60 * scale),
       y: range(r, Hpx * 0.04, Hpx * 0.94),
-      n: irange(r, 3, 11),
+      n: kind === "column" ? irange(r, 14, 24) : kind === "strip" ? irange(r, 3, 6) : irange(r, 3, 11),
       seed: irange(r, 1, 1e9),
       w,
       scale,
@@ -66,10 +66,12 @@ const genClusters = (r: Rng, Wpx: number, Hpx: number, count: number, scale: num
 };
 
 const barColor = (c: Cluster, i: number) => {
+  // mostly golden yellow / cyan, alternating in runs, few white bars
   const h = hash2(c.seed, i * 3 + 1);
-  if (c.palette < 0.45) return h < 0.75 ? YEL : WHT;
-  if (c.palette < 0.85) return h < 0.75 ? CYA : WHT;
-  return h < 0.5 ? YEL : CYA;
+  if (h < 0.1) return WHT;
+  if (c.palette < 0.35) return h < 0.8 ? YEL : CYA;
+  if (c.palette < 0.7) return h < 0.8 ? CYA : YEL;
+  return (i >> 1) % 2 === 0 ? YEL : CYA;
 };
 
 const CODE_CHARS = "0123456789ABCDEF";
@@ -93,6 +95,46 @@ const drawClustersStatic = (ctx: CanvasRenderingContext2D, cl: Cluster[]) => {
         }
         ctx.fillStyle = "rgba(160,210,255,0.25)";
         ctx.fillRect(-4 * s, -6 * s, 1.5 * s, c.n * 15 * s + 4 * s);
+        break;
+      }
+      case "strip": {
+        // long strip of solid white label boxes separated by cyan squares
+        let x = 0;
+        ctx.font = `700 ${11 * s}px ${MONO}`;
+        ctx.textBaseline = "middle";
+        for (let i = 0; i < c.n; i++) {
+          const w = range(r, 70, 120) * s;
+          ctx.fillStyle = "rgba(90,232,255,0.95)";
+          ctx.fillRect(x, -7 * s, 14 * s, 14 * s);
+          x += 18 * s;
+          ctx.fillStyle = "rgba(240,248,255,0.95)";
+          ctx.fillRect(x, -8 * s, w, 16 * s);
+          ctx.fillStyle = "rgba(10,40,90,0.9)";
+          ctx.fillText(code(r, 3) + " " + code(r, 4), x + 6 * s, 0.5 * s);
+          x += w + 8 * s;
+          if (x > c.w * 1.4) break;
+        }
+        ctx.fillStyle = "rgba(225,240,255,0.6)";
+        ctx.fillRect(x, -1 * s, 60 * s, 2 * s);
+        break;
+      }
+      case "column": {
+        ctx.fillStyle = "rgba(200,230,255,0.5)";
+        ctx.font = `500 ${10 * s}px ${MONO}`;
+        for (let i = 0; i < c.n; i += 1) {
+          if (r() < 0.6) ctx.fillText(code(r, 5), c.w + 12 * s, i * 11 * s + 3 * s);
+        }
+        break;
+      }
+      case "panel": {
+        ctx.fillStyle = "rgba(2,12,36,0.75)";
+        ctx.fillRect(-14 * s, -60 * s, c.w + 28 * s, 120 * s);
+        ctx.strokeStyle = "rgba(160,210,255,0.35)";
+        ctx.lineWidth = 1.5 * s;
+        ctx.strokeRect(-14 * s, -60 * s, c.w + 28 * s, 120 * s);
+        ctx.fillStyle = "rgba(200,230,255,0.5)";
+        ctx.font = `500 ${10 * s}px ${MONO}`;
+        ctx.fillText(code(r, 7), 0, 48 * s);
         break;
       }
       case "chips": {
@@ -149,12 +191,10 @@ const drawClustersStatic = (ctx: CanvasRenderingContext2D, cl: Cluster[]) => {
         ctx.stroke();
         ctx.fillStyle = "rgba(255,210,74,0.95)";
         ctx.fillRect(-6 * s, -5 * s, 10 * s, 10 * s);
-        ctx.font = `500 ${9 * s}px ${MONO}`;
-        ctx.fillStyle = "rgba(235,246,255,0.7)";
         for (let i = 0; i < leaves; i++) {
           const y = (i - (leaves - 1) / 2) * 13 * s;
-          ctx.strokeStyle = "rgba(235,246,255,0.7)";
-          ctx.strokeRect(c.w * 0.62, y - 4 * s, 30 * s, 8 * s);
+          ctx.fillStyle = "rgba(240,248,255,0.92)";
+          ctx.fillRect(c.w * 0.62, y - 5 * s, 44 * s, 10 * s);
         }
         break;
       }
@@ -166,9 +206,18 @@ const drawClustersStatic = (ctx: CanvasRenderingContext2D, cl: Cluster[]) => {
         break;
       }
       case "blocks": {
-        for (let i = 0; i < c.n * 3; i++) {
-          ctx.fillStyle = r() < 0.5 ? "rgba(90,232,255,0.35)" : "rgba(235,246,255,0.25)";
-          ctx.fillRect((i % 9) * 12 * s, Math.floor(i / 9) * 12 * s, 9 * s, 9 * s);
+        // small plus / cross markers and dots
+        ctx.strokeStyle = "rgba(200,235,255,0.7)";
+        ctx.lineWidth = 1.5 * s;
+        for (let i = 0; i < 3; i++) {
+          const x = range(r, 0, 120) * s;
+          const y = range(r, -30, 30) * s;
+          ctx.beginPath();
+          ctx.moveTo(x - 5 * s, y - 5 * s);
+          ctx.lineTo(x + 5 * s, y + 5 * s);
+          ctx.moveTo(x + 5 * s, y - 5 * s);
+          ctx.lineTo(x - 5 * s, y + 5 * s);
+          ctx.stroke();
         }
         break;
       }
@@ -186,8 +235,28 @@ const drawClustersDyn = (B: Batch2D, cl: Cluster[], f: number, gain: number) => 
         for (let i = 0; i < c.n; i++) {
           const v = 0.12 + 0.88 * beatValue(f, c.seed + i * 17, [24, 30, 40, 50][i % 4], LOOP, 0.55);
           const col = barColor(c, i);
-          B.rect(c.x, c.y + i * 15 * s - 3.5 * s, c.w * v, 7 * s, col, 0.95, { i: 1.25 * gain });
+          B.rect(c.x, c.y + i * 15 * s - 3.5 * s, c.w * v, 7 * s, col, 0.95, { i: 1.0 * gain });
         }
+        break;
+      }
+      case "column": {
+        for (let i = 0; i < c.n; i++) {
+          const v = 0.25 + 0.75 * beatValue(f, c.seed + i * 17, [24, 30, 40, 50][i % 4], LOOP, 0.55);
+          B.rect(c.x, c.y + i * 11 * s - 3 * s, c.w * v, 6 * s, barColor(c, i), 0.95, { i: 1.0 * gain });
+        }
+        break;
+      }
+      case "strip":
+        break;
+      case "panel": {
+        const n = 7;
+        const pts: number[] = [];
+        for (let i = 0; i < n; i++) {
+          const v = beatValue(f, c.seed + i * 29, 50, LOOP, 0.6);
+          pts.push(c.x + (i / (n - 1)) * c.w, c.y + 30 * s - v * 70 * s);
+        }
+        B.poly(pts, 2.2 * s, YEL, 0.9, { i: 1.1 * gain });
+        for (let i = 0; i < pts.length; i += 2) B.dot(pts[i], pts[i + 1], 4.5 * s, YEL, 1, { i: 1.3 * gain });
         break;
       }
       case "chips": {
@@ -203,16 +272,15 @@ const drawClustersDyn = (B: Batch2D, cl: Cluster[], f: number, gain: number) => 
           const v = beatValue(f, c.seed + i * 29, 50, LOOP, 0.6);
           pts.push(c.x + (i / (n - 1)) * c.w, c.y + 32 * s - v * 64 * s);
         }
-        const col = c.palette < 0.5 ? YEL : WHT;
-        B.poly(pts, 1.8 * s, WHT, 0.85, { i: 1.2 * gain });
+        B.poly(pts, 1.6 * s, "#CFE6FF", 0.7, { i: 1.0 * gain });
         for (let i = 0; i < pts.length; i += 2) {
-          B.rect(pts[i] - 4 * s, pts[i + 1] - 4 * s, 8 * s, 8 * s, col, 1, { border: 1.6 * s, i: 1.4 * gain });
+          B.rect(pts[i] - 4 * s, pts[i + 1] - 4 * s, 8 * s, 8 * s, "#E0C048", 1, { border: 1.6 * s, i: 1.2 * gain });
         }
         break;
       }
       case "digits": {
         const str = rollingDigits("#######", c.seed, f, LOOP, 10);
-        B.text(str, c.x, c.y, 16 * s, WHT, 0.95, { i: 1.3 * gain, spacing: 1.15 });
+        B.text(str, c.x, c.y, 34 * s, WHT, 1, { i: 1.4 * gain, spacing: 1.2 });
         break;
       }
       case "tree": {
@@ -227,10 +295,9 @@ const drawClustersDyn = (B: Batch2D, cl: Cluster[], f: number, gain: number) => 
       case "codes":
         break;
       case "blocks": {
-        const st = stepIndex(f, 10, LOOP);
-        for (let k = 0; k < 4; k++) {
-          const i = Math.floor(hash2(c.seed + k, st) * c.n * 3);
-          B.rect(c.x + (i % 9) * 12 * s, c.y + Math.floor(i / 9) * 12 * s, 9 * s, 9 * s, CYA, 0.9, { i: 1.6 * gain });
+        const st = stepIndex(f, 20, LOOP);
+        for (let k = 0; k < 2; k++) {
+          B.dot(c.x + hash3(c.seed, k, 1) * 140 * s, c.y + (hash3(c.seed, k, 2) - 0.5) * 60 * s, 3.5 * s, CYA, hash2(c.seed + k, st) > 0.3 ? 1 : 0.3, { i: 1.4 * gain, glow: 1.5 });
         }
         break;
       }
@@ -253,13 +320,13 @@ type LayerDef = {
   seed: number;
 };
 
-const ALL: Cluster["kind"][] = ["bars", "bars", "bars", "chips", "chips", "chart", "digits", "tree", "codes", "blocks"];
+const ALL: Cluster["kind"][] = ["bars", "bars", "column", "column", "strip", "chips", "chart", "digits", "digits", "tree", "codes", "codes", "blocks"];
 const LAYERS: LayerDef[] = [
-  { z: -2.0, blur: 0.0022, tilesPerLoop: 0, tileScale: 1.1, count: 26, scale: 1.0, alpha: 0.4, kinds: ALL, seed: 11 },
-  { z: 0.25, blur: 0, tilesPerLoop: 0, tileScale: 1.0, count: 44, scale: 1.15, alpha: 1, kinds: ALL, seed: 12 },
-  { z: 3.0, blur: 0.0028, tilesPerLoop: 1, tileScale: 1.08, count: 16, scale: 1.35, alpha: 0.9, kinds: ALL, seed: 13 },
-  { z: 6.5, blur: 0.0065, tilesPerLoop: 1, tileScale: 1.5, count: 12, scale: 1.45, alpha: 0.85, kinds: ["bars", "bars", "chips", "chips", "digits", "chart", "blocks"], seed: 14 },
-  { z: 11, blur: 0.014, tilesPerLoop: 2, tileScale: 1.08, count: 5, scale: 1.7, alpha: 0.7, kinds: ["bars", "chips", "chips", "blocks"], seed: 15 },
+  { z: -2.0, blur: 0.0022, tilesPerLoop: 0, tileScale: 1.35, count: 30, scale: 1.0, alpha: 0.4, kinds: ALL, seed: 11 },
+  { z: 0.25, blur: 0, tilesPerLoop: 0, tileScale: 1.25, count: 50, scale: 1.0, alpha: 1, kinds: [...ALL, "panel", "strip", "column"], seed: 12 },
+  { z: 3.0, blur: 0.0028, tilesPerLoop: 1, tileScale: 1.3, count: 16, scale: 1.15, alpha: 0.85, kinds: ALL, seed: 13 },
+  { z: 6.5, blur: 0.0065, tilesPerLoop: 1, tileScale: 1.5, count: 10, scale: 1.25, alpha: 0.7, kinds: ["bars", "column", "strip", "chips", "digits", "chart"], seed: 14 },
+  { z: 11, blur: 0.014, tilesPerLoop: 2, tileScale: 1.08, count: 5, scale: 1.4, alpha: 0.55, kinds: ["bars", "column", "strip", "chips"], seed: 15 },
 ];
 
 const LAYER_CLUSTERS = LAYERS.map((L) => {
@@ -285,7 +352,7 @@ const drawMap = (assets: Assets) => {
   const H = Math.round((W * MAP_H) / MAP_W);
   const { c, ctx } = makeCanvas(W, H);
   ctx.clearRect(0, 0, W, H);
-  const cols = 300;
+  const cols = 360;
   const pitch = W / cols;
   const rows = Math.floor(H / pitch);
   const r = mulberry32(4242);
@@ -318,9 +385,9 @@ const drawMap = (assets: Assets) => {
 const drawBackground = () => {
   const { c, ctx } = makeCanvas(1024, 576);
   const g = ctx.createRadialGradient(512, 260, 30, 512, 300, 620);
-  g.addColorStop(0, "#0B3478");
-  g.addColorStop(0.55, "#06245E");
-  g.addColorStop(1, "#020E30");
+  g.addColorStop(0, "#14447F");
+  g.addColorStop(0.45, "#0A2C66");
+  g.addColorStop(1, "#020A26");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1024, 576);
   // faint grid
@@ -350,7 +417,7 @@ const build: BuildFn = (assets) => {
   const bgZ = -8;
   const bgScale = (CAM_Z - bgZ) / CAM_Z;
   const bg = new THREE.Mesh(
-    new THREE.PlaneGeometry(VIS_W * bgScale * 1.15, VIS_H * bgScale * 1.15),
+    new THREE.PlaneGeometry(VIS_W * bgScale * 1.8, VIS_H * bgScale * 1.4),
     texPlaneMaterial(canvasTexture(drawBackground())),
   );
   bg.position.z = bgZ;
@@ -359,7 +426,9 @@ const build: BuildFn = (assets) => {
   const map = drawMap(assets);
   const sMap = new THREE.Scene();
   const mapMesh = new THREE.Mesh(new THREE.PlaneGeometry(MAP_W, MAP_H), texPlaneMaterial(canvasTexture(map.canvas), { tint: [1.15, 1.15, 1.15] }));
-  mapMesh.position.y = 0.35;
+  // Africa near the centre-left, equator a little below centre
+  mapMesh.position.x = -0.04 * VIS_W - (20 / 360) * MAP_W;
+  mapMesh.position.y = -0.11 * VIS_H + ((LAT_TOP + LAT_BOT) / 2 / (LAT_TOP - LAT_BOT)) * MAP_H;
   sMap.add(mapMesh);
   const mapBatch = new Batch2D({ capacity: 800, width: map.W, height: map.H, unitsPerPx: MAP_W / map.W, z: 0.001, padPx: 2 });
   mapBatch.mesh.position.copy(mapMesh.position);
@@ -413,7 +482,8 @@ const build: BuildFn = (assets) => {
   layers.push({ scene: sBack, blur: LAYERS[0].blur });
   sMap.add(overlays[1].group);
   overlays[1].group.traverse((o) => (o.renderOrder += 2));
-  layers.push({ scene: sMap, blur: 0 });
+  const mapLayer: LayerSpec = { scene: sMap, depth: { focus: 20, band: 1.6, range: 3.2, maxBlur: 0.007, nearMul: 1.5 } };
+  layers.push(mapLayer);
   for (let i = 2; i < overlays.length; i++) layers.push({ scene: overlays[i].scene, blur: LAYERS[i].blur });
 
   return {
@@ -421,18 +491,21 @@ const build: BuildFn = (assets) => {
     layers,
     pipeline: {
       background: BG,
-      bloomThreshold: 0.85,
-      bloomKnee: 0.45,
-      bloomIntensity: 0.55,
-      bloomRadius: 0.5,
-      vignette: 0.62,
+      bloomThreshold: 0.55,
+      bloomKnee: 0.5,
+      bloomIntensity: 0.85,
+      bloomRadius: 0.85,
+      vignette: 0.72,
     },
     update: (f) => {
       // closed-cycle push/pull and sway
       const push = (1 - Math.cos((2 * Math.PI * f) / LOOP)) / 2;
-      camera.position.set(0.25 * cyc(f, LOOP, 1), 0.12 * cyc(f, LOOP, 1, 1.3), CAM_Z - 1.4 * push);
-      camera.lookAt(0, 0, 0);
+      // slightly oblique: camera left of centre, looking a little right, so
+      // the planes recede left to right and the left side comes nearer
+      camera.position.set(-4.4 + 0.25 * cyc(f, LOOP, 1), 0.6 + 0.12 * cyc(f, LOOP, 1, 1.3), CAM_Z - 1.4 * push);
+      camera.lookAt(0.6, 0, 0);
       camera.updateMatrixWorld();
+      mapLayer.depth!.focus = camera.position.distanceTo(new THREE.Vector3(0.6, 0, 0));
 
       mapBatch.begin();
       for (const t of twinkle) {

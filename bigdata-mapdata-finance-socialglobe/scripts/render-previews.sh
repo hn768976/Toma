@@ -28,7 +28,7 @@ for c in "${COMPS[@]}"; do
   n=$(ls "$seq" | wc -l)
   echo "$c: $n frames in $((end-start)) s" | tee -a "$OUT/render-times.txt"
   ffmpeg -v error -y -framerate 30 -i "$seq/element-%03d.png" \
-    -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 \
+    -c:v libx264 -preset slow -tune grain -crf 16 -pix_fmt yuv420p -r 30 \
     -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
     -vf "scale=out_color_matrix=bt709:out_range=tv" \
     -movflags +faststart -an "$OUT/$name.mp4"
