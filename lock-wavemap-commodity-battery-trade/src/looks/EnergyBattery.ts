@@ -72,7 +72,7 @@ const pointsMaterial = (animateGlsl: string, extraUniforms: Record<string, THREE
       pxScale: { value: 1 },
       pxRes: { value: 1 },
       focus: { value: FOCUS },
-      cocScale: { value: 46 },
+      cocScale: { value: 60 },
       cocMax: { value: 60 },
       ...extraUniforms,
     },
@@ -104,7 +104,7 @@ const FLOOR = (() => {
     const gx = Math.round(xc / GRID) * GRID;
     const gz = Math.round(zc / GRID) * GRID;
     const b = range(rng, 0.35, 1);
-    const accent = rng() < 0.05 ? 1 : 0;
+    const accent = rng() < 0.09 ? 1 : 0;
     const step = 0.028;
     if (rng() < 0.18) {
       // small lit block (chip)
@@ -166,7 +166,7 @@ const RISERS = (() => {
 
 const NUMBERS = ["921.80", "358.37", "77753", "430.68", "6402.7", "88415", "570.31", "2048.6", "12.09", "93.77", "41166", "705.2", "65537", "814.40"];
 const NUM_POS = NUMBERS.map((_, i) =>
-  i === 0 ? ([-1.7, 0.18, 5.6, 0.3] as const) : ([range(rng, -9, 9) * (rng() < 0.5 ? 1 : -1), range(rng, 0.8, 7), range(rng, -18, -4), rng() * TAU] as const),
+  i === 0 ? ([-1.35, 0.06, 6.4, 0.3] as const) : ([range(rng, -9, 2.5), range(rng, 0.8, 7), range(rng, -18, -4), rng() * TAU] as const),
 );
 
 export const energyBatteryLook: LookFactory<EnergyBatteryProps> = (env, p) => {
@@ -222,7 +222,7 @@ export const energyBatteryLook: LookFactory<EnergyBatteryProps> = (env, p) => {
     float glowAt(vec3 p, vec4 d){
       float r = length(p.xz);
       float near = exp(-r / 1.8) * 2.2 + exp(-r / 5.5) * 0.7 + 0.08;
-      near *= exp(-max(0.0, -p.z - 1.0) / 3.2);   // fade into the distance: no hard horizon
+      near *= exp(-max(0.0, -p.z - 0.5) / 2.2);   // fade into the distance: no hard horizon
       float flick = 0.7 + 0.3 * sin(TAU * t * 3.0 + d.z * 7.0);
       float cone = exp(-pow(max(0.0, abs(p.x) - 0.4 - max(0.0, p.z) * 0.45) / 1.6, 2.0));
       float g = d.x * near * flick * (d.w > 1.5 ? 1.3 : 0.9) * mix(0.25, 1.0, cone);
@@ -293,7 +293,7 @@ export const energyBatteryLook: LookFactory<EnergyBatteryProps> = (env, p) => {
       ];
       // ~45% of the body height, centred a little above the middle
       P.forEach(([x, y], i) => {
-        const X = 256 + (x - 261) * 0.72;
+        const X = 256 + (x - 261) * 0.95;
         const Y = 470 + (y - 515) * 0.72;
         if (i) ctx.lineTo(X, Y);
         else ctx.moveTo(X, Y);
@@ -315,9 +315,15 @@ export const energyBatteryLook: LookFactory<EnergyBatteryProps> = (env, p) => {
     ctx.fillStyle = "rgb(255,0,0)";
     bolt();
     ctx.fill();
+    // double-line outline: wide stroke with its middle removed
     ctx.strokeStyle = "rgb(0,0,255)";
-    ctx.lineWidth = 9;
+    ctx.lineWidth = 22;
     ctx.lineJoin = "round";
+    bolt();
+    ctx.stroke();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = "rgb(0,0,0)";
+    ctx.lineWidth = 8;
     bolt();
     ctx.stroke();
   }
@@ -356,12 +362,13 @@ export const energyBatteryLook: LookFactory<EnergyBatteryProps> = (env, p) => {
           float halo = exp(-abs(d) / 0.03) * 0.15;
           float inside = 1.0 - smoothstep(-0.01, 0.01, d);
           // digital particle pattern: cells that flicker on whole loop cycles
-          vec2 g = vUv * vec2(46.0, 92.0) + vec2(hash(floor(vUv * vec2(46.0, 92.0)).yx) * 0.5, 0.0);
+          vec2 g = vUv * vec2(46.0, 92.0);
           vec2 cell = floor(g);
           vec2 f = fract(g) - 0.5;
           float h = hash(cell);
           float tw = 0.5 + 0.5 * sin(TAU * (t * (1.0 + floor(h * 4.0)) + h * 9.0));
-          float dotm = 1.0 - smoothstep(0.18, 0.42, length(f));
+          f += (vec2(hash(cell + 3.1), hash(cell + 7.7)) - 0.5) * 0.5;   // jitter: grainy, not a grid
+          float dotm = 1.0 - smoothstep(0.14, 0.36, length(f));
           float lev = level;
           float below = 1.0 - smoothstep(lev - 0.006, lev + 0.006, vUv.y);
           float meniscus = exp(-pow((vUv.y - lev) / 0.008, 2.0));
@@ -437,7 +444,7 @@ export const energyBatteryLook: LookFactory<EnergyBatteryProps> = (env, p) => {
   const shaft = new THREE.Mesh(
     new THREE.PlaneGeometry(3.2, 9),
     glowMat(`float x = abs(q.x) * 3.2; float y = vUv.y;
-      vec3 c = col * (exp(-pow(x / 0.22, 2.0)) * 0.06 + exp(-x / 0.9) * 0.015) * smoothstep(0.0, 0.25, y) * (1.0 - smoothstep(0.35, 1.0, y));
+      vec3 c = col * (exp(-pow(x / 0.12, 2.0)) * 0.05 + exp(-x / 0.9) * 0.006) * smoothstep(0.0, 0.25, y) * (1.0 - smoothstep(0.35, 1.0, y));
       o = vec4(c * k, 1.0);`),
   );
   shaft.position.set(0, 4.5, -BD);
@@ -471,7 +478,7 @@ export const energyBatteryLook: LookFactory<EnergyBatteryProps> = (env, p) => {
           float t = texture(map, vec2(uv.x, 1.0 - uv.y)).a; o = vec4(mix(col, vec3(0.6, 0.95, 1.0), 0.5) * t * a, 1.0);} `,
     });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.2125), m);
-    if (i === 0) mesh.scale.setScalar(0.6);
+    if (i === 0) mesh.scale.setScalar(0.42);
     const [x, y, z] = NUM_POS[i];
     mesh.position.set(x, y, z);
     scene.add(mesh);

@@ -38,8 +38,8 @@ const drawMap = (ctx: Ctx) => {
   ctx.fillRect(0, 0, CW, CH);
   landPath(ctx, getLand(), { x: 260, y: 170, w: 3620, h: 2000, latTop: 80, latBottom: -58 });
   const lg = ctx.createRadialGradient(CW * 0.5, CH * 0.45, 100, CW * 0.5, CH * 0.5, CW * 0.6);
-  lg.addColorStop(0, "rgba(40,84,190,0.8)");
-  lg.addColorStop(0.6, "rgba(30,64,150,0.6)");
+  lg.addColorStop(0, "rgba(36,76,176,0.68)");
+  lg.addColorStop(0.6, "rgba(28,60,144,0.5)");
   lg.addColorStop(1, "rgba(26,58,138,0.2)");
   ctx.fillStyle = lg;
   ctx.fill();
@@ -226,7 +226,7 @@ export const tradeChartLook: LookFactory<TradeChartProps> = (env, p) => {
         ctx.stroke();
       };
       stroke(30, rgba(s.color, 0.16), 24);
-      stroke(19, s.color, 6);
+      stroke(14, s.color, 6);
       ctx.shadowBlur = 0;
       // end tag
       const [ex, ey] = pts[pts.length - 1];
@@ -255,13 +255,13 @@ export const tradeChartLook: LookFactory<TradeChartProps> = (env, p) => {
       bloomKnee: 0.3,
       bloomRadius: 0.75,
       vignette: 0.75,
-      dof: { focus: 16.4, range: 1.4, ramp: 5, maxNear: 0.008, maxFar: 0.008 },
+      dof: { focus: 17.0, range: 1.4, ramp: 5, maxNear: 0.008, maxFar: 0.008 },
     },
     update: (frame, post) => {
       const t = frame / 30;
       // slow camera drift (dolly + slight orbit), eased over the whole clip
       const d = easeInOutCubic(frame / 450);
-      camera.position.set(1.5 - 0.6 * d, -0.35 + 0.2 * d, 17.1 - 0.7 * d);
+      camera.position.set(1.5 - 0.6 * d, -0.35 + 0.2 * d, 17.7 - 0.7 * d);
       camera.lookAt(1.3, -0.05, 0);
       const mapIn = smoothstep(0, sec(1.5), frame);
       (bg.material as THREE.ShaderMaterial).uniforms.fade.value = 0.25 + 0.75 * mapIn;

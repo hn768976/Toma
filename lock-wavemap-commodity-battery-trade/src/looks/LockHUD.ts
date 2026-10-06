@@ -41,10 +41,10 @@ const CARDS: CardDef[] = [
   { ang: 2.85, r: 7.2, w: 4.4, h: 2.5, kind: 6, seed: 11, y: 1.7 },
   { ang: 0.75, r: 8.6, w: 1.7, h: 4.0, kind: 7, seed: 12, y: 2.2 },
   { ang: 1.05, r: 9.6, w: 4.8, h: 1.0, kind: 8, seed: 13, y: 3.2 },
-  { ang: 1.45, r: 8.4, w: 2.0, h: 0.7, kind: 10, seed: 23, y: 0.45 },
+  { ang: 1.6, r: 8.0, w: 2.8, h: 1.0, kind: 10, seed: 23, y: 0.9 },
   { ang: 1.75, r: 9.4, w: 4.6, h: 1.0, kind: 3, seed: 14, y: 4.9 },
   { ang: 0.32, r: 6.2, w: 3.4, h: 0.62, kind: 9, seed: 15, y: 2.3 },
-  { ang: 4.3, r: 4.4, w: 1.5, h: 0.75, kind: 5, seed: 16, y: 0.35 },
+  { ang: 4.1, r: 4.6, w: 2.3, h: 1.05, kind: 5, seed: 16, y: 0.55 },
   { ang: 2.35, r: 9.0, w: 2.6, h: 1.3, kind: 4, seed: 17, y: 3.4 },
   { ang: 3.5, r: 9.6, w: 2.4, h: 1.2, kind: 1, seed: 18, y: 0.9 },
   { ang: 5.55, r: 8.4, w: 2.4, h: 0.9, kind: 0, seed: 19, y: 0.5 },
@@ -164,8 +164,8 @@ const drawRings = (ctx: Ctx, S: number, p: LockHUDProps) => {
         break;
       case "binary": {
         circle(R.rin + 0.03, 0.02, rgba(C, 0.5));
-        const n = 150;
-        for (let i = 0; i < n; i++) textOnRing(r() > 0.5 ? "1" : "0", mid, (i / n) * TAU, 0.3, rgba(T, 0.95), 600);
+        const n = 110;
+        for (let i = 0; i < n; i++) textOnRing(r() > 0.5 ? "1" : "0", mid, (i / n) * TAU, 0.42, rgba(T, 0.95), 700);
         break;
       }
       case "dash2":
@@ -227,7 +227,7 @@ const drawLock = (ctx: Ctx, w: number, h: number, p: LockHUDProps) => {
   };
   // pixel texture fill
   const fillPixels = () => {
-    const cell = w / 70;
+    const cell = w / 100;
     for (let y = 0; y < h; y += cell) {
       for (let x = 0; x < w; x += cell) {
         const v = hash01(Math.floor(x / cell), Math.floor(y / cell), 7);
@@ -260,7 +260,7 @@ const drawLock = (ctx: Ctx, w: number, h: number, p: LockHUDProps) => {
   const pix = makeCanvas(w, h);
   const pc = pix.ctx;
   {
-    const cell = w / 70;
+    const cell = w / 100;
     for (let y = 0; y < h; y += cell)
       for (let x = 0; x < w; x += cell) {
         const v = hash01(Math.floor(x / cell), Math.floor(y / cell), 7);
@@ -574,10 +574,12 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
     vertexShader: `out vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.9999,1.0);} `,
     fragmentShader: `precision highp float; in vec2 vUv; out vec4 o; uniform vec3 c0, c1, sc; uniform float fade, streak, sy;
       void main(){ vec2 q = vUv - vec2(0.5, 0.6); q.x *= 1.0; float r = length(q * vec2(1.25, 1.6));
-        vec3 c = mix(c0 * 0.85, c0 * 0.55, smoothstep(0.0, 0.9, r));
+        vec3 c = mix(c0 * 1.05, c0 * 0.72, smoothstep(0.0, 0.9, r));
         c = mix(c, c1 * 1.6, smoothstep(0.8, 1.5, r));
         float dy = abs(vUv.y - sy);
-        float s = exp(-pow(dy / 0.0022, 2.0)) * 0.55 + exp(-dy / 0.014) * 0.16 + exp(-dy / 0.06) * 0.05;
+        float dy2 = abs(vUv.y - sy - 0.2);
+        float s = exp(-pow(dy / 0.0022, 2.0)) * 0.9 + exp(-dy / 0.014) * 0.25 + exp(-dy / 0.06) * 0.06
+                + (exp(-pow(dy2 / 0.002, 2.0)) * 0.5 + exp(-dy2 / 0.012) * 0.12) * (1.0 - smoothstep(0.0, 0.25, vUv.x));
         s *= smoothstep(0.25, 0.5, abs(vUv.x - 0.5));
         c += c0 * 0.35 * exp(-length((vUv - vec2(0.08, 0.62)) * vec2(1.6, 1.0)) / 0.25);   // lighter haze, left
         o = vec4((c + sc * s * streak) * fade, 1.0); }`,
@@ -588,9 +590,12 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
   scene.add(bg);
 
   // Ring plane
+  const tilt = new THREE.Group();
+  tilt.rotation.set(0.06, 0, 0.2);
+  scene.add(tilt);
   const plane = new THREE.Group();
   plane.rotation.x = -Math.PI / 2;
-  scene.add(plane);
+  tilt.add(plane);
   const S = Math.round(5120 * ts);
   const ringC = makeCanvas(S, S);
   drawRings(ringC.ctx, S, p);
@@ -644,14 +649,42 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
     return { o, m };
   });
 
+  // Thin bright arcs on other axes (gyroscope feel), sweeping over the top
+  const arcMats: THREE.ShaderMaterial[] = [];
+  const arcs = [
+    { r: 10.6, w: 0.05, rx: 0.32, rz: -0.15, a0: 0.3, span: 0.62 },
+    { r: 11.4, w: 0.035, rx: 0.22, rz: 0.12, a0: 2.4, span: 0.5 },
+    { r: 9.8, w: 0.03, rx: -0.12, rz: 0.25, a0: 4.0, span: 0.45 },
+  ].map((a, i) => {
+    const m = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      uniforms: { col: { value: hexVec(p.ring) }, k: { value: 0 } },
+      vertexShader: `out vec2 vP; void main(){ vP = position.xy; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
+      fragmentShader: `precision highp float; in vec2 vP; out vec4 o; uniform vec3 col; uniform float k;
+        void main(){ float a = fract(atan(vP.y, vP.x) / 6.2831853); float f = smoothstep(0.0, 0.08, a) * (1.0 - smoothstep(0.85, 1.0, a));
+          o = vec4(mix(col, vec3(1.0), 0.4) * 0.9 * f * k, 1.0); }`,
+    });
+    arcMats.push(m);
+    const mesh = new THREE.Mesh(new THREE.RingGeometry(a.r - a.w, a.r, 256, 1, a.a0, a.span * TAU), m);
+    const g = new THREE.Group();
+    g.rotation.set(-Math.PI / 2 + a.rx, 0, a.rz);
+    g.add(mesh);
+    tilt.add(g);
+    return { mesh, speed: (i % 2 ? -1 : 1) * (2 + i) };
+  });
+
   // Lock (upright, faces the camera)
-  const LW = 3.3;
-  const LH = 3.14;
+  const LW = 3.8;
+  const LH = 3.62;
   const lockC = makeCanvas(1024 * Math.max(ts, 0.75), 973 * Math.max(ts, 0.75));
   drawLock(lockC.ctx, lockC.canvas.width, lockC.canvas.height, p);
   const lockMat = layerMaterial(canvasTexture(lockC.canvas, env.gl), { depthWrite: true });
   const lock = new THREE.Mesh(new THREE.PlaneGeometry(LW, LH), lockMat);
-  lock.position.set(0, 1.75, 0);
+  lock.position.set(0, 1.95, 0);
   lock.renderOrder = 5;
   lock.rotation.y = -0.55;
   scene.add(lock);
@@ -668,10 +701,10 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
       fragmentShader: `precision highp float; in vec2 vUv; out vec4 o; uniform vec3 col; uniform float k;
         void main(){ vec2 q = vUv - vec2(0.5, 0.5); float r = length(q*vec2(1.0,0.85))*4.0;
           vec2 b = (vUv - vec2(0.5, 0.115)) * vec2(4.0, 4.0); float flare = exp(-dot(b,b)/0.004) * 2.5 + exp(-abs(b.y)/0.02) * exp(-abs(b.x)/0.5) * 0.4;
-          o = vec4(col * (exp(-r/0.6) * 0.3 + flare) * k, 1.0);} `,
+          o = vec4(col * (exp(-r/0.7) * 0.55 + flare * 1.6) * k, 1.0);} `,
     }),
   );
-  lockGlow.position.set(0, 1.85, 0.1);
+  lockGlow.position.set(0, 2.0, 0.1);
   lockGlow.rotation.y = -0.55;
   scene.add(lockGlow);
 
@@ -692,7 +725,7 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
     const ch = Math.round((cw * def.h) / def.w);
     const c = makeCanvas(cw, ch);
     const tex = canvasTexture(c.canvas, env.gl);
-    const m = layerMaterial(tex, { additive: true, depthWrite: true });
+    const m = layerMaterial(tex, { additive: def.kind !== 10, depthWrite: true });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(def.w, def.h), m);
     // place on the ring plane (x right, z toward camera), standing upright, facing the centre-ish
     const x = Math.cos(def.ang) * def.r;
@@ -737,10 +770,10 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
       const build = easeOutCubic((frame - 45) / 90);
       const drift = clamp((frame - 120) / 480);
       const az = -0.75 + 0.14 * Math.sin(drift * Math.PI * 0.9) + 0.06 * (1 - build);
-      const el = 0.5 + 0.03 * Math.sin(drift * Math.PI) - 0.03 * (1 - build);
-      const dist = 18.6 + 1.8 * (1 - build) - 0.5 * drift;
+      const el = 0.66 + 0.03 * Math.sin(drift * Math.PI) - 0.03 * (1 - build);
+      const dist = 17.0 + 1.8 * (1 - build) - 0.5 * drift;
       camera.position.set(Math.sin(az) * Math.cos(el) * dist, Math.sin(el) * dist, Math.cos(az) * Math.cos(el) * dist);
-      const roll = 0.1 - 0.03 * drift;
+      const roll = 0.0 * drift;
       camera.up.set(Math.sin(roll) * Math.cos(az), Math.cos(roll), -Math.sin(roll) * Math.sin(az));
       camera.lookAt(0.3 * Math.cos(az), 0.3, -0.3 * Math.sin(az));
       camera.updateMatrixWorld();
@@ -758,6 +791,10 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
         ringMats[i].uniforms.gain.value = smoothstep(start, start + 12, frame);
         ringMeshes[i].rotation.z = ((R.speed * Math.PI) / 180) * sec;
       });
+      arcs.forEach((a, i) => {
+        a.mesh.rotation.z = ((a.speed * Math.PI) / 180) * sec;
+        arcMats[i].uniforms.k.value = smoothstep(70 + i * 8, 110 + i * 8, frame);
+      });
       oranges.forEach(({ o, m }) => {
         const ph = Math.floor((frame + (o.seed % 97)) / o.period);
         const on = hash01(ph, o.seed) > 0.4 ? 1 : 0.0;
@@ -766,7 +803,7 @@ export const lockHUDLook: LookFactory<LockHUDProps> = (env, p) => {
 
       const lockIn = smoothstep(60, 110, frame);
       lockMat.uniforms.opacity.value = lockIn;
-      lockMat.uniforms.gain.value = 0.85 + 0.08 * Math.sin(sec * 2.1);
+      lockMat.uniforms.gain.value = 1.12 + 0.08 * Math.sin(sec * 2.1);
       (lockGlow.material as THREE.ShaderMaterial).uniforms.k.value = lockIn * (0.9 + 0.1 * Math.sin(sec * 2.1));
       inner.quaternion.copy(camera.quaternion);
       innerMat.uniforms.opacity.value = smoothstep(80, 115, frame);

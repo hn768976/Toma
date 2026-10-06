@@ -73,7 +73,7 @@ const buildBands = (names: string[]): Band[] => {
   bands.push({ y, h: 1050, cells: [], chart: true });
   y += 1080;
   row(560, ["table", "dotline", "table", "hitable", "hitable", "list"], [900, 1300]);
-  row(620, ["bars", "gauge", "gauge", "bars", "line", "donuts"], [900, 1400]);
+  row(620, ["bars", "gauge", "gauge", "bars", "bars", "donuts"], [900, 1400]);
   const rest = DH - 40 - y;
   if (rest > 120) row(rest, ["list", "bars", "table", "bars", "list"], [1000, 1500]);
   // two of the gauges carry the headline numbers
@@ -119,8 +119,8 @@ const walk = (() => {
 const drawStaticBand = (ctx: Ctx, b: Band, p: CommodityBoardProps) => {
   const T = p.text;
   // bright separator rule above each band
-  ctx.fillStyle = rgba(p.highlight, 0.55);
-  ctx.fillRect(0, b.y - 16, DW, 4);
+  ctx.fillStyle = rgba(p.highlight, 0.85);
+  ctx.fillRect(0, b.y - 17, DW, 6);
   if (b.chart) {
     ctx.fillStyle = rgba(p.panel, 0.35);
     ctx.fillRect(0, b.y, DW, b.h);
@@ -256,7 +256,7 @@ const drawLiveCell = (ctx: Ctx, b: Band, c: Cell, frame: number, p: CommodityBoa
           const x = x0 + q * cw;
           const y = y0 + k * (ch + 14) + ch / 2;
           if (hi) {
-            ctx.fillStyle = rgba(H, c.kind === "hitable" ? 0.42 : 0.36);
+            ctx.fillStyle = rgba(H, c.kind === "hitable" ? 0.6 : 0.5);
             ctx.fillRect(x, y - ch / 2, cw - 24, ch);
           }
           const up = hash01(tick(frame, 50 + (i % 5) * 10, i), c.seed, i) > 0.3;
@@ -346,7 +346,7 @@ const drawChart = (ctx: Ctx, b: Band, frame: number, p: CommodityBoardProps) => 
   ctx.clip();
   if (pts.length > 1) {
     const grad = ctx.createLinearGradient(0, top, 0, top + hgt);
-    grad.addColorStop(0, rgba(p.highlight, 0.14));
+    grad.addColorStop(0, rgba(p.highlight, 0.3));
     grad.addColorStop(1, rgba(p.highlight, 0.0));
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -432,13 +432,13 @@ export const commodityBoardLook: LookFactory<CommodityBoardProps> = (env, p) => 
     scene,
     camera,
     post: {
-      bloomStrength: 0.6,
-      bloomThreshold: 0.6,
+      bloomStrength: 0.8,
+      bloomThreshold: 0.55,
       bloomKnee: 0.35,
       bloomRadius: 0.8,
       vignette: 0.6,
       exposure: 1.0,
-      dof: { focus: 20, range: 1.8, ramp: 6, maxNear: 0.009, maxFar: 0.008 },
+      dof: { focus: 20, range: 1.1, ramp: 5, maxNear: 0.012, maxFar: 0.01 },
     },
     update: (frame, post) => {
       plane.updateMatrixWorld();

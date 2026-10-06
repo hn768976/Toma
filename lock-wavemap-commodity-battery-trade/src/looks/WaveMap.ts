@@ -84,7 +84,7 @@ export const waveMapLook: LookFactory<WaveMapProps> = (env, p) => {
       void main(){ vec2 q=vUv-vec2(0.5,0.52); q.x*=1.6; float r=length(q);
         vec3 c=mix(glow, base, smoothstep(0.0,1.0,r)); c*=mix(1.0,0.75,smoothstep(0.6,1.2,r));
         c += glow * 0.15 * smoothstep(0.3, 1.0, vUv.x) * smoothstep(0.6, 0.0, vUv.y);
-        c *= mix(0.55, 1.0, smoothstep(0.0, 0.22, vUv.y) * smoothstep(1.0, 0.8, vUv.y)); o=vec4(c,1.0);} `,
+        c *= mix(0.45, 1.0, smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.78, vUv.y)); o=vec4(c,1.0);} `,
     depthWrite: false,
   });
   scene.add(quad(W, H, bg, 0, 0, -5));
@@ -96,14 +96,16 @@ export const waveMapLook: LookFactory<WaveMapProps> = (env, p) => {
     const s = canvas.width / W;
     ctx.scale(s, s);
     const rect = { x: W * 0.13, y: H * 0.1, w: W * 0.72, h: H * 0.8, latTop: 82, latBottom: -58 };
+    ctx.filter = `blur(${(3 * s).toFixed(2)}px)`;   // soft coastlines
     landPath(ctx, getLand(), rect);
     ctx.fillStyle = rgba(p.land, 0.78);
     ctx.fill();
     ctx.strokeStyle = rgba(p.land, 0.9);
     ctx.lineWidth = 2.2;
     ctx.stroke();
+    ctx.filter = "none";
     // faint grid
-    ctx.strokeStyle = rgba(p.labels, 0.17);
+    ctx.strokeStyle = rgba(p.labels, 0.24);
     ctx.lineWidth = 2;
     for (let x = 0; x <= W; x += 96) {
       ctx.beginPath();
@@ -159,7 +161,7 @@ export const waveMapLook: LookFactory<WaveMapProps> = (env, p) => {
         float h1 = fract(sin(mod(i0 + 1.0, 64.0) * 91.7) * 4375.85);
         float env = 0.5 + 0.5 * sin(6.2831853 * (vUv.x + t) * 2.0 + 1.0);
         float ridge = 0.43 - env * 0.10 - mix(h0, h1, fx) * 0.07;
-        float area = smoothstep(ridge-0.002, ridge+0.002, y) * (1.0 - smoothstep(0.5, 0.62, y)) * 0.11;
+        float area = smoothstep(ridge-0.002, ridge+0.002, y) * (1.0 - smoothstep(0.5, 0.62, y)) * 0.07;
         float edge = exp(-pow((y-ridge)/0.002,2.0))*0.10;
         o = vec4(tint*(a + area + edge), 1.0);
       }`,
@@ -249,7 +251,7 @@ export const waveMapLook: LookFactory<WaveMapProps> = (env, p) => {
         float body = aDat.y * (0.85 + 0.15*sin(6.2831853*t*aDat2.w*2.0 + aDat2.x*1.7));
         float w, h, cy;
         if (aIdx.y < 0.5) { w = spacing*0.55; h = body*H; cy = mid*H; }
-        else { w = max(3.0, spacing*0.045); h = (body + aDat.z + aDat.w)*H; cy = (mid + (aDat.z - aDat.w)*0.5)*H; }
+        else { w = max(5.0, spacing*0.05); h = (body + aDat.z + aDat.w)*H; cy = (mid + (aDat.z - aDat.w)*0.5)*H; }
         vec2 pos = vec2(x, (0.5 - bandY)*H - cy) + position.xy * vec2(w, h);
         vUv = uv; vA = aDat2.z; vPart = aIdx.y; vSize = vec2(w, h);
         vSoftPx = 2.5 + 22.0 * smoothstep(0.2, 0.5, abs(x) / W);   // softer toward the frame edges
@@ -262,7 +264,7 @@ export const waveMapLook: LookFactory<WaveMapProps> = (env, p) => {
         // 1px-ish soft edge so candles don't shimmer while scrolling
         vec2 px = vUv * vSize; vec2 d = min(px, vSize - px);
         float edge = clamp(min(d.x, d.y) / vSoftPx + 0.25, 0.0, 1.0);
-        float a = vA * edge * (vPart > 0.5 ? 0.6 : 0.8) * (0.88 + 0.12 * vUv.y);
+        float a = vA * edge * (vPart > 0.5 ? 0.62 : 0.62) * (0.88 + 0.12 * vUv.y);
         // body brighter at the core of the band
         o = vec4(color * a * 0.95, 1.0);
       }`,
