@@ -46,7 +46,14 @@ const dollarMask = () => {
   ctx.font = `700 ${H * 0.86}px "${FONT.inter}"`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("$", W / 2, H * 0.5);
+  // "$" as an S with the bar only above and below it (as in the reference)
+  ctx.fillText("S", W / 2, H * 0.5);
+  const m = ctx.measureText("S");
+  const top = H * 0.5 - m.actualBoundingBoxAscent;
+  const bot = H * 0.5 + m.actualBoundingBoxDescent;
+  const barW = H * 0.075;
+  ctx.fillRect(W / 2 - barW / 2, top - H * 0.09, barW, H * 0.12);
+  ctx.fillRect(W / 2 - barW / 2, bot - H * 0.03, barW, H * 0.12);
   const d = ctx.getImageData(0, 0, W, H).data;
   // bounding box of the glyph
   let x0 = W, x1 = 0, y0 = H, y1 = 0;
@@ -100,6 +107,7 @@ const streakTexture = (gl: WebGLRenderer) => {
 };
 
 const candleBand = (gl: WebGLRenderer, r: Rng, n: number, tint: string, hi: string, dir: "down" | "up") => {
+  const light = "#" + new Color(tint).lerp(new Color("#ffffff"), 0.35).getHexString();
   const W = 4096;
   const H = 1024;
   const { c, ctx } = makeCanvas(W, H);
@@ -113,7 +121,7 @@ const candleBand = (gl: WebGLRenderer, r: Rng, n: number, tint: string, hi: stri
     wick: 3,
     body: 0.55,
     glow: 8,
-    color: (i, up) => (up && r() < 0.3 ? hi : tint),
+    color: (i, up) => (up && r() < 0.35 ? light : tint),
   });
   return canvasTexture(c, gl, { repeat: true });
 };
@@ -146,7 +154,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   opaque.add(
     makeBackground(
       /* glsl */ `
-      col = uBg * (0.7 + 0.8 * smoothstep(0.0, 0.6, vUv.y) * (1.0 - 0.4 * vUv.y));
+      col = uBg * (1.3 + 0.9 * smoothstep(0.0, 0.6, vUv.y));
       col += uTint * 0.05 * exp(-pow(length((vUv - vec2(0.5, 0.25)) * vec2(1.4, 2.2)), 2.0) * 2.0);
       `,
       { uBg: { value: new Color(params.bg) }, uTint: { value: tint } },
@@ -162,8 +170,8 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   };
 
   // ── Far backdrop: soft vertical bars ─────────────────────────────────────
-  const backdrop = makeTexPlane({ map: barsBackdrop(gl, rng), shared, width: 110, height: 50, color: tint.clone().multiplyScalar(0.4) });
-  backdrop.position.set(0, 4, -45);
+  const backdrop = makeTexPlane({ map: barsBackdrop(gl, rng), shared, width: 110, height: 50, color: tint.clone().multiplyScalar(0.7) });
+  backdrop.position.set(0, 9, -45);
   backdrop.name = "backdrop";
   overlay.add(backdrop);
 
@@ -175,15 +183,15 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     rowStepDeg: 1.4,
     dotStepDeg: 0.9,
     dotSize: 0.065,
-    landGain: 0.42,
-    oceanGain: 0.07,
+    landGain: 0.8,
+    oceanGain: 0.04,
     coastGain: 0.45,
     backFace: 0.22,
     rim: tint,
-    rimGain: 0.22,
-    bodyGain: 0.035,
+    rimGain: 0.12,
+    bodyGain: 0.0,
   });
-  globe.group.position.set(1.0, 0.3, -1.6);
+  globe.group.position.set(0.8, 1.2, -1.6);
   globe.group.rotation.set(0.35, 0, 0.12);
   globe.group.name = "globe";
   overlay.add(globe.group);
@@ -227,7 +235,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   const dollarHook = (size: string, gain: string) => /* glsl */ `
     float tw = step(0.72, hash11(floor(uTime * 3.0) * 1.3 + iK.y * 91.7));
     float sp = 0.6 + 0.4 * hash11(iK.y * 17.0);
-    col = mix(uTint, uHot, 0.4 + 0.35 * sp) * iK.x * ${gain} * (1.0 + tw * 0.6);
+    col = mix(uTint, uHot, 0.06 + 0.7 * sp * sp * sp) * iK.x * ${gain} * (1.0 + tw * 0.6);
     alpha = uAlpha;
     sizeW = ${size};
   `;
@@ -237,7 +245,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     shared,
     square: true,
     uniforms: { uTint: { value: tint }, uHot: { value: hot }, uAlpha: { value: 0 } },
-    hook: dollarHook((step * 0.7).toFixed(4), "1.9"),
+    hook: dollarHook((step * 0.86).toFixed(4), "1.3"),
   });
   const edges = makeDots({
     count: edgePos.length / 3,
@@ -245,12 +253,12 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     shared,
     square: true,
     uniforms: { uTint: { value: tint }, uHot: { value: hot }, uAlpha: { value: 0 } },
-    hook: dollarHook((step * 0.8).toFixed(4), "3.2"),
+    hook: dollarHook((step * 0.8).toFixed(4), "2.4"),
   });
   fill.name = "dollar";
   edges.name = "dollar";
   dollar.add(fill, edges);
-  dollar.position.set(0, 0.25, 0.6);
+  dollar.position.set(0.4, 1.5, 0.6);
   overlay.add(dollar);
 
   // ── Candle band in front of the globe ────────────────────────────────────
@@ -274,21 +282,44 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     opacity: 0,
   });
   band2.position.set(-2, 2.0, -9);
+  // extra dense candle clusters: right side, and left over the globe
+  const bandR = makeTexPlane({
+    map: candleBand(gl, rng, 40, params.tint, params.highlight, params.direction),
+    shared,
+    width: 11,
+    height: 6.5,
+    color: new Color(1, 1, 1).multiplyScalar(0.9),
+    opacity: 0,
+  });
+  bandR.position.set(8.0, 0.8, 0.8);
+  bandR.name = "candles";
+  overlay.add(bandR);
+  const bandL = makeTexPlane({
+    map: candleBand(gl, rng, 30, params.tint, params.highlight, params.direction),
+    shared,
+    width: 6,
+    height: 5.5,
+    color: new Color(1, 1, 1).multiplyScalar(0.8),
+    opacity: 0,
+  });
+  bandL.position.set(-4.2, 1.4, 1.2);
+  bandL.name = "candles";
+  overlay.add(bandL);
   band2.name = "candles";
   overlay.add(band2);
 
   // ── Zig-zag arrow (thick glowing ribbon, draws on) ──────────────────────
   // Points in the arrow's plane (x right, y up); crash goes down-right, rally up-right.
   const zz: [number, number][] = [
-    [-13, -0.4],
-    [-8.6, -2.6],
-    [-4.8, 0.4],
-    [-1.4, -1.2],
+    [-13, -0.6],
+    [-9.4, -2.0],
+    [-6.2, 0.5],
+    [-1.8, -1.1],
     [2.0, -2.0],
-    [5.6, -4.4],
+    [5.4, -3.9],
   ].map(([x, y]) => [x, up ? -y - 2.8 : y] as [number, number]);
   const ribbon = (() => {
-    const W = 0.62;
+    const W = 0.42;
     const pos: number[] = [];
     const sv: number[] = [];
     const idx: number[] = [];
@@ -335,14 +366,15 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     const ux = dx / dl;
     const uy = dy / dl;
     const base = pos.length / 3;
-    const HL = 2.4;
-    const HW = 1.6;
+    const HL = 3.2;
+    const HW = 1.2;
     pos.push(pe[0] - ux * 0.2 + -uy * HW, pe[1] - uy * 0.2 + ux * HW, 0);
-    sv.push(S, 1);
+    // head: uniform shading (across = 0.75) so it reads as one solid arrowhead
+    sv.push(S, 0.75);
     pos.push(pe[0] - ux * 0.2 + uy * HW, pe[1] - uy * 0.2 - ux * HW, 0);
-    sv.push(S, -1);
+    sv.push(S, 0.75);
     pos.push(pe[0] + ux * HL, pe[1] + uy * HL, 0);
-    sv.push(S + HL, 0);
+    sv.push(S + HL, 0.75);
     idx.push(base, base + 1, base + 2);
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
@@ -371,7 +403,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
           float aa = fwidth(vSV.y) * 1.5;
           // bright edges, translucent body (like the reference's glassy arrow)
           float edge = smoothstep(0.62, 0.98 - aa, across);
-          float body = 0.55 + 0.3 * (1.0 - across);
+          float body = 0.32 + 0.2 * (1.0 - across);
           float shine = 0.5 + 0.5 * sin(vSV.x * 0.8 - uTime * 2.5);
           vec3 c = uC * (body + edge * 0.7) + uHot * edge * 0.15 * shine;
           gl_FragColor = vec4(c * vis, 0.0);
@@ -386,8 +418,8 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     const mesh = new Mesh(g, m);
     return mesh;
   })();
-  ribbon.position.set(0.5, up ? -1.0 : -1.4, 4.2);
-  ribbon.rotation.set(-0.12, -0.38, 0);
+  ribbon.position.set(0.0, up ? 0.0 : 1.6, 4.2);
+  ribbon.rotation.set(-0.12, -0.2, 0);
   // darker side face under the ribbon → reads as a solid 3D band
   const sideMat = (ribbon.material as ShaderMaterial).clone();
   sideMat.uniforms = { ...(ribbon.material as ShaderMaterial).uniforms, uC: { value: tint.clone().multiplyScalar(0.3) }, uHot: { value: tint.clone().multiplyScalar(0.1) } };
@@ -399,11 +431,11 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
 
   // ── Base glow burst + streak ─────────────────────────────────────────────
   const gTex = glowTexture(gl);
-  const burst = reg(makeTexPlane({ map: gTex, shared, width: 7, height: 7, color: tint.clone().lerp(hot, 0.35).multiplyScalar(2.6), opacity: 0 }));
+  const burst = reg(makeTexPlane({ map: gTex, shared, width: 10, height: 10, color: tint.clone().lerp(hot, 0.35).multiplyScalar(2.6), opacity: 0 }));
   burst.position.set(0, -4.4, 1.2);
-  const core = reg(makeTexPlane({ map: gTex, shared, width: 1.6, height: 1.6, color: hot.clone().multiplyScalar(7.0), opacity: 0 }));
+  const core = reg(makeTexPlane({ map: gTex, shared, width: 1.6, height: 1.6, color: hot.clone().multiplyScalar(9.0), opacity: 0 }));
   core.position.set(0, -4.35, 1.3);
-  const streak = reg(makeTexPlane({ map: streakTexture(gl), shared, width: 16, height: 1.0, color: tint.clone().lerp(hot, 0.4).multiplyScalar(2.2), opacity: 0 }));
+  const streak = reg(makeTexPlane({ map: streakTexture(gl), shared, width: 18, height: 1.2, color: tint.clone().lerp(hot, 0.4).multiplyScalar(2.2), opacity: 0 }));
   streak.position.set(0, -4.35, 1.25);
   for (const m of [burst, core, streak]) {
     m.name = "burst";
@@ -412,7 +444,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
 
   // ── Plexus floor ─────────────────────────────────────────────────────────
   const pts: [number, number, number][] = [];
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 420; i++) {
     const a = rng() * Math.PI * 2;
     const r = Math.sqrt(rng()) * 26;
     pts.push([Math.cos(a) * r * 1.4, -5.0 + (rng() - 0.5) * 0.8, Math.sin(a) * r * 0.7 - 6]);
@@ -435,7 +467,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     hook: /* glsl */ `
       widthW = 0.022;
       float dc = length(a.xz - vec2(0.0, 1.0));
-      col = uC * 1.6 * exp(-dc * 0.06);
+      col = uC * 2.4 * exp(-dc * 0.05);
       alpha = uAlpha * (0.5 + 0.5 * sin(uTime * 1.3 + a.x * 0.7 + b.z));
     `,
   });
@@ -446,7 +478,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     uniforms: { uC: { value: tint.clone().lerp(hot, 0.55) }, uAlpha: { value: 0 } },
     hook: /* glsl */ `
       sizeW = 0.09;
-      col = uC * 2.2 * exp(-length(pos.xz) * 0.05);
+      col = uC * 3.0 * exp(-length(pos.xz) * 0.05);
       alpha = uAlpha;
     `,
   });
@@ -473,10 +505,10 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     count: wa.length / 3,
     attrs: { iA: attr(3, wa), iB: attr(3, wb), iK: attr(1, wk) },
     shared,
-    uniforms: { uC: { value: tint.clone().lerp(hot, 0.6) }, uAlpha: { value: 0 } },
+    uniforms: { uC: { value: tint.clone().lerp(hot, 0.15) }, uAlpha: { value: 0 } },
     hook: /* glsl */ `
       widthW = 0.022;
-      col = uC * (1.2 - iK * 0.3);
+      col = uC * (0.65 - iK * 0.15);
       alpha = uAlpha * smoothstep(-2.0, 1.5, a.x) * smoothstep(13.0, 9.0, a.x);
     `,
   });
@@ -490,9 +522,11 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   const labels: LabelSpec[] = [];
   const lc = tint.clone().lerp(hot, 0.45).multiplyScalar(1.4);
   for (let i = 0; i < 30; i++) {
-    const z = 9 - rng() * 22;
+    const z = 2.5 - rng() * 5;
+    const ang = rng() * Math.PI * 2;
+    const rad = 6.8 + rng() * 4.5;
     labels.push({
-      pos: [-14 + rng() * 28, -4 + rng() * 9.5, z],
+      pos: [Math.cos(ang) * rad * 1.35, 0.8 + Math.sin(ang) * rad * 0.62, z],
       cell: (i * 3) % 252,
       variants: 3,
       period: 4 + Math.floor(rng() * 6), // flicker
@@ -544,7 +578,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     U(waves).uAlpha.value = fade;
     U(plexusDots).uAlpha.value = fade;
     (labelMesh.material as ShaderMaterial).uniforms.uAlpha.value = fade;
-    for (const b of [band, band2]) {
+    for (const b of [band, band2, bandR, bandL]) {
       U(b).uOpacity.value = fade;
       (U(b).uUvRect.value as Vector4).set(0.5, 1, t * 0.012 * (b === band ? 1 : 0.5), 0);
     }

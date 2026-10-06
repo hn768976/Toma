@@ -79,7 +79,7 @@ const candleSeries = (
     const bot = Math.min(yc, yo);
     const wick = 0.05 + rng() * 0.2;
     // mostly green, as in the reference: only some falling candles are red
-    const green = c < op && rng() < 0.45 ? 0 : 1;
+    const green = c < op && rng() < 0.6 ? 0 : 1;
     const x = i * o.dx;
     ca.push(x, bot - wick, o.z);
     cb.push(x, top + wick, o.z);
@@ -120,7 +120,7 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
       /* glsl */ `
       // deep electric blue, brighter through the middle band, dark corners
       float band = exp(-pow((vUv.y - 0.55) * 2.4, 2.0));
-      col = uBg * (0.35 + 1.5 * band) * (0.6 + 0.5 * smoothstep(1.0, 0.2, vUv.x));
+      col = uBg * (0.25 + 1.3 * band) * (0.55 + 0.5 * smoothstep(1.0, 0.2, vUv.x));
       `,
       { uBg: { value: new Color(params.bg) } },
       shared,
@@ -130,14 +130,14 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
   // The board: tilted ~50° and turned so it recedes to the upper right, slight roll.
   const board = new Group();
   board.rotation.order = "YXZ";
-  board.rotation.set(-0.86, -0.5, -0.16);
+  board.rotation.set(-0.66, -0.38, -0.1);
   overlay.add(board);
 
   // ── Map: fine round halftone dots (Asia–Pacific under the camera) ────────
   const grid = landGrid(assets, 0.55, { minLat: -50, maxLat: 75 });
   const mp: number[] = [];
   for (let i = 0; i < grid.length; i += 2) {
-    let lon = grid[i] - 112;
+    let lon = grid[i] - 128;
     if (lon < -180) lon += 360;
     mp.push(lon * MAP_K, (grid[i + 1] - 8) * MAP_K, 0);
   }
@@ -149,8 +149,8 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
     hook: /* glsl */ `
       sizeW = 0.026;
       minPx = 1.0;
-      col = uC * 0.85;
-      alpha = smoothstep(26.0, 18.0, abs(pos.x));
+      col = uC * 1.8;
+      alpha = smoothstep(40.0, 30.0, abs(pos.x));
     `,
   });
   mapDots.name = "map";
@@ -160,7 +160,7 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
   const ga: number[] = [];
   const gb: number[] = [];
   const gk: number[] = [];
-  const ruleYs = [-9.6, -7.9, -6.4, -5.1, -3.9, 4.6, 5.7, 6.8, 7.9, 9.0, 10.1];
+  const ruleYs = [-9.6, -7.9, -6.4, -5.1, -3.9, 4.6, 5.7, 6.8, 7.9, 9.0, 10.1, 11.2, 12.3];
   for (const y of ruleYs) {
     ga.push(-26, y, 0.02);
     gb.push(26, y, 0.02);
@@ -176,8 +176,8 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
     attrs: { iA: attr(3, ga), iB: attr(3, gb), iK: attr(1, gk) },
     shared,
     hook: /* glsl */ `
-      widthW = iK > 0.5 ? 0.014 : 0.012;
-      col = iK > 0.5 ? vec3(0.45, 0.65, 1.0) * 0.6 : vec3(0.3, 0.5, 1.0) * 0.3;
+      widthW = iK > 0.5 ? 0.012 : 0.01;
+      col = iK > 0.5 ? vec3(0.55, 0.85, 1.0) * 1.3 : vec3(0.3, 0.5, 1.0) * 0.3;
     `,
     fragHook: /* glsl */ `
       // fade both ends
@@ -187,20 +187,26 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
   gridLines.name = "grid";
   board.add(gridLines);
 
-  // ── Candle series at three depths ───────────────────────────────────────
+  // ── Candle series: upright on near-vertical planes receding to the right,
+  //    stacked at several depths in front of the map ─────────────────────────
+  const charts = new Group();
+  charts.rotation.order = "YXZ";
+  charts.rotation.set(-0.2, -0.5, -0.1);
+  overlay.add(charts);
   const series = [
-    candleSeries(rng, shared, { n: 300, dx: 0.15, amp: 4.6, y: 0.0, z: 0.05, body: 0.1, bend: 0.14, phase: 0.6, up: upC, down: downC, gain: 1.7 }),
-    candleSeries(rng, shared, { n: 260, dx: 0.17, amp: 2.6, y: 2.9, z: 0.5, body: 0.09, bend: 0.11, phase: 2.0, up: upC, down: downC, gain: 1.2 }),
-    candleSeries(rng, shared, { n: 240, dx: 0.19, amp: 2.4, y: -2.6, z: 0.8, body: 0.11, bend: 0.12, phase: 4.1, up: upC, down: downC, gain: 1.3 }),
+    // three distinct traces of big, separate candles (as in the reference)
+    candleSeries(rng, shared, { n: 130, dx: 0.3, amp: 5.5, y: 0.4, z: 0.0, body: 0.17, bend: 0.12, phase: 0.6, up: upC, down: downC, gain: 1.4 }),
+    candleSeries(rng, shared, { n: 120, dx: 0.32, amp: 3.6, y: 3.0, z: -3.0, body: 0.16, bend: 0.1, phase: 2.0, up: upC, down: downC, gain: 1.1 }),
+    candleSeries(rng, shared, { n: 110, dx: 0.34, amp: 3.8, y: -2.6, z: 2.4, body: 0.18, bend: 0.11, phase: 4.1, up: upC, down: downC, gain: 1.2 }),
   ];
   series.forEach((s) => {
     s.mesh.name = "candles";
-    board.add(s.mesh);
+    charts.add(s.mesh);
   });
 
   // faint wavy line charts
   const lines: { mesh: ReturnType<typeof makeSegments>; L: number }[] = [];
-  for (let k = 0; k < 3; k++) {
+  for (let k = 0; k < 5; k++) {
     const n = 120;
     const dx = 0.42;
     const L = n * dx;
@@ -215,7 +221,7 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
       lb.push(0, ((s[(i + 1) % n] - lo) / (hi - lo) - 0.5) * 2.2, 0.03);
       lx.push(i * dx);
     }
-    const y0 = [1.6, -1.2, 3.6][k];
+    const y0 = [1.4, -1.0, 3.4, 0.4, -2.8][k];
     const m = makeSegments({
       count: n,
       attrs: { iA: attr(3, la), iB: attr(3, lb), iX: attr(1, lx) },
@@ -226,13 +232,14 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
         float x1 = x0 + ${dx.toFixed(3)};
         a.x = x0; b.x = x1;
         a.y += ${y0.toFixed(2)}; b.y += ${y0.toFixed(2)};
+        a.z += ${(k * 1.1 - 2.0).toFixed(2)}; b.z += ${(k * 1.1 - 2.0).toFixed(2)};
         widthW = 0.016;
         col = vec3(0.75, 0.88, 1.0) * 0.55;
         alpha = abs(x0) < ${(L / 2 - dx).toFixed(3)} ? smoothstep(${(L / 2).toFixed(3)}, ${(L / 2 - 6).toFixed(3)}, abs(x0)) : 0.0;
       `,
     });
     m.name = "lines";
-    board.add(m);
+    charts.add(m);
     lines.push({ mesh: m, L });
   }
 
@@ -312,9 +319,9 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
   type Row = { y: number; z: number; h: number; spacing: number; kind: keyof typeof pools; speed: number; bright: number };
   const rows: Row[] = [
     // far rows (top of frame)
-    { y: 10.6, z: 0.15, h: 0.9, spacing: 5.0, kind: "big", speed: 1, bright: 0.9 },
+    { y: 10.6, z: 0.15, h: 1.25, spacing: 6.0, kind: "big", speed: 1, bright: 1.0 },
     { y: 9.55, z: 0.15, h: 0.7, spacing: 4.0, kind: "val", speed: 2, bright: 0.9 },
-    { y: 8.45, z: 0.15, h: 0.9, spacing: 5.0, kind: "big", speed: 1, bright: 1.0 },
+    { y: 8.45, z: 0.15, h: 1.2, spacing: 6.0, kind: "big", speed: 1, bright: 1.05 },
     { y: 7.35, z: 0.15, h: 0.7, spacing: 4.0, kind: "val", speed: 1, bright: 0.95 },
     { y: 6.25, z: 0.15, h: 0.62, spacing: 4.4, kind: "item", speed: 2, bright: 0.9 },
     { y: 5.15, z: 0.15, h: 0.7, spacing: 4.0, kind: "val", speed: 1, bright: 0.85 },
@@ -331,7 +338,7 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
   const labelMeshes: { mesh: ReturnType<typeof makeLabels>; speed: number }[] = [];
   rows.forEach((r) => {
     const specs: LabelSpec[] = [];
-    const n = Math.floor(WRAP / r.spacing);
+    const n = Math.floor(WRAP / (r.spacing * 0.72));
     const sp = WRAP / n;
     const pool = pools[r.kind];
     for (let i = 0; i < n; i++) {
@@ -359,7 +366,7 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
     [-5.75, 1.6, 0.06],
     [-8.75, 2.0, 0.06],
   ] as const) {
-    const b = makeTexPlane({ map: bTex, shared, width: 60, height: h, color: new Color(0.45, 0.6, 1.0).multiplyScalar(k * 3) });
+    const b = makeTexPlane({ map: bTex, shared, width: 60, height: h, color: new Color(0.3, 0.55, 1.0).multiplyScalar(k * 1.1) });
     b.position.set(0, y, 0.1);
     b.name = "bands";
     board.add(b);
@@ -376,8 +383,8 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
   post.bloomThreshold = 0.42;
   post.bloomRadius = 0.75;
   post.vignette = 0.55;
-  shared.uFocusRange.value = 1.2;
-  shared.uAperture.value = 0.07;
+  shared.uFocusRange.value = 3.0;
+  shared.uAperture.value = 0.03;
   shared.uNearMul.value = 1.2;
   shared.uMaxCoc.value = 0.02;
 
@@ -385,7 +392,8 @@ export const mapTicker: LookFactory<MapTickerParams> = ({ gl, assets, shared, pa
   const camTarget = new Vector3();
   const bandWorld = new Vector3();
   const update = (frame: number) => {
-    const ph = frame / LOOP;
+    // explicit 600-frame period: every motion below is periodic in it
+    const ph = (frame % LOOP) / LOOP;
     // camera glides sideways along the map on a closed path (whole cycle per loop)
     const glide = Math.sin(ph * TAU);
     camera.position.set(-1.0 + 2.6 * glide, -2.0 + 0.25 * Math.sin(ph * TAU * 2), 19.5);

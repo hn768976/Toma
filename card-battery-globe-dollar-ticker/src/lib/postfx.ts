@@ -461,7 +461,8 @@ export class Pipeline {
     u.tScene.value = this.rtB.texture;
     u.tBloom.value = low;
     (u.uRes.value as Vector2).set(this.w, this.h);
-    u.uFrameC.value = frame;
+    // grain/dither pattern repeats every 600 frames so loop compositions match at the seam
+    u.uFrameC.value = frame % 600;
     u.uExposure.value = post.exposure;
     u.uBloom.value = post.bloomStrength;
     u.uVignette.value = post.vignette;

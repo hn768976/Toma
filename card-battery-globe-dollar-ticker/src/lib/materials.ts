@@ -226,14 +226,15 @@ export const makeSegments = (o: SegmentsOptions) => {
         float core = max(px, minPx);
         float total = sqrt(core * core + coc * coc);
         float energy = px / total;
-        float half_ = total * 0.5 + 1.0;
+        float soft = 0.6 * coc / total; // defocused lines get a soft profile
+        float half_ = total * 0.5 * (1.0 + soft) + 1.0;
         vec2 off = nrm * position.y * half_;
         ${o.capB ? "off += dir * t * total * 0.5;" : ""}
         clip.xy += off / (0.5 * uResolution) * clip.w;
         vAcross = position.y * half_ / (total * 0.5);
         vAlong = t;
         vS = ${hasS ? "mix(iS.x, iS.y, t)" : "t"};
-        vEdge = clamp(1.0 / (total * 0.5), 0.0, 1.0);
+        vEdge = max(clamp(1.0 / (total * 0.5), 0.0, 1.0), soft);
         vCol = col * alpha * energy;
         vData = data;
         if (alpha * energy < 1e-4) clip = vec4(2.0, 2.0, 2.0, 1.0);

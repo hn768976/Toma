@@ -43,7 +43,8 @@ const candleStrip = (gl: WebGLRenderer, r: Rng, p: MarketGlobeParams, n: number,
   const colors = cs.map((k) => {
     const up = k.c >= k.o;
     const x = r();
-    return !up && x < 0.07 ? p.red : x < 0.45 ? "#EAF6FF" : p.cyan;
+    // reference: cyan / white, with only the rare red candle
+    return !up && x < 0.0 ? p.red : x < 0.3 ? "#EAF6FF" : p.cyan;
   });
   drawCandles(ctx, cs, 0, h * 0.06, w, h * 0.88, {
     up: "#fff",
@@ -153,10 +154,10 @@ const makeDonut = (shared: Shared, size: number, color: Color, phase: number, cy
         float r = length(vUv);
         float pxPerUv = 1.0 / max(fwidth(r), 1e-5);
         float soft = (1.0 + cocPx(vDist)) / pxPerUv;
-        float ring = smoothstep(0.62 - soft, 0.62 + soft, r) * (1.0 - smoothstep(0.92 - soft, 0.92 + soft, r));
-        float inner = smoothstep(0.42 - soft, 0.42 + soft, r) * (1.0 - smoothstep(0.5 - soft, 0.5 + soft, r));
+        float ring = smoothstep(0.74 - soft, 0.74 + soft, r) * (1.0 - smoothstep(0.9 - soft, 0.9 + soft, r));
+        float inner = smoothstep(0.55 - soft, 0.55 + soft, r) * (1.0 - smoothstep(0.6 - soft, 0.6 + soft, r));
         float a = fract(atan(vUv.y, vUv.x) / 6.2831853 + 0.25);
-        float t = uFrame / ${LOOP.toFixed(1)} * uCycles + uPhase;
+        float t = mod(uFrame, ${LOOP.toFixed(1)}) / ${LOOP.toFixed(1)} * uCycles + uPhase;
         float sweep = 0.35 + 0.55 * (0.5 + 0.5 * sin(t * 6.2831853));
         float filled = 1.0 - smoothstep(sweep - 0.004, sweep + 0.004, a);
         float gap = smoothstep(0.0, 0.01, fract(a * 24.0)) * smoothstep(1.0, 0.99, fract(a * 24.0));
@@ -190,7 +191,8 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
       col = mix(bot * 1.0, mix(bot, top, 0.6), smoothstep(0.1, 1.0, y));
       col += uBot * 0.5 * exp(-pow((vUv.x - 0.3) * 1.6, 2.0)) * smoothstep(0.9, 0.3, y);
       // brighter haze around the horizon
-      col += uBot * 0.9 * exp(-pow((y - 0.36) * 5.0, 2.0));
+      col += uBot * 0.6 * exp(-pow((y - 0.36) * 5.0, 2.0));
+      col *= mix(0.55, 1.0, smoothstep(0.0, 0.35, y)); // dark bottom quarter
       // violet tint, upper right
       col += vec3(0.09, 0.0, 0.12) * smoothstep(0.7, 1.0, vUv.x) * smoothstep(0.6, 1.0, y);
       `,
@@ -233,7 +235,7 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
         vec2 cell = floor(p);
         float hi = step(0.93, hash12(cell * 1.37 + 3.1));
         float fade = exp(-vDist * 0.022) * smoothstep(2.0, 6.0, vDist);
-        gl_FragColor = vec4(uC * sq * (1.2 + hi * 1.5) * fade, 0.0);
+        gl_FragColor = vec4(uC * sq * (2.6 + hi * 2.5) * fade, 0.0);
       }`,
     transparent: true,
     depthWrite: false,
@@ -256,15 +258,15 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
     rowStepDeg: 0.75,
     dotStepDeg: 0.4,
     dotSize: 0.06,
-    landGain: 0.55,
-    oceanGain: 0.14,
-    coastGain: 0.5,
+    landGain: 0.2,
+    oceanGain: 0.07,
+    coastGain: 0.25,
     backFace: 0.06,
     rim: new Color("#6AB0FF"),
-    rimGain: 0.3,
-    bodyGain: 0.012,
+    rimGain: 0.12,
+    bodyGain: 0.0,
   });
-  globe.group.position.set(9.4, 0.6, -15);
+  globe.group.position.set(10.8, 2.6, -15);
   globe.group.rotation.set(0.32, 0, -0.18);
   overlay.add(globe.group);
 
@@ -280,7 +282,7 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
   ) => {
     const mesh = makeTexPlane({ map: tex, shared, width: w, height: h, color: opts.color, opacity: opts.opacity ?? 1 });
     mesh.position.set(...pos);
-    mesh.rotation.y = opts.rotY ?? 0.18;
+    mesh.rotation.y = opts.rotY ?? 0.85; // panels form a wall receding toward the globe
     mesh.name = "strip" + layers.length;
     overlay.add(mesh);
     layers.push({ mesh, cycles: opts.cycles ?? 1, frac: opts.frac ?? 0.5, phase: rng() });
@@ -298,6 +300,7 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
   addStrip(lineStrip(gl, rng, 28), 7.0, 1.6, [-5.6, -0.2, 1.2], { color: white.clone().multiplyScalar(1.1), frac: 0.5, cycles: 1 });
   addStrip(areaStrip(gl, rng, 60), 6.0, 1.1, [-5.5, 3.4, -9], { color: white.clone().multiplyScalar(0.8), frac: 0.5, cycles: 1 });
   addStrip(candleStrip(gl, rng, params, 120), 12.0, 3.2, [0.5, 1.0, -12], { color: white.clone().multiplyScalar(0.75), frac: 0.5, cycles: 1, rotY: 0.1 });
+  addStrip(barStrip(gl, rng, 40, "#CFE8FF"), 2.0, 0.8, [6.8, 0.1, -9.2], { color: white.clone().multiplyScalar(0.7), frac: 0.6, cycles: 1 });
   addStrip(barStrip(gl, rng, 50, "#CFE8FF"), 4.0, 1.2, [-7.6, 2.7, -3.0], { color: white.clone().multiplyScalar(0.9), frac: 0.6, cycles: 1 });
   // HUD panels behind charts
   const pTex = panelTex(gl);
@@ -306,16 +309,17 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
     [-1.2, 3.2, -4.5, 3.2, 1.6],
     [-7.8, -0.9, 1.5, 2.6, 1.4],
     [-3.8, -1.6, -1.0, 4.0, 1.2],
+    [6.6, 0.0, -9.0, 2.2, 1.1], // HUD seen through the globe
   ] as const) {
     const m = makeTexPlane({ map: pTex, shared, width: w, height: h, color: new Color(0.6, 0.8, 1.4), opacity: 0.8 });
     m.position.set(x, y, z);
-    m.rotation.y = 0.18;
+    m.rotation.y = 0.85;
     m.name = "panels";
     overlay.add(m);
   }
   // Donuts
   const donuts = [
-    makeDonut(shared, 0.8, white.clone().multiplyScalar(1.5), 0.1, 1),
+    makeDonut(shared, 0.62, white.clone().multiplyScalar(1.6), 0.1, 1),
     makeDonut(shared, 0.42, cyan.clone().multiplyScalar(1.2), 0.6, 2),
     makeDonut(shared, 0.42, cyan.clone().multiplyScalar(1.1), 0.3, 1),
     makeDonut(shared, 0.45, white.clone().multiplyScalar(1.0), 0.8, 1),
@@ -330,7 +334,7 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
   ];
   donuts.forEach((d, i) => {
     d.position.set(...dPos[i]);
-    d.rotation.y = 0.18;
+    d.rotation.y = 0.75;
     d.name = "charts";
     overlay.add(d);
   });
@@ -340,10 +344,10 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
   for (let i = 0; i < 256; i++) texts.push((10 + rng() * 980).toFixed(2));
   const atlas = makeAtlas(gl, texts, { cellW: 256, cellH: 96, font: `600 36px "${FONT.mono}"`, color: "#ffffff", align: "center" });
   const labels: LabelSpec[] = [];
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 64; i++) {
     const z = 2.5 - rng() * 20;
     const x = -10.5 + rng() * (z < -10 ? 14 : 11);
-    const y = -2.2 + rng() * 7.0;
+    const y = -2.2 + Math.pow(rng(), 0.7) * 7.4;
     labels.push({
       pos: [x, y, z],
       cell: (i * 4) % 252,
@@ -360,29 +364,31 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
 
   // ── Post ──────────────────────────────────────────────────────────────
   const post = defaultPost();
-  post.bloomStrength = 0.5;
-  post.bloomThreshold = 0.85;
+  post.bloomStrength = 0.8;
+  post.bloomThreshold = 0.6;
   post.bloomRadius = 0.7;
   post.vignette = 0.3;
   shared.uFocus.value = 12.5;
   shared.uFocusRange.value = 1.5;
-  shared.uAperture.value = 0.018;
+  shared.uAperture.value = 0.02;
   shared.uNearMul.value = 1.0;
   shared.uMaxCoc.value = 0.012;
 
   const lookAt = new Vector3();
   const update = (frame: number) => {
-    const ph = (frame / LOOP) * TAU;
+    // explicit 600-frame period: every motion below is periodic in it
+    const lf = (frame % LOOP) / LOOP;
+    const ph = lf * TAU;
     // slow camera drift on a closed path
     camera.position.set(0.6 * Math.sin(ph), 0.15 * Math.sin(ph * 2) + 0.2, 12.5 + 0.5 * Math.cos(ph));
     lookAt.set(0.4 * Math.sin(ph), 1.05, 0);
     camera.lookAt(lookAt);
     camera.updateMatrixWorld();
     // one full turn per loop; phase chosen so Africa/Europe face the camera mid-loop
-    globe.spin.rotation.y = -(frame / LOOP) * TAU + 2.6;
+    globe.spin.rotation.y = -lf * TAU + 2.6;
     layers.forEach((l) => {
       const u = (l.mesh.material as ShaderMaterial).uniforms.uUvRect.value as Vector4;
-      u.set(l.frac, 1, l.phase + (frame / LOOP) * l.cycles, 0);
+      u.set(l.frac, 1, l.phase + lf * l.cycles, 0);
     });
     (floorMat.uniforms.uScroll as { value: number }).value = 0;
   };

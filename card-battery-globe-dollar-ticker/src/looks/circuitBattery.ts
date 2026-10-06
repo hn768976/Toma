@@ -12,7 +12,8 @@ import {
 } from "three";
 import { easeInOutSine, lerp, prog } from "../lib/ease";
 import { LookFactory } from "../lib/LookCanvas";
-import { attr, makeBackground, makeDots, makeSegments } from "../lib/materials";
+import { attr, makeBackground, makeDots, makeSegments, makeTexPlane } from "../lib/materials";
+import { canvasTexture, makeCanvas } from "../lib/canvas";
 import { defaultPost } from "../lib/postfx";
 import { mulberry32, SEEDS } from "../lib/rand";
 import { GLSL_COMMON } from "../lib/shared";
@@ -32,7 +33,7 @@ const BAT_W = 3.0;
 const BOARD_YAW = -0.62;
 const BAT_ROT = 2.75; // battery yaw within the board
 
-export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, width, height }) => {
+export const circuitBattery: LookFactory<BatteryParams> = ({ gl, shared, params, width, height }) => {
   const opaque = new Scene();
   const overlay = new Scene();
   const camera = new PerspectiveCamera(32, width / height, 0.5, 300);
@@ -106,7 +107,7 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
       const bx = ok ? sx : 1;
       const bz = ok ? sz : 1;
       for (let j = 0; j < bz; j++) for (let i = 0; i < bx; i++) occupied[(gz + j) * N + gx + i] = 1;
-      const h = 0.03 + Math.pow(rng(), 3) * 0.24;
+      const h = 0.01 + Math.pow(rng(), 3) * 0.06; // nearly flat board
       blocks.push({
         x: x0 + (bx * CELL) / 2,
         z: z0 + (bz * CELL) / 2,
@@ -146,12 +147,12 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
       void main() {
         float top = step(0.5, vN.y);
         float side = 1.0 - top;
-        vec3 c = uBoard * (0.22 + 0.32 * top + 0.1 * max(vN.x, 0.0));
+        vec3 c = uBoard * (0.1 + 0.14 * top + 0.05 * max(vN.x, 0.0));
         // faint lit top edge
         vec2 e = abs(vLocal.xz) * 2.0;
         float edge = top * smoothstep(0.86, 0.99, max(e.x, e.y));
         float rev = smoothstep(uReveal, uReveal - 3.0, length(vWorld.xz));
-        c += uRim * edge * (0.004 + 0.02 * vSeed * vSeed) * rev;
+        c += uRim * edge * (0.001 + 0.004 * vSeed * vSeed) * rev;
         // side faces pick up a little blue from the lit streets
         c += uRim * side * 0.003 * (1.0 - vLocal.y) * rev;
         // atmospheric blue haze with distance (stronger toward the far upper right)
@@ -189,7 +190,7 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
   const nSz = rowIdx.length - 1;
   const kindOf = () => {
     const r = rng();
-    return r < 0.64 ? 0 : r < 0.95 ? 1 : 2; // blue, orange, white
+    return r < 0.8 ? 0 : r < 0.97 ? 1 : 2; // blue, orange, white
   };
   // Long street traces
   for (let p = 0; p < 900; p++) {
@@ -229,6 +230,11 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
       const horiz = Math.abs(bz - az) < 1e-3;
       const ox = horiz ? 0 : off;
       const oz = horiz ? off : 0;
+      // keep the battery interior clean (no street traces running underneath)
+      if (inBattery((ax + bx) / 2 + ox, (az + bz) / 2 + oz, 0.1)) {
+        L += l;
+        continue;
+      }
       segA.push(ax + ox, 0.015, az + oz);
       segB.push(bx + ox, 0.015, bz + oz);
       segS.push(L, L + l);
@@ -237,29 +243,43 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
     }
     for (let i = startIdx; i < segP.length; i += 4) segP[i] = L;
   }
-  // Short traces across block tops (pins / stubs) — dense small detail that blinks
+  // Fine circuit traces on block tops: short right-angle walks (the dense
+  // PCB micro-detail). Dim always-on emission + stepped blinking.
   for (let p = 0; p < 9000; p++) {
     const blk = blocks[Math.floor(rng() * blocks.length)];
-    if (blk.w < 0.3 && blk.d < 0.3) continue;
-    const horiz = blk.w >= blk.d ? rng() < 0.8 : rng() < 0.2;
-    const y = blk.h + 0.006;
-    const t0 = (rng() - 0.5) * 0.7;
-    if (horiz) {
-      const z = blk.z + t0 * blk.d;
-      const l = blk.w * (0.3 + rng() * 0.6);
-      const x0 = blk.x - blk.w * 0.45 + rng() * (blk.w * 0.9 - l);
-      segA.push(x0, y, z);
-      segB.push(x0 + l, y, z);
-      segS.push(0, l);
-    } else {
-      const x = blk.x + t0 * blk.w;
-      const l = blk.d * (0.3 + rng() * 0.6);
-      const z0 = blk.z - blk.d * 0.45 + rng() * (blk.d * 0.9 - l);
-      segA.push(x, y, z0);
-      segB.push(x, y, z0 + l);
-      segS.push(0, l);
+    if (blk.w < 0.2 && blk.d < 0.2) continue;
+    const y = blk.h + 0.004;
+    const xmin = blk.x - blk.w * 0.46;
+    const xmax = blk.x + blk.w * 0.46;
+    const zmin = blk.z - blk.d * 0.46;
+    const zmax = blk.z + blk.d * 0.46;
+    let x = xmin + rng() * (xmax - xmin);
+    let z = zmin + rng() * (zmax - zmin);
+    const kind = kindOf();
+    const phase = rng() * 50;
+    const speed = -(0.4 + rng() * 1.6);
+    let L = 0;
+    const start = segP.length;
+    const steps = 1 + Math.floor(rng() * 4);
+    let horiz = rng() < 0.5;
+    for (let k = 0; k < steps; k++) {
+      const l = 0.04 + rng() * 0.18;
+      const sgn = rng() < 0.5 ? -1 : 1;
+      const nx = horiz ? Math.min(xmax, Math.max(xmin, x + sgn * l)) : x;
+      const nz = horiz ? z : Math.min(zmax, Math.max(zmin, z + sgn * l));
+      const ll = Math.hypot(nx - x, nz - z);
+      if (ll > 0.01) {
+        segA.push(x, y, z);
+        segB.push(nx, y, nz);
+        segS.push(L, L + ll);
+        segP.push(0, kind, phase, speed);
+        L += ll;
+      }
+      x = nx;
+      z = nz;
+      horiz = !horiz;
     }
-    segP.push(0, kindOf(), rng() * 50, -(0.5 + rng() * 1.5));
+    for (let i = start; i < segP.length; i += 4) segP[i] = L;
   }
   const traces = makeSegments({
     count: segA.length / 3,
@@ -271,9 +291,9 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
       uReveal: { value: 0 },
     },
     hook: /* glsl */ `
-      widthW = 0.024;
-      minPx = 0.9;
-      vec3 c = iP.y < 0.5 ? uBlue : (iP.y < 1.5 ? uOrange : vec3(0.9, 0.95, 1.0));
+      widthW = iP.w > 0.0 ? 0.02 : 0.011;
+      minPx = 0.8;
+      vec3 c = iP.y < 0.5 ? uBlue : (iP.y < 1.5 ? uOrange : (iP.y < 2.5 ? vec3(0.9, 0.95, 1.0) : vec3(0.55, 1.0, 0.15)));
       vec3 wa = (modelMatrix * vec4(a, 1.0)).xyz;
       float rev = smoothstep(uReveal, uReveal - 4.0, length(wa.xz));
       col = c;
@@ -294,7 +314,7 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
         // stub: blinks on/off in steps
         float k = floor(uTime * (-spd) + vData.z);
         lit = step(0.62, hash11(k * 1.37 + vData.z * 13.1));
-        base = 0.02;
+        base = 0.45;
       }
       inten *= base + lit * 3.0;
     `,
@@ -304,7 +324,7 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
   // ── Point lights on block tops (blink) ──────────────────────────────────
   const lp: number[] = [];
   const lk: number[] = [];
-  for (let i = 0; i < 9000; i++) {
+  for (let i = 0; i < 6000; i++) {
     let b = blocks[Math.floor(rng() * blocks.length)];
     // denser cluster of activity left of the battery (as in the reference)
     if (rng() < 0.45) {
@@ -329,12 +349,12 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
       uReveal: { value: 0 },
     },
     hook: /* glsl */ `
-      vec3 c = iK.x < 0.5 ? uBlue : (iK.x < 1.5 ? uOrange : vec3(0.85, 0.92, 1.0));
+      vec3 c = iK.x < 0.5 ? uBlue : (iK.x < 1.5 ? uOrange : (iK.x < 2.5 ? vec3(0.85, 0.92, 1.0) : vec3(0.55, 1.0, 0.15)));
       float k = floor(uTime * iK.z + iK.y);
       float on = step(0.62, hash11(k * 0.731 + iK.y));
       vec3 wp = (modelMatrix * vec4(pos, 1.0)).xyz;
       float rev = smoothstep(uReveal, uReveal - 4.0, length(wp.xz));
-      sizeW = 0.018 + iK.w * 0.022;
+      sizeW = 0.012 + iK.w * 0.016;
       col = c * on * 4.0;
       alpha = rev;
     `,
@@ -345,7 +365,7 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
   // ── Battery ──────────────────────────────────────────────────────────────
   // Outline polyline (board-local XZ): rounded body + terminal at +X.
   const outline: [number, number][] = [];
-  const R = 0.42;
+  const R = 0.2;
   const hx = BAT_L / 2;
   const hz = BAT_W / 2;
   const arc = (cx: number, cz: number, a0: number, a1: number) => {
@@ -404,7 +424,7 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
       count: p.a.length / 3,
       attrs: { iA: attr(3, p.a), iB: attr(3, p.b), iS: attr(2, p.s) },
       shared,
-      capB: true,
+      capB: false,
       uniforms: { uDraw: { value: 0 }, uC: { value: color }, uK: { value: k }, uTotal: { value: total }, uPulse: { value: 1 } },
       hook: `widthW = ${width.toFixed(3)}; col = uC * uK * uPulse; minPx = 1.2;`,
       fragHook: /* glsl */ `
@@ -421,17 +441,34 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
   batGroup.rotation.y = BAT_ROT;
   boardOverlay.add(batGroup);
   const edge = new Color(params.edge);
+  // blue light spilling from the battery onto the board
+  const spillTex = (() => {
+    const S = 256;
+    const { c, ctx } = makeCanvas(S, S);
+    const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0, "rgba(255,255,255,0.9)");
+    g.addColorStop(0.35, "rgba(255,255,255,0.35)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, S, S);
+    return canvasTexture(c, gl);
+  })();
+  const spill = makeTexPlane({ map: spillTex, shared, width: BAT_L * 2.6, height: BAT_W * 3.2, color: new Color(params.edge).multiplyScalar(0.18) });
+  spill.rotation.x = -Math.PI / 2;
+  spill.position.y = 0.012;
+  spill.name = "battery";
+  batGroup.add(spill);
   const core = new Color(params.edgeCore);
-  const outGlow = mkOutline(0.5, edge, 0.75, ol.L, ol, "battery");
-  const outEdge = mkOutline(0.15, edge, 3.0, ol.L, ol, "battery");
-  const outCore = mkOutline(0.04, core, 1.8, ol.L, ol, "battery");
-  const boltGlow = mkOutline(0.24, edge, 0.8, bl.L, bl, "battery");
-  const boltCore = mkOutline(0.06, core, 3.6, bl.L, bl, "battery");
+  const outGlow = mkOutline(0.34, edge, 0.9, ol.L, ol, "battery");
+  const outEdge = mkOutline(0.085, edge, 3.4, ol.L, ol, "battery");
+  const outCore = mkOutline(0.03, core, 1.0, ol.L, ol, "battery");
+  const boltGlow = mkOutline(0.16, edge, 0.9, bl.L, bl, "battery");
+  const boltCore = mkOutline(0.035, core, 2.6, bl.L, bl, "battery");
   // fill pattern: faint dot grid inside the body
   const fp: number[] = [];
   const fk: number[] = [];
-  for (let x = -hx + 0.35; x <= hx - 0.3; x += 0.16)
-    for (let z = -hz + 0.3; z <= hz - 0.28; z += 0.16) {
+  for (let x = -hx + 0.2; x <= hx - 0.15; x += 0.1)
+    for (let z = -hz + 0.18; z <= hz - 0.16; z += 0.1) {
       fp.push(x, 0.04, z);
       fk.push(rng(), rng());
     }
@@ -442,9 +479,11 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
     square: true,
     uniforms: { uC: { value: edge }, uFill: { value: 0 } },
     hook: /* glsl */ `
-      sizeW = 0.055;
+      sizeW = 0.07;
       float tw = 0.5 + 0.5 * sin(uTime * (1.0 + iK.y * 2.0) + iK.x * 40.0);
-      col = uC * (0.18 + 0.32 * tw * step(0.35, iK.x));
+      // glowing digital pixel noise filling the body
+      float pxn = step(0.45, hash11(floor(uTime * 4.0) * 0.37 + iK.x * 61.0));
+      col = uC * (0.04 + 0.1 * tw + 0.12 * pxn);
       alpha = smoothstep(pos.x - 0.6, pos.x + 0.6, mix(-4.2, 4.2, uFill));
     `,
   });
@@ -459,9 +498,9 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
   post.bloomRadius = 0.7;
   post.exposure = 1.0;
   post.vignette = 0.35;
-  shared.uAperture.value = 0.32;
-  shared.uMaxCoc.value = 0.045;
-  shared.uNearMul.value = 1.3;
+  shared.uAperture.value = 0.22;
+  shared.uMaxCoc.value = 0.035;
+  shared.uNearMul.value = 0.75;
   shared.uFocusRange.value = 0.4;
 
   const target = new Vector3(0, 0, 0);
@@ -473,11 +512,11 @@ export const circuitBattery: LookFactory<BatteryParams> = ({ shared, params, wid
     const t = frame / 30;
     // camera: ~40° above, slow diagonal drift
     const drift = t / 20;
-    const el = (34 * Math.PI) / 180 + Math.sin(drift * Math.PI) * 0.03;
+    const el = (29 * Math.PI) / 180 + Math.sin(drift * Math.PI) * 0.03;
     const az = 0.42 - drift * 0.12;
-    const dist = 21 - drift * 1.4;
+    const dist = 19.5 - drift * 1.2;
     // battery sits right of / above centre, as in the reference framing
-    target.set(-4.2 + drift * 1.2, 0, 1.0 - drift * 0.6);
+    target.set(-3.6 + drift * 1.0, 0, 2.2 - drift * 0.5);
     camera.position.set(
       target.x + dist * Math.cos(el) * Math.sin(az),
       dist * Math.sin(el),
