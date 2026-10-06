@@ -14,7 +14,7 @@ import { LayerSpec } from "../lib/pipeline";
 export const SOCIAL_FRAMES = 900;
 const LOOP = 900;
 
-const LAND = "#BFF0FF";
+const LAND = "#9FF0FF";
 const OCEAN = "#1A4A8A";
 const ICON = "#5FD8FF";
 const LINE = "#7FD0FF";
@@ -61,7 +61,7 @@ const MID = mkFloaters(
   [0.24, 0.34],
 );
 // near layer: in front, blurred
-const NEAR = mkFloaters(50, () => new THREE.Vector3(range(rng, -8, 8), range(rng, -4.2, 4.2), range(rng, 3, 6.5)), [0.2, 0.34]);
+const NEAR = mkFloaters(60, () => new THREE.Vector3(range(rng, -9, 6), range(rng, -4.4, 4.4), range(rng, 2.5, 5.5)), [0.18, 0.28]);
 // far layer: background web nodes, soft
 const FAR = mkFloaters(190, () => new THREE.Vector3(range(rng, -16, 16), range(rng, -9, 9), range(rng, -12, -4)), [0.3, 0.45]);
 
@@ -110,8 +110,8 @@ const oceanMaterial = () =>
         void main(){
           float ndv = max(dot(normalize(vN), normalize(vV)), 0.0);
           float fr = pow(1.0 - ndv, 3.0);
-          float a = 0.22 + 0.2 * fr;
-          vec3 c = uCol * (0.3 + 0.3 * ndv) + uRim * fr * 0.35;
+          float a = 0.35 + 0.1 * fr;
+          vec3 c = uCol * (0.12 + 0.12 * ndv) + uRim * fr * 0.12;
           fragOut = vec4(c * a, a);
         }`,
     }),
@@ -125,7 +125,7 @@ const rimHalo = () =>
       uniforms: { uCol: { value: new THREE.Vector3(...linearRGB("#3A9AFF")) } },
       vertexShader: `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `precision highp float; layout(location = 0) out highp vec4 fragOut; in vec2 vUv; uniform vec3 uCol;
-        void main(){ float d = length(vUv - 0.5) * 2.0 * 1.6; float g = d > 1.0 ? exp(-pow((d - 1.0) * 5.0, 2.0)) * 0.12 + exp(-(d - 1.0) * 4.0) * 0.06 : 0.06; fragOut = vec4(uCol * g, 0.0); }`,
+        void main(){ float d = length(vUv - 0.5) * 2.0 * 1.6; float g = d > 1.0 ? exp(-(d - 1.0) * 5.0) * 0.04 : 0.05; fragOut = vec4(uCol * g, 0.0); }`,
     }),
   );
 
@@ -173,7 +173,7 @@ const build: BuildFn = (assets) => {
   landPts.forEach(([x, y, z, h], i) => {
     // two-tone halftone with soft internal shading (low-frequency pattern)
     const shade = 0.6 + 0.4 * Math.sin(x * 9.1 + y * 4.7) * Math.sin(z * 7.3 - y * 5.9);
-    cloud.set(i, x * R, y * R, z * R, h < 0.3 ? LAND : "#46D2F2", (0.45 + 0.45 * h) * shade, 0.026, 0.8);
+    cloud.set(i, x * R, y * R, z * R, h < 0.3 ? LAND : "#3CE0FF", (0.5 + 0.5 * h) * shade, 0.026, 1.25);
   });
   cloud.commit();
   cloud.points.renderOrder = 1;
@@ -191,7 +191,7 @@ const build: BuildFn = (assets) => {
   const od = new PointCloud({ count: oceanDots.length, backAlpha: 0.0, softness: 0.3 });
   oceanDots.forEach(([la, lo], i) => {
     const p = sph(la, lo, R * 1.002);
-    od.set(i, p.x, p.y, p.z, "#6FB4F0", 0.5, 0.022, 1.0);
+    od.set(i, p.x, p.y, p.z, "#4F94D8", 0.3, 0.02, 1.0);
   });
   od.commit();
   od.points.renderOrder = 1;
@@ -201,7 +201,7 @@ const build: BuildFn = (assets) => {
   // orbit rings: two coiled (slinky-like) helices + two plain dotted rings,
   // each turning a whole number of times per loop
   const ringDefs = [
-    { r: R * 1.2, coil: R * 0.2, turns: 28, tiltX: 36, tiltZ: -42, n: 5200, k: 1 },
+    { r: R * 1.2, coil: R * 0.17, turns: 36, tiltX: 30, tiltZ: -38, n: 6400, k: 1 },
   ];
   const rings = ringDefs.map((d, ri) => {
     const g = new THREE.Group();
@@ -215,9 +215,9 @@ const build: BuildFn = (assets) => {
       const a = (i / d.n) * TAU;
       const ca = Math.cos(d.turns * a);
       const sa = Math.sin(d.turns * a);
-      const rr = d.r + d.coil * ca;
+      const rr = d.r + d.coil * 1.6 * ca;
       const big = i % 7 === 0;
-      pc.set(i, Math.cos(a) * rr, d.coil * sa, Math.sin(a) * rr, i % 3 === 0 ? "#A8ECFF" : "#4FC8F0", range(r, 0.35, 0.8) * (i % 5 < 3 ? 1 : 0.25), big ? 0.03 : 0.02, big ? 1.1 : 0.9);
+      pc.set(i, Math.cos(a) * rr, d.coil * 0.55 * sa, Math.sin(a) * rr, i % 3 === 0 ? "#A8ECFF" : "#4FC8F0", range(r, 0.35, 0.8) * (i % 5 < 3 ? 1 : 0.25), big ? 0.03 : 0.02, big ? 1.1 : 0.9);
     }
     pc.commit();
     pc.points.renderOrder = 2;
@@ -230,7 +230,7 @@ const build: BuildFn = (assets) => {
   const SURF_LATLON: [number, number][] = [];
   {
     const r = mulberry32(777);
-    while (SURF_LATLON.length < 48) {
+    while (SURF_LATLON.length < 12) {
       const lat = range(r, -50, 68);
       const lon = range(r, -180, 180);
       if (mask.at(lon, lat) > 0.5) SURF_LATLON.push([lat, lon]);
@@ -257,14 +257,14 @@ const build: BuildFn = (assets) => {
   // right edge out to nodes on the right / lower right
   const HUB = new THREE.Vector3(GLOBE_POS.x + R * 0.92, GLOBE_POS.y - R * 0.45, R * 0.35);
   const sr = mulberry32(0x57a4d);
-  const STRANDS = Array.from({ length: 12 }, () => ({
+  const STRANDS = Array.from({ length: 22 }, () => ({
     to: new THREE.Vector3(range(sr, -1, 10), range(sr, -6, 6), range(sr, -4, 1.5)),
-    a: range(sr, 0.06, 0.18),
+    a: range(sr, 0.04, 0.11),
     period: [150, 180, 225, 300][irange(sr, 0, 3)],
     ph: sr(),
   }));
   // city-light sparkles on land (twinkle on whole cycles)
-  const SPARKS = Array.from({ length: 70 }, (_, i) => {
+  const SPARKS = Array.from({ length: 24 }, (_, i) => {
     const p = landPts[Math.floor(hash2(7, i) * landPts.length)];
     return { p: new THREE.Vector3(p[0] * R * 1.01, p[1] * R * 1.01, p[2] * R * 1.01), k: 1 + (i % 5), ph: hash2(8, i) * TAU };
   });
@@ -294,10 +294,10 @@ const build: BuildFn = (assets) => {
   sFar.add(farNodes.mesh);
   const linesFar = new Lines3D(500);
   sFar.add(linesFar.mesh);
-  const farPairs = knnPairs(FAR.map((n) => n.anchor), 3, 9, 61);
+  const farPairs = knnPairs(FAR.map((n) => n.anchor), 4, 9, 61);
   // "data rain": faint vertical dotted columns behind everything, plus a
   // blue haze so the deep background reads as lit electric blue
-  const RAIN_COLS = 110;
+  const RAIN_COLS = 150;
   const RAIN_ROWS = 64;
   const grid = new PointCloud({ count: RAIN_COLS * RAIN_ROWS, softness: 0.25 });
   {
@@ -311,7 +311,7 @@ const build: BuildFn = (assets) => {
         const k = (cy - start + RAIN_ROWS) % RAIN_ROWS;
         const on = k < len;
         const a = on ? bright * (1 - k / len) : 0.04;
-        grid.set(i++, -12 + cx * 0.26, -7.2 + cy * 0.23, -9, "#4F9FE8", a, 0.07, 1.1);
+        grid.set(i++, -14 + cx * 0.19, -7.2 + cy * 0.23, -9, "#4FA8F0", a, 0.065, 1.15);
       }
     }
   }
@@ -336,7 +336,7 @@ const build: BuildFn = (assets) => {
 
   const layers: LayerSpec[] = [
     { scene: sFar, blur: 0.0055 },
-    { scene: sGlobe, blur: 0.0014 },
+    { scene: sGlobe, blur: 0.0024 },
     { scene: sNear, blur: 0.010 },
   ];
 
@@ -372,7 +372,7 @@ const build: BuildFn = (assets) => {
       });
       MID.forEach((m, j) => {
         const p = midNow[surfLocal.length + j];
-        iconsMid.icon("person", p.x, p.y, p.z, m.size, ICON, m.bright, { i: 1.5 });
+        iconsMid.icon("person", p.x, p.y, p.z, m.size, ICON, m.bright * 0.75, { i: 1.2 });
       });
       iconsMid.end();
 
@@ -407,14 +407,14 @@ const build: BuildFn = (assets) => {
         tmp.copy(HUB).lerp(st.to, t);
         pulses.blob(tmp.x, tmp.y, tmp.z, 0.1, "#BFF0FF", 0.5 * Math.sin(Math.PI * t), { i: 1.3 });
       }
-      pulses.blob(HUB.x, HUB.y, HUB.z, 0.14, "#CFF4FF", 0.5, { i: 1.4 });
+      
       linesMid.end();
       pulses.end();
       sparks.begin();
       for (const sp of SPARKS) {
         tmp.copy(sp.p).applyMatrix4(spin.matrixWorld);
         const tw = 0.5 + 0.5 * cyc(f, LOOP, sp.k * 2, sp.ph);
-        sparks.blob(tmp.x, tmp.y, tmp.z, 0.09, "#FFFFFF", 0.5 + 0.5 * tw, { i: 2.2, facing: true });
+        sparks.blob(tmp.x, tmp.y, tmp.z, 0.08, "#BFF6FF", 0.4 + 0.5 * tw, { i: 2.0, facing: true });
       }
       sparks.end();
 
@@ -429,7 +429,7 @@ const build: BuildFn = (assets) => {
         linesNear.seg(a.x, a.y, a.z, b.x, b.y, b.z, 1.6, LINE, 0.3, 1);
       }
       for (const s of SPECKS) {
-        iconsNear.blob(s.p.x + 0.3 * cyc(f, LOOP, s.k, s.ph), s.p.y + 0.2 * cyc(f, LOOP, 1, s.ph * 2), s.p.z, s.s, "#9FDFFF", s.a, { i: 1.4, disc: true });
+        iconsNear.blob(s.p.x + 0.3 * cyc(f, LOOP, s.k, s.ph), s.p.y + 0.2 * cyc(f, LOOP, 1, s.ph * 2), s.p.z, s.s * 0.45, "#9FDFFF", s.a * 0.6, { i: 1.2 });
       }
       iconsNear.end();
       linesNear.end();
@@ -445,7 +445,7 @@ const build: BuildFn = (assets) => {
       for (const pr of farPairs) {
         const a = farNow[pr.a];
         const b = farNow[pr.b];
-        linesFar.seg(a.x, a.y, a.z, b.x, b.y, b.z, 1.2, "#3F9FE8", 0.32, 1.1);
+        linesFar.seg(a.x, a.y, a.z, b.x, b.y, b.z, 1.0, "#3F9FE8", 0.24, 1.0);
       }
       farNodes.end();
       linesFar.end();
