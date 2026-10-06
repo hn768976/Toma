@@ -54,11 +54,15 @@ vec3 grad(float t){
 }
 void main(){
   // strands across the width, each made of fine dots along the path
+  // 40 fine strands; every 4th is brighter so the dotted grid still reads
+  // when the fine strands average out at small sizes
   float strand = aaLine(vAcross * uStrands, 0.75 * uPx + 0.28);
+  float major = aaLine(vAcross * uStrands * 0.25, 1.1 * uPx + 0.45);
   float dots = aaLine(vAlong, 1.0 * uPx + 0.3);
-  float m = strand * mix(0.15, 1.0, dots);
+  float dotsMajor = aaLine(vAlong * 0.25, 1.4 * uPx + 0.55);
+  float m = strand * mix(0.15, 1.0, dots) * 0.45 + major * dotsMajor * 1.2;
   float edge = smoothstep(0.0, 0.06, vAcross) * smoothstep(1.0, 0.94, vAcross);
-  vec3 c = grad(vCol) * m * uGain * (0.55 + 0.45 * edge) + grad(vCol) * 0.025;
+  vec3 c = grad(vCol) * m * uGain * (0.55 + 0.45 * edge) + grad(vCol) * 0.012;
   o = vec4(c, 1.0);
 }`;
 const ribbonDepthFrag = /* glsl */ `
@@ -127,7 +131,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     const a = arc[i] + (arc[Math.min(AL_N, i + 1)] - arc[i]) * (f - i);
     return k * ARC + a;
   };
-  const DOTS_PER_PERIOD = Math.round(ARC * 5);
+  const DOTS_PER_PERIOD = Math.round(ARC * 11 / 4) * 4;
   const smoothY = (x: number) => {
     let s = 0;
     for (let i = -12; i <= 12; i++) s += pathAt(x + i * 0.6)[1];
@@ -141,7 +145,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
 
   // ---- ribbon mesh (rebuilt per frame over a window around the camera)
   const NR = 2400;
-  const WIDTH = 3.4;
+  const WIDTH = 3.0;
   const widthDir = new THREE.Vector3(0, 0.18, 1).normalize();
   const rpos = new Float32Array(NR * 2 * 3);
   const across = new Float32Array(NR * 2);
@@ -172,7 +176,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     glslVersion: THREE.GLSL3,
     vertexShader: ribbonVert,
     fragmentShader: ribbonFrag,
-    uniforms: { uC0: { value: cs[0] }, uC1: { value: cs[1] }, uC2: { value: cs[2] }, uC3: { value: cs[3] }, uStrands: { value: 40 }, uPx: { value: ctx.pxScale }, uGain: { value: 1.05 } },
+    uniforms: { uC0: { value: cs[0] }, uC1: { value: cs[1] }, uC2: { value: cs[2] }, uC3: { value: cs[3] }, uStrands: { value: 40 }, uPx: { value: ctx.pxScale }, uGain: { value: 1.35 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -189,8 +193,8 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
   // ---- background grids at two depths
   const grids: THREE.Mesh[] = [];
   for (const [z, spacing, k] of [
-    [-14, 4, 0.05],
-    [-38, 8, 0.045],
+    [-14, 6, 0.05],
+    [-38, 10, 0.045],
   ] as Array<[number, number, number]>) {
     const m = new THREE.Mesh(
       new THREE.PlaneGeometry(1200, 200),
@@ -198,7 +202,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
         glslVersion: THREE.GLSL3,
         vertexShader: gridVert,
         fragmentShader: gridFrag,
-        uniforms: { uC: { value: new THREE.Color("#3AC88A").multiplyScalar(k) }, uSpacing: { value: spacing }, uPx: { value: ctx.pxScale } },
+        uniforms: { uC: { value: new THREE.Color("#5AA88A").multiplyScalar(k * 1.4) }, uSpacing: { value: spacing }, uPx: { value: ctx.pxScale } },
         transparent: true,
         depthWrite: true,
         blending: THREE.AdditiveBlending,
@@ -235,6 +239,11 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
       for (let r = 0; r < rows; r++) nums.push({ x, y: y0 - r * size * 1.45, z: z + (rng() - 0.5) * 2, s: size, text: fmtN(rng(), 4), c: col, a: alpha * (0.5 + rng() * 0.5), tick: rng() < 0.15 });
     }
   }
+  // scattered tiny numbers filling the space
+  for (let i = 0; i < 520; i++) {
+    const z = -8 - rng() * 34;
+    nums.push({ x: rng() * L, y: -9 + rng() * 26, z, s: 0.16 + rng() * 0.16, text: fmtN(rng(), 3 + Math.floor(rng() * 2)), c: palette[Math.floor(rng() * palette.length)], a: 0.22 + rng() * 0.2, tick: rng() < 0.1 });
+  }
   // big dim numbers far back
   for (let i = 0; i < 9; i++) nums.push({ x: rng() * L, y: -2 + rng() * 14, z: -30 - rng() * 10, s: 2.4 + rng() * 2.2, text: rng() < 0.5 ? "+0." + Math.floor(rng() * 900 + 100) : String(Math.floor(rng() * 9000 + 1000)), c: palette[Math.floor(rng() * palette.length)], a: 0.08, tick: false });
   // a few near, very soft
@@ -246,7 +255,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
   for (let x = 0.6; x < L; x += 1.5 + rng() * 2.5) {
     if (rng() < 0.3) continue;
     const n = 1 + Math.floor(rng() * 3);
-    for (let j = 0; j < n; j++) candles.push({ x: x + j * 0.42, dy: 0.6 + rng() * 2.5, h: 0.5 + rng() * 2.2, wick: 0.4 + rng() * 1.6, up: rng() < 0.6, dz: (rng() - 0.5) * 1.2 });
+    for (let j = 0; j < n; j++) candles.push({ x: x + j * 0.42, dy: 0.6 + rng() * 2.5, h: 0.3 + rng() * 1.3, wick: 0.3 + rng() * 1.0, up: rng() < 0.6, dz: (rng() - 0.5) * 1.2 });
   }
   type Label = { x: number; text: string; c: THREE.Color };
   const peakLabels: Label[] = turns.map((t) => ({ x: t[0], text: (20 + rng() * 60).toFixed(4), c: [ORANGE, GREEN, RED][Math.floor(rng() * 3)] }));
@@ -345,7 +354,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
           if (peak) {
             const lab = peakLabels[t];
             const val = (parseFloat(lab.text) + (hash01(t, Math.floor(f / 6), 9) - 0.5) * 0.02).toFixed(4);
-            marks.text(val, x, ty + 1.3 + R * 0.8, tz, 0.5, rgba(lab.c, 1.5), "center");
+            marks.text(val, x, ty + 1.3 + R * 0.8, tz, 0.32, rgba(lab.c, 1.3), "center");
           }
         }
       }
@@ -360,7 +369,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
         farBlurAt: 40,
         nearCoc: 0.01,
         farCoc: 0.0075,
-        bloom: 0.75,
+        bloom: 0.5,
         bloomRadius: 0.5,
         exposure: 1.1,
         vignette: 0.55,

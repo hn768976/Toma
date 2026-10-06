@@ -61,30 +61,31 @@ float aaDots(vec2 p, float r){
 void main(){
   float h = topoHeight(vT);
   float c = h / uStep;
-  float w = 0.9 * uPx + 0.22;
+  float w = 0.75 * uPx + 0.12;
   float minor = aaLine(c, w);
   float major = aaLine(c / 5.0, w * 1.5);
   // dotted look along the lines (fine world-space dot lattice)
   float dots = aaDots(vT * 2.6, 2.2 * uPx + 0.55);
   float dotMean = clamp(3.14159 * pow(2.2*uPx+0.55, 2.0) * pow(fwidth(vT.x*2.6),2.0), 0.0, 1.0);
-  float lineMask = max(minor * mix(0.55, 1.0, dots), major);
+  float lineMask = max(minor * mix(0.15, 1.0, dots), major * mix(0.45, 1.0, dots));
   // brighter where contours bunch up (steep slopes)
   float steep = clamp(length(vec2(dFdx(h), dFdy(h))) / max(length(vec2(dFdx(vT.x), dFdy(vT.y))), 1e-4), 0.0, 3.0);
   float lum = 0.55 + 0.35 * smoothstep(0.2, 1.5, steep) + 0.25 * smoothstep(-3.0, 4.0, h);
   vec3 col = uBase * (0.75 + 0.5 * smoothstep(-6.0, 5.0, h));
-  col += uLine * lineMask * lum * (1.0 + 1.2 * major);
+  float farDim = 1.0 - 0.88 * smoothstep(22.0, 110.0, vDist);
+  col += uLine * lineMask * lum * (1.0 + 1.2 * major) * farDim;
   // faint square grid
   float grid = max(aaLine(vT.x / 8.0, 0.8*uPx+0.3), aaLine(vT.y / 8.0, 0.8*uPx+0.3));
-  col += uLine * grid * 0.32;
+  col += uLine * grid * 0.32 * farDim;
   // scattered dim tiles
   vec2 cell = floor(vT / 1.5);
   ivec2 ci = ivec2(int(cell.x) + 4096, int(mod(cell.y, ${TOPO_T / 1.5}.0)));
   float r = hash12i(ci);
-  if (r < 0.03) {
+  if (r < 0.018) {
     vec2 f = fract(vT / 1.5);
     vec2 fw = fwidth(vT / 1.5);
     float inside = smoothstep(0.12 - fw.x, 0.12 + fw.x, f.x) * smoothstep(0.88 + fw.x, 0.88 - fw.x, f.x) * smoothstep(0.3 - fw.y, 0.3 + fw.y, f.y) * smoothstep(0.7 + fw.y, 0.7 - fw.y, f.y);
-    col += uTile * inside * (0.25 + 0.5 * fract(r * 97.0));
+    col += uTile * inside * (0.25 + 0.5 * fract(r * 97.0)) * farDim;
   }
   float fog = smoothstep(uFogNear, uFogFar, vDist);
   col = mix(col, uHaze, fog);
@@ -194,14 +195,14 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
     fragmentShader: terrainFrag,
     uniforms: {
       uOffset: { value: 0 },
-      uLine: { value: cLine.clone().multiplyScalar(0.55) },
-      uBase: { value: cBase },
+      uLine: { value: cLine.clone().lerp(new THREE.Color(1, 1, 1), 0.1).multiplyScalar(0.5) },
+      uBase: { value: cBase.clone().multiplyScalar(0.8) },
       uHaze: { value: cHaze },
       uTile: { value: cLine.clone().multiplyScalar(0.22) },
       uPx: { value: ctx.pxScale },
       uFogNear: { value: 60 },
       uFogFar: { value: 280 },
-      uStep: { value: 0.12 },
+      uStep: { value: 0.055 },
     },
     side: THREE.DoubleSide,
   });
@@ -219,7 +220,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       uniforms: {
         uHaze: { value: cHaze },
         uTop: { value: cBase.clone().multiplyScalar(0.35) },
-        uGlow: { value: cLine.clone().multiplyScalar(0.12) },
+        uGlow: { value: cLine.clone().multiplyScalar(0.06) },
       },
       side: THREE.BackSide,
       depthWrite: false,
@@ -245,7 +246,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
 
   // ---- per-tile content (generated once from the seed, periodic in z)
   const pins: Pin[] = [];
-  for (let i = 0; i < 64; i++) {
+  for (let i = 0; i < 110; i++) {
     const x = (rng() * 2 - 1) * 46;
     const z = -rng() * TOPO_T;
     pins.push({ x, z, y: 0, value: 20 + rng() * 680, tri: rng() < 0.22, showPin: rng() < 0.62, tick: rng() < 0.35 });
@@ -276,9 +277,9 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
     }
   }
   // sprinkle single dots
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 1400; i++) {
     const x = (rng() * 2 - 1) * 110, z = -rng() * TOPO_T;
-    if (topoHeight(x, z) < -0.6) lights.push({ x, z, y: 0, size: 0.1 + rng() * 0.1, phase: rng(), k: 1 + Math.floor(rng() * 3), b: 0.4 + rng() * 0.6 });
+    if (topoHeight(x, z) < -0.35) lights.push({ x, z, y: 0, size: 0.1 + rng() * 0.1, phase: rng(), k: 1 + Math.floor(rng() * 3), b: 0.4 + rng() * 0.6 });
   }
   for (const p of pins) p.y = topoHeight(p.x, p.z);
   for (const t of tags) t.y = topoHeight(t.x, t.z);
@@ -307,7 +308,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       const sway = Math.sin(TAU * ph) * 1.2;
       camera.position.set(sway, CAM_H + Math.sin(TAU * ph * 2) * 0.25, 0);
       camera.rotation.order = "YXZ";
-      camera.rotation.set(-18 * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0);
+      camera.rotation.set(-19 * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0);
       camera.updateMatrixWorld();
 
       sprites.begin();
@@ -329,7 +330,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
         const val = p.tick ? p.value + (hash01(i, Math.floor(f / 12), v.seed) - 0.5) * 40 : p.value;
         for (let j = 0; j < K; j++) {
           const z = wrapZ(p.z, j, offset);
-          const s = 0.62;
+          const s = 0.46;
           if (p.showPin) labels.icon(PIN, p.x, p.y, z, s * 1.1, white, -0.38, 0, 0.76, 1.0);
           const lx = p.showPin ? 0.6 : 0;
           if (p.tri) labels.icon(TRI, p.x, p.y, z, s, triCol, lx, 0.1, 0.6, 0.6);
@@ -343,7 +344,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
         const label = t.big ? "BIG DATA" : fmt(val);
         for (let j = 0; j < K; j++) {
           const z = wrapZ(t.z, j, offset);
-          const s = 0.55;
+          const s = 0.42;
           const poleEm = t.pole / s;
           labels.rect(t.x, t.y, z, s, lineTint, -0.03, 0, 0.06, poleEm);
           labels.icon(DOT, t.x, t.y, z, s, white, -0.35, -0.35, 0.7, 0.7);
@@ -367,6 +368,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
         bloom: 0.45,
         bloomRadius: 0.55,
         exposure: 1.0,
+        saturation: 0.95,
         vignette: 0.55,
         grain: 0.015,
       };

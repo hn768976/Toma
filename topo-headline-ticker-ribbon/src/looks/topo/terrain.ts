@@ -2,9 +2,9 @@ import { GLSL_PNOISE, pnoise } from "../../lib/noise";
 
 /** Terrain tiles along z with period T world units. */
 export const TOPO_T = 96;
-export const TOPO_F0 = 1 / 16; // lattice cells per world unit at octave 0
-export const TOPO_P0 = TOPO_T * TOPO_F0; // = 6 lattice cells per period
-export const TOPO_H = 2.0; // displacement amplitude (world units)
+export const TOPO_F0 = 1 / 12; // lattice cells per world unit at octave 0
+export const TOPO_P0 = TOPO_T * TOPO_F0; // = 8 lattice cells per period
+export const TOPO_H = 1.5; // displacement amplitude (world units)
 
 export function topoHeight(x: number, tz: number): number {
   const px = x * TOPO_F0, pz = tz * TOPO_F0;

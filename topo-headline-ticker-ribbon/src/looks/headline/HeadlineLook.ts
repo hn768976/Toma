@@ -299,7 +299,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
 
   // ---- ticker band
   const tk = buildTickerTexture(v.keywords);
-  const bandW = 34, bandH = 1.3;
+  const bandW = 34, bandH = 1.75;
   const band = new THREE.Group();
   band.position.set(0.8, 0.2, 1.6);
   scene.add(band);
@@ -311,9 +311,9 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
     in vec2 vUv; out vec4 o;
     void main(){
       float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x);
-      vec3 c = mix(vec3(0.10,0.13,0.20), vec3(0.42,0.46,0.55), smoothstep(0.0, 1.0, vUv.y));
+      vec3 c = mix(vec3(0.06,0.08,0.14), vec3(0.32,0.36,0.46), smoothstep(0.0, 1.0, vUv.y));
       c += vec3(0.6,0.65,0.75) * smoothstep(0.93, 0.97, vUv.y) * smoothstep(1.0, 0.97, vUv.y);
-      float a = 0.42 * edge * uA;
+      float a = 0.22 * edge * uA;
       if (a < 0.02) discard;
       o = vec4(c * a, a);
     }`,
@@ -443,7 +443,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
         bloom: 0.22,
         bloomRadius: 0.5,
         exposure: 1.05,
-        vignette: 0.6,
+        vignette: 0.85,
         grain: 0.015,
         saturation: 1.05,
       };

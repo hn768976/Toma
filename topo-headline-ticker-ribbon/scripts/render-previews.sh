@@ -5,7 +5,7 @@
 set -e
 cd "$(dirname "$0")/.."
 SCALE=0.3333333333333333
-IDS=${@:-"TopoTerrain-Teal TopoTerrain-Blue HeadlineWords-Tariffs HeadlineWords-Recession HeadlineWords-Inflation TickerFloor-Blue TrendRibbon-Multicolour"}
+IDS=${@:-"TopoTerrain-Teal TopoTerrain-Blue HeadlineWords-Tariffs HeadlineWords-Recession HeadlineWords-Inflation TickerFloor-Blue TickerFloor-BearRed TrendRibbon-Multicolour"}
 mkdir -p out/previews out/seq out/logs
 npx remotion bundle --out-dir=out/bundle > out/logs/bundle.log 2>&1
 for id in $IDS; do

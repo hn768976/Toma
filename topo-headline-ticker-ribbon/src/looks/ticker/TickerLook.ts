@@ -12,6 +12,18 @@ export type TickerVersion = {
   tileBright: string;
   line: string;
   lineAlt: string;
+  haze: string; // horizon haze / fog colour
+  hazeGain: number; // brightness of the horizon glow
+  beam: string; // light beam colour
+  label: string; // floating chart labels
+  bar: string; // faint bars behind the lines
+  gap: string; // floor colour between tiles
+  pUp: number; // share of ▲ cells (kind < pUp)
+  pSigned: number; // share of ▲ + ▼ cells (the rest show a plain value)
+  markerUp: string; // ▲ marker colour on the floor
+  markerDown: string; // ▼ marker colour on the floor
+  waveAmp: number; // scale of the wave shapes (1 = default)
+  trend: number; // downward drift of the chart lines across the frame (world units, 0 = flat)
   seed: number;
 };
 
@@ -51,7 +63,7 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
   c.height = H;
   const g = c.getContext("2d")!;
   const dark = new THREE.Color(v.tileDark), bright = new THREE.Color(v.tileBright);
-  g.fillStyle = "#020a24";
+  g.fillStyle = v.gap;
   g.fillRect(0, 0, W, H);
   const font = `700 ${Math.round(RH * 0.3)}px ${FONT_INTER}`;
   for (let r = 0; r < ROWS; r++) {
@@ -88,17 +100,18 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
       g.translate(0, y + RH * 0.5);
       g.scale(1, 1.9); // pre-stretch: the floor is seen at a grazing angle
       // shrink the text if it would not fit the tile
-      const str = kind < 0.66 ? `${kind < 0.33 ? "+" : "\u2212"} ${val} %` : `${val} %`;
+      const str = kind < v.pSigned ? `${kind < v.pUp ? "+" : "\u2212"} ${val} %` : `${val} %`;
       g.font = font;
-      const need = g.measureText(str).width + (kind < 0.66 ? RH * 0.3 : 0);
+      const need = g.measureText(str).width + (kind < v.pSigned ? RH * 0.3 : 0);
       const fit = Math.min(1, (w * 0.82) / need);
       const fs = RH * 0.3 * fit;
       g.font = `700 ${Math.round(fs)}px ${FONT_INTER}`;
       g.fillStyle = "rgba(255,255,255,0.96)";
       g.textBaseline = "middle";
       let tx = x + w * 0.1;
-      if (kind < 0.66) {
-        const up = kind < 0.33;
+      if (kind < v.pSigned) {
+        const up = kind < v.pUp;
+        g.fillStyle = up ? v.markerUp : v.markerDown;
         g.beginPath();
         if (up) {
           g.moveTo(tx, fs * 0.32);
@@ -111,6 +124,7 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
         }
         g.closePath();
         g.fill();
+        g.fillStyle = "rgba(255,255,255,0.96)";
         tx += fs * 1.0;
         g.fillText(str, tx, 0);
       } else {
@@ -137,7 +151,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
   const rng = mulberry32(v.seed);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, ctx.width / ctx.height, 0.1, 500);
-  const haze = new THREE.Color("#1A4AB8");
+  const haze = new THREE.Color(v.haze);
   const bgc = new THREE.Color(v.bg);
 
   // ---- background: dark top, blue haze glow at the horizon
@@ -147,14 +161,14 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       glslVersion: THREE.GLSL3,
       vertexShader: `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
       fragmentShader: /* glsl */ `
-      precision highp float; uniform vec3 uBg; uniform vec3 uHaze; uniform float uHorizonV;
+      precision highp float; uniform vec3 uBg; uniform vec3 uHaze; uniform float uHorizonV; uniform float uHazeGain;
       in vec2 vUv; out vec4 o;
       void main(){
         float dv = vUv.y - uHorizonV;
         float g = exp(-max(dv, 0.0) * 9.0) * (0.55 + 0.45 * exp(-pow((vUv.x - 0.5) * 7.0, 2.0)));
-        o = vec4(uBg + uHaze * g * 0.55, 1.0);
+        o = vec4(uBg + uHaze * g * uHazeGain, 1.0);
       }`,
-      uniforms: { uBg: { value: bgc }, uHaze: { value: haze }, uHorizonV: { value: 0.5 } },
+      uniforms: { uBg: { value: bgc }, uHaze: { value: haze }, uHorizonV: { value: 0.5 }, uHazeGain: { value: v.hazeGain } },
     }),
   );
   bg.position.set(0, 0, -300);
@@ -206,7 +220,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       [0.12, 47],
     ];
     for (const [a, k] of base) waves.push({ amp: a * (0.7 + rng() * 0.6), k: k + Math.floor(rng() * 2), m: (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 2)), ph: rng() * TAU });
-    const gl = new GlowLine(N, { core: 0.09, glow: 0.4, glowAmt: 0.1 });
+    const gl = new GlowLine(N, { core: 0.07, glow: 0.35, glowAmt: 0.05 });
     scene.add(gl.mesh);
     lines.push({ z: -22 - i * 3.5, y0: 7.0 + (rng() - 0.5) * 1.4, waves, color: new THREE.Color(lineCols[i]), gl, hw: 0.4 });
   }
@@ -238,7 +252,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       float vert = smoothstep(0.0, 0.08, vUv.y) * pow(1.0 - vUv.y, 1.4);
       o = vec4(uC * prof * vert * uA, 1.0);
     }`,
-    uniforms: { uC: { value: new THREE.Color("#6AA8FF") }, uA: { value: 1 } },
+    uniforms: { uC: { value: new THREE.Color(v.beam) }, uA: { value: 1 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -255,8 +269,8 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
     beams.push({ mesh, mat, a: i === 0 ? 0.55 : 0.18 + rng() * 0.2, m: 1 + Math.floor(rng() * 2), ph: rng() });
   });
 
-  const labelCol = new THREE.Color("#BFE0FF");
-  const barCol = new THREE.Color("#3A7AE8");
+  const labelCol = new THREE.Color(v.label);
+  const barCol = new THREE.Color(v.bar);
 
   return {
     scene,
@@ -277,8 +291,8 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
         for (let i = 0; i < N; i++) {
           const u = i / (N - 1);
           const x = -XR + 2 * XR * u;
-          let y = L.y0;
-          for (const w of L.waves) y += w.amp * Math.sin(TAU * (w.k * u) + w.ph + TAU * w.m * ph);
+          let y = L.y0 - v.trend * (x / XR); // gentle downward trend (static in time, so it loops)
+          for (const w of L.waves) y += v.waveAmp * w.amp * Math.sin(TAU * (w.k * u) + w.ph + TAU * w.m * ph);
           pts[i * 3] = x;
           pts[i * 3 + 1] = y;
           pts[i * 3 + 2] = L.z;
@@ -302,10 +316,10 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
         const k = 1.2 * l.a;
         const c: RGBA = [labelCol.r * k, labelCol.g * k, labelCol.b * k, 1];
         let ox = 0;
-        if (l.kind < 0.66) {
-          sprites.icon(l.kind < 0.33 ? UP : DOWN, l.x, yy, l.z, l.s, c, 0, -0.05, 0.65, 0.85);
+        if (l.kind < v.pSigned) {
+          sprites.icon(l.kind < v.pUp ? UP : DOWN, l.x, yy, l.z, l.s, c, 0, -0.05, 0.65, 0.85);
           ox = 0.85;
-          const sign = l.kind < 0.33 ? "+" : "−";
+          const sign = l.kind < v.pUp ? "+" : "−";
           sprites.text(`${sign} ${l.val} %`, l.x, yy, l.z, l.s, c, "left", ox, 0);
         } else sprites.text(`${l.val} %`, l.x, yy, l.z, l.s, c, "left", 0, 0);
       }
@@ -320,7 +334,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
         farBlurAt: 120,
         nearCoc: 0.006,
         farCoc: 0.006,
-        bloom: 0.55,
+        bloom: 0.38,
         bloomRadius: 0.6,
         exposure: 1.05,
         vignette: 0.5,
