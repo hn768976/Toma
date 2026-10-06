@@ -83,7 +83,7 @@ this delivery.)
   each label picks (and crossfades) its level from its circle of confusion. Extruded
   bevelled ribbon arrow rebuilt each frame from the draw-on progress. Dotted globe
   from Natural Earth land. Bloom.
-- **Map Dashboard** — three.js: an 8192 × 4608 Canvas 2D texture (mipmaps, 16×
+- **Map Dashboard** — three.js: an 8192 × 5120 Canvas 2D texture (mipmaps, 16×
   anisotropy) on a plane tilted ~55° to the view. Bars, histograms, donuts and ticking
   digits are instanced quads whose values are computed in the shader from the frame;
   network lines/nodes/pulses are rebuilt each frame. Section-by-section glitch reveal
@@ -117,19 +117,76 @@ Everything on screen is a pure function of `useCurrentFrame()`:
 - loops use `frame % 600`, whole turns and whole cycles only.
 
 Self-check performed: frame 300 rendered alone from a cold start is byte-identical to
-frame 300 of the full render (see checklist).
+frame 300 of the full render for all six compositions (see checklist).
+
+Loop looks are seamless by construction (`frame % 600`, whole turns/cycles) and
+verified: the 599→0 seam differs from its neighbours no more than any other
+arrow-cycle boundary.
 
 ## Measured render time (720p, this machine)
 
-MEASURED_TIMES
+Measured on the build machine: 4 vCPU, no GPU (ANGLE falls back to SwiftShader,
+i.e. WebGL2 in software), `--concurrency=4`, `--scale=0.3333333333333333` (1280×720),
+PNG frames. "Wall" is the full 600-frame render; per-frame = wall ÷ 600.
+
+| Composition | 600 frames, wall | per frame (wall) | ≈ per frame, one worker | 4K estimate (this machine) |
+|---|---|---|---|---|
+| AIAgentsBoard-Blue | 251 s | 0.42 s | ~1.7 s | ~1.5 s/frame (~15 min) |
+| MarketMove-CrashRed | 367 s | 0.61 s | ~2.4 s | ~5.5 s/frame (~55 min) |
+| MarketMove-RallyGreen | 384 s | 0.64 s | ~2.6 s | ~5.5 s/frame (~55 min) |
+| MapDashboard-Blue | 268 s | 0.45 s | ~1.8 s | ~4 s/frame (~40 min) |
+| AINetworkPanel-BlueWhite | 301 s | 0.50 s | ~2.0 s | ~4.5 s/frame (~45 min) |
+| SecurityHUD-Blue | 332 s | 0.55 s | ~2.2 s | ~5 s/frame (~50 min) |
+
+How the 4K estimate was made: a 60-frame batch at 1280×720 vs 1920×1080 (2.25×
+the pixels) cost 1.85× (Market) and 2.2× (Map) more per frame, i.e. the GL looks
+scale roughly linearly with pixel count on software GL. 3840×2160 is 9× the pixels
+of 720p, so ≈ 8–9× the 720p per-frame time. The Board (HTML/SVG + Canvas 2D) rose
+only 1.2× for 2.25× pixels, so ≈ 3–4×. On a machine with a real GPU behind ANGLE
+the GL looks will be much faster than these software-GL numbers.
 
 ## Banding check
 
-BANDING_RESULTS
+Checked on the **encoded mp4** (frame 450 of each, decoded back to PNG with ffmpeg),
+not on the preview:
+
+- **Dark-gradient profiles**: median of 32×8 px blocks down dark columns. The values
+  change in steps of 0–2 code values per 8 px with no plateaus or jumps (e.g. Board
+  left edge, blue channel, top→bottom: 54 52 50 46 46 … 22 21 20 16 13 12 9).
+- **Code-value occupancy**: in every look, every 8-bit level inside the dark range
+  that is in use (>1000 px) is present in all three channels — **no empty levels**
+  (Board B 8–119, Market-Red R 25–119, Market-Green G 23–119, Map B 29–119, Network
+  B 1–79, Security B 40–119).
+- **Glow falloff**: hub glow of the Network panel inspected at 3× with gamma 1.6 — no
+  contour rings.
+- Note: the histogram of a decoded frame shows a regular comb every ~6–7 levels.
+  That is the limited-range yuv420p → full-range RGB expansion (219 → 255 levels) in
+  the decoder, not banding; spatially the gradients stay smooth.
+
+How it is prevented: TPDF dither ±1/255 + grain (≈1.5 %) from an integer hash of
+pixel position and frame in the final GL pass; float-computed, dithered backgrounds
+and fixed noise tiles indexed by frame in the HTML/Canvas look; half-float render
+targets throughout the GL chain; PNG intermediates; CRF 16.
 
 ## Completion checklist
 
-CHECKLIST
+| Check | Result |
+|---|---|
+| 1. ffprobe: 1280×720, 30/1, 20.0 s, h264, yuv420p, no audio | ✅ all 6 |
+| 2. Loop: 601-frame render, frame 0 vs frame 600 pixel-identical (`--props='{"loopCheck":true}'`) | ✅ MarketMove ×2, SecurityHUD |
+| 3. Determinism: cold single-frame render == frame from full render, byte for byte | ✅ frame 300 all 6; frame 90 for Board, Map, Network |
+| 4. Banding on the encoded mp4 | ✅ all 6 (see above) |
+| 5. Contact sheets (5 frames each): required content present; text "AI Agents", "AI Generate", "AI" correct; filler invented; no brands/tickers/real data | ✅ all 6 |
+| 6. Motion 299/300/301: no jumps, flicker or crawl (also loop seam 599→0) | ✅ all 6 |
+| 7. Self comparison against references | ✅ done for each look |
+| 8. Independent sub-agent comparison, 3 rounds per look | ✅ done; residual differences listed in the delivery notes |
+
+Re-run step 2 for a loop look:
+
+```bash
+npx remotion still MarketMove-CrashRed f0.png   --frame=0   --scale=0.3333333333333333 --props='{"loopCheck":true}'
+npx remotion still MarketMove-CrashRed f600.png --frame=600 --scale=0.3333333333333333 --props='{"loopCheck":true}'
+```
 
 ## Add a colourway
 
