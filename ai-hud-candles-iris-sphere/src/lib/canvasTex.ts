@@ -12,7 +12,11 @@ export const makeCanvasTex = (w: number, h: number, colour: boolean, mipmaps = t
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext("2d", { alpha: true })!;
+  // willReadFrequently keeps the canvas on Chrome's software rasteriser. The
+  // GPU canvas path rasterises glyphs slightly differently depending on its
+  // glyph-cache state, which broke byte-for-byte determinism between a warm
+  // tab and a cold one (±1 on a few text pixels).
+  const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: true })!;
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = colour ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   tex.generateMipmaps = mipmaps;
