@@ -168,7 +168,7 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
             <stop offset="1" stopColor="#F2F7FC" />
           </linearGradient>
           <linearGradient id="tilefill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#5A7AA8" stopOpacity="0.55" />
+            <stop offset="0" stopColor="#6A9AC8" stopOpacity="0.6" />
             <stop offset="1" stopColor={row.tile} stopOpacity="0.55" />
           </linearGradient>
         </defs>
@@ -181,7 +181,7 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
           {/* faint hexagon outlines */}
           {[
             [1410, 660, 120],
-            [2760, 1690, 140],
+            [2760, 1690, 110],
           ].map(([x, y, r], i) => (
             <polygon key={i} fill="none" stroke="#6FB8FF" strokeWidth={4} opacity={0.18}
               points={Array.from({ length: 6 }, (_, k) => `${x + r * Math.cos((k * Math.PI) / 3)},${y + r * Math.sin((k * Math.PI) / 3)}`).join(" ")} />
@@ -215,9 +215,9 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
             const p = tracesP(k);
             return (
               <g key={k} opacity={p > 0 ? 1 : 0}>
-                <path d={t.d} fill="none" stroke="#7FE0FF" strokeWidth={5} pathLength={1} strokeDasharray="1 1"
+                <path d={t.d} fill="none" stroke="#9FEFFF" strokeWidth={5.5} pathLength={1} strokeDasharray="1 1"
                   strokeDashoffset={1 - p} />
-                <circle cx={t.end[0]} cy={t.end[1]} r={11} fill="#F2FCFF" stroke="none"
+                <circle cx={t.end[0]} cy={t.end[1]} r={8} fill="#E2F8FF" stroke="none"
                   opacity={p >= 0.98 ? 1 : 0} />
               </g>
             );
@@ -293,9 +293,9 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
                 opacity={0.1 * g} filter="url(#softglow)" />
               <rect x={-half + 16} y={-half + 16} width={TILE_SIZE - 32} height={TILE_SIZE - 32} rx={16} fill="none"
                 stroke="#8CC8FF" strokeWidth={2.5} strokeOpacity={0.28 + 0.3 * g} />
-              <g transform={`translate(${-82} ${-82}) scale(${164 / 24})`} filter={g > 0.3 ? "url(#glow)" : undefined}>
+              <g transform={`translate(${-96} ${-96}) scale(${192 / 24})`} filter={g > 0.3 ? "url(#glow)" : undefined}>
                 {(ICONS[t.icon] as IconDef).fill ? <path d={(ICONS[t.icon] as IconDef).fill} fill="#B8C8D8" /> : null}
-                <path d={ICONS[t.icon].stroke} fill="none" stroke={t.icon === "cloud" ? "none" : "#F2F8FF"} strokeWidth={1.2}
+                <path d={ICONS[t.icon].stroke} fill="none" stroke={t.icon === "cloud" ? "none" : "#F2F8FF"} strokeWidth={1.0}
                   strokeLinecap="round" strokeLinejoin="round" />
                 {t.icon === "shieldOutline" ? (
                   <path d={ICONS.check.stroke} fill="none" stroke="#3AD8FF" strokeWidth={2} strokeLinecap="round"

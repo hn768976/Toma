@@ -87,7 +87,7 @@ const BOKEH = (() => {
     return {
       x: left ? r() * 900 : W - r() * 900,
       y: 1300 + r() * 860,
-      s: 40 + r() * 70,
+      s: 16 + r() * 28,
       a: 0.18 + r() * 0.3,
       p: Math.floor(r() * 120),
     };
@@ -258,7 +258,7 @@ export const BoardCanvas: React.FC<{ row: BoardRow; lift: number }> = ({ row, li
         const pulse = 0.9 + 0.1 * Math.sin((frame / 60) * Math.PI * 2);
         ctx.globalAlpha = clamp01(glowIn * 0.55 * pulse);
         ctx.drawImage(getGlow(2400 * s, 2000 * s, [20, 150, 200]), CENTER.x - 1200, CENTER.y - 1000, 2400, 2000);
-        ctx.globalAlpha = clamp01(glowIn * pulse);
+        ctx.globalAlpha = clamp01(glowIn * 0.72 * pulse);
         ctx.drawImage(getGlow(1500 * s, 110 * s, [90, 230, 255]), CENTER.x - 750, CENTER.y + 160 - 55, 1500, 110);
         ctx.drawImage(getGlow(1320 * s, 40 * s, [160, 240, 255]), CENTER.x - 660, CENTER.y + 160 - 20, 1320, 40);
         ctx.drawImage(getGlow(700 * s, 30 * s, [230, 252, 255]), CENTER.x - 350, CENTER.y + 160 - 15, 700, 30);
@@ -326,8 +326,8 @@ export const BoardCanvas: React.FC<{ row: BoardRow; lift: number }> = ({ row, li
 
   return (
     <>
-      <canvas ref={backRef} style={layerStyle(2)} />
-      <canvas ref={midRef} style={layerStyle(0.8)} />
+      <canvas ref={backRef} style={layerStyle(3.5)} />
+      <canvas ref={midRef} style={layerStyle(1.4)} />
       <canvas ref={frontRef} style={layerStyle(12)} />
     </>
   );
