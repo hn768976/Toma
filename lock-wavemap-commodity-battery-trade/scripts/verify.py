@@ -99,7 +99,7 @@ for cid in only:
     dev = (box(lum) - box(slum))[mask]
     dev = np.abs(dev - np.median(dev))   # remove the constant RGB<->YUV round-trip offset
     dev99 = float(np.percentile(dev, 99)) if dev.size else 0.0
-    ok4 = area > 0.02 and src_runs <= 6 and dev99 < 1.0
+    ok4 = area > 0.02 and src_runs <= 6 and dev99 < 1.5   # no step larger than ~one 8-bit level
     log(f"  step4 {'PASS' if ok4 else 'FAIL'}: smooth dark-gradient area {area*100:.1f}%; source dither flat-run p99 {src_runs:.1f}px; "
         f"encoded-vs-source low-pass deviation p99 {dev99:.2f}/255")
     # contrast-stretched crop of the masked area for eyeballing

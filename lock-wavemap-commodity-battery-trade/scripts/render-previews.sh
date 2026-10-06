@@ -27,9 +27,11 @@ for id in "${IDS[@]}"; do
   end=$(date +%s.%N)
   total=$(ls "out/frames/$id" | wc -l)
   echo "$id: $total frames in $(echo "$end - $start" | bc) s -> $(echo "scale=3; ($end - $start) / $total" | bc) s/frame" | tee -a out/timings.txt
-  first=$(ls "out/frames/$id" | head -1)
-  pat=$(echo "$first" | sed -E 's/[0-9]+\.png$//')
-  digits=$(echo "$first" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
+  files=("out/frames/$id"/*.png)
+  first=$(basename "${files[0]}")
+  pat=${first%%[0-9]*.png}
+  num=${first#"$pat"}; num=${num%.png}
+  digits=${#num}
   ffmpeg -v error -y -framerate 30 -start_number 0 -i "out/frames/$id/${pat}%0${digits}d.png" -frames:v $n \
     -c:v libx264 -crf 16 -tune grain -pix_fmt yuv420p -r 30 -an -movflags +faststart "out/previews/$name.mp4"
   cp "out/frames/$id/${pat}$(printf "%0${digits}d" $still).png" "out/stills/$name.png"

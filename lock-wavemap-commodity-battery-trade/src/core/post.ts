@@ -193,8 +193,10 @@ void main() {
   float g1 = h01(uvec3(p, f * 3u + 1u));
   float g2 = h01(uvec3(p, f * 3u + 2u));
   float d1 = h01(uvec3(p.yx, f * 3u + 7u));
-  float n = (g1 + g2 - 1.0) * grain;                 // grain, triangular, luminance
-  col += n * (0.35 + 0.65 * sqrt(clamp(dot(col, vec3(0.3, 0.55, 0.15)), 0.0, 1.0)));
+  // grain, triangular, near-uniform across tones: it must stay strong enough in
+  // the darkest gradients to survive H.264 (weaker dark grain got flattened into blocks)
+  float n = (g1 + g2 - 1.0) * grain;
+  col += n * (0.8 + 0.2 * sqrt(clamp(dot(col, vec3(0.3, 0.55, 0.15)), 0.0, 1.0)));
   col += (d1 - 0.5) * (2.0 / 255.0);                // ±1/255 dither, last
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
