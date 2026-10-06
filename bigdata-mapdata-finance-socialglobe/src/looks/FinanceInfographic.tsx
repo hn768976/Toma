@@ -125,7 +125,7 @@ const barChart: Card = {
     const base = h - 152;
     const n = 19;
     const step = (w - 160) / 18;
-    const bw = step * 0.5;
+    const bw = step * 0.66;
     for (let i = 0; i < n; i++) {
       // bars grow to new values in waves travelling left to right; taller
       // towards the middle
@@ -139,7 +139,7 @@ const barChart: Card = {
       for (let k = 0; k < seg; k++) {
         // one tone, brightness fading downward in small steps
         const a = 0.95 - 0.6 * (k / (seg - 1));
-        B.rect(x, base - hh + (hh * k) / seg, bw, hh / seg + 0.5, C_MID, a, { i: 0.9 + 0.6 * (1 - k / seg) });
+        B.rect(x, base - hh + (hh * k) / seg, bw, hh / seg + 0.5, k < 3 ? C_HI : C_MID, a, { i: 1.0 + 0.7 * (1 - k / seg) });
       }
       if (hh > bw) B.dot(x + bw / 2, base - hh, bw / 2, C_MID, 0.95, { i: 1.5 });
     }
@@ -171,7 +171,7 @@ const areaCard = (i: number): Card => ({
     for (let k = 0; k < n; k++) {
       const t = k / (n - 1);
       // solid, jagged "mountain" rising steeply to the right
-      const jag = (hash3(i, k, 5) - 0.5) * 0.35;
+      const jag = (hash3(i, k, 5) - 0.5) * 0.08;
       const v = clamp01(0.08 + 0.85 * t * t + jag * (0.4 + t) + 0.18 * (beatValue(f, 500 + i * 97 + k * 7, 60, 600, 0.6) - 0.5));
       const x = lerp(x0, x1, t);
       const y = yb - v * 160;
@@ -180,6 +180,20 @@ const areaCard = (i: number): Card => ({
     B.text(rollingDigits("####### ###", 5612316 + i, f, 600, 10), 18, 222, 27, C_HI, 1, { i: 1.4, spacing: 1.05 });
   },
 });
+
+const cardDivider: Card = {
+  x: 1480,
+  y: 700,
+  w: 1220,
+  h: 14,
+  delay: 8,
+  layer: "board",
+  drawStatic: (ctx, w) => {
+    ctx.fillStyle = "rgba(140,235,255,0.7)";
+    for (let x = 0; x < w; x += 14) ctx.fillRect(x, 4, 7, 6);
+  },
+  drawDyn: () => {},
+};
 
 const counter: Card = {
   x: 1480,
@@ -190,7 +204,7 @@ const counter: Card = {
   layer: "board",
   drawStatic: (ctx, w, h) => {
     // bright filled tile, dark numerals (inverted)
-    ctx.fillStyle = "rgba(58,200,228,1)";
+    ctx.fillStyle = "rgba(160,236,250,1)";
     ctx.beginPath();
     ctx.roundRect(14, 10, w - 28, h - 20, 10);
     ctx.fill();
@@ -303,7 +317,12 @@ const header: Card = {
   h: 80,
   delay: 20,
   layer: "board",
-  drawStatic: () => {},
+  drawStatic: (ctx, w) => {
+    ctx.fillStyle = "rgba(110,215,250,0.35)";
+    ctx.fillRect(0, 2, w, 2);
+    ctx.fillRect(0, 74, w, 2);
+    for (const x of [120, 860, 1440, 1900, 2380]) ctx.fillRect(x, 0, 2, 78);
+  },
   drawDyn: (B, f) => {
     const items: [string, number, string][] = [
       ["MN-", 180, "###"],
@@ -384,7 +403,7 @@ const sideRight: Card = {
       B.rect(20 + i * 22, 900 - v * 240, 9, v * 240, C_MID, 0.8, { i: 1 });
     }
     // light flare at the bottom-right edge
-    B.dot(380, 760, 30, "#DFFBFF", 0.95, { i: 3.0, glow: 6, glowAmt: 0.6, add: true });
+    B.dot(200, 600, 12, "#BFF6FF", 1, { i: 6.0, glow: 5, glowAmt: 0.35, add: true });
   },
 };
 
@@ -433,7 +452,7 @@ const sideLeft: Card = {
   },
 };
 
-const CARDS: Card[] = [boardFill, header, barChart, areaCard(0), areaCard(1), areaCard(2), areaCard(3), counter, donutLabels, donut(0), donut(1), donut(2), table(0), table(1), sideRight, sideTopRight, sideLeft];
+const CARDS: Card[] = [boardFill, header, cardDivider, barChart, areaCard(0), areaCard(1), areaCard(2), areaCard(3), counter, donutLabels, donut(0), donut(1), donut(2), table(0), table(1), sideRight, sideTopRight, sideLeft];
 
 // --- globes -----------------------------------------------------------------
 
@@ -507,7 +526,7 @@ const farMap = (assets: Assets) => {
   const { c, ctx } = makeCanvas(W, H);
   ctx.clearRect(0, 0, W, H);
   traceLand(ctx, assets.land, (lon, lat) => [((lon + 180) / 360) * W, ((90 - lat) / 180) * H]);
-  ctx.fillStyle = "rgba(18,80,140,0.36)";
+  ctx.fillStyle = "rgba(30,100,160,0.18)";
   ctx.fill("evenodd");
   ctx.strokeStyle = "rgba(90,200,230,0.18)";
   ctx.lineWidth = 3;
@@ -576,7 +595,7 @@ const build: BuildFn = (assets) => {
   const R1 = 1.75;
   const mask = landMask(assets.land);
   const N = 20000;
-  const cloud = new PointCloud({ count: N, backAlpha: 0.9, softness: 0.75 });
+  const cloud = new PointCloud({ count: N, backAlpha: 1, softness: 0.9 });
   {
     const r = mulberry32(31337);
     let i = 0;
@@ -632,8 +651,8 @@ const build: BuildFn = (assets) => {
     { scene: sFar, blur: 0.0055 },
     { scene: sBack, blur: 0.0022 },
     { scene: sGlobes, blur: 0.0014 },
-    { scene: sBoard, blur: 0.0012 },
-    { scene: sSide, blur: 0.0022 },
+    { scene: sBoard, blur: 0.0019 },
+    { scene: sSide, blur: 0.0019 },
   ];
 
   return {
@@ -641,11 +660,11 @@ const build: BuildFn = (assets) => {
     layers,
     pipeline: {
       background: BG,
-      bloomThreshold: 0.55,
+      bloomThreshold: 0.4,
       bloomKnee: 0.5,
-      bloomIntensity: 0.8,
-      bloomRadius: 0.9,
-      vignette: 0.8,
+      bloomIntensity: 1.05,
+      bloomRadius: 0.95,
+      vignette: 0.65,
       saturation: 1.12,
     },
     update: (f) => {
@@ -677,7 +696,7 @@ const build: BuildFn = (assets) => {
 
       const fade = easeOutCubic(remap(f, 45, 75));
       (far.material as THREE.ShaderMaterial).uniforms.uOpacity.value = fade;
-      return { fade: Math.min(1, 0.0001 + fade), exposure: 0.9 };
+      return { fade: Math.min(1, 0.0001 + fade), exposure: 0.95 };
     },
   };
 };
