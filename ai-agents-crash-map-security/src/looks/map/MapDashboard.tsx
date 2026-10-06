@@ -13,17 +13,30 @@ import type { MapRow } from "../../versions";
 
 // Texture / plane layout ----------------------------------------------------
 const TW = 8192;
-const TH = 4608;
+const TH = 5120;
 const PW = 24; // plane size in world units
-const PH = 13.5;
+const PH = 15;
 const SX = 8; // reveal sections
 const SY = 5;
-const MAP = { x: 1700, y: 960, w: 4900, h: 2640, latTop: 80, latBot: -58 };
+const MAP = { x: 2250, y: 1380, w: 3700, h: 2200, latTop: 80, latBot: -58 };
 
 const lonLatToPx = (lon: number, lat: number): [number, number] => [
   MAP.x + ((lon + 180) / 360) * MAP.w,
   MAP.y + ((MAP.latTop - lat) / (MAP.latTop - MAP.latBot)) * MAP.h,
 ];
+// Rows of small donut rings (donut widgets) or a short row under a readout.
+const donutLayout = (w: { type: string; x: number; y: number; w: number; h: number }) => {
+  const top = w.y + 70;
+  const ih = w.h - 80;
+  if (w.type === "readout") {
+    const rad = Math.min(ih * 0.18, 45);
+    const n = Math.max(3, Math.min(6, Math.floor(w.w / (rad * 2.6))));
+    return Array.from({ length: n }, (_, k) => ({ cx: w.x + rad + k * rad * 2.6, cy: top + ih * 0.78, rad }));
+  }
+  const rad = Math.min(ih / 2, 110) * 0.85;
+  const n = Math.max(2, Math.min(6, Math.floor(w.w / (rad * 2.4))));
+  return Array.from({ length: n }, (_, k) => ({ cx: w.x + ((k + 0.5) * w.w) / n, cy: top + ih / 2, rad }));
+};
 const sectionOf = (px: number, py: number) =>
   Math.min(SY - 1, Math.floor((py / TH) * SY)) * SX + Math.min(SX - 1, Math.floor((px / TW) * SX));
 
@@ -31,7 +44,7 @@ const sectionOf = (px: number, py: number) =>
 const REVEAL: number[] = Array.from({ length: SX * SY }, (_, i) => 45 + Math.floor(hash(i, 41) * 60));
 
 // Widget layout (seeded) --------------------------------------------------------
-type WType = "bars" | "hist" | "donut" | "strip" | "ticker" | "wave";
+type WType = "bars" | "hist" | "donut" | "strip" | "ticker" | "wave" | "readout" | "table";
 type Widget = { type: WType; x: number; y: number; w: number; h: number; seed: number };
 
 const CAPTIONS = [
@@ -42,34 +55,42 @@ const CAPTIONS = [
 const WIDGETS: Widget[] = (() => {
   const r = mulberry32(8080);
   const out: Widget[] = [];
-  const types: WType[] = ["bars", "hist", "donut", "strip", "ticker", "wave"];
+  // weighted: bar charts and strips dominate, like the reference
+  const types: WType[] = ["bars", "bars", "bars", "hist", "hist", "donut", "strip", "strip", "ticker", "wave", "readout", "readout", "table"];
+  const pickType = () => types[Math.floor(r() * types.length)];
   const bands = [
-    { x0: 160, y0: 150, x1: 8030, y1: 830, dir: "h" },
-    { x0: 160, y0: 3730, x1: 8030, y1: 4480, dir: "h" },
-    { x0: 140, y0: 980, x1: 1560, y1: 3600, dir: "v" },
-    { x0: 6700, y0: 980, x1: 8060, y1: 3600, dir: "v" },
+    { x0: 160, y0: 130, x1: 8030, y1: 640, dir: "h" },
+    { x0: 160, y0: 700, x1: 8030, y1: 1200, dir: "h" },
+    { x0: 160, y0: 3760, x1: 8030, y1: 4320, dir: "h" },
+    { x0: 160, y0: 4380, x1: 8030, y1: 4990, dir: "h" },
+    { x0: 140, y0: 1340, x1: 2050, y1: 3620, dir: "v" },
+    { x0: 6150, y0: 1340, x1: 8060, y1: 3620, dir: "v" },
   ];
   let k = 0;
   for (const b of bands) {
     if (b.dir === "h") {
       let x = b.x0;
       while (x < b.x1 - 300) {
-        const w = Math.min(b.x1 - x, 460 + Math.floor(r() * 640));
-        const split = r() < 0.45;
+        const w = Math.min(b.x1 - x, 300 + Math.floor(r() * 420));
+        const split = r() < 0.7;
         const hh = b.y1 - b.y0;
         if (split) {
           const h1 = Math.floor(hh * (0.4 + r() * 0.2));
-          out.push({ type: types[Math.floor(r() * 6)], x, y: b.y0, w, h: h1 - 30, seed: k++ });
-          out.push({ type: types[Math.floor(r() * 6)], x, y: b.y0 + h1 + 30, w, h: hh - h1 - 30, seed: k++ });
-        } else out.push({ type: types[Math.floor(r() * 6)], x, y: b.y0, w, h: hh, seed: k++ });
-        x += w + 70 + Math.floor(r() * 60);
+          out.push({ type: pickType(), x, y: b.y0, w, h: h1 - 30, seed: k++ });
+          out.push({ type: pickType(), x, y: b.y0 + h1 + 30, w, h: hh - h1 - 30, seed: k++ });
+        } else out.push({ type: pickType(), x, y: b.y0, w, h: hh, seed: k++ });
+        x += w + 50 + Math.floor(r() * 40);
       }
     } else {
       let y = b.y0;
       while (y < b.y1 - 200) {
-        const h = Math.min(b.y1 - y, 300 + Math.floor(r() * 380));
-        out.push({ type: types[Math.floor(r() * 6)], x: b.x0, y, w: b.x1 - b.x0, h, seed: k++ });
-        y += h + 70;
+        const h = Math.min(b.y1 - y, 260 + Math.floor(r() * 260));
+        if (r() < 0.5) {
+          const w1 = Math.floor((b.x1 - b.x0) * (0.45 + r() * 0.15));
+          out.push({ type: pickType(), x: b.x0, y, w: w1 - 25, h, seed: k++ });
+          out.push({ type: pickType(), x: b.x0 + w1 + 25, y, w: b.x1 - b.x0 - w1 - 25, h, seed: k++ });
+        } else out.push({ type: pickType(), x: b.x0, y, w: b.x1 - b.x0, h, seed: k++ });
+        y += h + 50;
       }
     }
   }
@@ -87,7 +108,7 @@ const LINKS: { a: number; b: number; t0: number }[] = (() => {
       .map((q, j) => ({ j, d: Math.hypot(q[0] - p[0], q[1] - p[1]) }))
       .filter((o) => o.j !== i)
       .sort((u, v) => u.d - v.d);
-    const picks = [near[0].j, near[1].j, near[2].j, near[3 + Math.floor(r() * 6)].j];
+    const picks = [near[0].j, near[1].j, near[2].j, near[3].j, near[4 + Math.floor(r() * 6)].j];
     for (const j of picks) {
       const key = i < j ? `${i}-${j}` : `${j}-${i}`;
       if (!set.has(key)) {
@@ -97,7 +118,7 @@ const LINKS: { a: number; b: number; t0: number }[] = (() => {
     }
   });
   const order = out.map((l, i) => ({ l, k: r() + (i % 3) * 0.05 })).sort((u, v) => u.k - v.k);
-  return order.map((o, i) => ({ ...o.l, t0: 112 + i * 3 }));
+  return order.map((o, i) => ({ ...o.l, t0: 112 + i * 2 }));
 })();
 
 // Static base texture --------------------------------------------------------------
@@ -113,17 +134,15 @@ const drawBase = (row: MapRow) => {
 
   ctx.fillStyle = row.base;
   ctx.fillRect(0, 0, TW, TH);
-  ctx.fillStyle = "rgba(0,2,10,0.5)";
-  ctx.fillRect(0, 0, TW, TH);
   const g = ctx.createRadialGradient(TW * 0.5, TH * 0.48, 200, TW * 0.5, TH * 0.5, TW * 0.55);
-  g.addColorStop(0, "rgba(30,80,200,0.22)");
-  g.addColorStop(0.55, "rgba(16,50,150,0.1)");
+  g.addColorStop(0, "rgba(10,60,210,0.3)");
+  g.addColorStop(0.55, "rgba(6,40,170,0.16)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, TW, TH);
 
   // fine grid
-  ctx.strokeStyle = "rgba(120,170,255,0.035)";
+  ctx.strokeStyle = "rgba(130,180,255,0.07)";
   ctx.lineWidth = 2;
   for (let x = 0; x < TW; x += 64) {
     ctx.beginPath();
@@ -146,19 +165,44 @@ const drawBase = (row: MapRow) => {
     pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     ctx.stroke();
   };
-  hud([[1620, 900], [2400, 900], [2460, 860], [4200, 860]]);
-  hud([[6650, 3660], [5900, 3660], [5840, 3700], [3600, 3700]]);
-  hud([[1600, 3640], [1600, 2600]]);
-  hud([[6640, 960], [6640, 1900]]);
+  const mx0 = MAP.x;
+  const my0 = MAP.y;
+  const mx1 = MAP.x + MAP.w;
+  const my1 = MAP.y + MAP.h;
+  hud([[mx0 - 120, my0 - 60], [mx0 + 700, my0 - 60], [mx0 + 760, my0 - 120], [mx0 + 2300, my0 - 120]]);
+  hud([[mx1 + 120, my1 + 60], [mx1 - 700, my1 + 60], [mx1 - 760, my1 + 120], [mx1 - 2300, my1 + 120]]);
+  hud([[mx0 - 120, my1 + 60], [mx0 - 120, my0 + 1200]]);
+  hud([[150, my0 - 60], [900, my0 - 60], [980, my0 + 20], [mx0 - 180, my0 + 20], [mx0 - 180, my0 + 600]]);
+  hud([[mx0 - 60, my1 + 140], [mx0 + 800, my1 + 140], [mx0 + 880, my1 + 60], [mx0 + 1700, my1 + 60]]);
+  hud([[mx1 + 80, my0 - 100], [mx1 + 700, my0 - 100], [mx1 + 780, my0 - 20], [8050, my0 - 20]]);
+  hud([[mx1 + 120, my0], [mx1 + 120, my0 + 1000]]);
+  // long digit strings and segmented strips along the frame lines
+  ctx.font = `500 40px ${MONO}`;
+  ctx.fillStyle = "rgba(200,220,255,0.75)";
+  for (const [x, y] of [
+    [mx0 + 300, my1 + 200],
+    [300, my0 - 20],
+    [mx0 + 1700, my0 - 170],
+    [mx1 - 1300, my1 + 200],
+    [mx1 + 300, my0 + 1150],
+  ] as [number, number][]) {
+    ctx.fillText(Array.from({ length: 22 }, (_, q) => Math.floor(hash(x, y, q) * 10)).join(""), x, y);
+    for (let q = 0; q < 14; q++) {
+      ctx.fillStyle = q % 5 === 4 ? rgba(row.widgets[1], 0.8) : `rgba(225,235,255,${0.35 + 0.5 * hash(x, q)})`;
+      ctx.fillRect(x + q * 46, y + 22, 36, 18);
+    }
+    ctx.fillStyle = "rgba(200,220,255,0.75)";
+  }
   ctx.lineWidth = 3;
   ctx.strokeStyle = "rgba(140,190,255,0.3)";
-  hud([[200, 880], [1500, 880]]);
-  hud([[200, 3660], [1500, 3660]]);
-  hud([[6700, 880], [8000, 880]]);
+  hud([[200, 1280], [mx0 - 250, 1280]]);
+  hud([[200, 3670], [mx0 - 250, 3670]]);
+  hud([[mx1 + 250, 1280], [8000, 1280]]);
+  hud([[mx1 + 250, 3670], [8000, 3670]]);
 
   // dotted world map (hex-offset round dots)
   const { isLand } = getLandMask();
-  const pitch = 23;
+  const pitch = 16.5;
   const rows = Math.floor(MAP.h / (pitch * 0.9));
   const cols = Math.floor(MAP.w / pitch);
   for (let j = 0; j < rows; j++) {
@@ -173,10 +217,8 @@ const drawBase = (row: MapRow) => {
       const center = Math.exp(-(cx * cx * 2.2 + cy * cy * 3));
       const b = Math.min(1, 0.35 + 0.55 * center + 0.3 * hash(i, j, 2));
       const white = hash(i >> 2, j >> 2, 9) < 0.18 ? 0.6 : 0;
-      ctx.fillStyle = white > 0 || hash(i, j, 5) < 0.55 ? `rgba(230,240,255,${0.45 + 0.5 * b})` : rgba(row.dots, 0.4 + 0.55 * b);
-      ctx.beginPath();
-      ctx.arc(px, py, 8.5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = white > 0 || hash(i, j, 5) < 0.6 ? `rgba(220,230,245,${0.4 + 0.45 * b})` : rgba(row.dots, 0.35 + 0.45 * b);
+      ctx.fillRect(px - 5, py - 5, 10, 10);
     }
   }
 
@@ -222,12 +264,34 @@ const drawBase = (row: MapRow) => {
       ctx.font = `400 28px ${MONO}`;
       ctx.fillStyle = "rgba(150,190,255,0.5)";
       for (let k = 0; k < 4; k++) ctx.fillText(`${k * 25}`, w.x + (k * w.w) / 4, top + ih + 12);
+    } else if (w.type === "readout" || w.type === "table") {
+      if (w.type === "readout") {
+        const big = Math.min(ih * 0.42, 150);
+        ctx.font = `600 ${big}px ${INTER}`;
+        ctx.fillStyle = "rgba(235,242,255,0.92)";
+        ctx.fillText(`${Math.floor(hash(w.seed, 7) * 9000 + 1000)} ${Math.floor(hash(w.seed, 8) * 90 + 10)}`, w.x, top);
+      } else {
+        ctx.font = `400 30px ${MONO}`;
+        const rowsN = Math.max(3, Math.floor(ih / 44));
+        for (let rr = 0; rr < rowsN; rr++) {
+          ctx.fillStyle = rr === 0 ? "rgba(220,235,255,0.8)" : "rgba(150,180,225,0.55)";
+          const cells = Array.from({ length: 4 }, (_, q) => String(Math.floor(hash(w.seed, rr, q) * 9999)).padStart(4, "0"));
+          ctx.fillText(cells.join("   "), w.x, top + rr * 44);
+          ctx.fillStyle = "rgba(220,235,255,0.35)";
+          ctx.fillRect(w.x + w.w - 180, top + rr * 44 + 8, 40 + hash(w.seed, rr) * 140, 16);
+        }
+      }
+      if (w.type === "readout")
+        for (const d of donutLayout(w)) {
+          ctx.strokeStyle = "rgba(120,170,255,0.18)";
+          ctx.lineWidth = d.rad * 0.22;
+          ctx.beginPath();
+          ctx.arc(d.cx, d.cy, d.rad * 0.78, 0, Math.PI * 2);
+          ctx.stroke();
+        }
     } else if (w.type === "donut") {
-      const n = Math.max(1, Math.min(3, Math.floor(w.w / Math.max(ih, 200))));
-      const rad = Math.min(ih / 2, w.w / (2 * n)) * 0.82;
-      for (let k = 0; k < n; k++) {
-        const cx = w.x + ((k + 0.5) * w.w) / n;
-        const cy = top + ih / 2;
+      for (const d of donutLayout(w)) {
+        const { cx, cy, rad } = d;
         ctx.strokeStyle = "rgba(120,170,255,0.18)";
         ctx.lineWidth = rad * 0.22;
         ctx.beginPath();
@@ -307,11 +371,11 @@ const drawBase = (row: MapRow) => {
   // a few labels in the map
   ctx.font = `600 54px ${INTER}`;
   ctx.fillStyle = "rgba(230,240,255,0.85)";
-  ctx.fillText("NODE 2207", 3260, 2440);
+  ctx.fillText("NODE 2207", MAP.x + 1150, MAP.y + 1450);
   ctx.font = `400 36px ${MONO}`;
   ctx.fillStyle = "rgba(190,215,255,0.7)";
-  ctx.fillText("53 43 · 0045 2346 1904 4561", 2950, 3350);
-  ctx.fillText("SYNC 0.82  ROUTE 12", 4600, 1700);
+  ctx.fillText("53 43 · 0045 2346 1904 4561", MAP.x + 900, MAP.y + 2050);
+  ctx.fillText("SYNC 0.82  ROUTE 12", MAP.x + 2300, MAP.y + 420);
 
   baseCache = { key: row.id, canvas: c };
   return c;
@@ -335,7 +399,7 @@ float glitchAt(float sec) {
 
 const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight }) => {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, aspect, 0.2, 80);
+  const camera = new THREE.PerspectiveCamera(27, aspect, 0.2, 120);
   const pal = row.widgets.map(hexToVec3);
   const uniformsShared = {
     uFrame: { value: 0 },
@@ -363,7 +427,7 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
         vec3 c = texture(tMap, uv).rgb;
         // outside the dashboard: mirrored continuation, dimmed
         float outside = max(max(-vUv.x, vUv.x - 1.0), max(-vUv.y, vUv.y - 1.0));
-        float dim = outside <= 0.0 ? 1.0 : mix(0.5, 0.06, smoothstep(0.0, 0.12, outside));
+        float dim = outside <= 0.0 ? 1.0 : 0.6;
         gl_FragColor = vec4(c * v * dim, 1.0);
       }`,
   });
@@ -401,7 +465,10 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
         const a = w.seed % 2 ? pal[0] : pal[3];
         const b = pal[1];
         const cEnd = w.seed % 3 ? pal[2] : pal[0];
-        const c = t < 0.5 ? a.clone().lerp(b, t * 2) : b.clone().lerp(cEnd, (t - 0.5) * 2);
+        const mode = w.seed % 5;
+        let c = t < 0.5 ? a.clone().lerp(b, t * 2) : b.clone().lerp(cEnd, (t - 0.5) * 2);
+        if (mode <= 1) c = pal[0].clone().lerp(new THREE.Vector3(1, 0.62, 0.92), t * 0.6); // magenta / hot pink
+        if (mode === 2) c = new THREE.Vector3(0.82, 0.86, 0.95).multiplyScalar(0.7 + 0.3 * hash(w.seed, k)); // white/grey
         col.push(c.x, c.y, c.z);
         seed.push(w.seed * 100 + k);
         sec.push(sectionOf(x, top + ih / 2));
@@ -461,16 +528,11 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
   {
     const data: number[] = [];
     WIDGETS.forEach((w) => {
-      if (w.type !== "donut") return;
-      const top = w.y + 70;
-      const ih = w.h - 80;
-      const n = Math.max(1, Math.min(3, Math.floor(w.w / Math.max(ih, 200))));
-      const rad = Math.min(ih / 2, w.w / (2 * n)) * 0.82;
-      for (let k = 0; k < n; k++) {
-        const cx = w.x + ((k + 0.5) * w.w) / n;
-        const cy = top + ih / 2;
+      if (w.type !== "donut" && w.type !== "readout") return;
+      donutLayout(w).forEach((d, k) => {
+        const { cx, cy, rad } = d;
         data.push(cx, cy, rad, w.seed * 10 + k, sectionOf(cx, cy));
-      }
+      });
     });
     const n = data.length / 5;
     const geo = new THREE.InstancedBufferGeometry();
@@ -715,11 +777,11 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
 
     // camera glide: slow lateral move with a slight yaw change
     const g = easeInOutCubic(frame / 599);
-    const tx = -1.2 + 2.6 * g;
-    const tz = -0.2 + 0.3 * g;
+    const tx = -1.3 + 2.6 * g;
+    const tz = 0.8 - 0.2 * g;
     const yaw = 0.52 - 0.1 * g;
-    const pitch = (39 * Math.PI) / 180;
-    const dist = 12.6 - 0.7 * g;
+    const pitch = (45 * Math.PI) / 180;
+    const dist = 14.8 - 0.8 * g;
     camera.position.set(
       tx + Math.sin(yaw) * Math.cos(pitch) * dist,
       Math.sin(pitch) * dist,
@@ -757,17 +819,17 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
       const ex = ax + (bx - ax) * p;
       const ey = ay + (by - ay) * p;
       const flick = frame - l.t0 < 4 ? 0.5 : 1;
-      quad(ax, ay, ex, ey, 3.5, 0.6 * flick);
+      quad(ax, ay, ex, ey, 2.6, 0.42 * flick);
       nodeOn[l.a] = Math.max(nodeOn[l.a], range(frame, l.t0, l.t0 + 6));
       if (p > 0.98) nodeOn[l.b] = Math.max(nodeOn[l.b], 1);
       // travelling pulse once drawn
       if (p >= 1) {
         const per = 70 + (i % 5) * 12;
         const u = (((frame - l.t0 - 26) / per + hash(i, 8)) % 1 + 1) % 1;
-        spData.set([ax + (bx - ax) * u, ay + (by - ay) * u, 90, 0.7 * Math.sin(Math.PI * u)], s * 4);
+        spData.set([ax + (bx - ax) * u, ay + (by - ay) * u, 50, 0.5 * Math.sin(Math.PI * u)], s * 4);
         s++;
       } else {
-        spData.set([ex, ey, 110, 0.9], s * 4);
+        spData.set([ex, ey, 60, 0.7], s * 4);
         s++;
       }
     });
@@ -778,7 +840,7 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
     hubPx.forEach(([x, y], i) => {
       if (nodeOn[i] <= 0) return;
       const tw = 0.8 + 0.2 * Math.sin(frame * 0.15 + i);
-      spData.set([x, y, 160, nodeOn[i] * tw], s * 4);
+      spData.set([x, y, 70, 0.7 * nodeOn[i] * tw], s * 4);
       s++;
     });
     spBuf.needsUpdate = true;
@@ -803,8 +865,8 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
     const fadeIn = range(frame, 45, 70);
     return {
       frame,
-      bloom: { strength: 0.75, threshold: 0.55, knee: 0.3, radius: 1.0 },
-      dof: { focus: camera.position.distanceTo(new THREE.Vector3(tx, 0, tz)), aperture: 0.016, maxBlur: 0.011, nearScale: 0.8 },
+      bloom: { strength: 0.45, threshold: 0.75, knee: 0.3, radius: 1.0 },
+      dof: { focus: camera.position.distanceTo(new THREE.Vector3(tx, 0, tz)), aperture: 0.008, maxBlur: 0.006, nearScale: 0.8 },
       exposure: 0.25 + 0.75 * fadeIn,
       vignette: 0.55,
       grain: 0.015,
