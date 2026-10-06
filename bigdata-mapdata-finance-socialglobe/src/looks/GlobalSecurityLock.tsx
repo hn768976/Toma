@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Assets, traceLand } from "../lib/assets";
-import { linearRGB, premultBlend, texPlaneMaterial } from "../lib/batch2d";
+import { Batch2D, linearRGB, premultBlend, texPlaneMaterial } from "../lib/batch2d";
 import { ICONS, canvasTexture, glyphAtlas, makeCanvas } from "../lib/canvas";
 import { Billboards, Lines3D } from "../lib/prims3d";
 import { clamp01, easeOutCubic, hash2, irange, mulberry32, pick, range, remap, stepIndex } from "../lib/random";
@@ -18,7 +18,7 @@ const EDGE = "#BFF0FF";
 const GLOW = "#3A8AFF";
 const DIGIT = "#7FD4FF";
 const LANDC = "#1A3A6A";
-const MAP_TINT = 0.8;
+const MAP_TINT = 0.62;
 const BG = "#020C24";
 
 const CAM_Z = 20;
@@ -26,7 +26,7 @@ const FOV = 30;
 const VIS_H = 2 * CAM_Z * Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const VIS_W = (VIS_H * 16) / 9;
 
-const LOCK_H = VIS_H * 0.36; // lock quad height (world)
+const LOCK_H = VIS_H * 0.4; // lock quad height (world)
 
 // ---------------------------------------------------------------------------
 
@@ -64,7 +64,7 @@ const lockMaterial = () => {
         // lock-local coordinates: quad is 1 x 1, y up, centre (0,0)
         const vec2 BODY_C = vec2(0.0, -0.17);
         const vec2 BODY_H = vec2(0.33, 0.25);
-        const float BODY_R = 0.045;
+        const float BODY_R = 0.022;
         const vec2 SH_C = vec2(0.0, 0.13);   // shackle arc centre
         const float SH_R = 0.205;           // shackle centre-line radius
         const float SH_T = 0.055;           // shackle half thickness
@@ -107,7 +107,7 @@ const lockMaterial = () => {
           float alpha = 0.0;
 
           // ---- edges: body outer + inner line; shackle both edges + centre dots
-          float line = 0.006;
+          float line = 0.0045;
           float eB = (1.0 - smoothstep(line - fw, line + fw, abs(dB))) * bodyOn;
           float eB2 = (1.0 - smoothstep(line * 0.7 - fw, line * 0.7 + fw, abs(dB + 0.028))) * bodyOn * 0.75;
           float eS = (1.0 - smoothstep(line - fw, line + fw, abs(dS))) * shOn;
@@ -148,8 +148,8 @@ const lockMaterial = () => {
           col += uGlowCol * fillA * 0.18;
           // keyhole interior: dark
           float kIn = (1.0 - smoothstep(-fw, fw, dK)) * clamp(uFill * 3.0, 0.0, 1.0);
-          alpha = max(fillA, kIn * 0.85);
-          col *= (1.0 - kIn * 0.9);
+          alpha = max(fillA, kIn * 0.9);
+          col = mix(col, vec3(0.01, 0.05, 0.16), kIn); // solid dark keyhole
           col += uEdgeCol * eK * 2.0 * kIn;
           fragOut = vec4(col, alpha);
         }`,
@@ -167,7 +167,7 @@ const burstMaterial = () =>
         uAmt: { value: 0 },
         uFrame: { value: 0 },
         uAspect: { value: VIS_W / VIS_H },
-        uCol: { value: new THREE.Vector3(...linearRGB("#4A9CFF")) },
+        uCol: { value: new THREE.Vector3(...linearRGB("#3FB4FF")) },
         uCore: { value: new THREE.Vector3(...linearRGB("#CFF2FF")) },
         uCenter: { value: new THREE.Vector2(0, 0.03) },
       },
@@ -195,7 +195,7 @@ const burstMaterial = () =>
             float fl = 0.75 + 0.25 * sin(uFrame * (0.02 + 0.05 * h1(id + 5000.0)) + 6.2831 * h1(id + 9000.0));
             rays += prof * str * fl * (o == 0 ? 1.0 : (o == 1 ? 0.7 : 0.5));
           }
-          float fall = exp(-r * 3.4) * smoothstep(0.0, 0.05, r);
+          float fall = (exp(-r * 2.6) * 0.7 + 0.06) * smoothstep(0.0, 0.05, r);
           float glow = exp(-r * r * 22.0) * 1.1 + exp(-r * 5.0) * 0.35;
           vec3 c = uCol * (rays * fall * 1.3 + glow * 0.7) + uCore * exp(-r * r * 160.0) * 0.6;
           c *= uAmt;
@@ -212,7 +212,7 @@ const gridMaterial = () =>
       glslVersion: THREE.GLSL3,
       depthWrite: false,
       depthTest: false,
-      uniforms: { uAmt: { value: 0 }, uAspect: { value: VIS_W / VIS_H }, uCol: { value: new THREE.Vector3(...linearRGB("#5AA0FF")) } },
+      uniforms: { uAmt: { value: 0 }, uAspect: { value: VIS_W / VIS_H }, uCol: { value: new THREE.Vector3(...linearRGB("#4FBEF5")) } },
       vertexShader: `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: /* glsl */ `
         precision highp float;
@@ -229,12 +229,12 @@ const gridMaterial = () =>
         }
         void main(){
           vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
-          float ny = vUv.y * 64.0;
-          float hy = lineAA(ny, 1.2) * (0.25 + 0.75 * pow(h1(floor(ny + 0.5)), 3.0));
+          float ny = vUv.y * 190.0;
+          float hy = lineAA(ny, 1.0) * (0.35 + 0.65 * pow(h1(floor(ny + 0.5)), 2.0));
           float nx = vUv.x * 24.0;
-          float vx = lineAA(nx, 1.0) * 0.35 * step(0.55, h1(floor(nx + 0.5) + 300.0));
-          float center = exp(-dot(p, p) * 2.5) * 0.8 + 0.2;
-          float a = (hy * 0.22 + vx * 0.15) * center * uAmt;
+          float vx = lineAA(nx, 1.0) * 0.25 * step(0.7, h1(floor(nx + 0.5) + 300.0));
+          float center = exp(-dot(p, p) * 1.6) * 0.7 + 0.3;
+          float a = (hy * 0.3 + vx * 0.1) * center * uAmt;
           fragOut = vec4(uCol * a, 0.0);
         }`,
     }),
@@ -249,7 +249,7 @@ const streakMaterial = () =>
       uniforms: {
         uAmt: { value: 0 },
         uAspect: { value: VIS_W / VIS_H },
-        uCol: { value: new THREE.Vector3(...linearRGB("#3A8AFF")) },
+        uCol: { value: new THREE.Vector3(...linearRGB("#38B0FF")) },
         uCore: { value: new THREE.Vector3(...linearRGB("#DFF6FF")) },
       },
       vertexShader: `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
@@ -267,7 +267,12 @@ const streakMaterial = () =>
           float haze = exp(-ay * 22.0) * exp(-x * 2.2) * 0.25;
           // faint secondary lines above and below
           float sec = (exp(-abs(p.y - 0.035) * 1500.0) + exp(-abs(p.y + 0.03) * 1500.0)) * exp(-x * 2.5) * 0.35;
-          vec3 c = uCore * core * 2.2 + uCol * (wide + haze + sec) * 1.4;
+          float band = exp(-pow(p.y / 0.02, 2.0)) * (0.5 + 0.5 * exp(-x * 1.4)) * 0.22;
+          float yb = p.y + 0.105;   // weaker band at the lock base
+          float band2 = (exp(-pow(yb / 0.01, 2.0)) * 0.15 + exp(-abs(yb) * 1100.0) * 0.45) * exp(-x * 1.6);
+          float flash = exp(-(x * x * 260.0 + (yb + 0.012) * (yb + 0.012) * 4000.0));
+          vec3 warm = vec3(1.0, 0.78, 0.55);
+          vec3 c = uCore * core * 1.6 + uCol * (wide + haze + sec + band) * 1.2 + uCore * band2 * 1.2 + warm * flash * 1.2;
           fragOut = vec4(c * uAmt, 0.0);
         }`,
     }),
@@ -338,7 +343,7 @@ const BINS: [number, number][] = [
   [7, 12],
 ];
 const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
-  Array.from({ length: [26, 40, 18, 8][b] }, () => {
+  Array.from({ length: [10, 9, 9, 5][b] }, () => {
     const z = range(rng, z0, z1);
     const sc = (CAM_Z - z) / CAM_Z;
     let x = 0;
@@ -347,7 +352,7 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
     do {
       x = range(rng, -0.55, 0.55) * VIS_W * sc;
       y = range(rng, -0.55, 0.55) * VIS_H * sc;
-    } while (Math.abs(x / sc) < 3.2 && Math.abs(y / sc) < 3.0);
+    } while ((Math.abs(x / sc) < 3.6 && Math.abs(y / sc) < 3.2) || (b === 1 && Math.abs(x / sc) > 7.5));
     return {
       name: pick(rng, ICON_SET),
       x,
@@ -355,7 +360,7 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
       z,
       vx: range(rng, -0.012, 0.012),
       vy: range(rng, -0.008, 0.008),
-      s: range(rng, 0.3, 0.48) * (b === 3 ? 1.0 : 1),
+      s: range(rng, 0.5, 0.8) * (b >= 2 ? 0.75 : 1),
       a: range(rng, 0.55, 1),
       flick: rng() < 0.15,
       seed: irange(rng, 1, 1e9),
@@ -366,15 +371,27 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
 const SPECKS = Array.from({ length: 160 }, () => ({
   x: range(rng, -1, 1),
   y: range(rng, -1, 1),
-  z: range(rng, -4, 9),
-  s: range(rng, 0.015, 0.035),
-  a: range(rng, 0.25, 0.7),
+  z: rng() < 0.9 ? range(rng, -4, 2.5) : range(rng, 2.5, 6),
+  s: range(rng, 0.012, 0.03),
+  a: range(rng, 0.2, 0.55),
   vx: range(rng, -0.01, 0.01),
   vy: range(rng, -0.006, 0.006),
   dash: rng() < 0.3,
 }));
 
-const DASHES = Array.from({ length: 160 }, () => ({
+// floating binary digits on two depth planes (panel px, 1920 x 1080 frame)
+const FLOAT_DIGITS = [0, 1].map(() =>
+  Array.from({ length: 150 }, () => ({
+    x: range(rng, 0, 1920),
+    y: range(rng, 0, 1080),
+    size: range(rng, 9, 17),
+    a: range(rng, 0.25, 0.8),
+    vy: range(rng, 0.05, 0.25),
+    seed: irange(rng, 1, 1e9),
+  })),
+);
+
+const DASHES = Array.from({ length: 90 }, () => ({
   ang: rng() * Math.PI * 2,
   period: range(rng, 60, 160),
   ph: rng(),
@@ -394,7 +411,7 @@ const build: BuildFn = (assets) => {
   const map = new THREE.Mesh(new THREE.PlaneGeometry(VIS_W * ms * 1.06, VIS_H * ms * 1.06), mapMat);
   map.position.z = mapZ;
   sMap.add(map);
-  layers.push({ scene: sMap, blur: 0.0028 });
+  layers.push({ scene: sMap, blur: 0.006 });
 
   // icon bins + specks
   const binScenes = BINS.map(() => new THREE.Scene());
@@ -424,14 +441,28 @@ const build: BuildFn = (assets) => {
   sLock.add(dashes.mesh);
   const lockMat = lockMaterial();
   const lock = new THREE.Mesh(new THREE.PlaneGeometry(LOCK_H, LOCK_H), lockMat);
-  lock.position.set(0, VIS_H * 0.085, 0);
+  lock.position.set(0, VIS_H * 0.02, 0);
   lock.renderOrder = 2;
   sLock.add(lock);
   const streak = new THREE.Mesh(new THREE.PlaneGeometry(VIS_W * 1.02, VIS_H * 1.02), streakMaterial());
-  // at the lock's base
-  streak.position.set(0, lock.position.y + LOCK_H * (-0.17 - 0.25) + VIS_H * 0.0, 0.1);
+  // main band through the lower body; the shader adds a second, thinner
+  // band and a warm flash exactly at the lock's base (0.105 below)
+  streak.position.set(0, lock.position.y + LOCK_H * (-0.17 - 0.25) + VIS_H * 0.105, 0.1);
   streak.renderOrder = 3;
   sLock.add(streak);
+
+  // floating 0/1 digits: a sharp plane with the lock, a soft one behind
+  const digitPlanes = [
+    { z: 1.2, scene: sLock, order: 5 },
+    { z: -3.2, scene: binScenes[0], order: 1 },
+  ].map((d) => {
+    const sc = (CAM_Z - d.z) / CAM_Z;
+    const b = new Batch2D({ capacity: 200, width: 1920, height: 1080, unitsPerPx: (VIS_W * sc * 1.04) / 1920, z: 0 });
+    b.mesh.position.z = d.z;
+    b.mesh.renderOrder = d.order;
+    d.scene.add(b.mesh);
+    return b;
+  });
 
   layers.push({ scene: binScenes[0], blur: 0.004 });
   // the mid icon bin is in focus with the lock: same pass
@@ -446,7 +477,7 @@ const build: BuildFn = (assets) => {
   return {
     camera,
     layers,
-    pipeline: { background: BG, bloomThreshold: 0.75, bloomKnee: 0.45, bloomIntensity: 1.0, bloomRadius: 0.7, vignette: 0.5 },
+    pipeline: { background: BG, bloomThreshold: 0.6, bloomKnee: 0.5, bloomIntensity: 0.95, bloomRadius: 0.85, vignette: 0.7 },
     update: (f) => {
       camera.position.set(0.15 * Math.sin(f * 0.004), 0.08 * Math.sin(f * 0.003 + 1), CAM_Z - f * 0.0015);
       camera.lookAt(0, 0, 0);
@@ -480,7 +511,7 @@ const build: BuildFn = (assets) => {
         const c = Math.cos(d.ang);
         const s = Math.sin(d.ang);
         const a = d.a * burstAmt * Math.sin(Math.PI * t);
-        dashes.seg(c * r0, s * r0 + lock.position.y * 0.6, -0.3, c * r1, s * r1 + lock.position.y * 0.6, -0.3, 1.2, "#8FD0FF", a, 1.4);
+        dashes.seg(c * r0, s * r0 + lock.position.y * 0.6, -0.3, c * r1, s * r1 + lock.position.y * 0.6, -0.3, 1.0, "#8FD8FF", a * 0.55, 1.2);
       }
       dashes.end();
 
@@ -492,7 +523,7 @@ const build: BuildFn = (assets) => {
         for (const ic of list) {
           let a = ic.a * fadeIn;
           if (ic.flick) a *= hash2(ic.seed, stepIndex(f, 4, 600)) > 0.35 ? 1 : 0.15;
-          bb.icon(ic.name, ic.x + ic.vx * f, ic.y + ic.vy * f, ic.z, ic.s, "#EAF6FF", a, { i: 1.4 });
+          bb.icon(ic.name, ic.x + ic.vx * f, ic.y + ic.vy * f, ic.z, ic.s, "#EAF6FF", a * (b >= 2 ? 0.6 : 1), { i: 1.4 });
         }
         // specks in this bin
         for (const s of SPECKS) {
@@ -513,6 +544,16 @@ const build: BuildFn = (assets) => {
           ll.seg(x, y, s.z, x + s.s * 3, y, s.z, 1.6, "#9FD8FF", s.a * 0.8 * fadeIn, 1.3);
         }
         ll.end();
+      });
+
+      digitPlanes.forEach((b, k) => {
+        b.begin();
+        for (const d of FLOAT_DIGITS[k]) {
+          const y = (((d.y - d.vy * f) % 1080) + 1080) % 1080;
+          const ch = hash2(d.seed, stepIndex(f, 12, 600)) < 0.5 ? "0" : "1";
+          b.text(ch, d.x, y, d.size * (k === 1 ? 1.4 : 1), "#9FE2FF", d.a * fadeIn, { i: 1.3, align: "center" });
+        }
+        b.end();
       });
 
       (grid.material as THREE.ShaderMaterial).uniforms.uAmt.value = fadeIn;
