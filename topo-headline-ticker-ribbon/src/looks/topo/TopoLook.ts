@@ -77,6 +77,10 @@ void main(){
   // soft hotspot of light in the middle distance
   col += uLine * uHot * exp(-vT.x * vT.x / 500.0) * exp(-pow((vDist - 30.0) / 22.0, 2.0));
   float farDim = 1.0 - 0.88 * smoothstep(22.0, 110.0, vDist);
+  // where contours are denser than ~1 per 3 px they average to a flat sheet:
+  // fade them so the far field stays dark instead of saturating
+  float density = fwidth(c);
+  farDim *= 1.0 / (1.0 + 6.0 * max(density - 0.15, 0.0));
   col += uLine * lineMask * lum * (1.0 + 1.2 * major) * farDim;
   // faint square grid
   float grid = max(aaLine(vT.x / 5.0, 0.8*uPx+0.3), aaLine(vT.y / 5.0, 0.8*uPx+0.3));
