@@ -67,8 +67,8 @@ void main(){
   float major = aaLine(c / 5.0, w * 1.5);
   // dotted look along the lines (fine world-space dot lattice)
   // lines are strings of particles: a fine world-space dot lattice masks them
-  float dots = aaDots(vT * 8.0, 1.8 * uPx + 0.7);
-  float lineMask = max(minor * mix(0.06, 1.0, dots), major * mix(0.2, 1.0, dots));
+  float dots = aaDots(vT * 5.0, 1.9 * uPx + 0.75);
+  float lineMask = max(minor * (0.12 + 1.5 * dots), major * (0.3 + 1.3 * dots));
   // brighter where contours bunch up (steep slopes)
   float steep = clamp(length(vec2(dFdx(h), dFdy(h))) / max(length(vec2(dFdx(vT.x), dFdy(vT.y))), 1e-4), 0.0, 3.0);
   float lum = 0.55 + 0.35 * smoothstep(0.2, 1.5, steep) + 0.25 * smoothstep(-3.0, 4.0, h);
@@ -78,17 +78,17 @@ void main(){
   float farDim = 1.0 - 0.88 * smoothstep(22.0, 110.0, vDist);
   col += uLine * lineMask * lum * (1.0 + 1.2 * major) * farDim;
   // faint square grid
-  float grid = max(aaLine(vT.x / 6.0, 0.8*uPx+0.3), aaLine(vT.y / 6.0, 0.8*uPx+0.3));
-  col += uLine * grid * 0.4 * farDim;
+  float grid = max(aaLine(vT.x / 5.0, 0.8*uPx+0.3), aaLine(vT.y / 5.0, 0.8*uPx+0.3));
+  col += uLine * grid * 0.5 * farDim;
   // scattered dim tiles
   vec2 cell = floor(vT / 1.0);
   ivec2 ci = ivec2(int(cell.x) + 4096, int(mod(cell.y, ${TOPO_T}.0)));
   float r = hash12i(ci);
-  if (r < 0.05) {
+  if (r < 0.08) {
     vec2 f = fract(vT / 1.0);
     vec2 fw = fwidth(vT / 1.0);
     float inside = smoothstep(0.12 - fw.x, 0.12 + fw.x, f.x) * smoothstep(0.88 + fw.x, 0.88 - fw.x, f.x) * smoothstep(0.3 - fw.y, 0.3 + fw.y, f.y) * smoothstep(0.7 + fw.y, 0.7 - fw.y, f.y);
-    col += uTile * inside * (0.15 + 0.35 * fract(r * 97.0)) * farDim;
+    col += uTile * inside * (0.25 + 0.4 * fract(r * 97.0)) * farDim;
   }
   float fog = smoothstep(uFogNear, uFogFar, vDist);
   col = mix(col, uHaze, fog);
@@ -208,7 +208,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
     fragmentShader: terrainFrag,
     uniforms: {
       uOffset: { value: 0 },
-      uLine: { value: cLine.clone().lerp(new THREE.Color(1, 1, 1), 0.04).multiplyScalar(0.62) },
+      uLine: { value: cLine.clone().lerp(new THREE.Color("#BFEFFF"), 0.3).multiplyScalar(0.34) },
       uBase: { value: cBase.clone().multiplyScalar(0.25 + 0.3 * v.baseGain) },
       uHaze: { value: cHaze },
       uTile: { value: cLine.clone().multiplyScalar(0.22) },
@@ -216,7 +216,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       uHot: { value: 0.06 * v.baseGain },
       uFogNear: { value: 60 },
       uFogFar: { value: 280 },
-      uStep: { value: 0.075 },
+      uStep: { value: 0.07 },
     },
     side: THREE.DoubleSide,
   });
@@ -234,7 +234,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       uniforms: {
         uHaze: { value: cHaze },
         uTop: { value: cBase.clone().multiplyScalar(0.35) },
-        uGlow: { value: cLine.clone().multiplyScalar(0.06) },
+        uGlow: { value: cLine.clone().multiplyScalar(0.1) },
       },
       side: THREE.BackSide,
       depthWrite: false,
@@ -260,12 +260,12 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
 
   // ---- per-tile content (generated once from the seed, periodic in z)
   const pins: Pin[] = [];
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 150; i++) {
     const x = (rng() * 2 - 1) * 32;
     const z = -rng() * TOPO_T;
     const k = rng();
     // 45% standalone pins, 35% value labels with a small triangle, 20% pin + value
-    pins.push({ x, z, y: 0, value: 20 + rng() * 680, tri: k >= 0.45 && k < 0.8, showPin: k < 0.45 || k >= 0.8, label: k >= 0.45, tick: rng() < 0.35, teal: rng() < 0.35, down: rng() < 0.4 });
+    pins.push({ x, z, y: 0, value: 20 + rng() * 680, tri: k >= 0.45 && k < 0.58, showPin: k < 0.45 || k >= 0.8, label: k >= 0.45, tick: rng() < 0.35, teal: rng() < 0.35, down: rng() < 0.4 });
   }
   const tags: Tag[] = [];
   for (let i = 0; i < v.tagCount; i++) {
@@ -325,7 +325,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       const sway = Math.sin(TAU * ph) * 1.2;
       camera.position.set(sway, CAM_H + Math.sin(TAU * ph * 2) * 0.25, 0);
       camera.rotation.order = "YXZ";
-      camera.rotation.set(-28 * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0.035);
+      camera.rotation.set(-20.5 * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0.035);
       camera.updateMatrixWorld();
 
       sprites.begin();
@@ -349,7 +349,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
           const z = wrapZ(p.z, j, offset);
           const s = 0.34;
           if (p.showPin) labels.icon(PIN, p.x, p.y, z, s * 1.1, white, -0.38, 0, 0.76, 1.0);
-          if (!p.label) continue;
+          if (!p.label || -z > 75) continue; // keep the far band free of label clutter
           const lx = p.showPin ? 0.6 : 0;
           if (p.tri) labels.icon(p.down ? TRI_D : TRI, p.x, p.y, z, s, p.teal ? tealCol : triCol, lx, 0.1, 0.6, 0.6);
           labels.text(fmt(val), p.x, p.y, z, s * 0.8, labelCol, "left", (lx + (p.tri ? 0.75 : 0)) / 0.8, 0.25);
@@ -362,7 +362,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
         const label = t.big ? "BIG DATA" : fmt(val);
         for (let j = 0; j < K; j++) {
           const z = wrapZ(t.z, j, offset);
-          const s = 0.42;
+          const s = 0.62;
           const poleEm = t.pole / s;
           labels.rect(t.x, t.y, z, s, lineTint, -0.03, 0, 0.06, poleEm);
           labels.icon(DOT, t.x, t.y, z, s, white, -0.35, -0.35, 0.7, 0.7);
@@ -377,17 +377,17 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       labels.end();
 
       return {
-        focusNear: 17,
-        focusFar: 38,
-        nearBlurAt: 12,
+        focusNear: 21,
+        focusFar: 42,
+        nearBlurAt: 13,
         farBlurAt: 80,
-        nearCoc: 0.0075,
-        farCoc: 0.0055,
+        nearCoc: 0.008,
+        farCoc: 0.007,
         bloom: 0.5,
         bloomRadius: 0.55,
         exposure: 0.62,
         saturation: 1.12,
-        vignette: 0.55,
+        vignette: 0.8,
         grain: 0.015,
       };
     },

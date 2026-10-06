@@ -232,8 +232,8 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
         const str = fmtW(rng());
         const w = g.measureText(str).width;
         const r = rng();
-        if (r < 0.78) {
-          const col = r < 0.6 ? "255,160,58" : r < 0.72 ? "58,232,106" : "255,58,74";
+        if (r < 0.42) {
+          const col = r < 0.36 ? "255,160,58" : r < 0.4 ? "58,232,106" : "255,58,74";
           g.fillStyle = `rgba(${col},${(0.25 + rng() * 0.75).toFixed(2)})`;
           for (const sh of [0, W]) g.fillText(str, x - sh, y);
         }
@@ -251,8 +251,8 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     return t;
   })();
   for (const [z, u0, gain, y0] of [
-    [-9, 0, 0.2, -12],
-    [-22, 0.37, 0.2, -14],
+    [-9, 0, 0.16, -12],
+    [-22, 0.37, 0.16, -14],
   ] as Array<[number, number, number, number]>) {
     const wall = new THREE.Mesh(
       new THREE.PlaneGeometry(L * 10, 32 * 1.25),
@@ -309,13 +309,13 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     nums.push({ x: rng() * L, y: -9 + rng() * 26, z, s: 0.16 + rng() * 0.16, text: fmtN(rng(), 3 + Math.floor(rng() * 2)), c: palette[Math.floor(rng() * palette.length)], a: 0.22 + rng() * 0.2, tick: rng() < 0.1 });
   }
   // big dim numbers far back
-  for (let i = 0; i < 12; i++) nums.push({ x: rng() * L, y: 6 + rng() * 10, z: -12 - rng() * 22, s: 1.0 + rng() * 1.6, text: rng() < 0.4 ? "+0." + String(Math.floor(rng() * 900 + 100)).padStart(3, "0") : rng() < 0.5 ? String(Math.floor(rng() * 9000 + 1000)) : (rng() * 99).toFixed(3), c: rng() < 0.85 ? GREEN : RED, a: 0.55, tick: false });
+  for (let i = 0; i < 14; i++) nums.push({ x: rng() * L, y: 1.5 + rng() * 8, z: -7 - rng() * 14, s: 0.9 + rng() * 0.8, text: rng() < 0.4 ? "+0." + String(Math.floor(rng() * 900 + 100)).padStart(3, "0") : rng() < 0.5 ? String(Math.floor(rng() * 9000 + 1000)) : (rng() * 99).toFixed(3), c: rng() < 0.85 ? GREEN : RED, a: 0.75, tick: false });
   // a few near, very soft
   const nearNums: Num[] = [];
   for (let i = 0; i < 6; i++) nearNums.push({ x: rng() * L, y: -6 + rng() * 14, z: 6 + rng() * 2, s: 0.22 + rng() * 0.15, text: fmtN(rng(), 3), c: palette[Math.floor(rng() * palette.length)], a: 0.3, tick: false });
 
   // a few big out-of-focus candles in the foreground
-  const nearCandles = Array.from({ length: 4 }, () => ({ x: rng() * L, y: -3 + rng() * 4, h: 1.2 + rng() * 1.8, wick: 0.8 + rng(), up: rng() < 0.3, z: 6.5 + rng() * 1.5 }));
+  const nearCandles = Array.from({ length: 9 }, () => ({ x: rng() * L, y: -3 + rng() * 4, h: 1.2 + rng() * 1.8, wick: 0.8 + rng(), up: rng() < 0.3, z: 6.5 + rng() * 1.5 }));
   type Candle = { x: number; dy: number; h: number; wick: number; up: boolean; dz: number };
   const candles: Candle[] = [];
   for (let x = 0.6; x < L; x += 1.5 + rng() * 2.5) {
@@ -341,10 +341,10 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
       // camera alongside, slightly behind, following rises and falls (smoothed)
       const cy = smoothY(xc + 2);
       const cz = smoothZ(xc + 2);
-      camera.position.set(xc - 1.5, cy + 1.2, cz + 14);
+      camera.position.set(xc - 4.5, cy + 1.4, cz + 13);
       const ly = smoothY(xc + 9);
       camera.up.set(0, 1, 0);
-      camera.lookAt(xc + 4.5, ly + 0.6, smoothZ(xc + 9) - 2);
+      camera.lookAt(xc + 6, ly + 2.4, smoothZ(xc + 9) - 2);
       camera.updateMatrixWorld();
 
       // ribbon geometry around the camera
@@ -385,7 +385,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
         }
         for (const c of nearCandles) {
           const x = c.x + off;
-          if (Math.abs(x - xc + 2) > 9) continue;
+          if (Math.abs(x - xc + 3) > 9) continue;
           const col = c.up ? cUp : cDown;
           near.rect(x, c.y + cy * 0.6, c.z, 1, rgba(col, 0.7), -0.03, -c.wick * 0.5, 0.06, c.h + c.wick);
           near.rect(x, c.y + cy * 0.6, c.z, 1, rgba(col, 0.8), -0.12, 0, 0.24, c.h);
@@ -421,7 +421,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
             const px = x - Math.cos(a) * R;
             const py = ty + dir * (0.5 + Math.sin(a) * R * 0.8);
             const tw = 0.6 + 0.4 * Math.sin(TAU * (ph * 2 + j / 8 + t * 0.3));
-            marks.icon(DOT, px, py, tz, 0.26, rgba(cs[(t + (j > 4 ? 1 : 0)) % 4].clone().lerp(new THREE.Color(1, 1, 1), 0.3), 0.9 * tw), -0.5, -0.5, 1, 1);
+            marks.icon(DOT, px, py, tz, 0.34, rgba(cs[(t + (j > 4 ? 1 : 0)) % 4].clone().lerp(new THREE.Color(1, 1, 1), 0.3), 0.9 * tw), -0.5, -0.5, 1, 1);
           }
           marks.icon(DOT, x, ty, tz, 0.3, rgba(new THREE.Color("#FFFFFF"), 1.0), -0.5, -0.5, 1, 1);
           if (peak) {

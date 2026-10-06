@@ -23,6 +23,7 @@ export type TickerVersion = {
   markerUp: string; // ▲ marker colour on the floor
   markerDown: string; // ▼ marker colour on the floor
   waveAmp: number; // scale of the wave shapes (1 = default)
+  text: string; // floor text colour
   trend: number; // downward drift of the chart lines across the frame (world units, 0 = flat)
   seed: number;
 };
@@ -30,7 +31,7 @@ export type TickerVersion = {
 const LOOP = 600;
 const ROWS = 16; // rows in the floor texture (texture repeats in v)
 const ROWS_PER_LOOP = 4; // whole rows scrolled per loop
-const ROW_DEPTH = 1.5; // world units per row
+const ROW_DEPTH = 2.1; // world units per row
 const TEX_W_WORLD = 30; // world width of one texture repeat
 
 const UP = "", DOWN = "";
@@ -107,7 +108,7 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
       const fit = Math.min(1, (w * 0.82) / need);
       const fs = RH * 0.3 * fit;
       g.font = `700 ${Math.round(fs)}px ${FONT_INTER}`;
-      g.fillStyle = "rgba(255,255,255,0.96)";
+      g.fillStyle = v.text;
       g.textBaseline = "middle";
       let tx = x + w * 0.1;
       if (kind < v.pSigned) {
@@ -125,7 +126,7 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
         }
         g.closePath();
         g.fill();
-        g.fillStyle = "rgba(255,255,255,0.96)";
+        g.fillStyle = v.text;
         tx += fs * 1.0;
         g.fillText(str, tx, 0);
       } else {
@@ -184,21 +185,21 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
     void main(){ vec4 wp = modelMatrix*vec4(position,1.0); vW = wp.xz; vec4 mv = viewMatrix*wp; vDist = -mv.z; gl_Position = projectionMatrix*mv; }`,
     fragmentShader: /* glsl */ `
     precision highp float;
-    uniform sampler2D tMap; uniform float uScroll; uniform vec3 uHaze; uniform float uFogNear; uniform float uFogFar;
+    uniform sampler2D tMap; uniform float uScroll; uniform vec3 uHaze; uniform vec3 uPool; uniform float uFogNear; uniform float uFogFar;
     in vec2 vW; in float vDist; out vec4 o;
     void main(){
       vec2 uv = vec2(vW.x / ${TEX_W_WORLD.toFixed(1)}, (-vW.y) / ${(ROW_DEPTH * ROWS).toFixed(2)} + uScroll);
       // texture v grows into the distance; rows scroll toward the camera
       vec3 c = texture(tMap, uv).rgb;
       // central light from the beams reflected on the floor
-      float centre = exp(-pow(vW.x / 7.0, 2.0));
-      c *= 0.6 + 1.3 * centre * smoothstep(8.0, 45.0, vDist);
-      c += uHaze * 0.15 * centre * smoothstep(15.0, 60.0, vDist);
+      float centre = exp(-pow(vW.x / 11.0, 2.0));
+      c *= 0.6 + 1.0 * centre * smoothstep(8.0, 45.0, vDist);
+      c += uPool * centre * smoothstep(12.0, 50.0, vDist);
       float fog = smoothstep(uFogNear, uFogFar, vDist);
       c = mix(c, uHaze * 0.55, fog);
       o = vec4(c, 1.0);
     }`,
-    uniforms: { tMap: { value: floorTex }, uScroll: { value: 0 }, uHaze: { value: haze }, uFogNear: { value: 22 }, uFogFar: { value: 95 } },
+    uniforms: { tMap: { value: floorTex }, uScroll: { value: 0 }, uHaze: { value: haze }, uPool: { value: new THREE.Color(v.beam).multiplyScalar(0.12) }, uFogNear: { value: 40 }, uFogFar: { value: 170 } },
   });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -212,19 +213,29 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
   const lineCols = [v.line, v.lineAlt, v.lineAlt];
   const lines: Line[] = [];
   const XR = 46;
+  // two main lines share one shape and run as a parallel band; a third, dimmer
+  // line wanders on its own behind them
+  const shared: Wave[] = [];
+  const base = [
+    [3.0, 2],
+    [1.8, 5],
+    [0.9, 11],
+    [0.45, 23],
+    [0.2, 47],
+  ];
+  for (const [a, k] of base) shared.push({ amp: a * (0.7 + rng() * 0.6), k: k + Math.floor(rng() * 2), m: (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 2)), ph: rng() * TAU });
   for (let i = 0; i < 3; i++) {
-    const waves: Wave[] = [];
-    const base = [
-      [3.0, 2],
-      [1.8, 5],
-      [0.9, 11],
-      [0.45, 23],
-      [0.2, 47],
-    ];
-    for (const [a, k] of base) waves.push({ amp: a * (0.7 + rng() * 0.6), k: k + Math.floor(rng() * 2), m: (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 2)), ph: rng() * TAU });
-    const gl = new GlowLine(N, { core: 0.1, glow: 0.3, glowAmt: 0.035 });
+    let waves: Wave[];
+    if (i < 2) {
+      // the second line: same shape, slightly detuned high-frequency detail
+      waves = shared.map((w, j) => (i === 1 && j >= 2 ? { ...w, ph: w.ph + 1.3 + j } : w));
+    } else {
+      waves = base.map(([a, k]) => ({ amp: a * 0.7 * (0.7 + rng() * 0.6), k: k + Math.floor(rng() * 2), m: (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 2)), ph: rng() * TAU }));
+    }
+    const gl = new GlowLine(N, { core: 0.1, glow: 0.3, glowAmt: 0.03 });
     scene.add(gl.mesh);
-    lines.push({ z: -22 - i * 4, y0: 7.2 + (rng() - 0.5) * 1.2, waves, color: new THREE.Color(lineCols[i]), gl, hw: 0.3 });
+    const y0 = i === 0 ? 6.4 : i === 1 ? 4.9 : 6.0;
+    lines.push({ z: -24 - i * 0.6 - (i === 2 ? 6 : 0), y0, waves, color: new THREE.Color(lineCols[i]).multiplyScalar(i === 2 ? 0.55 : 1), gl, hw: 0.3 });
   }
   const pts = new Float32Array(N * 3), nrm = new Float32Array(N * 3), cols = new Float32Array(N * 3);
 
@@ -235,11 +246,11 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
   type Label = { x: number; y: number; z: number; s: number; kind: number; val: string; a: number; m: number; ph: number };
   const labels: Label[] = [];
   for (let i = 0; i < 120; i++) {
-    labels.push({ x: (rng() - 0.5) * 60, y: 3.5 + rng() * 10, z: -16 - rng() * 28, s: 0.3 + rng() * 0.55, kind: rng(), val: VALUES[Math.floor(rng() * VALUES.length)], a: 0.35 + rng() * 0.65, m: 1 + Math.floor(rng() * 2), ph: rng() });
+    labels.push({ x: (rng() - 0.5) * 60, y: 3.0 + rng() * 9, z: i < 6 ? 6 + rng() * 3 : -14 - rng() * 30, s: i < 6 ? 0.9 + rng() * 0.5 : i < 30 ? 0.7 + rng() * 0.4 : 0.25 + rng() * 0.35, kind: rng(), val: VALUES[Math.floor(rng() * VALUES.length)], a: 0.35 + rng() * 0.65, m: 1 + Math.floor(rng() * 2), ph: rng() });
   }
   type Bar = { x: number; z: number; h: number; m: number; ph: number };
   const bars: Bar[] = [];
-  for (let i = 0; i < 260; i++) bars.push({ x: (rng() - 0.5) * 90, z: -34 - rng() * 22, h: 1 + rng() * 9, m: 1 + Math.floor(rng() * 3), ph: rng() });
+  for (let i = 0; i < 130; i++) bars.push({ x: (rng() - 0.5) * 90, z: -34 - rng() * 22, h: 1 + rng() * 9, m: 1 + Math.floor(rng() * 3), ph: rng() });
 
   // ---- light beams at the horizon
   const beamMat = new THREE.ShaderMaterial({
@@ -283,7 +294,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       const ph = f / LOOP;
 
       camera.position.set(Math.sin(TAU * ph) * 0.6, 4.4 + Math.sin(TAU * ph * 2) * 0.06, 14);
-      camera.rotation.set(-0.075, Math.sin(TAU * ph) * 0.008, 0);
+      camera.rotation.set(-0.045, Math.sin(TAU * ph) * 0.008, 0);
       camera.updateMatrixWorld();
 
       floorMat.uniforms.uScroll.value = (ROWS_PER_LOOP / ROWS) * ph;
@@ -311,7 +322,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       for (const b of bars) {
         const h = b.h * (0.75 + 0.25 * Math.sin(TAU * (b.m * ph + b.ph)));
         // candlestick: thin wick + body, both from the frame number only
-        const k = 0.45;
+        const k = 0.26;
         const base = 2.5 + b.ph * 6;
         const bodyLo = h * (0.2 + 0.2 * b.ph), bodyHi = h * (0.55 + 0.3 * b.ph);
         sprites.rect(b.x, base, b.z, 1, [barCol.r * k, barCol.g * k, barCol.b * k, 1], -0.04, 0, 0.08, h);
@@ -334,12 +345,12 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       for (const b of beams) b.mat.uniforms.uA.value = b.a * (0.75 + 0.25 * Math.sin(TAU * (b.m * ph + b.ph)));
 
       return {
-        focusNear: 10,
-        focusFar: 44,
-        nearBlurAt: 6,
-        farBlurAt: 90,
-        nearCoc: 0.004,
-        farCoc: 0.006,
+        focusNear: 12,
+        focusFar: 34,
+        nearBlurAt: 7,
+        farBlurAt: 75,
+        nearCoc: 0.009,
+        farCoc: 0.007,
         bloom: 0.3,
         bloomRadius: 0.6,
         exposure: 0.66,

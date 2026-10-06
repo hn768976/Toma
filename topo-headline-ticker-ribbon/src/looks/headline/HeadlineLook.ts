@@ -121,7 +121,7 @@ function buildHeadlineTexture(word: string) {
 
 function buildTickerTexture(words: string[]) {
   const fontPx = 100;
-  const font = `italic 700 ${fontPx}px ${FONT_INTER}`;
+  const font = `italic 500 ${fontPx}px ${FONT_INTER}`;
   const meas = document.createElement("canvas").getContext("2d")!;
   meas.font = font;
   const sep = "   •   ";
@@ -165,7 +165,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
       in vec2 vUv; out vec4 o;
       void main(){
         float d = length((vUv - vec2(0.42, 0.55)) * vec2(1.7, 1.0));
-        vec3 c = mix(uA, uB, smoothstep(0.0, 0.45, d)); c = mix(c, vec3(0.0), smoothstep(0.35, 0.75, d)*0.8);
+        vec3 c = mix(uA, uB, smoothstep(0.05, 0.6, d)); c = mix(c, vec3(0.0), smoothstep(0.5, 0.9, d)*0.7);
         o = vec4(c * uOn, 1.0);
       }`,
       depthWrite: true,
@@ -201,7 +201,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
 
   // ---- dotted world map
   const map = buildMapTexture(ctx.assets.land);
-  const mapW = 27;
+  const mapW = 34;
   const mapMat = new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
     vertexShader: quadVert,
@@ -219,7 +219,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
     blendDst: THREE.OneMinusSrcAlphaFactor,
   });
   const mapMesh = new THREE.Mesh(new THREE.PlaneGeometry(mapW, mapW / map.aspect), mapMat);
-  mapMesh.position.set(-0.8, 1.4, -2.5);
+  mapMesh.position.set(-0.4, 2.0, -2.5);
   scene.add(mapMesh);
 
   // ---- numbers floor (tilted plane of percentages)
@@ -228,12 +228,12 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
   const numbers = new SpriteLayer(numAtlas, 8000, { billboard: false, depthWrite: true, right: new THREE.Vector3(1, 0, 0), up: floorUp });
   scene.add(numbers.mesh);
   type Num = { u: number; w: number; text: string; red: boolean; b: number };
-  const NUM_COLS = 15, NUM_ROWS = 30, ROW_GAP = 1.6, COL_GAP = 3.0;
+  const NUM_COLS = 11, NUM_ROWS = 24, ROW_GAP = 2.2, COL_GAP = 4.0;
   const nums: Num[] = [];
   const vals = ["10%", "30%", "36%", "20%", "0%", "10%", "36%", "30%"];
   for (let r = 0; r < NUM_ROWS; r++)
     for (let q = 0; q < NUM_COLS; q++) {
-      if (rng() < 0.3) continue;
+      if (rng() < 0.35) continue;
       nums.push({ u: (q - NUM_COLS / 2 + (rng() - 0.5) * 0.3 + (r % 2) * 0.5) * COL_GAP, w: r * ROW_GAP + rng() * 0.15, text: vals[Math.floor(rng() * vals.length)], red: rng() < 0.25, b: 0.6 + rng() * 0.4 });
     }
   const floorOrigin = new THREE.Vector3(0, -7.5, 5.0);
@@ -338,9 +338,9 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
       // streaky light band: faint fill plus thin horizontal light lines
       vec3 c = vec3(0.30,0.36,0.50) * 0.35;
       float streak = 0.0;
-      streak += exp(-pow((vUv.y - 0.96) * 60.0, 2.0)) * 1.0;
-      streak += exp(-pow((vUv.y - 0.05) * 60.0, 2.0)) * 0.7;
-      streak += exp(-pow((vUv.y - 0.88) * 90.0, 2.0)) * 0.35;
+      streak += exp(-pow((vUv.y - 0.9) * 14.0, 2.0)) * 0.55;
+      streak += exp(-pow((vUv.y - 0.12) * 16.0, 2.0)) * 0.35;
+      streak += exp(-pow((vUv.y - 0.5) * 3.0, 2.0)) * 0.12;
       c += vec3(0.55,0.62,0.8) * streak;
       float a = (0.12 + 0.55 * streak) * edge * uA;
       if (a < 0.02) discard;
@@ -374,7 +374,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
       a /= 9.0;
       a *= edge * uA;
       if (a < 0.03) discard;
-      o = vec4(vec3(0.78, 0.8, 0.86) * a, a);
+      o = vec4(vec3(0.86, 0.88, 0.94) * a, a);
     }`,
     uniforms: { tMap: { value: tk.tex }, uOff: { value: 0 }, uRep: { value: repeatU }, uSmear: { value: 0.004 }, uA: { value: 0 } },
     transparent: true,
@@ -398,7 +398,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
   scene.add(camera);
 
   const cyan = new THREE.Color("#30B0D0");
-  const red = new THREE.Color("#D01010");
+  const red = new THREE.Color("#B0101A");
 
   return {
     scene,
@@ -415,10 +415,10 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
 
       // ---- camera: slight angle, slow drift
       const drift = smoothstep(60, 450, frame);
-      const ang = -0.42 + 0.07 * drift;
+      const ang = -0.3 + 0.06 * drift;
       const dist = 22 - 1.4 * drift;
       camera.position.set(Math.sin(ang) * dist + 0.6, 0.6 + 0.4 * drift, Math.cos(ang) * dist);
-      camera.up.set(Math.sin(0.13), Math.cos(0.13), 0);
+      camera.up.set(Math.sin(0.08), Math.cos(0.08), 0);
       camera.lookAt(0.2, 0.5 + 0.1 * drift, 0);
       camera.updateMatrixWorld();
 
@@ -438,7 +438,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
         const ax = floorOrigin.x + n.u;
         const ay = floorOrigin.y + floorUp.y * w;
         const az = floorOrigin.z + floorUp.z * w;
-        numbers.text(n.text, ax, ay, az, 0.66, [base.r * k, base.g * k, base.b * k, 1], "center");
+        numbers.text(n.text, ax, ay, az, 0.95, [base.r * k, base.g * k, base.b * k, 1], "center");
       }
       numbers.end();
 
@@ -468,12 +468,12 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
         focusFar: 21.8,
         nearBlurAt: 13.0,
         farBlurAt: 30,
-        nearCoc: 0.003,
+        nearCoc: 0.002,
         farCoc: 0.0022,
         bloom: 0.12,
         bloomRadius: 0.5,
         exposure: 0.95,
-        vignette: 0.9,
+        vignette: 0.65,
         grain: 0.015,
         saturation: 1.05,
       };
