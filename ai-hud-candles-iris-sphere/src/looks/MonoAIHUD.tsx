@@ -106,7 +106,8 @@ const buildHud = (pal: HudPalette) => {
 
   const white = pal.white;
   const grey = pal.grey;
-  const ink = (a: number) => hexA(pal.line, a);
+  // dark ink on a light plate needs roughly twice the opacity to read
+  const ink = (a: number) => hexA(pal.line, pal.light ? Math.min(1, a * 2.1) : a);
   redraw(base, "static", (ctx) => {
     ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, TW, TH);
@@ -184,7 +185,7 @@ const buildHud = (pal: HudPalette) => {
       } else if (type === 1) {
         // header + rows of label/value
         ctx.font = mono(40, 500);
-        ctx.fillStyle = white;
+        ctx.fillStyle = pal.light ? pal.mint : white; // mint headers give the light theme hierarchy
         ctx.fillText(`${digits(2, 77, r.x)}.${digits(4, 77, r.y)}`, r.x + 20, r.y + 70);
         ctx.font = mono(24);
         for (let y = r.y + 130; y < r.y + r.h - 10; y += 40) {
@@ -258,8 +259,13 @@ const buildHud = (pal: HudPalette) => {
     const cy = CHIP_Y;
     // square mesh pad
     const pad = 620;
-    ctx.fillStyle = pal.light ? pal.panel : "rgba(4,5,6,0.9)";
+    ctx.fillStyle = pal.light ? "#D3D8DF" : "rgba(4,5,6,0.9)";
     ctx.fillRect(cx - pad, cy - pad, pad * 2, pad * 2);
+    if (pal.light) {
+      ctx.strokeStyle = hexA(pal.line, 0.55);
+      ctx.lineWidth = 4;
+      ctx.strokeRect(cx - pad, cy - pad, pad * 2, pad * 2);
+    }
     for (let y = -pad; y <= pad; y += 16) {
       for (let x = -pad; x <= pad; x += 16) {
         const e = Math.max(Math.abs(x), Math.abs(y)) / pad;
@@ -474,7 +480,7 @@ const drawDyn = (ct: CanvasTex, d: Dyn, frame: number, pal: HudPalette) => {
       ctx.font = "400 40px 'JetBrains Mono'";
       for (let r = 0; r < 4; r++) {
         ctx.fillStyle = r === 1 ? pal.white : pal.grey;
-        const y = 330 + r * 58;
+        const y = (pal.light ? 360 : 330) + r * 58;
         if (y > H - 10) break;
         ctx.fillText(`${digits(4, d.seed, r, step)}  ${digits(2, d.seed, r)}  ${digits(3, d.seed + 2, r, step)}  ${digits(10, d.seed + 3, r)}`, 120, y);
         // cyan triangle bullets
@@ -750,7 +756,8 @@ const build = (land: Land, pal: HudPalette) => {
     camera.rotateZ(THREE.MathUtils.degToRad(5));
     camera.updateMatrixWorld();
     const focus = camera.position.distanceTo(chipWorld);
-    shared.uDof.value.set(focus, 0.012, 0.012);
+    // the light theme is read as a document: keep it a touch crisper
+    shared.uDof.value.set(focus, pal.light ? 0.008 : 0.012, pal.light ? 0.008 : 0.012);
   };
   return { group, camera, shared, update };
 };

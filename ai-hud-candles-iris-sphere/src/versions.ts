@@ -116,7 +116,7 @@ export const versions: AnyRow[] = [
       bg: "#F2F3F5",
       panel: "#E2E5EA",
       white: "#2A2E34",
-      grey: "#6A707A",
+      grey: "#4A5058",
       line: "#2A2E34",
       mint: "#1AB88A",
       trace: "#2A2E34",
