@@ -11,10 +11,27 @@ export type Glyph = { u0: number; v0: number; u1: number; v1: number; adv: numbe
 
 export const ICON_SOLID = "";
 
+/** Turns drawn text into an LED dot-matrix look: keep only round dots on a grid. */
+export function applyDotMatrix(ctx: CanvasRenderingContext2D, W: number, H: number, pitch: number) {
+  const pat = document.createElement("canvas");
+  pat.width = pitch;
+  pat.height = pitch;
+  const pg = pat.getContext("2d")!;
+  pg.fillStyle = "#fff";
+  pg.beginPath();
+  pg.arc(pitch / 2, pitch / 2, pitch * 0.4, 0, Math.PI * 2);
+  pg.fill();
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.fillStyle = ctx.createPattern(pat, "repeat")!;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
 export class GlyphAtlas {
   texture: THREE.CanvasTexture;
   private map = new Map<string, Glyph>();
-  constructor(opts: { font: string; fontPx: number; chars: string; cellW: number; cellH: number; icons?: Record<string, IconDraw>; italicPad?: number }) {
+  constructor(opts: { font: string; fontPx: number; chars: string; cellW: number; cellH: number; icons?: Record<string, IconDraw>; italicPad?: number; dotMatrix?: number }) {
     const { font, fontPx, cellW, cellH } = opts;
     const icons: Record<string, IconDraw> = { [ICON_SOLID]: (c: CanvasRenderingContext2D, w: number, h: number) => c.fillRect(0, 0, w, h), ...(opts.icons ?? {}) };
     const all = Array.from(new Set(Array.from(opts.chars))).filter((c) => !(c in icons));
@@ -80,6 +97,7 @@ export class GlyphAtlas {
         true,
       );
     }
+    if (opts.dotMatrix) applyDotMatrix(ctx, W, H, opts.dotMatrix);
     this.texture = new THREE.CanvasTexture(canvas);
     this.texture.colorSpace = THREE.NoColorSpace; // used as a coverage mask
     this.texture.generateMipmaps = true;

@@ -81,8 +81,9 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
     let x = -Math.floor(rng() * 400);
     for (const w0 of widths) {
       const w = w0 * scale;
-      const t = Math.pow(rng(), 1.6) * rowBoost;
-      const col = dark.clone().lerp(bright, Math.min(1, t));
+      const t = Math.pow(rng(), 2.2) * rowBoost;
+      // patchy board: many dim cells, some lit, a few bright
+      const col = dark.clone().multiplyScalar(0.22).lerp(dark, Math.min(1, t * 1.6)).lerp(bright, Math.max(0, Math.min(1, t * 1.8 - 0.8)));
       const kind = rng();
       const val = VALUES[Math.floor(rng() * VALUES.length)];
       for (const shift of [0, W]) {
@@ -98,7 +99,7 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
       // text: ▲ + 28.90 %  /  97.58 %  /  ▼ − 13.59 %
       g.save();
       g.translate(0, y + RH * 0.5);
-      g.scale(1, 1.9); // pre-stretch: the floor is seen at a grazing angle
+      g.scale(1, 2.2); // pre-stretch: the floor is seen at a grazing angle
       // shrink the text if it would not fit the tile
       const str = kind < v.pSigned ? `${kind < v.pUp ? "+" : "\u2212"} ${val} %` : `${val} %`;
       g.font = font;
@@ -150,7 +151,7 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
 export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
   const rng = mulberry32(v.seed);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(42, ctx.width / ctx.height, 0.1, 500);
+  const camera = new THREE.PerspectiveCamera(28, ctx.width / ctx.height, 0.1, 500);
   const haze = new THREE.Color(v.haze);
   const bgc = new THREE.Color(v.bg);
 
@@ -190,13 +191,14 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       // texture v grows into the distance; rows scroll toward the camera
       vec3 c = texture(tMap, uv).rgb;
       // central light from the beams reflected on the floor
-      float centre = exp(-pow(vW.x / 9.0, 2.0));
-      c *= 0.75 + 0.9 * centre * smoothstep(5.0, 40.0, vDist);
+      float centre = exp(-pow(vW.x / 7.0, 2.0));
+      c *= 0.6 + 1.3 * centre * smoothstep(8.0, 45.0, vDist);
+      c += uHaze * 0.15 * centre * smoothstep(15.0, 60.0, vDist);
       float fog = smoothstep(uFogNear, uFogFar, vDist);
       c = mix(c, uHaze * 0.55, fog);
       o = vec4(c, 1.0);
     }`,
-    uniforms: { tMap: { value: floorTex }, uScroll: { value: 0 }, uHaze: { value: haze }, uFogNear: { value: 18 }, uFogFar: { value: 120 } },
+    uniforms: { tMap: { value: floorTex }, uScroll: { value: 0 }, uHaze: { value: haze }, uFogNear: { value: 22 }, uFogFar: { value: 95 } },
   });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -207,22 +209,22 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
   const N = 1400;
   type Wave = { amp: number; k: number; m: number; ph: number };
   type Line = { z: number; y0: number; waves: Wave[]; color: THREE.Color; gl: GlowLine; hw: number };
-  const lineCols = [v.line, v.lineAlt, v.line, v.lineAlt];
+  const lineCols = [v.line, v.lineAlt, v.lineAlt];
   const lines: Line[] = [];
   const XR = 46;
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     const waves: Wave[] = [];
     const base = [
-      [2.2, 2],
-      [1.3, 5],
-      [0.6, 11],
-      [0.3, 23],
-      [0.12, 47],
+      [3.0, 2],
+      [1.8, 5],
+      [0.9, 11],
+      [0.45, 23],
+      [0.2, 47],
     ];
     for (const [a, k] of base) waves.push({ amp: a * (0.7 + rng() * 0.6), k: k + Math.floor(rng() * 2), m: (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 2)), ph: rng() * TAU });
-    const gl = new GlowLine(N, { core: 0.07, glow: 0.35, glowAmt: 0.05 });
+    const gl = new GlowLine(N, { core: 0.1, glow: 0.3, glowAmt: 0.035 });
     scene.add(gl.mesh);
-    lines.push({ z: -22 - i * 3.5, y0: 7.0 + (rng() - 0.5) * 1.4, waves, color: new THREE.Color(lineCols[i]), gl, hw: 0.4 });
+    lines.push({ z: -22 - i * 4, y0: 7.2 + (rng() - 0.5) * 1.2, waves, color: new THREE.Color(lineCols[i]), gl, hw: 0.3 });
   }
   const pts = new Float32Array(N * 3), nrm = new Float32Array(N * 3), cols = new Float32Array(N * 3);
 
@@ -232,12 +234,12 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
   scene.add(sprites.mesh);
   type Label = { x: number; y: number; z: number; s: number; kind: number; val: string; a: number; m: number; ph: number };
   const labels: Label[] = [];
-  for (let i = 0; i < 46; i++) {
-    labels.push({ x: (rng() - 0.5) * 70, y: 3.6 + rng() * 8.5, z: -18 - rng() * 22, s: 0.4 + rng() * 0.55, kind: rng(), val: VALUES[Math.floor(rng() * VALUES.length)], a: 0.35 + rng() * 0.65, m: 1 + Math.floor(rng() * 2), ph: rng() });
+  for (let i = 0; i < 120; i++) {
+    labels.push({ x: (rng() - 0.5) * 60, y: 3.5 + rng() * 10, z: -16 - rng() * 28, s: 0.3 + rng() * 0.55, kind: rng(), val: VALUES[Math.floor(rng() * VALUES.length)], a: 0.35 + rng() * 0.65, m: 1 + Math.floor(rng() * 2), ph: rng() });
   }
   type Bar = { x: number; z: number; h: number; m: number; ph: number };
   const bars: Bar[] = [];
-  for (let i = 0; i < 160; i++) bars.push({ x: (rng() - 0.5) * 110, z: -40 - rng() * 25, h: 1 + rng() * 6, m: 1 + Math.floor(rng() * 3), ph: rng() });
+  for (let i = 0; i < 260; i++) bars.push({ x: (rng() - 0.5) * 90, z: -34 - rng() * 22, h: 1 + rng() * 9, m: 1 + Math.floor(rng() * 3), ph: rng() });
 
   // ---- light beams at the horizon
   const beamMat = new THREE.ShaderMaterial({
@@ -259,14 +261,14 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
   });
   type Beam = { mesh: THREE.Mesh; mat: THREE.ShaderMaterial; a: number; m: number; ph: number };
   const beams: Beam[] = [];
-  const beamXs = [0, -24, 19, -46, 40, -9];
+  const beamXs = [0, -15, 13, 31];
   beamXs.forEach((bx, i) => {
     const mat = beamMat.clone();
-    const w = i === 0 ? 12 : 5 + rng() * 5;
+    const w = i === 0 ? 16 : 7 + rng() * 4;
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, 40), mat);
     mesh.position.set(bx, 19.5, -60 - rng() * 20);
     scene.add(mesh);
-    beams.push({ mesh, mat, a: i === 0 ? 0.55 : 0.18 + rng() * 0.2, m: 1 + Math.floor(rng() * 2), ph: rng() });
+    beams.push({ mesh, mat, a: i === 0 ? 0.7 : 0.22 + rng() * 0.12, m: 1 + Math.floor(rng() * 2), ph: rng() });
   });
 
   const labelCol = new THREE.Color(v.label);
@@ -280,8 +282,8 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       const f = mod(frame, LOOP);
       const ph = f / LOOP;
 
-      camera.position.set(Math.sin(TAU * ph) * 0.6, 3.4 + Math.sin(TAU * ph * 2) * 0.08, 6);
-      camera.rotation.set(-0.05, Math.sin(TAU * ph) * 0.012, 0);
+      camera.position.set(Math.sin(TAU * ph) * 0.6, 4.4 + Math.sin(TAU * ph * 2) * 0.06, 14);
+      camera.rotation.set(-0.075, Math.sin(TAU * ph) * 0.008, 0);
       camera.updateMatrixWorld();
 
       floorMat.uniforms.uScroll.value = (ROWS_PER_LOOP / ROWS) * ph;
@@ -296,7 +298,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
           pts[i * 3] = x;
           pts[i * 3 + 1] = y;
           pts[i * 3 + 2] = L.z;
-          const b = 1.6;
+          const b = 1.15;
           cols[i * 3] = L.color.r * b;
           cols[i * 3 + 1] = L.color.g * b;
           cols[i * 3 + 2] = L.color.b * b;
@@ -308,12 +310,16 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       sprites.begin();
       for (const b of bars) {
         const h = b.h * (0.75 + 0.25 * Math.sin(TAU * (b.m * ph + b.ph)));
-        const k = 0.22;
-        sprites.rect(b.x, 1.5, b.z, 1, [barCol.r * k, barCol.g * k, barCol.b * k, 1], -0.07, 0, 0.14, h + 2);
+        // candlestick: thin wick + body, both from the frame number only
+        const k = 0.45;
+        const base = 2.5 + b.ph * 6;
+        const bodyLo = h * (0.2 + 0.2 * b.ph), bodyHi = h * (0.55 + 0.3 * b.ph);
+        sprites.rect(b.x, base, b.z, 1, [barCol.r * k, barCol.g * k, barCol.b * k, 1], -0.04, 0, 0.08, h);
+        sprites.rect(b.x, base, b.z, 1, [barCol.r * k * 1.4, barCol.g * k * 1.4, barCol.b * k * 1.4, 1], -0.16, bodyLo, 0.32, bodyHi - bodyLo);
       }
       for (const l of labels) {
         const yy = l.y + 0.25 * Math.sin(TAU * (l.m * ph + l.ph));
-        const k = 1.2 * l.a;
+        const k = 0.8 * l.a;
         const c: RGBA = [labelCol.r * k, labelCol.g * k, labelCol.b * k, 1];
         let ox = 0;
         if (l.kind < v.pSigned) {
@@ -329,14 +335,14 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
 
       return {
         focusNear: 10,
-        focusFar: 48,
-        nearBlurAt: 5,
-        farBlurAt: 120,
-        nearCoc: 0.006,
+        focusFar: 44,
+        nearBlurAt: 6,
+        farBlurAt: 90,
+        nearCoc: 0.004,
         farCoc: 0.006,
-        bloom: 0.38,
+        bloom: 0.3,
         bloomRadius: 0.6,
-        exposure: 1.05,
+        exposure: 0.66,
         vignette: 0.5,
         grain: 0.015,
       };

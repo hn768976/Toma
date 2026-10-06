@@ -236,7 +236,8 @@ export class Post {
       sw = this.down[i].width;
       sh = this.down[i].height;
     }
-    // Progressive upsample (bloom). Wider levels get more weight with bloomRadius.
+    // Progressive upsample (bloom): bloom = sum_k rad^k * level_k, so wide
+    // levels decay and the glow stays local (no flat wash over dark areas).
     const rad = p.bloomRadius ?? 0.6;
     let low: THREE.Texture = this.down[LEVELS - 1].texture;
     let lowW = this.down[LEVELS - 1].width,
@@ -245,8 +246,8 @@ export class Post {
       this.upMat.uniforms.tLow.value = low;
       this.upMat.uniforms.tHigh.value = this.down[i].texture;
       (this.upMat.uniforms.uTexel.value as THREE.Vector2).set(1 / lowW, 1 / lowH);
-      this.upMat.uniforms.uLowW.value = 1.0;
-      this.upMat.uniforms.uHighW.value = 1.0 - rad * 0.8;
+      this.upMat.uniforms.uLowW.value = rad;
+      this.upMat.uniforms.uHighW.value = 1.0;
       this.pass(r, this.upMat, this.up[i]);
       low = this.up[i].texture;
       lowW = this.up[i].width;
@@ -262,7 +263,9 @@ export class Post {
     u.uFarBlurAt.value = p.farBlurAt;
     u.uNearCoc.value = p.nearCoc;
     u.uFarCoc.value = p.farCoc;
-    u.uBloom.value = p.bloom / LEVELS;
+    let norm = 0;
+    for (let k = 0; k < LEVELS; k++) norm += Math.pow(rad, k);
+    u.uBloom.value = p.bloom / norm;
     (u.uBloomTint.value as THREE.Color).copy(p.bloomTint ?? new THREE.Color(1, 1, 1));
     u.uExposure.value = p.exposure;
     u.uVignette.value = p.vignette;

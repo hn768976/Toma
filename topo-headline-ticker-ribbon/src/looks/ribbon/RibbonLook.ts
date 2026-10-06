@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { FONT_MONO } from "../../lib/assets";
 import { GLSL_AALINE } from "../../lib/glsl";
-import { GlyphAtlas, SpriteLayer, RGBA } from "../../lib/glyphs";
+import { applyDotMatrix, GlyphAtlas, SpriteLayer, RGBA } from "../../lib/glyphs";
 import { hash01, mod, mulberry32, TAU } from "../../lib/random";
 import type { LookFactory } from "../../lib/Stage";
 
@@ -60,7 +60,7 @@ void main(){
   float major = aaLine(vAcross * uStrands * 0.25, 1.1 * uPx + 0.45);
   float dots = aaLine(vAlong, 1.0 * uPx + 0.3);
   float dotsMajor = aaLine(vAlong * 0.25, 1.4 * uPx + 0.55);
-  float m = strand * mix(0.15, 1.0, dots) * 0.45 + major * dotsMajor * 1.2;
+  float m = strand * mix(0.1, 1.0, dots) * 0.25 + major * dotsMajor * 1.4;
   float edge = smoothstep(0.0, 0.06, vAcross) * smoothstep(1.0, 0.94, vAcross);
   vec3 c = grad(vCol) * m * uGain * (0.55 + 0.45 * edge) + grad(vCol) * 0.012;
   o = vec4(c, 1.0);
@@ -145,7 +145,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
 
   // ---- ribbon mesh (rebuilt per frame over a window around the camera)
   const NR = 2400;
-  const WIDTH = 3.0;
+  const WIDTH = 2.4;
   const widthDir = new THREE.Vector3(0, 0.18, 1).normalize();
   const rpos = new Float32Array(NR * 2 * 3);
   const across = new Float32Array(NR * 2);
@@ -176,7 +176,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     glslVersion: THREE.GLSL3,
     vertexShader: ribbonVert,
     fragmentShader: ribbonFrag,
-    uniforms: { uC0: { value: cs[0] }, uC1: { value: cs[1] }, uC2: { value: cs[2] }, uC3: { value: cs[3] }, uStrands: { value: 40 }, uPx: { value: ctx.pxScale }, uGain: { value: 1.35 } },
+    uniforms: { uC0: { value: cs[0] }, uC1: { value: cs[1] }, uC2: { value: cs[2] }, uC3: { value: cs[3] }, uStrands: { value: 40 }, uPx: { value: ctx.pxScale }, uGain: { value: 0.6 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -193,8 +193,8 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
   // ---- background grids at two depths
   const grids: THREE.Mesh[] = [];
   for (const [z, spacing, k] of [
-    [-14, 6, 0.05],
-    [-38, 10, 0.045],
+    [-14, 5, 0.16],
+    [-38, 10, 0.1],
   ] as Array<[number, number, number]>) {
     const m = new THREE.Mesh(
       new THREE.PlaneGeometry(1200, 200),
@@ -202,7 +202,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
         glslVersion: THREE.GLSL3,
         vertexShader: gridVert,
         fragmentShader: gridFrag,
-        uniforms: { uC: { value: new THREE.Color("#5AA88A").multiplyScalar(k * 1.4) }, uSpacing: { value: spacing }, uPx: { value: ctx.pxScale } },
+        uniforms: { uC: { value: new THREE.Color("#3A6A62").multiplyScalar(k * 2.2) }, uSpacing: { value: spacing }, uPx: { value: ctx.pxScale } },
         transparent: true,
         depthWrite: true,
         blending: THREE.AdditiveBlending,
@@ -213,18 +213,82 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     scene.add(m);
   }
 
+  const fmtN = (r: number, d: number) => (r * 100).toFixed(d);
+  const fmtW = (r: number) => (r < 0.5 ? (r * 200).toFixed(4) : (r * 90).toFixed(4) + (r * 1e4).toFixed(0).slice(-4));
+  // ---- dense walls of dim dot-matrix numbers (static texture, periodic in x with L)
+  const wallTex = (() => {
+    const W = 4096, H = 2048;
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const g = c.getContext("2d")!;
+    g.clearRect(0, 0, W, H);
+    const rowH = 26;
+    for (let y = rowH; y < H; y += rowH * (0.9 + rng() * 0.5)) {
+      let x = -rng() * 200;
+      const fs = 14 + rng() * 7;
+      g.font = `700 ${fs.toFixed(0)}px ${FONT_MONO}`;
+      while (x < W) {
+        const str = fmtW(rng());
+        const w = g.measureText(str).width;
+        const r = rng();
+        if (r < 0.78) {
+          const col = r < 0.6 ? "255,160,58" : r < 0.72 ? "58,232,106" : "255,58,74";
+          g.fillStyle = `rgba(${col},${(0.25 + rng() * 0.75).toFixed(2)})`;
+          for (const sh of [0, W]) g.fillText(str, x - sh, y);
+        }
+        x += w + 14 + rng() * 160;
+      }
+    }
+    applyDotMatrix(g, W, H, 3);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = THREE.RepeatWrapping;
+    t.generateMipmaps = true;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    t.anisotropy = 8;
+    t.needsUpdate = true;
+    return t;
+  })();
+  for (const [z, u0, gain, y0] of [
+    [-9, 0, 0.2, -12],
+    [-22, 0.37, 0.2, -14],
+  ] as Array<[number, number, number, number]>) {
+    const wall = new THREE.Mesh(
+      new THREE.PlaneGeometry(L * 10, 32 * 1.25),
+      new THREE.ShaderMaterial({
+        glslVersion: THREE.GLSL3,
+        vertexShader: gridVert,
+        fragmentShader: /* glsl */ `
+        precision highp float; uniform sampler2D tMap; uniform float uU0; uniform float uGain; uniform float uY0;
+        in vec2 vW; in float vDist; out vec4 o;
+        void main(){
+          vec4 t = texture(tMap, vec2(vW.x / ${L.toFixed(1)} + uU0, (vW.y - uY0) / 40.0));
+          if (t.a < 0.03) discard;
+          o = vec4(t.rgb * t.a * uGain, 1.0);
+        }`,
+        uniforms: { tMap: { value: wallTex }, uU0: { value: u0 }, uGain: { value: gain }, uY0: { value: y0 } },
+        transparent: true,
+        depthWrite: true,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    wall.position.set(L * 5, y0 + 20, z);
+    scene.add(wall);
+  }
+
   // ---- sprites: numbers, candles, markers
-  const atlas = new GlyphAtlas({ font: `500 96px ${FONT_MONO}`, fontPx: 96, chars: "0123456789.+-", cellW: 80, cellH: 128, icons: { [DOT]: softDot } });
+  const atlas = new GlyphAtlas({ font: `700 96px ${FONT_MONO}`, fontPx: 96, chars: "0123456789.+-", cellW: 80, cellH: 128, icons: { [DOT]: softDot }, dotMatrix: 9 });
   const far = new SpriteLayer(atlas, 30000, { billboard: false, right: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0), depthWrite: true, alphaTest: 0.05 });
   const near = new SpriteLayer(atlas, 30000, { billboard: false, right: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0), depthWrite: true, alphaTest: 0.05 });
   const marks = new SpriteLayer(atlas, 20000, { billboard: true, depthWrite: true, alphaTest: 0.1 });
   scene.add(far.mesh, near.mesh, marks.mesh);
 
   const ORANGE = new THREE.Color("#FFA03A"), GREEN = new THREE.Color("#3AE86A"), RED = new THREE.Color("#FF3A4A");
-  const palette = [ORANGE, ORANGE, ORANGE, GREEN, RED];
+  const palette = [ORANGE, ORANGE, ORANGE, ORANGE, GREEN, GREEN, ORANGE, RED];
   type Num = { x: number; y: number; z: number; s: number; text: string; c: THREE.Color; a: number; tick: boolean };
   const nums: Num[] = [];
-  const fmtN = (r: number, d: number) => (r * 100).toFixed(d);
+
   // columns of small numbers (order-book like), several depths
   for (const [z, count, size, alpha] of [
     [-34, 130, 0.42, 0.28],
@@ -245,20 +309,22 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     nums.push({ x: rng() * L, y: -9 + rng() * 26, z, s: 0.16 + rng() * 0.16, text: fmtN(rng(), 3 + Math.floor(rng() * 2)), c: palette[Math.floor(rng() * palette.length)], a: 0.22 + rng() * 0.2, tick: rng() < 0.1 });
   }
   // big dim numbers far back
-  for (let i = 0; i < 9; i++) nums.push({ x: rng() * L, y: -2 + rng() * 14, z: -30 - rng() * 10, s: 2.4 + rng() * 2.2, text: rng() < 0.5 ? "+0." + Math.floor(rng() * 900 + 100) : String(Math.floor(rng() * 9000 + 1000)), c: palette[Math.floor(rng() * palette.length)], a: 0.08, tick: false });
+  for (let i = 0; i < 12; i++) nums.push({ x: rng() * L, y: 6 + rng() * 10, z: -12 - rng() * 22, s: 1.0 + rng() * 1.6, text: rng() < 0.4 ? "+0." + String(Math.floor(rng() * 900 + 100)).padStart(3, "0") : rng() < 0.5 ? String(Math.floor(rng() * 9000 + 1000)) : (rng() * 99).toFixed(3), c: rng() < 0.85 ? GREEN : RED, a: 0.55, tick: false });
   // a few near, very soft
   const nearNums: Num[] = [];
-  for (let i = 0; i < 14; i++) nearNums.push({ x: rng() * L, y: -6 + rng() * 14, z: 6 + rng() * 2, s: 0.5 + rng() * 0.4, text: fmtN(rng(), 3), c: palette[Math.floor(rng() * palette.length)], a: 0.55, tick: false });
+  for (let i = 0; i < 6; i++) nearNums.push({ x: rng() * L, y: -6 + rng() * 14, z: 6 + rng() * 2, s: 0.22 + rng() * 0.15, text: fmtN(rng(), 3), c: palette[Math.floor(rng() * palette.length)], a: 0.3, tick: false });
 
+  // a few big out-of-focus candles in the foreground
+  const nearCandles = Array.from({ length: 4 }, () => ({ x: rng() * L, y: -3 + rng() * 4, h: 1.2 + rng() * 1.8, wick: 0.8 + rng(), up: rng() < 0.3, z: 6.5 + rng() * 1.5 }));
   type Candle = { x: number; dy: number; h: number; wick: number; up: boolean; dz: number };
   const candles: Candle[] = [];
   for (let x = 0.6; x < L; x += 1.5 + rng() * 2.5) {
     if (rng() < 0.3) continue;
     const n = 1 + Math.floor(rng() * 3);
-    for (let j = 0; j < n; j++) candles.push({ x: x + j * 0.42, dy: 0.6 + rng() * 2.5, h: 0.3 + rng() * 1.3, wick: 0.3 + rng() * 1.0, up: rng() < 0.6, dz: (rng() - 0.5) * 1.2 });
+    for (let j = 0; j < n; j++) candles.push({ x: x + j * 0.42, dy: 0.1 + rng() * 1.0, h: 0.3 + rng() * 1.1, wick: 0.3 + rng() * 0.9, up: rng() < 0.8, dz: (rng() - 0.5) * 0.6 });
   }
   type Label = { x: number; text: string; c: THREE.Color };
-  const peakLabels: Label[] = turns.map((t) => ({ x: t[0], text: (20 + rng() * 60).toFixed(4), c: [ORANGE, GREEN, RED][Math.floor(rng() * 3)] }));
+  const peakLabels: Label[] = turns.map((t) => ({ x: t[0], text: (20 + rng() * 60).toFixed(4), c: [ORANGE, GREEN, GREEN, RED][Math.floor(rng() * 4)] }));
 
   const cUp = new THREE.Color(v.candleUp), cDown = new THREE.Color(v.candleDown);
   const rgba = (c: THREE.Color, k: number): RGBA => [c.r * k, c.g * k, c.b * k, 1];
@@ -275,10 +341,10 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
       // camera alongside, slightly behind, following rises and falls (smoothed)
       const cy = smoothY(xc + 2);
       const cz = smoothZ(xc + 2);
-      camera.position.set(xc - 3.5, cy + 2.4, cz + 12.5);
+      camera.position.set(xc - 1.5, cy + 1.2, cz + 14);
       const ly = smoothY(xc + 9);
       camera.up.set(0, 1, 0);
-      camera.lookAt(xc + 6, ly + 0.2, smoothZ(xc + 9) - 1.5);
+      camera.lookAt(xc + 4.5, ly + 0.6, smoothZ(xc + 9) - 2);
       camera.updateMatrixWorld();
 
       // ribbon geometry around the camera
@@ -312,10 +378,17 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
         for (let i = 0; i < nums.length; i++) {
           const n = nums[i];
           const x = n.x + off;
-          const depth = 12.5 - n.z;
+          const depth = 14 - n.z;
           if (Math.abs(x - xc - 3) > depth * 1.2 + 6) continue;
           const text = n.tick ? fmtN(hash01(i, Math.floor(f / 10), 3), 4) : n.text;
           far.text(text, x, n.y + cy * 0.5, n.z, n.s, rgba(n.c, n.a));
+        }
+        for (const c of nearCandles) {
+          const x = c.x + off;
+          if (Math.abs(x - xc + 2) > 9) continue;
+          const col = c.up ? cUp : cDown;
+          near.rect(x, c.y + cy * 0.6, c.z, 1, rgba(col, 0.7), -0.03, -c.wick * 0.5, 0.06, c.h + c.wick);
+          near.rect(x, c.y + cy * 0.6, c.z, 1, rgba(col, 0.8), -0.12, 0, 0.24, c.h);
         }
         for (const n of nearNums) {
           const x = n.x + off;
@@ -330,8 +403,8 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
           const col = c.up ? cUp : cDown;
           const base = p[1] + c.dy;
           const z = p[2] + c.dz;
-          marks.rect(x, base, z, 1, rgba(col, 1.1), -0.022, -c.wick * 0.5, 0.044, c.h + c.wick);
-          marks.rect(x, base, z, 1, rgba(col, 1.3), -0.09, 0, 0.18, c.h);
+          marks.rect(x, base, z, 1, rgba(col, 0.8), -0.02, -c.wick * 0.5, 0.04, c.h + c.wick);
+          marks.rect(x, base, z, 1, rgba(col, 0.95), -0.07, 0, 0.14, c.h);
         }
         // dotted arcs + dots at turns, labels near peaks
         for (let t = 0; t < turns.length; t++) {
@@ -342,15 +415,15 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
           const next = turns[(t + 1) % turns.length][1];
           const peak = ty >= prev && ty >= next;
           const dir = peak ? 1 : -1;
-          const R = 1.6 + (t % 3) * 0.5;
-          for (let j = 0; j <= 14; j++) {
-            const a = (j / 14) * Math.PI;
+          const R = 2.0 + (t % 3) * 0.6;
+          for (let j = 0; j <= 8; j++) {
+            const a = (j / 8) * Math.PI;
             const px = x - Math.cos(a) * R;
             const py = ty + dir * (0.5 + Math.sin(a) * R * 0.8);
-            const tw = 0.6 + 0.4 * Math.sin(TAU * (ph * 2 + j / 14 + t * 0.3));
-            marks.icon(DOT, px, py, tz, 0.12, rgba(new THREE.Color("#C8B8FF"), 1.2 * tw), -0.5, -0.5, 1, 1);
+            const tw = 0.6 + 0.4 * Math.sin(TAU * (ph * 2 + j / 8 + t * 0.3));
+            marks.icon(DOT, px, py, tz, 0.26, rgba(cs[(t + (j > 4 ? 1 : 0)) % 4].clone().lerp(new THREE.Color(1, 1, 1), 0.3), 0.9 * tw), -0.5, -0.5, 1, 1);
           }
-          marks.icon(DOT, x, ty, tz, 0.32, rgba(new THREE.Color("#FFFFFF"), 1.6), -0.5, -0.5, 1, 1);
+          marks.icon(DOT, x, ty, tz, 0.3, rgba(new THREE.Color("#FFFFFF"), 1.0), -0.5, -0.5, 1, 1);
           if (peak) {
             const lab = peakLabels[t];
             const val = (parseFloat(lab.text) + (hash01(t, Math.floor(f / 6), 9) - 0.5) * 0.02).toFixed(4);
@@ -363,15 +436,15 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
       marks.end();
 
       return {
-        focusNear: 10,
-        focusFar: 20,
+        focusNear: 11,
+        focusFar: 18,
         nearBlurAt: 5,
-        farBlurAt: 40,
+        farBlurAt: 42,
         nearCoc: 0.01,
-        farCoc: 0.0075,
-        bloom: 0.5,
+        farCoc: 0.009,
+        bloom: 0.25,
         bloomRadius: 0.5,
-        exposure: 1.1,
+        exposure: 0.85,
         vignette: 0.55,
         grain: 0.015,
       };

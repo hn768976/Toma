@@ -14,6 +14,7 @@ export type TopoVersion = {
   gold: string; // city lights
   tagMode: "values" | "bigdata"; // framed tags: values only, or BIG DATA + boxed values
   tagCount: number; // framed tags per tile
+  baseGain: number; // brightness of the terrain base / hotspot
   seed: number;
 };
 
@@ -22,7 +23,7 @@ const K = 3; // tiles replicated along z
 const Z_NEAR = 6; // world z where wrapped objects re-enter (behind camera)
 const Z_SPAN = K * TOPO_T;
 
-const CAM_H = 8.5;
+const CAM_H = 11;
 
 const terrainVert = /* glsl */ `
 ${GLSL_TOPO_HEIGHT}
@@ -46,7 +47,7 @@ ${GLSL_TOPO_HEIGHT}
 ${GLSL_HASH}
 ${GLSL_AALINE}
 uniform vec3 uLine; uniform vec3 uBase; uniform vec3 uHaze; uniform vec3 uTile;
-uniform float uPx; uniform float uFogNear; uniform float uFogFar; uniform float uStep;
+uniform float uPx; uniform float uHot; uniform float uFogNear; uniform float uFogFar; uniform float uStep;
 in vec2 vT; in float vDist; in float vH;
 out vec4 o;
 float aaDots(vec2 p, float r){
@@ -61,31 +62,33 @@ float aaDots(vec2 p, float r){
 void main(){
   float h = topoHeight(vT);
   float c = h / uStep;
-  float w = 0.75 * uPx + 0.12;
+  float w = 0.8 * uPx + 0.22;
   float minor = aaLine(c, w);
   float major = aaLine(c / 5.0, w * 1.5);
   // dotted look along the lines (fine world-space dot lattice)
-  float dots = aaDots(vT * 2.6, 2.2 * uPx + 0.55);
-  float dotMean = clamp(3.14159 * pow(2.2*uPx+0.55, 2.0) * pow(fwidth(vT.x*2.6),2.0), 0.0, 1.0);
-  float lineMask = max(minor * mix(0.15, 1.0, dots), major * mix(0.45, 1.0, dots));
+  // lines are strings of particles: a fine world-space dot lattice masks them
+  float dots = aaDots(vT * 8.0, 1.8 * uPx + 0.7);
+  float lineMask = max(minor * mix(0.06, 1.0, dots), major * mix(0.2, 1.0, dots));
   // brighter where contours bunch up (steep slopes)
   float steep = clamp(length(vec2(dFdx(h), dFdy(h))) / max(length(vec2(dFdx(vT.x), dFdy(vT.y))), 1e-4), 0.0, 3.0);
   float lum = 0.55 + 0.35 * smoothstep(0.2, 1.5, steep) + 0.25 * smoothstep(-3.0, 4.0, h);
   vec3 col = uBase * (0.75 + 0.5 * smoothstep(-6.0, 5.0, h));
+  // soft hotspot of light in the middle distance
+  col += uLine * uHot * exp(-vT.x * vT.x / 500.0) * exp(-pow((vDist - 30.0) / 22.0, 2.0));
   float farDim = 1.0 - 0.88 * smoothstep(22.0, 110.0, vDist);
   col += uLine * lineMask * lum * (1.0 + 1.2 * major) * farDim;
   // faint square grid
-  float grid = max(aaLine(vT.x / 8.0, 0.8*uPx+0.3), aaLine(vT.y / 8.0, 0.8*uPx+0.3));
-  col += uLine * grid * 0.32 * farDim;
+  float grid = max(aaLine(vT.x / 6.0, 0.8*uPx+0.3), aaLine(vT.y / 6.0, 0.8*uPx+0.3));
+  col += uLine * grid * 0.4 * farDim;
   // scattered dim tiles
-  vec2 cell = floor(vT / 1.5);
-  ivec2 ci = ivec2(int(cell.x) + 4096, int(mod(cell.y, ${TOPO_T / 1.5}.0)));
+  vec2 cell = floor(vT / 1.0);
+  ivec2 ci = ivec2(int(cell.x) + 4096, int(mod(cell.y, ${TOPO_T}.0)));
   float r = hash12i(ci);
-  if (r < 0.018) {
-    vec2 f = fract(vT / 1.5);
-    vec2 fw = fwidth(vT / 1.5);
+  if (r < 0.05) {
+    vec2 f = fract(vT / 1.0);
+    vec2 fw = fwidth(vT / 1.0);
     float inside = smoothstep(0.12 - fw.x, 0.12 + fw.x, f.x) * smoothstep(0.88 + fw.x, 0.88 - fw.x, f.x) * smoothstep(0.3 - fw.y, 0.3 + fw.y, f.y) * smoothstep(0.7 + fw.y, 0.7 - fw.y, f.y);
-    col += uTile * inside * (0.25 + 0.5 * fract(r * 97.0)) * farDim;
+    col += uTile * inside * (0.15 + 0.35 * fract(r * 97.0)) * farDim;
   }
   float fog = smoothstep(uFogNear, uFogFar, vDist);
   col = mix(col, uHaze, fog);
@@ -147,9 +150,19 @@ function triIcon(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.fill();
 }
 
-const PIN = "", DOT = "", TRI = "";
+function triDownIcon(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.1, h * 0.18);
+  ctx.lineTo(w * 0.9, h * 0.18);
+  ctx.lineTo(w * 0.5, h * 0.85);
+  ctx.closePath();
+  ctx.fill();
+}
 
-type Pin = { x: number; z: number; y: number; value: number; tri: boolean; showPin: boolean; tick: boolean };
+const PIN = "\uE101", DOT = "\uE102", TRI = "\uE103", TRI_D = "\uE104";
+
+type Pin = { x: number; z: number; y: number; value: number; tri: boolean; showPin: boolean; label: boolean; tick: boolean; teal: boolean; down: boolean };
 type Tag = { x: number; z: number; y: number; pole: number; big: boolean; value: number };
 type Light = { x: number; z: number; y: number; size: number; phase: number; k: number; b: number };
 
@@ -195,14 +208,15 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
     fragmentShader: terrainFrag,
     uniforms: {
       uOffset: { value: 0 },
-      uLine: { value: cLine.clone().lerp(new THREE.Color(1, 1, 1), 0.1).multiplyScalar(0.5) },
-      uBase: { value: cBase.clone().multiplyScalar(0.8) },
+      uLine: { value: cLine.clone().lerp(new THREE.Color(1, 1, 1), 0.04).multiplyScalar(0.62) },
+      uBase: { value: cBase.clone().multiplyScalar(0.25 + 0.3 * v.baseGain) },
       uHaze: { value: cHaze },
       uTile: { value: cLine.clone().multiplyScalar(0.22) },
       uPx: { value: ctx.pxScale },
+      uHot: { value: 0.06 * v.baseGain },
       uFogNear: { value: 60 },
       uFogFar: { value: 280 },
-      uStep: { value: 0.055 },
+      uStep: { value: 0.075 },
     },
     side: THREE.DoubleSide,
   });
@@ -231,12 +245,12 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
 
   // ---- sprites
   const atlas = new GlyphAtlas({
-    font: `700 96px ${FONT_MONO}`,
+    font: `500 96px ${FONT_MONO}`,
     fontPx: 96,
     chars: "0123456789.-+% BIGDAT",
     cellW: 80,
     cellH: 128,
-    icons: { [PIN]: pinIcon, [DOT]: softDot, [TRI]: triIcon },
+    icons: { [PIN]: pinIcon, [DOT]: softDot, [TRI]: triIcon, [TRI_D]: triDownIcon },
   });
   const sprites = new SpriteLayer(atlas, 30000, { billboard: true, fogNear: 60, fogFar: 260 });
   const labels = new SpriteLayer(atlas, 20000, { billboard: true, fogNear: 70, fogFar: 270, depthTest: false });
@@ -246,48 +260,51 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
 
   // ---- per-tile content (generated once from the seed, periodic in z)
   const pins: Pin[] = [];
-  for (let i = 0; i < 110; i++) {
-    const x = (rng() * 2 - 1) * 46;
+  for (let i = 0; i < 260; i++) {
+    const x = (rng() * 2 - 1) * 32;
     const z = -rng() * TOPO_T;
-    pins.push({ x, z, y: 0, value: 20 + rng() * 680, tri: rng() < 0.22, showPin: rng() < 0.62, tick: rng() < 0.35 });
+    const k = rng();
+    // 45% standalone pins, 35% value labels with a small triangle, 20% pin + value
+    pins.push({ x, z, y: 0, value: 20 + rng() * 680, tri: k >= 0.45 && k < 0.8, showPin: k < 0.45 || k >= 0.8, label: k >= 0.45, tick: rng() < 0.35, teal: rng() < 0.35, down: rng() < 0.4 });
   }
   const tags: Tag[] = [];
   for (let i = 0; i < v.tagCount; i++) {
-    const x = (rng() * 2 - 1) * 42;
+    const x = (rng() * 2 - 1) * 20;
     const z = -((i + rng() * 0.8) / v.tagCount) * TOPO_T;
-    tags.push({ x, z, y: 0, pole: 3.2 + rng() * 4.5, big: v.tagMode === "bigdata" && rng() < 0.55, value: 100 + rng() * 600 });
+    tags.push({ x, z, y: 0, pole: 2.5 + rng() * 3.5, big: v.tagMode === "bigdata" && rng() < 0.55, value: 100 + rng() * 600 });
   }
   const lights: Light[] = [];
   // clusters in low areas: candidate centres, keep the lowest
-  for (let c = 0; c < 40; c++) {
+  for (let c = 0; c < 80; c++) {
     let best = { x: 0, z: 0, h: 1e9 };
     for (let s = 0; s < 14; s++) {
-      const x = (rng() * 2 - 1) * 90;
+      const x = (rng() * 2 - 1) * 45;
       const z = -rng() * TOPO_T;
       const h = topoHeight(x, z);
       if (h < best.h) best = { x, z, h };
     }
-    const n = 30 + Math.floor(rng() * 70);
-    const spread = 1.5 + rng() * 4;
+    const n = 8 + Math.floor(rng() * 22);
+    const spread = 1.5 + rng() * 3;
     for (let i = 0; i < n; i++) {
       const a = rng() * TAU, r = spread * Math.sqrt(-2 * Math.log(1 - rng() * 0.999)) * 0.6;
       const x = best.x + Math.cos(a) * r;
       const z = best.z + Math.sin(a) * r * 0.8;
-      lights.push({ x, z, y: 0, size: 0.12 + rng() * 0.14, phase: rng(), k: 1 + Math.floor(rng() * 3), b: 0.5 + rng() * 0.8 });
+      lights.push({ x, z, y: 0, size: 0.05 + rng() * 0.06, phase: rng(), k: 1 + Math.floor(rng() * 3), b: 0.5 + rng() * 0.8 });
     }
   }
   // sprinkle single dots
   for (let i = 0; i < 1400; i++) {
-    const x = (rng() * 2 - 1) * 110, z = -rng() * TOPO_T;
-    if (topoHeight(x, z) < -0.35) lights.push({ x, z, y: 0, size: 0.1 + rng() * 0.1, phase: rng(), k: 1 + Math.floor(rng() * 3), b: 0.4 + rng() * 0.6 });
+    const x = (rng() * 2 - 1) * 45, z = -rng() * TOPO_T;
+    if (topoHeight(x, z) < -0.35) lights.push({ x, z, y: 0, size: 0.05 + rng() * 0.05, phase: rng(), k: 1 + Math.floor(rng() * 3), b: 0.4 + rng() * 0.6 });
   }
   for (const p of pins) p.y = topoHeight(p.x, p.z);
   for (const t of tags) t.y = topoHeight(t.x, t.z);
   for (const l of lights) l.y = topoHeight(l.x, l.z) + 0.05;
 
   const white = colorRGBA("#ffffff", 1, 1.6);
-  const labelCol = colorRGBA("#e8fbff", 0.95, 1.1);
+  const labelCol = colorRGBA("#d8f0ff", 0.95, 1.0);
   const triCol = colorRGBA("#ffa02a", 1, 2.0);
+  const tealCol = colorRGBA("#3ae0e8", 1, 1.8);
   const gold = new THREE.Color(v.gold);
   const lineTint = colorRGBA(v.contour, 1, 1.8);
 
@@ -308,7 +325,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       const sway = Math.sin(TAU * ph) * 1.2;
       camera.position.set(sway, CAM_H + Math.sin(TAU * ph * 2) * 0.25, 0);
       camera.rotation.order = "YXZ";
-      camera.rotation.set(-19 * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0);
+      camera.rotation.set(-28 * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0.035);
       camera.updateMatrixWorld();
 
       sprites.begin();
@@ -330,11 +347,12 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
         const val = p.tick ? p.value + (hash01(i, Math.floor(f / 12), v.seed) - 0.5) * 40 : p.value;
         for (let j = 0; j < K; j++) {
           const z = wrapZ(p.z, j, offset);
-          const s = 0.46;
+          const s = 0.34;
           if (p.showPin) labels.icon(PIN, p.x, p.y, z, s * 1.1, white, -0.38, 0, 0.76, 1.0);
+          if (!p.label) continue;
           const lx = p.showPin ? 0.6 : 0;
-          if (p.tri) labels.icon(TRI, p.x, p.y, z, s, triCol, lx, 0.1, 0.6, 0.6);
-          labels.text(fmt(val), p.x, p.y, z, s * 0.75, labelCol, "left", (lx + (p.tri ? 0.8 : 0)) / 0.75, 0.25);
+          if (p.tri) labels.icon(p.down ? TRI_D : TRI, p.x, p.y, z, s, p.teal ? tealCol : triCol, lx, 0.1, 0.6, 0.6);
+          labels.text(fmt(val), p.x, p.y, z, s * 0.8, labelCol, "left", (lx + (p.tri ? 0.75 : 0)) / 0.8, 0.25);
         }
       }
       // framed tags on thin poles
@@ -359,16 +377,16 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       labels.end();
 
       return {
-        focusNear: 20,
-        focusFar: 42,
-        nearBlurAt: 11,
-        farBlurAt: 120,
+        focusNear: 17,
+        focusFar: 38,
+        nearBlurAt: 12,
+        farBlurAt: 80,
         nearCoc: 0.0075,
         farCoc: 0.0055,
-        bloom: 0.45,
+        bloom: 0.5,
         bloomRadius: 0.55,
-        exposure: 1.0,
-        saturation: 0.95,
+        exposure: 0.62,
+        saturation: 1.12,
         vignette: 0.55,
         grain: 0.015,
       };

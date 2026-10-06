@@ -8,6 +8,7 @@ export const FONT_INTER = "InterShip";
 const FONTS: Array<[string, string, FontFaceDescriptors]> = [
   [FONT_INTER, "fonts/inter/Inter-BlackItalic.ttf", { weight: "900", style: "italic" }],
   [FONT_INTER, "fonts/inter/Inter-BoldItalic.ttf", { weight: "700", style: "italic" }],
+  [FONT_INTER, "fonts/inter/Inter-MediumItalic.ttf", { weight: "500", style: "italic" }],
   [FONT_INTER, "fonts/inter/Inter-Bold.ttf", { weight: "700", style: "normal" }],
   [FONT_INTER, "fonts/inter/Inter-SemiBold.ttf", { weight: "600", style: "normal" }],
   [FONT_MONO, "fonts/jetbrains-mono/JetBrainsMono-Medium.ttf", { weight: "500", style: "normal" }],

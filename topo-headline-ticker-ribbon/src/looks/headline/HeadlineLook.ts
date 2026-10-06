@@ -12,7 +12,7 @@ export type HeadlineVersion = {
 };
 
 const RED = "#E81A2A";
-const CYAN = "#5AD8FF";
+// numbers: cyan #30B0D0 (darker than the #5AD8FF brief, to match the reference) and red
 
 // ---------- helpers
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - clamp(t), 3);
@@ -72,8 +72,8 @@ function buildMapTexture(land: LandPolygons) {
       const my = Math.floor(((90 - lat) / 180) * MH);
       if (data[(my * MW + mx) * 4] < 128) continue;
       const v = 0.78 + 0.22 * hash01(q, r, 5);
-      g.fillStyle = `rgba(${Math.round(225 * v)},${Math.round(232 * v)},${Math.round(245 * v)},1)`;
-      const s = px * 0.68;
+      g.fillStyle = `rgba(${Math.round(185 * v)},${Math.round(198 * v)},${Math.round(235 * v)},0.92)`;
+      const s = px * 0.56;
       g.fillRect(q * px + (px - s) / 2, r * px + (px - s) / 2, s, s);
     }
   return { tex: canvasTex(c), aspect: W / H };
@@ -97,15 +97,15 @@ function buildHeadlineTexture(word: string) {
   g.fillStyle = RED;
   g.fillText(word, pad, by);
   // thin bright edge
-  g.lineWidth = 5;
-  g.strokeStyle = "rgba(255,120,120,0.9)";
+  g.lineWidth = 2.5;
+  g.strokeStyle = "rgba(255,70,70,0.7)";
   g.strokeText(word, pad, by);
   // inner top highlight
   g.globalCompositeOperation = "source-atop";
   const grad = g.createLinearGradient(0, by - fontPx * 0.75, 0, by);
-  grad.addColorStop(0, "rgba(255,90,90,0.35)");
+  grad.addColorStop(0, "rgba(255,60,60,0.08)");
   grad.addColorStop(0.5, "rgba(255,40,50,0)");
-  grad.addColorStop(1, "rgba(120,0,10,0.25)");
+  grad.addColorStop(1, "rgba(120,0,10,0.12)");
   g.fillStyle = grad;
   g.fillRect(0, 0, W, H);
   // extrusion mask (solid)
@@ -184,7 +184,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
     in vec2 vUv; out vec4 o;
     void main(){ float e = smoothstep(0.0,0.08,vUv.y)*smoothstep(1.0,0.92,vUv.y)*smoothstep(0.0,0.03,vUv.x)*smoothstep(1.0,0.97,vUv.x);
       o = vec4(uC*uA*e*(0.7+0.3*vUv.y), 1.0); }`,
-    uniforms: { uC: { value: new THREE.Color("#2A62C8") }, uA: { value: 0.0 } },
+    uniforms: { uC: { value: new THREE.Color("#1A3A88") }, uA: { value: 0.0 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -223,28 +223,28 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
   scene.add(mapMesh);
 
   // ---- numbers floor (tilted plane of percentages)
-  const numAtlas = new GlyphAtlas({ font: `italic 700 96px ${FONT_INTER}`, fontPx: 96, chars: "0123456789%", cellW: 96, cellH: 128 });
+  const numAtlas = new GlyphAtlas({ font: `italic 500 96px ${FONT_INTER}`, fontPx: 96, chars: "0123456789%", cellW: 96, cellH: 128 });
   const floorUp = new THREE.Vector3(0, Math.sin(0.72), -Math.cos(0.72)).normalize(); // recedes upward
   const numbers = new SpriteLayer(numAtlas, 8000, { billboard: false, depthWrite: true, right: new THREE.Vector3(1, 0, 0), up: floorUp });
   scene.add(numbers.mesh);
   type Num = { u: number; w: number; text: string; red: boolean; b: number };
-  const NUM_COLS = 13, NUM_ROWS = 30, ROW_GAP = 1.35, COL_GAP = 2.9;
+  const NUM_COLS = 15, NUM_ROWS = 30, ROW_GAP = 1.6, COL_GAP = 3.0;
   const nums: Num[] = [];
   const vals = ["10%", "30%", "36%", "20%", "0%", "10%", "36%", "30%"];
   for (let r = 0; r < NUM_ROWS; r++)
     for (let q = 0; q < NUM_COLS; q++) {
-      if (rng() < 0.42) continue;
-      nums.push({ u: (q - NUM_COLS / 2 + (rng() - 0.5) * 0.7 + (r % 2) * 0.5) * COL_GAP, w: r * ROW_GAP + rng() * 0.3, text: vals[Math.floor(rng() * vals.length)], red: rng() < 0.16, b: 0.6 + rng() * 0.4 });
+      if (rng() < 0.3) continue;
+      nums.push({ u: (q - NUM_COLS / 2 + (rng() - 0.5) * 0.3 + (r % 2) * 0.5) * COL_GAP, w: r * ROW_GAP + rng() * 0.15, text: vals[Math.floor(rng() * vals.length)], red: rng() < 0.25, b: 0.6 + rng() * 0.4 });
     }
   const floorOrigin = new THREE.Vector3(0, -7.5, 5.0);
   const floorLen = NUM_ROWS * ROW_GAP;
 
   // ---- headline word
   const hl = buildHeadlineTexture(v.headline);
-  const hlWidth = Math.min(12.6, v.headline.length * 1.6) / hl.textFrac;
+  const hlWidth = Math.min(14, v.headline.length * 1.85) / hl.textFrac;
   const hlH = hlWidth / hl.aspect;
   const hlGroup = new THREE.Group();
-  hlGroup.position.set(0.3, 2.3, 1.0);
+  hlGroup.position.set(-1.0, 2.4, 1.0);
   scene.add(hlGroup);
   const hlFaceMat = new THREE.ShaderMaterial({
     glslVersion: THREE.GLSL3,
@@ -293,13 +293,37 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
     m.renderOrder = 10;
     hlGroup.add(m);
   }
+  // translucent dark-red panel behind the word
+  const hlPanelMat = new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    vertexShader: quadVert,
+    fragmentShader: /* glsl */ `
+    precision highp float; uniform float uA;
+    in vec2 vUv; out vec4 o;
+    void main(){
+      float e = smoothstep(0.0, 0.06, vUv.x) * smoothstep(1.0, 0.94, vUv.x) * smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.88, vUv.y);
+      float a = 0.45 * e * uA;
+      if (a < 0.02) discard;
+      o = vec4(vec3(0.16, 0.0, 0.015) * a, a);
+    }`,
+    uniforms: { uA: { value: 0 } },
+    transparent: true,
+    depthWrite: true,
+    blending: THREE.CustomBlending,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneMinusSrcAlphaFactor,
+  });
+  const hlPanel = new THREE.Mesh(new THREE.PlaneGeometry(hlWidth * hl.textFrac * 1.08, hlH * 0.62), hlPanelMat);
+  hlPanel.position.set(-hlWidth * 0.01, -hlH * 0.03, -0.25);
+  hlPanel.renderOrder = 9;
+  hlGroup.add(hlPanel);
   const hlFace = new THREE.Mesh(hlGeo, hlFaceMat);
   hlFace.renderOrder = 11;
   hlGroup.add(hlFace);
 
   // ---- ticker band
   const tk = buildTickerTexture(v.keywords);
-  const bandW = 34, bandH = 1.75;
+  const bandW = 38, bandH = 2.0;
   const band = new THREE.Group();
   band.position.set(0.8, 0.2, 1.6);
   scene.add(band);
@@ -311,9 +335,14 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
     in vec2 vUv; out vec4 o;
     void main(){
       float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x);
-      vec3 c = mix(vec3(0.06,0.08,0.14), vec3(0.32,0.36,0.46), smoothstep(0.0, 1.0, vUv.y));
-      c += vec3(0.6,0.65,0.75) * smoothstep(0.93, 0.97, vUv.y) * smoothstep(1.0, 0.97, vUv.y);
-      float a = 0.22 * edge * uA;
+      // streaky light band: faint fill plus thin horizontal light lines
+      vec3 c = vec3(0.30,0.36,0.50) * 0.35;
+      float streak = 0.0;
+      streak += exp(-pow((vUv.y - 0.96) * 60.0, 2.0)) * 1.0;
+      streak += exp(-pow((vUv.y - 0.05) * 60.0, 2.0)) * 0.7;
+      streak += exp(-pow((vUv.y - 0.88) * 90.0, 2.0)) * 0.35;
+      c += vec3(0.55,0.62,0.8) * streak;
+      float a = (0.12 + 0.55 * streak) * edge * uA;
       if (a < 0.02) discard;
       o = vec4(c * a, a);
     }`,
@@ -345,7 +374,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
       a /= 9.0;
       a *= edge * uA;
       if (a < 0.03) discard;
-      o = vec4(vec3(1.0, 1.0, 1.02) * a * 1.15, a);
+      o = vec4(vec3(0.78, 0.8, 0.86) * a, a);
     }`,
     uniforms: { tMap: { value: tk.tex }, uOff: { value: 0 }, uRep: { value: repeatU }, uSmear: { value: 0.004 }, uA: { value: 0 } },
     transparent: true,
@@ -368,8 +397,8 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
   flash.position.set(0, 0, -1);
   scene.add(camera);
 
-  const cyan = new THREE.Color(CYAN);
-  const red = new THREE.Color("#E81A2A");
+  const cyan = new THREE.Color("#30B0D0");
+  const red = new THREE.Color("#D01010");
 
   return {
     scene,
@@ -386,15 +415,15 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
 
       // ---- camera: slight angle, slow drift
       const drift = smoothstep(60, 450, frame);
-      const ang = -0.2 + 0.07 * drift;
-      const dist = 19.5 - 1.4 * drift;
+      const ang = -0.42 + 0.07 * drift;
+      const dist = 22 - 1.4 * drift;
       camera.position.set(Math.sin(ang) * dist + 0.6, 0.6 + 0.4 * drift, Math.cos(ang) * dist);
-      camera.up.set(Math.sin(0.06), Math.cos(0.06), 0);
+      camera.up.set(Math.sin(0.13), Math.cos(0.13), 0);
       camera.lookAt(0.2, 0.5 + 0.1 * drift, 0);
       camera.updateMatrixWorld();
 
       (bg.material as THREE.ShaderMaterial).uniforms.uOn.value = 0.55 + 0.45 * smoothstep(0, 30, frame);
-      panelMat.uniforms.uA.value = 0.18 * mapOn + 0.25 * mapFlash;
+      panelMat.uniforms.uA.value = 0.12 * mapOn + 0.2 * mapFlash;
       mapMat.uniforms.uA.value = mapOn * (1 + 0.8 * mapFlash);
 
       // number floor: scrolls slowly toward the camera
@@ -405,7 +434,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
         const fadeIn = smoothstep(0, 2.5, w) * smoothstep(floorLen, floorLen - 4, w);
         const a = mapOn * (1 + 0.7 * mapFlash) * fadeIn * n.b;
         const base = n.red ? red : cyan;
-        const k = 1.25 * a;
+        const k = 0.95 * a;
         const ax = floorOrigin.x + n.u;
         const ay = floorOrigin.y + floorUp.y * w;
         const az = floorOrigin.z + floorUp.z * w;
@@ -421,6 +450,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
       hlFaceMat.uniforms.uFlash.value = 1.4 * hlFlash;
       hlFaceMat.uniforms.uA.value = hlOn * smoothstep(60, 62, frame);
       extrudeMat.uniforms.uA.value = hlOn * smoothstep(61, 66, frame);
+      hlPanelMat.uniforms.uA.value = hlOn * smoothstep(62, 70, frame);
       flashMat.opacity = 0.14 * hlFlash + 0.04 * mapFlash;
 
       // ticker
@@ -434,16 +464,16 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
 
       void TAU;
       return {
-        focusNear: 16.8,
-        focusFar: 18.9,
-        nearBlurAt: 12.0,
-        farBlurAt: 25,
-        nearCoc: 0.006,
-        farCoc: 0.004,
-        bloom: 0.22,
+        focusNear: 19.0,
+        focusFar: 21.8,
+        nearBlurAt: 13.0,
+        farBlurAt: 30,
+        nearCoc: 0.003,
+        farCoc: 0.0022,
+        bloom: 0.12,
         bloomRadius: 0.5,
-        exposure: 1.05,
-        vignette: 0.85,
+        exposure: 0.95,
+        vignette: 0.9,
         grain: 0.015,
         saturation: 1.05,
       };
