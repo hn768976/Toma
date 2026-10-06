@@ -21,7 +21,9 @@ const FACTORIES: Record<Version["look"], LookFactory<never>> = {
   mapTicker: mapTicker as LookFactory<never>,
 };
 
-const LookComp: React.FC<{ look: Version["look"]; params: Version["params"] }> = ({ look, params }) => (
+type CompProps = { look: Version["look"]; params: Version["params"]; loopCheck?: boolean };
+
+const LookComp: React.FC<CompProps> = ({ look, params }) => (
   <LookCanvas factory={FACTORIES[look]} params={params as never} />
 );
 
@@ -32,8 +34,13 @@ export const RemotionRoot: React.FC = () => (
         key={v.id}
         id={v.id}
         component={LookComp}
-        defaultProps={{ look: v.look, params: v.params }}
+        defaultProps={{ look: v.look, params: v.params } as CompProps}
         durationInFrames={FRAMES}
+        // Loop check (README): `--props='{"loopCheck":true}'` makes it 601 frames
+        // so frame 600 can be rendered and compared with frame 0.
+        calculateMetadata={({ props }) => ({
+          durationInFrames: (props as { loopCheck?: boolean }).loopCheck ? FRAMES + 1 : FRAMES,
+        })}
         fps={FPS}
         width={W}
         height={H}

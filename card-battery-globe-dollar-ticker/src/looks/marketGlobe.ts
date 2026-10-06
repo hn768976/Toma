@@ -43,7 +43,7 @@ const candleStrip = (gl: WebGLRenderer, r: Rng, p: MarketGlobeParams, n: number,
   const colors = cs.map((k) => {
     const up = k.c >= k.o;
     const x = r();
-    return !up && x < 0.45 ? p.red : x < 0.45 ? "#EAF6FF" : p.cyan;
+    return !up && x < 0.07 ? p.red : x < 0.45 ? "#EAF6FF" : p.cyan;
   });
   drawCandles(ctx, cs, 0, h * 0.06, w, h * 0.88, {
     up: "#fff",
@@ -77,7 +77,7 @@ const barStrip = (gl: WebGLRenderer, r: Rng, n: number, color: string, w = 2048,
     g.addColorStop(0, color);
     g.addColorStop(1, "rgba(80,160,255,0.0)");
     ctx.fillStyle = g;
-    ctx.fillRect(i * slot + slot * 0.18, h - bh, slot * 0.64, bh);
+    ctx.fillRect(i * slot + slot * 0.3, h - bh, slot * 0.4, bh);
   });
   return canvasTexture(c, gl, { repeat: true });
 };
@@ -106,10 +106,12 @@ const areaStrip = (gl: WebGLRenderer, r: Rng, n: number, w = 2048, h = 256) => {
 /** Thin frame / grid overlay texture (static HUD panel). */
 const panelTex = (gl: WebGLRenderer, w = 1024, h = 512) => {
   const { c, ctx } = makeCanvas(w, h);
-  ctx.strokeStyle = "rgba(150,200,255,0.35)";
+  ctx.strokeStyle = "rgba(170,215,255,0.55)";
   ctx.lineWidth = 2;
+  ctx.setLineDash([10, 8]);
   ctx.strokeRect(2, 2, w - 4, h - 4);
-  ctx.strokeStyle = "rgba(150,200,255,0.12)";
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(150,200,255,0.10)";
   ctx.lineWidth = 1;
   for (let x = 0; x < w; x += 64) {
     ctx.beginPath();
@@ -185,12 +187,12 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
       vec3 top = uTop;
       vec3 bot = uBot;
       float y = vUv.y;
-      col = mix(bot * 1.3, mix(bot, top, 0.55) * 1.4, smoothstep(0.1, 1.0, y));
+      col = mix(bot * 1.0, mix(bot, top, 0.6), smoothstep(0.1, 1.0, y));
       col += uBot * 0.5 * exp(-pow((vUv.x - 0.3) * 1.6, 2.0)) * smoothstep(0.9, 0.3, y);
       // brighter haze around the horizon
       col += uBot * 0.9 * exp(-pow((y - 0.36) * 5.0, 2.0));
       // violet tint, upper right
-      col += vec3(0.05, 0.0, 0.09) * smoothstep(0.55, 1.0, vUv.x) * smoothstep(0.3, 1.0, y);
+      col += vec3(0.09, 0.0, 0.12) * smoothstep(0.7, 1.0, vUv.x) * smoothstep(0.6, 1.0, y);
       `,
       { uTop: { value: new Color(params.bgTop) }, uBot: { value: new Color(params.bgBottom) } },
       shared,
@@ -217,7 +219,7 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
       varying vec3 vW;
       varying float vDist;
       void main() {
-        vec2 p = vW.xz / 1.5 + vec2(0.0, uScroll);
+        vec2 p = vW.xz / 2.6 + vec2(0.0, uScroll);
         vec2 f = abs(fract(p) - 0.5);
         vec2 fw = fwidth(p);
         float blur = 0.35 * cocPx(vDist) * max(fw.x, fw.y);
@@ -231,7 +233,7 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
         vec2 cell = floor(p);
         float hi = step(0.93, hash12(cell * 1.37 + 3.1));
         float fade = exp(-vDist * 0.022) * smoothstep(2.0, 6.0, vDist);
-        gl_FragColor = vec4(uC * sq * (2.2 + hi * 3.0) * fade, 0.0);
+        gl_FragColor = vec4(uC * sq * (1.2 + hi * 1.5) * fade, 0.0);
       }`,
     transparent: true,
     depthWrite: false,
@@ -254,13 +256,13 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
     rowStepDeg: 0.75,
     dotStepDeg: 0.4,
     dotSize: 0.06,
-    landGain: 0.8,
-    oceanGain: 0.34,
-    coastGain: 0.7,
+    landGain: 0.55,
+    oceanGain: 0.14,
+    coastGain: 0.5,
     backFace: 0.06,
     rim: new Color("#6AB0FF"),
-    rimGain: 0.8,
-    bodyGain: 0.05,
+    rimGain: 0.3,
+    bodyGain: 0.012,
   });
   globe.group.position.set(9.4, 0.6, -15);
   globe.group.rotation.set(0.32, 0, -0.18);
@@ -286,22 +288,24 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
   };
   const white = new Color(1, 1, 1);
   // mid layer (in focus): candles + line chart
-  addStrip(candleStrip(gl, rng, params, 220, 4096, 1024), 9.5, 3.0, [-3.4, 1.0, 0], { color: white.clone().multiplyScalar(1.5), frac: 0.45, cycles: 1 });
+  addStrip(candleStrip(gl, rng, params, 220, 4096, 1024), 9.5, 4.6, [-3.4, 1.5, 0], { color: white.clone().multiplyScalar(1.5), frac: 0.45, cycles: 1 });
   addStrip(lineStrip(gl, rng, 40), 9.0, 1.4, [-3.2, 0.6, 0.2], { color: white.clone().multiplyScalar(1.3), frac: 0.5, cycles: 1 });
-  addStrip(candleStrip(gl, rng, params, 160, 4096, 1024), 6.5, 2.6, [-5.2, 1.4, -2.0], { color: white.clone().multiplyScalar(1.15), frac: 0.4, cycles: 1 });
+  addStrip(candleStrip(gl, rng, params, 160, 4096, 1024), 6.5, 4.0, [-5.2, 2.0, -2.0], { color: white.clone().multiplyScalar(1.15), frac: 0.4, cycles: 1 });
   // near layer (soft): candles at the left edge
   addStrip(candleStrip(gl, rng, params, 120, 4096, 1024), 4.2, 3.6, [-6.6, 1.0, 4.0], { color: white.clone().multiplyScalar(1.1), frac: 0.35, cycles: 2 });
   // far layers
-  addStrip(barStrip(gl, rng, 80, "#9AD4FF"), 9.0, 2.0, [-4.0, 1.3, -6], { color: white.clone().multiplyScalar(0.9), frac: 0.5, cycles: 1 });
+  addStrip(barStrip(gl, rng, 160, "#9AD4FF"), 9.0, 1.4, [-4.0, 2.4, -6], { color: white.clone().multiplyScalar(0.8), frac: 0.5, cycles: 1 });
+  addStrip(lineStrip(gl, rng, 28), 7.0, 1.6, [-5.6, -0.2, 1.2], { color: white.clone().multiplyScalar(1.1), frac: 0.5, cycles: 1 });
   addStrip(areaStrip(gl, rng, 60), 6.0, 1.1, [-5.5, 3.4, -9], { color: white.clone().multiplyScalar(0.8), frac: 0.5, cycles: 1 });
   addStrip(candleStrip(gl, rng, params, 120), 12.0, 3.2, [0.5, 1.0, -12], { color: white.clone().multiplyScalar(0.75), frac: 0.5, cycles: 1, rotY: 0.1 });
   addStrip(barStrip(gl, rng, 50, "#CFE8FF"), 4.0, 1.2, [-7.6, 2.7, -3.0], { color: white.clone().multiplyScalar(0.9), frac: 0.6, cycles: 1 });
   // HUD panels behind charts
   const pTex = panelTex(gl);
   for (const [x, y, z, w, h] of [
-    [-6.4, 2.5, -2.0, 3.4, 1.8],
-    [-1.2, 2.4, -4.5, 3.2, 1.6],
-    [-7.8, -0.6, 1.5, 2.6, 1.4],
+    [-6.4, 3.0, -2.0, 3.4, 1.8],
+    [-1.2, 3.2, -4.5, 3.2, 1.6],
+    [-7.8, -0.9, 1.5, 2.6, 1.4],
+    [-3.8, -1.6, -1.0, 4.0, 1.2],
   ] as const) {
     const m = makeTexPlane({ map: pTex, shared, width: w, height: h, color: new Color(0.6, 0.8, 1.4), opacity: 0.8 });
     m.position.set(x, y, z);
@@ -311,18 +315,18 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
   }
   // Donuts
   const donuts = [
-    makeDonut(shared, 1.3, white.clone().multiplyScalar(1.6), 0.1, 1),
-    makeDonut(shared, 0.75, cyan.clone().multiplyScalar(1.5), 0.6, 2),
-    makeDonut(shared, 0.7, cyan.clone().multiplyScalar(1.3), 0.3, 1),
-    makeDonut(shared, 0.65, white.clone().multiplyScalar(1.2), 0.8, 1),
-    makeDonut(shared, 1.1, white.clone().multiplyScalar(0.9), 0.45, 1),
+    makeDonut(shared, 0.8, white.clone().multiplyScalar(1.5), 0.1, 1),
+    makeDonut(shared, 0.42, cyan.clone().multiplyScalar(1.2), 0.6, 2),
+    makeDonut(shared, 0.42, cyan.clone().multiplyScalar(1.1), 0.3, 1),
+    makeDonut(shared, 0.45, white.clone().multiplyScalar(1.0), 0.8, 1),
+    makeDonut(shared, 0.9, cyan.clone().multiplyScalar(0.6), 0.45, 1),
   ];
   const dPos: [number, number, number][] = [
-    [0.4, 1.7, 0.4],
-    [-1.4, 0.0, 0.4],
-    [-0.6, 0.0, 0.4],
-    [-8.0, 1.6, 3.0],
-    [4.0, 0.8, -6],
+    [-0.5, 1.9, 0.4],
+    [-1.0, 0.1, 0.4],
+    [-0.4, 0.1, 0.4],
+    [-7.4, 2.2, 2.0],
+    [7.5, 1.4, -8],
   ];
   donuts.forEach((d, i) => {
     d.position.set(...dPos[i]);
@@ -338,15 +342,15 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
   const labels: LabelSpec[] = [];
   for (let i = 0; i < 110; i++) {
     const z = 2.5 - rng() * 20;
-    const x = -10 + rng() * 13 + (z < -10 ? 5 : 0);
-    const y = -2.4 + rng() * 6.2;
+    const x = -10.5 + rng() * (z < -10 ? 14 : 11);
+    const y = -2.2 + rng() * 7.0;
     labels.push({
       pos: [x, y, z],
       cell: (i * 4) % 252,
       variants: 4,
       period: 15, // 600 / 15 = 40 steps; 40 % 4 = 0 → loops
       phase: Math.floor(rng() * 60) * 15,
-      height: 0.36 + rng() * 0.22,
+      height: 0.2 + rng() * 0.12,
       color: rng() < 0.85 ? [1.3, 1.4, 1.6] : [0.5, 1.2, 1.7],
     });
   }
@@ -356,13 +360,13 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
 
   // ── Post ──────────────────────────────────────────────────────────────
   const post = defaultPost();
-  post.bloomStrength = 0.75;
-  post.bloomThreshold = 0.6;
+  post.bloomStrength = 0.5;
+  post.bloomThreshold = 0.85;
   post.bloomRadius = 0.7;
   post.vignette = 0.3;
   shared.uFocus.value = 12.5;
   shared.uFocusRange.value = 1.5;
-  shared.uAperture.value = 0.03;
+  shared.uAperture.value = 0.018;
   shared.uNearMul.value = 1.0;
   shared.uMaxCoc.value = 0.012;
 
@@ -374,7 +378,8 @@ export const marketGlobe: LookFactory<MarketGlobeParams> = ({ gl, assets, shared
     lookAt.set(0.4 * Math.sin(ph), 1.05, 0);
     camera.lookAt(lookAt);
     camera.updateMatrixWorld();
-    globe.spin.rotation.y = -(frame / LOOP) * TAU; // one full turn per loop
+    // one full turn per loop; phase chosen so Africa/Europe face the camera mid-loop
+    globe.spin.rotation.y = -(frame / LOOP) * TAU + 2.6;
     layers.forEach((l) => {
       const u = (l.mesh.material as ShaderMaterial).uniforms.uUvRect.value as Vector4;
       u.set(l.frac, 1, l.phase + (frame / LOOP) * l.cycles, 0);

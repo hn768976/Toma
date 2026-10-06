@@ -48,7 +48,7 @@ const CW = 8.56;
 const CH = 5.398;
 const CR = 0.32;
 const CT = 0.1; // thickness (slightly exaggerated so the edge reads)
-const FLOAT_Y = 0.42;
+const FLOAT_Y = 0.24;
 const CARD_YAW = -0.36;
 
 const TW = 2048;
@@ -70,7 +70,7 @@ const buildCardMaps = (p: PaymentParams, gl: WebGLRenderer) => {
   hctx.fillStyle = "#000";
   hctx.fillRect(0, 0, TW, TH);
   const m = rm.ctx;
-  m.fillStyle = gold ? "rgb(255, 92, 255)" : "rgb(255, 120, 0)";
+  m.fillStyle = gold ? "rgb(255, 92, 255)" : "rgb(255, 70, 0)";
   m.fillRect(0, 0, TW, TH);
   if (gold) {
     // brushed streaks: thin horizontal lines in albedo + roughness
@@ -114,9 +114,9 @@ const buildCardMaps = (p: PaymentParams, gl: WebGLRenderer) => {
   const chipGold = p.chip === "gold";
   const cg = a.createLinearGradient(cx, cy, cx + cw, cy + ch);
   if (chipGold) {
-    cg.addColorStop(0, "#F3D98A");
-    cg.addColorStop(0.45, "#D7AE52");
-    cg.addColorStop(1, "#B3842E");
+    cg.addColorStop(0, "#FBE7A0");
+    cg.addColorStop(0.5, "#E8C46A");
+    cg.addColorStop(1, "#D0A44C");
   } else {
     cg.addColorStop(0, "#F2F3F5");
     cg.addColorStop(0.5, "#C5C9CF");
@@ -126,7 +126,7 @@ const buildCardMaps = (p: PaymentParams, gl: WebGLRenderer) => {
   a.fillStyle = cg;
   a.fill();
   roundRect(m, cx, cy, cw, ch, TW * 0.016);
-  m.fillStyle = "rgb(255, 70, 255)";
+  m.fillStyle = "rgb(255, 90, 150)";
   m.fill();
   roundRect(hctx, cx, cy, cw, ch, TW * 0.016);
   hctx.fillStyle = "#606060";
@@ -143,7 +143,7 @@ const buildCardMaps = (p: PaymentParams, gl: WebGLRenderer) => {
   ];
   for (const [x0, y0, x1, y1] of lines) {
     for (const [ctx, style, w] of [
-      [a, chipGold ? "rgba(120,80,20,0.75)" : "rgba(80,85,95,0.75)", 5],
+      [a, chipGold ? "rgba(150,105,30,0.35)" : "rgba(90,95,105,0.35)", 3],
       [hctx, "#202020", 6],
     ] as const) {
       ctx.strokeStyle = style;
@@ -178,7 +178,7 @@ const buildCardMaps = (p: PaymentParams, gl: WebGLRenderer) => {
     a.fillText(s, x, y);
     hctx.fillStyle = "#FFFFFF";
     hctx.fillText(s, x, y);
-    m.fillStyle = gold ? "rgb(255, 150, 0)" : "rgb(255, 60, 255)";
+    m.fillStyle = gold ? "rgb(255, 150, 0)" : "rgb(255, 80, 40)";
     m.fillText(s, x, y);
   };
   text("1234 5678 9101 1234", TW * 0.08, TH * 0.64, TH * 0.098, FONT.card, "left", TH * 0.006);
@@ -266,12 +266,12 @@ const nodeTexture = (symbol: string, gl: WebGLRenderer) => {
   const cx = S / 2;
   // outer ring
   ctx.strokeStyle = "rgba(255,255,255,1)";
-  ctx.lineWidth = S * 0.035;
+  ctx.lineWidth = S * 0.03;
   ctx.beginPath();
-  ctx.arc(cx, cx, S * 0.4, 0, Math.PI * 2);
+  ctx.arc(cx, cx, S * 0.42, 0, Math.PI * 2);
   ctx.stroke();
   // faint inner ring
-  ctx.strokeStyle = "rgba(255,255,255,0.28)";
+  ctx.strokeStyle = "rgba(255,255,255,0.0)";
   ctx.lineWidth = S * 0.012;
   ctx.beginPath();
   ctx.arc(cx, cx, S * 0.33, 0, Math.PI * 2);
@@ -297,7 +297,7 @@ const nodeTexture = (symbol: string, gl: WebGLRenderer) => {
     ctx.fillRect(x, top + S * 0.29, w, S * 0.03);
     ctx.fillRect(x - S * 0.03, top + S * 0.335, w + S * 0.06, S * 0.03);
   } else {
-    ctx.font = `600 ${S * 0.38}px "${FONT.inter}"`;
+    ctx.font = `700 ${S * 0.46}px "${FONT.inter}"`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(symbol, cx, cx + S * 0.015);
@@ -330,12 +330,12 @@ const shadowTexture = (gl: WebGLRenderer) => {
 };
 
 // Final camera (after the settle). Elevation 35°.
-const CAM_DIST = 23.5;
+const CAM_DIST = 32;
 const CAM_EL = (35 * Math.PI) / 180;
 const TARGET = new Vector3(0.15, 0, 0.35);
 
 const finalCamera = (aspect: number) => {
-  const cam = new PerspectiveCamera(30, aspect, 0.5, 200);
+  const cam = new PerspectiveCamera(22, aspect, 0.5, 300);
   cam.position.set(TARGET.x, TARGET.y + CAM_DIST * Math.sin(CAM_EL), TARGET.z + CAM_DIST * Math.cos(CAM_EL));
   cam.lookAt(TARGET);
   cam.updateMatrixWorld();
@@ -362,7 +362,7 @@ const NODES: { sym: string; ndc: [number, number] }[] = [
   { sym: "₹", ndc: [-0.65, -0.19] },
 ];
 
-const NODE_R = 1.05; // node disc radius (world)
+const NODE_R = 0.7; // node disc radius (world)
 const T_LINES = 5.3; // first line starts growing (s)
 const WAVE_TIMES = [10.6, 15.6];
 
@@ -380,9 +380,9 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
       /* glsl */ `
       vec3 navy = vec3(0.0006, 0.0037, 0.0232);
       vec3 blue = vec3(0.006, 0.03, 0.16);
-      float pool = exp(-pow(length((vUv - vec2(0.05, 0.08)) * vec2(1.0, 1.5)), 2.0) * 3.2);
+      float pool = exp(-pow(length((vUv - vec2(0.05, 0.08)) * vec2(1.0, 1.5)), 2.0) * 5.0);
       float top = smoothstep(0.55, 1.0, vUv.y);
-      col = mix(navy, blue, pool * 0.85) * (1.0 - top * 0.35);
+      col = mix(navy, blue, pool * 0.6) * (1.0 - top * 0.35);
       `,
       {},
       shared,
@@ -391,13 +391,13 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
 
   // ── Card ───────────────────────────────────────────────────────────────────
   opaque.environment = buildEnvironment(gl);
-  opaque.environmentIntensity = params.finish === "gold" ? 1.0 : 1.15;
+  opaque.environmentIntensity = params.finish === "gold" ? 1.1 : 1.5;
   const maps = buildCardMaps(params, gl);
   const { body, face } = cardGeometry();
   const gold = params.finish === "gold";
   const bodyMat = new MeshPhysicalMaterial({
     color: new Color(params.body).multiplyScalar(gold ? 1 : 1.6),
-    roughness: gold ? 0.3 : 0.32,
+    roughness: gold ? 0.3 : 0.2,
     metalness: gold ? 1 : 0.2,
     clearcoat: gold ? 0.2 : 0.5,
     clearcoatRoughness: 0.2,
@@ -411,7 +411,7 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
     roughness: 1,
     metalness: 1,
     clearcoat: gold ? 0.25 : 0.55,
-    clearcoatRoughness: gold ? 0.3 : 0.38,
+    clearcoatRoughness: gold ? 0.3 : 0.16,
     anisotropy: gold ? 0.75 : 0,
     anisotropyRotation: 0,
   });
@@ -430,7 +430,7 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
   const MAP_K = 0.17; // world units per degree
   const MAP_LON0 = 8; // lon/lat under the card
   const MAP_LAT0 = 30;
-  const grid = landGrid(assets, 0.62, { minLat: -58, maxLat: 80 });
+  const grid = landGrid(assets, 0.5, { minLat: -58, maxLat: 80 });
   const mapPos: number[] = [];
   for (let i = 0; i < grid.length; i += 2) {
     const x = (grid[i] - MAP_LON0) * MAP_K;
@@ -442,14 +442,13 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
     count: mapPos.length / 3,
     attrs: { iPos: attr(3, mapPos) },
     shared,
-    square: true,
     uniforms: { uReveal: { value: 0 }, uMapCol: { value: new Color("#1A3A6A") } },
     hook: /* glsl */ `
-      sizeW = 0.06;
+      sizeW = 0.05;
       float r = length(pos.xz);
       float rev = smoothstep(uReveal, uReveal - 5.0, r);
       float far = smoothstep(-36.0, -12.0, pos.z) * smoothstep(34.0, 18.0, abs(pos.x));
-      col = uMapCol * 1.6;
+      col = uMapCol * 1.0;
       alpha = rev * far;
       minPx = 1.0;
     `,
@@ -512,13 +511,10 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
   });
   // Stubs that run off the frame without a node (as in the reference)
   const stubs: [number, number][][] = [
-    [[1.6, -1.2], [1.6, -5.5], [7.5, -5.5], [7.5, -14]],
-    [[-1.8, 1.0], [-5.2, 1.0], [-5.2, 6.5], [-12, 6.5], [-12, 12]],
-    [[2.4, 0.9], [6.0, 0.9], [6.0, 3.6], [16, 3.6]],
-    [[-2.0, -0.8], [-6.5, -0.8], [-6.5, -3.0], [-22, -3.0]],
-    [[0.6, 1.3], [0.6, 7.0], [3.4, 7.0], [3.4, 14]],
-    [[-0.9, -1.3], [-0.9, -8.5], [-3.4, -8.5], [-3.4, -22]],
-    [[2.0, -1.0], [10.5, -1.0], [10.5, -7.5], [24, -7.5]],
+    [[1.6, -1.2], [1.6, -4.6], [5.0, -4.6], [5.0, -7.5]],
+    [[-1.8, 1.0], [-4.6, 1.0], [-4.6, 4.2], [-7.5, 4.2]],
+    [[2.4, 0.9], [5.2, 0.9], [5.2, 3.0], [8.5, 3.0]],
+    [[-0.9, -1.3], [-0.9, -5.2], [-3.0, -5.2], [-3.0, -7.6]],
   ];
   stubs.forEach((pts, i) => paths.push({ pts, t0: T_LINES + 0.6 + i * 0.27, dur: 2.2, node: -1 }));
 
@@ -565,7 +561,7 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
   });
   // fill total path length into the attribute
   for (let i = 0; i < segP.length / 4; i++) segP[i * 4 + 1] = pathLen[segP[i * 4 + 3]];
-  const lineCol = new Color("#1F6BFF").multiplyScalar(1.1);
+  const lineCol = new Color("#1F6BFF").multiplyScalar(0.85);
   const lines = makeSegments({
     count: segA.length / 3,
     attrs: { iA: attr(3, segA), iB: attr(3, segB), iS: attr(2, segS), iP: attr(4, segP) },
@@ -573,12 +569,12 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
     capB: true,
     uniforms: { uLineCol: { value: lineCol }, uPulseCol: { value: new Color(params.accent) } },
     hook: /* glsl */ `
-      widthW = 0.038;
+      widthW = 0.03;
       minPx = 1.0;
       col = uLineCol;
       data = iP;
       float rr = length(mix(a.xz, b.xz, 0.5));
-      alpha = smoothstep(26.0, 13.0, rr);
+      alpha = smoothstep(15.0, 8.5, rr);
     `,
     fragHook: /* glsl */ `
       float t0 = vData.x;
@@ -597,7 +593,7 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
       float ph = fract((vS - (uTime - t0 - dur) * sp) / spacing + hash11(pid * 3.7));
       float pulse = smoothstep(0.82, 0.97, ph) * (1.0 - smoothstep(0.97, 1.0, ph));
       pulse *= smoothstep(t0 + dur, t0 + dur + 0.8, uTime);
-      fcol = fcol * (1.0 + head * 3.0) + uPulseCol * vCol.b / max(uLineCol.b, 1e-3) * pulse * 3.5;
+      fcol = fcol * (1.0 + head * 3.0) + uPulseCol * vCol.b / max(uLineCol.b, 1e-3) * pulse * 1.6;
     `,
   });
   lines.renderOrder = 3;
@@ -619,7 +615,7 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
       shared,
       width: NODE_R * 2,
       height: NODE_R * 2,
-      color: accent.clone().multiplyScalar(2.2),
+      color: accent.clone().multiplyScalar(1.5),
       fragHook: /* glsl */ `
         // symbol (inner) whiter than the ring
         float rr = length(vUv - 0.5);
@@ -668,7 +664,7 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
       float lt = uTime - te - iW.z * 0.22;
       float life = 1.6;
       float p = clamp(lt / life, 0.0, 1.0);
-      float rad = 5.4 + p * 3.2 + iW.z * 0.55;
+      float rad = 4.25 + p * 1.9 + iW.z * 0.42;
       float ang0 = iW.x - uYaw;
       float ang1 = iW.y - uYaw;
       a = uCenter + vec3(cos(ang0) * rad, 0.0, -sin(ang0) * rad * 0.82);
@@ -677,8 +673,8 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
       float local = iW.x > 1.6 ? iW.x - 3.14159265 : iW.x;
       float edge = cos(clamp(local / 0.72, -1.0, 1.0) * 1.5707963);
       alpha = (lt > 0.0 && lt < life) ? fade * (0.55 + 0.45 * edge) : 0.0;
-      widthW = 0.075;
-      col = uWaveCol * 3.0;
+      widthW = 0.032;
+      col = uWaveCol * 2.2;
     `,
   });
   waves.renderOrder = 6;
@@ -692,8 +688,8 @@ export const paymentNetwork: LookFactory<PaymentParams> = ({ gl, assets, shared,
   post.bloomThreshold = 0.55;
   post.bloomRadius = 0.75;
   post.exposure = 1.05;
-  post.vignette = 0.3;
-  shared.uAperture.value = 0.075;
+  post.vignette = 0.5;
+  shared.uAperture.value = 0.03;
   shared.uMaxCoc.value = 0.01;
   shared.uNearMul.value = 1.0;
   shared.uFocusRange.value = 1.5;

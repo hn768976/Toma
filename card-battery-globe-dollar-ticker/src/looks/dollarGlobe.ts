@@ -162,28 +162,28 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   };
 
   // ── Far backdrop: soft vertical bars ─────────────────────────────────────
-  const backdrop = makeTexPlane({ map: barsBackdrop(gl, rng), shared, width: 110, height: 50, color: tint.clone().multiplyScalar(0.22) });
+  const backdrop = makeTexPlane({ map: barsBackdrop(gl, rng), shared, width: 110, height: 50, color: tint.clone().multiplyScalar(0.4) });
   backdrop.position.set(0, 4, -45);
   backdrop.name = "backdrop";
   overlay.add(backdrop);
 
   // ── Globe ──────────────────────────────────────────────────────────────
   const globe = makeGlobe(assets, shared, {
-    radius: 7.0,
+    radius: 6.6,
     color: tint.clone().lerp(hot, 0.25),
     oceanColor: tint,
     rowStepDeg: 1.4,
     dotStepDeg: 0.9,
     dotSize: 0.065,
-    landGain: 1.0,
+    landGain: 0.42,
     oceanGain: 0.07,
-    coastGain: 1.1,
+    coastGain: 0.45,
     backFace: 0.22,
     rim: tint,
-    rimGain: 0.45,
+    rimGain: 0.22,
     bodyGain: 0.035,
   });
-  globe.group.position.set(0, 0.2, -1.2);
+  globe.group.position.set(1.0, 0.3, -1.6);
   globe.group.rotation.set(0.35, 0, 0.12);
   globe.group.name = "globe";
   overlay.add(globe.group);
@@ -192,7 +192,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   const mask = dollarMask();
   const dH = DOLLAR_H;
   const dW = DOLLAR_H * mask.aspect;
-  const step = 0.105;
+  const step = 0.19;
   const fillPos: number[] = [];
   const fillK: number[] = [];
   const edgePos: number[] = [];
@@ -214,8 +214,9 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
           edgeK.push(k === 0 ? 1 : k === 4 ? 0.55 : 0.35, rng());
         }
       } else {
+        if (rng() < 0.12) continue; // dithered gaps, like the reference
         fillPos.push(x, y, DEPTH / 2);
-        fillK.push(1, rng());
+        fillK.push(0.6 + rng() * 0.5, rng());
         if ((i + j) % 2 === 0) {
           fillPos.push(x, y, -DEPTH / 2);
           fillK.push(0.35, rng());
@@ -226,7 +227,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   const dollarHook = (size: string, gain: string) => /* glsl */ `
     float tw = step(0.72, hash11(floor(uTime * 3.0) * 1.3 + iK.y * 91.7));
     float sp = 0.6 + 0.4 * hash11(iK.y * 17.0);
-    col = mix(uTint, uHot, 0.12 + 0.3 * sp) * iK.x * ${gain} * (1.0 + tw * 0.8);
+    col = mix(uTint, uHot, 0.4 + 0.35 * sp) * iK.x * ${gain} * (1.0 + tw * 0.6);
     alpha = uAlpha;
     sizeW = ${size};
   `;
@@ -236,7 +237,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     shared,
     square: true,
     uniforms: { uTint: { value: tint }, uHot: { value: hot }, uAlpha: { value: 0 } },
-    hook: dollarHook((step * 0.5).toFixed(4), "1.1"),
+    hook: dollarHook((step * 0.7).toFixed(4), "1.9"),
   });
   const edges = makeDots({
     count: edgePos.length / 3,
@@ -244,7 +245,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     shared,
     square: true,
     uniforms: { uTint: { value: tint }, uHot: { value: hot }, uAlpha: { value: 0 } },
-    hook: dollarHook((step * 0.75).toFixed(4), "2.4"),
+    hook: dollarHook((step * 0.8).toFixed(4), "3.2"),
   });
   fill.name = "dollar";
   edges.name = "dollar";
@@ -279,15 +280,15 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   // ── Zig-zag arrow (thick glowing ribbon, draws on) ──────────────────────
   // Points in the arrow's plane (x right, y up); crash goes down-right, rally up-right.
   const zz: [number, number][] = [
-    [-13, 0.0],
-    [-8.4, -2.2],
-    [-4.6, 0.8],
-    [-1.4, -0.8],
-    [2.2, -1.6],
-    [7.0, -4.6],
+    [-13, -0.4],
+    [-8.6, -2.6],
+    [-4.8, 0.4],
+    [-1.4, -1.2],
+    [2.0, -2.0],
+    [5.6, -4.4],
   ].map(([x, y]) => [x, up ? -y - 2.8 : y] as [number, number]);
   const ribbon = (() => {
-    const W = 0.55;
+    const W = 0.62;
     const pos: number[] = [];
     const sv: number[] = [];
     const idx: number[] = [];
@@ -370,9 +371,9 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
           float aa = fwidth(vSV.y) * 1.5;
           // bright edges, translucent body (like the reference's glassy arrow)
           float edge = smoothstep(0.62, 0.98 - aa, across);
-          float body = 0.5 + 0.25 * (1.0 - across);
+          float body = 0.55 + 0.3 * (1.0 - across);
           float shine = 0.5 + 0.5 * sin(vSV.x * 0.8 - uTime * 2.5);
-          vec3 c = uC * (body + edge * 1.3) + uHot * edge * 0.35 * shine;
+          vec3 c = uC * (body + edge * 0.7) + uHot * edge * 0.15 * shine;
           gl_FragColor = vec4(c * vis, 0.0);
         }`,
       transparent: true,
@@ -385,8 +386,14 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     const mesh = new Mesh(g, m);
     return mesh;
   })();
-  ribbon.position.set(0.5, up ? -0.4 : -0.6, 4.2);
-  ribbon.rotation.set(-0.12, up ? -0.18 : 0.18, 0);
+  ribbon.position.set(0.5, up ? -1.0 : -1.4, 4.2);
+  ribbon.rotation.set(-0.12, -0.38, 0);
+  // darker side face under the ribbon → reads as a solid 3D band
+  const sideMat = (ribbon.material as ShaderMaterial).clone();
+  sideMat.uniforms = { ...(ribbon.material as ShaderMaterial).uniforms, uC: { value: tint.clone().multiplyScalar(0.3) }, uHot: { value: tint.clone().multiplyScalar(0.1) } };
+  const ribbonSide = new Mesh(ribbon.geometry, sideMat);
+  ribbonSide.position.set(0, -0.32, -0.25);
+  ribbon.add(ribbonSide);
   ribbon.name = "arrow";
   overlay.add(ribbon);
 
@@ -394,7 +401,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   const gTex = glowTexture(gl);
   const burst = reg(makeTexPlane({ map: gTex, shared, width: 7, height: 7, color: tint.clone().lerp(hot, 0.35).multiplyScalar(2.6), opacity: 0 }));
   burst.position.set(0, -4.4, 1.2);
-  const core = reg(makeTexPlane({ map: gTex, shared, width: 1.6, height: 1.6, color: hot.clone().multiplyScalar(4.0), opacity: 0 }));
+  const core = reg(makeTexPlane({ map: gTex, shared, width: 1.6, height: 1.6, color: hot.clone().multiplyScalar(7.0), opacity: 0 }));
   core.position.set(0, -4.35, 1.3);
   const streak = reg(makeTexPlane({ map: streakTexture(gl), shared, width: 16, height: 1.0, color: tint.clone().lerp(hot, 0.4).multiplyScalar(2.2), opacity: 0 }));
   streak.position.set(0, -4.35, 1.25);
@@ -428,7 +435,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     hook: /* glsl */ `
       widthW = 0.022;
       float dc = length(a.xz - vec2(0.0, 1.0));
-      col = uC * 0.9 * exp(-dc * 0.07);
+      col = uC * 1.6 * exp(-dc * 0.06);
       alpha = uAlpha * (0.5 + 0.5 * sin(uTime * 1.3 + a.x * 0.7 + b.z));
     `,
   });
@@ -436,7 +443,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     count: pts.length,
     attrs: { iPos: attr(3, pts.flat()) },
     shared,
-    uniforms: { uC: { value: tint.clone().lerp(hot, 0.3) }, uAlpha: { value: 0 } },
+    uniforms: { uC: { value: tint.clone().lerp(hot, 0.55) }, uAlpha: { value: 0 } },
     hook: /* glsl */ `
       sizeW = 0.09;
       col = uC * 2.2 * exp(-length(pos.xz) * 0.05);
@@ -447,14 +454,43 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   plexusDots.name = "plexus";
   overlay.add(plexusLines, plexusDots);
 
+  // ── Thin wavy line charts across the right side ──────────────────────────
+  const wa: number[] = [];
+  const wb: number[] = [];
+  const wk: number[] = [];
+  for (let k = 0; k < 3; k++) {
+    const ph = rng() * 6;
+    const y0 = 1.2 - k * 0.7;
+    for (let i = 0; i < 90; i++) {
+      const x0 = -2 + i * 0.16;
+      const f = (x: number) => y0 + Math.sin(x * 0.9 + ph) * 0.35 + Math.sin(x * 2.3 + ph * 2) * 0.15;
+      wa.push(x0, f(x0), 1.6 + k * 0.4);
+      wb.push(x0 + 0.16, f(x0 + 0.16), 1.6 + k * 0.4);
+      wk.push(k);
+    }
+  }
+  const waves = makeSegments({
+    count: wa.length / 3,
+    attrs: { iA: attr(3, wa), iB: attr(3, wb), iK: attr(1, wk) },
+    shared,
+    uniforms: { uC: { value: tint.clone().lerp(hot, 0.6) }, uAlpha: { value: 0 } },
+    hook: /* glsl */ `
+      widthW = 0.022;
+      col = uC * (1.2 - iK * 0.3);
+      alpha = uAlpha * smoothstep(-2.0, 1.5, a.x) * smoothstep(13.0, 9.0, a.x);
+    `,
+  });
+  waves.name = "lines";
+  overlay.add(waves);
+
   // ── Floating numbers ─────────────────────────────────────────────────────
   const texts: string[] = [];
   for (let i = 0; i < 256; i++) texts.push((10 + rng() * 980).toFixed(2));
   const atlas = makeAtlas(gl, texts, { cellW: 256, cellH: 96, font: `600 36px "${FONT.mono}"`, color: "#ffffff", align: "center" });
   const labels: LabelSpec[] = [];
   const lc = tint.clone().lerp(hot, 0.45).multiplyScalar(1.4);
-  for (let i = 0; i < 70; i++) {
-    const z = 7 - rng() * 22;
+  for (let i = 0; i < 30; i++) {
+    const z = 9 - rng() * 22;
     labels.push({
       pos: [-14 + rng() * 28, -4 + rng() * 9.5, z],
       cell: (i * 3) % 252,
@@ -476,25 +512,26 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
   post.bloomRadius = 0.7;
   post.vignette = 0.4;
   post.saturation = 1.05;
-  shared.uFocusRange.value = 1.2;
-  shared.uAperture.value = 0.05;
+  shared.uFocusRange.value = 0.6;
+  shared.uAperture.value = 0.12;
   shared.uNearMul.value = 1.2;
   shared.uMaxCoc.value = 0.02;
 
   const U = (m: Mesh) => (m.material as ShaderMaterial).uniforms;
-  const target = new Vector3(0, -0.2, 0);
+  const target = new Vector3(0, 0.9, 0);
   const update = (frame: number) => {
     const t = frame / 30;
     // camera: slow sway
-    camera.position.set(Math.sin(t * 0.21) * 1.4, -0.6 + Math.sin(t * 0.13) * 0.3, 21 - smoothstep(0, 20, t) * 1.5);
+    camera.position.set(Math.sin(t * 0.21) * 1.4, -2.6 + Math.sin(t * 0.13) * 0.3, 21.5 - smoothstep(0, 20, t) * 1.5);
     camera.lookAt(target);
+    camera.rotateZ(0.07); // slight dutch tilt
     camera.updateMatrixWorld();
     shared.uFocus.value = camera.position.distanceTo(dollar.position);
 
     const fade = easeInOutCubic(prog(t, 1.5, 4.0));
     globe.setAlpha(fade);
     globe.spin.rotation.y = t * 0.16;
-    dollar.rotation.y = Math.sin(t * 0.35) * 0.22;
+    dollar.rotation.set(-0.1, 0.32 + Math.sin(t * 0.35) * 0.16, 0.04);
     dollar.scale.setScalar(0.92 + 0.08 * easeOutCubic(prog(t, 1.5, 4.0)));
     U(fill).uAlpha.value = fade;
     U(edges).uAlpha.value = fade;
@@ -504,6 +541,7 @@ export const dollarGlobe: LookFactory<DollarParams> = ({ gl, assets, shared, par
     U(core).uOpacity.value = fade * (0.85 + 0.3 * Math.sin(t * 3.1 + 1));
     U(streak).uOpacity.value = fade * pulse;
     U(plexusLines).uAlpha.value = fade;
+    U(waves).uAlpha.value = fade;
     U(plexusDots).uAlpha.value = fade;
     (labelMesh.material as ShaderMaterial).uniforms.uAlpha.value = fade;
     for (const b of [band, band2]) {

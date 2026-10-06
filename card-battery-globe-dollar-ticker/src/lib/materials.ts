@@ -115,11 +115,13 @@ export const makeDots = (o: DotsOptions) => {
         float core = max(px, minPx);
         float total = sqrt(core * core + coc * coc);
         float energy = (px * px) / (total * total);
-        float half_ = total * 0.5 + 1.0;
+        // defocused discs get a soft (not hard-edged) bokeh profile
+        float soft = 0.55 * coc / total;
+        float half_ = total * 0.5 * (1.0 + soft) + 1.0;
         clip.xy += position.xy * half_ / (0.5 * uResolution) * clip.w;
         vCorner = position.xy * half_ / (total * 0.5);
-        vEdge = clamp(1.0 / (total * 0.5), 0.0, 1.0);
-        vCol = col * alpha * energy;
+        vEdge = max(clamp(1.0 / (total * 0.5), 0.0, 1.0), soft);
+        vCol = col * alpha * energy * (1.0 + 0.3 * soft);
         if (alpha * energy < 1e-4) clip = vec4(2.0, 2.0, 2.0, 1.0);
         gl_Position = clip;
       }`,
