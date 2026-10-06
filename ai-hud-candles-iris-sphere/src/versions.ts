@@ -60,6 +60,7 @@ export const versions: AnyRow[] = [
     durationInFrames: 450,
     palette: {
       ring: "#3AD8E8",
+      blue: "#1A6AE8",
       cyan: "#3AE8F0",
       purple: "#C84AFF",
       gold: "#FFC83A",

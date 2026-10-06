@@ -25,6 +25,7 @@ const R = 7; // sphere radius
 const TAGS = 600;
 const TRIS = 150;
 const RINGS = 24;
+const EL = 1.04; // the ring stack is slightly taller than wide
 
 // ---------- data cloud points ----------
 const clusterPoint = (rnd: () => number, sigma: number) => {
@@ -57,8 +58,8 @@ const drawAtlas = (pal: SpherePalette) => {
         const x = c * 128;
         const y = r * 64;
         const num = `${Math.floor(r2() * 90 + 10)}.${Math.floor(r2() * 90 + 10)}`;
-        const style = (r * ATLAS_C + c) % 5;
-        if (style === 4) {
+        const style = (r * ATLAS_C + c) % 3;
+        if (style === 0) {
           // white outlined tag with white digits
           ctx.strokeStyle = pal.white;
           ctx.lineWidth = 4;
@@ -278,9 +279,9 @@ const shaftMaterial = (color: THREE.Color) =>
       uniform vec3 uColor; uniform float uAmp; varying vec2 vUv;
       void main() {
         float x = (vUv.x - 0.5) * 2.0;
-        float w = mix(0.35, 1.0, 1.0 - vUv.y);
-        float beam = exp(-pow(x / w, 2.0) * 2.5) * pow(vUv.y, 0.8);
-        float rays = 0.8 + 0.2 * sin(x * 40.0) * sin(x * 13.0 + 1.0);
+        float w = mix(0.5, 1.0, 1.0 - vUv.y);
+        float beam = exp(-pow(x / w, 2.0) * 1.6) * pow(vUv.y, 1.3);
+        float rays = 0.65 + 0.35 * pow(0.5 + 0.5 * sin(x * 31.0) * sin(x * 11.0 + 1.3), 2.0);
         gl_FragColor = vec4(uColor * beam * rays * uAmp, 1.0);
       }`,
     ...addBlend,
@@ -305,46 +306,39 @@ const build = (pal: SpherePalette) => {
   const N = 160;
   for (let i = 0; i < RINGS; i++) {
     const phi = ((i + 0.5) / RINGS) * Math.PI;
-    const y = Math.cos(phi) * R;
-    const rr = Math.sin(phi) * R;
-    for (let k = 0; k < N; k++) {
-      const a0 = (k / N) * Math.PI * 2;
-      const a1 = ((k + 1) / N) * Math.PI * 2;
-      ringSegs.push({
-        a: new THREE.Vector3(Math.cos(a0) * rr, y, Math.sin(a0) * rr),
-        b: new THREE.Vector3(Math.cos(a1) * rr, y, Math.sin(a1) * rr),
-        alpha: 0.55,
-        bright: 1.0,
-      });
+    const y = Math.cos(phi) * R * EL;
+    const pole = Math.abs(Math.cos(phi)) ** 3;
+    for (const [scale, al] of [[1, 0.45 + 0.55 * pole], [1.03, 0.35 * pole]] as const) {
+      if (al < 0.02) continue;
+      const rr = Math.sin(phi) * R * scale;
+      for (let k = 0; k < N; k++) {
+        const a0 = (k / N) * Math.PI * 2;
+        const a1 = ((k + 1) / N) * Math.PI * 2;
+        ringSegs.push({
+          a: new THREE.Vector3(Math.cos(a0) * rr, y, Math.sin(a0) * rr),
+          b: new THREE.Vector3(Math.cos(a1) * rr, y, Math.sin(a1) * rr),
+          alpha: al,
+          bright: 1.0,
+        });
+      }
     }
   }
   // orbit rings outside the sphere near the equator
-  for (const [y, rr] of [[0.6, R * 1.32], [-1.3, R * 1.22], [2.4, R * 1.12], [-3.2, R * 1.05]] as const) {
+  const ORBITS = [[0, R * 1.62], [-2.6, R * 1.45], [2.7, R * 1.42], [-5.4, R * 1.22], [5.6, R * 1.2], [-8.0, R * 0.95], [8.1, R * 0.92]] as const;
+  for (const [y, rr] of ORBITS) {
     for (let k = 0; k < N; k++) {
       const a0 = (k / N) * Math.PI * 2;
       const a1 = ((k + 1) / N) * Math.PI * 2;
-      const on = (k % 40) < 30 ? 1 : 0;
+      const on = 1;
       ringSegs.push({
         a: new THREE.Vector3(Math.cos(a0) * rr, y, Math.sin(a0) * rr),
         b: new THREE.Vector3(Math.cos(a1) * rr, y, Math.sin(a1) * rr),
-        alpha: 0.28 * on,
+        alpha: 0.11 * on,
         bright: 1.0,
       });
     }
   }
-  // faint meridian arcs
-  for (let m = 0; m < 6; m++) {
-    const th = (m / 6) * Math.PI;
-    for (let k = 0; k < 80; k++) {
-      const p0 = (k / 80) * Math.PI;
-      const p1 = ((k + 1) / 80) * Math.PI;
-      const P = (p: number) => new THREE.Vector3(Math.sin(p) * R * Math.cos(th), Math.cos(p) * R, Math.sin(p) * R * Math.sin(th));
-      ringSegs.push({ a: P(p0), b: P(p1), alpha: 0.05, bright: 1 });
-      const Q = (p: number) => new THREE.Vector3(-Math.sin(p) * R * Math.cos(th), Math.cos(p) * R, -Math.sin(p) * R * Math.sin(th));
-      ringSegs.push({ a: Q(p0), b: Q(p1), alpha: 0.05, bright: 1 });
-    }
-  }
-  const rings = lineMesh(shared, ringSegs, white.clone().multiplyScalar(1.1), 0.0006);
+  const rings = lineMesh(shared, ringSegs, white.clone().multiplyScalar(1.0), 0.00042);
   rings.renderOrder = 1;
   world.add(rings);
 
@@ -353,14 +347,8 @@ const build = (pal: SpherePalette) => {
   for (let i = 0; i < NODE_POS.length; i++) {
     for (let j = i + 1; j < NODE_POS.length; j++) {
       const d = NODE_POS[i].distanceTo(NODE_POS[j]);
-      if (d < 1.0 && plex.length < 520) plex.push({ a: NODE_POS[i], b: NODE_POS[j], alpha: 0.35 * (1 - d), bright: 1 });
+      if (d < 0.9 && plex.length < 300) plex.push({ a: NODE_POS[i], b: NODE_POS[j], alpha: 0.22 * (1 - d), bright: 1 });
     }
-  }
-  // long thin lines through the cloud (seen in the fly-through)
-  for (let i = 0; i < 26; i++) {
-    const a = clusterPoint(r, 3.0);
-    const dir = new THREE.Vector3(gaussian(r), gaussian(r) * 0.4, gaussian(r)).normalize();
-    plex.push({ a: a.clone().addScaledVector(dir, -6), b: a.clone().addScaledVector(dir, 6), alpha: 0.12, bright: 1 });
   }
   const plexus = lineMesh(shared, plex, white.clone(), 0.00045);
   plexus.renderOrder = 2;
@@ -373,12 +361,12 @@ const build = (pal: SpherePalette) => {
   const triPhase: number[] = [];
   for (let i = 0; i < TRIS; i++) {
     const a = NODE_POS[Math.floor(r() * NODE_POS.length)];
-    const s = 0.2 + Math.pow(r(), 2.5) * 0.75;
+    const s = 0.18 + Math.pow(r(), 2.5) * 0.6;
     const b = a.clone().add(new THREE.Vector3(gaussian(r), gaussian(r), gaussian(r)).normalize().multiplyScalar(s));
     const c = a.clone().add(new THREE.Vector3(gaussian(r), gaussian(r), gaussian(r)).normalize().multiplyScalar(s * (0.6 + r() * 0.6)));
     triPos.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
     triBary.push(1, 0, 0, 0, 1, 0, 0, 0, 1);
-    const al = 0.15 + r() * 0.35;
+    const al = 0.1 + r() * 0.25;
     const ph = r() * 30;
     triAlpha.push(al, al, al);
     triPhase.push(ph, ph, ph);
@@ -405,8 +393,16 @@ const build = (pal: SpherePalette) => {
     const ri = Math.floor(r() * RINGS);
     const phi = ((ri + 0.5) / RINGS) * Math.PI;
     const a = r() * Math.PI * 2;
-    dPos.push(Math.cos(a) * Math.sin(phi) * R, Math.cos(phi) * R, Math.sin(a) * Math.sin(phi) * R);
+    dPos.push(Math.cos(a) * Math.sin(phi) * R, Math.cos(phi) * R * EL, Math.sin(a) * Math.sin(phi) * R);
     dInfo.push(0.03 + r() * 0.03, 1);
+  }
+  // gold dots along the orbit rings
+  for (const [y, rr] of ORBITS) {
+    for (let k = 0; k < 26; k++) {
+      const a = r() * Math.PI * 2;
+      dPos.push(Math.cos(a) * rr, y, Math.sin(a) * rr);
+      dInfo.push(0.035 + r() * 0.03, 1);
+    }
   }
   const dg = new THREE.BufferGeometry();
   dg.setAttribute("position", new THREE.Float32BufferAttribute(dPos, 3));
@@ -426,7 +422,12 @@ const build = (pal: SpherePalette) => {
   const tp = new Float32Array(TAGS * 3);
   const ti = new Float32Array(TAGS * 4);
   TAG_POS.forEach((p, i) => {
-    tp.set([p.x, p.y, p.z], i * 3);
+    if (i >= TAGS - 70) {
+      // some labels sit out on the orbit rings
+      const [y, rr] = ORBITS[i % ORBITS.length];
+      const a = r() * Math.PI * 2;
+      tp.set([Math.cos(a) * rr, y + 0.12, Math.sin(a) * rr], i * 3);
+    } else tp.set([p.x, p.y, p.z], i * 3);
     ti.set([0.035 + r() * 0.04, Math.floor(r() * ATLAS_C * ATLAS_R), r() * 50, 0], i * 4);
   });
   tagG.setAttribute("aPos", new THREE.InstancedBufferAttribute(tp, 3));
@@ -439,16 +440,16 @@ const build = (pal: SpherePalette) => {
   world.add(tags);
 
   // soft top-down light shaft for the end
-  const shaft = new THREE.Mesh(new THREE.PlaneGeometry(14, 26), shaftMaterial(white.clone().multiplyScalar(0.07)));
+  const shaft = new THREE.Mesh(new THREE.PlaneGeometry(26, 30), shaftMaterial(white.clone().multiplyScalar(0.06)));
   shaft.position.set(0, 3, -2);
   shaft.renderOrder = 0;
   group.add(shaft);
 
   // camera path
-  const flyA = new THREE.Vector3(2.6, 1.2, 3.2);
-  const flyB = new THREE.Vector3(-0.6, -0.4, 2.2);
-  const elev = THREE.MathUtils.degToRad(13);
-  const D = 23.5;
+  const flyA = new THREE.Vector3(3.6, 1.4, 4.6);
+  const flyB = new THREE.Vector3(-0.8, -0.5, 3.8);
+  const elev = THREE.MathUtils.degToRad(2);
+  const D = 23.0;
   const endPos = new THREE.Vector3(0, Math.sin(elev) * D, Math.cos(elev) * D);
   const camPos = (t: number) => {
     const f = easeInOutSine(progress(t, 0, 8));
@@ -459,7 +460,8 @@ const build = (pal: SpherePalette) => {
   };
   const camLook = (t: number) => {
     const f = easeInOutSine(progress(t, 0, 8));
-    return new THREE.Vector3(lerp(-1.5, 0.4, f), lerp(-0.4, 0.1, f), lerp(-2.0, -1.0, f));
+    // look mostly along the path, past the dense core
+    return new THREE.Vector3(lerp(-3.5, -4.5, f), lerp(0.2, -0.6, f), lerp(1.0, 0.2, f));
   };
 
   const update = (frame: number, fps: number) => {
@@ -476,13 +478,14 @@ const build = (pal: SpherePalette) => {
     camera.lookAt(look);
     camera.updateMatrixWorld();
     // focus: near data during the fly-through, the sphere on the reveal
-    const focus = lerp(2.6, D, pb);
-    const strength = lerp(0.03, 0.006, pb);
+    const focus = lerp(3.4, D, pb);
+    const strength = lerp(0.03, 0.013, pb);
     shared.uDof.value.set(focus, strength, lerp(0.05, 0.012, pb));
     // rotation: slow throughout, a bit more visible in the hold
     world.rotation.y = t * 0.035 + easeInOutSine(progress(t, 12, 20)) * 0.35;
     const fadeIn = smooth(progress(t, 0, 0.8));
-    for (const m of [tagMat, rings.material, plexus.material, tris.material, dm] as THREE.ShaderMaterial[]) m.uniforms.uOpacity.value = fadeIn;
+    for (const m of [tagMat, plexus.material, tris.material, dm] as THREE.ShaderMaterial[]) m.uniforms.uOpacity.value = fadeIn;
+    (rings.material as THREE.ShaderMaterial).uniforms.uOpacity.value = fadeIn * lerp(0.35, 1, pb);
     (shaft.material as THREE.ShaderMaterial).uniforms.uAmp.value = smooth(progress(t, 12, 16));
   };
   return { group, camera, shared, update };

@@ -5,7 +5,7 @@ import { Land, landMask, useAssets } from "../lib/assets";
 import { makeCanvasTex, redraw, roundRect } from "../lib/canvasTex";
 import { easeInOutSine, progress } from "../lib/ease";
 import { DOF_TEXTURE, DOF_UNIFORMS, HASH } from "../lib/glsl";
-import { addBlend, marginPlane, premulBlend, STD_VERT } from "../lib/mesh";
+import { addBlend, marginPlane, premulBlend, STD_VERT, texPlaneMaterial } from "../lib/mesh";
 import { PostParams } from "../lib/post";
 import { mulberry32 } from "../lib/random";
 import { makeShared, Shared, Stage } from "../lib/Stage";
@@ -39,7 +39,7 @@ const drawDotMap = (land: Land) => {
   const ct = makeCanvasTex(W, H, true);
   const inLand = landMask(land, 2048, 1024);
   const rnd = mulberry32(1101);
-  const cols = 230;
+  const cols = 300;
   const step = W / cols;
   const rows = Math.floor(H / step);
   const latTop = 83;
@@ -56,9 +56,9 @@ const drawDotMap = (land: Land) => {
         const y = r * step + step * 0.5;
         const k = rnd();
         if (land) {
-          const a = 0.55 + 0.45 * k;
-          const s = step * (k > 0.97 ? 0.72 : 0.6);
-          ctx.fillStyle = k > 0.985 ? `rgba(150,215,255,${a})` : `rgba(90,170,225,${a})`;
+          const a = 0.72 + 0.18 * k;
+          const s = step * 0.74;
+          ctx.fillStyle = `rgba(92,165,215,${a})`;
           ctx.fillRect(x - s / 2, y - s / 2, s, s);
         } else if (k > 0.55) {
           ctx.fillStyle = `rgba(60,120,180,${0.1 + 0.08 * k})`;
@@ -79,18 +79,19 @@ const buildTraces = (): Trace[] => {
   const half = CHIP / 2;
   // side: 0 top, 1 right, 2 bottom, 3 left
   for (let side = 0; side < 4; side++) {
-    const n = side === 0 ? 7 : side === 2 ? 6 : 5;
+    const n = side === 0 ? 7 : side === 2 ? 8 : 6;
     for (let i = 0; i < n; i++) {
-      const s = -half * 0.78 + (i / (n - 1)) * half * 1.56;
-      const out1 = 0.12 + rnd() * 0.18;
-      const bendDir = s === 0 ? 0 : Math.sign(s);
-      const diag = 0.08 + rnd() * (side === 2 ? 0.12 : 0.25) * Math.abs(s / half);
-      const run = 0.08 + rnd() * (side === 0 ? 0.55 : side === 2 ? 0.12 : 0.35);
+      const s = -half * 0.8 + (i / (n - 1)) * half * 1.6;
+      const bendDir = Math.abs(s) < 0.05 ? 0 : Math.sign(s);
+      // short orthogonal circuitry: out, sideways jog, out again
+      const out1 = 0.05 + rnd() * 0.12;
+      const jog = bendDir * (0.03 + rnd() * 0.12);
+      const out2 = 0.06 + rnd() * (side === 0 ? 0.26 : side === 2 ? 0.14 : 0.18);
       const local: [number, number][] = [
         [s, half],
         [s, half + out1],
-        [s + bendDir * diag, half + out1 + diag],
-        [s + bendDir * diag + (rnd() < 0.35 ? bendDir * run * 0.6 : 0), half + out1 + diag + run],
+        [s + jog, half + out1],
+        [s + jog, half + out1 + out2],
       ];
       const rot = (p: [number, number]): [number, number] => {
         const [x, y] = p;
@@ -182,25 +183,23 @@ const drawChipFace = () => {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, S, S);
     ctx.globalCompositeOperation = "lighter";
-    // inner circuit (B)
-    ctx.strokeStyle = "rgb(0,0,255)";
-    ctx.lineWidth = 2.5;
-    for (let i = 0; i < 46; i++) {
-      let x = 80 + rnd() * (S - 160);
-      let y = 80 + rnd() * (S - 160);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      for (let k = 0; k < 3; k++) {
-        const d = 40 + rnd() * 120;
-        const dir = Math.floor(rnd() * 8) * (Math.PI / 4);
-        x = Math.min(S - 70, Math.max(70, x + Math.cos(dir) * d));
-        y = Math.min(S - 70, Math.max(70, y + Math.sin(dir) * d));
-        ctx.lineTo(x, y);
+    // inner plexus network (B)
+    const pts: [number, number][] = [];
+    for (let i = 0; i < 90; i++) pts.push([70 + rnd() * (S - 140), 70 + rnd() * (S - 140)]);
+    ctx.lineWidth = 2;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const d = Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1]);
+        if (d > 170) continue;
+        ctx.strokeStyle = `rgba(0,0,255,${1 - d / 170})`;
+        ctx.beginPath();
+        ctx.moveTo(pts[i][0], pts[i][1]);
+        ctx.lineTo(pts[j][0], pts[j][1]);
+        ctx.stroke();
       }
-      ctx.stroke();
       ctx.fillStyle = "rgb(0,0,255)";
       ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.arc(pts[i][0], pts[i][1], 4, 0, Math.PI * 2);
       ctx.fill();
     }
     // border (G)
@@ -371,18 +370,18 @@ const chipMaterial = (shared: Shared, face: THREE.Texture, pal: ChipPalette) =>
         float m = fbm(w + vec2(warp * 2.2, -warp * 1.6) + vec2(-uTime * 0.04, uTime * 0.06));
         float wisps = pow(smoothstep(0.42, 0.9, m), 2.4);
         float veins = pow(1.0 - abs(fbm(w * 1.7 + warp * 3.0 - uTime * 0.05) - 0.5) * 2.0, 10.0);
-        vec3 glass = uGlass * (0.55 + 0.6 * (1.0 - uv.y));
-        float bottom = exp(-pow(length((uv - vec2(0.5, 0.0)) * vec2(1.4, 2.4)), 2.0) * 3.0);
-        glass += vec3(0.3, 0.7, 1.0) * wisps * (0.3 + 1.2 * bottom);
+        vec3 glass = mix(uGlass * 1.3, vec3(0.05, 0.32, 0.45), 0.55) * (0.8 + 0.3 * (1.0 - uv.y));
+        float bottom = exp(-pow(length((uv - vec2(0.5, 0.0)) * vec2(2.6, 4.0)), 2.0) * 3.0);
+        glass += vec3(0.3, 0.75, 1.0) * wisps * (0.45 + 0.6 * bottom);
         glass += vec3(0.35, 0.8, 1.0) * veins * 0.22;
-        glass += uEdge * bottom * 1.6;
+        glass += uEdge * bottom * 0.7;
         // shimmer sweep across the face every few seconds
         float sweep = fract(uTime / 5.5);
         float band = exp(-pow((uv.x + uv.y * 0.6 - sweep * 2.6 + 0.4) * 9.0, 2.0));
         glass += vec3(0.5, 0.85, 1.0) * band * 0.35;
         vec3 col = glass * inside;
-        col += uEdge * F.b * 0.35 * inside;
-        col += mix(uEdge, vec3(1.0), 0.6) * F.r * 1.8;
+        col += mix(uEdge, vec3(1.0), 0.3) * F.b * 0.55 * inside;
+        col += mix(uEdge, vec3(1.0), 0.75) * F.r * 2.6;
         col += mix(uEdge, vec3(1.0), 0.35) * F.g * 2.4;
         // outer edge glow
         float halo = exp(-max(d, 0.0) * 60.0) * (1.0 - inside);
@@ -404,9 +403,9 @@ const glowMaterial = (shared: Shared, color: THREE.Color) =>
       varying vec2 vUv;
       void main() {
         vec2 p = (vUv - 0.5) * 2.0;
-        float core = exp(-dot(p * vec2(3.0, 9.0), p * vec2(3.0, 9.0)));
-        float soft = exp(-dot(p * vec2(1.2, 3.2), p * vec2(1.2, 3.2))) * 0.35;
-        float streak = exp(-abs(p.y) * 40.0) * exp(-abs(p.x) * 2.2) * 0.6;
+        float core = exp(-dot(p * vec2(9.0, 14.0), p * vec2(9.0, 14.0)));
+        float soft = exp(-dot(p * vec2(2.2, 3.0), p * vec2(2.2, 3.0))) * 0.3;
+        float streak = exp(-abs(p.y) * 60.0) * exp(-abs(p.x) * 3.5) * 0.7;
         vec3 col = uColor * (soft + streak) + mix(uColor, vec3(1.0), 0.7) * core * 2.5;
         gl_FragColor = vec4(col * uAmp, 0.0);
       }`,
@@ -424,7 +423,7 @@ const bgMaterial = (shared: Shared, pal: ChipPalette) =>
       void main() {
         vec2 q = (vUv - vec2(0.5, 0.58)) * vec2(1.78, 1.0);
         float g = exp(-dot(q, q) * 3.2);
-        vec3 col = mix(uLow * 0.55, uHigh * 1.25, g);
+        vec3 col = mix(uLow * 0.5, uHigh * 1.1 + vec3(0.0, 0.004, 0.022), g);
         // faint vertical light streaks
         float col_ = floor(vUv.x * 160.0);
         float s = hash11(col_);
@@ -488,10 +487,10 @@ const speckGeometry = (n: number) => {
   for (let i = 0; i < n; i++) {
     pos[i * 3] = (rnd() - 0.5) * 16;
     pos[i * 3 + 1] = (rnd() - 0.5) * 9;
-    pos[i * 3 + 2] = -6 + rnd() * 10.5;
+    pos[i * 3 + 2] = -6 + rnd() * 12;
     data[i * 4] = 0.006 + Math.pow(rnd(), 3) * 0.05; // size
     data[i * 4 + 1] = rnd(); // phase
-    data[i * 4 + 2] = rnd() < 0.06 ? 1 : 0; // warm accent
+    data[i * 4 + 2] = rnd() < 0.1 ? 1 : 0; // warm accent
     data[i * 4 + 3] = rnd(); // brightness
   }
   const g = new THREE.BufferGeometry();
@@ -532,7 +531,7 @@ const speckMaterial = (shared: Shared, pal: ChipPalette) =>
         float sq = max(abs(p.x), abs(p.y));
         float disk = length(p);
         float shape = mix(1.0 - smoothstep(0.75, 1.0, sq), 1.0 - smoothstep(0.6, 1.0, disk), clamp(vSoft * 1.5, 0.0, 1.0));
-        vec3 c = mix(uColor, uAccent, vWarm) * 1.6;
+        vec3 c = mix(uColor, uAccent, vWarm) * 2.4;
         gl_FragColor = vec4(c * shape * vAlpha * uFade, 0.0);
       }`,
     ...addBlend,
@@ -558,7 +557,7 @@ const build = (land: Land, pal: ChipPalette): Built => {
   group.add(bg);
 
   const glyphs = drawGlyphs();
-  const rainFar = new THREE.Mesh(new THREE.PlaneGeometry(20, 11.5), rainMaterial(shared, glyphs.tex, pal, 330, 230, 5, 0.26));
+  const rainFar = new THREE.Mesh(new THREE.PlaneGeometry(20, 11.5), rainMaterial(shared, glyphs.tex, pal, 330, 230, 5, 0.34));
   rainFar.position.set(0.14, -0.43, -4);
   rainFar.renderOrder = -9;
   group.add(rainFar);
@@ -593,7 +592,7 @@ const build = (land: Land, pal: ChipPalette): Built => {
   pool.renderOrder = 2;
   group.add(pool);
 
-  const label = makeCanvasTex(1024, 192, true);
+  const label = makeCanvasTex(1024, 232, true);
   const labelMat = new THREE.ShaderMaterial({
     uniforms: { ...shared, tMap: { value: label.tex }, uOpacity: { value: 0 } },
     vertexShader: STD_VERT,
@@ -609,18 +608,38 @@ const build = (land: Land, pal: ChipPalette): Built => {
       }`,
     ...premulBlend,
   });
-  const labelW = 1.62;
-  const labelMesh = new THREE.Mesh(marginPlane(labelW, (labelW * 192) / 1024, 0.03), labelMat);
-  labelMesh.position.set(0.04, -1.47, 0.0);
+  const labelW = 1.8;
+  const labelMesh = new THREE.Mesh(marginPlane(labelW, (labelW * 232) / 1024, 0.03), labelMat);
+  labelMesh.position.set(0.0, -1.5, 0.0);
   labelMesh.renderOrder = 3;
   group.add(labelMesh);
 
-  const specks = new THREE.Points(speckGeometry(520), speckMaterial(shared, pal));
+  // small HUD tag under the map (invented filler)
+  const hudTag = makeCanvasTex(768, 96, true);
+  redraw(hudTag, "static", (ctx) => {
+    ctx.strokeStyle = "rgba(120,180,230,0.55)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([14, 10]);
+    ctx.beginPath();
+    ctx.moveTo(10, 60);
+    ctx.lineTo(470, 60);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(150,200,240,0.7)";
+    ctx.font = "500 54px 'JetBrains Mono'";
+    ctx.fillText("T-02", 520, 74);
+  });
+  const hudTagMesh = new THREE.Mesh(marginPlane(1.2, 0.15, 0.02), texPlaneMaterial(shared, hudTag.tex, { opacity: 0.8 }));
+  hudTagMesh.position.set(0.55, -2.15, -0.2);
+  hudTagMesh.renderOrder = 3;
+  group.add(hudTagMesh);
+
+  const specks = new THREE.Points(speckGeometry(950), speckMaterial(shared, pal));
   specks.frustumCulled = false;
   specks.renderOrder = 5;
   group.add(specks);
 
-  const rainNear = new THREE.Mesh(new THREE.PlaneGeometry(11, 6.2), rainMaterial(shared, glyphs.tex, pal, 130, 90, 9, 0.06));
+  const rainNear = new THREE.Mesh(new THREE.PlaneGeometry(11, 6.2), rainMaterial(shared, glyphs.tex, pal, 130, 90, 9, 0.1));
   rainNear.position.set(0.14, -0.43, 3.2);
   rainNear.renderOrder = 6;
   group.add(rainNear);
@@ -635,7 +654,7 @@ const build = (land: Land, pal: ChipPalette): Built => {
     // mild depth of field, focus on the chip
     const push = easeInOutSine(progress(t, 2.5, 20));
     const camZ = 10.2 - 1.25 * push;
-    shared.uDof.value.set(camZ, 0.012, 0.03);
+    shared.uDof.value.set(camZ, 0.02, 0.035);
 
     const fade = progress(t, 0.0, 1.2);
     (bg.material as THREE.ShaderMaterial).uniforms.uFade.value = 0.35 + 0.65 * fade;
@@ -661,29 +680,30 @@ const build = (land: Land, pal: ChipPalette): Built => {
     const cursor = t > 2.5 && t < 4.3 && Math.floor(t * 4) % 2 === 0;
     const boxOn = progress(t, 2.4, 2.65);
     labelMat.uniforms.uOpacity.value = boxOn;
+    (hudTagMesh.material as THREE.ShaderMaterial).uniforms.uOpacity.value = 0.8 * progress(t, 2.8, 3.4);
     redraw(label, `${n}|${cursor ? 1 : 0}`, (ctx) => {
       ctx.fillStyle = "rgba(8,40,70,0.55)";
-      roundRect(ctx, 8, 8, 1008, 176, 22);
+      roundRect(ctx, 8, 8, 1008, 216, 22);
       ctx.fill();
       ctx.strokeStyle = "rgba(120,200,240,0.85)";
       ctx.lineWidth = 5;
       ctx.stroke();
-      ctx.font = "500 112px Inter";
+      ctx.font = "500 150px Inter";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#F2FAFF";
       const fullW = ctx.measureText(full).width;
       const x0 = 512 - fullW / 2;
       const s = full.slice(0, n);
-      ctx.fillText(s, x0, 100);
+      ctx.fillText(s, x0, 122);
       if (cursor && n < full.length + 1) {
         const w = ctx.measureText(s).width;
-        ctx.fillRect(x0 + w + 6, 46, 9, 104);
+        ctx.fillRect(x0 + w + 8, 56, 10, 128);
       }
     });
 
     const drift = Math.sin(t * 0.25) * 0.06;
-    camera.position.set(0.14 + drift, -0.43 + 0.03 * Math.sin(t * 0.19), camZ);
-    camera.lookAt(0.14 + drift * 0.6, -0.43, 0);
+    camera.position.set(drift, -0.43 + 0.03 * Math.sin(t * 0.19), camZ);
+    camera.lookAt(drift * 0.6, -0.43, 0);
     camera.updateMatrixWorld();
   };
 
@@ -695,7 +715,7 @@ const post: PostParams = {
   bloomStrength: 1.1,
   bloomThreshold: 0.75,
   bloomKnee: 0.45,
-  vignette: 0.35,
+  vignette: 0.55,
   grain: 0.015,
 };
 

@@ -6,7 +6,7 @@ import { easeInOutSine, progress, smooth } from "../lib/ease";
 import { DOF_UNIFORMS, HASH } from "../lib/glsl";
 import { addBlend, STD_VERT } from "../lib/mesh";
 import { PostParams } from "../lib/post";
-import { mulberry32 } from "../lib/random";
+import { hash, mulberry32 } from "../lib/random";
 import { makeShared, Shared, Stage } from "../lib/Stage";
 
 // Look 4 — Iris Burst. A thin ring; ~3,000 curved light strands burst out of
@@ -16,6 +16,7 @@ import { makeShared, Shared, Stage } from "../lib/Stage";
 
 export type IrisPalette = {
   ring: string;
+  blue: string;
   cyan: string;
   purple: string;
   gold: string;
@@ -32,14 +33,19 @@ const BURST = 1.5;
 
 // Picks a colour index by sector (as in the reference: gold low-right,
 // purple upper-left, cyan everywhere), with random mixing.
+// Colours come in clumps: strands in the same narrow angular band mostly
+// share a colour (0 cyan, 1 purple, 2 gold, 3 deep blue).
 const pickColour = (theta: number, r: number) => {
   const a = ((theta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const gold = Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(-55))) ** 1.5 * 0.75;
-  const purple = Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(150))) ** 1.5 * 0.55 + 0.12;
-  const cyan = 0.5;
-  const sum = gold + purple + cyan;
-  const x = r * sum;
-  return x < cyan ? 0 : x < cyan + purple ? 1 : 2;
+  const band = Math.floor((a / (Math.PI * 2)) * 70);
+  const x = r < 0.7 ? hash(band, 17) : r;
+  const gold = Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(-45))) ** 0.9 * 1.15 + 0.08;
+  const purple = Math.max(0, Math.cos(a - THREE.MathUtils.degToRad(160))) ** 1.4 * 0.3 + 0.06;
+  const cyan = 0.22;
+  const blue = 0.36;
+  const sum = gold + purple + cyan + blue;
+  const v = x * sum;
+  return v < blue ? 3 : v < blue + cyan ? 0 : v < blue + cyan + purple ? 1 : 2;
 };
 
 const strandGeometry = () => {
@@ -62,13 +68,15 @@ const strandGeometry = () => {
   const c = new Float32Array(STRANDS * 4); // twist, brightness, duration, spare
   for (let i = 0; i < STRANDS; i++) {
     const theta = (i / STRANDS) * Math.PI * 2 + (rnd() - 0.5) * 0.02;
-    const lift = Math.pow(rnd(), 2.0) * 0.6; // radians toward the viewer
+    // a few strands fall back into the pupil: dim warm streaks inside the hole
+    const inward = rnd() < 0.07;
+    const lift = inward ? -(1.0 + rnd() * 0.35) : Math.pow(rnd(), 2.0) * 0.6; // radians toward the viewer
     const long = rnd() < 0.12;
-    const len = long ? 2.6 + rnd() * 3.4 : 0.5 + Math.pow(rnd(), 1.6) * 2.4;
-    const curv = (rnd() - 0.5) * 0.5;
+    const len = inward ? 0.6 + rnd() * 0.8 : long ? 2.2 + rnd() * 2.2 : 0.5 + Math.pow(rnd(), 1.6) * 2.0;
+    const curv = 0.35 + (rnd() - 0.5) * 0.5; // mostly one way: an iris swirl
     a.set([theta, lift, len, curv], i * 4);
-    b.set([0.0035 + rnd() * 0.006, rnd() * 0.9, rnd() * 100, pickColour(theta, rnd())], i * 4);
-    c.set([(rnd() - 0.5) * 0.35, 0.18 + rnd() * 0.4, 1.6 + rnd() * 1.4, 0], i * 4);
+    b.set([0.004 + rnd() * 0.006, rnd() * 0.9, rnd() * 100, inward ? 2 : pickColour(theta, rnd())], i * 4);
+    c.set([(rnd() - 0.5) * 0.35, (inward ? 0.04 : 1) * (0.16 + rnd() * 0.34), 1.6 + rnd() * 1.4, 0], i * 4);
   }
   g.setAttribute("aA", new THREE.InstancedBufferAttribute(a, 4));
   g.setAttribute("aB", new THREE.InstancedBufferAttribute(b, 4));
@@ -78,9 +86,9 @@ const strandGeometry = () => {
 };
 
 const COMMON = /* glsl */ `
-uniform float uTime; uniform vec3 uCyan, uPurple, uGold;
+uniform float uTime; uniform vec3 uCyan, uPurple, uGold, uBlue;
 uniform float uEdgeBlur;
-vec3 palette(float k) { return k < 0.5 ? uCyan : (k < 1.5 ? uPurple : uGold); }
+vec3 palette(float k) { return k < 0.5 ? uCyan : (k < 1.5 ? uPurple : (k < 2.5 ? uGold : uBlue)); }
 float easeOutBack(float x) {
   float c1 = 1.70158 * 0.6, c3 = c1 + 1.0;
   float y = x - 1.0;
@@ -106,6 +114,7 @@ const strandMaterial = (shared: Shared, pal: IrisPalette) =>
       uCyan: { value: lin(pal.cyan) },
       uPurple: { value: lin(pal.purple) },
       uGold: { value: lin(pal.gold) },
+      uBlue: { value: lin(pal.blue) },
       uEdgeBlur: { value: 0.003 },
       uPxScale: { value: 1 },
     },
@@ -129,7 +138,7 @@ const strandMaterial = (shared: Shared, pal: IrisPalette) =>
         d = normalize(d + cross(nrm, radial) * tw);
         // bend sideways (a gentle swirl around the ring)
         vec3 p = normalize(cross(nrm, d));
-        float k = aA.w * 0.25 + sway * 0.4;
+        float k = aA.w * 0.45 + sway * 0.4;
         float g = clamp((uTime - ${BURST.toFixed(2)} - aB.y) / aC.z, 0.0, 1.0);
         float grow = aA.z * easeOutBack(g);
         float u = s * grow;
@@ -151,12 +160,14 @@ const strandMaterial = (shared: Shared, pal: IrisPalette) =>
         // brightness: energy spread over the blurred width
         float energy = max(px, 0.9) / hw;
         float tip = exp(-(1.0 - s) * 22.0) * (0.9 + 2.0 * (1.0 - g));
-        float rootGlow = exp(-s * 25.0) * 0.45;
-        vec3 col = palette(aB.w);
-        col = mix(col, vec3(1.0), rootGlow * 0.4 + tip * 0.15);
+        float rootGlow = exp(-s * 30.0) * 0.25;
+        vec3 col = palette(aB.w) * (aB.w > 1.5 && aB.w < 2.5 ? 1.45 : 1.0);
+        col = mix(col, vec3(1.0, 0.95, 0.7), rootGlow * 0.5 + tip * 0.2);
         float fadeOut = 1.0 - smoothstep(0.75, 1.0, s) * 0.4;
         vA = aC.y * energy * (0.75 + rootGlow + tip) * fadeOut * step(1e-4, grow);
         vA *= 0.85 + 0.15 * sin(uTime * 3.0 + aB.z * 13.0 + s * 6.0);
+        // thousands of roots overlap at the ring: keep that zone from burning to white
+        vA *= mix(0.22, 1.0, smoothstep(0.0, 0.3, s));
         vCol = col;
         vSide = side;
         vS = s;
@@ -178,7 +189,7 @@ const speckGeometry = () => {
   const a = new Float32Array(SPECKS * 4);
   for (let i = 0; i < SPECKS; i++) {
     const theta = rnd() * Math.PI * 2;
-    pos.set([theta, Math.pow(rnd(), 1.3) * 1.1, (rnd() - 0.5) * 0.2], i * 3);
+    pos.set([theta, Math.pow(rnd(), 1.5) * 0.55, (rnd() - 0.5) * 0.2], i * 3);
     // r0, speed, phase, colour
     a.set([rnd(), 0.08 + rnd() * 0.35, rnd() * 100, Math.floor(rnd() * 3.999)], i * 4);
   }
@@ -195,6 +206,7 @@ const speckMaterial = (shared: Shared, pal: IrisPalette) =>
       uCyan: { value: lin(pal.cyan) },
       uPurple: { value: lin(pal.purple) },
       uGold: { value: lin(pal.gold) },
+      uBlue: { value: lin(pal.blue) },
       uEdgeBlur: { value: 0.004 },
       uPxScale: { value: 1 },
     },
@@ -209,7 +221,7 @@ const speckMaterial = (shared: Shared, pal: IrisPalette) =>
         vec3 radial = vec3(cos(theta), sin(theta), 0.0);
         vec3 d = normalize(radial * cos(lift) + vec3(0.0, 0.0, sin(lift)));
         float since = max(uTime - ${BURST.toFixed(2)} - 0.1, 0.0);
-        float range = 5.5;
+        float range = 4.0;
         // spray: an eased burst, then a steady outward drift that wraps
         float burst = (1.0 - exp(-since * 1.6)) * (0.3 + aA.x * 2.6);
         float r = mod(burst + aA.y * since * 0.55 + aA.x * 0.2, range);
@@ -217,8 +229,8 @@ const speckMaterial = (shared: Shared, pal: IrisPalette) =>
         vec4 mv = modelViewMatrix * vec4(P, 1.0);
         vec4 clip = projectionMatrix * mv;
         float depth = -mv.z;
-        float px = (0.55 + fract(aA.z * 7.13) * 1.6) * uPxScale * uRes.y / 1080.0 * 6.0 / depth;
-        float coc = cocFrac(depth) * uRes.y + edgeCoc(clip);
+        float px = (0.7 + fract(aA.z * 7.13) * 1.9) * uPxScale * uRes.y / 1080.0 * 6.0 / depth;
+        float coc = min(cocFrac(depth) * uRes.y + edgeCoc(clip), 0.012 * uRes.y);
         float sz = max(px, 1.0) + coc;
         gl_PointSize = sz;
         gl_Position = clip;
@@ -226,7 +238,7 @@ const speckMaterial = (shared: Shared, pal: IrisPalette) =>
         float life = smoothstep(0.0, 0.4, r) * (1.0 - smoothstep(range * 0.7, range, r)) * step(0.001, since);
         float energy = (px * px) / (sz * sz);
         vec3 col = aA.w < 2.5 ? palette(aA.w) : vec3(0.55, 1.0, 0.6);
-        vCol = mix(col, vec3(1.0), 0.25);
+        vCol = col * 1.3;
         vA = (0.35 + 1.6 * tw) * life * energy * (px < 1.0 ? px : 1.0);
         vSoft = coc / sz;
       }`,
@@ -259,7 +271,7 @@ const ringMaterial = (shared: Shared, pal: IrisPalette) =>
         float glow = exp(-abs(r - 1.0) / 0.05) * 0.35;
         float ang = atan(p.y, p.x);
         float sparkle = pow(vnoise(vec2(ang * 40.0, uTime * 2.0)), 6.0) * 3.0;
-        vec3 col = uColor * (core * (1.5 + uHot * 1.5) + glow) + mix(uColor, vec3(1.0, 0.95, 0.6), 0.6) * core * sparkle * uHot;
+        vec3 col = uColor * (core * (1.5 + uHot * 0.6) + glow * (1.0 - 0.6 * uHot)) + mix(uColor, vec3(1.0, 0.95, 0.6), 0.6) * core * sparkle * uHot;
         gl_FragColor = vec4(col * uAmp, 1.0);
       }`,
     ...addBlend,
@@ -283,9 +295,9 @@ const planetMaterial = (shared: Shared, pal: IrisPalette) =>
       void main() {
         float ndv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
         float f = 1.0 - ndv;
-        float rim = pow(f, 4.0);
+        float rim = pow(f, 2.6);
         float side = smoothstep(-0.15, 0.75, normalize(vN).x);
-        vec3 col = mix(uInner, uOuter, smoothstep(0.55, 0.95, f)) * (rim * 4.0 + pow(f, 2.5) * 0.15) * side;
+        vec3 col = mix(uInner, uOuter, smoothstep(0.45, 0.9, f)) * (rim * 3.2 + pow(f, 8.0) * 4.0) * side;
         col += vec3(0.0008, 0.002, 0.004);
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -310,7 +322,7 @@ const haloMaterial = (pal: IrisPalette) =>
         float ndv = abs(dot(normalize(vN), normalize(vV)));
         float g = pow(smoothstep(0.0, 0.42, ndv), 2.5);
         float side = smoothstep(-0.1, 0.8, normalize(vN).x);
-        gl_FragColor = vec4(mix(uInner, uOuter, 0.6) * g * 0.9 * side, 1.0);
+        gl_FragColor = vec4(mix(uInner, uOuter, 0.75) * g * 1.4 * side, 1.0);
       }`,
     ...addBlend,
     side: THREE.BackSide,
@@ -334,7 +346,7 @@ const build = (pal: IrisPalette) => {
 
   // the iris, tilted ~35° off-axis
   const iris = new THREE.Group();
-  iris.rotation.set(THREE.MathUtils.degToRad(8), THREE.MathUtils.degToRad(47), THREE.MathUtils.degToRad(4));
+  iris.rotation.set(THREE.MathUtils.degToRad(8), THREE.MathUtils.degToRad(55), THREE.MathUtils.degToRad(4));
   group.add(iris);
   const ringMat = ringMaterial(shared, pal);
   const ring = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5), ringMat);
@@ -358,7 +370,8 @@ const build = (pal: IrisPalette) => {
   const update = (frame: number, fps: number) => {
     const t = frame / fps;
     shared.uTime.value = t;
-    ringMat.uniforms.uAmp.value = 0.25 + 0.45 * smooth(progress(t, 0, 1.4)) + 0.3 * smooth(progress(t, 1.4, 2.2));
+    // the ring is alone at first, then hands over to the strand roots
+    ringMat.uniforms.uAmp.value = (0.25 + 0.45 * smooth(progress(t, 0, 1.4)) + 0.3 * smooth(progress(t, 1.4, 2.2))) * (1 - 0.8 * smooth(progress(t, 2.2, 4.5)));
     ringMat.uniforms.uHot.value = smooth(progress(t, 1.5, 2.6));
     // camera pushes in through the whole piece, the ring drifts toward centre
     const k = easeInOutSine(progress(t, 0, 15));
@@ -374,8 +387,9 @@ const build = (pal: IrisPalette) => {
 
 const post: PostParams = {
   exposure: 1.0,
-  bloomStrength: 1.2,
-  bloomThreshold: 0.8,
+  bloomStrength: 1.0,
+  bloomThreshold: 0.85,
+  saturation: 1.2,
   bloomKnee: 0.4,
   vignette: 0.3,
   grain: 0.015,

@@ -30,8 +30,8 @@ const PH = (PW * TH) / TW;
 const PX = TW / PW; // texture px per unit
 // chip position on the texture (px)
 const CHIP_X = 3900;
-const CHIP_Y = 2950;
-const CHIP_PX = 560;
+const CHIP_Y = 3150;
+const CHIP_PX = 470;
 
 type Rect = { x: number; y: number; w: number; h: number };
 type Dyn = { rect: Rect; kind: "bigdata" | "num2" | "num4" | "pair"; seed: number; delay: number };
@@ -52,10 +52,10 @@ const buildHud = (pal: HudPalette) => {
   const meters: Meter[] = [];
 
   const chipZone: Rect = { x: CHIP_X - 900, y: CHIP_Y - 620, w: 1800, h: 1240 };
-  const globeZone: Rect = { x: CHIP_X - 2450, y: CHIP_Y - 2000, w: 1700, h: 1100 };
+  const globeZone: Rect = { x: CHIP_X - 3500, y: CHIP_Y - 1000, w: 1700, h: 1100 };
 
   // hand-placed key panels around the chip (match the reference's layout)
-  const bigData: Rect = { x: CHIP_X + 1150, y: CHIP_Y - 120, w: 1500, h: 760 };
+  const bigData: Rect = { x: CHIP_X + 1000, y: CHIP_Y - 420, w: 1500, h: 760 };
   dyn.push({ rect: { x: bigData.x, y: bigData.y, w: 1500, h: 560 }, kind: "bigdata", seed: 1, delay: 0.35 });
   meters.push({ rect: { x: bigData.x + 1550, y: bigData.y + 80, w: 600, h: 520 }, bars: 7, seed: 3, delay: 0.5, vertical: false });
   dyn.push({ rect: { x: CHIP_X + 1250, y: CHIP_Y - 1000, w: 1400, h: 220 }, kind: "pair", seed: 5, delay: 0.3 });
@@ -71,7 +71,8 @@ const buildHud = (pal: HudPalette) => {
   meters.push({ rect: { x: CHIP_X + 2300, y: CHIP_Y + 1000, w: 800, h: 500 }, bars: 9, seed: 25, delay: 0.6, vertical: true });
   meters.push({ rect: { x: CHIP_X - 2600, y: CHIP_Y - 1650, w: 650, h: 300 }, bars: 5, seed: 27, delay: 0.35, vertical: false });
 
-  const reserved: Rect[] = [chipZone, globeZone, ...dyn.map((d) => d.rect), ...meters.map((m) => m.rect)];
+  const analysis: Rect = { x: CHIP_X + 1350, y: CHIP_Y - 1450, w: 1500, h: 380 };
+  const reserved: Rect[] = [chipZone, globeZone, analysis, ...dyn.map((d) => d.rect), ...meters.map((m) => m.rect)];
 
   // free panels: subdivide the texture into cells and fill the free ones
   const panels: { r: Rect; delay: number }[] = [];
@@ -130,12 +131,15 @@ const buildHud = (pal: HudPalette) => {
         continue;
       }
       const tr = rnd();
-      const type = tr < 0.34 ? 0 : tr < 0.55 ? 1 : 2 + Math.floor(((tr - 0.55) / 0.45) * 5);
+      const type = tr < 0.45 ? 0 : tr < 0.72 ? 1 : 2 + Math.floor(((tr - 0.72) / 0.28) * 5);
       ctx.save();
       ctx.beginPath();
       ctx.rect(r.x, r.y, r.w, r.h);
       ctx.clip();
-      // panel frame: corner brackets + top rule
+      // panel frame: thin full border, corner brackets
+      ctx.strokeStyle = "rgba(150,158,166,0.22)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x - 15, r.y - 15, r.w + 30, r.h + 30);
       ctx.strokeStyle = "rgba(180,188,196,0.35)";
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -157,7 +161,7 @@ const buildHud = (pal: HudPalette) => {
         const cols = Math.max(1, Math.floor(r.w / 300));
         for (let c = 0; c < cols; c++) {
           for (let y = r.y + 60; y < r.y + r.h - 10; y += fs * 1.35) {
-            ctx.fillStyle = rnd() < 0.15 ? white : grey;
+            ctx.fillStyle = rnd() < 0.3 ? white : grey;
             const n = 4 + Math.floor(rnd() * 14);
             ctx.fillText(digits(n, 71, c, y, r.x), r.x + 20 + c * 300, y);
           }
@@ -173,6 +177,10 @@ const buildHud = (pal: HudPalette) => {
           ctx.fillText(FILLER[Math.floor(rnd() * FILLER.length)].toLowerCase(), r.x + 20, y);
           ctx.fillStyle = rnd() < 0.3 ? white : grey;
           ctx.fillText(digits(6, 73, y, r.x), r.x + r.w * 0.6, y);
+          if (rnd() < 0.08) {
+            ctx.fillStyle = "#E8963A";
+            ctx.fillRect(r.x + r.w - 40, y - 18, 10, 20);
+          }
         }
       } else if (type === 2) {
         // static grey bars
@@ -239,16 +247,21 @@ const buildHud = (pal: HudPalette) => {
     // chip surround: fine dot field and circuit traces with mint terminals
     const cx = CHIP_X;
     const cy = CHIP_Y;
-    for (let y = cy - 560; y < cy + 560; y += 26) {
-      for (let x = cx - 820; x < cx + 820; x += 26) {
-        const dx = (x - cx) / 820;
-        const dy = (y - cy) / 560;
-        const d = dx * dx + dy * dy;
-        if (d > 1) continue;
-        ctx.fillStyle = `rgba(150,158,166,${0.32 * (1 - d)})`;
-        ctx.fillRect(x, y, 6, 6);
-      }
+    // square mesh pad
+    const pad = 620;
+    ctx.strokeStyle = "rgba(150,158,166,0.16)";
+    ctx.lineWidth = 2;
+    for (let k = -pad; k <= pad; k += 22) {
+      ctx.beginPath();
+      ctx.moveTo(cx + k, cy - pad);
+      ctx.lineTo(cx + k, cy + pad);
+      ctx.moveTo(cx - pad, cy + k);
+      ctx.lineTo(cx + pad, cy + k);
+      ctx.stroke();
     }
+    ctx.strokeStyle = "rgba(200,206,212,0.45)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(cx - pad, cy - pad, pad * 2, pad * 2);
     const half = CHIP_PX / 2;
     const trnd = mulberry32(7411);
     ctx.lineWidth = 3.5;
@@ -258,27 +271,26 @@ const buildHud = (pal: HudPalette) => {
       const n = 7;
       for (let i = 0; i < n; i++) {
         const s = -half * 0.8 + (i / (n - 1)) * half * 1.6;
-        const o1 = 60 + trnd() * 90;
-        const dg = 50 + trnd() * 120;
-        const run = 60 + trnd() * 200;
-        const b = Math.sign(s) || 1;
+        const o1 = 30 + trnd() * 80;
+        const jog = (Math.sign(s) || 1) * (20 + trnd() * 70);
+        const run = 40 + trnd() * 150;
         const pts: [number, number][] = [
           [s, half],
           [s, half + o1],
-          [s + b * dg, half + o1 + dg],
-          [s + b * dg, half + o1 + dg + run],
+          [s + jog, half + o1],
+          [s + jog, half + o1 + run],
         ];
         const rot = ([x, y]: [number, number]): [number, number] =>
           side === 0 ? [cx + x, cy - y] : side === 1 ? [cx + y, cy + x] : side === 2 ? [cx - x, cy + y] : [cx - y, cy - x];
         const P = pts.map(rot);
-        ctx.strokeStyle = "rgba(205,212,218,0.85)";
+        ctx.strokeStyle = "rgba(120,236,226,0.95)";
         ctx.beginPath();
         P.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
         ctx.stroke();
         const [ex, ey] = P[P.length - 1];
-        ctx.fillStyle = trnd() < 0.7 ? pal.mint : white;
+        ctx.fillStyle = trnd() < 0.6 ? "#A8FFF0" : white;
         ctx.beginPath();
-        ctx.arc(ex, ey, 10, 0, Math.PI * 2);
+        ctx.arc(ex, ey, 12, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -288,6 +300,20 @@ const buildHud = (pal: HudPalette) => {
     sh.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = sh;
     ctx.fillRect(cx - 600, cy - 600, 1300, 1300);
+    // ANALYSIS DATA panel (static filler)
+    ctx.fillStyle = white;
+    ctx.font = "500 64px Rajdhani";
+    ctx.fillText("ANALYSIS DATA N", analysis.x + 60, analysis.y + 80);
+    ctx.fillStyle = "#3AE8D0";
+    ctx.fillRect(analysis.x + 10, analysis.y + 130, 22, 22);
+    ctx.fillStyle = white;
+    ctx.font = "500 56px Rajdhani";
+    ctx.fillText("Data Sector : 001", analysis.x + 60, analysis.y + 160);
+    ctx.fillStyle = "#E8963A";
+    ctx.fillRect(analysis.x + 560, analysis.y + 125, 12, 36);
+    ctx.font = "400 26px 'JetBrains Mono'";
+    ctx.fillStyle = grey;
+    for (let k = 0; k < 4; k++) ctx.fillText(digits(28, 91, k), analysis.x + 60, analysis.y + 220 + k * 36);
     // globe ring on the plate
     ctx.strokeStyle = "rgba(170,178,186,0.3)";
     ctx.lineWidth = 4;
@@ -451,7 +477,7 @@ const chipFace = () => {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, 1024, 1024);
     ctx.fillStyle = "#fff";
-    ctx.font = "700 400px Inter";
+    ctx.font = "700 470px Inter";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("AI", 512, 530);
@@ -472,10 +498,10 @@ const chipMesh = (shared: Shared, size: number) => {
   s.quadraticCurveTo(-h, h, -h, h - r);
   s.lineTo(-h, -h + r);
   s.quadraticCurveTo(-h, -h, -h + r, -h);
-  const g = new THREE.ExtrudeGeometry(s, { depth: size * 0.12, bevelEnabled: true, bevelThickness: size * 0.025, bevelSize: size * 0.025, bevelSegments: 4, curveSegments: 10 });
+  const g = new THREE.ExtrudeGeometry(s, { depth: size * 0.07, bevelEnabled: true, bevelThickness: size * 0.025, bevelSize: size * 0.025, bevelSegments: 4, curveSegments: 10 });
   const face = chipFace();
   const m = new THREE.ShaderMaterial({
-    uniforms: { ...shared, tFace: { value: face.tex }, uSize: { value: size }, uTop: { value: size * 0.145 }, uOn: { value: 0 } },
+    uniforms: { ...shared, tFace: { value: face.tex }, uSize: { value: size }, uTop: { value: size * 0.095 }, uOn: { value: 0 } },
     vertexShader: /* glsl */ `
       uniform float uSize;
       varying vec2 vFace; varying vec3 vN; varying float vZ; varying vec3 vView;
@@ -634,8 +660,8 @@ const build = (land: Land, pal: HudPalette) => {
 
   const globe = globeMesh(shared, land);
   const gz = hud.globeZone;
-  globe.position.copy(toLocal(gz.x + 850, gz.y + 550)).setZ(0.35);
-  globe.scale.set(1.15, 1.15, 0.5);
+  globe.position.copy(toLocal(gz.x + 850, gz.y + 550)).setZ(0.12);
+  globe.scale.set(1.25, 1.25, 0.12);
   globe.renderOrder = 2;
   plate.add(globe);
 
@@ -655,15 +681,15 @@ const build = (land: Land, pal: HudPalette) => {
     for (const m of meterMats) m.mat.uniforms.uOpacity.value = smooth(progress(reveal, m.delay * 0.75, m.delay * 0.75 + 0.25));
     const chipOn = smooth(progress(t, 2.3, 3.1));
     (chip.material as THREE.ShaderMaterial).uniforms.uOn.value = chipOn;
-    chip.position.z = 0.12 + (1 - chipOn) * 0.4;
+    chip.position.z = 0.06 + (1 - chipOn) * 0.4;
     (globe.material as THREE.ShaderMaterial).uniforms.uOn.value = smooth(progress(t, 2.0, 3.2));
     (globe.material as THREE.ShaderMaterial).uniforms.uRot.value = t * 0.22;
 
     // camera: ~45° down onto the plate, slow drift
     const drift = easeInOutSine(progress(t, 0, 20));
-    const yaw = THREE.MathUtils.degToRad(-24 + 7 * drift);
-    const pitch = THREE.MathUtils.degToRad(49 - 2 * drift);
-    const dist = 8.6 - 0.5 * drift;
+    const yaw = THREE.MathUtils.degToRad(26 - 7 * drift);
+    const pitch = THREE.MathUtils.degToRad(43 - 2 * drift);
+    const dist = 9.8 - 0.6 * drift;
     const target = chipWorld.clone().add(new THREE.Vector3(0.35 - 0.25 * drift, 0, -0.1));
     camera.position.set(
       target.x + Math.sin(yaw) * Math.cos(pitch) * dist,
@@ -672,18 +698,18 @@ const build = (land: Land, pal: HudPalette) => {
     );
     camera.up.set(0, 1, 0);
     camera.lookAt(target);
-    camera.rotateZ(THREE.MathUtils.degToRad(-6));
+    camera.rotateZ(THREE.MathUtils.degToRad(5));
     camera.updateMatrixWorld();
     const focus = camera.position.distanceTo(chipWorld);
-    shared.uDof.value.set(focus, 0.045, 0.03);
+    shared.uDof.value.set(focus, 0.022, 0.018);
   };
   return { group, camera, shared, update };
 };
 
 const post: PostParams = {
   exposure: 1.0,
-  bloomStrength: 0.55,
-  bloomThreshold: 0.85,
+  bloomStrength: 0.75,
+  bloomThreshold: 0.6,
   bloomKnee: 0.4,
   vignette: 0.45,
   grain: 0.015,

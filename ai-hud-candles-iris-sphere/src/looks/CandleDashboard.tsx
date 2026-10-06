@@ -52,9 +52,9 @@ const series = (seed: number, n: number): OHLC[] => {
     trend = trend * 0.9 + gaussian(rnd) * 0.025;
     const o = p;
     // mean-reverting walk keeps the chart inside its frame
-    const c = Math.min(0.9, Math.max(0.1, o + trend + gaussian(rnd) * 0.08 + (0.5 - o) * 0.05));
-    const h = Math.max(o, c) + Math.abs(gaussian(rnd)) * 0.06;
-    const l = Math.min(o, c) - Math.abs(gaussian(rnd)) * 0.06;
+    const c = Math.min(0.92, Math.max(0.08, o + trend + gaussian(rnd) * 0.15 + (0.5 - o) * 0.12));
+    const h = Math.max(o, c) + Math.abs(gaussian(rnd)) * 0.08;
+    const l = Math.min(o, c) - Math.abs(gaussian(rnd)) * 0.08;
     out.push({ o, h: Math.min(0.98, h), l: Math.max(0.02, l), c });
     p = c;
   }
@@ -65,7 +65,7 @@ const series = (seed: number, n: number): OHLC[] => {
 const layouts: Widget[][] = [
   [
     { type: "header", r: { u: 0.04, v: 0.03, w: 0.92, h: 0.06 }, seed: 1 },
-    { type: "candles", r: { u: 0.04, v: 0.12, w: 0.6, h: 0.56 }, seed: 11, count: 34, speed: 0.55 },
+    { type: "candles", r: { u: 0.04, v: 0.12, w: 0.6, h: 0.56 }, seed: 11, count: 33, speed: 0.55 },
     { type: "gauge", r: { u: 0.68, v: 0.12, w: 0.28, h: 0.27 }, seed: 12 },
     { type: "gauge", r: { u: 0.68, v: 0.42, w: 0.28, h: 0.27 }, seed: 13 },
     { type: "bars", r: { u: 0.04, v: 0.72, w: 0.6, h: 0.2 }, seed: 14, count: 22 },
@@ -114,22 +114,31 @@ const drawPanel = (ws: Widget[], pal: CandlePalette, seed: number) => {
   redraw(ct, "static", (ctx) => {
     // panel glass
     const g = ctx.createLinearGradient(0, 0, 0, TEX_H);
-    g.addColorStop(0, "rgba(16,76,104,0.9)");
-    g.addColorStop(1, "rgba(8,46,72,0.9)");
+    g.addColorStop(0, "rgba(6,40,66,0.62)");
+    g.addColorStop(1, "rgba(3,22,40,0.62)");
     ctx.fillStyle = g;
     roundRect(ctx, 6, 6, TEX_W - 12, TEX_H - 12, 26);
     ctx.fill();
-    ctx.strokeStyle = "rgba(90,200,224,0.55)";
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(110,225,245,0.85)";
+    ctx.lineWidth = 4;
     ctx.stroke();
     const mono = (px: number) => `500 ${px}px 'JetBrains Mono'`;
+    // dense, faint filler: tiny numbers and tick rows everywhere
+    ctx.font = mono(16);
+    for (let yy = 40; yy < TEX_H - 30; yy += 26) {
+      for (let xx = 30; xx < TEX_W - 200; xx += 230) {
+        if (rnd() < 0.45) continue;
+        ctx.fillStyle = `rgba(110,200,225,${0.12 + rnd() * 0.18})`;
+        ctx.fillText(digits(6 + Math.floor(rnd() * 6), seed, xx, yy), xx, yy);
+      }
+    }
     for (const w of ws) {
       const x = X(w.r.u);
       const y = Y(w.r.v);
       const W = X(w.r.w);
       const H = Y(w.r.h);
       if (w.type === "header") {
-        ctx.fillStyle = "rgba(90,200,224,0.18)";
+        ctx.fillStyle = "rgba(90,210,235,0.32)";
         ctx.fillRect(x, y, W, H);
         ctx.fillStyle = pal.text;
         ctx.font = `600 ${H * 0.55}px Rajdhani`;
@@ -298,7 +307,8 @@ const gaugeMaterial = (shared: Shared, pal: CandlePalette) =>
         float spinArc = inner * step(a2, 0.3);
         float dotc = 1.0 - smoothstep(0.1, 0.1 + soft, r);
         float dring = smoothstep(0.16 - soft, 0.16, r) * (1.0 - smoothstep(0.2, 0.2 + soft, r));
-        float a = ring * (0.3 + 0.7 * arcOn) + spinArc * 0.6 + dotc * 0.7 + dring * 0.6;
+        float ring2 = smoothstep(0.7 - soft, 0.7, r) * (1.0 - smoothstep(0.73, 0.73 + soft, r));
+        float a = ring * (0.55 + 0.45 * arcOn) + ring2 * 0.55 + spinArc * 0.5 + dotc * 0.8 + dring * 0.8;
         a = min(a, 1.0) * clamp(soft / max(px, 1e-5) > 1.5 ? 1.0 / (1.0 + coc * 0.02) : 1.0, 0.3, 1.0);
         vec3 col = uColor * 1.25 * a + vec3(0.6, 1.0, 1.0) * ring * arcOn * 0.5;
         a = clamp(a, 0.0, 1.0) * uOpacity;
@@ -336,7 +346,7 @@ const bgMaterial = (pal: CandlePalette) =>
       void main() {
         vec2 q = vUv - vec2(0.5, 0.65);
         float g = exp(-dot(q, q) * 4.0);
-        gl_FragColor = vec4(mix(uA * 0.6, uB, g), 1.0);
+        gl_FragColor = vec4(mix(uA * 0.4, uB * 0.8, g), 1.0);
       }`,
     depthWrite: false,
   });
@@ -351,14 +361,17 @@ type PanelRT = {
   delay: number;
 };
 
-const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: number): PanelRT => {
+const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: number, bare = false): PanelRT => {
   const group = new THREE.Group();
-  const tex = drawPanel(ws, pal, seed);
-  const pm = panelMaterial(shared, tex.tex);
-  const plane = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_W, PANEL_H), pm);
-  plane.renderOrder = 0;
-  group.add(plane);
-  const mats: THREE.ShaderMaterial[] = [pm];
+  const mats: THREE.ShaderMaterial[] = [];
+  if (!bare) {
+    const tex = drawPanel(ws, pal, seed);
+    const pm = panelMaterial(shared, tex.tex);
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_W, PANEL_H), pm);
+    plane.renderOrder = 0;
+    group.add(plane);
+    mats.push(pm);
+  }
   const toL = (u: number, v: number) => [(u - 0.5) * PANEL_W, (0.5 - v) * PANEL_H] as const;
   const up = lin(pal.up).multiplyScalar(1.9);
   const down = lin(pal.down).multiplyScalar(1.9);
@@ -394,11 +407,11 @@ const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: numb
           const l = live ? Math.min(d.o, c) - (Math.min(d.o, d.c) - d.l) * Math.min(1, f * 1.3) : d.l;
           // smooth scroll: the live candle slides in from the right edge while it prints
           const x = x1 - 0.5 * step - (scroll - k - 1) * step;
-          const yy = (v: number) => y1 + (y0 - y1) * Math.min(0.97, Math.max(0.03, 0.5 + (v - 0.5) * 1.5));
+          const yy = (v: number) => y1 + (y0 - y1) * Math.min(0.98, Math.max(0.02, 0.5 + (v - 0.5) * 1.15));
           const isUp = c >= d.o;
           const bodyTop = yy(Math.max(d.o, c));
           const bodyBot = yy(Math.min(d.o, c));
-          rect.setXYZW(i * 2, x, (bodyTop + bodyBot) / 2, step * 0.3, Math.max(0.006, (bodyTop - bodyBot) / 2));
+          rect.setXYZW(i * 2, x, (bodyTop + bodyBot) / 2, step * 0.26, Math.max(0.006, (bodyTop - bodyBot) / 2));
           rect.setXYZW(i * 2 + 1, x, (yy(h) + yy(l)) / 2, step * 0.045, (yy(h) - yy(l)) / 2);
           const cc = isUp ? up : down;
           const flash = live ? 1.25 : 1;
@@ -457,13 +470,13 @@ const buildPanel = (shared: Shared, ws: Widget[], pal: CandlePalette, seed: numb
       updaters.push((frame) => {
         const stepK = Math.floor((frame + w.seed) / 8);
         redraw(ct, stepK, (ctx) => {
-          ctx.fillStyle = pal.text;
+          ctx.fillStyle = "#9AEAF8";
           ctx.textBaseline = "middle";
           if (w.big) {
-            ctx.font = `600 ${ch * 0.75}px Rajdhani`;
+            ctx.font = `500 ${ch * 0.75}px Rajdhani`;
             ctx.fillText(`${(1 + hash(w.seed, stepK) * 8).toFixed(2)} %`, 16, ch * 0.55);
           } else {
-            ctx.font = `600 ${ch * 0.6}px Rajdhani`;
+            ctx.font = `500 ${ch * 0.6}px Rajdhani`;
             ctx.fillText(`TM: ${digits(6, w.seed, stepK)}`, 20, ch * 0.55);
           }
         });
@@ -491,7 +504,7 @@ const build = (pal: CandlePalette) => {
 
   // the wall of panels, turned ~25° away from the camera
   const wall = new THREE.Group();
-  wall.rotation.y = THREE.MathUtils.degToRad(-25);
+  wall.rotation.y = THREE.MathUtils.degToRad(-34);
   group.add(wall);
   const placement = [
     { x: -9.8, y: 0.15, z: 0.5 },
@@ -516,6 +529,22 @@ const build = (pal: CandlePalette) => {
     wall.add(pr.group);
     return pr;
   });
+  // free-floating candle layers in front of and behind the panels
+  const floating = [
+    { x: -6.2, y: 0.4, z: 0.8, seed: 61 },
+    { x: 2.2, y: -0.3, z: 0.6, seed: 62 },
+    { x: 7.5, y: 0.6, z: 0.9, seed: 63 },
+    { x: -2.5, y: 0.2, z: -1.0, seed: 64 },
+    { x: 5.2, y: 0.0, z: -1.2, seed: 65 },
+  ].map((f, i) => {
+    const ws: Widget[] = [{ type: "candles", r: { u: 0.0, v: 0.04, w: 1.0, h: 0.92 }, seed: f.seed, count: 30, speed: 0.5 + i * 0.07 }];
+    const pr = buildPanel(shared, ws, pal, 9500 + i, true);
+    pr.base.set(f.x, f.y, f.z);
+    pr.delay = 0.3 + hash(i, 99) * 0.5;
+    wall.add(pr.group);
+    return pr;
+  });
+  panels.push(...floating);
 
   const update = (frame: number, fps: number) => {
     const t = frame / fps;
@@ -529,18 +558,19 @@ const build = (pal: CandlePalette) => {
     // slow sideways drift
     const d = easeInOutSine(progress(t, 0, 20));
     const camX = -1.6 + 3.0 * d;
-    camera.position.set(camX, 0.15, 7.6);
+    camera.position.set(camX, 0.15, 7.9);
     camera.lookAt(camX * 0.85 + 0.4, 0.05, 0);
     camera.updateMatrixWorld();
-    shared.uDof.value.set(7.5, 0.13, 0.045);
+    shared.uDof.value.set(7.8, 0.075, 0.03);
   };
   return { group, camera, shared, update };
 };
 
 const post: PostParams = {
-  exposure: 1.05,
-  bloomStrength: 1.0,
-  bloomThreshold: 0.8,
+  exposure: 0.95,
+  bloomStrength: 1.6,
+  bloomThreshold: 0.7,
+  saturation: 1.2,
   bloomKnee: 0.4,
   vignette: 0.5,
   grain: 0.015,
