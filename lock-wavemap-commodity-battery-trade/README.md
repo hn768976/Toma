@@ -61,7 +61,22 @@ python3 scripts/verify.py      # steps 1-6 -> out/verify/report.txt + contact sh
 
 ## Measured render time
 
-RENDER_TIMES
+Measured on the build machine: 4 vCPU, **no GPU** (ANGLE → SwiftShader software GL),
+Remotion PNG sequence, default concurrency. Times are wall-clock / frames.
+
+| Look | 720p (`--scale=1/3`) | 4K, measured (12-frame sample) |
+|---|---|---|
+| Lock HUD | 0.70 s/frame | 8.3 s/frame |
+| Wave Map (Teal / Gold) | 0.75 / 0.77 s/frame | — |
+| Commodity Board | 0.70 s/frame | 7.6 s/frame |
+| Energy Battery (Blue / Green) | 0.61 / 0.62 s/frame | — |
+| Trade Chart (Tariffs / Inflation) | 0.65 / 0.65 s/frame | — |
+
+**4K estimate.** On this software-GL box 4K costs ~7–9 s/frame (≈ 11× the 720p time:
+9× the pixels plus 2× larger canvas textures), i.e. roughly 70–90 min per 20 s
+composition. On a machine with a real GPU (`--gl=angle` hitting hardware) the WebGL work
+mostly disappears and the per-frame cost is dominated by canvas-texture redraws and PNG
+capture; expect on the order of 0.5–1.5 s/frame at 4K (estimate, not measured here).
 
 ## Architecture
 
@@ -140,4 +155,13 @@ a new `<Composition>` with it. For the loop looks, keep `calculateMetadata={loop
 
 ## Completion checklist
 
-CHECKLIST
+Status of the verify loop on the delivered 720p previews (`out/verify/report_all.txt`):
+
+- [x] **1 File checks** — all 8: 1280×720, 30/1, h264, yuv420p, no audio, 20.0 s / 15.0 s.
+- [x] **2 Loop** — WaveMap Teal/Gold, EnergyBattery Blue/Green: frame 600 pixel-identical to frame 0 (601-frame render).
+- [x] **3 Determinism** — all 8: frame 300 rendered alone from a cold start is byte-identical to frame 300 of the full multi-threaded render; also frame 75 for Lock HUD, Commodity Board and both Trade Charts.
+- [x] **4 Banding** — all 8, measured on frames decoded from the mp4: source dither present (flat-run p99 ≤ 4 px) and encoded-vs-source low-pass deviation p99 0.77–0.98/255 (no step of a full level). Encoded with `-tune grain` so x264 keeps the dither.
+- [x] **5 Contact sheets** — `out/verify/contact_*.png`, checked by eye; text spelled correctly, no brands/tickers/exchanges.
+- [x] **6 Smoothness** — frames 299/300/301: even frame-to-frame change (ratio ≤ 1.09); no flicker or crawl seen in thin lines, angled text or the light grid.
+- [x] **7 / 8 Reference comparison** — self-comparison, then three rounds of fresh sub-agent comparisons per referenced composition (1, 2A, 3, 4A, 5A); fixes carried to 2B, 4B, 5B.
+- [x] Zip excludes node_modules, .git, refs/ and render output; `npm install && npx remotion studio` checked from a clean unzip.

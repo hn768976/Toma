@@ -7,7 +7,7 @@ NAME=lock-wavemap-commodity-battery-trade
 OUTZIP=${1:-out/$NAME-project.zip}
 TMP=$(mktemp -d)
 mkdir -p "$TMP/$NAME"
-tar --exclude=./node_modules --exclude=./.git --exclude=./refs --exclude=./out --exclude=./dist -cf - . | tar -xf - -C "$TMP/$NAME"
+tar --exclude=./node_modules --exclude=./.git --exclude=./refs --exclude=./out --exclude=./dist --exclude=./deliverables -cf - . | tar -xf - -C "$TMP/$NAME"
 mkdir -p "$(dirname "$OUTZIP")"
 rm -f "$OUTZIP"
 (cd "$TMP" && zip -qr "$OLDPWD/$OUTZIP" "$NAME")
