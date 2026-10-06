@@ -14,11 +14,11 @@ import { LayerSpec } from "../lib/pipeline";
 
 export const LOCK_FRAMES = 600;
 
-const EDGE = "#BFF0FF";
-const GLOW = "#3A8AFF";
+const EDGE = "#9FECFF";
+const GLOW = "#1FA0FF";
 const DIGIT = "#7FD4FF";
-const LANDC = "#1A3A6A";
-const MAP_TINT = 0.62;
+const LANDC = "#071A3C";
+const MAP_TINT = 0.75;
 const BG = "#020C24";
 
 const CAM_Z = 20;
@@ -185,17 +185,17 @@ const burstMaterial = () =>
           float rays = 0.0;
           // three octaves of thin rays with slowly varying strength
           for (int o = 0; o < 3; o++) {
-            float n = o == 0 ? 90.0 : (o == 1 ? 240.0 : 520.0);
+            float n = o == 0 ? 160.0 : (o == 1 ? 420.0 : 900.0);
             float x = a * n;
             float id = floor(x);
             float fx = fract(x) - 0.5;
-            float w = 0.06 + 0.12 * h1(id + float(o) * 1000.0);
+            float w = 0.04 + 0.06 * h1(id + float(o) * 1000.0);
             float prof = exp(-pow(fx / w, 2.0));
             float str = pow(h1(id * 3.0 + float(o) * 77.0), 3.0);
             float fl = 0.75 + 0.25 * sin(uFrame * (0.02 + 0.05 * h1(id + 5000.0)) + 6.2831 * h1(id + 9000.0));
             rays += prof * str * fl * (o == 0 ? 1.0 : (o == 1 ? 0.7 : 0.5));
           }
-          float fall = (exp(-r * 2.6) * 0.7 + 0.06) * smoothstep(0.0, 0.05, r);
+          float fall = (exp(-r * 2.0) * 0.8 + 0.1) * smoothstep(0.0, 0.05, r);
           float glow = exp(-r * r * 22.0) * 1.1 + exp(-r * 5.0) * 0.35;
           vec3 c = uCol * (rays * fall * 1.3 + glow * 0.7) + uCore * exp(-r * r * 160.0) * 0.6;
           c *= uAmt;
@@ -229,12 +229,12 @@ const gridMaterial = () =>
         }
         void main(){
           vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
-          float ny = vUv.y * 190.0;
-          float hy = lineAA(ny, 1.0) * (0.35 + 0.65 * pow(h1(floor(ny + 0.5)), 2.0));
-          float nx = vUv.x * 24.0;
-          float vx = lineAA(nx, 1.0) * 0.25 * step(0.7, h1(floor(nx + 0.5) + 300.0));
+          float ny = vUv.y * 38.0;
+          float hy = lineAA(ny, 1.3) * (0.3 + 0.7 * pow(h1(floor(ny + 0.5)), 2.0));
+          float nx = vUv.x * 40.0;
+          float vx = lineAA(nx, 1.0) * 0.55 * step(0.35, h1(floor(nx + 0.5) + 300.0));
           float center = exp(-dot(p, p) * 1.6) * 0.7 + 0.3;
-          float a = (hy * 0.3 + vx * 0.1) * center * uAmt;
+          float a = (hy * 0.42 + vx * 0.16) * center * uAmt;
           fragOut = vec4(uCol * a, 0.0);
         }`,
     }),
@@ -267,12 +267,12 @@ const streakMaterial = () =>
           float haze = exp(-ay * 22.0) * exp(-x * 2.2) * 0.25;
           // faint secondary lines above and below
           float sec = (exp(-abs(p.y - 0.035) * 1500.0) + exp(-abs(p.y + 0.03) * 1500.0)) * exp(-x * 2.5) * 0.35;
-          float band = exp(-pow(p.y / 0.02, 2.0)) * (0.5 + 0.5 * exp(-x * 1.4)) * 0.22;
+          float band = exp(-pow(p.y / 0.03, 2.0)) * (0.55 + 0.45 * exp(-x * 1.2)) * 0.5;
           float yb = p.y + 0.105;   // weaker band at the lock base
-          float band2 = (exp(-pow(yb / 0.01, 2.0)) * 0.15 + exp(-abs(yb) * 1100.0) * 0.45) * exp(-x * 1.6);
+          float band2 = (exp(-pow(yb / 0.016, 2.0)) * 0.3 + exp(-abs(yb) * 1100.0) * 0.35) * exp(-x * 1.4);
           float flash = exp(-(x * x * 260.0 + (yb + 0.012) * (yb + 0.012) * 4000.0));
-          vec3 warm = vec3(1.0, 0.78, 0.55);
-          vec3 c = uCore * core * 1.6 + uCol * (wide + haze + sec + band) * 1.2 + uCore * band2 * 1.2 + warm * flash * 1.2;
+          vec3 warm = vec3(0.75, 0.95, 1.0);
+          vec3 c = uCore * core * 1.6 + uCol * (wide + haze + sec + band) * 1.2 + uCore * band2 * 1.2 + warm * flash * 2.0;
           fragOut = vec4(c * uAmt, 0.0);
         }`,
     }),
@@ -284,7 +284,7 @@ const drawMap = (assets: Assets) => {
   const W = 4096;
   const H = 2304;
   const { c, ctx } = makeCanvas(W, H);
-  ctx.fillStyle = BG;
+  ctx.fillStyle = "#0E3060"; // ocean lighter than the land
   ctx.fillRect(0, 0, W, H);
   const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.55);
   g.addColorStop(0, "rgba(30,80,170,0.32)");
@@ -316,7 +316,7 @@ const drawMap = (assets: Assets) => {
   ctx.save();
   ctx.clip("evenodd");
   const r = mulberry32(5);
-  ctx.fillStyle = "rgba(120,170,240,0.18)";
+  ctx.fillStyle = "rgba(120,170,240,0.12)";
   for (let i = 0; i < 26000; i++) ctx.fillRect(r() * W, r() * H, 3, 3);
   ctx.restore();
   // horizontal scan lines + faint verticals
@@ -343,7 +343,7 @@ const BINS: [number, number][] = [
   [7, 12],
 ];
 const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
-  Array.from({ length: [10, 9, 9, 5][b] }, () => {
+  Array.from({ length: [12, 16, 6, 0][b] }, () => {
     const z = range(rng, z0, z1);
     const sc = (CAM_Z - z) / CAM_Z;
     let x = 0;
@@ -352,7 +352,7 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
     do {
       x = range(rng, -0.55, 0.55) * VIS_W * sc;
       y = range(rng, -0.55, 0.55) * VIS_H * sc;
-    } while ((Math.abs(x / sc) < 3.6 && Math.abs(y / sc) < 3.2) || (b === 1 && Math.abs(x / sc) > 7.5));
+    } while (Math.abs(x / sc) < 3.6 + (b === 1 ? 1.4 : 0) && Math.abs(y / sc) < 3.2);
     return {
       name: pick(rng, ICON_SET),
       x,
@@ -360,7 +360,7 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
       z,
       vx: range(rng, -0.012, 0.012),
       vy: range(rng, -0.008, 0.008),
-      s: range(rng, 0.5, 0.8) * (b >= 2 ? 0.75 : 1),
+      s: range(rng, 0.32, 0.55) * (b >= 2 ? 1.3 : 1),
       a: range(rng, 0.55, 1),
       flick: rng() < 0.15,
       seed: irange(rng, 1, 1e9),
@@ -371,8 +371,8 @@ const ICONS_BY_BIN: Icon[][] = BINS.map(([z0, z1], b) =>
 const SPECKS = Array.from({ length: 160 }, () => ({
   x: range(rng, -1, 1),
   y: range(rng, -1, 1),
-  z: rng() < 0.9 ? range(rng, -4, 2.5) : range(rng, 2.5, 6),
-  s: range(rng, 0.012, 0.03),
+  z: rng() < 0.92 ? range(rng, -4, 2.5) : range(rng, 2.5, 4),
+  s: range(rng, 0.012, 0.028),
   a: range(rng, 0.2, 0.55),
   vx: range(rng, -0.01, 0.01),
   vy: range(rng, -0.006, 0.006),
@@ -411,7 +411,7 @@ const build: BuildFn = (assets) => {
   const map = new THREE.Mesh(new THREE.PlaneGeometry(VIS_W * ms * 1.06, VIS_H * ms * 1.06), mapMat);
   map.position.z = mapZ;
   sMap.add(map);
-  layers.push({ scene: sMap, blur: 0.006 });
+  layers.push({ scene: sMap, blur: 0.0022 });
 
   // icon bins + specks
   const binScenes = BINS.map(() => new THREE.Scene());
@@ -477,7 +477,7 @@ const build: BuildFn = (assets) => {
   return {
     camera,
     layers,
-    pipeline: { background: BG, bloomThreshold: 0.6, bloomKnee: 0.5, bloomIntensity: 0.95, bloomRadius: 0.85, vignette: 0.7 },
+    pipeline: { background: BG, bloomThreshold: 0.6, bloomKnee: 0.5, bloomIntensity: 0.9, bloomRadius: 0.8, vignette: 0.85, saturation: 1.3 },
     update: (f) => {
       camera.position.set(0.15 * Math.sin(f * 0.004), 0.08 * Math.sin(f * 0.003 + 1), CAM_Z - f * 0.0015);
       camera.lookAt(0, 0, 0);
@@ -558,7 +558,7 @@ const build: BuildFn = (assets) => {
 
       (grid.material as THREE.ShaderMaterial).uniforms.uAmt.value = fadeIn;
       mapMat.uniforms.uOpacity.value = fadeIn * (0.85 + 0.15 * clamp01(remap(f, 45, 90)));
-      return { fade: Math.max(0.0001, fadeIn) };
+      return { fade: Math.max(0.0001, fadeIn), exposure: 0.78 };
     },
   };
 };
