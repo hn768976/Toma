@@ -70,10 +70,14 @@ const circuitTile = (seed: number, size: number, density: number, blur: number, 
         for (let k = 0; k < len; k++) if (hash(i, k) < 0.7) ctx.fillRect(x0 + ox + k * 14, y0 + oy, 9, 4);
       });
     } else {
+      // clusters of bright square particles
+      const n = 3 + Math.floor(r() * 9);
+      const pts = Array.from({ length: n }, () => [x0 + (r() - 0.5) * 120, y0 + (r() - 0.5) * 90, 4 + r() * 9, r()]);
       wrap((ox, oy) => {
-        ctx.fillStyle = rgba(r() < 0.25 ? "#FFFFFF" : col, a);
-        const s = 4 + r() * 8;
-        ctx.fillRect(x0 + ox, y0 + oy, s, s);
+        for (const [px, py, sz, w] of pts) {
+          ctx.fillStyle = rgba(w < 0.55 ? "#FFFFFF" : col, Math.min(1, a + 0.2));
+          ctx.fillRect(px + ox, py + oy, sz, sz);
+        }
       });
     }
   }
@@ -138,15 +142,18 @@ const padlockCanvas = (size: number) => {
   ctx.strokeStyle = "#fff";
   const band = makeCanvas(size, size);
   const bctx = band.getContext("2d")!;
-  bctx.lineWidth = 2.1 * s;
+  bctx.lineWidth = 2.6 * s;
   bctx.strokeStyle = "#fff";
   bctx.stroke(shackle);
   bctx.globalCompositeOperation = "source-in";
+  bctx.fillStyle = "rgba(140,200,255,0.4)";
+  bctx.fillRect(0, 0, size, size);
+  bctx.globalCompositeOperation = "source-atop";
   for (let y = 0; y < 11 * s; y += cell) {
     for (let x = 6 * s; x < 18 * s; x += cell) {
       const b = r();
       if (b < 0.35) continue;
-      bctx.fillStyle = `rgba(${160 + 95 * b},${215 + 40 * b},255,${0.3 + 0.6 * b})`;
+      bctx.fillStyle = `rgba(${170 + 85 * b},${220 + 35 * b},255,${0.55 + 0.45 * b})`;
       bctx.fillRect(x, y, cell * 0.75, cell * 0.75);
     }
   }
@@ -154,10 +161,10 @@ const padlockCanvas = (size: number) => {
   ctx.restore();
   // bright edges
   ctx.lineWidth = 0.32 * s;
-  ctx.strokeStyle = "rgba(220,245,255,0.95)";
+  ctx.strokeStyle = "rgba(200,235,255,0.3)";
   ctx.stroke(body);
   ctx.lineWidth = 0.22 * s;
-  ctx.strokeStyle = "rgba(200,240,255,0.85)";
+  ctx.strokeStyle = "rgba(200,240,255,0.22)";
   const inner = new Path2D();
   inner.moveTo(7.6 * s - 1.05 * s, 10.8 * s);
   inner.lineTo(7.6 * s - 1.05 * s, 7.6 * s);
@@ -170,9 +177,14 @@ const padlockCanvas = (size: number) => {
   inner2.arc(12 * s, 7.6 * s, 4.4 * s - 1.05 * s, Math.PI, 0);
   inner2.lineTo(16.4 * s - 1.05 * s, 10.8 * s);
   ctx.stroke(inner2);
-  ctx.strokeStyle = "rgba(220,245,255,0.9)";
+  ctx.strokeStyle = "rgba(220,245,255,0.3)";
   ctx.stroke(key);
-  return c;
+  // soften slightly: a hologram of particles rather than a vector icon
+  const out = makeCanvas(size, size);
+  const octx = out.getContext("2d")!;
+  octx.filter = `blur(${size / 600}px)`;
+  octx.drawImage(c, 0, 0);
+  return out;
 };
 
 const iconCanvas = (name: IconName, size: number) => {
@@ -181,12 +193,12 @@ const iconCanvas = (name: IconName, size: number) => {
   const m = size * 0.1;
   const path = new Path2D();
   path.roundRect(m, m, size - 2 * m, size - 2 * m, size * 0.1);
-  ctx.fillStyle = "rgba(40,110,255,0.35)";
+  ctx.fillStyle = "rgba(40,110,255,0.06)";
   ctx.fill(path);
   ctx.lineWidth = size * 0.022;
   ctx.strokeStyle = "rgba(170,220,255,0.9)";
   ctx.stroke(path);
-  drawIcon(ctx, name, size / 2, size / 2, size * 0.5, "#FFFFFF", 1.5);
+  drawIcon(ctx, name, size / 2, size / 2, size * 0.62, "#FFFFFF", 2.4);
   return c;
 };
 
@@ -201,18 +213,18 @@ const RINGS: RingDef[] = [
     radius: 3.15,
     turns: 1,
     z: -0.05,
-    opacity: 0.6,
+    opacity: 0.95,
     draw: (ctx, R) => {
-      const r0 = R * 0.86;
+      const r0 = R * 0.83;
       const r1 = R * 0.97;
-      for (let i = 0; i < 12; i++) {
-        const a0 = (i / 15) * TAU;
-        const a1 = a0 + (TAU / 15) * 0.72;
+      for (let i = 0; i < 10; i++) {
+        const a0 = (i / 13) * TAU;
+        const a1 = a0 + (TAU / 13) * 0.74;
         ctx.beginPath();
         ctx.arc(0, 0, r1, a0, a1);
         ctx.arc(0, 0, r0, a1, a0, true);
         ctx.closePath();
-        ctx.fillStyle = `rgba(40,110,255,${0.32 + 0.3 * hash(i, 4)})`;
+        ctx.fillStyle = `rgba(36,98,235,${0.82 + 0.15 * hash(i, 4)})`;
         ctx.fill();
         ctx.strokeStyle = "rgba(120,180,255,0.55)";
         ctx.lineWidth = 3;
@@ -234,11 +246,11 @@ const RINGS: RingDef[] = [
     z: 0.02,
     opacity: 0.8,
     draw: (ctx, R) => {
-      for (let i = 0; i < 240; i++) {
-        const a = (i / 240) * TAU;
+      for (let i = 0; i < 420; i++) {
+        const a = (i / 420) * TAU;
         const len = hash(i, 9) < 0.25 ? 0.2 : 0.12;
-        ctx.strokeStyle = `rgba(140,200,255,${0.35 + 0.5 * hash(i, 2)})`;
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = `rgba(170,220,255,${0.45 + 0.5 * hash(i, 2)})`;
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(Math.cos(a) * R * (0.95 - len), Math.sin(a) * R * (0.95 - len));
         ctx.lineTo(Math.cos(a) * R * 0.95, Math.sin(a) * R * 0.95);
@@ -255,26 +267,56 @@ const RINGS: RingDef[] = [
     z: 0.05,
     opacity: 1,
     draw: (ctx, R) => {
-      ctx.lineWidth = R * 0.035;
-      ctx.strokeStyle = "rgba(225,245,255,0.95)";
-      ctx.setLineDash([R * 0.09, R * 0.05]);
+      // bright toothed cog
+      const teeth = 40;
       ctx.beginPath();
-      ctx.arc(0, 0, R * 0.93, 0, TAU);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.lineWidth = R * 0.012;
-      ctx.strokeStyle = "rgba(180,225,255,0.85)";
-      ctx.beginPath();
-      ctx.arc(0, 0, R * 0.86, 0, TAU);
-      ctx.stroke();
-      // gear-like teeth
-      for (let i = 0; i < 72; i++) {
-        const a = (i / 72) * TAU;
-        ctx.strokeStyle = "rgba(170,220,255,0.7)";
-        ctx.lineWidth = R * 0.012;
+      for (let i = 0; i < teeth; i++) {
+        const a0 = (i / teeth) * TAU;
+        const a1 = a0 + (TAU / teeth) * 0.5;
+        ctx.arc(0, 0, R * 0.95, a0, a1);
+        ctx.arc(0, 0, R * 0.86, a1, a0 + TAU / teeth);
+      }
+      ctx.closePath();
+      ctx.arc(0, 0, R * 0.8, 0, TAU, true);
+      ctx.fillStyle = "rgba(230,248,255,0.95)";
+      ctx.fill("evenodd");
+      // dotted particle rings inside the cog
+      for (const [rr, n, sz] of [
+        [0.74, 120, 0.012],
+        [0.68, 96, 0.009],
+      ] as [number, number, number][]) {
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * TAU;
+          ctx.fillStyle = `rgba(190,235,255,${0.5 + 0.5 * hash(i, rr * 100)})`;
+          ctx.beginPath();
+          ctx.arc(Math.cos(a) * R * rr, Math.sin(a) * R * rr, R * sz, 0, TAU);
+          ctx.fill();
+        }
+      }
+    },
+  },
+  {
+    // thick white arc segments outside the cog
+    id: "arcs",
+    size: 2048,
+    radius: 1.72,
+    turns: -1,
+    z: 0.04,
+    opacity: 1,
+    draw: (ctx, R) => {
+      ctx.lineWidth = R * 0.05;
+      ctx.lineCap = "butt";
+      ctx.strokeStyle = "rgba(230,248,255,0.95)";
+      for (const [a0, a1] of [
+        [0.15, 0.85],
+        [1.25, 1.75],
+        [2.1, 3.0],
+        [3.4, 3.9],
+        [4.3, 5.2],
+        [5.55, 5.95],
+      ]) {
         ctx.beginPath();
-        ctx.moveTo(Math.cos(a) * R * 0.78, Math.sin(a) * R * 0.78);
-        ctx.lineTo(Math.cos(a) * R * 0.84, Math.sin(a) * R * 0.84);
+        ctx.arc(0, 0, R * 0.92, a0, a1);
         ctx.stroke();
       }
     },
@@ -343,11 +385,11 @@ const ICON_SLOTS: { name: IconName; angle: number }[] = [
 
 // Background layers: depth, blur (px at tile scale), drift in whole tiles per loop.
 const LAYERS = [
-  { z: -34, blur: 5, density: 1.1, kx: 1, ky: 0, repeat: 3, alpha: 0.35, seed: 11 },
-  { z: -22, blur: 3, density: 1.1, kx: -1, ky: 0, repeat: 3, alpha: 0.55, seed: 12 },
-  { z: -13, blur: 1.4, density: 1.0, kx: 1, ky: 1, repeat: 3, alpha: 0.85, seed: 13 },
-  { z: -6, blur: 0.5, density: 0.8, kx: -1, ky: 0, repeat: 3, alpha: 1.0, seed: 14 },
-  { z: 5.5, blur: 14, density: 0.2, kx: 1, ky: 0, repeat: 2, alpha: 0.45, seed: 15 },
+  { z: -34, blur: 7, density: 1.1, kx: 1, ky: 0, repeat: 3, alpha: 0.5, seed: 11 },
+  { z: -22, blur: 4, density: 1.1, kx: -1, ky: 0, repeat: 3, alpha: 0.7, seed: 12 },
+  { z: -13, blur: 1.6, density: 1.0, kx: 1, ky: 1, repeat: 3, alpha: 0.95, seed: 13 },
+  { z: -6, blur: 0.6, density: 0.8, kx: -1, ky: 0, repeat: 3, alpha: 1.0, seed: 14 },
+  { z: 5.5, blur: 16, density: 0.3, kx: 1, ky: 0, repeat: 2, alpha: 0.6, seed: 15 },
 ];
 
 const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
@@ -361,8 +403,8 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
     const c = makeCanvas(1024, 576);
     const ctx = c.getContext("2d")!;
     const g = ctx.createRadialGradient(480, 260, 20, 512, 288, 700);
-    g.addColorStop(0, "#08207A");
-    g.addColorStop(0.5, "#041050");
+    g.addColorStop(0, "#061A6A");
+    g.addColorStop(0.5, "#030C40");
     g.addColorStop(1, row.base);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 1024, 576);
@@ -398,19 +440,20 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
     );
     layerMats.push(mat);
     const d = CAM_Z - L.z;
-    const vh = 2 * d * Math.tan((35 / 2) * (Math.PI / 180)) * 1.9;
+    const vh = 2 * d * Math.tan((35 / 2) * (Math.PI / 180)) * 2.6;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(vh * aspect, vh), mat);
     m.position.set(0.6, 0, L.z);
     m.rotation.y = -0.62 + li * 0.04;
     m.rotation.x = 0.3;
+    m.rotation.z = -0.22;
     m.renderOrder = -10 + li;
     scene.add(m);
   });
 
   // HUD group: rings, padlock, icons — slightly tilted so it reads as 3D
   const hud = new THREE.Group();
-  hud.position.set(-0.35, 0.1, 0);
-  hud.rotation.set(0.2, 0.5, 0.04);
+  hud.position.set(-0.1, -0.5, 0);
+  hud.rotation.set(0.22, 0.55, -0.12);
   scene.add(hud);
 
   const ringMeshes = RINGS.map((rd, i) => {
@@ -436,13 +479,13 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
     const c = makeCanvas(512, 512);
     const ctx = c.getContext("2d")!;
     const g = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
-    g.addColorStop(0, "rgba(50,130,255,0.32)");
-    g.addColorStop(0.5, "rgba(30,90,255,0.1)");
+    g.addColorStop(0, "rgba(50,130,255,0.18)");
+    g.addColorStop(0.5, "rgba(30,90,255,0.04)");
     g.addColorStop(1, "rgba(20,60,255,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 512, 512);
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(4.2, 4.2),
+      new THREE.PlaneGeometry(3.0, 3.0),
       premulBlend(new THREE.MeshBasicMaterial({ map: canvasTexture(c, renderer) }), true),
     );
     m.position.z = -0.1;
@@ -459,12 +502,12 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
         void main(){
           vec4 c = texture(tMap, vUv);
           float scan = exp(-pow((vUv.y - uScan) * 9.0, 2.0));
-          gl_FragColor = c * 0.62 * (uPulse + scan * 0.6);
+          gl_FragColor = c * 0.75 * (uPulse + scan * 0.6);
         }`,
     }),
     true,
   );
-  const lock = new THREE.Mesh(new THREE.PlaneGeometry(1.85, 1.85), lockMat);
+  const lock = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), lockMat);
   lock.position.set(0, 0.04, 0.12);
   lock.renderOrder = 30;
   hud.add(lock);
@@ -479,7 +522,7 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
           void main(){ vec4 c = texture(tMap, vUv); gl_FragColor = c * (0.6 + 0.6 * uGlow); }`,
       }),
     );
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.78), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), mat);
     const a = (slot.angle * Math.PI) / 180;
     m.position.set(Math.cos(a) * 2.5, Math.sin(a) * 2.5, 0.08);
     m.renderOrder = 40 + i;
@@ -511,9 +554,9 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
 
     return {
       frame: f,
-      bloom: { strength: 0.7, threshold: 0.6, knee: 0.3, radius: 1.0 },
+      bloom: { strength: 0.55, threshold: 0.72, knee: 0.25, radius: 0.8 },
       exposure: 1.0,
-      vignette: 0.45,
+      vignette: 0.55,
       grain: 0.015,
     };
   };
