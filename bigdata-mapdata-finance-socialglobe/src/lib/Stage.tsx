@@ -1,19 +1,11 @@
 import { ThreeCanvas } from "@remotion/three";
 import { useThree } from "@react-three/fiber";
 import React, { useEffect, useMemo } from "react";
-import { AbsoluteFill, getInputProps, getRemotionEnvironment, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, getRemotionEnvironment, useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
 import { Assets, useAssets } from "./assets";
-import { Grade, LayerSpec, PERF, Pipeline, PipelineOptions, PostParams } from "./pipeline";
+import { Grade, LayerSpec, Pipeline, PipelineOptions, PostParams } from "./pipeline";
 import { syncProjection } from "./prims3d";
-import { PERF_TEX } from "./canvas";
-
-const perf = (getInputProps() as { perf?: { msaa?: number; dof?: boolean; aniso?: number } }).perf;
-if (perf) {
-  if (perf.msaa !== undefined) PERF.msaa = perf.msaa;
-  if (perf.dof !== undefined) PERF.dof = perf.dof;
-  if (perf.aniso !== undefined) PERF_TEX.aniso = perf.aniso;
-}
 
 // A "World" is built once per tab (deterministically: module-level seeds,
 // fixed build order) and then updated from the frame number alone.

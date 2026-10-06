@@ -2,8 +2,6 @@ import * as THREE from "three";
 import { MONO } from "./assets";
 
 /** Canvas 2D -> texture: sRGB, mipmapped, 16x anisotropic. */
-export const PERF_TEX = { aniso: 16 };
-
 export const canvasTexture = (
   canvas: HTMLCanvasElement,
   opts: { repeat?: boolean; srgb?: boolean; aniso?: number } = {},
@@ -13,7 +11,7 @@ export const canvasTexture = (
   t.generateMipmaps = true;
   t.minFilter = THREE.LinearMipmapLinearFilter;
   t.magFilter = THREE.LinearFilter;
-  t.anisotropy = Math.min(opts.aniso ?? 16, PERF_TEX.aniso);
+  t.anisotropy = opts.aniso ?? 16;
   t.premultiplyAlpha = false;
   if (opts.repeat) {
     t.wrapS = THREE.RepeatWrapping;

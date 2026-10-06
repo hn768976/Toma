@@ -120,9 +120,6 @@ const gaussKernel = (sigma: number) => {
 const MAX_TAPS = 17;
 const LEVELS = 7; // pyramid levels 0..6
 
-// Profiling switches (input prop "perf"), never used for final renders.
-export const PERF: { msaa: number; dof: boolean; bloom: boolean } = { msaa: 4, dof: true, bloom: true };
-
 export class Pipeline {
   private gl: THREE.WebGLRenderer;
   private opts: Required<PipelineOptions>;
@@ -414,7 +411,7 @@ export class Pipeline {
     this.w = w;
     this.h = h;
     this.msaa = rt(w, h, {
-      samples: PERF.msaa,
+      samples: 4,
       depthBuffer: true,
       depthTexture: new THREE.DepthTexture(w, h, THREE.UnsignedIntType),
     });
@@ -532,7 +529,7 @@ export class Pipeline {
       const tex = target.texture;
       const opacity = L.opacity ?? 1;
 
-      if (L.depth && PERF.dof) {
+      if (L.depth) {
         const D = L.depth;
         const maxSigma = D.maxBlur * H;
         const sigmas = [0.25, 0.5, 0.75, 1].map((f) => maxSigma * f);
@@ -557,7 +554,7 @@ export class Pipeline {
       } else {
         const sigma = (L.blur ?? 0) * H;
         let out: THREE.Texture = tex;
-        if (sigma >= 0.35 && PERF.dof) {
+        if (sigma >= 0.35) {
           this.buildPyramid(tex, this.levelFor(sigma));
           out = this.blur(tex, sigma, `L${li}u`);
         }

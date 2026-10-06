@@ -70,9 +70,40 @@ Renders a lossless PNG sequence at `--scale=0.3333333333333333` (exactly
 1280×720), encodes H.264 / yuv420p / CRF 16 / 30 fps with ffmpeg, and saves a
 720p still (frame 300).
 
+## How the look was matched
+
+Each composition went through three rounds of review. In each round a fresh
+agent compared a frame of the reference clip with a frame of the 720p preview
+and listed the differences, and the differences that affected the overall
+impression were fixed. The reference clips are not shipped (`refs/` is
+excluded).
+
 ## Render time
 
-RENDER_TIMES_PLACEHOLDER
+Measured in the build container: 4 CPU cores, **no GPU** (Chromium WebGL2 via
+ANGLE on SwiftShader), one tab (`--concurrency=1`; more tabs were slower
+because SwiftShader already uses every core).
+
+| Composition | 720p, s/frame | 720p, whole clip | 4K, s/frame | 4K whole clip, this machine |
+|---|---|---|---|---|
+| BigDataScreen-Blue | 1.51 | 15 min (600 f) | 9.3 | ~95 min |
+| DataWorldMap-BlueYellow | 2.5 | 25 min (600 f) | 14.7 | ~150 min |
+| FinanceInfographic-Teal | 2.3 | 23 min (600 f) | 12.7 | ~130 min |
+| SocialGlobe-Blue | 1.09 | 16 min (900 f) | 5.0 | ~75 min |
+| GlobalSecurityLock-Blue | 1.52 | 15 min (600 f) | 12.6 | ~125 min |
+
+720p times for BigDataScreen, SocialGlobe and GlobalSecurityLock are whole
+renders divided by the frame count. DataWorldMap and FinanceInfographic are
+the marginal cost of 60 frames (frames 300 to 359), because their whole
+renders shared the CPU with checks. 4K times are the marginal cost of
+frames 300 to 303 at `--scale=1`. These are not projections from 720p.
+
+**4K estimate.** Without a GPU, allow about 1.5 to 2.5 hours per clip.
+On a machine with a GPU, ANGLE uses the GPU, and the work that dominates here
+(the MSAA layer passes, the blur pyramid and the large textures) runs much
+faster. That GPU figure is my expectation and was not measured: roughly
+1 to 3 s per 4K frame, so about 10 to 30 min per clip with `--concurrency=1`.
+Raising `--concurrency` is safe, because every frame is independent.
 
 ## How it is built
 
@@ -102,8 +133,9 @@ scripts/render-previews.sh
   arcs use analytic box-filter coverage, and glyphs come from a mipmapped atlas
   through `textureGrad`, so small digits and thin lines hold steady at steep
   angles. No canvas is ever redrawn incrementally.
-- **Depth of field** is per layer: each layer renders into a 4× MSAA
-  half-float target and is either blurred uniformly (2.5D layers) or, for
+- **Depth of field** is per layer: each layer renders into a half-float
+  target (4× MSAA for layers that stay sharp; blurred layers skip MSAA) and
+  is either blurred uniformly (2.5D layers) or, for
   tilted planes, blended per pixel between pre-blurred levels by a circle of
   confusion computed from its depth buffer (the diagonal focus band of the Big
   Data Screen).
@@ -124,11 +156,63 @@ Remotion renders frames out of order on several tabs, so:
 
 ## Banding check
 
-BANDING_PLACEHOLDER
+Final pass, after bloom and tonemapping: sRGB encode, then **grain ≈1.5 %**
+(zero-mean triangular noise) and **±1/255 triangular dither** per channel.
+Both are a PCG hash of (pixel x, pixel y, frame), never `Math.random()`.
+The loops feed the hash `frame % loop`, so grain repeats with the loop.
+
+How it was checked: frame 300 was decoded **from each encoded mp4** (H.264,
+yuv420p, CRF 16, `-tune grain`). In the smooth dark gradients and glow
+falloffs (found automatically: gentle slope, low local contrast, dark), the
+check measures how often neighbouring pixels share the same 8-bit value and
+how long those runs are. A control is made by blurring the same frame and
+requantising it to 8 bits, which produces real banding.
+
+| Composition | identical neighbours | p99 run | max run | control: identical / p99 / max |
+|---|---|---|---|---|
+| BigDataScreen-Blue | 20.2 % | 5 px | 12 px | 63 % / 13 px / 51 px |
+| DataWorldMap-BlueYellow | 21.8 % | 5 px | 15 px | 70 % / 19 px / 66 px |
+| FinanceInfographic-Teal | 20.6 % | 5 px | 13 px | 58 % / 14 px / 31 px |
+| SocialGlobe-Blue | 21.3 % | 5 px | 10 px | 61 % / 14 px / 39 px |
+| GlobalSecurityLock-Blue | 19.8 % | 5 px | 8 px | 72 % / 16 px / 36 px |
+
+Each gradient's 15 px local mean changes smoothly across the frame, with no
+plateaus. The first encode used plain `-preset slow`, and one flattened patch
+showed up in DataWorldMap: a 68 px run of identical pixels where the source
+PNG had about 320 distinct values. `-tune grain` keeps the dither through the
+encoder, and `scripts/render-previews.sh` now uses it.
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+All checks were run on the final 720p renders:
+
+- [x] **Files:** 1280×720 (exact; `--scale=0.3333333333333333` gives
+      1280×720), 30/1, h264, yuv420p, video stream only. 20.0 s for looks 1,
+      2, 3 and 5; 30.0 s for look 4.
+- [x] **Loops:** DataWorldMap rendered at 601 frames and SocialGlobe at 901.
+      Frame 0 and the last frame are pixel-identical (0 differing pixels).
+- [x] **Determinism:** frame 300 rendered alone from a cold start is
+      **byte-identical** to frame 300 of the full render, for all five looks.
+      Frame 75 (inside the build-in) is byte-identical for looks 1, 3 and 5.
+- [x] **Banding:** checked on frames decoded from the mp4 (table above).
+- [x] **Content:** a five-frame contact sheet per look shows the required
+      elements. Look 1 builds in from black. Look 2 has a dotted map with
+      yellow and cyan bars and blurred drifting layers. Look 3 builds in and
+      has the bar chart, the "45" tile, the donuts, the tables and both globes
+      turning. Look 4 has the dotted globe, the coil ring, people and links,
+      and turns once in 900 frames. Look 5 starts on the dark map, then shows
+      the burst, the binary padlock and the streak.
+- [x] **Smoothness:** frames 299, 300 and 301 with grain removed. 0.0 to 0.6 %
+      of pixels change by more than 24 levels per frame, and that change is
+      the intended rolling digits and blinks. There are no flicker spikes on
+      slanted small digits, thin lines, the dot map or the point globe
+      (all line, rect, arc and glyph primitives are analytically
+      anti-aliased; sub-pixel points fade rather than drop out).
+- [x] **Content:** no logos, brands, real tickers or real data. All text and
+      numbers are invented and all icons are self-drawn.
+- [x] **Clean copy:** `npm install && npx remotion studio` from a fresh copy
+      (no `node_modules`) installs and starts, and all five compositions
+      resolve.
 
 ## Adding a colourway
 
