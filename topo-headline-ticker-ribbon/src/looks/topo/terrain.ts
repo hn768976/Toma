@@ -6,7 +6,7 @@ export const TOPO_F0 = 1 / 8; // lattice cells per world unit at octave 0
 export const TOPO_P0 = TOPO_T * TOPO_F0; // = 12 lattice cells per period
 export const TOPO_H = 1.9; // displacement amplitude (world units)
 /** features are stretched along x so contours form long horizontal bands */
-export const TOPO_SX = 0.65;
+export const TOPO_SX = 0.8;
 
 export function topoHeight(x: number, tz: number): number {
   const px = x * TOPO_F0 * TOPO_SX, pz = tz * TOPO_F0;
@@ -16,7 +16,7 @@ export function topoHeight(x: number, tz: number): number {
   let h = 0, amp = 1, f = 1;
   for (let o = 0; o < 5; o++) {
     h += amp * pnoise(qx * f, qz * f, TOPO_P0 * f, o * 1013);
-    amp *= 0.47;
+    amp *= 0.42;
     f *= 2;
   }
   return h * TOPO_H;
@@ -33,7 +33,7 @@ float topoHeight(vec2 xz){
   int per = P0;
   for (int o = 0; o < 5; o++) {
     h += amp * pnoise(q*f, per, o*1013);
-    amp *= 0.47; f *= 2.0; per *= 2;
+    amp *= 0.42; f *= 2.0; per *= 2;
   }
   return h * ${TOPO_H.toFixed(4)};
 }

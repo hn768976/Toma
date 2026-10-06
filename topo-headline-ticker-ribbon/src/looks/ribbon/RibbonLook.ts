@@ -79,7 +79,7 @@ ${GLSL_AALINE}
 uniform vec3 uC; uniform float uSpacing; uniform float uPx;
 in vec2 vW; in float vDist; out vec4 o;
 void main(){
-  float g = max(aaLine(vW.x / uSpacing, 0.8 * uPx + 0.3), aaLine(vW.y / uSpacing, 0.8 * uPx + 0.3));
+  float g = max(aaLine(vW.x / uSpacing, 1.8 * uPx + 0.5), aaLine(vW.y / uSpacing, 1.8 * uPx + 0.5));
   float g2 = max(aaLine(vW.x / (uSpacing*0.2), 0.6 * uPx + 0.25), aaLine(vW.y / (uSpacing*0.2), 0.6 * uPx + 0.25));
   o = vec4(uC * (g + g2 * 0.18), 1.0);
 }`;
@@ -145,7 +145,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
 
   // ---- ribbon mesh (rebuilt per frame over a window around the camera)
   const NR = 2400;
-  const WIDTH = 2.4;
+  const WIDTH = 1.6;
   const widthDir = new THREE.Vector3(0, 0.18, 1).normalize();
   const rpos = new Float32Array(NR * 2 * 3);
   const across = new Float32Array(NR * 2);
@@ -176,7 +176,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
     glslVersion: THREE.GLSL3,
     vertexShader: ribbonVert,
     fragmentShader: ribbonFrag,
-    uniforms: { uC0: { value: cs[0] }, uC1: { value: cs[1] }, uC2: { value: cs[2] }, uC3: { value: cs[3] }, uStrands: { value: 40 }, uPx: { value: ctx.pxScale }, uGain: { value: 0.6 } },
+    uniforms: { uC0: { value: cs[0] }, uC1: { value: cs[1] }, uC2: { value: cs[2] }, uC3: { value: cs[3] }, uStrands: { value: 40 }, uPx: { value: ctx.pxScale }, uGain: { value: 0.5 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -315,7 +315,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
   for (let i = 0; i < 6; i++) nearNums.push({ x: rng() * L, y: -6 + rng() * 14, z: 6 + rng() * 2, s: 0.22 + rng() * 0.15, text: fmtN(rng(), 3), c: palette[Math.floor(rng() * palette.length)], a: 0.3, tick: false });
 
   // a few big out-of-focus candles in the foreground
-  const nearCandles = Array.from({ length: 9 }, () => ({ x: rng() * L, y: -3 + rng() * 4, h: 1.2 + rng() * 1.8, wick: 0.8 + rng(), up: rng() < 0.3, z: 6.5 + rng() * 1.5 }));
+  const nearCandles = Array.from({ length: 9 }, () => ({ x: rng() * L, y: -3 + rng() * 2, h: 0.7 + rng() * 0.9, wick: 0.8 + rng(), up: rng() < 0.3, z: 6.5 + rng() * 1.5 }));
   type Candle = { x: number; dy: number; h: number; wick: number; up: boolean; dz: number };
   const candles: Candle[] = [];
   for (let x = 0.6; x < L; x += 1.5 + rng() * 2.5) {
@@ -341,10 +341,10 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
       // camera alongside, slightly behind, following rises and falls (smoothed)
       const cy = smoothY(xc + 2);
       const cz = smoothZ(xc + 2);
-      camera.position.set(xc - 4.5, cy + 1.4, cz + 13);
+      camera.position.set(xc - 3, cy + 1.4, cz + 13.5);
       const ly = smoothY(xc + 9);
       camera.up.set(0, 1, 0);
-      camera.lookAt(xc + 6, ly + 2.4, smoothZ(xc + 9) - 2);
+      camera.lookAt(xc + 5, ly + 2.2, smoothZ(xc + 9) - 2);
       camera.updateMatrixWorld();
 
       // ribbon geometry around the camera
@@ -385,7 +385,7 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
         }
         for (const c of nearCandles) {
           const x = c.x + off;
-          if (Math.abs(x - xc + 3) > 9) continue;
+          if (x - xc < -9 || x - xc > -3) continue; // left foreground only
           const col = c.up ? cUp : cDown;
           near.rect(x, c.y + cy * 0.6, c.z, 1, rgba(col, 0.7), -0.03, -c.wick * 0.5, 0.06, c.h + c.wick);
           near.rect(x, c.y + cy * 0.6, c.z, 1, rgba(col, 0.8), -0.12, 0, 0.24, c.h);
@@ -437,11 +437,11 @@ export const makeRibbonLook = (v: RibbonVersion): LookFactory => (ctx) => {
 
       return {
         focusNear: 11,
-        focusFar: 18,
+        focusFar: 22,
         nearBlurAt: 5,
         farBlurAt: 42,
         nearCoc: 0.01,
-        farCoc: 0.009,
+        farCoc: 0.006,
         bloom: 0.25,
         bloomRadius: 0.5,
         exposure: 0.85,

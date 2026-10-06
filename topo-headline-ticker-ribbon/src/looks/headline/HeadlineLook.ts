@@ -228,7 +228,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
   const numbers = new SpriteLayer(numAtlas, 8000, { billboard: false, depthWrite: true, right: new THREE.Vector3(1, 0, 0), up: floorUp });
   scene.add(numbers.mesh);
   type Num = { u: number; w: number; text: string; red: boolean; b: number };
-  const NUM_COLS = 11, NUM_ROWS = 24, ROW_GAP = 2.2, COL_GAP = 4.0;
+  const NUM_COLS = 13, NUM_ROWS = 26, ROW_GAP = 1.9, COL_GAP = 3.4;
   const nums: Num[] = [];
   const vals = ["10%", "30%", "36%", "20%", "0%", "10%", "36%", "30%"];
   for (let r = 0; r < NUM_ROWS; r++)
@@ -302,7 +302,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
     in vec2 vUv; out vec4 o;
     void main(){
       float e = smoothstep(0.0, 0.06, vUv.x) * smoothstep(1.0, 0.94, vUv.x) * smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.88, vUv.y);
-      float a = 0.45 * e * uA;
+      float a = 0.25 * e * uA;
       if (a < 0.02) discard;
       o = vec4(vec3(0.16, 0.0, 0.015) * a, a);
     }`,
@@ -336,13 +336,13 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
     void main(){
       float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x);
       // streaky light band: faint fill plus thin horizontal light lines
-      vec3 c = vec3(0.30,0.36,0.50) * 0.35;
+      vec3 c = vec3(0.30,0.36,0.50) * 0.2;
       float streak = 0.0;
       streak += exp(-pow((vUv.y - 0.9) * 14.0, 2.0)) * 0.55;
       streak += exp(-pow((vUv.y - 0.12) * 16.0, 2.0)) * 0.35;
       streak += exp(-pow((vUv.y - 0.5) * 3.0, 2.0)) * 0.12;
       c += vec3(0.55,0.62,0.8) * streak;
-      float a = (0.12 + 0.55 * streak) * edge * uA;
+      float a = (0.04 + 0.45 * streak) * edge * uA;
       if (a < 0.02) discard;
       o = vec4(c * a, a);
     }`,
@@ -415,15 +415,15 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
 
       // ---- camera: slight angle, slow drift
       const drift = smoothstep(60, 450, frame);
-      const ang = -0.3 + 0.06 * drift;
+      const ang = -0.22 + 0.05 * drift;
       const dist = 22 - 1.4 * drift;
       camera.position.set(Math.sin(ang) * dist + 0.6, 0.6 + 0.4 * drift, Math.cos(ang) * dist);
-      camera.up.set(Math.sin(0.08), Math.cos(0.08), 0);
+      camera.up.set(Math.sin(0.045), Math.cos(0.045), 0);
       camera.lookAt(0.2, 0.5 + 0.1 * drift, 0);
       camera.updateMatrixWorld();
 
       (bg.material as THREE.ShaderMaterial).uniforms.uOn.value = 0.55 + 0.45 * smoothstep(0, 30, frame);
-      panelMat.uniforms.uA.value = 0.12 * mapOn + 0.2 * mapFlash;
+      panelMat.uniforms.uA.value = 0.07 * mapOn + 0.15 * mapFlash;
       mapMat.uniforms.uA.value = mapOn * (1 + 0.8 * mapFlash);
 
       // number floor: scrolls slowly toward the camera
@@ -438,7 +438,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
         const ax = floorOrigin.x + n.u;
         const ay = floorOrigin.y + floorUp.y * w;
         const az = floorOrigin.z + floorUp.z * w;
-        numbers.text(n.text, ax, ay, az, 0.95, [base.r * k, base.g * k, base.b * k, 1], "center");
+        numbers.text(n.text, ax, ay, az, 0.8, [base.r * k, base.g * k, base.b * k, 1], "center");
       }
       numbers.end();
 
@@ -469,7 +469,7 @@ export const makeHeadlineLook = (v: HeadlineVersion): LookFactory => (ctx) => {
         nearBlurAt: 13.0,
         farBlurAt: 30,
         nearCoc: 0.002,
-        farCoc: 0.0022,
+        farCoc: 0.0012,
         bloom: 0.12,
         bloomRadius: 0.5,
         exposure: 0.95,

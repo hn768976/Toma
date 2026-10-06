@@ -2,8 +2,8 @@ import type { TopoVersion } from "./looks/topo/TopoLook";
 
 // One data row per version. Add a colourway = add a row.
 export const TOPO_VERSIONS: TopoVersion[] = [
-  { id: "TopoTerrain-Teal", contour: "#5AE8E0", base: "#041A24", haze: "#04131E", gold: "#E8B84A", tagMode: "values", tagCount: 2, baseGain: 1.3, seed: 1701 },
-  { id: "TopoTerrain-Blue", contour: "#5A8AFF", base: "#040C2E", haze: "#060F30", gold: "#E8B84A", tagMode: "bigdata", tagCount: 5, baseGain: 2.2, seed: 2903 },
+  { id: "TopoTerrain-Teal", contour: "#5AE8E0", base: "#041A24", haze: "#04131E", gold: "#E8B84A", tagMode: "values", tagCount: 2, baseGain: 1.3, pitch: 30, seed: 1701 },
+  { id: "TopoTerrain-Blue", contour: "#5A8AFF", base: "#040C2E", haze: "#060F30", gold: "#E8B84A", tagMode: "bigdata", tagCount: 5, baseGain: 2.0, pitch: 27, seed: 2903 },
 ];
 
 import type { HeadlineVersion } from "./looks/headline/HeadlineLook";
@@ -19,9 +19,9 @@ import type { TickerVersion } from "./looks/ticker/TickerLook";
 
 export const TICKER_VERSIONS: TickerVersion[] = [
   {
-    id: "TickerFloor-Blue", bg: "#010618", tileDark: "#0A3A9A", tileBright: "#1A6ADF", line: "#7FD8FF", lineAlt: "#9FE4FF",
-    haze: "#1A4AB8", hazeGain: 0.4, beam: "#7FC8FF", label: "#9FD8FF", bar: "#3A7AE8", gap: "#020a24",
-    pUp: 0.33, pSigned: 0.66, markerUp: "#FFFFFF", markerDown: "#FFFFFF", waveAmp: 0.8, text: "#CFE4FF", trend: 0, seed: 4242,
+    id: "TickerFloor-Blue", bg: "#040E36", tileDark: "#0A3A9A", tileBright: "#1A6ADF", line: "#7FD8FF", lineAlt: "#9FE4FF",
+    haze: "#1A4AB8", hazeGain: 0.85, beam: "#7FC8FF", label: "#9FD8FF", bar: "#3A7AE8", gap: "#020a24",
+    pUp: 0.33, pSigned: 0.66, markerUp: "#FFFFFF", markerDown: "#FFFFFF", waveAmp: 1.1, text: "#CFE4FF", trend: 0, seed: 4242,
   },
   // Market-crash version: red tiles, ▼ dominant (~75%), lines trending down.
   {

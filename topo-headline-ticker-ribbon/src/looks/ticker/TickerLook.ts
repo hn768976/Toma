@@ -84,7 +84,7 @@ function buildFloorTexture(v: TickerVersion, rng: () => number) {
       const w = w0 * scale;
       const t = Math.pow(rng(), 2.2) * rowBoost;
       // patchy board: many dim cells, some lit, a few bright
-      const col = dark.clone().multiplyScalar(0.22).lerp(dark, Math.min(1, t * 1.6)).lerp(bright, Math.max(0, Math.min(1, t * 1.8 - 0.8)));
+      const col = dark.clone().multiplyScalar(0.45).lerp(dark, Math.min(1, t * 2.2)).lerp(bright, Math.max(0, Math.min(1, t * 1.4 - 0.75)));
       const kind = rng();
       const val = VALUES[Math.floor(rng() * VALUES.length)];
       for (const shift of [0, W]) {
@@ -234,8 +234,8 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
     }
     const gl = new GlowLine(N, { core: 0.1, glow: 0.3, glowAmt: 0.03 });
     scene.add(gl.mesh);
-    const y0 = i === 0 ? 6.4 : i === 1 ? 4.9 : 6.0;
-    lines.push({ z: -24 - i * 0.6 - (i === 2 ? 6 : 0), y0, waves, color: new THREE.Color(lineCols[i]).multiplyScalar(i === 2 ? 0.55 : 1), gl, hw: 0.3 });
+    const y0 = i === 0 ? 7.4 : i === 1 ? 5.9 : 7.0;
+    lines.push({ z: -24 - i * 0.6 - (i === 2 ? 6 : 0), y0, waves, color: new THREE.Color(lineCols[i]).multiplyScalar(i === 2 ? 0.35 : 1), gl, hw: 0.3 });
   }
   const pts = new Float32Array(N * 3), nrm = new Float32Array(N * 3), cols = new Float32Array(N * 3);
 
@@ -279,7 +279,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, 40), mat);
     mesh.position.set(bx, 19.5, -60 - rng() * 20);
     scene.add(mesh);
-    beams.push({ mesh, mat, a: i === 0 ? 0.7 : 0.22 + rng() * 0.12, m: 1 + Math.floor(rng() * 2), ph: rng() });
+    beams.push({ mesh, mat, a: i === 0 ? 1.0 : 0.3 + rng() * 0.12, m: 1 + Math.floor(rng() * 2), ph: rng() });
   });
 
   const labelCol = new THREE.Color(v.label);
@@ -293,8 +293,8 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       const f = mod(frame, LOOP);
       const ph = f / LOOP;
 
-      camera.position.set(Math.sin(TAU * ph) * 0.6, 4.4 + Math.sin(TAU * ph * 2) * 0.06, 14);
-      camera.rotation.set(-0.045, Math.sin(TAU * ph) * 0.008, 0);
+      camera.position.set(Math.sin(TAU * ph) * 0.6, 5.6 + Math.sin(TAU * ph * 2) * 0.06, 14);
+      camera.rotation.set(-0.1, Math.sin(TAU * ph) * 0.008, 0);
       camera.updateMatrixWorld();
 
       floorMat.uniforms.uScroll.value = (ROWS_PER_LOOP / ROWS) * ph;
@@ -322,7 +322,7 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
       for (const b of bars) {
         const h = b.h * (0.75 + 0.25 * Math.sin(TAU * (b.m * ph + b.ph)));
         // candlestick: thin wick + body, both from the frame number only
-        const k = 0.26;
+        const k = 0.4;
         const base = 2.5 + b.ph * 6;
         const bodyLo = h * (0.2 + 0.2 * b.ph), bodyHi = h * (0.55 + 0.3 * b.ph);
         sprites.rect(b.x, base, b.z, 1, [barCol.r * k, barCol.g * k, barCol.b * k, 1], -0.04, 0, 0.08, h);
@@ -346,11 +346,11 @@ export const makeTickerLook = (v: TickerVersion): LookFactory => (ctx) => {
 
       return {
         focusNear: 12,
-        focusFar: 34,
+        focusFar: 45,
         nearBlurAt: 7,
-        farBlurAt: 75,
+        farBlurAt: 120,
         nearCoc: 0.009,
-        farCoc: 0.007,
+        farCoc: 0.0035,
         bloom: 0.3,
         bloomRadius: 0.6,
         exposure: 0.66,

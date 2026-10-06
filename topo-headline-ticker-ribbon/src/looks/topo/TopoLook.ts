@@ -15,6 +15,7 @@ export type TopoVersion = {
   tagMode: "values" | "bigdata"; // framed tags: values only, or BIG DATA + boxed values
   tagCount: number; // framed tags per tile
   baseGain: number; // brightness of the terrain base / hotspot
+  pitch: number; // camera pitch below the horizon, degrees
   seed: number;
 };
 
@@ -67,8 +68,8 @@ void main(){
   float major = aaLine(c / 5.0, w * 1.5);
   // dotted look along the lines (fine world-space dot lattice)
   // lines are strings of particles: a fine world-space dot lattice masks them
-  float dots = aaDots(vT * 5.0, 1.9 * uPx + 0.75);
-  float lineMask = max(minor * (0.12 + 1.5 * dots), major * (0.3 + 1.3 * dots));
+  float dots = aaDots(vT * 5.0, 2.4 * uPx + 0.85);
+  float lineMask = max(minor * (0.08 + 1.9 * dots), major * (0.25 + 1.6 * dots));
   // brighter where contours bunch up (steep slopes)
   float steep = clamp(length(vec2(dFdx(h), dFdy(h))) / max(length(vec2(dFdx(vT.x), dFdy(vT.y))), 1e-4), 0.0, 3.0);
   float lum = 0.55 + 0.35 * smoothstep(0.2, 1.5, steep) + 0.25 * smoothstep(-3.0, 4.0, h);
@@ -265,7 +266,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
     const z = -rng() * TOPO_T;
     const k = rng();
     // 45% standalone pins, 35% value labels with a small triangle, 20% pin + value
-    pins.push({ x, z, y: 0, value: 20 + rng() * 680, tri: k >= 0.45 && k < 0.58, showPin: k < 0.45 || k >= 0.8, label: k >= 0.45, tick: rng() < 0.35, teal: rng() < 0.35, down: rng() < 0.4 });
+    pins.push({ x, z, y: 0, value: 20 + rng() * 680, tri: k >= 0.3 && k < 0.7, showPin: k < 0.3 || k >= 0.85, label: k >= 0.3, tick: rng() < 0.35, teal: rng() < 0.35, down: rng() < 0.4 });
   }
   const tags: Tag[] = [];
   for (let i = 0; i < v.tagCount; i++) {
@@ -325,7 +326,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       const sway = Math.sin(TAU * ph) * 1.2;
       camera.position.set(sway, CAM_H + Math.sin(TAU * ph * 2) * 0.25, 0);
       camera.rotation.order = "YXZ";
-      camera.rotation.set(-20.5 * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0.035);
+      camera.rotation.set(-v.pitch * (Math.PI / 180), Math.sin(TAU * ph) * 0.02, 0.035);
       camera.updateMatrixWorld();
 
       sprites.begin();
@@ -347,7 +348,7 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
         const val = p.tick ? p.value + (hash01(i, Math.floor(f / 12), v.seed) - 0.5) * 40 : p.value;
         for (let j = 0; j < K; j++) {
           const z = wrapZ(p.z, j, offset);
-          const s = 0.34;
+          const s = 0.4;
           if (p.showPin) labels.icon(PIN, p.x, p.y, z, s * 1.1, white, -0.38, 0, 0.76, 1.0);
           if (!p.label || -z > 75) continue; // keep the far band free of label clutter
           const lx = p.showPin ? 0.6 : 0;
@@ -377,13 +378,13 @@ export const makeTopoLook = (v: TopoVersion): LookFactory => (ctx) => {
       labels.end();
 
       return {
-        focusNear: 21,
-        focusFar: 42,
+        focusNear: 18,
+        focusFar: 33,
         nearBlurAt: 13,
-        farBlurAt: 80,
+        farBlurAt: 60,
         nearCoc: 0.008,
         farCoc: 0.007,
-        bloom: 0.5,
+        bloom: 0.75,
         bloomRadius: 0.55,
         exposure: 0.62,
         saturation: 1.12,

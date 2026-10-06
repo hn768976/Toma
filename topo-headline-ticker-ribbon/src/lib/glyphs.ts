@@ -86,6 +86,7 @@ export class GlyphAtlas {
         false,
       );
     }
+    if (opts.dotMatrix) applyDotMatrix(ctx, W, H, opts.dotMatrix);
     for (const k of iconKeys) {
       place(
         k,
@@ -97,7 +98,6 @@ export class GlyphAtlas {
         true,
       );
     }
-    if (opts.dotMatrix) applyDotMatrix(ctx, W, H, opts.dotMatrix);
     this.texture = new THREE.CanvasTexture(canvas);
     this.texture.colorSpace = THREE.NoColorSpace; // used as a coverage mask
     this.texture.generateMipmaps = true;
