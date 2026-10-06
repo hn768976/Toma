@@ -1,0 +1,33 @@
+{
+  "name": "ai-hud-candles-iris-sphere",
+  "version": "1.0.0",
+  "description": "Five three.js motion graphics in Remotion: AI Agents Chip, Mono AI HUD, Candle Dashboard, Iris Burst, Data Sphere",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/bundler": "4.0.533",
+    "@remotion/cli": "4.0.533",
+    "@remotion/renderer": "4.0.533",
+    "@remotion/three": "4.0.533",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.533",
+    "three": "0.180.0",
+    "topojson-client": "3.1.0"
+  },
+  "devDependencies": {
+    "@types/geojson": "7946.0.16",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "@types/topojson-client": "3.1.5",
+    "@types/topojson-specification": "1.0.5",
+    "typescript": "5.9.3"
+  }
+}
