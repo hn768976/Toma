@@ -48,8 +48,8 @@ type WType = "bars" | "hist" | "donut" | "strip" | "ticker" | "wave" | "readout"
 type Widget = { type: WType; x: number; y: number; w: number; h: number; seed: number };
 
 const CAPTIONS = [
-  "DATA NODE", "SYNC RATE", "NET LOAD", "FLOW 07", "UPLINK", "PACKETS", "SIGNAL", "LATENCY",
-  "NODE MAP", "CORE 3", "STREAM", "BUFFER", "ROUTE 12", "INDEX", "QUEUE", "GRID 5",
+  "2207 33", "72", "958854", "35", "0045", "12 · 08", "4561", "88",
+  "NODE 7", "3 / 12", "26.98", "1904", "SYNC", "07", "553 1", "41.2",
 ];
 
 const WIDGETS: Widget[] = (() => {
@@ -135,14 +135,14 @@ const drawBase = (row: MapRow) => {
   ctx.fillStyle = row.base;
   ctx.fillRect(0, 0, TW, TH);
   const g = ctx.createRadialGradient(TW * 0.5, TH * 0.48, 200, TW * 0.5, TH * 0.5, TW * 0.55);
-  g.addColorStop(0, "rgba(10,60,210,0.3)");
+  g.addColorStop(0, "rgba(10,60,210,0.2)");
   g.addColorStop(0.55, "rgba(6,40,170,0.16)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, TW, TH);
 
   // fine grid
-  ctx.strokeStyle = "rgba(130,180,255,0.07)";
+  ctx.strokeStyle = "rgba(130,180,255,0.03)";
   ctx.lineWidth = 2;
   for (let x = 0; x < TW; x += 64) {
     ctx.beginPath();
@@ -158,8 +158,8 @@ const drawBase = (row: MapRow) => {
   }
 
   // angled HUD frame lines around the map
-  ctx.strokeStyle = "rgba(140,190,255,0.45)";
-  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(170,210,255,0.8)";
+  ctx.lineWidth = 10;
   const hud = (pts: [number, number][]) => {
     ctx.beginPath();
     pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
@@ -202,7 +202,7 @@ const drawBase = (row: MapRow) => {
 
   // dotted world map (hex-offset round dots)
   const { isLand } = getLandMask();
-  const pitch = 16.5;
+  const pitch = 22;
   const rows = Math.floor(MAP.h / (pitch * 0.9));
   const cols = Math.floor(MAP.w / pitch);
   for (let j = 0; j < rows; j++) {
@@ -217,8 +217,8 @@ const drawBase = (row: MapRow) => {
       const center = Math.exp(-(cx * cx * 2.2 + cy * cy * 3));
       const b = Math.min(1, 0.35 + 0.55 * center + 0.3 * hash(i, j, 2));
       const white = hash(i >> 2, j >> 2, 9) < 0.18 ? 0.6 : 0;
-      ctx.fillStyle = white > 0 || hash(i, j, 5) < 0.6 ? `rgba(220,230,245,${0.4 + 0.45 * b})` : rgba(row.dots, 0.35 + 0.45 * b);
-      ctx.fillRect(px - 5, py - 5, 10, 10);
+      ctx.fillStyle = white > 0 || hash(i, j, 5) < 0.6 ? `rgba(225,245,255,${0.45 + 0.45 * b})` : rgba(row.dots, 0.42 + 0.45 * b);
+      ctx.fillRect(px - 7.5, py - 7.5, 15, 15);
     }
   }
 
@@ -317,22 +317,17 @@ const drawBase = (row: MapRow) => {
         }
       }
     } else if (w.type === "wave") {
-      const n = 40;
-      ctx.beginPath();
-      for (let k = 0; k <= n; k++) {
-        const x = w.x + (k / n) * w.w;
-        const y = top + ih * (0.5 + 0.35 * Math.sin(k * 0.5 + w.seed) * Math.cos(k * 0.13 + w.seed * 2));
-        if (k) ctx.lineTo(x, y);
-        else ctx.moveTo(x, y);
+      // rainbow stack of thin horizontal lines (red → yellow → green → cyan → blue)
+      const hues = ["#FF3A4A", "#FF8A3A", "#FFD24A", "#7AE84A", "#3AE8A0", "#3AE8F0", "#3A9AFF", "#8A6AFF"];
+      const n = hues.length;
+      const lh = Math.min(16, ih / (n * 1.6));
+      for (let k = 0; k < n; k++) {
+        const len = w.w * (0.45 + 0.55 * hash(w.seed, k));
+        ctx.fillStyle = hues[k];
+        ctx.globalAlpha = 0.9;
+        ctx.fillRect(w.x, top + ih * 0.15 + k * lh * 1.6, len, lh);
       }
-      ctx.strokeStyle = rgba(pal[w.seed % 4], 0.9);
-      ctx.lineWidth = 6;
-      ctx.stroke();
-      ctx.lineTo(w.x + w.w, top + ih);
-      ctx.lineTo(w.x, top + ih);
-      ctx.closePath();
-      ctx.fillStyle = rgba(pal[w.seed % 4], 0.15);
-      ctx.fill();
+      ctx.globalAlpha = 1;
     } else if (w.type === "ticker") {
       ctx.font = `400 30px ${MONO}`;
       ctx.fillStyle = "rgba(150,190,255,0.55)";
@@ -453,7 +448,7 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
       if (w.type !== "bars" && w.type !== "hist") return;
       const n = w.type === "bars" ? 8 + (w.seed % 9) : 36 + (w.seed % 30);
       const top = w.y + 70;
-      const ih = w.h - 90;
+      const ih = (w.h - 90) * 0.6;
       const step = w.w / n;
       const bw = step * (w.type === "bars" ? 0.62 : 0.55);
       for (let k = 0; k < n; k++) {
@@ -467,7 +462,7 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
         const cEnd = w.seed % 3 ? pal[2] : pal[0];
         const mode = w.seed % 5;
         let c = t < 0.5 ? a.clone().lerp(b, t * 2) : b.clone().lerp(cEnd, (t - 0.5) * 2);
-        if (mode <= 1) c = pal[0].clone().lerp(new THREE.Vector3(1, 0.62, 0.92), t * 0.6); // magenta / hot pink
+        if (mode <= 1) c = pal[0].clone().lerp(new THREE.Vector3(0.95, 0.25, 0.8), t * 0.5); // hot magenta
         if (mode === 2) c = new THREE.Vector3(0.82, 0.86, 0.95).multiplyScalar(0.7 + 0.3 * hash(w.seed, k)); // white/grey
         col.push(c.x, c.y, c.z);
         seed.push(w.seed * 100 + k);
@@ -780,8 +775,8 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
     const tx = -1.3 + 2.6 * g;
     const tz = 0.8 - 0.2 * g;
     const yaw = 0.52 - 0.1 * g;
-    const pitch = (45 * Math.PI) / 180;
-    const dist = 14.8 - 0.8 * g;
+    const pitch = (40 * Math.PI) / 180;
+    const dist = 13.4 - 0.7 * g;
     camera.position.set(
       tx + Math.sin(yaw) * Math.cos(pitch) * dist,
       Math.sin(pitch) * dist,
@@ -840,7 +835,7 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
     hubPx.forEach(([x, y], i) => {
       if (nodeOn[i] <= 0) return;
       const tw = 0.8 + 0.2 * Math.sin(frame * 0.15 + i);
-      spData.set([x, y, 70, 0.7 * nodeOn[i] * tw], s * 4);
+      spData.set([x, y, 50, 0.5 * nodeOn[i] * tw], s * 4);
       s++;
     });
     spBuf.needsUpdate = true;
@@ -865,10 +860,10 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
     const fadeIn = range(frame, 45, 70);
     return {
       frame,
-      bloom: { strength: 0.45, threshold: 0.75, knee: 0.3, radius: 1.0 },
-      dof: { focus: camera.position.distanceTo(new THREE.Vector3(tx, 0, tz)), aperture: 0.008, maxBlur: 0.006, nearScale: 0.8 },
+      bloom: { strength: 0.7, threshold: 0.6, knee: 0.3, radius: 1.0 },
+      dof: { focus: camera.position.distanceTo(new THREE.Vector3(tx, 0, tz)), aperture: 0.014, maxBlur: 0.009, nearScale: 0.8 },
       exposure: 0.25 + 0.75 * fadeIn,
-      vignette: 0.55,
+      vignette: 0.75,
       grain: 0.015,
     };
   };
