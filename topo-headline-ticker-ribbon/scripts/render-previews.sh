@@ -13,7 +13,7 @@ for id in $IDS; do
   rm -rf "out/seq/$id"
   start=$(date +%s)
   npx remotion render out/bundle "$id" "out/seq/$id" --sequence --image-format=png \
-    --scale=$SCALE --gl=angle --concurrency=4 > "out/logs/render_$id.log" 2>&1
+    --scale=$SCALE --gl=angle --concurrency=4 --timeout=180000 > "out/logs/render_$id.log" 2>&1
   end=$(date +%s)
   frames=$(ls "out/seq/$id" | wc -l)
   echo "$id frames=$frames seconds=$((end-start))" >> out/logs/render_times.txt

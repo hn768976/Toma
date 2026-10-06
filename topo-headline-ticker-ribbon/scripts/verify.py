@@ -20,7 +20,7 @@ def sh(cmd):
 
 def still(frame, out, props=None):
     p = f"--props='{json.dumps(props)}'" if props else ""
-    r = sh(f"npx remotion still out/bundle {cid} {out} --frame={frame} --scale={SCALE} --gl=angle {p}")
+    r = sh(f"npx remotion still out/bundle {cid} {out} --frame={frame} --scale={SCALE} --gl=angle --timeout=180000 {p}")
     if r.returncode != 0:
         raise RuntimeError(r.stderr[-2000:])
 
