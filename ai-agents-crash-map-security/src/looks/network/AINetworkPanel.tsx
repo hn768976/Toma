@@ -11,10 +11,10 @@ import { useAssets } from "../../lib/useAssets";
 import type { NetworkRow } from "../../versions";
 
 // Panel layout (panel-local units; panel lies on the ground plane) -------------
-const PANEL_W = 5.1;
-const PANEL_H = 3.4;
+const PANEL_W = 5.9;
+const PANEL_H = 3.6;
 const CENTER_R = 0.56;
-const NODE_R = 0.3;
+const NODE_R = 0.25;
 
 const NODES: { icon: IconName; x: number; y: number }[] = (() => {
   const icons: IconName[] = ["user", "chart", "cloud", "gear", "database", "chat", "shield", "globe", "phone", "document"];
@@ -22,7 +22,7 @@ const NODES: { icon: IconName; x: number; y: number }[] = (() => {
   const radial = [1.0, 0.86, 0.78, 0.9, 1.0, 0.98, 0.84, 0.76, 0.88, 0.95];
   return icons.map((icon, i) => {
     const a = (angles[i] * Math.PI) / 180;
-    return { icon, x: Math.cos(a) * 2.0 * radial[i], y: Math.sin(a) * 1.3 * radial[i] };
+    return { icon, x: Math.cos(a) * 2.35 * radial[i], y: Math.sin(a) * 1.18 * radial[i] };
   });
 })();
 
@@ -76,12 +76,12 @@ const panelCanvas = (row: NetworkRow) => {
   const c = makeCanvas(w, h);
   const ctx = c.getContext("2d")!;
   const g = ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, w * 0.6);
-  g.addColorStop(0, rgba(row.panel, 0.08));
-  g.addColorStop(0.6, rgba(row.panel, 0.04));
-  g.addColorStop(1, rgba(row.panel, 0.025));
+  g.addColorStop(0, rgba(row.panel, 0.18));
+  g.addColorStop(0.6, rgba(row.panel, 0.12));
+  g.addColorStop(1, rgba(row.panel, 0.09));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(180,210,255,0.08)";
+  ctx.strokeStyle = "rgba(180,210,255,0.11)";
   ctx.lineWidth = 2;
   for (let x = 0; x < w; x += 64) {
     ctx.beginPath();
@@ -95,9 +95,26 @@ const panelCanvas = (row: NetworkRow) => {
     ctx.lineTo(w, y);
     ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(190,215,255,0.12)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(120,200,255,0.55)";
+  ctx.lineWidth = 4;
   ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.strokeStyle = "rgba(120,200,255,0.25)";
+  ctx.strokeRect(40, 40, w - 80, h - 80);
+  // small HUD widgets inside the panel
+  {
+    const rr = mulberry32(31);
+    for (let i = 0; i < 16; i++) {
+      const x = 60 + rr() * (w - 260);
+      const y = 60 + rr() * (h - 120);
+      if (Math.abs(x - w / 2) < w * 0.33 && Math.abs(y - h / 2) < h * 0.36) continue;
+      ctx.fillStyle = `rgba(170,210,255,${0.25 + rr() * 0.3})`;
+      if (rr() < 0.5) for (let k = 0; k < 6; k++) ctx.fillRect(x + k * 22, y + (k % 3) * 6, 14, 30 - (k % 3) * 6);
+      else {
+        ctx.font = `400 26px ${MONO}`;
+        ctx.fillText(String(Math.floor(rr() * 99999)).padStart(5, "0"), x, y);
+      }
+    }
+  }
   // thin bright-cyan accent lines
   ctx.strokeStyle = "rgba(60,200,255,0.85)";
   ctx.lineWidth = 5;
@@ -194,7 +211,7 @@ const bracketCanvas = () => {
   const c = makeCanvas(S, S);
   const ctx = c.getContext("2d")!;
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 30;
+  ctx.lineWidth = 14;
   ctx.lineCap = "square";
   ctx.beginPath();
   ctx.moveTo(S - 20, 12);
@@ -317,7 +334,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
       const w = 0.3 + rnd() * 1.6;
       const d = 0.3 + rnd() * 1.4;
       if (Math.abs(x) < PANEL_W / 2 + 1.9 + w / 2 && Math.abs(z) < PANEL_H / 2 + 1.7 + d / 2) continue;
-      const h = 0.04 + Math.pow(rnd(), 2.2) * 1.1;
+      const h = 0.03 + Math.pow(rnd(), 2.2) * 0.4;
       boxes.push({ x, z, w, d, h });
     }
     const geo = new THREE.BoxGeometry(1, 1, 1);
@@ -384,7 +401,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
   ].map((t, i) => {
     const tex = canvasTexture(tagCanvas(row, t.text, 30 + i), renderer);
     const mat = quadMat(tex, new THREE.Vector3(1, 1, 1), false);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.95 * t.s, 0.3 * t.s), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.15 * t.s, 0.36 * t.s), mat);
     m.rotation.x = -Math.PI / 2;
     m.position.set(t.x, 0.05 + hash(i, 4) * 0.3, t.z);
     scene.add(m);
@@ -584,7 +601,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     [-1, -1],
   ].map(([sx, sy], i) => {
     const mat = quadMat(brTex, white);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.72), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), mat);
     m.rotation.z = [0, -Math.PI / 2, Math.PI, Math.PI / 2][i];
     m.renderOrder = 6;
     panel.add(m);
@@ -616,7 +633,7 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     const centerA = 0.28 * range(frame, 40, 80) + 0.72 * range(frame, SPOKE_START - 6, SPOKE_START + 6);
     centerMat.uniforms.uA.value = centerA;
     (centerGlow.material as THREE.ShaderMaterial).uniforms.uA.value = centerA * (0.85 + 0.15 * Math.sin(frame * 0.08));
-    arcsMat.uniforms.uA.value = range(frame, SPOKE_START, SPOKE_START + 20) * 0.5;
+    arcsMat.uniforms.uA.value = 0; // no dotted halo around the hub
     arcs.rotation.z = frame * 0.004;
 
     // spokes draw out, nodes pop in one by one
@@ -699,14 +716,14 @@ const makeLook = (row: NetworkRow): LookFactory => ({ renderer, aspect }) => {
     });
     tags.forEach((tg) => {
       const blink = hash(tg.i, Math.floor(frame / 20)) < 0.15 ? 0.35 : 1;
-      tg.mat.uniforms.uA.value = env * blink * 0.7;
+      tg.mat.uniforms.uA.value = env * blink;
     });
 
     const focus = camera.position.distanceTo(target);
     return {
       frame,
-      bloom: { strength: 0.95, threshold: 0.5, knee: 0.3, radius: 1.0 },
-      dof: { focus, aperture: 0.012, maxBlur: 0.008, nearScale: 0.7 },
+      bloom: { strength: 0.85, threshold: 0.62, knee: 0.3, radius: 1.0 },
+      dof: { focus, aperture: 0.022, maxBlur: 0.011, nearScale: 0.8 },
       exposure: range(frame, 20, 60),
       vignette: 0.6,
       grain: 0.015,

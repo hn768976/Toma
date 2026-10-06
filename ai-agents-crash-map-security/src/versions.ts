@@ -74,7 +74,7 @@ export const VERSIONS: VersionRow[] = [
   {
     look: "network",
     id: "AINetworkPanel_BlueWhite",
-    base: "#03060C",
+    base: "#060E1C",
     block: "#0A0E18",
     diagram: "#FFFFFF",
     panel: "#5A8AD8",
