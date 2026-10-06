@@ -22,6 +22,7 @@ export type PointsOpts = {
   sphereCenter?: THREE.Vector3; // local space centre (default origin)
   softness?: number; // 0 = crisp disc, 1 = gaussian blob
   minPx?: number;
+  lit?: number; // 0..1: fade points facing away from an upper-left light
 };
 
 export class PointCloud {
@@ -53,23 +54,25 @@ export class PointCloud {
           uCenter: { value: o.sphereCenter ?? new THREE.Vector3() },
           uSoft: { value: o.softness ?? 0.35 },
           uMinPx: { value: o.minPx ?? 1.4 },
+          uLit: { value: o.lit ?? 0 },
           uOpacity: { value: 1 },
         },
         vertexShader: /* glsl */ `
           ${COMMON}
           in vec4 aCol; in float aSize;
-          uniform float uSizeScale, uBack, uMinPx; uniform vec3 uCenter;
+          uniform float uSizeScale, uBack, uMinPx, uLit; uniform vec3 uCenter;
           flat out vec4 vCol; flat out float vPx;
           void main(){
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
             float px = aSize * uSizeScale * uProj / max(-mv.z, 1e-3);
             float a = aCol.a;
             if (px < uMinPx) { a *= (px * px) / (uMinPx * uMinPx); px = uMinPx; }
-            if (uBack < 1.0) {
+            if (uBack < 1.0 || uLit > 0.0) {
               vec3 cv = (modelViewMatrix * vec4(uCenter, 1.0)).xyz;
               vec3 n = normalize(mv.xyz - cv);
               float facing = dot(n, normalize(-mv.xyz));
               a *= mix(uBack, 1.0, smoothstep(-0.05, 0.2, facing));
+              a *= mix(1.0, smoothstep(-0.6, 0.5, dot(n, normalize(vec3(-0.7, 0.55, 0.45)))), uLit);
             }
             vCol = vec4(aCol.rgb, a);
             vPx = px;
