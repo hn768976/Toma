@@ -65,12 +65,13 @@ const layoutRng = mulberry32(0x5eed01);
 const BLOCKS: Block[] = (() => {
   // scattered placement (rejection sampling, no overlaps), not a grid
   const out: Block[] = [];
-  const kinds: Block["kind"][] = ["digits", "digits", "digits", "digits", "digits", "small", "small", "small", "small", "bars", "stair", "stair", "list", "hatch", "hatch", "gauge", "meter"];
+  const kinds: Block["kind"][] = ["digits", "digits", "digits", "digits", "digits", "small", "small", "small", "small", "bars", "stair", "list", "hatch", "hatch", "meter"];
   let guard = 0;
   while (out.length < 58 && guard++ < 20000) {
     const kind = pick(layoutRng, kinds);
-    const w = range(layoutRng, 520, 1000) * (kind === "small" ? 0.6 : 1);
-    const h = range(layoutRng, 380, 640) * (kind === "small" ? 0.6 : 1);
+    const k = kind === "small" ? 0.6 : kind === "bars" ? 1.35 : 1;
+    const w = range(layoutRng, 520, 1000) * k;
+    const h = range(layoutRng, 380, 640) * k;
     const x = range(layoutRng, 80, TILE - w - 80);
     const y = range(layoutRng, 80, TILE - h - 80);
     const pad = 60;
@@ -134,7 +135,7 @@ const drawTile = () => {
     ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
   }
   // faint grid (divides the tile: seamless)
-  ctx.strokeStyle = "rgba(90,168,232,0.10)";
+  ctx.strokeStyle = "rgba(90,168,232,0.05)";
   ctx.lineWidth = 2;
   for (let i = 0; i <= TILE; i += 256) {
     ctx.beginPath();
@@ -144,7 +145,7 @@ const drawTile = () => {
     ctx.lineTo(TILE, i);
     ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(90,168,232,0.2)";
+  ctx.strokeStyle = "rgba(90,168,232,0.1)";
   ctx.lineWidth = 3;
   for (let i = 0; i <= TILE; i += 1024) {
     ctx.beginPath();
@@ -162,7 +163,7 @@ const drawTile = () => {
     const h = range(pr, 500, 1500);
     const x = range(pr, 0, TILE - w);
     const y = range(pr, 0, TILE - h);
-    ctx.fillStyle = `rgba(50,120,230,${range(pr, 0.07, 0.16).toFixed(3)})`;
+    ctx.fillStyle = `rgba(50,120,230,${range(pr, 0.04, 0.1).toFixed(3)})`;
     ctx.fillRect(x, y, w, h);
     if (pr() < 0.6) {
       ctx.strokeStyle = `rgba(150,210,255,${range(pr, 0.25, 0.5).toFixed(3)})`;
@@ -171,25 +172,36 @@ const drawTile = () => {
     }
   }
   // long thin bright border lines across the plane (both axes)
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 14; i++) {
     const horiz = pr() < 0.6;
     const p = range(pr, 100, TILE - 100);
     const a = range(pr, 0, TILE * 0.4);
     const b = a + range(pr, TILE * 0.3, TILE * 0.6);
-    ctx.fillStyle = `rgba(170,225,255,${range(pr, 0.35, 0.7).toFixed(3)})`;
-    if (horiz) ctx.fillRect(a, p, b - a, 4);
-    else ctx.fillRect(p, a, 4, b - a);
+    ctx.fillStyle = `rgba(185,232,255,${range(pr, 0.5, 0.85).toFixed(3)})`;
+    if (horiz) ctx.fillRect(a, p, b - a, 7);
+    else ctx.fillRect(p, a, 7, b - a);
     ctx.beginPath();
     ctx.arc(horiz ? b : p + 2, horiz ? p + 2 : b, 10, 0, Math.PI * 2);
     ctx.fill();
+  }
+  // thick bright highlight bars (read as slanted slabs in perspective)
+  for (let i = 0; i < 16; i++) {
+    const x = range(pr, 200, TILE - 1600);
+    const y = range(pr, 200, TILE - 200);
+    const w = range(pr, 500, 1400);
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, "rgba(140,205,255,0.75)");
+    g.addColorStop(1, "rgba(140,205,255,0.15)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, range(pr, 36, 70));
   }
   // big faint rings (ellipses once seen in perspective)
   for (let i = 0; i < 7; i++) {
     const x = range(pr, 800, TILE - 800);
     const y = range(pr, 800, TILE - 800);
     const r = range(pr, 260, 520);
-    ctx.strokeStyle = "rgba(150,210,255,0.4)";
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(160,215,255,0.6)";
+    ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.stroke();
@@ -253,7 +265,11 @@ const drawTile = () => {
     ctx.textAlign = "left";
     switch (b.kind) {
       case "digits": {
-        ctx.fillText(b.label, 0, 30);
+        ctx.font = `700 120px ${SANS}`;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#9FD4FF";
+        ctx.fillText(b.label === "BIG DATA" || br() < 0.5 ? "BIG DATA" : b.label, 0, -10);
+        ctx.fillStyle = C_MID;
         ctx.globalAlpha = 0.5;
         ctx.fillRect(0, 62, b.w * 0.6, 3);
         ctx.font = `500 26px ${MONO}`;
@@ -424,8 +440,8 @@ const drawDynamic = (B: Batch2D, f: number) => {
           const v = 0.15 + 0.85 * beatValue(f, s + i * 13, 30, LOOP, 0.6);
           const hgt = hmax * v;
           const x = b.x + (i * b.w) / b.n + ((b.w / b.n) - bw) / 2;
-          B.rect(x, base - hgt, bw, hgt, C_MID, 0.85, { i: 1.1 });
-          B.rect(x, base - hgt, bw, Math.min(12, hgt), C_HI, 1, { i: 1.8 });
+          B.rect(x, base - hgt, bw, hgt, C_MID, 0.95, { i: 1.5 });
+          B.rect(x, base - hgt, bw, Math.min(16, hgt), C_HI, 1, { i: 2.0 });
         }
         break;
       }
@@ -506,14 +522,14 @@ const build: BuildFn = () => {
   const camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.5, 140);
   const tex = canvasTexture(drawTile(), { repeat: true });
   const FOG: [number, number, number] = [11, 30, 0.85];
-  const fogColor = "#0a2470";
+  const fogColor = "#05123e";
 
   const makeFloor = (opts: { tint: number; uvOff: [number, number]; y: number; withDyn: boolean }) => {
     const floor = new THREE.Group();
     floor.position.y = opts.y;
     floor.rotation.x = -Math.PI / 2;
     const inner = new THREE.Group();
-    inner.rotation.z = THREE.MathUtils.degToRad(-44);
+    inner.rotation.z = THREE.MathUtils.degToRad(-50);
     floor.add(inner);
     const REP = 5;
     const mat = texPlaneMaterial(tex, {
@@ -545,7 +561,7 @@ const build: BuildFn = () => {
   };
 
   // main plane + its dimmer copy below
-  const main = makeFloor({ tint: 1.3, uvOff: [0, 0], y: 0, withDyn: true });
+  const main = makeFloor({ tint: 1.0, uvOff: [0, 0], y: 0, withDyn: true });
   const under = makeFloor({ tint: 0.75, uvOff: [0.37, 0.61], y: -1.3, withDyn: false });
 
   const sMain = new THREE.Scene();
@@ -559,7 +575,7 @@ const build: BuildFn = () => {
   const target = new THREE.Vector3();
   const layers = [
     { scene: sUnder, blur: 0.006 },
-    { scene: sMain, depth: { focus: 7.2, band: 0.9, range: 3.4, maxBlur: 0.0105, nearMul: 1.8 } },
+    { scene: sMain, depth: { focus: 7.2, band: 1.25, range: 4.2, maxBlur: 0.009, nearMul: 2.4 } },
   ];
 
   return {
@@ -567,11 +583,11 @@ const build: BuildFn = () => {
     layers,
     pipeline: {
       background: fogColor,
-      bloomThreshold: 0.6,
+      bloomThreshold: 0.7,
       bloomKnee: 0.5,
-      bloomIntensity: 1.5,
-      bloomRadius: 0.85,
-      vignette: 0.6,
+      bloomIntensity: 1.35,
+      bloomRadius: 0.75,
+      vignette: 0.85,
       saturation: 1.05,
     },
     update: (f) => {
