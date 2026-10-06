@@ -57,11 +57,11 @@ const LABELS: Label[] = (() => {
   // Depth layers from far to near, each a jittered grid filling the view.
   // far layers, ONE focal plane (z = 0, laid out as a staggered grid), near layers
   const layers = [-36, -27, -19, -12, -6.5, 0, 3.9, 5.4, 6.6];
-  const counts = [80, 70, 58, 46, 38, 60, 14, 9, 5];
+  const counts = [80, 70, 58, 46, 40, 78, 20, 10, 5];
   layers.forEach((z, li) => {
     const n = counts[li];
     const focal = z === 0;
-    const rows = focal ? 12 : Math.max(2, Math.round(Math.sqrt(n / 2.2)));
+    const rows = focal ? 13 : Math.max(2, Math.round(Math.sqrt(n / 2.2)));
     const cols = Math.ceil(n / rows);
     for (let k = 0; k < n; k++) {
       const row = Math.floor(k / cols);
@@ -83,8 +83,8 @@ const LABELS: Label[] = (() => {
         x,
         y,
         z: zz,
-        h: 0.05 * (CAM_Z - zz) * (0.75 + r() * 0.6) * (focal ? 1.45 : 1),
-        tinted: z < -12 ? r() < 0.6 : r() < (focal ? 0.12 : 0.36),
+        h: 0.05 * (CAM_Z - zz) * (0.75 + r() * 0.6) * (focal ? 1.45 : z > 3 ? 1.45 : 1),
+        tinted: z < -12 ? r() < 0.6 : r() < (focal ? 0.26 : 0.36),
         bright: 0.7 + r() * 0.3,
         period: periods[Math.floor(r() * periods.length)],
         offset: Math.floor(r() * 600),
@@ -217,8 +217,8 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
     const c = makeCanvas(2048, 1152);
     const ctx = c.getContext("2d")!;
     const g = ctx.createRadialGradient(1024, 520, 50, 1024, 576, 1250);
-    g.addColorStop(0, rgba(row.tint, 0.17));
-    g.addColorStop(0.45, rgba(row.tint, 0.06));
+    g.addColorStop(0, rgba(row.tint, 0.28));
+    g.addColorStop(0.45, rgba(row.tint, 0.13));
     g.addColorStop(1, rgba(row.dark, 1));
     ctx.fillStyle = row.dark;
     ctx.fillRect(0, 0, 2048, 1152);
@@ -240,7 +240,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
       const y = 150 + r() * 700;
       const sz = 90 + r() * 140;
       const dir = row.direction === "down" ? 1 : -1;
-      ctx.fillStyle = rgba(row.tint, 0.28 + r() * 0.16);
+      ctx.fillStyle = rgba(row.tint, 0.45 + r() * 0.2);
       ctx.beginPath();
       ctx.moveTo(x - sz * 0.18, y - dir * sz);
       ctx.lineTo(x + sz * 0.18, y - dir * sz);
@@ -336,7 +336,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
           float d = dot(q, q);
           float a = smoothstep(1.0, 0.55, d);
           float face = 0.25 + 0.75 * pow(vFace, 0.7);
-          vec3 c = uTint * vB * face * 0.75 + vec3(1.0, 0.8, 0.8) * vB * face * 0.04;
+          vec3 c = uTint * vB * face * 0.5 + vec3(1.0, 0.8, 0.8) * vB * face * 0.025;
           gl_FragColor = vec4(c * uFade, a);
         }`,
       transparent: true,
@@ -365,7 +365,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
             float f = 1.0 - clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
             float rim = pow(f, 2.6);
             float lit = clamp(dot(normalize(vN), normalize(vec3(-0.4, 0.5, 0.75))), 0.0, 1.0);
-            vec3 c = uTint * (0.05 + 0.1 * lit) + uTint * rim * 0.3;
+            vec3 c = uTint * (0.05 + 0.1 * lit) + uTint * rim * 0.16;
             gl_FragColor = vec4(c, 1.0);
           }`,
         transparent: true,
@@ -512,8 +512,14 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
     const focus = camZ; // sharp plane at z = 0
     LABELS.forEach((l, i) => {
       const x = l.x + l.sx * Math.sin(TAU * (ph + l.ph));
-      const y = l.y + l.sy * Math.sin(TAU * (2 * ph + l.ph));
-      iOffset.setXYZ(i, x, y, l.z);
+      const y0 = l.y + l.sy * Math.sin(TAU * (2 * ph + l.ph));
+      // the field is yawed: the right side recedes. Screen position is kept
+      // (x, y scaled with depth), so only size and focus change across the frame.
+      const d0 = CAM_Z - l.z;
+      const lz = l.z - (x / (2 * d0 * TAN * (16 / 9))) * d0 * 0.7;
+      const sc = (CAM_Z - lz) / d0;
+      const y = y0 * sc;
+      iOffset.setXYZ(i, x * sc, y, lz);
       const local = (f + l.offset) % l.period;
       const epoch = Math.floor(((f + l.offset) % LOOP) / l.period);
       const str = l.flickers
@@ -521,9 +527,9 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
         : Math.floor(hash(i, 5) * NSTR);
       const flick = l.flickers && local < 3 ? (local === 1 ? 0.15 : 0.5) : 1;
       // circle of confusion → atlas blur level
-      const dist = camZ - l.z;
+      const dist = camZ - lz;
       const k = Math.abs(1 - focus / dist);
-      const cocFrac = Math.min(0.03, k * (l.z > 0 ? 0.04 : 0.018)); // fraction of frame height
+      const cocFrac = Math.min(0.03, k * (lz > 0 ? 0.04 : 0.018)); // fraction of frame height
       const screenH = l.h / (2 * dist * TAN);
       const blurAtlas = (cocFrac / screenH) * CELL_H * 0.42;
       let lv = 0;
@@ -534,7 +540,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
           : lv + (blurAtlas - BLUR_LEVELS[lv]) / (BLUR_LEVELS[lv + 1] - BLUR_LEVELS[lv]);
       const depthFade = dist > 13 ? Math.max(0.12, 0.6 - (dist - 13) / 45) : 1;
       const hazeCut = 1 - 0.45 * Math.min(1, Math.max(0, lvf - 1.5) / 2.5);
-      const tintDim = l.tinted ? 0.6 : 1;
+      const tintDim = l.tinted ? 0.8 : 1;
       iCell.setXYZ(i, str, Math.min(5, Math.max(0, lvf)), l.bright * depthFade * hazeCut * flick * tintDim);
     });
     iOffset.needsUpdate = true;
@@ -565,9 +571,9 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
 
     return {
       frame: f,
-      bloom: { strength: 0.7, threshold: 0.68, knee: 0.35, radius: 1.0 },
+      bloom: { strength: 0.6, threshold: 0.68, knee: 0.35, radius: 0.75 },
       exposure: 1.0,
-      vignette: 0.8,
+      vignette: 0.62,
       grain: 0.015,
     };
   };
