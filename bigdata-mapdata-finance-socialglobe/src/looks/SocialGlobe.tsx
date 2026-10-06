@@ -21,8 +21,10 @@ const LINE = "#7FD0FF";
 const BG = "#020C2A";
 
 const R = 3;
-const GLOBE_POS = new THREE.Vector3(-2.3, 0.05, 0);
+const GLOBE_POS = new THREE.Vector3(-2.4, -0.05, 0);
 const TAU = Math.PI * 2;
+// phase so that Eurasia / Africa / India face the camera around frame 360
+const SPIN_PHASE = THREE.MathUtils.degToRad(-184);
 
 const sph = (lat: number, lon: number, r: number) => {
   const la = (lat * Math.PI) / 180;
@@ -48,20 +50,20 @@ const mkFloaters = (n: number, gen: () => THREE.Vector3, size: [number, number])
 
 // mid layer: around the globe and spreading to the right (sharp)
 const MID = mkFloaters(
-  90,
+  60,
   () => {
-    if (rng() < 0.55) {
+    if (rng() < 0.6) {
       const d = new THREE.Vector3(rng() * 2 - 1, rng() * 2 - 1, rng() * 2 - 1).normalize();
-      return d.multiplyScalar(range(rng, R * 1.12, R * 1.6)).add(GLOBE_POS);
+      return d.multiplyScalar(range(rng, R * 1.12, R * 1.5)).add(GLOBE_POS);
     }
-    return new THREE.Vector3(range(rng, -9, 8.5), range(rng, -4.6, 4.6), range(rng, -2.5, 1.0));
+    return new THREE.Vector3(range(rng, 1.0, 7.5), range(rng, -3.6, 3.6), range(rng, -1.0, 1.0));
   },
   [0.18, 0.26],
 );
 // near layer: in front, blurred
-const NEAR = mkFloaters(18, () => new THREE.Vector3(range(rng, -7, 7), range(rng, -3.6, 3.6), range(rng, 4, 7)), [0.18, 0.26]);
+const NEAR = mkFloaters(34, () => new THREE.Vector3(range(rng, -8, 8), range(rng, -4, 4), range(rng, 3.5, 7)), [0.16, 0.26]);
 // far layer: background web nodes, soft
-const FAR = mkFloaters(150, () => new THREE.Vector3(range(rng, -14, 15), range(rng, -8, 8), range(rng, -12, -5)), [0.28, 0.4]);
+const FAR = mkFloaters(190, () => new THREE.Vector3(range(rng, -16, 16), range(rng, -9, 9), range(rng, -12, -4)), [0.3, 0.45]);
 
 
 type Pair = { a: number; b: number; pulse: number; period: number; ph: number };
@@ -108,8 +110,8 @@ const oceanMaterial = () =>
         void main(){
           float ndv = max(dot(normalize(vN), normalize(vV)), 0.0);
           float fr = pow(1.0 - ndv, 3.0);
-          float a = 0.5 + 0.35 * fr;
-          vec3 c = uCol * (0.16 + 0.22 * ndv) + uRim * fr * 0.7;
+          float a = 0.42 + 0.2 * fr;
+          vec3 c = uCol * (0.3 + 0.3 * ndv) + uRim * fr * 0.35;
           fragOut = vec4(c * a, a);
         }`,
     }),
@@ -123,7 +125,7 @@ const rimHalo = () =>
       uniforms: { uCol: { value: new THREE.Vector3(...linearRGB("#3A9AFF")) } },
       vertexShader: `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `precision highp float; layout(location = 0) out highp vec4 fragOut; in vec2 vUv; uniform vec3 uCol;
-        void main(){ float d = length(vUv - 0.5) * 2.0 * 1.6; float g = d > 1.0 ? exp(-pow((d - 1.0) * 7.0, 2.0)) * 0.3 + exp(-(d - 1.0) * 6.0) * 0.08 : 0.05 * d * d; fragOut = vec4(uCol * g, 0.0); }`,
+        void main(){ float d = length(vUv - 0.5) * 2.0 * 1.6; float g = d > 1.0 ? exp(-pow((d - 1.0) * 5.0, 2.0)) * 0.18 + exp(-(d - 1.0) * 4.0) * 0.1 : 0.16; fragOut = vec4(uCol * g, 0.0); }`,
     }),
   );
 
@@ -136,7 +138,7 @@ const build: BuildFn = (assets) => {
   const root = new THREE.Group();
   root.position.copy(GLOBE_POS);
   root.rotation.z = THREE.MathUtils.degToRad(-12);
-  root.rotation.x = THREE.MathUtils.degToRad(14);
+  root.rotation.x = THREE.MathUtils.degToRad(24);
   sGlobe.add(root);
   const spin = new THREE.Group();
   root.add(spin);
@@ -169,15 +171,19 @@ const build: BuildFn = (assets) => {
   }
   const landPts = pts.slice(0, 42000);
   const cloud = new PointCloud({ count: landPts.length, backAlpha: 0.12, softness: 0.15, minPx: 1.3 });
-  landPts.forEach(([x, y, z, h], i) => cloud.set(i, x * R, y * R, z * R, h < 0.5 ? LAND : "#6FE0FF", 0.5 + 0.5 * h, 0.028, 0.85));
+  landPts.forEach(([x, y, z, h], i) => {
+    // two-tone halftone with soft internal shading (low-frequency pattern)
+    const shade = 0.6 + 0.4 * Math.sin(x * 9.1 + y * 4.7) * Math.sin(z * 7.3 - y * 5.9);
+    cloud.set(i, x * R, y * R, z * R, h < 0.45 ? LAND : "#3FCBF0", (0.45 + 0.45 * h) * shade, 0.03, 1.0);
+  });
   cloud.commit();
   cloud.points.renderOrder = 1;
   spin.add(cloud.points);
 
   // faint ocean dot grid (lat/lon) for the digital look
   const oceanDots: number[][] = [];
-  for (let lat = -80; lat <= 80; lat += 4) {
-    const n = Math.max(6, Math.round(90 * Math.cos((lat * Math.PI) / 180)));
+  for (let lat = -81; lat <= 81; lat += 3) {
+    const n = Math.max(6, Math.round(120 * Math.cos((lat * Math.PI) / 180)));
     for (let k = 0; k < n; k++) {
       const lon = -180 + (k / n) * 360;
       if (mask.at(lon, lat) < 0.5) oceanDots.push([lat, lon]);
@@ -186,7 +192,7 @@ const build: BuildFn = (assets) => {
   const od = new PointCloud({ count: oceanDots.length, backAlpha: 0.0, softness: 0.3 });
   oceanDots.forEach(([la, lo], i) => {
     const p = sph(la, lo, R * 1.002);
-    od.set(i, p.x, p.y, p.z, "#4F9BE0", 0.35, 0.02, 1);
+    od.set(i, p.x, p.y, p.z, "#6FB4F0", 0.5, 0.022, 1.0);
   });
   od.commit();
   od.points.renderOrder = 1;
@@ -196,10 +202,8 @@ const build: BuildFn = (assets) => {
   // orbit rings: two coiled (slinky-like) helices + two plain dotted rings,
   // each turning a whole number of times per loop
   const ringDefs = [
-    { r: R * 1.3, coil: R * 0.17, turns: 38, tiltX: 58, tiltZ: -24, n: 3400, k: 1 },
-    { r: R * 1.42, coil: R * 0.08, turns: 26, tiltX: 40, tiltZ: 30, n: 1800, k: -1 },
-    { r: R * 1.14, coil: 0, turns: 0, tiltX: 20, tiltZ: 10, n: 520, k: 2 },
-    { r: R * 1.55, coil: 0, turns: 0, tiltX: 66, tiltZ: -44, n: 640, k: -1 },
+    { r: R * 1.22, coil: R * 0.07, turns: 34, tiltX: 48, tiltZ: -32, n: 3000, k: 1 },
+    { r: R * 1.32, coil: R * 0.04, turns: 26, tiltX: 56, tiltZ: -24, n: 1500, k: -1 },
   ];
   const rings = ringDefs.map((d, ri) => {
     const g = new THREE.Group();
@@ -213,9 +217,9 @@ const build: BuildFn = (assets) => {
       const a = (i / d.n) * TAU;
       const ca = Math.cos(d.turns * a);
       const sa = Math.sin(d.turns * a);
-      const rr = d.r + d.coil * ca;
+      const rr = d.r + d.coil * 0.7 * ca; // flat loops
       const big = i % 7 === 0;
-      pc.set(i, Math.cos(a) * rr, d.coil * sa, Math.sin(a) * rr, i % 3 === 0 ? "#CFF4FF" : "#6FD8FF", range(r, 0.4, 0.9) * (d.coil ? 0.85 : 1), big ? 0.034 : 0.02, big ? 1.3 : 1.0);
+      pc.set(i, Math.cos(a) * rr, d.coil * 1.8 * sa, Math.sin(a) * rr, i % 3 === 0 ? "#CFF4FF" : "#6FD8FF", range(r, 0.4, 0.9) * (d.coil ? 0.85 : 1), big ? 0.034 : 0.02, big ? 1.3 : 1.0);
     }
     pc.commit();
     pc.points.renderOrder = 2;
@@ -251,6 +255,25 @@ const build: BuildFn = (assets) => {
   const midPos0 = MID.map((m) => m.anchor.clone());
   const midPairs = knnPairs([...surfWorld0, ...midPos0], 2, 3.0, 41);
 
+  // converging bundle of long plexus strands from one hub on the globe's
+  // right edge out to nodes on the right / lower right
+  const HUB = new THREE.Vector3(GLOBE_POS.x + R * 0.92, GLOBE_POS.y - R * 0.45, R * 0.35);
+  const sr = mulberry32(0x57a4d);
+  const STRANDS = Array.from({ length: 26 }, () => ({
+    to: new THREE.Vector3(range(sr, 1.5, 9.5), range(sr, -5, 1.5), range(sr, -3, 1.5)),
+    a: range(sr, 0.07, 0.24),
+    period: [150, 180, 225, 300][irange(sr, 0, 3)],
+    ph: sr(),
+  }));
+  // city-light sparkles on land (twinkle on whole cycles)
+  const SPARKS = Array.from({ length: 70 }, (_, i) => {
+    const p = landPts[Math.floor(hash2(7, i) * landPts.length)];
+    return { p: new THREE.Vector3(p[0] * R * 1.01, p[1] * R * 1.01, p[2] * R * 1.01), k: 1 + (i % 5), ph: hash2(8, i) * TAU };
+  });
+  const sparks = new Billboards(80, { backAlpha: 0, center: GLOBE_POS });
+  sparks.mesh.renderOrder = 5;
+  sGlobe.add(sparks.mesh);
+
   // ---- near layer (blurred icons + specks)
   const sNear = new THREE.Scene();
   const iconsNear = new Billboards(80);
@@ -258,12 +281,13 @@ const build: BuildFn = (assets) => {
   const linesNear = new Lines3D(80);
   sNear.add(linesNear.mesh);
   const nearPairs = knnPairs(NEAR.map((n) => n.anchor), 1, 5, 51);
+  const kr = mulberry32(0x5bec5);
   const SPECKS = Array.from({ length: 60 }, () => ({
-    p: new THREE.Vector3(range(rng, -7, 8), range(rng, -4, 4), range(rng, 4, 7)),
-    s: range(rng, 0.03, 0.12),
-    a: range(rng, 0.2, 0.6),
-    k: irange(rng, 1, 2),
-    ph: rng() * TAU,
+    p: new THREE.Vector3(range(kr, -7, 8), range(kr, -4, 4), range(kr, 4, 7)),
+    s: range(kr, 0.03, 0.12),
+    a: range(kr, 0.2, 0.6),
+    k: irange(kr, 1, 2),
+    ph: kr() * TAU,
   }));
 
   // ---- far layer (plexus web + dot grid)
@@ -273,23 +297,49 @@ const build: BuildFn = (assets) => {
   const linesFar = new Lines3D(500);
   sFar.add(linesFar.mesh);
   const farPairs = knnPairs(FAR.map((n) => n.anchor), 3, 6, 61);
-  const grid = new PointCloud({ count: 2400, softness: 0.1 });
+  // "data rain": faint vertical dotted columns behind everything, plus a
+  // blue haze so the deep background reads as lit electric blue
+  const RAIN_COLS = 90;
+  const RAIN_ROWS = 64;
+  const grid = new PointCloud({ count: RAIN_COLS * RAIN_ROWS, softness: 0.25 });
   {
     const r = mulberry32(88);
-    for (let i = 0; i < 2400; i++) {
-      const gx = (i % 60) - 30;
-      const gy = Math.floor(i / 60) - 20;
-      const on = r() < 0.5;
-      grid.set(i, 2 + gx * 0.42, gy * 0.42, -14, "#3F7FD0", on ? range(r, 0.15, 0.5) : 0.05, 0.05, 1);
+    let i = 0;
+    for (let cx = 0; cx < RAIN_COLS; cx++) {
+      const start = r() * RAIN_ROWS;
+      const len = range(r, 8, 40);
+      const bright = range(r, 0.3, 0.85);
+      for (let cy = 0; cy < RAIN_ROWS; cy++) {
+        const k = (cy - start + RAIN_ROWS) % RAIN_ROWS;
+        const on = k < len;
+        const a = on ? bright * (1 - k / len) : 0.04;
+        grid.set(i++, -14 + cx * 0.36, -9.5 + cy * 0.3, -14, "#4F8FE0", a, 0.05, 1);
+      }
     }
   }
   grid.commit();
   sFar.add(grid.points);
+  const haze = new THREE.Mesh(
+    new THREE.PlaneGeometry(60, 34),
+    premultBlend(
+      new THREE.ShaderMaterial({
+        glslVersion: THREE.GLSL3,
+        depthWrite: false,
+        uniforms: { uA: { value: new THREE.Vector3(...linearRGB("#082456")) }, uB: { value: new THREE.Vector3(...linearRGB("#020A22")) } },
+        vertexShader: `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+        fragmentShader: `precision highp float; layout(location = 0) out highp vec4 fragOut; in vec2 vUv; uniform vec3 uA, uB;
+          void main(){ vec2 p = (vUv - vec2(0.45, 0.5)) * vec2(1.8, 1.0); float g = exp(-dot(p, p) * 2.2); vec3 c = mix(uB, uA, g); fragOut = vec4(c, 1.0); }`,
+      }),
+    ),
+  );
+  haze.position.z = -16;
+  haze.renderOrder = -1;
+  sFar.add(haze);
 
   const layers: LayerSpec[] = [
-    { scene: sFar, blur: 0.0035 },
-    { scene: sGlobe, blur: 0 },
-    { scene: sNear, blur: 0.009 },
+    { scene: sFar, blur: 0.0055 },
+    { scene: sGlobe, blur: 0.0006 },
+    { scene: sNear, blur: 0.010 },
   ];
 
   const tmp = new THREE.Vector3();
@@ -299,15 +349,15 @@ const build: BuildFn = (assets) => {
   return {
     camera,
     layers,
-    pipeline: { background: BG, bloomThreshold: 0.7, bloomKnee: 0.4, bloomIntensity: 0.85, bloomRadius: 0.65, vignette: 0.5 },
+    pipeline: { background: BG, bloomThreshold: 0.45, bloomKnee: 0.5, bloomIntensity: 0.9, bloomRadius: 0.85, vignette: 0.45, saturation: 1.15 },
     update: (f) => {
       // camera: steady, slightly off-centre, gentle closed-cycle drift
-      camera.position.set(0.25 * cyc(f, LOOP, 1), 0.15 * cyc(f, LOOP, 1, 1.1), 13 + 0.3 * cyc(f, LOOP, 1, 2.0));
+      camera.position.set(0.25 * cyc(f, LOOP, 1), 0.15 * cyc(f, LOOP, 1, 1.1), 14 + 0.3 * cyc(f, LOOP, 1, 2.0));
       camera.lookAt(0, 0, 0);
       camera.updateMatrixWorld();
 
       // one full globe turn per 900 frames
-      spin.rotation.y = (TAU * f) / LOOP;
+      spin.rotation.y = (TAU * f) / LOOP + SPIN_PHASE;
       for (const r of rings) r.spinG.rotation.y = (TAU * r.k * f) / LOOP;
       root.updateMatrixWorld(true);
 
@@ -345,7 +395,7 @@ const build: BuildFn = (assets) => {
         const d = a.distanceTo(b);
         const al = THREE.MathUtils.smoothstep(4.2 - d, 0, 1.2) * Math.min(vis(pr.a), vis(pr.b));
         if (al <= 0.01) return;
-        linesMid.seg(a.x, a.y, a.z, b.x, b.y, b.z, 1.2, LINE, 0.4 * al, 1.1);
+        linesMid.seg(a.x, a.y, a.z, b.x, b.y, b.z, 1.0, LINE, 0.28 * al, 1.0);
         if (pr.pulse) {
           const t = (((f / pr.period + pr.ph) % 1) + 1) % 1;
           tmp.copy(a).lerp(b, t);
@@ -353,8 +403,22 @@ const build: BuildFn = (assets) => {
         }
         void k;
       });
+      for (const st of STRANDS) {
+        linesMid.seg(HUB.x, HUB.y, HUB.z, st.to.x, st.to.y, st.to.z, 1.0, LINE, st.a, 1.0);
+        const t = (((f / st.period + st.ph) % 1) + 1) % 1;
+        tmp.copy(HUB).lerp(st.to, t);
+        pulses.blob(tmp.x, tmp.y, tmp.z, 0.12, "#DFF8FF", 0.7 * Math.sin(Math.PI * t), { i: 1.8 });
+      }
+      pulses.blob(HUB.x, HUB.y, HUB.z, 0.2, "#E8FBFF", 0.8, { i: 2.0 });
       linesMid.end();
       pulses.end();
+      sparks.begin();
+      for (const sp of SPARKS) {
+        tmp.copy(sp.p).applyMatrix4(spin.matrixWorld);
+        const tw = 0.5 + 0.5 * cyc(f, LOOP, sp.k * 2, sp.ph);
+        sparks.blob(tmp.x, tmp.y, tmp.z, 0.09, "#FFFFFF", 0.5 + 0.5 * tw, { i: 2.2, facing: true });
+      }
+      sparks.end();
 
       // near
       iconsNear.begin();
