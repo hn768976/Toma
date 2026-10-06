@@ -55,27 +55,36 @@ const LABELS: Label[] = (() => {
   const out: Label[] = [];
   const periods = [60, 75, 100, 120, 150, 200];
   // Depth layers from far to near, each a jittered grid filling the view.
-  const layers = [-36, -27, -19, -12, -7, -3, -1.2, 0.6, 2.2, 3.9, 5.4, 6.6];
-  const counts = [70, 62, 52, 42, 34, 30, 26, 24, 20, 14, 9, 5];
+  // far layers, ONE focal plane (z = 0, laid out as a staggered grid), near layers
+  const layers = [-36, -27, -19, -12, -6.5, 0, 3.9, 5.4, 6.6];
+  const counts = [80, 70, 58, 46, 38, 60, 14, 9, 5];
   layers.forEach((z, li) => {
-    const d = CAM_Z - z;
-    const vh = 2 * d * TAN * 1.18;
-    const vw = vh * (16 / 9) * 1.06;
     const n = counts[li];
-    const rows = Math.max(2, Math.round(Math.sqrt(n / 2.2)));
+    const focal = z === 0;
+    const rows = focal ? 12 : Math.max(2, Math.round(Math.sqrt(n / 2.2)));
     const cols = Math.ceil(n / rows);
     for (let k = 0; k < n; k++) {
       const row = Math.floor(k / cols);
       const col = k % cols;
-      const x = ((col + 0.15 + r() * 0.7) / cols - 0.5) * vw;
-      const y = ((row + 0.2 + r() * 0.6) / rows - 0.5) * vh;
-      const zz = z + (r() - 0.5) * (z > -4 && z < 3 ? 0.5 : 1.4);
+      // jittered grid in screen space (0..1, y down), slightly overscanned
+      const u = focal
+        ? ((col + 0.35 + (row % 2) * 0.45 + (r() - 0.5) * 0.2) / cols - 0.5) * 1.1 + 0.5
+        : ((col + 0.15 + r() * 0.7) / cols - 0.5) * 1.12 + 0.5;
+      const v = focal
+        ? ((row + 0.5 + (r() - 0.5) * 0.15) / rows - 0.5) * 1.08 + 0.5
+        : ((row + 0.2 + r() * 0.6) / rows - 0.5) * 1.12 + 0.5;
+      // the field leans back: rows higher in frame sit further away
+      const d0 = CAM_Z - (z + (r() - 0.5) * (focal ? 0.3 : 1.4));
+      const dist = d0 * (1 + 0.55 * (0.5 - v));
+      const zz = CAM_Z - dist;
+      const x = (u - 0.5) * 2 * dist * TAN * (16 / 9);
+      const y = (0.5 - v) * 2 * dist * TAN;
       out.push({
         x,
         y,
         z: zz,
-        h: 0.05 * (CAM_Z - zz) * (0.75 + r() * 0.6) * (z > -4 && z < 3 ? 1.35 : 1),
-        tinted: z < -12 ? r() < 0.6 : r() < 0.22,
+        h: 0.05 * (CAM_Z - zz) * (0.75 + r() * 0.6) * (focal ? 1.6 : 1),
+        tinted: z < -12 ? r() < 0.6 : r() < 0.36,
         bright: 0.7 + r() * 0.3,
         period: periods[Math.floor(r() * periods.length)],
         offset: Math.floor(r() * 600),
@@ -132,10 +141,10 @@ const screenToWorld = (sx: number, sy: number, z: number, aspect: number): THREE
 
 const arrowPath = (dir: "down" | "up", aspect: number): THREE.Vector2[] => {
   const pts: [number, number][] = [
-    [-0.08, 0.31],
-    [0.05, 0.45],
-    [0.4, 0.13],
-    [0.79, 0.84],
+    [-0.06, 0.2],
+    [0.05, 0.43],
+    [0.39, 0.12],
+    [0.78, 0.83],
   ];
   return pts.map(([x, y]) => screenToWorld(x, dir === "down" ? y : 1 - y, ARROW_Z, aspect));
 };
@@ -224,8 +233,27 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
       ctx.fillStyle = rgba(r() < 0.5 ? row.tint : "#ffffff", 0.05 + r() * 0.1);
       ctx.fillRect(x, 1152 - h - r() * 200, w, h);
     }
-    ctx.filter = "blur(2px)";
-    ctx.strokeStyle = rgba(row.tint, 0.08);
+    // faint out-of-focus arrows echoing the main one
+    ctx.filter = "blur(14px)";
+    for (let i = 0; i < 7; i++) {
+      const x = 120 + r() * 1800;
+      const y = 150 + r() * 700;
+      const sz = 90 + r() * 140;
+      const dir = row.direction === "down" ? 1 : -1;
+      ctx.fillStyle = rgba(row.tint, 0.1 + r() * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(x - sz * 0.18, y - dir * sz);
+      ctx.lineTo(x + sz * 0.18, y - dir * sz);
+      ctx.lineTo(x + sz * 0.18, y);
+      ctx.lineTo(x + sz * 0.45, y);
+      ctx.lineTo(x, y + dir * sz * 0.55);
+      ctx.lineTo(x - sz * 0.45, y);
+      ctx.lineTo(x - sz * 0.18, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.filter = "blur(1px)";
+    ctx.strokeStyle = rgba(row.tint, 0.11);
     ctx.lineWidth = 2;
     for (let x = 0; x < 2048; x += 64) {
       ctx.beginPath();
@@ -308,7 +336,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
           float d = dot(q, q);
           float a = smoothstep(1.0, 0.55, d);
           float face = 0.25 + 0.75 * pow(vFace, 0.7);
-          vec3 c = uTint * vB * face * 0.85 + vec3(1.0, 0.8, 0.8) * vB * face * 0.06;
+          vec3 c = uTint * vB * face * 0.55 + vec3(1.0, 0.8, 0.8) * vB * face * 0.03;
           gl_FragColor = vec4(c * uFade, a);
         }`,
       transparent: true,
@@ -337,7 +365,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
             float f = 1.0 - clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
             float rim = pow(f, 2.6);
             float lit = clamp(dot(normalize(vN), normalize(vec3(-0.4, 0.5, 0.75))), 0.0, 1.0);
-            vec3 c = uTint * (0.025 + 0.05 * lit) + uTint * rim * 0.32;
+            vec3 c = uTint * (0.02 + 0.04 * lit) + uTint * rim * 0.14;
             gl_FragColor = vec4(c, 1.0);
           }`,
         transparent: true,
@@ -398,7 +426,7 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
           float l0 = floor(b);
           float l1 = min(l0 + 1.0, 5.0);
           float a = mix(cellA(l0), cellA(l1), b - l0) * vCell.z;
-          vec3 col = mix(uWhite, uTint * 0.9, vTint);
+          vec3 col = mix(uWhite, uTint * 1.15, vTint);
           gl_FragColor = vec4(col * a, a);
         }`,
     }),
@@ -436,9 +464,10 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
         float spec = pow(clamp(dot(n, h), 0.0, 1.0), 40.0);
         float fres = pow(1.0 - clamp(dot(n, normalize(vV)), 0.0, 1.0), 3.0);
         float front = smoothstep(0.85, 0.99, n.z);
-        vec3 c = uTint * (0.42 + 0.8 * diff);
-        c = mix(c * 0.45, c, front);
-        c += mix(uTint, vec3(1.0), 0.35) * (spec * 0.55 + fres * 0.2);
+        vec3 c = uTint * (0.85 + 0.45 * diff);
+        c = mix(c * 0.7, c, front);
+        c += mix(uTint, vec3(1.0), 0.3) * (spec * 0.3 + fres * 0.15);
+        c *= 1.08; // slightly emissive: feeds the bloom like light on a display
         gl_FragColor = vec4(c * uAlpha, uAlpha);
       }`,
     transparent: true,
@@ -449,8 +478,8 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
   });
   const arrowGroup = new THREE.Group();
   arrowGroup.position.z = ARROW_Z;
-  arrowGroup.rotation.x = row.direction === "down" ? -0.2 : 0.2;
-  arrowGroup.rotation.y = 0.12;
+  arrowGroup.rotation.x = row.direction === "down" ? -0.08 : 0.08;
+  arrowGroup.rotation.y = 0.04;
   scene.add(arrowGroup);
   const arrowMesh = new THREE.Mesh(new THREE.BufferGeometry(), arrowMat);
   arrowMesh.renderOrder = 4;
@@ -520,10 +549,10 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
       lastKey = key;
       const shape = buildArrowShape(path, prog, SHAFT, HEAD_W, HEAD_L);
       const geo = new THREE.ExtrudeGeometry(shape, {
-        depth: SHAFT * 0.42,
+        depth: SHAFT * 0.18,
         bevelEnabled: true,
-        bevelThickness: SHAFT * 0.12,
-        bevelSize: SHAFT * 0.1,
+        bevelThickness: SHAFT * 0.06,
+        bevelSize: SHAFT * 0.06,
         bevelSegments: 3,
         curveSegments: 1,
       });
@@ -535,9 +564,9 @@ const makeLook = (row: MarketRow): LookFactory => ({ renderer, aspect, pixelHeig
 
     return {
       frame: f,
-      bloom: { strength: 0.55, threshold: 0.75, knee: 0.3, radius: 1.0 },
+      bloom: { strength: 0.7, threshold: 0.68, knee: 0.35, radius: 1.0 },
       exposure: 1.0,
-      vignette: 0.5,
+      vignette: 0.75,
       grain: 0.015,
     };
   };

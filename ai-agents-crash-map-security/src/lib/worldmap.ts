@@ -30,16 +30,30 @@ export const loadLandMask = (): Promise<LandMask> => {
         ctx.fillStyle = "#fff";
         const px = (lon: number) => ((lon + 180) / 360) * MASK_W;
         const py = (lat: number) => ((90 - lat) / 180) * MASK_H;
+        // Rings that cross the antimeridian are unwrapped (no ±360° jumps) and
+        // drawn at -360/0/+360 so nothing smears a band across the map.
         const drawPolygon = (poly: number[][][]) => {
-          ctx.beginPath();
-          for (const ring of poly) {
-            ring.forEach(([lon, lat], i) => {
-              if (i === 0) ctx.moveTo(px(lon), py(lat));
-              else ctx.lineTo(px(lon), py(lat));
+          const rings = poly.map((ring) => {
+            let prev = ring[0][0];
+            let shift = 0;
+            return ring.map(([lon, lat]) => {
+              if (lon - prev > 180) shift -= 360;
+              if (lon - prev < -180) shift += 360;
+              prev = lon;
+              return [lon + shift, lat];
             });
-            ctx.closePath();
+          });
+          for (const off of [-360, 0, 360]) {
+            ctx.beginPath();
+            for (const ring of rings) {
+              ring.forEach(([lon, lat], i) => {
+                if (i === 0) ctx.moveTo(px(lon + off), py(lat));
+                else ctx.lineTo(px(lon + off), py(lat));
+              });
+              ctx.closePath();
+            }
+            ctx.fill("evenodd");
           }
-          ctx.fill("evenodd");
         };
         const feats = "features" in land ? land.features : [land];
         for (const f of feats) {

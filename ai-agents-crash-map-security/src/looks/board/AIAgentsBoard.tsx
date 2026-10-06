@@ -12,9 +12,9 @@ import { BoardCanvas, CENTER, H, W } from "./BoardCanvas";
 
 const TILES: { icon: IconName; x: number; y: number }[] = [
   { icon: "agent", x: 2587, y: 896 },
-  { icon: "shield", x: 2950, y: 896 },
+  { icon: "shieldOutline", x: 2950, y: 896 },
   { icon: "cloud", x: 3314, y: 896 },
-  { icon: "gear", x: 2587, y: 1259 },
+  { icon: "gearFine", x: 2587, y: 1259 },
   { icon: "document", x: 2950, y: 1259 },
   { icon: "globe", x: 3314, y: 1259 },
 ];
@@ -22,10 +22,11 @@ const TILE_SIZE = 252;
 
 // Invented filler copy (no real text).
 const FILLER = [
-  "agent nodes plan each task, call the right tool, check the result and",
-  "hand the next step to a peer node. every run is logged, scored and",
-  "replayed so the swarm keeps learning. queue depth stays low while",
-  "throughput holds steady across all regions of the cluster grid.",
+  "agent nodes plan each task, call the right tool, check the result and then",
+  "hand the next step to a peer node. every run is logged, scored and kept so",
+  "the swarm keeps learning from its own traces. queue depth stays low while",
+  "throughput holds steady across all regions of the cluster grid, and slow",
+  "steps are retried on a fresh node before the window closes for the batch.",
 ];
 
 const typed = (s: string, p: number) => s.slice(0, Math.floor(clamp01(p) * s.length + 0.0001));
@@ -34,14 +35,14 @@ const typed = (s: string, p: number) => s.slice(0, Math.floor(clamp01(p) * s.len
 const TRACES = (() => {
   const r = mulberry32(2024);
   const out: { d: string; end: [number, number]; delay: number }[] = [];
-  const N = 20;
+  const N = 12;
   for (let k = 0; k < N; k++) {
     const a = (k / N) * Math.PI * 2 + 0.16;
     const c = Math.cos(a);
     const s = Math.sin(a);
     const edge = 178 / Math.max(Math.abs(c), Math.abs(s));
     const p0: [number, number] = [c * edge, s * edge];
-    const r1 = Math.max(edge + 22, 205 + r() * 40);
+    const r1 = Math.max(edge + 26, 215 + r() * 30);
     const p1: [number, number] = [c * r1, s * r1];
     const bend = (r() < 0.5 ? -1 : 1) * (0.16 + r() * 0.2);
     const r2 = 262 + r() * 34;
@@ -118,6 +119,8 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
       `${n(4, 5)}  ${n(5, 6)}  ${n(6, 2)}`,
       `${n(7, 5)}  ${n(8, 4)}  ${n(9, 4)}`,
       `${n(10, 5)}  ${n(11, 5)}  ${n(12, 3)}`,
+      `${n(13, 4)}  ${n(14, 4)}  ${n(15, 4)}`,
+      `${n(16, 4)}  ${n(17, 4)}  ${n(18, 4)}`,
     ];
   })();
   const numsIn = range(frame, 116, 124);
@@ -137,7 +140,7 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
       >
         <defs>
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="10" result="b" />
+            <feGaussianBlur stdDeviation="14" result="b" />
             <feMerge>
               <feMergeNode in="b" />
               <feMergeNode in="b" />
@@ -152,30 +155,39 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
             </feMerge>
           </filter>
           <linearGradient id="pill" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor="#3E7BFF" />
+            <stop offset="0" stopColor="#4E9BFF" />
             <stop offset="1" stopColor={row.accent} />
           </linearGradient>
           <linearGradient id="chip" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#FFFFFF" />
-            <stop offset="1" stopColor="#DDEFFF" />
+            <stop offset="0" stopColor="#F4FAFF" />
+            <stop offset="1" stopColor="#D2E8FA" />
           </linearGradient>
           <linearGradient id="tilefill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor={row.tile} stopOpacity="0.85" />
-            <stop offset="1" stopColor={row.tile} stopOpacity="0.55" />
+            <stop offset="0" stopColor={row.tile} stopOpacity="0.6" />
+            <stop offset="1" stopColor={row.tile} stopOpacity="0.38" />
           </linearGradient>
         </defs>
 
         {/* HUD decorations */}
         <g opacity={range(frame, 100, 130)}>
           <Chevrons x={2560} y={648} n={9} size={40} opacity={0.35} />
-          <Chevrons x={3500} y={1080} n={3} size={30} opacity={0.3} />
+          <Chevrons x={3190} y={1068} n={3} size={30} opacity={0.3} />
           <Chevrons x={1800} y={1660} n={2} size={30} opacity={0.25} dir={1} />
-          <path d="M2380 760 H2470 M2380 1400 H2470 M3530 760 V1400" stroke="#6FB8FF" strokeWidth={3} opacity={0.25} />
+          {/* faint hexagon outlines */}
+          {[
+            [1410, 660, 120],
+            [2760, 1690, 140],
+          ].map(([x, y, r], i) => (
+            <polygon key={i} fill="none" stroke="#6FB8FF" strokeWidth={4} opacity={0.18}
+              points={Array.from({ length: 6 }, (_, k) => `${x + r * Math.cos((k * Math.PI) / 3)},${y + r * Math.sin((k * Math.PI) / 3)}`).join(" ")} />
+          ))}
         </g>
 
         {/* Ring */}
         <g transform={`translate(${CENTER.x} ${CENTER.y})`} filter="url(#glow)">
-          <circle r={400} fill="none" stroke={ringColor} strokeWidth={4} opacity={0.55} pathLength={1}
+          <circle r={330} fill="none" stroke="#6FE8FF" strokeWidth={16} opacity={0.85} pathLength={1}
+            strokeDasharray="1 1" strokeDashoffset={1 - ringP} transform={`rotate(${-90 + rotC})`} />
+          <circle r={420} fill="none" stroke={ringColor} strokeWidth={4} opacity={0.4} pathLength={1}
             strokeDasharray="1 1" strokeDashoffset={1 - ringP} transform={`rotate(${-90 + rotC})`} />
           <g transform={`rotate(${rotA})`}>
             <circle r={372} fill="none" stroke={ringColor} strokeWidth={10} opacity={0.3 * ringP}
@@ -183,11 +195,11 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
             {Array.from({ length: 12 }, (_, i) => {
               const a = (i / 12) * Math.PI * 2;
               return (
-                <circle key={i} cx={Math.cos(a) * 400} cy={Math.sin(a) * 400} r={9} fill="#BFF0FF" opacity={ringP} />
+                <circle key={i} cx={Math.cos(a) * 420} cy={Math.sin(a) * 420} r={10} fill="#DFF8FF" opacity={ringP} />
               );
             })}
           </g>
-          <path d={TICKS} stroke={ringColor} strokeWidth={4} opacity={0.6 * ringP} transform={`rotate(${rotB})`} />
+          <path d={TICKS} stroke={ringColor} strokeWidth={3} opacity={0.3 * ringP} transform={`rotate(${rotB})`} />
           <g transform={`rotate(${rotC * 2})`} opacity={ringP}>
             {ARCS.map((d, i) => (
               <path key={i} d={d} stroke={ringColor} strokeWidth={8} fill="none" opacity={0.8} />
@@ -198,9 +210,9 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
             const p = tracesP(k);
             return (
               <g key={k} opacity={p > 0 ? 1 : 0}>
-                <path d={t.d} fill="none" stroke="#8FE4FF" strokeWidth={4} pathLength={1} strokeDasharray="1 1"
+                <path d={t.d} fill="none" stroke="#8FEAFF" strokeWidth={7} pathLength={1} strokeDasharray="1 1"
                   strokeDashoffset={1 - p} />
-                <circle cx={t.end[0]} cy={t.end[1]} r={9} fill="none" stroke="#CFF4FF" strokeWidth={4}
+                <circle cx={t.end[0]} cy={t.end[1]} r={11} fill="none" stroke="#CFF4FF" strokeWidth={6}
                   opacity={p >= 0.98 ? 1 : 0} />
               </g>
             );
@@ -212,8 +224,8 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
           transform={`translate(${CENTER.x} ${CENTER.y}) scale(${chipScale})`}
           opacity={chipIn}
         >
-          <rect x={-170} y={-170} width={340} height={340} rx={34} fill="none" stroke="#9FE8FF" strokeWidth={10}
-            opacity={0.65} filter="url(#softglow)" />
+          <rect x={-166} y={-166} width={332} height={332} rx={32} fill="none" stroke="#9FE8FF" strokeWidth={14}
+            opacity={0.45} filter="url(#softglow)" />
           <rect x={-162} y={-162} width={324} height={324} rx={30} fill="url(#chip)" />
           <text x={0} y={8} textAnchor="middle" dominantBaseline="middle" fontFamily={INTER} fontWeight={700}
             fontSize={150} fill="#0B2552" letterSpacing={-2}>
@@ -224,9 +236,9 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
         {/* Left block */}
         <g>
           <g transform={`translate(876 856) scale(${0.6 + 0.4 * pillIn} 1)`} opacity={clamp01(pillIn)}>
-            <rect x={-268} y={-31} width={536} height={62} rx={31} fill="url(#pill)" filter="url(#glow)" opacity={0.95} />
-            <text x={0} y={3} textAnchor="middle" dominantBaseline="middle" fontFamily={MONO} fontWeight={500}
-              fontSize={54} fill="#FFFFFF" filter="url(#glow)">
+            <rect x={-268} y={-31} width={536} height={62} rx={31} fill="url(#pill)" opacity={0.92} />
+            <text x={0} y={3} textAnchor="middle" dominantBaseline="middle" fontFamily={MONO} fontWeight={400}
+              fontSize={54} fill="#FFFFFF">
               {genText}
             </text>
           </g>
@@ -239,21 +251,24 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
           <g opacity={numsIn} fontFamily={MONO} fontSize={19} fill="#AFC8EC">
             <text x={388} y={1036} opacity={0.75}>{numbers[0]}</text>
             <text x={388} y={1062} opacity={0.75}>{numbers[1]}</text>
-            <text x={1010} y={1036} opacity={0.75}>{numbers[2]}</text>
-            <text x={1010} y={1062} opacity={0.75}>{numbers[3]}</text>
+            <text x={790} y={1036} opacity={0.75}>{numbers[4]}</text>
+            <text x={790} y={1062} opacity={0.75}>{numbers[5]}</text>
+            <text x={1180} y={1036} opacity={0.75}>{numbers[2]}</text>
+            <text x={1180} y={1062} opacity={0.75}>{numbers[3]}</text>
           </g>
-          <text x={876} y={1170} textAnchor="middle" dominantBaseline="middle" fontFamily={MONO} fontWeight={500}
-            fontSize={62} fill="#F2F8FF" filter="url(#glow)">
+          <text x={876} y={1170} textAnchor="middle" dominantBaseline="middle" fontFamily={MONO} fontWeight={400}
+            fontSize={62} fill="#EAF4FF">
             {agentsText}
           </text>
-          <g fontFamily={MONO} fontSize={19} fill="#B9CCE8" opacity={0.8}>
+          <g fontFamily={MONO} fontSize={17} fill="#B9CCE8" opacity={0.8}>
             {FILLER.map((line, i) => (
-              <text key={i} x={380} y={1238 + i * 27}>
+              <text key={i} x={380} y={1236 + i * 24}>
                 {typed(line, fillerP * FILLER.length - i)}
               </text>
             ))}
           </g>
-          <path d="M385 1350 H560" stroke="#7FB8FF" strokeWidth={3} opacity={0.5 * range(frame, 150, 156)} />
+          <path d="M375 1250 V1385 H420 M375 1250 H400 M1380 1210 H1440 V1250" fill="none" stroke="#7FB8FF" strokeWidth={3}
+            opacity={0.5 * range(frame, 150, 156)} />
         </g>
 
         {/* Icon tiles */}
@@ -268,15 +283,19 @@ const Board: React.FC<{ row: BoardRow }> = ({ row }) => {
           return (
             <g key={i} transform={`translate(${t.x} ${t.y}) scale(${sc})`} opacity={clamp01(p * 1.6) * flick}>
               <rect x={-half} y={-half} width={TILE_SIZE} height={TILE_SIZE} rx={26} fill="url(#tilefill)"
-                stroke="#8CC8FF" strokeWidth={4} strokeOpacity={0.55 + 0.45 * g} />
+                stroke="#9CC4E8" strokeWidth={4} strokeOpacity={0.4 + 0.35 * g} />
               <rect x={-half} y={-half} width={TILE_SIZE} height={TILE_SIZE} rx={26} fill="#5AD8FF"
-                opacity={0.18 * g} filter="url(#softglow)" />
+                opacity={0.1 * g} filter="url(#softglow)" />
               <rect x={-half + 16} y={-half + 16} width={TILE_SIZE - 32} height={TILE_SIZE - 32} rx={16} fill="none"
                 stroke="#8CC8FF" strokeWidth={2.5} strokeOpacity={0.28 + 0.3 * g} />
               <g transform={`translate(${-82} ${-82}) scale(${164 / 24})`} filter={g > 0.3 ? "url(#glow)" : undefined}>
-                {(ICONS[t.icon] as IconDef).fill ? <path d={(ICONS[t.icon] as IconDef).fill} fill="#FFFFFF" /> : null}
-                <path d={ICONS[t.icon].stroke} fill="none" stroke="#FFFFFF" strokeWidth={1.45}
+                {(ICONS[t.icon] as IconDef).fill ? <path d={(ICONS[t.icon] as IconDef).fill} fill="#B8C8D8" /> : null}
+                <path d={ICONS[t.icon].stroke} fill="none" stroke="#F2F8FF" strokeWidth={1.2}
                   strokeLinecap="round" strokeLinejoin="round" />
+                {t.icon === "shieldOutline" ? (
+                  <path d={ICONS.check.stroke} fill="none" stroke="#3AD8FF" strokeWidth={2} strokeLinecap="round"
+                    strokeLinejoin="round" />
+                ) : null}
               </g>
             </g>
           );
