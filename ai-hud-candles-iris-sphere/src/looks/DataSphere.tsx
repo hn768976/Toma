@@ -133,7 +133,7 @@ const tagMaterial = (shared: Shared, atlas: THREE.Texture) =>
         float inside = step(abs(vL.x), vH.x) * step(abs(vL.y), vH.y);
         float alpha = mix(a * 0.75, t.a, inside * clamp(1.0 / vGrad, 0.0, 1.0));
         alpha = max(alpha, a * 0.6) * vA * uOpacity;
-        vec3 c = col * 1.5;
+        vec3 c = col * 1.15;
         if (dot(c, c) < 0.01) c = vec3(1.7, 1.0, 0.35);
         gl_FragColor = vec4(c * alpha, alpha);
       }`,
@@ -333,7 +333,7 @@ const build = (pal: SpherePalette) => {
       ringSegs.push({
         a: new THREE.Vector3(Math.cos(a0) * rr, y, Math.sin(a0) * rr),
         b: new THREE.Vector3(Math.cos(a1) * rr, y, Math.sin(a1) * rr),
-        alpha: 0.11 * on,
+        alpha: 0.07 * on,
         bright: 1.0,
       });
     }
@@ -347,7 +347,7 @@ const build = (pal: SpherePalette) => {
   for (let i = 0; i < NODE_POS.length; i++) {
     for (let j = i + 1; j < NODE_POS.length; j++) {
       const d = NODE_POS[i].distanceTo(NODE_POS[j]);
-      if (d < 0.9 && plex.length < 300) plex.push({ a: NODE_POS[i], b: NODE_POS[j], alpha: 0.22 * (1 - d), bright: 1 });
+      if (d < 0.8 && plex.length < 150) plex.push({ a: NODE_POS[i], b: NODE_POS[j], alpha: 0.22 * (1 - d), bright: 1 });
     }
   }
   const plexus = lineMesh(shared, plex, white.clone(), 0.00045);
@@ -442,7 +442,7 @@ const build = (pal: SpherePalette) => {
   world.add(tags);
 
   // soft top-down light shaft for the end
-  const shaft = new THREE.Mesh(new THREE.PlaneGeometry(26, 30), shaftMaterial(white.clone().multiplyScalar(0.03)));
+  const shaft = new THREE.Mesh(new THREE.PlaneGeometry(26, 30), shaftMaterial(white.clone().multiplyScalar(0.016)));
   shaft.position.set(0, 3, -2);
   shaft.renderOrder = 0;
   group.add(shaft);
@@ -450,7 +450,7 @@ const build = (pal: SpherePalette) => {
   // camera path
   const flyA = new THREE.Vector3(3.6, 1.4, 4.6);
   const flyB = new THREE.Vector3(-0.8, -0.5, 3.8);
-  const elev = THREE.MathUtils.degToRad(2);
+  const elev = THREE.MathUtils.degToRad(0);
   const D = 39.0;
   const endPos = new THREE.Vector3(0, Math.sin(elev) * D, Math.cos(elev) * D);
   const camPos = (t: number) => {
@@ -480,13 +480,13 @@ const build = (pal: SpherePalette) => {
     camera.fov = lerp(40, 24, pb);
     camera.updateProjectionMatrix();
     dm.uniforms.uPxScale.value = 1 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
-    tagMat.uniforms.uTagScale.value = lerp(1, 1.45, pb);
+    tagMat.uniforms.uTagScale.value = lerp(1, 1.15, pb);
     camera.position.copy(pos);
     camera.lookAt(look);
     camera.updateMatrixWorld();
     // focus: near data during the fly-through, the sphere on the reveal
     const focus = lerp(3.4, D, pb);
-    const strength = lerp(0.03, 0.013, pb);
+    const strength = lerp(0.03, 0.022, pb);
     shared.uDof.value.set(focus, strength, lerp(0.05, 0.012, pb));
     // rotation: slow throughout, a bit more visible in the hold
     world.rotation.y = t * 0.035 + easeInOutSine(progress(t, 12, 20)) * 0.35;
