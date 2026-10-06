@@ -25,7 +25,7 @@ const circuitTile = (seed: number, size: number, density: number, blur: number, 
     for (const ox of [-size, 0, size]) for (const oy of [-size, 0, size]) fn(ox, oy);
   };
   ctx.lineCap = "square";
-  const n = Math.floor(260 * density);
+  const n = Math.floor(420 * density);
   for (let i = 0; i < n; i++) {
     const col = palette[Math.floor(r() * palette.length)];
     const a = 0.25 + r() * 0.75;
@@ -33,7 +33,7 @@ const circuitTile = (seed: number, size: number, density: number, blur: number, 
     const x0 = Math.floor(r() * size);
     const y0 = Math.floor(r() * size);
     const lw = r() < 0.8 ? 2 : 4;
-    if (kind < 0.55) {
+    if (kind < 0.4) {
       // orthogonal trace with 1–3 bends, mostly horizontal runs
       const pts: [number, number][] = [[x0, y0]];
       let x = x0;
@@ -54,7 +54,7 @@ const circuitTile = (seed: number, size: number, density: number, blur: number, 
         ctx.fillStyle = rgba(col, Math.min(1, a + 0.2));
         ctx.fillRect(ex + ox - 4, ey + oy - 4, 8, 8);
       });
-    } else if (kind < 0.7) {
+    } else if (kind < 0.5) {
       const w = 20 + r() * 120;
       const h = 12 + r() * 60;
       wrap((ox, oy) => {
@@ -62,12 +62,14 @@ const circuitTile = (seed: number, size: number, density: number, blur: number, 
         ctx.lineWidth = 2;
         ctx.strokeRect(x0 + ox, y0 + oy, w, h);
       });
-    } else if (kind < 0.88) {
+    } else if (kind < 0.8) {
       // dash run
       const len = 4 + Math.floor(r() * 10);
       wrap((ox, oy) => {
         ctx.fillStyle = rgba(col, a);
-        for (let k = 0; k < len; k++) if (hash(i, k) < 0.7) ctx.fillRect(x0 + ox + k * 14, y0 + oy, 9, 4);
+        const vert = hash(i, 99) < 0.4;
+        for (let k = 0; k < len; k++)
+          if (hash(i, k) < 0.7) ctx.fillRect(x0 + ox + (vert ? 0 : k * 14), y0 + oy + (vert ? k * 14 : 0), vert ? 4 : 9, vert ? 9 : 4);
       });
     } else {
       // clusters of bright square particles
@@ -146,7 +148,7 @@ const padlockCanvas = (size: number) => {
   bctx.strokeStyle = "#fff";
   bctx.stroke(shackle);
   bctx.globalCompositeOperation = "source-in";
-  bctx.fillStyle = "rgba(140,200,255,0.4)";
+  bctx.fillStyle = "rgba(140,200,255,0.18)";
   bctx.fillRect(0, 0, size, size);
   bctx.globalCompositeOperation = "source-atop";
   for (let y = 0; y < 11 * s; y += cell) {
@@ -192,7 +194,7 @@ const iconCanvas = (name: IconName, size: number) => {
   const ctx = c.getContext("2d")!;
   const m = size * 0.1;
   const path = new Path2D();
-  path.roundRect(m, m, size - 2 * m, size - 2 * m, size * 0.1);
+  path.rect(m, m, size - 2 * m, size - 2 * m);
   ctx.fillStyle = "rgba(40,110,255,0.06)";
   ctx.fill(path);
   ctx.lineWidth = size * 0.022;
@@ -224,7 +226,7 @@ const RINGS: RingDef[] = [
         ctx.arc(0, 0, r1, a0, a1);
         ctx.arc(0, 0, r0, a1, a0, true);
         ctx.closePath();
-        ctx.fillStyle = `rgba(36,98,235,${0.82 + 0.15 * hash(i, 4)})`;
+        ctx.fillStyle = `rgba(42,92,210,${0.68 + 0.12 * hash(i, 4)})`;
         ctx.fill();
         ctx.strokeStyle = "rgba(120,180,255,0.55)";
         ctx.lineWidth = 3;
@@ -249,7 +251,7 @@ const RINGS: RingDef[] = [
       for (let i = 0; i < 420; i++) {
         const a = (i / 420) * TAU;
         const len = hash(i, 9) < 0.25 ? 0.2 : 0.12;
-        ctx.strokeStyle = `rgba(170,220,255,${0.45 + 0.5 * hash(i, 2)})`;
+        ctx.strokeStyle = `rgba(190,232,255,${0.65 + 0.35 * hash(i, 2)})`;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(Math.cos(a) * R * (0.95 - len), Math.sin(a) * R * (0.95 - len));
@@ -375,12 +377,12 @@ const RINGS: RingDef[] = [
 ];
 
 const ICON_SLOTS: { name: IconName; angle: number }[] = [
-  { name: "phone", angle: 98 },
-  { name: "mail", angle: 42 },
-  { name: "globe", angle: -12 },
-  { name: "cloud", angle: -78 },
-  { name: "wifi", angle: -140 },
-  { name: "document", angle: 160 },
+  { name: "phone", angle: 112 },
+  { name: "mail", angle: 56 },
+  { name: "globe", angle: 3 },
+  { name: "cloud", angle: -63 },
+  { name: "wifi", angle: -125 },
+  { name: "document", angle: 172 },
 ];
 
 // Background layers: depth, blur (px at tile scale), drift in whole tiles per loop.
@@ -389,7 +391,7 @@ const LAYERS = [
   { z: -22, blur: 4, density: 1.1, kx: -1, ky: 0, repeat: 3, alpha: 0.7, seed: 12 },
   { z: -13, blur: 1.6, density: 1.0, kx: 1, ky: 1, repeat: 3, alpha: 0.95, seed: 13 },
   { z: -6, blur: 0.6, density: 0.8, kx: -1, ky: 0, repeat: 3, alpha: 1.0, seed: 14 },
-  { z: 5.5, blur: 16, density: 0.3, kx: 1, ky: 0, repeat: 2, alpha: 0.6, seed: 15 },
+  { z: 5.5, blur: 9, density: 0.3, kx: 1, ky: 0, repeat: 2, alpha: 0.35, seed: 15 },
 ];
 
 const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
@@ -403,8 +405,8 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
     const c = makeCanvas(1024, 576);
     const ctx = c.getContext("2d")!;
     const g = ctx.createRadialGradient(480, 260, 20, 512, 288, 700);
-    g.addColorStop(0, "#061A6A");
-    g.addColorStop(0.5, "#030C40");
+    g.addColorStop(0, "#041E86");
+    g.addColorStop(0.5, "#02125A");
     g.addColorStop(1, row.base);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 1024, 576);
@@ -433,7 +435,7 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
           void main(){
             vec4 c = texture(tMap, vUv * uRep + uOff);
             float edge = smoothstep(0.0, 0.12, vUv.x) * smoothstep(1.0, 0.88, vUv.x) * smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.88, vUv.y);
-            gl_FragColor = c * uA * edge;
+            gl_FragColor = c * uA * edge * 0.75;
           }`,
       }),
       true,
@@ -443,16 +445,16 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
     const vh = 2 * d * Math.tan((35 / 2) * (Math.PI / 180)) * 2.6;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(vh * aspect, vh), mat);
     m.position.set(0.6, 0, L.z);
-    m.rotation.y = -0.62 + li * 0.04;
-    m.rotation.x = 0.3;
-    m.rotation.z = -0.22;
+    m.rotation.y = -0.4 + li * 0.03;
+    m.rotation.x = 0.18;
+    m.rotation.z = -0.2;
     m.renderOrder = -10 + li;
     scene.add(m);
   });
 
   // HUD group: rings, padlock, icons — slightly tilted so it reads as 3D
   const hud = new THREE.Group();
-  hud.position.set(-0.1, -0.5, 0);
+  hud.position.set(-0.15, -0.3, 0);
   hud.rotation.set(0.22, 0.55, -0.12);
   scene.add(hud);
 
@@ -473,6 +475,25 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
     hud.add(m);
     return m;
   });
+
+  // dark disc inside the outer ring: separates the HUD from the busy background
+  {
+    const c = makeCanvas(512, 512);
+    const ctx = c.getContext("2d")!;
+    const g = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+    g.addColorStop(0, "rgba(2,8,40,0.75)");
+    g.addColorStop(0.8, "rgba(2,8,40,0.6)");
+    g.addColorStop(1, "rgba(2,8,40,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 512, 512);
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.6, 5.6),
+      premulBlend(new THREE.MeshBasicMaterial({ map: canvasTexture(c, renderer) })),
+    );
+    m.position.z = -0.12;
+    m.renderOrder = 8;
+    hud.add(m);
+  }
 
   // soft glow disc behind padlock
   {
@@ -522,9 +543,9 @@ const makeLook = (row: SecurityRow): LookFactory => ({ renderer, aspect }) => {
           void main(){ vec4 c = texture(tMap, vUv); gl_FragColor = c * (0.6 + 0.6 * uGlow); }`,
       }),
     );
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.08), mat);
     const a = (slot.angle * Math.PI) / 180;
-    m.position.set(Math.cos(a) * 2.5, Math.sin(a) * 2.5, 0.08);
+    m.position.set(Math.cos(a) * 2.28, Math.sin(a) * 2.28, 0.08);
     m.renderOrder = 40 + i;
     hud.add(m);
     return mat;
