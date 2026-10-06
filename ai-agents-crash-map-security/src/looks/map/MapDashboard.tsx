@@ -217,7 +217,7 @@ const drawBase = (row: MapRow) => {
       const center = Math.exp(-(cx * cx * 2.2 + cy * cy * 3));
       const b = Math.min(1, 0.35 + 0.55 * center + 0.3 * hash(i, j, 2));
       const white = hash(i >> 2, j >> 2, 9) < 0.18 ? 0.6 : 0;
-      ctx.fillStyle = white > 0 || hash(i, j, 5) < 0.6 ? `rgba(225,245,255,${0.45 + 0.45 * b})` : rgba(row.dots, 0.42 + 0.45 * b);
+      ctx.fillStyle = white > 0 || hash(i, j, 5) < 0.65 ? `rgba(215,228,240,${0.38 + 0.4 * b})` : rgba(row.dots, 0.36 + 0.4 * b);
       ctx.fillRect(px - 7.5, py - 7.5, 15, 15);
     }
   }
@@ -363,6 +363,36 @@ const drawBase = (row: MapRow) => {
       for (let k = 0; k < 6; k++) if (r() < 0.7) ctx.fillRect(x + k * 34, y, 24, 12);
     }
   }
+  // orange numeric tags at some network hubs, and small UI clusters over the oceans
+  ctx.font = `600 44px ${MONO}`;
+  HUBS.forEach(([lon, lat], i) => {
+    if (i % 3) return;
+    const [x, y] = lonLatToPx(lon, lat);
+    ctx.fillStyle = "rgba(255,170,60,0.95)";
+    ctx.fillText(`${(hash(i, 4) * 90 + 10).toFixed(2)}`, x + 26, y - 30);
+  });
+  for (const [ox, oy] of [
+    [MAP.x + MAP.w * 0.36, MAP.y + MAP.h * 0.62],
+    [MAP.x + MAP.w * 0.66, MAP.y + MAP.h * 0.72],
+    [MAP.x + MAP.w * 0.12, MAP.y + MAP.h * 0.55],
+  ] as [number, number][]) {
+    ctx.font = `500 34px ${MONO}`;
+    ctx.fillStyle = "rgba(205,225,255,0.7)";
+    ctx.fillText(Array.from({ length: 16 }, (_, q) => Math.floor(hash(ox, q) * 10)).join(""), ox, oy);
+    for (let q = 0; q < 10; q++) {
+      ctx.fillStyle = q % 4 === 3 ? rgba(row.widgets[1], 0.8) : `rgba(225,235,255,${0.3 + 0.5 * hash(oy, q)})`;
+      ctx.fillRect(ox + q * 40, oy + 20, 30, 14);
+    }
+    ctx.strokeStyle = "rgba(170,210,255,0.5)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(ox - 40, oy + 60);
+    ctx.lineTo(ox + 300, oy + 60);
+    ctx.lineTo(ox + 360, oy + 120);
+    ctx.lineTo(ox + 700, oy + 120);
+    ctx.stroke();
+  }
+
   // a few labels in the map
   ctx.font = `600 54px ${INTER}`;
   ctx.fillStyle = "rgba(230,240,255,0.85)";
@@ -448,7 +478,7 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
       if (w.type !== "bars" && w.type !== "hist") return;
       const n = w.type === "bars" ? 8 + (w.seed % 9) : 36 + (w.seed % 30);
       const top = w.y + 70;
-      const ih = (w.h - 90) * 0.6;
+      const ih = (w.h - 90) * 0.45;
       const step = w.w / n;
       const bw = step * (w.type === "bars" ? 0.62 : 0.55);
       for (let k = 0; k < n; k++) {
@@ -462,7 +492,7 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
         const cEnd = w.seed % 3 ? pal[2] : pal[0];
         const mode = w.seed % 5;
         let c = t < 0.5 ? a.clone().lerp(b, t * 2) : b.clone().lerp(cEnd, (t - 0.5) * 2);
-        if (mode <= 1) c = pal[0].clone().lerp(new THREE.Vector3(0.95, 0.25, 0.8), t * 0.5); // hot magenta
+        if (mode === 0) c = pal[0].clone().lerp(new THREE.Vector3(0.95, 0.25, 0.8), t * 0.5); // hot magenta
         if (mode === 2) c = new THREE.Vector3(0.82, 0.86, 0.95).multiplyScalar(0.7 + 0.3 * hash(w.seed, k)); // white/grey
         col.push(c.x, c.y, c.z);
         seed.push(w.seed * 100 + k);
@@ -775,8 +805,8 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
     const tx = -1.3 + 2.6 * g;
     const tz = 0.8 - 0.2 * g;
     const yaw = 0.52 - 0.1 * g;
-    const pitch = (40 * Math.PI) / 180;
-    const dist = 13.4 - 0.7 * g;
+    const pitch = (37 * Math.PI) / 180;
+    const dist = 11.2 - 0.6 * g;
     camera.position.set(
       tx + Math.sin(yaw) * Math.cos(pitch) * dist,
       Math.sin(pitch) * dist,
@@ -860,10 +890,10 @@ const makeLook = (row: MapRow): LookFactory => ({ renderer, aspect, pixelHeight 
     const fadeIn = range(frame, 45, 70);
     return {
       frame,
-      bloom: { strength: 0.7, threshold: 0.6, knee: 0.3, radius: 1.0 },
-      dof: { focus: camera.position.distanceTo(new THREE.Vector3(tx, 0, tz)), aperture: 0.014, maxBlur: 0.009, nearScale: 0.8 },
+      bloom: { strength: 0.6, threshold: 0.68, knee: 0.3, radius: 1.0 },
+      dof: { focus: camera.position.distanceTo(new THREE.Vector3(tx, 0, tz)), aperture: 0.011, maxBlur: 0.008, nearScale: 0.8 },
       exposure: 0.25 + 0.75 * fadeIn,
-      vignette: 0.75,
+      vignette: 0.45,
       grain: 0.015,
     };
   };
