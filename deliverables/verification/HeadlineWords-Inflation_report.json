@@ -1,0 +1,36 @@
+{
+ "id": "HeadlineWords-Inflation",
+ "step1": {
+  "ok": true,
+  "stream": {
+   "codec_name": "h264",
+   "codec_type": "video",
+   "width": 1280,
+   "height": 720,
+   "pix_fmt": "yuv420p",
+   "r_frame_rate": "30/1"
+  },
+  "duration": "15.000000",
+  "streams": 1
+ },
+ "step3_f300": {
+  "ok": true,
+  "md5_cold": "e77f112cac0b27e0cfe4c5d8d98dedc8",
+  "md5_full": "e77f112cac0b27e0cfe4c5d8d98dedc8"
+ },
+ "step3_f70": {
+  "ok": true,
+  "md5_cold": "c6ccd7abf2313a48c78da6e748330060",
+  "md5_full": "c6ccd7abf2313a48c78da6e748330060"
+ },
+ "step4": {
+  "ok": true,
+  "dark_levels_present": 80,
+  "empty_levels_in_dark_range": []
+ },
+ "step5_sheet": "out/verify/HeadlineWords-Inflation_contact.png (frames [0, 112, 224, 336, 449])",
+ "step6": {
+  "mad_299_300": 7.652,
+  "mad_300_301": 7.657
+ }
+}

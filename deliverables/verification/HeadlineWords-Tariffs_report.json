@@ -1,0 +1,36 @@
+{
+ "id": "HeadlineWords-Tariffs",
+ "step1": {
+  "ok": true,
+  "stream": {
+   "codec_name": "h264",
+   "codec_type": "video",
+   "width": 1280,
+   "height": 720,
+   "pix_fmt": "yuv420p",
+   "r_frame_rate": "30/1"
+  },
+  "duration": "15.000000",
+  "streams": 1
+ },
+ "step3_f300": {
+  "ok": true,
+  "md5_cold": "691c2dd9383e57f80ac60bb587704455",
+  "md5_full": "691c2dd9383e57f80ac60bb587704455"
+ },
+ "step3_f70": {
+  "ok": true,
+  "md5_cold": "e13527fd1333c375ab30c92c3b9cc76b",
+  "md5_full": "e13527fd1333c375ab30c92c3b9cc76b"
+ },
+ "step4": {
+  "ok": true,
+  "dark_levels_present": 80,
+  "empty_levels_in_dark_range": []
+ },
+ "step5_sheet": "out/verify/HeadlineWords-Tariffs_contact.png (frames [0, 112, 224, 336, 449])",
+ "step6": {
+  "mad_299_300": 7.236,
+  "mad_300_301": 7.224
+ }
+}

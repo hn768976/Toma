@@ -1,0 +1,35 @@
+{
+ "id": "TopoTerrain-Teal",
+ "step1": {
+  "ok": true,
+  "stream": {
+   "codec_name": "h264",
+   "codec_type": "video",
+   "width": 1280,
+   "height": 720,
+   "pix_fmt": "yuv420p",
+   "r_frame_rate": "30/1"
+  },
+  "duration": "20.000000",
+  "streams": 1
+ },
+ "step2": {
+  "ok": true,
+  "differing_pixels": 0
+ },
+ "step3_f300": {
+  "ok": true,
+  "md5_cold": "21f1d861193e81d91f1f19910700108d",
+  "md5_full": "21f1d861193e81d91f1f19910700108d"
+ },
+ "step4": {
+  "ok": true,
+  "dark_levels_present": 79,
+  "empty_levels_in_dark_range": []
+ },
+ "step5_sheet": "out/verify/TopoTerrain-Teal_contact.png (frames [0, 149, 299, 449, 599])",
+ "step6": {
+  "mad_299_300": 12.813,
+  "mad_300_301": 12.811
+ }
+}

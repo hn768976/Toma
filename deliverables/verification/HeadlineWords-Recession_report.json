@@ -1,0 +1,36 @@
+{
+ "id": "HeadlineWords-Recession",
+ "step1": {
+  "ok": true,
+  "stream": {
+   "codec_name": "h264",
+   "codec_type": "video",
+   "width": 1280,
+   "height": 720,
+   "pix_fmt": "yuv420p",
+   "r_frame_rate": "30/1"
+  },
+  "duration": "15.000000",
+  "streams": 1
+ },
+ "step3_f300": {
+  "ok": true,
+  "md5_cold": "3073b1a9b2d1bdad854a5ce17465e99d",
+  "md5_full": "3073b1a9b2d1bdad854a5ce17465e99d"
+ },
+ "step3_f70": {
+  "ok": true,
+  "md5_cold": "7d7e94f5d0315ea88ad37e7b8b072afc",
+  "md5_full": "7d7e94f5d0315ea88ad37e7b8b072afc"
+ },
+ "step4": {
+  "ok": true,
+  "dark_levels_present": 80,
+  "empty_levels_in_dark_range": []
+ },
+ "step5_sheet": "out/verify/HeadlineWords-Recession_contact.png (frames [0, 112, 224, 336, 449])",
+ "step6": {
+  "mad_299_300": 7.162,
+  "mad_300_301": 7.139
+ }
+}

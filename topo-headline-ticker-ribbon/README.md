@@ -68,7 +68,25 @@ slam-in.)
 
 ## Render time
 
-__TIMING__
+Measured in this build environment: 4-core cloud container, **no GPU**. ANGLE falls back to
+SwiftShader (software WebGL2). 720p = `--scale=0.3333333333333333`, `--concurrency=4`, PNG
+sequence; time is wall-clock for the full composition.
+
+| Look | Composition | Frames | Wall time | **Per frame (720p)** |
+|---|---|---|---|---|
+| Topo Data Terrain | TopoTerrain-Teal | 600 | 550 s | **0.92 s** |
+| Topo Data Terrain | TopoTerrain-Blue | 600 | 595 s | **0.99 s** |
+| Headline Words | Tariffs / Recession / Inflation | 450 | 222 / 210 / 216 s | **0.47–0.49 s** |
+| Ticker Floor | TickerFloor-Blue / BearRed | 600 | 261 / 267 s | **0.44 s** |
+| Trend Ribbon | TrendRibbon-Multicolour | 600 | 529 s | **0.88 s** |
+
+**4K estimate.** 4K has 9× the pixels of 720p, and almost all of the cost is fill (fragment shaders
+and the post chain).
+* Same software-GL machine: about 9× slower, so roughly 8–9 s per frame for Topo/Ribbon and
+  4 s for Headline/Ticker. A 600-frame Topo loop would take about 1.5 h.
+* Desktop GPU with ANGLE (e.g. an RTX-class card): about **0.3–0.8 s per frame**, mostly
+  PNG/JPEG readback and encoding. That's roughly 3–8 min per 20 s composition at
+  `--concurrency=2`. This is an estimate; it wasn't measured here because no GPU was available.
 
 ## How it's built
 
@@ -142,7 +160,33 @@ public/data/natural-earth  ne_110m_land.geojson (public domain, LICENSE.md)
 
 ## Verification & completion checklist
 
-__CHECKLIST__
+All 8 previews were checked with `scripts/verify.py` (reports in `out/verify/`, which is not
+shipped):
+
+- [x] **Files:** 1280×720, 30/1, h264, yuv420p, a single video stream (no audio). Durations are
+      20.000 s for the loops and 15.000 s for Headline Words.
+- [x] **Loop** (6 loops; composition at 601 frames via `--props='{"loopCheck":true}'`): frame 0 =
+      frame 600, **0 differing pixels** for every loop.
+- [x] **Determinism:** frame 300 rendered alone from a cold start = frame 300 from the full
+      multi-threaded render, **byte for byte** (same md5) for all 8. Headline Words frame 70
+      (mid slam-in) also matches.
+- [x] **Banding:** read on frames decoded from the encoded mp4. Every dark luminance level is
+      present (no empty histogram bins). Haze and gradient profiles change smoothly, and the
+      longest run of identical pixels in a dark gradient is 5–15 px (grain plus dither break up
+      plateaus).
+- [x] **Contact sheets** (5 frames each): terrain and camera travel; Headline Words build-in,
+      slam and ticker; ticker rows moving; ribbon colour shift, candles and markers.
+      TickerFloor-BearRed has red tiles, mostly ▼ and lines trending down.
+- [x] **Text:** words spelled correctly. There are no people, parties, countries, brands or real
+      tickers, and all numbers are invented.
+- [x] **Motion and aliasing:** frames 299/300/301 have equal frame-to-frame differences (no
+      popping). Contours and ribbon strands use `fwidth` anti-aliasing and fade to mean coverage
+      below a few pixels per line.
+- [x] **Reference comparison:** 3 rounds, each with fresh, uninstructed reviewer agents.
+- [x] **Clean copy:** `npm install && npx remotion studio` serves (tested from an unzipped copy).
+
+To re-run the checks: `scripts/render-previews.sh` then `python3 scripts/verify.py <id>`
+(`refs/` is not shipped).
 
 ## Licences
 
