@@ -251,7 +251,8 @@ export class TerminalRenderer implements LookRenderer {
     const inWhip = f >= T.whipStart - 1 && f <= T.whipEnd + 1;
     let src: THREE.Texture;
     if (inWhip) {
-      const N = 10;
+      // More sub-frames where the whip is fastest, so the blur is continuous rather than stepped.
+      const N = f >= 185 && f <= 199 ? 32 : 12;
       this.post.clearAccum();
       for (let k = 0; k < N; k++) {
         const t = f - 0.25 + (0.5 * (k + 0.5)) / N;

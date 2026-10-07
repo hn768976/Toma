@@ -335,6 +335,8 @@ export class TerrainRenderer implements LookRenderer {
     // Main dot grid: positions come from gl_VertexID + the field texture.
     const gridGeo = new THREE.BufferGeometry();
     gridGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(NX * NS), 1));
+    // Positions come from the shader; give three a bounding sphere so it never tries to compute one.
+    gridGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
     const grid = new THREE.Points(
       gridGeo,
       new THREE.RawShaderMaterial({
