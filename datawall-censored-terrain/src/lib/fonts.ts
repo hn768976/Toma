@@ -6,7 +6,7 @@ export const MONO_FAMILY = "TermMono";
 export const STAMP_FAMILY = "StampBold";
 
 const FONTS: { family: string; file: string; weight: string }[] = [
-  { family: MONO_FAMILY, file: "fonts/IBMPlexMono-Medium.woff2", weight: "500" },
+  { family: MONO_FAMILY, file: "fonts/IBMPlexMono-SemiBold.woff2", weight: "600" },
   { family: STAMP_FAMILY, file: "fonts/Oswald-Bold.woff2", weight: "700" },
 ];
 

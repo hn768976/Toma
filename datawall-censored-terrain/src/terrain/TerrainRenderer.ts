@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { hexLinear, type RGB } from "../lib/color";
 import { PostPipeline } from "../lib/post";
-import { mulberry32, range } from "../lib/random";
+import { irange, mulberry32, range } from "../lib/random";
 import { HASH, HEADER } from "../lib/shaders";
 import type { LookRenderer } from "../lib/Stage";
 import type { TerrainVersion } from "../versions";
@@ -42,9 +42,9 @@ const CORRIDOR = (() => {
 
 export const CAM = {
   fov: 22,
-  height: CORRIDOR + 1.5,
-  horizonFromTop: 0.24,
-  focus: 15, // metres, roughly 30% of the visible depth on screen
+  height: CORRIDOR + 2.1,
+  horizonFromTop: 0.22,
+  focus: 19, // metres, roughly 30% of the visible depth on screen
 };
 
 // Extra points: grid lines, nodes (core + halo), vertical node lines, dust.
@@ -62,12 +62,23 @@ const buildExtras = () => {
   // Dotted grid lines (flat, slightly above the valley floor), closer spacing than the dot grid.
   for (const c of gridColumns) {
     const x = X0 + c * DX;
-    for (let i = 0; i < NS / 6; i++) add(x, GRID_Y, i * DS * 6, 0.04, 1.8, 0, 0, 0, 0);
+    for (let i = 0; i < NS / 6; i++) add(x, GRID_Y, i * DS * 6, 0.035, 2.4, 0, 0, 0, 0);
   }
   for (const r of gridRows) {
     for (const tileOff of [0, TILE]) {
       const s = r * DS + tileOff;
-      for (let i = 0; i < NX; i++) add(X0 + i * DX, GRID_Y, s, 0.04, 1.8, 0, 0, 0, 0);
+      for (let i = 0; i < NX; i++) add(X0 + i * DX, GRID_Y, s, 0.035, 2.8, 0, 0, 0, 0);
+    }
+  }
+  // Bright nodes where some dotted grid lines cross.
+  const irng = mulberry32(6060);
+  for (const r of gridRows) {
+    for (const c of gridColumns) {
+      if (irng() > 0.3) continue;
+      for (const tileOff of [0, TILE]) {
+        add(X0 + c * DX, GRID_Y, r * DS + tileOff, 0.07, 10, irange(irng, 1, 4), irng(), 1, 0);
+        add(X0 + c * DX, GRID_Y, r * DS + tileOff, 0.22, 0.25, 0, 0, 1, 1);
+      }
     }
   }
   // Nodes and vertical lines, replicated for both visible tiles.
@@ -75,13 +86,13 @@ const buildExtras = () => {
     for (const tileOff of [0, TILE]) {
       const x = X0 + n.col * DX;
       const s = n.row * DS + tileOff;
-      add(x, n.y, s, 0.06, 6 * n.bright, n.rate, n.phase, 1, 0);
-      add(x, n.y, s, 0.35, 0.3 * n.bright, n.rate, n.phase, 1, 1);
+      add(x, n.y, s, 0.06, 9 * n.bright, n.rate, n.phase, 1, 0);
+      add(x, n.y, s, 0.22, 0.22 * n.bright, n.rate, n.phase, 1, 1);
       if (n.line > 0) {
         const steps = Math.floor(n.line / 0.035);
         for (let i = 1; i <= steps; i++) {
           const f = i / steps;
-          add(x, n.y + i * 0.035, s, 0.024, 4.5 * (1 - f) * n.bright, n.rate, n.phase, 1, 0, -1);
+          add(x, n.y + i * 0.035, s, 0.03, 9 * (1 - f) * n.bright, n.rate, n.phase, 1, 0, -1);
         }
       }
     }
@@ -91,7 +102,7 @@ const buildExtras = () => {
   for (let i = 0; i < 3000; i++) {
     const warm = rng() < 0.25;
     const big = rng() < 0.06;
-    add(range(rng, -18, 18), range(rng, 0.8, 9), range(rng, 0, DEPTH), big ? range(rng, 0.06, 0.12) : range(rng, 0.012, 0.03), range(rng, 0.3, 1.2), 0, rng(), warm ? 3 : 2, 0, range(rng, 0.1, 0.5), i);
+    add(range(rng, -18, 18), rng() < 0.85 ? range(rng, 0.3, 3) : range(rng, 3, 9), range(rng, 0, DEPTH), big ? range(rng, 0.06, 0.12) : range(rng, 0.012, 0.03), range(rng, 0.3, 1.2), 0, rng(), warm ? 3 : 2, 0, range(rng, 0.1, 0.5), i);
   }
   return { count: pos.length / 3, pos: new Float32Array(pos), p: new Float32Array(p), k: new Float32Array(k) };
 };
@@ -111,6 +122,7 @@ uniform float uMinPx;      // minimum drawn diameter px
 uniform float uGain;
 uniform float uFogLen;
 uniform vec3 cHaze;
+uniform vec3 cFar;
 out vec3 vCol;
 out float vD;
 flat out float vProfile;
@@ -127,8 +139,9 @@ void emit(vec3 world, float sizeW, vec3 col, float inten, float sRel, float prof
   float d = max(max(geo, coc), uMinPx);
   float a = inten * uGain * min(geo * geo, d * d) / (d * d);
   float fog = 1.0 - exp(-sRel / uFogLen);
-  col = mix(col, cHaze * 2.5, fog * 0.5);
-  a *= mix(1.0, 0.7, fog);
+  // Distance: a bright, cool, streaky band toward the horizon (as in the reference).
+  col = mix(col, cFar, fog * 0.45);
+  a *= mix(1.0, 1.1, fog);
   a *= (1.0 - smoothstep(${(DEPTH * 0.8).toFixed(2)}, ${(DEPTH * 0.97).toFixed(2)}, sRel));
   a *= smoothstep(0.3, 1.5, sRel);
   vCol = col * a;
@@ -144,6 +157,7 @@ uniform highp sampler2D tField;
 uniform vec3 cLow;
 uniform vec3 cRidge;
 uniform vec3 cPlateau;
+uniform vec3 cNodeTint;
 ${POINT_COMMON}
 void main() {
   int id = gl_VertexID;
@@ -154,21 +168,27 @@ void main() {
   float plateau = f.g;
   // Small jitter outside plateaus; plateaus keep the tidy grid. Seeded by tile position.
   uint key = uint(col) * 7919u + uint(trow) * 104729u;
-  float jx = (hash2u(key, 3u) - 0.5) * ${(DX * 0.1).toFixed(4)} * (1.0 - plateau);
+  float jx = (hash2u(key, 3u) - 0.5) * ${(DX * 0.7).toFixed(4)} * (1.0 - plateau * 0.8);
+  float js = (hash2u(key, 4u) - 0.5) * ${(DS * 1.6).toFixed(4)} * (1.0 - plateau * 0.8);
   float jy = (hash2u(key, 5u) - 0.5) * 0.03 * (1.0 - plateau);
-  float sRel = mod(float(row) * ${DS} - uSCam, ${DEPTH.toFixed(2)});
+  float sRel = mod(float(row) * ${DS} + js - uSCam, ${DEPTH.toFixed(2)});
   vec3 world = vec3(${X0.toFixed(4)} + float(col) * ${DX} + jx, f.r + jy, -sRel);
   // Height/slope colour: valleys low colour, mid heights lift toward the pale plateau colour,
   // ridges and slopes ember.
   float mid = smoothstep(0.3, 1.2, f.r) * (1.0 - f.b);
-  float ember = smoothstep(0.4, 0.62, f.b);
-  vec3 col3 = mix(mix(cLow, cPlateau, 0.55 + mid * 0.4), cRidge, ember);
+  float ember = smoothstep(0.4, 0.65, f.b);
+  vec3 cool = mix(cPlateau, cNodeTint, 0.3);
+  vec3 col3 = mix(mix(cLow, cool, 0.35 + mid * 0.5), cRidge, ember);
   float inten = 1.0 + 0.5 * ember + 0.5 * mid;
   col3 = mix(col3, cPlateau, plateau * 0.7);
   inten *= 1.0 + 0.1 * plateau;
   // Faint per-dot variation.
-  inten *= 0.7 + 0.6 * hash2u(key, 9u);
-  emit(world, 0.026, col3, inten, sRel, 0.0);
+  // Glittery clusters: per-dot sparkle weighted by a coarse cluster hash (tile-periodic).
+  uint ckey = uint(col / 6) * 7919u + uint(trow / 9) * 104729u;
+  float cluster = hash2u(ckey, 21u);
+  float sp = hash2u(key, 9u);
+  inten *= (0.35 + 1.3 * sp * sp) * (0.08 + 1.5 * cluster * cluster);
+  emit(world, 0.034, col3, inten * 0.8, sRel, 0.0);
 }
 `;
 
@@ -188,7 +208,7 @@ void main() {
   if (aP.z > 0.0) inten *= 0.5 + 0.5 * sin(6.2831853 * (aP.z * u + aP.w));
   float sRel0 = mod(p.z - uSCam, ${DEPTH.toFixed(2)});
   // Vertical node lines only read in the middle distance and beyond.
-  if (aK.z < 0.0) inten *= smoothstep(14.0, 24.0, sRel0);
+  if (aK.z < 0.0) inten *= smoothstep(5.0, 9.0, sRel0);
   if (aK.z > 0.0) {
     uint sd = uint(aK.w);
     float k1 = 1.0 + floor(hash2u(sd, 1u) * 3.0);
@@ -218,7 +238,7 @@ void main() {
     w = exp(-r * r * 5.0) * 2.2;
   } else {
     // Flat disc with a one-pixel soft edge (bokeh); tiny dots become a soft blob.
-    float edge = max(2.0 / vD, 0.08);
+    float edge = clamp(2.0 / vD + vD * 0.03, 0.08, 1.0);
     w = 1.0 - smoothstep(1.0 - edge, 1.0, r);
     w *= 1.27; // compensate for the disc area (pi/4)
   }
@@ -241,6 +261,8 @@ void main() {
   float e = (y - uHorizon) * uTanHalf;  // ~ elevation (rad) above the horizon
   vec3 c = mix(cHaze, cTop, smoothstep(-0.005, 0.2, e));
   c += cBand * uBand * exp(-pow((e - 0.012) / 0.02, 2.0));
+  // Faint warm glow in the top-left corner.
+  c += cBand * 0.35 * smoothstep(0.75, 0.0, length(vec2(vUv.x, 1.0 - vUv.y) * vec2(1.4, 1.6)));
   // Below the horizon the far terrain sits in haze that darkens toward the ground.
   c = mix(c, cHaze * 0.25, smoothstep(0.0, -0.08, e));
   outColor = vec4(c, 1.0);
@@ -284,6 +306,7 @@ export class TerrainRenderer implements LookRenderer {
       uGain: { value: 1 },
       uFogLen: { value: 38 },
       cHaze: { value: L(v.skyHaze) },
+      cFar: { value: L(v.node) },
     };
 
     // Sky (drawn first, full screen).
@@ -324,6 +347,7 @@ export class TerrainRenderer implements LookRenderer {
           cLow: { value: L(v.low) },
           cRidge: { value: L(v.ridge) },
           cPlateau: { value: L(v.plateau) },
+          cNodeTint: { value: L(v.node) },
         },
         depthTest: false,
         depthWrite: false,
@@ -389,10 +413,10 @@ export class TerrainRenderer implements LookRenderer {
     this.uni.uPxPerUnit.value = this.h / (2 * tanHalf);
     // Near ground (~6 m) gets a CoC radius of ~2.2% of frame height.
     const nearZ = 6;
-    this.uni.uCocK.value = (0.013 * this.h) / (1 / nearZ - 1 / CAM.focus);
+    this.uni.uCocK.value = (0.028 * this.h) / (1 / nearZ - 1 / CAM.focus);
     this.uni.uMaxCoc.value = Math.min(0.06 * this.h, this.maxPoint);
     this.uni.uMinPx.value = Math.max(1.5 * res * 3, 1.25);
-    this.uni.uGain.value = 0.22;
+    this.uni.uGain.value = 0.36;
 
     this.post.renderScene(this.scene, cam, [0, 0, 0]);
     this.post.finish(this.post.scene.texture, {

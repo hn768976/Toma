@@ -18,11 +18,11 @@ export const STACK_H = 11.2;
 // Direction of travel along x (the camera moves MOVE_X * BLOCK_L per loop).
 export const MOVE_X = -1;
 
-// Glyph cell: 5x7 dots at 0.05 pitch.
+// Glyph cell: 5x7 dots at ~0.037 pitch.
 export const DOT = 0.05;
-export const GLYPH_W = 0.25;
-export const GLYPH_H = 0.35;
-export const GLYPH_ADV = 0.32;
+export const GLYPH_W = 0.23;
+export const GLYPH_H = 0.32;
+export const GLYPH_ADV = 0.3;
 
 export const KIND = { glyph: 0, bar: 1, dot: 2, glow: 3, rule: 4 } as const;
 
@@ -30,14 +30,15 @@ export const KIND = { glyph: 0, bar: 1, dot: 2, glow: 3, rule: 4 } as const;
 export const CAM = {
   fov: 30, // vertical, degrees (long lens)
   graze: 35, // angle between the view direction and the wall surface
-  azimuth: 62, // in-plane direction, degrees from +y toward +x
-  focusDist: 17,
-  roll: -9, // degrees
+  azimuth: 56, // in-plane direction, degrees from +y toward +x
+  focusDist: 20,
+  roll: -3, // degrees
   start: new THREE.Vector3(0, 3.2, 0), // point on the wall the camera looks at, frame 0
 };
 
-// Top of the wall (top of stack 0).
-export const TOP_EDGE_Y = STACK_H;
+// Top of the wall (top of stack 1).
+export const TOP_STACK = 1;
+export const TOP_EDGE_Y = (TOP_STACK + 1) * STACK_H;
 
 export const viewDir = () => {
   const g = THREE.MathUtils.degToRad(CAM.graze);
@@ -138,7 +139,7 @@ const dotStrip =
     }
   };
 
-const BAR_WIDTHS = [0.06, 0.08, 0.1, 0.12, 0.15, 0.2];
+const BAR_WIDTHS = [0.1, 0.12, 0.15, 0.18, 0.22, 0.26];
 const barBand =
   (h: number): Band =>
   (rng, t0, t1, yl, out) => {
@@ -158,7 +159,7 @@ const barBand =
         e.rateA = irange(rng, 1, 8); // brightness drift cycles per loop
         e.rateB = irange(rng, 4, 24); // brightness step slots per loop
         out.push(e);
-        t += w + range(rng, 0.14, 0.45);
+        t += w + range(rng, 0.25, 0.6);
       }
       if (framed) {
         const fw = t - start + 0.12;
@@ -215,7 +216,7 @@ const mixedField =
       while (t < t1) {
         const segLen = range(rng, 1.2, 7);
         const mode = rng();
-        const density = mode < 0.4 ? 0.0 : mode < 0.55 ? 0.4 : 0.92;
+        const density = mode < 0.1 ? 0.0 : mode < 0.25 ? 0.6 : 0.95;
         const glyphy = rng() < 0.1;
         const b = range(rng, 0.2, 0.55);
         const end = Math.min(t + segLen, t1);
@@ -237,20 +238,20 @@ const mixedField =
 
 // Band stack (y-local positions inside one STACK_H block).
 const STACK: { y: number; band: Band }[] = [
-  { y: -0.72, band: rule(0.025, [0.25, 0.45]) },
-  { y: -0.6, band: glowBand(2.4) },
-  { y: 1.92, band: rule(0.02, [0.3, 0.5]) },
-  { y: 2.1, band: dotStrip(0.06, 0.16, [0.3, 0.6]) },
-  { y: 2.65, band: glyphRow(20, 60, 0.4, 4, 0.9, [0.55, 1]) },
-  { y: 3.15, band: mixedField(14, 0.22, 0.1) },
-  { y: 6.25, band: glyphRow(6, 24, 1.5, 8, 0.85, [0.5, 1]) },
-  { y: 6.75, band: dotStrip(0.05, 0.12, [0.25, 0.5]) },
-  { y: 6.95, band: rule(0.02, [0.3, 0.55]) },
-  { y: 7.1, band: barBand(2.5) },
-  { y: 9.75, band: glyphRow(20, 60, 0.3, 3, 0.9, [0.55, 1]) },
-  { y: 10.25, band: dotStrip(0.06, 0.16, [0.25, 0.55]) },
-  { y: 10.55, band: mixedField(2, 0.3, 0.12) },
-  { y: 11.1, band: rule(0.025, [0.3, 0.5]) },
+  { y: 0.0, band: rule(0.025, [0.35, 0.6]) },
+  { y: 0.1, band: glowBand(1.8) },
+  { y: 2.0, band: rule(0.025, [0.45, 0.7]) },
+  { y: 2.15, band: dotStrip(0.06, 0.16, [0.3, 0.6]) },
+  { y: 2.45, band: glyphRow(10, 40, 0.8, 5, 0.6, [0.55, 1]) },
+  { y: 2.9, band: mixedField(10, 0.22, 0.13) },
+  { y: 5.25, band: rule(0.025, [0.45, 0.7]) },
+  { y: 5.4, band: barBand(1.9) },
+  { y: 7.45, band: glyphRow(4, 16, 1.5, 8, 0.7, [0.5, 1]) },
+  { y: 7.85, band: rule(0.025, [0.45, 0.7]) },
+  { y: 8.0, band: barBand(2.4) },
+  { y: 10.55, band: glyphRow(10, 40, 0.6, 4, 0.7, [0.55, 1]) },
+  { y: 10.95, band: dotStrip(0.06, 0.16, [0.25, 0.55]) },
+  { y: 11.15, band: rule(0.03, [0.45, 0.7]) },
 ];
 
 // Template for stack j over one block [0, BLOCK_L). Elements that would cross the block end are
@@ -263,6 +264,15 @@ export const buildTemplate = (j: number) => {
   const raw: Element[] = [];
   for (const s of STACK) s.band(rng, t0, t1, s.y, raw);
   const out = raw.filter((e) => e.x >= t0 && e.x + e.w <= t1 - 0.05);
+  if (j === TOP_STACK) {
+    // A few loose specks in the dark space above the wall.
+    const frng = mulberry32(31173);
+    for (let k = 0; k < 120; k++) {
+      const sz = range(frng, 0.05, 0.14);
+      const e = el(range(frng, t0, t1 - 0.2), range(frng, STACK_H + 0.4, STACK_H + 7), sz, sz, KIND.dot, frng, range(frng, 0.2, 0.6));
+      out.push(e);
+    }
+  }
 
   // Elements near a glow block dim a little while it is on: link each to the glow block
   // directly beneath it in the same stack (glow band is y 0.1..1.8).
@@ -288,15 +298,15 @@ export const buildTemplate = (j: number) => {
   const lines: LineSeg[] = [];
   const lrng = mulberry32(90412);
   let t = t0 + range(lrng, 0, 10);
-  while (j === 0 && t < t1) {
-    const hub: [number, number, number] = [t, TOP_EDGE_Y + range(lrng, 0.5, 3), range(lrng, 0.8, 2.6)];
-    const n = irange(lrng, 5, 8);
+  while (j === TOP_STACK && t < t1) {
+    const hub: [number, number, number] = [t - TOP_STACK * 0, TOP_EDGE_Y - TOP_STACK * STACK_H + range(lrng, 2, 4.5), range(lrng, 1.2, 2.8)];
+    const n = irange(lrng, 7, 11);
     const seed = nextSeed();
     const rate = pick(lrng, [2, 3]);
     const phase = lrng();
     for (let i = 0; i < n; i++) {
-      const ang = range(lrng, -Math.PI * 0.92, -Math.PI * 0.08);
-      const len = range(lrng, 6, 18);
+      const ang = range(lrng, -Math.PI * 0.8, -Math.PI * 0.2);
+      const len = range(lrng, 9, 22);
       lines.push({
         a: hub,
         b: [hub[0] + Math.cos(ang) * len * 1.3, hub[1] + Math.sin(ang) * len * 0.7, 0.02],

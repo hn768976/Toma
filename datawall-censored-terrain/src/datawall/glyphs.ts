@@ -59,9 +59,9 @@ export const makeGlyphAtlas = () => {
     for (let r = 0; r < 7; r++) {
       for (let c = 0; c < 5; c++) {
         if (rows[r][c] !== "#") continue;
-        // Square-ish LED dots with a little rounding.
+        // Square, blocky LED dots.
         ctx.beginPath();
-        ctx.roundRect(cx + c * PITCH + 1, cy + r * PITCH + 1, PITCH - 2, PITCH - 2, 1.5);
+        ctx.rect(cx + c * PITCH + 0.5, cy + r * PITCH + 0.5, PITCH - 1, PITCH - 1);
         ctx.fill();
       }
     }

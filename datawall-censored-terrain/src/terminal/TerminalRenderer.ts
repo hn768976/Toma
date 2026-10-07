@@ -26,7 +26,7 @@ const pxB = B.w / LABEL_CANVAS.w;
 const textLineY = (li: number) => A.y0 + A.h - (TEXT_LAYOUT.firstBaseline + li * TEXT_LAYOUT.lineGap) * pxA;
 const TEXT_MID_Y = textLineY(1) + 0.2;
 const LABEL_CENTER = new THREE.Vector3(
-  B.x0 + (LABEL_LAYOUT.stripX + LABEL_LAYOUT.stripW * 0.4) * pxB,
+  B.x0 + (LABEL_LAYOUT.stripX + LABEL_LAYOUT.stripW * 0.3) * pxB,
   B.y0 + B.h - (LABEL_LAYOUT.stripY + LABEL_LAYOUT.stripH * 0.5) * pxB,
   0,
 );
@@ -40,21 +40,21 @@ const FOV = 38;
 const poseAt = (t: number): Pose => {
   // Text shot: a 3/4 view along the lines; the focus slides a little with the typing.
   const typeP = clamp01((t - T.lineStart[0]) / (T.typeEnd - T.lineStart[0]));
-  const textX = 4.6 + 1.4 * smoother(typeP) + 0.01 * Math.max(0, t - T.typeEnd);
+  const textX = 5.6 + 1.2 * smoother(typeP) + 0.01 * Math.max(0, t - T.typeEnd);
   const text: Pose = {
     target: new THREE.Vector3(textX, TEXT_MID_Y, 0),
-    graze: 40,
-    az: -3,
-    dist: 4.7,
+    graze: 60,
+    az: 6,
+    dist: 6.0,
     roll: 0,
   };
   // Label shot: strip recedes to the right and descends slightly; slow push-in + drift.
   const hold = clamp01((t - T.labelIn[0]) / (STORY_FRAMES - T.labelIn[0]));
   const label: Pose = {
     target: LABEL_CENTER.clone().add(new THREE.Vector3(0.2 * Math.sin(hold * 2.4), 0.08 * Math.sin(hold * 3.1 + 0.6), 0)),
-    graze: 44 + 2 * hold,
+    graze: 54 + 2 * hold,
     az: 9,
-    dist: 7.6 - 0.9 * smoother(hold),
+    dist: 6.5 - 0.7 * smoother(hold),
     roll: -3,
   };
   if (t <= T.whipStart) return text;
@@ -119,7 +119,7 @@ void main() {
   vec3 c = hasTex ? toLinear(texture(tScreen, vUv).rgb) : cBase;
   // Emissive boost so text and bars bloom; dark background stays dark.
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  c *= uGain * (0.75 + 0.25 * smoothstep(0.05, 0.4, lum)) / (1.0 + 0.6 * smoothstep(0.45, 0.9, lum));
+  c *= uGain * (0.75 + 0.25 * smoothstep(0.05, 0.4, lum)) / (1.0 + 1.0 * smoothstep(0.45, 0.9, lum));
   // RGB stripe sub-pixel mask, only where a display pixel spans several frame pixels.
   vec2 cell = vScreen / uPitch;
   vec2 fw = fwidth(cell);
@@ -193,7 +193,7 @@ export class TerminalRenderer implements LookRenderer {
           hasTex: { value: tex !== null },
           cBase: { value: new THREE.Vector3(...this.bg) },
           uGain: { value: 1.25 },
-          uPitch: { value: 0.02 },
+          uPitch: { value: 0.014 },
           uMask: { value: 0.85 },
         },
       });
@@ -227,7 +227,7 @@ export class TerminalRenderer implements LookRenderer {
       camera: cam,
       planeView: plane,
       focusDepth: zf,
-      cocK: (label ? 0.022 : 0.03) * this.h * zf,
+      cocK: (label ? 0.034 : 0.035) * this.h * zf,
       maxCoc: 0.05 * this.h,
     });
   }
@@ -263,13 +263,13 @@ export class TerminalRenderer implements LookRenderer {
     }
 
     const glitch = f >= T.glitch[0] && f < T.glitch[1];
-    const split = glitch ? (f % 2 === 0 ? 0.006 : -0.0045) : 0.0011;
+    const split = glitch ? (f % 2 === 0 ? 0.006 : -0.0045) : 0.0024;
     this.post.finish(src, {
       bloomStrength: 0.75,
       bloomThreshold: 0.6,
       bloomKnee: 0.5,
       bloomRadius: 0.9,
-      caEdge: 0.006,
+      caEdge: 0.01,
       rgbSplit: split,
       knee: 0.9,
       gradeGain: this.v.gradeGain,

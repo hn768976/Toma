@@ -82,7 +82,8 @@ void main() {
   float coc = cocAt(vUv);
   // Tap spacing decides which mip to read, so wide discs stay smooth with a fixed tap count.
   float spacing = max(coc, 1.0) * 1.772 / sqrt(float(TAPS));
-  float lod = max(log2(spacing), 1.0);
+  // Slightly under-filtered so wide discs keep a round bokeh edge.
+  float lod = max(log2(spacing) - 0.6, 1.0);
   vec3 sum = vec3(0.0);
   float wsum = 0.0;
   for (int i = 0; i < TAPS; i++) {

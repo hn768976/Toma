@@ -5,7 +5,7 @@ import { HASH, HEADER } from "../lib/shaders";
 import type { LookRenderer } from "../lib/Stage";
 import type { DataWallVersion } from "../versions";
 import { ATLAS_COLS, ATLAS_ROWS, GLYPH_CONTENT, GLYPH_TABLE, makeGlyphAtlas } from "./glyphs";
-import { BLOCK_L, CAM, LOOP_FRAMES, STACK_H, buildTemplate, cameraPose, visibleBounds } from "./layout";
+import { BLOCK_L, CAM, LOOP_FRAMES, STACK_H, TOP_STACK, buildTemplate, cameraPose, visibleBounds } from "./layout";
 
 // ---------------------------------------------------------------- instance data (module level)
 const MAX_DIST = 140;
@@ -13,7 +13,7 @@ const bounds = visibleBounds(16 / 9, MAX_DIST);
 // Stacks from the lowest visible one up to the top of the wall (stack 0), each with its own
 // template, copied every BLOCK_L along x across the region the camera sees during the loop.
 const J0 = Math.floor(bounds.y0 / STACK_H) - 1;
-const J1 = Math.min(0, Math.ceil(bounds.y1 / STACK_H));
+const J1 = Math.min(TOP_STACK, Math.ceil(bounds.y1 / STACK_H));
 const TEMPLATES = Array.from({ length: J1 - J0 + 1 }, (_, i) => ({ j: J0 + i, tpl: buildTemplate(J0 + i) }));
 const K0 = Math.floor((bounds.x0 - 25) / BLOCK_L) - 1;
 const K1 = Math.ceil((bounds.x1 + 25) / BLOCK_L) + 1;
@@ -410,7 +410,7 @@ export class DataWallRenderer implements LookRenderer {
     this.common.uCamPos.value.copy(cam.position);
     this.common.uPixelAngle.value = (2 * Math.tan(THREE.MathUtils.degToRad(CAM.fov / 2))) / this.h;
     this.lineUniforms.uRes.value.set(this.w, this.h);
-    this.lineUniforms.uWidthPx.value = 10 * res;
+    this.lineUniforms.uWidthPx.value = 20 * res;
 
     this.post.renderScene(this.scene, cam, this.bg);
 
@@ -426,8 +426,8 @@ export class DataWallRenderer implements LookRenderer {
     });
 
     this.post.finish(dofTex, {
-      bloomStrength: 0.22,
-      bloomThreshold: 0.85,
+      bloomStrength: 0.2,
+      bloomThreshold: 0.8,
       bloomKnee: 0.4,
       bloomRadius: 0.85,
       caEdge: 0.0015,

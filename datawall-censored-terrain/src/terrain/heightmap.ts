@@ -99,8 +99,8 @@ export type Plateau = { x0: number; x1: number; s0: number; s1: number; level: n
 export const PLATEAUS: Plateau[] = (() => {
   const rng = mulberry32(77031);
   const out: Plateau[] = [];
-  for (let k = 0; k < 16; k++) {
-    const w = range(rng, 2, 6);
+  for (let k = 0; k < 10; k++) {
+    const w = range(rng, 2, 5);
     const l = range(rng, 2.5, 8);
     // Snap edges to the dot grid so plateau borders are clean rows/columns.
     const cx = range(rng, -20, 20);
@@ -134,9 +134,9 @@ const natural = (x: number, s: number): [number, number] => {
   // A lower corridor along the flight path, rising toward the sides.
   const side = smooth(3, 18, Math.abs(x));
   const k = 0.7 + 0.3 * side;
-  const h = Math.max(((hills + ridge + rough + big) * k + side * 0.8) * 0.65, -0.2);
+  const h = Math.max(((hills * 0.6 + ridge * 0.8 + rough + big * 0.5) * k + side * 0.6) * 0.6, -0.2);
   const patch = fbm(x + 40, s, 4, 2);
-  const ember = smooth(0.62, 0.9, rv) * 0.7 + smooth(0.2, 0.5, patch) * 0.55;
+  const ember = smooth(0.62, 0.9, rv) * 0.7 + smooth(0.25, 0.5, patch) * 0.55;
   return [h, Math.min(ember, 1)];
 };
 
@@ -205,7 +205,7 @@ export const gridColumns = (() => {
   let c = irange(rng, 10, 40);
   while (c < NX) {
     cols.push(c);
-    c += irange(rng, 35, 90);
+    c += irange(rng, 80, 170);
   }
   return cols;
 })();
@@ -215,7 +215,7 @@ export const gridRows = (() => {
   let r = irange(rng, 0, 40);
   while (r < NT) {
     rows.push(r);
-    r += irange(rng, 60, 140);
+    r += irange(rng, 140, 280);
   }
   return rows;
 })();

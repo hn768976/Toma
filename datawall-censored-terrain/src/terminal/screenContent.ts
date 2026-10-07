@@ -10,13 +10,15 @@ export const LABEL_CANVAS = { w: 4096, h: 2304 };
 
 // ------------------------------------------------------------------ text screen layout
 export const TEXT_LAYOUT = {
-  fontPx: 120,
-  left: 260,
+  fontPx: 112,
+  left: 200,
   firstBaseline: 1000,
   lineGap: 215,
 };
 
-const font = (px: number) => `500 ${px}px ${MONO_FAMILY}`;
+const font = (px: number) => `600 ${px}px ${MONO_FAMILY}`;
+// Extra tracking: the reference terminal type is wide and letter-spaced.
+const TRACKING = 1.12;
 
 // Redaction bar segments per line: word groups split at a few seeded spaces.
 export const redactionSegments = (line: string, lineIndex: number) => {
@@ -54,15 +56,24 @@ export const drawTextScreen = (ctx: CanvasRenderingContext2D, frame: number, v: 
   ctx.fillRect(0, 0, w, h);
   ctx.font = font(L.fontPx);
   ctx.textBaseline = "alphabetic";
-  const adv = ctx.measureText("M").width;
+  const adv = ctx.measureText("M").width * TRACKING;
   const capTop = L.fontPx * 0.78;
   const cellH = L.fontPx * 0.95;
 
+  // Characters are placed one by one on the monospace grid (with tracking). Two passes: a wide
+  // glow-coloured halo, then the glyph with a tight glow.
   const drawChars = (s: string, x: number, y: number, color: string, glow: number) => {
-    ctx.fillStyle = color;
     ctx.shadowColor = v.textGlow;
-    ctx.shadowBlur = glow;
-    ctx.fillText(s, x, y);
+    for (const [blur, alpha, fill] of [
+      [glow * 2.4, 0.85, v.textGlow],
+      [glow * 0.6, 1, color],
+    ] as const) {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = fill;
+      ctx.shadowBlur = blur;
+      for (let i = 0; i < s.length; i++) if (s[i] !== " ") ctx.fillText(s[i], x + i * adv, y);
+    }
+    ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
   };
 
@@ -130,11 +141,13 @@ export const drawTextScreen = (ctx: CanvasRenderingContext2D, frame: number, v: 
       (li === 0 && frame < T.lineStart[0] && idleBlink) ||
       (li === 2 && n === line.length && frame < T.hlStart[0] && idleBlink);
     if (showCursor) {
+      ctx.globalAlpha = 0.7;
       ctx.fillStyle = v.text;
       ctx.shadowColor = v.textGlow;
       ctx.shadowBlur = 40;
-      ctx.fillRect(L.left + n * adv + adv * 0.08, y - capTop, adv * 0.84, cellH);
+      ctx.fillRect(L.left + n * adv + adv * 0.12, y - capTop, adv * 0.76, cellH);
       ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
     }
 
     // Highlight / redaction bars.
@@ -173,15 +186,15 @@ export const makeGlobe = (v: TerminalVersion) => {
   const g = sharp.getContext("2d")!;
   g.fillStyle = v.background;
   g.fillRect(0, 0, w, h);
-  const cx = w * 0.6;
+  const cx = w * 0.64;
   const cy = h * 0.5;
-  const r = h * 0.62;
+  const r = h * 0.64;
   // body
   const grad = g.createRadialGradient(cx - r * 0.25, cy - r * 0.2, r * 0.1, cx, cy, r);
   grad.addColorStop(0, v.shapeTint);
   grad.addColorStop(0.75, v.shapeTint);
   grad.addColorStop(1, v.background);
-  g.globalAlpha = 0.95;
+  g.globalAlpha = 0.62;
   g.fillStyle = grad;
   g.beginPath();
   g.arc(cx, cy, r, 0, Math.PI * 2);
@@ -206,13 +219,16 @@ export const makeGlobe = (v: TerminalVersion) => {
   g.beginPath();
   g.arc(cx + 50, cy, r, -Math.PI * 0.5, Math.PI * 0.5);
   g.stroke();
-  // thin mixed band between them where the two fringes overlap
-  g.globalAlpha = 0.5;
-  g.lineWidth = 40;
-  g.strokeStyle = v.shapeTint;
+  // soft colour patches (lower right in fringe B, left in fringe A)
+  g.globalAlpha = 0.45;
+  g.fillStyle = v.fringeB;
   g.beginPath();
-  g.arc(cx, cy, r + 40, 0, Math.PI * 2);
-  g.stroke();
+  g.ellipse(cx + r * 0.55, cy + r * 0.45, r * 0.32, r * 0.22, 0.4, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = v.fringeA;
+  g.beginPath();
+  g.ellipse(cx - r * 0.75, cy - r * 0.1, r * 0.12, r * 0.45, 0, 0, Math.PI * 2);
+  g.fill();
   g.globalAlpha = 1;
 
   const out = document.createElement("canvas");
@@ -221,13 +237,13 @@ export const makeGlobe = (v: TerminalVersion) => {
   const o = out.getContext("2d")!;
   o.fillStyle = v.background;
   o.fillRect(0, 0, w, h);
-  o.filter = "blur(60px)";
+  o.filter = "blur(110px)";
   o.drawImage(sharp, 0, 0);
   o.filter = "none";
   // vertical scan-lines over the shape
   o.globalCompositeOperation = "multiply";
   o.fillStyle = "rgba(0,0,0,0.3)";
-  for (let x = 0; x < w; x += 28) o.fillRect(x, 0, 12, h);
+  for (let x = 0; x < w; x += 18) o.fillRect(x, 0, 7, h);
   o.globalCompositeOperation = "source-over";
   return out;
 };
