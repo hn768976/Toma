@@ -1,0 +1,32 @@
+{
+  "name": "forex-streaks-glitchmap",
+  "version": "1.0.0",
+  "description": "Rate Board, Light Streaks and Glitch Dot Map: 5 seamless 20s loops (Remotion, 30fps, 3840x2160)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.8.1",
+    "@remotion/cli": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@fontsource/rajdhani": "5.3.0",
+    "@fontsource/roboto-mono": "5.3.0",
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3",
+    "world-atlas": "2.0.2"
+  }
+}
