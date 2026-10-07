@@ -51,7 +51,9 @@ npx remotion render MapTicker-Blue           out/MapTicker_Blue.mp4           --
 ```
 
 (The codec/CRF/pixel-format/image-format flags repeat what `remotion.config.ts`
-sets, so they also work from the Node APIs' equivalent options.)
+sets. The config also sets `Config.setMuted(true)` — without it Remotion adds a
+silent AAC track — and adds `-tune grain` to the x264 encode. From the Node APIs
+pass `muted: true` and an equivalent `ffmpegOverride`.)
 
 720p previews (what was rendered here): add `--scale=0.3333333333333333`
 (→ exactly 1280×720). `scripts/render-preview.sh <id> <name>` renders a PNG
@@ -69,7 +71,36 @@ npx remotion still MarketGlobe-Blue out/MarketGlobe_Blue_6K.png --frame=300 --sc
 
 ## Render time
 
-__TIMING__
+Measured here: 720p previews (`--scale=1/3` → 1280×720), PNG frames,
+`--concurrency=2`, in a cloud container with **no GPU** — Chromium's WebGL2
+ran on SwiftShader (software rendering through ANGLE). Wall-clock time per frame:
+
+| Look | Composition | s / frame (720p) |
+|---|---|---|
+| 1 Payment Network | `PaymentNetwork-BlackCard` | 2.48 |
+| 1 Payment Network | `PaymentNetwork-GoldCard` | 2.50 |
+| 2 Circuit Battery | `CircuitBattery-Blue` | 2.86 |
+| 3 Market Globe | `MarketGlobe-Blue` | 4.81 |
+| 4 Dollar Globe | `DollarGlobe-CrashRed` | 4.67 |
+| 4 Dollar Globe | `DollarGlobe-RallyGreen` | 4.63 |
+| 5 Map Ticker | `MapTicker-Blue` | 2.34 |
+
+(SwiftShader already uses every CPU core, so more tabs didn't speed it up;
+`--concurrency=4` measured the same throughput as 1–2.)
+
+**4K estimate.** 4K has 9× the pixels. These looks are fill-rate bound
+(full-screen post passes, additive overdraw), so on the same software
+renderer expect roughly 7–9× → **~17–45 s/frame (≈3–7.5 h per composition)**.
+On a machine with a real GPU (run Chromium with `--gl=angle` so it uses the
+hardware), the WebGL work becomes small (tens of ms per frame) and the time is
+dominated by Remotion's 4K PNG capture and encode: expect **~0.4–1 s/frame
+(≈4–10 min per composition)**.
+
+Performance notes for software GL (they matter less on a GPU):
+- HDR targets are float32 where filterable — SwiftShader emulates half floats
+  slowly (3–4× slower overall in tests).
+- Every shader branch runs on software GL, so the DoF passes use a fixed, small
+  number of texture fetches (16-tap quarter-res opaque DoF; 4–5 taps in-shader).
 
 ## Determinism
 
@@ -90,7 +121,7 @@ is a function of `useCurrentFrame()` only:
 - Fonts and Natural Earth data load behind `delayRender` / `continueRender`.
 
 Self-check: render frame 300 alone from a cold start and compare it with frame
-300 of the full render — byte for byte (see checklist).
+300 of the full render — byte for byte (see checklist; `scripts/verify.sh`).
 
 ## Banding
 
@@ -101,7 +132,18 @@ Self-check: render frame 300 alone from a cold start and compare it with frame
 - Check the **encoded mp4**, not the preview: extract frames with ffmpeg and
   read pixel values across dark gradients and glow falloffs (see checklist).
 
-__BANDING__
+Result of the check on all 7 previews (frame 360 decoded from each encoded
+mp4; `scripts/banding.py`): **no band edges in any composition**. Along dark rows
+and through the brightest glow column, 64-px segment means change by fractional
+amounts (smooth), and the local noise from dither + grain stays above the
+quantisation step everywhere except one very dark vignette corner.
+
+One finding fixed during the check: with default x264 settings the darkest
+top-right corner of the Payment frames became a perfectly flat (0, 0, 10) patch,
+because the encoder quantised the dither away. Previews are therefore encoded with
+`-tune grain` (`scripts/encode.sh`), which keeps the dither in near-black areas.
+`remotion.config.ts` applies the same `-tune grain` to Remotion's own encoder
+(`Config.overrideFfmpegCommand`), so the 4K commands above get it automatically.
 
 ## Loops (Market Globe, Map Ticker)
 
@@ -169,4 +211,23 @@ scripts/              preview render + stills helpers
 
 ## Completion checklist
 
-__CHECKLIST__
+Verified on the 720p previews in this container (`scripts/verify.sh`):
+
+| Check | 1A | 1B | 2 | 3 | 4A | 4B | 5 |
+|---|---|---|---|---|---|---|---|
+| 1. 1280×720, 30/1, 20.0 s, h264, yuv420p, no audio | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 2. Loop: frame 0 ≡ frame 600 (pixel-identical) | – | – | – | ✅ | – | – | ✅ |
+| 3. Cold frame 300 ≡ full render (byte-identical) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 3. Cold frame 90 ≡ full render (byte-identical) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 4. Banding (from encoded mp4) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 5. Contact sheet shows the required content | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 6. Frames 299/300/301: no jumps/flicker/crawl | ✅ | ✅ | ✅ | ✅* | ✅ | ✅ | ✅* |
+| Text: only "BANK", 1234 5678 9101 1234, 00/00; invented index names | ✅ | ✅ | – | ✅ | ✅ | ✅ | ✅ |
+
+\* Market Globe and Map Ticker move fast (scrolling candles / ticker rows): the
+pixel metric flags ~1 % / ~3 % of pixels as changing sign between frames, the
+same on frames without a number tick; visual inspection shows continuous motion,
+no flicker and no crawling text.
+
+Also verified: `npm install && npx remotion studio` from a clean unzip of the
+project (Studio serves; all 7 compositions listed, 3840×2160, 30 fps, 600 frames).

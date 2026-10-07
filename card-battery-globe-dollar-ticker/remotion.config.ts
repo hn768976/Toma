@@ -17,6 +17,16 @@ Config.setDelayRenderTimeoutInMilliseconds(180000);
 Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
+// Silent compositions: no audio stream in the output.
+Config.setMuted(true);
+// Keep x264 from quantising the ±1/255 dither + grain away in near-black areas
+// (which re-creates flat plateaus in dark vignette corners): add `-tune grain`
+// to every libx264 encode.
+Config.overrideFfmpegCommand(({ args }) => {
+  const i = args.indexOf("libx264");
+  if (i === -1 || args.includes("-tune")) return args;
+  return [...args.slice(0, i + 1), "-tune", "grain", ...args.slice(i + 1)];
+});
 
 // Sandboxed environments that block Remotion's own Chrome Headless Shell
 // download but ship a Playwright Chromium: reuse it. On a normal machine this
