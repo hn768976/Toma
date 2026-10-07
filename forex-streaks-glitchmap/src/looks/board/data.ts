@@ -37,7 +37,7 @@ export const RED: BoardPalette = {
   baseline: "#FF3A3A",
   glowLL: "#FF1A1A",
   glowUR: "#2A8AFF",
-  bias: -0.55,
+  bias: -0.8,
 };
 
 export const BLUE: BoardPalette = {
@@ -51,7 +51,7 @@ export const BLUE: BoardPalette = {
   baseline: "#FF5A6A",
   glowLL: "#2A6AFF",
   glowUR: "#4AD8FF",
-  bias: 0.55,
+  bias: 0.8,
 };
 
 export interface RowSpec {
@@ -87,6 +87,6 @@ export const ROW_SPECS: RowSpec[] = Array.from({ length: ROWS }, (_, r) => {
     tickOffset: Math.floor(rng() * 40),
     amp: 0.0012 + rng() * 0.003,
     seed: 100 + r * 13,
-    chip: r % 3 === 1 ? "" : "TRADE",
+    chip: r % 4 === 1 ? "" : "TRADE",
   };
 });

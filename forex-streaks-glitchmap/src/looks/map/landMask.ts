@@ -80,9 +80,12 @@ export const buildLandGrid = (): LandGrid => {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W, H);
 
-  const unit = W / (2 * Math.PI); // px per Miller unit
+  // Cells are not square on screen (pitchY/pitchX = ~1.096 for 150 x 77 in 16:9), so the
+  // vertical scale of the mask is reduced by that ratio: the projected map is true Miller
+  // in the final frame, not stretched.
+  const unitY = ((3840 / (2 * Math.PI)) * SS) / (2160 / ROWS);
   const top = miller(TOP_LAT);
-  const project = ([lon, lat]: Pt): Pt => [((lon + 180) / 360) * W, (top - miller(lat)) * unit];
+  const project = ([lon, lat]: Pt): Pt => [((lon + 180) / 360) * W, (top - miller(lat)) * unitY];
 
   ctx.beginPath();
   for (const ring of getRings()) {

@@ -40,9 +40,9 @@ const BUNDLE_LIST: Bundle[] = Array.from({ length: BUNDLES }, (_, b) => {
   return {
     x0: -5.5 + f * 11 + (rng() - 0.5) * 1.2,
     lane: 0.45 + rng() * 1.1,
-    th0: 0.2 - f * 0.46 + (rng() - 0.5) * 0.2,
+    th0: 0.5 - f * 0.9 + (rng() - 0.5) * 0.24,
     thEnd: 0.0 + 0.58 * Math.pow(rng(), 1.7),
-    len: 8 + rng() * 34,
+    len: 5 + rng() * 22,
     seed: 11 + b * 7,
     weight: 0.6 + rng(),
   };
@@ -78,11 +78,11 @@ const RIBBON_LIST: Ribbon[] = (() => {
     out.push({
       bundle: bi,
       u: loose ? (rng() * 2 - 1) * 3.2 : (rng() + rng() - 1),
-      drift: (rng() - 0.5) * (loose ? 14 : 4.5),
-      y0: rng() * rng() * 1.5,
+      drift: (rng() - 0.5) * (loose ? 16 : 7),
+      y0: rng() * rng() * 0.38, // every ribbon starts below the bottom edge: no visible line ends
       arch: rng() < 0.5 ? rng() * 1.6 : 0,
-      widthPx: thick ? 13 + rng() * 9 : 4.5 + Math.pow(rng(), 1.5) * 8,
-      intensity: (thick ? 1.05 : 0.08) + Math.pow(rng(), 2.6) * (thick ? 0.65 : 1.75),
+      widthPx: thick ? 12 + rng() * 8 : 3 + Math.pow(rng(), 1.5) * 4,
+      intensity: (thick ? 1.5 : 0.04) + Math.pow(rng(), 3.2) * (thick ? 0.9 : 3.0),
       k: 3 + Math.floor(rng() * 7),
       phase: rng(),
       tail: 0.05 + rng() * 0.12,
@@ -183,7 +183,7 @@ void main() {
   float head = 1.0 - fract(vP.w + vP.z * uLoop);
   float fadeHead = smoothstep(0.0, 0.2, head) * (1.0 - smoothstep(0.93, 1.0, head));
   float pulse = prof(vT - head, vTail) * fadeHead;
-  float far = mix(1.0, 0.0, smoothstep(0.25, 0.93, vT));
+  float far = mix(1.0, 0.0, smoothstep(0.12, 0.7, vT));
   float inten = vP.y * far * (0.28 + 1.3 * pulse) / pow(vDef, 0.7);
   vec3 col = mix(vColor, vec3(1.0), clamp(pulse * 0.16, 0.0, 1.0)) * inten * across;
   gl_FragColor = vec4(col, 1.0);
@@ -213,7 +213,7 @@ void main() {
   float side = smoothstep(-1.2, 1.0, ndc.x);                    // the horizon glow lives on the flare side
   vec3 sky = mix(uSkyHorizon * mix(0.12, 0.55, side), uSkyTop, 1.0 - exp(-up * 4.2));
   vec2 d = vec2((ndc.x - uFlare.x) * aspect / 0.8, h / 0.34);
-  sky += uHaze * (0.8 * exp(-dot(d, d) * 0.9));
+  sky += uHaze * (0.45 * exp(-dot(d, d) * 1.1));
   float below = clamp(-h, 0.0, 1.0);
   vec3 ground = mix(uSkyHorizon * 0.32, uSkyTop * 0.6, smoothstep(0.0, 0.7, below));
   float gx = (ndc.x - uFlare.x) * aspect / 1.5;
@@ -228,12 +228,12 @@ void main() {
       vec2 b = uGlintB[i];
       vec2 p = (ndc - (a.xy + shift)) * vec2(aspect, 1.0);
       float tw = 0.55 + 0.45 * sin(6.2831853 * (b.x * uLoop + b.y));
-      col += uGlint * a.w * tw * exp(-dot(p, p) / (2.0 * a.z * a.z)) * 0.28;
+      col += uGlint * a.w * tw * exp(-dot(p, p) / (2.0 * a.z * a.z)) * 0.03;
     }
     // the one larger violet ghost, stretched horizontally
     vec2 g = (ndc - (vec2(-0.55, 0.64) + shift)) * vec2(aspect, 1.0);
-    col += uGlint * 0.4 * exp(-(g.x * g.x) / (2.0 * 0.06 * 0.06) - (g.y * g.y) / (2.0 * 0.009 * 0.009));
-    col += uGlint * 0.07 * exp(-(g.x * g.x) / (2.0 * 0.3 * 0.3) - (g.y * g.y) / (2.0 * 0.05 * 0.05));
+    col += uGlint * 0.28 * exp(-(g.x * g.x) / (2.0 * 0.03 * 0.03) - (g.y * g.y) / (2.0 * 0.009 * 0.009));
+    col += uGlint * 0.03 * exp(-(g.x * g.x) / (2.0 * 0.3 * 0.3) - (g.y * g.y) / (2.0 * 0.05 * 0.05));
   }
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -249,11 +249,11 @@ void main() {
   float aspect = uRes.x / uRes.y;
   vec2 d = (vUv * 2.0 - 1.0 - uFlare) * vec2(aspect, 1.0); // 1 unit = half the frame height
   float r = length(d);
-  float core = exp(-pow(r / 0.026, 2.0)) * 12.0;
+  float core = exp(-pow(r / 0.034, 2.0)) * 16.0;
   float hot = exp(-pow(r / 0.06, 2.0)) * 1.0;
-  float glow = exp(-r / 0.14) * 1.3;
+  float glow = exp(-r / 0.1) * 1.0;
   float streak = exp(-abs(d.x) / 0.32) * exp(-pow(d.y / 0.013, 2.0)) * 4.5;
-  float streak2 = exp(-abs(d.x) / 0.18) * exp(-pow(d.y / 0.04, 2.0)) * 0.5 + exp(-abs(d.x) / 0.55) * exp(-abs(d.y) / 0.1) * 0.7;
+  float streak2 = exp(-abs(d.x) / 0.18) * exp(-pow(d.y / 0.04, 2.0)) * 0.5 + exp(-abs(d.x) / 0.3) * exp(-abs(d.y) / 0.07) * 0.5;
   vec3 col = uCore * (core + hot) + uGlow * (glow + streak2) + mix(uGlow, uCore, 0.55) * streak;
   gl_FragColor = vec4(col * uPulse, 1.0);
 }`;
@@ -407,7 +407,7 @@ export const createStreaksRig = (palette: StreaksPalette): RigFactory => (gl, w,
     tScene: { value: sceneRT.texture },
     tBloom: { value: null },
     uLoopFrame: { value: 0 },
-    uBloom: { value: 0.38 },
+    uBloom: { value: 0.22 },
     uChroma: { value: 0.0022 },
     uVignette: { value: 0.42 },
     uGrain: { value: 0.015 },
@@ -443,7 +443,7 @@ export const createStreaksRig = (palette: StreaksPalette): RigFactory => (gl, w,
     for (let i = 0; i < 40; i++) {
       const mid = 0.5 * (lo + hi);
       projectDir(mid, tmp);
-      if (tmp.x < 0.965) lo = mid;
+      if (tmp.x < 0.978) lo = mid;
       else hi = mid;
     }
     return 0.5 * (lo + hi);
@@ -542,7 +542,7 @@ export const createStreaksRig = (palette: StreaksPalette): RigFactory => (gl, w,
       gl.render(ribbonScene, camera);
       flare.render(gl, sceneRT);
 
-      const bloomTex = bloom.render(gl, sceneRT.texture, w, h, 1.1);
+      const bloomTex = bloom.render(gl, sceneRT.texture, w, h, 1.5);
       composite.material.uniforms.tBloom.value = bloomTex;
       composite.material.uniforms.uLoopFrame.value = f;
       composite.render(gl, null);

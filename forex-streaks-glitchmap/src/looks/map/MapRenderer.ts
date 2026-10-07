@@ -25,8 +25,8 @@ const SEED = 0x4d41_5001;
 const SHIFT_SLOT = 24; // 25 slots per loop
 const SHIFT_FIRE = 0.68; // 25 * 0.68 = one shift every ~1.2 s on average
 const FLICKER_SLOT = 20; // 30 slots per loop
-const FLARE_COUNT = 56;
-const FLARE_LIFE = 30; // ~1 s
+const FLARE_COUNT = 48;
+const FLARE_LIFE = 80; // ~2.7 s
 const DISSOLVE_PERIOD = 200; // 3 per loop (6.67 s)
 const DISSOLVE_START = 90;
 const SCATTER = 20;
@@ -88,7 +88,7 @@ const FLARES: Flare[] = Array.from({ length: FLARE_COUNT }, (_, j) => ({
   cx: 0.04 + hash01(SEED, 101, j) * 0.92,
   cy: 0.06 + hash01(SEED, 102, j) * 0.8,
   glyph: j % 2 === 0 ? G_RING : G_PLUS,
-  peak: 2 + hash01(SEED, 103, j) * 1.4,
+  peak: 2.6 + hash01(SEED, 103, j) * 2,
   driftX: (hash01(SEED, 104, j) - 0.5) * 36,
   driftY: (hash01(SEED, 105, j) - 0.5) * 36,
 }));
@@ -204,9 +204,9 @@ export class MapRenderer {
         const i = r * COLS + c;
         const cov = coverage[i];
         const inl = inland[i];
-        const landness = smoothstep(0.06, 0.4, cov);
+        const landness = smoothstep(0.04, 0.3, cov);
         this.kind[i] = landness > 0 ? 1 : 0;
-        this.density[i] = landness * (0.78 + 0.2 * smoothstep(0.25, 0.9, inl));
+        this.density[i] = landness * (0.86 + 0.14 * smoothstep(0.25, 0.9, inl));
         // Polar edge: thin dashed band + a few rows of specks beneath it.
         if (r === bandRow || r === bandRow + 1) {
           const run = hash01(SEED, 300, Math.floor(c / 2), r) < 0.62;
@@ -219,7 +219,7 @@ export class MapRenderer {
           this.density[i] = 0.62;
         } else if (r < 2 && landness === 0) {
           this.kind[i] = 3; // ... and along the very top
-          this.density[i] = 0.45;
+          this.density[i] = 0.8; // dense, tidy lattice along the very top
         }
         const h = hash32(SEED, 400, i);
         this.period[i] = 6 + (h % 15); // 6..20 frames
@@ -283,16 +283,16 @@ export class MapRenderer {
         let b: number;
         if (kind === 0) {
           const u = (rnd & 0xffff) / 65536;
-          present = u < 0.03 || (u > 0.5 && u < 0.7); // ~1% stray symbols + a very faint dotted lattice
+          present = u < 0.02 || (u > 0.5 && u < 0.58); // ~1% stray symbols + a very faint dotted lattice
           const faint = u > 0.5;
           const pick = faint ? 6 : (rnd >>> 16) % 8;
           g = pick < 3 ? G_RING : pick < 5 ? G_PLUS : pick < 6 ? G_DOT : (rnd >>> 20) % NG;
           b = faint ? 0.07 + 0.06 * (((rnd >>> 8) & 0xff) / 255) : 0.55 + 0.45 * (((rnd >>> 8) & 0xff) / 255);
         } else if (kind === 2) {
           present = true;
-          const q = (rnd >>> 16) % 5;
-          g = q === 0 ? G_EQ : q < 3 ? G_DASH : G_DOT;
-          b = 0.45 + 0.4 * (((rnd >>> 8) & 0xff) / 255);
+          const q = (rnd >>> 16) % 6;
+          g = q === 0 ? G_DASH : q === 1 ? G_EQ : G_DOT;
+          b = 0.4 + 0.45 * (((rnd >>> 8) & 0xff) / 255);
         } else if (kind === 3) {
           present = (rnd & 0xffff) / 65536 < this.density[i];
           g = (rnd >>> 16) % 3 === 0 ? G_DASH : G_DOT;

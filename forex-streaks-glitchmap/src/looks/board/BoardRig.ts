@@ -14,11 +14,11 @@ import type { BoardPalette } from "./data";
 // accumulation). Everything is a function of the loop frame.
 // ---------------------------------------------------------------------------
 
-const TILE_W = 0.44; // metres: one tile = 8 rows of 0.055 m (8:1 rows)
-const TILE_H = 0.44;
-const CAM_H = 0.23;
-const FOV = 50;
-const PITCH = THREE.MathUtils.degToRad(-35);
+const TILE_W = 0.42; // metres: one tile = 8 rows of 0.0525 m (8:1 rows)
+const TILE_H = 0.42;
+const CAM_H = 0.26;
+const FOV = 44;
+const PITCH = THREE.MathUtils.degToRad(-36);
 
 const BOARD_VERT = /* glsl */ `
 varying vec3 vWorld;
@@ -142,12 +142,12 @@ void main() {
   // screen-space glows: lower left (35% of the frame wide), upper right (25%)
   vec2 pLL = (vUv - vec2(0.115, 0.015)) * vec2(aspect, 1.0);
   float dLL = length(pLL) / (0.35 * aspect);
-  float gLL = 0.45 * exp(-pow(dLL * 2.2, 1.5)) + 4.0 * exp(-pow(dLL * 5.5, 2.0));
+  float gLL = 0.3 * exp(-pow(dLL * 2.2, 1.5)) + 5.5 * exp(-pow(dLL * 4.6, 2.0));
   vec2 pUR = (vUv - vec2(0.975, 0.9)) * vec2(aspect, 1.0);
   float dUR = length(pUR) / (0.25 * aspect);
-  float gUR = 0.55 * exp(-pow(dUR * 2.0, 1.4)) + 2.4 * exp(-pow(dUR * 4.5, 2.0));
+  float gUR = 0.3 * exp(-pow(dUR * 2.0, 1.4)) + 3.6 * exp(-pow(dUR * 4.4, 2.0));
   // the glows also light the board a little
-  col *= 1.0 + 0.9 * (gLL + gUR) * 0.5;
+  col *= 1.0 + 0.5 * (gLL + gUR) * 0.5;
   col += uGlowLL * gLL + uGlowUR * gUR;
 
   col += texture2D(tBloom, vUv).rgb * uBloom;
@@ -168,7 +168,7 @@ export const createBoardRig = (palette: BoardPalette): RigFactory => (gl, w, h):
   const camera = new THREE.PerspectiveCamera(FOV, w / h, 0.05, 200);
   camera.rotation.order = "YXZ";
 
-  const rmax = 0.03 * h; // largest circle of confusion in px
+  const rmax = 0.036 * h; // largest circle of confusion in px
   const boardMat = new THREE.ShaderMaterial({
     vertexShader: BOARD_VERT,
     fragmentShader: BOARD_FRAG,
@@ -177,7 +177,7 @@ export const createBoardRig = (palette: BoardPalette): RigFactory => (gl, w, h):
       uSlide: { value: 0 },
       uTile: { value: new THREE.Vector2(TILE_W, TILE_H) },
       uFocus: { value: 0.6 },
-      uBand: { value: 0.26 },
+      uBand: { value: 0.15 },
       uRmax: { value: rmax },
       uGain: { value: 1.0 },
       uYaw: { value: 0 },
@@ -211,7 +211,7 @@ export const createBoardRig = (palette: BoardPalette): RigFactory => (gl, w, h):
     uGlowLL: { value: new THREE.Color(palette.glowLL) },
     uGlowUR: { value: new THREE.Color(palette.glowUR) },
     uLoopFrame: { value: 0 },
-    uBloom: { value: 0.45 },
+    uBloom: { value: 0.3 },
     uChroma: { value: 0.012 },
     uVignette: { value: 0.4 },
     uGrain: { value: 0.015 },
@@ -235,7 +235,7 @@ export const createBoardRig = (palette: BoardPalette): RigFactory => (gl, w, h):
   // focus depth: where the ray through a point a bit below screen centre meets the board
   placeCamera(0);
   const focusDepth = ((): number => {
-    const dir = new THREE.Vector3(0, -0.42, 0.5).unproject(camera).sub(camera.position).normalize();
+    const dir = new THREE.Vector3(0, -0.35, 0.5).unproject(camera).sub(camera.position).normalize();
     const t = -camera.position.y / dir.y;
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     return t * dir.dot(fwd);

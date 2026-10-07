@@ -71,12 +71,10 @@ export class BoardTexture {
       const y0 = r * ROW_H;
       const spec = ROW_SPECS[r];
       // ---- row background + hairline ----
-      const bg = ctx.createLinearGradient(0, y0, 0, y0 + ROW_H);
-      bg.addColorStop(0, P.baseTop);
-      bg.addColorStop(1, P.baseBottom);
-      ctx.fillStyle = bg;
+      // a flat base (a per-row gradient would repeat as visible bands)
+      ctx.fillStyle = P.baseTop;
       ctx.fillRect(0, y0, TILE, ROW_H);
-      ctx.fillStyle = "rgba(255,255,255,0.03)";
+      ctx.fillStyle = "rgba(255,255,255,0.02)";
       ctx.fillRect(0, y0 + ROW_H - 3, TILE, 3);
 
       this.drawRow(r, spec, y0, f);
@@ -184,16 +182,19 @@ export class BoardTexture {
     ctx.lineTo(xOf(SPARK_SAMPLES - 1), YB);
     ctx.closePath();
     const fill = ctx.createLinearGradient(0, YT, 0, YB);
-    fill.addColorStop(0, hex(P.sparkHigh, 0.42));
+    fill.addColorStop(0, hex(P.sparkHigh, 0.62));
     fill.addColorStop(1, hex(P.sparkLow, 0.05));
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.beginPath();
     for (let n = 0; n < SPARK_SAMPLES; n++) (n === 0 ? ctx.moveTo : ctx.lineTo).call(ctx, xOf(n), yOf(pts[n]));
     ctx.strokeStyle = P.sparkHigh;
-    ctx.lineWidth = 3.5;
+    ctx.shadowColor = P.sparkHigh;
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 4.5;
     ctx.lineJoin = "round";
     ctx.stroke();
+    ctx.shadowBlur = 0;
     // dashed baseline in red + a tiny end label
     ctx.setLineDash([22, 16]);
     ctx.strokeStyle = hex(P.baseline, 0.8);
@@ -204,15 +205,27 @@ export class BoardTexture {
     ctx.lineTo(X1 + 10, by);
     ctx.stroke();
     ctx.setLineDash([]);
+    // green dashed line under the chart, as on the reference
+    ctx.setLineDash([22, 16]);
+    ctx.strokeStyle = hex(P.up, 0.65);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(X0 - 20, YB + 6);
+    ctx.lineTo(X1 + 10, YB + 6);
+    ctx.stroke();
+    ctx.setLineDash([]);
     set(`500 50px "${FONT_NUMBERS}"`, up ? P.up : P.down, "0px");
     ctx.fillText((value * (1 + 0.0004 * pts[SPARK_SAMPLES - 1])).toFixed(s.decimals), X1 + 40, clamp(yOf(pts[SPARK_SAMPLES - 1]), YT + 40, YB));
 
     // chip (rounded outline button; an abstract blank pill on some rows)
     ctx.lineWidth = 6;
-    ctx.strokeStyle = hex(P.sparkHigh, 0.9);
+    ctx.strokeStyle = hex(P.sparkHigh, 0.95);
+    ctx.shadowColor = P.sparkHigh;
+    ctx.shadowBlur = 22;
     ctx.beginPath();
     ctx.roundRect(3740, y0 + 205, 290, 100, 50);
     ctx.stroke();
+    ctx.shadowBlur = 0;
     if (s.chip) {
       set(`600 46px "${FONT_DISPLAY}"`, "rgba(200,218,255,0.92)", "5px");
       ctx.textAlign = "center";

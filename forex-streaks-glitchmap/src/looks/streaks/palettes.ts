@@ -17,9 +17,9 @@ export const BLUE_MAGENTA: StreaksPalette = {
   id: "BlueMagenta",
   streaks: [
     { hex: "#2A6AFF", weight: 0.5 }, // blue
-    { hex: "#3AD8FF", weight: 0.2 }, // cyan
-    { hex: "#FF2AC8", weight: 0.15 }, // magenta
-    { hex: "#8A4AFF", weight: 0.15 }, // violet
+    { hex: "#3AD8FF", weight: 0.28 }, // cyan
+    { hex: "#FF2AC8", weight: 0.09 }, // magenta
+    { hex: "#8A4AFF", weight: 0.13 }, // violet
   ],
   flareCore: "#FFFFFF",
   flareGlow: "#A83AFF",
