@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "remotion studio",
     "studio": "remotion studio",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check:codes": "node scripts/check-codes.mjs",
+    "preview": "scripts/render-previews.sh 3"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.1",
