@@ -255,7 +255,8 @@ export class MapRenderer {
   }
 
   /** Draw one frame into `ctx` (same size as the renderer). */
-  draw(ctx: CanvasRenderingContext2D, frame: number): void {
+  /** `stress` > 1 re-draws every glyph that many times (timing only: the default 1 is the real frame). */
+  draw(ctx: CanvasRenderingContext2D, frame: number, stress = 1): void {
     const f = loopFrame(frame);
     const { cw, ch, s, gw, gh } = this;
     const l = this.lctx;
@@ -328,6 +329,7 @@ export class MapRenderer {
         const sx = g * gw;
         l.globalAlpha = a;
         l.drawImage(this.atlas, sx, 0, gw, gh, x, y, gw, gh);
+        for (let k = 1; k < stress; k++) l.drawImage(this.atlas, sx, 0, gw, gh, x + k, y, gw, gh);
         // slight 1 px red / blue offset on bright glyphs only
         if (a > 0.72) {
           l.globalAlpha = a * 0.55;

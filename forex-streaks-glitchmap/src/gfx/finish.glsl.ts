@@ -22,7 +22,7 @@ vec3 finish(vec3 col, vec2 fragCoord, float loopFrame, float grainAmount, float 
   uint fr = uint(loopFrame);
   float g = hash3(uvec3(gp, fr)) + hash3(uvec3(gp, fr + 977u)) - 1.0;       // triangular, [-1, 1]
   float luma = dot(srgb, vec3(0.299, 0.587, 0.114));
-  float response = 0.35 + 0.65 * smoothstep(0.0, 0.5, luma);                // grain lives in the mid-tones
+  float response = 0.8 + 0.2 * smoothstep(0.0, 0.5, luma);                  // nearly uniform: dark gradients need it most (x264 eats faint noise)
   srgb += g * grainAmount * response;
   uvec2 dp = uvec2(floor(fragCoord));
   float d = hash3(uvec3(dp, fr + 31u)) + hash3(uvec3(dp, fr + 1999u)) - 1.0; // triangular dither

@@ -215,7 +215,7 @@ export const createBoardRig = (palette: BoardPalette): RigFactory => (gl, w, h):
     uChroma: { value: 0.012 },
     uVignette: { value: 0.4 },
     uGrain: { value: 0.015 },
-    uGrainSize: { value: Math.max(1, Math.round(scale * 1.5)) },
+    uGrainSize: { value: Math.max(1, Math.round(scale * 6)) },
     uExposure: { value: 1.0 },
     uRmax: { value: rmax },
   });

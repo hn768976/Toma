@@ -8,7 +8,7 @@ declare -A FILE=( [GlitchDotMap-Mono]=GlitchDotMap_Mono [LightStreaks-BlueMagent
 for ID in GlitchDotMap-Mono LightStreaks-BlueMagenta LightStreaks-Gold RateBoard-Red RateBoard-Blue; do
   START=$(date +%s)
   npx remotion render "$ID" "deliverables/${FILE[$ID]}.mp4" --scale=$SCALE --codec=h264 --pixel-format=yuv420p --crf=16 \
-    --image-format=png --concurrency="$CONC" > "out/render_${ID}.log" 2>&1
+    --image-format=png --muted --concurrency="$CONC" > "out/render_${ID}.log" 2>&1
   RC=$?
   END=$(date +%s)
   echo "$ID rc=$RC wall=$((END-START))s" | tee -a out/render_times.txt

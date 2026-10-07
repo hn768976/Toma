@@ -13,6 +13,8 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setColorSpace("bt709");
+// No audio stream at all (a muted track would still add an AAC stream and pad the duration).
+Config.setMuted(true);
 
 // WebGL2 in headless Chromium (software ANGLE/SwiftShader when there is no GPU).
 Config.setChromiumOpenGlRenderer("angle");
@@ -28,3 +30,13 @@ const playwrightHeadlessShell =
 if (existsSync(playwrightHeadlessShell)) {
   Config.setBrowserExecutable(playwrightHeadlessShell);
 }
+
+// Encoder: dark gradients band easily once x264 smooths away the dither and grain.
+// -tune grain keeps the grain, and a slower preset spends bits on it.
+Config.setX264Preset("slow");
+Config.overrideFfmpegCommand(({ type, args }) => {
+  if (type !== "stitcher") return args;
+  const out = args.slice(0, -1);
+  const last = args[args.length - 1]; // output path
+  return [...out, "-tune", "grain", last];
+});

@@ -411,7 +411,7 @@ export const createStreaksRig = (palette: StreaksPalette): RigFactory => (gl, w,
     uChroma: { value: 0.0022 },
     uVignette: { value: 0.42 },
     uGrain: { value: 0.015 },
-    uGrainSize: { value: Math.max(1, Math.round(scale * 1.5)) },
+    uGrainSize: { value: Math.max(1, Math.round(scale * 6)) },
     uExposure: { value: 1.9 },
   });
 
