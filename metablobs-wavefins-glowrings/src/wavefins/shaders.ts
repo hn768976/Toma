@@ -85,13 +85,13 @@ uniform vec2 uRes;
 uniform float uFocus;      // focus distance (world units)
 uniform float uCocScale;   // CoC (fraction of frame height) per unit of |1/f - 1/d|
 uniform float uMaxCoc;     // max CoC radius, fraction of frame height
-const int N = 64;
+const int N = 64; // tap spacing ~ maxCoc * sqrt(pi / N) = 0.22 * radius
 float cocPx(float depth01) {
   float d = max(depth01 * 40.0, 0.01);
   return min(abs(1.0 / uFocus - 1.0 / d) * uCocScale, uMaxCoc) * uRes.y;
 }
 void main() {
-  vec4 c0 = texture(uSrc, vUv);
+  vec4 c0 = textureLod(uSrc, vUv, 0.0);
   float coc0 = cocPx(c0.a);
   float maxPx = uMaxCoc * uRes.y;
   vec3 acc = c0.rgb;
@@ -102,8 +102,14 @@ void main() {
     float r = sqrt(fi / float(N)) * maxPx;
     float a = fi * 2.39996323;
     vec2 off = vec2(cos(a), sin(a)) * r;
-    vec4 s = texture(uSrc, vUv + off / uRes);
-    float cs = cocPx(s.a);
+    vec2 suv = vUv + off / uRes;
+    float sa = textureLod(uSrc, suv, 0.0).a;
+    float cs = cocPx(sa);
+    // Read colour from a mip pre-blurred to about half the tap spacing at this
+    // sample's own blur radius, so thin highlights spread smoothly instead of
+    // leaving a copy at every tap. In-focus samples (small CoC) stay at mip 0.
+    float lod = log2(max(cs * 0.22 * 0.5, 1.0));
+    vec4 s = vec4(textureLod(uSrc, suv, lod).rgb, sa);
     float w = clamp(cs - r + 1.0, 0.0, 1.0);
     // a sample behind the centre may only spread as far as the centre's own CoC
     if (s.a > c0.a) w = min(w, clamp(coc0 - r + 1.0, 0.0, 1.0));

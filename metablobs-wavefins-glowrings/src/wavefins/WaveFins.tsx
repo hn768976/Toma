@@ -140,7 +140,12 @@ class WaveFinsRenderer implements FrameRenderer {
     if (!this.sceneRT || this.sceneRT.width !== w || this.sceneRT.height !== h) {
       this.sceneRT?.dispose();
       this.dofRT?.dispose();
-      this.sceneRT = makeTarget(w, h, { samples: 4, depthBuffer: true });
+      this.sceneRT = makeTarget(w, h, {
+        samples: 4,
+        depthBuffer: true,
+        generateMipmaps: true, // the DoF gather reads pre-blurred mips
+        minFilter: THREE.LinearMipmapLinearFilter,
+      });
       this.dofRT = makeTarget(w, h);
     }
     const ph = loopPhase(frame);
