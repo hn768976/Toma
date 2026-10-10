@@ -12,7 +12,7 @@ export type PostSettings = {
     radius: [number, number]; // in units of frame height
     color: [number, number, number];
     strength: number;
-    falloff?: number; // 2 = gaussian, 1 = exponential
+    falloff?: number; // 4 = flat-topped, 2 = gaussian, 1 = exponential
   }[];
   bloomStrength: number;
   bloomLevels?: number;
@@ -112,7 +112,7 @@ void main() {
   for (int i = 0; i < 2; i++) {
     vec2 d = (vUv - uGlowC[i]) * vec2(aspect, 1.0) / uGlowR[i];
     float r2 = dot(d, d);
-    float g = uGlowF[i] > 1.5 ? exp(-r2) : exp(-sqrt(r2));
+    float g = uGlowF[i] > 3.5 ? exp(-r2 * r2) : (uGlowF[i] > 1.5 ? exp(-r2) : exp(-sqrt(r2)));
     col += uGlowCol[i] * uGlowS[i] * g;
   }
   col += texture(tScene, vUv).rgb * uExposure;

@@ -15,14 +15,15 @@ export const tunnelSchema = z.object({
 });
 export type TunnelProps = z.infer<typeof tunnelSchema>;
 
-// Layout: elliptical rings every 0.25 along -z, 256 fixed angular slots.
-// The seed pattern repeats every K = 64 rings, and the camera travels exactly
-// K * 0.25 = 16 units per loop, so the view at frame 600 is the view at 0.
+// Layout: elliptical rings every 0.125 along -z, 96 fixed angular slots (dense
+// rings + fewer slots make the dots read as radial spokes, as in the reference).
+// The seed pattern repeats every K = 128 rings, and the camera travels exactly
+// K * 0.125 = 16 units per loop, so the view at frame 600 is the view at 0.
 const RX = 3.0;
 const RY = 2.2;
-const SPACING = 0.25;
-const SLOTS = 256;
-const K = 64;
+const SPACING = 0.125;
+const SLOTS = 96;
+const K = 128;
 const PERIODS = 4; // 256 rings drawn: covers 40+ units ahead at every frame
 const TRAVEL = K * SPACING;
 const FOV = 52;
@@ -79,10 +80,10 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float dist = -mv.z;
   if (dist < 0.3) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; vColor = vec3(0.); vSoft = 0.; return; }
-  vec3 col = mix(uFar, uNear, smoothstep(16.0, 3.0, dist));
+  vec3 col = mix(uFar, uNear, smoothstep(16.0, 3.0, dist)) * (1.0 + 0.5 * smoothstep(9.0, 3.0, dist));
   float tw = 1.0 + aTw.x * pow(0.5 + 0.5 * sin(TAU * (aTw.y * uTime + aTw.z)), 10.0);
   float fade = smoothstep(42.0, 24.0, dist) * smoothstep(0.3, 1.5, dist);
-  sprite(mv, 0.034 * aSize, col * tw * fade * uGain);
+  sprite(mv, 0.03 * aSize * (1.0 + 0.8 * smoothstep(10.0, 3.0, dist)), col * tw * fade * uGain);
 }
 `;
 
@@ -97,9 +98,9 @@ export const makeTunnel =
       {
         uFar: { value: new THREE.Vector3(...hexToRgb(p.dotFar)) },
         uNear: { value: new THREE.Vector3(...hexToRgb(p.dotNear)) },
-        uGain: { value: 2.2 },
+        uGain: { value: 1.7 },
       },
-      { px: ctx.px, height: ctx.height, fovDeg: FOV, focus: 22, aperture: 9, maxPx: 150 },
+      { px: ctx.px, height: ctx.height, fovDeg: FOV, focus: 14, aperture: 9, maxPx: 120 },
     );
     scene.add(
       pointsFrom(
@@ -113,14 +114,14 @@ export const makeTunnel =
     );
     const glow = hexToRgb(p.glow);
     const core = hexToRgb(p.glowCore);
-    const post = {
+        const post = {
       background: hexToRgb(p.background),
       glows: [
-        { center: [0.5, 0.5] as [number, number], radius: [0.3, 0.21] as [number, number], color: glow, strength: 0.55, falloff: 1 },
-        { center: [0.5, 0.5] as [number, number], radius: [0.07, 0.05] as [number, number], color: core, strength: 0.9, falloff: 2 },
+        { center: [0.5, 0.48] as [number, number], radius: [0.5, 0.33] as [number, number], color: glow, strength: 0.8, falloff: 4 },
+        { center: [0.5, 0.48] as [number, number], radius: [0.22, 0.15] as [number, number], color: core, strength: 0.12, falloff: 2 },
       ],
       bloomStrength: 0.9,
-      vignette: 0.9,
+      vignette: 1.0,
       vignetteColor: hexToRgb(p.corners),
       grain: 0.02,
     };
@@ -135,8 +136,8 @@ export const makeTunnel =
         camera.updateMatrixWorld();
         mat.uniforms.uTime.value = t;
         const breathe = 1 + 0.08 * Math.sin(TAU * 2 * t);
-        post.glows[0].strength = 0.55 * breathe;
-        post.glows[1].strength = 0.9 * (1 + 0.06 * Math.sin(TAU * 2 * t + 0.7));
+        post.glows[0].strength = 0.8 * breathe;
+        post.glows[1].strength = 0.12 * (1 + 0.06 * Math.sin(TAU * 2 * t + 0.7));
       },
       dispose: () => {
         mat.dispose();
