@@ -1,0 +1,27 @@
+{
+  "name": "glow-glitchcode-curtain",
+  "version": "1.0.0",
+  "description": "Glow Gradient, Glitch Code and Light Curtain: five 20s seamless-loop motion backgrounds (Remotion)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "5.2.8",
+    "@react-three/fiber": "9.2.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.177.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.177.0",
+    "typescript": "5.9.3"
+  }
+}
