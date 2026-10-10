@@ -43,12 +43,12 @@ npx remotion still src/index.ts GlowGradient-Aurora out/GlowGradient_Aurora_6k.p
 ```
 (Same pattern for the other four composition ids.)
 
-**720p previews** (exactly 1280×720; 3840 × 1/3 = 1280, 2160 × 1/3 = 720):
+**720p stills / test renders** (exactly 1280×720; 3840 × 1/3 = 1280, 2160 × 1/3 = 720). The delivered files are one 720p still per composition; the mp4 preview renders were only used for verification and are not shipped:
 
 ```bash
 npx remotion render src/index.ts GlowGradient-Aurora out/GlowGradient_Aurora.mp4 --scale=0.3333333333333333 --codec=h264 --crf=16 --pixel-format=yuv420p --muted --gl=angle
 ```
-or `tools/bundle.sh && tools/render-previews.sh` for all five plus 720p PNG stills.
+or `tools/bundle.sh && tools/render-previews.sh` for all five mp4s plus 720p PNG stills (frame 300).
 
 ### Chromium GL flag
 
