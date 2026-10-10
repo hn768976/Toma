@@ -25,7 +25,7 @@ const CAM_DIST = 3.7;
 const GLOBE_N = 220000;
 const SHELL_N = 40000;
 const SHELL_R = [1.18, 1.42];
-const SHELL_THICK = [0.025, 0.09];
+const SHELL_THICK = [0.012, 0.03];
 const STREAKS = 350;
 const SPECKS = 45000;
 const AXIAL_TILT = (23.4 * Math.PI) / 180;
@@ -105,7 +105,7 @@ const data = (): GlobeData => {
     const r = 4 + Math.pow(rng(), 0.7) * 8;
     sp.set([x * r, y * r, z * r], i * 3);
     sc[i] = Math.floor(rng() * 3);
-    st.set([1 + Math.floor(rng() * 3), rng(), 0.4 + Math.pow(rng(), 2) * 1.8], i * 3);
+    st.set([1 + Math.floor(rng() * 3), rng(), 0.35 + Math.pow(rng(), 3) * 1.6], i * 3);
   }
 
   cache = {
@@ -127,12 +127,13 @@ uniform float uGain;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   vec3 col = aKind > 1.5 ? uTwk * (0.4 + 2.2 * pow(0.5 + 0.5 * sin(TAU * (aTw.x * uTime + aTw.y)), 6.0))
-           : (aKind > 0.5 ? uLand * 0.8 : uOcean * 0.9);
+           : (aKind > 0.5 ? uLand * 0.6 : uOcean * 0.45);
   // Hollow look: the face toward the camera is darker than the limb.
   vec3 wn = normalize(mat3(modelMatrix) * position);
   vec3 wp = (modelMatrix * vec4(position, 1.0)).xyz;
   float face = abs(dot(wn, normalize(cameraPosition - wp)));
-  col *= 0.35 + 0.9 * pow(1.0 - face, 1.5);
+  // Dim toward the limb so the projected pile-up of dots stays a soft edge.
+  col *= mix(0.3, 0.62, smoothstep(0.0, 0.45, face));
   sprite(mv, 0.0105 * aTw.z * (aKind > 1.5 ? 1.5 : 1.0), col * uGain);
 }
 `;
@@ -140,14 +141,16 @@ void main() {
 const SHELL_VERT = /* glsl */ `
 uniform vec3 uShell;
 uniform float uGain;
+uniform float uOuter;
 void main() {
   vec4 world = modelMatrix * vec4(position, 1.0);
   vec3 n = normalize(world.xyz);
   vec3 v = normalize(cameraPosition - world.xyz);
   float rim = 1.0 - abs(dot(n, v));
-  float k = 0.04 + 0.7 * pow(rim, 5.0);
+  float k = 0.04 + 1.0 * pow(rim, 9.0);
   vec4 mv = viewMatrix * world;
-  sprite(mv, 0.009, uShell * k * uGain);
+  float outer = step(1.3, length(position));
+  sprite(mv, 0.009 * (1.0 + outer), uShell * k * uGain * mix(1.0, uOuter, outer));
 }
 `;
 
@@ -179,7 +182,7 @@ varying float vI;
 void main() {
   float s = fract(aPar.y + aPar.x * uTime);
   float head = 0.05 + s * uRmax;
-  float len = aPar.z * (1.0 + 1.5 * s);
+  float len = aPar.z;
   float tail = max(head - len, 0.0);
   vec3 pT = aDir * tail;
   vec3 pH = aDir * head;
@@ -190,13 +193,13 @@ void main() {
   vec2 dir = sH - sT;
   float slen = length(dir);
   vec2 nrm = slen > 1e-4 ? vec2(-dir.y, dir.x) / slen : vec2(0.0, 1.0);
-  float wTrue = 2.6 * uPx;
+  float wTrue = 3.4 * uPx;
   float w = max(wTrue, 1.3);
   vec4 c = aCorner.x < 0.5 ? cT : cH;
   vec2 sc = (aCorner.x < 0.5 ? sT : sH) + nrm * aCorner.y * w;
   gl_Position = vec4(sc / (uRes * 0.5) * c.w, c.z, c.w);
   vUv = aCorner;
-  float life = smoothstep(0.85, 1.35, head) * (1.0 - smoothstep(0.7, 1.0, s));
+  float life = 0.8 * smoothstep(0.3, 0.8, head) * (1.0 - smoothstep(0.7, 1.0, s));
   vI = aPar.w * life * (wTrue / w) * step(0.0, cT.w) * step(0.0, cH.w);
 }
 `;
@@ -208,7 +211,7 @@ varying float vI;
 void main() {
   float along = pow(sin(3.14159265 * vUv.x), 1.5) * (0.35 + 0.65 * vUv.x);
   float across = 1.0 - smoothstep(0.0, 1.0, abs(vUv.y));
-  gl_FragColor = vec4(uCol * vI * along * across, 1.0);
+  gl_FragColor = vec4(uCol * vec3(0.75, 0.9, 1.0) * vI * along * across, 1.0);
 }
 `;
 
@@ -234,13 +237,13 @@ export const makeGlobe =
     globe.matrixAutoUpdate = false;
     scene.add(globe);
 
-    const shellMat = spriteMaterial(SHELL_VERT, { uShell: { value: v3(p.shell) }, uGain: { value: 0.9 } }, { ...base, focus, aperture: 16, maxPx: 60 });
+    const shellMat = spriteMaterial(SHELL_VERT, { uShell: { value: v3(p.shell) }, uGain: { value: 0.75 }, uOuter: { value: 1.0 } }, { ...base, focus, aperture: 16, maxPx: 60 });
     D.shells.forEach((s) => scene.add(pointsFrom({ position: { array: s.pos, size: 3 } }, shellMat)));
 
     const speckMat = spriteMaterial(
       SPECK_VERT,
       { uA: { value: v3(p.speckA) }, uB: { value: v3(p.speckB) }, uC: { value: v3(p.speckC) }, uGain: { value: 0.8 } },
-      { ...base, focus, aperture: 16, maxPx: 110 },
+      { ...base, focus, aperture: 14, maxPx: 80 },
     );
     scene.add(pointsFrom({ position: { array: D.specks.pos, size: 3 }, aCol: { array: D.specks.col, size: 1 }, aTw: { array: D.specks.tw, size: 3 } }, speckMat));
 
@@ -272,7 +275,10 @@ export const makeGlobe =
 
     const post = {
       background: hexToRgb(p.background),
-      glows: [{ center: [0.5, 0.5] as [number, number], radius: [0.75, 0.75] as [number, number], color: hexToRgb(p.glow), strength: 0.8, falloff: 2 }],
+      glows: [
+        { center: [0.5, 0.5] as [number, number], radius: [0.75, 0.75] as [number, number], color: hexToRgb(p.glow), strength: 0.8, falloff: 2 },
+        { center: [0.5, 0.5] as [number, number], radius: [1.2, 0.9] as [number, number], color: hexToRgb(p.speckA), strength: 0.035, falloff: 2 },
+      ],
       bloomStrength: 0.5,
       vignette: 0.45,
       vignetteColor: hexToRgb(p.background),

@@ -27,7 +27,7 @@ const GEO = {
   pitch: 0.691, // plane tilt (radians from facing the camera)
   roll: 0.04, // rotation of the plane about the view axis
   R0: 1.578,
-  wFar: 0.014, // bundle width at the tail
+  wFar: 0.12, // bundle width at the tail
   wNear: 3.0, // bundle width at the broad near side
 };
 // Visible angular range, theta measured in the plane: 0 = screen right,
@@ -43,13 +43,14 @@ const lines = (): LineSet => {
   // One continuous ribbon. Spacing is uneven: a slow density modulation
   // gathers the lines into 3-4 soft bundles without opening black gaps.
   const s: number[] = [];
-  const warp = (u: number) => u + 0.035 * Math.sin(u * TAU * 3.5 + 0.7) + 0.02 * Math.sin(u * TAU * 7.3 + 2.1);
+  const warp = (u: number) => u + 0.045 * Math.sin(u * TAU * 3.5 + 0.7) + 0.012 * Math.sin(u * TAU * 7.3 + 2.1);
   for (let i = 0; i < N_LINES; i++) {
     const u = (i + 0.5 + (rng() - 0.5) * 0.7) / N_LINES;
     s.push(Math.min(1, Math.max(0, warp(u))));
   }
+  s.sort((x, y) => x - y);
   s.sort((a, b) => a - b);
-  const b = s.map(() => 0.45 + 0.55 * Math.pow(rng(), 1.4));
+  const b = s.map(() => 0.6 + 0.4 * rng());
   const laps = s.map(() => 1 + Math.floor(rng() * 3));
   const ph = s.map(() => rng());
   lineCache = {
@@ -135,7 +136,7 @@ void main() {
   // Brightness envelope along the arc: fade at the tail and at the exit.
   // Where the bundle is narrow its lines overlap; dim it so the tail fades
   // instead of forming a hot spot.
-  float narrow = pow(clamp(W / 0.5, 0.08, 1.0), 0.8);
+  float narrow = pow(clamp(W / 0.6, 0.08, 1.0), 0.8);
   float env = narrow * smoothstep(TH_TAIL, TH_TAIL + 1.1, th) * (1.0 - smoothstep(TH_END - 0.9, TH_END, th));
   env *= 0.6 + 0.4 * smoothstep(-1.6, 0.6, th);
   if (env <= 0.0 || u < -0.6 || u > 1.6) { outColor = vec4(0.0); return; }
@@ -143,26 +144,40 @@ void main() {
   // Line widths in 4K pixels, converted to this resolution. The rendered core
   // is never thinner than ~0.8 px; thinner lines just get dimmer.
   float coreW = 1.2 * uPx;
-  float coreR = max(coreW, 1.25);
+  // Depth of field: the near, lower-left end of the ribbon is defocused.
+  float dof = smoothstep(1.3, 2.3, th) * 4.0 * uPx;
+  float coreR = max(sqrt(coreW * coreW + dof * dof), 1.25);
   float coreAmp = coreW / coreR;
-  float haloR = 7.0 * uPx;
+  float haloR = 7.0 * uPx + dof;
 
   vec3 col = vec3(0.0);
-  for (int i = 0; i < ${N_LINES}; i++) {
+  // uS is sorted: binary-search the first line within reach, then walk
+  // forward until the lines are out of reach (only a handful per pixel).
+  float reach = haloR * 3.5 * grad;
+  int lo = 0;
+  int hi = ${N_LINES} - 1;
+  for (int it = 0; it < 7; it++) {
+    if (lo >= hi) break;
+    int mid = (lo + hi) / 2;
+    if (uS[mid] < u - reach) lo = mid + 1; else hi = mid;
+  }
+  for (int i = lo; i < ${N_LINES}; i++) {
+    if (uS[i] > u + reach) break;
     float dPx = abs(u - uS[i]) / grad;
-    if (dPx > haloR * 3.5) continue;
     float flow = 0.45 + 0.55 * pow(0.5 + 0.5 * cos(3.0 * (th - TAU * uLaps[i] * uTime) + TAU * uPh[i]), 3.0);
     float k = uB[i] * flow;
     float edgeMix = smoothstep(0.25, 0.5, abs(uS[i] - 0.5));
     vec3 lc = mix(uLine, uEdge, edgeMix);
     float core = exp(-dPx * dPx / (coreR * coreR * 0.36)) * coreAmp;
     float halo = exp(-dPx * dPx / (haloR * haloR));
-    col += k * (mix(lc, uCore, 0.55) * core * 1.5 + lc * halo * 0.3);
+    float silver = step(0.82, fract(uPh[i] * 7.13));
+    vec3 cc = mix(mix(lc, uCore, 0.6), vec3(1.0, 0.97, 0.9), silver * 0.6);
+    col += k * (cc * core * 1.15 + lc * halo * 0.22);
   }
   // Warm glow under the brightest, broad part.
   float bandC = (u - 0.5) / 0.62;
   float warm = exp(-bandC * bandC * bandC * bandC) * smoothstep(-0.6, 1.2, th);
-  col += uWarm * warm * 1.1;
+  col += uWarm * warm * 0.35;
   outColor = vec4(col * env, 1.0);
 }
 `;
@@ -204,7 +219,7 @@ varying float vGlint;
 void main() {
   vec2 c = gl_PointCoord * 2.0 - 1.0;
   float r2 = dot(c, c);
-  float a = exp(-r2 * 7.0);
+  float a = exp(-r2 * 9.0) + 0.25 * exp(-r2 * 2.5);
   if (vGlint > 0.5) {
     float star = exp(-abs(c.x) * 22.0) * exp(-c.y * c.y * 2.5) + exp(-abs(c.y) * 22.0) * exp(-c.x * c.x * 2.5);
     a = exp(-r2 * 30.0) * 1.5 + star * 0.8;
@@ -223,9 +238,9 @@ const sparks = () => {
   const q = new Float32Array(N_SPARK * 2);
   for (let i = 0; i < N_SPARK; i++) {
     // Mostly on lines, a few between them.
-    const s = rng() < 0.8 ? L.s[Math.floor(rng() * L.s.length)] : rng() * 1.1 - 0.05;
+    const s = rng() < 0.8 ? L.s[Math.floor(rng() * L.s.length)] : rng();
     p.set([s, rng(), 1 + Math.floor(rng() * 2), rng()], i * 4);
-    q.set([1 + Math.floor(rng() * 4), rng() < 0.05 ? 1 : 0], i * 2);
+    q.set([1 + Math.floor(rng() * 4), rng() < 0.02 ? 1 : 0], i * 2);
   }
   sparkCache = { p, q };
   return sparkCache;

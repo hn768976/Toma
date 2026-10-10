@@ -7,6 +7,11 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 
+// Each tab builds its point layouts / land mask / candle tiles and compiles
+// shaders before the first frame. With software GL and several tabs at once
+// that can exceed Remotion's 30 s default, so allow more time.
+Config.setDelayRenderTimeoutInMilliseconds(180000);
+
 // WebGL2 in headless Chromium. "angle" is the flag the brief asks for and is
 // right on a machine with a GPU. On a GPU-less box (CI, cloud containers)
 // set REMOTION_GL=swangle to get ANGLE-on-SwiftShader instead.

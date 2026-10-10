@@ -20,8 +20,10 @@ export type ShellsProps = z.infer<typeof shellsSchema>;
 // advanced by a fixed step, which turns the poles into spirals.
 const RADII = [1.0, 1.25, 1.55, 1.95];
 const RINGS = [150, 175, 200, 220];
-const FOV = 73.4;
-const CAM_DIST = 2.45;
+const FOV = 92;
+// Camera sits inside the two outer shells (between r=1.25 and r=1.55): the
+// outer shells become walls wrapping round the view, the inner one fills the height.
+const CAM_DIST = 1.42;
 
 type Shell = {
   pos: Float32Array; // unit-sphere positions (pole along +y), scaled by radius
@@ -55,14 +57,18 @@ const shells = (): Shell[] => {
         const a = start + (j / n) * TAU;
         pos.push(radius * Math.sin(phi) * Math.cos(a), radius * Math.cos(phi), radius * Math.sin(phi) * Math.sin(a));
         const u = rng();
-        kind.push(u < 0.03 ? 1 : u < 0.04 ? 2 : u < 0.062 ? 3 : 0);
+        kind.push(u < 0.035 ? 1 : u < 0.039 ? 2 : u < 0.062 ? 3 : 0);
         tw.push(1 + Math.floor(rng() * 4), rng(), 0.8 + rng() * 0.4);
       }
     }
-    const off = () => (rng() - 0.5) * 2 * 0.12;
-    const tilt = new THREE.Quaternion().setFromEuler(
+    const off = () => (rng() - 0.5) * 2 * 0.05;
+    const randomTilt = new THREE.Quaternion().setFromEuler(
       new THREE.Euler((rng() - 0.5) * 2.6, rng() * TAU, (rng() - 0.5) * 2.6),
     );
+    const POLES = [new THREE.Vector3(-0.45, 0.12, 1), new THREE.Vector3(0.4, 0.25, 1)];
+    const tilt = si < POLES.length
+      ? new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), POLES[si].clone().normalize())
+      : randomTilt;
     return {
       pos: new Float32Array(pos),
       kind: new Float32Array(kind),
@@ -97,13 +103,12 @@ void main() {
   // Seen edge-on, a dotted sphere piles its dots up into a hard outline;
   // dim toward the silhouette so rims stay soft bands rather than lines.
   float face = abs(dot(n, v));
-  vec3 col = mix(uBase, uRim, rimK) * (0.3 + 0.7 * smoothstep(0.0, 0.45, face)) * (0.75 + 0.6 * rimK);
+  vec3 col = mix(uBase, uRim, rimK) * (0.3 + 0.45 * smoothstep(0.0, 0.45, face)) * (0.75 + 0.3 * rimK);
   float size = uSize * aTw.z;
   if (aKind > 0.5) {
     vec3 acc = aKind < 1.5 ? uAccA : (aKind < 2.5 ? uAccB : uAccC);
     float tw = 0.35 + 1.4 * pow(0.5 + 0.5 * sin(TAU * (aTw.x * uTime + aTw.y)), 4.0);
-    col = acc * tw * 1.3;
-    size *= 1.35;
+    col = acc * tw * 0.75;
   }
   vec4 mv = viewMatrix * world;
   sprite(mv, size, col * uGain);
@@ -122,15 +127,15 @@ export const makeShells =
       uAccA: { value: new THREE.Vector3(...hexToRgb(p.accentA)) },
       uAccB: { value: new THREE.Vector3(...hexToRgb(p.accentB)) },
       uAccC: { value: new THREE.Vector3(...hexToRgb(p.accentC)) },
-      uGain: { value: 0.5 },
-      uSize: { value: 0.016 },
+      uGain: { value: 0.7 },
+      uSize: { value: 0.011 },
     };
     const mats: THREE.ShaderMaterial[] = [];
     const objs = S.map((sh) => {
       const mat = spriteMaterial(
         VERT,
         { ...colours, uCentre: { value: sh.centre.clone() } },
-        { px: ctx.px, height: ctx.height, fovDeg: FOV, focus: CAM_DIST - 1.25, aperture: 26, maxPx: 90 },
+        { px: ctx.px, height: ctx.height, fovDeg: FOV, focus: 0.9, aperture: 11, maxPx: 60 },
       );
       mats.push(mat);
       const pts = pointsFrom(
@@ -146,8 +151,8 @@ export const makeShells =
     const post = {
       background: bg,
       glows: [
-        { center: [-0.02, 0.5] as [number, number], radius: [0.35, 0.6] as [number, number], color: rimCol, strength: 0.08, falloff: 2 },
-        { center: [1.02, 0.5] as [number, number], radius: [0.35, 0.6] as [number, number], color: rimCol, strength: 0.08, falloff: 2 },
+        { center: [-0.02, 0.5] as [number, number], radius: [0.35, 0.6] as [number, number], color: rimCol, strength: 0.05, falloff: 2 },
+        { center: [1.02, 0.5] as [number, number], radius: [0.35, 0.6] as [number, number], color: rimCol, strength: 0.05, falloff: 2 },
       ],
       bloomStrength: 0.8,
       vignette: 0.55,
@@ -161,7 +166,7 @@ export const makeShells =
       post,
       update: (f) => {
         const t = f / 600;
-        camera.position.set(0.12 * Math.sin(TAU * t), 0.07 * Math.cos(TAU * t), CAM_DIST);
+        camera.position.set(0.06 * Math.sin(TAU * t), 0.035 * Math.cos(TAU * t), CAM_DIST);
         camera.lookAt(0.05 * Math.sin(TAU * t), 0, 0);
         camera.updateMatrixWorld();
         S.forEach((sh, i) => {

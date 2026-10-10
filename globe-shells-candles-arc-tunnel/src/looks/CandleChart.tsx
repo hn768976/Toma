@@ -15,7 +15,7 @@ export const candleSchema = z.object({
 export type CandleProps = z.infer<typeof candleSchema>;
 
 // Everything is laid out in 4K design pixels and scaled by k = canvasH / 2160.
-const ANGLE = (25 * Math.PI) / 180; // chart slope (rises to the right)
+const ANGLE = (30 * Math.PI) / 180; // chart slope (rises to the right)
 const SLOPE = Math.tan(ANGLE);
 
 type LayerDef = {
@@ -31,9 +31,9 @@ type LayerDef = {
 };
 
 const LAYERS: Record<"far" | "main" | "near", LayerDef> = {
-  far: { seed: 11, period: 1600, spacing: 80, width: 48, blur: 10, glow: 0, opacity: 0.4, noise: 190, offsetY: -520 },
-  main: { seed: 23, period: 3200, spacing: 64, width: 36, blur: 0, glow: 10, opacity: 0.9, noise: 150, offsetY: 160 },
-  near: { seed: 37, period: 5120, spacing: 160, width: 100, blur: 4, glow: 0, opacity: 0.38, noise: 420, offsetY: 900 },
+  far: { seed: 11, period: 1600, spacing: 84, width: 52, blur: 11, glow: 0, opacity: 0.45, noise: 280, offsetY: -560 },
+  main: { seed: 29, period: 3200, spacing: 64, width: 36, blur: 0, glow: 12, opacity: 0.95, noise: 135, offsetY: 0 },
+  near: { seed: 37, period: 5120, spacing: 150, width: 76, blur: 2, glow: 0, opacity: 0.5, noise: 560, offsetY: 980 },
 };
 
 type Candle = { x: number; open: number; close: number; high: number; low: number };
@@ -47,7 +47,7 @@ const buildCandles = (L: LayerDef): Candle[] => {
   let ar = 0;
   const noise: number[] = [];
   for (let i = 0; i < n; i++) {
-    ar = ar * 0.15 + (rng() - 0.5) * 2;
+    ar = (rng() - 0.5) * 2;
     noise.push(ar);
   }
   const mean = noise.reduce((a, b) => a + b, 0) / n;
@@ -107,7 +107,7 @@ const buildTile = (L: LayerDef, k: number, colour: string, hi: string): Tile => 
       const bx = (x - L.width / 2) * k;
       if (up) {
         c.fillStyle = colour;
-        c.globalAlpha = 0.55;
+        c.globalAlpha = 0.72;
         c.fillRect(bx, yTop * k, L.width * k, bodyH * k);
         c.globalAlpha = 1;
         c.lineWidth = Math.max(2.2, L.width * 0.1) * k;
@@ -329,10 +329,14 @@ export const CandleChart: React.FC<{ look: CandleProps; loopCheck?: boolean }> =
       const gry = ((y + gy) & (NOISE - 1)) * NOISE;
       let i = y * cw * 4;
       for (let x = 0; x < cw; x++, i += 4) {
-        const n = noise.dither[ry + ((x + ox) & (NOISE - 1))] + noise.grain[gry + ((x + gx) & (NOISE - 1))] * grainAmp;
-        d[i] += n;
-        d[i + 1] += n;
-        d[i + 2] += n;
+        // Dither is +-1/255 on every channel; grain follows each channel's
+        // level so the saturated blues don't pick up a grey/red cast.
+        const dz = noise.dither[ry + ((x + ox) & (NOISE - 1))];
+        const g = noise.grain[gry + ((x + gx) & (NOISE - 1))] * grainAmp;
+        const mx = Math.max(d[i], d[i + 1], d[i + 2], 1);
+        d[i] += dz + (g * d[i]) / mx;
+        d[i + 1] += dz + (g * d[i + 1]) / mx;
+        d[i + 2] += dz + (g * d[i + 2]) / mx;
       }
     }
     ctx.putImageData(img, 0, 0);
