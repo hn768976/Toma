@@ -86,7 +86,7 @@ uniform vec2 uRes;
 uniform float uFocus;      // focus distance (world units)
 uniform float uCocScale;   // CoC (fraction of frame height) per unit of |1/f - 1/d|
 uniform float uMaxCoc;     // max CoC radius, fraction of frame height
-const int N = 112; // tap spacing ~ maxCoc * sqrt(pi / N) = 0.167 * radius
+const int N = 80; // tap spacing ~ maxCoc * sqrt(pi / N) = 0.198 * radius
 float cocPx(float depth01) {
   float d = max(depth01 * 40.0, 0.01);
   return min(abs(1.0 / uFocus - 1.0 / d) * uCocScale, uMaxCoc) * uRes.y;
@@ -104,14 +104,14 @@ void main() {
     float a = fi * 2.39996323;
     vec2 off = vec2(cos(a), sin(a)) * r;
     vec2 suv = vUv + off / uRes;
-    float sa = textureLod(uSrc, suv, 0.0).a;
-    float cs = cocPx(sa);
-    // Read colour from a mip pre-blurred to about half the tap spacing at this
-    // sample's own blur radius, so thin highlights spread smoothly instead of
-    // leaving a copy at every tap. In-focus samples (small CoC) stay at mip 0;
-    // capped at mip 1, since coarser mips turn near-vertical edges blocky.
-    float lod = min(log2(max(cs * 0.167 * 0.5, 1.0)), 1.0);
-    vec4 s = vec4(textureLod(uSrc, suv, lod).rgb, sa);
+    // One fetch per tap, from a mip pre-blurred to about half the tap spacing at
+    // this tap's own blur radius (estimated from the tap's ring radius r, which a
+    // tap can only reach if its CoC >= r). Thin highlights then spread smoothly
+    // instead of leaving a copy at every tap; capped at mip 1, since coarser mips
+    // turn near-vertical edges blocky. Taps near the centre stay at mip 0.
+    float lod = min(log2(max(r * 0.198 * 0.5, 1.0)), 1.0);
+    vec4 s = textureLod(uSrc, suv, lod);
+    float cs = cocPx(s.a);
     float w = clamp(cs - r + 1.0, 0.0, 1.0);
     // a sample behind the centre may only spread as far as the centre's own CoC
     if (s.a > c0.a) w = min(w, clamp(coc0 - r + 1.0, 0.0, 1.0));
