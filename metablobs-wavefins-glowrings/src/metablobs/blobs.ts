@@ -48,9 +48,9 @@ const build = (): Group[] => {
     const room = PERIOD_H / 2 - halfView(zFar) - haloMargin(zFar);
     // Members: radius limited so the group (and its halo) stays out of view when it wraps.
     const members: Member[] = [];
-    const rMaxDepth = Math.min(1.25, Math.max(0.35, room));
+    const rMaxDepth = Math.min(1.5, Math.max(0.35, room));
     for (let m = 0; m < n; m++) {
-      const rBase = n === 1 ? range(rng, 0.45, 1.0) : range(rng, 0.4, 0.75);
+      const rBase = n === 1 ? range(rng, 0.6, 1.0) : range(rng, 0.55, 0.85);
       const r = Math.max(0.35, Math.min(rMaxDepth, rBase * rMaxDepth));
       let off: [number, number, number] = [0, 0, 0];
       if (m > 0) {

@@ -52,7 +52,7 @@ export const FIN_EMISSIVE = /* glsl */ `
   float dLead = vFinUv.x * uFinWidth;
   float dTrail = (1.0 - vFinUv.x) * uFinWidth;
   float band = 1.0 - smoothstep(0.0, 0.028, dLead);
-  float bandT = (1.0 - smoothstep(0.0, 0.02, dTrail)) * 0.18;
+  float bandT = 0.0 * dTrail;
   // bright stretches drift along each edge (whole cycles per loop)
   float y = vFinUv.y;
   float tp = uPhase * 6.28318530718;
@@ -63,8 +63,16 @@ export const FIN_EMISSIVE = /* glsl */ `
 
 export const FIN_DEPTH_OUT = /* glsl */ `
 #include <dithering_fragment>
+{
+  // metal -> highlight ramp: bright reflections shift from the metal tint toward
+  // the (paler) highlight colour, like real polished steel / copper
+  const vec3 LW = vec3(0.2126, 0.7152, 0.0722);
+  float lum = dot(gl_FragColor.rgb, LW);
+  vec3 hi = uHighlight * lum / max(dot(uHighlight, LW), 1e-3);
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, hi * 1.1, smoothstep(0.06, 0.55, lum) * 0.8);
+}
 // cheap contact shadow: the part of each fin tucked behind its neighbour falls to black
-gl_FragColor.rgb *= 1.0 - 0.97 * smoothstep(0.3, 0.92, vFinUv.x);
+gl_FragColor.rgb *= 1.0 - 0.985 * smoothstep(0.04, 0.6, vFinUv.x);
 gl_FragColor.a = clamp(vViewPosition.z / 40.0, 0.0, 1.0);
 `;
 

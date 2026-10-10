@@ -63,8 +63,8 @@ class WaveFinsRenderer implements FrameRenderer {
     uSrc: { value: null },
     uRes: { value: new THREE.Vector2() },
     uFocus: { value: 6 },
-    uCocScale: { value: 0.12 },
-    uMaxCoc: { value: 0.012 },
+    uCocScale: { value: 0.3 },
+    uMaxCoc: { value: 0.02 },
   });
   private final: THREE.RawShaderMaterial;
   private group = new THREE.Group();
@@ -107,10 +107,10 @@ class WaveFinsRenderer implements FrameRenderer {
     }
     fins.frustumCulled = false;
     this.group.add(fins);
-    this.group.rotation.z = -0.42; // fins lean, like the reference
+    this.group.rotation.z = -0.38; // fins lean, like the reference
     this.scene.add(this.group);
 
-    this.key = new THREE.PointLight(new THREE.Color(p.keyLight), 6, 0, 0);
+    this.key = new THREE.PointLight(new THREE.Color(p.keyLight), 3, 0, 0);
     this.scene.add(this.key);
     this.scene.background = null;
 
@@ -126,9 +126,9 @@ class WaveFinsRenderer implements FrameRenderer {
 
   private panels(): Panel[] {
     return [
-      { u: 0.3, v: 0.32, w: 0.15, h: 0.4, color: this.p.panelA, alpha: 1 },
-      { u: 0.6, v: 0.28, w: 0.03, h: 0.36, color: this.p.panelB, alpha: 1 },
-      { u: 0.85, v: 0.45, w: 0.06, h: 0.2, color: this.p.panelA, alpha: 0.5 },
+      { u: 0.42, v: 0.38, w: 0.2, h: 0.36, color: this.p.panelA, alpha: 0.6 },
+      { u: 0.47, v: 0.34, w: 0.09, h: 0.3, color: this.p.panelB, alpha: 1 },
+      { u: 0.9, v: 0.5, w: 0.08, h: 0.25, color: this.p.panelA, alpha: 0.5 },
     ];
   }
 
@@ -147,7 +147,7 @@ class WaveFinsRenderer implements FrameRenderer {
     const tp = TAU * ph;
     const u = this.finUniforms;
     // Wave flex: amplitude, phase and per-fin offset all run whole cycles.
-    u.uAmp.value = 0.62 + 0.2 * Math.sin(tp + 0.4);
+    u.uAmp.value = 0.8 + 0.25 * Math.sin(tp + 0.4);
     u.uAmp2.value = 0.1 + 0.06 * Math.sin(2 * tp + 1.1);
     u.uK.value = 0.95;
     u.uPhi.value = tp + 0.8 * Math.sin(tp);
@@ -162,7 +162,7 @@ class WaveFinsRenderer implements FrameRenderer {
     // Camera: one closed lap. Sideways drift +-1.2, orbit +-8 deg, slight push.
     const drift = 1.2 * Math.sin(tp);
     const orbit = ((8 * Math.PI) / 180) * Math.sin(tp + 0.9);
-    const dist = 4.6 + 0.3 * Math.sin(2 * tp + 0.3);
+    const dist = 3.7 + 0.3 * Math.sin(2 * tp + 0.3);
     this.target.set(drift * 0.6, 0.15 * Math.sin(tp + 2.1), 0);
     this.camera.position.set(
       this.target.x + Math.sin(orbit) * dist + drift * 0.4,

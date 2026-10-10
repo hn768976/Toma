@@ -78,29 +78,34 @@ vec3 shade(vec3 p, vec3 rd, float t) {
     vec3 LB = normalize(vec3(0.92, -0.30, 0.30)); // colour B: right
     float wa = dot(n, LA);
     float wb = dot(n, LB);
-    // wide, soft blend: each blob is half A, half B
-    float m = smoothstep(-0.35, 1.25, wb - wa);
+    // broad half-and-half split: A on the upper-left side, B on the right
+    float m = smoothstep(-0.45, 0.75, wb - wa);
     vec3 base = mix(uColA, uColB, m);
-    float lit = 0.42 + 0.58 * clamp(max(wa, wb) * 0.75 + 0.4, 0.0, 1.0);
+    float lit = 0.5 + 0.5 * clamp(max(wa, wb) * 0.7 + 0.45, 0.0, 1.0);
     vec3 col = base * lit * (0.6 + 0.4 * ao);
-    // soft white sheen along the shared edge, on the camera-facing part
-    float edge = exp(-pow((m - 0.4) / 0.45, 2.0));
-    col += vec3(0.55, 0.55, 0.65) * 0.16 * edge * smoothstep(0.35, 1.0, nv) * ao;
+    // soft pale sheen on the camera-facing body, widest where the colours meet
+    float sheen = smoothstep(0.25, 1.0, nv);
+    col = mix(col, vec3(0.40, 0.38, 0.56) * (0.6 + 0.4 * ao), 0.5 * sheen);
     // fresnel rim, brighter in colour A
-    col += uColA * pow(f, 2.6) * 1.1;
+    col += uColA * pow(f, 2.6) * 0.9;
+    // far blobs sit slightly darker, so the depth layering reads
+    col *= mix(1.0, 0.72, smoothstep(9.0, 14.5, t));
     return col;
   }
   // White matte / porcelain
   vec3 L = normalize(vec3(-0.6, 0.7, 0.55));
   float diff = clamp(dot(n, L) * 0.5 + 0.5, 0.0, 1.0);
-  float light = clamp(0.05 + 1.15 * diff, 0.0, 1.0) * mix(0.35, 1.0, ao);
+  float light = clamp(0.1 + 1.1 * diff, 0.0, 1.0) * mix(0.4, 1.0, ao);
+  // rounder volume: grey toward the silhouette and underside, near-white in the middle
+  light *= mix(1.0, 0.55, pow(f, 1.6));
   vec3 col = mix(uColB, uColA, light);
+  col += vec3(0.07) * pow(nv, 3.0) * diff;  // soft pearly sheen
   // thin translucent rim: a slightly darker grey line just inside the silhouette,
   // and a brighter band just inside that
-  float band = smoothstep(0.55, 0.74, f) * (1.0 - smoothstep(0.78, 0.88, f));
-  float line = smoothstep(0.87, 0.98, f);
-  col += vec3(0.06) * band;
-  col = mix(col, uColB * 0.92, line * 0.45);
+  float band = smoothstep(0.62, 0.78, f) * (1.0 - smoothstep(0.8, 0.9, f));
+  float line = smoothstep(0.88, 0.985, f);
+  col += vec3(0.03) * band;
+  col = mix(col, uColB * 0.95, line * 0.25);
   // depth fog: distant blobs fade toward the background
   float fog = smoothstep(7.5, 13.5, t) * 0.55;
   return mix(col, uBg, fog);
@@ -120,6 +125,7 @@ void main() {
   } else {
     vec2 q = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y;
     bg = mix(uBg, uBgCentre, exp(-dot(q, q) / (2.0 * 0.42 * 0.42)));
+    bg *= 1.0 - 0.06 * smoothstep(0.4, 1.0, length(q));
   }
 
   // Per-ray culling: collect blobs whose bounding sphere (r + k) the ray touches;
@@ -150,7 +156,7 @@ void main() {
   if (uMode == 0) {
     // Soft glow halo in colour A, ~4% of frame height wide, cut to exactly zero
     // beyond 4.5% so blobs wrapping outside the frame never pop.
-    float g = exp(-glowScr / 0.011) * (1.0 - smoothstep(0.025, 0.045, glowScr));
+    float g = exp(-glowScr / 0.0075) * (1.0 - smoothstep(0.025, 0.045, glowScr));
     col += uColA * g * uGlow;
   }
 
