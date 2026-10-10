@@ -108,7 +108,7 @@ Remotion renders frames out of order across tabs, so every pixel is a pure funct
 ## How it is built
 
 **Meta Blobs** (`src/metablobs`). 24 spheres in 16 groups (10 singles, 4 pairs,
-2 triplets), radii 0.35–1.1, in x ∈ [−6, 6], z ∈ [−5, 1.5]. The field is a polynomial
+2 triplets), radii 0.35–1.3 (larger near the camera), in x ∈ [−6, 6], z ∈ [−5, 1.5]. The field is a polynomial
 smooth-min (k = 0.55). Groups rise with a vertical period H = 11 and travel exactly 1 or
 2 periods per loop; each group wraps as a unit, and its radius is limited by its depth
 so that it (and its glow halo) is outside the frustum when it wraps, which means no pop.
@@ -119,29 +119,40 @@ only between the nearest entry and the farthest exit, evaluating only those blob
 is exact, because a blob more than k away along the ray cannot change a polynomial smin
 at the surface. Normals come from the tetrahedral gradient, AO from 4 taps. Silhouettes
 are anti-aliased by shading the ray's closest approach and blending by cone coverage.
-The neon glow is the analytic closest-approach distance in frame-height units, about
-4% wide and cut to exactly zero beyond 4.5%. Neon post: bloom mip-chain, then grain
-1.5% and dither.
+Neon shading: a milky body carrying a very soft A→B gradient (light A upper left,
+light B right), the two colours concentrated in a soft rim band and a fresnel edge,
+and far blobs slightly darker. The glow halo (colour A) uses the analytic
+closest-approach distance in frame-height units. It falls off over about 2–3% and is cut to
+exactly zero beyond 4.5%, so blobs wrapping outside the frame never pop. White shading:
+high-ambient diffuse light from the upper left, F8 to C8 grey with AO, near blobs pushed
+toward white, a thin darker rim line with a brighter band inside it, a slightly
+translucent edge, and depth fog toward the background. Neon post: bloom mip-chain, then
+grain 1.5% and dither.
 
 **Wave Fins** (`src/wavefins`). 20 instanced `PlaneGeometry(1.2, 6, 64, 256)` fins,
-0.55 apart, turned 60°, the row leaning about −35°. The vertex shader bends each fin by
+0.55 apart, turned 60°, the row leaning about −32°. The vertex shader bends each fin by
 `A(t)·sin(y·k + φ(t) + i·δ(t))` plus a second harmonic and a slight cross-curvature,
 with normals from the analytic derivative. Material: `MeshStandardMaterial` (metalness
 1, roughness 0.28) extended in `onBeforeCompile` with the bend, a thin leading-edge
 highlight band (fresnel weighted, brightness drifting along the edge), and a contact
-darkening where each fin tucks behind its neighbour. The environment is a canvas
+darkening where each fin tucks behind its neighbour, plus a metal→highlight tone ramp
+(bright reflections shift toward the version's highlight colour; per-version strength). The environment is a canvas
 equirect with 3 soft panels on black, put through PMREM, and its rotation sweeps on a
 closed path. One point key light also moves on a closed path. The camera does one
 closed lap: ±1.2 sideways drift, ±8° orbit and a slight push. Post: 4× MSAA scene
-target (view depth in alpha), then a 64-tap golden-spiral gather DoF focused on the
-middle fins, then a bloom mip-chain, vignette, grain 1.5% faded to zero below 3%
+target (view depth in alpha, mipmapped), then an 80-tap golden-spiral gather DoF
+focused on the middle fins. Each tap reads mip ≤ 1, pre-blurred to about half the tap
+spacing, so thin highlights don't leave a copy at every tap. After that come a bloom
+mip-chain, vignette, grain 1.5% faded to zero below 3%
 luminance, and dither.
 
 **Glow Rings** (`src/glowrings`). Rings are centred at (50%, −25%) of the frame and drift
 on a small closed path. Six rings are alive at once; ring *i* is at life
 `(t + i/6) mod 1`, so its radius grows from 0.2 to 1.6 frame heights. Each ring is a
-Gaussian core (σ 4.5–8% of frame height, widening with age) plus a 3.2× wider faint
-halo. Arc brightness is 3D value noise sampled on (cos θ, sin θ) offset around a
+Gaussian core (σ 4.2–7.5% of frame height, widening with age) plus a 3.2× wider faint
+halo. A ring is visible for about the middle half of its life, so two or three arcs show at once, each
+slightly off-centre so the arcs aren't perfectly concentric. The top-centre hot spot is a compact
+breathing glow, with a faint tint haze beside it. Arc brightness is 3D value noise sampled on (cos θ, sin θ) offset around a
 circle in time, so the bright stretches slide around the ring and loop. The inner tint
 copy sits 0.9σ inside at 25%. A faint breathing centre glow, a slight vignette, then
 grain 2.5% (not faded in the darks) and dither.
