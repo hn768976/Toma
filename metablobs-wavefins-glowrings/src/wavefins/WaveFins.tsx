@@ -25,6 +25,7 @@ export type WaveFinsProps = {
   background: string;
   envIntensity: number;
   edgeStrength: number;
+  highlightRamp: number; // 0..1: how far bright reflections shift toward `highlight`
   bloom: number;
   grain: number;
 };
@@ -51,6 +52,7 @@ class WaveFinsRenderer implements FrameRenderer {
     uDelta: { value: 0.2 },
     uCurve: { value: 0.25 },
     uHighlight: { value: new THREE.Vector3() },
+    uHighlightRamp: { value: 0.8 },
     uEdgeStrength: { value: 1 },
     uFinWidth: { value: FIN_W },
     uPhase: { value: 0 },
@@ -73,6 +75,7 @@ class WaveFinsRenderer implements FrameRenderer {
   constructor(private readonly p: WaveFinsProps) {
     this.finUniforms.uHighlight.value = hexToLinear(p.highlight);
     this.finUniforms.uEdgeStrength.value = p.edgeStrength;
+    this.finUniforms.uHighlightRamp.value = p.highlightRamp;
     this.material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(p.metal),
       metalness: 1,
@@ -91,7 +94,7 @@ class WaveFinsRenderer implements FrameRenderer {
         .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n" + FIN_EMISSIVE)
         .replace("#include <dithering_fragment>", FIN_DEPTH_OUT);
     };
-    this.material.customProgramCacheKey = () => "wave-fin-v1";
+    this.material.customProgramCacheKey = () => "wave-fin-v2";
 
     const geo = new THREE.PlaneGeometry(FIN_W, FIN_H, 64, 256);
     const fins = new THREE.InstancedMesh(geo, this.material, FIN_COUNT);
@@ -107,7 +110,7 @@ class WaveFinsRenderer implements FrameRenderer {
     }
     fins.frustumCulled = false;
     this.group.add(fins);
-    this.group.rotation.z = -0.38; // fins lean, like the reference
+    this.group.rotation.z = -0.55; // fins lean, like the reference
     this.scene.add(this.group);
 
     this.key = new THREE.PointLight(new THREE.Color(p.keyLight), 3, 0, 0);

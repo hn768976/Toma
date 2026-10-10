@@ -37,6 +37,7 @@ vec3 transformed = vec3(fu, fy, fw + uCurve * fu * fu);
 
 export const FIN_FRAGMENT_PARS = /* glsl */ `
 uniform vec3 uHighlight;
+uniform float uHighlightRamp;
 uniform float uEdgeStrength;
 uniform float uFinWidth;
 uniform float uPhase;
@@ -69,10 +70,10 @@ export const FIN_DEPTH_OUT = /* glsl */ `
   const vec3 LW = vec3(0.2126, 0.7152, 0.0722);
   float lum = dot(gl_FragColor.rgb, LW);
   vec3 hi = uHighlight * lum / max(dot(uHighlight, LW), 1e-3);
-  gl_FragColor.rgb = mix(gl_FragColor.rgb, hi * 1.1, smoothstep(0.06, 0.55, lum) * 0.8);
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, hi * 1.1, smoothstep(0.06, 0.55, lum) * uHighlightRamp);
 }
 // cheap contact shadow: the part of each fin tucked behind its neighbour falls to black
-gl_FragColor.rgb *= 1.0 - 0.985 * smoothstep(0.04, 0.6, vFinUv.x);
+gl_FragColor.rgb *= 1.0 - 0.99 * smoothstep(0.03, 0.55, vFinUv.x);
 gl_FragColor.a = clamp(vViewPosition.z / 40.0, 0.0, 1.0);
 `;
 
@@ -85,7 +86,7 @@ uniform vec2 uRes;
 uniform float uFocus;      // focus distance (world units)
 uniform float uCocScale;   // CoC (fraction of frame height) per unit of |1/f - 1/d|
 uniform float uMaxCoc;     // max CoC radius, fraction of frame height
-const int N = 64; // tap spacing ~ maxCoc * sqrt(pi / N) = 0.22 * radius
+const int N = 112; // tap spacing ~ maxCoc * sqrt(pi / N) = 0.167 * radius
 float cocPx(float depth01) {
   float d = max(depth01 * 40.0, 0.01);
   return min(abs(1.0 / uFocus - 1.0 / d) * uCocScale, uMaxCoc) * uRes.y;
@@ -107,8 +108,9 @@ void main() {
     float cs = cocPx(sa);
     // Read colour from a mip pre-blurred to about half the tap spacing at this
     // sample's own blur radius, so thin highlights spread smoothly instead of
-    // leaving a copy at every tap. In-focus samples (small CoC) stay at mip 0.
-    float lod = log2(max(cs * 0.22 * 0.5, 1.0));
+    // leaving a copy at every tap. In-focus samples (small CoC) stay at mip 0;
+    // capped at mip 1, since coarser mips turn near-vertical edges blocky.
+    float lod = min(log2(max(cs * 0.167 * 0.5, 1.0)), 1.0);
     vec4 s = vec4(textureLod(uSrc, suv, lod).rgb, sa);
     float w = clamp(cs - r + 1.0, 0.0, 1.0);
     // a sample behind the centre may only spread as far as the centre's own CoC
