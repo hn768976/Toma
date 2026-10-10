@@ -52,7 +52,7 @@ npx remotion still GlitterFloor-Gold out/GlitterFloor_Gold_6K.png --frame=300 --
 ```
 Same for the other ids (`NeonFrame-Spectrum`, `SpotlightDust-TealCrimson`, ...).
 
-## 720p previews (how the supplied mp4s were made)
+## 720p previews (optional; only the stills are supplied)
 
 `--scale=0.3333333333333333` gives exactly 1280x720 (verified with ffprobe). Canvases use
 `window.devicePixelRatio` as their backing-store ratio, so a 1/3 scale really does 1/9 of the GPU work.
