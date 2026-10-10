@@ -81,17 +81,17 @@ void main() {
     float xh = (r - R) / (sigma * 3.2);
     float halo = exp(-0.5 * xh * xh) * 0.05;
     float b = arcBrightness(atan(dc.x, dc.y), float(i));
-    col += uRing * (core + halo) * b * fade * 0.095;
+    col += uRing * (core + halo) * b * fade * 0.066;
     // secondary tint: smaller, dimmer copy shifted inward
     float Rt = R - sigma * 0.9;
     float xt = (r - Rt) / (sigma * 0.8);
     float bt = arcBrightness(atan(dc.x, dc.y) + 0.6, float(i) + 0.5);
-    col += uTint * exp(-0.5 * xt * xt) * bt * fade * 0.095 * 0.25;
+    col += uTint * exp(-0.5 * xt * xt) * bt * fade * 0.066 * 0.25;
   }
   // faint breathing centre glow at the top
-  vec2 gc = vec2(0.5 * aspect + 0.03 * sin(tp + 1.3), 0.06);
+  vec2 gc = vec2(0.5 * aspect + 0.03 * sin(tp + 1.3), 0.13);
   float gd = length((q - gc) * vec2(0.75, 1.0));
-  col += uRing * exp(-gd * gd / (2.0 * 0.085 * 0.085)) * 0.30 * (1.0 + 0.2 * sin(tp));
+  col += uRing * exp(-gd * gd / (2.0 * 0.075 * 0.075)) * 0.30 * (1.0 + 0.2 * sin(tp));
   // faint tint haze beside the hot spot
   vec2 hc = vec2(0.42 * aspect + 0.04 * sin(tp + 2.0), -0.02);
   float hd = length(q - hc);

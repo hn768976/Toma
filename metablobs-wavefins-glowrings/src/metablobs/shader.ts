@@ -78,18 +78,18 @@ vec3 shade(vec3 p, vec3 rd, float t) {
     vec3 LB = normalize(vec3(0.92, -0.30, 0.30)); // colour B: right
     float wa = dot(n, LA);
     float wb = dot(n, LB);
-    // broad half-and-half split: A on the upper-left side, B on the right
-    float m = smoothstep(-0.15, 0.9, wb - wa);
-    vec3 base = mix(uColA, uColB, m);
-    float lit = 0.5 + 0.5 * clamp(max(wa, wb) * 0.7 + 0.45, 0.0, 1.0);
-    vec3 col = base * lit * (0.6 + 0.4 * ao);
-    // soft pale sheen on the camera-facing body, widest where the colours meet
-    float sheen = smoothstep(0.25, 1.0, nv);
-    col = mix(col, vec3(0.40, 0.38, 0.56) * (0.6 + 0.4 * ao), 0.5 * sheen);
-    // fresnel rim, brighter in colour A
-    col += uColA * pow(f, 2.6) * 0.9;
+    // Milky body carrying a very soft A -> B gradient (A upper left, B right),
+    // with the colours strongest in the rim light.
+    float side = smoothstep(-0.9, 1.1, wb - wa);
+    vec3 rimCol = mix(uColA, uColB, side);
+    vec3 body = mix(rimCol, vec3(1.0), 0.3) * 0.72;
+    float lit = 0.55 + 0.45 * clamp(max(wa, wb) * 0.8 + 0.3, 0.0, 1.0);
+    vec3 col = body * lit * (0.55 + 0.45 * ao);
+    // colour creeps in from the silhouette (soft rim band), then a bright fresnel edge
+    col = mix(col, rimCol * (0.75 + 0.25 * ao), smoothstep(0.25, 0.9, f) * 0.6);
+    col += rimCol * pow(f, 3.0) * 0.9;
     // far blobs sit slightly darker, so the depth layering reads
-    col *= mix(1.0, 0.72, smoothstep(9.0, 14.5, t));
+    col *= mix(1.0, 0.7, smoothstep(9.0, 14.5, t));
     return col;
   }
   // White matte / porcelain
@@ -99,15 +99,16 @@ vec3 shade(vec3 p, vec3 rd, float t) {
   // rounder volume: grey toward the silhouette and underside, near-white in the middle
   light *= mix(1.0, 0.55, pow(f, 1.6));
   vec3 col = mix(uColB, uColA, light);
-  col += vec3(0.12) * pow(nv, 3.0) * diff;  // soft pearly sheen, front blobs read near-white
+  col += vec3(0.12) * pow(nv, 3.0) * diff;  // soft pearly sheen
+  col += vec3(0.07) * (1.0 - smoothstep(6.0, 9.5, t)) * diff;  // near blobs read near-white
   // thin translucent rim: a slightly darker grey line just inside the silhouette,
   // and a brighter band just inside that
   float band = smoothstep(0.62, 0.78, f) * (1.0 - smoothstep(0.8, 0.9, f));
-  float line = smoothstep(0.88, 0.985, f);
+  float line = smoothstep(0.93, 0.995, f);
   col += vec3(0.03) * band;
   // translucent edge: the background shows through just inside the silhouette
-  col = mix(col, uBg, 0.22 * smoothstep(0.72, 0.95, f));
-  col = mix(col, uColB * 0.85, line * 0.55);
+  col = mix(col, uBg, 0.3 * smoothstep(0.7, 0.95, f));
+  col = mix(col, uColB * 0.9, line * 0.3);
   // depth fog: distant blobs fade toward the background
   float fog = smoothstep(7.5, 13.5, t) * 0.55;
   return mix(col, uBg, fog);
@@ -158,7 +159,7 @@ void main() {
   if (uMode == 0) {
     // Soft glow halo in colour A, ~4% of frame height wide, cut to exactly zero
     // beyond 4.5% so blobs wrapping outside the frame never pop.
-    float g = exp(-glowScr / 0.0075) * (1.0 - smoothstep(0.025, 0.045, glowScr));
+    float g = exp(-glowScr / 0.0055) * (1.0 - smoothstep(0.025, 0.045, glowScr));
     col += uColA * g * uGlow;
   }
 
