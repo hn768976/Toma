@@ -79,7 +79,7 @@ vec3 shade(vec3 p, vec3 rd, float t) {
     float wa = dot(n, LA);
     float wb = dot(n, LB);
     // broad half-and-half split: A on the upper-left side, B on the right
-    float m = smoothstep(-0.45, 0.75, wb - wa);
+    float m = smoothstep(-0.15, 0.9, wb - wa);
     vec3 base = mix(uColA, uColB, m);
     float lit = 0.5 + 0.5 * clamp(max(wa, wb) * 0.7 + 0.45, 0.0, 1.0);
     vec3 col = base * lit * (0.6 + 0.4 * ao);
@@ -99,13 +99,15 @@ vec3 shade(vec3 p, vec3 rd, float t) {
   // rounder volume: grey toward the silhouette and underside, near-white in the middle
   light *= mix(1.0, 0.55, pow(f, 1.6));
   vec3 col = mix(uColB, uColA, light);
-  col += vec3(0.07) * pow(nv, 3.0) * diff;  // soft pearly sheen
+  col += vec3(0.12) * pow(nv, 3.0) * diff;  // soft pearly sheen, front blobs read near-white
   // thin translucent rim: a slightly darker grey line just inside the silhouette,
   // and a brighter band just inside that
   float band = smoothstep(0.62, 0.78, f) * (1.0 - smoothstep(0.8, 0.9, f));
   float line = smoothstep(0.88, 0.985, f);
   col += vec3(0.03) * band;
-  col = mix(col, uColB * 0.95, line * 0.25);
+  // translucent edge: the background shows through just inside the silhouette
+  col = mix(col, uBg, 0.22 * smoothstep(0.72, 0.95, f));
+  col = mix(col, uColB * 0.85, line * 0.55);
   // depth fog: distant blobs fade toward the background
   float fog = smoothstep(7.5, 13.5, t) * 0.55;
   return mix(col, uBg, fog);

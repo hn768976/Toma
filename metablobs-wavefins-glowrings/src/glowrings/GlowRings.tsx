@@ -72,30 +72,30 @@ void main() {
   for (int i = 0; i < RINGS; i++) {
     float life = fract(uPhase + float(i) / float(RINGS));
     float R = mix(0.20, 1.60, pow(life, 1.12));
-    float fade = smoothstep(0.08, 0.42, life) * (1.0 - smoothstep(0.5, 0.92, life));
-    float sigma = mix(0.06, 0.11, life);          // widens with growth: more defocus
+    float fade = smoothstep(0.1, 0.35, life) * (1.0 - smoothstep(0.52, 0.82, life));
+    float sigma = mix(0.042, 0.075, life);          // widens with growth: more defocus
     vec2 dc = q - (c + vec2(0.09 * sin(float(i) * 2.17 + 0.6), 0.03 * cos(float(i) * 1.37)));
     float r = length(dc);
     float x = (r - R) / sigma;
     float core = exp(-0.5 * x * x);
     float xh = (r - R) / (sigma * 3.2);
-    float halo = exp(-0.5 * xh * xh) * 0.08;
+    float halo = exp(-0.5 * xh * xh) * 0.05;
     float b = arcBrightness(atan(dc.x, dc.y), float(i));
-    col += uRing * (core + halo) * b * fade * 0.075;
+    col += uRing * (core + halo) * b * fade * 0.095;
     // secondary tint: smaller, dimmer copy shifted inward
     float Rt = R - sigma * 0.9;
     float xt = (r - Rt) / (sigma * 0.8);
     float bt = arcBrightness(atan(dc.x, dc.y) + 0.6, float(i) + 0.5);
-    col += uTint * exp(-0.5 * xt * xt) * bt * fade * 0.075 * 0.25;
+    col += uTint * exp(-0.5 * xt * xt) * bt * fade * 0.095 * 0.25;
   }
   // faint breathing centre glow at the top
   vec2 gc = vec2(0.5 * aspect + 0.03 * sin(tp + 1.3), 0.06);
   float gd = length((q - gc) * vec2(0.75, 1.0));
-  col += uRing * exp(-gd * gd / (2.0 * 0.10 * 0.10)) * 0.17 * (1.0 + 0.25 * sin(tp));
+  col += uRing * exp(-gd * gd / (2.0 * 0.085 * 0.085)) * 0.30 * (1.0 + 0.2 * sin(tp));
   // faint tint haze beside the hot spot
-  vec2 hc = vec2(0.38 * aspect + 0.04 * sin(tp + 2.0), 0.0);
+  vec2 hc = vec2(0.42 * aspect + 0.04 * sin(tp + 2.0), -0.02);
   float hd = length(q - hc);
-  col += uTint * exp(-hd * hd / (2.0 * 0.16 * 0.16)) * 0.035;
+  col += uTint * exp(-hd * hd / (2.0 * 0.14 * 0.14)) * 0.05;
   // slight vignette
   vec2 vq = q / vec2(aspect, 1.0) - 0.5;
   col *= 1.0 - 0.55 * smoothstep(0.2, 0.75, length(vq));
