@@ -3,6 +3,7 @@
 # then H.264 / yuv420p / CRF 16 / 30 fps with ffmpeg. Keeps frame 300 of the full
 # render (for the determinism check) and a PNG still of each composition.
 #   usage: scripts/render-previews.sh [CompositionId ...]   (default: all 8)
+#   ENCODE_ONLY=1 re-encodes an existing out/seq/<id> sequence without rendering.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ALL=(MetaBlobs-NeonBlueMagenta MetaBlobs-WhiteMatte MetaBlobs-SunsetCoral WaveFins-Blue WaveFins-Copper GlowRings-Magenta GlowRings-Violet GlowRings-Teal)
@@ -11,15 +12,18 @@ mkdir -p out/previews out/stills out/full300
 for c in "${COMPS[@]}"; do
   name="${c/-/_}"
   seq="out/seq/$c"
-  rm -rf "$seq"
-  start=$(date +%s)
-  npx remotion render "$c" "$seq" --sequence --image-format=png --scale=0.3333333333333333 --log=error
-  echo "$c: rendered 600 frames in $(( $(date +%s) - start ))s"
-  first=$(ls "$seq" | sort | head -1)
+  if [ -z "${ENCODE_ONLY:-}" ]; then
+    rm -rf "$seq"
+    start=$(date +%s)
+    npx remotion render "$c" "$seq" --sequence --image-format=png --scale=0.3333333333333333 --log=error
+    echo "$c: rendered 600 frames in $(( $(date +%s) - start ))s"
+  fi
+  # (sed, not head: head closing the pipe early can SIGPIPE the script under pipefail)
+  first=$(ls "$seq" | sort | sed -n 1p)
   size=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$seq/$first")
   if [ "$size" != "1280,720" ]; then echo "unexpected frame size $size" >&2; exit 1; fi
-  pattern=$(ls "$seq" | sort | head -1 | sed -E 's/[0-9]+\.png$//')
-  digits=$(ls "$seq" | sort | head -1 | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
+  pattern=$(ls "$seq" | sort | sed -n 1p | sed -E 's/[0-9]+\.png$//')
+  digits=$(ls "$seq" | sort | sed -n 1p | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
   x264extra=()
   # Glow Rings: very dark, very soft gradients -> keep grain through the encoder.
   if [[ "$c" == GlowRings-* ]]; then x264extra=(-tune grain); fi
