@@ -15,7 +15,7 @@ import {arrowGeometry, barGeometry, cardGeometry} from './geometry';
 import {animate, cameraPose, chartToWorld, computeLayout, focusBand, LOOK} from './layout';
 import {addGlint, floorFragment, floorVertex, MAX_LINES, postFragment, postVertex, skyFragment, skyVertex} from './shaders';
 
-const FLOOR_NEAR = new THREE.Color('#93A9D0');
+const FLOOR_NEAR = new THREE.Color('#99B0D5');
 const SKY_TOP = new THREE.Color('#D3E2F2');
 const FLOOR_FAR = new THREE.Color('#B9CDE6');
 /** Brightness of the (display-referred) arrow's lit colour. */
@@ -100,7 +100,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     const glint = {uGlintPos: {value: -1}, uGlintStrength: {value: 0}};
     const faceMat = new THREE.MeshPhysicalMaterial({map: flagTex, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.14, envMapIntensity: 1.3, emissiveMap: flagTex, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0.62});
     addGlint(faceMat, glint);
-    const rimMat = new THREE.MeshPhysicalMaterial({color: '#F7F8FB', roughness: 0.08, metalness: 1, clearcoat: 1, envMapIntensity: 2.2});
+    const rimMat = new THREE.MeshPhysicalMaterial({color: '#FFFFFF', roughness: 0.18, metalness: 0.25, clearcoat: 1, envMapIntensity: 1.8, emissive: new THREE.Color('#E8EEF6'), emissiveIntensity: 0.35});
     const card = new THREE.Mesh(cardGeo, [faceMat, rimMat]);
     card.position.copy(layout.cardCenter);
     card.castShadow = true;
@@ -115,7 +115,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
         roughness: 0.1,
         clearcoat: 1,
         clearcoatRoughness: 0.06,
-        envMapIntensity: 1.8,
+        envMapIntensity: 2.6,
         emissive: new THREE.Color('#C9D6E6'),
         emissiveIntensity: 0.16 + 0.12 * h * h,
       });
@@ -163,7 +163,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     chart.add(body, head);
 
     // coloured glow on the floor under the arrow
-    const glowMat = new THREE.MeshBasicMaterial({map: bandTexture(), color: new THREE.Color(preset.arrow), opacity: 0.05, clippingPlanes: [clip]});
+    const glowMat = new THREE.MeshBasicMaterial({map: bandTexture(), color: new THREE.Color(preset.arrow), opacity: 0.035, clippingPlanes: [clip]});
     keepAlpha(glowMat, true);
     const glowLen = arrow.tipX - arrow.startX + 0.6;
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(glowLen, 3.4), glowMat);
@@ -204,7 +204,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     floor.renderOrder = -2;
 
     // contact / key-light shadow
-    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#1a2a46'), opacity: 0.3});
+    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#1a2a46'), opacity: 0.18});
     keepAlpha(shadowMat);
     shadowMat.polygonOffset = true;
     shadowMat.polygonOffsetFactor = -4;

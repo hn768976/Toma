@@ -164,7 +164,7 @@ void main() {
     speck = clamp((r - length(p - c)) / aa + 0.5, 0.0, 1.0) * (0.35 + 0.65 * hash12(cell + 9.2));
   }
   float far = smoothstep(uGradEnd * 1.4, uGradStart, dist); // details fade into the haze
-  col = mix(col, vec3(1.0), (lines * 0.32 + nodes * 0.7 + speck * 0.55) * far * uFade);
+  col = mix(col, vec3(1.0), (lines * 0.2 + nodes * 0.45 + speck * 0.45) * far * uFade);
 
   // blurred mirror reflection (tonemapped like the lit scene, then blended)
   vec2 uv = gl_FragCoord.xy / uRes;

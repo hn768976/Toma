@@ -27,8 +27,8 @@ export const LOOK = {
   cardX: 2.2, // card centre (world); the camera's move to the right shows it right of the chart
   arrowThickness: 0.66, // ribbon size within the chart plane
   arrowDepth: 0.24, // ribbon size toward the camera
-  arrowHeadWidth: 2.8,
-  arrowHeadLength: 2.0,
+  arrowHeadWidth: 2.3,
+  arrowHeadLength: 1.7,
 };
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
