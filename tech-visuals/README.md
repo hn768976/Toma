@@ -67,7 +67,43 @@ For stories, take the still from the hold (dashboard frame 380, flowchart 440, n
 
 ## Render times
 
-__TIMINGS__
+Measured in a CPU-only container: 4 vCPU, no GPU, so WebGL2 runs on ANGLE → SwiftShader. The figures include PNG intermediates and H.264 encoding. **On any machine with a GPU, expect these to be several times faster.**
+
+### 720p previews (`--scale=1/3`, 4 tabs in parallel)
+
+| Composition | Frames | Total | Wall time per frame | ≈ per frame per tab |
+|---|---|---|---|---|
+| GridPucks-Slate | 600 | 326 s | 0.54 s | ~2.2 s |
+| GridPucks-White | 600 | 325 s | 0.54 s | ~2.2 s |
+| WindTurbineDashboard-Story | 450 | 210 s | 0.47 s | ~1.9 s |
+| FlowchartBuild-BlueWhite | 450 | 120 s | 0.27 s | ~1.1 s |
+| FlowchartBuild-CyanNavy | 450 | 155 s | 0.35 s | ~1.4 s |
+| NetworkHub-DrawOn | 450 | 517 s | 1.15 s | ~4.6 s |
+| NetworkHub-PulseLoop | 600 | 721 s | 1.20 s | ~4.8 s |
+| FolderRow-Blue | 600 | 448 s | 0.75 s | ~3.0 s |
+
+### Two real 4K frames (3840×2160, frame 300, one tab)
+
+Per-frame time is the 4-frame run minus the 1-frame run, divided by 3, so browser startup is excluded.
+
+| Composition | 1 frame (incl. startup) | 4 frames | **per 4K frame** |
+|---|---|---|---|
+| GridPucks-Slate (instanced pucks + shadows + DoF) | 18.5 s | 34.5 s | **≈ 5.3 s** |
+| FolderRow-Blue (folders + reflection + streams + DoF + bloom) | 18.3 s | 37.8 s | **≈ 6.5 s** |
+
+### 4K estimates (same CPU-only box, 4 tabs)
+
+A 4K frame cost about 2.2–2.5× a 720p frame in a single tab. The fixed per-frame costs (PNG encoding, CPU-side instancing, the Canvas UI) don't scale with pixel count. Applying ×2.4 to the 720p wall times:
+
+| Composition | Estimated 4K render |
+|---|---|
+| GridPucks-Slate / White | ≈ 13 min each |
+| WindTurbineDashboard-Story | ≈ 8–9 min |
+| FlowchartBuild-BlueWhite / CyanNavy | ≈ 5 / 6 min |
+| NetworkHub-DrawOn / PulseLoop | ≈ 21 / 29 min (glow ribbons and bloom scale with pixels, so this may run longer) |
+| FolderRow-Blue | ≈ 18 min |
+
+All eight together: about 2 h on this box. On a desktop GPU with `--gl=angle`, expect well under 30 min.
 
 ## How it works
 
@@ -141,4 +177,36 @@ Inter (SIL Open Font License 1.1). The WOFF2 files and the licence text are in `
 
 ## Verification
 
-__VERIFY__
+Run on the 720p previews in this container.
+
+- **File checks (ffprobe):** all 8 are 1280×720, 30/1, h264, yuv420p, with no audio stream. Durations are exactly 15.0 s (450 frames) for the stories and 20.0 s (600 frames) for the loops.
+- **Loop check:** the loops were rendered with `--props='{"loopCheck":true}'` (601 frames), and frame 0 was compared with frame 600. GridPucks-Slate, GridPucks-White, NetworkHub-PulseLoop and FolderRow-Blue are **pixel-identical**.
+- **Determinism:** for each composition, frame 300 rendered alone from a cold start was compared with frame 300 from a 4-tab sequence render (frames 280–320). All 8 are **byte-identical**.
+- **Banding (frames taken from the encoded mp4):**
+  - Profiles across the slate and white puck surfaces near the vignette change smoothly. The largest 5-px-smoothed step is ≤ 1.8 levels (slate) and ≤ 1.0 level (white).
+  - The Folder Row sky and flare, the 3B navy (≤ 0.4 level per step along the top edge) and the hub haze were also inspected under a strong level stretch. They show grain-textured, contour-free gradients.
+  - The hub's black is clean: the corner maxes out at 1/255, because grain is faded out below 3% luminance and only the ±1/255 dither remains.
+- **Contact sheets** (five evenly spaced frames per composition) show:
+  - discs moving along grid lines;
+  - the chart drawing, the gauge counting up to ≈815 kW and then flickering ±20, and the temperature bars rising;
+  - shapes popping in with connectors drawing on as the camera travels;
+  - the ring drawing on, then branches and devices, then a pulsing hold;
+  - folders gliding past over the reflective floor, with data streams and the left flare.
+
+  No logos, brands, maker names or real data appear.
+- **Motion:** consecutive frames around frame 300 and through the busy story sections step cleanly:
+  - puck slides ease in and out and stop cleanly;
+  - the procedural grid and connector lines are anti-aliased by coverage, so they don't crawl;
+  - blades turn at 2.1° per frame (no strobing);
+  - pulses move at constant speed along arc length.
+
+### Completion checklist
+
+- [x] 8 compositions at 3840×2160, 30 fps (450 frames for the stories, 600 for the loops)
+- [x] WebGL2 via `@remotion/three` and ANGLE, with no WebGPU and no PixiJS
+- [x] Single-frame post (DoF, bloom) with no TAA, dither ±1/255, and grain from pixel × `frame % period`
+- [x] No `Math.random()`, `Date.now()` or carried state; everything is seeded at module level
+- [x] Inter (OFL) bundled with its licence; generic labels and `XXX` placeholders only
+- [x] Turbine model built in code and checked by fresh sub-agents (three rounds)
+- [x] 720p previews, PNG stills, loop and determinism checks, banding check
+- [x] `npm install && npx remotion studio` verified from a clean copy
