@@ -117,6 +117,9 @@ by the same script and stored in the file's JSON header.
   cables are `TubeGeometry` port-to-port loops with clear plugs and boots
   (one red per switch). LED blink schedules are an integer hash of
   `(frame % 600, seed)` in the shader.
+  - The switch is 2U. Its top U is a brush-strip cable pass-through: each
+    patch cable comes out of that gap and drops into one port, as in the
+    references.
   - Rack 2's column is a phase-shifted copy, so its switch sits half a
     period below rack 1's. 3B's diagonal glide then crosses both switches
     head-on (at t = 0.25 and 0.75).
@@ -154,9 +157,9 @@ including startup):
 | AndroidTraderHUD-Left | 600 | 633 s | 1.05 s |
 | AndroidTraderHUD-Right | 600 | 669 s | 1.12 s |
 | GrowthChartHUD-Story | 450 | 275 s | 0.61 s |
-| ServerRack-FrontScroll | 600 | 1026 s | 1.71 s |
-| ServerRack-DiagonalGlide | 600 | 1449 s | 2.41 s |
-| ServerRack-LowAngle | 600 | 2407 s | 4.01 s |
+| ServerRack-FrontScroll | 600 | 1101 s | 1.84 s |
+| ServerRack-DiagonalGlide | 600 | 1486 s | 2.48 s |
+| ServerRack-LowAngle | 600 | 2501 s | 4.17 s |
 
 **Two real 4K frames** (3840×2160, 1 tab, SwiftShader):
 
@@ -174,9 +177,9 @@ box:
 | AndroidTraderHUD-Left | ≈ 67 min |
 | AndroidTraderHUD-Right | ≈ 71 min |
 | GrowthChartHUD-Story | ≈ 29 min |
-| ServerRack-FrontScroll | ≈ 105 min |
+| ServerRack-FrontScroll | ≈ 110 min |
 | ServerRack-DiagonalGlide | ≈ 135 min |
-| ServerRack-LowAngle | ≈ 240 min |
+| ServerRack-LowAngle | ≈ 250 min |
 
 On a desktop GPU with `--gl=angle`, expect roughly an order of magnitude
 less. That is an estimate, not a measurement.
