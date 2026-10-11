@@ -258,10 +258,11 @@ const W1: UnitType = {
   caddies: [],
   leds: [
     // LED matrix.
-    ...Array.from({ length: 12 }, (_, i) => ({
-      x: 80 + (i % 4) * 22,
-      y: 30 + Math.floor(i / 4) * 20,
-      kind: (i % 7 === 3 ? "orange" : "green") as LedKind,
+    // Activity matrix: 4 x 6, green and red.
+    ...Array.from({ length: 24 }, (_, i) => ({
+      x: 66 + (i % 6) * 22,
+      y: 26 + Math.floor(i / 6) * 16,
+      kind: ((i * 7) % 5 < 2 ? "red" : "green") as LedKind,
       mode: (i % 4 === 0 ? "steady" : "flicker") as LedMode,
       size: 0.55,
     })),

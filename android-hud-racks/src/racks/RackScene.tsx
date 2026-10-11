@@ -58,7 +58,7 @@ const RACK_SHIFT = [0, (((switchTop(0) + H / 2 - switchTop(1)) % H) + H) % H];
 // Centre of the cable mass above the switch of rack 0 (copy 0, 0).
 const SWITCH0 = {
   x: (560 - PANEL_W / 2) * M,
-  y: -switchTop(0) - 0.05 + 0.2,
+  y: -switchTop(0) - 0.05 + 0.14,
 };
 
 export type RackVersion = "front" | "diagonal" | "low";
@@ -111,20 +111,21 @@ const CAMS: Record<RackVersion, CamCfg> = {
     copiesY: [-1, 3],
     fov: 36,
     pose: (t, cam) => {
-      // High, looking steeply down onto the rack faces. The point the view
+      // High and oblique, looking down onto the rack faces. The point the view
       // centre lands on travels (W, -H) per loop and passes over the cable
       // mass of rack 1's switch at t = 0.25 and rack 2's at t = 0.75.
-      cam.rotation.set(THREE.MathUtils.degToRad(-52), THREE.MathUtils.degToRad(-30), THREE.MathUtils.degToRad(30), "YXZ");
+      cam.rotation.set(THREE.MathUtils.degToRad(-30), THREE.MathUtils.degToRad(-12), THREE.MathUtils.degToRad(34), "YXZ");
       cam.updateMatrixWorld();
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
       const gx = SWITCH0.x + W * (t - 0.25);
       const gy = SWITCH0.y - H * (t - 0.25);
-      const dist = 0.62;
+      const dist = 0.56;
       cam.position.set(gx - fwd.x * dist, gy - fwd.y * dist, 0.035 - fwd.z * dist);
     },
     focus: (cam) => faceDistance(cam, 0.0, 0.0) - 0.06,
-    post: { dof: { aperture: 28, maxCoc: 22, nearScale: 0.7 }, ca: 0 },
-    exposure: 1.9,
+    post: { dof: { aperture: 11, maxCoc: 12, nearScale: 0.6 }, ca: 0 },
+    exposure: 2.4,
+    vignette: 0.35,
   },
   // 3C: low, looking up along the face at about 20 deg; rises by H.
   low: {
@@ -264,10 +265,9 @@ const buildCables = (t: UnitType, seed: number) => {
     clip.rotateX(-0.12);
     clip.translate(x0, y0 + 0.0062, plugLen / 2 - 0.004);
     plugs.push(clip);
-    const boot = new THREE.CylinderGeometry(0.0095, 0.0105, 0.026, 12);
-    boot.rotateX(Math.PI / 2);
-    boot.translate(x0, y0, plugLen - 0.006 + 0.01);
-    boots.push(boot);
+    // Chunky strain-relief boot: a lathe profile with ridges and a rounded
+    // tail, wrapping the back of the plug.
+    boots.push(bootGeometry().translate(x0, y0, plugLen - 0.016));
   };
   const z0 = plugLen + 0.012;
   const loops = 6 + Math.floor(rnd() * 2); // 6-7 loops = 12-14 plugged ports
@@ -291,8 +291,8 @@ const buildCables = (t: UnitType, seed: number) => {
     if (!a || !b) break;
     const ax = a.x * M, ay = -a.y * M, bx = b.x * M, by = -b.y * M;
     const mid = (ax + bx) / 2 + (rnd() - 0.5) * 0.012;
-    const h = 0.26 + rnd() * 0.16; // tall: the tops run out of frame
-    const out = 0.045 + rnd() * 0.03;
+    const h = 0.17 + rnd() * 0.1; // tall hairpins over the switch
+    const out = 0.06 + rnd() * 0.04;
     const lean = (rnd() - 0.5) * 0.015;
     const pts = [
       new THREE.Vector3(ax, ay, z0),
@@ -333,6 +333,26 @@ const buildCables = (t: UnitType, seed: number) => {
     bootsBlue: mergeGeometries(bootsBlue),
     bootsRed: mergeGeometries(bootsRed),
   };
+};
+
+let bootProto: THREE.BufferGeometry | null = null;
+const bootGeometry = () => {
+  if (!bootProto) {
+    const pts: THREE.Vector2[] = [];
+    const L = 0.042;
+    for (let i = 0; i <= 28; i++) {
+      const u = i / 28;
+      // Tapers from the plug toward the cable, with ridges on the body.
+      let r = 0.0102 - 0.004 * u;
+      if (u > 0.2 && u < 0.85) r += 0.0009 * (0.5 + 0.5 * Math.cos(u * Math.PI * 18));
+      if (u > 0.92) r *= Math.sqrt(Math.max(0, (1 - u) / 0.08)) * 0.4 + 0.6;
+      pts.push(new THREE.Vector2(Math.max(0.0001, r), u * L));
+    }
+    pts.unshift(new THREE.Vector2(0.0001, 0));
+    bootProto = new THREE.LatheGeometry(pts, 16);
+    bootProto.rotateX(Math.PI / 2); // along +z
+  }
+  return bootProto.clone();
 };
 
 const handleGeometry = () => {
@@ -545,10 +565,10 @@ const makeFactory =
     scene.add(glowMesh);
 
     // Patch cables on the switches: two bundle variants (one per rack).
-    const cableBlue = new THREE.MeshStandardMaterial({ color: "#2A4A9A", roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 });
+    const cableBlue = new THREE.MeshStandardMaterial({ color: "#2A4A9A", roughness: 0.48, metalness: 0.0, envMapIntensity: 0.8 });
     const cableRed = new THREE.MeshStandardMaterial({ color: "#B3201A", roughness: 0.42, metalness: 0.0, envMapIntensity: 1.2 });
     const plugMat = new THREE.MeshPhysicalMaterial({
-      color: "#C8D4E0",
+      color: "#A8C0E8",
       roughness: 0.15,
       metalness: 0,
       transparent: true,
