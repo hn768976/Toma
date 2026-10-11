@@ -74,6 +74,9 @@ type CamCfg = {
   ledGain?: number; // LED brightness and glow size multiplier
   bloom?: number;
   greenGain?: number; // dims green LEDs (3C reads mostly red / amber)
+  glowScale?: number; // LED halo size
+  vignette?: number;
+  underLight?: number; // cool light from below the camera (3C)
   haze?: { color: THREE.ColorRepresentation; density: number };
 };
 
@@ -139,6 +142,9 @@ const CAMS: Record<RackVersion, CamCfg> = {
     exposure: 0.66,
     ledGain: 2.2,
     greenGain: 0.35,
+    glowScale: 0.85,
+    vignette: 0.3,
+    underLight: 0.5,
     bloom: 0.45,
     // Cool blue distance haze: the far racks fade into blue-lit darkness.
     haze: { color: "#0C1A33", density: 0.22 },
@@ -507,7 +513,7 @@ const makeFactory =
     leds.forEach((l, i) => ledAttr.set(l.d, i * 4));
     const ledUniforms = {
       uFrame: { value: 0 },
-      glowSize: { value: 16 * Math.min(1.25, cfg.ledGain ?? 1) },
+      glowSize: { value: 16 * (cfg.glowScale ?? Math.min(1.25, cfg.ledGain ?? 1)) },
       ledGain: { value: cfg.ledGain ?? 1 },
       greenGain: { value: cfg.greenGain ?? 1 },
     };
@@ -572,13 +578,18 @@ const makeFactory =
     scene.add(slide);
     scene.add(slide.target);
 
+    // 3C: a cool light from low in front, so the near rows and the fin
+    // edges catch light and the frame brightens toward the bottom.
+    const under = new THREE.DirectionalLight(0xdfe6f2, cfg.underLight ?? 0);
+    under.position.set(2.2, -2.2, 1.0);
+    if (cfg.underLight) scene.add(under);
     if (cfg.haze) scene.fog = new THREE.FogExp2(new THREE.Color(cfg.haze.color).getHex(), cfg.haze.density);
     const camera = new THREE.PerspectiveCamera(cfg.fov, width / height, 0.02, 40);
     const post = new PostChain(renderer, width, height, {
       dof: cfg.post.dof,
       bloom: { threshold: 1.2, knee: 0.6, intensity: cfg.bloom ?? 0.38 },
       grade: { exposure: cfg.exposure ?? 1.15, tint: [1.0, 1.0, 1.01], lift: [0.003, 0.003, 0.004], saturation: 0.95, contrast: 1.1 },
-      vignette: { strength: 0.62, radius: 0.32, softness: 0.75 },
+      vignette: { strength: cfg.vignette ?? 0.62, radius: 0.32, softness: 0.75 },
       ca: cfg.post.ca ?? 0,
       grain: 0.015,
       loop: RACK_LOOP,
