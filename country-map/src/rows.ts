@@ -26,6 +26,10 @@ export type CountryRow = {
 	 * page, the map stops at this graticule-bounded neatline and the sheet beyond
 	 * is blank paper. Use it to keep things out of view (e.g. Alaska for USA). */
 	printArea?: [number, number, number, number];
+	/** Shot width relative to the reference (Mexico = 1). >1 pulls back for compact
+	 * countries so neighbours stay in view; label sizes scale with it so text keeps
+	 * its on-screen size. */
+	zoom?: number;
 	/** Place-label overrides: Natural Earth name -> printed name, or null to hide. */
 	placeNames?: Record<string, string | null>;
 	/** Camera offsets in frame widths [lateral, forward] and yaw (start, end) in

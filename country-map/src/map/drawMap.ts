@@ -33,7 +33,7 @@ const C = {
 	name: '#111111',
 };
 
-const S = {
+const BASE = {
 	name: TEX * 0.024,
 	nameSpacing: 0.035,
 	city: 88,
@@ -55,6 +55,32 @@ const S = {
 	misregister: 1,
 	maxLabels: 35,
 	maxFeaturedLabels: 33,
+};
+
+// Sizes for the row being drawn (labels x zoom, lines x sqrt(zoom)). Set at the
+// start of drawMap; drawing is synchronous so this never leaks between rows.
+let S = BASE;
+const scaledSizes = (zoom: number) => {
+	const t = Math.sqrt(zoom);
+	return {
+		...BASE,
+		name: BASE.name * zoom,
+		city: BASE.city * zoom,
+		capital: BASE.capital * zoom,
+		neighbour: BASE.neighbour * zoom,
+		dot: BASE.dot * zoom,
+		capitalSquare: BASE.capitalSquare * zoom,
+		coastLine: BASE.coastLine * t,
+		graticule: BASE.graticule * t,
+		river: BASE.river * t,
+		border: BASE.border * t,
+		borderHalo: BASE.borderHalo * t,
+		roadMajorIn: BASE.roadMajorIn * t,
+		roadMinorIn: BASE.roadMinorIn * t,
+		roadMajorOut: BASE.roadMajorOut * t,
+		roadMinorOut: BASE.roadMinorOut * t,
+		misregister: BASE.misregister,
+	};
 };
 
 const font = (weight: number, size: number) => `${weight} ${size}px "${FONT_FAMILY}"`;
@@ -136,7 +162,12 @@ const assignColours = (data: MapData, featuredIdx: number) => {
 	const rng = mulberry32(SEED_COLOURS);
 	const tie = data.countries.map(() => rng());
 	const eligible = (i: number) => i !== featuredIdx && !data.countries[i].disputed;
-	const todo = new Set([...Array(n).keys()].filter(eligible));
+	// Countries bordering the featured one go first and never get light orange
+	// (closest to the featured peach); with 3 colours for that ring, the rest
+	// still has all 4.
+	const ring = new Set(data.countries[featuredIdx].neighbours.filter(eligible));
+	const others = new Set([...Array(n).keys()].filter((i) => eligible(i) && !ring.has(i)));
+	for (const todo of [ring, others])
 	while (todo.size) {
 		let pick = -1;
 		let bestSat = -1;
@@ -155,7 +186,36 @@ const assignColours = (data: MapData, featuredIdx: number) => {
 		const touchesFeatured = data.countries[pick].neighbours.includes(featuredIdx);
 		// Light orange (index 3) is closest to the featured peach: avoid it next to the featured country.
 		const order = touchesFeatured ? [0, 1, 2, 3] : [0, 2, 1, 3];
-		colour[pick] = order.find((c) => !used.has(c) && !(touchesFeatured && c === 3)) ?? order.find((c) => !used.has(c)) ?? 0;
+		const allowed = (i: number, c: number) => !(c === 3 && data.countries[i].neighbours.includes(featuredIdx));
+		let choice = order.find((c) => !used.has(c) && allowed(pick, c));
+		if (choice === undefined) {
+			// Stuck: free a colour by recolouring the single neighbour that holds it.
+			for (const c of order.filter((c) => allowed(pick, c))) {
+				const holders = data.countries[pick].neighbours.filter((j) => colour[j] === c);
+				if (holders.length !== 1) continue;
+				const k = holders[0];
+				const kUsed = new Set(data.countries[k].neighbours.filter((j) => j !== pick).map((j) => colour[j]));
+				const alt = [0, 1, 2, 3].find((a) => a !== c && !kUsed.has(a) && allowed(k, a));
+				if (alt !== undefined) {
+					colour[k] = alt;
+					choice = c;
+					break;
+				}
+			}
+		}
+		colour[pick] = choice ?? order.find((c) => !used.has(c)) ?? 0;
+	}
+	// Min-conflicts repair (deterministic: seeded tie-breaks, fixed iteration cap).
+	const allowedC = (i: number, c: number) => !(c === 3 && data.countries[i].neighbours.includes(featuredIdx));
+	const clash = (i: number, c: number) => data.countries[i].neighbours.filter((j) => colour[j] === c).length;
+	for (let iter = 0; iter < 5000; iter++) {
+		const bad = [...Array(n).keys()].filter((i) => eligible(i) && (clash(i, colour[i]) > 0 || !allowedC(i, colour[i])));
+		if (!bad.length) break;
+		const i = bad[Math.floor(rng() * bad.length)];
+		const options = [0, 1, 2, 3].filter((c) => allowedC(i, c) && c !== colour[i]);
+		const best = Math.min(...options.map((c) => clash(i, c)));
+		const ties = options.filter((c) => clash(i, c) === best);
+		colour[i] = ties[Math.floor(rng() * ties.length)];
 	}
 	return colour;
 };
@@ -200,7 +260,7 @@ const layoutLabels = (ctx: CanvasRenderingContext2D, row: CountryRow, data: MapD
 		if (!vc) return;
 		const f = font(600, S.neighbour);
 		const w = measure(ctx, text, f, S.neighbour, S.neighbourSpacing);
-		if (vc.distance < S.neighbour * 0.9 || vc.area < w * S.neighbour * 4) return;
+		if (vc.distance < S.neighbour * 0.9 || vc.area < w * S.neighbour * 4 || w / 2 > vc.distance * 2.5) return;
 		const box: Box = [vc.xy[0] - w / 2 - 30, vc.xy[1] - S.neighbour * 0.42, vc.xy[0] + w / 2 + 30, vc.xy[1] + S.neighbour * 0.42];
 		if (!inTex(box) || taken.some((t) => overlaps(t, box))) return;
 		taken.push(box);
@@ -211,7 +271,8 @@ const layoutLabels = (ctx: CanvasRenderingContext2D, row: CountryRow, data: MapD
 	const rename = (name: string): string => {
 		const o = row.placeNames?.[name];
 		if (o !== undefined) return o as string;
-		return name;
+		// Natural Earth sometimes carries the admin unit in the name.
+		return name.replace(/\s+governorate$/i, '');
 	};
 
 	// 3. Cities: featured first (capital first), then neighbours; collision pass.
@@ -228,7 +289,8 @@ const layoutLabels = (ctx: CanvasRenderingContext2D, row: CountryRow, data: MapD
 	// are spent where they can be read.
 	const seen = (pl: (typeof projected)[number]) => {
 		const [x, y] = pl.xy!;
-		return Math.abs(x - nx) < TEX * 0.22 && y > ny - TEX * 0.2 && y < ny + TEX * 0.17;
+		const z = row.zoom ?? 1;
+		return Math.abs(x - nx) < TEX * 0.22 * z && y > ny - TEX * 0.2 * z && y < ny + TEX * 0.17 * z;
 	};
 	const featuredAll = projected.filter((pl) => pl.a3 === row.iso);
 	const featuredCities = [...featuredAll.filter(seen).sort(byImportance), ...featuredAll.filter((pl) => !seen(pl)).sort(byImportance)];
@@ -259,6 +321,9 @@ const layoutLabels = (ctx: CanvasRenderingContext2D, row: CountryRow, data: MapD
 		for (const [box, lx, ly, align] of candidates) {
 			const padded: Box = [box[0] - 36, box[1] - 14, box[2] + 36, box[3] + 14];
 			if (!inTex(padded) || taken.some((t) => overlaps(t, padded))) continue;
+			// Don't park a label next to someone else's dot: it would read as theirs.
+			const near: Box = [box[0] - 70, box[1] - 50, box[2] + 70, box[3] + 50];
+			if (dots.some((d) => d.x > near[0] && d.x < near[2] && d.y > near[1] && d.y < near[3])) continue;
 			taken.push(padded, dotBox);
 			labels.push({ text: pl.name, x: lx, y: ly, font: f, spacing: 0, colour: C.city, align, size });
 			dots.push({ x, y, capital: cap });
@@ -479,7 +544,7 @@ const drawView = (
 export type MapTextures = {
 	hi: HTMLCanvasElement;
 	lo: HTMLCanvasElement;
-	stats: { drawMs: number; cities: number; labels: number };
+	stats: { drawMs: number; cities: number; labels: number; conflicts: number };
 };
 
 /**
@@ -509,6 +574,7 @@ const fixWinding = (g: Geom): Geom => {
 /** Draws the printed atlas page for one country: hi-res centre + low-res surround. */
 export const drawMap = (row: CountryRow, data: MapData): MapTextures => {
 	const t0 = performance.now();
+	S = scaledSizes(row.zoom ?? 1);
 	for (const c of data.countries) c.geometry = fixWinding(c.geometry);
 	for (const l of data.lakes) l.geometry = fixWinding(l.geometry);
 	const p = buildProjection(row, data);
@@ -527,5 +593,13 @@ export const drawMap = (row: CountryRow, data: MapData): MapTextures => {
 	// Force rasterisation to finish before anything uploads the canvases.
 	hi.getContext('2d')!.getImageData(0, 0, 1, 1);
 	lo.getContext('2d')!.getImageData(0, 0, 1, 1);
-	return { hi, lo, stats: { drawMs: performance.now() - t0, cities: layout.cityCount, labels: layout.labels.length } };
+	// Colour-rule audit: touching neighbours sharing a colour, and light orange next to the featured country.
+	let conflicts = 0;
+	data.countries.forEach((c, i) =>
+		c.neighbours.forEach((j) => {
+			if (j > i && colours[i] >= 0 && colours[i] === colours[j]) conflicts++;
+			if (j === featuredIdx && colours[i] === 3) conflicts++;
+		}),
+	);
+	return { hi, lo, stats: { drawMs: performance.now() - t0, cities: layout.cityCount, labels: layout.labels.length, conflicts } };
 };

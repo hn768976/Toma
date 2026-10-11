@@ -49,6 +49,8 @@ const midpoint = (g) => {
 	return line[Math.floor(line.length / 2)];
 };
 
+const countryNames = new Set(L.countries.flatMap((f) => [f.properties.NAME, f.properties.NAME_EN, f.properties.ADMIN, f.properties.NAME_LONG]).filter(Boolean));
+
 fs.mkdirSync(path.join(root, 'public/data'), { recursive: true });
 
 for (const row of rows) {
@@ -85,7 +87,8 @@ for (const row of rows) {
 		places: L.places
 			.filter((f) => hits(f._bb, win))
 			.map((f) => ({
-				name: f.properties.NAME_EN || f.properties.NAME,
+				// NAME_EN is occasionally a country name (e.g. Ha'il -> "Saudi Arabia"); fall back to NAME then.
+				name: f.properties.NAME_EN && !countryNames.has(f.properties.NAME_EN) ? f.properties.NAME_EN : f.properties.NAME,
 				rank: f.properties.SCALERANK,
 				pop: f.properties.POP_MAX,
 				cls: f.properties.FEATURECLA,

@@ -20,7 +20,7 @@ const loadMap = (row: CountryRow) => {
 			]);
 			const t1 = performance.now();
 			const maps = drawMap(row, data);
-			console.log(`[map] ${row.id}: data+fonts ${(t1 - t0).toFixed(0)} ms, draw ${maps.stats.drawMs.toFixed(0)} ms, ${maps.stats.cities} cities, ${maps.stats.labels} labels`);
+			console.log(`[map] ${row.id}: data+fonts ${(t1 - t0).toFixed(0)} ms, draw ${maps.stats.drawMs.toFixed(0)} ms, ${maps.stats.cities} cities, ${maps.stats.labels} labels, ${maps.stats.conflicts} colour conflicts`);
 			return maps;
 		})();
 		cache.set(row.id, p);

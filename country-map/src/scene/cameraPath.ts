@@ -18,7 +18,9 @@ export const RACK_START = 0.84;
 
 const ASPECT = 16 / 9;
 const tanHalfV = Math.tan((CAMERA_FOV * Math.PI) / 360);
-export const CAMERA_DISTANCE = FRAME_WIDTH_AT_FOCUS / (2 * tanHalfV * ASPECT);
+/** Frame width at focus for a row (row.zoom widens the shot for compact countries). */
+export const frameWidth = (row: CountryRow) => FRAME_WIDTH_AT_FOCUS * (row.zoom ?? 1);
+const cameraDistance = (row: CountryRow) => frameWidth(row) / (2 * tanHalfV * ASPECT);
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const easeInOutCubic = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
@@ -40,14 +42,15 @@ export const shotAt = (row: CountryRow, frame: number, camera: THREE.Perspective
 	const s = easeSlide(f / (DURATION - 1));
 	const { start, end, yaw } = row.camera;
 	const base = ((row.camera.baseYaw ?? 0) * Math.PI) / 180;
-	const ox = (start[0] + (end[0] - start[0]) * s) * FRAME_WIDTH_AT_FOCUS;
-	const oz = (start[1] + (end[1] - start[1]) * s) * FRAME_WIDTH_AT_FOCUS;
+	const fw = frameWidth(row);
+	const ox = (start[0] + (end[0] - start[0]) * s) * fw;
+	const oz = (start[1] + (end[1] - start[1]) * s) * fw;
 	const yawRad = base + ((yaw[0] + (yaw[1] - yaw[0]) * s) * Math.PI) / 180;
 	const el = (CAMERA_ELEVATION * Math.PI) / 180;
 
 	// Offsets are in the camera's own frame (lateral, forward), turned by baseYaw.
 	const target = new THREE.Vector3(ox, 0, oz).applyAxisAngle(new THREE.Vector3(0, 1, 0), base);
-	const back = new THREE.Vector3(0, Math.sin(el), Math.cos(el)).multiplyScalar(CAMERA_DISTANCE);
+	const back = new THREE.Vector3(0, Math.sin(el), Math.cos(el)).multiplyScalar(cameraDistance(row));
 	back.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawRad);
 	const position = target.clone().add(back);
 
