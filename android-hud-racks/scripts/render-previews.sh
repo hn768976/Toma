@@ -24,14 +24,16 @@ mkdir -p "$OUT/frames" "$OUT/timing"
 for c in "${COMPS[@]}"; do
   n=${NAME[$c]}
   seq="$OUT/frames/$n"
-  rm -rf "$seq"
-  start=$(date +%s.%N)
-  npx remotion render "$c" --sequence --image-format=png --scale=0.3333333333333333 \
-    --concurrency=${CONCURRENCY:-2} "$seq" > "$OUT/timing/$n.log" 2>&1
-  end=$(date +%s.%N)
-  frames=$(ls "$seq" | wc -l)
-  echo "$c $frames frames $(echo "$end - $start" | bc) s" | tee -a "$OUT/timing/summary.txt"
-  first=$(ls "$seq" | head -1)
+  if [ "${SKIP_RENDER:-0}" != 1 ]; then
+    rm -rf "$seq"
+    start=$(date +%s.%N)
+    npx remotion render "$c" --sequence --image-format=png --scale=0.3333333333333333 \
+      --concurrency=${CONCURRENCY:-2} "$seq" > "$OUT/timing/$n.log" 2>&1
+    end=$(date +%s.%N)
+    frames=$(ls "$seq" | wc -l)
+    echo "$c $frames frames $(echo "$end - $start" | bc) s" | tee -a "$OUT/timing/summary.txt"
+  fi
+  first=$(ls "$seq" | sed -n 1p)
   digits=$(echo "$first" | sed -E 's/element-([0-9]+)\.png/\1/' | tr -d '\n' | wc -c)
   ffmpeg -v error -y -framerate 30 -i "$seq/element-%0${digits}d.png" \
     -c:v libx264 -crf 16 -pix_fmt yuv420p -preset slow -movflags +faststart \

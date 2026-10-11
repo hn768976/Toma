@@ -79,7 +79,7 @@ export const PANELS: PanelSpec[] = [
   // Filler text columns, softly out of focus.
   {
     name: "text",
-    z: -0.5,
+    z: -0.95,
     u: [0.36, 0.72],
     v: [0.04, 0.64],
     intensity: 0.9,
@@ -295,7 +295,7 @@ export const PANELS: PanelSpec[] = [
   // Bottom left: circle buttons, close to camera so slightly soft.
   {
     name: "buttons",
-    z: 0.45,
+    z: 0.75,
     u: [0.0, 0.2],
     v: [0.84, 1.02],
     intensity: 3.2,

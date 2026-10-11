@@ -100,9 +100,12 @@ void main() {
   float g = gridLine(uv * vec2(16.0, 9.0), 2.0, 0.6);
   vec2 f = abs(fract(gp - 0.5) - 0.5);
   float plus = (step(f.x, 0.012) * step(f.y, 0.07) + step(f.y, 0.012) * step(f.x, 0.07));
-  col += cGrid * (g * 0.2 + min(plus, 1.0) * 0.35) * (0.4 + 0.6 * glow + 0.3);
+  col += cGrid * (g * 0.12 + min(plus, 1.0) * 0.3) * (0.3 + 0.7 * glow);
   vec2 d = (uv - 0.5) * vec2(1.6, 1.2);
-  col *= 1.0 - 0.5 * smoothstep(0.35, 0.95, length(d));
+  col *= 1.0 - 0.6 * smoothstep(0.3, 0.95, length(d));
+  // Toward a desaturated navy-black away from the light.
+  float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  col = mix(vec3(l) * vec3(0.8, 0.9, 1.25), col, 0.45 + 0.55 * glow);
   gl_FragColor = vec4(col * fade, 1.0);
 }
 `;
@@ -255,8 +258,8 @@ const SUBS: Sub[] = [
   // Left edge ring gauge with a counter.
   {
     name: "ring-left",
-    x: 80,
-    y: 380,
+    x: 330,
+    y: 360,
     w: 600,
     h: 520,
     delay: 10,
@@ -351,12 +354,12 @@ const SUBS: Sub[] = [
   // Bar indicator stack, lower left.
   {
     name: "bar-stack",
-    x: 600,
+    x: 700,
     y: 1860,
     w: 1050,
     h: 520,
     delay: 34,
-    intensity: 1.2,
+    intensity: 0.85,
     drawStatic: (ctx) => {
       triangle(ctx, 30, 30, 26, 1, HUD.white);
       textLines(ctx, 0, 455, 28, ["BETA     ALPHA"], ink(0.8), "inter");
@@ -396,6 +399,22 @@ const SUBS: Sub[] = [
         },
       },
     ],
+  },
+  // Tiny text column at the right edge.
+  {
+    name: "labels-right",
+    x: 4300,
+    y: 420,
+    w: 420,
+    h: 700,
+    delay: 40,
+    intensity: 1.0,
+    drawStatic: (ctx) => {
+      ctx.font = inter(30, 500);
+      ctx.fillStyle = ink(0.85);
+      ctx.textBaseline = "top";
+      ["Def Mdl", "else if", "Def Mxt", "loop 4", "Def Cnt", "else", "ret 0"].forEach((t, i) => ctx.fillText(t, 0, i * 52));
+    },
   },
   // Small side labels.
   {

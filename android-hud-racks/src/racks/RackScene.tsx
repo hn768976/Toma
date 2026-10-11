@@ -259,13 +259,16 @@ const buildCables = (t: UnitType, seed: number) => {
       new THREE.Vector3(ax, ay, z0),
       new THREE.Vector3(ax, ay + 0.012, z0 + 0.02),
       new THREE.Vector3(ax - 0.006 + lean * 0.3, ay + h * 0.45, z0 + out),
+      // A round crown: three points around the top of the loop.
+      new THREE.Vector3(ax + (mid - ax) * 0.08 + lean * 0.8, Math.max(ay, by) + h * 0.9, z0 + out * 0.88),
       new THREE.Vector3(mid + lean, Math.max(ay, by) + h, z0 + out * 0.8),
+      new THREE.Vector3(bx + (mid - bx) * 0.08 + lean * 0.8, Math.max(ay, by) + h * 0.9, z0 + out * 0.88),
       new THREE.Vector3(bx + 0.006 + lean * 0.3, by + h * 0.45, z0 + out),
       new THREE.Vector3(bx, by + 0.012, z0 + 0.02),
       new THREE.Vector3(bx, by, z0),
     ];
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
-    blue.push(new THREE.TubeGeometry(curve, 96, 0.0085, 10, false));
+    blue.push(new THREE.TubeGeometry(curve, 128, 0.0085, 10, false));
     plugAt(ax, ay, bootsBlue);
     plugAt(bx, by, bootsBlue);
   }

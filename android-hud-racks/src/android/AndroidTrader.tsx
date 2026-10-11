@@ -30,19 +30,16 @@ varying vec2 vUv;
 void main() {
   vec2 uv = vUv;
   if (flip > 0.5) uv.x = 1.0 - uv.x;
-  // Steel-blue gradient: darker low and right, lighter behind the head,
-  // with a pale haze high in the HUD area.
-  float g = clamp(0.45 * uv.y + 0.6 * (1.0 - uv.x) - 0.1, 0.0, 1.0);
-  vec3 col = mix(cDark * 0.35, cLight, g * g);
-  // Pale cyan haze over the upper middle, behind the head and text.
-  float h = exp(-pow(length((uv - vec2(0.5, 0.78)) * vec2(1.5, 1.9)), 2.0) * 2.2);
-  col += cHaze * h * 1.0;
-  // Near-black lower right corner.
+  // Deep navy everywhere, rising to steel blue behind the head and up top.
+  float g = clamp(0.55 * uv.y + 0.55 * (1.0 - uv.x) - 0.15, 0.0, 1.0);
+  vec3 col = mix(cDark * 0.22, cLight * 0.75, g * g);
+  // A strong pale-cyan bloom over the upper middle.
+  float h = exp(-pow(length((uv - vec2(0.5, 0.9)) * vec2(1.5, 2.0)), 2.0) * 3.0);
+  col += cHaze * h * 0.75;
+  // Near-black navy toward the lower right.
   float dc = length((uv - vec2(1.0, 0.0)) * vec2(0.8, 1.2));
-  col *= mix(0.25, 1.0, smoothstep(0.1, 0.7, dc));
-  float h2 = exp(-pow(length((uv - vec2(0.16, 0.55)) * vec2(1.6, 1.4)), 2.0) * 3.0);
-  col += cLight * h2 * 0.35;
-  gl_FragColor = vec4(col * 0.48, 1.0);
+  col *= mix(0.3, 1.0, smoothstep(0.1, 0.75, dc));
+  gl_FragColor = vec4(col, 1.0);
 }
 `;
 const BG_VERT = /* glsl */ `
@@ -132,7 +129,7 @@ const makeFactory =
       uniforms: {
         cDark: { value: lin("#0A1A30") },
         cLight: { value: lin("#2A4A6A") },
-        cHaze: { value: lin("#7AAACC") },
+        cHaze: { value: lin("#8ABCE0") },
         flip: { value: flip ? 1 : 0 },
       },
       depthWrite: true,
@@ -300,6 +297,15 @@ const makeFactory =
       { widthPx: 2 * px, color: "#F4FAFF", intensity: 0.55, resolution: res },
     );
     head.add(guide.mesh);
+    // Solid thin reticles around both eyes.
+    const reticles = assets.header.eyes.map((e) => {
+      const g = new THREE.Group();
+      g.position.set(e.x, e.y, e.z + 0.075);
+      const l = new FatLines(circleSegments(0.085, 96), { widthPx: 2.4 * px, color: "#F4FAFF", intensity: 1.1, resolution: res });
+      g.add(l.mesh);
+      head.add(g);
+      return g;
+    });
 
     // HUD panels.
     const panels: HudPanel[] = [];
@@ -362,9 +368,9 @@ const makeFactory =
     });
 
     const post = new PostChain(renderer, width, height, {
-      dof: { aperture: 26, maxCoc: 20, nearScale: 1.3 },
+      dof: { aperture: 34, maxCoc: 24, nearScale: 1.4 },
       bloom: { threshold: 1.0, knee: 0.5, intensity: 0.32 },
-      grade: { exposure: 1.0, tint: [0.97, 1.0, 1.03], lift: [0.0, 0.0, 0.006], saturation: 1.0, contrast: 1.1 },
+      grade: { exposure: 1.0, tint: [0.95, 1.0, 1.06], lift: [0.0, 0.0, 0.0], saturation: 1.12, contrast: 1.12 },
       vignette: { strength: 0.55, radius: 0.38, softness: 0.65 },
       grain: 0.015,
       loop: LOOP,
@@ -398,6 +404,7 @@ const makeFactory =
         ring3.material.uniforms.uTime.value = t;
         rings.lookAt(camera.position);
         rings2.lookAt(camera.position);
+        for (const r of reticles) r.lookAt(camera.position);
         for (const p of panels) p.update(frame);
 
         // Flare positions follow the eyes on screen.
