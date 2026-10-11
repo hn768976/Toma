@@ -1,0 +1,8 @@
+node_modules
+out
+raw
+build
+.scratch
+*.zip
+public/_sheet
+.DS_Store
