@@ -48,17 +48,8 @@ npx remotion render GlowRings-Violet          out/GlowRings_Violet.mp4          
 npx remotion render GlowRings-Teal            out/GlowRings_Teal.mp4            --gl=angle
 ```
 
-For the Glow Rings files, the previews were encoded with x264 `-tune grain` (see
-Banding). Remotion has no `-tune` switch, so to get the same at 4K render a PNG
-sequence and encode it with ffmpeg:
-
-```bash
-npx remotion render GlowRings-Magenta out/seq/GlowRings-Magenta --sequence --image-format=png --gl=angle
-ffmpeg -framerate 30 -i out/seq/GlowRings-Magenta/element-%03d.png \
-  -c:v libx264 -preset slow -crf 16 -tune grain -pix_fmt yuv420p -r 30 -an out/GlowRings_Magenta.mp4
-```
-
-(`scripts/render-previews.sh` does exactly this, at 720p, for all eight.)
+All eight use the same encoder settings (H.264, `yuv420p`, CRF 16 from
+`remotion.config.ts`); no special Glow Rings encode is needed (see Banding).
 
 ### Stills at 6000×3375
 
@@ -82,7 +73,47 @@ frame sequence and every mp4).
 
 ## Render times
 
-TIMINGS_PLACEHOLDER
+Measured in this sandbox: **no GPU**, so Chromium ran WebGL2 on SwiftShader (software)
+on 4 vCPUs, concurrency 1. These are worst-case numbers; on a machine with a GPU the
+shader work drops by orders of magnitude and frame capture/PNG encoding dominates.
+
+**720p (1280×720), per frame** (full 600-frame renders, final code):
+
+| Composition | s / frame | 600-frame render |
+|---|---|---|
+| MetaBlobs-NeonBlueMagenta | 0.90 | 538 s |
+| MetaBlobs-WhiteMatte | 0.73 | 440 s |
+| MetaBlobs-SunsetCoral | 0.82 | 494 s |
+| WaveFins-Blue | 3.7 | 2239 s |
+| WaveFins-Copper | 3.8 | 2284 s |
+| GlowRings-Magenta | 0.79 | 472 s |
+| GlowRings-Violet | 0.78 | 467 s |
+| GlowRings-Teal | 0.84 | 503 s |
+
+**Real 4K frames** (3840×2160, frames 300–302; "GPU" = WebGL render + readback measured
+in the page, "wall" = marginal wall-clock per frame incl. screenshot + PNG):
+
+| Composition | GPU-side render | wall clock / frame |
+|---|---|---|
+| **1A** MetaBlobs-NeonBlueMagenta (24-blob raymarch + glow + bloom) | **6.0–6.6 s** | 7.1 s |
+| **2A** WaveFins-Blue (fins + MSAA + 80-tap gather DoF + bloom) | **24.6–25.5 s** | 25.2 s |
+| 3A GlowRings-Magenta (for reference) | 5.0 s | 5.7 s |
+
+1A is under the ~8 s threshold, so the per-tile blob culling was not needed: the
+per-ray bounding-sphere culling already limits each ray to the 0–3 blobs it can touch,
+and at 4K about half of the frame time is the screenshot/PNG path, not the raymarch.
+
+**4K estimate per composition** (600 frames, this software-GL sandbox; a GPU machine will be
+much faster):
+
+| Composition | estimate |
+|---|---|
+| MetaBlobs (each of 3) | ~65–75 min |
+| WaveFins (each of 2) | ~4.2 h |
+| GlowRings (each of 3) | ~55–60 min |
+
+Raising `Config.setConcurrency` helps only when the GPU isn't the bottleneck; on SwiftShader
+one tab already uses every core.
 
 ## Determinism
 
@@ -181,8 +212,73 @@ use them.
 
 ## Banding
 
-BANDING_PLACEHOLDER
+Checked on frames **decoded from the encoded mp4s** (not the renderer output), with
+`scripts/banding.py`: profiles averaged over a 9-px strip, plus a contrast-stretched copy
+of the frame so any steps become obvious.
+
+| Area | Result |
+|---|---|
+| Glow Rings, ring peak → black (all 3 colours, 3.6× stretch) | smooth; largest 1-px step in the averaged profile 3.9–4.3 codes (grain level), no plateaus or contour rings |
+| White Matte background (4.6× stretch) | smooth; the lighter centre falls off without contours; max step 4.9 codes |
+| Neon glow halo (1A), blob edge → black | blue channel 165 → 1 over ~36 px in monotone steps; no plateaus |
+| Wave Fins gaps | 44–51 % of the frame below 8/255; mean inside those 1.5, max 8 — clean black (grain faded below 3 % luminance, dither off below half a code) |
+
+Grain: 2.5 % Glow Rings (not faded in the darks), 1.5 % Meta Blobs, 1.5 % Wave Fins (faded
+to zero below 3 % luminance); ±1/255 triangular dither in every final pass; both are
+integer hashes of pixel position and `frame % 600`.
+
+**Glow Rings encoder fix: none needed.** The first previews were encoded with x264
+`-tune grain` as a precaution. A side-by-side test on 60 frames encoded with and without
+it showed no banding in either (max step 4.0 vs 4.4 codes, visually identical at 3.6×
+stretch); the plain encode is ~23 % smaller, so the final previews use the plain settings
+(CRF 16, no `-tune`). Grain was not raised and CRF 14 was not needed.
+
+Brightest peaks (the top hot spot, blurred to ignore grain): 36–43 % in the brightest
+channel, i.e. 20 % (Magenta, Violet) and 28 % (Teal) as Rec.709-weighted luma of the
+encoded values. That is a little under the 30–40 % the brief suggested: the reference
+reviews repeatedly found the rings too bright, so they were dimmed until they read like the
+references. Raise the `0.066` ring gain in `GlowRings.tsx` to lift them.
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+Verify loop as run on the final 720p previews (`scripts/verify.sh`, `scripts/banding.py`,
+`scripts/motion.py`):
+
+- [x] **Step 1 – files:** all 8 are h264, `yuv420p`, 1280×720, 30/1, 600 frames, 20.0 s,
+      video stream only (no audio).
+- [x] **Step 2 – loop:** 601-frame variant (`--props='{"loopCheck":true}'`), frame 600 ==
+      frame 0 byte for byte for all 8. The motion is continuous across the seam: the
+      599→600 change equals an ordinary 0→1 step (ratio 0.97–1.00).
+- [x] **Step 3 – determinism:** frame 300 rendered alone from a cold start == frame 300
+      of the full render, byte for byte, for all 8.
+- [x] **Step 4 – banding:** see Banding; smooth everywhere, Wave Fins gaps clean black.
+- [x] **Step 5 – contact sheets:** blobs (spheres, peanuts and triples at several sizes,
+      rising, merging/splitting, two-colour lighting + halo / white with thin rims and
+      softer distant blobs), fins (row of thin curved fins, S/C/diagonal shapes over the
+      loop, edge highlights, travelling light, black gaps, soft near/far fins), rings
+      (crescents from above-frame centres, expanding, faint inner tint, dark). No text.
+- [x] **Step 6 – motion:** frame-to-frame change over 2 s around frame 300 and over the
+      full loop. Blobs and rings: max ≤ 1.19× median (no pops, flicker or pulsing); fins:
+      the step size varies smoothly with the camera speed (largest change between
+      neighbouring steps 0.29 on a median of 1.8, no jumps). The DoF edge-ghosting found in
+      an earlier version was fixed (mip-prefiltered taps).
+- [x] **Step 7 – self comparison** with the references (1A, 1B, 2A, 2B, 3A, 3B) after
+      every tuning pass.
+- [~] **Step 8 – independent comparison** (fresh agents, given only the two frames and
+      the fixed instruction) for 1A, 1B, 2A, 2B, 3A, over three rounds; each round's
+      findings drove the next change.
+      - 1A, 1B, 3A: the remaining notes are mostly layout (the reference frames are
+        different moments of a different random arrangement), the requested film grain,
+        and, for 1B, the reference's glassy translucency, which goes beyond the matte
+        porcelain the brief describes.
+      - **2A / 2B: not fully matched after the third attempt.** Reviewers still report:
+        fins that curve into arches on the right instead of the reference's evenly
+        spaced backward-bowing crescent blades with long tails to the lower left; uneven
+        width and spacing from perspective; blue lighter and less saturated / copper
+        more rust-orange than the reference's deep royal blue / champagne-silver; and
+        faint stacked thin lines along some fin rims in the DoF.
+- [x] 4K timing of 1A (≤ 8 s GPU-side, so no tile culling) and 2A recorded; 720p timing
+      for all 8 recorded.
+- [x] `npm install && npx remotion studio` from a clean copy of the zip: installs, type
+      checks, the Studio serves, and all 8 compositions bundle and list.
+- [x] No text, logos or brands; no MCP servers; everything generated in code.
