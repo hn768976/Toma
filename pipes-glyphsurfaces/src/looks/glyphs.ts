@@ -113,10 +113,12 @@ void main() {
       if (on > 0.6) continue;
       float len = 3.0 + float((lh >> 8u) % 6u);
       float trips = 1.0 + float((lh >> 12u) % 2u);
-      float p0 = float((lh >> 16u) % 64u);
+      float p0 = float((lh >> 16u) % 64u) + float((lh >> 22u) & 255u) / 256.0;
       float head = mod(p0 - trips * uGrid.y * t, uGrid.y);
-      float d = mod(aCell.y - head, uGrid.y);
-      if (d < len) streak = max(streak, 1.0 - d / len * 0.65);
+      float d = mod(aCell.y - head + 1.0, uGrid.y) - 1.0;
+      // soft-edged run: cells fade in at the head and out at the tail (no popping)
+      float w = smoothstep(-1.0, 0.0, d) * (1.0 - smoothstep(len - 1.0, len, d));
+      streak = max(streak, w * (1.0 - clamp(d, 0.0, len) / len * 0.65));
     }
   } else if (aInfo.w > 1.5) {
     // occasional white flares, whole-cycle pulses
@@ -185,6 +187,8 @@ void main() {
     col = mix(col, gc, mask * tile);
   }
   float fog = 1.0 - exp(-uFogDensity * vDist);
+  // the floor's far edge (it moves one patch per loop) is always faded out
+  if (uMode == 0) fog = max(fog, smoothstep(230.0, 290.0, vDist));
   col = mix(col, uFogColor, fog);
   outColor = vec4(col, vDepth / uDepthScale);
 }
@@ -204,7 +208,7 @@ export const glyphFactory: LookFactory<GlyphVersion> = (renderer, v) => {
 
   if (v.kind === "floor" || v.kind === "wave") {
     const floor = v.kind === "floor";
-    const nx = floor ? 96 : 120, ny = floor ? 64 : 80, patches = floor ? 5 : 1;
+    const nx = floor ? 96 : 120, ny = floor ? 64 : 80, patches = floor ? 8 : 1;
     const pitch = floor ? 1.12 : 1.1;
     const count = nx * ny * patches;
     const geo = new THREE.InstancedBufferGeometry();
