@@ -70,7 +70,22 @@ back to SwiftShader (CPU), which works but is slow.
 
 ## Render time
 
-__RENDER_TIME__
+Measured on the build machine: 4 vCPUs, **no GPU** (ANGLE falls back to
+SwiftShader, i.e. WebGL on the CPU), `FlagChart-SouthKorea-Decline`, PNG
+frames, start-up time subtracted. Each frame is three passes (mirror
+reflection, main scene with 4× MSAA and PCSS shadows, post with depth of field).
+
+| Resolution | One worker | Full 12 s clip, 4 workers |
+|-----------|-----------|---------------------------|
+| 720p (`--scale=0.333…`) | **2.27 s / frame** | __CLIP_TIME__ incl. encoding |
+| 1080p (`--scale=0.5`) | 4.47 s / frame | — |
+| **4K (estimate)** | **≈ 16 s / frame** | ≈ 1.6 h per composition, ≈ 80 h for all 50 |
+
+Time grows roughly linearly with pixel count (720p → 1080p: 2.25× pixels, 2.0×
+time); 4K (9× the pixels of 720p) is extrapolated, not measured — 4K was not
+rendered here. SwiftShader already uses every core, so Remotion concurrency
+barely helps on a CPU-only machine. **Render the 4K set on a machine with a
+GPU**: expect roughly 0.5–1.5 s per 4K frame there.
 
 ## Scene (shared by all 50 — `src/scene/`)
 
