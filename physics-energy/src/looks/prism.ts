@@ -29,8 +29,8 @@ const SPECTRUM = spectrumSamples(24).map((s) => ({
 }));
 const MEAN_DN = SPECTRUM.reduce((a, s) => a + s.spread, 0) / SPECTRUM.length;
 const NSUB = 7;
-const BEAM_R = 0.11;
-const BEAM_DIR = new THREE.Vector3(0.75, -0.62, -0.12).normalize();
+const BEAM_R = 0.16;
+const BEAM_DIR = new THREE.Vector3(0.55, -0.82, -0.1).normalize();
 const SRC_DIST = 9;
 
 // outward face planes n.x = c in prism space (3 sides + 2 caps)
@@ -293,8 +293,8 @@ void main() {
     float d = segDist(vW, segA[i], segB[i]);
     glow += segW[i] * (exp(-d * d / 0.012) * 1.2 + exp(-d * d / 0.15) * 0.35);
   }
-  vec3 tint = vec3(0.75, 0.85, 1.0);
-  vec3 c = tint * (0.006 + fres * 0.12) + vec3(spec) + vec3(0.9, 0.95, 1.0) * glow;
+  vec3 tint = vec3(0.6, 0.85, 1.0);
+  vec3 c = tint * (0.02 + fres * 0.35) + vec3(spec) + vec3(0.8, 0.92, 1.0) * glow;
   c *= mix(1.0, 0.45, backFace);
   fragColor = vec4(c, 1.0);
 }`;
@@ -328,7 +328,7 @@ export const createPrism = () => (gl: THREE.WebGLRenderer, w: number, h: number)
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
   const cam = new THREE.PerspectiveCamera(35, w / h, 0.05, 100);
-  cam.position.set(0.15, 0.05, 4.9);
+  cam.position.set(0.15, 0.05, 6.6);
   cam.lookAt(0.15, -0.05, 0);
   cam.updateMatrixWorld();
 
@@ -365,9 +365,9 @@ export const createPrism = () => (gl: THREE.WebGLRenderer, w: number, h: number)
     return p;
   };
   const edgeGeo = buildRibbonGeometry(edges.map((e) => ({ p: subdiv(e), color: [0.85, 0.92, 1.0] })));
-  const fade: [number, number, number] = [4.3, 5.5, 0.25];
-  const edgeCore = new THREE.Mesh(edgeGeo, ribbonMaterial({ width4k: 3, pxScale, res, mode: "solid", additive: true, intensity: 0.7, depthTest: false, depthFade: fade }));
-  const edgeGlow = new THREE.Mesh(edgeGeo, ribbonMaterial({ width4k: 14, pxScale, res, mode: "glow", additive: true, intensity: 0.25, depthTest: false, depthFade: fade }));
+  const fade: [number, number, number] = [6.0, 7.2, 0.3];
+  const edgeCore = new THREE.Mesh(edgeGeo, ribbonMaterial({ width4k: 2.5, pxScale, res, mode: "solid", additive: true, intensity: 0.28, depthTest: false, depthFade: fade }));
+  const edgeGlow = new THREE.Mesh(edgeGeo, ribbonMaterial({ width4k: 14, pxScale, res, mode: "glow", additive: true, intensity: 0.12, depthTest: false, depthFade: fade }));
   [edgeGlow, edgeCore].forEach((m, i) => { m.renderOrder = 4 + i; m.frustumCulled = false; prism.add(m); });
 
   const post = new Post(gl, w, h, {
@@ -405,7 +405,7 @@ export const createPrism = () => (gl: THREE.WebGLRenderer, w: number, h: number)
           if (s) {
             u.segA.value[i].copy(s.a);
             u.segB.value[i].copy(s.a).addScaledVector(s.d, s.len);
-            u.segW.value[i] = Math.min(0.35, s.w * 24 * 0.18);
+            u.segW.value[i] = Math.min(0.4, s.w * 24 * 0.2);
           } else u.segW.value[i] = 0;
         }
       }
@@ -414,14 +414,17 @@ export const createPrism = () => (gl: THREE.WebGLRenderer, w: number, h: number)
           case 0: // incoming white beam: soft volumetric + hot core + blue haze
             beams.add(s.a, s.d, s.len, [1, 1, 1], s.w * 0.6, 0.12, 0.0, 0);
             beams.add(s.a, s.d, s.len, [1, 1, 1], s.w * 1.1, 0.032, 0.0, 0);
-            beams.add(s.a, s.d, s.len, HAZE, s.w * 0.012, 0.22, 0.0, 0);
+            beams.add(s.a, s.d, s.len, HAZE, s.w * 0.03, 0.22, 0.0, 0);
+            // haze cone that opens toward the prism
+            beams.add(s.a, s.d, s.len, [0.85, 0.9, 1.0], s.w * 0.12, 0.04, 0.022, 0);
             break;
           case 4: // part of the beam that misses the prism
             beams.add(s.a, s.d, s.len, [1, 1, 1], s.w * 0.55, 0.05, 0.0, 0);
             beams.add(s.a, s.d, s.len, [1, 1, 1], s.w * 1.1, 0.032, 0.0, 0);
             break;
           case 1: // spectral exit rays
-            beams.add(s.a, s.d, s.len, s.rgb, s.w * 2.0, 0.028, 0.006 + 0.014 * (s.spread ?? 1), 14);
+            beams.add(s.a, s.d, s.len, s.rgb, s.w * 2.0, 0.04, 0.008 + 0.014 * (s.spread ?? 1), 14);
+            if (s.w > 0.004) beams.add(s.a, s.d, s.len, HAZE, s.w * 0.04, 0.2, 0.05, 8);
             break;
           case 2: // inside the glass
             beams.add(s.a, s.d, s.len, s.rgb, s.w * 0.6, 0.03, 0.0, 0);

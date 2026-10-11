@@ -59,7 +59,7 @@ void main() {
       vec3 n = vec3(n2.x, -n2.y, nz);
       float diff = max(dot(n, normalize(vec3(-0.4, 0.6, 0.7))), 0.0);
       float spec = pow(max(dot(n, normalize(vec3(-0.3, 0.5, 1.0))), 0.0), 24.0);
-      col = col * (0.55 + 0.6 * diff) + spec * 0.35;
+      col = col * (0.75 + 0.35 * diff) + spec * 0.04;
     }
   }
   if (a <= 0.002) discard;

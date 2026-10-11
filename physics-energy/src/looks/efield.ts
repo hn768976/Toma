@@ -16,6 +16,8 @@ export interface EFieldParams {
 const CHARGE_X = 0.55; // world units; frame is 2 units tall
 const DISC_R = 0.05; // 2.5 % of frame height
 const PALETTE = ["#9AE84A", "#3AD8F0", "#9A5AF0", "#FF7A6A"].map((c) => new THREE.Color(c));
+// palette order by line index: green-led, like the reference's mood
+const SEQ = [0, 1, 0, 2, 0, 1, 0, 3];
 const N_SEEDS = 20;
 // Lines are followed far beyond the frame, so a line that sweeps off-screen
 // comes back in and ends on the negative charge, as the physics requires.
@@ -30,7 +32,8 @@ const visibleRuns = (pts: V3[]) => {
   const runs: V3[][] = [];
   let cur: V3[] = [];
   for (const q of pts) {
-    if (Math.abs(q[0]) < 1.95 && Math.abs(q[1]) < 1.12) cur.push(q);
+    // particles float in the central region between and around the charges
+    if (Math.abs(q[0]) < 1.05 && Math.abs(q[1]) < 0.95) cur.push(q);
     else if (cur.length) { runs.push(cur); cur = []; }
   }
   if (cur.length) runs.push(cur);
@@ -65,7 +68,7 @@ const traceLines = (p: EFieldParams): TracedLine[] => {
         maxSteps: 60000,
       });
       const r = resampleAdaptive(pts, 0.006, 0.25, inFrame);
-      out.push({ pts: r, color: PALETTE[idx % PALETTE.length], segs: visibleRuns(r) });
+      out.push({ pts: r, color: PALETTE[SEQ[idx % SEQ.length]], segs: visibleRuns(r) });
       idx++;
     }
   }
@@ -90,7 +93,7 @@ const traceLines = (p: EFieldParams): TracedLine[] => {
       });
       if (hitPositive) continue;
       const r = resampleAdaptive(pts.reverse(), 0.006, 0.25, inFrame); // stored along E (toward the -)
-      out.push({ pts: r, color: PALETTE[idx % PALETTE.length], segs: visibleRuns(r) });
+      out.push({ pts: r, color: PALETTE[SEQ[idx % SEQ.length]], segs: visibleRuns(r) });
       idx++;
     }
   }
@@ -109,15 +112,15 @@ void main() {
   float r = length(q) * 4.0;   // in disc radii
   float aa = fwidth(r);
   float core = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, r);
-  float ring1R = 1.38 + 0.06 * pulse;
-  float ring2R = 1.78 + 0.12 * pulse;
+  float ring1R = 1.5 + 0.06 * pulse;
+  float ring2R = 2.05 + 0.12 * pulse;
   float ring1 = 1.0 - smoothstep(0.0, 0.07 + aa, abs(r - ring1R));
   float ring2 = (1.0 - smoothstep(0.0, 0.04 + aa, abs(r - ring2R))) * (0.55 + 0.25 * pulse);
   // dashed outer ring like a HUD tick ring
   float ang = atan(q.y, q.x);
   float ticks = smoothstep(0.2, 0.5, abs(sin(ang * 18.0)));
-  ring2 *= mix(1.0, ticks, 0.6);
-  float glow = exp(-r * r / 2.4) * (0.55 + 0.25 * pulse);
+  ring2 *= ticks;
+  float glow = exp(-r * r / 2.4) * (0.55 + 0.25 * pulse) * (1.0 - 0.7 * smoothstep(1.05, 1.2, r) * (1.0 - smoothstep(1.3, 1.45, r)));
   vec3 c = color * (core * 0.85 + ring1 * 0.8 + ring2 * 0.6 + glow * 0.35);
   // glyph occupies the inner disc
   vec2 gu = (vUv - 0.5) * 4.0 * 0.5 / 0.62 + 0.5;
@@ -133,29 +136,59 @@ export const createEField = (p: EFieldParams) => (gl: THREE.WebGLRenderer, w: nu
   const pxScale = h / 2160;
   const aspect = w / h;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color("#020309");
   const cam = new THREE.OrthographicCamera(-aspect, aspect, 1, -1, -10, 10);
   cam.position.z = 5;
+
+  // faint navy ghost rings behind the field (barely visible depth cue)
+  const ghost = new THREE.Mesh(new THREE.PlaneGeometry(aspect * 2.2, 2.2), new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    vertexShader: `out vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `precision highp float;
+layout(location = 0) out highp vec4 fragColor;
+in vec2 vP;
+uniform float cx;
+void main() {
+  float g = 0.0;
+  for (int i = 0; i < 2; i++) {
+    float r = length(vP - vec2(i == 0 ? -cx : cx, 0.0));
+    g += smoothstep(0.35, 0.0, abs(fract(r * 3.2) - 0.5)) * exp(-r * 1.1);
+  }
+  fragColor = vec4(vec3(0.0025, 0.004, 0.011) * g, 1.0);
+}`,
+    uniforms: { cx: { value: CHARGE_X } },
+    blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
+  }));
+  ghost.position.z = -1;
+  ghost.renderOrder = -1;
+  scene.add(ghost);
 
   const lines = traceLines(p);
   const rnd = mulberry32(5150);
 
   // faint background structure: wide dim glow copies
-  const ribbonLines: RibbonLine[] = lines.map((l, i) => ({
+  // lines are dimmer far from the charges, leaving dark open areas
+  const near = (q: V3) => Math.min(Math.hypot(q[0] + CHARGE_X, q[1]), Math.hypot(q[0] - CHARGE_X, q[1]));
+  const lineAlpha = (l: TracedLine) => Float32Array.from(l.pts, (q, k) => Math.min(1, k / 6) * Math.max(0.22, Math.min(1, 1.3 - near(q) / 1.4)));
+  const ribbonLines: RibbonLine[] = lines.map((l) => ({
     p: flat(l.pts),
     color: [l.color.r, l.color.g, l.color.b],
     param: rnd(),
-    alpha: Float32Array.from(l.pts, (_, k) => Math.min(1, k / 6)),
+    alpha: lineAlpha(l),
   }));
-  void ribbonLines.forEach((_, i) => i);
   const geo = buildRibbonGeometry(ribbonLines);
+  // soft, defocused-looking wide copies on some of the lines
+  const geoSoft = buildRibbonGeometry(lines.map((l) => {
+    const k = rnd() < 0.45 ? 0.4 + rnd() * 0.6 : 0;
+    return { p: flat(l.pts), color: [l.color.r, l.color.g, l.color.b], alpha: lineAlpha(l).map((a) => a * k) };
+  }));
   // Pulses: spaced PULSE_GAP world units along each line, each moving
   // PULSE_TRIPS gaps per loop, so the pattern repeats exactly every 600 frames.
   const PULSE_GAP = 1.4, PULSE_TRIPS = 2;
-  const wide = new THREE.Mesh(geo, ribbonMaterial({ width4k: 80, pxScale, res, mode: "glow", additive: true, intensity: 0.05 }));
+  const wide = new THREE.Mesh(geoSoft, ribbonMaterial({ width4k: 70, pxScale, res, mode: "glow", additive: true, intensity: 0.11 }));
   const glow = new THREE.Mesh(geo, ribbonMaterial({ width4k: 18, pxScale, res, mode: "glow", additive: true, intensity: 0.12,
     pulse: [1.0, 1, PULSE_TRIPS, 0.05], pulseByLen: PULSE_GAP }));
-  const core = new THREE.Mesh(geo, ribbonMaterial({ width4k: 3, pxScale, res, mode: "solid", additive: true, intensity: 0.45,
+  const core = new THREE.Mesh(geo, ribbonMaterial({ width4k: 3, pxScale, res, mode: "solid", additive: true, intensity: 0.36,
     pulse: [1.0, 1, PULSE_TRIPS, 0.04], pulseByLen: PULSE_GAP }));
   [wide, glow, core].forEach((m, i) => { m.frustumCulled = false; m.renderOrder = i; scene.add(m); });
 
@@ -168,7 +201,7 @@ export const createEField = (p: EFieldParams) => (gl: THREE.WebGLRenderer, w: nu
     // pick a visible run with probability proportional to its length
     let x = rnd() * totalLen, k = 0;
     while (k < segs.length - 1 && x > segs[k].sg.length) { x -= segs[k].sg.length; k++; }
-    return { seg: segs[k].sg, trips: 1 + Math.floor(rnd() * 2), phase: rnd(), size: 10 + rnd() * 14,
+    return { seg: segs[k].sg, trips: 1 + Math.floor(rnd() * 2), phase: rnd(), ...(() => { const big = rnd() < 0.12; return { big, size: big ? 16 + rnd() * 10 : 5 + rnd() * 3 }; })(),
       color: segs[k].color.clone().lerp(new THREE.Color(1, 0.95, 0.5), rnd() < 0.3 ? 0.7 : 0.15) };
   });
   dots.points.renderOrder = 5;
@@ -215,7 +248,7 @@ export const createEField = (p: EFieldParams) => (gl: THREE.WebGLRenderer, w: nu
         d.seg.at(u * d.seg.length, tmp);
         dots.pos.set(tmp, i * 3);
         const fade = Math.min(1, u / 0.04, (1 - u) / 0.04);
-        dots.rgba.set([d.color.r * 1.1, d.color.g * 1.1, d.color.b * 1.1, fade * 0.9], i * 4);
+        dots.rgba.set([d.color.r * 1.1, d.color.g * 1.1, d.color.b * 1.1, fade * (d.big ? 0.9 : 0.45)], i * 4);
         dots.size[i] = d.size;
       });
       dots.update();

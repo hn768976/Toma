@@ -16,12 +16,12 @@ export interface MagnetParams {
 }
 
 const LEN = 2.0, SIZE = 0.4;
-const CENTER = 1.42; // magnet centres at x = -CENTER, +CENTER (gap 0.84)
+const CENTER = 1.6; // magnet centres at x = -CENTER, +CENTER (gap 1.2)
 const H = SIZE / 2; // field plane: mid-height of the magnets
 const LINE_Y = 0.004; // lines are drawn lying on the table, like iron filings
 const SEEDS = 16;
 const RED = new THREE.Color("#E8202A"), BLUE = new THREE.Color("#2A3AE8");
-const YAW = 0.42; // magnets lie diagonally in frame
+const YAW = 0.72; // magnets lie diagonally in frame
 
 interface Magnet { cx: number; nDir: 1 | -1 } // nDir: +1 if N is at the +x end
 
@@ -60,11 +60,11 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   const pmrem = new THREE.PMREMGenerator(gl);
   const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
   scene.environment = envRT.texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.35;
 
-  const FOV = 30;
+  const FOV = 46;
   const cam = new THREE.PerspectiveCamera(FOV, w / h, 0.1, 100);
-  const elev = (40 * Math.PI) / 180, dist = 12.5;
+  const elev = (40 * Math.PI) / 180, dist = 8.6;
   const placeCam = (az: number, el: number) => {
     if (opts.topDown) {
       cam.position.set(0, 17, 0.0001);
@@ -92,6 +92,11 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
     ndc.set(q[0], LINE_Y, q[2]).applyMatrix4(world.matrixWorld).project(cam);
     return Math.abs(ndc.x) > 1.12 || Math.abs(ndc.y) > 1.15;
   };
+  // The diagram is bounded to an oval around the magnets (as in a textbook
+  // figure); lines that leave it end there and fade out, rather than running
+  // off every edge of the frame.
+  const RX = 6.6, RZ = 3.9;
+  const outside = (q: V3) => (q[0] / RX) ** 2 + (q[2] / RZ) ** 2 > 1 || offFrame(q);
   const faces = facesFor(ms);
   const step = (q: V3) => {
     const d = Math.min(...poles.map((c) => Math.hypot(q[0] - c.p[0], q[2] - c.p[2])));
@@ -112,7 +117,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   for (const pole of faces.filter((c) => c.q > 0)) {
     for (let i = 0; i < SEEDS; i++) {
       const s = seed(pole.p, i);
-      const pts = traceLine(field, s, { dir: 1, step, stop: (q) => nearPole(q, -1) || offFrame(q), maxSteps: 8000 });
+      const pts = traceLine(field, s, { dir: 1, step, stop: (q) => nearPole(q, -1) || outside(q), maxSteps: 8000 });
       lines.push(pts);
     }
   }
@@ -123,16 +128,29 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
       let reachedN = false;
       const pts = traceLine(field, s, {
         dir: -1, step, maxSteps: 8000,
-        stop: (q) => { if (nearPole(q, 1)) { reachedN = true; return true; } return offFrame(q); },
+        stop: (q) => { if (nearPole(q, 1)) { reachedN = true; return true; } return outside(q); },
       });
       if (!reachedN) lines.push(pts.reverse()); // stored in N->S (field) direction
     }
   }
   const drawn = lines.map((l) => resample(l.map(([x, , z]) => [x, LINE_Y, z] as V3), 0.01));
+  // open ends (not on a pole) fade out over FADE_LEN
+  const FADE_LEN = 0.9;
+  const onPole = (q: V3) => faces.some((c) => Math.abs(q[0] - c.p[0]) < 0.08 && Math.abs(q[2]) < SIZE / 2 + 0.1);
+  const ends = drawn.map((l) => {
+    const smp = new PathSampler(l);
+    const openA = !onPole(l[0]), openB = !onPole(l[l.length - 1]);
+    const fadeAt = (s: number) =>
+      Math.min(openA ? Math.min(1, s / FADE_LEN) : 1, openB ? Math.min(1, (smp.length - s) / FADE_LEN) : 1);
+    return { smp, fadeAt };
+  });
 
   const lineCol = new THREE.Color("#2A2A2A");
-  const geo = buildRibbonGeometry(drawn.map((l) => ({ p: flat(l), color: [lineCol.r, lineCol.g, lineCol.b] }) as RibbonLine));
-  const lineMesh = new THREE.Mesh(geo, ribbonMaterial({ width4k: 3.6, pxScale, res, mode: "solid", opacity: 0.95 }));
+  const geo = buildRibbonGeometry(drawn.map((l, i) => ({
+    p: flat(l), color: [lineCol.r, lineCol.g, lineCol.b],
+    alpha: Float32Array.from(ends[i].smp.cum, (s) => ends[i].fadeAt(s)),
+  }) as RibbonLine));
+  const lineMesh = new THREE.Mesh(geo, ribbonMaterial({ width4k: 6, pxScale, res, mode: "solid", opacity: 1 }));
   lineMesh.frustumCulled = false;
   lineMesh.renderOrder = 2;
   world.add(lineMesh);
@@ -144,7 +162,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
     const smp = new PathSampler(l);
     for (let s = 0.55; s < smp.length - 0.3; s += 1.1) {
       const a = smp.at(s), b = smp.at(s + 0.02);
-      if (insideMagnet(ms, a[0], a[2], 0.15) || offFrame(a)) continue;
+      if (insideMagnet(ms, a[0], a[2], 0.15) || offFrame(a) || smp.length - s < FADE_LEN) continue;
       const dx = b[0] - a[0], dz = b[2] - a[2], m = Math.hypot(dx, dz) || 1;
       const ux = dx / m, uz = dz / m, nx = -uz, nz = ux;
       const tip = [a[0] + ux * A, LINE_Y + 0.001, a[2] + uz * A];
@@ -172,7 +190,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", "#include <common>\nvarying float vLocalX;\nuniform vec3 cN;\nuniform vec3 cS;")
       .replace("#include <color_fragment>",
-        "float aaX = fwidth(vLocalX);\ndiffuseColor.rgb = mix(cS, cN, smoothstep(-aaX, aaX, vLocalX));");
+        "float aaX = max(fwidth(vLocalX), 1e-4);\ndiffuseColor.rgb = mix(cS, cN, smoothstep(-aaX, aaX, vLocalX));");
   };
   const glyphN = glyphTexture("N"), glyphS = glyphTexture("S");
   const letterMat = (tex: THREE.Texture, base: THREE.Color) =>
@@ -204,7 +222,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   }
 
   // --- table, light, shadows ---
-  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.3 }));
+  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.4 }));
   shadowPlane.rotation.x = -Math.PI / 2;
   shadowPlane.receiveShadow = true;
   scene.add(shadowPlane);
@@ -218,7 +236,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   const contactTex = new THREE.CanvasTexture(cc);
   for (const m of ms) {
     const cs = new THREE.Mesh(new THREE.PlaneGeometry(LEN * 1.45, SIZE * 2.4),
-      new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, opacity: 0.45, depthWrite: false, color: 0x000000 }));
+      new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, opacity: 0.6, depthWrite: false, color: 0x000000 }));
     cs.rotation.x = -Math.PI / 2;
     cs.position.set(m.cx, 0.001, 0);
     cs.renderOrder = 1;
@@ -229,11 +247,11 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -5; sun.shadow.camera.right = 5; sun.shadow.camera.top = 5; sun.shadow.camera.bottom = -5;
-  sun.shadow.radius = 10;
+  sun.shadow.radius = 16;
   sun.shadow.blurSamples = 16;
   sun.shadow.bias = -0.0005;
   scene.add(sun);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xdddddd, 1.1));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbbb, 0.55));
 
   // --- dots flowing N -> S, speed ~ sqrt(|B|), whole trips per loop ---
   const flow = drawn.map((l, li) => {
@@ -264,7 +282,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   const DOT_R = 0.042;
   const dots = new Dots({ count: dotsSpec.length, pxScale, mode: 2, worldSize: DOT_R * 2, depthWrite: true });
   (dots.points.material as THREE.ShaderMaterial).uniforms.worldScale.value = DOT_R * 2 * worldPointScale(h, FOV) / (DOT_R * 2);
-  dotsSpec.forEach((_, i) => { dots.rgba.set([0.06, 0.06, 0.06, 1], i * 4); dots.size[i] = DOT_R * 2; });
+  dotsSpec.forEach((_, i) => { dots.rgba.set([0.02, 0.02, 0.02, 1], i * 4); dots.size[i] = DOT_R * 2; });
   dots.points.renderOrder = 4;
   world.add(dots.points);
 
@@ -288,7 +306,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
         smp.at(u * smp.length, tmp);
         dots.pos.set([tmp[0], DOT_R, tmp[2]], i * 3);
         // hidden while passing under a magnet (avoids sprites poking through the bar)
-        dots.rgba[i * 4 + 3] = insideMagnet(ms, tmp[0], tmp[2], DOT_R) ? 0 : 1;
+        dots.rgba[i * 4 + 3] = insideMagnet(ms, tmp[0], tmp[2], DOT_R) ? 0 : ends[d.f.li].fadeAt(u * smp.length);
       });
       dots.update();
       // very slight closed drift

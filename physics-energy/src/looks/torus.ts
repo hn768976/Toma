@@ -12,7 +12,7 @@ import { loopPhase, TAU } from "../lib/loop";
  * up. Field lines are seeded on rings inside the loop, in the equatorial
  * plane, and integrated (RK4) until they come back through the core.
  */
-const CORE_A = 0.2;
+const CORE_A = 0.25;
 const AZIMUTHS = 24;
 /** target outer equatorial radius of the three families (outer = torus outline) */
 const TARGET_R = [1.0, 0.74, 0.5];
@@ -25,7 +25,7 @@ const traceLoop = (rho: number) => {
     step: (p) => Math.min(0.01, Math.max(0.0015, 0.05 * Math.abs(Math.hypot(p[0], p[2]) - CORE_A) + 0.002)),
     stop: (p) => {
       // closed once it climbs back through the equator inside the core
-      if (p[1] < -0.01) crossed = true;
+      if (p[1] < -0.005) crossed = true;
       return (crossed && p[1] >= 0 && Math.hypot(p[0], p[2]) < CORE_A) || Math.hypot(...p) > 3;
     },
     maxSteps: 20000,
@@ -58,9 +58,9 @@ export const createTorus = (p: TorusParams) => (gl: THREE.WebGLRenderer, w: numb
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(p.bg);
   const cam = new THREE.PerspectiveCamera(30, w / h, 0.1, 50);
-  const elev = (8 * Math.PI) / 180, dist = 3.05;
+  const elev = (5 * Math.PI) / 180, dist = 3.05;
   cam.position.set(0, Math.sin(elev) * dist, Math.cos(elev) * dist);
-  cam.lookAt(0, 0, 0);
+  cam.lookAt(0, -0.07, 0);
   cam.updateMatrixWorld();
 
   const top = new THREE.Color(p.top), bottom = new THREE.Color(p.bottom);
@@ -74,19 +74,20 @@ export const createTorus = (p: TorusParams) => (gl: THREE.WebGLRenderer, w: numb
   const c = new THREE.Color();
   fam.forEach((base, f) => {
     for (let k = 0; k < AZIMUTHS; k++) {
-      const phi = (TAU * k) / AZIMUTHS + (f * TAU) / AZIMUTHS / 3; // stagger families
+      const phi = (TAU * k) / AZIMUTHS; // all three families share the 24 meridian planes
       const cs = Math.cos(phi), sn = Math.sin(phi);
       const pts = base.map(([x, y, z]) => [x * cs + z * sn, y, -x * sn + z * cs] as V3);
       const col = new Float32Array(pts.length * 3);
       pts.forEach((q, i) => {
         const yN = q[1] / 0.38;
-        c.copy(bottom).lerp(top, THREE.MathUtils.smoothstep(yN, -0.35, 0.35));
+        c.copy(bottom).lerp(top, THREE.MathUtils.smoothstep(yN, -0.05, 0.05));
         // white-hot glint where the loop crosses the equator on the outside
         const rho = Math.hypot(q[0], q[2]);
-        const glint = Math.exp(-((q[1] / 0.012) ** 2)) * THREE.MathUtils.smoothstep(rho, 0.3, 0.6);
-        c.lerp(new THREE.Color(1, 0.95, 0.9), glint * 0.8).multiplyScalar(1 + glint * 1.5);
+        const glint = Math.exp(-((q[1] / 0.01) ** 2));
+        c.lerp(new THREE.Color(1, 0.85, 0.6), glint * 0.85).multiplyScalar(1 + glint * 2.0);
         // inner families are fainter; and dim where all loops crowd the core
-        c.multiplyScalar([1, 0.6, 0.38][f] * (0.35 + 0.65 * THREE.MathUtils.smoothstep(rho, 0.05, 0.35)));
+        // (the equator glint, including the streak through the core, is not dimmed)
+        c.multiplyScalar(THREE.MathUtils.lerp([1, 0.5, 0.3][f] * (0.12 + 0.88 * THREE.MathUtils.smoothstep(rho, 0.04, 0.3)), 1, glint));
         col.set([c.r, c.g, c.b], i * 3);
       });
       ribbons.push({ p: flat(pts), color: col, param: rnd() });
@@ -94,9 +95,9 @@ export const createTorus = (p: TorusParams) => (gl: THREE.WebGLRenderer, w: numb
     }
   });
   const geo = buildRibbonGeometry(ribbons);
-  const fade: [number, number, number] = [dist - 0.8, dist + 0.8, 0.5];
-  const glow = new THREE.Mesh(geo, ribbonMaterial({ width4k: 20, pxScale, res, mode: "glow", additive: true, intensity: 0.12, depthFade: fade }));
-  const core = new THREE.Mesh(geo, ribbonMaterial({ width4k: 7, pxScale, res, mode: "solid", additive: true, intensity: 1.0, depthFade: fade }));
+  const fade: [number, number, number] = [dist - 0.6, dist + 0.5, 0.3];
+  const glow = new THREE.Mesh(geo, ribbonMaterial({ width4k: 20, pxScale, res, mode: "glow", additive: true, intensity: 0.035, depthFade: fade }));
+  const core = new THREE.Mesh(geo, ribbonMaterial({ width4k: 12, pxScale, res, mode: "solid", additive: true, intensity: 0.9, depthFade: fade }));
   [glow, core].forEach((m, i) => { m.frustumCulled = false; m.renderOrder = i; group.add(m); });
 
   // equator dots: where every loop crosses the equator (outer and inner side)
@@ -109,8 +110,8 @@ export const createTorus = (p: TorusParams) => (gl: THREE.WebGLRenderer, w: numb
   const eqDots = new Dots({ count: eq.length, pxScale, mode: 0, additive: true });
   eq.forEach((q, i) => {
     eqDots.pos.set(q, i * 3);
-    eqDots.rgba.set([2.2, 0.9, 0.45, 1], i * 4);
-    eqDots.size[i] = 16;
+    eqDots.rgba.set([2.6, 1.2, 0.55, 1], i * 4);
+    eqDots.size[i] = 18;
   });
   eqDots.update();
   eqDots.points.renderOrder = 3;
@@ -120,15 +121,15 @@ export const createTorus = (p: TorusParams) => (gl: THREE.WebGLRenderer, w: numb
   const N_BEADS = 150;
   const beads = new Dots({ count: N_BEADS, pxScale, mode: 0, additive: true });
   const bead = Array.from({ length: N_BEADS }, () => ({
-    line: Math.floor(rnd() * lines.length), trips: 1 + Math.floor(rnd() * 2), phase: rnd(), size: 7 + rnd() * 5,
+    line: Math.floor(rnd() * lines.length), trips: 1 + Math.floor(rnd() * 2), phase: rnd(), size: 6 + rnd() * 4,
   }));
   beads.points.renderOrder = 4;
   group.add(beads.points);
 
   const post = new Post(gl, w, h, {
-    bloom: { strength: 0.45, threshold: 0.5, knee: 0.3, levels: 6, radius: 0.75 },
+    bloom: { strength: 0.3, threshold: 0.7, knee: 0.3, levels: 5, radius: 0.6 },
     grain: 0.015, shoulder: 0.75,
-    vignette: { amount: 0.3, start: 0.6, end: 1.4 },
+    vignette: { amount: 0.0, start: 0.6, end: 1.4 },
   });
 
   const tmp: V3 = [0, 0, 0];
@@ -136,15 +137,16 @@ export const createTorus = (p: TorusParams) => (gl: THREE.WebGLRenderer, w: numb
     render(frame) {
       const t = loopPhase(frame);
       // 360/24 * 4 = 60 degrees per loop: the 24-fold symmetry makes it seamless
-      group.rotation.y = ((TAU / AZIMUTHS) * 4) * t;
+      // + half a step so loops are not exactly edge-on at the loop start
+      group.rotation.y = ((TAU / AZIMUTHS) * 4) * t + TAU / AZIMUTHS / 2;
       bead.forEach((b, i) => {
         const l = lines[b.line];
         const u = (t * b.trips + b.phase) % 1;
         l.sampler.at(u * l.sampler.length, tmp);
         beads.pos.set(tmp, i * 3);
         const yN = tmp[1] / 0.38;
-        c.copy(bottom).lerp(top, THREE.MathUtils.smoothstep(yN, -0.35, 0.35)).lerp(new THREE.Color(1, 1, 1), 0.35);
-        beads.rgba.set([c.r * 0.9, c.g * 0.9, c.b * 0.9, 0.6], i * 4);
+        c.copy(bottom).lerp(top, THREE.MathUtils.smoothstep(yN, -0.05, 0.05)).lerp(new THREE.Color(1, 1, 1), 0.2);
+        beads.rgba.set([c.r * 0.8, c.g * 0.8, c.b * 0.8, 0.35], i * 4);
         beads.size[i] = b.size;
       });
       beads.update();
