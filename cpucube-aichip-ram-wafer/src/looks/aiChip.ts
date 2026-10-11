@@ -401,6 +401,7 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
   });
   const sparks = new THREE.Points(sparkGeo, sparkMat);
   sparks.frustumCulled = false;
+  sparks.renderOrder = 6;
   scene.add(sparks);
   const sparkData = Array.from({ length: NSP }, () => ({ t: Math.floor(rng() * traces.length), trips: 1 + Math.floor(rng() * 3), off: rng() }));
   const along = (pts: THREE.Vector3[], u: number, out: THREE.Vector3) => {
@@ -418,6 +419,11 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
   const boardObj = board.build(line.clone().multiplyScalar(1.6), lw, lwDim);
   const chipObj = chip.build(line.clone().multiplyScalar(1.4), lw, lwDim);
   const pinObj = pins.build(line, lw, 0.9 * lwDim);
+  // Explicit draw order for every transparent layer: the depth sort would otherwise
+  // break near-ties (die vs streaks) differently from frame to frame.
+  boardObj.renderOrder = 3;
+  chipObj.renderOrder = 3;
+  pinObj.renderOrder = 3;
   scene.add(boardObj, chipObj, pinObj);
   const chipMat = chipObj.material as LineMaterial;
   for (const o of [boardObj, chipObj, pinObj]) (o.material as LineMaterial).resolution.set(size.x, size.y);
@@ -430,6 +436,7 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
     );
     m.rotation.x = -Math.PI / 2;
     m.position.y = y;
+    m.renderOrder = 1;
     scene.add(m);
     return m;
   };
@@ -439,6 +446,7 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
   const die = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.72, depthWrite: false }));
   die.rotation.x = -Math.PI / 2;
   die.position.y = PH + 0.0005;
+  die.renderOrder = 2;
   scene.add(die);
   for (const [x, z, w, d] of comps) fill(w, d, 0.002, 0.012, line).position.set(x, 0.002, z);
 
@@ -453,6 +461,7 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
   const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 1.01), labelMat);
   labelMesh.rotation.x = -Math.PI / 2;
   labelMesh.position.y = PH + 0.003;
+  labelMesh.renderOrder = 4;
   scene.add(labelMesh);
 
   // ---- arrow markers along the far edge ----
@@ -467,6 +476,7 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
     const o = a.build(line.clone().multiplyScalar(1.6), lw, lwDim);
     (o.material as LineMaterial).resolution.set(size.x, size.y);
     o.position.set(BX0 + 0.5 + (i / 19) * (B.w / 2 - BX0 - 1), 0.35, -B.d / 2 + 0.25);
+    o.renderOrder = 3;
     scene.add(o);
     arrows.push(o);
     arrowPhase.push(rng());
@@ -479,14 +489,17 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
   const streakMat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
+    // the streaks are a light overlay (as in the reference), not occluded by the board
+    depthTest: false,
     blending: THREE.AdditiveBlending,
     uniforms: { uColor: { value: line.clone().lerp(new THREE.Color(1, 1, 1), 0.3) } },
     vertexShader: `attribute float aK; varying vec2 vUv; varying float vK; varying float vY;
       void main(){ vUv = uv; vK = aK; vec4 w = modelMatrix * instanceMatrix * vec4(position,1.0); vY = w.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `uniform vec3 uColor; varying vec2 vUv; varying float vK; varying float vY;
       void main(){
-        float across = 1.0 - abs(vUv.x - 0.5) * 2.0;
-        float along = sin(3.14159 * vUv.y); along *= along;
+        // clamp: MSAA can shade a sub-pixel quad at a pixel centre outside it (extrapolated uv)
+        float across = clamp(1.0 - abs(vUv.x - 0.5) * 2.0, 0.0, 1.0);
+        float along = sin(3.14159 * clamp(vUv.y, 0.0, 1.0)); along *= along;
         float win = 1.0;
         gl_FragColor = vec4(uColor * vK * across * across * along * win, 1.0);
       }`,
@@ -494,8 +507,11 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
   streakGeo.setAttribute("aK", new THREE.InstancedBufferAttribute(sTint, 1));
   const streaks = new THREE.InstancedMesh(streakGeo, streakMat, NS);
   streaks.frustumCulled = false;
+  streaks.renderOrder = 7;
   scene.add(streaks);
   const streakData: { x: number; z: number; len: number; trips: number; off: number; w: number }[] = [];
+  // world width of ~1.3 output px at the chip distance
+  const minStreakW = (1.3 / size.y) * 2 * 10.5 * Math.tan(THREE.MathUtils.degToRad(32 / 2));
   for (let i = 0; i < NS; i++) {
     // cluster some around the chip's back-right corner, like the reference, rest spread
     const near = rng() < 0.3;
@@ -504,6 +520,10 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
     sTint[i] = (near ? 4.5 : 2.6) * (0.4 + rng() * 0.9);
     streakData.push({ x, z, len: 4 + rng() * 7, trips: 1 + Math.floor(rng() * 2), off: rng(), w: 0.004 + rng() * 0.007 });
   }
+  // streaks thinner than the minimum width are drawn at the minimum width, dimmed (built once)
+  streakData.forEach((sd, i) => {
+    sTint[i] *= sd.w / Math.max(sd.w, minStreakW);
+  });
 
   // ---- code layer: 2 planes of filler code and binary, scrolling up ----
   const codeMat = (seed: number, kind: "code" | "binary" | "mixed", alpha: number) => {
@@ -517,6 +537,8 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
   const codeB = codeMat(0x0c0de2, "binary", 0.24);
   const planeA = new THREE.Mesh(new THREE.PlaneGeometry(10.5, 10.5), codeA.m);
   const planeB = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), codeB.m);
+  planeA.renderOrder = 8;
+  planeB.renderOrder = 8;
   scene.add(planeA, planeB);
 
   const target = new THREE.Vector3(-0.98, 0, -1.02);
@@ -556,11 +578,14 @@ export const aiChip: LookFactory<AiChipParams> = (p, gl) => {
       const ph = (phase(frame, s.trips) + s.off) % 1;
       const y = -7 - s.len + ph * (17 + s.len);
       v.set(s.x, 0, s.z).addScaledVector(camUp, y + s.len / 2);
-      sc.set(s.w, s.len, 1);
+      // keep streaks at least ~1.3 px wide (at any output size); thinner ones are dimmed instead
+      const w = Math.max(s.w, minStreakW);
+      sc.set(w, s.len, 1);
       mtx.compose(v, camera.quaternion, sc);
       streaks.setMatrixAt(i, mtx);
     }
     streaks.instanceMatrix.needsUpdate = true;
+
 
     // code planes face the camera and scroll up by whole texture periods
     // both planes hang between the camera and the chip, facing the camera, filling the frame
