@@ -267,6 +267,21 @@ const layoutLabels = (ctx: CanvasRenderingContext2D, row: CountryRow, data: MapD
 		labels.push({ text, x: vc.xy[0], y: vc.xy[1], font: f, spacing: S.neighbourSpacing, colour: C.neighbourName, align: 'center', size: S.neighbour });
 	});
 
+	// Small foreign polygons (enclaves like Lesotho, Eswatini) are obstacles for
+	// city labels, so a label never runs across another country.
+	data.countries.forEach((c, i) => {
+		if (i === featuredIdx) return;
+		for (const poly of polygonsOf(c.geometry)) {
+			const pts = poly[0].map((q) => p(q)).filter(Boolean) as XY[];
+			if (!pts.length) continue;
+			const xs = pts.map((q) => q[0]);
+			const ys = pts.map((q) => q[1]);
+			const box: Box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+			const size = Math.max(box[2] - box[0], box[3] - box[1]);
+			if (size > 60 && size < TEX * 0.15 && box[2] > 0 && box[0] < TEX && box[3] > 0 && box[1] < TEX) taken.push(box);
+		}
+	});
+
 	// Per-row place-name overrides (null hides a place), then generic cleanup.
 	const rename = (name: string): string => {
 		const o = row.placeNames?.[name];
