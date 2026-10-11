@@ -166,15 +166,109 @@ frames stay in `renders/frames/<id>/` for the determinism check.
 
 ## Measured render times
 
-<!-- TIMINGS -->
+All times were measured in this build's container: a 4-core cloud VM with **no GPU**, so
+Chromium ran WebGL2 on **SwiftShader** (CPU). A desktop GPU through ANGLE is much faster.
+
+**720p previews.** Each is a full render of all 600 frames, as a PNG sequence with
+`--scale=0.3333333333333333 --concurrency=2`. The time includes bundling, browser start and
+texture builds (about 15–20 s).
+
+| Composition | Render (600 f) | Per frame at 720p |
+|---|---|---|
+| CPUCube-Blue | 712 s | **1.19 s** |
+| CPUCube-Amber | 672 s | **1.12 s** |
+| AIHologramChip-Teal | 523 s | **0.87 s** |
+| AIHologramChip-Violet | 507 s | **0.85 s** |
+| RAMMacro-GreenBlue | 1965 s | **3.28 s** |
+| RAMMacro-MagentaOrange | 2015 s | **3.36 s** |
+| SiliconWafer-SilverPrism | 622 s | **1.04 s** |
+| SiliconWafer-VioletGrating | 598 s | **1.00 s** |
+
+The H.264 encode took 32–50 s per file.
+
+**Two real 4K frames (3840×2160).** These are frames 298–301 rendered as a sequence, timed
+between consecutive frames, so tab and texture setup is excluded:
+
+| Composition | Per 4K frame (SwiftShader) |
+|---|---|
+| RAMMacro-GreenBlue (3A: three area lights, very wide DoF) | **24.4 s** (25.2 / 24.8 / 23.6) |
+| SiliconWafer-VioletGrating (4B: diffraction shader and DoF) | **8.1 s** (8.0 / 7.9 / 8.3) |
+
+The measured 4K/720p ratio is 7.4× for 3A and 8.1× for 4B; 4K has 9× the pixels.
+
+**4K estimates for 600 frames.** The SwiftShader figures here use about 7.5–8× the 720p
+time per frame:
+
+| Composition | Here (SwiftShader, 4 cores) | Desktop GPU (estimate) |
+|---|---|---|
+| CPU Cube (×2) | ≈ 9 s/frame → ≈ 1.5 h each | ≈ 0.3–0.6 s/frame → 3–6 min |
+| AI Hologram Chip (×2) | ≈ 6.5 s/frame → ≈ 1.1 h each | ≈ 0.2–0.4 s/frame → 2–4 min |
+| RAM Macro (×2) | ≈ 24 s/frame → ≈ 4 h each | ≈ 0.6–1.2 s/frame → 6–12 min |
+| Silicon Wafer (×2) | ≈ 8 s/frame → ≈ 1.35 h each | ≈ 0.3–0.5 s/frame → 3–5 min |
+
+The GPU column is an **estimate, not a measurement**: no GPU was available here. Expect it
+to be dominated by the 72-tap DoF gather and 4× MSAA at 4K, plus Chromium's screenshot
+readback (about 0.1–0.2 s per 4K frame). All eight at 4K on SwiftShader would take
+roughly 16–17 h. On a GPU, expect well under an hour.
+
 
 ## Checks (completion checklist)
 
-<!-- CHECKS -->
+Every item below was run on the delivered 720p renders.
+
+- [x] **File checks** (ffprobe), all 8: `h264`, `1280×720`, `30/1`, `yuv420p`, duration
+  `20.000000`, and one video stream with **no audio**.
+- [x] **Loop**, all 8. The compositions were made 601 frames long with **unwrapped**
+  time (`REMOTION_NO_WRAP=1`: neither the frame nor `phase()` is wrapped), and frame 600
+  is **IDENTICAL** to frame 0 pixel for pixel.
+  - The first run caught RAM and wafer 4A differing by float-rounding noise, because they
+    translated by exactly one period in world space. Both now apply the travel as
+    `period × phase`, which is exactly 0 at the loop point.
+- [x] **Same result every time**, all 8. Frame 300 rendered alone from a cold start is
+  **byte-identical** (`cmp`) to frame 300 of the full out-of-order render (2 tabs).
+  - The first run failed on both hologram versions (1 code value in 4–5 pixels).
+  - The cause was a near-tie in three.js's transparent depth sort (die mask vs data
+    streaks), which resolved differently after a long run of frames.
+  - The fix was an explicit `renderOrder` for every transparent layer, plus a uv clamp
+    on the sub-pixel streak quads. Both versions were re-rendered and re-checked.
+- [x] **Banding**: see below.
+- [x] **Contact sheets** (frames 0, 120, 240, 360, 480), checked for every composition.
+- [x] **Motion smoothness**, frames 270–330 from the full PNG sequences.
+  - Frame-to-frame mean differences are even: max/mean is 1.01–1.09, with no spikes and no
+    alternation, for all but 4B.
+  - 4B shows a smooth V that bottoms out at frame 300, where the eased out-and-back camera
+    path turns around. That is intended easing, not judder.
+- [x] **RAM model check**: three rounds with a fresh sub-agent each time.
+- [x] **Reference comparison by separate agents**: three rounds per reference look.
+- [x] **Determinism rules.**
+  - No `Math.random()` anywhere, no `Date.now()`, and no R3F clock.
+  - No state carried between frames; `look.update(frame)` sets everything from the frame.
+  - Seeded mulberry32 for every layout.
+  - Fonts and textures are built or loaded once, behind `delayRender`.
+- [x] **No logos, brands or part numbers.**
+  - Chips, modules and wafers carry only pin-1 dots, pads and generic structure.
+  - The only text is "AI" and invented filler code: made-up identifiers such as
+    `lattice`, `qmix` and `tensor_fold`.
+- [x] **Fonts are OFL only**: Blinker ExtraBold and JetBrains Mono, with their licences in
+  `public/fonts/`.
 
 ## Banding check
 
-<!-- BANDING -->
+Profiles were read from frame 300 (frame 0 for the CPU bokeh) **decoded from the
+encoded mp4s**, using `tools/banding.py`. That tool averages a 9-px strip, reports
+16-px block means, and reports the longest run where luma stays exactly flat.
+
+| Area | Result |
+|---|---|
+| Hologram 2A background (left haze, top to bottom) | 54.6 → 37.9 in steps of about 1 code per 16 px. Longest flat run 3 px. |
+| Hologram 2B background | 18.9 → 11.3, smooth. Longest flat run 3 px. |
+| RAM deep-blue shadow | 155 → 117 → 97 → 83 → 72 → 64 → 58 → 53 → 50 → 48, smooth. Longest flat run 3 px. |
+| Wafer 4B rainbow band and the rim falling to black | Bands vary smoothly. The black side falls 12.7 → 8.3 → 5.0 → 3.4 → 3.0 → 2.7 → 2.2 → 1.9. Longest flat run 4 px. |
+| Wafer 4A flare gradient | 104 → 237, irregular from die structure. Longest flat run 2 px. |
+| CPU board bokeh (blurred far board, frame 0) | Longest flat run 2–5 px. |
+
+There are no plateau-and-step patterns anywhere, so the ±1/255 dither and the 1.5% or 2%
+grain hold up through H.264 at CRF 16. The grain did not need raising.
 
 ## Adding a colourway
 
