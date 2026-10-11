@@ -1,0 +1,31 @@
+{
+  "name": "cpucube-aichip-ram-wafer",
+  "version": "1.0.0",
+  "description": "CPU Cube, AI Hologram Chip, RAM Macro and Silicon Wafer \u2014 20s seamless loops (Remotion + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc --noEmit",
+    "render:previews": "bash tools/render-previews.sh",
+    "check:loop": "bash tools/loopcheck.sh $(cat tools/all.txt)"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.8.1",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "typescript": "5.9.3",
+    "@remotion/bundler": "4.0.515",
+    "@remotion/renderer": "4.0.515"
+  }
+}
