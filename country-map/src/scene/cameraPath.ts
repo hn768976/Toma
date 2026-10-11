@@ -10,7 +10,7 @@ export const CAMERA_FOV = 22; // vertical, degrees
 export const FRAME_WIDTH_AT_FOCUS = 4.4;
 /** Fraction of frame height that stays sharp around the name. */
 export const SHARP_BAND = 0.08;
-/** CoC (fraction of frame height) at the edge of the sharp band. */
+/** CoC slope: CoC (fraction of frame height) at twice the sharp band's depth range. */
 export const COC_AT_BAND_EDGE = 0.0013;
 export const MAX_COC = 0.045;
 /** Rack focus starts this much nearer than the name (fraction of focus distance). */
@@ -32,8 +32,10 @@ export type Shot = {
 	target: THREE.Vector3;
 	/** View-space depth that is in focus. */
 	focusDepth: number;
-	/** CoC = k * |z - zf| / z (fraction of frame height). */
+	/** CoC = k * max(|z - zf| / z - dead, 0) (fraction of frame height). */
 	cocScale: number;
+	/** Relative depth inside which CoC is exactly 0: the sharp band. */
+	cocDead: number;
 };
 
 /** Everything the camera does is a pure function of the frame number. */
@@ -82,5 +84,5 @@ export const shotAt = (row: CountryRow, frame: number, camera: THREE.Perspective
 
 	const rack = easeInOutCubic(clamp01(f / RACK_END));
 	const focusDepth = zName * (RACK_START + (1 - RACK_START) * rack);
-	return { position, target, focusDepth, cocScale };
+	return { position, target, focusDepth, cocScale, cocDead: rel };
 };

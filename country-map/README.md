@@ -28,7 +28,7 @@ SouthKorea, Italy, Spain, Indonesia, SaudiArabia, Turkiye, Pakistan, SouthAfrica
 
 ```bash
 npm install
-npx remotion studio        # preview (renders at 0.5x density in the Studio for speed)
+npx remotion studio        # preview; the Studio renders at 0.5x density for speed
 ```
 
 Node 18+ is required (tested with Node 22). `npm run build-data` regenerates
@@ -80,7 +80,52 @@ mipmapped texture, about 1 GB, so raise concurrency only if you have the RAM.
 
 ## Measured times
 
-TIMINGS_PLACEHOLDER
+**Machine:** a 4-vCPU cloud container with **no GPU**, so WebGL ran on SwiftShader (CPU)
+through ANGLE. Chromium headless shell 1194, Remotion 4.0.515.
+- **Per-frame time** is the average over 10 consecutive frames (300–309) in a warm tab,
+  with the map already drawn.
+- **Map draw** is the one-time d3-geo Canvas drawing per tab: both canvases, labels and
+  colouring. Loading data and fonts adds another 0.1–1.3 s, and uploading and
+  mipmapping the textures adds roughly 10 s on SwiftShader.
+
+| composition | 720p per frame | map draw (once per tab) | 720p video, 1 tab (est.) |
+|---|---|---|---|
+| `CountryMap-USA` | 3.15 s | 8.5 s | 24 min |
+| `CountryMap-China` | 3.24 s | 9.8 s | 24 min |
+| `CountryMap-India` | 3.17 s | 5.4 s | 24 min |
+| `CountryMap-Japan` | 3.24 s | 2.8 s | 24 min |
+| `CountryMap-Germany` | 3.33 s | 3.1 s | 25 min |
+| `CountryMap-UK` | 3.20 s | 3.2 s | 24 min |
+| `CountryMap-France` | 3.35 s | 3.6 s | 25 min |
+| `CountryMap-Brazil` | 3.34 s | 6.3 s | 25 min |
+| `CountryMap-Canada` | 3.31 s | 12.6 s | 25 min |
+| `CountryMap-Russia` | 3.36 s | 7.4 s | 25 min |
+| `CountryMap-Mexico` | 2.98 s | 6.1 s | 22 min |
+| `CountryMap-Australia` | 3.10 s | 5.5 s | 23 min |
+| `CountryMap-SouthKorea` | 3.15 s | 2.5 s | 24 min |
+| `CountryMap-Italy` | 3.12 s | 3.6 s | 23 min |
+| `CountryMap-Spain` | 3.07 s | 2.9 s | 23 min |
+| `CountryMap-Indonesia` | 3.11 s | 4.2 s | 23 min |
+| `CountryMap-SaudiArabia` | 3.25 s | 4.2 s | 24 min |
+| `CountryMap-Turkiye` | 2.89 s | 4.7 s | 22 min |
+| `CountryMap-Pakistan` | 2.90 s | 3.0 s | 22 min |
+| `CountryMap-SouthAfrica` | 2.88 s | 2.1 s | 22 min |
+
+**One real 4K frame of Mexico (3840×2160), timed:**
+- **warm:** 22.2 s per frame;
+- **cold:** 64 s for the first frame, which includes page load,
+  the 6.5 s map draw and the texture upload.
+
+**4K estimates:**
+- **This CPU-only box:** about 22 s × 450 ≈ **2.8 h per composition per tab**, and about
+  1.5–2 h at concurrency 2.
+- **A GPU machine (estimate, not measured):** the DoF gather (64 taps) and an 8192²
+  anisotropic texture are trivial for any discrete GPU. Per-frame time there is bound by
+  Chromium's 4K screenshot and PNG encode, typically **0.5–1.5 s per frame**, so about
+  **4–12 min per composition**, plus about 10 s of map drawing per tab.
+
+**Measured preview:** the 720p Mexico preview took **24 min** for 450 frames at
+concurrency 2.
 
 ## Banding check
 
@@ -148,6 +193,30 @@ Every value on screen is a pure function of `useCurrentFrame()`:
    window and that no overlaps appear. Adjust `labelLonLat`, `camera` and `placeNames`
    as needed.
 
+## Deviations from the brief (and why)
+
+- **Camera at 32° instead of about 25°.** The reference is visibly steeper. At 25° the
+  lettering was squashed and Mexico's Pacific coast ran much flatter than in the
+  reference. Set in `CAMERA_ELEVATION` in `src/scene/cameraPath.ts`; the FOV is still
+  22°.
+- **Country-name size 2.4% of the texture width instead of 4.5%.** At 4.5% the name
+  spanned about 29% of the frame against about 17% in the reference, and the sub-agent
+  comparison ranked this high. It is now about 20% of the frame width.
+- **Per-row `zoom`.** After matching the reference's tight Mexico shot, compact
+  countries (Germany, South Korea, Spain…) filled the whole frame with no neighbours
+  visible. Each row can pull the camera back; label sizes scale with it so they look
+  the same on screen. The country still fills 55% of the texture width.
+- **Sharp band.** CoC is exactly 0 inside the band (8% of frame height) and ramps up
+  outside it. City labels inside the band are therefore crisp at 4K, not just at 720p.
+  Nearer paper (bottom of frame) blurs at 0.7× the rate of farther paper, as in the
+  reference.
+- **Kept per the brief despite the reference:**
+  - small dark city dots, where the reference has red circles;
+  - spec fill colours, where the reference's land is paler and the US has a relief tint;
+  - no second-language country label.
+- **Composition IDs** use `-` (`CountryMap-Mexico`), because Remotion rejects `_`.
+  Output files keep the `CountryMap_Mexico` names.
+
 ## Data and licences
 
 **Natural Earth.** All map data comes from Natural Earth (naturalearthdata.com), 1:10m
@@ -172,4 +241,47 @@ names are in English.
 
 ## Completion checklist
 
-CHECKLIST_PLACEHOLDER
+Verify loop as run in the build session. At the user's request, only **one** 720p
+preview video was rendered (Mexico), plus one 720p still per composition (frame 300 =
+10 s) and the Mexico 4K label crop.
+
+- [x] **Basic file checks (step 1)**, on the Mexico preview: 1280×720, 30/1, 15.000 s,
+  450 frames, h264, yuv420p, no audio. The first attempt carried a silent AAC track and
+  was re-rendered with `--muted`.
+- [x] **Rack focus and motion (step 2):**
+  - at frame 0 the name is soft and focus is on the paper in front of it; it is sharp
+    from frame 90 (3 s);
+  - name-region sharpness (mean absolute Laplacian, 720p) is 6.3 at frame 0 and 16.9 at
+    frame 90;
+  - the slide is continuous to frame 449, as the five-frame contact sheets of all 20
+    show.
+- [x] **Same result every time (step 3):** the cold frame 300 is byte-identical to a
+  second cold render and to frame 300 rendered warm in sequence. The mp4 frame 300 is
+  aligned (best PSNR).
+- [x] **Banding (step 4):** read from the encoded mp4; values change smoothly and grain
+  stays at 1.5%.
+- [x] **Per-composition contact sheets (step 5)**, five frames each for all 20:
+  - the featured country is peach with its English name in bold capitals;
+  - neighbours have distinct colours: an automatic audit logs 0 touching same-colour
+    pairs for all 20, and no light orange next to the featured country;
+  - the graticule, roads, rivers, city dots and capital marker are present;
+  - disputed lines are dashed;
+  - there are no overlapping labels, because of the collision pass;
+  - the DoF band is shallow;
+  - there are no legends, logos or publisher text.
+- [x] **Motion smoothness (step 6)**, on frames 30–89 and 240–299 for Mexico (from the
+  mp4), USA and Japan:
+  - phase-correlation shifts are steady at 0.08–0.25 px/frame at 720p;
+  - the largest frame-to-frame change is ≤ 0.044 px, so there is no judder;
+  - the motion-compensated residual stays at the grain floor, so there is no shimmer or
+    crawl (`scripts/motion-check.py`).
+- [x] **Reference look, self-check (step 7)**, against `refs/994845492.mp4`.
+- [x] **Reference comparison by fresh sub-agents (step 8)**, three rounds. See the build
+  report.
+- [x] **Geography check by fresh sub-agents.** All 20 were identified correctly in every
+  round, and the flagged items were fixed.
+- [x] **Texture sharpness:** the 4K crop of the sharp band shows crisp city labels
+  (Torreón, Monterrey, San Luis Potosí, Tepic). 8192 is enough at this zoom: about 1.6
+  texels per 4K pixel horizontally at the focus plane.
+- [x] **Render times measured** (above). No 4K videos were rendered here.
+- [x] **Clean copy:** `npm install && npx remotion studio` checked from an extracted zip.

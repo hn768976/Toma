@@ -107,7 +107,8 @@ precision highp float;
 uniform sampler2D uColour;  // linear rgb + view depth in alpha, mipmapped
 uniform vec2 uRes;          // render target size (px)
 uniform float uFocus;       // in-focus view depth
-uniform float uCocScale;    // coc = k * |z - zf| / z, fraction of frame height
+uniform float uCocScale;    // coc = k * max(|z - zf| / z - dead, 0), fraction of frame height
+uniform float uCocDead;     // relative depth of the sharp band (CoC exactly 0 inside)
 uniform float uMaxCoc;
 uniform float uFrame;       // frame % 450
 uniform float uGrain;
@@ -132,7 +133,7 @@ void main() {
   vec4 c0 = textureLod(uColour, vUv, 0.0);
   float z = max(c0.a, 1e-3);
   // Paper nearer than the focus plane (bottom of frame) blurs more gently.
-  float coc = min(uCocScale * abs(z - uFocus) / z * (z < uFocus ? 0.7 : 1.0), uMaxCoc);
+  float coc = min(uCocScale * max(abs(z - uFocus) / z - uCocDead, 0.0) * (z < uFocus ? 0.7 : 1.0), uMaxCoc);
   float r = coc * uRes.y; // radius in px
   vec3 col = c0.rgb;
   if (r > 0.35) {

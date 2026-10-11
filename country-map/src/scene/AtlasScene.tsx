@@ -96,6 +96,7 @@ export const AtlasScene: React.FC<{ row: CountryRow; maps: MapTextures }> = ({ r
 				uRes: { value: size.clone() },
 				uFocus: { value: 1 },
 				uCocScale: { value: 0 },
+				uCocDead: { value: 0 },
 				uMaxCoc: { value: MAX_COC },
 				uFrame: { value: 0 },
 				uGrain: { value: GRAIN },
@@ -125,6 +126,7 @@ export const AtlasScene: React.FC<{ row: CountryRow; maps: MapTextures }> = ({ r
 		res.paperMat.uniforms.uCamPos.value.copy(shot.position);
 		res.postMat.uniforms.uFocus.value = shot.focusDepth;
 		res.postMat.uniforms.uCocScale.value = shot.cocScale;
+		res.postMat.uniforms.uCocDead.value = shot.cocDead;
 		res.postMat.uniforms.uFrame.value = f % DURATION;
 		gl.setRenderTarget(res.rt);
 		gl.clear();
