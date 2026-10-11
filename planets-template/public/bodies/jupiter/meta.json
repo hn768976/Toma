@@ -1,0 +1,47 @@
+{
+  "id": "jupiter",
+  "name": "Jupiter",
+  "kind": "planet",
+  "radiusKm": 71492,
+  "flattening": 0.06487,
+  "obliquityDeg": 3.13,
+  "retrograde": false,
+  "rotationPeriodH": 9.925,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.22,
+    "normalStrength": 0.35
+  },
+  "atmosphere": {
+    "color": [
+      0.95,
+      0.88,
+      0.76
+    ],
+    "strength": 0.18,
+    "thickness": 0.03,
+    "crescent": 0.9
+  },
+  "rings": null,
+  "procedural": true,
+  "notes": "Large-scale structure from the NASA map; fine turbulence, colour grade and polar caps procedural.",
+  "greatRedSpot": {
+    "latDeg": -31,
+    "lonDeg": -109
+  },
+  "credits": [
+    {
+      "what": "Global colour map (large-scale structure)",
+      "credit": "NASA 3D Resources, \"Jupiter\" global texture (720 x 360). NASA.",
+      "url": "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/Images%20and%20Textures/Jupiter/Jupiter.tif",
+      "license": "Public domain (U.S. Government work: NASA / USGS)"
+    }
+  ]
+}

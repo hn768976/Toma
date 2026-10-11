@@ -1,0 +1,37 @@
+{
+  "id": "neptune",
+  "name": "Neptune",
+  "kind": "planet",
+  "radiusKm": 24764,
+  "flattening": 0.01708,
+  "obliquityDeg": 28.32,
+  "retrograde": false,
+  "rotationPeriodH": 16.11,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.3,
+    "normalStrength": 0.1,
+    "limbDarkening": 0.45
+  },
+  "atmosphere": {
+    "color": [
+      0.45,
+      0.62,
+      1
+    ],
+    "strength": 0.65,
+    "thickness": 0.04,
+    "crescent": 1.2
+  },
+  "rings": null,
+  "procedural": true,
+  "notes": "Procedural (no public-domain global map of Neptune exists); features after Voyager 2 images.",
+  "credits": []
+}

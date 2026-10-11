@@ -1,0 +1,42 @@
+{
+  "id": "mercury",
+  "name": "Mercury",
+  "kind": "planet",
+  "radiusKm": 2439.7,
+  "flattening": 0,
+  "obliquityDeg": 0.034,
+  "retrograde": false,
+  "rotationPeriodH": 1407.6,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.04,
+    "normalStrength": 1
+  },
+  "atmosphere": null,
+  "rings": null,
+  "procedural": false,
+  "notes": "Panchromatic mosaic tinted to Mercury's neutral grey-brown.",
+  "credits": [
+    {
+      "what": "Colour (panchromatic) mosaic",
+      "credit": "Mercury MESSENGER MDIS global mosaic 250 m (2013). NASA / Johns Hopkins University APL / Carnegie Institution of Washington; USGS Astrogeology Science Center.",
+      "url": "https://planetarymaps.usgs.gov/mosaic/Mercury_MESSENGER_mosaic_global_250m_2013.tif",
+      "mirror": "https://asc-pds-services.s3.amazonaws.com/mosaic/Mercury_MESSENGER_mosaic_global_250m_2013.tif",
+      "license": "Public domain (U.S. Government work: NASA / USGS)"
+    },
+    {
+      "what": "Elevation model",
+      "credit": "Mercury MESSENGER global DEM 665 m v2. NASA / JHUAPL / Carnegie Institution of Washington; USGS Astrogeology Science Center.",
+      "url": "https://planetarymaps.usgs.gov/mosaic/Mercury_Messenger_USGS_DEM_Global_665m_v2.tif",
+      "mirror": "https://asc-pds-services.s3.amazonaws.com/mosaic/Mercury_Messenger_USGS_DEM_Global_665m_v2.tif",
+      "license": "Public domain (U.S. Government work: NASA / USGS)"
+    }
+  ]
+}

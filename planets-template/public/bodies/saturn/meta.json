@@ -1,0 +1,40 @@
+{
+  "id": "saturn",
+  "name": "Saturn",
+  "kind": "planet",
+  "radiusKm": 60268,
+  "flattening": 0.09796,
+  "obliquityDeg": 26.73,
+  "retrograde": false,
+  "rotationPeriodH": 10.656,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.22,
+    "normalStrength": 0.03
+  },
+  "atmosphere": {
+    "color": [
+      0.98,
+      0.9,
+      0.72
+    ],
+    "strength": 0.15,
+    "thickness": 0.03,
+    "crescent": 0.9
+  },
+  "rings": {
+    "texture": "rings.png",
+    "inner": 1.1100418132342205,
+    "outer": 2.339550009955532
+  },
+  "procedural": true,
+  "notes": "Procedural bands from a latitude profile matched to Cassini true-colour images; rings from published ring radii.",
+  "credits": []
+}

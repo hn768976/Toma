@@ -1,0 +1,41 @@
+{
+  "id": "uranus",
+  "name": "Uranus",
+  "kind": "planet",
+  "radiusKm": 25559,
+  "flattening": 0.02293,
+  "obliquityDeg": 97.77,
+  "retrograde": true,
+  "rotationPeriodH": -17.24,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.35,
+    "normalStrength": 0,
+    "limbDarkening": 0.55
+  },
+  "atmosphere": {
+    "color": [
+      0.72,
+      0.93,
+      0.96
+    ],
+    "strength": 0.4,
+    "thickness": 0.035,
+    "crescent": 1.2
+  },
+  "rings": {
+    "texture": "rings.png",
+    "inner": 1.6041316170429203,
+    "outer": 2.0266833600688603
+  },
+  "procedural": true,
+  "notes": "Procedural (no public-domain global map of Uranus exists).",
+  "credits": []
+}

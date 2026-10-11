@@ -1,0 +1,42 @@
+{
+  "id": "ceres",
+  "name": "Ceres",
+  "kind": "dwarf",
+  "radiusKm": 469.7,
+  "flattening": 0.075,
+  "obliquityDeg": 4,
+  "retrograde": false,
+  "rotationPeriodH": 9.074,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.04,
+    "normalStrength": 1
+  },
+  "atmosphere": null,
+  "rings": null,
+  "procedural": false,
+  "notes": "",
+  "credits": [
+    {
+      "what": "Panchromatic mosaic",
+      "credit": "Ceres Dawn FC global mosaic 20 ppd (Oct 2015). NASA / JPL-Caltech / UCLA / MPS / DLR / IDA; USGS Astrogeology Science Center.",
+      "url": "https://planetarymaps.usgs.gov/mosaic/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif",
+      "mirror": "https://asc-pds-services.s3.amazonaws.com/mosaic/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif",
+      "license": "Public domain (U.S. Government work: NASA / USGS)"
+    },
+    {
+      "what": "Elevation model",
+      "credit": "Ceres Dawn FC HAMO DTM 60 ppd (Oct 2016). NASA / JPL-Caltech / UCLA / MPS / DLR / IDA; USGS Astrogeology Science Center.",
+      "url": "https://planetarymaps.usgs.gov/mosaic/Ceres_Dawn_FC_HAMO_DTM_DLR_Global_60ppd_Oct2016.tif",
+      "mirror": "https://asc-pds-services.s3.amazonaws.com/mosaic/Ceres_Dawn_FC_HAMO_DTM_DLR_Global_60ppd_Oct2016.tif",
+      "license": "Public domain (U.S. Government work: NASA / USGS)"
+    }
+  ]
+}

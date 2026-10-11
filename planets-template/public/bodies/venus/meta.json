@@ -1,0 +1,36 @@
+{
+  "id": "venus",
+  "name": "Venus",
+  "kind": "planet",
+  "radiusKm": 6051.8,
+  "flattening": 0,
+  "obliquityDeg": 177.36,
+  "retrograde": true,
+  "rotationPeriodH": -5832.5,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.35,
+    "normalStrength": 0.15
+  },
+  "atmosphere": {
+    "color": [
+      1,
+      0.93,
+      0.78
+    ],
+    "strength": 0.7,
+    "thickness": 0.045,
+    "crescent": 1.4
+  },
+  "rings": null,
+  "procedural": true,
+  "notes": "Procedural cloud-top map (visible-light Venus is a soft, nearly featureless cloud deck; the public-domain global maps are Magellan radar of the surface, which is never visible).",
+  "credits": []
+}

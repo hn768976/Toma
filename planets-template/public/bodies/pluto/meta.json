@@ -1,0 +1,51 @@
+{
+  "id": "pluto",
+  "name": "Pluto",
+  "kind": "dwarf",
+  "radiusKm": 1188.3,
+  "flattening": 0,
+  "obliquityDeg": 122.53,
+  "retrograde": true,
+  "rotationPeriodH": -153.29,
+  "maps": {
+    "color": "color.webp",
+    "normal": "normal.webp",
+    "width": 8192,
+    "height": 4096,
+    "longitudeLeftEdgeDeg": -180
+  },
+  "surface": {
+    "saturation": 1.1,
+    "wrap": 0.05,
+    "normalStrength": 1
+  },
+  "atmosphere": {
+    "color": [
+      0.55,
+      0.72,
+      1
+    ],
+    "strength": 0.15,
+    "thickness": 0.018,
+    "crescent": 1
+  },
+  "rings": null,
+  "procedural": true,
+  "notes": "Colourised with a ramp matched to New Horizons colour images; the unimaged south (polar night in 2015) is filled procedurally.",
+  "credits": [
+    {
+      "what": "Panchromatic mosaic",
+      "credit": "Pluto New Horizons LORRI/MVIC global mosaic 300 m (Jul 2017). NASA / Johns Hopkins University APL / Southwest Research Institute; USGS Astrogeology Science Center.",
+      "url": "https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif",
+      "mirror": "https://asc-pds-services.s3.amazonaws.com/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif",
+      "license": "Public domain (U.S. Government work: NASA / USGS)"
+    },
+    {
+      "what": "Elevation model",
+      "credit": "Pluto New Horizons global DEM 300 m (Jul 2017). NASA / JHUAPL / SwRI; USGS Astrogeology Science Center.",
+      "url": "https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_DEM_300m_Jul2017_16bit.tif",
+      "mirror": "https://asc-pds-services.s3.amazonaws.com/mosaic/Pluto_NewHorizons_Global_DEM_300m_Jul2017_16bit.tif",
+      "license": "Public domain (U.S. Government work: NASA / USGS)"
+    }
+  ]
+}

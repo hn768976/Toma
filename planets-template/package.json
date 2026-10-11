@@ -1,0 +1,33 @@
+{
+  "name": "planets-template",
+  "version": "1.0.0",
+  "description": "Planets template: 9 solar-system bodies x Spin / Crescent shots (Remotion + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "build:bodies": "node scripts/build-bodies.mjs",
+    "render:all": "bash scripts/render-all-4k.sh",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.4.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "^4.0.515",
+    "@remotion/renderer": "^4.0.515",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "geotiff": "2.1.3",
+    "sharp": "0.34.4",
+    "typescript": "5.9.3"
+  }
+}
