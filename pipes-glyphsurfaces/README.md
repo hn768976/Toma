@@ -55,7 +55,35 @@ npx remotion still src/index.ts SteelPipes-Bundle out/SteelPipes_Bundle_6K.png -
 radius, bloom radius, grain) is defined relative to image height, so 6K and 720p
 have the same look.
 
-<!-- TIMINGS -->
+## Measured render times
+
+Measured in a CPU-only cloud container with 4 vCPUs. There is no GPU, so ANGLE
+falls back to SwiftShader. Per-frame figures are marginal cost, `(16-frame time −
+1-frame cold time) / 15`, with startup excluded. On a real GPU expect these to
+drop by one to two orders of magnitude.
+
+| Composition | 720p s/frame (measured) | 4K s/frame | 4K, 600 frames (CPU estimate) |
+|---|---|---|---|
+| SteelPipes-Stacked | 17.6 | ~104 (est., ×5.9) | ~17 h |
+| SteelPipes-Bundle (2A) | 9.3 | **54.7 (measured)** | ~9.1 h |
+| CopperPipes-Bundle | 9.3 | ~55 (est.) | ~9.2 h |
+| DataTileFloor-GreenTeal (3A) | 1.4 | **4.9 (measured)** | ~49 min |
+| DataTileFloor-MagentaBlue | 1.4 | ~4.9 (est.) | ~49 min |
+| GlyphWave-Blue | 0.9 | ~3.1 (est., ×3.4) | ~31 min |
+| BinaryCubes-CyanViolet | 2.5 | ~10 (est., ×4) | ~1.7 h |
+
+The two 4K frames were timed for real:
+
+- **2A** (140 instanced pipes, PMREM, 4× MSAA, DoF): 1 cold frame took 98.8 s,
+  and 4 frames took 262.8 s, so about **54.7 s** per 4K frame.
+- **3A** (about 49 k instanced cells with 8 depth patches, DoF and bloom): 1
+  cold frame took 12.1 s, and 4 frames took 26.9 s, so about **4.9 s** per 4K
+  frame.
+
+The other 4K figures scale the 720p measurement by the measured 4K/720p ratio
+for the same engine: ×5.9 for pipes, ×3.4 for glyph quads, ×4 for cubes.
+Rendering in parallel (`--concurrency`) divides wall-clock time accordingly.
+
 
 ## How it works
 
@@ -68,7 +96,8 @@ have the same look.
 - All random layout (pipe packing, cell palettes, glyph schedules, padlocks,
   brushed-noise texture) comes from `mulberry32` with fixed seeds.
 - Glyph swaps use holds from {10, 12, 15, 20, 24, 30, 40, 60} frames, all of
-  which divide 600. The glyph is `hash(cell, step)`, evaluated on the GPU.
+  which divide 600. The glyph is `hash(cell, step mod (600/hold))`, evaluated on
+  the GPU, with a per-cell phase offset so swaps never line up.
 - Waves sample simplex noise around a circle in time (`cos θ, sin θ`).
   Flicker uses whole cycles per loop. The floor moves exactly one patch depth
   (64 × 1.12 units) per loop.
@@ -109,4 +138,58 @@ SIL Open Font License 1.1 (`public/fonts/OFL.txt`). The padlocks are drawn with
 Canvas paths. There are no logos, brands, words or real code: every glyph is a
 random single character, hex digit or binary digit.
 
-<!-- CHECKS -->
+## Verification (run on the delivered code)
+
+| Check | Method | Result |
+|---|---|---|
+| Loop: frame 600 = frame 0 | `REMOTION_LOOP_CHECK=1` (601-frame comps), stills at 0 and 600, pixel diff | **0 / identical** for all 7 |
+| Seam continuity | mean abs diff 599→0 vs 0→1 | equal within noise for all 7 |
+| Determinism | cold `remotion still --frame=300` vs frame 300 of a `--concurrency=2` sequence (296–304) | **byte-identical** (max diff 0) for all 7 |
+| Banding | 720p still → H.264 CRF 16 yuv420p → decode, pixel runs across a pipe streak, glyph bokeh, cube gradient | no steps (max smoothed step ≤ 1 level in the dark bokeh; no flat runs except clipped highlights); grain left at 1.5 % |
+| Output size | `--scale=0.3333333333333333` | exactly 1280×720 |
+
+Two bugs were found by these checks and fixed:
+
+- **Glyph swap flash.** Every hold length divides 600, so originally every cell
+  swapped glyph (and dipped) on frame 0. Each cell now gets a hashed phase
+  offset inside its hold.
+- **Tile streak popping.** Streak runs switched whole cells on and off, and all
+  lanes aligned on frames 0 and 300. Runs now have soft edges and fractional
+  lane phases.
+
+### Completion checklist
+
+- [x] 7 compositions, 3840×2160, 30 fps, 600 frames, seamless loops
+- [x] One data row per version (`src/versions.ts`)
+- [x] WebGL2 via `@remotion/three` and `--gl=angle`; no WebGPU, no TAA
+- [x] Everything deterministic from `useCurrentFrame()`; seeded `mulberry32`
+- [x] JetBrains Mono (OFL) only, licence included; no logos, words or real code
+- [x] Dither ±1/255 and 1.5 % grain from pixel position and `frame % 600`
+- [x] 720p timing for every composition; 4K frames of 2A and 3A timed
+- [ ] Full 4K renders: not done here (CPU-only container); commands above
+
+
+## Deviations from the brief (and why)
+
+The brief's camera numbers and sizes were starting points. These values were
+changed to match the reference footage:
+
+- **Stacked:** the stack is 18 × 8 pipes, not 7 × 5, so the oblique reference
+  framing fills the frame with no visible stack edge. Wall thickness is 5 % of
+  the radius.
+- **Bundle:** the camera sits below the bundle, looking up about 25° off the
+  axis, with a 26° FOV to reduce the fan-out.
+- **Data Tile Floor:** the camera is 13 units up and pitched 40°. At 2.5 units
+  up the tiles were far larger than in the reference. The floor uses 8 patches
+  (about 49 k cells), and the far edge fades out so it never pops at the loop.
+- **Glyph Wave:** the wave amplitude is 3.0, not 1.5, so the fold reads. The
+  camera views the sheet from the side, so rows recede to the right as in the
+  reference. Glyphs are drawn on an 11-column LCD pixel grid sampled from
+  JetBrains Mono, which gives the blocky reference look within the OFL-font
+  rule.
+- **Binary Cubes:** the colour gradient is in screen space (top cyan → bottom
+  magenta, with violet toward the sides). It is not tied to world depth, because
+  the steep camera compresses depth.
+- **Studio environment:** the studio light panels are computed into a float
+  buffer, not an 8-bit canvas, so they can be HDR (panels up to 10×), then
+  PMREM-filtered.
