@@ -11,7 +11,7 @@ const PERIOD_X = P * SPACING; // 14.4 world units — camera travels exactly thi
 const FW = 1.1; // folder width
 const FH = 0.8; // folder height (body)
 const TAB_W = 0.34;
-const TAB_H = 0.075;
+const TAB_H = 0.06;
 
 // ---- seeded per-slot variation (module level) ----
 const VAR = (() => {
@@ -46,14 +46,14 @@ const folderShape = (tabRight: boolean) => {
   s.lineTo(x0, r);
   s.quadraticCurveTo(x0, 0, x0 + r, 0);
   const g = new THREE.ExtrudeGeometry(s, {
-    depth: 0.04,
+    depth: 0.022,
     bevelEnabled: true,
-    bevelThickness: 0.006,
-    bevelSize: 0.006,
+    bevelThickness: 0.003,
+    bevelSize: 0.003,
     bevelSegments: 2,
     curveSegments: 6,
   });
-  g.translate(0, 0, -0.02);
+  g.translate(0, 0, -0.011);
   // face normal → −x (towards the camera, which looks along +x), turned 12° further toward it
   g.rotateY(-Math.PI / 2 + THREE.MathUtils.degToRad(14));
   return g;
@@ -130,21 +130,22 @@ float gridLine(vec2 uv, float w) {
   return mix(l.x, 1.0, l.y);
 }
 void main() {
-  vec2 p = vW.xz / 0.6; // grid every 0.6 (= folder spacing → periodic with the row)
-  float line = gridLine(p, 0.03);
+  vec2 p = vW.xz / 0.3; // grid every 0.3 (divides the row period → periodic)
+  float line = gridLine(p, 0.035);
   // glowing dots on a finer lattice, hashed on (x mod period) so the floor repeats every row period
   vec2 q = vW.xz / 0.15;
   vec2 cell = floor(q + 0.5);
   float px = mod(cell.x, periodX / 0.15);
   float h = hash(vec2(px, cell.y));
-  float dotOn = step(0.8, h);
+  float dotOn = step(0.72, h);
+  vec2 jit = vec2(hash(vec2(px, cell.y) + 3.1), hash(vec2(px, cell.y) + 7.7)) - 0.5;
   float tw = 0.35 + 0.65 * (0.5 + 0.5 * sin(TAU * (floor(1.0 + h * 3.0) * t + h * 7.0)));
-  vec2 dq = (q - cell) * 0.15;
-  float r = length(dq) / 0.012;
+  vec2 dq = (q - cell - jit * 0.6) * 0.15;
+  float r = length(dq) / (0.005 + 0.012 * fract(h * 13.7));
   float dotv = dotOn * exp(-r * r) * tw;
   float dist = length(vW.xz - camPos.xz);
   float fade = exp(-dist * 0.05);
-  vec3 c = cBase * (1.0 + 1.2 * fade) + cLine * line * 0.45 * fade + cDot * dotv * 3.0 * fade;
+  vec3 c = cBase * (1.0 + 1.2 * fade) + cLine * line * 0.7 * fade + cDot * dotv * 3.4 * fade;
   c = mix(cFog, c, clamp(fade * 1.25, 0.0, 1.0));
   gl_FragColor = vec4(c, 0.82);
 }
@@ -210,12 +211,12 @@ const buildStreams = () => {
   // dashed lines laid out inside one period [0, 14.4) then repeated ×4 along x
   const perTile: [number, number, number, number, number][] = [];
   while (perTile.length < target / 4) {
-    const z = -2.2 - r() * 7.5;
+    const z = -1.6 - r() * 5.5;
     const vertical = r() < 0.45;
     const n = 4 + Math.floor(r() * 9);
     const gap = 0.07 + r() * 0.05;
     const x = r() * PERIOD_X;
-    const y = 0.1 + r() * 3.2;
+    const y = Math.pow(r(), 1.4) * 2.6;
     for (let i = 0; i < n && perTile.length < target / 4; i++) {
       if (r() < 0.15) continue; // dash gaps
       perTile.push(vertical ? [x, y + i * gap, z, 1, r()] : [x + i * gap, y, z, 0, r()]);
@@ -224,7 +225,7 @@ const buildStreams = () => {
   for (let k = 0; k < 4; k++)
     for (const [x, y, z, kind, ph] of perTile) {
       pos.push(x + k * PERIOD_X, y, z);
-      seed.push(ph, 1 + Math.floor(ph * 4), kind, 0.026 + 0.022 * ((ph * 7.31) % 1));
+      seed.push(ph, 1 + Math.floor(ph * 4), kind, 0.011 + 0.012 * ((ph * 7.31) % 1));
     }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -235,7 +236,7 @@ const buildStreams = () => {
 export const createFolderRow = () => (): Look => {
   const pipe = new Pipeline(4);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(21, 16 / 9, 0.1, 80);
+  const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 80);
   const DEFINES = { TAU: "6.283185307179586" };
 
   const bg = new THREE.Mesh(
@@ -245,7 +246,7 @@ export const createFolderRow = () => (): Look => {
       fragmentShader: BG_FRAG,
       depthWrite: false,
       uniforms: {
-        cTop: { value: new THREE.Color("#04113A") },
+        cTop: { value: new THREE.Color("#030A2E") },
         cMid: { value: new THREE.Color("#0A2470") },
         cHorizon: { value: new THREE.Color("#163C9E") },
       },
@@ -270,7 +271,7 @@ export const createFolderRow = () => (): Look => {
         periodX: { value: PERIOD_X },
         pxScale: { value: 1000 },
         yRange: { value: 4.2 },
-        cDot: { value: new THREE.Color("#8AC8FF").multiplyScalar(1.6) },
+        cDot: { value: new THREE.Color("#9AD4FF").multiplyScalar(3.2) },
       },
     }),
   );
@@ -285,7 +286,7 @@ export const createFolderRow = () => (): Look => {
     roughness: 0.55,
     metalness: 0,
     normalMap: nmap,
-    normalScale: new THREE.Vector2(1.2, 1.2),
+    normalScale: new THREE.Vector2(0.8, 0.8),
   });
   const side = new THREE.MeshStandardMaterial({ color: new THREE.Color("#8FA6D6"), roughness: 0.6 });
   const reflMat = new THREE.ShaderMaterial({
@@ -330,8 +331,10 @@ export const createFolderRow = () => (): Look => {
   rowR.renderOrder = 2;
   scene.add(rowL, rowR);
 
+  // distance falloff into saturated blue, as in the reference
+  scene.fog = new THREE.Fog(new THREE.Color("#163C9E"), 4.5, 15);
   scene.add(new THREE.HemisphereLight(new THREE.Color("#7A92E0"), new THREE.Color("#0A1A50"), 1.1));
-  const key = new THREE.DirectionalLight(new THREE.Color("#B0C4FF"), 2.1);
+  const key = new THREE.DirectionalLight(new THREE.Color("#C0D0FF"), 2.9);
   key.position.set(-8, 3.5, 3.5);
   scene.add(key);
   const rim = new THREE.DirectionalLight(new THREE.Color("#4A8AFF"), 0.8);
@@ -351,8 +354,8 @@ export const createFolderRow = () => (): Look => {
       const t = (((frame % LOOP) + LOOP) % LOOP) / LOOP; // frame 600 ≡ frame 0 exactly
       const camX = t * PERIOD_X;
       const bob = 0.025 * Math.sin(TAU * t);
-      camera.position.set(camX - 3.4, 1.55 + bob, 5.9);
-      camera.lookAt(camX, 0.5 + bob * 0.5, 0);
+      camera.position.set(camX - 2.9, 1.18 + bob, 4.1);
+      camera.lookAt(camX + 1.1, 0.8 + bob * 0.5, 0);
       camera.updateMatrixWorld();
 
       const first = Math.floor(camX / SPACING) - 14;
@@ -391,14 +394,14 @@ export const createFolderRow = () => (): Look => {
       gl.render(scene, camera);
       pipe.finish(gl, {
         camera,
-        dof: { focus: 6.2, range: 0.5, aperture: 2.2, maxRadius: 0.009 },
+        dof: { focus: 4.6, range: 0.6, aperture: 0.75, maxRadius: 0.007 },
         bloom: { strength: 0.6, threshold: 0.85, knee: 0.4 },
         final: {
           frame,
           period: LOOP,
           grain: 0.02,
           vignette: 0.35,
-          flare: { pos: [-0.02, 0.6], color: new THREE.Color("#4A8AFF"), radius: 0.32, intensity: 0.55 },
+          flare: { pos: [-0.01, 0.6], color: new THREE.Color("#4A8AFF"), radius: 0.2, intensity: 0.7, streak: 0.5 },
         },
       });
     },

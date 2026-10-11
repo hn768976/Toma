@@ -21,8 +21,8 @@ export const SLATE: GridPucksPalette = {
   line: "#8A9AAE",
   lineAlpha: 0.6,
   pucks: ["#F0B88A", "#F4C870", "#C8C0E0", "#7AB8E8", "#E8B8C8"],
-  shadow: 0.42,
-  vignette: 0.28,
+  shadow: 0.5,
+  vignette: 0.08,
   vignetteColor: "#2A3646",
 };
 
@@ -32,18 +32,18 @@ export const WHITE: GridPucksPalette = {
   line: "#BCBCC4",
   lineAlpha: 0.6,
   pucks: ["#9A7AE8", "#C87AD8", "#F0A04A", "#E8A88A", "#7A8AE8"],
-  shadow: 0.22,
-  vignette: 0.12,
-  vignetteColor: "#C8C8D0",
+  shadow: 0.3,
+  vignette: 0.16,
+  vignetteColor: "#D4D4DA",
 };
 
 // ---- Layout constants -------------------------------------------------------
 export const LOOP = 600;
 const PATCH = 40; // cells per periodic patch side
-const PUCKS_PER_PATCH = 560;
-const TILES = 2; // patches drawn each side of the centre patch
-const PUCK_R = 0.13;
-const PUCK_H = 0.04;
+const PUCKS_PER_PATCH = 300;
+const TILES = 1; // patches drawn each side of the centre patch (3×3 covers the whole view)
+const PUCK_R = 0.15;
+const PUCK_H = 0.062;
 const SLIDE = 14; // frames per one-cell slide
 const MOVER_SHARE = 0.66; // remaining pucks rest the whole loop → ~20% moving at any frame
 
@@ -163,7 +163,7 @@ const puckGeometry = () => {
     const u = 1 - i / 6;
     pts.push(new THREE.Vector2((r - b) * u, h + 0.006 * (1 - u * u)));
   }
-  const g = new THREE.LatheGeometry(pts, 48);
+  const g = new THREE.LatheGeometry(pts, 32);
   g.computeVertexNormals();
   return g;
 };
@@ -218,7 +218,7 @@ void main() {
 export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
   const pipe = new Pipeline(4);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.5, 200);
+  const camera = new THREE.PerspectiveCamera(23, 16 / 9, 0.5, 200);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2),
@@ -249,7 +249,7 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
     new THREE.ShaderMaterial({
       vertexShader: SHADOW_VERT,
       fragmentShader: SHADOW_FRAG,
-      uniforms: { opacity: { value: pal.shadow }, r: { value: PUCK_R * 1.15 } },
+      uniforms: { opacity: { value: pal.shadow }, r: { value: PUCK_R * 1.2 } },
       transparent: true,
       depthWrite: false,
     }),
@@ -264,14 +264,17 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       for (const w of WALKS) pucks.setColorAt(n++, colors[w.color % colors.length]);
   scene.add(shadows, pucks);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, new THREE.Color(pal.surfaceLow), 1.6));
-  const key = new THREE.DirectionalLight(0xffffff, 1.9);
-  key.position.set(-3, 8, 2);
+  scene.add(new THREE.HemisphereLight(0xffffff, new THREE.Color(pal.surfaceLow), 1.55));
+  const key = new THREE.DirectionalLight(0xffffff, 2.1);
+  key.position.set(-4, 7, -3);
   scene.add(key);
 
   const m = new THREE.Matrix4();
   const v2 = new THREE.Vector2();
   const clear = new THREE.Color(pal.surfaceLow);
+  const frustum = new THREE.Frustum();
+  const projView = new THREE.Matrix4();
+  const sphere = new THREE.Sphere(new THREE.Vector3(), PUCK_R * 3);
   const shadowOff = new THREE.Vector2(0.035, 0.03);
 
   return {
@@ -280,8 +283,8 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       // One closed camera lap per loop.
       const target = new THREE.Vector3(0.9 * Math.cos(TAU * t), 0, 0.6 * Math.sin(TAU * t));
       const yaw = THREE.MathUtils.degToRad(40 + 2.5 * Math.sin(TAU * t));
-      const pitch = THREE.MathUtils.degToRad(33);
-      const dist = 8.6;
+      const pitch = THREE.MathUtils.degToRad(30);
+      const dist = 9.4;
       camera.position.set(
         target.x - Math.sin(yaw) * Math.cos(pitch) * dist,
         Math.sin(pitch) * dist,
@@ -289,7 +292,18 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       );
       camera.lookAt(target);
       camera.updateMatrixWorld();
+      // contact shadow falls toward screen lower-right (key light from upper-left, behind)
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize();
+      const toward = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 2).setY(0).normalize();
+      shadowOff.set(right.x * 0.07 + toward.x * 0.06, right.z * 0.07 + toward.z * 0.06);
 
+      pipe.begin(gl, clear);
+      camera.aspect = pipe.w / pipe.h;
+      camera.updateProjectionMatrix();
+      projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      frustum.setFromProjectionMatrix(projView);
+
+      // Only pucks inside the view frustum are instanced (CPU cull; the pattern is unchanged).
       let i = 0;
       for (let ti = -TILES; ti <= TILES; ti++)
         for (let tj = -TILES; tj <= TILES; tj++)
@@ -297,24 +311,26 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
             puckPos(w, frame, v2);
             const x = v2.x + ti * PATCH;
             const z = v2.y + tj * PATCH;
+            sphere.center.set(x, 0, z);
+            if (!frustum.intersectsSphere(sphere)) continue;
             m.makeTranslation(x, 0, z);
             pucks.setMatrixAt(i, m);
+            pucks.setColorAt(i, colors[w.color % colors.length]);
             m.makeTranslation(x + shadowOff.x, 0.001, z + shadowOff.y);
             shadows.setMatrixAt(i, m);
             i++;
           }
+      pucks.count = i;
+      shadows.count = i;
       pucks.instanceMatrix.needsUpdate = true;
       shadows.instanceMatrix.needsUpdate = true;
       if (pucks.instanceColor) pucks.instanceColor.needsUpdate = true;
 
-      pipe.begin(gl, clear);
       (ground.material as THREE.ShaderMaterial).uniforms.res.value.set(pipe.w, pipe.h);
-      camera.aspect = pipe.w / pipe.h;
-      camera.updateProjectionMatrix();
       gl.render(scene, camera);
       pipe.finish(gl, {
         camera,
-        dof: { focus: dist, range: 0.35, aperture: 2.6, maxRadius: 0.012 },
+        dof: { focus: dist, range: 0.9, aperture: 1.25, maxRadius: 0.009 },
         final: {
           frame,
           period: LOOP,

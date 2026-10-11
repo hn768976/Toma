@@ -28,6 +28,7 @@ export type FlareOptions = {
   color: THREE.Color; // linear
   radius: number; // fraction of height
   intensity: number;
+  streak?: number; // horizontal anamorphic streak strength
 };
 
 export type FinalOptions = {
@@ -184,7 +185,7 @@ uniform vec2 res; uniform float frameIdx;
 uniform float grain; uniform float grainLumaCut;
 uniform float vignette; uniform vec3 vignetteColor;
 uniform vec2 flarePos; uniform vec3 flareColor; uniform float flareRadius; uniform float flareIntensity;
-uniform float exposure;
+uniform float exposure; uniform float flareStreak;
 varying vec2 vUv;
 
 uint hashU(uint x) {
@@ -205,6 +206,7 @@ void main() {
     vec2 d = (vUv - flarePos) * vec2(aspect, 1.0);
     float r = length(d) / flareRadius;
     col += flareColor * flareIntensity * (exp(-r * r * 2.0) * 0.8 + 0.25 / (1.0 + r * r * 6.0));
+    col += flareColor * flareIntensity * flareStreak * exp(-pow(d.y / 0.008, 2.0)) * exp(-abs(d.x) / 0.7);
   }
   vec2 v = (vUv - 0.5) * vec2(aspect, 1.0) / (0.5 * length(vec2(aspect, 1.0)));
   float vig = smoothstep(0.35, 1.05, length(v));
@@ -275,7 +277,7 @@ export class Pipeline {
     res: { value: new THREE.Vector2() }, frameIdx: { value: 0 }, grain: { value: 0.015 }, grainLumaCut: { value: 0 },
     vignette: { value: 0.2 }, vignetteColor: { value: new THREE.Color(0, 0, 0) },
     flarePos: { value: new THREE.Vector2() }, flareColor: { value: new THREE.Color() }, flareRadius: { value: 0.3 },
-    flareIntensity: { value: 0 }, exposure: { value: 1 },
+    flareIntensity: { value: 0 }, exposure: { value: 1 }, flareStreak: { value: 0 },
   });
 
   constructor(private samples = 4) {}
@@ -411,6 +413,7 @@ export class Pipeline {
       f.flareColor.value.copy(o.flare.color);
       f.flareRadius.value = o.flare.radius;
       f.flareIntensity.value = o.flare.intensity;
+      f.flareStreak.value = o.flare.streak ?? 0;
     } else {
       f.flareIntensity.value = 0;
     }

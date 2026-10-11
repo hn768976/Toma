@@ -23,8 +23,8 @@ export const BLUE_WHITE: FlowPalette = {
   shape: "#1A8AE8",
   shapeSide: "#0F62B0",
   line: "#1A1A1A",
-  shadow: 0.42,
-  glow: 0.8,
+  shadow: 0.7,
+  glow: 1.0,
   bloom: false,
   vignette: 0.06,
   vignetteColor: "#C9D0D8",
@@ -49,17 +49,17 @@ type Node = { x: number; y: number; w: number; h: number; kind: Kind; appear: nu
 type Edge = { pts: THREE.Vector2[]; from: number; to: number; start: number; dur: number };
 
 // ---- camera path along the strip (pure function of frame, tabulated at module level) ----
-const ROW = 1.15;
-const CAM_D = 6.4; // distance camera → target
-const TILT = THREE.MathUtils.degToRad(30); // from the surface normal
-const LEAD = 3.6; // nodes pop when they come this far ahead of the camera target
+const ROW = 0.92;
+const CAM_D = 10.2; // distance camera → target
+const TILT = THREE.MathUtils.degToRad(21); // from the surface normal
+const LEAD = 2.0; // nodes pop when they come this far ahead of the camera target
 const CAM_Y: number[] = (() => {
   const v = (f: number) => {
     const ein = clamp(f / 30);
     const ramp = ein * ein * (3 - 2 * ein); // slight ease at the start
     const out = clamp((f - 390) / 60);
     const slow = 1 - 0.93 * (out * out * (3 - 2 * out)); // last 2 s → near-hold
-    return 0.056 * (0.25 + 0.75 * ramp) * slow; // units per frame
+    return 0.046 * (0.25 + 0.75 * ramp) * slow; // units per frame
   };
   const ys = [0];
   for (let f = 1; f <= DURATION; f++) ys.push(ys[f - 1] + v(f - 0.5));
@@ -97,7 +97,7 @@ const buildGraph = () => {
   };
   const add = (x: number, y: number, kind: Kind, wh?: [number, number]) => {
     const [w, h] = wh ?? size(kind);
-    nodes.push({ x, y, w, h, kind, appear: 0, trigger: 0 });
+    nodes.push({ x, y, w: w * 0.68, h: h * 0.68, kind, appear: 0, trigger: 0 });
     return nodes.length - 1;
   };
   const link = (a: number, b: number, style: "straight" | "bus" | "diag") => {
@@ -118,7 +118,7 @@ const buildGraph = () => {
   let spine = add(0, y, "rect", [1.6, 0.6]);
   y += ROW;
   const outer: Record<string, number | null> = { L: null, R: null };
-  const END = camY(DURATION) + 7;
+  const END = camY(DURATION) + 4;
   let sections = 0;
   while (y < END) {
     const split = sections % 2 === 1 || r() < 0.25;
@@ -177,7 +177,7 @@ const buildGraph = () => {
   // near-hold it keeps going a little so the held view is a fully built section.
   const y0 = camY(0);
   const wave = (f: number) =>
-    f < 390 ? camY(f) + LEAD : Math.min(camY(390) + LEAD + (f - 390) * 0.09, camY(DURATION) + 5.6);
+    f < 390 ? camY(f) + LEAD : Math.min(camY(390) + LEAD + (f - 390) * 0.06, camY(DURATION) + 2.9);
   for (const n of nodes) {
     let f = 0;
     while (f < DURATION && wave(f) < n.y) f++;
@@ -289,7 +289,7 @@ void main() { gl_FragColor = vec4(mix(cLow, cHigh, smoothstep(0.0, 1.0, vUv.y)),
 export const createFlowchart = (pal: FlowPalette) => (): Look => {
   const pipe = new Pipeline(4);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(35, 16 / 9, 0.5, 60);
+  const camera = new THREE.PerspectiveCamera(22, 16 / 9, 0.5, 60);
   const { nodes, edges } = GRAPH;
 
   const bg = new THREE.Mesh(
@@ -306,7 +306,7 @@ export const createFlowchart = (pal: FlowPalette) => (): Look => {
   scene.add(bg);
 
   // connectors: one mesh, draw-on in the shader
-  const LINE_HALF = 0.0048;
+  const LINE_HALF = 0.0085;
   const PAD = 0.03;
   {
     const pos: number[] = [];
@@ -370,13 +370,8 @@ export const createFlowchart = (pal: FlowPalette) => (): Look => {
   // shapes + shadows
   const shapeColor = new THREE.Color(pal.shape);
   const items = nodes.map((n) => {
-    const mat = new THREE.MeshStandardMaterial({
-      color: shapeColor.clone().multiplyScalar(1 - pal.glow),
-      emissive: shapeColor.clone().multiplyScalar(pal.glow),
-      roughness: 0.5,
-      metalness: 0,
-      transparent: true,
-    });
+    // flat, unlit face in the exact shape colour (as in the reference); only the thin sides are shaded
+    const mat = new THREE.MeshBasicMaterial({ color: shapeColor.clone(), transparent: true });
     const side = new THREE.MeshStandardMaterial({
       color: new THREE.Color(pal.shapeSide).multiplyScalar(0.6),
       emissive: new THREE.Color(pal.shapeSide).multiplyScalar(pal.glow * 0.8),
@@ -398,12 +393,12 @@ export const createFlowchart = (pal: FlowPalette) => (): Look => {
           size: { value: new THREE.Vector2(n.w, n.h) },
           kind: { value: kindIdx },
           opacity: { value: pal.shadow },
-          blur: { value: 0.05 },
+          blur: { value: 0.012 },
           scale: { value: 1 },
         },
       }),
     );
-    sh.position.set(n.x + 0.045, n.y - 0.055, 0.002);
+    sh.position.set(n.x + 0.028, n.y - 0.034, 0.002);
     sh.renderOrder = 2;
     scene.add(sh, mesh);
     return { n, mesh, mat, side, sh };

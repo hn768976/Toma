@@ -44,14 +44,14 @@ export const DASHBOARD = {
     { label: "Rotor", value: 40.5 },
     { label: "Stator", value: 31.5 },
   ],
-  tempMax: 80,
+  tempMax: 130,
 };
 
 export const DURATION = 450;
 const COL = {
   bg: "#0A1A20",
   panel: "#0E2A30",
-  panelHi: "#12343A",
+  panelHi: "#0E3540",
   turbinePanel: "#4A5560",
   text: "#FFFFFF",
   textDim: "#A8CCCC",
@@ -89,10 +89,20 @@ const SERIES_DATA = (() => {
     const v: number[] = [];
     for (let i = 0; i < N_PTS; i++) {
       const trend = s.start + ((s.end - s.start) * i) / (N_PTS - 1);
-      v.push(Math.max(10, Math.min(495, trend + (r() - 0.5) * (s.start * 0.55 + 40))));
+      // rising walk with a strong alternating zig-zag, as in the reference
+      const zig = (i % 2 ? 1 : -1) * (0.35 + r() * 0.65) * (s.start * 0.45 + 20);
+      v.push(Math.max(10, Math.min(495, trend + zig + (r() - 0.5) * 30)));
     }
     return v;
   });
+})();
+
+// paired coral + teal bars (and a pale one) per x, irregular heights
+const BAR_DATA = (() => {
+  const r = mulberry32(0x0bad5eed);
+  return Array.from({ length: N_PTS }, (_, i) =>
+    SERIES_DATA.map((ser) => Math.max(20, ser[i] * (0.45 + r() * 0.6))),
+  );
 })();
 
 const xOf = (i: number) => PLOT.x0 + 0.2 * X_STEP + i * X_STEP;
@@ -129,7 +139,7 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
   // title + underline
   panel(0, () => {
     ctx.fillStyle = COL.text;
-    ctx.font = "700 96px Inter";
+    ctx.font = "700 92px Inter";
     ctx.fillText(D.title, 112, 128);
     ctx.fillStyle = COL.teal;
     ctx.fillRect(112, 166, 700, 15);
@@ -146,7 +156,7 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
       roundRect(ctx, m, 28);
       ctx.fill();
       ctx.fillStyle = COL.text;
-      ctx.font = "500 62px Inter";
+      ctx.font = "400 54px Inter";
       ctx.textAlign = "center";
       ctx.fillText(D.menus[i], m.x + m.w / 2 - 30, m.y + m.h / 2 + 22);
       ctx.textAlign = "left";
@@ -169,10 +179,10 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     roundRect(ctx, t, 44);
     ctx.fill();
     ctx.fillStyle = COL.text;
-    ctx.font = "400 60px Inter";
+    ctx.font = "400 52px Inter";
     ctx.fillText("Status :", t.x + 75, t.y + 105);
     const sw = ctx.measureText("Status :").width;
-    ctx.font = "500 54px Inter";
+    ctx.font = "500 46px Inter";
     const pw = ctx.measureText(D.status).width + 50;
     ctx.fillStyle = COL.mint;
     roundRect(ctx, R(t.x + 100 + sw, t.y + 52, pw, 72), 20);
@@ -180,7 +190,7 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     ctx.fillStyle = "#123A30";
     ctx.fillText(D.status, t.x + 125 + sw, t.y + 107);
     ctx.fillStyle = COL.text;
-    ctx.font = "400 52px Inter";
+    ctx.font = "400 48px Inter";
     D.info.forEach(([k, v], i) => ctx.fillText(`${k} : ${v}`, t.x + 50, t.y + 1310 + i * 68));
     ctx.textAlign = "right";
     D.infoRight.forEach(([k, v], i) => ctx.fillText(`${k} : ${v}`, t.x + t.w - 50, t.y + 1446 + i * 68));
@@ -194,8 +204,8 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     roundRect(ctx, c, 26);
     ctx.fill();
     // legend
-    ctx.font = "400 46px Inter";
-    let lx = c.x + 520;
+    ctx.font = "400 38px Inter";
+    let lx = c.x + 560;
     D.series.forEach((s) => {
       ctx.strokeStyle = s.color;
       ctx.lineWidth = 10;
@@ -212,7 +222,7 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     ctx.strokeStyle = COL.grid;
     ctx.lineWidth = 3;
     ctx.fillStyle = COL.textDim;
-    ctx.font = "400 40px Inter";
+    ctx.font = "400 34px Inter";
     ctx.textAlign = "right";
     for (let v = 0; v <= 500; v += 100) {
       const y = yOf(v);
@@ -247,12 +257,12 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
       const x = xOf(i);
       const k = easeOut(clamp((headX - x) / 160));
       if (k <= 0) continue;
-      const w = 22;
-      [0, 1, 2].forEach((si) => {
-        const v = SERIES_DATA[si][i] * k;
+      const w = 34;
+      BAR_DATA[i].forEach((v0, si) => {
+        const v = v0 * k;
         ctx.fillStyle = D.series[si].color;
-        ctx.globalAlpha = si === 2 ? 0.55 : 0.85;
-        const bx = x - 40 + si * (w + 6);
+        ctx.globalAlpha = si === 2 ? 0.4 : 0.6;
+        const bx = x - 52 + si * (w + 2);
         ctx.fillRect(bx, yOf(v), w, PLOT.y0 - yOf(v));
       });
       ctx.globalAlpha = 1;
@@ -356,7 +366,7 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     roundRect(ctx, h, 18);
     ctx.fill();
     ctx.fillStyle = COL.text;
-    ctx.font = "400 56px Inter";
+    ctx.font = "400 50px Inter";
     ctx.textAlign = "center";
     ctx.fillText("Temperatures", h.x + h.w / 2, h.y + 62);
     L.tempCols.forEach((c, i) => {
@@ -427,7 +437,7 @@ export const createDashboard = () => (): Look => {
   uiScene.add(quad);
 
   // 3D: one turbine for the big panel, one for the close-up (separate scenes)
-  const mat = new THREE.MeshStandardMaterial({ color: 0xe6e9ec, roughness: 0.4, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xcfd4d9, roughness: 0.45, metalness: 0 });
   const big = new THREE.Scene();
   const bigT = buildTurbine(mat);
   bigT.nacelle.rotation.y = THREE.MathUtils.degToRad(-18);
@@ -478,7 +488,7 @@ export const createDashboard = () => (): Look => {
         env = pm.fromScene(new RoomEnvironment(), 0.04).texture;
         big.environment = env;
         close.environment = env;
-        big.environmentIntensity = 0.6;
+        big.environmentIntensity = 0.5;
         close.environmentIntensity = 0.5;
         pm.dispose();
       }
@@ -499,18 +509,18 @@ export const createDashboard = () => (): Look => {
       bigT.rotor.rotation.z = -f * THREE.MathUtils.degToRad(2.1);
       mat.opacity = 1;
       if (k3 > 0.02) {
-        bigCam.position.set(1.45, 0.55, 4.6);
-        bigCam.lookAt(0.0, 0.84, 0);
+        bigCam.position.set(1.3, 0.48, 4.3);
+        bigCam.lookAt(0.0, 0.8, 0);
         bigCam.updateMatrixWorld();
         const r = { ...L.turbine, y: L.turbine.y + (1 - k3) * 60 };
         viewport(gl, r, big, bigCam);
       }
       // nacelle close-up: 3/4 rear view, slowly turning
       closeT.rotor.rotation.z = -f * THREE.MathUtils.degToRad(2.1);
-      closeT.nacelle.rotation.y = THREE.MathUtils.degToRad(-140 + f * 0.12);
+      closeT.nacelle.rotation.y = THREE.MathUtils.degToRad(-10 + f * 0.1);
       if (k7 > 0.02) {
-        closeCam.position.set(0.36, 1.2, 0.42);
-        closeCam.lookAt(0, 1.04, -0.02);
+        closeCam.position.set(0.5, 0.9, 0.62);
+        closeCam.lookAt(0, 1.03, 0.0);
         closeCam.updateMatrixWorld();
         const r = { ...L.nacelle, y: L.nacelle.y + (1 - k7) * 60 };
         viewport(gl, r, close, closeCam);

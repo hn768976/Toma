@@ -13,9 +13,9 @@ import { mulberry32 } from "../lib/random";
 export type HubMode = "drawOn" | "pulseLoop";
 
 const HUB = new THREE.Vector2(0, 0.165);
-const R = 0.09; // ring radius (≈9% of frame height)
-const DEV_W = 0.046;
-const DEV_H = 0.056;
+const R = 0.092; // ring radius (≈9% of frame height)
+const DEV_W = 0.056;
+const DEV_H = 0.066;
 
 type Stroke = {
   pts: THREE.Vector2[];
@@ -62,13 +62,22 @@ const bezier = (p0: THREE.Vector2, p1: THREE.Vector2, p2: THREE.Vector2, p3: THR
   return c.getPoints(n);
 };
 
-// Left wing as chains running outward from the hub (reference-like pixel space 768×432, hub at 384,140);
-// the right wing is the exact mirror. 13 devices per side.
-const LEFT_CHAINS: [number, number][][] = [
-  [[258, 142], [183, 121], [124, 106]],
-  [[196, 186], [128, 180], [62, 166]],
-  [[244, 240], [186, 230], [92, 228]],
-  [[318, 262], [256, 302], [190, 298], [154, 344]],
+// Left wing (reference-like pixel space 768×432, hub centre at 384,140); the right wing is its mirror.
+// parent: index of the device it branches from; -1 = end of the upper hub bar, -2 = lower-left of the ring.
+const LEFT_DEVICES: { px: [number, number]; parent: number }[] = [
+  { px: [257, 140], parent: -1 },
+  { px: [183, 120], parent: 0 },
+  { px: [125, 105], parent: 1 },
+  { px: [195, 183], parent: 0 },
+  { px: [128, 178], parent: 3 },
+  { px: [93, 225], parent: 4 },
+  { px: [318, 258], parent: -2 },
+  { px: [243, 240], parent: 6 },
+  { px: [185, 228], parent: 7 },
+  { px: [255, 300], parent: 6 },
+  { px: [190, 295], parent: 9 },
+  { px: [155, 342], parent: 10 },
+  { px: [236, 352], parent: 9 },
 ];
 const toWorld = ([x, y]: [number, number]) => new THREE.Vector2((x - 384) / 432, (140 - y) / 432 + HUB.y);
 
@@ -78,134 +87,125 @@ const buildStrokes = (mode: HubMode): Stroke[] => {
   const S: Stroke[] = [];
   const T = (s: number) => (story ? s : -1000);
 
-  // ---- hub ring (0–2s) ----
-  S.push({ pts: arc(HUB, R, Math.PI / 2, Math.PI / 2 + TAU, 128), width: 3.4, bright: 1.15, white: 0.75, start: T(4), dur: 40 });
-  S.push({ pts: arc(HUB, R * 0.8, -Math.PI / 2, -Math.PI / 2 + TAU, 112), width: 0.9, bright: 0.8, start: T(14), dur: 36 });
-  // notched outer rim: 12 teeth (rotates with the ring)
-  for (let i = 0; i < 12; i++) {
-    const a0 = (i / 12) * TAU + 0.05;
-    const a1 = a0 + TAU / 12 - 0.12;
-    const c = new THREE.Vector2(HUB.x + Math.cos((a0 + a1) / 2) * R * 1.2, HUB.y + Math.sin((a0 + a1) / 2) * R * 1.2);
-    // each tooth is a closed arc-band outline (gear segment)
-    const r1 = R * 1.13;
-    const r2 = R * 1.3 + (i % 3 === 0 ? 0.006 : 0);
-    const pts = [...arc(HUB, r1, a0, a1, 12), ...arc(HUB, r2, a1, a0, 12)];
+  // ---- hub (0–2 s): bright main ring, thin inner ring, segmented outer band with gaps ----
+  S.push({ pts: arc(HUB, R, Math.PI / 2, Math.PI / 2 + TAU, 128), width: 2.2, bright: 1.0, white: 0.55, start: T(4), dur: 40 });
+  S.push({ pts: arc(HUB, R * 0.8, -Math.PI / 2, -Math.PI / 2 + TAU, 112), width: 0.8, bright: 0.75, white: 0.5, start: T(14), dur: 36 });
+  // outer band: four arc-band segments, gaps at about 10 and 2 o'clock and at the bottom (static)
+  const r1 = R * 1.18;
+  const r2 = R * 1.36;
+  const segs: [number, number][] = [
+    [0.12, 0.92], // right-top … top-right gap at ~2 o'clock (≈ 0.5 rad)
+    [1.08, 2.06],
+    [2.22, 4.38],
+    [4.62, 6.0],
+  ];
+  segs.forEach(([a0, a1], i) => {
+    const pts = [...arc(HUB, r1, a0, a1, 24), ...arc(HUB, r2, a1, a0, 24)];
     pts.push(pts[0].clone());
-    S.push({ pts, width: 1.0, bright: 0.9, white: 0.5, start: T(44 + i * 1.5), dur: 8, ring: 1, teeth: c });
+    S.push({ pts, width: 0.9, bright: 0.85, white: 0.35, start: T(30 + i * 3), dur: 16 });
+  });
+  // 12 notches/teeth on the outer edge of the band — these rotate one notch period per loop
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * TAU + 0.26;
+    const w = 0.07;
+    const c = new THREE.Vector2(HUB.x + Math.cos(a) * R * 1.44, HUB.y + Math.sin(a) * R * 1.44);
+    const pts = [...arc(HUB, R * 1.4, a - w, a + w, 4), ...arc(HUB, R * 1.5, a + w, a - w, 4)];
+    pts.push(pts[0].clone());
+    S.push({ pts, width: 0.8, bright: 0.85, white: 0.4, start: T(44 + i * 1.5), dur: 8, ring: 1, teeth: c });
   }
-  // short horizontal bar with small dots under the hub (mirrored pairs)
-  const barY = HUB.y - R * 0.38;
+  // two horizontal bars each side at the hub's lower half, with small square terminals
+  const barA = HUB.y - 0.05;
+  const barB = HUB.y - 0.095;
   for (const sgn of [-1, 1]) {
-    S.push({
-      pts: [new THREE.Vector2(HUB.x + sgn * R * 1.32, barY), new THREE.Vector2(HUB.x + sgn * R * 2.9, barY)],
-      width: 1.0, bright: 0.9, start: T(50), dur: 10,
-    });
-    S.push({
-      pts: [new THREE.Vector2(HUB.x + sgn * R * 0.95, barY - 0.032), new THREE.Vector2(HUB.x + sgn * R * 2.1, barY - 0.032)],
-      width: 0.8, bright: 0.7, start: T(54), dur: 10,
-    });
-    for (const dx of [1.32, 2.0]) {
-      const c = new THREE.Vector2(HUB.x + sgn * R * dx, barY - (dx > 1.5 ? 0.032 : 0));
-      S.push({ pts: roundRect(c, 0.012, 0.012, 0.002), width: 0.9, bright: 1.1, start: T(56), dur: 6 });
+    S.push({ pts: [new THREE.Vector2(sgn * R * 1.0, barA), new THREE.Vector2(sgn * 0.25, barA)], width: 0.8, bright: 0.85, white: 0.4, start: T(50), dur: 12 });
+    S.push({ pts: [new THREE.Vector2(sgn * R * 0.7, barB), new THREE.Vector2(sgn * 0.27, barB)], width: 0.7, bright: 0.7, white: 0.3, start: T(54), dur: 12 });
+    for (const [x, y] of [[0.106, barA], [0.178, barB]] as [number, number][]) {
+      S.push({ pts: roundRect(new THREE.Vector2(sgn * x, y), 0.014, 0.014, 0.002), width: 0.9, bright: 1.0, white: 0.6, start: T(58), dur: 4 });
     }
   }
 
   // ---- devices + wires (left wing, then mirrored) ----
-  type Dev = { p: THREE.Vector2; tier: 1 | 2 | 3 | 4; i: number; parent: THREE.Vector2 | null };
+  type Dev = { p: THREE.Vector2; depth: number; parent: number };
   const devs: Dev[] = [];
-  let di = 0;
-  LEFT_CHAINS.forEach((chain, ci) => {
-    let prev: THREE.Vector2 | null = ci === 1 ? toWorld(LEFT_CHAINS[0][0]) : null;
-    chain.forEach((px, k) => {
-      const p = toWorld(px);
-      devs.push({ p, tier: (k + (ci === 1 ? 2 : 1)) as Dev["tier"], i: di++, parent: prev });
-      prev = p;
-    });
+  LEFT_DEVICES.forEach((d) => {
+    const depth = d.parent < 0 ? 0 : devs[d.parent].depth + 1;
+    devs.push({ p: toWorld(d.px), depth, parent: d.parent });
   });
-  const tierStart = { 1: 62, 2: 100, 3: 138, 4: 172 };
+  const tierStart = [62, 100, 138, 172];
+  const pops: number[] = [];
   const wing: Stroke[] = [];
-  for (const d of devs) {
+  devs.forEach((d, di) => {
     let from: THREE.Vector2;
-    if (!d.parent) {
-      // port on the left half of the ring
-      const ang = Math.PI + Math.atan2(HUB.y - d.p.y, HUB.x - d.p.x) * 0.6;
-      from = new THREE.Vector2(HUB.x + Math.cos(ang) * R * 1.3, HUB.y + Math.sin(ang) * R * 1.3);
+    if (d.parent === -1) from = new THREE.Vector2(-0.25, barA);
+    else if (d.parent === -2) {
+      const ang = Math.PI * 1.3;
+      from = new THREE.Vector2(HUB.x + Math.cos(ang) * R * 1.36, HUB.y + Math.sin(ang) * R * 1.36);
     } else {
-      from = new THREE.Vector2(d.parent.x - DEV_W * 0.55, d.parent.y + (rnd() - 0.5) * DEV_H * 0.4);
+      const par = devs[d.parent].p;
+      from = new THREE.Vector2(par.x - DEV_W * 0.52, par.y + (rnd() - 0.5) * DEV_H * 0.5);
     }
-    const to = new THREE.Vector2(d.p.x + DEV_W * 0.55, d.p.y + (rnd() - 0.5) * DEV_H * 0.3);
+    const to = new THREE.Vector2(d.p.x + DEV_W * 0.52, d.p.y + (rnd() - 0.5) * DEV_H * 0.4);
     const dx = to.x - from.x;
-    const wob = (rnd() - 0.5) * 0.03;
+    const wob = (rnd() - 0.5) * 0.025;
     const pts = bezier(
       from,
       new THREE.Vector2(from.x + dx * (0.35 + rnd() * 0.2), from.y + wob),
       new THREE.Vector2(to.x - dx * (0.35 + rnd() * 0.2), to.y - wob),
       to,
     );
-    const len = pts.reduce((s, p, i) => (i ? s + p.distanceTo(pts[i - 1]) : 0), 0);
-    const wStart = tierStart[d.tier] + rnd() * 12;
-    const wDur = Math.round(16 + len * 60);
-    const pulse = { k: 2 + Math.floor(rnd() * 3), phase: rnd() };
-    wing.push({ pts, width: 0.55, bright: 0.7, white: 0.35, start: T(wStart), dur: wDur, pulse });
-    // a second, fainter parallel wire on some links (like the reference's doubled traces)
-    if (rnd() < 0.45) {
-      const off = pts.map((p) => new THREE.Vector2(p.x, p.y - 0.006));
-      wing.push({ pts: off, width: 0.45, bright: 0.4, white: 0.2, start: T(wStart + 4), dur: wDur, pulse: { k: pulse.k, phase: (pulse.phase + 0.5) % 1 } });
+    const len = pts.reduce((sum, p, i) => (i ? sum + p.distanceTo(pts[i - 1]) : 0), 0);
+    const parentPop = d.parent >= 0 ? pops[d.parent] : 0;
+    const wStart = Math.max(tierStart[Math.min(d.depth, 3)] + rnd() * 10, parentPop + 2);
+    const wDur = Math.round(14 + len * 60);
+    const pulse = { k: 1 + Math.floor(rnd() * 2), phase: rnd() };
+    wing.push({ pts, width: 0.5, bright: 0.75, white: 0.3, start: T(wStart), dur: wDur, pulse });
+    // doubled / tripled traces, as in the reference
+    const strands = 1 + Math.floor(rnd() * 2.6);
+    for (let k = 1; k <= strands; k++) {
+      const off = pts.map((p, i) => {
+        const u = i / (pts.length - 1);
+        const e = Math.min(1, Math.min(u, 1 - u) / 0.12);
+        return new THREE.Vector2(p.x, p.y + e * 0.0055 * k * (k % 2 ? 1 : -1));
+      });
+      wing.push({ pts: off, width: 0.4, bright: 0.45, white: 0.15, start: T(wStart + 3 * k), dur: wDur });
     }
     const pop = wStart + wDur;
+    pops[di] = pop;
     const flash = { k: pulse.k, phase: pulse.phase, pop: story ? pop : -1000, center: d.p.clone() };
-    wing.push({ pts: roundRect(d.p, DEV_W, DEV_H, 0.006), width: 1.1, bright: 1.0, white: 0.6, start: T(pop - 2), dur: 2, flash });
-    // soft blue fill of the device body
+    wing.push({ pts: roundRect(d.p, DEV_W, DEV_H, 0.006), width: 1.05, bright: 1.0, white: 0.5, start: T(pop - 2), dur: 2, flash });
+    // luminous card body
     wing.push({
-      pts: [new THREE.Vector2(d.p.x - DEV_W * 0.36, d.p.y), new THREE.Vector2(d.p.x + DEV_W * 0.36, d.p.y)],
-      width: (DEV_H * 0.4) / 0.0011, bright: 0.07, white: 0, start: T(pop - 2), dur: 2, flash, fill: true,
+      pts: [new THREE.Vector2(d.p.x - DEV_W * 0.38, d.p.y), new THREE.Vector2(d.p.x + DEV_W * 0.38, d.p.y)],
+      width: (DEV_H * 0.42) / 0.0011, bright: 0.38, white: 0, start: T(pop - 2), dur: 2, flash, fill: true,
     });
-    // inner glyph: document lines / screen / phone
-    const g = d.i % 3;
-    if (g === 0) {
-      for (let k = 0; k < 3; k++) {
-        const y = d.p.y + DEV_H * (0.22 - k * 0.18);
-        const w = DEV_W * (k === 2 ? 0.35 : 0.6);
-        wing.push({
-          pts: [new THREE.Vector2(d.p.x - DEV_W * 0.3, y), new THREE.Vector2(d.p.x - DEV_W * 0.3 + w, y)],
-          width: 0.7, bright: 0.9, start: T(pop - 2), dur: 2, flash,
-        });
-      }
-    } else if (g === 1) {
-      wing.push({ pts: roundRect(new THREE.Vector2(d.p.x, d.p.y + DEV_H * 0.08), DEV_W * 0.6, DEV_H * 0.42, 0.002), width: 0.7, bright: 0.9, start: T(pop - 2), dur: 2, flash });
+    // document glyph: white text lines
+    for (let k = 0; k < 4; k++) {
+      const y = d.p.y + DEV_H * (0.26 - k * 0.16);
+      const w = DEV_W * (k === 3 ? 0.32 : k === 1 ? 0.5 : 0.62);
       wing.push({
-        pts: [new THREE.Vector2(d.p.x - DEV_W * 0.2, d.p.y - DEV_H * 0.28), new THREE.Vector2(d.p.x + DEV_W * 0.2, d.p.y - DEV_H * 0.28)],
-        width: 0.7, bright: 0.9, start: T(pop - 2), dur: 2, flash,
-      });
-    } else {
-      wing.push({ pts: roundRect(new THREE.Vector2(d.p.x - DEV_W * 0.12, d.p.y), DEV_W * 0.34, DEV_H * 0.6, 0.004), width: 0.7, bright: 0.9, start: T(pop - 2), dur: 2, flash });
-      wing.push({
-        pts: [new THREE.Vector2(d.p.x + DEV_W * 0.12, d.p.y + DEV_H * 0.12), new THREE.Vector2(d.p.x + DEV_W * 0.3, d.p.y + DEV_H * 0.12)],
-        width: 0.7, bright: 0.9, start: T(pop - 2), dur: 2, flash,
+        pts: [new THREE.Vector2(d.p.x - DEV_W * 0.3, y), new THREE.Vector2(d.p.x - DEV_W * 0.3 + w, y)],
+        width: 0.75, bright: 1.0, white: 0.85, start: T(pop - 2), dur: 2, flash,
       });
     }
-  }
+  });
   // mirror the wing → perfectly symmetrical emblem
-  for (const s of wing) {
-    S.push(s);
+  for (const st of wing) {
+    S.push(st);
     const m = (v: THREE.Vector2) => new THREE.Vector2(2 * HUB.x - v.x, v.y);
-    S.push({
-      ...s,
-      pts: s.pts.map(m),
-      flash: s.flash ? { ...s.flash, center: m(s.flash.center) } : undefined,
-    });
+    S.push({ ...st, pts: st.pts.map(m), flash: st.flash ? { ...st.flash, center: m(st.flash.center) } : undefined });
   }
   return S;
 };
 
 const STROKE_VERT = /* glsl */ `
 attribute vec4 aAcross; // x: -1..1 across, y: core half-width multiplier, z: whiteness, w: fill
+attribute vec2 aSeg;    // x: position along this segment (extends past both ends), y: segment length
 attribute vec4 aAlong;  // x: arc length, y: total length, z: start frame, w: duration
 attribute vec4 aPulse;  // x: k, y: phase, z: has pulse, w: brightness
 attribute vec4 aFlash;  // x: k, y: phase, z: pop frame, w: is device
 attribute vec4 aCenter; // xy: pop/tooth centre, z: ring-rotating, w: is tooth
 uniform float frame; uniform float loopT; uniform float ringRot; uniform vec2 hub; uniform float halfW;
-varying vec4 vAcross; varying vec4 vAlong; varying vec4 vPulse; varying vec4 vFlash; varying float vScale;
+varying vec4 vAcross; varying vec4 vAlong; varying vec4 vPulse; varying vec4 vFlash; varying float vScale; varying vec2 vSeg;
 void main() {
   vec2 p = position.xy;
   float sc = 1.0;
@@ -227,7 +227,7 @@ void main() {
     float c = cos(ringRot), s = sin(ringRot);
     p = hub + vec2(c * d.x - s * d.y, s * d.x + c * d.y);
   }
-  vAcross = aAcross; vAlong = aAlong; vPulse = aPulse; vFlash = aFlash; vScale = sc;
+  vAcross = aAcross; vAlong = aAlong; vPulse = aPulse; vFlash = aFlash; vScale = sc; vSeg = aSeg;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 0.0, 1.0);
 }
 `;
@@ -235,16 +235,20 @@ void main() {
 const STROKE_FRAG = /* glsl */ `
 uniform float frame; uniform float loopT; uniform float halfW; uniform float coreW; uniform float glowW;
 uniform vec3 cGlow; uniform vec3 cCore; uniform vec3 cBead; uniform float pulseOn;
-varying vec4 vAcross; varying vec4 vAlong; varying vec4 vPulse; varying vec4 vFlash; varying float vScale;
+varying vec4 vAcross; varying vec4 vAlong; varying vec4 vPulse; varying vec4 vFlash; varying float vScale; varying vec2 vSeg;
 float hash(float n) { return fract(sin(n) * 43758.5453123); }
 void main() {
   // draw-on: reveal along the arc length
+  float du = vSeg.x - clamp(vSeg.x, 0.0, vSeg.y);   // distance beyond the segment ends
+  float alongPos = vAlong.x - du;
   float prog = clamp((frame - vAlong.z) / vAlong.w, 0.0, 1.0);
   float head = prog * vAlong.y;
-  float vis = smoothstep(head + 0.002, head - 0.002, vAlong.x) * step(0.0001, prog);
+  float vis = smoothstep(head + 0.002, head - 0.002, alongPos) * step(0.0001, prog);
   if (vFlash.w > 0.5) vis = step(0.001, vScale);
   if (vis <= 0.0) discard;
-  float d = abs(vAcross.x) * halfW;           // world distance from the centre line
+  // true distance to the segment (round caps); fills keep square ends
+  float d = vAcross.w > 0.5 ? abs(vAcross.x) * halfW : length(vec2(du, vAcross.x * halfW));
+  if (vAcross.w > 0.5 && du != 0.0) discard;
   float cw = coreW * vAcross.y;
   float aa = fwidth(d) + 1e-6;
   float core = clamp((cw - d) / aa + 0.5, 0.0, 1.0);
@@ -254,13 +258,14 @@ void main() {
   // pulses: beads travelling hub → device, whole trips per loop
   float bead = 0.0;
   if (vPulse.z > 0.5 && pulseOn > 0.0) {
-    float u = fract(vPulse.x * loopT + vPulse.y);
-    float s = vAlong.x / vAlong.y;
-    float dd = (s - u) * vAlong.y / 0.022;
-    bead = exp(-dd * dd) * pulseOn * clamp(prog * 2.0 - 1.0, 0.0, 1.0);
-    // a soft comet tail behind the bead
-    float tail = (s < u) ? exp(-(u - s) * vAlong.y / 0.04) * 0.25 : 0.0;
-    bead += tail * pulseOn * clamp(prog * 2.0 - 1.0, 0.0, 1.0);
+    float s = alongPos / vAlong.y;
+    float on = pulseOn * clamp(prog * 2.0 - 1.0, 0.0, 1.0);
+    for (int i = 0; i < 2; i++) {
+      float u = fract(vPulse.x * loopT + vPulse.y + float(i) * 0.5);
+      float dd = (s - u) * vAlong.y / 0.007;
+      bead += exp(-dd * dd) * on;
+      bead += ((s < u) ? exp(-(u - s) * vAlong.y / 0.02) * 0.2 : 0.0) * on;
+    }
   }
   // device flash when a bead arrives + a light step-schedule flicker
   float flash = 0.0;
@@ -287,14 +292,17 @@ varying vec2 vUv;
 void main() {
   vec2 d = (vUv - hubUv) * vec2(res.x / res.y, 1.0);
   float r = length(d);
-  gl_FragColor = vec4(cHaze * (exp(-r * r / 0.03) * 0.010 + exp(-r * r / 0.25) * 0.0025), 1.0);
+  gl_FragColor = vec4(cHaze * (exp(-r * r / 0.03) * 0.004 + exp(-r * r / 0.25) * 0.001), 1.0);
 }
 `;
 
 const buildGeometry = (strokes: Stroke[], halfW: number) => {
+  // One independent quad per polyline segment (extended by halfW at both ends); the fragment
+  // shader measures the true distance to the segment (round caps), so sharp corners never fold.
   const pos: number[] = [];
   const across: number[] = [];
   const along: number[] = [];
+  const seg: number[] = [];
   const pulse: number[] = [];
   const flash: number[] = [];
   const center: number[] = [];
@@ -306,32 +314,34 @@ const buildGeometry = (strokes: Stroke[], halfW: number) => {
     const cum = [0];
     for (let i = 1; i < n; i++) cum.push((L += s.pts[i].distanceTo(s.pts[i - 1])));
     const total = Math.max(L, 1e-4);
-    for (let i = 0; i < n; i++) {
-      const a = s.pts[Math.max(0, i - 1)];
-      const b = s.pts[Math.min(n - 1, i + 1)];
+    for (let i = 0; i < n - 1; i++) {
+      const a = s.pts[i];
+      const b = s.pts[i + 1];
+      const len = a.distanceTo(b);
+      if (len < 1e-7) continue;
       const t = new THREE.Vector2().subVectors(b, a).normalize();
       const nrm = new THREE.Vector2(-t.y, t.x);
-      for (const side of [-1, 1]) {
-        const p = s.pts[i].clone().addScaledVector(nrm, side * halfW);
-        pos.push(p.x, p.y, 0);
-        across.push(side, s.width, s.white ?? 1, s.fill ? 1 : 0);
-        along.push(cum[i], total, s.start, s.dur);
-        pulse.push(s.pulse?.k ?? 0, s.pulse?.phase ?? 0, s.pulse ? 1 : 0, s.bright);
-        flash.push(s.flash?.k ?? 1, s.flash?.phase ?? 0, s.flash?.pop ?? -1000, s.flash ? 1 : 0);
-        const c = s.flash?.center ?? s.teeth ?? HUB;
-        center.push(c.x, c.y, s.ring ?? 0, s.teeth ? 1 : 0);
-      }
-      if (i < n - 1) {
-        const v = base + i * 2;
-        idx.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
-      }
+      for (const u of [-halfW, len + halfW])
+        for (const side of [-1, 1]) {
+          const p = a.clone().addScaledVector(t, u).addScaledVector(nrm, side * halfW);
+          pos.push(p.x, p.y, 0);
+          across.push(side, s.width, s.white ?? 1, s.fill ? 1 : 0);
+          along.push(cum[i] + u, total, s.start, s.dur);
+          seg.push(u, len);
+          pulse.push(s.pulse?.k ?? 0, s.pulse?.phase ?? 0, s.pulse ? 1 : 0, s.bright);
+          flash.push(s.flash?.k ?? 1, s.flash?.phase ?? 0, s.flash?.pop ?? -1000, s.flash ? 1 : 0);
+          const c = s.flash?.center ?? s.teeth ?? HUB;
+          center.push(c.x, c.y, s.ring ?? 0, s.teeth ? 1 : 0);
+        }
+      idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
+      base += 4;
     }
-    base += n * 2;
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute("aAcross", new THREE.Float32BufferAttribute(across, 4));
   g.setAttribute("aAlong", new THREE.Float32BufferAttribute(along, 4));
+  g.setAttribute("aSeg", new THREE.Float32BufferAttribute(seg, 2));
   g.setAttribute("aPulse", new THREE.Float32BufferAttribute(pulse, 4));
   g.setAttribute("aFlash", new THREE.Float32BufferAttribute(flash, 4));
   g.setAttribute("aCenter", new THREE.Float32BufferAttribute(center, 4));
