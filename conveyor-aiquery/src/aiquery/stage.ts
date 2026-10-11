@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mulberry32 } from "../lib/random";
 import { Bloom, COMMON, FullscreenPass, makeDofGather, makeRT, makeTent, shader } from "../gl/post";
 import type { Stage, StageFactory } from "../gl/GLStage";
-import { buildNetwork, type Network } from "./network";
+import { buildNetwork, finalFrame, type Network } from "./network";
 
 // ------------------------------------------------------------ constants --
 const NAVY0 = new THREE.Color("#020818");
@@ -50,6 +50,11 @@ const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const storyKeys = (n: Network): Key[] => {
   const p0 = n.path[0], p1 = n.path[1], p2 = n.path[2];
   const fin = n.final;
+  // the hold looks across the last segment so the violet beam runs left to
+  // right into the answer; the target sits right of it -> answer left of centre
+  const { r, v } = finalFrame(p2.v0, fin);
+  const holdPos = (d: number) => fin.clone().addScaledVector(v, -d).add(V(0, 0.25, 0)).addScaledVector(r, -0.3);
+  const holdTgt = fin.clone().addScaledVector(r, 0.75);
   return [
     { f: 0, pos: V(0, 0.55, 7.2), tgt: V(0, 0.45, 0), focus: V(0, 0.6, 0) },
     { f: 75, pos: V(0, 0.45, 6.0), tgt: V(0, 0.35, 0), focus: V(0, 0.5, 0) },
@@ -57,21 +62,21 @@ const storyKeys = (n: Network): Key[] => {
     { f: 168, pos: V(-2.6, 0.9, 2.6), tgt: V(5, 0, -0.5), focus: p0.getPoint(0.25) },
     { f: 240, pos: p0.getPoint(0.75).add(V(-2.2, 1.0, 2.6)), tgt: p1.getPoint(0.3), focus: p0.getPoint(0.95) },
     { f: 300, pos: p1.getPoint(0.55).add(V(-1.8, 0.7, 2.0)), tgt: p2.getPoint(0.2), focus: p1.getPoint(0.9) },
-    { f: 360, pos: p2.getPoint(0.6).add(V(-1.2, 0.45, 1.6)), tgt: fin, focus: fin },
-    { f: 405, pos: fin.clone().add(V(-1.25, 0.3, 1.45)), tgt: fin, focus: fin },
-    { f: 449, pos: fin.clone().add(V(-1.18, 0.28, 1.38)), tgt: fin, focus: fin },
+    { f: 360, pos: holdPos(4.6).addScaledVector(r, -1.2).add(V(0, 0.3, 0)), tgt: holdTgt, focus: fin },
+    { f: 405, pos: holdPos(3.9), tgt: holdTgt, focus: fin },
+    { f: 449, pos: holdPos(3.75), tgt: holdTgt, focus: fin },
   ];
 };
 
 // 2B: one closed lap through the middle branches.
 const loopPose = (n: Network, f: number) => {
   const th = (f / 600) * Math.PI * 2;
-  const c = n.root.children[1].pos.clone().lerp(n.root.children[2].pos, 0.5).add(V(3.5, 0, 0));
-  const P = (a: number) => c.clone().add(V(Math.cos(a) * 6.5, Math.sin(a) * 2.2 + Math.sin(2 * a) * 0.8, Math.sin(a) * 4.5 + Math.cos(2 * a) * 0.6));
-  const pos = P(th);
-  const ahead = P(th + 0.55);
-  const tgt = ahead.lerp(c, 0.45);
-  return { pos, tgt, focus: pos.clone().lerp(tgt, 0.55) };
+  // drift on a closed loop beside the hub the violet route passes through:
+  // the route arrives from the left, the hub's fans burst out to the right
+  const hub = n.path[0].v3;
+  const pos = hub.clone().add(V(-1.6 + 0.9 * Math.cos(th), 0.3 + 0.5 * Math.sin(th), 3.8 + 0.6 * Math.sin(th)));
+  const tgt = hub.clone().add(V(0.25 + 0.3 * Math.sin(th), 0.15 * Math.cos(th), 0));
+  return { pos, tgt, focus: hub.clone() };
 };
 
 // ------------------------------------------------------------- textures --
@@ -168,7 +173,8 @@ const STRAND_VERT = /* glsl */ `
   vec3 bez(float t){ float u = 1.0 - t; return u*u*u*iP0.xyz + 3.0*u*u*t*iP1.xyz + 3.0*u*t*t*iP2.xyz + t*t*t*iP3.xyz; }
   void main(){
     float grow = clamp((uTime - iA.x) / iA.y, 0.0, 1.0);
-    grow = 1.0 - pow(1.0 - grow, 2.2); // ease out: fast burst, gentle arrival
+    float gu = 1.0 - grow;
+    grow = 1.0 - gu * gu; // ease out (no pow: pow(0, y) is NaN on some drivers)
     float t = position.x * grow;
     vec3 p = bez(t);
     vec3 q = bez(min(t + 0.01, 1.0)) - bez(max(t - 0.01, 0.0));
@@ -187,20 +193,21 @@ const STRAND_VERT = /* glsl */ `
     vT = t;
     vMix = iB.z;
     // bead: whole trips per loop (uLoop frames)
-    float tp = fract(uTime / uLoop * iA.w + iB.x);
-    vBead = iA.w > 0.0 ? exp(-pow((t - tp) / 0.012, 2.0)) : 0.0;
-    vec2 off = nrm * position.y * wd * 0.5 * (1.0 + vBead * 1.5);
+    float tp = fract(mod(uTime, uLoop) / uLoop * iA.w + iB.x);
+    float bd = (t - tp) / 0.0035;
+    vBead = iA.w > 0.0 ? exp(-bd * bd) * step(0.0001, grow) : 0.0;
+    vec2 off = nrm * position.y * wd * 0.5 * (1.0 + vBead * 0.6);
     gl_Position = c0 + vec4(off / (uRes * 0.5) * c0.w, 0.0, 0.0);
   }`;
 const STRAND_FRAG = /* glsl */ `
-  uniform vec3 uColA; uniform vec3 uColB; uniform float uGain;
+  uniform vec3 uColA; uniform vec3 uColB; uniform float uGain; uniform float uBead;
   varying float vSide; varying float vAlpha; varying float vT; varying float vBead; varying float vMix;
   void main(){
     float prof = exp(-vSide * vSide * 2.2);
     // a touch brighter near both ends (where fans gather)
     float ends = 1.0 + 0.6 * exp(-vT * 18.0) + 0.3 * exp(-(1.0 - vT) * 14.0);
     vec3 col = mix(uColA, uColB, clamp(vT * vMix, 0.0, 1.0));
-    vec3 c = col * vAlpha * prof * ends * uGain + vec3(0.8, 0.95, 1.0) * vBead * 3.0 * prof;
+    vec3 c = col * vAlpha * prof * ends * uGain + vec3(0.35, 0.8, 1.0) * vBead * 1.6 * uBead * prof;
     gl_FragColor = vec4(c, 1.0);
   }`;
 
@@ -209,38 +216,53 @@ const CUBE_VERT = /* glsl */ `
   attribute float iFinal;
   uniform float uTime; uniform float uLoop;
   varying vec3 vLocal; varying float vBright; varying float vFinal; varying vec3 vN;
+  varying float vNear;
   void main(){
     float appear = clamp((uTime - iC.x) / 12.0, 0.0, 1.0);
     appear = appear * appear * (3.0 - 2.0 * appear);
     vLocal = position;
     vN = normal;
-    float fl = 1.0 + 0.18 * sin(6.2831853 * (uTime / uLoop * iC.z + iC.w));
+    float fl = 1.0 + 0.18 * sin(6.2831853 * (mod(uTime, uLoop) / uLoop * iC.z + iC.w));
     vBright = iC.y * fl * appear;
     vFinal = iFinal;
     vec4 wp = instanceMatrix * vec4(position * appear, 1.0);
-    gl_Position = projectionMatrix * modelViewMatrix * wp;
+    vec4 mv = modelViewMatrix * wp;
+    // cubes brushing past the lens would become huge white blurs: fade them
+    vNear = smoothstep(1.2, 3.5, -mv.z);
+    gl_Position = projectionMatrix * mv;
   }`;
 const CUBE_FRAG = /* glsl */ `
   uniform vec3 uCol; uniform float uFlare;
   varying vec3 vLocal; varying float vBright; varying float vFinal; varying vec3 vN;
+  varying float vNear;
   void main(){
     vec3 a = abs(vLocal) * 2.0;
     float mx = max(a.x, max(a.y, a.z)), mn = min(a.x, min(a.y, a.z));
     float mid = a.x + a.y + a.z - mx - mn;
     float edge = smoothstep(0.78, 0.94, mid);
-    float face = 0.35 + 0.25 * max(dot(normalize(vN), normalize(vec3(-0.4, 0.7, 0.6))), 0.0);
-    vec3 c = uCol * face + mix(uCol, vec3(0.85, 0.95, 1.0), 0.6) * edge * 2.2;
+    // solid shaded blue blocks: lit faces brighter, side faces darker,
+    // a soft cyan rim on the edges
+    float lit = max(dot(normalize(vN), normalize(vec3(-0.35, 0.55, 0.75))), 0.0);
+    float face = 0.3 + 0.6 * lit;
+    vec3 c = uCol * face + vec3(0.15, 0.55, 1.0) * lit * lit * 0.25 + vec3(0.2, 0.5, 1.0) * edge * 0.1;
     c *= vBright;
-    c += vFinal * uFlare * vec3(0.9, 0.95, 1.0) * (0.6 + edge);
-    gl_FragColor = vec4(c, 1.0);
+    // the answer: glassy blue with a glowing mosaic inside and a bright rim
+    if (vFinal > 0.5) {
+      vec2 g = fract((vLocal.xy + vLocal.z) * 5.0);
+      float cellv = step(0.12, g.x) * step(0.12, g.y);
+      float mosaic = cellv * (0.5 + 0.5 * fract(sin(dot(floor((vLocal.xy + vLocal.z) * 5.0), vec2(12.9898, 78.233))) * 43758.5453));
+      c = uCol * (0.35 + 0.35 * lit) + mix(vec3(0.05, 0.3, 1.0), vec3(0.25, 0.7, 1.0), mosaic) * mosaic * 0.7 + vec3(0.4, 0.8, 1.0) * edge * 0.6;
+      c *= 1.0 + uFlare * 0.3;
+    }
+    gl_FragColor = vec4(c * vNear, 1.0);
   }`;
 
 const DUST_VERT = /* glsl */ `
   attribute vec4 iD; // phase, cycles, size, bright
   uniform float uTime; uniform float uLoop; uniform float uFocus; uniform float uCocK; uniform float uPx;
-  varying float vA;
+  varying float vA; varying float vSize;
   void main(){
-    float a = 6.2831853 * (uTime / uLoop * iD.y + iD.x);
+    float a = 6.2831853 * (mod(uTime, uLoop) / uLoop * iD.y + iD.x);
     vec3 p = position + vec3(sin(a), cos(a * 1.0), sin(a + 1.3)) * 0.25;
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     float z = -mv.z;
@@ -248,15 +270,19 @@ const DUST_VERT = /* glsl */ `
     float s = iD.z * uPx;
     float size = s + 2.0 * coc;
     gl_PointSize = max(size, 1.0);
+    vSize = gl_PointSize;
     vA = iD.w * (s * s) / (gl_PointSize * gl_PointSize) * smoothstep(0.2, 1.2, z);
     gl_Position = projectionMatrix * mv;
   }`;
 const DUST_FRAG = /* glsl */ `
-  varying float vA;
+  varying float vA; varying float vSize;
   void main(){
     vec2 d = gl_PointCoord - 0.5;
     float r = length(d) * 2.0;
-    float disc = 1.0 - smoothstep(0.8, 1.0, r);
+    // tiny square motes (sharp) that round off into bokeh discs when blurred
+    vec2 ad = abs(d) * 2.0;
+    float sq = 1.0 - smoothstep(0.75, 1.0, max(ad.x, ad.y));
+    float disc = mix(sq, 1.0 - smoothstep(0.8, 1.0, r), smoothstep(3.0, 8.0, vSize));
     gl_FragColor = vec4(vec3(0.55, 0.75, 1.0) * vA * disc * 2.0, 1.0);
   }`;
 
@@ -310,39 +336,57 @@ export class AIStage implements Stage {
     }
     strip.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     strip.setIndex(idx);
-    const mkInst = (list: Array<{ p: THREE.Vector3[]; a: number[]; b: number[] }>) => {
-      const g = new THREE.InstancedBufferGeometry();
-      g.index = strip.index;
+    // Per-strand data rides on an InstancedMesh as extra instanced
+    // attributes (the shader ignores instanceMatrix).
+    const mkInst = (list: Array<{ p: THREE.Vector3[]; a: number[]; b: number[] }>, mat: THREE.Material) => {
+      const g = new THREE.BufferGeometry();
+      g.setIndex(strip.index);
       g.setAttribute("position", strip.getAttribute("position"));
       const P = [0, 1, 2, 3].map(() => new Float32Array(list.length * 4));
       const A = new Float32Array(list.length * 4), B = new Float32Array(list.length * 4);
       list.forEach((s, i) => {
-        for (let k = 0; k < 4; k++) P[k].set([s.p[k].x, s.p[k].y, s.p[k].z, 0], i * 4);
+        for (let k = 0; k < 4; k++) P[k].set([s.p[k].x, s.p[k].y, s.p[k].z, 1], i * 4);
         A.set(s.a, i * 4);
         B.set(s.b, i * 4);
       });
       ["iP0", "iP1", "iP2", "iP3"].forEach((n, k) => g.setAttribute(n, new THREE.InstancedBufferAttribute(P[k], 4)));
       g.setAttribute("iA", new THREE.InstancedBufferAttribute(A, 4));
       g.setAttribute("iB", new THREE.InstancedBufferAttribute(B, 4));
-      g.instanceCount = list.length;
-      return g;
+      const m = new THREE.InstancedMesh(g, mat, list.length);
+      m.frustumCulled = false;
+      return m;
     };
     const strandUniforms = () => ({
-      uTime: { value: 0 }, uLoop: { value: 600 }, uRes: { value: res }, uWidth: { value: 1.5 * px }, uFocus: { value: 5 }, uCocK: { value: 0.012 * H },
-      uColA: { value: STRAND.clone() }, uColB: { value: STRAND.clone() }, uGain: { value: 1.0 },
+      uTime: { value: 0 }, uLoop: { value: 600 }, uRes: { value: res }, uWidth: { value: 1.5 * px }, uFocus: { value: 5 }, uCocK: { value: (mode === "story" ? 0.012 : 0.006) * H },
+      uColA: { value: STRAND.clone().multiply(new THREE.Color(0.72, 0.9, 1.25)) }, uColB: { value: STRAND.clone().multiply(new THREE.Color(0.72, 0.9, 1.25)) }, uGain: { value: mode === "story" ? 1.0 : 0.4 }, uBead: { value: mode === "story" ? 0.25 : 0.65 },
     });
-    const additive = { blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true };
+    // DoubleSide: a screen-space ribbon's winding flips with its direction
+    const additive = { blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true, side: THREE.DoubleSide };
     this.strandMat = new THREE.ShaderMaterial({ vertexShader: STRAND_VERT, fragmentShader: STRAND_FRAG, uniforms: strandUniforms(), ...additive });
-    const strands = new THREE.Mesh(mkInst(NET.strands.map((s) => ({ p: s.p, a: [s.birth, s.dur, s.alpha, s.pulse], b: [s.phase, 1, 0, 0] }))), this.strandMat);
+    const strands = mkInst(NET.strands.map((s) => ({ p: s.p, a: [s.birth, s.dur, s.alpha, s.pulse], b: [s.phase, s.width ?? 1, 0, 0] })), this.strandMat);
     strands.frustumCulled = false;
     this.scene.add(strands);
     // violet route: thicker ribbon, draws on segment by segment
     this.violetMat = new THREE.ShaderMaterial({ vertexShader: STRAND_VERT, fragmentShader: STRAND_FRAG, uniforms: strandUniforms(), ...additive });
-    this.violetMat.uniforms.uWidth.value = 5 * px;
+    this.violetMat.uniforms.uWidth.value = 9 * px;
     this.violetMat.uniforms.uColA.value = VIOLET0.clone();
     this.violetMat.uniforms.uColB.value = VIOLET1.clone();
-    this.violetMat.uniforms.uGain.value = 2.6;
-    const vio = new THREE.Mesh(mkInst(NET.path.map((c, i) => ({ p: [c.v0, c.v1, c.v2, c.v3], a: [NET.pathTimes[i][0], NET.pathTimes[i][1] - NET.pathTimes[i][0], 1, 0], b: [0, 1, 1, 0] }))), this.violetMat);
+    this.violetMat.uniforms.uGain.value = 4.5;
+    // 2B: the violet route ends at the hub; a blue-white continuation runs on
+    // to a glowing point a little past it
+    const route = mode === "story" ? NET.path : NET.path.slice(0, 1);
+    const vio = mkInst(route.map((c, i) => ({ p: [c.v0, c.v1, c.v2, c.v3], a: [NET.pathTimes[i][0], NET.pathTimes[i][1] - NET.pathTimes[i][0], 1, 0], b: [0, 1, 1, 0] })), this.violetMat);
+    if (mode === "loop") {
+      const p1 = NET.path[1];
+      const end = p1.getPoint(0.3);
+      const sub = new THREE.CubicBezierCurve3(p1.v0, p1.v0.clone().lerp(p1.v1, 0.3), p1.getPoint(0.18), end);
+      const cont = mkInst([{ p: [sub.v0, sub.v1, sub.v2, sub.v3], a: [0, 1, 1, 0], b: [0, 2.2, 0, 0] }], this.strandMat);
+      cont.renderOrder = 1;
+      this.scene.add(cont);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 0.8, 1.0).multiplyScalar(6) }));
+      dot.position.copy(end);
+      this.cubeScene.add(dot);
+    }
     vio.frustumCulled = false;
     this.scene.add(vio);
 
@@ -353,7 +397,10 @@ export class AIStage implements Stage {
     const ic = new Float32Array(NET.cubes.length * 4), fin = new Float32Array(NET.cubes.length);
     const rq = mulberry32(99);
     NET.cubes.forEach((c, i) => {
-      const m = new THREE.Matrix4().compose(c.pos, new THREE.Quaternion().setFromEuler(new THREE.Euler((rq() - 0.5) * 0.1, (rq() - 0.5) * 0.3, 0)), new THREE.Vector3(c.size, c.size, c.size));
+      const e = new THREE.Euler((rq() - 0.5) * 0.7, (rq() - 0.5) * 1.1, (rq() - 0.5) * 0.3);
+      // the answer faces the final camera squarely
+      const q = c.final ? new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), finalFrame(NET.path[2].v0, NET.final).v.clone().negate()) : new THREE.Quaternion().setFromEuler(e);
+      const m = new THREE.Matrix4().compose(c.pos, q, new THREE.Vector3(c.size, c.size, c.size));
       cubes.setMatrixAt(i, m);
       ic.set([c.birth, c.bright, c.flick, c.phase], i * 4);
       fin[i] = c.final ? 1 : 0;
@@ -430,9 +477,10 @@ export class AIStage implements Stage {
       void main(){
         vec3 c = mix(c0, c1, smoothstep(0.0, 1.2, vUv.y * 0.6 + (1.0 - abs(vUv.x - 0.5)) * 0.5));
         vec2 d = (vUv - glow) * vec2(res.x / res.y, 1.0);
-        c += vec3(0.04, 0.12, 0.32) * glowK * exp(-dot(d, d) * 2.2);
+        c += vec3(0.008, 0.03, 0.1) * glowK * exp(-dot(d, d) * 1.4);
+        c += vec3(0.004, 0.014, 0.05) * smoothstep(0.55, 1.0, vUv.y);
         gl_FragColor = vec4(c, 1.0);
-      }`, { c0: { value: NAVY0.clone().convertSRGBToLinear() }, c1: { value: NAVY1.clone().convertSRGBToLinear() }, glow: { value: new THREE.Vector2(0.5, 0.5) }, glowK: { value: 1 }, res: { value: res } });
+      }`, { c0: { value: NAVY0.clone().convertSRGBToLinear() }, c1: { value: NAVY1.clone().convertSRGBToLinear().multiplyScalar(mode === "story" ? 1.2 : 0.5) }, glow: { value: new THREE.Vector2(0.5, 0.5) }, glowK: { value: mode === "story" ? 1 : 0.3 }, res: { value: res } });
     this.coc = shader(`
       uniform sampler2D tColor; uniform sampler2D tDepth; uniform float near; uniform float far; uniform float focus; uniform float cocInf; varying vec2 vUv;
       float lin(float d){ float z = d * 2.0 - 1.0; return 2.0 * near * far / (far + near - z * (far - near)); }
@@ -462,12 +510,14 @@ export class AIStage implements Stage {
         o += g * 0.015;
         o += (ign(gl_FragCoord.xy + f * 5.588238) - 0.5) * (2.0 / 255.0);
         gl_FragColor = vec4(o, 1.0);
-      }`, { tSrc: { value: this.sumRT.texture }, tBloom: { value: null }, bloomK: { value: 0.55 }, exposure: { value: 1.25 }, frame: { value: 0 }, loopLen: { value: this.loopLen }, res: { value: res } });
+      }`, { tSrc: { value: this.sumRT.texture }, tBloom: { value: null }, bloomK: { value: 0.38 }, exposure: { value: 1.25 }, frame: { value: 0 }, loopLen: { value: this.loopLen }, res: { value: res } });
   }
 
   render(gl: THREE.WebGLRenderer, frame: number) {
     const story = this.mode === "story";
-    const f = story ? Math.min(Math.max(frame, 0), 449) : ((frame % 600) + 600) % 600;
+    // 2B uses the raw frame: every periodic term is a whole number of cycles
+    // per 600 frames (shaders take mod(t, 600)), so frame 600 == frame 0.
+    const f = story ? Math.min(Math.max(frame, 0), 449) : frame;
     let pos: THREE.Vector3, tgt: THREE.Vector3, focusP: THREE.Vector3;
     if (story) {
       pos = hermite(this.keys, f, (k) => k.pos);
@@ -478,7 +528,7 @@ export class AIStage implements Stage {
     }
     const cam = this.camera;
     cam.position.copy(pos);
-    cam.fov = story ? 38 : 42;
+    cam.fov = story ? 38 : 40;
     cam.aspect = this.W / this.H;
     cam.lookAt(tgt);
     cam.updateProjectionMatrix();
@@ -519,10 +569,10 @@ export class AIStage implements Stage {
       const ext = sm(100, 122, f);
       this.chip.cube.scale.set(1, 1, Math.max(0.02, ext));
       this.chip.cubeMat.uniforms.op.value = sm(96, 110, f);
-      this.chip.cubeMat.uniforms.heat.value = 3.5 * sm(100, 125, f) * (1 - 0.6 * sm(150, 210, f)) + 0.8;
+      this.chip.cubeMat.uniforms.heat.value = 1.6 * sm(100, 125, f) * (1 - 0.6 * sm(150, 210, f)) + 0.3;
     }
     // final cube flare (2A: 345..380 then settle; 2B: gentle steady glow)
-    this.cubeMat.uniforms.uFlare.value = story ? 6 * Math.exp(-Math.pow((f - 355) / 14, 2)) + 1.2 * Math.min(1, Math.max(0, (f - 340) / 20)) : 1.2;
+    this.cubeMat.uniforms.uFlare.value = story ? 5 * Math.exp(-(((f - 355) / 14) ** 2)) + 0.6 * Math.min(1, Math.max(0, (f - 340) / 20)) : 0.6;
 
     // 1. background + additive glow layer (strands, path, dust, bar, chip)
     const proj = tgt.clone().project(cam);

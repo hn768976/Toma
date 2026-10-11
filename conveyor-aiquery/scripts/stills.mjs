@@ -15,10 +15,11 @@ const chromiumOptions = { gl: "angle" };
 
 const serveUrl = await bundle({ entryPoint: path.resolve("src/index.ts") });
 const browser = await openBrowser("chrome", { browserExecutable, chromiumOptions });
-const composition = await selectComposition({ serveUrl, id, puppeteerInstance: browser, chromiumOptions, browserExecutable });
+const inputProps = process.env.PROPS ? JSON.parse(process.env.PROPS) : {};
+const composition = await selectComposition({ serveUrl, id, inputProps, puppeteerInstance: browser, chromiumOptions, browserExecutable });
 for (const frame of frames) {
   const t0 = performance.now();
-  await renderStill({ composition, serveUrl, frame, output: `${prefix}_${String(frame).padStart(3, "0")}.png`, scale, puppeteerInstance: browser, chromiumOptions, browserExecutable, imageFormat: "png", timeoutInMilliseconds: 600000 });
+  await renderStill({ composition, serveUrl, frame, inputProps, output: `${prefix}_${String(frame).padStart(3, "0")}.png`, scale, puppeteerInstance: browser, chromiumOptions, browserExecutable, imageFormat: "png", timeoutInMilliseconds: 600000, onBrowserLog: process.env.BROWSER_LOG ? (l) => console.log("[browser]", l.type, l.text.slice(0, 600)) : undefined });
   console.log(`frame ${frame}: ${((performance.now() - t0) / 1000).toFixed(2)} s`);
 }
 await browser.close({ silent: true });

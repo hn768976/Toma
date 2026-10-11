@@ -9,6 +9,7 @@ Config.setChromiumOpenGlRenderer("angle");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+Config.setMuted(true); // silent motion graphics: no audio stream
 Config.setTimeoutInMilliseconds(240000);
 
 // Sandboxed environments that cannot download Remotion's Chrome Headless

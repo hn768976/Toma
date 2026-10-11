@@ -65,7 +65,7 @@ vec3 acesFilm(vec3 x) {
   vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
   return clamp(m2 * (a / b), 0.0, 1.0);
 }
-vec3 toSRGB(vec3 c) { return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+vec3 toSRGB(vec3 c) { return mix(c * 12.92, 1.055 * pow(max(c, vec3(1e-6)), vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
 `;
 
 // --- Bloom: threshold, a 5-level down/up chain (fixed taps). -------------
@@ -147,28 +147,11 @@ export class Bloom {
 }
 
 // --- Depth of field: gather with a fixed golden-angle disc pattern. -------
-// Input: colour (rgb) + signed circle of confusion in pixels (a; <0 = near).
-// Runs at half resolution; the composite pass blends it with the sharp image.
+// Input: colour (rgb) + signed circle of confusion in full-res pixels (a;
+// <0 = near). Runs at a reduced working size (cocScale converts the CoC);
+// taps read the full-res buffer so every tap keeps its own CoC. The
+// composite pass blends the result with the sharp image.
 export const DOF_TAPS = 96;
-export const makeDofDownsample = () =>
-  shader(`
-    uniform sampler2D tSrc; uniform vec2 texel; uniform float cocScale; varying vec2 vUv;
-    void main(){
-      // 4x4 bilinear taps cover up to a 4x reduction
-      vec3 acc = vec3(0.0); float ws = 0.0; float nearC = 0.0; float sumC = 0.0;
-      for (int j = 0; j < 4; j++) for (int i = 0; i < 4; i++) {
-        vec4 s = texture2D(tSrc, vUv + texel * (vec2(float(i), float(j)) - 1.5));
-        // in-focus pixels barely feed the blur buffer (they are taken sharp
-        // from full res later); this keeps them from spreading as speckle
-        float w = 0.02 + smoothstep(0.5, 3.0, abs(s.a));
-        acc += s.rgb * w; ws += w;
-        nearC = min(nearC, s.a);
-        sumC += s.a;
-      }
-      float avgC = sumC / 16.0;
-      gl_FragColor = vec4(acc / ws, (nearC < -1.0 ? nearC : avgC) * cocScale);
-    }`, { tSrc: { value: null }, texel: { value: new THREE.Vector2() }, cocScale: { value: 0.5 } });
-
 export const makeDofGather = () =>
   shader(`
     ${COMMON}
