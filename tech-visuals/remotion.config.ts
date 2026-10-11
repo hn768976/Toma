@@ -8,6 +8,8 @@ Config.setVideoImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// Silent graphics: no audio stream at all.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 Config.setConcurrency(4);
 // Software GL (SwiftShader) can take a while to create several contexts in parallel.
