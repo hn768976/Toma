@@ -22,6 +22,6 @@ for c in "${COMPS[@]}"; do
   name="${c//-/_}"
   echo "=== $c -> $OUT/$name.mp4"
   npx remotion render build "$c" "$OUT/$name.mp4" \
-    --codec=h264 --crf=16 --pixel-format=yuv420p \
+    --codec=h264 --crf=16 --pixel-format=yuv420p --muted \
     --gl="${REMOTION_GL:-angle}" --concurrency="${REMOTION_CONCURRENCY:-2}"
 done

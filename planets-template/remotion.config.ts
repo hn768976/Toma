@@ -7,6 +7,9 @@ Config.setOverwriteOutput(true);
 Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
+// No audio track (the template is silent; an empty AAC track would also pad
+// the container duration past 20.0 s / 15.0 s).
+Config.setMuted(true);
 // WebGL2 through ANGLE. On a machine with a GPU, "angle" uses it;
 // set REMOTION_GL=swangle to force ANGLE's software (SwiftShader) backend.
 Config.setChromiumOpenGlRenderer(

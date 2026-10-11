@@ -17,7 +17,7 @@
   "surface": {
     "saturation": 1.1,
     "wrap": 0.35,
-    "normalStrength": 0.15
+    "normalStrength": 0.02
   },
   "atmosphere": {
     "color": [

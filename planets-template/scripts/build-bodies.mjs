@@ -32,8 +32,9 @@ const ONLY = args.only ? args.only.split(",") : null;
 const log = (...m) => console.log(new Date().toISOString().slice(11, 19), ...m);
 
 // USGS Astrogeology map archive (planetarymaps.usgs.gov/mosaic/ is served
-// from this public S3 bucket; both URLs give the same files).
-const USGS = "https://asc-pds-services.s3.amazonaws.com/mosaic/";
+// from this public S3 bucket; both URLs give the same files). Set
+// USGS_BASE=https://planetarymaps.usgs.gov/mosaic/ to use the web host.
+const USGS = process.env.USGS_BASE ?? "https://asc-pds-services.s3.amazonaws.com/mosaic/";
 const USGS_WEB = "https://planetarymaps.usgs.gov/mosaic/";
 const NASA3D = "https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/Images%20and%20Textures/";
 
@@ -61,7 +62,7 @@ export const BODIES = {
     rotationPeriodH: -5832.5,
     procedural: "venus",
     atmosphere: { color: [1.0, 0.93, 0.78], strength: 0.7, thickness: 0.045, crescent: 1.4 },
-    surface: { wrap: 0.35, normalStrength: 0.15 },
+    surface: { wrap: 0.35, normalStrength: 0.02 },
     credits: [],
     notes: "Procedural cloud-top map (visible-light Venus is a soft, nearly featureless cloud deck; the public-domain global maps are Magellan radar of the surface, which is never visible).",
   },

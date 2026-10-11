@@ -28,8 +28,9 @@ export function frameState(row: VersionRow, frame: number): FrameState {
   const N = row.durationInFrames;
   const isSpin = row.shot === "spin";
   // Spin: the clip is an exact loop, so everything is a function of the
-  // wrapped phase; frame N renders exactly like frame 0.
-  const loopFrame = isSpin ? ((frame % N) + N) % N : frame;
+  // wrapped phase; frame N renders exactly like frame 0. (Crescent: the
+  // wrapped frame only seeds the grain; within 0..449 it equals frame.)
+  const loopFrame = ((frame % N) + N) % N;
   const t = loopFrame / N;
   const hero = isSpin ? 300 : 400;
 
