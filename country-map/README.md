@@ -84,7 +84,21 @@ TIMINGS_PLACEHOLDER
 
 ## Banding check
 
-BANDING_PLACEHOLDER
+Banding is most likely in the pale sea and the large out-of-focus areas.
+- **Final pass:** `src/scene/shaders.ts` adds ±1/255 triangular dither and 1.5% grain,
+  both from a fixed hash of pixel position and `frame % 450`.
+- **The render target is half-float**, so the DoF gather and the grade never quantise
+  before the final 8-bit write.
+
+**Check, run on the encoded mp4, not the preview.** Frame 300 was decoded from
+`CountryMap_Mexico.mp4` (H.264, CRF 16, yuv420p) and pixel values were read across the
+blurred Pacific:
+- a vertical profile (y 430–719 at x 60–90, 9-px smoothed) and a horizontal profile
+  (y 690);
+- values fall smoothly through the vignette and blur, with a largest smoothed step of
+  1.4 levels and no flat run longer than 4 px;
+- there are no visible bands, so grain stays at 1.5%. The brief allows up to 3% if a
+  different encoder bands.
 
 ## Determinism
 
@@ -100,7 +114,14 @@ Every value on screen is a pure function of `useCurrentFrame()`:
   finished behind `delayRender` before the `<ThreeCanvas>` mounts. The textures are
   uploaded with `gl.initTexture` only after the canvas is fully drawn.
 
-DETERMINISM_PLACEHOLDER
+**Self-check, done:**
+- **Cold-start renders:** two separate cold-start renders of `CountryMap-Mexico` frame
+  300 are **byte-identical**.
+- **Mid-sequence render:** frame 300 rendered in a warm tab, after frames 290–299, is
+  **byte-identical** to the cold-start frame 300.
+- **Encoded preview:** decoded frame 300 of the H.264 preview matches the still at
+  39.4 dB PSNR, against 38.5 dB for frames 299 and 301, which confirms the alignment.
+  The remaining gap is lossy encoding of the grain.
 
 ## How to add a new country
 

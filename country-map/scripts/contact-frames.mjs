@@ -39,6 +39,6 @@ for (const id of ids) {
 		onFrameUpdate: () => undefined,
 	});
 	const files = fs.readdirSync(dir).filter((f) => f.endsWith('.png') && f.startsWith('element')).sort().map((f) => path.join(dir, f));
-	execFileSync('python3', ['scripts/contact-sheet.py', 'row', path.join(outDir, `contact_${id}.png`), ...files]);
+	if (arg('sheet', 'yes') === 'yes') execFileSync('python3', ['scripts/contact-sheet.py', 'row', path.join(outDir, `contact_${id}.png`), ...files]);
 	console.log(`${id}: ${files.length} frames -> ${path.join(outDir, `contact_${id}.png`)}`);
 }
