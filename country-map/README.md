@@ -135,7 +135,7 @@ through ANGLE. Chromium headless shell 1194, Remotion 4.0.515.
   Chromium's 4K screenshot and PNG encode, typically **0.5–1.5 s per frame**, so about
   **4–12 min per composition**, plus about 10 s of map drawing per tab.
 
-**Measured preview:** the 720p Mexico preview took **24 min** for 450 frames at
+**Measured preview:** the 720p Mexico preview took **20.5 min** for 450 frames at
 concurrency 2.
 
 ## Banding check
@@ -152,7 +152,7 @@ blurred Pacific:
 - a vertical profile (y 430–719 at x 60–90, 9-px smoothed) and a horizontal profile
   (y 690);
 - values fall smoothly through the vignette and blur, with a largest smoothed step of
-  1.4 levels and no flat run longer than 4 px;
+  1.8 levels and no flat run longer than 3 px;
 - there are no visible bands, so grain stays at 1.5%. The brief allows up to 3% if a
   different encoder bands.
 
@@ -176,7 +176,7 @@ Every value on screen is a pure function of `useCurrentFrame()`:
 - **Mid-sequence render:** frame 300 rendered in a warm tab, after frames 290–299, is
   **byte-identical** to the cold-start frame 300.
 - **Encoded preview:** decoded frame 300 of the H.264 preview matches the still at
-  39.4 dB PSNR, against 38.5 dB for frames 299 and 301, which confirms the alignment.
+  38.7 dB PSNR, against 37.6 dB for frames 299 and 301, which confirms the alignment.
   The remaining gap is lossy encoding of the grain.
 
 ## How to add a new country
