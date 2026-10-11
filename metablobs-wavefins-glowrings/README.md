@@ -64,7 +64,7 @@ Swap the composition id for any of the eight. `--scale=1.5625` turns 3840×2160 
 ### 720p previews
 
 ```bash
-scripts/render-previews.sh          # all 8 -> out/previews/*.mp4 + out/stills/*.png
+scripts/render-previews.sh          # all 8 -> out/previews/*.mp4 + out/stills/*.png (frame 300)
 scripts/verify.sh                   # ffprobe, loop seam, cold-start determinism
 ```
 
@@ -86,9 +86,9 @@ shader work drops by orders of magnitude and frame capture/PNG encoding dominate
 | MetaBlobs-SunsetCoral | 0.82 | 494 s |
 | WaveFins-Blue | 3.7 | 2239 s |
 | WaveFins-Copper | 3.8 | 2284 s |
-| GlowRings-Magenta | 0.79 | 472 s |
-| GlowRings-Violet | 0.78 | 467 s |
-| GlowRings-Teal | 0.84 | 503 s |
+| GlowRings-Magenta | 0.79 | 476 s |
+| GlowRings-Violet | 0.77 | 464 s |
+| GlowRings-Teal | 0.76 | 456 s |
 
 **Real 4K frames** (3840×2160, frames 300–302; "GPU" = WebGL render + readback measured
 in the page, "wall" = marginal wall-clock per frame incl. screenshot + PNG):
