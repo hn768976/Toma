@@ -10,25 +10,25 @@ export const DURATION = 360;
 export const LOOK = {
   fov: 34, // vertical, degrees
   elevationStart: 35, // camera starts high...
-  elevationEnd: 15, // ...and ends lower
+  elevationEnd: 20, // ...and ends lower
   azimuthStart: -14, // degrees; negative = camera to the left
   azimuthEnd: 11, // 25° of orbit in total
   pushIn: 0.86, // distance multiplier reached at the last frame
   chartHeightFrac: 0.46, // tallest bar ≈ 40% of frame height (measured at frame 300)
   cardMaxWidthFrac: 0.55, // card never wider than 55% of the frame
-  chartYaw: 30, // degrees: the bar row is turned so its right end recedes, as in the references
+  chartYaw: -30, // degrees: the bar row is turned so its right end comes toward the camera, as in the references
   // world units
   barSpacing: 1,
-  barWidth: 0.78,
-  barDepth: 0.78,
+  barWidth: 0.9,
+  barDepth: 0.95,
   chartHeight: 7,
-  cardHeight: 10.2,
+  cardHeight: 9,
   cardZ: -4.2, // back face of the card
-  cardX: 1.4, // card centre (world); the camera's move to the right shows it right of the chart
-  arrowThickness: 0.62, // ribbon size within the chart plane
-  arrowDepth: 0.42, // ribbon size toward the camera
-  arrowHeadWidth: 1.6,
-  arrowHeadLength: 1.25,
+  cardX: 2.6, // card centre (world); the camera's move to the right shows it right of the chart
+  arrowThickness: 0.85, // ribbon size within the chart plane
+  arrowDepth: 0.6, // ribbon size toward the camera
+  arrowHeadWidth: 2.3,
+  arrowHeadLength: 1.7,
 };
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -94,7 +94,7 @@ export type Layout = {
 export const computeLayout = (row: Row, dir: Direction, aspect: number): Layout => {
   const heights = HEIGHTS[row.id][dir];
   const H = LOOK.chartHeight;
-  const target = new THREE.Vector3(1.6, H * 0.47, -1.6);
+  const target = new THREE.Vector3(1.2, H * 0.38, -0.8);
 
   // Distance so the tallest bar spans LOOK.chartHeightFrac of the frame at frame 300.
   let distance = 30;
@@ -121,6 +121,12 @@ export const computeLayout = (row: Row, dir: Direction, aspect: number): Layout 
     if (r.w <= LOOK.cardMaxWidthFrac) break;
     cardH *= LOOK.cardMaxWidthFrac / r.w;
   }
+  // keep the card's top at least 5% below the frame edge (look a little higher if needed)
+  for (let i = 0; i < 40; i++) {
+    const r = screenRect(makeCamera(aspect, 300, target, distance), cardBox(cardH));
+    if (r.y0 >= 0.05) break;
+    target.y += 0.1;
+  }
   const cardW = cardH * ratio;
   const cardCenter = new THREE.Vector3(LOOK.cardX + (row.cardOffset?.x ?? 0) * cardW, (row.cardOffset?.y ?? 0) * cardH, LOOK.cardZ);
 
@@ -139,7 +145,7 @@ export const computeLayout = (row: Row, dir: Direction, aspect: number): Layout 
     cardCenter,
     arrowPath: pts,
     arrowZ,
-    focusNearPoint: chartToWorld(new THREE.Vector3(barX(0) - 1, 0, arrowZ + 1)),
+    focusNearPoint: chartToWorld(new THREE.Vector3(barX(BAR_COUNT - 1) + 2, 0, arrowZ + 1)),
     focusFarPoint: new THREE.Vector3(cardCenter.x, cardH, LOOK.cardZ - 0.3),
   };
 };

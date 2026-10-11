@@ -43,8 +43,8 @@ export const ROWS: Row[] = [
 ];
 
 export const DIRECTIONS = {
-  Growth: {arrow: '#3AE84A', arrowTop: '#7DF57A', bars: 'rising'},
-  Decline: {arrow: '#E8203A', arrowTop: '#FF4A4A', bars: 'falling'},
+  Growth: {arrow: '#3AE84A', arrowTop: '#6CF06A', bars: 'rising', glow: 0.04},
+  Decline: {arrow: '#E8203A', arrowTop: '#FF4A4A', bars: 'falling', glow: 0.15},
 } as const;
 export type Direction = keyof typeof DIRECTIONS;
 

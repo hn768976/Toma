@@ -17,7 +17,7 @@ export const cardGeometry = (w: number, h: number) => {
   s.lineTo(-w / 2, r);
   s.absarc(-w / 2 + r, r, r, Math.PI, Math.PI * 1.5, false);
   const depth = w * 0.03;
-  const bevel = h * 0.012;
+  const bevel = h * 0.007;
   const uv = {
     generateTopUV: (_g: THREE.ExtrudeGeometry, v: number[], a: number, b: number, c: number) =>
       [a, b, c].map((i) => new THREE.Vector2((v[i * 3] + w / 2) / w, v[i * 3 + 1] / h)),
@@ -86,7 +86,10 @@ const topEdgeColors = (geo: THREE.BufferGeometry, base: string, top: string) => 
 export const arrowGeometry = (path: THREE.Vector2[], color: string, topColor: string) => {
   const t = LOOK.arrowThickness / 2;
   const last = path[path.length - 1];
-  const dir = last.clone().sub(path[path.length - 2]).normalize();
+  // head direction: the last segment, limited to ±45° so the head stays bold and in frame
+  const raw = last.clone().sub(path[path.length - 2]);
+  const ang = THREE.MathUtils.clamp(Math.atan2(raw.y, raw.x), -Math.PI / 4, Math.PI / 4);
+  const dir = new THREE.Vector2(Math.cos(ang), Math.sin(ang));
   // shorten the body slightly so it tucks under the head
   const body = path.map((p) => p.clone());
   body[body.length - 1] = last.clone().addScaledVector(dir, 0.05);

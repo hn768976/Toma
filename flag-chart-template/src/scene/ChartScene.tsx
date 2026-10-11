@@ -15,9 +15,11 @@ import {arrowGeometry, barGeometry, cardGeometry} from './geometry';
 import {animate, cameraPose, chartToWorld, computeLayout, focusBand, LOOK} from './layout';
 import {addGlint, floorFragment, floorVertex, MAX_LINES, postFragment, postVertex, skyFragment, skyVertex} from './shaders';
 
-const FLOOR_NEAR = new THREE.Color('#94AED2');
+const FLOOR_NEAR = new THREE.Color('#A2B9D8');
 const SKY_TOP = new THREE.Color('#E2ECF6');
 const FLOOR_FAR = new THREE.Color('#C8D8E8');
+/** Brightness of the (display-referred) arrow's lit colour. */
+const ARROW_EXPOSURE = 0.3;
 
 const srgb = (c: THREE.Color) => {
   const o = {r: 0, g: 0, b: 0};
@@ -94,9 +96,9 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     flagTex.colorSpace = THREE.SRGBColorSpace;
     flagTex.anisotropy = 8;
     const glint = {uGlintPos: {value: -1}, uGlintStrength: {value: 0}};
-    const faceMat = new THREE.MeshPhysicalMaterial({map: flagTex, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.14, envMapIntensity: 1.3, emissiveMap: flagTex, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0.34});
+    const faceMat = new THREE.MeshPhysicalMaterial({map: flagTex, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.14, envMapIntensity: 1.3, emissiveMap: flagTex, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0.5});
     addGlint(faceMat, glint);
-    const rimMat = new THREE.MeshPhysicalMaterial({color: '#F3F5F9', roughness: 0.2, metalness: 0.25, clearcoat: 1, envMapIntensity: 1.1});
+    const rimMat = new THREE.MeshPhysicalMaterial({color: '#F3F5F9', roughness: 0.14, metalness: 0.75, clearcoat: 1, envMapIntensity: 1.4});
     const card = new THREE.Mesh(cardGeo, [faceMat, rimMat]);
     card.position.copy(layout.cardCenter);
     card.castShadow = true;
@@ -104,9 +106,19 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
 
     // bars
     // glossy white, slightly cool in the shadows (a soft cool fill keeps the shaded sides from going grey)
-    const barMat = new THREE.MeshPhysicalMaterial({color: '#F4F6FA', roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.3, emissive: new THREE.Color('#C9D6E6'), emissiveIntensity: 0.32});
+    // short bars shade toward a cool slate, tall ones stay white (as in the references)
+    const barMat = (h: number) =>
+      new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#8E92AE').lerp(new THREE.Color('#F4F6FA'), THREE.MathUtils.smoothstep(h, 0.05, 0.75)),
+        roughness: 0.16,
+        clearcoat: 1,
+        clearcoatRoughness: 0.06,
+        envMapIntensity: 1.4,
+        emissive: new THREE.Color('#C9D6E6'),
+        emissiveIntensity: 0.12 + 0.12 * h,
+      });
     const bars = layout.heights.map((h, i) => {
-      const m = new THREE.Mesh(barGeometry(h * LOOK.chartHeight), barMat);
+      const m = new THREE.Mesh(barGeometry(h * LOOK.chartHeight), barMat(h));
       m.position.set((i - (layout.heights.length - 1) / 2) * LOOK.barSpacing, 0, 0);
       m.castShadow = true;
       m.receiveShadow = true;
@@ -119,12 +131,12 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     const clip = new THREE.Plane(new THREE.Vector3(-1, 0, 0), -1000);
     const arrowMat = new THREE.MeshPhysicalMaterial({
       vertexColors: true,
-      roughness: 0.3,
-      clearcoat: 0.7,
-      clearcoatRoughness: 0.12,
-      envMapIntensity: 0.6,
+      roughness: 0.35,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.15,
+      envMapIntensity: 0.12,
       emissive: new THREE.Color(preset.arrow),
-      emissiveIntensity: 0.6,
+      emissiveIntensity: preset.glow, // bright green needs less self-light than red to stay saturated after ACES
       side: THREE.DoubleSide,
       clippingPlanes: [clip],
     });
@@ -133,6 +145,15 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     body.castShadow = true;
     const headMat = arrowMat.clone();
     headMat.clippingPlanes = [];
+    // The arrow is display-referred (alpha 0 = skip ACES in the post pass):
+    // ACES desaturates a bright, saturated green badly; lit shading and gloss
+    // still apply, only the tone curve is skipped.
+    for (const m of [arrowMat, headMat]) {
+      m.onBeforeCompile = (shader) => {
+        shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `#include <opaque_fragment>\n  gl_FragColor.rgb *= ${ARROW_EXPOSURE.toFixed(3)};\n  gl_FragColor.a = 0.0;`);
+      };
+      m.customProgramCacheKey = () => 'arrow-display';
+    }
     const head = new THREE.Mesh(arrow.head, headMat);
     head.position.set(arrow.headPos.x, arrow.headPos.y, layout.arrowZ);
     head.rotation.z = arrow.headAngle;
@@ -140,10 +161,10 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     chart.add(body, head);
 
     // coloured glow on the floor under the arrow
-    const glowMat = new THREE.MeshBasicMaterial({map: bandTexture(), color: new THREE.Color(preset.arrow), opacity: 0.55, clippingPlanes: [clip]});
+    const glowMat = new THREE.MeshBasicMaterial({map: bandTexture(), color: new THREE.Color(preset.arrow), opacity: 0.22, clippingPlanes: [clip]});
     keepAlpha(glowMat, true);
     const glowLen = arrow.tipX - arrow.startX + 0.6;
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(glowLen, 2.4), glowMat);
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(glowLen, 3.4), glowMat);
     glow.rotation.x = -Math.PI / 2;
     glow.position.set((arrow.tipX + arrow.startX) / 2, 0.004, layout.arrowZ + 0.5);
     glow.renderOrder = 2;
@@ -159,7 +180,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
       uFade: {value: 0},
       uRefl: {value: reflRt.texture},
       uRes: {value: new THREE.Vector2(1, 1)},
-      uReflStrength: {value: 0.07},
+      uReflStrength: {value: 0.04},
       uReflBlur: {value: 2},
       uExposure: {value: 0.42},
       uLines: {value: FLOOR_LINES},
@@ -172,7 +193,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     floor.renderOrder = -2;
 
     // contact / key-light shadow
-    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#1a2a46'), opacity: 0.28});
+    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#1a2a46'), opacity: 0.34});
     keepAlpha(shadowMat);
     shadowMat.polygonOffset = true;
     shadowMat.polygonOffsetFactor = -4;
@@ -185,7 +206,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
 
     // key light from the upper left
     const key = new THREE.DirectionalLight('#ffffff', 1.1);
-    key.position.set(-14, 22, 9);
+    key.position.set(-9, 26, 15);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     const sc = key.shadow.camera as THREE.OrthographicCamera;
@@ -257,7 +278,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
       uFocusFar: {value: 0},
       uFarRange: {value: layout.distance * 0.35},
       uNearRange: {value: layout.distance * 0.15},
-      uMaxCoc: {value: h * 0.008},
+      uMaxCoc: {value: h * 0.004},
       uExposure: {value: 0.42},
       uFrame: {value: 0},
       uFlare: {value: 0},

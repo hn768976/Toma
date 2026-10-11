@@ -84,7 +84,7 @@ patchSoftShadows();
 // scene (rendered from the same camera with the scene mirrored in y, so the
 // reflection is sampled at this fragment's own screen position).
 // --------------------------------------------------------------------------
-export const MAX_LINES = 18;
+export const MAX_LINES = 30;
 export const floorVertex = /* glsl */ `
 out vec3 vWorld;
 void main() {
@@ -158,7 +158,7 @@ void main() {
   vec2 cell = floor(p / uSpeckCell);
   float h = hash12(cell);
   float speck = 0.0;
-  if (h < 0.16) {
+  if (h < 0.26) {
     vec2 c = (cell + vec2(hash12(cell + 7.1), hash12(cell + 3.3)) * 0.8 + 0.1) * uSpeckCell;
     float r = uSpeckCell * (0.025 + 0.03 * hash12(cell + 1.7));
     speck = clamp((r - length(p - c)) / aa + 0.5, 0.0, 1.0) * (0.35 + 0.65 * hash12(cell + 9.2));
