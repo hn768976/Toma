@@ -221,6 +221,12 @@ Every value on screen is a pure function of `useCurrentFrame()`:
   outside it. City labels inside the band are therefore crisp at 4K, not just at 720p.
   Nearer paper (bottom of frame) blurs at 0.7× the rate of farther paper, as in the
   reference.
+- **Camera speed.** `SLIDE_GAIN` (2.5) and `YAW_GAIN` (1.3) in
+  `src/scene/cameraPath.ts` multiply every row's start-to-end travel around its
+  midpoint. They were raised after review because the slide felt too slow. Mexico now
+  travels about 20% of the frame width over 15 s. Lower them for a calmer move. The
+  20 stills were rendered before this change; at frame 300 they differ by only a few
+  percent of framing.
 - **Kept per the brief despite the reference:**
   - small dark city dots, where the reference has red circles;
   - spec fill colours, where the reference's land is paler and the US has a relief tint;

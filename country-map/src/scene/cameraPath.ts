@@ -15,6 +15,10 @@ export const COC_AT_BAND_EDGE = 0.0013;
 export const MAX_COC = 0.045;
 /** Rack focus starts this much nearer than the name (fraction of focus distance). */
 export const RACK_START = 0.84;
+/** Slide speed: multiplies each row's start->end travel (1 = the row's raw offsets). */
+export const SLIDE_GAIN = 2.5;
+/** Rotation speed: multiplies each row's yaw travel. */
+export const YAW_GAIN = 1.3;
 
 const ASPECT = 16 / 9;
 const tanHalfV = Math.tan((CAMERA_FOV * Math.PI) / 360);
@@ -45,9 +49,12 @@ export const shotAt = (row: CountryRow, frame: number, camera: THREE.Perspective
 	const { start, end, yaw } = row.camera;
 	const base = ((row.camera.baseYaw ?? 0) * Math.PI) / 180;
 	const fw = frameWidth(row);
-	const ox = (start[0] + (end[0] - start[0]) * s) * fw;
-	const oz = (start[1] + (end[1] - start[1]) * s) * fw;
-	const yawRad = base + ((yaw[0] + (yaw[1] - yaw[0]) * s) * Math.PI) / 180;
+	// Travel is scaled around the midpoint of each row's start/end, so the shot
+	// stays centred while SLIDE_GAIN sets the speed.
+	const along = (a: number, b: number, g: number) => (a + b) / 2 + (b - a) * g * (s - 0.5);
+	const ox = along(start[0], end[0], SLIDE_GAIN) * fw;
+	const oz = along(start[1], end[1], SLIDE_GAIN) * fw;
+	const yawRad = base + (along(yaw[0], yaw[1], YAW_GAIN) * Math.PI) / 180;
 	const el = (CAMERA_ELEVATION * Math.PI) / 180;
 
 	// Offsets are in the camera's own frame (lateral, forward), turned by baseYaw.
