@@ -45,8 +45,11 @@ uniform float uFrame;
 // glyph slot for this cell at this frame, plus the 2-frame brightness dip on a swap
 vec2 glyphState(uint cellId, float holdIdx) {
   float hold = HOLDS[int(holdIdx)];
-  float stepI = floor(uFrame / hold);
-  float since = uFrame - stepI * hold;
+  // per-cell phase so swaps never line up across the grid (no global flash)
+  float off = float(hash3u(cellId, 5u, 311u) % uint(hold));
+  float f = uFrame + off;
+  float stepI = mod(floor(f / hold), ${LOOP_FRAMES}.0 / hold);
+  float since = mod(f, hold);
   uint h = hash3u(cellId, uint(stepI), 977u);
   float slot = float(uSet[int(h % uint(uSetCount))]);
   float dip = since < 1.0 ? 0.3 : (since < 2.0 ? 0.65 : 1.0);
