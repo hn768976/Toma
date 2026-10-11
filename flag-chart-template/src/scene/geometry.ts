@@ -17,7 +17,7 @@ export const cardGeometry = (w: number, h: number) => {
   s.lineTo(-w / 2, r);
   s.absarc(-w / 2 + r, r, r, Math.PI, Math.PI * 1.5, false);
   const depth = w * 0.03;
-  const bevel = h * 0.007;
+  const bevel = h * 0.014;
   const uv = {
     generateTopUV: (_g: THREE.ExtrudeGeometry, v: number[], a: number, b: number, c: number) =>
       [a, b, c].map((i) => new THREE.Vector2((v[i * 3] + w / 2) / w, v[i * 3 + 1] / h)),
@@ -73,7 +73,7 @@ const topEdgeColors = (geo: THREE.BufferGeometry, base: string, top: string) => 
   const c = new THREE.Color();
   for (let i = 0; i < n.count; i++) {
     const side = 1 - Math.abs(n.getZ(i)); // walls of the extrusion: keep them light, not dark maroon
-    c.copy(cBase).lerp(cTop, Math.max(THREE.MathUtils.smoothstep(n.getY(i), 0.25, 0.85), side * 0.45));
+    c.copy(cBase).lerp(cTop, Math.max(THREE.MathUtils.smoothstep(n.getY(i), 0.25, 0.85), side * 0.2));
     col.set([c.r, c.g, c.b], i * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));

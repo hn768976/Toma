@@ -8,7 +8,7 @@ export const DURATION = 360;
 
 // ------------------------------------------------------------------ shared look
 export const LOOK = {
-  fov: 46, // vertical, degrees (a fairly wide lens close up: strong perspective, as in the references)
+  fov: 40, // vertical, degrees (a fairly wide lens close up: strong perspective, as in the references)
   elevationStart: 35, // camera starts high...
   elevationEnd: 24, // ...and ends lower
   azimuthStart: -14, // degrees; negative = camera to the left
@@ -25,8 +25,8 @@ export const LOOK = {
   cardHeight: 8.6,
   cardZ: -4.2, // back face of the card
   cardX: 2.2, // card centre (world); the camera's move to the right shows it right of the chart
-  arrowThickness: 0.85, // ribbon size within the chart plane
-  arrowDepth: 0.3, // ribbon size toward the camera
+  arrowThickness: 0.66, // ribbon size within the chart plane
+  arrowDepth: 0.24, // ribbon size toward the camera
   arrowHeadWidth: 2.8,
   arrowHeadLength: 2.0,
 };
@@ -131,9 +131,14 @@ export const computeLayout = (row: Row, dir: Direction, aspect: number): Layout 
   const cardCenter = new THREE.Vector3(LOOK.cardX + (row.cardOffset?.x ?? 0) * cardW, (row.cardOffset?.y ?? 0) * cardH, LOOK.cardZ);
 
   // Arrow: through the bar tops (a little below them), from the first bar to the last.
-  const below = 0.45;
+  const below = 0.75;
   const pts = heights.map((h, i) => new THREE.Vector2(barX(i), Math.max(0.5, H * h - below)));
   pts.unshift(new THREE.Vector2(barX(0) - LOOK.barSpacing * 0.45, pts[0].y + (dir === 'Growth' ? -0.35 : 0.35)));
+  // the head (up to 36° down) must end at floor level, not below it
+  // (lift the whole path if needed, keeping its shape)
+  const minLast = LOOK.arrowHeadLength * Math.sin(Math.PI / 5) + LOOK.arrowHeadWidth * 0.3;
+  const lift = Math.max(0, minLast - pts[pts.length - 1].y);
+  for (const p of pts) p.y += lift;
   const arrowZ = LOOK.barDepth / 2 + 0.08 + LOOK.arrowDepth / 2;
 
   return {

@@ -16,8 +16,8 @@ import {animate, cameraPose, chartToWorld, computeLayout, focusBand, LOOK} from 
 import {addGlint, floorFragment, floorVertex, MAX_LINES, postFragment, postVertex, skyFragment, skyVertex} from './shaders';
 
 const FLOOR_NEAR = new THREE.Color('#93A9D0');
-const SKY_TOP = new THREE.Color('#E2ECF6');
-const FLOOR_FAR = new THREE.Color('#C8D8E8');
+const SKY_TOP = new THREE.Color('#D3E2F2');
+const FLOOR_FAR = new THREE.Color('#B9CDE6');
 /** Brightness of the (display-referred) arrow's lit colour. */
 const ARROW_EXPOSURE = 0.3;
 
@@ -81,6 +81,8 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
   // ---------------------------------------------------------------- objects (built once)
   const objs = useMemo(() => {
     const preset = DIRECTIONS[dir];
+    const glowHolderAo = new THREE.Group(); // floor decals under the chart (same transform, not mirrored)
+    glowHolderAo.rotation.y = THREE.MathUtils.degToRad(LOOK.chartYaw);
     const mirrored = new THREE.Group(); // everything that reflects in the floor
     const chart = new THREE.Group(); // bars + arrow, turned by LOOK.chartYaw
     chart.rotation.y = THREE.MathUtils.degToRad(LOOK.chartYaw);
@@ -96,7 +98,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     flagTex.colorSpace = THREE.SRGBColorSpace;
     flagTex.anisotropy = 8;
     const glint = {uGlintPos: {value: -1}, uGlintStrength: {value: 0}};
-    const faceMat = new THREE.MeshPhysicalMaterial({map: flagTex, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.14, envMapIntensity: 1.3, emissiveMap: flagTex, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0.5});
+    const faceMat = new THREE.MeshPhysicalMaterial({map: flagTex, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.14, envMapIntensity: 1.3, emissiveMap: flagTex, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0.62});
     addGlint(faceMat, glint);
     const rimMat = new THREE.MeshPhysicalMaterial({color: '#F7F8FB', roughness: 0.08, metalness: 1, clearcoat: 1, envMapIntensity: 2.2});
     const card = new THREE.Mesh(cardGeo, [faceMat, rimMat]);
@@ -115,7 +117,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
         clearcoatRoughness: 0.06,
         envMapIntensity: 1.8,
         emissive: new THREE.Color('#C9D6E6'),
-        emissiveIntensity: 0.04 + 0.14 * h * h,
+        emissiveIntensity: 0.16 + 0.12 * h * h,
       });
     const bars = layout.heights.map((h, i) => {
       const m = new THREE.Mesh(barGeometry(h * LOOK.chartHeight), barMat(h));
@@ -131,8 +133,8 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     const clip = new THREE.Plane(new THREE.Vector3(-1, 0, 0), -1000);
     const arrowMat = new THREE.MeshPhysicalMaterial({
       vertexColors: true,
-      roughness: 0.25,
-      clearcoat: 0.8,
+      roughness: 0.18,
+      clearcoat: 1,
       clearcoatRoughness: 0.15,
       envMapIntensity: 0.12,
       emissive: new THREE.Color(preset.arrow),
@@ -161,13 +163,22 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     chart.add(body, head);
 
     // coloured glow on the floor under the arrow
-    const glowMat = new THREE.MeshBasicMaterial({map: bandTexture(), color: new THREE.Color(preset.arrow), opacity: 0.1, clippingPlanes: [clip]});
+    const glowMat = new THREE.MeshBasicMaterial({map: bandTexture(), color: new THREE.Color(preset.arrow), opacity: 0.05, clippingPlanes: [clip]});
     keepAlpha(glowMat, true);
     const glowLen = arrow.tipX - arrow.startX + 0.6;
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(glowLen, 3.4), glowMat);
     glow.rotation.x = -Math.PI / 2;
     glow.position.set((arrow.tipX + arrow.startX) / 2, 0.004, layout.arrowZ + 0.5);
     glow.renderOrder = 2;
+
+    // soft contact shadow under the whole chart (grounds the bars)
+    const aoMat = new THREE.MeshBasicMaterial({map: bandTexture(), color: new THREE.Color('#0d1730'), opacity: 0.32});
+    keepAlpha(aoMat);
+    const ao = new THREE.Mesh(new THREE.PlaneGeometry(LOOK.barSpacing * layout.heights.length + 1.2, 3.2), aoMat);
+    ao.rotation.x = -Math.PI / 2;
+    ao.position.y = 0.003;
+    ao.renderOrder = 1;
+    glowHolderAo.add(ao);
 
     // floor
     const reflRt = new THREE.WebGLRenderTarget(1, 1, {type: THREE.HalfFloatType});
@@ -184,7 +195,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
       uReflBlur: {value: 2},
       uExposure: {value: 0.42},
       uLines: {value: FLOOR_LINES},
-      uLineWidth: {value: 0.035},
+      uLineWidth: {value: 0.022},
       uSpeckCell: {value: 1.3},
     };
     const floorMat = new THREE.ShaderMaterial({vertexShader: floorVertex, fragmentShader: floorFragment, uniforms: floorUniforms, glslVersion: THREE.GLSL3});
@@ -193,7 +204,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     floor.renderOrder = -2;
 
     // contact / key-light shadow
-    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#1a2a46'), opacity: 0.24});
+    const shadowMat = new THREE.ShadowMaterial({color: new THREE.Color('#1a2a46'), opacity: 0.3});
     keepAlpha(shadowMat);
     shadowMat.polygonOffset = true;
     shadowMat.polygonOffsetFactor = -4;
@@ -228,8 +239,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
     sky.frustumCulled = false;
 
     const root = new THREE.Group();
-    const glowHolder = new THREE.Group(); // same transform as the chart, but not mirrored
-    glowHolder.rotation.y = chart.rotation.y;
+    const glowHolder = glowHolderAo; // same transform as the chart, but not mirrored
     glowHolder.add(glow);
     root.add(sky, floor, catcher, glowHolder, mirrored, key, key.target);
     return {root, sky, mirrored, floor, catcher, glow, bars, body, head, clip, arrow, glint, floorUniforms, reflRt, arrowMat, headMat};
@@ -278,7 +288,7 @@ export const ChartScene: React.FC<SceneProps> = ({row, dir, flagImg, hdri, frame
       uFocusFar: {value: 0},
       uFarRange: {value: layout.distance * 0.35},
       uNearRange: {value: layout.distance * 0.15},
-      uMaxCoc: {value: h * 0.0055},
+      uMaxCoc: {value: h * 0.003},
       uExposure: {value: 0.42},
       uFrame: {value: 0},
       uFlare: {value: 0},
