@@ -28,7 +28,7 @@ export const ROWS: Row[] = [
   {id: 'Russia', label: 'Russia', flag: 'Russia'},
   {id: 'SouthKorea', label: 'South Korea', flag: 'SouthKorea'},
   {id: 'Australia', label: 'Australia', flag: 'Australia'},
-  {id: 'Spain', label: 'Spain', flag: 'Spain'},
+  {id: 'Spain', label: 'Spain', flag: 'Spain', cardOffset: {x: 0.2}}, // coat of arms sits toward the hoist
   {id: 'Mexico', label: 'Mexico', flag: 'Mexico'},
   {id: 'Indonesia', label: 'Indonesia', flag: 'Indonesia'},
   {id: 'Netherlands', label: 'Netherlands', flag: 'Netherlands'},
@@ -43,8 +43,10 @@ export const ROWS: Row[] = [
 ];
 
 export const DIRECTIONS = {
-  Growth: {arrow: '#3AE84A', arrowTop: '#6CF06A', bars: 'rising', glow: 0.04},
-  Decline: {arrow: '#E8203A', arrowTop: '#FF4A4A', bars: 'falling', glow: 0.15},
+  // cardShift (world units, +x = right): Growth's tall bars stand at the near
+  // end, in front of the card's centre, so its card sits further right.
+  Growth: {arrow: '#3AE84A', arrowTop: '#6CF06A', bars: 'rising', glow: 0.04, cardShift: 3.8},
+  Decline: {arrow: '#E8203A', arrowTop: '#FF4A4A', bars: 'falling', glow: 0.15, cardShift: 0},
 } as const;
 export type Direction = keyof typeof DIRECTIONS;
 

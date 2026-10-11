@@ -77,7 +77,7 @@ reflection, main scene with 4× MSAA and PCSS shadows, post with depth of field)
 
 | Resolution | One worker | Full 12 s clip, 4 workers |
 |-----------|-----------|---------------------------|
-| 720p (`--scale=0.333…`) | **2.27 s / frame** | __CLIP_TIME__ incl. encoding |
+| 720p (`--scale=0.333…`) | **2.27 s / frame** | 13 min 17 s incl. encoding |
 | 1080p (`--scale=0.5`) | 4.47 s / frame | — |
 | **4K (estimate)** | **≈ 16 s / frame** | ≈ 1.6 h per composition, ≈ 80 h for all 50 |
 
@@ -94,17 +94,25 @@ GPU**: expect roughly 0.5–1.5 s per 4K frame there.
   clearcoat (the studio HDRI's reflection slides across it as the camera
   moves) and one soft reflection sweep around frame 200. Constant height,
   width from the flag's official ratio, shrunk only if it would exceed 55% of
-  the frame width (UK, USA, Canada…). Optional per-row `cardOffset`.
+  the frame width (UK, USA, Canada…). Growth's tall bars stand at the near end,
+  in front of the card's centre, so the Growth preset moves the card further
+  right (`cardShift`); a per-row `cardOffset` nudges single flags (Spain, whose
+  arms sit toward the hoist).
 - **Bars:** 9 rounded boxes, glossy white `#F4F6FA` with a cool fill in the
   shadows; heights seeded per country (`src/data/rows.ts`, module-level
   `mulberry32`): rising 10% → 100% with two small dips for Growth, the same
-  heights mirrored for Decline. The tallest bar is ≈ 46% of frame height.
-  The bar row is turned 30° so its right end recedes, as in the references.
+  heights mirrored for Decline. The tallest bar is ≈ 46% of frame height
+  (a little above the 40% asked for, toward the references' larger chart).
+  The bar row is turned 25° so its right end comes toward the camera, as in
+  both references; a 40° lens close up gives the references' strong
+  perspective.
 - **Arrow:** a thick zigzag ribbon (mitred corners, square-ish section) just
   below the bar tops and in front of them, plus a bold arrowhead; green
   `#3AE84A` with a lighter top edge (Growth) or red `#E8203A` (Decline);
   glossy; a soft coloured glow on the floor beneath it. It draws on with a
-  clipping plane; the head pops in last.
+  clipping plane; the head pops in last. The arrow is rendered
+  display-referred (it skips ACES): the tone curve turned the vivid green
+  pastel. Measured on screen: green ≈ (58,234,83), red ≈ (223,38,66).
 - **Floor:** blue-grey `#94AED2` → `#C8D8E8` toward the horizon, faint light
   specks and thin "network" lines with nodes (fixed, seeded), and a blurred
   mirror reflection (the scene is rendered mirrored from the same camera and
@@ -121,7 +129,7 @@ GPU**: expect roughly 0.5–1.5 s per 4K frame there.
 
 Timeline: fade-in 0–15; bars grow 10–70 (staggered, ease-out with a small
 overshoot); arrow draws on 30–100, head pops 98–110; camera drifts 0–360 from
-35° high and 14° left to 15° high and 11° right (25° orbit) with a 14%
+35° high and 14° left to 24° high and 11° right (25° orbit) with a 14%
 push-in; reflection sweep across the card around frame 200.
 
 ## Determinism
@@ -136,7 +144,39 @@ push-in; reflection sweep across the card around frame 200.
 
 ## Checks
 
-__CHECKS__
+Run before delivery:
+
+- **Files:** `ffprobe` on the preview: 1280×720, 30/1, 12.000 s, 360 frames,
+  h264, yuv420p, video stream only.
+- **Determinism:** the preview rendered in full as a PNG sequence (4 workers,
+  out of order) and frame 200 rendered alone from a cold start: byte-identical.
+  `npm run sheets` renders frame 300 of all 50 compositions twice, each pass
+  in a fresh browser, and compares the PNGs: 50/50 identical.
+- **Every composition renders:** the same script (no errors, no empty frames)
+  builds the Growth and Decline sheets.
+- **Banding:** a frame decoded from the encoded mp4, read down a floor column
+  left of the chart (5×5 averaged to remove grain): values fall smoothly from
+  191 to 162 with no step larger than 2.4 levels, no plateaus. What prevents
+  banding: ±1/255 dither after tonemapping and 1.5% grain (integer hash of
+  pixel and frame) in the final pass; half-float render targets; PNG
+  intermediate frames.
+- **Motion:** frames 0/40/105/200/280/359 of the preview: fade-in, bars grow,
+  the arrow draws on and lands with its head, the reflection sweep crosses the
+  card at 200, the camera moves from high-left to lower-right.
+- **Flags:** an independent check of the numbered flag sheet identified all 25
+  and found no inaccuracies.
+- **Clean copy:** `npm install && npx remotion studio` from a fresh copy (no
+  `node_modules`) starts the studio.
+
+### Completion checklist
+
+- [x] 50 compositions (25 countries × Growth/Decline) from data rows, 3840×2160, 30 fps, 360 frames
+- [x] 3D (WebGL2, `@remotion/three`): flag card, 9 glossy bars, extruded zigzag arrow with draw-on and head pop
+- [x] Flags uncropped at official ratios on the card; card ≤ 55% of frame width; Saudi Arabia omitted
+- [x] Floor gradient + specks + network lines + blurred reflection; backdrop gradient; HDRI + key light; PCSS shadows; DOF; ACES
+- [x] Dither + grain, no `Math.random()`, no clocks, no temporal effects; byte-identical cold frames
+- [x] HDRI licence (CC0) and `FLAG_SOURCES.md` shipped
+- [x] 720p preview `FlagChart_SouthKorea_Decline.mp4`; flag, Growth and Decline sheets
 
 ## How to add a country
 

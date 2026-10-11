@@ -1,7 +1,7 @@
 // Scene layout, camera and animation. Pure functions of (row, direction,
 // frame): no clocks, no state carried between frames.
 import * as THREE from 'three';
-import {BAR_COUNT, HEIGHTS, flagRatio, type Direction, type Row} from '../data/rows';
+import {BAR_COUNT, DIRECTIONS, HEIGHTS, flagRatio, type Direction, type Row} from '../data/rows';
 
 export const FPS = 30;
 export const DURATION = 360;
@@ -112,7 +112,7 @@ export const computeLayout = (row: Row, dir: Direction, aspect: number): Layout 
   let cardH = LOOK.cardHeight;
   const cardBox = (h: number) => {
     const w = h * ratio;
-    const cx = LOOK.cardX + (row.cardOffset?.x ?? 0) * w;
+    const cx = LOOK.cardX + DIRECTIONS[dir].cardShift + (row.cardOffset?.x ?? 0) * w;
     const y0 = (row.cardOffset?.y ?? 0) * h;
     return [new THREE.Vector3(cx - w / 2, y0, LOOK.cardZ), new THREE.Vector3(cx + w / 2, y0, LOOK.cardZ), new THREE.Vector3(cx - w / 2, y0 + h, LOOK.cardZ), new THREE.Vector3(cx + w / 2, y0 + h, LOOK.cardZ)];
   };
@@ -128,7 +128,7 @@ export const computeLayout = (row: Row, dir: Direction, aspect: number): Layout 
     target.y += 0.1;
   }
   const cardW = cardH * ratio;
-  const cardCenter = new THREE.Vector3(LOOK.cardX + (row.cardOffset?.x ?? 0) * cardW, (row.cardOffset?.y ?? 0) * cardH, LOOK.cardZ);
+  const cardCenter = new THREE.Vector3(LOOK.cardX + DIRECTIONS[dir].cardShift + (row.cardOffset?.x ?? 0) * cardW, (row.cardOffset?.y ?? 0) * cardH, LOOK.cardZ);
 
   // Arrow: through the bar tops (a little below them), from the first bar to the last.
   const below = 0.75;
