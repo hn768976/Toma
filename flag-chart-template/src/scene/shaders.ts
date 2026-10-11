@@ -84,7 +84,7 @@ patchSoftShadows();
 // scene (rendered from the same camera with the scene mirrored in y, so the
 // reflection is sampled at this fragment's own screen position).
 // --------------------------------------------------------------------------
-export const MAX_LINES = 30;
+export const MAX_LINES = 40;
 export const floorVertex = /* glsl */ `
 out vec3 vWorld;
 void main() {

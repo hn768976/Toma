@@ -8,27 +8,27 @@ export const DURATION = 360;
 
 // ------------------------------------------------------------------ shared look
 export const LOOK = {
-  fov: 34, // vertical, degrees
+  fov: 46, // vertical, degrees (a fairly wide lens close up: strong perspective, as in the references)
   elevationStart: 35, // camera starts high...
-  elevationEnd: 20, // ...and ends lower
+  elevationEnd: 24, // ...and ends lower
   azimuthStart: -14, // degrees; negative = camera to the left
   azimuthEnd: 11, // 25° of orbit in total
   pushIn: 0.86, // distance multiplier reached at the last frame
   chartHeightFrac: 0.46, // tallest bar ≈ 40% of frame height (measured at frame 300)
   cardMaxWidthFrac: 0.55, // card never wider than 55% of the frame
-  chartYaw: -30, // degrees: the bar row is turned so its right end comes toward the camera, as in the references
+  chartYaw: -25, // degrees: the bar row is turned so its right end comes toward the camera, as in the references
   // world units
-  barSpacing: 1,
-  barWidth: 0.9,
-  barDepth: 0.95,
+  barSpacing: 1.15,
+  barWidth: 1.06,
+  barDepth: 1.06,
   chartHeight: 7,
-  cardHeight: 9,
+  cardHeight: 8.6,
   cardZ: -4.2, // back face of the card
-  cardX: 2.6, // card centre (world); the camera's move to the right shows it right of the chart
+  cardX: 2.2, // card centre (world); the camera's move to the right shows it right of the chart
   arrowThickness: 0.85, // ribbon size within the chart plane
-  arrowDepth: 0.6, // ribbon size toward the camera
-  arrowHeadWidth: 2.3,
-  arrowHeadLength: 1.7,
+  arrowDepth: 0.3, // ribbon size toward the camera
+  arrowHeadWidth: 2.8,
+  arrowHeadLength: 2.0,
 };
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -94,7 +94,7 @@ export type Layout = {
 export const computeLayout = (row: Row, dir: Direction, aspect: number): Layout => {
   const heights = HEIGHTS[row.id][dir];
   const H = LOOK.chartHeight;
-  const target = new THREE.Vector3(1.2, H * 0.38, -0.8);
+  const target = new THREE.Vector3(2.6, H * 0.4, -0.2);
 
   // Distance so the tallest bar spans LOOK.chartHeightFrac of the frame at frame 300.
   let distance = 30;

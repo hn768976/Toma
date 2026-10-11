@@ -72,7 +72,8 @@ const topEdgeColors = (geo: THREE.BufferGeometry, base: string, top: string) => 
   const col = new Float32Array(n.count * 3);
   const c = new THREE.Color();
   for (let i = 0; i < n.count; i++) {
-    c.copy(cBase).lerp(cTop, THREE.MathUtils.smoothstep(n.getY(i), 0.25, 0.85));
+    const side = 1 - Math.abs(n.getZ(i)); // walls of the extrusion: keep them light, not dark maroon
+    c.copy(cBase).lerp(cTop, Math.max(THREE.MathUtils.smoothstep(n.getY(i), 0.25, 0.85), side * 0.45));
     col.set([c.r, c.g, c.b], i * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -86,9 +87,9 @@ const topEdgeColors = (geo: THREE.BufferGeometry, base: string, top: string) => 
 export const arrowGeometry = (path: THREE.Vector2[], color: string, topColor: string) => {
   const t = LOOK.arrowThickness / 2;
   const last = path[path.length - 1];
-  // head direction: the last segment, limited to ±45° so the head stays bold and in frame
+  // head direction: the last segment, limited to -36°..+45° so the head stays bold and in frame
   const raw = last.clone().sub(path[path.length - 2]);
-  const ang = THREE.MathUtils.clamp(Math.atan2(raw.y, raw.x), -Math.PI / 4, Math.PI / 4);
+  const ang = THREE.MathUtils.clamp(Math.atan2(raw.y, raw.x), -Math.PI / 5, Math.PI / 4);
   const dir = new THREE.Vector2(Math.cos(ang), Math.sin(ang));
   // shorten the body slightly so it tucks under the head
   const body = path.map((p) => p.clone());
