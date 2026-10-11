@@ -40,10 +40,10 @@ export const WHITE: GridPucksPalette = {
 // ---- Layout constants -------------------------------------------------------
 export const LOOP = 600;
 const PATCH = 40; // cells per periodic patch side
-const PUCKS_PER_PATCH = 300;
+const PUCKS_PER_PATCH = 400;
 const TILES = 1; // patches drawn each side of the centre patch (3×3 covers the whole view)
-const PUCK_R = 0.15;
-const PUCK_H = 0.062;
+const PUCK_R = 0.17;
+const PUCK_H = 0.045;
 const SLIDE = 14; // frames per one-cell slide
 const MOVER_SHARE = 0.66; // remaining pucks rest the whole loop → ~20% moving at any frame
 
@@ -148,7 +148,7 @@ const puckPos = (w: Walk, frame: number, out: THREE.Vector2) => {
 const puckGeometry = () => {
   const r = PUCK_R;
   const h = PUCK_H;
-  const b = 0.014;
+  const b = 0.022;
   const pts: THREE.Vector2[] = [new THREE.Vector2(0, 0)];
   for (let i = 0; i <= 6; i++) {
     const a = -Math.PI / 2 + (i / 6) * (Math.PI / 2);
@@ -161,7 +161,7 @@ const puckGeometry = () => {
   // gentle dome on top
   for (let i = 1; i <= 6; i++) {
     const u = 1 - i / 6;
-    pts.push(new THREE.Vector2((r - b) * u, h + 0.006 * (1 - u * u)));
+    pts.push(new THREE.Vector2((r - b) * u, h + 0.016 * (1 - u * u)));
   }
   const g = new THREE.LatheGeometry(pts, 32);
   g.computeVertexNormals();
@@ -218,7 +218,7 @@ void main() {
 export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
   const pipe = new Pipeline(4);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(23, 16 / 9, 0.5, 200);
+  const camera = new THREE.PerspectiveCamera(17, 16 / 9, 0.5, 200);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2),
@@ -230,7 +230,7 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
         cHigh: { value: new THREE.Color(pal.surfaceHigh) },
         cLine: { value: new THREE.Color(pal.line) },
         lineAlpha: { value: pal.lineAlpha },
-        lineW: { value: 0.014 },
+        lineW: { value: 0.01 },
         res: { value: new THREE.Vector2(1, 1) },
       },
     }),
@@ -249,7 +249,7 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
     new THREE.ShaderMaterial({
       vertexShader: SHADOW_VERT,
       fragmentShader: SHADOW_FRAG,
-      uniforms: { opacity: { value: pal.shadow }, r: { value: PUCK_R * 1.2 } },
+      uniforms: { opacity: { value: pal.shadow }, r: { value: PUCK_R * 1.45 } },
       transparent: true,
       depthWrite: false,
     }),
@@ -282,9 +282,9 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       const t = (((frame % LOOP) + LOOP) % LOOP) / LOOP; // frame 600 ≡ frame 0 exactly
       // One closed camera lap per loop.
       const target = new THREE.Vector3(0.9 * Math.cos(TAU * t), 0, 0.6 * Math.sin(TAU * t));
-      const yaw = THREE.MathUtils.degToRad(40 + 2.5 * Math.sin(TAU * t));
-      const pitch = THREE.MathUtils.degToRad(30);
-      const dist = 9.4;
+      const yaw = THREE.MathUtils.degToRad(30 + 2.5 * Math.sin(TAU * t));
+      const pitch = THREE.MathUtils.degToRad(31);
+      const dist = 12.5;
       camera.position.set(
         target.x - Math.sin(yaw) * Math.cos(pitch) * dist,
         Math.sin(pitch) * dist,
@@ -330,7 +330,7 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       gl.render(scene, camera);
       pipe.finish(gl, {
         camera,
-        dof: { focus: dist, range: 0.9, aperture: 1.25, maxRadius: 0.009 },
+        dof: { focus: dist, range: 0.7, aperture: 2.3, maxRadius: 0.01 },
         final: {
           frame,
           period: LOOP,

@@ -88,7 +88,7 @@ const buildStrokes = (mode: HubMode): Stroke[] => {
   const T = (s: number) => (story ? s : -1000);
 
   // ---- hub (0–2 s): bright main ring, thin inner ring, segmented outer band with gaps ----
-  S.push({ pts: arc(HUB, R, Math.PI / 2, Math.PI / 2 + TAU, 128), width: 2.2, bright: 1.0, white: 0.55, start: T(4), dur: 40 });
+  S.push({ pts: arc(HUB, R, Math.PI / 2, Math.PI / 2 + TAU, 128), width: 3.0, bright: 1.35, white: 0.8, start: T(4), dur: 40 });
   S.push({ pts: arc(HUB, R * 0.8, -Math.PI / 2, -Math.PI / 2 + TAU, 112), width: 0.8, bright: 0.75, white: 0.5, start: T(14), dur: 36 });
   // outer band: four arc-band segments, gaps at about 10 and 2 o'clock and at the bottom (static)
   const r1 = R * 1.18;
@@ -102,7 +102,7 @@ const buildStrokes = (mode: HubMode): Stroke[] => {
   segs.forEach(([a0, a1], i) => {
     const pts = [...arc(HUB, r1, a0, a1, 24), ...arc(HUB, r2, a1, a0, 24)];
     pts.push(pts[0].clone());
-    S.push({ pts, width: 0.9, bright: 0.85, white: 0.35, start: T(30 + i * 3), dur: 16 });
+    S.push({ pts, width: 1.2, bright: 1.1, white: 0.5, start: T(30 + i * 3), dur: 16 });
   });
   // 12 notches/teeth on the outer edge of the band — these rotate one notch period per loop
   for (let i = 0; i < 12; i++) {
@@ -176,7 +176,7 @@ const buildStrokes = (mode: HubMode): Stroke[] => {
     // luminous card body
     wing.push({
       pts: [new THREE.Vector2(d.p.x - DEV_W * 0.38, d.p.y), new THREE.Vector2(d.p.x + DEV_W * 0.38, d.p.y)],
-      width: (DEV_H * 0.42) / 0.0011, bright: 0.38, white: 0, start: T(pop - 2), dur: 2, flash, fill: true,
+      width: (DEV_H * 0.42) / 0.0011, bright: 0.16, white: 0, start: T(pop - 2), dur: 2, flash, fill: true,
     });
     // document glyph: white text lines
     for (let k = 0; k < 4; k++) {
@@ -398,7 +398,7 @@ export const createNetworkHub = (mode: HubMode) => (): Look => {
       glowW: { value: 0.0042 },
       cGlow: { value: new THREE.Color("#3A8AFF") },
       cCore: { value: new THREE.Color("#BFE0FF") },
-      cBead: { value: new THREE.Color("#9AF0FF") },
+      cBead: { value: new THREE.Color("#8AFFE0") },
       pulseOn: { value: 1 },
     },
   });

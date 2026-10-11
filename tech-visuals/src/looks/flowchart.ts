@@ -21,12 +21,12 @@ export const BLUE_WHITE: FlowPalette = {
   bgLow: "#F6F8FA",
   bgHigh: "#F6F8FA",
   shape: "#1A8AE8",
-  shapeSide: "#0F62B0",
+  shapeSide: "#1470C8",
   line: "#1A1A1A",
-  shadow: 0.7,
+  shadow: 0.85,
   glow: 1.0,
   bloom: false,
-  vignette: 0.06,
+  vignette: 0.0,
   vignetteColor: "#C9D0D8",
 };
 
@@ -51,7 +51,7 @@ type Edge = { pts: THREE.Vector2[]; from: number; to: number; start: number; dur
 // ---- camera path along the strip (pure function of frame, tabulated at module level) ----
 const ROW = 0.92;
 const CAM_D = 10.2; // distance camera → target
-const TILT = THREE.MathUtils.degToRad(21); // from the surface normal
+const TILT = THREE.MathUtils.degToRad(26); // from the surface normal
 const LEAD = 2.0; // nodes pop when they come this far ahead of the camera target
 const CAM_Y: number[] = (() => {
   const v = (f: number) => {
@@ -393,12 +393,12 @@ export const createFlowchart = (pal: FlowPalette) => (): Look => {
           size: { value: new THREE.Vector2(n.w, n.h) },
           kind: { value: kindIdx },
           opacity: { value: pal.shadow },
-          blur: { value: 0.012 },
+          blur: { value: 0.006 },
           scale: { value: 1 },
         },
       }),
     );
-    sh.position.set(n.x + 0.028, n.y - 0.034, 0.002);
+    sh.position.set(n.x + 0.018, n.y - 0.024, 0.002);
     sh.renderOrder = 2;
     scene.add(sh, mesh);
     return { n, mesh, mat, side, sh };

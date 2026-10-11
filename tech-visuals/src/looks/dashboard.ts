@@ -44,7 +44,7 @@ export const DASHBOARD = {
     { label: "Rotor", value: 40.5 },
     { label: "Stator", value: 31.5 },
   ],
-  tempMax: 130,
+  tempMax: 170,
 };
 
 export const DURATION = 450;
@@ -101,7 +101,7 @@ const SERIES_DATA = (() => {
 const BAR_DATA = (() => {
   const r = mulberry32(0x0bad5eed);
   return Array.from({ length: N_PTS }, (_, i) =>
-    SERIES_DATA.map((ser) => Math.max(20, ser[i] * (0.45 + r() * 0.6))),
+    SERIES_DATA.map((ser) => Math.max(40, Math.min(450, ser[i] * (0.75 + r() * 0.45) + 60))),
   );
 })();
 
@@ -253,15 +253,15 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     const head = chartHead(f);
     const headX = xOf(0) + head * (xOf(N_PTS - 1) - xOf(0));
     // bars (paired coral + teal, thin white) rise as the head passes
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 7; i++) {
       const x = xOf(i);
       const k = easeOut(clamp((headX - x) / 160));
       if (k <= 0) continue;
-      const w = 34;
+      const w = 24;
       BAR_DATA[i].forEach((v0, si) => {
         const v = v0 * k;
         ctx.fillStyle = D.series[si].color;
-        ctx.globalAlpha = si === 2 ? 0.4 : 0.6;
+        ctx.globalAlpha = si === 2 ? 0.3 : 0.42;
         const bx = x - 52 + si * (w + 2);
         ctx.fillRect(bx, yOf(v), w, PLOT.y0 - yOf(v));
       });
@@ -307,9 +307,9 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     roundRect(ctx, g, 26);
     ctx.fill();
     const cx = g.x + g.w / 2;
-    const cy = g.y + 385;
-    const rOut = 330;
-    const thick = 100;
+    const cy = g.y + 400;
+    const rOut = 395;
+    const thick = 140;
     const a0 = (Math.PI * 160) / 180; // 220° sweep (160° → 380°), symmetric about the top
     const span = (Math.PI * 220) / 180;
     const fillK = easeOut(ramp(f, FILL0, FILL1));
@@ -332,20 +332,20 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     }
     ctx.fillStyle = COL.text;
     ctx.textAlign = "center";
-    ctx.font = "400 62px Inter";
-    ctx.fillText(D.gauge.label, cx, cy - 115);
-    ctx.font = "700 110px Inter";
-    ctx.fillText(String(Math.round(val)), cx, cy + 5);
+    ctx.font = "400 60px Inter";
+    ctx.fillText(D.gauge.label, cx, cy - 95);
+    ctx.font = "500 80px Inter";
+    ctx.fillText(String(Math.round(val)), cx, cy + 0);
     ctx.font = "400 46px Inter";
-    ctx.fillText(D.gauge.unit, cx, cy + 70);
+    ctx.fillText(D.gauge.unit, cx, cy + 60);
     ctx.font = "400 34px Inter";
     ctx.fillStyle = COL.textDim;
-    ctx.fillText(`${D.gauge.max}${D.gauge.unit}`, cx + rOut + 10, cy + 160);
+    ctx.fillText(`${D.gauge.max}${D.gauge.unit}`, cx + rOut - 30, cy + 205);
     ctx.textAlign = "left";
     // small stats
-    ctx.font = "400 36px Inter";
+    ctx.font = "400 30px Inter";
     D.stats.forEach((s, i) => {
-      const y = g.y + 620 + i * 50;
+      const y = g.y + 650 + i * 40;
       let v = s.value * easeOut(ramp(f, FILL0 + 10, FILL1));
       if (f >= FILL1 && i === 0) v = s.value + (hash1(Math.floor((f - FILL1) / 20), 23) - 0.5) * 0.4;
       ctx.fillStyle = COL.textDim;
@@ -398,11 +398,11 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     roundRect(ctx, n, 16);
     ctx.clip();
     const gr = ctx.createLinearGradient(n.x, n.y, n.x + n.w, n.y + n.h);
-    gr.addColorStop(0, "#0B2A6A");
-    gr.addColorStop(1, "#06163E");
+    gr.addColorStop(0, "#082052");
+    gr.addColorStop(1, "#040E2C");
     ctx.fillStyle = gr;
     ctx.fillRect(n.x, n.y, n.w, n.h);
-    ctx.strokeStyle = "rgba(70,130,255,0.55)";
+    ctx.strokeStyle = "rgba(80,170,255,0.45)";
     ctx.lineWidth = 3;
     for (let x = n.x + 20; x < n.x + n.w; x += 56) {
       ctx.beginPath();
@@ -447,9 +447,20 @@ export const createDashboard = () => (): Look => {
   big.add(keyA);
   const bigCam = new THREE.PerspectiveCamera(24, 1, 0.05, 50);
 
+  // nacelle close-up: see-through "x-ray" shell with the drivetrain glowing inside
   const close = new THREE.Scene();
-  const closeT = buildTurbine(mat);
+  const xray = new THREE.MeshStandardMaterial({
+    color: 0xbfe6ff,
+    emissive: new THREE.Color("#0E3A66"),
+    roughness: 0.35,
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const closeT = buildTurbine(xray);
   closeT.markers.visible = true;
+  closeT.internals.visible = true;
   close.add(closeT.group);
   const keyB = new THREE.DirectionalLight(0xbfd8ff, 1.0);
   keyB.position.set(-2, 2, 3);
@@ -519,8 +530,8 @@ export const createDashboard = () => (): Look => {
       closeT.rotor.rotation.z = -f * THREE.MathUtils.degToRad(2.1);
       closeT.nacelle.rotation.y = THREE.MathUtils.degToRad(-10 + f * 0.1);
       if (k7 > 0.02) {
-        closeCam.position.set(0.5, 0.9, 0.62);
-        closeCam.lookAt(0, 1.03, 0.0);
+        closeCam.position.set(0.42, 0.98, 0.34);
+        closeCam.lookAt(0, 1.04, -0.03);
         closeCam.updateMatrixWorld();
         const r = { ...L.nacelle, y: L.nacelle.y + (1 - k7) * 60 };
         viewport(gl, r, close, closeCam);

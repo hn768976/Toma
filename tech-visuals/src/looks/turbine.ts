@@ -10,6 +10,7 @@ export type Turbine = {
   rotor: THREE.Group; // rotate about z
   nacelle: THREE.Group; // yaw-able head (nacelle + rotor)
   markers: THREE.Group; // glowing sensor markers (hidden by default)
+  internals: THREE.Group; // drivetrain inside the nacelle (for the see-through close-up; hidden by default)
 };
 
 const TOWER_H = 1.0;
@@ -20,7 +21,7 @@ const towerGeometry = () => {
   const n = 24;
   for (let i = 0; i <= n; i++) {
     const t = i / n;
-    pts.push(new THREE.Vector2(0.04 - 0.019 * t, t * (TOWER_H - 0.02)));
+    pts.push(new THREE.Vector2(0.034 - 0.016 * t, t * (TOWER_H - 0.02)));
   }
   pts.push(new THREE.Vector2(0.0, TOWER_H - 0.02));
   pts.unshift(new THREE.Vector2(0, 0));
@@ -82,11 +83,11 @@ const bladeGeometry = () => {
   const SECTIONS: { r: number; chord: number; thick: number; twist: number; round: number; sweep: number }[] = [
     { r: 0.0, chord: 0.026, thick: 1.0, twist: 0, round: 1, sweep: 0 },
     { r: 0.04, chord: 0.03, thick: 0.9, twist: 4, round: 0.75, sweep: 0 },
-    { r: 0.1, chord: 0.05, thick: 0.38, twist: 16, round: 0.1, sweep: 0.004 },
-    { r: 0.18, chord: 0.046, thick: 0.28, twist: 12, round: 0, sweep: 0.004 },
-    { r: 0.28, chord: 0.037, thick: 0.22, twist: 8, round: 0, sweep: 0.003 },
-    { r: 0.38, chord: 0.028, thick: 0.18, twist: 5, round: 0, sweep: 0.002 },
-    { r: 0.48, chord: 0.019, thick: 0.15, twist: 3, round: 0, sweep: 0.0 },
+    { r: 0.1, chord: 0.042, thick: 0.4, twist: 16, round: 0.1, sweep: 0.004 },
+    { r: 0.18, chord: 0.038, thick: 0.3, twist: 12, round: 0, sweep: 0.004 },
+    { r: 0.28, chord: 0.03, thick: 0.24, twist: 8, round: 0, sweep: 0.003 },
+    { r: 0.38, chord: 0.022, thick: 0.2, twist: 5, round: 0, sweep: 0.002 },
+    { r: 0.48, chord: 0.015, thick: 0.16, twist: 3, round: 0, sweep: 0.0 },
     { r: BLADE_L, chord: 0.008, thick: 0.14, twist: 2, round: 0, sweep: -0.002 },
   ];
   const N = 24; // points per section
@@ -214,6 +215,21 @@ export const buildTurbine = (mat: THREE.Material): Turbine => {
   }
   markers.visible = false;
   nacelle.add(markers);
+
+  // simple drivetrain: main shaft, bearing, gearbox, generator (only shown in the x-ray view)
+  const internals = new THREE.Group();
+  const im = new THREE.MeshStandardMaterial({ color: 0x7fdcff, emissive: new THREE.Color("#2A9AD8"), roughness: 0.5 });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 16).rotateX(Math.PI / 2), im);
+  shaft.position.set(0, 0.004, 0.03);
+  const bearing = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 20).rotateX(Math.PI / 2), im);
+  bearing.position.set(0, 0.004, 0.04);
+  const gearbox = new THREE.Mesh(new RoundedBoxGeometry(0.05, 0.05, 0.06, 2, 0.008), im);
+  gearbox.position.set(0, 0.0, -0.03);
+  const gen = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.06, 20).rotateX(Math.PI / 2), im);
+  gen.position.set(0, 0.002, -0.11);
+  internals.add(shaft, bearing, gearbox, gen);
+  internals.visible = false;
+  nacelle.add(internals);
   group.add(nacelle);
-  return { group, rotor, nacelle, markers };
+  return { group, rotor, nacelle, markers, internals };
 };

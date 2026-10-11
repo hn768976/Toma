@@ -8,8 +8,8 @@ export const LOOP = 600;
 const SPACING = 0.6;
 const P = 24; // row period in folders
 const PERIOD_X = P * SPACING; // 14.4 world units — camera travels exactly this per loop
-const FW = 1.1; // folder width
-const FH = 0.8; // folder height (body)
+const FW = 0.92; // folder width
+const FH = 0.9; // folder height (body)
 const TAB_W = 0.34;
 const TAB_H = 0.06;
 
@@ -19,7 +19,7 @@ const VAR = (() => {
   return Array.from({ length: P }, () => ({
     h: 1 + (r() * 2 - 1) * 0.05,
     tilt: THREE.MathUtils.degToRad((r() * 2 - 1) * 2),
-    tabRight: r() < 0.5,
+    tabRight: r() < 0.2,
   }));
 })();
 
@@ -55,7 +55,7 @@ const folderShape = (tabRight: boolean) => {
   });
   g.translate(0, 0, -0.011);
   // face normal → −x (towards the camera, which looks along +x), turned 12° further toward it
-  g.rotateY(-Math.PI / 2 + THREE.MathUtils.degToRad(14));
+  g.rotateY(-Math.PI / 2 + THREE.MathUtils.degToRad(22));
   return g;
 };
 
@@ -64,7 +64,7 @@ const grooveNormalMap = () => {
   const W = 256;
   const H = 256;
   const data = new Uint8Array(W * H * 4);
-  const grooves = [0.22, 0.36, 0.5, 0.64, 0.78];
+  const grooves = [0.3, 0.44, 0.58, 0.72];
   for (let y = 0; y < H; y++) {
     const v = y / (H - 1);
     let ny = 0;
@@ -170,7 +170,7 @@ uniform vec3 cFace; uniform vec3 lightDir;
 varying vec3 vW; varying vec3 vN;
 void main() {
   float ndl = abs(dot(normalize(vN), lightDir));
-  float fade = exp(vW.y * 3.2) * 0.38;
+  float fade = exp(vW.y * 3.0) * 0.6;
   gl_FragColor = vec4(cFace * (0.35 + 0.65 * ndl) * fade, 1.0);
 }
 `;
@@ -236,7 +236,7 @@ const buildStreams = () => {
 export const createFolderRow = () => (): Look => {
   const pipe = new Pipeline(4);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 80);
+  const camera = new THREE.PerspectiveCamera(24, 16 / 9, 0.1, 80);
   const DEFINES = { TAU: "6.283185307179586" };
 
   const bg = new THREE.Mesh(
@@ -246,8 +246,8 @@ export const createFolderRow = () => (): Look => {
       fragmentShader: BG_FRAG,
       depthWrite: false,
       uniforms: {
-        cTop: { value: new THREE.Color("#030A2E") },
-        cMid: { value: new THREE.Color("#0A2470") },
+        cTop: { value: new THREE.Color("#06205E") },
+        cMid: { value: new THREE.Color("#0C2E82") },
         cHorizon: { value: new THREE.Color("#163C9E") },
       },
     }),
@@ -354,8 +354,8 @@ export const createFolderRow = () => (): Look => {
       const t = (((frame % LOOP) + LOOP) % LOOP) / LOOP; // frame 600 ≡ frame 0 exactly
       const camX = t * PERIOD_X;
       const bob = 0.025 * Math.sin(TAU * t);
-      camera.position.set(camX - 2.9, 1.18 + bob, 4.1);
-      camera.lookAt(camX + 1.1, 0.8 + bob * 0.5, 0);
+      camera.position.set(camX - 3.5, 1.6 + bob, 5.0);
+      camera.lookAt(camX + 1.5, 0.42 + bob * 0.5, 0);
       camera.updateMatrixWorld();
 
       const first = Math.floor(camX / SPACING) - 14;
@@ -394,7 +394,7 @@ export const createFolderRow = () => (): Look => {
       gl.render(scene, camera);
       pipe.finish(gl, {
         camera,
-        dof: { focus: 4.6, range: 0.6, aperture: 0.75, maxRadius: 0.007 },
+        dof: { focus: 5.6, range: 1.2, aperture: 0.35, maxRadius: 0.006 },
         bloom: { strength: 0.6, threshold: 0.85, knee: 0.4 },
         final: {
           frame,
