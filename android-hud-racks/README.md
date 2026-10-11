@@ -126,4 +126,109 @@ by the same script and stored in the file's JSON header.
 - Loops use whole cycles: walks return to their start, holds divide the
   composition length, and cameras move exactly one period.
 
-RESULTS_PLACEHOLDER
+## Verification scripts
+
+| Script | What it checks |
+|---|---|
+| `scripts/loop-check.sh` | Step 2: with `REMOTION_LOOP_CHECK=1` the loops are 601 frames; renders frames 0 and 600 and compares the pixels |
+| `scripts/render-previews.sh` | 720p previews (PNG sequence, then ffmpeg H.264 yuv420p CRF 16), keeps frame 300 |
+| `scripts/determinism-check.sh` | Step 3: frame 300 rendered cold vs frame 300 of the full render, byte for byte |
+| `scripts/banding-check.py` | Step 4: reads pixel lines from frames decoded out of the encoded mp4s |
+| `scripts/contact-sheets.sh` | Step 5: five evenly spaced frames per preview |
+
+## Measured render times
+
+All measurements were taken in a cloud container: 4 vCPU, no GPU, so
+Chromium's WebGL2 runs on ANGLE + SwiftShader (software). A GPU machine will
+be much faster.
+
+**720p previews** (`--scale=0.3333333333333333`, 2 tabs, whole composition
+including startup):
+
+| Composition | Frames | Wall time | Per frame |
+|---|---|---|---|
+| AndroidTraderHUD-Left | 600 | 633 s | 1.05 s |
+| AndroidTraderHUD-Right | 600 | 669 s | 1.12 s |
+| GrowthChartHUD-Story | 450 | 275 s | 0.61 s |
+| ServerRack-FrontScroll | 600 | 949 s | 1.58 s |
+| ServerRack-DiagonalGlide | 600 | 1507 s | 2.51 s |
+| ServerRack-LowAngle | 600 | 1716 s | 2.86 s |
+
+**Two real 4K frames** (3840×2160, 1 tab, SwiftShader):
+
+| Composition | 1 frame (cold, incl. startup) | 4 frames | Marginal cost per frame |
+|---|---|---|---|
+| AndroidTraderHUD-Left (frame 150) | 20.1 s | 40.2 s | **6.7 s** |
+| ServerRack-DiagonalGlide (frame 150) | 41.4 s | 89.1 s | **15.9 s** |
+
+**4K estimates.** Both timed compositions came out about 6.3× their 720p
+per-frame cost, so the others are scaled by the same factor. On this CPU
+box:
+
+| Composition | Estimate |
+|---|---|
+| AndroidTraderHUD-Left | ≈ 67 min |
+| AndroidTraderHUD-Right | ≈ 71 min |
+| GrowthChartHUD-Story | ≈ 29 min |
+| ServerRack-FrontScroll | ≈ 100 min |
+| ServerRack-DiagonalGlide | ≈ 160 min |
+| ServerRack-LowAngle | ≈ 180 min |
+
+On a desktop GPU with `--gl=angle`, expect roughly an order of magnitude
+less. That is an estimate, not a measurement.
+
+## Banding check
+
+Frames were decoded from the encoded mp4s (`out/banding/`), and pixel values
+were read along lines through clean gradient areas only:
+
+- the HUD background in the lower right, at the right edge, and under the
+  gauge (1A and 1B);
+- the chart's blue gradient beside and under the chart and along the bottom;
+- the eye halo;
+- soft highlights on rack metal (3A, 3B and 3C).
+
+What the lines show:
+
+- **Backgrounds:** the gradients ramp smoothly. The longest run of
+  identical pixels is 5–10 px (grain keeps it short), and the smoothed
+  step between neighbours is 0.3–1.4 code values per pixel.
+- **Lines the script flags:** where it flags the eye halo, the chart bottom
+  line and the rack lines, the plotted profiles show those jumps are real
+  content (wireframe strands, grid "+" ticks, panel and slat edges). The
+  ramps between them are smooth with grain-level noise.
+- **Contrast stretch:** a 5× stretch of the dark regions shows no contour
+  steps.
+
+Grain therefore stays at 1.5 %, and dither is ±1/255 triangular.
+
+## Completion checklist
+
+- [x] 6 compositions, one project, 3840×2160 at 30 fps; 450 frames for the
+  chart and 600 for the loops.
+- [x] Android head sculpted as an SDF and meshed in code: marching cubes at
+  320³ (303×321×180 grid), 2 Taubin passes weighted near the seams, and
+  `head.bin` committed.
+- [x] Head model check: 3 rounds with fresh sub-agents. Every round
+  identified it as a smooth white android bust.
+- [x] Rack model check: 3 rounds with fresh sub-agents, with fixes applied.
+- [x] Shared HUD kit: Canvas-2D elements, static parts drawn once, widgets
+  redrawn from the frame.
+- [x] WebGL2 via `@remotion/three`, `--gl=angle`. No PixiJS, no WebGPU, no
+  MCP, no downloaded models.
+- [x] Fonts are OFL only (Orbitron, Inter) with their licence texts in
+  `public/fonts/`.
+- [x] No logos, brands, real tickers, exchanges, prices or maker names. All
+  values are invented.
+- [x] Loop check: frame 600 equals frame 0, pixel for pixel, for all 5
+  loops.
+- [x] Determinism: frame 300 rendered cold matches the full render byte for
+  byte, for all 6 compositions.
+- [x] Previews are 1280×720, 30/1, h264, yuv420p, with no audio; durations
+  are 15.0 s and 20.0 s.
+- [x] Banding checked on the encoded mp4s.
+- [x] Motion: consecutive-frame differences around frame 300 (and at 2–6 s
+  in the chart) are even, within ±20 % of their mean. No judder or flicker
+  spikes.
+- [ ] Reference comparison (step 8) left differences, listed in the delivery
+  report.

@@ -15,12 +15,14 @@ from PIL import Image
 OUT = sys.argv[1] if len(sys.argv) > 1 else "out"
 # (file, time s, label, (x0, y0, x1, y1)) - horizontal or vertical probe lines
 PROBES = [
-    ("AndroidTraderHUD_Left", 3.0, "HUD background, lower right (horizontal)", (700, 640, 1270, 640)),
-    ("AndroidTraderHUD_Left", 3.0, "HUD background, right side (vertical)", (1150, 10, 1150, 700)),
-    ("AndroidTraderHUD_Left", 3.0, "eye glow (left eye, horizontal)", "eye"),
-    ("AndroidTraderHUD_Right", 3.0, "HUD background, lower left (horizontal)", (10, 650, 560, 650)),
-    ("GrowthChartHUD_Story", 13.0, "chart blue gradient (vertical, between elements)", (640, 460, 640, 520)),
-    ("GrowthChartHUD_Story", 13.0, "chart blue gradient, right edge (vertical)", (1270, 10, 1270, 500)),
+    ("AndroidTraderHUD_Left", 3.0, "HUD background, lower right (horizontal)", (700, 700, 1270, 700)),
+    ("AndroidTraderHUD_Left", 3.0, "HUD background, right edge (vertical)", (1270, 300, 1270, 520)),
+    ("AndroidTraderHUD_Left", 3.0, "HUD background, under the gauge (vertical)", (1000, 640, 1000, 715)),
+    ("AndroidTraderHUD_Left", 3.0, "eye glow, halo above the right eye (vertical)", (297, 8, 297, 66)),
+    ("AndroidTraderHUD_Right", 3.0, "HUD background, lower left (horizontal)", (10, 700, 560, 700)),
+    ("GrowthChartHUD_Story", 13.0, "chart blue gradient, right side (vertical)", (1150, 200, 1150, 420)),
+    ("GrowthChartHUD_Story", 13.0, "chart blue gradient, under the chart (vertical)", (450, 470, 450, 500)),
+    ("GrowthChartHUD_Story", 13.0, "chart blue gradient, bottom (horizontal)", (640, 690, 1270, 690)),
     ("ServerRack_FrontScroll", 5.0, "rack metal soft highlight", "highlight"),
     ("ServerRack_DiagonalGlide", 5.0, "rack metal soft highlight", "highlight"),
     ("ServerRack_LowAngle", 5.0, "rack dark shadow to highlight", "highlight"),
@@ -74,7 +76,7 @@ def find_highlight(img):
             v = [luma(img.getpixel((x + i, y))) for i in range(0, 300, 10)]
             rng = max(v) - min(v)
             rough = sum(abs(v[i] - v[i - 1]) for i in range(1, len(v)))
-            score = rng - 0.5 * rough
+            score = rng - 1.5 * max(0, rough - 1.4 * rng)
             if score > best:
                 best, pick = score, (x, y, x + 299, y)
     return pick

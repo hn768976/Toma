@@ -59,6 +59,7 @@ type CamCfg = {
   focus: (cam: THREE.PerspectiveCamera) => number;
   post: Partial<PostOptions> & { dof: NonNullable<PostOptions["dof"]> };
   exposure?: number;
+  ledGain?: number; // LED brightness and glow size multiplier
 };
 
 // Distance along the view axis to the rack face (z = 0) through the
@@ -106,11 +107,13 @@ const CAMS: Record<RackVersion, CamCfg> = {
     fov: 40,
     pose: (t, cam) => {
       cam.position.set(0.1, -0.9 + H * t, 0.3);
-      cam.rotation.set(THREE.MathUtils.degToRad(52), 0, 0, "YXZ");
+      // About 20 deg between the view axis and the rack face.
+      cam.rotation.set(THREE.MathUtils.degToRad(68), 0, THREE.MathUtils.degToRad(-4), "YXZ");
     },
     focus: (cam) => faceDistance(cam, 0, -0.1),
     post: { dof: { aperture: 26, maxCoc: 20, nearScale: 0.9 }, ca: 2 },
     exposure: 0.75,
+    ledGain: 1.8,
   },
 };
 
@@ -128,6 +131,7 @@ const FLICKER_HOLDS = [2, 3, 4, 5, 6];
 // integer hash, so it is identical in any render order.
 const LED_GLSL = /* glsl */ `
 uniform float uFrame;
+uniform float ledGain;
 float ledHash(float a, float b) {
   uint h = uint(a) * 747796405u + uint(b) * 2891336453u + 12345u;
   h ^= h >> 16; h *= 2246822519u; h ^= h >> 13; h *= 3266489917u; h ^= h >> 16;
@@ -168,7 +172,7 @@ void main() {
   float on = ledOn(vLed);
   vec3 c = ledColor(vLed.x);
   // Off LEDs are a dim coloured lens; on ones are hot.
-  vec3 col = c * (0.05 + on * 9.0) + vec3(0.02) * (1.0 - on);
+  vec3 col = c * (0.05 + on * 9.0 * ledGain) + vec3(0.02) * (1.0 - on);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -196,7 +200,7 @@ void main() {
   float r = length(vUv);
   // Hot core, then a wide faint spill that tints the metal around it.
   float a = (exp(-r * r * 120.0) * 1.4 + exp(-r * r * 22.0) * 0.22 + exp(-r * r * 5.0) * 0.07) * (1.0 - smoothstep(0.85, 1.0, r));
-  gl_FragColor = vec4(ledColor(vLed.x) * a * on * 0.6, 1.0);
+  gl_FragColor = vec4(ledColor(vLed.x) * a * on * 0.6 * ledGain, 1.0);
 }
 `;
 
@@ -471,7 +475,7 @@ const makeFactory =
     ledGeo.rotateX(Math.PI / 2);
     const ledAttr = new Float32Array(leds.length * 4);
     leds.forEach((l, i) => ledAttr.set(l.d, i * 4));
-    const ledUniforms = { uFrame: { value: 0 }, glowSize: { value: 16 } };
+    const ledUniforms = { uFrame: { value: 0 }, glowSize: { value: 16 * (cfg.ledGain ?? 1) }, ledGain: { value: cfg.ledGain ?? 1 } };
     const ledMesh = new THREE.InstancedMesh(
       ledGeo,
       new THREE.ShaderMaterial({ vertexShader: LED_VERT, fragmentShader: LED_FRAG, uniforms: ledUniforms }),
