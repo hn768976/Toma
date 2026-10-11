@@ -21,11 +21,11 @@
   },
   "atmosphere": {
     "color": [
-      1.0,
+      1,
       0.62,
       0.48
     ],
-    "strength": 0.08,
+    "strength": 0.05,
     "thickness": 0.012,
     "crescent": 0.8
   },

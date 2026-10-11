@@ -59,6 +59,12 @@ export type VersionRow = {
   sunColor: [number, number, number];
   // Multiplier on the body's atmosphere strength for this shot.
   atmosphereScale: number;
+  // Faint fill light from the opposite side (fraction of the sun), so
+  // relief stays faintly visible on the night side of Crescent shots.
+  fill: number;
+  // Multiplier on limb darkening (0 on Crescent shots: a backlit crescent
+  // is brightest toward its limb).
+  limbScale: number;
   starBrightness: number;
 };
 
@@ -138,7 +144,9 @@ function spinRow(b: BodyId): VersionRow {
     saturationBoost: 1,
     sunColor: [1, 1, 1],
     atmosphereScale: 1,
-    starBrightness: 1.6,
+    fill: 0,
+    limbScale: 1,
+    starBrightness: 0.85,
   };
 }
 
@@ -161,15 +169,23 @@ function crescentRow(b: BodyId): VersionRow {
     rotation: { direction: pr.dir, faceLonDeg: pr.face - 60 * pr.dir, turnDeg: 25 },
     atmosphere: m.atmosphere ? { color: m.atmosphere.color, strength: m.atmosphere.strength } : null,
     rings: Boolean(m.rings),
-    light: { angleDeg: 115, side: 1, elevationDeg: 20, swingDeg: 8 },
-    exposure: 1.7 * (pr.exposure ?? 1),
+    // From behind and to the upper right (~110-115 deg off the camera axis),
+    // so the terminator runs diagonally and the lower disc falls into shadow.
+    // Saturn: lit from the right (5 deg up), which puts the sun ~20 deg
+    // north of the ring plane, so the rings' shadow falls as broad bands
+    // across the middle of the crescent.
+    light: { angleDeg: 115, side: 1, elevationDeg: b === "saturn" ? 5 : 35, swingDeg: 8 },
+    exposure: 2.1 * (pr.exposure ?? 1),
     reliefBoost: 2.4,
-    wrapBoost: 0.3,
-    saturationBoost: 1.25,
-    sunColor: [1.0, 0.9, 0.76],
+    wrapBoost: 0,
+    saturationBoost: 1.3,
+    // Warm low sun; Mars gets the hot amber of the reference look.
+    sunColor: b === "mars" ? [1.0, 0.86, 0.5] : [1.0, 0.95, 0.85],
     // Mars is not one of the crescent bodies with an atmosphere arc.
-    atmosphereScale: b === "mars" ? 0.35 : 1,
-    starBrightness: 0.05,
+    atmosphereScale: b === "mars" ? 0.15 : 1,
+    fill: 0.05,
+    limbScale: 0,
+    starBrightness: 0.02,
   };
 }
 

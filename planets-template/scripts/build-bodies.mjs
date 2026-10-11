@@ -68,9 +68,9 @@ export const BODIES = {
   mars: {
     name: "Mars", kind: "planet", radiusKm: 3389.5, flattening: 0.00589, obliquityDeg: 25.19,
     rotationPeriodH: 24.6229,
-    color: { ...src("Mars_Viking_ClrMosaic_global_925m.tif"), mode: "rgb", whitenCaps: true },
+    color: { ...src("Mars_Viking_ClrMosaic_global_925m.tif"), mode: "rgb", whitenCaps: true, grade: { gain: [1.06, 0.93, 0.86], lift: 0.035 } },
     dem: { ...src("Mars_MGS_MOLA_DEM_mosaic_global_463m.tif"), exaggeration: 3.5 },
-    atmosphere: { color: [1.0, 0.62, 0.48], strength: 0.08, thickness: 0.012, crescent: 0.8 },
+    atmosphere: { color: [1.0, 0.62, 0.48], strength: 0.05, thickness: 0.012, crescent: 0.8 },
     surface: { wrap: 0.06, normalStrength: 1.0 },
     credits: [
       ["Colour mosaic", "Mars Viking MDIM2.1 colorized global mosaic 925 m. NASA / JPL / USGS Astrogeology Science Center.", "Mars_Viking_ClrMosaic_global_925m.tif"],
@@ -197,6 +197,14 @@ function whitenCaps(chs) {
   }
 }
 
+// Gentle colour grade: per-channel gain and a lift of the darks.
+function gradeRgb(chs, { gain, lift }) {
+  for (let c = 0; c < 3; c++) {
+    const ch = chs[c];
+    for (let i = 0; i < ch.length; i++) ch[i] = lift + (1 - lift) * ch[i] * gain[c];
+  }
+}
+
 function erode(mask, r) {
   const blurred = gaussian(mask, W, H, r);
   return blurred.map((v) => (v > 0.999 ? 1 : 0));
@@ -217,6 +225,7 @@ async function colorFromMosaic(b) {
   if (b.color.mode === "rgb") {
     const chs = r.channels.map((ch) => finishChannel(pushPullFill(ch.map((v) => v / 255), hard, W, H)));
     if (b.color.whitenCaps) whitenCaps(chs);
+    if (b.color.grade) gradeRgb(chs, b.color.grade);
     return { chs, cover: hard };
   }
   let g = r.channels[0].map((v) => v / 255);

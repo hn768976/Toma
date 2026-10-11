@@ -81,6 +81,7 @@ const Scene: React.FC<{ row: VersionRow; meta: BodyMeta; maps: Maps }> = ({ row,
       uAtmColor: { value: new THREE.Vector3(...(atm?.color ?? [0, 0, 0])) },
       uAtmStrength: { value: (atm?.strength ?? 0) * row.atmosphereScale },
       uSunColor: { value: new THREE.Vector3(...row.sunColor) },
+      uFill: { value: row.fill },
     };
 
     // Star field (behind everything; additive, depth-tested against the body).
@@ -103,10 +104,13 @@ const Scene: React.FC<{ row: VersionRow; meta: BodyMeta; maps: Maps }> = ({ row,
           ...shared,
           uColor: { value: maps.color },
           uNormal: { value: maps.normal },
-          uNormalStrength: { value: meta.surface.normalStrength > 0 ? row.reliefBoost : 0 },
-          uWrap: { value: meta.surface.wrap + row.wrapBoost },
+          // The Crescent relief boost applies to solid bodies only (gas giants
+          // and cloud decks keep their gentle baked normals).
+          uNormalStrength: { value: meta.surface.normalStrength <= 0 ? 0 : meta.surface.normalStrength >= 0.5 ? row.reliefBoost : 1 },
+          // Crescent shots cap the wrap so most of the disc stays in shadow.
+          uWrap: { value: row.shot === "crescent" ? Math.min(meta.surface.wrap, 0.1) : meta.surface.wrap + row.wrapBoost },
           uSaturation: { value: meta.surface.saturation * row.saturationBoost },
-          uLimb: { value: meta.surface.limbDarkening ?? (atm ? 0.35 : 0.2) },
+          uLimb: { value: (meta.surface.limbDarkening ?? (atm ? 0.35 : 0.2)) * row.limbScale },
         },
         toneMapped: false,
       }),

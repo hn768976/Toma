@@ -14,6 +14,7 @@ const common = /* glsl */ `
   uniform vec2 uRingRange;    // inner, outer radius (planet radii)
   uniform float uHasRings;
   uniform vec3 uSunColor;     // sunlight colour
+  uniform float uFill;        // fill light from the opposite side
 
   // Ellipsoid -> unit sphere.
   vec3 toUnit(vec3 q) { return vec3(q.x, q.y / uFlat, q.z); }
@@ -93,6 +94,15 @@ export const planetFrag = /* glsl */ `
     float limb = mix(1.0, pow(mu, 0.35), uLimb);
     float shadow = ringTransmit(vPos);
     vec3 col = albedo * diff * limb * shadow * uSun * uSunColor;
+    // Faint fill from the side opposite the sun: the sun direction mirrored
+    // across the view axis (same depth, other side), so relief glints
+    // faintly across the night side.
+    vec3 Vc = normalize(uCam);
+    vec3 Lpar = Vc * dot(uLight, Vc);
+    vec3 fillDir = normalize(Lpar - (uLight - Lpar));
+    float fd = max(dot(n, fillDir), 0.0);
+    float fg = max(dot(nGeo, fillDir), 0.0);
+    col += albedo * uFill * uSun * pow(fd, 6.0) * smoothstep(0.0, 0.25, fg) * (1.0 - diff);
 
     // Atmospheric in-scatter on the disc toward the limb (lit side only).
     float rim = pow(1.0 - mu, 3.0);
