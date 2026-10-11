@@ -91,7 +91,7 @@ Eclipse by its multi-octave flow noise.
   renders imperatively in a layout effect on each frame change and holds its own
   `delayRender` handle until the draw has finished. There is no `useFrame` clock, no
   `Date.now()`, no state carried between frames, and no TAA.
-* Randomness: `mulberry32` seeded at module level (people formation, digits, rays). In
+* Randomness: `mulberry32` seeded at module level (people formation, digit values and positions). In
   shaders, integer hashes (`hashU`) are bit-exact on any GPU.
 * Fonts are loaded once with `FontFace` and `document.fonts.ready` before the canvas
   mounts, and text textures are built once after that.

@@ -1,5 +1,5 @@
 import { Group, Mesh, Shape, Vector2, type Object3D } from "three";
-import { easeInOutCubic, easeOutBack, easeOutCubic, lerp, pop, ramp } from "../../lib/anim";
+import { easeInOutCubic, easeOutCubic, lerp, pop, ramp } from "../../lib/anim";
 import { mulberry32 } from "../../lib/random";
 import { PAL, lineMesh, makeLabel, rectMesh, rectPts, shapeMesh } from "../kit";
 import type { StoryBuilder } from "../pipeline";
@@ -14,13 +14,6 @@ const DIGITS = Array.from({ length: 25 }, (_, i) => ({
   start: [(rng() - 0.5) * 1.9, (rng() - 0.5) * 1.9, (rng() - 0.5) * 2.2] as const,
   phase: rng() * Math.PI * 2,
   delay: i * 0.7 + rng() * 6,
-}));
-
-// 13 uneven wedge rays over the upper ~150 degrees (above the arrow), slightly asymmetric
-const RAYS = Array.from({ length: 13 }, (_, i) => ({
-  deg: 15 + i * (150 / 12) + (rng() - 0.5) * 6,
-  len: 0.12 + rng() * 0.3,
-  rad: 0.9 + rng() * 0.32,
 }));
 
 const LABEL_Y = -1.45;
@@ -133,7 +126,7 @@ export const dataAnalysisIdea: StoryBuilder = ({ anisotropy }) => {
   lAnalysis.mesh.position.set(0.05, LABEL_Y, 0);
   chart.add(order(lAnalysis.mesh, 10));
 
-  // ---------------- Idea: light bulb with rays -----------------------------
+  // ---------------- Idea: light bulb -----------------------------
   const bulb = new Group();
   bulb.position.x = X_BULB;
   content.add(bulb);
@@ -175,25 +168,6 @@ export const dataAnalysisIdea: StoryBuilder = ({ anisotropy }) => {
   tip.lineTo(-0.08, -1.1);
   const tipMesh = order(shapeMesh(tip, PAL.violet, 1), 9);
   bulb.add(tipMesh);
-  const rays = RAYS.map(({ deg, len, rad }, i) => {
-    const a = (deg * Math.PI) / 180;
-    const s = new Shape();
-    const L = len;
-    s.moveTo(-0.035, 0);
-    s.lineTo(0.035, 0);
-    s.lineTo(0, L);
-    s.lineTo(-0.035, 0);
-    const pivot = new Group();
-    pivot.position.set(0, BY, 0);
-    pivot.rotation.z = a - Math.PI / 2;
-    const m = shapeMesh(s, PAL.white, 1);
-    m.material.uniforms.uGain.value = 1.25;
-    const holder = new Group();
-    holder.add(order(m, 9));
-    pivot.add(holder);
-    bulb.add(pivot);
-    return { holder, m, i };
-  });
   const lIdea = makeLabel("Idea", { em: 0.66, align: "center", anisotropy, glow: 0.18, color: "#E4E2FA" });
   lIdea.mesh.position.set(0, LABEL_Y, 0);
   bulb.add(order(lIdea.mesh, 10));
@@ -244,21 +218,13 @@ export const dataAnalysisIdea: StoryBuilder = ({ anisotropy }) => {
     });
     lAnalysis.typeOn(f, 122);
 
-    // bulb: outline draws, fills white with cyan base, rays burst
+    // bulb: outline draws, then fills white with a cyan base
     bulbEdge.material.uniforms.uDraw.value = easeInOutCubic(ramp(f, 188, 216));
     bulbEdge.material.uniforms.uOpacity.value = ramp(f, 188, 190);
     const fillT = easeOutCubic(ramp(f, 214, 228));
     bulbFill.material.uniforms.uOpacity.value = fillT;
     baseBars.forEach((b, k) => (b.material.uniforms.uOpacity.value = easeOutCubic(ramp(f, 206 + k * 4, 214 + k * 4))));
     tipMesh.material.uniforms.uOpacity.value = easeOutCubic(ramp(f, 218, 226));
-    for (const r of rays) {
-      const t = ramp(f, 228 + (r.i % 3), 244 + (r.i % 3));
-      const burst = easeOutBack(t);
-      const pulse = f > 270 ? 0.06 * Math.sin(((f - 270) / 45) * Math.PI * 2 + r.i * 0.6) : 0;
-      r.holder.position.y = RAYS[r.i].rad * (0.75 + 0.25 * burst) + pulse * 1.5;
-      r.holder.scale.setScalar(Math.max(1e-4, Math.min(1.2, burst) * (1 + pulse)));
-      r.m.material.uniforms.uOpacity.value = ramp(f, 228, 232) * (0.9 + pulse);
-    }
     lIdea.typeOn(f, 240);
   };
 
