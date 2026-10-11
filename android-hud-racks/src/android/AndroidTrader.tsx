@@ -17,9 +17,9 @@ import { Waves } from "./waves";
 export type AndroidProps = { side: "left" | "right" };
 
 const FOV = 28;
-const CAM_DIST = 2.85;
-const CAM_Y = -0.43;
-const HEAD_X = 0.78; // distance of the head from the frame centre
+const CAM_DIST = 2.4;
+const CAM_Y = -0.32;
+const HEAD_X = 0.64; // distance of the head from the frame centre
 
 const lin = (hex: string) => new THREE.Color(hex); // three converts to linear
 
@@ -32,13 +32,17 @@ void main() {
   if (flip > 0.5) uv.x = 1.0 - uv.x;
   // Steel-blue gradient: darker low and right, lighter behind the head,
   // with a pale haze high in the HUD area.
-  float g = clamp(0.62 * uv.y + 0.38 * (1.0 - uv.x) * 0.8 + 0.1, 0.0, 1.0);
-  vec3 col = mix(cDark, cLight, g);
-  float h = exp(-pow(length((uv - vec2(0.56, 0.86)) * vec2(1.3, 2.2)), 2.0) * 2.5);
-  col += cHaze * h * 0.9;
+  float g = clamp(0.45 * uv.y + 0.6 * (1.0 - uv.x) - 0.1, 0.0, 1.0);
+  vec3 col = mix(cDark * 0.35, cLight, g * g);
+  // Pale cyan haze over the upper middle, behind the head and text.
+  float h = exp(-pow(length((uv - vec2(0.5, 0.78)) * vec2(1.5, 1.9)), 2.0) * 2.2);
+  col += cHaze * h * 1.0;
+  // Near-black lower right corner.
+  float dc = length((uv - vec2(1.0, 0.0)) * vec2(0.8, 1.2));
+  col *= mix(0.25, 1.0, smoothstep(0.1, 0.7, dc));
   float h2 = exp(-pow(length((uv - vec2(0.16, 0.55)) * vec2(1.6, 1.4)), 2.0) * 3.0);
-  col += cLight * h2 * 0.5;
-  gl_FragColor = vec4(col, 1.0);
+  col += cLight * h2 * 0.35;
+  gl_FragColor = vec4(col * 0.48, 1.0);
 }
 `;
 const BG_VERT = /* glsl */ `
@@ -53,14 +57,14 @@ varying vec3 vN;
 void main() {
   float r = length(vN.xy) * step(0.0, vN.z) + step(vN.z, 0.0);
   vec3 core = vec3(0.74, 0.89, 1.0);
-  vec3 iris = vec3(0.04, 0.25, 1.0);
+  vec3 iris = vec3(0.02, 0.1, 1.0);
   float ang = atan(vN.y, vN.x);
   float streak = 0.75 + 0.25 * sin(ang * 23.0) * sin(ang * 7.0 + 1.3);
-  vec3 c = iris * 5.0 * streak * (1.0 - smoothstep(0.55, 0.85, r));
+  vec3 c = iris * 1.7 * streak * (1.0 - smoothstep(0.55, 0.85, r));
   c += iris * 0.6 * (1.0 - smoothstep(0.85, 1.0, r));
   float ring = smoothstep(0.13, 0.17, r) * (1.0 - smoothstep(0.2, 0.26, r));
   c *= 1.0 - 0.85 * ring;
-  c += core * 26.0 * pulse * (1.0 - smoothstep(0.0, 0.16, r));
+  c += core * 9.0 * pulse * (1.0 - smoothstep(0.0, 0.09, r));
   gl_FragColor = vec4(c, 1.0);
 }
 `;
@@ -128,7 +132,7 @@ const makeFactory =
       uniforms: {
         cDark: { value: lin("#0A1A30") },
         cLight: { value: lin("#2A4A6A") },
-        cHaze: { value: lin("#5A8AB8") },
+        cHaze: { value: lin("#7AAACC") },
         flip: { value: flip ? 1 : 0 },
       },
       depthWrite: true,
@@ -141,7 +145,7 @@ const makeFactory =
     const head = new THREE.Group();
     head.position.set(-HEAD_X * sgn, 0, 0);
     // Turned slightly toward the HUD (rotate the mesh; never mirror it).
-    head.rotation.y = 0.2 * sgn;
+    head.rotation.y = 0.06 * sgn;
     head.rotation.x = 0.03;
     scene.add(head);
     const headMesh = new THREE.Mesh(assets.geometry, makeHeadMaterial(env));
@@ -161,7 +165,7 @@ const makeFactory =
         new THREE.ShaderMaterial({
           vertexShader: SPRITE_VERT,
           fragmentShader: HALO_FRAG,
-          uniforms: { color: { value: new THREE.Vector3(0.1, 0.35, 1.0).multiplyScalar(1.4) } },
+          uniforms: { color: { value: new THREE.Vector3(0.03, 0.12, 1.0).multiplyScalar(0.6) } },
           transparent: true,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
@@ -271,7 +275,7 @@ const makeFactory =
       return new FatLines(s, {
         widthPx: 2.4 * px,
         color: "#F4FAFF",
-        intensity: 0.85,
+        intensity: 1.3,
         resolution: res,
         glsl: /* glsl */ `
           float t = fract(vData.x - uTime * vData.z);
@@ -283,6 +287,19 @@ const makeFactory =
     const r1 = dashed(0.115, 144, 3, 1, 0);
     const r2 = dashed(0.145, 160, 9, -2, 1);
     rings.add(r1.mesh, r2.mesh);
+    // A ring around the other eye and a thin vertical guide line through
+    // the face down to the chest.
+    const ring3 = dashed(0.125, 144, 1, 1, 0);
+    const rings2 = new THREE.Group();
+    const eyeR2 = assets.header.eyes[1];
+    rings2.position.set(eyeR2.x, eyeR2.y, eyeR2.z + 0.08);
+    rings2.add(ring3.mesh);
+    head.add(rings2);
+    const guide = new FatLines(
+      [{ a: [0.03, 0.42, 0.48], b: [0.03, -1.1, 0.48] }],
+      { widthPx: 2 * px, color: "#F4FAFF", intensity: 0.55, resolution: res },
+    );
+    head.add(guide.mesh);
 
     // HUD panels.
     const panels: HudPanel[] = [];
@@ -314,13 +331,13 @@ const makeFactory =
     }
 
     // Lights.
-    const key = new THREE.DirectionalLight(0xe8f0ff, 2.3);
+    const key = new THREE.DirectionalLight(0xf8f9fb, 3.0);
     key.position.set(-3 * sgn, 2, 4);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0x8ab8ff, 2.2);
+    const rim = new THREE.DirectionalLight(0x8ab8ff, 1.2);
     rim.position.set(4 * sgn, 1, -2.5);
     scene.add(rim);
-    const fill = new THREE.HemisphereLight(0x6a8ab8, 0x0a1a30, 0.5);
+    const fill = new THREE.HemisphereLight(0xa0a8b4, 0x101820, 0.12);
     scene.add(fill);
 
     const camera = new THREE.PerspectiveCamera(FOV, width / height, 0.1, 30);
@@ -345,10 +362,10 @@ const makeFactory =
     });
 
     const post = new PostChain(renderer, width, height, {
-      dof: { aperture: 34, maxCoc: 22, nearScale: 1.3 },
-      bloom: { threshold: 0.9, knee: 0.6, intensity: 0.55 },
-      grade: { exposure: 1.0, tint: [0.94, 0.99, 1.06], lift: [0.0, 0.01, 0.025], saturation: 1.05, contrast: 1.04 },
-      vignette: { strength: 0.42, radius: 0.45, softness: 0.65 },
+      dof: { aperture: 26, maxCoc: 20, nearScale: 1.3 },
+      bloom: { threshold: 1.0, knee: 0.5, intensity: 0.32 },
+      grade: { exposure: 1.0, tint: [0.97, 1.0, 1.03], lift: [0.0, 0.0, 0.006], saturation: 1.0, contrast: 1.1 },
+      vignette: { strength: 0.55, radius: 0.38, softness: 0.65 },
       grain: 0.015,
       loop: LOOP,
       clearColor: 0x0a1a30,
@@ -357,8 +374,11 @@ const makeFactory =
     const tmp = new THREE.Vector3();
 
     return {
-      render(frame) {
-        const t = (frame % LOOP) / LOOP;
+      render(rawFrame) {
+        // Everything below sees the wrapped frame, so frame 600 is drawn
+        // exactly like frame 0 (no 6*pi vs 0 rounding in the gauges).
+        const frame = rawFrame % LOOP;
+        const t = frame / LOOP;
         // Camera: one closed lap of +-2 deg yaw around the head and a 1.5 %
         // push in and out.
         const yaw = THREE.MathUtils.degToRad(2) * Math.sin(TAU * t);
@@ -375,7 +395,9 @@ const makeFactory =
         nodeMat.uniforms.uTime.value = t;
         r1.material.uniforms.uTime.value = t;
         r2.material.uniforms.uTime.value = t;
+        ring3.material.uniforms.uTime.value = t;
         rings.lookAt(camera.position);
+        rings2.lookAt(camera.position);
         for (const p of panels) p.update(frame);
 
         // Flare positions follow the eyes on screen.

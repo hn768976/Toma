@@ -26,18 +26,18 @@ const makeStrands = (): Strand[] => {
   // Three bundles: green, red and a few yellow-orange strands. Strands in a
   // bundle share a base wave with small differences, so they braid.
   const bundles = [
-    { n: 11, c0: "#3AF06A", c1: "#B8FF8A", f: 2.1, p: 0.1, t: 1 },
-    { n: 10, c0: "#FF3A2A", c1: "#FF8A5A", f: 2.6, p: 0.55, t: -1 },
+    { n: 11, c0: "#3AF06A", c1: "#7AF84A", f: 2.1, p: 0.1, t: 1 },
+    { n: 10, c0: "#FF3A2A", c1: "#FF6A3A", f: 2.6, p: 0.55, t: -1 },
     { n: 3, c0: "#FFC83A", c1: "#FF8A3A", f: 1.7, p: 0.3, t: 1 },
   ];
   for (const b of bundles) {
     for (let i = 0; i < b.n; i++) {
       out.push({
-        freq: [b.f + (rnd() - 0.5) * 0.3, 4.3 + rnd() * 2.2, 8 + rnd() * 5],
+        freq: [b.f + (rnd() - 0.5) * 0.12, 4.3 + rnd() * 1.0, 8 + rnd() * 3],
         phase: [b.p + (rnd() - 0.5) * 0.12, rnd(), rnd()],
-        amp: [0.55 + rnd() * 0.15, 0.18 + rnd() * 0.12, 0.05 + rnd() * 0.06],
+        amp: [0.62 + rnd() * 0.1, 0.12 + rnd() * 0.08, 0.03 + rnd() * 0.04],
         turns: [b.t, b.t * (1 + Math.floor(rnd() * 2)), -b.t * (1 + Math.floor(rnd() * 3))],
-        offset: (rnd() - 0.5) * 0.18,
+        offset: (rnd() - 0.5) * 0.08,
         c0: new THREE.Color(b.c0),
         c1: new THREE.Color(b.c1),
         gain: 0.6 + rnd() * 0.6,
@@ -61,7 +61,7 @@ uniform float faceX;
 float envelope(float t) {
   // Wild near the face, calmer away from it.
   float d = abs(t - faceX);
-  return mix(1.0, 0.42, smoothstep(0.02, 0.75, d));
+  return mix(1.0, 0.7, smoothstep(0.02, 0.75, d));
 }
 float waveY(float t) {
   float y = aAmp.x * sin(6.2831853 * (aFreq.x * t + aPhase.x + aTurns.x * uLoop));
@@ -115,14 +115,14 @@ void main() {
   float a;
   if (glow > 0.5) {
     float r = abs(vSide) / halfW;
-    a = exp(-r * r * 3.0) * 0.07;
+    a = exp(-r * r * 3.0) * 0.09;
   } else {
     a = clamp(halfW + 0.5 - abs(vSide), 0.0, 1.0) * min(halfW * 2.0, 1.0);
   }
   // Brighter and flared near the face.
   float near = 1.0 - smoothstep(0.0, 0.45, abs(vT - faceX));
   float edge = smoothstep(0.0, 0.04, vT) * smoothstep(1.0, 0.96, vT);
-  float k = bright * vGain * (1.0 + 1.1 * near * near) * edge;
+  float k = bright * vGain * (1.0 + 0.25 * near * near) * edge * mix(1.0, 0.55, glow * near);
   gl_FragColor = vec4(vCol * a * k, 1.0);
 }
 `;
@@ -179,11 +179,11 @@ export class Waves {
       uLoop: { value: 0 },
       res: { value: new THREE.Vector2(width, height) },
       baseY: { value: height * (1 - 0.54) },
-      ampPx: { value: height * 0.09 },
+      ampPx: { value: height * 0.115 },
       faceX: { value: faceX },
       halfW: { value: 1.5 * px },
       glow: { value: 0 },
-      bright: { value: 1.35 },
+      bright: { value: 0.85 },
       beadPx: { value: 3.2 * px },
       beadGain: { value: 2.2 },
     };
@@ -242,7 +242,7 @@ export class Waves {
     g.setAttribute("aGain", new THREE.BufferAttribute(A.aGain, 1));
     g.setIndex(idx);
     const mk = (glow: boolean) => {
-      const u = { ...this.uniforms, glow: { value: glow ? 1 : 0 }, halfW: { value: (glow ? 11 : 1.5) * px } };
+      const u = { ...this.uniforms, glow: { value: glow ? 1 : 0 }, halfW: { value: (glow ? 12 : 2.0) * px } };
       const m = new THREE.ShaderMaterial({
         vertexShader: RIBBON_VERT,
         fragmentShader: RIBBON_FRAG,

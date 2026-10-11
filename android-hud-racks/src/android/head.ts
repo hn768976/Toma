@@ -46,7 +46,7 @@ export const makeHeadMaterial = (envMap: THREE.Texture | null) => {
     clearcoat: 0.6,
     clearcoatRoughness: 0.12,
     envMap,
-    envMapIntensity: 0.9,
+    envMapIntensity: 0.6,
   });
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader
@@ -66,7 +66,7 @@ export const makeHeadMaterial = (envMap: THREE.Texture | null) => {
       .replace(
         "#include <color_fragment>",
         // Seams darken toward #4A5058.
-        "#include <color_fragment>\ndiffuseColor.rgb *= mix(vec3(1.0), vec3(0.72, 0.76, 0.82), vLow);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.0685, 0.0802, 0.0976), smoothstep(0.35, 0.95, vSeam));",
+        "#include <color_fragment>\ndiffuseColor.rgb *= mix(vec3(1.0), vec3(0.5, 0.53, 0.58), vLow);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.0685, 0.0802, 0.0976), smoothstep(0.35, 0.95, vSeam));",
       )
       .replace(
         "#include <roughnessmap_fragment>",

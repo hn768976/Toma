@@ -16,7 +16,7 @@ import { Led, PANEL_W, paintLff, paintSff, U, UNIT_TYPES, UnitType } from "./uni
 
 export const RACK_LOOP = 600;
 const M = 0.001; // panel units -> world
-const RACK_PITCH = (PANEL_W + 2 * 46 + 70) * M; // one rack + posts + gap
+const RACK_PITCH = (PANEL_W + 2 * 46 + 30) * M; // one rack + posts + gap
 const RACKS = 2;
 const W = RACK_PITCH * RACKS;
 
@@ -58,6 +58,7 @@ type CamCfg = {
   pose: (t: number, cam: THREE.PerspectiveCamera) => void;
   focus: (cam: THREE.PerspectiveCamera) => number;
   post: Partial<PostOptions> & { dof: NonNullable<PostOptions["dof"]> };
+  exposure?: number;
 };
 
 // Distance along the view axis to the rack face (z = 0) through the
@@ -78,11 +79,12 @@ const CAMS: Record<RackVersion, CamCfg> = {
     copiesY: [-1, 2],
     fov: 38,
     pose: (t, cam) => {
-      cam.position.set(-0.2, -0.3 - H * t, 0.68);
+      cam.position.set(-0.04, -0.3 - H * t, 0.68);
       cam.rotation.set(0, 0, 0);
     },
     focus: (cam) => faceDistance(cam),
-    post: { dof: { aperture: 40, maxCoc: 22, nearScale: 1.0, edge: 9 }, ca: 0 },
+    post: { dof: { aperture: 25, maxCoc: 18, nearScale: 1.0, edge: 8 }, ca: 0 },
+    exposure: 1.2,
   },
   // 3B: about 35 deg oblique, looking slightly down; glides by (W, -H).
   diagonal: {
@@ -90,11 +92,12 @@ const CAMS: Record<RackVersion, CamCfg> = {
     copiesY: [-1, 3],
     fov: 36,
     pose: (t, cam) => {
-      cam.position.set(-0.7 + W * t, 0.05 - H * t, 0.72);
-      cam.rotation.set(THREE.MathUtils.degToRad(-24), THREE.MathUtils.degToRad(-35), 0, "YXZ");
+      cam.position.set(-0.1 + W * t, 0.16 - H * t, 0.4);
+      cam.rotation.set(THREE.MathUtils.degToRad(-42), THREE.MathUtils.degToRad(-35), THREE.MathUtils.degToRad(28), "YXZ");
     },
     focus: (cam) => faceDistance(cam, 0.05, 0.0),
-    post: { dof: { aperture: 110, maxCoc: 30, nearScale: 0.8 }, ca: 0 },
+    post: { dof: { aperture: 28, maxCoc: 22, nearScale: 0.7 }, ca: 0 },
+    exposure: 1.9,
   },
   // 3C: low, looking up along the face at about 20 deg; rises by H.
   low: {
@@ -103,10 +106,11 @@ const CAMS: Record<RackVersion, CamCfg> = {
     fov: 40,
     pose: (t, cam) => {
       cam.position.set(0.1, -0.9 + H * t, 0.3);
-      cam.rotation.set(THREE.MathUtils.degToRad(62), 0, 0, "YXZ");
+      cam.rotation.set(THREE.MathUtils.degToRad(52), 0, 0, "YXZ");
     },
     focus: (cam) => faceDistance(cam, 0, -0.1),
-    post: { dof: { aperture: 130, maxCoc: 32, nearScale: 1.2 }, ca: 2 },
+    post: { dof: { aperture: 26, maxCoc: 20, nearScale: 0.9 }, ca: 2 },
+    exposure: 0.75,
   },
 };
 
@@ -164,7 +168,7 @@ void main() {
   float on = ledOn(vLed);
   vec3 c = ledColor(vLed.x);
   // Off LEDs are a dim coloured lens; on ones are hot.
-  vec3 col = c * (0.05 + on * 6.0) + vec3(0.02) * (1.0 - on);
+  vec3 col = c * (0.05 + on * 9.0) + vec3(0.02) * (1.0 - on);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -192,7 +196,7 @@ void main() {
   float r = length(vUv);
   // Hot core, then a wide faint spill that tints the metal around it.
   float a = (exp(-r * r * 120.0) * 1.4 + exp(-r * r * 22.0) * 0.22 + exp(-r * r * 5.0) * 0.07) * (1.0 - smoothstep(0.85, 1.0, r));
-  gl_FragColor = vec4(ledColor(vLed.x) * a * on * 1.4, 1.0);
+  gl_FragColor = vec4(ledColor(vLed.x) * a * on * 0.6, 1.0);
 }
 `;
 
@@ -210,10 +214,10 @@ const buildCables = (t: UnitType, seed: number) => {
   const plugs: THREE.BufferGeometry[] = [];
   const bootsBlue: THREE.BufferGeometry[] = [];
   const bootsRed: THREE.BufferGeometry[] = [];
-  const plugLen = 0.024;
+  const plugLen = 0.026;
   const plugAt = (x0: number, y0: number, boots: THREE.BufferGeometry[]) => {
     // The clear plug sits in the port opening; the boot behind it.
-    const plug = new THREE.BoxGeometry(0.0125, 0.0105, plugLen);
+    const plug = new THREE.BoxGeometry(0.0135, 0.0112, plugLen);
     plug.translate(x0, y0, plugLen / 2 - 0.006);
     plugs.push(plug);
     // Latch clip on the top of the plug.
@@ -221,13 +225,13 @@ const buildCables = (t: UnitType, seed: number) => {
     clip.rotateX(-0.12);
     clip.translate(x0, y0 + 0.0062, plugLen / 2 - 0.004);
     plugs.push(clip);
-    const boot = new THREE.CylinderGeometry(0.0058, 0.0074, 0.02, 12);
+    const boot = new THREE.CylinderGeometry(0.0095, 0.0105, 0.026, 12);
     boot.rotateX(Math.PI / 2);
     boot.translate(x0, y0, plugLen - 0.006 + 0.01);
     boots.push(boot);
   };
   const z0 = plugLen + 0.012;
-  const loops = 4 + Math.floor(rnd() * 4); // 4-7 loops = 8-14 plugged ports
+  const loops = 6 + Math.floor(rnd() * 2); // 6-7 loops = 12-14 plugged ports
   const top = t.ports.filter((p) => p.y < 50);
   const bottom = t.ports.filter((p) => p.y >= 50);
   const free = [...top, ...bottom];
@@ -237,41 +241,46 @@ const buildCables = (t: UnitType, seed: number) => {
     free.splice(free.indexOf(p), 1);
     return p;
   };
+  // Neighbouring top-row ports are paired, so the loops stand tall and
+  // nearly parallel, like a curtain over the switch.
+  const order = [...top].sort((p, q) => p.x - q.x);
+  const startAt = Math.floor(rnd() * Math.max(1, order.length - loops * 2 + 1));
+  void take;
   for (let k = 0; k < loops; k++) {
-    const a = take(top);
-    const b = take(rnd() < 0.7 ? top : bottom.length && free.some((p) => p.y >= 50) ? bottom : top);
+    const a = order[startAt + k * 2];
+    const b = order[startAt + k * 2 + 1];
     if (!a || !b) break;
     const ax = a.x * M, ay = -a.y * M, bx = b.x * M, by = -b.y * M;
-    const mid = (ax + bx) / 2 + (rnd() - 0.5) * 0.02;
-    const h = 0.09 + rnd() * 0.16; // loop height above the switch
-    const out = 0.05 + rnd() * 0.06;
-    const lean = (rnd() - 0.5) * 0.04;
+    const mid = (ax + bx) / 2 + (rnd() - 0.5) * 0.012;
+    const h = 0.26 + rnd() * 0.16; // tall: the tops run out of frame
+    const out = 0.045 + rnd() * 0.03;
+    const lean = (rnd() - 0.5) * 0.015;
     const pts = [
       new THREE.Vector3(ax, ay, z0),
-      new THREE.Vector3(ax, ay + 0.004, z0 + 0.03),
-      new THREE.Vector3(ax + (mid - ax) * 0.2 + lean, ay + h * 0.55, z0 + out),
-      new THREE.Vector3(mid + lean, Math.max(ay, by) + h, z0 + out * 0.7),
-      new THREE.Vector3(bx + (mid - bx) * 0.2 + lean, by + h * 0.55, z0 + out * 0.9),
-      new THREE.Vector3(bx, by + 0.004, z0 + 0.03),
+      new THREE.Vector3(ax, ay + 0.012, z0 + 0.02),
+      new THREE.Vector3(ax - 0.006 + lean * 0.3, ay + h * 0.45, z0 + out),
+      new THREE.Vector3(mid + lean, Math.max(ay, by) + h, z0 + out * 0.8),
+      new THREE.Vector3(bx + 0.006 + lean * 0.3, by + h * 0.45, z0 + out),
+      new THREE.Vector3(bx, by + 0.012, z0 + 0.02),
       new THREE.Vector3(bx, by, z0),
     ];
     const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
-    blue.push(new THREE.TubeGeometry(curve, 96, 0.0048, 10, false));
+    blue.push(new THREE.TubeGeometry(curve, 96, 0.0085, 10, false));
     plugAt(ax, ay, bootsBlue);
     plugAt(bx, by, bootsBlue);
   }
-  // One red cable from the uplink port, dropping down the side and out of
-  // the frame below (it is routed to the next rack).
+  // One red cable from the uplink port, rising up the side and out of the
+  // frame above (it is routed to the next rack).
   for (const sp of t.spare) {
     const x0 = sp.x * M, y0 = -sp.y * M;
     const pts = [
       new THREE.Vector3(x0, y0, z0),
       new THREE.Vector3(x0, y0, z0 + 0.03),
-      new THREE.Vector3(x0 + 0.012, y0 - 0.05, z0 + 0.055),
-      new THREE.Vector3(x0 + 0.03, y0 - 0.2, z0 + 0.05),
-      new THREE.Vector3(x0 + 0.045, y0 - 0.5, 0.05),
+      new THREE.Vector3(x0 + 0.01, y0 + 0.05, z0 + 0.05),
+      new THREE.Vector3(x0 + 0.03, y0 + 0.2, z0 + 0.045),
+      new THREE.Vector3(x0 + 0.04, y0 + 0.5, 0.05),
     ];
-    red.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), 72, 0.0048, 10, false));
+    red.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), 72, 0.0068, 10, false));
     plugAt(x0, y0, bootsRed);
   }
   return {
@@ -391,7 +400,7 @@ const makeFactory =
         const gap = f.h / f.n;
         for (let i = 0; i < f.n; i++) {
           const [x, y] = at(f.x + f.w / 2, f.y + gap * (i + 0.5));
-          fins.push(M4(x, y, 0.004, f.w * M, gap * 0.42 * M, 0.011, tilt));
+          fins.push(M4(x, y, 0.007, f.w * M, gap * 0.42 * M, 0.018, tilt));
         }
       }
       for (const h of t.handles) {
@@ -488,7 +497,7 @@ const makeFactory =
     scene.add(glowMesh);
 
     // Patch cables on the switches: two bundle variants (one per rack).
-    const cableBlue = new THREE.MeshStandardMaterial({ color: "#2A4A9A", roughness: 0.42, metalness: 0.0, envMapIntensity: 1.2 });
+    const cableBlue = new THREE.MeshStandardMaterial({ color: "#2A4A9A", roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 });
     const cableRed = new THREE.MeshStandardMaterial({ color: "#B3201A", roughness: 0.42, metalness: 0.0, envMapIntensity: 1.2 });
     const plugMat = new THREE.MeshPhysicalMaterial({
       color: "#C8D4E0",
@@ -512,7 +521,7 @@ const makeFactory =
 
     // Lights: dark room, soft cool key from the upper left, a narrow
     // highlight that slides along the rack, and a dim fill.
-    const key = new THREE.DirectionalLight(0xc8d8ff, 1.6);
+    const key = new THREE.DirectionalLight(0xe8ecf4, 1.6);
     key.position.set(-2, 3, 2.5);
     scene.add(key);
     const fill = new THREE.HemisphereLight(0x8090a8, 0x050506, 0.12);
@@ -524,9 +533,9 @@ const makeFactory =
     const camera = new THREE.PerspectiveCamera(cfg.fov, width / height, 0.02, 40);
     const post = new PostChain(renderer, width, height, {
       dof: cfg.post.dof,
-      bloom: { threshold: 1.0, knee: 0.6, intensity: 0.6 },
-      grade: { exposure: 1.15, tint: [0.97, 1.0, 1.03], lift: [0.004, 0.006, 0.01], saturation: 0.95, contrast: 1.06 },
-      vignette: { strength: 0.5, radius: 0.4, softness: 0.7 },
+      bloom: { threshold: 1.2, knee: 0.6, intensity: 0.38 },
+      grade: { exposure: cfg.exposure ?? 1.15, tint: [1.0, 1.0, 1.01], lift: [0.003, 0.003, 0.004], saturation: 0.95, contrast: 1.1 },
+      vignette: { strength: 0.62, radius: 0.32, softness: 0.75 },
       ca: cfg.post.ca ?? 0,
       grain: 0.015,
       loop: RACK_LOOP,

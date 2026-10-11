@@ -40,9 +40,7 @@ export type PanelSpec = {
 const price1 = makePrice(101, 261.89, 18);
 const price2 = makePrice(202, 243.67, 14);
 const price3 = makePrice(303, 98.4, 6);
-const price4 = makePrice(404, 314.19, 22);
 const bars1 = makeBars(11, 8);
-const bars2 = makeBars(12, 14);
 const bars3 = makeBars(13, 10);
 const bars4 = makeBars(14, 9);
 
@@ -75,20 +73,19 @@ export const PANELS: PanelSpec[] = [
       ctx.fillStyle = rgba(HUD.line, 0.06);
       ctx.textBaseline = "top";
       ctx.fillText("LEARNING", w * 0.08, h * 0.02);
-      ctx.font = orbitron(240, 500);
-      ctx.fillText("NEURAL CORE", w * 0.18, h * 0.62);
+
     },
   },
   // Filler text columns, softly out of focus.
   {
     name: "text",
-    z: -0.9,
+    z: -0.5,
     u: [0.36, 0.72],
     v: [0.04, 0.64],
     intensity: 0.9,
     drawStatic: (ctx, w) => {
-      fillerColumn(ctx, 51, 20, 30, 30, 26, 0.32);
-      fillerColumn(ctx, 52, w * 0.55, 160, 26, 22, 0.26);
+      fillerColumn(ctx, 51, 20, 30, 30, 26, 0.42);
+      fillerColumn(ctx, 52, w * 0.55, 160, 26, 22, 0.34);
       ctx.font = orbitron(64, 500);
       ctx.fillStyle = rgba(HUD.line, 0.22);
       ctx.fillText("MODEL 4.2", 20, 1200);
@@ -206,7 +203,13 @@ export const PANELS: PanelSpec[] = [
       ctx.moveTo(380, 420);
       ctx.lineTo(1000, 420);
       ctx.stroke();
-      labelRow(ctx, 400, 432, 22, ["Q1", "Q2", "Q3", "Q4"], 150, 0.6);
+      for (let i = 0; i < 4; i++) {
+        ctx.strokeStyle = rgba(HUD.line, 0.25);
+        ctx.beginPath();
+        ctx.moveTo(380, 200 + i * 60);
+        ctx.lineTo(1000, 200 + i * 60);
+        ctx.stroke();
+      }
     },
     widgets: () => [
       {
@@ -219,28 +222,21 @@ export const PANELS: PanelSpec[] = [
           ringGauge(ctx, 180, 180, 120, counter2(77, f, 40, LOOP), -(f / LOOP) * TAU * 3, 5);
         },
       },
-      {
-        x: 400,
-        y: 120,
-        w: 600,
-        h: 290,
-        key: (f) => String(Math.floor(f / 3)),
-        draw: (ctx, f) => {
-          miniBars(ctx, 0, 0, 590, 290, bars2(Math.floor(f / 3) * 3, LOOP, 0.15, 1), 0.85);
-        },
-      },
     ],
   },
   // Bottom centre: bar chart with a faint frame.
   {
-    name: "chart-bottom",
-    z: -0.35,
-    u: [0.4, 0.66],
-    v: [0.73, 0.94],
-    intensity: 1.2,
+    name: "chart-chest",
+    z: 0.3,
+    u: [0.1, 0.45],
+    v: [0.6, 0.79],
+    intensity: 0.8,
     drawStatic: (ctx, w, h) => {
-      grid(ctx, 0, 40, w, h - 110, 10, 4, rgba(HUD.line, 0.16), 2);
-      labelRow(ctx, 10, h - 50, 22, ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP"], (w - 40) / 9, 0.6);
+      for (let i = 0; i <= 5; i++) {
+        ctx.fillStyle = rgba(HUD.line, 0.22);
+        ctx.fillRect(0, 40 + ((h - 110) * i) / 5, w, 2);
+      }
+      labelRow(ctx, 10, h - 50, 22, ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], (w - 40) / 12, 0.6);
     },
     widgets: (w, h) => [
       {
@@ -250,7 +246,7 @@ export const PANELS: PanelSpec[] = [
         h: h - 110,
         key: (f) => String(Math.floor(f / 4)),
         draw: (ctx, f) => {
-          miniBars(ctx, 0, 0, w, h - 110, bars3(Math.floor(f / 4) * 4, LOOP, 0.1, 0.95), 0.75);
+          miniBars(ctx, 0, (h - 110) * 0.75, w * 0.25, (h - 110) * 0.25, bars3(Math.floor(f / 4) * 4, LOOP, 0.2, 1).slice(0, 3), 0.7);
         },
       },
     ],
@@ -259,8 +255,8 @@ export const PANELS: PanelSpec[] = [
   {
     name: "price-left",
     z: 0.28,
-    u: [0.13, 0.36],
-    v: [0.62, 0.8],
+    u: [0.36, 0.59],
+    v: [0.66, 0.84],
     intensity: 1.5,
     drawStatic: (ctx) => {
       ctx.strokeStyle = rgba(HUD.line, 0.55);
@@ -296,45 +292,23 @@ export const PANELS: PanelSpec[] = [
       },
     ],
   },
-  // Second top price, smaller, further right.
+  // Bottom left: circle buttons, close to camera so slightly soft.
   {
-    name: "price-top2",
-    z: -0.4,
-    u: [0.66, 0.86],
-    v: [0.33, 0.42],
-    intensity: 1.1,
+    name: "buttons",
+    z: 0.45,
+    u: [0.0, 0.2],
+    v: [0.84, 1.02],
+    intensity: 3.2,
     widgets: () => [
       {
         x: 0,
         y: 0,
         w: 760,
-        h: 190,
-        key: (f) => price4(f, LOOP).text,
-        draw: (ctx, f) => {
-          const p = price4(f, LOOP);
-          priceReadout(ctx, 10, 70, 56, p.text, p.dir);
-          labelRow(ctx, 10, 130, 22, ["OPEN", "HIGH", "LOW", "CLOSE"], 150, 0.55);
-        },
-      },
-    ],
-  },
-  // Bottom left: circle buttons, close to camera so slightly soft.
-  {
-    name: "buttons",
-    z: 0.45,
-    u: [0.0, 0.16],
-    v: [0.86, 1.0],
-    intensity: 2.2,
-    widgets: () => [
-      {
-        x: 0,
-        y: 0,
-        w: 600,
-        h: 300,
+        h: 380,
         key: (f) => String(Math.floor(f / 75) % 4),
         draw: (ctx, f) => {
           const on = Math.floor(f / 75) % 4;
-          for (let i = 0; i < 3; i++) circleButton(ctx, 100 + i * 190, 170, 72, i === on % 3, 9);
+          for (let i = 0; i < 3; i++) circleButton(ctx, 120 + i * 240, 200, 98, i === on % 3, 14);
         },
       },
     ],

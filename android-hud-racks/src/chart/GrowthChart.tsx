@@ -52,14 +52,14 @@ const makeSeries = (seed: number, start: number, end: number, wiggle: number) =>
   const rnd = mulberry32(seed);
   const pts: number[] = [];
   for (let i = 0; i < 12; i++) {
-    const trend = start + ((end - start) * Math.pow(i / 11, 1.35));
+    const trend = start + ((end - start) * Math.pow(i / 11, 2.1));
     pts.push(clamp(trend + (rnd() - 0.45) * wiggle * (i % 2 === 0 ? 1 : -0.8), 60, 590));
   }
   pts[11] = end;
   return pts;
 };
-const BACK = makeSeries(8812, 230, 590, 230);
-const FRONT = makeSeries(4471, 170, 545, 170);
+const BACK = makeSeries(8812, 200, 590, 200);
+const FRONT = makeSeries(4471, 150, 550, 150);
 
 // Story timing (frames).
 const T_DRAW_START = 45;
@@ -81,6 +81,7 @@ void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(
 const BG_FRAG = /* glsl */ `
 uniform vec3 c0, c1, cGrid;
 uniform float fade;
+uniform float aspect;
 varying vec2 vUv;
 float gridLine(vec2 p, float cells, float w) {
   vec2 g = abs(fract(p * cells - 0.5) - 0.5) / fwidth(p * cells);
@@ -89,13 +90,19 @@ float gridLine(vec2 p, float cells, float w) {
 }
 void main() {
   vec2 uv = vUv;
-  vec3 col = mix(c0, c1, smoothstep(0.0, 1.0, uv.y * 0.75 + (1.0 - uv.x) * 0.35));
-  // Faint tile grid at 20 %.
+  // Deep navy, lit by a broad glow from the upper left and falling to
+  // near black at the bottom and right.
+  float glow = exp(-pow(length((uv - vec2(0.18, 0.95)) * vec2(1.0, 1.4)), 2.0) * 2.2);
+  vec3 col = mix(c0 * 0.35, c1, glow);
+  col *= mix(0.35, 1.0, smoothstep(0.0, 0.7, uv.y * 0.8 + (1.0 - uv.x) * 0.45));
+  // Faint tile grid at 20 % with small "+" marks on the crossings.
+  vec2 gp = uv * vec2(16.0, 9.0) * 2.0;
   float g = gridLine(uv * vec2(16.0, 9.0), 2.0, 0.6);
-  col += cGrid * g * 0.2;
-  // Darker vignette corners.
+  vec2 f = abs(fract(gp - 0.5) - 0.5);
+  float plus = (step(f.x, 0.012) * step(f.y, 0.07) + step(f.y, 0.012) * step(f.x, 0.07));
+  col += cGrid * (g * 0.2 + min(plus, 1.0) * 0.35) * (0.4 + 0.6 * glow + 0.3);
   vec2 d = (uv - 0.5) * vec2(1.6, 1.2);
-  col *= 1.0 - 0.55 * smoothstep(0.35, 0.95, length(d));
+  col *= 1.0 - 0.5 * smoothstep(0.35, 0.95, length(d));
   gl_FragColor = vec4(col * fade, 1.0);
 }
 `;
@@ -131,7 +138,7 @@ vec4 area(float s[12], float prog, float fillA, float edgeA) {
   float dist = abs(y - v) / sqrt(1.0 + sl * sl);
   float lineW = 3.2 * px;
   float edge = 1.0 - smoothstep(lineW * 0.5, lineW * 0.5 + fwidth(y) * 1.2, dist);
-  float glow = exp(-dist / (14.0 * px)) * 0.25;
+  float glow = exp(-dist / (5.0 * px)) * 0.12;
   float a = (inside * fillA + edge * edgeA + glow * edgeA) * rev;
   // Leading edge: a soft bright vertical line while drawing.
   float lead = exp(-abs(x - prog) * sizePx.x / 10.0) * (1.0 - smoothstep(v, v + 0.03, y)) * step(0.001, prog) * (1.0 - step(0.999, prog));
@@ -139,11 +146,11 @@ vec4 area(float s[12], float prog, float fillA, float edgeA) {
   return vec4(vec3(1.0), a);
 }
 void main() {
-  vec4 b = area(back, pBack, 0.25, 0.55);
-  vec4 f = area(front, pFront, 0.55, 1.0);
+  vec4 b = area(back, pBack, 0.22, 0.7);
+  vec4 f = area(front, pFront, 0.42, 1.1);
   // Layer the two translucent areas like paint (not a plain sum), then
   // scale so the result sits as soft white over the blue.
-  float a = (1.0 - (1.0 - clamp(b.a, 0.0, 1.0)) * (1.0 - clamp(f.a, 0.0, 1.0))) * opacity * 0.72;
+  float a = (1.0 - (1.0 - clamp(b.a, 0.0, 1.0)) * (1.0 - clamp(f.a, 0.0, 1.0))) * opacity * 0.62;
   if (a < 0.01) discard;
   gl_FragColor = vec4(vec3(0.957, 0.98, 1.0) * a, 1.0);
 }
@@ -172,11 +179,11 @@ const drawChartFrame = (ctx: CanvasRenderingContext2D) => {
   ctx.strokeStyle = HUD.white;
   ctx.lineWidth = 4;
   ctx.strokeRect(x, y, w, h);
-  ctx.font = inter(44, 500);
-  ctx.fillStyle = ink(0.95);
+  ctx.font = inter(38, 400);
+  ctx.fillStyle = ink(0.9);
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  for (let i = 1; i <= 6; i++) ctx.fillText(String(i * 100), x - 30, y + h - (h * i) / 6);
+  for (let i = 0; i <= 6; i++) ctx.fillText(String(i * 100), x - 30, y + h - (h * i) / 6);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   MONTHS.forEach((m, i) => ctx.fillText(m, x + (w * i) / 11, y + h + 26));
@@ -241,7 +248,7 @@ const SUBS: Sub[] = [
         w: 2700,
         h: 250,
         key: (f) => String(Math.floor(f / 5)),
-        draw: (ctx, f) => miniBars(ctx, 0, 0, 2700, 250, bars(Math.floor(f / 5) * 5, L, 0.25, 1), 0.7),
+        draw: (ctx, f) => miniBars(ctx, 0, 90, 2700, 160, bars(Math.floor(f / 5) * 5, L, 0.25, 1), 0.5),
       },
     ],
   },
@@ -285,7 +292,11 @@ const SUBS: Sub[] = [
         h: 640,
         key: (f) => String(Math.floor(f / 2)),
         draw: (ctx, f) => {
-          ringGauge(ctx, 320, 320, 250, "…", -(f / L) * TAU * 1.2, 9);
+          ctx.textBaseline = "top";
+          ringGauge(ctx, 320, 340, 230, "…", -(f / L) * TAU * 1.2, 9);
+          ctx.font = inter(40, 500);
+          ctx.fillStyle = HUD.white;
+          ctx.fillText("8921 0388", 150, 40);
           ctx.strokeStyle = HUD.white;
           ctx.lineWidth = 22;
           ctx.beginPath();
@@ -298,14 +309,14 @@ const SUBS: Sub[] = [
   // Number boxes with two-digit counters.
   {
     name: "boxes",
-    x: 1700,
+    x: 1850,
     y: 1900,
-    w: 1400,
+    w: 1650,
     h: 260,
     delay: 26,
     intensity: 1.3,
     widgets: [0, 1, 2, 3].map((i) => ({
-      x: 20 + i * 340,
+      x: 20 + i * 410,
       y: 30,
       w: 260,
       h: 190,
@@ -317,7 +328,7 @@ const SUBS: Sub[] = [
   // Code lines under the boxes.
   {
     name: "codes",
-    x: 2350,
+    x: 2700,
     y: 2210,
     w: 1100,
     h: 200,
@@ -429,6 +440,7 @@ const factory: SceneFactory<null> = ({ renderer, width, height }) => {
     return new THREE.Vector3(c.r, c.g, c.b);
   };
   const bgU = {
+    aspect: { value: 16 / 9 },
     c0: { value: lin("#0A2A5A") },
     c1: { value: lin("#1A4A8A") },
     cGrid: { value: lin("#3A6AB8") },
@@ -543,9 +555,9 @@ const factory: SceneFactory<null> = ({ renderer, width, height }) => {
   const chartCentre = toWorld(PLOT.x + PLOT.w / 2 - 80, PLOT.y + PLOT.h / 2 + 330);
 
   const post = new PostChain(renderer, width, height, {
-    dof: { aperture: 70, maxCoc: 30, nearScale: 1.2 },
-    bloom: { threshold: 0.95, knee: 0.5, intensity: 0.3 },
-    grade: { exposure: 1.0, tint: [0.95, 1.0, 1.06], lift: [0.0, 0.01, 0.03], saturation: 1.0, contrast: 1.05 },
+    dof: { aperture: 30, maxCoc: 20, nearScale: 1.0 },
+    bloom: { threshold: 1.1, knee: 0.5, intensity: 0.12 },
+    grade: { exposure: 1.0, tint: [0.98, 1.0, 1.02], lift: [0.0, 0.0, 0.004], saturation: 1.0, contrast: 1.08 },
     vignette: { strength: 0.45, radius: 0.42, softness: 0.7 },
     grain: 0.015,
     loop: CHART_FRAMES,
@@ -583,7 +595,7 @@ const factory: SceneFactory<null> = ({ renderer, width, height }) => {
       screen.updateMatrixWorld();
       target.copy(chartCentre).applyMatrix4(screen.matrixWorld);
       const e = 0.5 - 0.5 * Math.cos(Math.PI * s);
-      const dist = 14.6 * (1 - 0.05 * e);
+      const dist = 13.8 * (1 - 0.05 * e);
       const yaw = THREE.MathUtils.degToRad(-1.2 + 2.4 * e);
       camera.position.set(target.x + Math.sin(yaw) * dist, target.y + 0.35, target.z + Math.cos(yaw) * dist);
       camera.lookAt(target.x, target.y + 0.1, target.z);

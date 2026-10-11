@@ -254,18 +254,21 @@ const W1: UnitType = {
   caddies: [],
   leds: [
     // LED matrix.
-    ...Array.from({ length: 32 }, (_, i) => ({
-      x: 64 + (i % 8) * 17,
-      y: 24 + Math.floor(i / 8) * 17,
+    ...Array.from({ length: 12 }, (_, i) => ({
+      x: 80 + (i % 4) * 22,
+      y: 30 + Math.floor(i / 4) * 20,
       kind: (i % 7 === 3 ? "orange" : "green") as LedKind,
       mode: (i % 4 === 0 ? "steady" : "flicker") as LedMode,
       size: 0.55,
     })),
     // Link/activity LEDs next to each port.
-    ...portXs.flatMap((x, i) => [
-      { x: x + 6, y: i < 12 ? 16 : 92, kind: "green" as LedKind, mode: "flicker" as LedMode, size: 0.45 },
-      { x: x + 30, y: i < 12 ? 16 : 92, kind: (i % 4 === 1 ? "orange" : "green") as LedKind, mode: (i % 2 ? "blink" : "steady") as LedMode, size: 0.45 },
-    ]),
+    ...portXs.filter((_, i) => i % 3 !== 2).map((x, i) => ({
+      x: x + 30,
+      y: x % 2 ? 16 : 92,
+      kind: (i % 4 === 1 ? "orange" : "green") as LedKind,
+      mode: (i % 2 ? "flicker" : "blink") as LedMode,
+      size: 0.4,
+    })),
   ],
   ports: portXs.slice(0, 12).map((x) => ({ x: x + 18, y: 36 })).concat(portXs.slice(12, 18).map((x) => ({ x: x + 18, y: 72 }))),
   spare: [{ x: 1012, y: 46 }],
@@ -312,7 +315,7 @@ export const paintSff = (p: Painter) => {
   p.rect(0, 0, 80, 84, { color: GUN, rough: 0.4, height: 0.5 });
   p.plate(3, 3, 74, 78, { color: "#1C1D21", rough: 0.45, height: 0.5 });
   // Slotted handle: silver slats.
-  p.slats(10, 12, 46, 56, 6, { color: "#A8ACB4", rough: 0.3, height: 0.72 });
+  p.slats(10, 12, 46, 56, 6, { color: "#7E828A", rough: 0.4, height: 0.72 });
   p.rect(62, 12, 10, 52, { color: "#0A0A0C", rough: 0.6, height: 0.35 });
   // Release latch and the activity/fault windows.
   p.plate(10, 70, 46, 9, { color: "#8A8E96", rough: 0.3, height: 0.66 });
