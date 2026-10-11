@@ -1,0 +1,35 @@
+{
+  "name": "usmap-boxes-rain-aieye",
+  "version": "1.0.0",
+  "description": "US Map Assemble, Cardboard Boxes, Particle Rain Stage and AI Eye motion backgrounds (Remotion, 30fps, 4K)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.534",
+    "@remotion/three": "4.0.534",
+    "clipper-lib": "6.4.2",
+    "d3-geo": "3.1.1",
+    "pixi.js": "8.13.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.534",
+    "three": "0.180.0",
+    "topojson-client": "3.1.0",
+    "topojson-simplify": "3.0.3",
+    "us-atlas": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.0",
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "@types/topojson-client": "3.1.5",
+    "@types/topojson-simplify": "3.0.3",
+    "typescript": "5.9.3"
+  }
+}
