@@ -21,7 +21,7 @@ const RACKS = 2;
 const W = RACK_PITCH * RACKS;
 
 // Column composition (same counts in every rack, so every column has the
-// same height H): 1 switch, 2 storage, 1 PSU, 1 blank, 13 servers.
+// same height H): 1 switch (2U), 2 storage, 1 PSU, 1 blank, 13 servers.
 const makeColumn = (seed: number) => {
   const rnd = mulberry32(seed);
   const pool = [
@@ -58,7 +58,7 @@ const RACK_SHIFT = [0, (((switchTop(0) + H / 2 - switchTop(1)) % H) + H) % H];
 // Centre of the cable mass above the switch of rack 0 (copy 0, 0).
 const SWITCH0 = {
   x: (560 - PANEL_W / 2) * M,
-  y: -switchTop(0) - 0.05 + 0.14,
+  y: -switchTop(0) - 0.085,
 };
 
 export type RackVersion = "front" | "diagonal" | "low";
@@ -246,10 +246,7 @@ type Placement = { type: UnitType; x: number; y: number; rack: number; copy: num
 
 const buildCables = (t: UnitType, seed: number) => {
   // Patch cables in panel-local world units: x right from the panel's left
-  // edge, y up (panel y down is negative), z out of the face. Each blue
-  // cable is a loop between two ports of the same switch: out of one port,
-  // up in an arc in front of the units above, and back down into another,
-  // so the loops pile up above the switch like a tidy bundle.
+  // edge, y up (panel y down is negative), z out of the face.
   const rnd = mulberry32(seed);
   const blue: THREE.BufferGeometry[] = [];
   const red: THREE.BufferGeometry[] = [];
@@ -272,62 +269,43 @@ const buildCables = (t: UnitType, seed: number) => {
     boots.push(bootGeometry().translate(x0, y0, plugLen - 0.016));
   };
   const z0 = plugLen + 0.012;
-  const loops = 6 + Math.floor(rnd() * 2); // 6-7 loops = 12-14 plugged ports
-  const top = t.ports.filter((p) => p.y < 50);
-  const bottom = t.ports.filter((p) => p.y >= 50);
-  const free = [...top, ...bottom];
-  const take = (pool: { x: number; y: number }[]) => {
-    const avail = pool.filter((p) => free.includes(p));
-    const p = avail[Math.floor(rnd() * avail.length)];
-    free.splice(free.indexOf(p), 1);
-    return p;
-  };
-  // Neighbouring top-row ports are paired, so the loops stand tall and
-  // nearly parallel, like a curtain over the switch.
-  const order = [...top].sort((p, q) => p.x - q.x);
-  const startAt = Math.floor(rnd() * Math.max(1, order.length - loops * 2 + 1));
-  void take;
-  for (let k = 0; k < loops; k++) {
-    const a = order[startAt + k * 2];
-    const b = order[startAt + k * 2 + 1];
-    if (!a || !b) break;
-    const ax = a.x * M, ay = -a.y * M, bx = b.x * M, by = -b.y * M;
-    const mid = (ax + bx) / 2 + (rnd() - 0.5) * 0.012;
-    const h = 0.17 + rnd() * 0.1; // tall hairpins over the switch
-    const out = 0.06 + rnd() * 0.04;
-    const lean = (rnd() - 0.5) * 0.015;
-    const pts = [
-      new THREE.Vector3(ax, ay, z0),
-      new THREE.Vector3(ax, ay + 0.012, z0 + 0.02),
-      new THREE.Vector3(ax - 0.006 + lean * 0.3, ay + h * 0.45, z0 + out),
-      // A round crown: three points around the top of the loop.
-      new THREE.Vector3(ax + (mid - ax) * 0.08 + lean * 0.8, Math.max(ay, by) + h * 0.9, z0 + out * 0.88),
-      new THREE.Vector3(mid + lean, Math.max(ay, by) + h, z0 + out * 0.8),
-      new THREE.Vector3(bx + (mid - bx) * 0.08 + lean * 0.8, Math.max(ay, by) + h * 0.9, z0 + out * 0.88),
-      new THREE.Vector3(bx + 0.006 + lean * 0.3, by + h * 0.45, z0 + out),
-      new THREE.Vector3(bx, by + 0.012, z0 + 0.02),
-      new THREE.Vector3(bx, by, z0),
-    ];
-    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
-    blue.push(new THREE.TubeGeometry(curve, 128, 0.0085, 10, false));
-    plugAt(ax, ay, bootsBlue);
-    plugAt(bx, by, bootsBlue);
-  }
-  // One red cable from the uplink port, rising up the side and out of the
-  // frame above (it is routed to the next rack).
-  for (const sp of t.spare) {
-    const x0 = sp.x * M, y0 = -sp.y * M;
+  // Every cable is plugged into one port at its lower end and comes out of
+  // the brush-strip pass-through above the ports: it leaves the slot, arches
+  // up and out, and drops into its port, like the references.
+  const slot = t.passThrough!;
+  const ySlot = -slot.y * M;
+  const top = [...t.ports.filter((p) => p.y < 160)].sort((p, q) => p.x - q.x);
+  const bottom = t.ports.filter((p) => p.y >= 160);
+  const skip = new Set<number>();
+  const nSkip = Math.floor(rnd() * 3); // 10-12 of the 12 top-row ports
+  while (skip.size < nSkip) skip.add(Math.floor(rnd() * top.length));
+  const chosen = top.filter((_, i) => !skip.has(i));
+  const nBottom = Math.floor(rnd() * 3); // plus 0-2 bottom-row ports
+  for (let i = 0; i < nBottom; i++) chosen.push(bottom[Math.floor(rnd() * bottom.length)]);
+  const cable = (px: number, py: number, isRed: boolean) => {
+    const x0 = px * M;
+    const y0 = -py * M;
+    const lower = py >= 160;
+    // Where the cable enters the slot: roughly above its port.
+    const xs = Math.min(slot.x1 * M, Math.max(slot.x0 * M, x0 + (rnd() - 0.5) * 0.02 + (isRed ? -0.01 : 0)));
+    const rise = 0.06 + rnd() * 0.04; // apex above the slot
+    const out = (lower ? 0.085 : 0.06) + rnd() * 0.03;
     const pts = [
       new THREE.Vector3(x0, y0, z0),
-      new THREE.Vector3(x0, y0, z0 + 0.03),
-      new THREE.Vector3(x0 + 0.012, y0 + 0.045, z0 + 0.045),
-      new THREE.Vector3(x0 + 0.045, y0 + 0.1, 0.045),
-      new THREE.Vector3(x0 + 0.075, y0 + 0.13, 0.0),
-      new THREE.Vector3(x0 + 0.085, y0 + 0.16, -0.06),
+      new THREE.Vector3(x0, y0 + 0.006, z0 + 0.03),
+      new THREE.Vector3((x0 * 2 + xs) / 3, y0 + (ySlot - y0) * 0.55, z0 + out),
+      new THREE.Vector3((x0 + xs * 2) / 3, ySlot + rise, z0 + out * 0.75),
+      new THREE.Vector3(xs, ySlot + rise * 0.45, 0.02),
+      new THREE.Vector3(xs, ySlot + 0.002, -0.004),
+      new THREE.Vector3(xs, ySlot - 0.004, -0.05),
     ];
-    red.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), 72, 0.0068, 10, false));
-    plugAt(x0, y0, bootsRed);
-  }
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    (isRed ? red : blue).push(new THREE.TubeGeometry(curve, 112, isRed ? 0.0072 : 0.0082, 10, false));
+    plugAt(x0, y0, isRed ? bootsRed : bootsBlue);
+  };
+  for (const p of chosen) cable(p.x, p.y, false);
+  // One red cable from the uplink port, into the same pass-through.
+  for (const sp of t.spare) cable(sp.x, sp.y, true);
   return {
     blue: mergeGeometries(blue),
     red: mergeGeometries(red),

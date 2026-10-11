@@ -25,6 +25,9 @@ export type UnitType = {
   leds: Led[];
   ports: Port[]; // switch ports that take cables
   spare: Port[]; // the port the red cable goes into
+  // A recessed cable pass-through (brush strip) the patch cables come out
+  // of: its vertical centre and horizontal extent, in panel units.
+  passThrough?: { y: number; x0: number; x1: number };
 };
 
 const BLACK = "#1C1E22";
@@ -228,16 +231,40 @@ const P2: UnitType = {
 // 1U network switch: a dense LED matrix, two rows of RJ45-style ports with
 // link LEDs, and uplink slots on the right.
 const portXs = Array.from({ length: 24 }, (_, i) => 236 + (i % 12) * 50 + Math.floor((i % 12) / 6) * 26);
+// 2U network switch. Top U: a brush-strip cable pass-through, the gap the
+// patch cables come out of. Bottom U: a dense LED matrix, two rows of
+// RJ45-style ports with link LEDs, and uplink slots on the right.
+const BRUSH = { y0: 26, y1: 74, x0: 48, x1: 1032 };
 const W1: UnitType = {
   id: "w1",
-  heightU: 1,
+  heightU: 2,
   paint: (p) => {
-    base(p, 100, "#1B1C20");
-    ears(p, 100);
-    p.plate(50, 12, 150, 76, { color: "#121316", rough: 0.5, height: 0.48 });
+    base(p, 200, "#1B1C20");
+    ears(p, 200);
+    // Brush-strip pass-through: a dark recessed slot with bristles closing
+    // in from the top and bottom edges.
+    p.plate(BRUSH.x0 - 6, BRUSH.y0 - 8, BRUSH.x1 - BRUSH.x0 + 12, BRUSH.y1 - BRUSH.y0 + 16, { color: "#2A2C31", rough: 0.4, height: 0.55 });
+    p.rect(BRUSH.x0, BRUSH.y0, BRUSH.x1 - BRUSH.x0, BRUSH.y1 - BRUSH.y0, { color: "#020203", rough: 0.95, height: 0.0 });
+    let a = 99;
+    const rnd = () => {
+      a = (a * 1103515245 + 12345) & 0x7fffffff;
+      return a / 0x7fffffff;
+    };
+    const mid = (BRUSH.y0 + BRUSH.y1) / 2;
+    for (let x = BRUSH.x0 + 1; x < BRUSH.x1 - 1; x += 1.6 + rnd() * 1.4) {
+      const g = 30 + Math.floor(rnd() * 24);
+      const col = `rgb(${g},${g + 1},${g + 4})`;
+      const reachT = mid - BRUSH.y0 - 2 - rnd() * 6;
+      const reachB = BRUSH.y1 - mid - 2 - rnd() * 6;
+      p.rect(x, BRUSH.y0, 0.7, reachT, { color: col, rough: 0.85, height: 0.25 });
+      p.rect(x, BRUSH.y1 - reachB, 0.7, reachB, { color: col, rough: 0.85, height: 0.25 });
+    }
+    for (const sx of [24, PANEL_W - 24]) p.screw(sx, 50, 5);
+    // Port half.
+    p.plate(50, 112, 150, 76, { color: "#121316", rough: 0.5, height: 0.48 });
     for (let i = 0; i < 24; i++) {
       const x = portXs[i];
-      const y = i < 12 ? 22 : 58;
+      const y = i < 12 ? 122 : 158;
       // Port: dark opening with a metal lip and a latch notch.
       p.rect(x - 2, y - 2, 40, 32, { color: "#7A7E86", rough: 0.3, height: 0.56 });
       p.rect(x, y, 36, 28, { color: "#030304", rough: 0.9, height: 0.05 });
@@ -245,23 +272,22 @@ const W1: UnitType = {
     }
     // Uplink slots and a console port.
     for (let i = 0; i < 2; i++) {
-      p.rect(880 + i * 52, 30, 44, 36, { color: "#5A5E66", rough: 0.35, height: 0.58 });
-      p.rect(884 + i * 52, 34, 36, 28, { color: "#040405", rough: 0.9, height: 0.05 });
+      p.rect(880 + i * 52, 130, 44, 36, { color: "#5A5E66", rough: 0.35, height: 0.58 });
+      p.rect(884 + i * 52, 134, 36, 28, { color: "#040405", rough: 0.9, height: 0.05 });
     }
-    p.rect(992, 30, 40, 32, { color: "#9A9EA6", rough: 0.3, height: 0.6 });
-    p.rect(995, 33, 34, 26, { color: "#030304", height: 0.05 });
+    p.rect(992, 130, 40, 32, { color: "#9A9EA6", rough: 0.3, height: 0.6 });
+    p.rect(995, 133, 34, 26, { color: "#030304", height: 0.05 });
     p.brushed(23);
-    grime(p, 123, PANEL_W, 100);
+    grime(p, 123, PANEL_W, 200);
   },
   fins: [],
   handles: [],
   caddies: [],
   leds: [
-    // LED matrix.
     // Activity matrix: 4 x 6, green and red.
     ...Array.from({ length: 24 }, (_, i) => ({
       x: 66 + (i % 6) * 22,
-      y: 26 + Math.floor(i / 6) * 16,
+      y: 126 + Math.floor(i / 6) * 16,
       kind: ((i * 7) % 5 < 2 ? "red" : "green") as LedKind,
       mode: (i % 4 === 0 ? "steady" : "flicker") as LedMode,
       size: 0.55,
@@ -269,14 +295,15 @@ const W1: UnitType = {
     // Link/activity LEDs next to each port.
     ...portXs.filter((_, i) => i % 3 !== 2).map((x, i) => ({
       x: x + 30,
-      y: x % 2 ? 16 : 92,
+      y: x % 2 ? 116 : 192,
       kind: (i % 4 === 1 ? "orange" : "green") as LedKind,
       mode: (i % 2 ? "flicker" : "blink") as LedMode,
       size: 0.4,
     })),
   ],
-  ports: portXs.slice(0, 12).map((x) => ({ x: x + 18, y: 36 })).concat(portXs.slice(12, 18).map((x) => ({ x: x + 18, y: 72 }))),
-  spare: [{ x: 1012, y: 46 }],
+  ports: portXs.slice(0, 12).map((x) => ({ x: x + 18, y: 136 })).concat(portXs.slice(12, 18).map((x) => ({ x: x + 18, y: 172 }))),
+  spare: [{ x: 1012, y: 146 }],
+  passThrough: { y: (BRUSH.y0 + BRUSH.y1) / 2, x0: BRUSH.x0 + 10, x1: BRUSH.x1 - 10 },
 };
 
 // 1U blank / honeycomb vent.
