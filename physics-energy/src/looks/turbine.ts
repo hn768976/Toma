@@ -17,7 +17,7 @@ export const bladeGeometry = (length: number) => {
     const u = s / (BLADE_SECTIONS - 1);
     const r = r0 + (length - r0) * u;
     // chord: round root, widest at ~20 %, tapering to the tip
-    const chord = length * (u < 0.2 ? 0.05 + 0.25 * (u / 0.2) * 0.42 : 0.155 - 0.12 * ((u - 0.2) / 0.8) ** 0.9) * 0.55;
+    const chord = length * (u < 0.2 ? 0.05 + 0.25 * (u / 0.2) * 0.42 : 0.155 - 0.12 * ((u - 0.2) / 0.8) ** 0.9) * 0.68;
     const thick = u < 0.12 ? 0.9 - u * 4 : 0.16 - 0.06 * u; // root is nearly circular
     const twist = THREE.MathUtils.degToRad(16 * (1 - u) ** 1.5);
     const ring: THREE.Vector3[] = [];
@@ -68,8 +68,8 @@ export const buildTurbine = (height: number, material: THREE.Material): Turbine 
   // tapered tubular tower
   const towerProfile = [
     new THREE.Vector2(0.0, 0),
-    new THREE.Vector2(0.017 * height, 0),
-    new THREE.Vector2(0.0095 * height, height),
+    new THREE.Vector2(0.022 * height, 0),
+    new THREE.Vector2(0.012 * height, height),
     new THREE.Vector2(0.0, height),
   ];
   const tower = new THREE.Mesh(new THREE.LatheGeometry(towerProfile, 20), material);

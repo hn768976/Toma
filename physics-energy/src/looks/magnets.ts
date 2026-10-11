@@ -16,7 +16,7 @@ export interface MagnetParams {
 }
 
 const LEN = 2.0, SIZE = 0.4;
-const CENTER = 1.6; // magnet centres at x = -CENTER, +CENTER (gap 1.2)
+const CENTER = 1.85; // magnet centres at x = -CENTER, +CENTER (gap 1.7)
 const H = SIZE / 2; // field plane: mid-height of the magnets
 const LINE_Y = 0.004; // lines are drawn lying on the table, like iron filings
 const SEEDS = 16;
@@ -62,9 +62,9 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   scene.environment = envRT.texture;
   scene.environmentIntensity = 0.35;
 
-  const FOV = 46;
+  const FOV = 34;
   const cam = new THREE.PerspectiveCamera(FOV, w / h, 0.1, 100);
-  const elev = (40 * Math.PI) / 180, dist = 8.6;
+  const elev = (40 * Math.PI) / 180, dist = 11.6;
   const placeCam = (az: number, el: number) => {
     if (opts.topDown) {
       cam.position.set(0, 17, 0.0001);
@@ -109,10 +109,38 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   const RS = 0.06;
   // In the table plane through the poles, the field of the four charges has
   // no vertical component, so 2D tracing in that plane is exact.
-  // seeds evenly (by angle) on a thin ellipse around each face
-  const seed = (c: V3, i: number): V3 => {
-    const th = (TAU * (i + 0.5)) / SEEDS;
-    return [c[0] + Math.cos(th) * RS, H, Math.sin(th) * (SIZE / 2 + RS)];
+  // Seeds on a thin ellipse around each face, placed at equal steps of
+  // magnetic flux through the ellipse (Gauss): each line carries the same
+  // flux, so line density follows field strength, as in a textbook diagram.
+  const ell = (c: V3, th: number): V3 => [c[0] + Math.cos(th) * RS, H, Math.sin(th) * (SIZE / 2 + RS)];
+  const seedCache = new Map<V3, V3[]>();
+  const seedsFor = (c: V3, sign: number) => {
+    const M = 1440;
+    const w = new Float64Array(M);
+    for (let k = 0; k < M; k++) {
+      const th = (TAU * (k + 0.5)) / M;
+      const p = ell(c, th);
+      // outward normal of the ellipse (a = RS, b = SIZE/2 + RS) times arc length
+      const a = RS, b = SIZE / 2 + RS;
+      const nx = Math.cos(th) / a, nz = Math.sin(th) / b, nl = Math.hypot(nx, nz);
+      const ds = Math.hypot(a * Math.sin(th), b * Math.cos(th)) * (TAU / M);
+      const B = field(p);
+      w[k] = Math.max(0, sign * (B[0] * nx + B[2] * nz) / nl) * ds;
+    }
+    const total = w.reduce((x, y) => x + y, 0);
+    const out: V3[] = [];
+    let acc = 0, k = 0;
+    for (let i = 0; i < SEEDS; i++) {
+      const target = ((i + 0.5) / SEEDS) * total;
+      while (k < M - 1 && acc + w[k] < target) { acc += w[k]; k++; }
+      const frac = w[k] > 0 ? (target - acc) / w[k] : 0.5;
+      out.push(ell(c, (TAU * (k + frac)) / M));
+    }
+    return out;
+  };
+  const seed = (c: V3, i: number, sign = 1): V3 => {
+    if (!seedCache.has(c)) seedCache.set(c, seedsFor(c, sign));
+    return seedCache.get(c)![i];
   };
   for (const pole of faces.filter((c) => c.q > 0)) {
     for (let i = 0; i < SEEDS; i++) {
@@ -124,7 +152,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   // lines that come in from infinity and end on S poles
   for (const pole of faces.filter((c) => c.q < 0)) {
     for (let i = 0; i < SEEDS; i++) {
-      const s = seed(pole.p, i);
+      const s = seed(pole.p, i, -1);
       let reachedN = false;
       const pts = traceLine(field, s, {
         dir: -1, step, maxSteps: 8000,
@@ -135,7 +163,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   }
   const drawn = lines.map((l) => resample(l.map(([x, , z]) => [x, LINE_Y, z] as V3), 0.01));
   // open ends (not on a pole) fade out over FADE_LEN
-  const FADE_LEN = 0.9;
+  const FADE_LEN = 0.35;
   const onPole = (q: V3) => faces.some((c) => Math.abs(q[0] - c.p[0]) < 0.08 && Math.abs(q[2]) < SIZE / 2 + 0.1);
   const ends = drawn.map((l) => {
     const smp = new PathSampler(l);
@@ -222,7 +250,7 @@ export const createMagnets = (p: MagnetParams) => (gl: THREE.WebGLRenderer, w: n
   }
 
   // --- table, light, shadows ---
-  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.4 }));
+  const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.5 }));
   shadowPlane.rotation.x = -Math.PI / 2;
   shadowPlane.receiveShadow = true;
   scene.add(shadowPlane);

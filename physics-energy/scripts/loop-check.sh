@@ -9,7 +9,7 @@ mkdir -p "$D"
 [ -d "$B" ] || npx remotion bundle src/index.ts --out-dir="$B" >/dev/null
 IDS=("$@")
 [ ${#IDS[@]} -eq 0 ] && IDS=(WindFarmHologram-Blue WindFarmHologram-Green PrismDispersion-Dark MagneticTorus-PinkViolet BarMagnets-Attract BarMagnets-Repel ElectricField-OppositeCharges ElectricField-LikeCharges)
-SC=--scale=0.3333333333333333
+SC="--scale=0.3333333333333333 --timeout=180000"
 for id in "${IDS[@]}"; do
   P="{\"variant\":\"$id\",\"loopCheck\":true}"
   npx remotion still "$B" "$id" "$D/${id}_f0.png" --frame=0 $SC --props="$P" >/dev/null

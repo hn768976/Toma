@@ -63,7 +63,7 @@ const worldMapTexture = (dotRGB: string) => {
     for (let x = step / 2; x < MW; x += step) {
       const i = (Math.floor(y) * MW + Math.floor(x)) * 4;
       if (data[i] > 127) {
-        const r = step * 0.22 * s;
+        const r = step * 0.17 * s;
         // fade toward the map edges
         const ex = Math.min(x / MW, 1 - x / MW) * 6, ey = Math.min(y / MH, 1 - y / MH) * 5;
         og.globalAlpha = Math.min(1, ex, ey);
@@ -77,7 +77,7 @@ const worldMapTexture = (dotRGB: string) => {
   const soft = document.createElement("canvas");
   soft.width = TW; soft.height = TH;
   const sg = soft.getContext("2d")!;
-  sg.filter = "blur(1.5px)";
+  sg.filter = "blur(0.8px)";
   sg.drawImage(out, 0, 0);
   const t = new THREE.CanvasTexture(soft);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -102,7 +102,7 @@ void main() {
   float spot = exp(-dot(sp, sp) / 0.35);          // soft light from the top centre
   vec3 c = mix(c0 * 1.0, c1 * 1.3, spot);
   vec2 d = (vUv - glowPos) * vec2(aspect, 1.0);
-  c += glow * (exp(-dot(d, d) / 0.006) * 0.26 + exp(-dot(d, d) / 0.025) * 0.08);
+  c += glow * (exp(-dot(d, d) / 0.01) * 0.2 + exp(-dot(d, d) / 0.035) * 0.08);
   fragColor = vec4(c, 1.0);
 }`;
 
@@ -135,6 +135,7 @@ void main() {
   b += 0.5 * exp(-pow((p.z + 4.5) / 4.0, 2.0));
   b *= 0.45 + 1.1 * aRnd * aRnd;   // uneven, sparkly
   b *= smoothstep(-24.0, -14.0, p.z);   // fade out far behind
+  b *= mix(0.35, 1.0, smoothstep(14.0, 2.0, p.z));   // and toward the bottom of frame
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
   float s = 0.046 * worldScale / max(-mv.z, 0.1);
@@ -167,8 +168,8 @@ uniform vec3 color;
 uniform vec3 hot;
 void main() {
   float x = (vUv.x - 0.5) * 2.0, y = (vUv.y - 0.5) * 2.0;
-  float across = exp(-y * y / 0.0012) * 0.9 + exp(-y * y / 0.012) * 0.3 + exp(-y * y / 0.2) * 0.12;
-  float along = exp(-pow((x + 0.09) / 0.15, 2.0)) * 1.0 + exp(-pow((x + 0.09) / 0.3, 2.0)) * 0.2;
+  float across = exp(-y * y / 0.0007) * 0.9 + exp(-y * y / 0.006) * 0.25 + exp(-y * y / 0.12) * 0.07;
+  float along = exp(-pow((x + 0.1) / 0.24, 2.0)) * 0.85 + exp(-pow((x + 0.1) / 0.45, 2.0)) * 0.2;
   vec3 c = mix(color, hot, exp(-pow((x + 0.09) / 0.07, 2.0)) * exp(-y * y / 0.01));
   fragColor = vec4(c * across * along, 1.0);
 }`;
@@ -185,7 +186,7 @@ export const createWindFarm = (p: WindFarmParams) => (gl: THREE.WebGLRenderer, w
     glslVersion: THREE.GLSL3, vertexShader: BG_VERT, fragmentShader: BG_FRAG, depthWrite: false,
     uniforms: {
       c0: { value: new THREE.Color(p.bgBottom) }, c1: { value: new THREE.Color(p.bgTop) },
-      glow: { value: glowCol.clone().lerp(new THREE.Color("#FF8AE0"), 0.25) }, glowPos: { value: new THREE.Vector2(0.58, 0.45) }, aspect: { value: w / h },
+      glow: { value: glowCol.clone().lerp(new THREE.Color("#FF8AE0"), 0.25).lerp(new THREE.Color("#C8C8F0"), 0.3) }, glowPos: { value: new THREE.Vector2(0.58, 0.45) }, aspect: { value: w / h },
     },
   });
   const bgGeo = new THREE.BufferGeometry();
@@ -197,11 +198,11 @@ export const createWindFarm = (p: WindFarmParams) => (gl: THREE.WebGLRenderer, w
 
   // dotted world map far behind
   const map = worldMapTexture("#ffffff");
-  const MAP_W = 80;
+  const MAP_W = 86;
   const mapMesh = new THREE.Mesh(new THREE.PlaneGeometry(MAP_W, MAP_W / map.aspect),
-    new THREE.MeshBasicMaterial({ map: map.texture, color: dotsCol.clone().lerp(new THREE.Color(1, 1, 1), 0.3).multiplyScalar(0.16),
+    new THREE.MeshBasicMaterial({ map: map.texture, color: dotsCol.clone().lerp(new THREE.Color(1, 1, 1), 0.3).multiplyScalar(0.26),
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-  mapMesh.position.set(-1.5, 13.6, -62);
+  mapMesh.position.set(-3.0, 14.4, -62);
   mapMesh.renderOrder = -5;
   scene.add(mapMesh);
 
@@ -214,8 +215,8 @@ export const createWindFarm = (p: WindFarmParams) => (gl: THREE.WebGLRenderer, w
     scene.add(tb.group);
     return { ...t, ...tb };
   });
-  scene.add(new THREE.HemisphereLight(0xc8dcff, 0x3a4a70, 1.9));
-  const key = new THREE.DirectionalLight(0xffffff, 1.0);
+  scene.add(new THREE.HemisphereLight(0xc8dcff, 0x2a3a60, 1.5));
+  const key = new THREE.DirectionalLight(0xffffff, 1.5);
   key.position.set(-6, 10, 12);
   scene.add(key);
   const rim = new THREE.DirectionalLight(glowCol.clone().lerp(new THREE.Color(1, 1, 1), 0.5), 2.2);
@@ -257,7 +258,7 @@ export const createWindFarm = (p: WindFarmParams) => (gl: THREE.WebGLRenderer, w
     glslVersion: THREE.GLSL3,
     vertexShader: `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
     fragmentShader: BAND_FRAG,
-    uniforms: { color: { value: dotsCol.clone().lerp(glowCol, 0.35).multiplyScalar(0.45) }, hot: { value: new THREE.Color(1, 1, 1).multiplyScalar(0.9) } },
+    uniforms: { color: { value: dotsCol.clone().lerp(glowCol, 0.55).multiplyScalar(0.62) }, hot: { value: new THREE.Color(1, 1, 1).lerp(glowCol, 0.25).multiplyScalar(1.1) } },
     blending: THREE.AdditiveBlending, transparent: true, depthWrite: false,
   }));
   band.position.set(0, 0.25, -3.5);
@@ -271,10 +272,10 @@ export const createWindFarm = (p: WindFarmParams) => (gl: THREE.WebGLRenderer, w
   const spark = Array.from({ length: N_SPARKS }, () => {
     // mostly around the left turbines, a few on the right
     const pick = rnd();
-    const tb = TURBINES[pick < 0.35 ? 1 : pick < 0.6 ? 2 : pick < 0.85 ? 0 : 3];
+    const tb = TURBINES[pick < 0.3 ? 1 : pick < 0.5 ? 2 : pick < 0.68 ? 0 : 3];
     return {
       x: tb.x + (rnd() - 0.6) * 6, z: tb.z + (rnd() - 0.5) * 3, rise: 1.5 + rnd() * 4,
-      trips: 1 + Math.floor(rnd() * 3), phase: rnd(), sway: rnd() * TAU, size: 0.022 + rnd() * 0.034,
+      trips: 1 + Math.floor(rnd() * 3), phase: rnd(), sway: rnd() * TAU, size: 0.03 + rnd() * 0.04,
     };
   });
   sparks.points.renderOrder = 6;
@@ -286,7 +287,7 @@ export const createWindFarm = (p: WindFarmParams) => (gl: THREE.WebGLRenderer, w
     dof: { focus, range: 18, farRange: 45, maxCocPx4k: 7, near: cam.near, far: cam.far },
     bloom: { strength: 0.55, threshold: 0.75, knee: 0.4, levels: 7, radius: 0.85 },
     grain: 0.015, shoulder: 0.8,
-    vignette: { amount: 0.22, start: 0.6, end: 1.4 },
+    vignette: { amount: 0.4, start: 0.45, end: 1.3 },
   });
 
   const c = new THREE.Color();

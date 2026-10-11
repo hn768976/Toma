@@ -30,6 +30,9 @@ const SPECTRUM = spectrumSamples(24).map((s) => ({
 const MEAN_DN = SPECTRUM.reduce((a, s) => a + s.spread, 0) / SPECTRUM.length;
 const NSUB = 7;
 const BEAM_R = 0.16;
+const CENTRE = (NSUB - 1) / 2;
+/** normalised weight of the centre sub-ray */
+const CENTRE_W = 1 / Array.from({ length: NSUB }, (_, k) => Math.exp(-0.5 * (((k / (NSUB - 1)) * 2 - 1) * 2) ** 2)).reduce((a, b) => a + b, 0);
 const BEAM_DIR = new THREE.Vector3(0.55, -0.82, -0.1).normalize();
 const SRC_DIST = 9;
 
@@ -88,7 +91,7 @@ const exitFace = (o: V, d: V): [number, number] => {
   return [Math.max(tOut, 0), face];
 };
 
-export interface Seg { a: V; d: V; len: number; rgb: [number, number, number]; w: number; kind: number; spread?: number }
+export interface Seg { a: V; d: V; len: number; rgb: [number, number, number]; w: number; kind: number; spread?: number; sub?: number }
 // kind: 0 incoming white, 1 out (spectral), 2 inside glass, 3 entry reflection, 4 missed beam
 
 export const traceBeam = (q: THREE.Quaternion, out: Seg[]) => {
@@ -111,7 +114,7 @@ export const traceBeam = (q: THREE.Quaternion, out: Seg[]) => {
     }
     const [tIn, fIn] = hit;
     const E = o.clone().addScaledVector(d, tIn);
-    out.push({ a: oW, d: BEAM_DIR.clone(), len: tIn, rgb: [1, 1, 1], w: wk, kind: 0 });
+    out.push({ a: oW, d: BEAM_DIR.clone(), len: tIn, rgb: [1, 1, 1], w: wk, kind: 0, sub: k });
     const Nin = PLANES[fIn].n; // outward; faces against the incoming ray
     const cosI = -Nin.dot(d);
     // partial reflection of the white beam at the entry face
@@ -131,7 +134,7 @@ export const traceBeam = (q: THREE.Quaternion, out: Seg[]) => {
         const cosO = No.dot(D);
         const R = fresnelR(cosO, n, 1);
         const Tout = refract(D, No.clone().negate(), n, new THREE.Vector3());
-        if (Tout && R < 1) out.push({ a: toWorldP(X), d: toWorldP(Tout), len: 16, rgb: s.rgb, w: energy * (1 - R), kind: 1, spread: s.spread / MEAN_DN });
+        if (Tout && R < 1) out.push({ a: toWorldP(X), d: toWorldP(Tout), len: 16, rgb: s.rgb, w: energy * (1 - R), kind: 1, spread: s.spread / MEAN_DN, sub: k });
         // the reflected part continues inside (one internal bounce)
         energy *= R;
         P = X;
@@ -371,7 +374,7 @@ export const createPrism = () => (gl: THREE.WebGLRenderer, w: number, h: number)
   [edgeGlow, edgeCore].forEach((m, i) => { m.renderOrder = 4 + i; m.frustumCulled = false; prism.add(m); });
 
   const post = new Post(gl, w, h, {
-    bloom: { strength: 0.55, threshold: 0.8, knee: 0.4, levels: 7, radius: 0.8 },
+    bloom: { strength: 0.75, threshold: 0.7, knee: 0.4, levels: 7, radius: 0.85 },
     grain: 0.015, grainGate: true, shoulder: 0.7,
     vignette: { amount: 0.25, start: 0.6, end: 1.4 },
   });
@@ -405,18 +408,23 @@ export const createPrism = () => (gl: THREE.WebGLRenderer, w: number, h: number)
           if (s) {
             u.segA.value[i].copy(s.a);
             u.segB.value[i].copy(s.a).addScaledVector(s.d, s.len);
-            u.segW.value[i] = Math.min(0.4, s.w * 24 * 0.2);
+            u.segW.value[i] = Math.min(0.5, s.w * 24 * 0.26);
           } else u.segW.value[i] = 0;
         }
       }
       for (const s of segs) {
         switch (s.kind) {
           case 0: // incoming white beam: soft volumetric + hot core + blue haze
-            beams.add(s.a, s.d, s.len, [1, 1, 1], s.w * 0.6, 0.12, 0.0, 0);
             beams.add(s.a, s.d, s.len, [1, 1, 1], s.w * 1.1, 0.032, 0.0, 0);
-            beams.add(s.a, s.d, s.len, HAZE, s.w * 0.03, 0.22, 0.0, 0);
-            // haze cone that opens toward the prism
-            beams.add(s.a, s.d, s.len, [0.85, 0.9, 1.0], s.w * 0.12, 0.04, 0.022, 0);
+            // wide layers are drawn once, on the centre sub-ray, carrying the
+            // whole beam's weight (same look, ~7x less overdraw)
+            if (s.sub === CENTRE) {
+              const W = s.w / CENTRE_W;
+              beams.add(s.a, s.d, s.len, [1, 1, 1], W * 0.6, 0.12, 0.0, 0);
+              beams.add(s.a, s.d, s.len, HAZE, W * 0.03, 0.22, 0.0, 0);
+              // haze cone that opens toward the prism
+              beams.add(s.a, s.d, s.len, [0.85, 0.9, 1.0], W * 0.12, 0.04, 0.022, 0);
+            }
             break;
           case 4: // part of the beam that misses the prism
             beams.add(s.a, s.d, s.len, [1, 1, 1], s.w * 0.55, 0.05, 0.0, 0);
@@ -424,7 +432,7 @@ export const createPrism = () => (gl: THREE.WebGLRenderer, w: number, h: number)
             break;
           case 1: // spectral exit rays
             beams.add(s.a, s.d, s.len, s.rgb, s.w * 2.0, 0.04, 0.008 + 0.014 * (s.spread ?? 1), 14);
-            if (s.w > 0.004) beams.add(s.a, s.d, s.len, HAZE, s.w * 0.04, 0.2, 0.05, 8);
+            if (s.sub === CENTRE && s.w / CENTRE_W > 0.004) beams.add(s.a, s.d, s.len, HAZE, (s.w / CENTRE_W) * 0.04, 0.2, 0.05, 8);
             break;
           case 2: // inside the glass
             beams.add(s.a, s.d, s.len, s.rgb, s.w * 0.6, 0.03, 0.0, 0);

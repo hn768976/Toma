@@ -131,6 +131,7 @@ in float vAlpha;
 in float vParam;
 in float vDepth;
 uniform vec3 depthFade;  // near, far, factor at far (factor 1 = off)
+uniform vec4 depthTint;  // rgb, amount: far parts shift toward this tint
 uniform float widthPx;   // device px
 uniform float mode;      // 0 solid (coverage AA), 1 gaussian glow
 uniform float opacity;
@@ -157,7 +158,9 @@ void main() {
     b += pulse.x * bump;
   }
   vec3 col = mix(vColor, hotColor, clamp((b - 1.0) * 0.35, 0.0, 0.6)) * b * intensity;
-  float df = mix(1.0, depthFade.z, smoothstep(depthFade.x, depthFade.y, vDepth));
+  float dt = smoothstep(depthFade.x, depthFade.y, vDepth);
+  float df = mix(1.0, depthFade.z, dt);
+  col = mix(col, depthTint.rgb * dot(col, vec3(0.33)), depthTint.a * dt);
   fragColor = vec4(col * df, a * vAlpha * opacity);
 }`;
 
@@ -175,6 +178,7 @@ export interface RibbonMatOptions {
   hotColor?: THREE.Color;
   /** dim with view depth: [near, far, factor at far] */
   depthFade?: [number, number, number];
+  depthTint?: [number, number, number, number];
 }
 
 export const ribbonMaterial = (o: RibbonMatOptions) => {
@@ -197,6 +201,7 @@ export const ribbonMaterial = (o: RibbonMatOptions) => {
       pulseByLen: { value: o.pulseByLen ?? 0 },
       hotColor: { value: o.hotColor ?? new THREE.Color(1, 1, 1) },
       depthFade: { value: new THREE.Vector3(...(o.depthFade ?? [0, 1, 1])) },
+      depthTint: { value: new THREE.Vector4(...(o.depthTint ?? [1, 1, 1, 0])) },
     },
     transparent: true,
     depthWrite: false,
