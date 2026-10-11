@@ -16,15 +16,25 @@ const DIGITS = Array.from({ length: 25 }, (_, i) => ({
   delay: i * 0.7 + rng() * 6,
 }));
 
-// 16 uneven wedge rays over the upper ~205 degrees (kept clear of the arrow), slightly asymmetric
-const RAYS = Array.from({ length: 16 }, (_, i) => ({
-  deg: -12 + i * (204 / 15) + (rng() - 0.5) * 7,
+// 13 uneven wedge rays over the upper ~150 degrees (above the arrow), slightly asymmetric
+const RAYS = Array.from({ length: 13 }, (_, i) => ({
+  deg: 15 + i * (150 / 12) + (rng() - 0.5) * 6,
   len: 0.12 + rng() * 0.3,
   rad: 0.9 + rng() * 0.32,
 }));
 
 const LABEL_Y = -1.45;
-const X_DATA = -2.95, X_A1 = -1.82, X_CHART = -0.55, X_A2 = 0.78, X_BULB = 2.9;
+// Equal gaps between the three icons, each arrow centred in its gap.
+// Icon bodies (x extents about their centre): data page stack [-0.65, +0.91],
+// chart axes [-0.8, +0.9], bulb glass [-0.62, +0.62].
+// The layer is turned with its right side nearer the camera, so the second gap is
+// narrower in world units to read the same width on screen.
+const GAP1 = 1.6, GAP2 = 1.2;
+const X_DATA = -2.95;
+const X_A1 = X_DATA + 0.91 + GAP1 / 2;
+const X_CHART = X_DATA + 0.91 + GAP1 + 0.8;
+const X_A2 = X_CHART + 0.9 + GAP2 / 2;
+const X_BULB = X_CHART + 0.9 + GAP2 + 0.62;
 
 const order = <T extends Object3D>(o: T, r: number): T => {
   o.renderOrder = r;
@@ -33,7 +43,7 @@ const order = <T extends Object3D>(o: T, r: number): T => {
 
 export const dataAnalysisIdea: StoryBuilder = ({ anisotropy }) => {
   const root = new Group();
-  root.scale.setScalar(0.97);
+  root.scale.setScalar(0.88);
   root.position.y = 0.1;
   const content = new Group();
   root.add(content);
@@ -192,7 +202,7 @@ export const dataAnalysisIdea: StoryBuilder = ({ anisotropy }) => {
     // group slides: Data centred -> Data+chart -> all three
     const s1 = easeInOutCubic(ramp(f, 72, 98));
     const s2 = easeInOutCubic(ramp(f, 162, 190));
-    content.position.x = lerp(lerp(2.95, 1.15, s1), -0.6, s2);
+    content.position.x = lerp(lerp(-X_DATA, -(X_DATA + X_CHART) / 2 - 0.15, s1), -(X_DATA + X_BULB) / 2 + 0.1, s2);
 
     // digits float loosely then snap to the 5x5 grid
     for (const { m, d, grid } of digits) {
