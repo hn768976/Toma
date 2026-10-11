@@ -16,15 +16,15 @@ const DIGITS = Array.from({ length: 25 }, (_, i) => ({
   delay: i * 0.7 + rng() * 6,
 }));
 
-// 16 uneven wedge rays, upper ~260 degrees, slightly asymmetric
+// 16 uneven wedge rays over the upper ~205 degrees (kept clear of the arrow), slightly asymmetric
 const RAYS = Array.from({ length: 16 }, (_, i) => ({
-  deg: -45 + i * (270 / 15) + (rng() - 0.5) * 9,
+  deg: -12 + i * (204 / 15) + (rng() - 0.5) * 7,
   len: 0.12 + rng() * 0.3,
-  rad: 0.95 + rng() * 0.42,
+  rad: 0.9 + rng() * 0.32,
 }));
 
 const LABEL_Y = -1.45;
-const X_DATA = -2.95, X_A1 = -1.82, X_CHART = -0.55, X_A2 = 0.78, X_BULB = 2.05;
+const X_DATA = -2.95, X_A1 = -1.82, X_CHART = -0.55, X_A2 = 0.78, X_BULB = 2.9;
 
 const order = <T extends Object3D>(o: T, r: number): T => {
   o.renderOrder = r;
@@ -192,7 +192,7 @@ export const dataAnalysisIdea: StoryBuilder = ({ anisotropy }) => {
     // group slides: Data centred -> Data+chart -> all three
     const s1 = easeInOutCubic(ramp(f, 72, 98));
     const s2 = easeInOutCubic(ramp(f, 162, 190));
-    content.position.x = lerp(lerp(2.95, 1.15, s1), -0.25, s2);
+    content.position.x = lerp(lerp(2.95, 1.15, s1), -0.6, s2);
 
     // digits float loosely then snap to the 5x5 grid
     for (const { m, d, grid } of digits) {
