@@ -73,6 +73,7 @@ type CamCfg = {
   exposure?: number;
   ledGain?: number; // LED brightness and glow size multiplier
   bloom?: number;
+  greenGain?: number; // dims green LEDs (3C reads mostly red / amber)
   haze?: { color: THREE.ColorRepresentation; density: number };
 };
 
@@ -128,17 +129,19 @@ const CAMS: Record<RackVersion, CamCfg> = {
     copiesY: [-1, 6],
     fov: 40,
     pose: (t, cam) => {
-      cam.position.set(0.1, -0.9 + H * t, 0.3);
-      // About 20 deg between the view axis and the rack face.
-      cam.rotation.set(THREE.MathUtils.degToRad(68), 0, THREE.MathUtils.degToRad(-4), "YXZ");
+      cam.position.set(0.12, -0.9 + H * t, 0.24);
+      // Close to the face, looking up it: the view axis is about 25 deg off
+      // the rack face, so the modules stay large and still converge upward.
+      cam.rotation.set(THREE.MathUtils.degToRad(66), 0, THREE.MathUtils.degToRad(-4), "YXZ");
     },
     focus: (cam) => faceDistance(cam, 0, -0.1),
-    post: { dof: { aperture: 26, maxCoc: 20, nearScale: 0.9 }, ca: 2 },
-    exposure: 0.8,
-    ledGain: 2.6,
-    bloom: 0.6,
+    post: { dof: { aperture: 17, maxCoc: 16, nearScale: 0.8 }, ca: 2 },
+    exposure: 0.66,
+    ledGain: 2.2,
+    greenGain: 0.35,
+    bloom: 0.45,
     // Cool blue distance haze: the far racks fade into blue-lit darkness.
-    haze: { color: "#16305A", density: 0.42 },
+    haze: { color: "#0C1A33", density: 0.22 },
   },
 };
 
@@ -157,6 +160,7 @@ const FLICKER_HOLDS = [2, 3, 4, 5, 6];
 const LED_GLSL = /* glsl */ `
 uniform float uFrame;
 uniform float ledGain;
+uniform float greenGain;
 float ledHash(float a, float b) {
   uint h = uint(a) * 747796405u + uint(b) * 2891336453u + 12345u;
   h ^= h >> 16; h *= 2246822519u; h ^= h >> 13; h *= 3266489917u; h ^= h >> 16;
@@ -175,7 +179,7 @@ float ledOn(vec4 d) {
 vec3 ledColor(float k) {
   if (k < 0.5) return vec3(${LED_COLORS.red.join(", ")});
   if (k < 1.5) return vec3(${LED_COLORS.orange.join(", ")});
-  return vec3(${LED_COLORS.green.join(", ")});
+  return vec3(${LED_COLORS.green.join(", ")}) * greenGain;
 }
 `;
 
@@ -501,7 +505,12 @@ const makeFactory =
     ledGeo.rotateX(Math.PI / 2);
     const ledAttr = new Float32Array(leds.length * 4);
     leds.forEach((l, i) => ledAttr.set(l.d, i * 4));
-    const ledUniforms = { uFrame: { value: 0 }, glowSize: { value: 16 * (cfg.ledGain ?? 1) }, ledGain: { value: cfg.ledGain ?? 1 } };
+    const ledUniforms = {
+      uFrame: { value: 0 },
+      glowSize: { value: 16 * Math.min(1.25, cfg.ledGain ?? 1) },
+      ledGain: { value: cfg.ledGain ?? 1 },
+      greenGain: { value: cfg.greenGain ?? 1 },
+    };
     const ledMesh = new THREE.InstancedMesh(
       ledGeo,
       new THREE.ShaderMaterial({ vertexShader: LED_VERT, fragmentShader: LED_FRAG, uniforms: ledUniforms }),
