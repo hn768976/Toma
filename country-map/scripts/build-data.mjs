@@ -13,7 +13,7 @@ import { neighbors, mesh } from 'topojson-client';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const raw = (n) => JSON.parse(fs.readFileSync(path.join(root, 'data/raw', `${n}.geojson`), 'utf8'));
 const rows = JSON.parse(fs.readFileSync(path.join(root, 'src/countries.json'), 'utf8'));
-const only = process.argv[2];
+const only = process.argv[2] ? new Set(process.argv[2].split(',')) : null;
 
 console.time('load');
 const L = {
@@ -54,7 +54,7 @@ const countryNames = new Set(L.countries.flatMap((f) => [f.properties.NAME, f.pr
 fs.mkdirSync(path.join(root, 'public/data'), { recursive: true });
 
 for (const row of rows) {
-	if (only && row.id !== only) continue;
+	if (only && !only.has(row.id)) continue;
 	const [a, b, c, d] = row.frame;
 	const midLat = (b + d) / 2, midLon = (a + c) / 2;
 	const cosL = Math.cos((midLat * Math.PI) / 180);

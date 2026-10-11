@@ -1,9 +1,9 @@
-# Atlas Country Close-up — Remotion template (20 countries)
+# Atlas Country Close-up — Remotion template (33 countries)
 
 A macro close-up of a printed political atlas page on a desk. The camera rack-focuses
 onto the country name, then slides slowly across the paper. The depth of field is
 razor-thin. One template scene is driven by one data row per country
-(`src/countries.json`), giving 20 compositions of **15 s, 30 fps, 3840×2160**.
+(`src/countries.json`), giving 33 compositions of **15 s, 30 fps, 3840×2160**.
 
 - **Map:** drawn once per composition with **d3-geo on Canvas 2D** (`src/map/drawMap.ts`).
   - an **8192×8192** hi-res sheet around the country;
@@ -21,8 +21,18 @@ razor-thin. One template scene is driven by one data row per country
 Remotion composition IDs may only contain `a-z A-Z 0-9 -`. So the IDs are
 `CountryMap-<Name>`, and the output files are named `CountryMap_<Name>` as requested:
 
-`USA, China, India, Japan, Germany, UK, France, Brazil, Canada, Russia, Mexico, Australia,
-SouthKorea, Italy, Spain, Indonesia, SaudiArabia, Turkiye, Pakistan, SouthAfrica`
+1. **Original 20, all rendered and verified:** `USA, China, India, Japan, Germany, UK,
+   France, Brazil, Canada, Russia, Mexico, Australia, SouthKorea, Italy, Spain,
+   Indonesia, SaudiArabia, Turkiye, Pakistan, SouthAfrica`.
+2. **Added later as data rows, not yet rendered or visually checked:** `Ukraine,
+   Israel, Iran, Egypt, UAE, Nigeria, Argentina, Netherlands, Switzerland, Poland,
+   Vietnam, Thailand, Philippines`.
+   - Their `public/data` files are built.
+   - Before shipping them, render frame 300 of each and check the label placement and
+     the `zoom`, `camera` and `labelLonLat` values. See "How to add a new country".
+   - The Israel row shows the Palestinian territories in neutral grey (Natural Earth
+     "Indeterminate").
+   - The Philippines name is placed over the Sibuyan Sea (`labelLonLat`).
 
 ## Setup
 
@@ -49,7 +59,8 @@ is how the timings below were measured.
 ```bash
 npx remotion render src/index.ts CountryMap-Mexico out/CountryMap_Mexico.mp4 --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
 # all 20:
-for c in USA China India Japan Germany UK France Brazil Canada Russia Mexico Australia SouthKorea Italy Spain Indonesia SaudiArabia Turkiye Pakistan SouthAfrica; do
+for c in USA China India Japan Germany UK France Brazil Canada Russia Mexico Australia SouthKorea Italy Spain Indonesia SaudiArabia Turkiye Pakistan SouthAfrica \
+         Ukraine Israel Iran Egypt UAE Nigeria Argentina Netherlands Switzerland Poland Vietnam Thailand Philippines; do
   npx remotion render src/index.ts CountryMap-$c out/CountryMap_$c.mp4 --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
 done
 ```
