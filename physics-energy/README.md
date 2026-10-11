@@ -113,7 +113,9 @@ npx remotion still src/index.ts WindFarmHologram-Blue out/WindFarmHologram_Blue_
 - **Bar magnets (4A/4B).** Each magnet is two magnetic charges, + at the N face and − at the S face.
   - Each face charge is spread over the face width (7 sub-charges), so facing poles give the near-parallel gap field of flat faces rather than a point fan.
   - In the plane through the pole charges, B has no vertical component, so lines traced in that plane are exact. They are drawn lying on the table, like iron filings.
-  - 16 seeds go around each N face. Lines are also traced backward from each S face and kept only if they escape, i.e. come in from outside the frame.
+  - 16 seeds per N face sit on a thin ellipse around the face, at equal steps of **magnetic flux** through it (Gauss's law). Each line therefore carries the same flux, and line density follows field strength. This is why facing opposite poles show a dense, straight bundle across the gap.
+  - Lines are also traced backward from each S face (seeded the same way) and kept only if they come in from outside the diagram.
+  - The diagram is bounded to an oval around the magnets. A line leaving the oval ends there with a short fade, as in a textbook figure.
   - Dots move N → S at a speed proportional to √|B|.
 - **Prism (2).** The beam is traced every frame from the prism's pose. It is a white beam split into 7 parallel sub-rays across its width, × 24 wavelengths (400–700 nm). For each one:
   1. Refract at the entry face (vector Snell).
@@ -157,4 +159,52 @@ The new id appears in the Studio and is renderable straight away.
 - three.js (MIT), Remotion (Remotion licence: free for individuals and small companies; larger companies need a company licence; see remotion.dev/license).
 - There are no logos or brand marks. The only text is N, S, + and −.
 
-<!-- RESULTS -->
+## Measured results
+
+The environment was a 4-vCPU cloud container with **no GPU**, so WebGL2 ran through ANGLE → SwiftShader (software). On a GPU machine expect much faster renders; I could not measure that here.
+
+### Render time per frame, 720p previews
+
+The previews were rendered at `--scale=0.3333333333333333 --concurrency=2`. The figure is wall time ÷ 600 frames. Concurrency 4 was no faster, because software GL already uses all cores.
+
+| Composition | s / frame (720p) | Est. s / frame (4K) | Est. 4K render (600 frames) |
+|---|---|---|---|
+| WindFarmHologram-Blue | 1.08 | **9.8 (measured)** | ~1 h 40 min |
+| WindFarmHologram-Green | 1.08 | ~9.8 | ~1 h 40 min |
+| PrismDispersion-Dark | 1.46 | **13.0 (measured)** | ~2 h 10 min |
+| MagneticTorus-PinkViolet | 0.73 | ~6.6 | ~1 h 05 min |
+| BarMagnets-Attract | 0.45 | ~4.0 | ~40 min |
+| BarMagnets-Repel | 0.48 | ~4.3 | ~43 min |
+| ElectricField-OppositeCharges | 0.67 | ~6.0 | ~1 h |
+| ElectricField-LikeCharges | 0.77 | ~6.9 | ~1 h 10 min |
+
+How the 4K numbers were obtained:
+- The two **measured** 4K frames are frame 300 of 1A (60,000 ground dots, 4 turbines, depth of field, bloom) and of 2 (traced beams and bloom), at 3840×2160 with concurrency 1.
+- Each was measured as (time for 4 frames − time for 1 frame) ÷ 3, which removes browser start-up.
+- The other 4K estimates scale each look's 720p figure by the measured ratio of about 9×.
+- **The whole set at 4K comes to about 10 hours on this CPU-only container.** With a GPU and `--gl=angle`, expect a large speedup.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| 1. File checks (ffprobe) | All 8 pass: 1280×720, 30/1, 20.0 s, 600 frames, h264, yuv420p, one video stream, no audio. |
+| 2. Seamless loop | All 8: frame 0 and frame 600 (601-frame composition via `--props='{"loopCheck":true}'`) are pixel-identical (max diff 0). On lossless PNGs, the 599→0 step equals a normal frame step (for example 3.72 vs 3.72 for 1A), so the motion is continuous across the wrap and not only equal at the endpoints. |
+| 3. Determinism | All 8: frame 300 from a cold `remotion still` and frame 300 from a multi-frame, 2-thread `remotion render --sequence` are byte-identical (same SHA-256 of the PNG). |
+| 4. Banding (encoded mp4) | Frames decoded from the mp4s, with crops contrast-stretched to their full range (`scripts/banding_crops.py`). Every region shows a smooth, grain-dithered ramp with no steps, and the longest constant run in a 16-row-averaged profile is 1–4 rows. Regions: 1A/1B sky gradient and violet bloom, prism beam edge, torus indigo background, magnet shadow on white, e-field glow on black. Grain stayed at the planned 1.5 % (1 % on white); no increase was needed. |
+| 5. Content | Contact sheets (`out/analysis/*_sheet.png`) checked for every composition. The only text is N, S, + and −. There are no logos. |
+| 6. Motion | Mean absolute difference between consecutive frames, frames 270–330, shows no spikes in any composition, so nothing pops. Total internal reflection fades out through the Fresnel transmission, which goes to 0 at the critical angle. Thin lines are coverage-anti-aliased screen-space ribbons. Rotor speeds are 3–4 revolutions per 20 s (about 2° per frame), so there is no strobing. |
+
+`scripts/loop-check.sh` and `scripts/analyze.py` rerun these checks.
+
+## Completion checklist
+
+- [x] 8 compositions, one data row each, 3840×2160, 30 fps, 600 frames
+- [x] three.js in `@remotion/three` on WebGL2 (`--gl=angle`); no WebGPU; no MCP; no PixiJS
+- [x] Field lines integrated with RK4 from physical fields; prism beams traced per wavelength with Snell and Fresnel
+- [x] Deterministic: no `Math.random()` at render time, no clocks, no TAA, single-frame post
+- [x] Seamless 20 s loops (pixel-identical 0/600)
+- [x] Dither (±1/255) and frame-hashed grain in every final pass; banding checked on the encoded mp4
+- [x] OFL font only (Blinker SemiBold, licence included); world-atlas / Natural Earth note included
+- [x] 720p previews and stills; 4K and 6K commands documented
+
