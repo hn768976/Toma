@@ -209,7 +209,7 @@ export const buildTurbine = (mat: THREE.Material): Turbine => {
     [0.04, -0.008, -0.17],
   ];
   for (const [x, y, z] of spots) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.0042, 12, 8), mk);
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 12, 8), mk);
     s.position.set(x, y, z);
     markers.add(s);
   }
@@ -218,7 +218,7 @@ export const buildTurbine = (mat: THREE.Material): Turbine => {
 
   // simple drivetrain: main shaft, bearing, gearbox, generator (only shown in the x-ray view)
   const internals = new THREE.Group();
-  const im = new THREE.MeshStandardMaterial({ color: 0x7fdcff, emissive: new THREE.Color("#2A9AD8"), roughness: 0.5 });
+  const im = new THREE.MeshStandardMaterial({ color: 0x7fdcff, emissive: new THREE.Color("#145A88"), roughness: 0.5 });
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 16).rotateX(Math.PI / 2), im);
   shaft.position.set(0, 0.004, 0.03);
   const bearing = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 20).rotateX(Math.PI / 2), im);

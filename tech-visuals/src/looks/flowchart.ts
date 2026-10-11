@@ -21,9 +21,9 @@ export const BLUE_WHITE: FlowPalette = {
   bgLow: "#F6F8FA",
   bgHigh: "#F6F8FA",
   shape: "#1A8AE8",
-  shapeSide: "#1470C8",
+  shapeSide: "#1A86E2",
   line: "#1A1A1A",
-  shadow: 0.85,
+  shadow: 0.26,
   glow: 1.0,
   bloom: false,
   vignette: 0.0,
@@ -97,7 +97,7 @@ const buildGraph = () => {
   };
   const add = (x: number, y: number, kind: Kind, wh?: [number, number]) => {
     const [w, h] = wh ?? size(kind);
-    nodes.push({ x, y, w: w * 0.68, h: h * 0.68, kind, appear: 0, trigger: 0 });
+    nodes.push({ x, y, w: w * 0.58, h: h * 0.58, kind, appear: 0, trigger: 0 });
     return nodes.length - 1;
   };
   const link = (a: number, b: number, style: "straight" | "bus" | "diag") => {
@@ -393,12 +393,12 @@ export const createFlowchart = (pal: FlowPalette) => (): Look => {
           size: { value: new THREE.Vector2(n.w, n.h) },
           kind: { value: kindIdx },
           opacity: { value: pal.shadow },
-          blur: { value: 0.006 },
+          blur: { value: 0.022 },
           scale: { value: 1 },
         },
       }),
     );
-    sh.position.set(n.x + 0.018, n.y - 0.024, 0.002);
+    sh.position.set(n.x + 0.02, n.y - 0.026, 0.002);
     sh.renderOrder = 2;
     scene.add(sh, mesh);
     return { n, mesh, mat, side, sh };
@@ -414,7 +414,7 @@ export const createFlowchart = (pal: FlowPalette) => (): Look => {
     render(gl, frame) {
       const f = ((frame % DURATION) + DURATION) % DURATION;
       const cy = camY(f);
-      const sway = THREE.MathUtils.degToRad(1.6) * Math.sin((TAU * f) / DURATION);
+      const sway = THREE.MathUtils.degToRad(3.2) * Math.sin((TAU * f) / DURATION);
       const target = new THREE.Vector3(0, cy, 0);
       camera.position.set(
         Math.sin(sway) * CAM_D * Math.sin(TILT),

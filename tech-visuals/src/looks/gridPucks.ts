@@ -21,8 +21,8 @@ export const SLATE: GridPucksPalette = {
   line: "#8A9AAE",
   lineAlpha: 0.6,
   pucks: ["#F0B88A", "#F4C870", "#C8C0E0", "#7AB8E8", "#E8B8C8"],
-  shadow: 0.5,
-  vignette: 0.08,
+  shadow: 0.6,
+  vignette: 0.06,
   vignetteColor: "#2A3646",
 };
 
@@ -32,18 +32,18 @@ export const WHITE: GridPucksPalette = {
   line: "#BCBCC4",
   lineAlpha: 0.6,
   pucks: ["#9A7AE8", "#C87AD8", "#F0A04A", "#E8A88A", "#7A8AE8"],
-  shadow: 0.3,
-  vignette: 0.16,
-  vignetteColor: "#D4D4DA",
+  shadow: 0.36,
+  vignette: 0.3,
+  vignetteColor: "#D2CFCC",
 };
 
 // ---- Layout constants -------------------------------------------------------
 export const LOOP = 600;
 const PATCH = 40; // cells per periodic patch side
-const PUCKS_PER_PATCH = 400;
+const PUCKS_PER_PATCH = 560;
 const TILES = 1; // patches drawn each side of the centre patch (3×3 covers the whole view)
-const PUCK_R = 0.17;
-const PUCK_H = 0.045;
+const PUCK_R = 0.13;
+const PUCK_H = 0.058;
 const SLIDE = 14; // frames per one-cell slide
 const MOVER_SHARE = 0.66; // remaining pucks rest the whole loop → ~20% moving at any frame
 
@@ -119,16 +119,24 @@ const buildWalks = (): Walk[] => {
       path.push([px + dx, pz + dz]);
     }
     const w: Walk = { path, moves, phase: Math.floor(rnd() * LOOP), color: Math.floor(rnd() * 1e6) };
-    // test occupancy (current + destination, plus their 4-neighbourhood guard while sliding)
-    const cellsAt = (t: number) => {
-      const s = walkAt(w, (t + w.phase) % LOOP);
+    // Some movers travel as a rigid pair (a partner one cell over, same moves in lockstep), as in the
+    // reference — their spacing never changes, so they cannot touch each other.
+    const group: Walk[] = [w];
+    if (mover && rnd() < 0.45) {
+      const o: [number, number] = rnd() < 0.5 ? [1, 0] : [0, 1];
+      group.push({ ...w, path: path.map(([x, z]) => [x + o[0], z + o[1]] as [number, number]), color: Math.floor(rnd() * 1e6) });
+    }
+    // occupancy: every intersection a puck is on (or sliding between) at every frame
+    const cellsAt = (g: Walk, t: number) => {
+      const s = walkAt(g, (t + g.phase) % LOOP);
       return s.a === s.b ? [cell(s.a[0], s.a[1])] : [cell(s.a[0], s.a[1]), cell(s.b[0], s.b[1])];
     };
     let ok = true;
-    for (let t = 0; t < LOOP && ok; t++) for (const c of cellsAt(t)) if (occ[t * PATCH * PATCH + c]) ok = false;
+    for (const g of group)
+      for (let t = 0; t < LOOP && ok; t++) for (const c of cellsAt(g, t)) if (occ[t * PATCH * PATCH + c]) ok = false;
     if (!ok) continue;
-    for (let t = 0; t < LOOP; t++) for (const c of cellsAt(t)) occ[t * PATCH * PATCH + c] = 1;
-    walks.push(w);
+    for (const g of group) for (let t = 0; t < LOOP; t++) for (const c of cellsAt(g, t)) occ[t * PATCH * PATCH + c] = 1;
+    walks.push(...group);
   }
   return walks;
 };
@@ -218,7 +226,7 @@ void main() {
 export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
   const pipe = new Pipeline(4);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(17, 16 / 9, 0.5, 200);
+  const camera = new THREE.PerspectiveCamera(18, 16 / 9, 0.5, 200);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2),
@@ -230,7 +238,7 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
         cHigh: { value: new THREE.Color(pal.surfaceHigh) },
         cLine: { value: new THREE.Color(pal.line) },
         lineAlpha: { value: pal.lineAlpha },
-        lineW: { value: 0.01 },
+        lineW: { value: 0.013 },
         res: { value: new THREE.Vector2(1, 1) },
       },
     }),
@@ -282,9 +290,9 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       const t = (((frame % LOOP) + LOOP) % LOOP) / LOOP; // frame 600 ≡ frame 0 exactly
       // One closed camera lap per loop.
       const target = new THREE.Vector3(0.9 * Math.cos(TAU * t), 0, 0.6 * Math.sin(TAU * t));
-      const yaw = THREE.MathUtils.degToRad(30 + 2.5 * Math.sin(TAU * t));
-      const pitch = THREE.MathUtils.degToRad(31);
-      const dist = 12.5;
+      const yaw = THREE.MathUtils.degToRad(22 + 2.5 * Math.sin(TAU * t));
+      const pitch = THREE.MathUtils.degToRad(34);
+      const dist = 10.5;
       camera.position.set(
         target.x - Math.sin(yaw) * Math.cos(pitch) * dist,
         Math.sin(pitch) * dist,
@@ -295,7 +303,7 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       // contact shadow falls toward screen lower-right (key light from upper-left, behind)
       const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize();
       const toward = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 2).setY(0).normalize();
-      shadowOff.set(right.x * 0.07 + toward.x * 0.06, right.z * 0.07 + toward.z * 0.06);
+      shadowOff.set(right.x * 0.06 + toward.x * 0.07, right.z * 0.06 + toward.z * 0.07);
 
       pipe.begin(gl, clear);
       camera.aspect = pipe.w / pipe.h;
@@ -330,7 +338,7 @@ export const createGridPucks = (pal: GridPucksPalette) => (): Look => {
       gl.render(scene, camera);
       pipe.finish(gl, {
         camera,
-        dof: { focus: dist, range: 0.7, aperture: 2.3, maxRadius: 0.01 },
+        dof: { focus: dist, range: 0.5, aperture: 3.2, maxRadius: 0.01 },
         final: {
           frame,
           period: LOOP,

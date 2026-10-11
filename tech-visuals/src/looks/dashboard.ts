@@ -90,7 +90,7 @@ const SERIES_DATA = (() => {
     for (let i = 0; i < N_PTS; i++) {
       const trend = s.start + ((s.end - s.start) * i) / (N_PTS - 1);
       // rising walk with a strong alternating zig-zag, as in the reference
-      const zig = (i % 2 ? 1 : -1) * (0.35 + r() * 0.65) * (s.start * 0.45 + 20);
+      const zig = ((i + s.start) % 2 ? 1 : -1) * (0.6 + r() * 0.5) * (s.start * 0.4 + 30);
       v.push(Math.max(10, Math.min(495, trend + zig + (r() - 0.5) * 30)));
     }
     return v;
@@ -101,7 +101,7 @@ const SERIES_DATA = (() => {
 const BAR_DATA = (() => {
   const r = mulberry32(0x0bad5eed);
   return Array.from({ length: N_PTS }, (_, i) =>
-    SERIES_DATA.map((ser) => Math.max(40, Math.min(450, ser[i] * (0.75 + r() * 0.45) + 60))),
+    SERIES_DATA.map((ser) => Math.max(60, Math.min(450, ser[i] * (0.8 + r() * 0.4) + 90))),
   );
 })();
 
@@ -261,7 +261,7 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
       BAR_DATA[i].forEach((v0, si) => {
         const v = v0 * k;
         ctx.fillStyle = D.series[si].color;
-        ctx.globalAlpha = si === 2 ? 0.3 : 0.42;
+        ctx.globalAlpha = si === 2 ? 0.45 : 0.62;
         const bx = x - 52 + si * (w + 2);
         ctx.fillRect(bx, yOf(v), w, PLOT.y0 - yOf(v));
       });
@@ -398,11 +398,11 @@ const drawUI = (ctx: CanvasRenderingContext2D, f: number) => {
     roundRect(ctx, n, 16);
     ctx.clip();
     const gr = ctx.createLinearGradient(n.x, n.y, n.x + n.w, n.y + n.h);
-    gr.addColorStop(0, "#082052");
-    gr.addColorStop(1, "#040E2C");
+    gr.addColorStop(0, "#0C2C78");
+    gr.addColorStop(1, "#08205A");
     ctx.fillStyle = gr;
     ctx.fillRect(n.x, n.y, n.w, n.h);
-    ctx.strokeStyle = "rgba(80,170,255,0.45)";
+    ctx.strokeStyle = "rgba(90,150,255,0.6)";
     ctx.lineWidth = 3;
     for (let x = n.x + 20; x < n.x + n.w; x += 56) {
       ctx.beginPath();
@@ -437,7 +437,7 @@ export const createDashboard = () => (): Look => {
   uiScene.add(quad);
 
   // 3D: one turbine for the big panel, one for the close-up (separate scenes)
-  const mat = new THREE.MeshStandardMaterial({ color: 0xcfd4d9, roughness: 0.45, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xe8ebee, roughness: 0.5, metalness: 0 });
   const big = new THREE.Scene();
   const bigT = buildTurbine(mat);
   bigT.nacelle.rotation.y = THREE.MathUtils.degToRad(-18);
@@ -454,7 +454,7 @@ export const createDashboard = () => (): Look => {
     emissive: new THREE.Color("#0E3A66"),
     roughness: 0.35,
     transparent: true,
-    opacity: 0.42,
+    opacity: 0.72,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -536,7 +536,7 @@ export const createDashboard = () => (): Look => {
         const r = { ...L.nacelle, y: L.nacelle.y + (1 - k7) * 60 };
         viewport(gl, r, close, closeCam);
       }
-      pipe.finish(gl, { final: { frame: f, period: DURATION, grain: 0.015, vignette: 0.12 } });
+      pipe.finish(gl, { final: { frame: f, period: DURATION, grain: 0.015, vignette: 0.04 } });
     },
     dispose() {
       pipe.dispose();

@@ -88,7 +88,7 @@ const buildStrokes = (mode: HubMode): Stroke[] => {
   const T = (s: number) => (story ? s : -1000);
 
   // ---- hub (0–2 s): bright main ring, thin inner ring, segmented outer band with gaps ----
-  S.push({ pts: arc(HUB, R, Math.PI / 2, Math.PI / 2 + TAU, 128), width: 3.0, bright: 1.35, white: 0.8, start: T(4), dur: 40 });
+  S.push({ pts: arc(HUB, R, Math.PI / 2, Math.PI / 2 + TAU, 128), width: 2.0, bright: 1.05, white: 0.55, start: T(4), dur: 40 });
   S.push({ pts: arc(HUB, R * 0.8, -Math.PI / 2, -Math.PI / 2 + TAU, 112), width: 0.8, bright: 0.75, white: 0.5, start: T(14), dur: 36 });
   // outer band: four arc-band segments, gaps at about 10 and 2 o'clock and at the bottom (static)
   const r1 = R * 1.18;
@@ -109,7 +109,7 @@ const buildStrokes = (mode: HubMode): Stroke[] => {
     const a = (i / 12) * TAU + 0.26;
     const w = 0.07;
     const c = new THREE.Vector2(HUB.x + Math.cos(a) * R * 1.44, HUB.y + Math.sin(a) * R * 1.44);
-    const pts = [...arc(HUB, R * 1.4, a - w, a + w, 4), ...arc(HUB, R * 1.5, a + w, a - w, 4)];
+    const pts = [...arc(HUB, R * 1.36, a - w, a + w, 4), ...arc(HUB, R * 1.47, a + w, a - w, 4)];
     pts.push(pts[0].clone());
     S.push({ pts, width: 0.8, bright: 0.85, white: 0.4, start: T(44 + i * 1.5), dur: 8, ring: 1, teeth: c });
   }
@@ -172,11 +172,11 @@ const buildStrokes = (mode: HubMode): Stroke[] => {
     const pop = wStart + wDur;
     pops[di] = pop;
     const flash = { k: pulse.k, phase: pulse.phase, pop: story ? pop : -1000, center: d.p.clone() };
-    wing.push({ pts: roundRect(d.p, DEV_W, DEV_H, 0.006), width: 1.05, bright: 1.0, white: 0.5, start: T(pop - 2), dur: 2, flash });
+    wing.push({ pts: roundRect(d.p, DEV_W, DEV_H, 0.006), width: 1.05, bright: 1.15, white: 0.15, start: T(pop - 2), dur: 2, flash });
     // luminous card body
     wing.push({
       pts: [new THREE.Vector2(d.p.x - DEV_W * 0.38, d.p.y), new THREE.Vector2(d.p.x + DEV_W * 0.38, d.p.y)],
-      width: (DEV_H * 0.42) / 0.0011, bright: 0.16, white: 0, start: T(pop - 2), dur: 2, flash, fill: true,
+      width: (DEV_H * 0.42) / 0.0011, bright: 0.08, white: 0, start: T(pop - 2), dur: 2, flash, fill: true,
     });
     // document glyph: white text lines
     for (let k = 0; k < 4; k++) {
@@ -234,7 +234,7 @@ void main() {
 
 const STROKE_FRAG = /* glsl */ `
 uniform float frame; uniform float loopT; uniform float halfW; uniform float coreW; uniform float glowW;
-uniform vec3 cGlow; uniform vec3 cCore; uniform vec3 cBead; uniform float pulseOn;
+uniform vec3 cGlow; uniform vec3 cCore; uniform vec3 cBead; uniform vec3 cWire; uniform float pulseOn;
 varying vec4 vAcross; varying vec4 vAlong; varying vec4 vPulse; varying vec4 vFlash; varying float vScale; varying vec2 vSeg;
 float hash(float n) { return fract(sin(n) * 43758.5453123); }
 void main() {
@@ -262,9 +262,9 @@ void main() {
     float on = pulseOn * clamp(prog * 2.0 - 1.0, 0.0, 1.0);
     for (int i = 0; i < 2; i++) {
       float u = fract(vPulse.x * loopT + vPulse.y + float(i) * 0.5);
-      float dd = (s - u) * vAlong.y / 0.007;
+      float dd = (s - u) * vAlong.y / 0.016;
       bead += exp(-dd * dd) * on;
-      bead += ((s < u) ? exp(-(u - s) * vAlong.y / 0.02) * 0.2 : 0.0) * on;
+      bead += ((s < u) ? exp(-(u - s) * vAlong.y / 0.035) * 0.35 : 0.0) * on;
     }
   }
   // device flash when a bead arrives + a light step-schedule flicker
@@ -279,8 +279,9 @@ void main() {
     flash += (hash(step4 * 7.13 + vFlash.y * 91.7) - 0.5) * 0.18;
   }
   float br = b * (1.0 + flash) * vis;
-  vec3 coreC = mix(cGlow, cCore, vAcross.z);
-  vec3 col = (vAcross.w > 0.5 ? cGlow * core : coreC * core * 0.95 + cGlow * glow * 0.6) * br;
+  vec3 glowC = vAcross.y < 0.6 ? cWire : cGlow; // wires lean teal-cyan
+  vec3 coreC = mix(glowC, cCore, vAcross.z);
+  vec3 col = (vAcross.w > 0.5 ? cGlow * core : coreC * core * 0.95 + glowC * glow * 0.6) * br;
   col += (cBead * core * 1.8 + cBead * exp(-d * d / (glowW * glowW * 1.5)) * 0.7) * bead * vis;
   gl_FragColor = vec4(col, 1.0);
 }
@@ -399,6 +400,7 @@ export const createNetworkHub = (mode: HubMode) => (): Look => {
       cGlow: { value: new THREE.Color("#3A8AFF") },
       cCore: { value: new THREE.Color("#BFE0FF") },
       cBead: { value: new THREE.Color("#8AFFE0") },
+      cWire: { value: new THREE.Color("#2AB4F0") },
       pulseOn: { value: 1 },
     },
   });

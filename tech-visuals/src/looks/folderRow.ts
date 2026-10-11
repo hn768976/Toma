@@ -145,7 +145,7 @@ void main() {
   float dotv = dotOn * exp(-r * r) * tw;
   float dist = length(vW.xz - camPos.xz);
   float fade = exp(-dist * 0.05);
-  vec3 c = cBase * (1.0 + 1.2 * fade) + cLine * line * 0.7 * fade + cDot * dotv * 3.4 * fade;
+  vec3 c = cBase * (1.0 + 1.2 * fade) + cLine * line * 0.5 * fade + cDot * dotv * 3.0 * fade;
   c = mix(cFog, c, clamp(fade * 1.25, 0.0, 1.0));
   gl_FragColor = vec4(c, 0.82);
 }
@@ -170,7 +170,7 @@ uniform vec3 cFace; uniform vec3 lightDir;
 varying vec3 vW; varying vec3 vN;
 void main() {
   float ndl = abs(dot(normalize(vN), lightDir));
-  float fade = exp(vW.y * 3.0) * 0.6;
+  float fade = exp(vW.y * 3.0) * 0.38;
   gl_FragColor = vec4(cFace * (0.35 + 0.65 * ndl) * fade, 1.0);
 }
 `;
@@ -184,8 +184,8 @@ void main() {
   // drift: whole periods per loop
   if (seed.z < 0.5) p.x += periodX * t;               // horizontal dashes drift one period
   else p.y = mod(p.y - 0.4 + yRange * t * 2.0, yRange) + 0.4; // vertical dashes fall/rise twice
-  float span = periodX * 4.0;
-  float x0 = camX - periodX * 1.5;
+  float span = periodX * 2.0;
+  float x0 = camX - periodX * 0.6;
   p.x = x0 + mod(p.x - x0, span);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
@@ -210,19 +210,19 @@ const buildStreams = () => {
   const target = 8000;
   // dashed lines laid out inside one period [0, 14.4) then repeated ×4 along x
   const perTile: [number, number, number, number, number][] = [];
-  while (perTile.length < target / 4) {
+  while (perTile.length < target / 2) {
     const z = -1.6 - r() * 5.5;
     const vertical = r() < 0.45;
-    const n = 4 + Math.floor(r() * 9);
+    const n = vertical ? 8 + Math.floor(r() * 18) : 4 + Math.floor(r() * 9);
     const gap = 0.07 + r() * 0.05;
     const x = r() * PERIOD_X;
     const y = Math.pow(r(), 1.4) * 2.6;
-    for (let i = 0; i < n && perTile.length < target / 4; i++) {
+    for (let i = 0; i < n && perTile.length < target / 2; i++) {
       if (r() < 0.15) continue; // dash gaps
       perTile.push(vertical ? [x, y + i * gap, z, 1, r()] : [x + i * gap, y, z, 0, r()]);
     }
   }
-  for (let k = 0; k < 4; k++)
+  for (let k = 0; k < 2; k++)
     for (const [x, y, z, kind, ph] of perTile) {
       pos.push(x + k * PERIOD_X, y, z);
       seed.push(ph, 1 + Math.floor(ph * 4), kind, 0.011 + 0.012 * ((ph * 7.31) % 1));
@@ -246,7 +246,7 @@ export const createFolderRow = () => (): Look => {
       fragmentShader: BG_FRAG,
       depthWrite: false,
       uniforms: {
-        cTop: { value: new THREE.Color("#06205E") },
+        cTop: { value: new THREE.Color("#041A52") },
         cMid: { value: new THREE.Color("#0C2E82") },
         cHorizon: { value: new THREE.Color("#163C9E") },
       },
@@ -332,7 +332,7 @@ export const createFolderRow = () => (): Look => {
   scene.add(rowL, rowR);
 
   // distance falloff into saturated blue, as in the reference
-  scene.fog = new THREE.Fog(new THREE.Color("#163C9E"), 4.5, 15);
+  scene.fog = new THREE.Fog(new THREE.Color("#163C9E"), 4.0, 12);
   scene.add(new THREE.HemisphereLight(new THREE.Color("#7A92E0"), new THREE.Color("#0A1A50"), 1.1));
   const key = new THREE.DirectionalLight(new THREE.Color("#C0D0FF"), 2.9);
   key.position.set(-8, 3.5, 3.5);
@@ -355,7 +355,7 @@ export const createFolderRow = () => (): Look => {
       const camX = t * PERIOD_X;
       const bob = 0.025 * Math.sin(TAU * t);
       camera.position.set(camX - 3.5, 1.6 + bob, 5.0);
-      camera.lookAt(camX + 1.5, 0.42 + bob * 0.5, 0);
+      camera.lookAt(camX + 1.5, 0.12 + bob * 0.5, 0);
       camera.updateMatrixWorld();
 
       const first = Math.floor(camX / SPACING) - 14;
@@ -401,7 +401,7 @@ export const createFolderRow = () => (): Look => {
           period: LOOP,
           grain: 0.02,
           vignette: 0.35,
-          flare: { pos: [-0.01, 0.6], color: new THREE.Color("#4A8AFF"), radius: 0.2, intensity: 0.7, streak: 0.5 },
+          flare: { pos: [-0.01, 0.6], color: new THREE.Color("#4A8AFF"), radius: 0.22, intensity: 0.95, streak: 0.8 },
         },
       });
     },
