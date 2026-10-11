@@ -33,7 +33,7 @@ export const ROWS: Row[] = [
   {id: 'Indonesia', label: 'Indonesia', flag: 'Indonesia'},
   {id: 'Netherlands', label: 'Netherlands', flag: 'Netherlands'},
   {id: 'UAE', label: 'United Arab Emirates', flag: 'UAE'},
-  {id: 'Turkiye', label: 'Türkiye', flag: 'Turkiye'},
+  {id: 'Turkiye', label: 'Türkiye', flag: 'Turkiye', cardOffset: {x: 0.14}}, // crescent sits toward the hoist
   {id: 'Switzerland', label: 'Switzerland', flag: 'Switzerland'},
   {id: 'Argentina', label: 'Argentina', flag: 'Argentina'},
   {id: 'SouthAfrica', label: 'South Africa', flag: 'SouthAfrica'},

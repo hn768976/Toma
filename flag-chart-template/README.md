@@ -96,8 +96,8 @@ GPU**: expect roughly 0.5–1.5 s per 4K frame there.
   width from the flag's official ratio, shrunk only if it would exceed 55% of
   the frame width (UK, USA, Canada…). Growth's tall bars stand at the near end,
   in front of the card's centre, so the Growth preset moves the card further
-  right (`cardShift`); a per-row `cardOffset` nudges single flags (Spain, whose
-  arms sit toward the hoist).
+  right (`cardShift`); a per-row `cardOffset` nudges single flags (Spain and
+  Türkiye, whose emblems sit toward the hoist).
 - **Bars:** 9 rounded boxes, glossy white `#F4F6FA` with a cool fill in the
   shadows; heights seeded per country (`src/data/rows.ts`, module-level
   `mulberry32`): rising 10% → 100% with two small dips for Growth, the same
