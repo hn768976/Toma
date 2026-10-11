@@ -77,6 +77,7 @@ type CamCfg = {
   glowScale?: number; // LED halo size
   vignette?: number;
   underLight?: number; // cool light from below the camera (3C)
+  lift?: number; // raises the blacks to charcoal (3B)
   haze?: { color: THREE.ColorRepresentation; density: number };
 };
 
@@ -119,13 +120,14 @@ const CAMS: Record<RackVersion, CamCfg> = {
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
       const gx = SWITCH0.x + W * (t - 0.25);
       const gy = SWITCH0.y - H * (t - 0.25);
-      const dist = 0.56;
+      const dist = 1.0;
       cam.position.set(gx - fwd.x * dist, gy - fwd.y * dist, 0.035 - fwd.z * dist);
     },
     focus: (cam) => faceDistance(cam, 0.0, 0.0) - 0.06,
-    post: { dof: { aperture: 11, maxCoc: 12, nearScale: 0.6 }, ca: 0 },
-    exposure: 2.4,
+    post: { dof: { aperture: 22, maxCoc: 16, nearScale: 0.6, edge: 10 }, ca: 0 },
+    exposure: 2.2,
     vignette: 0.35,
+    lift: 0.012,
   },
   // 3C: low, looking up along the face at about 20 deg; rises by H.
   low: {
@@ -339,11 +341,11 @@ let bootProto: THREE.BufferGeometry | null = null;
 const bootGeometry = () => {
   if (!bootProto) {
     const pts: THREE.Vector2[] = [];
-    const L = 0.042;
+    const L = 0.058;
     for (let i = 0; i <= 28; i++) {
       const u = i / 28;
       // Tapers from the plug toward the cable, with ridges on the body.
-      let r = 0.0102 - 0.004 * u;
+      let r = 0.0108 - 0.0042 * u;
       if (u > 0.2 && u < 0.85) r += 0.0009 * (0.5 + 0.5 * Math.cos(u * Math.PI * 18));
       if (u > 0.92) r *= Math.sqrt(Math.max(0, (1 - u) / 0.08)) * 0.4 + 0.6;
       pts.push(new THREE.Vector2(Math.max(0.0001, r), u * L));
@@ -565,7 +567,7 @@ const makeFactory =
     scene.add(glowMesh);
 
     // Patch cables on the switches: two bundle variants (one per rack).
-    const cableBlue = new THREE.MeshStandardMaterial({ color: "#2A4A9A", roughness: 0.48, metalness: 0.0, envMapIntensity: 0.8 });
+    const cableBlue = new THREE.MeshStandardMaterial({ color: "#2A4A9A", roughness: 0.6, metalness: 0.0, envMapIntensity: 0.55 });
     const cableRed = new THREE.MeshStandardMaterial({ color: "#B3201A", roughness: 0.42, metalness: 0.0, envMapIntensity: 1.2 });
     const plugMat = new THREE.MeshPhysicalMaterial({
       color: "#A8C0E8",
@@ -608,7 +610,7 @@ const makeFactory =
     const post = new PostChain(renderer, width, height, {
       dof: cfg.post.dof,
       bloom: { threshold: 1.2, knee: 0.6, intensity: cfg.bloom ?? 0.38 },
-      grade: { exposure: cfg.exposure ?? 1.15, tint: [1.0, 1.0, 1.01], lift: [0.003, 0.003, 0.004], saturation: 0.95, contrast: 1.1 },
+      grade: { exposure: cfg.exposure ?? 1.15, tint: [1.0, 1.0, 1.01], lift: [0.003 + (cfg.lift ?? 0), 0.003 + (cfg.lift ?? 0), 0.004 + (cfg.lift ?? 0) * 1.4], saturation: 0.95, contrast: 1.1 },
       vignette: { strength: cfg.vignette ?? 0.62, radius: 0.32, softness: 0.75 },
       ca: cfg.post.ca ?? 0,
       grain: 0.015,
