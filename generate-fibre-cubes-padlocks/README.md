@@ -84,8 +84,8 @@ excluded. `scripts/time-render.sh` reproduces it.
 | GenerateButton-Circuit | 0.17 | ~1.5 | ~11 min |
 | GenerateButton-Waveform | 0.18 | ~1.5 | ~11 min |
 | GenerateButton-CircuitWarm | 0.24 | ~1.6 | ~12 min |
-| FibreRibbon-Blue | 1.92 | ~13 | ~2.2 h |
-| FibreRibbon-Violet | 1.83 | ~13 | ~2.2 h |
+| FibreRibbon-Blue | 2.41 | ~17 | ~2.8 h |
+| FibreRibbon-Violet | 2.31 | ~16 | ~2.7 h |
 | CubeNetwork-Blue | 1.72 | ~12 | ~2.0 h |
 | PadlockField-TopDownOrange | 2.41 | ~17 | ~2.8 h |
 | PadlockField-FlyOverCyan | 5.01 | **~35 (timed)** | ~5.8 h |
@@ -132,6 +132,18 @@ SwiftShader frames of the padlock looks can exceed Remotion's default 30 s
      triangular dither as the very last step.
 
   There is no TAA and there are no history buffers.
+- **Fibre Ribbon curves** (`src/fibre/ribbonPath.ts`):
+  - The centre line is a centripetal Catmull-Rom spline sampled at 1000
+    points.
+  - Both turns have a radius well above the ribbon's half-width, so fibres on
+    the inside of a turn never fold into a cusp.
+  - The camera-facing twist of the band is smoothed along its length (about
+    10 world units), so no fibre kinks where the path turns toward the camera.
+  - `node scripts/check-fibre-smoothness.mjs` projects the fibres with the shot
+    camera at 4K and reports the tightest on-screen radius and any folds. It
+    now reports 0 folds, a sharpest bend of under 5° per segment and a
+    tightest radius of about 33 px. Before the fix the left bend had a 70°
+    kink.
 - **Thin lines** (fibres, network lines) are camera-facing strips
   (`src/lib/strips.ts`). Their width is in world units with a minimum pixel
   width, so they stay anti-aliased at any resolution. A depth-only pre-pass
@@ -172,6 +184,7 @@ REMOTION_LOOP_CHECK=1 …            # makes loop compositions 601 frames long
 scripts/loop-check.sh <ids…>        # frame 0 vs 600, pixel for pixel
 scripts/determinism-check.sh <id> <frames…>   # cold still vs multi-threaded range render
 scripts/contact-sheet.sh <id> <duration>      # 5 evenly spaced frames
+node scripts/check-fibre-smoothness.mjs       # fibre ribbon: sharpest on-screen bend, folds
 scripts/verify-all.sh               # all of the above for all 8
 ```
 

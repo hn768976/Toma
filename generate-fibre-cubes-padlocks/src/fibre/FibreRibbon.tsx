@@ -5,33 +5,11 @@ import { PostPipeline } from "../lib/post";
 import { mulberry32 } from "../lib/random";
 import { buildStripGeometry, makeStripDepthMaterial, STRIP_VERT, StripLine } from "../lib/strips";
 import { LookFactory, ThreeLook } from "../lib/ThreeLook";
+import { buildRibbonFrame, CAMERA_POS, CAMERA_TARGET, RIBBON_HALF, SEGMENTS } from "./ribbonPath";
 
 const TAU = Math.PI * 2;
 const FIBRES = 120;
-const SEGMENTS = 360;
 const BOARD_Y = -3.2;
-
-// S-curve centre line (x, y, z). Far end top-left, loops back at the right,
-// crosses the frame and comes toward the camera at the lower centre-right.
-const PATH_POINTS: [number, number, number][] = [
-  [-60, 3.4, -52],
-  [-30, 3.4, -52],
-  [-4, 3.2, -51],
-  [15, 2.6, -48],
-  [25, 1.2, -42],
-  [21, 0.6, -33],
-  [8, 0.0, -27],
-  [-5, -0.4, -21.5],
-  [-11.5, -0.7, -15.5],
-  [-12.0, -0.9, -9.5],
-  [-8.5, -1.0, -4],
-  [-2.5, -1.1, 1.2],
-  [2.2, -1.2, 4.6],
-  [4.6, -1.25, 7.0],
-];
-
-const CAMERA_POS = new THREE.Vector3(1.6, 6.2, 13.5);
-const CAMERA_TARGET = new THREE.Vector3(1.6, -3.4, -18);
 
 const drawBoardTexture = (seed: number, color: string) => {
   const rng = mulberry32(seed * 977 + 13);
@@ -116,36 +94,10 @@ const makeFactory = (row: FibreRow): LookFactory => (gl, w, h) => {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, w / h, 0.5, 400);
 
-  const path = new THREE.CatmullRomCurve3(
-    PATH_POINTS.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
-    false,
-    "centripetal",
-  );
-  const up = new THREE.Vector3(0, 1, 0);
-  const centre: THREE.Vector3[] = [];
-  const sideV: THREE.Vector3[] = [];
-  const upV: THREE.Vector3[] = [];
-  for (let i = 0; i <= SEGMENTS; i++) {
-    const t = i / SEGMENTS;
-    const p = path.getPointAt(t);
-    const tan = path.getTangentAt(t);
-    // the band's broad face turns toward the camera (as in a filmed
-    // ribbon), mixed with "flat on the ground" so it still lies in space
-    const toCam = CAMERA_POS.clone().sub(p).normalize();
-    const faceN = up.clone().multiplyScalar(0.35).addScaledVector(toCam, 0.65).normalize();
-    const s = new THREE.Vector3().crossVectors(tan, faceN).normalize();
-    const u = new THREE.Vector3().crossVectors(s, tan).normalize();
-    // bank the band a little in the turns so it reads as a twisting ribbon
-    const bank = 0.15 * Math.sin(t * Math.PI * 2.0);
-    s.applyAxisAngle(tan, bank);
-    u.applyAxisAngle(tan, bank);
-    centre.push(p);
-    sideV.push(s);
-    upV.push(u);
-  }
+  // smooth centre line + side/up frame (twist smoothed so no fibre kinks)
+  const { path, centre, side: sideV, up: upV } = buildRibbonFrame(SEGMENTS);
 
   const lines: StripLine[] = [];
-  const RIBBON_HALF = 1.9;
   for (let f = 0; f < FIBRES; f++) {
     // loose bundles with small gaps so single fibres read
     const bundle = Math.floor(f / 4);
@@ -254,16 +206,8 @@ const makeFactory = (row: FibreRow): LookFactory => (gl, w, h) => {
   fibres.frustumCulled = false;
   scene.add(depthMesh, fibres);
 
-  // faint reflection of the ribbon in the board: mirrored copy, dimmed
-  const reflUniforms = { ...fibreUniforms, uGain: { value: 0.03 } };
-  const reflMat = fibreMat.clone();
-  reflMat.uniforms = reflUniforms;
-  const refl = new THREE.Mesh(geo, reflMat);
-  refl.scale.set(1, -1, 1);
-  refl.position.y = BOARD_Y * 2;
-  refl.renderOrder = 2;
-  refl.frustumCulled = false;
-  scene.add(refl); // very faint mirror copy; the DoF blurs it into soft streaks
+  // (no mirrored copy of the ribbon: seen from below its hairpin reads as a
+  // sharp spike; the board's soft glow under the path stands in for it)
 
   // sparkles along fibres
   const SPARKS = 380;
@@ -389,7 +333,6 @@ const makeFactory = (row: FibreRow): LookFactory => (gl, w, h) => {
     render: (frame) => {
       const ph = (((frame % LOOP_FRAMES) + LOOP_FRAMES) % LOOP_FRAMES) / LOOP_FRAMES;
       fibreUniforms.uPhase.value = ph;
-      reflUniforms.uPhase.value = ph;
       sparkMat.uniforms.uPhase.value = ph;
       // slow drift: whole cycles over the loop
       camPos.copy(CAMERA_POS);
@@ -406,7 +349,6 @@ const makeFactory = (row: FibreRow): LookFactory => (gl, w, h) => {
       post.dispose();
       geo.dispose();
       fibreMat.dispose();
-      reflMat.dispose();
       fibreDepth.dispose();
       sparkGeo.dispose();
       sparkMat.dispose();
