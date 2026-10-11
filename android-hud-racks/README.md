@@ -117,6 +117,10 @@ by the same script and stored in the file's JSON header.
   cables are `TubeGeometry` port-to-port loops with clear plugs and boots
   (one red per switch). LED blink schedules are an integer hash of
   `(frame % 600, seed)` in the shader.
+  - Rack 2's column is a phase-shifted copy, so its switch sits half a
+    period below rack 1's. 3B's diagonal glide then crosses both switches
+    head-on (at t = 0.25 and 0.75).
+  - 3C adds a cool distance haze, a low side light and dimmed green LEDs.
 
 ### Determinism
 
@@ -150,19 +154,19 @@ including startup):
 | AndroidTraderHUD-Left | 600 | 633 s | 1.05 s |
 | AndroidTraderHUD-Right | 600 | 669 s | 1.12 s |
 | GrowthChartHUD-Story | 450 | 275 s | 0.61 s |
-| ServerRack-FrontScroll | 600 | 949 s | 1.58 s |
-| ServerRack-DiagonalGlide | 600 | 1507 s | 2.51 s |
-| ServerRack-LowAngle | 600 | 1716 s | 2.86 s |
+| ServerRack-FrontScroll | 600 | 1026 s | 1.71 s |
+| ServerRack-DiagonalGlide | 600 | 1449 s | 2.41 s |
+| ServerRack-LowAngle | 600 | 2407 s | 4.01 s |
 
 **Two real 4K frames** (3840×2160, 1 tab, SwiftShader):
 
 | Composition | 1 frame (cold, incl. startup) | 4 frames | Marginal cost per frame |
 |---|---|---|---|
 | AndroidTraderHUD-Left (frame 150) | 20.1 s | 40.2 s | **6.7 s** |
-| ServerRack-DiagonalGlide (frame 150) | 41.4 s | 89.1 s | **15.9 s** |
+| ServerRack-DiagonalGlide (frame 150) | 38.2 s | 78.0 s | **13.3 s** |
 
-**4K estimates.** Both timed compositions came out about 6.3× their 720p
-per-frame cost, so the others are scaled by the same factor. On this CPU
+**4K estimates.** The two timed compositions came out 5.5–6.4× their 720p
+per-frame cost, so the others are scaled by about 6×. On this CPU
 box:
 
 | Composition | Estimate |
@@ -170,9 +174,9 @@ box:
 | AndroidTraderHUD-Left | ≈ 67 min |
 | AndroidTraderHUD-Right | ≈ 71 min |
 | GrowthChartHUD-Story | ≈ 29 min |
-| ServerRack-FrontScroll | ≈ 100 min |
-| ServerRack-DiagonalGlide | ≈ 160 min |
-| ServerRack-LowAngle | ≈ 180 min |
+| ServerRack-FrontScroll | ≈ 105 min |
+| ServerRack-DiagonalGlide | ≈ 135 min |
+| ServerRack-LowAngle | ≈ 240 min |
 
 On a desktop GPU with `--gl=angle`, expect roughly an order of magnitude
 less. That is an estimate, not a measurement.
