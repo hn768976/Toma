@@ -110,7 +110,8 @@ const S1: UnitType = {
     p.slotGrid(284, 22, 264, 56, 14, 4, 0.6, true);
     p.plate(656, 10, 280, 80, { color: "#222428", rough: 0.45, height: 0.52 });
     p.slotGrid(668, 20, 256, 60, 9, 3, 0.66);
-    p.circle(950, 50, 6, { color: "#050506", height: 0.3 });
+    p.circle(950, 30, 6, { color: "#050506", height: 0.3 });
+    p.circle(950, 70, 6, { color: "#050506", height: 0.3 });
     p.plate(966, 14, 72, 72, { color: DARK, rough: 0.5, height: 0.4 });
     p.brushed(11);
     grime(p, 111, PANEL_W, 100);
@@ -124,7 +125,8 @@ const S1: UnitType = {
   leds: [
     { x: 166, y: 30, kind: "red", mode: "blink" },
     { x: 166, y: 70, kind: "orange", mode: "steady" },
-    { x: 950, y: 50, kind: "red", mode: "blip" },
+    { x: 950, y: 30, kind: "red", mode: "blip" },
+    { x: 950, y: 70, kind: "orange", mode: "steady" },
   ],
   ports: [],
   spare: [],
@@ -151,8 +153,8 @@ const S3: UnitType = {
   handles: [],
   caddies: Array.from({ length: 8 }, (_, i) => ({ x: 48 + i * 83, y: 8, w: 80, h: 84, variant: "sff" as const })),
   leds: [
-    { x: 952, y: 34, kind: "green", mode: "flicker" },
-    { x: 952, y: 66, kind: "orange", mode: "blink" },
+    { x: 952, y: 34, kind: "red", mode: "blink" },
+    { x: 952, y: 66, kind: "orange", mode: "steady" },
     ...Array.from({ length: 8 }, (_, i) => ({
       x: 48 + i * 83 + 68,
       y: 78,
@@ -206,6 +208,7 @@ const P2: UnitType = {
     p.slotGrid(602, 26, 356, 148, 6, 9, 0.7);
     p.circle(1000, 60, 6, { color: "#050506", height: 0.3 });
     p.circle(1000, 100, 6, { color: "#050506", height: 0.3 });
+    p.circle(1000, 140, 6, { color: "#050506", height: 0.3 });
     controls(p, 990, 150);
     p.brushed(19);
     grime(p, 119, PANEL_W, 200);
@@ -215,7 +218,8 @@ const P2: UnitType = {
   caddies: [],
   leds: [
     { x: 1000, y: 60, kind: "green", mode: "steady" },
-    { x: 1000, y: 100, kind: "green", mode: "blip" },
+    { x: 1000, y: 100, kind: "orange", mode: "blip" },
+    { x: 1000, y: 140, kind: "red", mode: "blink" },
   ],
   ports: [],
   spare: [],
@@ -292,7 +296,10 @@ const B1: UnitType = {
     { x: PANEL_W - 30, y: 20, w: 24, h: 60, vertical: true },
   ],
   caddies: [],
-  leds: [],
+  leds: [
+    { x: 1014, y: 30, kind: "red", mode: "steady" },
+    { x: 1014, y: 70, kind: "orange", mode: "blink" },
+  ],
   ports: [],
   spare: [],
 };

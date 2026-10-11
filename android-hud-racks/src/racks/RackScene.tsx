@@ -49,6 +49,18 @@ const makeColumn = (seed: number) => {
 const COLUMNS = [makeColumn(1183), makeColumn(4062)];
 const H = COLUMNS[0].reduce((a, u) => a + u.type.heightU * U, 0) * M;
 
+// Each column holds one switch. Rack 2's column is shifted down (a pure
+// phase shift of the periodic column) so its switch sits exactly H/2 below
+// rack 1's. The diagonal glide moves (W, H) per loop, i.e. one rack pitch
+// per H/2, so it can cross both switches head-on.
+const switchTop = (r: number) => COLUMNS[r].find((u) => u.type.ports.length)!.top * M;
+const RACK_SHIFT = [0, (((switchTop(0) + H / 2 - switchTop(1)) % H) + H) % H];
+// Centre of the cable mass above the switch of rack 0 (copy 0, 0).
+const SWITCH0 = {
+  x: (560 - PANEL_W / 2) * M,
+  y: -switchTop(0) - 0.05 + 0.2,
+};
+
 export type RackVersion = "front" | "diagonal" | "low";
 
 type CamCfg = {
@@ -60,6 +72,8 @@ type CamCfg = {
   post: Partial<PostOptions> & { dof: NonNullable<PostOptions["dof"]> };
   exposure?: number;
   ledGain?: number; // LED brightness and glow size multiplier
+  bloom?: number;
+  haze?: { color: THREE.ColorRepresentation; density: number };
 };
 
 // Distance along the view axis to the rack face (z = 0) through the
@@ -93,10 +107,18 @@ const CAMS: Record<RackVersion, CamCfg> = {
     copiesY: [-1, 3],
     fov: 36,
     pose: (t, cam) => {
-      cam.position.set(-0.1 + W * t, 0.16 - H * t, 0.4);
-      cam.rotation.set(THREE.MathUtils.degToRad(-42), THREE.MathUtils.degToRad(-35), THREE.MathUtils.degToRad(28), "YXZ");
+      // High, looking steeply down onto the rack faces. The point the view
+      // centre lands on travels (W, -H) per loop and passes over the cable
+      // mass of rack 1's switch at t = 0.25 and rack 2's at t = 0.75.
+      cam.rotation.set(THREE.MathUtils.degToRad(-52), THREE.MathUtils.degToRad(-30), THREE.MathUtils.degToRad(30), "YXZ");
+      cam.updateMatrixWorld();
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+      const gx = SWITCH0.x + W * (t - 0.25);
+      const gy = SWITCH0.y - H * (t - 0.25);
+      const dist = 0.62;
+      cam.position.set(gx - fwd.x * dist, gy - fwd.y * dist, 0.035 - fwd.z * dist);
     },
-    focus: (cam) => faceDistance(cam, 0.05, 0.0),
+    focus: (cam) => faceDistance(cam, 0.0, 0.0) - 0.06,
     post: { dof: { aperture: 28, maxCoc: 22, nearScale: 0.7 }, ca: 0 },
     exposure: 1.9,
   },
@@ -112,8 +134,11 @@ const CAMS: Record<RackVersion, CamCfg> = {
     },
     focus: (cam) => faceDistance(cam, 0, -0.1),
     post: { dof: { aperture: 26, maxCoc: 20, nearScale: 0.9 }, ca: 2 },
-    exposure: 0.75,
-    ledGain: 1.8,
+    exposure: 0.8,
+    ledGain: 2.6,
+    bloom: 0.6,
+    // Cool blue distance haze: the far racks fade into blue-lit darkness.
+    haze: { color: "#16305A", density: 0.42 },
   },
 };
 
@@ -283,9 +308,10 @@ const buildCables = (t: UnitType, seed: number) => {
     const pts = [
       new THREE.Vector3(x0, y0, z0),
       new THREE.Vector3(x0, y0, z0 + 0.03),
-      new THREE.Vector3(x0 + 0.01, y0 + 0.05, z0 + 0.05),
-      new THREE.Vector3(x0 + 0.03, y0 + 0.2, z0 + 0.045),
-      new THREE.Vector3(x0 + 0.04, y0 + 0.5, 0.05),
+      new THREE.Vector3(x0 + 0.012, y0 + 0.045, z0 + 0.045),
+      new THREE.Vector3(x0 + 0.045, y0 + 0.1, 0.045),
+      new THREE.Vector3(x0 + 0.075, y0 + 0.13, 0.0),
+      new THREE.Vector3(x0 + 0.085, y0 + 0.16, -0.06),
     ];
     red.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), 72, 0.0068, 10, false));
     plugAt(x0, y0, bootsRed);
@@ -355,13 +381,13 @@ const makeFactory =
     // Placements.
     const placements: Placement[] = [];
     for (let cx = cfg.copiesX[0]; cx <= cfg.copiesX[1]; cx++)
-      for (let cy = cfg.copiesY[0]; cy <= cfg.copiesY[1]; cy++)
+      for (let cy = cfg.copiesY[0] - 1; cy <= cfg.copiesY[1]; cy++)
         for (let r = 0; r < RACKS; r++)
           for (const u of COLUMNS[r]) {
             placements.push({
               type: u.type,
               x: cx * W + r * RACK_PITCH - (PANEL_W * M) / 2,
-              y: -(cy * H) - u.top * M,
+              y: -(cy * H) - u.top * M - RACK_SHIFT[r],
               rack: r,
               copy: cx * 31 + cy,
             });
@@ -369,7 +395,7 @@ const makeFactory =
 
     const pos = new THREE.Vector3();
     const scl = new THREE.Vector3();
-    const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(-16));
+    const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(-24));
     const rotZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
     const ident = new THREE.Quaternion();
 
@@ -407,7 +433,7 @@ const makeFactory =
         const gap = f.h / f.n;
         for (let i = 0; i < f.n; i++) {
           const [x, y] = at(f.x + f.w / 2, f.y + gap * (i + 0.5));
-          fins.push(M4(x, y, 0.007, f.w * M, gap * 0.42 * M, 0.018, tilt));
+          fins.push(M4(x, y, 0.011, f.w * M, gap * 0.42 * M, 0.026, tilt));
         }
       }
       for (const h of t.handles) {
@@ -537,10 +563,11 @@ const makeFactory =
     scene.add(slide);
     scene.add(slide.target);
 
+    if (cfg.haze) scene.fog = new THREE.FogExp2(new THREE.Color(cfg.haze.color).getHex(), cfg.haze.density);
     const camera = new THREE.PerspectiveCamera(cfg.fov, width / height, 0.02, 40);
     const post = new PostChain(renderer, width, height, {
       dof: cfg.post.dof,
-      bloom: { threshold: 1.2, knee: 0.6, intensity: 0.38 },
+      bloom: { threshold: 1.2, knee: 0.6, intensity: cfg.bloom ?? 0.38 },
       grade: { exposure: cfg.exposure ?? 1.15, tint: [1.0, 1.0, 1.01], lift: [0.003, 0.003, 0.004], saturation: 0.95, contrast: 1.1 },
       vignette: { strength: 0.62, radius: 0.32, softness: 0.75 },
       ca: cfg.post.ca ?? 0,
