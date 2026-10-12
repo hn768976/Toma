@@ -14,10 +14,12 @@ vec3 ditherGrain(vec3 col, vec2 fc, float frame, float grain){
 }`;
 
 export const FINAL_PASS = {
-  uniforms: { tDiffuse: { value: null }, uFrame: { value: 0 }, uGrain: { value: 0.015 } },
+  uniforms: { tDiffuse: { value: null }, uFrame: { value: 0 }, uGrain: { value: 0.015 }, uVignette: { value: 0 } },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */ `
-uniform sampler2D tDiffuse; uniform float uFrame; uniform float uGrain; varying vec2 vUv;
+uniform sampler2D tDiffuse; uniform float uFrame; uniform float uGrain; uniform float uVignette; varying vec2 vUv;
 ${GRAIN_GLSL}
-void main(){ vec4 c = texture2D(tDiffuse, vUv); gl_FragColor = vec4(ditherGrain(c.rgb, gl_FragCoord.xy, uFrame, uGrain), 1.0); }`,
+void main(){ vec4 c = texture2D(tDiffuse, vUv);
+  vec2 q = (vUv - 0.5) * vec2(1.0, 0.75); c.rgb *= 1.0 - uVignette * smoothstep(0.12, 0.62, dot(q, q) * 2.2);
+  gl_FragColor = vec4(ditherGrain(c.rgb, gl_FragCoord.xy, uFrame, uGrain), 1.0); }`,
 };

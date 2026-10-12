@@ -73,8 +73,8 @@ export const VERSIONS: Version[] = [
     props: {
       bg: "#12062A",
       grid: "#3A2A6A",
-      violet: [122, 42, 200],
-      magenta: [200, 58, 200],
+      violet: [110, 30, 210],
+      magenta: [190, 40, 200],
       deep: [42, 26, 106],
       dots: ["#F0F0FF", "#C8B0FF", "#5AE8F0", "#FF8AD8"],
       text: "#C8B0FF",
@@ -99,8 +99,8 @@ export const VERSIONS: Version[] = [
       point: [0.784, 0.847, 0.941], // #C8D8F0
       glowL: [0.541, 0.353, 1.0], // #8A5AFF
       glowR: [0.227, 0.784, 1.0], // #3AC8FF
-      haze: [0.03, 0.05, 0.11],
-      bg: [0.008, 0.01, 0.02],
+      haze: [0.05, 0.08, 0.14],
+      bg: [0.05, 0.068, 0.1],
     },
   },
 ];

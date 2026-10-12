@@ -26,7 +26,7 @@ export type CoinBadgeProps = {
 
 // ------------------------------------------------------------ geometry --
 const RB = 1; // ring radius (world units)
-const TILT = (36 * Math.PI) / 180;
+const TILT = (44 * Math.PI) / 180;
 
 type RayData = { geo: THREE.BufferGeometry };
 
@@ -101,7 +101,7 @@ const buildRays = (): RayData => {
       quad(pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1], acc, acc + l, m, total);
       acc += l;
     }
-    dot(pts[pts.length - 1][0], pts[pts.length - 1][1], 0.035, m, total, total);
+    dot(pts[pts.length - 1][0], pts[pts.length - 1][1], 0.022, [m[0], m[1], m[2] * 0.5], total, total);
     dot(pts[0][0], pts[0][1], 0.02, m, 0, total);
   }
   const geo = new THREE.BufferGeometry();
@@ -136,7 +136,7 @@ void main(){
   }
   float fade = exp(-vAlong / 1.15);                // traces fade with distance from the ring
   float b = vMeta.z * (0.1 + 1.25 * fade + 2.2 * pulse * (0.35 + fade));
-  vec3 col = mix(uColor2, uColor, smoothstep(0.0, 0.9, vAlong));   // warm near the ring
+  vec3 col = mix(uColor2, uColor, smoothstep(0.1, 1.5, vAlong));   // warm near the ring
   gl_FragColor = vec4(col * b * a, 1.0);
 }`;
 
@@ -162,7 +162,8 @@ const buildNebulaTexture = (c1: string, c2: string) => {
       n /= norm;
       // band along one diagonal (2-fold), fading with radius
       const band = 0.5 + 0.5 * Math.cos(2 * (Math.atan2(y, x) - 0.6));
-      const dens = Math.max(0, n - 0.3) * 5.5 * (0.2 + 0.8 * band ** 2) * Math.exp(-((rr / 0.62) ** 2));
+      const streak = noise(4, (ang * 3) % 1, rr * 0.25);
+      const dens = Math.max(0, n - 0.33) * 7 * (0.08 + 0.92 * band ** 3) * Math.exp(-((rr / 0.85) ** 2)) * 1.3 * (0.85 + 0.3 * streak);
       const mix = Math.min(1, Math.max(0, noise(2, (ang + 0.5) % 1, rr)));
       const k = (j * S + i) * 4;
       data[k] = Math.min(255, 255 * dens * (A.r * (1 - mix) + B.r * mix));
@@ -227,23 +228,24 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
 
     // badge (tilted back)
     const badge = new THREE.Group();
-    badge.rotation.set(-TILT, 0.0, 0.1);
+    badge.rotation.set(-TILT, 0.12, 0.1);
+    badge.position.set(-0.12, 0.18, 0);
     root.add(badge);
     const face = new THREE.Mesh(
       new THREE.CylinderGeometry(RB * 0.985, RB * 0.985, 0.06, 160),
-      new THREE.MeshPhysicalMaterial({ color: p.face, roughness: 0.22, metalness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.3, transparent: true, opacity: 0.62 }),
+      new THREE.MeshStandardMaterial({ color: p.face, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.55 }),
     );
     face.rotation.x = Math.PI / 2;
     face.position.z = -0.03;
     badge.add(face);
     const bezel = new THREE.Mesh(
-      new THREE.TorusGeometry(RB, 0.045, 32, 256),
-      new THREE.MeshStandardMaterial({ color: p.rays, roughness: 0.25, metalness: 1.0 }),
+      new THREE.TorusGeometry(RB, 0.03, 32, 256),
+      new THREE.MeshStandardMaterial({ color: p.face, roughness: 0.45, metalness: 0.6 }),
     );
     badge.add(bezel);
-    const coreCol = new THREE.Color(p.ring).multiplyScalar(3.0);
-    const core = new THREE.Mesh(new THREE.TorusGeometry(RB, 0.034, 24, 256), new THREE.MeshBasicMaterial({ color: coreCol, toneMapped: false }));
-    core.position.z = 0.02;
+    const coreCol = new THREE.Color(p.ring).multiplyScalar(1.7);
+    const core = new THREE.Mesh(new THREE.TorusGeometry(RB, 0.028, 24, 256), new THREE.MeshBasicMaterial({ color: coreCol, toneMapped: false }));
+    core.position.z = 0.025;
     badge.add(core);
     const halo = new THREE.Mesh(
       new THREE.TorusGeometry(RB * 1.045, 0.008, 12, 256),
@@ -256,7 +258,7 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
     symGeo.scale(0.66, 0.66, 1);
     const sym = new THREE.Mesh(
       symGeo,
-      new THREE.MeshStandardMaterial({ color: p.metal, roughness: 0.38, metalness: 0.15, emissive: new THREE.Color(p.metal), emissiveIntensity: 0.04 }),
+      new THREE.MeshStandardMaterial({ color: p.metal, roughness: 0.38, metalness: 0.15, emissive: new THREE.Color(p.metal), emissiveIntensity: 0.22 }),
     );
     sym.position.z = 0.02;
     badge.add(sym);
@@ -278,11 +280,12 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
 
     // bokeh particles
     const r = mulberry32(0x400);
-    const NB = 400;
+    const NB = 420;
     const bp = new Float32Array(NB * 3), bs = new Float32Array(NB * 4), bc = new Float32Array(NB * 3);
     const cols = [new THREE.Color(p.rays), new THREE.Color(p.nebula2), new THREE.Color("#ffffff"), new THREE.Color(p.nebula)];
     for (let i = 0; i < NB; i++) {
-      bp.set([(r() - 0.5) * 16, (r() - 0.5) * 10, -6 + r() * 9.5], i * 3);
+      const u = (r() - 0.5) * 2.2, v = (r() - 0.5) * 0.9; // spread along the nebula diagonal
+      bp.set([u * 6 - v * 3.5, u * 3.4 + v * 6, -4.5 + r() * 7], i * 3);
       bs.set([1 + Math.floor(r() * 2), r(), 0.05 + r() * 0.25, r() * 0.2], i * 4);
       const cc = cols[Math.floor(r() * 4)].clone().multiplyScalar(0.35 + r() * 0.65);
       bc.set([cc.r, cc.g, cc.b], i * 3);
@@ -312,7 +315,7 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
     c.setPixelRatio(1);
     c.setSize(w, h);
     c.addPass(new RenderPass(scene, camera));
-    c.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.9, 0.35, 0.85));
+    c.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.55, 0.08, 0.92));
     c.addPass(new OutputPass());
     c.addPass(new ShaderPass(FINAL_PASS));
     return c;
@@ -339,6 +342,7 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
     const fp = (composer.passes[3] as ShaderPass).uniforms;
     fp.uFrame.value = f;
     fp.uGrain.value = 0.015;
+    fp.uVignette.value = 0.85;
     composer.render();
   }, 1);
 

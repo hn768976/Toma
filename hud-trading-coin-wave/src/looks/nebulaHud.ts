@@ -1,5 +1,5 @@
 import { DrawFn } from "../lib/CanvasLook";
-import { MONO, SANS } from "../lib/fonts";
+import { MONO } from "../lib/fonts";
 import { periodicNoise } from "../lib/noise";
 import { cyc, digits, hash3, hashF, holdBucket, loopFrame, mulberry32, smoothstep, TAU } from "../lib/random";
 
@@ -79,7 +79,7 @@ const buildNebula = (tw: number, th: number, seed: number, p: NebulaHudProps, sp
   const img = ctx.createImageData(tw, th);
   const oct = [0, 1, 2, 3, 4].map((o) => {
     const cx = 4 << o; // cells across the tile (integer → periodic)
-    const cy = Math.max(2, Math.round((cx * th * 2.6) / tw)); // stretched horizontally
+    const cy = Math.max(2, Math.round((cx * th * 5.5) / tw)); // strongly stretched → horizontal streaks
     return { n: periodicNoise(seed * 7 + o, cx, cy), cx, cy, amp: 0.5 ** o };
   });
   const warp = periodicNoise(seed * 13 + 99, 6, 4);
@@ -144,8 +144,7 @@ const CIRCUITS: [number, number][][] = [
   [[0.19, 0.04], [0.21, 0.07], [0.31, 0.07], [0.31, 0.2], [0.36, 0.2]],
   [[0.08, 0.12], [0.2, 0.12], [0.22, 0.15], [0.3, 0.15]],
   [[1.0, 0.09], [0.86, 0.09], [0.84, 0.06], [0.68, 0.06]],
-  [[0.74, 0.06], [0.72, 0.1], [0.72, 0.24], [0.66, 0.24]],
-  [[0.95, 0.15], [0.8, 0.15], [0.78, 0.18], [0.75, 0.18]],
+  [[0.62, 0.72], [0.78, 0.72], [0.8, 0.69], [0.97, 0.69]],
   [[0.58, 0.97], [0.58, 0.88], [0.6, 0.86], [0.75, 0.86]],
   [[0.22, 0.95], [0.38, 0.95], [0.4, 0.92], [0.47, 0.92]],
 ];
@@ -164,8 +163,8 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   // ---------------------------------------------------------- nebula --
   const cell = Math.max(3, R(0.0075 * h)); // LED cell, integer pixels
   const tcell = Math.max(2, R(0.0042 * h)); // dot-matrix text cell
-  const bandH = R(0.62 * h);
-  const bandY = R(0.47 * h - bandH / 2);
+  const bandH = R(0.5 * h);
+  const bandY = R(0.4 * h - bandH / 2);
   const texW1 = Math.min(1920, w);
   const tex1 = buildNebula(texW1, R(texW1 * (bandH / w)), 1, c, 2600);
   const tex2 = buildNebula(R(texW1 / 2), R((texW1 / 2) * (bandH / (w / 2)) / 1.3), 2, c, 900);
@@ -203,7 +202,7 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   for (let gx = 0; gx < w; gx += cell) ctx.fillRect(gx, 0, gap, h);
   for (let gy = 0; gy < h; gy += cell) ctx.fillRect(0, gy, w, gap);
   ctx.fillStyle = c.grid;
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.2;
   for (let gx = 0; gx < w; gx += cell * 3) ctx.fillRect(gx, 0, 1, h);
   for (let gy = 0; gy < h; gy += cell * 3) ctx.fillRect(0, gy, w, 1);
   ctx.globalAlpha = 1;
@@ -236,7 +235,9 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
       const ln = sphereNoise((((lon / TAU) % 1) + 1) % 1 * 24, (lat / Math.PI + 0.5) * 12);
       const land = smoothstep(0.45, 0.62, ln);
       const meridian = Math.abs(((lon / TAU) * 16 % 1 + 1) % 1 - 0.5) > 0.46 ? 0.35 : 0;
-      let b = shade * (0.18 + 0.82 * land) + meridian * shade;
+      let b = shade * (0.3 + 0.55 * land) + meridian * shade * 0.6;
+      const noiseDot = hashF(id, holdBucket(f, 6, id % 6), 23);
+      b *= noiseDot < 0.22 ? 0.15 : 0.7 + 0.5 * noiseDot;
       const hsh = hash3(id, 17);
       let col = c.dots[hsh % 100 < 60 ? 0 : hsh % 100 < 90 ? 1 : hsh % 100 < 96 ? 2 : 3];
       // scramble patches
@@ -272,14 +273,15 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   ctx.setLineDash([]);
   ctx.restore();
   ctx.beginPath();
-  ctx.arc(scx, scy, rad * 1.42, 0, TAU);
+  ctx.arc(scx, scy, rad * 1.42, Math.PI * 1.15, Math.PI * 1.85);
   ctx.strokeStyle = c.line;
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = 0.25;
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.globalAlpha = 1;
   const br = rad * 1.25;
-  const bl = rad * 0.16;
+  const bl = rad * 0.09;
+  ctx.globalAlpha = 0.6;
   ctx.strokeStyle = c.line;
   ctx.lineWidth = Math.max(1, 0.0018 * h);
   for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
@@ -289,13 +291,13 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
     ctx.lineTo(scx + sx * br - sx * bl, scy + sy * br);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
   const tagSize = R(0.0125 * h);
   ctx.font = `500 ${tagSize}px ${MONO}`;
   ctx.textAlign = "center";
   ctx.fillStyle = c.text;
   ctx.fillText(`SCAN ${digits(3, 31, 0, holdBucket(f, 12))}.${digits(2, 32, 0, holdBucket(f, 6))}  LAT ${digits(2, 33, 0, holdBucket(f, 30))}°`, R(scx), R(scy - rad * 1.32));
   ctx.fillText(`OBJ-${digits(4, 34)}  ▸ ${digits(5, 35, 0, holdBucket(f, 20, 3))}`, R(scx), R(scy + rad * 1.36));
-  ctx.strokeRect(R(scx - 0.035 * h) + 0.5, R(scy + rad * 1.04) + 0.5, R(0.07 * h), R(0.022 * h));
   ctx.textAlign = "left";
 
   // ---------------------------------------------------- circuits --
@@ -334,13 +336,13 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   const tiny = Math.max(7, R(0.0135 * h));
   dotText(
     ctx,
-    Array.from({ length: 6 }, (_, r) => `${digits(4, 100 + r, 0, holdBucket(f, [6, 8, 10, 12, 15, 20][r], r))} ${digits(5, 110 + r)}`),
-    X(0.006), Y(0.07), tcell, 6, c.dots[0], [1, 0.6, 0.85, 0.5, 0.9, 0.65],
+    Array.from({ length: 8 }, (_, r) => `${digits(4, 100 + r, 0, holdBucket(f, [6, 8, 10, 12, 15, 20, 8, 10][r], r))} ${digits(5, 110 + r)} ${digits(6, 120 + r, 0, holdBucket(f, 12, r))}`),
+    X(0.006), Y(0.07), tcell, 5, c.dots[0], [1, 0.6, 0.85, 0.5, 0.9, 0.65, 0.8, 0.55],
   );
   dotText(
     ctx,
-    Array.from({ length: 6 }, (_, r) => `${digits(3, 180 + r, 0, holdBucket(f, [10, 12, 15, 20, 24, 30][r], r))}${digits(3, 190 + r)}`),
-    X(0.006), Y(0.56), tcell, 6, c.text, [0.9, 0.7, 0.9, 0.6, 0.8, 0.7],
+    Array.from({ length: 8 }, (_, r) => `${digits(3, 180 + r, 0, holdBucket(f, [10, 12, 15, 20, 24, 30, 12, 15][r], r))}${digits(3, 190 + r)} ${digits(8, 195 + r, 0, holdBucket(f, 20, r))}`),
+    X(0.006), Y(0.54), tcell, 5, c.text, [0.9, 0.7, 0.9, 0.6, 0.8, 0.7, 0.85, 0.6],
   );
   ctx.font = `400 ${tiny}px ${MONO}`;
   ctx.fillStyle = c.text;
@@ -380,31 +382,31 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   ctx.lineTo(X(0.99) + 0.5, Y(0.66) + 0.5);
   ctx.stroke();
 
-  // code panel (lower left)
-  ctx.strokeStyle = c.accent;
-  ctx.globalAlpha = 0.85;
-  ctx.strokeRect(X(0.02) + 0.5, Y(0.8) + 0.5, X(0.21), Y(0.04));
-  ctx.fillStyle = c.accent;
-  ctx.globalAlpha = 0.18;
-  ctx.fillRect(X(0.02), Y(0.8), X(0.21), Y(0.04));
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = c.dots[2];
-  const codeLine = `0x${digits(4, 170, 0, holdBucket(f, 6))}  MOV ${digits(2, 171, 0, holdBucket(f, 10))} ${digits(6, 172, 0, holdBucket(f, 4))}`;
-  ctx.fillText(codeLine, X(0.026), Y(0.826));
-  ctx.fillStyle = c.text;
-  ctx.font = `500 ${R(0.012 * h)}px ${SANS}`;
-  ctx.fillText("DATA STREAM", X(0.02), Y(0.79));
+  // code panel (lower left): a lit cyan dot-matrix bar
+  {
+    const x0 = Math.floor(X(0.2) / tcell) * tcell, y0 = Math.floor(Y(0.79) / tcell) * tcell;
+    const cols = Math.round(X(0.11) / tcell), rows = 5;
+    const sz = Math.max(1, tcell - Math.max(1, R(tcell * 0.22)));
+    ctx.fillStyle = c.dots[2];
+    for (let j = 0; j < rows; j++)
+      for (let i = 0; i < cols; i++) {
+        const on = hashF(i, j, holdBucket(f, 4, 1)) < 0.82;
+        ctx.globalAlpha = on ? 0.9 : 0.25;
+        ctx.fillRect(x0 + i * tcell, y0 + j * tcell, sz, sz);
+      }
+    ctx.globalAlpha = 1;
+  }
 
   // segmented bar block (lower right)
-  const bx0 = 0.752, by0 = 0.885;
+  const bx0 = 0.755, by0 = 0.885;
   for (let row = 0; row < 2; row++) {
     const nSeg = 14;
     const lvl = 0.5 + 0.5 * Math.sin(TAU * cyc(f, row + 1, row * 0.3));
     const on = Math.round(lvl * nSeg);
     for (let s = 0; s < nSeg; s++) {
-      ctx.fillStyle = s < on ? (row ? c.dots[2] : c.dots[0]) : c.grid;
-      ctx.globalAlpha = s < on ? 0.9 : 0.6;
-      ctx.fillRect(X(bx0 + s * 0.016), Y(by0 + row * 0.04), X(0.013), Y(0.026));
+      ctx.fillStyle = s < on ? (row ? c.dots[2] : c.dots[1]) : c.grid;
+      ctx.globalAlpha = s < on ? 0.6 : 0.45;
+      ctx.fillRect(X(bx0 + s * 0.016), Y(by0 + row * 0.035), X(0.0135), Y(0.02));
     }
   }
   ctx.globalAlpha = 1;
@@ -417,6 +419,56 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   }
   ctx.globalAlpha = 1;
 
+  // ------------------------------------------- sparkles in the band --
+  for (let i = 0; i < 700; i++) {
+    const sx0 = hashF(i, 1, 77);
+    const x = ((sx0 - cyc(f, 1) + 1) % 1) * w; // drift with the nebula
+    const y = bandY + bandH * (0.5 + (hashF(i, 2, 77) + hashF(i, 3, 77) - 1) * 0.42);
+    const tw = hashF(i, holdBucket(f, [6, 8, 10, 12][i % 4], i % 6), 78);
+    if (tw < 0.45) continue;
+    ctx.globalAlpha = (tw - 0.45) * 1.6;
+    ctx.fillStyle = i % 5 === 0 ? c.dots[3] : c.dots[0];
+    const sz = Math.max(1, R(h * (i % 7 === 0 ? 0.003 : 0.0016)));
+    ctx.fillRect(R(x), R(y), sz, sz);
+  }
+  ctx.globalAlpha = 1;
+
+  // ------------------------------------------- scattered glitch blocks --
+  for (let i = 0; i < 14; i++) {
+    const hb = holdBucket(f, [3, 4, 5, 6][i % 4], i % 3);
+    if (hashF(i, hb, 81) < 0.55) continue;
+    const gx = Math.floor((hashF(i, hb, 82) * w) / tcell) * tcell;
+    const gy = Math.floor(((0.15 + hashF(i, hb, 83) * 0.7) * h) / tcell) * tcell;
+    const gw = Math.round((0.01 + hashF(i, hb, 84) * 0.05) * w / tcell) * tcell;
+    const gh = tcell * (1 + (hash3(i, hb, 85) % 4));
+    ctx.globalAlpha = 0.25 + 0.35 * hashF(i, hb, 86);
+    ctx.fillStyle = c.dots[hash3(i, hb, 87) % 4];
+    ctx.fillRect(gx, gy, gw, gh);
+  }
+  ctx.globalAlpha = 1;
+
+  // ------------------------------------------------------------ bloom --
+  {
+    const bw = Math.ceil(w / 4), bh = Math.ceil(h / 4);
+    const bl = scratch("bloom", bw, bh);
+    const bc = bl.getContext("2d")!;
+    bc.filter = "none";
+    bc.clearRect(0, 0, bw, bh);
+    bc.drawImage(ctx.canvas, 0, 0, bw, bh);
+    const bl2 = scratch("bloom2", bw, bh);
+    const bc2 = bl2.getContext("2d")!;
+    bc2.clearRect(0, 0, bw, bh);
+    bc2.filter = `contrast(3) brightness(0.55) blur(${Math.max(1, bh * 0.006)}px)`;
+    bc2.drawImage(bl, 0, 0);
+    bc2.filter = "none";
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.globalAlpha = 0.55;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(bl2, 0, 0, w, h);
+    ctx.restore();
+  }
+
   // -------------------------------------------------- scan line --
   const sy = cyc(f, 3) * h * 1.1 - h * 0.05;
   const sg = ctx.createLinearGradient(0, sy - 0.06 * h, 0, sy);
@@ -424,7 +476,7 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   sg.addColorStop(1, "rgba(200,170,255,0.12)");
   ctx.fillStyle = sg;
   ctx.fillRect(0, R(sy - 0.06 * h), w, R(0.06 * h));
-  ctx.fillStyle = "rgba(230,215,255,0.45)";
+  ctx.fillStyle = "rgba(230,215,255,0.22)";
   ctx.fillRect(0, R(sy), w, Math.max(1, R(0.0012 * h)));
 
   // ----------------------------------------------------- glitches --

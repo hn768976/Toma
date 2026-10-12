@@ -18,19 +18,19 @@ const ROWS = 240;
 const X_HALF = 34; // world half-width of the grid
 const Z_NEAR = 1.2;
 const Z_FAR = 46;
-const CAM_H = 2.6; // camera height; line of sight to the focus is ~12° down
-const PITCH = (4.5 * Math.PI) / 180; // camera pitch (down)
+const CAM_H = 1.5; // camera height; line of sight to the focus is ~12° down
+const PITCH = (2.2 * Math.PI) / 180; // camera pitch (down)
 const FOCUS = Z_NEAR + 0.6 * (Z_FAR - Z_NEAR) - 12; // focal depth (≈60% of the way, measured along the view)
 const VFOV = (42 * Math.PI) / 180;
 
 // travelling waves: integer cycles per loop → exact 600-frame loop
 // [kx, kz, amplitude, cycles per loop, phase]
 const WAVES: [number, number, number, number, number][] = [
-  [0.31, 0.42, 0.42, 2, 0.3],
-  [-0.47, 0.26, 0.3, 3, 1.7],
-  [0.12, 0.83, 0.2, 5, 4.1],
-  [0.78, -0.31, 0.14, 4, 2.6],
-  [-0.12, 0.17, 0.45, 1, 5.2],
+  [0.31, 0.42, 0.45, 2, 0.3],
+  [-0.47, 0.26, 0.26, 3, 1.7],
+  [0.12, 0.83, 0.16, 5, 4.1],
+  [0.78, -0.31, 0.1, 4, 2.6],
+  [-0.09, 0.21, 0.75, 1, 5.2],
 ];
 
 const COMMON_GLSL = /* glsl */ `
@@ -71,21 +71,21 @@ void main(){
   vec3 s = project(vec3(xz.x, h, xz.y));
   float depth = s.z;
   // size: sharp point + circle of confusion from the focal depth
-  float sharpPx = max(1.25, 0.055 * uFocal / depth * 0.5 * uPx);
+  float sharpPx = max(1.25, 0.028 * uFocal / depth * 0.5 * uPx);
   float cocPx = abs(1.0 / depth - 1.0 / ${FOCUS.toFixed(3)}) * 0.2 * uPx;
   float sizePx = max(sharpPx, cocPx);
   // energy conservation: blurred points spread the same light
   float energy = (sharpPx * sharpPx) / (sizePx * sizePx);
   vSoft = clamp(cocPx / sizePx, 0.0, 1.0);
-  float crest = smoothstep(-0.6, 1.4, h);
+  float crest = smoothstep(-0.35, 0.7, h);
   float farT = clamp((depth - 14.0) / 30.0, 0.0, 1.0);
   float sx = clamp(s.x * 0.5 + 0.5, 0.0, 1.0);
   vec3 glow = mix(uGlowL, uGlowR, smoothstep(0.15, 0.85, sx));
   float glowAmt = smoothstep(0.35, 1.0, farT) * (0.35 + 0.9 * crest);
-  vCol = mix(uPoint * (0.45 + 0.75 * crest), glow * 1.5, glowAmt * 0.75);
+  vCol = mix(uPoint * (0.5 + 0.7 * crest), glow * 1.3, glowAmt * 0.7);
   float twinkle = 0.75 + 0.25 * aGrid.z;
   float fog = 1.0 - smoothstep(0.82, 1.0, (depth - ${Z_NEAR.toFixed(2)}) / ${(Z_FAR - Z_NEAR).toFixed(2)});
-  vAlpha = clamp(energy * 1.6, 0.05, 1.0) * twinkle * fog * (0.55 + 0.45 * crest) * smoothstep(0.6, 1.4, depth);
+  vAlpha = clamp(energy * 2.8, 0.07, 1.0) * twinkle * fog * (0.55 + 0.45 * crest) * smoothstep(0.6, 1.4, depth);
   vec2 off = aPosition * sizePx / uPx * vec2(1.0 / uAspect, 1.0);
   gl_Position = vec4(s.xy + off, 0.0, 1.0);
   vUv = aPosition;
@@ -97,7 +97,7 @@ out vec4 finalColor;
 void main(){
   float r = length(vUv);
   float hard = smoothstep(1.0, 0.45, r);
-  float bokeh = smoothstep(1.0, 0.82, r) * (0.75 + 0.25 * smoothstep(0.4, 0.95, r)); // flat disc, faint rim
+  float bokeh = exp(-r * r * 3.0) * smoothstep(1.0, 0.7, r); // soft, defocused
   float a = mix(hard * hard, bokeh, vSoft) * vAlpha;
   finalColor = vec4(vCol * a, 0.0);
 }`;
@@ -132,8 +132,11 @@ ${GRAIN_GLSL}
 void main(){
   float y = vP.y;                       // 0 bottom … 1 top
   float d = y - uHorizon;
-  float haze = exp(-pow(d / 0.16, 2.0)) * 0.9 + exp(-pow(d / 0.42, 2.0)) * 0.35;
+  float haze = exp(-pow(d / 0.16, 2.0)) * 0.7 + exp(-pow(d / 0.42, 2.0)) * 0.3 + (1.0 - smoothstep(-0.5, 0.0, d)) * 0.55;
   vec3 c = uBg + uHaze * haze;
+  // horizontal flare on the right of the horizon
+  float fx = smoothstep(0.72, 1.0, vP.x);
+  c += uGlowR * fx * (exp(-pow(d / 0.006, 2.0)) * 0.9 + exp(-pow(d / 0.03, 2.0)) * 0.25);
   vec3 glow = mix(uGlowL, uGlowR, smoothstep(0.1, 0.9, vP.x));
   c += glow * exp(-pow(d / 0.012, 2.0)) * 0.22 + glow * exp(-pow(d / 0.06, 2.0)) * 0.06;
   // vignette
@@ -154,9 +157,9 @@ const buildField = () => {
     const tz = j / (ROWS - 1);
     const z = Z_NEAR + (Z_FAR - Z_NEAR) * Math.pow(tz, 1.25);
     for (let i = 0; i < COLS; i++) {
-      const x = -X_HALF + (2 * X_HALF * (i + 0.5 + (r() - 0.5) * 0.9)) / COLS;
+      const x = -X_HALF + (2 * X_HALF * (i + 0.5 + (r() - 0.5) * 0.15)) / COLS;
       g[k++] = x;
-      g[k++] = z + (r() - 0.5) * 0.9 * ((Z_FAR - Z_NEAR) / ROWS) * 1.25 * Math.pow(tz + 0.01, 0.25);
+      g[k++] = z + (r() - 0.5) * 0.15 * ((Z_FAR - Z_NEAR) / ROWS) * 1.25 * Math.pow(tz + 0.01, 0.25);
       g[k++] = r();
     }
   }
