@@ -60,6 +60,7 @@ export const Stage: React.FC<{ factory: StageFactory; style?: React.CSSPropertie
       dpr={dpr}
       linear
       flat
+      legacy
       style={{ position: "absolute", left: 0, top: 0, ...style }}
       gl={{ antialias: false, alpha: false, preserveDrawingBuffer: true, powerPreference: "high-performance" }}
     >

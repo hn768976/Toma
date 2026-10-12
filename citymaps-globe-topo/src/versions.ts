@@ -81,16 +81,16 @@ export const VERSIONS: VersionRow[] = [
     props: {
       citySeed: CITY_SEED,
       palette: {
-        ground: "#1C3646",
+        ground: "#18344A",
         buildings: ["#213748", "#243B4C", "#273F50", "#2A4454", "#2E4858", "#334E5E"],
-        local: "#78A6BC",
+        local: "#6EA6C4",
         avenue: "#98C4D6",
         arterial: "#B8DEEC",
         water: "#081320",
         park: "#0A1624",
         grid: "#8AB8C8",
         text: "#8AE8F0",
-        dim: "#4A8890",
+        dim: "#6AB4BE",
         accent: "#F0D84A",
       },
     },
@@ -100,7 +100,7 @@ export const VERSIONS: VersionRow[] = [
     look: "CityFlyover",
     props: {
       citySeed: CITY_SEED,
-      palette: { local: "#1AC8B8", avenue: "#5AF0E0", ground: "#04181A", pin: "#F0E04A", pillA: "#F4F4EC", pillB: "#F09A4A", label: "#E8FFF8" },
+      palette: { local: "#1AC8B8", avenue: "#5AF0E0", ground: "#04181A", pin: "#F0E04A", pillA: "#F4F0DC", pillB: "#F0A47A", label: "#E8FFF8" },
     },
   },
   {
@@ -118,13 +118,13 @@ export const VERSIONS: VersionRow[] = [
       citySeed: CITY_SEED,
       palette: {
         local: "#7AC8C0",
-        avenue: "#9AE8E0",
+        avenue: "#8AD8D4",
         block: "#1A2A2C",
         water: "#050909",
         dot: "#F0E04A",
         text: "#C8D0D0",
         highlight: "#5AD8C8",
-        panel: "#121718",
+        panel: "#171718",
       },
     },
   },
@@ -133,7 +133,7 @@ export const VERSIONS: VersionRow[] = [
     look: "WorldConnections",
     props: {
       seed: WORLD_SEED,
-      palette: { dots: "#D8E4F4", cities: "#F0F6FF", arcs: "#8AB8FF", pulse: "#E8F4FF", background: "#04102A", haze: "#1C4470", beams: "#C8E0FF", accent: "#6AF0D8" },
+      palette: { dots: "#D8E4F4", cities: "#F0F6FF", arcs: "#8AB8FF", pulse: "#E8F4FF", background: "#04102A", haze: "#183456", beams: "#C8E0FF", accent: "#6AF0D8" },
     },
   },
   {
@@ -152,12 +152,12 @@ export const VERSIONS: VersionRow[] = [
       palette: {
         land: "#8AF0D8",
         rim: "#2AF0C0",
-        ocean: "#030909",
+        ocean: "#06100F",
         specks: "#F0D86A",
         bars: "#3AC8A0",
         text: "#B8D8D0",
         dim: "#5A7470",
-        background: "#0B1312",
+        background: "#141E1D",
       },
     },
   },

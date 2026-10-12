@@ -28,4 +28,10 @@ export const fsMaterial = (frag: string, uniforms: Record<string, THREE.IUniform
     ...extra,
   });
 
-export const vec3Of = (hex: string) => new THREE.Vector3(...new THREE.Color(hex).toArray());
+// Parse "#RRGGBB" directly. (THREE.Color would apply colour management, which
+// R3F re-enables on canvas creation; all colours here are display values.)
+export const hexToRGB = (hex: string): [number, number, number] => {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+};
+export const vec3Of = (hex: string) => new THREE.Vector3(...hexToRGB(hex));

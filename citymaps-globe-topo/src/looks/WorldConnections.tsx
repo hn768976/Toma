@@ -45,12 +45,12 @@ void main() {
   vec2 p = vUv;
   vec3 col = uBg;
   // lighter haze at the top
-  col += uHaze * pow(smoothstep(0.35, 1.05, p.y), 1.5) * 0.7;
+  col += uHaze * pow(smoothstep(0.35, 1.05, p.y), 1.5) * 0.4;
   // broad soft glow behind the map and in the upper left
-  col += uHaze * 0.3 * exp(-pow(length((p - vec2(0.45, 0.55)) * vec2(1.0, 1.6)), 2.0) / 0.18);
-  col += uHaze * 0.85 * exp(-length(p - vec2(0.0, 0.9)) / 0.35);
-  col += uHaze * 0.12 + vec3(0.02, 0.025, 0.03);
-  col += uHaze * 0.18 * exp(-pow((p.y - 0.95) / 0.25, 2.0)) * (0.7 + 0.3 * sin(p.x * 3.0 + 1.0));
+  col += uHaze * 0.12 * exp(-pow(length((p - vec2(0.45, 0.55)) * vec2(1.0, 1.6)), 2.0) / 0.18);
+  col += uHaze * 0.45 * exp(-length(p - vec2(0.0, 0.9)) / 0.3);
+  col += uHaze * 0.05 + vec3(0.012, 0.014, 0.018);
+  col += uHaze * 0.08 * exp(-pow((p.y - 0.95) / 0.25, 2.0)) * (0.7 + 0.3 * sin(p.x * 3.0 + 1.0));
   // faint large translucent panels in the background, slowly drifting
   vec2 q = vec2(p.x * uRes.x / uRes.y, p.y);
   float d = 0.01 * sin(uT);

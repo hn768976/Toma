@@ -49,7 +49,7 @@ void main() {
   float lw = max(1.5, uRes.y / 720.0 * 1.4);
   float d = min(g.x, g.y);
   float line = 1.0 - smoothstep(lw * 0.5 - 0.5, lw * 0.5 + 0.5, d);
-  col = mix(col, uGrid, line * 0.36);
+  col = mix(col, uGrid, line * 0.5);
 
   // slow sweeping scanlines (bright edge with a soft trail above)
   float y = 1.0 - vUv.y;
@@ -67,9 +67,9 @@ void main() {
 export const cityHudStyle = (p: CityHudPalette): CityStyle => ({
   size: TEX,
   ground: p.ground,
-  widths: [8.3, 10.5, 14],
-  colors: [p.local, p.avenue, p.arterial],
-  alphas: [0.6, 0.8, 0.9],
+  widths: [8.3, 10, 12],
+  colors: [p.local, p.local, p.arterial],
+  alphas: [0.62, 0.72, 0.75],
   water: p.water,
   park: p.park,
   lot: p.park,
@@ -156,8 +156,11 @@ const Overlay: React.FC<{ p: CityHudPalette }> = ({ p }) => {
         ))}
         <Brackets x={3220} y={1860} w={620} h={190} len={26} color={p.dim} sw={3} />
         {/* full-frame crosshair lines */}
-        <line x1={1920} y1={0} x2={1920} y2={2160} stroke={p.text} strokeWidth={2} opacity={0.35} />
-        <line x1={0} y1={1120} x2={3840} y2={1120} stroke={p.text} strokeWidth={2} opacity={0.3} />
+        <line x1={1920} y1={0} x2={1920} y2={2160} stroke={p.text} strokeWidth={10} opacity={0.08} />
+        <line x1={1920} y1={0} x2={1920} y2={2160} stroke={p.text} strokeWidth={3} opacity={0.7} />
+        <line x1={0} y1={1120} x2={3840} y2={1120} stroke={p.text} strokeWidth={10} opacity={0.07} />
+        <line x1={0} y1={1120} x2={3840} y2={1120} stroke={p.text} strokeWidth={3} opacity={0.6} />
+        <line x1={0} y1={176} x2={3840} y2={176} stroke={p.text} strokeWidth={4} opacity={0.55} />
         {/* callouts with leader lines into the map */}
         {CALLOUTS.map((c, i) => (
           <g key={i} opacity={blink(f, 300 + i, 50, 0.85) ? 0.9 : 0.35}>

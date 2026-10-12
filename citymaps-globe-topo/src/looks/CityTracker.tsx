@@ -56,14 +56,15 @@ void main() {
     // the dot: core + halo + a soft pulse ring
     float k = uRes.y / 720.0;
     float d = length(px - uDot) / k;
-    float core = 1.0 - smoothstep(5.0, 6.2, d);
-    float ring = smoothstep(6.0, 7.0, d) * (1.0 - smoothstep(7.4, 8.6, d));
-    float halo = exp(-d * d / 160.0) * 0.55;
+    float core = 1.0 - smoothstep(8.0, 9.2, d);
+    float ring = smoothstep(9.6, 10.6, d) * (1.0 - smoothstep(11.2, 12.4, d));
+    float halo = exp(-d * d / 260.0) * 0.4;
     float pr = mix(8.0, 26.0, uPulse);
     float pulse = exp(-pow((d - pr) / 1.4, 2.0)) * (1.0 - uPulse) * 0.6;
     col = mix(col, uDotCol * 0.35, clamp(halo, 0.0, 1.0) * 0.6);
     col += uDotCol * (halo * 0.6 + pulse);
-    col = mix(col, vec3(1.0, 0.97, 0.75), core);
+    col = mix(col, uDotCol * 0.95, core);
+    col = mix(col, vec3(1.0, 0.98, 0.8), (1.0 - smoothstep(3.0, 4.2, d)) * 0.6);
     col = mix(col, uDotCol, ring * 0.9);
   }
   fragColor = vec4(col, 1.0);
@@ -72,14 +73,14 @@ void main() {
 export const cityTrackerStyle = (p: CityTrackerPalette): CityStyle => ({
   size: TEX,
   ground: p.block,
-  widths: [10.4, 13, 18],
-  colors: [p.local, p.avenue, p.avenue],
-  alphas: [0.72, 0.92, 1],
+  widths: [10.4, 12, 15],
+  colors: [p.local, p.local, p.avenue],
+  alphas: [0.55, 0.75, 0.9],
   water: p.water,
   park: p.water,
   lot: p.water,
   rail: p.local,
-  halo: { color: p.avenue, width: 40, alpha: 0.14 },
+  halo: { color: p.avenue, width: 70, alpha: 0.3 },
 });
 
 const camAt = (props: CityTrackerProps, f: number) => {
@@ -113,7 +114,7 @@ const makeFactory =
     const scene = new THREE.Scene();
     scene.add(fullscreenMesh(mat));
     const ocam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const post = new PostFX(width, height, { vignette: 0.25, grain: 0.015, bloom: { strength: 0.3, threshold: 0.55, knee: 0.3, radius: 1 } });
+    const post = new PostFX(width, height, { vignette: 0.25, grain: 0.015, bloom: { strength: 0.18, threshold: 0.6, knee: 0.3, radius: 1 } });
     return {
       render(r, f) {
         const { cam, dot } = camAt(props, f);
@@ -147,7 +148,21 @@ const Overlay: React.FC<{ p: CityTrackerPalette }> = ({ p }) => {
     <AbsoluteFill>
       {/* top glitch bar */}
       <Svg>
-        <line x1={0} y1={96} x2={3840} y2={96} stroke={p.text} strokeWidth={2} opacity={0.25} />
+        {/* continuous glowing grey band */}
+        <defs>
+          <linearGradient id="topband" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={p.text} stopOpacity={0.05} />
+            <stop offset="0.5" stopColor={p.text} stopOpacity={0.2} />
+            <stop offset="1" stopColor={p.text} stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <rect x={0} y={30} width={3840} height={150} fill="url(#topband)" />
+        <line x1={0} y1={96} x2={3840} y2={96} stroke={p.text} strokeWidth={3} opacity={0.5} />
+        {Array.from({ length: 120 }, (_, i) => (
+          <line key={`t${i}`} x1={i * 32} y1={86} x2={i * 32} y2={i % 5 === 0 ? 70 : 80} stroke={p.text} strokeWidth={2} opacity={0.45} />
+        ))}
+        <circle cx={1420} cy={96} r={34} fill="none" stroke={p.text} strokeWidth={3} opacity={0.55} />
+        <circle cx={1500} cy={96} r={22} fill="none" stroke={p.text} strokeWidth={3} opacity={0.55} />
         {Array.from({ length: 70 }, (_, i) => {
           const h = hash01(i, 5);
           const x = h * 3840;

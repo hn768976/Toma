@@ -181,7 +181,7 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
   const rp = [range(rng, 0, 6.28), range(rng, 0, 6.28), range(rng, 0, 6.28), range(rng, 0, 6.28)];
   const riverX = (y: number) =>
     riverX0 + 260 * Math.sin((6.2832 * y) / W + rp[0]) + 110 * Math.sin((6.2832 * 2 * y) / W + rp[1]) + 45 * Math.sin((6.2832 * 5 * y) / W + rp[2]);
-  const riverHalfW = (y: number) => 0.5 * (115 + 35 * Math.sin((6.2832 * 3 * y) / W + rp[3]));
+  const riverHalfW = (y: number) => 0.5 * (92 + 12 * Math.sin((6.2832 * 3 * y) / W + rp[3]));
 
   const inSea = (p: V2) => {
     const x = mod(p.x, W);
@@ -281,8 +281,8 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
       offB: range(rng, 0, 50),
       poly: poly.map((q) => q.p),
       warp: kind === "organic",
-      avenueEveryA: irange(rng, 8, 11),
-      avenueEveryB: kind === "downtown" ? irange(rng, 6, 8) : kind === "suburb" || kind === "industrial" ? irange(rng, 4, 6) : irange(rng, 5, 7),
+      avenueEveryA: irange(rng, 16, 22),
+      avenueEveryB: kind === "downtown" ? irange(rng, 12, 16) : kind === "suburb" || kind === "industrial" ? irange(rng, 6, 9) : irange(rng, 9, 12),
       dropLocal: drop,
     });
   });
@@ -379,11 +379,14 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
       const c = add(d.seed, v(range(rng, -350, 350), range(rng, -350, 350)));
       const r = range(rng, 70, 150);
       const ph = range(rng, 0, 6.28);
+      // angular patch: a few straight edges, aligned loosely to the grid
       const blob: V2[] = [];
-      for (let t = 0; t < 32; t++) {
-        const a = (t / 32) * Math.PI * 2;
-        const rr = r * (1 + 0.28 * Math.sin(2 * a + ph) + 0.15 * Math.sin(5 * a + 2 * ph) + 0.08 * Math.sin(9 * a + ph));
-        blob.push(add(c, v(Math.cos(a) * rr * 1.3, Math.sin(a) * rr)));
+      const nv = irange(rng, 5, 7);
+      for (let t = 0; t < nv; t++) {
+        const a = ph + (t / nv) * Math.PI * 2 + range(rng, -0.25, 0.25);
+        const rr = r * range(rng, 0.65, 1.25);
+        const q = v(Math.cos(a) * rr * 1.3, Math.sin(a) * rr);
+        blob.push(add(c, add(mul(d.U, dot(q, v(1, 0))), mul(d.V, dot(q, v(0, 1))))));
       }
       if (!blob.every((q) => pointInPoly(q, d.poly)) || blob.some(inWater)) continue;
       parks.push(blob);
@@ -395,8 +398,8 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
     let got = 0;
     let big = d.kind === "downtown" || d.kind === "grid" || d.kind === "mixed" ? 1 : 0;
     for (let k = 0; k < 4000 && got < targetParkBlocks; k++) {
-      let ni = chance(rng, 0.5) ? 1 : 2;
-      let nj = chance(rng, 0.6) ? 1 : 2;
+      let ni = irange(rng, 2, 4);
+      let nj = irange(rng, 1, 3);
       if (big > 0) {
         ni = Math.round(range(rng, 140, 260) / d.a);
         nj = Math.max(2, Math.round(range(rng, 140, 260) / d.b));
@@ -532,7 +535,7 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
     [2, -1],
     [1, 2],
   ];
-  const nArt = 5;
+  const nArt = 4;
   for (let k = 0; k < nArt; k++) {
     const [p, q] = dirs[k];
     const D = v(p * W, q * W);
@@ -540,8 +543,8 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
     const T = mul(D, 1 / L);
     const N = v(-T.y, T.x);
     const o = v(range(rng, 0, W), range(rng, 0, W));
-    const amp1 = range(rng, 20, 60);
-    const amp2 = range(rng, 8, 25);
+    const amp1 = range(rng, 10, 28);
+    const amp2 = range(rng, 3, 8);
     const k1 = irange(rng, 2, 4);
     const k2 = irange(rng, 6, 9);
     const ph1 = range(rng, 0, 6.28);

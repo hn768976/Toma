@@ -77,7 +77,7 @@ void main() {
   vec2 dp = vWorld.xz - uPin.xz;
   float d = length(dp);
   float aa = max(fwidth(d), 1e-3);
-  float core = 1.0 - smoothstep(19.0 - aa, 19.0 + aa, d);
+  float core = 1.0 - smoothstep(26.0 - aa, 26.0 + aa, d);
   float glow = exp(-d * d / (2.0 * 48.0 * 48.0));
   // a second, fainter pin far away (upper right)
   float d2 = length(vWorld.xz - uPin2.xz);
@@ -98,11 +98,11 @@ void main() {
     vec2 c = uPillA.xz + ab * (float(i) / float(${N_PILLS - 1}));
     vec2 p = vWorld.xz - c;
     vec2 q = vec2(dot(p, dir), dot(p, nrm));
-    float sd = sdRoundBox(q, vec2(60.0, 16.0), 14.0);
+    float sd = sdRoundBox(q, vec2(70.0, 24.0), 14.0);
     float a = 1.0 - smoothstep(-fwidth(sd), fwidth(sd), sd);
     float halo = exp(-max(sd, 0.0) / 16.0) * 0.25;
     vec3 pc = (i % 3 == 2) ? uPillCol1 : (i == 0 ? uPillCol2 : uPillCol0);
-    col = mix(col, pc * 1.35, a * uPillOn[i]);
+    col = mix(col, pc * 1.1, a * uPillOn[i]);
     col += pc * halo * uPillOn[i];
   }
 
@@ -116,15 +116,16 @@ void main() {
 export const cityFlyoverStyle = (p: CityFlyoverPalette): CityStyle => ({
   size: TEX,
   ground: p.ground,
-  widths: [10.5, 14, 19],
-  colors: [p.local, p.avenue, p.avenue],
-  alphas: [0.6, 1, 1],
+  widths: [10.5, 13, 16],
+  colors: [p.local, p.local, p.avenue],
+  alphas: [0.6, 0.85, 1],
   water: "#000000",
   park: "#000000",
   lot: "#000000",
   rail: p.local,
-  halo: { color: p.avenue, width: 50, alpha: 0.22 },
-  labels: { color: p.label, alpha: 0.75, angle: -YAW0 },
+  halo: { color: p.avenue, width: 70, alpha: 0.32 },
+  labels: { color: p.label, alpha: 0.75, angle: -YAW0, numbers: true },
+  sparkles: { color: p.label, count: 2600, size: 3.2 },
 });
 
 // ray from camera through NDC point -> ground (y = 0)
@@ -200,20 +201,20 @@ const makeFactory =
         plane.position.set(cam.position.x, 0, cam.position.z);
 
         // focus ~40% up the frame
-        const focusPt = groundHit(cam, 0, -0.2);
+        const focusPt = groundHit(cam, 0, -0.02);
         const toF = focusPt.clone().sub(cam.position);
         const camDir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
         const zf = toF.dot(camDir);
         const u = mat.uniforms;
         u.uFocus.value = zf;
-        u.uCocA.value = 0.75;
+        u.uCocA.value = 0.55;
 
         // pin upper middle, pills lower left: anchored to the view
-        u.uPin.value.copy(groundHit(cam, 0.02, 0.3));
+        u.uPin.value.copy(groundHit(cam, -0.22, 0.28));
         u.uPinT.value = (f % 150) / 150;
         u.uPin2.value.copy(groundHit(cam, 0.55, 0.82));
-        u.uPillA.value.copy(groundHit(cam, -0.98, -0.18));
-        u.uPillB.value.copy(groundHit(cam, -0.62, -0.86));
+        u.uPillA.value.copy(groundHit(cam, -0.93, -0.08));
+        u.uPillB.value.copy(groundHit(cam, -0.3, -0.82));
         for (let i = 0; i < N_PILLS; i++) {
           u.uPillOn.value[i] = hash01(Math.floor(f / 5), i, 17) < 0.82 ? 1 : 0.35;
         }

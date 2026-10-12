@@ -321,6 +321,6 @@ void main() {
 };
 
 export const hexRGB = (hex: string): [number, number, number] => {
-  const c = new THREE.Color(hex);
-  return [c.r, c.g, c.b];
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 };

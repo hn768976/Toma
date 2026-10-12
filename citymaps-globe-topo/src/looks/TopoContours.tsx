@@ -20,7 +20,7 @@ export interface TopoContoursProps {
 }
 
 const HSCALE = 0.13; // world height of the terrain's top
-const ELEV = (50 * Math.PI) / 180;
+const ELEV = (54 * Math.PI) / 180;
 const DIST = 0.8;
 
 const terrains = new Map<number, Terrain>();
@@ -42,7 +42,9 @@ uniform vec2 uRes;
 void main() {
   vec2 q = vUv - vec2(0.5, 0.62);
   q.x *= uRes.x / uRes.y;
-  vec3 col = uBg * (2.5 - 1.6 * smoothstep(0.05, 1.0, length(q)));
+  vec3 col = uBg * (2.6 - 1.2 * smoothstep(0.05, 1.1, length(q)));
+  // soft atmospheric haze
+  col += uBg * 0.8 * exp(-pow(length(q - vec2(0.0, 0.1)), 2.0) / 0.25);
   // faint fine grid
   float cell = uRes.y / 54.0;
   vec2 g = abs(fract(gl_FragCoord.xy / cell + 0.5) - 0.5) * cell;
@@ -79,7 +81,7 @@ const makeFactory =
         pts,
         closed: c.closed,
         color: isIndex ? ic : lc,
-        alpha: (isIndex ? 1.0 : 0.85 * lift) * (0.35 + 0.65 * Math.min(1, c.height / 0.22)),
+        alpha: isIndex ? 1.0 : 0.85 * lift * (0.25 + 0.75 * Math.min(1, c.height / 0.3)),
         width: isIndex ? 1.7 : 1.05,
       };
     });
@@ -96,6 +98,15 @@ const makeFactory =
     const contourMesh = new THREE.Mesh(buildRibbonGeometry(lines), contourMat);
     contourMesh.frustumCulled = false;
     root.add(contourMesh);
+    // out-of-focus ghost terrain far behind: fills the corners with soft haze
+    const ghostMat = ribbonMaterial({ basePx: 1.5 * k, resolution: [width, height], dof, softness: 0.55 });
+    ghostMat.blendEquation = THREE.MaxEquation;
+    const ghost = new THREE.Mesh(contourMesh.geometry, ghostMat);
+    ghost.frustumCulled = false;
+    ghost.position.set(0.15, -0.35, -0.75);
+    ghost.scale.set(2.2, 1.4, 1.6);
+    ghost.rotation.y = 0.9;
+    root.add(ghost);
 
     // summit dots + a sprinkle of small markers on lines
     const sp: number[] = [];
@@ -126,7 +137,7 @@ const makeFactory =
     bgScene.add(fullscreenMesh(bgMat));
     const ocam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const cam = new THREE.PerspectiveCamera(42, width / height, 0.01, 20);
-    const post = new PostFX(width, height, { bloom: { strength: 0.5, threshold: 0.35, knee: 0.3, radius: 1 }, vignette: 0.5, grain: 0.015 });
+    const post = new PostFX(width, height, { bloom: { strength: 0.35, threshold: 0.55, knee: 0.3, radius: 1 }, vignette: 0.5, grain: 0.015 });
     const focusPeak = new THREE.Vector3(0, 0.75 * HSCALE, -0.05);
     return {
       render(r, f) {
@@ -183,7 +194,7 @@ const Overlay: React.FC<{ p: TopoPalette }> = ({ p }) => {
         {Array.from({ length: 29 }, (_, i) => (
           <line key={i} x1={3480} y1={420 + i * 20} x2={3480 - (i % 5 === 0 ? 34 : 16)} y2={420 + i * 20} stroke={p.hud} strokeWidth={2.5} opacity={0.7} />
         ))}
-        <polygon points={`3496,${560 + 120 * Math.sin((f / LOOP) * 6.283)} 3514,${550 + 120 * Math.sin((f / LOOP) * 6.283)} 3514,${570 + 120 * Math.sin((f / LOOP) * 6.283)}`} fill={p.index} />
+        <polygon points={`3496,${560 + 120 * Math.sin((f / LOOP) * 6.283)} 3514,${550 + 120 * Math.sin((f / LOOP) * 6.283)} 3514,${570 + 120 * Math.sin((f / LOOP) * 6.283)}`} fill={p.hud} />
         {/* horizontal scan line with ticks, a marker moving across */}
         <line x1={260} y1={scanY} x2={3580} y2={scanY} stroke={p.hud} strokeWidth={8} opacity={0.08} />
         <line x1={260} y1={scanY} x2={3580} y2={scanY} stroke={p.hud} strokeWidth={2.5} opacity={0.75} />
@@ -229,7 +240,7 @@ const Overlay: React.FC<{ p: TopoPalette }> = ({ p }) => {
       <CodeLines f={f} x={760} y={600} rows={3} seed={702} size={16} theme={theme} cols={[14]} />
       <Txt x={3480 - 30} y={380} size={18} color={p.hud} align="right" width={300}>{`ELEV ${pad(counterValue(f, 703, 15, 1000, 4800), 4)}`}</Txt>
       <CodeLines f={f} x={3240} y={1180} rows={5} seed={704} size={17} theme={theme} cols={[10, 8]} />
-      <Txt x={3240} y={1140} size={18} color={p.index}>{`SECTOR ${pad(counterValue(f, 705, 30, 1, 99), 2)} // SCAN`}</Txt>
+      <Txt x={3240} y={1140} size={18} color={p.hud}>{`SECTOR ${pad(counterValue(f, 705, 30, 1, 99), 2)} // SCAN`}</Txt>
       <CodeLines f={f} x={1240} y={1950} rows={3} seed={706} size={16} theme={theme} cols={[12]} />
       <Txt x={300} y={2060} size={18} color={p.hud} opacity={0.8}>{`CONTOUR INTERVAL 25M   INDEX 125M   GRID ${pad(counterValue(f, 707, 60, 100, 999), 3)}`}</Txt>
     </AbsoluteFill>

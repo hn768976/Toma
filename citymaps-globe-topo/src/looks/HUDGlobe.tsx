@@ -75,7 +75,7 @@ out vec4 fragColor;
 void main() {
   float nv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
     float rim2 = pow(1.0 - nv, 14.0);
-  vec3 col = uOcean + uRim * (0.05 + pow(1.0 - nv, 3.0) * 0.32 + rim2 * 0.35);
+  vec3 col = uOcean + uRim * (0.11 + pow(1.0 - nv, 1.6) * 0.3 + rim2 * 0.18);
   // faint inner sheen toward the upper left
   col += uRim * 0.05 * smoothstep(0.2, 1.0, dot(normalize(vN), normalize(vec3(-0.5, 0.6, 0.6))));
   fragColor = vec4(col, 0.0);
@@ -110,7 +110,7 @@ void main() {
   // atmosphere glow outside the globe
   float r = length(px - uC);
   float out1 = max(r - uR, 0.0) / uR;
-  col += uRim * exp(-out1 / 0.05) * 0.16 * step(uR * 0.985, r);
+  col += uRim * exp(-out1 / 0.08) * 0.1 * step(uR * 0.985, r);
   col += uRim * exp(-out1 / 0.14) * 0.08;
   fragColor = vec4(col, 1.0);
 }`;
@@ -159,17 +159,17 @@ const makeFactory =
       const lon = (Math.atan2(x, z) * 180) / Math.PI;
       if (!isLand(lon, lat)) {
         // sparse faint specks over the oceans
-        if (rng() < 0.05) {
+        if (rng() < 0.22) {
           const ro = 1.003 + rng() * 0.03;
           lp.push(x * ro, y * ro, z * ro);
-          lc.push(land[0], land[1], land[2], 0.35 + 0.4 * rng());
+          lc.push(land[0], land[1], land[2], 0.25 + 0.35 * rng());
           ls.push(0.9 + 0.5 * rng());
         }
         continue;
       }
       const rr = 1.003 + rng() * rng() * 0.03;
       lp.push(x * rr, y * rr, z * rr);
-      const b = rng() < 0.02 ? 2.2 : 0.6 + 1.0 * rng() * rng() + 0.3 * rng();
+      const b = rng() < 0.03 ? 2.4 : 0.7 + 1.1 * rng() * rng() + 0.3 * rng();
       lc.push(land[0], land[1], land[2], b);
       ls.push(b > 1.7 ? 1.9 : 1.0 + 0.4 * rng());
     }
@@ -205,7 +205,7 @@ const makeFactory =
     spin.add(coasts);
 
     // gold specks: a swirling sheet, periodic in 600 frames
-    const NS = 3600;
+    const NS = 4200;
     const sp = new Float32Array(NS * 3);
     const sc = new Float32Array(NS * 4);
     const ss = new Float32Array(NS);
@@ -216,7 +216,7 @@ const makeFactory =
       sp[i * 3] = rng();
       sp[i * 3 + 1] = rng() * 2 - 1;
       sp[i * 3 + 2] = rng();
-      sc.set([gold[0], gold[1], gold[2], 0.7 + 0.9 * rng()], i * 4);
+      sc.set([gold[0], gold[1], gold[2], 0.9 + 1.1 * rng()], i * 4);
       ss[i] = 0.8 + 0.9 * rng();
       spar[i * 2] = rng() < 0.7 ? 1 : 2; // whole cycles per loop
       spar[i * 2 + 1] = rng();
@@ -236,13 +236,15 @@ const makeFactory =
           float j = position.z;
           // a sheet that peels off the upper-right limb, streams outward
           // and swirls round behind the globe
-          float a = p * 3.5 + v * 0.15 + uSheetRot;
+          float a = p * 2.3 + v * 0.15 + uSheetRot;
           float rad = 1.04 + 0.55 * pow(p, 0.8) + 0.25 * (j - 0.5) * p;
           float h = v * (0.08 + 0.8 * p) + 0.3 * sin(p * 4.0 + v * 2.5) * p;
           vec3 e1 = normalize(vec3(0.75, 0.62, 0.2));
           vec3 e2 = normalize(vec3(-0.35, 0.643, -0.681));
           vec3 e3 = normalize(cross(e1, e2));
           pos = (cos(a) * e1 + sin(a) * e2) * rad + e3 * h;
+          // a third of the specks stream on the opposite side (lower left)
+          if (j > 0.66) pos = vec3(-pos.x, -pos.y, abs(pos.z) * 0.6);
           amod = pow(1.0 - p, 0.5) * smoothstep(0.0, 0.06, p) * (0.6 + 0.4 * (1.0 - abs(v)));
         `,
       }),
@@ -260,7 +262,7 @@ const makeFactory =
     for (let i = 0; i < ND; i++) {
       const u = rng() * 2 - 1;
       const th = rng() * Math.PI * 2;
-      const rr = 1.02 + 0.55 * Math.pow(rng(), 2.0);
+      const rr = 1.0 + (rng() < 0.6 ? 0.12 * Math.pow(rng(), 2.0) : 0.5 * Math.pow(rng(), 1.5));
       const q = Math.sqrt(1 - u * u);
       dp.set([Math.cos(th) * q * rr, u * rr, Math.sin(th) * q * rr], i * 3);
       const white = rng() < 0.6;
@@ -319,6 +321,8 @@ const MARKERS: { lat: number; lon: number; shape: "pentagon" | "ring"; window: [
   { lat: 38, lon: -40, shape: "pentagon", window: [0, 1] },
   { lat: 22, lon: 70, shape: "ring", window: [0, 1] },
   { lat: -18, lon: 135, shape: "pentagon", window: [0, 1] },
+  { lat: 8, lon: 15, shape: "ring", window: [0, 1] },
+  { lat: 40, lon: -110, shape: "ring", window: [0, 1] },
 ];
 
 const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
@@ -348,8 +352,8 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
             const an = -Math.PI / 2 + (j * TAU) / 5;
             return `${m.x + Math.cos(an) * s},${m.y + Math.sin(an) * s}`;
           }).join(" ");
-          const lx = m.i === 1 ? 2900 : 2700;
-          const ly = m.y + (m.i === 0 ? -60 : 50);
+          const lx = m.i % 2 === 1 ? 2900 : 2700;
+          const ly = m.y + (m.i % 2 === 0 ? -60 : 50);
           return (
             <g key={m.i} opacity={m.a}>
               {m.shape === "pentagon" ? (
@@ -368,8 +372,8 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
       {markers.map((m) =>
         m.a > 0.001 ? (
           <div key={m.i} style={{ opacity: m.a }}>
-            <Txt x={(m.i === 1 ? 2900 : 2700) + 16} y={m.y + (m.i === 0 ? -60 : 50) - 14} size={22} color={p.text}>{`${pad(counterValue(f, 510 + m.i, 15, 0, 99999999), 8)}${pad(counterValue(f, 520 + m.i, 15, 0, 9999), 4)}`}</Txt>
-            <Txt x={(m.i === 1 ? 2900 : 2700) + 16} y={m.y + (m.i === 0 ? -60 : 50) + 18} size={18} color={p.dim}>{`TARGET ${m.i + 1}  //  ${m.shape === "ring" ? "SCAN" : "SECTOR"}`}</Txt>
+            <Txt x={(m.i % 2 === 1 ? 2900 : 2700) + 16} y={m.y + (m.i % 2 === 0 ? -60 : 50) - 14} size={22} color={p.text}>{`${pad(counterValue(f, 510 + m.i, 15, 0, 99999999), 8)}${pad(counterValue(f, 520 + m.i, 15, 0, 9999), 4)}`}</Txt>
+            <Txt x={(m.i % 2 === 1 ? 2900 : 2700) + 16} y={m.y + (m.i % 2 === 0 ? -60 : 50) + 18} size={18} color={p.dim}>{`TARGET ${m.i + 1}  //  ${m.shape === "ring" ? "SCAN" : "SECTOR"}`}</Txt>
           </div>
         ) : null,
       )}
@@ -398,6 +402,10 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
       <Rect x={1470} y={1860} w={4} h={240} fill={p.text} opacity={0.7} />
       <Txt x={1500} y={1885} size={190} color={p.text} weight={400} spacing={-0.02}>{pad(big, 2)}</Txt>
 
+      {/* dim translucent panels */}
+      <Rect x={40} y={20} w={1020} h={300} fill="rgba(170,190,186,0.07)" />
+      <Rect x={3600} y={880} w={220} h={360} fill="rgba(170,190,186,0.08)" />
+      <Rect x={2560} y={1120} w={520} h={260} fill="rgba(170,190,186,0.06)" />
       {/* extra data blocks */}
       <CodeLines f={f} x={1150} y={40} rows={6} seed={590} size={17} theme={theme} cols={[8, 8, 4]} />
       <CodeLines f={f} x={40} y={360} rows={8} seed={591} size={16} theme={theme} cols={[3, 12, 6]} />

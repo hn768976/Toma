@@ -18,7 +18,9 @@ export interface CityStyle {
   rail?: string;
   buildings?: { shades: string[] };
   noise?: { fine: number; coarse: number };
-  labels?: { color: string; alpha: number; angle?: number };
+  labels?: { color: string; alpha: number; angle?: number; numbers?: boolean };
+  // bright specks at some intersections
+  sparkles?: { color: string; count: number; size: number };
   // soft halo under avenues/arterials (emissive looks)
   halo?: { color: string; width: number; alpha: number };
 }
@@ -52,6 +54,39 @@ const polyPath = (polys: V2[][], W: number, closed: boolean) => {
     if (closed) path.closePath();
   }
   return path;
+};
+
+// Seven-segment digits as strokes (no font dependency).
+const SEG: Record<string, string> = {
+  "0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd",
+  "6": "afgedc", "7": "abc", "8": "abcdefg", "9": "abcdfg", ",": "", " ": "",
+};
+const digitPath = (path: Path2D, str: string, x0: number, y0: number, h: number, c: number, s: number) => {
+  const w = h * 0.55;
+  const P = (x: number, y: number): [number, number] => [x0 + c * x - s * y, y0 + s * x + c * y];
+  let x = 0;
+  for (const ch of str) {
+    if (ch === ",") {
+      const [ax, ay] = P(x + w * 0.1, h * 0.5);
+      const [bx, by] = P(x + w * 0.1, h * 0.65);
+      path.moveTo(ax, ay);
+      path.lineTo(bx, by);
+      x += w * 0.5;
+      continue;
+    }
+    const segs: Record<string, [number, number, number, number]> = {
+      a: [0, -h / 2, w, -h / 2], b: [w, -h / 2, w, 0], c: [w, 0, w, h / 2], d: [0, h / 2, w, h / 2],
+      e: [0, 0, 0, h / 2], f: [0, -h / 2, 0, 0], g: [0, 0, w, 0],
+    };
+    for (const k of SEG[ch] ?? "") {
+      const [a1, b1, a2, b2] = segs[k];
+      const [ax, ay] = P(x + a1, b1);
+      const [bx, by] = P(x + a2, b2);
+      path.moveTo(ax, ay);
+      path.lineTo(bx, by);
+    }
+    x += w * 1.45;
+  }
 };
 
 // Tileable noise overlay (Look 1 "imagery" feel).
@@ -193,7 +228,36 @@ export const drawCity = (city: City, style: CityStyle): HTMLCanvasElement => {
       }
     }
     wrapped(ctx, W, scale, () => ctx.fill(path));
+    if (style.labels.numbers) {
+      // every third label also gets a number string
+      const np = new Path2D();
+      const nr = mulberry32(city.seed + 9);
+      city.labels.forEach((l, i) => {
+        if (i % 3 !== 0) return;
+        const ang = style.labels!.angle ?? l.angle;
+        const n = Math.floor(nr() * 99999);
+        const str = nr() < 0.4 ? n.toLocaleString("en-US") : String(n).padStart(5, "0");
+        digitPath(np, str, l.p.x, l.p.y + 14, 9, Math.cos(ang), Math.sin(ang));
+      });
+      ctx.strokeStyle = style.labels.color;
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      wrapped(ctx, W, scale, () => ctx.stroke(np));
+    }
     ctx.globalAlpha = 1;
+  }
+
+  if (style.sparkles) {
+    const sr = mulberry32(city.seed + 21);
+    const sp = new Path2D();
+    for (let i = 0; i < style.sparkles.count; i++) {
+      const n = city.nodes[Math.floor(sr() * city.nodes.length)];
+      const r = (style.sparkles.size * (0.6 + 0.8 * sr())) / scale;
+      sp.moveTo(n.x + r, n.y);
+      sp.arc(n.x, n.y, r, 0, Math.PI * 2);
+    }
+    ctx.fillStyle = style.sparkles.color;
+    wrapped(ctx, W, scale, () => ctx.fill(sp));
   }
 
   // imagery-like noise
