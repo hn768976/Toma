@@ -7,7 +7,7 @@ import { LOOP, loopFrame, TAU } from "../lib/loop";
 import { gauss, mulberry32, range, Rng } from "../lib/random";
 import { WaterKit } from "./kit";
 import { hexToRgb, WaterPalette } from "./palettes";
-import { BLUR_D, SHARP_D, Sprite } from "./sprites";
+import { BLUR_D, IRREG_BASE, IRREG_BLUR_BASE, IRREG_BLUR_COUNT, IRREG_COUNT, SHARP_D, Sprite } from "./sprites";
 
 /** Layer = depth class. */
 export const FAR = 0;
@@ -50,7 +50,7 @@ export type BubbleSpec = {
   seed: number;
   aspect: number; // width / height
   /** Burst birth frames (each must be in [0,600)). */
-  bursts: { frame: number; count: number; duration: number; spreadMul?: number; srcX?: number; fizz?: number }[];
+  bursts: { frame: number; count: number; duration: number; spreadMul?: number; srcX?: number; fizz?: number; clumps?: number }[];
   /** Burst upwelling: initial speed (720 units/frame) and decay (frames). */
   plumeV: number;
   plumeTau: number;
@@ -90,16 +90,28 @@ const riseSpeed = (s: number) => 1.45 + 2.1 * Math.pow(Math.min(s, 14) / 14, 0.6
 
 const spriteFor = (s: number, layer: number, rng: Rng): Sprite => {
   if (layer === NEAR) {
+    if (s > 4 && rng() < 0.7) return IRREG_BLUR_BASE + Math.floor(rng() * IRREG_BLUR_COUNT);
     if (s > 10) return Sprite.CapBlur;
     if (s > 4) return Sprite.OblateBlur;
     return Sprite.RoundBlur;
   }
   if (s < 3) return Sprite.Tiny;
-  if (s < 5) return Sprite.Round;
-  if (s < 8) return Sprite.Oblate;
+  if (s < 5) return rng() < 0.3 ? IRREG_BASE + Math.floor(rng() * IRREG_COUNT) : Sprite.Round;
+  if (s < 7) return rng() < 0.5 ? IRREG_BASE + Math.floor(rng() * IRREG_COUNT) : Sprite.Oblate;
+  const r = rng();
+  if (r < 0.7) return IRREG_BASE + Math.floor(rng() * IRREG_COUNT);
   if (s < 10.5) return Sprite.Wobbly;
-  return rng() < 0.5 ? Sprite.Cap : Sprite.CapWide;
+  return r < 0.85 ? Sprite.Cap : Sprite.CapWide;
 };
+
+const isCap = (s: Sprite) => s === Sprite.Cap || s === Sprite.CapWide || s === Sprite.CapBlur;
+
+const pickLayer = (rng: Rng, spec: BubbleSpec) => {
+  const r = rng();
+  return r < spec.nearFraction ? NEAR : r < spec.nearFraction + spec.farFraction ? FAR : MID;
+};
+
+const layerSpeed = (layer: number) => (layer === FAR ? 0.8 : layer === NEAR ? 1.35 : 1);
 
 const makeBubble = (
   rng: Rng,
@@ -110,29 +122,25 @@ const makeBubble = (
   spreadMul: number,
   jetMul: number,
   plume: number,
+  forcedLayer?: number,
 ): Bubble => {
-  const r = rng();
-  const layer = r < spec.nearFraction ? NEAR : r < spec.nearFraction + spec.farFraction ? FAR : MID;
-  const depthScale = layer === NEAR ? range(rng, 2.2, 3.4) : layer === FAR ? range(rng, 0.45, 0.65) : range(rng, 0.85, 1.15);
+  let layer = forcedLayer ?? pickLayer(rng, spec);
+  // Large out-of-focus bubbles are rare: most near bubbles are small soft glints.
+  if (layer === NEAR && size > 4 && rng() < 0.85) layer = MID;
+  const depthScale = layer === NEAR ? (size > 4 ? range(rng, 3.5, 5) : range(rng, 2.2, 3.4)) : layer === FAR ? range(rng, 0.45, 0.65) : range(rng, 0.85, 1.15);
   const parallax = layer === NEAR ? range(rng, 2.2, 3.2) : layer === FAR ? range(rng, 0.55, 0.7) : 1;
-  const H = 720;
   const y0 = range(rng, spec.y0[0], spec.y0[1]) + (layer === NEAR ? 40 : 0);
-  // Speed: physical rise speed, × parallax (near bubbles cross the frame faster);
-  // clamped so every bubble leaves the top before its age wraps at 600.
-  const travel = y0 + 40 - plume * spec.plumeTau * 0.9;
-  let speed = riseSpeed(size) * (layer === FAR ? 0.8 : layer === NEAR ? 1.35 : 1) * range(rng, 0.9, 1.1);
-  speed = Math.max(speed, travel / (LOOP - 30));
   const big = size > 3;
   const sprite = spriteFor(size, layer, rng);
-  return {
+  const b: Bubble = {
     birth,
     layer,
     srcX,
-    y0: H + y0,
+    y0: 720 + y0,
     size,
-    speed,
+    speed: riseSpeed(size) * layerSpeed(layer) * range(rng, 0.9, 1.1),
     jet: jetMul * range(rng, 1.5, 4.5) * (0.4 + size / 14),
-    plume: plume * range(rng, 0.8, 1.1) * (layer === NEAR ? 1.35 : layer === FAR ? 0.8 : 1),
+    plume: plume * range(rng, 0.8, 1.1) * layerSpeed(layer),
     spread: gauss(rng) * spec.spreadScale * spreadMul * parallax,
     diff: gauss(rng) * 2.6 * parallax,
     tau: range(rng, 45, 140),
@@ -146,7 +154,7 @@ const makeBubble = (
     shapeW: range(rng, 0.25, 0.45),
     shapeP: range(rng, 0, TAU),
     shapeAmp: size < 3 ? 0 : size < 8 ? 0.08 : 0.14,
-    rot0: sprite === Sprite.Cap || sprite === Sprite.CapWide || sprite === Sprite.CapBlur ? range(rng, -0.15, 0.15) : range(rng, -0.6, 0.6),
+    rot0: isCap(sprite) ? range(rng, -0.15, 0.15) : range(rng, -0.6, 0.6),
     asp0: range(rng, 0.82, 1.12),
     depthScale,
     parallax,
@@ -154,6 +162,66 @@ const makeBubble = (
     sprite,
     drawnD: layer === NEAR ? BLUR_D : SHARP_D,
   };
+  return ensureExit(b, spec);
+};
+
+/** Every bubble must leave the top of the frame before its age wraps at 600. */
+const ensureExit = (b: Bubble, spec: BubbleSpec) => {
+  const travel = b.y0 + 40 - b.plume * spec.plumeTau * 0.9;
+  b.speed = Math.max(b.speed, travel / (LOOP - 30));
+  return b;
+};
+
+/** A clump: a sub-cloud of a burst whose bubbles share one trajectory. */
+type Clump = {
+  t: number;
+  dx: number;
+  dy: number;
+  spread: number;
+  tau: number;
+  swirlR: number;
+  swirlW: number;
+  swirlP: number;
+  plume: number;
+  speed: number;
+  sigma: number;
+  layer: number;
+};
+
+const makeClump = (rng: Rng, spec: BubbleSpec, duration: number, spreadMul: number): Clump => {
+  const r = rng();
+  const layer = r < 0.06 ? NEAR : r < 0.26 ? FAR : MID;
+  return {
+    t: Math.pow(rng(), 1.6) * duration,
+    dx: gauss(rng) * 8,
+    dy: gauss(rng) * 14,
+    spread: gauss(rng) * spec.spreadScale * spreadMul,
+    tau: range(rng, 60, 170),
+    swirlR: range(rng, 10, 40) * spreadMul,
+    swirlW: range(rng, 0.012, 0.035) * (rng() < 0.5 ? -1 : 1),
+    swirlP: range(rng, 0, TAU),
+    plume: spec.plumeV * range(rng, 0.7, 1.2),
+    speed: range(rng, 1.5, 2.5),
+    sigma: range(rng, 3, 12),
+    layer,
+  };
+};
+
+/** Bind a bubble to a clump's shared trajectory. */
+const joinClump = (rng: Rng, spec: BubbleSpec, b: Bubble, c: Clump, ownSpeed: boolean) => {
+  const par = b.parallax;
+  const ls = layerSpeed(b.layer);
+  b.spread = c.spread * par + gauss(rng) * c.sigma * 1.0 * par;
+  b.tau = c.tau;
+  b.swirlR = c.swirlR * par;
+  b.swirlW = c.swirlW;
+  b.swirlP = c.swirlP + gauss(rng) * 0.15;
+  b.plume = c.plume * ls;
+  if (!ownSpeed) b.speed = c.speed * ls * (1 + gauss(rng) * 0.05);
+  b.y0 += c.dy + gauss(rng) * c.sigma;
+  b.diff = gauss(rng) * 0.8 * par;
+  b.jet *= 0.5;
+  return ensureExit(b, spec);
 };
 
 export const buildBubbles = (spec: BubbleSpec): Bubble[] => {
@@ -162,17 +230,34 @@ export const buildBubbles = (spec: BubbleSpec): Bubble[] => {
   const list: Bubble[] = [];
   for (const b of spec.bursts) {
     const src = (b.srcX ?? spec.sourceX + (rng() * 2 - 1) * spec.sourceJitter) * W;
+    const spreadMul = b.spreadMul ?? 1;
+    const clumps = Array.from({ length: b.clumps ?? 0 }, () => makeClump(rng, spec, b.duration, spreadMul));
     for (let i = 0; i < b.count; i++) {
       // Most of the burst leaves in the first ~third of the exhale.
-      const t = Math.pow(rng(), 1.8) * b.duration;
       const size = powerLawSize(rng, spec.burstSizeMin ?? spec.sizeMin, spec.sizeMax, spec.powerLaw);
-      list.push(makeBubble(rng, spec, (b.frame + t) % LOOP, src + gauss(rng) * 5, size, b.spreadMul ?? 1, 1, spec.plumeV));
+      if (clumps.length && rng() < 0.65) {
+        const c = clumps[Math.floor(rng() * clumps.length)];
+        const bb = makeBubble(rng, spec, (b.frame + c.t + rng() * 4) % LOOP, src + c.dx + gauss(rng) * c.sigma, size, spreadMul, 1, spec.plumeV);
+        list.push(joinClump(rng, spec, bb, c, true));
+      } else {
+        const t = Math.pow(rng(), 1.8) * b.duration;
+        list.push(makeBubble(rng, spec, (b.frame + t) % LOOP, src + gauss(rng) * 5, size, spreadMul, 1, spec.plumeV));
+      }
     }
-    // Micro-bubble fizz carried up in the same plume, lingering as a fine column.
+    // Dense micro-bubble fizz, packed into the clumps: this is what makes an
+    // exhaled plume read as a bright, clumpy white mass.
     for (let i = 0; i < (b.fizz ?? 0); i++) {
-      const t = Math.pow(rng(), 1.4) * b.duration * 1.6;
-      const size = powerLawSize(rng, spec.sizeMin, spec.fizzSizeMax, 1.6);
-      list.push(makeBubble(rng, spec, (b.frame + t) % LOOP, src + gauss(rng) * 6, size, (b.spreadMul ?? 1) * 0.8, 0.5, spec.plumeV * range(rng, 0.5, 1.0)));
+      const size = powerLawSize(rng, spec.sizeMin, spec.fizzSizeMax, 1.5);
+      if (clumps.length) {
+        // Bigger clumps get more fizz (pick with a skew).
+        const c = clumps[Math.floor(Math.pow(rng(), 1.5) * clumps.length)];
+        const layer = c.layer === NEAR && rng() < 0.75 ? MID : c.layer;
+        const bb = makeBubble(rng, spec, (b.frame + c.t + rng() * 3) % LOOP, src + c.dx + gauss(rng) * c.sigma, size, spreadMul, 0.5, spec.plumeV, layer);
+        list.push(joinClump(rng, spec, bb, c, false));
+      } else {
+        const t = Math.pow(rng(), 1.4) * b.duration * 1.6;
+        list.push(makeBubble(rng, spec, (b.frame + t) % LOOP, src + gauss(rng) * 6, size, spreadMul * 0.8, 0.5, spec.plumeV * range(rng, 0.5, 1.0)));
+      }
     }
   }
   const nTrickle = Math.round(spec.trickle * LOOP);
@@ -188,15 +273,16 @@ export const buildBubbles = (spec: BubbleSpec): Bubble[] => {
 };
 
 /** Approximate god-ray brightness at (xN, yN) — the same sway terms as the shader, no caustic. */
-export const rayLight = (xN: number, yN: number, th: number, sun: [number, number], aspect: number) => {
+export const rayLight = (xN: number, yN: number, th: number, sun: [number, number], aspect: number, D: number) => {
   const dx = (xN - sun[0]) * aspect;
-  const dy = yN - (sun[1] - 0.55);
+  const dy = yN - (sun[1] - 1.3);
   const ang = Math.atan2(dx, dy);
   let s = 0;
-  s += 0.42 * Math.pow(0.5 + 0.5 * Math.cos(ang * 23 + 1.3 + 0.9 * Math.sin(th + 0.4) + 0.4 * Math.sin(2 * th + 2.1)), 5);
-  s += 0.36 * Math.pow(0.5 + 0.5 * Math.cos(ang * 37 + 4.1 - 1.1 * Math.sin(th + 1.9) + 0.5 * Math.sin(3 * th + 0.2)), 7);
-  s += 0.3 * Math.pow(0.5 + 0.5 * Math.cos(ang * 53 + 2.6 + 1.3 * Math.sin(2 * th + 4.4)), 9);
-  return s * Math.exp(-yN * 1.4);
+  s += 0.42 * Math.pow(0.5 + 0.5 * Math.cos(ang * 23 * D + 1.3 + 0.9 * Math.sin(th + 0.4) + 0.4 * Math.sin(2 * th + 2.1)), 5);
+  s += 0.36 * Math.pow(0.5 + 0.5 * Math.cos(ang * 37 * D + 4.1 - 1.1 * Math.sin(th + 1.9) + 0.5 * Math.sin(3 * th + 0.2)), 7);
+  s += 0.3 * Math.pow(0.5 + 0.5 * Math.cos(ang * 53 * D + 2.6 + 1.3 * Math.sin(2 * th + 4.4)), 9);
+  s += 0.22 * Math.pow(0.5 + 0.5 * Math.cos(ang * 79 * D + 0.7 - 1.6 * Math.sin(th + 3.3) + 0.6 * Math.sin(2 * th)), 12);
+  return Math.min(1.2, s) * Math.exp(-ang * ang * 5);
 };
 
 export class BubbleField {
@@ -286,7 +372,9 @@ export class BubbleField {
 
       // Brighter near the lit surface; catch ray light; fade into the glare at the top.
       const up = Math.max(0, 1 - yN);
-      const lit = Math.min(1, (0.72 + 0.4 * Math.pow(up, 1.8) + 0.5 * rayLight(xN, yN, th, sun, this.spec.aspect)) * this.spec.brightness);
+      // Bubbles flash as they cross the rays.
+      const ray = rayLight(xN, yN, th, sun, this.spec.aspect, this.kit.look.rayDensity);
+      const lit = Math.min(1, (0.62 + 0.35 * Math.pow(up, 1.8) + 0.75 * ray * (0.4 + 0.6 * up)) * this.spec.brightness);
       const glare = smooth(0.0, 0.2, yN) * (1 - 0.6 * Math.exp(-(((xN - sun[0]) * this.spec.aspect) ** 2 + (yN - sun[1]) ** 2) / 0.04));
       const a = b.alpha * area * glare;
       p.alpha = Math.max(0, Math.min(1, a));

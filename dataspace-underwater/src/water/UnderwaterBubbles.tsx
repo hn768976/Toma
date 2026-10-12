@@ -24,15 +24,15 @@ export const bubbleSpec = (aspect: number): BubbleSpec => ({
   aspect,
   // 5 bursts per loop, every 120 frames, 500–900 bubbles each (seeded counts).
   bursts: [
-    { frame: 0, count: 820, duration: 34, fizz: 2100 },
-    { frame: 120, count: 610, duration: 28, fizz: 1800 },
-    { frame: 240, count: 900, duration: 38, fizz: 2300 },
-    { frame: 360, count: 540, duration: 26, fizz: 1700 },
-    { frame: 480, count: 740, duration: 32, fizz: 2000 },
+    { frame: 0, count: 820, duration: 34, fizz: 3600, clumps: 34 },
+    { frame: 120, count: 610, duration: 28, fizz: 3000, clumps: 26 },
+    { frame: 240, count: 900, duration: 38, fizz: 3900, clumps: 38 },
+    { frame: 360, count: 540, duration: 26, fizz: 2800, clumps: 24 },
+    { frame: 480, count: 740, duration: 32, fizz: 3400, clumps: 30 },
   ],
   plumeV: 2.3,
   plumeTau: 120,
-  fizzSizeMax: 1.6,
+  fizzSizeMax: 2.2,
   trickle: 6,
   sourceX: 0.55,
   sourceJitter: 0.06,
@@ -64,6 +64,7 @@ export const UnderwaterBubbles: React.FC<{ palette: WaterPaletteKey }> = ({ pale
           kit.setFrame(frame);
           bubbles.update(frame);
           snow.update(frame);
+          if (frame === 300) console.log(`[bubbles] records=${bubbles.count} alive@300=${bubbles.aliveLastFrame}`);
           kit.draw(root);
         },
         destroy: () => {

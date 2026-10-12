@@ -111,7 +111,7 @@ float sunDist(vec2 uv, out vec2 q) {
   vec2 p = aspectP(uv);
   vec2 c = vec2(uSun.x * asp, uSun.y);
   q = (p - c) * vec2(1.0, 1.9);
-  q += 0.018 * surfaceWarp(p * 1.6);
+  q += 0.024 * surfaceWarp(p * 1.6) + 0.016 * surfaceWarp(p * 4.3 + 1.7) + 0.008 * surfaceWarp(p * 9.1 + 3.1);
   return length(q);
 }
 `;
@@ -148,11 +148,11 @@ void main() {
   vec2 sq;
   float sd = sunDist(uv, sq);
   float tir = smoothstep(uSunR * 1.05, uSunR * 1.6, sd) * smoothstep(0.32, 0.02, uv.y);
-  col *= 1.0 - 0.28 * tir;
+  col *= 1.0 - 0.42 * tir;
   // Slow volumetric mottling (whole-cycle drift), with a hint of green.
   float mot = sin(p.x * 3.1 + p.y * 2.3 + uTheta) * sin(p.x * 1.7 - p.y * 3.7 - uTheta + 1.3)
             + 0.5 * sin(p.x * 6.3 - p.y * 4.1 + 2.0 * uTheta + 0.5);
-  col *= 1.0 + 0.055 * mot;
+  col *= 1.0 + 0.085 * mot;
   col.g += 0.012 * mot * (col.g + 0.05);
   // Darker corners.
   vec2 vc = (uv - vec2(0.5, 0.45)) * vec2(1.0, 1.0);
@@ -199,16 +199,19 @@ void main() {
   // Refracted disc broken into bright cells by the ripples.
   float cells = caustic(q * 7.5 + 4.0, t * 2.0);
   float cells2 = caustic(q * 15.0 + 9.0, t);
-  float disc = smoothstep(R, R * 0.82, d);
-  float breakup = 0.25 + 1.1 * cells + 0.5 * cells2;
-  float core = disc * breakup;
+  // Snell's window: a crisp-edged ellipse of distorted sky, with a thin bright
+  // refraction rim at its edge.
+  float disc = smoothstep(R, R * 0.9, d);
+  float breakup = 0.12 + 1.1 * pow(cells, 1.3) + 0.6 * cells2;
+  float rimLine = exp(-pow((d - R * 0.975) / (R * 0.035), 2.0)) * (0.5 + 0.8 * cells);
+  float core = disc * breakup + rimLine * 0.6;
   // Outer shimmering fringe (patches of light around the window).
   float fringe = smoothstep(R * 2.2, R * 0.8, d) * cells * 0.6;
   // Soft glow halo.
-  float halo = exp(-d * d / (R * R * 3.5)) * 0.55 + exp(-d * d / (R * R * 18.0)) * 0.18;
+  float halo = exp(-d * d / (R * R * 3.5)) * 0.3 + exp(-d * d / (R * R * 18.0)) * 0.14;
   float flare = 1.0 + 1.6 * uFlare;
   float v = (core * 0.55 + fringe * 0.9 + halo * 0.4) * flare;
-  vec3 c = mix(uTop, uSunCol, clamp(core + 0.4, 0.0, 1.0)) * v;
+  vec3 c = mix(uTop, uSunCol, clamp(core * 0.8 + 0.2, 0.0, 1.0)) * v;
   fragColor = vec4(c, 0.0);
 }
 `;

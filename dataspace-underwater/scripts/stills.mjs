@@ -32,6 +32,7 @@ for (const frame of frames) {
     browserExecutable,
     timeoutInMilliseconds: 600000,
     overwrite: true,
+    onBrowserLog: (l) => { if (l.text.startsWith('[')) console.log(l.text); },
   });
   console.log(`frame ${frame}: ${(performance.now() - t0).toFixed(0)} ms`);
 }

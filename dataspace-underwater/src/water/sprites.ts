@@ -1,3 +1,4 @@
+import { mulberry32 } from "../lib/random";
 // Prebaked bubble / speck sprite atlas, built once at startup.
 //
 // Pixels are stored PREMULTIPLIED with "emission": rgb may exceed alpha, so a
@@ -7,7 +8,7 @@
 
 export const CELL = 128;
 export const ATLAS_COLS = 8;
-export const ATLAS_ROWS = 2;
+export const ATLAS_ROWS = 4;
 export const ATLAS_W = CELL * ATLAS_COLS;
 export const ATLAS_H = CELL * ATLAS_ROWS;
 
@@ -28,7 +29,13 @@ export const Sprite = {
   SpeckBokeh: 9,
   Tiny: 10,
 } as const;
-export type Sprite = (typeof Sprite)[keyof typeof Sprite];
+export type Sprite = number;
+
+/** Seeded irregular large-bubble shapes (sharp), and blurred copies for the near layer. */
+export const IRREG_BASE = 11;
+export const IRREG_COUNT = 13;
+export const IRREG_BLUR_BASE = IRREG_BASE + IRREG_COUNT; // 24
+export const IRREG_BLUR_COUNT = 6;
 
 type Shape = (u: number, v: number) => number; // signed distance, radius units, v down
 
@@ -63,12 +70,20 @@ const smooth = (a: number, b: number, x: number) => {
 type Px = [number, number, number, number]; // premultiplied r,g,b (emission) + a
 
 /** Shade one bubble pixel. (u,v) in radius units, v down; rpx = radius in px. */
-const shadeBubble = (shape: Shape, u: number, v: number, rpx: number, cap: boolean): Px => {
+const shadeBubble = (
+  shape: Shape,
+  u: number,
+  v: number,
+  rpx: number,
+  cap: boolean,
+  rimMod: (u: number, v: number) => number = () => 1,
+  glints: [number, number, number][] = [],
+): Px => {
   const d = shape(u, v);
   const aa = 1 / rpx;
   const cov = Math.min(1, Math.max(0, 0.5 - d / aa));
   const t = Math.max(0, -d); // depth inside the edge
-  const rimW = cap ? 0.17 : 0.15;
+  const rimW = cap ? 0.24 : 0.22;
   const rim = Math.exp(-((t / rimW) ** 2)) * cov;
   // Light comes from above: top of the rim slightly brighter.
   const lt = 0.78 + 0.22 * Math.max(-1, Math.min(1, -v));
@@ -81,10 +96,12 @@ const shadeBubble = (shape: Shape, u: number, v: number, rpx: number, cap: boole
   const spec = 1.2 * Math.exp(-(sx * sx + sy * sy) / 0.012) * cov;
   // Refracted, inverted image of the bright surface: the lower half of the
   // bubble's interior is lit, the upper half sees the dark depths.
-  const refr = 0.45 * smooth(-0.15, 0.75, v) * smooth(0.0, 0.35, t) * cov;
+  const refr = 0.55 * smooth(-0.35, 0.7, v) * smooth(0.0, 0.3, t) * cov + 0.12 * cov;
   // Rim is thicker / brighter at the bottom where light exits.
   const rimB = Math.exp(-((t / (rimW * (1 + 0.6 * smooth(0, 1, v)))) ** 2)) * cov;
-  let e = Math.max(rim, rimB) * 0.95 * lt + cres + spec + refr + 0.12 * cov;
+  let g = 0;
+  for (const [gx, gy, gr] of glints) g += 0.9 * Math.exp(-((u - gx) ** 2 + (v - gy) ** 2) / (gr * gr)) * cov;
+  let e = Math.max(rim, rimB) * 0.95 * lt * rimMod(u, v) + cres + spec + refr + 0.12 * cov + g;
   // Faint dark edge outside, on the side away from the light (bottom).
   const outside = Math.max(0, d);
   const dark = 0.32 * Math.exp(-(((outside - 0.04) / 0.05) ** 2)) * smooth(0.0, 0.9, v) * (d > -0.02 ? 1 : 0);
@@ -169,6 +186,46 @@ const renderCell = (fn: (u: number, v: number, rpx: number) => Px, diameter: num
   return buf;
 };
 
+// Irregular large bubble: polar harmonic outline, squashed, sometimes with a
+// flat or skirted bottom, a broken rim and a few extra glints. Seeded.
+const irregular = (seed: number) => {
+  const rng = mulberry32(0x1bb0 + seed * 7919);
+  const harm: [number, number, number][] = [];
+  for (let k = 2; k <= 7; k++) harm.push([k, (rng() * 0.11) / Math.sqrt(k - 1), rng() * TAU_]);
+  const asp = 0.55 + rng() * 0.35;
+  const kind = rng(); // <0.35 flat bottom, <0.6 skirted cap, else free blob
+  const tilt = (rng() - 0.5) * 0.25;
+  const shape: Shape = (u0, v0) => {
+    const u = u0 + tilt * v0;
+    const v = v0 / asp;
+    const r = len(u, v);
+    const phi = Math.atan2(v, u);
+    let R = 1;
+    for (const [k, a, p] of harm) R += a * Math.cos(k * phi + p);
+    let d = (r - R) * asp * 0.95;
+    if (kind < 0.35) d = Math.max(d, v0 - asp * (0.35 + 0.25 * rng0(seed)) - 0.1 * u0 * u0);
+    else if (kind < 0.6) d = Math.max(d, v0 - asp * 0.15 - 0.3 * u0 * u0 * u0 * u0 + 0.05 * Math.sin(u0 * 9 + seed));
+    return d;
+  };
+  const m1 = 2 + Math.floor(rng() * 4);
+  const p1 = rng() * TAU_;
+  const m2 = 5 + Math.floor(rng() * 5);
+  const p2 = rng() * TAU_;
+  const rimMod = (u: number, v: number) => {
+    const phi = Math.atan2(v, u);
+    return 0.35 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(m1 * phi + p1), 0.6) * (0.7 + 0.3 * Math.sin(m2 * phi + p2));
+  };
+  const glints: [number, number, number][] = [];
+  const ng = 1 + Math.floor(rng() * 3);
+  for (let i = 0; i < ng; i++) {
+    const a = -Math.PI / 2 + (rng() - 0.5) * 2.2;
+    glints.push([Math.cos(a) * 0.75, Math.sin(a) * 0.75 * asp, 0.05 + rng() * 0.07]);
+  }
+  return (u: number, v: number, rpx: number) => shadeBubble(shape, u, v, rpx, kind < 0.6, rimMod, glints);
+};
+const TAU_ = Math.PI * 2;
+const rng0 = (seed: number) => (Math.sin(seed * 12.9898) * 43758.5453) % 1;
+
 const bubble = (shape: Shape, cap: boolean) => (u: number, v: number, rpx: number) =>
   shadeBubble(shape, u, v, rpx, cap);
 
@@ -192,6 +249,9 @@ export const getSpriteAtlas = (): Uint8Array => {
     // At 1–3 px a bubble is just a glint: a bright solid dot with a soft edge.
     [Sprite.Tiny, renderCell((u, v) => shadeTiny(u, v), SHARP_D, 0)],
   ];
+  for (let i = 0; i < IRREG_COUNT; i++) cells.push([IRREG_BASE + i, renderCell(irregular(i), SHARP_D, 0)]);
+  for (let i = 0; i < IRREG_BLUR_COUNT; i++)
+    cells.push([IRREG_BLUR_BASE + i, renderCell(irregular(i * 2 + 1), BLUR_D, 7 + (i % 3) * 2)]);
   const out = new Uint8Array(ATLAS_W * ATLAS_H * 4);
   for (const [idx, buf] of cells) {
     const cx = (idx % ATLAS_COLS) * CELL;

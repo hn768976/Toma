@@ -43,8 +43,8 @@ const makeSpecks = (seed: number, count: number): Speck[] => {
       p1: range(rng, 0, Math.PI * 2),
       p2: range(rng, 0, Math.PI * 2),
       p3: range(rng, 0, Math.PI * 2),
-      size: bokeh ? range(rng, 4, 11) : Math.pow(rng(), 2) * 1.6 + 0.7,
-      alpha: bokeh ? range(rng, 0.1, 0.28) : range(rng, 0.35, 0.95),
+      size: bokeh ? range(rng, 4, 11) : Math.pow(rng(), 2) * 2.2 + 0.9,
+      alpha: bokeh ? range(rng, 0.14, 0.35) : range(rng, 0.5, 1.0),
       bokeh,
       tw: 1 + Math.floor(rng() * 4),
       tp: range(rng, 0, Math.PI * 2),
@@ -97,7 +97,7 @@ export class MarineSnow {
       const sc = (d / drawn) * (CELL / CELL);
       p.scaleX = p.scaleY = sc;
       // Area compensation for sub-pixel specks; brighter near the lit top.
-      const area = Math.min(1, ((s.size * k) / d) ** 2);
+      const area = Math.min(1, Math.pow((s.size * k) / d, 1.2));
       const lit = 0.55 + 0.6 * Math.pow(Math.max(0, 1 - yN), 1.5);
       const tw = 0.8 + 0.2 * Math.sin(s.tw * th + s.tp);
       p.alpha = Math.min(1, s.alpha * area * lit * tw * this.brightness);

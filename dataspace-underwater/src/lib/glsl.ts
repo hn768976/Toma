@@ -15,8 +15,8 @@ float hash3(uvec2 p, uint f, uint salt) {
 
 /**
  * Final 8-bit output stage:
- *   - film grain: zero-mean triangular noise, amplitude uGrain (≈ peak-to-peak
- *     fraction of full scale), slightly weighted toward mid-tones;
+ *   - film grain: zero-mean triangular noise with standard deviation ≈ uGrain
+ *     (fraction of full scale) in the mid-tones, a little less in the darks;
  *   - ±1/255 triangular dither so the 8-bit quantiser never makes steps.
  */
 export const GLSL_FINAL = /* glsl */ `
@@ -27,7 +27,7 @@ vec3 grainAndDither(vec3 c, vec2 fragCoord, float loopFrame, float grainAmt) {
   // Grain (monochrome, triangular PDF)
   float g = hash3(ip, f, 11u) + hash3(ip, f, 23u) - 1.0;
   float luma = dot(c, vec3(0.299, 0.587, 0.114));
-  c += g * grainAmt * (0.8 + 0.7 * sqrt(clamp(luma, 0.0, 1.0)));
+  c += g * 2.45 * grainAmt * (0.75 + 0.5 * sqrt(clamp(luma, 0.0, 1.0)));
   // Dither ±1/255 per channel (triangular)
   vec3 d = vec3(
     hash3(ip, f, 101u) + hash3(ip, f, 102u),
