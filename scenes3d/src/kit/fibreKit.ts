@@ -343,7 +343,7 @@ export const buildFibreKit = (
         .replace("#include <common>", "#include <common>\nuniform float uEdge;\nuniform vec3 uEdgeCol;\nuniform float uDash;\nvarying vec3 vWPos;")
         .replace(
           "#include <emissivemap_fragment>",
-          "#include <emissivemap_fragment>\n{ vec3 nV = normalize(vNormal); float side = 1.0 - abs(dot(nV, normalize((viewMatrix * vec4(0.0,1.0,0.0,0.0)).xyz))); float dash = mix(1.0, step(0.5, fract((vWPos.x + vWPos.z) * 16.0)), uDash); totalEmissiveRadiance += uEdgeCol * uEdge * dash * smoothstep(0.08, 0.3, side) * (1.0 - smoothstep(0.55, 0.85, side)); }",
+          "#include <emissivemap_fragment>\n{ vec3 nV = normalize(vNormal); float side = 1.0 - abs(dot(nV, normalize((viewMatrix * vec4(0.0,1.0,0.0,0.0)).xyz))); float dq = (vWPos.x + vWPos.z) * 16.0; float dw = fwidth(dq); float dsh = mix(smoothstep(0.5 - dw, 0.5 + dw, fract(dq)) * (1.0 - smoothstep(1.0 - dw, 1.0, fract(dq))), 0.5, smoothstep(0.25, 0.5, dw)); float dash = mix(1.0, dsh, uDash); totalEmissiveRadiance += uEdgeCol * uEdge * dash * smoothstep(0.08, 0.3, side) * (1.0 - smoothstep(0.55, 0.85, side)); }",
         );
     };
     const mesh = new THREE.InstancedMesh(geo, mat, list.length);
