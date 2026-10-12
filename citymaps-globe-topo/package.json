@@ -1,0 +1,27 @@
+{
+  "name": "citymaps-globe-topo",
+  "version": "1.0.0",
+  "description": "City maps, world connections, HUD globe and topo contours: nine 20s seamless loops (Remotion + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit",
+    "prepare-data": "node scripts/prepare-world.mjs"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  }
+}
