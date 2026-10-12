@@ -13,12 +13,12 @@ export const VERSIONS: Version[] = [
   {
     id: "NumberMatrix-Green",
     component: NumberMatrix,
-    props: { idx: "#4A8A7A", str: "#C8F0E0", val: "#7AD8B8", hi: "#2A6A5A", line: "#4A6E66", flash: "#F0FFF8" },
+    props: { idx: "#4A8A7A", str: "#C8F0E0", val: "#7AD8B8", hi: "#2A6A5A", line: "#2E4842", flash: "#F0FFF8" },
   },
   {
     id: "NumberMatrix-Amber",
     component: NumberMatrix,
-    props: { idx: "#8A6A3A", str: "#FFE0B0", val: "#F0A84A", hi: "#6A3A0A", line: "#6E5232", flash: "#FFF6E8" },
+    props: { idx: "#8A6A3A", str: "#FFE0B0", val: "#F0A84A", hi: "#6A3A0A", line: "#4A3822", flash: "#FFF6E8" },
   },
   {
     id: "RadialHUD-GreyGold",
@@ -53,14 +53,14 @@ export const VERSIONS: Version[] = [
     component: TradingTerminal,
     props: {
       bg: "#0E1420",
-      panel: "#111A28",
+      panel: "#0F1622",
       grid: "#1E2838",
       up: "#2AB88A",
       down: "#E83A4A",
       text: "#A8B8C8",
       bright: "#E4ECF4",
-      ma1: "#C8D4E0",
-      ma2: "#6A7A8E",
+      ma1: "#D8CCA8",
+      ma2: "#8A8070",
       summary: ["#4AB88A", "#E8945A", "#9A90D8", "#D8C878"],
       analysis: "#E8506A",
       chartBg: "#131A27",
@@ -100,8 +100,8 @@ export const VERSIONS: Version[] = [
       point: [0.784, 0.847, 0.941], // #C8D8F0
       glowL: [0.541, 0.353, 1.0], // #8A5AFF
       glowR: [0.227, 0.784, 1.0], // #3AC8FF
-      haze: [0.05, 0.08, 0.14],
-      bg: [0.05, 0.068, 0.1],
+      haze: [0.04, 0.065, 0.12],
+      bg: [0.045, 0.06, 0.09],
     },
   },
 ];

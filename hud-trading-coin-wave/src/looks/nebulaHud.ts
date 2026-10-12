@@ -160,7 +160,7 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
 
   // ---------------------------------------------------------- nebula --
   const cell = Math.max(3, R(0.0075 * h)); // LED cell, integer pixels
-  const tcell = Math.max(2, R(0.0042 * h)); // dot-matrix text cell
+  const tcell = Math.max(2, R(0.0052 * h)); // dot-matrix text cell
   const bandH = R(0.5 * h);
   const bandY = R(0.4 * h - bandH / 2);
   const texW1 = Math.min(1920, w);
@@ -192,11 +192,26 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   ctx.globalCompositeOperation = "screen";
   ctx.drawImage(low, 0, 0, lw * cell, lh * cell);
   ctx.restore();
+  {
+    const lg = ctx.createLinearGradient(0, 0, w, 0);
+    lg.addColorStop(0, "rgba(10,3,26,0.45)");
+    lg.addColorStop(0.55, "rgba(10,3,26,0)");
+    ctx.fillStyle = lg;
+    ctx.fillRect(0, bandY, w, bandH);
+    const rg = ctx.createLinearGradient(w * 0.55, 0, w, 0);
+    rg.addColorStop(0, "rgba(200,60,210,0)");
+    rg.addColorStop(1, "rgba(200,60,210,0.22)");
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = rg;
+    ctx.fillRect(w * 0.55, bandY + bandH * 0.3, w * 0.45, bandH * 0.3);
+    ctx.restore();
+  }
 
   // ------------------------------------------------- grid + vignette --
   const gap = Math.max(1, R(cell * 0.18));
   ctx.fillStyle = c.bg;
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = 0.35;
   for (let gx = 0; gx < w; gx += cell) ctx.fillRect(gx, 0, gap, h);
   for (let gy = 0; gy < h; gy += cell) ctx.fillRect(0, gy, w, gap);
   ctx.fillStyle = c.grid;
@@ -231,13 +246,16 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
       const lon = Math.atan2(u, z) + rot;
       const lat = Math.asin(v);
       const ln = sphereNoise((((lon / TAU) % 1) + 1) % 1 * 24, (lat / Math.PI + 0.5) * 12);
-      const land = smoothstep(0.45, 0.62, ln);
+      // radar-like concentric rings in screen space + faint turning texture
+      const ringR = Math.sqrt(rr);
+      const rings = Math.abs(((ringR * 7) % 1) - 0.5) > 0.32 ? 1 : 0.35;
+      const land = 0.45 * rings + 0.3 * smoothstep(0.4, 0.7, ln) + (ringR < 0.18 ? 0.5 : 0);
       const meridian = Math.abs(((lon / TAU) * 16 % 1 + 1) % 1 - 0.5) > 0.46 ? 0.35 : 0;
       let b = shade * (0.3 + 0.55 * land) + meridian * shade * 0.6;
       const noiseDot = hashF(id, holdBucket(f, 6, id % 6), 23);
       b *= noiseDot < 0.3 ? 0.1 : 0.45 + 0.45 * noiseDot;
       const hsh = hash3(id, 17);
-      let col = c.dots[hsh % 100 < 60 ? 0 : hsh % 100 < 90 ? 1 : hsh % 100 < 96 ? 2 : 3];
+      let col = c.dots[hsh % 100 < 62 ? 0 : hsh % 100 < 95 ? 1 : hsh % 100 < 98 ? 2 : 3];
       // scramble patches
       for (let p = 0; p < PATCHES.length; p++) {
         const P = PATCHES[p];
@@ -369,6 +387,22 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   ctx.lineTo(X(0.97) + 0.5, Y(0.62) + 0.5);
   ctx.lineTo(X(0.99) + 0.5, Y(0.66) + 0.5);
   ctx.stroke();
+
+  // wide dotted bar strips (left third)
+  {
+    const sz = Math.max(1, tcell - Math.max(1, R(tcell * 0.22)));
+    for (let r = 0; r < 7; r++) {
+      const y0 = Math.floor(Y(0.31 + r * 0.032) / tcell) * tcell;
+      const len = Math.round((0.12 + 0.2 * hashF(r, holdBucket(f, 20, r * 3), 95)) * w / tcell);
+      ctx.fillStyle = r % 3 === 2 ? c.dots[2] : r % 2 ? c.dots[1] : c.dots[0];
+      for (let j = 0; j < 2; j++)
+        for (let i = 0; i < len; i++) {
+          ctx.globalAlpha = (hashF(r * 999 + i, j, holdBucket(f, 6, r)) < 0.15 ? 0.15 : 0.55) * (0.6 + 0.4 * (r % 2));
+          ctx.fillRect(Math.floor(X(0.01) / tcell) * tcell + i * tcell, y0 + j * tcell, sz, sz);
+        }
+    }
+    ctx.globalAlpha = 1;
+  }
 
   // code panel (lower left): a lit cyan dot-matrix bar
   {
@@ -506,10 +540,10 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   const sy = cyc(f, 3) * h * 1.1 - h * 0.05;
   const sg = ctx.createLinearGradient(0, sy - 0.06 * h, 0, sy);
   sg.addColorStop(0, "rgba(200,170,255,0)");
-  sg.addColorStop(1, "rgba(200,170,255,0.12)");
+  sg.addColorStop(1, "rgba(200,170,255,0.05)");
   ctx.fillStyle = sg;
   ctx.fillRect(0, R(sy - 0.06 * h), w, R(0.06 * h));
-  ctx.fillStyle = "rgba(230,215,255,0.22)";
+  ctx.fillStyle = "rgba(230,215,255,0.12)";
   ctx.fillRect(0, R(sy), w, Math.max(1, R(0.0012 * h)));
 
   // ----------------------------------------------------- glitches --

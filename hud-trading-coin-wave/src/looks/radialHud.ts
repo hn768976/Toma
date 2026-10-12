@@ -29,7 +29,7 @@ const mkSegs = (n: number, gap: number): Seg[] => {
   }
   return segs;
 };
-const SEG_OUTER = mkSegs(4, 0.09); // repeats twice (180°)
+const SEG_OUTER = mkSegs(7, 0.025); // repeats twice (180°)
 const SEG_INNER = mkSegs(5, 0.03); // repeats three times (120°)
 
 // Labels on the text ring: angle (deg, 0 = right, clockwise), length, kind
@@ -162,7 +162,7 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
 
   // B: text ring (labels + yellow rim counters), one turn per loop
   const rotText = -TAU * cyc(f, 1);
-  const rB = D(0.392);
+  const rB = D(0.375);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   LABELS.forEach((L, i) => {
@@ -175,7 +175,7 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
       ctx.font = `600 ${R(D(0.046))}px ${HUD}`;
       ctx.fillStyle = c.counter;
     } else {
-      ctx.font = `600 ${R(D(0.029))}px ${HUD}`;
+      ctx.font = `600 ${R(D(0.025))}px ${HUD}`;
       ctx.fillStyle = i % 3 === 1 ? c.dim : c.text;
     }
     ctx.fillText(val, 0, 0);
@@ -193,24 +193,12 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
       ctx.moveTo(cx + Math.cos(a) * D(0.2), cy + Math.sin(a) * D(0.2));
       ctx.lineTo(cx + Math.cos(a) * D(0.262), cy + Math.sin(a) * D(0.262));
       ctx.strokeStyle = c.greys[2];
-      ctx.globalAlpha = 0.25 + 0.35 * ((k * 7) % 5) / 4;
+      ctx.globalAlpha = 0.12 + 0.18 * ((k * 7) % 5) / 4;
       ctx.lineWidth = lw(0.0035);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
-  // thin chords and spokes across the open centre
-  ctx.strokeStyle = c.faint;
-  ctx.lineWidth = lw(0.0009);
-  for (let k = 0; k < 6; k++) {
-    const a = (k * TAU) / 6 + TAU * cyc(f, -1) / 6;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * D(0.06), cy + Math.sin(a) * D(0.06));
-    ctx.lineTo(cx + Math.cos(a) * D(0.15), cy + Math.sin(a) * D(0.15));
-    ctx.stroke();
-  }
-  arc(D(0.371), 0, TAU, lw(0.0009), c.faint);
-
   // D: 180-tick ring, 12 ticks per loop
   ticks(180, D(0.284), D(0.29), (TAU / 180) * 12 * cyc(f, 1), c.dim, lw(0.0011), 5, D(0.295));
 
@@ -279,8 +267,6 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
     ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, D(0.0028), 0, TAU);
     ctx.fill();
   }
-  ctx.fillStyle = c.faint;
-  for (let k = -2; k <= 2; k++) ctx.fillRect(R(cx + k * D(0.03)), R(cy - D(0.012)), 1, R(D(0.024)));
   // extra rings of tiny text and point lights (inside the dial)
   ctx.font = `600 ${R(D(0.0115))}px ${HUD}`;
   [0.19, 0.255, 0.3].forEach((rr, ri) => {

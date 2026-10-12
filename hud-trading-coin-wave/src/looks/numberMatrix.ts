@@ -15,18 +15,18 @@ export type NumberMatrixProps = {
 // All positions are fractions of the frame (x of width, y of height).
 const PITCH = 0.0235; // row pitch
 const FONT = 0.0146; // font size (cap height ≈ 1.1% of frame height)
-const TRACK = 0.0026; // letter spacing
+const TRACK = 0.0021; // letter spacing
 const GAP = 0.9; // gap between groups, in rows
 
 // Each row: index (2) · short value (5) · long string (15) · value (5)
 type PanelDef = { x: number; y: number; w: number; groups: number[]; boxed: boolean; cols: [number, number, number, number]; scale?: number };
 const PANELS: PanelDef[] = [
   { x: 0.0156, y: 0.046, w: 0.272, groups: [6, 1, 6, 2, 6], boxed: false, cols: [0, 0.026, 0.09, 0.236] },
-  { x: 0.393, y: 0.1, w: 0.19, groups: [6, 1, 6, 2, 4], boxed: true, cols: [0, 0.019, 0.063, 0.161], scale: 0.84 },
-  { x: 0.703, y: 0.1, w: 0.19, groups: [6, 1, 6, 2, 4], boxed: true, cols: [0, 0.019, 0.063, 0.161], scale: 0.84 },
-  { x: 0.0156, y: 0.746, w: 0.272, groups: [6, 2], boxed: false, cols: [0, 0.026, 0.09, 0.236] },
-  { x: 0.34, y: 0.746, w: 0.262, groups: [6, 2], boxed: false, cols: [0, 0.024, 0.1, 0.232] },
-  { x: 0.64, y: 0.746, w: 0.3, groups: [6, 2], boxed: false, cols: [0, 0.024, 0.07, 0.3] },
+  { x: 0.392, y: 0.1, w: 0.205, groups: [6, 1, 6, 2, 6], boxed: true, cols: [0, 0.02, 0.068, 0.17], scale: 0.84 },
+  { x: 0.684, y: 0.1, w: 0.232, groups: [6, 1, 6, 2, 6], boxed: true, cols: [0, 0.022, 0.078, 0.192], scale: 0.84 },
+  { x: 0.0156, y: 0.736, w: 0.272, groups: [6, 2], boxed: false, cols: [0, 0.026, 0.114, 0.236] },
+  { x: 0.36, y: 0.736, w: 0.262, groups: [6, 2], boxed: false, cols: [0, 0.03, 0.11, 0.24] },
+  { x: 0.71, y: 0.736, w: 0.27, groups: [6, 2], boxed: false, cols: [0, 0.03, 0.11, 0.246] },
 ];
 
 // ------------------------------------------------- seeded per-cell schedules --
@@ -180,11 +180,14 @@ export const drawNumberMatrix: DrawFn<NumberMatrixProps> = (ctx, w, h, frame, c)
       const right = X(p.w) + 0.5 * (lineW % 2);
       ctx.beginPath();
       if (!p.boxed) return;
-      ctx.rect(left, top, right - left, bot - top);
-      // double left edge and inner column dividers, as in the reference
-      ctx.moveTo(left + 2 * lineW, top);
-      ctx.lineTo(left + 2 * lineW, bot);
-      for (const cx of [p.cols[2] - 0.004, p.cols[3] - 0.004]) {
+      // short groups get a full outline; tall groups only vertical rules
+      if (g.rows.length <= 2) ctx.rect(left, top, right - left, bot - top);
+      else
+        for (const xx of [left, right]) {
+          ctx.moveTo(xx, top);
+          ctx.lineTo(xx, bot);
+        }
+      for (const cx of [p.cols[1] - 0.003, p.cols[2] - 0.004, p.cols[3] - 0.004]) {
         ctx.moveTo(X(cx) + 0.5 * (lineW % 2), top);
         ctx.lineTo(X(cx) + 0.5 * (lineW % 2), bot);
       }
@@ -222,6 +225,7 @@ export const drawNumberMatrix: DrawFn<NumberMatrixProps> = (ctx, w, h, frame, c)
         ctx.font = `500 ${fpx}px ${MONO}`;
         if (!row.shortStr) {
           ctx.fillStyle = isHi || flash ? c.flash : c.str;
+          ctx.font = `400 ${fpx}px ${MONO}`;
           ctx.fillText(longString(row, f, wave, waveBucket), X(p.cols[2]), base);
         }
         const val2 = row.val2Hold ? digits(5, row.id, 78, holdBucket(f, row.val2Hold, row.val2Off)) : digits(5, row.id, 78);

@@ -134,8 +134,8 @@ void main(){
     float e = abs(vUv2.x);
     a = smoothstep(1.0, 0.25, e) * 0.6 + smoothstep(0.42, 0.1, e) * 0.9;
   }
-  float fade = exp(-vAlong / 1.15);                // traces fade with distance from the ring
-  float b = vMeta.z * (0.1 + 1.25 * fade + 2.2 * pulse * (0.35 + fade));
+  float fade = exp(-vAlong / 0.8);                // traces fade with distance from the ring
+  float b = vMeta.z * (0.05 + 1.3 * fade + 2.2 * pulse * (0.35 + fade));
   vec3 col = mix(uColor2, uColor, smoothstep(0.4, 3.0, vAlong));   // warm near the ring
   gl_FragColor = vec4(col * b * a, 1.0);
 }`;
@@ -161,9 +161,9 @@ const buildNebulaTexture = (c1: string, c2: string) => {
       }
       n /= norm;
       // band along one diagonal (2-fold), fading with radius
-      const band = 0.5 + 0.5 * Math.cos(2 * (Math.atan2(y, x) - 0.6));
+      const band = 0.5 + 0.5 * Math.cos(2 * (Math.atan2(y, x) - 0.75));
       const streak = noise(4, (ang * 3) % 1, rr * 0.25);
-      const dens = Math.max(0, n - 0.33) * 7 * (0.08 + 0.92 * band ** 3) * Math.exp(-((rr / 0.85) ** 2)) * 1.3 * (0.85 + 0.3 * streak);
+      const dens = Math.max(0, n - 0.33) * 7 * (0.08 + 0.92 * band ** 3) * Math.exp(-((rr / 1.0) ** 2)) * 1.3 * (0.85 + 0.3 * streak);
       const mix = Math.min(1, Math.max(0, noise(2, (ang + 0.5) % 1, rr)));
       const k = (j * S + i) * 4;
       data[k] = Math.min(255, 255 * dens * (A.r * (1 - mix) + B.r * mix));
@@ -251,11 +251,6 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
     const core = new THREE.Mesh(new THREE.TorusGeometry(RB, 0.016, 24, 256), new THREE.MeshBasicMaterial({ color: coreCol, toneMapped: false }));
     core.position.z = 0.025;
     badge.add(core);
-    const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(RB * 1.045, 0.008, 12, 256),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(p.rays).multiplyScalar(1.6), toneMapped: false }),
-    );
-    badge.add(halo);
 
     const shapes = SYMBOLS[p.symbol]();
     const symGeo = new THREE.ExtrudeGeometry(shapes, { depth: 0.1, bevelEnabled: true, bevelThickness: 0.045, bevelSize: 0.03, bevelSegments: 4, curveSegments: 48 });

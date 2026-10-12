@@ -157,9 +157,9 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   const volH = 0.23 * h;
   cs.forEach((k) => {
     ctx.fillStyle = k.c >= k.o ? c.up : c.down;
-    ctx.globalAlpha = 0.62;
+    ctx.globalAlpha = 0.45;
     const vh = k.v * volH;
-    ctx.fillRect(k.x - pitch * 0.42, volB - vh, pitch * 0.84, vh);
+    ctx.fillRect(k.x - pitch * 0.3, volB - vh, pitch * 0.6, vh);
   });
   ctx.globalAlpha = 1;
   // moving averages (over the plotted values)
@@ -198,15 +198,14 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   // last-price line + tag
   const last = cs[cs.length - 1];
   const ly = R(py(last.c));
-  ctx.strokeStyle = c.text;
+  // dashed last-price line, drawn as integer-pixel dashes (no stroked dash pattern)
+  ctx.fillStyle = c.text;
   ctx.globalAlpha = 0.35;
-  ctx.lineWidth = 1;
-  ctx.setLineDash([R(0.006 * h), R(0.005 * h)]);
-  ctx.beginPath();
-  ctx.moveTo(0, ly + 0.5);
-  ctx.lineTo(X(chartR), ly + 0.5);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  {
+    const on = Math.max(2, R(0.006 * h));
+    const period = on + Math.max(2, R(0.005 * h));
+    for (let x = 0; x < X(chartR); x += period) ctx.fillRect(x, ly, Math.min(on, X(chartR) - x), 1);
+  }
   ctx.globalAlpha = 1;
 
   // price scale (its own lighter boxed strip)
@@ -311,7 +310,7 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ctx.fillRect(X(sx), Y(0.2), w - X(sx), 1);
 
   text("GOLD / USD", sx + 0.006, 0.228, c.bright, R(0.019 * h), SANS, 500);
-  text(last.c.toFixed(2), sx + 0.006, 0.272, c.bright, R(0.038 * h), SANS, 500);
+  text(last.c.toFixed(2), sx + 0.006, 0.268, c.bright, R(0.028 * h), SANS, 400);
   ctx.fillStyle = c.up;
   ctx.fillRect(X(sx + 0.006), Y(0.284), X(0.036), Y(0.02));
   ctx.fillStyle = c.down;
