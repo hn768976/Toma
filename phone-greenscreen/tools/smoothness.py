@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Step 6 helper: track the phone through a window of PNG frames and report
-per-frame motion of its silhouette (centroid + bounding box), plus the largest
+per-frame motion of its silhouette (centroid, bounding box, bottom edge), plus the largest
 change in velocity (a pop shows up as a spike).
 
   smoothness.py <seq_dir> <first> <last> <green|bg-sample>
@@ -23,14 +23,16 @@ for f in range(a, b + 1):
         m = np.abs(img - bg).max(2) > 40
     ys, xs = np.nonzero(m)
     if len(xs) < 50:
-        rows.append((f, np.nan, np.nan, np.nan, np.nan))
+        rows.append((f, np.nan, np.nan, np.nan, np.nan, np.nan))
         continue
-    rows.append((f, xs.mean(), ys.mean(), xs.max() - xs.min(), ys.max() - ys.min()))
+    rows.append((f, xs.mean(), ys.mean(), xs.max() - xs.min(), ys.max() - ys.min(), ys.max()))
 r = np.array(rows, float)
-vel = np.diff(r[:, 1:3], axis=0)
+# while the phone is cropped by the frame edge its centroid is not physical;
+# track the bottom edge (col 5) and centre x instead
+vel = np.diff(r[:, [1, 5]], axis=0)
 acc = np.diff(vel, axis=0)
 for row in r:
-    print("f%3d cx %7.2f cy %7.2f w %6.1f h %6.1f" % tuple(row))
+    print("f%3d cx %7.2f cy %7.2f w %6.1f h %6.1f bottom %6.1f" % tuple(row))
 ok = ~np.isnan(acc).any(1)
 if ok.any():
     i = np.nanargmax(np.abs(acc[ok]).max(1))
