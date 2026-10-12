@@ -74,7 +74,7 @@ export const buildWorld = (gl: THREE.WebGLRenderer, row: VersionRow): World => {
   // key from the upper left, rim from the right
   const key = new THREE.DirectionalLight(0xffffff, 1.6);
   key.position.set(-3, 4, 4);
-  const rim = new THREE.DirectionalLight(0xffffff, 2.4);
+  const rim = new THREE.DirectionalLight(0xffffff, 3.2);
   rim.position.set(5, 1.5, -2.5);
   scene.add(key, rim);
 
@@ -118,9 +118,9 @@ export const buildWorld = (gl: THREE.WebGLRenderer, row: VersionRow): World => {
       roleMeshes.push(im);
     }
     // soft drop shadows, down and to the right
-    const tex = roundedRectShadowTexture(0.085);
+    const tex = roundedRectShadowTexture(0.05);
     const sg = new THREE.PlaneGeometry(PHONE.W + 2 * GRID_SHADOW_PAD, PHONE.H + 2 * GRID_SHADOW_PAD);
-    sg.translate(0.045, -0.07, -PHONE.D / 2 - 0.004);
+    sg.translate(0.02, -0.04, -PHONE.D / 2 - 0.004);
     const sm = new THREE.MeshBasicMaterial({
       color: 0x000000,
       map: tex,
@@ -196,7 +196,7 @@ export const buildWorld = (gl: THREE.WebGLRenderer, row: VersionRow): World => {
       }
       const gap = Math.max(0, minY - floorY);
       shadow.position.set((minX + maxX) / 2, floorY, (minZ + maxZ) / 2);
-      shadow.scale.set((maxX - minX) * 1.25 + 0.5 + gap * 0.6, 1, maxZ - minZ + 0.6 + gap * 0.5);
+      shadow.scale.set((maxX - minX) * 1.1 + 0.3 + gap * 0.6, 1, maxZ - minZ + 0.35 + gap * 0.5);
       sm.opacity = (bg.shadowOpacity ?? 0.4) * Math.exp(-gap * 2.2);
       shadow.updateMatrixWorld(true);
     };

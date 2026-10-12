@@ -42,6 +42,8 @@ uniform vec3 uC1;
 uniform vec3 uC2;
 uniform vec2 uGlowPos;     // uv of the soft floor glow
 uniform float uGlow;       // its strength
+uniform float uDeepen;     // diagonal: deepen the first colour in the bottom-left corner
+uniform float uStreak;     // diagonal: soft light streak from the upper left
 uniform float uHorizon;    // studio: uv.y of the wall / floor blend
 uniform float uVignette;
 uniform float uGrain;      // amplitude (0.01 = 1%)
@@ -86,15 +88,20 @@ vec3 background(vec2 uv) {
   float aspect = uRes.x / uRes.y;
   if (uBgType == 1) {
     // soft diagonal: top-left -> bottom-right, with gently curved bands
-    vec2 p = vec2(uv.x * aspect, uv.y);
-    vec2 dir = normalize(vec2(aspect, -1.0));
-    float t = dot(p - vec2(0.0, 1.0), dir) / dot(vec2(aspect, -1.0), dir);
-    t += 0.06 * sin(uv.y * 3.1 + 0.4) * sin(uv.x * 2.3);
-    // keep the end colours across more of the frame: a narrower white band
-    t = clamp((t - 0.12) / 0.76, 0.0, 1.0);
-    vec3 c = t < 0.5
-      ? mix(uC0, uC1, smoothstep(0.0, 1.0, t / 0.5))
-      : mix(uC1, uC2, smoothstep(0.0, 1.0, (t - 0.5) / 0.5));
+    // corner-to-corner diagonal: 0 at top-left, 1 at bottom-right
+    float t = 0.5 * (uv.x + (1.0 - uv.y));
+    t += 0.04 * sin(uv.y * 3.1 + 0.4) * sin(uv.x * 2.3);
+    t = clamp(t, 0.0, 1.0);
+    // first colour holds over the top-left half; the last only reaches into its corner
+    vec3 c = t < 0.55
+      ? mix(uC0, uC1, smoothstep(0.05, 0.55, t))
+      : mix(uC1, uC2, smoothstep(0.62, 1.0, t));
+    // the first colour deepens into the bottom-left corner (darkest area of the frame)
+    float bl = smoothstep(0.95, 0.0, length(uv * vec2(0.9, 1.2)));
+    c = mix(c, uC0 * vec3(0.71, 0.76, 0.87), uDeepen * bl);
+    // a soft diagonal light streak from the upper left towards the centre
+    float d = abs((uv.y - 1.05) + 0.85 * uv.x) / 1.31;
+    c = mix(c, vec3(1.0), uStreak * exp(-d * d * 60.0) * smoothstep(0.75, 0.15, uv.x));
     vec2 g = (uv - uGlowPos) * vec2(aspect * 0.55, 1.6);
     c = mix(c, vec3(1.0), uGlow * exp(-dot(g, g) * 4.0));
     return c;
@@ -104,13 +111,14 @@ vec3 background(vec2 uv) {
     // a soft horizon falloff into a brighter floor.
     float x = (uv.x - 0.5) * aspect;
     // darker towards the top, the sides, and (asymmetric key) the right wall
-    float wallShade = 0.075 * smoothstep(uHorizon, 1.05, uv.y) + 0.05 * x * x
-                    + 0.09 * smoothstep(0.35, 1.0, uv.x) * smoothstep(uHorizon - 0.05, 0.9, uv.y);
-    vec3 wall = uC0 * (1.0 - wallShade * vec3(1.0, 0.99, 0.965)); // shade cools slightly
+    float wallShade = 0.06 * smoothstep(uHorizon, 1.05, uv.y) + 0.035 * x * x * step(0.0, x)
+                    + 0.012 * x * x
+                    + 0.11 * smoothstep(0.35, 1.0, uv.x) * smoothstep(uHorizon - 0.05, 0.9, uv.y);
+    vec3 wall = uC0 * (1.0 - wallShade * vec3(1.0, 1.0, 0.8)); // shade takes a faint lavender cast
     // soft vertical light falling onto the wall behind the subject
     wall += 0.025 * exp(-x * x * 2.2) * smoothstep(1.0, uHorizon, uv.y);
     float floorT = clamp((uHorizon - uv.y) / uHorizon, 0.0, 1.0);
-    vec3 floorC = uC0 * (1.0 - 0.03 * x * x) + 0.02 * floorT;
+    vec3 floorC = uC0 * (0.955 - 0.03 * x * x) * vec3(1.0, 1.0, 1.008) + 0.012 * floorT;
     float k = smoothstep(uHorizon - 0.07, uHorizon + 0.09, uv.y);
     vec3 c = mix(floorC, wall, k);
     // the cove: a faint shading band where the floor bends up into the wall
@@ -185,6 +193,8 @@ export const buildPostPass = (bg: BackgroundSpec): PostPass => {
       uC2: { value: srgbVec(c[2] ?? c[1] ?? c[0]) },
       uGlowPos: { value: new THREE.Vector2(...(bg.glowPos ?? [0.5, 0.2])) },
       uGlow: { value: bg.glow ?? 0 },
+      uDeepen: { value: bg.deepen ?? 0 },
+      uStreak: { value: bg.streak ?? 0 },
       uHorizon: { value: bg.horizon ?? 0.25 },
       uVignette: { value: bg.vignette ?? 0 },
       uGrain: { value: 0.01 },

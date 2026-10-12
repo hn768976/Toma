@@ -52,7 +52,7 @@ export const DROP_IN = {
     position: [0, 0.32, DROP_D],
     target: [0, 0.02, 0],
   } as CameraSpec,
-  floorY: -0.8,
+  floorY: -0.75,
   pose: (f: number): Pose => {
     const baseYaw = 5 * deg; // left side just visible; the hold turns 20° to the left
     const y0 = 0.06;
@@ -88,14 +88,15 @@ export const DROP_IN = {
 // ---------------------------------------------------------------------------
 // 2 — Sway (600-frame loop)
 // ---------------------------------------------------------------------------
-const SWAY_D = distanceFor(0.82, FOV);
+const SWAY_FOV = 30; // wider lens + closer camera: more perspective taper while it turns
+const SWAY_D = distanceFor(0.82, SWAY_FOV);
 const SWAY_VH = 1.5 / 0.82;
-const SWAY_X = -0.38 * halfWidthAt(SWAY_D, FOV, ASPECT); // left third (~31 % across)
+const SWAY_X = -0.38 * halfWidthAt(SWAY_D, SWAY_FOV, ASPECT); // left third (~31 % across)
 
 export const SWAY = {
   camera: {
     kind: "perspective",
-    fov: FOV,
+    fov: SWAY_FOV,
     position: [0, 0.1, SWAY_D],
     target: [0, 0, 0],
   } as CameraSpec,
@@ -128,10 +129,10 @@ export const TUMBLE = {
     position: [0, 0.35, TUMBLE_D],
     target: [0, 0.02, 0],
   } as CameraSpec,
-  floorY: -0.84,
+  floorY: -0.8,
   pose: (f: number): Pose => {
     const top = 3.1;
-    const y0 = 0.03;
+    const y0 = 0.07;
     const restYaw = -7 * deg;
     // 0–3.5 s: tumble in (≈1.25 turns over two axes), land upright at
     // ~2.5 s and settle by 3.5 s

@@ -13,6 +13,9 @@ export type BackgroundSpec = {
   /** soft floor glow (diagonal backgrounds) */
   glow?: number;
   glowPos?: [number, number];
+  /** diagonal: deepen the first colour into the bottom-left corner / soft light streak */
+  deepen?: number;
+  streak?: number;
   /** studio: uv.y of the wall / floor horizon (0 = bottom) */
   horizon?: number;
   vignette?: number;
@@ -27,11 +30,13 @@ export const BACKGROUNDS = {
   PastelGradient: {
     type: "diagonal",
     colors: ["#C8D4F0", "#F0F2F8", "#F0D8E0"],
-    glow: 0.45,
+    glow: 0.35,
     glowPos: [0.69, 0.13],
+    deepen: 1.0,
+    streak: 0.45,
     vignette: 0.06,
     shadow: true,
-    shadowOpacity: 0.26,
+    shadowOpacity: 0.24,
   },
   PastelPink: {
     type: "diagonal",
@@ -48,7 +53,7 @@ export const BACKGROUNDS = {
     shadow: true,
     shadowOpacity: 0.3,
   },
-  White: { type: "flat", colors: ["#FAFAFA"], shadow: true, shadowOpacity: 0.24 },
+  White: { type: "flat", colors: ["#FAFAFA"], shadow: true, shadowOpacity: 0.2 },
   /** neutral grey, used only for the model check stills */
   Grey: { type: "flat", colors: ["#8A8D92"], shadow: false },
 } satisfies Record<string, BackgroundSpec>;
