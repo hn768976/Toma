@@ -90,7 +90,8 @@ vec3 background(vec2 uv) {
     vec2 dir = normalize(vec2(aspect, -1.0));
     float t = dot(p - vec2(0.0, 1.0), dir) / dot(vec2(aspect, -1.0), dir);
     t += 0.06 * sin(uv.y * 3.1 + 0.4) * sin(uv.x * 2.3);
-    t = clamp(t, 0.0, 1.0);
+    // keep the end colours across more of the frame: a narrower white band
+    t = clamp((t - 0.12) / 0.76, 0.0, 1.0);
     vec3 c = t < 0.5
       ? mix(uC0, uC1, smoothstep(0.0, 1.0, t / 0.5))
       : mix(uC1, uC2, smoothstep(0.0, 1.0, (t - 0.5) / 0.5));
@@ -102,8 +103,10 @@ vec3 background(vec2 uv) {
     // seamless cyclorama: wall darkens towards the top and the sides,
     // a soft horizon falloff into a brighter floor.
     float x = (uv.x - 0.5) * aspect;
-    float wallShade = 0.075 * smoothstep(uHorizon, 1.05, uv.y) + 0.05 * x * x;
-    vec3 wall = uC0 * (1.0 - wallShade);
+    // darker towards the top, the sides, and (asymmetric key) the right wall
+    float wallShade = 0.075 * smoothstep(uHorizon, 1.05, uv.y) + 0.05 * x * x
+                    + 0.09 * smoothstep(0.35, 1.0, uv.x) * smoothstep(uHorizon - 0.05, 0.9, uv.y);
+    vec3 wall = uC0 * (1.0 - wallShade * vec3(1.0, 0.99, 0.965)); // shade cools slightly
     // soft vertical light falling onto the wall behind the subject
     wall += 0.025 * exp(-x * x * 2.2) * smoothstep(1.0, uHorizon, uv.y);
     float floorT = clamp((uHorizon - uv.y) / uHorizon, 0.0, 1.0);

@@ -27,11 +27,11 @@ export const BACKGROUNDS = {
   PastelGradient: {
     type: "diagonal",
     colors: ["#C8D4F0", "#F0F2F8", "#F0D8E0"],
-    glow: 0.55,
+    glow: 0.45,
     glowPos: [0.69, 0.13],
-    vignette: 0.05,
+    vignette: 0.06,
     shadow: true,
-    shadowOpacity: 0.42,
+    shadowOpacity: 0.26,
   },
   PastelPink: {
     type: "diagonal",
@@ -46,9 +46,9 @@ export const BACKGROUNDS = {
     horizon: 0.22,
     vignette: 0.1,
     shadow: true,
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.3,
   },
-  White: { type: "flat", colors: ["#FAFAFA"], shadow: true, shadowOpacity: 0.32 },
+  White: { type: "flat", colors: ["#FAFAFA"], shadow: true, shadowOpacity: 0.24 },
   /** neutral grey, used only for the model check stills */
   Grey: { type: "flat", colors: ["#8A8D92"], shadow: false },
 } satisfies Record<string, BackgroundSpec>;

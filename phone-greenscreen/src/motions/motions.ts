@@ -52,15 +52,16 @@ export const DROP_IN = {
     position: [0, 0.32, DROP_D],
     target: [0, 0.02, 0],
   } as CameraSpec,
-  floorY: -0.86,
+  floorY: -0.8,
   pose: (f: number): Pose => {
-    const baseYaw = -9 * deg;
-    const top = 2.9;
+    const baseYaw = 5 * deg; // left side just visible; the hold turns 20° to the left
+    const y0 = 0.06;
+    const top = 2.95;
     // 0–1.5 s: drop in with a soft ease-out and a small settle bounce
     if (f < 45) {
       const e = easeOutBack(f / 45, 0.75);
       return {
-        position: [DROP_X, mix(top, 0, e), 0],
+        position: [DROP_X, mix(top, y0, e), 0],
         rotation: [mix(-6 * deg, 0, e), mix(baseYaw + 16 * deg, baseYaw, e), mix(-7 * deg, 0, e)],
       };
     }
@@ -69,7 +70,7 @@ export const DROP_IN = {
       const u = seg(f, 45, 210);
       const turn = 0.5 - 0.5 * Math.cos(2 * Math.PI * u);
       return {
-        position: [DROP_X, 0.012 * Math.sin(2 * Math.PI * u), 0],
+        position: [DROP_X, y0 + 0.012 * Math.sin(2 * Math.PI * u), 0],
         rotation: [0, baseYaw - 20 * deg * turn, 0],
       };
     }
@@ -78,7 +79,7 @@ export const DROP_IN = {
     const e = easeInCubic(u);
     const tilt = easeInOutSine(u);
     return {
-      position: [DROP_X + 0.08 * e, mix(0, top, e), 0],
+      position: [DROP_X + 0.08 * e, mix(y0, top, e), 0],
       rotation: [-7 * deg * tilt, baseYaw + 6 * deg * tilt, -9 * deg * tilt],
     };
   },
@@ -87,8 +88,8 @@ export const DROP_IN = {
 // ---------------------------------------------------------------------------
 // 2 — Sway (600-frame loop)
 // ---------------------------------------------------------------------------
-const SWAY_D = distanceFor(0.8, FOV);
-const SWAY_VH = 1.5 / 0.8;
+const SWAY_D = distanceFor(0.82, FOV);
+const SWAY_VH = 1.5 / 0.82;
 const SWAY_X = -0.38 * halfWidthAt(SWAY_D, FOV, ASPECT); // left third (~31 % across)
 
 export const SWAY = {
@@ -104,11 +105,12 @@ export const SWAY = {
     const t = (((f % loopLength) + loopLength) % loopLength) / loopLength;
     const TAU = 2 * Math.PI;
     return {
-      position: [SWAY_X, 0.02 * SWAY_VH * Math.sin(TAU * 3 * t + 0.6), 0],
+      position: [SWAY_X, -0.035 + 0.02 * SWAY_VH * Math.sin(TAU * 3 * t + 0.6), 0],
       rotation: [
         2 * deg * Math.sin(TAU * 2 * t + 1.9),
         18 * deg * Math.sin(TAU * 2 * t),
-        6 * deg * Math.sin(TAU * 3 * t + 1.1),
+        // phase chosen so the phone leans into its first full turn
+        6 * deg * Math.sin(TAU * 3 * t - 0.785),
       ],
     };
   },
@@ -117,7 +119,7 @@ export const SWAY = {
 // ---------------------------------------------------------------------------
 // 3 — Tumble Land (300 frames)
 // ---------------------------------------------------------------------------
-const TUMBLE_D = distanceFor(0.68, FOV);
+const TUMBLE_D = distanceFor(0.74, FOV);
 
 export const TUMBLE = {
   camera: {
@@ -126,20 +128,22 @@ export const TUMBLE = {
     position: [0, 0.35, TUMBLE_D],
     target: [0, 0.02, 0],
   } as CameraSpec,
-  floorY: -0.9,
+  floorY: -0.84,
   pose: (f: number): Pose => {
     const top = 3.1;
+    const y0 = 0.03;
+    const restYaw = -7 * deg;
     // 0–3.5 s: tumble in (≈1.25 turns over two axes), land upright at
     // ~2.5 s and settle by 3.5 s
     if (f < 105) {
       const u = f / 105;
-      const y = mix(top, 0, easeOutBack(u, 0.55));
+      const y = mix(top, y0, easeOutBack(u, 0.55));
       const r = easeOutBack(seg(f, 0, 100), 0.35);
       return {
         position: [0, y, 0],
         rotation: [
           mix(-24 * deg, 0, r), // pitch
-          mix(450 * deg, 0, r), // 1.25 turns of yaw: enters edge-on (90°)
+          mix(450 * deg, restYaw, r), // ~1.25 turns of yaw: enters edge-on (90°)
           mix(38 * deg, 0, r), // roll
         ],
       };
@@ -149,8 +153,8 @@ export const TUMBLE = {
       const v = seg(f, 105, 240);
       const fl = 0.5 - 0.5 * Math.cos(2 * Math.PI * v);
       return {
-        position: [0, 0.022 * fl, 0],
-        rotation: [0, 2.5 * deg * Math.sin(2 * Math.PI * v), 0],
+        position: [0, y0 + 0.022 * fl, 0],
+        rotation: [0, restYaw + 2.5 * deg * Math.sin(2 * Math.PI * v), 0],
       };
     }
     // 8–10 s: tip and tumble out of the top
@@ -158,8 +162,8 @@ export const TUMBLE = {
     const e = easeInCubic(u);
     const tip = easeInOutSine(Math.min(1, u * 1.6));
     return {
-      position: [0.15 * e, mix(0, top + 0.3, e), 0],
-      rotation: [-50 * deg * tip - 130 * deg * e, -110 * deg * e, 16 * deg * tip],
+      position: [0.15 * e, mix(y0, top + 0.3, e), 0],
+      rotation: [-50 * deg * tip - 130 * deg * e, restYaw - 110 * deg * e, 16 * deg * tip],
     };
   },
 };
@@ -168,9 +172,9 @@ export const TUMBLE = {
 // 4 — Grid (600-frame loop)
 // ---------------------------------------------------------------------------
 export const GRID = {
-  camera: { kind: "orthographic", viewHeight: 3.1 } as CameraSpec,
+  camera: { kind: "orthographic", viewHeight: 2.7 } as CameraSpec,
   columns: 4,
-  rowPeriod: 2.2,
+  rowPeriod: 2.1,
   rows: [-3, -2, -1, 0, 1, 2],
   /** upward scroll; exactly one row period per loop, wrapped so frame N === frame 0 */
   offset: (f: number, loopLength: number) => {
