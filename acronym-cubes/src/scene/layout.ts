@@ -21,7 +21,7 @@ export const STATIC_JITTER = 0.08;
 export const FLARES_PER_LOOP = 100; // ≈ 5 per second
 export const FLARE_FRAMES = 6;
 /** rows over which the field colour runs from A (far) to B (near / frame bottom) */
-export const GRADIENT_ROWS: [number, number] = [3, 31];
+export const GRADIENT_ROWS: [number, number] = [3, 28];
 
 export type CubeCell = {
   x: number;
@@ -83,7 +83,7 @@ export function buildLayout(word: string, baseIconCount: number): CubeCell[] {
         row,
         col,
         // A → B across the rows the camera actually sees (far edge → bottom of frame)
-        gradientT: Math.pow(smoothstep(GRADIENT_ROWS[0], GRADIENT_ROWS[1], row), 1.5),
+        gradientT: smoothstep(GRADIENT_ROWS[0], GRADIENT_ROWS[1], row),
         slot,
         accent,
         jitter: (hC * 2 - 1) * STATIC_JITTER,

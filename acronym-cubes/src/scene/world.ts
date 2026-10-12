@@ -52,7 +52,7 @@ export const LOOK = {
     vignette: 0.7,
     grain: 0.015,
     saturation: 1.35,
-    bottomFalloff: 0.6,
+    bottomFalloff: 0.4,
   },
 };
 
@@ -100,7 +100,8 @@ export function buildWorld(gl: THREE.WebGLRenderer, row: AcronymRow, font: Font,
   cubes.frustumCulled = false;
   const tmp = new THREE.Color();
   cells.forEach((c, i) => {
-    tmp.copy(colA).lerp(colB, c.gradientT).multiplyScalar(LOOK.cubeBrightness);
+    // near cubes a touch brighter so colour B holds up under the icon bokeh
+    tmp.copy(colA).lerp(colB, c.gradientT).multiplyScalar(LOOK.cubeBrightness * (0.85 + 0.6 * c.gradientT));
     cubes.setColorAt(i, tmp);
   });
   scene.add(cubes);
