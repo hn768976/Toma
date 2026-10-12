@@ -22,7 +22,8 @@ const LAT_MIN = -57;
 const LAT_MAX = 83;
 const SX = 0.01; // map units per degree of longitude
 const SY = 0.0112; // per degree of latitude (slightly stretched, Miller-like)
-const TILT = (34 * Math.PI) / 180;
+const TILT = (46 * Math.PI) / 180;
+const YAW = 0.24; // left side nearer, map recedes toward the upper right
 const PERIODS = [150, 200, 300, 600];
 
 const toMap = (lat: number, lon: number) => new THREE.Vector3(lon * SX, (lat - (LAT_MIN + LAT_MAX) / 2) * SY, 0);
@@ -47,7 +48,8 @@ void main() {
   col += uHaze * pow(smoothstep(0.35, 1.05, p.y), 1.5) * 0.7;
   // broad soft glow behind the map and in the upper left
   col += uHaze * 0.3 * exp(-pow(length((p - vec2(0.45, 0.55)) * vec2(1.0, 1.6)), 2.0) / 0.18);
-  col += uHaze * 0.45 * exp(-length(p - vec2(0.0, 0.85)) / 0.3);
+  col += uHaze * 0.85 * exp(-length(p - vec2(0.0, 0.9)) / 0.35);
+  col += uHaze * 0.12 + vec3(0.02, 0.025, 0.03);
   col += uHaze * 0.18 * exp(-pow((p.y - 0.95) / 0.25, 2.0)) * (0.7 + 0.3 * sin(p.x * 3.0 + 1.0));
   // faint large translucent panels in the background, slowly drifting
   vec2 q = vec2(p.x * uRes.x / uRes.y, p.y);
@@ -62,11 +64,17 @@ void main() {
   // faint circuit lines low in the frame
   float lw = 1.5 / uRes.y;
   float gl = 0.0;
-  for (int i = 0; i < 5; i++) {
-    float y = 0.06 + float(i) * 0.035;
-    gl += (1.0 - smoothstep(0.0, lw, abs(p.y - y))) * step(0.1 + 0.13 * float(i), p.x) * step(p.x, 0.55 + 0.08 * float(i));
+  for (int i = 0; i < 9; i++) {
+    float fi = float(i);
+    float y = 0.04 + fi * 0.028;
+    float x0 = fract(fi * 0.37) * 0.6;
+    float x1 = x0 + 0.15 + fract(fi * 0.61) * 0.35;
+    gl += (1.0 - smoothstep(0.0, lw, abs(p.y - y))) * step(x0, p.x) * step(p.x, x1);
+    // angled jog at the end of each trace
+    float jx = p.x - x1;
+    gl += (1.0 - smoothstep(0.0, lw * 1.4, abs((p.y - y) - jx * 0.8))) * step(0.0, jx) * step(jx, 0.03);
   }
-  col += uHaze * gl * 0.35;
+  col += uHaze * gl * 0.6;
   fragColor = vec4(col, 1.0);
 }`;
 
@@ -81,7 +89,7 @@ const makeFactory =
     const UP = new THREE.Vector3(0, Math.cos(TILT), Math.sin(TILT));
 
     const root = new THREE.Group();
-    root.rotation.x = -TILT;
+    root.rotation.set(-TILT, YAW, 0, "YXZ");
     const scene = new THREE.Scene();
     scene.add(root);
 
@@ -101,13 +109,14 @@ const makeFactory =
         let near = 0;
         for (const c of cityPos) near += Math.exp(-p.distanceToSquared(c) / (2 * 0.05 * 0.05));
         // each cell: a short vertical streak of 2-3 sparkly sub-dots
-        const n = 2 + (rng() < 0.4 ? 1 : 0);
+        if (rng() < 0.18) continue; // uneven density
+        const n = 2 + Math.floor(rng() * 3);
         for (let q = 0; q < n; q++) {
-          const b = 1.0 + 0.6 * rng() + Math.min(1.2, near) * 0.9;
+          const b = 0.9 + 0.6 * rng() + Math.min(1.2, near) * 0.5;
           const teal = rng() < 0.06;
-          dotPos.push(p.x + (rng() - 0.5) * 0.002, p.y + (q - (n - 1) / 2) * SY * 0.3, 0);
+          dotPos.push(p.x + (rng() - 0.5) * 0.0015, p.y + (q - (n - 1) / 2) * SY * 0.42 + (rng() - 0.5) * SY * 0.15, 0);
           dotCol.push(teal ? xc[0] : dc[0], teal ? xc[1] : dc[1], teal ? xc[2] : dc[2], Math.min(2.2, b));
-          dotSize.push(1.2 + 0.6 * rng() * rng() + Math.min(1, near) * 0.5);
+          dotSize.push(0.9 + 0.8 * rng() * rng() + Math.min(1, near) * 0.4);
           dotPar.push(1 + Math.floor(rng() * 3), rng() * 6.283);
         }
       }
@@ -116,8 +125,9 @@ const makeFactory =
       for (let lo = -179.5; lo < 180; lo += 1) {
         if (isLand(lo, la)) continue;
         const coast = isLand(lo + 1, la) || isLand(lo - 1, la) || isLand(lo, la + 1) || isLand(lo, la - 1);
-        if (!coast || rng() > 0.45) continue;
-        const p = toMap(la + (rng() - 0.5) * 1.6, lo + (rng() - 0.5) * 1.6);
+        const far = !coast && rng() < 0.03;
+        if (!(coast && rng() < 0.9) && !far) continue;
+        const p = toMap(la + (rng() - 0.5) * 2.6, lo + (rng() - 0.5) * 2.6);
         const teal = rng() < 0.35;
         dotPos.push(p.x, p.y, 0);
         dotCol.push(teal ? xc[0] : dc[0], teal ? xc[1] : dc[1], teal ? xc[2] : dc[2], 0.5 + 0.7 * rng());
@@ -149,13 +159,13 @@ const makeFactory =
       const big = 0.6 + 0.4 * rng();
       // wide soft glow
       glowPos.push(p.x, p.y, 0.001);
-      glowCol.push(cc[0], cc[1], cc[2], 0.22 * big);
-      glowSize.push(22 * big);
+      glowCol.push(cc[0], cc[1], cc[2], 0.16 * big);
+      glowSize.push(14 * big);
       glowPar.push(1 + Math.floor(rng() * 2), rng() * 6.283);
       // bright core
       glowPos.push(p.x, p.y, 0.002);
-      glowCol.push(1, 1, 1, 2.0);
-      glowSize.push(3.6 * big);
+      glowCol.push(1, 1, 1, 3.2);
+      glowSize.push(4.4 * big);
       glowPar.push(2, rng() * 6.283);
     });
     const glows = new THREE.Points(
@@ -174,7 +184,11 @@ const makeFactory =
       const b = Math.floor(rng() * CITIES.length);
       if (a === b) continue;
       const ang = gcAngle(CITIES[a], CITIES[b]);
-      if (ang < 0.55 || ang > 2.4) continue;
+      if (ang < 0.55 || ang > 2.6) continue;
+      // most arcs fan from the Americas across to Europe/Asia/Oceania
+      const west = CITIES[a][1] < -30;
+      const east = CITIES[b][1] > 0;
+      if (!(west && east) && rng() < 0.75) continue;
       const key = a < b ? `${a}-${b}` : `${b}-${a}`;
       if (used.has(key)) continue;
       used.add(key);
@@ -185,7 +199,7 @@ const makeFactory =
       const B = cityPos[b];
       const d = A.distanceTo(B);
       const C = A.clone().add(B).multiplyScalar(0.5);
-      C.addScaledVector(UP, d * 0.45);
+      C.addScaledVector(UP, d * 0.6);
       const pts: number[] = [];
       for (let s = 0; s <= 80; s++) {
         const t = s / 80;
@@ -257,14 +271,14 @@ const makeFactory =
     const ocam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     const cam = new THREE.PerspectiveCamera(30, width / height, 0.1, 100);
-    const post = new PostFX(width, height, { bloom: { strength: 0.6, threshold: 0.5, knee: 0.4, radius: 1 }, vignette: 0.3, grain: 0.015 });
+    const post = new PostFX(width, height, { bloom: { strength: 0.32, threshold: 0.75, knee: 0.3, radius: 1 }, vignette: 0.25, grain: 0.015 });
     return {
       render(r, f) {
         const ph = phase(f, 1);
         const push = 1 + 0.04 * Math.sin(ph);
-        const dist = 3.8 / push;
-        cam.position.set(0.12 * Math.sin(ph + 0.4), -0.05 + 0.06 * Math.cos(ph), dist);
-        cam.lookAt(0.02 * Math.sin(ph + 1.3), 0.06, 0);
+        const dist = 3.5 / push;
+        cam.position.set(0.12 + 0.12 * Math.sin(ph + 0.4), -0.05 + 0.06 * Math.cos(ph), dist);
+        cam.lookAt(0.12 + 0.02 * Math.sin(ph + 1.3), 0.02, 0);
         cam.updateMatrixWorld(true);
         dof.uFocus.value = dist;
         uPhase.value = ph;
