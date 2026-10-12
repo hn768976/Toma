@@ -123,4 +123,98 @@ All versions are data rows in `src/versions.ts` (one row per version).
   positions are approximate coordinates of major cities and no names are
   shown.
 
-<!-- MEASUREMENTS -->
+## Measured render times
+
+Measured in a GPU-less container (4 vCPU, 15 GB RAM): WebGL2 runs on ANGLE →
+SwiftShader (CPU), so these are worst-case numbers. A machine with a GPU will be
+much faster.
+
+**720p previews** (full 600-frame render, `--concurrency=4`, includes encode):
+
+| Composition | Wall time | Wall time per frame |
+|---|---|---|
+| CityHUD-SteelBlue | 204 s | 0.34 s |
+| CityFlyover-Teal | 268 s | 0.45 s |
+| CityFlyover-Amber | 261 s | 0.44 s |
+| CityTracker-Teal | 155 s | 0.26 s |
+| WorldConnections-Blue | 158 s | 0.26 s |
+| WorldConnections-Gold | 158 s | 0.26 s |
+| HUDGlobe-Teal | 192 s | 0.32 s |
+| TopoContours-GreenOrange | 274 s | 0.46 s |
+| TopoContours-IceBlue | 273 s | 0.45 s |
+
+**Timed real 4K frames** (3840×2160, `--concurrency=1`, per-frame cost =
+(time for 10 frames − time for 1 frame) / 9, which removes bundling/startup):
+
+| Composition | 4K per frame | 720p per frame (same method) | Ratio |
+|---|---|---|---|
+| CityFlyover-Teal (2A) | 3.99 s | 0.63 s | 6.3× |
+| HUDGlobe-Teal (5) | 2.27 s | 0.42 s | 5.4× |
+
+**4K estimates** for a full 600-frame render on this kind of CPU-only machine
+(720p wall time × ~6): City HUD ≈ 20 min, Flyover ≈ 27–28 min each, Tracker
+≈ 16 min, World ≈ 16 min each, Globe ≈ 17 min, Topo ≈ 27 min each, so about
+3.5 hours for all nine. On a workstation GPU expect well under a second per 4K
+frame. First-frame start-up per tab is ~5–10 s (city generation and painting
+the 8192² textures).
+
+## Verification (as run here)
+
+| Check | Result |
+|---|---|
+| 1. ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, 20.000 s | all 9 pass |
+| 2. Loop: `loopCheck` (601 frames), frame 0 vs frame 600 pixel for pixel | all 9 identical |
+| 3. Determinism: frame 300 as a cold single still vs frame 300 of a 4-tab PNG-sequence render (frames 280–319), byte for byte | all 9 identical |
+| 4. Banding: frames decoded from the encoded mp4s, contrast-stretched crops and luma profiles across the deep blue (4), the globe background (5), the dark greens (6) and the blurred foreground/horizon (2) | smooth, no steps |
+| 5. Contact sheets (5 evenly spaced frames) | all 9 show the required content |
+| 6. Motion: consecutive-frame crops around frame 300; tracker path analysed exactly | no crawl/moiré; tracker dot accel ≤ 0.28 px/frame², map follow ≤ 0.07 px/frame² |
+
+`scripts/check-loop-determinism.sh` runs checks 2–3 and `scripts/verify.py`
+has the probe / sheet / banding / compare helpers.
+
+### Banding check
+
+Every look ends in a final pass that adds ±1/255 dither and a 1.5% grain that
+is a pure function of pixel position and `frame % 600` (PCG hash in the
+shader). Check it on the encoded file, not the preview:
+
+```
+python3 scripts/verify.py banding out/previews/WorldConnections_Blue.mp4 300 v:640:0:170 h:690:0:1280
+```
+
+It prints, per line, the largest jump of the smoothed luma profile and the
+longest flat run; stepped gradients show as long flat runs followed by jumps.
+
+## Completion checklist
+
+- [x] 9 compositions, 3840×2160, 30 fps, 600 frames, seamless loops
+- [x] three.js on WebGL2 via `@remotion/three`; no PixiJS, no WebGPU
+- [x] one procedural tileable city drives Looks 1–3; texture painted once
+- [x] Natural Earth 110m land (public domain) for Looks 4–5; no names shown
+- [x] procedural terrain for Look 6
+- [x] OFL fonts only (JetBrains Mono, Inter) with licence texts
+- [x] no `Math.random()`, no clock, no TAA/accumulation; frame-only animation
+- [x] one data row per version (`src/versions.ts`)
+- [x] 720p previews and stills; checks 1–6 pass
+
+## Known differences from the references
+
+These were flagged by the independent comparisons and left as they are,
+because the brief asks for them or because matching would break another rule:
+
+* **River and ring road (Looks 1–3).** The brief asks for a river (80–150 m,
+  dark fill) and a ring-road arc; the reference clips show neither prominently.
+  The river is at the narrow end (≈92 m) and the ring is a partial arc.
+* **City scale (Looks 1–3).** The references show a larger city than a
+  3 × 3 km tile can without visibly repeating. Blocks are smaller than
+  real-world blocks (≈9–34 m) to reach a comparable street density; the
+  comparisons still read the references as slightly more zoomed out.
+* **Yellow accents (Look 1)** are in the brief; the reference has none.
+* **Arcs (Look 4).** The brief asks for ~24 arcs with travelling pulses; the
+  reference has a bundle of ~8–10 faint arcs. Arcs are kept faint and fan
+  from the Americas eastward.
+* **Globe position (Look 5)** is at (42%, 52%) as specified; the reference
+  globe is nearer the centre.
+* **Contour count (Look 6).** The brief asks for ~40 levels; the reference
+  shows ~8–12 rings per hill. Low-lying levels are faded instead.
+
