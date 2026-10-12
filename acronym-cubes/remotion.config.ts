@@ -9,8 +9,9 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
-// GL is single-context-heavy; a lower concurrency is usually faster than the default.
-Config.setConcurrency(2);
+// Software GL (SwiftShader) already uses every core inside one tab, so one tab
+// is fastest there. On a machine with a real GPU, try 2-4.
+Config.setConcurrency(1);
 // Each 4K frame can take several seconds on software GL.
 Config.setTimeoutInMilliseconds(240000);
 

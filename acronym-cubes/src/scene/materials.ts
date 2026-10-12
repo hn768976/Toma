@@ -129,7 +129,7 @@ export function makeLetterFaceMaterial(envMap: THREE.Texture, face: THREE.Color,
   const uniforms = {
     uFace: { value: face },
     uCap: { value: capHeight },
-    uGlow: { value: 0.55 },
+    uGlow: { value: 0.75 },
   };
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);

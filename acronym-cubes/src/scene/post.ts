@@ -28,6 +28,8 @@ export type PostParams = {
   grain: number;
   /** saturation before tone mapping (1 = unchanged) */
   saturation: number;
+  /** extra darkening toward the bottom edge (0 = none) */
+  bottomFalloff: number;
 };
 
 const FS_VERT = /* glsl */ `
@@ -319,6 +321,7 @@ export class PostPipeline {
       uniform float uVignette;
       uniform float uGrain;
       uniform float uSat;
+      uniform float uBottom;
       uniform float uFrame;
       uniform vec2 uRes;
       uvec3 pcg3d(uvec3 v) {
@@ -342,6 +345,7 @@ export class PostPipeline {
         c = aces(c * uExposure);
         vec2 p = (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
         c *= 1.0 - uVignette * smoothstep(0.35, 1.15, length(p));
+        c *= 1.0 - uBottom * smoothstep(0.55, 1.0, 1.0 - vUv.y);
         c = toSRGB(c);
         uvec3 h = pcg3d(uvec3(uvec2(gl_FragCoord.xy), uint(uFrame)));
         vec3 r = vec3(h) / 4294967295.0;
@@ -359,6 +363,7 @@ export class PostPipeline {
         uVignette: { value: 0.4 },
         uGrain: { value: 0.015 },
         uSat: { value: 1 },
+        uBottom: { value: 0 },
         uFrame: { value: 0 },
         uRes: { value: new THREE.Vector2() },
       },
@@ -473,6 +478,7 @@ export class PostPipeline {
     f.uVignette.value = p.vignette;
     f.uGrain.value = p.grain;
     f.uSat.value = p.saturation;
+    f.uBottom.value = p.bottomFalloff;
     f.uFrame.value = p.frame;
     f.uRes.value.set(w, h);
     this.pass(this.finalMat, null);

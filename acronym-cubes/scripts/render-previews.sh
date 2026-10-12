@@ -10,7 +10,7 @@ mkdir -p out/previews out/stills
 for id in $ids; do
   s=$(date +%s.%N)
   npx remotion render out/bundle "AcronymCubes-$id" "out/previews/AcronymCubes_$id.mp4" \
-    --scale=0.3333333333333333 --codec=h264 --crf=16 --pixel-format=yuv420p --muted \
+    --scale=0.3333333333333333 --codec=h264 --crf=16 --pixel-format=yuv420p --muted --concurrency=1 \
     > "out/previews/AcronymCubes_$id.log" 2>&1 || echo "FAILED $id"
   e=$(date +%s.%N)
   echo "$id total_s=$(echo "$e - $s" | bc) per_frame_s=$(echo "scale=3; ($e - $s) / 600" | bc)" | tee -a out/previews/timings.txt

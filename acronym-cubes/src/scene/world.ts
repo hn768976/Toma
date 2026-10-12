@@ -49,9 +49,10 @@ export const LOOK = {
     bloomStrength: 1.2,
     bloomThreshold: 1.0,
     exposure: 0.7,
-    vignette: 0.62,
+    vignette: 0.7,
     grain: 0.015,
     saturation: 1.35,
+    bottomFalloff: 0.6,
   },
 };
 
