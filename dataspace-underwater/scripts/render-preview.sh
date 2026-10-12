@@ -13,7 +13,7 @@ T0=$(date +%s.%N)
 npx remotion render "$BUNDLE" "$ID" "$SEQ" --sequence --image-format=png \
   --scale=0.3333333333333333 --concurrency=4 --gl=angle --log=warn
 T1=$(date +%s.%N)
-FIRST=$(ls "$SEQ" | head -1); PATTERN=$(echo "$FIRST" | sed -E 's/[0-9]+\.png$//')
+FIRST=$(ls "$SEQ" | sed -n 1p); PATTERN=$(echo "$FIRST" | sed -E 's/[0-9]+\.png$//')
 DIGITS=$(echo "$FIRST" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
 ffmpeg -v error -y -framerate 30 -i "$SEQ/${PATTERN}%0${DIGITS}d.png" -c:v libx264 -preset slow -crf 16 \
   -pix_fmt yuv420p -r 30 -an -movflags +faststart "out/previews/$NAME.mp4"
