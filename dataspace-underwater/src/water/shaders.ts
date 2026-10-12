@@ -35,6 +35,13 @@ uniform float uRayDensity; // scales ray angular frequencies (~ray count)
 uniform float uRayReach;  // how far down the rays reach (uv.y)
 uniform float uSurface;   // strength of the surface wave lines
 uniform float uLift;      // strength of the radial lift under the sun
+uniform float uRaySrc;    // how far above the surface the rays converge (smaller = wider fan)
+uniform float uRayFan;    // angular falloff of the fan
+uniform float uSunCore;   // brightness of the sun patch core
+uniform float uLiftReach; // vertical reach of the lit column
+uniform float uRayLean;   // sideways offset of the ray source
+uniform float uRayStart;  // depth at which rays reach full strength
+uniform float uRaySharp;  // ray exponent multiplier
 
 // Loopable caustic: a variant of the classic iterative water-caustic, with all
 // time multipliers integers so it is exactly periodic in t over 2π.
@@ -70,7 +77,7 @@ vec2 surfaceWarp(vec2 p) {
 // cycle phases, modulated by the surface caustic so they flicker.
 float rayField(vec2 uv) {
   float asp = uRes.x / uRes.y;
-  vec2 src = vec2(uSun.x * asp, uSun.y - 1.3);
+  vec2 src = vec2((uSun.x + uRayLean) * asp, uSun.y - uRaySrc);
   vec2 d = aspectP(uv) - src;
   float ang = atan(d.x, d.y);
   float r = length(d);
@@ -78,11 +85,11 @@ float rayField(vec2 uv) {
   float D = uRayDensity;
 
   float s = 0.0;
-  s += 0.42 * pow(0.5 + 0.5 * cos(ang * 23.0 * D + 1.3 + 0.9 * sin(t + 0.4) + 0.4 * sin(2.0 * t + 2.1)), 5.0);
-  s += 0.36 * pow(0.5 + 0.5 * cos(ang * 37.0 * D + 4.1 - 1.1 * sin(t + 1.9) + 0.5 * sin(3.0 * t + 0.2)), 7.0);
-  s += 0.30 * pow(0.5 + 0.5 * cos(ang * 53.0 * D + 2.6 + 1.3 * sin(2.0 * t + 4.4)), 9.0);
-  s += 0.22 * pow(0.5 + 0.5 * cos(ang * 79.0 * D + 0.7 - 1.6 * sin(t + 3.3) + 0.6 * sin(2.0 * t)), 12.0);
-  s += 0.15 * pow(0.5 + 0.5 * cos(ang * 113.0 * D + 5.5 + 2.0 * sin(3.0 * t + 1.1)), 14.0);
+  s += 0.42 * pow(0.5 + 0.5 * cos(ang * 23.0 * D + 1.3 + 0.9 * sin(t + 0.4) + 0.4 * sin(2.0 * t + 2.1)), 5.0 * uRaySharp);
+  s += 0.36 * pow(0.5 + 0.5 * cos(ang * 37.0 * D + 4.1 - 1.1 * sin(t + 1.9) + 0.5 * sin(3.0 * t + 0.2)), 7.0 * uRaySharp);
+  s += 0.30 * pow(0.5 + 0.5 * cos(ang * 53.0 * D + 2.6 + 1.3 * sin(2.0 * t + 4.4)), 9.0 * uRaySharp);
+  s += 0.22 * pow(0.5 + 0.5 * cos(ang * 79.0 * D + 0.7 - 1.6 * sin(t + 3.3) + 0.6 * sin(2.0 * t)), 12.0 * uRaySharp);
+  s += 0.15 * pow(0.5 + 0.5 * cos(ang * 113.0 * D + 5.5 + 2.0 * sin(3.0 * t + 1.1)), 14.0 * uRaySharp);
 
   // Surface ripples focus light into some rays more than others.
   float cs = caustic(vec2(ang * 6.0 + 11.0, 3.7), t);
@@ -99,9 +106,9 @@ float rayField(vec2 uv) {
   float len = uRayReach * (0.6 + 0.4 * (0.5 + 0.5 * sin(ang * 9.0 + 2.2 + 0.7 * sin(t + 2.6))));
   float fade = smoothstep(len, 0.0, uv.y) * exp(-uv.y * 1.1);
   // Rays emerge just under the surface glow.
-  fade *= smoothstep(-0.05, 0.08, uv.y + 0.02);
+  fade *= smoothstep(-0.05, uRayStart, uv.y + 0.02);
   // Wider fan edges are weaker.
-  fade *= exp(-ang * ang * 5.0);
+  fade *= exp(-ang * ang * uRayFan);
   return s * fade;
 }
 
@@ -137,7 +144,7 @@ void main() {
   float wMid = 0.62 + 0.12 * y;
   float wTop = 0.30 + 0.10 * y;
   float mMid = exp(-(dx * dx) / (wMid * wMid)) * (1.0 - 0.25 * smoothstep(0.6, 1.0, y));
-  float mTop = exp(-(dx * dx) / (wTop * wTop)) * (exp(-pow((y - 0.4) / 0.42, 2.0)) * 0.95);
+  float mTop = exp(-(dx * dx) / (wTop * wTop)) * (exp(-pow((y - 0.4) / (0.42 * uLiftReach), 2.0)) * 0.95);
   vec3 col = mix(uDeep, uMid, clamp(mMid * 1.1, 0.0, 1.0));
   col = mix(col, uTop, clamp(mTop * uLift, 0.0, 1.0));
   // Extra lift right under the sun patch.
@@ -148,7 +155,7 @@ void main() {
   vec2 sq;
   float sd = sunDist(uv, sq);
   float tir = smoothstep(uSunR * 1.05, uSunR * 1.6, sd) * smoothstep(0.32, 0.02, uv.y);
-  col *= 1.0 - 0.42 * tir;
+  col *= 1.0 - 0.42 * tir * min(1.0, uSurface * 2.0);
   // Slow volumetric mottling (whole-cycle drift), with a hint of green.
   float mot = sin(p.x * 3.1 + p.y * 2.3 + uTheta) * sin(p.x * 1.7 - p.y * 3.7 - uTheta + 1.3)
             + 0.5 * sin(p.x * 6.3 - p.y * 4.1 + 2.0 * uTheta + 0.5);
@@ -210,7 +217,7 @@ void main() {
   // Soft glow halo.
   float halo = exp(-d * d / (R * R * 3.5)) * 0.3 + exp(-d * d / (R * R * 18.0)) * 0.14;
   float flare = 1.0 + 1.6 * uFlare;
-  float v = (core * 0.55 + fringe * 0.9 + halo * 0.4) * flare;
+  float v = (core * 0.55 * uSunCore + fringe * 0.9 * uSunCore + halo * 0.4) * flare;
   vec3 c = mix(uTop, uSunCol, clamp(core * 0.8 + 0.2, 0.0, 1.0)) * v;
   fragColor = vec4(c, 0.0);
 }

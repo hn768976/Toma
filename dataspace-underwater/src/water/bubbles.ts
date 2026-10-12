@@ -73,6 +73,8 @@ export type BubbleSpec = {
   /** Lateral column waver amplitude (720 units). */
   waver: number;
   brightness: number;
+  /** Lateral random-walk strength (× sqrt(age)). */
+  diffusion: number;
   /** Lateral spread scale for bursts. */
   spreadScale: number;
   /** Optional source y (below frame) range. */
@@ -128,7 +130,7 @@ const makeBubble = (
   // Large out-of-focus bubbles are rare: most near bubbles are small soft glints.
   if (layer === NEAR && size > 4 && rng() < 0.85) layer = MID;
   const depthScale = layer === NEAR ? (size > 4 ? range(rng, 3.5, 5) : range(rng, 2.2, 3.4)) : layer === FAR ? range(rng, 0.45, 0.65) : range(rng, 0.85, 1.15);
-  const parallax = layer === NEAR ? range(rng, 2.2, 3.2) : layer === FAR ? range(rng, 0.55, 0.7) : 1;
+  const parallax = layer === NEAR ? range(rng, 1.3, 1.8) : layer === FAR ? range(rng, 0.55, 0.7) : 1;
   const y0 = range(rng, spec.y0[0], spec.y0[1]) + (layer === NEAR ? 40 : 0);
   const big = size > 3;
   const sprite = spriteFor(size, layer, rng);
@@ -142,7 +144,7 @@ const makeBubble = (
     jet: jetMul * range(rng, 1.5, 4.5) * (0.4 + size / 14),
     plume: plume * range(rng, 0.8, 1.1) * layerSpeed(layer),
     spread: gauss(rng) * spec.spreadScale * spreadMul * parallax,
-    diff: gauss(rng) * 2.6 * parallax,
+    diff: gauss(rng) * spec.diffusion * parallax,
     tau: range(rng, 45, 140),
     swirlR: range(rng, 4, 22) * spreadMul * parallax,
     swirlW: range(rng, 0.015, 0.04) * (rng() < 0.5 ? -1 : 1),
@@ -193,16 +195,16 @@ const makeClump = (rng: Rng, spec: BubbleSpec, duration: number, spreadMul: numb
   const layer = r < 0.06 ? NEAR : r < 0.26 ? FAR : MID;
   return {
     t: Math.pow(rng(), 1.6) * duration,
-    dx: gauss(rng) * 8,
-    dy: gauss(rng) * 14,
+    dx: gauss(rng) * 24,
+    dy: gauss(rng) * 22,
     spread: gauss(rng) * spec.spreadScale * spreadMul,
-    tau: range(rng, 60, 170),
-    swirlR: range(rng, 10, 40) * spreadMul,
+    tau: range(rng, 25, 80),
+    swirlR: range(rng, 5, 18) * spreadMul,
     swirlW: range(rng, 0.012, 0.035) * (rng() < 0.5 ? -1 : 1),
     swirlP: range(rng, 0, TAU),
     plume: spec.plumeV * range(rng, 0.7, 1.2),
     speed: range(rng, 1.5, 2.5),
-    sigma: range(rng, 3, 12),
+    sigma: range(rng, 4, 16),
     layer,
   };
 };
@@ -219,7 +221,7 @@ const joinClump = (rng: Rng, spec: BubbleSpec, b: Bubble, c: Clump, ownSpeed: bo
   b.plume = c.plume * ls;
   if (!ownSpeed) b.speed = c.speed * ls * (1 + gauss(rng) * 0.05);
   b.y0 += c.dy + gauss(rng) * c.sigma;
-  b.diff = gauss(rng) * 0.8 * par;
+  b.diff = gauss(rng) * spec.diffusion * 0.3 * par;
   b.jet *= 0.5;
   return ensureExit(b, spec);
 };
@@ -273,16 +275,16 @@ export const buildBubbles = (spec: BubbleSpec): Bubble[] => {
 };
 
 /** Approximate god-ray brightness at (xN, yN) — the same sway terms as the shader, no caustic. */
-export const rayLight = (xN: number, yN: number, th: number, sun: [number, number], aspect: number, D: number) => {
-  const dx = (xN - sun[0]) * aspect;
-  const dy = yN - (sun[1] - 1.3);
+export const rayLight = (xN: number, yN: number, th: number, sun: [number, number], aspect: number, D: number, src: number, fan: number, lean = 0) => {
+  const dx = (xN - sun[0] - lean) * aspect;
+  const dy = yN - (sun[1] - src);
   const ang = Math.atan2(dx, dy);
   let s = 0;
   s += 0.42 * Math.pow(0.5 + 0.5 * Math.cos(ang * 23 * D + 1.3 + 0.9 * Math.sin(th + 0.4) + 0.4 * Math.sin(2 * th + 2.1)), 5);
   s += 0.36 * Math.pow(0.5 + 0.5 * Math.cos(ang * 37 * D + 4.1 - 1.1 * Math.sin(th + 1.9) + 0.5 * Math.sin(3 * th + 0.2)), 7);
   s += 0.3 * Math.pow(0.5 + 0.5 * Math.cos(ang * 53 * D + 2.6 + 1.3 * Math.sin(2 * th + 4.4)), 9);
   s += 0.22 * Math.pow(0.5 + 0.5 * Math.cos(ang * 79 * D + 0.7 - 1.6 * Math.sin(th + 3.3) + 0.6 * Math.sin(2 * th)), 12);
-  return Math.min(1.2, s) * Math.exp(-ang * ang * 5);
+  return Math.min(1.2, s) * Math.exp(-ang * ang * fan);
 };
 
 export class BubbleField {
@@ -373,7 +375,8 @@ export class BubbleField {
       // Brighter near the lit surface; catch ray light; fade into the glare at the top.
       const up = Math.max(0, 1 - yN);
       // Bubbles flash as they cross the rays.
-      const ray = rayLight(xN, yN, th, sun, this.spec.aspect, this.kit.look.rayDensity);
+      const L = this.kit.look;
+      const ray = rayLight(xN, yN, th, sun, this.spec.aspect, L.rayDensity, L.raySrc, L.rayFan, L.rayLean);
       const lit = Math.min(1, (0.62 + 0.35 * Math.pow(up, 1.8) + 0.75 * ray * (0.4 + 0.6 * up)) * this.spec.brightness);
       const glare = smooth(0.0, 0.2, yN) * (1 - 0.6 * Math.exp(-(((xN - sun[0]) * this.spec.aspect) ** 2 + (yN - sun[1]) ** 2) / 0.04));
       const a = b.alpha * area * glare;

@@ -32,6 +32,17 @@ export type WaterLook = {
   /** Flare amount 0..1 as a function of θ (must be whole-cycle periodic). */
   flare: (theta: number) => number;
   grain: number;
+  raySrc: number;
+  rayFan: number;
+  sunCore: number;
+  /** Vertical reach of the lit water column (larger = glow reaches deeper). */
+  liftReach: number;
+  /** Fan lean: shifts the ray source sideways relative to the sun (uv x). */
+  rayLean: number;
+  /** Depth (uv y) where the rays reach full strength below the surface. */
+  rayStart: number;
+  /** Ray sharpness multiplier (<1 = broader, softer shafts). */
+  raySharp: number;
 };
 
 const quad = () =>
@@ -86,6 +97,13 @@ export class WaterKit {
       uRayReach: { value: look.rayReach, type: "f32" },
       uSurface: { value: look.surface, type: "f32" },
       uLift: { value: look.lift, type: "f32" },
+      uRaySrc: { value: look.raySrc, type: "f32" },
+      uRayFan: { value: look.rayFan, type: "f32" },
+      uSunCore: { value: look.sunCore, type: "f32" },
+      uLiftReach: { value: look.liftReach, type: "f32" },
+      uRayLean: { value: look.rayLean, type: "f32" },
+      uRayStart: { value: look.rayStart, type: "f32" },
+      uRaySharp: { value: look.raySharp, type: "f32" },
     });
 
     const bnSource = new BufferImageSource({

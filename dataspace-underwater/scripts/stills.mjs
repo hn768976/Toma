@@ -17,12 +17,14 @@ const shell = "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headle
 const browserExecutable = existsSync(shell) ? shell : null;
 const chromiumOptions = { gl: "angle" };
 const browser = await openBrowser("chrome", { browserExecutable, chromiumOptions });
-const composition = await selectComposition({ serveUrl, id: compId, puppeteerInstance: browser, chromiumOptions, browserExecutable });
+const inputProps = process.env.FRAMES ? { frames: Number(process.env.FRAMES) } : {};
+const composition = await selectComposition({ serveUrl, id: compId, inputProps, puppeteerInstance: browser, chromiumOptions, browserExecutable });
 for (const frame of frames) {
   const t0 = performance.now();
   await renderStill({
     serveUrl,
     composition,
+    inputProps,
     frame,
     output: path.join(outDir, `${compId}_f${String(frame).padStart(4, "0")}.png`),
     scale,

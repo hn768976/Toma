@@ -9,14 +9,21 @@ import { MarineSnow } from "./snow";
 // Look 2 — Underwater Bubbles. Sun patch at the top centre, moderate rays.
 export const BUBBLES_LOOK: WaterLook = {
   sun: [0.5, -0.02],
-  sunR: 0.2,
+  sunR: 0.13,
   rayDensity: 2.0,
   rayReach: 1.0,
-  rayGain: 0.45,
-  surface: 0.6,
+  rayGain: 0.35,
+  surface: 0.14,
   lift: 1.0,
   flare: () => 0,
   grain: 0.02,
+  raySrc: 1.3,
+  rayFan: 5,
+  sunCore: 1,
+  liftReach: 1.6,
+  rayLean: -0.05,
+  rayStart: 0.08,
+  raySharp: 1,
 };
 
 export const bubbleSpec = (aspect: number): BubbleSpec => ({
@@ -45,7 +52,8 @@ export const bubbleSpec = (aspect: number): BubbleSpec => ({
   farFraction: 0.2,
   waver: 26,
   brightness: 1,
-  spreadScale: 62,
+  spreadScale: 30,
+  diffusion: 1.2,
   y0: [15, 70],
 });
 
@@ -55,7 +63,7 @@ export const UnderwaterBubbles: React.FC<{ palette: WaterPaletteKey }> = ({ pale
       const pal = WATER_PALETTES[palette];
       const kit = new WaterKit(app, pw, ph, pal, BUBBLES_LOOK);
       const bubbles = new BubbleField(kit, bubbleSpec(pw / ph), pal);
-      const snow = new MarineSnow(kit, 0x5e0b, 300, 0.8);
+      const snow = new MarineSnow(kit, 0x5e0b, 300, 0.45, 0.1);
       const root = new Container();
       // Composite order: background → far bubbles → god rays → mid → near (blurred) → Snell glow.
       root.addChild(kit.bg, bubbles.layers[0], kit.rays, snow.container, bubbles.layers[1], bubbles.layers[2], kit.snell);
