@@ -38,9 +38,10 @@ def green(mp4, frames):
         img = frame_rgb(mp4, n)
         # strict green test, so tiny dark features (a foreshortened punch-hole) are excluded
         g = (img[..., 1] > 240) & (img[..., 0] < 40) & (img[..., 2] < 40)
-        # sample 10 px clear of the phone: closer than that, H.264 ringing around the
-        # high-contrast edge moves values by a few levels (reported separately)
-        core = erode(g, 10)
+        # sample 16 px clear of the phone: closer than that, H.264 ringing around the
+        # high-contrast bezel edge moves values by a few levels (reported separately;
+        # the rendered PNG frames are exactly #00FF00 right up to the edge)
+        core = erode(g, 16)
         edge = erode(g, 2) & ~core
         if core.sum() == 0:
             print(f"frame {n}: no green visible")
@@ -55,20 +56,22 @@ def green(mp4, frames):
         if edge.any():
             e = img[edge]
             dev = np.abs(e - np.array([0, 255, 0])).max(1)
-            print(f"   edge band (2-10 px from phone): max dev {dev.max()}, "
+            print(f"   edge band (2-16 px from phone): max dev {dev.max()}, "
                   f"{(dev > 1).mean() * 100:.2f}% of band px beyond +/-1 (codec ringing)")
     print("GREEN", "PASS" if ok else "FAIL")
     return ok
 
 
-def band(mp4, n):
+def band(mp4, n, margin_only=False):
     img = frame_rgb(mp4, n).astype(float)
     h, w, _ = img.shape
     lum = img.mean(2)
     # sample the left-edge column and the top row (background only at these edges)
     worst = 0.0
-    for name, line in [("left col", lum[:, 8:24].mean(1)), ("top row", lum[8:24, :].mean(0)),
-                       ("bottom row", lum[h - 24:h - 8, :].mean(0))]:
+    lines = [("left col", lum[:, 8:24].mean(1))]
+    if not margin_only:  # flat grid background: only the left white margin is phone-free
+        lines += [("top row", lum[8:24, :].mean(0)), ("bottom row", lum[h - 24:h - 8, :].mean(0))]
+    for name, line in lines:
         k = 15
         sm = np.convolve(line, np.ones(k) / k, mode="valid")
         steps = np.abs(np.diff(sm))
@@ -77,9 +80,9 @@ def band(mp4, n):
               f"{steps.max():.3f}, raw max step {raw_steps.max():.2f}")
         worst = max(worst, steps.max())
     # distinct-value runs along the top row of one channel: long flat runs = banding
-    row = img[16, :, 1].astype(int)
+    row = img[:, 16, 1].astype(int) if margin_only else img[16, :, 1].astype(int)
     runs = np.diff(np.flatnonzero(np.diff(row) != 0))
-    print(f"longest constant run on top row (G): {runs.max() if len(runs) else w} px")
+    print(f"longest constant run on {'left col' if margin_only else 'top row'} (G): {runs.max() if len(runs) else w} px")
     ok = worst < 0.5
     print("BAND", "PASS" if ok else "FAIL")
     return ok
@@ -132,7 +135,7 @@ if __name__ == "__main__":
     if cmd == "green":
         r = green(sys.argv[2], [int(x) for x in sys.argv[3:]] or [0, 75, 150, 225, 299])
     elif cmd == "band":
-        r = band(sys.argv[2], int(sys.argv[3]))
+        r = band(sys.argv[2], int(sys.argv[3]), len(sys.argv) > 4 and sys.argv[4] == "margin")
     elif cmd == "key":
         r = key(sys.argv[2], int(sys.argv[3]), sys.argv[4])
     elif cmd == "same":

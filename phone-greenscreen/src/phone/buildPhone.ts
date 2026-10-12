@@ -52,13 +52,22 @@ export const buildPhoneParts = ({ frameColor }: PhoneOptions): PhonePart[] => {
   const frameCol = new THREE.Color(frameColor);
 
   // ---------- materials ----------
+  // A metal's base colour is its reflectance. Used as-is, a dark swatch like
+  // graphite reflects ~4 % of the studio and renders near-black; keep its hue
+  // and saturation but give it real aluminium reflectance, so the frame reads as
+  // the swatch colour under the studio and its edges glint.
+  const metalCol = (lightness: number) => {
+    const hsl = { h: 0, s: 0, l: 0 };
+    frameCol.getHSL(hsl);
+    return new THREE.Color().setHSL(hsl.h, hsl.s, Math.max(hsl.l, lightness));
+  };
   const satin = new THREE.MeshPhysicalMaterial({
-    color: frameCol,
+    color: metalCol(0.42),
     metalness: 1,
     roughness: 0.3,
   });
   const polished = new THREE.MeshPhysicalMaterial({
-    color: frameCol.clone().offsetHSL(0, 0, 0.12),
+    color: metalCol(0.68),
     metalness: 1,
     roughness: 0.14,
   });
@@ -106,7 +115,7 @@ export const buildPhoneParts = ({ frameColor }: PhoneOptions): PhonePart[] => {
     side: THREE.DoubleSide,
   });
   const lensRing = new THREE.MeshPhysicalMaterial({
-    color: frameCol.clone().offsetHSL(0, 0, 0.1),
+    color: metalCol(0.45),
     metalness: 1,
     roughness: 0.22,
     side: THREE.DoubleSide,
