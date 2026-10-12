@@ -107,4 +107,71 @@ carried between frames, no TAA, no `AccumulativeShadows`. Fonts load once
 behind `delayRender`, and canvas textures are built after that. Loop periods
 (pulses, LED holds, streaks, bobbing, shimmer, camera drift) all divide 600.
 
-<!-- RESULTS -->
+## Measured render times (this build machine)
+
+Measured on a 4-core cloud VM with **no GPU** (Chromium headless shell, ANGLE
+falling back to SwiftShader software GL), concurrency 1. Per-frame times are
+amortised from a 10-frame sequence minus a 1-frame run (which removes the
+~6–8 s of browser/bundle start-up).
+
+| Composition | 720p s/frame | 720p 1-frame still (incl. start-up) |
+|---|---|---|
+| ElementRing-Teal | 3.4 | 14.4 s |
+| ElementRing-Violet | 3.0 | 14.4 s |
+| ChipOnOre-Blue | 2.7 | 13.0 s |
+| EVBatteryPack-Story | 3.2 | 14.2 s |
+| ServerStreams-Blue | 2.3 | 9.6 s |
+| ServerStreams-TealMirrored | 2.4 | 9.5 s |
+| AIRacks-Blue | 2.2 | 9.7 s |
+| AIRacks-Violet | 2.3 | 9.3 s |
+
+**Real 4K frames (3840×2160):**
+- ElementRing-Teal frame 300: 52.6 s as a one-off still (with start-up). Amortised over a 3-frame sequence: **20.1 s/frame**.
+- AIRacks-Blue frame 300: 41.5 s as a one-off still. Amortised: **18.4 s/frame**.
+
+**4K estimates on this CPU-only machine** (4K ≈ 6–8× the 720p cost):
+- ElementRing-Teal / -Violet: 600 × ~20 s ≈ 3.3 h each.
+- ChipOnOre-Blue: ≈ 3.0 h.
+- EVBatteryPack-Story (300 f): ≈ 1.8 h.
+- ServerStreams ×2: ≈ 2.7 h each.
+- AIRacks ×2: 600 × 18.4 s ≈ 3.1 h each.
+- All eight: ≈ 23 h serial.
+
+On a machine with a real GPU, expect these to drop by one to two orders of
+magnitude; raise `--concurrency` there.
+
+## Verification results
+
+| Check | Result |
+|---|---|
+| Model check (fresh sub-agent, 3 rounds on grey stills: nugget, chip, battery pack, rack) | Nugget went from "crumpled low-poly blob, random tint per face" to "rock or ore nugget, metallic mineral"; the battery pack gained cells, busbar and terminations; the rack gained real 3D units. |
+| Loop: 601-frame build, frame 0 vs 600 (all 7 loops) | **Identical pixel for pixel** |
+| Determinism: frame 300 (150 for the story), two separate cold processes | **Byte-identical** for all 8 |
+| Determinism: frame 300/150 out of a multi-frame sequence vs cold single frame | **Byte-identical** for all 8 |
+| Banding: still → H.264 yuv420p CRF 16 → decoded, luminance read along the at-risk areas | Smooth: every gradient line has short runs (8–21 of 400 samples) with no stair-steps; the one long run is a genuinely flat fog area |
+| Text / data | Tile text matches the element table (checked at 4K); no brand names; the chip has no markings |
+| Motion (10 consecutive frames per comp) | Frame-to-frame change steady (max/median 1.01–1.10, the 1.10 is an LED hold switching) |
+
+Reproduce: `REMOTION_LOOP_CHECK=1` (env var at **render** time) makes the
+loops 601 frames long, so `--frame=600` can be compared with `--frame=0`.
+
+## Banding
+
+The final pass adds ±1/255 triangular dither and ~1.5 % grain. The grain is a
+fixed hash of (pixel, `frame % 600`), or `frame % 300` for the story.
+`Math.random()` is never used. Dark floors (looks 1–2), blue fog (4), the
+white studio falloff (3) and the gaps between racks (5) were all checked
+after H.264 encoding, as above.
+
+## Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps; 7 × 600-frame loops, 1 × 300-frame story; one data row per version
+- [x] three.js on WebGL2 via `@remotion/three`; no PixiJS, no WebGPU, no MCP servers
+- [x] OFL fonts only (Inter 400/600/700 + licence)
+- [x] Element data exactly as the brief's table
+- [x] No logos, brands or manufacturer names; chip unmarked
+- [x] No `Math.random()`, `Date.now()`, `useFrame` clock, frame-to-frame state, TAA or `AccumulativeShadows`
+- [x] Loop, determinism, banding, content and smoothness checks (above)
+- [x] 720p PNG still of each composition
+- [ ] 720p mp4 previews: not rendered (dropped by request)
+

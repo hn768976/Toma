@@ -208,7 +208,7 @@ const DROP_START = 30; // 1 s
 const DROP_END = 180; // 6 s
 const DROP_DUR = 20;
 const STEP = (DROP_END - DROP_START - DROP_DUR) / (ORDER.length - 1);
-const HANG_H = 0.95;
+const HANG_H = 0.55;
 
 /** Module height above its bay and how lit it is, from the frame alone. */
 export function moduleState(i: number, frame: number) {
@@ -344,7 +344,7 @@ const POST: PostSettings = {
   saturation: 1.0,
 };
 
-const Lighting: React.FC<{ module: string }> = ({ module }) => {
+const Lighting: React.FC<{ module: string; tileGlow: number }> = ({ module, tileGlow }) => {
   const { gl, scene } = useThree();
   const env = useMemo(
     () =>
@@ -375,7 +375,9 @@ const Lighting: React.FC<{ module: string }> = ({ module }) => {
         shadow-bias={-0.0005}
       />
       <hemisphereLight args={["#ffffff", "#aeb9cc", 0.25]} />
-      <pointLight position={[0, 0.55, -0.6]} color="#ff8a2a" intensity={0.8} distance={1.6} decay={2} />
+      {/* orange spill from the tiles, only once they have risen */}
+      <pointLight position={[0, 0.55, -0.6]} color="#ff8a2a" intensity={0.8 * tileGlow} distance={1.6} decay={2} />
+
       
     </>
   );
@@ -396,7 +398,7 @@ export const EVBatteryPack: React.FC<{ row: EVBatteryRow }> = ({ row }) => {
   const TILE_SIZE = 0.3;
   return (
     <Stage camera={camera} post={{ ...POST, focus: dist - 0.35 }} background="#c9ccdb">
-      <Lighting module={row.module} />
+      <Lighting module={row.module} tileGlow={clamp01((frame - 150) / 60)} />
       <fog attach="fog" args={["#c9ccdb", 10, 22]} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[40, 40]} />

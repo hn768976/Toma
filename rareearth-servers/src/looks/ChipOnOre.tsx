@@ -303,7 +303,7 @@ export const ChipOnOre: React.FC<{ row: ChipOnOreRow }> = ({ row }) => {
           rMax: 1.6,
           sizeMin: 0.03,
           sizeMax: 0.06,
-          avoid: NUGGETS.map((n) => ({ x: n.position[0], z: n.position[2], r: n.scale * 1.3 })),
+          avoid: [...NUGGETS.map((n) => ({ x: n.position[0], z: n.position[2], r: n.scale * 1.3 })), { x: 0, z: 0, r: 0.8 }],
         }}
       />
       <OreChips
