@@ -94,7 +94,7 @@ PANELS.forEach((p, pi) => {
         valOff: Math.floor(rnd() * valHold),
         val2Hold,
         val2Off: val2Hold ? Math.floor(rnd() * val2Hold) : 0,
-        dim: 0.6 + rnd() * 0.32,
+        dim: 0.82 + rnd() * 0.18,
         shortStr: false,
       };
       ROWS.push(row);
