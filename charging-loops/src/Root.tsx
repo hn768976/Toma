@@ -8,21 +8,24 @@ import { makeSegmentTorus } from "./torus/segmentTorus";
 import { ThreeLook } from "./three/ThreeLook";
 import { VERSIONS, VersionRow } from "./versions";
 
-type Props = { row: VersionRow; loopCheck?: boolean };
+// `tune` lets a render override look parameters (used while matching the
+// references); normal renders leave it empty.
+type Props = { row: VersionRow; loopCheck?: boolean; tune?: Record<string, number> };
 
-const Look: React.FC<Props> = ({ row }) => {
+const Look: React.FC<Props> = ({ row, tune }) => {
+  const tuneKey = JSON.stringify(tune ?? {});
   const factory = useMemo(() => {
     switch (row.look) {
       case "bladeRing":
-        return makeBladeRing(row);
+        return makeBladeRing(row, JSON.parse(tuneKey));
       case "plateArc":
-        return makePlateArc(row);
+        return makePlateArc(row, JSON.parse(tuneKey));
       case "segmentTorus":
-        return makeSegmentTorus(row);
+        return makeSegmentTorus(row, JSON.parse(tuneKey));
       default:
         return null;
     }
-  }, [row]);
+  }, [row, tuneKey]);
   if (factory) return <ThreeLook factory={factory} />;
   if (row.look === "chargeIcon") return <ChargeIcon row={row} />;
   if (row.look === "chargeGauge") return <ChargeGauge row={row} />;

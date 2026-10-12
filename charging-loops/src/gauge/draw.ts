@@ -8,8 +8,8 @@ export const PW = 2400;
 export const PH = 1600;
 export const FONT = "Exo2Gauge";
 
-const DIAL_C = { x: 1130, y: 830 };
-const DIAL_R = 640;
+const DIAL_C = { x: 1150, y: 820 };
+const DIAL_R = 660;
 const ARC_START = 145 * DEG; // canvas angles, clockwise from +x
 const ARC_SWEEP = 250 * DEG;
 const TICKS = 120;
@@ -70,17 +70,17 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
   ctx.lineCap = "butt";
 
   // ---- outer thin ring (partial, like the reference)
-  ctx.shadowColor = rgba(dialCol, 0.8);
-  ctx.shadowBlur = 26;
-  ctx.strokeStyle = rgba(dialCol, 0.55);
-  ctx.lineWidth = 7;
+  ctx.shadowColor = rgba(dialCol, 0.9);
+  ctx.shadowBlur = 40;
+  ctx.strokeStyle = rgba("#8AD4FF", 0.8);
+  ctx.lineWidth = 18;
   ctx.beginPath();
-  ctx.arc(DIAL_C.x, DIAL_C.y, DIAL_R + 120, ARC_START - 8 * DEG, ARC_START - 8 * DEG + ARC_SWEEP * 0.62 * sweep);
+  ctx.arc(DIAL_C.x, DIAL_C.y, DIAL_R + 130, ARC_START - 6 * DEG, ARC_START - 6 * DEG + ARC_SWEEP * 0.86 * sweep);
   ctx.stroke();
 
   // ---- main ring line and soft glow band
-  ctx.strokeStyle = rgba(dialCol, 0.7);
-  ctx.lineWidth = 9;
+  ctx.strokeStyle = rgba("#8AD4FF", 0.85);
+  ctx.lineWidth = 10;
   ctx.beginPath();
   ctx.arc(DIAL_C.x, DIAL_C.y, DIAL_R + 26, ARC_START, ARC_START + ARC_SWEEP * sweep);
   ctx.stroke();
@@ -100,7 +100,7 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
     const long = i % 10 === 0;
     const r0 = DIAL_R - (long ? 62 : 32);
     const r1 = DIAL_R;
-    ctx.strokeStyle = rgba(dialCol, long ? 0.85 : 0.7);
+    ctx.strokeStyle = long ? "rgba(190,232,255,0.95)" : rgba("#8AD4FF", 0.85);
     ctx.lineWidth = long ? 7 : 5;
     ctx.beginPath();
     ctx.moveTo(DIAL_C.x + r0 * Math.cos(a), DIAL_C.y + r0 * Math.sin(a));
@@ -113,7 +113,7 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
   ctx.globalAlpha = appear;
 
   // ---- top: bolt with chevrons pulsing inward
-  const by = 440;
+  const by = 430;
   const bx = DIAL_C.x + 20;
   ctx.shadowColor = rgba("#3AA0FF", 1);
   ctx.shadowBlur = 30 + 50 * full + 60 * flash;
@@ -131,26 +131,29 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
     chevron(ctx, bx + 200 - i * 48, by + 10, 60, -1);
   }
 
-  // ---- car-battery pictogram (box + two terminal stubs)
-  ctx.shadowColor = "rgba(255,255,255,0.6)";
-  ctx.shadowBlur = 14;
-  ctx.fillStyle = "#F4F8FF";
-  const px = 640;
-  const py = 760;
-  ctx.fillRect(px, py, 150, 92);
-  ctx.fillRect(px + 18, py - 20, 30, 20);
-  ctx.fillRect(px + 102, py - 20, 30, 20);
-  ctx.fillStyle = "#0A1420";
-  ctx.shadowBlur = 0;
-  ctx.fillRect(px + 22, py + 30, 26, 7); // minus
-  ctx.fillRect(px + 102, py + 30, 26, 7); // plus
-  ctx.fillRect(px + 111, py + 21, 8, 25);
+  // segmented strip under the bolt, filling with the charge
+  for (let i = 0; i < 12; i++) {
+    const on = i < Math.round((12 * level) / 100);
+    ctx.shadowBlur = on ? 10 : 0;
+    ctx.fillStyle = on ? rgba("#6AC0FF", 0.85) : rgba(dialCol, 0.15);
+    ctx.fillRect(bx - 150 + i * 25, by + 95, 16, 26);
+  }
+
+  // ---- car-battery pictogram (box + two terminal stubs), blown-out white
+  ctx.shadowColor = "rgba(255,255,255,0.9)";
+  ctx.shadowBlur = 26;
+  ctx.fillStyle = "#FFFFFF";
+  const px = 800;
+  const py = 770;
+  ctx.fillRect(px, py, 120, 74);
+  ctx.fillRect(px + 14, py - 16, 26, 16);
+  ctx.fillRect(px + 80, py - 16, 26, 16);
 
   // ---- bar
-  const bx0 = 860;
+  const bx0 = 980;
   const by0 = 760;
-  const bw = 700;
-  const bh = 96;
+  const bw = 560;
+  const bh = 92;
   ctx.shadowColor = rgba(dialCol, 0.9);
   ctx.shadowBlur = 16;
   ctx.strokeStyle = rgba("#7FD0FF", 0.85);
@@ -163,15 +166,16 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
     const fy = by0 + inset;
     const fh = bh - inset * 2;
     const g = ctx.createLinearGradient(fx, 0, fx + bw, 0);
-    g.addColorStop(0, "#3E8EE8");
-    g.addColorStop(1, "#9FE0FF");
-    ctx.shadowBlur = 22;
+    g.addColorStop(0, "#7CC8FF");
+    g.addColorStop(1, "#B8EEFF");
+    ctx.shadowColor = "rgba(120,210,255,1)";
+    ctx.shadowBlur = 40;
     ctx.fillStyle = g;
     ctx.fillRect(fx, fy, fw, fh);
     ctx.shadowBlur = 0;
     // fine vertical stripes
-    ctx.fillStyle = "rgba(10,40,80,0.35)";
-    for (let x = fx + 6; x < fx + fw - 4; x += 14) ctx.fillRect(x, fy, 4, fh);
+    ctx.fillStyle = "rgba(30,90,150,0.35)";
+    for (let x = fx + 6; x < fx + fw - 4; x += 12) ctx.fillRect(x, fy, 3, fh);
     // top sheen
     ctx.fillStyle = "rgba(255,255,255,0.18)";
     ctx.fillRect(fx, fy, fw, fh * 0.3);
@@ -189,55 +193,56 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
   }
 
   // ---- percentage ("40 %")
-  ctx.shadowColor = rgba(row.percent, 0.7);
-  ctx.shadowBlur = 12;
+  ctx.shadowColor = rgba(row.percent, 0.9);
+  ctx.shadowBlur = 16;
   ctx.fillStyle = row.percent;
-  ctx.font = `600 78px ${FONT}`;
+  ctx.font = `600 62px ${FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText(`${pct} %`, bx0 + bw / 2, by0 + bh + 100);
+  ctx.fillText(`${pct} %`, bx0 + bw * 0.62, by0 + bh + 86);
 
   // ---- leaf + "ECO Mode"
-  const lx = 760;
-  const ly = 1090;
+  const lx = 960;
+  const ly = 1060;
   ctx.shadowColor = rgba(row.eco, 0.6);
   ctx.shadowBlur = 10;
-  ctx.fillStyle = "#24A84C";
+  ctx.fillStyle = "#1E8A3E";
   ctx.beginPath();
   ctx.moveTo(lx - 95, ly + 48);
   ctx.bezierCurveTo(lx - 110, ly - 40, lx - 10, ly - 70, lx + 105, ly - 58);
   ctx.bezierCurveTo(lx + 95, ly + 20, lx + 10, ly + 75, lx - 95, ly + 48);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = "#0E3A1C";
-  ctx.lineWidth = 7;
+  ctx.strokeStyle = "#145A2A";
+  ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.moveTo(lx - 80, ly + 40);
   ctx.quadraticCurveTo(lx + 10, ly - 5, lx + 90, ly - 50);
   ctx.stroke();
-  ctx.shadowColor = rgba(row.eco, 0.6);
-  ctx.shadowBlur = 10;
+  ctx.shadowColor = rgba(row.eco, 0.8);
+  ctx.shadowBlur = 14;
   ctx.fillStyle = row.eco;
-  ctx.font = `600 92px ${FONT}`;
+  ctx.font = `600 84px ${FONT}`;
   ctx.textAlign = "left";
   ctx.fillText("ECO Mode", lx + 150, ly + 34);
 
   // ---- "Power" + 12 short bars lit in step with the charge
-  const pwx = 1800;
-  const pwy = 1000;
+  const pwx = 1850;
+  const pwy = 900;
   ctx.fillStyle = rgba(dialCol, 0.8);
   ctx.shadowColor = rgba(dialCol, 0.6);
-  ctx.font = `600 70px ${FONT}`;
+  ctx.shadowBlur = 10;
+  ctx.font = `600 52px ${FONT}`;
   ctx.textAlign = "left";
   ctx.fillText("Power", pwx, pwy);
   const lit = Math.round((12 * level) / 100);
   for (let i = 0; i < 12; i++) {
-    // bottom bar first
-    const y = pwy + 50 + (11 - i) * 30;
+    // bottom bar first; the stack follows the dial's curve
+    const y = pwy + 34 + (11 - i) * 17;
     const on = i < lit;
-    ctx.shadowBlur = on ? 14 : 0;
-    ctx.fillStyle = on ? rgba("#7FCFFF", 0.95) : rgba(dialCol, 0.13);
-    ctx.fillRect(pwx + 10 - i * 3, y, 120, 18);
+    ctx.shadowBlur = on ? 12 : 0;
+    ctx.fillStyle = on ? rgba("#8FD8FF", 0.55 + 0.4 * (i / 11)) : rgba(dialCol, 0.13);
+    ctx.fillRect(pwx + 4 - (11 - i) * 4, y, 78, 11);
   }
   ctx.restore();
 };

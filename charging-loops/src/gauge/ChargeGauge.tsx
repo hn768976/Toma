@@ -28,8 +28,15 @@ const loadFont = () => {
   return fontPromise;
 };
 
+// Depth of field: a sharp band through the bar and readout, with the far
+// right and the near lower-left / upper-left of the dial out of focus.
+const SHARP_MASK =
+  "radial-gradient(ellipse 34% 30% at 47% 52%, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 100%)";
+const SOFT_MASK =
+  "radial-gradient(ellipse 34% 30% at 47% 52%, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 100%)";
+
 // Plane shown at 1.35x its design size (3240 x 2160 CSS px in a 3840 x 2160 frame).
-const PLANE_SCALE = 1.35;
+const PLANE_SCALE = 1.5;
 const CSS_W = PW * PLANE_SCALE;
 const CSS_H = PH * PLANE_SCALE;
 
@@ -48,7 +55,7 @@ const drawBackground = (c: HTMLCanvasElement, frame: number) => {
   const d = img.data;
   const f = frame % 300;
   // #04080E plus a faint radial lift behind the dial (centre ~ 42 %, 50 %)
-  const cx = 0.42 * w;
+  const cx = 0.5 * w;
   const cy = 0.5 * h;
   const rr = 0.55 * h;
   for (let y = 0; y < h; y++) {
@@ -56,15 +63,16 @@ const drawBackground = (c: HTMLCanvasElement, frame: number) => {
       const dx = (x - cx) / rr;
       const dy = (y - cy) / rr;
       const r2 = dx * dx + dy * dy;
-      const lift = Math.exp(-r2 * 1.2);
+      const lift = Math.exp(-r2 * 1.6);
+      const vig = 1 - 0.6 * Math.min(1, Math.max(0, (Math.sqrt(r2) - 0.7) / 1.2));
       const n1 = hash(x, y, f);
       const n2 = hash(x + 7919, y + 104729, f);
       const dither = n1 + n2 - 1; // triangular, +/-1 LSB
       const grain = (hash(x + 31, y + 17, f + 300) - 0.5) * 2 * 0.015 * 255 * 0.5;
       const i = (y * w + x) * 4;
-      d[i] = 4 + 6 * lift + dither + grain;
-      d[i + 1] = 8 + 14 * lift + dither + grain;
-      d[i + 2] = 14 + 26 * lift + dither + grain;
+      d[i] = (4 + 4 * lift) * vig + dither + grain;
+      d[i + 1] = (8 + 9 * lift) * vig + dither + grain;
+      d[i + 2] = (14 + 16 * lift) * vig + dither + grain;
       d[i + 3] = 255;
     }
   }
@@ -97,6 +105,7 @@ export const ChargeGauge: React.FC<{ row: ChargeGaugeRow }> = ({ row }) => {
   const [ready, setReady] = useState(false);
   const sharp = useRef<HTMLCanvasElement>(null);
   const soft = useRef<HTMLCanvasElement>(null);
+  const bloom = useRef<HTMLCanvasElement>(null);
   const bg = useRef<HTMLCanvasElement>(null);
   const grain = useRef<HTMLCanvasElement>(null);
   const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio;
@@ -119,6 +128,9 @@ export const ChargeGauge: React.FC<{ row: ChargeGaugeRow }> = ({ row }) => {
     const sc = soft.current!.getContext("2d")!;
     sc.clearRect(0, 0, s.width, s.height);
     sc.drawImage(s, 0, 0);
+    const bc = bloom.current!.getContext("2d")!;
+    bc.clearRect(0, 0, s.width, s.height);
+    bc.drawImage(s, 0, 0);
     drawBackground(bg.current!, frame);
     drawGrain(grain.current!, frame);
   }, [frame, ready, row]);
@@ -126,11 +138,13 @@ export const ChargeGauge: React.FC<{ row: ChargeGaugeRow }> = ({ row }) => {
   // camera drift: rotateY -28 -> -22 deg and a slight push in
   const t = frame / 299;
   const e = 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, t));
-  const rotY = -28 + 6 * e;
+  // The reference's tilt is stronger than -28/8 deg at this perspective, so
+  // the plane is turned further and seen through a shorter perspective.
+  const rotY = -34 + 6 * e;
   const push = 1 + 0.05 * e;
   const planeStyle: React.CSSProperties = {
     position: "absolute",
-    left: (width - CSS_W) / 2 - 140,
+    left: (width - CSS_W) / 2 - 330,
     top: (height - CSS_H) / 2,
     width: CSS_W,
     height: CSS_H,
@@ -144,12 +158,12 @@ export const ChargeGauge: React.FC<{ row: ChargeGaugeRow }> = ({ row }) => {
     <AbsoluteFill style={{ backgroundColor: "#04080E" }}>
       <canvas ref={bg} width={fw} height={fh} style={{ position: "absolute", width, height }} />
       {/* perspective 1600 px at 1080p scale = 3200 px in this 4K layout */}
-      <AbsoluteFill style={{ perspective: 3200, perspectiveOrigin: "45% 50%" }}>
+      <AbsoluteFill style={{ perspective: 2600, perspectiveOrigin: "50% 50%" }}>
         <div
           style={{
             ...planeStyle,
             transformStyle: "preserve-3d",
-            transform: `scale(${push}) rotateY(${rotY}deg) rotateX(8deg)`,
+            transform: `scale(${push}) rotateZ(9deg) rotateY(${rotY}deg) rotateX(14deg)`,
           }}
         >
           <canvas
@@ -160,8 +174,8 @@ export const ChargeGauge: React.FC<{ row: ChargeGaugeRow }> = ({ row }) => {
               position: "absolute",
               width: CSS_W,
               height: CSS_H,
-              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 72%)",
-              maskImage: "linear-gradient(to right, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 72%)",
+              WebkitMaskImage: SHARP_MASK,
+              maskImage: SHARP_MASK,
             }}
           />
           {/* depth of field: blurred copy, faded in toward the far (right) side */}
@@ -173,9 +187,23 @@ export const ChargeGauge: React.FC<{ row: ChargeGaugeRow }> = ({ row }) => {
               position: "absolute",
               width: CSS_W,
               height: CSS_H,
-              filter: "blur(6px)",
-              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0) 30%, rgba(0,0,0,1) 72%)",
-              maskImage: "linear-gradient(to right, rgba(0,0,0,0) 30%, rgba(0,0,0,1) 72%)",
+              filter: "blur(9px)",
+              WebkitMaskImage: SOFT_MASK,
+              maskImage: SOFT_MASK,
+            }}
+          />
+          {/* bloom: a wide blurred copy added on top */}
+          <canvas
+            ref={bloom}
+            width={bw}
+            height={bh}
+            style={{
+              position: "absolute",
+              width: CSS_W,
+              height: CSS_H,
+              filter: "blur(28px)",
+              mixBlendMode: "screen",
+              opacity: 0.85,
             }}
           />
         </div>

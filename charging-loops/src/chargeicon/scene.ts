@@ -24,12 +24,14 @@ const CY = H / 2;
 const LOOP = 600;
 
 // ---------------------------------------------------------------- icon shape
-const BODY_H = 0.5 * H; // matches the reference icon (about half the frame height)
-const BODY_W = 0.12 * W;
+// Sized to the reference clip (body ~0.5 H tall, ~0.145 W wide): the 22 % x
+// 12 % of the brief looked small next to it in side-by-side checks.
+const BODY_H = 0.5 * H;
+const BODY_W = 0.145 * W;
 const CORNER = 0.17 * BODY_W;
-const CAP_W = 0.36 * BODY_W;
-const CAP_H = 0.055 * BODY_H;
-const DOT = 7; // dot diameter, design px
+const CAP_W = 0.42 * BODY_W;
+const CAP_H = 0.05 * BODY_H;
+const DOT = 10; // dot diameter, design px
 const DOT_STEP = DOT * 1.2;
 
 type Pt = [number, number];
@@ -87,17 +89,22 @@ const batteryOutline = (): Pt[] => {
   ];
 };
 
-// Outlined lightning bolt, in body-relative units.
+// Lightning bolt as a single open zigzag stroke, body-relative units.
 const BOLT: Pt[] = [
-  [0.27, -0.33],
-  [-0.24, 0.07],
-  [0.0, 0.05],
+  [0.24, -0.34],
+  [-0.2, 0.05],
+  [0.17, 0.0],
   [-0.22, 0.36],
-  [0.27, -0.06],
-  [0.02, -0.04],
 ];
 const boltOutline = (): Pt[] =>
   BOLT.map(([x, y]) => [CX + x * BODY_W, CY + y * BODY_H] as Pt);
+
+const mixHex = (a: string, b: string, t: number) => {
+  const pa = parseInt(a.slice(1), 16);
+  const pb = parseInt(b.slice(1), 16);
+  const ch = (sh: number) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
 
 const strokePoly = (g: Graphics, p: Pt[], closed: boolean) => {
   g.moveTo(p[0][0], p[0][1]);
@@ -115,15 +122,16 @@ type Cluster = {
   phase: number;
   wraps: number;
   color: number;
-  cells: { i: number; j: number; id: number; shade: number }[];
+  streak: boolean; // horizontal glitch smear instead of square blocks
+  cells: { i: number; j: number; id: number; shade: number; len: number }[];
 };
 
 const PALETTE = [0x1ad8b8, 0x2ae86a, 0x2a6aff, 0xe82a3a]; // teal, green, blue, red
 const CLUSTERS = 240;
-const Z_FAR = 7;
+const Z_FAR = 4.2;
 const Z_NEAR = 0.55;
-const Z_SPLIT_A = 2.0;
-const Z_SPLIT_B = 2.8;
+const Z_SPLIT_A = 1.6;
+const Z_SPLIT_B = 2.3;
 
 const buildClusters = (shares: number[], seed: number): Cluster[] => {
   const rnd = mulberry32(seed);
@@ -132,10 +140,11 @@ const buildClusters = (shares: number[], seed: number): Cluster[] => {
   for (let c = 0; c < CLUSTERS; c++) {
     const cols = 5 + Math.floor(rnd() * 14);
     const rows = 5 + Math.floor(rnd() * 8);
-    const cell = 12 + rnd() * 9;
-    // spread wider than the frame: far clusters crowd towards the centre
-    const x = (rnd() * 2 - 1) * 2000;
-    const y = (rnd() * 2 - 1) * 1150;
+    const cell = 16 + rnd() * 14;
+    // denser in a central band behind the icon, as in the reference
+    const band = rnd() < 0.7;
+    let x = band ? (rnd() * 2 - 1) * 1100 + 150 : (rnd() * 2 - 1) * 2100;
+    const y = (rnd() * 2 - 1) * 1250;
     const phase = rnd();
     const wraps = rnd() < 0.65 ? 1 : 2;
     let pick = rnd();
@@ -144,17 +153,33 @@ const buildClusters = (shares: number[], seed: number): Cluster[] => {
       if (pick < shares[ci]) break;
       pick -= shares[ci];
     }
-    const density = 0.35 + rnd() * 0.45;
-    const stripe = rnd() < 0.35; // some clusters are row-striped
+    // red glitch blocks gather on the right, as in the reference
+    if (ci === 3) x = 700 + rnd() * 1300;
+    const density = 0.45 + rnd() * 0.45;
+    const kind = rnd();
+    const frame = kind < 0.22; // outlined rectangle / circuit frame
+    const streak = kind > 0.84 || (ci === 3 && kind > 0.4); // horizontal smear
+    const stripe = !frame && rnd() < 0.3; // row-striped grids
     const cells: Cluster["cells"] = [];
     for (let j = 0; j < rows; j++) {
       if (stripe && j % 2 === 1) continue;
       for (let i = 0; i < cols; i++) {
-        if (hash2(c * 977 + i, j * 131 + 7) > density) continue;
-        cells.push({ i, j, id: id++, shade: 0.6 + 0.4 * hash2(id, 99) });
+        const edge = i === 0 || j === 0 || i === cols - 1 || j === rows - 1;
+        const inner = i === 2 || j === 2 || i === cols - 3 || j === rows - 3;
+        if (frame) {
+          if (!edge && !(inner && hash2(c, i + j) > 0.4)) continue;
+        } else if (hash2(c * 977 + i, j * 131 + 7) > density) continue;
+        if (streak && i > 0 && hash2(c * 31 + j, 5) > 0.3) continue; // one smear per row
+        cells.push({
+          i,
+          j,
+          id: id++,
+          shade: 0.6 + 0.4 * hash2(id, 99),
+          len: streak ? 3 + Math.floor(hash2(c, j * 7) * (cols - 2)) : 1,
+        });
       }
     }
-    out.push({ cols, rows, cell, x, y, phase, wraps, color: PALETTE[ci], cells });
+    out.push({ cols, rows, cell, x, y, phase, wraps, color: PALETTE[ci], streak, cells });
   }
   return out;
 };
@@ -207,6 +232,8 @@ export class ChargeIconScene {
   stage = new Container();
   private far: ParticleContainer;
   private near: ParticleContainer;
+  private fog: ParticleContainer;
+  private fogP: Particle[] = [];
   private farP: Particle[] = [];
   private nearP: Particle[] = [];
   private clusters: Cluster[];
@@ -232,6 +259,7 @@ export class ChargeIconScene {
       });
     this.far = mk();
     this.near = mk();
+    this.fog = mk();
     for (const cl of this.clusters) {
       for (let k = 0; k < cl.cells.length; k++) {
         const a = new Particle({ texture: tex, anchorX: 0.5, anchorY: 0.5, tint: cl.color });
@@ -242,11 +270,24 @@ export class ChargeIconScene {
         this.nearP.push(b);
       }
     }
+    for (const cl of this.clusters) {
+      const f = new Particle({ texture: tex, anchorX: 0.5, anchorY: 0.5, tint: cl.color });
+      this.fog.addParticle(f);
+      this.fogP.push(f);
+    }
+    // haze: one big soft quad per cluster, heavily blurred ("data fog")
+    const fogWrap = new Container();
+    fogWrap.addChild(this.fog);
+    fogWrap.filters = [new BlurFilter({ strength: 90, quality: 4, resolution })];
+    fogWrap.filterArea = new Rectangle(0, 0, W, H);
+    fogWrap.blendMode = "add";
     const farWrap = new Container();
     farWrap.addChild(this.far);
-    farWrap.filters = [new BlurFilter({ strength: 7, quality: 3, resolution })];
+    farWrap.filters = [new BlurFilter({ strength: 14, quality: 4, resolution })];
     farWrap.filterArea = new Rectangle(0, 0, W, H);
-    this.stage.addChild(farWrap, this.near);
+    farWrap.blendMode = "add";
+    this.near.blendMode = "add";
+    this.stage.addChild(fogWrap, farWrap, this.near);
 
     // HUD arcs: radius relative to the icon, as 18 % / 21 % are to a 22 % icon
     const r1 = BODY_H * (0.18 / 0.22);
@@ -261,7 +302,7 @@ export class ChargeIconScene {
           g.arc(0, 0, r, a0, a1);
         }
       }
-      g.stroke({ width, color: row.glow, alpha: 0.28 });
+      g.stroke({ width, color: row.glow, alpha: 0.14 });
     };
     segArc(this.hudA, r1, 3, 5);
     segArc(this.hudB, r2, 4, 3);
@@ -273,42 +314,65 @@ export class ChargeIconScene {
     // Icon: glow copies (wide, faint) + dotted core
     const outline = batteryOutline();
     const bolt = boltOutline();
+    // faint blue tint inside the body
+    const inside = new Graphics();
+    inside.roundRect(CX - BODY_W / 2, CY - BODY_H / 2, BODY_W, BODY_H, CORNER);
+    inside.fill({ color: row.glow, alpha: 0.06 });
     const glow = new Graphics();
     for (const [w, a] of [
-      [70, 0.07],
-      [36, 0.14],
-      [16, 0.32],
+      [90, 0.08],
+      [46, 0.16],
+      [22, 0.4],
     ] as const) {
       strokePoly(glow, outline, false);
       glow.stroke({ width: w, color: row.glow, alpha: a, join: "round", cap: "round" });
-      strokePoly(glow, bolt, true);
+      strokePoly(glow, bolt, false);
       glow.stroke({ width: w, color: row.glow, alpha: a, join: "round", cap: "round" });
     }
+    // dotted strokes, coloured from the hot core colour (upper left) to a
+    // blue-violet (lower right), with a few hashed sparkle dots
+    const far = `#${mixHex(row.glow, "#6A5AFF", 0.6).toString(16).padStart(6, "0")}`;
     const dots = new Graphics();
-    const drawDots = (pts: Pt[], color: string) => {
-      for (const [x, y] of pts) dots.circle(x, y, DOT / 2);
-      dots.fill({ color });
-    };
     const dense = (p: Pt[], closed: boolean) => resample(p, 2, closed);
-    // outer cyan dotted halo row and a white-hot core row
-    drawDots(resample(dense(outline, false), DOT_STEP, false), row.outline);
-    const boltPts = resample(dense(bolt, true), DOT_STEP, false);
-    for (const [x, y] of boltPts) this.bolt.circle(x, y, DOT / 2);
-    this.bolt.fill({ color: "#FFFFFF" });
+    const tint = (x: number, y: number) => {
+      const t = clamp(((x - (CX - BODY_W / 2)) / BODY_W) * 0.55 + ((y - (CY - BODY_H / 2)) / BODY_H) * 0.6 - 0.15);
+      return mixHex(row.outline, far, t);
+    };
+    const outlinePts = resample(dense(outline, false), DOT_STEP, false);
+    outlinePts.forEach(([x, y], k) => {
+      const sparkle = hash2(k, 7) > 0.93;
+      dots.circle(x, y, (sparkle ? DOT * 0.75 : DOT / 2));
+      dots.fill({ color: sparkle ? "#FFFFFF" : tint(x, y) });
+    });
+    const boltPts = resample(dense(bolt, false), DOT_STEP, false);
+    boltPts.forEach(([x, y], k) => {
+      this.bolt.circle(x, y, DOT / 2 + 1);
+      // brightest near the top of the bolt
+      this.bolt.fill({ color: mixHex("#FFFFFF", row.glow, clamp(k / boltPts.length) * 0.6) });
+    });
 
     // 4B fill segments (drawn once, alpha animated)
     if (row.fill) this.buildFill();
 
-    this.icon.addChild(glow, this.fillGlow, this.fill, dots, this.bolt);
+    this.icon.addChild(inside, glow, this.fillGlow, this.fill, dots, this.bolt);
     // bloom: a blurred additive copy of the icon only
     const bloomG = new Graphics();
     strokePoly(bloomG, outline, false);
-    bloomG.stroke({ width: 22, color: row.glow, alpha: 0.9, join: "round" });
-    strokePoly(bloomG, bolt, true);
-    bloomG.stroke({ width: 22, color: row.glow, alpha: 0.9, join: "round" });
-    this.iconBloom.addChild(bloomG);
-    this.iconBloom.filters = [new BlurFilter({ strength: 60, quality: 4, resolution })];
-    this.iconBloom.filterArea = new Rectangle(0, 0, W, H);
+    bloomG.stroke({ width: 34, color: row.glow, alpha: 1, join: "round" });
+    strokePoly(bloomG, bolt, false);
+    bloomG.stroke({ width: 34, color: row.glow, alpha: 1, join: "round" });
+    const bloomWide = new Graphics();
+    strokePoly(bloomWide, outline, false);
+    bloomWide.stroke({ width: 60, color: far, alpha: 0.6, join: "round" });
+    const bloomWideWrap = new Container();
+    bloomWideWrap.addChild(bloomWide);
+    bloomWideWrap.filters = [new BlurFilter({ strength: 140, quality: 4, resolution })];
+    bloomWideWrap.filterArea = new Rectangle(0, 0, W, H);
+    const bloomTight = new Container();
+    bloomTight.addChild(bloomG);
+    bloomTight.filters = [new BlurFilter({ strength: 50, quality: 4, resolution })];
+    bloomTight.filterArea = new Rectangle(0, 0, W, H);
+    this.iconBloom.addChild(bloomWideWrap, bloomTight);
     this.iconBloom.blendMode = "add";
     this.stage.addChild(this.iconBloom, this.icon);
 
@@ -357,6 +421,7 @@ export class ChargeIconScene {
 
     // ---- data background
     let n = 0;
+    let ci = 0;
     const s = 1 / this.texSize;
     const bucket = Math.floor(f / 3);
     for (const cl of this.clusters) {
@@ -365,23 +430,32 @@ export class ChargeIconScene {
       const k = 1 / z;
       const fadeIn = smoothstep(Z_FAR, Z_FAR * 0.72, z);
       const fadeOut = smoothstep(Z_NEAR, Z_NEAR * 1.9, z);
-      const depthB = 0.45 + 0.55 * clamp(1 - (z - Z_NEAR) / (Z_FAR - Z_NEAR) * 1.1);
+      const depthB = 0.55 + 0.45 * clamp(1 - (z - Z_NEAR) / (Z_FAR - Z_NEAR) * 1.1);
       const farW = smoothstep(Z_SPLIT_A, Z_SPLIT_B, z);
       const size = cl.cell * 0.74 * k;
       const ox = CX + cl.x * k;
       const oy = CY + cl.y * k;
       const base = fadeIn * fadeOut * depthB;
+      const fp0 = this.fogP[ci++];
+      fp0.x = ox;
+      fp0.y = oy;
+      fp0.scaleX = cl.cols * cl.cell * k * s * 1.1;
+      fp0.scaleY = cl.rows * cl.cell * k * s * 1.1;
+      fp0.alpha = 0.2 * base;
       for (const c of cl.cells) {
         const h = hash2(c.id, bucket);
         const flick = h < 0.12 ? 0.12 : 0.55 + 0.45 * h;
         const a = clamp(base * flick * c.shade);
-        const px = ox + (c.i - cl.cols / 2) * cl.cell * k;
+        const w = c.len > 1 ? (c.len - 0.26) * cl.cell * k : size;
+        const hgt = c.len > 1 ? size * 0.42 : size;
+        const px = ox + (c.i - cl.cols / 2 + (c.len - 1) / 2) * cl.cell * k;
         const py = oy + (c.j - cl.rows / 2) * cl.cell * k;
         const fp = this.farP[n];
         const np = this.nearP[n];
         fp.x = np.x = px;
         fp.y = np.y = py;
-        fp.scaleX = fp.scaleY = np.scaleX = np.scaleY = size * s;
+        fp.scaleX = np.scaleX = w * s;
+        fp.scaleY = np.scaleY = hgt * s;
         fp.alpha = a * farW;
         np.alpha = a * (1 - farW);
         n++;
