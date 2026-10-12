@@ -78,7 +78,9 @@ const buildStrips = (): Strip[] => {
       uScale: Math.min(0.9, w / 24) * range(rng, 0.8, 1.2),
       opacity: range(rng, 0.3, 0.85),
       panel: isPanel ? range(rng, 0.06, 0.16) : 0,
-      dashCycles: (rng() < 0.5 ? 1 : -1) * irange(rng, 1, 4),
+      // Dash cells scrolled per loop (integer). The irregular dash pattern
+      // repeats every |dashCycles| cells, so the scroll loops exactly.
+      dashCycles: (rng() < 0.5 ? 1 : -1) * irange(rng, 7, 16),
       dashPhase: rng(),
       dashDensity: range(rng, 6, 24),
     });
@@ -153,10 +155,15 @@ float h1(float n) { return fract(sin(n * 12.9898 + 4.1414) * 43758.5453); }
 // Per-line brightness and broken segments, so the grid reads as scattered
 // rays rather than a complete tiled floor. Line ids are integers in world
 // space, so the pattern is fixed to the world and loops with the flight.
-float lineMod(float c, float along, float salt) {
+// idPeriod / alongPeriod wrap the hash inputs so the pattern repeats exactly
+// every loop period along the flight axis (0 = no wrap, used across x).
+float lineMod(float c, float along, float salt, float idPeriod, float alongPeriod) {
   float id = floor(c + 0.5);
+  if (idPeriod > 0.0) id = mod(id, idPeriod);
+  float segId = floor(along / 8.0);
+  if (alongPeriod > 0.0) segId = mod(segId, alongPeriod);
   float b = h1(id + salt);
-  float seg = h1(id * 7.0 + floor(along / 6.0) + salt * 3.0);
+  float seg = h1(id * 7.0 + segId + salt * 3.0);
   return (b < 0.35 ? 0.15 : 0.35 + 0.65 * b) * (seg < 0.3 ? 0.25 : 1.0);
 }
 void main() {
@@ -164,8 +171,9 @@ void main() {
   // 0.5-unit cells: 80 lines per loop period, every 8th brighter (10 per period).
   vec2 g = vWorld.xz * 2.0;
   // Lines along the flight (rays from the vanishing point) read stronger than cross lines.
-  float minor = max(gridLine(g.x, 0.2) * lineMod(g.x, g.y, 0.0), 0.55 * gridLine(g.y, 0.18) * lineMod(g.y, g.x, 5.0));
-  float major = max(gridLine(g.x / 8.0, 0.4) * lineMod(g.x / 8.0, g.y, 9.0), 0.5 * gridLine(g.y / 8.0, 0.3));
+  // g.y runs along the flight: one loop = 2·D grid units = 2·D/8 segments.
+  float minor = max(gridLine(g.x, 0.2) * lineMod(g.x, g.y, 0.0, 0.0, ${(2 * D) / 8}.0), 0.55 * gridLine(g.y, 0.18) * lineMod(g.y, g.x, 5.0, ${2 * D}.0, 0.0));
+  float major = max(gridLine(g.x / 8.0, 0.4) * lineMod(g.x / 8.0, g.y, 9.0, 0.0, ${(2 * D) / 8}.0), 0.5 * gridLine(g.y / 8.0, 0.3));
   float a = max(minor * 0.25, major * 0.5);
   // Fine dot mesh between the lines (the floor and ceiling are never flat).
   vec2 q = vWorld.xz * 4.0;
@@ -226,7 +234,7 @@ void main() {
   // Dash streams sliding along the strip (whole cycles per loop).
   float dpos = vUv.x * vTex.w - vDash.x * uU + vDash.y;
   float dc = fract(dpos);
-  float cell = floor(dpos);
+  float cell = mod(floor(dpos), abs(vDash.x));
   float keep = step(0.45, fract(sin(cell * 91.3458 + vSize.z * 7.13) * 47453.5453));
   float len = 0.15 + 0.5 * fract(sin(cell * 12.9898 + 3.0) * 43758.5453);
   float dashes = keep * smoothstep(0.0, 0.05, dc) * (1.0 - smoothstep(len, len + 0.06, dc));
