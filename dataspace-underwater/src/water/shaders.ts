@@ -42,6 +42,10 @@ uniform float uLiftReach; // vertical reach of the lit column
 uniform float uRayLean;   // sideways offset of the ray source
 uniform float uRayStart;  // depth at which rays reach full strength
 uniform float uRaySharp;  // ray exponent multiplier
+uniform float uSunEdge;   // sun patch inner radius fraction
+uniform float uSunBreak;  // ripple breakup of the sun patch
+uniform vec2  uColumn;    // bubble-column glow: x (uv), strength
+uniform float uRayFine;   // strength of the fine crisp streaks
 
 // Loopable caustic: a variant of the classic iterative water-caustic, with all
 // time multipliers integers so it is exactly periodic in t over 2π.
@@ -91,6 +95,10 @@ float rayField(vec2 uv) {
   s += 0.22 * pow(0.5 + 0.5 * cos(ang * 79.0 * D + 0.7 - 1.6 * sin(t + 3.3) + 0.6 * sin(2.0 * t)), 12.0 * uRaySharp);
   s += 0.15 * pow(0.5 + 0.5 * cos(ang * 113.0 * D + 5.5 + 2.0 * sin(3.0 * t + 1.1)), 14.0 * uRaySharp);
 
+  // Fine crisp streaks on top of the broad shafts (fixed sharpness).
+  s += uRayFine * 0.30 * pow(0.5 + 0.5 * cos(ang * 61.0 + 1.9 + 1.2 * sin(t + 2.4)), 22.0);
+  s += uRayFine * 0.24 * pow(0.5 + 0.5 * cos(ang * 97.0 + 0.4 - 1.4 * sin(2.0 * t + 0.8)), 26.0);
+  s += uRayFine * 0.18 * pow(0.5 + 0.5 * cos(ang * 143.0 + 3.3 + 1.7 * sin(t + 5.0)), 30.0);
   // Surface ripples focus light into some rays more than others.
   float cs = caustic(vec2(ang * 6.0 + 11.0, 3.7), t);
   s *= 0.45 + 1.4 * cs;
@@ -161,6 +169,9 @@ void main() {
             + 0.5 * sin(p.x * 6.3 - p.y * 4.1 + 2.0 * uTheta + 0.5);
   col *= 1.0 + 0.085 * mot;
   col.g += 0.012 * mot * (col.g + 0.05);
+  // Light scattered by a bubble column (Look 2): a soft teal haze around it.
+  float cdx = (uv.x - uColumn.x) * asp;
+  col += uTop * uColumn.y * exp(-cdx * cdx / 0.012) * smoothstep(0.0, 0.35, y) * (0.6 + 0.4 * smoothstep(1.0, 0.5, y));
   // Darker corners.
   vec2 vc = (uv - vec2(0.5, 0.45)) * vec2(1.0, 1.0);
   col *= 1.0 - 0.25 * smoothstep(0.45, 0.75, length(vc));
@@ -208,10 +219,10 @@ void main() {
   float cells2 = caustic(q * 15.0 + 9.0, t);
   // Snell's window: a crisp-edged ellipse of distorted sky, with a thin bright
   // refraction rim at its edge.
-  float disc = smoothstep(R, R * 0.9, d);
+  float disc = smoothstep(R, R * uSunEdge, d);
   float breakup = 0.12 + 1.1 * pow(cells, 1.3) + 0.6 * cells2;
   float rimLine = exp(-pow((d - R * 0.975) / (R * 0.035), 2.0)) * (0.5 + 0.8 * cells);
-  float core = disc * breakup + rimLine * 0.6;
+  float core = disc * mix(1.0, breakup, uSunBreak) + rimLine * 0.6 * uSunBreak;
   // Outer shimmering fringe (patches of light around the window).
   float fringe = smoothstep(R * 2.2, R * 0.8, d) * cells * 0.6;
   // Soft glow halo.

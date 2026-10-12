@@ -43,6 +43,14 @@ export type WaterLook = {
   rayStart: number;
   /** Ray sharpness multiplier (<1 = broader, softer shafts). */
   raySharp: number;
+  /** Sun patch edge softness: inner radius fraction (0.9 crisp … 0.3 soft). */
+  sunEdge: number;
+  /** How much the ripples break the sun patch up (0..1). */
+  sunBreak: number;
+  /** Glow of the bubble column scattering light: [x (uv), strength]. */
+  columnGlow: [number, number];
+  /** Fine crisp ray streaks layered over the broad shafts. */
+  rayFine: number;
 };
 
 const quad = () =>
@@ -104,6 +112,10 @@ export class WaterKit {
       uRayLean: { value: look.rayLean, type: "f32" },
       uRayStart: { value: look.rayStart, type: "f32" },
       uRaySharp: { value: look.raySharp, type: "f32" },
+      uSunEdge: { value: look.sunEdge, type: "f32" },
+      uSunBreak: { value: look.sunBreak, type: "f32" },
+      uColumn: { value: new Float32Array(look.columnGlow), type: "vec2<f32>" },
+      uRayFine: { value: look.rayFine, type: "f32" },
     });
 
     const bnSource = new BufferImageSource({

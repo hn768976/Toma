@@ -61,7 +61,7 @@ const buildStrips = (): Strip[] => {
     // Heights cluster loosely around eye level (as in the reference), clear of floor/ceiling.
     // Spread over the whole height, a little denser around eye level.
     const yr = rng() * 2 - 1;
-    const y = Math.sign(yr) * Math.pow(Math.abs(yr), 1.05) * 3.05 + 0.2;
+    const y = Math.sign(yr) * Math.pow(Math.abs(yr), 1.05) * 3.0 + 0.1;
     // Panels (faintly filled rectangles) build up a lit wall right of centre.
     const xr = rng();
     const x = -20 + 52 * Math.pow(xr, 0.75);
@@ -76,7 +76,7 @@ const buildStrips = (): Strip[] => {
       row: irange(rng, 0, ATLAS_ROWS - 1),
       uOff: range(rng, 0, 0.6),
       uScale: Math.min(0.9, w / 24) * range(rng, 0.8, 1.2),
-      opacity: range(rng, 0.2, 0.7),
+      opacity: range(rng, 0.3, 0.85),
       panel: isPanel ? range(rng, 0.06, 0.16) : 0,
       dashCycles: (rng() < 0.5 ? 1 : -1) * irange(rng, 1, 4),
       dashPhase: rng(),
@@ -113,10 +113,10 @@ const buildDots = (): Dot[] => {
 const DOTS = buildDots();
 
 const BLOOMS = [
-  { x: -9.0, y: -2.7, b: 6, r: 7, a: 0.35, n: 1, p: 0.3 },
-  { x: 11.0, y: -2.6, b: 19, r: 6, a: 0.3, n: 2, p: 2.1 },
-  { x: 7.0, y: 0.9, b: 27, r: 4, a: 0.18, n: 1, p: 4.0 },
-  { x: -6.0, y: -2.9, b: 35, r: 7, a: 0.3, n: 3, p: 1.2 },
+  { x: 7.0, y: 0.2, b: 6, r: 3.2, a: 0.55, n: 1, p: 0.3 },
+  { x: 12.0, y: -2.5, b: 19, r: 4.0, a: 0.45, n: 2, p: 2.1 },
+  { x: 4.5, y: 0.6, b: 27, r: 2.6, a: 0.5, n: 1, p: 4.0 },
+  { x: 9.0, y: -2.7, b: 35, r: 3.5, a: 0.45, n: 3, p: 1.2 },
 ];
 
 // ── Shaders ──────────────────────────────────────────────────────────────────
@@ -164,9 +164,16 @@ void main() {
   // 0.5-unit cells: 80 lines per loop period, every 8th brighter (10 per period).
   vec2 g = vWorld.xz * 2.0;
   // Lines along the flight (rays from the vanishing point) read stronger than cross lines.
-  float minor = max(gridLine(g.x, 0.2) * lineMod(g.x, g.y, 0.0), 0.4 * gridLine(g.y, 0.18) * lineMod(g.y, g.x, 5.0));
+  float minor = max(gridLine(g.x, 0.2) * lineMod(g.x, g.y, 0.0), 0.55 * gridLine(g.y, 0.18) * lineMod(g.y, g.x, 5.0));
   float major = max(gridLine(g.x / 8.0, 0.4) * lineMod(g.x / 8.0, g.y, 9.0), 0.5 * gridLine(g.y / 8.0, 0.3));
   float a = max(minor * 0.25, major * 0.5);
+  // Fine dot mesh between the lines (the floor and ceiling are never flat).
+  vec2 q = vWorld.xz * 4.0;
+  vec2 fq = abs(fract(q) - 0.5) / fwidth(q);
+  float dotm = (1.0 - smoothstep(0.6, 1.4, max(fq.x, fq.y))) * (1.0 - smoothstep(0.08, 0.2, max(fwidth(q).x, fwidth(q).y)));
+  a = max(a, dotm * 0.22);
+  // The floor catches more light than the ceiling.
+  a *= vWorld.y < uCam.y ? 1.35 : 0.85;
   float vis = fogVis(dist);
   // Additive: light lines over the fog.
   fragColor = vec4(uGrid * a * vis, 1.0);
@@ -304,7 +311,9 @@ void main() {
   float h = exp(-pow((vUv.y - uHorizonY) / 0.11, 2.0));
   float side = 1.0 - 0.35 * pow(abs(vUv.x - 0.5) * 2.0, 2.0);
   float away = smoothstep(0.08, 0.45, abs(vUv.y - uHorizonY));
-  vec3 c = mix(uFog * vec3(0.95, 1.0, 1.12), uFog * 0.62, away);
+  // Above the horizon the void darkens; below it the floor haze stays lit.
+  float below = step(vUv.y, uHorizonY);
+  vec3 c = mix(uFog * vec3(0.95, 1.0, 1.12), mix(uFog * 0.62, uFog * vec3(1.15, 1.3, 1.5), below), away);
   c = mix(c, uHorizon, h * side * 0.6);
   fragColor = vec4(c, 1.0);
 }
@@ -573,7 +582,7 @@ const createRuntime = (gl: THREE.WebGLRenderer, pw: number, ph: number, atlasCan
         Math.min(1, Math.max(0, (ahead - 4) / 10)) *
         (1 - Math.min(1, Math.max(0, (ahead - 35) / (FOG_END - 40))));
       const breathe = 0.7 + 0.3 * Math.sin(bl.def.n * th + bl.def.p);
-      bl.mat.uniforms.uAlpha.value = bl.def.a * 0.5 * vis * breathe;
+      bl.mat.uniforms.uAlpha.value = bl.def.a * 0.8 * vis * breathe;
       bl.mesh.position.set(bl.def.x, bl.def.y, camZ - ahead);
       bl.mesh.quaternion.copy(camera.quaternion);
       bl.mesh.scale.setScalar(bl.def.r * 1.5);

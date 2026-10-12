@@ -2,6 +2,7 @@
 import { Particle, ParticleContainer } from "pixi.js";
 import { loopTheta } from "../lib/loop";
 import { mulberry32, range } from "../lib/random";
+import { rayLight } from "./bubbles";
 import { WaterKit } from "./kit";
 import { CELL, SHARP_D, BLUR_D, Sprite } from "./sprites";
 
@@ -100,7 +101,9 @@ export class MarineSnow {
       // Area compensation for sub-pixel specks; brighter near the lit top.
       const area = Math.min(1, Math.pow((s.size * k) / d, 1.2));
       const cx = (xN - 0.5) * (pw / ph);
-      const lit = (0.3 + 0.5 * Math.pow(Math.max(0, 1 - yN), 1.5)) * (0.45 + 1.1 * Math.exp(-(cx * cx) / 0.18));
+      const L = this.kit.look;
+      const ray = rayLight(xN, yN, th, L.sun, pw / ph, L.rayDensity, L.raySrc, L.rayFan, L.rayLean);
+      const lit = (0.3 + 0.5 * Math.pow(Math.max(0, 1 - yN), 1.5)) * (0.4 + 0.9 * Math.exp(-(cx * cx) / 0.18) + 1.6 * ray * Math.max(0, 1 - yN * 1.3));
       const tw = 0.8 + 0.2 * Math.sin(s.tw * th + s.tp);
       p.alpha = Math.min(1, s.alpha * area * lit * tw * this.brightness);
     }

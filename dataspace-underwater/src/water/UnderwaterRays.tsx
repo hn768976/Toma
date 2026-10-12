@@ -9,23 +9,27 @@ import { MarineSnow } from "./snow";
 // Look 3 — Underwater Rays. The kit at full strength: ~30 broad rays, sun patch
 // top centre slightly left, flaring briefly twice per loop.
 export const RAYS_LOOK: WaterLook = {
-  sun: [0.47, -0.04],
+  sun: [0.49, -0.04],
   sunR: 0.1,
   rayDensity: 0.85,
-  rayReach: 0.72,
+  rayReach: 0.85,
   rayGain: 1.4,
-  surface: 0.18,
+  surface: 0.1,
   lift: 1.2,
   // Two brief flares per loop (cos(2θ) peaks at θ=0.9 and 0.9+π).
   flare: (th) => Math.pow(0.5 + 0.5 * Math.cos(2 * th - 1.8), 16),
   grain: 0.02,
-  raySrc: 0.7,
+  raySrc: 0.55,
   rayFan: 1.3,
   sunCore: 0.12,
   liftReach: 0.85,
-  rayLean: -0.03,
+  rayLean: 0,
   rayStart: 0.3,
-  raySharp: 0.45,
+  raySharp: 0.6,
+  sunEdge: 0.9,
+  sunBreak: 1,
+  columnGlow: [0.5, 0],
+  rayFine: 1.0,
 };
 
 // A few groups of 5–12 tiny bubbles on a seeded schedule (6 groups → every 100 frames).
