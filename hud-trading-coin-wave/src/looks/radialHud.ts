@@ -1,6 +1,6 @@
 import { DrawFn } from "../lib/CanvasLook";
 import { HUD, MONO, SANS } from "../lib/fonts";
-import { cyc, digits, hash3, holdBucket, loopFrame, mulberry32, TAU } from "../lib/random";
+import { cyc, digits, hash3, hashF, holdBucket, loopFrame, mulberry32, TAU } from "../lib/random";
 
 export type RadialHudProps = {
   greys: [string, string, string, string]; // ring segments, dark → light
@@ -59,7 +59,7 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
   const R = (v: number) => Math.round(v);
   const lw = (v: number) => Math.max(1, v * h);
   const cx = 0.285 * w;
-  const cy = 0.497 * h;
+  const cy = 0.52 * h;
 
   // ---------------------------------------------------- background marks --
   // tiny grid crosses (no full grid: the black between marks stays 0,0,0)
@@ -102,39 +102,33 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
         const grow = 0.78 + 0.22 * Math.sin(TAU * cyc(f, s.k, s.ph));
         const a0 = rot + k * span + s.s * span;
         const a1 = a0 + s.l * span * grow;
+        // smoky translucent panel: dark inside, brighter towards the outer edge,
+        // with segments stepping in and out
+        const step = (s.g - 1.5) * (r1 - r0) * 0.12;
+        const ro = r1 + step;
+        const ri = r0 + (s.striped ? (r1 - r0) * 0.25 : 0);
+        const grad = ctx.createRadialGradient(cx, cy, ri, cx, cy, ro);
+        grad.addColorStop(0, c.greys[0]);
+        grad.addColorStop(1, c.greys[Math.min(3, s.g + 1)]);
         ctx.beginPath();
-        ctx.arc(cx, cy, r1, a0, a1);
-        ctx.arc(cx, cy, r0, a1, a0, true);
+        ctx.arc(cx, cy, ro, a0, a1);
+        ctx.arc(cx, cy, ri, a1, a0, true);
         ctx.closePath();
-        ctx.fillStyle = c.greys[s.g];
-        ctx.globalAlpha = s.striped ? 0.22 : 0.42;
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.28 + 0.1 * s.g;
         ctx.fill();
-        // brighter outer lip
+        // thin bright outer lip
         ctx.beginPath();
-        ctx.arc(cx, cy, r1, a0, a1);
-        ctx.arc(cx, cy, r1 - (r1 - r0) * 0.16, a1, a0, true);
-        ctx.closePath();
-        ctx.globalAlpha = 0.75;
-        ctx.fillStyle = c.greys[Math.min(3, s.g + 1)];
-        ctx.fill();
-        if (s.striped) {
-          ctx.globalAlpha = 0.45;
-          const nStr = Math.max(3, Math.floor(((a1 - a0) * r1) / H(0.009)));
-          ctx.beginPath();
-          for (let i = 0; i <= nStr; i++) {
-            const a = a0 + ((a1 - a0) * i) / nStr;
-            ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
-            ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
-          }
-          ctx.strokeStyle = c.greys[Math.min(3, s.g + 1)];
-          ctx.lineWidth = lw(0.0028);
-          ctx.stroke();
-        }
+        ctx.arc(cx, cy, ro, a0, a1);
+        ctx.strokeStyle = c.greys[3];
+        ctx.globalAlpha = 0.6;
+        ctx.lineWidth = lw(0.0022);
+        ctx.stroke();
         ctx.globalAlpha = 1;
       }
   };
 
-  const D = (v: number) => v * h * 0.76; // dial scale
+  const D = (v: number) => v * h * 0.96; // dial scale
   // ---------------------------------------------------------------- dial --
   // A: outer thin arc that sweeps out into lines (as in the reference)
   const rA = D(0.452);
@@ -262,15 +256,34 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
     ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, D(0.0028), 0, TAU);
     ctx.fill();
   }
-  for (let k = 0; k < 4; k++) {
-    const a = (k * TAU) / 4;
+  ctx.fillStyle = c.faint;
+  for (let k = -2; k <= 2; k++) ctx.fillRect(R(cx + k * D(0.03)), R(cy - D(0.012)), 1, R(D(0.024)));
+  // extra rings of tiny text and point lights (inside the dial)
+  ctx.font = `600 ${R(D(0.0115))}px ${HUD}`;
+  [0.19, 0.255, 0.3].forEach((rr, ri) => {
+    const n = [14, 18, 22][ri];
+    for (let k = 0; k < n; k++) {
+      if (hash3(k, ri, 3) % 3 === 0) continue;
+      const a = (k / n) * TAU + TAU * cyc(f, ri === 1 ? 1 : -1) / [2, 3, 2][ri];
+      ctx.save();
+      ctx.translate(cx + Math.cos(a) * D(rr), cy + Math.sin(a) * D(rr));
+      ctx.rotate(a + Math.PI / 2);
+      ctx.fillStyle = k % 4 === 0 ? c.text : c.dim;
+      ctx.fillText(digits(2 + (hash3(k, ri) % 4), 600 + ri * 40 + k, 0, holdBucket(f, [20, 30, 24][ri], k % 20)), 0, 0);
+      ctx.restore();
+    }
+  });
+  for (let k = 0; k < 46; k++) {
+    const rr = D(0.17 + 0.17 * hashF(k, 1));
+    const a = TAU * hashF(k, 2) + TAU * cyc(f, k % 3 === 0 ? 1 : -1) / 2;
+    const tw = 0.5 + 0.5 * Math.sin(TAU * cyc(f, 1 + (k % 4), hashF(k, 3)));
+    ctx.globalAlpha = 0.4 + 0.6 * tw;
+    ctx.fillStyle = k % 9 === 0 ? "#E8803A" : k % 2 ? c.accent : c.text;
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * D(0.012), cy + Math.sin(a) * D(0.012));
-    ctx.lineTo(cx + Math.cos(a) * D(0.03), cy + Math.sin(a) * D(0.03));
-    ctx.strokeStyle = c.dim;
-    ctx.lineWidth = lw(0.0016);
-    ctx.stroke();
+    ctx.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, Math.max(0.8, D(0.0022)), 0, TAU);
+    ctx.fill();
   }
+  ctx.globalAlpha = 1;
   ctx.fillStyle = "#E85A2A";
   ctx.beginPath();
   ctx.arc(cx - D(0.235), cy, D(0.004), 0, TAU);
@@ -407,11 +420,11 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
   for (let i = 0; i < 4; i++) {
     const gx = (0.72 + i * 0.038) * w;
     const gy = 0.85 * h;
-    const r = H(0.02);
+    const r = H(0.016);
     ctx.beginPath();
     ctx.arc(gx, gy, r, 0, TAU);
     ctx.strokeStyle = c.faint;
-    ctx.lineWidth = lw(0.003);
+    ctx.lineWidth = lw(0.0018);
     ctx.stroke();
     const fill = 0.5 + 0.45 * Math.sin(TAU * cyc(f, [1, 2, 1, 3][i], i * 0.27));
     ctx.beginPath();

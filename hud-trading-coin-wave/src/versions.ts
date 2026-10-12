@@ -30,7 +30,7 @@ export const VERSIONS: Version[] = [
       faint: "#3A3A3A",
       counter: "#F0C030",
       bar: "#3AC88A",
-      accent: "#3AB8A8",
+      accent: "#3FA89A",
       accentDark: "#1E4A40",
     },
   },
@@ -63,6 +63,8 @@ export const VERSIONS: Version[] = [
       ma2: "#6A7A8E",
       summary: ["#3AB87A", "#E8884A", "#8A6AE8", "#E8C84A"],
       analysis: "#E8506A",
+      chartBg: "#131A27",
+      card: "#162032",
     },
   },
   {

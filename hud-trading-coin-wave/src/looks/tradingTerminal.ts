@@ -14,6 +14,8 @@ export type TradingTerminalProps = {
   ma2: string;
   summary: [string, string, string, string];
   analysis: string;
+  chartBg: string;
+  card: string;
 };
 
 // ------------------------------------------------------------ the series --
@@ -124,14 +126,16 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   const chartW = (chartR - chartL) * w;
   const pitch = chartW / VISIBLE;
   const xRight = chartW - pitch * 0.9;
-  const pTop = 1590;
-  const pBot = 1546;
+  const pTop = 1594;
+  const pBot = 1542;
   const py = (p: number) => (chartT + ((pTop - p) / (pTop - pBot)) * (chartB - chartT)) * h;
 
   // grid
+  ctx.fillStyle = c.chartBg;
+  ctx.fillRect(0, Y(chartT), X(chartR), Y(chartB - chartT));
   ctx.fillStyle = c.grid;
   for (let gx = 0.0355; gx < 0.83; gx += 0.0355) ctx.fillRect(X(gx), Y(chartT), 1, Y(chartB - chartT));
-  for (let p = 1548; p <= 1588; p += 2) ctx.fillRect(0, R(py(p)), X(0.83), 1);
+  for (let p = 1544; p <= 1592; p += 2) ctx.fillRect(0, R(py(p)), X(0.83), 1);
 
   // faint floating chart notes, as in the reference
   [
@@ -149,10 +153,10 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ctx.clip();
   // volume bars
   const volB = chartB * h;
-  const volH = 0.26 * h;
+  const volH = 0.17 * h;
   cs.forEach((k) => {
     ctx.fillStyle = k.c >= k.o ? c.up : c.down;
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.42;
     const vh = k.v * volH;
     ctx.fillRect(k.x - pitch * 0.32, volB - vh, pitch * 0.64, vh);
   });
@@ -173,10 +177,12 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
     ctx.lineWidth = lwid;
     ctx.stroke();
   };
-  ma(26, c.ma2, Math.max(1, 0.0012 * h));
-  ma(9, c.ma1, Math.max(1, 0.0012 * h));
+  ctx.globalAlpha = 0.55;
+  ma(26, c.ma2, Math.max(1, 0.0009 * h));
+  ma(9, c.ma1, Math.max(1, 0.0009 * h));
+  ctx.globalAlpha = 1;
   // wicks + bodies
-  const bodyW = pitch * 0.62;
+  const bodyW = pitch * 0.5;
   const wickW = Math.max(1, pitch * 0.12);
   cs.forEach((k) => {
     const up = k.c >= k.o;
@@ -190,9 +196,9 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
 
   // last-price line + tag
   const last = cs[cs.length - 1];
-  const lastUp = last.c >= last.o;
   const ly = R(py(last.c));
-  ctx.strokeStyle = lastUp ? c.up : c.down;
+  ctx.strokeStyle = c.text;
+  ctx.globalAlpha = 0.35;
   ctx.lineWidth = 1;
   ctx.setLineDash([R(0.006 * h), R(0.005 * h)]);
   ctx.beginPath();
@@ -200,6 +206,7 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ctx.lineTo(X(chartR), ly + 0.5);
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
 
   // price scale
   ctx.fillStyle = c.bg;
@@ -208,18 +215,20 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ctx.fillRect(X(chartR), Y(chartT), 1, Y(chartB - chartT));
   for (let p = 1550; p <= 1588; p += 2) text(p.toFixed(2), 0.797, py(p) / h + 0.004, c.text, tiny, MONO, 400);
   const tagH = R(0.022 * h);
-  ctx.fillStyle = lastUp ? c.up : c.down;
+  ctx.fillStyle = "#5A6678";
   ctx.fillRect(X(chartR) + 1, ly - R(tagH / 2), X(0.832) - X(chartR), tagH);
   text(last.c.toFixed(2), 0.797, (ly + tagH * 0.3) / h, c.bright, tiny, MONO, 500);
 
   // ---------------------------------------------------------- ticker bar --
-  ctx.fillStyle = c.panel;
+  ctx.fillStyle = c.bg;
   ctx.fillRect(0, 0, X(0.833), Y(0.058));
   INSTR.forEach((name, i) => {
     const x0 = 0.004 + i * 0.1035;
+    ctx.fillStyle = c.panel;
+    ctx.fillRect(X(x0 - 0.002), Y(0.004), X(0.1), Y(0.05));
     const hb = holdBucket(f, [20, 30, 24, 40, 20, 12, 60, 30][i], (i * 7) % 12);
     const jit = (hashF(i, hb, 5) - 0.5) * 0.002;
-    const pct = ((hash3(i, 9) % 300) / 100 - 1.0) + jit * 50;
+    const pct = [0.18, 0.29, -0.07, -1.25, 0.36, 0.33, 0.02, -0.14][i] + jit * 10;
     const up = pct >= 0;
     const val = name === "GOLD" ? last.c : INSTR_BASE[i] * (1 + jit);
     const fresh = f % [20, 30, 24, 40, 20, 12, 60, 30][i] < 3; // brief flash on tick
@@ -304,6 +313,11 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
     const y0 = 0.338 + row * 0.19;
     const cw = 0.075;
     const ch = 0.07;
+    ctx.fillStyle = c.card;
+    ctx.fillRect(X(x0 - 0.003), Y(y0 - 0.01), X(cw + 0.006), Y(0.175));
+    ctx.strokeStyle = c.grid;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(X(x0 - 0.003) + 0.5, Y(y0 - 0.01) + 0.5, X(cw + 0.006), Y(0.175));
     text("Market Summary", x0, y0 + 0.006, c.bright, tiny, SANS, 500);
     text(SUMMARY_NAMES[i], x0, y0 + 0.021, c.text, tiny, SANS, 400);
     const base = (y0 + 0.03 + ch) * h;
@@ -328,6 +342,11 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
     // small table under the chart
     for (let r = 0; r < 4; r++) {
       const yy = base / h + 0.018 + r * 0.0145;
+      const ch3 = (hash3(i, r, holdBucket(f, 30, (i * 4 + r) % 30)) % 500) / 100 - 2.2;
+      ctx.fillStyle = ch3 >= 0 ? c.up : c.down;
+      ctx.globalAlpha = 0.14;
+      ctx.fillRect(X(x0), Y(yy - 0.0105), X(cw), Y(0.0135));
+      ctx.globalAlpha = 1;
       ctx.fillStyle = c.summary[(i + r) % 4];
       ctx.fillRect(X(x0), Y(yy - 0.008), Y(0.008), Y(0.008));
       text(INSTR[(i * 2 + r) % 8].split(" ")[0], x0 + 0.008, yy, c.text, tiny, SANS, 400);
