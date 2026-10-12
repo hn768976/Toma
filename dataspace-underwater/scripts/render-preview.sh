@@ -11,7 +11,7 @@ SEQ=out/seq/$ID
 rm -rf "$SEQ"; mkdir -p out/previews out/keep/$ID
 T0=$(date +%s.%N)
 npx remotion render "$BUNDLE" "$ID" "$SEQ" --sequence --image-format=png \
-  --scale=0.3333333333333333 --concurrency=4 --gl=angle --log=error
+  --scale=0.3333333333333333 --concurrency=4 --gl=angle --log=warn
 T1=$(date +%s.%N)
 FIRST=$(ls "$SEQ" | head -1); PATTERN=$(echo "$FIRST" | sed -E 's/[0-9]+\.png$//')
 DIGITS=$(echo "$FIRST" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
