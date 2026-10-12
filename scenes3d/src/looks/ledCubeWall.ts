@@ -80,15 +80,34 @@ const { GROUPS, CELL_GROUP, LED_KIND, LED_SCHED } = (() => {
   // LEDs: ~30% of blocks, ~10% of those brighter and larger.
   const ledKind = new Float32Array(n);
   const periods = [60, 75, 100, 120, 150, 200, 300];
-  const ledSched: { period: number; phase: number; duty: number }[] = [];
+  const ledSched: { period: number; phase: number; duty: number; level: number }[] = [];
+  // Clustered: a smooth density field plus short runs along rows/columns.
+  const blobs = Array.from({ length: 14 }, () => [rng() * COLS, rng() * ROWS_N, 3 + rng() * 5]);
   for (let i = 0; i < n; i++) {
+    const cx = i % COLS;
+    const cy = Math.floor(i / COLS);
+    let dens = 0.14;
+    blobs.forEach(([bx, by, br]) => (dens += 0.3 * Math.exp(-((cx - bx) ** 2 + (cy - by) ** 2) / (br * br))));
     const r = rng();
-    ledKind[i] = r < 0.3 ? (rng() < 0.1 ? 2 : 1) : 0;
+    ledKind[i] = r < Math.min(0.85, dens) ? (rng() < 0.1 ? 2 : 1) : 0;
     ledSched.push({
       period: periods[Math.floor(rng() * periods.length)],
       phase: Math.floor(rng() * LOOP),
       duty: 0.35 + rng() * 0.55,
+      // A spread of brightness: many dim, some full.
+      level: 0.35 + 0.65 * Math.pow(rng(), 0.4),
     });
+  }
+  // Runs: extend some lit LEDs along their row or column.
+  for (let k = 0; k < 60; k++) {
+    const i = Math.floor(rng() * n);
+    const horiz = rng() < 0.5;
+    const len = 2 + Math.floor(rng() * 4);
+    for (let s = 0; s < len; s++) {
+      const cx = (i % COLS) + (horiz ? s : 0);
+      const cy = Math.floor(i / COLS) + (horiz ? 0 : s);
+      if (cx < COLS && cy < ROWS_N) ledKind[cy * COLS + cx] = ledKind[cy * COLS + cx] || 1;
+    }
   }
   return { GROUPS: groups, CELL_GROUP: cellGroup, LED_KIND: ledKind, LED_SCHED: ledSched };
 })();
@@ -138,9 +157,9 @@ void main() {
   float h = st.r;
   vec3 p = position;
   vec3 w;
-  w.xy = iCell - uGrid * 0.5 + 0.5 + p.xy * 0.94;
+  w.xy = iCell - uGrid * 0.5 + 0.5 + p.xy * 0.975;
   w.z = p.z > 0.0 ? h : -0.6;
-  vLocal = vec3(p.xy * 0.94, w.z);
+  vLocal = vec3(p.xy * 0.975, w.z);
   vN = normal;
   vWorld = w;
   vCell = iCell;
@@ -184,8 +203,8 @@ void main() {
   if (front) {
     // Small bevel: tilt the normal near the face edges.
     vec2 q = vLocal.xy;
-    float hw = 0.47;
-    float bev = 0.022;
+    float hw = 0.4875;
+    float bev = 0.035;
     vec2 e = smoothstep(hw - bev, hw, abs(q)) * sign(q);
     N = normalize(vec3(e * 0.9, 1.0));
     // Analytic shadow from neighbours toward the light.
@@ -197,44 +216,47 @@ void main() {
       vec2 c = floor(sp + uGrid * 0.5);
       if (all(equal(c, vCell))) continue;
       float hn = prot(c);
-      float occ = smoothstep(-0.004, 0.03, hn - (vH + d * tanE));
+      float occ = smoothstep(-0.01, 0.09, hn - (vH + d * tanE));
       shadow = min(shadow, 1.0 - occ);
     }
+    shadow = mix(0.62, 1.0, shadow);
     // Contact AO where a neighbour stands higher.
     float hL = prot(vCell + vec2(-1.0, 0.0));
     float hR = prot(vCell + vec2(1.0, 0.0));
     float hD = prot(vCell + vec2(0.0, -1.0));
     float hU = prot(vCell + vec2(0.0, 1.0));
-    float dl = q.x + 0.47, dr = 0.47 - q.x, dd = q.y + 0.47, du = 0.47 - q.y;
-    ao *= 1.0 - 0.55 * smoothstep(0.0, 0.25, hL - vH) * exp(-dl / 0.07);
-    ao *= 1.0 - 0.55 * smoothstep(0.0, 0.25, hR - vH) * exp(-dr / 0.07);
-    ao *= 1.0 - 0.55 * smoothstep(0.0, 0.25, hD - vH) * exp(-dd / 0.07);
-    ao *= 1.0 - 0.55 * smoothstep(0.0, 0.25, hU - vH) * exp(-du / 0.07);
+    float dl = q.x + 0.4875, dr = 0.4875 - q.x, dd = q.y + 0.4875, du = 0.4875 - q.y;
+    ao *= 1.0 - 0.3 * smoothstep(0.0, 0.25, hL - vH) * exp(-dl / 0.07);
+    ao *= 1.0 - 0.3 * smoothstep(0.0, 0.25, hR - vH) * exp(-dr / 0.07);
+    ao *= 1.0 - 0.3 * smoothstep(0.0, 0.25, hD - vH) * exp(-dd / 0.07);
+    ao *= 1.0 - 0.3 * smoothstep(0.0, 0.25, hU - vH) * exp(-du / 0.07);
     // LED
     if (vLedKind > 0.5) {
-      float s = vLedKind > 1.5 ? 0.075 : 0.058;
-      float gain = vLedKind > 1.5 ? 1.8 : 1.0;
+      float s = vLedKind > 1.5 ? 0.062 : 0.05;
+      float gain = vLedKind > 1.5 ? 1.2 : 1.0;
       vec2 aq = abs(q);
       float fw = fwidth(q.x) * 0.75;
       float sq = (1.0 - smoothstep(s - fw, s + fw, aq.x)) * (1.0 - smoothstep(s - fw, s + fw, aq.y));
       float r2 = dot(q, q);
-      float glow = exp(-r2 / (s * s * 4.0)) * 0.3 + exp(-r2 / 0.03) * 0.05;
-      emissive = uLed * vLedOn * gain * (sq * 9.0 + glow * 2.0);
+      float glow = exp(-r2 / (s * s * 3.0)) * 0.18 + exp(-r2 / 0.02) * 0.03;
+      emissive = uLed * vLedOn * gain * (sq * 6.0 + glow * 2.0);
     }
   } else if (N.z > -0.5) {
     // Side faces: darker the deeper they go into the seam.
-    ao *= mix(0.08, 1.0, smoothstep(-0.25, vH, vWorld.z));
+    ao *= mix(0.3, 1.0, smoothstep(-0.25, vH, vWorld.z));
     // Self-shadow from the wall itself for faces turned away from the light.
   } else {
     ao = 0.0;
   }
   float diff = max(dot(N, L), 0.0);
-  float fill = 0.22 * (0.55 + 0.45 * N.z);
+  float fill = 0.14 * (0.55 + 0.45 * N.z);
   vec3 H = normalize(L + V);
   float spec = pow(max(dot(N, H), 0.0), 28.0) * uSpec;
   // Gentle large-scale falloff, brighter toward the upper left like a softbox.
-  float area = 0.6 + 0.6 * smoothstep(1.4, -0.6, length(vWorld.xy / uGrid * vec2(1.2, 1.6) - vec2(-0.25, 0.2)));
-  vec3 specCol = mix(vec3(1.0), uBlock / max(max(uBlock.r, uBlock.g), uBlock.b), 0.75);
+  // Soft overhead light: brightest upper centre, darker lower third and corners.
+  vec2 wp = vWorld.xy / (uGrid * vec2(0.36, 0.36));
+  float area = (0.4 + 0.8 * smoothstep(-0.9, 0.7, wp.y)) * (1.0 - 0.25 * smoothstep(0.6, 1.2, abs(wp.x)));
+  vec3 specCol = mix(vec3(1.0), uBlock / max(max(uBlock.r, uBlock.g), uBlock.b), 0.92);
   vec3 col = uBlock * (diff * shadow * uKey * area + fill) * ao + specCol * spec * shadow * ao * area;
   gl_FragColor = vec4(col + emissive, 1.0);
 }
@@ -252,8 +274,8 @@ const lin = (hex: string, gain = 1) =>
 export const createLedCubeWall = (P: LedCubeWallParams): LookInstance => {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(22, 16 / 9, 5, 200);
-  // About 30 x 17 blocks in view, matching the reference block size.
-  const D = 8.6 / Math.tan(THREE.MathUtils.degToRad(11));
+  // About 27 x 15 blocks in view, matching the reference block size.
+  const D = 7.6 / Math.tan(THREE.MathUtils.degToRad(11));
 
   const n = COLS * ROWS_N;
   const state = new Float32Array(n * 4);
@@ -313,10 +335,10 @@ export const createLedCubeWall = (P: LedCubeWallParams): LookInstance => {
       focus: D,
       cocScale: 60,
       maxCoc: 5,
-      bloomStrength: 0.22,
-      bloomThreshold: 1.2,
+      bloomStrength: 0.12,
+      bloomThreshold: 1.5,
       exposure: 1.0,
-      vignette: 0.25,
+      vignette: 0.5,
       grain: 0.015,
       acesMix: 0.0,
     },
@@ -337,7 +359,7 @@ export const createLedCubeWall = (P: LedCubeWallParams): LookInstance => {
       const depth = GROUPS.map((gr) => groupDepth(gr, f));
       for (let i = 0; i < n; i++) {
         state[i * 4] = depth[CELL_GROUP[i]];
-        state[i * 4 + 1] = LED_KIND[i] > 0 ? ledLevel(i, f) : 0;
+        state[i * 4 + 1] = LED_KIND[i] > 0 ? ledLevel(i, f) * LED_SCHED[i].level : 0;
       }
       tex.needsUpdate = true;
     },

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { circuitTextures, LAYOUTS, PLATE_VARIANTS } from "./circuit";
-import { buildRibbons, Polyline, RIBBON_VERT } from "./geom";
+import { buildRibbons, buildSprites, Polyline, RIBBON_VERT, SPRITE_VERT } from "./geom";
 import { mulberry32 } from "./random";
 
 // Shared kit for Looks 4 and 5: circuit plates and fibre bundles.
@@ -17,6 +17,24 @@ export type FibrePalette = {
   edge: number;
   /** Ambient light and reflection strength. */
   light: number;
+  /** Backdrop gradient (sky above, haze below). */
+  bgTop: string;
+  bgBottom: string;
+  /** Metal collars where bundles meet pads. */
+  collars: boolean;
+  /** Moving bead dots per fibre, and their radius (world). */
+  beads: number;
+  beadSize: number;
+  /** 0 = beads in the pulse colour, 1 = in the fibre colour. */
+  beadTint: number;
+  /** Static glowing dots where fibres meet the pads at both ends. */
+  endDots: boolean;
+  /** Soft glow pool on the plate around each bundle's pad. */
+  pool: number;
+  /** Dashed light strip along the bevel instead of a solid one. */
+  dashedEdge: boolean;
+  /** Circuit texture repeats across a plate (smaller, finer detail). */
+  circuitRepeat: number;
 };
 
 export type PlateSpec = {
@@ -38,7 +56,7 @@ export type BundleSpec = {
   width: number; // fibre width (world)
 };
 
-export const THICK = 0.065;
+export const THICK = 0.085;
 
 /** Pad centres in world space for a plate (underside or top). */
 export const padsOf = (p: PlateSpec, side: -1 | 1) => {
@@ -81,6 +99,14 @@ const plateGeometry = (variant: number) => {
   }
   g.computeVertexNormals();
   return g;
+};
+
+const repeated = (t: THREE.Texture, n: number) => {
+  const c = t.clone();
+  c.wrapS = c.wrapT = THREE.RepeatWrapping;
+  c.repeat.set(n, n);
+  c.needsUpdate = true;
+  return c;
 };
 
 const envMapFor = (gl: THREE.WebGLRenderer, P: FibrePalette) => {
@@ -196,9 +222,40 @@ void main() {
   float len = uPulseLen / max(vExtra, 0.1);
   float p = pulse(vU, fract(t), len) + pulse(vU, fract(t + 0.37), len) * 0.8 + pulse(vU, fract(t + 0.71), len) * 0.6;
   float fog = exp(-vViewZ * vViewZ * uFog * uFog);
-  vec3 col = uColor * base + uPulse * p * 4.0;
+  vec3 col = uColor * base + uPulse * p * 1.5;
   gl_FragColor = vec4(col * a * vAlpha * uGain * fog, 1.0);
 #endif
+}
+`;
+
+const BEAD_FRAG = /* glsl */ `
+uniform float uFog;
+varying vec2 vCorner;
+varying vec3 vColor;
+varying float vAlpha;
+varying float vViewZ;
+void main() {
+  float r = length(vCorner);
+  if (r > 1.0) discard;
+  float core = 1.0 - smoothstep(0.55, 1.0, r);
+  core += 1.5 * (1.0 - smoothstep(0.0, 0.4, r));
+  float fog = exp(-vViewZ * vViewZ * uFog * uFog);
+  gl_FragColor = vec4(vColor * core * vAlpha * fog * 2.2, 1.0);
+}
+`;
+
+const POOL_FRAG = /* glsl */ `
+uniform float uFog;
+varying vec2 vCorner;
+varying vec3 vColor;
+varying float vAlpha;
+varying float vViewZ;
+void main() {
+  float r2 = dot(vCorner, vCorner);
+  if (r2 > 1.0) discard;
+  float g = exp(-r2 * 4.0) - exp(-4.0);
+  float fog = exp(-vViewZ * vViewZ * uFog * uFog);
+  gl_FragColor = vec4(vColor * g * vAlpha * fog, 1.0);
 }
 `;
 
@@ -207,6 +264,7 @@ uniform vec3 uColor;
 uniform vec3 uPulse;
 uniform float uFrame;
 uniform float uFog;
+uniform float uGain;
 varying float vSide;
 varying float vU;
 varying float vSeed;
@@ -222,15 +280,15 @@ void main() {
   float d = vU - pos;
   float p = exp(-d * d / (len * len)) * step(0.0, 1.0 - abs(d) * 3.0);
   float fog = exp(-vViewZ * vViewZ * uFog * uFog);
-  vec3 col = uColor * 0.12 + (uPulse * 0.5 + uColor * 0.7) * p * 2.5;
-  gl_FragColor = vec4(col * a * vAlpha * fog, 1.0);
+  vec3 col = uColor * 0.1 + (uPulse * 0.4 + uColor * 0.6) * p * 1.4;
+  gl_FragColor = vec4(col * a * vAlpha * fog * uGain, 1.0);
 }
 `;
 
 export type FibreKit = {
   group: THREE.Group;
   depthGroup: THREE.Group;
-  update: (frame: number, w: number, h: number, k: number) => void;
+  update: (frame: number, w: number, h: number, k: number, cam?: THREE.Camera) => void;
   clearColor: THREE.Color;
   dispose: () => void;
 };
@@ -265,18 +323,25 @@ export const buildFibreKit = (
       envMap: env,
       envMapIntensity: P.light,
       emissive: fib,
-      emissiveMap: tex[v],
+      emissiveMap: P.circuitRepeat === 1 ? tex[v] : repeated(tex[v], P.circuitRepeat),
       emissiveIntensity: P.plateEmissive,
     });
     // Bright bevel edges: add a rim term where the normal turns sideways.
     mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uDash = { value: P.dashedEdge ? 1 : 0 };
+      sh.vertexShader = sh.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vWPos;")
+        .replace(
+          "#include <project_vertex>",
+          "#include <project_vertex>\nvWPos = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;",
+        );
       sh.uniforms.uEdge = { value: P.edge };
-      sh.uniforms.uEdgeCol = { value: fib.clone().lerp(new THREE.Color(1, 1, 1), 0.35) };
+      sh.uniforms.uEdgeCol = { value: fib.clone() };
       sh.fragmentShader = sh.fragmentShader
-        .replace("#include <common>", "#include <common>\nuniform float uEdge;\nuniform vec3 uEdgeCol;")
+        .replace("#include <common>", "#include <common>\nuniform float uEdge;\nuniform vec3 uEdgeCol;\nuniform float uDash;\nvarying vec3 vWPos;")
         .replace(
           "#include <emissivemap_fragment>",
-          "#include <emissivemap_fragment>\n{ vec3 nV = normalize(vNormal); float side = 1.0 - abs(dot(nV, normalize((viewMatrix * vec4(0.0,1.0,0.0,0.0)).xyz))); totalEmissiveRadiance += uEdgeCol * uEdge * smoothstep(0.08, 0.3, side) * (1.0 - smoothstep(0.55, 0.85, side)); }",
+          "#include <emissivemap_fragment>\n{ vec3 nV = normalize(vNormal); float side = 1.0 - abs(dot(nV, normalize((viewMatrix * vec4(0.0,1.0,0.0,0.0)).xyz))); float dash = mix(1.0, step(0.5, fract((vWPos.x + vWPos.z) * 16.0)), uDash); totalEmissiveRadiance += uEdgeCol * uEdge * dash * smoothstep(0.08, 0.3, side) * (1.0 - smoothstep(0.55, 0.85, side)); }",
         );
     };
     const mesh = new THREE.InstancedMesh(geo, mat, list.length);
@@ -290,11 +355,18 @@ export const buildFibreKit = (
 
   // Fibres
   const lines: Polyline[] = [];
+  const tips: { pos: THREE.Vector3; size: number; color: THREE.Color; seed: number }[] = [];
   bundles.forEach((b) => {
     const rng = mulberry32(b.seed);
     for (let i = 0; i < b.count; i++) {
       const { pts, len } = fibrePoints(b, i, rng);
       lines.push({ points: pts, width: b.width * (0.6 + rng() * 0.9), seed: rng(), extra: len });
+      // Glowing tip where a hanging fibre ends.
+      if (b.hang) tips.push({ pos: pts[pts.length - 1], size: P.beadSize * 1.2, color: fib, seed: i });
+      else if (P.endDots) {
+        tips.push({ pos: pts[0], size: P.beadSize * 1.1, color: fib, seed: i });
+        tips.push({ pos: pts[pts.length - 1], size: P.beadSize * 1.3, color: fib, seed: i });
+      }
     }
   });
   const res = new THREE.Vector2(1, 1);
@@ -336,13 +408,100 @@ export const buildFibreKit = (
   fd.frustumCulled = false;
   depthGroup.add(fd);
 
+  // Bead dots travelling along the fibres. Positions are recomputed from the
+  // frame each time (period divides the loop), never accumulated.
+  const B = P.beads;
+  const beadCol = pulse.clone().lerp(fib, P.beadTint);
+  const beadItems = lines.flatMap((l, li) =>
+    Array.from({ length: B }, (_, b) => ({ pos: l.points[0], size: P.beadSize, color: beadCol, seed: li * 8 + b })),
+  );
+  const beadGeo = buildSprites([...beadItems, ...tips]);
+  const beadPos = beadGeo.getAttribute("iPos") as THREE.InstancedBufferAttribute;
+  const PERIODS6 = [100, 120, 150, 200, 300, 600];
+  const beadSched = lines.map((l) => ({
+    period: PERIODS6[Math.floor((((l.seed * 13.17) % 1) + 1) % 1 * 5.999)],
+    phase: (l.seed * 7.31) % 1,
+  }));
+  const beadMat = new THREE.ShaderMaterial({
+    vertexShader: SPRITE_VERT,
+    fragmentShader: BEAD_FRAG,
+    uniforms: { uRes: { value: res }, uMinPx: minPx, uSizeMul: { value: 1 }, uFog: fogU },
+    blending: THREE.CustomBlending,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneFactor,
+    depthWrite: false,
+    transparent: true,
+  });
+  const beadMesh = new THREE.Mesh(beadGeo, beadMat);
+  beadMesh.frustumCulled = false;
+  beadMesh.renderOrder = 6;
+  if (B > 0 || tips.length) group.add(beadMesh);
+  const tmp = new THREE.Vector3();
+  const placeBeads = (frame: number) => {
+    lines.forEach((l, li) => {
+      const sc = beadSched[li];
+      const pts = l.points;
+      for (let b = 0; b < B; b++) {
+        const u = (((frame / sc.period + sc.phase + b / B) % 1) + 1) % 1;
+        const x = u * (pts.length - 1);
+        const i0 = Math.min(pts.length - 2, Math.floor(x));
+        tmp.copy(pts[i0]).lerp(pts[i0 + 1], x - i0);
+        beadPos.setXYZ(li * B + b, tmp.x, tmp.y, tmp.z);
+      }
+    });
+    beadPos.needsUpdate = true;
+  };
+
+  // Glow pools on the plates around each bundle's pad.
+  if (P.pool > 0) {
+    const pools = bundles.flatMap((b, i) => {
+      const c = fib.clone().multiplyScalar(P.pool);
+      const out = [{ pos: b.from.clone().add(new THREE.Vector3(0, -0.004, 0)), size: b.padR * 5, color: c, seed: i }];
+      if (!b.hang) out.push({ pos: b.to.clone().add(new THREE.Vector3(0, 0.004, 0)), size: b.toR * 4, color: c, seed: i });
+      return out;
+    });
+    const poolMesh = new THREE.Mesh(
+      buildSprites(pools),
+      new THREE.ShaderMaterial({
+        vertexShader: SPRITE_VERT,
+        fragmentShader: POOL_FRAG,
+        uniforms: { uRes: { value: res }, uMinPx: minPx, uSizeMul: { value: 1 }, uFog: fogU },
+        blending: THREE.CustomBlending,
+        blendSrc: THREE.OneFactor,
+        blendDst: THREE.OneFactor,
+        depthWrite: false,
+        transparent: true,
+      }),
+    );
+    poolMesh.frustumCulled = false;
+    poolMesh.renderOrder = 3;
+    group.add(poolMesh);
+  }
+
+  // Backdrop: vertical gradient on a sphere that follows the camera.
+  const backdrop = new THREE.Mesh(
+    new THREE.SphereGeometry(50, 32, 16),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+      uniforms: { uTop: { value: new THREE.Color(P.bgTop) }, uBottom: { value: new THREE.Color(P.bgBottom) } },
+      vertexShader: `varying vec3 vD; void main(){ vD = normalize(position); vec4 w = modelMatrix * vec4(position,1.0); gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: `uniform vec3 uTop; uniform vec3 uBottom; varying vec3 vD;
+        void main(){ float t = smoothstep(-0.45, 0.6, vD.y); gl_FragColor = vec4(mix(uBottom, uTop, t), 1.0); }`,
+    }),
+  );
+  backdrop.renderOrder = -10;
+  backdrop.frustumCulled = false;
+  group.add(backdrop);
+
   // Ferrules: a short glowing collar where each bundle meets its pad(s).
   const collars: { pos: THREE.Vector3; r: number; dir: number }[] = [];
   bundles.forEach((b) => {
     collars.push({ pos: b.from, r: b.padR, dir: -1 });
     if (!b.hang) collars.push({ pos: b.to, r: b.toR, dir: 1 });
   });
-  if (collars.length) {
+  if (collars.length && P.collars) {
     const cg = new THREE.CylinderGeometry(1, 1, 1, 28, 1, true);
     cg.translate(0, 0.5, 0);
     const cm = new THREE.MeshPhysicalMaterial({
@@ -399,6 +558,7 @@ export const buildFibreKit = (
       uPulse: { value: pulse },
       uFrame: frameU,
       uFog: fogU,
+      uGain: { value: Math.min(1, P.plateEmissive / 0.6) },
     },
     blending: THREE.CustomBlending,
     blendSrc: THREE.OneFactor,
@@ -428,10 +588,12 @@ export const buildFibreKit = (
     group,
     depthGroup,
     clearColor: fogCol,
-    update: (frame, w, h, k) => {
+    update: (frame, w, h, k, cam?: THREE.Camera) => {
       res.set(w, h);
       frameU.value = frame;
       minPx.value = Math.max(1, 2.2 * k);
+      placeBeads(frame);
+      if (cam) backdrop.position.copy(cam.position);
     },
     dispose: () => {
       fibreGeo.dispose();

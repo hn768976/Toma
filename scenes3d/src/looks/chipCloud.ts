@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BundleSpec, buildFibreKit, FibrePalette, padsOf, PlateSpec } from "../kit/fibreKit";
+import { BundleSpec, buildFibreKit, FibrePalette, padsOf, PlateSpec, THICK } from "../kit/fibreKit";
 import { LookInstance } from "../kit/post";
 import { LOOP, mulberry32 } from "../kit/random";
 
@@ -11,7 +11,7 @@ const SIZE = 1.0;
 const SX = 1.6 * SIZE; // horizontal spacing
 const SY = 1.2 * SIZE; // vertical spacing
 const N = 3;
-const NV = 2;
+const NV = 3;
 
 type CellSeed = { dx: number; dz: number; dy: number; tiltX: number; tiltZ: number; yaw: number; variant: number; bundles: number };
 
@@ -20,8 +20,8 @@ const CELLS: CellSeed[] = (() => {
   const out: CellSeed[] = [];
   for (let i = 0; i < N * N * NV; i++) {
     out.push({
-      dx: (rng() - 0.5) * 0.45,
-      dz: (rng() - 0.5) * 0.45,
+      dx: (rng() - 0.5) * 0.25,
+      dz: (rng() - 0.5) * 0.25,
       dy: (rng() - 0.5) * 0.25,
       tiltX: (rng() - 0.5) * 0.12,
       tiltZ: (rng() - 0.5) * 0.12,
@@ -37,10 +37,10 @@ const mod = (a: number, n: number) => ((a % n) + n) % n;
 const cellSeed = (i: number, j: number, k: number) => CELLS[(mod(k, NV) * N + mod(j, N)) * N + mod(i, N)];
 const cellId = (i: number, j: number, k: number) => (mod(k, NV) * N + mod(j, N)) * N + mod(i, N);
 
-const START = new THREE.Vector3(0.3, 1.9, 0.2);
+const START = new THREE.Vector3(0.3, 1.25, 0.2);
 const TRAVEL = new THREE.Vector3(N * SX, 0, N * SX);
 const HEADING = THREE.MathUtils.degToRad(-58); // look direction (yaw)
-const PITCH = THREE.MathUtils.degToRad(-30);
+const PITCH = THREE.MathUtils.degToRad(-24);
 
 const camAt = (t: number, cam: THREE.PerspectiveCamera) => {
   const a = t * Math.PI * 2;
@@ -53,14 +53,16 @@ const camAt = (t: number, cam: THREE.PerspectiveCamera) => {
 
 const plateMatrix = (i: number, j: number, k: number) => {
   const s = cellSeed(i, j, k);
+  // Stagger levels by a third of a cell so column gaps never line up.
+  const st = mod(k, NV) * 0.32;
   return new THREE.Matrix4()
-    .makeTranslation(i * SX + s.dx, k * SY + s.dy, j * SX + s.dz)
+    .makeTranslation(i * SX + s.dx + st, k * SY + s.dy, j * SX + s.dz + st * 0.6)
     .multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(s.tiltX, s.yaw, s.tiltZ)));
 };
 
 const buildLayout = (aspect: number) => {
   // Keep only cells the camera can see somewhere along its path.
-  const cam = new THREE.PerspectiveCamera(42, aspect, 0.1, 19);
+  const cam = new THREE.PerspectiveCamera(34, aspect, 0.1, 17);
   const frustums: THREE.Frustum[] = [];
   const positions: THREE.Vector3[] = [];
   for (let s = 0; s <= 16; s++) {
@@ -74,7 +76,7 @@ const buildLayout = (aspect: number) => {
   }
   const visible = (p: THREE.Vector3) => {
     const sph = new THREE.Sphere(p, 1.4 * SIZE);
-    return frustums.some((f, i) => f.intersectsSphere(sph) && positions[i].distanceTo(p) < 19);
+    return frustums.some((f, i) => f.intersectsSphere(sph) && positions[i].distanceTo(p) < 17);
   };
   const plates: PlateSpec[] = [];
   const keys = new Map<string, PlateSpec>();
@@ -91,31 +93,24 @@ const buildLayout = (aspect: number) => {
   const bundles: BundleSpec[] = [];
   keys.forEach((p, key) => {
     const [i, j, k] = key.split(",").map(Number);
-    const below = keys.get(`${i},${j},${k - 1}`);
     const s = cellSeed(i, j, k);
     const rng = mulberry32(400 + cellId(i, j, k));
     const from = padsOf(p, -1);
-    const to = below
-      ? padsOf(below, 1)
-      : padsOf({ ...p, matrix: plateMatrix(i, j, k - 1), variant: cellSeed(i, j, k - 1).variant }, 1);
+    const below = new THREE.Vector3(0, THICK / 2, 0).applyMatrix4(plateMatrix(i, j, k - 1));
     for (let b = 0; b < s.bundles; b++) {
       const a = from[b % from.length];
-      // Matching pad on the plate below: the nearest one in plan.
-      const t = to
-        .slice()
-        .sort(
-          (x, y) =>
-            Math.hypot(x.pos.x - a.pos.x, x.pos.z - a.pos.z) - Math.hypot(y.pos.x - a.pos.x, y.pos.z - a.pos.z),
-        )[b % to.length];
+      // Land straight below on the next plate's top face (a collar marks
+      // the joint), so bundles hang near-vertically as in the reference.
+      const t = { pos: new THREE.Vector3(a.pos.x + (rng() - 0.5) * 0.2, below.y, a.pos.z + (rng() - 0.5) * 0.2), r: a.r };
       bundles.push({
         from: a.pos,
         to: t.pos,
-        padR: a.r * 1.1,
-        toR: t.r * 1.1,
+        padR: a.r * 1.2,
+        toR: 0.3 + rng() * 0.12,
         count: 12 + Math.floor(rng() * 9),
         seed: cellId(i, j, k) * 10 + b,
         hang: false,
-        width: 0.0028,
+        width: 0.0055,
       });
     }
   });
@@ -125,7 +120,7 @@ const buildLayout = (aspect: number) => {
 export const createChipCloud = (P: FibrePalette, gl: THREE.WebGLRenderer): LookInstance => {
   const scene = new THREE.Scene();
   const depthScene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.1, 40);
+  const camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 40);
   const { plates, bundles } = buildLayout(16 / 9);
   const kit = buildFibreKit(gl, P, plates, bundles, scene);
   scene.add(kit.group);
@@ -135,9 +130,9 @@ export const createChipCloud = (P: FibrePalette, gl: THREE.WebGLRenderer): LookI
     camera,
     clearColor: kit.clearColor,
     post: {
-      focus: 7.5,
+      focus: 5.5,
       cocScale: 9,
-      maxCoc: 10,
+      maxCoc: 9,
       nearScale: 1.4,
       bloomStrength: 0.3,
       bloomThreshold: 0.9,
@@ -151,7 +146,7 @@ export const createChipCloud = (P: FibrePalette, gl: THREE.WebGLRenderer): LookI
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       camAt(f / LOOP, camera);
-      kit.update(f, w, h, k);
+      kit.update(f, w, h, k, camera);
     },
     draw: (g) => {
       g.render(scene, camera);

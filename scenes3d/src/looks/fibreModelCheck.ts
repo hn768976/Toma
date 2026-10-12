@@ -47,7 +47,7 @@ export const createFibreModelCheck = (P: FibrePalette, gl: THREE.WebGLRenderer):
     update: (frame, w, h, k) => {
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      kit.update(frame % LOOP, w, h, k);
+      kit.update(frame % LOOP, w, h, k, camera);
     },
     draw: (g) => {
       g.render(scene, camera);

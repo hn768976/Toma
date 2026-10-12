@@ -5,6 +5,7 @@ import { LOOP, mulberry32 } from "../kit/random";
 
 export type PlexusShellsParams = {
   nodeA: string; // main node colour
+  nodeA2: string; // secondary main colour (a bluer cyan mixed in)
   nodeB: string; // accent node colour
   link: string;
   ring: string;
@@ -28,24 +29,29 @@ const shell = (n: number, radius: number, seed: number, accentShare: number): No
     p.add(new THREE.Vector3(rng() - 0.5, rng() - 0.5, rng() - 0.5).multiplyScalar(0.11));
     p.normalize().multiplyScalar(radius * (1 + (rng() - 0.5) * 0.04));
     const s = rng();
+    const size = 1 + 3 * Math.pow(s, 2.2);
     out.push({
       p,
-      size: 1 + 3 * Math.pow(s, 3.2),
-      accent: rng() < accentShare,
+      size,
+      // Accents lean toward the larger nodes; overall share stays ~accentShare.
+      accent: rng() < accentShare * (0.6 + 0.55 * (size - 1)),
       seed: rng(),
     });
   }
   return out;
 };
 
-const knnLinks = (nodes: Node[], k: number) => {
+const knnLinks = (nodes: Node[], k: number, seed: number) => {
+  const rng = mulberry32(seed);
   const seen = new Set<string>();
   const out: [number, number][] = [];
   nodes.forEach((a, i) => {
-    const d = nodes
+    const sorted = nodes
       .map((b, j) => ({ j, d: j === i ? Infinity : a.p.distanceToSquared(b.p) }))
-      .sort((x, y) => x.d - y.d)
-      .slice(0, k);
+      .sort((x, y) => x.d - y.d);
+    const d = sorted.slice(0, k);
+    // A share of longer links so the web criss-crosses instead of tiling.
+    if (rng() < 0.35) d.push(sorted[6 + Math.floor(rng() * 10)]);
     d.forEach(({ j }) => {
       const key = i < j ? `${i}-${j}` : `${j}-${i}`;
       if (!seen.has(key)) {
@@ -59,21 +65,23 @@ const knnLinks = (nodes: Node[], k: number) => {
 
 const OUTER = shell(420, 1, 1101, 0.18);
 const INNER = shell(260, 0.5, 2202, 0.18);
-const OUTER_LINKS = knnLinks(OUTER, 3);
-const INNER_LINKS = knnLinks(INNER, 3);
+const OUTER_LINKS = knnLinks(OUTER, 3, 11);
+const INNER_LINKS = knnLinks(INNER, 3, 12);
 
 type Ring = { center: THREE.Vector3; normal: THREE.Vector3; radius: number; count: number };
 const RINGS: Ring[] = (() => {
   const rng = mulberry32(3303);
   const out: Ring[] = [];
-  for (let i = 0; i < 10; i++) {
-    const normal = new THREE.Vector3(rng() - 0.5, rng() - 0.5, rng() - 0.5).normalize();
+  for (let i = 0; i < 16; i++) {
+    // Mostly upright orbits: normals close to horizontal.
+    const az = rng() * Math.PI * 2;
+    const normal = new THREE.Vector3(Math.cos(az), (rng() - 0.5) * 0.35, Math.sin(az)).normalize();
     let radius: number;
     let offset: number;
-    if (i < 4) {
+    if (i < 5) {
       radius = 1; // great circles on the outer shell
       offset = 0;
-    } else if (i < 7) {
+    } else if (i < 11) {
       // small circles on the outer shell
       offset = 0.3 + rng() * 0.45;
       radius = Math.sqrt(1 - offset * offset);
@@ -127,7 +135,7 @@ void main() {
   gl_FragColor = vec4(0.0);
 #else
   float core = 1.0 - smoothstep(0.62, 1.0, r);
-  core += 0.35 * (1.0 - smoothstep(0.0, 0.45, r));
+  core += 0.12 * (1.0 - smoothstep(0.0, 0.45, r));
   float periods[6] = float[6](100.0, 120.0, 150.0, 200.0, 300.0, 600.0);
   float period = periods[int(floor(fract(vSeed * 7.137) * 5.999))];
   float tw = 1.0 + uTwinkle * sin(6.2831853 * (uFrame / period + vSeed));
@@ -167,7 +175,7 @@ const lin = (hex: string, gain = 1) =>
 export const createPlexusShells = (P: PlexusShellsParams): LookInstance => {
   const scene = new THREE.Scene();
   const depthScene = new THREE.Scene();
-  const D = 4.25;
+  const D = 4.45;
   const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.5, 20);
   camera.position.set(0, 0, D);
   camera.lookAt(0, 0, 0);
@@ -212,14 +220,15 @@ export const createPlexusShells = (P: PlexusShellsParams): LookInstance => {
     return d;
   };
 
-  const colA = lin(P.nodeA, 2.2);
+  const colA = lin(P.nodeA, 2.0);
+  const colA2 = lin(P.nodeA2, 2.0);
   const colB = lin(P.nodeB, 2.4);
   const nodeSprites = (nodes: Node[], base: number) =>
     buildSprites(
       nodes.map((n) => ({
         pos: n.p,
         size: base * n.size,
-        color: n.accent ? colB : colA,
+        color: n.accent ? colB : n.seed < 0.4 ? colA2 : colA,
         seed: n.seed,
       })),
     );
@@ -255,14 +264,14 @@ export const createPlexusShells = (P: PlexusShellsParams): LookInstance => {
 
   // Outer shell
   add(outer, outerD, nodeSprites(OUTER, 0.0052), nodeMat(1, 1));
-  add(outer, outerD, buildRibbons(linkLines(OUTER, OUTER_LINKS, 0.0021)), linkMat(lin(P.link, 0.42)));
+  add(outer, outerD, buildRibbons(linkLines(OUTER, OUTER_LINKS, 0.0021)), linkMat(lin(P.link, 0.32)));
   // Inner shell (links slightly brighter)
-  add(inner, innerD, nodeSprites(INNER, 0.0046), nodeMat(1, 1));
-  add(inner, innerD, buildRibbons(linkLines(INNER, INNER_LINKS, 0.0019)), linkMat(lin(P.link, 0.55)));
+  add(inner, innerD, nodeSprites(INNER, 0.0046), nodeMat(1.2, 1));
+  add(inner, innerD, buildRibbons(linkLines(INNER, INNER_LINKS, 0.0019)), linkMat(lin(P.link, 0.5)));
 
   // Dotted rings ride with the outer shell
   const ringDots: { pos: THREE.Vector3; size: number; color: THREE.Color; seed: number }[] = [];
-  const ringCol = lin(P.ring, 0.3);
+  const ringCol = lin(P.ring, 0.45);
   RINGS.forEach((r, ri) => {
     const t1 = new THREE.Vector3(0, 1, 0).cross(r.normal);
     if (t1.lengthSq() < 1e-4) t1.set(1, 0, 0);
@@ -282,7 +291,7 @@ export const createPlexusShells = (P: PlexusShellsParams): LookInstance => {
   add(outer, null, buildSprites(ringDots), ringMat);
 
   // Specks inside the volume
-  const speckCol = lin(P.speck, 0.9);
+  const speckCol = lin(P.speck, 1.3);
   const speckMat = nodeMat(1, 1);
   speckMat.uniforms.uTwinkle = { value: 0.5 };
   add(
@@ -303,11 +312,11 @@ export const createPlexusShells = (P: PlexusShellsParams): LookInstance => {
     camera,
     post: {
       focus: D - 1,
-      cocScale: 16,
-      maxCoc: 7,
+      cocScale: 9,
+      maxCoc: 4,
       nearScale: 1,
-      bloomStrength: 0.3,
-      bloomThreshold: 0.5,
+      bloomStrength: 0.08,
+      bloomThreshold: 0.9,
       acesMix: 0.15,
       exposure: 1.0,
       vignette: 0.0,

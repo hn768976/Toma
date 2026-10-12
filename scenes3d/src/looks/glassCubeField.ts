@@ -32,7 +32,7 @@ float hfield(vec2 c) {
   vec2 cm = mod(c, ${TILE.toFixed(1)});
   vec3 r = hash3(uvec3(uvec2(cm + 0.5), 7u));
   float k = floor(r.z * 2.0) + 1.0;
-  n = n * 0.75 + 0.55 * (r.x - 0.5) + 0.22 * sin(k * T + 6.2831853 * r.y);
+  n = n * 0.6 + 0.95 * (r.x - 0.5) + 0.25 * sin(k * T + 6.2831853 * r.y);
   return clamp(1.0 + 0.9 * n, 0.4, 1.6);
 }
 `;
@@ -88,23 +88,38 @@ void main() {
   else if (a.x > 0.5) e = min(d.y, d.z);
   else e = min(d.x, d.y);
   float fw = fwidth(e);
-  float line = 1.0 - smoothstep(0.012, 0.012 + max(fw, 1e-4) * 1.2, e);
-  float halo = exp(-e / 0.07) * 0.35;
+  float line = 1.0 - smoothstep(0.008, 0.008 + max(fw, 1e-4) * 1.2, e);
   // Faces seen edge-on stack up along one screen column; fade them out.
   float facing = smoothstep(0.03, 0.15, abs(dot(N, V)));
   line *= facing;
-  halo *= facing;
   float fres = pow(max(1.0 - abs(dot(N, V)), 0.0), 3.0);
   float y01 = clamp(vWorld.y / max(vH, 1e-3), 0.0, 1.0);
-  float grad = mix(0.05, 1.0, y01 * y01 * y01);
-  float top = step(0.5, N.y);
-  vec3 col = uFill * (0.012 + 0.10 * grad + 0.18 * fres * grad + top * 0.45);
-  col += uEdge * (line * (0.06 + 0.6 * grad) + halo * grad * 0.25);
-  col += uGlow * 0.06 * (1.0 - y01);
+  // Key light from the lower left of the view: falls off toward top right.
+  vec3 vp = (viewMatrix * vec4(vWorld, 1.0)).xyz;
+  vec2 sdir = vp.xy / max(-vp.z, 0.1);
+  float key = mix(1.15, 0.02, smoothstep(-0.55, 0.55, sdir.x * 0.75 + sdir.y * 0.9));
+  vec3 col;
+  float alpha = 0.0;
+  if (a.y > 0.5) {
+    // Top face: a filled glass panel, brightest toward its front-left edge.
+    vec2 q = vLocal.xz / (vSize.xz * 0.5);
+    vec3 viewL = (inverse(viewMatrix) * vec4(-0.7, -0.5, 0.0, 0.0)).xyz;
+    vec2 ld = normalize(viewL.xz + vec2(1e-4));
+    float g = clamp(0.55 + 0.45 * dot(q, ld), 0.0, 1.0);
+    col = uFill * (0.25 + 1.6 * g * g) * key;
+    col += uEdge * line * (0.2 + 0.9 * g * g) * key * uBack * uBack;
+    col += uEdge * exp(-e / 0.05) * 0.12 * key * facing;
+    alpha = 0.72 * uBack * uBack;
+  } else {
+    // Sides: dark smoky glass with a faint lift near the top.
+    col = uFill * (0.03 + 0.18 * y01 * y01 + 0.12 * fres) * key;
+    col += uEdge * line * 0.1 * (0.3 + y01) * key * uBack * uBack;
+  }
+  col += uGlow * 0.03 * (1.0 - y01) * key;
   col *= uBack;
   float dist = length(uCamPos - vWorld);
   float fog = exp(-dist * dist * uFog * uFog);
-  gl_FragColor = vec4(col * fog, 1.0);
+  gl_FragColor = vec4(col * fog, alpha * fog);
 #endif
 }
 `;
@@ -117,7 +132,7 @@ varying vec3 vWorld;
 void main() {
   float dist = length(uCamPos - vWorld);
   float fog = exp(-dist * dist * uFog * uFog);
-  gl_FragColor = vec4(uGlow * 0.035 * fog, 1.0);
+  gl_FragColor = vec4(uGlow * 0.012 * fog, 1.0);
 }
 `;
 
@@ -128,7 +143,7 @@ const lin = (hex: string, gain = 1) =>
 export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
   const scene = new THREE.Scene();
   const depthScene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.2, 60);
+  const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.2, 60);
 
   const box = new THREE.BoxGeometry(1, 1, 1);
   const g = new THREE.InstancedBufferGeometry();
@@ -136,11 +151,16 @@ export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
   g.setAttribute("position", box.getAttribute("position"));
   g.setAttribute("normal", box.getAttribute("normal"));
   const n = WIN * WIN;
+  // Far cells first (the camera always looks roughly along +z, +x), so the
+  // semi-opaque top faces composite back to front.
+  const list: [number, number][] = [];
+  for (let i = 0; i < n; i++) list.push([(i % WIN) - WIN / 2, Math.floor(i / WIN) - WIN / 2]);
+  list.sort((a, b) => b[0] * 0.34 + b[1] * 0.94 - (a[0] * 0.34 + a[1] * 0.94));
   const cells = new Float32Array(n * 2);
-  for (let i = 0; i < n; i++) {
-    cells[i * 2] = (i % WIN) - WIN / 2;
-    cells[i * 2 + 1] = Math.floor(i / WIN) - WIN / 2;
-  }
+  list.forEach(([x, z], i) => {
+    cells[i * 2] = x;
+    cells[i * 2 + 1] = z;
+  });
   g.setAttribute("iCell", new THREE.InstancedBufferAttribute(cells, 2));
   g.instanceCount = n;
 
@@ -149,11 +169,13 @@ export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
     uShift: { value: new THREE.Vector2() },
     uT: { value: 0 },
     uFill: { value: lin(P.fill) },
-    uEdge: { value: lin(P.edge, 1.4) },
+    uEdge: { value: lin(P.edge, 1.0) },
     uGlow: { value: lin(P.glow) },
     uCamPos: { value: camPos },
-    uFog: { value: 0.12 },
+    uFog: { value: 0.075 },
   };
+  // Premultiplied "over": alpha 0 is purely additive (sides, back faces),
+  // alpha > 0 on the top faces lets them partly hide what is behind.
   const glass = (side: THREE.Side, back: number) =>
     new THREE.ShaderMaterial({
       vertexShader: VERT,
@@ -162,11 +184,11 @@ export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
       side,
       blending: THREE.CustomBlending,
       blendSrc: THREE.OneFactor,
-      blendDst: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
       depthWrite: false,
       transparent: true,
     });
-  const backMesh = new THREE.Mesh(g, glass(THREE.BackSide, 0.55));
+  const backMesh = new THREE.Mesh(g, glass(THREE.BackSide, 0.35));
   backMesh.renderOrder = 1;
   const frontMesh = new THREE.Mesh(g, glass(THREE.FrontSide, 1.0));
   frontMesh.renderOrder = 2;
@@ -194,19 +216,19 @@ export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  const H = 2.7;
+  const H = 4.3;
   const start = new THREE.Vector2(0.37, 0.61);
 
   return {
     scene,
     camera,
     post: {
-      focus: 4.5,
-      cocScale: 6,
+      focus: 7.0,
+      cocScale: 7,
       maxCoc: 9,
       nearScale: 1.6,
-      bloomStrength: 0.45,
-      bloomThreshold: 0.45,
+      bloomStrength: 0.3,
+      bloomThreshold: 0.6,
       exposure: 1.0,
       vignette: 0.45,
       grain: 0.015,
@@ -222,7 +244,7 @@ export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
       const cx = start.x + t * TILE;
       const cz = start.y + t * TILE;
       const yaw = THREE.MathUtils.degToRad(70 + 6 * Math.sin(a));
-      const pitch = THREE.MathUtils.degToRad(-25 + 1.5 * Math.sin(a * 2 + 1));
+      const pitch = THREE.MathUtils.degToRad(-34 + 1.5 * Math.sin(a * 2 + 1));
       camera.position.set(cx, H + 0.25 * Math.sin(a + 0.4), cz);
       const dir = new THREE.Vector3(
         Math.cos(yaw) * Math.cos(pitch),
