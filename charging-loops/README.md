@@ -207,6 +207,15 @@ uses every core.
   The gauge is mostly CPU: per-pixel background and grain plus CSS blur, so it gains
   less.
 
+## Reference comparison
+
+Looks 1A, 2, 3A, 4A and 5 were compared with their reference clips over three rounds.
+Each round used a fresh, independent agent that saw only two frames and a neutral
+"list every difference" instruction. The fixes were carried over to 1B, 3B and 4B.
+The deviations above are the main results. Round 3 flagged details that contradicted
+earlier rounds, such as lit faces vs dark faces, plump vs thin slices, and blurred vs
+sharp blocks. Those were settled by judgement, not by a fourth round.
+
 ## Checks
 
 All of these were run on the final code, at 720p (`--scale=0.3333333333333333`,
@@ -227,6 +236,12 @@ the checks use stills and PNG sequences.
     because the dither was shared across R, G and B.
   - Fix: independent per-channel dither everywhere (three.js post, Pixi post, gauge
     background), and the gauge background now uses the full 1.5 % grain.
+  - **Residual:** at ×16 gain, one faint 1-level chroma contour remains in the
+    gauge's near-black lift. It is the H.264 encoder's chroma quantisation on
+    16-px blocks, not the source PNG, and it isn't visible at normal gain.
+  - If it matters at 4K, encode with a lower chroma QP (for example
+    `-x264-params chroma-qp-offset=-4`) or with `-tune grain` in your own ffmpeg
+    pass.
 - **What each composition shows:** five-frame contact sheets were checked.
   - Blade Ring: rotation.
   - Plate Arc: plates sliding along the arc.
