@@ -10,7 +10,7 @@ for id in $IDS; do
   name=${id/-/_}
   t0=$(date +%s.%N)
   npx remotion render "$id" "$OUT/$name.mp4" --scale=0.3333333333333333 --crf=16 --pixel-format=yuv420p \
-    --image-format=png --concurrency=${CONC:-4} --log=error
+    --image-format=png --muted --concurrency=${CONC:-4} --log=error
   t1=$(date +%s.%N)
   echo "$id $(echo "$t1 - $t0" | bc)" | tee -a "$OUT/render-times.txt"
 done
