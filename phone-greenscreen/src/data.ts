@@ -53,7 +53,7 @@ export const BACKGROUNDS = {
     shadow: true,
     shadowOpacity: 0.3,
   },
-  White: { type: "flat", colors: ["#FAFAFA"], shadow: true, shadowOpacity: 0.2 },
+  White: { type: "flat", colors: ["#FAFAFA"], shadow: true, shadowOpacity: 0.3 },
   /** neutral grey, used only for the model check stills */
   Grey: { type: "flat", colors: ["#8A8D92"], shadow: false },
 } satisfies Record<string, BackgroundSpec>;
