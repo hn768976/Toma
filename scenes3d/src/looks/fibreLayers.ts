@@ -98,7 +98,8 @@ const buildLayout = () => {
           count: 20 + Math.floor(rng() * 6),
           seed: pl.idx * 10,
           hang: false,
-          width: 0.013,
+          width: 0.016,
+          trunk: 2.2,
         });
       }
       // Down into the haze, fanning out.
@@ -109,10 +110,11 @@ const buildLayout = () => {
           to: from.pos.clone().add(new THREE.Vector3((rng() - 0.5) * 0.8, -3.6, (rng() - 0.5) * 0.8)),
           padR: from.r,
           toR: 1.3 + rng() * 0.6,
-          count: 20 + Math.floor(rng() * 6),
+          count: 20 + Math.floor(rng() * 4),
           seed: pl.idx * 10 + k + 1,
           hang: true,
-          width: 0.012,
+          width: 0.016,
+          trunk: 1.4,
         });
       });
     } else if (pl.layer === 2) {

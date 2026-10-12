@@ -23,18 +23,18 @@ export const FIBRE_CYAN: FibrePalette = {
   fog: "#06304A",
   plate: "#0A2A4A",
   fogDensity: 0.06,
-  plateEmissive: 0.45,
+  plateEmissive: 0.4,
   fibreGain: 0.85,
   edge: 0.6,
-  light: 0.6,
+  light: 1.0,
   bgTop: "#000306",
   bgBottom: "#0C4E86",
   collars: false,
   beads: 4,
-  beadSize: 0.016,
-  beadTint: 0.75,
+  beadSize: 0.024,
+  beadTint: 0.85,
   endDots: true,
-  pool: 0.6,
+  pool: 0.45,
   dashedEdge: true,
   circuitRepeat: 2,
 };
@@ -52,22 +52,22 @@ export const FIBRE_VIOLET: FibrePalette = {
 export const CHIP_BLUE: FibrePalette = {
   fibre: "#4FE2FF",
   pulse: "#E8FCFF",
-  fog: "#154676",
+  fog: "#0E3260",
   plate: "#2A6ACA",
   fogDensity: 0.12,
-  plateEmissive: 0.12,
+  plateEmissive: 0.06,
   fibreGain: 0.8,
-  edge: 0.25,
-  light: 0.6,
-  bgTop: "#1A4F80",
-  bgBottom: "#0F3E6E",
+  edge: 0.1,
+  light: 0.9,
+  bgTop: "#0F3E6E",
+  bgBottom: "#062244",
   collars: false,
   beads: 4,
   beadSize: 0.012,
   beadTint: 0.85,
   endDots: true,
   pool: 0,
-  dashedEdge: true,
+  dashedEdge: false,
   circuitRepeat: 1,
 };
 
@@ -88,7 +88,8 @@ export const ROWS: AnyRow[] = [
   row<LedCubeWallParams>({
     id: "LEDCubeWall-Blue",
     factory: createLedCubeWall,
-    params: { block: "#0C5AC8", led: "#8AE8FF", seam: "#0A2E6A", key: 0.75, spec: 0.08 },
+    // Spec hex #1A5AC8; red lowered to match the reference frame.
+    params: { block: "#0458C4", led: "#8AF0FF", seam: "#0A2E6A", key: 0.66, spec: 0.08 },
   }),
   row<LedCubeWallParams>({
     id: "LEDCubeWall-GraphiteAmber",
@@ -98,7 +99,8 @@ export const ROWS: AnyRow[] = [
   row<GlassCubeFieldParams>({
     id: "GlassCubeField-Blue",
     factory: createGlassCubeField,
-    params: { fill: "#0A2AB0", edge: "#5A8AFF", glow: "#1A4AFF" },
+    // Spec hexes #0A2AB0 / #5A8AFF / #1A4AFF; shifted toward the azure of the reference frame.
+    params: { fill: "#0844D0", edge: "#4AA0FF", glow: "#1A5AFF" },
   }),
   row<GlassCubeFieldParams>({
     id: "GlassCubeField-Emerald",

@@ -121,7 +121,7 @@ if (mode === "stills") {
     await renderFrames({
       serveUrl,
       composition,
-      frameRange: [300, 300 + n - 1],
+      frameRange: [300 - Math.floor(n / 2), 300 - Math.floor(n / 2) + n - 1],
       imageFormat: "png",
       outputDir: dir,
       scale,

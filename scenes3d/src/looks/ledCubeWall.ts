@@ -86,7 +86,7 @@ const { GROUPS, CELL_GROUP, LED_KIND, LED_SCHED } = (() => {
   for (let i = 0; i < n; i++) {
     const cx = i % COLS;
     const cy = Math.floor(i / COLS);
-    let dens = 0.14;
+    let dens = 0.08;
     blobs.forEach(([bx, by, br]) => (dens += 0.3 * Math.exp(-((cx - bx) ** 2 + (cy - by) ** 2) / (br * br))));
     const r = rng();
     ledKind[i] = r < Math.min(0.85, dens) ? (rng() < 0.1 ? 2 : 1) : 0;
@@ -95,11 +95,11 @@ const { GROUPS, CELL_GROUP, LED_KIND, LED_SCHED } = (() => {
       phase: Math.floor(rng() * LOOP),
       duty: 0.35 + rng() * 0.55,
       // A spread of brightness: many dim, some full.
-      level: 0.35 + 0.65 * Math.pow(rng(), 0.4),
+      level: 0.12 + 0.88 * rng(),
     });
   }
   // Runs: extend some lit LEDs along their row or column.
-  for (let k = 0; k < 60; k++) {
+  for (let k = 0; k < 35; k++) {
     const i = Math.floor(rng() * n);
     const horiz = rng() < 0.5;
     const len = 2 + Math.floor(rng() * 4);
@@ -219,7 +219,7 @@ void main() {
       float occ = smoothstep(-0.01, 0.09, hn - (vH + d * tanE));
       shadow = min(shadow, 1.0 - occ);
     }
-    shadow = mix(0.62, 1.0, shadow);
+    shadow = mix(0.75, 1.0, shadow);
     // Contact AO where a neighbour stands higher.
     float hL = prot(vCell + vec2(-1.0, 0.0));
     float hR = prot(vCell + vec2(1.0, 0.0));
@@ -232,7 +232,7 @@ void main() {
     ao *= 1.0 - 0.3 * smoothstep(0.0, 0.25, hU - vH) * exp(-du / 0.07);
     // LED
     if (vLedKind > 0.5) {
-      float s = vLedKind > 1.5 ? 0.062 : 0.05;
+      float s = vLedKind > 1.5 ? 0.052 : 0.042;
       float gain = vLedKind > 1.5 ? 1.2 : 1.0;
       vec2 aq = abs(q);
       float fw = fwidth(q.x) * 0.75;
@@ -243,7 +243,7 @@ void main() {
     }
   } else if (N.z > -0.5) {
     // Side faces: darker the deeper they go into the seam.
-    ao *= mix(0.3, 1.0, smoothstep(-0.25, vH, vWorld.z));
+    ao *= mix(0.55, 1.0, smoothstep(-0.25, vH, vWorld.z));
     // Self-shadow from the wall itself for faces turned away from the light.
   } else {
     ao = 0.0;
@@ -255,7 +255,7 @@ void main() {
   // Gentle large-scale falloff, brighter toward the upper left like a softbox.
   // Soft overhead light: brightest upper centre, darker lower third and corners.
   vec2 wp = vWorld.xy / (uGrid * vec2(0.36, 0.36));
-  float area = (0.4 + 0.8 * smoothstep(-0.9, 0.7, wp.y)) * (1.0 - 0.25 * smoothstep(0.6, 1.2, abs(wp.x)));
+  float area = (0.45 + 0.75 * smoothstep(-0.9, 0.7, wp.y)) * (1.0 - 0.3 * smoothstep(0.2, 1.2, wp.x));
   vec3 specCol = mix(vec3(1.0), uBlock / max(max(uBlock.r, uBlock.g), uBlock.b), 0.92);
   vec3 col = uBlock * (diff * shadow * uKey * area + fill) * ao + specCol * spec * shadow * ao * area;
   gl_FragColor = vec4(col + emissive, 1.0);

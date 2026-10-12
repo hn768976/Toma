@@ -97,7 +97,7 @@ void main() {
   // Key light from the lower left of the view: falls off toward top right.
   vec3 vp = (viewMatrix * vec4(vWorld, 1.0)).xyz;
   vec2 sdir = vp.xy / max(-vp.z, 0.1);
-  float key = mix(1.15, 0.02, smoothstep(-0.55, 0.55, sdir.x * 0.75 + sdir.y * 0.9));
+  float key = mix(1.15, 0.03, smoothstep(0.15, 0.9, length((sdir - vec2(0.12, -0.12)) * vec2(0.8, 1.1))));
   vec3 col;
   float alpha = 0.0;
   if (a.y > 0.5) {
@@ -143,7 +143,7 @@ const lin = (hex: string, gain = 1) =>
 export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
   const scene = new THREE.Scene();
   const depthScene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.2, 60);
+  const camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.2, 60);
 
   const box = new THREE.BoxGeometry(1, 1, 1);
   const g = new THREE.InstancedBufferGeometry();
@@ -188,7 +188,7 @@ export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
       depthWrite: false,
       transparent: true,
     });
-  const backMesh = new THREE.Mesh(g, glass(THREE.BackSide, 0.35));
+  const backMesh = new THREE.Mesh(g, glass(THREE.BackSide, 0.25));
   backMesh.renderOrder = 1;
   const frontMesh = new THREE.Mesh(g, glass(THREE.FrontSide, 1.0));
   frontMesh.renderOrder = 2;
@@ -216,7 +216,7 @@ export const createGlassCubeField = (P: GlassCubeFieldParams): LookInstance => {
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  const H = 4.3;
+  const H = 5.2;
   const start = new THREE.Vector2(0.37, 0.61);
 
   return {

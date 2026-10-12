@@ -34,7 +34,7 @@ const shell = (n: number, radius: number, seed: number, accentShare: number): No
       p,
       size,
       // Accents lean toward the larger nodes; overall share stays ~accentShare.
-      accent: rng() < accentShare * (0.6 + 0.55 * (size - 1)),
+      accent: rng() < accentShare * (0.55 + 0.35 * (size - 1)),
       seed: rng(),
     });
   }
@@ -96,6 +96,22 @@ const RINGS: Ring[] = (() => {
       radius,
       count: Math.round(radius * 260),
     });
+  }
+  return out;
+})();
+
+// Small upright orbit loops (read as narrow vertical ellipses as they turn).
+const LOOPS: Ring[] = (() => {
+  const rng = mulberry32(3404);
+  const out: Ring[] = [];
+  for (let i = 0; i < 22; i++) {
+    const az = rng() * Math.PI * 2;
+    const normal = new THREE.Vector3(Math.cos(az), (rng() - 0.5) * 0.2, Math.sin(az)).normalize();
+    const dir = new THREE.Vector3(rng() - 0.5, (rng() - 0.5) * 1.4, rng() - 0.5).normalize();
+    const radius = 0.12 + rng() * 0.28;
+    // Keep each loop inside the outer shell.
+    const d = 0.5 + rng() * (0.94 - radius - 0.5);
+    out.push({ center: dir.multiplyScalar(d), normal, radius, count: Math.round(radius * 220) });
   }
   return out;
 })();
@@ -272,7 +288,7 @@ export const createPlexusShells = (P: PlexusShellsParams): LookInstance => {
   // Dotted rings ride with the outer shell
   const ringDots: { pos: THREE.Vector3; size: number; color: THREE.Color; seed: number }[] = [];
   const ringCol = lin(P.ring, 0.45);
-  RINGS.forEach((r, ri) => {
+  [...RINGS, ...LOOPS].forEach((r, ri) => {
     const t1 = new THREE.Vector3(0, 1, 0).cross(r.normal);
     if (t1.lengthSq() < 1e-4) t1.set(1, 0, 0);
     t1.normalize();
@@ -312,11 +328,11 @@ export const createPlexusShells = (P: PlexusShellsParams): LookInstance => {
     camera,
     post: {
       focus: D - 1,
-      cocScale: 9,
-      maxCoc: 4,
+      cocScale: 12,
+      maxCoc: 5,
       nearScale: 1,
-      bloomStrength: 0.08,
-      bloomThreshold: 0.9,
+      bloomStrength: 0.14,
+      bloomThreshold: 0.8,
       acesMix: 0.15,
       exposure: 1.0,
       vignette: 0.0,

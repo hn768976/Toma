@@ -54,6 +54,8 @@ export type BundleSpec = {
   seed: number;
   hang: boolean; // true: hangs out of frame and flares wide
   width: number; // fibre width (world)
+  /** Trunk radius as a multiple of the pad radius (default 0.5). */
+  trunk?: number;
 };
 
 export const THICK = 0.085;
@@ -157,7 +159,7 @@ const fibrePoints = (b: BundleSpec, i: number, rng: () => number) => {
   const rr = Math.sqrt((i + 0.5) / b.count);
   const ring = (r: number, u1: THREE.Vector3, u2: THREE.Vector3, t = th) =>
     u1.clone().multiplyScalar(Math.cos(t) * r).addScaledVector(u2, Math.sin(t) * r);
-  const trunkR = b.padR * 0.5;
+  const trunkR = b.padR * (b.trunk ?? 0.5);
   const pts: THREE.Vector3[] = [];
   // Fibres leave from the whole pad face, not one point.
   const P0 = A.clone().add(ring(b.padR * (0.12 + 0.8 * rr), pe1, pe2));
@@ -222,7 +224,7 @@ void main() {
   float len = uPulseLen / max(vExtra, 0.1);
   float p = pulse(vU, fract(t), len) + pulse(vU, fract(t + 0.37), len) * 0.8 + pulse(vU, fract(t + 0.71), len) * 0.6;
   float fog = exp(-vViewZ * vViewZ * uFog * uFog);
-  vec3 col = uColor * base + uPulse * p * 1.5;
+  vec3 col = uColor * base + uPulse * p * 0.6;
   gl_FragColor = vec4(col * a * vAlpha * uGain * fog, 1.0);
 #endif
 }
@@ -456,7 +458,7 @@ export const buildFibreKit = (
   if (P.pool > 0) {
     const pools = bundles.flatMap((b, i) => {
       const c = fib.clone().multiplyScalar(P.pool);
-      const out = [{ pos: b.from.clone().add(new THREE.Vector3(0, -0.004, 0)), size: b.padR * 5, color: c, seed: i }];
+      const out = [{ pos: b.from.clone().add(new THREE.Vector3(0, -0.004, 0)), size: b.padR * 5.5, color: c, seed: i }];
       if (!b.hang) out.push({ pos: b.to.clone().add(new THREE.Vector3(0, 0.004, 0)), size: b.toR * 4, color: c, seed: i });
       return out;
     });

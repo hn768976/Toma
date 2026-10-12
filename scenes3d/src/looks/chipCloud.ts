@@ -37,10 +37,10 @@ const mod = (a: number, n: number) => ((a % n) + n) % n;
 const cellSeed = (i: number, j: number, k: number) => CELLS[(mod(k, NV) * N + mod(j, N)) * N + mod(i, N)];
 const cellId = (i: number, j: number, k: number) => (mod(k, NV) * N + mod(j, N)) * N + mod(i, N);
 
-const START = new THREE.Vector3(0.3, 1.25, 0.2);
+const START = new THREE.Vector3(0.3, 0.75, 0.2);
 const TRAVEL = new THREE.Vector3(N * SX, 0, N * SX);
 const HEADING = THREE.MathUtils.degToRad(-58); // look direction (yaw)
-const PITCH = THREE.MathUtils.degToRad(-24);
+const PITCH = THREE.MathUtils.degToRad(-17);
 
 const camAt = (t: number, cam: THREE.PerspectiveCamera) => {
   const a = t * Math.PI * 2;
@@ -106,7 +106,8 @@ const buildLayout = (aspect: number) => {
         from: a.pos,
         to: t.pos,
         padR: a.r * 1.2,
-        toR: 0.3 + rng() * 0.12,
+        toR: 0.32 + rng() * 0.1,
+        trunk: 2.6,
         count: 12 + Math.floor(rng() * 9),
         seed: cellId(i, j, k) * 10 + b,
         hang: false,
