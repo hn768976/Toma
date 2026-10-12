@@ -68,7 +68,9 @@ const drawBackground = (c: HTMLCanvasElement, frame: number) => {
       const n1 = hash(x, y, f);
       const n2 = hash(x + 7919, y + 104729, f);
       const dither = n1 + n2 - 1; // triangular, +/-1 LSB
-      const grain = (hash(x + 31, y + 17, f + 300) - 0.5) * 2 * 0.015 * 255 * 0.5;
+      // full 1.5 % grain: weaker grain was smoothed away by H.264 and the
+      // 1-level steps of the radial lift showed through
+      const grain = (hash(x + 31, y + 17, f + 300) - 0.5) * 2 * 0.015 * 255;
       const i = (y * w + x) * 4;
       d[i] = (4 + 5 * lift) * vig + dither + grain;
       d[i + 1] = (8 + 9 * lift) * vig + dither + grain;
