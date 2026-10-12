@@ -81,8 +81,9 @@ def seam(d):
 
 
 def band(mp4, n, x0, y0, x1, y1, out):
+    x0, y0, x1, y1 = (int(v) for v in (x0, y0, x1, y1))
     img = frame(mp4, int(n))
-    crop = img[int(y0):int(y1), int(x0):int(x1)]
+    crop = img[y0:y1, x0:x1]
     lum = crop.mean(axis=2)
     # Profile along the longer axis, averaged across the other (removes grain).
     horiz = (x1 - x0) >= (y1 - y0)
