@@ -102,7 +102,7 @@ const buildRays = (): RayData => {
       acc += l;
     }
     dot(pts[pts.length - 1][0], pts[pts.length - 1][1], 0.022, [m[0], m[1], m[2] * 0.5], total, total);
-    dot(pts[0][0], pts[0][1], 0.02, m, 0, total);
+    dot(pts[0][0], pts[0][1], 0.02, [m[0], m[1], Math.min(1, m[2] * 1.7)], 0, total);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -136,7 +136,7 @@ void main(){
   }
   float fade = exp(-vAlong / 1.15);                // traces fade with distance from the ring
   float b = vMeta.z * (0.1 + 1.25 * fade + 2.2 * pulse * (0.35 + fade));
-  vec3 col = mix(uColor2, uColor, smoothstep(0.1, 1.5, vAlong));   // warm near the ring
+  vec3 col = mix(uColor2, uColor, smoothstep(0.4, 3.0, vAlong));   // warm near the ring
   gl_FragColor = vec4(col * b * a, 1.0);
 }`;
 
@@ -181,7 +181,7 @@ const buildNebulaTexture = (c1: string, c2: string) => {
 
 const BOKEH_VS = /* glsl */ `
 attribute vec4 aSeed; uniform float uT; uniform float uScale; uniform float uFocus;
-varying float vAlpha; varying vec3 vCol; attribute vec3 aCol;
+varying float vAlpha; varying vec3 vCol; attribute vec3 aCol; varying float vSquare;
 void main(){
   vec3 p = position;
   float ph = 6.2831853 * (uT * aSeed.x + aSeed.y);
@@ -193,11 +193,15 @@ void main(){
   gl_PointSize = uScale * (0.02 + coc * 0.05) / depth;
   vAlpha = 0.9 / (1.0 + coc * coc * 2.0);
   vCol = aCol;
+  vSquare = step(0.5, fract(aSeed.y * 7.0));
+  if (vSquare > 0.5) { gl_PointSize = max(2.0, uScale * 0.006 / depth); vAlpha = 1.0; vCol = aCol * 1.6; }
 }`;
 const BOKEH_FS = /* glsl */ `
 varying float vAlpha; varying vec3 vCol;
+varying float vSquare;
 void main(){ vec2 c = gl_PointCoord * 2.0 - 1.0; float r = length(c);
   float a = smoothstep(1.0, 0.7, r) * (0.65 + 0.35 * smoothstep(0.5, 0.95, r));
+  if (vSquare > 0.5) a = step(max(abs(c.x), abs(c.y)), 0.6);
   gl_FragColor = vec4(vCol * a * vAlpha, 1.0); }`;
 
 const Scene: React.FC<CoinBadgeProps> = (p) => {
@@ -229,22 +233,22 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
     // badge (tilted back)
     const badge = new THREE.Group();
     badge.rotation.set(-TILT, 0.12, 0.1);
-    badge.position.set(-0.12, 0.18, 0);
+    badge.position.set(-0.42, 0.1, 0);
     root.add(badge);
     const face = new THREE.Mesh(
       new THREE.CylinderGeometry(RB * 0.985, RB * 0.985, 0.06, 160),
-      new THREE.MeshStandardMaterial({ color: p.face, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.55 }),
+      new THREE.MeshStandardMaterial({ color: p.face, roughness: 0.55, metalness: 0.0, transparent: true, opacity: 0.35 }),
     );
     face.rotation.x = Math.PI / 2;
     face.position.z = -0.03;
     badge.add(face);
     const bezel = new THREE.Mesh(
-      new THREE.TorusGeometry(RB, 0.03, 32, 256),
+      new THREE.TorusGeometry(RB, 0.02, 32, 256),
       new THREE.MeshStandardMaterial({ color: p.face, roughness: 0.45, metalness: 0.6 }),
     );
     badge.add(bezel);
-    const coreCol = new THREE.Color(p.ring).multiplyScalar(1.7);
-    const core = new THREE.Mesh(new THREE.TorusGeometry(RB, 0.028, 24, 256), new THREE.MeshBasicMaterial({ color: coreCol, toneMapped: false }));
+    const coreCol = new THREE.Color(p.ring).multiplyScalar(1.45);
+    const core = new THREE.Mesh(new THREE.TorusGeometry(RB, 0.016, 24, 256), new THREE.MeshBasicMaterial({ color: coreCol, toneMapped: false }));
     core.position.z = 0.025;
     badge.add(core);
     const halo = new THREE.Mesh(
@@ -255,7 +259,7 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
 
     const shapes = SYMBOLS[p.symbol]();
     const symGeo = new THREE.ExtrudeGeometry(shapes, { depth: 0.1, bevelEnabled: true, bevelThickness: 0.045, bevelSize: 0.03, bevelSegments: 4, curveSegments: 48 });
-    symGeo.scale(0.66, 0.66, 1);
+    symGeo.scale(0.8, 0.8, 1);
     const sym = new THREE.Mesh(
       symGeo,
       new THREE.MeshStandardMaterial({ color: p.metal, roughness: 0.38, metalness: 0.15, emissive: new THREE.Color(p.metal), emissiveIntensity: 0.22 }),
@@ -315,7 +319,7 @@ const Scene: React.FC<CoinBadgeProps> = (p) => {
     c.setPixelRatio(1);
     c.setSize(w, h);
     c.addPass(new RenderPass(scene, camera));
-    c.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.55, 0.08, 0.92));
+    c.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.4, 0.06, 0.95));
     c.addPass(new OutputPass());
     c.addPass(new ShaderPass(FINAL_PASS));
     return c;

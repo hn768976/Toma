@@ -13,12 +13,12 @@ export const VERSIONS: Version[] = [
   {
     id: "NumberMatrix-Green",
     component: NumberMatrix,
-    props: { idx: "#4A8A7A", str: "#C8F0E0", val: "#7AD8B8", hi: "#2A6A5A", line: "#22403A", flash: "#F0FFF8" },
+    props: { idx: "#4A8A7A", str: "#C8F0E0", val: "#7AD8B8", hi: "#2A6A5A", line: "#4A6E66", flash: "#F0FFF8" },
   },
   {
     id: "NumberMatrix-Amber",
     component: NumberMatrix,
-    props: { idx: "#8A6A3A", str: "#FFE0B0", val: "#F0A84A", hi: "#6A3A0A", line: "#43301A", flash: "#FFF6E8" },
+    props: { idx: "#8A6A3A", str: "#FFE0B0", val: "#F0A84A", hi: "#6A3A0A", line: "#6E5232", flash: "#FFF6E8" },
   },
   {
     id: "RadialHUD-GreyGold",
@@ -61,10 +61,11 @@ export const VERSIONS: Version[] = [
       bright: "#E4ECF4",
       ma1: "#C8D4E0",
       ma2: "#6A7A8E",
-      summary: ["#3AB87A", "#E8884A", "#8A6AE8", "#E8C84A"],
+      summary: ["#4AB88A", "#E8945A", "#9A90D8", "#D8C878"],
       analysis: "#E8506A",
       chartBg: "#131A27",
       card: "#162032",
+      tickerCell: "#29333C",
     },
   },
   {

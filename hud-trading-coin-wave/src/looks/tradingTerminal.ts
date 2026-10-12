@@ -16,6 +16,7 @@ export type TradingTerminalProps = {
   analysis: string;
   chartBg: string;
   card: string;
+  tickerCell: string;
 };
 
 // ------------------------------------------------------------ the series --
@@ -153,12 +154,12 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ctx.clip();
   // volume bars
   const volB = chartB * h;
-  const volH = 0.17 * h;
+  const volH = 0.23 * h;
   cs.forEach((k) => {
     ctx.fillStyle = k.c >= k.o ? c.up : c.down;
-    ctx.globalAlpha = 0.42;
+    ctx.globalAlpha = 0.62;
     const vh = k.v * volH;
-    ctx.fillRect(k.x - pitch * 0.32, volB - vh, pitch * 0.64, vh);
+    ctx.fillRect(k.x - pitch * 0.42, volB - vh, pitch * 0.84, vh);
   });
   ctx.globalAlpha = 1;
   // moving averages (over the plotted values)
@@ -182,7 +183,7 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ma(9, c.ma1, Math.max(1, 0.0009 * h));
   ctx.globalAlpha = 1;
   // wicks + bodies
-  const bodyW = pitch * 0.5;
+  const bodyW = pitch * 0.64;
   const wickW = Math.max(1, pitch * 0.12);
   cs.forEach((k) => {
     const up = k.c >= k.o;
@@ -208,8 +209,8 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 
-  // price scale
-  ctx.fillStyle = c.bg;
+  // price scale (its own lighter boxed strip)
+  ctx.fillStyle = c.card;
   ctx.fillRect(X(chartR), Y(chartT), X(0.835) - X(chartR), Y(chartB - chartT));
   ctx.fillStyle = c.grid;
   ctx.fillRect(X(chartR), Y(chartT), 1, Y(chartB - chartT));
@@ -224,7 +225,7 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   ctx.fillRect(0, 0, X(0.833), Y(0.058));
   INSTR.forEach((name, i) => {
     const x0 = 0.004 + i * 0.1035;
-    ctx.fillStyle = c.panel;
+    ctx.fillStyle = c.tickerCell;
     ctx.fillRect(X(x0 - 0.002), Y(0.004), X(0.1), Y(0.05));
     const hb = holdBucket(f, [20, 30, 24, 40, 20, 12, 60, 30][i], (i * 7) % 12);
     const jit = (hashF(i, hb, 5) - 0.5) * 0.002;
@@ -245,24 +246,46 @@ export const drawTradingTerminal: DrawFn<TradingTerminalProps> = (ctx, w, h, fra
   // -------------------------------------------------------- bottom strip --
   ctx.fillStyle = c.panel;
   ctx.fillRect(0, Y(0.94), X(0.833), h - Y(0.94));
-  for (let i = 0; i < 10; i++) {
-    const x0 = 0.006 + i * 0.024;
-    for (let r = 0; r < 2; r++) {
-      ctx.fillStyle = (i + r) % 3 === 0 ? "#4A5668" : "#2A3446";
-      ctx.fillRect(X(x0), Y(0.948 + r * 0.022), X(0.02), Y(0.012));
+  // three rows of light pill buttons
+  for (let i = 0; i < 9; i++)
+    for (let r = 0; r < 3; r++) {
+      const x0 = 0.006 + i * 0.026;
+      const lit = hash3(i, r, holdBucket(f, 60, (i + r) % 60)) % 5 === 0;
+      ctx.fillStyle = lit ? "#E4ECF4" : (i + r) % 3 === 0 ? "#B8C4D0" : "#7A8698";
+      ctx.beginPath();
+      ctx.roundRect(X(x0), Y(0.946 + r * 0.017), X(0.022), Y(0.011), Y(0.004));
+      ctx.fill();
+      ctx.fillStyle = "#2A3446";
+      ctx.fillRect(X(x0 + 0.004), Y(0.9505 + r * 0.017), X(0.012), Math.max(1, Y(0.002)));
     }
+  // boxed mini line chart
+  ctx.strokeStyle = "#5A6678";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(X(0.25) + 0.5, Y(0.946) + 0.5, X(0.07), Y(0.045));
+  ctx.beginPath();
+  for (let k = 0; k <= 30; k++) {
+    const v = 0.5 + 0.35 * Math.sin(k * 0.7 + 6.283 * cyc(f, 1)) * Math.cos(k * 0.23);
+    const xx = X(0.252 + (k / 30) * 0.066), yy = Y(0.988 - v * 0.038);
+    if (k) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy);
   }
-  for (let i = 0; i < 4; i++) {
-    const x0 = 0.26 + i * 0.065;
-    text(`${["ORDERS", "FILLS", "ALERTS", "LOG"][i]}  ${String(hash3(i, holdBucket(f, 30, i)) % 900 + 100)}`, x0, 0.958, c.text, tiny, MONO, 400);
-    text(`${(hash3(i, 3, holdBucket(f, 20, i * 2)) % 10000) / 100}`, x0, 0.98, c.grid === "#1E2838" ? "#5A6678" : c.text, tiny, MONO, 400);
+  ctx.strokeStyle = c.up;
+  ctx.stroke();
+  // text blocks with green tags
+  for (let i = 0; i < 3; i++) {
+    const x0 = 0.33 + i * 0.07;
+    ctx.fillStyle = c.up;
+    ctx.fillRect(X(x0), Y(0.95), X(0.012), Y(0.008));
+    text(`${["ORDERS", "FILLS", "ALERTS"][i]} ${String(hash3(i, holdBucket(f, 30, i)) % 900 + 100)}`, x0 + 0.015, 0.958, c.text, tiny, MONO, 400);
+    text(`${(hash3(i, 3, holdBucket(f, 20, i * 2)) % 10000) / 100}`, x0, 0.98, "#7A8698", tiny, MONO, 400);
   }
-  for (let i = 0; i < 24; i++) {
-    const x0 = X(0.53 + i * 0.012);
-    const v = (hash3(i, holdBucket(f, 10, i % 10), 4) % 100) / 100;
-    ctx.fillStyle = i % 4 === 0 ? c.text : "#3A4658";
-    ctx.fillRect(x0, Y(0.99) - R(v * 0.035 * h), Math.max(1, R(0.002 * h)), R(v * 0.035 * h));
-  }
+  // dot-matrix grids with some lit cells
+  for (let gI = 0; gI < 4; gI++)
+    for (let j = 0; j < 4; j++)
+      for (let i = 0; i < 9; i++) {
+        const on = hash3(gI * 100 + i, j, holdBucket(f, 15, (gI * 4 + i) % 15)) % 7;
+        ctx.fillStyle = on === 0 ? "#E8C84A" : on < 3 ? "#9AA6B8" : "#3A4658";
+        ctx.fillRect(X(0.55 + gI * 0.068 + i * 0.006), Y(0.948 + j * 0.011), Math.max(1, X(0.004)), Math.max(1, Y(0.007)));
+      }
 
   // ---------------------------------------------------------- side panel --
   const sx = 0.836;

@@ -19,14 +19,14 @@ const TRACK = 0.0026; // letter spacing
 const GAP = 0.9; // gap between groups, in rows
 
 // Each row: index (2) · short value (5) · long string (15) · value (5)
-type PanelDef = { x: number; y: number; w: number; groups: number[]; boxed: boolean; cols: [number, number, number, number] };
+type PanelDef = { x: number; y: number; w: number; groups: number[]; boxed: boolean; cols: [number, number, number, number]; scale?: number };
 const PANELS: PanelDef[] = [
   { x: 0.0156, y: 0.046, w: 0.272, groups: [6, 1, 6, 2, 6], boxed: false, cols: [0, 0.026, 0.09, 0.236] },
-  { x: 0.399, y: 0.103, w: 0.222, groups: [5, 1, 6, 2, 5], boxed: true, cols: [0, 0.022, 0.074, 0.188] },
-  { x: 0.697, y: 0.103, w: 0.222, groups: [5, 1, 6, 2, 5], boxed: true, cols: [0, 0.022, 0.074, 0.188] },
+  { x: 0.393, y: 0.1, w: 0.19, groups: [6, 1, 6, 2, 4], boxed: true, cols: [0, 0.019, 0.063, 0.161], scale: 0.84 },
+  { x: 0.703, y: 0.1, w: 0.19, groups: [6, 1, 6, 2, 4], boxed: true, cols: [0, 0.019, 0.063, 0.161], scale: 0.84 },
   { x: 0.0156, y: 0.746, w: 0.272, groups: [6, 2], boxed: false, cols: [0, 0.026, 0.09, 0.236] },
-  { x: 0.36, y: 0.746, w: 0.262, groups: [6, 2], boxed: false, cols: [0, 0.024, 0.11, 0.236] },
-  { x: 0.672, y: 0.746, w: 0.29, groups: [6, 2], boxed: false, cols: [0, 0.024, 0.13, 0.25] },
+  { x: 0.34, y: 0.746, w: 0.262, groups: [6, 2], boxed: false, cols: [0, 0.024, 0.1, 0.232] },
+  { x: 0.64, y: 0.746, w: 0.3, groups: [6, 2], boxed: false, cols: [0, 0.024, 0.07, 0.3] },
 ];
 
 // ------------------------------------------------- seeded per-cell schedules --
@@ -54,16 +54,17 @@ const GROUPS: Group[] = [];
 const WAVE_PERIODS = [100, 120, 150, 200, 300];
 const HI_PERIODS = [60, 100, 120, 150];
 // Groups that carry a stepping highlight bar (panel, group).
-const HI_GROUPS = new Set(["0:0", "1:2", "2:4", "4:0", "0:4", "5:0"]);
+const HI_GROUPS = new Set(["0:0", "1:2", "5:0"]);
 
 PANELS.forEach((p, pi) => {
   let y = p.y;
+  const PITCH_P = PITCH * (p.scale ?? 1);
   p.groups.forEach((n, gi) => {
     const g: Group = {
       panel: pi,
       rows: [],
       y0: y,
-      y1: y + n * PITCH,
+      y1: y + n * PITCH_P,
       wavePeriod: WAVE_PERIODS[Math.floor(rnd() * WAVE_PERIODS.length)],
       waveOff: Math.floor(rnd() * 600),
       hiPeriod: 0,
@@ -99,10 +100,10 @@ PANELS.forEach((p, pi) => {
       };
       ROWS.push(row);
       g.rows.push(row);
-      y += PITCH;
+      y += PITCH_P;
     }
     GROUPS.push(g);
-    y += GAP * PITCH;
+    y += GAP * PITCH_P;
   });
 });
 
@@ -164,24 +165,28 @@ export const drawNumberMatrix: DrawFn<NumberMatrixProps> = (ctx, w, h, frame, c)
     const gx = glitch >= 0 ? (hash3(pi, glitch, 3) % 3) - 1 : 0;
     const shift = gx * Math.max(1, Math.round(h / 1440));
     const X = (v: number) => px(p.x + v) + shift;
+    const sc = p.scale ?? 1;
+    const fpx = Math.max(7, Math.round(FONT * h * sc));
+    ctx.letterSpacing = `${Math.round(TRACK * h * sc * 10) / 10}px`;
+    const rowHP = rowH * sc;
 
     // group boxes / separators
     ctx.strokeStyle = c.line;
     ctx.lineWidth = lineW;
     GROUPS.filter((g) => g.panel === pi).forEach((g) => {
-      const top = py(g.y0 - 0.3 * PITCH) + 0.5 * (lineW % 2);
-      const bot = py(g.y1 + 0.15 * PITCH) + 0.5 * (lineW % 2);
+      const top = py(g.y0 - 0.3 * PITCH * sc) + 0.5 * (lineW % 2);
+      const bot = py(g.y1 + 0.15 * PITCH * sc) + 0.5 * (lineW % 2);
       const left = X(-0.006) + 0.5 * (lineW % 2);
       const right = X(p.w) + 0.5 * (lineW % 2);
       ctx.beginPath();
-      if (p.boxed) {
-        ctx.rect(left, top, right - left, bot - top);
-      } else {
-        // small separator ticks under each group, as in the reference
-        ctx.moveTo(left, bot);
-        ctx.lineTo(left + px(0.012), bot);
-        ctx.moveTo(right - px(0.012), bot);
-        ctx.lineTo(right, bot);
+      if (!p.boxed) return;
+      ctx.rect(left, top, right - left, bot - top);
+      // double left edge and inner column dividers, as in the reference
+      ctx.moveTo(left + 2 * lineW, top);
+      ctx.lineTo(left + 2 * lineW, bot);
+      for (const cx of [p.cols[2] - 0.004, p.cols[3] - 0.004]) {
+        ctx.moveTo(X(cx) + 0.5 * (lineW % 2), top);
+        ctx.lineTo(X(cx) + 0.5 * (lineW % 2), bot);
       }
       ctx.stroke();
     });
@@ -195,8 +200,9 @@ export const drawNumberMatrix: DrawFn<NumberMatrixProps> = (ctx, w, h, frame, c)
       }
       const wt = (f + g.waveOff) % g.wavePeriod;
       g.rows.forEach((row) => {
+        ctx.font = `500 ${fpx}px ${MONO}`;
         const top = py(row.y);
-        const base = top + Math.round(rowH * 0.76);
+        const base = top + Math.round(rowHP * 0.76);
         const dw = wt - row.r * 2; // wave reaches row r two frames after row r-1
         const wave = dw >= 0 && dw < 8;
         const waveBucket = Math.floor(f / 2) + row.r * 1000;
@@ -205,19 +211,21 @@ export const drawNumberMatrix: DrawFn<NumberMatrixProps> = (ctx, w, h, frame, c)
         const isHi = row.r === hiRow;
         if (isHi) {
           ctx.fillStyle = c.hi;
-          ctx.fillRect(X(-0.004), top, X(p.w) - X(-0.004), Math.round(rowH * 0.94));
+          ctx.fillRect(X(-0.004), top, X(p.w) - X(-0.004), Math.round(rowHP * 0.94));
         }
         const dim = isHi || flash ? 1 : row.dim;
         ctx.globalAlpha = alpha * dim;
         const valStr = digits(5, row.id, 77, holdBucket(f, row.valHold, row.valOff));
-        ctx.fillStyle = isHi || flash ? c.flash : c.idx;
+        ctx.fillStyle = isHi || flash ? c.flash : c.val;
+        ctx.font = `600 ${fpx}px ${MONO}`;
         ctx.fillText(row.index, X(p.cols[0]), base);
+        ctx.font = `500 ${fpx}px ${MONO}`;
         if (!row.shortStr) {
           ctx.fillStyle = isHi || flash ? c.flash : c.str;
           ctx.fillText(longString(row, f, wave, waveBucket), X(p.cols[2]), base);
         }
         const val2 = row.val2Hold ? digits(5, row.id, 78, holdBucket(f, row.val2Hold, row.val2Off)) : digits(5, row.id, 78);
-        ctx.fillStyle = isHi || flash ? c.flash : c.val;
+        ctx.fillStyle = isHi || flash ? c.flash : c.idx;
         ctx.fillText(val2, X(p.cols[1]), base);
         ctx.fillText(valStr, X(p.cols[3]), base);
         ctx.globalAlpha = alpha;

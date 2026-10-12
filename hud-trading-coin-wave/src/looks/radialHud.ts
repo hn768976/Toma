@@ -29,9 +29,8 @@ const mkSegs = (n: number, gap: number): Seg[] => {
   }
   return segs;
 };
-const SEG_OUTER = mkSegs(4, 0.035); // repeats twice (180°)
+const SEG_OUTER = mkSegs(4, 0.09); // repeats twice (180°)
 const SEG_INNER = mkSegs(5, 0.03); // repeats three times (120°)
-const SEG_OUTER2 = mkSegs(3, 0.08); // repeats three times (120°)
 
 // Labels on the text ring: angle (deg, 0 = right, clockwise), length, kind
 const LABELS: { a: number; n: number; yellow: boolean; hold: number }[] = [
@@ -59,7 +58,7 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
   const R = (v: number) => Math.round(v);
   const lw = (v: number) => Math.max(1, v * h);
   const cx = 0.285 * w;
-  const cy = 0.52 * h;
+  const cy = 0.47 * h;
 
   // ---------------------------------------------------- background marks --
   // tiny grid crosses (no full grid: the black between marks stays 0,0,0)
@@ -115,7 +114,7 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
         ctx.arc(cx, cy, ri, a1, a0, true);
         ctx.closePath();
         ctx.fillStyle = grad;
-        ctx.globalAlpha = 0.28 + 0.1 * s.g;
+        ctx.globalAlpha = 0.18 + 0.07 * s.g;
         ctx.fill();
         // thin bright outer lip
         ctx.beginPath();
@@ -185,7 +184,31 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
 
   // C: broad translucent grey segments, pattern repeats twice → half a turn per loop
   segRing(SEG_OUTER, 2, TAU * 0.5 * cyc(f, 1), D(0.3), D(0.367));
-  segRing(SEG_OUTER2, 3, -(TAU / 3) * cyc(f, 1), D(0.318), D(0.348));
+  // radial blade sector inside the upper-left of the ring (one turn per loop)
+  {
+    const a0 = Math.PI * 1.08 + TAU * cyc(f, 1);
+    for (let k = 0; k < 26; k++) {
+      const a = a0 + k * 0.026;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * D(0.2), cy + Math.sin(a) * D(0.2));
+      ctx.lineTo(cx + Math.cos(a) * D(0.262), cy + Math.sin(a) * D(0.262));
+      ctx.strokeStyle = c.greys[2];
+      ctx.globalAlpha = 0.25 + 0.35 * ((k * 7) % 5) / 4;
+      ctx.lineWidth = lw(0.0035);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // thin chords and spokes across the open centre
+  ctx.strokeStyle = c.faint;
+  ctx.lineWidth = lw(0.0009);
+  for (let k = 0; k < 6; k++) {
+    const a = (k * TAU) / 6 + TAU * cyc(f, -1) / 6;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * D(0.06), cy + Math.sin(a) * D(0.06));
+    ctx.lineTo(cx + Math.cos(a) * D(0.15), cy + Math.sin(a) * D(0.15));
+    ctx.stroke();
+  }
   arc(D(0.371), 0, TAU, lw(0.0009), c.faint);
 
   // D: 180-tick ring, 12 ticks per loop
@@ -308,13 +331,13 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
   ctx.beginPath();
   ctx.arc(R(0.452 * w), R(cy), H(0.0045), 0, TAU);
   ctx.fill();
-  const bigFont = R(H(0.056));
+  const bigFont = R(H(0.044));
   ctx.font = `600 ${bigFont}px ${HUD}`;
   ctx.fillStyle = c.counter;
   const big = digits(3, 7001, 0, holdBucket(f, 15));
   ctx.fillText(big, R(0.466 * w), R(cy + bigFont * 0.36));
   let x = 0.466 * w + ctx.measureText(big).width + H(0.035);
-  const mid = R(H(0.034));
+  const mid = R(H(0.026));
   [5, 5, 2, 7, 3].forEach((n, i) => {
     ctx.font = `600 ${mid}px ${HUD}`;
     const s = digits(n, 7100 + i, 0, holdBucket(f, [10, 20, 30, 12, 24][i], i));
@@ -436,13 +459,13 @@ export const drawRadialHud: DrawFn<RadialHudProps> = (ctx, w, h, frame, c) => {
   label(`${digits(4, 800)} . ${digits(3, 801, 0, holdBucket(f, 20))}`, 0.88, 0.875, c.dim, MONO, tiny, 400);
 
   // ---------------------------------------------------- bottom baseline --
-  const by = 0.945;
-  hline(0.01, 0.985, by, c.dim);
+  const by = 0.955;
+  hline(0.01, 0.985, by, c.faint);
   let bx = 0.015;
   BOTTOM_NUMS.forEach((n, i) => {
     const s = digits(n, 850 + i, 0, holdBucket(f, [20, 30, 15, 40, 24, 12][i], i * 2));
-    label(s, bx, by - 0.008, i === 2 ? c.text : c.dim, HUD, R(H(0.02)), 600);
-    bx += 0.012 + n * 0.0062;
+    label(s, bx, by - 0.008, c.dim, HUD, R(H(0.015)), 600);
+    bx += 0.01 + n * 0.0047;
   });
   for (let i = 0; i < 40; i++) {
     const X = 0.32 + i * 0.016;

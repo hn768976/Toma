@@ -145,8 +145,6 @@ const CIRCUITS: [number, number][][] = [
   [[0.08, 0.12], [0.2, 0.12], [0.22, 0.15], [0.3, 0.15]],
   [[1.0, 0.09], [0.86, 0.09], [0.84, 0.06], [0.68, 0.06]],
   [[0.62, 0.72], [0.78, 0.72], [0.8, 0.69], [0.97, 0.69]],
-  [[0.58, 0.97], [0.58, 0.88], [0.6, 0.86], [0.75, 0.86]],
-  [[0.22, 0.95], [0.38, 0.95], [0.4, 0.92], [0.47, 0.92]],
 ];
 const GLITCH = [61, 178, 289, 403, 537];
 
@@ -208,7 +206,7 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   ctx.globalAlpha = 1;
   const vg = ctx.createRadialGradient(w / 2, h / 2, h * 0.35, w / 2, h / 2, w * 0.62);
   vg.addColorStop(0, "rgba(6,2,16,0)");
-  vg.addColorStop(1, "rgba(6,2,16,0.6)");
+  vg.addColorStop(1, "rgba(4,1,12,0.85)");
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, w, h);
 
@@ -217,7 +215,7 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
   const scy = 0.46 * h;
   const rad = 0.29 * h;
   const step = (2 * rad) / 106; // ≈ 8.8k dots in the disc
-  const ds = Math.max(1, R(step * 0.62));
+  const ds = Math.max(1, R(step * 0.5));
   const rot = TAU * cyc(f, 1);
   const lx = -0.45, ly = -0.55, lz = 0.7;
   const n = 106;
@@ -237,7 +235,7 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
       const meridian = Math.abs(((lon / TAU) * 16 % 1 + 1) % 1 - 0.5) > 0.46 ? 0.35 : 0;
       let b = shade * (0.3 + 0.55 * land) + meridian * shade * 0.6;
       const noiseDot = hashF(id, holdBucket(f, 6, id % 6), 23);
-      b *= noiseDot < 0.22 ? 0.15 : 0.7 + 0.5 * noiseDot;
+      b *= noiseDot < 0.3 ? 0.1 : 0.45 + 0.45 * noiseDot;
       const hsh = hash3(id, 17);
       let col = c.dots[hsh % 100 < 60 ? 0 : hsh % 100 < 90 ? 1 : hsh % 100 < 96 ? 2 : 3];
       // scramble patches
@@ -351,16 +349,6 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
     ctx.globalAlpha = 0.6 + 0.4 * ((r * 37) % 5) / 4;
     ctx.fillText(`${digits(4, 100 + r, 0, holdBucket(f, [6, 8, 10, 12, 15, 20][r], r))} ${digits(6, 110 + r)} ${digits(3, 120 + r, 0, holdBucket(f, 24, r * 3))}`, X(0.012), Y(yy));
   }
-  for (let r = 0; r < 4; r++) {
-    const yy = 0.37 + r * 0.028;
-    ctx.globalAlpha = 0.85;
-    ctx.fillText(`${["SYS", "NET", "MEM", "SIG"][r]}  ${digits(2, 130 + r)}:${digits(2, 140 + r, 0, holdBucket(f, 10, r))}  ${digits(5, 150 + r, 0, holdBucket(f, 30, r * 4))}`, X(0.008), Y(yy));
-    ctx.fillStyle = c.accent;
-    const bw = 0.01 + 0.035 * hashF(r, holdBucket(f, 20, r * 2), 3);
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(X(0.135), Y(yy - 0.009), X(bw), Math.max(1, Y(0.008)));
-    ctx.fillStyle = c.text;
-  }
   ctx.globalAlpha = 1;
   // right column text
   dotText(ctx, Array.from({ length: 5 }, (_, r) => digits(6, 160 + r, 0, holdBucket(f, [8, 12, 20, 30, 40][r], r))), X(0.745), Y(0.28), tcell, 6, c.text, [0.9, 0.6, 0.8, 0.6, 0.9]);
@@ -410,13 +398,58 @@ export const drawNebulaHud: DrawFn<NebulaHudProps> = (ctx, w, h, frame, c) => {
     }
   }
   ctx.globalAlpha = 1;
-  // small bars left of the panel
-  for (let s = 0; s < 6; s++) {
-    ctx.fillStyle = c.text;
-    ctx.globalAlpha = 0.7;
-    const v = 0.3 + 0.7 * hashF(s, holdBucket(f, 15, s * 2), 8);
-    ctx.fillRect(X(0.68 + s * 0.01), Y(0.97) - R(v * 0.05 * h), Math.max(1, X(0.005)), R(v * 0.05 * h));
+  ctx.globalAlpha = 1;
+
+  // ----------------------------------- mosaic tile clusters in the band --
+  {
+    const sz = Math.max(1, tcell - Math.max(1, R(tcell * 0.22)));
+    for (let k = 0; k < 9; k++) {
+      // cluster anchors drift with the band (one width per loop)
+      const left = k < 5;
+      const ax = ((hashF(k, 1, 91) * 0.24 + (left ? 0.0 : 0.72) - cyc(f, 1) * 0) % 1) * w;
+      const ay = bandY + bandH * (0.25 + 0.45 * hashF(k, 2, 91));
+      const cols = 6 + (hash3(k, 3, 91) % 14), rows = 2 + (hash3(k, 4, 91) % 4);
+      const col = left ? (k % 2 ? c.dots[0] : c.dots[1]) : k % 2 ? c.dots[3] : c.dots[1];
+      const hb = holdBucket(f, [5, 6, 8, 10][k % 4], k % 5);
+      ctx.fillStyle = col;
+      for (let j = 0; j < rows; j++)
+        for (let i = 0; i < cols; i++) {
+          const q = hashF(k * 1000 + j * 50 + i, hb, 92);
+          if (q < 0.3) continue;
+          ctx.globalAlpha = 0.25 + 0.5 * q;
+          ctx.fillRect(Math.floor(ax / tcell + i) * tcell, Math.floor(ay / tcell + j) * tcell, sz, sz);
+        }
+    }
+    ctx.globalAlpha = 1;
   }
+
+  // ------------------------------------------ grid crosses at intersections --
+  ctx.fillStyle = c.line;
+  ctx.globalAlpha = 0.18;
+  const cs = Math.max(1, R(cell * 0.6));
+  for (let gy = cell * 6; gy < h; gy += cell * 6)
+    for (let gx = cell * 6; gx < w; gx += cell * 6) {
+      ctx.fillRect(gx - cs, gy, cs * 2 + 1, 1);
+      ctx.fillRect(gx, gy - cs, 1, cs * 2 + 1);
+    }
+  ctx.globalAlpha = 1;
+
+  // ------------------------------------------------- nested sphere rings --
+  ctx.strokeStyle = c.line;
+  [0.32, 0.55, 0.8].forEach((rf, i) => {
+    ctx.save();
+    ctx.translate(scx, scy);
+    ctx.rotate(TAU * cyc(f, i % 2 ? 1 : -1) / [4, 6, 8][i]);
+    ctx.beginPath();
+    ctx.arc(0, 0, rad * rf, 0, TAU);
+    const n = [24, 36, 48][i];
+    ctx.setLineDash([((TAU * rad * rf) / n) * 0.35, ((TAU * rad * rf) / n) * 0.65]);
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = Math.max(1, 0.0012 * h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  });
   ctx.globalAlpha = 1;
 
   // ------------------------------------------- sparkles in the band --

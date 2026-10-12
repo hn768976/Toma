@@ -19,7 +19,7 @@ const X_HALF = 34; // world half-width of the grid
 const Z_NEAR = 1.2;
 const Z_FAR = 46;
 const CAM_H = 1.5; // camera height; line of sight to the focus is ~12° down
-const PITCH = (2.2 * Math.PI) / 180; // camera pitch (down)
+const PITCH = (3.6 * Math.PI) / 180; // camera pitch (down)
 const FOCUS = Z_NEAR + 0.6 * (Z_FAR - Z_NEAR) - 12; // focal depth (≈60% of the way, measured along the view)
 const VFOV = (42 * Math.PI) / 180;
 
@@ -72,7 +72,7 @@ void main(){
   float depth = s.z;
   // size: sharp point + circle of confusion from the focal depth
   float sharpPx = max(1.25, 0.028 * uFocal / depth * 0.5 * uPx);
-  float cocPx = abs(1.0 / depth - 1.0 / ${FOCUS.toFixed(3)}) * 0.2 * uPx;
+  float cocPx = abs(1.0 / depth - 1.0 / ${FOCUS.toFixed(3)}) * 0.34 * uPx;
   float sizePx = max(sharpPx, cocPx);
   // energy conservation: blurred points spread the same light
   float energy = (sharpPx * sharpPx) / (sizePx * sizePx);
@@ -82,7 +82,7 @@ void main(){
   float sx = clamp(s.x * 0.5 + 0.5, 0.0, 1.0);
   vec3 glow = mix(uGlowL, uGlowR, smoothstep(0.15, 0.85, sx));
   float glowAmt = smoothstep(0.35, 1.0, farT) * (0.35 + 0.9 * crest);
-  vCol = mix(uPoint * (0.5 + 0.7 * crest), glow * 1.3, glowAmt * 0.7);
+  vCol = mix(uPoint * (0.5 + 0.7 * crest), glow * 1.3, glowAmt * 0.45);
   float twinkle = 0.75 + 0.25 * aGrid.z;
   float fog = 1.0 - smoothstep(0.82, 1.0, (depth - ${Z_NEAR.toFixed(2)}) / ${(Z_FAR - Z_NEAR).toFixed(2)});
   vAlpha = clamp(energy * 2.8, 0.07, 1.0) * twinkle * fog * (0.55 + 0.45 * crest) * smoothstep(0.6, 1.4, depth);
@@ -111,8 +111,8 @@ void main(){
   float ph = 6.2831853 * (uT * (1.0 + floor(aSeed.w * 2.0)) + aSeed.w * 7.0);
   vec3 p = aSeed.xyz + vec3(0.6 * sin(ph), 0.25 * cos(ph), 0.4 * sin(ph + 1.3));
   vec3 s = project(p);
-  float sizePx = max(1.2, (0.03 * uFocal / s.z * 0.5 + abs(1.0 / s.z - 1.0 / ${FOCUS.toFixed(3)}) * 0.035) * uPx);
-  vAlpha = clamp(1.4 / (sizePx * 0.6), 0.04, 0.8) * (0.4 + 0.6 * fract(aSeed.w * 13.0)) * step(0.5, s.z);
+  float sizePx = max(1.5, (0.03 * uFocal / s.z * 0.5 + abs(1.0 / s.z - 1.0 / ${FOCUS.toFixed(3)}) * 0.12) * uPx);
+  vAlpha = clamp(1.2 / (sizePx * 0.6), 0.05, 0.5) * (0.25 + 0.75 * fract(aSeed.w * 13.0)) * step(0.6, fract(aSeed.w * 7.0)) * step(0.5, s.z);
   vec2 off = aPosition * sizePx / uPx * vec2(1.0 / uAspect, 1.0);
   gl_Position = vec4(s.xy + off, 0.0, 1.0);
   vUv = aPosition;
@@ -132,11 +132,11 @@ ${GRAIN_GLSL}
 void main(){
   float y = vP.y;                       // 0 bottom … 1 top
   float d = y - uHorizon;
-  float haze = exp(-pow(d / 0.16, 2.0)) * 0.7 + exp(-pow(d / 0.42, 2.0)) * 0.3 + (1.0 - smoothstep(-0.5, 0.0, d)) * 0.55;
+  float haze = exp(-pow(d / 0.08, 2.0)) * 0.35 + exp(-pow(min(d, 0.0) / 0.42, 2.0)) * 0.3 + (1.0 - smoothstep(-0.5, 0.0, d)) * 0.55;
   vec3 c = uBg + uHaze * haze;
   // horizontal flare on the right of the horizon
   float fx = smoothstep(0.72, 1.0, vP.x);
-  c += uGlowR * fx * (exp(-pow(d / 0.006, 2.0)) * 0.9 + exp(-pow(d / 0.03, 2.0)) * 0.25);
+  c += uGlowR * fx * (exp(-pow(d / 0.012, 2.0)) * 0.35 + exp(-pow(d / 0.05, 2.0)) * 0.22);
   vec3 glow = mix(uGlowL, uGlowR, smoothstep(0.1, 0.9, vP.x));
   c += glow * exp(-pow(d / 0.012, 2.0)) * 0.22 + glow * exp(-pow(d / 0.06, 2.0)) * 0.06;
   // vignette
@@ -157,9 +157,9 @@ const buildField = () => {
     const tz = j / (ROWS - 1);
     const z = Z_NEAR + (Z_FAR - Z_NEAR) * Math.pow(tz, 1.25);
     for (let i = 0; i < COLS; i++) {
-      const x = -X_HALF + (2 * X_HALF * (i + 0.5 + (r() - 0.5) * 0.15)) / COLS;
+      const x = -X_HALF + (2 * X_HALF * (i + 0.5 + (r() - 0.5) * 0.5)) / COLS;
       g[k++] = x;
-      g[k++] = z + (r() - 0.5) * 0.15 * ((Z_FAR - Z_NEAR) / ROWS) * 1.25 * Math.pow(tz + 0.01, 0.25);
+      g[k++] = z + (r() - 0.5) * 0.5 * ((Z_FAR - Z_NEAR) / ROWS) * 1.25 * Math.pow(tz + 0.01, 0.25);
       g[k++] = r();
     }
   }
