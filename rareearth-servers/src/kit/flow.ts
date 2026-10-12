@@ -89,7 +89,7 @@ uniform float pulsesOnly;
 varying float vAlong, vLen, vPeriod, vPhase, vBright;
 varying float vFog;
 void main() {
-  float p = fract(frame / vPeriod + vPhase);
+  float p = fract(fract(frame / vPeriod) + vPhase);
   float head = p * (vLen + seg);
   float s = head - vAlong * vLen;           // distance behind the head
   float k = 0.0;

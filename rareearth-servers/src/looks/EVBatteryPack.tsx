@@ -74,11 +74,11 @@ export const BatteryPack: React.FC = () => {
     return { base, rim };
   }, []);
   const graphite = useMemo(
-    () => new THREE.MeshPhysicalMaterial({ color: "#9aa3ae", metalness: 0.75, roughness: 0.4, clearcoat: 0.4, clearcoatRoughness: 0.3 }),
+    () => new THREE.MeshPhysicalMaterial({ color: "#3a3f48", metalness: 0.7, roughness: 0.4, clearcoat: 0.8, clearcoatRoughness: 0.15 }),
     [],
   );
   const inner = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#7d8691", metalness: 0.7, roughness: 0.4 }),
+    () => new THREE.MeshStandardMaterial({ color: "#2a2e36", metalness: 0.7, roughness: 0.35 }),
     [],
   );
   const wall = useMemo(
@@ -234,7 +234,7 @@ function moduleTexture() {
   const c = document.createElement("canvas");
   c.width = c.height = S;
   const g = c.getContext("2d")!;
-  g.fillStyle = "#1e6be0";
+  g.fillStyle = "#8fb4f0";
   g.fillRect(0, 0, S, S);
   const n = 4;
   const cell = (S - 40) / n;
@@ -243,15 +243,15 @@ function moduleTexture() {
       const cx = 20 + (x + 0.5) * cell;
       const cy = 20 + (y + 0.5) * cell;
       const grd = g.createRadialGradient(cx, cy, 2, cx, cy, cell * 0.44);
-      grd.addColorStop(0, "#c8f4ff");
-      grd.addColorStop(0.6, "#4cc8ff");
-      grd.addColorStop(1, "#2a8fff");
+      grd.addColorStop(0, "#ffffff");
+      grd.addColorStop(0.6, "#f2f8ff");
+      grd.addColorStop(1, "#e2eeff");
       g.fillStyle = grd;
       g.beginPath();
       g.arc(cx, cy, cell * 0.42, 0, Math.PI * 2);
       g.fill();
     }
-  g.fillStyle = "rgba(40,70,120,0.5)";
+  g.fillStyle = "rgba(200,220,255,0.4)";
   for (let y = 0; y < n; y++) g.fillRect(14, 20 + (y + 0.5) * cell - 4, S - 28, 8);
   g.strokeStyle = "#0e1a30";
   g.lineWidth = 10;
@@ -270,10 +270,10 @@ export const Modules: React.FC<{ color: string; frame: number }> = ({ color, fra
   const mats = useMemo(
     () =>
       ORDER.map(
-        () =>
+        (_, i) =>
           new THREE.MeshPhysicalMaterial({
-            color: new THREE.Color(color),
-            emissive: new THREE.Color(color),
+            color: new THREE.Color("#1a4fd0").lerp(new THREE.Color("#30d8ff"), ((i * 53) % 13) / 13),
+            emissive: new THREE.Color("#1a4fd0").lerp(new THREE.Color("#30d8ff"), ((i * 53) % 13) / 13),
             emissiveMap: moduleTexture(),
             emissiveIntensity: 0.3,
             roughness: 0.12,
@@ -296,7 +296,7 @@ export const Modules: React.FC<{ color: string; frame: number }> = ({ color, fra
         const m = mats[i];
         const tall = (cell.c * 7 + cell.r * 3) % 3 === 0 ? 1.6 : (cell.c + cell.r) % 2 ? 1.25 : 1;
         const pulse = 1 + 0.12 * Math.sin((TAU * (frame + i * 9)) / 75) * clamp01((frame - 220) / 20);
-        m.emissiveIntensity = (0.35 + 2.2 * s.lit) * pulse;
+        m.emissiveIntensity = (0.3 + 1.25 * s.lit) * pulse * (0.75 + 0.5 * ((i * 37) % 11) / 10);
         m.opacity = s.appear;
         m.visible = s.appear > 0.001;
         return (
@@ -317,20 +317,20 @@ export const Modules: React.FC<{ color: string; frame: number }> = ({ color, fra
 
 // ---------- scene ----------
 const NUGGETS: NuggetSpec[] = [
-  { seed: 101, position: [-1.35, 0.13, -0.95], scale: 0.26, rotY: 0.3, squash: [1.4, 0.65, 0.95] },
-  { seed: 113, position: [0.45, 0.13, -1.05], scale: 0.25, rotY: 1.2, squash: [1.45, 0.62, 0.9] },
-  { seed: 127, position: [1.55, 0.13, -0.15], scale: 0.24, rotY: 2.0, squash: [1.3, 0.75, 1.0] },
-  { seed: 131, position: [-1.6, 0.12, 0.45], scale: 0.2, rotY: 2.8, squash: [1.2, 0.8, 1.0] },
-  { seed: 149, position: [-0.85, 0.14, 1.05], scale: 0.27, rotY: 3.6, squash: [1.4, 0.68, 1.0] },
-  { seed: 157, position: [1.3, 0.13, 0.95], scale: 0.25, rotY: 4.4, squash: [1.35, 0.7, 0.95] },
+  { seed: 101, position: [1.85, 0.12, 0.05], scale: 0.21, rotY: 0.3, squash: [1.4, 0.65, 0.95] },
+  { seed: 113, position: [0.45, 0.11, 1.25], scale: 0.19, rotY: 1.2, squash: [1.45, 0.62, 0.9] },
+  { seed: 127, position: [-1.2, 0.13, 1.0], scale: 0.24, rotY: 2.0, squash: [1.3, 0.75, 1.0] },
+  { seed: 131, position: [-1.95, 0.12, -0.25], scale: 0.2, rotY: 2.8, squash: [1.2, 0.8, 1.0] },
+  { seed: 149, position: [1.35, 0.14, -1.2], scale: 0.27, rotY: 3.6, squash: [1.4, 0.68, 1.0] },
+  { seed: 157, position: [-1.7, 0.13, -1.25], scale: 0.25, rotY: 4.4, squash: [1.35, 0.7, 0.95] },
 ];
 
 const POST: PostSettings = {
   focus: 4.2,
-  focusRange: 0.9,
+  focusRange: 0.7,
   nearRamp: 1.6,
   farRamp: 2.4,
-  maxBlur: 0.003,
+  maxBlur: 0.007,
   aoStrength: 0.6,
   aoRadius: 0.12,
   bloomStrength: 0.55,
@@ -362,8 +362,8 @@ const Lighting: React.FC<{ module: string }> = ({ module }) => {
   return (
     <>
       <directionalLight
-        position={[-2.5, 6, 3]}
-        intensity={1.3}
+        position={[3.5, 6, -1.5]}
+        intensity={2.2}
         color="#ffffff"
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -374,8 +374,9 @@ const Lighting: React.FC<{ module: string }> = ({ module }) => {
         shadow-radius={8}
         shadow-bias={-0.0005}
       />
-      <hemisphereLight args={["#ffffff", "#aeb9cc", 0.45]} />
-      <pointLight position={[0.3, 0.6, 0]} color={module} intensity={0.5} distance={2.0} decay={2} />
+      <hemisphereLight args={["#ffffff", "#aeb9cc", 0.25]} />
+      <pointLight position={[0, 0.55, -0.6]} color="#ff8a2a" intensity={0.8} distance={1.6} decay={2} />
+      
     </>
   );
 };
@@ -384,22 +385,22 @@ export const EVBatteryPack: React.FC<{ row: EVBatteryRow }> = ({ row }) => {
   const frame = useCurrentFrame();
   // slow push in for the whole story, plus a gentle drift
   const push = interpolate(frame, [0, DURATION], [0, 1], { easing: Easing.inOut(Easing.sin) });
-  const dist = 4.6 - 0.4 * push;
-  const az = -0.78 + 0.06 * push;
-  const elev = (38 * Math.PI) / 180;
+  const dist = 4.15 - 0.3 * push;
+  const az = 0.62 + 0.06 * push;
+  const elev = (35 * Math.PI) / 180;
   const camera: CameraPose = {
     position: [dist * Math.cos(elev) * Math.sin(az), dist * Math.sin(elev), dist * Math.cos(elev) * Math.cos(az)],
-    target: [0.05, 0.2, -0.05],
+    target: [-0.05, 0.05, 0.1],
     fov: 32,
   };
   const TILE_SIZE = 0.3;
   return (
-    <Stage camera={camera} post={{ ...POST, focus: dist - 0.35 }} background="#cfd6e4">
+    <Stage camera={camera} post={{ ...POST, focus: dist - 0.35 }} background="#c9ccdb">
       <Lighting module={row.module} />
-      <fog attach="fog" args={["#cfd6e4", 7, 16]} />
+      <fog attach="fog" args={["#c9ccdb", 10, 22]} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[40, 40]} />
-        <meshPhysicalMaterial color="#d3d9e8" roughness={0.55} sheen={0.4} sheenRoughness={0.6} sheenColor="#ffffff" />
+        <meshPhysicalMaterial color="#cdd1e2" roughness={0.55} sheen={0.4} sheenRoughness={0.6} sheenColor="#ffffff" />
       </mesh>
       <group position={[0, 0.06, 0]} rotation={[0, 0.0, 0]}>
         {/* the tray stands on low feet so it reads as a separate object */}
@@ -418,10 +419,10 @@ export const EVBatteryPack: React.FC<{ row: EVBatteryRow }> = ({ row }) => {
               el={bySymbol(sym)}
               color={row.tile}
               size={TILE_SIZE}
-              intensity={4.2 + 2.5 * flash}
+              intensity={6.5 + 3 * flash}
               shimmer={((frame / 150 + i * 0.2) % 1) * 3.2 - 1.1}
               opacity={e}
-              fill={0.3}
+              fill={0.16}
               over
               position={[x, y - 0.12 * (1 - e), -TRAY_W / 2 + INSET * 0.5]}
               rotation={[0, 0, 0]}
@@ -430,17 +431,17 @@ export const EVBatteryPack: React.FC<{ row: EVBatteryRow }> = ({ row }) => {
         })}
       </group>
       {NUGGETS.map((n) => (
-        <Nugget key={n.seed} spec={n} kind="silver" envIntensity={2.3} />
+        <Nugget key={n.seed} spec={n} kind="silver" envIntensity={1.3} />
       ))}
       <OreChips
         kind="silver"
-        envIntensity={2.3}
+        envIntensity={1.3}
         scatter={{
           seed: 9191,
           count: 20,
-          center: [0, 0.35],
-          rMin: 1.2,
-          rMax: 1.8,
+          center: [0.7, 1.15],
+          rMin: 0.2,
+          rMax: 0.95,
           sizeMin: 0.02,
           sizeMax: 0.05,
           avoid: [

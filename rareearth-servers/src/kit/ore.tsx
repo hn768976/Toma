@@ -211,6 +211,7 @@ export function oreMaterial(kind: OreMaterialKind, envIntensity = 1): THREE.Mesh
           metalness: 1,
           roughness: 0.3,
           iridescence: 0,
+          // a little contrast in the silver: some facets slightly darker
           vertexColors: true,
           envMapIntensity: envIntensity,
         });
@@ -243,9 +244,9 @@ vec3 crumple(vec3 surf_pos, vec3 surf_norm, float h, float faceDir){
         "#include <normal_fragment_maps>",
         `#include <normal_fragment_maps>
 {
-  vec3 q = vObjPos * ${kind === "iridescent" ? "9.0" : "16.0"};
+  vec3 q = vObjPos * ${kind === "iridescent" ? "9.0" : "14.0"};
   float hb = vn(q) * 0.55 + vn(q * 2.7 + 3.1) * 0.3 + vn(q * 6.1 + 7.7) * 0.15;
-  normal = crumple(-vViewPosition, normal, hb * ${kind === "iridescent" ? "0.9" : "1.6"}, faceDirection);
+  normal = crumple(-vViewPosition, normal, hb * ${kind === "iridescent" ? "0.9" : "0.8"}, faceDirection);
 }`,
       );
     if (kind === "iridescent") {
@@ -254,7 +255,7 @@ vec3 crumple(vec3 surf_pos, vec3 surf_norm, float h, float faceDir){
       // colours flow over facet edges and flash with the viewing angle.
       const lpf = THREE.ShaderChunk.lights_physical_fragment.replace(
         "texture2D( iridescenceThicknessMap, vIridescenceThicknessMapUv ).g",
-        "clamp(vn(vObjPos * 2.6 + 11.0) * 0.55 + vn(vObjPos * 6.0 + 3.0) * 0.3 - 0.05, 0.0, 1.0)",
+        "clamp(vn(vObjPos * 2.6 + 11.0) * 0.8 + vn(vObjPos * 6.0 + 3.0) * 0.4 - 0.1, 0.0, 1.0)",
       );
       sh.fragmentShader = sh.fragmentShader.replace("#include <lights_physical_fragment>", lpf);
       sh.fragmentShader = sh.fragmentShader.replace(

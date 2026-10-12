@@ -79,6 +79,9 @@ export const Stage: React.FC<StageProps> = ({ camera, post, background, shadows 
         height={height}
         dpr={typeof window === "undefined" ? 1 : window.devicePixelRatio}
         flat
+        // shadows exist from the very first render: switching them on later
+        // recompiles programs mid-sequence and makes frame N depend on history
+        shadows={shadows ? "soft" : false}
         gl={{
           antialias: false,
           preserveDrawingBuffer: true,

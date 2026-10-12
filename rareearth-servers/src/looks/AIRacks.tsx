@@ -97,8 +97,8 @@ function unitFace(kind: UnitKind, seed: number) {
           dot(x, 34 + row * ((H - 80) / 1), 14, 9, r < 0.25 ? "#ffffff" : r < 0.4 ? "#ffb347" : "#38d8ff");
         }
       }
-    g.fillStyle = "#e6ecf5";
-    g.fillRect(W * 0.55, H / 2 - 18, 6, 36);
+    ge.fillStyle = "#ff9a2a";
+    ge.fillRect(W * 0.55, H / 2 - 18, 6, 36);
   }
   const toTex = (c: HTMLCanvasElement) => {
     const t = new THREE.CanvasTexture(c);
@@ -178,9 +178,9 @@ function badgeMaterial(color: string) {
         vec2 q = abs(vUv - 0.5) - (0.5 - 40.0/512.0 - 56.0/512.0);
         float sdf = length(max(q, 0.0)) - 56.0/512.0;
         float inside = 1.0 - smoothstep(-0.004, 0.004, sdf);
-        vec3 fill = tint * inside * (0.55 + 0.25 * (1.0 - vUv.y));
-        vec3 c = fill * (1.0 - t.b) + vec3(0.92, 0.98, 1.0) * t.b * 2.2
-               + mix(tint, vec3(1.0), 0.25) * t.r * 2.2 + tint * t.g * 0.8;
+        vec3 fill = tint * tint * inside * (0.75 + 0.25 * (1.0 - vUv.y));
+        vec3 c = fill * (1.0 - t.b) + vec3(0.92, 0.98, 1.0) * t.b * 1.5
+               + tint * t.r * 1.3 + tint * t.g * 0.45;
         gl_FragColor = vec4(c, 1.0); }`,
     transparent: true,
     blending: THREE.AdditiveBlending,
@@ -204,7 +204,7 @@ const Rack: React.FC<{ index: number; x: number; row: AIRacksRow }> = ({ index, 
     [],
   );
   const unitGeo = useMemo(() => new RoundedBoxGeometry(RACK_W - 0.07, UNIT_H - 0.012, 0.05, 2, 0.006), []);
-  const strip = useMemo(() => new THREE.Color(row.badge).multiplyScalar(1.7), [row.badge]);
+  const strip = useMemo(() => new THREE.Color(row.badge).multiplyScalar(1.6), [row.badge]);
   const tint = useMemo(() => new THREE.Color(row.rackTint).lerp(new THREE.Color("#ffffff"), 0.15), [row.rackTint]);
   const emCol = useMemo(() => new THREE.Color(row.badge).lerp(new THREE.Color("#ffffff"), 0.2), [row.badge]);
   const bMat = useMemo(() => badgeMaterial(row.badge), [row.badge]);
@@ -226,7 +226,7 @@ const Rack: React.FC<{ index: number; x: number; row: AIRacksRow }> = ({ index, 
       {/* edge light strips up each side */}
       {[-1, 1].map((sgn) => (
         <mesh key={`s${sgn}`} position={[sgn * (RACK_W / 2 + 0.004), RACK_H / 2 - 0.05, 0.03]}>
-          <boxGeometry args={[0.02, RACK_H - 0.16, 0.014]} />
+          <boxGeometry args={[0.014, RACK_H - 0.16, 0.012]} />
           <meshBasicMaterial color={strip} toneMapped={false} />
         </mesh>
       ))}
@@ -269,17 +269,18 @@ const STREAKS = (() => {
   const gs: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 120; i++) {
     const across = i % 4 === 0; // some sweep flatter, across the racks
-    const z = across ? 0.05 + streakRnd() * 0.5 : -0.25 + streakRnd() * 1.4;
-    const p0 = new THREE.Vector3(1.0 + streakRnd() * 1.8, 0.4 + streakRnd() * 1.0, z);
+    const z = across ? 0.25 + streakRnd() * 0.45 : 0.2 + streakRnd() * 0.9;
+    // sweep from the lower centre / right up toward the upper right
+    const p0 = new THREE.Vector3(-1.0 + streakRnd() * 1.4, 0.45 + streakRnd() * 0.6, z);
     const p2 = across
-      ? new THREE.Vector3(-2.2 - streakRnd() * 1.0, 0.6 + streakRnd() * 1.4, z)
-      : new THREE.Vector3(-1.6 + streakRnd() * 2.0, 2.4 + streakRnd() * 0.8, z);
+      ? new THREE.Vector3(0.9 + streakRnd() * 0.8, 1.3 + streakRnd() * 0.9, z)
+      : new THREE.Vector3(0.0 + streakRnd() * 1.2, 2.3 + streakRnd() * 0.6, z);
     const mid = p0.clone().lerp(p2, 0.5);
-    const p1 = mid.add(new THREE.Vector3(0.6 + streakRnd() * 0.5, -0.45 - streakRnd() * 0.4, 0));
+    const p1 = mid.add(new THREE.Vector3(0.35 + streakRnd() * 0.4, -0.35 - streakRnd() * 0.35, 0));
     const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2);
     const pts = curve.getPoints(80);
     gs.push(
-      ribbonLine(pts, 0.003 + streakRnd() * 0.005, new THREE.Vector3(0, 0, 1), {
+      ribbonLine(pts, i % 12 === 0 ? 0.007 : 0.0025 + streakRnd() * 0.0035, new THREE.Vector3(0, 0, 1), {
         period: STREAK_PERIODS[Math.floor(streakRnd() * STREAK_PERIODS.length)],
         phase: streakRnd(),
         bright: 0.15 + Math.pow(streakRnd(), 4) * 1.4,
@@ -298,8 +299,8 @@ const Streaks: React.FC<{ row: AIRacksRow; frame: number }> = ({ row, frame }) =
       flowMaterial({
         color: row.streak,
         headColor: "#" + new THREE.Color(row.head).lerp(new THREE.Color(row.badge), 0.45).getHexString(),
-        base: 0.03,
-        pulse: 4,
+        base: 0.06,
+        pulse: 6,
         seg: MEAN_LEN * 0.15 * 1.4,
       }),
     [row.streak, row.head],
@@ -311,7 +312,7 @@ const Streaks: React.FC<{ row: AIRacksRow; frame: number }> = ({ row, frame }) =
 // ---------- bokeh ----------
 const bokehRnd = mulberry32(25);
 const BOKEH = Array.from({ length: 25 }, () => ({
-  x: -0.3 + bokehRnd() * 1.9,
+  x: 0.3 + bokehRnd() * 1.4,
   y: 0.9 + bokehRnd() * 1.4,
   z: 0.25 + bokehRnd() * 0.6,
   r: 0.008 + bokehRnd() * 0.022,
@@ -359,16 +360,16 @@ const POST: PostSettings = {
   maxBlur: 0.008,
   aoStrength: 0.5,
   aoRadius: 0.06,
-  bloomStrength: 1.0,
-  bloomThreshold: 0.75,
+  bloomStrength: 0.85,
+  bloomThreshold: 0.95,
   bloomRadius: 0.55,
-  exposure: 1.0,
-  vignette: 0.35,
+  exposure: 1.05,
+  vignette: 0.3,
   grain: 0.015,
   period: LOOP,
-  contrast: 0.9,
-  saturation: 1.08,
-  lift: [0.01, 0.06, 0.11],
+  contrast: 1.0,
+  saturation: 1.22,
+  lift: [0.004, 0.03, 0.07],
 };
 
 const Lighting: React.FC<{ row: AIRacksRow }> = ({ row }) => {
@@ -397,14 +398,15 @@ const Lighting: React.FC<{ row: AIRacksRow }> = ({ row }) => {
 };
 
 export const AIRacks: React.FC<{ row: AIRacksRow }> = ({ row }) => {
-  const frame = useCurrentFrame();
+  // wrapped, so frame 600 is exactly frame 0 (seamless loop)
+  const frame = useCurrentFrame() % LOOP;
   // slide a fixed distance and back, cosine-eased, one cycle per loop
   const slide = 0.5 * (1 - Math.cos((TAU * frame) / LOOP));
   // low three-quarter view from the left, racks receding to the right
   const x = 0.0 + 0.28 * slide;
   const camera: CameraPose = {
-    position: [x - 0.05, 1.4, 1.6],
-    target: [x - 0.12, 1.4 + 2.1 * Math.tan((5 * Math.PI) / 180), -0.5],
+    position: [x - 0.38, 1.4, 1.62],
+    target: [x - 0.36, 1.4 + 2.1 * Math.tan((5 * Math.PI) / 180), -0.5],
     fov: 46,
   };
   const pitch = RACK_W + GAP;
@@ -421,7 +423,7 @@ export const AIRacks: React.FC<{ row: AIRacksRow }> = ({ row }) => {
         <meshStandardMaterial color="#0b1424" roughness={0.5} metalness={0.3} />
       </mesh>
       {/* the row recedes to the right: nearest (largest) rack on the left */}
-      <group position={[-0.62, 0, 0.1]} rotation={[0, 0.42, 0]}>
+      <group position={[-0.72, 0, 0.1]} rotation={[0, 0.2, 0]}>
         {[0, 1, 2].map((k) => (
           <Rack key={k} index={k} x={k * pitch} row={row} />
         ))}

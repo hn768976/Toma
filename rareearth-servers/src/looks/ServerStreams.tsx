@@ -9,6 +9,7 @@ import { PostSettings } from "../engine/Post";
 import { CameraPose, Stage } from "../engine/Stage";
 import { SoftReflection } from "../kit/floor";
 import { flowMaterial, mergeLines, tubeLine } from "../kit/flow";
+import { GlowDecal } from "../kit/tile";
 import { hash2, mulberry32, TAU } from "../lib/random";
 
 const LOOP = 600;
@@ -103,7 +104,7 @@ const LEDS: Led[] = (() => {
   ];
   let id = 0;
   for (let u = 0; u < UNITS; u++) {
-    const n = 7 + Math.floor(rackRnd() * 8);
+    const n = 5 + Math.floor(rackRnd() * 6);
     for (let k = 0; k < n; k++) {
       let r = rackRnd();
       let col = palette[0].c;
@@ -145,7 +146,7 @@ const Leds: React.FC<{ frame: number }> = ({ frame }) => {
   const col = new THREE.Color();
   LEDS.forEach((l, i) => {
     const on = ledOn(l, frame);
-    col.copy(l.color).multiplyScalar(on ? 6 : 0.15);
+    col.copy(l.color).multiplyScalar(on ? 10 : 0.2);
     mesh.setColorAt(i, col);
   });
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -204,15 +205,15 @@ export const ServerRack: React.FC<{ frame: number; strip: string }> = ({ frame, 
   const geos = useMemo(
     () => ({
       body: new RoundedBoxGeometry(RW, RH - 0.08, RD, 3, 0.012),
-      cap: new RoundedBoxGeometry(RW + 0.02, 0.07, RD + 0.02, 4, 0.025),
-      plinth: new RoundedBoxGeometry(RW - 0.02, 0.06, RD - 0.04, 2, 0.008),
+      cap: new RoundedBoxGeometry(RW + 0.02, 0.07, RD + 0.02, 2, 0.006),
+      plinth: new RoundedBoxGeometry(RW - 0.02, 0.1, RD - 0.04, 2, 0.006),
     }),
     [],
   );
-  const stripCol = useMemo(() => new THREE.Color(strip).multiplyScalar(5), [strip]);
+  const stripCol = useMemo(() => new THREE.Color(strip).multiplyScalar(3.4), [strip]);
   return (
     <group>
-      <mesh geometry={geos.plinth} position={[0, 0.03, 0]} castShadow receiveShadow>
+      <mesh geometry={geos.plinth} position={[0, 0.05, 0]} castShadow receiveShadow>
         <meshStandardMaterial color="#1a2a44" metalness={0.6} roughness={0.4} />
       </mesh>
       <mesh geometry={geos.body} position={[0, 0.04 + (RH - 0.08) / 2, 0]} castShadow receiveShadow>
@@ -252,25 +253,26 @@ export const ServerRack: React.FC<{ frame: number; strip: string }> = ({ frame, 
 
 // ---------- data lines ----------
 const lineRnd = mulberry32(4004);
-const LINE_PERIODS = [30, 40, 50, 60, 75, 100];
+const LINE_PERIODS = [20, 24, 25, 30, 40, 50];
 const N_LINES = 40;
-const WALL_X = -5.5;
 
 // In: two tight, nearly straight ribbons come in high from off-frame left,
 // run past the rack's left side and turn into the front panel.
 function inCurve(i: number): THREE.CatmullRomCurve3 {
   const band = i % 2;
   const j = Math.floor(i / 2) / (N_LINES / 2 - 1); // 0..1 across the ribbon
-  const y0 = (band ? 1.72 : 1.18) + (j - 0.5) * 0.14;
+  const y0 = (band ? 2.75 : 2.05) + (j - 0.5) * 0.16;
   const z0 = (band ? -0.9 : -0.3) + (j - 0.5) * 0.18;
   const yEnd = U0 + 0.15 + (band ? 0.55 + j * 0.4 : 0.1 + j * 0.4) * (UNITS * UH - 0.3);
-  const zEnd = RD / 2 + 0.005;
-  const xEnd = -FACE_W / 2 + 0.06 + j * 0.06;
+  // they run into the rack's left side, close to the front edge, so they never cross its faces
+  const zEnd = RD / 2 - 0.12 - j * 0.15;
+  const xEnd = -RW / 2 - 0.003;
   return new THREE.CatmullRomCurve3([
-    new THREE.Vector3(WALL_X - 1.5, y0 + 0.25, z0 - 0.5),
-    new THREE.Vector3(-2.6, (y0 * 2 + yEnd) / 3, z0 * 0.4 + 0.25),
-    new THREE.Vector3(-0.75, (y0 + yEnd * 2) / 3, RD / 2 + 0.12 + j * 0.04),
-    new THREE.Vector3(xEnd - 0.05, yEnd, zEnd + 0.06),
+    // from screen upper-left: world (-0.5, 0, -1.3) for this camera
+    new THREE.Vector3(-3.6, y0 + 0.2, z0 - 3.6),
+    new THREE.Vector3(-2.0, (y0 * 2 + yEnd) / 3, z0 * 0.5 - 0.9),
+    new THREE.Vector3(-0.9, (y0 + yEnd * 2) / 3, zEnd - 0.2),
+    new THREE.Vector3(xEnd - 0.08, yEnd, zEnd),
     new THREE.Vector3(xEnd, yEnd, zEnd),
   ]);
 }
@@ -284,9 +286,10 @@ function outCurve(i: number): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3([
     new THREE.Vector3(FACE_W / 2 - 0.02, yStart, RD / 2 + 0.005),
     new THREE.Vector3(FACE_W / 2 + 0.2, yStart * 0.95, RD / 2 + 0.1),
-    new THREE.Vector3(1.6, 0.55 + yStart * 0.35 + spread * 0.08, RD / 2 + 0.35 + spread * 0.18),
-    new THREE.Vector3(3.6, 0.35 + k * 0.5, 1.1 + spread * 0.7),
-    new THREE.Vector3(8.0, 0.25 + k * 0.6, 1.8 + spread * 1.6),
+    // screen "down-right" for this camera is roughly world (+0.5, 0, +1.3)
+    new THREE.Vector3(1.3 + spread * 0.06, 0.55 + yStart * 0.3, RD / 2 + 0.6 - spread * 0.03),
+    new THREE.Vector3(2.3 + spread * 0.22, 0.3 + k * 0.15, 2.3 - spread * 0.1),
+    new THREE.Vector3(3.6 + spread * 0.75, 0.05 + k * 0.06, 6.0 - spread * 0.3),
   ]);
 }
 
@@ -316,7 +319,7 @@ const LINES = (() => {
 const DataLines: React.FC<{ color: string; frame: number }> = ({ color, frame }) => {
   const geo = useMemo(() => mergeLines(LINES), []);
   const mat = useMemo(
-    () => flowMaterial({ color, headColor: "#d8f0ff", base: 0.32, pulse: 4.5, seg: 0.1, fadeIn: 0.05, fadeOut: 0.15 }),
+    () => flowMaterial({ color, headColor: "#ffd9a8", base: 0.38, pulse: 5, seg: 0.04, fadeIn: 0.05, fadeOut: 0.15 }),
     [color],
   );
   mat.uniforms.frame.value = frame;
@@ -370,14 +373,11 @@ const Room: React.FC<{ room: string }> = ({ room }) => {
         <planeGeometry args={[40, 40]} />
         <meshStandardMaterial map={floorTex} roughness={0.38} metalness={0.25} envMapIntensity={0.7} />
       </mesh>
-      <mesh position={[0, 4, -3.6]} receiveShadow>
+      <mesh position={[0, 4, -2.4]} receiveShadow>
         <planeGeometry args={[30, 8]} />
         <meshStandardMaterial map={wallTex} roughness={0.6} metalness={0.2} color="#c8d2e6" emissive={wallGlow} />
       </mesh>
-      <mesh position={[WALL_X, 4, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[30, 8]} />
-        <meshStandardMaterial map={wallTex} roughness={0.6} metalness={0.2} color="#aab4c8" />
-      </mesh>
+
     </>
   );
 };
@@ -386,18 +386,18 @@ const POST: PostSettings = {
   focus: 5.1,
   focusRange: 1.2,
   nearRamp: 2.0,
-  farRamp: 4.0,
-  maxBlur: 0.009,
+  farRamp: 2.5,
+  maxBlur: 0.012,
   aoStrength: 0.6,
   aoRadius: 0.15,
   bloomStrength: 0.75,
   bloomThreshold: 0.9,
   bloomRadius: 0.55,
-  exposure: 1.1,
-  vignette: 0.45,
+  exposure: 1.45,
+  vignette: 0.65,
   grain: 0.015,
   period: LOOP,
-  contrast: 0.94,
+  contrast: 0.9,
   saturation: 1.0,
   lift: [0.012, 0.03, 0.065],
 };
@@ -438,7 +438,8 @@ const Lighting: React.FC<{ row: ServerStreamsRow }> = ({ row }) => {
 };
 
 export const ServerStreams: React.FC<{ row: ServerStreamsRow }> = ({ row }) => {
-  const frame = useCurrentFrame();
+  // wrapped, so frame 600 is exactly frame 0 (seamless loop)
+  const frame = useCurrentFrame() % LOOP;
   const t = (TAU * frame) / LOOP;
   const m = row.mirrored ? -1 : 1;
   const fogCol = "#" + new THREE.Color(row.room).lerp(new THREE.Color("#5a7aa8"), 0.18).getHexString();
@@ -459,11 +460,13 @@ export const ServerStreams: React.FC<{ row: ServerStreamsRow }> = ({ row }) => {
     <Stage camera={camera} post={POST} background={fogCol}>
       <fogExp2 attach="fog" args={[fogCol, 0.05]} />
       <Lighting row={row} />
-      <SoftReflection size={40} strength={0.3} blur={0.01} resolution={1024} fadeDist={7} />
+      <SoftReflection size={40} strength={0.5} blur={0.01} resolution={1024} fadeDist={7} />
       {/* the mirrored version flips the whole set; the camera is mirrored to match */}
       <group scale={[m, 1, 1]}>
         <Room room={row.room} />
         <ServerRack frame={frame} strip={row.lines} />
+        <GlowDecal color={row.lines} intensity={0.35} position={[3.2, 0.004, 2.6]} scale={[6, 4.5]} rotationY={-0.5} />
+        <GlowDecal color={row.lines} intensity={0.45} position={[-0.25, 0.004, 0.65]} scale={[1.1, 1.1]} />
         <DataLines color={row.lines} frame={frame} />
       </group>
     </Stage>

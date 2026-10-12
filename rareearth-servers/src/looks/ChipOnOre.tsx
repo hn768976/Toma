@@ -16,7 +16,7 @@ import { mulberry32, TAU } from "../lib/random";
 const LOOP = 600;
 const CHIP = 1.0; // package edge length
 const CHIP_T = 0.035;
-const CHIP_ROT = 0.5;
+const CHIP_ROT = -0.35;
 
 // ---------- chip ----------
 const padTexCache = new Map<string, { map: THREE.Texture; emissive: THREE.Texture }>();
@@ -98,7 +98,7 @@ export const Chip: React.FC<{ glow: string; emissive: number; position?: [number
   return (
     <group position={position} rotation={[0, rotY, 0]}>
       <mesh geometry={geo} position={[0, CHIP_T / 2, 0]} castShadow receiveShadow>
-        <meshPhysicalMaterial color="#0d1626" roughness={0.38} metalness={0.4} clearcoat={0.6} clearcoatRoughness={0.2} />
+        <meshPhysicalMaterial color="#2a4a78" roughness={0.38} metalness={0.4} clearcoat={0.6} clearcoatRoughness={0.2} emissive="#1a5aa8" emissiveIntensity={0.6} />
       </mesh>
       <mesh position={[0, CHIP_T + 0.0008, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[CHIP * 0.985, CHIP * 0.985]} />
@@ -139,7 +139,7 @@ const TRACES: Trace[] = (() => {
       const turn = (traceRnd() < 0.5 ? -1 : 1) * Math.sign(o || 1);
       const d2 = traceRnd() < 0.3 ? 0 : 0.06 + traceRnd() * 0.2;
       const p2 = p1.clone().addScaledVector(sd.along, turn * d2);
-      const d3 = 0.05 + traceRnd() * 0.22;
+      const d3 = 0.03 + traceRnd() * 0.14;
       const p3 = p2.clone().addScaledVector(sd.out, d3);
       const pts = [p0, p1, p2, p3].map((p) => p.setY(0.0025).applyMatrix4(rot));
       // densify so the ribbon has clean right-angle corners
@@ -164,15 +164,15 @@ const TRACE_ATTRS = TRACES.map(() => ({
 const Traces: React.FC<{ color: string; frame: number }> = ({ color, frame }) => {
   const geo = useMemo(
     () =>
-      mergeLines(TRACES.map((t, i) => ribbonLine(t.pts, 0.009, new THREE.Vector3(0, 1, 0), TRACE_ATTRS[i]))),
+      mergeLines(TRACES.map((t, i) => ribbonLine(t.pts, 0.016, new THREE.Vector3(0, 1, 0), TRACE_ATTRS[i]))),
     [],
   );
   const mat = useMemo(
-    () => flowMaterial({ color, headColor: "#e8f6ff", base: 0.55, pulse: 5, seg: 0.2, fadeOut: 0.45 }),
+    () => flowMaterial({ color, headColor: "#e8f6ff", base: 1.1, pulse: 5, seg: 0.2, fadeOut: 0.45 }),
     [color],
   );
   mat.uniforms.frame.value = frame;
-  const vias = useMemo(() => new THREE.RingGeometry(0.012, 0.022, 20), []);
+  const vias = useMemo(() => new THREE.RingGeometry(0.008, 0.014, 20), []);
   const viaCol = useMemo(() => new THREE.Color(color).multiplyScalar(0.5), [color]);
   return (
     <>
@@ -188,9 +188,9 @@ const Traces: React.FC<{ color: string; frame: number }> = ({ color, frame }) =>
 
 // ---------- scene ----------
 const NUGGETS: NuggetSpec[] = [
-  { seed: 51, position: [0.0, 0.24, -0.78], scale: 0.42, rotY: 0.8, squash: [1.35, 0.66, 1.0], parts: 14 },
-  { seed: 63, position: [-0.98, 0.2, 0.3], scale: 0.38, rotY: 2.2, squash: [1.3, 0.64, 1.05], parts: 14 },
-  { seed: 77, position: [0.92, 0.2, 0.22], scale: 0.38, rotY: 4.0, squash: [1.3, 0.66, 1.0], parts: 14 },
+  { seed: 51, position: [0.05, 0.24, -0.62], scale: 0.44, rotY: 0.8, squash: [1.35, 0.66, 1.0], parts: 14 },
+  { seed: 63, position: [-0.86, 0.2, 0.32], scale: 0.4, rotY: 2.2, squash: [1.3, 0.64, 1.05], parts: 14 },
+  { seed: 77, position: [0.84, 0.2, 0.18], scale: 0.4, rotY: 4.0, squash: [1.3, 0.66, 1.0], parts: 14 },
 ];
 
 const POST: PostSettings = {
@@ -210,20 +210,20 @@ const POST: PostSettings = {
   period: LOOP,
   contrast: 0.97,
   saturation: 1.05,
-  lift: [0.004, 0.012, 0.035],
+  lift: [0.01, 0.022, 0.05],
 };
 
 const Lighting: React.FC<{ frame: number; glow: string }> = ({ frame, glow }) => {
   const { gl, scene } = useThree();
   const env = useMemo(
     () =>
-      studioEnv(gl, "chip", "#121826", 0.5, [
-        { position: [0, 10, 1], size: [6, 3], color: "#ffffff", intensity: 2.5 },
+      studioEnv(gl, "chip", "#0a0e18", 0.18, [
+        { position: [0, 10, 1], size: [2, 1], color: "#ffffff", intensity: 4 },
         { position: [6, 1.5, 6], size: [3, 1.2], color: "#cfe6ff", intensity: 2.2 },
         { position: [-6, 1.5, 6], size: [3, 1.2], color: "#ffd6f0", intensity: 2.2 },
         { position: [8, 1.2, -2], size: [3, 1.2], color: "#fff0d8", intensity: 2.2 },
         { position: [-8, 1.2, -2], size: [3, 1.2], color: "#d8e0ff", intensity: 2.2 },
-        { position: [0, 8, -7], size: [9, 4], color: "#ffd9a8", intensity: 4 },
+        { position: [0, 8, -7], size: [4, 1.5], color: "#ffd9a8", intensity: 6 },
         { position: [4, 6, -5], size: [2, 2], color: "#ffcf9a", intensity: 6 },
         { position: [-5, 5, -4], size: [2, 2], color: "#ffe2c0", intensity: 5 },
         { position: [0, 1, 8], size: [10, 1.5], color: glow, intensity: 0.6 },
@@ -247,7 +247,7 @@ const Lighting: React.FC<{ frame: number; glow: string }> = ({ frame, glow }) =>
         position={[0.4, 3.6, -3.4]}
         target={target}
         color="#ffd8a6"
-        intensity={16}
+        intensity={9}
         angle={0.4}
         penumbra={0.9}
         decay={2}
@@ -256,16 +256,17 @@ const Lighting: React.FC<{ frame: number; glow: string }> = ({ frame, glow }) =>
         shadow-bias={-0.0004}
         shadow-radius={6}
       />
-      <pointLight position={[0, 0.3, 0]} color={glow} intensity={1.2} distance={1.8} decay={2} />
+      
     </>
   );
 };
 
 export const ChipOnOre: React.FC<{ row: ChipOnOreRow }> = ({ row }) => {
-  const frame = useCurrentFrame();
+  // wrapped, so frame 600 is exactly frame 0 (seamless loop)
+  const frame = useCurrentFrame() % LOOP;
   const t = (TAU * frame) / LOOP;
   const az = (12 * Math.PI) / 180 * Math.sin(t);
-  const elev = (25 * Math.PI) / 180 + 0.02 * Math.sin(2 * t);
+  const elev = (29 * Math.PI) / 180 + 0.02 * Math.sin(2 * t);
   const dist = 3.9;
   const camera: CameraPose = {
     position: [dist * Math.cos(elev) * Math.sin(az), dist * Math.sin(elev), dist * Math.cos(elev) * Math.cos(az)],
@@ -284,24 +285,38 @@ export const ChipOnOre: React.FC<{ row: ChipOnOreRow }> = ({ row }) => {
         <planeGeometry args={[30, 30]} />
         <meshStandardMaterial color="#03050a" roughness={0.7} metalness={0} envMapIntensity={0} />
       </mesh>
-      <SoftReflection size={30} strength={0.35} blur={0.012} resolution={1024} fadeDist={5} />
+      <SoftReflection size={30} strength={0.65} blur={0.01} resolution={1024} fadeDist={5} />
       <GlowDecal color={row.glow} intensity={0.55} position={[0, 0.001, 0]} scale={[2.6, 2.6]} rotationY={CHIP_ROT} />
-      <Chip glow={row.glow} emissive={2.4} rotY={CHIP_ROT} />
+      <Chip glow={row.glow} emissive={4.2} rotY={CHIP_ROT} />
       <Traces color={row.glow} frame={frame} />
       {NUGGETS.map((n) => (
-        <Nugget key={n.seed} spec={n} kind="iridescent" envIntensity={1.7} />
+        <Nugget key={n.seed} spec={n} kind="iridescent" envIntensity={2.2} />
       ))}
+      <OreChips
+        kind="iridescent"
+        envIntensity={2.0}
+        scatter={{
+          seed: 7474,
+          count: 14,
+          center: [0, -1.25],
+          rMin: 0.0,
+          rMax: 1.6,
+          sizeMin: 0.03,
+          sizeMax: 0.06,
+          avoid: NUGGETS.map((n) => ({ x: n.position[0], z: n.position[2], r: n.scale * 1.3 })),
+        }}
+      />
       <OreChips
         kind="iridescent"
         envIntensity={2.2}
         scatter={{
           seed: 7373,
-          count: 44,
-          center: [0, 0.4],
-          rMin: 0.55,
-          rMax: 2.2,
-          sizeMin: 0.035,
-          sizeMax: 0.08,
+          count: 28,
+          center: [0.15, 1.0],
+          rMin: 0.0,
+          rMax: 1.2,
+          sizeMin: 0.03,
+          sizeMax: 0.06,
           avoid: [
             ...NUGGETS.map((n) => ({ x: n.position[0], z: n.position[2], r: n.scale * 1.2 })),
             { x: 0, z: 0, r: 0.75 },

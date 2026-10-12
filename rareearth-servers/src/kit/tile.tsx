@@ -31,7 +31,7 @@ function drawInk(ctx: CanvasRenderingContext2D, el: Element, outline: boolean) {
   ctx.fillStyle = "#fff";
   ctx.strokeStyle = "#fff";
   if (outline) {
-    ctx.lineWidth = 9;
+    ctx.lineWidth = 12;
     ctx.beginPath();
     ctx.roundRect(22, 22, CW - 44, CH - 44, 20);
     ctx.stroke();
