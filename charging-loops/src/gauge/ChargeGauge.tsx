@@ -31,12 +31,12 @@ const loadFont = () => {
 // Depth of field: a sharp band through the bar and readout, with the far
 // right and the near lower-left / upper-left of the dial out of focus.
 const SHARP_MASK =
-  "radial-gradient(ellipse 40% 34% at 40% 50%, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 100%)";
+  "radial-gradient(ellipse 34% 26% at 44% 52%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)";
 const SOFT_MASK =
-  "radial-gradient(ellipse 40% 34% at 40% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 100%)";
+  "radial-gradient(ellipse 34% 26% at 44% 52%, rgba(0,0,0,0) 50%, rgba(0,0,0,1) 100%)";
 
 // Plane shown at 1.35x its design size (3240 x 2160 CSS px in a 3840 x 2160 frame).
-const PLANE_SCALE = 1.46;
+const PLANE_SCALE = 1.55;
 const CSS_W = PW * PLANE_SCALE;
 const CSS_H = PH * PLANE_SCALE;
 
@@ -140,7 +140,7 @@ export const ChargeGauge: React.FC<{ row: ChargeGaugeRow }> = ({ row }) => {
   const e = 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, t));
   // The reference's tilt is stronger than -28/8 deg at this perspective, so
   // the plane is turned further and seen through a shorter perspective.
-  const rotY = -38 + 6 * e;
+  const rotY = -46 + 6 * e;
   const push = 1 + 0.05 * e;
   const planeStyle: React.CSSProperties = {
     position: "absolute",

@@ -109,8 +109,8 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
     const long = i % 10 === 0;
     const r0 = DIAL_R - (long ? 62 : 36);
     const r1 = DIAL_R;
-    ctx.strokeStyle = long ? "rgba(215,242,255,1)" : "rgba(170,225,255,0.95)";
-    ctx.lineWidth = long ? 6 : 4.5;
+    ctx.strokeStyle = long ? "rgba(170,225,255,0.9)" : "rgba(110,190,255,0.75)";
+    ctx.lineWidth = long ? 5 : 3.5;
     ctx.beginPath();
     ctx.moveTo(DIAL_C.x + r0 * Math.cos(a), DIAL_C.y + r0 * Math.sin(a));
     ctx.lineTo(DIAL_C.x + r1 * Math.cos(a), DIAL_C.y + r1 * Math.sin(a));
@@ -152,22 +152,22 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
   ctx.shadowColor = "rgba(255,255,255,0.9)";
   ctx.shadowBlur = 26;
   ctx.fillStyle = "#FFFFFF";
-  ctx.shadowBlur = 8;
-  const px = 880;
-  const py = 776;
-  ctx.fillRect(px, py, 96, 60);
-  ctx.fillRect(px + 12, py - 13, 20, 13);
-  ctx.fillRect(px + 64, py - 13, 20, 13);
+  ctx.shadowBlur = 22;
+  const px = 860;
+  const py = 768;
+  ctx.fillRect(px, py, 124, 78);
+  ctx.fillRect(px + 14, py - 16, 26, 16);
+  ctx.fillRect(px + 84, py - 16, 26, 16);
 
   // ---- bar
   const bx0 = 1020;
   const by0 = 756;
   const bw = 640;
   const bh = 92;
-  ctx.shadowColor = rgba(dialCol, 0.9);
-  ctx.shadowBlur = 16;
-  ctx.strokeStyle = rgba("#7FD0FF", 0.85);
-  ctx.lineWidth = 5;
+  ctx.shadowColor = rgba("#6AD0FF", 1);
+  ctx.shadowBlur = 30;
+  ctx.strokeStyle = rgba("#8FDCFF", 1);
+  ctx.lineWidth = 7;
   ctx.strokeRect(bx0, by0, bw, bh);
   const inset = 12;
   const fw = (bw - inset * 2) * (level / 100);
@@ -176,8 +176,8 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
     const fy = by0 + inset;
     const fh = bh - inset * 2;
     const g = ctx.createLinearGradient(fx, 0, fx + bw, 0);
-    g.addColorStop(0, "#7CC8FF");
-    g.addColorStop(1, "#B8EEFF");
+    g.addColorStop(0, "#5ABAFF");
+    g.addColorStop(1, "#9EE4FF");
     ctx.shadowColor = "rgba(120,210,255,1)";
     ctx.shadowBlur = 24;
     ctx.fillStyle = g;
@@ -241,7 +241,7 @@ export const drawGauge = (ctx: CanvasRenderingContext2D, row: ChargeGaugeRow, f:
 
   // ---- "Power" + 12 short bars lit in step with the charge
   const pwx = 1930;
-  const pwy = 960;
+  const pwy = 880;
   ctx.fillStyle = rgba(dialCol, 0.8);
   ctx.shadowColor = rgba(dialCol, 0.6);
   ctx.shadowBlur = 10;

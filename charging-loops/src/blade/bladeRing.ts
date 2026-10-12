@@ -14,11 +14,11 @@ const LENGTH = 1;
 // comparison: the slabs there are thinner and taller than a 1 x 0.18 x 0.62
 // box, and the camera sits lower than 50 deg so the broad faces read.
 export const BLADE_PARAMS = {
-  // The reference shows ~21-24 thin upright fins with clear gaps; 30 slabs
-  // of 0.18 read as packed dominoes in side-by-side checks.
+  // The reference shows ~24 upright slabs with gaps; 30 slabs at 25 deg yaw
+  // read as packed dominoes in side-by-side checks.
   count: 24,
   radius: 1.6, // slab centre radius (inner edge 1.1): the reference's hole is wide
-  thick: 0.09,
+  thick: 0.15,
   height: 1.1,
   yaw: 6, // turn about each slab's own vertical axis
   tilt: 8, // outward lean
@@ -27,16 +27,16 @@ export const BLADE_PARAMS = {
   tx: 0,
   ty: 0.45,
   tz: -0.5,
-  fov: 40,
-  band: 16, // horizon band in the environment: lights the faces
-  top: 30, // high strip behind: bevel edge lines
-  sky: 7, // high band all round: bright top edges on every slab
+  fov: 36,
+  band: 7, // horizon band in the environment: lights the faces
+  top: 40, // high strip behind: bevel edge lines
+  sky: 12, // high band all round: bright top edges on every slab
   rim: 60,
   exposure: 1.9,
-  roughness: 0.55,
-  bloom: 1.2,
+  roughness: 0.4,
+  bloom: 0.5,
   bloomR: 0.025,
-  bloomT: 0.35,
+  bloomT: 0.55,
   blur: 0.006,
 };
 

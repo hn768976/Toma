@@ -15,31 +15,31 @@ const CORNER = 0.22;
 // Framing parameters (camera at origin looking down -Z).
 export const PLATE_FRAMING = {
   fov: 42,
-  cx: 1.4, // ring centre; the camera sits at the origin looking down -Z
+  cx: 1.6, // ring centre; the camera sits at the origin looking down -Z
   cy: -1.6,
-  cz: -4.7,
+  cz: -6.0,
   yaw: 10, // left side of the ring swings toward the camera
   pitch: 0,
   roll: -10,
   twist: -35, // about each plate's radial axis: the stack fans
-  spin: 45, // about each plate's own normal: square reads as a diamond
+  spin: 20, // about each plate's own normal
   count: 30, // the reference shows ~14 plates over half a turn (12 deg pitch)
   size: 1.7,
-  thick: 0.22,
-  bevel: 0.08,
+  thick: 0.12,
+  bevel: 0.04,
   key: 6,
   kx: -2,
   ky: 6,
   kz: 1,
-  face: 14, // broad upper-left strip: satin faces
-  edge: 16, // thin far strip: edge highlights
-  exposure: 0.85,
+  face: 8, // broad upper-left strip: satin faces
+  edge: 24, // thin far strip: thin bright edge highlights
+  exposure: 0.7,
   focus: 4.4,
   metal: 0.6,
   rough: 0.45, // satin, not glassy
   coat: 0,
-  blur: 0.012,
-  bloom: 0.6,
+  blur: 0.005,
+  bloom: 0.25,
 };
 
 const roundedSquare = (s: number, r: number) => {

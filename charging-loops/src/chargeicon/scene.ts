@@ -31,7 +31,7 @@ const BODY_W = 0.145 * W;
 const CORNER = 0.17 * BODY_W;
 const CAP_W = 0.42 * BODY_W;
 const CAP_H = 0.05 * BODY_H;
-const DOT = 6.5; // dot diameter, design px
+const DOT = 8.5; // dot diameter, design px
 const DOT_STEP = DOT * 1.2;
 
 type Pt = [number, number];
@@ -131,10 +131,10 @@ type Cluster = {
 
 const PALETTE = [0x1ad8b8, 0x2ae86a, 0x2a6aff, 0xe82a3a]; // teal, green, blue, red
 const CLUSTERS = 240;
-const Z_FAR = 4.2;
+const Z_FAR = 3.4;
 const Z_NEAR = 0.55;
-const Z_SPLIT_A = 0.95;
-const Z_SPLIT_B = 1.35;
+const Z_SPLIT_A = 1.4;
+const Z_SPLIT_B = 2.0;
 
 const buildClusters = (shares: number[], seed: number): Cluster[] => {
   const rnd = mulberry32(seed);
@@ -147,7 +147,7 @@ const buildClusters = (shares: number[], seed: number): Cluster[] => {
     // denser in a central band behind the icon, as in the reference
     // a central band (x ~0.22-0.8 of the frame); the left fifth stays dark
     let x = -950 + rnd() * 2250;
-    let y = (rnd() * 2 - 1) * 1250;
+    let y = (rnd() * 2 - 1) * 1150;
     const phase = rnd();
     const wraps = rnd() < 0.65 ? 1 : 2;
     let pick = rnd();
@@ -290,7 +290,7 @@ export class ChargeIconScene {
     fogWrap.blendMode = "add";
     const farWrap = new Container();
     farWrap.addChild(this.far);
-    farWrap.filters = [new BlurFilter({ strength: 16, quality: 4, resolution })];
+    farWrap.filters = [new BlurFilter({ strength: 10, quality: 4, resolution })];
     farWrap.filterArea = new Rectangle(0, 0, W, H);
     farWrap.blendMode = "add";
     this.near.blendMode = "add";
@@ -333,15 +333,16 @@ export class ChargeIconScene {
     inside.roundRect(CX - BODY_W / 2, CY - BODY_H / 2, BODY_W, BODY_H, CORNER);
     inside.fill({ color: row.glow, alpha: 0.025 });
     const glow = new Graphics();
+    const boltGlow = new Graphics(); // above the interior fill, unlike `glow`
     for (const [w, a] of [
       [100, 0.1],
       [52, 0.22],
-      [26, 0.55],
+      [40, 0.9],
     ] as const) {
       strokePoly(glow, outline, false);
       glow.stroke({ width: w, color: row.glow, alpha: a, join: "round", cap: "round" });
-      strokePoly(glow, bolt, true);
-      glow.stroke({ width: w, color: row.glow, alpha: a, join: "round", cap: "round" });
+      strokePoly(boltGlow, bolt, true);
+      boltGlow.stroke({ width: w * 0.8, color: row.glow, alpha: a, join: "round", cap: "round" });
     }
     // dotted strokes, coloured from the hot core colour (upper left) to a
     // blue-violet (lower right), with a few hashed sparkle dots
@@ -350,7 +351,7 @@ export class ChargeIconScene {
     const dense = (p: Pt[], closed: boolean) => resample(p, 2, closed);
     const tint = (x: number, y: number) => {
       const t = clamp(((x - (CX - BODY_W / 2)) / BODY_W) * 0.55 + ((y - (CY - BODY_H / 2)) / BODY_H) * 0.6 - 0.15);
-      return mixHex(row.outline, far, t);
+      return mixHex(row.outline, far, t * 0.55);
     };
     // a doubled neon tube: two rows of fine dots with grainy brightness
     let k = 0;
@@ -363,7 +364,7 @@ export class ChargeIconScene {
     }
     const boltPts = resample(dense(bolt, true), DOT_STEP, false);
     boltPts.forEach(([x, y], k) => {
-      this.bolt.circle(x, y, DOT / 2 + 1);
+      this.bolt.circle(x, y, DOT / 2 + 2.5);
       // brightest near the top of the bolt
       this.bolt.fill({ color: mixHex("#FFFFFF", row.glow, clamp(k / boltPts.length) * 0.6) });
     });
@@ -371,13 +372,14 @@ export class ChargeIconScene {
     // 4B fill segments (drawn once, alpha animated)
     if (row.fill) this.buildFill();
 
-    this.icon.addChild(inside, glow, this.fillGlow, this.fill, dots, this.bolt);
+    // interior above the glow copies: the glow only shows outside the body
+    this.icon.addChild(glow, inside, this.fillGlow, this.fill, boltGlow, dots, this.bolt);
     // bloom: a blurred additive copy of the icon only
     const bloomG = new Graphics();
     strokePoly(bloomG, outline, false);
     bloomG.stroke({ width: 44, color: row.glow, alpha: 1, join: "round" });
     strokePoly(bloomG, bolt, true);
-    bloomG.stroke({ width: 44, color: row.glow, alpha: 1, join: "round" });
+    bloomG.stroke({ width: 64, color: row.glow, alpha: 1, join: "round" });
     const bloomWide = new Graphics();
     strokePoly(bloomWide, outline, false);
     bloomWide.stroke({ width: 70, color: far, alpha: 0.85, join: "round" });
@@ -387,7 +389,7 @@ export class ChargeIconScene {
     bloomWideWrap.filterArea = new Rectangle(0, 0, W, H);
     const bloomTight = new Container();
     bloomTight.addChild(bloomG);
-    bloomTight.filters = [new BlurFilter({ strength: 50, quality: 4, resolution })];
+    bloomTight.filters = [new BlurFilter({ strength: 40, quality: 4, resolution })];
     bloomTight.filterArea = new Rectangle(0, 0, W, H);
     this.iconBloom.addChild(bloomWideWrap, bloomTight);
     this.iconBloom.blendMode = "add";
@@ -459,7 +461,7 @@ export class ChargeIconScene {
       fp0.y = oy;
       fp0.scaleX = cl.cols * cl.cell * k * s * 1.1;
       fp0.scaleY = cl.rows * cl.cell * k * s * 1.1;
-      fp0.alpha = (cl.red ? 0.3 : 0.08) * base;
+      fp0.alpha = (cl.red ? 0.18 : 0.025) * base;
       for (const c of cl.cells) {
         const h = hash2(c.id, bucket);
         const flick = h < 0.12 ? 0.12 : 0.55 + 0.45 * h;
@@ -513,7 +515,7 @@ export class ChargeIconScene {
     }
     this.icon.position.set(jx, jy);
     this.iconBloom.position.set(jx, jy);
-    this.iconBloom.alpha = clamp(glow * 1.1, 0, 1);
+    this.iconBloom.alpha = clamp(glow * 1.5, 0, 1);
     this.hud.alpha = 0.8 + 0.2 * breathe;
 
     this.post.resources.postUniforms.uniforms.uFrame = f;

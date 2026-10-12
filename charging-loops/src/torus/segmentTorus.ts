@@ -15,21 +15,22 @@ export const TORUS_PARAMS = {
   segments: 40,
   minor: 1.05, // tube radius (major radius is 3)
   pinch: 0.32, // how much the tube narrows at a seam
-  zoom: 1.15, // scales every beat's camera offset from its target
+  zoom: 0.95, // scales every beat's camera offset from its target
   roll: -40, // camera roll, deg: the ring runs diagonally across the frame
   inner: 1, // how strongly the warm colour gathers on the hole-facing side
   shininess: 26,
-  segLight: 1.4, // one-sided light across each slice: bright edge -> dark core
+  segLight: 1.2, // one-sided light across each slice: bright edge -> dark core
   segPow: 4,
   warm: 1.1, // overall reach of gradient B
-  keyScale: 0.15,
+  keyScale: 0.12,
   glow: 1.5, // inner-wall glow in colour B
   sharp: 0.3, // 0 = soft A-B blend, 1 = hard split (avoids a muddy mid-tone)
-  rimScale: 0.2,
+  rimScale: 0.35,
   exposure: 0.9,
   groove: 0.7, // darkening in the creases between slices
   bloom: 0.8,
   blur: 0.0015,
+  phase0: 1.6, // where gradient B sits at frame 0 (constant offset; the loop is unchanged)
 };
 
 // One segment around ring angle 0, spanning +/- half a pitch.
@@ -199,7 +200,7 @@ type Beat = {
 // Three beats at frames 0, 200, 400; beat 1 again at 600.
 export const TORUS_BEATS: Beat[] = [
   // 1: close, low, along the ring, fully lit
-  { cam: [1.2, 2.0, 4.3], target: [-0.6, -0.3, -1.0], fov: 54, key: [0.25, 0.35, 1], keyAmt: 1.0, fill: 0.015, rim: 0.4, seam: 0.4, focus: 4.6, lit: 1 },
+  { cam: [1.2, 2.7, 4.3], target: [-0.6, -0.3, -1.0], fov: 60, key: [0.25, 0.35, 1], keyAmt: 1.0, fill: 0.015, rim: 0.4, seam: 0.4, focus: 4.6, lit: 1 },
   // 2: key swings away; only rims and seams glow
   { cam: [-0.2, 1.8, 4.4], target: [0.2, -0.2, -1.4], fov: 56, key: [0.1, 0.25, -1], keyAmt: 0.3, fill: 0.0, rim: 4.0, seam: 4.0, focus: 4.6, lit: 0.12 },
   // 3: wider, the ring's curve against black (still overflowing the frame)
@@ -302,7 +303,7 @@ export const makeSegmentTorus =
         camera.rotateZ(P.roll * DEG);
         camera.updateMatrixWorld();
         const u = mat.uniforms;
-        u.uPhase.value = (TAU * (frame % 600)) / 600;
+        u.uPhase.value = P.phase0 + (TAU * (frame % 600)) / 600;
         u.uKeyDir.value.set(...b.key).normalize();
         u.uKey.value = b.keyAmt * P.keyScale;
         u.uFill.value = b.fill;
