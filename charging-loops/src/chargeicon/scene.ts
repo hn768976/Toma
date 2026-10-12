@@ -230,7 +230,9 @@ void main(void) {
   float f = mod(uFrame, 600.0);
   float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col += (hash(p, f) - 0.5) * 2.0 * uGrain * (0.35 + luma);
-  col += (hash(p + 17.0, f) + hash(p + 59.0, f + 3.0) - 1.0) / 255.0;
+  col += (vec3(hash(p + 17.0, f) + hash(p + 59.0, f + 3.0),
+               hash(p + 23.0, f + 7.0) + hash(p + 71.0, f + 11.0),
+               hash(p + 31.0, f + 13.0) + hash(p + 83.0, f + 17.0)) - 1.0) / 255.0;
   finalColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
 

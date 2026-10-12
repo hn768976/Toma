@@ -162,8 +162,97 @@ clips showed a clear mismatch. In those cases the reference won:
 
 ## Measured render times
 
-MEASUREMENTS_PLACEHOLDER
+Measured in this build container: 4 vCPU, **no GPU**, so WebGL runs on SwiftShader
+through ANGLE. Per-frame cost = (4-frame sequence render − 1-frame cold still) ÷ 3,
+both at `--concurrency=1`, which removes browser start-up from the figure.
+
+| Composition | 720p s/frame | 720p 40 frames at `--concurrency=4` (wall) |
+|---|---|---|
+| BladeRing-Blue | 1.95 | 80 s |
+| BladeRing-Copper | 1.79 | 75 s |
+| PlateArc-Blue | 1.54 | 65 s |
+| SegmentTorus-BlueCoral | 1.38 | 49 s |
+| SegmentTorus-TealGold | 1.15 | 51 s |
+| ChargeIcon-Cyan | 1.28 | 45 s |
+| ChargeIcon-GreenFill | 1.39 | 47 s |
+| ChargeGauge-Story | 1.30 | 43 s |
+
+On this box, concurrency barely helps the WebGL looks, because SwiftShader already
+uses every core.
+
+**Two real 4K frames (3840×2160):**
+
+| Composition | Cold 4K still, incl. browser start | 4K s/frame (warm) |
+|---|---|---|
+| BladeRing-Blue (1A) | 28.4 s | **12.3 s** |
+| ChargeIcon-Cyan (4A) | 15.2 s | **9.3 s** |
+
+**4K estimates for a full render:**
+- **On this kind of CPU-only machine:** scale the 720p figure by the measured
+  4K/720p ratio, 6.3× for the three.js looks and 7.3× for Pixi and Canvas.
+
+  | Composition | Frames | Estimated time |
+  |---|---|---|
+  | 1A | 600 | ≈ 2.1 h |
+  | 1B | 600 | ≈ 1.9 h |
+  | 2 | 600 | ≈ 1.6 h |
+  | 3A | 600 | ≈ 1.4 h |
+  | 3B | 600 | ≈ 1.2 h |
+  | 4A | 600 | ≈ 1.6 h |
+  | 4B | 600 | ≈ 1.7 h |
+  | 5 | 300 | ≈ 0.8 h |
+
+- **On a machine with a real GPU** (ANGLE on hardware), expect roughly 10–30× faster
+  for Looks 1–4, so about 5–15 minutes each. That is an estimate, not measured here.
+  The gauge is mostly CPU: per-pixel background and grain plus CSS blur, so it gains
+  less.
 
 ## Checks
 
-CHECKS_PLACEHOLDER
+All of these were run on the final code, at 720p (`--scale=0.3333333333333333`,
+exactly 1280×720). Per the latest instructions no preview videos were rendered, so
+the checks use stills and PNG sequences.
+
+- **Loop (7 loops):** with `--props='{"loopCheck":true}'` (601 frames), frames 0 and
+  600 are **pixel-identical** for every loop.
+- **Determinism (all 8):** frame 300 (150 for the gauge), rendered cold with
+  `remotion still`, is **byte-identical** to the same frame from a 40-frame PNG
+  sequence rendered at `--concurrency=4`, with frames out of order across tabs.
+- **Banding:** each still was encoded as one-frame H.264 `yuv420p` CRF 16, decoded,
+  and inspected at ×8 / ×16 gain.
+  - Looks 1–2: the background black is exact 0, with no grain or dither in it
+    (35 % / 60 % of the pixels are exactly 0).
+  - Torus shadows and the Look 4 dark space are smooth.
+  - The gauge's radial lift first showed a faint tinted contour. It was a chroma step,
+    because the dither was shared across R, G and B.
+  - Fix: independent per-channel dither everywhere (three.js post, Pixi post, gauge
+    background), and the gauge background now uses the full 1.5 % grain.
+- **What each composition shows:** five-frame contact sheets were checked.
+  - Blade Ring: rotation.
+  - Plate Arc: plates sliding along the arc.
+  - Torus: lit / dim / wide beats, with the gradient travelling.
+  - Charge Icon: blocks flying and flickering, HUD arcs.
+  - 4B: fill, flash and reset, twice per loop.
+  - Gauge: 6 → 22 → 56 → 87 → 100 %, Power bars in step, flash at 100 %.
+  - No brand names anywhere; "ECO Mode" and "Power" are spelled correctly.
+- **Percentage:** it starts at 5, reaches 100 at frame 270 (9.0 s), never steps
+  backwards, and moves at most 1 % per frame (checked over all 300 frames from
+  `percentAt`).
+- **Clean install:** a copy without `node_modules` passes `npm install && npx remotion
+  studio`, and the Studio builds and serves.
+
+### Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps; 600-frame loops and a 300-frame story
+- [x] One data row per version (`src/versions.ts`)
+- [x] three.js / WebGL2 for Looks 1–3; PixiJS 8 / WebGL2, no ticker, for Look 4;
+  Canvas 2D for Look 5
+- [x] Everything is driven by `useCurrentFrame()`, with no runtime `Math.random()`
+- [x] Loops exact (frame 0 = frame 600)
+- [x] Cold frame = full-render frame, byte for byte
+- [x] OFL font with its licence; no logos or brand names
+- [x] Dither and grain (fixed hash of pixel + `frame % 600` / `% 300`); grain fades to
+  zero near black in Looks 1–2
+- [x] 720p still of each composition
+- [ ] 720p preview videos: not rendered, as requested
+- [ ] 4K videos and 6K stills: not rendered here, as the brief asked

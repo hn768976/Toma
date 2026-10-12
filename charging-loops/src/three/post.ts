@@ -105,7 +105,12 @@ void main() {
   float f = mod(uFrame, 600.0);
   vec2 p = gl_FragCoord.xy;
   float g = (hash(p, f) - 0.5) * 2.0 * uGrain;
-  float dith = (hash(p + 17.0, f) + hash(p + 59.0, f + 3.0) - 1.0) / 255.0;
+  // independent triangular dither per channel (dithers chroma as well as luma)
+  vec3 dith = vec3(
+    hash(p + 17.0, f) + hash(p + 59.0, f + 3.0),
+    hash(p + 23.0, f + 7.0) + hash(p + 71.0, f + 11.0),
+    hash(p + 31.0, f + 13.0) + hash(p + 83.0, f + 17.0)) - 1.0;
+  dith /= 255.0;
   float gFade = mix(1.0, smoothstep(0.012, 0.03, luma), uBlackCut);
   float dFade = mix(1.0, smoothstep(0.0, 0.006, luma), uBlackCut);
   col += g * gFade * (0.35 + luma) + dith * dFade;

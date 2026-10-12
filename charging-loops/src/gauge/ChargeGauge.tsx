@@ -65,16 +65,19 @@ const drawBackground = (c: HTMLCanvasElement, frame: number) => {
       const r2 = dx * dx + dy * dy;
       const lift = Math.exp(-r2 * 1.6);
       const vig = 1 - 0.6 * Math.min(1, Math.max(0, (Math.sqrt(r2) - 0.7) / 1.2));
-      const n1 = hash(x, y, f);
-      const n2 = hash(x + 7919, y + 104729, f);
-      const dither = n1 + n2 - 1; // triangular, +/-1 LSB
+      // triangular +/-1 LSB dither, independent per channel so the chroma
+      // planes are dithered too (a shared value only dithers luma, and the
+      // 4:2:0 chroma steps of the dark lift then show as tinted contours)
+      const dr = hash(x, y, f) + hash(x + 7919, y + 104729, f) - 1;
+      const dg = hash(x + 13, y + 7, f + 600) + hash(x + 7907, y + 104723, f + 600) - 1;
+      const db = hash(x + 29, y + 3, f + 1200) + hash(x + 7901, y + 104717, f + 1200) - 1;
       // full 1.5 % grain: weaker grain was smoothed away by H.264 and the
       // 1-level steps of the radial lift showed through
       const grain = (hash(x + 31, y + 17, f + 300) - 0.5) * 2 * 0.015 * 255;
       const i = (y * w + x) * 4;
-      d[i] = (4 + 5 * lift) * vig + dither + grain;
-      d[i + 1] = (8 + 9 * lift) * vig + dither + grain;
-      d[i + 2] = (14 + 22 * lift) * vig + dither + grain;
+      d[i] = (4 + 5 * lift) * vig + dr + grain;
+      d[i + 1] = (8 + 9 * lift) * vig + dg + grain;
+      d[i + 2] = (14 + 22 * lift) * vig + db + grain;
       d[i + 3] = 255;
     }
   }
