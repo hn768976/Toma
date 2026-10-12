@@ -257,6 +257,7 @@ export const pointsMaterial = (opts: {
   uniforms?: Record<string, THREE.IUniform>;
   vertMod?: string; // GLSL: may modify `pos` (vec3) and `amod` (float) using `param`
   hard?: number; // 0 = soft gaussian dot, 1 = hard disc
+  flare?: number; // strength of a 4-point star cross
 }) => {
   const u = opts.uniforms ?? {};
   const decl = Object.keys(u)
@@ -268,7 +269,7 @@ export const pointsMaterial = (opts: {
     .join("\n");
   return new THREE.RawShaderMaterial({
     glslVersion: THREE.GLSL3,
-    uniforms: { uPx: { value: opts.basePx }, uHard: { value: opts.hard ?? 0.5 }, ...opts.dof, ...u },
+    uniforms: { uPx: { value: opts.basePx }, uHard: { value: opts.hard ?? 0.5 }, uFlare: { value: opts.flare ?? 0 }, ...opts.dof, ...u },
     vertexShader: /* glsl */ `
 precision highp float;
 uniform mat4 modelViewMatrix;
@@ -300,6 +301,7 @@ void main() {
     fragmentShader: /* glsl */ `
 precision highp float;
 uniform float uHard;
+uniform float uFlare;
 in vec4 vColor;
 in float vCore;
 out vec4 fragColor;
@@ -308,6 +310,8 @@ void main() {
   float hard = 1.0 - smoothstep(vCore - 0.25, vCore, r);
   float soft = exp(-4.0 * r * r / (vCore * vCore));
   float a = vColor.a * mix(soft, hard, uHard);
+  vec2 pc = abs(gl_PointCoord - 0.5) * 2.0;
+  a += vColor.a * uFlare * (exp(-pc.y * 40.0) * exp(-pc.x * 3.5) + exp(-pc.x * 40.0) * exp(-pc.y * 3.5)) * (1.0 - smoothstep(0.85, 1.0, max(pc.x, pc.y)));
   fragColor = vec4(vColor.rgb * a, 0.0);
 }`,
     transparent: true,

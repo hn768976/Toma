@@ -133,7 +133,7 @@ export const VERSIONS: VersionRow[] = [
     look: "WorldConnections",
     props: {
       seed: WORLD_SEED,
-      palette: { dots: "#D8E4F4", cities: "#F0F6FF", arcs: "#8AB8FF", pulse: "#E8F4FF", background: "#04102A", haze: "#183456", beams: "#C8E0FF", accent: "#6AF0D8" },
+      palette: { dots: "#DCE2EA", cities: "#F0F6FF", arcs: "#8AB8FF", pulse: "#E8F4FF", background: "#04102A", haze: "#183456", beams: "#C8E0FF", accent: "#6AF0D8" },
     },
   },
   {
@@ -152,12 +152,12 @@ export const VERSIONS: VersionRow[] = [
       palette: {
         land: "#8AF0D8",
         rim: "#2AF0C0",
-        ocean: "#06100F",
+        ocean: "#030606",
         specks: "#F0D86A",
         bars: "#3AC8A0",
         text: "#B8D8D0",
         dim: "#5A7470",
-        background: "#141E1D",
+        background: "#0E1213",
       },
     },
   },

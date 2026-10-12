@@ -81,8 +81,9 @@ void main() {
   float glow = exp(-d * d / (2.0 * 48.0 * 48.0));
   // a second, fainter pin far away (upper right)
   float d2 = length(vWorld.xz - uPin2.xz);
-  col += uPinCol * (0.8 * (1.0 - smoothstep(24.0, 32.0, d2)) + 0.35 * exp(-d2 * d2 / (2.0 * 70.0 * 70.0)));
-  col += uPinCol * (core * 1.6 + glow * 0.55);
+  col += uPinCol * (1.3 * (1.0 - smoothstep(30.0, 40.0, d2)) + 0.5 * exp(-d2 * d2 / (2.0 * 80.0 * 80.0)));
+  col = mix(col, uPinCol, core);
+  col += uPinCol * glow * 0.45;
   for (int i = 0; i < 2; i++) {
     float t = fract(uPinT + float(i) * 0.5);
     float r = mix(24.0, 180.0, t);
@@ -98,7 +99,7 @@ void main() {
     vec2 c = uPillA.xz + ab * (float(i) / float(${N_PILLS - 1}));
     vec2 p = vWorld.xz - c;
     vec2 q = vec2(dot(p, dir), dot(p, nrm));
-    float sd = sdRoundBox(q, vec2(70.0, 24.0), 14.0);
+    float sd = sdRoundBox(q, vec2(46.0, 18.0), 12.0);
     float a = 1.0 - smoothstep(-fwidth(sd), fwidth(sd), sd);
     float halo = exp(-max(sd, 0.0) / 16.0) * 0.25;
     vec3 pc = (i % 3 == 2) ? uPillCol1 : (i == 0 ? uPillCol2 : uPillCol0);
@@ -109,6 +110,7 @@ void main() {
   // fog toward the horizon
   float fog = smoothstep(uFogNear, uFogFar, vZ);
   col = mix(col, uGround * 0.6, fog);
+  col *= mix(0.55, 1.0, smoothstep(uFocus * 0.45, uFocus * 0.9, vZ));
   float coc = clamp(uCocA * abs(vZ - uFocus) / vZ, 0.0, 1.0);
   fragColor = vec4(col, coc);
 }`;
@@ -213,8 +215,8 @@ const makeFactory =
         u.uPin.value.copy(groundHit(cam, -0.22, 0.28));
         u.uPinT.value = (f % 150) / 150;
         u.uPin2.value.copy(groundHit(cam, 0.55, 0.82));
-        u.uPillA.value.copy(groundHit(cam, -0.93, -0.08));
-        u.uPillB.value.copy(groundHit(cam, -0.3, -0.82));
+        u.uPillA.value.copy(groundHit(cam, -0.95, -0.1));
+        u.uPillB.value.copy(groundHit(cam, -0.45, -0.75));
         for (let i = 0; i < N_PILLS; i++) {
           u.uPillOn.value[i] = hash01(Math.floor(f / 5), i, 17) < 0.82 ? 1 : 0.35;
         }

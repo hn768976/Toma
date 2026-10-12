@@ -22,8 +22,8 @@ const LAT_MIN = -57;
 const LAT_MAX = 83;
 const SX = 0.01; // map units per degree of longitude
 const SY = 0.0112; // per degree of latitude (slightly stretched, Miller-like)
-const TILT = (46 * Math.PI) / 180;
-const YAW = 0.24; // left side nearer, map recedes toward the upper right
+const TILT = (38 * Math.PI) / 180;
+const YAW = 0.14; // left side nearer, map recedes toward the upper right
 const PERIODS = [150, 200, 300, 600];
 
 const toMap = (lat: number, lon: number) => new THREE.Vector3(lon * SX, (lat - (LAT_MIN + LAT_MAX) / 2) * SY, 0);
@@ -45,11 +45,11 @@ void main() {
   vec2 p = vUv;
   vec3 col = uBg;
   // lighter haze at the top
-  col += uHaze * pow(smoothstep(0.35, 1.05, p.y), 1.5) * 0.4;
+  col += uHaze * pow(smoothstep(0.45, 1.05, p.y), 1.8) * 0.18;
   // broad soft glow behind the map and in the upper left
   col += uHaze * 0.12 * exp(-pow(length((p - vec2(0.45, 0.55)) * vec2(1.0, 1.6)), 2.0) / 0.18);
-  col += uHaze * 0.45 * exp(-length(p - vec2(0.0, 0.9)) / 0.3);
-  col += uHaze * 0.05 + vec3(0.012, 0.014, 0.018);
+  col += uHaze * 0.4 * exp(-length(p - vec2(0.0, 0.95)) / 0.22);
+  col += vec3(0.008, 0.009, 0.012);
   col += uHaze * 0.08 * exp(-pow((p.y - 0.95) / 0.25, 2.0)) * (0.7 + 0.3 * sin(p.x * 3.0 + 1.0));
   // faint large translucent panels in the background, slowly drifting
   vec2 q = vec2(p.x * uRes.x / uRes.y, p.y);
@@ -74,7 +74,7 @@ void main() {
     float jx = p.x - x1;
     gl += (1.0 - smoothstep(0.0, lw * 1.4, abs((p.y - y) - jx * 0.8))) * step(0.0, jx) * step(jx, 0.03);
   }
-  col += uHaze * gl * 0.6;
+  col += vec3(0.5, 0.55, 0.62) * gl * 0.07;
   fragColor = vec4(col, 1.0);
 }`;
 
@@ -84,7 +84,7 @@ const makeFactory =
     const pal = props.palette;
     const rng = mulberry32(props.seed * 977 + 13);
     const k = height / 720; // px scale relative to 720p
-    const dof = dofUniforms(4.2, 22 * k, 7 * k);
+    const dof = dofUniforms(4.2, 10 * k, 4 * k);
     // world-up expressed in the tilted map's local frame
     const UP = new THREE.Vector3(0, Math.cos(TILT), Math.sin(TILT));
 
@@ -113,7 +113,7 @@ const makeFactory =
         const n = 2 + Math.floor(rng() * 3);
         for (let q = 0; q < n; q++) {
           const b = 0.9 + 0.6 * rng() + Math.min(1.2, near) * 0.5;
-          const teal = rng() < 0.06;
+          const teal = rng() < 0.1;
           dotPos.push(p.x + (rng() - 0.5) * 0.0015, p.y + (q - (n - 1) / 2) * SY * 0.42 + (rng() - 0.5) * SY * 0.15, 0);
           dotCol.push(teal ? xc[0] : dc[0], teal ? xc[1] : dc[1], teal ? xc[2] : dc[2], Math.min(2.2, b));
           dotSize.push(0.9 + 0.8 * rng() * rng() + Math.min(1, near) * 0.4);
@@ -168,6 +168,13 @@ const makeFactory =
       glowSize.push(4.4 * big);
       glowPar.push(2, rng() * 6.283);
     });
+    // star flares at the city lights
+    const flares = new THREE.Points(
+      buildPointsGeometry(new Float32Array(cityPos.flatMap((p) => [p.x, p.y, 0.003])), new Float32Array(cityPos.flatMap(() => [0.85, 0.92, 1, 0.9])), new Float32Array(cityPos.map(() => 26 + 14 * rng()))),
+      pointsMaterial({ basePx: k, dof, hard: 0, flare: 1.0 }),
+    );
+    flares.frustumCulled = false;
+    root.add(flares);
     const glows = new THREE.Points(
       buildPointsGeometry(new Float32Array(glowPos), new Float32Array(glowCol), new Float32Array(glowSize), new Float32Array(glowPar)),
       pointsMaterial({ basePx: k, dof, hard: 0, uniforms: { uPhase }, vertMod: "amod = 0.8 + 0.2 * sin(uPhase * param.x + param.y);" }),
@@ -207,7 +214,7 @@ const makeFactory =
         pts.push(u * u * A.x + 2 * u * t * C.x + t * t * B.x, u * u * A.y + 2 * u * t * C.y + t * t * B.y, u * u * A.z + 2 * u * t * C.z + t * t * B.z);
       }
       const period = i % PERIODS.length;
-      return { pts, color: [0.5 * ac[0] + 0.5, 0.5 * ac[1] + 0.5, 0.5 * ac[2] + 0.5], alpha: 0.2, width: 0.9, seed: period + range(rng, 0, 0.999) };
+      return { pts, color: [0.4 * ac[0] + 0.6, 0.4 * ac[1] + 0.6, 0.4 * ac[2] + 0.6], alpha: 0.15, width: 0.85, seed: period + range(rng, 0, 0.999) };
     });
     const uF = { value: 0 };
     const pulseCol = new THREE.Vector3(...hexRGB(pal.pulse));
@@ -271,12 +278,12 @@ const makeFactory =
     const ocam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
     const cam = new THREE.PerspectiveCamera(30, width / height, 0.1, 100);
-    const post = new PostFX(width, height, { bloom: { strength: 0.32, threshold: 0.75, knee: 0.3, radius: 1 }, vignette: 0.25, grain: 0.015 });
+    const post = new PostFX(width, height, { bloom: { strength: 0.32, threshold: 0.75, knee: 0.3, radius: 1 }, vignette: 0.6, grain: 0.015 });
     return {
       render(r, f) {
         const ph = phase(f, 1);
         const push = 1 + 0.04 * Math.sin(ph);
-        const dist = 3.5 / push;
+        const dist = 3.95 / push;
         cam.position.set(0.12 + 0.12 * Math.sin(ph + 0.4), -0.05 + 0.06 * Math.cos(ph), dist);
         cam.lookAt(0.12 + 0.02 * Math.sin(ph + 1.3), 0.02, 0);
         cam.updateMatrixWorld(true);

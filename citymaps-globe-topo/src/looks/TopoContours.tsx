@@ -42,15 +42,14 @@ uniform vec2 uRes;
 void main() {
   vec2 q = vUv - vec2(0.5, 0.62);
   q.x *= uRes.x / uRes.y;
-  vec3 col = uBg * (2.6 - 1.2 * smoothstep(0.05, 1.1, length(q)));
+  vec3 col = uBg * (1.35 - 1.0 * smoothstep(0.05, 1.0, length(q)));
   // soft atmospheric haze
-  col += uBg * 0.8 * exp(-pow(length(q - vec2(0.0, 0.1)), 2.0) / 0.25);
+  col += uBg * 0.45 * exp(-pow(length(q - vec2(0.0, 0.1)), 2.0) / 0.25);
   // faint fine grid
   float cell = uRes.y / 54.0;
   vec2 g = abs(fract(gl_FragCoord.xy / cell + 0.5) - 0.5) * cell;
   float lw = max(1.5, uRes.y / 720.0 * 1.2);
   float d = min(g.x, g.y);
-  col += uBg * 0.35 * (1.0 - smoothstep(lw * 0.5 - 0.5, lw * 0.5 + 0.5, d));
   fragColor = vec4(col, 1.0);
 }`;
 
@@ -60,7 +59,7 @@ const makeFactory =
     const pal = props.palette;
     const terrain = getTerrain(props.seed);
     const k = height / 720;
-    const dof = dofUniforms(DIST, 42 * k, 22 * k);
+    const dof = dofUniforms(DIST, 60 * k, 26 * k);
     dof.uFogNear.value = DIST * 1.05;
     dof.uFogFar.value = DIST * 1.9;
     dof.uFogMin.value = 0.5;
@@ -81,7 +80,7 @@ const makeFactory =
         pts,
         closed: c.closed,
         color: isIndex ? ic : lc,
-        alpha: isIndex ? 1.0 : 0.85 * lift * (0.25 + 0.75 * Math.min(1, c.height / 0.3)),
+        alpha: (isIndex ? 1.0 : 0.85 * lift) * (0.25 + 0.75 * Math.min(1, c.height / 0.3)),
         width: isIndex ? 1.7 : 1.05,
       };
     });
@@ -103,8 +102,8 @@ const makeFactory =
     ghostMat.blendEquation = THREE.MaxEquation;
     const ghost = new THREE.Mesh(contourMesh.geometry, ghostMat);
     ghost.frustumCulled = false;
-    ghost.position.set(0.15, -0.35, -0.75);
-    ghost.scale.set(2.2, 1.4, 1.6);
+    ghost.position.set(0.1, -0.2, -0.55);
+    ghost.scale.set(2.4, 1.6, 1.8);
     ghost.rotation.y = 0.9;
     root.add(ghost);
 
@@ -137,7 +136,7 @@ const makeFactory =
     bgScene.add(fullscreenMesh(bgMat));
     const ocam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const cam = new THREE.PerspectiveCamera(42, width / height, 0.01, 20);
-    const post = new PostFX(width, height, { bloom: { strength: 0.35, threshold: 0.55, knee: 0.3, radius: 1 }, vignette: 0.5, grain: 0.015 });
+    const post = new PostFX(width, height, { bloom: { strength: 0.35, threshold: 0.55, knee: 0.3, radius: 1 }, vignette: 0.75, grain: 0.015 });
     const focusPeak = new THREE.Vector3(0, 0.75 * HSCALE, -0.05);
     return {
       render(r, f) {

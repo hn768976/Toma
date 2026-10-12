@@ -75,7 +75,7 @@ out vec4 fragColor;
 void main() {
   float nv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
     float rim2 = pow(1.0 - nv, 14.0);
-  vec3 col = uOcean + uRim * (0.11 + pow(1.0 - nv, 1.6) * 0.3 + rim2 * 0.18);
+  vec3 col = uOcean + uRim * (0.015 + pow(1.0 - nv, 2.5) * 0.18 + rim2 * 0.3);
   // faint inner sheen toward the upper left
   col += uRim * 0.05 * smoothstep(0.2, 1.0, dot(normalize(vN), normalize(vec3(-0.5, 0.6, 0.6))));
   fragColor = vec4(col, 0.0);
@@ -100,7 +100,7 @@ void main() {
   vec2 px = gl_FragCoord.xy;
   vec3 col = uBg;
   float lw = max(1.5, uRes.y / 720.0 * 1.2);
-  col += vec3(0.6, 0.75, 0.72) * grid(px, uRes.x / 64.0, lw) * 0.085;
+  col += vec3(0.6, 0.75, 0.72) * grid(px, uRes.x / 128.0, lw) * 0.035;
   col += vec3(0.6, 0.75, 0.72) * 0.03 * exp(-length(px - uC) / (uR * 2.2));
   // big translucent grey panel sliding behind the globe
   vec2 uv = vUv;
@@ -110,8 +110,8 @@ void main() {
   // atmosphere glow outside the globe
   float r = length(px - uC);
   float out1 = max(r - uR, 0.0) / uR;
-  col += uRim * exp(-out1 / 0.08) * 0.1 * step(uR * 0.985, r);
-  col += uRim * exp(-out1 / 0.14) * 0.08;
+  col += uRim * exp(-out1 / 0.025) * 0.18 * step(uR * 0.985, r);
+  col += uRim * exp(-out1 / 0.12) * 0.04;
   fragColor = vec4(col, 1.0);
 }`;
 
@@ -162,7 +162,7 @@ const makeFactory =
         if (rng() < 0.22) {
           const ro = 1.003 + rng() * 0.03;
           lp.push(x * ro, y * ro, z * ro);
-          lc.push(land[0], land[1], land[2], 0.25 + 0.35 * rng());
+          lc.push(land[0], land[1], land[2], 0.12 + 0.2 * rng());
           ls.push(0.9 + 0.5 * rng());
         }
         continue;
@@ -170,7 +170,9 @@ const makeFactory =
       const rr = 1.003 + rng() * rng() * 0.03;
       lp.push(x * rr, y * rr, z * rr);
       const b = rng() < 0.03 ? 2.4 : 0.7 + 1.1 * rng() * rng() + 0.3 * rng();
-      lc.push(land[0], land[1], land[2], b);
+      const tint = rng();
+      const lcol = tint < 0.15 ? [0.95, 1, 0.98] : tint < 0.35 ? [land[0] * 0.6, land[1] * 0.95, land[2] * 0.85] : land;
+      lc.push(lcol[0], lcol[1], lcol[2], b);
       ls.push(b > 1.7 ? 1.9 : 1.0 + 0.4 * rng());
     }
     const landPts = new THREE.Points(
@@ -205,7 +207,7 @@ const makeFactory =
     spin.add(coasts);
 
     // gold specks: a swirling sheet, periodic in 600 frames
-    const NS = 4200;
+    const NS = 7000;
     const sp = new Float32Array(NS * 3);
     const sc = new Float32Array(NS * 4);
     const ss = new Float32Array(NS);
@@ -237,7 +239,7 @@ const makeFactory =
           // a sheet that peels off the upper-right limb, streams outward
           // and swirls round behind the globe
           float a = p * 2.3 + v * 0.15 + uSheetRot;
-          float rad = 1.04 + 0.55 * pow(p, 0.8) + 0.25 * (j - 0.5) * p;
+          float rad = 1.04 + 0.7 * pow(p, 0.8) + 0.4 * (j - 0.5) * p;
           float h = v * (0.08 + 0.8 * p) + 0.3 * sin(p * 4.0 + v * 2.5) * p;
           vec3 e1 = normalize(vec3(0.75, 0.62, 0.2));
           vec3 e2 = normalize(vec3(-0.35, 0.643, -0.681));
@@ -273,6 +275,26 @@ const makeFactory =
     dust.frustumCulled = false;
     spin.add(dust);
 
+    // star sparkles and a few warm glowing dots around the globe
+    const NSP = 40;
+    const spp = new Float32Array(NSP * 3);
+    const spc = new Float32Array(NSP * 4);
+    const sps = new Float32Array(NSP);
+    for (let i = 0; i < NSP; i++) {
+      // in a loose ring just outside the silhouette
+      const th = rng() * Math.PI * 2;
+      const rr = 1.08 + 0.4 * rng();
+      spp.set([Math.cos(th) * rr, Math.sin(th) * rr, (rng() - 0.5) * 0.3], i * 3);
+      const warm = i % 3 === 0;
+      spc.set(warm ? [1, 0.72, 0.38, 0.9] : [0.9, 1, 1, 1.0], i * 4);
+      sps[i] = warm ? 3.5 : 9 + 7 * rng();
+    }
+    const stars = new THREE.Points(buildPointsGeometry(spp, spc, sps), pointsMaterial({ basePx: k, dof: speckDof, hard: 0.2, flare: 0.9 }));
+    stars.frustumCulled = false;
+    const starGroup = new THREE.Group();
+    starGroup.add(stars);
+    scene.add(starGroup);
+
     // background (grid, sliding panel, atmosphere glow)
     const pose0 = globePose(0, aspect);
     const cproj = pose0.centre.clone().project(pose0.cam);
@@ -301,6 +323,9 @@ const makeFactory =
         scene.updateMatrixWorld(true);
         uSpeckPhase.value = f / LOOP;
         speckGroup.position.copy(pose.centre);
+        starGroup.position.copy(pose.centre);
+        starGroup.rotation.z = phase(f, 1); // one whole turn per loop
+        starGroup.updateMatrixWorld(true);
         uSheetRot.value = 0.35 * Math.sin(phase(f, 1));
         speckGroup.updateMatrixWorld(true);
         // panel slides in and out once per loop

@@ -158,7 +158,7 @@ export interface CityParams {
 
 // Block spacings are scaled so the 3 km tile carries a dense, fine street
 // mesh (as in the references) without zooming out until the tile repeats.
-const BLOCK_SCALE = 0.45;
+const BLOCK_SCALE = 0.36;
 
 export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
   const rng = mulberry32(seed);
@@ -565,13 +565,14 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
     const R = range(rng, 620, 720);
     const ph = range(rng, 0, 6.28);
     const pts: V2[] = [];
-    const n = 240;
-    for (let s = 0; s < n; s++) {
-      const a = (s / n) * Math.PI * 2;
+    // a partial ring (about 230°), so it reads as a ring-road arc
+    const n = 160;
+    for (let s = 0; s <= n; s++) {
+      const a = ph + (s / n) * Math.PI * 1.28;
       const r = R * (1 + 0.07 * Math.sin(2 * a + ph) + 0.04 * Math.sin(3 * a + 2 * ph));
       pts.push(add(c, v(Math.cos(a) * r, Math.sin(a) * r * 0.86)));
     }
-    roads.push({ pts, cls: 2, closeOffset: v(0, 0), drop: 0 });
+    roads.push({ pts, cls: 1, closeOffset: null, drop: 0 });
   }
 
   // ---- intersections (spatial hash on the torus) ----
@@ -790,10 +791,10 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
     for (let i = i0; i <= i1; i++) {
       for (let j = j0; j <= j1; j++) {
         if (parkBlocks.has(`${di}:${i}:${j}`)) continue;
-        const u0 = d.offA + i * d.a + 2.2;
-        const u1 = d.offA + (i + 1) * d.a - 2.2;
-        const v0 = d.offB + j * d.b + 2.2;
-        const v1 = d.offB + (j + 1) * d.b - 2.2;
+        const u0 = d.offA + i * d.a + 1.8;
+        const u1 = d.offA + (i + 1) * d.a - 1.8;
+        const v0 = d.offB + j * d.b + 1.8;
+        const v1 = d.offB + (j + 1) * d.b - 1.8;
         const cen = P((u0 + u1) / 2, (v0 + v1) / 2);
         const cw = d.warp ? warp(cen) : cen;
         if (!pointInPoly(cen, d.poly) || inWater(cw) || inParkOrLot(cw)) continue;
