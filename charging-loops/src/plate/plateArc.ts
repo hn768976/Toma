@@ -15,12 +15,12 @@ const CORNER = 0.22;
 // Framing parameters (camera at origin looking down -Z).
 export const PLATE_FRAMING = {
   fov: 42,
-  cx: 0.9, // ring centre; the camera sits at the origin looking down -Z
-  cy: -1.48,
-  cz: -5.5,
-  yaw: 35, // left side of the ring swings toward the camera
+  cx: 1.4, // ring centre; the camera sits at the origin looking down -Z
+  cy: -1.6,
+  cz: -4.7,
+  yaw: 10, // left side of the ring swings toward the camera
   pitch: 0,
-  roll: 0,
+  roll: -10,
   twist: -35, // about each plate's radial axis: the stack fans
   spin: 45, // about each plate's own normal: square reads as a diamond
   count: 30, // the reference shows ~14 plates over half a turn (12 deg pitch)
@@ -33,8 +33,13 @@ export const PLATE_FRAMING = {
   kz: 1,
   face: 14, // broad upper-left strip: satin faces
   edge: 16, // thin far strip: edge highlights
-  exposure: 1.0,
+  exposure: 0.85,
   focus: 4.4,
+  metal: 0.6,
+  rough: 0.45, // satin, not glassy
+  coat: 0,
+  blur: 0.012,
+  bloom: 0.6,
 };
 
 const roundedSquare = (s: number, r: number) => {
@@ -82,9 +87,9 @@ export const makePlateArc =
     geo.center();
     const mat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(row.base),
-      metalness: 0.75,
-      roughness: 0.3,
-      clearcoat: 0.3,
+      metalness: F.metal,
+      roughness: F.rough,
+      clearcoat: F.coat,
       clearcoatRoughness: 0.25,
     });
     const PLATES = F.count;
@@ -143,8 +148,11 @@ export const makePlateArc =
           focusDist: F.focus,
           focusDead: 0.4,
           focusRange: 2.5,
-          maxBlur: 0.007,
+          maxBlur: F.blur,
           exposure: F.exposure,
+          bloom: F.bloom,
+          bloomRadius: 0.02,
+          bloomThreshold: 0.4,
           vignette: 0.2,
           grain: 0.015,
           blackCut: 1,

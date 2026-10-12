@@ -8,31 +8,36 @@ import { BladeRingRow } from "../versions";
 // Look 1: 30 bevelled metal slabs fanned like turbine blades, seen from
 // ~50 degrees above. The ring turns 36 deg (= 3 slab pitches) per 600 frames.
 
-export const SLABS = 30;
-const PITCH = 360 / SLABS; // 12 deg
-const TURN_PER_LOOP = PITCH * 3; // 36 deg
 const LENGTH = 1;
 
 // Shape, framing and light. Matched to the reference by side-by-side
 // comparison: the slabs there are thinner and taller than a 1 x 0.18 x 0.62
 // box, and the camera sits lower than 50 deg so the broad faces read.
 export const BLADE_PARAMS = {
+  // The reference shows ~21-24 thin upright fins with clear gaps; 30 slabs
+  // of 0.18 read as packed dominoes in side-by-side checks.
+  count: 24,
   radius: 1.6, // slab centre radius (inner edge 1.1): the reference's hole is wide
-  thick: 0.13,
-  height: 0.7,
-  yaw: 14, // turn about each slab's own vertical axis
+  thick: 0.09,
+  height: 1.1,
+  yaw: 6, // turn about each slab's own vertical axis
   tilt: 8, // outward lean
-  elev: 38, // camera elevation, deg
-  dist: 4.0,
+  elev: 40, // camera elevation, deg
+  dist: 4.6,
   tx: 0,
-  ty: 0.15,
-  tz: -0.2,
+  ty: 0.45,
+  tz: -0.5,
   fov: 40,
-  band: 6, // horizon band in the environment: lights the faces
+  band: 16, // horizon band in the environment: lights the faces
   top: 30, // high strip behind: bevel edge lines
   sky: 7, // high band all round: bright top edges on every slab
   rim: 60,
-  exposure: 1.5,
+  exposure: 1.9,
+  roughness: 0.55,
+  bloom: 1.2,
+  bloomR: 0.025,
+  bloomT: 0.35,
+  blur: 0.006,
 };
 
 export const makeStripEnv = (
@@ -105,11 +110,12 @@ export const makeBladeRing =
     const mat = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(row.base),
       metalness: 0.85,
-      roughness: 0.28,
+      roughness: P.roughness,
       clearcoat: 0.3,
       clearcoatRoughness: 0.2,
       envMapIntensity: 1.0,
     });
+    const SLABS = P.count;
     const ring = new THREE.InstancedMesh(geo, mat, SLABS);
     ring.frustumCulled = false;
     scene.add(ring);
@@ -139,9 +145,11 @@ export const makeBladeRing =
       scene,
       camera,
       update: (frame) => {
-        const turn = (TURN_PER_LOOP * frame) / 600;
+        // Turn exactly 3 slab pitches per 600 frames. Integer maths, so frame
+        // 600 is bit-identical to frame 0 with the slabs relabelled.
+        const period = 600 * SLABS;
         for (let i = 0; i < SLABS; i++) {
-          const a = ((i * PITCH + turn) % 360) * DEG;
+          const a = (TAU * ((i * 600 + 3 * frame) % period)) / period;
           rotY.makeRotationY(a);
           m.multiplyMatrices(rotY, local);
           ring.setMatrixAt(i, m);
@@ -164,8 +172,11 @@ export const makeBladeRing =
           focusDist: camDist - 0.4,
           focusDead: 0.5,
           focusRange: 2.2,
-          maxBlur: 0.006,
+          maxBlur: P.blur,
           exposure: P.exposure,
+          bloom: P.bloom,
+          bloomRadius: P.bloomR,
+          bloomThreshold: P.bloomT,
           vignette: 0.25,
           grain: 0.015,
           blackCut: 1,

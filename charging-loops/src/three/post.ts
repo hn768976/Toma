@@ -14,6 +14,9 @@ export type PostSettings = {
   vignette: number;
   grain: number; // amplitude, 0.015 = 1.5 %
   blackCut: number; // 1 = fade grain + dither to zero near black (clean black)
+  bloom?: number; // strength of the soft halo around bright areas
+  bloomRadius?: number; // fraction of frame height
+  bloomThreshold?: number;
 };
 
 const vertex = /* glsl */ `
@@ -33,6 +36,7 @@ uniform sampler2D tDepth;
 uniform vec2 uRes;
 uniform float uNear, uFar, uFocus, uDead, uRange, uMaxBlur;
 uniform float uFrame, uExposure, uVignette, uGrain, uBlackCut;
+uniform float uBloom, uBloomR, uBloomT;
 in vec2 vUv;
 out vec4 outColor;
 
@@ -79,6 +83,18 @@ void main() {
     }
   }
   vec3 col = acc / wsum;
+  // bloom: fixed golden-angle gather of the bright pass (no state, no mips)
+  if (uBloom > 0.0) {
+    vec3 b = vec3(0.0);
+    for (int i = 0; i < 32; i++) {
+      float fi = float(i);
+      float r = sqrt((fi + 0.5) / 32.0) * uBloomR;
+      float a = fi * 2.39996323 + 0.7;
+      vec3 c = texture(tColor, vUv + vec2(cos(a), sin(a)) * r * px).rgb;
+      b += max(c - uBloomT, 0.0) * (1.0 - 0.6 * (r / uBloomR));
+    }
+    col += uBloom * b / 32.0;
+  }
   col = aces(col * uExposure);
   col = toSRGB(col);
   vec2 q = vUv - 0.5;
@@ -133,6 +149,9 @@ export class PostPipeline {
         uVignette: { value: 0.3 },
         uGrain: { value: 0.015 },
         uBlackCut: { value: 0 },
+        uBloom: { value: 0 },
+        uBloomR: { value: 1 },
+        uBloomT: { value: 1 },
       },
     });
     const geo = new THREE.BufferGeometry();
@@ -165,6 +184,9 @@ export class PostPipeline {
     u.uVignette.value = s.vignette;
     u.uGrain.value = s.grain;
     u.uBlackCut.value = s.blackCut;
+    u.uBloom.value = s.bloom ?? 0;
+    u.uBloomR.value = (s.bloomRadius ?? 0.02) * h;
+    u.uBloomT.value = s.bloomThreshold ?? 0.6;
 
     gl.setRenderTarget(this.rt);
     gl.setClearColor(0x000000, 1);

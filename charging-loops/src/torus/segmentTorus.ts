@@ -14,19 +14,22 @@ export const TORUS_PARAMS = {
   // read as a ribbed hose next to it, so the count is a parameter.
   segments: 40,
   minor: 1.05, // tube radius (major radius is 3)
-  pinch: 0.5, // how much the tube narrows at a seam
-  zoom: 1, // scales every beat's camera offset from its target
+  pinch: 0.32, // how much the tube narrows at a seam
+  zoom: 1.15, // scales every beat's camera offset from its target
   roll: -40, // camera roll, deg: the ring runs diagonally across the frame
   inner: 1, // how strongly the warm colour gathers on the hole-facing side
   shininess: 26,
-  segLight: 2.5, // one-sided light across each slice: bright edge -> dark core
-  segPow: 3,
+  segLight: 1.4, // one-sided light across each slice: bright edge -> dark core
+  segPow: 4,
   warm: 1.1, // overall reach of gradient B
   keyScale: 0.15,
-  glow: 2.0, // inner-wall glow in colour B
-  sharp: 0.8, // 0 = soft A-B blend, 1 = hard split (avoids a muddy mid-tone)
+  glow: 1.5, // inner-wall glow in colour B
+  sharp: 0.3, // 0 = soft A-B blend, 1 = hard split (avoids a muddy mid-tone)
   rimScale: 0.2,
-  exposure: 1.2,
+  exposure: 0.9,
+  groove: 0.7, // darkening in the creases between slices
+  bloom: 0.8,
+  blur: 0.0015,
 };
 
 // One segment around ring angle 0, spanning +/- half a pitch.
@@ -134,6 +137,7 @@ uniform float uWarm;
 uniform float uGlow;
 uniform float uSharp;
 uniform float uLit;
+uniform float uGroove;
 varying vec3 vN;
 varying vec3 vW;
 varying vec3 vObj;
@@ -170,7 +174,10 @@ void main() {
   vec3 col = base * (uKey * lam * 0.55 + uFill + uSegLight * uLit * slice)
            + uKey * spec * mix(vec3(1.0), base, 0.7);
   // hole-facing walls turned toward the camera glow in colour B
-  col += uB * uGlow * uLit * gs * inner * inner * pow(max(dot(N, V), 0.0), 1.5) * (0.4 + 0.6 * slice);
+  // broad, soft: the whole inner face, not just slice edges
+  col += uB * uGlow * uLit * gs * inner * pow(max(dot(N, V), 0.0), 0.8);
+  // dark grooves where slices meet
+  col *= mix(1.0 - uGroove, 1.0, smoothstep(0.98, 0.7, abs(vSeg)));
   col += uRim * fres * uRimAmt;
   col += uRim * seam * uSeamAmt * (0.35 + 0.65 * fres);
   gl_FragColor = vec4(min(col, vec3(16.0)), 1.0);
@@ -192,7 +199,7 @@ type Beat = {
 // Three beats at frames 0, 200, 400; beat 1 again at 600.
 export const TORUS_BEATS: Beat[] = [
   // 1: close, low, along the ring, fully lit
-  { cam: [1.2, 2.0, 4.3], target: [-0.6, -0.3, -1.0], fov: 58, key: [0.25, 0.35, 1], keyAmt: 1.0, fill: 0.015, rim: 0.4, seam: 0.4, focus: 4.6, lit: 1 },
+  { cam: [1.2, 2.0, 4.3], target: [-0.6, -0.3, -1.0], fov: 54, key: [0.25, 0.35, 1], keyAmt: 1.0, fill: 0.015, rim: 0.4, seam: 0.4, focus: 4.6, lit: 1 },
   // 2: key swings away; only rims and seams glow
   { cam: [-0.2, 1.8, 4.4], target: [0.2, -0.2, -1.4], fov: 56, key: [0.1, 0.25, -1], keyAmt: 0.3, fill: 0.0, rim: 4.0, seam: 4.0, focus: 4.6, lit: 0.12 },
   // 3: wider, the ring's curve against black (still overflowing the frame)
@@ -263,6 +270,7 @@ export const makeSegmentTorus =
         uGlow: { value: P.glow },
         uSharp: { value: P.sharp },
         uLit: { value: 1 },
+        uGroove: { value: P.groove },
       },
     });
     const torus = new THREE.InstancedMesh(geo, mat, SEGMENTS);
@@ -306,8 +314,11 @@ export const makeSegmentTorus =
           focusDist: b.focus * P.zoom,
           focusDead: 0.8,
           focusRange: 4,
-          maxBlur: 0.006,
+          maxBlur: P.blur,
           exposure: P.exposure,
+          bloom: P.bloom,
+          bloomRadius: 0.025,
+          bloomThreshold: 0.45,
           vignette: 0.2,
           grain: 0.015,
           blackCut: 0,
