@@ -108,18 +108,12 @@ const TURBINES: TurbineSpot[] = (() => {
     { x: 24, z: -27, yaw: -0.35, scale: 1.1 },
     { x: -15, z: -37, yaw: 0.25, scale: 1.05 },
   ];
+  // Speed and phase belong to the base layout, so the copy one period further
+  // away is identical: when it takes the near copy's place at the loop seam the
+  // rotor angle carries on without a jump.
+  const spin = base.map(() => ({ k: 3 + Math.floor(r() * 4), phase: r() * TAU })); // 3..6 thirds of a turn per loop
   const out: TurbineSpot[] = [];
-  for (let rep = 0; rep < 2; rep++) {
-    for (const b of base) {
-      out.push({
-        ...b,
-        x: b.x + (rep ? range(r, -2, 2) * 0 : 0),
-        z: b.z - rep * P,
-        k: 3 + Math.floor(r() * 4), // 3..6 thirds of a turn per loop
-        phase: r() * TAU,
-      });
-    }
-  }
+  for (let rep = 0; rep < 2; rep++) base.forEach((b, i) => out.push({ ...b, z: b.z - rep * P, ...spin[i] }));
   return out;
 })();
 
