@@ -820,7 +820,7 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
   {
     const lr = mulberry32(seed + 99);
     const avs = kept.filter((e) => e.cls >= 1 && e.len > 60);
-    for (let k = 0; k < 220 && avs.length; k++) {
+    for (let k = 0; k < 520 && avs.length; k++) {
       const e = pick(lr, avs);
       const t = range(lr, 0.2, 0.8);
       const a = e.pts[0];
@@ -828,7 +828,7 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
       const dir = sub(b, a);
       const l = len(dir) || 1;
       const nrm = v(-dir.y / l, dir.x / l);
-      const p = add(lerpV(a, b, t), mul(nrm, (chance(lr, 0.5) ? 1 : -1) * range(lr, 9, 16)));
+      const p = add(lerpV(a, b, t), mul(nrm, (chance(lr, 0.5) ? 1 : -1) * range(lr, 18, 30)));
       if (inWater(p)) continue;
       labels.push({ p, angle: Math.atan2(dir.y, dir.x), n: irange(lr, 3, 7) });
     }

@@ -24,7 +24,7 @@ export interface CityTrackerProps {
 const TEX = 8192;
 // map window in composition pixels
 const WIN = { x: 790, y: 212, w: 3050, h: 1640 };
-const VIEW_W = 0.6; // tiles across the window
+const VIEW_W = 0.86; // tiles across the window
 
 const FRAG = /* glsl */ `
 precision highp float;
@@ -72,14 +72,14 @@ void main() {
 export const cityTrackerStyle = (p: CityTrackerPalette): CityStyle => ({
   size: TEX,
   ground: p.block,
-  widths: [7.5, 11, 16],
+  widths: [10.5, 14, 20],
   colors: [p.local, p.avenue, p.avenue],
   alphas: [0.8, 0.95, 1],
   water: p.water,
   park: p.water,
   lot: p.water,
   rail: p.local,
-  halo: { color: p.avenue, width: 46, alpha: 0.16 },
+  halo: { color: p.avenue, width: 60, alpha: 0.16 },
 });
 
 const camAt = (props: CityTrackerProps, f: number) => {

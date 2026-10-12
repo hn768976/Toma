@@ -75,7 +75,7 @@ out vec4 fragColor;
 void main() {
   float nv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
     float rim2 = pow(1.0 - nv, 14.0);
-  vec3 col = uOcean + uRim * (pow(1.0 - nv, 4.5) * 0.55 + rim2 * 1.1);
+  vec3 col = uOcean + uRim * (0.035 + pow(1.0 - nv, 4.5) * 0.45 + rim2 * 0.9);
   // faint inner sheen toward the upper left
   col += uRim * 0.05 * smoothstep(0.2, 1.0, dot(normalize(vN), normalize(vec3(-0.5, 0.6, 0.6))));
   fragColor = vec4(col, 0.0);
@@ -142,7 +142,7 @@ const makeFactory =
     spin.add(ocean);
 
     // land points: Fibonacci sphere masked by Natural Earth land
-    const N = 190000;
+    const N = 230000;
     const lp: number[] = [];
     const lc: number[] = [];
     const ls: number[] = [];
@@ -159,9 +159,9 @@ const makeFactory =
       if (!isLand(lon, lat)) continue;
       const rr = 1.004 + rng() * 0.004;
       lp.push(x * rr, y * rr, z * rr);
-      const b = rng() < 0.004 ? 1.6 : 0.42 + 0.5 * rng();
+      const b = rng() < 0.01 ? 1.8 : 0.75 + 0.8 * rng();
       lc.push(land[0], land[1], land[2], b);
-      ls.push(b > 1.5 ? 1.7 : 0.95 + 0.35 * rng());
+      ls.push(b > 1.7 ? 1.9 : 1.0 + 0.4 * rng());
     }
     const landPts = new THREE.Points(
       buildPointsGeometry(new Float32Array(lp), new Float32Array(lc), new Float32Array(ls)),
@@ -195,7 +195,7 @@ const makeFactory =
     spin.add(coasts);
 
     // gold specks: a swirling sheet, periodic in 600 frames
-    const NS = 3200;
+    const NS = 3600;
     const sp = new Float32Array(NS * 3);
     const sc = new Float32Array(NS * 4);
     const ss = new Float32Array(NS);
@@ -228,7 +228,7 @@ const makeFactory =
           // and swirls round behind the globe
           float a = p * 2.1 + v * 0.15 + uSheetRot;
           float rad = 1.03 + 1.0 * pow(p, 0.8) + 0.1 * (j - 0.5) * p;
-          float h = v * (0.05 + 0.5 * p) + 0.25 * sin(p * 4.0 + v * 2.5) * p;
+          float h = v * (0.08 + 0.8 * p) + 0.3 * sin(p * 4.0 + v * 2.5) * p;
           vec3 e1 = normalize(vec3(0.75, 0.62, 0.2));
           vec3 e2 = normalize(vec3(-0.35, 0.643, -0.681));
           vec3 e3 = normalize(cross(e1, e2));
@@ -241,6 +241,25 @@ const makeFactory =
     const speckGroup = new THREE.Group();
     speckGroup.add(specks);
     scene.add(speckGroup);
+
+    // sparkle dust around the globe (orbits with the spin, loops exactly)
+    const ND = 1600;
+    const dp = new Float32Array(ND * 3);
+    const dcol = new Float32Array(ND * 4);
+    const dsz = new Float32Array(ND);
+    for (let i = 0; i < ND; i++) {
+      const u = rng() * 2 - 1;
+      const th = rng() * Math.PI * 2;
+      const rr = 1.02 + 0.3 * Math.pow(rng(), 2.2);
+      const q = Math.sqrt(1 - u * u);
+      dp.set([Math.cos(th) * q * rr, u * rr, Math.sin(th) * q * rr], i * 3);
+      const white = rng() < 0.4;
+      dcol.set(white ? [0.9, 1, 0.97, 0.9 + rng()] : [land[0], land[1], land[2], 0.6 + 0.8 * rng()], i * 4);
+      dsz[i] = 1.0 + 1.4 * rng() * rng();
+    }
+    const dust = new THREE.Points(buildPointsGeometry(dp, dcol, dsz), pointsMaterial({ basePx: k, dof: speckDof, hard: 0.5 }));
+    dust.frustumCulled = false;
+    spin.add(dust);
 
     // background (grid, sliding panel, atmosphere glow)
     const pose0 = globePose(0, aspect);

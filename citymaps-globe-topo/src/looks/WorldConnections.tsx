@@ -22,7 +22,7 @@ const LAT_MIN = -57;
 const LAT_MAX = 83;
 const SX = 0.01; // map units per degree of longitude
 const SY = 0.0112; // per degree of latitude (slightly stretched, Miller-like)
-const TILT = (27 * Math.PI) / 180;
+const TILT = (34 * Math.PI) / 180;
 const PERIODS = [150, 200, 300, 600];
 
 const toMap = (lat: number, lon: number) => new THREE.Vector3(lon * SX, (lat - (LAT_MIN + LAT_MAX) / 2) * SY, 0);
@@ -44,7 +44,10 @@ void main() {
   vec2 p = vUv;
   vec3 col = uBg;
   // lighter haze at the top
-  col += uHaze * pow(smoothstep(0.2, 1.05, p.y), 1.3) * 1.0;
+  col += uHaze * pow(smoothstep(0.35, 1.05, p.y), 1.5) * 0.7;
+  // broad soft glow behind the map and in the upper left
+  col += uHaze * 0.3 * exp(-pow(length((p - vec2(0.45, 0.55)) * vec2(1.0, 1.6)), 2.0) / 0.18);
+  col += uHaze * 0.45 * exp(-length(p - vec2(0.0, 0.85)) / 0.3);
   col += uHaze * 0.18 * exp(-pow((p.y - 0.95) / 0.25, 2.0)) * (0.7 + 0.3 * sin(p.x * 3.0 + 1.0));
   // faint large translucent panels in the background, slowly drifting
   vec2 q = vec2(p.x * uRes.x / uRes.y, p.y);
@@ -55,7 +58,7 @@ void main() {
   panels += box(q, vec2(1.45 + d, 0.62), vec2(0.18, 0.16), 0.02);
   panels += box(q, vec2(0.62, 0.28 + d), vec2(0.34, 0.06), 0.02);
   panels += box(q, vec2(1.35 - d, 0.22), vec2(0.22, 0.09), 0.02);
-  col += vec3(0.55, 0.65, 0.8) * panels * 0.028;
+  col += vec3(0.55, 0.65, 0.8) * panels * 0.05;
   // faint circuit lines low in the frame
   float lw = 1.5 / uRes.y;
   float gl = 0.0;
@@ -63,7 +66,7 @@ void main() {
     float y = 0.06 + float(i) * 0.035;
     gl += (1.0 - smoothstep(0.0, lw, abs(p.y - y))) * step(0.1 + 0.13 * float(i), p.x) * step(p.x, 0.55 + 0.08 * float(i));
   }
-  col += uHaze * gl * 0.12;
+  col += uHaze * gl * 0.35;
   fragColor = vec4(col, 1.0);
 }`;
 
@@ -73,7 +76,7 @@ const makeFactory =
     const pal = props.palette;
     const rng = mulberry32(props.seed * 977 + 13);
     const k = height / 720; // px scale relative to 720p
-    const dof = dofUniforms(4.2, 40 * k, 12 * k);
+    const dof = dofUniforms(4.2, 22 * k, 7 * k);
     // world-up expressed in the tilted map's local frame
     const UP = new THREE.Vector3(0, Math.cos(TILT), Math.sin(TILT));
 
@@ -89,16 +92,36 @@ const makeFactory =
     const dotSize: number[] = [];
     const dotPar: number[] = [];
     const dc = hexRGB(pal.dots);
+    const ac = hexRGB(pal.arcs);
+    const xc = hexRGB(pal.accent);
     for (let la = LAT_MIN + 0.5; la < LAT_MAX; la += 1) {
       for (let lo = -179.5; lo < 180; lo += 1) {
         if (!isLand(lo, la)) continue;
         const p = toMap(la, lo);
         let near = 0;
         for (const c of cityPos) near += Math.exp(-p.distanceToSquared(c) / (2 * 0.05 * 0.05));
-        const b = 0.95 + 0.3 * rng() + Math.min(1.2, near) * 0.9;
+        // each cell: a short vertical streak of 2-3 sparkly sub-dots
+        const n = 2 + (rng() < 0.4 ? 1 : 0);
+        for (let q = 0; q < n; q++) {
+          const b = 1.0 + 0.6 * rng() + Math.min(1.2, near) * 0.9;
+          const teal = rng() < 0.06;
+          dotPos.push(p.x + (rng() - 0.5) * 0.002, p.y + (q - (n - 1) / 2) * SY * 0.3, 0);
+          dotCol.push(teal ? xc[0] : dc[0], teal ? xc[1] : dc[1], teal ? xc[2] : dc[2], Math.min(2.2, b));
+          dotSize.push(1.2 + 0.6 * rng() * rng() + Math.min(1, near) * 0.5);
+          dotPar.push(1 + Math.floor(rng() * 3), rng() * 6.283);
+        }
+      }
+    }
+    for (let la = LAT_MIN + 0.5; la < LAT_MAX; la += 1) {
+      for (let lo = -179.5; lo < 180; lo += 1) {
+        if (isLand(lo, la)) continue;
+        const coast = isLand(lo + 1, la) || isLand(lo - 1, la) || isLand(lo, la + 1) || isLand(lo, la - 1);
+        if (!coast || rng() > 0.45) continue;
+        const p = toMap(la + (rng() - 0.5) * 1.6, lo + (rng() - 0.5) * 1.6);
+        const teal = rng() < 0.35;
         dotPos.push(p.x, p.y, 0);
-        dotCol.push(dc[0], dc[1], dc[2], Math.min(2.0, b));
-        dotSize.push(1.7 + 0.4 * rng() + Math.min(1, near) * 0.6);
+        dotCol.push(teal ? xc[0] : dc[0], teal ? xc[1] : dc[1], teal ? xc[2] : dc[2], 0.5 + 0.7 * rng());
+        dotSize.push(1.0 + 0.6 * rng());
         dotPar.push(1 + Math.floor(rng() * 3), rng() * 6.283);
       }
     }
@@ -126,13 +149,13 @@ const makeFactory =
       const big = 0.6 + 0.4 * rng();
       // wide soft glow
       glowPos.push(p.x, p.y, 0.001);
-      glowCol.push(cc[0], cc[1], cc[2], 0.32 * big);
-      glowSize.push(34 * big);
+      glowCol.push(cc[0], cc[1], cc[2], 0.22 * big);
+      glowSize.push(22 * big);
       glowPar.push(1 + Math.floor(rng() * 2), rng() * 6.283);
       // bright core
       glowPos.push(p.x, p.y, 0.002);
-      glowCol.push(1, 1, 1, 1.4);
-      glowSize.push(4.5 * big);
+      glowCol.push(1, 1, 1, 2.0);
+      glowSize.push(3.6 * big);
       glowPar.push(2, rng() * 6.283);
     });
     const glows = new THREE.Points(
@@ -157,7 +180,6 @@ const makeFactory =
       used.add(key);
       pairs.push([a, b]);
     }
-    const ac = hexRGB(pal.arcs);
     const arcLines: RibbonLine[] = pairs.map(([a, b], i) => {
       const A = cityPos[a];
       const B = cityPos[b];
@@ -171,7 +193,7 @@ const makeFactory =
         pts.push(u * u * A.x + 2 * u * t * C.x + t * t * B.x, u * u * A.y + 2 * u * t * C.y + t * t * B.y, u * u * A.z + 2 * u * t * C.z + t * t * B.z);
       }
       const period = i % PERIODS.length;
-      return { pts, color: ac, alpha: 0.3, width: 1.1, seed: period + range(rng, 0, 0.999) };
+      return { pts, color: [0.5 * ac[0] + 0.5, 0.5 * ac[1] + 0.5, 0.5 * ac[2] + 0.5], alpha: 0.2, width: 0.9, seed: period + range(rng, 0, 0.999) };
     });
     const uF = { value: 0 };
     const pulseCol = new THREE.Vector3(...hexRGB(pal.pulse));
@@ -188,7 +210,7 @@ const makeFactory =
           float head = fract(uF / per + fract(vParam.y));
           float dd = fract(head - vParam.x);          // distance behind the head
           float tail = exp(-dd / 0.045) * step(dd, 0.35);
-          bmod = 1.0 + 6.0 * tail;
+          bmod = 1.0 + 3.5 * tail;
           // fade the very ends into the city glow
           bmod *= smoothstep(0.0, 0.04, vParam.x) * smoothstep(1.0, 0.96, vParam.x);
         `,
@@ -242,7 +264,7 @@ const makeFactory =
         const push = 1 + 0.04 * Math.sin(ph);
         const dist = 3.8 / push;
         cam.position.set(0.12 * Math.sin(ph + 0.4), -0.05 + 0.06 * Math.cos(ph), dist);
-        cam.lookAt(0.02 * Math.sin(ph + 1.3), 0.12, 0);
+        cam.lookAt(0.02 * Math.sin(ph + 1.3), 0.06, 0);
         cam.updateMatrixWorld(true);
         dof.uFocus.value = dist;
         uPhase.value = ph;

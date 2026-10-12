@@ -177,18 +177,18 @@ export const drawCity = (city: City, style: CityStyle): HTMLCanvasElement => {
     for (const l of city.labels) {
       const c = Math.cos(l.angle);
       const s = Math.sin(l.angle);
-      let x = -l.n * 5;
+      let x = -l.n * 9;
       for (let k = 0; k < l.n; k++) {
-        const w = 3 + lr() * 6;
+        const w = 6 + lr() * 12;
         const px = l.p.x + c * x;
         const py = l.p.y + s * x;
-        const h = 1.6;
+        const h = 3.2;
         path.moveTo(px - s * h, py + c * h);
         path.lineTo(px + c * w - s * h, py + s * w + c * h);
         path.lineTo(px + c * w + s * h, py + s * w - c * h);
         path.lineTo(px + s * h, py - c * h);
         path.closePath();
-        x += w + 2.5;
+        x += w + 4.5;
       }
     }
     wrapped(ctx, W, scale, () => ctx.fill(path));

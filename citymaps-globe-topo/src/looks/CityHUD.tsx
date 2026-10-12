@@ -20,7 +20,7 @@ export interface CityHUDProps {
 
 const TEX = 8192;
 // visible map width in tiles (tile = 3 km)
-const VIEW_W = 0.56;
+const VIEW_W = 0.86;
 const ROT = -0.42;
 
 const MAP_FRAG = /* glsl */ `
@@ -67,7 +67,7 @@ void main() {
 export const cityHudStyle = (p: CityHudPalette): CityStyle => ({
   size: TEX,
   ground: p.ground,
-  widths: [6, 8.5, 12],
+  widths: [8.5, 11, 15],
   colors: [p.local, p.avenue, p.arterial],
   alphas: [0.85, 0.9, 0.95],
   water: p.water,
@@ -75,7 +75,7 @@ export const cityHudStyle = (p: CityHudPalette): CityStyle => ({
   lot: p.park,
   rail: p.local,
   buildings: { shades: p.buildings },
-  noise: { fine: 0.1, coarse: 0.55 },
+  noise: { fine: 0.08, coarse: 0.45 },
 });
 
 const makeFactory =

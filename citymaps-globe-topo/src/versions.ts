@@ -46,6 +46,7 @@ export interface WorldPalette {
   background: string;
   haze: string;
   beams: string;
+  accent: string; // sparse accent dots on land and coasts
 }
 export interface GlobePalette {
   land: string;
@@ -81,7 +82,7 @@ export const VERSIONS: VersionRow[] = [
       citySeed: CITY_SEED,
       palette: {
         ground: "#1C3240",
-        buildings: ["#22394A", "#273F50", "#2C4656", "#324C5C", "#3A5A6A", "#44647A"],
+        buildings: ["#213748", "#243B4C", "#273F50", "#2A4454", "#2E4858", "#334E5E"],
         local: "#7A9AAC",
         avenue: "#9AB8C8",
         arterial: "#B8D4E2",
@@ -132,7 +133,7 @@ export const VERSIONS: VersionRow[] = [
     look: "WorldConnections",
     props: {
       seed: WORLD_SEED,
-      palette: { dots: "#C8D8F0", cities: "#E8F2FF", arcs: "#8AB8FF", pulse: "#E0F0FF", background: "#04102A", haze: "#1A3A6A", beams: "#C8E0FF" },
+      palette: { dots: "#D8E4F4", cities: "#F0F6FF", arcs: "#8AB8FF", pulse: "#E8F4FF", background: "#04102A", haze: "#1C4470", beams: "#C8E0FF", accent: "#6AF0D8" },
     },
   },
   {
@@ -140,7 +141,7 @@ export const VERSIONS: VersionRow[] = [
     look: "WorldConnections",
     props: {
       seed: WORLD_SEED,
-      palette: { dots: "#F0C878", cities: "#FFE8B8", arcs: "#E89A3A", pulse: "#FFE0A0", background: "#120A04", haze: "#3A2410", beams: "#FFD890" },
+      palette: { dots: "#F0C878", cities: "#FFE8B8", arcs: "#E89A3A", pulse: "#FFE0A0", background: "#120A04", haze: "#3A2410", beams: "#FFD890", accent: "#FFF0C0" },
     },
   },
   {

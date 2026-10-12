@@ -22,7 +22,7 @@ export interface CityFlyoverProps {
 const TEX = 8192;
 const PITCH = (30 * Math.PI) / 180;
 const FOV = 40;
-const ALT = 1000; // metres
+const ALT = 1350; // metres
 const YAW0 = (-58 * Math.PI) / 180;
 const N_PILLS = 7;
 
@@ -111,7 +111,7 @@ void main() {
 export const cityFlyoverStyle = (p: CityFlyoverPalette): CityStyle => ({
   size: TEX,
   ground: p.ground,
-  widths: [8, 12, 16],
+  widths: [10.5, 15, 20],
   colors: [p.local, p.avenue, p.avenue],
   alphas: [0.6, 1, 1],
   water: "#000000",
@@ -119,7 +119,7 @@ export const cityFlyoverStyle = (p: CityFlyoverPalette): CityStyle => ({
   lot: "#000000",
   rail: p.local,
   halo: { color: p.avenue, width: 50, alpha: 0.22 },
-  labels: { color: p.label, alpha: 0.85 },
+  labels: { color: p.label, alpha: 0.6 },
 });
 
 // ray from camera through NDC point -> ground (y = 0)
@@ -144,12 +144,12 @@ const makeFactory =
       uniforms: {
         tMap: { value: tex },
         uW: { value: W },
-        uGain: { value: 1.25 },
+        uGain: { value: 1.4 },
         uGround: { value: vec3Of(pal.ground) },
         uFocus: { value: 1000 },
         uCocA: { value: 1 },
-        uFogNear: { value: 3000 },
-        uFogFar: { value: 8000 },
+        uFogNear: { value: 4000 },
+        uFogFar: { value: 10000 },
         uPin: { value: new THREE.Vector3() },
         uPinCol: { value: vec3Of(pal.pin) },
         uPinT: { value: 0 },

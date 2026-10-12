@@ -55,9 +55,11 @@ export const buildTerrain = (seed: number, levels = 40): Terrain => {
   };
   // 2-3 peaks and a valley
   const peaks = [
-    { x: range(rng, -0.06, 0.04), z: range(rng, -0.08, -0.03), h: 1.0, sx: 0.2, sz: 0.15 },
+    { x: range(rng, -0.06, 0.04), z: range(rng, -0.08, -0.03), h: 1.0, sx: 0.15, sz: 0.12 },
     { x: range(rng, 0.28, 0.36), z: range(rng, -0.04, 0.04), h: 0.55, sx: 0.13, sz: 0.11 },
     { x: range(rng, -0.4, -0.32), z: range(rng, 0.05, 0.12), h: 0.5, sx: 0.12, sz: 0.1 },
+    { x: range(rng, 0.12, 0.2), z: range(rng, 0.12, 0.18), h: 0.38, sx: 0.07, sz: 0.06 },
+    { x: range(rng, -0.22, -0.14), z: range(rng, -0.24, -0.18), h: 0.42, sx: 0.09, sz: 0.07 },
   ];
   const valley = { x: range(rng, 0.05, 0.15), z: range(rng, 0.12, 0.18), d: 0.18 };
   const h = new Float32Array(nx * nz);
@@ -85,7 +87,8 @@ export const buildTerrain = (seed: number, levels = 40): Terrain => {
       hmax = Math.max(hmax, v);
     }
   }
-  for (let k = 0; k < h.length; k++) h[k] = (h[k] - hmin) / (hmax - hmin);
+  // shape: flatten lowlands so lines gather on the hills and gaps open up between them
+  for (let k = 0; k < h.length; k++) h[k] = Math.pow((h[k] - hmin) / (hmax - hmin), 1.35);
 
   // summits: local maxima over a window
   const summits: Terrain["summits"] = [];

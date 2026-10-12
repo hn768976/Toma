@@ -42,7 +42,7 @@ uniform vec2 uRes;
 void main() {
   vec2 q = vUv - vec2(0.5, 0.62);
   q.x *= uRes.x / uRes.y;
-  vec3 col = uBg * (1.25 - 0.55 * smoothstep(0.1, 1.0, length(q)));
+  vec3 col = uBg * (1.7 - 0.8 * smoothstep(0.1, 1.0, length(q)));
   // faint fine grid
   float cell = uRes.y / 54.0;
   vec2 g = abs(fract(gl_FragCoord.xy / cell + 0.5) - 0.5) * cell;
@@ -79,7 +79,7 @@ const makeFactory =
         pts,
         closed: c.closed,
         color: isIndex ? ic : lc,
-        alpha: isIndex ? 1.0 : 0.62 * lift * 1.25,
+        alpha: isIndex ? 0.72 : 0.9 * lift,
         width: isIndex ? 1.7 : 1.05,
       };
     });
