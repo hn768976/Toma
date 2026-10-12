@@ -1,0 +1,10 @@
+{"id": "FinanceMontage-Blue", "mean_step": 7.751, "min_step": 7.476, "max_step": 8.056, "cv": 0.021, "stalls": 0}
+{"id": "CurvedChartWall-Blue", "mean_step": 4.481, "min_step": 4.348, "max_step": 4.545, "cv": 0.013, "stalls": 0}
+{"id": "CurvedChartWall-Emerald", "mean_step": 4.534, "min_step": 4.397, "max_step": 4.601, "cv": 0.013, "stalls": 0}
+{"id": "BarRace-Cyan", "mean_step": 3.173, "min_step": 3.099, "max_step": 3.597, "cv": 0.035, "stalls": 0}
+{"id": "BarRace-Amber", "mean_step": 3.118, "min_step": 3.046, "max_step": 3.528, "cv": 0.035, "stalls": 0}
+{"id": "TickerLine-Blue", "mean_step": 6.18, "min_step": 5.816, "max_step": 6.349, "cv": 0.023, "stalls": 0}
+{"id": "ColumnChart-Blue", "mean_step": 3.528, "min_step": 3.293, "max_step": 3.641, "cv": 0.028, "stalls": 0}
+{"id": "ColumnChart-Violet", "mean_step": 3.646, "min_step": 3.409, "max_step": 3.735, "cv": 0.025, "stalls": 0}
+{"id": "TradingDashboard-Purple", "mean_step": 3.379, "min_step": 3.307, "max_step": 3.452, "cv": 0.011, "stalls": 0}
+{"id": "NightChart-Gold", "mean_step": 3.973, "min_step": 3.314, "max_step": 5.075, "cv": 0.101, "stalls": 0}

@@ -1,0 +1,8 @@
+CurvedChartWall-Blue scale=1 still_wall=15.207211585
+CurvedChartWall-Blue scale=0.3333333333333333 still_wall=3.544492309
+TradingDashboard-Purple scale=1 still_wall=12.611159099
+TradingDashboard-Purple scale=0.3333333333333333 still_wall=3.572763090
+CurvedChartWall-Blue 4K frames=0-0 wall=14.639404748
+CurvedChartWall-Blue 4K frames=0-4 wall=42.070624931
+TradingDashboard-Purple 4K frames=0-0 wall=11.358235015
+TradingDashboard-Purple 4K frames=0-4 wall=38.184012291
