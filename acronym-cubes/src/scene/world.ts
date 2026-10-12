@@ -34,18 +34,24 @@ export const LOOK = {
   plateFrameShare: 0.55,
   pushIn: 0.04,
   yawDeg: 3,
-  cubeBrightness: 0.3,
-  bgDarken: 0.05,
+  cubeBrightness: 0.11,
+  bgDarken: 0.012,
+  hazeLevel: 0.22,
+  hazeDensity: 0.016,
+  outlineInset: 0.22,
+  outlineWidth: 0.045,
+  outlineGain: 2.2,
   post: {
     aperture: 2.4,
     focusRange: 2.6,
     nearScale: 2.6,
     maxBlur: 0.013,
-    bloomStrength: 0.9,
-    bloomThreshold: 0.9,
-    exposure: 0.85,
-    vignette: 0.45,
+    bloomStrength: 1.2,
+    bloomThreshold: 1.0,
+    exposure: 0.7,
+    vignette: 0.62,
     grain: 0.015,
+    saturation: 1.35,
   },
 };
 
@@ -66,6 +72,8 @@ export function buildWorld(gl: THREE.WebGLRenderer, row: AcronymRow, font: Font,
   const colB = lin(row.colorB);
   const bg = colA.clone().lerp(colB, 0.35).multiplyScalar(LOOK.bgDarken);
   gl.setClearColor(bg, 1);
+  // coloured distance haze in the far palette colour (reads as the blue glow at the top)
+  scene.fog = new THREE.FogExp2(colA.clone().multiplyScalar(LOOK.hazeLevel), LOOK.hazeDensity);
 
   // environment: RoomEnvironment through PMREM (built once)
   const pmrem = new THREE.PMREMGenerator(gl);
@@ -140,10 +148,29 @@ export function buildWorld(gl: THREE.WebGLRenderer, row: AcronymRow, font: Font,
   // --- plate and letters ----------------------------------------------------
   const mid = colA.clone().lerp(colB, 0.5);
   const plateGeo = new RoundedBoxGeometry(PLATE_W, PLATE_H, PLATE_D, 4, 0.12);
-  const plate = makePlateMaterial(env, mid.clone().multiplyScalar(0.16), mid.clone().lerp(new THREE.Color(1, 1, 1), 0.4).multiplyScalar(0.5));
+  const plate = makePlateMaterial(env, mid.clone().multiplyScalar(0.07), mid.clone().lerp(new THREE.Color(1, 1, 1), 0.5).multiplyScalar(1.1));
   const plateMesh = new THREE.Mesh(plateGeo, plate.material);
   plateMesh.position.y = PLATE_TOP - PLATE_H / 2;
   scene.add(plateMesh);
+
+  // thin glowing outline inset on the plate's top face (the rim highlight line)
+  const outline = new THREE.Shape();
+  const ow = PLATE_W / 2 - LOOK.outlineInset;
+  const od = PLATE_D / 2 - LOOK.outlineInset;
+  const lw = LOOK.outlineWidth;
+  outline.moveTo(-ow, -od).lineTo(ow, -od).lineTo(ow, od).lineTo(-ow, od).closePath();
+  const hole = new THREE.Path();
+  hole.moveTo(-ow + lw, -od + lw).lineTo(-ow + lw, od - lw).lineTo(ow - lw, od - lw).lineTo(ow - lw, -od + lw).closePath();
+  outline.holes.push(hole);
+  const outlineGeo = new THREE.ShapeGeometry(outline);
+  outlineGeo.rotateX(-Math.PI / 2);
+  const outlineMat = new THREE.MeshBasicMaterial({
+    color: lin(row.iconColor ?? ICON_COLOR).multiplyScalar(LOOK.outlineGain),
+    fog: false,
+  });
+  const outlineMesh = new THREE.Mesh(outlineGeo, outlineMat);
+  outlineMesh.position.y = PLATE_TOP + 0.003;
+  scene.add(outlineMesh);
 
   const letters = buildLetters(font, row.word, row.coinNotches);
   const face = makeLetterFaceMaterial(env, lin(row.letterFace), letters.capHeight);
@@ -235,6 +262,8 @@ export function buildWorld(gl: THREE.WebGLRenderer, row: AcronymRow, font: Font,
     cubeGeo.dispose();
     iconGeo.dispose();
     plateGeo.dispose();
+    outlineGeo.dispose();
+    outlineMat.dispose();
     letters.geometry.dispose();
     [cube.material, icon.material, plate.material, face.material, iri.material].forEach((m) => m.dispose());
   };

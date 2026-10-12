@@ -26,6 +26,8 @@ export type PostParams = {
   exposure: number;
   vignette: number;
   grain: number;
+  /** saturation before tone mapping (1 = unchanged) */
+  saturation: number;
 };
 
 const FS_VERT = /* glsl */ `
@@ -316,6 +318,7 @@ export class PostPipeline {
       uniform float uExposure;
       uniform float uVignette;
       uniform float uGrain;
+      uniform float uSat;
       uniform float uFrame;
       uniform vec2 uRes;
       uvec3 pcg3d(uvec3 v) {
@@ -334,6 +337,8 @@ export class PostPipeline {
       }
       void main() {
         vec3 c = texture(tComp, vUv).rgb + texture(tBloom, vUv).rgb * uBloom;
+        float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+        c = max(mix(vec3(lum), c, uSat), 0.0);
         c = aces(c * uExposure);
         vec2 p = (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0);
         c *= 1.0 - uVignette * smoothstep(0.35, 1.15, length(p));
@@ -353,6 +358,7 @@ export class PostPipeline {
         uExposure: { value: 1 },
         uVignette: { value: 0.4 },
         uGrain: { value: 0.015 },
+        uSat: { value: 1 },
         uFrame: { value: 0 },
         uRes: { value: new THREE.Vector2() },
       },
@@ -466,6 +472,7 @@ export class PostPipeline {
     f.uExposure.value = p.exposure;
     f.uVignette.value = p.vignette;
     f.uGrain.value = p.grain;
+    f.uSat.value = p.saturation;
     f.uFrame.value = p.frame;
     f.uRes.value.set(w, h);
     this.pass(this.finalMat, null);

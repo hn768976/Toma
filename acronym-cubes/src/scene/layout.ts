@@ -14,7 +14,7 @@ export const PLATE_W = PLATE_COLS * PITCH - 0.25;
 export const PLATE_D = PLATE_ROWS * PITCH - 0.25;
 export const PLATE_H = 0.3;
 export const PLATE_TOP = 0.95; // world y of the plate's top face
-export const ICON_SIZE = 0.64;
+export const ICON_SIZE = 0.56;
 export const ACCENT_SHARE = 0.12;
 export const RIPPLE_AMP = 0.35;
 export const STATIC_JITTER = 0.08;
@@ -83,7 +83,7 @@ export function buildLayout(word: string, baseIconCount: number): CubeCell[] {
         row,
         col,
         // A → B across the rows the camera actually sees (far edge → bottom of frame)
-        gradientT: smoothstep(GRADIENT_ROWS[0], GRADIENT_ROWS[1], row),
+        gradientT: Math.pow(smoothstep(GRADIENT_ROWS[0], GRADIENT_ROWS[1], row), 1.5),
         slot,
         accent,
         jitter: (hC * 2 - 1) * STATIC_JITTER,

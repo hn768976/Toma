@@ -13,9 +13,9 @@ export function makeCubeMaterial(envMap: THREE.Texture) {
     roughness: 0.4,
     metalness: 0.0,
     envMap,
-    envMapIntensity: 0.3,
+    envMapIntensity: 0.12,
   });
-  const uniforms = { uSelfGlow: { value: 0.16 } };
+  const uniforms = { uSelfGlow: { value: 0.32 } };
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.fragmentShader = shader.fragmentShader
@@ -23,7 +23,9 @@ export function makeCubeMaterial(envMap: THREE.Texture) {
       .replace(
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
-        totalEmissiveRadiance += vColor.rgb * uSelfGlow * (0.35 + 0.65 * clamp(normal.y * 0.5 + 0.5, 0.0, 1.0));`,
+        vec3 nW = inverseTransformDirection(normal, viewMatrix);
+        // tops glow in the field colour, sides fall off to near-black
+        totalEmissiveRadiance += vColor.rgb * uSelfGlow * (0.08 + 0.92 * smoothstep(0.4, 0.95, nW.y));`,
       );
   };
   return { material: m, uniforms };
@@ -36,8 +38,8 @@ export function makeIconMaterial(atlas: THREE.Texture, iconColor: THREE.Color, a
     uFrame: { value: 0 },
     uIcon: { value: iconColor },
     uAccent: { value: accentColor },
-    uIconGain: { value: 1.15 },
-    uAccentGain: { value: 2.4 },
+    uIconGain: { value: 0.75 },
+    uAccentGain: { value: 2.0 },
     uHalo: { value: 0.9 },
   };
   const material = new THREE.ShaderMaterial({
