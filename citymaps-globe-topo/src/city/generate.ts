@@ -1019,6 +1019,27 @@ const buildRoute = (
       if (Math.abs(cross) > 0.5 || Math.hypot(b.x - a.x, b.y - a.y) > 200) simp.push(b);
     }
     simp.push(pts[pts.length - 1]);
+    // round each corner with a fillet (<= 30 m, ~3 px off the centreline at 720p) so the dot flows through turns
+    const fil: V2[] = [];
+    const m = simp.length - 1; // closed: simp[m] == simp[0]
+    for (let i = 0; i < m; i++) {
+      const P = simp[i];
+      const A = simp[(i - 1 + m) % m];
+      const B = simp[i + 1];
+      const la = Math.hypot(P.x - A.x, P.y - A.y);
+      const lb = Math.hypot(B.x - P.x, B.y - P.y);
+      const r = Math.min(30, la / 2.2, lb / 2.2);
+      const p0 = { x: P.x + ((A.x - P.x) / la) * r, y: P.y + ((A.y - P.y) / la) * r };
+      const p2 = { x: P.x + ((B.x - P.x) / lb) * r, y: P.y + ((B.y - P.y) / lb) * r };
+      for (let k = 0; k <= 12; k++) {
+        const t = k / 12;
+        const u = 1 - t;
+        fil.push({ x: u * u * p0.x + 2 * u * t * P.x + t * t * p2.x, y: u * u * p0.y + 2 * u * t * P.y + t * t * p2.y });
+      }
+    }
+    fil.push({ ...fil[0] });
+    simp.length = 0;
+    simp.push(...fil);
     const cum = [0];
     for (let i = 1; i < simp.length; i++) cum.push(cum[i - 1] + Math.hypot(simp[i].x - simp[i - 1].x, simp[i].y - simp[i - 1].y));
     return { pts: simp, cum, length: cum[cum.length - 1] };

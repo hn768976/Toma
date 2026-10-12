@@ -7,7 +7,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import * as THREE from "three";
 import { getCity, getCityCanvas, makeCityTexture } from "../city/assets";
 import { CityStyle } from "../city/draw";
-import { followCamera, routePoint } from "../city/route";
+import { followCamera, routeSmooth } from "../city/route";
 import { fsMaterial, fullscreenMesh, vec3Of } from "../gl/fullscreen";
 import { PostFX } from "../gl/post";
 import { Stage, StageFactory } from "../gl/Stage";
@@ -88,7 +88,9 @@ const camAt = (props: CityTrackerProps, f: number) => {
   const r = city.route;
   const s = (r.length * f) / LOOP;
   const cam = followCamera(r, s);
-  const dot = routePoint(r, s);
+  // dot drawn at a short arc-length average (±18 m): exact on straight
+  // streets, eased through corners
+  const dot = routeSmooth(r, s, 18, 24);
   return { city, cam, dot };
 };
 
