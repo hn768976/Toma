@@ -106,7 +106,7 @@ export const SWAY = {
     const t = (((f % loopLength) + loopLength) % loopLength) / loopLength;
     const TAU = 2 * Math.PI;
     return {
-      position: [SWAY_X, -0.035 + 0.02 * SWAY_VH * Math.sin(TAU * 3 * t + 0.6), 0],
+      position: [SWAY_X, -0.005 + 0.02 * SWAY_VH * Math.sin(TAU * 3 * t + 0.6), 0],
       rotation: [
         2 * deg * Math.sin(TAU * 2 * t + 1.9),
         18 * deg * Math.sin(TAU * 2 * t),

@@ -99,6 +99,12 @@ vec3 background(vec2 uv) {
     // the first colour deepens into the bottom-left corner (darkest area of the frame)
     float bl = smoothstep(0.95, 0.0, length(uv * vec2(0.9, 1.2)));
     c = mix(c, uC0 * vec3(0.71, 0.76, 0.87), uDeepen * bl);
+    // the first colour also reaches into the top-right corner (lighter than bottom-left)
+    float tr = smoothstep(0.7, 0.0, length((uv - vec2(1.0, 1.0)) * vec2(0.9, 1.3)));
+    c = mix(c, uC0 * vec3(0.95, 0.97, 0.99), 0.7 * uDeepen * tr);
+    // a little of the last colour warms the bottom centre
+    float bc = smoothstep(0.45, 0.0, length((uv - vec2(0.55, 0.0)) * vec2(0.8, 1.6)));
+    c = mix(c, uC2, 0.35 * uDeepen * bc);
     // a soft diagonal light streak from the upper left towards the centre
     float d = abs((uv.y - 1.05) + 0.85 * uv.x) / 1.31;
     c = mix(c, vec3(1.0), uStreak * exp(-d * d * 60.0) * smoothstep(0.75, 0.15, uv.x));
@@ -113,12 +119,14 @@ vec3 background(vec2 uv) {
     // darker towards the top, the sides, and (asymmetric key) the right wall
     float wallShade = 0.06 * smoothstep(uHorizon, 1.05, uv.y) + 0.035 * x * x * step(0.0, x)
                     + 0.012 * x * x
-                    + 0.11 * smoothstep(0.35, 1.0, uv.x) * smoothstep(uHorizon - 0.05, 0.9, uv.y);
+                    + 0.15 * smoothstep(0.3, 1.0, uv.x) * smoothstep(uHorizon - 0.05, 0.85, uv.y);
     vec3 wall = uC0 * (1.0 - wallShade * vec3(1.0, 1.0, 0.8)); // shade takes a faint lavender cast
-    // soft vertical light falling onto the wall behind the subject
-    wall += 0.025 * exp(-x * x * 2.2) * smoothstep(1.0, uHorizon, uv.y);
+    // soft light falling onto the wall from the left of the subject
+    wall += 0.02 * exp(-(x + 0.45) * (x + 0.45) * 2.0) * smoothstep(1.0, uHorizon, uv.y);
     float floorT = clamp((uHorizon - uv.y) / uHorizon, 0.0, 1.0);
-    vec3 floorC = uC0 * (0.955 - 0.03 * x * x) * vec3(1.0, 1.0, 1.008) + 0.012 * floorT;
+    // floor: lit from the lower left, brighter than the wall there, falling off to the right
+    vec3 floorC = uC0 * (1.0 - 0.02 * x * x - 0.09 * smoothstep(0.35, 1.0, uv.x))
+                * vec3(1.0, 1.0, 1.008) + 0.01 * floorT;
     float k = smoothstep(uHorizon - 0.07, uHorizon + 0.09, uv.y);
     vec3 c = mix(floorC, wall, k);
     // the cove: a faint shading band where the floor bends up into the wall

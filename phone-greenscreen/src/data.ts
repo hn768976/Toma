@@ -30,10 +30,10 @@ export const BACKGROUNDS = {
   PastelGradient: {
     type: "diagonal",
     colors: ["#C8D4F0", "#F0F2F8", "#F0D8E0"],
-    glow: 0.35,
+    glow: 0.22,
     glowPos: [0.69, 0.13],
     deepen: 1.0,
-    streak: 0.45,
+    streak: 0.3,
     vignette: 0.06,
     shadow: true,
     shadowOpacity: 0.24,
