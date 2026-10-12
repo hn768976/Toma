@@ -49,7 +49,7 @@ void main() {
   float lw = max(1.5, uRes.y / 720.0 * 1.4);
   float d = min(g.x, g.y);
   float line = 1.0 - smoothstep(lw * 0.5 - 0.5, lw * 0.5 + 0.5, d);
-  col = mix(col, uGrid, line * 0.22);
+  col = mix(col, uGrid, line * 0.36);
 
   // slow sweeping scanlines (bright edge with a soft trail above)
   float y = 1.0 - vUv.y;
@@ -67,9 +67,9 @@ void main() {
 export const cityHudStyle = (p: CityHudPalette): CityStyle => ({
   size: TEX,
   ground: p.ground,
-  widths: [8.5, 11, 15],
+  widths: [8.3, 10.5, 14],
   colors: [p.local, p.avenue, p.arterial],
-  alphas: [0.85, 0.9, 0.95],
+  alphas: [0.6, 0.8, 0.9],
   water: p.water,
   park: p.park,
   lot: p.park,
@@ -98,7 +98,7 @@ const makeFactory =
     const scene = new THREE.Scene();
     scene.add(fullscreenMesh(mat));
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const post = new PostFX(width, height, { vignette: 0.45, grain: 0.015 });
+    const post = new PostFX(width, height, { vignette: 0.4, grain: 0.015, bloom: { strength: 0.22, threshold: 0.5, knee: 0.3, radius: 1 } });
     return {
       render(r, f) {
         const u = mat.uniforms;
@@ -120,6 +120,12 @@ const makeFactory =
   };
 
 const LABELS = ["DATA ANALYSIS", "CORE DATA", "ENCODING DATA FEED", "POWER OUTPUT", "TARGET", "SECTOR", "SCAN"];
+
+const CALLOUTS = [
+  { px: 1610, py: 520, lx: 1330, ly: 330, label: "SECTOR 04" },
+  { px: 2310, py: 760, lx: 2480, ly: 560, label: "SCAN B7" },
+  { px: 1760, py: 1460, lx: 1380, ly: 1640, label: "NODE 21" },
+];
 
 const Overlay: React.FC<{ p: CityHudPalette }> = ({ p }) => {
   const f = loopFrame(useCurrentFrame());
@@ -149,6 +155,16 @@ const Overlay: React.FC<{ p: CityHudPalette }> = ({ p }) => {
           <Dial key={i} f={f} x={3270 + i * 150} y={1935} r={42} seed={40 + i} theme={theme} cycles={i % 2 === 0 ? 1 : -2} showNum />
         ))}
         <Brackets x={3220} y={1860} w={620} h={190} len={26} color={p.dim} sw={3} />
+        {/* full-frame crosshair lines */}
+        <line x1={1920} y1={0} x2={1920} y2={2160} stroke={p.text} strokeWidth={2} opacity={0.35} />
+        <line x1={0} y1={1120} x2={3840} y2={1120} stroke={p.text} strokeWidth={2} opacity={0.3} />
+        {/* callouts with leader lines into the map */}
+        {CALLOUTS.map((c, i) => (
+          <g key={i} opacity={blink(f, 300 + i, 50, 0.85) ? 0.9 : 0.35}>
+            <circle cx={c.px} cy={c.py} r={9} fill="none" stroke={p.text} strokeWidth={3} />
+            <polyline points={`${c.px},${c.py} ${c.lx},${c.ly + 14} ${c.lx + 260},${c.ly + 14}`} fill="none" stroke={p.text} strokeWidth={2} />
+          </g>
+        ))}
         {/* centre crosshair + ring */}
         <g opacity={0.85}>
           <circle cx={1920} cy={1080} r={64} fill="none" stroke={p.text} strokeWidth={3} />
@@ -165,6 +181,9 @@ const Overlay: React.FC<{ p: CityHudPalette }> = ({ p }) => {
       <Txt x={1920 + 90} y={1080 - 120} size={22} color={p.accent}>{`TARGET ${pad(counterValue(f, 77, 20, 100, 999), 3)}`}</Txt>
       <Txt x={1920 + 90} y={1080 - 90} size={18} color={p.text} opacity={0.8}>{`${(34 + tick(f, 78, 12) * 0.9).toFixed(4)}N  ${(118 + tick(f, 79, 12) * 0.9).toFixed(4)}W`}</Txt>
 
+      {CALLOUTS.map((c, i) => (
+        <Txt key={i} x={c.lx + 6} y={c.ly - 12} size={18} color={p.text} opacity={blink(f, 300 + i, 50, 0.85) ? 0.95 : 0.4}>{`${c.label} ${pad(counterValue(f, 310 + i, 20, 0, 999), 3)}`}</Txt>
+      ))}
       {/* left column (30% width) */}
       {[0, 1, 2].map((i) => (
         <Txt key={i} x={lx + 90 + i * 150} y={630} size={20} color={p.text}>{pad(counterValue(f, 30 + i, 15, 0, 99), 2)}</Txt>

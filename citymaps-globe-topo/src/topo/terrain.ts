@@ -88,7 +88,7 @@ export const buildTerrain = (seed: number, levels = 40): Terrain => {
     }
   }
   // shape: flatten lowlands so lines gather on the hills and gaps open up between them
-  for (let k = 0; k < h.length; k++) h[k] = Math.pow((h[k] - hmin) / (hmax - hmin), 1.35);
+  for (let k = 0; k < h.length; k++) h[k] = Math.pow((h[k] - hmin) / (hmax - hmin), 1.6);
 
   // summits: local maxima over a window
   const summits: Terrain["summits"] = [];

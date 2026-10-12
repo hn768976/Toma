@@ -21,7 +21,7 @@ export interface TopoContoursProps {
 
 const HSCALE = 0.13; // world height of the terrain's top
 const ELEV = (50 * Math.PI) / 180;
-const DIST = 0.68;
+const DIST = 0.8;
 
 const terrains = new Map<number, Terrain>();
 const getTerrain = (seed: number) => {
@@ -42,7 +42,7 @@ uniform vec2 uRes;
 void main() {
   vec2 q = vUv - vec2(0.5, 0.62);
   q.x *= uRes.x / uRes.y;
-  vec3 col = uBg * (1.7 - 0.8 * smoothstep(0.1, 1.0, length(q)));
+  vec3 col = uBg * (2.5 - 1.6 * smoothstep(0.05, 1.0, length(q)));
   // faint fine grid
   float cell = uRes.y / 54.0;
   vec2 g = abs(fract(gl_FragCoord.xy / cell + 0.5) - 0.5) * cell;
@@ -58,7 +58,7 @@ const makeFactory =
     const pal = props.palette;
     const terrain = getTerrain(props.seed);
     const k = height / 720;
-    const dof = dofUniforms(DIST, 26 * k, 16 * k);
+    const dof = dofUniforms(DIST, 42 * k, 22 * k);
     dof.uFogNear.value = DIST * 1.05;
     dof.uFogFar.value = DIST * 1.9;
     dof.uFogMin.value = 0.5;
@@ -79,11 +79,18 @@ const makeFactory =
         pts,
         closed: c.closed,
         color: isIndex ? ic : lc,
-        alpha: isIndex ? 0.72 : 0.9 * lift,
+        alpha: (isIndex ? 1.0 : 0.85 * lift) * (0.35 + 0.65 * Math.min(1, c.height / 0.22)),
         width: isIndex ? 1.7 : 1.05,
       };
     });
-    const contourMat = ribbonMaterial({ basePx: 1.5 * k, resolution: [width, height], dof, softness: 0.55 });
+    const contourMat = ribbonMaterial({
+      basePx: 1.5 * k,
+      resolution: [width, height],
+      dof,
+      softness: 0.55,
+      // pale, near-white core inside the coloured line
+      fragMod: "rgb = mix(rgb, vec3(1.0, 0.98, 0.92), 0.45 * (1.0 - smoothstep(0.0, max(vHalf, 0.5) * 0.9, d)) * step(vSoftW, 1.2));",
+    });
     // MAX blending: lines stacked edge-on on far slopes don't sum to white
     contourMat.blendEquation = THREE.MaxEquation;
     const contourMesh = new THREE.Mesh(buildRibbonGeometry(lines), contourMat);
@@ -101,7 +108,7 @@ const makeFactory =
       ssz.push(4.2);
     });
     terrain.contours.forEach((c, i) => {
-      if (i % 7 !== 3 || c.pts.length < 40) return;
+      if (i % 3 !== 1 || c.pts.length < 40 || c.height < 0.3) return;
       const m = Math.floor(c.pts.length / 4) * 2;
       sp.push(c.pts[m], c.height * HSCALE, c.pts[m + 1]);
       scol.push(sc[0], sc[1], sc[2], 1.1);
@@ -178,12 +185,32 @@ const Overlay: React.FC<{ p: TopoPalette }> = ({ p }) => {
         ))}
         <polygon points={`3496,${560 + 120 * Math.sin((f / LOOP) * 6.283)} 3514,${550 + 120 * Math.sin((f / LOOP) * 6.283)} 3514,${570 + 120 * Math.sin((f / LOOP) * 6.283)}`} fill={p.index} />
         {/* horizontal scan line with ticks, a marker moving across */}
-        <line x1={260} y1={scanY} x2={3580} y2={scanY} stroke={p.hud} strokeWidth={2} opacity={0.45} />
+        <line x1={260} y1={scanY} x2={3580} y2={scanY} stroke={p.hud} strokeWidth={8} opacity={0.08} />
+        <line x1={260} y1={scanY} x2={3580} y2={scanY} stroke={p.hud} strokeWidth={2.5} opacity={0.75} />
         {Array.from({ length: 34 }, (_, i) => (
           <line key={i} x1={260 + i * 100} y1={scanY - 8} x2={260 + i * 100} y2={scanY + 8} stroke={p.hud} strokeWidth={2} opacity={0.45} />
         ))}
         <rect x={scanX - 3} y={scanY - 40} width={6} height={80} fill={p.hud} opacity={0.85} />
         <circle cx={2760} cy={1046} r={7} fill={p.index} />
+        {/* left bracket panel */}
+        <polyline points="560,400 536,400 536,1020 560,1020" fill="none" stroke={p.hud} strokeWidth={2.5} opacity={0.7} />
+        {/* dot grids at the top */}
+        {[760, 2840].map((x0) =>
+          Array.from({ length: 8 }, (_, i) => (
+            <circle key={`${x0}-${i}`} cx={x0 + (i % 4) * 34} cy={190 + Math.floor(i / 4) * 30} r={4} fill={p.hud} opacity={0.6} />
+          )),
+        )}
+        {/* x-in-box icons */}
+        {[
+          [250, 560],
+          [3600, 560],
+          [3600, 1000],
+        ].map(([x, y], i) => (
+          <g key={i} opacity={0.7}>
+            <rect x={x} y={y} width={30} height={30} fill="none" stroke={p.hud} strokeWidth={2.5} />
+            <path d={`M ${x + 6} ${y + 6} L ${x + 24} ${y + 24} M ${x + 24} ${y + 6} L ${x + 6} ${y + 24}`} stroke={p.hud} strokeWidth={2.5} />
+          </g>
+        ))}
         {/* small square glyphs */}
         {[0, 1].map((i) => (
           <rect key={i} x={250} y={470 + i * 1040} width={26} height={26} fill="none" stroke={p.hud} strokeWidth={2.5} opacity={0.7} />
@@ -192,7 +219,12 @@ const Overlay: React.FC<{ p: TopoPalette }> = ({ p }) => {
           <rect key={i} x={1920 + i * 46} y={2030} width={26} height={26} fill="none" stroke={p.hud} strokeWidth={2.5} opacity={0.7} />
         ))}
       </Svg>
-      <CodeLines f={f} x={600} y={420} rows={14} seed={701} size={17} theme={theme} cols={[8]} holds={[20, 30, 60]} />
+      {["TARGET TRACKING", "POSITION", "VELOCITY"].map((h, i) => (
+        <React.Fragment key={h}>
+          <Txt x={580} y={410 + i * 200} size={19} color={p.hud} weight={700}>{h}</Txt>
+          <CodeLines f={f} x={580} y={446 + i * 200} rows={4} seed={710 + i} size={16} theme={theme} cols={[4, 6]} holds={[15, 30, 60]} />
+        </React.Fragment>
+      ))}
       <Txt x={760} y={560} size={18} color={p.hud}>{"ALT 2.0145 / FPS 30 / 4K"}</Txt>
       <CodeLines f={f} x={760} y={600} rows={3} seed={702} size={16} theme={theme} cols={[14]} />
       <Txt x={3480 - 30} y={380} size={18} color={p.hud} align="right" width={300}>{`ELEV ${pad(counterValue(f, 703, 15, 1000, 4800), 4)}`}</Txt>

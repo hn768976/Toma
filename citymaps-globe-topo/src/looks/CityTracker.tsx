@@ -72,14 +72,14 @@ void main() {
 export const cityTrackerStyle = (p: CityTrackerPalette): CityStyle => ({
   size: TEX,
   ground: p.block,
-  widths: [10.5, 14, 20],
+  widths: [10.4, 13, 18],
   colors: [p.local, p.avenue, p.avenue],
-  alphas: [0.8, 0.95, 1],
+  alphas: [0.72, 0.92, 1],
   water: p.water,
   park: p.water,
   lot: p.water,
   rail: p.local,
-  halo: { color: p.avenue, width: 60, alpha: 0.16 },
+  halo: { color: p.avenue, width: 40, alpha: 0.14 },
 });
 
 const camAt = (props: CityTrackerProps, f: number) => {
@@ -113,7 +113,7 @@ const makeFactory =
     const scene = new THREE.Scene();
     scene.add(fullscreenMesh(mat));
     const ocam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const post = new PostFX(width, height, { vignette: 0.25, grain: 0.015, bloom: { strength: 0.12, threshold: 0.75, knee: 0.3, radius: 1 } });
+    const post = new PostFX(width, height, { vignette: 0.25, grain: 0.015, bloom: { strength: 0.3, threshold: 0.55, knee: 0.3, radius: 1 } });
     return {
       render(r, f) {
         const { cam, dot } = camAt(props, f);

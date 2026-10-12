@@ -62,6 +62,8 @@ uniform vec3 uPillA;     // first pill (world)
 uniform vec3 uPillB;     // last pill (world)
 uniform vec3 uPillCol0;
 uniform vec3 uPillCol1;
+uniform vec3 uPillCol2;
+uniform vec3 uPin2;
 uniform float uPillOn[${N_PILLS}];
 float sdRoundBox(vec2 p, vec2 b, float r) {
   vec2 q = abs(p) - b + r;
@@ -77,6 +79,9 @@ void main() {
   float aa = max(fwidth(d), 1e-3);
   float core = 1.0 - smoothstep(19.0 - aa, 19.0 + aa, d);
   float glow = exp(-d * d / (2.0 * 48.0 * 48.0));
+  // a second, fainter pin far away (upper right)
+  float d2 = length(vWorld.xz - uPin2.xz);
+  col += uPinCol * (0.8 * (1.0 - smoothstep(24.0, 32.0, d2)) + 0.35 * exp(-d2 * d2 / (2.0 * 70.0 * 70.0)));
   col += uPinCol * (core * 1.6 + glow * 0.55);
   for (int i = 0; i < 2; i++) {
     float t = fract(uPinT + float(i) * 0.5);
@@ -93,10 +98,10 @@ void main() {
     vec2 c = uPillA.xz + ab * (float(i) / float(${N_PILLS - 1}));
     vec2 p = vWorld.xz - c;
     vec2 q = vec2(dot(p, dir), dot(p, nrm));
-    float sd = sdRoundBox(q, vec2(40.0, 14.0), 12.0);
+    float sd = sdRoundBox(q, vec2(60.0, 16.0), 14.0);
     float a = 1.0 - smoothstep(-fwidth(sd), fwidth(sd), sd);
-    float halo = exp(-max(sd, 0.0) / 15.0) * 0.25;
-    vec3 pc = (i % 3 == 2) ? uPillCol1 : uPillCol0;
+    float halo = exp(-max(sd, 0.0) / 16.0) * 0.25;
+    vec3 pc = (i % 3 == 2) ? uPillCol1 : (i == 0 ? uPillCol2 : uPillCol0);
     col = mix(col, pc * 1.35, a * uPillOn[i]);
     col += pc * halo * uPillOn[i];
   }
@@ -111,7 +116,7 @@ void main() {
 export const cityFlyoverStyle = (p: CityFlyoverPalette): CityStyle => ({
   size: TEX,
   ground: p.ground,
-  widths: [10.5, 15, 20],
+  widths: [10.5, 14, 19],
   colors: [p.local, p.avenue, p.avenue],
   alphas: [0.6, 1, 1],
   water: "#000000",
@@ -119,7 +124,7 @@ export const cityFlyoverStyle = (p: CityFlyoverPalette): CityStyle => ({
   lot: "#000000",
   rail: p.local,
   halo: { color: p.avenue, width: 50, alpha: 0.22 },
-  labels: { color: p.label, alpha: 0.6 },
+  labels: { color: p.label, alpha: 0.75, angle: -YAW0 },
 });
 
 // ray from camera through NDC point -> ground (y = 0)
@@ -148,8 +153,8 @@ const makeFactory =
         uGround: { value: vec3Of(pal.ground) },
         uFocus: { value: 1000 },
         uCocA: { value: 1 },
-        uFogNear: { value: 4000 },
-        uFogFar: { value: 10000 },
+        uFogNear: { value: 4500 },
+        uFogFar: { value: 12000 },
         uPin: { value: new THREE.Vector3() },
         uPinCol: { value: vec3Of(pal.pin) },
         uPinT: { value: 0 },
@@ -157,6 +162,8 @@ const makeFactory =
         uPillB: { value: new THREE.Vector3() },
         uPillCol0: { value: vec3Of(pal.pillA) },
         uPillCol1: { value: vec3Of(pal.pillB) },
+        uPillCol2: { value: vec3Of(pal.avenue) },
+        uPin2: { value: new THREE.Vector3() },
         uPillOn: { value: new Array(N_PILLS).fill(1) },
       },
       depthTest: true,
@@ -174,7 +181,7 @@ const makeFactory =
     // start so the view centre sits near downtown
     const start = city.districts[0].seed;
     const post = new PostFX(width, height, {
-      dof: { cocMaxFrac: 0.03 },
+      dof: { cocMaxFrac: 0.02 },
       bloom: { strength: 0.4, threshold: 0.7, knee: 0.35, radius: 1 },
       vignette: 0.55,
       grain: 0.015,
@@ -199,11 +206,12 @@ const makeFactory =
         const zf = toF.dot(camDir);
         const u = mat.uniforms;
         u.uFocus.value = zf;
-        u.uCocA.value = 0.9;
+        u.uCocA.value = 0.75;
 
         // pin upper middle, pills lower left: anchored to the view
         u.uPin.value.copy(groundHit(cam, 0.02, 0.3));
         u.uPinT.value = (f % 150) / 150;
+        u.uPin2.value.copy(groundHit(cam, 0.55, 0.82));
         u.uPillA.value.copy(groundHit(cam, -0.98, -0.18));
         u.uPillB.value.copy(groundHit(cam, -0.62, -0.86));
         for (let i = 0; i < N_PILLS; i++) {

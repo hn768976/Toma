@@ -18,7 +18,7 @@ export interface CityStyle {
   rail?: string;
   buildings?: { shades: string[] };
   noise?: { fine: number; coarse: number };
-  labels?: { color: string; alpha: number };
+  labels?: { color: string; alpha: number; angle?: number };
   // soft halo under avenues/arterials (emissive looks)
   halo?: { color: string; width: number; alpha: number };
 }
@@ -175,8 +175,9 @@ export const drawCity = (city: City, style: CityStyle): HTMLCanvasElement => {
     const lr = mulberry32(city.seed + 5);
     const path = new Path2D();
     for (const l of city.labels) {
-      const c = Math.cos(l.angle);
-      const s = Math.sin(l.angle);
+      const ang = style.labels.angle ?? l.angle;
+      const c = Math.cos(ang);
+      const s = Math.sin(ang);
       let x = -l.n * 9;
       for (let k = 0; k < l.n; k++) {
         const w = 6 + lr() * 12;

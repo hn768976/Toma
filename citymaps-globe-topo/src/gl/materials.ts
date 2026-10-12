@@ -221,9 +221,10 @@ void main() {
   float d = abs(vDist);
   float cov = 1.0 - smoothstep(vHalf - vSoftW, vHalf + vSoftW, d);
   float bmod = 1.0;
+  vec3 rgb = vColor.rgb;
   ${opts.fragMod ?? ""}
   float a = vColor.a * cov * bmod;
-  fragColor = vec4(vColor.rgb * a, 0.0);
+  fragColor = vec4(rgb * a, 0.0);
 }`,
     transparent: true,
     depthWrite: false,

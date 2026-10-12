@@ -75,7 +75,7 @@ out vec4 fragColor;
 void main() {
   float nv = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
     float rim2 = pow(1.0 - nv, 14.0);
-  vec3 col = uOcean + uRim * (0.035 + pow(1.0 - nv, 4.5) * 0.45 + rim2 * 0.9);
+  vec3 col = uOcean + uRim * (0.05 + pow(1.0 - nv, 3.0) * 0.32 + rim2 * 0.35);
   // faint inner sheen toward the upper left
   col += uRim * 0.05 * smoothstep(0.2, 1.0, dot(normalize(vN), normalize(vec3(-0.5, 0.6, 0.6))));
   fragColor = vec4(col, 0.0);
@@ -100,7 +100,8 @@ void main() {
   vec2 px = gl_FragCoord.xy;
   vec3 col = uBg;
   float lw = max(1.5, uRes.y / 720.0 * 1.2);
-  col += vec3(0.6, 0.75, 0.72) * grid(px, uRes.x / 64.0, lw) * 0.045;
+  col += vec3(0.6, 0.75, 0.72) * grid(px, uRes.x / 64.0, lw) * 0.085;
+  col += vec3(0.6, 0.75, 0.72) * 0.03 * exp(-length(px - uC) / (uR * 2.2));
   // big translucent grey panel sliding behind the globe
   vec2 uv = vUv;
   float inX = smoothstep(uPanelX, uPanelX + 0.002, uv.x) * (1.0 - smoothstep(uPanelX + 0.36, uPanelX + 0.362, uv.x));
@@ -109,7 +110,7 @@ void main() {
   // atmosphere glow outside the globe
   float r = length(px - uC);
   float out1 = max(r - uR, 0.0) / uR;
-  col += uRim * exp(-out1 / 0.03) * 0.32 * step(uR * 0.985, r);
+  col += uRim * exp(-out1 / 0.05) * 0.16 * step(uR * 0.985, r);
   col += uRim * exp(-out1 / 0.14) * 0.08;
   fragColor = vec4(col, 1.0);
 }`;
@@ -127,7 +128,7 @@ const makeFactory =
     tilt.add(spin);
     scene.add(tilt);
     const dof = dofUniforms(DIST - 0.8, 9 * k, 6 * k);
-    const speckDof = dofUniforms(DIST - 0.8, 16 * k, 12 * k);
+    const speckDof = dofUniforms(DIST - 0.8, 9 * k, 7 * k);
 
     // ocean sphere (writes depth, hides the far side)
     const ocean = new THREE.Mesh(
@@ -156,10 +157,19 @@ const makeFactory =
       const z = Math.sin(th) * r;
       const lat = (Math.asin(y) * 180) / Math.PI;
       const lon = (Math.atan2(x, z) * 180) / Math.PI;
-      if (!isLand(lon, lat)) continue;
-      const rr = 1.004 + rng() * 0.004;
+      if (!isLand(lon, lat)) {
+        // sparse faint specks over the oceans
+        if (rng() < 0.05) {
+          const ro = 1.003 + rng() * 0.03;
+          lp.push(x * ro, y * ro, z * ro);
+          lc.push(land[0], land[1], land[2], 0.35 + 0.4 * rng());
+          ls.push(0.9 + 0.5 * rng());
+        }
+        continue;
+      }
+      const rr = 1.003 + rng() * rng() * 0.03;
       lp.push(x * rr, y * rr, z * rr);
-      const b = rng() < 0.01 ? 1.8 : 0.75 + 0.8 * rng();
+      const b = rng() < 0.02 ? 2.2 : 0.6 + 1.0 * rng() * rng() + 0.3 * rng();
       lc.push(land[0], land[1], land[2], b);
       ls.push(b > 1.7 ? 1.9 : 1.0 + 0.4 * rng());
     }
@@ -206,8 +216,8 @@ const makeFactory =
       sp[i * 3] = rng();
       sp[i * 3 + 1] = rng() * 2 - 1;
       sp[i * 3 + 2] = rng();
-      sc.set([gold[0], gold[1], gold[2], 0.8 + 1.0 * rng()], i * 4);
-      ss[i] = 1.0 + 1.3 * rng();
+      sc.set([gold[0], gold[1], gold[2], 0.7 + 0.9 * rng()], i * 4);
+      ss[i] = 0.8 + 0.9 * rng();
       spar[i * 2] = rng() < 0.7 ? 1 : 2; // whole cycles per loop
       spar[i * 2 + 1] = rng();
     }
@@ -226,14 +236,14 @@ const makeFactory =
           float j = position.z;
           // a sheet that peels off the upper-right limb, streams outward
           // and swirls round behind the globe
-          float a = p * 2.1 + v * 0.15 + uSheetRot;
-          float rad = 1.03 + 1.0 * pow(p, 0.8) + 0.1 * (j - 0.5) * p;
+          float a = p * 3.5 + v * 0.15 + uSheetRot;
+          float rad = 1.04 + 0.55 * pow(p, 0.8) + 0.25 * (j - 0.5) * p;
           float h = v * (0.08 + 0.8 * p) + 0.3 * sin(p * 4.0 + v * 2.5) * p;
           vec3 e1 = normalize(vec3(0.75, 0.62, 0.2));
           vec3 e2 = normalize(vec3(-0.35, 0.643, -0.681));
           vec3 e3 = normalize(cross(e1, e2));
           pos = (cos(a) * e1 + sin(a) * e2) * rad + e3 * h;
-          amod = pow(1.0 - p, 0.8) * smoothstep(0.0, 0.06, p) * (0.6 + 0.4 * (1.0 - abs(v)));
+          amod = pow(1.0 - p, 0.5) * smoothstep(0.0, 0.06, p) * (0.6 + 0.4 * (1.0 - abs(v)));
         `,
       }),
     );
@@ -243,19 +253,19 @@ const makeFactory =
     scene.add(speckGroup);
 
     // sparkle dust around the globe (orbits with the spin, loops exactly)
-    const ND = 1600;
+    const ND = 3200;
     const dp = new Float32Array(ND * 3);
     const dcol = new Float32Array(ND * 4);
     const dsz = new Float32Array(ND);
     for (let i = 0; i < ND; i++) {
       const u = rng() * 2 - 1;
       const th = rng() * Math.PI * 2;
-      const rr = 1.02 + 0.3 * Math.pow(rng(), 2.2);
+      const rr = 1.02 + 0.55 * Math.pow(rng(), 2.0);
       const q = Math.sqrt(1 - u * u);
       dp.set([Math.cos(th) * q * rr, u * rr, Math.sin(th) * q * rr], i * 3);
-      const white = rng() < 0.4;
+      const white = rng() < 0.6;
       dcol.set(white ? [0.9, 1, 0.97, 0.9 + rng()] : [land[0], land[1], land[2], 0.6 + 0.8 * rng()], i * 4);
-      dsz[i] = 1.0 + 1.4 * rng() * rng();
+      dsz[i] = 0.9 + (rng() < 0.05 ? 2.5 : 1.0) * rng();
     }
     const dust = new THREE.Points(buildPointsGeometry(dp, dcol, dsz), pointsMaterial({ basePx: k, dof: speckDof, hard: 0.5 }));
     dust.frustumCulled = false;
@@ -338,8 +348,8 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
             const an = -Math.PI / 2 + (j * TAU) / 5;
             return `${m.x + Math.cos(an) * s},${m.y + Math.sin(an) * s}`;
           }).join(" ");
-          const lx = m.x + (m.i === 1 ? 260 : 360);
-          const ly = m.y + (m.i === 0 ? -150 : 120);
+          const lx = m.i === 1 ? 2900 : 2700;
+          const ly = m.y + (m.i === 0 ? -60 : 50);
           return (
             <g key={m.i} opacity={m.a}>
               {m.shape === "pentagon" ? (
@@ -347,7 +357,7 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
               ) : (
                 <circle cx={m.x} cy={m.y} r={s} fill="none" stroke={p.text} strokeWidth={4} />
               )}
-              <polyline points={`${m.x + s},${m.y} ${lx - 120},${ly} ${lx},${ly}`} fill="none" stroke={p.text} strokeWidth={2.5} />
+              <polyline points={`${m.x + s},${m.y} ${m.x + s + 60},${ly} ${lx},${ly}`} fill="none" stroke={p.text} strokeWidth={2.5} />
               <circle cx={m.x} cy={m.y} r={5} fill={p.text} />
             </g>
           );
@@ -358,8 +368,8 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
       {markers.map((m) =>
         m.a > 0.001 ? (
           <div key={m.i} style={{ opacity: m.a }}>
-            <Txt x={m.x + (m.i === 1 ? 270 : 370)} y={m.y + (m.i === 0 ? -170 : 100)} size={22} color={p.text}>{`${pad(counterValue(f, 510 + m.i, 15, 0, 99999999), 8)}${pad(counterValue(f, 520 + m.i, 15, 0, 9999), 4)}`}</Txt>
-            <Txt x={m.x + (m.i === 1 ? 270 : 370)} y={m.y + (m.i === 0 ? -138 : 132)} size={18} color={p.dim}>{`TARGET ${m.i + 1}  //  ${m.shape === "ring" ? "SCAN" : "SECTOR"}`}</Txt>
+            <Txt x={(m.i === 1 ? 2900 : 2700) + 16} y={m.y + (m.i === 0 ? -60 : 50) - 14} size={22} color={p.text}>{`${pad(counterValue(f, 510 + m.i, 15, 0, 99999999), 8)}${pad(counterValue(f, 520 + m.i, 15, 0, 9999), 4)}`}</Txt>
+            <Txt x={(m.i === 1 ? 2900 : 2700) + 16} y={m.y + (m.i === 0 ? -60 : 50) + 18} size={18} color={p.dim}>{`TARGET ${m.i + 1}  //  ${m.shape === "ring" ? "SCAN" : "SECTOR"}`}</Txt>
           </div>
         ) : null,
       )}
@@ -385,9 +395,17 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
       ))}
       <Txt x={300} y={1740} size={17} color={p.dim}>{`● ENCODING DATA FEED  ${pad(counterValue(f, 570, 12, 0, 9999), 4)}`}</Txt>
       {/* big counter */}
-      <Rect x={1400} y={1745} w={170} h={150} stroke={p.text} sw={3} />
-      <Txt x={1414} y={1768} size={104} color={p.text} weight={500} spacing={0}>{pad(big, 2)}</Txt>
+      <Rect x={1470} y={1860} w={4} h={240} fill={p.text} opacity={0.7} />
+      <Txt x={1500} y={1885} size={190} color={p.text} weight={400} spacing={-0.02}>{pad(big, 2)}</Txt>
 
+      {/* extra data blocks */}
+      <CodeLines f={f} x={1150} y={40} rows={6} seed={590} size={17} theme={theme} cols={[8, 8, 4]} />
+      <CodeLines f={f} x={40} y={360} rows={8} seed={591} size={16} theme={theme} cols={[3, 12, 6]} />
+      <Rect x={600} y={330} w={420} h={300} fill="rgba(160,190,185,0.06)" stroke={p.dim} sw={2} />
+      <CodeLines f={f} x={620} y={350} rows={9} seed={592} size={16} theme={theme} cols={[18]} />
+      <CodeLines f={f} x={3170} y={1300} rows={9} seed={593} size={16} theme={theme} cols={[8, 10]} />
+      <Rect x={3150} y={1260} w={650} h={330} fill="rgba(160,190,185,0.05)" stroke={p.dim} sw={2} />
+      <CodeLines f={f} x={2100} y={1700} rows={4} seed={594} size={16} theme={theme} cols={[14, 6]} />
       {/* text near the globe */}
       <CodeLines f={f} x={2060} y={300} rows={6} seed={580} size={17} theme={theme} cols={[22]} />
       <CodeLines f={f} x={2560} y={1150} rows={6} seed={581} size={17} theme={theme} cols={[24]} />
@@ -396,7 +414,12 @@ const Overlay: React.FC<{ p: GlobePalette }> = ({ p }) => {
       {[0, 1].map((c) =>
         Array.from({ length: 12 }, (_, i) => {
           const v = 0.35 + 0.65 * tick(f, 600 + c * 50 + i, [15, 20, 30][(i + c) % 3]);
-          return <Rect key={`${c}-${i}`} x={3170 + c * 330} y={40 + i * 60} w={290 * v} h={38} fill={p.bars} opacity={0.85} />;
+          return (
+            <React.Fragment key={`${c}-${i}`}>
+              <Rect x={3164 + c * 330} y={34 + i * 60} w={302} h={50} stroke={p.dim} sw={2} opacity={0.6} />
+              <Rect x={3170 + c * 330} y={40 + i * 60} w={290 * v} h={38} fill={p.bars} opacity={0.9} r={8} />
+            </React.Fragment>
+          );
         }),
       )}
       <CodeLines f={f} x={3170} y={800} rows={4} seed={620} size={17} theme={theme} cols={[10, 10]} />

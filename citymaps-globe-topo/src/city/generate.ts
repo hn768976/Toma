@@ -156,6 +156,10 @@ export interface CityParams {
   W?: number;
 }
 
+// Block spacings are scaled so the 3 km tile carries a dense, fine street
+// mesh (as in the references) without zooming out until the tile repeats.
+const BLOCK_SCALE = 0.45;
+
 export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
   const rng = mulberry32(seed);
   const torusDelta = (a: number, b: number) => {
@@ -271,8 +275,8 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
       angle,
       U,
       V,
-      a: range(rng, alo, ahi),
-      b: range(rng, blo, bhi),
+      a: range(rng, alo, ahi) * BLOCK_SCALE,
+      b: range(rng, blo, bhi) * BLOCK_SCALE,
       offA: range(rng, 0, 50),
       offB: range(rng, 0, 50),
       poly: poly.map((q) => q.p),
@@ -292,7 +296,7 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
     const y = (p.y / W) * 12;
     const x2 = (p.x / W) * 30;
     const y2 = (p.y / W) * 30;
-    return v(p.x + 55 * warpN1(x, y) + 14 * warpN3(x2, y2), p.y + 55 * warpN2(x, y) + 14 * warpN4(x2, y2));
+    return v(p.x + 40 * warpN1(x, y) + 8 * warpN3(x2, y2), p.y + 40 * warpN2(x, y) + 8 * warpN4(x2, y2));
   };
 
   // ---- parks and lots (block-aligned) ----
@@ -369,6 +373,21 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
         lots.push(q);
         placed++;
       }
+    }
+    // one or two large organic dark patches (big parks, cemeteries, golf)
+    for (let k = 0, placed = 0; k < 30 && placed < (d.kind === "industrial" ? 1 : 2); k++) {
+      const c = add(d.seed, v(range(rng, -350, 350), range(rng, -350, 350)));
+      const r = range(rng, 70, 150);
+      const ph = range(rng, 0, 6.28);
+      const blob: V2[] = [];
+      for (let t = 0; t < 32; t++) {
+        const a = (t / 32) * Math.PI * 2;
+        const rr = r * (1 + 0.28 * Math.sin(2 * a + ph) + 0.15 * Math.sin(5 * a + 2 * ph) + 0.08 * Math.sin(9 * a + ph));
+        blob.push(add(c, v(Math.cos(a) * rr * 1.3, Math.sin(a) * rr)));
+      }
+      if (!blob.every((q) => pointInPoly(q, d.poly)) || blob.some(inWater)) continue;
+      parks.push(blob);
+      placed++;
     }
     // parks: ~4% of blocks, a mix of single blocks and larger merged parks
     const nBlocks = (i1 - i0 + 1) * (j1 - j0 + 1);
@@ -768,10 +787,10 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
     for (let i = i0; i <= i1; i++) {
       for (let j = j0; j <= j1; j++) {
         if (parkBlocks.has(`${di}:${i}:${j}`)) continue;
-        const u0 = d.offA + i * d.a + 4.5;
-        const u1 = d.offA + (i + 1) * d.a - 4.5;
-        const v0 = d.offB + j * d.b + 4.5;
-        const v1 = d.offB + (j + 1) * d.b - 4.5;
+        const u0 = d.offA + i * d.a + 2.2;
+        const u1 = d.offA + (i + 1) * d.a - 2.2;
+        const v0 = d.offB + j * d.b + 2.2;
+        const v1 = d.offB + (j + 1) * d.b - 2.2;
         const cen = P((u0 + u1) / 2, (v0 + v1) / 2);
         const cw = d.warp ? warp(cen) : cen;
         if (!pointInPoly(cen, d.poly) || inWater(cw) || inParkOrLot(cw)) continue;
@@ -785,9 +804,9 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
         for (const side of [0, 1]) {
           let x = L0;
           while (x < L1 - 3) {
-            const w = Math.min(L1 - x, ind ? range(brng, 16, 42) : range(brng, 6, 15));
+            const w = Math.min(L1 - x, ind ? range(brng, 8, 20) : range(brng, 3, 7));
             if (brng() < (ind ? 0.7 : 0.88)) {
-              const dd = Math.min(depthMax - 0.8, ind ? range(brng, 14, 34) : range(brng, 7, 17));
+              const dd = Math.min(depthMax - 0.8, ind ? range(brng, 6, 15) : range(brng, 3, 8));
               const g = range(brng, 0.6, 1.2);
               const a0 = x + g * 0.5;
               const a1 = x + w - g * 0.5;
@@ -819,7 +838,7 @@ export const generateCity = ({ seed, W = 3000 }: CityParams): City => {
   const labels: City["labels"] = [];
   {
     const lr = mulberry32(seed + 99);
-    const avs = kept.filter((e) => e.cls >= 1 && e.len > 60);
+    const avs = kept.filter((e) => e.cls >= 1 && e.len > 25);
     for (let k = 0; k < 520 && avs.length; k++) {
       const e = pick(lr, avs);
       const t = range(lr, 0.2, 0.8);
