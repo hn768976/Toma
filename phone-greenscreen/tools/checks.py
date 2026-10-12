@@ -36,7 +36,8 @@ def green(mp4, frames):
     ok = True
     for n in frames:
         img = frame_rgb(mp4, n)
-        g = (img[..., 1] > 200) & (img[..., 0] < 80) & (img[..., 2] < 80)
+        # strict green test, so tiny dark features (a foreshortened punch-hole) are excluded
+        g = (img[..., 1] > 240) & (img[..., 0] < 40) & (img[..., 2] < 40)
         # sample 10 px clear of the phone: closer than that, H.264 ringing around the
         # high-contrast edge moves values by a few levels (reported separately)
         core = erode(g, 10)
