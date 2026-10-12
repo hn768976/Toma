@@ -133,15 +133,75 @@ story.
 
 ## Measured render times
 
-MEASURED_TIMES
+Measured in a cloud container with **no GPU**. Chromium ran WebGL2 through ANGLE on
+**SwiftShader (software GL)**, on 4 vCPUs. Each number is wall time per frame, including browser
+startup, averaged over a 30-frame (720p) or 6-frame (4K) range around frame 300.
+
+| Composition | 720p, 1 thread | 720p full render, 4 threads (wall ÷ frames) | 4K, 1 thread |
+|---|---|---|---|
+| PlexusBulb-BlueIgnite | 0.82 s | 0.58 s (260 s / 450) | 3.6 s |
+| PlexusBulb-GoldLoop | 0.81 s | 0.57 s (344 s / 600) | ≈ 3.6 s (same scene) |
+| WireframeWindFarm-Teal | 2.01 s | 1.79 s (1073 s / 600) | 6.6 s |
+| WireframeWindFarm-Blue | 1.94 s | 1.77 s (1062 s / 600) | ≈ 6.6 s (same scene) |
+| AIWindGrid-Blue | 1.65 s | 1.38 s (829 s / 600) | **5.8 s** |
+
+**The timed 4K frame of Look 3** (badges + point wave + wide DoF):
+* `npx remotion still AIWindGrid-Blue --frame=300` at 3840×2160 took **8.6 s** end to end
+  (a 720p still of the same frame took 4.9 s, so roughly 3.7 s of extra GPU work at 4K);
+* a 6-frame 4K sequence averaged **5.8 s per frame**, including startup.
+
+**4K estimates, same software-GL machine.** Extra render threads barely help here, because
+SwiftShader already uses every core.
+
+| Composition | Estimate |
+|---|---|
+| 1A (450 f) | ≈ 27 min |
+| 1B (600 f) | ≈ 36 min |
+| 2A or 2B (600 f each) | ≈ 65 min each |
+| 3 (600 f) | ≈ 58 min |
+| **All five** | **≈ 4 h 10 min** |
+
+On a machine with a real GPU (ANGLE → D3D11, Metal or Vulkan), expect these to be roughly
+10–30× faster. The work per frame is a few hundred thousand instanced line quads, a
+half-resolution 56-tap gather and a 6-level bloom, which is light for any discrete GPU.
 
 ## Banding check
 
-BANDING
+Checked on frame 300 **decoded from the encoded H.264 previews**, not on the PNGs. For each
+crop, the luminance was averaged across the strip (to remove grain), then the profile and a
+contrast-stretched image were inspected.
+
+| Area | Crop (720p px) | Averaged profile | Stretched view |
+|---|---|---|---|
+| 1A bulb glow on navy | x 20–560, y 330–362 | rises smoothly 10.3 → 50.6, mean step 0.32 levels | no contours |
+| 1B gold glow | same | 6.8 → 46.7, mean step 0.35 | no contours |
+| 2A teal background / floor | x 0–1280, y 440–720 | smooth between lines, mean step 0.32 | no contours |
+| 3 blue map edge | x 0–12, y 0–150 | flat 40–42, mean step 0.36 | no steps |
+
+The only large steps in any profile are single dust specks or HUD marks, not bands. The 1.5%
+grain and ±1/255 dither held up through H.264 at CRF 16, so the grain was not raised.
 
 ## Completion checklist
 
-CHECKLIST
+- [x] 5 compositions, one data row each (`src/versions.ts`), 3840×2160, 30 fps, 450 / 600 frames.
+- [x] WebGL2 via `@remotion/three`, `--gl=angle`. No WebGPU, no PixiJS, no MCP servers.
+- [x] OFL fonts only (Blinker SemiBold, JetBrains Mono), licences included. No logos or brands;
+      the only text is "AI" and invented HUD values.
+- [x] Bulb model check, 3 rounds with fresh sub-agents (lit and unlit on grey).
+- [x] **Step 1:** all 5 previews are h264, 1280×720, 30/1, yuv420p, no audio, 15.000 s / 20.000 s.
+- [x] **Step 2:** frame 600 of the 601-frame variant is byte-identical to frame 0 for all 4 loops.
+      Seam continuity: the 599→0 difference is 1.00–1.01× the neighbouring frame differences
+      (AI grid 1.18×, because every HUD ticker steps on frame 0 by design).
+- [x] **Step 3:** a cold render of frame 300 is byte-identical to frame 300 of the full
+      multi-threaded render, for all 5 compositions.
+- [x] **Step 4:** banding checked on the encoded mp4s (see above).
+- [x] **Step 5:** contact sheets for all 5 checked.
+- [x] **Step 6:** the 2 s around frame 300 and 1A's 1–5 s were stepped through. Plexus links
+      fade with distance (under 0.07% of pixels jump per frame), thin lines don't crawl, rotors
+      turn at most 1.2°/frame, and the cameras glide.
+- [x] **Steps 7–8:** compared with the references, 3 rounds per look with fresh sub-agents.
+- [x] `npm install && npx remotion studio` works from a clean copy (studio serves, all
+      5 compositions listed).
 
 ## Fonts and licences
 
