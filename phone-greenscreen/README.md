@@ -135,8 +135,90 @@ src/scene/environment.ts    procedural soft-box studio → PMREM
 src/scene/post.ts           tone map, backgrounds, vignette, dither, grain, green composite
 src/scene/shadows.ts        math-generated shadow textures
 src/motions/motions.ts      all motion curves
-tools/render-previews.sh    720p previews + timings
+tools/render-previews.sh    720p previews + PNG of frame 150 + timings -> renders/
+tools/full-sequences.sh     full PNG-sequence renders (601-frame loops) -> out/seq/
+tools/verify-all.sh         runs verify steps 1-4 on the above
 tools/checks.py             green / banding / key / identical-frame checks
+tools/smoothness.py         tracks the phone silhouette frame by frame (step 6)
+tools/sheet.sh              quick contact sheet of chosen frames
 ```
 
-<!-- RESULTS -->
+## Measured render times
+
+All times were measured in this build environment: 4 CPU cores, **no GPU**. WebGL
+runs on SwiftShader through ANGLE. Previews were rendered with
+`tools/render-previews.sh` (720p, `--concurrency=4`, PNG frames, H.264 encode
+included). Times are wall-clock per output frame.
+
+| Composition | Frames | 720p total | 720p per frame | 4K estimate per frame | 4K estimate total |
+|---|---|---|---|---|---|
+| PhoneDropIn-GreenScreen | 300 | 98 s | 326 ms | ~2.4 s | ~12 min |
+| PhoneDropIn-PastelGradient | 300 | 112 s | 372 ms | ~2.5 s | ~13 min |
+| PhoneSway-GreenScreen | 600 | 206 s | 343 ms | ~2.4 s | ~24 min |
+| PhoneSway-PastelPink | 600 | 229 s | 381 ms | ~2.5 s | ~25 min |
+| PhoneTumbleLand-GreenScreen | 300 | 92 s | 307 ms | ~2.4 s | ~12 min |
+| PhoneTumbleLand-WhiteStudio | 300 | 107 s | 357 ms | ~2.5 s | ~13 min |
+| PhoneGrid-White | 600 | 419 s | 698 ms | ~3.1 s | ~31 min |
+
+**How the 4K estimates were made.** On the same machine, single 4K stills took
+~8.6 s (1B) and ~9.7 s (grid) longer than single 720p stills. The shader work is
+CPU-bound here, and 4K is 9× the pixels. That puts 4K at roughly **6–7× the 720p
+time per frame** (~2.5 s per frame) on this machine; the grid, which is already
+heavier at 720p, comes out at ~4.5× (~3.1 s). On a machine with a real GPU through
+ANGLE, expect it to be far faster: the scene is light, and most of the cost here is
+software rasterisation and PNG capture. Those numbers were **not** measured.
+
+## Verification (run on the 720p previews)
+
+Run `tools/verify-all.sh` after `tools/render-previews.sh` and `tools/full-sequences.sh`.
+**All checks pass.**
+
+1. **Files:** all 7 are 1280×720, 30/1, h264, yuv420p, with no audio stream
+   (rendered with `--muted`). Durations are 10.000 s and 20.000 s.
+2. **Loops:** the 2A, 2B and 4 compositions were rendered at 601 frames
+   (`REMOTION_LOOP_CHECK=1`). Frame 600 is **byte-identical** to frame 0. The loop
+   phase, including the grain seed, wraps with `frame % 600`.
+3. **Determinism:** frame 150 rendered alone from a cold start is
+   **byte-identical** to frame 150 of a full 4-thread render, for all 7 compositions.
+4. **Green check** (`tools/checks.py green`), sampled in the encoded mp4 at 5
+   evenly spaced frames per composition:
+   - The screen, and the background on the green versions, is a single flat value
+     within ±1. It decodes as (0, 254–255, 0).
+   - Samples are taken 16 px clear of the phone. Within ~16 px of the black bezel,
+     H.264 ringing (CRF 16, 4:2:0) moves values by up to ~15 levels. That is codec
+     ringing, not the render: the rendered PNG frames are exactly `#00FF00` right
+     up to the edge.
+
+   **Banding** (`tools/checks.py band`): read across the pastel gradients and the
+   studio falloff in the encoded mp4. The largest step between smoothed neighbouring
+   values is ≤ 0.33 levels, and the longest constant run is ≤ 25 px, so there are no
+   steps.
+
+   **Key test** (ffmpeg `chromakey` + `despill`, frame 150 of 1A, 2A and 3A): there
+   are 0 holes in the phone body and 0 opaque green-fringe pixels. The composites
+   over magenta are clean.
+5. **Contact sheets** (5 evenly spaced frames per composition):
+   - each shows the generic phone, a flat green screen and the right motion and
+     background;
+   - there is no shadow on the green versions.
+6. **Smoothness:**
+   - The phone's silhouette was tracked frame by frame on the full sequences. The
+     landings ease in, overshoot by a few pixels and settle, with no pop: maximum
+     acceleration is 8.8 px/frame² on 3A and 5.5 px/frame² on the sway.
+   - Stepping through enlarged crops showed stable rims and highlights, with no edge
+     shimmer.
+
+## Completion checklist
+
+- [x] 4 motions → 7 compositions, one project, 3840×2160 @ 30 fps; 300 / 600 frames
+- [x] one phone model built in code; grid instanced; WebGL2 (ANGLE), no WebGPU, no PixiJS
+- [x] generic design: round punch-hole, flat sides, power right / volume left,
+      plain back with a two-lens vertical strip, no logos or text
+- [x] screen and green backgrounds `#00FF00`, composited after post via a mask
+- [x] no shadow on green; soft contact shadows on Pastel Gradient, White Studio and Grid
+- [x] dither ±1/255 and 1 % grain from pixel position + frame; none on green
+- [x] no `Math.random()`, no clocks, no `useState` visuals, no TAA or accumulation
+- [x] loop checks, determinism checks, green / banding / key checks pass
+- [x] model check by independent sub-agents (2 rounds, no brand match after round 2)
+- [x] reference comparison by independent sub-agents (3 rounds per motion)
+
