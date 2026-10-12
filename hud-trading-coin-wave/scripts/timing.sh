@@ -5,8 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 mode=$1; shift
 if [ "$mode" = 4k ]; then scale=1; n=2; else scale=0.3333333333333333; n=20; fi
-tmp=$(mktemp -d)
-t() { local s=$(date +%s.%N); "$@" >/dev/null 2>&1; echo "$(date +%s.%N) - $s" | bc; }
+tmp=out/timing-tmp; mkdir -p "$tmp"
+t() { local s=$(date +%s.%N); "$@" >out/timing-last.log 2>&1 || { tail -5 out/timing-last.log >&2; exit 1; }; echo "$(date +%s.%N) - $s" | bc; }
 for id in "$@"; do
   t1=$(t npx remotion render build "$id" "$tmp/a" --sequence --image-format=png --frames=300-300 --scale=$scale --concurrency=1 --gl=angle)
   tn=$(t npx remotion render build "$id" "$tmp/b" --sequence --image-format=png --frames=300-$((300 + n)) --scale=$scale --concurrency=1 --gl=angle)
