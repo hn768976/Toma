@@ -1,0 +1,8 @@
+CloudUpload-Blue (duration=601 frames) frame0 vs frame600: IDENTICAL
+DataPills-Blue (duration=601 frames) frame0 vs frame600: IDENTICAL
+DataPills-Amber (duration=601 frames) frame0 vs frame600: IDENTICAL
+DiamondFrames-BlackGold (duration=601 frames) frame0 vs frame600: IDENTICAL
+DiamondFrames-BlackSilver (duration=601 frames) frame0 vs frame600: IDENTICAL
+TopoLines-Silver (duration=601 frames) frame0 vs frame600: IDENTICAL
+TopoLines-Cyan (duration=601 frames) frame0 vs frame600: IDENTICAL
+FacetedRelief-MidnightBlue (duration=601 frames) frame0 vs frame600: IDENTICAL

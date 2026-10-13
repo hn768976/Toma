@@ -1,0 +1,8 @@
+CloudUpload-Blue: patch (930, 20, 340, 70) mean=31.38 profile 12.14..48.66 max column-mean step=1.70
+DataPills-Blue: patch (940, 0, 330, 60) mean=5.86 profile 4.02..8.72 max column-mean step=0.65
+DataPills-Amber: patch (940, 0, 330, 60) mean=10.08 profile 7.02..14.83 max column-mean step=0.63
+DiamondFrames-BlackGold: patch (560, 470, 160, 120) mean=4.51 profile 1.19..12.32 max column-mean step=6.64
+DiamondFrames-BlackSilver: patch (560, 470, 160, 120) mean=5.61 profile 1.39..15.36 max column-mean step=6.87
+TopoLines-Silver: patch (180, 240, 120, 60) mean=1.02 profile 1.00..1.28 max column-mean step=0.03
+TopoLines-Cyan: patch (120, 260, 120, 60) mean=1.02 profile 1.00..1.28 max column-mean step=0.08
+FacetedRelief-MidnightBlue: patch (600, 300, 120, 60) mean=22.04 profile 7.98..81.63 max column-mean step=27.27

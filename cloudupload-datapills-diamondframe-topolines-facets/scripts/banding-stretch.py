@@ -11,8 +11,8 @@ P = {  # id: (x, y, w, h) gradient-only regions at 1280x720
  "DataPills-Amber": (940, 0, 330, 60),
  "DiamondFrames-BlackGold": (560, 470, 160, 120),
  "DiamondFrames-BlackSilver": (560, 470, 160, 120),
- "TopoLines-Silver": None, "TopoLines-Cyan": None,
- "FacetedRelief-MidnightBlue": None,
+ "TopoLines-Silver": "auto", "TopoLines-Cyan": "auto",
+ "FacetedRelief-MidnightBlue": (600, 300, 120, 60),
 }
 ids = sys.argv[1:]
 tiles = []
@@ -22,8 +22,12 @@ for cid in ids:
                     "-vf", "select=eq(n\\,300)", "-frames:v", "1", png], check=True)
     im = Image.open(png).convert("RGB")
     box = P.get(cid)
-    if box is None:
-        box = (0, 0, 400, 120)
+    if box == "auto":
+        # darkest 120x60 window = black between contour lines + glow falloff
+        g = im.convert("L").resize((64, 36), Image.BOX)
+        best = min(((g.getpixel((i, j)) + g.getpixel((i + 3, j)) + g.getpixel((i, j + 2)) + g.getpixel((i + 3, j + 2)), i, j)
+                    for i in range(0, 60) for j in range(0, 33)))
+        box = (best[1] * 20, best[2] * 20, 120, 60)
     x, y, w, h = box
     c = im.crop((x, y, x + w, y + h))
     L = c.convert("L")

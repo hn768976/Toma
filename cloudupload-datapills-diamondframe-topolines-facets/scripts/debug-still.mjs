@@ -1,12 +1,14 @@
 // Debug helper: render one still and print browser console output.
 import { bundle } from "@remotion/bundler";
 import { renderStill, selectComposition } from "@remotion/renderer";
+import { existsSync } from "node:fs";
 const [id, frame = "0", out = "out/debug.png", scale = "0.3333333333333333"] = process.argv.slice(2);
+const SHELL = "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell";
 const serveUrl = await bundle({ entryPoint: "src/index.ts" });
 const opts = {
   serveUrl,
   chromiumOptions: { gl: "angle" },
-  browserExecutable: "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell",
+  browserExecutable: existsSync(SHELL) ? SHELL : null,
 };
 const composition = await selectComposition({ ...opts, id, inputProps: {} });
 await renderStill({

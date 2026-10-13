@@ -105,7 +105,9 @@ Each look is a plain three.js "world" that is built once and has an
   SDF (circles plus a rounded box), ray-marched into a polygon. The up-arrow
   is a hole in that outline. The shape is extruded with bevels into a
   `MeshPhysicalMaterial` (transmission 0.5, roughness 0.2) with an additive
-  Fresnel rim.
+  Fresnel rim (masked on downward faces to avoid edge-on hotspots). A
+  slightly smaller solid glass arrow stands in the cut-out so the arrow
+  reads clearly.
   - **Platform:** three rings, a dashed ring and ticks. They turn in
     opposite directions, one whole turn per loop.
   - **Beams:** 40 cylindrical-billboard beams plus 3 haze columns. Their
@@ -115,8 +117,10 @@ Each look is a plain three.js "world" that is built once and has an
   - **Floor and wall:** circuit canvas textures (R channel = trace,
     G/R = per-trace phase) with pulses running outward.
   - **Depth of field:** focuses on the cloud.
-- **Look 2, Data Pills.** 11 capsules per layout period (≈ 55 across the 5
-  periodic copies in the scene, ~8–12 on screen). Each capsule is an
+- **Look 2, Data Pills.** 11 capsules per layout period (55 across the 5
+  periodic copies in the scene, 8–12 on screen; the brief suggested about
+  70, but the reference shows about 8, so this follows the reference).
+  Capsules are rejection-sampled so they never overlap on screen. Each capsule is an
   instanced quad drawn with a stadium SDF: outline, glass fill, and a data
   atlas with 8 variants (padlock, divider, binary text in JetBrains Mono,
   bars).
@@ -147,7 +151,7 @@ Each look is a plain three.js "world" that is built once and has an
     cycles per loop), plus hashed twinkle stars.
   - **Brightness:** varies slowly along the lines.
 - **Look 5, Faceted Relief.** Jittered seeds on a torus give periodic
-  Voronoi cells. Each cell becomes a star: 13–17 ridges at even angles run
+  Voronoi cells. Each cell becomes a star: 16–20 ridges at even angles run
   from the raised apex down to the cell boundary, with notched valleys
   between them. Every facet is a flat triangle. Ridges and valleys get a
   thin world-space chamfer highlight in the shader.
@@ -190,11 +194,92 @@ if you want the helper scripts to include it.
 
 ## Measured render times
 
-MEASURED_TIMES
+These were measured in a cloud container with **no GPU**. Chromium ran with
+`--gl=angle`, which fell back to SwiftShader (software WebGL). All times
+come from the final renders, one render thread each (`--concurrency=1`;
+more threads were slower on this 4-core machine). The 720p figure is the
+wall time of the full 600-frame render divided by 600.
+
+| Composition | 720p s/frame | 600 frames at 720p |
+|---|---|---|
+| CloudUpload-Blue | 2.60 | 26.0 min |
+| DataPills-Blue | 0.45 | 4.5 min |
+| DataPills-Amber | 0.45 | 4.5 min |
+| DiamondFrames-BlackGold | 0.81 | 8.1 min |
+| DiamondFrames-BlackSilver | 0.87 | 8.7 min |
+| TopoLines-Silver | 0.40 | 4.0 min |
+| TopoLines-Cyan | 0.37 | 3.7 min |
+| FacetedRelief-MidnightBlue | 0.62 | 6.2 min |
+
+### Timed 4K frames (3840x2160, frame 300, `npx remotion still`)
+
+| Composition | Wall time of the still | Minus start-up (≈ 6 s / 4.4 s) | Ratio to 720p frame |
+|---|---|---|---|
+| CloudUpload-Blue | 53.1 s | **≈ 47 s / frame** | ≈ 18x |
+| DiamondFrames-BlackGold | 13.1 s | **≈ 8.7 s / frame** | ≈ 11x |
+
+The start-up figure is the same composition's 720p still time minus its
+720p per-frame time. It covers the browser launch, scene build, the PMREM
+environment and the canvas textures.
+
+### 4K estimates, same CPU-only machine, one thread
+
+| Composition | Estimated s/frame at 4K | 600 frames |
+|---|---|---|
+| CloudUpload-Blue | ≈ 47 (measured) | ≈ 7.8 h |
+| DataPills-Blue / Amber | ≈ 5–8 | ≈ 50–80 min each |
+| DiamondFrames-BlackGold / Silver | ≈ 8.7 (measured) | ≈ 1.5 h each |
+| TopoLines-Silver / Cyan | ≈ 3.5–4 | ≈ 35–40 min each |
+| FacetedRelief-MidnightBlue | ≈ 6–8 | ≈ 60–80 min |
+
+That is about 15 h for all eight at 4K on this CPU-only machine. These
+scenes are fill-rate bound (MSAA, DoF gather, physical transmission), so a
+machine with a real GPU through ANGLE should be one to two orders of
+magnitude faster, roughly 0.3–2 s per 4K frame. Use `--concurrency` there.
+Remotion's per-frame timeout is raised to 600 s in `remotion.config.ts`
+because the 4K Cloud Upload frame exceeds the 30 s default on software GL.
+
 
 ## Checks and completion checklist
 
-CHECKLIST
+All checks ran on the **final** 720p renders. The scripts are in `scripts/`.
+
+| Step | Check | Result |
+|---|---|---|
+| 1 | ffprobe: 1280x720, 30/1, h264, yuv420p, no audio, 20.0 s (`check-files.sh`) | **8/8 PASS** |
+| 2 | Loop: composition made 601 frames (`loopCheck` prop), frame 0 vs 600 (`loop-check.sh`) | **8/8 pixel-identical** |
+| 3 | Determinism: cold-start frame 300 vs frame 300 of the full render (`determinism-check.sh`) | **8/8 byte-identical** (decoded pixels and PNG file bytes) |
+| 4 | Banding, read from frame 300 of the **encoded mp4** (`banding-stretch.py`, `banding-check.py`) | PASS, details below |
+| 5 | Contact sheets, 5 frames each (`contact-sheets.sh` → `out/contact/`) | All required features present |
+| 6 | Motion, frames 270–329 (`motion-check.py`): frame-to-frame difference, flicker spikes, 1:1 crops | 8/8: steady differences, **0 isolated spikes** |
+| 7–8 | Reference comparison and independent critic rounds | See the delivery report. Three rounds were run per look. Significant differences remain for all five looks. |
+
+**Banding.** Gradient-only patches are cut from each encoded mp4,
+contrast-stretched 8×, and the column-mean profile is read:
+
+- **Smooth ramps:** Data Pills backgrounds have a largest neighbour step of
+  0.65 levels, and Cloud Upload's upper background 1.7 levels. All of these
+  are smooth ramps covered by grain, with no contour steps.
+- **Diamond Frames:** the centre panel shows only the intended dot-grid
+  normal map.
+- **Topo Lines:** the black between lines is flat and clean at levels 1–3,
+  because grain and dither fade to zero below about 3% luminance, as
+  specified. In TopoLines-Cyan there is one 1-level step in the far tail of
+  the glow, visible only at 8× stretch. With grain off in near-black, that
+  is the 8-bit minimum.
+
+### Completion checklist
+
+- [x] 8 compositions, 3840x2160, 30 fps, 600 frames, one data row each (`src/versions.ts`)
+- [x] three.js on WebGL2 for Looks 1, 2, 3 and 5; one fragment shader for Look 4; no PixiJS
+- [x] JetBrains Mono (OFL) bundled with its licence; no other text, no logos
+- [x] Deterministic: seeded mulberry32 at module level, everything driven by `frame % 600`, no `Math.random` / `Date.now` / clock; no TAA or accumulation
+- [x] Grain about 1.5% plus ±1/255 dither from (x, y, frame); grain fades out in near-black on Look 4
+- [x] 720p previews and 720p PNG stills for all 8; ffprobe-verified
+- [x] Loop, determinism, banding, contact-sheet and motion checks pass
+- [x] Measured 720p times, two timed 4K frames, 4K estimates
+- [ ] Visual match to the references: **not fully achieved**. See the remaining differences in the delivery report.
+
 
 ## Licences
 

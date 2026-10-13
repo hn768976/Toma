@@ -24,3 +24,8 @@ const playwrightHeadlessShell =
 if (existsSync(playwrightHeadlessShell)) {
   Config.setBrowserExecutable(playwrightHeadlessShell);
 }
+
+// A 4K frame of Cloud Upload takes longer than Remotion's default 30 s
+// per-frame timeout on software WebGL (no GPU). Generous limit; it does not
+// change the output.
+Config.setDelayRenderTimeoutInMilliseconds(600000);

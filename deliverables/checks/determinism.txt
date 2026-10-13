@@ -1,0 +1,8 @@
+CloudUpload-Blue cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
+DataPills-Blue cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
+DataPills-Amber cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
+DiamondFrames-BlackGold cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
+DiamondFrames-BlackSilver cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
+TopoLines-Silver cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
+TopoLines-Cyan cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
+FacetedRelief-MidnightBlue cold frame 300 vs full render: IDENTICAL (file-bytes-identical)
