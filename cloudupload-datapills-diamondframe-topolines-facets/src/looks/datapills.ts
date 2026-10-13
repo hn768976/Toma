@@ -609,7 +609,7 @@ export const makeDataPills =
         // camera: exactly one layout period V per loop
         const cp = new THREE.Vector3(0, 0.4, 0).addScaledVector(V, f);
         camera.position.copy(cp);
-        camera.rotation.set(0.03, -0.18, -0.06, "YXZ");
+        camera.rotation.set(0.12, -0.18, -0.06, "YXZ");
         camera.updateMatrixWorld();
         const focalPx = (720 * pxScale) / 2 / Math.tan(((FOV / 2) * Math.PI) / 180);
         dofUniforms.pxScale.value = pxScale;

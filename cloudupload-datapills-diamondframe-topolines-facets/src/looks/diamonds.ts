@@ -227,17 +227,17 @@ uniform vec3 sweepDirView, staticDirView, glintCol;`,
   float tilt = 1.0 - normal.z;                     // 0 on flat tops, >0 on bevels
   float bev = smoothstep(0.03, 0.12, tilt) * (1.0 - smoothstep(0.6, 0.95, tilt));
   vec3 Ls = normalize(vec3(-sweepDirView.xy, 0.55));
-  float g1 = pow(max(dot(normal, Ls), 0.0), 60.0);
+  float g1 = pow(max(dot(normal, Ls), 0.0), 240.0);
   float along = dot(vSweepW.xy, vec2(0.70710678, 0.70710678));
   float win = exp(-pow((along - sweepS) / 1.1, 2.0));
   vec3 Lt = normalize(vec3(staticDirView.xy, 0.5));
-  float g2 = pow(max(dot(normal, Lt), 0.0), 90.0);
+  float g2 = pow(max(dot(normal, Lt), 0.0), 160.0);
   // which band of its tile is this? (diamond radius in the tile lattice)
   vec2 ab = vec2(vSweepW.x + vSweepW.y, vSweepW.x - vSweepW.y);
   ab -= ${(2 * HALF).toFixed(4)} * floor(ab / ${(2 * HALF).toFixed(4)} + 0.5);
   float rl = max(abs(ab.x), abs(ab.y));
   float inner = 1.0 - smoothstep(${(P + W * 1.05).toFixed(4)}, ${(P + W * 1.3).toFixed(4)}, rl);
-  totalEmissiveRadiance += glintCol * bev * (g1 * win * sweepAmt * (6.0 + 14.0 * inner) + g2 * (0.25 + 5.0 * inner));
+  totalEmissiveRadiance += glintCol * bev * (g1 * win * sweepAmt * (3.0 + 7.0 * inner) + g2 * (0.3 + 9.0 * inner));
 }`,
           );
       };
