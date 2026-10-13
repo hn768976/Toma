@@ -332,7 +332,8 @@ in vec3 vV;
 in vec3 vObj;
 void main() {
   float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
-  float r = pow(f, 2.5);
+  // no rim on downward faces: seen edge-on from above they stack into hotspots
+  float r = pow(f, 2.5) * smoothstep(-0.35, 0.15, normalize(vN).y);
   // inner white glow, stronger toward the top of the cloud
   float top = smoothstep(-0.8, 1.2, vObj.y);
   vec3 c = rim * r * 1.4 + glow * (0.01 + 0.03 * top);
