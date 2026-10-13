@@ -22,7 +22,7 @@ def pixels(path):
 def frame_file(file, n):
     import os
     d = f"out/frames/{file}"
-    names = sorted(os.listdir(d))
+    names = sorted(n for n in os.listdir(d) if n.endswith(".png"))
     return f"{d}/{names[n]}"
 
 def banding(file):

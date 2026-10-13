@@ -391,7 +391,19 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
             // Pulses only once the network is drawn.
             m.mats.link.uniforms.uPulseOn.value = smooth(7.0, 9.0, sec);
             // Fill grid and nodes fade in during the pull-back.
-            m.mats.fill.uniforms.uDim.value = 1.6;
+            // Close-up: the map lines are near the lens, so they are drawn thinner
+            // and dimmer and open up to full strength as the camera pulls back
+            // (otherwise the bloom washes the opening out).
+            const near = 1 - smooth(2.6, 6.0, sec);
+            const k = lerp(1, 0.3, near);
+            const wk = lerp(1, 0.45, near);
+            m.mats.fill.uniforms.uDim.value = 1.6 * k * 0.7 + 1.6 * 0.3 * (1 - near);
+            m.mats.outline.uniforms.uDim.value = k;
+            m.mats.outlineM.uniforms.uWidthMul.value = wk;
+            m.mats.outline.uniforms.uWidthMul.value = wk;
+            m.mats.fill.uniforms.uWidthMul.value = wk;
+            m.mats.verts.uniforms.uDim.value = k;
+            (m.areaMat as THREE.MeshBasicMaterial).opacity = 1 - near;
           } else {
             T = m.center.clone();
             D = D1;

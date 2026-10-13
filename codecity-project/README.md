@@ -123,6 +123,76 @@ colourway:
 - Pass `--props='{"loopCheck":true}'` to make a composition one frame longer, so frame 600 can
   be rendered and compared with frame 0.
 
+## Measured render times (this build machine)
+
+Measured in a cloud container with **no GPU**: 4 vCPU, Chromium headless with `--gl=angle`
+falling back to SwiftShader (software). Renders used `--concurrency=2`.
+
+Per-frame times for full renders at 720p (`--scale=1/3`):
+
+| Composition | Frames | Wall time | s / frame (720p) |
+|---|---|---|---|
+| CodeTowers-Cyan | 600 | 958 s | 1.60 |
+| FibreWorldMap-Story | 360 | 315 s | 0.87 |
+| FibreWorldMap-HoldLoop | 600 | 423 s | 0.71 |
+| GlassCityDrive-Blue | 600 | 754 s | 1.26 |
+| WireframeStreet-BlueCyan | 600 | 417 s | 0.70 |
+| WireframeStreet-VioletPink | 600 | 430 s | 0.72 |
+| AIServerRow-Teal | 600 | 568 s | 0.95 |
+
+Two real 4K frames, each a cold `remotion still` of frame 300 at `--scale=1`, 3840×2160:
+
+| Composition | 4K still wall time | 720p still, same method | 4K frame excl. ≈5 s startup |
+|---|---|---|---|
+| CodeTowers-Cyan | 35.2 s | 6.9 s | ≈ 30 s |
+| GlassCityDrive-Blue | 31.9 s | 6.0 s | ≈ 26 s |
+
+A 4K frame costs about 19–21× a 720p frame here (9× the pixels, plus bloom/DoF chains and
+4×MSAA at full size).
+
+**4K estimates, same CPU-only machine:** 720p s/frame × ≈20 × frames:
+
+| Composition | Estimate |
+|---|---|
+| CodeTowers | ≈ 5.3 h |
+| GlassCityDrive | ≈ 4.2 h |
+| AIServerRow | ≈ 3.2 h |
+| FibreWorldMap-HoldLoop | ≈ 2.4 h |
+| each WireframeStreet | ≈ 2.3 h |
+| FibreWorldMap-Story | ≈ 1.7 h |
+| **all seven** | **≈ 21 h** |
+
+On a machine with a real GPU behind ANGLE, expect these to drop by roughly an order of
+magnitude. That is an estimate; it was not measured here. Splitting work across machines with
+`--frames=a-b` is safe because every frame is independent.
+
+## Verification (run on the 720p previews)
+
+| Check | Result |
+|---|---|
+| 1. ffprobe | All 7: 1280×720, 30/1, h264, yuv420p, no audio. Durations 20.0 s (12.0 s for the Story). |
+| 2. Loop | The 6 loops rendered at 601 frames (`loopCheck`): frame 600 is pixel-identical to frame 0. Seams were also checked for continuity: the 599→0 change is the same size as the other frame steps. |
+| 3. Determinism | Frame 300 (180 for the Story), rendered alone from a cold start, is **byte-identical** to the same frame of the full render, for all 7. It is also identical across concurrency 1, 2 and 4. |
+| 4. Banding | Frames read from the encoded mp4s, with profiles through the horizon hazes, dark skies, black map background and AI-row background. Steps are at most about 2 code values per pixel along steep gradients, with no plateaus. Map black stays at 1–4/255. Details: `out/checks/banding.txt`. |
+| 5. Content | A contact sheet per composition (5 evenly spaced frames). Each shows the expected scene. No logos; the code is generated; "AI" is spelled correctly. |
+| 6. Motion | 2 s around frame 300 (75–270 for the Story). Frame-to-frame fine-detail energy changes by ≤2.6% on the loops, so there is no crawl or moiré. The Story's largest change is the smooth peak of the eased pull-back (frames 151–156), not a pop. |
+
+### Banding measures
+
+- Dither: ±1/255 triangular, applied in display space in the final pass.
+- Grain: about 1.5%. It comes from a hash of pixel position and `frame % period`.
+- Map (Look 2): grain and dither fade to zero below about 3% luminance.
+
+## Completion checklist
+
+- [x] 7 compositions, one data row each, 3840×2160 at 30 fps (600 frames; Story 360)
+- [x] three.js on WebGL2 via `@remotion/three`, `--gl=angle`
+- [x] Deterministic: no `Math.random` at render time, no clock, no state carried between frames
+- [x] Fonts and atlases loaded once behind `delayRender`
+- [x] Loops close exactly; cold frames are byte-identical
+- [x] OFL fonts with licence texts; Natural Earth with a public-domain note
+- [x] README with render, still and GL commands, timings, checks and how to add a colourway
+
 ## Licences
 
 See `NOTICE-data.md`:
