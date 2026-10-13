@@ -47,7 +47,7 @@ const buildMesh = () => {
   // the band along the bottom 35%
   fill(42, () => [-0.7 + rnd() * 2.4, -0.75 + 0.95 * Math.pow(rnd(), 0.9)]);
   // a few low peaks along the band
-  fill(4, () => [0.3 + rnd() * 0.4, 0.12 + rnd() * 0.08]);
+  fill(4, () => [0.3 + rnd() * 0.4, -0.05 + rnd() * 0.1]);
 
   const nodes: Node[] = pts.map((p) => ({
     u: p.u, v: p.v, z: (rnd() - 0.5) * 3.2,
@@ -62,7 +62,9 @@ const buildMesh = () => {
     const P = [pts[a], pts[b], pts[c]];
     const cu = (P[0].u + P[1].u + P[2].u) / 3, cv = (P[0].v + P[1].v + P[2].v) / 3;
     const maxEdge = Math.max(...[[0, 1], [1, 2], [2, 0]].map(([i, j]) => Math.hypot((P[i].u - P[j].u) * 1.78, P[i].v - P[j].v)));
-    const inGap = cv > 0.24 && cu > 0.24 && cu < 0.76;
+    // empty centre: a wide V between the two side clusters, only sparse lines low in the middle
+    const mid = Math.abs(cu - 0.5);
+    const inGap = (cv > 0.24 && mid < 0.26) || (cv > 0.08 && mid < 0.18);
     if (inGap || maxEdge > 0.95) continue;
     tris.push([a, b, c]);
   }
@@ -73,6 +75,14 @@ const buildMesh = () => {
       const k = i < j ? `${i}-${j}` : `${j}-${i}`;
       if (!edgeSet.has(k)) { edgeSet.add(k); edges.push([i, j]); }
     }
+  // a few long strands between non-adjacent nodes, so lines cross like a 3D plexus
+  for (let k = 0; k < 14; k++) {
+    const i = Math.floor(rnd() * pts.length), j = Math.floor(rnd() * pts.length);
+    const d2 = Math.hypot((pts[i].u - pts[j].u) * 1.78, pts[i].v - pts[j].v);
+    const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+    const side = (p: { u: number }) => (p.u < 0.35 ? 0 : p.u > 0.65 ? 2 : 1);
+    if (i !== j && d2 > 0.25 && d2 < 0.7 && side(pts[i]) === side(pts[j]) && !edgeSet.has(key)) { edgeSet.add(key); edges.push([i, j]); }
+  }
   // drop nodes that ended up in no facet (stray points in the empty middle)
   const used = new Set(tris.flat());
   const keep = nodes.map((_, i) => i).filter((i) => used.has(i));
@@ -94,7 +104,7 @@ const FACET_POOL: number[] = (() => {
     const cu = (a.u + b.u + c.u) / 3, cv = (a.v + b.v + c.v) / 3;
     const onScreen = cu > 0.0 && cu < 1.0 && cv > 0.0 && cv < 0.95;
     const side = cu < 0.3 || cu > 0.7;
-    return { i, score: onScreen ? area * (side ? 2 : 1) : -1 };
+    return { i, score: onScreen && side ? area : -1 };
   });
   return scored.filter((s) => s.score > 0).sort((x, y) => y.score - x.score).slice(0, 12).map((s) => s.i);
 })();
@@ -154,7 +164,7 @@ void main() {
   float scale = uRes.y / 720.0;
   float dist = -view.z;
   float coc = abs(${CAM_Z.toFixed(1)} / dist - 1.0) * 0.02 * uRes.y; // light DoF
-  float core = (2.0 + 3.6 * iS * iS) * scale;
+  float core = (2.6 + 4.2 * iS * iS) * scale;
   float r = max(core, coc) * 8.0;   // sprite includes the halo
   vColor = uNode * pow(core / max(core, coc), 1.2);
   vSharp = 1.0;
@@ -170,8 +180,8 @@ in vec2 vP; in vec3 vColor; in float vSharp; in float vEdge; out vec4 outColor;
 ${BOKEH_FRAG_GLSL}
 void main() {
   float r = length(vP);
-  float core = exp(-r * r * 300.0) * 1.5;
-  float halo = exp(-r * r * 28.0) * 0.7 + exp(-r * r * 6.0) * 0.22;
+  float core = exp(-r * r * 260.0) * 1.0;
+  float halo = exp(-r * r * 22.0) * 0.8 + exp(-r * r * 5.0) * 0.3;
   outColor = vec4(vColor * (core + halo) * (1.0 - smoothstep(0.85, 1.0, r)), 1.0);
 }`;
 
@@ -264,7 +274,7 @@ export const makeLowPoly = (v: LowPolyVersion): SceneBuilder => ({ width, height
     scene, camera,
     update,
     post: {
-      bloomStrength: 0.12, bloomThreshold: 0.0, bloomRadius: 1.0, vignette: 0.45,
+      bloomStrength: 0.24, bloomThreshold: 0.0, bloomRadius: 1.0, vignette: 0.45,
       grain: 0.015, grainFloor: 0, exposure: 1.0,
       backgroundGlsl: `vec3 background(vec2 uv) {
         float t = smoothstep(1.0, 0.0, uv.y);
