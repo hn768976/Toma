@@ -62,19 +62,22 @@ const LIGHTS: BokehLight[] = [];
   // Denser toward the centre line, where the near and middle distance is seen.
   const rx = () => {
     const u = rng();
-    return (rng() < 0.5 ? -1 : 1) * HALF_X * u * u;
+    return (rng() < 0.5 ? -1 : 1) * 0.4 * (Math.pow(HALF_X / 0.4 + 1, u) - 1);
   };
   const want = [
-    { n: 30, kind: 0 as const, size: () => [range(rng, 0.35, 0.9), range(rng, 0.02, 0.045), range(rng, 0.2, 0.6)] },
-    { n: 40, kind: 2 as const, size: () => { const r = range(rng, 0.04, 0.12); return [r * 2, range(rng, 0.03, 0.09), r * 2]; } },
-    { n: 130, kind: 0 as const, size: () => [range(rng, 0.12, 0.32), range(rng, 0.015, 0.035), range(rng, 0.08, 0.25)] },
-    { n: 250, kind: 1 as const, size: () => [range(rng, 0.03, 0.12), range(rng, 0.01, 0.025), range(rng, 0.025, 0.07)] },
+    { n: 14, kind: 0 as const, size: () => [range(rng, 0.4, 0.75), range(rng, 0.03, 0.06), range(rng, 0.2, 0.45)] },
+    { n: 6, kind: 2 as const, size: () => { const r = range(rng, 0.15, 0.25); return [r * 2, range(rng, 0.02, 0.04), r * 2]; } },
+    { n: 40, kind: 0 as const, size: () => [range(rng, 0.18, 0.45), range(rng, 0.02, 0.045), range(rng, 0.12, 0.3)] },
+    { n: 40, kind: 2 as const, size: () => { const r = range(rng, 0.03, 0.08); return [r * 2, range(rng, 0.04, 0.1), r * 2]; } },
+    { n: 120, kind: 0 as const, size: () => [range(rng, 0.08, 0.2), range(rng, 0.015, 0.035), range(rng, 0.05, 0.14)] },
+    { n: 240, kind: 1 as const, size: () => [range(rng, 0.03, 0.1), range(rng, 0.01, 0.025), range(rng, 0.02, 0.06)] },
   ];
+
   for (const w of want) {
     let placed = 0;
     for (let tries = 0; placed < w.n && tries < w.n * 40; tries++) {
       const [sx, sy, sz] = w.size();
-      const c: Comp = { kind: w.kind, x: rx(), z: rng() * P, sx, sy, sz, tint: rng() };
+      const c: Comp = { kind: w.kind, x: rx(), z: rng() * P, sx, sy: sy * 1.6, sz, tint: rng() };
       if (tryPlace(c, 0.02)) placed++;
     }
   }
@@ -84,7 +87,7 @@ const LIGHTS: BokehLight[] = [];
   const lc = new THREE.Color();
   const tileLights: BokehLight[] = [];
   const add = (x: number, y: number, z: number, e: number) => {
-    const white = rng() < 0.12;
+    const white = rng() < 0.03;
     tileLights.push({
       x, y, z: ((z % P) + P) % P,
       color: lc.clone(), // replaced per version in the factory
@@ -115,7 +118,7 @@ const LIGHTS: BokehLight[] = [];
       // Log-distributed across x: about as many lights per screen area near the
       // camera (narrow view) as far away (wide view).
       const u = rng();
-      const cx = (rng() < 0.5 ? -1 : 1) * 0.3 * (Math.pow(HALF_X / 0.3 + 1, u) - 1);
+      const cx = rng() < 0.3 ? (rng() - 0.5) * 2.6 : (rng() < 0.5 ? -1 : 1) * 0.3 * (Math.pow(HALF_X / 0.3 + 1, u) - 1);
       const cz = rng() * P;
       const n = 3 + Math.floor(rng() * 8);
       const e = range(rng, 0.5, 1.5);
@@ -134,11 +137,16 @@ const LIGHTS: BokehLight[] = [];
 // ---------------------------------------------------------------------------
 const ENV_GLSL = /* glsl */ `
 uniform vec3 uGlow;
-// The environment: black sky with a bright band at the horizon, hottest at the centre.
+// The environment: black sky, a deep blue band at the horizon with a near-white
+// hot spot at its centre.
+float hotOf(vec3 d) { return exp(-d.x * d.x * 14.0); }
+vec3 glowCol(vec3 d) {
+  float hot = hotOf(d);
+  return uGlow * (0.25 + 1.5 * hot) + vec3(0.9, 0.95, 1.0) * hot * hot * 0.5;
+}
 vec3 env(vec3 d) {
-  float h = exp(-abs(d.y) * 26.0) * 1.6 + exp(-abs(d.y) * 6.0) * 0.25;
-  float c = exp(-d.x * d.x * 9.0);
-  return uGlow * h * (0.45 + 1.4 * c) * step(-0.25, d.y);
+  float h = exp(-abs(d.y) * 26.0) * 1.2 + exp(-abs(d.y) * 6.0) * 0.2;
+  return glowCol(d) * h * step(-0.25, d.y);
 }
 float fogOf(float dist) {
   return pow(smoothstep(8.0, ${(WRAP - BEHIND - 1).toFixed(1)}, dist), 1.6);
@@ -152,8 +160,11 @@ in vec3 aMisc; // sy, kind, tint
 out vec3 vN;
 out vec3 vW;
 out vec3 vVP;
+out vec3 vLocal;
+out vec3 vSize;
 out float vTint;
 out float vTop;
+out float vKind;
 void main() {
   vec3 p = position;
   vec3 s = vec3(aBox.z, aMisc.x, aBox.w);
@@ -161,7 +172,10 @@ void main() {
   vec3 w = vec3(aBox.x, 0.0, wrapZ(aBox.y)) + p * s;
   vW = w;
   vN = normalize(normal / s);
+  vLocal = p;
+  vSize = s;
   vTint = aMisc.z;
+  vKind = aMisc.y;
   vTop = step(0.5, normal.y);
   vec4 vp = viewMatrix * vec4(w, 1.0);
   vVP = vp.xyz;
@@ -176,8 +190,11 @@ ${ENV_GLSL}
 in vec3 vN;
 in vec3 vW;
 in vec3 vVP;
+in vec3 vLocal;
+in vec3 vSize;
 in float vTint;
 in float vTop;
+in float vKind;
 uniform vec3 uCam;
 uniform vec3 uLightC;
 void main() {
@@ -185,15 +202,22 @@ void main() {
   vec3 V = normalize(uCam - vW);
   vec3 R = reflect(-V, N);
   float fres = 0.04 + 0.96 * pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 5.0);
-  // Dark grey bodies; tops range from dark matte to brushed silver.
-  float metal = vTop * mix(0.25, 0.85, vTint);
-  vec3 base = vTop > 0.5 ? mix(vec3(0.012, 0.013, 0.015), vec3(0.14, 0.15, 0.16), vTint * vTint) : vec3(0.008, 0.009, 0.011);
-  vec3 spec = env(normalize(R + vec3(0.0, 0.06, 0.0))) * mix(0.03, 0.35, metal) * (0.4 + fres);
-  // Soft fill from above, and LED spill from the board.
-  float fill = max(N.y, 0.0) * 0.35 + 0.08;
-  vec3 col = base * fill + spec + uLightC * 0.004 * (1.0 - vTop);
+  // Neutral grey bodies; tops from dark matte to brushed silver.
+  float metal = vTop * mix(0.3, 0.9, vTint);
+  vec3 grey = vec3(1.0, 0.97, 0.93);
+  vec3 base = vTop > 0.5 ? grey * mix(0.03, 0.3, vTint) : grey * 0.018;
+  vec3 spec = env(normalize(R + vec3(0.0, 0.05, 0.0))) * mix(0.05, 0.5, metal) * (0.4 + fres);
+  // Bright specular rim along the top edges of boxes (catches the horizon light).
+  vec3 lp = clamp(vLocal, vec3(-0.5, 0.0, -0.5), vec3(0.5, 1.0, 0.5));
+  float edgeD = vKind > 1.5 ? (0.5 - length(lp.xz)) * vSize.x : min((0.5 - abs(lp.x)) * vSize.x, (0.5 - abs(lp.z)) * vSize.z);
+  float rim = vTop * exp(-max(edgeD, 0.0) / 0.006);
+  float topLip = (1.0 - vTop) * smoothstep(0.85, 1.0, lp.y);
+  vec3 dir = normalize(vW - uCam);
+  vec3 hl = glowCol(dir) * (rim * 0.9 + topLip * 0.35) * (0.4 + vTint);
+  float fill = max(N.y, 0.0) * 0.6 + 0.15;
+  vec3 col = base * fill + spec + hl + uLightC * 0.006 * (1.0 - vTop);
   float dist = length(vW - uCam);
-  col = mix(col, uGlow * 0.55, fogOf(dist));
+  col = mix(col, glowCol(dir) * 0.45, fogOf(dist));
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
 `;
@@ -241,14 +265,14 @@ void main() {
   float far = length(vW - uCam);
   // Traces fade into an average tone with distance (avoids moire).
   float fade = 1.0 - smoothstep(4.0, 14.0, far);
-  vec3 col = uBoard * 0.25 * (0.7 + 0.6 * vnoise(vec3(b * 0.7, 3.0)));
-  col += uBoard * 0.9 * trace * fade + uBoard * 0.12 * (1.0 - fade);
+  vec3 col = uBoard * 2.4 * (0.6 + 0.8 * vnoise(vec3(b * 0.7, 3.0)));
+  col += uBoard * 3.5 * trace * fade + uBoard * 0.6 * (1.0 - fade);
   // Glossy board: horizon glow reflected at grazing angles.
   vec3 R = reflect(-V, vec3(0.0, 1.0, 0.0));
   float fres = 0.02 + 0.98 * pow(clamp(1.0 - V.y, 0.0, 1.0), 5.0);
-  col += env(R) * fres * 0.06;
-  col += uLightC * 0.006;
-  col = mix(col, uGlow * 0.55, fogOf(far));
+  col += env(R) * fres * 0.12;
+  col += uLightC * 0.012;
+  col = mix(col, glowCol(normalize(vW - uCam)) * 0.45, fogOf(far));
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
 `;
@@ -265,10 +289,8 @@ void main() {
   vec3 d = normalize((uCamWorld * vec4(normalize(v.xyz / v.w), 0.0)).xyz);
   // Bright haze band hugging the horizon, plus a wide faint halo above it.
   float up = max(d.y, 0.0);
-  float hot = exp(-d.x * d.x * 9.0);
-  vec3 col = uGlow * (exp(-up * 120.0) * 1.5 + exp(-up * 30.0) * 0.1 + exp(-up * 9.0) * 0.012) * (0.4 + 1.4 * hot);
-  col += vec3(0.8, 0.9, 1.0) * exp(-up * 160.0) * hot * hot * 1.5;
-  col += uGlow * 0.55 * step(d.y, 0.0);
+  vec3 col = glowCol(d) * (exp(-up * 150.0) * 0.7 + exp(-up * 30.0) * 0.05);
+  col += glowCol(d) * 0.45 * step(d.y, 0.0);
   gl_FragColor = vec4(col, uCocFar);
 }
 `;
@@ -288,6 +310,7 @@ export const createCircuitHorizon: LookFactory<CircuitHorizonParams> = (gl, para
     vignette: 0.45,
     grain: 0.015,
     grainDarkCut: 0.03,
+    whiten: 0.05,
   });
   const pu = periodicUniforms(WRAP, BEHIND, FOCUS, COC_K, 0.04);
   const boardC = new THREE.Color(params.board);
@@ -359,10 +382,14 @@ export const createCircuitHorizon: LookFactory<CircuitHorizonParams> = (gl, para
   const g2 = makeComp(cylBase, COMPS.filter((c) => c.kind === 2));
 
   // Lights.
-  const lights = LIGHTS.map((l) => ({ ...l, color: l.size > 1 ? lightC.clone().lerp(new THREE.Color(1, 1, 1), 0.55) : lightC.clone() }));
+  const teal = new THREE.Color("#2AD8E8");
+  const lights = LIGHTS.map((l, i) => ({
+    ...l,
+    color: l.size > 1 ? lightC.clone().lerp(new THREE.Color(1, 1, 1), 0.4) : lightC.clone().lerp(teal, (i * 7919) % 4 === 0 ? 0.6 : 0),
+  }));
   const bokeh = createBokeh(lights, pu);
-  bokeh.mat.uniforms.uGain.value = 2.6;
-  bokeh.mat.uniforms.uFalloff.value = 1.1;
+  bokeh.mat.uniforms.uGain.value = 4.2;
+  bokeh.mat.uniforms.uFalloff.value = 0.8;
   bokeh.mat.uniforms.uSharpR.value = 0.0034;
   bokeh.mat.uniforms.uFade.value.set(WRAP * 0.45, WRAP * 0.85);
 
