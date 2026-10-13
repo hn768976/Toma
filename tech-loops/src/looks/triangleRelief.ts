@@ -99,7 +99,7 @@ EDGES.forEach((e, k) => {
 interface Step { edge: number; reversed: boolean }
 interface Tracer { period: number; offset: number; routes: Step[][]; speed: number }
 
-const SPILL = 0.36;
+const SPILL = 0.24;
 const rng = mulberry32(0x7a1e5eed);
 const N_TRACERS = 12;
 const PERIODS = [150, 200, 300, 300, 600];
@@ -114,7 +114,7 @@ const TRACERS: Tracer[] = [];
       for (let attempt = 0; attempt < 50; attempt++) {
         const j = Math.floor(J0 + 2 + rng() * (J1 - J0 - 4));
         // Biased toward the right half, where the reference's lit mesh sits.
-        const xs = (0.55 * rng() - 0.05) * FRAME_W;
+        const xs = (0.42 * rng() + 0.08) * FRAME_W;
         const i = Math.round((xs + FRAME_W / 2 + SIDE) / SIDE - j * 0.5);
         const len = 4 + Math.floor(rng() * 7); // 4..10 edges
         let ci = i, cj = j;
@@ -344,17 +344,17 @@ void main() {
   float aa = fwidth(vUv.y) + 1e-4;
   float across = abs(vUv.y);
   float core = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, across);
-  float halo = exp(-across * across * 0.35) * 0.18;
+  float halo = exp(-across * across * 0.25) * 0.28;
   // Lit range along the edge, soft-edged by a pixel.
   float aaL = fwidth(s) * 1.5 + 1e-5;
   float m = smoothstep(vLit.z - aaL, vLit.z + aaL, s) * (1.0 - smoothstep(vLit.w - aaL, vLit.w + aaL, s));
   float sc = clamp(s, 0.0, 1.0);
   float inten = max(mix(vLit.x, vLit.y, sc) * m, max(vSpill.x, vSpill.y) * 0.8);
   // Dim parts of a line run deeper and warmer; bright parts go pale.
-  vec3 tint = pow(uLine, vec3(1.0 + 0.7 * (1.0 - clamp(inten, 0.0, 1.0))));
+  vec3 tint = pow(uLine, vec3(1.0 + 1.2 * (1.0 - clamp(inten, 0.0, 1.0))));
   // Champagne rather than copper: pull the gold a little toward grey.
   tint = mix(tint, vec3(dot(tint, vec3(0.2126, 0.7152, 0.0722))), 0.3);
-  vec3 c = tint * inten * (core * 3.0 + halo);
+  vec3 c = tint * inten * (core * 2.2 + halo);
   gl_FragColor = vec4(c, 1.0);
 }
 `;
