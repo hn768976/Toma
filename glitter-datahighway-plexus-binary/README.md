@@ -44,14 +44,14 @@ Each command renders the full 20 s loop at 3840×2160, H.264, yuv420p, CRF 16
 `remotion.config.ts`; they are repeated here so the commands stand alone).
 
 ```bash
-npx remotion render src/index.ts GlitterVortex-Gold        out/GlitterVortex_Gold_4K.mp4        --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
-npx remotion render src/index.ts GlitterVortex-Silver      out/GlitterVortex_Silver_4K.mp4      --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
-npx remotion render src/index.ts DataHighway-Multicolour   out/DataHighway_Multicolour_4K.mp4   --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
-npx remotion render src/index.ts PlexusLandscape-BlueAmber out/PlexusLandscape_BlueAmber_4K.mp4 --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
-npx remotion render src/index.ts LowPolyPlexus-Blue        out/LowPolyPlexus_Blue_4K.mp4        --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
-npx remotion render src/index.ts LowPolyPlexus-Violet      out/LowPolyPlexus_Violet_4K.mp4      --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
-npx remotion render src/index.ts BinaryPlane-Blue          out/BinaryPlane_Blue_4K.mp4          --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
-npx remotion render src/index.ts BinaryPlane-Green         out/BinaryPlane_Green_4K.mp4         --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16
+npx remotion render src/index.ts GlitterVortex-Gold        out/GlitterVortex_Gold_4K.mp4        --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
+npx remotion render src/index.ts GlitterVortex-Silver      out/GlitterVortex_Silver_4K.mp4      --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
+npx remotion render src/index.ts DataHighway-Multicolour   out/DataHighway_Multicolour_4K.mp4   --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
+npx remotion render src/index.ts PlexusLandscape-BlueAmber out/PlexusLandscape_BlueAmber_4K.mp4 --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
+npx remotion render src/index.ts LowPolyPlexus-Blue        out/LowPolyPlexus_Blue_4K.mp4        --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
+npx remotion render src/index.ts LowPolyPlexus-Violet      out/LowPolyPlexus_Violet_4K.mp4      --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
+npx remotion render src/index.ts BinaryPlane-Blue          out/BinaryPlane_Blue_4K.mp4          --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
+npx remotion render src/index.ts BinaryPlane-Green         out/BinaryPlane_Green_4K.mp4         --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 --timeout=600000
 ```
 
 On a GPU machine, `--concurrency` can be raised; on software GL it barely
@@ -64,7 +64,7 @@ The compositions are 3840 wide, so a 6000×3375 still is `--scale=1.5625`
 pixels, so the still is genuinely rendered at 6K, not upscaled:
 
 ```bash
-npx remotion still src/index.ts GlitterVortex-Gold out/GlitterVortex_Gold_6K.png --frame=300 --scale=1.5625 --gl=angle --image-format=png
+npx remotion still src/index.ts GlitterVortex-Gold out/GlitterVortex_Gold_6K.png --frame=300 --scale=1.5625 --gl=angle --image-format=png --timeout=600000
 ```
 
 (Swap the composition id for any other. 6K stills were not rendered here.)
@@ -142,12 +142,112 @@ For example, a red Low-Poly Plexus:
 
 It shows up in the studio and is renderable as `LowPolyPlexus-Red`.
 
-## Measured render times, banding check and checklist
+## Measured render times
 
-See **[`VERIFY.md`](VERIFY.md)**. It covers the 720p per-frame times for every
-composition, the two timed 4K frames with 4K estimates, the ffprobe results,
-the loop and determinism checks, the banding transects and the completion
-checklist.
+Machine: 4-core Intel Xeon @ 2.1 GHz, **no GPU**, so WebGL2 ran on SwiftShader
+(software) through `--gl=angle`. A GPU machine will be far faster, often by more
+than 10×.
+
+**720p (1280×720), per frame.** Each figure is the wall time of the full
+601-frame preview render divided by its frame count, at `--concurrency=2`. It
+includes browser start-up.
+
+| Composition | s / frame @ 720p | 600-frame preview |
+|---|---|---|
+| GlitterVortex-Gold | 2.65 | 26.5 min |
+| GlitterVortex-Silver | 2.19 | 21.9 min |
+| DataHighway-Multicolour | 1.67 | 16.7 min |
+| PlexusLandscape-BlueAmber | 0.73 | 7.3 min |
+| LowPolyPlexus-Blue | 0.26 | 2.6 min |
+| LowPolyPlexus-Violet | 0.26 | 2.6 min |
+| BinaryPlane-Blue | 3.07 | 30.7 min |
+| BinaryPlane-Green | 2.96 | 29.6 min |
+
+**Two real 4K frames (3840×2160), timed at `--scale=1 --concurrency=1`.**
+Each composition was rendered for frames 300–300 and then for frames 300–302.
+The marginal cost per frame is the difference divided by 2.
+
+| Composition | 1 frame incl. start-up | 3 frames | **marginal s / 4K frame** | same method @ 720p |
+|---|---|---|---|---|
+| GlitterVortex-Gold (1A) | 7.1 s | 15.6 s | **4.3 s** | 2.2 s |
+| BinaryPlane-Blue (5A) | 72.7 s | 136.2 s | **31.8 s** | 2.8 s |
+
+Glitter is vertex-bound: 150k instanced particles, so it scales by only about
+2× from 720p to 4K. Binary is fill-bound: a 72-tap DoF gather plus bloom at
+9× the pixels, so it scales by about 11×.
+
+**4K estimates for a full 600-frame render on this kind of CPU-only machine.**
+The two measured looks are from the table above. The others use their 720p
+times × the scale factor of the look they most resemble: about 10× for
+the DoF-plus-bloom pipelines (Highway), and about 8× for the
+point/line looks (Plexus and Low-Poly), which do not have the full-screen DoF pass.
+
+| Composition | est. s / 4K frame | est. 600 frames |
+|---|---|---|
+| GlitterVortex-Gold / Silver | 4.3 (measured) | ~45 min each |
+| DataHighway-Multicolour | ~17 | ~2.8 h |
+| PlexusLandscape-BlueAmber | ~6 | ~1 h |
+| LowPolyPlexus-Blue / Violet | ~2 | ~20 min each |
+| BinaryPlane-Blue / Green | 31.8 (measured) | ~5.3 h each |
+
+On software GL a single 4K Binary frame can take more than 30 s, which is why
+`remotion.config.ts` raises the page timeout to 10 minutes. Pass
+`--timeout=600000` if you render with the Node API or another config.
+
+## Verification (what was checked, and the results)
+
+All checks ran on the delivered 720p files and their PNG sequences.
+`scripts/render-preview.sh` does checks 1–3 for each composition,
+`scripts/banding-check.py` does check 4 and `scripts/motion-check.py` does check 6.
+
+1. **File checks (ffprobe).** All 8 previews are h264, 1280×720, `30/1`,
+   yuv420p, 20.000000 s, with one video stream and **no audio**. `--scale=0.3333333333333333`
+   gives exactly 1280×720, so no downscale fallback was needed.
+2. **Loop.** Each composition was rendered as 601 frames
+   (`--props='{"loopCheck":true}'`). The decoded pixels of frame 0 and frame 600
+   are identical (framemd5) for **all 8**. A seam check on the mp4s also shows
+   that the 599→0 step is no larger than an ordinary frame step.
+3. **Determinism.** Frame 300 was rendered alone from a cold start with
+   `remotion still`, using a 600-frame composition rather than the 601-frame
+   one. It is **byte-identical** to frame 300 of the full render (`cmp`)
+   for **all 8**.
+4. **Banding, measured on the encoded mp4.** Frames were decoded at 2, 4, 10
+   and 15 s, and the gradient areas were sampled:
+   - Glitter: the glow haze in the top-right sky.
+   - Highway: the sky above the horizon glow.
+   - Plexus: the dark sky down to the navy horizon.
+   - Low-Poly: the navy or plum gradient.
+   - Binary: the dark DoF blur.
+
+   The largest row-to-row step of the averaged profile is 0.15–0.96 levels, and
+   **0.0 % of 8×8 blocks are flat**, so the dither survived the encode and every
+   region passed. x264's default adaptive quantisation stripped the dither in
+   the darkest areas (up to 14 % flat blocks in Low-Poly Violet). The encode
+   therefore uses `-x264-params aq-mode=3:aq-strength=1.6`.
+5. **Contact sheets.** Five evenly spaced frames per composition were checked
+   against the brief.
+6. **Motion.** Two seconds around frame 300 of each composition were checked:
+   - Mean luminance has no alternating pulse; lag-1 autocorrelation of the
+     frame-to-frame change is above −0.5 everywhere except Plexus.
+   - Plexus's ±0.09-level wobble is x264 noise: the source PNG frames change
+     smoothly.
+   - Glyph swaps and bar flicker are staggered per instance, so no frame
+     carries a synchronised swap.
+7. **Look comparison with the references** (steps 7 and 8). See the delivery
+   report for what the independent comparisons flagged and what was changed.
+
+### Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, 600 frames, seamless loops
+- [x] Look 1 on PixiJS 8 / WebGL2 with 150k particles projected in a custom shader; Looks 2–5 on `@remotion/three` / WebGL2
+- [x] One data row per version (`src/versions.ts`)
+- [x] Deterministic: seeded `mulberry32`, hashes of (id, frame bucket), no `Math.random`/`Date.now`/clock/`useState` visuals, no TAA
+- [x] Font and atlas loaded behind `delayRender`
+- [x] Grain about 1.5 % from (pixel, frame % 600); ±1/255 dither; grain fades below about 3 % luminance in Looks 2 and 3
+- [x] JetBrains Mono (OFL) bundled with its licence; no other text
+- [x] 720p previews, H.264 yuv420p CRF 16, verified with ffprobe
+- [x] Loop check, cold-start determinism check, banding check on the encoded mp4, motion check
+- [x] 4K render commands, 6K still command, GL flag, timings and estimates documented
 
 ## Fonts and licences
 

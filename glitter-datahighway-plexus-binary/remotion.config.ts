@@ -15,6 +15,11 @@ Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
 
+// A 4K frame takes ~40 s on software WebGL (SwiftShader) for the heaviest
+// looks, which exceeds the default 30 s page timeout. Generous on purpose;
+// on a GPU frames take well under a second.
+Config.setDelayRenderTimeoutInMilliseconds(600_000);
+
 // Some sandboxed environments block Remotion's own Chrome Headless Shell
 // download but ship a Playwright Chromium. Use it if present; elsewhere
 // this path does not exist and Remotion uses its managed browser.
