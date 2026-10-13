@@ -18,19 +18,26 @@ for id in "${ids[@]}"; do
   file=$(node -e "
     const s=require('fs').readFileSync('src/versions.ts','utf8');
     const m=[...s.matchAll(/id: \"([^\"]+)\",\s*file: \"([^\"]+)\"/g)].find(x=>x[1]==='$id'); console.log(m[2]);")
-  rm -rf "out/frames/$file"
-  start=$(date +%s.%N)
-  npx remotion render out/bundle "$id" "out/frames/$file" --sequence --image-format=png \
-    --scale=$SCALE --concurrency=${CONCURRENCY:-2} > "out/logs/$file.log" 2>&1
-  end=$(date +%s.%N)
-  n=$(ls "out/frames/$file" | wc -l)
-  echo "$id frames=$n seconds=$(echo "$end - $start" | bc) per_frame=$(echo "scale=3; ($end - $start) / $n" | bc)" | tee -a out/logs/timings.txt
-  first=$(ls "out/frames/$file" | head -1)
+  if [ -n "${REUSE:-}" ] && [ -f "out/frames/$file/.complete" ]; then
+    echo "$id: reusing rendered frames"
+  else
+    rm -rf "out/frames/$file"
+    start=$(date +%s.%N)
+    npx remotion render out/bundle "$id" "out/frames/$file" --sequence --image-format=png \
+      --scale=$SCALE --concurrency=${CONCURRENCY:-2} > "out/logs/$file.log" 2>&1
+    end=$(date +%s.%N)
+    n=$(find "out/frames/$file" -name '*.png' | wc -l)
+    echo "$id frames=$n seconds=$(echo "$end - $start" | bc) per_frame=$(echo "scale=3; ($end - $start) / $n" | bc)" | tee -a out/logs/timings.txt
+    touch "out/frames/$file/.complete"
+  fi
+  n=$(find "out/frames/$file" -name '*.png' | wc -l)
+  mapfile -t names < <(find "out/frames/$file" -name '*.png' -printf '%f\n' | sort)
+  first=${names[0]}
   pattern=$(echo "$first" | sed -E 's/[0-9]+\.png$//')
   digits=$(echo "$first" | sed -E 's/^.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
   ffmpeg -v error -y -framerate 30 -i "out/frames/$file/${pattern}%0${digits}d.png" \
     -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart \
     "out/previews/$file.mp4"
   mid=$(( n / 2 ))
-  cp "out/frames/$file/$(ls "out/frames/$file" | sed -n "$((mid + 1))p")" "out/previews/$file.png"
+  cp "out/frames/$file/${names[$mid]}" "out/previews/$file.png"
 done
