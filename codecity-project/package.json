@@ -1,0 +1,35 @@
+{
+  "name": "codecity-fibremap-glasscity-wirestreet-aiserver",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "d3-delaunay": "6.0.4",
+    "postprocessing": "6.37.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.178.0",
+    "topojson-client": "3.1.0"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "5.2.6",
+    "@fontsource/jetbrains-mono": "5.2.6",
+    "@types/d3-delaunay": "6.0.4",
+    "@types/geojson": "7946.0.16",
+    "@types/react": "19.2.7",
+    "@types/three": "0.178.1",
+    "@types/topojson-client": "3.1.5",
+    "@types/topojson-specification": "1.0.5",
+    "typescript": "5.9.3",
+    "world-atlas": "2.0.2"
+  }
+}
