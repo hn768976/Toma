@@ -9,6 +9,18 @@ ALL="LightStreams-CoralViolet LightStreams-TealBlue ShieldDome-Story ShieldDome-
 COMPS=${*:-$ALL}
 mkdir -p out/previews out/frames
 [ -d out/bundle ] || npx remotion bundle src/index.ts --out-dir=out/bundle
+encode() { # $1 composition id, $2 output file stem
+  local files=("out/frames/$1"/*.png)
+  local first=${files[0]##*/}
+  local digits=$(echo "$first" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/')
+  ffmpeg -v error -y -framerate 30 -i "out/frames/$1/element-%0${#digits}d.png" \
+    -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart \
+    "out/previews/$2.mp4"
+}
+if [ "${ENCODE_ONLY:-}" = 1 ]; then
+  for c in $COMPS; do encode "$c" "$(echo "$c" | sed 's/-/_/')"; done
+  exit 0
+fi
 for c in $COMPS; do
   file=$(echo "$c" | sed 's/-/_/')
   rm -rf "out/frames/$c"
@@ -18,10 +30,6 @@ for c in $COMPS; do
   end=$(date +%s.%N)
   n=$(ls "out/frames/$c" | wc -l)
   echo "$c frames=$n seconds=$(echo "$end-$start" | bc) per_frame=$(echo "($end-$start)/$n" | bc -l | cut -c1-6)" | tee -a out/render-times.txt
-  first=$(ls "out/frames/$c" | head -1)
-  pattern=$(echo "$first" | sed -E 's/[0-9]+\.png$//')
-  digits=$(echo "$first" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | wc -c)
-  ffmpeg -v error -y -framerate 30 -i "out/frames/$c/${pattern}%0$((digits-1))d.png" \
-    -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart \
-    "out/previews/$file.mp4"
+  encode "$c" "$file"
 done
+
