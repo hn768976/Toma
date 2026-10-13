@@ -261,7 +261,7 @@ in float vBright;
 void main() {
   float across = exp(-vQ.x * vQ.x * 5.0);
   float core = exp(-vQ.x * vQ.x * 40.0) * 0.6;
-  float v = smoothstep(0.0, 0.06, vQ.y) * (1.0 - smoothstep(0.45, 0.85, vQ.y));
+  float v = smoothstep(0.0, 0.06, vQ.y) * (1.0 - smoothstep(0.55, 1.0, vQ.y));
   gl_FragColor = vec4(color * (across + core) * v * vBright, 1.0);
 }
 `;
@@ -350,6 +350,7 @@ export const makeCloud =
     scene.add(
       makeBackdrop(params.background, [
         { x: 0.0, y: 0.6, rx: 0.42, ry: 0.5, color: params.haze, strength: 2.2 },
+        { x: 0.02, y: 0.68, rx: 0.12, ry: 0.3, color: params.accent, strength: 0.55 },
         { x: 0.85, y: 0.9, rx: 0.4, ry: 0.3, color: params.haze, strength: 0.45 },
         { x: 0.35, y: 0.5, rx: 0.5, ry: 0.7, color: params.haze, strength: 0.45 },
       ]),
@@ -468,6 +469,28 @@ export const makeCloud =
     const cloud = new THREE.Group();
     const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
     cloud.add(cloudMesh);
+    // solid glass arrow standing in the cut-out, protruding front and back
+    const arrowShape = new THREE.Shape(arrowHole().map((v) => v.clone().multiplyScalar(0.86).add(new THREE.Vector2(0, -0.02))));
+    const arrowGeo = new THREE.ExtrudeGeometry(arrowShape, {
+      depth: 0.9,
+      bevelEnabled: true,
+      bevelThickness: 0.06,
+      bevelSize: 0.04,
+      bevelSegments: 3,
+    });
+    arrowGeo.translate(0, 0, -0.45);
+    const arrow = new THREE.Mesh(
+      arrowGeo,
+      new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color("#8fe6ff"),
+        roughness: 0.15,
+        metalness: 0,
+        emissive: new THREE.Color(params.accent),
+        emissiveIntensity: 0.6,
+        envMapIntensity: 0.9,
+      }),
+    );
+    cloud.add(arrow);
     const rim = new THREE.Mesh(
       cloudGeo,
       new THREE.ShaderMaterial({
@@ -499,13 +522,13 @@ export const makeCloud =
     for (let i = 0; i < BEAMS; i++) {
       const a = rng() * TAU;
       const rr = Math.sqrt(rng()) * RING_R * 0.85;
-      bAttr.set([Math.cos(a) * rr, Math.sin(a) * rr, range(rng, 0.04, 0.2), range(rng, 4.6, 6.4)], i * 4);
+      bAttr.set([Math.cos(a) * rr, Math.sin(a) * rr, range(rng, 0.04, 0.2), range(rng, 6.5, 8.5)], i * 4);
       fAttr.set([4 + Math.floor(rng() * 14), 9 + Math.floor(rng() * 20), rng(), range(rng, 0.1, 0.4)], i * 4);
     }
     // 3 wide soft haze columns
     for (let i = 0; i < 3; i++) {
       const j = BEAMS + i;
-      bAttr.set([(i - 1) * 0.3, 0, RING_R * (0.75 + 0.25 * i), 6.0 + 0.5 * i], j * 4);
+      bAttr.set([(i - 1) * 0.3, 0, RING_R * (0.85 + 0.2 * i), 7.5 + 0.5 * i], j * 4);
       fAttr.set([1, 2, i * 0.3, 0.32], j * 4);
     }
     beamGeo.setAttribute("iBeam", new THREE.InstancedBufferAttribute(bAttr, 4));
@@ -536,12 +559,15 @@ export const makeCloud =
     const pP = new Float32Array(PARTICLES * 4);
     const pM = new Float32Array(PARTICLES * 4);
     for (let i = 0; i < PARTICLES; i++) {
-      const a = rng() * TAU;
-      const rr = Math.sqrt(rng()) * RING_R * 0.82;
-      pP.set([a, rr, rng(), 1 + Math.floor(rng() * 3)], i * 4);
+      // particles stream up in 28 fixed columns (readable data streams)
+      const col = Math.floor(rng() * 28);
+      const cr = mulberry32(0xc0 + col);
+      const a = cr() * TAU;
+      const rr = Math.sqrt(cr()) * RING_R * 0.85;
+      pP.set([a, rr, rng(), 1 + Math.floor(rng() * 2)], i * 4);
       const kr = rng();
-      const kind = kr < 0.6 ? 0 : kr < 0.85 ? 1 : 2;
-      pM.set([kind, Math.floor(rng() * 16), kind === 2 ? range(rng, 0.045, 0.07) : range(rng, 0.01, 0.024), rng() < 0.06 ? range(rng, 1.1, 1.6) : range(rng, 0.2, 0.65)], i * 4);
+      const kind = kr < 0.35 ? 0 : kr < 0.55 ? 1 : 2;
+      pM.set([kind, Math.floor(rng() * 16), kind === 2 ? range(rng, 0.06, 0.085) : range(rng, 0.01, 0.024), rng() < 0.06 ? range(rng, 1.1, 1.6) : range(rng, 0.2, 0.65)], i * 4);
     }
     partGeo.setAttribute("iP", new THREE.InstancedBufferAttribute(pP, 4));
     partGeo.setAttribute("iM", new THREE.InstancedBufferAttribute(pM, 4));

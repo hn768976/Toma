@@ -3,7 +3,6 @@ import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLigh
 import { LOOP, TAU } from "../common/constants";
 import { makeStripEnv } from "../common/env";
 import { FRAG_OUT, GLSL_HASH } from "../common/glsl";
-import { mulberry32 } from "../common/random";
 import type { World } from "../common/world";
 
 /**
@@ -25,7 +24,7 @@ const W = 0.8; // band width
 const RINGS = 5;
 const HALF = P + RINGS * W; // tile half-diagonal (4.5)
 const STEP = 0.03 * 2 * HALF; // each band ~3% deeper
-const BEVEL = 0.15;
+const BEVEL = 0.22;
 const LAT = 3; // lattice copies each way
 
 const diamondPath = (r: number, hole = false) => {
@@ -49,7 +48,7 @@ const ringGeometry = (rIn: number, rOut: number, depth: number) => {
     bevelEnabled: true,
     bevelThickness: BEVEL,
     bevelSize: BEVEL,
-    bevelSegments: 6,
+    bevelSegments: 8,
     curveSegments: 1,
   });
   g.translate(0, 0, -depth - BEVEL); // top face at z = 0
@@ -230,14 +229,16 @@ uniform vec3 sweepDirView, staticDirView, glintCol;`,
   float g1 = pow(max(dot(normal, Ls), 0.0), 240.0);
   float along = dot(vSweepW.xy, vec2(0.70710678, 0.70710678));
   float win = exp(-pow((along - sweepS) / 1.1, 2.0));
+  // steady gold rims: bevels facing lower-left and upper-right
   vec3 Lt = normalize(vec3(staticDirView.xy, 0.5));
-  float g2 = pow(max(dot(normal, Lt), 0.0), 160.0);
+  vec3 Lu = normalize(vec3(-staticDirView.xy, 0.5));
+  float g2 = pow(max(dot(normal, Lt), 0.0), 300.0) + pow(max(dot(normal, Lu), 0.0), 300.0);
   // which band of its tile is this? (diamond radius in the tile lattice)
   vec2 ab = vec2(vSweepW.x + vSweepW.y, vSweepW.x - vSweepW.y);
   ab -= ${(2 * HALF).toFixed(4)} * floor(ab / ${(2 * HALF).toFixed(4)} + 0.5);
   float rl = max(abs(ab.x), abs(ab.y));
-  float inner = 1.0 - smoothstep(${(P + W * 1.05).toFixed(4)}, ${(P + W * 1.3).toFixed(4)}, rl);
-  totalEmissiveRadiance += glintCol * bev * (g1 * win * sweepAmt * (3.0 + 7.0 * inner) + g2 * (0.3 + 9.0 * inner));
+  float inner = 1.0 - smoothstep(${(P + W * 0.25).toFixed(4)}, ${(P + W * 0.45).toFixed(4)}, rl);
+  totalEmissiveRadiance += glintCol * bev * (g1 * win * sweepAmt * (3.0 + 7.0 * inner) + g2 * (0.15 + 4.0 * inner));
 }`,
           );
       };
@@ -279,7 +280,6 @@ uniform vec3 sweepDirView, staticDirView, glintCol;`,
     const sweep = new THREE.RectAreaLight(params.edge, 0, 40, 0.6);
     scene.add(sweep);
     // glitter on the upper edges of the frames + upper panel
-    const rng = mulberry32(0xd1a307);
     const gpos = new Float32Array(GLITTER * 3);
     const gid = new Float32Array(GLITTER);
     // glitter: a fine dot grid over the upper bands and upper panel of the
@@ -287,8 +287,9 @@ uniform vec3 sweepDirView, staticDirView, glintCol;`,
     // candidates on a fine world-space dot grid over the upper part of the
     // frame; each sits on the surface of whichever band/panel is under it
     const cands: [number, number, number][] = [];
-    const G = 0.07;
-    for (let y = 0.5; y <= 3.2; y += G) {
+    // a regular halftone grid (reads as a dot texture), filled from the top down
+    const G = 0.09;
+    for (let y = 3.3; y >= 0.3; y -= G) {
       for (let x = -5.6; x <= 5.6; x += G) {
         let a = x + y;
         let b = x - y;
@@ -296,13 +297,11 @@ uniform vec3 sweepDirView, staticDirView, glintCol;`,
         b -= 2 * HALF * Math.round(b / (2 * HALF));
         const rl = Math.max(Math.abs(a), Math.abs(b)) / 1; // diamond radius in tile
         const k = rl < P ? RINGS : Math.min(RINGS - 1, Math.floor((HALF - rl) / W));
-        // fewer dots further down
-        if (mulberry32(Math.round(x * 1000) * 7 + Math.round(y * 1000))() > (y - 0.5) / 2.0) continue;
         cands.push([x, y, (k === RINGS ? -RINGS * STEP : -k * STEP) + 0.012]);
       }
     }
     for (let i = 0; i < GLITTER; i++) {
-      const best = cands[Math.floor(rng() * cands.length)];
+      const best = cands[Math.min(i, cands.length - 1)];
       gpos[i * 3] = best[0];
       gpos[i * 3 + 1] = best[1];
       gpos[i * 3 + 2] = best[2];
@@ -375,7 +374,7 @@ uniform vec3 sweepDirView, staticDirView, glintCol;`,
           out.set(x, y, 0).transformDirection(camera.matrixWorldInverse);
         camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
         toView(1, 1, sweepU.sweepDirView.value);
-        toView(-1, -0.35, sweepU.staticDirView.value);
+        toView(-1, -1, sweepU.staticDirView.value);
 
         gUniforms.pxScale.value = pxScale;
         gUniforms.bucketF.value = t / 10; // 10-frame buckets

@@ -50,12 +50,26 @@ type Cap = {
 };
 const caps: Cap[] = [];
 for (let i = 0; i < PER_TILE; i++) {
-  const u = (i + rng() * 0.9) / PER_TILE;
-  const z = -range(rng, 2.6, 15);
-  const spread = 0.95 * -z * Math.tan(((FOV / 2) * Math.PI) / 180) + 0.4;
-  const p = V.clone()
-    .multiplyScalar(u)
-    .add(new THREE.Vector3(0, range(rng, -spread, spread), z));
+  // rejection-sample so capsules never overlap on screen (periodic in V)
+  let p = new THREE.Vector3();
+  for (let tries = 0; tries < 60; tries++) {
+    const u = (i + rng() * 0.9) / PER_TILE;
+    // one near, out-of-focus foreground capsule per period
+    const z = i === 3 ? -2.3 : -range(rng, 4.0, 15);
+    const spread = 0.95 * -z * Math.tan(((FOV / 2) * Math.PI) / 180) + 0.4;
+    p = V.clone()
+      .multiplyScalar(u)
+      .add(new THREE.Vector3(0, range(rng, -spread, spread) + -z * 0.12, z));
+    const clash = caps.some((c) =>
+      [-1, 0, 1].some((k) => {
+        const q = c.base.clone().addScaledVector(V, k);
+        const s1 = -1 / q.z;
+        const s2 = -1 / p.z;
+        return Math.abs(q.x * s1 - p.x * s2) < 2.6 * HALF_LEN * Math.max(s1, s2) && Math.abs(q.y * s1 - p.y * s2) < 7 * HALF_H * Math.max(s1, s2);
+      }),
+    );
+    if (!clash) break;
+  }
   caps.push({
     base: p,
     yaw: range(rng, -0.25, 0.25),
@@ -99,9 +113,9 @@ const specks = Array.from({ length: SPECKS }, () => {
   const z = -range(rng, 3.5, 20);
   const spread = 0.62 * -z * Math.tan(((FOV / 2) * Math.PI) / 180) + 1.5;
   return {
-    p: V.clone().multiplyScalar(u).add(new THREE.Vector3(0, range(rng, -spread, spread), z)),
+    p: V.clone().multiplyScalar(u).add(new THREE.Vector3(0, range(rng, -spread, spread) + -z * 0.12, z)),
     size: range(rng, 0.07, 0.11),
-    square: rng() < 0.7 ? 1 : 0,
+    square: rng() < 0.95 ? 1 : 0,
     bright: rng() < 0.35 ? range(rng, 0.9, 1.4) : range(rng, 0.0, 0.05),
     tw: rng(),
   };
@@ -126,7 +140,7 @@ const makeAtlas = () => {
     g.rect(0, y0, ATLAS_W, ROW_H);
     g.clip();
     // left section: lighter tile with a padlock (generic glyph, not a logo)
-    g.fillStyle = "rgba(255,255,255,0.22)";
+    g.fillStyle = "rgba(255,255,255,0.08)";
     g.fillRect(70, y0 + 40, 150, 176);
     const lx = 145;
     const ly = y0 + 140;
@@ -239,10 +253,10 @@ void main() {
   float aa = vPxW;
   float d = sdStadium(vLocal, halfLen, halfH);
   // outline: thin line (world) convolved with blur ~ gaussian of sigma s
-  float t = 0.012;
+  float t = 0.009;
   float s = sqrt(t * t + b * b * 0.35 + aa * aa * 0.3);
   float outline = (t / s) * exp(-0.5 * d * d / (s * s));
-  float halo = exp(-max(d, 0.0) / (0.02 + b)) * 0.06 * (0.04 / (0.04 + b));
+  float halo = exp(-max(d, 0.0) / (0.012 + b)) * 0.05 * (0.04 / (0.04 + b));
   // faint glass fill
   float inside = 1.0 - smoothstep(-b - aa, b + aa, d);
   float fill = inside * 0.13;
@@ -261,7 +275,7 @@ void main() {
   float dots = (exp(-dot(e1, e1) / (rs * rs)) + exp(-dot(e2, e2) / (rs * rs))) * (0.028 * 0.028) / (rs * rs) * 1.3;
   float energy = (outline * 1.6 + halo + fill + dots) * vMeta.y;
   // data marks read near-white, like the reference
-  gl_FragColor = vec4(color * energy + mix(color, vec3(1.0), 0.55) * data * vMeta.y, 1.0);
+  gl_FragColor = vec4(color * energy + mix(color, vec3(1.0), 0.3) * data * vMeta.y, 1.0);
 }
 `;
 
@@ -553,7 +567,7 @@ export const makeDataPills =
     spGeo.instanceCount = nSp;
     const spUniforms = {
       ...dofUniforms,
-      color: { value: lineColor.clone().lerp(capColor, 0.4).multiplyScalar(1.3) },
+      color: { value: lineColor.clone().lerp(capColor, 0.15).multiplyScalar(1.6) },
       tf: { value: 0 },
       camRight: { value: new THREE.Vector3(1, 0, 0) },
       camUp: { value: new THREE.Vector3(0, 1, 0) },
