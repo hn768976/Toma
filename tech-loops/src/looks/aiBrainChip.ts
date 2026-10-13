@@ -27,7 +27,7 @@ const K = 4;
 const WRAP = P * K;
 const BEHIND = 3;
 const HALF_X = 18;
-const CAM_Y = 2.2;
+const CAM_Y = 3.6;
 
 interface Block { x: number; z: number; sx: number; sy: number; sz: number; shade: number }
 const BLOCKS: Block[] = [];
@@ -43,16 +43,16 @@ const CITY_LIGHTS: Omit<BokehLight, "color">[] = [];
       const ax = Math.abs(cx);
       if (rng() < 0.18) continue; // streets / gaps
       // Low "component" blocks in the middle avenue, towers rising toward the sides.
-      const avenue = ax < 2.5;
-      const tall = avenue ? 0 : Math.min(1, (ax - 2.5) / 9);
-      const hmax = avenue ? 0.3 : 0.4 + tall * 6.5;
+      const avenue = ax < 1.3;
+      const tall = avenue ? 0 : Math.min(1, 0.2 + (ax - 1.3) / 8);
+      const hmax = avenue ? 0.35 : 0.5 + tall * 3.2;
       const sy = range(rng, 0.12, 1) * hmax * (rng() < 0.15 ? 1.6 : 1);
       const sx = range(rng, 0.45, 0.92) * CELL;
       const sz = range(rng, 0.45, 0.92) * CELL;
       const b = { x: cx + (rng() - 0.5) * (CELL - sx) * 0.5, z: gz * CELL + CELL / 2, sx, sy, sz, shade: rng() };
       tile.push(b);
       // LED rows on the faces that look toward the camera (+z) and the avenue.
-      const faces = 1 + Math.floor(rng() * (avenue ? 2 : 6));
+      const faces = 2 + Math.floor(rng() * (avenue ? 2 : 6));
       for (let f = 0; f < faces; f++) {
         const n = 2 + Math.floor(rng() * 4);
         const sp = range(rng, 0.06, 0.1);
@@ -60,12 +60,15 @@ const CITY_LIGHTS: Omit<BokehLight, "color">[] = [];
         const e = range(rng, 0.5, 1.5);
         const onSide = !avenue && rng() < 0.5;
         const tw = rng() < 0.3 ? 1 + Math.floor(rng() * 3) : 0;
-        for (let i = 0; i < n; i++) {
+        const rows = rng() < 0.5 ? 2 : 1;
+        for (let k = 0; k < n * rows; k++) {
+          const i = k % n;
+          const yy = y - Math.floor(k / n) * sp * 1.1;
           const t = (i - (n - 1) / 2) * sp;
           const sideX = b.x - Math.sign(b.x) * (b.sx / 2 + 0.01);
           tileL.push({
             x: onSide ? sideX : b.x + t,
-            y: avenue ? y : y,
+            y: yy,
             z: onSide ? b.z + t : b.z + b.sz / 2 + 0.01,
             energy: e,
             twinkleK: tw,
@@ -129,8 +132,11 @@ void main() {
   vec3 L = uBrainPos - vW;
   float dl = length(L);
   col += uBrain * 0.05 * max(dot(N, L / dl), 0.0) / (1.0 + dl * dl * 0.5);
+  // Warm pool on the tops right under the brain.
+  vec2 dxz = vW.xz - uBrainPos.xz;
+  col += uBrain * 0.18 * max(N.y, 0.0) * exp(-dot(dxz, dxz) * 1.2);
   // Atmospheric depth.
-  float fog = smoothstep(4.0, 40.0, dist) * 0.85;
+  float fog = 0.3 + 0.6 * smoothstep(4.0, 36.0, dist);
   col = mix(col, uBg, fog);
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
@@ -157,17 +163,19 @@ const brainShape = (v: THREE.Vector3) => {
   const y = v.y;
   const z = v.z;
   let rx = 1.18;
-  let ry = 0.82;
+  let ry = 0.95;
   let rz = 0.78;
   // Frontal lobe a touch lower and rounder, occipital slightly pointed.
   if (x < 0) rx *= 1.0 + 0.06 * Math.max(0, -y);
   ry *= 1 - 0.1 * Math.max(0, x) * Math.max(0, -y);
+  // Frontal lobe bulging up and forward.
+  ry *= 1 + 0.1 * Math.max(0, x) * Math.max(0, y);
   const p = new THREE.Vector3(x * rx, y * ry, z * rz);
   // Flatten the underside.
   if (p.y < -0.35) p.y = -0.35 + (p.y + 0.35) * 0.55;
   // Temporal lobe bulge.
   const tb = Math.exp(-(((p.x - 0.2) / 0.5) ** 2 + ((p.y + 0.38) / 0.22) ** 2));
-  p.y -= 0.12 * tb;
+  p.y -= 0.2 * tb;
   p.z *= 1 + 0.08 * tb;
   // Longitudinal fissure between the hemispheres (top, along x).
   const fis = Math.exp(-(z * z) / 0.004) * Math.max(0, y);
@@ -207,15 +215,18 @@ const buildCerebellum = () => {
   return g;
 };
 
-const buildStem = () => {
-  const g = new THREE.CylinderGeometry(0.13, 0.09, 0.62, 48, 8, true);
-  g.rotateZ(-0.35);
-  g.translate(-0.3, -0.78, 0);
-  g.setAttribute("aPart", new THREE.BufferAttribute(new Float32Array(g.getAttribute("position").count).fill(2), 1));
-  return g;
-};
+
+const FOLD_GLSL = /* glsl */ `
+float foldField(vec3 p) {
+  vec3 q = p * 2.6 + vec3(3.1, 7.7, 1.3);
+  vec3 warp = vec3(vnoise(q * 0.8 + 11.0), vnoise(q * 0.8 + 23.0), vnoise(q * 0.8 + 37.0)) - 0.5;
+  return fbm3(q + warp * 1.6) * 9.0;
+}
+`;
 
 const BRAIN_VERT = /* glsl */ `
+${NOISE}
+${FOLD_GLSL}
 in float aPart;
 out vec3 vO;     // object-space position (folds live here, so they turn with the brain)
 out vec3 vN;
@@ -224,7 +235,10 @@ out float vPart;
 void main() {
   vO = position;
   vPart = aPart;
-  vec4 w = modelMatrix * vec4(position, 1.0);
+  // Sulci sink along the fold lines, so the silhouette and surface read as gyri.
+  vec3 pos = position;
+  if (aPart < 0.5) pos -= normal * 0.03 * (0.5 + 0.5 * cos(6.2831853 * foldField(position)));
+  vec4 w = modelMatrix * vec4(pos, 1.0);
   vW = w.xyz;
   vN = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * w;
@@ -234,6 +248,7 @@ void main() {
 const BRAIN_FRAG = /* glsl */ `
 precision highp float;
 ${NOISE}
+${FOLD_GLSL}
 in vec3 vO;
 in vec3 vN;
 in vec3 vW;
@@ -257,20 +272,19 @@ void main() {
   float ndv = abs(dot(N, V));
   vec3 p = vO;
   float r = length(p - uChipO);
-  float warm = exp(-r * r * 0.5);
+  // Warm around the chip and the lower front; cool blue-white over the back.
+  float warm = exp(-r * r * 0.9);
+  warm = max(warm, 0.7 * smoothstep(0.1, 0.9, p.x) * smoothstep(0.2, -0.4, p.y));
   float fold;
   float line;
   if (vPart < 0.5) {
     // Gyri: iso-lines of a domain-warped noise field on the surface.
-    vec3 q = p * 2.6 + vec3(3.1, 7.7, 1.3);
-    vec3 warp = vec3(vnoise(q * 0.8 + 11.0), vnoise(q * 0.8 + 23.0), vnoise(q * 0.8 + 37.0)) - 0.5;
-    float n = fbm3(q + warp * 1.6);
-    fold = n * 4.6;
-    line = lineAA(fold, 0.6 + 1.1 * warm);
+    fold = foldField(p);
+    line = lineAA(fold, 1.2 + 1.0 * warm);
   } else if (vPart < 1.5) {
     // Cerebellum folia: near-horizontal bands.
-    fold = (p.y + 0.05 * vnoise(p * 7.0)) * 30.0;
-    line = lineAA(fold, 0.5) * 0.45;
+    fold = foldField(p * 1.7 + 4.0);
+    line = lineAA(fold, 0.6) * 0.6;
   } else {
     fold = p.y * 10.0;
     line = lineAA(fold, 0.4) * 0.5;
@@ -282,12 +296,18 @@ void main() {
   float pulse = pow(smoothstep(0.75, 1.0, wave), 3.0) * (0.6 + 0.4 * warm);
   float wave2 = fract(vnoise(p * 1.7 + 5.0) * 2.0 - cyc(2.0));
   pulse += pow(smoothstep(0.85, 1.0, wave2), 4.0) * 0.6;
-  float rim = pow(clamp(1.0 - ndv, 0.0, 1.0), 2.5);
-  vec3 col = base * line * (0.5 + 1.6 * warm + 2.4 * pulse);
+  float rim = pow(clamp(1.0 - ndv, 0.0, 1.0), 4.0);
+  // Lines crowd together at grazing angles; thin them out so the edge stays a crisp outline.
+  line *= smoothstep(0.04, 0.4, ndv);
+  // Sparks: a few hashed points on the warm lines that flicker in whole cycles.
+  vec3 sc = floor(p * 24.0);
+  float sh = hash31(sc + 17.0);
+  float spark = step(0.975, sh) * warm * (0.5 + 0.5 * cos(6.2831853 * (cyc(1.0 + floor(hash31(sc + 3.0) * 3.0)) + sh * 37.0)));
+  vec3 col = base * line * (0.55 + 1.5 * warm + 2.0 * pulse);
   col += mix(base, vec3(1.0, 0.95, 0.85), 0.5) * line * pulse * warm * 1.5;
-  col += mix(uOuter, uBrain, 0.2) * rim * 0.22;        // glassy outline
-  col += base * 0.008 * (0.4 + warm);                  // faint inner fill
-  col *= mix(1.0, 0.45, uBack);
+  col += mix(uOuter, uBrain, warm) * rim * 0.35;       // thin glassy outline
+  col += uBrain * spark * 3.0;
+  col *= mix(1.0, 0.3, uBack);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -316,23 +336,23 @@ void main() {
   float aa = fwidth(p.x) * 1.0;
   float d = sdRoundBox(p, vec2(0.62), 0.12);
   float inside = 1.0 - smoothstep(-aa, aa, d);
-  float outline = 1.0 - smoothstep(0.012, 0.012 + aa * 1.5, abs(d + 0.02));
+  float outline = 1.0 - smoothstep(0.03, 0.03 + aa * 1.5, abs(d + 0.035));
   float inner = 1.0 - smoothstep(0.006, 0.006 + aa * 1.5, abs(d + 0.085));
   // Pins: 5 per side, just outside the package outline.
   vec2 ap = abs(p);
   float slotY = abs(fract(p.y / 0.2 + 0.5) - 0.5) * 0.2;
   float slotX = abs(fract(p.x / 0.2 + 0.5) - 0.5) * 0.2;
-  float pinsX = smoothstep(0.64, 0.64 + aa, ap.x) * (1.0 - smoothstep(0.8, 0.8 + aa, ap.x)) * step(ap.y, 0.5) * (1.0 - smoothstep(0.032, 0.032 + aa, slotY));
-  float pinsY = smoothstep(0.64, 0.64 + aa, ap.y) * (1.0 - smoothstep(0.8, 0.8 + aa, ap.y)) * step(ap.x, 0.5) * (1.0 - smoothstep(0.032, 0.032 + aa, slotX));
+  float pinsX = smoothstep(0.64, 0.64 + aa, ap.x) * (1.0 - smoothstep(0.97, 0.99, ap.x)) * (1.0 - 0.7 * smoothstep(0.8, 0.97, ap.x)) * step(ap.y, 0.5) * (1.0 - smoothstep(0.032, 0.032 + aa, slotY));
+  float pinsY = smoothstep(0.64, 0.64 + aa, ap.y) * (1.0 - smoothstep(0.97, 0.99, ap.y)) * (1.0 - 0.7 * smoothstep(0.8, 0.97, ap.y)) * step(ap.x, 0.5) * (1.0 - smoothstep(0.032, 0.032 + aa, slotX));
   float pins = max(pinsX, pinsY);
   float glow = exp(-max(d, 0.0) * 9.0) * (1.0 - inside) * 0.5;
   vec4 t = texture(tText, vUv);
-  vec3 fill = uBrain * 0.10 + vec3(0.02, 0.012, 0.005);
+  vec3 fill = uBrain * 0.035 + vec3(0.03, 0.012, 0.003);
   vec3 col = fill * inside;
   col += uBrain * (outline * 2.6 + inner * 0.8 + pins * 1.6) * uBreath;
-  col += mix(uBrain, vec3(1.0, 0.96, 0.88), 0.6) * t.a * 2.4 * uBreath;
+  col += mix(uBrain, vec3(1.0, 0.96, 0.88), 0.45) * t.a * 2.2 * uBreath;
   col += uBrain * glow * uBreath;
-  float alpha = clamp(inside * 0.88 + outline + pins + glow * 0.0, 0.0, 1.0);
+  float alpha = clamp(inside * 0.96 + outline + pins, 0.0, 1.0);
   // Premultiplied: dark glass occludes the brain lines behind it, glow adds.
   gl_FragColor = vec4(col, alpha);
 }
@@ -340,13 +360,13 @@ void main() {
 
 export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): Look => {
   const BRAIN_DIST = 6.2;
-  const COC_K = 0.02;
+  const COC_K = 0.009;
   const post = new Post(gl, {
     msaa: 0,
     depthTexture: true,
     dof: { maxRadius: 0.045 },
-    bloomStrength: 0.9,
-    bloomRadius: 0.65,
+    bloomStrength: 0.6,
+    bloomRadius: 0.4,
     bloomThreshold: 0.75,
     bloomKnee: 0.6,
     exposure: 1.0,
@@ -427,8 +447,8 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
 
   const lights = CITY_LIGHTS.map((l) => ({ ...l, color: cityC.clone() }));
   const bokeh = createBokeh(lights, pu);
-  bokeh.mat.uniforms.uGain.value = 1.6;
-  bokeh.mat.uniforms.uSharpR.value = 0.0032;
+  bokeh.mat.uniforms.uGain.value = 3.2;
+  bokeh.mat.uniforms.uSharpR.value = 0.0045;
   bokeh.mat.uniforms.uFalloff.value = 1.0;
   bokeh.mat.uniforms.uFade.value.set(28, 46);
 
@@ -442,7 +462,7 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
   brainGroup.add(tilt);
   const spin = new THREE.Group();
   tilt.add(spin);
-  const chipO = new THREE.Vector3(0.12, 0.02, 0);
+  const chipO = new THREE.Vector3(0.45, 0.02, 0.35);
   const mkBrainMat = (side: THREE.Side, back: number) =>
     shaderMat({
       vertexShader: BRAIN_VERT,
@@ -463,8 +483,13 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
     });
   const backMat = mkBrainMat(THREE.BackSide, 1);
   const frontMat = mkBrainMat(THREE.FrontSide, 0);
-  const brainGeos = [buildBrainGeometry(), buildCerebellum(), buildStem()];
+  const brainGeos = [buildBrainGeometry(), buildCerebellum()];
+  // Dark glass: dims the city lights seen through the brain before the lines go on.
+  const shadeMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55, depthTest: false, depthWrite: false });
   for (const g of brainGeos) {
+    const sh = new THREE.Mesh(g, shadeMat);
+    sh.renderOrder = 0;
+    spin.add(sh);
     const b = new THREE.Mesh(g, backMat);
     b.renderOrder = 1;
     const f = new THREE.Mesh(g, frontMat);
@@ -481,7 +506,7 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `700 360px "${BADGE_FONT}"`;
+  ctx.font = `700 440px "${BADGE_FONT}"`;
   ctx.fillText("AI", 512, 540);
   const textTex = new THREE.CanvasTexture(canvas);
   textTex.colorSpace = THREE.NoColorSpace;
@@ -503,7 +528,7 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
   const badge = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.82), badgeMat);
   badge.renderOrder = 3;
   // Placed toward the camera from the brain centre, facing the camera.
-  badge.position.copy(brainPos).addScaledVector(fwd, -0.85).addScaledVector(new THREE.Vector3(1, 0, 0), 0.12);
+  badge.position.copy(brainPos).addScaledVector(fwd, -0.85).addScaledVector(new THREE.Vector3(1, 0, 0), 0.48);
   badge.quaternion.copy(camera.quaternion);
   overlay.add(badge);
 
@@ -531,7 +556,7 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
       post.dispose();
       bokeh.dispose();
       textTex.dispose();
-      for (const m of [bgMat, cityMat, groundMat, backMat, frontMat, badgeMat]) m.dispose();
+      for (const m of [bgMat, cityMat, groundMat, backMat, frontMat, badgeMat, shadeMat]) m.dispose();
       for (const g of [...brainGeos, cityGeo, boxBase, bg.geometry, ground.geometry, badge.geometry]) g.dispose();
     },
   };
