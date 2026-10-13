@@ -1,67 +1,85 @@
 #!/usr/bin/env python3
-"""Banding check on the *encoded* mp4.
+"""Banding check on the *encoded* mp4 previews.
 
-Extracts one frame from each preview with ffmpeg, then walks vertical and
-horizontal pixel transects through the gradient areas named in the README
-(glow haze, horizon glow, navy gradient, dark DoF blur). For each transect it
-smooths away grain/dither with a wide box filter and reports:
-  * max step between adjacent smoothed samples (8-bit levels)
-  * longest run of identical smoothed values (a long flat run followed by a
-    step is what a band looks like)
-Usage: python3 scripts/banding-check.py out/previews
+Grabs one frame from each preview with ffmpeg (decoded from the H.264
+file, not the PNG frames), then inspects the gradient areas that band most
+easily: the glow haze (Look 1), the sky above the horizon glow (Look 2), the
+dark sky and DoF blur (Look 3), the navy gradient (Look 4) and the dark DoF
+blur (Look 5).
+
+For each region it reports:
+  * the row profile (each row averaged across the region) and its largest
+    step between adjacent rows, in 8-bit levels. A smooth gradient changes
+    by well under 1 level per row; a band edge shows up as a jump of
+    about 1 level after a flat run.
+  * "flat 8x8 blocks": the share of 8x8 blocks whose pixels are all the same
+    value although they are not clipped black (mean > 3). Without dither, a
+    slow gradient is mostly flat blocks separated by 1-level steps; with
+    the ±1/255 dither and grain, almost none are flat.
+A region passes when the profile step is < 1.0 level and fewer than 5% of
+its blocks are flat.
+
+Usage: python3 scripts/banding-check.py [previews_dir] [time_seconds]
 """
-import subprocess, sys, os
+import os
+import subprocess
+import sys
+
 import numpy as np
 
-AREAS = {
-    # name: list of (kind, fixed coord as fraction, start, end) on a 1280x720 frame
-    "GlitterVortex_Gold": [("v", 0.85, 0.0, 0.35), ("h", 0.08, 0.55, 1.0)],
-    "GlitterVortex_Silver": [("v", 0.85, 0.0, 0.35), ("h", 0.08, 0.55, 1.0)],
-    "DataHighway_Multicolour": [("v", 0.5, 0.0, 0.5), ("v", 0.15, 0.0, 0.5)],
-    "PlexusLandscape_BlueAmber": [("v", 0.5, 0.0, 0.45), ("v", 0.9, 0.0, 0.45)],
-    "LowPolyPlexus_Blue": [("v", 0.5, 0.0, 0.6)],
-    "LowPolyPlexus_Violet": [("v", 0.5, 0.0, 0.6)],
-    "BinaryPlane_Blue": [("v", 0.12, 0.0, 0.4), ("h", 0.05, 0.0, 0.5)],
-    "BinaryPlane_Green": [("v", 0.12, 0.0, 0.4), ("h", 0.05, 0.0, 0.5)],
+# name: [(label, x0, y0, x1, y1)] in fractions of the 1280x720 frame
+REGIONS = {
+    "GlitterVortex_Gold": [("glow haze, top-right sky", 0.90, 0.00, 1.00, 0.16)],
+    "GlitterVortex_Silver": [("glow haze, top-right sky", 0.90, 0.00, 1.00, 0.16)],
+    "DataHighway_Multicolour": [("sky above horizon glow", 0.30, 0.00, 0.70, 0.42)],
+    "PlexusLandscape_BlueAmber": [("dark sky to navy horizon", 0.10, 0.00, 0.90, 0.28)],
+    "LowPolyPlexus_Blue": [("navy gradient", 0.36, 0.00, 0.64, 0.55)],
+    "LowPolyPlexus_Violet": [("plum gradient", 0.36, 0.00, 0.64, 0.55)],
+    "BinaryPlane_Blue": [("dark DoF blur, top-left", 0.00, 0.00, 0.10, 0.30)],
+    "BinaryPlane_Green": [("dark DoF blur, top-left", 0.00, 0.00, 0.10, 0.30)],
 }
 
-def frame(path, t=10.0):
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", path, "-frames:v", "1",
-                          "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
+
+def frame(path, t):
+    raw = subprocess.run(
+        ["ffmpeg", "-v", "error", "-ss", str(t), "-i", path, "-frames:v", "1",
+         "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+        capture_output=True, check=True).stdout
     return np.frombuffer(raw, np.uint8).reshape(720, 1280, 3).astype(float)
 
-def transect(img, kind, fixed, a, b):
-    H, W, _ = img.shape
-    if kind == "v":
-        x = int(fixed * (W - 1)); band = img[int(a * H):int(b * H), max(0, x - 3):x + 4].mean(axis=1)
-    else:
-        y = int(fixed * (H - 1)); band = img[max(0, y - 3):y + 4, int(a * W):int(b * W)].mean(axis=0)
-    return band.mean(axis=1)  # luminance-ish
 
-def main(d):
+def check(img, x0, y0, x1, y1):
+    H, W, _ = img.shape
+    reg = img[int(y0 * H):int(y1 * H), int(x0 * W):int(x1 * W)]
+    lum = reg @ np.array([0.2126, 0.7152, 0.0722])
+    prof = lum.mean(axis=1)
+    step = np.abs(np.diff(prof)).max()
+    h, w = (lum.shape[0] // 8) * 8, (lum.shape[1] // 8) * 8
+    blocks = reg[:h, :w].reshape(h // 8, 8, w // 8, 8, 3).transpose(0, 2, 1, 3, 4).reshape(-1, 64, 3)
+    lit = blocks.mean(axis=(1, 2)) > 3
+    flat = (blocks.std(axis=1).max(axis=1) == 0) & lit
+    flat_pct = 100.0 * flat.sum() / max(1, lit.sum())
+    return prof, step, flat_pct
+
+
+def main(d, t):
     ok = True
-    for name, areas in AREAS.items():
+    for name, regions in REGIONS.items():
         p = os.path.join(d, name + ".mp4")
         if not os.path.exists(p):
             continue
-        img = frame(p)
-        for kind, fixed, a, b in areas:
-            t = transect(img, kind, fixed, a, b)
-            k = 9
-            sm = np.convolve(t, np.ones(k) / k, mode="valid")
-            steps = np.abs(np.diff(sm))
-            # a "band edge": a jump of >= 1.5 levels within one pixel in an otherwise smooth area
-            maxstep = steps.max() if len(steps) else 0
-            q = np.round(sm)
-            runs, cur = [], 1
-            for i in range(1, len(q)):
-                cur = cur + 1 if q[i] == q[i - 1] else (runs.append(cur) or 1)
-            runs.append(cur)
-            verdict = "smooth" if maxstep < 1.5 else "CHECK"
-            ok &= verdict == "smooth"
-            print(f"{name:28s} {kind}@{fixed:.2f} [{a:.2f}-{b:.2f}] range {t.min():5.1f}-{t.max():5.1f}  "
-                  f"max adjacent step {maxstep:4.2f}  longest flat run {max(runs):3d}px  {verdict}")
+        img = frame(p, t)
+        for label, *box in regions:
+            prof, step, flat = check(img, *box)
+            good = step < 1.0 and flat < 5.0
+            ok &= good
+            samples = " ".join(f"{v:5.1f}" for v in prof[:: max(1, len(prof) // 8)])
+            print(f"{name:27s} {label:28s} rows {samples} | max row step {step:4.2f} | flat blocks {flat:4.1f}% | "
+                  f"{'smooth' if good else 'BANDING?'}")
     return ok
 
+
 if __name__ == "__main__":
-    sys.exit(0 if main(sys.argv[1] if len(sys.argv) > 1 else "out/previews") else 1)
+    d = sys.argv[1] if len(sys.argv) > 1 else "out/previews"
+    t = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0
+    sys.exit(0 if main(d, t) else 1)
