@@ -84,6 +84,9 @@ uniform float uScale;
 uniform float uStripes;
 uniform float uWarp;
 uniform float uWarpFreq;
+// radius of the time circle in noise space: sets how fast the relief morphs
+uniform float uTR;
+uniform float uDrift;
 uniform float uGRef;
 uniform float uEven;
 varying vec2 vUv;
@@ -107,15 +110,15 @@ float field(vec2 p) {
   // two levels of strong domain warping (fBm, time on a circle): the warp
   // stretches the noise into long marbled filaments
   vec2 w0 = p * uWarpFreq;
-  vec2 q = vec2(fbm(w0, 0.3, 0.0, 2), fbm(w0 + vec2(5.2, 1.3), 0.3, 3.1, 2));
-  vec2 r = vec2(fbm(w0 + uWarp * q + vec2(1.7, 9.2), 0.35, 7.3, 2), fbm(w0 + uWarp * q + vec2(8.3, 2.8), 0.35, 1.9, 2));
-  return fbm(w0 + uWarp * r, 0.3, 4.4, 2);
+  vec2 q = vec2(fbm(w0, uTR, 0.0, 2), fbm(w0 + vec2(5.2, 1.3), uTR, 3.1, 2));
+  vec2 r = vec2(fbm(w0 + uWarp * q + vec2(1.7, 9.2), uTR * 1.15, 7.3, 2), fbm(w0 + uWarp * q + vec2(8.3, 2.8), uTR * 1.15, 1.9, 2));
+  return fbm(w0 + uWarp * r, uTR, 4.4, 2);
 }
 
 void main() {
   vec2 p = (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0) * uScale;
   // slow circular drift of the whole pattern
-  p += uCircle * 0.12;
+  p += uCircle * uDrift;
   float n = field(p);
   // gradient of the field over a wide stencil (smooth), used to even out the
   // ridge spacing: where the field is flat the stripes tighten, where it is
@@ -230,6 +233,8 @@ export const createHoloLiquid: LookFactory<HoloParams> = (params) => {
       uStripes: { value: 9.0 },
       uWarp: { value: 2.4 },
       uWarpFreq: { value: 0.35 },
+      uTR: { value: 0.006 },
+      uDrift: { value: 0.006 },
       uGRef: { value: 1.2 },
       uEven: { value: 0.8 },
     },
