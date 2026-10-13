@@ -17,15 +17,15 @@ export interface NeonPodiumParams {
 // ---------------------------------------------------------------------------
 const COLS = 20;
 const ROWS = 7;
-const CUBE = 0.42; // cube edge
-const PITCH = 0.56; // spacing along the arc (columns stand apart)
-const ROW_PITCH = 0.44; // vertical spacing
+const CUBE = 0.5; // cube edge
+const PITCH = 0.64; // spacing along the arc (columns stand apart)
+const ROW_PITCH = 0.52; // vertical spacing
 // Concave wall: a parabola in plan, z = WALL_Z + WALL_K * x^2, so the sides
 // sweep forward toward the camera.
-const WALL_Z = -3.3;
-const WALL_K = 0.38;
-const WALL_Y0 = 0.12; // centre height of the bottom row
-const EDGE_T = 0.024; // neon tube thickness
+const WALL_Z = -4.5;
+const WALL_K = 0.3;
+const WALL_Y0 = -0.05; // centre height of the bottom row
+const EDGE_T = 0.015; // neon tube thickness
 const POD_R = 1.0;
 const POD_H = 0.22;
 
@@ -131,7 +131,7 @@ void main() {
   float fres = pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 3.0);
   // Dark tinted glass-like faces: a soft gradient of both neons, brighter toward the top.
   float up = clamp(vL.y + 0.5, 0.0, 1.0);
-  vec3 col = uAmb * 1.2 + neon * (glow * 0.6 + fres * 0.08) + mix(uB, uA, vBand) * 0.02 * (0.4 + 0.6 * up) + mix(uA, uB, 0.3) * 0.02;
+  vec3 col = uAmb * 2.0 + neon * (glow * 0.35 + fres * 0.05) + mix(uB, uA, vBand) * 0.012 * (0.4 + 0.6 * up) + mix(uA, uB, 0.65) * 0.02;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -206,7 +206,7 @@ void main() {
     float band = smoothstep(0.1, 0.13, y) * (1.0 - smoothstep(0.19, 0.22, y));
     float lip = smoothstep(0.86, 0.97, y);
     float side = 0.5 + 0.5 * dot(N, V);
-    col = uAmb * 1.2 * side + uRim * (band * 1.8 + lip * 0.25) + uRim * 0.05;
+    col = uAmb * 1.2 * side + uRim * (band * 3.0 + lip * 1.2) + uRim * 0.05;
   }
   gl_FragColor = vec4(col, 1.0);
 }
@@ -240,11 +240,11 @@ void main() {
   vec3 blur = texture(tReflBlur, suv).rgb;
   // Roughness ~0.1: mostly sharp near the contact, softer farther from it.
   float dist = length(vW - uCam);
-  vec3 refl = mix(sharp, blur, 0.85);
+  vec3 refl = mix(sharp, blur, 0.97);
   vec3 col = uAmb * 0.15 + refl * (0.2 + 0.4 * fres);
   // Light pool from the podium rim.
   float rp = length(vW.xz);
-  col += uRim * 0.05 * exp(-max(rp - uPodR, 0.0) * 2.2) * smoothstep(uPodR * 0.9, uPodR * 1.02, rp);
+  col += uRim * 0.12 * exp(-max(rp - uPodR, 0.0) * 2.2) * smoothstep(uPodR * 0.9, uPodR * 1.02, rp);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -257,7 +257,7 @@ uniform vec3 uA;
 uniform vec3 uB;
 void main() {
   float y = vUv.y;
-  vec3 col = uAmb * (0.5 + 0.9 * (1.0 - y));
+  vec3 col = uAmb * (0.25 + 0.45 * (1.0 - y));
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -278,8 +278,8 @@ void main() {
 export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Look => {
   const post = new Post(gl, {
     msaa: 4,
-    bloomStrength: 0.6,
-    bloomRadius: 0.55,
+    bloomStrength: 0.8,
+    bloomRadius: 0.5,
     bloomThreshold: 0.7,
     bloomKnee: 0.5,
     exposure: 1.0,
@@ -329,7 +329,7 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
   const edgeMat = shaderMat({
     vertexShader: EDGE_VERT,
     fragmentShader: EDGE_FRAG,
-    uniforms: { uCam: { value: new THREE.Vector3() }, uGain: { value: 1.6 } },
+    uniforms: { uCam: { value: new THREE.Vector3() }, uGain: { value: 2.0 } },
   });
   const edges = new THREE.InstancedMesh(edgeGeo, edgeMat, SLOTS.length * 12);
   edges.frustumCulled = false;
@@ -409,14 +409,12 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
     const ph = cyc(frame, 2); // two waves per loop
     SLOTS.forEach((s, i) => {
       const u = s.col / (COLS - 1);
-      const v = s.row / (ROWS - 1);
-      // Travelling bump: phase advances across the wall, slightly diagonal.
-      // Travelling wave, about three crests across the wall, slightly diagonal.
-      const phi = ph - u * 3.0 - v * 0.25;
+      // Travelling wave, about two crests across the wall; alternate rows fold opposite ways.
+      const phi = ph - u * 2.2;
       const sw = Math.sin(TAU * phi);
       // Alternate rows turn opposite ways: columns fold like an accordion.
       const rot = ((s.row % 2 ? 1 : -1) * sw * Math.PI) / 4; // up to +-45 deg
-      const push = Math.abs(sw) * 0.16;
+      const push = Math.abs(sw) * 0.05;
       const nx = -Math.sin(s.angle);
       const nz = Math.cos(s.angle); // inward normal (toward the camera side)
       pos.set(s.x + nx * push, s.y, s.z + nz * push);
@@ -447,8 +445,8 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
       const a = cyc(frame, 1) * TAU;
       // Slow closed dolly, +-3 %.
       const dz = 1 + 0.03 * Math.sin(a);
-      camera.position.set(0, 0.5, 3.5 * dz);
-      camera.lookAt(0, 0.94, 0);
+      camera.position.set(0, 0.55, 3.7 * dz);
+      camera.lookAt(0, 0.98, 0);
       camera.updateMatrixWorld();
       // Rim colour drifts between the two neons (one full cycle per loop).
       // Dwell on each neon, crossing over quickly in between.
@@ -476,7 +474,7 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
       blurMat.uniforms.uDir.value.set(0.5 / (w >> 2), 0);
       post.blit(blurMat, reflBlurA);
       blurMat.uniforms.tSrc.value = reflBlurA.texture;
-      blurMat.uniforms.uDir.value.set(0, 5.0 / (h >> 2));
+      blurMat.uniforms.uDir.value.set(0, 8.0 / (h >> 2));
       post.blit(blurMat, reflBlurB);
 
       // 2) Main pass.
