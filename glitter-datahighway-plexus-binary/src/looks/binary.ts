@@ -9,10 +9,10 @@ import { hexToLinear, LOOP, mulberry32 } from "../lib/random";
 
 export type BinaryVersion = { head: string; tail: string; dim: string };
 
-const COLS = 120, ROWS = 300, PX = 0.9, PZ = 0.82; // column / row pitch (world)
+const COLS = 120, ROWS = 300, PX = 0.72, PZ = 0.7; // column / row pitch (world)
 const Z_NEAR = 60; // row 0 world z (rows recede to -z)
 const HOLDS = [20, 30, 40, 50, 60, 75]; // glyph swap holds, all divide 600
-const PERIODS = [25, 30, 50, 60]; // stream repeat along a column (rows), all divide 300
+const PERIODS = [20, 25, 30, 50]; // stream repeat along a column (rows), all divide 300
 
 const layout = () => {
   const rnd = mulberry32(0x1a4a8a);
@@ -55,7 +55,7 @@ void main() {
   g = min(g, ${(GLYPHS.length - 1).toFixed(1)});
   // stream
   vec4 s = uStreams[int(c)];
-  vec3 col = uDim * 0.25 * iMisc.z * 2.6;
+  vec3 col = uDim * 0.25 * iMisc.z * 4.5;
   if (s.x > 0.0) {
     float period = s.x, len = s.y;
     float head = fract(s.w + s.z * uFrame / ${LOOP.toFixed(1)}) * period; // moves toward row 0 ("down")
@@ -67,14 +67,14 @@ void main() {
       // a few glyphs in each tail lean aqua-green
       float aqua = float((h >> 20) & 7u) < 3.0 ? 0.55 : 0.0;
       vec3 tc = mix(uTail, vec3(uTail.g * 0.25, uTail.g, uTail.b * 0.45), aqua);
-      col += uHead * headGlow * 1.3 + tc * tail * 1.6 * (1.0 - headGlow * 0.6);
+      col += uHead * headGlow * 0.8 + tc * tail * 2.2 * (1.0 - headGlow * 0.6);
     }
   }
   vColor = col;
   vUv = vec2((g + position.x * 0.5 + 0.5) / 8.0, position.y * 0.5 + 0.5);
-  vec3 world = vec3((c - ${(COLS / 2).toFixed(1)}) * ${PX.toFixed(3)} + position.x * 0.36,
+  vec3 world = vec3((c - ${(COLS / 2).toFixed(1)}) * ${PX.toFixed(3)} + position.x * 0.32,
                     0.0,
-                    ${Z_NEAR.toFixed(1)} - r * ${PZ.toFixed(3)} - position.y * 0.41);
+                    ${Z_NEAR.toFixed(1)} - r * ${PZ.toFixed(3)} - position.y * 0.36);
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;
 const FRAG = /* glsl */ `
@@ -100,7 +100,7 @@ void main() {
   vec2 fw = fwidth(p);
   vec2 l = 1.0 - smoothstep(vec2(0.0), fw * 1.2, abs(fract(p) - 0.5) * 2.0 * 0.5);
   // horizontal scanlines a little stronger than the verticals
-  float line = max(l.x * 0.5, l.y) * (1.0 - smoothstep(0.25, 0.6, max(fw.x, fw.y)));
+  float line = max(l.x * 0.2, l.y) * (1.0 - smoothstep(0.25, 0.6, max(fw.x, fw.y)));
   outColor = vec4(uDim * (0.012 + 0.04 * line), 1.0);
 }`;
 
@@ -147,7 +147,7 @@ export const makeBinary = (v: BinaryVersion, atlasCanvas: HTMLCanvasElement): Sc
     grid.renderOrder = -1;
     scene.add(grid, glyphs);
 
-    const H = 12.0;
+    const H = 8.0;
     const update = (f: number) => {
       uniforms.uFrame.value = f;
       const ph = (2 * Math.PI * f) / LOOP;
@@ -156,16 +156,16 @@ export const makeBinary = (v: BinaryVersion, atlasCanvas: HTMLCanvasElement): Sc
       camera.rotation.set(
         THREE.MathUtils.degToRad(-40),
         THREE.MathUtils.degToRad(12 + 1.2 * Math.sin(ph)),
-        THREE.MathUtils.degToRad(-13),
+        THREE.MathUtils.degToRad(-24),
       );
     };
     const focus = H / Math.sin(THREE.MathUtils.degToRad(40));
     return {
       scene, camera, update,
       post: {
-        bloomStrength: 0.14, bloomThreshold: 0.0, bloomRadius: 1.0, vignette: 0.35,
+        bloomStrength: 0.3, bloomThreshold: 0.0, bloomRadius: 1.0, vignette: 0.35,
         grain: 0.015, grainFloor: 0, exposure: 1.0,
-        dof: { surface: { kind: "plane", normal: new THREE.Vector3(0, 1, 0), d: 0 }, focusDist: focus, scale: 0.028, farScale: 0.028, maxCoc: 0.012 },
+        dof: { surface: { kind: "plane", normal: new THREE.Vector3(0, 1, 0), d: 0 }, focusDist: focus, scale: 0.042, farScale: 0.03, maxCoc: 0.014 },
       },
     };
   };
