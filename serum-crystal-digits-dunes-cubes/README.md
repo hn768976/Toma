@@ -128,4 +128,59 @@ frames, no TAA / accumulation. Loops use `frame % 600` and only whole cycles,
 so frame 600 equals frame 0. The font, digit atlas, PMREM environments and
 blue-noise tile are built once; the font waits on `delayRender`.
 
-<!-- MEASUREMENTS -->
+## Measured render times
+
+Machine: 4-vCPU cloud container, **no GPU** – Chromium's WebGL2 runs on
+SwiftShader (software) via ANGLE. Times are wall-clock for the whole render
+(including bundling and encoding) divided by the frame count, concurrency 2.
+
+| Composition | 720p s/frame | 4K estimate here (software) |
+|---|---|---|
+| SerumCapsule-SilverBlue | 0.47 | **10.9 s/frame measured** → ~55 min |
+| SerumCapsule-Gold | 0.48 | ~55 min |
+| CrystalBurst-IceBlue | 6.05 | **97 s/frame measured** → ~16 h |
+| CrystalBurst-AmethystRose | 6.18 | ~16.5 h |
+| DigitSwirl-Teal | 0.63 | ~13 s/frame → ~2.1 h |
+| RibbedDunes-White | 1.02 | ~20 s/frame → ~3.4 h |
+| RibbedDunes-Graphite | 1.09 | ~22 s/frame → ~3.6 h |
+| CubeCluster-Blue | 0.99 | ~20 s/frame → ~3.3 h |
+
+The two real 4K frames (3840×2160, one-off `remotion still`, start-up cost
+subtracted): **1A frame 240 = 10.9 s**, **2A frame 300 = 97 s**. Measured 4K/720p
+ratios were 23× (1A) and 16× (2A); the other estimates use 20×. On any machine
+with a GPU these drop by one to two orders of magnitude — Crystal Burst is the
+heavy one (420 instanced `MeshPhysicalMaterial` shards with iridescence and
+three environment lookups for the dispersion).
+
+## Banding check
+
+* Final pass: half-float (RGBA16F) scene/post targets, then ±1/255 blue-noise
+  dither (offset by `frame % period`) + 1.5 % grain from an integer hash of
+  pixel position and frame. Gradient backdrops add their own blue-noise dither.
+* Checked on frames **decoded from the encoded mp4s**
+  (`scripts/banding.py`, `scripts/stretch.py`): pixel rows/columns across the
+  Serum backdrops, both dune skies, the cube glow and the digit haze. Averaged
+  profiles step by ≤ 1.8 levels per pixel with ≤ 2.6 levels residual against a
+  smooth fit, and 8× contrast-stretched crops show no contour steps.
+
+## Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps; Look 1 = 300 frames, others 600
+- [x] three.js / `@remotion/three` on WebGL2, `--gl=angle`; no PixiJS, no MCP
+- [x] JetBrains Mono (OFL, `public/fonts/OFL.txt`) for the digits; no other text
+- [x] Generic 7-atom molecule (pentagon + 2 side atoms), no named compound
+- [x] Determinism: no `Math.random`, no clocks, no TAA/accumulation;
+      cold frame 300 (150 for Look 1) == full-render frame, byte for byte (all 8)
+- [x] Loops: frame 600 == frame 0 pixel for pixel on a 601-frame render (all 6);
+      the 599→0 step is no larger than normal frame-to-frame change
+- [x] Previews: 1280×720, h264, yuv420p, 30/1, no audio, 10.0 s / 20.0 s
+- [x] Banding checked on the encoded mp4s
+- [x] Render times per composition + two real 4K frames recorded
+
+## Verification scripts
+
+`scripts/render-preview.sh`, `render-all.sh`, `check-loop-det.sh` (ffprobe,
+601-frame loop check, cold-frame determinism, contact sheet), `seam.py`,
+`compare.py`, `banding.py`, `stretch.py`, `contact.sh`, `crops.py`.
+The loop check sets `REMOTION_LOOP_FRAMES=601` (read in `src/Root.tsx`).
+
