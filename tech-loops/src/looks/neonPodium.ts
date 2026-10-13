@@ -17,14 +17,15 @@ export interface NeonPodiumParams {
 // ---------------------------------------------------------------------------
 const COLS = 20;
 const ROWS = 7;
-const CUBE = 0.37; // cube edge
-const PITCH = 0.43; // spacing along the arc / vertically
+const CUBE = 0.42; // cube edge
+const PITCH = 0.56; // spacing along the arc (columns stand apart)
+const ROW_PITCH = 0.44; // vertical spacing
 // Concave wall: a parabola in plan, z = WALL_Z + WALL_K * x^2, so the sides
 // sweep forward toward the camera.
 const WALL_Z = -3.3;
-const WALL_K = 0.26;
-const WALL_Y0 = 0.24; // centre height of the bottom row
-const EDGE_T = 0.017; // neon tube thickness
+const WALL_K = 0.38;
+const WALL_Y0 = 0.12; // centre height of the bottom row
+const EDGE_T = 0.024; // neon tube thickness
 const POD_R = 1.0;
 const POD_H = 0.22;
 
@@ -66,13 +67,14 @@ const SLOTS: Slot[] = [];
       const cx = colX[c];
       const a = Math.atan(2 * WALL_K * cx);
       // Colour bands: groups of columns alternate A / B with soft-ish transitions.
-      const band = 0.5 + 0.5 * Math.sin(c * 1.05 + 0.4 + r * 0.18);
+      // Skewed toward neon A, so the first colour (cyan-blue in 5A) carries more of the wall.
+      const band = Math.pow(0.5 + 0.5 * Math.sin(c * 1.05 + 0.4 + r * 0.18), 1.5);
       SLOTS.push({
         col: c,
         row: r,
         angle: a,
         x: cx,
-        y: WALL_Y0 + r * PITCH,
+        y: WALL_Y0 + r * ROW_PITCH,
         z: WALL_Z + WALL_K * cx * cx,
         band: band < 0.5 ? Math.pow(band * 2, 3) / 2 : 1 - Math.pow((1 - band) * 2, 3) / 2,
       });
@@ -129,7 +131,7 @@ void main() {
   float fres = pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 3.0);
   // Dark tinted glass-like faces: a soft gradient of both neons, brighter toward the top.
   float up = clamp(vL.y + 0.5, 0.0, 1.0);
-  vec3 col = uAmb * 1.2 + neon * (glow + fres * 0.12) + mix(uB, uA, vBand) * 0.035 * (0.4 + 0.6 * up) + mix(uA, uB, 0.5) * 0.018;
+  vec3 col = uAmb * 1.2 + neon * (glow * 0.6 + fres * 0.08) + mix(uB, uA, vBand) * 0.02 * (0.4 + 0.6 * up) + mix(uA, uB, 0.3) * 0.02;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -194,17 +196,17 @@ void main() {
     // Top: dark satin, reflecting the wall's glow as a soft vertical gradient.
     float r = length(vL.xz) / uR;
     float fres = pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 4.0);
-    col = uAmb * 2.5 + mix(uRim2, uRim, 0.5) * (0.1 + fres * 0.45) * (0.5 + 0.5 * smoothstep(1.0, -1.0, vL.z / uR));
+    col = uAmb * 1.4 + mix(uRim2, uRim, 0.5) * (0.04 + fres * 0.3) * (0.5 + 0.5 * smoothstep(1.0, -1.0, vL.z / uR));
     col += uRim * smoothstep(0.965, 0.995, r) * 0.6;
   } else if (N.y < -0.5) {
     col = vec3(0.0);
   } else {
     // Side: dark metal with a glowing band low down and a fine lit lip on top.
     float y = (vL.y + uH * 0.5) / uH; // 0 bottom .. 1 top
-    float band = smoothstep(0.1, 0.15, y) * (1.0 - smoothstep(0.26, 0.31, y));
+    float band = smoothstep(0.1, 0.13, y) * (1.0 - smoothstep(0.19, 0.22, y));
     float lip = smoothstep(0.86, 0.97, y);
     float side = 0.5 + 0.5 * dot(N, V);
-    col = uAmb * 1.2 * side + uRim * (band * 3.2 + lip * 0.35) + uRim * 0.05;
+    col = uAmb * 1.2 * side + uRim * (band * 1.8 + lip * 0.25) + uRim * 0.05;
   }
   gl_FragColor = vec4(col, 1.0);
 }
@@ -239,10 +241,10 @@ void main() {
   // Roughness ~0.1: mostly sharp near the contact, softer farther from it.
   float dist = length(vW - uCam);
   vec3 refl = mix(sharp, blur, 0.85);
-  vec3 col = uAmb * 0.25 + refl * (0.25 + 0.45 * fres);
+  vec3 col = uAmb * 0.15 + refl * (0.2 + 0.4 * fres);
   // Light pool from the podium rim.
   float rp = length(vW.xz);
-  col += uRim * 0.25 * exp(-max(rp - uPodR, 0.0) * 2.2) * smoothstep(uPodR * 0.9, uPodR * 1.02, rp);
+  col += uRim * 0.05 * exp(-max(rp - uPodR, 0.0) * 2.2) * smoothstep(uPodR * 0.9, uPodR * 1.02, rp);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -276,8 +278,8 @@ void main() {
 export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Look => {
   const post = new Post(gl, {
     msaa: 4,
-    bloomStrength: 0.85,
-    bloomRadius: 0.6,
+    bloomStrength: 0.6,
+    bloomRadius: 0.55,
     bloomThreshold: 0.7,
     bloomKnee: 0.5,
     exposure: 1.0,
@@ -327,7 +329,7 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
   const edgeMat = shaderMat({
     vertexShader: EDGE_VERT,
     fragmentShader: EDGE_FRAG,
-    uniforms: { uCam: { value: new THREE.Vector3() }, uGain: { value: 1.25 } },
+    uniforms: { uCam: { value: new THREE.Vector3() }, uGain: { value: 1.6 } },
   });
   const edges = new THREE.InstancedMesh(edgeGeo, edgeMat, SLOTS.length * 12);
   edges.frustumCulled = false;
@@ -412,7 +414,8 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
       // Travelling wave, about three crests across the wall, slightly diagonal.
       const phi = ph - u * 3.0 - v * 0.25;
       const sw = Math.sin(TAU * phi);
-      const rot = (sw * Math.PI) / 4; // up to +-45 deg
+      // Alternate rows turn opposite ways: columns fold like an accordion.
+      const rot = ((s.row % 2 ? 1 : -1) * sw * Math.PI) / 4; // up to +-45 deg
       const push = Math.abs(sw) * 0.16;
       const nx = -Math.sin(s.angle);
       const nz = Math.cos(s.angle); // inward normal (toward the camera side)
@@ -470,10 +473,10 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
       world.updateMatrixWorld(true);
       // Soften it (roughness ~0.1, slightly streaked vertically like polished resin).
       blurMat.uniforms.tSrc.value = reflRT.texture;
-      blurMat.uniforms.uDir.value.set(1.0 / (w >> 2), 0);
+      blurMat.uniforms.uDir.value.set(0.5 / (w >> 2), 0);
       post.blit(blurMat, reflBlurA);
       blurMat.uniforms.tSrc.value = reflBlurA.texture;
-      blurMat.uniforms.uDir.value.set(0, 2.6 / (h >> 2));
+      blurMat.uniforms.uDir.value.set(0, 5.0 / (h >> 2));
       post.blit(blurMat, reflBlurB);
 
       // 2) Main pass.
