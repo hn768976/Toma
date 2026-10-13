@@ -18,7 +18,7 @@ export type PlexusLandscapeVersion = {
 const NX = 64, NZ = 94, D0 = 1.2, D1 = 30, Z0 = 3.3;
 const rowDepth = (j: number) => {
   const t = j / (NZ - 1);
-  return 0.3 * D0 * Math.pow(D1 / D0, t) + 0.7 * (D0 + (D1 - D0) * t);
+  return 0.55 * D0 * Math.pow(D1 / D0, t) + 0.45 * (D0 + (D1 - D0) * t);
 };
 const halfWidth = (d: number) => 2.4 + 0.85 * d;
 
@@ -93,10 +93,10 @@ void main() {
   vec4 view = viewMatrix * vec4(world, 1.0);
   float dist = -view.z;
   float scale = uRes.y / 720.0;
-  float core = 1.6 * iMisc.x * scale;            // in-focus radius (px)
+  float core = 1.6 * iMisc.x * scale * (1.0 + 0.5 * step(iColor.b * 1.5, iColor.r)); // amber nodes larger            // in-focus radius (px)
   // tilted focal plane: near on the left, far on the right (diagonal sharp band)
   vec4 c0 = projectionMatrix * view;
-  float focus = uFocus * (1.0 + 0.55 * clamp(c0.x / c0.w, -1.0, 1.0));
+  float focus = uFocus * (1.0 + 0.3 * clamp(c0.x / c0.w, -1.0, 1.0));
   float coc = cocPx(dist, focus, uNearK, uFarK, uRes.y);
   float r = max(core, coc) + 1.0 * scale;
   float energy = pow(core / r, 1.25);
@@ -104,8 +104,8 @@ void main() {
   // brightness: a few bright nodes, many dim; amber nodes glow hottest
   float warm = step(iColor.b * 1.5, iColor.r);
   float lum = (0.35 + 0.65 * (iMisc.x - 1.0) * 0.5) * (1.0 + 0.9 * warm);
-  float fade = 1.0 - 0.9 * smoothstep(uFarFade * 0.25, uFarFade * 0.9, dist);
-  vColor = iColor * lum * tw * fade * mix(2.6, 0.6, smoothstep(core, core * 3.0, coc)) * max(energy, 0.02);
+  float fade = 1.0 - 0.94 * smoothstep(uFarFade * 0.2, uFarFade * 0.8, dist);
+  vColor = iColor * lum * tw * fade * mix(2.6, 0.6, smoothstep(core, core * 3.0, coc)) * max(energy, 0.06);
   vSharp = 1.0 - smoothstep(core * 0.8, core * 2.5, coc);
   vEdge = 1.2;  // very soft bokeh edge (gaussian-like, no rim)
   vP = position.xy;
@@ -137,7 +137,7 @@ void main() {
   float dist = -view.z;
   float scale = uRes.y / 720.0;
   vec4 c0 = projectionMatrix * view;
-  float focus = uFocus * (1.0 + 0.55 * clamp(c0.x / c0.w, -1.0, 1.0));
+  float focus = uFocus * (1.0 + 0.3 * clamp(c0.x / c0.w, -1.0, 1.0));
   float coc = cocPx(dist, focus, uNearK, uFarK, uRes.y);
   float w = 1.0 * scale + coc * 0.3;            // half width in px, blurred lines widen
   float fade = 1.0 - smoothstep(uFarFade * 0.8, uFarFade, dist);
@@ -169,7 +169,7 @@ export const makePlexusLandscape = (v: PlexusLandscapeVersion): SceneBuilder => 
       uPhase: { value: 0 },
       uRes: { value: new THREE.Vector2(width, height) },
       uFocus: { value: 6.5 },
-      uNearK: { value: 0.014 },
+      uNearK: { value: 0.03 },
       uFarK: { value: 0.014 },
       uFarFade: { value: 31 },
       uLink: { value: new THREE.Color(...hexToLinear(v.link)).multiplyScalar(v.linkAlpha) },
@@ -201,7 +201,7 @@ export const makePlexusLandscape = (v: PlexusLandscapeVersion): SceneBuilder => 
       // slow closed drift sideways and forward
       camera.position.set(0.7 * Math.sin(ph), 1.45 + 0.06 * Math.sin(2 * ph + 1), 4.5 - 0.6 * (1 - Math.cos(ph)));
       camera.rotation.order = "YXZ";
-      camera.rotation.set(THREE.MathUtils.degToRad(-6), THREE.MathUtils.degToRad(-3 + 1.5 * Math.sin(ph)), THREE.MathUtils.degToRad(5));
+      camera.rotation.set(THREE.MathUtils.degToRad(-4), THREE.MathUtils.degToRad(-3 + 1.5 * Math.sin(ph)), THREE.MathUtils.degToRad(-6));
     };
     const navy = hexToLinear(v.horizon);
     return {
