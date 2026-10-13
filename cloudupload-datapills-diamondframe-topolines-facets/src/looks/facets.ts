@@ -18,7 +18,7 @@ export type FacetsParams = {
   background: string;
 };
 
-const T = 10; // tile period (world units)
+const T = 11.5; // tile period (world units)
 const GRID = 4; // seeds per tile side -> 16 stars per tile
 
 type V2 = [number, number];
@@ -124,7 +124,7 @@ const buildTile = (): Tri[] => {
       const aV = th0 + ((k + 1) * Math.PI) / N + (r() - 0.5) * 0.25;
       const uV: V2 = [Math.cos(aV), Math.sin(aV)];
       const dV = rayToPoly(s.p, uV, poly);
-      const fv = 0.72 + 0.2 * r();
+      const fv = 0.8 + 0.15 * r();
       const V = new THREE.Vector3(s.p[0] + uV[0] * dV * fv, s.p[1] + uV[1] * dV * fv, H * (1 - fv) * (0.45 + 0.3 * r()));
       const p0 = new THREE.Vector3(P0[0], P0[1], 0);
       const p2 = new THREE.Vector3(P2[0], P2[1], 0);
@@ -279,12 +279,12 @@ export const makeFacets =
       gl,
       [
         // strips spread all around the view axis -> stars lit evenly
-        { dir: [0.2, 0.9, 0.7], roll: 0.3, length: 70, width: 16, color: params.strip, intensity: 36 },
-        { dir: [-0.85, -0.3, 0.7], roll: 1.2, length: 70, width: 12, color: params.strip, intensity: 26 },
+        { dir: [0.2, 0.9, 0.7], roll: 0.3, length: 70, width: 9, color: params.strip, intensity: 70 },
+        { dir: [-0.85, -0.3, 0.7], roll: 1.2, length: 70, width: 7, color: params.strip, intensity: 50 },
         { dir: [0.75, -0.55, 0.7], roll: -0.6, length: 60, width: 10, color: params.strip, intensity: 22 },
         { dir: [-0.4, 0.5, 0.9], roll: 2.0, length: 50, width: 6, color: params.strip, intensity: 12 },
       ],
-      { top: "#34363c", bottom: "#0e0e12", intensity: 2.6 },
+      { top: "#383c48", bottom: "#141620", intensity: 3.2 },
       0.02,
     );
     scene.environmentIntensity = 1.0;

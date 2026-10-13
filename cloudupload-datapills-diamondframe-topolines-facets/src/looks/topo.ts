@@ -25,7 +25,7 @@ uniform float tf;      // t / 600 in [0,1)
 uniform vec3 lineCol, glowCol, sparkCol;
 in vec2 vUv;
 
-const float LEVELS = 13.0;      // contour lines per unit of height
+const float LEVELS = 15.0;      // contour lines per unit of height
 const float R = 0.42;          // radius of the time circle in noise space
 
 float field(vec2 p) {
@@ -80,7 +80,7 @@ void main() {
   vec2 gp = vec2(dFdx(ph), dFdy(ph));
   vec2 tang = vec2(-gv.y, gv.x) / g;
   float along = max(abs(dot(gp, tang)), 1e-4);      // phase per real px along line
-  float bead = ph - tf * 6.0;                        // 6 whole cycles per loop
+  float bead = ph * 1.5 - tf * 6.0;                        // 6 whole cycles per loop
   float bi = floor(bead + 0.5);
   float sPx = abs(bead - bi) / along / pxScale;      // 720p px along the line
   float r1 = hash3u(uvec3(ivec3(int(bi) + 50000, int(lvl) + 50000, 7))).x;
