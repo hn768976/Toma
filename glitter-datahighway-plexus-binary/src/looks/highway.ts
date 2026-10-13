@@ -102,13 +102,13 @@ void main() {
   float edge = max(min(d.x, d.y), 0.0); // MSAA: pixel centre may lie outside the quad
   float rim = exp(-edge / 0.0012);
   vec3 base = vLocal.y > vCap.w ? vCap.rgb : vColor;  // two-colour bars
-  vec3 c = base * mix(1.0, 0.42 + 1.5 * rim, vLit);
+  vec3 c = base * mix(1.0, 0.55 + 0.9 * rim, vLit);
   // far bars turn into bright white-cyan sparkle near the horizon
   float far = smoothstep(uHorizon * 0.15, uHorizon * 0.8, vDist);
   vec3 sparkle = (c * 0.6 + uHaze * 1.1 + vec3(0.6)) * (0.4 + 2.4 * vTw * vTw);
-  c = mix(c, sparkle * max(vLit, 0.3) * 1.6, far * 0.9);
+  c = mix(c, sparkle * max(vLit, 0.4) * 2.6, far * 0.9);
   // the floor's far corners fall away into black at the frame sides
-  c *= mix(1.0, smoothstep(0.85, 0.3, vSide), far);
+  c *= mix(1.0, smoothstep(0.6, 0.2, vSide), far);
   // the horizon folds unbounded depth into one pixel row; fade bars out before it
   c *= smoothstep(uHorizon * 1.0, uHorizon * 0.9, vDist);
   // far bars are sub-pixel: keep part of their energy so the horizon band stays luminous
@@ -123,9 +123,9 @@ void main() {
   vec3 d = normalize(vDir);
   float elev = asin(clamp(d.y, -1.0, 1.0)) + uDip;    // 0 at the horizon
   float az = atan(d.x, -d.z);
-  float centre = exp(-az * az / 0.06);
+  float centre = exp(-az * az / 0.3);
   float glow = exp(-max(elev, 0.0) / 0.012) * step(-0.002, elev);
-  vec3 c = (uHaze * 0.12 + uGlow * 0.02) * glow * centre;
+  vec3 c = (uHaze * 0.16 + uGlow * 0.03) * glow * centre;
   outColor = vec4(c, 1.0);
 }`;
 const SKY_VERT = /* glsl */ `
@@ -219,7 +219,7 @@ export const makeHighway = (v: HighwayVersion): SceneBuilder => {
     return {
       scene, camera, update,
       post: {
-        bloomStrength: 0.22, bloomThreshold: 0.35, bloomRadius: 1.0, vignette: 0.35,
+        bloomStrength: 0.3, bloomThreshold: 0.35, bloomRadius: 1.0, bloomLevels: 5, vignette: 0.35,
         grain: 0.015, grainFloor: 0.03, exposure: 1.0,
         dof: {
           surface: { kind: "sphere", radius: R, center: new THREE.Vector3(0, -R, 0) },
