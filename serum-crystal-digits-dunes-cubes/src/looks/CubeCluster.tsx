@@ -57,7 +57,7 @@ const CUBES: CubeSeed[] = (() => {
         // ~65% at the top; density rises toward the right
         const edge = -0.24 + 0.28 * (ny + 1);
         if (nx < edge) continue;
-        const keep = 0.2 + 0.8 * Math.min(1, (nx - edge) / 0.6);
+        const keep = 0.08 + 0.92 * Math.min(1, (nx - edge) / 0.9);
         cands.push({ pos: v.clone(), key: rng() / keep });
       }
     }
@@ -148,7 +148,7 @@ const Scene: React.FC<CubeClusterProps> = (p) => {
       mesh.setColorAt(i, col);
     });
     // atmospheric haze: distant cubes fade toward the backdrop blue
-    scene.fog = new THREE.Fog(new THREE.Color(p.edge).lerp(new THREE.Color(p.glow), 0.45), 12, 34);
+    scene.fog = new THREE.Fog(new THREE.Color(p.edge).lerp(new THREE.Color(p.glow), 0.45), 10, 26);
     const group = new THREE.Group();
     group.add(mesh);
     scene.add(group);
@@ -168,7 +168,7 @@ const Scene: React.FC<CubeClusterProps> = (p) => {
     key.shadow.normalBias = 0.02;
     key.shadow.radius = 3;
     scene.add(key, key.target);
-    const hemi = new THREE.HemisphereLight(p.fill, 0x3a78d8, 2.6);
+    const hemi = new THREE.HemisphereLight(p.fill, 0x4a88e0, 3.2);
     scene.add(hemi);
     const rim = new THREE.DirectionalLight(p.fill, 0.6);
     rim.position.set(6, -3, 4);
@@ -178,7 +178,7 @@ const Scene: React.FC<CubeClusterProps> = (p) => {
       period: LOOP,
       samples: 4,
       ssao: { radius: 0.5, strength: 0.3, bias: 0.015 },
-      dof: { focus: 15.2, range: 8, maxBlur: 0.005 },
+      dof: { focus: 15.0, range: 3.5, maxBlur: 0.011 },
       vignette: 0.38,
       vignetteColor: new THREE.Color(p.edge).multiplyScalar(0.6),
       grain: 0.015,
@@ -196,6 +196,11 @@ const Scene: React.FC<CubeClusterProps> = (p) => {
 
   useFrameRender((frame) => {
     const { scene, camera, mesh, group, bgMat, pipeline } = built;
+    // R3F may reconfigure the renderer after mount; re-assert shadows every
+    // frame so a frame never depends on what happened before it.
+    gl.shadowMap.enabled = true;
+    gl.shadowMap.type = THREE.PCFSoftShadowMap;
+    gl.shadowMap.needsUpdate = true;
     const f = ((frame % LOOP) + LOOP) % LOOP;
     const ph = (f / LOOP) * TAU;
     camera.aspect = size.width / size.height;
@@ -223,7 +228,7 @@ const Scene: React.FC<CubeClusterProps> = (p) => {
 };
 
 export const CubeCluster: React.FC<CubeClusterProps> = (props) => (
-  <SceneCanvas>
+  <SceneCanvas shadows>
     <Scene {...props} />
   </SceneCanvas>
 );

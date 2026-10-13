@@ -6,7 +6,7 @@ import { useCurrentFrame, useVideoConfig } from "remotion";
 // One ThreeCanvas per composition. WebGL2, no MSAA on the default framebuffer
 // (the Pipeline renders into its own MSAA half-float target), no tone mapping,
 // no colour conversion (the composite pass does linear→sRGB itself).
-export const SceneCanvas: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SceneCanvas: React.FC<{ children: React.ReactNode; shadows?: boolean }> = ({ children, shadows }) => {
   const { width, height } = useVideoConfig();
   const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
   return (
@@ -16,6 +16,7 @@ export const SceneCanvas: React.FC<{ children: React.ReactNode }> = ({ children 
       dpr={dpr}
       linear
       flat
+      shadows={shadows ? "soft" : false}
       gl={{
         antialias: false,
         alpha: false,

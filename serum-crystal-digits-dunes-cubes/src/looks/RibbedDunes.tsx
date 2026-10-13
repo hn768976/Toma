@@ -33,7 +33,7 @@ float dunes(vec2 p) {
   return h;
 }
 // Ridge phase: fine parallel lines that bend with the dune flow.
-const float RIDGE_K = 6.2831853 / 0.36; // 0.27 world units per ridge (~120 across the view)
+const float RIDGE_K = 6.2831853 / 0.3; // 0.27 world units per ridge (~120 across the view)
 float ridgePhase(vec2 p, float h) {
   vec2 dir = normalize(vec2(0.07, 1.0));
   float bend = 1.6 * sin(0.21 * p.x + 0.5) + 0.7 * sin(0.07 * p.y - 0.8 + uPhase);
@@ -74,9 +74,6 @@ const Scene: React.FC<RibbedDunesProps> = (p) => {
         vec2 d = (uv - vec2(0.5, 0.42)) * vec2(uAspect, 1.0);
         float v = smoothstep(0.35, 1.3, length(d));
         c = mix(c, uSkyTop * 0.9, v * 0.6);
-        // soft bright glow low on the right horizon
-        vec2 g = (uv - vec2(0.86, uHorizonY + 0.02)) * vec2(uAspect, 2.2);
-        c += uSkyHorizon * exp(-dot(g, g) * 22.0) * 0.22;
         return c;
       }
     `;
@@ -147,10 +144,10 @@ const Scene: React.FC<RibbedDunesProps> = (p) => {
           float s = fract(ph / 6.2831853) * 2.0 - 1.0;
           float prof = sqrt(max(1.0 - s * s, 0.0));
           float dprof = -s / max(prof, 0.18);         // d(profile)/ds, clamped at the groove
-          float A = 0.075;                              // ridge height in world units
+          float A = 0.09;                              // ridge height in world units
           // anti-aliasing: fade ridges as they approach pixel frequency
           float fw = fwidth(ph);
-          float aa = 1.0 - smoothstep(0.7, 1.8, fw);
+          float aa = 1.0 - smoothstep(0.5, 1.4, fw);
           vec2 gr = A * dprof * (gph / 3.14159265) * aa;
           vec3 n = normalize(vec3(-(g.x + gr.x), 1.0, -(g.y + gr.y)));
 
@@ -159,7 +156,7 @@ const Scene: React.FC<RibbedDunesProps> = (p) => {
           float diff = clamp((dot(n, L) + wrap) / (1.0 + wrap), 0.0, 1.0);
           float sky = 0.5 + 0.5 * n.y;
           // groove occlusion keeps the line visible even when lit edge-on
-          float groove = mix(1.0, smoothstep(0.0, 0.75, prof), 0.85 * aa);
+          float groove = mix(1.0, smoothstep(0.0, 0.8, prof), 0.95 * aa);
           float lit = diff * uKey * groove;
           vec3 c = mix(uShadow, uSurface, 0.15 + 0.85 * clamp(lit, 0.0, 1.0));
           c = mix(c, uHighlight, pow(clamp(lit - 0.7, 0.0, 1.0) * 3.3, 2.0) * 0.8);
@@ -185,8 +182,7 @@ const Scene: React.FC<RibbedDunesProps> = (p) => {
       period: LOOP,
       samples: 4,
       dof: { focus: 10, range: 4, maxBlur: 0.02, nearOnly: true },
-      bloom: { threshold: 0.95, strength: 0.25, knee: 0.15 },
-      vignette: 0.12,
+            vignette: 0.25,
       vignetteColor: new THREE.Color(p.skyTop).multiplyScalar(0.85),
       grain: 0.015,
     });
@@ -205,7 +201,7 @@ const Scene: React.FC<RibbedDunesProps> = (p) => {
     camera.rotation.set(0, 0, 0);
     camera.rotation.order = "YXZ";
     camera.rotation.y = 0.04 * Math.sin(ph + 0.7);
-    camera.rotation.x = -0.02;
+    camera.rotation.x = -0.035;
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
     // where the true horizon lands on screen: used by the sky gradient

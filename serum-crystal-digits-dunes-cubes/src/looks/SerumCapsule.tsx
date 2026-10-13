@@ -303,7 +303,7 @@ const Scene: React.FC<SerumCapsuleProps> = (p) => {
     });
     // The capsule is drawn in two passes: its glass body behind the molecule,
     // then rim, band and highlights in front of it.
-    const capsule = new THREE.Mesh(quad, makeBubbleMat(0.0, 1.0));
+    const capsule = new THREE.Mesh(quad, makeBubbleMat(0.0, 0.55));
     (capsule.material as THREE.ShaderMaterial).uniforms.uBandK.value = 0.35;
     capsule.frustumCulled = false;
     scene.add(capsule);
@@ -366,9 +366,9 @@ const Scene: React.FC<SerumCapsuleProps> = (p) => {
     ringGeo.setAttribute("aSide", new THREE.Float32BufferAttribute(side, 1));
     ringGeo.setIndex(idx);
     const RINGS = [
-      { r: 2.35, w: 0.3, tiltX: 0.36, tiltZ: 0.3, speed: 1.0, start: 6.0, a0: 2.4 },
-      { r: 2.1, w: 0.22, tiltX: 0.5, tiltZ: 0.38, speed: -0.85, start: 6.3, a0: 0.4 },
-      { r: 1.8, w: 0.16, tiltX: 0.9, tiltZ: -0.5, speed: 1.2, start: 6.6, a0: 4.2 },
+      { r: 3.0, w: 0.4, tiltX: 0.36, tiltZ: 0.3, speed: 1.0, start: 6.0, a0: 2.4 },
+      { r: 2.65, w: 0.3, tiltX: 0.5, tiltZ: 0.38, speed: -0.85, start: 6.3, a0: 0.4 },
+      { r: 2.25, w: 0.22, tiltX: 0.9, tiltZ: -0.5, speed: 1.2, start: 6.6, a0: 4.2 },
     ];
     const ringMeshes = RINGS.flatMap((rg) =>
       [0, 1].map((front) => {
@@ -464,7 +464,7 @@ const Scene: React.FC<SerumCapsuleProps> = (p) => {
       mat.uniforms.uR.value = r;
       view.copy(pos).applyMatrix4(cam.matrixWorldInverse);
       const dist = -view.z;
-      const soft = Math.min(0.6, Math.abs(dist - focus) * 0.13);
+      const soft = Math.min(0.6, Math.abs(dist - focus) * 0.09);
       mat.uniforms.uSoft.value = soft;
       mat.uniforms.uQuad.value = 1.15 + soft * 1.2;
       mat.uniforms.uAlpha.value = alpha;

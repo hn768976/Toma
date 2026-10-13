@@ -77,7 +77,7 @@ export const CRYSTAL_BURST: { id: string; props: CrystalBurstProps }[] = [
       base: "#3A7CC4",
       deep: "#030A18",
       strips: ["#FFFFFF", "#5A9AFF", "#3AD8E8", "#8AB8FF"],
-      accents: ["#F0A0C0", "#F0D090", "#A898F0"],
+      accents: ["#FF7AA0", "#FFC860", "#FFB060"],
       tint: "#2E4C72",
     },
   },
@@ -96,6 +96,6 @@ export const CRYSTAL_BURST: { id: string; props: CrystalBurstProps }[] = [
 export const DIGIT_SWIRL: { id: string; props: DigitSwirlProps }[] = [
   {
     id: "DigitSwirl-Teal",
-    props: { digit: "#8AF0F0", streak: "#3AC8E8", ring: "#3AD8E8", bg: "#020A0E", haze: "#04202C" },
+    props: { digit: "#8AF0F0", streak: "#3AC8E8", ring: "#3AD8E8", bg: "#020A0E", haze: "#021620" },
   },
 ];

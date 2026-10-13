@@ -87,14 +87,14 @@ const DIGIT_DATA = (() => {
     laps[i] = 1 + Math.floor(rng() * 3); // whole laps per loop
     // denser toward the outer (left) wall, with a filled core
     // mostly on the tunnel wall (reads as a curved band), a few in the core
-    const wall = rng() < 0.85;
+    const wall = rng() < 0.92;
     const r = wall ? 0.82 + 0.22 * rng() : Math.sqrt(rng()) * 0.8;
-    const a = wall ? (rng() - 0.5) * 3.6 : rng() * TAU;
+    const a = wall ? (rng() - 0.5) * 2.6 : rng() * TAU;
     off[i * 2] = r * TUNNEL_R;
     off[i * 2 + 1] = a;
     const big = rng() < 0.03;
     // size multiplier 1–8× of the base digit height
-    size[i] = big ? 2.5 + rng() * 2.5 : 1 + Math.pow(rng(), 3.0) * 1.5;
+    size[i] = big ? 2.2 + rng() * 1.6 : 1 + Math.pow(rng(), 3.0) * 1.5;
     digit[i] = Math.floor(rng() * 10);
     flick[i * 3] = 4 + Math.floor(rng() * 40); // whole flicker cycles per loop
     flick[i * 3 + 1] = rng() * TAU;
@@ -113,7 +113,7 @@ const STREAK_DATA = (() => {
     u0[i] = rng();
     laps[i] = 2 + Math.floor(rng() * 3);
     off[i * 2] = (0.82 + 0.22 * rng()) * TUNNEL_R;
-    off[i * 2 + 1] = (rng() - 0.5) * 3.6;
+    off[i * 2 + 1] = (rng() - 0.5) * 2.6;
     len[i] = 0.02 + rng() * 0.05;
   }
   return { u0, laps, off, len };
@@ -221,7 +221,7 @@ const Scene: React.FC<DigitSwirlProps> = (p) => {
       fragmentShader: `uniform vec3 uColor; varying vec2 vUv; varying float vFade;
         void main(){
           float ends = smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.75, vUv.x);
-          gl_FragColor = vec4(uColor * ends * vFade * 0.5, 1.0);
+          gl_FragColor = vec4(uColor * ends * vFade * 0.35, 1.0);
         }`,
     });
     // Arcs: partial cross-section rings of the tunnel wall on the outer (left)
@@ -281,7 +281,7 @@ const Scene: React.FC<DigitSwirlProps> = (p) => {
           vec4 mv = modelViewMatrix * vec4(wp, 1.0);
           float dist = -mv.z;
           float coc = clamp(abs(dist - uFocus) / 7.0, 0.0, 1.0);
-          coc = max(coc, step(3.5, aSize) * 0.45);
+          coc = max(coc, step(2.1, aSize) * 0.25);
           float sz = uBaseSize * aSize * (1.0 + 0.35 * coc);
           mv.xy += position.xy * sz * vec2(0.62, 1.0) * 1.15;
           gl_Position = projectionMatrix * mv;
@@ -302,7 +302,7 @@ const Scene: React.FC<DigitSwirlProps> = (p) => {
           vec2 auv = vec2((vDigit + vUv.x) / 10.0, vUv.y);
           float a = mix(texture2D(uSharp, auv).a, texture2D(uBlur, auv).a, smoothstep(0.15, 0.7, vBlur));
           vec3 col = mix(uColor, vec3(1.0), vWhite * vWhite * vWhite * 0.6 * (1.0 - vBlur));
-          gl_FragColor = vec4(col * a * vAlpha * 2.3, 1.0);
+          gl_FragColor = vec4(col * a * vAlpha * 3.0, 1.0);
         }
       `,
     });
@@ -351,7 +351,7 @@ const Scene: React.FC<DigitSwirlProps> = (p) => {
         void main() {
           float across = exp(-pow((vUv.y - 0.5) * 4.0, 2.0));
           float along = pow(vUv.x, 1.6);
-          gl_FragColor = vec4(uColor * across * along * vAlpha * 0.32, 1.0);
+          gl_FragColor = vec4(uColor * across * along * vAlpha * 0.45, 1.0);
         }
       `,
     });
@@ -396,7 +396,7 @@ const Scene: React.FC<DigitSwirlProps> = (p) => {
     const pipeline = new Pipeline({
       period: LOOP,
       samples: 4,
-      bloom: { threshold: 0.25, strength: 1.25, knee: 0.3 },
+      bloom: { threshold: 0.22, strength: 1.5, knee: 0.3 },
       vignette: 0.5,
       vignetteColor: new THREE.Color(0x000000),
       grain: 0.015,

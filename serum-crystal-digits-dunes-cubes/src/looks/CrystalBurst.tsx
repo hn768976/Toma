@@ -44,7 +44,7 @@ const SECTOR_SEEDED: Shard[] = (() => {
     // middle ring: lifted toward the camera, tips land mid-frame
     { n: 11, z: -1.4, tilt: [0.4, 0.7], len: [0.7, 1.0], r0: [0.0, 0.15], w: 1.35 },
     // front ring: short, steep shards pointing at the camera around the heart
-    { n: 8, z: -0.7, tilt: [0.55, 0.85], len: [0.6, 0.72], r0: [0.05, 0.3], w: 0.85 },
+    { n: 8, z: -0.7, tilt: [0.95, 1.2], len: [0.6, 0.72], r0: [0.0, 0.08], w: 0.38 },
   ];
   const out: Shard[] = [];
   // frame half-width at the ring's depth (camera at z = 4, fov 60, 16:9)
@@ -137,7 +137,7 @@ const makeEnvTexture = (p: CrystalBurstProps) => {
   const main = p.strips.map((s) => new THREE.Color(s));
   const acc = p.accents.map((s) => new THREE.Color(s));
   for (let i = 0; i < 56; i++) {
-    const isAcc = i % 9 === 8;
+    const isAcc = i % 6 === 5;
     const pool = isAcc ? acc : main;
     const c = !isAcc && rng() < 0.4 ? main[0] : pool[Math.floor(rng() * pool.length) % pool.length];
     strips.push({
@@ -156,7 +156,7 @@ const makeEnvTexture = (p: CrystalBurstProps) => {
       const az = ((x + 0.5) / W) * TAU;
       // base: deep → base with soft large-scale variation
       const t = 0.5 + 0.5 * Math.sin(az * 2 + 0.7) * Math.cos(el * 1.5);
-      const col = deep.clone().lerp(base, 0.15 + 0.6 * t * t).multiplyScalar(0.7);
+      const col = deep.clone().lerp(base, 0.1 + 0.6 * t * t).multiplyScalar(0.55);
       // broad soft light around one hemisphere (a big studio softbox)
       const soft = Math.max(0, Math.cos(az - 1.2) * Math.cos(el - 0.3));
       col.add(base.clone().lerp(new THREE.Color(1, 1, 1), 0.5).multiplyScalar(0.55 * Math.pow(soft, 4)));
