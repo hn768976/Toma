@@ -36,7 +36,7 @@ type Shard = {
 
 // Seeded within one 30° sector, then replicated 12 times: rotating the burst
 // by exactly one sector maps the set onto itself.
-const SECTOR: Shard[] = (() => {
+const SECTOR_SEEDED: Shard[] = (() => {
   const rng = mulberry32(0xc7a57a1);
   const rings = [
     // deep ring: long shards lying almost in the image plane (reach the edges)
@@ -68,6 +68,10 @@ const SECTOR: Shard[] = (() => {
   });
   return out;
 })();
+
+// Draw order front ring → deep ring, so the depth test rejects hidden layers
+// early (same image, far less shading work).
+const SECTOR: Shard[] = [...SECTOR_SEEDED].reverse();
 
 // Elongated faceted bipyramid along +X: inner tip at 0, widest at 0.22, sharp
 // outer tip at 1. Hexagonal cross-section; flat shading via non-indexed normals.
@@ -261,8 +265,6 @@ const Scene: React.FC<CrystalBurstProps> = (p) => {
       iridescenceThicknessMap: makeThicknessMap(),
       envMap: envRT.texture,
       envMapIntensity: 1.0,
-      clearcoat: 0.25,
-      clearcoatRoughness: 0.04,
       flatShading: false,
     });
     // Fake dispersion: sample the environment with slightly split R/G/B

@@ -2,12 +2,14 @@
 # Renders all 8 previews at 720p and logs wall time per composition.
 cd "$(dirname "$0")/.."
 LOG=out/log/render_times.tsv
-echo -e "composition\tframes\tseconds\tsec_per_frame" > $LOG
+[ -f $LOG ] || echo -e "composition\tframes\tseconds\tsec_per_frame" > $LOG
+ONLY="$*"
 for pair in SerumCapsule-SilverBlue:SerumCapsule_SilverBlue:300 SerumCapsule-Gold:SerumCapsule_Gold:300 \
   CrystalBurst-IceBlue:CrystalBurst_IceBlue:600 CrystalBurst-AmethystRose:CrystalBurst_AmethystRose:600 \
   DigitSwirl-Teal:DigitSwirl_Teal:600 RibbedDunes-White:RibbedDunes_White:600 \
   RibbedDunes-Graphite:RibbedDunes_Graphite:600 CubeCluster-Blue:CubeCluster_Blue:600; do
   IFS=: read id name n <<< "$pair"
+  if [ -n "$ONLY" ] && ! echo " $ONLY " | grep -q " $id "; then continue; fi
   rm -rf out/frames/$id
   s=$(date +%s.%N)
   scripts/render-preview.sh $id $name
