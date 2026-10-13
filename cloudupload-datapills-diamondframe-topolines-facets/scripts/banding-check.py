@@ -24,7 +24,8 @@ def lum(p):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 out = {}
-for cid, lines in LINES.items():
+sel = sys.argv[1:] or list(LINES)
+for cid, lines in [(c, LINES[c]) for c in sel]:
     mp4 = f"out/previews/{cid.replace('-', '_')}.mp4"
     png = f"out/checks/{cid}_mp4_f300.png"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", mp4, "-vf", "select=eq(n\\,300)", "-frames:v", "1", png], check=True)
