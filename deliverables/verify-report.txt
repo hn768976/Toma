@@ -1,0 +1,48 @@
+== TriangleRelief-BlackGold
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 left wall, vertical: range 0.3-45.3, max row-to-row step 26.50, longest flat run 14px | 26.0 26.2 26.8 25.0 27.0 33.8 18.0 13.6 14.8 38.5 15.8 11.5
+step4 dark top band, horizontal: range 10.5-48.2, max row-to-row step 4.97, longest flat run 10px | 26.9 26.6 34.5 19.5 21.9 32.9 37.9 37.8 33.6 32.0 38.7 37.4 45.1
+== TriangleRelief-NavySilver
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 left wall, vertical: range 0.4-48.0, max row-to-row step 27.01, longest flat run 12px | 28.4 32.6 31.8 30.5 32.1 37.9 22.2 20.1 21.3 40.9 21.4 18.4
+step4 dark top band, horizontal: range 12.7-51.5, max row-to-row step 5.47, longest flat run 19px | 32.3 32.9 38.6 24.9 26.6 35.4 44.1 43.5 40.9 37.3 46.0 44.9 49.8
+== IsoCloudChip-BlueViolet
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 board gradient, vertical: range 17.7-132.8, max row-to-row step 11.17, longest flat run 2px | 18.4 19.0 19.6 30.8 39.9 47.8 52.3 57.1 58.9 62.4 74.7 64.6
+step4 board, horizontal: range 62.9-96.2, max row-to-row step 3.55, longest flat run 4px | 63.7 67.3 93.4 64.3 67.3 72.9 73.5 86.2 77.4 79.9 79.4 79.1 79.7
+== AIBrainChip-GoldBlue
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 background haze, vertical: range 10.3-105.4, max row-to-row step 26.97, longest flat run 3px | 37.0 40.4 56.9 32.7 23.6 42.4 21.0 21.9 15.7 68.0 17.2 12.1
+step4 top haze, horizontal: range 36.7-61.8, max row-to-row step 2.12, longest flat run 4px | 38.8 38.5 39.3 45.7 54.2 57.5 61.1 60.2 58.1 54.6 47.4 43.1 40.4
+== AIBrainChip-CyanViolet
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 background haze, vertical: range 7.8-95.0, max row-to-row step 22.78, longest flat run 2px | 27.1 32.1 48.4 27.4 19.8 33.8 17.3 17.6 11.3 61.3 14.8 9.7
+step4 top haze, horizontal: range 26.9-55.0, max row-to-row step 2.06, longest flat run 3px | 29.1 29.0 29.6 35.3 45.1 49.4 54.1 53.6 50.2 45.2 37.4 33.0 31.0
+== CircuitHorizon-Blue
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 sky to horizon glow, vertical: range 0.4-174.2, max row-to-row step 35.17, longest flat run 16px | 0.4 0.9 1.0 2.2 4.2 9.7 19.4 35.3 60.4 129.3 56.7 37.4 37.3
+step4 horizon glow, horizontal: range 62.8-190.8, max row-to-row step 2.00, longest flat run 3px | 63.9 72.8 101.3 123.3 145.3 179.7 178.1 177.4 140.9 126.6 100.2 73.7 76.0
+== NeonPodium-BlueMagenta
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 sky, vertical: range 7.5-29.6, max row-to-row step 1.31, longest flat run 2px | 7.5 8.9 8.0 8.2 9.2 9.5 10.2 11.9 12.7 14.2 16.6 19.5 23.6
+step4 floor, vertical: range 29.3-35.7, max row-to-row step 1.72, longest flat run 2px | 30.7 30.7 32.2 31.0 29.8 30.3 35.6 32.7 31.8 30.3 32.3 30.8
+== NeonPodium-OrangeTeal
+step1: codec_name=h264 codec_type=video width=1280 height=720 pix_fmt=yuv420p r_frame_rate=30/1 duration=20.000000  audio_streams=0
+step2 loop 0 vs 600: IDENTICAL pixel for pixel
+step3: frame 300 cold == full render: BYTE-IDENTICAL
+step4 sky, vertical: range 14.7-44.1, max row-to-row step 1.69, longest flat run 2px | 14.8 16.9 16.7 16.7 17.2 18.6 19.3 21.2 22.9 24.3 28.1 32.0 38.1
+step4 floor, vertical: range 53.1-62.5, max row-to-row step 2.06, longest flat run 2px | 55.6 54.8 55.8 55.2 53.2 55.6 61.7 57.5 56.0 54.4 57.3 55.6
