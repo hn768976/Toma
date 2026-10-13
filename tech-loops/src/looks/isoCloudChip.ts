@@ -17,7 +17,7 @@ export interface IsoCloudChipParams {
 // World: board is the y = 0 plane, chip centred at the origin.
 // On screen, +z runs toward the lower left, -x toward the upper left.
 const CHIP = 4.0;
-const CHIP_H = 0.75;
+const CHIP_H = 0.95;
 
 // ---------------------------------------------------------------------------
 // Seeded layout (module level).
@@ -31,13 +31,13 @@ for (let i = 0; i < 600; i++) {
   const dir: 0 | 1 = rng() < 0.62 ? 0 : 1;
   DASHES.push({
     lane: i,
-    x: range(rng, -24, 24),
-    z: range(rng, -24, 24),
+    x: range(rng, -28, 28),
+    z: range(rng, -28, 28),
     len: range(rng, 0.35, 0.9),
     k: 1 + Math.floor(rng() * 3),
     phase: rng(),
     dir,
-    bright: 0.1 + 1.5 * rng() * rng() * rng(),
+    bright: 0.9 + 0.8 * rng(),
   });
 }
 
@@ -53,7 +53,7 @@ const DOTS: Dot[] = [];
       // Screen-right-and-up corresponds to -z / +x... keep a band behind the chip.
       const u = -z * 0.7 + x * 0.3;
       if (u < 3.5 || u > 11 || Math.abs(x + z) > 12) continue;
-      if (rng() < 0.9) continue;
+      if (rng() < 0.6) continue;
       DOTS.push({ x, z, r: range(rng, 0.06, 0.12), k: rng() < 0.5 ? 1 + Math.floor(rng() * 3) : 0, phase: rng() });
     }
   }
@@ -80,7 +80,7 @@ for (let i = 0; i < 90; i++) {
   PADS.push([x, y, range(rng, 3, 7)]);
 }
 const SPARKS: [number, number, number][] = [];
-for (let i = 0; i < 900; i++) SPARKS.push([rng(), rng(), rng() * rng()]);
+for (let i = 0; i < 1600; i++) SPARKS.push([rng(), rng(), rng() * rng()]);
 const CODE_ROWS: number[][] = [];
 for (let r = 0; r < 26; r++) {
   const row: number[] = [];
@@ -108,7 +108,7 @@ const makeCircuitTexture = () => {
   g.lineCap = "round";
   g.lineJoin = "round";
   for (const t of TRACES) {
-    g.globalAlpha = 0.55;
+    g.globalAlpha = 0.3;
     g.lineWidth = t.w;
     g.beginPath();
     t.pts.forEach(([x, y], i) => (i ? g.lineTo(x * S, y * S) : g.moveTo(x * S, y * S)));
@@ -121,8 +121,9 @@ const makeCircuitTexture = () => {
     g.arc(x * S, y * S, r, 0, TAU);
     g.fill();
   }
+  g.globalAlpha = 0.3;
   for (const [x, y, r] of SPARKS) {
-    g.globalAlpha = 0.5 + 0.5 * r;
+    g.globalAlpha = 0.6 + 0.4 * r;
     g.beginPath();
     g.arc(x * S, y * S, 1.2 + 2 * r, 0, TAU);
     g.fill();
@@ -136,7 +137,7 @@ const makeCircuitTexture = () => {
   g.shadowColor = "#fff";
   g.shadowBlur = 18;
   g.beginPath();
-  cloudShape(CHIP * 0.5)
+  cloudShape(CHIP * 0.62)
     .getPoints(48)
     .forEach((pt, i) => {
       const x0 = pt.x;
@@ -301,10 +302,10 @@ void main() {
   float circ = texture(tCircuit, uv).r;
   float inner = smoothstep(0.0, -0.4, d);
   float glow = exp(-length(p) * 0.55) * (0.6 + 0.4 * uPulse);
-  vec3 col = mix(uViolet * 0.05, uBlue * 0.18 + uCyan * 0.03, inner);
-  col += uCyan * circ * inner * (0.6 + 1.6 * glow) * smoothstep(-0.32, -0.45, d);
+  vec3 col = mix(uViolet * 0.08, uBlue * 0.12 + uCyan * 0.01, inner);
+  col += uCyan * circ * inner * (0.8 + 2.2 * glow) * smoothstep(-0.32, -0.45, d);
   col += mix(uBlue, uCyan, 0.4) * glow * 0.12 * inner;
-  col += uCyan * (frame * 3.0 + frame2 * 1.6);
+  col += uCyan * (frame * 1.8 + frame2 * 1.4);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -352,7 +353,7 @@ void main() {
   float f = smoothstep(1.15, 0.1, sc.y) - 0.3 * (1.0 - sc.x) * smoothstep(0.45, 1.0, sc.y);
   f = clamp(f, 0.0, 1.0);
   vec3 deep = mix(uA, uB, 0.4) * 0.16;
-  vec3 bright = mix(uA, uCyan, 0.14) * 0.6;
+  vec3 bright = uA * 0.5 + uCyan * 0.1;
   vec3 col = mix(deep, bright, f);
   col += uA * 0.12 * smoothstep(0.3, 1.0, sc.x);
   // Violet glow just left of the chip.
@@ -368,7 +369,7 @@ void main() {
   vec2 hc = fract(h) - 0.5;
   float hex = 1.0 - smoothstep(0.32, 0.4, length(hc));
   float hm = smoothstep(2.0, 6.0, -p.y * 0.7 + p.x * 0.3) * (1.0 - smoothstep(10.0, 14.0, -p.y * 0.7 + p.x * 0.3));
-  col += uCyan * 0.025 * hex * hm;
+  col += uCyan * 0.06 * hex * hm;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -404,7 +405,7 @@ void main() {
     a = (1.0 - smoothstep(0.6, 1.0, abs(vQ.y))) * along * along * (1.0 - smoothstep(0.92, 1.0, along));
   } else {
     // Round dot.
-    a = 1.0 - smoothstep(0.7, 1.0, length(vQ));
+    a = 1.0 - smoothstep(0.8, 1.0, length(vQ)) + 0.25 * exp(-length(vQ) * 2.0);
   }
   gl_FragColor = vec4(uColor * vI * a, 1.0);
 }
@@ -424,8 +425,8 @@ void main() {
   float ph = uPhase[i];
   // A bright pulse running toward the chip, over a dimmer steady line.
   float dp = along - ph;
-  float pulse = exp(-dp * dp * 260.0) * 3.0 + exp(-max(-dp, 0.0) * 9.0) * step(dp, 0.0) * 0.6;
-  float fade = smoothstep(0.0, 0.25, along) * (1.0 - smoothstep(0.96, 1.0, along));
+  float pulse = exp(-dp * dp * 400.0) * 1.2 + exp(-max(-dp, 0.0) * 9.0) * step(dp, 0.0) * 0.3;
+  float fade = 1.0 - smoothstep(0.96, 1.0, along);
   gl_FragColor = vec4(uColor * core * vI * fade * (0.35 + pulse), 1.0);
 }
 `;
@@ -502,7 +503,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
   const ringOuter = chamferShape(CHIP + 0.18, CHIP * 0.1);
   ringOuter.holes.push(chamferShape(CHIP + 0.06, CHIP * 0.09) as unknown as THREE.Path);
   add(slab(ringOuter, 0.025, 0), emit(cyan, 2.2));
-  const pinMat = emit(cyan, 0.45);
+  const pinMat = emit(cyan, 0.2);
   const pinGeo = new THREE.BoxGeometry(0.07, 0.03, 0.2);
   for (let s = 0; s < 4; s++) {
     for (let i = 0; i < 14; i++) {
@@ -529,18 +530,18 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
   // Raised glass layer.
   add(slab(chamferShape(CHIP * 0.84, CHIP * 0.07), 0.12, 0.02), glass(cyan, 0.3, 0.0), 0, CHIP_H, 0);
   // Cloud, standing up on the glass and facing the camera's diagonal.
-  const cloudG = new THREE.ExtrudeGeometry(cloudShape(CHIP * 0.5), { depth: 0.22, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3, curveSegments: 32 });
+  const cloudG = new THREE.ExtrudeGeometry(cloudShape(CHIP * 0.62), { depth: 0.3, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3, curveSegments: 32 });
   cloudG.rotateX(-Math.PI / 2);
   cloudG.translate(0, CHIP_H + 0.14, 0);
-  const cloud = add(cloudG, glass(cyan, 0.9, 0.02), 0, 0, 0, Math.PI / 4);
+  const cloud = add(cloudG, glass(cA.clone().lerp(cyan, 0.55), 1.3, 0.1), 0, 0, 0, Math.PI / 4);
   cloud.position.set(0.1, 0, -0.1);
   // A bright outline under the cloud (its footprint glows on the glass).
-  const cloudLine = new THREE.ShapeGeometry(cloudShape(CHIP * 0.53), 32);
+  const cloudLine = new THREE.ShapeGeometry(cloudShape(CHIP * 0.65), 32);
   cloudLine.rotateX(-Math.PI / 2);
   add(cloudLine, glass(cyan, 0.5, 0.25), 0.1, CHIP_H + 0.13, -0.1, Math.PI / 4);
 
   // Satellites.
-  const padMat = emit(cyan, 0.6);
+  const padMat = emit(cyan, 1.5);
   const padShape = (s: number) => {
     const o = chamferShape(s, s * 0.08);
     o.holes.push(chamferShape(s - 0.07, s * 0.08) as unknown as THREE.Path);
@@ -552,7 +553,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
   for (const [x, z] of servers) {
     add(slab(padShape(1.5), 0.02, 0), padMat, x, 0, z);
     add(slab(chamferShape(1.25, 0.1), 0.25, 0.03), bodyMat, x, 0, z);
-    add(new THREE.BoxGeometry(0.62, 0.18, 0.62), serverCore, x, 0.38, z);
+    add(new THREE.BoxGeometry(0.8, 0.36, 0.8), serverCore, x, 0.48, z);
     add(new THREE.BoxGeometry(0.9, 0.75, 0.9), serverGlass, x, 0.63, z);
   }
   const codeTex = keep(makeCodeTexture());
@@ -560,14 +561,14 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     shaderMat({
       vertexShader: /* glsl */ `out vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0); }`,
       fragmentShader: /* glsl */ `precision highp float; in vec2 vUv; uniform sampler2D tCode; uniform vec3 uScreen; uniform vec3 uCyan;
-        void main(){ float c = texture(tCode, vUv).r; vec3 col = vec3(0.004, 0.008, 0.014) + uScreen * c * 1.4 + uCyan * 0.015;
+        void main(){ float c = texture(tCode, vUv).r; vec3 col = vec3(0.004, 0.008, 0.014) + uScreen * c * 0.8 + uCyan * 0.01;
           float e = max(abs(vUv.x - 0.5), abs(vUv.y - 0.5)); col += uCyan * smoothstep(0.46, 0.5, e) * 1.2; gl_FragColor = vec4(col, 1.0); }`,
       uniforms: { tCode: { value: codeTex }, uScreen: { value: screen }, uCyan: { value: cyan } },
       side: THREE.DoubleSide,
     }),
   );
   // Phones: three tall cards toward the upper right (-z).
-  const phones: [number, number][] = [[-0.4, -4.0], [1.2, -4.2], [2.8, -4.4]];
+  const phones: [number, number][] = [[-0.6, -3.7], [0.9, -3.9], [2.4, -4.1]];
   for (const [x, z] of phones) {
     add(slab(padShape(1.0), 0.02, 0), padMat, x, 0, z);
     add(new THREE.BoxGeometry(0.5, 1.0, 0.07), bodyMat, x, 0.52, z, Math.PI / 4);
@@ -577,7 +578,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     sc.translateZ(0.04);
   }
   // Laptops: base + open screen, toward the lower right (+x).
-  const laptops: [number, number][] = [[4.1, -2.2], [4.4, -0.3], [4.7, 1.6]];
+  const laptops: [number, number][] = [[3.7, -2.0], [4.0, -0.2], [4.3, 1.6]];
   for (const [x, z] of laptops) {
     add(slab(padShape(1.5), 0.02, 0), padMat, x, 0, z);
     const g = new THREE.Group();
@@ -590,7 +591,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     g.add(base);
     const lid = new THREE.Group();
     lid.position.set(0, 0.08, -0.27);
-    lid.rotation.x = -0.32;
+    lid.rotation.x = -0.5;
     g.add(lid);
     const lb = new THREE.Mesh(keep(new THREE.BoxGeometry(1.1, 0.75, 0.04)), bodyMat);
     lb.position.set(0, 0.375, 0);
@@ -677,7 +678,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     shaderMat({
       vertexShader: QUAD_VERT,
       fragmentShader: /* glsl */ `precision highp float; in vec2 vQ; in float vI; in float vKind; uniform vec3 uColor;
-        void main(){ float a = 1.0 - smoothstep(0.5, 1.0, abs(vQ.y)); gl_FragColor = vec4(uColor * a * 1.6, 1.0); }`,
+        void main(){ float a = 1.0 - smoothstep(0.5, 1.0, abs(vQ.y)); gl_FragColor = vec4(uColor * a * 2.5, 1.0); }`,
       uniforms: { uColor: { value: cyan }, uY: { value: 0.012 } },
       blending: THREE.AdditiveBlending,
       transparent: true,
@@ -691,8 +692,8 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
 
   // Long light lines streaking in from the lower left (+z) toward the chip.
   const LL: { x: number; k: number; off: number }[] = [
-    { x: -0.9, k: 2, off: 0.0 },
-    { x: 0.35, k: 3, off: 0.45 },
+    { x: 0.9, k: 2, off: 0.0 },
+    { x: 1.9, k: 3, off: 0.45 },
   ];
   const llGeo = keep(new THREE.InstancedBufferGeometry());
   llGeo.setAttribute("position", quadGeo.getAttribute("position"));
@@ -700,9 +701,9 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
   const lB = new Float32Array(LL.length * 4);
   LL.forEach((l, i) => {
     const z0 = CHIP / 2 + 0.3;
-    const z1 = 24;
-    lA.set([l.x, (z0 + z1) / 2, z1 - z0, 0.13], i * 4);
-    lB.set([0, -1, 1.7, i], i * 4);
+    const z1 = 40;
+    lA.set([l.x, (z0 + z1) / 2, z1 - z0, 0.08], i * 4);
+    lB.set([0, -1, 1.8, i], i * 4);
   });
   llGeo.setAttribute("aA", new THREE.InstancedBufferAttribute(lA, 4));
   llGeo.setAttribute("aB", new THREE.InstancedBufferAttribute(lB, 4));
@@ -712,7 +713,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     shaderMat({
       vertexShader: QUAD_VERT,
       fragmentShader: LINE_FRAG,
-      uniforms: { uColor: { value: cyan.clone().lerp(new THREE.Color(1, 1, 1), 0.2) }, uY: { value: 0.02 }, uPhase: { value: llPhase } },
+      uniforms: { uColor: { value: cyan.clone() }, uY: { value: 0.02 }, uPhase: { value: llPhase } },
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
@@ -725,7 +726,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
 
   /** Per-frame positions of dashes and dot twinkle, from the frame number only. */
   const layoutQuads = (frame: number) => {
-    const SPAN = 48;
+    const SPAN = 56;
     DASHES.forEach((d, i) => {
       const u = (cyc(frame, d.k) + d.phase) % 1;
       // Travel along the lane toward the chip, wrapping over SPAN (whole cycles per loop).
@@ -734,10 +735,10 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
       let dx = 0;
       let dz = 0;
       if (d.dir === 0) {
-        z = 24 - u * SPAN;
+        z = 28 - u * SPAN;
         dz = -1;
       } else {
-        x = -24 + u * SPAN;
+        x = -28 + u * SPAN;
         dx = 1;
       }
       const edge = Math.min(1, Math.min(u, 1 - u) * 8); // fade at the wrap ends
@@ -749,7 +750,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
       const i = DASHES.length + j;
       const tw = d.k ? 0.45 + 0.55 * (0.5 + 0.5 * Math.cos(TAU * (cyc(frame, d.k) + d.phase))) : 0.7;
       aA.set([d.x, d.z, d.r * 2, d.r * 2], i * 4);
-      aB.set([1, 0, tw * 0.9, 1], i * 4);
+      aB.set([1, 0, tw * 1.6, 1], i * 4);
     });
     NODES.forEach(([x, z], j) => {
       const i = DASHES.length + DOTS.length + j;
