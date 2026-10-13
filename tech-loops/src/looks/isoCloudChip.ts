@@ -54,7 +54,7 @@ const DOTS: Dot[] = [];
       const u = -z * 0.7 + x * 0.3;
       if (u < 3.5 || u > 11 || Math.abs(x + z) > 12) continue;
       if (rng() < 0.6) continue;
-      DOTS.push({ x, z, r: range(rng, 0.06, 0.12), k: rng() < 0.5 ? 1 + Math.floor(rng() * 3) : 0, phase: rng() });
+      DOTS.push({ x, z, r: range(rng, 0.035, 0.06), k: rng() < 0.5 ? 1 + Math.floor(rng() * 3) : 0, phase: rng() });
     }
   }
   // Scattered dots elsewhere.
@@ -353,7 +353,7 @@ void main() {
   float f = smoothstep(1.15, 0.1, sc.y) - 0.3 * (1.0 - sc.x) * smoothstep(0.45, 1.0, sc.y);
   f = clamp(f, 0.0, 1.0);
   vec3 deep = mix(uA, uB, 0.4) * 0.16;
-  vec3 bright = uA * 0.5 + uCyan * 0.1;
+  vec3 bright = uA * 0.58 + uCyan * 0.06;
   vec3 col = mix(deep, bright, f);
   col += uA * 0.12 * smoothstep(0.3, 1.0, sc.x);
   // Violet glow just left of the chip.
@@ -405,7 +405,7 @@ void main() {
     a = (1.0 - smoothstep(0.6, 1.0, abs(vQ.y))) * along * along * (1.0 - smoothstep(0.92, 1.0, along));
   } else {
     // Round dot.
-    a = 1.0 - smoothstep(0.8, 1.0, length(vQ)) + 0.25 * exp(-length(vQ) * 2.0);
+    a = 1.0 - smoothstep(0.75, 0.95, length(vQ));
   }
   gl_FragColor = vec4(uColor * vI * a, 1.0);
 }
@@ -434,15 +434,16 @@ void main() {
 export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params): Look => {
   const post = new Post(gl, {
     msaa: 4,
-    bloomStrength: 1.0,
-    bloomRadius: 0.75,
+    bloomStrength: 0.6,
+    bloomRadius: 0.5,
     bloomThreshold: 0.8,
     bloomKnee: 0.6,
     exposure: 1.0,
     vignette: 0.35,
     grain: 0.015,
     grainDarkCut: 0,
-    cornerBlur: 1.0,
+    cornerBlur: 0.6,
+    whiten: 0.04,
   });
   const cA = new THREE.Color(params.boardA);
   const cB = new THREE.Color(params.boardB);
@@ -502,8 +503,9 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
   add(slab(chamferShape(CHIP, CHIP * 0.08), CHIP_H, 0.06), bodyMat);
   const ringOuter = chamferShape(CHIP + 0.18, CHIP * 0.1);
   ringOuter.holes.push(chamferShape(CHIP + 0.06, CHIP * 0.09) as unknown as THREE.Path);
-  add(slab(ringOuter, 0.025, 0), emit(cyan, 2.2));
-  const pinMat = emit(cyan, 0.2);
+  add(slab(ringOuter, 0.025, 0), emit(cyan, 3.0));
+  const pinMat = solid(body, 0.6);
+  const icPinMat = emit(cyan, 1.2);
   const pinGeo = new THREE.BoxGeometry(0.07, 0.03, 0.2);
   for (let s = 0; s < 4; s++) {
     for (let i = 0; i < 14; i++) {
@@ -533,7 +535,7 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
   const cloudG = new THREE.ExtrudeGeometry(cloudShape(CHIP * 0.62), { depth: 0.3, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3, curveSegments: 32 });
   cloudG.rotateX(-Math.PI / 2);
   cloudG.translate(0, CHIP_H + 0.14, 0);
-  const cloud = add(cloudG, glass(cA.clone().lerp(cyan, 0.55), 1.3, 0.1), 0, 0, 0, Math.PI / 4);
+  const cloud = add(cloudG, glass(cA.clone().lerp(cyan, 0.4), 0.8, 0.04), 0, 0, 0, Math.PI / 4);
   cloud.position.set(0.1, 0, -0.1);
   // A bright outline under the cloud (its footprint glows on the glass).
   const cloudLine = new THREE.ShapeGeometry(cloudShape(CHIP * 0.65), 32);
@@ -547,13 +549,13 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     o.holes.push(chamferShape(s - 0.07, s * 0.08) as unknown as THREE.Path);
     return o;
   };
-  const serverGlass = glass(cyan, 0.7, 0.18);
-  const serverCore = glass(cyan, 0.8, 0.6);
+  const serverGlass = glass(cyan, 0.6, 0.03);
+  const serverCore = glass(cyan, 0.6, 0.45);
   const servers: [number, number][] = [[-4.0, 1.5], [-4.2, -0.4], [-4.4, -2.3]];
   for (const [x, z] of servers) {
     add(slab(padShape(1.5), 0.02, 0), padMat, x, 0, z);
     add(slab(chamferShape(1.25, 0.1), 0.25, 0.03), bodyMat, x, 0, z);
-    add(new THREE.BoxGeometry(0.8, 0.36, 0.8), serverCore, x, 0.48, z);
+    add(new THREE.BoxGeometry(0.82, 0.24, 0.82), serverCore, x, 0.4, z);
     add(new THREE.BoxGeometry(0.9, 0.75, 0.9), serverGlass, x, 0.63, z);
   }
   const codeTex = keep(makeCodeTexture());
@@ -586,9 +588,12 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     g.rotation.y = Math.PI / 4;
     g.scale.setScalar(0.8);
     scene.add(g);
-    const base = new THREE.Mesh(keep(new THREE.BoxGeometry(1.1, 0.06, 0.75)), bodyMat);
-    base.position.set(0, 0.05, 0.1);
+    const base = new THREE.Mesh(keep(new THREE.BoxGeometry(1.1, 0.07, 0.8)), bodyMat);
+    base.position.set(0, 0.05, 0.15);
     g.add(base);
+    const keys = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.95, 0.55).rotateX(-Math.PI / 2)), screenMat);
+    keys.position.set(0, 0.088, 0.18);
+    g.add(keys);
     const lid = new THREE.Group();
     lid.position.set(0, 0.08, -0.27);
     lid.rotation.x = -0.5;
@@ -608,8 +613,8 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
     for (let k = 0; k < 4; k++) {
       const a = (k * Math.PI) / 2;
       for (let i = -2; i <= 2; i++) {
-        const m = new THREE.Mesh(pinGeo, pinMat);
-        m.scale.set(0.5, 1, 0.4);
+        const m = new THREE.Mesh(pinGeo, icPinMat);
+        m.scale.set(0.6, 1, 0.5);
         m.position.set(x + Math.cos(a) * (s / 2 + 0.06) - Math.sin(a) * i * s * 0.17, 0.02, z + Math.sin(a) * (s / 2 + 0.06) + Math.cos(a) * i * s * 0.17);
         m.rotation.y = -a + Math.PI / 2;
         scene.add(m);
@@ -778,10 +783,10 @@ export const createIsoCloudChip: LookFactory<IsoCloudChipParams> = (gl, params):
       camera.lookAt(target);
       const W = (ORTHO_H * 16) / 9;
       // Off-centre frustum: the chip sits right of and above the frame centre.
-      camera.left = -0.66 * W;
-      camera.right = 0.34 * W;
-      camera.top = 0.42 * ORTHO_H;
-      camera.bottom = -0.58 * ORTHO_H;
+      camera.left = -0.69 * W;
+      camera.right = 0.31 * W;
+      camera.top = 0.48 * ORTHO_H;
+      camera.bottom = -0.52 * ORTHO_H;
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
       camera.getWorldDirection(viewDir);
