@@ -25,7 +25,7 @@ uniform float tf;      // t / 600 in [0,1)
 uniform vec3 lineCol, glowCol, sparkCol;
 in vec2 vUv;
 
-const float LEVELS = 17.0;      // contour lines per unit of height
+const float LEVELS = 13.0;      // contour lines per unit of height
 const float R = 0.42;          // radius of the time circle in noise space
 
 float field(vec2 p) {
@@ -48,7 +48,7 @@ void main() {
   vec2 fp = p * 0.72 + vec2(0.31, -0.17);
 
   // gentle slope keeps contours flowing and evenly spread (fewer voids)
-  float h = field(fp) + dot(fp, vec2(0.32, 0.5)) * 0.55;
+  float h = field(fp) + dot(fp, vec2(0.25, 0.4)) * 0.2;
   float v = h * LEVELS;
   // screen-space gradient of the level value (value per real pixel)
   vec2 gv = vec2(dFdx(v), dFdy(v));
@@ -68,7 +68,7 @@ void main() {
   float halfW = (0.8 + 0.3 * min(bright, 1.8)) * pxScale;
   float core = clamp(halfW + 0.5 - dpx, 0.0, 1.0);
   // soft glow from a wider, fainter falloff (720p px)
-  float glow = exp(-d720 / 2.4) * 0.34 + exp(-d720 / 9.0) * 0.08;
+  float glow = exp(-d720 / 1.8) * 0.3 + exp(-d720 / 6.0) * 0.04 * min(bright, 1.5);
   // fade where the gradient collapses (peaks/saddles: width would blow up)
   float gfade = smoothstep(0.002, 0.012, g / pxScale);
 
@@ -76,7 +76,7 @@ void main() {
   // phase field: a second smooth noise; along a contour it varies, so
   // fract(phase - k*t) marks beads that slide along the line.
   float ph = snoise(vec3(fp * 0.9 + vec2(-4.0, 8.0), lvl * 0.37)) * 26.0
-           + dot(fp, vec2(2.1, -1.3)) * 22.0;
+           + dot(fp, vec2(2.1, -1.3)) * 12.0;
   vec2 gp = vec2(dFdx(ph), dFdy(ph));
   vec2 tang = vec2(-gv.y, gv.x) / g;
   float along = max(abs(dot(gp, tang)), 1e-4);      // phase per real px along line
@@ -88,9 +88,9 @@ void main() {
   // twinkle: smooth periodic, integer cycles per loop
   float tw = 0.5 + 0.5 * sin(TAU_ * (tf * floor(2.0 + r2 * 5.0) + r1));
   float beadAmp = mix(0.5, 1.1, r1) * (0.5 + 0.5 * tw);
-  float dot0 = exp(-(sPx * sPx + d720 * d720) / 1.4);
+  float dot0 = exp(-(sPx * sPx + d720 * d720) / 2.2);
   // a few bigger star glints: cross-shaped flare in line-local axes
-  float big = step(0.965, r1) * tw * tw;
+  float big = step(0.88, r1) * tw * tw;
   float star = big * (exp(-d720 / 0.9) * exp(-sPx * sPx / 30.0) + exp(-sPx / 0.9) * exp(-d720 * d720 / 30.0)) * 0.9
              + big * exp(-(sPx * sPx + d720 * d720) / 6.0) * 0.8;
   float spacing = 1.0 / along / pxScale;               // 720p px between beads

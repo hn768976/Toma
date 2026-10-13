@@ -18,7 +18,7 @@ export type FacetsParams = {
   background: string;
 };
 
-const T = 13; // tile period (world units)
+const T = 10; // tile period (world units)
 const GRID = 4; // seeds per tile side -> 16 stars per tile
 
 type V2 = [number, number];
@@ -101,7 +101,7 @@ const buildTile = (): Tri[] => {
       }
     });
     const r = mulberry32(0xfa0 + si * 7919);
-    const N = 13 + Math.floor(r() * 5); // ridges per star
+    const N = 16 + Math.floor(r() * 5); // ridges per star
     const th0 = r() * TAU;
     const H = s.h;
     const apex = new THREE.Vector3(s.p[0], s.p[1], H);
@@ -284,8 +284,8 @@ export const makeFacets =
         { dir: [0.75, -0.55, 0.7], roll: -0.6, length: 60, width: 10, color: params.strip, intensity: 22 },
         { dir: [-0.4, 0.5, 0.9], roll: 2.0, length: 50, width: 6, color: params.strip, intensity: 12 },
       ],
-      { top: "#2a3248", bottom: "#07090f", intensity: 2.0 },
-      0.1,
+      { top: "#34363c", bottom: "#0e0e12", intensity: 2.6 },
+      0.02,
     );
     scene.environmentIntensity = 1.0;
 

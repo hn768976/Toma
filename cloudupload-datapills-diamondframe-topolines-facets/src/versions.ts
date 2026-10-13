@@ -64,6 +64,6 @@ export const VERSIONS: Version[] = [
     id: "FacetedRelief-MidnightBlue",
     look: "facets",
     background: "#03050B",
-    params: { metal: "#141A2E", strip: "#D6E0FF", key: "#9FB4FF", background: "#03050B" },
+    params: { metal: "#141A2E", strip: "#F6F0E6", key: "#9FB4FF", background: "#03050B" },
   },
 ];
