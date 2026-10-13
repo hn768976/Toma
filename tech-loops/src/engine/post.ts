@@ -199,8 +199,12 @@ void main() {
   float gfade = grainDarkCut > 0.0 ? smoothstep(grainDarkCut * 0.5, grainDarkCut * 1.6, L) : 1.0;
   float g = hash1(uvec3(px, f)) + hash1(uvec3(px + 7919u, f + 613u)) - 1.0; // triangular, [-1,1]
   srgb += g * grain * gfade;
-  // +-1/255 triangular dither before 8-bit quantisation.
-  float d = hash1(uvec3(px + 104729u, f + 1291u)) + hash1(uvec3(px + 15485863u, f + 337u)) - 1.0;
+  // +-1/255 triangular dither before 8-bit quantisation, independent per channel so
+  // the chroma of dark gradients is dithered too (it survives yuv420p encoding better).
+  vec3 d = vec3(
+    hash1(uvec3(px + 104729u, f + 1291u)) + hash1(uvec3(px + 15485863u, f + 337u)),
+    hash1(uvec3(px + 7727u, f + 4099u)) + hash1(uvec3(px + 99991u, f + 811u)),
+    hash1(uvec3(px + 31337u, f + 2221u)) + hash1(uvec3(px + 65537u, f + 1777u))) - 1.0;
   srgb += d / 255.0;
   gl_FragColor = vec4(srgb, 1.0);
 }

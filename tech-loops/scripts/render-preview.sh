@@ -11,5 +11,5 @@ START=$(date +%s.%N)
 npx remotion render "$ID" "$FR" --sequence --image-format=png --scale=0.3333333333333333 --concurrency=4 > "out/timings/$ID.log" 2>&1
 END=$(date +%s.%N)
 echo "$ID wall=$(echo "$END - $START" | bc) frames=600" | tee -a out/timings/summary.txt
-ffmpeg -v error -y -framerate 30 -i "$FR/element-%03d.png" -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -r 30 -an -movflags +faststart "out/previews/$STEM.mp4" < /dev/null
+ffmpeg -v error -y -framerate 30 -i "$FR/element-%03d.png" -c:v libx264 -preset slow -crf 16 -x264-params aq-mode=3:aq-strength=1.4:deadzone-inter=0:deadzone-intra=0 -pix_fmt yuv420p -r 30 -an -movflags +faststart "out/previews/$STEM.mp4" < /dev/null
 cp "$FR/element-300.png" "out/stills/$STEM.png"
