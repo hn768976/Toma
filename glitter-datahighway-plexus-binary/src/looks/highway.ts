@@ -79,7 +79,8 @@ void main() {
   vLit = iB.x < 0.0 ? 0.0 : 1.0;
   vSide = abs(xx) / max(-zz, 0.05);
   vDist = length(view.xyz);
-  float bucket = floor(uFrame / iB.y);
+  // per-bar phase so flicker holds never all change on the same frame (still 600-periodic)
+  float bucket = floor(mod(uFrame + floor(iB.z * iB.y), ${LOOP.toFixed(1)}) / iB.y);
   float fl = mix(0.86, 1.0, h12(iB.z * 91.0, bucket));
   float k = (iB.x < 0.0 ? 1.0 : mix(0.6, 1.2, iB.x) * fl);
   vCap = vec4(iColor2.rgb * k, iColor2.w);

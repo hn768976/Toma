@@ -3,7 +3,8 @@
 #   scripts/render-preview.sh <CompositionId> <OutputBaseName> [bundleDir]
 # 1. Renders frames 0..600 (601-frame loop-check variant) as PNGs at 1280x720.
 # 2. Loop check: frame 0 and frame 600 must have identical decoded pixels.
-# 3. Encodes frames 0..599 to H.264 / yuv420p / CRF 16 / 30fps, no audio.
+# 3. Encodes frames 0..599 to H.264 / yuv420p / CRF 16 / 30fps, no audio
+#    (scripts/encode-preview.sh).
 # 4. Determinism: renders frame 300 alone from a cold start and compares it
 #    byte for byte (file and decoded pixels) with frame 300 of the sequence.
 set -euo pipefail
@@ -28,8 +29,7 @@ f300="$SEQ/element-$(printf "%0${pad}d" 300).png"
 md5px() { ffmpeg -v error -i "$1" -f framemd5 - | awk -F, '!/^#/ {gsub(/ /, "", $NF); print $NF}'; }
 loop="FAIL"; [ "$(md5px "$first")" = "$(md5px "$last")" ] && loop="PASS"
 # encode the 600-frame loop
-ffmpeg -v error -y -framerate 30 -start_number 0 -i "$SEQ/element-%0${pad}d.png" -frames:v 600 \
-  -c:v libx264 -pix_fmt yuv420p -crf 16 -preset slow -r 30 -an -movflags +faststart "out/previews/$NAME.mp4"
+"$(dirname "$0")/encode-preview.sh" "$SEQ" "out/previews/$NAME.mp4"
 cp "$f300" "out/stills/$NAME.png"
 # cold still of frame 300
 npx remotion still "$BUNDLE" "$COMP" "out/cold/$COMP-300.png" --frame=300 --props="{\"id\":\"$COMP\",\"loopCheck\":false}" \

@@ -7,5 +7,5 @@
 #   scripts/encode-preview.sh <png-seq-dir> <out.mp4>
 set -euo pipefail
 ffmpeg -v error -y -framerate 30 -start_number 0 -i "$1/element-%03d.png" -frames:v 600 \
-  -c:v libx264 -pix_fmt yuv420p -crf 16 -preset slow -x264-params aq-mode=3:aq-strength=1.2 \
+  -c:v libx264 -pix_fmt yuv420p -crf 16 -preset slow -x264-params aq-mode=3:aq-strength=1.6 \
   -r 30 -an -movflags +faststart "$2"

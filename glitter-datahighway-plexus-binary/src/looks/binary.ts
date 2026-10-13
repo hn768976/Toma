@@ -48,7 +48,8 @@ uint hashU(uint x) { x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca6
 void main() {
   float c = iCell.x, r = iCell.y;
   // glyph choice: mostly 0/1, ~10% S H T = +, re-picked on a seeded hold
-  float bucket = floor(uFrame / iMisc.y);
+  // per-glyph phase so swaps never all land on the same frame (still 600-periodic)
+  float bucket = floor(mod(uFrame + mod(iMisc.x, iMisc.y), ${LOOP.toFixed(1)}) / iMisc.y);
   uint h = hashU(uint(iMisc.x) * 747796405u + uint(bucket) * 2891336453u);
   float u01 = float(h & 0xffffu) / 65536.0;
   float g = u01 < 0.9 ? floor(u01 / 0.45) : 2.0 + floor((u01 - 0.9) / 0.1 * 5.0);
