@@ -99,7 +99,7 @@ EDGES.forEach((e, k) => {
 interface Step { edge: number; reversed: boolean }
 interface Tracer { period: number; offset: number; routes: Step[][]; speed: number }
 
-const SPILL = 0.34;
+const SPILL = 0.36;
 const rng = mulberry32(0x7a1e5eed);
 const N_TRACERS = 12;
 const PERIODS = [150, 200, 300, 300, 600];
@@ -113,7 +113,8 @@ const TRACERS: Tracer[] = [];
     for (let c = 0; c < cycles; c++) {
       for (let attempt = 0; attempt < 50; attempt++) {
         const j = Math.floor(J0 + 2 + rng() * (J1 - J0 - 4));
-        const xs = (rng() - 0.5) * FRAME_W * 0.95;
+        // Biased toward the right half, where the reference's lit mesh sits.
+        const xs = (0.62 * rng() - 0.18) * FRAME_W;
         const i = Math.round((xs + FRAME_W / 2 + SIDE) / SIDE - j * 0.5);
         const len = 4 + Math.floor(rng() * 7); // 4..10 edges
         let ci = i, cj = j;
@@ -150,8 +151,8 @@ const TRACERS: Tracer[] = [];
 // ---------------------------------------------------------------------------
 /** One bevelled triangular prism, point-up, centred on its centroid. */
 const buildTileGeometry = () => {
-  const gap = SIDE * 0.006;
-  const bevel = SIDE * 0.022;
+  const gap = SIDE * 0.012;
+  const bevel = SIDE * 0.03;
   const bevelDrop = SIDE * 0.02;
   const depth = SIDE * 0.4;
   const R = SIDE / Math.sqrt(3) - gap; // circumradius of the outer edge
@@ -242,7 +243,9 @@ void main() {
   float e = uSide * 0.5;
   vec2 grad = vec2(tileDepth(aInst.xy + vec2(e, 0.0), -1.0) - tileDepth(aInst.xy - vec2(e, 0.0), -1.0),
                    tileDepth(aInst.xy + vec2(0.0, e), -1.0) - tileDepth(aInst.xy - vec2(0.0, e), -1.0)) / (2.0 * e);
-  grad *= 2.4;
+  grad *= 12.0;
+  // Plus a small fixed tilt of its own, so neighbouring tiles read as separate panels.
+  grad += (vec2(hash31(vec3(aInst.w, 2.0, 5.0)), hash31(vec3(aInst.w, 8.0, 1.0))) - 0.5) * 0.14;
   float z = z0 + dot(grad, p.xy);
   n = normalize(vec3(n.xy - grad * n.z, n.z));
   // Neighbour across this face's edge: the edge midpoint direction (outward normal in xy).
@@ -289,12 +292,14 @@ void main() {
   // Satin: broad, weak specular lobe (roughness ~0.5).
   float spec = pow(max(dot(N, H), 0.0), 30.0) * 0.008 + pow(max(dot(N, H), 0.0), 5.0) * 0.0025;
   float bev = vPart > 0.5 && vPart < 1.5 ? 1.0 : 0.0;
-  float sheen = bev * (0.02 * diff * diff + 0.004 * pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 2.0));
+  float sheen = bev * (0.045 * diff * diff + 0.008 * pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 2.0));
   float ao = 1.0 - 0.8 * vAo;
   ao *= vPart > 1.5 ? 0.2 : 1.0; // sides sit in the seams
   vec3 base = uTile;
-  vec3 col = base * (0.35 + 1.6 * diff * fall) + uKey * (spec + sheen) * fall;
-  col *= ao * (1.0 + 0.45 * vDepth);
+  // Lighter toward the top of the frame, as with a soft key above.
+  float topLift = 0.75 + 0.6 * smoothstep(-uFrame.y, uFrame.y, vW.y);
+  vec3 col = (base * (0.45 + 1.9 * diff * fall) + uKey * (spec + sheen) * fall) * topLift;
+  col *= ao * (1.0 + 0.6 * vDepth);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -346,7 +351,9 @@ void main() {
   float sc = clamp(s, 0.0, 1.0);
   float inten = max(mix(vLit.x, vLit.y, sc) * m, mix(vSpill.x, vSpill.y, sc * sc * (3.0 - 2.0 * sc)));
   // Dim parts of a line run deeper and warmer; bright parts go pale.
-  vec3 tint = pow(uLine, vec3(1.0 + 1.6 * (1.0 - clamp(inten, 0.0, 1.0))));
+  vec3 tint = pow(uLine, vec3(1.0 + 0.7 * (1.0 - clamp(inten, 0.0, 1.0))));
+  // Champagne rather than copper: pull the gold a little toward grey.
+  tint = mix(tint, vec3(dot(tint, vec3(0.2126, 0.7152, 0.0722))), 0.3);
   vec3 c = tint * inten * (core * 3.0 + halo);
   gl_FragColor = vec4(c, 1.0);
 }
@@ -355,7 +362,7 @@ void main() {
 export const createTriangleRelief: LookFactory<TriangleReliefParams> = (gl, params): Look => {
   const post = new Post(gl, {
     msaa: 4,
-    bloomStrength: 0.55,
+    bloomStrength: 0.35,
     bloomRadius: 0.55,
     bloomThreshold: 0.9,
     bloomKnee: 0.6,
@@ -448,7 +455,7 @@ export const createTriangleRelief: LookFactory<TriangleReliefParams> = (gl, para
       const fadeOut = 1 - Math.min(1, Math.max(0, (u - run) / Math.max(0.05, 0.92 - run)));
       const env = fadeIn * fadeOut * fadeOut;
       if (env <= 0) continue;
-      const bright = (x: number) => env * (0.3 + 1.3 * Math.exp(-(head - x) / 1.2));
+      const bright = (x: number) => env * (0.45 + 0.85 * Math.exp(-(head - x) / 1.5));
       for (let k = 0; k < n; k++) {
         if (head <= k) break;
         const to = Math.min(1, head - k);
