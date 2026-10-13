@@ -19,7 +19,7 @@ export const VERSIONS: VersionRow[] = [
   { id: "TriangleRelief-NavySilver", file: "TriangleRelief_NavySilver", look: "triangleRelief",
     params: { tile: "#0A1428", line: "#D8E4F8", keyTint: "#E0ECFF" } },
   { id: "IsoCloudChip-BlueViolet", file: "IsoCloudChip_BlueViolet", look: "isoCloudChip",
-    params: { boardA: "#2A3ADA", boardB: "#6A3AE8", cyan: "#5AF0FF", screen: "#4AFFA8", body: "#141A5A" } },
+    params: { boardA: "#2A3ADA", boardB: "#6A3AE8", cyan: "#5AF0FF", screen: "#4AFFA8", body: "#1E1C6E" } },
   { id: "AIBrainChip-GoldBlue", file: "AIBrainChip_GoldBlue", look: "aiBrainChip",
     params: { brain: "#FFB04A", city: "#3A8AFF", outer: "#BFD4FF", bg: "#0A1E66" } },
   { id: "AIBrainChip-CyanViolet", file: "AIBrainChip_CyanViolet", look: "aiBrainChip",
