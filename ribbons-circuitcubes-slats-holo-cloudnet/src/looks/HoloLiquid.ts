@@ -123,7 +123,7 @@ void main() {
   const float E = 0.03;
   vec2 gr = vec2(field(p + vec2(E, 0.0)) - field(p - vec2(E, 0.0)), field(p + vec2(0.0, E)) - field(p - vec2(0.0, E))) / (2.0 * E);
   float gm = length(gr);
-  n *= pow(uGRef / max(gm, 0.3 * uGRef), uEven);
+  n *= pow(uGRef / max(gm, 0.55 * uGRef), uEven);
   // ridged contour transform: rounded crests, narrow smoothed valleys
   float s = sin(3.14159265 * n * uStripes);
   const float e = 0.12;
@@ -181,7 +181,7 @@ void main() {
   // continuous in R (no atan seam)
   // crests (untilted) reflect the bright bands, flanks the cooler ones
   // holographic environment: horizontal bands picked by the reflection direction
-  vec3 env = bandColor(0.22 + 0.85 * R.y + 0.3 * R.x);
+  vec3 env = bandColor(0.3 + 0.85 * R.y + 0.3 * R.x);
   // chrome: part of the reflection is neutral silver
   env = mix(env, vec3(dot(env, vec3(0.3, 0.5, 0.2))) * 1.05, 0.12);
   vec3 col = mix(env, uBase, smoothstep(0.8, 1.0, tilt) * 0.5);
@@ -201,7 +201,7 @@ void main() {
   // crest highlight: thin bright line along the top of every ridge
   col += uBands[4] * smoothstep(0.86, 1.0, h) * 0.15 * (1.0 - flat_);
   // deep valleys: fake AO from the height
-  float ao = mix(0.12, 1.0, smoothstep(0.0, 0.6, h));
+  float ao = mix(0.05, 1.0, smoothstep(0.0, 0.65, h));
   col *= ao;
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -227,7 +227,7 @@ export const createHoloLiquid: LookFactory<HoloParams> = (params) => {
       uRes: { value: new THREE.Vector2(1, 1) },
       uCircle: { value: new THREE.Vector2(1, 0) },
       uScale: { value: 0.55 },
-      uStripes: { value: 15.0 },
+      uStripes: { value: 9.0 },
       uWarp: { value: 2.4 },
       uWarpFreq: { value: 0.35 },
       uGRef: { value: 1.2 },
@@ -273,7 +273,7 @@ export const createHoloLiquid: LookFactory<HoloParams> = (params) => {
     },
     post: () => ({
       ...defaultPost(),
-      bloom: 0.35,
+      bloom: 0.5,
       bloomThreshold: 0.75,
       bloomRadius: 0.75,
       vignette: 0.4,

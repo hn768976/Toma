@@ -25,14 +25,16 @@ export const VERSIONS: Row<unknown>[] = [
   row<RibbonParams>("RibbonLayers-Blue", createRibbonLayers, {
     ribbon: "#1A4AF0",
     shadow: "#4A1AA8",
-    key: "#B0D4FF",
-    sheen: "#5AA8FF",
+    key: "#A0DCFF",
+    sheen: "#4AB8FF",
+    saturation: 1.1,
   }),
   row<RibbonParams>("RibbonLayers-Coral", createRibbonLayers, {
     ribbon: "#F07A5A",
     shadow: "#A83A5A",
     key: "#FFE2D2",
     sheen: "#FFC0A8",
+    saturation: 1.0,
   }),
   row<CircuitParams>("CircuitCubes-Blue", createCircuitCubes, {
     boardBase: "#0A1A4A",
@@ -41,7 +43,7 @@ export const VERSIONS: Row<unknown>[] = [
     cyan: "#5AE8FF",
     blue: "#3A8AFF",
     trace: "#5AC8FF",
-    core: "#C8F4FF",
+    core: "#8AF0FF",
   }),
   row<SlatParams>("SlatRibbon-GraphiteOrange", createSlatRibbon, {
     glow: "#FF8A3A",
@@ -66,7 +68,7 @@ export const VERSIONS: Row<unknown>[] = [
   row<CloudParams>(
     "CloudNetwork-Blue",
     createCloudNetwork,
-    { floor: "#0A1A4A", dots: "#3A6ACA", glow: "#2A7AFF", glass: "#5A9AFF", line: "#5AB8FF" },
+    { floor: "#0A1A4A", dots: "#3A6ACA", glow: "#2A7AFF", glass: "#3A7AE8", line: "#5AB8FF" },
     async () => ({ land: await loadLandMask() }),
   ),
 ];

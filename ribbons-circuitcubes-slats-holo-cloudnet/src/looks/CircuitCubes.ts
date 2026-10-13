@@ -21,7 +21,7 @@ export type CircuitParams = {
 
 // ---------- layout (module level, seeded once) ----------
 const rng = mulberry32(0xc1c0be);
-const CUBE = 0.2; // small cube edge
+const CUBE = 0.14; // small cube edge
 const PITCH = CUBE * 1.16;
 
 // The layout is placed in screen-aligned coordinates for the camera's ~30°
@@ -187,12 +187,12 @@ void main() {
   float dist = length(p - hazeDir.xz);
   float hazeAmt = exp(-dist * 0.24) * 3.6 + exp(-dist * 0.55) * 2.5;
   // the floor under the network (right of frame) falls off to deep navy
-  float netDark = smoothstep(-5.0, 2.0, p.x * 0.866 - p.y * 0.5);
+  float netDark = smoothstep(-5.0, 1.0, p.x * 0.866 - p.y * 0.5);
   hazeAmt *= 1.0 - 0.75 * netDark;
-  vec3 c = base * (0.9 + 0.2 * tv) * (1.0 - 0.3 * netDark) + haze * hazeAmt * (0.92 + 0.16 * tv);
+  vec3 c = base * (0.9 + 0.2 * tv) * (1.0 - 0.45 * netDark) + haze * hazeAmt * (0.92 + 0.16 * tv);
   // seams: dark grooves with a faint bevel highlight in the line colour
   c = mix(c, c * 0.35, g * 0.9);
-  c += line * hl * (0.5 + hazeAmt * 0.4);
+  c += line * hl * (0.5 + hazeAmt * 0.4) * (1.0 - 0.85 * netDark);
   // glow pooled around the core
   c += glow * exp(-dot(p, p) * 0.8) * 0.12;
   gl_FragColor = vec4(c, 1.0);
@@ -300,7 +300,7 @@ export const createCircuitCubes: LookFactory<CircuitParams> = (params, gl) => {
   const coreMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     emissive: lin(params.core),
-    emissiveIntensity: 0.16,
+    emissiveIntensity: 0.32,
     roughness: 0.15,
     transmission: 0.3,
     thickness: 0.4,
@@ -368,12 +368,12 @@ export const createCircuitCubes: LookFactory<CircuitParams> = (params, gl) => {
   });
   const traceGeo = buildLines(
     TRACES.map((t) => ({ pts: t.pts, cycles: CLUSTERS[t.cluster].cycles, offset: CLUSTERS[t.cluster].offset })),
-    0.014,
+    0.009,
   );
   scene.add(new THREE.Mesh(traceGeo, traceMat));
   const stubMat = traceMat.clone();
   stubMat.uniforms.baseAlpha.value = 0.9;
-  const stubGeo = buildLines([...STUBS, ...BRANCHES].map((pts) => ({ pts, cycles: 0, offset: 0.5 })), 0.012);
+  const stubGeo = buildLines([...STUBS, ...BRANCHES].map((pts) => ({ pts, cycles: 0, offset: 0.5 })), 0.008);
   scene.add(new THREE.Mesh(stubGeo, stubMat));
 
   // via dots at trace corners and stub ends
@@ -429,8 +429,8 @@ export const createCircuitCubes: LookFactory<CircuitParams> = (params, gl) => {
       dofFar: 0.012,
       dofNear: 0.034,
       dofRange: 2.0,
-      bloom: 0.25,
-      bloomThreshold: 1.3,
+      bloom: 0.4,
+      bloomThreshold: 1.0,
       bloomRadius: 0.85,
       vignette: 0.3,
       exposure: 1.0,

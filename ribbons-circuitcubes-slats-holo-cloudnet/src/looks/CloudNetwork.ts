@@ -63,9 +63,9 @@ void main() {
   dotMask *= 1.0 - smoothstep(0.45, 0.9, aa); // fade before dots go sub-pixel
   vec3 c = floorCol;
   // broad haze across the floor (brighter to the back right)
-  c += hazeCol * 1.3 * exp(-length(vXZ - vec2(9.0, -2.0)) * 0.13);
+  c += hazeCol * 1.6 * exp(-length(vXZ - vec2(11.0, 0.0)) * 0.12);
   c *= 0.55 + 0.45 * smoothstep(-14.0, 4.0, vXZ.x - 0.4 * vXZ.y); // darker to the left
-  c = mix(c, c + dotCol * 0.8, dotMask);
+  c = mix(c, c + dotCol * 0.55, dotMask);
   // light pooled under the cloud and the pedestals
   float pool = exp(-dot(vXZ, vXZ) * 0.35) * 1.4;
   for (int i = 0; i < 12; i++) {
@@ -242,10 +242,10 @@ export const createCloudNetwork: LookFactory<CloudParams> = (params, gl) => {
     emissiveIntensity: 0.18,
     envMapIntensity: 1.5,
   });
-  const discMat = new THREE.MeshPhysicalMaterial({ color: lin("#7AA8E8"), roughness: 0.18, metalness: 0.3, clearcoat: 1, envMapIntensity: 1.2 });
+  const discMat = new THREE.MeshPhysicalMaterial({ color: lin("#2A4A8A"), roughness: 0.2, metalness: 0.4, clearcoat: 1, envMapIntensity: 1.2 });
   const cyan = lin(params.line);
-  const rimMat = new THREE.MeshBasicMaterial({ color: cyan.clone().multiplyScalar(0.35) });
-  const ringMat = new THREE.MeshBasicMaterial({ color: cyan.clone().multiplyScalar(1.4), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  const rimMat = new THREE.MeshBasicMaterial({ color: cyan.clone().multiplyScalar(0.25) });
+  const ringMat = new THREE.MeshBasicMaterial({ color: cyan.clone().multiplyScalar(2.0), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
   const mk = (g: THREE.BufferGeometry, m: THREE.Material, y: number) => {
     const im = new THREE.InstancedMesh(g, m, PAWNS.length);
     const m4 = new THREE.Matrix4();
@@ -291,6 +291,14 @@ export const createCloudNetwork: LookFactory<CloudParams> = (params, gl) => {
     side: THREE.DoubleSide,
   });
   scene.add(new THREE.Mesh(lineGeo, lineMat));
+  // small glowing end node where each line meets its base
+  const nodeMat = new THREE.MeshBasicMaterial({ color: cyan.clone().multiplyScalar(2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  const nodes = new THREE.InstancedMesh(new THREE.CircleGeometry(0.05, 20).rotateX(-Math.PI / 2), nodeMat, PAWNS.length);
+  PAWNS.forEach((p, i) => {
+    const d = new THREE.Vector2(-p.x, -p.z).normalize();
+    nodes.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x + d.x * 0.56, 0.145, p.z + d.y * 0.56));
+  });
+  scene.add(nodes);
 
   scene.add(new THREE.HemisphereLight(glass, lin(params.floor), 0.9));
   const key = new THREE.DirectionalLight(0xffffff, 1.4);
@@ -304,7 +312,7 @@ export const createCloudNetwork: LookFactory<CloudParams> = (params, gl) => {
   cloudLight.position.set(0, 0.25, 1.6);
   scene.add(cloudLight);
 
-  const target = new THREE.Vector3(0.3, 0.2, 1.1);
+  const target = new THREE.Vector3(-0.6, 0.2, 1.4);
   return {
     scene,
     camera,
@@ -313,7 +321,7 @@ export const createCloudNetwork: LookFactory<CloudParams> = (params, gl) => {
       lineMat.uniforms.phase.value = t;
       const k = 0.5 - 0.5 * Math.cos(TAU * t); // 0 → 1 → 0
       const az = THREE.MathUtils.degToRad(-12 + 30 * k); // exactly 30° out and back
-      const el = THREE.MathUtils.degToRad(34);
+      const el = THREE.MathUtils.degToRad(40);
       const dist = 15.5 * (1 - 0.04 * k);
       camera.aspect = w / h;
       camera.position.set(
@@ -327,8 +335,8 @@ export const createCloudNetwork: LookFactory<CloudParams> = (params, gl) => {
     post: () => ({
       ...defaultPost(),
       focus: camera.position.distanceTo(cloud.position),
-      dofFar: 0.004,
-      dofNear: 0.005,
+      dofFar: 0.002,
+      dofNear: 0.0025,
       dofRange: 3.5,
       bloom: 0.45,
       bloomThreshold: 0.85,
@@ -338,7 +346,7 @@ export const createCloudNetwork: LookFactory<CloudParams> = (params, gl) => {
     }),
     dispose: () => {
       [cloudGeo, bodyGeo, headGeo, discGeo, rimGeo, ringGeo, lineGeo, floor.geometry].forEach((g) => g.dispose());
-      [shellMat, coreMat, pawnMat, discMat, rimMat, ringMat, lineMat, floorMat].forEach((m) => m.dispose());
+      [shellMat, coreMat, pawnMat, discMat, rimMat, ringMat, lineMat, floorMat, nodeMat].forEach((m) => m.dispose());
       tex.dispose();
       envRT.dispose();
     },

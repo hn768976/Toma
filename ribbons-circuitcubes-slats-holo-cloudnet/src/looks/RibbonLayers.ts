@@ -14,6 +14,8 @@ export type RibbonParams = {
   /** Colour of the key light (slightly warm/cool per version). */
   key: string;
   sheen: string;
+  /** Post saturation (the blue needs a lift; warm colours clip if pushed). */
+  saturation: number;
 };
 
 const RIBBONS = 9;
@@ -22,8 +24,8 @@ const X0 = -13;
 const X1 = 13;
 const WIDTH = 1.8; // ≈18% of the frame height (frame ≈ 10 units tall at the stack)
 const THICK = 0.3; // ≈3%
-const DZ = THICK * 1.15; // each ribbon sits a little in front of the one below
-const SPACING = 1.55;
+const DZ = THICK * 1.04; // each ribbon sits a little in front of the one below
+const SPACING = 1.45;
 
 // stadium profile: (a across the ribbon, b through its thickness) + normals
 const profile: { a: number; b: number; na: number; nb: number }[] = (() => {
@@ -66,11 +68,13 @@ const centre = (i: number, x: number, t: number) => {
   const g =
     (1.3 + 0.2 * Math.sin(w + 0.6)) * Math.sin(0.36 * x + 0.35 + 0.35 * Math.sin(w)) +
     0.12 * Math.sin(0.6 * x - w + 0.4) +
-    0.08 * Math.sin(1.1 * x + w * 2 + 1.7 + i * 0.35);
+    0.08 * Math.sin(1.1 * x + w * 2 + 1.7 + i * 0.35) +
+    // the stack sweeps up steeply into the right third
+    0.05 * Math.log1p(Math.exp(x - 1.5)) ** 2; // smooth (softplus) so there is no crease
   // layers converge toward the lower right
-  const sp = SPACING * (1 - 0.15 * Math.max(0, Math.tanh((x - 1) / 4))) * (1 + 0.05 * Math.sin(w + i * 0.9 + 0.2 * x));
+  const sp = SPACING * (1 - 0.19 * (1 + Math.tanh((x - 1.5) / 3))) * (1 + 0.05 * Math.sin(w + i * 0.9 + 0.2 * x)) * (0.92 + 0.16 * ((i * 0.618) % 1));
   const local = 0.08 * Math.sin(0.8 * x + i * 1.3 + w) * (1 + 0.4 * Math.cos(w + i));
-  return 6.6 - i * sp + g + local;
+  return 6.1 - i * sp + g + local;
 };
 
 export const createRibbonLayers: LookFactory<RibbonParams> = (params, gl) => {
@@ -143,7 +147,7 @@ export const createRibbonLayers: LookFactory<RibbonParams> = (params, gl) => {
   key.shadow.normalBias = 0.02;
   scene.add(key);
   scene.add(key.target);
-  const hemi = new THREE.HemisphereLight(lin(params.ribbon).lerp(lin(params.sheen), 0.45), shadowTint.clone().lerp(lin(params.ribbon), 0.7), 1.25);
+  const hemi = new THREE.HemisphereLight(lin(params.ribbon).lerp(lin(params.sheen), 0.45), shadowTint.clone().lerp(lin(params.ribbon), 0.85), 1.3);
   scene.add(hemi);
   const fill = new THREE.DirectionalLight(shadowTint.clone().lerp(new THREE.Color(1, 1, 1), 0.15), 0.3);
   fill.position.set(7, -4, 6);
@@ -198,7 +202,7 @@ export const createRibbonLayers: LookFactory<RibbonParams> = (params, gl) => {
     update,
     post: () => ({
       ...defaultPost(),
-      ao: 0.35,
+      ao: 0.2,
       aoRadius: 0.45,
       aoTint: lin(params.ribbon).multiplyScalar(0.35).lerp(shadowTint, 0.4),
       focus: 10.3,
@@ -209,7 +213,7 @@ export const createRibbonLayers: LookFactory<RibbonParams> = (params, gl) => {
       bloomThreshold: 1.0,
       vignette: 0.3,
       exposure: 1.12,
-      saturation: 1.25,
+      saturation: params.saturation,
     }),
     dispose: () => {
       ribbons.forEach((r) => r.geo.dispose());

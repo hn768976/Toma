@@ -17,7 +17,7 @@ export type SlatParams = {
 };
 
 const COUNT = 420;
-const DEPTH = 0.62; // ≈2.7× the pitch, so neighbouring blades just overlap in view // slat depth across the band
+const DEPTH = 0.85; // ≈2.7× the pitch, so neighbouring blades just overlap in view // slat depth across the band
 
 // Fixed path, sampled once at module level (no randomness involved).
 const PATH = new THREE.CatmullRomCurve3(
@@ -74,8 +74,12 @@ varying vec2 vUv;
 void main() {
   vec3 c = mix(bottom, top * 0.75, smoothstep(0.1, 0.85, vUv.y));
   // soft lift behind the band, right of centre
-  vec2 q = (vUv - vec2(0.78, 0.55)) * vec2(aspect, 1.0);
-  c += bottom * 1.5 * exp(-dot(q, q) * 4.0);
+  vec2 q = (vUv - vec2(0.64, 0.6)) * vec2(aspect, 1.0);
+  c *= 0.7;
+  c += bottom * 1.0 * exp(-dot(q, q) * 5.0);
+  // warm spill in the bottom-right corner
+  vec2 br = (vUv - vec2(1.0, 0.0)) * vec2(aspect, 1.0);
+  c += glow * 0.05 * exp(-dot(br, br) * 6.0);
   // darker top-left corner
   vec2 k = (vUv - vec2(0.0, 1.0)) * vec2(aspect, 1.0);
   c *= 0.55 + 0.45 * smoothstep(0.2, 1.4, length(k));
@@ -122,7 +126,7 @@ export const createSlatRibbon: LookFactory<SlatParams> = (params, gl) => {
   };
   panel(glow, 1.2, new THREE.Vector3(0, -5, -6), [10, 3]);
   // the warm underglow as the metal faces see it (low, to the side): drives the orange rims
-  panel(glow, 9, new THREE.Vector3(8, -3, 3), [3.5, 1.4]);
+  panel(glow, 20, new THREE.Vector3(8, -3, 3), [3.5, 1.4]);
   panel(lin(params.key), 2.6, new THREE.Vector3(5, 7, 2), [6, 4]);
   panel(lin(params.key), 1.6, new THREE.Vector3(3, 2, 8), [8, 5]);
   const pmrem = new THREE.PMREMGenerator(gl);
@@ -153,7 +157,7 @@ export const createSlatRibbon: LookFactory<SlatParams> = (params, gl) => {
   const keyL = new THREE.DirectionalLight(lin(params.key), 6.0);
   keyL.position.set(6, 10, 4);
   scene.add(keyL);
-  scene.add(new THREE.HemisphereLight(lin(params.bgBottom), new THREE.Color(0, 0, 0), 1.8));
+  scene.add(new THREE.HemisphereLight(lin(params.bgBottom), new THREE.Color(0, 0, 0), 0.9));
   const fillL = new THREE.DirectionalLight(lin(params.key), 0.9);
   fillL.position.set(-5, 3, 10);
   scene.add(fillL);
