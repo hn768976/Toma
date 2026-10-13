@@ -38,6 +38,7 @@ uniform float uGain;
 uniform vec3 uOffset;    // whole-strip offset (world)
 uniform vec2 uFade;      // view depths where lights fade out into the haze
 uniform float uFalloff;
+uniform float uCocScale; // bokeh size relative to the scene's DoF
 out vec2 vLocal;
 out float vR;
 out vec3 vC;
@@ -63,7 +64,7 @@ void main() {
     vis += step(depth, sd * 1.01 + 0.03);
   }
   vis /= 5.0;
-  float coc = abs(cocOf(depth)) * uRes.y;
+  float coc = abs(cocOf(depth)) * uRes.y * uCocScale;
   float r0 = uSharpR * aPar.w * uRes.y;
   float r = max(coc, r0);
   float tw = aPar.y > 0.0 ? 0.55 + 0.45 * cos(6.2831853 * (mod(aPar.y * uF, 600.0) / 600.0 + aPar.z)) : 1.0;
@@ -86,8 +87,10 @@ precision highp float;
 in vec2 vLocal;
 in float vR;
 in vec3 vC;
+uniform float uSquare; // 0 round .. 1 square (LED-like)
 void main() {
-  float d = length(vLocal);
+  vec2 a = abs(vLocal);
+  float d = mix(length(vLocal), max(a.x, a.y) * 1.08, uSquare);
   float prof;
   if (vR < 2.5) {
     prof = exp(-d * d / (vR * vR * 0.55));
@@ -130,6 +133,8 @@ export const createBokeh = (lights: BokehLight[], pu: PeriodicUniforms) => {
       uOffset: { value: new THREE.Vector3() },
       uFade: { value: new THREE.Vector2(1e3, 2e3) },
       uFalloff: { value: 2 },
+      uSquare: { value: 0 },
+      uCocScale: { value: 1 },
     },
     blending: THREE.AdditiveBlending,
     depthTest: false,
