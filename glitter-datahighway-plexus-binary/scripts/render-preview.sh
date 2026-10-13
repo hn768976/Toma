@@ -10,18 +10,22 @@ set -euo pipefail
 COMP="$1"; NAME="$2"; BUNDLE="${3:-out/bundle}"
 SCALE=0.3333333333333333
 SEQ="out/seq/$COMP"; mkdir -p "$SEQ" out/previews out/stills out/cold out/logs
-rm -f "$SEQ"/*.png
 PROPS="{\"id\":\"$COMP\",\"loopCheck\":true}"
 t0=$(date +%s.%N)
-npx remotion render "$BUNDLE" "$COMP" "$SEQ" --sequence --image-format=png --props="$PROPS" \
+[ -n "${SKIP_RENDER:-}" ] || rm -f "$SEQ"/*.png
+[ -n "${SKIP_RENDER:-}" ] || npx remotion render "$BUNDLE" "$COMP" "$SEQ" --sequence --image-format=png --props="$PROPS" \
   --scale=$SCALE --concurrency=${CONCURRENCY:-2} --log=error > "out/logs/$COMP.render.log" 2>&1
 t1=$(date +%s.%N)
-n=$(ls "$SEQ"/*.png | wc -l)
+frames=("$SEQ"/element-*.png)   # glob is sorted; no pipes (pipefail + head = SIGPIPE)
+n=${#frames[@]}
+if [ -n "${SKIP_RENDER:-}" ]; then  # re-run of the checks only: time from the frames' mtimes
+  t0=$(stat -c %.9Y "$SEQ"/element-*.png | sort -n | head -n 1 || true); t1=$(stat -c %.9Y "$SEQ"/element-*.png | sort -n | tail -n 1)
+fi
 perframe=$(echo "($t1 - $t0) / $n" | bc -l)
-first=$(ls "$SEQ"/*.png | head -1); last=$(ls "$SEQ"/*.png | tail -1)
-pad=$(basename "$first" .png | sed 's/[^0-9]//g' | wc -c); pad=$((pad - 1))
+first=${frames[0]}; last=${frames[$((n - 1))]}
+digits=${first##*element-}; digits=${digits%.png}; pad=${#digits}
 f300="$SEQ/element-$(printf "%0${pad}d" 300).png"
-md5px() { ffmpeg -v error -i "$1" -f framemd5 - | grep -v '^#' | awk -F, '{print $NF}' | tr -d ' '; }
+md5px() { ffmpeg -v error -i "$1" -f framemd5 - | awk -F, '!/^#/ {gsub(/ /, "", $NF); print $NF}'; }
 loop="FAIL"; [ "$(md5px "$first")" = "$(md5px "$last")" ] && loop="PASS"
 # encode the 600-frame loop
 ffmpeg -v error -y -framerate 30 -start_number 0 -i "$SEQ/element-%0${pad}d.png" -frames:v 600 \

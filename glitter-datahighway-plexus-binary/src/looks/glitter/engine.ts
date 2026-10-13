@@ -31,21 +31,25 @@ void main() {
   float sharp = 1.0 - smoothstep(core * 1.2, core * 3.5, coc);
   float rDisc = max(core, coc);
   float rSprite = mix(rDisc + scale, core * 5.5, sharp);  // stars need room for their spikes
-  // twinkle: hash of (id, floor(frame/2)) blended to the next bucket
+  // twinkle: hash of (id, floor(frame/2)) blended smoothly to the next bucket.
+  // Odd ids are offset by one frame so half the glitter changes on each frame,
+  // and the sparkle curve is applied per bucket before blending, which keeps
+  // the mean brightness constant (no global 15 Hz pulse).
   uint id = uint(aB.y);
-  float b = floor(uFrame / 2.0);
-  float fr = (uFrame - b * 2.0) / 2.0;
-  float s0 = h01(id, uint(mod(b, 300.0))), s1 = h01(id, uint(mod(b + 1.0, 300.0)));
+  float fo = uFrame + float(id & 1u);
+  float b = floor(fo / 2.0);
+  float fr = (fo - b * 2.0) / 2.0;
+  float k = 4.0 - 2.0 * aB.z;
+  float s0 = pow(h01(id, uint(mod(b, 300.0))), k), s1 = pow(h01(id, uint(mod(b + 1.0, 300.0))), k);
   float sparkle = mix(s0, s1, smoothstep(0.0, 1.0, fr));
-  sparkle = pow(sparkle, 4.0 - 2.0 * aB.z);
   // brightness = base x (0.5 + 0.5 x sparkle); the base is heavy-tailed so a few
   // thousand points read as distinct lights over a fine gold dust
-  float bright = (0.5 + 0.5 * sparkle) * (0.3 + 2.4 * pow(aB.z, 6.0));
+  float bright = (0.5 + 0.5 * sparkle) * (0.12 + 4.5 * pow(aB.z, 7.0));
   float energy = pow(core / rDisc, 1.05);
   float farDim = min(1.0, pow(uFocus / max(dist, 0.05), 2.6)); // keeps the dense far arms from blowing out
   // grazing views stack many particles per pixel: dim them by the view angle
   float graze = mix(0.06, 1.0, smoothstep(0.12, 0.6, (uCamY - world.y) / max(dist, 0.05)));
-  vColor = graze * aColor * bright * uGain * mix(max(energy, 0.01) * 1.1, 0.9 * farDim, sharp);
+  vColor = graze * aColor * bright * uGain * mix(max(energy, 0.01) * 1.0, 0.9 * farDim, sharp);
   vSharp = sharp;
   vStar = core / rSprite;
   vP = aPosition;
@@ -80,7 +84,7 @@ in vec2 vD; uniform vec3 uHaze; uniform vec3 uHazeCore;
 out vec4 finalColor;
 void main() {
   float r = length(vD) / ${DISC_R.toFixed(2)};
-  vec3 c = uHazeCore * exp(-r * r / 0.02) * 0.08 + uHaze * (exp(-r * r / 0.15) * 0.12 + exp(-r * r / 0.9) * 0.08);
+  vec3 c = uHazeCore * exp(-r * r / 0.02) * 0.08 + uHaze * (exp(-r * r / 0.15) * 0.05 + exp(-r * r / 0.9) * 0.015);
   finalColor = vec4(c, 1.0);
 }`;
 
@@ -178,9 +182,9 @@ export const createGlitterEngine = async (
     uFrame: { value: 0, type: "f32" },
     uRes: { value: new Float32Array([width, height]), type: "vec2<f32>" },
     uFocus: { value: 1, type: "f32" },
-    uNearK: { value: 0.045, type: "f32" },
+    uNearK: { value: 0.036, type: "f32" },
     uFarK: { value: 0.012, type: "f32" },
-    uGain: { value: 1.0, type: "f32" },
+    uGain: { value: 1.7, type: "f32" },
     uCamY: { value: 1, type: "f32" },
   });
   const cu = camGroup.uniforms as { uFrame: number; uFocus: number; uNearK: number; uFarK: number; uCamY: number };
@@ -231,7 +235,7 @@ export const createGlitterEngine = async (
       uScene: sceneRT.source,
       uBloom: sceneRT.source,
       p: {
-        uBloomStrength: { value: 0.1, type: "f32" },
+        uBloomStrength: { value: 0.12, type: "f32" },
         uFrame: { value: 0, type: "f32" },
         uSky: { value: new Float32Array(hexToLinear(v.haze)), type: "vec3<f32>" },
       },
@@ -257,7 +261,7 @@ export const createGlitterEngine = async (
     const look = new THREE.Vector3(Math.cos(yaw) * Math.cos(pitch), Math.sin(pitch), Math.sin(yaw) * Math.cos(pitch));
     cam.up.set(0, 1, 0);
     cam.lookAt(cam.position.clone().add(look));
-    cam.rotateZ(THREE.MathUtils.degToRad(-14));
+    cam.rotateZ(THREE.MathUtils.degToRad(12));
     const D = h / Math.sin(-pitch); // distance to the disc along the view axis
     cam.updateMatrixWorld();
     cam.updateProjectionMatrix();
@@ -265,7 +269,7 @@ export const createGlitterEngine = async (
     proj.set(cam.projectionMatrix.elements);
     cu.uFrame = f;
     cu.uCamY = cam.position.y;
-    cu.uFocus = D * 1.25;
+    cu.uFocus = D * 1.05;
 
     renderer.render({ container: stage, target: sceneRT, clear: true, clearColor: [0, 0, 0, 1] });
 
