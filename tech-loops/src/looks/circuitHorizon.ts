@@ -65,19 +65,22 @@ const LIGHTS: BokehLight[] = [];
     return (rng() < 0.5 ? -1 : 1) * 0.4 * (Math.pow(HALF_X / 0.4 + 1, u) - 1);
   };
   const want = [
-    { n: 14, kind: 0 as const, size: () => [range(rng, 0.4, 0.75), range(rng, 0.03, 0.06), range(rng, 0.2, 0.45)] },
-    { n: 6, kind: 2 as const, size: () => { const r = range(rng, 0.15, 0.25); return [r * 2, range(rng, 0.02, 0.04), r * 2]; } },
-    { n: 40, kind: 0 as const, size: () => [range(rng, 0.18, 0.45), range(rng, 0.02, 0.045), range(rng, 0.12, 0.3)] },
-    { n: 40, kind: 2 as const, size: () => { const r = range(rng, 0.03, 0.08); return [r * 2, range(rng, 0.04, 0.1), r * 2]; } },
-    { n: 120, kind: 0 as const, size: () => [range(rng, 0.08, 0.2), range(rng, 0.015, 0.035), range(rng, 0.05, 0.14)] },
-    { n: 240, kind: 1 as const, size: () => [range(rng, 0.03, 0.1), range(rng, 0.01, 0.025), range(rng, 0.02, 0.06)] },
+    // Glossy pill-shaped slabs (stretched cylinders).
+    { n: 2, kind: 2 as const, size: () => [range(rng, 0.9, 1.3), range(rng, 0.02, 0.03), range(rng, 0.22, 0.3)] },
+    { n: 8, kind: 0 as const, size: () => [range(rng, 0.3, 0.55), range(rng, 0.02, 0.035), range(rng, 0.15, 0.3)] },
+    { n: 4, kind: 2 as const, size: () => { const r = range(rng, 0.1, 0.16); return [r * 2, range(rng, 0.015, 0.03), r * 2]; } },
+    { n: 34, kind: 0 as const, size: () => [range(rng, 0.12, 0.28), range(rng, 0.012, 0.03), range(rng, 0.08, 0.18)] },
+    { n: 34, kind: 2 as const, size: () => { const r = range(rng, 0.02, 0.05); return [r * 2, range(rng, 0.03, 0.07), r * 2]; } },
+    { n: 120, kind: 0 as const, size: () => [range(rng, 0.05, 0.13), range(rng, 0.01, 0.022), range(rng, 0.03, 0.09)] },
+    { n: 250, kind: 1 as const, size: () => [range(rng, 0.02, 0.06), range(rng, 0.006, 0.015), range(rng, 0.015, 0.04)] },
   ];
+
 
   for (const w of want) {
     let placed = 0;
     for (let tries = 0; placed < w.n && tries < w.n * 40; tries++) {
       const [sx, sy, sz] = w.size();
-      const c: Comp = { kind: w.kind, x: rx(), z: rng() * P, sx, sy: sy * 1.6, sz, tint: rng() };
+      const c: Comp = { kind: w.kind, x: rx(), z: rng() * P, sx: sx * 1.7, sy: sy * 1.4, sz: sz * 1.7, tint: rng() };
       if (tryPlace(c, 0.02)) placed++;
     }
   }
@@ -118,7 +121,7 @@ const LIGHTS: BokehLight[] = [];
       // Log-distributed across x: about as many lights per screen area near the
       // camera (narrow view) as far away (wide view).
       const u = rng();
-      const cx = rng() < 0.3 ? (rng() - 0.5) * 2.6 : (rng() < 0.5 ? -1 : 1) * 0.3 * (Math.pow(HALF_X / 0.3 + 1, u) - 1);
+      const cx = rng() < 0.4 ? (rng() - 0.6) * 2.4 : (rng() < 0.5 ? -1 : 1) * 0.3 * (Math.pow(HALF_X / 0.3 + 1, u) - 1);
       const cz = rng() * P;
       const n = 3 + Math.floor(rng() * 8);
       const e = range(rng, 0.5, 1.5);
@@ -142,7 +145,7 @@ uniform vec3 uGlow;
 float hotOf(vec3 d) { return exp(-d.x * d.x * 14.0); }
 vec3 glowCol(vec3 d) {
   float hot = hotOf(d);
-  return uGlow * (0.25 + 1.5 * hot) + vec3(0.9, 0.95, 1.0) * hot * hot * 0.5;
+  return uGlow * (0.3 + 1.4 * hot) + vec3(0.85, 0.95, 1.0) * hot * hot * 0.35;
 }
 vec3 env(vec3 d) {
   float h = exp(-abs(d.y) * 26.0) * 1.2 + exp(-abs(d.y) * 6.0) * 0.2;
@@ -217,7 +220,7 @@ void main() {
   float fill = max(N.y, 0.0) * 0.6 + 0.15;
   vec3 col = base * fill + spec + hl + uLightC * 0.006 * (1.0 - vTop);
   float dist = length(vW - uCam);
-  col = mix(col, glowCol(dir) * 0.45, fogOf(dist));
+  col = mix(col, glowCol(dir) * (0.3 + 0.9 * hotOf(dir) * hotOf(dir)), fogOf(dist));
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
 `;
@@ -265,14 +268,16 @@ void main() {
   float far = length(vW - uCam);
   // Traces fade into an average tone with distance (avoids moire).
   float fade = 1.0 - smoothstep(4.0, 14.0, far);
-  vec3 col = uBoard * 2.4 * (0.6 + 0.8 * vnoise(vec3(b * 0.7, 3.0)));
-  col += uBoard * 3.5 * trace * fade + uBoard * 0.6 * (1.0 - fade);
+  vec3 warmB = uBoard * vec3(1.25, 1.1, 0.8);
+  vec3 col = warmB * 0.8 * (0.6 + 0.8 * vnoise(vec3(b * 0.7, 3.0)));
+  col += warmB * 2.2 * trace * fade + warmB * 0.3 * (1.0 - fade);
   // Glossy board: horizon glow reflected at grazing angles.
   vec3 R = reflect(-V, vec3(0.0, 1.0, 0.0));
   float fres = 0.02 + 0.98 * pow(clamp(1.0 - V.y, 0.0, 1.0), 5.0);
   col += env(R) * fres * 0.12;
   col += uLightC * 0.012;
-  col = mix(col, glowCol(normalize(vW - uCam)) * 0.45, fogOf(far));
+  vec3 fd = normalize(vW - uCam);
+  col = mix(col, glowCol(fd) * (0.3 + 0.9 * hotOf(fd) * hotOf(fd)), fogOf(far));
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
 `;
@@ -289,7 +294,7 @@ void main() {
   vec3 d = normalize((uCamWorld * vec4(normalize(v.xyz / v.w), 0.0)).xyz);
   // Bright haze band hugging the horizon, plus a wide faint halo above it.
   float up = max(d.y, 0.0);
-  vec3 col = glowCol(d) * (exp(-up * 150.0) * 0.7 + exp(-up * 30.0) * 0.05);
+  vec3 col = glowCol(d) * (exp(-up * 45.0) * 0.45 + exp(-up * 12.0) * 0.05);
   col += glowCol(d) * 0.45 * step(d.y, 0.0);
   gl_FragColor = vec4(col, uCocFar);
 }
@@ -297,7 +302,7 @@ void main() {
 
 export const createCircuitHorizon: LookFactory<CircuitHorizonParams> = (gl, params): Look => {
   const FOCUS = 4.2;
-  const COC_K = 0.0085;
+  const COC_K = 0.012;
   const post = new Post(gl, {
     msaa: 0,
     depthTexture: true,
@@ -385,10 +390,10 @@ export const createCircuitHorizon: LookFactory<CircuitHorizonParams> = (gl, para
   const teal = new THREE.Color("#2AD8E8");
   const lights = LIGHTS.map((l, i) => ({
     ...l,
-    color: l.size > 1 ? lightC.clone().lerp(new THREE.Color(1, 1, 1), 0.4) : lightC.clone().lerp(teal, (i * 7919) % 4 === 0 ? 0.6 : 0),
+    color: l.size > 1 ? lightC.clone().lerp(new THREE.Color(1, 1, 1), 0.4) : lightC.clone().lerp(teal, (i * 7919) % 10 === 0 ? 0.4 : 0),
   }));
   const bokeh = createBokeh(lights, pu);
-  bokeh.mat.uniforms.uGain.value = 4.2;
+  bokeh.mat.uniforms.uGain.value = 5.5;
   bokeh.mat.uniforms.uFalloff.value = 0.8;
   bokeh.mat.uniforms.uSharpR.value = 0.0034;
   bokeh.mat.uniforms.uFade.value.set(WRAP * 0.45, WRAP * 0.85);

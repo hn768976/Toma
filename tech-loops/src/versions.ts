@@ -25,7 +25,7 @@ export const VERSIONS: VersionRow[] = [
   { id: "AIBrainChip-CyanViolet", file: "AIBrainChip_CyanViolet", look: "aiBrainChip",
     params: { brain: "#5AF0FF", city: "#8A5AFF", outer: "#9A6AFF", bg: "#2C147A" } },
   { id: "CircuitHorizon-Blue", file: "CircuitHorizon_Blue", look: "circuitHorizon",
-    params: { board: "#0E1014", light: "#4A9AFF", horizon: "#2A78FF" } },
+    params: { board: "#0E1014", light: "#4A9AFF", horizon: "#1E86E8" } },
   { id: "NeonPodium-BlueMagenta", file: "NeonPodium_BlueMagenta", look: "neonPodium",
     params: { neonA: "#3A6AFF", neonB: "#E83AE8", ambient: "#0A0618" } },
   { id: "NeonPodium-OrangeTeal", file: "NeonPodium_OrangeTeal", look: "neonPodium",
