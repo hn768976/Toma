@@ -13,19 +13,24 @@ SCALE=0.3333333333333333
 OUT=renders
 FR="$OUT/frames-$ID"
 mkdir -p "$OUT" "$FR"
-rm -f "$FR"/*.png
 LOG="$OUT/$NAME.verify.txt"
-: > "$LOG"
+shopt -s nullglob
+files=("$FR"/*.png)
+if [ "${#files[@]}" -ne 601 ]; then
+  # (re)render unless a complete 601-frame sequence is already there
+  rm -f "$FR"/*.png
+  : > "$LOG"
+  t0=$(date +%s.%N)
+  npx remotion render "$BUNDLE" "$ID" "$FR" --sequence --image-format=png \
+    --props='{"loopTest":true}' --scale=$SCALE --concurrency=2 --log=error
+  t1=$(date +%s.%N)
+  files=("$FR"/*.png)
+  n=${#files[@]}
+  echo "frames=$n render_seconds=$(echo "$t1 - $t0" | bc) per_frame=$(echo "($t1 - $t0) / $n" | bc -l | cut -c1-5)" | tee -a "$LOG"
+fi
 
-t0=$(date +%s.%N)
-npx remotion render "$BUNDLE" "$ID" "$FR" --sequence --image-format=png \
-  --props='{"loopTest":true}' --scale=$SCALE --concurrency=2 --log=error
-t1=$(date +%s.%N)
-n=$(ls "$FR"/*.png | wc -l)
-echo "frames=$n render_seconds=$(echo "$t1 - $t0" | bc) per_frame=$(echo "($t1 - $t0) / $n" | bc -l | cut -c1-5)" | tee -a "$LOG"
-
-first=$(ls "$FR"/*.png | head -1)
-last=$(ls "$FR"/*.png | tail -1)
+first="${files[0]}"
+last="${files[${#files[@]}-1]}"
 pat=$(basename "$first" | sed -E 's/[0-9]+\.png$//')
 digits=$(basename "$first" | sed -E "s/^$pat//; s/\.png$//" | wc -c); digits=$((digits-1))
 f300="$FR/$(printf "%s%0${digits}d.png" "$pat" 300)"
