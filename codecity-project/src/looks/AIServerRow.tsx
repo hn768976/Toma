@@ -70,29 +70,33 @@ void main() {
     float bandEdge = gridLines(v - 0.08, bandH, 0.006);
     float pat = 0.0;
     float led = 0.0;
-    if (type < 0.35) {
+    if (type < 0.4) {
       // Drive row: vertical slots.
       pat = gridLines(u, 0.045, 0.006) * step(0.12, bv) * step(bv, 0.88);
       // Activity LEDs at the left end of each slot.
       float slotI = floor(u / 0.045);
       float blink = step(0.55, fract(hash21(vec2(slotI, bi + design * 50.0)) + uT * floor(1.0 + hash21(vec2(bi, slotI)) * 4.0)));
       vec2 q = vec2(fract(u / 0.045) - 0.5, bv - 0.2);
-      led = smoothstep(0.012, 0.0, length(q * vec2(0.045, bandH)) - 0.004) * blink;
-    } else if (type < 0.6) {
+      led = smoothstep(0.012, 0.0, length(q * vec2(0.045, bandH)) - 0.004) * blink * step(0.7, hash21(vec2(slotI * 3.1, bi)));
+    } else if (type < 0.75) {
       // Vent grille: fine horizontal slits.
       pat = gridLines(v, 0.018, 0.004) * step(0.1, bv) * step(bv, 0.9) * step(0.15, u) * step(u, size.x - 0.4) * 0.8;
-    } else if (type < 0.8) {
+    } else if (type < 0.9) {
       // Blank panel with a handle line and a status LED.
       pat = lineAt(abs(bv - 0.5) * bandH, 0.006, px.y) * step(size.x - 0.32, u) * step(u, size.x - 0.12);
       vec2 q = vec2(u - 0.14, (bv - 0.5) * bandH);
       led = smoothstep(0.01, 0.0, length(q) - 0.006) * 0.8;
     }
-    c = uRack * (1.0 + 0.6 * pat * inside) + vec3(0.06, 0.07, 0.08) * frame + uRack * 0.4 * bandEdge * inside;
+    // Each unit's faceplate has its own shade; a lighter bevel on its top edge.
+    float plate = 0.35 + 0.7 * hash21(vec2(bi * 3.7, design * 11.0 + 1.0));
+    float bevel = smoothstep(0.85, 1.0, bv) * 1.2;
+    c = uRack * (0.45 * plate + bevel * inside + 2.0 * pat * inside) + vec3(0.04, 0.045, 0.05) * frame + uRack * 0.9 * bandEdge * inside;
+    c += uGlow * 0.6 * lineAt(size.y - v, 0.006, px.y) + vec3(0.1, 0.25, 0.6) * 0.15 * lineAt(min(u, size.x - u), 0.008, px.x);
     c += uGlow * led * 2.5 * inside;
     // Edge sheen from the glow in front.
     c += uGlow * 0.035 * smoothstep(0.6, 1.8, v);
   } else if (vN.y > 0.5) {
-    c = uRack * 0.7;
+    c = uRack * 0.9 + uGlow * 0.04;
   } else {
     // Sides: panel seams.
     float v = vLocal.y;
@@ -102,7 +106,7 @@ void main() {
   }
   // Fade far cabinets into black.
   float d = length(vWorld - cameraPosition);
-  c *= exp(-max(d - 6.0, 0.0) / 14.0);
+  c *= exp(-max(d - 7.0, 0.0) / 6.5);
   gl_FragColor = vec4(c * uDim, 1.0);
 }`;
 
@@ -156,19 +160,32 @@ void main() {
     float o = (float(i) - 1.5) * 0.16 + 0.08;
     float jog = (float(i) - 1.5) * 0.08;
     float xUp = p.y < 0.95 ? o : o + jog * smoothstep(0.95, 1.1, p.y);
-    tr = max(tr, lineAt(abs(p.x - xUp), 0.008, px) * step(0.6, p.y));
+    tr = max(tr, lineAt(abs(p.x - xUp), 0.008, px) * step(0.6, p.y) * step(p.y, 0.92));
     float xDn = p.y > -0.95 ? o : o - jog * smoothstep(-0.95, -1.1, p.y);
     tr = max(tr, lineAt(abs(p.x - xDn), 0.008, px) * step(p.y, -0.6));
   }
-  tr *= smoothstep(1.45, 1.1, abs(p.y));
-  vec2 tuv = p / 0.78 + 0.5;
+  // Bottom traces turn sideways along the base.
+  float baseY = -1.06;
+  for (int i = 0; i < 4; i++) {
+    float o = (float(i) - 1.5) * 0.16 + 0.08;
+    float yy = baseY + float(i) * 0.025;
+    tr = max(tr, lineAt(abs(p.y - yy), 0.008, px) * step(o, p.x) * step(p.x, 0.85) * step(p.y, -0.6));
+  }
+  tr *= step(p.y, 0.93) * step(-1.07, p.y);
+  for (int i = 0; i < 5; i++) {
+    float o = (float(i) - 2.0) * 0.16;
+    pins = max(pins, lineAt(abs(length(vec2(p.x - 0.68, p.y - o)) - 0.03), 0.008, px));
+  }
+  vec2 tuv = p / 0.95 + 0.5;
   float txt = 0.0;
   if (all(greaterThan(tuv, vec2(0.0))) && all(lessThan(tuv, vec2(1.0)))) txt = texture2D(uText, tuv).r;
-  vec3 c = uGlow * (body * 0.15 + outline * 2.4 + inner * 0.8 + pins * 1.6 + tr * 1.3);
-  c += uTextC * txt * 1.6;
+  vec3 c = vec3(0.01, 0.05, 0.1) * body + uGlow * (body * 0.15 + outline * 2.4 + inner * 0.8 + pins * 1.6 + tr * 1.3);
+  // Letters: bright face with a blue fall-off toward the bottom (extruded look).
+  vec3 tcol = mix(vec3(0.35, 0.62, 1.0), uTextC, smoothstep(-0.35, 0.1, p.y));
+  c += tcol * txt * 3.2;
   c *= uBreath;
   float dist = length(vWorld - cameraPosition);
-  c *= exp(-max(dist - 6.0, 0.0) / 16.0);
+  c *= exp(-max(dist - 7.0, 0.0) / 8.0);
   gl_FragColor = vec4(c * uDim, 1.0);
 }`;
 
@@ -252,7 +269,7 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
       const y = r() < 0.7 ? range(r, 0.95, 1.55) : range(r, 0.3, 2.3);
       const z = r() < 0.75 ? range(r, 0.3, 0.55) : range(r, -0.1, 1.2);
       a.set([y, z, r(), range(r, 2.5, 9)], i * 4);
-      b.set([1 + Math.floor(r() * 3), range(r, 0.006, 0.016), range(r, 0.5, 1.4), r()], i * 4);
+      b.set([1 + Math.floor(r() * 3), range(r, 0.01, 0.03), range(r, 0.8, 2.0), r()], i * 4);
     }
     sg.setAttribute("aA", new THREE.InstancedBufferAttribute(a, 4));
     sg.setAttribute("aB", new THREE.InstancedBufferAttribute(b, 4));
@@ -268,13 +285,15 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
           uniform float uMirror;
           varying vec2 vUv;
           varying float vB;
+          varying float vHue;
           void main() {
             vUv = uv;
+            vHue = aB.w;
             float x = ${(BAYS_TO * S).toFixed(2)} - mod(aA.z * ${SPAN.toFixed(1)} + aB.x * ${SPAN.toFixed(1)} * uT, ${SPAN.toFixed(1)});
             vec3 p = vec3(x + position.x * aA.w, aA.x + position.y * aB.y, aA.y);
             vec4 w = modelMatrix * vec4(p, 1.0);
             w.y *= uMirror;
-            vB = aB.z * exp(-max(length(w.xyz - cameraPosition) - 6.0, 0.0) / 16.0);
+            vB = aB.z * exp(-max(length(w.xyz - cameraPosition) - 7.0, 0.0) / 9.0);
             gl_Position = projectionMatrix * viewMatrix * w;
           }`,
         fragmentShader: /* glsl */ `
@@ -282,10 +301,12 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
           uniform float uDim;
           varying vec2 vUv;
           varying float vB;
+          varying float vHue;
           void main() {
             float across = 1.0 - abs(vUv.y * 2.0 - 1.0);
             float head = smoothstep(0.0, 0.85, vUv.x) * smoothstep(1.0, 0.92, vUv.x);
-            gl_FragColor = vec4(uC * 2.6 * across * head * vB * uDim, 1.0);
+            vec3 cc = mix(uC, vec3(0.2, 0.7, 1.0), step(0.7, vHue));
+            gl_FragColor = vec4(cc * 2.6 * across * head * vB * uDim, 1.0);
           }`,
         transparent: true,
         depthWrite: false,
@@ -302,8 +323,9 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
         void main() {
           // Glossy black: mostly lets the mirrored scene through, with a faint
           // teal sheen near the racks.
-          float sheen = exp(-abs(vW.z - 0.4) / 1.2) * 0.04;
-          gl_FragColor = vec4(uGlow * sheen, 0.55);
+          float sheen = exp(-abs(vW.z - 0.8) / 2.0) * 0.28;
+          vec3 blue = vec3(0.03, 0.1, 0.3);
+          gl_FragColor = vec4((uGlow * 0.4 + blue) * sheen, 0.6);
         }`,
       transparent: true,
       depthWrite: true,
@@ -311,13 +333,13 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
     return {
       geo,
       rackM: rackMat(1, 1),
-      rackMir: rackMat(-1, 0.35),
+      rackMir: rackMat(-1, 0.6),
       chipM: chipMat(1, 1),
-      chipMir: chipMat(-1, 0.3),
+      chipMir: chipMat(-1, 0.55),
       bays,
       sg,
       streakM: streakMat(1, 1),
-      streakMir: streakMat(-1, 0.3),
+      streakMir: streakMat(-1, 0.55),
       floorMat,
     };
   }, [p.seed, p.rack, p.glow, p.text]);
@@ -326,7 +348,7 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
   const chipY = 1.3;
   const chips = (mat: THREE.ShaderMaterial) =>
     m.bays.map((b) => (
-      <mesh key={b} material={mat} position={[b * S, chipY, chipZ]} renderOrder={3}>
+      <mesh key={b} material={mat} position={[b * S, chipY, chipZ]} scale={1.2} renderOrder={3}>
         <planeGeometry args={[1.7, 2.9]} />
       </mesh>
     ));
@@ -351,8 +373,8 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
           period: PERIOD,
           background: "#000",
           exposure: 1,
-          bloom: { intensity: 1.1, threshold: 0.4, smoothing: 0.3, radius: 0.6 },
-          dof: { focus: 6.5, range: 3.5, bokeh: 3.2 },
+          bloom: { intensity: 1.2, threshold: 0.3, smoothing: 0.3, radius: 0.8, levels: 7 },
+          dof: { focus: 6.4, range: 1.8, bokeh: 4.5 },
           grain: 0.015,
         }}
         update={(frame, cam) => {
@@ -369,9 +391,9 @@ const Scene: React.FC<AIServerRowProps> = (p) => {
           // exactly one bay's offset: use whole-bay phase steps of 2π.
           const breath = 0.86 + 0.14 * Math.sin(TAU * 3 * t);
           [m.chipM, m.chipMir].forEach((mat) => (mat.uniforms.uBreath.value = breath));
-          cam.fov = 38;
-          cam.position.set(3.2 + 0.08 * loopSin(f, PERIOD, 1), 0.85 + 0.04 * loopSin(f, PERIOD, 1, 1), 4.6);
-          cam.lookAt(-5.5, 1.2, 0.2);
+          cam.fov = 40;
+          cam.position.set(1.4 + 0.06 * loopSin(f, PERIOD, 1), 1.0 + 0.03 * loopSin(f, PERIOD, 1, 1), 5.4);
+          cam.lookAt(-2.6, 1.3, 0.1);
           cam.rotateZ(0.4 * loopSin(f, PERIOD, 1, 2) * (TAU / 360));
         }}
       />
@@ -383,7 +405,7 @@ export const AIServerRow: React.FC<AIServerRowProps> = (p) => {
   const ready = useFontsReady();
   if (!ready) return null;
   return (
-    <Stage fov={38} near={0.1} far={200}>
+    <Stage fov={40} near={0.1} far={200}>
       <Scene {...p} />
     </Stage>
   );

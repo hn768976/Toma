@@ -1,7 +1,6 @@
 import { ThreeCanvas } from "@remotion/three";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
-  BloomEffect,
   DepthOfFieldEffect,
   Effect,
   EffectComposer,
@@ -11,13 +10,14 @@ import {
 import React, { useLayoutEffect, useMemo, useRef } from "react";
 import { getRemotionEnvironment, useCurrentFrame, useVideoConfig } from "remotion";
 import * as THREE from "three";
+import { MipBloomPass } from "./bloom";
 
 export type PostConfig = {
   // Loop length (or story length). Grain is driven by frame % period.
   period: number;
   background: string;
   exposure: number;
-  bloom: { intensity: number; threshold: number; smoothing: number; radius: number };
+  bloom: { intensity: number; threshold: number; smoothing: number; radius: number; levels?: number };
   // World-space focus distance/range. Bokeh is given for a 1080-px-tall frame
   // and scaled with the real drawing-buffer height, so 720p and 4K match.
   dof?: { focus: number; range: number; bokeh: number };
@@ -33,6 +33,8 @@ uniform float uFrame;
 uniform float uGrain;
 uniform float uBlackFade;
 uniform float uExposure;
+uniform sampler2D tBloom;
+uniform float uBloom;
 
 float h12(vec2 p, float f) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031 + f * vec3(0.1173, 0.2131, 0.3197));
@@ -48,7 +50,8 @@ vec3 toLinear(vec3 c) {
   return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
 }
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  vec3 c = inputColor.rgb * uExposure;
+  // Bloom: sum of the mip chain (each level adds a wider halo).
+  vec3 c = (inputColor.rgb + texture2D(tBloom, uv).rgb * uBloom) * uExposure;
   // Filmic-ish shoulder that keeps hue: compress by the max channel.
   float m = max(max(c.r, c.g), c.b);
   float k = m > 0.6 ? (0.6 + (1.0 - exp(-(m - 0.6) * 2.5)) * 0.4) / m : 1.0;
@@ -72,6 +75,8 @@ class FinalEffect extends Effect {
         ["uGrain", new THREE.Uniform(0.015)],
         ["uBlackFade", new THREE.Uniform(0)],
         ["uExposure", new THREE.Uniform(1)],
+        ["tBloom", new THREE.Uniform(null)],
+        ["uBloom", new THREE.Uniform(0)],
       ]),
     });
   }
@@ -155,19 +160,13 @@ export const Driver: React.FC<{
       });
       composer.addPass(new EffectPass(camera, dof));
     }
-    const bloom = new BloomEffect({
-      intensity: post.bloom.intensity,
-      luminanceThreshold: post.bloom.threshold,
-      luminanceSmoothing: post.bloom.smoothing,
-      mipmapBlur: true,
-      radius: post.bloom.radius,
-      levels: 8,
-    });
+    const bloom = new MipBloomPass(post.bloom.levels ?? 7, post.bloom.threshold, post.bloom.smoothing);
+    composer.addPass(bloom);
     const final = new FinalEffect();
-    const pass = new EffectPass(camera, bloom, final);
+    const pass = new EffectPass(camera, final);
     pass.dithering = false;
     composer.addPass(pass);
-    return { composer, dof, final };
+    return { composer, dof, final, bloom };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gl, scene, camera]);
 
@@ -195,6 +194,10 @@ export const Driver: React.FC<{
     u.get("uGrain")!.value = post.grain;
     u.get("uBlackFade")!.value = post.blackFade ? 1 : 0;
     u.get("uExposure")!.value = post.exposure;
+    // Normalised so `intensity` is roughly "halo energy relative to source".
+    u.get("uBloom")!.value = post.bloom.intensity / (post.bloom.levels ?? 7);
+    chain.bloom.radius = post.bloom.radius / 0.6;
+    u.get("tBloom")!.value = chain.bloom.texture;
     chain.composer.render();
   }, 1);
 

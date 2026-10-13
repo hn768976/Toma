@@ -152,15 +152,21 @@ void main() {
       float runs = hash21(vec2(ci * 5.3 + faceId, seed * 400.0));
       // Clusters: a coarse block noise decides which parts of a face are "occupied".
       float blk = hash31(vec3(floor(fi / 4.0) * 7.1 + faceId * 3.0, floor(ci / 3.0) * 2.3, seed * 97.0));
-      float lit = step(1.0 - uWindowLit * 2.6 * step(0.6, blk) * (0.6 + runs * 0.8), h);
+      // More lit windows low down, fewer near the top.
+      float hb = 2.0 * exp(-v / 30.0) + 0.15;
+      float lit = step(1.0 - uWindowLit * 2.6 * hb * step(0.6, blk) * (0.6 + runs * 0.8), h);
       vec2 cell = vec2(fract((u + hu) / mullS), fract(v / uFloorH));
       vec2 cpx = vec2(fwidth(cell.x), fwidth(cell.y));
-      vec2 inr = smoothstep(vec2(0.12, 0.38) - cpx, vec2(0.12, 0.38) + cpx, cell) * (1.0 - smoothstep(vec2(0.88, 0.68) - cpx, vec2(0.88, 0.68) + cpx, cell));
+      // Varied window sizes: short dashes to long bars.
+      float wv = hash31(vec3(fi, ci, seed * 13.0));
+      vec2 lo = vec2(0.1 + 0.3 * wv, 0.42 - 0.12 * step(0.8, wv));
+      vec2 hi = vec2(0.9 - 0.25 * fract(wv * 7.0), 0.62);
+      vec2 inr = smoothstep(lo - cpx, lo + cpx, cell) * (1.0 - smoothstep(hi - cpx, hi + cpx, cell));
       float rect = inr.x * inr.y;
       // Far away cells are sub-pixel: use their average.
       float cellPx = min(mullS / pxu, uFloorH / pxv);
       float near = smoothstep(2.0, 6.0, cellPx);
-      win = mix(uWindowLit * 0.4 * 0.76 * 0.3, lit * rect, near) * step(uFloorH * 0.5, v) * step(v, vSize.y - uFloorH * 0.3);
+      win = mix(uWindowLit * 0.4 * 0.72 * 0.2, lit * rect, near) * step(uFloorH * 0.5, v) * step(v, vSize.y - uFloorH * 0.3);
     }
   }
   if (kind > 0.5 && kind < 1.5) lines = 0.0;
@@ -176,8 +182,8 @@ void main() {
     float fres = pow(1.0 - abs(dot(vdir, normalize(vN * vec3(1.0, uMirror, 1.0)))), 2.0);
     body *= 0.5 + 0.9 * fres;
     // Brighter toward the base (ground glow).
-    float base = exp(-max(vWorld.y * uMirror, 0.0) / 30.0);
-    col = body * (0.8 + 1.6 * base) + uLine * uLineAlpha * (edge + lines * 0.45) + uWindow * win;
+    float base = exp(-max(vWorld.y * uMirror, 0.0) / 22.0);
+    col = body * (0.8 + 2.4 * base) + uLine * base * 0.06 + uLine * uLineAlpha * (edge + lines * 0.45) + uWindow * win;
     col *= uBright * (1.0 - fogT);
     alpha = 1.0;
   } else {
@@ -187,10 +193,11 @@ void main() {
     float shade = an.z > 0.5 ? (vN.z > 0.0 ? 1.35 : 0.8) : (an.x > 0.5 ? 0.95 : 1.5);
     shade *= 0.8 + 0.45 * fract(seed * 13.7);
     vec3 body = uBody * shade * (0.8 + 0.6 * height01);
-    float ln = max(edge, lines * 0.85) * uLineAlpha;
+    float ln = max(edge * 1.0, lines * 0.6) * uLineAlpha;
+    col += uLine * edge * 0.6 * uLineAlpha;
     col = mix(body, uLine, ln);
     // Height haze: low parts fade into the glow sooner.
-    float haze = clamp(fogT * (1.15 - 0.5 * height01), 0.0, 1.0);
+    float haze = max(clamp(fogT * (1.15 - 0.5 * height01), 0.0, 1.0), smoothstep(0.7, 1.0, fogT));
     vec3 fogC = skyCol(normalize(vWorld - cameraPosition));
     col = mix(col * uBright, fogC, haze);
     alpha = 1.0;

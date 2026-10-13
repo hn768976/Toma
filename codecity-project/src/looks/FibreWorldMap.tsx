@@ -28,6 +28,7 @@ uniform float uDraw;     // seconds, for link reveal
 uniform float uPulseOn;
 uniform float uDim;
 uniform float uLink;     // 1 for network links
+uniform float uCoreCyan;
 varying float vAcross;
 varying float vAlong;
 varying float vI;
@@ -37,16 +38,19 @@ varying vec3 vWorld;
 void main() {
   float core = exp(-vAcross * vAcross * 2.2);
   vec3 col = mix(uColA, uColB, vPar.w);
+  // Hot core: the blue fibres run toward icy cyan-white at their centre.
+  col = mix(col, vec3(0.45, 0.85, 1.0) * max(max(col.r, col.g), col.b), uCoreCyan * core * core);
   float a = vI * core;
   if (uLink > 0.5) {
+    a *= 0.6 + 0.9 * vAlong;
     // Reveal: grows from node to node.
     float prog = clamp((uDraw - vPar.z) / 0.8, 0.0, 1.0);
     float head = smoothstep(prog, prog - 0.02, vAlong);
     a *= head;
     // Pulses: whole cycles per composition.
     float ph = fract(vAlong - vPar.y - vPar.x * uT);
-    float pulse = exp(-ph * 22.0 / max(vLen, 0.5)) * step(0.0, ph);
-    a += vI * core * pulse * 5.0 * uPulseOn * head;
+    float pulse = exp(-ph * 14.0 / max(vLen, 0.5)) * step(0.0, ph);
+    a += vI * core * pulse * 8.0 * uPulseOn * head;
   }
   gl_FragColor = vec4(col * a * uDim, 1.0);
 }`;
@@ -77,6 +81,10 @@ void main() {
   vec2 q = gl_PointCoord * 2.0 - 1.0;
   float d = dot(q, q) * 9.0;
   float a = exp(-d * 1.5) + 0.25 * exp(-d * 0.25);
+  // Four-point star flare.
+  float sx = exp(-abs(q.x) * 30.0) * exp(-q.y * q.y * 6.0);
+  float sy = exp(-abs(q.y) * 30.0) * exp(-q.x * q.x * 6.0);
+  a += (sx + sy) * 1.6 * smoothstep(1.2, 2.5, vB);
   gl_FragColor = vec4(uCol * a * vB * uDim, 1.0);
 }`;
 
@@ -117,6 +125,7 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
           uPulseOn: { value: 1 },
           uDim: { value: dim },
           uLink: { value: link },
+          uCoreCyan: { value: link > 0.5 ? 0 : 1.0 },
         },
         transparent: true,
         depthWrite: false,
@@ -129,17 +138,21 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
     const strands = [-1.5, -0.5, 0.5, 1.5];
     map.rings.forEach((ring, ri) => {
       strands.forEach((k, si) => {
-        const off = offsetRing(ring, k * 0.028, 0.012, ri * 7 + si);
+        const off = offsetRing(ring, k * 0.04, 0.015, ri * 7 + si);
         const pts = [...off, off[0]].map((q) => v3(q, 0.003));
-        outlineLines.push({ pts, width: 0.006, intensity: Math.abs(k) < 1 ? 1.6 : 0.9, params: [0, 0, 0, 0] });
+        outlineLines.push({ pts, width: 0.011, intensity: Math.abs(k) < 1 ? 2.6 : 1.4, params: [0, 0, 0, 0] });
       });
     });
     const outlineGeo = ribbonGeometry(outlineLines);
     const outlineCol = lin(p.outline);
 
     // Fill grid (Delaunay inside each continent).
-    const fillLines: Polyline[] = map.fillEdges.map(([a, b]) => ({ pts: [v3(a, 0.002), v3(b, 0.002)], width: 0.007, intensity: 1 }));
+    const fillLines: Polyline[] = map.fillEdges.map(([a, b], i) => ({ pts: [v3(a, 0.002), v3(b, 0.002)], width: 0.008, intensity: 0.8 + 2.4 * Math.pow(hash01(i, 31), 2) }));
     const fillGeo = ribbonGeometry(fillLines);
+    const tri = new Float32Array(map.fillTris.flatMap(([a, b, c]) => [a.x, 0.001, a.y, b.x, 0.001, b.y, c.x, 0.001, c.y]));
+    const areaGeo = new THREE.BufferGeometry();
+    areaGeo.setAttribute("position", new THREE.BufferAttribute(tri, 3));
+    const areaMat = new THREE.MeshBasicMaterial({ color: lin(p.fill).lerp(new THREE.Color(0.05, 0.45, 1), 0.6).multiplyScalar(0.2), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide });
     const fillCol = lin(p.fill);
 
     // Network: 80 nodes on land, ~120 links (nearest neighbours + long arcs).
@@ -160,9 +173,19 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
         if (!has(i, j) && order[k][0] < 6) links.push([i, j]);
       }
     });
+    // Hubs: a few nodes fan out many links (the reference's bursts).
+    const hubs = [0, 1, 2, 3, 4].map(() => Math.floor(r() * nodes.length));
+    hubs.forEach((h, hi) => {
+      const order = nodes.map((q, j) => [q.distanceTo(nodes[h]), j] as const).filter(([d, j]) => j !== h && d < (hi === 0 ? 9 : 5)).sort((a, b) => a[0] - b[0]);
+      const fan = hi === 0 ? 22 : 10;
+      for (let k = 0; k < Math.min(fan, order.length); k++) {
+        const j = order[Math.floor(r() * order.length)][1];
+        if (!has(h, j)) links.push([h, j]);
+      }
+    });
     // A few long-haul arcs, then fill up to ~120 with mid-range links.
     let longN = 0;
-    while (longN < 14) {
+    while (longN < 2) {
       const a = Math.floor(r() * nodes.length);
       const b = Math.floor(r() * nodes.length);
       const d = nodes[a].distanceTo(nodes[b]);
@@ -194,7 +217,7 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
       nodeStart[a] = Math.min(nodeStart[a], start);
       nodeStart[b] = Math.min(nodeStart[b], start + 0.6);
       const cycles = story ? 1 + Math.floor(r() * 3) : 2 + Math.floor(r() * 4);
-      return { pts, width: 0.008, intensity: 1.1, params: [cycles, r(), start, r() * 0.3] };
+      return { pts, width: 0.008, intensity: d > 6 ? 0.8 : 1.2, params: [cycles, r(), start, r() * 0.3] };
     });
     const linkGeo = ribbonGeometry(linkLines);
     const netCol = lin(p.network);
@@ -208,8 +231,10 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
       g.setAttribute("aStart", new THREE.BufferAttribute(new Float32Array(pts.map((_, i) => start(i))), 1));
       return g;
     };
-    const vertGeo = pointGeo(map.fillVerts, 0.03, (i) => 0.4 + hash01(i, 5) * 0.9, () => -10);
-    const nodeGeo = pointGeo(nodes, 0.05, () => 1.6, (i) => nodeStart[i]);
+    const vertGeo = pointGeo(map.fillVerts, 0.045, (i) => 1.0 + Math.pow(hash01(i, 5), 2) * 3.0, () => -10);
+    const sparks = map.fillVerts.filter((_, i) => hash01(i, 404) < 0.35).map((q, i) => q.clone().add(new THREE.Vector2(hash01(i, 1) - 0.5, hash01(i, 2) - 0.5).multiplyScalar(0.6)));
+    const sparkGeo = pointGeo(sparks, 0.03, (i) => 0.8 + hash01(i, 77) * 1.6, (i) => 6.5 + 2.5 * hash01(i, 78));
+    const nodeGeo = pointGeo(nodes, 0.06, (i) => 1.6 + hash01(i, 9) * 2.0, (i) => nodeStart[i]);
     const pointMat = (c: THREE.Color, mir: number, dim: number) =>
       new THREE.ShaderMaterial({
         vertexShader: POINT_VERT,
@@ -223,29 +248,29 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
     // Story fibres: 40 fibres rising from the coast in front of the camera.
     const fibres: Fibre[] = [];
     const focusC = new THREE.Vector2(-1.2, -4.6);
-    const nearRings = map.rings.flatMap((ring) => ring.map((q, i) => ({ q, ring, i }))).filter(({ q }) => q.distanceTo(focusC) < 3.2);
+    const nearRings = map.rings.flatMap((ring) => ring.map((q, i) => ({ q, ring, i }))).filter(({ q }) => q.distanceTo(focusC) < 3.4 && q.y < focusC.y - 0.6);
     const fr = mulberry32(p.seed ^ 0xf1b);
     for (let k = 0; k < 40 && nearRings.length; k++) {
       const { q, ring, i } = nearRings[Math.floor(fr() * nearRings.length)];
       const nx = ring[(i + 3) % ring.length];
       const dir = nx.clone().sub(q).normalize();
       if (fr() < 0.5) dir.negate();
-      fibres.push({ base: q.clone(), dir, len: range(fr, 0.5, 1.5), h: range(fr, 0.25, 0.9), curl: range(fr, -0.3, 0.3), orange: fr() < 0.6 });
+      fibres.push({ base: q.clone(), dir, len: range(fr, 0.1, 0.35), h: range(fr, 0.15, 0.5), curl: range(fr, -0.3, 0.3), orange: fr() < 0.6 });
     }
-    const fibreLines: Polyline[] = fibres.map((fb) => ({ pts: fibrePoints(fb, 1), width: 0.0035, intensity: 1.2, params: [0, 0, 0, fb.orange ? 1 : 0] }));
+    const fibreLines: Polyline[] = fibres.map((fb) => ({ pts: fibrePoints(fb, 1), width: 0.006, intensity: 1.6, params: [0, 0, 0, fb.orange ? 1 : 0] }));
     const fibreGeo = ribbonGeometry(fibreLines);
     const tipGeo = new THREE.BufferGeometry();
     tipGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(fibres.length * 3), 3));
-    tipGeo.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(fibres.map(() => 0.018)), 1));
-    tipGeo.setAttribute("aBright", new THREE.BufferAttribute(new Float32Array(fibres.map(() => 3)), 1));
+    tipGeo.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(fibres.map(() => 0.05)), 1));
+    tipGeo.setAttribute("aBright", new THREE.BufferAttribute(new Float32Array(fibres.map(() => 4)), 1));
     tipGeo.setAttribute("aStart", new THREE.BufferAttribute(new Float32Array(fibres.map(() => -10)), 1));
     const tipColorsOrange = fibres.map((f) => f.orange);
 
     const mats = {
       outline: ribbonMat(outlineCol, outlineCol, 0, 1, 1),
       outlineM: ribbonMat(outlineCol, outlineCol, 0, -1, 0.35),
-      fill: ribbonMat(fillCol, fillCol, 0, 1, 0.55),
-      link: ribbonMat(netCol, new THREE.Color(1, 1, 1), 1, 1, 1),
+      fill: ribbonMat(fillCol, lin(p.outline), 0, 1, 1.6),
+      link: ribbonMat(netCol.clone().lerp(new THREE.Color(1, 0.75, 0.7), 0.3), new THREE.Color(1, 1, 1), 1, 1, 1),
       fibre: ribbonMat(lin(p.tipBlue), netCol, 0, 1, 1),
       fibreM: ribbonMat(lin(p.tipBlue), netCol, 0, -1, 0.35),
       verts: pointMat(lin(p.outline).lerp(new THREE.Color(1, 1, 1), 0.35), 1, 1),
@@ -255,13 +280,16 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
       tipsOM: pointMat(netCol.clone(), -1, 0.35),
       tipsBM: pointMat(lin(p.tipBlue), -1, 0.35),
     };
+    // Fibres carry orange as well as blue: no cyan core shift for them.
+    mats.fibre.uniforms.uCoreCyan.value = 0;
+    mats.fibreM.uniforms.uCoreCyan.value = 0;
     // Split tips into orange / blue draw ranges by sorting.
     const order = fibres.map((_, i) => i).sort((a, b) => Number(tipColorsOrange[b]) - Number(tipColorsOrange[a]));
     const nOrange = tipColorsOrange.filter(Boolean).length;
     const floorMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.004, 0.006, 0.014), transparent: true, opacity: 0.75, depthWrite: false });
     const cx = (map.bounds.min.x + map.bounds.max.x) / 2;
     const cz = (map.bounds.min.y + map.bounds.max.y) / 2;
-    return { map, outlineGeo, fillGeo, linkGeo, vertGeo, nodeGeo, fibres, fibreGeo, tipGeo, mats, order, nOrange, floorMat, center: new THREE.Vector3(cx, 0, cz), focusC };
+    return { map, sparkGeo, areaGeo, areaMat, outlineGeo, fillGeo, linkGeo, vertGeo, nodeGeo, fibres, fibreGeo, tipGeo, mats, order, nOrange, floorMat, center: new THREE.Vector3(cx, 0, cz), focusC };
   }, [p.seed, p.outline, p.fill, p.network, p.tipBlue, story]);
 
   const tipGeoO = useMemo(() => m.tipGeo.clone(), [m]);
@@ -283,11 +311,13 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
         </mesh>
       )}
       <group renderOrder={2}>
+        <mesh geometry={m.areaGeo} material={m.areaMat} frustumCulled={false} renderOrder={2} />
         <mesh geometry={m.fillGeo} material={m.mats.fill} frustumCulled={false} renderOrder={2} />
         <mesh geometry={m.outlineGeo} material={m.mats.outline} frustumCulled={false} renderOrder={2} />
         <points geometry={m.vertGeo} material={m.mats.verts} frustumCulled={false} renderOrder={3} />
         <mesh geometry={m.linkGeo} material={m.mats.link} frustumCulled={false} renderOrder={3} />
         <points geometry={m.nodeGeo} material={m.mats.nodes} frustumCulled={false} renderOrder={4} />
+        <points geometry={m.sparkGeo} material={m.mats.nodes} frustumCulled={false} renderOrder={4} />
         {story && <mesh geometry={m.fibreGeo} material={m.mats.fibre} frustumCulled={false} renderOrder={3} />}
         {story && <points geometry={tipGeoO} material={m.mats.tipsO} frustumCulled={false} renderOrder={4} />}
         {story && <points geometry={tipGeoB} material={m.mats.tipsB} frustumCulled={false} renderOrder={4} />}
@@ -297,7 +327,7 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
           period: p.duration,
           background: "#000",
           exposure: 1,
-          bloom: { intensity: 1.4, threshold: 0.3, smoothing: 0.3, radius: 0.7 },
+          bloom: { intensity: 2.0, threshold: 0.3, smoothing: 0.2, radius: 0.8, levels: 7 },
           dof: { focus: 40, range: 100, bokeh: 0 },
           grain: 0.015,
           blackFade: true,
@@ -330,14 +360,14 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
             T = T0.clone().lerp(m.center, easeInOut((sec - 2.7) / 3.8));
             const D0 = 1.7;
             D = D0 * Math.pow(D1 / D0, e);
-            phi = lerp(9, phi1, easeInOut((sec - 2.9) / 3.6));
+            phi = lerp(7, phi1, easeInOut((sec - 2.9) / 3.6));
             theta = lerp(24 - sec * 1.5, 0, e);
             // Fibres lie down into the outlines as the camera rises.
             lift = 1 - smooth(2.6, 5.6, sec);
             draw = sec;
             const dim = 1 - smooth(3.0, 5.5, sec);
             (m.floorMat as THREE.MeshBasicMaterial).opacity = 0.75;
-            [m.mats.outlineM, m.mats.fibreM, m.mats.tipsOM, m.mats.tipsBM].forEach((mat) => (mat.uniforms.uDim.value = 0.4 * dim));
+            [m.mats.outlineM, m.mats.fibreM, m.mats.tipsOM, m.mats.tipsBM].forEach((mat) => (mat.uniforms.uDim.value = 0.6 * dim));
             mirror.current!.visible = dim > 0.001;
             floor.current!.visible = dim > 0.001;
             // Fibres: geometry follows the lift; brightness eases toward the
@@ -361,7 +391,7 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
             // Pulses only once the network is drawn.
             m.mats.link.uniforms.uPulseOn.value = smooth(7.0, 9.0, sec);
             // Fill grid and nodes fade in during the pull-back.
-            m.mats.fill.uniforms.uDim.value = 0.55 * (0.35 + 0.65 * smooth(3.5, 6.5, sec));
+            m.mats.fill.uniforms.uDim.value = 1.6;
           } else {
             T = m.center.clone();
             D = D1;
@@ -381,8 +411,8 @@ const Scene: React.FC<FibreWorldMapProps & { duration: number }> = (p) => {
           // DoF: shallow in the close-up, opening up to all-sharp at the map.
           const open = story ? smooth(2.8, 6.0, sec) : 1;
           ctx.dof.focus = D;
-          ctx.dof.range = lerp(D * 0.35, D * 3, open);
-          ctx.dof.bokeh = lerp(5, 0, open);
+          ctx.dof.range = lerp(D * 0.25, D * 3, open);
+          ctx.dof.bokeh = lerp(8, 0, open);
           void TAU;
           void clamp;
         }}

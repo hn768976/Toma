@@ -25,7 +25,7 @@ export const VERSIONS: Row[] = [
     component: CodeTowers,
     frames: 600,
     loop: true,
-    props: { seed: 1099, code: "#5AD8F8", edge: "#3AD8F8", tower: "#0A2A4A", haze: "#0FA8E8", fill: "#1A78E0" },
+    props: { seed: 1099, code: "#5AD8F8", edge: "#3AD8F8", tower: "#0A2A4A", haze: "#0FA8E8", fill: "#14A0E8" },
   },
   {
     id: "FibreWorldMap-Story",

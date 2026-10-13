@@ -33,7 +33,7 @@ uniform vec3 uGlowDir;
 uniform vec2 uGlowW; // horizontal, vertical angular width (rad)
 uniform vec3 uGlow2; // optional second, lower and flatter glow (warm horizon band)
 vec3 skyCol(vec3 d) {
-  vec3 c = mix(uSkyHorizon, uSkyTop, smoothstep(-0.05, 0.55, d.y));
+  vec3 c = mix(uSkyHorizon, uSkyTop, smoothstep(-0.02, 0.3, d.y));
   vec3 g = normalize(uGlowDir);
   float az = atan(d.x, -d.z) - atan(g.x, -g.z);
   float el = asin(clamp(d.y, -1.0, 1.0)) - asin(clamp(g.y, -1.0, 1.0));

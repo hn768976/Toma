@@ -74,6 +74,7 @@ export type WorldMap = {
   rings: Ring[]; // smoothed, resampled land outlines (no Antarctica, no tiny islands)
   fillEdges: [THREE.Vector2, THREE.Vector2][];
   fillVerts: THREE.Vector2[];
+  fillTris: [THREE.Vector2, THREE.Vector2, THREE.Vector2][];
   bounds: THREE.Box2;
 };
 
@@ -103,13 +104,14 @@ export function buildWorldMap(seed: number): WorldMap {
       // Skip rings that wrap the antimeridian badly (tiny Chukotka slivers).
       const proj = outer.map(([lon, lat]) => project(lon, lat));
       const area = Math.abs(ringArea(proj));
-      if (area < 0.12) continue;
+      if (area < 0.5) continue;
       rings.push(resample(chaikin(proj, 2), 0.04));
     }
   }
   const r = mulberry32(seed);
   const fillEdges: [THREE.Vector2, THREE.Vector2][] = [];
   const fillVerts: THREE.Vector2[] = [];
+  const fillTris: [THREE.Vector2, THREE.Vector2, THREE.Vector2][] = [];
   for (const ring of rings) {
     const area = Math.abs(ringArea(ring));
     if (area < 0.6) continue;
@@ -140,6 +142,7 @@ export function buildWorldMap(seed: number): WorldMap {
       if (!inside(cen, ring)) continue;
       // Drop slivers along the coast.
       if (Math.max(a.distanceTo(b), b.distanceTo(c), c.distanceTo(a)) > 3.2) continue;
+      fillTris.push([a, b, c]);
       for (const [u, v] of [[ia, ib], [ib, ic], [ic, ia]]) {
         const key = u < v ? `${u}-${v}` : `${v}-${u}`;
         if (seen.has(key)) continue;
@@ -150,7 +153,7 @@ export function buildWorldMap(seed: number): WorldMap {
   }
   const bounds = new THREE.Box2();
   rings.forEach((rg) => rg.forEach((p) => bounds.expandByPoint(p)));
-  return { rings, fillEdges, fillVerts, bounds };
+  return { rings, fillEdges, fillVerts, fillTris, bounds };
 }
 
 // Offsets a closed ring along its normals (for the parallel fibre strands).

@@ -80,17 +80,17 @@ void main() {
   vec2 gy = dFdy(tc) / vec2(${ATLAS_COLS}.0, -${ATLAS_ROWS}.0);
   float code = textureGrad(uAtlas, auv, gx, gy).r;
   // Code fades in toward the base glow and out toward the top.
-  float hfade = smoothstep(vSize.y * 0.9, 0.0, v) * 0.85 + 0.15;
+  float hfade = 0.55 + 0.45 * smoothstep(0.0, 30.0, v);
   float pxu = max(fwidth(u), 1e-5);
   float pxv = max(fwidth(v), 1e-5);
   float edge = lineAt(hu - abs(u), 0.06, pxu) * 0.8 + lineAt(vSize.y - v, 0.06, pxv) * 0.4;
   float b = vParams.w;
-  vec3 emit = uCode * code * b * hfade * 1.3 + uEdge * edge * 0.5;
+  vec3 emit = (uCode * code * code * 2.4 + vec3(0.5, 0.9, 1.0) * pow(code, 6.0) * 2.0) * b * hfade + uEdge * edge * 0.5;
   // Haze: low parts and distant parts dissolve into the horizon glow.
-  float fog = (1.0 - exp(-vDist / 160.0));
-  float lowHaze = exp(-max(v, 0.0) / 7.0) * smoothstep(15.0, 80.0, vDist);
+  float fog = (1.0 - exp(-vDist / 220.0));
+  float lowHaze = exp(-max(v, 0.0) / 5.0) * smoothstep(10.0, 90.0, vDist);
   emit *= 1.0 - fog * 0.8;
-  emit += uHaze * (lowHaze * 0.7 + fog * 0.04);
+  emit += uHaze * (lowHaze * 0.6);
   float a = uBodyA * (1.0 - fog * 0.6);
   gl_FragColor = vec4(uBody * a + emit, a);
 }`;
@@ -147,16 +147,16 @@ void main() {
     float e = max(lineAt(h.x - abs(q.x), 0.02, px.x), lineAt(h.y - abs(q.y), 0.02, px.y));
     // Light panels: some tiles carry an inner glowing rectangle.
     vec2 inr = smoothstep(h * 0.75 + px, h * 0.75 - px, abs(q));
-    float panel = inr.x * inr.y * step(0.6, vKind);
-    float fill = 0.05 + 0.25 * fract(vKind * 7.31 + 0.13) * step(0.01, vKind);
-    c = uFill * (fill * 1.4 + panel * 0.9 * fract(vKind * 3.7)) + uEdge * (e * 0.9 + vLit * 2.0) + uFill * 0.05;
+    float panel = inr.x * inr.y * step(0.45, vKind);
+    float fill = 0.03 + 0.3 * fract(vKind * 7.31 + 0.13) * step(0.01, vKind) * step(0.3, fract(vKind * 5.3));
+    c = uFill * (fill * 2.4 + panel * 2.4 * fract(vKind * 3.7)) + uEdge * (e * 0.9 + vLit * 2.0) + uFill * 0.05;
   } else {
     // Sides: dark, with a bright upper rim.
     float rim = smoothstep(0.05, 0.0, vSize.y - vLocal.y);
     c = uEdge * (0.02 + rim * 0.6 + vLit * 0.4);
   }
-  float fog = 1.0 - exp(-pow(vDist / 75.0, 1.6));
-  c = mix(c, uHaze * 1.2, fog);
+  float fog = 1.0 - exp(-pow(vDist / 65.0, 1.5));
+  c = mix(c, uHaze * 1.75, fog);
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -181,10 +181,10 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
     const h = lin(p.haze);
     return {
       top: [0.0, 0.002, 0.006],
-      horizon: [h.r * 0.25, h.g * 0.25, h.b * 0.25],
+      horizon: [h.r * 0.12, h.g * 0.12, h.b * 0.12],
       glow: [h.r * 1.6, h.g * 1.6, h.b * 1.6],
-      glowDir: [0, 0, -1],
-      glowW: [3.0, 0.09],
+      glowDir: [0, -0.045, -1],
+      glowW: [3.0, 0.07],
     };
   }, [p.haze]);
 
@@ -194,11 +194,11 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
     type T = { x: number; z: number; w: number; d: number; h: number; v: number; s: number; k: number; b: number };
     const towers: T[] = [];
     let tries = 0;
-    while (towers.length < 14 && tries++ < 5000) {
+    while (towers.length < 7 && tries++ < 5000) {
       const side = r() < 0.5 ? -1 : 1;
-      const w = range(r, 5, 13);
-      const d = range(r, 5, 12);
-      const x = side * (6 + w / 2 + Math.pow(r(), 1.3) * 55);
+      const w = range(r, 14, 26);
+      const d = range(r, 6, 12);
+      const x = side * (22 + w / 2 + Math.pow(r(), 1.2) * 50);
       const z = r() * P;
       // Keep footprints apart (also across the period seam).
       const ok = towers.every((t) => {
@@ -206,7 +206,7 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
         return Math.abs(t.x - x) > (t.w + w) / 2 + 2 || dz > (t.d + d) / 2 + 2;
       });
       if (!ok) continue;
-      towers.push({ x, z, w, d, h: range(r, 45, 140), v: Math.floor(r() * 6), s: range(r, 0.8, 1.9), k: 1 + Math.floor(r() * 2), b: range(r, 0.5, 1.2) });
+      towers.push({ x, z, w, d, h: range(r, 45, 140), v: Math.floor(r() * 6), s: range(r, 2.6, 4.6), k: 1 + Math.floor(r() * 2), b: range(r, 0.5, 1.2) });
     }
     const all: { o: number[]; s: number[]; p: number[] }[] = [];
     for (let c = -1; c < COPIES - 1; c++) {
@@ -245,7 +245,7 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
     const tileH: number[] = [], tileK: number[] = [];
     for (let i = 0; i < nx * nz; i++) {
       tileH.push(range(fr, 0.02, 0.3) * (fr() < 0.12 ? 2.5 : 1));
-      tileK.push(fr() < 0.45 ? 0.02 + fr() * 0.98 : 0);
+      tileK.push(fr() < 0.55 ? 0.02 + fr() * 0.98 : 0);
     }
     for (let c = -1; c < COPIES - 1; c++) {
       for (let iz = 0; iz < nz; iz++) {
@@ -284,12 +284,12 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
     // Light lines: thin vertical and horizontal strokes that flash.
     const lr = mulberry32(p.seed ^ 0x1717);
     const lightLines = Array.from({ length: 12 }, (_, i) => {
-      const vertical = i < 6;
+      const vertical = i < 2;
       return {
         vertical,
-        x: (lr() * 2 - 1) * (vertical ? 30 : 10),
+        x: vertical ? (lr() < 0.5 ? -1 : 1) * (12 + lr() * 20) : (lr() * 2 - 1) * 10,
         z: -(lr() * P),
-        len: vertical ? range(lr, 30, 90) : range(lr, 20, 60),
+        len: vertical ? range(lr, 30, 90) : range(lr, 50, 120),
         y: vertical ? 0 : range(lr, 0.15, 0.6),
         phase: Math.floor(lr() * 10),
       };
@@ -326,7 +326,7 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
       <group ref={near}>
         {m.nearLines.map((mat, i) => (
           <mesh key={i} material={mat} renderOrder={4}>
-            <planeGeometry args={[4.2, 0.26]} />
+            <planeGeometry args={[2.6, 0.16]} />
           </mesh>
         ))}
       </group>
@@ -335,8 +335,8 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
           period: PERIOD,
           background: "#000",
           exposure: 1,
-          bloom: { intensity: 0.9, threshold: 0.5, smoothing: 0.3, radius: 0.6 },
-          dof: { focus: 22, range: 26, bokeh: 2.2 },
+          bloom: { intensity: 1.3, threshold: 0.4, smoothing: 0.3, radius: 0.7, levels: 6 },
+          dof: { focus: 30, range: 70, bokeh: 2.2 },
           grain: 0.015,
         }}
         update={(frame, cam) => {
@@ -353,14 +353,16 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
             if (!mesh) return;
             const i = k % 20;
             const c = Math.floor(k / 20);
-            const on = hash01(i, c, ls.index, p.seed) < 0.3 ? 1 : 0;
+            const on = hash01(i, c, ls.index, p.seed) < 0.4 ? 1 : 0;
             const env = Math.sin(Math.PI * ls.t) ** 4;
-            (mesh.material as THREE.MeshBasicMaterial).opacity = on * env;
+            // Floor rails glow steadily and flash brighter; vertical ones only flash.
+            const vert = i < 2;
+            (mesh.material as THREE.MeshBasicMaterial).opacity = (vert ? 0 : 0.45) + on * env * (vert ? 0.6 : 0.55);
           });
           cam.fov = 58;
-          cam.position.set(0.8 * loopSin(f, PERIOD, 1), 2.2 + 0.15 * loopSin(f, PERIOD, 2, 0.7), 0);
+          cam.position.set(0.8 * loopSin(f, PERIOD, 1), 3.0 + 0.15 * loopSin(f, PERIOD, 2, 0.7), 0);
           cam.rotation.set(
-            (3 + 0.6 * loopSin(f, PERIOD, 1, 1.9)) * (TAU / 360),
+            (6 + 0.6 * loopSin(f, PERIOD, 1, 1.9)) * (TAU / 360),
             2 * loopSin(f, PERIOD, 1, 0.6) * (TAU / 360),
             0.8 * loopSin(f, PERIOD, 1, 2.4) * (TAU / 360),
             "YXZ",
@@ -381,7 +383,7 @@ const Scene: React.FC<CodeTowersProps> = (p) => {
             const u = ns.t;
             const dir = i % 2 === 0 ? 1 : -1;
             mesh.position.set(dir * (5.5 - 11 * u), [0.5, -0.7, 0.9][i], -2.2 - i * 0.3);
-            mat.uniforms.uA.value = Math.sin(Math.PI * u) ** 2 * 0.8;
+            mat.uniforms.uA.value = Math.sin(Math.PI * u) ** 2 * 0.55;
           });
         }}
       />

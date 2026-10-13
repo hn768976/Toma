@@ -30,10 +30,10 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
     const h = lin(p.skyHorizon);
     return {
       top: [0.0, 0.0, 0.004],
-      horizon: [h.r * 0.1, h.g * 0.1, h.b * 0.1],
-      glow: [h.r * 2.2, h.g * 2.2, h.b * 2.2],
+      horizon: [h.r * 0.06, h.g * 0.06, h.b * 0.06],
+      glow: [h.r * 2.6, h.g * 2.6, h.b * 2.6],
       glowDir: [0, 0.0, -1],
-      glowW: [0.25, 0.07],
+      glowW: [0.9, 0.05],
     };
   }, [p.skyHorizon]);
 
@@ -41,10 +41,10 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
     const boxes = generateStreet({
       seed: p.citySeed,
       period: L,
-      roadHalf: 13,
-      floorH: 3.6,
+      roadHalf: 26,
+      floorH: 3.0,
       minFloors: 3,
-      maxFloors: 40,
+      maxFloors: 34,
       rows: 1,
       lotMin: 12,
       lotMax: 26,
@@ -58,19 +58,19 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
       lineAlpha: 1.0,
       edgeW: 0.1,
       floorW: 0.035,
-      floorH: 3.6,
-      mullion: 2.6,
-      windowLit: 0.15,
+      floorH: 3.0,
+      mullion: 1.7,
+      windowLit: 0.1,
       window: lin(p.window).multiplyScalar(2.2),
       fogColor: new THREE.Color(0, 0, 0),
-      fogNear: 60,
-      fogFar: 520,
+      fogNear: 40,
+      fogFar: 330,
       hazeHeight: 100,
       mirror: 1,
-      brightness: 0.4,
+      brightness: 0.3,
     };
     const mat = buildingMaterial(style);
-    const mirrorMat = buildingMaterial({ ...style, mirror: -1, brightness: 0.16 });
+    const mirrorMat = buildingMaterial({ ...style, mirror: -1, brightness: 0.4 });
 
     // Road: dark, partly transparent over the mirrored city (wet reflection),
     // with lane lines and a bright edge strip on both sides.
@@ -96,18 +96,20 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
           float px = max(fwidth(x), 1e-5);
           // Solid outer lane lines and dashed inner ones.
           float l = 0.0;
-          l = max(l, lineAt(abs(abs(x) - 9.0), 0.09, px) * 1.4);
-          float dash = step(0.45, fract(z / 12.0));
-          l = max(l, lineAt(abs(abs(x) - 3.2), 0.07, px) * mix(1.0, dash, smoothstep(2.0, 8.0, 12.0 / max(fwidth(z), 1e-5))) * 0.9);
-          float curb = lineAt(abs(abs(x) - 12.5), 0.25, px) * 0.6;
+          l = max(l, lineAt(abs(abs(x) - 12.0), 0.16, px) * 3.2);
+          l = max(l, lineAt(abs(abs(x) - 4.0), 0.08, px) * 1.2);
+
+          float curb = lineAt(abs(abs(x) - 22.0), 0.3, px) * 0.35;
           float dist = length(vWorld - cameraPosition);
-          vec3 c = uRoad * 0.25 + uLine * (l + curb) * 2.2;
+          vec3 c = uRoad * 0.6 + uLine * (l + curb) * 2.2;
           // Light pooling on the road from the buildings either side.
-          c += uLine * 0.06 * smoothstep(6.0, 13.0, abs(x));
+          c += uLine * 0.1 * smoothstep(8.0, 24.0, abs(x));
+          // Ground glow toward the horizon.
+          c += uHaze * 0.5 * smoothstep(30.0, 250.0, dist);
           // Haze toward the horizon.
           float hz = smoothstep(80.0, 450.0, dist);
           c = mix(c, uHaze * 0.5, hz * 0.8);
-          gl_FragColor = vec4(c, 0.82 - 0.25 * hz);
+          gl_FragColor = vec4(c, 0.62 - 0.2 * hz);
         }`,
       transparent: true,
       depthWrite: true,
@@ -129,7 +131,7 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
     for (let i = 0; i < N; i++) {
       const side = r() < 0.5 ? -1 : 1;
       const lane = r();
-      const x = lane < 0.35 ? side * (9 + (r() - 0.5) * 0.8) : lane < 0.7 ? side * (11 + r() * 1.6) : side * (1 + r() * 7.5);
+      const x = lane < 0.35 ? side * (12 + (r() - 0.5) * 0.8) : lane < 0.7 ? side * (13 + r() * 8) : side * (1 + r() * 10);
       const y = lane < 0.7 ? 0.05 + r() * 0.5 : 0.04 + r() * 0.15;
       a.set([x, y, r() * L, 8 + r() * 36], i * 4);
       // speed in whole periods per loop (1..3 extra), width, brightness, hue mix
@@ -194,8 +196,8 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
           period: PERIOD,
           background: "#000",
           exposure: 1,
-          bloom: { intensity: 1.3, threshold: 0.35, smoothing: 0.4, radius: 0.7 },
-          dof: { focus: 50, range: 260, bokeh: 0.5 },
+          bloom: { intensity: 1.6, threshold: 0.3, smoothing: 0.4, radius: 0.75, levels: 6 },
+          dof: { focus: 55, range: 50, bokeh: 3.0 },
           grain: 0.015,
         }}
         update={(frame, cam) => {
@@ -205,11 +207,11 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
           world.current!.position.z = zOff;
           m.roadMat.uniforms.uOff.value = zOff;
           m.streakMat.uniforms.uT.value = t;
-          cam.fov = 62;
+          cam.fov = 72;
           cam.position.set(1.2 * loopSin(f, PERIOD, 1, 0.4), 2.0 + 0.1 * loopSin(f, PERIOD, 3), 0);
           const yaw = 4 * loopSin(f, PERIOD, 1) * (TAU / 360);
           const roll = 2 * loopSin(f, PERIOD, 1, 0.3) * (TAU / 360);
-          cam.rotation.set((14 + 1 * loopSin(f, PERIOD, 2, 1.1)) * (TAU / 360), yaw, roll, "YXZ");
+          cam.rotation.set((21 + 1 * loopSin(f, PERIOD, 2, 1.1)) * (TAU / 360), yaw, roll, "YXZ");
           sky.current!.position.copy(cam.position);
         }}
       />
@@ -218,7 +220,7 @@ const Scene: React.FC<GlassCityDriveProps> = (p) => {
 };
 
 export const GlassCityDrive: React.FC<GlassCityDriveProps> = (p) => (
-  <Stage fov={62} near={0.3} far={1400}>
+  <Stage fov={72} near={0.3} far={1400}>
     <Scene {...p} />
   </Stage>
 );

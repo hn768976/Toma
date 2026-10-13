@@ -30,15 +30,15 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
   const skyParams = useMemo<SkyParams>(() => {
     const g = lin(p.glow);
     const t = lin(p.skyTop);
-    const h = lin(p.glow).multiplyScalar(0.35).lerp(t, 0.35);
+    const h = lin(p.glow).multiplyScalar(0.3).lerp(t, 0.6);
     const w = p.glowWarm ? lin(p.glowWarm) : null;
     return {
       glow2: w ? [w.r * 1.4, w.g * 1.4, w.b * 1.4] : [0, 0, 0],
       top: [t.r, t.g, t.b],
       horizon: [h.r, h.g, h.b],
-      glow: [g.r * 1.6, g.g * 1.6, g.b * 1.6],
-      glowDir: [0, 0.03, -1],
-      glowW: [0.5, 0.32],
+      glow: [g.r * 1.8, g.g * 1.8, g.b * 1.8],
+      glowDir: [0, -0.01, -1],
+      glowW: [0.65, 0.14],
     };
   }, [p.glow, p.glowWarm, p.skyTop]);
 
@@ -47,7 +47,7 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
       seed: p.citySeed,
       period: L,
       roadHalf: 27,
-      floorH: 3.4,
+      floorH: 1.3,
       minFloors: 3,
       maxFloors: 40,
       rows: 2,
@@ -59,18 +59,18 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
       mode: "solid" as const,
       body: lin(p.body),
       bodyAlpha: 1,
-      line: lin(p.line),
+      line: lin(p.line).multiplyScalar(1.8),
       lineAlpha: 0.7,
-      edgeW: 0.07,
-      floorW: 0.032,
-      floorH: 3.4,
-      mullion: 3.2,
+      edgeW: 0.05,
+      floorW: 0.018,
+      floorH: 2.6,
+      mullion: 3.0,
       windowLit: 0,
       window: new THREE.Color(0, 0, 0),
       fogColor: lin(p.glow),
-      fogNear: 30,
-      fogFar: 380,
-      hazeHeight: 120,
+      fogNear: 120,
+      fogFar: 480,
+      hazeHeight: 50,
       mirror: 1,
       brightness: 1,
       sky: skyParams,
@@ -100,11 +100,15 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
           float dist = length(vWorld - cameraPosition);
           vec3 sky = skyCol(dir);
           vec3 base = uLine * 0.03;
-          vec3 c = base + uLine * l * 0.9;
+          float nearB = mix(1.0, 0.4, smoothstep(10.0, 160.0, dist));
+          vec3 c = base + uLine * l * nearB;
+          // Wet street: the horizon glow reflected as a streak down the middle.
+          vec3 hz = skyCol(normalize(vec3(dir.x, -dir.y, dir.z)));
+          c += hz * 1.1 * exp(-abs(vWorld.x) / 8.0);
           float fog = smoothstep(15.0, 380.0, dist);
           c = mix(c, sky, fog);
           // Partly transparent: the mirrored city shows through as a reflection.
-          gl_FragColor = vec4(c, mix(0.78, 1.0, fog));
+          gl_FragColor = vec4(c, mix(0.8, 1.0, fog));
         }`,
       transparent: true,
       depthWrite: true,
@@ -118,8 +122,8 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
     for (let c = 0; c < COPIES; c++) {
       for (let i = 0; i < n / 2; i++) {
         // n/2 per period, twice: 60 visible over two periods of view.
-        const x = (r() * 2 - 1) * 18;
-        const y = 0.2 + r() * 2.5;
+        const x = (r() < 0.5 ? -1 : 1) * (6 + r() * 14);
+        const y = 0.2 + r() * 4;
         const z = -(r() * L + (c - 1) * L);
         pos.set([x, y, z], (c * n + i) * 3);
         ph[c * n + i] = r();
@@ -141,7 +145,7 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
           p.y += 0.25 * sin(a * 2.0);
           p.x += 0.3 * sin(a + aPhase * 10.0);
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
-          gl_PointSize = uScale * 0.22 / -mv.z;
+          gl_PointSize = uScale * 0.7 / -mv.z;
           vA = (0.5 + 0.5 * sin(a * 3.0 + aPhase * 6.28)) * smoothstep(250.0, 60.0, -mv.z);
           gl_Position = projectionMatrix * mv;
         }`,
@@ -177,8 +181,7 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
           period: PERIOD,
           background: "#000",
           exposure: 1,
-          bloom: { intensity: 0.9, threshold: 0.55, smoothing: 0.3, radius: 0.6 },
-          dof: { focus: 40, range: 120, bokeh: 1.2 },
+          bloom: { intensity: 1.0, threshold: 0.45, smoothing: 0.3, radius: 0.55, levels: 6 },
           grain: 0.015,
         }}
         update={(frame, cam, { buffer }) => {
@@ -188,13 +191,13 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
           world.current!.position.z = zOff;
           floorMat.uniforms.uOff.value = zOff;
           pointsMat.uniforms.uT.value = t;
-          cam.fov = 58;
+          cam.fov = 46;
           cam.updateProjectionMatrix();
           const bufH = buffer.y;
           pointsMat.uniforms.uScale.value = bufH / (2 * Math.tan((cam.fov * Math.PI) / 360));
-          cam.position.set(0.6 * loopSin(f, PERIOD, 1), 4.5 + 0.2 * loopSin(f, PERIOD, 2, 1), 0);
+          cam.position.set(0.6 * loopSin(f, PERIOD, 1), 16 + 0.3 * loopSin(f, PERIOD, 2, 1), 0);
           cam.rotation.set(
-            (4 + 0.5 * loopSin(f, PERIOD, 1, 2)) * (TAU / 360),
+            (1.5 + 0.4 * loopSin(f, PERIOD, 1, 2)) * (TAU / 360),
             1.5 * loopSin(f, PERIOD, 1, 0.5) * (TAU / 360),
             0.5 * loopSin(f, PERIOD, 1, 1.3) * (TAU / 360),
             "YXZ",
@@ -207,7 +210,7 @@ const Scene: React.FC<WireframeStreetProps> = (p) => {
 };
 
 export const WireframeStreet: React.FC<WireframeStreetProps> = (p) => (
-  <Stage fov={52} near={0.5} far={1200}>
+  <Stage fov={42} near={0.5} far={1200}>
     <Scene {...p} />
   </Stage>
 );

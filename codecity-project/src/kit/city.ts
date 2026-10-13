@@ -88,14 +88,23 @@ export function generateStreet(p: CityParams): Box[] {
           boxes.push({ x: xc, z: zc, y0: 0, w: depth, d: lotLen, h, seed, kind: 0 });
         }
         // Roof boxes and spires on the tallest.
-        if (floors > p.maxFloors * 0.6) {
+        if (floors > p.maxFloors * 0.45) {
           const top = boxes[boxes.length - 1];
           const ty = top.y0 + top.h;
-          if (r() < 0.7) {
-            boxes.push({ x: top.x, z: top.z, y0: ty, w: top.w * 0.45, d: top.d * 0.45, h: p.floorH * range(r, 1, 2.5), seed, kind: 1 });
-          }
-          if (r() < 0.55) {
-            const sh = range(r, 8, 22);
+          if (r() < 0.75) {
+            // Stepped crown: 2-3 shrinking tiers.
+            let y = ty, w = top.w, d = top.d;
+            const tiers = 2 + Math.floor(r() * 2);
+            for (let k = 0; k < tiers; k++) {
+              w *= range(r, 0.6, 0.78);
+              d *= range(r, 0.6, 0.78);
+              const th = p.floorH * range(r, 2, 4);
+              boxes.push({ x: top.x, z: top.z, y0: y, w, d, h: th, seed, kind: 0 });
+              y += th;
+            }
+            if (r() < 0.5) boxes.push({ x: top.x, z: top.z, y0: y, w: 0.4, d: 0.4, h: range(r, 4, 10), seed, kind: 1 });
+          } else if (r() < 0.5) {
+            const sh = range(r, 6, 18);
             boxes.push({
               x: top.x + range(r, -0.2, 0.2) * top.w,
               z: top.z + range(r, -0.2, 0.2) * top.d,

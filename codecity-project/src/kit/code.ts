@@ -91,8 +91,9 @@ export function makeCodeAtlas(seed: number) {
       const lines = codeLines(r, Math.floor(CELL_H / lh));
       lines.forEach((line, i) => {
         // A few lines are highlighted (brighter), most are dim.
-        const hi = r() < 0.12;
-        const a = hi ? 1 : 0.35 + r() * 0.35;
+        const hi = r() < 0.4;
+        if (!hi && r() < 0.35) return; // gaps: keeps the faces from reading as a solid texture
+        const a = hi ? 1 : 0.25 + r() * 0.3;
         g.fillStyle = `rgba(255,255,255,${a})`;
         g.fillText(line, ox + c * colW + 16, oy + i * lh + 4, colW - 24);
       });
