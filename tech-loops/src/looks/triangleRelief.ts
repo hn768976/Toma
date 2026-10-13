@@ -114,7 +114,7 @@ const TRACERS: Tracer[] = [];
       for (let attempt = 0; attempt < 50; attempt++) {
         const j = Math.floor(J0 + 2 + rng() * (J1 - J0 - 4));
         // Biased toward the right half, where the reference's lit mesh sits.
-        const xs = (0.62 * rng() - 0.18) * FRAME_W;
+        const xs = (0.55 * rng() - 0.05) * FRAME_W;
         const i = Math.round((xs + FRAME_W / 2 + SIDE) / SIDE - j * 0.5);
         const len = 4 + Math.floor(rng() * 7); // 4..10 edges
         let ci = i, cj = j;
@@ -298,7 +298,7 @@ void main() {
   vec3 base = uTile;
   // Lighter toward the top of the frame, as with a soft key above.
   float topLift = 0.75 + 0.6 * smoothstep(-uFrame.y, uFrame.y, vW.y);
-  vec3 col = (base * (0.45 + 1.9 * diff * fall) + uKey * (spec + sheen) * fall) * topLift;
+  vec3 col = (base * (0.7 + 2.0 * diff * fall) + uKey * (spec + sheen) * fall) * topLift;
   col *= ao * (1.0 + 0.6 * vDepth);
   gl_FragColor = vec4(col, 1.0);
 }
@@ -349,7 +349,7 @@ void main() {
   float aaL = fwidth(s) * 1.5 + 1e-5;
   float m = smoothstep(vLit.z - aaL, vLit.z + aaL, s) * (1.0 - smoothstep(vLit.w - aaL, vLit.w + aaL, s));
   float sc = clamp(s, 0.0, 1.0);
-  float inten = max(mix(vLit.x, vLit.y, sc) * m, mix(vSpill.x, vSpill.y, sc * sc * (3.0 - 2.0 * sc)));
+  float inten = max(mix(vLit.x, vLit.y, sc) * m, max(vSpill.x, vSpill.y) * 0.8);
   // Dim parts of a line run deeper and warmer; bright parts go pale.
   vec3 tint = pow(uLine, vec3(1.0 + 0.7 * (1.0 - clamp(inten, 0.0, 1.0))));
   // Champagne rather than copper: pull the gold a little toward grey.
@@ -362,12 +362,12 @@ void main() {
 export const createTriangleRelief: LookFactory<TriangleReliefParams> = (gl, params): Look => {
   const post = new Post(gl, {
     msaa: 4,
-    bloomStrength: 0.35,
+    bloomStrength: 0.5,
     bloomRadius: 0.55,
     bloomThreshold: 0.9,
     bloomKnee: 0.6,
     exposure: 1.0,
-    vignette: 0.55,
+    vignette: 0.3,
     grain: 0.015,
     grainDarkCut: 0.03,
   });
@@ -414,7 +414,7 @@ export const createTriangleRelief: LookFactory<TriangleReliefParams> = (gl, para
     fragmentShader: LINE_FRAG,
     uniforms: {
       uLine: { value: new THREE.Color(params.line) },
-      uHalfW: { value: FRAME_H * 0.0007 },
+      uHalfW: { value: FRAME_H * 0.0009 },
     },
     blending: THREE.AdditiveBlending,
     depthTest: false,
@@ -455,7 +455,7 @@ export const createTriangleRelief: LookFactory<TriangleReliefParams> = (gl, para
       const fadeOut = 1 - Math.min(1, Math.max(0, (u - run) / Math.max(0.05, 0.92 - run)));
       const env = fadeIn * fadeOut * fadeOut;
       if (env <= 0) continue;
-      const bright = (x: number) => env * (0.45 + 0.85 * Math.exp(-(head - x) / 1.5));
+      const bright = (x: number) => env * (0.45 + 1.4 * Math.exp(-(head - x) / 1.2));
       for (let k = 0; k < n; k++) {
         if (head <= k) break;
         const to = Math.min(1, head - k);
