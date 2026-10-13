@@ -31,6 +31,8 @@ export interface PostOptions {
 }
 
 const quadGeo = new THREE.PlaneGeometry(2, 2);
+/** Line count of the blur base (half of 720p). */
+const BASE_H = 360;
 
 const makePass = (frag: string, uniforms: Record<string, THREE.IUniform>) =>
   shaderMat({
@@ -151,7 +153,8 @@ void main() {
   vec4 s = texture(tSharp, vUv);
   vec4 b = texture(tBlur, vUv);
   float r = max(abs(s.a), abs(b.a)) * resolution.y;
-  float k = smoothstep(0.6, 2.2, r);
+  float px = resolution.y / 720.0; // thresholds are in 720p pixels
+  float k = smoothstep(0.6 * px, 2.2 * px, r);
   gl_FragColor = vec4(mix(s.rgb, b.rgb, k), s.a);
 }
 `;
@@ -223,6 +226,8 @@ export class Post {
   private down: THREE.WebGLRenderTarget[] = [];
   private up: THREE.WebGLRenderTarget[] = [];
   private soft: THREE.WebGLRenderTarget[] = [];
+  private preSrc: THREE.WebGLRenderTarget[] = [];
+  private preScene: THREE.WebGLRenderTarget[] = [];
   private mesh = new THREE.Mesh(quadGeo);
   private cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private quadScene = new THREE.Scene();
@@ -302,15 +307,34 @@ export class Post {
       samples: this.opts.msaa,
       ...(this.opts.depthTexture ? { depthTexture: new THREE.DepthTexture(w, h, THREE.UnsignedIntType) } : {}),
     });
+    // Blur passes work on a base of at most 360 lines, so bloom, DoF and the corner
+    // softening cover the same fraction of the frame at 720p, 4K or 6K. Above 720p the
+    // source is first box-halved down toward the base (no aliasing from sparse taps).
+    let bw = w >> 1;
+    let bh = h >> 1;
+    const preSizes: [number, number][] = [];
+    if (bh > BASE_H * 1.01) {
+      let cw = w;
+      let ch = h;
+      while (ch / 2 > BASE_H * 1.01) {
+        cw = Math.max(1, cw >> 1);
+        ch = Math.max(1, ch >> 1);
+        preSizes.push([cw, ch]);
+      }
+      bh = BASE_H;
+      bw = Math.round((w * BASE_H) / h);
+    }
+    this.preSrc = preSizes.map(([a, b]) => this.rt(a, b));
     if (this.opts.dof) {
-      this.dofHalf = this.rt(w >> 1, h >> 1);
-      this.dofHalfBlur = this.rt(w >> 1, h >> 1);
+      this.preScene = preSizes.map(([a, b]) => this.rt(a, b));
+      this.dofHalf = this.rt(bw, bh);
+      this.dofHalfBlur = this.rt(bw, bh);
       this.dofOut = this.rt(w, h);
     } else {
       this.dofOut = this.scene;
     }
-    let lw = w;
-    let lh = h;
+    let lw = bw * 2;
+    let lh = bh * 2;
     for (let i = 0; i < 7; i++) {
       lw = Math.max(1, lw >> 1);
       lh = Math.max(1, lh >> 1);
@@ -318,7 +342,7 @@ export class Post {
       this.up.push(this.rt(lw, lh));
     }
     if (this.opts.cornerBlur) {
-      this.soft.push(this.rt(w >> 1, h >> 1), this.rt(w >> 2, h >> 2), this.rt(w >> 3, h >> 3));
+      this.soft.push(this.rt(bw, bh), this.rt(bw >> 1, bh >> 1), this.rt(bw >> 2, bh >> 2));
     }
     return [w, h];
   }
@@ -336,12 +360,29 @@ export class Post {
     this.gl.clear(true, true, false);
   }
 
+  /** Box-halve `src` through `chain`; returns the last texture and its size. */
+  private preDown(src: THREE.WebGLRenderTarget, chain: THREE.WebGLRenderTarget[]): [THREE.Texture, number, number] {
+    let t = src.texture;
+    let tw = src.width;
+    let th = src.height;
+    for (const rt of chain) {
+      this.copyDownMat.uniforms.tSrc.value = t;
+      this.copyDownMat.uniforms.texel.value.set(1 / tw, 1 / th);
+      this.blit(this.copyDownMat, rt);
+      t = rt.texture;
+      tw = rt.width;
+      th = rt.height;
+    }
+    return [t, tw, th];
+  }
+
   /** Run DoF (if enabled) from the scene target into dofOut. */
   runDof() {
     if (!this.opts.dof) return;
     const { w, h } = this;
-    this.copyDownMat.uniforms.tSrc.value = this.scene.texture;
-    this.copyDownMat.uniforms.texel.value.set(1 / w, 1 / h);
+    const [pt, pw, ph] = this.preDown(this.scene, this.preScene);
+    this.copyDownMat.uniforms.tSrc.value = pt;
+    this.copyDownMat.uniforms.texel.value.set(1 / pw, 1 / ph);
     this.blit(this.copyDownMat, this.dofHalf);
     this.dofMat.uniforms.tSrc.value = this.dofHalf.texture;
     this.dofMat.uniforms.resolution.value.set(this.dofHalf.width, this.dofHalf.height);
@@ -356,10 +397,11 @@ export class Post {
   /** Bloom + corner soften + tonemap + grain + dither, to the canvas. */
   finish(frame: number, src: THREE.WebGLRenderTarget = this.dofOut) {
     const o = this.opts;
-    // Bloom pyramid.
-    let prev = src.texture;
-    let pw = src.width;
-    let ph = src.height;
+    // Bloom pyramid (from the base-resolution source).
+    const [baseTex, baseW, baseH] = this.preDown(src, this.preSrc);
+    let prev = baseTex;
+    let pw = baseW;
+    let ph = baseH;
     for (let i = 0; i < this.down.length; i++) {
       const u = this.downMat.uniforms;
       u.tSrc.value = prev;
@@ -385,9 +427,9 @@ export class Post {
     }
     // Corner softening source.
     if (o.cornerBlur) {
-      let s = src.texture;
-      let sw = src.width;
-      let sh = src.height;
+      let s = baseTex;
+      let sw = baseW;
+      let sh = baseH;
       for (const t of this.soft) {
         this.downMat.uniforms.tSrc.value = s;
         this.downMat.uniforms.texel.value.set(1 / sw, 1 / sh);
@@ -422,7 +464,9 @@ export class Post {
       this.dofHalfBlur?.dispose();
       this.dofOut?.dispose();
     }
-    for (const t of [...this.down, ...this.up, ...this.soft]) t.dispose();
+    for (const t of [...this.down, ...this.up, ...this.soft, ...this.preSrc, ...this.preScene]) t.dispose();
+    this.preSrc = [];
+    this.preScene = [];
     this.down = [];
     this.up = [];
     this.soft = [];
