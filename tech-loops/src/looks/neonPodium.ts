@@ -25,7 +25,9 @@ const ROW_PITCH = 0.52; // vertical spacing
 const WALL_Z = -4.5;
 const WALL_K = 0.3;
 const WALL_Y0 = -0.05; // centre height of the bottom row
-const EDGE_T = 0.015; // neon tube thickness
+const EDGE_T = 0.021; // neon tube thickness
+/** Panel depth as a fraction of its width: shallow louvre-like frames rather than cubes. */
+const DEPTH = 0.4;
 const POD_R = 1.0;
 const POD_H = 0.22;
 
@@ -86,9 +88,12 @@ const SLOTS: Slot[] = [];
 const EDGES12: { c: THREE.Vector3; s: THREE.Vector3; depth: boolean }[] = [];
 {
   const h = 0.5;
-  for (const y of [-h, h]) for (const z of [-h, h]) EDGES12.push({ c: new THREE.Vector3(0, y, z), s: new THREE.Vector3(1 + EDGE_T / CUBE, EDGE_T / CUBE, EDGE_T / CUBE), depth: false });
-  for (const x of [-h, h]) for (const z of [-h, h]) EDGES12.push({ c: new THREE.Vector3(x, 0, z), s: new THREE.Vector3(EDGE_T / CUBE, 1 + EDGE_T / CUBE, EDGE_T / CUBE), depth: false });
-  for (const x of [-h, h]) for (const y of [-h, h]) EDGES12.push({ c: new THREE.Vector3(x, y, 0), s: new THREE.Vector3(EDGE_T / CUBE, EDGE_T / CUBE, 1 + EDGE_T / CUBE), depth: true });
+  // Thickness per unit-box axis, so tubes stay round after the panel's non-uniform scale.
+  const tx = EDGE_T / CUBE;
+  const tz = EDGE_T / (CUBE * DEPTH);
+  for (const y of [-h, h]) for (const z of [-h, h]) EDGES12.push({ c: new THREE.Vector3(0, y, z), s: new THREE.Vector3(1 + tx, tx, tz), depth: false });
+  for (const x of [-h, h]) for (const z of [-h, h]) EDGES12.push({ c: new THREE.Vector3(x, 0, z), s: new THREE.Vector3(tx, 1 + tx, tz), depth: false });
+  for (const x of [-h, h]) for (const y of [-h, h]) EDGES12.push({ c: new THREE.Vector3(x, y, 0), s: new THREE.Vector3(tx, tx, 1 + tz), depth: true });
 }
 
 const FACE_VERT = /* glsl */ `
@@ -131,7 +136,7 @@ void main() {
   float fres = pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 3.0);
   // Dark tinted glass-like faces: a soft gradient of both neons, brighter toward the top.
   float up = clamp(vL.y + 0.5, 0.0, 1.0);
-  vec3 col = uAmb * 2.0 + neon * (glow * 0.35 + fres * 0.05) + mix(uB, uA, vBand) * 0.012 * (0.4 + 0.6 * up) + mix(uA, uB, 0.65) * 0.02;
+  vec3 col = uAmb * 2.0 + neon * (glow * 0.2 + fres * 0.03) + mix(uB, uA, vBand) * 0.012 * (0.4 + 0.6 * up) + mix(uA, uB, 0.65) * 0.02;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -206,7 +211,7 @@ void main() {
     float band = smoothstep(0.1, 0.13, y) * (1.0 - smoothstep(0.19, 0.22, y));
     float lip = smoothstep(0.86, 0.97, y);
     float side = 0.5 + 0.5 * dot(N, V);
-    col = uAmb * 1.2 * side + uRim * (band * 3.0 + lip * 1.2) + uRim * 0.05;
+    col = uAmb * 1.2 * side + mix(uRim, vec3(dot(uRim, vec3(0.33))), 0.35) * (band * 3.0 + lip * 0.3) + uRim * 0.05;
   }
   gl_FragColor = vec4(col, 1.0);
 }
@@ -241,7 +246,7 @@ void main() {
   // Roughness ~0.1: mostly sharp near the contact, softer farther from it.
   float dist = length(vW - uCam);
   vec3 refl = mix(sharp, blur, 0.97);
-  vec3 col = uAmb * 0.15 + refl * (0.2 + 0.4 * fres);
+  vec3 col = uAmb * 0.15 + refl * (0.15 + 0.32 * fres);
   // Light pool from the podium rim.
   float rp = length(vW.xz);
   col += uRim * 0.12 * exp(-max(rp - uPodR, 0.0) * 2.2) * smoothstep(uPodR * 0.9, uPodR * 1.02, rp);
@@ -278,8 +283,8 @@ void main() {
 export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Look => {
   const post = new Post(gl, {
     msaa: 4,
-    bloomStrength: 0.8,
-    bloomRadius: 0.5,
+    bloomStrength: 1.1,
+    bloomRadius: 0.72,
     bloomThreshold: 0.7,
     bloomKnee: 0.5,
     exposure: 1.0,
@@ -329,7 +334,7 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
   const edgeMat = shaderMat({
     vertexShader: EDGE_VERT,
     fragmentShader: EDGE_FRAG,
-    uniforms: { uCam: { value: new THREE.Vector3() }, uGain: { value: 2.0 } },
+    uniforms: { uCam: { value: new THREE.Vector3() }, uGain: { value: 1.5 } },
   });
   const edges = new THREE.InstancedMesh(edgeGeo, edgeMat, SLOTS.length * 12);
   edges.frustumCulled = false;
@@ -419,7 +424,7 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
       const nz = Math.cos(s.angle); // inward normal (toward the camera side)
       pos.set(s.x + nx * push, s.y, s.z + nz * push);
       q.setFromAxisAngle(yAxis, -s.angle + rot);
-      scl.setScalar(CUBE);
+      scl.set(CUBE, CUBE, CUBE * DEPTH);
       m4.compose(pos, q, scl);
       faces.setMatrixAt(i, m4);
       EDGES12.forEach((e, k) => {
@@ -475,6 +480,13 @@ export const createNeonPodium: LookFactory<NeonPodiumParams> = (gl, params): Loo
       post.blit(blurMat, reflBlurA);
       blurMat.uniforms.tSrc.value = reflBlurA.texture;
       blurMat.uniforms.uDir.value.set(0, 8.0 / (h >> 2));
+      post.blit(blurMat, reflBlurB);
+      // A second, longer vertical pass for the wet-floor streaks.
+      blurMat.uniforms.tSrc.value = reflBlurB.texture;
+      blurMat.uniforms.uDir.value.set(0, 16.0 / (h >> 2));
+      post.blit(blurMat, reflBlurA);
+      blurMat.uniforms.tSrc.value = reflBlurA.texture;
+      blurMat.uniforms.uDir.value.set(0.4 / (w >> 2), 0);
       post.blit(blurMat, reflBlurB);
 
       // 2) Main pass.
