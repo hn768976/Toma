@@ -8,5 +8,5 @@ const re = /id: "([^"]+)", file: "([^"]+)"/g; let m;
 while ((m = re.exec(src))) console.log(m[1] + " " + m[2]);')
 while read -r ID STEM; do
   if [ $# -gt 0 ] && [[ ! " $* " =~ " $ID " ]]; then continue; fi
-  scripts/render-preview.sh "$ID" "$STEM"
+  scripts/render-preview.sh "$ID" "$STEM" < /dev/null
 done <<< "$ROWS"
