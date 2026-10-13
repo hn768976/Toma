@@ -135,9 +135,9 @@ void main() {
   col += uBrain * 0.05 * max(dot(N, L / dl), 0.0) / (1.0 + dl * dl * 0.5);
   // Warm pool on the tops right under the brain.
   vec2 dxz = vW.xz - uBrainPos.xz;
-  col += mix(uBrain, vec3(1.0, 0.45, 0.8) * dot(uBrain, vec3(0.33)), 0.35) * 0.9 * max(N.y, 0.0) * exp(-dot(dxz, dxz) * 0.9);
+  col += mix(uBrain, vec3(1.0, 0.45, 0.8) * dot(uBrain, vec3(0.33)), 0.35) * 0.9 * max(N.y, 0.0) * exp(-dot(dxz, dxz) * 2.5);
   // Atmospheric depth.
-  float fog = 0.45 + 0.5 * smoothstep(4.0, 36.0, dist);
+  float fog = 0.15 + 0.7 * smoothstep(4.0, 36.0, dist);
   col = mix(col, uBg, fog);
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
@@ -307,7 +307,7 @@ void main() {
   // Sparks: a few hashed points on the warm lines that flicker in whole cycles.
   vec3 sc = floor(p * 24.0);
   float sh = hash31(sc + 17.0);
-  float spark = step(0.96, sh) * warm * (0.5 + 0.5 * cos(6.2831853 * (cyc(1.0 + floor(hash31(sc + 3.0) * 3.0)) + sh * 37.0)));
+  float spark = line * step(0.985, sh) * warm * (0.5 + 0.5 * cos(6.2831853 * (cyc(1.0 + floor(hash31(sc + 3.0) * 3.0)) + sh * 37.0)));
   vec3 col = base * line * (0.3 + 1.7 * warm + 1.8 * pulse);
   col += mix(base, vec3(1.0, 0.95, 0.85), 0.4) * line * pulse * wt * 1.5;
   col += mix(uOuter, uBrain, wt) * rim * 0.25;       // thin glassy outline
@@ -370,8 +370,8 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
     msaa: 0,
     depthTexture: true,
     dof: { maxRadius: 0.045 },
-    bloomStrength: 0.6,
-    bloomRadius: 0.4,
+    bloomStrength: 0.9,
+    bloomRadius: 0.6,
     bloomThreshold: 0.75,
     bloomKnee: 0.6,
     exposure: 1.0,
@@ -456,9 +456,9 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
   bokeh.mat.uniforms.uGain.value = 4.5;
   bokeh.mat.uniforms.uSharpR.value = 0.0045;
   bokeh.mat.uniforms.uFalloff.value = 1.0;
-  bokeh.mat.uniforms.uSquare.value = 0.6;
+  bokeh.mat.uniforms.uSquare.value = 0.25;
   // The LEDs stay small and fairly crisp while the blocks behind them blur heavily.
-  bokeh.mat.uniforms.uCocScale.value = 0.3;
+  bokeh.mat.uniforms.uCocScale.value = 0.75;
   bokeh.mat.uniforms.uFade.value.set(28, 46);
 
   // --- Brain overlay (drawn sharp, after DoF) ---
@@ -540,6 +540,26 @@ export const createAIBrainChip: LookFactory<AIBrainChipParams> = (gl, params): L
   badge.position.copy(brainPos).addScaledVector(fwd, -0.85).addScaledVector(new THREE.Vector3(1, 0, 0), 0.48);
   badge.quaternion.copy(camera.quaternion);
   overlay.add(badge);
+
+  // Soft warm bloom around the chip, with a violet-pink fringe, behind the lines.
+  const haloMat = shaderMat({
+    vertexShader: BADGE_VERT,
+    fragmentShader: /* glsl */ `precision highp float; in vec2 vUv; uniform vec3 uBrain; uniform float uBreath;
+      void main(){ vec2 p = (vUv - 0.5) * 2.0; float r = length(p * vec2(1.0, 1.25));
+        vec3 pink = vec3(0.55, 0.18, 0.6) * dot(uBrain, vec3(0.33));
+        vec3 c = uBrain * exp(-r * r * 9.0) * 0.55 * uBreath + mix(uBrain, pink, 0.6) * exp(-r * r * 2.2) * 0.12;
+        gl_FragColor = vec4(c, 1.0); }`,
+    uniforms: { uBrain: { value: brainC }, uBreath: breath },
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 3.4), haloMat);
+  halo.position.copy(brainPos).addScaledVector(new THREE.Vector3(1, 0, 0), 0.3).addScaledVector(fwd, 0.5);
+  halo.quaternion.copy(camera.quaternion);
+  halo.renderOrder = 0.5;
+  overlay.add(halo);
 
   const black = new THREE.Color(0, 0, 0);
   return {
