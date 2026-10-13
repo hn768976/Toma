@@ -80,7 +80,7 @@ const LIGHTS: BokehLight[] = [];
     let placed = 0;
     for (let tries = 0; placed < w.n && tries < w.n * 40; tries++) {
       const [sx, sy, sz] = w.size();
-      const c: Comp = { kind: w.kind, x: rx(), z: rng() * P, sx: sx * 1.7, sy: sy * 1.4, sz: sz * 1.7, tint: rng() };
+      const c: Comp = { kind: w.kind, x: rx(), z: rng() * P, sx: sx * 1.35, sy: sy * 3.0, sz: sz * 1.35, tint: rng() };
       if (tryPlace(c, 0.02)) placed++;
     }
   }
@@ -132,6 +132,22 @@ const LIGHTS: BokehLight[] = [];
       add(c.x + (rng() - 0.5) * c.sx * 0.8, c.sy + 0.006, c.z + (rng() - 0.5) * c.sz * 0.8, range(rng, 0.4, 1.2));
     }
   }
+  // Four bright LED clusters per tile, left of centre, so one is always passing close to the lens.
+  for (let c = 0; c < 4; c++) {
+    const cz = c * (P / 4) + rng();
+    for (let i = 0; i < 12; i++) {
+      tileLights.push({
+        x: -0.25 - rng() * 0.8,
+        y: 0.012,
+        z: (((cz + (rng() - 0.5) * 0.6) % P) + P) % P,
+        color: lc.clone(),
+        energy: range(rng, 1.4, 2.4),
+        twinkleK: 0,
+        twinklePhase: 0,
+        size: 1,
+      });
+    }
+  }
   for (let k = 0; k < K; k++) for (const l of tileLights) LIGHTS.push({ ...l, z: l.z + k * P });
 }
 
@@ -145,7 +161,7 @@ uniform vec3 uGlow;
 float hotOf(vec3 d) { return exp(-d.x * d.x * 14.0); }
 vec3 glowCol(vec3 d) {
   float hot = hotOf(d);
-  return uGlow * (0.3 + 1.4 * hot) + vec3(0.85, 0.95, 1.0) * hot * hot * 0.35;
+  return uGlow * (0.55 + 0.8 * hot) + vec3(0.85, 0.95, 1.0) * hot * hot * 0.3;
 }
 vec3 env(vec3 d) {
   float h = exp(-abs(d.y) * 26.0) * 1.2 + exp(-abs(d.y) * 6.0) * 0.2;
@@ -208,7 +224,7 @@ void main() {
   // Neutral grey bodies; tops from dark matte to brushed silver.
   float metal = vTop * mix(0.3, 0.9, vTint);
   vec3 grey = vec3(1.0, 0.97, 0.93);
-  vec3 base = vTop > 0.5 ? grey * mix(0.03, 0.3, vTint) : grey * 0.018;
+  vec3 base = vTop > 0.5 ? grey * mix(0.02, 0.16, vTint) : grey * 0.018;
   vec3 spec = env(normalize(R + vec3(0.0, 0.05, 0.0))) * mix(0.05, 0.5, metal) * (0.4 + fres);
   // Bright specular rim along the top edges of boxes (catches the horizon light).
   vec3 lp = clamp(vLocal, vec3(-0.5, 0.0, -0.5), vec3(0.5, 1.0, 0.5));
@@ -216,11 +232,11 @@ void main() {
   float rim = vTop * exp(-max(edgeD, 0.0) / 0.006);
   float topLip = (1.0 - vTop) * smoothstep(0.85, 1.0, lp.y);
   vec3 dir = normalize(vW - uCam);
-  vec3 hl = glowCol(dir) * (rim * 0.9 + topLip * 0.35) * (0.4 + vTint);
+  vec3 hl = glowCol(dir) * (rim * 1.6 + topLip * 0.5) * (0.4 + vTint);
   float fill = max(N.y, 0.0) * 0.6 + 0.15;
   vec3 col = base * fill + spec + hl + uLightC * 0.006 * (1.0 - vTop);
   float dist = length(vW - uCam);
-  col = mix(col, glowCol(dir) * (0.3 + 0.9 * hotOf(dir) * hotOf(dir)), fogOf(dist));
+  col = mix(col, glowCol(dir) * (0.1 + 0.9 * pow(hotOf(dir), 6.0)), fogOf(dist));
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
 `;
@@ -277,7 +293,7 @@ void main() {
   col += env(R) * fres * 0.12;
   col += uLightC * 0.012;
   vec3 fd = normalize(vW - uCam);
-  col = mix(col, glowCol(fd) * (0.3 + 0.9 * hotOf(fd) * hotOf(fd)), fogOf(far));
+  col = mix(col, glowCol(fd) * (0.1 + 0.9 * pow(hotOf(fd), 6.0)), fogOf(far));
   gl_FragColor = vec4(col, cocOf(-vVP.z));
 }
 `;
@@ -294,7 +310,7 @@ void main() {
   vec3 d = normalize((uCamWorld * vec4(normalize(v.xyz / v.w), 0.0)).xyz);
   // Bright haze band hugging the horizon, plus a wide faint halo above it.
   float up = max(d.y, 0.0);
-  vec3 col = glowCol(d) * (exp(-up * 45.0) * 0.45 + exp(-up * 12.0) * 0.05);
+  vec3 col = glowCol(d) * (exp(-up * 60.0) * 0.55 + exp(-up * 14.0) * 0.012);
   col += glowCol(d) * 0.45 * step(d.y, 0.0);
   gl_FragColor = vec4(col, uCocFar);
 }
@@ -390,7 +406,7 @@ export const createCircuitHorizon: LookFactory<CircuitHorizonParams> = (gl, para
   const teal = new THREE.Color("#2AD8E8");
   const lights = LIGHTS.map((l, i) => ({
     ...l,
-    color: l.size > 1 ? lightC.clone().lerp(new THREE.Color(1, 1, 1), 0.4) : lightC.clone().lerp(teal, (i * 7919) % 10 === 0 ? 0.4 : 0),
+    color: l.size > 1 ? lightC.clone().lerp(new THREE.Color(1, 1, 1), 0.4) : lightC.clone().lerp(teal, (i * 7919) % 4 === 0 ? 0.35 : 0).multiplyScalar((i * 104729) % 3 === 0 ? 0.8 : 1),
   }));
   const bokeh = createBokeh(lights, pu);
   bokeh.mat.uniforms.uGain.value = 5.5;
