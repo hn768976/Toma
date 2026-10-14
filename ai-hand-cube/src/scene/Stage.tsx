@@ -41,6 +41,7 @@ export const Stage: React.FC<{
       height={height}
       dpr={dpr}
       flat
+      shadows="soft"
       gl={{
         antialias: false,
         alpha: false,

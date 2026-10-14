@@ -10,7 +10,7 @@ export const buildHandMaterials = (p: Palette, env: THREE.Texture): HandMaterial
     clearcoat: 0.35,
     clearcoatRoughness: 0.18,
     envMap: env,
-    envMapIntensity: 1.0,
+    envMapIntensity: 0.85,
   });
   const joint = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(p.handJoint),
@@ -26,5 +26,19 @@ export const buildHandMaterials = (p: Palette, env: THREE.Texture): HandMaterial
     envMap: env,
     envMapIntensity: 0.4,
   });
-  return { shell, joint, seam };
+  const metal = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color("#DDE3EC"),
+    metalness: 1.0,
+    roughness: 0.14,
+    envMap: env,
+    envMapIntensity: 1.3,
+  });
+  const pad = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(p.handJoint).multiplyScalar(0.7),
+    metalness: 0.0,
+    roughness: 0.75,
+    envMap: env,
+    envMapIntensity: 0.5,
+  });
+  return { shell, joint, seam, metal, pad };
 };

@@ -441,7 +441,9 @@ export class PostPipeline {
     gl.autoClear = false;
     gl.setClearColor(0x000000, 0);
 
-    // 1. main scene
+    // 1. main scene (shadow maps update once per frame, here)
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = true;
     gl.setRenderTarget(this.rtMain);
     gl.clear(true, true, true);
     gl.render(scene, cam);

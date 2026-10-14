@@ -16,7 +16,7 @@ const palette = VERSIONS[0].palette;
 const DEG = Math.PI / 180;
 
 const VIEWS = [
-  { yaw: -12, elev: 34, dist: 4.6 },
+  { yaw: -24, elev: 40, dist: 4.6 },
   { yaw: -58, elev: 28, dist: 4.6 },
   { yaw: -25, elev: -12, dist: 4.6 },
 ];
