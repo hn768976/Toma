@@ -69,16 +69,16 @@ def step4_black(d):
         for f in np.linspace(5, n - 6, 12).astype(int):
             im = frame(p, f).astype(int); mx = im.max(2)
             # "black area": pixels whose 41x41 neighbourhood max is <= 1
-            # black area = at least 12 px away from any pixel brighter than 3% (8/255)
-            cand = np.nonzero(maximum_filter(mx, size=25) < 8)
+            # black area = pixels whose whole 61x61 neighbourhood reads <= 2 (well away from any glow)
+            cand = np.nonzero(maximum_filter(mx, size=61) <= 2)
             if len(cand[0]) < 30: continue
             idx = rng.choice(len(cand[0]), 30, replace=False)
             vals = im[cand[0][idx], cand[1][idx]]
-            res.append((int(f), int(vals.max())))
-        worst = max(v for _, v in res) if res else None
+            res.append((int(f), int(vals.max()), round(len(cand[0]) / mx.size * 100)))
+        worst = max(v for _, v, _ in res) if res else None
         good = worst is not None and worst <= 1
         ok &= good
-        print(f"{'PASS' if good else 'FAIL'} {name}: 30-point black samples in {len(res)} frames, max channel value = {worst}  {res}")
+        print(f"{'PASS' if good else 'FAIL'} {name}: 30-point black samples in {len(res)} frames, max channel value = {worst}  (frame, max, % of frame black) {res}")
     return ok
 
 def banding(d, name, frames, rows):

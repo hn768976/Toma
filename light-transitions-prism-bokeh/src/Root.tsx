@@ -3,12 +3,14 @@ import { VERSIONS } from "./data";
 import { PixiLook } from "./lib/PixiLook";
 import { LOOKS } from "./looks";
 
-type Props = { row: string; durationOverride?: number };
+// durationOverride / debugBackgroundOnly are used only by the verification scripts.
+type Props = { row: string; durationOverride?: number; debugBackgroundOnly?: boolean };
 
-const LookComp: React.FC<Props> = ({ row }) => {
+const LookComp: React.FC<Props> = ({ row, debugBackgroundOnly }) => {
   const v = VERSIONS.find((r) => r.id === row)!;
   const look = LOOKS[v.look];
-  return <PixiLook build={look.build} params={v.params as never} options={look.options} />;
+  const params = debugBackgroundOnly ? { ...v.params, debugBackgroundOnly } : v.params;
+  return <PixiLook build={look.build} params={params as never} options={look.options} />;
 };
 
 export const RemotionRoot: React.FC = () => (

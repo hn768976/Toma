@@ -10,6 +10,8 @@ export interface RedBokehParams {
   bokehA: string;
   bokehB: string;
   sparkle: string;
+  /** Verification only: hide all sprites to inspect the background gradient. */
+  debugBackgroundOnly?: boolean;
 }
 
 const LOOP = 600;
@@ -227,6 +229,8 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
       rot0: range(rng, -0.3, 0.3),
     });
   }
+
+  if (params.debugBackgroundOnly) for (const it of items) it.sprite.visible = false;
 
   const wrap = (v: number, m: number) => ((v % m) + m) % m;
   const TAU = Math.PI * 2;

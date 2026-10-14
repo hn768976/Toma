@@ -63,7 +63,7 @@ void main() {
   if (uOverlay > 0.5) {
     gate = smoothstep(0.012, 0.03, level);
     // Kill sub-LSB glow tails so black really is black.
-    c *= smoothstep(0.0015, 0.006, mx);
+    c *= smoothstep(0.006, 0.016, mx);
   }
   // Film grain: monochrome, triangular PDF, from pixel position and frame.
   uint h = hashu(uvec3(uvec2(px), uint(uFrame) + 7u));
