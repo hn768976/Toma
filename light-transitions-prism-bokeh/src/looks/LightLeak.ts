@@ -28,9 +28,11 @@ ${GLSL_COMMON}
 vec3 ramp(float I, vec3 deep, vec3 mid, vec3 core) {
   vec3 c = deep * 2.2 * min(I, 0.3) / 0.3 * (1.0 - 0.5 * smoothstep(0.3, 0.8, I));
   c += mid * smoothstep(0.18, 0.72, I) * 1.4;
-  c += core * smoothstep(0.55, 1.3, I) * 1.6;
+  c += core * smoothstep(0.55, 1.3, I) * 3.0;
   // Pale icy band where the coloured wash turns into the blown-out core.
-  c += mix(mid, vec3(0.75, 0.85, 1.0), 0.6) * smoothstep(0.45, 0.85, I) * (1.0 - smoothstep(0.95, 1.3, I)) * 0.45;
+  c += mix(mid, vec3(0.75, 0.85, 1.0), 0.6) * smoothstep(0.55, 0.9, I) * (1.0 - smoothstep(0.95, 1.3, I)) * 0.6;
+  // Hot magenta band just outside the core (mid hue pushed toward red).
+  c += mix(mid, vec3(mid.b * 0.55, mid.g * 0.3, mid.b), 0.6) * smoothstep(0.35, 0.65, I) * (1.0 - smoothstep(0.75, 1.05, I)) * 0.5;
   return c;
 }
 
@@ -47,11 +49,13 @@ void main() {
     q.x /= B.y;
     // Domain warp from fixed noise, drifting slowly with time.
     vec2 w = vec2(fbm(q * 1.7 + B.x + vec2(0.0, uTime * 0.07)), fbm(q * 1.7 + B.x + 5.2 - vec2(uTime * 0.06, 0.0))) - 0.5;
-    vec2 qw = q + w * 0.22 * A.z;
+    vec2 qw = q + w * 0.38 * A.z;
     float d = length(qw) / A.z;
     // Broad coloured wash plus a large, round, blown-out disc (out-of-focus light).
-    float wash = exp(-d * d * 0.8);
-    float disc = smoothstep(0.8, 0.25, d);
+    float wash = exp(-d * d * 0.32);
+    // Ragged edge: the disc threshold wobbles with fixed noise.
+    float edge = 0.62 + 0.22 * (fbm(qw * 3.0 / A.z + B.x * 1.7) - 0.5);
+    float disc = smoothstep(edge + 0.2, edge - 0.3, d);
     float tex = 0.92 + 0.16 * (fbm(qw * 1.4 / A.z + B.x * 3.1) - 0.5);
     float I = A.w * (0.8 * wash + 0.95 * disc) * tex;
     vec3 deep = mix(uDeep, uAccent * 0.35, B.w);
@@ -97,7 +101,7 @@ export const buildLightLeak: LookBuilder<LightLeakParams> = ({ width, height }, 
     { t0: 0.25, t1: 3.3, from: [-0.45, 0.62], to: [0.3, 0.45], radius: 0.52, peak: 1.3, stretch: 1.5, angle: 0.25, accent: 0, seed: 1.3 },
     { t0: 2.5, t1: 5.9, from: [A + 0.45, -0.25], to: [A - 0.3, 0.4], radius: 0.58, peak: 1.2, stretch: 1.35, angle: -0.6, accent: 0, seed: 7.9 },
     { t0: 6.6, t1: 9.3, from: [0.95, 1.5], to: [1.05, 0.7], radius: 0.6, peak: 1.15, stretch: 1.7, angle: 0.1, accent: 1, seed: 13.4 },
-    { t0: 9.8, t1: 11.8, from: [-0.35, 0.05], to: [0.35, 0.5], radius: 0.62, peak: 1.35, stretch: 1.45, angle: 0.5, accent: 0, seed: 21.7 },
+    { t0: 9.8, t1: 11.8, from: [-0.35, 0.05], to: [0.35, 0.5], radius: 0.62, peak: 1.35, stretch: 1.45, angle: 1.35, accent: 0, seed: 21.7 },
   ];
   const v3 = (hex: string) => ({ value: new Float32Array(hexToRgb(hex)), type: "vec3<f32>" });
   const { mesh, u } = fullscreenMesh(width, height, FRAG, {

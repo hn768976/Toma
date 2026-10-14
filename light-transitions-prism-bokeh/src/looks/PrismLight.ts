@@ -11,7 +11,7 @@ export interface PrismLightParams {
 }
 
 const LOOP = 600;
-const BASE = 6; // 6 base shards x 6-fold symmetry = 36 shards
+const BASE = 5; // 5 base shards x 6-fold symmetry = 30 shards
 
 const FRAG = /* glsl */ `#version 300 es
 precision highp float;
@@ -43,10 +43,12 @@ void main() {
   const float SECTOR = TAU / 6.0;
   // Background: blurred radial light streaks over an indigo field. Every angular
   // term has a whole number of periods per 60 degrees, so the 6-fold symmetry is exact.
-  float st = 0.5 + 0.22 * sin(a * 12.0 + 1.3 + 2.0 * r) + 0.16 * sin(a * 18.0 - 0.7 - 3.0 * r)
-           + 0.12 * sin(a * 30.0 + 2.1 + 1.5 * r);
-  vec3 acc = mix(uSpec[2], uSpec[1], 0.5 + 0.5 * sin(a * 6.0 + 0.9 * r)) * (0.14 + 0.34 * st);
+  float st = 0.5 + 0.26 * sin(a * 6.0 + 1.3 + 2.0 * r) + 0.16 * sin(a * 12.0 - 0.7 - 3.0 * r);
+  st = mix(0.5, st, smoothstep(0.05, 0.45, r));   // no sharp convergence at the centre
+  vec3 acc = mix(uSpec[2] * vec3(0.7, 0.5, 1.0), uSpec[1], 0.5 + 0.5 * sin(a * 6.0 + 0.9 * r)) * (0.2 + 0.36 * st);
   acc += uSpec[0] * 0.12 * (0.5 + 0.5 * sin(a * 6.0 + 2.4));
+  vec3 bg = acc;
+  acc = vec3(0.0);
   // Fold into one 60-degree sector.
   float af = mod(a, SECTOR);
   float sumM = 0.0, sumM2 = 0.0;
@@ -57,22 +59,26 @@ void main() {
       float ang = A.x + B.z * (r - A.y);              // swirl: angle drifts with radius
       float da = af - ang + float(j) * SECTOR;
       float u = sat((r - A.y) / max(A.z - A.y, 1e-3)); // 0 inner .. 1 outer
-      float hw = A.w * (0.35 + 0.65 * mix(u, 1.0 - u, B.w));
+      float hw = A.w * mix(0.85, 0.35 + 0.65 * (1.0 - u), B.w);   // blocks (kind 0) or tapering blades (kind 1)
       float arc = da * r;
       float half_ = hw * r + 0.01;
       float soft = 0.008 + 0.022 * r;                  // crisp facet edges, softer far out
       float m = smoothstep(half_ + soft, half_ - soft, abs(arc));
       m *= smoothstep(A.y - 0.04, A.y + 0.04, r) * (1.0 - smoothstep(A.z - 0.06, A.z + 0.06, r));
       // Facets: a faint internal edge splits each shard into two planes.
-      float facet = mix(0.72, 1.0, smoothstep(-0.004, 0.004, arc - 0.25 * half_));
+      float facet = mix(0.75, 1.0, smoothstep(-0.02, 0.02, arc - 0.25 * half_));
       m *= B.y * facet;
       // Dispersion: hue sweeps across the shard (a rainbow band), stronger on "triangle" shards.
       float t = arc / max(half_, 1e-3);
-      float hue = B.x + mix(0.08, 0.45, B.w) * t + 0.12 * r;
-      acc += spectrum(hue) * m;
+      // Solid facet colour, with a rainbow fringe running along one edge only.
+      float fringe = smoothstep(0.45, 0.85, t);
+      float hue = B.x + 0.04 * t + 0.08 * r + fringe * 0.7 * (t - 0.45);
+      acc += spectrum(hue) * m * (1.0 + 0.5 * fringe);
       sumM += m; sumM2 += m * m;
     }
   }
+  // Facets cover the background (they read as solid light, not as a tint on blue).
+  acc += bg * (1.0 - 0.75 * min(sumM, 1.0));
   // White glints where shards overlap (sum of pairwise products).
   float overlap = max(0.5 * (sumM * sumM - sumM2), 0.0);
   acc += vec3(1.0) * smoothstep(0.5, 1.6, overlap) * 0.6;
@@ -80,6 +86,7 @@ void main() {
   acc *= mix(0.4, 1.0, smoothstep(0.03, 0.3, r));
   acc += uCoreCol * exp(-r * r / 0.02) * 0.35;
   vec3 c = 1.0 - exp(-acc * 1.05);
+  c = sat3(mix(vec3(luma(c)), c, 1.35));   // keep the refracted colours saturated
   finalColor = vec4(c, 1.0);
 }`;
 
@@ -89,9 +96,9 @@ const SHARDS = Array.from({ length: BASE }, (_, k) => ({
   angle: (k / BASE) * ((Math.PI * 2) / 6) + range(rng, -0.08, 0.08),
   rIn: range(rng, 0.22, 0.75),
   len: range(rng, 0.25, 0.6),
-  halfWidth: range(rng, 0.14, 0.3),
-  hue: k / BASE + range(rng, -0.05, 0.05),
-  intensity: range(rng, 0.6, 1.6),
+  halfWidth: range(rng, 0.12, 0.26),
+  hue: (k / BASE + 0.66) % 1 + range(rng, -0.03, 0.03), // brightest shards (k = 0, 1) are gold / orange
+  intensity: k < 2 ? range(rng, 0.9, 1.15) : range(rng, 0.5, 1.0),
   twist: range(rng, -0.9, 0.9),
   kind: rng() < 0.35 ? 0 : 1,
   // Radial pulse: whole cycles per loop so frame 600 == frame 0.
