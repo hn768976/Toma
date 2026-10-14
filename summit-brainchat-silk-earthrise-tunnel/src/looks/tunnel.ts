@@ -41,7 +41,7 @@ const FOG_FAR = 27;
 export function buildTunnel(ctx: BuildCtx, p: TunnelParams): LookHandle {
   RectAreaLightUniformsLib.init();
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(new THREE.Color(p.fog), 1.5, FOG_FAR);
+  scene.fog = new THREE.Fog(new THREE.Color(p.fog), 5, FOG_FAR);
   const camera = new THREE.PerspectiveCamera(66, ctx.width / ctx.height, 0.05, 120);
 
   const slatMat = new THREE.MeshStandardMaterial({ color: p.slat, roughness: 0.5, metalness: 0, emissive: new THREE.Color(p.slat).multiplyScalar(p.slatGlow) });
@@ -54,11 +54,14 @@ export function buildTunnel(ctx: BuildCtx, p: TunnelParams): LookHandle {
   const zOf = (i: number) => -(i - 4) * MODULE;
 
   const ceilGeo = new RoundedBoxGeometry(2 * WC + 0.3, 0.12, 0.085, 2, 0.025);
-  const ceil = new THREE.InstancedMesh(ceilGeo, slatMat, count);
+  // two ceiling ribs per module (the 0.6-unit module still repeats exactly)
+  const ceil = new THREE.InstancedMesh(ceilGeo, slatMat, count * 2);
   const m4 = new THREE.Matrix4();
   for (let i = 0; i < count; i++) {
-    m4.makeTranslation(0, HC + 0.08, zOf(i));
-    ceil.setMatrixAt(i, m4);
+    for (let k = 0; k < 2; k++) {
+      m4.makeTranslation(0, HC + 0.08, zOf(i) - k * MODULE * 0.5);
+      ceil.setMatrixAt(i * 2 + k, m4);
+    }
   }
   slats.add(ceil);
 
@@ -98,7 +101,7 @@ export function buildTunnel(ctx: BuildCtx, p: TunnelParams): LookHandle {
 
     // strips: floor/wall and ceiling/wall edges
     const stripMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.strip).multiplyScalar(p.stripIntensity), fog: false });
-    const stripGeo = new THREE.CylinderGeometry(0.018, 0.018, 90, 8, 1);
+    const stripGeo = new THREE.CylinderGeometry(0.012, 0.012, 90, 8, 1);
     stripGeo.rotateX(Math.PI / 2);
     const s1 = new THREE.Mesh(stripGeo, stripMat);
     s1.position.set(B.x + n.x * 0.36, 0.03, -35);
@@ -127,18 +130,18 @@ export function buildTunnel(ctx: BuildCtx, p: TunnelParams): LookHandle {
 
   // end light panel (moves with the camera: it is "infinitely" far)
   const endMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.endLight).multiplyScalar(p.endIntensity), fog: false });
-  const end = new THREE.Mesh(new THREE.PlaneGeometry(2 * WF + 1, HC + 1), endMat);
+  const end = new THREE.Mesh(new THREE.CircleGeometry(1.35, 6), endMat);
   end.position.set(0, HC / 2, -FOG_FAR - 3);
   scene.add(end);
   // large soft round bloom around the end light (haze around the source)
   const glowMat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(p.endLight).multiplyScalar(p.endIntensity * 0.25) } },
+    uniforms: { uColor: { value: new THREE.Color(p.endLight).multiplyScalar(p.endIntensity * 0.4) } },
     vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader: `varying vec2 vUv; uniform vec3 uColor;
       void main(){ float r = length(vUv - 0.5) * 2.0; gl_FragColor = vec4(uColor * (exp(-r*r/0.05) + 0.35*exp(-r*r/0.25)) * (1.0 - smoothstep(0.85, 1.0, r)), 1.0); }`,
     transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false,
   });
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), glowMat);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(11, 11), glowMat);
   glow.position.set(0, HC * 0.42, -FOG_FAR + 1);
   glow.renderOrder = 10;
   scene.add(glow);
@@ -191,7 +194,7 @@ export function buildTunnel(ctx: BuildCtx, p: TunnelParams): LookHandle {
         float F = 0.18 + 0.82 * pow(1.0 - max(V.y, 0.0), 5.0);
         // floor lit by the edge strips: brighter near the walls
         float edge = smoothstep(${(WF - 0.9).toFixed(2)}, ${WF.toFixed(2)}, abs(vWorld.x));
-        vec3 base = uBase * (0.72 + 0.2 * edge) + uLight * edge * 0.12;
+        vec3 base = uBase * (0.55 + 0.2 * edge) + uLight * edge * 0.1;
         vec3 c = mix(base, r, clamp(F * uReflect, 0.0, 1.0));
         float d = length(uCamPos - vWorld);
         c = mix(c, uFogColor, smoothstep(uFog.x, uFog.y, d) * 1.0);
@@ -234,8 +237,8 @@ export function buildTunnel(ctx: BuildCtx, p: TunnelParams): LookHandle {
     bloomThreshold: 1.1,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    ao: { radius: 0.22, strength: 0.4, bias: 0.015 },
-    dof: { focus: 6, aperture: 0.004, maxCoc: 0.006, nearScale: 1 },
+    ao: { radius: 0.24, strength: 0.7, bias: 0.015 },
+    dof: { focus: 6, aperture: 0.0015, maxCoc: 0.003, nearScale: 1 },
     vignette: 0.0,
     grain: 0.015,
     grainFadeLum: 0,
@@ -246,7 +249,7 @@ export function buildTunnel(ctx: BuildCtx, p: TunnelParams): LookHandle {
     // exactly 10 modules per loop; the wrap is invisible (identical modules)
     slats.position.z = MODULE * fract((10 * f) / LOOP);
     camera.position.set(0, 0.5, 0);
-    camera.rotation.set(THREE.MathUtils.degToRad(15), 0, THREE.MathUtils.degToRad(1) * osc(f, 1), "YXZ");
+    camera.rotation.set(THREE.MathUtils.degToRad(16.5), 0, THREE.MathUtils.degToRad(1) * osc(f, 1), "YXZ");
     camera.updateMatrixWorld();
     floorMat.uniforms.uCamPos.value.copy(camera.position);
   };
