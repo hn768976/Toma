@@ -9,7 +9,7 @@ export const buildEnvironment = (gl: THREE.WebGLRenderer, p: Palette) => {
   const room = new THREE.Mesh(
     new THREE.SphereGeometry(50, 32, 16),
     new THREE.MeshBasicMaterial({
-      color: new THREE.Color(p.background).multiplyScalar(1.6),
+      color: new THREE.Color(p.background).multiplyScalar(0.9),
       side: THREE.BackSide,
     }),
   );
@@ -34,7 +34,7 @@ export const buildEnvironment = (gl: THREE.WebGLRenderer, p: Palette) => {
     scene.add(m);
   };
   // key softbox above, slightly in front
-  addPanel("#ffffff", 3.0, 14, 8, [0, 12, 6]);
+  addPanel("#ffffff", 1.7, 22, 14, [0, 12, 6]);
   // soft white strip front-left for long highlights along fingers
   addPanel("#ffffff", 1.6, 4, 14, [-10, 6, 10]);
   // cube glow above the hand (strong, tinted)

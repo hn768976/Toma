@@ -4,7 +4,7 @@ import type { Palette } from "../versions";
 export const buildLights = (p: Palette) => {
   const group = new THREE.Group();
   const ambient = new THREE.AmbientLight(new THREE.Color(p.glow), 0.15);
-  const key = new THREE.DirectionalLight(new THREE.Color(p.key), 1.9);
+  const key = new THREE.DirectionalLight(new THREE.Color(p.key), 1.3);
   key.position.set(-4, 4.5, 2.2);
   // soft shadows for contact shading (fingers on palm, hinge parts)
   key.castShadow = true;
