@@ -1,0 +1,16 @@
+DataGridSpace-Blue LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+DataGridSpace-Blue DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
+ParticleOrb-VioletBlue LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+ParticleOrb-VioletBlue DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
+ParticleOrb-TealGold LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+ParticleOrb-TealGold DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
+CellCluster-MicroscopeBlue LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+CellCluster-MicroscopeBlue DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
+PillarField-BlueViolet LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+PillarField-BlueViolet DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
+PillarField-CopperGold LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+PillarField-CopperGold DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
+GrapheneLattice-TealGold LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+GrapheneLattice-TealGold DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
+GrapheneLattice-BlueSilver LOOP 0 vs 600: pixels_differing=0 max_diff=0 bytes_identical=True
+GrapheneLattice-BlueSilver DETERMINISM cold f300 vs full-render f300: pixels_differing=0 max_diff=0 bytes_identical=True
