@@ -32,7 +32,7 @@ export type SpiralGeom = {
   bands: Band[];
   geometry: THREE.BufferGeometry;
   floor: THREE.BufferGeometry;
-  floorRefs: { d1: Float32Array; d2: Float32Array; r1: Int32Array; r2: Int32Array };
+  floorRefs: { d1: Float32Array; d2: Float32Array; r1: Int32Array; r2: Int32Array; vx: Float32Array; vz: Float32Array };
 };
 
 // Every band lies on a member of one logarithmic-spiral family
@@ -195,6 +195,7 @@ export const buildSpiral = (seed: number): SpiralGeom => {
   geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   geometry.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
   geometry.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geometry.setAttribute("ksh", new THREE.BufferAttribute(new Float32Array(vcount).fill(1), 1));
   geometry.setIndex(index);
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 20);
 
@@ -207,6 +208,9 @@ export const buildSpiral = (seed: number): SpiralGeom => {
   const d2 = new Float32Array((FN + 1) * (FN + 1));
   const r1 = new Int32Array((FN + 1) * (FN + 1));
   const r2 = new Int32Array((FN + 1) * (FN + 1));
+  // plan direction from the nearest wall to the floor point (for shadows)
+  const fvx = new Float32Array((FN + 1) * (FN + 1));
+  const fvz = new Float32Array((FN + 1) * (FN + 1));
   const findex: number[] = [];
   for (let j = 0; j <= FN; j++)
     for (let i = 0; i <= FN; i++) {
@@ -227,6 +231,8 @@ export const buildSpiral = (seed: number): SpiralGeom => {
         const bb = bands[(best.id / SAMPLES) | 0];
         const s = best.id % SAMPLES;
         const outer = (x - bb.px[s]) * bb.nx[s] + (z - bb.pz[s]) * bb.nz[s] > 0;
+        fvx[k] = outer ? bb.nx[s] : -bb.nx[s];
+        fvz[k] = outer ? bb.nz[s] : -bb.nz[s];
         const gap = outer ? bb.dOut[s] : bb.dIn[s];
         d2[k] = Math.max(gap - best.d, 1e-3);
         r2[k] = outer ? bb.hOutRef[s] : bb.hInRef[s];
@@ -265,9 +271,10 @@ export const buildSpiral = (seed: number): SpiralGeom => {
   for (let k = 0; k < fn.length; k += 3) fn[k + 1] = 1;
   floor.setAttribute("normal", new THREE.BufferAttribute(fn, 3));
   floor.setAttribute("color", new THREE.BufferAttribute(fcol, 3));
+  floor.setAttribute("ksh", new THREE.BufferAttribute(new Float32Array((FN + 1) * (FN + 1)).fill(1), 1));
   floor.setIndex(findex);
   floor.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 20);
-  return { bands, geometry, floor, floorRefs: { d1, d2, r1, r2 } };
+  return { bands, geometry, floor, floorRefs: { d1, d2, r1, r2, vx: fvx, vz: fvz } };
 };
 
 /** Height of band b at sample s at loop phase u (whole ripple cycles). */
@@ -288,8 +295,31 @@ const floorOpen = (h1: number, d1: number, h2: number, d2: number) => {
   return Math.max(0, open);
 };
 
-/** Update wall positions/normals/AO and floor AO for loop phase u. */
-export const updateSpiral = (g: SpiralGeom, u: number, aoStrength: number) => {
+/**
+ * Soft shadow of the key light, cast by the facing wall: a ray from the
+ * point toward the light passes the neighbour wall at plan distance
+ * dNormal / cos; it is shadowed when it is still below that wall's top.
+ * The penumbra widens with distance like an area light's.
+ */
+const keyShadow = (y: number, c: number, dNormal: number, hn: number, tanE: number) => {
+  if (c <= 0.02 || dNormal >= 1.19) return 1;
+  const dist = Math.min(dNormal / c, 3);
+  const pen = 0.012 + 0.1 * dist;
+  const t = Math.min(1, Math.max(0, (y + dist * tanE - hn + pen) / (2 * pen)));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * Update wall positions/normals/AO/shadow and the floor for loop phase u.
+ * light: key light direction in the spiral's local frame.
+ */
+export const updateSpiral = (g: SpiralGeom, u: number, aoStrength: number, light: THREE.Vector3) => {
+  const lh = Math.hypot(light.x, light.z) || 1;
+  const lx = light.x / lh;
+  const lz = light.z / lh;
+  const tanE = light.y / lh;
+  const kshA = g.geometry.getAttribute("ksh") as THREE.BufferAttribute;
+  const K = kshA.array as Float32Array;
   const { bands } = g;
   const pos = g.geometry.getAttribute("position") as THREE.BufferAttribute;
   const nor = g.geometry.getAttribute("normal") as THREE.BufferAttribute;
@@ -317,30 +347,32 @@ export const updateSpiral = (g: SpiralGeom, u: number, aoStrength: number) => {
       const oz = b.nz[s];
       const hOut = hRef(b.hOutRef[s]);
       const hIn = hRef(b.hInRef[s]);
-      const put = (px: number, py: number, pz: number, nx: number, ny: number, nz: number, a: number) => {
+      const cOut = ox * lx + oz * lz;
+      const put = (px: number, py: number, pz: number, nx: number, ny: number, nz: number, a: number, ks: number) => {
         P[v * 3] = px; P[v * 3 + 1] = py; P[v * 3 + 2] = pz;
         N[v * 3] = nx; N[v * 3 + 1] = ny; N[v * 3 + 2] = nz;
         C[v * 3] = a; C[v * 3 + 1] = a; C[v * 3 + 2] = a;
+        K[v] = ks;
         v++;
       };
       // outer side, bottom to top
       for (const f of SIDE_ROWS) {
         const y = straight * f;
         const corner = 1 - 0.32 * Math.exp(-y / 0.025);
-        put(x + ox * R, y, z + oz * R, ox, 0, oz, ao(wallOpen(y, hOut, b.dOut[s]) * corner));
+        put(x + ox * R, y, z + oz * R, ox, 0, oz, ao(wallOpen(y, hOut, b.dOut[s]) * corner), keyShadow(y, cOut, b.dOut[s], hOut, tanE));
       }
       // rounded top
       for (let k = 1; k <= ARC; k++) {
         const a = (k / (ARC + 1)) * Math.PI;
         const c = Math.cos(a);
         const sn = Math.sin(a);
-        put(x + ox * R * c, straight + R * sn, z + oz * R * c, ox * c, sn, oz * c, 1);
+        put(x + ox * R * c, straight + R * sn, z + oz * R * c, ox * c, sn, oz * c, 1, 1);
       }
       // inner side, top to bottom
       for (let k = SIDE_ROWS.length - 1; k >= 0; k--) {
         const y = straight * SIDE_ROWS[k];
         const corner = 1 - 0.32 * Math.exp(-y / 0.025);
-        put(x - ox * R, y, z - oz * R, -ox, 0, -oz, ao(wallOpen(y, hIn, b.dIn[s]) * corner));
+        put(x - ox * R, y, z - oz * R, -ox, 0, -oz, ao(wallOpen(y, hIn, b.dIn[s]) * corner), keyShadow(y, -cOut, b.dIn[s], hIn, tanE));
       }
     }
   }
@@ -361,6 +393,7 @@ export const updateSpiral = (g: SpiralGeom, u: number, aoStrength: number) => {
         P[v * 3] = P[k * 3]; P[v * 3 + 1] = P[k * 3 + 1]; P[v * 3 + 2] = P[k * 3 + 2];
         N[v * 3] = tx; N[v * 3 + 1] = 0; N[v * 3 + 2] = tz;
         C[v * 3] = C[k * 3]; C[v * 3 + 1] = C[k * 3 + 1]; C[v * 3 + 2] = C[k * 3 + 2];
+        K[v] = 1;
         v++;
       }
     }
@@ -368,12 +401,21 @@ export const updateSpiral = (g: SpiralGeom, u: number, aoStrength: number) => {
   pos.needsUpdate = true;
   nor.needsUpdate = true;
   col.needsUpdate = true;
+  kshA.needsUpdate = true;
+  const fk = g.floor.getAttribute("ksh") as THREE.BufferAttribute;
+  const FK = fk.array as Float32Array;
   const fc = g.floor.getAttribute("color") as THREE.BufferAttribute;
   const F = fc.array as Float32Array;
-  const { d1, d2, r1, r2 } = g.floorRefs;
+  const { d1, d2, r1, r2, vx, vz } = g.floorRefs;
   for (let k = 0; k < d1.length; k++) {
     const a = ao(floorOpen(hRef(r1[k]), d1[k], hRef(r2[k]), d2[k]));
     F[k * 3] = a; F[k * 3 + 1] = a; F[k * 3 + 2] = a;
+    // the wall toward the light: wall 1 lies along -v, wall 2 along +v
+    const c1 = -(vx[k] * lx + vz[k] * lz);
+    FK[k] = r1[k] < 0 ? 1 : c1 > 0
+      ? keyShadow(0, c1, d1[k], hRef(r1[k]), tanE)
+      : keyShadow(0, -c1, d2[k], hRef(r2[k]), tanE);
   }
   fc.needsUpdate = true;
+  fk.needsUpdate = true;
 };

@@ -75,22 +75,34 @@ export class BandsEngine {
     });
     // Clamp each MSAA sample before the resolve: sub-pixel HDR specular on
     // the rounded tops would otherwise survive the average as sparkles.
+    // Also: the key light (directional light 0) is scaled by the per-vertex
+    // analytic soft shadow `ksh` (see spiralGeometry.ts).
     const clampOut = (m: THREE.Material) => {
       m.onBeforeCompile = (sh) => {
-        sh.fragmentShader = sh.fragmentShader.replace(
-          "#include <dithering_fragment>",
-          "#include <dithering_fragment>\n gl_FragColor.rgb = min(gl_FragColor.rgb, vec3(1.0));",
-        );
+        sh.vertexShader = sh.vertexShader
+          .replace("#include <common>", "#include <common>\nattribute float ksh;\nvarying float vKsh;")
+          .replace("#include <begin_vertex>", "#include <begin_vertex>\nvKsh = ksh;");
+        sh.fragmentShader = sh.fragmentShader
+          .replace("#include <common>", "#include <common>\nvarying float vKsh;")
+          .replace(
+            "#include <lights_fragment_begin>",
+            THREE.ShaderChunk.lights_fragment_begin.replace(
+              "getDirectionalLightInfo( directionalLight, directLight );",
+              "getDirectionalLightInfo( directionalLight, directLight );\n\t\t#if ( UNROLLED_LOOP_INDEX == 0 )\n\t\tdirectLight.color *= vKsh;\n\t\t#endif",
+            ),
+          )
+          .replace(
+            "#include <dithering_fragment>",
+            "#include <dithering_fragment>\n gl_FragColor.rgb = min(gl_FragColor.rgb, vec3(1.0));",
+          );
       };
     };
     clampOut(mat);
     clampOut(floorMat);
     const walls = new THREE.Mesh(g.geometry, mat);
-    walls.castShadow = true;
-    walls.receiveShadow = true;
+
     walls.frustumCulled = false;
     const floor = new THREE.Mesh(g.floor, floorMat);
-    floor.receiveShadow = true;
     floor.frustumCulled = false;
     this.group.add(walls, floor);
     this.scene.add(this.group);
@@ -99,14 +111,8 @@ export class BandsEngine {
     this.scene.add(hemi);
     this.key = new THREE.DirectionalLight(colors.key.color, colors.key.intensity * ex);
     this.key.position.set(...colors.key.dir).multiplyScalar(4);
-    this.key.castShadow = true;
-    const sc = this.key.shadow.camera as THREE.OrthographicCamera;
-    sc.left = -3.2; sc.right = 3.2; sc.top = 3.2; sc.bottom = -3.2; sc.near = 0.5; sc.far = 12;
-    this.key.shadow.mapSize.set(2048, 2048);
-    this.key.shadow.radius = 7;
-    this.key.shadow.blurSamples = 16;
-    this.key.shadow.bias = -0.0004;
-    this.key.shadow.normalBias = 0.006;
+    // No shadow map: three's shadow pass made frames depend on the frames
+    // rendered before them in the same tab. Shadows are analytic instead.
     this.scene.add(this.key, this.key.target);
     this.sweep = new THREE.DirectionalLight(colors.sweep.color, colors.sweep.intensity * ex);
     this.scene.add(this.sweep, this.sweep.target);
@@ -117,9 +123,7 @@ export class BandsEngine {
     this.scene.environment = this.envRT.texture;
     this.scene.environmentIntensity = colors.env * ex;
 
-    gl.shadowMap.enabled = true;
-    gl.shadowMap.type = THREE.VSMShadowMap;
-    gl.shadowMap.autoUpdate = true;
+    gl.shadowMap.enabled = false;
 
     this.finalMat = new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -155,9 +159,12 @@ export class BandsEngine {
     }
     const L = this.loopFrames;
     const u = (((frame % L) + L) % L) / L;
-    updateSpiral(this.geom, u, this.colors.aoStrength);
     // Spiral turns +-12 degrees, cosine over the loop.
     this.group.rotation.y = THREE.MathUtils.degToRad(12) * Math.cos(u * TAU);
+    const keyLocal = new THREE.Vector3(...this.colors.key.dir)
+      .normalize()
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -this.group.rotation.y);
+    updateSpiral(this.geom, u, this.colors.aoStrength, keyLocal);
     // Sweep light: one full turn of azimuth per loop.
     const az = u * TAU + 0.6;
     const el = this.colors.sweep.elevation;
