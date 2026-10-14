@@ -108,6 +108,7 @@ const pieceGeometry = (r: number) => {
 
 const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h) => {
   renderer.shadowMap.enabled = true;
+  const lookZ = 4; // surface point at screen centre (rows grow toward -z)
   renderer.shadowMap.type = THREE.PCFShadowMap;
   const scene = new THREE.Scene();
   const base = new THREE.Color(props.piece);
@@ -132,16 +133,61 @@ const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h
   const tmpQ = new THREE.Quaternion();
   const tmpP = new THREE.Vector3();
   const one = new THREE.Vector3(1, 1, 1);
+  const zero = new THREE.Vector3(0, 0, 0);
   const rows: THREE.InstancedMesh[] = [];
   for (let r = 0; r < ROWS; r++) {
     const im = new THREE.InstancedMesh(pieceGeometry(r), mat, COLS);
     im.castShadow = true;
+    // three.js caches an InstancedMesh's bounding sphere from whichever frame
+    // renders first; culling would then depend on render order. Never cull.
+    im.frustumCulled = false;
     im.receiveShadow = true;
     const col = base.clone().offsetHSL(0, 0, rowTint[r]);
-    for (let c = 0; c < COLS; c++) im.setColorAt(c, col);
+    for (let c = 0; c < COLS; c++) {
+      im.setColorAt(c, col);
+      const cx = COL0 + c;
+      const isLift = lifts.some((L) => L.row === r && L.col === cx);
+      // Instance buffers are written once and never change: a moving instance
+      // made three's shadow pass depend on the previously rendered frame.
+      tmpM.compose(tmpP.set(cx + 0.5, rowHeight[r], -(ROW0 + r) - 0.5), tmpQ.identity(), isLift ? zero : one);
+      im.setMatrixAt(c, tmpM);
+    }
     rows.push(im);
     scene.add(im);
   }
+  // the three lifting pieces are ordinary meshes, posed from the frame
+  const liftMeshes = lifts.map((L) => {
+    const m = new THREE.Mesh(rows[L.row].geometry, mat.clone());
+    (m.material as THREE.MeshStandardMaterial).color = base.clone().offsetHSL(0, 0, rowTint[L.row]);
+    // Moving casters in three's shadow map carried state from the previously
+    // rendered frame, so the lifting pieces don't cast into it. A soft contact
+    // shadow decal, driven only by the frame, stands in for their shadow.
+    m.castShadow = false;
+    m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  });
+  const blobTex = (() => {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 128;
+    const ctx = cv.getContext("2d")!;
+    const g = ctx.createRadialGradient(64, 64, 8, 64, 64, 64);
+    g.addColorStop(0, "rgba(0,0,0,1)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(cv);
+  })();
+  const blobs = lifts.map(() => {
+    const b = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.5, 1.5),
+      new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, opacity: 0, depthWrite: false, color: 0x000000 }),
+    );
+    b.rotation.x = -Math.PI / 2;
+    b.renderOrder = 1;
+    scene.add(b);
+    return b;
+  });
 
   // ---- light: soft key at a low angle so the seams read ----
   const key = new THREE.DirectionalLight(props.dark ? 0xe4eaf4 : 0xf4f8ff, props.dark ? 1.1 : 2.0);
@@ -153,6 +199,10 @@ const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h
   key.shadow.normalBias = 0.01;
   const sc = key.shadow.camera as THREE.OrthographicCamera;
   sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.near = 0.5; sc.far = 60;
+  // the key light is fixed in the world (the camera only slides one piece);
+  // a light that moved per frame made the shadow map depend on the previous frame
+  key.position.set(-10.5, 5.5, -lookZ - 14);
+  key.target.position.set(0.5, 0, -lookZ);
   scene.add(key, key.target);
   const hemi = new THREE.HemisphereLight(props.dark ? 0x9098a8 : 0xe8f0ff, props.dark ? 0x101216 : 0x9aa4b4, props.dark ? 0.7 : 1.9);
   scene.add(hemi);
@@ -176,7 +226,6 @@ const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h
   const elev = (25 * Math.PI) / 180;
   const camDist = 7.0;
   const yaw = (-30 * Math.PI) / 180; // grid seen at an angle, seams run diagonally
-  const lookZ = 4; // surface point at screen centre (rows grow toward -z)
   const ray = new THREE.Raycaster();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const hit = new THREE.Vector3();
@@ -195,35 +244,26 @@ const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h
       // focus about a third of the way up the frame
       ray.setFromCamera(new THREE.Vector2(0, -1 / 3), camera);
       if (ray.ray.intersectPlane(plane, hit)) post.setFocus(hit.sub(camera.position).dot(camera.getWorldDirection(fwd)));
-      key.position.set(camera.position.x - 10, 5.5, -lookZ - 14);
-      key.target.position.set(camera.position.x, 0, -lookZ);
-      key.target.updateMatrixWorld();
 
-      for (let r = 0; r < ROWS; r++) {
-        const im = rows[r];
-        const rz = -(ROW0 + r); // world z of row centre
-        for (let c = 0; c < COLS; c++) {
-          const cx = COL0 + c;
-          let y = rowHeight[r];
-          tmpQ.identity();
-          for (const L of lifts) {
-            if (L.row !== r || L.col !== cx) continue;
-            const u = (ph - L.start) / LIFT_LEN;
-            if (u > 0 && u < 1) {
-              // eased up–hold–settle
-              const e = Math.sin(Math.PI * u);
-              const k = e * e * (3 - 2 * e);
-              y += 0.05 * k;
-              const ax = new THREE.Vector3(Math.cos(L.axis), 0, Math.sin(L.axis));
-              tmpQ.setFromAxisAngle(ax, ((L.tilt * Math.PI) / 180) * k * Math.sin(Math.PI * u * 1.0 + 0.3));
-            }
-          }
-          tmpP.set(cx + 0.5, y, rz - 0.5);
-          tmpM.compose(tmpP, tmpQ, one);
-          im.setMatrixAt(c, tmpM);
+      lifts.forEach((L, i) => {
+        let y = rowHeight[L.row];
+        tmpQ.identity();
+        const u = (ph - L.start) / LIFT_LEN;
+        if (u > 0 && u < 1) {
+          // eased up–hold–settle
+          const e = Math.sin(Math.PI * u);
+          const k = e * e * (3 - 2 * e);
+          y += 0.05 * k;
+          const ax = new THREE.Vector3(Math.cos(L.axis), 0, Math.sin(L.axis));
+          tmpQ.setFromAxisAngle(ax, ((L.tilt * Math.PI) / 180) * k * Math.sin(Math.PI * u * 1.0 + 0.3));
         }
-        im.instanceMatrix.needsUpdate = true;
-      }
+        liftMeshes[i].position.set(L.col + 0.5, y, -(ROW0 + L.row) - 0.5);
+        liftMeshes[i].quaternion.copy(tmpQ);
+        // contact shadow: offset away from the key light, darker as it lifts
+        const lift = y - rowHeight[L.row];
+        blobs[i].position.set(L.col + 0.5 + lift * 2.2, rowHeight[L.row] + PIECE_DEPTH + 0.002, -(ROW0 + L.row) - 0.5 + lift * 4.5);
+        (blobs[i].material as THREE.MeshBasicMaterial).opacity = Math.min(1, lift / 0.05) * (props.dark ? 0.55 : 0.32);
+      });
       void th;
     },
     render: (r, lf) => post.render(r, scene, camera, lf),
