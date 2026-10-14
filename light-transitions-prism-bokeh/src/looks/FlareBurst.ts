@@ -45,19 +45,19 @@ vec3 rays(vec2 d, float S, float I) {
     float da = a - ang; da = mod(da + PI, TAU) - PI;
     float perp = abs(sin(da)) * r;
     float len = S * (0.18 + 0.55 * h1(i, 7.0) * h1(i, 8.0) + 0.12 * h1(i, 9.0));
-    float w = 0.85 * PX + 0.0009 * S;
+    float w = 1.6 * PX + 0.004 * S;
     float prof = exp(-pow(perp / w, 2.0)) * step(abs(da), 1.2);
     float b = 0.25 + 0.75 * h1(i, 11.0);
-    acc += mix(uGlow, uCore, 0.55) * prof * exp(-r / len) * b * 0.55;
+    acc += mix(uGlow, uCore, 0.75) * prof * exp(-r / len) * b * 0.24;
   }
   // 6 long rays.
-  float a6 = a - 0.26;
+  float a6 = a - 0.5236 + uFx.z; // one long ray stays vertical
   float j = floor(a6 / TAU * 6.0 + 0.5);
   float da6 = a6 - j / 6.0 * TAU; da6 = mod(da6 + PI, TAU) - PI;
   float perp6 = abs(sin(da6)) * r;
   float len6 = S * (0.75 + 0.25 * h1(j, 21.0));
-  float w6 = 1.3 * PX + 0.0016 * S;
-  acc += mix(uCore, vec3(1.0), 0.3) * exp(-pow(perp6 / w6, 2.0)) * exp(-r / len6) * 1.1 * step(abs(da6), 1.2);
+  float w6 = 2.4 * PX + 0.006 * S;
+  acc += mix(uCore, vec3(1.0), 0.3) * exp(-pow(perp6 / w6, 2.0)) * exp(-r / len6) * 0.38 * step(abs(da6), 1.2);
   acc += uGlow * exp(-pow(perp6 / (w6 * 5.0), 2.0)) * exp(-r / (len6 * 0.8)) * 0.25 * step(abs(da6), 1.2);
   // Fade rays into the core so the centre is a clean glow.
   return acc * I * smoothstep(0.0, 0.03 * S + 4.0 * PX, r);
@@ -74,15 +74,15 @@ vec3 ghosts(vec2 p, vec2 P, vec2 C, float S, float I) {
     float f = mix(-1.55, 0.7, h1(fk, 31.0));
     if (k == 0) f = -0.42; if (k == 1) f = -0.95; if (k == 2) f = 0.38; if (k == 3) f = -1.4;
     vec2 g = C + v * f;
-    float rad = S * (0.025 + 0.09 * h1(fk, 33.0));
+    float rad = S * (0.05 + 0.13 * h1(fk, 33.0));
     vec2 q = p - g;
     float hexK = mod(fk, 2.0) < 0.5 ? uFx.y : uFx.y * 0.5;
     float sd = mix(length(q) - rad, sdHex(q, rad * 0.93), hexK);
-    float soft = rad * 0.12 + 1.5 * PX;
+    float soft = rad * 0.3 + 1.5 * PX;
     float fill = smoothstep(soft, -soft, sd);
-    float rim = exp(-pow(sd / (rad * 0.08 + PX), 2.0));
-    float b = (0.05 + 0.1 * h1(fk, 35.0)) * I;
-    vec3 col = mix(uGhost, uGlow, h1(fk, 37.0) * 0.6);
+    float rim = exp(-pow(sd / (rad * 0.2 + PX), 2.0)) * 0.5;
+    float b = (0.06 + 0.1 * h1(fk, 35.0)) * I;
+    vec3 col = mix(mix(uGhost, uCore, 0.45), uGlow, h1(fk, 37.0) * 0.5);
     acc += col * (fill * (0.55 + 0.45 * length(q) / max(rad, 1e-4)) + rim * 0.8) * b;
   }
   return acc;
@@ -103,25 +103,33 @@ void main() {
   vec3 c = vec3(0.0);
   if (I > 0.0) {
     // Core and glow.
-    c += uCore * (exp(-pow(r / (0.022 * S + 2.0 * PX), 2.0)) * 2.4 + exp(-r / (0.035 * S)) * 0.6) * I;
-    c += uGlow * (exp(-r / (0.075 * S)) * 0.75 + exp(-pow(r / (0.42 * S), 2.0)) * 0.22) * I;
+    c += uCore * (exp(-pow(r / (0.03 * S + 2.0 * PX), 2.0)) * 2.4 + exp(-r / (0.06 * S)) * 1.0) * I;
+    c += mix(uGlow, uCore, 0.35) * exp(-r / (0.12 * S)) * 0.6 * I;
+    // Broad coloured wash that fills much of the frame (glow -> ghost hue outward).
+    // Broad, warm, soft wash: core gold -> ghost pink -> glow violet toward the edges.
+    float rs = r / S;
+    vec3 gold = uCore * vec3(1.0, 0.82, 0.62);
+    vec3 washCol = mix(mix(gold, uGhost, smoothstep(0.2, 0.75, rs)), uGlow * 0.8, smoothstep(0.6, 1.4, rs));
+    c += washCol * (exp(-pow(rs / 0.4, 2.0)) * 0.6 + exp(-pow(rs / 1.1, 2.0)) * 0.3) * I;
     c += rays(d, S, I);
     // Halo ring with a little chromatic split.
     float R = 0.34 * S;
     float w = 0.0045 * S + 1.2 * PX;
     vec3 ring = vec3(exp(-pow((r - R * 1.012) / w, 2.0)), exp(-pow((r - R) / w, 2.0)), exp(-pow((r - R * 0.988) / w, 2.0)));
-    c += (ring * mix(uGlow, vec3(1.0), 0.45) * 0.35 + uGlow * exp(-pow((r - R) / (w * 7.0), 2.0)) * 0.06) * I;
+    c += (ring * mix(uGlow, vec3(1.0), 0.45) * 0.08 + mix(uCore, uGhost, 0.35) * exp(-pow((r - R) / (0.07 * S), 2.0)) * 0.3) * I;
     // Anamorphic horizontal streak.
     float dy = abs(d.y), dx = abs(d.x);
-    c += mix(uGlow, uCore, 0.35) * (exp(-pow(dy / (0.0035 * S + 1.0 * PX), 2.0)) * exp(-dx / (0.95 * S)) * 0.65
-       + exp(-pow(dy / (0.022 * S), 2.0)) * exp(-dx / (0.5 * S)) * 0.16) * I;
+    c += mix(uGlow, uCore, 0.35) * (exp(-pow(dy / (0.012 * S + 2.0 * PX), 2.0)) * exp(-dx / (0.8 * S)) * 0.18
+       + exp(-pow(dy / (0.03 * S), 2.0)) * exp(-dx / (0.5 * S)) * 0.14) * I;
     c += ghosts(p, P, C, S, I);
   }
   c = softClip(max(c, 0.0));
   // White-out spreads outward from the flare until the whole frame is white.
   float W = uFx.x;
   float wl = smoothstep(0.0, 1.0, (W - 0.35 * min(r / 2.1, 1.0)) / 0.65);
-  c = mix(c, uWhiteCol, wl);
+  // The blown-out frame stays warm toward the edges, with faint rays showing through.
+  vec3 wcol = mix(uWhiteCol, mix(uWhiteCol, uCore, 0.55), smoothstep(0.35, 1.5, r));
+  c = mix(c, wcol, wl);
   finalColor = vec4(c, 1.0);
 }`;
 

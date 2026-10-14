@@ -11,7 +11,7 @@ export interface PrismLightParams {
 }
 
 const LOOP = 600;
-const BASE = 5; // 5 base shards x 6-fold symmetry = 30 shards
+const BASE = 6; // 6 base shards x 6-fold symmetry = 36 shards
 
 const FRAG = /* glsl */ `#version 300 es
 precision highp float;
@@ -41,9 +41,14 @@ void main() {
   float r = length(d);
   float a = atan(d.y, d.x) - uPhi;
   const float SECTOR = TAU / 6.0;
-  // Fold into one 60-degree sector: exact 6-fold symmetry.
+  // Background: blurred radial light streaks over an indigo field. Every angular
+  // term has a whole number of periods per 60 degrees, so the 6-fold symmetry is exact.
+  float st = 0.5 + 0.22 * sin(a * 12.0 + 1.3 + 2.0 * r) + 0.16 * sin(a * 18.0 - 0.7 - 3.0 * r)
+           + 0.12 * sin(a * 30.0 + 2.1 + 1.5 * r);
+  vec3 acc = mix(uSpec[2], uSpec[1], 0.5 + 0.5 * sin(a * 6.0 + 0.9 * r)) * (0.14 + 0.34 * st);
+  acc += uSpec[0] * 0.12 * (0.5 + 0.5 * sin(a * 6.0 + 2.4));
+  // Fold into one 60-degree sector.
   float af = mod(a, SECTOR);
-  vec3 acc = vec3(0.0);
   float sumM = 0.0, sumM2 = 0.0;
   for (int k = 0; k < ${BASE}; k++) {
     vec4 A = uShA[k];
@@ -52,28 +57,29 @@ void main() {
       float ang = A.x + B.z * (r - A.y);              // swirl: angle drifts with radius
       float da = af - ang + float(j) * SECTOR;
       float u = sat((r - A.y) / max(A.z - A.y, 1e-3)); // 0 inner .. 1 outer
-      float hw = A.w * (0.3 + 0.7 * mix(u, 1.0 - u, B.w));
-      float arc = abs(da) * r;
+      float hw = A.w * (0.35 + 0.65 * mix(u, 1.0 - u, B.w));
+      float arc = da * r;
       float half_ = hw * r + 0.01;
-      float soft = 0.045 + 0.06 * r;                   // heavy blur
-      float m = smoothstep(half_ + soft, half_ - soft, arc);
-      m *= smoothstep(A.y - 0.09, A.y + 0.09, r) * (1.0 - smoothstep(A.z - 0.18, A.z + 0.12, r));
-      m *= B.y * mix(1.0, 0.55, u);
-      float hue = B.x + 0.12 * da / max(hw, 0.05) + 0.25 * r;
+      float soft = 0.008 + 0.022 * r;                  // crisp facet edges, softer far out
+      float m = smoothstep(half_ + soft, half_ - soft, abs(arc));
+      m *= smoothstep(A.y - 0.04, A.y + 0.04, r) * (1.0 - smoothstep(A.z - 0.06, A.z + 0.06, r));
+      // Facets: a faint internal edge splits each shard into two planes.
+      float facet = mix(0.72, 1.0, smoothstep(-0.004, 0.004, arc - 0.25 * half_));
+      m *= B.y * facet;
+      // Dispersion: hue sweeps across the shard (a rainbow band), stronger on "triangle" shards.
+      float t = arc / max(half_, 1e-3);
+      float hue = B.x + mix(0.08, 0.45, B.w) * t + 0.12 * r;
       acc += spectrum(hue) * m;
       sumM += m; sumM2 += m * m;
     }
   }
   // White glints where shards overlap (sum of pairwise products).
   float overlap = max(0.5 * (sumM * sumM - sumM2), 0.0);
-  acc += vec3(1.0) * pow(overlap, 1.4) * 0.55;
+  acc += vec3(1.0) * smoothstep(0.5, 1.6, overlap) * 0.6;
   // Darker violet centre.
-  float centre = smoothstep(0.04, 0.34, r);
-  acc *= mix(0.18, 1.0, centre);
-  acc += uCoreCol * exp(-r * r / 0.03) * 0.5;
-  // Deep violet surround so the frame is never dead black.
-  acc += uCoreCol * 0.22 * (1.0 - smoothstep(0.2, 1.2, r));
-  vec3 c = 1.0 - exp(-acc * 1.5);
+  acc *= mix(0.4, 1.0, smoothstep(0.03, 0.3, r));
+  acc += uCoreCol * exp(-r * r / 0.02) * 0.35;
+  vec3 c = 1.0 - exp(-acc * 1.05);
   finalColor = vec4(c, 1.0);
 }`;
 
@@ -81,11 +87,11 @@ void main() {
 const rng = mulberry32(0x9c1a4e);
 const SHARDS = Array.from({ length: BASE }, (_, k) => ({
   angle: (k / BASE) * ((Math.PI * 2) / 6) + range(rng, -0.08, 0.08),
-  rIn: range(rng, 0.1, 0.5),
-  len: range(rng, 0.3, 0.7),
-  halfWidth: range(rng, 0.09, 0.2),
+  rIn: range(rng, 0.22, 0.75),
+  len: range(rng, 0.25, 0.6),
+  halfWidth: range(rng, 0.14, 0.3),
   hue: k / BASE + range(rng, -0.05, 0.05),
-  intensity: range(rng, 0.55, 0.95),
+  intensity: range(rng, 0.6, 1.6),
   twist: range(rng, -0.9, 0.9),
   kind: rng() < 0.35 ? 0 : 1,
   // Radial pulse: whole cycles per loop so frame 600 == frame 0.
