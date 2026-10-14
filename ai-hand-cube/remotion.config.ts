@@ -17,6 +17,8 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// No audio track in the outputs.
+Config.setMuted(true);
 // 3D frames are heavy; give each frame plenty of time on CPU-only machines.
 Config.setDelayRenderTimeoutInMilliseconds(600000);
 

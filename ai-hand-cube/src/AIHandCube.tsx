@@ -29,11 +29,11 @@ export const SCENE = {
   lookDrop: 0.26, // look slightly below the cube so the hand fits
   palmAnchor: new THREE.Vector3(-0.03, 0.1, 0.02), // where the cube sits (palm local)
   floatGap: 0.07, // gap between palm and cube bottom once floating
-  handTilt: 36 * DEG, // palm tilted toward the camera
+  handTilt: 28 * DEG, // palm tilted toward the camera
   handYaw: 2 * DEG, // fingers point toward the viewer
   handRoll: -4 * DEG,
   handScale: 1.0,
-  wristBend: -54 * DEG, // forearm runs straight away from camera, hidden behind palm and cube
+  wristBend: -64 * DEG, // forearm runs straight away from camera, hidden behind palm and cube
   cubeWorld: new THREE.Vector3(0, 0, 0),
   // CoC = K * max(0, |1 - focus/z| - band): the cube (+-0.4 around its centre) stays sharp
   dof: { nearK: 0.17, farK: 0.05, maxCoc: 0.02, band: 0.095 },
