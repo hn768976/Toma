@@ -39,11 +39,11 @@ when there is none. All three looks use WebGL2, not WebGPU.
 ### 4K (3840×2160) — one command per composition
 
 ```bash
-npx remotion render src/index.ts AIHudPlane-Violet   out/AIHudPlane_Violet_4K.mp4   --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
-npx remotion render src/index.ts AIHudPlane-Teal     out/AIHudPlane_Teal_4K.mp4     --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
-npx remotion render src/index.ts ParticleAIChip-Blue out/ParticleAIChip_Blue_4K.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
-npx remotion render src/index.ts AIChipReveal-Blue   out/AIChipReveal_Blue_4K.mp4   --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
-npx remotion render src/index.ts AIChipReveal-Amber  out/AIChipReveal_Amber_4K.mp4  --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p
+npx remotion render src/index.ts AIHudPlane-Violet   out/AIHudPlane_Violet_4K.mp4   --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --muted
+npx remotion render src/index.ts AIHudPlane-Teal     out/AIHudPlane_Teal_4K.mp4     --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --muted
+npx remotion render src/index.ts ParticleAIChip-Blue out/ParticleAIChip_Blue_4K.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --muted
+npx remotion render src/index.ts AIChipReveal-Blue   out/AIChipReveal_Blue_4K.mp4   --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --muted
+npx remotion render src/index.ts AIChipReveal-Amber  out/AIChipReveal_Amber_4K.mp4  --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --muted
 ```
 
 (ProRes: `--codec=prores --prores-profile=4444`.)
@@ -55,7 +55,8 @@ npx remotion render src/index.ts AIHudPlane-Violet out/AIHudPlane_Violet.mp4 \
   --scale=0.3333333333333333 --codec=h264 --crf=16 --pixel-format=yuv420p
 ```
 
-`scripts/render-previews.sh` renders all five and logs the wall time.
+`scripts/render-previews.sh` renders all five (`--muted`, so there is no silent audio track) and logs the wall time.
+Remotion adds a silent AAC track unless `--muted` is passed; add it to the 4K commands too if you need video-only files.
 `3840 × 0.3333333333333333` rounds to exactly 1280×720, so no ffmpeg
 downscale is needed (checked with ffprobe).
 
@@ -72,7 +73,49 @@ follows Remotion's device scale factor. A 6K still is therefore rendered at
 6K, not upscaled. Point sizes, line widths and blur radii are written in px at
 2160p and scale with the output.
 
-RENDER_TIMES_PLACEHOLDER
+## Measured render times
+
+Measured on the build machine: a 4-vCPU cloud container with **no GPU**, so
+headless Chromium ran WebGL2 on ANGLE → SwiftShader (software). On a machine
+with a GPU expect these to be several times faster.
+
+### 720p (1280×720, `--scale=0.3333333333333333`), full renders
+
+| Composition | Frames | Wall time | Per frame (concurrency 4) | Per frame (concurrency 1, 6-frame run) |
+|---|---|---|---|---|
+| AIHudPlane-Violet | 450 | 285 s | 0.63 s | 0.67 s |
+| AIHudPlane-Teal | 450 | 289 s | 0.64 s | — (same scene) |
+| ParticleAIChip-Blue | 600 | 333 s | 0.55 s | 0.65 s |
+| AIChipReveal-Blue | 300 | 199 s | 0.66 s | 0.63 s |
+| AIChipReveal-Amber | 300 | 185 s | 0.62 s | — (same scene) |
+
+SwiftShader already spreads one frame across all cores, so extra Remotion
+concurrency barely helps on a CPU-only machine.
+
+### Two real 4K frames (3840×2160, `--scale=1`)
+
+| Frame | Cold single still (browser start + one-time texture builds + frame) | Steady-state per frame (6-frame run, concurrency 1) |
+|---|---|---|
+| AIHudPlane-Violet, frame 360 (hold) | 14.2 s | ≈ 5.8 s |
+| ParticleAIChip-Blue, frame 300 | 11.4 s | ≈ 4.2 s |
+
+Both stills were checked: 3840×2160.
+
+### 4K estimates (same CPU-only machine)
+
+4K costs ≈ 7–9× the 720p per-frame time (9× the pixels; the HUD and point
+passes scale with pixels, the per-frame JS does not).
+
+| Composition | Estimate |
+|---|---|
+| AIHudPlane-Violet / Teal (450 f × ≈5.8 s) | ≈ 44 min each |
+| ParticleAIChip-Blue (600 f × ≈4.2 s) | ≈ 42 min |
+| AIChipReveal-Blue / Amber (300 f × ≈5.5 s, scaled from 720p) | ≈ 28 min each |
+| **All five** | **≈ 3 h 10 min** |
+
+On a desktop GPU (ANGLE → GPU), expect well under 1 s per 4K frame and
+roughly 30–40 min for all five. That figure is an estimate; it was not
+measured here.
 
 ## How to change things
 
@@ -155,7 +198,26 @@ public/fonts/              OFL fonts + licence texts
   numbers of cycles, the twinkle has 200 buckets of 3 frames, and the grain
   period is 600.
 
-CHECKS_PLACEHOLDER
+## Verification (run before delivery)
+
+| Check | Result |
+|---|---|
+| 1 · File checks (`scripts/check-files.sh`) | **Pass** for all 5: h264, 1280×720, 30/1, yuv420p, no audio stream, 15.000 / 20.000 / 10.000 s. (First run failed: Remotion adds a silent AAC track by default, which also made durations 15.06 s. The previews were remuxed with the video stream copied bit-for-bit and no audio, and the script now renders with `--muted`.) |
+| 2 · Loop (601-frame override, frames 0 vs 600) | **Pass**: identical pixels and identical PNG bytes. |
+| 3 · Determinism (middle frame from a cold start vs the same frame of a full multi-threaded render, `scripts/determinism.sh`) | **Pass** for all 5 (frames 225 / 225 / 300 / 150 / 150): PNG files identical byte for byte. |
+| 4 · Banding (`scripts/banding.py`, frames decoded **from the encoded mp4**) | **Pass**: no hard band edges (two flat runs of ≥12 px meeting at a clean step) in any of 15 strips through the blurred backgrounds, dark spaces and bokeh. Gradients step one level at a time with interleaving (e.g. 20 20 21 20 21 21 22 21 …). One 16-px flat run in the particle chip is at luma 8 (near black), where x264 flattens grain; values on both sides interleave 7/8/9. |
+| 5 · Content (contact sheets, `scripts/contact-sheet.sh`) | **Pass**: the HUD builds on a tilted plane with the AI ring, blurred violet/teal background and DoF band. The particle chip shows the AI centre, data rain and bokeh. The reveal scrambles, locks on "AI", and the callouts (CHATBOT, COMMAND PROMPT, DATA, MODEL) draw out. "AI" is in capitals everywhere; there are no logos. |
+| 6 · Motion | **Pass**: HUD line and text regions change by ≈1 level per frame on the hold (no shimmer or moiré, mipmaps + 8× anisotropy). Twinkle shows no spikes at bucket boundaries (mean frame-to-frame change 3.9 at boundaries vs 4.4 within buckets, mostly grain). The scramble changes every 2 frames. |
+
+### Completion checklist
+
+- [x] 5 compositions at 3840×2160 / 30 fps, one data row each
+- [x] three.js on WebGL2 via `@remotion/three`; `--gl=angle`
+- [x] OFL fonts only (Orbitron 600 / JetBrains Mono / Rajdhani), licences included
+- [x] No `Math.random()`, `Date.now()`, R3F clock or visual `useState`; seeded `mulberry32` + integer hashes
+- [x] Half-float targets, ±1/255 dither, ≈1.5 % frame-indexed grain
+- [x] 720p previews and stills; 4K render commands and still command above
+- [x] Render times measured; two real 4K frames timed
 
 ## Fonts (SIL Open Font License 1.1)
 
