@@ -114,8 +114,8 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         float NdV = max(dot(normalize(vN), normalize(vV)), 0.0);
         float rim = pow(1.0 - NdV, 3.0);
         // atmospheric haze washes the surface, more towards the limb
-        vec3 haze = vec3(0.02, 0.04, 0.09) * pow(1.0 - NdV, 2.0);
-        vec3 c = base * 0.8 + haze + uCity * city * 9.0 + uRim * (rim * 0.12 + pow(1.0 - NdV, 14.0) * 0.9);
+        vec3 haze = vec3(0.03, 0.065, 0.13) * (0.4 + 0.6 * pow(1.0 - NdV, 1.5));
+        vec3 c = base * 1.0 + haze + uCity * city * 9.0 + uRim * (rim * 0.12 + pow(1.0 - NdV, 14.0) * 0.9);
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -135,10 +135,10 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         float tca = dot(oc, d);
         float dist = length(oc - d * tca);
         float x = max(dist - uR, 0.0) / uR;
-        float g = exp(-x / 0.006) * 0.8 + exp(-x / 0.03) * 0.22 + exp(-x / 0.25) * 0.06;
+        float g = exp(-x / 0.006) * 0.8 + exp(-x / 0.035) * 0.35 + exp(-x / 0.25) * 0.09;
         g *= 1.0 - smoothstep(0.6, 0.95, x);
-        float hot = exp(-pow(vW.x / (uR * 0.15), 2.0)) * exp(-x / 0.015);
-        gl_FragColor = vec4(uRim * g + vec3(1.0, 0.55, 0.2) * hot * 0.6, 1.0);
+        float hot = exp(-pow(vW.x / (uR * 0.24), 2.0)) * exp(-x / 0.02);
+        gl_FragColor = vec4(uRim * g + vec3(1.0, 0.6, 0.28) * hot * 0.9, 1.0);
       }`,
     side: THREE.BackSide,
     transparent: true,
@@ -193,9 +193,9 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   }
   const grid = makeScreenLines(new Float32Array(segs), {
     color: p.grid,
-    intensity: 3.6,
+    intensity: 4.6,
     opacity: p.gridOpacity,
-    widthPx: 1.0,
+    widthPx: 1.3,
     pxScale: ctx.pxScale,
     resolution: ctx.resolution,
     params: new Float32Array(gparam),
@@ -245,8 +245,8 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
       if (ib !== ia && an > 0.12 && an < 0.7) { b = cand; break; }
     }
     const ang = a.angleTo(b);
-    const tall = ia === hub && rnd() < 0.5 ? range(rnd, 0.1, 0.28) : 0;
-    const c = a.clone().add(b).normalize().multiplyScalar(R * (1.06 + Math.min(0.45, 0.85 * ang) + tall));
+    const tall = ia === hub && rnd() < 0.5 ? range(rnd, 0.04, 0.12) : 0;
+    const c = a.clone().add(b).normalize().multiplyScalar(R * (1.05 + Math.min(0.28, 0.6 * ang) + tall));
     const arc: Arc = { a, b, c, period: periods[i % 3], offset: Math.floor(rnd() * 600), flight: Math.round(range(rnd, 55, 80)) };
     arcs.push(arc);
     const P0 = new THREE.Vector3(), P1 = new THREE.Vector3();
@@ -350,7 +350,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
     // uniform on sphere, then kept in globe space (moves with the sway)
     const u = sprnd() * 2 - 1, th = sprnd() * TAU;
     const rr = Math.sqrt(1 - u * u);
-    const rad = R * (1.008 + 0.06 * Math.pow(sprnd(), 3));
+    const rad = R * (1.008 + 0.012 * Math.pow(sprnd(), 2));
     spPos.set([rr * Math.cos(th) * rad, u * rad, rr * Math.sin(th) * rad], i * 3);
     spPar[i * 4] = [2, 3, 4, 5, 6][Math.floor(sprnd() * 5)];
     spPar[i * 4 + 1] = sprnd();
@@ -391,11 +391,11 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   const look = new THREE.Vector3(0, 10.55, 0);
   const post = {
     exposure: p.exposure,
-    bloomStrength: 0.5,
-    bloomThreshold: 0.85,
+    bloomStrength: 0.65,
+    bloomThreshold: 0.8,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 15, aperture: 0.005, maxCoc: 0.005, nearScale: 1.2 },
+    dof: { focus: 15, aperture: 0.012, maxCoc: 0.008, nearScale: 1.6 },
     vignette: 0.08,
     saturation: 0.85,
     grain: 0.015,

@@ -151,7 +151,7 @@ export const VERSIONS: VersionRow[] = [
     look: "earth",
     params: {
       skyTop: "#0C1A3E",
-      skyHorizon: "#18346C",
+      skyHorizon: "#1E3E7C",
       grid: "#5AD8FF",
       gridOpacity: 0.4,
       arc: "#FFA03A",
