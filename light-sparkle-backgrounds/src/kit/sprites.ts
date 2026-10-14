@@ -162,6 +162,7 @@ export type SpriteKit = {
   flare6: Texture;
   streak: Texture;
   streakChroma: Texture;
+  streakWarmCool: Texture;
   bokehRound: Texture;
   bokehSoft: Texture;
   bokehHex: Texture;
@@ -194,6 +195,16 @@ export const bakeSpriteKit = (): SpriteKit => {
     flare6: toTexture(bake(S, S, flareFn(3, false, 0)), "flare6"),
     streak: toTexture(bake(S, 64, streakFn(0)), "streak"),
     streakChroma: toTexture(bake(S, 64, streakFn(1)), "streakChroma"),
+    // Colour changes along the streak: warm (pink-orange) at u<0, cool blue at u>0.
+    streakWarmCool: toTexture(bake(S, 64, (u, v) => {
+      const [r, g, b] = streakFn(0)(u, v);
+      const t = Math.min(1, Math.max(0, (u + 1) / 2));
+      const warm = [1.0, 0.78, 0.8];
+      const cool = [0.76, 0.8, 1.0];
+      const w = Math.abs(u) < 0.08 ? 0 : 1; // neutral right at the core
+      const k = (i: number) => 1 + w * ((t < 0.5 ? warm[i] : cool[i]) - 1);
+      return [r * k(0), g * k(1), b * k(2)];
+    }), "streakWarmCool"),
     bokehRound: toTexture(bake(S, S, bokehFn(false, 0.02)), "bokehRound"),
     bokehSoft: toTexture(bake(S, S, bokehFn(false, 0.09)), "bokehSoft"),
     bokehHex: toTexture(bake(S, S, bokehFn(true, 0.025)), "bokehHex"),

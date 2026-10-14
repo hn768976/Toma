@@ -40,14 +40,15 @@ vec3 background(vec2 p) {
   // Background: deep at the edges, blue pooled under the source.
   vec2 q = (p - vec2(1920.0, 380.0)) / vec2(2350.0, 1650.0);
   float gd = clamp(length(q), 0.0, 1.4);
-  vec3 bg = mix(uBgCenter, uBgEdge, smoothstep(0.0, 1.0, pow(gd, 0.85)));
+  vec3 bg = mix(uBgCenter, uBgEdge, smoothstep(0.0, 0.85, pow(gd, 0.7)));
   // Rays: ~140 degree fan, strong falloff to ~80% of the frame height.
   float cone = smoothstep(1.32, 1.02, abs(ang));
-  float fall = exp(-pow(r / 0.82, 1.8));
+  float rr = length(vec2(v.x * 0.55, v.y)) / 2160.0;
+  float fall = exp(-pow(rr / 0.62, 2.0));
   float rays = rayField(p);
-  float haze = 0.22 * exp(-pow(r / 0.45, 1.5)) * smoothstep(1.5, 0.6, abs(ang));
-  float glow = 0.75 * exp(-r * r / 0.004) + 0.3 * exp(-r * r / 0.03);
-  vec3 col = bg + uRayColor * (rays * cone * fall * 0.5 * uShimmer + haze) + mix(uRayColor, vec3(1.0), 0.6) * glow;
+  float haze = 0.14 * exp(-pow(r / 0.4, 1.6)) * smoothstep(1.5, 0.6, abs(ang));
+  float glow = 0.45 * exp(-r * r / 0.006) + 0.25 * exp(-r * r / 0.035);
+  vec3 col = bg + uRayColor * (rays * cone * fall * 0.5 * uShimmer + haze) + uRayColor * glow;
   return col;
 }
 `;
@@ -65,9 +66,9 @@ export const spotlight =
     for (let i = 0; i < NRAYS; i++) {
       const base = -halfFan + (2 * halfFan * (i + 0.5)) / NRAYS;
       rays.push({
-        a0: base + range(rng, -0.04, 0.04),
-        w: range(rng, 0.02, 0.07),
-        i0: range(rng, 0.35, 1.0) * (1 - 0.35 * Math.abs(base / halfFan)),
+        a0: base + range(rng, -0.05, 0.05),
+        w: range(rng, 0.05, 0.13),
+        i0: (rng() < 0.3 ? range(rng, 0.0, 0.12) : range(rng, 0.3, 0.75)) ,
         swayA: range(rng, 0.008, 0.025),
         swayK: pick(rng, [1, 1, 2]),
         swayP: rng() * TAU,
@@ -89,7 +90,7 @@ export const spotlight =
       const vx = x - SOURCE.x;
       const vy = y - SOURCE.y;
       const ang = Math.atan2(vx, vy);
-      const r = Math.hypot(vx, vy) / DESIGN_H;
+      const r = Math.hypot(vx * 0.55, vy) / DESIGN_H;
       let s = 0;
       for (let i = 0; i < NRAYS; i++) {
         const d = (ang - rayData[i * 4]) / rayData[i * 4 + 1];
@@ -115,7 +116,7 @@ export const spotlight =
       const roll = rng();
       // 55% fall one cycle per loop, 15% two cycles, 30% hover (closed bob path).
       const n = roll < 0.55 ? 1 : roll < 0.7 ? 2 : 0;
-      p.tint = pick(rng, tints);
+      p.tint = pick(rng, tints.slice(1));
       sp.push({
         p,
         x0: range(rng, 0, DESIGN_W),
@@ -124,8 +125,8 @@ export const spotlight =
         swA: range(rng, 6, 30),
         swK: pick(rng, [1, 2, 3]),
         swP: rng() * TAU,
-        size: 48 + 110 * Math.pow(rng(), 2.2),
-        a: 0.35 + 0.65 * Math.pow(rng(), 1.2),
+        size: i < 260 ? range(rng, 110, 190) : 36 + 60 * Math.pow(rng(), 2.5),
+        a: i < 260 ? range(rng, 0.7, 1.0) : 0.02 + 0.1 * Math.pow(rng(), 2),
         k: pick(rng, CYCLES),
         phi: rng() * TAU,
         sh: range(rng, 1, 4),
@@ -139,27 +140,37 @@ export const spotlight =
       const tex = six ? kit.flare6 : kit.flare4;
       const p = addParticle(six ? flares6 : flares4, tex);
       p.rotation = range(rng, -0.08, 0.08) + (six ? Math.PI / 6 : 0);
-      p.tint = pick(rng, tints);
-      meds.push({ p, x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H * 0.95), size: 110 + 230 * Math.pow(rng(), 2.2), a: range(rng, 0.25, 0.65), k: pick(rng, CYCLES), phi: rng() * TAU, bobP: rng() * TAU });
+      p.tint = tints[0];
+      meds.push({ p, x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H * 0.95), size: 110 + 230 * Math.pow(rng(), 2.2), a: 0.06 + 0.4 * Math.pow(rng(), 3), k: pick(rng, CYCLES), phi: rng() * TAU, bobP: rng() * TAU });
     }
 
-    type Big = { core: ReturnType<typeof addParticle>; h: ReturnType<typeof addParticle>; v: ReturnType<typeof addParticle>; x: number; y: number; core0: number; len: number; a: number; k: number; phi: number; bobP: number };
+    type Big = { core: ReturnType<typeof addParticle>; arms: ReturnType<typeof addParticle>[]; x: number; y: number; core0: number; len: number; a: number; k: number; phi: number; bobP: number };
     const bigs: Big[] = [];
     for (let i = 0; i < 25; i++) {
       const core = addParticle(cores, kit.dot);
-      const h = addParticle(streaks, kit.streak);
-      const v = addParticle(streaks, kit.streak);
-      const tilt = range(rng, -0.05, 0.05);
-      h.rotation = tilt;
-      v.rotation = Math.PI / 2 + tilt;
-      const t = pick(rng, tints);
-      core.tint = t;
-      h.tint = t;
-      v.tint = t;
-      // Big flares sit mostly in the ray fan.
-      const ang = range(rng, -1.0, 1.0);
-      const rr = range(rng, 0.15, 0.85) * DESIGN_H;
-      bigs.push({ core, h, v, x: Math.min(DESIGN_W - 150, Math.max(150, SOURCE.x + Math.sin(ang) * rr * 1.5)), y: SOURCE.y + Math.cos(ang) * rr, core0: range(rng, 300, 480), len: range(rng, 300, 650), a: range(rng, 0.45, 0.8), k: pick(rng, [1, 2, 3, 4]), phi: rng() * TAU, bobP: rng() * TAU });
+      const tilt = range(rng, -0.12, 0.12);
+      // Four arms: + and a fainter, longer X on the diagonals.
+      const arms = [0, Math.PI / 2, Math.PI / 4, -Math.PI / 4].map((a) => {
+        const q = addParticle(streaks, kit.streak);
+        q.rotation = a + tilt;
+        q.tint = tints[0];
+        return q;
+      });
+      core.tint = tints[0];
+      // Weighted to the lower half and the sides.
+      const side = rng() < 0.35;
+      bigs.push({
+        core,
+        arms,
+        x: side ? (rng() < 0.5 ? range(rng, 100, 900) : range(rng, 2940, 3740)) : range(rng, 150, DESIGN_W - 150),
+        y: side ? range(rng, 0.25, 0.95) * DESIGN_H : range(rng, 0.45, 0.97) * DESIGN_H,
+        core0: range(rng, 240, 400),
+        len: range(rng, 300, 600),
+        a: range(rng, 0.5, 0.9),
+        k: pick(rng, [1, 2, 3, 4]),
+        phi: rng() * TAU,
+        bobP: rng() * TAU,
+      });
     }
 
     // ~6 glints per second on the flares -> 120 per loop.
@@ -198,7 +209,7 @@ export const spotlight =
           s.p.x = x;
           s.p.y = y;
           const tw = pulse(ph, s.k, s.phi, s.sh);
-          const lit = 0.55 + 0.7 * rayField(x, y);
+          const lit = 0.6 + 0.6 * rayField(x, y);
           s.p.alpha = Math.min(1, s.a * (0.25 + 0.75 * tw) * lit);
           setSize(s.p, s.size * (0.8 + 0.25 * tw));
         }
@@ -218,18 +229,18 @@ export const spotlight =
           const b = boost[meds.length + j];
           const x = g.x + 12 * Math.cos(TAU * ph + g.bobP);
           const y = g.y + 16 * Math.sin(TAU * ph + g.bobP);
-          for (const q of [g.core, g.h, g.v]) {
+          for (const q of [g.core, ...g.arms]) {
             q.x = x;
             q.y = y;
           }
           const a = Math.min(1, g.a * (0.5 + 0.5 * tw) * (1 + 0.8 * b));
           g.core.alpha = a;
           setSize(g.core, g.core0 * (0.85 + 0.15 * tw) * (1 + 0.5 * b));
-          g.h.alpha = a * 0.9;
-          g.v.alpha = a * 0.75;
           const L = g.len * (0.7 + 0.3 * tw) * (1 + 1.2 * b);
-          setSize(g.h, L, 64);
-          setSize(g.v, L, 64);
+          g.arms.forEach((q, ai) => {
+            q.alpha = a * (ai < 2 ? 0.85 : 0.45);
+            setSize(q, ai < 2 ? L : L * 1.3, ai < 2 ? 60 : 44);
+          });
         });
       },
     };
