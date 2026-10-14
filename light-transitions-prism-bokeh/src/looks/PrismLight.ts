@@ -62,7 +62,7 @@ void main() {
       float hw = A.w * mix(0.85, 0.35 + 0.65 * (1.0 - u), B.w);   // blocks (kind 0) or tapering blades (kind 1)
       float arc = da * r;
       float half_ = hw * r + 0.01;
-      float soft = 0.008 + 0.022 * r;                  // crisp facet edges, softer far out
+      float soft = 0.018 + 0.035 * r;                  // soft facet edges, softer far out
       float m = smoothstep(half_ + soft, half_ - soft, abs(arc));
       m *= smoothstep(A.y - 0.04, A.y + 0.04, r) * (1.0 - smoothstep(A.z - 0.06, A.z + 0.06, r));
       // Facets: a faint internal edge splits each shard into two planes.
@@ -71,7 +71,7 @@ void main() {
       // Dispersion: hue sweeps across the shard (a rainbow band), stronger on "triangle" shards.
       float t = arc / max(half_, 1e-3);
       // Solid facet colour, with a rainbow fringe running along one edge only.
-      float fringe = smoothstep(0.45, 0.85, t);
+      float fringe = smoothstep(0.35, 0.95, t);
       float hue = B.x + 0.04 * t + 0.08 * r + fringe * 0.7 * (t - 0.45);
       acc += spectrum(hue) * m * (1.0 + 0.5 * fringe);
       sumM += m; sumM2 += m * m;
@@ -85,6 +85,8 @@ void main() {
   // Darker violet centre.
   acc *= mix(0.4, 1.0, smoothstep(0.03, 0.3, r));
   acc += uCoreCol * exp(-r * r / 0.02) * 0.35;
+  // Deep indigo toward the edges and corners.
+  acc *= mix(1.0, 0.5, smoothstep(0.65, 1.1, r));
   vec3 c = 1.0 - exp(-acc * 1.05);
   c = sat3(mix(vec3(luma(c)), c, 1.35));   // keep the refracted colours saturated
   finalColor = vec4(c, 1.0);
@@ -97,8 +99,8 @@ const SHARDS = Array.from({ length: BASE }, (_, k) => ({
   rIn: range(rng, 0.22, 0.75),
   len: range(rng, 0.25, 0.6),
   halfWidth: range(rng, 0.12, 0.26),
-  hue: (k / BASE + 0.66) % 1 + range(rng, -0.03, 0.03), // brightest shards (k = 0, 1) are gold / orange
-  intensity: k < 2 ? range(rng, 0.9, 1.15) : range(rng, 0.5, 1.0),
+  hue: (k / BASE + 0.66) % 1 + range(rng, -0.03, 0.03), // k = 0 gold, k = 1 salmon-pink, then magenta, violet, cyan
+  intensity: k === 0 ? range(rng, 0.85, 1.0) : k === 1 ? range(rng, 0.9, 1.15) : range(rng, 0.5, 1.0),
   twist: range(rng, -0.9, 0.9),
   kind: rng() < 0.35 ? 0 : 1,
   // Radial pulse: whole cycles per loop so frame 600 == frame 0.
