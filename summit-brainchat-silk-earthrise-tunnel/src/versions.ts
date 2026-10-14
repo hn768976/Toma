@@ -58,7 +58,7 @@ export const VERSIONS: VersionRow[] = [
     look: "brain",
     params: {
       bg: "#020A1A",
-      brain: "#1238C0",
+      brain: "#1E50E8",
       brainRim: "#3AE8FF",
       brainFold: "#3AC8FF",
       traceColors: ["#3AE8FF", "#FF4AC8", "#3AF08A", "#8A5AFF"],

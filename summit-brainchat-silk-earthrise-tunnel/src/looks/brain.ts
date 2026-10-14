@@ -23,7 +23,7 @@ export type BrainParams = {
 
 const SEED = 0xb8a1;
 const simplex = makeSimplex3(SEED);
-const CHIP = 1.65; // chip half-size
+const CHIP = 1.45; // chip half-size
 
 // ---- brain hemisphere geometry (built once) -------------------------------
 function hemisphere(side: number) {
@@ -34,7 +34,7 @@ function hemisphere(side: number) {
   const p = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    p.set(v.x * 0.82, v.y * 0.74, v.z * 1.3);
+    p.set(v.x * 0.8, v.y * 0.92, v.z * 1.3);
     // medial face flattened
     if (v.x * side < 0) p.x *= 0.22;
     // flatter underside
@@ -79,19 +79,19 @@ function buildTraces(): Trace[] {
     const ang = (side * Math.PI) / 2;
     const ux = Math.cos(ang), uz = Math.sin(ang); // outward
     const vx = -uz, vz = ux; // lateral
-    const spread = range(rnd, 2.4, 3.2);
+    const spread = range(rnd, 3.6, 4.6);
     for (let j = 0; j < per; j++) {
       const o = -1 + (2 * (j + 0.5)) / per;
       const v0 = o * CHIP * 0.86;
       const l1 = 0.22 + 1.5 * (1 - Math.abs(o)) + 0.06 * rnd();
       const v1 = v0 + o * Math.abs(o) * spread;
-      const l3 = l1 + range(rnd, 1.5, 9);
+      const l3 = l1 + range(rnd, 1.2, 5.5);
       const P = (u: number, vv: number): [number, number] => [ux * u + vx * vv, uz * u + vz * vv];
       const pts = [P(CHIP + 0.02, v0), P(CHIP + l1, v0), P(CHIP + l1, v1), P(CHIP + l3, v1)];
       let len = 0;
       for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
       const cr = rnd();
-      out.push({ pts, color: cr < 0.45 ? 0 : cr < 0.65 ? 3 : cr < 0.85 ? 1 : 2, period: periods[Math.floor(rnd() * periods.length)], phase: rnd(), len });
+      out.push({ pts, color: cr < 0.6 ? 0 : cr < 0.75 ? 3 : cr < 0.94 ? 1 : 2, period: periods[Math.floor(rnd() * periods.length)], phase: rnd(), len });
     }
   }
   return out;
@@ -138,11 +138,11 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   const camera = new THREE.PerspectiveCamera(32, ctx.width / ctx.height, 0.3, 200);
   const bg = new THREE.Color(p.bg);
   const traceCols = p.traceColors.map((c) => new THREE.Color(c));
-  const FOG: [number, number] = [9, 34];
+  const FOG: [number, number] = [7, 19];
 
   scene.add(
     makeBackground(
-      `in vec2 vUv; uniform vec3 uBg; void main(){ vec3 haze = vec3(0.02, 0.06, 0.16) * (1.0 - smoothstep(0.3, 1.0, vUv.y)); gl_FragColor = vec4(uBg + haze, 1.0); }`,
+      `in vec2 vUv; uniform vec3 uBg; void main(){ vec3 haze = vec3(0.004, 0.012, 0.035) * (1.0 - smoothstep(0.3, 1.0, vUv.y)); gl_FragColor = vec4(uBg + haze, 1.0); }`,
       { uBg: { value: bg } },
     ),
   );
@@ -175,7 +175,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   // ---- board -----------------------------------------------------------------
   const boardMat = new THREE.ShaderMaterial({
     uniforms: {
-      uBase: { value: new THREE.Color("#061430") },
+      uBase: { value: new THREE.Color("#030916") },
       uBg: { value: bg },
       uGlowA: { value: new THREE.Color(p.chipRimA) },
       uGlowB: { value: new THREE.Color(traceCols[0]) },
@@ -193,8 +193,8 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
         float dots = (1.0 - smoothstep(0.06, 0.06 + fw * 1.5, length(g))) * (1.0 - smoothstep(0.12, 0.35, fw));
         float r = max(abs(q.x), abs(q.y));
         vec3 c = uBase + uBase * dots * 2.5;
-        c += uGlowB * 0.3 * exp(-max(r - ${CHIP.toFixed(2)}, 0.0) / 0.9);
-        c += vec3(0.015, 0.05, 0.14) * exp(-length(q) / 7.0);
+        c += uGlowB * 0.22 * exp(-max(r - ${CHIP.toFixed(2)}, 0.0) / 0.6);
+        c += vec3(0.012, 0.04, 0.12) * exp(-length(q) / 5.5);
         c += uGlowA * 0.10 * exp(-max(r - ${CHIP.toFixed(2)}, 0.0) / 1.4);
         float fog = smoothstep(uFog.x, uFog.y, vDepth);
         gl_FragColor = vec4(mix(c, uBg, fog), 1.0);
@@ -206,7 +206,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
 
   // ---- traces (flat emissive strips) ----------------------------------------
   const tpos: number[] = [], ts: number[] = [], tp: number[] = [], tidx: number[] = [];
-  const W = 0.018;
+  const W = 0.012;
   let vi = 0;
   TRACES.forEach((tr) => {
     let s = 0;
@@ -251,9 +251,9 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
         // pulse travels outward; whole cycles per 600 frames (period divides 600)
         float head = fract(uFrame / vT.y + vT.z) * (L + 3.0) - 1.0;
         float d = head - vS;
-        float pulse = d >= 0.0 ? exp(-d / 0.55) : exp(d / 0.05);
+        float pulse = d >= 0.0 ? exp(-d / 0.3) : exp(d / 0.03);
         float fade = 1.0 - smoothstep(L - 1.5, L, vS) * 0.6;
-        vec3 c = col * (0.5 * fade + 5.0 * pulse);
+        vec3 c = col * (0.32 * fade + 9.0 * pulse);
         float fog = smoothstep(uFog.x, uFog.y, vDepth);
         gl_FragColor = vec4(c * (1.0 - fog), 1.0);
       }`,
@@ -282,13 +282,13 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       softness: 0.3,
       uniforms: { uCols: { value: traceCols } },
       decl: "uniform vec3 uCols[4];",
-      body: "col.rgb = uCols[int(P.x + 0.5)] * 2.0;",
+      body: "col.rgb = uCols[int(P.x + 0.5)] * 1.4;",
     }),
   );
 
   // far bokeh specks (defocused by the DoF)
   const brnd = mulberry32(SEED + 11);
-  const NB = 260;
+  const NB = 120;
   const bpos = new Float32Array(NB * 3);
   const bpar = new Float32Array(NB * 4);
   const bsz = new Float32Array(NB);
@@ -317,16 +317,16 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   const chip = new THREE.Group();
   scene.add(chip);
   const chipBase = new THREE.Mesh(
-    new RoundedBoxGeometry(CHIP * 2, 0.26, CHIP * 2, 3, 0.05),
+    new RoundedBoxGeometry(CHIP * 2, 0.34, CHIP * 2, 3, 0.05),
     new THREE.MeshPhysicalMaterial({ color: "#0a1226", metalness: 0.7, roughness: 0.3, clearcoat: 0.6 }),
   );
-  chipBase.position.y = 0.13;
+  chipBase.position.y = 0.17;
   chip.add(chipBase);
   const chipTop = new THREE.Mesh(
     new RoundedBoxGeometry(CHIP * 1.62, 0.1, CHIP * 1.62, 3, 0.03),
     new THREE.MeshPhysicalMaterial({ color: "#0e1a3a", metalness: 0.5, roughness: 0.25, emissive: new THREE.Color("#0a2a6a"), emissiveIntensity: 0.6 }),
   );
-  chipTop.position.y = 0.3;
+  chipTop.position.y = 0.37;
   chip.add(chipTop);
   const frame = (half: number, y: number, t: number, color: THREE.Color) => {
     const m = new THREE.MeshBasicMaterial({ color });
@@ -341,19 +341,19 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       chip.add(b);
     }
   };
-  frame(CHIP + 0.01, 0.255, 0.035, new THREE.Color(p.chipRimA).multiplyScalar(5));
-  frame(CHIP * 0.81 + 0.01, 0.36, 0.03, new THREE.Color(p.chipRimB).multiplyScalar(4));
+  frame(CHIP + 0.01, 0.335, 0.022, new THREE.Color(p.chipRimA).multiplyScalar(3.5));
+  frame(CHIP * 0.81 + 0.01, 0.43, 0.016, new THREE.Color(p.chipRimB).multiplyScalar(2.2));
   frame(CHIP + 0.02, 0.015, 0.03, new THREE.Color(traceCols[0]).multiplyScalar(3));
 
   // ---- brain -------------------------------------------------------------------
   const brain = new THREE.Group();
-  brain.position.set(0, 0.36 + 0.62, 0);
+  brain.position.set(0, 0.42 + 0.78, 0);
   scene.add(brain);
   const brainMat = new THREE.MeshPhysicalMaterial({
     color: p.brain,
-    transmission: 0.45,
+    transmission: 0.62,
     thickness: 1.2,
-    roughness: 0.3,
+    roughness: 0.25,
     ior: 1.4,
     metalness: 0,
     clearcoat: 1,
@@ -377,7 +377,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
         float bNdV = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
-        totalEmissiveRadiance += uRim * (pow(1.0 - bNdV, 2.5) * 1.4) + uFold * pow(vSulci, 2.0) * 2.6;`,
+        totalEmissiveRadiance += uRim * (pow(1.0 - bNdV, 2.5) * 1.2) + uFold * pow(vSulci, 2.2) * 6.0;`,
       );
   };
   brainMat.customProgramCacheKey = () => "brain-glass";
@@ -408,7 +408,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
     softness: 0.5,
     uniforms: { uT: { value: 0 } },
     decl: "uniform float uT;",
-    body: "float tw = 0.5 + 0.5 * sin(6.2831853 * (uT * P.x + P.y)); col.rgb = base * (0.35 + 2.4 * tw * tw * tw);",
+    body: "float tw = 0.5 + 0.5 * sin(6.2831853 * (uT * P.x + P.y)); vec3 warm = fract(P.y * 7.0) < 0.45 ? vec3(1.0, 0.62, 0.3) : base; col.rgb = warm * (0.35 + 2.6 * tw * tw * tw);",
   });
   brain.add(sparkles);
 
@@ -430,14 +430,14 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   cubeMatGlow.emissive = new THREE.Color(p.cube).multiplyScalar(0.3);
   const cubeSegs: number[] = [];
   const placed: [number, number, number][] = [];
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 14; i++) {
     let x = 0, z = 0, s = 0.3;
     for (let tries = 0; tries < 100; tries++) {
       const a = crnd() * TAU;
-      const r = range(crnd, CHIP * 1.8, 7.0);
+      const r = range(crnd, CHIP * 1.9, 5.8);
       x = Math.cos(a) * r;
       z = Math.sin(a) * r - 1.5;
-      s = range(crnd, 0.2, 0.48);
+      s = range(crnd, 0.16, 0.3);
       if (placed.every(([px, pz, ps]) => Math.hypot(px - x, pz - z) > (ps + s) * 1.2)) break;
     }
     placed.push([x, z, s]);
@@ -475,8 +475,8 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   const rimL = new THREE.DirectionalLight(new THREE.Color("#a050ff"), 1.4);
   rimL.position.set(4, 3, -7);
   scene.add(rimL);
-  const inner = new THREE.PointLight(new THREE.Color("#3ae8ff"), 6, 7, 2);
-  inner.position.set(0, 0.9, 0);
+  const inner = new THREE.PointLight(new THREE.Color("#3ae8ff"), 4, 5, 2);
+  inner.position.set(0, 0.45, 2.2);
   scene.add(inner);
 
   // ---- bubbles ----------------------------------------------------------------
@@ -492,7 +492,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       metalness: 0.0,
       clearcoat: 1,
       clearcoatRoughness: 0.05,
-      emissive: new THREE.Color(p.bubble).multiplyScalar(0.55),
+      emissive: new THREE.Color(p.bubble).multiplyScalar(0.18),
       transparent: true,
       envMapIntensity: 1.5,
     });
@@ -513,24 +513,24 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       body,
       dots,
       spawn: k * 150 + 10,
-      start: new THREE.Vector3(side > 0 ? 1.85 : -1.7, 1.45, side > 0 ? 0.3 : 0.1),
-      rise: new THREE.Vector3(side > 0 ? 0.3 : -0.25, 1.25, -0.3),
+      start: new THREE.Vector3(side > 0 ? 1.55 : 1.2, 1.7, side > 0 ? 0.4 : 0.2),
+      rise: new THREE.Vector3(side > 0 ? 0.15 : 0.3, 1.9, -0.3),
     });
   }
 
   const target = new THREE.Vector3(0, 1.05, 0);
   const post = {
     exposure: p.exposure,
-    bloomStrength: 0.55,
-    bloomThreshold: 0.85,
+    bloomStrength: 0.32,
+    bloomThreshold: 1.0,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 10, aperture: 0.03, maxCoc: 0.014, nearScale: 1.0 },
+    dof: { focus: 10, aperture: 0.016, maxCoc: 0.01, nearScale: 0.7 },
     vignette: 0.35,
     grain: 0.015,
     grainFadeLum: 0,
   };
-  const LIFE = 165;
+  const LIFE = 200;
 
   const update = (f: number) => {
     const t = f / LOOP;
@@ -538,8 +538,8 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
     (sparkles.material as THREE.ShaderMaterial).uniforms.uT.value = t;
 
     // camera ~30° down, closed orbit ±8°
-    const yaw = THREE.MathUtils.degToRad(-10 + 8 * osc(f, 1));
-    const elev = THREE.MathUtils.degToRad(28);
+    const yaw = THREE.MathUtils.degToRad(-6 + 8 * osc(f, 1));
+    const elev = THREE.MathUtils.degToRad(33);
     const dist = 8.8;
     camera.position.set(
       target.x + Math.sin(yaw) * Math.cos(elev) * dist,
@@ -563,14 +563,14 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       const riseE = 1 - Math.pow(1 - k, 1.7);
       b.group.position.copy(b.start).addScaledVector(b.rise, riseE);
       b.group.quaternion.copy(camera.quaternion);
-      b.group.scale.setScalar(Math.max(0.0001, pop) * 1.0);
+      b.group.scale.setScalar(Math.max(0.0001, pop) * 0.82);
       const op = clamp01(age / 5) * (1 - smoothstep(LIFE * 0.62, LIFE, age));
       b.body.opacity = op;
       b.dots.forEach((dm, i) => {
         // dots pulse in sequence: 15 cycles per loop (40-frame period)
         const ph = fract(f / 40 - i * 0.2);
         const bump = Math.exp(-(((ph - 0.2) / 0.1) ** 2));
-        dm.color.setScalar(1.3 + 3.0 * bump);
+        dm.color.setScalar(0.9 + 1.2 * bump);
         dm.opacity = op;
       });
     }
