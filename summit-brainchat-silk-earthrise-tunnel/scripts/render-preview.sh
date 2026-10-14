@@ -9,11 +9,13 @@ set -euo pipefail
 ID="$1"; NAME="$2"
 OUT=renders; SEQ="$OUT/seq/$NAME"
 mkdir -p "$OUT" "$SEQ" "$OUT/keep"
-start=$(date +%s.%N)
-npx remotion render build/bundle "$ID" "$SEQ" --sequence --image-format=png \
-  --scale=0.3333333333333333 --concurrency=1 --log=error
-end=$(date +%s.%N)
-echo "$ID render_seconds=$(echo "$end - $start" | bc)" | tee -a "$OUT/render-times.txt"
+if [ "${SKIP_RENDER:-0}" != 1 ]; then
+  start=$(date +%s.%N)
+  npx remotion render build/bundle "$ID" "$SEQ" --sequence --image-format=png \
+    --scale=0.3333333333333333 --concurrency=1 --log=error
+  end=$(date +%s.%N)
+  echo "$ID render_seconds=$(echo "$end - $start" | bc)" | tee -a "$OUT/render-times.txt"
+fi
 first=$(ls "$SEQ" | head -1)
 pattern=$(echo "$first" | sed -E 's/[0-9]+\.png$//')
 digits=$(echo "$first" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
