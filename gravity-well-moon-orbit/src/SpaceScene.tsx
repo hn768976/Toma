@@ -207,8 +207,8 @@ const OrbitScene: React.FC<{
 }> = ({ row, frame, textures, shared, pose, starAxis }) => {
   const t = phase(frame);
   const R = row.earth.radius;
-  // Start on the far left of the ellipse, then CCW from above: behind
-  // Earth first, round the right, and back in front.
+  // Start on the far left of the ellipse, then CCW from above: across the
+  // front of Earth, round the right, behind Earth, and back to the left.
   const a = turnAngle(frame, 1) + Math.PI;
   // The orbit plane is rolled about the view axis (the Moon's real orbit is
   // inclined ~5 deg); "above" still means the orbit plane's own north side.
