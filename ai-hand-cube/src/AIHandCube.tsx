@@ -36,7 +36,7 @@ export const SCENE = {
   wristBend: -64 * DEG, // forearm runs straight away from camera, hidden behind palm and cube
   cubeWorld: new THREE.Vector3(0, 0, 0),
   // CoC = K * max(0, |1 - focus/z| - band): the cube (+-0.4 around its centre) stays sharp
-  dof: { nearK: 0.17, farK: 0.05, maxCoc: 0.02, band: 0.095 },
+  dof: { nearK: 0.17, farK: 0.05, maxCoc: 0.02, band: 0.12 },
 };
 
 /** Camera placement shared by the frame update and the Mirrored panel filter. */
