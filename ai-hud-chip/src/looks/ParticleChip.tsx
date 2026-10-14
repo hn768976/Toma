@@ -27,7 +27,7 @@ const TWINKLE_BUCKET = 3; // frames per twinkle bucket; LOOP / 3 = 200 buckets
 const H = 1.36; // chip half size (world)
 const DEPTH = 0.16;
 const CAM_DIST = 8.2;
-const CHIP_POS: [number, number, number] = [0.5, 0.0, 0];
+const CHIP_POS: [number, number, number] = [0.78, 0.0, 0];
 
 const DOF: DofSettings = { mode: 1, a: CAM_DIST, b: 14, c: 0, max: 46, min: 0 };
 
@@ -70,17 +70,17 @@ const buildChipPoints = (): PointSet => {
   };
 
   // 1. pin grid — each pad a small cluster of points (dense dotted look)
-  for (const p of makePads(48, 0x9ad)) {
+  for (const p of makePads(46, 0x9ad)) {
     const cx = p.u * H;
     const cy = p.v * H;
     const r = p.s * H * 0.5;
     // patchy brightness (bands and gaps, like the reference's gritty face)
     const patch = 0.55 + 0.9 * Math.max(0, Math.sin(p.u * 7.0 + 1.3) * Math.cos(p.v * 5.0 - 0.4));
-    add(cx, cy, 0.002, 1.3 * p.lum * patch, 13);
+    add(cx, cy, 0.002, 1.6 * p.lum * patch, 16);
     for (let k = 0; k < 5; k++) add(cx + jitter(rng, r * 2.4), cy + jitter(rng, r * 2.4), 0.002, 0.5 * p.lum, 3.0);
   }
   // 2. package outline: double front edge, back edge, depth edges
-  square(H, 0.004, 0.0016, 0.75, 3.4, 0.01);
+  square(H, 0.004, 0.0014, 0.85, 3.8, 0.012);
   square(H * 0.975, 0.004, 0.0028, 0.6, 2.6);
   square(H, -DEPTH, 0.004, 0.45, 2.6);
   for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) segment(sx * H, sy * H, 0, sx * H, sy * H, -DEPTH, 0.004, 0.6, 2.6);
@@ -90,9 +90,9 @@ const buildChipPoints = (): PointSet => {
   for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
     const cx = sx * H * CHIP.FRAME_IN * 0.88;
     const cy = sy * H * CHIP.FRAME_IN * 0.88;
-    for (let i = 0; i < 160; i++) {
+    for (let i = 0; i < 320; i++) {
       const a = rng() * Math.PI * 2;
-      const rr = H * 0.035 * Math.sqrt(rng());
+      const rr = H * 0.06 * Math.sqrt(rng());
       add(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 0.006, 0.8, 2.8);
     }
   }
@@ -118,7 +118,7 @@ const buildChipPoints = (): PointSet => {
     const y0 = jitter(rng, 2 * H);
     const a = rng() * Math.PI;
     const l = 0.04 + rng() * 0.25;
-    segment(x0, y0, 0.003, x0 + Math.cos(a) * l, y0 + Math.sin(a) * l, 0.003, 0.006, 0.3, 2.4, 0.003);
+    segment(x0, y0, 0.003, x0 + Math.cos(a) * l, y0 + Math.sin(a) * l, 0.003, 0.006, 0.5, 2.6, 0.003);
   }
   // 4d. frayed, glitchy fragments breaking off the outline
   for (let k = 0; k < 260; k++) {
@@ -129,6 +129,12 @@ const buildChipPoints = (): PointSet => {
     const horiz = e >= 2;
     const l = 0.02 + rng() * 0.12;
     segment(x0, y0, 0.004, x0 + (horiz ? l : jitter(rng, 0.03)), y0 + (horiz ? jitter(rng, 0.03) : l), 0.004, 0.005, 0.45, 2.4, 0.004);
+  }
+  // 4e. vertical digital smear streaks through the face
+  for (let k = 0; k < 40; k++) {
+    const x0 = jitter(rng, 2 * H);
+    const y0 = jitter(rng, 2 * H);
+    segment(x0, y0, 0.004, x0 + jitter(rng, 0.01), y0 + 0.2 + rng() * 0.6, 0.004, 0.004, 0.55, 2.6, 0.002);
   }
   // 5. sparkle dust across the face
   for (let i = 0; i < 6500; i++) add(jitter(rng, 2 * H), jitter(rng, 2 * H), 0.003, 0.12 + 0.25 * rng() * rng(), 2.4);
@@ -169,14 +175,17 @@ const buildRain = (): PointSet => {
   const size: number[] = [];
   const drift: number[] = [];
   const LINES = 150;
+  // three bright lines pinned near the chip (one passes in front of it)
+  const PINNED: [number, number][] = [[CHIP_POS[0] + H * 0.75, 0.6], [CHIP_POS[0] - H * 1.25, -1.0], [CHIP_POS[0] + H * 1.3, -0.5]];
   for (let l = 0; l < LINES; l++) {
-    const z = rng() < 0.12 ? 1.2 + rng() * 1.8 : -1.5 - rng() * 12;
+    const pin = l < PINNED.length ? PINNED[l] : null;
+    const z = pin ? pin[1] : rng() < 0.12 ? 1.2 + rng() * 1.8 : -1.5 - rng() * 12;
     const dist = CAM_DIST - z;
     const halfW = dist * 0.32 * (16 / 9);
-    const x = (rng() * 2 - 1) * halfW;
+    const x = pin ? pin[0] : (rng() * 2 - 1) * halfW;
     const span = dist * 0.36 * 2; // a little taller than the view
     const cycles = 1 + Math.floor(rng() * 3); // whole cycles per loop
-    const strong = rng() < 0.16;
+    const strong = l < 3 || rng() < 0.16;
     const bLine = strong ? 1.0 + 0.6 * rng() : 0.08 + 0.22 * rng();
     // dots and dashes along the line (in 0..1 of span)
     let s = rng() * 0.05;
@@ -341,14 +350,14 @@ const buildBokeh = (row: ParticleChipRow) => {
   const rng = mulberry32(0xb0b0);
   const specs: BokehSpec[] = [];
   const base = new THREE.Color(row.bokeh);
-  for (let i = 0; i < 34; i++) {
+  for (let i = 0; i < 20; i++) {
     const z = -3 - rng() * 9;
     const dist = CAM_DIST - z;
     // clustered left-middle and low
     const x = rng() < 0.6 ? -dist * (0.15 + rng() * 0.4) : (rng() * 2 - 1) * dist * 0.55;
     const y = -dist * 0.22 + rng() * dist * 0.32;
     const c = base.clone().lerp(new THREE.Color("#c4e6ff"), 0.35 + rng() * 0.4);
-    specs.push({ x, y, z, size: 40 + rng() * 130, color: c, gain: 0.08 + rng() * 0.26 });
+    specs.push({ x, y, z, size: 60 + rng() * 140, color: c, gain: 0.08 + rng() * 0.24 });
   }
   // big soft foreground blobs along the bottom
   for (let i = 0; i < 9; i++) {
@@ -369,14 +378,14 @@ const Scene: React.FC<{ row: ParticleChipRow }> = ({ row }) => {
   const phase = f / LOOP;
 
   const a = useMemo(() => {
-    const chip = makePoints(CHIP_POINTS, row.points, false, 1, 3.2, DOF);
-    const rain = makePoints(RAIN_POINTS, row.rain, true, 0.6, 4.2, { ...DOF, b: 8, max: 22 });
+    const chip = makePoints(CHIP_POINTS, row.points, false, 1, 4.2, DOF);
+    const rain = makePoints(RAIN_POINTS, row.rain, true, 0.6, 5.5, { ...DOF, b: 8, max: 22 });
     const centre = makeTexMaterial({ map: buildCentre(row.centre), dof: DOF, tint: row.points, additive: true, depthTest: false });
     const far = makeTexMaterial({ map: buildFarText(row.centre), dof: { ...DOF, max: 30 }, tint: row.bokeh, additive: true, depthTest: false, opacity: 0.22 });
     const fill = makeTexMaterial({ map: buildFill(), dof: DOF, depthTest: true, depthWrite: false, opacity: 0.85 });
     const backdrop = makeTexMaterial({ map: buildBoardBackdrop(row.space, [row.bokeh], 30), dof: { ...DOF, max: 0 }, depthTest: false });
     backdrop.transparent = false;
-    const floor = makeTexMaterial({ map: buildBoardFloor("#0c2140"), dof: { ...DOF, b: 26, min: 0 }, depthTest: true, depthWrite: true });
+    const floor = makeTexMaterial({ map: buildBoardFloor("#123060"), dof: { ...DOF, b: 26, min: 0 }, depthTest: true, depthWrite: true });
     floor.transparent = false;
     const bokeh = buildBokeh(row);
     return { chip, rain, centre, far, fill, backdrop, floor, bokeh };

@@ -58,7 +58,7 @@ const buildFace = (row: ChipRevealRow) => {
   const rng = mulberry32(0x7a11);
   ctx.strokeStyle = row.ticks;
   ctx.lineWidth = 3;
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 25; i++) {
     const x = rng() * S;
     const y = rng() * S;
     const m = Math.max(Math.abs(x / S - 0.5), Math.abs(y / S - 0.5)) * 2;
@@ -79,7 +79,7 @@ const buildDie = (row: ChipRevealRow) => {
   const { cv, ctx } = makeCanvas(S, S);
   const die = new THREE.Color(row.die);
   const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S * 0.7);
-  g.addColorStop(0, `#${die.clone().multiplyScalar(4.2).getHexString()}`);
+  g.addColorStop(0, `#${die.clone().multiplyScalar(2.6).getHexString()}`);
   g.addColorStop(1, `#${die.getHexString()}`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, S, S);
@@ -138,6 +138,10 @@ const buildFaceHud = () => {
   p.arc(c, c, D * 0.31, 0.3, 1.9, 0.4, 0.7, 2.4, 0.8);
   p.arc(c, c, D * 0.31, 3.4, 5.0, 0.45, 0.75, 2.4, 0.8);
   for (const a of [0.3, 1.9, 3.4, 5.0, 2.62]) p.dot(c + Math.cos(a) * D * 0.29, c + Math.sin(a) * D * 0.29, 7, 0.75, 1);
+  // second (double) ring and tall bracket rectangles either side of it
+  p.arc(c, c, D * 0.27, Math.PI / 2, Math.PI * 2.5, 0.25, 0.75, 2.2, 0.75);
+  p.frame(U(-0.62), U(-0.5), U(-0.5) - U(-0.62), U(0.5) - U(-0.5), 0.35, 0.65, { width: 2.4 });
+  p.frame(U(0.5), U(-0.5), U(0.62) - U(0.5), U(0.5) - U(-0.5), 0.35, 0.65, { width: 2.4, corner: 1 });
   // tick marks between frame and ring
   p.line(U(0), U(-0.66), U(0), U(-0.58), 0.6, 0.65, 2.4);
   p.line(U(0.1), U(-0.75), U(0.04), U(-0.62), 0.6, 0.65, 2.4);
@@ -261,8 +265,8 @@ const buildBokeh = (row: ChipRevealRow) => {
   // a saturated glow patch bottom-right
   specs.push({ x: 4.3, y: -1.9, z: 2.2, size: 420, color: new THREE.Color(row.bokeh[0]), gain: 0.35 });
   // fine floating specks
-  for (let i = 0; i < 130; i++)
-    specs.push({ x: (rng() * 2 - 1) * 5, y: -1.2 + rng() * 4, z: -2 + rng() * 4, size: 3 + rng() * 6, color: new THREE.Color(row.hud), gain: 0.25 + rng() * 0.5 });
+  for (let i = 0; i < 280; i++)
+    specs.push({ x: (rng() * 2 - 1) * 5, y: -1.2 + rng() * 4, z: -2 + rng() * 4, size: 3 + rng() * 5, color: new THREE.Color(row.bokeh[3]).lerp(new THREE.Color(row.hud), 0.5), gain: 0.3 + rng() * 0.5 });
   return makeBokeh(specs, 0xb0cf);
 };
 
@@ -284,7 +288,7 @@ const Scene: React.FC<{ row: ChipRevealRow }> = ({ row }) => {
     face.transparent = false;
     const die = makeTexMaterial({ map: buildDie(row), dof: DOF, depthTest: true, depthWrite: true });
     die.transparent = false;
-    const side = new THREE.MeshBasicMaterial({ color: "#0b1424" });
+    const side = new THREE.MeshBasicMaterial({ color: "#04070d" });
     const faceHud = makeHudMaterial({ map: buildFaceHud(), line: row.hud, dof: DOF, flash: 1.5 });
     const callouts = makeHudMaterial({ map: buildCallouts(row), line: row.hud, fill: row.hud, dof: DOF, fillOpacity: 0.8, flash: 1.6 });
     const floor = makeTexMaterial({ map: buildFloor(row), dof: { ...DOF, b: 22, min: 0 }, depthTest: true, depthWrite: true });
@@ -301,13 +305,13 @@ const Scene: React.FC<{ row: ChipRevealRow }> = ({ row }) => {
       return { ...n, label, mat };
     });
     const bokeh = buildBokeh(row);
-    const lc = new THREE.Color(row.bokeh[3]).multiplyScalar(0.022);
+    const lc = new THREE.Color(row.bokeh[3]).multiplyScalar(0.04);
     const lift: [number, number, number] = [lc.r, lc.g, lc.b];
     return { face, die, side, faceHud, callouts, floor, backdrop, letters, lettersMat, nums, bokeh, lift };
   }, [row]);
 
   // ---- per-frame values (pure functions of frame)
-  const soft = interpolate(sec, [0, 2.3], [14, 1.4], { extrapolateRight: "clamp", easing: Easing.out(Easing.quad) });
+  const soft = interpolate(sec, [0, 2.3], [14, 2.2], { extrapolateRight: "clamp", easing: Easing.out(Easing.quad) });
   for (const m of [a.face, a.die, a.faceHud, a.lettersMat, ...a.nums.map((n) => n.mat)]) m.uniforms.uDofMin.value = soft;
 
   // letters: scramble every 2 frames, lock on the centre text with a flash
@@ -366,7 +370,7 @@ const Scene: React.FC<{ row: ChipRevealRow }> = ({ row }) => {
         <planeGeometry args={[26, 26]} />
       </mesh>
       {/* chip package */}
-      <group position={[CHIP_X, CHIP_Y, 0]} rotation={[0, -0.12, 0]}>
+      <group position={[CHIP_X, CHIP_Y, 0]} rotation={[0, -0.04, 0]}>
         <mesh renderOrder={1} material={a.side}>
           <boxGeometry args={[CHIP_SIZE, CHIP_SIZE, CHIP_DEPTH]} />
         </mesh>
@@ -395,7 +399,7 @@ const Scene: React.FC<{ row: ChipRevealRow }> = ({ row }) => {
       <mesh renderOrder={7} position={[CO_X, CO_Y, FACE_Z + 0.05]} material={a.callouts}>
         <planeGeometry args={[CO_SIZE, CO_SIZE]} />
       </mesh>
-      <Pipeline frame={frame} period={durationInFrames} bloomStrength={1.35} bloomThreshold={0.22} vignette={0.55} grain={0.015} saturation={0.85} chroma={4} lift={a.lift} />
+      <Pipeline frame={frame} period={durationInFrames} bloomStrength={1.6} bloomThreshold={0.2} vignette={0.55} grain={0.015} saturation={0.85} chroma={4} lift={a.lift} />
     </>
   );
 };

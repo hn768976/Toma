@@ -30,12 +30,12 @@ export const buildBoardFloor = (board: string) => {
     ctx.stroke();
   }
   // rows of bright pin blocks (like the reference's foreground connectors)
-  for (let r = 0; r < 240; r++) {
+  for (let r = 0; r < 420; r++) {
     const y = rng() * S;
     const x0 = rng() * S;
     const n = 6 + Math.floor(rng() * 24);
-    ctx.fillStyle = rng() < 0.5 ? bright : `#${base.clone().multiplyScalar(6).lerp(new THREE.Color("#ffffff"), 0.45).getHexString()}`;
-    for (let k = 0; k < n; k++) ctx.fillRect(x0 + k * 22, y, 12, 26 + rng() * 10);
+    ctx.fillStyle = rng() < 0.5 ? bright : `#${base.clone().multiplyScalar(7).lerp(new THREE.Color("#ffffff"), 0.15).getHexString()}`;
+    for (let k = 0; k < n; k++) ctx.fillRect(x0 + k * 14, y, 7, 12 + rng() * 8);
   }
   // components
   for (let i = 0; i < 60; i++) {
