@@ -1,0 +1,27 @@
+{
+  "name": "particlecloth-padlock-heartpodium-puzzle-warp",
+  "version": "1.0.0",
+  "description": "Five looks, eight 20s seamless-loop compositions (Remotion + PixiJS 8 + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.7.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "pixi.js": "8.20.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.185.4",
+    "typescript": "5.9.3"
+  }
+}
