@@ -133,29 +133,29 @@ SwiftShader already uses every core.
 
 | Composition | 720p median / frame | 720p full 600-frame preview (wall) |
 |---|---|---|
-| SpotlightSparkles-Blue | 0.52 s | 3.9 min |
-| SpotlightSparkles-Gold | 0.49 s | 3.7 min |
-| PastelBokeh-PinkLavender | 0.50 s | 3.7 min |
-| PastelBokeh-MintAqua | 0.51 s | 3.9 min |
+| SpotlightSparkles-Blue | 0.53 s | 3.9 min |
+| SpotlightSparkles-Gold | 0.48 s | 3.7 min |
+| PastelBokeh-PinkLavender | 0.56 s | 4.3 min |
+| PastelBokeh-MintAqua | 0.53 s | 4.3 min |
 | SunFlare-Midday | 0.98 s | 8.2 min |
 | SunFlare-GoldenHour | 0.96 s | 8.2 min |
-| StarTwinkle-Black | 0.25 s | 1.6 min |
+| StarTwinkle-Black | 0.26 s | 1.7 min |
 | SilkLight-PaleBlue | 0.38 s | 2.6 min |
 
 **Two real 4K frames (3840×2160, frame 300, cold browser):**
-- **1A SpotlightSparkles-Blue: 4.7 s** (3.4–4.9 s over frames 299–301).
-- **2A PastelBokeh-PinkLavender: 3.6 s** (3.2–4.5 s).
+- **1A SpotlightSparkles-Blue: 4.1 s** (3.7–7.3 s over frames 299–301; the 7.3 s one includes browser warm-up).
+- **2A PastelBokeh-PinkLavender: 4.6 s** (4.6–5.5 s).
 
 4K is roughly 7–9× the 720p cost here, close to the 9× pixel ratio, so the cost is per pixel.
 
 **4K estimates per 600-frame composition, on this CPU-only box:**
-- 1A/1B: about 47 min each.
-- 2A/2B: about 36 min each.
+- 1A/1B: about 42 min each.
+- 2A/2B: about 46 min each.
 - 3A/3B: about 85 min each.
 - 4: about 20 min.
 - 5: about 35 min.
 
-That's roughly **6.5 h for all eight**. On a machine with a real GPU, the WebGL work drops to
+That's roughly **6.6 h for all eight**. On a machine with a real GPU, the WebGL work drops to
 milliseconds and the PNG screenshot dominates; expect a small fraction of this.
 
 ## Verification results
@@ -165,19 +165,63 @@ All eight passed every check below on the final code.
 | Check | Result |
 |---|---|
 | 1. ffprobe | All 8: h264, 1280×720, 30/1, yuv420p, no audio stream, 20.000 s, 600 frames |
-| 2. Loop | 601-frame variant (`loopCheck`): frame 600 ≡ frame 0 pixel for pixel, all 8. Also checked that the 599→0 step on lossless frames matches a normal frame step (ratio 0.84–1.06), so no term jumps at the seam |
+| 2. Loop | 601-frame variant (`loopCheck`): frame 600 ≡ frame 0 pixel for pixel, all 8. Also checked that the 599→0 step on lossless frames matches a normal frame step (ratio 0.95–1.02), so no term jumps at the seam |
 | 3. Determinism | Cold single still of frame 300 vs frame 300 of the full render: **byte-identical PNG files**, all 8 |
 | 4. Banding | Frame 300 decoded **from the mp4**, 6 full-length lines each (3 columns, 3 rows), see below |
-| 4. Black level | Look 4: 50 points away from stars in the mp4 frame all read **0,0,0** (71.5 % of the lossless frame is exactly 0) |
+| 4. Black level | Look 4: 50 points away from stars in the mp4 frame all read **0,0,0** (88 % of the lossless frame is exactly 0) |
 | 5. Contact sheets | 5 frames each (0/120/240/360/480): each look shows what its section of the brief asks for |
 | 6. Motion | Frame-to-frame change over frames 270–330 is flat (max/median 1.02–1.25; Star Twinkle 2.1 from the deliberate glints); no one-frame strobes; sprites are mipmapped |
 
 **Banding detail.**
-- Longest run of identical RGB pixels along any gradient line, in the decoded mp4 frame: 10 px (Spotlight), 24 px (Pastel), 24 px (Sun), 25 px (Silk). Plateaus would mean banding; these are short.
+- Longest run of identical RGB pixels along any gradient line, in the decoded mp4 frame: 17 px (Spotlight), 22 px (Pastel), 24 px (Sun), 25 px (Silk). Plateaus would mean banding; these are short.
 - The only long runs are in clipped pure white (the sun core) and exact black (Look 4), which is intended.
 - Contrast-stretched crops of the pale and dark gradients show grain, with no contour steps.
 - `-tune grain` was not needed at CRF 16.
 - How it's built: float gradients, `rgba16float` targets, 64×64 blue-noise dither offset by `frame % 600`, and a hashed grain (1.5 %, 2 % on Looks 2 and 5). Look 4 has no grain or dither.
+
+## Reference comparison (steps 7–8)
+
+For each of 1A, 2A, 3A, 4 and 5, one preview frame was put next to a reference frame. A fresh
+sub-agent then listed the differences, with no context about how the scene was built. That was
+repeated for 3 rounds per look, and the fixes were carried over to 1B, 2B and 3B. The last round
+used frames decoded from the mp4 previews.
+
+**Fixed:**
+- **Spotlight:**
+  - wide, soft, uneven beams with dark gaps between them, reaching the sides
+  - a saturated source glow with no white disc, and a deeper navy with a vignette
+  - about 260 bright cyan dots, with the rest of the 5,000 specks nearly invisible
+  - about 12 white soft-bloom flares with + and X spikes
+- **Pastel Bokeh:**
+  - bright glitter across the whole frame and glowing hero glints
+  - softer, larger, fainter bokeh
+  - crossing wavy strands and less white wash
+- **Sun Flare:**
+  - an irregular blown-out core partly off the right edge, and a blend towards white (no cyan cast)
+  - soft wide spikes with hazy veils, plus an iridescent smear on the sun's line
+  - faint ghosts and faint sky texture
+- **Star Twinkle:**
+  - sparse stars with small hard cores and short soft + spikes
+  - vertical spikes warm above the core and cool below, with a red-above / blue-below wash
+  - small stars as plain dots, and exact black between
+- **Silk Light:**
+  - the correct "\" streak direction (it had been mirrored) and a cyan-to-white vertical gradient
+  - blooms in the lower corners and the middle
+  - uneven soft beams with no hard ridges, and dust weighted to the top
+
+**Still different (deliberately kept as the brief specifies):**
+- **2A colours:** the reference stays saturated pink to the bottom, with a pink-magenta top. The
+  brief's stops are `#E8A8F0 → #F8C8E8 → #FFE8E0`, which are more lavender at the top and fade to
+  pale peach at the bottom, so 2A reads lighter. To match the reference instead, change that one
+  data row, e.g. `top: "#F6B2F0", mid: "#FAC8EC", bottom: "#FCC2DA"`.
+- **3A sky:** the reference sky is a brighter azure. The brief's `#3A8AE8 → #8AC8F8` was kept.
+- **3A ghosts:** the reference shows essentially one faint ghost. The brief's ~7 ghost elements
+  were kept, made very faint.
+- **1A colours:** the reference rays and source are a slightly greener cyan with zero red. The
+  brief's ray colour `#6AA8FF` (and its navy stops) were kept.
+- **Counts:** 1A keeps 5,000 specks and 150 medium flares, and 4 keeps 900 points and 120 flares,
+  as specified. The extra ones are kept nearly invisible to match the references' sparser look.
+- **5:** grain 2 % and ~120 dust specks as specified; the reference has no grain and fewer specks.
 
 ## Completion checklist
 
