@@ -36,7 +36,7 @@ const BLUE: Palette = {
   circuit: "#5AD8FF",
   text: "#DFF8FF",
   hud: "#5A9AE8",
-  handBase: "#E8ECF2",
+  handBase: "#C6CCD5", // light silver-grey (between the brief's #E8ECF2 and the reference's grey metal)
   handJoint: "#3A3E46",
   rim: "#4FA8FF",
   key: "#DCE8FF",
@@ -50,7 +50,7 @@ const GOLD: Palette = {
   circuit: "#FFC870",
   text: "#FFF4E2",
   hud: "#E8A04A",
-  handBase: "#F1E8DA",
+  handBase: "#D6CBB8", // silver-champagne
   handJoint: "#3E3830",
   rim: "#FFB860",
   key: "#FFF0DC",

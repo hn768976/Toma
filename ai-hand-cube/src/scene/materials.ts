@@ -6,8 +6,8 @@ import type { HandMaterials } from "./hand";
 export const buildHandMaterials = (p: Palette, env: THREE.Texture): HandMaterials => {
   const shell = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(p.handBase),
-    metalness: 0.3,
-    roughness: 0.3,
+    metalness: 0.5,
+    roughness: 0.32,
     clearcoat: 0.12,
     clearcoatRoughness: 0.3,
     envMap: env,

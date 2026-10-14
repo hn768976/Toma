@@ -33,7 +33,7 @@ export const SCENE = {
   handYaw: 2 * DEG, // fingers point toward the viewer
   handRoll: -4 * DEG,
   handScale: 1.0,
-  wristBend: -42 * DEG, // forearm runs straight away from camera, hidden behind palm and cube
+  wristBend: -54 * DEG, // forearm runs straight away from camera, hidden behind palm and cube
   cubeWorld: new THREE.Vector3(0, 0, 0),
   // CoC = K * max(0, |1 - focus/z| - band): the cube (+-0.4 around its centre) stays sharp
   dof: { nearK: 0.17, farK: 0.05, maxCoc: 0.02, band: 0.095 },
@@ -77,14 +77,14 @@ const Scene: React.FC<{ v: Version; refs: RenderRefs }> = ({ v, refs }) => {
     const env = buildEnvironment(gl, p);
     const handMats = buildHandMaterials(p, env);
     // in the scene the hand is lit mostly by the cube: dimmer reflections
-    (handMats.shell as THREE.MeshPhysicalMaterial).envMapIntensity = 0.45;
+    (handMats.shell as THREE.MeshPhysicalMaterial).envMapIntensity = 1.0;
     (handMats.metal as THREE.MeshPhysicalMaterial).envMapIntensity = 0.6;
     const hand = buildHand(handMats);
     const bg = buildBackground();
     bg.material.uniforms.uBase.value.set(p.background);
     bg.material.uniforms.uGlow.value.set(p.glow);
     const lights = buildLights(p);
-    lights.key.intensity *= 0.32; // the hand sits in shadow under the cube
+    lights.key.intensity *= 0.6; // the hand sits partly in shadow under the cube
     lights.rimL.intensity *= 0.7;
     lights.rimR.intensity *= 0.7;
     const cube = buildCube(p, env, v.cubeText);

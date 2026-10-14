@@ -230,8 +230,8 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   // base joint; then 2 segments. The thumb lies roughly in the palm plane,
   // angled ~40deg away from the index finger, pad turned toward the fingers.
   const thenarDir = new THREE.Group();
-  thenarDir.position.set(-0.3, 0.03, 0.06);
-  thenarDir.rotation.set(-14 * DEG, -72 * DEG, -6 * DEG, "YXZ");
+  thenarDir.position.set(-0.3, 0.04, 0.0);
+  thenarDir.rotation.set(-26 * DEG, -66 * DEG, -6 * DEG, "YXZ");
   palm.add(thenarDir);
   const thenarLen = 0.34;
   thenarDir.add(
@@ -244,7 +244,7 @@ export const buildHand = (mats: HandMaterials): HandRig => {
         nBottom: 2.4,
         capStart: 0.1,
         capEnd: 0.06,
-        section: (t) => ({ w: lerp(0.32, 0.2, t), h: lerp(0.26, 0.17, t) }),
+        section: (t) => ({ w: lerp(0.34, 0.25, t), h: lerp(0.28, 0.22, t) }),
       }),
       mats.shell,
     ),
@@ -252,16 +252,16 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   // real part break where the thenar housing meets the palm: graphite gasket
   const gasket: THREE.Vector3[] = [];
   for (let i = 0; i < 40; i++) {
-    const p = sectionPoint({ w: 0.29, h: 0.235 }, (i / 40) * Math.PI * 2, 2.6, 2.4, 1.01);
+    const p = sectionPoint({ w: 0.31, h: 0.255 }, (i / 40) * Math.PI * 2, 2.6, 2.4, 1.01);
     gasket.push(new THREE.Vector3(p.x, p.y, 0.16));
   }
   thenarDir.add(tube(gasket, 0.003, mats.seam, true, 96));
   const thumbBase = new THREE.Group();
   thumbBase.position.z = thenarLen + 0.02;
-  thumbBase.rotation.set(-10 * DEG, 18 * DEG, -20 * DEG, "YXZ");
+  thumbBase.rotation.set(-20 * DEG, 14 * DEG, -20 * DEG, "YXZ");
   thenarDir.add(thumbBase);
-  // thumb: nearly as thick as a finger, shorter than the index finger
-  const thumbJoints = buildChain(thumbBase, [0.38, 0.3], 0.205, 0.185);
+  // thumb: shorter than the fingers but the chunkiest digit
+  const thumbJoints = buildChain(thumbBase, [0.35, 0.27], 0.235, 0.215);
   chains.unshift({ joints: thumbJoints, relaxed: [8 * DEG, 12 * DEG] });
   // web between the thumb housing and the index knuckle: a low sculpted
   // shell so the thumb visibly belongs to the palm
