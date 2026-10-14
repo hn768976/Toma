@@ -419,7 +419,9 @@ export class WalletWorld {
         new THREE.MeshPhysicalMaterial({
           color: this.lockBase,
           transmission: 0.5,
-          roughness: 0.16,
+          // Rough enough that what is behind (the wallet's bright rim) blurs
+          // into a glow instead of reading as a sharp line through the lock.
+          roughness: 0.42,
           thickness: 1.2,
           ior: 1.5,
           attenuationColor: this.lockBase,
@@ -522,7 +524,7 @@ export class WalletWorld {
       this.lock.visible = l.visible;
       this.lock.position.set(LOCK.x, LOCK.y + l.drop, LOCK.z);
       this.shackle.position.y = l.shackle;
-      this.lockMat.emissiveIntensity = 0.9 + 0.3 * l.glow + 2.4 * l.flash;
+      this.lockMat.emissiveIntensity = 0.9 + 0.3 * l.glow + 1.3 * l.flash;
     }
 
     const cam = cameraPose(story, frame, loop);

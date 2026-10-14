@@ -21,19 +21,31 @@ W, H = im.size
 def luma(p):
     return 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]
 
+# (name, points, mask objects?) -- background lines skip anything brighter than
+# the line's median + 18 (blocks or their halo crossing the line) and 16 px
+# around it, so only the gradient itself is measured. The floor pool is a
+# legitimately bright gradient and is never masked.
 lines = {
-    "left glow, vertical (x=6%)": [(int(0.06 * W), y) for y in range(int(0.05 * H), int(0.97 * H))],
-    "upper background, horizontal (y=10%)": [(x, int(0.10 * H)) for x in range(int(0.02 * W), int(0.98 * W))],
-    "floor pool, horizontal (y=93%)": [(x, int(0.93 * H)) for x in range(int(0.02 * W), int(0.98 * W))],
-    "right side, vertical (x=94%)": [(int(0.94 * W), y) for y in range(int(0.05 * H), int(0.97 * H))],
+    "left glow, vertical (x=6%)": ([(int(0.06 * W), y) for y in range(int(0.05 * H), int(0.97 * H))], True),
+    "upper background, horizontal (y=10%)": ([(x, int(0.10 * H)) for x in range(int(0.02 * W), int(0.98 * W))], True),
+    "floor pool, horizontal (y=93%)": ([(x, int(0.93 * H)) for x in range(int(0.02 * W), int(0.98 * W))], False),
+    "right side, vertical (x=94%)": ([(int(0.94 * W), y) for y in range(int(0.05 * H), int(0.97 * H))], True),
 }
 worst = 0.0
-for name, pts in lines.items():
+for name, (pts, mask_objects) in lines.items():
     v = [luma(im.getpixel(p)) for p in pts]
+    masked = [False] * len(v)
+    if mask_objects:
+        med = sorted(v)[len(v) // 2]
+        for i, x in enumerate(v):
+            if x > med + 18:
+                for j in range(max(0, i - 16), min(len(v), i + 17)):
+                    masked[j] = True
     k = 9
     sm = [sum(v[i - k // 2 : i + k // 2 + 1]) / k for i in range(k // 2, len(v) - k // 2)]
-    jumps = [abs(sm[i + 1] - sm[i]) for i in range(len(sm) - 1)]
-    mj = max(jumps)
+    ok = [not any(masked[i - k // 2 : i + k // 2 + 1]) for i in range(k // 2, len(v) - k // 2)]
+    jumps = [abs(sm[i + 1] - sm[i]) for i in range(len(sm) - 1) if ok[i] and ok[i + 1]]
+    mj = max(jumps) if jumps else 0.0
     worst = max(worst, mj)
     # longest run of identical *raw* values (dither should break these up)
     run = best = 1
@@ -42,5 +54,6 @@ for name, pts in lines.items():
         best = max(best, run)
     step = max(1, len(v) // 12)
     samples = " ".join(f"{round(x)}" for x in v[::step])
-    print(f"{name}: range {min(v):.0f}-{max(v):.0f}, max smoothed jump {mj:.2f}, longest flat raw run {best}px\n    samples: {samples}")
+    skipped = sum(masked)
+    print(f"{name}: range {min(v):.0f}-{max(v):.0f}, max smoothed jump {mj:.2f}, longest flat raw run {best}px, object px skipped {skipped}\n    samples: {samples}")
 print(f"RESULT: {'PASS' if worst < 1.5 else 'FAIL'} (worst smoothed jump {worst:.2f} code values)")
