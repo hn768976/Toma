@@ -19,7 +19,7 @@ export interface CircuitPadlockProps {
 const N = 160; // circuit cells across one board tile
 const TILE = 9.6; // world units per tile → 0.06 per cell
 const boardCircuit = makeCircuit(0xb0a2d002, N, 16000);
-const lockCircuit = makeCircuit(0x10c4c002, 40, 260);
+const lockCircuit = makeCircuit(0x10c4c002, 40, 140);
 
 const cellToWorld = (p: [number, number]) => new THREE.Vector3(((p[0] + 0.5) / N - 0.5) * TILE, 0, ((p[1] + 0.5) / N - 0.5) * TILE);
 
@@ -60,7 +60,7 @@ const dashes = (() => {
   // dashes travel in short rows (like out-of-focus LED strips) or alone
   while (out.length < DASHES) {
     const depthBand = rnd();
-    const p0 = new THREE.Vector3(-4 + rnd() * 24, 0.3 + Math.pow(rnd(), 0.7) * (1.0 + (1 - depthBand) * 4.5), -24 + depthBand * 21);
+    const p0 = new THREE.Vector3(-2 + rnd() * 22, 0.2 + Math.pow(rnd(), 1.4) * (0.8 + (1 - depthBand) * 3.2), -20 + depthBand * 18);
     const far = 1 - depthBand;
     const ph = rnd(), cycles = 1 + Math.floor(rnd() * 3);
     const n = rnd() < 0.45 ? 2 + Math.floor(rnd() * 4) : 1;
@@ -101,7 +101,9 @@ const lockTexture = () => {
   for (let i = 0; i < tmp.data.length; i += 4) {
     const v = tmp.data[i];
     const gl = tmp.data[i + 2];
-    const o = Math.min(255, v + gl * 0.35);
+    // circuit fades toward the left half of the face, like the reference
+    const fx = 0.25 + 0.75 * Math.min(1, ((i / 4) % size) / (size * 0.55));
+    const o = Math.min(255, (v + gl * 0.35) * fx);
     tmp.data[i] = o;
     tmp.data[i + 1] = o;
     tmp.data[i + 2] = o;
@@ -160,7 +162,7 @@ void main() {
   float cyc = 1.0 + floor(id * 3.0);                 // 1..3 cycles per loop
   float pulse = 0.5 + 0.5 * sin(uTheta * cyc + id * 40.0);
   float traceI = t.r * (0.55 + 0.9 * pulse * pulse);
-  vec3 col = uBoard * 1.8;
+  vec3 col = uBoard * 1.0;
   col += uTrace * traceI * 1.6;
   col += uGlow * t.b * 0.22 * (0.6 + 0.4 * pulse);
   // light pool / reflection haze under the lock
@@ -171,7 +173,7 @@ void main() {
   // distance fade into the dark
   float dist = length(vWorld.xz - vec2(0.0, -2.0));
   col *= mix(1.0, 0.6, smoothstep(6.0, 30.0, dist));
-  col += uGlow * 0.05 * smoothstep(5.0, 25.0, dist);
+  col += uGlow * 0.015 * smoothstep(5.0, 25.0, dist);
   gl_FragColor = vec4(col, uOpacity);
 }
 `;
@@ -201,7 +203,7 @@ const makeEnv = (renderer: THREE.WebGLRenderer, glow: THREE.Color) => {
 
 const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, h) => {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x02161c);
+  scene.background = new THREE.Color(0x010709);
   const glass = new THREE.Color(props.glass);
   const glow = new THREE.Color(props.glow);
   const envRT = makeEnv(renderer, glow);
@@ -230,7 +232,7 @@ const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, 
       uGlow: { value: glow },
       uTheta: { value: 0 },
       uLockPos: { value: new THREE.Vector3(0, 0, 0) },
-      uOpacity: { value: 0.62 },
+      uOpacity: { value: 0.82 },
     },
     // blended over the mirrored lock, but kept in the opaque list (renderOrder)
     // so the glass lock's transmission pass sees the board
@@ -247,7 +249,7 @@ const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, 
   const lock = new THREE.Group();
   const lockTex = lockTexture();
   renderer.initTexture(lockTex);
-  const bodyW = 1.0, bodyH = 0.86, bodyD = 0.36;
+  const bodyW = 1.12, bodyH = 0.9, bodyD = 0.4;
   const bodyMat = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(0x1478a0),
     metalness: 0,
@@ -279,7 +281,7 @@ const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, 
   lock.add(body);
 
   // shackle: half torus + two legs, solid glowing cyan
-  const shR = 0.29, shT = 0.085, legH = 0.17;
+  const shR = 0.33, shT = 0.11, legH = 0.1;
   const shMat = new THREE.MeshPhysicalMaterial({
     color: glass,
     roughness: 0.2,
@@ -313,7 +315,7 @@ const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, 
 
   // mirrored lock under the semi-transparent board = glossy reflection
   const mirror = new THREE.Group();
-  const mirMat = new THREE.MeshBasicMaterial({ color: glass.clone().multiplyScalar(1.1), map: lockTex });
+  const mirMat = new THREE.MeshBasicMaterial({ color: glass.clone().multiplyScalar(0.5), map: lockTex });
   const mirShMat = new THREE.MeshBasicMaterial({ color: glow.clone().multiplyScalar(0.9) });
   const mb = new THREE.Mesh(body.geometry, mirMat);
   mb.position.copy(body.position);
@@ -356,8 +358,8 @@ const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, 
   const target = new THREE.Vector3(0, 0.55, 0);
   const post = new PostPipeline(w, h, {
     samples: 4,
-    dof: { focus: 5.0, focusRange: 0.5, aperture: 0.024, maxCoc: 0.018 },
-    bloom: { strength: 0.9, radius: 1.0, levels: 6 },
+    dof: { focus: 5.0, focusRange: 1.4, aperture: 0.03, maxCoc: 0.02 },
+    bloom: { strength: 1.3, radius: 1.0, levels: 6 },
     final: { exposure: 1.15, tone: "neutral", grain: 0.015, vignette: 0.5, saturation: 1.12, gain: [0.88, 0.98, 1.12] },
   });
 
@@ -367,7 +369,7 @@ const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, 
       const ph = loopPhase(frame);
       boardMat.uniforms.uTheta.value = th;
       // camera: ~20° above the board, slow closed ±8° orbit
-      const az = (-24 + 8 * Math.sin(th)) * (Math.PI / 180);
+      const az = (-36 + 8 * Math.sin(th)) * (Math.PI / 180);
       const el = 17 * (Math.PI / 180);
       const dist = 5.0;
       camera.position.set(target.x + Math.sin(az) * Math.cos(el) * dist, target.y + Math.sin(el) * dist, target.z + Math.cos(az) * Math.cos(el) * dist);
@@ -390,7 +392,7 @@ const createWorld = (props: CircuitPadlockProps): WorldFactory => (renderer, w, 
         along(p, s - 0.35 * p.size, vT);
         vH.y = vT.y = 0.012;
         const fade = Math.sin(Math.PI * Math.max(0, Math.min(1, (s + 0.5) / (p.len + 1.0))));
-        caps.set(DASHES + k, vH, vT, 0.018, p.bright * 4.0 * fade, pulseCol);
+        caps.set(DASHES + k, vH, vT, 0.014, p.bright * 5.0 * fade, pulseCol);
       });
       caps.commit();
     },

@@ -42,10 +42,10 @@ const streakSeeds: StreakSeed[] = (() => {
       z0: rnd(),
       // whole number of wraps per 600 frames
       cycles: 1 + Math.floor(Math.pow(rnd(), 1.6) * 4),
-      bright: beam ? 0.9 + rnd() * 1.6 : spark ? 0.22 + rnd() * 0.35 : 0.05 + rnd() * 0.06,
-      width: beam ? 1.6 + rnd() * 1.2 : spark ? 0.8 + rnd() * 0.5 : 0.5 + rnd() * 0.3,
+      bright: beam ? 0.8 + rnd() * 1.4 : spark ? 0.3 + rnd() * 0.4 : 0.035 + rnd() * 0.04,
+      width: beam ? 3.0 + rnd() * 2.0 : spark ? 0.9 + rnd() * 0.5 : 0.45 + rnd() * 0.25,
       pick: u,
-      blur: beam ? 0.6 + rnd() * 0.4 : spark ? rnd() * 0.12 : 0.5 + rnd() * 0.5,
+      blur: beam ? 0.6 + rnd() * 0.4 : spark ? rnd() * 0.03 : 0.5 + rnd() * 0.5,
     });
   }
   return out;
@@ -85,7 +85,7 @@ void main() {
   float s = fract(z0 + cyc * uPhase);
   float zH = -uDepth + s * span;              // head moves toward the camera
   float speed = cyc * span / ${LOOP.toFixed(1)}; // world units per frame
-  float trail = speed * (4.0 + 34.0 * iB.w);  // longer when faster
+  float trail = speed * (1.2 + 36.0 * iB.w);  // longer when faster
   float zT = zH - trail;
   vec3 dir = vec3(cos(phi), sin(phi), 0.0);
   vec4 cH = projectionMatrix * modelViewMatrix * vec4(dir * R + vec3(0.0, 0.0, zH), 1.0);
@@ -108,7 +108,7 @@ void main() {
   float dist = -zH;
   vFade = smoothstep(80.0, 18.0, dist) * iB.x * (0.5 + 1.0 * smoothstep(40.0, 6.0, dist));
   // keep a dark core around the vanishing point
-  vFade *= smoothstep(0.12, 0.5, length(sH) / (0.5 * uRes.y));
+  vFade *= smoothstep(0.22, 0.65, length(sH) / (0.5 * uRes.y));
   gl_Position = vec4(p / (0.5 * uRes) * cH.w, cH.z, cH.w);
 }
 `;
@@ -132,7 +132,7 @@ void main() {
   vec3 green = vec3(0.35, 1.0, 0.3);
   vec3 c = (vColor * sA * 1.1 + mix(vColor, green, 0.8) * sB * 0.9 + vColor * halo * 0.18) * tail;
   float dh = length(vec2(vLocal.x - vLen, vLocal.y)) / vW;
-  c += mix(vColor, vec3(0.85, 1.0, 1.0), 0.6) * (exp(-dh * dh * 2.5) * 1.3 + exp(-dh * 1.2) * 0.15);
+  c += mix(vColor, vec3(0.85, 1.0, 1.0), 0.6) * (exp(-dh * dh * 1.6) * 1.5 + exp(-dh * dh * 0.35) * 0.25);
   gl_FragColor = vec4(c * vFade, 1.0);
 }
 `;
@@ -243,7 +243,7 @@ const createWorld = (props: WarpStreaksProps): WorldFactory => (renderer, w, h) 
 
   const post = new PostPipeline(w, h, {
     samples: 4,
-    bloom: { strength: 0.5, radius: 1.0, levels: 6 },
+    bloom: { strength: 0.85, radius: 1.2, levels: 6 },
     final: { exposure: 1.0, tone: "aces", grain: 0.015, grainFloor: 0.03, blackGate: true, ca: 0.004, saturation: 1.15 },
   });
 

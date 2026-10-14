@@ -66,7 +66,7 @@ vec4 T(float r) { return vec4(r * cos(uTheta), r * sin(uTheta), 0.0, 0.0); }
 // sheet position for grid coords g (u,v)
 vec3 sheet(vec2 g) {
   float sx = uAspect * 2.0 * 1.18;   // overflow the frame sideways
-  float sy = 1.22;                   // ~55–60% of frame height before the edge lumps
+  float sy = 1.05;                   // ~55–60% of frame height before the edge lumps
   vec3 p = vec3((g.x - 0.5) * sx, (g.y - 0.5) * sy, 0.0);
   vec2 q = vec2(p.x * 0.55, p.y * 0.9);
   float c = cos(uTheta), s = sin(uTheta);
@@ -84,9 +84,9 @@ vec3 sheet(vec2 g) {
   // the band undulates up and down, and is pushed along by the folds
   p.y += 0.07 * sin(p.x * 1.3 - uTheta * 2.0 + 0.7) + 0.08 * warp2 + 0.08 * fold * (g.y - 0.2);
   // lumpy, cloud-like top and bottom silhouettes
-  float lumpT = snoise(vec4(p.x * 1.5, 2.0, 1.1 * c, 1.1 * s));
+  float lumpT = snoise(vec4(p.x * 1.8, 2.0, 1.1 * c, 1.1 * s)) + 0.3 * snoise(vec4(p.x * 3.6, 7.0, 0.8 * s, 0.8 * c));
   float lumpB = snoise(vec4(p.x * 1.3, 9.0, 0.9 * s, 0.9 * c));
-  p.y += 0.24 * lumpT * smoothstep(0.45, 1.0, g.y) - 0.16 * lumpB * smoothstep(0.55, 0.0, g.y);
+  p.y += 0.3 * lumpT * smoothstep(0.45, 1.0, g.y) - 0.16 * lumpB * smoothstep(0.55, 0.0, g.y);
   p.x += 0.16 * warp + 0.06 * w2;
   return p;
 }
@@ -116,16 +116,16 @@ void main() {
   vec2 ndc = vec2(V.x * persp / uAspect, V.y * persp);
   // bunching: projected area of this point's grid cell (small area = dense)
   float cellA = abs(Pu.x * Pv.y - Pu.y * Pv.x) * persp * persp + 1e-6;
-  float bunch = clamp(pow(2.2e-5 / cellA, 0.3), 0.7, 1.25);
+  float bunch = clamp(pow(2.2e-5 / cellA, 0.25), 0.8, 1.1);
   gl_Position = vec4(ndc, 0.0, 1.0);
-  float size = (3.4 + aSeed.x * 1.6) * persp * uPx;
+  float size = (3.8 + aSeed.x * 2.0) * persp * uPx;
   gl_PointSize = max(size, 1.0);
   float cover = min(size * size, 1.0);   // sub-pixel points keep their energy
   float facing = abs(N.z);
-  float lit = 0.55 + 0.45 * pow(facing, 1.2);
+  float lit = 0.72 + 0.28 * facing;
   float fade = 1.0 - e * 0.85;
   vec3 deep = max(mix(vec3(dot(uDeep, vec3(0.2126, 0.7152, 0.0722))), uDeep, 1.5), 0.0);
-  vec3 col = mix(deep, uLight, smoothstep(0.45, 1.0, facing) * 0.7 + 0.25 * aSeed.y);
+  vec3 col = mix(deep, uLight, 0.05 + 0.4 * smoothstep(0.5, 1.0, facing) + 0.25 * aSeed.y);
   vColor = col * lit * fade * cover * bunch * (0.5 + 0.75 * aSeed.y);
   vSoft = step(1.6, size);
 }
@@ -143,7 +143,7 @@ void main() {
   float hl = exp(-dot(hp, hp) * 40.0);
   // sphere height profile: under MAX blending overlapping beads form a pile of
   // spheres with darker valleys between them, like the reference
-  float a = mix(1.0, step(d, 1.0) * (0.06 + 0.62 * (1.0 - d * d) + 0.75 * hl), vSoft);
+  float a = mix(1.0, step(d, 1.0) * (0.8 * pow(max(1.0 - d * d, 0.0), 1.5) + 0.7 * hl), vSoft);
   fragColor = vec4(vColor * a, 1.0);
 }
 `;
@@ -172,7 +172,7 @@ void main() {
     glow += texture(uTexture, vUv + vec2(cos(a), sin(a)) * uTexel * 3.0).rgb;
   }
   acc += glow / 8.0 * 0.25;
-  vec3 c = 1.0 - exp(-acc * 1.6);
+  vec3 c = 1.0 - exp(-acc * 1.05);
   c = linearToSRGB(c);
   c = applyGrainDither(c, gl_FragCoord.xy, uLoopFrame, 0.015, 0.03, 1.0);
   fragColor = vec4(clamp(c, 0.0, 1.0), 1.0);

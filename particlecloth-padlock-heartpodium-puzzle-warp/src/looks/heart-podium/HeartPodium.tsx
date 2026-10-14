@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ThreeStage, WorldFactory } from "../../lib/ThreeStage";
 import { PostPipeline } from "../../lib/post";
 import { mulberry32 } from "../../lib/random";
@@ -36,7 +37,7 @@ const boxes: BoxSpec[] = (() => {
     { x: -1.72, z: 0.8, w: 0.3, h: 0.16, d: 0.28, rot: -0.1, y: 0 },
   ];
   const R: BoxSpec[] = [
-    { x: 2.6, z: -0.3, w: 0.5, h: 0.52, d: 0.5, rot: 0.3, y: 0 },
+    { x: 2.85, z: -0.3, w: 0.5, h: 0.52, d: 0.5, rot: 0.3, y: 0 },
     { x: 2.12, z: 0.5, w: 0.3, h: 0.3, d: 0.3, rot: -0.25, y: 0 },
   ];
   const S = 1.2;
@@ -100,8 +101,34 @@ const heartGeometry = () => {
     const z = 0.42 * Math.sign(sz) * Math.pow(Math.abs(sz), 0.9);
     p.setXYZ(i, R * sx, R * sy - cy, z);
   }
-  g.computeVertexNormals();
-  return g;
+  // weld the sphere seam, then relax the surface so the cleft→tip line
+  // doesn't read as a crease (plain Laplacian smoothing, fixed iterations)
+  g.deleteAttribute("normal");
+  g.deleteAttribute("uv");
+  const w = mergeVertices(g, 1e-5);
+  const pos = w.attributes.position as THREE.BufferAttribute;
+  const idx = w.index!;
+  const nb: Set<number>[] = Array.from({ length: pos.count }, () => new Set<number>());
+  for (let t = 0; t < idx.count; t += 3) {
+    const a = idx.getX(t), b = idx.getX(t + 1), c = idx.getX(t + 2);
+    nb[a].add(b).add(c); nb[b].add(a).add(c); nb[c].add(a).add(b);
+  }
+  const cur = Float32Array.from(pos.array as Float32Array);
+  for (let it = 0; it < 12; it++) {
+    const next = Float32Array.from(cur);
+    for (let v = 0; v < pos.count; v++) {
+      let x = 0, y = 0, zz = 0;
+      nb[v].forEach((n) => { x += cur[n * 3]; y += cur[n * 3 + 1]; zz += cur[n * 3 + 2]; });
+      const k = nb[v].size || 1;
+      next[v * 3] = cur[v * 3] * 0.5 + (x / k) * 0.5;
+      next[v * 3 + 1] = cur[v * 3 + 1] * 0.5 + (y / k) * 0.5;
+      next[v * 3 + 2] = cur[v * 3 + 2] * 0.5 + (zz / k) * 0.5;
+    }
+    cur.set(next);
+  }
+  pos.copyArray(cur);
+  w.computeVertexNormals();
+  return w;
 };
 
 // seamless studio cove: floor → quarter circle → wall, extruded along x
@@ -193,7 +220,7 @@ const createWorld = (props: HeartPodiumProps): WorldFactory => (renderer, w, h) 
     s2.position.y = b.h / 2;
     g.add(s1, s2);
     // bow: torus loops flattened into ribbon loops (two big, two small) + knot
-    const bs = Math.max(b.w, b.d) * 0.8;
+    const bs = Math.max(b.w, b.d) * 0.62;
     // rosette: eight loops around the knot, alternating large and small
     const loops: [number, number, number][] = Array.from({ length: 8 }, (_, k) => [1, (k * Math.PI) / 4 + 0.2, k % 2 ? 0.7 : 0.95] as [number, number, number]);
     for (const [sx, yaw, sz] of loops) {
@@ -223,7 +250,7 @@ const createWorld = (props: HeartPodiumProps): WorldFactory => (renderer, w, h) 
   const hg = heartGeometry();
   const heartMat = props.heartMetal
     ? new THREE.MeshPhysicalMaterial({ color: new THREE.Color(props.heart), metalness: 1, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.1 })
-    : new THREE.MeshPhysicalMaterial({ color: new THREE.Color(props.heart), roughness: 0.42, clearcoat: 0.6, clearcoatRoughness: 0.35, sheen: 0.5, sheenRoughness: 0.5, sheenColor: new THREE.Color(1, 0.75, 0.8) });
+    : new THREE.MeshPhysicalMaterial({ color: new THREE.Color(props.heart), roughness: 0.5, clearcoat: 0.25, clearcoatRoughness: 0.5, sheen: 0.5, sheenRoughness: 0.5, sheenColor: new THREE.Color(1, 0.75, 0.8) });
   const heartMeshes = hearts.map((hs) => {
     const m = new THREE.Mesh(hg, heartMat);
     m.scale.setScalar(hs.s);
