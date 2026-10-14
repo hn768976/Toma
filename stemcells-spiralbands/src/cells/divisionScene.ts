@@ -204,7 +204,7 @@ export const buildDivisionScene = (opt: DivisionOptions): CellSceneDef => {
       camera: cam,
       cells: states,
       phase: sec / (opt.frames / FPS),
-      apertureScale: lerp(1.6, 2.6, wide),
+      apertureScale: lerp(1.6, 3.2, wide),
     };
   };
 

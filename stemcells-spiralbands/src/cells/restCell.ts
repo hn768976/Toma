@@ -43,8 +43,8 @@ export const makeFragmentSeeds = (rng: Rng, n: number): FragmentSeed[] =>
     const s = range(rng, 0.05, 0.13);
     return {
       dir: randomUnit(rng),
-      dist: range(rng, 0.78, 1.08),
-      scale: new THREE.Vector3(s * range(rng, 1.2, 2.0), s * range(rng, 0.6, 1.1), s * range(rng, 0.12, 0.22)),
+      dist: range(rng, 0.45, 0.95),
+      scale: new THREE.Vector3(s * range(rng, 0.9, 1.4), s * range(rng, 0.7, 1.2), s * range(rng, 0.15, 0.25)),
       quat: randomQuat(rng),
       ph: rng() * TAU,
     };

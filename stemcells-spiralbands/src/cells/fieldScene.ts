@@ -98,7 +98,7 @@ export const buildFieldScene = (opt: FieldOptions): CellSceneDef => {
   // Near cells that sweep past the lens, very blurred.
   let guard = 0;
   let near = 0;
-  while (near < 5 && guard++ < 5000) {
+  while (near < 3 && guard++ < 5000) {
     const z = -range(rng, 2.6, 5.5);
     const hw = -z * TAN * ASPECT;
     const hh = -z * TAN;

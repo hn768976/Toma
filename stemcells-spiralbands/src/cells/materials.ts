@@ -115,14 +115,16 @@ void main() {
   // The shell seen edge-on: optical path through the membrane grows as 1/NdV.
   float line = (1.0 - exp(-uMembrane / max(NdV, 0.025))) - (1.0 - exp(-uMembrane));
   line = clamp(line, 0.0, 0.92);
-  vec3 lineCol = mix(uLineTint, bgHere, 0.55) * uLineBright;
+  vec2 toGlow = normalize((uGlowPos - suv) * vec2(uAspect, 1.0) + 1e-4);
+  float glowSide = dot(normalize(N.xy + 1e-4), toGlow);
+  vec3 lineCol = mix(uLineTint, bgHere, 0.55) * uLineBright * (0.95 + 0.45 * glowSide);
 
   // Glass body: the sphere acts as a weak ball lens, so the disc shows a
   // displaced, tinted copy of what is behind it, displaced more toward the
   // rim, with a darker band just inside the bright edge.
   float cloud = snoise(vLocal * 2.1 + uWobSeed) * 0.5 + snoise(vLocal * 4.7 - uWobSeed) * 0.3
               + smoothstep(0.55, 0.9, snoise(vLocal * 13.0 + uWobSeed.zxy)) * 0.9;
-  vec2 wav = vec2(snoise(vLocal * 3.3 + 1.7), snoise(vLocal * 3.3 - 4.1)) * 0.012;
+  vec2 wav = vec2(snoise(vLocal * 3.3 + 1.7), snoise(vLocal * 3.3 - 4.1)) * 0.026;
   vec2 ofs = -N.xy * uRefr * (0.35 + 1.8 * g * g) + wav;
   vec3 body = backdrop(suv + ofs) * uBodyTint + uBodyLift * uBodyTint * (0.6 + 0.4 * cloud);
   body *= 1.0 - uDarkBand * smoothstep(0.42, 0.72, g) * (1.0 - smoothstep(0.86, 0.98, g));
@@ -135,8 +137,7 @@ void main() {
 
   float a = 1.0 - (1.0 - aR) * (1.0 - line) * (1.0 - aH);
   // Crescent: the rim on the side facing the glow catches the backlight.
-  vec2 toGlow = normalize((uGlowPos - suv) * vec2(uAspect, 1.0) + 1e-4);
-  float cres = pow(g, 4.0) * smoothstep(-0.2, 0.9, dot(normalize(N.xy + 1e-4), toGlow)) * uCrescent * front;
+  float cres = pow(g, 4.0) * smoothstep(-0.2, 0.9, glowSide) * uCrescent * front;
   vec3 rgb = refr * aR
            + vec3(cres) * (0.6 + 0.4 * bgHere)
            + lineCol * line * (1.0 - aR)
