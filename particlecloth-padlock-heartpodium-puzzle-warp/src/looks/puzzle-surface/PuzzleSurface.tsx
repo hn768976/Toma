@@ -115,7 +115,7 @@ const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h
 
   const camera = new THREE.PerspectiveCamera(22, w / h, 0.3, 120);
   // atmospheric falloff: the far, defocused surface dissolves into pale haze
-  scene.fog = props.dark ? new THREE.Fog(0x16181e, 6, 17) : new THREE.Fog(0xf6f9ff, 4.8, 12);
+  scene.fog = props.dark ? new THREE.Fog(0x16181e, 7.5, 20) : new THREE.Fog(0xf2f6ff, 6.5, 17);
 
   // dark board under the pieces shows in the seams
   const under = new THREE.Mesh(
@@ -165,16 +165,16 @@ const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h
 
   const post = new PostPipeline(w, h, {
     samples: 4,
-    ssao: { radius: 0.1, intensity: 1.2, strength: props.dark ? 0.55 : 0.42, bias: 0.004 },
-    dof: { focus: 5.5, focusRange: 0.3, aperture: 0.07, maxCoc: 0.02 },
+    ssao: { radius: 0.1, intensity: 1.2, strength: props.dark ? 0.5 : 0.3, bias: 0.004 },
+    dof: { focus: 7, focusRange: 0.35, aperture: 0.07, maxCoc: 0.02 },
     final: props.dark
-      ? { exposure: 1.0, tone: "neutral", grain: 0.015, vignette: 0.35, gain: [0.96, 0.985, 1.03], saturation: 0.75 }
-      : { exposure: 1.3, tone: "neutral", grain: 0.015, vignette: 0.32, gain: [0.95, 0.985, 1.05], saturation: 0.9 },
+      ? { exposure: 1.0, tone: "neutral", grain: 0.015, vignette: 0.35, gain: [0.96, 0.985, 1.03], saturation: 0.75, bottomTint: [0.8, 0.84, 0.92] }
+      : { exposure: 1.4, tone: "neutral", grain: 0.015, vignette: 0.32, bottomTint: [0.8, 0.84, 0.93], gain: [0.95, 0.985, 1.05], saturation: 0.9 },
   });
 
   // camera: ~25° above the surface, telephoto; slides one piece per loop
   const elev = (25 * Math.PI) / 180;
-  const camDist = 5.6;
+  const camDist = 7.0;
   const yaw = (-30 * Math.PI) / 180; // grid seen at an angle, seams run diagonally
   const lookZ = 4; // surface point at screen centre (rows grow toward -z)
   const ray = new THREE.Raycaster();
@@ -190,7 +190,7 @@ const createWorld = (props: PuzzleSurfaceProps): WorldFactory => (renderer, w, h
       const target = new THREE.Vector3(x + 0.5, 0, -lookZ);
       camera.position.set(target.x + Math.sin(yaw) * Math.cos(elev) * camDist, Math.sin(elev) * camDist, target.z + Math.cos(yaw) * Math.cos(elev) * camDist);
       camera.lookAt(target);
-      camera.rotateZ((-14 * Math.PI) / 180); // grid runs diagonally across the frame
+      camera.rotateZ((-8 * Math.PI) / 180); // grid runs diagonally across the frame
       camera.updateMatrixWorld();
       // focus about a third of the way up the frame
       ray.setFromCamera(new THREE.Vector2(0, -1 / 3), camera);

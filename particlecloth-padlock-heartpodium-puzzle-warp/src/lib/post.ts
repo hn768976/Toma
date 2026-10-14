@@ -309,6 +309,7 @@ uniform float uGrainFloor;
 uniform float uBlackGate;
 uniform float uLoopFrame;
 uniform vec3 uTint;
+uniform vec3 uBottomTint;
 varying vec2 vUv;
 ${GRAIN_GLSL}
 vec3 RRTAndODTFit(vec3 v) {
@@ -352,6 +353,8 @@ void main() {
   vec2 q = vUv - 0.5;
   float vig = 1.0 - uVignette * smoothstep(0.2, 0.85, length(q * vec2(1.0, 0.75)) * 1.35);
   c *= vig;
+  // optional vertical grade: darker / cooler toward the bottom of frame
+  c *= mix(vec3(1.0), uBottomTint, pow(1.0 - vUv.y, 1.5));
   c = c * uGain + uLift;
   float L = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = max(mix(vec3(L), c, uSaturation), 0.0);
@@ -379,6 +382,7 @@ export interface PostOptions {
     lift?: [number, number, number];
     gain?: [number, number, number];
     tint?: [number, number, number];
+    bottomTint?: [number, number, number];
     saturation?: number;
     contrast?: number;
     vignette?: number;
@@ -536,6 +540,7 @@ export class PostPipeline {
       uLift: { value: new THREE.Vector3(...(f.lift ?? [0, 0, 0])) },
       uGain: { value: new THREE.Vector3(...(f.gain ?? [1, 1, 1])) },
       uTint: { value: new THREE.Vector3(...(f.tint ?? [1, 1, 1])) },
+      uBottomTint: { value: new THREE.Vector3(...(f.bottomTint ?? [1, 1, 1])) },
       uSaturation: { value: f.saturation ?? 1 },
       uContrast: { value: f.contrast ?? 1 },
       uVignette: { value: f.vignette ?? 0 },
