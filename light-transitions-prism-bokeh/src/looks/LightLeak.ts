@@ -28,7 +28,7 @@ ${GLSL_COMMON}
 vec3 ramp(float I, vec3 deep, vec3 mid, vec3 core) {
   vec3 c = deep * 2.2 * min(I, 0.3) / 0.3 * (1.0 - 0.5 * smoothstep(0.3, 0.8, I));
   c += mid * smoothstep(0.18, 0.72, I) * 1.1;
-  c += core * smoothstep(0.62, 1.15, I);
+  c += core * smoothstep(0.55, 1.7, I) * 0.9;
   return c;
 }
 
@@ -48,7 +48,7 @@ void main() {
     vec2 qw = q + w * 0.55 * A.z;
     float d = length(qw) / A.z;
     float body = exp(-d * d * 2.1) + 0.35 * exp(-d * d * 9.0);
-    float tex = 0.82 + 0.4 * (fbm(qw * 1.6 / A.z + B.x * 3.1) - 0.5);
+    float tex = 0.88 + 0.26 * (fbm(qw * 1.6 / A.z + B.x * 3.1) - 0.5);
     float I = A.w * body * tex;
     vec3 deep = mix(uDeep, uAccent * 0.35, B.w);
     vec3 mid = mix(uMid, uAccent, B.w);
@@ -65,7 +65,7 @@ void main() {
     c += mix(uMid, uCore, 0.6) * s * uStreak.x;
   }
   // Soft shoulder so overlapping leaks blaze to white instead of clipping hue.
-  c = 1.0 - exp(-c * 1.15);
+  c = 1.0 - exp(-c * 1.05);
   finalColor = vec4(c, 1.0);
 }`;
 
@@ -90,10 +90,10 @@ export const buildLightLeak: LookBuilder<LightLeakParams> = ({ width, height }, 
   // Four leak events over 12s, each entering from an edge; black gaps at
   // ~5.9-6.6s and ~9.3-9.8s. Frames 0 and 359 are black.
   const events: LeakEvent[] = [
-    { t0: 0.25, t1: 3.3, from: [-0.45, 0.62], to: [0.55, 0.42], radius: 0.52, peak: 1.45, stretch: 1.5, angle: 0.25, accent: 0, seed: 1.3 },
-    { t0: 2.5, t1: 5.9, from: [A + 0.45, -0.25], to: [A - 0.55, 0.38], radius: 0.58, peak: 1.4, stretch: 1.35, angle: -0.6, accent: 0, seed: 7.9 },
-    { t0: 6.6, t1: 9.3, from: [0.95, 1.5], to: [1.05, 0.7], radius: 0.6, peak: 1.3, stretch: 1.7, angle: 0.1, accent: 1, seed: 13.4 },
-    { t0: 9.8, t1: 11.8, from: [-0.35, 0.05], to: [0.75, 0.45], radius: 0.62, peak: 1.55, stretch: 1.45, angle: 0.5, accent: 0, seed: 21.7 },
+    { t0: 0.25, t1: 3.3, from: [-0.45, 0.62], to: [0.55, 0.42], radius: 0.52, peak: 1.3, stretch: 1.5, angle: 0.25, accent: 0, seed: 1.3 },
+    { t0: 2.5, t1: 5.9, from: [A + 0.45, -0.25], to: [A - 0.55, 0.38], radius: 0.58, peak: 1.2, stretch: 1.35, angle: -0.6, accent: 0, seed: 7.9 },
+    { t0: 6.6, t1: 9.3, from: [0.95, 1.5], to: [1.05, 0.7], radius: 0.6, peak: 1.15, stretch: 1.7, angle: 0.1, accent: 1, seed: 13.4 },
+    { t0: 9.8, t1: 11.8, from: [-0.35, 0.05], to: [0.75, 0.45], radius: 0.62, peak: 1.35, stretch: 1.45, angle: 0.5, accent: 0, seed: 21.7 },
   ];
   const v3 = (hex: string) => ({ value: new Float32Array(hexToRgb(hex)), type: "vec3<f32>" });
   const { mesh, u } = fullscreenMesh(width, height, FRAG, {

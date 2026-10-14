@@ -23,7 +23,8 @@ uniform float uAspect;
 uniform vec3 uCentre, uCorner;
 ${GLSL_COMMON}
 void main() {
-  vec2 q = (vUV - 0.5) * vec2(uAspect, 1.0);
+  // Light centre sits a little up and to the right of frame centre.
+  vec2 q = (vUV - vec2(0.54, 0.45)) * vec2(uAspect, 1.0);
   float d = length(q) / length(vec2(0.5 * uAspect, 0.5));
   float k = smoothstep(0.0, 1.0, d);
   k = k * k * (1.2 - 0.2 * k);
@@ -51,7 +52,7 @@ const discTexture = (soft: number) =>
     // Out-of-focus disc: even, slightly brighter middle, feathered edge, no rim.
     grad.addColorStop(0, "rgba(255,255,255,1)");
     grad.addColorStop(Math.max(0.05, 1 - soft - 0.25), "rgba(255,255,255,0.9)");
-    grad.addColorStop(1 - soft, "rgba(255,255,255,0.72)");
+    grad.addColorStop(1 - soft, "rgba(255,255,255,0.8)");
     grad.addColorStop(1 - soft * 0.4, "rgba(255,255,255,0.25)");
     grad.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = grad;
@@ -117,8 +118,8 @@ interface Item {
 
 // Layers: [repeatsX, repeatsY] per loop -> drift by whole layout repeats.
 const LAYERS = [
-  { count: 70, rMin: 34, rMax: 105, aMin: 0.1, aMax: 0.5, dx: 0, dy: 1, tex: 0 }, // large: the visible discs
-  { count: 150, rMin: 12, rMax: 30, aMin: 0.04, aMax: 0.16, dx: 1, dy: 1, tex: 1 }, // medium, faint
+  { count: 70, rMin: 36, rMax: 110, aMin: 0.03, aMax: 0.52, dx: 0, dy: 1, tex: 0 }, // large: the visible discs
+  { count: 150, rMin: 12, rMax: 30, aMin: 0.015, aMax: 0.12, dx: 1, dy: 1, tex: 1 }, // medium, faint
   { count: 380, rMin: 2.5, rMax: 7, aMin: 0.03, aMax: 0.12, dx: -1, dy: 2, tex: 2 }, // small, faint specks
 ];
 
@@ -133,7 +134,7 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
   const scene = new Container();
   scene.addChild(bg.mesh);
 
-  const discTex = [discTexture(0.26), discTexture(0.3), discTexture(0.45)];
+  const discTex = [discTexture(0.36), discTexture(0.36), discTexture(0.5)];
   const glowTex = glowTexture();
   const starTex = starTexture();
   const rng = mulberry32(0x5eed_b0e);
@@ -157,14 +158,16 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
       sp.anchor.set(0.5);
       const rad = range(rng, L.rMin, L.rMax) * S;
       const baseScale = (rad * 2) / 256;
-      sp.tint = lerpHex(Math.pow(rng(), 3.5));
+      sp.tint = lerpHex(Math.pow(rng(), 6));
+      // Discs add light (glow within the red) rather than veiling it.
+      sp.blendMode = "add" as BLEND_MODES;
       layer.addChild(sp);
       items.push({
         sprite: sp,
         bx: rng() * domW,
         by: rng() * domH,
         layer: li,
-        baseAlpha: L.aMin + (L.aMax - L.aMin) * Math.pow(rng(), 1.3),
+        baseAlpha: L.aMin + (L.aMax - L.aMin) * Math.pow(rng(), 3.4),
         baseScale,
         tw: 1 + Math.floor(rng() * 2),
         ph: rng(),
@@ -190,7 +193,7 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
       bx: rng() * domW,
       by: rng() * domH,
       layer: 1 + (rng() < 0.5 ? 1 : 0),
-      baseAlpha: range(rng, 0.03, 0.22),
+      baseAlpha: range(rng, 0.01, 0.07),
       baseScale: size / 64,
       tw: 1 + Math.floor(rng() * 7),
       ph: rng(),
@@ -207,7 +210,7 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
     sp.tint = sparkleTint;
     // Two hero stars with long rays; the rest are small and dim.
     const hero = i < 2;
-    const size = (hero ? range(rng, 110, 140) : range(rng, 10, 22)) * S;
+    const size = (hero ? range(rng, 55, 75) : range(rng, 8, 18)) * S;
     sparkLayer.addChild(sp);
     items.push({
       sprite: sp,
