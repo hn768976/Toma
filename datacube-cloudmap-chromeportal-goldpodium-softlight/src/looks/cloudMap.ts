@@ -70,17 +70,17 @@ const SERVERS: [number, number][] = [
 ];
 
 /* Right-angled routes. Each route: list of (lon,lat) corners. */
-const route = (from: [number, number], via: "xz" | "zx", endOffset: number): Vector2[] => {
+const route = (from: [number, number], via: "xz" | "zx", endOffset: number, lane = 0.45): Vector2[] => {
   const a = toXZ(from[0], from[1]);
   const b = new Vector2(cloudBase.x + endOffset, cloudBase.y + 0.9);
   const pts = [a];
   if (via === "xz") {
     // go along x first to a lane, then z, then into the base
-    pts.push(new Vector2(a.x, b.y + (a.y - b.y) * 0.45));
-    pts.push(new Vector2(b.x, b.y + (a.y - b.y) * 0.45));
+    pts.push(new Vector2(a.x, b.y + (a.y - b.y) * lane));
+    pts.push(new Vector2(b.x, b.y + (a.y - b.y) * lane));
   } else {
-    pts.push(new Vector2(b.x + (a.x - b.x) * 0.5, a.y));
-    pts.push(new Vector2(b.x + (a.x - b.x) * 0.5, b.y));
+    pts.push(new Vector2(b.x + (a.x - b.x) * lane, a.y));
+    pts.push(new Vector2(b.x + (a.x - b.x) * lane, b.y));
   }
   pts.push(b);
   return pts;
@@ -93,16 +93,16 @@ interface PathDef {
 }
 
 const PATHS: PathDef[] = [
-  { pts: route(SERVERS[0], "zx", -0.24), t0: 2.0, dur: 1.6 },
-  { pts: route(SERVERS[1], "xz", -0.16), t0: 2.2, dur: 1.7 },
-  { pts: route(SERVERS[2], "zx", -0.08), t0: 2.1, dur: 1.2 },
-  { pts: route(SERVERS[3], "xz", 0.0), t0: 2.3, dur: 1.4 },
-  { pts: route(SERVERS[4], "xz", 0.08), t0: 2.5, dur: 1.6 },
-  { pts: route(SERVERS[5], "xz", 0.16), t0: 2.4, dur: 1.3 },
-  { pts: route(SERVERS[6], "zx", 0.24), t0: 2.6, dur: 1.6 },
-  { pts: route(SERVERS[7], "zx", 0.32), t0: 2.8, dur: 1.6 },
-  { pts: route(SERVERS[8], "zx", -0.32), t0: 2.7, dur: 1.3 },
-  { pts: route(SERVERS[9], "zx", 0.4), t0: 2.9, dur: 1.6 },
+  { pts: route(SERVERS[0], "zx", -0.24, 0.5), t0: 2.0, dur: 1.6 },
+  { pts: route(SERVERS[1], "xz", -0.16, 0.42), t0: 2.2, dur: 1.7 },
+  { pts: route(SERVERS[2], "zx", -0.08, 0.58), t0: 2.1, dur: 1.2 },
+  { pts: route(SERVERS[3], "xz", 0.0, 0.36), t0: 2.3, dur: 1.4 },
+  { pts: route(SERVERS[4], "xz", 0.08, 0.47), t0: 2.5, dur: 1.6 },
+  { pts: route(SERVERS[5], "xz", 0.16, 0.62), t0: 2.4, dur: 1.3 },
+  { pts: route(SERVERS[6], "zx", 0.24, 0.4), t0: 2.6, dur: 1.6 },
+  { pts: route(SERVERS[7], "zx", 0.32, 0.54), t0: 2.8, dur: 1.6 },
+  { pts: route(SERVERS[8], "zx", -0.32, 0.66), t0: 2.7, dur: 1.3 },
+  { pts: route(SERVERS[9], "zx", 0.4, 0.33), t0: 2.9, dur: 1.6 },
   // a fan of parallel lanes from the hub running east (as the reference)
   ...[0, 2, 4].map((k) => ({
     pts: [
@@ -186,25 +186,29 @@ void main() {
 }`;
 
 const serverTexture = () => {
+  // Slots are wide and pre-blurred: thin 1-px-on-screen lines shimmered as the camera pushed in.
   const c = document.createElement("canvas");
-  c.width = 128;
-  c.height = 256;
+  c.width = 256;
+  c.height = 512;
   const x = c.getContext("2d")!;
   x.fillStyle = "#0a1e40";
-  x.fillRect(0, 0, 128, 256);
+  x.fillRect(0, 0, 256, 512);
   for (let i = 0; i < 3; i++) {
-    const y0 = 8 + i * 82;
-    x.fillStyle = "#16508e";
-    x.fillRect(6, y0, 116, 74);
-    for (let s = 0; s < 4; s++) {
-      x.fillStyle = "#8ff4ff";
-      x.fillRect(16, y0 + 12 + s * 15, 72, 5);
+    const y0 = 16 + i * 164;
+    x.fillStyle = "#14447a";
+    x.fillRect(12, y0, 232, 148);
+    x.filter = "blur(10px)";
+    for (let s = 0; s < 2; s++) {
+      x.fillStyle = "#4fb4d8";
+      x.fillRect(32, y0 + 30 + s * 58, 144, 30);
     }
-    x.fillStyle = "#ffffff";
-    x.fillRect(98, y0 + 12, 10, 10);
+    x.fillStyle = "#cfffff";
+    x.fillRect(196, y0 + 26, 22, 22);
+    x.filter = "none";
   }
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
+  t.anisotropy = 8;
   return t;
 };
 
@@ -485,7 +489,7 @@ export const createCloudMap = (p: CloudMapParams, geo: LandGeoJSON) => (renderer
     color: new Color("#0C1E3C"),
     emissive: new Color(1, 1, 1),
     emissiveMap: sTex,
-    emissiveIntensity: 0.75,
+    emissiveIntensity: 0.6,
     roughness: 0.5,
     metalness: 0.2,
     envMapIntensity: 0.4,

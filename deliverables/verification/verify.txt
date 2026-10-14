@@ -1,0 +1,61 @@
+== SoftLight-Blue
+loop 0 vs 600: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+determinism frame 300: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.10 x=0.00-1.00  rgb [32, 46, 126]->[23, 35, 109]  longest-flat-run=9px  max-step(9-row mean)=1.86  resid-std=1.66  smooth
+  y=0.50 x=0.00-1.00  rgb [41, 64, 131]->[30, 42, 116]  longest-flat-run=6px  max-step(9-row mean)=2.41  resid-std=1.82  CHECK
+  y=0.85 x=0.00-1.00  rgb [80, 120, 180]->[28, 41, 112]  longest-flat-run=7px  max-step(9-row mean)=2.22  resid-std=1.61  CHECK
+SoftLight_Blue: CHECK
+out/verify/SoftLight_Blue_contact.png [0, 150, 300, 449, 599]
+== SoftLight-Violet
+loop 0 vs 600: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+determinism frame 300: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.10 x=0.00-1.00  rgb [42, 27, 105]->[39, 25, 98]  longest-flat-run=7px  max-step(9-row mean)=1.86  resid-std=1.82  smooth
+  y=0.50 x=0.00-1.00  rgb [64, 47, 119]->[40, 26, 99]  longest-flat-run=8px  max-step(9-row mean)=2.19  resid-std=1.92  CHECK
+  y=0.85 x=0.00-1.00  rgb [118, 96, 172]->[42, 28, 99]  longest-flat-run=9px  max-step(9-row mean)=1.95  resid-std=1.61  smooth
+SoftLight_Violet: CHECK
+out/verify/SoftLight_Violet_contact.png [0, 150, 300, 449, 599]
+== CloudMap-Story
+determinism frame 150: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.06 x=0.00-1.00  rgb [0, 3, 14]->[0, 1, 12]  longest-flat-run=20px  max-step(9-row mean)=13.21  resid-std=5.62  CHECK
+  y=0.15 x=0.00-1.00  rgb [0, 0, 22]->[0, 0, 14]  longest-flat-run=19px  max-step(9-row mean)=12.85  resid-std=7.24  CHECK
+CloudMap_Story: CHECK
+out/verify/CloudMap_Story_contact.png [0, 75, 150, 224, 299]
+== GoldRibbonPodium-RedGold
+loop 0 vs 600: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+determinism frame 300: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.12 x=0.30-1.00  rgb [94, 15, 10]->[54, 4, 2]  longest-flat-run=9px  max-step(9-row mean)=2.95  resid-std=1.37  CHECK
+  y=0.55 x=0.00-1.00  rgb [92, 23, 8]->[224, 166, 84]  longest-flat-run=14px  max-step(9-row mean)=2.49  resid-std=3.12  CHECK
+  y=0.95 x=0.00-1.00  rgb [126, 16, 15]->[127, 17, 16]  longest-flat-run=15px  max-step(9-row mean)=0.81  resid-std=0.46  smooth
+GoldRibbonPodium_RedGold: CHECK
+out/verify/GoldRibbonPodium_RedGold_contact.png [0, 150, 300, 449, 599]
+== GoldRibbonPodium-EmeraldGold
+loop 0 vs 600: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+determinism frame 300: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.12 x=0.30-1.00  rgb [37, 68, 53]->[1, 27, 16]  longest-flat-run=9px  max-step(9-row mean)=2.73  resid-std=2.61  CHECK
+  y=0.55 x=0.00-1.00  rgb [38, 53, 25]->[222, 165, 80]  longest-flat-run=14px  max-step(9-row mean)=2.46  resid-std=3.61  CHECK
+  y=0.95 x=0.00-1.00  rgb [7, 74, 49]->[15, 78, 54]  longest-flat-run=21px  max-step(9-row mean)=0.79  resid-std=0.53  smooth
+GoldRibbonPodium_EmeraldGold: CHECK
+out/verify/GoldRibbonPodium_EmeraldGold_contact.png [0, 150, 300, 449, 599]
+== ChromePortal-Silver
+loop 0 vs 600: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+determinism frame 300: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.50 x=0.40-0.60  rgb [243, 242, 245]->[239, 238, 241]  longest-flat-run=10px  max-step(9-row mean)=0.67  resid-std=0.28  smooth
+  y=0.35 x=0.42-0.58  rgb [243, 242, 245]->[243, 242, 245]  longest-flat-run=8px  max-step(9-row mean)=0.52  resid-std=0.31  smooth
+ChromePortal_Silver: PASS
+out/verify/ChromePortal_Silver_contact.png [0, 150, 300, 449, 599]
+== ChromePortal-Gold
+loop 0 vs 600: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+determinism frame 300: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.50 x=0.40-0.60  rgb [248, 241, 225]->[249, 240, 225]  longest-flat-run=10px  max-step(9-row mean)=0.89  resid-std=0.47  smooth
+  y=0.35 x=0.42-0.58  rgb [248, 241, 225]->[249, 240, 225]  longest-flat-run=11px  max-step(9-row mean)=0.74  resid-std=0.39  smooth
+ChromePortal_Gold: PASS
+out/verify/ChromePortal_Gold_contact.png [0, 150, 300, 449, 599]
+== DataCube-Blue
+loop 0 vs 600: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+determinism frame 300: file-bytes-identical=True pixels-identical=True max-diff=0 differing-pixels=0
+  y=0.08 x=0.00-1.00  rgb [0, 0, 10]->[0, 0, 12]  longest-flat-run=44px  max-step(9-row mean)=0.65  resid-std=0.36  CHECK
+  y=0.50 x=0.00-0.32  rgb [1, 0, 15]->[2, 21, 101]  longest-flat-run=83px  max-step(9-row mean)=0.68  resid-std=0.44  CHECK
+  y=0.90 x=0.00-1.00  rgb [0, 0, 12]->[0, 1, 15]  longest-flat-run=72px  max-step(9-row mean)=0.79  resid-std=0.38  CHECK
+DataCube_Blue: CHECK
+out/verify/DataCube_Blue_contact.png [0, 150, 300, 449, 599]
+DONE

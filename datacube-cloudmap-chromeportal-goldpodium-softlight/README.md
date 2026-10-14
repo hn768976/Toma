@@ -92,6 +92,67 @@ Remotion renders frames out of order on several tabs. Every visible value is a p
 - **Grain**: 1.5 % (2 % on Soft Light), from an integer hash of pixel position and `frame % 600`
   (`frame % 300` for Cloud Map). Never `Math.random()`.
 
+## Measured render times (this build machine: 4 vCPU, **no GPU** → ANGLE fell back to SwiftShader)
+
+720p previews (`--scale=1/3`, `--concurrency=4`), wall time ÷ frames, bundling and browser start-up included:
+
+| Composition | Frames | Wall | Per frame |
+|---|---|---|---|
+| SoftLight-Blue | 600 | 98 s | 0.16 s |
+| SoftLight-Violet | 600 | 101 s | 0.17 s |
+| CloudMap-Story | 300 | 219 s | 0.73 s |
+| GoldRibbonPodium-RedGold | 600 | 330 s | 0.55 s |
+| GoldRibbonPodium-EmeraldGold | 600 | 328 s | 0.55 s |
+| ChromePortal-Silver | 600 | 876 s | 1.46 s |
+| ChromePortal-Gold | 600 | 857 s | 1.43 s |
+| DataCube-Blue | 600 | 1581 s | 2.64 s |
+
+Single real **4K frames** (3840×2160, frame 300, one tab, warm-up excluded — `scripts/time-frames.mjs 1 300 3 …`):
+
+- **DataCube-Blue: 19.6 s / frame**
+- **ChromePortal-Silver: 5.8 s / frame**
+
+4K estimates on this same GPU-less machine (one tab per frame; `--concurrency` gives little extra because
+SwiftShader already uses all cores): Data Cube ≈ 600 × 19.6 s ≈ **3.3 h**; Chrome Portal ≈ 600 × 5.8 s ≈ **1 h each**;
+Podium ≈ 4–5 s/frame ≈ **45 min each**; Cloud Map ≈ 4–5 s/frame ≈ **25 min**; Soft Light ≈ 1.5 s/frame ≈ **15 min each**
+(scaled from the 720p numbers by the measured 720p→4K ratios: ×7.5 for fill-bound scenes, ×4 for Chrome).
+On a machine with a real GPU (`--gl=angle` hardware path) expect these to drop by an order of magnitude or more.
+
+## Verification (run on the encoded 720p previews)
+
+| Check | Result |
+|---|---|
+| 1. ffprobe: h264, 1280×720, yuv420p, 30/1, no audio, 20.0 s (10.0 s Cloud Map) | **pass, all 8, first time** |
+| 2. Loop: compositions made 601 frames (`--props='{"extraFrames":1}'`), frame 600 vs 0 | **byte-identical PNGs, all 7 loops** |
+| 3. Cold single frame 300 (150) vs same frame inside a 4-thread sequence render | **byte-identical, all 8** |
+| 4. Banding: frames decoded from the mp4, gradients contrast-stretched ×12 about the local mean | **no steps or contours, all 8** — only even grain (`out/verify/*_band_stretch.png`) |
+| 5. Contact sheets (5 evenly spaced frames) | content as specified, all 8 |
+| 6. Motion: 2 s around frame 300 (Cloud Map 2–6.5 s), frame-to-frame Δ and persistent-shimmer metric | loops ≤ 0.001 % shimmering pixels; Cloud Map 0.11 % (draw-on heads passing) after fixing server-stripe strobing |
+
+`--tune grain` was **not** needed: Soft Light shows no banding at CRF 16 with the 2 % grain + blue noise
+(the cost is file size: ≈ 41 MB per 20 s at 720p).
+
+Scripts: `scripts/verify.sh {probe|loop|determinism|contact} <Id>`, `scripts/verify-all.sh`,
+`scripts/banding.py`, `scripts/banding_view.py`, `scripts/motion.py`, `scripts/shimmer.py`.
+
+## Completion checklist
+
+- [x] 8 compositions, one data row each, 3840×2160, 30 fps (600 f loops, 300 f Cloud Map)
+- [x] Looks 1–4 three.js on WebGL2 via `@remotion/three`; Look 5 one fragment shader; no PixiJS, no WebGPU
+- [x] No text, logos or brands; Natural Earth 1:110m land, public domain, note included
+- [x] Half-float targets, ±1/255 dither, blue-noise dither (3, 4, 5), grain 1.5 % / 2 %, all frame-driven
+- [x] No `Math.random()`, clocks, state or temporal accumulation in render
+- [x] Loops seamless; cold-start frames byte-identical
+- [x] 720p previews + 720p stills rendered; 4K/6K commands documented (not rendered here)
+
+## Deliberate deviations from the brief (to match the references)
+
+- **Chrome Portal:** 52 bands instead of ~120, and an opening of ≈ 45 % of frame height instead of 30 % —
+  the reference's slats are far fewer and thicker and its opening much larger. The tube cross-section is a
+  rounded square twisting once around the ring (gives the reference's squarish, folded look); the band
+  pattern slides exactly one band spacing per loop.
+- **Data Cube** stays at x ≈ 55 % as specified (the reference has it at ≈ 65 %).
+
 ## Files
 
 - `src/versions.ts` — the 8 data rows
