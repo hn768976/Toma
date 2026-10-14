@@ -10,6 +10,16 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// Pure video: no silent audio track (it would also pad the duration).
+Config.setMuted(true);
+// Every composition is a whole number of seconds, so a keyframe on every 30th
+// frame lands on the last frame. A keyframe of a black frame decodes to exact
+// black; a predicted one can keep a faint residue of earlier light.
+Config.overrideFfmpegCommand(({ args }) => {
+  if (!args.includes("libx264")) return args;
+  const out = args[args.length - 1];
+  return [...args.slice(0, -1), "-force_key_frames", "expr:eq(mod(n+1,30),0)", out];
+});
 
 // Sandboxes that cannot download Remotion's Chrome Headless Shell may ship a
 // Playwright one; use it if present, otherwise Remotion's default applies.
