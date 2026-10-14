@@ -77,10 +77,11 @@ export const VERSIONS: VersionRow[] = [
       cloth: "#0A0A0C",
       highlight: "#8A8A90",
       diffuse: 0.75,
-      spec: 0.26,
-      ambient: 0.33,
-      exposure: 1.0,
+      spec: 0.3,
+      ambient: 0.16,
+      exposure: 0.72,
       grainFadeLum: 0.03,
+      weave: 1.0,
     },
   },
   {
@@ -95,6 +96,7 @@ export const VERSIONS: VersionRow[] = [
       ambient: 0.22,
       exposure: 1.0,
       grainFadeLum: 0,
+      weave: 0.45,
     },
   },
   {
