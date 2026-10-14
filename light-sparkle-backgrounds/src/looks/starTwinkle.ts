@@ -36,7 +36,7 @@ export const starTwinkle =
       p.x = range(rng, 0, DESIGN_W);
       p.y = range(rng, 0, DESIGN_H);
       p.tint = tintFor(range(rng, -0.8, 0.8));
-      pts.push({ p, size: 30 + 70 * Math.pow(rng(), 2.2), a: 0.25 + 0.75 * Math.pow(rng(), 1.5), k: pick(rng, CYCLES), phi: rng() * TAU, sharp: range(rng, 1, 3) });
+      pts.push({ p, size: 26 + 60 * Math.pow(rng(), 2.5), a: 0.06 + 0.6 * Math.pow(rng(), 2.5), k: pick(rng, CYCLES), phi: rng() * TAU, sharp: range(rng, 1, 3) });
     }
     const fls: Star[] = [];
     for (let i = 0; i < 120; i++) {
@@ -45,7 +45,7 @@ export const starTwinkle =
       p.y = range(rng, 0, DESIGN_H);
       p.rotation = range(rng, -0.06, 0.06);
       p.tint = tintFor(range(rng, -0.7, 0.7));
-      fls.push({ p, size: 110 * (1 + 5 * Math.pow(rng(), 3)), a: range(rng, 0.35, 0.6), k: pick(rng, [1, 2, 3, 4, 5]), phi: rng() * TAU, sharp: range(rng, 1, 2) });
+      fls.push({ p, size: 120 * (1 + 5 * Math.pow(rng(), 3)), a: 0.08 + 0.55 * Math.pow(rng(), 2), k: pick(rng, [1, 2, 3, 4, 5]), phi: rng() * TAU, sharp: range(rng, 1, 2) });
     }
     // ~3 glints per second -> 60 per 600-frame loop.
     const glints: Glint[] = [];

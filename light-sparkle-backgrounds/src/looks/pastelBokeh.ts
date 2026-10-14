@@ -36,7 +36,7 @@ vec3 background(vec2 p) {
   // Soft white glow band across the middle, slowly undulating (whole cycles).
   float by = 0.52 + 0.025 * sin(TAU * p.x / 3840.0 * 0.8 + uBandPhase);
   float band = exp(-pow((y - by) / 0.16, 2.0));
-  g = mix(g, vec3(1.0), 0.22 * band);
+  g = mix(g, vec3(1.0), 0.1 * band);
   // Thin glowing wavy lines, white at ~40%.
   float lines = 0.0;
   for (int i = 0; i < ${NLINES}; i++) {
@@ -48,7 +48,7 @@ vec3 background(vec2 p) {
     float glow = exp(-d * d / (2.0 * 22.0 * 22.0));
     lines += uLineB[i].w * fade * (0.85 * core + 0.35 * glow);
   }
-  g = g + (1.0 - g) * clamp(0.55 * lines, 0.0, 1.0);
+  g = g + (1.0 - g) * clamp(0.9 * lines, 0.0, 1.0);
   return g;
 }
 `;
@@ -59,7 +59,7 @@ export const pastelBokeh =
     const rng = mulberry32(params.seed);
     // Bias positions towards the bright middle band.
     const yMid = (r: Rng) => {
-      if (r() < 0.7) return range(r, 0, DESIGN_H);
+      if (r() < 0.4) return range(r, 0, DESIGN_H);
       const g = (r() + r() + r() - 1.5) / 1.5; // ~triangular in [-1,1]
       return DESIGN_H * (0.52 + 0.45 * g);
     };
@@ -69,7 +69,7 @@ export const pastelBokeh =
     const lines: Line[] = [];
     for (let i = 0; i < NLINES; i++) {
       lines.push({
-        y0: DESIGN_H * (0.42 + 0.05 * i + range(rng, -0.02, 0.02)),
+        y0: DESIGN_H * (0.36 + 0.045 * i + range(rng, -0.02, 0.02)),
         a1: range(rng, 90, 200),
         c1: range(rng, 0.6, 1.3),
         p1: rng() * TAU,
@@ -104,9 +104,9 @@ export const pastelBokeh =
     type Disc = { p: ReturnType<typeof addParticle>; margin: number; x0: number; y0: number; wrap: number; n: number; bobA: number; bobK: number; bobP: number; size: number; a: number; k: number; phi: number };
     const discs: Disc[] = [];
     const LAYERS = [
-      { count: 180, pcs: [back], tex: [kit.bokehSoft], size: [300, 600], alpha: [0.05, 0.11], n: 1 },
-      { count: 300, pcs: [midR, midH], tex: [kit.bokehRound, kit.bokehHex], size: [120, 280], alpha: [0.09, 0.2], n: 1 },
-      { count: 420, pcs: [front], tex: [kit.bokehRound], size: [40, 130], alpha: [0.16, 0.32], n: 2 },
+      { count: 180, pcs: [back], tex: [kit.bokehSoft], size: [160, 320], alpha: [0.04, 0.08], n: 1 },
+      { count: 300, pcs: [midR, midH], tex: [kit.bokehRound, kit.bokehHex], size: [90, 180], alpha: [0.07, 0.15], n: 1 },
+      { count: 420, pcs: [front], tex: [kit.bokehRound], size: [40, 100], alpha: [0.12, 0.25], n: 2 },
     ];
     for (const L of LAYERS) {
       const margin = L.size[1] * 0.6;
@@ -140,7 +140,7 @@ export const pastelBokeh =
     const PW = DESIGN_W + 100;
     for (let i = 0; i < 3000; i++) {
       const p = addParticle(points, kit.dot);
-      pts.push({ p, x0: range(rng, 0, PW), y0: yMid(rng), n: rng() < 0.5 ? 1 : 0, line: -1, size: 26 + 60 * Math.pow(rng(), 2.5), a: range(rng, 0.25, 0.95), k: pick(rng, CYCLES), phi: rng() * TAU, sh: range(rng, 2, 5), bobP: rng() * TAU });
+      pts.push({ p, x0: range(rng, 0, PW), y0: yMid(rng), n: rng() < 0.5 ? 1 : 0, line: -1, size: 34 + 90 * Math.pow(rng(), 2.2), a: range(rng, 0.5, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU, sh: range(rng, 2, 5), bobP: rng() * TAU });
     }
     // Sparkles riding the wavy lines.
     for (let li = 0; li < NLINES; li++) {
@@ -154,7 +154,7 @@ export const pastelBokeh =
     for (let i = 0; i < 60; i++) {
       const p = addParticle(flares, kit.flare4);
       p.rotation = range(rng, -0.1, 0.1);
-      fls.push({ p, x: range(rng, 0, DESIGN_W), y: yMid(rng), size: range(rng, 110, 300), a: range(rng, 0.35, 0.75), k: pick(rng, CYCLES), phi: rng() * TAU });
+      fls.push({ p, x: range(rng, 0, DESIGN_W), y: yMid(rng), size: range(rng, 150, 380), a: range(rng, 0.6, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU });
     }
     const glints: Glint[] = [];
     for (let i = 0; i < 24; i++) glints.push({ target: Math.floor(rng() * fls.length), start: Math.floor(rng() * 600), dur: Math.floor(range(rng, 10, 16)), gain: range(rng, 0.8, 1.3) });
@@ -202,7 +202,7 @@ export const pastelBokeh =
           s.p.x = x;
           s.p.y = y;
           const tw = pulse(ph, s.k, s.phi, s.sh);
-          s.p.alpha = s.a * (0.15 + 0.85 * tw);
+          s.p.alpha = s.a * (0.3 + 0.7 * tw);
           setSize(s.p, s.size * (0.7 + 0.4 * tw));
         }
         boost.fill(0);

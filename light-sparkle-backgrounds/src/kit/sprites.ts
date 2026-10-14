@@ -84,7 +84,7 @@ const flareFn =
       const w = 0.012;
       const g = streak(along, across, w, 2.2);
       // Lateral chromatic fringe: red pushed to one edge, blue to the other.
-      const off = chroma * w * 1.6;
+      const off = chroma * w * 2.6;
       const rr = chroma > 0 ? streak(along, across - off, w * 1.25, 2.2) : g;
       const bb = chroma > 0 ? streak(along, across + off, w * 1.25, 2.2) : g;
       sr += rr;
