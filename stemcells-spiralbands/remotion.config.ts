@@ -10,6 +10,8 @@ Config.setVideoImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// No audio track in the output.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 
 // Some sandboxed environments block downloading Remotion's Chrome Headless
