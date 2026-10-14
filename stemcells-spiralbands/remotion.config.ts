@@ -12,6 +12,9 @@ Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 // No audio track in the output.
 Config.setMuted(true);
+// First frames build geometry and compile shaders; at 4K or on a software
+// GL they can take longer than the default 30 s.
+Config.setDelayRenderTimeoutInMilliseconds(300000);
 Config.setOverwriteOutput(true);
 
 // Some sandboxed environments block downloading Remotion's Chrome Headless
