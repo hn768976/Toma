@@ -91,7 +91,7 @@ function buildTraces(): Trace[] {
       let len = 0;
       for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
       const cr = rnd();
-      out.push({ pts, color: cr < 0.6 ? 0 : cr < 0.75 ? 3 : cr < 0.94 ? 1 : 2, period: periods[Math.floor(rnd() * periods.length)], phase: rnd(), len });
+      out.push({ pts, color: cr < 0.7 ? 0 : cr < 0.8 ? 3 : cr < 0.95 ? 1 : 2, period: periods[Math.floor(rnd() * periods.length)], phase: rnd(), len });
     }
   }
   return out;
@@ -142,7 +142,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
 
   scene.add(
     makeBackground(
-      `in vec2 vUv; uniform vec3 uBg; void main(){ vec3 haze = vec3(0.004, 0.012, 0.035) * (1.0 - smoothstep(0.3, 1.0, vUv.y)); gl_FragColor = vec4(uBg + haze, 1.0); }`,
+      `in vec2 vUv; uniform vec3 uBg; void main(){ vec3 haze = vec3(0.008, 0.022, 0.06) * (1.0 - smoothstep(0.25, 1.0, vUv.y)); gl_FragColor = vec4(uBg + haze, 1.0); }`,
       { uBg: { value: bg } },
     ),
   );
@@ -254,7 +254,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
         float pulse = d >= 0.0 ? exp(-d / 0.3) : exp(d / 0.03);
         float fade = 1.0 - smoothstep(L - 1.5, L, vS) * 0.6;
         vec3 hotCol = mix(col, vec3(1.0), 0.55 * exp(-vS / 0.9));
-        vec3 c = hotCol * (0.32 * fade + 1.6 * exp(-vS / 1.2) + 9.0 * pulse);
+        vec3 c = hotCol * (0.22 * fade + 1.6 * exp(-vS / 1.0) + 10.0 * pulse);
         float fog = smoothstep(uFog.x, uFog.y, vDepth);
         gl_FragColor = vec4(c * (1.0 - fog), 1.0);
       }`,
@@ -283,13 +283,13 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       softness: 0.3,
       uniforms: { uCols: { value: traceCols } },
       decl: "uniform vec3 uCols[4];",
-      body: "col.rgb = uCols[int(P.x + 0.5)] * 1.4;",
+      body: "col.rgb = uCols[int(P.x + 0.5)] * 2.2;",
     }),
   );
 
   // far bokeh specks (defocused by the DoF)
   const brnd = mulberry32(SEED + 11);
-  const NB = 120;
+  const NB = 60;
   const bpos = new Float32Array(NB * 3);
   const bpar = new Float32Array(NB * 4);
   const bsz = new Float32Array(NB);
@@ -310,7 +310,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       softness: 0.2,
       uniforms: { uCols: { value: traceCols } },
       decl: "uniform vec3 uCols[4];",
-      body: "col.rgb = mix(uCols[int(P.x + 0.5)], vec3(0.4, 0.6, 1.0), 0.5) * P.y * 1.2;",
+      body: "col.rgb = mix(uCols[int(P.x + 0.5)], vec3(0.4, 0.6, 1.0), 0.5) * P.y * 0.55;",
     }),
   );
 
@@ -325,7 +325,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   chip.add(chipBase);
   const chipTop = new THREE.Mesh(
     new RoundedBoxGeometry(CHIP * 1.7, 0.05, CHIP * 1.7, 2, 0.02),
-    new THREE.MeshPhysicalMaterial({ color: "#0e1a3a", metalness: 0.5, roughness: 0.25, emissive: new THREE.Color("#0a2a6a"), emissiveIntensity: 0.2 }),
+    new THREE.MeshPhysicalMaterial({ color: "#010205", metalness: 0.1, roughness: 0.8, envMapIntensity: 0.15, emissive: new THREE.Color("#0a2a6a"), emissiveIntensity: 0.0 }),
   );
   chipTop.position.y = 0.2;
   chip.add(chipTop);
@@ -342,13 +342,13 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       chip.add(b);
     }
   };
-  frame(CHIP + 0.01, 0.175, 0.03, new THREE.Color(p.chipRimA).multiplyScalar(4.5));
+  frame(CHIP + 0.01, 0.175, 0.026, new THREE.Color(p.chipRimA).multiplyScalar(2.6));
   frame(CHIP * 0.86 + 0.01, 0.225, 0.014, new THREE.Color(p.chipRimB).multiplyScalar(2.0));
   frame(CHIP + 0.02, 0.015, 0.03, new THREE.Color(traceCols[0]).multiplyScalar(3));
 
   // ---- brain -------------------------------------------------------------------
   const brain = new THREE.Group();
-  brain.position.set(0, 0.22 + 0.82, 0);
+  brain.position.set(0, 0.22 + 0.7, 0);
   scene.add(brain);
   const brainMat = new THREE.MeshPhysicalMaterial({
     color: p.brain,
@@ -383,6 +383,31 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   };
   brainMat.customProgramCacheKey = () => "brain-glass";
   for (const g of HEMIS) brain.add(new THREE.Mesh(g, brainMat));
+  // cerebellum (back, underneath) with fine horizontal folia, and the brain stem
+  const cereGeo = new THREE.SphereGeometry(1, 128, 80);
+  {
+    const pa = cereGeo.attributes.position as THREE.BufferAttribute;
+    const sul = new Float32Array(pa.count);
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pa.count; i++) {
+      v.fromBufferAttribute(pa, i);
+      const s = 1 - smoothstep(0, 0.3, Math.abs(Math.sin(v.y * 15 + 0.6 * simplex(v.x * 2, v.y * 2, v.z * 2))));
+      v.multiplyScalar(1 - 0.05 * s);
+      pa.setXYZ(i, v.x * 0.66, v.y * 0.34, v.z * 0.44);
+      sul[i] = s;
+    }
+    cereGeo.setAttribute("aSulci", new THREE.BufferAttribute(sul, 1));
+    cereGeo.computeVertexNormals();
+  }
+  const cere = new THREE.Mesh(cereGeo, brainMat);
+  cere.position.set(0, -0.42, -0.92);
+  brain.add(cere);
+  const stemGeo = new THREE.CylinderGeometry(0.13, 0.1, 0.55, 32);
+  stemGeo.setAttribute("aSulci", new THREE.BufferAttribute(new Float32Array(stemGeo.attributes.position.count), 1));
+  const stem = new THREE.Mesh(stemGeo, brainMat);
+  stem.position.set(0, -0.55, -0.5);
+  stem.rotation.x = -0.45;
+  brain.add(stem);
   brain.scale.setScalar(1.12);
 
   // surface sparkles
@@ -431,7 +456,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   cubeMatGlow.emissive = new THREE.Color(p.cube).multiplyScalar(0.3);
   const cubeSegs: number[] = [];
   const placed: [number, number, number][] = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 16; i++) {
     let x = 0, z = 0, s = 0.3;
     for (let tries = 0; tries < 100; tries++) {
       const a = crnd() * TAU;
@@ -443,12 +468,13 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
     }
     placed.push([x, z, s]);
     const glow = crnd() < 0.35;
-    const m = new THREE.Mesh(new RoundedBoxGeometry(s, s, s, 2, s * 0.06), glow ? cubeMatGlow : cubeMatGlass);
-    m.position.set(x, s / 2, z);
+    const sy = crnd() < 0.3 ? s * range(crnd, 1.6, 2.4) : s; // some tall blocks
+    const m = new THREE.Mesh(new RoundedBoxGeometry(s, sy, s, 2, s * 0.06), glow ? cubeMatGlow : cubeMatGlass);
+    m.position.set(x, sy / 2, z);
     m.rotation.y = crnd() * Math.PI;
     m.updateMatrixWorld();
     scene.add(m);
-    const eg = new THREE.EdgesGeometry(new THREE.BoxGeometry(s * 1.002, s * 1.002, s * 1.002));
+    const eg = new THREE.EdgesGeometry(new THREE.BoxGeometry(s * 1.002, sy * 1.002, s * 1.002));
     const ea = eg.attributes.position.array as Float32Array;
     const v = new THREE.Vector3();
     for (let k = 0; k < ea.length; k += 3) {
@@ -493,7 +519,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       metalness: 0.0,
       clearcoat: 1,
       clearcoatRoughness: 0.05,
-      emissive: new THREE.Color(p.bubble).multiplyScalar(0.3),
+      emissive: new THREE.Color(p.bubble).multiplyScalar(0.1),
       transparent: true,
       envMapIntensity: 1.5,
     });
@@ -526,12 +552,12 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
     bloomThreshold: 0.95,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 10, aperture: 0.032, maxCoc: 0.015, nearScale: 0.8 },
+    dof: { focus: 10, aperture: 0.02, maxCoc: 0.012, nearScale: 0.8 },
     vignette: 0.55,
     grain: 0.015,
     grainFadeLum: 0,
   };
-  const LIFE = 240;
+  const LIFE = 270;
 
   const update = (f: number) => {
     const t = f / LOOP;
@@ -540,8 +566,8 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
 
     // camera ~30° down, closed orbit ±8°
     const yaw = THREE.MathUtils.degToRad(-38 + 8 * osc(f, 1));
-    const elev = THREE.MathUtils.degToRad(24);
-    const dist = 8.9;
+    const elev = THREE.MathUtils.degToRad(17);
+    const dist = 9.6;
     camera.position.set(
       target.x + Math.sin(yaw) * Math.cos(elev) * dist,
       target.y + Math.sin(elev) * dist,
@@ -564,14 +590,14 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       const riseE = 1 - Math.pow(1 - k, 1.7);
       b.group.position.copy(b.start).addScaledVector(b.rise, riseE);
       b.group.quaternion.copy(camera.quaternion);
-      b.group.scale.setScalar(Math.max(0.0001, pop) * 0.82);
+      b.group.scale.setScalar(Math.max(0.0001, pop) * 0.7);
       const op = clamp01(age / 5) * (1 - smoothstep(LIFE * 0.62, LIFE, age));
       b.body.opacity = op;
       b.dots.forEach((dm, i) => {
         // dots pulse in sequence: 15 cycles per loop (40-frame period)
         const ph = fract(f / 40 - i * 0.2);
         const bump = Math.exp(-(((ph - 0.2) / 0.1) ** 2));
-        dm.color.setScalar(0.9 + 1.2 * bump);
+        dm.color.setScalar(0.7 + 0.8 * bump);
         dm.opacity = op;
       });
     }

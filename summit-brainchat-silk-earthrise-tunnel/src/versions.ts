@@ -65,7 +65,7 @@ export const VERSIONS: VersionRow[] = [
       chipRimA: "#FF4AC8",
       chipRimB: "#3AF08A",
       cube: "#3AD8F0",
-      bubble: "#3A8AFF",
+      bubble: "#2A6AF0",
       exposure: 1.0,
     },
   },
