@@ -22,7 +22,7 @@ uniform float uAspect;
 uniform vec3 uStreak;
 uniform vec3 uDeep, uMid, uBright;
 // Streaks: curve (y0, slope, curvature, xc), anim (xTail, xHead, intensity, whiteMix)
-uniform vec4 uCurveA, uAnimA, uCurveD, uAnimD;
+uniform vec4 uCurveA, uAnimA, uCurveD, uAnimD, uCurveB, uAnimB;
 uniform vec4 uBand;   // lead, intensity, -, -
 uniform vec4 uShard;  // cx, cy, intensity, -
 ${GLSL_COMMON}
@@ -38,7 +38,7 @@ vec3 streak(vec2 p, vec4 cv, vec4 an, vec3 col, float seed) {
   float x = p.x;
   float dx = x - cv.w;
   // Fixed arc jitter (does not change over time -> no shimmer).
-  float jit = 2.2 * PX * n1(x * 38.0, seed) + 1.0 * PX * n1(x * 110.0, seed + 3.0);
+  float jit = 1.1 * PX * n1(x * 38.0, seed) + 0.45 * PX * n1(x * 110.0, seed + 3.0);
   float yc = cv.x + cv.y * dx + cv.z * dx * dx + jit;
   float slope = cv.y + 2.0 * cv.z * dx;
   float d = abs(p.y - yc) / sqrt(1.0 + slope * slope);
@@ -57,9 +57,26 @@ vec3 streak(vec2 p, vec4 cv, vec4 an, vec3 col, float seed) {
 }
 
 vec3 bandGrad(float g) {
-  // g: 0 = leading edge (bright) -> 1 = trailing (deep)
-  vec3 c = mix(uBright, uMid, smoothstep(0.4, 0.8, g));
-  return mix(c, uDeep, smoothstep(0.75, 1.1, g));
+  // g: 0 = leading edge (bright) -> 1 = trailing (deep). The mid zone leans
+  // toward the streak hue (magenta in the violet version).
+  vec3 mid = mix(uMid, uStreak * 0.72, 0.38);
+  vec3 c = mix(uBright, mid, smoothstep(0.45, 0.8, g));
+  return mix(c, uDeep, smoothstep(0.8, 1.1, g));
+}
+
+// Rounded-end horizontal strips stacked inside the band (soft tone steps).
+float strips(vec2 p, float lead) {
+  float acc = 0.0;
+  for (int i = 0; i < 6; i++) {
+    float fi = float(i);
+    float yc = 0.08 + fi * 0.17 + 0.03 * sin(fi * 2.3);
+    float hh = 0.05 + 0.03 * hash21(vec2(fi, 4.0));
+    float xEnd = (0.55 + 0.45 * hash21(vec2(fi, 9.0))) * uAspect + (lead - 0.95) * 0.9;
+    vec2 q = vec2(max(p.x - (xEnd - hh), 0.0), p.y - yc);
+    float sd = length(q) - hh;                       // pill with rounded right end
+    acc += (0.07 + 0.07 * hash21(vec2(fi, 2.0))) * smoothstep(0.012, -0.012, sd);
+  }
+  return acc;
 }
 
 vec3 band(vec2 p) {
@@ -70,17 +87,14 @@ vec3 band(vec2 p) {
   float across = dot(q, t);
   float s = dot(q, n) + 0.09 * across * across; // bowed leading edge
   float lead = uBand.x;
-  const float W = 1.25;
+  const float W = 1.9;
   float g = (lead - s) / W;
   float front = smoothstep(-0.004, 0.012, lead - s);       // just behind the edge
-  float back = 1.0 - smoothstep(0.95, 1.4, g);             // long soft trailing fade
-  // Slow broad variation across the band so it is not a flat fill.
-  float var = 0.94 + 0.06 * sin(across * 4.1 + 1.3);
-  vec3 fill = bandGrad(sat(g)) * front * back * var;
-  // Inner bloom just behind the leading edge.
-  float e = lead - s;
-  fill += mix(uBright, vec3(1.0), 0.35) * 0.35 * exp(-max(e, 0.0) / 0.05) * front;
+  float back = 1.0 - smoothstep(0.95, 1.3, g);              // soft trailing fade
+  vec3 fill = bandGrad(sat(g)) * front * back;
+  fill *= 1.0 + strips(p, lead) * (1.0 - smoothstep(0.5, 0.9, g));
   // White edge line on the leading edge.
+  float e = lead - s;
   float de = abs(e) * inversesqrt(1.0 + pow(0.18 * across, 2.0));
   vec3 edge = vec3(1.0) * exp(-pow(de / (2.4 * PX), 2.0)) * 1.25
             + mix(uBright, vec3(1.0), 0.5) * (0.45 * exp(-de / (7.0 * PX)) + 0.12 * exp(-de / (40.0 * PX)));
@@ -120,6 +134,7 @@ void main() {
   vec3 c = band(p);
   c += streak(p, uCurveA, uAnimA, uStreak, 1.0);
   c += streak(p, uCurveD, uAnimD, mix(uStreak, vec3(1.0), 0.75), 5.0);
+  c += streak(p, uCurveB, uAnimB, mix(uStreak, vec3(1.0), 0.55), 9.0);
   c += shard(p);
   finalColor = vec4(softClip(max(c, 0.0)), 1.0);
 }`;
@@ -141,6 +156,9 @@ export const buildLightSweep: LookBuilder<LightSweepParams> = ({ width, height }
     uAnimA: v4(),
     // Streak D: skims the bottom right.
     uCurveD: v4(0.86, -0.07, 0.16, aspect * 0.78),
+    // Streak B: rides across the band as it fills the frame, rising left -> right.
+    uCurveB: v4(0.52, -0.09, -0.012, aspect * 0.5),
+    uAnimB: v4(),
     uAnimD: v4(),
     uBand: v4(),
     uShard: v4(),
@@ -154,9 +172,11 @@ export const buildLightSweep: LookBuilder<LightSweepParams> = ({ width, height }
   const lead = spline([
     [1.2, -1.35],
     [2.0, -0.05],
-    [3.1, 0.95],
-    [4.5, 3.05],
+    [3.1, 1.35],
+    [4.5, 4.1],
   ]);
+  const headB = spline([[1.85, -0.05], [2.75, aspect + 0.2]]);
+  const tailB = spline([[2.0, -0.4], [3.6, aspect * 0.35]]);
   const shardU = spline([[4.5, -0.55], [5.8, 0.75]]);
   const headD = spline([[6.0, aspect * 0.48], [6.9, aspect + 0.1]]);
   const tailD = spline([[6.15, aspect * 0.4], [7.25, aspect + 0.05]]);
@@ -174,6 +194,7 @@ export const buildLightSweep: LookBuilder<LightSweepParams> = ({ width, height }
       const ends = frame <= 0 || frame >= 239 ? 0 : 1;
       set("uAnimA", [tailA(t), headA(t), envelope(0.1, 0.3, 0.85, 1.2, t) * ends, 0.75]);
       set("uBand", [lead(t), smootherstep(1.2, 1.35, t) * (1 - smootherstep(4.35, 4.6, t)) * ends]);
+      set("uAnimB", [tailB(t), headB(t), envelope(1.85, 2.05, 3.4, 4.1, t) * ends, 0.85]);
       const su = shardU(t);
       const a = [1 / Math.hypot(1, 0.78), -0.78 / Math.hypot(1, 0.78)];
       set("uShard", [0.32 + a[0] * su, 0.3 + a[1] * su, envelope(4.5, 4.75, 5.35, 5.95, t) * ends]);
