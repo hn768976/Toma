@@ -6,7 +6,9 @@ cd "$(dirname "$0")/.."
 mkdir -p out/checks
 npx remotion bundle src/index.ts --out-dir=out/bundle --log=error >/dev/null
 for id in "$@"; do
-  dur=$(npx remotion compositions out/bundle --log=error 2>/dev/null | awk -v id="$id" '$1==id {print $4}')
+  case "$id" in
+    LightSweep-*) dur=240 ;; FlareBurst-*) dur=180 ;; LightLeak-*) dur=360 ;; *) dur=600 ;;
+  esac
   mid=$((dur / 2))
   rm -rf "out/checks/seq_$id"
   npx remotion render out/bundle "$id" "out/checks/seq_$id" --sequence --image-format=png --concurrency=4 \

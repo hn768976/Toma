@@ -10,6 +10,8 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// Software WebGL at 4K can take well over the default 30s per frame.
+Config.setDelayRenderTimeoutInMilliseconds(180000);
 // Pure video: no silent audio track (it would also pad the duration).
 Config.setMuted(true);
 // Every composition is a whole number of seconds, so a keyframe on every 30th

@@ -120,7 +120,7 @@ void main() {
   c = softClip(max(c, 0.0));
   // White-out spreads outward from the flare until the whole frame is white.
   float W = uFx.x;
-  float wl = smoothstep(0.0, 1.0, W * (1.0 + 1.25 * 2.1) - 1.25 * r);
+  float wl = smoothstep(0.0, 1.0, (W - 0.35 * min(r / 2.1, 1.0)) / 0.65);
   c = mix(c, uWhiteCol, wl);
   finalColor = vec4(c, 1.0);
 }`;
@@ -145,7 +145,7 @@ export const buildFlareBurst: LookBuilder<FlareBurstParams> = ({ width, height }
 
   const inten = spline([[0.12, 0], [0.5, 0.5], [1.4, 0.85], [2.0, 1.6], [2.8, 1.6], [3.5, 1.1], [4.5, 1.0], [5.85, 0]]);
   const scale = spline([[0.2, 0.22], [0.5, 0.28], [1.3, 0.6], [2.0, 1.3], [2.45, 1.95], [2.8, 1.85], [3.7, 1.08], [4.5, 1.0], [6.0, 1.06]]);
-  const white = spline([[1.85, 0], [2.45, 1], [2.85, 1], [3.45, 0]]);
+  const white = spline([[1.75, 0], [2.5, 1], [2.8, 1], [3.6, 0]]);
   const px = spline([[0, 0.3], [2.0, 0.41], [2.8, 0.43], [3.8, 0.45]]);
   const py = spline([[0, 0.5], [2.0, 0.52], [3.8, 0.55]]);
   const hex = spline([[0, 0.25], [3.2, 1]]);
