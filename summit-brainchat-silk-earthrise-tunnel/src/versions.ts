@@ -19,7 +19,7 @@ export const VERSIONS: VersionRow[] = [
     file: "SummitPath_Blue",
     look: "summit",
     params: {
-      facets: ["#0A1E5A", "#1A4AB0", "#3A78D8", "#6AA8F0"],
+      facets: ["#0A1A50", "#1A4AB0", "#3A8AD8", "#6AB8F0", "#9AD8FF"],
       facetByHeight: 0.15,
       edge: "#A8D8FF",
       node: "#DDF0FF",
@@ -30,7 +30,7 @@ export const VERSIONS: VersionRow[] = [
       bgBottom: "#0A2A6A",
       keyLight: "#CFE4FF",
       fill: "#3A6AD0",
-      exposure: 1.0,
+      exposure: 0.9,
     },
   },
   {
@@ -38,8 +38,8 @@ export const VERSIONS: VersionRow[] = [
     file: "SummitPath_GoldDawn",
     look: "summit",
     params: {
-      facets: ["#4A2A6A", "#C86A6A", "#F0B860"],
-      facetByHeight: 0.7,
+      facets: ["#2A1440", "#4A2A6A", "#C86A6A", "#F0B860"],
+      facetByHeight: 1.0,
       edge: "#FFD8A8",
       node: "#FFF0D8",
       path: "#FFF4DC",
@@ -49,7 +49,7 @@ export const VERSIONS: VersionRow[] = [
       bgBottom: "#B0502A",
       keyLight: "#FFE0C0",
       fill: "#8A4A9A",
-      exposure: 1.0,
+      exposure: 0.9,
     },
   },
   {

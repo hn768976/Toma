@@ -33,15 +33,17 @@ const simplex = makeSimplex3(SEED);
 
 function height(x: number, z: number) {
   const r = Math.sqrt(x * x + (z * 1.05) * (z * 1.05));
-  const cone = 5.6 * Math.pow(Math.max(0, 1 - r / 15), 1.7) + 1.9 * Math.exp(-(r * r) / 7);
+  const cone = 4.6 * Math.pow(Math.max(0, 1 - r / 8.5), 1.25) + 2.6 * Math.pow(Math.max(0, 1 - r / 17), 1.4);
+  // close, bulging foreground dome rising from the lower left
+  const dome = 2.6 * Math.exp(-((x + 7) ** 2 + (z - 10) ** 2) / 26) + 1.4 * Math.exp(-((x - 5) ** 2 + (z - 11) ** 2) / 18);
   const ridged = 1 - Math.abs(simplex(x * 0.19, 3.1, z * 0.19));
-  const shoulderR = 1.6 * Math.exp(-((x - 7.5) ** 2 + (z + 0.5) ** 2) / 10);
+  const shoulderR = 1.2 * Math.exp(-((x - 7.5) ** 2 + (z + 0.5) ** 2) / 10);
   const shoulderL = 1.0 * Math.exp(-((x + 8.5) ** 2 + (z - 1.5) ** 2) / 12);
-  const rough = 0.45 * simplex(x * 0.5, 7.7, z * 0.5);
+  const rough = 0.6 * simplex(x * 0.45, 7.7, z * 0.45);
   const away = 1 - Math.min(1, cone / H);
-  let h = cone + shoulderR + shoulderL + (ridged - 0.55) * 1.4 * (0.3 + 0.7 * away) + rough * (0.3 + away);
+  let h = cone + dome + shoulderR + shoulderL + (ridged - 0.55) * 1.4 * (0.3 + 0.7 * away) + rough * (0.3 + away);
   // keep the summit the single highest point
-  h = Math.min(h, H - 0.3 * Math.min(r, 3));
+  h = Math.min(h, H - 0.18 * Math.min(r, 4) - 0.04 * r * r);
   return Math.max(h, -0.6);
 }
 
@@ -181,7 +183,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
         float core = exp(-r * r / 0.035);
         float glow = exp(-r * r / 0.16);
         float wide = 1.0 / (1.0 + pow(r / 0.28, 2.0)) * (1.0 - smoothstep(0.6, 1.0, r));
-        gl_FragColor = vec4(uColor * uI * (0.9 * core + 0.6 * glow + 0.3 * wide), 1.0);
+        gl_FragColor = vec4(uColor * uI * (1.0 * core + 0.7 * glow + 0.12 * wide), 1.0);
       }`,
     transparent: true,
     depthWrite: false,
@@ -228,7 +230,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
     fragmentShader: `varying vec3 vD; uniform vec3 uHalo, uTop, uBot;
       void main(){ vec3 c = mix(uBot, uTop, smoothstep(-0.2, 0.8, vD.y)) * 2.0;
         float h = max(dot(vD, normalize(vec3(0.0, 0.25, -1.0))), 0.0);
-        c += uHalo * (pow(h, 8.0) * 2.5 + pow(h, 2.0) * 0.6);
+        c += uHalo * (pow(h, 10.0) * 1.2 + pow(h, 2.0) * 0.35);
         gl_FragColor = vec4(c, 1.0); }`,
   });
   envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 64, 32), envMat));
@@ -244,7 +246,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
     clearcoat: 1,
     clearcoatRoughness: 0.12,
     envMap: envTex,
-    envMapIntensity: 0.55,
+    envMapIntensity: 0.35,
     emissive: new THREE.Color(p.facets[0]).multiplyScalar(0.06),
   });
   const mountain = new THREE.Mesh(fgeo, facetMat);
@@ -270,9 +272,9 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   scene.add(
     makeScreenLines(segs, {
       color: p.edge,
-      intensity: 1.6,
+      intensity: 1.1,
       opacity: 0.3,
-      widthPx: 1.1,
+      widthPx: 1.0,
       pxScale: ctx.pxScale,
       resolution: ctx.resolution,
     }),
@@ -288,7 +290,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
 
   const curve = new THREE.CurvePath<THREE.Vector3>();
   for (let i = 1; i < pathPts.length; i++) curve.add(new THREE.LineCurve3(pathPts[i - 1], pathPts[i]));
-  const tube = new THREE.TubeGeometry(curve, 900, 0.028, 8, false);
+  const tube = new THREE.TubeGeometry(curve, 900, 0.017, 8, false);
   const pulseU = { value: 0 };
   const pathMat = new THREE.ShaderMaterial({
     uniforms: { uColor: { value: new THREE.Color(p.path) }, uHead: pulseU },
@@ -299,7 +301,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
         float d = uHead - vS;
         float tail = d >= 0.0 ? exp(-d / 0.07) : 0.0;
         float head = exp(-d * d / 0.00012);
-        gl_FragColor = vec4(uColor * (1.5 + 6.0 * tail + 9.0 * head), 1.0);
+        gl_FragColor = vec4(uColor * (1.3 + 2.6 * tail + 4.0 * head), 1.0);
       }`,
   });
   scene.add(new THREE.Mesh(tube, pathMat));
@@ -312,24 +314,24 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   for (let k = 0; k < n; k++) {
     npos.set([pos[k * 3], pos[k * 3 + 1] + lift * 2, pos[k * 3 + 2]], k * 3);
     const s = sOf.get(k);
-    nsize[k] = s !== undefined ? 1.6 : 1;
+    nsize[k] = s !== undefined ? 1.35 : 1;
     nparam[k * 4] = s !== undefined ? s : -10;
   }
   const nodes = makeScreenPoints(npos, {
     color: p.node,
-    intensity: 1.8,
-    sizePx: 3.2,
+    intensity: 2.6,
+    sizePx: 5.0,
     pxScale: ctx.pxScale,
     sizes: nsize,
     params: nparam,
-    softness: 0.35,
+    softness: 0.6,
     uniforms: { uHead: pulseU },
     decl: "uniform float uHead;",
     body: /* glsl */ `
       if (P.x > -1.0) {
         float d = uHead - P.x;
         float flash = d >= -0.004 ? exp(-max(d, 0.0) / 0.05) : 0.0;
-        col.rgb = base * (1.6 + 9.0 * flash);
+        col.rgb = base * (1.6 + 3.5 * flash);
       }`,
   });
   scene.add(nodes);
@@ -348,11 +350,13 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   flagGeo.translate(FW / 2, 0, 0);
   const flagBase = (flagGeo.attributes.position.array as Float32Array).slice();
   const flagMat = new THREE.MeshStandardMaterial({
-    color: "#f4f6fa",
-    roughness: 0.55,
+    color: "#c4cad6",
+    roughness: 0.6,
     side: THREE.DoubleSide,
-    emissive: "#ffffff",
-    emissiveIntensity: 0.35,
+    emissive: "#dfe6f2",
+    emissiveIntensity: 0.18,
+    transparent: true,
+    opacity: 0.82,
   });
   const flag = new THREE.Mesh(flagGeo, flagMat);
   flag.position.copy(top).add(new THREE.Vector3(0.02, poleH - FH / 2 - 0.02, 0));
@@ -374,11 +378,11 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   const focusTarget = new THREE.Vector3(0, H, 0);
   const post = {
     exposure: p.exposure,
-    bloomStrength: 0.4,
+    bloomStrength: 0.3,
     bloomThreshold: 0.9,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 21, aperture: 0.009, maxCoc: 0.01, nearScale: 1.0 },
+    dof: { focus: 21, aperture: 0.011, maxCoc: 0.011, nearScale: 1.3 },
     vignette: 0.35,
     grain: 0.015,
     grainFadeLum: 0,
@@ -388,15 +392,15 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
     const t = f / LOOP;
     // camera: low, slow closed orbit ±10°, gentle push
     const yaw = THREE.MathUtils.degToRad(10) * osc(f, 1);
-    const dist = 21 * (1 - 0.035 * (0.5 - 0.5 * oscC(f, 1)));
+    const dist = 16.5 * (1 - 0.035 * (0.5 - 0.5 * oscC(f, 1)));
     camera.position.set(Math.sin(yaw) * dist, 2.6 + 0.2 * osc(f, 1, 0.25), Math.cos(yaw) * dist);
-    camera.lookAt(0, 6.0, 0);
+    camera.lookAt(0, 6.5, 0);
     camera.updateMatrixWorld();
     post.dof.focus = camera.position.distanceTo(focusTarget);
 
     // halo faces camera and breathes (2 breaths / loop)
     halo.quaternion.copy(camera.quaternion);
-    halo.scale.setScalar(30 * (1 + 0.04 * osc(f, 2)));
+    halo.scale.setScalar(25 * (1 + 0.04 * osc(f, 2)));
     haloMat.uniforms.uI.value = p.haloIntensity * (1 + 0.08 * osc(f, 2));
 
     // pulses: 3 climbs per loop
