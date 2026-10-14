@@ -6,7 +6,7 @@ mkdir -p out/checks
 sheet() { # name n_frames duration
   local f=out/previews/$1.mp4 n=$2 d=$3 i=0 args=() filt=""
   for k in $(seq 0 $((n-1))); do
-    t=$(echo "scale=3; $d * ($k + 0.5) / $n" | bc)
+    t=$(printf "%.3f" "$(echo "scale=3; $d * ($k + 0.5) / $n" | bc)")
     args+=(-ss "$t" -i "$f"); filt+="[$k:v]scale=480:-1,drawtext=text='t=${t}s':x=8:y=8:fontsize=18:fontcolor=white:box=1:boxcolor=black@0.5[v$k];"
   done
   local cols=4; [ "$n" = 5 ] && cols=5

@@ -12,7 +12,7 @@ for id in $IDS; do
   start=$(date +%s.%N)
   npx remotion render out/bundle "$id" "$OUT/$name.mp4" \
     --scale=0.3333333333333333 --codec=h264 --crf=16 --pixel-format=yuv420p \
-    --concurrency=4 --log=error
+    --concurrency=4 --muted --log=error
   end=$(date +%s.%N)
   frames=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$OUT/$name.mp4")
   echo "$name frames=$frames wall=$(echo "$end - $start" | bc)s per_frame=$(echo "scale=3; ($end - $start) / $frames" | bc)s (concurrency 4)" | tee -a "$OUT/render-times.txt"

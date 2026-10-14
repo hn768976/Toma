@@ -11,7 +11,7 @@ for name in "${!DUR[@]}"; do
   v=$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -of default=nw=1:nk=1 "$f" | paste -sd, -)
   a=$(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$f" | wc -l)
   d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$f")
-  want="h264,1280,720,30/1,yuv420p"
+  want="h264,1280,720,yuv420p,30/1"
   ok=PASS
   [ "$v" = "$want" ] || ok=FAIL
   [ "$a" = "0" ] || ok=FAIL
