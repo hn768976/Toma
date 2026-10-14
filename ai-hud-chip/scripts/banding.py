@@ -5,8 +5,8 @@ For each named region (a horizontal and a vertical strip through a dark or
 blurred gradient area) it reads the luma values, then reports:
   * longest run of identical raw values (a flat 8-bit plateau = band)
   * the 15-px moving-average profile and its largest single-step jump
-Smooth gradients with grain/dither give short runs (< ~6 px) and no jumps
-> 1.5 levels in the averaged profile.
+A band = a flat plateau (>= 12 px of one value) meeting another plateau with
+a clean step. Dithered gradients interleave neighbouring values instead.
 usage: banding.py video.mp4 time_s "name:x0,y0,x1,y1" ...
 """
 import subprocess, sys
@@ -29,6 +29,17 @@ def longest_run(v):
         best = max(best, cur)
     return best
 
+def clean_steps(v, plateau=12):
+    """Count band edges: a flat run >= plateau px that ends in a step to
+    another flat run >= plateau px with no interleaving (a hard band)."""
+    runs = []
+    cur, n = v[0], 1
+    for x in v[1:]:
+        if x == cur: n += 1
+        else: runs.append((cur, n)); cur, n = x, 1
+    runs.append((cur, n))
+    return sum(1 for (a, na), (b, nb) in zip(runs, runs[1:]) if na >= plateau and nb >= plateau)
+
 def smooth(v, k=15):
     h = k // 2
     return [sum(v[max(0, i - h):i + h + 1]) / len(v[max(0, i - h):i + h + 1]) for i in range(len(v))]
@@ -43,8 +54,9 @@ for spec in sys.argv[3:]:
     s = smooth(v)
     jump = max(abs(a - b) for a, b in zip(s, s[1:]))
     run = longest_run(v)
-    verdict = "SMOOTH" if run <= 8 and jump <= 1.5 else "CHECK"
+    edges = clean_steps(v)
+    verdict = "SMOOTH" if edges == 0 and run < 16 else "BANDED"
     ok &= verdict == "SMOOTH"
     sample = " ".join(str(x) for x in v[:: max(1, len(v) // 16)])
-    print(f"  {name:<26} len={len(v):4d} luma {min(v):3d}..{max(v):3d}  longest flat run={run:2d}px  max avg step={jump:.2f}  {verdict}\n      samples: {sample}")
+    print(f"  {name:<26} len={len(v):4d} luma {min(v):3d}..{max(v):3d}  longest flat run={run:2d}px  hard band edges={edges}  max avg step={jump:.2f}  {verdict}\n      samples: {sample}")
 sys.exit(0 if ok else 1)
