@@ -1,0 +1,6 @@
+node_modules
+out
+refs
+*.zip
+deliverables/*.mp4
+deliverables/*.zip
