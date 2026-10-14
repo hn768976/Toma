@@ -33,17 +33,19 @@ const simplex = makeSimplex3(SEED);
 
 function height(x: number, z: number) {
   const r = Math.sqrt(x * x + (z * 1.05) * (z * 1.05));
-  const cone = 4.6 * Math.pow(Math.max(0, 1 - r / 8.5), 1.25) + 2.6 * Math.pow(Math.max(0, 1 - r / 17), 1.4);
+  const cone = 4.4 * Math.pow(Math.max(0, 1 - r / 6.8), 1.15) + 2.8 * Math.pow(Math.max(0, 1 - r / 17), 1.5);
   // close, bulging foreground dome rising from the lower left
-  const dome = 2.6 * Math.exp(-((x + 7) ** 2 + (z - 10) ** 2) / 26) + 1.4 * Math.exp(-((x - 5) ** 2 + (z - 11) ** 2) / 18);
+  const dome = 1.6 * Math.exp(-((x + 7) ** 2 + (z - 10) ** 2) / 26) + 1.4 * Math.exp(-((x - 5) ** 2 + (z - 11) ** 2) / 18);
   const ridged = 1 - Math.abs(simplex(x * 0.19, 3.1, z * 0.19));
   const shoulderR = 1.2 * Math.exp(-((x - 7.5) ** 2 + (z + 0.5) ** 2) / 10);
-  const shoulderL = 1.0 * Math.exp(-((x + 8.5) ** 2 + (z - 1.5) ** 2) / 12);
+  const shoulderL = 0.5 * Math.exp(-((x + 8.5) ** 2 + (z - 1.5) ** 2) / 12);
   const rough = 0.6 * simplex(x * 0.45, 7.7, z * 0.45);
   const away = 1 - Math.min(1, cone / H);
   let h = cone + dome + shoulderR + shoulderL + (ridged - 0.55) * 1.4 * (0.3 + 0.7 * away) + rough * (0.3 + away);
   // keep the summit the single highest point
-  h = Math.min(h, H - 0.18 * Math.min(r, 4) - 0.04 * r * r);
+  // lumpy, knobbly summit rather than a clean pyramid tip
+  h += 0.55 * simplex(x * 0.9, 11.3, z * 0.9) * Math.exp(-(r * r) / 6);
+  h = Math.min(h, H - 0.32 * Math.min(r, 4) - 0.03 * r * r);
   return Math.max(h, -0.6);
 }
 
@@ -58,7 +60,7 @@ type MountainData = {
 function buildMountain(): MountainData {
   const rnd = mulberry32(SEED + 1);
   const pts: number[] = [];
-  const NX = 32, NZ = 19;
+  const NX = 30, NZ = 16;
   const x0 = -17, x1 = 17, z0 = -7, z1 = 15.5;
   for (let j = 0; j < NZ; j++) {
     for (let i = 0; i < NX; i++) {
@@ -66,6 +68,11 @@ function buildMountain(): MountainData {
       const v = (j + 0.15 + 0.7 * rnd()) / NZ;
       pts.push(x0 + (x1 - x0) * u, z0 + (z1 - z0) * v);
     }
+  }
+  // extra, finer samples around the summit (total stays ~600)
+  for (let k = 0; k < 120; k++) {
+    const a = rnd() * Math.PI * 2, rr = 0.35 + 5.0 * Math.pow(rnd(), 0.8);
+    pts.push(Math.cos(a) * rr, Math.sin(a) * rr * 0.9);
   }
   // summit point: replace nearest sample
   let best = 0, bd = 1e9;
@@ -190,7 +197,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
     blending: THREE.AdditiveBlending,
   });
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), haloMat);
-  halo.position.set(0, H + 0.6, -12);
+  halo.position.set(0, H + 0.9, -4);
   halo.renderOrder = -10;
   scene.add(halo);
 
@@ -214,7 +221,11 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
     const hT = smoothstep(-0.5, H, cy);
     const t = (1 - p.facetByHeight) * crnd() + p.facetByHeight * (hT * 0.75 + 0.25 * crnd());
     const c = sample(t);
-    for (let k = 0; k < 3; k++) fcol.set([c.r, c.g, c.b], (f * 3 + k) * 3);
+    // per-vertex brightness jitter -> a soft gradient inside each facet (glassy look)
+    for (let k = 0; k < 3; k++) {
+      const g = 0.78 + 0.5 * crnd();
+      fcol.set([c.r * g, c.g * g, c.b * g], (f * 3 + k) * 3);
+    }
   }
   const fgeo = new THREE.BufferGeometry();
   fgeo.setAttribute("position", new THREE.BufferAttribute(fpos, 3));
@@ -256,7 +267,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   const key = new THREE.DirectionalLight(new THREE.Color(p.keyLight), 1.7);
   key.position.set(-8, 7, 9);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(new THREE.Color(p.halo), 3.2);
+  const rim = new THREE.DirectionalLight(new THREE.Color(p.halo), 5.0);
   rim.position.set(0, 4, -12);
   scene.add(rim);
   const fill = new THREE.DirectionalLight(new THREE.Color(p.fill), 0.9);
@@ -272,7 +283,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   scene.add(
     makeScreenLines(segs, {
       color: p.edge,
-      intensity: 1.1,
+      intensity: 1.9,
       opacity: 0.3,
       widthPx: 1.0,
       pxScale: ctx.pxScale,
@@ -301,7 +312,7 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
         float d = uHead - vS;
         float tail = d >= 0.0 ? exp(-d / 0.07) : 0.0;
         float head = exp(-d * d / 0.00012);
-        gl_FragColor = vec4(uColor * (1.3 + 2.6 * tail + 4.0 * head), 1.0);
+        gl_FragColor = vec4(uColor * (2.4 + 3.0 * tail + 4.5 * head), 1.0);
       }`,
   });
   scene.add(new THREE.Mesh(tube, pathMat));
@@ -319,12 +330,12 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   }
   const nodes = makeScreenPoints(npos, {
     color: p.node,
-    intensity: 2.6,
-    sizePx: 5.0,
+    intensity: 3.4,
+    sizePx: 6.0,
     pxScale: ctx.pxScale,
     sizes: nsize,
     params: nparam,
-    softness: 0.6,
+    softness: 0.9,
     uniforms: { uHead: pulseU },
     decl: "uniform float uHead;",
     body: /* glsl */ `
@@ -345,16 +356,16 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   );
   pole.position.copy(top).add(new THREE.Vector3(0, poleH / 2, 0));
   scene.add(pole);
-  const FW = 0.82, FH = 0.5;
+  const FW = 0.6, FH = 0.37;
   const flagGeo = new THREE.PlaneGeometry(FW, FH, 28, 14);
   flagGeo.translate(FW / 2, 0, 0);
   const flagBase = (flagGeo.attributes.position.array as Float32Array).slice();
   const flagMat = new THREE.MeshStandardMaterial({
-    color: "#c4cad6",
+    color: "#a8b2c6",
     roughness: 0.6,
     side: THREE.DoubleSide,
     emissive: "#dfe6f2",
-    emissiveIntensity: 0.18,
+    emissiveIntensity: 0.08,
     transparent: true,
     opacity: 0.82,
   });
@@ -375,14 +386,26 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
   });
   scene.add(summitGlow);
 
+  // soft light flare where the path leaves the bottom of the frame
+  const p0 = pathPts[0];
+  scene.add(
+    makeScreenPoints(new Float32Array([p0.x, p0.y + 0.05, p0.z]), {
+      color: p.path,
+      intensity: 1.6,
+      sizePx: 70,
+      pxScale: ctx.pxScale,
+      softness: 1,
+    }),
+  );
+
   const focusTarget = new THREE.Vector3(0, H, 0);
   const post = {
     exposure: p.exposure,
-    bloomStrength: 0.3,
+    bloomStrength: 0.45,
     bloomThreshold: 0.9,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 21, aperture: 0.011, maxCoc: 0.011, nearScale: 1.3 },
+    dof: { focus: 21, aperture: 0.013, maxCoc: 0.013, nearScale: 2.0 },
     vignette: 0.35,
     grain: 0.015,
     grainFadeLum: 0,
@@ -394,13 +417,13 @@ export function buildSummit(ctx: BuildCtx, p: SummitParams): LookHandle {
     const yaw = THREE.MathUtils.degToRad(10) * osc(f, 1);
     const dist = 16.5 * (1 - 0.035 * (0.5 - 0.5 * oscC(f, 1)));
     camera.position.set(Math.sin(yaw) * dist, 2.6 + 0.2 * osc(f, 1, 0.25), Math.cos(yaw) * dist);
-    camera.lookAt(0, 6.5, 0);
+    camera.lookAt(0, 6.8, 0);
     camera.updateMatrixWorld();
     post.dof.focus = camera.position.distanceTo(focusTarget);
 
     // halo faces camera and breathes (2 breaths / loop)
     halo.quaternion.copy(camera.quaternion);
-    halo.scale.setScalar(25 * (1 + 0.04 * osc(f, 2)));
+    halo.scale.setScalar(17 * (1 + 0.04 * osc(f, 2)));
     haloMat.uniforms.uI.value = p.haloIntensity * (1 + 0.08 * osc(f, 2));
 
     // pulses: 3 climbs per loop

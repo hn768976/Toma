@@ -19,7 +19,7 @@ export const VERSIONS: VersionRow[] = [
     file: "SummitPath_Blue",
     look: "summit",
     params: {
-      facets: ["#0A1A50", "#1A4AB0", "#3A8AD8", "#6AB8F0", "#9AD8FF"],
+      facets: ["#020618", "#0E2A6A", "#2F6AD0", "#6AB8F0", "#B8E6FF"],
       facetByHeight: 0.15,
       edge: "#A8D8FF",
       node: "#DDF0FF",
