@@ -122,7 +122,7 @@ export const computeState = (frame: number, v: Version): SceneState => {
       BASE_ROT +
       // slow settle during the build, then ±15° during the hold
       -8 * DEG * (1 - ramp(s, 3.5, 9.5)) +
-      15 * DEG * holdIn * Math.sin((TAU * holdT) / 11),
+      -15 * DEG * holdIn * Math.sin((TAU * holdT) / 11),
     cubeBob: 0.03 * Math.sin((TAU * s) / 5) * ramp(s, 5, 7),
     camYaw: 2 * DEG * Math.sin((TAU * s) / 30),
     camPitch: 0,

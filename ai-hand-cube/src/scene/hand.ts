@@ -8,7 +8,7 @@
 // segment, a polished pin through them and a darker ball partly hidden
 // between the segments.
 import * as THREE from "three";
-import { loft, rod, Section, sectionPoint, tube } from "./geom";
+import { loft, Section, sectionPoint, tube } from "./geom";
 
 const DEG = Math.PI / 180;
 
@@ -24,6 +24,8 @@ export type HandRig = {
   root: THREE.Group;
   /** extra curl in radians [thumb, index, middle, ring, little] */
   setPose: (extraCurl: readonly number[]) => void;
+  /** wrist bend (radians, negative = forearm drops) */
+  setWrist: (angle: number) => void;
 };
 
 const smooth = (a: number, b: number, x: number) => {
@@ -430,30 +432,45 @@ export const buildHand = (mats: HandMaterials): HandRig => {
     wrist.add(tube(pts, 0.006, mats.seam, true, 128));
   });
 
-  // pistons: from mounts on the forearm sides to mounts on the palm heel
-  palm.updateMatrixWorld(true);
-  const wristToPalm = (v: THREE.Vector3) => {
-    wrist.updateMatrix();
-    return v.clone().applyMatrix4(wrist.matrix);
-  };
+  // pistons: from mounts on the forearm sides to mounts on the palm heel.
+  // The forearm mount rides on the wrist group; sleeve and rod are re-aimed
+  // whenever the wrist bend changes, so they always connect both mounts.
   const mountGeo = loft({ length: 0.12, rows: 8, cols: 24, nTop: 5, nBottom: 5, capStart: 0.02, capEnd: 0.02, section: () => ({ w: 0.08, h: 0.09 }) });
-  [-1, 1].forEach((side) => {
-    const a = wristToPalm(new THREE.Vector3(side * 0.33, 0.06, -0.75));
-    const b = new THREE.Vector3(side * 0.44, 0.0, -0.4);
-    const mid = a.clone().lerp(b, 0.55);
-    palm.add(rod(a, mid, 0.034, mats.joint)); // sleeve
-    palm.add(rod(mid.clone().lerp(a, 0.1), b, 0.017, mats.metal)); // rod
-    // clevis brackets bolted to the forearm and the palm heel, each with a pin
-    [a, b].forEach((p) => {
+  const unitCyl = new THREE.CylinderGeometry(1, 1, 1, 24);
+  const pistons = [-1, 1].map((side) => {
+    const aLocal = new THREE.Vector3(side * 0.33, 0.06, -0.75); // in wrist space
+    const b = new THREE.Vector3(side * 0.44, 0.0, -0.4); // in palm space
+    const mount = (parent: THREE.Object3D, p: THREE.Vector3) => {
       const m = new THREE.Mesh(mountGeo, mats.joint);
       m.position.copy(p).add(new THREE.Vector3(-side * 0.03, 0, -0.06));
-      palm.add(m);
+      parent.add(m);
       const pin = new THREE.Mesh(pinGeo, mats.metal);
       pin.scale.set(0.11, 0.022, 0.022);
       pin.position.copy(p);
-      palm.add(pin);
-    });
+      parent.add(pin);
+    };
+    mount(wrist, aLocal);
+    mount(palm, b);
+    const sleeve = new THREE.Mesh(unitCyl, mats.joint);
+    const rodM = new THREE.Mesh(unitCyl, mats.metal);
+    palm.add(sleeve, rodM);
+    return { aLocal, b, sleeve, rodM };
   });
+  const aim = (m: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3, r: number) => {
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    m.scale.set(r, a.distanceTo(b), r);
+  };
+  const placePistons = () => {
+    wrist.updateMatrix();
+    pistons.forEach(({ aLocal, b, sleeve, rodM }) => {
+      const a = aLocal.clone().applyMatrix4(wrist.matrix);
+      const mid = a.clone().lerp(b, 0.55);
+      aim(sleeve, a, mid, 0.034);
+      aim(rodM, mid.clone().lerp(a, 0.1), b, 0.017);
+    });
+  };
+  placePistons();
 
   // shadows for contact shading between parts
   root.traverse((o) => {
@@ -474,5 +491,9 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   };
   setPose([0, 0, 0, 0, 0]);
 
-  return { root, setPose };
+  const setWrist = (angle: number) => {
+    wrist.rotation.x = angle;
+    placePistons();
+  };
+  return { root, setPose, setWrist };
 };

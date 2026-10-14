@@ -13,6 +13,7 @@ import { COC, FULLSCREEN_VERT, HASH } from "./shaders";
 export type PostParams = {
   frameMod: number;
   focus: number;
+  focusBand: number;
   nearK: number;
   farK: number;
   maxCoc: number;
@@ -61,6 +62,7 @@ const cocUniforms = () => ({
   uFarK: { value: 0.01 },
   uMaxCoc: { value: 0.012 },
   uHeightPx: { value: 1080 },
+  uFocusBand: { value: 0 },
   uNear: { value: 0.1 },
   uFar: { value: 100 },
 });
@@ -423,6 +425,7 @@ export class PostPipeline {
     m.uniforms.uNearK.value = p.nearK;
     m.uniforms.uFarK.value = p.farK;
     m.uniforms.uMaxCoc.value = p.maxCoc;
+    m.uniforms.uFocusBand.value = p.focusBand;
     m.uniforms.uHeightPx.value = this.h;
     m.uniforms.uNear.value = cam.near;
     m.uniforms.uFar.value = cam.far;
@@ -452,9 +455,17 @@ export class PostPipeline {
     gl.setRenderTarget(this.rtHud);
     gl.clear(true, true, true);
     if (hudScene) {
+      // objects flagged skipDepthPrepass (the full-screen background) must
+      // not occlude the HUD
+      const hidden: THREE.Object3D[] = [];
+      scene.traverse((o) => {
+        if (o.userData.skipDepthPrepass && o.visible) hidden.push(o);
+      });
+      hidden.forEach((o) => (o.visible = false));
       scene.overrideMaterial = this.depthOnly;
       gl.render(scene, cam);
       scene.overrideMaterial = null;
+      hidden.forEach((o) => (o.visible = true));
       gl.render(hudScene, cam);
     }
 

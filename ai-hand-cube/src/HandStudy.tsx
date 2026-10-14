@@ -65,6 +65,7 @@ export const HandStudy: React.FC = () => {
       params: {
         frameMod: 0,
         focus: 6,
+        focusBand: 0,
         nearK: 0,
         farK: 0,
         maxCoc: 0,

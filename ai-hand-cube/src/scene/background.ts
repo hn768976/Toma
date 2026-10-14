@@ -42,9 +42,9 @@ export const buildBackground = () => {
         d.y *= 1.25;
         float r = length(d) / uGlowRadius;
         // smooth, wide falloff (two gaussians) - no hard ring anywhere
-        float glow = 0.65 * exp(-r * r * 1.6) + 0.35 * exp(-r * r * 0.35);
+        float glow = 0.6 * exp(-r * r * 2.0) + 0.4 * exp(-r * r * 0.45);
         // slightly darker toward the bottom/top edges
-        float vert = 1.0 - 0.25 * pow(abs(vUv.y - 0.5) * 2.0, 2.0);
+        float vert = 1.0 - 0.45 * pow(abs(vUv.y - 0.5) * 2.0, 1.5);
         vec3 c = uBase * vert + uGlow * glow * uGlowStrength;
         outColor = vec4(c, 1.0);
       }`,
@@ -52,5 +52,6 @@ export const buildBackground = () => {
   const mesh = new THREE.Mesh(g, material);
   mesh.frustumCulled = false;
   mesh.renderOrder = -1000;
+  mesh.userData.skipDepthPrepass = true;
   return { mesh, material };
 };

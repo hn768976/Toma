@@ -7,10 +7,12 @@ export type Palette = {
   circuit: string; // circuit traces + cube edges
   text: string; // "AI" letters
   hud: string; // HUD panel lines
+  hudAccent: string; // small accent boxes in the HUD
   handBase: string; // satin shell colour of the hand
   handJoint: string; // graphite joints
   rim: string; // rim light on the hand
   key: string; // key light tint
+  emissive: number; // overall brightness of cube/edges/glow (warm hues bloom harder)
 };
 
 export type Version = {
@@ -30,6 +32,7 @@ export type Version = {
 const BLUE: Palette = {
   background: "#020A1E",
   glow: "#0A3A8A",
+  hudAccent: "#FF7A3A",
   circuit: "#5AD8FF",
   text: "#DFF8FF",
   hud: "#5A9AE8",
@@ -37,11 +40,13 @@ const BLUE: Palette = {
   handJoint: "#3A3E46",
   rim: "#4FA8FF",
   key: "#DCE8FF",
+  emissive: 1,
 };
 
 const GOLD: Palette = {
   background: "#120804",
-  glow: "#6A3A0E",
+  glow: "#3E2108",
+  hudAccent: "#FFF0C0",
   circuit: "#FFC870",
   text: "#FFF4E2",
   hud: "#E8A04A",
@@ -49,35 +54,36 @@ const GOLD: Palette = {
   handJoint: "#3E3830",
   rim: "#FFB860",
   key: "#FFF0DC",
+  emissive: 0.62,
 };
 
 export const VERSIONS: Version[] = [
   {
-    id: "AIHandCube_Story",
+    id: "AIHandCube-Story",
     durationInFrames: 450,
     timeline: "story",
     palette: BLUE,
-    framing: { cubeScreenX: 0.5, clearLeft: false },
+    framing: { cubeScreenX: 0.525, clearLeft: false },
     cubeText: "AI",
   },
   {
-    id: "AIHandCube_HoldLoop",
+    id: "AIHandCube-HoldLoop",
     durationInFrames: 600,
     timeline: "loop",
     palette: BLUE,
-    framing: { cubeScreenX: 0.5, clearLeft: false },
+    framing: { cubeScreenX: 0.525, clearLeft: false },
     cubeText: "AI",
   },
   {
-    id: "AIHandCube_Gold",
+    id: "AIHandCube-Gold",
     durationInFrames: 450,
     timeline: "story",
     palette: GOLD,
-    framing: { cubeScreenX: 0.5, clearLeft: false },
+    framing: { cubeScreenX: 0.525, clearLeft: false },
     cubeText: "AI",
   },
   {
-    id: "AIHandCube_Mirrored",
+    id: "AIHandCube-Mirrored",
     durationInFrames: 600,
     timeline: "loop",
     palette: BLUE,

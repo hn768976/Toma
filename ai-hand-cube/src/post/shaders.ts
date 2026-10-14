@@ -28,8 +28,11 @@ uniform float uNearK;      // CoC scale in front of the focus plane (fraction of
 uniform float uFarK;       // CoC scale behind the focus plane
 uniform float uMaxCoc;     // max CoC (fraction of height)
 uniform float uHeightPx;   // full-res height in px
+uniform float uFocusBand;  // in-focus band around the focus plane (relative units)
 float cocPx(float z) {
-  float c = z < uFocus ? uNearK * (uFocus / z - 1.0) : uFarK * (1.0 - uFocus / z);
+  float d = z < uFocus ? uFocus / z - 1.0 : 1.0 - uFocus / z;
+  d = max(0.0, d - uFocusBand);
+  float c = z < uFocus ? uNearK * d : uFarK * d;
   return min(c, uMaxCoc) * uHeightPx;
 }
 `;
