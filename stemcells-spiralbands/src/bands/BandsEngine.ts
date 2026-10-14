@@ -38,7 +38,7 @@ export class BandsEngine {
   private loopFrames: number;
   private scene = new THREE.Scene();
   private group = new THREE.Group();
-  private camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.05, 50);
+  private camera = new THREE.PerspectiveCamera(24, 16 / 9, 0.05, 50);
   private key: THREE.DirectionalLight;
   private sweep: THREE.DirectionalLight;
   private geom: SpiralGeom;
@@ -106,6 +106,7 @@ export class BandsEngine {
     this.key.shadow.radius = 7;
     this.key.shadow.blurSamples = 16;
     this.key.shadow.bias = -0.0004;
+    this.key.shadow.normalBias = 0.006;
     this.scene.add(this.key, this.key.target);
     this.sweep = new THREE.DirectionalLight(colors.sweep.color, colors.sweep.intensity * ex);
     this.scene.add(this.sweep, this.sweep.target);
@@ -163,10 +164,10 @@ export class BandsEngine {
     this.sweep.position.set(Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el)).multiplyScalar(5);
     const cam = this.camera;
     cam.aspect = W / H;
-    const target = new THREE.Vector3(0.25, 0.05, 0.6);
-    const elev = THREE.MathUtils.degToRad(34);
-    const azc = THREE.MathUtils.degToRad(-12);
-    const dist = 1.55;
+    const target = new THREE.Vector3(0.12, 0.1, 0.5);
+    const elev = THREE.MathUtils.degToRad(27);
+    const azc = THREE.MathUtils.degToRad(-14);
+    const dist = 2.3;
     cam.position.set(
       target.x + Math.sin(azc) * Math.cos(elev) * dist,
       target.y + Math.sin(elev) * dist,

@@ -40,11 +40,11 @@ export type FragmentSeed = {
 export const makeFragmentSeeds = (rng: Rng, n: number): FragmentSeed[] =>
   Array.from({ length: n }, () => {
     // Torn flakes: flat, irregular, close to the membrane.
-    const s = range(rng, 0.03, 0.07);
+    const s = range(rng, 0.05, 0.13);
     return {
       dir: randomUnit(rng),
       dist: range(rng, 0.78, 1.08),
-      scale: new THREE.Vector3(s * range(rng, 1.0, 1.6), s * range(rng, 0.7, 1.2), s * range(rng, 0.2, 0.35)),
+      scale: new THREE.Vector3(s * range(rng, 1.2, 2.0), s * range(rng, 0.6, 1.1), s * range(rng, 0.12, 0.22)),
       quat: randomQuat(rng),
       ph: rng() * TAU,
     };

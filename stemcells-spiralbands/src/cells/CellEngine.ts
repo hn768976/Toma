@@ -36,7 +36,7 @@ const NUCLEUS_SEEDS = [101, 202, 303, 404];
 const PARTICLE_GROUPS = 6;
 /** Max blur radius inside an impostor, in impostor texels. */
 const MAX_TEXEL_BLUR = 6;
-const COC_CAP_1080 = 70;
+const COC_CAP_1080 = 48;
 
 type CellObject = {
   scene: THREE.Scene;
@@ -115,7 +115,7 @@ export class CellEngine {
     const c = colors;
     // Softbox on the same side as the backdrop glow (upper right), so the
     // highlight and the backlight agree.
-    const winDir = new THREE.Vector3(0.5, 0.6, 0.62).normalize();
+    const winDir = new THREE.Vector3(0.72, 0.58, 0.34).normalize();
     this.shared = {
       uBgEdge: { value: lin(c.backdrop.edge) },
       uBgMid: { value: lin(c.backdrop.mid) },
@@ -143,6 +143,8 @@ export class CellEngine {
       uBody: { value: c.membrane.body },
       uBodyTint: { value: lin(c.membrane.bodyTint) },
       uDarkBand: { value: c.membrane.darkBand },
+      uBodyLift: { value: c.membrane.bodyLift },
+      uCrescent: { value: c.membrane.crescent },
       uHalo: { value: c.nucleus.halo },
       uNucBase: { value: lin(c.nucleus.base) },
       uNucDeep: { value: lin(c.nucleus.deep) },
@@ -468,6 +470,9 @@ export class CellEngine {
       const Y1 = 1 - (y0 / H) * 2;
       const Y0 = 1 - ((y0 + h * ds) / H) * 2;
       cu.uRect.value.set(X0, Y0, X1, Y1);
+      // far cells fade into the glowing backdrop
+      const [f0, f1] = this.colors.fade;
+      cu.uOpacity.value = 1 - Math.min(1, Math.max(0, (z - f0) / (f1 - f0))) * 0.85;
       this.quad.material = this.compositeMat;
       gl.render(this.quadScene, this.orthoCam);
       tp = this.mark("composite", tp);

@@ -47,10 +47,14 @@ export type CellColors = {
     body: number;
     bodyTint: RGBHex;
     darkBand: number;
+    bodyLift: number;
+    crescent: number;
   };
   particles: { color: RGBHex; alpha: number; size: number };
   /** Near-lens blur at infinity, in px at 1080p. */
   aperturePx: number;
+  /** Far cells fade into the backdrop between these distances. */
+  fade: [number, number];
   grain: number;
 };
 

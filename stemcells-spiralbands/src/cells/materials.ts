@@ -84,6 +84,8 @@ uniform float uCloudAmt;
 uniform float uBody;
 uniform vec3 uBodyTint;
 uniform float uDarkBand;
+uniform float uBodyLift;
+uniform float uCrescent;
 varying vec3 vN;
 varying vec3 vViewPos;
 varying vec4 vMainClip;
@@ -122,7 +124,7 @@ void main() {
               + smoothstep(0.55, 0.9, snoise(vLocal * 13.0 + uWobSeed.zxy)) * 0.9;
   vec2 wav = vec2(snoise(vLocal * 3.3 + 1.7), snoise(vLocal * 3.3 - 4.1)) * 0.012;
   vec2 ofs = -N.xy * uRefr * (0.35 + 1.8 * g * g) + wav;
-  vec3 body = backdrop(suv + ofs) * uBodyTint;
+  vec3 body = backdrop(suv + ofs) * uBodyTint + uBodyLift * uBodyTint * (0.6 + 0.4 * cloud);
   body *= 1.0 - uDarkBand * smoothstep(0.42, 0.72, g) * (1.0 - smoothstep(0.86, 0.98, g));
   float aR = clamp(uBody * (0.55 + 0.45 * g) * front, 0.0, 1.0);
   vec3 refr = body;
@@ -132,7 +134,11 @@ void main() {
   vec3 hazeCol = uHazeColor * (0.55 + 0.45 * bgHere / max(max(uBgMid.r, uBgMid.g), 0.05));
 
   float a = 1.0 - (1.0 - aR) * (1.0 - line) * (1.0 - aH);
+  // Crescent: the rim on the side facing the glow catches the backlight.
+  vec2 toGlow = normalize((uGlowPos - suv) * vec2(uAspect, 1.0) + 1e-4);
+  float cres = pow(g, 4.0) * smoothstep(-0.2, 0.9, dot(normalize(N.xy + 1e-4), toGlow)) * uCrescent * front;
   vec3 rgb = refr * aR
+           + vec3(cres) * (0.6 + 0.4 * bgHere)
            + lineCol * line * (1.0 - aR)
            + hazeCol * aH * (1.0 - aR) * (1.0 - line)
            + spec;
@@ -354,10 +360,11 @@ export const makeCompositeMaterial = () =>
       uniform sampler2D tSrc;
       uniform vec2 uMaxUv;
       uniform vec2 uInvSize;
+      uniform float uOpacity;
       varying vec2 vUv;
       void main() {
         vec2 uv = clamp(vUv, 0.5 * uInvSize, uMaxUv - 0.5 * uInvSize);
-        gl_FragColor = texture2D(tSrc, uv);
+        gl_FragColor = texture2D(tSrc, uv) * uOpacity;
       }
     `,
     uniforms: {
@@ -365,6 +372,7 @@ export const makeCompositeMaterial = () =>
       uRect: { value: new THREE.Vector4() },
       uMaxUv: { value: new THREE.Vector2() },
       uInvSize: { value: new THREE.Vector2() },
+      uOpacity: { value: 1 },
     },
     depthTest: false,
     depthWrite: false,

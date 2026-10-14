@@ -25,7 +25,7 @@ export type FieldOptions = {
 };
 
 const FOV = 38;
-const FOCUS = 7.2;
+const FOCUS = 6.2;
 const TAN = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const ASPECT = 16 / 9;
 
@@ -98,7 +98,7 @@ export const buildFieldScene = (opt: FieldOptions): CellSceneDef => {
   // Near cells that sweep past the lens, very blurred.
   let guard = 0;
   let near = 0;
-  while (near < 8 && guard++ < 5000) {
+  while (near < 5 && guard++ < 5000) {
     const z = -range(rng, 2.6, 5.5);
     const hw = -z * TAN * ASPECT;
     const hh = -z * TAN;
@@ -113,7 +113,8 @@ export const buildFieldScene = (opt: FieldOptions): CellSceneDef => {
   guard = 0;
   while (cells.length < total && guard++ < 20000) {
     const u = rng();
-    const z = -(4.2 + 30 * Math.pow(u, 1.7));
+    // a dozen big cells round the focus, the rest further back fading out
+    const z = -(4.0 + 36 * Math.pow(u, 1.15));
     const hw = -z * TAN * ASPECT * 1.12;
     const hh = -z * TAN * 1.12;
     const base = new THREE.Vector3(range(rng, -hw, hw), range(rng, -hh, hh), z);
