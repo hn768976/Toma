@@ -181,8 +181,8 @@ const buildTextTexture = (text: string) => {
   const y = W / 2 + 20;
   // soft halo
   g.shadowColor = "#fff";
-  g.shadowBlur = 50;
-  g.strokeStyle = "rgba(255,255,255,0.45)";
+  g.shadowBlur = 40;
+  g.strokeStyle = "rgba(255,255,255,0.22)";
   g.lineWidth = 64;
   g.strokeText(text, W / 2, y);
   g.shadowBlur = 0;
@@ -565,7 +565,7 @@ export const buildCube = (p: Palette, env: THREE.Texture, text: string): CubeRig
       m.uniforms.uColor.value.copy(circuitColor).multiplyScalar(E);
     });
     edgeMat.color.copy(circuitColor).lerp(WHITE, 0.15).multiplyScalar(E * (1.5 + 0.8 * st.innerGlow + 2.0 * st.aiFlash));
-    textMat.uniforms.uAmount.value = E * st.aiOn * (1.25 + 3.0 * st.aiFlash);
+    textMat.uniforms.uAmount.value = E * st.aiOn * (1.0 + 3.0 * st.aiFlash);
     glowMat.uniforms.uAmount.value = E * (0.15 * st.squareGlow + 0.06 * st.innerGlow + 0.5 * st.aiFlash);
     squareMat.uniforms.uAmount.value = E * st.squareGlow * (1.0 - 0.82 * st.glass);
     squareMat.uniforms.uEdge.value = 1 - 0.6 * st.glass;

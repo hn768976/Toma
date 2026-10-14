@@ -18,6 +18,7 @@ export type PanelDef = {
   yaw: number; // radians
   opacity: number; // 0.3 .. 0.6
   period: number; // frames per tick (divides 600)
+  phase: number; // tick phase offset in frames (0..period-1), so panels tick at different moments
   seed: number;
   frame: boolean;
 };
@@ -50,6 +51,7 @@ const LAYOUT: { pos: [number, number, number]; size: [number, number]; kind?: Pa
 
 export const buildPanelDefs = (): PanelDef[] => {
   const rng = mulberry32(0x4d5);
+  const phaseRng = mulberry32(0x7a11);
   return LAYOUT.map((l, i) => ({
     kind: l.kind ?? pick(rng, KINDS),
     label: pick(rng, LABELS),
@@ -62,9 +64,10 @@ export const buildPanelDefs = (): PanelDef[] => {
         : -l.pos[0] * 0.08 + range(rng, -0.05, 0.05),
     opacity: range(rng, 0.3, 0.6) * (l.pos[2] > 0.5 ? 0.45 : 1),
     period: pick(rng, TICK_PERIODS),
+    phase: 0, // filled below once the period is known
     seed: 1000 + i * 97,
     frame: l.frame ?? false,
-  }));
+  })).map((d) => ({ ...d, phase: Math.floor(phaseRng() * d.period) }));
 };
 
 const PX_PER_UNIT = 760; // canvas resolution per world unit
@@ -393,7 +396,9 @@ export const buildHud = (defs: PanelDef[], color: string, accent: string): HudRi
     const tanHalf = Math.tan((cam.fov * Math.PI) / 360);
     panels.forEach((p, i) => {
       const loopTicks = Math.max(1, Math.round(loopLen / p.def.period));
-      const tick = Math.floor(frame / p.def.period);
+      // phase offset keeps panels from ticking together; the frame is already
+      // wrapped to the loop and the offset is constant, so loops stay seamless
+      const tick = Math.floor((frame + p.def.phase) / p.def.period);
       if (tick !== p.lastTick) {
         drawPanel(p.ctx, p.W, p.H, p.def, tick, loopTicks);
         p.tex.needsUpdate = true;

@@ -29,7 +29,7 @@ export const SCENE = {
   lookDrop: 0.26, // look slightly below the cube so the hand fits
   palmAnchor: new THREE.Vector3(-0.03, 0.1, 0.02), // where the cube sits (palm local)
   floatGap: 0.07, // gap between palm and cube bottom once floating
-  handTilt: 28 * DEG, // palm tilted toward the camera
+  handTilt: 36 * DEG, // palm tilted toward the camera
   handYaw: 2 * DEG, // fingers point toward the viewer
   handRoll: -4 * DEG,
   handScale: 1.0,

@@ -299,7 +299,7 @@ export const buildHand = (mats: HandMaterials): HandRig => {
       nBottom: 3,
       capStart: 0,
       capEnd: 0.06,
-      section: (t) => ({ w: lerp(0.6, 0.72, Math.sin(Math.PI * t)), h: lerp(0.36, 0.38, t), oy: -0.02 }),
+      section: (t) => ({ w: lerp(0.6, 0.72, Math.sin(Math.PI * t)), h: lerp(0.28, 0.32, t), oy: -0.09 }),
     }),
     mats.shell,
   );
@@ -307,26 +307,26 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   // hinge pin through the cuff, caps visible on both sides
   const wristPin = new THREE.Mesh(pinGeo, mats.metal);
   wristPin.scale.set(0.8, 0.07, 0.07);
-  wristPin.position.set(0, -0.02, -0.68);
+  wristPin.position.set(0, -0.09, -0.68);
   palm.add(wristPin);
   [-1, 1].forEach((side) => {
     const boss = new THREE.Mesh(plateGeo, mats.joint);
     boss.scale.set(0.05, 0.13, 0.13);
-    boss.position.set(side * 0.36, -0.02, -0.68);
+    boss.position.set(side * 0.36, -0.09, -0.68);
     palm.add(boss);
   });
   const cuffSeam: THREE.Vector3[] = [];
   for (let i = 0; i < 48; i++) {
-    const p = sectionPoint({ w: 0.6, h: 0.36, oy: -0.02 }, (i / 48) * Math.PI * 2, 3, 3, 1.006);
+    const p = sectionPoint({ w: 0.6, h: 0.28, oy: -0.09 }, (i / 48) * Math.PI * 2, 3, 3, 1.006);
     cuffSeam.push(new THREE.Vector3(p.x, p.y, -0.88));
   }
   palm.add(tube(cuffSeam, 0.008, mats.joint, true, 96));
 
   const wrist = new THREE.Group();
-  wrist.position.set(0, -0.02, -0.88);
+  wrist.position.set(0, -0.09, -0.88);
   wrist.rotation.x = -14 * DEG; // forearm heads back and down out of frame
   palm.add(wrist);
-  // rotary wrist ring with bolt heads between cuff and forearm
+  // rotary wrist ring between cuff and forearm
   const ringG = loft({
     zStart: -0.06,
     length: 0.1,
@@ -337,16 +337,6 @@ export const buildHand = (mats: HandMaterials): HandRig => {
     section: () => ({ w: 0.64, h: 0.42 }),
   });
   wrist.add(new THREE.Mesh(ringG, mats.joint));
-  const boltG = new THREE.CylinderGeometry(0.018, 0.018, 0.02, 6);
-  boltG.rotateX(Math.PI / 2);
-  for (let i = 0; i < 10; i++) {
-    const th = (i / 10) * Math.PI * 2 + 0.3;
-    const p = sectionPoint({ w: 0.64, h: 0.42 }, th, 2.8, 2.8, 1.0);
-    const bolt = new THREE.Mesh(boltG, mats.metal);
-    bolt.position.set(p.x * 1.01, p.y * 1.01, -0.01);
-    bolt.lookAt(p.x * 3, p.y * 3, -0.01);
-    wrist.add(bolt);
-  }
   const foreLen = 7;
   const fore = new THREE.Mesh(
     loft({
