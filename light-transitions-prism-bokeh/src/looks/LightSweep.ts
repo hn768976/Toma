@@ -10,6 +10,8 @@ export interface LightSweepParams {
   bandDeep: string;
   bandMid: string;
   bandBright: string;
+  /** Saturated accent that shows through the band's mid zone (magenta in violet). */
+  bandAccent: string;
 }
 
 // Units: y in [0,1] = frame height, x in [0,aspect]. 1/720 = one pixel at 720p.
@@ -20,7 +22,8 @@ in vec2 vUV;
 out vec4 finalColor;
 uniform float uAspect;
 uniform vec3 uStreak;
-uniform vec3 uDeep, uMid, uBright;
+uniform vec3 uDeep, uMid, uBright, uAccent;
+uniform vec2 uKink;   // streak B: x position and height of its small step
 // Streaks: curve (y0, slope, curvature, xc), anim (xTail, xHead, intensity, whiteMix)
 uniform vec4 uCurveA, uAnimA, uCurveD, uAnimD, uCurveB, uAnimB;
 uniform vec4 uBand;   // lead, intensity, -, -
@@ -38,16 +41,21 @@ vec3 streak(vec2 p, vec4 cv, vec4 an, vec3 col, float seed) {
   float x = p.x;
   float dx = x - cv.w;
   // Fixed arc jitter (does not change over time -> no shimmer).
-  float jit = 1.1 * PX * n1(x * 38.0, seed) + 0.45 * PX * n1(x * 110.0, seed + 3.0);
-  float yc = cv.x + cv.y * dx + cv.z * dx * dx + jit;
+  float jk = seed > 8.0 ? 0.3 : 1.0;
+  float jit = jk * (1.1 * PX * n1(x * 38.0, seed) + 0.45 * PX * n1(x * 110.0, seed + 3.0));
+  float kink = seed > 8.0 ? uKink.y * smoothstep(uKink.x - 0.03, uKink.x + 0.03, x) : 0.0;
+  float yc = cv.x + cv.y * dx + cv.z * dx * dx + jit + kink;
   float slope = cv.y + 2.0 * cv.z * dx;
   float d = abs(p.y - yc) / sqrt(1.0 + slope * slope);
   float len = max(an.y - an.x, 1e-3);
   float along = (x - an.x) / len;            // 0 at tail, 1 at head
   float m = smoothstep(0.0, 0.25, along) * (1.0 - smoothstep(1.0, 1.0 + 6.0 * PX / len, along));
   m *= mix(0.25, 1.0, sat(along));
-  float core = exp(-pow(d / (1.35 * PX), 2.0));
-  float glow = 0.45 * exp(-d / (5.0 * PX)) + 0.14 * exp(-pow(d / (22.0 * PX), 2.0));
+  // Streak B (seed 9) is the broad, flat stroke that crosses the band.
+  bool broad = seed > 8.0;
+  float core = broad ? smoothstep(5.6 * PX, 4.0 * PX, d) : exp(-pow(d / (1.35 * PX), 2.0));
+  float glow = broad ? 0.12 * exp(-d / (6.0 * PX))
+                     : 0.45 * exp(-d / (5.0 * PX)) + 0.14 * exp(-pow(d / (22.0 * PX), 2.0));
   vec2 head = vec2(an.y, cv.x + cv.y * (an.y - cv.w) + cv.z * (an.y - cv.w) * (an.y - cv.w));
   float hd = length(p - head);
   float headGlow = exp(-pow(hd / (9.0 * PX), 2.0)) * 1.4 + exp(-hd / (30.0 * PX)) * 0.35;
@@ -59,22 +67,24 @@ vec3 streak(vec2 p, vec4 cv, vec4 an, vec3 col, float seed) {
 vec3 bandGrad(float g) {
   // g: 0 = leading edge (bright) -> 1 = trailing (deep). The mid zone leans
   // toward the streak hue (magenta in the violet version).
-  vec3 mid = mix(uMid, uStreak * 0.72, 0.38);
-  vec3 c = mix(uBright, mid, smoothstep(0.45, 0.8, g));
-  return mix(c, uDeep, smoothstep(0.8, 1.1, g));
+  vec3 mid = mix(uMid, uAccent, 0.7);
+  vec3 c = mix(uBright, mid, smoothstep(0.55, 0.8, g));
+  return mix(c, mix(uDeep, uAccent * 0.5, 0.75), smoothstep(0.82, 1.15, g));
 }
 
 // Rounded-end horizontal strips stacked inside the band (soft tone steps).
 float strips(vec2 p, float lead) {
   float acc = 0.0;
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < 5; i++) {
     float fi = float(i);
-    float yc = 0.08 + fi * 0.17 + 0.03 * sin(fi * 2.3);
-    float hh = 0.05 + 0.03 * hash21(vec2(fi, 4.0));
+    float yc = 0.1 + fi * 0.21 + 0.02 * sin(fi * 2.3);
+    float hh = 0.1 + 0.035 * hash21(vec2(fi, 4.0));
     float xEnd = (0.55 + 0.45 * hash21(vec2(fi, 9.0))) * uAspect + (lead - 0.95) * 0.9;
     vec2 q = vec2(max(p.x - (xEnd - hh), 0.0), p.y - yc);
     float sd = length(q) - hh;                       // pill with rounded right end
-    acc += (0.07 + 0.07 * hash21(vec2(fi, 2.0))) * smoothstep(0.012, -0.012, sd);
+    // Signed tone step: each pill is a lighter or darker shade than what is behind it.
+    float tone = (hash21(vec2(fi, 2.0)) < 0.5 ? -1.0 : 1.0) * (0.04 + 0.04 * hash21(vec2(fi, 6.0)));
+    acc += tone * smoothstep(0.006, -0.006, sd);
   }
   return acc;
 }
@@ -92,7 +102,7 @@ vec3 band(vec2 p) {
   float front = smoothstep(-0.004, 0.012, lead - s);       // just behind the edge
   float back = 1.0 - smoothstep(0.95, 1.3, g);              // soft trailing fade
   vec3 fill = bandGrad(sat(g)) * front * back;
-  fill *= 1.0 + strips(p, lead) * (1.0 - smoothstep(0.5, 0.9, g));
+  fill *= max(1.0 + strips(p, lead) * (1.0 - smoothstep(0.6, 0.95, g)), 0.0);
   // White edge line on the leading edge.
   float e = lead - s;
   float de = abs(e) * inversesqrt(1.0 + pow(0.18 * across, 2.0));
@@ -134,7 +144,7 @@ void main() {
   vec3 c = band(p);
   c += streak(p, uCurveA, uAnimA, uStreak, 1.0);
   c += streak(p, uCurveD, uAnimD, mix(uStreak, vec3(1.0), 0.75), 5.0);
-  c += streak(p, uCurveB, uAnimB, mix(uStreak, vec3(1.0), 0.55), 9.0);
+  c += streak(p, uCurveB, uAnimB, mix(uStreak, vec3(1.0), 0.45) * 0.85, 9.0);
   c += shard(p);
   finalColor = vec4(softClip(max(c, 0.0)), 1.0);
 }`;
@@ -151,6 +161,8 @@ export const buildLightSweep: LookBuilder<LightSweepParams> = ({ width, height }
     uDeep: v3(params.bandDeep),
     uMid: v3(params.bandMid),
     uBright: v3(params.bandBright),
+    uAccent: v3(params.bandAccent),
+    uKink: { value: new Float32Array([aspect * 0.11, -0.022]), type: "vec2<f32>" },
     // Streak A: low gentle curve across the lower third, left -> right.
     uCurveA: v4(0.7, -0.12, 0.09, aspect * 0.5),
     uAnimA: v4(),
@@ -172,11 +184,12 @@ export const buildLightSweep: LookBuilder<LightSweepParams> = ({ width, height }
   const lead = spline([
     [1.2, -1.35],
     [2.0, -0.05],
-    [3.1, 1.35],
-    [4.5, 4.1],
+    [2.6, 1.15],
+    [3.8, 1.8],
+    [4.55, 3.7],
   ]);
-  const headB = spline([[1.85, -0.05], [2.75, aspect + 0.2]]);
-  const tailB = spline([[2.0, -0.4], [3.6, aspect * 0.35]]);
+  const headB = spline([[1.85, -0.05], [2.6, aspect + 0.2]]);
+  const tailB = spline([[2.9, -0.6], [4.0, aspect * 0.6]]);
   const shardU = spline([[4.5, -0.55], [5.8, 0.75]]);
   const headD = spline([[6.0, aspect * 0.48], [6.9, aspect + 0.1]]);
   const tailD = spline([[6.15, aspect * 0.4], [7.25, aspect + 0.05]]);
@@ -193,8 +206,8 @@ export const buildLightSweep: LookBuilder<LightSweepParams> = ({ width, height }
       // Hard guarantee: first and last frame fully black.
       const ends = frame <= 0 || frame >= 239 ? 0 : 1;
       set("uAnimA", [tailA(t), headA(t), envelope(0.1, 0.3, 0.85, 1.2, t) * ends, 0.75]);
-      set("uBand", [lead(t), smootherstep(1.2, 1.35, t) * (1 - smootherstep(4.35, 4.6, t)) * ends]);
-      set("uAnimB", [tailB(t), headB(t), envelope(1.85, 2.05, 3.4, 4.1, t) * ends, 0.85]);
+      set("uBand", [lead(t), smootherstep(1.2, 1.35, t) * (1 - smootherstep(4.45, 4.7, t)) * ends]);
+      set("uAnimB", [tailB(t), headB(t), envelope(1.85, 2.05, 3.4, 4.1, t) * ends, 0.35]);
       const su = shardU(t);
       const a = [1 / Math.hypot(1, 0.78), -0.78 / Math.hypot(1, 0.78)];
       set("uShard", [0.32 + a[0] * su, 0.3 + a[1] * su, envelope(4.5, 4.75, 5.35, 5.95, t) * ends]);

@@ -27,7 +27,11 @@ void main() {
   float d = length(q) / length(vec2(0.5 * uAspect, 0.5));
   float k = smoothstep(0.0, 1.0, d);
   k = k * k * (1.2 - 0.2 * k);
-  finalColor = vec4(mix(uCentre, uCorner, sat(k)), 1.0);
+  vec3 c = mix(uCentre, uCorner, sat(k));
+  // Large, very soft blotches of deeper red (static, so the loop stays exact).
+  float m = fbm(q * 2.2 + 3.7);
+  c *= mix(0.82, 1.06, smoothstep(0.25, 0.75, m));
+  finalColor = vec4(c, 1.0);
 }`;
 
 // Pre-baked sprite textures (drawn once, before the first frame).
@@ -40,14 +44,15 @@ const canvasTex = (size: number, draw: (g: CanvasRenderingContext2D, s: number) 
   return Texture.from(c);
 };
 
-const discTexture = (edge: number, rim: number) =>
+const discTexture = (soft: number) =>
   canvasTex(256, (g, s) => {
     const r = s / 2;
     const grad = g.createRadialGradient(r, r, 0, r, r, r);
-    grad.addColorStop(0, "rgba(255,255,255,0.78)");
-    grad.addColorStop(Math.max(0.05, 1 - edge - 0.18), "rgba(255,255,255,0.84)");
-    grad.addColorStop(1 - edge * 0.6, `rgba(255,255,255,${rim})`);
-    grad.addColorStop(1 - edge * 0.25, "rgba(255,255,255,0.45)");
+    // Out-of-focus disc: even, slightly brighter middle, feathered edge, no rim.
+    grad.addColorStop(0, "rgba(255,255,255,1)");
+    grad.addColorStop(Math.max(0.05, 1 - soft - 0.25), "rgba(255,255,255,0.9)");
+    grad.addColorStop(1 - soft, "rgba(255,255,255,0.72)");
+    grad.addColorStop(1 - soft * 0.4, "rgba(255,255,255,0.25)");
     grad.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = grad;
     g.fillRect(0, 0, s, s);
@@ -69,7 +74,7 @@ const starTexture = () =>
   canvasTex(256, (g, s) => {
     const r = s / 2;
     g.globalCompositeOperation = "lighter";
-    const glow = g.createRadialGradient(r, r, 0, r, r, r * 0.4);
+    const glow = g.createRadialGradient(r, r, 0, r, r, r * 0.3);
     glow.addColorStop(0, "rgba(255,255,255,1)");
     glow.addColorStop(0.25, "rgba(255,255,255,0.5)");
     glow.addColorStop(1, "rgba(255,255,255,0)");
@@ -86,9 +91,9 @@ const starTexture = () =>
       lg.addColorStop(1, "rgba(255,255,255,0)");
       g.fillStyle = lg;
       g.beginPath();
-      g.moveTo(0, -s * 0.03);
+      g.moveTo(0, -s * 0.014);
       g.lineTo(r, 0);
-      g.lineTo(0, s * 0.03);
+      g.lineTo(0, s * 0.014);
       g.closePath();
       g.fill();
       g.restore();
@@ -112,9 +117,9 @@ interface Item {
 
 // Layers: [repeatsX, repeatsY] per loop -> drift by whole layout repeats.
 const LAYERS = [
-  { count: 70, rMin: 40, rMax: 88, aMin: 0.1, aMax: 0.26, dx: 0, dy: 1, tex: 0 }, // large, faint
-  { count: 150, rMin: 12, rMax: 28, aMin: 0.1, aMax: 0.24, dx: 1, dy: 1, tex: 1 }, // medium
-  { count: 380, rMin: 2.5, rMax: 7, aMin: 0.14, aMax: 0.4, dx: -1, dy: 2, tex: 2 }, // small, bright
+  { count: 70, rMin: 34, rMax: 105, aMin: 0.1, aMax: 0.5, dx: 0, dy: 1, tex: 0 }, // large: the visible discs
+  { count: 150, rMin: 12, rMax: 30, aMin: 0.04, aMax: 0.16, dx: 1, dy: 1, tex: 1 }, // medium, faint
+  { count: 380, rMin: 2.5, rMax: 7, aMin: 0.03, aMax: 0.12, dx: -1, dy: 2, tex: 2 }, // small, faint specks
 ];
 
 export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, params) => {
@@ -128,7 +133,7 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
   const scene = new Container();
   scene.addChild(bg.mesh);
 
-  const discTex = [discTexture(0.3, 0.86), discTexture(0.16, 0.95), discTexture(0.1, 1.0)];
+  const discTex = [discTexture(0.26), discTexture(0.3), discTexture(0.45)];
   const glowTex = glowTexture();
   const starTex = starTexture();
   const rng = mulberry32(0x5eed_b0e);
@@ -159,7 +164,7 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
         bx: rng() * domW,
         by: rng() * domH,
         layer: li,
-        baseAlpha: range(rng, L.aMin, L.aMax),
+        baseAlpha: L.aMin + (L.aMax - L.aMin) * Math.pow(rng(), 1.3),
         baseScale,
         tw: 1 + Math.floor(rng() * 2),
         ph: rng(),
@@ -178,18 +183,18 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
     sp.anchor.set(0.5);
     sp.blendMode = "add" as BLEND_MODES;
     sp.tint = sparkleTint;
-    const size = range(rng, 3.5, 9) * S;
+    const size = range(rng, 2.5, 6) * S;
     sparkLayer.addChild(sp);
     items.push({
       sprite: sp,
       bx: rng() * domW,
       by: rng() * domH,
       layer: 1 + (rng() < 0.5 ? 1 : 0),
-      baseAlpha: range(rng, 0.25, 0.85),
+      baseAlpha: range(rng, 0.03, 0.22),
       baseScale: size / 64,
       tw: 1 + Math.floor(rng() * 7),
       ph: rng(),
-      glint: rng() < 0.12 ? 1 : 0,
+      glint: rng() < 0.04 ? 1 : 0,
       gc: 1 + Math.floor(rng() * 3),
       gph: rng(),
       rot0: 0,
@@ -200,14 +205,16 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
     sp.anchor.set(0.5);
     sp.blendMode = "add" as BLEND_MODES;
     sp.tint = sparkleTint;
-    const size = range(rng, 16, 40) * S;
+    // Two hero stars with long rays; the rest are small and dim.
+    const hero = i < 2;
+    const size = (hero ? range(rng, 110, 140) : range(rng, 10, 22)) * S;
     sparkLayer.addChild(sp);
     items.push({
       sprite: sp,
       bx: rng() * domW,
       by: rng() * domH,
       layer: 1,
-      baseAlpha: range(rng, 0.6, 1.0),
+      baseAlpha: hero ? 1 : range(rng, 0.2, 0.55),
       baseScale: size / 256,
       tw: 1 + Math.floor(rng() * 4),
       ph: rng(),
@@ -246,9 +253,9 @@ export const buildRedBokeh: LookBuilder<RedBokehParams> = ({ width, height }, pa
           sp.rotation = it.rot0 + 0.12 * Math.sin(TAU * (ph + it.ph));
         } else {
           // Tiny point: twinkle, some with brief glints.
-          const tw = Math.pow(0.5 + 0.5 * s, 3);
+          const tw = Math.pow(0.5 + 0.5 * s, 6);
           const gl = it.glint ? Math.pow(0.5 + 0.5 * Math.sin(TAU * (it.gc * ph + it.gph)), 24) : 0;
-          sp.alpha = Math.min(1, it.baseAlpha * (0.2 + 0.8 * tw) + gl);
+          sp.alpha = Math.min(1, it.baseAlpha * (0.1 + 0.9 * tw) + 0.8 * gl);
           sp.scale.set(it.baseScale * (1 + 1.2 * gl));
         }
       }

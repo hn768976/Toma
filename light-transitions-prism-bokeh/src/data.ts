@@ -16,9 +16,9 @@ export type VersionRow =
 export const VERSIONS: VersionRow[] = [
   // Look 1 — Light Sweep (8s transition)
   { id: "LightSweep-Violet", file: "LightSweep_Violet", look: "lightSweep",
-    params: { streak: "#C878FF", bandDeep: "#0A0030", bandMid: "#3A10C8", bandBright: "#2A00FF" } },
+    params: { streak: "#C878FF", bandDeep: "#0A0030", bandMid: "#3A10C8", bandBright: "#2A00FF", bandAccent: "#7A00D0" } },
   { id: "LightSweep-Gold", file: "LightSweep_Gold", look: "lightSweep",
-    params: { streak: "#FFD88A", bandDeep: "#1A0A00", bandMid: "#8A4A0A", bandBright: "#FFB040" } },
+    params: { streak: "#FFD88A", bandDeep: "#1A0A00", bandMid: "#8A4A0A", bandBright: "#FFB040", bandAccent: "#D05A00" } },
   // Look 2 — Flare Burst (6s transition)
   { id: "FlareBurst-VioletGold", file: "FlareBurst_VioletGold", look: "flareBurst",
     params: { glow: "#8A4AFF", core: "#FFC870", whiteout: "#FFF4E0", ghost: "#FF6AC8" } },
