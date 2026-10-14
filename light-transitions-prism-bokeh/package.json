@@ -1,0 +1,23 @@
+{
+  "name": "light-transitions-prism-bokeh",
+  "version": "1.0.0",
+  "description": "Light Sweep, Flare Burst, Light Leak, Prism Light and Red Bokeh motion graphics (Remotion + PixiJS 8 / WebGL2)",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "pixi.js": "8.20.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
