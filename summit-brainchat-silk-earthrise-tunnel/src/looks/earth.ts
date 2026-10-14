@@ -51,7 +51,7 @@ function loadTexture(url: string) {
 
 export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(30, ctx.width / ctx.height, 0.5, 200);
+  const camera = new THREE.PerspectiveCamera(17, ctx.width / ctx.height, 0.5, 200);
 
   scene.add(
     makeBackground(
@@ -113,7 +113,9 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         float city = smoothstep(0.0, 0.18, night.r - night.b) * (0.6 + 2.5 * dot(night, vec3(0.33)));
         float NdV = max(dot(normalize(vN), normalize(vV)), 0.0);
         float rim = pow(1.0 - NdV, 3.0);
-        vec3 c = base + uCity * city * 7.0 + uRim * (rim * 0.4 + pow(1.0 - NdV, 10.0) * 1.4);
+        // atmospheric haze washes the surface, more towards the limb
+        vec3 haze = vec3(0.045, 0.085, 0.19) * (0.35 + 0.65 * pow(1.0 - NdV, 1.5));
+        vec3 c = base * 0.9 + haze + uCity * city * 8.0 + uRim * (rim * 0.35 + pow(1.0 - NdV, 10.0) * 1.1);
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -133,7 +135,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         float tca = dot(oc, d);
         float dist = length(oc - d * tca);
         float x = max(dist - uR, 0.0) / uR;
-        float g = exp(-x / 0.01) * 1.0 + exp(-x / 0.06) * 0.4 + exp(-x / 0.3) * 0.18;
+        float g = exp(-x / 0.008) * 0.9 + exp(-x / 0.04) * 0.3 + exp(-x / 0.25) * 0.1;
         g *= 1.0 - smoothstep(0.6, 0.95, x);
         gl_FragColor = vec4(uRim * g, 1.0);
       }`,
@@ -146,8 +148,10 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   scene.add(atmo);
 
   // ---- geodesic grid ----------------------------------------------------------
-  // 3 levels of 4:1 subdivision = 1280 faces; three.js expresses that as detail 7
-  const ico = new THREE.IcosahedronGeometry(R * 1.012, 7);
+  // Spec asked for "detail 3" (3 subdivision levels = 1280 faces = three.js detail 7).
+  // At the reference's framing its cells are finer than that, so we use 12
+  // segments per icosahedron edge (three.js detail 11, 2880 faces).
+  const ico = new THREE.IcosahedronGeometry(R * 1.012, 11);
   const ipos = ico.attributes.position.array as Float32Array;
   const vkey = (i: number) => `${ipos[i * 3].toFixed(3)},${ipos[i * 3 + 1].toFixed(3)},${ipos[i * 3 + 2].toFixed(3)}`;
   const vmap = new Map<string, number>();
@@ -183,17 +187,17 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   }
   const grid = makeScreenLines(new Float32Array(segs), {
     color: p.grid,
-    intensity: 2.6,
+    intensity: 3.6,
     opacity: p.gridOpacity,
-    widthPx: 1.05,
+    widthPx: 1.35,
     pxScale: ctx.pxScale,
     resolution: ctx.resolution,
   });
   spin.add(grid);
   const nodes = makeScreenPoints(new Float32Array(verts), {
     color: p.grid,
-    intensity: 2.6,
-    sizePx: 3.6,
+    intensity: 4.5,
+    sizePx: 4.6,
     pxScale: ctx.pxScale,
     softness: 0.4,
   });
@@ -223,7 +227,8 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
       if (ib !== ia && an > 0.12 && an < 0.7) { b = cand; break; }
     }
     const ang = a.angleTo(b);
-    const c = a.clone().add(b).normalize().multiplyScalar(R * (1.06 + Math.min(0.45, 0.85 * ang)));
+    const tall = rnd() < 0.3 ? range(rnd, 0.15, 0.4) : 0;
+    const c = a.clone().add(b).normalize().multiplyScalar(R * (1.06 + Math.min(0.45, 0.85 * ang) + tall));
     const arc: Arc = { a, b, c, period: periods[i % 3], offset: Math.floor(rnd() * 600), flight: Math.round(range(rnd, 55, 80)) };
     arcs.push(arc);
     const P0 = new THREE.Vector3(), P1 = new THREE.Vector3();
@@ -238,8 +243,8 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   const heads = new Float32Array(NA);
   const arcLines = makeScreenLines(new Float32Array(aseg), {
     color: p.arc,
-    intensity: 3.2,
-    widthPx: 1.8,
+    intensity: 3.4,
+    widthPx: 1.25,
     pxScale: ctx.pxScale,
     resolution: ctx.resolution,
     sParams: new Float32Array(as),
@@ -251,7 +256,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
       float d = h - s;
       float a = (d >= 0.0 && h > 0.0) ? exp(-d / 0.32) : 0.0;
       a *= 1.0 - smoothstep(1.2, 1.5, h);
-      col = vec4(base * (1.0 + 1.5 * exp(-d / 0.03)), a);`,
+      col = vec4(mix(base, vec3(base.r, base.r * 0.85, base.r * 0.8), 0.25) * (1.0 + 2.0 * exp(-d / 0.03)), a);`,
   });
   spin.add(arcLines);
   const headPos = new Float32Array(NA * 3);
@@ -281,7 +286,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         float a = ring(r, 0.42, 0.06) * 0.8;            // location ring
         a += (1.0 - smoothstep(0.1, 0.14, r)) * 1.4;      // centre dot
         a += ring(r, 0.42 + 0.55 * ph, 0.05) * pow(1.0 - ph, 1.5) * 1.2; // pulse
-        gl_FragColor = vec4(uColor * a * 1.6, 1.0);
+        gl_FragColor = vec4(uColor * a * 0.9, 1.0);
       }`,
     transparent: true,
     depthWrite: false,
@@ -294,7 +299,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   for (let i = 0; i < NR; i++) {
     const [lat, lon] = CITIES[i];
     const pos = llToVec(lat, lon, R * 1.004);
-    const g = new THREE.PlaneGeometry(0.42, 0.42);
+    const g = new THREE.PlaneGeometry(0.3, 0.3);
     const m = new THREE.Matrix4().lookAt(new THREE.Vector3(), pos.clone().normalize().negate(), new THREE.Vector3(0, 1, 0));
     g.applyMatrix4(m);
     g.translate(pos.x, pos.y, pos.z);
@@ -318,6 +323,34 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   const rings = new THREE.Mesh(merged, ringMat);
   spin.add(rings);
 
+  // ---- sparkles: dense near the limb band, scattered on the surface ----
+  const sprnd = mulberry32(SEED + 5);
+  const NSP = 1400;
+  const spPos = new Float32Array(NSP * 3), spPar = new Float32Array(NSP * 4), spSz = new Float32Array(NSP);
+  for (let i = 0; i < NSP; i++) {
+    // uniform on sphere, then kept in globe space (moves with the sway)
+    const u = sprnd() * 2 - 1, th = sprnd() * TAU;
+    const rr = Math.sqrt(1 - u * u);
+    const rad = R * (1.01 + 0.03 * sprnd() * sprnd());
+    spPos.set([rr * Math.cos(th) * rad, u * rad, rr * Math.sin(th) * rad], i * 3);
+    spPar[i * 4] = [2, 3, 4, 5, 6][Math.floor(sprnd() * 5)];
+    spPar[i * 4 + 1] = sprnd();
+    spSz[i] = range(sprnd, 0.5, 1.5);
+  }
+  const sparkles = makeScreenPoints(spPos, {
+    color: "#D8F4FF",
+    intensity: 2.2,
+    sizePx: 3.2,
+    pxScale: ctx.pxScale,
+    sizes: spSz,
+    params: spPar,
+    softness: 0.6,
+    uniforms: { uT: { value: 0 } },
+    decl: "uniform float uT;",
+    body: "float tw = 0.5 + 0.5 * sin(6.2831853 * (uT * P.x + P.y)); col.rgb = base * (0.15 + 1.8 * tw * tw * tw);",
+  });
+  spin.add(sparkles);
+
   // ---- textures ------------------------------------------------------------
   const ready = Promise.all([
     loadTexture(staticFile("textures/nasa_black_marble_4096.jpg")),
@@ -335,16 +368,17 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
     ctx.gl.initTexture(day);
   });
 
-  const camBase = new THREE.Vector3(0, 3.2, 21.5);
-  const look = new THREE.Vector3(0, 10.2, 0);
+  const camBase = new THREE.Vector3(0, 4.2, 23.5);
+  const look = new THREE.Vector3(0, 10.35, 0);
   const post = {
     exposure: p.exposure,
     bloomStrength: 0.5,
     bloomThreshold: 0.85,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 15, aperture: 0.006, maxCoc: 0.008, nearScale: 1 },
-    vignette: 0.3,
+    dof: { focus: 15, aperture: 0.012, maxCoc: 0.008, nearScale: 1.2 },
+    vignette: 0.08,
+    saturation: 0.85,
     grain: 0.015,
     grainFadeLum: 0,
   };
@@ -353,6 +387,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
 
   const update = (f: number) => {
     const t = f / LOOP;
+    (sparkles.material as THREE.ShaderMaterial).uniforms.uT.value = t;
     // sway 20° one way and back: cosine, exact loop
     spin.rotation.y = baseYaw + THREE.MathUtils.degToRad(20) * (0.5 - 0.5 * Math.cos(TAU * t));
     // slow push ±2%
@@ -361,7 +396,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
     camera.lookAt(look);
     camera.updateMatrixWorld();
     atmoMat.uniforms.uCenter.value.set(0, 0, 0);
-    post.dof.focus = camera.position.distanceTo(new THREE.Vector3(0, R * 0.8, R * 0.55));
+    post.dof.focus = camera.position.distanceTo(new THREE.Vector3(0, R * 0.92, R * 0.38));
 
     for (let i = 0; i < NA; i++) {
       const A = arcs[i];
