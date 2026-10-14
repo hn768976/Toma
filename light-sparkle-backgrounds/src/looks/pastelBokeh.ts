@@ -39,7 +39,7 @@ vec3 background(vec2 p) {
   g = mix(g, vec3(1.0), 0.1 * band);
   // Soft central glow.
   vec2 cq = (p - vec2(1950.0, 1200.0)) / vec2(1500.0, 700.0);
-  g = mix(g, vec3(1.0), 0.18 * exp(-dot(cq, cq)));
+  g = mix(g, vec3(1.0), 0.08 * exp(-dot(cq, cq)));
   // Thin glowing wavy lines, white at ~40%.
   float lines = 0.0;
   for (int i = 0; i < ${NLINES}; i++) {
@@ -51,7 +51,7 @@ vec3 background(vec2 p) {
     float glow = exp(-d * d / (2.0 * 30.0 * 30.0));
     lines += uLineB[i].w * fade * (0.85 * core + 0.35 * glow);
   }
-  g = g + (1.0 - g) * clamp(0.55 * lines, 0.0, 1.0);
+  g = g + (1.0 - g) * clamp(0.8 * lines, 0.0, 1.0);
   return g;
 }
 `;
@@ -81,7 +81,7 @@ export const pastelBokeh =
         c2: range(rng, 1.8, 3.2),
         p2: rng() * TAU,
         m2: pick(rng, [-1, 1, 2, -2]),
-        inten: i < 2 ? range(rng, 0.8, 1.0) : range(rng, 0.3, 0.5),
+        inten: i < 2 ? range(rng, 0.85, 1.0) : range(rng, 0.5, 0.7),
         ik: pick(rng, [1, 2]),
         ip: rng() * TAU,
       });
@@ -108,8 +108,8 @@ export const pastelBokeh =
     const discs: Disc[] = [];
     const LAYERS = [
       { count: 180, pcs: [back], tex: [kit.bokehSoft], size: [220, 420], alpha: [0.03, 0.07], n: 1 },
-      { count: 300, pcs: [midR, midH], tex: [kit.bokehSoft, kit.bokehHex], size: [130, 240], alpha: [0.08, 0.16], n: 1 },
-      { count: 420, pcs: [front], tex: [kit.bokehSoft], size: [70, 160], alpha: [0.07, 0.15], n: 2 },
+      { count: 300, pcs: [midR, midH], tex: [kit.bokehSoft, kit.bokehHex], size: [130, 260], alpha: [0.04, 0.09], n: 1 },
+      { count: 420, pcs: [front], tex: [kit.bokehSoft], size: [70, 160], alpha: [0.035, 0.09], n: 2 },
     ];
     for (const L of LAYERS) {
       const margin = L.size[1] * 0.6;
@@ -159,7 +159,7 @@ export const pastelBokeh =
       const p = addParticle(flares, kit.flare4);
       p.rotation = range(rng, -0.1, 0.1);
       glows.push(addParticle(points, kit.dot));
-      fls.push({ p, x: range(rng, 0, DESIGN_W), y: yMid(rng), size: range(rng, 130, 280), a: range(rng, 0.75, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU });
+      fls.push({ p, x: range(rng, 0, DESIGN_W), y: yMid(rng), size: i < 10 ? range(rng, 360, 520) : range(rng, 110, 240), a: range(rng, 0.75, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU });
     }
     const glints: Glint[] = [];
     for (let i = 0; i < 24; i++) glints.push({ target: Math.floor(rng() * fls.length), start: Math.floor(rng() * 600), dur: Math.floor(range(rng, 10, 16)), gain: range(rng, 0.8, 1.3) });

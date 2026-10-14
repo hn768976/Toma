@@ -14,8 +14,8 @@ vec3 background(vec2 p) { return vec3(0.0); }
 
 const tintFor = (t: number) => {
   // t in [-1,1]: warm .. cool white
-  const warm = [1.0, 0.9, 0.78];
-  const cool = [0.8, 0.88, 1.0];
+  const warm = [1.0, 0.8, 0.62];
+  const cool = [0.7, 0.82, 1.0];
   const a = t < 0 ? warm : cool;
   const k = Math.abs(t);
   const c = [0, 1, 2].map((i) => 1 + (a[i] - 1) * k);
@@ -57,11 +57,12 @@ export const starTwinkle =
     const stars: Star[] = [];
     for (let i = 0; i < 120; i++) {
       const at = place();
-      const tint = tintFor(range(rng, -0.4, 0.3));
+      const tint = tintFor(range(rng, -0.9, 0.9));
       const core = addParticle(cores, kit.dot);
       const h = addParticle(hRays, kit.streakChroma);
       const v = addParticle(vRays, kit.streakWarmCool);
       v.rotation = Math.PI / 2; // warm end up, cool end down
+      h.rotation = Math.PI; // red fringe above the horizontal spike, blue below
       const hz = [0xff8a70, 0x7090ff].map((t) => {
         const q = addParticle(hazes, kit.dot);
         q.tint = t;
@@ -74,7 +75,7 @@ export const starTwinkle =
       });
       // Sizes vary 1-6x; brightness heavily skewed so only a few dozen stand out.
       const scale = 1 + 5 * Math.pow(rng(), 3);
-      stars.push({ core, h, v, hz, scale, a: 0.03 + 0.97 * Math.pow(rng(), 4.5) * Math.min(1, scale / 2), k: pick(rng, [1, 2, 3, 4, 5]), phi: rng() * TAU, sharp: range(rng, 1, 2) });
+      stars.push({ core, h, v, hz, scale, a: 0.03 + 0.97 * Math.pow(rng(), 3) * Math.min(1, scale / 2), k: pick(rng, [1, 2, 3, 4, 5]), phi: rng() * TAU, sharp: range(rng, 1, 2) });
     }
     // ~3 glints per second -> 60 per 600-frame loop.
     const glints: Glint[] = [];
@@ -105,18 +106,19 @@ export const starTwinkle =
           s.core.alpha = Math.min(1, a * 0.9);
           setSize(s.core, 45 + 25 * s.scale);
           // Short, soft + spikes of similar length; small stars are plain dots.
-          const spikes = Math.min(1, Math.max(0, (s.scale - 1.3) / 0.8));
+          const spikes = Math.min(1, Math.max(0, (s.scale - 2.0) / 0.8));
           s.h.alpha = a * 0.9 * spikes;
-          setSize(s.h, 125 * L, 40);
+          setSize(s.h, 125 * L, 55);
           s.v.alpha = a * 0.9 * spikes;
-          setSize(s.v, 135 * L, 40);
+          setSize(s.v, 135 * L, 55);
           // Red / blue fringe hugging the core, above and below the horizontal spike.
-          s.hz[0].alpha = a * 0.35 * spikes;
-          s.hz[0].y = s.v.y - 8 * s.scale;
-          s.hz[1].alpha = a * 0.35 * spikes;
-          s.hz[1].y = s.v.y + 8 * s.scale;
-          setSize(s.hz[0], 40 * s.scale, 22 * s.scale);
-          setSize(s.hz[1], 40 * s.scale, 22 * s.scale);
+          // Broad two-tone wash around the core: warm above, deep blue below.
+          s.hz[0].alpha = a * 0.5 * spikes;
+          s.hz[0].y = s.v.y - 10 * s.scale;
+          s.hz[1].alpha = a * 0.5 * spikes;
+          s.hz[1].y = s.v.y + 10 * s.scale;
+          setSize(s.hz[0], 70 * s.scale, 40 * s.scale);
+          setSize(s.hz[1], 70 * s.scale, 40 * s.scale);
         });
       },
     };

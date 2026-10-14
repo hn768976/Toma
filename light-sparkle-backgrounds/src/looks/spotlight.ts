@@ -38,7 +38,7 @@ vec3 background(vec2 p) {
   float r = length(v) / 2160.0;
   float ang = atan(v.x, v.y);
   // Background: deep at the edges, blue pooled under the source.
-  vec2 q = (p - vec2(1920.0, 380.0)) / vec2(2350.0, 1650.0);
+  vec2 q = (p - vec2(1920.0, 0.0)) / vec2(2700.0, 2300.0);
   float gd = clamp(length(q), 0.0, 1.4);
   vec3 bg = mix(uBgCenter, uBgEdge, smoothstep(0.0, 0.85, pow(gd, 0.7)));
   // Rays: ~140 degree fan, strong falloff to ~80% of the frame height.
@@ -68,7 +68,7 @@ export const spotlight =
       rays.push({
         a0: base + range(rng, -0.05, 0.05),
         w: range(rng, 0.05, 0.13),
-        i0: (rng() < 0.3 ? range(rng, 0.0, 0.12) : range(rng, 0.3, 0.75)) ,
+        i0: (rng() < 0.3 ? range(rng, 0.0, 0.12) : range(rng, 0.3, 0.75)) * (Math.abs(base / halfFan) > 0.5 ? 1.35 : 1),
         swayA: range(rng, 0.008, 0.025),
         swayK: pick(rng, [1, 1, 2]),
         swayP: rng() * TAU,
@@ -125,8 +125,8 @@ export const spotlight =
         swA: range(rng, 6, 30),
         swK: pick(rng, [1, 2, 3]),
         swP: rng() * TAU,
-        size: i < 280 ? range(rng, 150, 260) : 36 + 60 * Math.pow(rng(), 2.5),
-        a: i < 280 ? range(rng, 0.85, 1.0) : 0.02 + 0.08 * Math.pow(rng(), 2),
+        size: i < 260 ? range(rng, 130, 200) : 36 + 60 * Math.pow(rng(), 2.5),
+        a: i < 260 ? range(rng, 0.9, 1.0) : 0.02 + 0.08 * Math.pow(rng(), 2),
         k: pick(rng, CYCLES),
         phi: rng() * TAU,
         sh: range(rng, 1, 4),
@@ -141,7 +141,7 @@ export const spotlight =
       const p = addParticle(six ? flares6 : flares4, tex);
       p.rotation = range(rng, -0.08, 0.08) + (six ? Math.PI / 6 : 0);
       p.tint = tints[0];
-      meds.push({ p, x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H * 0.95), size: 110 + 230 * Math.pow(rng(), 2.2), a: 0.03 + 0.25 * Math.pow(rng(), 4), k: pick(rng, CYCLES), phi: rng() * TAU, bobP: rng() * TAU });
+      meds.push({ p, x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H * 0.95), size: 110 + 230 * Math.pow(rng(), 2.2), a: 0.015 + 0.15 * Math.pow(rng(), 4), k: pick(rng, CYCLES), phi: rng() * TAU, bobP: rng() * TAU });
     }
 
     type Big = { core: ReturnType<typeof addParticle>; arms: ReturnType<typeof addParticle>[]; x: number; y: number; core0: number; len: number; a: number; k: number; phi: number; bobP: number };
@@ -163,8 +163,8 @@ export const spotlight =
         core,
         arms,
         x: side ? (rng() < 0.5 ? range(rng, 100, 900) : range(rng, 2940, 3740)) : range(rng, 150, DESIGN_W - 150),
-        y: side ? range(rng, 0.25, 0.95) * DESIGN_H : range(rng, 0.45, 0.97) * DESIGN_H,
-        core0: range(rng, 240, 400),
+        y: range(rng, 0.15, 0.95) * DESIGN_H,
+        core0: range(rng, 380, 560),
         len: range(rng, 300, 600),
         a: i < 13 ? range(rng, 0.6, 0.95) : range(rng, 0.03, 0.12),
         k: pick(rng, [1, 2, 3, 4]),
@@ -239,7 +239,7 @@ export const spotlight =
           const L = g.len * (0.7 + 0.3 * tw) * (1 + 1.2 * b);
           g.arms.forEach((q, ai) => {
             q.alpha = a * (ai < 2 ? 0.6 : 0.6);
-            setSize(q, ai < 2 ? L * 0.9 : L * 2.4, ai < 2 ? 46 : 34);
+            setSize(q, ai < 2 ? L * 0.8 : L * 1.3, ai < 2 ? 56 : 50);
           });
         });
       },
