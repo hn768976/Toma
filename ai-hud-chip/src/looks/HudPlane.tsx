@@ -256,7 +256,7 @@ void main() { vUv = uv; gl_Position = vec4(position.xy, 0.9999, 1.0); }
 const BG_FRAG = /* glsl */ `
 precision highp float;
 in vec2 vUv; out vec4 fragColor;
-#define NB 9
+#define NB 11
 uniform float uTime; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3; uniform float uAspect;
 uniform vec4 uBlob[NB]; uniform vec3 uBlobC[NB];
 ${GLSL_HASH}
@@ -297,11 +297,13 @@ const BLOBS: [number, number, number, number, number, number][] = [
   [-0.55, 0.3, 0.4, 0.28, 1, 0.45],
   [0.7, 0.36, 0.55, 0.42, 3, 0.85],
   [-0.78, -0.05, 0.36, 0.5, 4, 0.4],
-  [0.75, -0.2, 0.45, 0.45, 4, 0.55],
+  [0.75, -0.2, 0.45, 0.45, 4, 0.22],
   [-0.1, -0.1, 0.55, 0.3, 0, 0.45],
   [0.3, 0.12, 0.35, 0.22, 4, 0.35],
   [-0.4, -0.42, 0.45, 0.22, 2, 0.2],
   [0.25, -0.3, 0.4, 0.25, 1, 0.3],
+  [-0.12, 0.02, 0.32, 0.26, 1, 0.5],
+  [-0.6, -0.35, 0.4, 0.25, 4, 0.4],
 ];
 const blobColour = (row: HudPlaneRow, slot: number, gain: number) => {
   const c = new THREE.Color(row.bg[Math.min(slot, 2)]);
@@ -377,7 +379,7 @@ const Scene: React.FC<{ row: HudPlaneRow }> = ({ row }) => {
       glslVersion: THREE.GLSL3,
       vertexShader: GRID_VERT,
       fragmentShader: GRID_FRAG,
-      uniforms: { uColor: { value: new THREE.Color(row.hud) }, uOpacity: { value: 0 }, uCells: { value: new THREE.Vector2(32, 18) }, ...dofUniforms(DOF) },
+      uniforms: { uColor: { value: new THREE.Color(row.hud).lerp(new THREE.Color("#6fdcff"), 0.45) }, uOpacity: { value: 0 }, uCells: { value: new THREE.Vector2(32, 18) }, ...dofUniforms(DOF) },
       transparent: true,
       depthWrite: false,
       depthTest: false,
@@ -422,7 +424,7 @@ const Scene: React.FC<{ row: HudPlaneRow }> = ({ row }) => {
   assets.bgMat.uniforms.uTime.value = sec;
   assets.dust.material.uniforms.uPhase.value = frame / 450;
   assets.dust.material.uniforms.uGain.value = interpolate(sec, [0, 2], [0.3, 1], { extrapolateRight: "clamp" });
-  assets.gridMat.uniforms.uOpacity.value = interpolate(sec, [0, 1.5, 4], [0, 0.34, 0.28], { extrapolateRight: "clamp" });
+  assets.gridMat.uniforms.uOpacity.value = interpolate(sec, [0, 1.5, 4], [0, 0.42, 0.36], { extrapolateRight: "clamp" });
   assets.sheetMat.uniforms.uNow.value = now;
   assets.ringMats.forEach((m) => (m.uniforms.uNow.value = now));
   const aiOn = interpolate(sec, [4.9, 5.0, 5.08, 5.16, 5.3, 5.8], [0, 0.7, 0.15, 0.9, 0.5, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
