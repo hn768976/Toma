@@ -99,7 +99,7 @@ function buildTraces(): Trace[] {
 const TRACES = buildTraces();
 
 function speechBubbleGeometry(tailRight: boolean) {
-  const w = 1.5, h = 0.74, r = 0.37;
+  const w = 1.45, h = 0.62, r = 0.2;
   const s = new THREE.Shape();
   const x0 = -w / 2, x1 = w / 2, y0 = -h / 2, y1 = h / 2;
   s.moveTo(x0 + r, y0);
@@ -253,7 +253,8 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
         float d = head - vS;
         float pulse = d >= 0.0 ? exp(-d / 0.3) : exp(d / 0.03);
         float fade = 1.0 - smoothstep(L - 1.5, L, vS) * 0.6;
-        vec3 c = col * (0.32 * fade + 9.0 * pulse);
+        vec3 hotCol = mix(col, vec3(1.0), 0.55 * exp(-vS / 0.9));
+        vec3 c = hotCol * (0.32 * fade + 1.6 * exp(-vS / 1.2) + 9.0 * pulse);
         float fog = smoothstep(uFog.x, uFog.y, vDepth);
         gl_FragColor = vec4(c * (1.0 - fog), 1.0);
       }`,
@@ -317,16 +318,16 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   const chip = new THREE.Group();
   scene.add(chip);
   const chipBase = new THREE.Mesh(
-    new RoundedBoxGeometry(CHIP * 2, 0.34, CHIP * 2, 3, 0.05),
+    new RoundedBoxGeometry(CHIP * 2, 0.18, CHIP * 2, 3, 0.04),
     new THREE.MeshPhysicalMaterial({ color: "#0a1226", metalness: 0.7, roughness: 0.3, clearcoat: 0.6 }),
   );
-  chipBase.position.y = 0.17;
+  chipBase.position.y = 0.09;
   chip.add(chipBase);
   const chipTop = new THREE.Mesh(
-    new RoundedBoxGeometry(CHIP * 1.62, 0.1, CHIP * 1.62, 3, 0.03),
-    new THREE.MeshPhysicalMaterial({ color: "#0e1a3a", metalness: 0.5, roughness: 0.25, emissive: new THREE.Color("#0a2a6a"), emissiveIntensity: 0.6 }),
+    new RoundedBoxGeometry(CHIP * 1.7, 0.05, CHIP * 1.7, 2, 0.02),
+    new THREE.MeshPhysicalMaterial({ color: "#0e1a3a", metalness: 0.5, roughness: 0.25, emissive: new THREE.Color("#0a2a6a"), emissiveIntensity: 0.2 }),
   );
-  chipTop.position.y = 0.37;
+  chipTop.position.y = 0.2;
   chip.add(chipTop);
   const frame = (half: number, y: number, t: number, color: THREE.Color) => {
     const m = new THREE.MeshBasicMaterial({ color });
@@ -341,13 +342,13 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       chip.add(b);
     }
   };
-  frame(CHIP + 0.01, 0.335, 0.022, new THREE.Color(p.chipRimA).multiplyScalar(3.5));
-  frame(CHIP * 0.81 + 0.01, 0.43, 0.016, new THREE.Color(p.chipRimB).multiplyScalar(2.2));
+  frame(CHIP + 0.01, 0.175, 0.03, new THREE.Color(p.chipRimA).multiplyScalar(4.5));
+  frame(CHIP * 0.86 + 0.01, 0.225, 0.014, new THREE.Color(p.chipRimB).multiplyScalar(2.0));
   frame(CHIP + 0.02, 0.015, 0.03, new THREE.Color(traceCols[0]).multiplyScalar(3));
 
   // ---- brain -------------------------------------------------------------------
   const brain = new THREE.Group();
-  brain.position.set(0, 0.42 + 0.78, 0);
+  brain.position.set(0, 0.22 + 0.82, 0);
   scene.add(brain);
   const brainMat = new THREE.MeshPhysicalMaterial({
     color: p.brain,
@@ -386,7 +387,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
 
   // surface sparkles
   const srnd = mulberry32(SEED + 21);
-  const NS = 1100;
+  const NS = 1600;
   const spos = new Float32Array(NS * 3), spar = new Float32Array(NS * 4), ssz = new Float32Array(NS);
   const cycles = [2, 3, 4, 5, 6];
   for (let i = 0; i < NS; i++) {
@@ -401,7 +402,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
   }
   const sparkles = makeScreenPoints(spos, {
     color: "#cfefff",
-    sizePx: 2.6,
+    sizePx: 3.0,
     pxScale: ctx.pxScale,
     sizes: ssz,
     params: spar,
@@ -492,7 +493,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       metalness: 0.0,
       clearcoat: 1,
       clearcoatRoughness: 0.05,
-      emissive: new THREE.Color(p.bubble).multiplyScalar(0.18),
+      emissive: new THREE.Color(p.bubble).multiplyScalar(0.3),
       transparent: true,
       envMapIntensity: 1.5,
     });
@@ -513,24 +514,24 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
       body,
       dots,
       spawn: k * 150 + 10,
-      start: new THREE.Vector3(side > 0 ? 1.55 : 1.2, 1.7, side > 0 ? 0.4 : 0.2),
-      rise: new THREE.Vector3(side > 0 ? 0.15 : 0.3, 1.9, -0.3),
+      start: new THREE.Vector3(side > 0 ? 1.05 : 1.15, 1.75, side > 0 ? 0.5 : 0.4),
+      rise: new THREE.Vector3(side > 0 ? 0.25 : 0.15, 2.6, -0.2),
     });
   }
 
-  const target = new THREE.Vector3(0, 1.05, 0);
+  const target = new THREE.Vector3(0.9, 1.0, -0.5);
   const post = {
     exposure: p.exposure,
-    bloomStrength: 0.32,
-    bloomThreshold: 1.0,
+    bloomStrength: 0.5,
+    bloomThreshold: 0.95,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 10, aperture: 0.016, maxCoc: 0.01, nearScale: 0.7 },
-    vignette: 0.35,
+    dof: { focus: 10, aperture: 0.032, maxCoc: 0.015, nearScale: 0.8 },
+    vignette: 0.55,
     grain: 0.015,
     grainFadeLum: 0,
   };
-  const LIFE = 200;
+  const LIFE = 240;
 
   const update = (f: number) => {
     const t = f / LOOP;
@@ -538,9 +539,9 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
     (sparkles.material as THREE.ShaderMaterial).uniforms.uT.value = t;
 
     // camera ~30° down, closed orbit ±8°
-    const yaw = THREE.MathUtils.degToRad(-6 + 8 * osc(f, 1));
-    const elev = THREE.MathUtils.degToRad(33);
-    const dist = 8.8;
+    const yaw = THREE.MathUtils.degToRad(-38 + 8 * osc(f, 1));
+    const elev = THREE.MathUtils.degToRad(24);
+    const dist = 8.9;
     camera.position.set(
       target.x + Math.sin(yaw) * Math.cos(elev) * dist,
       target.y + Math.sin(elev) * dist,
@@ -551,7 +552,7 @@ export function buildBrain(ctx: BuildCtx, p: BrainParams): LookHandle {
     post.dof.focus = camera.position.distanceTo(brain.position);
 
     // brain turns slowly ±10° (cosine)
-    brain.rotation.y = THREE.MathUtils.degToRad(-78 + 10 * Math.cos(TAU * t));
+    brain.rotation.y = THREE.MathUtils.degToRad(-78 - 38 + 10 * Math.cos(TAU * t));
 
     for (const b of bubbles) {
       const age = (((f - b.spawn) % LOOP) + LOOP) % LOOP;
