@@ -1,0 +1,2 @@
+# 720p previews are large (two exceed GitHub's 100 MB limit); they are delivered as files, not committed
+*.mp4
