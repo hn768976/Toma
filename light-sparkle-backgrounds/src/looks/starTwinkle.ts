@@ -28,14 +28,14 @@ export const starTwinkle =
     const rng = mulberry32(params.seed);
     const points = layer(kit.dot);
     const cores = layer(kit.dot);
-    const hRays = layer(kit.streak);
+    const hRays = layer(kit.streakChroma);
     const vRays = layer(kit.streakWarmCool);
     const hazes = layer(kit.dot);
 
     // Loose clusters with empty black between them.
     const clusters = Array.from({ length: 5 }, () => ({ x: range(rng, 0.05, 0.95) * DESIGN_W, y: range(rng, 0.05, 0.95) * DESIGN_H, s: range(rng, 350, 700) }));
     const place = () => {
-      if (rng() < 0.45) return { x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H) };
+      if (rng() < 0.88) return { x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H) };
       const c = pick(rng, clusters);
       const g = () => (rng() + rng() + rng() - 1.5) / 1.5;
       return { x: Math.min(DESIGN_W, Math.max(0, c.x + g() * c.s * 1.6)), y: Math.min(DESIGN_H, Math.max(0, c.y + g() * c.s)) };
@@ -50,7 +50,7 @@ export const starTwinkle =
       p.y = at.y;
       p.tint = tintFor(range(rng, -0.8, 0.8));
       // Most points sit near black; a few are visible.
-      pts.push({ p, size: 26 + 50 * Math.pow(rng(), 2.5), a: 0.015 + 0.45 * Math.pow(rng(), 5), k: pick(rng, CYCLES), phi: rng() * TAU, sharp: range(rng, 1, 3) });
+      pts.push({ p, size: 26 + 50 * Math.pow(rng(), 2.5), a: 0.01 + 0.4 * Math.pow(rng(), 7), k: pick(rng, CYCLES), phi: rng() * TAU, sharp: range(rng, 1, 3) });
     }
 
     type Star = { core: ReturnType<typeof addParticle>; h: ReturnType<typeof addParticle>; v: ReturnType<typeof addParticle>; hz: ReturnType<typeof addParticle>[]; scale: number; a: number; k: number; phi: number; sharp: number };
@@ -59,7 +59,7 @@ export const starTwinkle =
       const at = place();
       const tint = tintFor(range(rng, -0.4, 0.3));
       const core = addParticle(cores, kit.dot);
-      const h = addParticle(hRays, kit.streak);
+      const h = addParticle(hRays, kit.streakChroma);
       const v = addParticle(vRays, kit.streakWarmCool);
       v.rotation = Math.PI / 2; // warm end up, cool end down
       const hz = [0xff8a70, 0x7090ff].map((t) => {
@@ -74,7 +74,7 @@ export const starTwinkle =
       });
       // Sizes vary 1-6x; brightness heavily skewed so only a few dozen stand out.
       const scale = 1 + 5 * Math.pow(rng(), 3);
-      stars.push({ core, h, v, hz, scale, a: 0.04 + 0.96 * Math.pow(rng(), 3) * Math.min(1, scale / 2), k: pick(rng, [1, 2, 3, 4, 5]), phi: rng() * TAU, sharp: range(rng, 1, 2) });
+      stars.push({ core, h, v, hz, scale, a: 0.03 + 0.97 * Math.pow(rng(), 4.5) * Math.min(1, scale / 2), k: pick(rng, [1, 2, 3, 4, 5]), phi: rng() * TAU, sharp: range(rng, 1, 2) });
     }
     // ~3 glints per second -> 60 per 600-frame loop.
     const glints: Glint[] = [];
@@ -102,19 +102,21 @@ export const starTwinkle =
           const b = boost[i];
           const a = Math.min(1, s.a * (0.55 + 0.45 * tw) * (1 + 1.2 * b));
           const L = s.scale * (0.8 + 0.2 * tw) * (1 + 0.9 * b);
-          s.core.alpha = Math.min(1, a * 1.3);
-          setSize(s.core, 70 + 40 * s.scale);
-          // Hair-thin rays; the horizontal ones run much longer at a faint level.
-          s.h.alpha = a * 0.8;
-          setSize(s.h, 170 * L * (1 + 0.3 * s.scale), 22);
-          s.v.alpha = a * 0.8;
-          setSize(s.v, 160 * L, 22);
-          s.hz[0].alpha = a * 0.12;
-          s.hz[0].y = s.v.y - 30 * s.scale;
-          s.hz[1].alpha = a * 0.12;
-          s.hz[1].y = s.v.y + 30 * s.scale;
-          setSize(s.hz[0], 160 * s.scale);
-          setSize(s.hz[1], 160 * s.scale);
+          s.core.alpha = Math.min(1, a * 0.9);
+          setSize(s.core, 45 + 25 * s.scale);
+          // Short, soft + spikes of similar length; small stars are plain dots.
+          const spikes = Math.min(1, Math.max(0, (s.scale - 1.3) / 0.8));
+          s.h.alpha = a * 0.9 * spikes;
+          setSize(s.h, 125 * L, 40);
+          s.v.alpha = a * 0.9 * spikes;
+          setSize(s.v, 135 * L, 40);
+          // Red / blue fringe hugging the core, above and below the horizontal spike.
+          s.hz[0].alpha = a * 0.35 * spikes;
+          s.hz[0].y = s.v.y - 8 * s.scale;
+          s.hz[1].alpha = a * 0.35 * spikes;
+          s.hz[1].y = s.v.y + 8 * s.scale;
+          setSize(s.hz[0], 40 * s.scale, 22 * s.scale);
+          setSize(s.hz[1], 40 * s.scale, 22 * s.scale);
         });
       },
     };

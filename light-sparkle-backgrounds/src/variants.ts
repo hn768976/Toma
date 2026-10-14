@@ -10,7 +10,7 @@ import { sunFlare } from "./looks/sunFlare";
 export type Variant = { id: string; file: string; make: () => LookFactory };
 
 export const VARIANTS: Variant[] = [
-  { id: "SpotlightSparkles-Blue", file: "SpotlightSparkles_Blue", make: () => spotlight({ seed: 1001, bgEdge: "#020A2A", bgCenter: "#0A3A9A", rays: "#6AA8FF", sparkles: ["#FFFFFF", "#B8E2FF", "#86CCFF"] }) },
+  { id: "SpotlightSparkles-Blue", file: "SpotlightSparkles_Blue", make: () => spotlight({ seed: 1001, bgEdge: "#020A2A", bgCenter: "#0A3A9A", rays: "#6AA8FF", sparkles: ["#FFFFFF", "#6CC8FF", "#8AD6FF"] }) },
   { id: "SpotlightSparkles-Gold", file: "SpotlightSparkles_Gold", make: () => spotlight({ seed: 1001, bgEdge: "#140A02", bgCenter: "#5A3A0A", rays: "#FFC86A", sparkles: ["#FFFFFF", "#FFF2D8", "#FFE0A0"] }) },
   { id: "PastelBokeh-PinkLavender", file: "PastelBokeh_PinkLavender", make: () => pastelBokeh({ seed: 2002, top: "#E8A8F0", mid: "#F8C8E8", bottom: "#FFE8E0" }) },
   { id: "PastelBokeh-MintAqua", file: "PastelBokeh_MintAqua", make: () => pastelBokeh({ seed: 2002, top: "#9AE8E0", mid: "#C8F4EC", bottom: "#F0FFF8" }) },

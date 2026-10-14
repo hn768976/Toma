@@ -37,6 +37,9 @@ vec3 background(vec2 p) {
   float by = 0.52 + 0.025 * sin(TAU * p.x / 3840.0 * 0.8 + uBandPhase);
   float band = exp(-pow((y - by) / 0.16, 2.0));
   g = mix(g, vec3(1.0), 0.1 * band);
+  // Soft central glow.
+  vec2 cq = (p - vec2(1950.0, 1200.0)) / vec2(1500.0, 700.0);
+  g = mix(g, vec3(1.0), 0.18 * exp(-dot(cq, cq)));
   // Thin glowing wavy lines, white at ~40%.
   float lines = 0.0;
   for (int i = 0; i < ${NLINES}; i++) {
@@ -69,8 +72,8 @@ export const pastelBokeh =
     const lines: Line[] = [];
     for (let i = 0; i < NLINES; i++) {
       lines.push({
-        y0: DESIGN_H * (0.36 + 0.045 * i + range(rng, -0.02, 0.02)),
-        a1: range(rng, 45, 110),
+        y0: DESIGN_H * (0.4 + 0.02 * i + range(rng, -0.01, 0.01)),
+        a1: range(rng, 70, 160),
         c1: range(rng, 0.6, 1.3),
         p1: rng() * TAU,
         m1: pick(rng, [1, -1, 2]),
@@ -105,8 +108,8 @@ export const pastelBokeh =
     const discs: Disc[] = [];
     const LAYERS = [
       { count: 180, pcs: [back], tex: [kit.bokehSoft], size: [220, 420], alpha: [0.03, 0.07], n: 1 },
-      { count: 300, pcs: [midR, midH], tex: [kit.bokehSoft, kit.bokehHex], size: [130, 240], alpha: [0.04, 0.1], n: 1 },
-      { count: 420, pcs: [front], tex: [kit.bokehSoft], size: [60, 150], alpha: [0.05, 0.13], n: 2 },
+      { count: 300, pcs: [midR, midH], tex: [kit.bokehSoft, kit.bokehHex], size: [130, 240], alpha: [0.08, 0.16], n: 1 },
+      { count: 420, pcs: [front], tex: [kit.bokehSoft], size: [70, 160], alpha: [0.07, 0.15], n: 2 },
     ];
     for (const L of LAYERS) {
       const margin = L.size[1] * 0.6;
@@ -140,7 +143,7 @@ export const pastelBokeh =
     const PW = DESIGN_W + 100;
     for (let i = 0; i < 3000; i++) {
       const p = addParticle(points, kit.dot);
-      pts.push({ p, x0: range(rng, 0, PW), y0: yMid(rng), n: rng() < 0.5 ? 1 : 0, line: -1, size: i < 700 ? range(rng, 110, 280) : 34 + 90 * Math.pow(rng(), 2.2), a: i < 700 ? range(rng, 0.8, 1.0) : range(rng, 0.5, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU, sh: range(rng, 2, 5), bobP: rng() * TAU });
+      pts.push({ p, x0: range(rng, 0, PW), y0: yMid(rng), n: rng() < 0.5 ? 1 : 0, line: -1, size: i < 700 ? range(rng, 130, 330) : 34 + 90 * Math.pow(rng(), 2.2), a: i < 700 ? range(rng, 0.8, 1.0) : range(rng, 0.5, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU, sh: range(rng, 2, 5), bobP: rng() * TAU });
     }
     // Sparkles riding the wavy lines.
     for (let li = 0; li < NLINES; li++) {
@@ -149,12 +152,14 @@ export const pastelBokeh =
         pts.push({ p, x0: range(rng, 0, PW), y0: 0, n: pick(rng, [1, 2]), line: li, size: 40 + 50 * rng(), a: range(rng, 0.6, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU, sh: range(rng, 1, 3), bobP: rng() * TAU });
       }
     }
+    const glows: ReturnType<typeof addParticle>[] = [];
     type Fl = { p: ReturnType<typeof addParticle>; x: number; y: number; size: number; a: number; k: number; phi: number };
     const fls: Fl[] = [];
     for (let i = 0; i < 60; i++) {
       const p = addParticle(flares, kit.flare4);
       p.rotation = range(rng, -0.1, 0.1);
-      fls.push({ p, x: range(rng, 0, DESIGN_W), y: yMid(rng), size: range(rng, 220, 520), a: range(rng, 0.75, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU });
+      glows.push(addParticle(points, kit.dot));
+      fls.push({ p, x: range(rng, 0, DESIGN_W), y: yMid(rng), size: range(rng, 130, 280), a: range(rng, 0.75, 1.0), k: pick(rng, CYCLES), phi: rng() * TAU });
     }
     const glints: Glint[] = [];
     for (let i = 0; i < 24; i++) glints.push({ target: Math.floor(rng() * fls.length), start: Math.floor(rng() * 600), dur: Math.floor(range(rng, 10, 16)), gain: range(rng, 0.8, 1.3) });
@@ -214,6 +219,11 @@ export const pastelBokeh =
           f.p.y = f.y;
           f.p.alpha = Math.min(1, f.a * (0.3 + 0.7 * tw) * (1 + b));
           setSize(f.p, f.size * (0.7 + 0.3 * tw) * (1 + 0.8 * b));
+          const gl = glows[i];
+          gl.x = f.x;
+          gl.y = f.y;
+          gl.alpha = f.p.alpha;
+          setSize(gl, f.size * 1.3 * (0.8 + 0.2 * tw));
         });
       },
     };

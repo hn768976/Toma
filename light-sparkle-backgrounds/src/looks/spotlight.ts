@@ -42,9 +42,9 @@ vec3 background(vec2 p) {
   float gd = clamp(length(q), 0.0, 1.4);
   vec3 bg = mix(uBgCenter, uBgEdge, smoothstep(0.0, 0.85, pow(gd, 0.7)));
   // Rays: ~140 degree fan, strong falloff to ~80% of the frame height.
-  float cone = smoothstep(1.32, 1.02, abs(ang));
-  float rr = length(vec2(v.x * 0.55, v.y)) / 2160.0;
-  float fall = exp(-pow(rr / 0.62, 2.0));
+  float cone = smoothstep(1.48, 1.12, abs(ang));
+  float rr = length(vec2(v.x * 0.45, v.y)) / 2160.0;
+  float fall = exp(-pow(rr / 0.72, 2.0));
   float rays = rayField(p);
   float haze = 0.14 * exp(-pow(r / 0.4, 1.6)) * smoothstep(1.5, 0.6, abs(ang));
   float glow = 0.45 * exp(-r * r / 0.006) + 0.25 * exp(-r * r / 0.035);
@@ -62,7 +62,7 @@ export const spotlight =
     // ---- Rays: fixed parameters, whole-cycle sway and flicker -----------------
     type Ray = { a0: number; w: number; i0: number; swayA: number; swayK: number; swayP: number; flK: number; flP: number };
     const rays: Ray[] = [];
-    const halfFan = (70 * Math.PI) / 180;
+    const halfFan = (78 * Math.PI) / 180;
     for (let i = 0; i < NRAYS; i++) {
       const base = -halfFan + (2 * halfFan * (i + 0.5)) / NRAYS;
       rays.push({
@@ -90,13 +90,13 @@ export const spotlight =
       const vx = x - SOURCE.x;
       const vy = y - SOURCE.y;
       const ang = Math.atan2(vx, vy);
-      const r = Math.hypot(vx * 0.55, vy) / DESIGN_H;
+      const r = Math.hypot(vx * 0.45, vy) / DESIGN_H;
       let s = 0;
       for (let i = 0; i < NRAYS; i++) {
         const d = (ang - rayData[i * 4]) / rayData[i * 4 + 1];
         s += rayData[i * 4 + 2] * Math.exp(-d * d);
       }
-      const cone = Math.min(1, Math.max(0, (1.32 - Math.abs(ang)) / 0.3));
+      const cone = Math.min(1, Math.max(0, (1.48 - Math.abs(ang)) / 0.36));
       return Math.min(1.5, s) * cone * Math.exp(-Math.pow(r / 0.75, 1.7));
     };
 
@@ -125,8 +125,8 @@ export const spotlight =
         swA: range(rng, 6, 30),
         swK: pick(rng, [1, 2, 3]),
         swP: rng() * TAU,
-        size: i < 260 ? range(rng, 110, 190) : 36 + 60 * Math.pow(rng(), 2.5),
-        a: i < 260 ? range(rng, 0.7, 1.0) : 0.02 + 0.1 * Math.pow(rng(), 2),
+        size: i < 280 ? range(rng, 150, 260) : 36 + 60 * Math.pow(rng(), 2.5),
+        a: i < 280 ? range(rng, 0.85, 1.0) : 0.02 + 0.08 * Math.pow(rng(), 2),
         k: pick(rng, CYCLES),
         phi: rng() * TAU,
         sh: range(rng, 1, 4),
@@ -141,7 +141,7 @@ export const spotlight =
       const p = addParticle(six ? flares6 : flares4, tex);
       p.rotation = range(rng, -0.08, 0.08) + (six ? Math.PI / 6 : 0);
       p.tint = tints[0];
-      meds.push({ p, x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H * 0.95), size: 110 + 230 * Math.pow(rng(), 2.2), a: 0.06 + 0.4 * Math.pow(rng(), 3), k: pick(rng, CYCLES), phi: rng() * TAU, bobP: rng() * TAU });
+      meds.push({ p, x: range(rng, 0, DESIGN_W), y: range(rng, 0, DESIGN_H * 0.95), size: 110 + 230 * Math.pow(rng(), 2.2), a: 0.03 + 0.25 * Math.pow(rng(), 4), k: pick(rng, CYCLES), phi: rng() * TAU, bobP: rng() * TAU });
     }
 
     type Big = { core: ReturnType<typeof addParticle>; arms: ReturnType<typeof addParticle>[]; x: number; y: number; core0: number; len: number; a: number; k: number; phi: number; bobP: number };
@@ -166,7 +166,7 @@ export const spotlight =
         y: side ? range(rng, 0.25, 0.95) * DESIGN_H : range(rng, 0.45, 0.97) * DESIGN_H,
         core0: range(rng, 240, 400),
         len: range(rng, 300, 600),
-        a: range(rng, 0.5, 0.9),
+        a: i < 13 ? range(rng, 0.6, 0.95) : range(rng, 0.03, 0.12),
         k: pick(rng, [1, 2, 3, 4]),
         phi: rng() * TAU,
         bobP: rng() * TAU,
@@ -238,8 +238,8 @@ export const spotlight =
           setSize(g.core, g.core0 * (0.85 + 0.15 * tw) * (1 + 0.5 * b));
           const L = g.len * (0.7 + 0.3 * tw) * (1 + 1.2 * b);
           g.arms.forEach((q, ai) => {
-            q.alpha = a * (ai < 2 ? 0.85 : 0.45);
-            setSize(q, ai < 2 ? L : L * 1.3, ai < 2 ? 60 : 44);
+            q.alpha = a * (ai < 2 ? 0.6 : 0.6);
+            setSize(q, ai < 2 ? L * 0.9 : L * 2.4, ai < 2 ? 46 : 34);
           });
         });
       },
