@@ -280,10 +280,10 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   // base joint; then 2 segments. The thumb lies roughly in the palm plane,
   // angled ~40deg away from the index finger, pad turned toward the fingers.
   const thenarDir = new THREE.Group();
-  thenarDir.position.set(-0.22, 0.03, -0.3);
-  thenarDir.rotation.set(-10 * DEG, -50 * DEG, -10 * DEG, "YXZ");
+  thenarDir.position.set(-0.26, 0.04, -0.06);
+  thenarDir.rotation.set(-12 * DEG, -52 * DEG, -8 * DEG, "YXZ");
   palm.add(thenarDir);
-  const thenarLen = 0.52;
+  const thenarLen = 0.42;
   thenarDir.add(
     new THREE.Mesh(
       loft({
@@ -308,10 +308,34 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   thenarDir.add(tube(gasket, 0.009, mats.joint, true, 96));
   const thumbBase = new THREE.Group();
   thumbBase.position.z = thenarLen + 0.02;
-  thumbBase.rotation.set(-16 * DEG, 10 * DEG, -16 * DEG, "YXZ");
+  thumbBase.rotation.set(-22 * DEG, -14 * DEG, -24 * DEG, "YXZ");
   thenarDir.add(thumbBase);
-  const thumbJoints = buildChain(thumbBase, [0.4, 0.33], 0.21, 0.185);
-  chains.unshift({ joints: thumbJoints, relaxed: [10 * DEG, 16 * DEG] });
+  const thumbJoints = buildChain(thumbBase, [0.47, 0.37], 0.215, 0.19);
+  chains.unshift({ joints: thumbJoints, relaxed: [8 * DEG, 12 * DEG] });
+  // web between the thumb housing and the index knuckle: a low sculpted
+  // shell so the thumb visibly belongs to the palm
+  palm.updateMatrixWorld(true);
+  const webA = new THREE.Vector3(0, 0, thenarLen * 0.75).applyMatrix4(thenarDir.matrix);
+  const webB = new THREE.Vector3(FINGERS[0].x + 0.02, 0.0, knuckleZ(FINGERS[0].x) - 0.1);
+  const web = new THREE.Group();
+  web.position.copy(webA);
+  web.lookAt(webB);
+  palm.add(web);
+  web.add(
+    new THREE.Mesh(
+      loft({
+        length: webA.distanceTo(webB),
+        rows: 24,
+        cols: 40,
+        nTop: 2.4,
+        nBottom: 2.4,
+        capStart: 0.06,
+        capEnd: 0.08,
+        section: (t) => ({ w: lerp(0.2, 0.14, t), h: lerp(0.2, 0.13, t), oy: 0.01 }),
+      }),
+      mats.shell,
+    ),
+  );
 
   // --- Wrist: cuff with a hinge, sculpted forearm, pistons -------------------
   const cuff = new THREE.Mesh(
