@@ -16,7 +16,7 @@ if [ "${SKIP_RENDER:-0}" != 1 ]; then
   end=$(date +%s.%N)
   echo "$ID render_seconds=$(echo "$end - $start" | bc)" | tee -a "$OUT/render-times.txt"
 fi
-first=$(ls "$SEQ" | head -1)
+first=$(ls "$SEQ" | awk "NR==1")
 pattern=$(echo "$first" | sed -E 's/[0-9]+\.png$//')
 digits=$(echo "$first" | sed -E 's/.*[^0-9]([0-9]+)\.png$/\1/' | tr -d '\n' | wc -c)
 ffmpeg -v error -y -framerate 30 -i "$SEQ/${pattern}%0${digits}d.png" -c:v libx264 -crf 16 \
