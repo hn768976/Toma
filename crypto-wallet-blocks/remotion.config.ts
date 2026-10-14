@@ -11,6 +11,8 @@ Config.setVideoImageFormat("png");
 Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
+// Video only: no (silent) audio track in the output.
+Config.setMuted(true);
 Config.setOverwriteOutput(true);
 // Software GL at 4K can take well over the default 30 s per frame.
 Config.setDelayRenderTimeoutInMilliseconds(900000);

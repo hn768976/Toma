@@ -512,7 +512,9 @@ export class WalletWorld {
       mat.uniforms.uSize.value.set(PANEL.w, PANEL.h, st.depth);
       mat.uniforms.uOpacity.value = st.opacity;
       mat.uniforms.uIntensity.value = 0.9 * st.shimmer;
-      mat.uniforms.uTexOffset.value.set(k * 0.31, k * 0.17 + st.scroll * 0.25);
+      // Mirrored-repeat texture: its period is 2, so scrolling exactly 2 per loop
+      // returns to the start (seamless in the hold loop).
+      mat.uniforms.uTexOffset.value.set(k * 0.31, k * 0.17 + st.scroll * 2);
     });
 
     if (story !== "blocks") {

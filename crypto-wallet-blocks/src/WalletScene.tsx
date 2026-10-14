@@ -34,8 +34,12 @@ const World: React.FC<{ version: Version; onReady: () => void }> = ({ version, o
     const { k, w, h } = sizing.current;
     world.camera.aspect = size.width / size.height;
     world.camera.updateProjectionMatrix();
-    world.update(frame, k, w, h);
-    post.setFrame(frame % version.loopFrames, world.focusDistance, 2.4);
+    // Everything is driven by the frame within the loop period, so a loop's
+    // last-plus-one frame is bit-identical to frame 0. (For the 10 s stories
+    // the period equals the duration, so this is a no-op.)
+    const f = frame % version.loopFrames;
+    world.update(f, k, w, h);
+    post.setFrame(f, world.focusDistance, 2.4);
     post.render();
     if (!readyOnce.current) {
       readyOnce.current = true;
