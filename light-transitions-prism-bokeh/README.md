@@ -92,14 +92,14 @@ Frames used for the delivered stills:
 |---|---|
 | Light Sweep Violet | 73 |
 | Light Sweep Gold | 71 |
-| Flare Burst (both) | 64 (see note) |
-| Light Leak (both) | 334 |
+| Flare Burst (both) | 57 (see note) |
+| Light Leak (both) | 250 |
 | Prism Light | 300 |
 | Red Bokeh | 300 |
 
-The Flare Burst's single brightest frame is the white-out (frames 75–90), which is a plain
-warm-white frame. Frame 64 is the brightest moment that still shows the flare: the rays
-spreading into the white-out.
+The Flare Burst's single brightest frame is the white-out (frames 75–90), which is a nearly
+plain warm-white frame. Frame 57 is the brightest moment that still shows the flare: the
+bloom and rays spreading into the white-out.
 
 Rendering 6K is resolution-independent: shaders work in frame-height units, and sprite
 sizes are given in 720p pixels and scaled to the layout.
@@ -157,14 +157,14 @@ Measured in this sandbox: 4 vCPU, no GPU (ANGLE → SwiftShader), with nothing e
 
 | Composition | 720p per frame, 1 tab | 720p per frame, 4 tabs | Full 720p preview (wall clock incl. startup and encode) |
 |---|---|---|---|
-| LightSweep-Violet | 0.41 s | 0.26 s | 59 s |
-| LightSweep-Gold | 0.35 s | 0.29 s | 59 s |
-| FlareBurst-VioletGold | 0.43 s | 0.32 s | 62 s |
-| FlareBurst-Cyan | 0.41 s | 0.34 s | 62 s |
-| LightLeak-VioletBlue | 0.36 s | 0.32 s | 147 s |
-| LightLeak-WarmAmber | 0.35 s | 0.32 s | 147 s |
-| PrismLight-Rainbow | 0.37 s | 0.29 s | 185 s |
-| RedBokeh-RedGold | 0.26 s | 0.20 s | 134 s |
+| LightSweep-Violet | 0.34 s | 0.25 s | 59 s |
+| LightSweep-Gold | 0.32 s | 0.26 s | 59 s |
+| FlareBurst-VioletGold | 0.42 s | 0.35 s | 68 s |
+| FlareBurst-Cyan | 0.43 s | 0.34 s | 67 s |
+| LightLeak-VioletBlue | 0.40 s | 0.38 s | 175 s |
+| LightLeak-WarmAmber | 0.43 s | 0.41 s | 172 s |
+| PrismLight-Rainbow | 0.37 s | 0.31 s | 188 s |
+| RedBokeh-RedGold | 0.27 s | 0.20 s | 134 s |
 
 Four tabs barely beat one, because the 4 vCPUs are shared between SwiftShader, PNG
 encoding and x264.
@@ -173,17 +173,17 @@ encoding and x264.
 
 | Frame | 4K still, total | 720p still of the same frame, total | Net 4K cost |
 |---|---|---|---|
-| 3A `LightLeak-VioletBlue`, frame 180 | 4.67 s | 2.65 s | ≈ 2.0 s above 720p, ≈ **2.4 s per 4K frame** |
-| 5 `RedBokeh-RedGold`, frame 300 | 4.33 s | 2.68 s | ≈ 1.65 s above 720p, ≈ **1.9 s per 4K frame** |
+| 3A `LightLeak-VioletBlue`, frame 180 | 4.88 s | 2.55 s | ≈ 2.3 s above 720p, ≈ **2.7 s per 4K frame** |
+| 5 `RedBokeh-RedGold`, frame 300 | 3.95 s | 2.27 s | ≈ 1.7 s above 720p, ≈ **1.95 s per 4K frame** |
 
 **4K estimates.** On this kind of CPU-only machine, a 4K frame costs about 7× a 720p frame,
-roughly 1.9–2.9 s per frame. Full 4K renders would take roughly:
+roughly 1.9–3.0 s per frame. Full 4K renders would take roughly:
 
 | Composition | Estimated full 4K render |
 |---|---|
 | Light Sweep | ~11 min each |
 | Flare Burst | ~9 min each |
-| Light Leak | ~15 min each |
+| Light Leak | ~17 min each |
 | Prism Light | ~26 min |
 | Red Bokeh | ~19 min |
 
@@ -204,7 +204,8 @@ involved.
 | 4 | Black level: 30 samples in black areas (61-px neighbourhood ≤ 2) across 9–12 frames per overlay | ✅ all 6: max channel 0–1 (`verify.py black-samples`) |
 | 4 | Banding: strip-averaged profiles across each gradient | ✅ largest 1-px step 0.36–0.66 LSB, no staircase (`banding.py`) |
 | 5 | Contact sheets (8 frames per transition, 5 per loop) | ✅ `out/sheets/` |
-| 6 | Motion: frame-to-frame differences, isolated single-frame spikes | ✅ none; the flare white-out ramps over ~10 frames each way (`motion.py`) |
+| 6 | Motion: frame-to-frame differences, isolated single-frame spikes | ✅ none; the flare white-out and the leak fades are eased S-curves over ≥ 10 frames (`motion.py`) |
+| 7–8 | Look vs reference: side-by-side check, then a fresh comparison agent per round (≤ 3 rounds) for 1A, 2A, 3A, 4, 5 | see below |
 
 **Banding details (step 4):**
 - Red Bokeh: checked with the sprites hidden (`--props='{"debugBackgroundOnly":true}'`).
@@ -217,6 +218,50 @@ involved.
 
 All of these are smooth: the dither plus grain turns the 8-bit and 4:2:0 quantisation into
 noise rather than steps.
+
+### Reference comparison (steps 7–8)
+
+Each round, a fresh agent was given one reference frame, one preview frame and a neutral
+"list every difference" instruction. Fixes carried over to the B versions.
+
+- **1A Light Sweep.** Fixed:
+  - full-frame saturated `#2A00FF` at the peak;
+  - flat lavender stroke with a kink across the band;
+  - magenta accent zone (`bandAccent`);
+  - 5 large low-contrast rounded "pill" bands.
+
+  Left as is: the reference is hard-edged vector art, but the spec asks for a soft-edged band
+  with grain.
+- **2A Flare Burst.** Fixed:
+  - warm gold → pink → violet wash;
+  - huge soft white bloom;
+  - soft halo offset to the left;
+  - softer, dimmer rays;
+  - blurred ghosts;
+  - warm white-out edges.
+
+  Left as is: the reference has no hexagonal ghosts or ring line; the spec asks for both, so
+  they stay, softened.
+- **3A Light Leak.** Fixed: large round blown-out cores with ragged edges, an icy fringe, a
+  magenta band and a broad saturated wash.
+
+  Left as is: the reference also briefly blows out the whole frame and has a streaky pink
+  corner flare; mine keeps leaks as distinct blooms with black gaps, as the spec's timeline
+  describes.
+- **4 Prism Light.** Fixed:
+  - saturated indigo field;
+  - large faceted shards with rainbow edge fringes;
+  - gold, salmon, cyan and magenta accents;
+  - edge vignette.
+
+  Left as is: the reference is an asymmetric tunnel with a bright off-centre hotspot. The spec
+  requires a darker violet centre and an exact 6-fold layout (needed for the seamless loop), so
+  the composition stays radially symmetric.
+- **5 Red Bokeh.** Fixed: fewer, larger, softer discs that brighten the red rather than veil
+  it; much less dust; two hero stars; a mottled background.
+
+  Left as is: the red is slightly pinker than the reference because the spec fixes
+  `#E8202A` → `#8A0A10`.
 
 ## Completion checklist
 
