@@ -51,7 +51,7 @@ function loadTexture(url: string) {
 
 export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(17, ctx.width / ctx.height, 0.5, 200);
+  const camera = new THREE.PerspectiveCamera(18.5, ctx.width / ctx.height, 0.5, 200);
 
   scene.add(
     makeBackground(
@@ -108,14 +108,14 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         // Blue Marble gives the land/ocean split (darkened, tinted); the Black
         // Marble's own faint terrain gives the relief.
         float relief = dot(night, vec3(0.2, 0.3, 0.5));
-        vec3 base = mix(uOcean, uLand, land) * (0.6 + 0.5 * min(dl, 0.35) + 2.2 * relief);
+        vec3 base = mix(uOcean, uLand, land) * (0.35 + 1.6 * dl + 1.4 * relief);
         // city lights: warm pixels of the Black Marble
-        float city = smoothstep(0.0, 0.18, night.r - night.b) * (0.6 + 2.5 * dot(night, vec3(0.33)));
+        float city = smoothstep(0.03, 0.16, night.r - night.b) * (0.6 + 2.8 * dot(night, vec3(0.33)));
         float NdV = max(dot(normalize(vN), normalize(vV)), 0.0);
         float rim = pow(1.0 - NdV, 3.0);
         // atmospheric haze washes the surface, more towards the limb
-        vec3 haze = vec3(0.045, 0.085, 0.19) * (0.35 + 0.65 * pow(1.0 - NdV, 1.5));
-        vec3 c = base * 0.9 + haze + uCity * city * 8.0 + uRim * (rim * 0.35 + pow(1.0 - NdV, 10.0) * 1.1);
+        vec3 haze = vec3(0.02, 0.04, 0.09) * pow(1.0 - NdV, 2.0);
+        vec3 c = base * 0.8 + haze + uCity * city * 9.0 + uRim * (rim * 0.12 + pow(1.0 - NdV, 14.0) * 0.9);
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -135,9 +135,10 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         float tca = dot(oc, d);
         float dist = length(oc - d * tca);
         float x = max(dist - uR, 0.0) / uR;
-        float g = exp(-x / 0.008) * 0.9 + exp(-x / 0.04) * 0.3 + exp(-x / 0.25) * 0.1;
+        float g = exp(-x / 0.006) * 0.8 + exp(-x / 0.03) * 0.22 + exp(-x / 0.25) * 0.06;
         g *= 1.0 - smoothstep(0.6, 0.95, x);
-        gl_FragColor = vec4(uRim * g, 1.0);
+        float hot = exp(-pow(vW.x / (uR * 0.15), 2.0)) * exp(-x / 0.015);
+        gl_FragColor = vec4(uRim * g + vec3(1.0, 0.55, 0.2) * hot * 0.6, 1.0);
       }`,
     side: THREE.BackSide,
     transparent: true,
@@ -167,6 +168,8 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   }
   const eset = new Set<string>();
   const segs: number[] = [];
+  const gparam: number[] = [];
+  const grnd = mulberry32(SEED + 3);
   for (let t = 0; t < idx.length; t += 3) {
     for (let e = 0; e < 3; e++) {
       const a = idx[t + e], b = idx[t + ((e + 1) % 3)];
@@ -177,10 +180,13 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
       const A = new THREE.Vector3(verts[a * 3], verts[a * 3 + 1], verts[a * 3 + 2]);
       const B = new THREE.Vector3(verts[b * 3], verts[b * 3 + 1], verts[b * 3 + 2]);
       const S = 2;
+      const edgeBright = 0.35 + 0.9 * grnd() * grnd() + 0.25 * grnd();
+      const edgeWarm = grnd() < 0.07 ? 1 : 0;
       let prev = A.clone();
       for (let s = 1; s <= S; s++) {
         const q = A.clone().lerp(B, s / S).setLength(R * 1.012);
         segs.push(prev.x, prev.y, prev.z, q.x, q.y, q.z);
+        gparam.push(edgeBright, edgeWarm, 0, 0);
         prev = q;
       }
     }
@@ -189,15 +195,19 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
     color: p.grid,
     intensity: 3.6,
     opacity: p.gridOpacity,
-    widthPx: 1.35,
+    widthPx: 1.0,
     pxScale: ctx.pxScale,
     resolution: ctx.resolution,
+    params: new Float32Array(gparam),
+    uniforms: { uWarm: { value: new THREE.Color(p.arc) } },
+    decl: "uniform vec3 uWarm;",
+    body: "col.rgb = mix(base, uWarm * 3.0, P.y) * P.x;",
   });
   spin.add(grid);
   const nodes = makeScreenPoints(new Float32Array(verts), {
     color: p.grid,
-    intensity: 4.5,
-    sizePx: 4.6,
+    intensity: 5.5,
+    sizePx: 3.6,
     pxScale: ctx.pxScale,
     softness: 0.4,
   });
@@ -215,8 +225,16 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
     const u = 1 - t;
     return out.set(0, 0, 0).addScaledVector(A.a, u * u).addScaledVector(A.c, 2 * u * t).addScaledVector(A.b, t * t);
   };
+  // hub: the city nearest the top of the visible limb at mid-sway
+  const mid = new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(12)).multiply(new THREE.Matrix4().makeRotationY(baseYaw + THREE.MathUtils.degToRad(10)));
+  let hub = 0, hubScore = -1e9;
+  CITIES.forEach(([la, lo], i) => {
+    const w = llToVec(la, lo, R).applyMatrix4(mid);
+    const sc = w.z > 2 ? w.y + 0.2 * w.z : -1e9;
+    if (sc > hubScore) { hubScore = sc; hub = i; }
+  });
   for (let i = 0; i < NA; i++) {
-    const ia = Math.floor(rnd() * CITIES.length);
+    const ia = i % 5 < 2 ? hub : Math.floor(rnd() * CITIES.length);
     const a = llToVec(CITIES[ia][0], CITIES[ia][1], R * 1.003);
     // destination: a different city within ~40° of arc
     let b = a;
@@ -227,7 +245,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
       if (ib !== ia && an > 0.12 && an < 0.7) { b = cand; break; }
     }
     const ang = a.angleTo(b);
-    const tall = rnd() < 0.3 ? range(rnd, 0.15, 0.4) : 0;
+    const tall = ia === hub && rnd() < 0.5 ? range(rnd, 0.1, 0.28) : 0;
     const c = a.clone().add(b).normalize().multiplyScalar(R * (1.06 + Math.min(0.45, 0.85 * ang) + tall));
     const arc: Arc = { a, b, c, period: periods[i % 3], offset: Math.floor(rnd() * 600), flight: Math.round(range(rnd, 55, 80)) };
     arcs.push(arc);
@@ -256,7 +274,7 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
       float d = h - s;
       float a = (d >= 0.0 && h > 0.0) ? exp(-d / 0.32) : 0.0;
       a *= 1.0 - smoothstep(1.2, 1.5, h);
-      col = vec4(mix(base, vec3(base.r, base.r * 0.85, base.r * 0.8), 0.25) * (1.0 + 2.0 * exp(-d / 0.03)), a);`,
+      col = vec4(mix(base, vec3(1.0, 0.95, 0.85) * 2.0, exp(-d / 0.02)) * (1.0 + 1.5 * exp(-d / 0.03)), a);`,
   });
   spin.add(arcLines);
   const headPos = new Float32Array(NA * 3);
@@ -286,7 +304,8 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
         float a = ring(r, 0.42, 0.06) * 0.8;            // location ring
         a += (1.0 - smoothstep(0.1, 0.14, r)) * 1.4;      // centre dot
         a += ring(r, 0.42 + 0.55 * ph, 0.05) * pow(1.0 - ph, 1.5) * 1.2; // pulse
-        gl_FragColor = vec4(uColor * a * 0.9, 1.0);
+        vec3 rc = mod(vIdx, 3.0) < 1.0 ? vec3(1.0, 0.62, 0.25) : uColor;
+        gl_FragColor = vec4(rc * a * 1.7, 1.0);
       }`,
     transparent: true,
     depthWrite: false,
@@ -325,13 +344,13 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
 
   // ---- sparkles: dense near the limb band, scattered on the surface ----
   const sprnd = mulberry32(SEED + 5);
-  const NSP = 1400;
+  const NSP = 4200;
   const spPos = new Float32Array(NSP * 3), spPar = new Float32Array(NSP * 4), spSz = new Float32Array(NSP);
   for (let i = 0; i < NSP; i++) {
     // uniform on sphere, then kept in globe space (moves with the sway)
     const u = sprnd() * 2 - 1, th = sprnd() * TAU;
     const rr = Math.sqrt(1 - u * u);
-    const rad = R * (1.01 + 0.03 * sprnd() * sprnd());
+    const rad = R * (1.008 + 0.06 * Math.pow(sprnd(), 3));
     spPos.set([rr * Math.cos(th) * rad, u * rad, rr * Math.sin(th) * rad], i * 3);
     spPar[i * 4] = [2, 3, 4, 5, 6][Math.floor(sprnd() * 5)];
     spPar[i * 4 + 1] = sprnd();
@@ -339,12 +358,12 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   }
   const sparkles = makeScreenPoints(spPos, {
     color: "#D8F4FF",
-    intensity: 2.2,
-    sizePx: 3.2,
+    intensity: 2.6,
+    sizePx: 2.1,
     pxScale: ctx.pxScale,
     sizes: spSz,
     params: spPar,
-    softness: 0.6,
+    softness: 0.25,
     uniforms: { uT: { value: 0 } },
     decl: "uniform float uT;",
     body: "float tw = 0.5 + 0.5 * sin(6.2831853 * (uT * P.x + P.y)); col.rgb = base * (0.15 + 1.8 * tw * tw * tw);",
@@ -369,14 +388,14 @@ export function buildEarth(ctx: BuildCtx, p: EarthParams): LookHandle {
   });
 
   const camBase = new THREE.Vector3(0, 4.2, 23.5);
-  const look = new THREE.Vector3(0, 10.35, 0);
+  const look = new THREE.Vector3(0, 10.55, 0);
   const post = {
     exposure: p.exposure,
     bloomStrength: 0.5,
     bloomThreshold: 0.85,
     bloomKnee: 0.6,
     bloomRadius: 0.85,
-    dof: { focus: 15, aperture: 0.012, maxCoc: 0.008, nearScale: 1.2 },
+    dof: { focus: 15, aperture: 0.005, maxCoc: 0.005, nearScale: 1.2 },
     vignette: 0.08,
     saturation: 0.85,
     grain: 0.015,
