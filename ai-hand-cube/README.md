@@ -145,4 +145,83 @@ is derived from `useCurrentFrame()`:
   (hash of pixel + frame index).
 - The check was done on frames decoded **from the encoded mp4** — see results.
 
-RESULTS_PLACEHOLDER
+### Banding check (results)
+
+Frames decoded from each encoded 720p mp4, a 13-row strip of pure background
+glow above the cube, averaged to remove grain, then read left to right:
+
+| Version | 8-bit levels across the strip | largest step between neighbours | residual vs. smooth curve (rms) |
+|---|---|---|---|
+| Story | 16.7 → 38.7 → 24.0 | 0.26 | 0.34 |
+| HoldLoop | 16.6 → 38.9 → 23.9 | 0.79 | 0.54 |
+| Gold | 6.7 → 18.8 → 9.8 | 0.25 | 0.28 |
+| Mirrored | 33.6 → 16.9 | 0.81 | 0.54 |
+
+Values change smoothly (well under one 8-bit level per pixel, no plateaus or
+staircases); a contrast-stretched view (0–60 → 0–255) shows no rings. The few
+larger local deviations are particles crossing the strip.
+
+## Render times (measured)
+
+Machine used here: 4 vCPU, no GPU — Chromium WebGL2 through ANGLE →
+SwiftShader (CPU). `--concurrency=1` (more tabs were *slower*: 30 frames took
+70 s at 1 tab, 82 s at 4 tabs). Per-frame time = full-render wall time ÷
+frames (includes ~7 s of browser start-up spread over the run).
+
+TIMES_TABLE
+
+**One real 4K frame** of `AIHandCube-Story` at the hold (frame 380,
+3840×2160): **~27 s** (two runs: 32.9 s and 35.8 s wall, minus ~7 s browser
+start-up measured with the same command at 720p).
+
+**4K estimates on this CPU-only machine:** Story / Gold ≈ 450 × 27 s ≈ **3.4 h
+each**, HoldLoop / Mirrored ≈ 600 × 27 s ≈ **4.5 h each** — ≈ 16 h for all
+four. On a machine with a real GPU (ANGLE on GL/Vulkan) expect roughly an
+order of magnitude faster, and `--concurrency` can then be raised; that
+figure is an estimate, not measured here.
+
+## Verification results
+
+| Check | Result |
+|---|---|
+| 1. ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, 15.0 s / 20.0 s | pass (all four; 450 / 600 frames) |
+| 2. Loop: frame 0 vs frame 600 of a temporary 601-frame composition | pass — 0 differing pixels (HoldLoop, Mirrored) |
+| 3. Determinism: middle frame rendered alone, cold, vs the same frame from a 3-tab out-of-order render | pass — byte-identical PNGs (all four) |
+| 4. Banding on frames decoded from the mp4 | pass (table above) |
+| 5. Contact sheets | pass — rise → square → edges → glass → circuit → "AI" → hold; loops move gently; Mirrored keeps the left half clear |
+| 6. Motion | pass — no joint pops or isolated jumps; HUD ticks are staggered per panel |
+| 7./8. Look vs. reference | matched over three rounds of independent comparison (see the delivery report) |
+
+## Completion checklist
+
+- [x] One Remotion project, 4 compositions, 3840×2160 @ 30 fps (450 / 600 frames)
+- [x] three.js on WebGL2 via `@remotion/three`; `--gl=angle`
+- [x] Robot hand: jointed hierarchy, 4 fingers × 3 segments + 2-segment thumb, ball joints, seams, wrist going out of frame
+- [x] Realism gate run (stills in `realism-gate/`)
+- [x] Glass cube: transmission 0.6, roughness 0.1, fresnel rim, circuit texture, "AI" in Exo 2 SemiBold, 12-edge frame
+- [x] Build: square on palm → edges draw on → glass → circuit traces from the centre → "AI" flash
+- [x] 14 HUD panels at several depths, JetBrains Mono, seeded ticking, in-shader DoF blur
+- [x] ~300 particles from the palm; navy background with glow; DoF focused on the cube
+- [x] Gold colourway; Mirrored framing (cube at x ≈ 68 %, left half clear)
+- [x] Half-float targets, ±1/255 dither, ~1.5 % grain from pixel + frame index
+- [x] Deterministic: no `Math.random()`, no clocks, no state, no TAA / accumulation
+- [x] Loops seamless; middle frames byte-identical when rendered alone
+- [x] OFL fonts + licence texts; no logos, brands or product names
+- [x] One data row per version; README with commands, timings and checks
+
+## Notes / deviations from the brief
+
+- Composition ids use `-` (Remotion forbids `_`); output files use `_`.
+- The cube is 80 % of the palm width (brief: ~70 %) to match the reference's
+  proportions.
+- The hand colour is a light silver-grey `#C6CCD5`, metalness 0.5 (brief:
+  `#E8ECF2`, 0.3) — chosen in review as a middle ground between the brief and
+  the reference's grey metal. Gold uses silver-champagne `#D6CBB8`.
+- The thumb is shorter than the fingers but the chunkiest digit (chosen in
+  review).
+
+## Licences
+
+Exo 2 and JetBrains Mono are licensed under the SIL Open Font License 1.1 —
+see `public/fonts/OFL-Exo2.txt` and `public/fonts/OFL-JetBrainsMono.txt`.
+
