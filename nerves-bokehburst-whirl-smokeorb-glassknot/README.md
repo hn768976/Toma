@@ -63,6 +63,12 @@ npx remotion render <id> out/<file>.mp4 --gl=angle --scale=0.3333333333333333
 
 `--scale=0.3333333333333333` gives exactly 1280×720 (checked with ffprobe).
 
+The delivered previews were rendered as Remotion PNG sequences at that scale (all 600 frames)
+and encoded with
+`ffmpeg -framerate 30 -i element-%03d.png -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p -an`.
+Keeping the PNGs is what made the byte-for-byte frame-300 check possible. The output settings
+match what the `remotion render` command above produces.
+
 ### 6K stills (6000×3375)
 
 ```bash
@@ -117,4 +123,73 @@ The same applies to `BOKEH_VARIANTS`, `WHIRL_VARIANTS`, `SMOKEORB_VARIANTS` and 
 - Smoke Orb fades the grain to zero below 3 % luminance and keeps true black at exactly 0.
 - PNG (not JPEG) intermediate frames.
 
-RESULTS_PLACEHOLDER
+## Measured render times
+
+Measured in this project's build environment: 4 vCPU, **no GPU**, so ANGLE ran on SwiftShader (CPU).
+Expect a large speed-up on any machine with a real GPU.
+
+### 720p (1280×720), full 600-frame renders
+
+These are wall time ÷ 600 for the delivered previews, with `--concurrency=2`. SwiftShader already
+saturates all cores, so a higher concurrency does not help on this box.
+
+| Composition | ms / frame (720p) | 600 frames |
+|---|---|---|
+| NerveFibres-Red | 3 895 | 39 min |
+| NerveFibres-Blue | 3 968 | 40 min |
+| BokehBurst-Blue | 432 | 4.3 min |
+| CosmicWhirl-Blue | 707 | 7.1 min |
+| SmokeOrb-PinkGold | 330 | 3.3 min |
+| SmokeOrb-CyanBlue | 340 | 3.4 min |
+| GlassKnot-Galaxy | 2 902 | 29 min |
+| GlassKnot-Nebula | 2 838 | 28 min |
+
+### Real 4K frames (3840×2160), timed
+
+The per-frame time is (N-frame job − 1-frame job) ÷ (N − 1), so browser start-up, shader compile and
+scene setup are excluded.
+
+| Composition | 4K s / frame | Measured as |
+|---|---|---|
+| 5 · SmokeOrb-PinkGold | **≈ 2.8 s** (2.5–3.1 over two runs) | 7-frame vs 1-frame job, concurrency 1 |
+| 7 · GlassKnot-Galaxy | **≈ 16.8 s** | 4-frame vs 1-frame job, concurrency 1 (one-time setup ≈ 40 s) |
+
+### 4K estimates for all compositions (this CPU-only machine)
+
+The two timed frames are about 5.7× their 720p cost (pixel count is 9×; per-frame fixed costs do not scale).
+The pixel-bound whirl shader is estimated at the full 9×.
+
+| Composition | est. 4K s / frame | est. 600 frames |
+|---|---|---|
+| NerveFibres (each) | ≈ 22–30 s | ≈ 4–5 h |
+| BokehBurst-Blue | ≈ 3–4 s | ≈ 35 min |
+| CosmicWhirl-Blue | ≈ 6–9 s | ≈ 1–1.5 h |
+| SmokeOrb (each) | ≈ 2.8 s (measured) | ≈ 30 min |
+| GlassKnot (each) | ≈ 17 s (measured) | ≈ 2.8 h |
+
+On a desktop GPU, expect these to drop by one to two orders of magnitude.
+
+## Verification results (720p previews)
+
+| Check | Result |
+|---|---|
+| 1 · ffprobe | all 8: h264, 1280×720, 30/1, yuv420p, 600 frames, 20.000 s, no audio stream |
+| 2 · loop (601-frame comp, frame 600 vs 0) | all 8 pixel-identical. Also checked the seam step: the mean change 599→0 equals the normal 0→1 step (e.g. Whirl 5.04 vs 5.02, Nerve Red 4.43 vs 4.40) |
+| 3 · cold frame 300 vs full render | all 8 byte-for-byte identical PNGs |
+| 4 · banding (frame from the encoded mp4) | smooth everywhere: dithered 8-bit runs average 1.3–1.5 px with no flat bands; the orb halo falls to exact black in sub-level steps |
+| 5 · contact sheets | each shows the required elements |
+| 6 · motion (2 s around frame 300) | frame-to-frame change is steady, with no single-frame spikes; no fibre or streak shimmer, no texture boil, glints slide, stars don't pop |
+
+Cosmic Whirl failed the seam check on its first render: the sparkle hash was not 3-fold symmetric like
+the 120° loop rotation. It was fixed and passed on the second render. Everything else passed first time.
+
+## Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, 600 frames, seamless loops
+- [x] three.js (WebGL2) for Nerve Fibres, Cosmic Whirl and Glass Knot; PixiJS 8 (WebGL2) for Bokeh Burst and Smoke Orb
+- [x] one data row per version (`src/variants.ts`)
+- [x] seeded layouts, frame-pure rendering, no `Math.random()`, `Date.now()` or clocks; no TAA or accumulation
+- [x] half-float targets, ±1/255 dither, 1.5 % grain from `frame % 600`, grain fade below 3 % luminance on Smoke Orb
+- [x] 720p previews + PNG stills of all 8 (frame 300)
+- [x] render times measured, two 4K frames timed, 4K estimates
+- [x] no text, logos or brands; procedural galaxy and nebula; generic nerve illustration

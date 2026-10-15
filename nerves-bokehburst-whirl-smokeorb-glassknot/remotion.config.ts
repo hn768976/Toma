@@ -9,6 +9,8 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// CPU-only (SwiftShader) 4K frames can keep the page busy for longer than the 30 s default.
+Config.setDelayRenderTimeoutInMilliseconds(600000);
 
 // Sandboxed environments that cannot download Remotion's Chrome Headless Shell
 // may ship Playwright's. Use it when present; elsewhere Remotion's own is used.
