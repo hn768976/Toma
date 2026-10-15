@@ -29,10 +29,11 @@ void main() {
   vec2 o = vec2(cos(uTheta), sin(uTheta)) * 0.01;
   vec4 n = texture(uNoise, s * 0.35 + o);
   vec4 n2 = texture(uNoise, s * 0.9 - o);
-  float mott = (n.x - 0.5) * 0.05 + (n2.z - 0.5) * 0.025;
+  float mott = (n.x - 0.5) * 0.08 + (n2.z - 0.5) * 0.035;
   vec2 d = vUV - 0.5; d.x *= 1.6;
-  float vig = 1.04 - 0.16 * dot(d, d) * 1.6;
-  finalColor = vec4(uField * (vig + mott), 1.0);
+  float vig = 1.03 - 0.05 * dot(d, d) * 1.6;
+  // slight warm lamp tint
+  finalColor = vec4(uField * vec3(1.01, 1.0, 1.005) * (vig + mott), 1.0);
 }`;
 
 const VERT = /* glsl */ `${GLSL_HEADER}
@@ -83,13 +84,14 @@ type Obj = {
 };
 
 const KIND_MIX: [Kind, number][] = [
-  ["diatom", 0.5],
-  ["algae", 0.22],
-  ["cluster", 0.07],
-  ["speck", 0.12],
-  ["debris", 0.045],
+  ["speck", 0.4],
+  ["diatom", 0.3],
+  ["algae", 0.04],
+  ["cluster", 0.05],
+  ["bubble", 0.08],
+  ["debris", 0.1],
+  ["fibre", 0.03],
   ["needle", 0.01],
-  ["fibre", 0.035],
 ];
 
 const layout = (entries: AtlasEntry[], count: number): Obj[] => {
@@ -101,35 +103,63 @@ const layout = (entries: AtlasEntry[], count: number): Obj[] => {
     for (const [k, w] of KIND_MIX) {
       if ((u -= w) <= 0) return k;
     }
-    return "diatom" as Kind;
+    return "speck" as Kind;
   };
+  const caps: Partial<Record<Kind, number>> = { needle: 1, fibre: 6, debris: 28, bubble: 20 };
+  const used: Partial<Record<Kind, number>> = {};
   for (let i = 0; i < count; i++) {
-    const kind = pickKind();
+    let kind = pickKind();
+    if (caps[kind] !== undefined && (used[kind] ?? 0) >= caps[kind]!) kind = "speck";
+    used[kind] = (used[kind] ?? 0) + 1;
     const list = byKind(kind);
     const e = list[Math.floor(r() * list.length)];
-    const lr = r();
-    const layer = (lr < 0.5 ? 0 : lr < 0.76 ? 1 : 2) as 0 | 1 | 2;
     let x = range(r, -150, 3990);
     let y = range(r, -150, 2310);
-    // debris and fibres gather on the right, as in a real slide corner
-    if (kind === "debris" || kind === "fibre") {
-      x = range(r, 2700, 4000);
-      y = r() < 0.5 ? range(r, -100, 700) : range(r, 1200, 2300);
+    if (kind === "debris") {
+      x = range(r, 3000, 4050);
+      y = r() < 0.4 ? range(r, -150, 700) : range(r, 1300, 2300);
     }
-    const sizeScale = kind === "diatom" ? range(r, 0.55, 0.95) : kind === "debris" ? range(r, 0.6, 1.3) : range(r, 0.75, 1.2);
+    if (kind === "fibre") {
+      x = range(r, 2750, 3150);
+      y = range(r, 0, 300);
+    }
+    if (kind === "needle") {
+      x = 920;
+      y = 1000;
+    }
+    if (kind === "debris") {
+      // khaki mass at the lower right, a smaller clump at the top right
+      x = range(r, 3300, 4000);
+      y = r() < 0.3 ? range(r, 0, 500) : range(r, 1400, 2250);
+    }
+    // focus varies by region: upper left sharpest, lower left most defocused
+    const sharpness = 0.55 - 0.45 * (y / 2160) + 0.15 * (1 - x / 3840) * (1 - y / 2160);
+    const lr = r();
+    let layer = (lr < sharpness * 0.85 ? 1 : lr < 0.75 ? 0 : 2) as 0 | 1 | 2;
+    if (kind === "debris") layer = r() < 0.6 ? 2 : 0;
+    // diatoms gather in the lower-right clump too
+    if (kind === "diatom" && r() < 0.18) {
+      x = range(r, 3000, 3950);
+      y = range(r, 1350, 2250);
+    }
+    if (kind === "needle" || kind === "fibre") layer = 1;
+    if ((kind === "algae" || kind === "cluster") && layer !== 1) layer = r() < 0.7 ? 1 : 2;
+    const sizeScale =
+      kind === "diatom" ? range(r, 0.55, 0.95) : kind === "debris" ? range(r, 0.8, 1.5) : kind === "speck" ? range(r, 0.4, 1.0) : range(r, 0.75, 1.2);
+    const diag = 0.65; // shared lean, upper left to lower right
     objs.push({
       e,
       layer,
       x,
       y,
-      ax: range(r, 20, 110) * (r() < 0.5 ? -1 : 1),
-      ay: range(r, 10, 70),
+      ax: range(r, 20, 90) * (r() < 0.5 ? -1 : 1),
+      ay: range(r, 10, 50),
       ph: r() * TAU,
-      ang: r() * TAU,
-      turn: kind === "algae" || kind === "speck" ? 0 : range(r, 0.05, 0.35) * (r() < 0.5 ? -1 : 1),
+      ang: kind === "needle" ? 1.5 : kind === "diatom" ? diag + range(r, -0.6, 0.6) : r() * TAU,
+      turn: kind === "algae" || kind === "speck" || kind === "bubble" ? 0 : range(r, 0.04, 0.25) * (r() < 0.5 ? -1 : 1),
       turnPh: r() * TAU,
-      scale: sizeScale * (layer === 2 ? 1.25 : layer === 0 ? 1.05 : 1),
-      k: layer === 1 ? 1 : layer === 0 ? 1.0 : 0.85,
+      scale: sizeScale * (layer === 2 ? 1.3 : layer === 0 ? (kind === "diatom" ? 1.8 : 1.15) : 1),
+      k: kind === "speck" ? (layer !== 1 ? 0.35 : 0.7) : 1,
     });
   }
   objs.sort((a, b) => a.layer - b.layer);
@@ -175,9 +205,11 @@ const makeLook = (params: DiatomParams): PixiLook<Scene> => ({
     s.objs.forEach((o, i) => {
       const e = s.entries[o.e];
       // closed drift (one whole cycle per loop) + gentle turning
-      const x = o.x + o.ax * Math.cos(th + o.ph);
-      const y = o.y + o.ay * Math.sin(th + o.ph);
       const a = o.ang + o.turn * Math.sin(th + o.turnPh);
+      // drift (closed loop) plus a glide back and forth along the long axis
+      const glide = o.turn !== 0 ? 40 * Math.sin(th * 2 + o.ph) : 0;
+      const x = o.x + o.ax * Math.cos(th + o.ph) + Math.cos(a) * glide;
+      const y = o.y + o.ay * Math.sin(th + o.ph) + Math.sin(a) * glide;
       const uv = e.uv[o.layer === 1 ? 0 : o.layer === 2 ? 1 : 2];
       const k = i * FPI;
       d[k] = x;

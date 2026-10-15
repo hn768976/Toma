@@ -27,7 +27,7 @@ export const ROWS: Row[] = [
   {
     id: "SatelliteNetwork-Blue",
     look: "satellites",
-    params: { shot: "wide", tint: "#9CCBFF", rim: "#2F8BFF", link: "#CFE6FF", satellites: 60 },
+    params: { shot: "wide", tint: "#9CCBFF", rim: "#2F8BFF", link: "#CFE6FF", satellites: 96 },
   },
   {
     id: "SatelliteNetwork-Close",
@@ -37,17 +37,17 @@ export const ROWS: Row[] = [
   {
     id: "Aurora-Green",
     look: "aurora",
-    params: { green: "#3AF06A", edge: "#C8FFC8", top: "#3AF06A", topMix: 0, brightness: 1.8 },
+    params: { green: "#3AF06A", edge: "#C8FFC8", top: "#C878B0", topMix: 0.6, brightness: 3.3 },
   },
   {
     id: "Aurora-VioletGreen",
     look: "aurora",
-    params: { green: "#3AF06A", edge: "#C8FFC8", top: "#C86AE8", topMix: 0.85, brightness: 1.8 },
+    params: { green: "#3AF06A", edge: "#C8FFC8", top: "#C86AE8", topMix: 0.9, brightness: 3.3 },
   },
   {
     id: "StarDisc-Orange",
     look: "stardisc",
-    params: { core: "#FFD8A0", glow: "#FF8A3A", dust: "#D8D6D2", particles: 200000 },
+    params: { core: "#FFD8A0", glow: "#FF8A3A", dust: "#C9CED8", particles: 200000 },
   },
   {
     id: "Diatoms-BrightField",

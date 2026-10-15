@@ -60,6 +60,8 @@ const tuneMaterials = (parts: Part[]) => {
     m.metalness = m.name === "solar" ? 0.35 : 0.75;
     m.roughness = m.name === "solar" ? 0.28 : 0.38;
     m.envMapIntensity = 0.9;
+    // grade the foil and panels toward the blue/white palette of the look
+    m.color = new THREE.Color(m.name === "solar" ? 0xf0f6ff : 0x7d93c4);
     m.side = THREE.DoubleSide;
   }
 };
@@ -72,36 +74,35 @@ type Sat = { r: number; e1: THREE.Vector3; e2: THREE.Vector3; a0: number; turns:
  * the plane is opened 50-70 degrees in depth. About half of every orbit is in
  * the visible left half of the frame at any time, as in the reference.
  */
-export const WIDE_EYE = new THREE.Vector3(-1.25, 0.5, 2.0);
-export const WIDE_TARGET = new THREE.Vector3(-0.95, 0.12, 0);
+export const WIDE_EYE = new THREE.Vector3(-0.95, 0.58, 1.6);
+export const WIDE_TARGET = new THREE.Vector3(-0.78, 0.06, 0);
 const buildSats = (n: number, seed: number): Sat[] => {
   const r = mulberry32(seed);
-  const F = WIDE_TARGET.clone().sub(WIDE_EYE).normalize();
-  const R = new THREE.Vector3().crossVectors(F, new THREE.Vector3(0, 1, 0)).normalize();
-  const U = new THREE.Vector3().crossVectors(R, F).normalize();
+  // Great-circle shells (plane normal given by polar th / azimuth ph), found
+  // by an offline search (scripts/orbit-search.mjs) to keep as many
+  // satellites as possible in the wide crop, some crossing the globe.
   const shells = [
-    { r: 1.25, beta: 0.45, gamma: 1.05 },
-    { r: 1.45, beta: -0.2, gamma: 1.2 },
-    { r: 1.7, beta: 0.15, gamma: 0.95 },
-    { r: 1.95, beta: -0.45, gamma: 1.1 },
-    { r: 2.2, beta: 0.3, gamma: 1.25 },
+    { r: 1.41, th: 2.8, ph: 1.814 },
+    { r: 1.35, th: 2.549, ph: 1.057 },
+    { r: 1.43, th: 2.711, ph: 1.184 },
+    { r: 1.31, th: 2.937, ph: 2.326 },
+    { r: 1.06, th: 0.595, ph: 0.342 },
   ];
   const sats: Sat[] = [];
   for (let i = 0; i < n; i++) {
     const sh = shells[i % shells.length];
     const k = Math.floor(i / shells.length);
     const per = Math.ceil(n / shells.length);
-    const beta = sh.beta + gauss(r) * 0.04;
-    const e2 = R.clone().multiplyScalar(-Math.cos(beta)).addScaledVector(U, Math.sin(beta)).normalize();
-    const n2 = new THREE.Vector3().crossVectors(F, e2).normalize(); // in screen plane, perpendicular to e2
-    const g = sh.gamma + gauss(r) * 0.04;
-    const e1 = F.clone().multiplyScalar(-Math.cos(g)).addScaledVector(n2, Math.sin(g)).normalize();
-    e1.sub(e2.clone().multiplyScalar(e1.dot(e2))).normalize();
+    const th = sh.th + gauss(r) * 0.03, ph = sh.ph + gauss(r) * 0.03;
+    const nrm = new THREE.Vector3(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
+    const t = Math.abs(nrm.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    const e1 = new THREE.Vector3().crossVectors(nrm, t).normalize();
+    const e2 = new THREE.Vector3().crossVectors(nrm, e1).normalize();
     sats.push({
       r: sh.r + gauss(r) * 0.02,
       e1,
       e2,
-      a0: (k / per) * TAU + r() * 0.2,
+      a0: (k / per) * TAU + r() * 0.15,
       turns: sh.r < 1.6 ? 2 : 1, // whole orbits per 600 frames
       tilt: range(r, -0.25, 0.25),
       scale: range(r, 0.85, 1.15),
@@ -146,15 +147,17 @@ void main() {
   float warm = max(tex.r - tex.b * 0.9, 0.0);
   float city = smoothstep(0.004, 0.12, warm);
   // stylised dotted continents (as in the reference)
-  vec2 g = fract(vUv * vec2(900.0, 450.0)) - 0.5;
-  float dots = smoothstep(0.32, 0.12, length(g));
-  vec3 c = vec3(0.002, 0.008, 0.03);
-  c += uRim * land * (0.05 + 0.3 * dots);
-  c += uTint * city * (2.0 + 4.0 * dots);
+  vec2 g = fract(vUv * vec2(1500.0, 750.0)) - 0.5;
+  float dots = smoothstep(0.34, 0.1, length(g));
+  vec3 c = vec3(0.001, 0.004, 0.012);
+  c += uRim * land * (0.04 + 0.9 * dots);
+  // lit blue face, glowing toward the sun-side limb
+  c += uRim * 0.06 * smoothstep(0.1, 1.0, dot(N, uSun));
+  c += uTint * city * (2.5 + 6.0 * dots);
   // atmosphere seen through the limb, brighter toward the sun side
   float sunSide = 0.35 + 0.65 * smoothstep(-0.4, 0.8, dot(N, uSun));
-  c += uRim * fres * 1.1 * sunSide;
-  c += uRim * pow(1.0 - ndv, 8.0) * 2.5 * sunSide;
+  c += uRim * pow(1.0 - ndv, 3.0) * 1.0 * sunSide;
+  c += uRim * pow(1.0 - ndv, 10.0) * 2.5 * sunSide;
   gl_FragColor = vec4(c, 1.0);
 }`;
 const ATMO_FRAG = /* glsl */ `
@@ -167,7 +170,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vP);
   float d = dot(N, V); // negative on the back faces we draw
   // brightest at the planet's limb, fading out to the edge of the shell
-  float glow = pow(clamp(-d / 0.33, 0.0, 1.0), 2.2);
+  float glow = pow(clamp(-d / 0.33, 0.0, 1.0), 2.5);
   float sunSide = 0.4 + 0.6 * smoothstep(-0.5, 0.8, dot(N, uSun));
   gl_FragColor = vec4(uRim * glow * 1.4 * sunSide, 1.0);
 }`;
@@ -185,7 +188,9 @@ void main() {
   vec2 p = vUv; p.x *= 1.7778;
   vec2 g = uGlowPos; g.x *= 1.7778;
   float d = length(p - g);
-  vec3 c = uDeep * (0.7 + 0.5 * vUv.y);
+  vec3 c = uDeep * (0.55 + 0.5 * vUv.y);
+  vec2 vq = vUv - 0.5; vq.x *= 1.4;
+  c *= 1.0 - 0.75 * smoothstep(0.25, 0.85, length(vq));
   c += uGlow * (exp(-d * d / 0.08) * 0.6 + exp(-d / 0.5) * 0.25) * uGlowAmt;
   gl_FragColor = vec4(c, 1.0);
 }`;
@@ -297,7 +302,7 @@ export const buildSatelliteScene = (opts: {
   scene.environment = envTex;
   scene.environmentIntensity = 0.55;
 
-  const SUN = new THREE.Vector3(-1.0, 0.45, -0.35).normalize();
+  const SUN = new THREE.Vector3(-0.85, -0.2, 0.55).normalize();
 
   // background gradient (float precision, drawn behind everything)
   const bg = new THREE.Mesh(
@@ -310,8 +315,8 @@ export const buildSatelliteScene = (opts: {
       uniforms: {
         uDeep: { value: new THREE.Color(0.0025, 0.012, 0.05) },
         uGlow: { value: col(params.rim) },
-        uGlowPos: { value: new THREE.Vector2(close ? 0.1 : -0.02, close ? 0.75 : 0.62) },
-        uGlowAmt: { value: close ? 0.12 : 0.22 },
+        uGlowPos: { value: new THREE.Vector2(close ? 0.1 : -0.03, close ? 0.75 : 0.7) },
+        uGlowAmt: { value: close ? 0.12 : 0.45 },
       },
     }),
   );
@@ -339,7 +344,7 @@ export const buildSatelliteScene = (opts: {
   earthPivot.add(earth);
   scene.add(earthPivot);
   const atmo = new THREE.Mesh(
-    new THREE.SphereGeometry(1.06, 120, 90),
+    new THREE.SphereGeometry(1.05, 120, 90),
     new THREE.ShaderMaterial({
       vertexShader: EARTH_VERT,
       fragmentShader: ATMO_FRAG,
@@ -353,7 +358,7 @@ export const buildSatelliteScene = (opts: {
   scene.add(atmo);
 
   // lights
-  const sun = new THREE.DirectionalLight(0xfff4e8, 3.2);
+  const sun = new THREE.DirectionalLight(0xfff4e8, close ? 1.3 : 2.0);
   sun.position.copy(SUN).multiplyScalar(10);
   scene.add(sun);
   scene.add(new THREE.HemisphereLight(0x6a9cff, 0x0a1a40, 0.35));
@@ -417,10 +422,10 @@ export const buildSatelliteScene = (opts: {
     return pts;
   };
   mkPoints(2200, 77, 60, 90, [2, 5], "#cfe0ff", [0.05, 0.9]);
-  mkPoints(260, 78, 2.2, 6, [6, 16], "#3d8bff", [0.05, 0.35]);
+  mkPoints(520, 78, 2.0, 5, [12, 28], "#4d9bff", [0.15, 0.7]);
 
   // links
-  const MAXSEG = sats.length * 3 + 8;
+  const MAXSEG = sats.length * 5 + 8;
   const linkPos = new Float32Array(MAXSEG * 6);
   const linkCol = new Float32Array(MAXSEG * 6);
   const linkGeo = new LineSegmentsGeometry();
@@ -447,27 +452,55 @@ export const buildSatelliteScene = (opts: {
   for (let i = 0; i < sats.length; i++) {
     const j = i + shellsN < sats.length ? i + shellsN : i % shellsN;
     pairs.push([i, j, 0.9]);
-    if (lr() < 0.7) pairs.push([i, Math.floor(lr() * sats.length), 0.7]);
+    pairs.push([i, Math.floor(lr() * sats.length), 0.7]);
+    if (lr() < 0.5) pairs.push([i, Math.floor(lr() * sats.length), 0.5]);
   }
   const ground = sats.map(() => new THREE.Vector3(gauss(lr) * 0.25, gauss(lr) * 0.25, gauss(lr) * 0.25));
-  const groundOn = sats.map(() => lr() < 0.55);
+  const groundOn = sats.map(() => lr() < 0.85);
 
   // signal icons
   const iconGeo = new THREE.PlaneGeometry(1, 1);
-  const icons = Array.from({ length: 10 }, (_, k) => {
+  const icons = Array.from({ length: 24 }, (_, k) => {
     const m = new THREE.ShaderMaterial({
       vertexShader: ICON_VERT,
       fragmentShader: ICON_FRAG,
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      uniforms: { uColor: { value: col(params.rim).multiplyScalar(1.6) }, uPulse: { value: 0 }, uAlpha: { value: 1 } },
+      uniforms: { uColor: { value: col(params.rim).multiplyScalar(2.4) }, uPulse: { value: 0 }, uAlpha: { value: 1 } },
     });
     const mesh = new THREE.Mesh(iconGeo, m);
     mesh.frustumCulled = false;
     scene.add(mesh);
-    return { mesh, m, sat: (k * 7 + 3) % sats.length, period: [100, 120, 150, 200, 300][k % 5], off: Math.floor(lr() * 600) };
+    return { mesh, m, sat: (k * 4 + 1) % sats.length, period: [100, 120, 150, 200, 300][k % 5], off: Math.floor(lr() * 600) };
   });
+
+  // small ring/target markers on the globe surface
+  const ringMat = new THREE.ShaderMaterial({
+    vertexShader: ICON_VERT,
+    fragmentShader: /* glsl */ `
+uniform vec3 uColor;
+varying vec2 vUv;
+void main() {
+  float r = length(vUv * 2.0 - 1.0);
+  float m = smoothstep(0.08, 0.0, abs(r - 0.75)) + smoothstep(0.08, 0.0, abs(r - 0.4)) * 0.7 + smoothstep(0.15, 0.0, r);
+  gl_FragColor = vec4(uColor * m * 0.8, 1.0);
+}`,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: { uColor: { value: col(params.rim).multiplyScalar(1.8) } },
+  });
+  const rr = mulberry32(31);
+  for (let i = 0; i < 14; i++) {
+    const u = rr() * 2 - 1, a = rr() * TAU, sq = Math.sqrt(1 - u * u);
+    const n = new THREE.Vector3(Math.cos(a) * sq, u, Math.sin(a) * sq);
+    const ring = new THREE.Mesh(iconGeo, ringMat);
+    ring.position.copy(n).multiplyScalar(1.003);
+    ring.lookAt(n.clone().multiplyScalar(2));
+    ring.scale.setScalar(0.045);
+    earth.add(ring);
+  }
 
   // post-processing (half-float targets)
   const rt = new THREE.WebGLRenderTarget(width * dpr, height * dpr, { type: THREE.HalfFloatType, samples: 4 });
@@ -476,13 +509,14 @@ export const buildSatelliteScene = (opts: {
   composer.setSize(width, height);
   composer.addPass(new RenderPass(scene, camera));
   let bokeh: BokehPass | null = null;
-  if (close) {
-    bokeh = new BokehPass(scene, camera, { focus: 0.2, aperture: 0.012, maxblur: 0.012 });
-    composer.addPass(bokeh);
-  }
-  const bloom = new UnrealBloomPass(new THREE.Vector2(width * dpr, height * dpr), close ? 0.55 : 0.7, 0.6, 0.55);
+  bokeh = close
+    ? new BokehPass(scene, camera, { focus: 0.2, aperture: 0.012, maxblur: 0.012 })
+    : new BokehPass(scene, camera, { focus: 2.1, aperture: 0.0006, maxblur: 0.003 });
+  composer.addPass(bokeh);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(width * dpr, height * dpr), close ? 0.55 : 0.7, 0.6, 0.75);
   composer.addPass(bloom);
   const final = new ShaderPass(FINAL);
+  (final.uniforms as Record<string, { value: number }>).uExposure.value = close ? 0.8 : 1.0;
   composer.addPass(final);
 
   // reusable temporaries
@@ -508,11 +542,13 @@ export const buildSatelliteScene = (opts: {
   const render = (frame: number) => {
     const ph = (((frame % 600) + 600) % 600) / 600;
     const th = ph * TAU;
-    earth.rotation.y = -1.9 + (12 * Math.PI) / 180 * Math.cos(th); // sway +-12 deg
+    earth.rotation.y = -1.15 + (12 * Math.PI) / 180 * Math.cos(th); // sway +-12 deg
 
     sats.forEach((s, i) => {
       orbitPos(s, ph, P);
-      satMatrix(s, P, SAT_SIZE * s.scale, M);
+      // wide shot: keep apparent size roughly constant (flat, graphic look)
+      const sz = close ? SAT_SIZE : SAT_SIZE * THREE.MathUtils.clamp(P.distanceTo(WIDE_EYE) / 1.7, 0.35, 1.2);
+      satMatrix(s, P, sz * s.scale, M);
       for (const im of inst) im.setMatrixAt(i, M);
     });
     for (const im of inst) im.instanceMatrix.needsUpdate = true;
@@ -521,7 +557,7 @@ export const buildSatelliteScene = (opts: {
     if (!close) {
       camera.position.copy(WIDE_EYE).add(Q.set(0.05 * Math.cos(th), 0.04 * Math.sin(th), 0));
       camera.lookAt(Q.copy(WIDE_TARGET).add(P.set(0.03 * Math.sin(th), 0, 0)));
-      camera.rotateZ(-0.16);
+      camera.rotateZ(-0.42);
     } else {
       orbitPos(heroSat, ph, P);
       satMatrix(heroSat, P, 0.06, M);
@@ -536,9 +572,9 @@ export const buildSatelliteScene = (opts: {
       const normal = new THREE.Vector3().crossVectors(radial, along).normalize();
       const sway = 0.012 * Math.sin(th) ;
       camera.position.copy(P)
-        .addScaledVector(along, -0.12)
-        .addScaledVector(radial, 0.05 + 0.008 * Math.cos(th))
-        .addScaledVector(normal, 0.05 + sway);
+        .addScaledVector(along, -0.1)
+        .addScaledVector(radial, 0.07 + 0.008 * Math.cos(th))
+        .addScaledVector(normal, 0.085 + sway);
       up.copy(radial);
       camera.up.copy(up);
       camera.lookAt(Q.copy(P).addScaledVector(radial, -0.05).addScaledVector(along, 0.06));
@@ -562,7 +598,7 @@ export const buildSatelliteScene = (opts: {
     const posCache = sats.map((s) => orbitPos(s, ph, new THREE.Vector3()));
     for (const [i, j, w] of pairs) {
       const d = posCache[i].distanceTo(posCache[j]);
-      put(posCache[i], posCache[j], 0.3 * w * (1 - THREE.MathUtils.smoothstep(d, 0.35, 0.75)));
+      put(posCache[i], posCache[j], 0.32 * w * (1 - THREE.MathUtils.smoothstep(d, 0.5, 1.1)));
     }
     sats.forEach((_, i) => {
       if (!groundOn[i]) return;
@@ -581,7 +617,7 @@ export const buildSatelliteScene = (opts: {
     for (const ic of icons) {
       ic.mesh.position.copy(posCache[ic.sat]);
       ic.mesh.quaternion.copy(camera.quaternion);
-      ic.mesh.scale.setScalar(close ? 0.05 : 0.26);
+      ic.mesh.scale.setScalar(close ? 0.05 : 0.2 * THREE.MathUtils.clamp(posCache[ic.sat].distanceTo(camera.position) / 1.7, 0.35, 1.3));
       const u = ((f + ic.off) % ic.period) / ic.period;
       ic.m.uniforms.uPulse.value = u;
       ic.m.uniforms.uAlpha.value = 0.55 + 0.45 * Math.sin(Math.PI * u);

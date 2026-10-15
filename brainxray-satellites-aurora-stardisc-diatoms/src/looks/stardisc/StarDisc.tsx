@@ -20,24 +20,20 @@ const hex = (h: string) => {
 // ------------------------------------------------------------------ disc data
 // Radial density with rings and 2-3 clear gaps (fraction of the outer radius).
 const RINGS: { r: number; w: number; d: number }[] = [
-  { r: 0.17, w: 0.03, d: 0.15 },
-  { r: 0.27, w: 0.03, d: 0.7 }, // bright inner ring
-  { r: 0.42, w: 0.06, d: 0.75 },
-  { r: 0.52, w: 0.05, d: 0.6 },
-  { r: 0.7, w: 0.07, d: 0.65 },
-  { r: 0.86, w: 0.05, d: 1.4 }, // outer ring
-  { r: 0.96, w: 0.04, d: 0.45 },
+  { r: 0.33, w: 0.022, d: 0.7 }, // ring close around the star
+  { r: 0.55, w: 0.04, d: 0.45 }, // middle ring
+  { r: 0.86, w: 0.06, d: 1.0 }, // wide outer band
 ];
 const GAPS: { r: number; w: number }[] = [
-  { r: 0.33, w: 0.025 },
-  { r: 0.615, w: 0.03 },
-  { r: 0.785, w: 0.02 },
+  { r: 0.42, w: 0.03 },
+  { r: 0.72, w: 0.025 },
 ];
 const density = (r: number) => {
-  let d = 0.12 * Math.exp(-Math.pow((r - 0.6) / 0.45, 2));
+  let d = 0.22;
   for (const g of RINGS) d += g.d * Math.exp(-Math.pow((r - g.r) / g.w, 2));
-  for (const g of GAPS) d *= 1 - 0.97 * Math.exp(-Math.pow((r - g.r) / g.w, 4));
-  if (r < 0.12) d *= Math.pow(r / 0.12, 3);
+  for (const g of GAPS) d *= 1 - 0.5 * Math.exp(-Math.pow((r - g.r) / g.w, 4));
+  if (r < 0.28) d *= Math.pow(r / 0.28, 4);
+  if (r > 0.94) d *= 0.08 + 0.92 * Math.exp(-(r - 0.94) / 0.04);
   return d;
 };
 /** Whole turns per 600 frames for the band containing r (inner bands faster). */
@@ -49,14 +45,14 @@ const buildDisc = (count: number) => {
   const data = new Float32Array(count * FPI);
   let n = 0;
   while (n < count) {
-    const rr = 0.08 + r() * 0.95;
+    const rr = 0.06 + r() * 1.2;
     if (r() * 1.15 > density(rr)) continue;
-    const rock = r() < 0.025;
+    const rock = r() < 0.05;
     const o = n * FPI;
     data[o] = rr + gauss(r) * 0.004; // radius
     data[o + 1] = r() * TAU; // phase angle
     data[o + 2] = gauss(r) * 0.006 * (0.6 + rr); // height above plane
-    data[o + 3] = rock ? range(r, 3.5, 8) : Math.pow(r(), 3) * 2.2 + 0.9; // size (design px at 4K)
+    data[o + 3] = rock ? range(r, 4, 10) * (r() < 0.15 ? 1.6 : 1) : Math.pow(r(), 5) * 1.4 + 0.6; // size (design px at 4K)
     data[o + 4] = rock ? range(r, 0.5, 0.9) : range(r, 0.25, 1.0); // albedo
     data[o + 5] = bandTurns(rr); // turns per loop
     data[o + 6] = rock ? 1 : 0;
@@ -76,6 +72,7 @@ out float vI;
 out float vRock;
 out float vSeed;
 out float vWarm;
+out vec2 vLit;
 uniform mat3 uProjectionMatrix;
 uniform mat3 uWorldTransformMatrix;
 uniform mat3 uTransformMatrix;
@@ -93,7 +90,7 @@ void main() {
   // perspective size; never smaller than ~1.3 backing px (energy kept)
   float persp = 2.4 / clip.w;
   float sizePx = aI0.w * persp * (aI1.z > 0.5 ? 1.0 : 1.0);
-  float minPx = 1.3 / uPxScale;
+  float minPx = 1.0 / uPxScale;
   float s = max(sizePx, minPx);
   float energy = (sizePx * sizePx) / (s * s);
   vec2 p = sp + aPosition * s;
@@ -102,12 +99,13 @@ void main() {
   vC = aPosition;
   // lit from the star: brighter inside, a little forward-scatter on the far side
   float rr = aI0.x;
-  float light = 0.36 / (0.3 + rr);
+  float light = 0.22 / (0.35 + rr);
   float far = clamp(sin(a), -1.0, 1.0);
   vI = aI1.x * light * (0.85 + 0.25 * far) * energy;
   vRock = aI1.z;
   vSeed = aI1.w;
   vWarm = exp(-rr * 4.0);
+  vLit = normalize(uDesign * 0.5 - sp + vec2(0.001)) * 0.8;
   if (clip.w < 0.05) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
 }`;
 const DISC_FRAG = /* glsl */ `${GLSL_HEADER}
@@ -116,6 +114,7 @@ in float vI;
 in float vRock;
 in float vSeed;
 in float vWarm;
+in vec2 vLit;
 out vec4 finalColor;
 uniform vec3 uDust;
 uniform vec3 uGlow;
@@ -128,11 +127,14 @@ void main() {
     float ang = atan(vC.y, vC.x);
     float edge = 0.78 + 0.12 * sin(ang * 3.0 + vSeed) + 0.07 * sin(ang * 5.0 + vSeed * 1.7);
     float d = length(vC) / edge;
-    m = smoothstep(1.0, 0.75, d) * (0.55 + 0.45 * clamp(-vC.y + 0.2, 0.0, 1.0));
+    // shaded chunk: lit edge facing the star (toward screen centre/up), dark side
+    vec2 L = normalize(vec2(0.0, -1.0) + vLit);
+    float lit = clamp(dot(vC, L) * 0.9 + 0.35, 0.08, 1.0);
+    m = smoothstep(1.0, 0.85, d) * lit * 2.2;
   } else {
-    m = exp(-r2 * 3.5);
+    m = smoothstep(1.0, 0.6, r2);
   }
-  vec3 c = mix(uDust, uGlow, vWarm * 0.6) * m * vI;
+  vec3 c = mix(uDust, uGlow, vWarm * 0.18) * m * vI;
   finalColor = vec4(c, 0.0);
 }`;
 
@@ -162,29 +164,40 @@ void main() {
   float r = length(d);
   float pulse = 1.0 + 0.04 * sin(uTheta * 3.0);
   float z = uZoom;
-  // core and glow
-  col += uCore * exp(-r * r / (0.0012 * z * z)) * 1.8 * pulse;
-  col += uCore * exp(-r / (0.016 * z)) * 0.7;
-  col += uGlow * exp(-r / (0.07 * z)) * 0.5;
-  col += uGlow * exp(-r / (0.28 * z)) * 0.12;
-  // ~12 rays
-  float a = atan(d.y, d.x);
-  float rays = pow(abs(cos(a * 6.0 + 0.2)), 60.0) + 0.5 * pow(abs(cos(a * 6.0 + 1.75)), 90.0);
-  col += mix(uGlow, uCore, 0.3) * rays * exp(-r / (0.1 * z)) * 0.45 * pulse;
-  // horizontal anamorphic streak (a few thin lines)
-  float sy = abs(d.y);
-  float streak = exp(-sy / 0.0016) * exp(-abs(d.x) / 0.55) * 0.55
-               + exp(-abs(sy - 0.010) / 0.0011) * exp(-abs(d.x) / 0.12) * 0.25
-               + exp(-sy / 0.006) * exp(-abs(d.x) / 0.9) * 0.08;
-  col += mix(uGlow, vec3(1.0, 0.75, 0.55), 0.4) * streak * pulse;
-  // lens ghosts along the line through the frame centre
-  vec2 c0 = vec2(1920.0, 1080.0);
-  for (int i = 0; i < 4; i++) {
-    float t = 1.6 + float(i) * 0.3;
-    vec2 gp = uStar + (c0 - uStar) * t;
-    float gr = 40.0 + float(i) * 35.0;
+  // warm haze lifting the whole frame, stronger around the star
+  col += uGlow * (0.01 + 0.025 * exp(-r / (0.3 * z)));
+  // small white-hot core inside a large amber halo
+  col += vec3(1.0, 0.97, 0.9) * exp(-r * r / (0.00012 * z * z)) * 2.0 * pulse;
+  col += uCore * exp(-r / (0.01 * z)) * 0.8;
+  vec3 salmon = mix(uGlow, vec3(1.0, 0.62, 0.48), 0.35);
+  col += salmon * exp(-r / (0.075 * z)) * 0.9;
+  col += salmon * exp(-r / (0.12 * z)) * 0.22;
+  // soft ray burst fanning mainly upward, faint below
+  float a = atan(d.x, -d.y); // 0 = straight up
+  float up = 0.65 + 0.35 * smoothstep(0.0, -0.15, d.y);
+  float rays = pow(0.5 + 0.5 * cos(a * 7.0), 6.0) * 0.6 + pow(0.5 + 0.5 * cos(a * 11.0 + 1.3), 10.0) * 0.4;
+  col += mix(uGlow, uCore, 0.25) * rays * exp(-r / (0.22 * z)) * 0.35 * up * pulse;
+  // thin sharp spikes in all directions, long ones reaching down past the disc
+  float spikes = pow(abs(cos(a * 6.0 + 0.3)), 400.0) + 0.6 * pow(abs(cos(a * 9.0 + 1.1)), 600.0);
+  float down = 1.0 + 1.5 * smoothstep(0.85, 1.0, abs(cos(a)) * step(0.0, d.y));
+  col += mix(uGlow, uCore, 0.5) * spikes * exp(-r / (0.09 * z * down)) * 0.3 * pulse;
+  // stacked anamorphic streaks (orange-pink), the main one across the frame
+  float sy = d.y;
+  float streak = exp(-abs(sy) / 0.004) * exp(-abs(d.x) / 0.6) * 0.8
+               + exp(-abs(sy - 0.009) / 0.0018) * exp(-abs(d.x) / 0.45) * 0.9
+               + exp(-abs(sy + 0.008) / 0.0018) * exp(-abs(d.x) / 0.4) * 0.8
+               + exp(-abs(sy - 0.018) / 0.0016) * exp(-abs(d.x) / 0.25) * 0.5
+               + exp(-abs(sy) / 0.015) * exp(-abs(d.x) / 0.8) * 0.15;
+  col += mix(uGlow, vec3(1.0, 0.62, 0.55), 0.45) * streak * pulse;
+  // lens ghosts on a diagonal toward the lower left
+  for (int i = 0; i < 5; i++) {
+    float t = 0.9 + float(i) * 0.28;
+    vec2 gp = uStar + vec2(-0.43, 0.3) * t * 2160.0;
+    float gr = (60.0 + float(i) * 14.0);
     float gd = length(p - gp) / gr;
-    col += uGlow * 0.06 * smoothstep(1.0, 0.5, gd) * (0.6 + 0.4 * smoothstep(0.6, 1.0, gd));
+    // hexagonal soft ghost
+    vec2 gq = (p - gp) / gr; float hx = max(abs(gq.x) * 0.866 + abs(gq.y) * 0.5, abs(gq.y));
+    col += mix(uGlow, vec3(0.6, 0.6, 0.25), float(i % 2) * 0.5) * 0.09 * smoothstep(1.0, 0.55, hx);
   }
   finalColor = vec4(col, 1.0);
 }`;
@@ -250,14 +263,14 @@ const norm = (a: number[]) => {
   return [a[0] / l, a[1] / l, a[2] / l];
 };
 
-const ELEV = (22 * Math.PI) / 180; // camera ~15 degrees above the disc plane
-const CAM_DIST = 1.95;
+const ELEV = (18 * Math.PI) / 180; // camera ~15 degrees above the disc plane
+const CAM_DIST = 2.1;
 const FOV = (44 * Math.PI) / 180;
 const camera = (phase: number) => {
   // slow closed push: +-6% distance, cosine
   const dist = CAM_DIST * (1 + 0.06 * Math.cos(phase * TAU));
   const eye = [0, Math.sin(ELEV) * dist, -Math.cos(ELEV) * dist];
-  const target = [0, -0.2, 0.22];
+  const target = [0, -0.36, 0.3];
   const view = mat4.lookAt(eye, target, [0, 1, 0]);
   const proj = mat4.perspective(FOV, 16 / 9, 0.05, 50);
   return { vp: mat4.mul(proj, view), dist };
@@ -273,12 +286,12 @@ const project = (vp: number[], p: number[]) => {
 const FG = (() => {
   const r = mulberry32(8080);
   return Array.from({ length: 7 }, () => ({
-    cx: range(r, 200, 3600),
-    cy: range(r, 1500, 2300),
+    cx: r() < 0.5 ? range(r, -100, 700) : range(r, 3100, 3950),
+    cy: range(r, 1750, 2350),
     ax: range(r, 250, 700) * (r() < 0.5 ? -1 : 1),
     ay: range(r, 40, 140),
     ph: r() * TAU,
-    rad: range(r, 70, 210),
+    rad: range(r, 60, 150),
     alpha: range(r, 0.6, 1),
     seed: r() * 100,
   }));
@@ -351,7 +364,7 @@ const makeLook = (params: StarDiscParams): PixiLook<Scene> => ({
     const cam = camera(ph);
     (s.disc.u.uVP as Float32Array).set(cam.vp);
     s.disc.u.uPhase = ph;
-    const sp = project(cam.vp, [0, 0, 0]);
+    const sp = project(cam.vp, [0, 0.07, 0]);
     s.star.u.uStar = sp;
     s.star.u.uTheta = ph * TAU;
     s.star.u.uZoom = CAM_DIST / cam.dist;

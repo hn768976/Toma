@@ -426,5 +426,7 @@ export const generate = (): Generated => {
     catmull([v(440, 266), v(440, 300), v(440, 340), v(410, 380), v(392, 430), v(389, 500)], 10),
   ];
   const burstPoints: V2[] = [v(300, 180), v(440, 120), v(560, 140), v(455, 250), v(322, 350), v(600, 230)];
+  // hotspot where the brainstem meets the cerebellum
+  burstPoints.push(v(392, 318));
   return { sulci, gyri: field.gyri, arbor, folia, sparkPaths, burstPoints };
 };

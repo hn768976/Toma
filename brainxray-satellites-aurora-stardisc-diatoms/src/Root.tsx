@@ -10,10 +10,12 @@ import { ROWS, Row } from "./rows";
 export const FPS = 30;
 export const WIDTH = 3840;
 export const HEIGHT = 2160;
-/** 20s loops. The loop check temporarily sets LOOP_CHECK=1 for 601 frames. */
-export const DURATION = process.env.REMOTION_LOOP_CHECK === "1" ? 601 : 600;
+/** 20s loops. The loop check passes --props='{"loopCheck":true}' for 601 frames. */
+export const DURATION = 600;
 
-const Look: React.FC<{ row: Row }> = ({ row }) => {
+type Props = { row: Row; loopCheck?: boolean };
+
+const Look: React.FC<Props> = ({ row }) => {
   switch (row.look) {
     case "brain":
       return <Brain params={row.params} />;
@@ -36,10 +38,11 @@ export const RemotionRoot: React.FC = () => (
         id={row.id}
         component={Look}
         durationInFrames={DURATION}
+        calculateMetadata={({ props }: { props: Props }) => ({ durationInFrames: props.loopCheck ? DURATION + 1 : DURATION })}
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}
-        defaultProps={{ row }}
+        defaultProps={{ row, loopCheck: false } as Props}
       />
     ))}
   </>

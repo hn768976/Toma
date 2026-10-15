@@ -6,9 +6,9 @@ import { mulberry32, range, Rng } from "../../lib/rand";
 
 export const T_SCALE = 1.25;
 const NEUTRAL = Math.round(255 / T_SCALE); // 204
-export const BLUR_LEVELS = [0, 10, 26]; // design px
+export const BLUR_LEVELS = [0, 12, 36]; // design px
 
-export type Kind = "diatom" | "algae" | "cluster" | "needle" | "fibre" | "debris" | "speck";
+export type Kind = "diatom" | "algae" | "cluster" | "needle" | "fibre" | "debris" | "speck" | "bubble";
 export type SpriteDef = { kind: Kind; size: number; draw: (ctx: CanvasRenderingContext2D, r: Rng, s: number) => void };
 export type AtlasEntry = { kind: Kind; size: number; uv: [number, number, number, number][] }; // per blur level
 
@@ -41,78 +41,96 @@ const diatomPath = (L: number, W: number, p: number, cap: number) => {
 };
 
 const drawDiatom = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
-  const L = s * range(r, 0.62, 0.8);
-  const W = L * range(r, 0.26, 0.42);
-  const p = range(r, 0.42, 0.75); // 0.5 rounded ... 1 pointed
-  const cap = range(r, 0, 1.2);
+  const style = r();
+  const L = s * range(r, 0.55, 0.8);
+  // plump ovals, slender rods, or boat-shaped pennates
+  const W = L * (style < 0.35 ? range(r, 0.4, 0.52) : style < 0.6 ? range(r, 0.14, 0.2) : range(r, 0.24, 0.34));
+  const p = style < 0.35 ? range(r, 0.45, 0.6) : range(r, 0.5, 0.9);
+  const cap = style > 0.85 ? range(r, 2, 4) : range(r, 0, 1);
   const path = diatomPath(L, W, p, cap);
-  // bright halo just outside (phase/Becke line in bright field)
-  ctx.lineWidth = s * 0.03;
-  ctx.strokeStyle = tcol(1.08);
+  // broad bright halo (bright-field phase halo)
+  ctx.save();
+  ctx.filter = `blur(${s * 0.02}px)`;
+  ctx.lineWidth = s * 0.06;
+  ctx.strokeStyle = tcol(1.16);
   ctx.stroke(path);
-  // pale inner body
-  ctx.fillStyle = tcol(range(r, 0.86, 0.94), [0.98, 1.0, 0.97]);
+  ctx.restore();
+  // blue-violet fringe just outside the wall
+  // chromatic fringes: blue on one side, yellow on the other
+  ctx.lineWidth = s * 0.016;
+  ctx.strokeStyle = tcol(1.05, [0.85, 0.92, 1.15]);
+  ctx.save();
+  ctx.translate(-s * 0.008, -s * 0.01);
+  ctx.scale(1.03, 1.08);
+  ctx.stroke(path);
+  ctx.restore();
+  ctx.strokeStyle = tcol(1.05, [1.12, 1.05, 0.8]);
+  ctx.save();
+  ctx.translate(s * 0.008, s * 0.01);
+  ctx.scale(1.03, 1.08);
+  ctx.stroke(path);
+  ctx.restore();
+  // pale glassy body
+  ctx.fillStyle = tcol(range(r, 0.9, 0.98), [1.0, 1.0, 0.97]);
   ctx.fill(path);
   ctx.save();
   ctx.clip(path);
-  // dark protoplast mass filling much of the cell (as seen in bright field)
-  if (r() < 0.75) {
-    ctx.fillStyle = tcol(range(r, 0.42, 0.6), [0.95, 0.97, 0.88]);
-    ctx.beginPath();
-    ctx.ellipse(range(r, -L * 0.04, L * 0.04), 0, L * range(r, 0.26, 0.36), W * range(r, 0.24, 0.33), 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // chloroplasts: golden-green plates along the girdle in many cells
-  if (r() < 0.5) {
-    const tint: [number, number, number] = [range(r, 0.85, 0.95), range(r, 0.9, 1.0), range(r, 0.45, 0.65)];
-    ctx.fillStyle = tcol(range(r, 0.72, 0.85), tint);
+  // golden-brown protoplast / chloroplast mass
+  if (r() < 0.85) {
+    const tint: [number, number, number] = [0.97, 0.95, 0.88];
+    ctx.filter = `blur(${s * 0.012}px)`;
+    ctx.fillStyle = tcol(range(r, 0.28, 0.45), tint);
     for (const side of [-1, 1]) {
       ctx.beginPath();
-      ctx.ellipse(range(r, -L * 0.05, L * 0.05), (side * W) / 5, L * range(r, 0.3, 0.4), W * 0.17, 0, 0, Math.PI * 2);
+      ctx.ellipse(range(r, -L * 0.04, L * 0.04), (side * W) / 6, L * range(r, 0.26, 0.36), W * 0.2, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    // granules
-    for (let i = 0; i < 10; i++) {
-      ctx.fillStyle = tcol(range(r, 0.55, 0.75), tint);
+    ctx.filter = "none";
+    // green chloroplast bands in some cells
+    if (r() < 0.5) {
+      ctx.fillStyle = tcol(range(r, 0.7, 0.8), [0.8, 1.0, 0.45]);
+      ctx.fillRect(-L * 0.3, -W * 0.3, L * 0.6, W * 0.08);
+      ctx.fillRect(-L * 0.3, W * 0.22, L * 0.6, W * 0.08);
+    }
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = tcol(range(r, 0.45, 0.7), tint);
       ctx.beginPath();
-      ctx.arc(range(r, -L * 0.3, L * 0.3), range(r, -W * 0.28, W * 0.28), s * range(r, 0.01, 0.02), 0, Math.PI * 2);
+      ctx.arc(range(r, -L * 0.3, L * 0.3), range(r, -W * 0.28, W * 0.28), s * range(r, 0.006, 0.014), 0, Math.PI * 2);
       ctx.fill();
     }
   }
+  // glassy bright middle
+  ctx.save();
+  ctx.filter = `blur(${s * 0.015}px)`;
+  ctx.fillStyle = tcol(1.04);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, L * 0.3, W * 0.12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
   // fine cross striae
-  ctx.strokeStyle = tcol(0.8);
-  ctx.lineWidth = Math.max(0.6, s * 0.006);
-  const step = s * 0.022;
+  ctx.strokeStyle = tcol(0.84);
+  ctx.lineWidth = Math.max(0.6, s * 0.005);
+  const step = s * 0.018;
   for (let x = -L / 2; x < L / 2; x += step) {
     ctx.beginPath();
     ctx.moveTo(x, -W / 2);
-    ctx.lineTo(x + (x / L) * W * 0.15, -W * 0.06);
+    ctx.lineTo(x + (x / L) * W * 0.15, -W * 0.08);
     ctx.moveTo(x, W / 2);
-    ctx.lineTo(x + (x / L) * W * 0.15, W * 0.06);
+    ctx.lineTo(x + (x / L) * W * 0.15, W * 0.08);
     ctx.stroke();
   }
   // raphe and central nodule
-  ctx.strokeStyle = tcol(0.62);
-  ctx.lineWidth = Math.max(0.8, s * 0.008);
+  ctx.strokeStyle = tcol(0.7);
+  ctx.lineWidth = Math.max(0.8, s * 0.006);
   ctx.beginPath();
   ctx.moveTo(-L * 0.44, 0);
   ctx.lineTo(L * 0.44, 0);
   ctx.stroke();
-  ctx.fillStyle = tcol(0.7);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, s * 0.02, W * 0.14, 0, 0, Math.PI * 2);
-  ctx.fill();
   ctx.restore();
-  // dark outline (frustule wall), doubled
-  ctx.lineWidth = s * 0.018;
-  ctx.strokeStyle = tcol(0.42, [0.95, 1, 0.95]);
+  // frustule wall: grey with a warm inner edge
+  ctx.lineWidth = s * 0.014;
+  ctx.strokeStyle = tcol(0.5, [1.0, 0.97, 0.9]);
   ctx.stroke(path);
-  ctx.lineWidth = s * 0.008;
-  ctx.strokeStyle = tcol(0.6);
-  ctx.save();
-  ctx.scale(0.93, 0.8);
-  ctx.stroke(path);
-  ctx.restore();
 };
 
 // ------------------------------------------------------------- algae
@@ -123,9 +141,9 @@ const greenCell = (ctx: CanvasRenderingContext2D, r: Rng, x: number, y: number, 
   ctx.fill();
   const g = ctx.createRadialGradient(x - rad * 0.3, y - rad * 0.3, rad * 0.1, x, y, rad);
   // #9AC83A as transmission tint
-  g.addColorStop(0, tcol(range(r, 1.0, 1.08), [0.95, 1.0, 0.3]));
-  g.addColorStop(0.7, tcol(range(r, 0.85, 0.95), [0.78, 0.85, 0.2]));
-  g.addColorStop(1, tcol(0.5, [0.6, 0.65, 0.3]));
+  g.addColorStop(0, tcol(range(r, 1.0, 1.1), [1.0, 1.0, 0.22]));
+  g.addColorStop(0.65, tcol(range(r, 0.9, 1.0), [0.95, 0.97, 0.15]));
+  g.addColorStop(1, tcol(0.6, [0.7, 0.72, 0.3]));
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(x, y, rad, 0, Math.PI * 2);
@@ -133,7 +151,7 @@ const greenCell = (ctx: CanvasRenderingContext2D, r: Rng, x: number, y: number, 
 };
 const drawAlgae = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => greenCell(ctx, r, 0, 0, s * range(r, 0.3, 0.4));
 const drawCluster = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
-  const n = 2 + Math.floor(r() * 4);
+  const n = 2 + Math.floor(r() * 5);
   const rad = s * 0.12;
   let x = -rad * 1.2, y = 0;
   for (let i = 0; i < n; i++) {
@@ -147,7 +165,7 @@ const drawCluster = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
 // ------------------------------------------------------------- rods
 const drawNeedle = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
   const L = s * 0.9;
-  const w = s * range(r, 0.012, 0.02);
+  const w = s * range(r, 0.007, 0.01);
   ctx.save();
   ctx.rotate(-Math.PI / 4);
   ctx.fillStyle = tcol(1.08);
@@ -162,27 +180,45 @@ const drawNeedle = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
   ctx.closePath();
   ctx.fillStyle = tcol(0.45);
   ctx.fill();
-  ctx.fillStyle = tcol(0.85);
-  ctx.fillRect(-L * 0.4, -w * 0.25, L * 0.8, w * 0.5);
   ctx.restore();
 };
 const drawFibre = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
-  ctx.save();
-  ctx.rotate(-Math.PI / 4 + range(r, -0.2, 0.2));
-  for (let k = 0; k < 5; k++) {
-    ctx.strokeStyle = tcol(range(r, 0.55, 0.8));
-    ctx.lineWidth = s * range(r, 0.004, 0.009);
+  // a pale spray of fine filaments fanning from one end
+  const n = 7 + Math.floor(r() * 6);
+  for (let k = 0; k < n; k++) {
+    const ang = -Math.PI * 0.75 + range(r, -0.35, 0.35);
+    const len = s * range(r, 0.45, 0.9);
+    ctx.strokeStyle = tcol(range(r, 0.6, 0.78));
+    ctx.lineWidth = s * range(r, 0.003, 0.007);
     ctx.beginPath();
-    let x = -s * 0.45, y = range(r, -s * 0.06, s * 0.06);
+    let x = s * 0.4, y = s * 0.4, a = ang;
     ctx.moveTo(x, y);
-    while (x < s * 0.45) {
-      x += s * 0.05;
-      y += range(r, -s * 0.012, s * 0.012);
+    for (let t = 0; t < len; t += s * 0.04) {
+      a += range(r, -0.18, 0.18);
+      x += Math.cos(a) * s * 0.04;
+      y += Math.sin(a) * s * 0.04;
       ctx.lineTo(x, y);
     }
     ctx.stroke();
   }
+};
+const drawBubble = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
+  const R = s * range(r, 0.25, 0.4);
+  ctx.save();
+  ctx.filter = `blur(${s * 0.04}px)`;
+  ctx.fillStyle = tcol(1.14);
+  ctx.beginPath();
+  ctx.arc(0, 0, R, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = s * 0.05;
+  ctx.strokeStyle = tcol(0.85);
+  ctx.stroke();
   ctx.restore();
+  ctx.lineWidth = s * 0.03;
+  ctx.strokeStyle = tcol(1.12);
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 1.18, 0, Math.PI * 2);
+  ctx.stroke();
 };
 
 // ------------------------------------------------------------- debris
@@ -193,8 +229,8 @@ const drawDebris = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
     const a = r() * Math.PI * 2;
     const d = Math.pow(r(), 0.6) * R * (0.7 + 0.3 * Math.sin(a * 3 + 1));
     const x = Math.cos(a) * d, y = Math.sin(a) * d * 0.85;
-    const tint: [number, number, number] = r() < 0.6 ? [0.95, 0.95, 0.55] : [0.9, 0.82, 0.6];
-    ctx.fillStyle = tcol(range(r, 0.72, 0.95), tint);
+    const tint: [number, number, number] = r() < 0.6 ? [0.9, 0.92, 0.45] : [0.85, 0.82, 0.5];
+    ctx.fillStyle = tcol(range(r, 0.72, 0.92), tint);
     ctx.beginPath();
     ctx.arc(x, y, s * range(r, 0.012, 0.035), 0, Math.PI * 2);
     ctx.fill();
@@ -211,20 +247,21 @@ const drawSpeck = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
   ctx.beginPath();
   ctx.arc(0, 0, s * 0.26, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = tcol(range(r, 0.25, 0.5));
+  ctx.fillStyle = tcol(range(r, 0.45, 0.72));
   ctx.beginPath();
-  ctx.arc(0, 0, s * range(r, 0.12, 0.2), 0, Math.PI * 2);
+  ctx.arc(0, 0, s * range(r, 0.1, 0.18), 0, Math.PI * 2);
   ctx.fill();
 };
 
 export const SPRITES: SpriteDef[] = [
-  ...Array.from({ length: 12 }, () => ({ kind: "diatom" as const, size: 250, draw: drawDiatom })),
+  ...Array.from({ length: 12 }, () => ({ kind: "diatom" as const, size: 300, draw: drawDiatom })),
   ...Array.from({ length: 3 }, () => ({ kind: "algae" as const, size: 48, draw: drawAlgae })),
   ...Array.from({ length: 3 }, () => ({ kind: "cluster" as const, size: 100, draw: drawCluster })),
-  ...Array.from({ length: 2 }, () => ({ kind: "needle" as const, size: 640, draw: drawNeedle })),
+  ...Array.from({ length: 1 }, () => ({ kind: "needle" as const, size: 480, draw: drawNeedle })),
   ...Array.from({ length: 2 }, () => ({ kind: "fibre" as const, size: 640, draw: drawFibre })),
-  ...Array.from({ length: 4 }, () => ({ kind: "debris" as const, size: 640, draw: drawDebris })),
+  ...Array.from({ length: 4 }, () => ({ kind: "debris" as const, size: 440, draw: drawDebris })),
   ...Array.from({ length: 2 }, () => ({ kind: "speck" as const, size: 48, draw: drawSpeck })),
+  ...Array.from({ length: 2 }, () => ({ kind: "bubble" as const, size: 90, draw: drawBubble })),
 ];
 
 /** Shelf-pack every sprite x blur level into one canvas at backing resolution. */

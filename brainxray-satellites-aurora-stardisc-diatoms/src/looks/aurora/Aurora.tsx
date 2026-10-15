@@ -54,7 +54,7 @@ void main() {
   vec2 s = vUV * vec2(1.7778, 1.0);
   vec3 acc = vec3(0.0);
   for (int r = 0; r < ${RIBBONS}; r++) {
-    float W = 0.0, Ta = 0.0, I = 0.0, E = 0.0, T = 0.0;
+    float W = 0.0, Ta = 0.0, I = 0.0, E = 0.0, T = 0.0, B = 0.0;
     for (int i = 0; i < ${NODES}; i++) {
       vec4 nd = uNode[r * ${NODES} + i];
       vec4 at = uAttr[r * ${NODES} + i];
@@ -65,32 +65,42 @@ void main() {
       float w = exp(-a * a / (2.0 * at.w * at.w));
       if (w < 1e-4) continue;
       float H = at.x;
-      float lower = smoothstep(-0.045, 0.02, v);
+      float lower = r == 3 ? smoothstep(-0.12, 0.05, v) : smoothstep(-0.018, 0.008, v);
       float vv = max(v, 0.0);
-      float prof = (exp(-vv / H) * 0.7 + exp(-vv / (H * 0.2)) * 0.55) * lower
-                 + (1.0 - lower) * exp(-max(-v, 0.0) / 0.03) * 0.12
-                 + exp(-abs(v - H * 0.3) / 0.07) * 0.06;
+      float prof = (exp(-vv / H) * 0.8 + exp(-vv / (H * 0.25)) * 0.7 + exp(-vv / 0.01) * 0.8) * lower
+                 + (1.0 - lower) * exp(-max(-v, 0.0) / 0.035) * 0.15
+                 + exp(-abs(v - H * 0.3) / 0.06) * 0.03;
       float wb = w * at.y;
       I += wb * prof;
-      E += wb * exp(-vv / 0.016) * lower;
-      T += wb * smoothstep(H * 0.5, H * 1.6, vv) * prof;
+      E += wb * exp(-vv / 0.025) * lower;
+      B += wb * exp(-abs(v + 0.012) / 0.01);
+      T += wb * smoothstep(H * 0.35, H * 1.3, vv) * prof;
       W += w; Ta += w * (at.z + a);
     }
     if (W < 1e-3) continue;
     // Rays converge on the magnetic zenith (above the frame): their
     // coordinate is the angle around that point, drifting slowly.
-    vec2 zd = s - vec2(1.25, -0.9);
+    vec2 zd = s - vec2(1.05, -0.3);
     float phi = atan(zd.x, zd.y);
     float rho = length(zd);
-    float drift = 0.012 * sin(uTheta + float(r)) ;
-    vec4 r1 = LN(vec2((phi + drift) * 2.4 + float(r) * 0.31, rho * 0.18), 0.05);
-    vec4 r2 = LN(vec2((phi - drift) * 6.3 + float(r) * 0.17, rho * 0.35 + 0.5), 0.04);
-    float ray = 0.45 + 1.1 * pow(r1.z, 2.0) + 0.35 * r2.w;
+    // rays wander a little (field-line structure + exposure motion)
+    phi += (LN(vec2(rho * 1.7, phi * 0.6) + float(r) * 0.4, 0.06).y - 0.5) * 0.035;
+    float drift = 0.012 * sin(uTheta + float(r)) + 0.006 * sin(2.0 * uTheta + float(r) * 2.3);
+    // coarse ray bundles x fine striations (long along the field lines)
+    vec4 r1 = LN(vec2((phi + drift) * 1.3 + float(r) * 0.31, rho * 0.08), 0.05);
+    vec4 r2 = LN(vec2((phi - drift) * 5.5 + float(r) * 0.17, rho * 0.05 + 0.5), 0.12);
+    float ray = mix(1.0, (0.3 + 1.0 * pow(r1.z, 2.0)) * (0.35 + 1.25 * pow(r2.w, 2.2)), 0.45);
     vec4 al = LN(vec2(Ta / W * 0.45 + float(r) * 0.23, 0.2), 0.07);
-    float along = mix(0.12, 1.1, smoothstep(0.25, 0.75, al.x * 0.7 + al.y * 0.3));
+    float along = mix(0.02, 1.35, smoothstep(0.35, 0.72, al.x * 0.7 + al.y * 0.3));
+    // blotchy, uneven brightness within the curtains
+    along *= 0.55 + 0.9 * LN(vec2(Ta / W * 1.7 + 3.1, 0.6) + float(r), 0.08).z;
     float k = ray * along;
-    vec3 col = uGreen * I + (uEdge - uGreen) * E * 0.6;
+    // colour with height: yellow-green bright lower edge, green body,
+    // faint red/purple tops
+    vec3 col = uGreen * I + (uEdge - uGreen) * E * 0.2;
     col = mix(col, uTop * I, clamp(T / max(I, 1e-4), 0.0, 1.0) * uTopMix);
+    // very faint magenta fringe just under the brightest lower edges
+    col += vec3(0.5, 0.05, 0.35) * B * 0.14;
     acc += col * k;
   }
   finalColor = vec4(acc, 1.0);
@@ -119,31 +129,31 @@ const RIBBON_DEFS: RibbonDef[] = [
       [1.18 + 0.03 * S(th + 1.9), 0.31 + 0.04 * S(th + 0.4)],
       [1.11 + 0.02 * C(th), 0.21 + 0.03 * S(2 * th)],
     ],
-    height: (u) => 0.06 + 0.2 * Math.max(0, (u - 0.5) / 0.5),
-    bright: (u, th) => 1.0 + 0.3 * S(th + u * 4.0),
+    height: (u) => 0.08 + 0.15 * Math.pow(Math.max(0, (u - 0.5) / 0.5), 1.3),
+    bright: (u, th) => 1.2 + 0.3 * S(th + u * 4.0),
   },
   {
     // Second band beneath the fold.
     pts: (th) => [
       [0.62, 0.86 + 0.02 * S(th + 0.3)],
       [0.86, 0.88 + 0.02 * C(th)],
-      [1.1, 0.85 + 0.03 * S(2 * th + 1.0)],
-      [1.35, 0.8 + 0.03 * S(th + 2.2)],
-      [1.55, 0.76 + 0.02 * C(th + 0.6)],
+      [1.1, 0.86 + 0.03 * S(2 * th + 1.0)],
+      [1.3, 0.84 + 0.03 * S(th + 2.2)],
+      [1.45, 0.83 + 0.02 * C(th + 0.6)],
     ],
-    height: () => 0.07,
-    bright: (u, th) => 0.6 + 0.25 * S(th * 2 + u * 3.0),
+    height: () => 0.08,
+    bright: (u, th) => 0.7 + 0.25 * S(th * 2 + u * 3.0),
   },
   {
     // Lower band, right, near the horizon.
     pts: (th) => [
-      [1.05, 0.95 + 0.01 * S(th)],
-      [1.3, 0.93 + 0.015 * S(th + 1.3)],
-      [1.55, 0.9 + 0.015 * C(th + 0.4)],
-      [1.95, 0.87 + 0.01 * C(th)],
+      [0.8, 0.95 + 0.01 * S(th)],
+      [1.0, 0.94 + 0.015 * S(th + 1.3)],
+      [1.2, 0.93 + 0.015 * C(th + 0.4)],
+      [1.4, 0.93 + 0.01 * C(th)],
     ],
-    height: () => 0.04,
-    bright: (u, th) => 0.6 + 0.2 * S(th + u * 5.0),
+    height: () => 0.06,
+    bright: (u, th) => 0.35 + 0.15 * S(th + u * 5.0),
   },
   {
     // Faint high streaks, upper right.
@@ -152,14 +162,25 @@ const RIBBON_DEFS: RibbonDef[] = [
       [1.55, 0.13 + 0.02 * C(th + 0.5)],
       [1.95, 0.17 + 0.02 * S(th + 1.5)],
     ],
-    height: () => 0.1,
-    bright: () => 0.18,
+    height: () => 0.12,
+    bright: () => 0.025,
   },
 ];
 
 const ribbonUniforms = (th: number, node: Float32Array, attr: Float32Array) => {
   RIBBON_DEFS.forEach((def, r) => {
-    const dense = catmull(def.pts(th), 20);
+    const now = def.pts(th);
+    const mean = def.pts(0).map((_, i) => {
+      let x = 0, y = 0;
+      for (let k = 0; k < 8; k++) {
+        const q = def.pts((k / 8) * Math.PI * 2)[i];
+        x += q[0] / 8;
+        y += q[1] / 8;
+      }
+      return [x, y] as V2;
+    });
+    const pts = now.map((p, i) => [mean[i][0] + 0.6 * (p[0] - mean[i][0]), mean[i][1] + 0.6 * (p[1] - mean[i][1])] as V2);
+    const dense = catmull(pts, 20);
     const { p, t, len } = resample(dense, NODES);
     const spacing = len / (NODES - 1);
     for (let i = 0; i < NODES; i++) {
@@ -191,30 +212,44 @@ uniform float uBright;
 ${NOISE}
 void main() {
   vec2 s = vUV * vec2(1.7778, 1.0);
-  vec3 sky = vec3(0.00055, 0.00075, 0.00085) + vec3(0.0006, 0.0009, 0.0008) * smoothstep(0.3, 1.0, s.y);
+  // night sky with faint airglow toward the horizon
+  vec3 sky = vec3(0.0006, 0.0008, 0.0011) + vec3(0.0022, 0.0024, 0.0016) * smoothstep(0.35, 1.0, s.y);
   vec3 aur = texture(uCurtains, vUV).rgb * uBright;
-  vec3 stars = texture(uStars, vUV).rgb * 0.09;
-  vec3 col = sky + stars + aur;
-  // Soft grey clouds, lower left, catching a little aurora light.
+  // broad scattered glow: the sky brightens around bright aurora
+  vec3 wide = vec3(0.0);
+  for (int i = 0; i < 8; i++) {
+    float a = float(i) * 0.785398;
+    wide += texture(uCurtains, vUV + vec2(cos(a), sin(a) * 1.7778) * 0.05).rgb;
+    wide += texture(uCurtains, vUV + vec2(cos(a + 0.39), sin(a + 0.39) * 1.7778) * 0.13).rgb;
+  }
+  wide *= uBright / 16.0;
+  vec3 stars = texture(uStars, vUV).rgb * 0.09 * (0.75 + 0.5 * LN(vUV * 60.0, 0.3).w);
+  vec3 col = sky + stars * (1.0 - smoothstep(0.45, 0.75, s.y)) + aur + wide * 1.1;
+  // Clouds, lower left, lit by the aurora above them.
   vec4 cn = LN(vec2(s.x * 0.45, s.y * 0.9) + 0.6, 0.03);
-  float region = (1.0 - smoothstep(0.15, 0.75, s.x)) * smoothstep(0.44, 0.56, s.y) * (1.0 - smoothstep(0.78, 1.0, s.y));
-  float cloud = smoothstep(0.25, 0.7, cn.x * 0.75 + cn.y * 0.25) * region;
-  vec3 cloudCol = vec3(0.028, 0.032, 0.030) * (0.6 + 0.7 * cn.w) + aur * 0.6 + uGreen * 0.003;
-  col = mix(col, cloudCol, cloud * 0.9);
-  float tree = texture(uTrees, vUV).r;
-  col = mix(col, vec3(0.0004, 0.0005, 0.0005), tree);
+  float region = (1.0 - smoothstep(0.3, 0.75, s.x)) * smoothstep(0.36, 0.48, s.y) * (1.0 - smoothstep(0.74, 0.92, s.y));
+  float cloud = smoothstep(0.1, 0.6, cn.x * 0.75 + cn.y * 0.25) * region;
+  vec3 cloudCol = vec3(0.075, 0.08, 0.075) * (0.6 + 0.6 * cn.w) + wide * 0.8 + aur * 0.25;
+  col = mix(col, cloudCol, cloud * 0.85);
+  // Foreground: R = ground, G = trees (both always in front of the sky).
+  vec4 fg = texture(uTrees, vUV);
+  vec3 ground = vec3(0.0022, 0.0026, 0.0024) + wide * 0.12;
+  col = mix(col, ground, max(fg.r, fg.g));
+  // tree silhouettes pick up a faint green rim from the sky behind them
+  float rim = fg.g * (1.0 - fg.g) * 4.0;
+  col = mix(col, vec3(0.0022, 0.0026, 0.0024) + wide * 0.04 * rim, fg.g);
   finalColor = vec4(col, 1.0);
 }`;
 
 type Scene = { root: Container; curtains: Container; rt: RenderTexture; meshes: ShaderMesh[]; node: Float32Array; attr: Float32Array };
 
 const makeLook = (params: AuroraParams): PixiLook<Scene> => ({
-  post: { grain: 0.015, darkFade: true, blueNoise: 1.0, linear: true },
+  post: { grain: 0.015, darkFade: true, blueNoise: 1.0, linear: true, vignette: 0.28 },
   build: ({ W, H, res }) => {
     const noise = noiseTexture(256, [[4, 4], [4, 4], [8, 3], [16, 3]], 777);
     const trees = canvasTexture(drawTreeline(W, H, res));
     const stars = canvasTexture(drawStars(W, H, res));
-    const rt = RenderTexture.create({ width: W, height: H, resolution: res * 0.5, format: "rgba16float" });
+    const rt = RenderTexture.create({ width: W, height: H, resolution: res * 0.75, format: "rgba16float" });
     const node = new Float32Array(RIBBONS * NODES * 4);
     const attr = new Float32Array(RIBBONS * NODES * 4);
     const common = {

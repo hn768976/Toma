@@ -59,7 +59,7 @@ const drawLines = (ctx: Ctx, g: A.Generated) => {
   stroke(ctx, path(A.SKULL_BASE.map(([x, y]) => [x, y + 7] as V2)), 0.9, 0.45);
   stroke(ctx, path(A.CLIVUS, true), 1.0, 0.6);
   stroke(ctx, path(A.CEREBRUM, true), 1.6, 1);
-  for (const s of g.sulci) stroke(ctx, rawPath(s), 1.35, 0.9);
+  for (const s of g.sulci) stroke(ctx, rawPath(s), 1.3, 0.62);
   stroke(ctx, path(A.CORPUS_CALLOSUM, true, 8), 1.4, 1);
   stroke(ctx, path(A.FORNIX), 1.1, 0.8);
   stroke(ctx, path(A.CINGULATE_SULCUS), 1.2, 0.9);
@@ -120,7 +120,7 @@ const drawFill = (ctx: Ctx, g: A.Generated, px: number) => {
   ctx.save();
   ctx.clip(skinClosed);
   ctx.filter = `blur(${5 * px}px)`;
-  stroke(ctx, skin, 12, 0.55);
+  stroke(ctx, skin, 14, 0.85);
   ctx.filter = "none";
   ctx.restore();
   // skull bone band with marrow speckle
@@ -160,13 +160,17 @@ const drawFill = (ctx: Ctx, g: A.Generated, px: number) => {
     gc.height = gy.h;
     const gctx = gc.getContext("2d")!;
     const id = gctx.createImageData(gy.w, gy.h);
+    const W = gy.w;
     for (let k = 0; k < gy.data.length; k++) {
-      const val = Math.round(255 * gy.data[k]);
+      const a = gy.data[Math.max(0, k - W - 1)], b = gy.data[Math.min(gy.data.length - 1, k + W + 1)];
+      // rounded, lit gyri: base density plus an emboss highlight
+      const lit = Math.max(0, (a - b) * 2.2);
+      const val = Math.round(255 * Math.min(1, gy.data[k] * 0.8 + lit * 1.4));
       id.data[k * 4] = id.data[k * 4 + 1] = id.data[k * 4 + 2] = val;
       id.data[k * 4 + 3] = 255;
     }
     gctx.putImageData(id, 0, 0);
-    ctx.globalAlpha = 0.22;
+    ctx.globalAlpha = 0.7;
     ctx.globalCompositeOperation = "lighter";
     ctx.imageSmoothingQuality = "high";
     ctx.filter = `blur(${1.2 * px}px)`;
@@ -268,8 +272,8 @@ export const bakeBrain = (W: number, H: number, res: number) => {
   gctx.filter = `blur(${1.6 * px}px)`;
   gctx.globalAlpha = 0.9;
   gctx.drawImage(lines, 0, 0);
-  gctx.filter = `blur(${6 * px}px)`;
-  gctx.globalAlpha = 0.8;
+  gctx.filter = `blur(${7 * px}px)`;
+  gctx.globalAlpha = 1.0;
   gctx.drawImage(lines, 0, 0);
   const { c: act2, ctx: actx } = mkCanvas(cw, ch);
   actx.filter = `blur(${0.6 * px}px)`;
