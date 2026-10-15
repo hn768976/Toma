@@ -1,5 +1,5 @@
 import { Container, Sprite, type Texture } from "pixi.js";
-import { canvasTexture, makeCanvas } from "../engine/bake";
+import { blurred, canvasTexture, makeCanvas } from "../engine/bake";
 import { drawInto } from "../engine/gl";
 import { hash3, mulberry32, range, type Rng } from "../engine/rng";
 import type { LookFactory } from "../engine/types";
@@ -19,25 +19,78 @@ export type FilmDustParams = {
 
 const TAU = Math.PI * 2;
 
-type Kind = "speck" | "fibre" | "thread" | "scratch";
+type Kind = "speck" | "fibre" | "thread" | "shard" | "soft" | "scratch";
 
+// irregular fleck / chip (not a round dot)
 const bakeSpeck = (rng: Rng, px: number) => {
-  const r = range(rng, 0.5, 1.6) * px; // radius -> 1-3 px diameter at 720p
-  const S = Math.ceil(r * 2 + 4 * px + 4);
+  const r = range(rng, 0.7, 2.2) * px;
+  const S = Math.ceil(r * 4 + 6 * px + 4);
   const { c, g } = makeCanvas(S, S);
   g.fillStyle = "#fff";
+  g.shadowColor = "rgba(255,255,255,0.6)";
+  g.shadowBlur = 1.5 * px;
   g.beginPath();
-  const n = 7;
+  const n = 5 + Math.floor(rng() * 3);
+  const el = range(rng, 1, 2.6);
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * TAU;
-    const rr = r * range(rng, 0.6, 1.2);
-    const x = S / 2 + Math.cos(a) * rr;
+    const a = (i / n) * TAU + range(rng, -0.3, 0.3);
+    const rr = r * range(rng, 0.45, 1.2);
+    const x = S / 2 + Math.cos(a) * rr * el;
     const y = S / 2 + Math.sin(a) * rr;
     if (i === 0) g.moveTo(x, y);
     else g.lineTo(x, y);
   }
   g.closePath();
   g.fill();
+  return c;
+};
+
+// short, jagged, flat shard: a few straight segments with sharp kinks, varying
+// width (ribbon), sometimes a twig-like fork; edge glint baked in as a glow
+const bakeShard = (rng: Rng, px: number) => {
+  const len = (12 + 48 * rng() ** 1.6) * px;
+  const segs = 2 + Math.floor(rng() * 5);
+  const pts: [number, number][] = [[0, 0]];
+  let a = range(rng, 0, TAU);
+  for (let i = 0; i < segs; i++) {
+    a += range(rng, -1.1, 1.1);
+    const l = (len / segs) * range(rng, 0.5, 1.5);
+    const [x, y] = pts[pts.length - 1];
+    pts.push([x + Math.cos(a) * l, y + Math.sin(a) * l]);
+  }
+  const forks: [number, number, number, number][] = [];
+  if (rng() < 0.45) {
+    const [x, y] = pts[1 + Math.floor(rng() * (pts.length - 1))];
+    const fa = a + range(rng, 0.6, 1.6) * (rng() < 0.5 ? -1 : 1);
+    const fl = len * range(rng, 0.15, 0.4);
+    forks.push([x, y, x + Math.cos(fa) * fl, y + Math.sin(fa) * fl]);
+  }
+  const all = [...pts, ...forks.map((f) => [f[2], f[3]] as [number, number])];
+  const w = range(rng, 1.0, 2.6) * px;
+  const pad = w * 3 + 3 * px + 4;
+  const minx = Math.min(...all.map((p) => p[0])) - pad;
+  const miny = Math.min(...all.map((p) => p[1])) - pad;
+  const { c, g } = makeCanvas(Math.max(...all.map((p) => p[0])) - minx + pad, Math.max(...all.map((p) => p[1])) - miny + pad);
+  g.lineCap = "round";
+  g.lineJoin = "miter";
+  g.shadowColor = "rgba(255,255,255,0.7)";
+  g.shadowBlur = 1.2 * px;
+  for (let i = 1; i < pts.length; i++) {
+    g.strokeStyle = `rgba(255,255,255,${range(rng, 0.45, 1)})`;
+    g.lineWidth = w * range(rng, 0.4, 1.2);
+    g.beginPath();
+    g.moveTo(pts[i - 1][0] - minx, pts[i - 1][1] - miny);
+    g.lineTo(pts[i][0] - minx, pts[i][1] - miny);
+    g.stroke();
+  }
+  for (const f of forks) {
+    g.strokeStyle = `rgba(255,255,255,${range(rng, 0.4, 0.9)})`;
+    g.lineWidth = w * 0.5;
+    g.beginPath();
+    g.moveTo(f[0] - minx, f[1] - miny);
+    g.lineTo(f[2] - minx, f[3] - miny);
+    g.stroke();
+  }
   return c;
 };
 
@@ -144,6 +197,9 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
     speck: Array.from({ length: 24 }, () => canvasTexture(bakeSpeck(rng, px))),
     fibre: Array.from({ length: 64 }, () => canvasTexture(bakeFibre(rng, px))),
     thread: Array.from({ length: 20 }, () => canvasTexture(bakeThread(rng, px))),
+    shard: Array.from({ length: 64 }, () => canvasTexture(bakeShard(rng, px))),
+    // out-of-focus flakes behind the sharp ones (defocused depth layer)
+    soft: Array.from({ length: 32 }, () => canvasTexture(blurred(bakeShard(rng, px * 1.6), range(rng, 1.6, 3.4) * px))),
     scratch: Array.from({ length: 6 }, () => canvasTexture(bakeScratch(rng, px))),
   };
 
@@ -164,14 +220,15 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
 
   ctx.post.setGrade({ mode: "rgb", bloom: 0, vignette: 0, grain: 0.015, toneMap: false });
 
-  const kindFor = (h: number): Kind => (h < 0.42 ? "speck" : h < 0.97 ? "fibre" : "thread");
+  const kindFor = (h: number): Kind =>
+    h < 0.14 ? "speck" : h < 0.6 ? "shard" : h < 0.78 ? "soft" : h < 0.98 ? "fibre" : "thread";
 
   // density in soft patches; moves on a closed loop over 600 frames
   const density = (x: number, y: number, ph: number) => {
     const ox = Math.cos(TAU * ph) * 0.8;
     const oy = Math.sin(TAU * ph) * 0.8;
     const n = 0.65 * vnoise(x * 3 + ox, y * 3 + oy, 11) + 0.35 * vnoise(x * 7 - oy, y * 7 + ox, 12);
-    return 0.3 + 0.7 * Math.min(1, Math.max(0, (n - 0.2) / 0.6));
+    return 0.55 + 0.45 * Math.min(1, Math.max(0, (n - 0.2) / 0.6));
   };
 
   const place = (s: Sprite, a: number, b: number, c: number, ph: number, maxTries: number) => {
@@ -187,7 +244,8 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
         s.rotation = hash3(a, b, c * 31 + 6) * TAU;
         const sc = k === "speck" ? 0.7 + 0.6 * hash3(a, b, c * 31 + 8) : 0.75 + 0.5 * hash3(a, b, c * 31 + 8);
         s.scale.set(sc / ctx.res);
-        s.alpha = 0.3 + 0.7 * hash3(a, b, c * 31 + 9) ** 1.5; // 30-100 %
+        const br = 0.3 + 0.7 * hash3(a, b, c * 31 + 9) ** 0.8; // 30-100 %
+        s.alpha = (k === "soft" ? br * 0.35 : br) * 0.62;
         s.visible = true;
         return;
       }
