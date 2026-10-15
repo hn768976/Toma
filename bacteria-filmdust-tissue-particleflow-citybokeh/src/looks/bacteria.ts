@@ -94,8 +94,8 @@ const drawBead = (g: CanvasRenderingContext2D, x: number, y: number, r: number, 
   const ox = range(rng, -0.25, 0.25) * r;
   const oy = range(rng, -0.25, 0.25) * r;
   const gr = g.createRadialGradient(x + ox, y + oy, 0, x, y, r * 1.25);
-  const core = range(rng, 0.1, 0.35);
-  const rim = range(rng, 0.45, 1.0);
+  const core = range(rng, 0.3, 0.6); // fuller cells, not hollow rings
+  const rim = range(rng, 0.5, 0.9);
   const rp = range(rng, 0.6, 0.78);
   gr.addColorStop(0, `rgba(255,255,255,${core})`);
   gr.addColorStop(rp * 0.6, `rgba(255,255,255,${core * range(rng, 0.8, 1.3)})`);
@@ -290,7 +290,7 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
           wobR: range(rng, 0.004, 0.02),
           wobK: rng() < 0.6 ? 1 : 2,
           wobPh: range(rng, 0, Math.PI * 2),
-          scale: isHero ? 1.5 : range(rng, 0.75, 1.2) * (kind === "speck" ? (blobby ? range(rng, 3.0, 4.5) : range(rng, 1.0, 2.2)) : 1),
+          scale: isHero ? 1.5 : range(rng, 0.75, 1.2) * (kind === "speck" ? (blobby ? range(rng, 3.0, 4.5) : 0.35 + 2.6 * rng() ** 2.2) : 1),
           bright: isHero
             ? 1.35
             : kind === "chain"

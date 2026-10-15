@@ -218,7 +218,15 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
         const pulse = 0.5 - 0.5 * Math.cos(TAU * t);
         const fade = 1 - d.fadeDepth * (1 - pulse * pulse * (3 - 2 * pulse));
         d.s.position.set(sx, sy);
-        d.s.scale.set((d.d * H * ctx.res) / texPx / ctx.res);
+        // cat's-eye: towards the frame edges the disc is squashed along the radial
+        // direction (optical vignetting of a fast lens)
+        const rx = sx / W - 0.5;
+        const ry = (sy / H - 0.5) * (H / W);
+        const rr = Math.hypot(rx, ry);
+        const cat = 1 - 0.28 * Math.min(1, Math.max(0, (rr - 0.25) / 0.35)) ** 1.5;
+        const base = (d.d * H) / texPx;
+        d.s.rotation = Math.atan2(ry, rx);
+        d.s.scale.set(base * cat, base);
         // lights cluster on the right of the street; they fade out towards the left
         const side = 0.25 + 0.75 * smooth01((sx / W - 0.15) / 0.45);
         d.s.alpha = d.a * fade * side;
