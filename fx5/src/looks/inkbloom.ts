@@ -85,7 +85,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
     // grow scales the blots' radius; the seeds bias where the cluster is densest
     // blots near the seeds appear first and the bloom spreads outward
     float gr = clamp((grow + 0.55) / 0.6, 0.0, 1.2);
-    float rmul = clamp(gr * 2.2 - d * 1.5 + 0.25 * n, 0.0, 1.25);
+    float rmul = clamp(gr * 1.35 - d * 1.5 + 0.25 * n, 0.0, 0.95);
     f = max(blots(p + 0.04 * w1, 3.4, sd, rmul), blots(p + 0.04 * w1 + 3.7, 1.9, sd + 5.0, rmul * 0.92));
   }
   // ragged, splattery edge
@@ -126,10 +126,10 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float m = mask * (1.0 - max(bigHole, hole * (1.0 - wd)));
   vec3 c = col * m;
   // dark ink wash with grungy texture in the gaps around the blots
-  float washF = f + mix(0.16, 0.09, roundBlots) + 0.22 * fbm(q * 2.0 + sd + 60.0, 3);
+  float washF = f + mix(0.16, 0.14, roundBlots) + 0.22 * fbm(q * 2.0 + sd + 60.0, 3);
   float wash = smoothstep(0.0, 0.25, washF) * (1.0 - m) * smoothstep(-0.7, -0.15, grow);
   float grunge = smoothstep(-0.2, 0.6, fbm(q * 9.0 + sd + 13.0, 4)) * (0.6 + 0.4 * gnoise(q * 40.0));
-  vec3 washCol = mix(base * base * 0.22, base * vec3(0.42, 0.34, 0.2), roundBlots);
+  vec3 washCol = mix(base * base * 0.22, base * vec3(0.58, 0.47, 0.22), roundBlots);
   c += washCol * wash * grunge * (1.0 - 0.7 * dropMode);
   if (roundBlots > 0.5) {
     vec2 gq = mat2(0.94, 0.34, -0.34, 0.94) * q;
