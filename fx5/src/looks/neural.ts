@@ -143,7 +143,7 @@ function pathSegs(): Seg[] {
 /* ---------------- camera: closed path, push in / drift / pull back ---------------- */
 // keys: time (s), centre x, centre y, zoom
 const KEYS: [number, number, number, number][] = [
-  [0, 0.02, 0.06, 1.15],
+  [0, 0.0, 0.06, 1.3],
   [8, -0.28, 0.02, 2.5],
   [14, 0.24, -0.08, 2.3],
 ];
@@ -237,10 +237,10 @@ void main() {
   L *= 1.0 - 0.6 * smoothstep(0.15, 0.85, b.x);  // occipital side falls into deep shadow
   // gritty speckle texture: mottled patches plus fine dark specks
   float sp = fbm(b * 30.0 + 5.0, 3);
-  float sp2 = gnoise(b * 110.0);
+  float sp2 = gnoise(b * 190.0);
   float grit = smoothstep(0.3, 0.6, sp2 + 0.4 * sp);
   L *= (0.75 + 0.5 * sp) * (1.0 - 0.35 * grit);
-  L *= 1.0 - 0.6 * sulcus;
+  L *= 1.0 - 0.3 * sulcus;
   L += 0.12 * rim * smoothstep(0.2, 0.8, L);
   // dark pathways (and their travelling pulse)
   vec4 pth = texture(uPaths, vUV);
@@ -286,7 +286,7 @@ void main() {
   vec3 bl = texture(uB0, vUV).rgb * 0.5 + texture(uB1, vUV).rgb * 0.5 + texture(uB2, vUV).rgb * 0.45 + texture(uB3, vUV).rgb * 0.4;
   // bloom only the highlights
   vec3 hi = max(bl - 0.35, 0.0);
-  c += hi * 0.7;
+  c += hi * 1.0 + bl * vec3(0.0, 0.08, 0.05);
   c = 1.0 - exp(-c * 1.5);
   finalColor = vec4(finishColor(linearToSrgb(c), uFrameMod, 0.015), 1.0);
 }
