@@ -191,11 +191,14 @@ const ribbonUniforms = (th: number, node: Float32Array, attr: Float32Array) => {
       node[k + 2] = t[i][0];
       node[k + 3] = t[i][1];
       // fade the ribbon ends
-      const endFade = Math.min(1, u / 0.12, (1 - u) / 0.12);
+      // long smooth fade at both ends so ray columns don't stop abruptly
+      const e = Math.min(1, u / 0.3, (1 - u) / 0.3);
+      const endFade = e * e * (3 - 2 * e);
       attr[k] = def.height(u);
-      attr[k + 1] = def.bright(u, th) * Math.max(0, endFade) * (spacing / (spacing * 0.75 * 2.5066));
+      const sigma = spacing * 0.75 * (1 + 2.5 * (1 - endFade));
+      attr[k + 1] = def.bright(u, th) * Math.max(0, endFade) * (spacing / (sigma * 2.5066));
       attr[k + 2] = u * len;
-      attr[k + 3] = spacing * 0.75;
+      attr[k + 3] = sigma;
     }
   });
 };

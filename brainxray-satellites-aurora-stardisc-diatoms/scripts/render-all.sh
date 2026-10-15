@@ -2,7 +2,7 @@
 # Render + verify every composition (720p previews) from a frozen bundle copy.
 # ONLY="Name1 Name2" restricts the list.
 set -uo pipefail
-export BUNDLE=out/bundle-render
+export BUNDLE=${BUNDLE:-out/bundle-render}
 declare -A PROBE=(
   [BrainXRay_Gold]='{"navy_left":[150,600,10,220],"navy_right":[150,600,1150,1275]}'
   [BrainXRay_Cyan]='{"navy_left":[150,600,10,220],"navy_right":[150,600,1150,1275]}'
