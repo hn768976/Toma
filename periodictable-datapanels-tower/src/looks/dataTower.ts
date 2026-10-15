@@ -373,7 +373,8 @@ export const dataTower =
             faces.setMatrixAt(i, tmp.multiplyMatrices(boxM, facesLocal[k]));
             // data marks tick: variant is a hash of (n·TICKS + tick step),
             // which also satisfies content(n, t=1) == content(n+1, t=0).
-            const phase = hash2(k, 991);
+            // phases kept inside 0.1..0.9 so no tick falls on the loop point
+            const phase = 0.1 + 0.8 * hash2(k, 991);
             const step = Math.floor(t * TICKS + phase);
             variant[i] = Math.floor(hash2(n * TICKS + step, k * 7 + 3) * VARIANTS);
             fade[i] = k < 4 ? 1 : 0.3;

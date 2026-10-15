@@ -38,11 +38,11 @@ const splitCsvLine = (l: string) => {
   return out;
 };
 
-// Map the source category to a standard family name. Elements whose
-// chemistry is not established (category starts with "unknown") are labelled
-// as such rather than guessed.
-const categoryLabel = (c: string) => {
-  if (c.startsWith("unknown")) return "Unknown Properties";
+// Map the source category to a standard family name. Elements 109–118, whose
+// chemistry is not established, are all labelled "Unknown Properties" rather
+// than guessed (the source is inconsistent there, e.g. Cn vs Rg).
+const categoryLabel = (c: string, z: number) => {
+  if (z >= 109 || c.startsWith("unknown")) return "Unknown Properties";
   if (c === "diatomic nonmetal" || c === "polyatomic nonmetal") return "Reactive Nonmetal";
   return c.replace(/(^|[\s-])([a-z])/g, (_, a: string, b: string) => a + b.toUpperCase());
 };
@@ -63,7 +63,7 @@ const parse = (): Element[] => {
       row: Number(g("row")),
       col: Number(g("col")),
       category: g("category"),
-      categoryLabel: categoryLabel(g("category")),
+      categoryLabel: categoryLabel(g("category"), Number(g("z"))),
       shells: g("shells"),
       oxidation: g("oxidation_states") ? g("oxidation_states").split(" ") : [],
     };

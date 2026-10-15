@@ -75,15 +75,15 @@ void main() {
   int c = int(cellF.x);
   int r = int(cellF.y);
 
-  // dot intensity on this cell (the bump of m = c-1 peaks at t = 1 - beta)
-  float b1 = beta(c - 1, r);
-  float d1 = (float(c) - t) - (float(c - 1) + b1);
-  float b0 = beta(c, r);
-  float d0 = (float(c) - t) - (float(c) + b0);
-  float I = max(bump(d1), bump(d0));
-  float rad1 = 0.2 + 0.14 * r01(c - 1, r, 29u);
-  float rad0 = 0.2 + 0.14 * r01(c, r, 29u);
-  float rad = bump(d1) >= bump(d0) ? rad1 : rad0;
+  // dot intensity on this cell: bumps m = c-2 .. c+1 of the travelling
+  // pattern (a function of c - t only, so it is continuous across the loop)
+  float I = 0.0;
+  float rad = 0.2;
+  for (int k = -2; k <= 1; k++) {
+    int m = c + k;
+    float bk = bump((float(c) - t) - (float(m) + beta(m, r)));
+    if (bk > I) { I = bk; rad = 0.2 + 0.14 * r01(m, r, 29u); }
+  }
 
   // row label shift, hidden under the scanning band
   float zb = mix(scan.x, scan.y, t);
