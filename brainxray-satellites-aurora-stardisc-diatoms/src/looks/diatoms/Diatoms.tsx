@@ -33,7 +33,7 @@ void main() {
   vec2 d = vUV - 0.5; d.x *= 1.6;
   float vig = 1.03 - 0.05 * dot(d, d) * 1.6;
   // slight warm lamp tint
-  finalColor = vec4(uField * vec3(1.01, 1.0, 1.005) * (vig + mott), 1.0);
+  finalColor = vec4(uField * vec3(1.015, 1.0, 0.985) * (vig + mott), 1.0);
 }`;
 
 const VERT = /* glsl */ `${GLSL_HEADER}
@@ -143,7 +143,13 @@ const layout = (entries: AtlasEntry[], count: number): Obj[] => {
       y = range(r, 1350, 2250);
     }
     if (kind === "needle" || kind === "fibre") layer = 1;
-    if ((kind === "algae" || kind === "cluster") && layer !== 1) layer = r() < 0.7 ? 1 : 2;
+    if ((kind === "algae" || kind === "cluster") && layer !== 1) layer = r() < 0.55 ? 1 : 2;
+    // specks gather near other objects (clumpy debris)
+    if (kind === "speck" && objs.length > 0 && r() < 0.5) {
+      const host = objs[Math.floor(r() * objs.length)];
+      x = host.x + range(r, -140, 140);
+      y = host.y + range(r, -140, 140);
+    }
     const sizeScale =
       kind === "diatom" ? range(r, 0.55, 0.95) : kind === "debris" ? range(r, 0.8, 1.5) : kind === "speck" ? range(r, 0.4, 1.0) : range(r, 0.75, 1.2);
     const diag = 0.65; // shared lean, upper left to lower right
@@ -159,8 +165,13 @@ const layout = (entries: AtlasEntry[], count: number): Obj[] => {
       turn: kind === "algae" || kind === "speck" || kind === "bubble" ? 0 : range(r, 0.04, 0.25) * (r() < 0.5 ? -1 : 1),
       turnPh: r() * TAU,
       scale: sizeScale * (layer === 2 ? 1.3 : layer === 0 ? (kind === "diatom" ? 1.8 : 1.15) : 1),
-      k: kind === "speck" ? (layer !== 1 ? 0.35 : 0.7) : 1,
+      k: kind === "speck" ? (layer !== 1 ? 0.35 : 0.7) : kind === "diatom" && layer === 0 ? 0.7 : 1,
     });
+  }
+  // dust motes on the optics: very soft, faint, fixed in frame
+  const specks = byKind("speck");
+  for (let i = 0; i < 18; i++) {
+    objs.push({ e: specks[i % specks.length], layer: 0, x: range(r, 0, 3840), y: range(r, 0, 2160), ax: 0, ay: 0, ph: 0, ang: 0, turn: 0, turnPh: 0, scale: range(r, 2.5, 4.5), k: 0.22 });
   }
   objs.sort((a, b) => a.layer - b.layer);
   return objs;
@@ -208,9 +219,14 @@ const makeLook = (params: DiatomParams): PixiLook<Scene> => ({
       const a = o.ang + o.turn * Math.sin(th + o.turnPh);
       // drift (closed loop) plus a glide back and forth along the long axis
       const glide = o.turn !== 0 ? 40 * Math.sin(th * 2 + o.ph) : 0;
-      const x = o.x + o.ax * Math.cos(th + o.ph) + Math.cos(a) * glide;
-      const y = o.y + o.ay * Math.sin(th + o.ph) + Math.sin(a) * glide;
-      const uv = e.uv[o.layer === 1 ? 0 : o.layer === 2 ? 1 : 2];
+      // depth parallax: each focus layer shares a drift of its own size
+      const lx = [25, 60, 110][o.layer] * Math.cos(th + 0.4), ly = [8, 20, 36][o.layer] * Math.sin(th + 0.4);
+      const fixed = o.ax === 0 && o.ay === 0; // dust on the optics never moves
+      const x = o.x + (fixed ? 0 : o.ax * Math.cos(th + o.ph) + Math.cos(a) * glide + lx);
+      const y = o.y + (fixed ? 0 : o.ay * Math.sin(th + o.ph) + Math.sin(a) * glide + ly);
+      // blur level: in-focus layer is partly "slightly soft" (continuous depth of field)
+      const soft = o.layer === 1 && ((i * 2654435761) >>> 0) % 10 < 3;
+      const uv = e.uv[o.layer === 1 ? (soft ? 1 : 0) : o.layer === 2 ? 2 : 3];
       const k = i * FPI;
       d[k] = x;
       d[k + 1] = y;

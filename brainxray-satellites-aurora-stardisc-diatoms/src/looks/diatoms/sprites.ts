@@ -6,7 +6,7 @@ import { mulberry32, range, Rng } from "../../lib/rand";
 
 export const T_SCALE = 1.25;
 const NEUTRAL = Math.round(255 / T_SCALE); // 204
-export const BLUR_LEVELS = [0, 12, 36]; // design px
+export const BLUR_LEVELS = [0, 5, 12, 36]; // design px: sharp, slightly soft, soft, very soft
 
 export type Kind = "diatom" | "algae" | "cluster" | "needle" | "fibre" | "debris" | "speck" | "bubble";
 export type SpriteDef = { kind: Kind; size: number; draw: (ctx: CanvasRenderingContext2D, r: Rng, s: number) => void };
@@ -44,10 +44,15 @@ const drawDiatom = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
   const style = r();
   const L = s * range(r, 0.55, 0.8);
   // plump ovals, slender rods, or boat-shaped pennates
-  const W = L * (style < 0.35 ? range(r, 0.4, 0.52) : style < 0.6 ? range(r, 0.14, 0.2) : range(r, 0.24, 0.34));
+  const girdle = style >= 0.6 && style < 0.72; // girdle (side) view: a rounded rectangle
+  const W = L * (style < 0.35 ? range(r, 0.4, 0.52) : style < 0.6 ? range(r, 0.14, 0.2) : girdle ? range(r, 0.3, 0.45) : range(r, 0.24, 0.34));
   const p = style < 0.35 ? range(r, 0.45, 0.6) : range(r, 0.5, 0.9);
-  const cap = style > 0.85 ? range(r, 2, 4) : range(r, 0, 1);
-  const path = diatomPath(L, W, p, cap);
+  const cap = style > 0.75 ? range(r, 2, 4) : range(r, 0, 1);
+  let path = diatomPath(L, W, p, cap);
+  if (girdle) {
+    path = new Path2D();
+    path.roundRect(-L / 2, -W / 2, L, W, W * 0.28);
+  }
   // broad bright halo (bright-field phase halo)
   ctx.save();
   ctx.filter = `blur(${s * 0.02}px)`;
@@ -77,7 +82,7 @@ const drawDiatom = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
   ctx.clip(path);
   // golden-brown protoplast / chloroplast mass
   if (r() < 0.85) {
-    const tint: [number, number, number] = [0.97, 0.95, 0.88];
+    const tint: [number, number, number] = [1.0, range(r, 0.86, 0.92), range(r, 0.58, 0.7)]; // golden-brown
     ctx.filter = `blur(${s * 0.012}px)`;
     ctx.fillStyle = tcol(range(r, 0.28, 0.45), tint);
     for (const side of [-1, 1]) {
@@ -108,9 +113,9 @@ const drawDiatom = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
   ctx.fill();
   ctx.restore();
   // fine cross striae
-  ctx.strokeStyle = tcol(0.84);
-  ctx.lineWidth = Math.max(0.6, s * 0.005);
-  const step = s * 0.018;
+  ctx.strokeStyle = tcol(0.76);
+  ctx.lineWidth = Math.max(0.8, s * 0.008);
+  const step = s * 0.026;
   for (let x = -L / 2; x < L / 2; x += step) {
     ctx.beginPath();
     ctx.moveTo(x, -W / 2);
@@ -141,8 +146,8 @@ const greenCell = (ctx: CanvasRenderingContext2D, r: Rng, x: number, y: number, 
   ctx.fill();
   const g = ctx.createRadialGradient(x - rad * 0.3, y - rad * 0.3, rad * 0.1, x, y, rad);
   // #9AC83A as transmission tint
-  g.addColorStop(0, tcol(range(r, 1.0, 1.1), [1.0, 1.0, 0.22]));
-  g.addColorStop(0.65, tcol(range(r, 0.9, 1.0), [0.95, 0.97, 0.15]));
+  g.addColorStop(0, tcol(range(r, 1.0, 1.08), [0.95, 1.0, 0.4]));
+  g.addColorStop(0.65, tcol(range(r, 0.88, 0.96), [0.85, 0.92, 0.38]));
   g.addColorStop(1, tcol(0.6, [0.7, 0.72, 0.3]));
   ctx.fillStyle = g;
   ctx.beginPath();
@@ -204,16 +209,14 @@ const drawFibre = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
 };
 const drawBubble = (ctx: CanvasRenderingContext2D, r: Rng, s: number) => {
   const R = s * range(r, 0.25, 0.4);
-  ctx.save();
-  ctx.filter = `blur(${s * 0.04}px)`;
-  ctx.fillStyle = tcol(1.14);
+  // air bubble: thick dark ring, bright centre, crisp edges
+  ctx.fillStyle = tcol(1.12);
   ctx.beginPath();
   ctx.arc(0, 0, R, 0, Math.PI * 2);
   ctx.fill();
-  ctx.lineWidth = s * 0.05;
-  ctx.strokeStyle = tcol(0.85);
+  ctx.lineWidth = s * 0.18;
+  ctx.strokeStyle = tcol(0.5);
   ctx.stroke();
-  ctx.restore();
   ctx.lineWidth = s * 0.03;
   ctx.strokeStyle = tcol(1.12);
   ctx.beginPath();
