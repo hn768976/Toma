@@ -32,7 +32,7 @@ const KINDS: PanelKind[] = ["code", "chart", "grid", "numbers", "tree", "bars"];
 const LAYOUT: { pos: [number, number, number]; size: [number, number]; kind?: PanelKind; frame?: boolean }[] = [
   // wrapped closely round the cube (near focus, mostly sharp)
   { pos: [-0.66, 0.3, -0.4], size: [0.5, 0.6], kind: "tree" },
-  { pos: [0.92, 0.12, -0.45], size: [0.95, 0.95], kind: "tree", frame: true },
+  { pos: [0.92, 0.12, -0.45], size: [0.85, 0.85], kind: "tree", frame: true },
   { pos: [-0.74, -0.12, -0.25], size: [0.38, 0.46], kind: "code" },
   { pos: [1.0, -0.46, -0.2], size: [0.62, 0.24], kind: "chart" },
   { pos: [-1.08, -0.62, -0.55], size: [0.6, 0.42], kind: "code" },
@@ -378,7 +378,7 @@ export const buildHud = (defs: PanelDef[], color: string, accent: string): HudRi
             a = acc / 25.0;
           }
           float accent = max(a.y - a.x, 0.0);
-          outColor = vec4((uColor * a.x * 1.6 + uAccent * accent * 1.8) * uAmount, 1.0);
+          outColor = vec4((uColor * a.x * 1.6 + uAccent * accent * 1.1) * uAmount, 1.0);
         }`,
     });
     const mesh = new THREE.Mesh(

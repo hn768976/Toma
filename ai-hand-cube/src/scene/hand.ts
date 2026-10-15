@@ -98,13 +98,13 @@ type FingerDef = {
 
 const FINGERS: FingerDef[] = [
   // index (thumb side, -X)
-  { x: -0.33, splay: -9 * DEG, lengths: [0.47, 0.3, 0.25], width: 0.2, relaxed: [16 * DEG, 22 * DEG, 16 * DEG] },
+  { x: -0.33, splay: -9 * DEG, lengths: [0.47, 0.3, 0.25], width: 0.2, relaxed: [6 * DEG, 12 * DEG, 10 * DEG] },
   // middle - longest
-  { x: -0.11, splay: -2.5 * DEG, lengths: [0.53, 0.34, 0.27], width: 0.212, relaxed: [17 * DEG, 23 * DEG, 17 * DEG] },
+  { x: -0.11, splay: -2.5 * DEG, lengths: [0.53, 0.34, 0.27], width: 0.212, relaxed: [6 * DEG, 13 * DEG, 10 * DEG] },
   // ring
-  { x: 0.11, splay: 4.5 * DEG, lengths: [0.5, 0.32, 0.26], width: 0.202, relaxed: [18 * DEG, 24 * DEG, 18 * DEG] },
+  { x: 0.11, splay: 4.5 * DEG, lengths: [0.5, 0.32, 0.26], width: 0.202, relaxed: [7 * DEG, 14 * DEG, 11 * DEG] },
   // little - ~80% of middle
-  { x: 0.32, splay: 13 * DEG, lengths: [0.4, 0.26, 0.21], width: 0.178, relaxed: [20 * DEG, 25 * DEG, 18 * DEG] },
+  { x: 0.32, splay: 13 * DEG, lengths: [0.4, 0.26, 0.21], width: 0.178, relaxed: [9 * DEG, 16 * DEG, 12 * DEG] },
 ];
 
 const knuckleZ = (x: number) => 0.47 + 0.05 * Math.max(0, 1 - (x / 0.49) ** 2);
@@ -231,7 +231,7 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   // angled ~40deg away from the index finger, pad turned toward the fingers.
   const thenarDir = new THREE.Group();
   thenarDir.position.set(-0.3, 0.04, 0.0);
-  thenarDir.rotation.set(-26 * DEG, -66 * DEG, -6 * DEG, "YXZ");
+  thenarDir.rotation.set(-18 * DEG, -68 * DEG, -6 * DEG, "YXZ");
   palm.add(thenarDir);
   const thenarLen = 0.34;
   thenarDir.add(
@@ -258,7 +258,7 @@ export const buildHand = (mats: HandMaterials): HandRig => {
   thenarDir.add(tube(gasket, 0.003, mats.seam, true, 96));
   const thumbBase = new THREE.Group();
   thumbBase.position.z = thenarLen + 0.02;
-  thumbBase.rotation.set(-20 * DEG, 14 * DEG, -20 * DEG, "YXZ");
+  thumbBase.rotation.set(-22 * DEG, 18 * DEG, -20 * DEG, "YXZ");
   thenarDir.add(thumbBase);
   // thumb: shorter than the fingers but the chunkiest digit
   const thumbJoints = buildChain(thumbBase, [0.35, 0.27], 0.235, 0.215);
@@ -351,7 +351,7 @@ export const buildHand = (mats: HandMaterials): HandRig => {
         // t = 1 at the wrist; widens and flattens toward the elbow
         const d = (1 - t) * foreLen; // distance from the wrist
         const bulge = smooth(0, 2.2, d) - 0.25 * smooth(3.0, 6.0, d);
-        return { w: 0.56 + 0.26 * bulge, h: 0.38 + 0.16 * bulge };
+        return { w: 0.5 + 0.12 * bulge, h: 0.26 + 0.06 * bulge };
       },
     }),
     mats.shell,
@@ -362,7 +362,7 @@ export const buildHand = (mats: HandMaterials): HandRig => {
     const t = (z + foreLen) / foreLen;
     const dd = (1 - t) * foreLen;
     const bulge = smooth(0, 2.2, dd) - 0.25 * smooth(3.0, 6.0, dd);
-    const sec = { w: 0.56 + 0.26 * bulge, h: 0.38 + 0.16 * bulge };
+    const sec = { w: 0.5 + 0.12 * bulge, h: 0.26 + 0.06 * bulge };
     const pts: THREE.Vector3[] = [];
     for (let i = 0; i < 48; i++) {
       const p = sectionPoint(sec, (i / 48) * Math.PI * 2, 2.6, 2.4, 1.004);

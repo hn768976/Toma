@@ -23,17 +23,17 @@ const SQUARE_LIFT = 0.07; // glow square height above the palm anchor (palm unit
 
 // Scene constants (world units: palm width ~ 1)
 export const SCENE = {
-  fov: 26,
-  camDist: 5.0,
-  camDrop: 0.48, // camera sits slightly below the cube centre (underside visible)
-  lookDrop: 0.26, // look slightly below the cube so the hand fits
+  fov: 34,
+  camDist: 3.7,
+  camDrop: 0.3, // camera sits slightly below the cube centre (underside visible)
+  lookDrop: 0.2, // look slightly below the cube so the hand fits
   palmAnchor: new THREE.Vector3(-0.03, 0.1, 0.02), // where the cube sits (palm local)
-  floatGap: 0.07, // gap between palm and cube bottom once floating
-  handTilt: 36 * DEG, // palm tilted toward the camera
+  floatGap: 0.16, // gap between palm and cube bottom once floating (glow pool shows)
+  handTilt: 13 * DEG, // palm tilted toward the camera
   handYaw: 2 * DEG, // fingers point toward the viewer
   handRoll: -4 * DEG,
-  handScale: 1.0,
-  wristBend: -64 * DEG, // forearm runs straight away from camera, hidden behind palm and cube
+  handScale: 1.12,
+  wristBend: -25 * DEG, // forearm runs straight away from camera, hidden behind palm and cube
   cubeWorld: new THREE.Vector3(0, 0, 0),
   // CoC = K * max(0, |1 - focus/z| - band): the cube (+-0.4 around its centre) stays sharp
   dof: { nearK: 0.17, farK: 0.05, maxCoc: 0.02, band: 0.12 },
@@ -184,7 +184,7 @@ const Scene: React.FC<{ v: Version; refs: RenderRefs }> = ({ v, refs }) => {
     const sp = cube.group.position.clone().project(cam);
     bg.material.uniforms.uGlowPos.value.set(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5 - 0.02);
     bg.material.uniforms.uAspect.value = W / H;
-    bg.material.uniforms.uGlowStrength.value = 0.4 + 0.14 * st.innerGlow + 0.12 * st.aiFlash;
+    bg.material.uniforms.uGlowStrength.value = 0.3 + 0.12 * st.innerGlow + 0.1 * st.aiFlash;
 
     // --- HUD + particles ---------------------------------------------------------
     const focus = cam.position.distanceTo(cube.group.position);
@@ -237,7 +237,7 @@ export const AIHandCube: React.FC<{ versionId: string }> = ({ versionId }) => {
         bloomThreshold: 1.15,
         exposure: 1.0,
         grain: 0.015,
-        vignette: 0.55,
+        vignette: 0.7,
       },
     }),
     [width, height],

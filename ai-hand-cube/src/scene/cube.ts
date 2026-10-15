@@ -363,7 +363,7 @@ export const buildCube = (p: Palette, env: THREE.Texture, text: string): CubeRig
         // faces turned toward the upper-left key read silver, others darker blue
         float key = clamp(dot(normalize(vN), normalize(vec3(-0.75, 0.35, 0.55))), 0.0, 1.0);
         vec3 tint = mix(uColor * 0.6, metal, 0.55 + 0.45 * key);
-        vec3 panel = tint * shade * (0.45 + 0.55 * uGlow) * (0.6 + 0.7 * key);
+        vec3 panel = tint * shade * (0.36 + 0.42 * uGlow) * (0.55 + 0.6 * key);
         float alpha = uGlass * (0.9 + 0.08 * c.b);
         vec3 col = panel * alpha + uColor * lines * 1.1;
         outColor = vec4(col, alpha);
@@ -565,9 +565,9 @@ export const buildCube = (p: Palette, env: THREE.Texture, text: string): CubeRig
       m.uniforms.uColor.value.copy(circuitColor).multiplyScalar(E);
     });
     edgeMat.color.copy(circuitColor).lerp(WHITE, 0.15).multiplyScalar(E * (1.5 + 0.8 * st.innerGlow + 2.0 * st.aiFlash));
-    textMat.uniforms.uAmount.value = E * st.aiOn * (1.0 + 3.0 * st.aiFlash);
+    textMat.uniforms.uAmount.value = E * st.aiOn * (1.45 + 3.0 * st.aiFlash);
     glowMat.uniforms.uAmount.value = E * (0.15 * st.squareGlow + 0.06 * st.innerGlow + 0.5 * st.aiFlash);
-    squareMat.uniforms.uAmount.value = E * st.squareGlow * (1.0 - 0.82 * st.glass);
+    squareMat.uniforms.uAmount.value = E * st.squareGlow * (1.0 - 0.6 * st.glass);
     squareMat.uniforms.uEdge.value = 1 - 0.6 * st.glass;
   };
 
