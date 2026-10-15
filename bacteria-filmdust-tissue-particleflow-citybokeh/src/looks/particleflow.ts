@@ -68,19 +68,28 @@ vec3 sheetPos(int k, float x, float v, float ph) {
 
 void main() {
   int k = int(aRand.x + 0.5);
+  bool dust = k >= 5;            // index 5 = a fine dust haze filling the volume
+  int ks = min(k, 4);
   float ph = uPhase;
-  vec4 C = uSheetC[k];
-  vec4 D = uSheetD[k];
-  float u = fract(aPosition.x + C.x * ph);
+  vec4 C = uSheetC[ks];
+  vec4 D = uSheetD[ks];
+  float u = fract(aPosition.x + (dust ? 1.0 : C.x) * ph);
   float v = aPosition.y;
   float x = (u - 0.5) * L;
 
-  // sand-like thickness: jitter off the surface
-  vec3 p = sheetPos(k, x, v, ph);
-  vec3 px = sheetPos(k, x + 0.05, v, ph);
-  vec3 pv = sheetPos(k, x, v + 0.02, ph);
-  vec3 n = normalize(cross(px - p, pv - p));
-  p += n * (aRand.y - 0.5) * 0.22 * (0.4 + aRand.z);
+  vec3 p;
+  vec3 n;
+  if (dust) {
+    p = vec3(x, -5.0 + 14.0 * (v * 0.5 + 0.5), -16.0 + 40.0 * aRand.y);
+    n = normalize(vec3(0.3, 1.0, 0.2));
+  } else {
+    // sand-like thickness: jitter off the surface
+    p = sheetPos(ks, x, v, ph);
+    vec3 px = sheetPos(ks, x + 0.05, v, ph);
+    vec3 pv = sheetPos(ks, x, v + 0.02, ph);
+    n = normalize(cross(px - p, pv - p));
+    p += n * (aRand.y - 0.5) * 0.22 * (0.4 + aRand.z);
+  }
 
   vec3 d = p - uCamPos;
   vec3 view = vec3(dot(d, uCamR), dot(d, uCamU), dot(d, uCamF));
@@ -92,15 +101,15 @@ void main() {
   float graze = 1.0 - abs(dot(n, vd));
   float edgeT = pow(graze, 4.0) * 0.6;
   // a few elliptical voids fixed on the sheet (in x, v); particles thin out through them
-  float h = vn(vec2(x * 0.075 + C.y * 7.0, v * 1.3 + C.y * 3.0));
-  float hole = mix(1.0, 0.12, smoothstep(C.z, C.z + 0.05, h));
+  float h = vn(vec2(x * 0.05 + C.y * 7.0, v * 0.9 + C.y * 3.0));
+  float hole = dust ? 1.0 : mix(1.0, 0.1, smoothstep(C.z, C.z + 0.08, h));
   // fade at sheet ends; crisp side edges with a bright seam of grains (the lips of the sheets)
   float ends = smoothstep(0.0, 0.08, u) * smoothstep(1.0, 0.92, u);
   float av = abs(v);
-  float sides = smoothstep(1.02, 0.985, av);
-  float seam = 1.0 + D.w * smoothstep(0.82, 0.98, av);
+  float sides = dust ? 1.0 : smoothstep(1.02, 0.75, av);
+  float seam = dust ? 1.0 : 1.0 + D.w * smoothstep(0.7, 0.95, av);
 
-  float star = step(1.0 - D.z, aRand.w);
+  float star = dust ? 0.0 : step(1.0 - D.z, aRand.w);
   vStar = star;
   // grain size: mostly fine dust, some medium specks, a few large soft grains
   float big = pow(aRand.z, 6.0);
@@ -114,11 +123,12 @@ void main() {
 
   vec3 blue = mix(uDeep, uSheet, clamp(0.5 + 0.7 * aRand.z + 0.3 * graze, 0.0, 1.0)) * 1.9;
   vec3 grey = mix(uGrey, uEdge2, aRand.y * 0.8) * 1.1;
-  vec3 col = mix(blue, grey, D.x);
+  vec3 col = dust ? uGrey * 0.9 : mix(blue, grey, D.x);
   vec3 ec = mix(uEdge, uEdge2, aRand.y);
   col = mix(col, ec, clamp(edgeT + star + 0.35 * (seam - 1.0) / max(D.w, 0.01), 0.0, 1.0));
   float a = C.w * hole * ends * sides * seam * energy * (0.55 + 0.45 * aRand.z) * (1.0 + 2.0 * star);
   a *= clamp(24.0 / depth, 0.6, 1.0); // distant sheets a little dimmer
+  if (dust) a = 0.4 * energy * (0.4 + 0.6 * aRand.z);
   vColor = col * a;
 }`;
 
@@ -162,14 +172,16 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
   const defs = [
     // A: baseY, halfW, zOff, curl | B: amp1, f1, amp2, f2 | C: turns, seed, hole thr, bright
     // D: grey amount, size mult, star rate, seam strength | share of particles
-    { A: [0.0, 5.0, -8.5, 0.4], B: [0.9, 0.16, 0.35, 0.41], C: [1, 0.3, 0.7, 0.62], D: [0, 0.95, 0.001, 0.8], share: 0.3 },
-    { A: [1.5, 4.6, -0.8, 0.45], B: [0.7, 0.13, 0.4, 0.37], C: [1, 1.7, 0.72, 0.62], D: [0.05, 0.9, 0.001, 1.0], share: 0.28 },
-    { A: [2.6, 3.4, 8.2, 0.4], B: [1.0, 0.11, 0.3, 0.33], C: [2, 2.9, 0.7, 0.5], D: [0.55, 0.9, 0.003, 1.0], share: 0.12 },
+    { A: [0.0, 5.5, -8.5, 0.4], B: [0.9, 0.16, 0.35, 0.41], C: [1, 0.3, 0.68, 0.85], D: [0, 0.72, 0.0003, 0.6], share: 0.27 },
+    { A: [1.5, 5.0, -0.8, 0.45], B: [0.7, 0.13, 0.4, 0.37], C: [1, 1.7, 0.7, 0.85], D: [0.05, 0.72, 0.0003, 0.8], share: 0.25 },
+    { A: [2.6, 5.0, 8.6, 0.4], B: [1.0, 0.11, 0.3, 0.33], C: [2, 2.9, 0.68, 0.42], D: [0.6, 0.85, 0.004, 0.6], share: 0.1 },
     // the near, sparse, grey-white sheet across the upper-left with big sparkles
-    { A: [7.0, 4.5, 13.0, 0.3], B: [0.6, 0.1, 0.3, 0.27], C: [1, 5.3, 0.74, 0.55], D: [1.0, 1.25, 0.03, 1.0], share: 0.12 },
-    { A: [-2.0, 6.0, 16.0, 0.35], B: [0.8, 0.09, 0.5, 0.29], C: [1, 4.1, 0.74, 0.5], D: [0.85, 1.0, 0.006, 0.8], share: 0.18 },
+    { A: [7.0, 6.0, 13.0, 0.3], B: [0.6, 0.1, 0.3, 0.27], C: [1, 5.3, 0.74, 0.42], D: [1.0, 1.1, 0.015, 0.4], share: 0.1 },
+    { A: [-2.0, 7.0, 16.0, 0.35], B: [0.8, 0.09, 0.5, 0.29], C: [1, 4.1, 0.74, 0.4], D: [0.85, 0.9, 0.012, 0.4], share: 0.18 },
+    // [5] dust haze (shape ignored; uses its own volume)
+    { A: [0, 1, 0, 0], B: [0, 0, 0, 0], C: [1, 0, 1, 0.2], D: [1, 0.7, 0, 0], share: 0.1 },
   ];
-  defs.forEach((d, i) => {
+  defs.slice(0, 5).forEach((d, i) => {
     sheetA.set(d.A, i * 4);
     sheetB.set(d.B, i * 4);
     sheetC.set(d.C, i * 4);
@@ -253,7 +265,7 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
       let right = norm(cross(fwd, [0, 1, 0]));
       let up = cross(right, fwd);
       // roll so the flow runs diagonally across the frame
-      const roll = -1.22 + 0.03 * Math.sin(TAU * ph);
+      const roll = -1.4 + 0.03 * Math.sin(TAU * ph);
       const cr = Math.cos(roll);
       const sr = Math.sin(roll);
       const r2: V = [right[0] * cr + up[0] * sr, right[1] * cr + up[1] * sr, right[2] * cr + up[2] * sr];
