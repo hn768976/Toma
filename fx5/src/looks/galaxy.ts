@@ -80,6 +80,7 @@ uniform mat3 uWorldTransformMatrix;
 uniform mat3 uTransformMatrix;
 uniform float uS;          // physical px per design px
 uniform float uPhase;      // 0..1 over the loop
+uniform float uWeight;     // sub-frame weight (motion blur)
 uniform float uTilt;       // radians from face-on
 uniform vec3 uView;        // centre x, centre y (design px), scale (design px per unit)
 uniform vec3 uArm; uniform vec3 uArmAlt; uniform vec3 uCore; uniform vec3 uWarm;
@@ -131,7 +132,7 @@ void main() {
   float sz = max(want, 1.6);
   bright *= (want * want) / (sz * sz);
   gl_PointSize = sz * 2.0;  // gaussian needs room
-  vCol = col * bright;
+  vCol = col * bright * uWeight;
   vSoft = type > 1.5 && type < 2.5 ? 1.0 : 0.0;
   mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
   gl_Position = vec4((mvp * vec3(screen * uS, 1.0)).xy, 0.0, 1.0);
@@ -204,6 +205,7 @@ export const galaxyScene: SceneFactory<GalaxyParams> = ({ renderer, w, h, s }, p
   const group = new UniformGroup({
     uS: { value: s, type: 'f32' },
     uPhase: { value: 0, type: 'f32' },
+    uWeight: { value: 1, type: 'f32' },
     uTilt: { value: (63 * Math.PI) / 180, type: 'f32' },
     uView: { value: [1920, 1080, 1400], type: 'vec3<f32>' },
     uArm: { value: hexToLinear(p.arm), type: 'vec3<f32>' },
@@ -250,10 +252,16 @@ export const galaxyScene: SceneFactory<GalaxyParams> = ({ renderer, w, h, s }, p
         930 + 22 * Math.sin(4 * Math.PI * ph + 0.6),
         1400 * (1 + 0.02 * Math.cos(2 * Math.PI * ph)),
       ];
-      group.uniforms.uPhase = ph;
       group.uniforms.uView = view;
       out.u.uView = view;
-      renderer.render({ container: root, target: starRT, clear: true, clearColor: [0, 0, 0, 0] });
+      // motion blur: accumulate SUB sub-frame positions across a 180° shutter,
+      // all derived from the frame number, so it stays deterministic and loops
+      const SUB = 4;
+      group.uniforms.uWeight = 1 / SUB;
+      for (let k = 0; k < SUB; k++) {
+        group.uniforms.uPhase = (f + ((k + 0.5) / SUB - 0.5) * 0.5) / 600;
+        renderer.render({ container: root, target: starRT, clear: k === 0, clearColor: [0, 0, 0, 0] });
+      }
       bloom.run(renderer, starRT, 2);
       out.u.uFrameMod = frame % p.loopFrames;
       out.draw(renderer);
