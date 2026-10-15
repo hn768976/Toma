@@ -137,11 +137,11 @@ and change its colours. Example: a green bacteria version.
 
 Row parameters per look:
 
-* `bacteria`: `ramp` (5 stops: black, deep, mid, bright, highlight), `seed`
+* `bacteria`: `ramp` (5 stops: black, deep, mid, bright, highlight; luminance-driven), `seed`
 * `filmdust`: `count` (elements per frame), `seed`
 * `tissue`: `ramp` (black → deep → bright → hot → white)
-* `particleflow`: `deep`, `sheet`, `edge`, `edge2`, `haze`, `count`, `seed`
-* `bokeh`: `bgTop`, `bgBottom`, `glow`, `blob`, `colors` (weighted list), `seed`
+* `particleflow`: `deep`, `sheet`, `edge`, `edge2`, `grey` (pale near sheet), `haze`, `count`, `seed`
+* `bokeh`: `bgTop`, `bgBottom`, `glow`, `blob`, `colors` (weighted list, back layers), `front` (near headlight discs; entries 0 and 1 are the bright pair), `seed`
 
 ## Verification scripts
 
@@ -151,4 +151,94 @@ Row parameters per look:
 * `scripts/seam.py <Name>`: the 599 → 0 step compared with ordinary frame steps
 * `scripts/stills.mjs`: frames / contact sheets / per-frame timings with one browser
 
-RESULTS_PLACEHOLDER
+## Measured render times
+
+All numbers are from this build machine: 4 vCPU, **no GPU** (Chromium falls back
+to SwiftShader through ANGLE), 15 GB RAM. With a real GPU expect these to drop by
+an order of magnitude.
+
+### 720p previews (full 600-frame render, `--concurrency=4`, wall time ÷ 600)
+
+| Composition | ms / frame @ 720p |
+|---|---|
+| BacteriaChains-Red | 782 |
+| BacteriaChains-Blue | 791 |
+| FilmDust-Dense | 1869 |
+| FilmDust-Light | 369 |
+| GlowingTissue-Orange | 611 |
+| GlowingTissue-Blue | 584 |
+| ParticleFlow-Blue | 289 |
+| ParticleFlow-Gold | 274 |
+| CityBokeh-Warm | 282 |
+| CityBokeh-Cool | 280 |
+
+(Concurrency barely helps here: every tab shares the one SwiftShader GPU process.)
+
+### Two timed 4K frames (3840×2160, `--scale=1 --concurrency=1`)
+
+Timed as (render of frames 300–303) − (render of frame 300) ÷ 3, so browser start-up
+and sprite baking are excluded:
+
+| Composition | s / frame @ 4K |
+|---|---|
+| FilmDust-Dense | **11.5** (frame 300 alone, cold: 25.3 s) |
+| ParticleFlow-Blue | **2.1** (frame 300 alone, cold: 5.1 s) |
+
+### 4K estimates for a full 600-frame render on this kind of machine (no GPU)
+
+Measured 4K / 720p ratio: ×6.2 (dust, sprite-bound) and ×7.4 (particles). Shader-bound
+looks (tissue, bacteria background) scale closer to the ×9 pixel count.
+
+| Composition | est. s / frame @ 4K | est. full render |
+|---|---|---|
+| BacteriaChains (each) | ~6 | ~60 min |
+| FilmDust-Dense | 11.5 (measured) | ~115 min |
+| FilmDust-Light | ~2.5 | ~25 min |
+| GlowingTissue (each) | ~5.5 | ~55 min |
+| ParticleFlow (each) | 2.1 (measured) | ~21 min |
+| CityBokeh (each) | ~2 | ~20 min |
+
+Total for all ten at 4K ≈ 8 hours on 4 software-rendered vCPUs; on a machine with a
+GPU, roughly 30–60 minutes.
+
+## Banding check (on the encoded mp4)
+
+`scripts/banding.py` decodes frame 300 of each preview and reads the luma profile along
+a gradient: the bacteria dark field (column 1240), the tissue vignette ramp (row 360),
+the particle-flow haze floor (9×9 minimum filter along row 354, i.e. the haze between
+grains) and the bokeh background (column 20, top to bottom). Every profile changes
+smoothly: no staircase plateaus. On the smooth bokeh gradients the largest
+neighbour step after a 5-px smooth is < 1 code value (0.89 warm, 0.74 cool). Below ~3 %
+luminance the dither is deliberately faded out (so blacks stay clean); there the
+gradients are so shallow that 1-code plateaus are the minimum possible in 8-bit. Results:
+`renders/logs/banding.txt` (render output, not in the zip).
+
+Half-float (rgba16float) targets are used for the scene and every bloom level; the final
+pass adds ±1/255 triangular dither and 1.5 % grain from a PCG hash of (pixel, frame % 600).
+
+## Completion checklist
+
+- [x] 10 compositions, 3840×2160, 30 fps, 600 frames, one data row each (`src/versions.ts`)
+- [x] PixiJS 8 on WebGL2 (checked at start-up: throws if WebGL2 or float colour buffers are missing)
+- [x] Particle Flow: 250,000 points, 3D positions projected in a custom vertex shader
+- [x] 720p previews: 1280×720, h264, yuv420p, 30/1, no audio, 20.0 s (ffprobe, all 10)
+- [x] Loop check: frame 600 of the 601-frame variant == frame 0, pixel for pixel (all 10)
+- [x] Determinism: cold-start `remotion still` frame 300 == full-render frame 300, byte for byte (all 10)
+- [x] Seam: the 599→0 step is in the range of ordinary steps (`scripts/seam.py`)
+- [x] Film Dust black level: 50 points between the dust read 0,0,0 (max 1) in the decoded mp4
+- [x] Grain/dither fade to 0 below ~3 % luminance on every look
+- [x] No `Math.random()`, `Date.now()` or state driving visuals; no Pixi ticker
+- [x] Banding check on the encoded mp4
+- [x] Render times at 720p for all 10; two real 4K frames timed
+- [x] Visual comparison against the references by separate agents, 3 rounds per look
+
+## Notes and deviations
+
+* **Bokeh disc size:** the brief says up to 25 % of frame height; the reference's front
+  discs are ~34 %, and the comparison agents flagged smaller discs, so the front layer
+  is 30–36 %. Change `LAYERS[2].d` in `src/looks/bokeh.ts` to cap it at 25 %.
+* **Film Dust vertical scratches:** the rare long vertical scratches are a requested
+  feature (0–2 per frame, faint). They are not a bug.
+* **Bacteria realism:** a fresh agent judged the bokeh still "probably real footage"
+  but the bacteria still "CG" (bead chains, monochrome tint). Both are part of the
+  brief, and the reference itself is an abstract CG animation.
