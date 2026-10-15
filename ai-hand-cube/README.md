@@ -152,10 +152,10 @@ glow above the cube, averaged to remove grain, then read left to right:
 
 | Version | 8-bit levels across the strip | largest step between neighbours | residual vs. smooth curve (rms) |
 |---|---|---|---|
-| Story | 17.2 → 39.8 → 19.6 | 0.19 | 0.33 |
-| HoldLoop | 16.9 → 39.5 → 19.6 | 0.24 | 0.31 |
-| Gold | 7.4 → 19.4 → 7.8 | 0.24 | 0.26 |
-| Mirrored | 33.5 → 36.2 → 16.4 | 0.22 | 0.30 |
+| Story | 29.9 → 7.6 | 0.18 | 0.30 |
+| HoldLoop | 30.1 → 7.3 | 0.18 | 0.27 |
+| Gold | 13.1 → 2.4 | 0.14 | 0.19 |
+| Mirrored | 6.5 → 28.2 → 18.1 | 0.15 | 0.27 |
 
 Values change smoothly (well under one 8-bit level per pixel, no plateaus or
 staircases); a contrast-stretched view (0–60 → 0–255) shows no rings. The few
@@ -170,17 +170,21 @@ frames (includes ~7 s of browser start-up spread over the run).
 
 | Composition | Frames | Full 720p render (wall) | Per frame at 720p |
 |---|---|---|---|
-| AIHandCube-Story | 450 | 833 s | **1.85 s** |
-| AIHandCube-HoldLoop | 600 | 1265 s | **2.11 s** |
-| AIHandCube-Gold | 450 | 830 s | **1.84 s** |
-| AIHandCube-Mirrored | 600 | 1258 s | **2.10 s** |
+| AIHandCube-Story | 450 | 1352 s | **3.0 s** |
+| AIHandCube-HoldLoop | 600 | 2122 s | **3.5 s** |
+| AIHandCube-Gold | 450 | 1431 s | **3.2 s** |
+| AIHandCube-Mirrored | 600 | 2249 s | **3.7 s** |
+
+(The final framing puts a large out-of-focus hand in the foreground; the
+depth-of-field gather over that area is the biggest cost.)
 
 **One real 4K frame** of `AIHandCube-Story` at the hold (frame 380,
-3840×2160): **~27 s** (two runs: 32.9 s and 35.8 s wall, minus ~7 s browser
-start-up measured with the same command at 720p).
+3840×2160): **~50 s** (62 s wall for a single cold `remotion still`, minus
+~12 s of browser start-up and scene build measured with the same command at
+720p).
 
-**4K estimates on this CPU-only machine:** Story / Gold ≈ 450 × 27 s ≈ **3.4 h
-each**, HoldLoop / Mirrored ≈ 600 × 27 s ≈ **4.5 h each** — ≈ 16 h for all
+**4K estimates on this CPU-only machine:** Story / Gold ≈ 450 × 50 s ≈ **6.3 h
+each**, HoldLoop / Mirrored ≈ 600 × 50 s ≈ **8.3 h each** — ≈ 29 h for all
 four. On a machine with a real GPU (ANGLE on GL/Vulkan) expect roughly an
 order of magnitude faster, and `--concurrency` can then be raised; that
 figure is an estimate, not measured here.
@@ -224,6 +228,11 @@ figure is an estimate, not measured here.
   the reference's grey metal. Gold uses silver-champagne `#D6CBB8`.
 - The thumb is shorter than the fingers but the chunkiest digit (chosen in
   review).
+- Hand pose follows the reference: palm up, fingers toward the viewer as a
+  soft-focus row at the bottom, thumb rising beside the cube, the cube
+  floating just above the palm over a glow pool. The forearm is aimed away
+  from the camera behind the palm, so **the wrist is never visible**
+  (the brief's "wrist going out of frame below" was replaced at review).
 
 ## Licences
 
