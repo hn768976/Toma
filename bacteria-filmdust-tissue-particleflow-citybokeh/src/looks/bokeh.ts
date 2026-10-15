@@ -1,5 +1,5 @@
 import { Container, Sprite } from "pixi.js";
-import { canvasTexture, makeCanvas } from "../engine/bake";
+import { blurred, canvasTexture, makeCanvas } from "../engine/bake";
 import { GLSL_COMMON, Pass, drawInto } from "../engine/gl";
 import { hexToRgb, type Grade } from "../engine/post";
 import { mulberry32, range, type Rng } from "../engine/rng";
@@ -28,14 +28,17 @@ uniform vec3 uTop; uniform vec3 uBottom; uniform vec3 uGlow; uniform vec3 uBlob;
 uniform float uPhase; uniform float uAspect;
 void main() {
   vec2 p = vUV;
-  vec3 col = mix(uTop * 0.75, uBottom, smoothstep(0.3, 1.0, p.y));
-  // faint warm glow along the lower third (street level), slowly breathing
-  float band = exp(-pow((p.y - 0.78) / 0.16, 2.0));
+  vec3 col = mix(uTop * 0.55, uBottom, smoothstep(0.35, 1.0, p.y));
+  // faint glow along the lower third (street level), slowly breathing
+  float band = exp(-pow((p.y - 0.62) / 0.2, 2.0));
   float n = fbmP(vec2(p.x * 3.0 + cos(TAU * uPhase) * 0.4, p.y * 2.0 + sin(TAU * uPhase) * 0.2), vec2(4096.0), 4);
   col += uGlow * band * (0.55 + 0.6 * n);
   // a big defocused far light in the upper left
   vec2 d = (p - vec2(0.12 + 0.02 * sin(TAU * uPhase), 0.1)) * vec2(uAspect, 1.0);
   col += uBlob * 0.7 * exp(-dot(d, d) / 0.04);
+  // a large soft dark silhouette mid-left (a passing car / street furniture)
+  vec2 sdk = (p - vec2(0.33 + 0.03 * sin(TAU * uPhase), 0.42)) * vec2(uAspect * 0.6, 1.4);
+  col *= 1.0 - 0.55 * exp(-dot(sdk, sdk) / 0.03);
   o = vec4(col, 1.0);
 }`;
 
@@ -86,13 +89,18 @@ const bakeDisc = (rng: Rng, D: number, px: number) => {
   return c;
 };
 
-const LAYERS = [
+type LayerDef = { n: number; d: number[]; a: number[]; turns: number; lw: number; y: number[]; soft: boolean };
+const LAYERS: LayerDef[] = [
   // count, diameter range (fraction of H), alpha range, turns per loop, layout width (x W), y range
-  { n: 40, d: [0.06, 0.13], a: [0.03, 0.25], turns: 1, lw: 1.15, y: [0.15, 0.8] },
-  { n: 25, d: [0.13, 0.22], a: [0.08, 0.6], turns: 1, lw: 1.5, y: [0.2, 0.8] },
-  { n: 12, d: [0.22, 0.32], a: [0.12, 1.0], turns: 2, lw: 1.35, y: [0.3, 0.75] },
+  { n: 40, d: [0.1, 0.18], a: [0.015, 0.07], turns: 1, lw: 1.15, y: [0.2, 0.75], soft: true },
+  { n: 25, d: [0.2, 0.28], a: [0.03, 0.22], turns: 1, lw: 1.5, y: [0.25, 0.7], soft: true },
+  { n: 12, d: [0.3, 0.36], a: [0.35, 1.0], turns: 2, lw: 2.4, y: [0.3, 0.72], soft: false },
 ];
-const PERIODS = [600, 300, 200, 150, 120]; // fade schedules divide 600
+const PERIODS = [600, 300, 200, 150, 120];
+const smooth01 = (t: number) => {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+}; // fade schedules divide 600
 
 type Disc = {
   s: Sprite;
@@ -122,8 +130,11 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
   });
 
   // a few disc variants baked at the largest on-screen size
-  const Dmax = 0.32 * ph;
-  const discTex = Array.from({ length: 4 }, () => canvasTexture(bakeDisc(rng, Dmax, px)));
+  const Dmax = 0.36 * ph;
+  const discCanvases = Array.from({ length: 4 }, () => bakeDisc(rng, Dmax, px));
+  const discTex = discCanvases.map((c) => canvasTexture(c));
+  // softer variants for the far layers (less defined edges)
+  const softTex = discCanvases.map((c) => canvasTexture(blurred(c, Dmax * 0.035)));
   const texPx = Dmax; // diameter in texture px
 
   const totalW = params.colors.reduce((a, c) => a + c.w, 0);
@@ -140,7 +151,8 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
   const discs: Disc[] = [];
   LAYERS.forEach((L, li) => {
     for (let i = 0; i < L.n; i++) {
-      const s = new Sprite(discTex[Math.floor(rng() * discTex.length)]);
+      const vi = Math.floor(rng() * discTex.length);
+      const s = new Sprite(L.soft ? softTex[vi] : discTex[vi]);
       s.anchor.set(0.5);
       s.blendMode = "add";
       s.tint = pickColor();
@@ -153,7 +165,7 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
         bobA: range(rng, 0.003, 0.012),
         bobPh: range(rng, 0, Math.PI * 2),
         d: range(rng, L.d[0], L.d[1]),
-        a: L.a[0] + (L.a[1] - L.a[0]) * rng() ** 3.2, // mostly dim, a few bright
+        a: L.a[0] + (L.a[1] - L.a[0]) * rng() ** 1.5,
         per: PERIODS[Math.floor(rng() * PERIODS.length)],
         fadePh: rng(),
         fadeDepth: range(rng, 0.3, 1.0),
@@ -161,7 +173,7 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
     }
   });
 
-  const grade: Grade = { mode: "rgb", bloom: 0.3, vignette: 0.45, vignetteShape: [0.45, 1.15], grain: 0.015, toneMap: true };
+  const grade: Grade = { mode: "rgb", bloom: 0.45, vignette: 0.45, vignetteShape: [0.45, 1.15], grain: 0.015, toneMap: true };
   ctx.post.setGrade(grade);
   const TAU = Math.PI * 2;
 
@@ -185,7 +197,9 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
         const fade = 1 - d.fadeDepth * (1 - pulse * pulse * (3 - 2 * pulse));
         d.s.position.set(sx, sy);
         d.s.scale.set((d.d * H * ctx.res) / texPx / ctx.res);
-        d.s.alpha = d.a * fade;
+        // lights cluster on the right of the street; they fade out towards the left
+        const side = 0.25 + 0.75 * smooth01((sx / W - 0.15) / 0.45);
+        d.s.alpha = d.a * fade * side;
       }
       drawInto(ctx.renderer, stage, ctx.post.hdr, false);
       ctx.post.present(f);

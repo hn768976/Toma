@@ -17,16 +17,16 @@ export const VERSIONS: VersionRow[] = [
     id: "CityBokeh-Warm",
     look: "bokeh",
     params: {
-      seed: 5501, bgTop: "#1A0E08", bgBottom: "#3A2010", glow: "#2A1408", blob: "#3A0806",
-      colors: [{ c: "#FFF4E6", w: 4 }, { c: "#F0E0C8", w: 5 }, { c: "#D8E4F0", w: 2 }, { c: "#C8A880", w: 3 }, { c: "#E05030", w: 0.7 }],
+      seed: 5501, bgTop: "#1A0E08", bgBottom: "#3A2010", glow: "#3A2C20", blob: "#3A0806",
+      colors: [{ c: "#FFF6EC", w: 4 }, { c: "#F0E0C8", w: 4 }, { c: "#DCEAF6", w: 3 }, { c: "#A89888", w: 3 }, { c: "#D04030", w: 0.25 }],
     },
   },
   {
     id: "CityBokeh-Cool",
     look: "bokeh",
     params: {
-      seed: 5501, bgTop: "#04080E", bgBottom: "#0A1A2A", glow: "#081A2C", blob: "#140A30",
-      colors: [{ c: "#D8E8FF", w: 5 }, { c: "#9FE8F0", w: 3 }, { c: "#B8A8FF", w: 2 }, { c: "#F2F6FF", w: 3 }, { c: "#F0B060", w: 0.7 }],
+      seed: 5501, bgTop: "#04080E", bgBottom: "#0A1A2A", glow: "#14263A", blob: "#140A30",
+      colors: [{ c: "#D8E8FF", w: 5 }, { c: "#9FE8F0", w: 2.5 }, { c: "#B8A8FF", w: 1.5 }, { c: "#F2F6FF", w: 3 }, { c: "#8898A8", w: 2 }, { c: "#F0B060", w: 0.25 }],
     },
   },
 ];
