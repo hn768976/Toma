@@ -421,8 +421,10 @@ export const buildSatelliteScene = (opts: {
     scene.add(pts);
     return pts;
   };
-  mkPoints(2200, 77, 60, 90, [2, 5], "#cfe0ff", [0.05, 0.9]);
-  mkPoints(520, 78, 2.0, 5, [12, 28], "#4d9bff", [0.15, 0.7]);
+  const pointClouds = [
+    mkPoints(2200, 77, 60, 90, [2, 5], "#cfe0ff", [0.05, 0.9]),
+    mkPoints(520, 78, 2.0, 5, [12, 28], "#4d9bff", [0.15, 0.7]),
+  ];
 
   // links
   const MAXSEG = sats.length * 5 + 8;
@@ -512,6 +514,22 @@ void main() {
   bokeh = close
     ? new BokehPass(scene, camera, { focus: 0.2, aperture: 0.012, maxblur: 0.012 })
     : new BokehPass(scene, camera, { focus: 2.1, aperture: 0.0006, maxblur: 0.003 });
+  // BokehPass renders a depth pre-pass with an override material that has no
+  // gl_PointSize, which leaves point sprites with an undefined size (and a
+  // non-deterministic depth). Hide the point clouds during that pass only:
+  // they are far background / out-of-focus dots anyway.
+  {
+    const b = bokeh;
+    const original = b.render.bind(b);
+    b.render = (...args: Parameters<BokehPass["render"]>) => {
+      for (const p of pointClouds) p.visible = false;
+      try {
+        original(...args);
+      } finally {
+        for (const p of pointClouds) p.visible = true;
+      }
+    };
+  }
   composer.addPass(bokeh);
   const bloom = new UnrealBloomPass(new THREE.Vector2(width * dpr, height * dpr), close ? 0.55 : 0.7, 0.6, 0.75);
   composer.addPass(bloom);
