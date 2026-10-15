@@ -19,6 +19,7 @@ export const VERSIONS: VersionRow[] = [
     params: {
       seed: 5501, bgTop: "#1A0E08", bgBottom: "#3A2010", glow: "#3A2C20", blob: "#3A0806",
       colors: [{ c: "#FFF6EC", w: 4 }, { c: "#F0E0C8", w: 4 }, { c: "#DCEAF6", w: 3 }, { c: "#A89888", w: 3 }, { c: "#D04030", w: 0.25 }],
+      front: ["#DCEAF6", "#F4F2EE", "#FFF6EC", "#E8E0D6", "#B4A898", "#F0D8A0"],
     },
   },
   {
@@ -27,6 +28,7 @@ export const VERSIONS: VersionRow[] = [
     params: {
       seed: 5501, bgTop: "#04080E", bgBottom: "#0A1A2A", glow: "#14263A", blob: "#140A30",
       colors: [{ c: "#D8E8FF", w: 5 }, { c: "#9FE8F0", w: 2.5 }, { c: "#B8A8FF", w: 1.5 }, { c: "#F2F6FF", w: 3 }, { c: "#8898A8", w: 2 }, { c: "#F0B060", w: 0.25 }],
+      front: ["#D8E8FF", "#F2F6FF", "#9FE8F0", "#C8D4E8", "#8898A8", "#F0B060"],
     },
   },
 ];
