@@ -57,6 +57,22 @@ const GOLD: Palette = {
   emissive: 0.62,
 };
 
+// Dark violet: near-black plum background, violet glow, lavender circuit,
+// magenta HUD accents; the hand stays silver with a violet rim light.
+const VIOLET: Palette = {
+  background: "#0B0416",
+  glow: "#34115E",
+  hudAccent: "#FF6FD8",
+  circuit: "#B98CFF",
+  text: "#F3EAFF",
+  hud: "#9C6CF0",
+  handBase: "#C8C6D8", // silver with a faint cool-violet cast
+  handJoint: "#38343F",
+  rim: "#A774FF",
+  key: "#EEE6FF",
+  emissive: 0.85,
+};
+
 export const VERSIONS: Version[] = [
   {
     id: "AIHandCube-Story",
@@ -88,6 +104,23 @@ export const VERSIONS: Version[] = [
     timeline: "loop",
     palette: BLUE,
     framing: { cubeScreenX: 0.68, clearLeft: true },
+    cubeText: "AI",
+  },
+  // Variations of the Hold Loop (composition 2) in two more colourways
+  {
+    id: "AIHandCube-HoldLoopViolet",
+    durationInFrames: 600,
+    timeline: "loop",
+    palette: VIOLET,
+    framing: { cubeScreenX: 0.525, clearLeft: false },
+    cubeText: "AI",
+  },
+  {
+    id: "AIHandCube-HoldLoopGold",
+    durationInFrames: 600,
+    timeline: "loop",
+    palette: GOLD,
+    framing: { cubeScreenX: 0.525, clearLeft: false },
     cubeText: "AI",
   },
 ];
