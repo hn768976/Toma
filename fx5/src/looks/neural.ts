@@ -55,8 +55,8 @@ function grow(x: number, y: number, ang: number, len: number, w0: number, s0: nu
   let cy = y;
   let curl = (rnd() - 0.5) * 0.06;
   for (let i = 0; i < n; i++) {
-    a += curl + (rnd() - 0.5) * 0.16;
-    curl = curl * 0.9 + (rnd() - 0.5) * 0.06;
+    a += curl + (rnd() - 0.5) * 0.2;
+    curl = curl * 0.9 + (rnd() - 0.5) * 0.1;
     cx += Math.cos(a) * step;
     cy += Math.sin(a) * step;
     if (brainSd(cx, cy) > -0.035) break;
@@ -95,7 +95,7 @@ const ROOTS: [number, number, number][] = [
 ];
 for (const [rx, ry, ra] of ROOTS) {
   const before = PATHS.length;
-  grow(rx, ry, ra, 0.6 + 0.2 * rnd(), 0.022, 0, 2); // trunk only (no auto children)
+  grow(rx, ry, ra, 0.6 + 0.2 * rnd(), 0.028, 0, 2); // trunk only (no auto children)
   const trunk = PATHS[before];
   if (!trunk) continue;
   for (let k = 0; k < 10; k++) {
@@ -105,7 +105,7 @@ for (const [rx, ry, ra] of ROOTS) {
     const base = Math.atan2(py - prev[1], px - prev[0]);
     const side = k % 2 === 0 ? -1 : 1;
     grow(px, py, base + side * (0.35 + 0.7 * rnd()), 0.25 + 0.35 * rnd(),
-      0.02 * (1 - 0.5 * (j / trunk.pts.length)), j * trunk.ds, 1);
+      0.024 * (1 - 0.4 * (j / trunk.pts.length)), j * trunk.ds, 1);
   }
 }
 // fine black specks scattered around the surface
@@ -184,7 +184,7 @@ void main() {
   vec2 dh = segDist(vP, vSeg.xy, vSeg.zw);
   float w = max(vProp.x, 0.8 / uS);
   float x = dh.x / w;
-  float core = exp(-pow(x, 4.0) * 0.8) * min(vProp.x / w, 1.0);
+  float core = (1.0 - smoothstep(0.8, 1.15, x)) * min(vProp.x / w, 1.0);
   float s = mix(vPath.x, vPath.y, dh.y);
   float pulse = vProp.w < 0.5 ? pow(0.5 + 0.5 * cos(6.2831853 * (s * 1.6 - uPhase)), 14.0) : 0.0;
   pulse *= exp(-x * x * 4.0);  // the pulse glows along the vein's centre only
@@ -231,15 +231,16 @@ void main() {
   // harsh lighting: blown out centre-low, falling off to the edges
   vec2 lc = vec2(-0.32, 0.14);
   vec2 lc2 = vec2(0.02, 0.3);
-  float L = 0.85 * exp(-dot(b - lc, b - lc) / 0.12) + 0.6 * exp(-dot(b - lc2, b - lc2) / 0.06)
+  float L = 0.7 * exp(-dot(b - lc, b - lc) / 0.12) + 0.45 * exp(-dot(b - lc2, b - lc2) / 0.06)
           + 0.4 * exp(-dot(b - vec2(-0.15, -0.05), b - vec2(-0.15, -0.05)) / 0.5) + 0.16;
   L *= smoothstep(0.0, 0.1, -sd) * 0.45 + 0.55;
-  L *= 1.0 - 0.6 * smoothstep(0.15, 0.85, b.x);  // occipital side falls into deep shadow
+  L *= 1.0 - 0.55 * smoothstep(0.2, 1.0, b.x);  // occipital side falls into deep shadow
   // gritty speckle texture: mottled patches plus fine dark specks
   float sp = fbm(b * 30.0 + 5.0, 3);
   float sp2 = gnoise(b * 190.0);
-  float grit = smoothstep(0.3, 0.6, sp2 + 0.4 * sp);
-  L *= (0.75 + 0.5 * sp) * (1.0 - 0.35 * grit);
+  float blot = fbm(b * 55.0 + 9.0, 3);
+  float grit = smoothstep(0.12, 0.38, blot + 0.25 * sp2);
+  L *= (0.75 + 0.5 * sp) * (1.0 - 0.45 * grit);
   L *= 1.0 - 0.3 * sulcus;
   L += 0.12 * rim * smoothstep(0.2, 0.8, L);
   // dark pathways (and their travelling pulse)
@@ -263,13 +264,18 @@ void main() {
            : mix(warm, uHi, clamp((Lq - 0.75) / 0.25, 0.0, 1.0)) * (1.0 + 0.3 * max(Lq - 1.0, 0.0));
   // cool tint toward the lower edge, like the reference's cyan fringe
   col = mix(col, col * vec3(0.7, 1.0, 1.25), smoothstep(0.0, 0.3, b.y) * smoothstep(0.25, 0.0, -sd) * 0.6);
+  // olive / yellow-green mottling across the mid-tones
+  float olive = smoothstep(-0.1, 0.4, fbm(b * 4.0 + 31.0, 3));
+  col = mix(col, col * vec3(1.35, 0.95, 0.35) + uMid * 0.02, olive * 0.55 * smoothstep(0.2, 0.45, Lq) * (1.0 - smoothstep(0.8, 1.0, Lq)));
+  // the pathways themselves are near-black, faintly warm
+  col = mix(col, vec3(0.012, 0.009, 0.004), smoothstep(0.3, 0.7, dark) * (1.0 - pth.g * 0.5));
   // brownish speckle and warm tint in the lit areas
   col *= mix(vec3(1.0), vec3(1.05, 0.85, 0.45), grit * smoothstep(0.3, 0.8, Lq) * 0.6);
   col *= inside;
   // edge glow round the silhouette
   // uneven rim: bright teal-tinted in places, absent elsewhere
   float rimVar = smoothstep(0.0, 0.5, fbm(b * 3.0 + 7.0, 2));
-  col += mix(uMid, uHi, 0.5) * vec3(0.8, 1.0, 1.1) * 0.35 * rimVar * exp(-abs(sd) * 220.0) * smoothstep(0.05, 0.4, L + 0.15);
+  col += mix(uMid, uHi, 0.5) * vec3(0.55, 1.0, 1.3) * 0.5 * rimVar * exp(-abs(sd) * 220.0) * smoothstep(0.05, 0.4, L + 0.15);
   finalColor = vec4(col, 1.0);
 }
 `;
