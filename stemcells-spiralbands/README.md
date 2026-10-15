@@ -72,7 +72,47 @@ Any composition id and frame work the same way.
 
 ## Measured render times
 
-__TIMINGS__
+Measured in a cloud container **without a GPU**: Chromium falls back to
+SwiftShader (software WebGL), on 4 vCPUs. A machine with a GPU will be much
+faster. These numbers are an upper bound.
+
+**720p previews** (`--scale=0.3333333333333333`, `--concurrency=2`, whole
+render divided by frame count, startup included):
+
+| Composition | Frames | Total | Per frame |
+|---|---|---|---|
+| CellField-Blue | 600 | 2125 s | 3.5 s |
+| CellField-Red | 600 | 2315 s | 3.9 s |
+| HeroCell-Blue | 600 | 2051 s | 3.4 s |
+| CellDivision-Red | 360 | 1262 s | 3.5 s |
+| CellDivision-Blue | 360 | 1223 s | 3.4 s |
+| SpiralBands-White | 600 | 4020 s | 6.7 s |
+| SpiralBands-Graphite | 600 | 4061 s | 6.8 s |
+
+**Two real 4K frames** (3840×2160, `npx remotion still --scale=1`, one tab):
+
+| Frame | 4K still | 720p still, same frame | 4K frame, setup removed* |
+|---|---|---|---|
+| 1A CellField-Blue, frame 300 | 21.3 s | 10.7 s | ≈ 14 s |
+| 3A CellDivision-Red, frame 330 (wide hold) | 24.5 s | 8.9 s | ≈ 19 s |
+
+\* A still includes page load, geometry build and shader compile (about
+5–7 s, the 720p still minus a 720p frame).
+
+**4K estimates on this software GL:** 4K costs about 4× (1A) to 5.4× (3A)
+a 720p frame, not 9×, because a good part of the cost is vertex and CPU
+work that does not scale with pixels.
+
+| Composition | Estimated time |
+|---|---|
+| CellField-Blue / Red, HeroCell-Blue | about 14–16 s/frame, 2.3–2.6 h each |
+| CellDivision Red / Blue | about 19 s/frame, about 1.9 h each |
+| SpiralBands (not measured at 4K) | about 20–25 s/frame, about 3.5–4 h each, mostly CPU geometry update, scales less with pixels |
+| All seven | roughly 17–18 h |
+
+On a real GPU the GL part is typically one to two orders of magnitude
+faster, so expect a small fraction of that. That figure is an estimate; it
+was not measured here.
 
 ## How it works
 
@@ -123,9 +163,12 @@ never cross. Each band has a rounded top, square end caps, and a gently rippling
 sample to the facing wall is found once at load, and per frame the occlusion
 angle is computed from the current neighbour heights. This replaces SSAO,
 because it is exact for this geometry and has no screen-space noise to crawl. The scene
-has a VSM soft shadow from the upper-right key (blurred in shadow space,
-deterministic), and a sweep light that turns one full azimuth per loop
-(cool and low for Graphite). The spiral turns ±12° (cosine).
+has a soft shadow from the upper-right key and a sweep light that turns
+one full azimuth per loop (cool and low for Graphite). The shadow is analytic too: per vertex, the
+ray toward the key light is tested against the facing wall's current height,
+with a penumbra that grows with distance. three.js shadow maps were tried
+first. They made a frame depend on the frames the same tab had rendered
+before it, which broke byte-for-byte determinism. The spiral turns ±12° (cosine).
 
 ### Banding
 
@@ -167,4 +210,51 @@ The composition appears in the Studio automatically. `look` selects the scene
   profile across a gradient, for banding.
 - `scripts/contact.sh video.mp4 N sheet.png` makes a contact sheet.
 
-__CHECKS__
+## Banding check
+
+The check reads frames from the **encoded mp4s**, not the preview.
+`scripts/banding.py` averages a 24–48-row strip column by column across a
+soft gradient. That removes grain and dither but keeps quantisation steps.
+
+| Preview, area | Range (code values) | Steps > 0.5 code |
+|---|---|---|
+| HeroCell_Blue, backdrop glow (y 30, x 420–880) | 107–143 | none in the open gradient; the only jumps are at cell rims |
+| CellField_Blue, glow (y 230, x 660–900) | 188–213 | 3, at a rim |
+| SpiralBands_White, band face (y 600, x 100–500) | 193–219 | 0 |
+| SpiralBands_Graphite, dark face | 58–65 | 0; the strip mean changes in fractions of a code |
+| CellDivision Red/Blue, CellField_Red, backdrop strips | | smooth; jumps only where a strip crosses a rim |
+
+No staircase anywhere. Targets are half-float, with blue-noise dither and
+1.5% grain in the final pass.
+
+## Completion checklist
+
+- [x] 7 compositions, 3840×2160, 30 fps. Loops are 600 frames; Cell Division is 360.
+- [x] One data row per version (`src/data/versions.ts`).
+- [x] 720p previews: 1280×720, h264, yuv420p, 30/1, no audio stream.
+  Cell Division is 12.0 s; the rest are 20.0 s (checked with ffprobe).
+- [x] Loop check: each loop rendered at 601 frames, frames 0 and 600
+  identical byte for byte (all 5 loops).
+- [x] Determinism: the middle frame of each composition rendered alone from
+  a cold start is byte-identical to the same frame from a multi-threaded
+  sequence render (all 7).
+- [x] Banding: frames from the encoded mp4s, smooth (above).
+- [x] Contact sheets per composition, and motion smoothness. Mean
+  frame-to-frame difference over 2 s around the middle (Cell Division over
+  1.5–9 s) shows no spikes; the largest frame is 1.7× the median. The pinch,
+  stepped frame by frame, has no seams or pops.
+- [x] Model check (3 rounds) and reference comparison by fresh sub-agents
+  (3 rounds per look).
+- [x] Two real 4K frames timed.
+- [x] `npm install && npx remotion studio` from a clean copy of the zip.
+
+## Known limitations
+
+- Spiral Bands has no depth of field (the reference blurs far bands). The
+  brief does not ask for it.
+- Hero Cell ends with the hero at about 40% of frame height, as the brief
+  specifies. The reference is closer (about 70%).
+- Cell Field Red: the near cells that sweep past the lens are large and
+  heavily blurred. In some frames they dominate more than in the reference.
+- The soft-box highlight on the cell glass breaks into small scribble-like
+  marks where the membrane wobbles.
