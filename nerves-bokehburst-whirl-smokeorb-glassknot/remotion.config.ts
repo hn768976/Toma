@@ -9,7 +9,6 @@ Config.setPixelFormat("yuv420p");
 Config.setCodec("h264");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
-Config.setConcurrency(1);
 
 // Sandboxed environments that cannot download Remotion's Chrome Headless Shell
 // may ship Playwright's. Use it when present; elsewhere Remotion's own is used.

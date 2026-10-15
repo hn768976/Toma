@@ -66,12 +66,14 @@ float billow(vec3 p) {
 }
 
 // one layer of hashed sparkles on a conformal (log-polar) grid in the co-rotating frame.
-// M cells around the full circle (multiple of ARMS so the grid is periodic under the loop rotation).
+// M cells around the full circle (a multiple of ARMS); the hash repeats every M/ARMS cells.
 vec3 sparkles(float th, float s, float r, float M, float seed, float mask) {
   float cell = TAU / M;
   vec2 g = vec2(th / cell, s / cell);
   vec2 id = floor(g);
-  id.x = mod(id.x, M);
+  // the pattern turns TAU/ARMS per loop, so the sparkle hash must repeat every M/ARMS cells
+  // (3-fold symmetric); then frame 599 -> 600 (= 0) is just one more step of the rotation
+  id.x = mod(id.x, M / ARMS);
   vec2 f = fract(g);
   vec3 h = hash32(id + seed);
   if (h.z > 0.24) return vec3(0.0);
