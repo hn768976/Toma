@@ -60,7 +60,7 @@ float blots(vec2 p, float scale, float sd, float rmul) {
       vec2 ctr = c + 0.2 + 0.6 * h.xy;
       vec2 dv = g - ctr;
       float a = atan(dv.y, dv.x);
-      float r0 = mix(0.2, 0.62, pow(fract(h.z * 7.13), 0.7)) * rmul;
+      float r0 = mix(0.34, 0.66, pow(fract(h.z * 7.13), 0.7)) * rmul;
       // ragged rim: a few lobes plus many short spikes
       float rim = 1.0 + 0.1 * gnoise(vec2(a * 1.6, h.x * 40.0)) + 0.07 * gnoise(vec2(a * 9.0, h.y * 40.0))
                 + 0.05 * max(gnoise(vec2(a * 26.0, h.z * 40.0)), 0.0);
@@ -85,7 +85,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
     // grow scales the blots' radius; the seeds bias where the cluster is densest
     // blots near the seeds appear first and the bloom spreads outward
     float gr = clamp((grow + 0.55) / 0.6, 0.0, 1.2);
-    float rmul = clamp(gr * 1.35 - d * 1.5 + 0.25 * n, 0.0, 0.95);
+    float rmul = clamp(gr * 1.2 - d * 1.5 + 0.25 * n, 0.0, 0.88);
     f = max(blots(p + 0.04 * w1, 3.4, sd, rmul), blots(p + 0.04 * w1 + 3.7, 1.9, sd + 5.0, rmul * 0.92));
   }
   // ragged, splattery edge
@@ -106,7 +106,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float outDrop = smoothstep(odAA, -odAA, od) * (1.0 - mask) * smoothstep(-0.7, -0.2, grow) * (1.0 - roundBlots);
   // flat, pale interior; only a thin darker band at the very edge
   float k = smoothstep(0.0, mix(0.06, 0.012, roundBlots), f);
-  vec3 paleCol = mix(base, vec3(0.92, 0.95, 0.86), pale * mix(1.0, 0.75 + 0.35 * smoothstep(-0.4, 0.4, fbm(q * 1.7 + sd + 3.0, 2)), roundBlots));
+  vec3 paleCol = mix(base, mix(vec3(0.92, 0.95, 0.86), vec3(0.84, 0.92, 0.66), roundBlots), pale * mix(1.0, 0.75 + 0.35 * smoothstep(-0.4, 0.4, fbm(q * 1.7 + sd + 3.0, 2)), roundBlots));
   vec3 col = mix(base * 0.55, paleCol, k);
   float tone = smoothstep(-0.55, 0.55, fbm(q * 1.3 + sd + 40.0, 3));
   col *= mix(0.8, 1.08, tone);
@@ -117,6 +117,9 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float scratch = smoothstep(0.55, 0.85, gnoise(vec2(sq.x * 70.0, sq.y * 7.0) + sd)) * smoothstep(-0.1, 0.4, fbm(q * 4.0 + sd + 21.0, 2));
   col = mix(col, base * 0.45, crackAmt * crack);
   col = mix(col, mix(base, vec3(0.5), 0.3) * 0.75, mix(0.5, 0.8, roundBlots) * scratch);
+  // dry-brush streaks dragged across the blots (scene 1)
+  float drag = smoothstep(0.35, 0.8, gnoise(vec2(sq.x * 3.0, sq.y * 38.0) + sd * 2.0)) * smoothstep(-0.2, 0.5, fbm(q * 2.2 + sd + 44.0, 2));
+  col = mix(col, base * vec3(0.75, 0.85, 0.35), 0.55 * drag * roundBlots);
   // white droplets (drop mode)
   float wdd = dots(p + 0.02 * w1, 11.0, 0.3 * dropMode * (1.0 - cluster * 0.7), sd + 77.0);
   float wAA = max(fwidth(wdd), 1e-5) * 0.7;
@@ -129,12 +132,16 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float washF = f + mix(0.16, 0.14, roundBlots) + 0.22 * fbm(q * 2.0 + sd + 60.0, 3);
   float wash = smoothstep(0.0, 0.25, washF) * (1.0 - m) * smoothstep(-0.7, -0.15, grow);
   float grunge = smoothstep(-0.2, 0.6, fbm(q * 9.0 + sd + 13.0, 4)) * (0.6 + 0.4 * gnoise(q * 40.0));
+  // scene 1: a few grainy, sponge-like olive patches on clean black instead of smoke
+  float patchMask = smoothstep(0.05, 0.3, fbm(p * 1.4 + sd + 70.0, 3));
+  float grain = smoothstep(-0.15, 0.45, gnoise(p * 160.0 + sd) + 0.6 * gnoise(p * 45.0 + sd));
+  grunge = mix(grunge, patchMask * (0.35 + 0.75 * grain), roundBlots);
   vec3 washCol = mix(base * base * 0.22, base * vec3(0.58, 0.47, 0.22), roundBlots);
   c += washCol * wash * grunge * (1.0 - 0.7 * dropMode);
   if (roundBlots > 0.5) {
     vec2 gq = mat2(0.94, 0.34, -0.34, 0.94) * q;
-    float blade = smoothstep(0.55, 0.8, gnoise(vec2(gq.x * 2.2, gq.y * 70.0) + sd)) * smoothstep(0.2, 0.7, fbm(q * 2.5 + sd + 90.0, 2));
-    c += base * 0.8 * blade * wash * (1.0 - m) * smoothstep(0.3, -0.5, p.x);
+    float blade = smoothstep(0.45, 0.7, gnoise(vec2(gq.x * 1.6, gq.y * 90.0) + sd)) * smoothstep(0.2, 0.7, fbm(q * 2.5 + sd + 90.0, 2));
+    c += base * vec3(0.9, 1.15, 0.4) * 1.3 * blade * (1.0 - m) * smoothstep(0.1, -0.6, p.x) * smoothstep(-0.7, -0.2, grow);
   }
   c += paleCol * 0.85 * outDrop;
   return c;
