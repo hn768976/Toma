@@ -1,0 +1,22 @@
+{
+  "name": "inkbloom-neuralpaths-lightning-flare-galaxy",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "pixi.js": "8.22.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
