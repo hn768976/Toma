@@ -1,0 +1,92 @@
+/**
+ * One data row per version. To add a colourway, copy a row, give it a new id and
+ * new colours; Root.tsx registers a composition for every row automatically.
+ */
+import type { WhirlVariant } from "./looks/whirl/CosmicWhirl";
+
+export const WHIRL_VARIANTS: WhirlVariant[] = [
+  {
+    id: "CosmicWhirl_Blue",
+    core: "#C8E8FF",
+    coreGlow: "#2A6AE8",
+    matter: "#1C3A78",
+    highlight: "#B8D0F0",
+    deep: "#040A22",
+    sparkleA: "#FFC870",
+    sparkleB: "#FFFFFF",
+  },
+];
+
+import type { GlassKnotVariant } from "./looks/glassknot/GlassKnot";
+
+const KNOT_STARS = ["#FF4A3A", "#FFFFFF", "#FFFFFF", "#7AA0FF", "#FFA040", "#FFE0C0"];
+
+export const GLASSKNOT_VARIANTS: GlassKnotVariant[] = [
+  {
+    id: "GlassKnot_Galaxy",
+    background: "galaxy",
+    bgBase: "#05060C",
+    bgA: "#5E6E8E",
+    bgB: "#3A4A6A",
+    bgCore: "#FFF0D8",
+    inner: "#6E78E0",
+    starColors: KNOT_STARS,
+  },
+  {
+    id: "GlassKnot_Nebula",
+    background: "nebula",
+    bgBase: "#07040E",
+    bgA: "#6A2AA8",
+    bgB: "#E86AA8",
+    bgCore: "#FFD0E8",
+    inner: "#8A70E0",
+    starColors: KNOT_STARS,
+  },
+];
+
+import type { NerveVariant } from "./looks/nerve/NerveFibres";
+
+export const NERVE_VARIANTS: NerveVariant[] = [
+  {
+    id: "NerveFibres_Red",
+    fibre: "#C81A2A",
+    fibreSheen: "#FF8A90",
+    web: "#8A4A4A",
+    haze: "#B07A7A",
+    hazeGlow: "#F0C8C0",
+    tip: "#FFD0DA",
+    bead: "#F4C8D0",
+    speck: "#F0E4E4",
+  },
+  {
+    id: "NerveFibres_Blue",
+    fibre: "#1A4AC8",
+    fibreSheen: "#8AB0FF",
+    web: "#4A5A8A",
+    haze: "#5A6A9A",
+    hazeGlow: "#C0D0F0",
+    tip: "#D0F4FF",
+    bead: "#C8DCF8",
+    speck: "#E4ECF4",
+  },
+];
+
+import type { BokehVariant } from "./looks/bokeh/BokehBurst";
+
+export const BOKEH_VARIANTS: BokehVariant[] = [
+  {
+    id: "BokehBurst_Blue",
+    background: "#0A1A5A",
+    hazeA: "#2A6AE8",
+    hazeB: "#5A3AC8",
+    streakColors: ["#3A8AFF", "#3A8AFF", "#3A8AFF", "#4AD8FF", "#4AD8FF", "#A87AFF", "#FF8AD8"],
+    discColors: ["#8AC8FF", "#BFE6FF", "#6AB0FF", "#E8F6FF"],
+  },
+];
+
+import type { SmokeOrbVariant } from "./looks/smokeorb/SmokeOrb";
+
+export const SMOKEORB_VARIANTS: SmokeOrbVariant[] = [
+  { id: "SmokeOrb_PinkGold", core: "#FFF4FA", rim: "#E8A0F0", halo: "#F0B8F0", smoke: "#E8B86A", smokeHighlight: "#FFE6B0" },
+  { id: "SmokeOrb_CyanBlue", core: "#F4FCFF", rim: "#8AE8FF", halo: "#A8ECFF", smoke: "#4A8AFF", smokeHighlight: "#FFFFFF" },
+];
