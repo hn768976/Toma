@@ -35,21 +35,26 @@ void main() {
   vec2 q = p * 2.6 + cyc * 0.3 + 40.0;
   vec2 w = vec2(fbm(q * 0.8 + 3.0, 4), fbm(q * 0.8 + 9.0, 4)) - 0.5;
   float broad = fbm(q * 0.9 + w * 1.2, 3);                                // large-scale light/dark
-  vec2 qf = p * 10.0 + w * 2.0 + cyc * 0.6 + 7.0;
+  vec2 qf = p * 7.0 + w * 2.0 + cyc * 0.5 + 7.0;
   float mott = smoothstep(0.38, 0.62, fbm(qf, 4));                        // 20-60 px patches
   float mott2 = smoothstep(0.45, 0.7, fbm(qf * 2.1 + 13.0, 3));
-  float field = (0.10 + 0.17 * mott + 0.07 * mott2) * (0.5 + 0.8 * broad);
-  field *= 0.55 + 0.45 * smoothstep(0.25, 0.5, fbm(q * 1.6 - w + 5.0, 4)); // dark maroon pockets, no pure-black pools
+  float field = (0.12 + 0.22 * mott + 0.08 * mott2) * (0.5 + 0.8 * broad);
+  field *= 0.25 + 0.75 * smoothstep(0.25, 0.5, fbm(q * 1.6 - w + 5.0, 4)); // dark maroon pockets, no pure-black pools
   field *= 1.0 - 0.35 * smoothstep(0.1, 0.5, vUV.y - 0.45);               // even darkening toward the bottom
 
-  // the pale salmon plateau: large, flat, opaque, with a firm lobed edge; drifts and swells
-  vec2 c = vec2(0.34, -0.08) + vec2(0.06 * sin(TAU * ph), 0.03 * sin(TAU * 2.0 * ph + 1.0));
-  float size = 0.18 + 0.025 * (0.5 - 0.5 * cos(TAU * ph));
-  vec2 d = (p - c) / vec2(size * 2.4, size);
-  float edge = fbm(p * 4.5 + cyc * 0.3 + 70.0, 5) - 0.5;
-  float r = length(d) + edge * 0.9;
-  float haze = smoothstep(1.08, 0.7, r);
-  float lum = field * (1.0 - 0.6 * haze) + haze * (0.80 + 0.1 * mott - 0.12 * mott2);
+  // the dusty pink plateau: large, flat, ragged edges breaking into the blotches,
+  // with lobes reaching up-right and a paler area to its upper left; drifts and swells
+  vec2 c = vec2(0.32, -0.03) + vec2(0.06 * sin(TAU * ph), 0.03 * sin(TAU * 2.0 * ph + 1.0));
+  float size = 0.17 + 0.025 * (0.5 - 0.5 * cos(TAU * ph));
+  float edge = fbm(p * 5.0 + cyc * 0.3 + 70.0, 5) - 0.5;
+  float r0 = length((p - c) / vec2(size * 2.4, size));
+  float r1 = length((p - c - vec2(0.2, -0.17)) / vec2(size * 1.3, size * 0.7));
+  float r2 = length((p - vec2(-0.0, -0.2) - 0.5 * (c - vec2(0.32, -0.03))) / vec2(size * 1.0, size * 0.8));
+  float haze = smoothstep(1.15, 0.6, r0 + edge * 1.3);
+  haze = max(haze, 0.65 * smoothstep(1.1, 0.5, r1 + edge * 1.3));
+  haze = max(haze, 0.45 * smoothstep(1.1, 0.5, r2 + edge * 1.3));
+  haze *= 0.75 + 0.25 * mott;                                              // breaks into the blotches
+  float lum = field * (1.0 - 0.3 * haze) + haze * (0.66 - 0.08 * mott2);
   o = vec4(vec3(lum), 1.0);
 }`;
 
@@ -61,7 +66,7 @@ const LAYERS = 4;
 // per layer: scale, brightness, drift radius (fraction of W), rotation amplitude (rad)
 const LAYER_DEF = [
   { scale: 1.6, bright: 0.85, drift: 0.11, rot: 0.06 },
-  { scale: 1.2, bright: 0.9, drift: 0.08, rot: 0.05 },
+  { scale: 1.2, bright: 0.9, drift: 0.035, rot: 0.03 },
   { scale: 0.92, bright: 0.85, drift: 0.06, rot: 0.04 },
   { scale: 0.7, bright: 0.7, drift: 0.045, rot: 0.03 },
 ];
@@ -96,9 +101,9 @@ const drawBead = (g: CanvasRenderingContext2D, x: number, y: number, r: number, 
 // as solid dark cells against the pale haze (the additive rim stays light)
 const drawFill = (g: CanvasRenderingContext2D, x: number, y: number, r: number) => {
   const gr = g.createRadialGradient(x, y, 0, x, y, r * 0.9);
-  gr.addColorStop(0, "rgba(70,70,70,1)");
-  gr.addColorStop(0.7, "rgba(80,80,80,1)");
-  gr.addColorStop(1, "rgba(80,80,80,0)");
+  gr.addColorStop(0, "rgba(45,45,45,1)");
+  gr.addColorStop(0.7, "rgba(55,55,55,1)");
+  gr.addColorStop(1, "rgba(55,55,55,0)");
   g.fillStyle = gr;
   g.beginPath();
   g.arc(x, y, r * 0.9, 0, Math.PI * 2);
@@ -227,7 +232,7 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
       for (let i = 0; i < n; i++) {
         const pool = kind === "chain" ? chains : kind === "clump" ? clumps : specks;
         // the hero chain: one short near-vertical chain left of centre in layers 2 and 3
-        const isHero = kind === "chain" && i === 0 && (L === 1 || L === 2);
+        const isHero = kind === "chain" && i === 0 && L === 1;
         const variant = isHero ? hero : pool[Math.floor(rng() * pool.length)];
         const mk = (fill = false) => {
           const s = new Sprite(fill ? variant.fill![0] : variant.levels[0]);
@@ -236,14 +241,14 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
           (fill ? fillC : rimC)[L].addChild(s);
           return s;
         };
-        const blobby = kind === "speck" && i < 3; // a few large soft bokeh blobs
+        const blobby = kind === "speck" && i < 5; // a few large soft bokeh blobs
         objs.push({
           variant,
           layer: L,
           ...(isHero
-            ? { x: 0.505 + (L - 1) * 0.02, y: 0.5 }
+            ? { x: 0.5, y: 0.485 }
             : kind === "speck" && rng() < 0.7
-              ? { x: 0.5 + (rng() + rng() + rng() - 1.5) * 0.18 - 0.06, y: 0.5 + (rng() + rng() + rng() - 1.5) * 0.2 - 0.05 }
+              ? { x: 0.5 + (rng() + rng() + rng() - 1.5) * 0.16 - 0.05, y: 0.5 + (rng() + rng() + rng() - 1.5) * 0.2 - 0.06 }
               : { x: rng(), y: rng() }),
           rot: isHero ? range(rng, -0.15, 0.15) : range(rng, 0, Math.PI * 2),
           rotAmp: isHero ? 0.12 : range(rng, 0.1, 0.6),
@@ -252,13 +257,13 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
           wobR: range(rng, 0.004, 0.02),
           wobK: rng() < 0.6 ? 1 : 2,
           wobPh: range(rng, 0, Math.PI * 2),
-          scale: isHero ? 1.0 : range(rng, 0.75, 1.2) * (kind === "speck" ? (blobby ? range(rng, 2.6, 3.6) : range(rng, 0.6, 1.3)) : 1),
+          scale: isHero ? 1.5 : range(rng, 0.75, 1.2) * (kind === "speck" ? (blobby ? range(rng, 3.0, 4.5) : range(rng, 1.0, 2.2)) : 1),
           bright: isHero
             ? 1.35
             : kind === "chain"
               ? range(rng, 0.25, 0.6)
               : kind === "clump"
-                ? range(rng, 0.25, 0.6)
+                ? range(rng, 0.1, 0.3)
                 : blobby
                   ? 0.35
                   : range(rng, 0.6, 1.3),
@@ -276,7 +281,7 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
     ramp: params.ramp,
     stops: [0.22, 0.55, 0.95, 1.6],
     exposure: 1.0,
-    bloom: 0.15,
+    bloom: 0.3,
     vignette: 0.4,
     vignetteShape: [0.45, 1.2],
     grain: 0.018,
