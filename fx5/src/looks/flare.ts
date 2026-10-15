@@ -89,7 +89,10 @@ void main() {
   vec3 c = texture(uSrc, vUV).rgb;
   c = 1.0 - exp(-c * 1.1);           // filmic shoulder, 0 stays 0
   vec3 s = linearToSrgb(c);
-  s = max(s - 2.0 / 255.0, 0.0) * (255.0 / 253.0); // overlay black floor
+  // overlay black floor plus a soft knee, so the glow tail reaches exactly 0
+  // quickly instead of trailing 1–3 code values across the frame
+  s = max(s - 4.0 / 255.0, 0.0) * (255.0 / 251.0);
+  s *= smoothstep(0.0, 12.0 / 255.0, max(s.r, max(s.g, s.b)));
   finalColor = vec4(finishColor(s, uFrameMod, 0.015), 1.0);
 }
 `;

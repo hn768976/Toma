@@ -81,15 +81,19 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float d = 10.0;
   for (int k = 0; k < 3; k++) d = min(d, length(p - uSeed[si * 3 + k]));
   float f = grow - spread * d + nz.x * n;
+  float edgeGate = 1.0;
   if (roundBlots > 0.5) {
     // grow scales the blots' radius; the seeds bias where the cluster is densest
     // blots near the seeds appear first and the bloom spreads outward
     float gr = clamp((grow + 0.55) / 0.6, 0.0, 1.2);
     float rmul = clamp(gr * 1.2 - d * 1.5 + 0.25 * n, 0.0, 0.88);
-    f = max(blots(p + 0.04 * w1, 3.4, sd, rmul), blots(p + 0.04 * w1 + 3.7, 1.9, sd + 5.0, rmul * 0.92));
+    rmul *= smoothstep(0.0, 0.15, gr); // nothing at all before the scene starts / after it ends
+    edgeGate = smoothstep(0.0, 0.15, gr);
+    // the small bias keeps a zero-radius blot from leaving a half-covered pixel at its centre
+    f = max(blots(p + 0.04 * w1, 3.4, sd, rmul), blots(p + 0.04 * w1 + 3.7, 1.9, sd + 5.0, rmul * 0.92)) - 0.003;
   }
   // ragged, splattery edge
-  f += 0.035 * fbm(q * 14.0 + sd * 2.0, 3) + 0.014 * gnoise(q * 48.0 + sd);
+  f += (0.035 * fbm(q * 14.0 + sd * 2.0, 3) + 0.014 * gnoise(q * 48.0 + sd)) * edgeGate;
   float aa = max(fwidth(f), 1e-4) * 0.7;
   float mask = smoothstep(-aa, aa, f);
   // large holes eating the blot
@@ -103,7 +107,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   // small splats sitting right against the edge
   float od = dots(p + 0.02 * w1, 10.0, 0.5 * exp(min(f, 0.0) * 60.0) * step(-0.03, f), sd + 31.0);
   float odAA = max(fwidth(od), 1e-5) * 0.7;
-  float outDrop = smoothstep(odAA, -odAA, od) * (1.0 - mask) * smoothstep(-0.7, -0.2, grow) * (1.0 - roundBlots);
+  float outDrop = smoothstep(odAA, -odAA, od) * (1.0 - mask) * smoothstep(-0.55, -0.2, grow) * (1.0 - roundBlots);
   // flat, pale interior; only a thin darker band at the very edge
   float k = smoothstep(0.0, mix(0.06, 0.012, roundBlots), f);
   vec3 paleCol = mix(base, mix(vec3(0.92, 0.95, 0.86), vec3(0.84, 0.92, 0.66), roundBlots), pale * mix(1.0, 0.75 + 0.35 * smoothstep(-0.4, 0.4, fbm(q * 1.7 + sd + 3.0, 2)), roundBlots));
@@ -130,7 +134,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   vec3 c = col * m;
   // dark ink wash with grungy texture in the gaps around the blots
   float washF = f + mix(0.16, 0.14, roundBlots) + 0.22 * fbm(q * 2.0 + sd + 60.0, 3);
-  float wash = smoothstep(0.0, 0.25, washF) * (1.0 - m) * smoothstep(-0.7, -0.15, grow);
+  float wash = smoothstep(0.0, 0.25, washF) * (1.0 - m) * smoothstep(-0.55, -0.15, grow);
   float grunge = smoothstep(-0.2, 0.6, fbm(q * 9.0 + sd + 13.0, 4)) * (0.6 + 0.4 * gnoise(q * 40.0));
   // scene 1: a few grainy, sponge-like olive patches on clean black instead of smoke
   float patchMask = smoothstep(0.05, 0.3, fbm(p * 1.4 + sd + 70.0, 3));
@@ -141,7 +145,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   if (roundBlots > 0.5) {
     vec2 gq = mat2(0.94, 0.34, -0.34, 0.94) * q;
     float blade = smoothstep(0.45, 0.7, gnoise(vec2(gq.x * 1.6, gq.y * 90.0) + sd)) * smoothstep(0.2, 0.7, fbm(q * 2.5 + sd + 90.0, 2));
-    c += base * vec3(0.9, 1.15, 0.4) * 1.3 * blade * (1.0 - m) * smoothstep(0.1, -0.6, p.x) * smoothstep(-0.7, -0.2, grow);
+    c += base * vec3(0.9, 1.15, 0.4) * 1.3 * blade * (1.0 - m) * smoothstep(0.1, -0.6, p.x) * smoothstep(-0.55, -0.2, grow);
   }
   c += paleCol * 0.85 * outDrop;
   return c;

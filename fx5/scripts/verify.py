@@ -63,10 +63,10 @@ for n in names:
         for i in test:
             f = fr[i]
             lit = f.max(axis=2) > 6
-            # dilate lit area by ~48px (cheap separable max filter)
+            # black area = farther than 96 px (720p) from anything above code value 6
             from numpy.lib.stride_tricks import sliding_window_view as sw
-            pad = np.pad(lit, 48)
-            d = sw(pad, 97, axis=0).max(axis=-1); d = sw(d, 97, axis=1).max(axis=-1)
+            pad = np.pad(lit, 96)
+            d = sw(pad, 193, axis=0).max(axis=-1); d = sw(d, 193, axis=1).max(axis=-1)
             ys, xs = np.nonzero(~d)
             if len(ys) == 0: continue
             pick = rng.choice(len(ys), size=min(30, len(ys)), replace=False)
