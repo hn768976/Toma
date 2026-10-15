@@ -14,6 +14,7 @@ export const WHIRL_VARIANTS: WhirlVariant[] = [
     deep: "#040A22",
     sparkleA: "#FFC870",
     sparkleB: "#FFFFFF",
+    warm: "#B08458",
   },
 ];
 
@@ -25,11 +26,11 @@ export const GLASSKNOT_VARIANTS: GlassKnotVariant[] = [
   {
     id: "GlassKnot_Galaxy",
     background: "galaxy",
-    bgBase: "#05060C",
+    bgBase: "#16131C",
     bgA: "#5E6E8E",
     bgB: "#3A4A6A",
     bgCore: "#FFF0D8",
-    inner: "#6E78E0",
+    inner: "#4A68F0",
     starColors: KNOT_STARS,
   },
   {
@@ -55,7 +56,7 @@ export const NERVE_VARIANTS: NerveVariant[] = [
     haze: "#B07A7A",
     hazeGlow: "#F0C8C0",
     tip: "#FFD0DA",
-    bead: "#F4C8D0",
+    bead: "#F49AAE",
     speck: "#F0E4E4",
   },
   {
@@ -79,14 +80,15 @@ export const BOKEH_VARIANTS: BokehVariant[] = [
     background: "#0A1A5A",
     hazeA: "#2A6AE8",
     hazeB: "#5A3AC8",
-    streakColors: ["#3A8AFF", "#3A8AFF", "#3A8AFF", "#4AD8FF", "#4AD8FF", "#A87AFF", "#FF8AD8"],
-    discColors: ["#8AC8FF", "#BFE6FF", "#6AB0FF", "#E8F6FF"],
+    streakColors: ["#3A8AFF", "#3A8AFF", "#3A9AFF", "#4AB8FF", "#4AD0FF", "#5AA0FF", "#A87AFF"],
+    sparkColors: ["#FFFFFF", "#E8E0FF", "#A87AFF", "#FF8AD8", "#C8B0FF", "#8AE0FF"],
+    discColors: ["#4AC8FF", "#6AD8FF", "#3AB0F0", "#8AE4FF"],
   },
 ];
 
 import type { SmokeOrbVariant } from "./looks/smokeorb/SmokeOrb";
 
 export const SMOKEORB_VARIANTS: SmokeOrbVariant[] = [
-  { id: "SmokeOrb_PinkGold", core: "#FFF4FA", rim: "#E8A0F0", halo: "#F0B8F0", smoke: "#E8B86A", smokeHighlight: "#FFE6B0" },
+  { id: "SmokeOrb_PinkGold", core: "#FFF8FC", rim: "#E8A0F0", halo: "#F0B8F0", smoke: "#E8B86A", smokeHighlight: "#FFE6B0" },
   { id: "SmokeOrb_CyanBlue", core: "#F4FCFF", rim: "#8AE8FF", halo: "#A8ECFF", smoke: "#4A8AFF", smokeHighlight: "#FFFFFF" },
 ];

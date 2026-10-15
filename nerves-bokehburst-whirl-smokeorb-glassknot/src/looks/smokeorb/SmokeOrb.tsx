@@ -18,8 +18,8 @@ export type SmokeOrbVariant = {
 };
 
 // ---------- smoke layout: curl-noise streamlines around a unit sphere (computed once) ----------
-const SOURCES = 150;
-const LINES_PER_SOURCE = 20;
+const SOURCES = 60;
+const LINES_PER_SOURCE = 50;
 const LINES = SOURCES * LINES_PER_SOURCE;
 const STEPS = 140;
 const PER_LINE = 50;
@@ -70,7 +70,7 @@ const buildStreamlines = () => {
     if (vn < 0) v = [v[0] - nx * vn * k, v[1] - ny * vn * k, v[2] - nz * vn * k];
     if (r < 1.12) v = [v[0] + nx * 0.4, v[1] + ny * 0.4, v[2] + nz * 0.4];
     // radial spring toward a shell around the orb so wisps keep wrapping it
-    const pull = (r - 1.42) * 0.55 * (r > 1.42 ? 1 : 0.3);
+    const pull = (r - 1.3) * 0.9 * (r > 1.3 ? 1 : 0.3);
     return [v[0] - nx * pull, v[1] - ny * pull, v[2] - nz * pull];
   };
 
@@ -81,12 +81,12 @@ const buildStreamlines = () => {
     const u = range(rng, -1, 1);
     const a = rng() * TAU;
     const sq = Math.sqrt(1 - u * u);
-    const r0 = range(rng, 1.1, 1.6);
+    const r0 = range(rng, 1.08, 1.4);
     const c: V3 = [sq * Math.cos(a) * r0, u * r0, sq * Math.sin(a) * r0];
     // a short seed segment -> neighbouring streamlines form a thin sheet
     const d: V3 = [range(rng, -1, 1), range(rng, -1, 1), range(rng, -1, 1)];
     const dl = Math.hypot(...d);
-    const spread = range(rng, 0.012, 0.028);
+    const spread = range(rng, 0.004, 0.009);
     const dt = range(rng, 0.024, 0.034);
     for (let k = 0; k < LINES_PER_SOURCE; k++) {
       const o = (k - LINES_PER_SOURCE / 2) * spread;
@@ -124,8 +124,8 @@ const buildStreamlines = () => {
       pJit[i * 3] = range(rng, -1, 1) * 0.005;
       pJit[i * 3 + 1] = range(rng, -1, 1) * 0.005;
       pJit[i * 3 + 2] = range(rng, -1, 1) * 0.005;
-      pData[i * 2] = rng() < 0.06 ? range(rng, 1.6, 2.6) : range(rng, 0.5, 1.1); // brightness
-      pData[i * 2 + 1] = range(rng, 0.8, 1.5); // size
+      pData[i * 2] = rng() < 0.03 ? range(rng, 1.6, 2.2) : range(rng, 0.5, 1.0); // brightness
+      pData[i * 2 + 1] = range(rng, 0.9, 1.4); // size
     }
   }
   return { lines, pLine, pOff, pCyc, pJit, pData };
@@ -241,15 +241,24 @@ void main() {
     // gaseous surface: slow noise sampled on a time circle
     float g = 0.5 * snoise(n * 2.2 + T) + 0.25 * snoise(n * 4.7 - T * 1.3) + 0.125 * snoise(vec3(n.x * 9.0, n.y * 3.0, n.z * 9.0) + T);
     float fres = pow(1.0 - mu, 1.6);
-    col = mix(uCore * 1.05, uRim * 1.1, fres);
-    col *= 0.78 + 0.45 * g;
-    col += uRim * pow(1.0 - mu, 4.0) * 1.6;
+    // marbled gas: white with lavender / pale-blue streaks, a cool lower-left rim, warm touches
+    float marb = snoise(vec3(n.x * 1.8 + g * 1.2, n.y * 9.0, n.z * 1.8) - T);
+    vec3 base = mix(uCore, mix(uRim, vec3(0.62, 0.72, 1.0), 0.5), smoothstep(0.0, 0.9, marb) * 0.5);
+    col = mix(base * 0.72, uRim * 1.0, fres);
+    col *= 0.82 + 0.36 * g;
+    float lowerLeft = clamp(dot(n.xy, normalize(vec2(-0.7, -0.7))), 0.0, 1.0);
+    col = mix(col, vec3(0.45, 0.5, 1.0) * 1.2, pow(1.0 - mu, 2.5) * lowerLeft * 0.7);
+    col = mix(col, vec3(1.0, 0.62, 0.45), smoothstep(0.55, 0.9, snoise(n * 1.7 + 9.0)) * pow(1.0 - mu, 2.0) * 0.5);
+    col += uRim * pow(1.0 - mu, 4.0) * 1.4;
     // soft antialiased limb
     col *= smoothstep(0.0, 0.03, disc);
   }
   // halo: bright near the limb, wide soft tail, forced to exactly zero well inside the frame
   float o = max(dr - 1.0, 0.0);
-  float halo = exp(-o * 14.0) * 1.2 + exp(-o * 4.5) * 0.22 + exp(-o * 2.0) * 0.03;
+  // lopsided bloom: strongest toward the upper right
+  vec2 sp = vec2(px.x - uW * 0.5, -(px.y - uH * 0.5));
+  float dirK = 0.55 + 0.75 * max(dot(normalize(sp + 1e-4), normalize(vec2(0.75, 0.6))), 0.0);
+  float halo = (exp(-o * 14.0) * 1.2 + exp(-o * 4.5) * 0.2 * dirK + exp(-o * 2.2) * 0.015) * dirK;
   halo *= 1.0 - smoothstep(1.0, 1.9, o);
   col += uHalo * halo * mix(1.0, 0.4, smoothstep(0.0, 0.03, disc));
   finalColor = vec4(col, 1.0);
@@ -297,7 +306,7 @@ const makeFactory =
       uD: { value: CAM_D, type: "f32" },
       uSmoke: { value: lin(v.smoke), type: "vec3<f32>" },
       uSmokeHi: { value: lin(v.smokeHighlight), type: "vec3<f32>" },
-      uGain: { value: 0.3, type: "f32" },
+      uGain: { value: 0.12, type: "f32" },
     };
     const pShader = Shader.from({ gl: { vertex: PARTICLE_VERT, fragment: PARTICLE_FRAG }, resources: { pU: pUniforms } });
     const particles = new Mesh({ geometry: geometry as never, shader: pShader as never });

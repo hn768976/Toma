@@ -95,7 +95,7 @@ const DOF_FRAG = /* glsl */ `
 uniform sampler2D tColor;
 ${DEPTH_FN}
 varying vec2 vUv;
-const int N = 56;
+const int N = 72;
 void main() {
   float cc = cocAt(vUv);
   float cz = uCocMode > 0.5 ? 0.0 : linDepth(vUv);
@@ -224,6 +224,7 @@ export class PostPipeline {
   readonly opts: PostOptions;
   sceneRT: THREE.WebGLRenderTarget;
   private dofRT: THREE.WebGLRenderTarget | null = null;
+  private dofRT2: THREE.WebGLRenderTarget | null = null;
   private mips: THREE.WebGLRenderTarget[] = [];
   private streakSrc: THREE.WebGLRenderTarget | null = null;
   private streakA: THREE.WebGLRenderTarget | null = null;
@@ -269,8 +270,9 @@ export class PostPipeline {
 
     if (opts.dof) {
       // DoF gather runs at <= 1080 rows so its look (and cost) is resolution independent.
-      const s = Math.min(1, 1080 / h) * 0.5;
+      const s = Math.min(1, 1080 / h) * 0.3;
       this.dofRT = makeRT(Math.round(w * s), Math.round(h * s));
+      this.dofRT2 = makeRT(Math.round(w * s), Math.round(h * s));
       this.dofMat = new THREE.ShaderMaterial({
         vertexShader: FS_VERT,
         fragmentShader: DOF_FRAG,
@@ -335,7 +337,7 @@ export class PostPipeline {
       uniforms: {
         tScene: { value: this.sceneRT.texture },
         tBloom: { value: this.mips[0].texture },
-        tDof: { value: this.dofRT?.texture ?? this.black },
+        tDof: { value: this.dofRT2?.texture ?? this.black },
         tStreakA: { value: this.streakA?.texture ?? this.black },
         tStreakB: { value: this.streakB?.texture ?? this.black },
         uUseDof: { value: opts.dof ? 1 : 0 },
@@ -406,6 +408,12 @@ export class PostPipeline {
     if (this.dofMat && this.dofRT) {
       this.dofMat.uniforms.tColor.value = src;
       this.pass(gl, this.dofMat, this.dofRT);
+      // tent smoothing of the gathered result removes the sample-pattern texture
+      const u = this.upMat.uniforms;
+      u.tSrc.value = this.dofRT.texture;
+      u.uTexel.value.set(1 / this.dofRT.width, 1 / this.dofRT.height);
+      u.uWeight.value = 1;
+      this.pass(gl, this.upMat, this.dofRT2!);
     }
 
     // bloom down chain
@@ -457,6 +465,7 @@ export class PostPipeline {
   dispose() {
     this.sceneRT.dispose();
     this.dofRT?.dispose();
+    this.dofRT2?.dispose();
     this.mips.forEach((m) => m.dispose());
     this.streakSrc?.dispose();
     this.streakA?.dispose();

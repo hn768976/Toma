@@ -20,6 +20,8 @@ export type WhirlVariant = {
   deep: string;
   sparkleA: string;
   sparkleB: string;
+  /** warm amber tint in the near cloud bodies */
+  warm: string;
 };
 
 const ARMS = 3;
@@ -35,7 +37,7 @@ uniform float uT;
 uniform float uAspect;
 uniform float uPxH;
 uniform vec2 uCore;
-uniform vec3 cCore, cGlow, cMatter, cHi, cDeep, cSpA, cSpB;
+uniform vec3 cCore, cGlow, cMatter, cHi, cDeep, cSpA, cSpB, cWarm;
 varying vec2 vUv;
 ${SIMPLEX3}
 ${HASH}
@@ -72,17 +74,17 @@ vec3 sparkles(float th, float s, float r, float M, float seed, float mask) {
   id.x = mod(id.x, M);
   vec2 f = fract(g);
   vec3 h = hash32(id + seed);
-  if (h.z > 0.16) return vec3(0.0);
+  if (h.z > 0.15) return vec3(0.0);
   vec2 c = 0.25 + 0.5 * h.xy;
   float cellPx = r * cell * uPxH;              // cell size on screen in pixels
   float dPx = length(f - c) * cellPx;
-  float radPx = mix(0.6, 1.5, h.x) * (uPxH / 720.0);
+  float radPx = mix(0.6, 2.2, h.x * h.x) * (uPxH / 720.0) * mix(1.0, 2.0, smoothstep(-1.5, -0.3, s));
   float tw = 0.55 + 0.45 * sin(TAU * (floor(1.0 + h.y * 3.0) * uT + h.z * 7.0));
   float core = exp(-dPx * dPx / (radPx * radPx));
   // fade layers whose cells get too small on screen (prevents aliasing near the core)
   float vis = smoothstep(4.0, 9.0, cellPx / (uPxH / 720.0));
   vec3 col = mix(cSpA, cSpB, step(0.55, h.y));
-  return col * core * tw * vis * mask * mix(1.5, 5.0, h.x);
+  return col * core * tw * vis * mask * mix(1.5, 6.0, h.x);
 }
 
 void main() {
@@ -107,40 +109,47 @@ void main() {
   float phiW = phi + 0.9 * w1;
   float sW = s + 0.05 * w2;
 
-  vec3 P = vec3(1.5 * cos(phiW), 1.5 * sin(phiW), 13.0 * sW) + T * 2.0;
+  // near-isotropic clumps (~1.6:1 along the arms): lumpy cloud matter, not hair
+  vec3 P = vec3(1.25 * cos(phiW), 1.25 * sin(phiW), 11.5 * sW) + T * 2.0;
   float h = billow(P) * 0.85;
   // fake lighting: directional derivative of the height field toward the core
-  // (the core is the light source, so clumps facing it catch the light)
-  float hL = billow(P - vec3(0.0, 0.0, 0.07)) * 0.85;
-  float diff = clamp(0.4 + (h - hL) * 4.0, 0.0, 1.0);
-  float ridge = diff * diff;
+  // (the core is the light source, so the sides of the lumps facing it catch the light)
+  float hL = billow(P - vec3(0.0, 0.0, 0.09)) * 0.85;
+  float diff = clamp(0.35 + (h - hL) * 5.0, 0.0, 1.0);
+  float ridge = diff * diff * diff;
 
-  // arm density: broad arms with clumpy edges
+  // arm density: broad bands, narrow dark crescent channels between them
   float arm = cos(phiW) * 0.5 + 0.5;
-  float dens = smoothstep(0.22, 0.62, arm * 0.9 + (h - 0.55) * 0.8);
+  float dens = smoothstep(0.3, 0.68, arm * 0.95 + (h - 0.5) * 0.6);
 
   // depth: the funnel recedes toward the core; outer matter is nearest and largest
   float depth = smoothstep(-4.6, -0.6, s);
-  float inner = 1.0 - smoothstep(-3.0, -1.5, s);   // bright inner swirl
+  float inner = 1.0 - smoothstep(-3.0, -1.7, s);   // bright inner rim of the tunnel
 
-  vec3 matter = cMatter * (0.3 + 1.0 * diff) + cHi * ridge * 0.9;
-  matter *= mix(0.45, 1.0, depth) * (0.35 + 0.9 * h);
-  // the inner swirl is streakier and glows blue
+  vec3 matter = cMatter * (0.12 + 1.05 * diff) * (0.3 + 0.9 * h) + cHi * ridge * 1.1;
+  matter *= mix(0.45, 0.85, depth);
+  // warm amber in the near (outer) cloud bodies
+  float warmMask = smoothstep(-1.4, -0.3, s) * smoothstep(0.1, 0.7, snoise(P * 0.35 + 3.0) * 0.5 + 0.5);
+  matter = mix(matter, matter * cWarm * 2.2, warmMask * 0.6);
+  // the inner rim glows pale blue, streaking along the swirl
   float streak = 0.5 + 0.5 * cos(phiW * 2.0 + h * 4.0);
-  matter += cGlow * inner * (0.4 + 1.0 * streak) * 1.2;
+  matter += cGlow * inner * (0.3 + 0.8 * streak) * 0.9;
 
-  vec3 col = cDeep * (0.6 + 0.4 * h);
+  vec3 col = cDeep * (0.35 + 0.4 * h);
   col = mix(col, matter, dens);
 
-  // glowing core
-  float rc = r / 0.022;
-  col += cCore * exp(-rc * rc) * 3.0;
-  col += cCore * exp(-r / 0.05) * 0.8;
-  col += cGlow * exp(-r / 0.1) * 1.2;
-  col += cGlow * exp(-r / 0.3) * 0.25;
+  // core: a small darker hole with a glowing rim and one bright point
+  float hole = smoothstep(0.012, 0.05, r);
+  col *= mix(0.25, 1.0, hole);
+  float ring = (r - 0.05) / 0.025;
+  col += cGlow * exp(-ring * ring) * 0.9;
+  col += cCore * exp(-ring * ring * 2.0) * 0.5;
+  col += cGlow * exp(-r / 0.09) * 0.35 * hole;
+  float pt = r / 0.006;
+  col += cCore * exp(-pt * pt) * 2.5;
 
   // sparkles embedded in the matter (gold & white), a few in the gaps
-  float smask = mix(0.25, 1.0, dens);
+  float smask = mix(0.12, 1.0, dens);
   vec3 sp = vec3(0.0);
   sp += sparkles(th, s, r, 96.0, 3.0, smask);
   sp += sparkles(th, s, r, 192.0, 11.0, smask);
@@ -173,6 +182,7 @@ const makeFactory =
         cDeep: { value: lin(v.deep) },
         cSpA: { value: lin(v.sparkleA) },
         cSpB: { value: lin(v.sparkleB) },
+        cWarm: { value: lin(v.warm) },
       },
       depthTest: false,
       depthWrite: false,
@@ -183,10 +193,10 @@ const makeFactory =
 
     const post = new PostPipeline(pxW, pxH, {
       msaa: 0,
-      dof: { mode: "radial", maxCoc: 0.012, radialCenter: [0.53, 0.5], radialRange: [0.45, 1.05] },
+      dof: { mode: "radial", maxCoc: 0.024, radialCenter: [0.555, 0.5], radialRange: [0.36, 1.0] },
       bloom: { strength: 0.35, threshold: 0.9, knee: 0.6 },
-      vignette: { strength: 0.85, color: hexToLinear(v.deep) },
-      exposure: 1,
+      vignette: { strength: 0.9, color: hexToLinear(v.deep).map((c) => c * 0.4) as [number, number, number] },
+      exposure: 0.85,
       grain: 0.015,
     });
 

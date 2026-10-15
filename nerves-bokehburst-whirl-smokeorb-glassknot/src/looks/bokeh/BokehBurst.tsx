@@ -1,4 +1,4 @@
-import { Container, Renderer, Sprite } from "pixi.js";
+import { Buffer, BufferUsage, Container, Geometry, Mesh, Renderer, Shader, Sprite } from "pixi.js";
 import React, { useCallback } from "react";
 import { hexToNumber, hexToRgb } from "../../lib/color";
 import { FINISH, SHOULDER } from "../../lib/glsl";
@@ -12,52 +12,71 @@ export type BokehVariant = {
   background: string;
   hazeA: string;
   hazeB: string;
+  /** long fine fibres */
   streakColors: string[];
+  /** short hot sparks */
+  sparkColors: string[];
   discColors: string[];
 };
 
-const STREAKS = 3000;
+// 3 000 streaks in total: long curved fibres (ribbon mesh) + short hot sparks (sprites)
+const FIBRES = 1800;
+const SPARKS = 1200;
+const SEG = 10; // segments per fibre ribbon
 const DISCS = 60;
-const DOTS = 50;
+const DOTS = 24;
 
-// ---------- deterministic layout (module level, seeded) ----------
-type StreakSpec = { ang: number; curl: number; cycles: number; off: number; len: number; thick: number; color: string; bright: number; r0: number };
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+// ---------- deterministic layout (seeded) ----------
+type FibreSpec = { ang: number; curl: number; wob: number; wobF: number; ph: number; cycles: number; off: number; len: number; thick: number; col: [number, number, number]; bright: number; r0: number };
+type SparkSpec = { ang: number; cycles: number; off: number; len: number; thick: number; color: string; bright: number; r0: number };
 type DiscSpec = { x: number; y: number; z: number; size: number; color: string; alpha: number };
-type HazeSpec = { x: number; y: number; ax: number; ay: number; ph: number; size: number; color: "a" | "b"; alpha: number; cycles: number };
+type HazeSpec = { x: number; y: number; ax: number; ay: number; ph: number; size: number; color: string; alpha: number };
 
 const buildLayout = (v: BokehVariant) => {
   const rng = mulberry32(0xb0ce4);
-  const streaks: StreakSpec[] = [];
-  for (let i = 0; i < STREAKS; i++) {
-    const long = rng() < 0.55;
-    streaks.push({
+  const fibres: FibreSpec[] = [];
+  for (let i = 0; i < FIBRES; i++) {
+    fibres.push({
       ang: rng() * TAU,
-      curl: range(rng, -0.25, 0.25),
+      curl: range(rng, -0.35, 0.35),
+      wob: range(rng, 0, 0.05),
+      wobF: range(rng, 4, 10),
+      ph: rng() * TAU,
       // whole number of wraps per 600 frames -> exact loop
-      cycles: irange(rng, 2, 6),
+      cycles: irange(rng, 1, 3),
       off: rng(),
-      len: long ? range(rng, 0.18, 0.55) : range(rng, 0.03, 0.12),
-      thick: long ? range(rng, 0.0014, 0.0026) : range(rng, 0.002, 0.0038),
-      color: pick(rng, v.streakColors),
-      bright: long ? range(rng, 0.12, 0.4) : range(rng, 0.3, 0.8),
-      r0: range(rng, 0.14, 0.3),
+      len: range(rng, 0.25, 0.8),
+      thick: range(rng, 0.0011, 0.0019),
+      col: hexToRgb(pick(rng, v.streakColors)),
+      bright: range(rng, 0.2, 0.6),
+      r0: range(rng, 0.12, 0.26),
+    });
+  }
+  const sparks: SparkSpec[] = [];
+  for (let i = 0; i < SPARKS; i++) {
+    sparks.push({
+      ang: rng() * TAU,
+      cycles: irange(rng, 2, 5),
+      off: rng(),
+      len: range(rng, 0.02, 0.055),
+      thick: range(rng, 0.0011, 0.0018),
+      color: pick(rng, v.sparkColors),
+      bright: range(rng, 0.35, 1.0),
+      r0: range(rng, 0.15, 0.3),
     });
   }
   const discs: DiscSpec[] = [];
   for (let i = 0; i < DISCS; i++) {
-    // loose ball: points in a sphere, denser toward its shell
     const u = range(rng, -1, 1);
     const a = rng() * TAU;
     const s = Math.sqrt(1 - u * u);
-    const rr = range(rng, 0.7, 1.0);
-    discs.push({
-      x: s * Math.cos(a) * rr,
-      y: u * rr,
-      z: s * Math.sin(a) * rr,
-      size: range(rng, 0.035, 0.085),
-      color: pick(rng, v.discColors),
-      alpha: range(rng, 0.1, 0.32),
-    });
+    const rr = Math.pow(rng(), 0.3);
+    discs.push({ x: s * Math.cos(a) * rr, y: u * rr, z: s * Math.sin(a) * rr, size: range(rng, 0.05, 0.1), color: pick(rng, v.discColors), alpha: range(rng, 0.07, 0.2) });
   }
   const dots: DiscSpec[] = [];
   for (let i = 0; i < DOTS; i++) {
@@ -65,36 +84,42 @@ const buildLayout = (v: BokehVariant) => {
     const a = rng() * TAU;
     const s = Math.sqrt(1 - u * u);
     const rr = Math.pow(rng(), 0.5) * 0.9;
-    dots.push({ x: s * Math.cos(a) * rr, y: u * rr, z: s * Math.sin(a) * rr, size: range(rng, 0.008, 0.018), color: pick(rng, v.discColors), alpha: range(rng, 0.5, 1) });
+    dots.push({ x: s * Math.cos(a) * rr, y: u * rr, z: s * Math.sin(a) * rr, size: range(rng, 0.008, 0.016), color: pick(rng, v.discColors), alpha: range(rng, 0.5, 1) });
   }
-  const haze: HazeSpec[] = [];
-  for (let i = 0; i < 5; i++) {
-    haze.push({
-      x: range(rng, 0.15, 0.85),
-      y: range(rng, 0.2, 0.8),
-      ax: range(rng, 0.03, 0.08),
-      ay: range(rng, 0.02, 0.06),
-      ph: rng(),
-      size: range(rng, 0.7, 1.2),
-      color: i % 2 === 0 ? "a" : "b",
-      alpha: range(rng, 0.18, 0.35),
-      cycles: 1,
-    });
-  }
-  return { streaks, discs, dots, haze };
+  // large, very soft defocused blobs in the background (upper left, upper right, violet on the right, ...)
+  const hazeDefs: [number, number, number, string, number][] = [
+    [0.15, 0.25, 0.55, v.hazeA, 0.42],
+    [0.82, 0.15, 0.5, v.hazeA, 0.38],
+    [0.95, 0.55, 0.45, v.hazeB, 0.38],
+    [0.3, 0.8, 0.5, v.hazeA, 0.25],
+    [0.65, 0.85, 0.45, v.hazeB, 0.2],
+    [0.05, 0.6, 0.4, v.hazeA, 0.25],
+    [0.55, 0.05, 0.4, v.hazeA, 0.2],
+  ];
+  const haze: HazeSpec[] = hazeDefs.map(([x, y, size, color, alpha]) => ({
+    x,
+    y,
+    size,
+    color,
+    alpha,
+    ax: range(rng, 0.02, 0.05),
+    ay: range(rng, 0.015, 0.04),
+    ph: rng(),
+  }));
+  return { fibres, sparks, discs, dots, haze };
 };
 
 // ---------- prebaked sprites ----------
-const streakTex = () =>
-  makeTexture(256, 16, (u, v) => {
-    const along = Math.pow(u, 1.6) * (1 - smooth(0.94, 1.0, u));
-    const across = Math.exp(-Math.pow((v - 0.5) / 0.18, 2));
+const sparkTex = () =>
+  makeTexture(128, 16, (u, v) => {
+    const along = smooth(0, 0.5, u) * (1 - smooth(0.85, 1.0, u));
+    const across = Math.exp(-Math.pow((v - 0.5) / 0.2, 2));
     return [1, 1, 1, along * across];
   });
 const discTex = () =>
   makeTexture(128, 128, (u, v) => {
     const d = Math.hypot(u - 0.5, v - 0.5) * 2;
-    const a = (1 - smooth(0.86, 1.0, d)) * (0.5 + 0.5 * smooth(0.55, 0.96, d));
+    const a = (1 - smooth(0.8, 1.0, d)) * (0.8 + 0.2 * smooth(0.6, 0.95, d));
     return [1, 1, 1, a];
   });
 const glowTex = () =>
@@ -102,10 +127,34 @@ const glowTex = () =>
     const d = Math.hypot(u - 0.5, v - 0.5) * 2;
     return [1, 1, 1, Math.exp(-d * d * 4.5) * (1 - smooth(0.9, 1.0, d))];
   });
-const smooth = (a: number, b: number, x: number) => {
-  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-  return t * t * (3 - 2 * t);
-};
+
+const RIBBON_VERT = /* glsl */ `
+in vec2 aPosition;
+in vec2 aUV;
+in vec4 aColor;
+out vec2 vUV;
+out vec4 vColor;
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+void main() {
+  mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+  gl_Position = vec4((mvp * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
+  vUV = aUV;
+  vColor = aColor;
+}
+`;
+const RIBBON_FRAG = /* glsl */ `
+in vec2 vUV;
+in vec4 vColor;
+out vec4 finalColor;
+void main() {
+  // vUV.x: 0 tail -> 1 head; vUV.y: -1..1 across
+  float across = exp(-vUV.y * vUV.y * 3.0);
+  float along = pow(vUV.x, 1.3) * (1.0 - smoothstep(0.96, 1.0, vUV.x));
+  finalColor = vec4(vColor.rgb * vColor.a * across * along, 0.0);
+}
+`;
 
 const BLUR_FRAG = /* glsl */ `
 in vec2 vUV;
@@ -138,7 +187,7 @@ ${SHOULDER}
 void main() {
   vec2 d = vUV - 0.5;
   float r = length(d * vec2(uAspect, 1.0));
-  float amt = uRadial * smoothstep(0.2, 0.95, r);
+  float amt = uRadial * smoothstep(0.25, 0.95, r);
   vec3 c = vec3(0.0);
   for (int i = 0; i < 12; i++) {
     c += texture(uScene, vUV - d * amt * float(i) / 11.0).rgb;
@@ -154,7 +203,7 @@ const makeFactory =
   (v: BokehVariant): PixiLookFactory =>
   (renderer: Renderer, W: number, H: number) => {
     const L = buildLayout(v);
-    const texStreak = streakTex();
+    const texSpark = sparkTex();
     const texDisc = discTex();
     const texGlow = glowTex();
 
@@ -168,24 +217,63 @@ const makeFactory =
       const s = new Sprite(texGlow);
       s.anchor.set(0.5);
       s.blendMode = "add";
-      s.tint = hexToNumber(h.color === "a" ? v.hazeA : v.hazeB);
+      s.tint = hexToNumber(h.color);
       s.alpha = h.alpha;
       s.width = s.height = h.size * H;
       hazeLayer.addChild(s);
       return s;
     });
-    // central glow behind the cluster
     const core = new Sprite(texGlow);
     core.anchor.set(0.5);
     core.blendMode = "add";
-    core.tint = hexToNumber(v.hazeA);
-    core.alpha = 0.22;
-    core.width = core.height = 0.75 * H;
+    core.tint = hexToNumber(v.discColors[0]);
+    core.alpha = 0.28;
     core.position.set(W / 2, H / 2);
     hazeLayer.addChild(core);
 
-    const streakSprites = L.streaks.map((st) => {
-      const s = new Sprite(texStreak);
+    // ---- fibre ribbons: one dynamic mesh, (SEG+1)*2 vertices per fibre ----
+    const VPF = (SEG + 1) * 2;
+    const pos = new Float32Array(FIBRES * VPF * 2);
+    const col = new Float32Array(FIBRES * VPF * 4);
+    const uv = new Float32Array(FIBRES * VPF * 2);
+    const idx = new Uint32Array(FIBRES * SEG * 6);
+    for (let f = 0; f < FIBRES; f++) {
+      const c = L.fibres[f].col;
+      for (let k = 0; k <= SEG; k++) {
+        for (let side = 0; side < 2; side++) {
+          const vi = f * VPF + k * 2 + side;
+          uv[vi * 2] = k / SEG;
+          uv[vi * 2 + 1] = side === 0 ? -1 : 1;
+          col[vi * 4] = c[0];
+          col[vi * 4 + 1] = c[1];
+          col[vi * 4 + 2] = c[2];
+        }
+        if (k < SEG) {
+          const b = f * VPF + k * 2;
+          const ii = (f * SEG + k) * 6;
+          idx.set([b, b + 1, b + 2, b + 1, b + 3, b + 2], ii);
+        }
+      }
+    }
+    const posBuf = new Buffer({ data: pos, usage: BufferUsage.VERTEX | BufferUsage.COPY_DST });
+    const colBuf = new Buffer({ data: col, usage: BufferUsage.VERTEX | BufferUsage.COPY_DST });
+    const ribbonGeo = new Geometry({
+      attributes: {
+        aPosition: { buffer: posBuf, format: "float32x2" },
+        aUV: { buffer: uv, format: "float32x2" },
+        aColor: { buffer: colBuf, format: "float32x4" },
+      },
+      indexBuffer: idx,
+    });
+    const ribbons = new Mesh({
+      geometry: ribbonGeo as never,
+      shader: Shader.from({ gl: { vertex: RIBBON_VERT, fragment: RIBBON_FRAG }, resources: {} }) as never,
+    });
+    ribbons.blendMode = "add";
+    streakLayer.addChild(ribbons);
+
+    const sparkSprites = L.sparks.map((st) => {
+      const s = new Sprite(texSpark);
       s.anchor.set(1, 0.5);
       s.blendMode = "add";
       s.tint = hexToNumber(st.color);
@@ -210,7 +298,7 @@ const makeFactory =
       return s;
     });
 
-    // ---------- post: HDR scene -> quarter-res blur -> final (radial blur, bloom, grain, dither) ----------
+    // ---------- post ----------
     const rtScene = makeHdrTarget(W, H);
     const qW = Math.round(W / 4);
     const qH = Math.round(H / 4);
@@ -226,11 +314,12 @@ const makeFactory =
       finalU: {
         uFrame: { value: 0, type: "f32" },
         uAspect: { value: W / H, type: "f32" },
-        uBloomAmt: { value: 0.5, type: "f32" },
-        uRadial: { value: 0.07, type: "f32" },
+        uBloomAmt: { value: 0.45, type: "f32" },
+        uRadial: { value: 0.06, type: "f32" },
       },
     });
     const bg = hexToRgb(v.background);
+    const rMax = (0.62 * Math.hypot(W, H)) / H;
 
     const render = (frame: number) => {
       const t = loopPhase(frame);
@@ -238,49 +327,81 @@ const makeFactory =
       const cy = H / 2;
 
       L.haze.forEach((h, i) => {
-        const s = hazeSprites[i];
-        s.position.set(
-          (h.x + h.ax * Math.sin(TAU * (h.cycles * t + h.ph))) * W,
-          (h.y + h.ay * Math.cos(TAU * (h.cycles * t + h.ph * 1.7))) * H,
-        );
+        hazeSprites[i].position.set((h.x + h.ax * Math.sin(TAU * (t + h.ph))) * W, (h.y + h.ay * Math.cos(TAU * (t + h.ph * 1.7))) * H);
       });
 
-      // streaks: radiate outward, lengthen as they go, fade at the edge, wrap
-      const rMax = 0.62 * Math.hypot(W, H) / H;
-      L.streaks.forEach((st, i) => {
-        const s = streakSprites[i];
+      // fibres: radiate outward, lengthen as they go, fade at the edge, wrap
+      for (let f = 0; f < FIBRES; f++) {
+        const st = L.fibres[f];
         const u = (st.off + st.cycles * t) % 1;
-        const r = st.r0 + (rMax - st.r0) * Math.pow(u, 1.7);
-        const ang = st.ang + st.curl * u;
-        const len = st.len * (0.25 + 1.4 * u);
+        const head = st.r0 + (rMax - st.r0) * Math.pow(u, 1.5);
+        const len = st.len * (0.3 + 0.9 * u);
+        const tail = Math.max(st.r0 * 0.7, head - len);
+        const fade = smooth(0.0, 0.15, u) * (1 - smooth(0.8, 1.0, u)) * st.bright;
+        const halfW = st.thick * H * 1.6;
+        let px = 0;
+        let py = 0;
+        for (let k = 0; k <= SEG; k++) {
+          const r = tail + ((head - tail) * k) / SEG;
+          const ang = st.ang + st.curl * (r - st.r0) + st.wob * Math.sin(st.wobF * r + st.ph);
+          const x = cx + Math.cos(ang) * r * H;
+          const y = cy + Math.sin(ang) * r * H;
+          // ribbon normal from the local tangent
+          const r2 = r + 0.002;
+          const a2 = st.ang + st.curl * (r2 - st.r0) + st.wob * Math.sin(st.wobF * r2 + st.ph);
+          let tx = cx + Math.cos(a2) * r2 * H - x;
+          let ty = cy + Math.sin(a2) * r2 * H - y;
+          const tl = Math.hypot(tx, ty) || 1;
+          tx /= tl;
+          ty /= tl;
+          const w = halfW * (0.35 + 0.65 * (k / SEG));
+          const vi = f * VPF + k * 2;
+          pos[vi * 2] = x - ty * w;
+          pos[vi * 2 + 1] = y + tx * w;
+          pos[vi * 2 + 2] = x + ty * w;
+          pos[vi * 2 + 3] = y - tx * w;
+          col[vi * 4 + 3] = fade;
+          col[vi * 4 + 7] = fade;
+          px = x;
+          py = y;
+        }
+        void px;
+        void py;
+      }
+      posBuf.update();
+      colBuf.update();
+
+      L.sparks.forEach((st, i) => {
+        const s = sparkSprites[i];
+        const u = (st.off + st.cycles * t) % 1;
+        const r = st.r0 + (rMax - st.r0) * Math.pow(u, 1.6);
         const fade = smooth(0.0, 0.12, u) * (1 - smooth(0.82, 1.0, u));
-        s.position.set(cx + Math.cos(ang) * r * H, cy + Math.sin(ang) * r * H);
-        s.rotation = ang + st.curl * 0.5;
-        s.scale.set((len * H) / 256, (st.thick * H * 3.2) / 16);
+        s.position.set(cx + Math.cos(st.ang) * r * H, cy + Math.sin(st.ang) * r * H);
+        s.rotation = st.ang;
+        s.scale.set((st.len * H * (0.5 + u)) / 128, (st.thick * H * 3) / 16);
         s.alpha = st.bright * fade;
       });
 
       // bokeh cluster: a loose ball, turning one whole turn per loop and breathing twice
-      const breathe = 1 + 0.06 * Math.sin(TAU * 2 * t);
+      const breathe = 1 + 0.05 * Math.sin(TAU * 2 * t);
       const R = 0.2 * H * breathe;
       const rot = TAU * t;
       const ca = Math.cos(rot);
       const sa = Math.sin(rot);
       const tilt = 0.35;
-      const project = (d: DiscSpec, sprite: Sprite, sizeMul: number) => {
+      const project = (d: DiscSpec, sprite: Sprite) => {
         const x = d.x * ca + d.z * sa;
         const z0 = -d.x * sa + d.z * ca;
         const y = d.y * Math.cos(tilt) - z0 * Math.sin(tilt);
         const z = d.y * Math.sin(tilt) + z0 * Math.cos(tilt);
         const persp = 3 / (3 - z);
-        sprite.position.set(cx + x * R * persp, cy + y * R * persp);
-        const size = d.size * H * persp * sizeMul;
-        sprite.width = sprite.height = size;
-        sprite.alpha = d.alpha * (0.6 + 0.4 * (z + 1) * 0.5);
+        sprite.position.set(cx + x * R * persp, cy + y * R * 1.15 * persp);
+        sprite.width = sprite.height = d.size * H * persp;
+        sprite.alpha = d.alpha * (0.6 + 0.2 * (z + 1));
       };
-      L.discs.forEach((d, i) => project(d, discSprites[i], 1));
-      L.dots.forEach((d, i) => project(d, dotSprites[i], 1));
-      core.width = core.height = 0.75 * H * breathe;
+      L.discs.forEach((d, i) => project(d, discSprites[i]));
+      L.dots.forEach((d, i) => project(d, dotSprites[i]));
+      core.width = core.height = 0.6 * H * breathe;
 
       renderer.render({ container: stage, target: rtScene, clear: true, clearColor: [bg[0], bg[1], bg[2], 1] });
       renderer.render({ container: down, target: rtQ1, clear: true });
@@ -294,7 +415,7 @@ const makeFactory =
       render,
       destroy: () => {
         stage.destroy({ children: true });
-        [rtScene, rtQ1, rtQ2, texStreak, texDisc, texGlow].forEach((t) => t.destroy(true));
+        [rtScene, rtQ1, rtQ2, texSpark, texDisc, texGlow].forEach((t) => t.destroy(true));
       },
     };
   };

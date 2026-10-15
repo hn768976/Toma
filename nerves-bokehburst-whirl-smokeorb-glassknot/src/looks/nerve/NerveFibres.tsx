@@ -26,10 +26,10 @@ export type NerveVariant = {
 // exactly one slab per loop, so frame 600 sees the same world as frame 0.
 const SLAB = 30;
 const COPIES = [1, 0, -1, -2, -3];
-const WEB_COUNT = 700;
-const HERO_COUNT = 20;
-const SECONDARY_COUNT = 50;
-const SPECK_COUNT = 400;
+const WEB_COUNT = 1100;
+const HERO_COUNT = 26;
+const SECONDARY_COUNT = 60;
+const SPECK_COUNT = 450;
 
 const randUnit = (rng: Rng) => {
   const z = range(rng, -1, 1);
@@ -63,7 +63,7 @@ const buildFibres = (rng: Rng, count: number, rMin: number, rMax: number, beadSh
   for (let i = 0; i < count; i++) {
     const pts: THREE.Vector3[] = [];
     const start = new THREE.Vector3(range(rng, -14, 14), range(rng, -9, 9), range(rng, -SLAB, 0));
-    pushOut(start, 2.6);
+    pushOut(start, 3.4);
     let dir = randUnit(rng);
     dir.z *= 0.6;
     dir.normalize();
@@ -74,7 +74,7 @@ const buildFibres = (rng: Rng, count: number, rMin: number, rMax: number, beadSh
       const turn = randUnit(rng).multiplyScalar(0.55);
       dir = dir.add(turn).normalize();
       p = p.clone().addScaledVector(dir, range(rng, 2.2, 3.6));
-      pushOut(p, 2.6);
+      pushOut(p, 3.4);
     }
     out.push({
       curve: new THREE.CatmullRomCurve3(pts, false, "centripetal"),
@@ -107,7 +107,20 @@ void main() {
 }
 `;
 
+// The background web and specks are always defocused: they write a depth pushed
+// beyond the focus band (monotonic in true distance, so they still sort among
+// themselves), which the depth-based DoF reads as "far". Fog uses the true distance.
+const PUSH_DEPTH = /* glsl */ `
+uniform float uNear;
+uniform float uFar;
+float pushedDepth(float z) {
+  float zd = 24.0 + z * 0.6;
+  return (uFar * (zd - uNear)) / (zd * (uFar - uNear));
+}
+`;
+
 const WEB_FRAG = /* glsl */ `
+${PUSH_DEPTH}
 uniform vec3 cWeb;
 uniform vec3 cHaze;
 uniform vec3 cLight;
@@ -126,6 +139,7 @@ void main() {
   float d = length(vViewPos);
   float f = 1.0 - exp(-pow(uFog * d, 2.0));
   gl_FragColor = vec4(mix(col, cHaze, f), 1.0);
+  gl_FragDepth = pushedDepth(d);
 }
 `;
 
@@ -135,6 +149,7 @@ attribute float aSize;
 uniform float uT;
 uniform float uPxH;
 varying float vFog;
+varying float vDist;
 uniform float uFog;
 #define TAU 6.28318530718
 void main() {
@@ -148,18 +163,22 @@ void main() {
   float d = -mv.z;
   gl_PointSize = max(aSize * uPxH * 0.9 / d, 1.5);
   vFog = 1.0 - exp(-pow(uFog * d, 2.0));
+  vDist = d;
 }
 `;
 
 const SPECK_FRAG = /* glsl */ `
+${PUSH_DEPTH}
 uniform vec3 cSpeck;
 varying float vFog;
+varying float vDist;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float r = length(c) * 2.0;
   if (r > 1.0) discard;
   float a = 1.0 - smoothstep(0.4, 1.0, r);
-  gl_FragColor = vec4(cSpeck * a * (1.0 - vFog) * 0.9, 1.0);
+  gl_FragColor = vec4(cSpeck * a * (1.0 - vFog) * 0.45, 1.0);
+  gl_FragDepth = pushedDepth(vDist);
 }
 `;
 
@@ -168,7 +187,7 @@ uniform vec3 cGlow;
 varying vec2 vUv;
 void main() {
   vec2 p = vUv - 0.5;
-  float g = exp(-dot(p, p) * 9.0) * 0.6;
+  float g = exp(-dot(p, p) * 10.0) * 0.9;
   gl_FragColor = vec4(cGlow * g, 1.0);
 }
 `;
@@ -236,11 +255,11 @@ const makeFactory =
 
     // ---- background web: ~600 thin, matte, gently bowed fibres per slab ----
     const rng = mulberry32(0xf1b3e5);
-    const webGeo = new THREE.CylinderGeometry(1, 1, 1, 6, 12, true);
+    const webGeo = new THREE.CylinderGeometry(1, 1, 1, 5, 8, true);
     const webMat = new THREE.ShaderMaterial({
       vertexShader: WEB_VERT,
       fragmentShader: WEB_FRAG,
-      uniforms: { cWeb: { value: V3(v.web) }, cHaze: { value: V3(v.haze) }, cLight: { value: V3(v.hazeGlow) }, uFog: { value: FOG } },
+      uniforms: { cWeb: { value: V3(v.web) }, cHaze: { value: V3(v.haze) }, cLight: { value: V3(v.hazeGlow) }, uFog: { value: FOG }, uNear: { value: 0.1 }, uFar: { value: 90 } },
     });
     const total = WEB_COUNT * COPIES.length;
     const web = new THREE.InstancedMesh(webGeo, webMat, total);
@@ -257,8 +276,8 @@ const makeFactory =
       // keep fibres from slicing straight through the lens
       const perp = pos.clone().sub(dir.clone().multiplyScalar(pos.dot(dir)));
       if (Math.hypot(perp.x, perp.y) < 1.5) pos.x += pos.x >= 0 ? 3 : -3;
-      const side = randUnit(rng).cross(dir).normalize().multiplyScalar(range(rng, 0.3, 2.2));
-      webSpecs.push({ pos, dir, len, r: range(rng, 0.014, 0.04), bend: side, shade: range(rng, 1.1, 1.9) });
+      const side = randUnit(rng).cross(dir).normalize().multiplyScalar(range(rng, 1.0, 4.0));
+      webSpecs.push({ pos, dir, len, r: range(rng, 0.025, 0.07), bend: side, shade: range(rng, 0.7, 1.6) });
     }
     let idx = 0;
     for (const k of COPIES) {
@@ -295,14 +314,14 @@ const makeFactory =
       roughness: 0.25,
       sheen: 1,
       sheenColor: C("#ffffff"),
-      emissive: C(v.bead).multiplyScalar(0.35),
+      emissive: C(v.bead).multiplyScalar(0.6),
       envMapIntensity: 0.8,
     });
     disposables.push(heroMat, beadMat);
 
     const heroes = [
-      ...buildFibres(rng, HERO_COUNT, 0.11, 0.2, 0.5, 0.8),
-      ...buildFibres(rng, SECONDARY_COUNT, 0.045, 0.08, 0.2, 0.75),
+      ...buildFibres(rng, HERO_COUNT, 0.13, 0.22, 0.75, 1.0),
+      ...buildFibres(rng, SECONDARY_COUNT, 0.05, 0.1, 0.6, 0.9),
     ];
     const beadGeo = new THREE.SphereGeometry(1, 20, 14);
     const tipGeo = new THREE.SphereGeometry(1, 16, 12);
@@ -335,6 +354,17 @@ const makeFactory =
         const tube = new THREE.Mesh(geo, heroMat);
         tube.position.copy(off);
         world.add(tube);
+        // rounded cap on the start so no fibre ends in a flat cut
+        const cap = new THREE.Mesh(beadGeo, heroMat);
+        cap.position.copy(h.curve.getPoint(0)).add(off);
+        cap.scale.setScalar(h.radius);
+        world.add(cap);
+        if (!(h.tip || h.beads > 0)) {
+          const cap2 = new THREE.Mesh(beadGeo, heroMat);
+          cap2.position.copy(end).add(off);
+          cap2.scale.setScalar(h.radius);
+          world.add(cap2);
+        }
         for (const b of beads) {
           const bm = new THREE.Mesh(beadGeo, beadMat);
           bm.position.copy(b.pos).add(off);
@@ -357,7 +387,7 @@ const makeFactory =
     const speckSize = new Float32Array(SPECK_COUNT * COPIES.length);
     const base: number[][] = [];
     for (let i = 0; i < SPECK_COUNT; i++) {
-      base.push([range(rng, -16, 16), range(rng, -10, 10), range(rng, -SLAB, 0), rng(), rng(), rng(), range(rng, 0.08, 0.22)]);
+      base.push([range(rng, -16, 16), range(rng, -10, 10), range(rng, -SLAB, 0), rng(), rng(), rng(), range(rng, 0.25, 0.55)]);
     }
     let si = 0;
     for (const k of COPIES) {
@@ -375,7 +405,7 @@ const makeFactory =
     const speckMat = new THREE.ShaderMaterial({
       vertexShader: SPECK_VERT,
       fragmentShader: SPECK_FRAG,
-      uniforms: { uT: { value: 0 }, uPxH: { value: pxH }, uFog: { value: FOG }, cSpeck: { value: V3(v.speck) } },
+      uniforms: { uT: { value: 0 }, uPxH: { value: pxH }, uFog: { value: FOG }, cSpeck: { value: V3(v.speck) }, uNear: { value: 0.1 }, uFar: { value: 90 } },
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: true,
@@ -390,9 +420,10 @@ const makeFactory =
       msaa: 4,
       depth: true,
       dof: { mode: "depth", focus: 7.5, band: 1.2, cocScale: 0.055, maxCoc: 0.022 },
-      bloom: { strength: 0.45, threshold: 0.9, knee: 0.5 },
-      vignette: { strength: 0.6, color: hexToLinear(v.web).map((c) => c * 0.35) as [number, number, number] },
-      exposure: 1,
+      bloom: { strength: 0.6, threshold: 0.8, knee: 0.5 },
+      vignette: { strength: 0.85, color: hexToLinear(v.web).map((c) => c * 0.22) as [number, number, number] },
+      exposure: 0.62,
+      saturation: 1.35,
       grain: 0.015,
     });
     post.setCamera(cam);
