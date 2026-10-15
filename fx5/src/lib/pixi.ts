@@ -1,4 +1,5 @@
 import {
+  Texture,
   Geometry,
   Mesh,
   RenderTexture,
@@ -26,6 +27,7 @@ export class Pass {
   mesh: Mesh<Geometry, Shader>;
   shader: Shader;
   u: Record<string, any>;
+  private textureNames: Record<string, true> = {};
   constructor(
     w: number,
     h: number,
@@ -46,9 +48,18 @@ export class Pass {
       resources: { u: group, ...textures },
     });
     this.u = group.uniforms;
+    for (const k of Object.keys(textures)) this.textureNames[k] = true;
     this.mesh = new Mesh({ geometry, shader: this.shader });
   }
+  /**
+   * Swap a texture. The name must already be declared at construction: Pixi
+   * never binds a resource first added later, so the pass would silently
+   * sample whatever texture was last left on that unit.
+   */
   tex(name: string, src: TextureSource) {
+    if (!(name in this.textureNames)) {
+      throw new Error(`Pass.tex: '${name}' must be declared when the pass is created`);
+    }
     this.shader.resources[name] = src;
   }
   draw(renderer: Renderer, target?: RenderTexture, clear = true) {
@@ -124,17 +135,17 @@ export class Bloom {
       this.down.push(
         new Pass(rw, rh, DOWN_FRAG, {
           uTexel: { value: [0.5 / sw, 0.5 / sh], type: 'vec2<f32>' },
-        }),
+        }, { uSrc: Texture.EMPTY.source }),
       );
       this.blurH.push(
         new Pass(rw, rh, BLUR_FRAG, {
           uDir: { value: [1 / rw, 0], type: 'vec2<f32>' },
-        }),
+        }, { uSrc: Texture.EMPTY.source }),
       );
       this.blurV.push(
         new Pass(rw, rh, BLUR_FRAG, {
           uDir: { value: [0, 1 / rh], type: 'vec2<f32>' },
-        }),
+        }, { uSrc: Texture.EMPTY.source }),
       );
       sw = rw;
       sh = rh;
