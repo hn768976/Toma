@@ -7,5 +7,5 @@ OUT=${1:-$NAME/deliver/$NAME-project.zip}
 rm -f "$OUT"
 zip -r -q "$OUT" "$NAME" \
   -x "$NAME/node_modules/*" "$NAME/.git/*" "$NAME/refs/*" "$NAME/build/*" \
-     "$NAME/out/*" "$NAME/renders/*" "$NAME/deliver/*" "$NAME/*.zip"
+     "$NAME/out/*" "$NAME/renders/*" "$NAME/deliver/*" "$NAME/*.zip" "*/__pycache__/*"
 echo "wrote $OUT"
