@@ -94,6 +94,54 @@ const bakeShard = (rng: Rng, px: number) => {
   return c;
 };
 
+// a small piece of debris: 2-5 short angular fragments crumpled together,
+// sometimes with a star / x-shaped glint; soft-edged like filmed dust
+const bakeDebris = (rng: Rng, px: number) => {
+  const S = Math.ceil(40 * px + 8);
+  const { c, g } = makeCanvas(S, S);
+  g.lineCap = "butt";
+  g.lineJoin = "miter";
+  const n = 2 + Math.floor(rng() * 4);
+  for (let i = 0; i < n; i++) {
+    const cx = S / 2 + range(rng, -7, 7) * px;
+    const cy = S / 2 + range(rng, -7, 7) * px;
+    const segs = 1 + Math.floor(rng() * 3);
+    let a = range(rng, 0, TAU);
+    let x = cx;
+    let y = cy;
+    g.strokeStyle = `rgba(255,255,255,${range(rng, 0.35, 0.95)})`;
+    g.lineWidth = range(rng, 0.8, 2.4) * px;
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let k = 0; k < segs; k++) {
+      a += range(rng, -1.6, 1.6);
+      const l = range(rng, 2.5, 9) * px;
+      x += Math.cos(a) * l;
+      y += Math.sin(a) * l;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  if (rng() < 0.25) {
+    // star / x glint
+    const cx = S / 2;
+    const cy = S / 2;
+    const arms = rng() < 0.5 ? 2 : 3;
+    const a0 = range(rng, 0, TAU);
+    g.strokeStyle = `rgba(255,255,255,${range(rng, 0.5, 0.9)})`;
+    g.lineWidth = range(rng, 0.7, 1.3) * px;
+    for (let k = 0; k < arms; k++) {
+      const a = a0 + (k * Math.PI) / arms;
+      const l = range(rng, 3, 7) * px;
+      g.beginPath();
+      g.moveTo(cx - Math.cos(a) * l, cy - Math.sin(a) * l);
+      g.lineTo(cx + Math.cos(a) * l, cy + Math.sin(a) * l);
+      g.stroke();
+    }
+  }
+  return c;
+};
+
 const strokePath = (
   rng: Rng,
   px: number,
@@ -197,9 +245,9 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
     speck: Array.from({ length: 24 }, () => canvasTexture(bakeSpeck(rng, px))),
     fibre: Array.from({ length: 64 }, () => canvasTexture(bakeFibre(rng, px))),
     thread: Array.from({ length: 20 }, () => canvasTexture(bakeThread(rng, px))),
-    shard: Array.from({ length: 64 }, () => canvasTexture(blurred(bakeShard(rng, px), 0.55 * px))),
+    shard: Array.from({ length: 96 }, (_, i) => canvasTexture(blurred(i % 3 === 0 ? bakeShard(rng, px) : bakeDebris(rng, px), 0.9 * px))),
     // out-of-focus flakes behind the sharp ones (defocused depth layer)
-    soft: Array.from({ length: 32 }, () => canvasTexture(blurred(bakeShard(rng, px * 1.8), range(rng, 1.8, 3.6) * px))),
+    soft: Array.from({ length: 48 }, () => canvasTexture(blurred(bakeDebris(rng, px * 1.5), range(rng, 1.1, 2.0) * px))),
     scratch: Array.from({ length: 6 }, () => canvasTexture(bakeScratch(rng, px))),
   };
 
@@ -221,16 +269,16 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
   ctx.post.setGrade({ mode: "rgb", bloom: 0, vignette: 0, grain: 0.015, toneMap: false });
 
   const kindFor = (h: number): Kind =>
-    h < 0.12 ? "speck" : h < 0.62 ? "shard" : h < 0.9 ? "soft" : h < 0.99 ? "fibre" : "thread";
+    h < 0.1 ? "speck" : h < 0.6 ? "shard" : h < 0.95 ? "soft" : h < 0.99 ? "fibre" : "thread";
 
   // density in soft patches; moves on a closed loop over 600 frames
   const density = (x: number, y: number, ph: number) => {
     const ox = Math.cos(TAU * ph) * 0.8;
     const oy = Math.sin(TAU * ph) * 0.8;
     const n = 0.65 * vnoise(x * 3 + ox, y * 3 + oy, 11) + 0.35 * vnoise(x * 7 - oy, y * 7 + ox, 12);
-    const base = 0.55 + 0.45 * Math.min(1, Math.max(0, (n - 0.2) / 0.6));
+    const base = 0.75 + 0.25 * Math.min(1, Math.max(0, (n - 0.2) / 0.6));
     const yy = y * (W / H); // back to 0..1
-    const col = 0.72 + 0.28 * Math.exp(-(((x - 0.5) / 0.28) ** 2));
+    const col = 0.68 + 0.32 * Math.exp(-(((x - 0.5) / 0.3) ** 2 + ((yy - 0.5) / 0.45) ** 2));
     const tr = Math.hypot((x - 1) * 1.6, yy) < 0.75 ? 0.75 : 1;
     const bl = Math.hypot(x * 1.6, yy - 1) < 0.75 ? 0.75 : 1;
     return base * col * Math.min(tr, bl);
@@ -251,8 +299,8 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
         s.rotation = hr < 0.6 ? -0.65 + (hr / 0.6 - 0.5) * 1.3 : hr * TAU;
         const sc = k === "speck" ? 0.7 + 0.6 * hash3(a, b, c * 31 + 8) : 0.75 + 0.5 * hash3(a, b, c * 31 + 8);
         s.scale.set(sc / ctx.res);
-        const br = 0.3 + 0.7 * hash3(a, b, c * 31 + 9) ** 0.8; // 30-100 %
-        s.alpha = (k === "soft" ? br * 0.55 : br) * 0.74;
+        const br = 0.3 + 0.55 * hash3(a, b, c * 31 + 9) ** 0.8; // 30-85 %: soft grey, never clipped white
+        s.alpha = (k === "soft" ? br * 0.5 : br) * 0.55;
         s.visible = true;
         return;
       }
@@ -283,7 +331,7 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
         s.position.set(hash3(bucket, k, 79) * W, H * (0.3 + 0.4 * hash3(bucket, k, 80)));
         s.rotation = (hash3(bucket, k, 81) - 0.5) * 0.03;
         s.scale.set(1 / ctx.res, (1.2 + hash3(bucket, k, 82)) / ctx.res);
-        s.alpha = 0.18 + 0.27 * hash3(bucket, k, 83);
+        s.alpha = 0.12 + 0.18 * hash3(bucket, k, 83);
       }
       drawInto(ctx.renderer, stage, ctx.post.hdr, true);
       ctx.post.present(f);
