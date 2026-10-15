@@ -27,8 +27,8 @@ export type NerveVariant = {
 const SLAB = 30;
 const COPIES = [1, 0, -1, -2, -3];
 const WEB_COUNT = 1100;
-const HERO_COUNT = 36;
-const SECONDARY_COUNT = 80;
+const HERO_COUNT = 26;
+const SECONDARY_COUNT = 45;
 const SPECK_COUNT = 450;
 
 const randUnit = (rng: Rng) => {
@@ -187,7 +187,7 @@ uniform vec3 cGlow;
 varying vec2 vUv;
 void main() {
   vec2 p = vUv - 0.5;
-  float g = exp(-dot(p, p) * 8.0) * 1.5;
+  float g = exp(-dot(p, p) * 12.0) * 2.4;
   gl_FragColor = vec4(cGlow * g, 1.0);
 }
 `;
@@ -271,13 +271,15 @@ const makeFactory =
     const webSpecs: { pos: THREE.Vector3; dir: THREE.Vector3; len: number; r: number; bend: THREE.Vector3; shade: number }[] = [];
     for (let i = 0; i < WEB_COUNT; i++) {
       const dir = randUnit(rng);
-      const len = range(rng, 14, 30);
+      dir.y *= 2.2; // bias toward vertical / diagonal bundles
+      dir.normalize();
+      const len = range(rng, 22, 40);
       const pos = new THREE.Vector3(range(rng, -24, 24), range(rng, -16, 16), range(rng, -SLAB, 0));
       // keep fibres from slicing straight through the lens
       const perp = pos.clone().sub(dir.clone().multiplyScalar(pos.dot(dir)));
       if (Math.hypot(perp.x, perp.y) < 1.5) pos.x += pos.x >= 0 ? 3 : -3;
-      const side = randUnit(rng).cross(dir).normalize().multiplyScalar(range(rng, 1.0, 4.0));
-      webSpecs.push({ pos, dir, len, r: range(rng, 0.018, 0.045), bend: side, shade: range(rng, 1.5, 2.4) });
+      const side = randUnit(rng).cross(dir).normalize().multiplyScalar(range(rng, 0.4, 1.8));
+      webSpecs.push({ pos, dir, len, r: range(rng, 0.012, 0.03), bend: side, shade: range(rng, 1.1, 1.8) });
     }
     let idx = 0;
     for (const k of COPIES) {
@@ -301,10 +303,11 @@ const makeFactory =
       color: C(v.fibre),
       roughness: 0.3,
       metalness: 0,
-      sheen: 0.4,
+      sheen: 0.5,
       sheenColor: C(v.fibreSheen),
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.2,
       sheenRoughness: 0.45,
-      clearcoat: 0.0,
       emissive: C(v.fibre).multiplyScalar(0.05),
       envMapIntensity: 0.45,
     });
@@ -313,13 +316,13 @@ const makeFactory =
       roughness: 0.25,
       sheen: 1,
       sheenColor: C("#ffffff"),
-      emissive: C(v.bead).multiplyScalar(1.4),
+      emissive: C(v.bead).multiplyScalar(2.6),
       envMapIntensity: 0.8,
     });
     disposables.push(heroMat, beadMat);
 
     const heroes = [
-      ...buildFibres(rng, HERO_COUNT, 0.1, 0.16, 0.9, 1.0),
+      ...buildFibres(rng, HERO_COUNT, 0.15, 0.24, 0.9, 1.0),
       ...buildFibres(rng, SECONDARY_COUNT, 0.04, 0.07, 0.85, 1.0),
     ];
     const beadGeo = new THREE.SphereGeometry(1, 20, 14);
@@ -348,7 +351,7 @@ const makeFactory =
       const tipR = h.radius * (h.beads > 0 ? 0.75 : 1.05);
       const tipMat = new THREE.MeshBasicMaterial({ color: tipCol.clone(), fog: true });
       disposables.push(tipMat);
-      if (h.tip || h.beads > 0) tips.push({ mat: tipMat, cycles: h.pulseCycles, phase: h.pulsePhase, gain: h.beads > 0 ? 3.2 : 2.5 });
+      if (h.tip || h.beads > 0) tips.push({ mat: tipMat, cycles: h.pulseCycles, phase: h.pulsePhase, gain: h.beads > 0 ? 6 : 4.5 });
       for (const k of COPIES) {
         const off = new THREE.Vector3(0, 0, k * SLAB);
         const tube = new THREE.Mesh(geo, heroMat);
@@ -388,7 +391,7 @@ const makeFactory =
     const speckSize = new Float32Array(SPECK_COUNT * COPIES.length);
     const base: number[][] = [];
     for (let i = 0; i < SPECK_COUNT; i++) {
-      base.push([range(rng, -16, 16), range(rng, -10, 10), range(rng, -SLAB, 0), rng(), rng(), rng(), range(rng, 0.45, 0.9)]);
+      base.push([range(rng, -1, 1) * Math.abs(range(rng, -1, 1)) * 14, range(rng, -1, 1) * Math.abs(range(rng, -1, 1)) * 8, range(rng, -SLAB, 0), rng(), rng(), rng(), range(rng, 0.4, 0.8)]);
     }
     let si = 0;
     for (const k of COPIES) {
@@ -420,11 +423,11 @@ const makeFactory =
     const post = new PostPipeline(pxW, pxH, {
       msaa: 4,
       depth: true,
-      dof: { mode: "depth", focus: 7.5, band: 1.2, cocScale: 0.055, maxCoc: 0.022 },
+      dof: { mode: "depth", focus: 8, band: 2.5, cocScale: 0.06, maxCoc: 0.022 },
       bloom: { strength: 0.6, threshold: 0.8, knee: 0.5 },
-      vignette: { strength: 0.85, color: hexToLinear(v.web).map((c) => c * 0.22) as [number, number, number] },
-      exposure: 0.62,
-      saturation: 1.35,
+      vignette: { strength: 1.0, color: hexToLinear(v.web).map((c) => c * 0.3) as [number, number, number] },
+      exposure: 0.27,
+      saturation: 1.55,
       grain: 0.015,
     });
     post.setCamera(cam);

@@ -74,7 +74,7 @@ vec3 sparkles(float th, float s, float r, float M, float seed, float mask) {
   id.x = mod(id.x, M);
   vec2 f = fract(g);
   vec3 h = hash32(id + seed);
-  if (h.z > 0.15) return vec3(0.0);
+  if (h.z > 0.24) return vec3(0.0);
   vec2 c = 0.25 + 0.5 * h.xy;
   float cellPx = r * cell * uPxH;              // cell size on screen in pixels
   float dPx = length(f - c) * cellPx;
@@ -123,7 +123,10 @@ void main() {
 
   // arm density: broad bands, narrow dark crescent channels between them
   float arm = cos(phiW) * 0.5 + 0.5;
-  float dens = smoothstep(0.16, 0.56, arm * 0.95 + (h - 0.5) * 0.7);
+  float armW = arm * 0.95 + (h - 0.5) * 0.45;
+  float dens = smoothstep(0.12, 0.45, armW);
+  // bright rim along the arm edges (smooth ribbons with lit edges)
+  float rim = smoothstep(0.12, 0.3, armW) * (1.0 - smoothstep(0.3, 0.55, armW));
 
   // depth: the funnel recedes toward the core; outer matter is nearest and largest
   float depth = smoothstep(-4.6, -0.6, s);
@@ -138,22 +141,19 @@ void main() {
   float streak = 0.5 + 0.5 * cos(phiW * 2.0 + h * 4.0);
   matter += cGlow * inner * (0.3 + 0.8 * streak) * 0.9;
 
-  vec3 col = cDeep * (0.7 + 0.6 * h);
+  matter += cHi * rim * 0.55 * mix(1.0, 0.5, depth);
+  vec3 col = cDeep * (0.8 + 0.6 * h);
   col = mix(col, matter, dens);
 
-  // core: a small darker hole with a glowing rim and one bright point
-  float hole = smoothstep(0.012, 0.05, r);
-  col *= mix(0.25, 1.0, hole);
-  float ring = (r - 0.05) / 0.025;
-  col += cGlow * exp(-ring * ring) * 0.9;
-  col += cCore * exp(-ring * ring * 2.0) * 0.5;
-  col += cGlow * exp(-r / 0.13) * 0.9 * hole;
-  col += cCore * exp(-r / 0.06) * 0.35 * hole;
-  float pt = r / 0.006;
-  col += cCore * exp(-pt * pt) * 2.5;
+  // eye: a soft, slightly elongated cyan-white glow the inner arms wrap into
+  vec2 pe = p * vec2(0.8, 1.15);
+  float re = length(pe);
+  col += cGlow * exp(-re / 0.11) * 1.1;
+  col += cCore * exp(-re / 0.045) * 0.9;
+  col += cCore * exp(-(re * re) / 0.0004) * 0.6;
 
   // sparkles embedded in the matter (gold & white), a few in the gaps
-  float smask = mix(0.12, 1.0, dens);
+  float smask = mix(0.12, 1.0, dens) * (0.6 + 1.2 * rim);
   vec3 sp = vec3(0.0);
   sp += sparkles(th, s, r, 96.0, 3.0, smask);
   sp += sparkles(th, s, r, 192.0, 11.0, smask);
@@ -199,10 +199,11 @@ const makeFactory =
 
     const post = new PostPipeline(pxW, pxH, {
       msaa: 0,
-      dof: { mode: "radial", maxCoc: 0.02, radialCenter: [0.5, 0.48], radialRange: [0.3, 1.3] },
+      dof: { mode: "radial", maxCoc: 0.03, radialCenter: [0.55, 0.52], radialRange: [0.28, 1.0] },
       bloom: { strength: 0.35, threshold: 0.9, knee: 0.6 },
       vignette: { strength: 0.9, color: hexToLinear(v.deep).map((c) => c * 0.4) as [number, number, number] },
-      exposure: 0.85,
+      exposure: 0.95,
+      saturation: 1.2,
       grain: 0.015,
     });
 

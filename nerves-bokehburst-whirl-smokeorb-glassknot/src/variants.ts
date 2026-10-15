@@ -20,7 +20,7 @@ export const WHIRL_VARIANTS: WhirlVariant[] = [
 
 import type { GlassKnotVariant } from "./looks/glassknot/GlassKnot";
 
-const KNOT_STARS = ["#FF3A2A", "#FF4A3A", "#FFFFFF", "#FFFFFF", "#7AA0FF", "#FFA040", "#FFE0C0"];
+const KNOT_STARS = ["#FF3A2A", "#FF4A3A", "#FF5A2A", "#FFFFFF", "#FFFFFF", "#7AA0FF", "#FFA040", "#FFB060"];
 
 export const GLASSKNOT_VARIANTS: GlassKnotVariant[] = [
   {
@@ -57,7 +57,7 @@ export const NERVE_VARIANTS: NerveVariant[] = [
     hazeGlow: "#F0C8C0",
     tip: "#FFD0DA",
     bead: "#F49AAE",
-    speck: "#F0E4E4",
+    speck: "#D8D4D4",
   },
   {
     id: "NerveFibres_Blue",
@@ -80,9 +80,9 @@ export const BOKEH_VARIANTS: BokehVariant[] = [
     background: "#0A1A5A",
     hazeA: "#2A6AE8",
     hazeB: "#5A3AC8",
-    streakColors: ["#3A8AFF", "#3AA0FF", "#3AB0FF", "#4AC0FF", "#4AD0FF", "#2A80F0", "#9AE4FF"],
+    streakColors: ["#3A9AFF", "#3AB0FF", "#3AC0FF", "#4AD0FF", "#5AE0FF", "#3A8AFF", "#9AECFF"],
     sparkColors: ["#FFFFFF", "#FFE0F4", "#FF8AD8", "#FF6AC8", "#E8C8FF", "#A87AFF"],
-    discColors: ["#4AC8FF", "#6AD8FF", "#3AB0F0", "#8AE4FF"],
+    discColors: ["#2AC8F0", "#4AD8FF", "#2AB4E8", "#7AE8FF"],
   },
 ];
 

@@ -84,7 +84,7 @@ void main() {
     arms = pow(arms, 2.2);
     float disk = exp(-r / 0.55);
     float dust = smoothstep(-0.2, 0.5, fbm(q * 4.0, 7.7));
-    col += cA * disk * (0.2 + 1.3 * arms) * (0.5 + 0.5 * dust) * 1.3;
+    col += cA * disk * (0.25 + 1.4 * arms) * (0.45 + 0.55 * dust) * 1.8;
     col += cB * exp(-r / 0.9) * 0.18;
     col += cCore * (exp(-r * r / 0.012) * 1.6 + exp(-r / 0.12) * 0.5);
     // faint diffuse glow band
@@ -102,9 +102,9 @@ void main() {
   }
 
   // layers of bokeh stars (several sizes)
-  col += bokeh(p, 5.0, 1.0, 0.035, 0.08, 0.5, 0.09);
-  col += bokeh(p, 9.0, 13.0, 0.02, 0.045, 0.45, 0.09);
-  col += bokeh(p, 16.0, 41.0, 0.01, 0.022, 0.35, 0.08);
+  col += bokeh(p, 6.0, 1.0, 0.035, 0.08, 0.8, 0.12);
+  col += bokeh(p, 11.0, 13.0, 0.02, 0.045, 0.75, 0.13);
+  col += bokeh(p, 19.0, 41.0, 0.012, 0.025, 0.65, 0.12);
 
   gl_FragColor = vec4(col, 1.0);
 }

@@ -24,7 +24,7 @@ const FIBRES = 1000;
 const SPARKS = 2000; // ~300 bright hot sparks, the rest faint dust streaks
 const SEG = 10; // segments per fibre ribbon
 const DISCS = 60;
-const DOTS = 24;
+const DOTS = 60;
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -41,18 +41,18 @@ const buildLayout = (v: BokehVariant) => {
   const rng = mulberry32(0xb0ce4);
   const fibres: FibreSpec[] = [];
   for (let i = 0; i < FIBRES; i++) {
-    const blurred = rng() < 0.3;
+    const blurred = rng() < 0.1;
     fibres.push({
       blur: blurred ? 1 : 0,
       ang: rng() * TAU,
-      curl: range(rng, -0.9, 0.9),
-      wob: range(rng, 0.0, 0.09),
+      curl: range(rng, -0.4, 0.4),
+      wob: range(rng, 0.0, 0.04),
       wobF: range(rng, 4, 10),
       ph: rng() * TAU,
       // whole number of wraps per 600 frames -> exact loop
       cycles: irange(rng, 1, 3),
       off: rng(),
-      len: range(rng, 0.25, 0.8),
+      len: range(rng, 0.35, 1.0),
       thick: blurred ? range(rng, 0.004, 0.007) : range(rng, 0.0011, 0.0018),
       col: hexToRgb(pick(rng, v.streakColors)),
       bright: blurred ? range(rng, 0.08, 0.18) : range(rng, 0.25, 0.75),
@@ -61,7 +61,7 @@ const buildLayout = (v: BokehVariant) => {
   }
   const sparks: SparkSpec[] = [];
   for (let i = 0; i < SPARKS; i++) {
-    const hot = i < 300;
+    const hot = i < 700;
     sparks.push({
       ang: rng() * TAU,
       cycles: irange(rng, 2, 5),
@@ -69,7 +69,7 @@ const buildLayout = (v: BokehVariant) => {
       len: range(rng, 0.02, 0.055),
       thick: range(rng, 0.0011, 0.0018),
       color: hot ? pick(rng, v.sparkColors) : pick(rng, v.streakColors),
-      bright: hot ? range(rng, 0.8, 1.6) : range(rng, 0.04, 0.12),
+      bright: hot ? range(rng, 1.0, 2.0) : range(rng, 0.04, 0.12),
       r0: range(rng, 0.15, 0.3),
     });
   }
@@ -78,9 +78,9 @@ const buildLayout = (v: BokehVariant) => {
     const u = range(rng, -1, 1);
     const a = rng() * TAU;
     const s = Math.sqrt(1 - u * u);
-    const rr = range(rng, 0.82, 1.0);
-    const crisp = rng() < 0.3;
-    discs.push({ x: s * Math.cos(a) * rr, y: u * rr, z: s * Math.sin(a) * rr, size: range(rng, 0.045, 0.075), color: crisp ? "#D8F6FF" : pick(rng, v.discColors), alpha: crisp ? range(rng, 0.3, 0.5) : range(rng, 0.1, 0.22) });
+    const rr = range(rng, 0.85, 1.0);
+    const crisp = rng() < 0.12;
+    discs.push({ x: s * Math.cos(a) * rr, y: u * rr, z: s * Math.sin(a) * rr, size: range(rng, 0.045, 0.075), color: crisp ? "#C8F4FF" : pick(rng, v.discColors), alpha: crisp ? range(rng, 0.25, 0.4) : range(rng, 0.08, 0.16) });
   }
   const dots: DiscSpec[] = [];
   for (let i = 0; i < DOTS; i++) {
@@ -92,15 +92,16 @@ const buildLayout = (v: BokehVariant) => {
   }
   // large, very soft defocused blobs in the background (upper left, upper right, violet on the right, ...)
   const hazeDefs: [number, number, number, string, number][] = [
-    [0.15, 0.25, 0.55, v.hazeA, 0.42],
-    [0.82, 0.15, 0.5, v.hazeA, 0.38],
+    [0.15, 0.28, 0.6, v.hazeA, 0.75],
+    [0.8, 0.2, 0.55, v.hazeA, 0.7],
     [0.95, 0.55, 0.45, v.hazeB, 0.38],
     [0.3, 0.8, 0.5, v.hazeA, 0.25],
     [0.65, 0.85, 0.45, v.hazeB, 0.2],
     [0.05, 0.6, 0.4, v.hazeA, 0.25],
     [0.55, 0.05, 0.4, v.hazeA, 0.2],
-    [0.97, 0.05, 0.45, v.hazeB, 0.3],
-    [0.97, 0.95, 0.45, v.hazeB, 0.3],
+    [0.97, 0.08, 0.5, v.hazeB, 0.5],
+    [0.97, 0.92, 0.45, v.hazeB, 0.4],
+    [0.92, 0.5, 0.4, v.hazeB, 0.35],
     [0.02, 0.3, 0.35, v.hazeB, 0.25],
   ];
   const haze: HazeSpec[] = hazeDefs.map(([x, y, size, color, alpha]) => ({
@@ -236,9 +237,18 @@ const makeFactory =
     core.anchor.set(0.5);
     core.blendMode = "add";
     core.tint = hexToNumber(v.discColors[0]);
-    core.alpha = 0.16;
+    core.alpha = 0.55;
     core.position.set(W / 2, H / 2);
     hazeLayer.addChild(core);
+    const band = new Sprite(texGlow);
+    band.anchor.set(0.5);
+    band.blendMode = "add";
+    band.tint = hexToNumber(v.discColors[0]);
+    band.alpha = 0.35;
+    band.width = 1.6 * W;
+    band.height = 0.22 * H;
+    band.position.set(W * 0.515, H * 0.52);
+    hazeLayer.addChild(band);
 
     // ---- fibre ribbons: one dynamic mesh, (SEG+1)*2 vertices per fibre ----
     const VPF = (SEG + 1) * 2;
@@ -393,7 +403,7 @@ const makeFactory =
 
       // bokeh cluster: a loose ball, turning one whole turn per loop and breathing twice
       const breathe = 1 + 0.05 * Math.sin(TAU * 2 * t);
-      const R = 0.24 * H * breathe;
+      const R = 0.21 * H * breathe;
       const rot = TAU * t;
       const ca = Math.cos(rot);
       const sa = Math.sin(rot);

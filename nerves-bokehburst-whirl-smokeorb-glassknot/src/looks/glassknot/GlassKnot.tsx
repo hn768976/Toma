@@ -24,7 +24,7 @@ export type GlassKnotVariant = {
 const P = 2;
 const Q = 3;
 const KNOT_R = 1;
-const TUBE_R = 0.52;
+const TUBE_R = 0.45;
 
 const curve = (u: number, out: THREE.Vector3) => {
   const qu = (Q / P) * u;
@@ -62,7 +62,7 @@ const buildStars = (colors: string[]): Star[] => {
       pos,
       size: big ? range(rng, 0.026, 0.042) : range(rng, 0.005, 0.01),
       color: new THREE.Color(pick(rng, colors)),
-      gain: big ? range(rng, 10, 20) : range(rng, 1.2, 3.5),
+      gain: big ? range(rng, 10, 20) : range(rng, 0.6, 1.8),
       cycles: 1 + Math.floor(rng() * 4),
       phase: rng(),
     });
@@ -77,7 +77,7 @@ const buildSwirl = () => {
   const pts: THREE.Vector3[] = [];
   const u0 = 0.6;
   for (let i = 0; i <= 40; i++) {
-    const u = u0 + (i / 40) * 0.8;
+    const u = u0 + (i / 40) * 0.55;
     const ang = 1.2 + i * 0.09;
     pts.push(tubePoint(u, 0.45, ang).pos);
   }
@@ -138,8 +138,8 @@ const buildEnvironment = (gl: THREE.WebGLRenderer) => {
   };
   // long thin strip -> long thin rim streaks on the upper-left edges
   box(14, 0.9, [-7, 7, 6], 30);
-  box(4, 3, [-8, 4, 8], 6);
-  box(2, 2, [6, 5, 5], 24, [1.2, 0.7, 0.4]);
+  box(6, 4, [-8, 5, 8], 14);
+  box(3, 3, [6, 5, 5], 40, [1.2, 0.65, 0.35]);
   box(2, 6, [8, 1, 3], 6, [0.9, 0.95, 1.1]);
   box(2, 1.5, [1, 8, -2], 20);
   box(8, 1.2, [0, -7, 4], 1.5, [0.7, 0.8, 1.2]);
@@ -157,7 +157,7 @@ const makeFactory =
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0, 0, 0);
     const cam = new THREE.PerspectiveCamera(35, aspect, 0.1, 100);
-    cam.position.set(0, 0, 5.8);
+    cam.position.set(0, 0, 6.0);
     cam.lookAt(0, 0, 0);
 
     const envRT = buildEnvironment(gl);
@@ -205,7 +205,7 @@ const makeFactory =
       clearcoat: 0.3,
       clearcoatRoughness: 0.05,
       attenuationColor: new THREE.Color(v.inner),
-      attenuationDistance: 1.3,
+      attenuationDistance: 3.0,
     });
     // Path length through a tube is long at its centre and short at its silhouette:
     // scale thickness by the facing ratio so the middle tints deep blue while the
@@ -259,7 +259,7 @@ const makeFactory =
 
     const post = new PostPipeline(pxW, pxH, {
       msaa: 4,
-      bloom: { strength: 0.5, threshold: 1.0, knee: 0.6, radius: 0.85 },
+      bloom: { strength: 0.65, threshold: 1.0, knee: 0.8, radius: 0.9 },
       streak: { strength: 0.9, length: 0.08 },
       vignette: { strength: 0.6, color: [0, 0, 0] },
       exposure: 1,

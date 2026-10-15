@@ -55,11 +55,11 @@ const buildStreamlines = () => {
     const r = Math.hypot(p[0], p[1], p[2]);
     const c = curl(p[0], p[1], p[2]);
     // swirl around a tilted axis, strongest near the sphere
-    const sw = 1.1 / Math.max(r * r, 1);
+    const sw = 1.5 / Math.max(r * r, 1);
     let v: V3 = [
-      c[0] * 0.55 + (axis[1] * p[2] - axis[2] * p[1]) * sw,
-      c[1] * 0.55 + (axis[2] * p[0] - axis[0] * p[2]) * sw + 0.05,
-      c[2] * 0.55 + (axis[0] * p[1] - axis[1] * p[0]) * sw,
+      c[0] * 0.32 + (axis[1] * p[2] - axis[2] * p[1]) * sw,
+      c[1] * 0.32 + (axis[2] * p[0] - axis[0] * p[2]) * sw + 0.05,
+      c[2] * 0.32 + (axis[0] * p[1] - axis[1] * p[0]) * sw,
     ];
     // the sphere pushes the flow aside: remove the inward component near its surface
     const nx = p[0] / r;
@@ -70,7 +70,7 @@ const buildStreamlines = () => {
     if (vn < 0) v = [v[0] - nx * vn * k, v[1] - ny * vn * k, v[2] - nz * vn * k];
     if (r < 1.12) v = [v[0] + nx * 0.4, v[1] + ny * 0.4, v[2] + nz * 0.4];
     // radial spring toward a shell around the orb so wisps keep wrapping it
-    const pull = (r - 1.3) * 0.9 * (r > 1.3 ? 1 : 0.3);
+    const pull = (r - 1.55) * 0.7 * (r > 1.55 ? 1 : 0.3);
     return [v[0] - nx * pull, v[1] - ny * pull, v[2] - nz * pull];
   };
 
@@ -82,7 +82,7 @@ const buildStreamlines = () => {
     const u = rng() < 0.65 ? range(rng, -0.2, 1) : range(rng, -1, 1);
     const a = rng() < 0.65 ? range(rng, Math.PI * 0.5, Math.PI * 1.5) : rng() * TAU;
     const sq = Math.sqrt(1 - u * u);
-    const r0 = range(rng, 1.08, 1.4);
+    const r0 = range(rng, 1.12, 1.7);
     const c: V3 = [sq * Math.cos(a) * r0, u * r0, sq * Math.sin(a) * r0];
     // a short seed segment -> neighbouring streamlines form a thin sheet
     const d: V3 = [range(rng, -1, 1), range(rng, -1, 1), range(rng, -1, 1)];
@@ -122,11 +122,11 @@ const buildStreamlines = () => {
       pLine[i] = l;
       pOff[i] = (j + rng() * 0.8) / PER_LINE;
       pCyc[i] = cyc;
-      pJit[i * 3] = range(rng, -1, 1) * 0.005;
-      pJit[i * 3 + 1] = range(rng, -1, 1) * 0.005;
-      pJit[i * 3 + 2] = range(rng, -1, 1) * 0.005;
+      pJit[i * 3] = range(rng, -1, 1) * 0.003;
+      pJit[i * 3 + 1] = range(rng, -1, 1) * 0.003;
+      pJit[i * 3 + 2] = range(rng, -1, 1) * 0.003;
       pData[i * 2] = rng() < 0.03 ? range(rng, 1.6, 2.2) : range(rng, 0.5, 1.0); // brightness
-      pData[i * 2 + 1] = range(rng, 1.4, 2.2); // size
+      pData[i * 2 + 1] = range(rng, 0.9, 1.3); // size
     }
   }
   return { lines, pLine, pOff, pCyc, pJit, pData };
@@ -160,7 +160,7 @@ void main() {
   vec3 T = 0.55 * vec3(cos(TAU * uT), sin(TAU * uT), 0.0);
   vec3 p = aPos.xyz;
   vec3 q = p * 1.4 + T;
-  p += 0.09 * vec3(snoise(q), snoise(q + vec3(17.1, 3.2, 8.4)), snoise(q + vec3(5.7, 21.3, 11.9)));
+  p += 0.05 * vec3(snoise(q), snoise(q + vec3(17.1, 3.2, 8.4)), snoise(q + vec3(5.7, 21.3, 11.9)));
   p.y += uBob;
   float z = uD - p.z;
   vec2 s = vec2(uW * 0.5 + uFocal * uH * p.x / z, uH * 0.5 - uFocal * uH * p.y / z);
@@ -208,7 +208,8 @@ void main() {
   float r = length(c) * 2.0;
   float f = exp(-r * r * 3.0) * step(r, 1.0);
   vec3 base = mix(uSmoke, uSmokeHi, 0.35 + 0.65 * vHi);
-  base = mix(base, uRimTint, vNear * 0.55);   // picks up the orb's colour close to it
+  base = mix(base * vec3(1.05, 0.85, 0.6), base, vNear);
+  base = mix(base, mix(uRimTint, vec3(0.75, 0.72, 0.9), 0.5), vNear * 0.8);   // picks up the orb's colour close to it
   vec3 col = base * f * vA * uGain;
   finalColor = vec4(col, 0.0);
 }
@@ -251,8 +252,8 @@ void main() {
     // marbled gas: white with lavender / pale-blue streaks, a cool lower-left rim, warm touches
     vec3 nd = vec3(0.7071 * (n.x + n.y), 0.7071 * (n.y - n.x), n.z);   // diagonal streaks
     float marb = snoise(vec3(nd.x * 1.8 + g * 1.2, nd.y * 9.0, nd.z * 1.8) - T);
-    vec3 base = mix(uCore, mix(uRim, vec3(0.62, 0.72, 1.0), 0.5), smoothstep(0.0, 0.9, marb) * 0.5);
-    col = mix(base * 0.72, uRim * 1.0, fres);
+    vec3 base = mix(uCore, mix(uRim, vec3(0.62, 0.72, 1.0), 0.75), smoothstep(0.0, 0.9, marb) * 0.42);
+    col = mix(base * 0.85, uRim * 1.0, fres);
     col *= 0.82 + 0.36 * g;
     float lowerLeft = clamp(dot(n.xy, normalize(vec2(-0.7, -0.7))), 0.0, 1.0);
     col = mix(col, vec3(0.45, 0.5, 1.0) * 1.2, pow(1.0 - mu, 2.5) * lowerLeft * 0.7);
@@ -266,8 +267,8 @@ void main() {
   // lopsided bloom: strongest toward the upper right
   vec2 sp = vec2(px.x - uW * 0.5, -(px.y - uH * 0.5));
   float dirK = 0.55 + 0.75 * max(dot(normalize(sp + 1e-4), normalize(vec2(0.75, 0.6))), 0.0);
-  float halo = (exp(-o * 14.0) * 1.2 + exp(-o * 4.5) * 0.2 * dirK + exp(-o * 2.2) * 0.015) * dirK;
-  halo *= 1.0 - smoothstep(1.0, 1.9, o);
+  float halo = (exp(-o * 9.0) * 1.4 + exp(-o * 3.5) * 0.14 * dirK) * dirK;
+  halo *= 1.0 - smoothstep(0.8, 1.4, o);
   // coloured edge light: blue-violet on the right / lower right, a cool crescent below, warm on the left
   vec2 dn = normalize(sp + 1e-4);
   vec3 hc = uHalo;
@@ -299,7 +300,7 @@ const makeFactory =
   (v: SmokeOrbVariant): PixiLookFactory =>
   (renderer: Renderer, W: number, H: number) => {
     const L = layout();
-    const focal = 0.225 * Math.sqrt(CAM_D * CAM_D - 1); // orb radius ~0.225 of frame height
+    const focal = 0.212 * Math.sqrt(CAM_D * CAM_D - 1); // orb radius ~0.21 of frame height
     const lin = (h: string) => new Float32Array(hexToLinear(h));
 
     const pos = new Float32Array(PARTICLES * 4);
@@ -320,7 +321,7 @@ const makeFactory =
       uD: { value: CAM_D, type: "f32" },
       uSmoke: { value: lin(v.smoke), type: "vec3<f32>" },
       uSmokeHi: { value: lin(v.smokeHighlight), type: "vec3<f32>" },
-      uGain: { value: 0.075, type: "f32" },
+      uGain: { value: 0.13, type: "f32" },
       uRimTint: { value: lin(v.rim), type: "vec3<f32>" },
     };
     const pShader = Shader.from({ gl: { vertex: PARTICLE_VERT, fragment: PARTICLE_FRAG }, resources: { pU: pUniforms } });
