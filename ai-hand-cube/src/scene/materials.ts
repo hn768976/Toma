@@ -6,10 +6,11 @@ import type { HandMaterials } from "./hand";
 export const buildHandMaterials = (p: Palette, env: THREE.Texture): HandMaterials => {
   const shell = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(p.handBase),
-    metalness: 0.5,
-    roughness: 0.32,
-    clearcoat: 0.12,
-    clearcoatRoughness: 0.3,
+    // polished satin metal: crisp reflections under a thin glossy coat
+    metalness: 0.85,
+    roughness: 0.22,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.08,
     envMap: env,
     envMapIntensity: 1.25,
   });
@@ -43,7 +44,8 @@ export const buildHandMaterials = (p: Palette, env: THREE.Texture): HandMaterial
     envMapIntensity: 0.5,
   });
   // satin shell: fine bead-blast speckle and faint moulding blotches
-  applyFinish(shell, { grain: 140, roughVar: 0.35, toneVar: 0.03, brush: 0 });
+  // only a faint micro-variation (no visible blotches)
+  applyFinish(shell, { grain: 220, roughVar: 0.06, toneVar: 0.0, brush: 0 });
   // graphite joints: bead-blasted
   applyFinish(joint, { grain: 260, roughVar: 0.45, toneVar: 0.06, brush: 0 });
   // polished pins/rods: fine brushing along their length

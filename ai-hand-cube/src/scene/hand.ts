@@ -69,9 +69,9 @@ const palmDeform = (v: THREE.Vector3) => {
   // knuckle row: a rounded metacarpal head behind each finger, top and back
   const kx = [-0.33, -0.11, 0.11, 0.32];
   let k = 0;
-  kx.forEach((x) => (k += gauss((v.x - x) / 0.085, 0)));
+  kx.forEach((x) => (k += gauss((v.x - x) / 0.11, 0)));
   k = Math.min(1, k) * smooth(0.72, 0.95, t);
-  v.y += (v.y > (sec.oy ?? 0) ? 0.03 : -0.035) * k;
+  v.y += (v.y > (sec.oy ?? 0) ? 0.012 : -0.02) * k;
   // knuckle arch: the middle of the front edge comes forward
   v.z += 0.05 * Math.max(0, 1 - xn * xn) * smooth(0.7, 1, t);
 };

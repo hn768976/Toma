@@ -77,7 +77,7 @@ const Scene: React.FC<{ v: Version; refs: RenderRefs }> = ({ v, refs }) => {
     const env = buildEnvironment(gl, p);
     const handMats = buildHandMaterials(p, env);
     // in the scene the hand is lit mostly by the cube: dimmer reflections
-    (handMats.shell as THREE.MeshPhysicalMaterial).envMapIntensity = 1.0;
+    (handMats.shell as THREE.MeshPhysicalMaterial).envMapIntensity = 1.45;
     (handMats.metal as THREE.MeshPhysicalMaterial).envMapIntensity = 0.6;
     const hand = buildHand(handMats);
     const bg = buildBackground();
