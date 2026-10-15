@@ -1,0 +1,28 @@
+{
+  "name": "periodictable-datapanels-tower",
+  "version": "1.0.0",
+  "description": "Periodic table scenes, data panels and data tower \u2014 Remotion + three.js (WebGL2)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "data:build": "node scripts/build-elements.mjs",
+    "data:check": "node scripts/check-elements.mjs",
+    "typecheck": "tsc --noEmit",
+    "fitcheck": "bash scripts/fitcheck.sh"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  }
+}
