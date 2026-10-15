@@ -61,7 +61,7 @@ void main() {
   vec2 s = vec2(dot(q, dir), dot(q, nrm));
 
   // base lattice (cells slightly longer along the strands); drifts one tile per loop
-  vec2 c = s * vec2(5.0, 6.5) + vec2(TILE * ph, 0.0) + vec2(1.7, 9.3);
+  vec2 c = s * vec2(3.6, 5.0) + vec2(TILE * ph, 0.0) + vec2(1.7, 9.3);
 
   // slow closed wobble of the warp so the tissue "breathes" without boiling
   vec2 wob = 0.06 * vec2(cos(TAU * ph), sin(TAU * ph));
@@ -85,12 +85,12 @@ void main() {
 
   // nested smaller cells inside some cells
   vec3 vn2 = voronoiP(cw * 3.0 + 5.0, PER * 3.0, 7.0);
-  float inner = smoothstep(0.05, 0.015, abs(vn2.x - 0.3)) * step(0.45, vn2.z) * inside * step(0.5, fract(v.z * 3.7));
+  float inner = smoothstep(0.05, 0.015, abs(vn2.x - 0.3)) * step(0.45, vn2.z) * inside * step(0.85, fract(v.z * 3.7));
 
   // crisp grainy texture: speckle + dark pores
   float grit = fbmP(cw * 8.0 + 2.0, PER * 8.0, 4);
   float speck = vnoiseP(cw * 40.0, PER * 40.0);
-  float pores = smoothstep(0.8, 0.9, vnoiseP(cw * 34.0 + 3.0, PER * 34.0));
+  float pores = smoothstep(0.86, 0.94, vnoiseP(cw * 24.0 + 3.0, PER * 24.0));
   float crust = smoothstep(0.35, 0.75, grit) * (0.6 + 0.4 * speck);
 
   // branching ribbon tendrils (ridged, warped noise) in the hot core
@@ -106,23 +106,27 @@ void main() {
   vec2 e = p - vec2(0.0, 0.02);
   e = vec2(dot(e, bd), dot(e, bn));
   float edgeN = fbmP((p + 3.0) * 3.0 + vec2(cos(TAU * ph), sin(TAU * ph)) * 0.25, vec2(64.0), 4) - 0.5;
-  vec2 er = vec2(0.50, 0.24) * (0.85 + 0.25 * pulse);
+  vec2 er = vec2(0.42, 0.22) * (0.85 + 0.25 * pulse);
   float core = exp(-pow(length(e / er) + edgeN * 0.5, 2.0) * 1.3);
-  float body = smoothstep(1.0, 0.7, length(e / vec2(0.92, 0.55)) + edgeN * 0.35 + (crust - 0.5) * 0.12);
+  float body = smoothstep(1.0, 0.62, length(e / vec2(0.86, 0.5)) + edgeN * 0.35 + (crust - 0.5) * 0.12);
 
   float gain = 0.82 + 0.28 * pulse;
-  float wallHeat = mix(0.38, 1.9, core) * (0.7 + 0.3 * wv);
+  // walls thicken and merge into wide molten channels towards the hot core
+  float wallFat = smoothstep(wallW + 0.16 * core, 0.0, edge) ;
+  float wallHeat = mix(0.4, 2.2, core) * (0.7 + 0.3 * wv);
+  float soft = fbmP(cw * 3.0 + 2.0, PER * 3.0, 3);                         // soft cloudy shading
   float heat = 0.0;
-  heat += body * (0.10 + 0.16 * crust);                                   // dim gritty tissue
-  heat += body * strands * 0.12;                                          // fibres
-  heat += body * inside * (0.07 + 0.12 * grit) * (0.6 + 0.6 * core);     // dark crimson cell interiors
-  heat += body * rimIn * (0.10 + 0.35 * core);                            // inner rim highlight
-  heat += body * walls * wallHeat;                                        // glowing walls / ribbons
-  heat += body * glowNear * 0.18 * (0.4 + core);                          // tight glow
-  heat += body * inner * (0.25 + 0.7 * core);                             // nested cells
-  heat += body * tendrils * core * 1.4;                                   // white-hot branching ribbons
-  heat *= 1.0 - 0.75 * pores * smoothstep(0.08, 0.3, heat);               // dark pits
-  heat *= 0.85 + 0.3 * speck;                                             // crisp grain
+  heat += body * (0.10 + 0.14 * crust);                                    // dim rough crust
+  heat += body * strands * (0.18 + 0.5 * core);                            // flowing streaks
+  heat += body * inside * (0.16 + 0.2 * soft) * (0.5 + 1.4 * core);         // red-orange pockets, cloudy
+  heat += body * rimIn * (0.10 + 0.35 * core);                             // inner rim highlight
+  heat += body * max(walls, wallFat * core) * wallHeat;                    // glowing walls / molten channels
+  heat += body * glowNear * 0.3 * (0.4 + core);                            // glow spreading into pockets
+  heat += body * inner * (0.25 + 0.7 * core);                              // a few nested cells
+  heat += body * tendrils * core * 1.6;                                    // white-hot ribbons
+  heat += body * core * core * 0.6;                                        // fused blown-out core
+  heat *= 1.0 - 0.6 * pores * core;                                        // a few holes in the hot areas
+  heat *= 0.94 + 0.12 * speck;                                             // fine grain
   heat *= gain;
   o = vec4(heat, heat, heat, 1.0);
 }`;
@@ -137,7 +141,7 @@ export const createTissue: LookFactory<TissueParams> = (ctx, params) => {
     ramp: params.ramp,
     stops: [0.22, 0.6, 1.05, 1.6],
     exposure: 1.0,
-    bloom: 0.3,
+    bloom: 0.6,
     vignette: 0.7,
     vignetteShape: [0.6, 1.15],
     grain: 0.015,
