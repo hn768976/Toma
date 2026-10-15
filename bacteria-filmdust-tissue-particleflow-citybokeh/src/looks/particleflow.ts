@@ -118,7 +118,7 @@ void main() {
   float coc = abs(depth - uFocusDepth) / uFocusDepth;
   float sizePx = size * uPx * (1.0 + 3.0 * coc) * clamp(17.0 / depth, 0.6, 2.0);
   if (dust) sizePx = (0.9 + 0.6 * aRand.z) * uPx; // fine haze: no depth growth
-  gl_PointSize = max(sizePx, 1.0);
+  gl_PointSize = max(sizePx, 2.0); // >= 2 px so moving grains are antialiased (no single-pixel shimmer)
   float energy = (size * uPx) * (size * uPx) / (gl_PointSize * gl_PointSize);
   energy = mix(energy, 1.0, 0.35); // keep soft grains visible as blobs
 
@@ -242,7 +242,7 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
     uPhase: { value: 0, type: "f32" },
   });
 
-  const grade: Grade = { mode: "rgb", exposure: 1.0, bloom: 0.45, vignette: 0.12, vignetteShape: [0.6, 1.3], grain: 0.015, toneMap: true };
+  const grade: Grade = { mode: "rgb", exposure: 1.25, bloom: 0.45, vignette: 0.12, vignetteShape: [0.6, 1.3], grain: 0.015, toneMap: true };
   ctx.post.setGrade(grade);
 
   const TAU = Math.PI * 2;
