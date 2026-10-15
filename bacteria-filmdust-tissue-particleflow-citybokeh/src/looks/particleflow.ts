@@ -122,8 +122,8 @@ void main() {
   float energy = (size * uPx) * (size * uPx) / (gl_PointSize * gl_PointSize);
   energy = mix(energy, 1.0, 0.35); // keep soft grains visible as blobs
 
-  vec3 blue = mix(uDeep, uSheet, clamp(0.5 + 0.7 * aRand.z + 0.3 * graze, 0.0, 1.0)) * 1.9;
-  vec3 grey = mix(uGrey, uEdge2, aRand.y * 0.8) * 1.1;
+  vec3 blue = (mix(uDeep, uSheet, clamp(0.5 + 0.7 * aRand.z + 0.3 * graze, 0.0, 1.0)) * 1.7 + uEdge2 * 0.25);
+  vec3 grey = mix(uGrey, uEdge2, aRand.y * 0.5) * 0.95;
   vec3 col = dust ? uGrey * 0.9 : mix(blue, grey, D.x);
   vec3 ec = mix(uEdge, uEdge2, aRand.y);
   col = mix(col, ec, clamp(edgeT + star + 0.35 * (seam - 1.0) / max(D.w, 0.01), 0.0, 1.0));
@@ -155,7 +155,7 @@ void main() {
   // faint diagonal haze band following the flow
   float band = exp(-pow(dot(p, normalize(vec2(0.55, 0.85))) / 0.35, 2.0));
   float n = fbmP(vUV * vec2(3.0, 2.0) * 2.0 + vec2(cos(TAU * uPhase), sin(TAU * uPhase)) * 0.3, vec2(4096.0), 4);
-  o = vec4(uHaze * band * (0.6 + 0.8 * n) * 0.35, 1.0);
+  o = vec4(uHaze * (0.25 + band) * (0.6 + 0.8 * n) * 0.5, 1.0);
 }`;
 
 const v3 = (hex: string) => new Float32Array(hexToRgb(hex));
@@ -173,14 +173,14 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
   const defs = [
     // A: baseY, halfW, zOff, curl | B: amp1, f1, amp2, f2 | C: turns, seed, hole thr, bright
     // D: grey amount, size mult, star rate, seam strength | share of particles
-    { A: [0.0, 5.5, -8.5, 0.4], B: [0.9, 0.16, 0.35, 0.41], C: [1, 0.3, 0.68, 0.85], D: [0, 0.72, 0.0003, 0.6], share: 0.23 },
-    { A: [1.5, 5.0, -0.8, 0.45], B: [0.7, 0.13, 0.4, 0.37], C: [1, 1.7, 0.7, 0.85], D: [0.05, 0.72, 0.0003, 0.8], share: 0.21 },
-    { A: [2.6, 5.0, 8.6, 0.4], B: [1.0, 0.11, 0.3, 0.33], C: [2, 2.9, 0.68, 0.42], D: [0.6, 0.85, 0.004, 0.6], share: 0.1 },
+    { A: [0.0, 6.5, -8.5, 0.4], B: [0.9, 0.16, 0.35, 0.41], C: [1, 0.3, 0.68, 0.9], D: [0, 0.7, 0.0, 0.6], share: 0.25 },
+    { A: [1.5, 5.5, -0.5, 0.45], B: [0.7, 0.13, 0.4, 0.37], C: [1, 1.7, 0.7, 0.95], D: [0.05, 0.7, 0.0, 1.6], share: 0.22 },
+    { A: [2.6, 5.5, 9.0, 0.4], B: [1.0, 0.11, 0.3, 0.33], C: [2, 2.9, 0.68, 0.5], D: [0.75, 0.85, 0.006, 1.4], share: 0.11 },
     // the near, sparse, grey-white sheet across the upper-left with big sparkles
-    { A: [7.0, 6.0, 13.0, 0.3], B: [0.6, 0.1, 0.3, 0.27], C: [1, 5.3, 0.74, 0.42], D: [1.0, 1.1, 0.015, 0.4], share: 0.1 },
-    { A: [-2.0, 7.0, 16.0, 0.35], B: [0.8, 0.09, 0.5, 0.29], C: [1, 4.1, 0.74, 0.4], D: [0.85, 0.9, 0.012, 0.4], share: 0.16 },
+    { A: [7.0, 9.0, 15.0, 0.3], B: [0.6, 0.1, 0.3, 0.27], C: [1, 5.3, 0.74, 0.42], D: [1.0, 1.1, 0.02, 0.3], share: 0.1 },
+    { A: [-2.0, 10.0, 19.0, 0.35], B: [0.8, 0.09, 0.5, 0.29], C: [1, 4.1, 0.74, 0.45], D: [0.85, 0.85, 0.012, 0.3], share: 0.16 },
     // [5] dust haze (shape ignored; uses its own volume)
-    { A: [0, 1, 0, 0], B: [0, 0, 0, 0], C: [1, 0, 1, 0.2], D: [1, 1.0, 0, 0], share: 0.2 },
+    { A: [0, 1, 0, 0], B: [0, 0, 0, 0], C: [1, 0, 1, 0.2], D: [1, 1.0, 0, 0], share: 0.16 },
   ];
   defs.slice(0, 5).forEach((d, i) => {
     sheetA.set(d.A, i * 4);
@@ -242,7 +242,7 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
     uPhase: { value: 0, type: "f32" },
   });
 
-  const grade: Grade = { mode: "rgb", exposure: 1.05, bloom: 0.15, vignette: 0.12, vignetteShape: [0.6, 1.3], grain: 0.015, toneMap: true };
+  const grade: Grade = { mode: "rgb", exposure: 1.0, bloom: 0.45, vignette: 0.12, vignetteShape: [0.6, 1.3], grain: 0.015, toneMap: true };
   ctx.post.setGrade(grade);
 
   const TAU = Math.PI * 2;
@@ -266,7 +266,7 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
       let right = norm(cross(fwd, [0, 1, 0]));
       let up = cross(right, fwd);
       // roll so the flow runs diagonally across the frame
-      const roll = -1.4 + 0.03 * Math.sin(TAU * ph);
+      const roll = -1.3 + 0.03 * Math.sin(TAU * ph);
       const cr = Math.cos(roll);
       const sr = Math.sin(roll);
       const r2: V = [right[0] * cr + up[0] * sr, right[1] * cr + up[1] * sr, right[2] * cr + up[2] * sr];
