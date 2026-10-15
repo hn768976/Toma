@@ -39,10 +39,12 @@ void main() {
   col *= 0.8 + 0.4 * fbmP(p * vec2(5.0, 3.0) + 31.0 + vec2(cos(TAU * uPhase), sin(TAU * uPhase)) * 0.2, vec2(4096.0), 3);
   // a big defocused far light in the upper left
   vec2 d = (p - vec2(0.12 + 0.02 * sin(TAU * uPhase), 0.1)) * vec2(uAspect, 1.0);
-  col += uBlob * 0.7 * exp(-dot(d, d) / 0.04);
+  col += uBlob * 0.4 * smoothstep(0.32, 0.12, length(d * vec2(0.9, 1.3)));
   // a large soft dark silhouette mid-left (a passing car / street furniture)
   vec2 sdk = (p - vec2(0.33 + 0.03 * sin(TAU * uPhase), 0.42)) * vec2(uAspect * 0.6, 1.4);
   col *= 1.0 - 0.55 * exp(-dot(sdk, sdk) / 0.03);
+  // keep the shadows' colour cast (saturated, never neutral grey)
+  col = max(mix(vec3(dot(col, vec3(0.2126, 0.7152, 0.0722))), col, 1.7), 0.0);
   o = vec4(col, 1.0);
 }`;
 
@@ -51,7 +53,7 @@ const bakeDisc = (rng: Rng, D: number, px: number) => {
   const { c, g } = makeCanvas(S, S);
   const cx = S / 2;
   const r = D / 2;
-  const soft = Math.max(1, 3.2 * px) / r; // edge softness as a fraction of r
+  const soft = Math.max(1, 6.5 * px) / r; // edge softness as a fraction of r
   g.globalCompositeOperation = "lighter";
   // one pass per channel with slightly different radii -> chromatic fringe
   const chans: [string, number][] = [
@@ -64,8 +66,8 @@ const bakeDisc = (rng: Rng, D: number, px: number) => {
     const gr = g.createRadialGradient(cx, cx, 0, cx, cx, R);
     gr.addColorStop(0, `rgba(${rgb},0.86)`);
     gr.addColorStop(0.7, `rgba(${rgb},0.87)`);
-    gr.addColorStop(Math.max(0.75, 0.97 - soft * 2), `rgba(${rgb},0.9)`);
-    gr.addColorStop(Math.max(0.8, 1 - soft), `rgba(${rgb},0.9)`);
+    gr.addColorStop(Math.max(0.7, 0.97 - soft * 2.2), `rgba(${rgb},0.97)`);
+    gr.addColorStop(Math.max(0.78, 1 - soft * 1.2), `rgba(${rgb},0.95)`);
     gr.addColorStop(1, `rgba(${rgb},0)`);
     g.fillStyle = gr;
     g.beginPath();
@@ -108,6 +110,7 @@ const smooth01 = (t: number) => {
 
 type Disc = {
   s: Sprite;
+  refl?: Sprite;
   layer: number;
   x0: number;
   y: number;
@@ -161,17 +164,30 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
       s.anchor.set(0.5);
       // front discs occlude rather than sum (screen); back layers add faintly
       s.blendMode = li === 2 ? "screen" : "add";
-      s.tint = li === 2 ? pickFront() : pickColor();
+      const front = li === 2;
+      // front discs come in touching pairs (two lanes of headlights), a third of them bright
+      const hero = front && Math.floor(i / 2) % 2 === 0; // bright pairs: one cool, one neutral
+      s.tint = front ? (hero ? params.front[i % 2] : pickFront()) : pickColor();
       stage.addChild(s);
+      let refl: Sprite | undefined;
+      if (hero) {
+        refl = new Sprite(softTex[vi]);
+        refl.anchor.set(0.5, 0);
+        refl.blendMode = "add";
+        refl.tint = s.tint;
+        stage.addChild(refl);
+      }
+      const pairBase = Math.floor(i / 2) / Math.ceil(L.n / 2);
       discs.push({
         s,
+        refl,
         layer: li,
-        x0: (i + range(rng, 0.1, 0.9)) / L.n, // stratified so discs spread out
-        y: range(rng, L.y[0], L.y[1]),
+        x0: front ? (pairBase + (i % 2) * 0.095 + range(rng, 0, 0.01)) % 1 : (i + range(rng, 0.1, 0.9)) / L.n,
+        y: front ? (hero ? range(rng, 0.6, 0.68) : range(rng, 0.27, 0.36)) : range(rng, L.y[0], L.y[1]),
         bobA: range(rng, 0.003, 0.012),
         bobPh: range(rng, 0, Math.PI * 2),
         d: range(rng, L.d[0], L.d[1]),
-        a: L.a[0] + (L.a[1] - L.a[0]) * rng() ** 0.8,
+        a: front ? (hero ? range(rng, 0.85, 1.0) : range(rng, 0.12, 0.32)) : L.a[0] + (L.a[1] - L.a[0]) * rng() ** 0.8,
         per: PERIODS[Math.floor(rng() * PERIODS.length)],
         fadePh: rng(),
         fadeDepth: range(rng, 0.3, 1.0),
@@ -206,6 +222,13 @@ export const createBokeh: LookFactory<BokehParams> = (ctx, params) => {
         // lights cluster on the right of the street; they fade out towards the left
         const side = 0.25 + 0.75 * smooth01((sx / W - 0.15) / 0.45);
         d.s.alpha = d.a * fade * side;
+        if (d.refl) {
+          // a faint vertical smear reflected on the wet street below the light
+          const sc = (d.d * H) / texPx;
+          d.refl.position.set(sx, sy + d.d * H * 0.6);
+          d.refl.scale.set(sc * 0.8, sc * 0.45);
+          d.refl.alpha = d.s.alpha * 0.07;
+        }
       }
       drawInto(ctx.renderer, stage, ctx.post.hdr, false);
       ctx.post.present(f);
