@@ -58,6 +58,20 @@ void main() {
   o = vec4(vec3(lum), 1.0);
 }`;
 
+// Multiplied over the sprites: the same blotchy mottle, so particles sit *in*
+// the out-of-focus tissue instead of floating on top of it.
+const EMBED = /* glsl */ `
+${GLSL_COMMON}
+in vec2 vUV; out vec4 o;
+uniform float uPhase;
+uniform float uAspect;
+void main() {
+  vec2 p = (vUV - 0.5) * vec2(uAspect, 1.0);
+  vec2 cyc = vec2(cos(TAU * uPhase), sin(TAU * uPhase));
+  float m = fbmP(p * 6.0 + cyc * 0.4 + 300.0, vec2(4096.0), 4);
+  o = vec4(vec3(0.62 + 0.55 * smoothstep(0.3, 0.7, m)), 1.0);
+}`;
+
 const BLUR_LEVELS = [0, 1.5, 4, 9]; // in 720p pixels
 const N_CHAIN_VARIANTS = 12;
 const N_CLUMP_VARIANTS = 8;
@@ -76,20 +90,24 @@ type Variant = { levels: Texture[]; fill?: Texture[] };
 
 const drawBead = (g: CanvasRenderingContext2D, x: number, y: number, r: number, rng: Rng) => {
   // dark-field cell: dim body, bright rim, soft outer halo
-  const gr = g.createRadialGradient(x, y, 0, x, y, r * 1.25);
-  const core = range(rng, 0.06, 0.2);
-  const rim = range(rng, 0.75, 1.0);
+  // off-centre gradient so the rim is brighter on one side (irregular lighting)
+  const ox = range(rng, -0.25, 0.25) * r;
+  const oy = range(rng, -0.25, 0.25) * r;
+  const gr = g.createRadialGradient(x + ox, y + oy, 0, x, y, r * 1.25);
+  const core = range(rng, 0.1, 0.35);
+  const rim = range(rng, 0.45, 1.0);
+  const rp = range(rng, 0.6, 0.78);
   gr.addColorStop(0, `rgba(255,255,255,${core})`);
-  gr.addColorStop(0.45, `rgba(255,255,255,${core * 1.1})`);
-  gr.addColorStop(0.7, `rgba(255,255,255,${rim})`);
-  gr.addColorStop(0.86, `rgba(255,255,255,${rim * 0.4})`);
+  gr.addColorStop(rp * 0.6, `rgba(255,255,255,${core * range(rng, 0.8, 1.3)})`);
+  gr.addColorStop(rp, `rgba(255,255,255,${rim})`);
+  gr.addColorStop(Math.min(0.95, rp + range(rng, 0.1, 0.2)), `rgba(255,255,255,${rim * 0.35})`);
   gr.addColorStop(1, "rgba(255,255,255,0)");
   g.fillStyle = gr;
   // slightly oval, irregular cells
   g.save();
   g.translate(x, y);
   g.rotate(range(rng, 0, Math.PI));
-  g.scale(range(rng, 0.85, 1.15), range(rng, 0.8, 1.05));
+  g.scale(range(rng, 0.75, 1.25), range(rng, 0.7, 1.05));
   g.translate(-x, -y);
   g.beginPath();
   g.arc(x, y, r * 1.25, 0, Math.PI * 2);
@@ -125,7 +143,7 @@ const bakeBeads = (pts: [number, number][], r: number, rng: Rng, alpha = 1): Bak
   rim.g.globalCompositeOperation = "lighter";
   rim.g.globalAlpha = alpha;
   for (const [px, py] of pts) {
-    const rr = r * range(rng, 0.88, 1.08);
+    const rr = r * range(rng, 0.7, 1.2);
     drawBead(rim.g, px - minx, py - miny, rr, rng);
     drawFill(fill.g, px - minx, py - miny, rr);
   }
@@ -144,7 +162,7 @@ const bakeChain = (rng: Rng, r: number, hero = false): Baked => {
   for (let i = 0; i < n; i++) {
     pts.push([x, y]);
     a += curl + wig * Math.sin(i * 0.7 + ph);
-    const step = r * range(rng, 1.7, 1.95);
+    const step = r * range(rng, 1.45, 2.1); // uneven spacing, some cells touching
     x += Math.cos(a) * step;
     y += Math.sin(a) * step;
   }
@@ -211,6 +229,11 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
     uAspect: { value: W / H, type: "f32" },
   });
 
+  const embed = new Pass("bacteria-embed", EMBED, {
+    uPhase: { value: 0, type: "f32" },
+    uAspect: { value: W / H, type: "f32" },
+  });
+
   const stage = new Container();
   const layerContainers = LAYER_DEF.map(() => new Container());
   const fillC = LAYER_DEF.map(() => new Container());
@@ -222,6 +245,11 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
   }
 
   const objs: Obj[] = [];
+  const clumpCentres: [number, number][] = Array.from({ length: 16 }, (_, i) =>
+    i < 9
+      ? [0.5 + (rng() + rng() - 1) * 0.12 - 0.04, 0.5 + (rng() + rng() - 1) * 0.14 - 0.04]
+      : [range(rng, 0.1, 0.9), range(rng, 0.1, 0.9)],
+  );
   const counts = [
     { kind: "chain", n: 12 },
     { kind: "clump", n: 18 },
@@ -247,8 +275,13 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
           layer: L,
           ...(isHero
             ? { x: 0.5, y: 0.485 }
-            : kind === "speck" && rng() < 0.7
-              ? { x: 0.5 + (rng() + rng() + rng() - 1.5) * 0.16 - 0.05, y: 0.5 + (rng() + rng() + rng() - 1.5) * 0.2 - 0.06 }
+            : kind === "speck" && rng() < 0.8
+              ? (() => {
+                  // specks gather in loose clumps (debris), densest near the hero chain
+                  const cc = clumpCentres[Math.floor(rng() * clumpCentres.length)];
+                  const sp = range(rng, 0.008, 0.035);
+                  return { x: cc[0] + (rng() + rng() - 1) * sp, y: cc[1] + (rng() + rng() - 1) * sp };
+                })()
               : { x: rng(), y: rng() }),
           rot: isHero ? range(rng, -0.15, 0.15) : range(rng, 0, Math.PI * 2),
           rotAmp: isHero ? 0.12 : range(rng, 0.1, 0.6),
@@ -342,6 +375,8 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
         }
       }
       drawInto(ctx.renderer, stage, ctx.post.hdr, false);
+      embed.uniforms.uPhase = ph;
+      embed.run(ctx.renderer, ctx.post.hdr, "multiply");
       ctx.post.present(f);
     },
   };

@@ -1,4 +1,5 @@
 import {
+  Container,
   Geometry,
   GlProgram,
   Mesh,
@@ -6,7 +7,6 @@ import {
   Shader,
   Texture,
   UniformGroup,
-  type Container,
   type WebGLRenderer,
 } from "pixi.js";
 
@@ -81,6 +81,8 @@ export type UniformSpec = Record<string, { value: unknown; type: string }>;
 
 export class Pass {
   readonly mesh: Mesh<Geometry, Shader>;
+  // the mesh is rendered through a parent so its blend mode applies
+  private root = new Container();
   readonly u: UniformGroup;
   private shader: Shader;
 
@@ -93,6 +95,7 @@ export class Pass {
       resources,
     });
     this.mesh = new Mesh({ geometry: quadGeometry(), shader: this.shader });
+    this.root.addChild(this.mesh);
   }
 
   get uniforms(): Record<string, unknown> {
@@ -105,15 +108,15 @@ export class Pass {
 
   private validated = false;
 
-  run(renderer: WebGLRenderer, target: RenderTexture | null, additive = false) {
+  run(renderer: WebGLRenderer, target: RenderTexture | null, additive: boolean | "multiply" = false) {
     if (!this.validated) {
       validateProgram(renderer, this.shader.glProgram);
       this.validated = true;
     }
     this.uniforms.uFlip = target ? -1 : 1;
-    this.mesh.blendMode = additive ? "add" : "none";
+    this.mesh.blendMode = additive === "multiply" ? "multiply" : additive ? "add" : "none";
     renderer.render({
-      container: this.mesh,
+      container: this.root,
       target: target ?? undefined,
       clear: !additive,
       clearColor: [0, 0, 0, 1],
