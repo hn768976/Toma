@@ -19,6 +19,7 @@ export type ParticleFlowParams = {
   sheet: string; // sheet colour
   edge: string; // edge specks
   edge2: string; // secondary edge colour
+  grey: string; // the pale, desaturated near sheet
   haze: string;
 };
 
@@ -36,8 +37,9 @@ uniform vec3 uCamPos; uniform vec3 uCamR; uniform vec3 uCamU; uniform vec3 uCamF
 uniform float uFocusDepth;
 uniform vec4 uSheetA[5];   // baseY, halfWidth, zOffset, curl
 uniform vec4 uSheetB[5];   // amp1, freq1, amp2, freq2
-uniform vec4 uSheetC[5];   // flow turns per loop, phase seed, hole density, brightness
-uniform vec3 uDeep; uniform vec3 uSheet; uniform vec3 uEdge; uniform vec3 uEdge2;
+uniform vec4 uSheetC[5];   // flow turns per loop, phase seed, hole threshold, brightness
+uniform vec4 uSheetD[5];   // grey amount, size multiplier, star rate, seam strength
+uniform vec3 uDeep; uniform vec3 uSheet; uniform vec3 uEdge; uniform vec3 uEdge2; uniform vec3 uGrey;
 out vec3 vColor;
 out float vStar;
 
@@ -68,6 +70,7 @@ void main() {
   int k = int(aRand.x + 0.5);
   float ph = uPhase;
   vec4 C = uSheetC[k];
+  vec4 D = uSheetD[k];
   float u = fract(aPosition.x + C.x * ph);
   float v = aPosition.y;
   float x = (u - 0.5) * L;
@@ -84,31 +87,38 @@ void main() {
   float depth = max(view.z, 0.05);
   gl_Position = vec4(view.x * uFocal / uAspect, view.y * uFocal * uFlip, 0.0, depth);
 
-  // grazing angle -> bright, larger edge specks
+  // grazing angle -> slightly brighter, larger grains (kept subtle: no glowing streaks)
   vec3 vd = normalize(d);
   float graze = 1.0 - abs(dot(n, vd));
-  float edgeT = pow(graze, 3.0);
-  // dark hollows fixed on the sheet (in x, v); particles fade through them
-  float h = 0.65 * vn(vec2(x * 0.16 + C.y * 7.0, v * 1.8 + C.y * 3.0)) + 0.35 * vn(vec2(x * 0.4 + 3.0, v * 4.0 + C.y));
-  float hole = 1.0 - smoothstep(C.z, C.z + 0.08, h);
-  // fade at sheet ends and side edges
+  float edgeT = pow(graze, 4.0) * 0.6;
+  // a few elliptical voids fixed on the sheet (in x, v); particles thin out through them
+  float h = vn(vec2(x * 0.075 + C.y * 7.0, v * 1.3 + C.y * 3.0));
+  float hole = mix(1.0, 0.12, smoothstep(C.z, C.z + 0.05, h));
+  // fade at sheet ends; crisp side edges with a bright seam of grains (the lips of the sheets)
   float ends = smoothstep(0.0, 0.08, u) * smoothstep(1.0, 0.92, u);
-  float sides = smoothstep(1.0, 0.8, abs(v));
+  float av = abs(v);
+  float sides = smoothstep(1.02, 0.985, av);
+  float seam = 1.0 + D.w * smoothstep(0.82, 0.98, av);
 
-  float star = step(0.9965, aRand.w);
+  float star = step(1.0 - D.z, aRand.w);
   vStar = star;
-  // depth of field: points away from the focal depth grow and dim
+  // grain size: mostly fine dust, some medium specks, a few large soft grains
+  float big = pow(aRand.z, 6.0);
+  float size = (0.8 + 0.7 * aRand.z + 2.6 * big + 0.6 * edgeT) * D.y * (1.0 + star * 2.0);
+  // depth of field: points away from the focal depth grow and soften
   float coc = abs(depth - uFocusDepth) / uFocusDepth;
-  float size = (1.0 + 0.9 * aRand.z + 0.8 * edgeT) * (1.0 + star * 2.2);
   float sizePx = size * uPx * (1.0 + 3.0 * coc) * clamp(17.0 / depth, 0.6, 2.0);
   gl_PointSize = max(sizePx, 1.0);
   float energy = (size * uPx) * (size * uPx) / (gl_PointSize * gl_PointSize);
+  energy = mix(energy, 1.0, 0.35); // keep soft grains visible as blobs
 
-  vec3 col = mix(uDeep, uSheet, clamp(0.45 + 0.75 * aRand.z + 0.4 * graze, 0.0, 1.0)) * 1.6;
+  vec3 blue = mix(uDeep, uSheet, clamp(0.5 + 0.7 * aRand.z + 0.3 * graze, 0.0, 1.0)) * 1.9;
+  vec3 grey = mix(uGrey, uEdge2, aRand.y * 0.8) * 1.1;
+  vec3 col = mix(blue, grey, D.x);
   vec3 ec = mix(uEdge, uEdge2, aRand.y);
-  col = mix(col, ec, clamp(edgeT * 1.6 + star, 0.0, 1.0));
-  float a = C.w * hole * ends * sides * energy * (0.55 + 0.45 * aRand.z) * (1.0 + 0.6 * edgeT + 2.0 * star);
-  a *= clamp(24.0 / depth, 0.5, 1.0); // distant sheets dimmer
+  col = mix(col, ec, clamp(edgeT + star + 0.35 * (seam - 1.0) / max(D.w, 0.01), 0.0, 1.0));
+  float a = C.w * hole * ends * sides * seam * energy * (0.55 + 0.45 * aRand.z) * (1.0 + 2.0 * star);
+  a *= clamp(24.0 / depth, 0.6, 1.0); // distant sheets a little dimmer
   vColor = col * a;
 }`;
 
@@ -134,7 +144,7 @@ void main() {
   // faint diagonal haze band following the flow
   float band = exp(-pow(dot(p, normalize(vec2(0.55, 0.85))) / 0.35, 2.0));
   float n = fbmP(vUV * vec2(3.0, 2.0) * 2.0 + vec2(cos(TAU * uPhase), sin(TAU * uPhase)) * 0.3, vec2(4096.0), 4);
-  o = vec4(uHaze * band * (0.6 + 0.8 * n), 1.0);
+  o = vec4(uHaze * band * (0.6 + 0.8 * n) * 0.35, 1.0);
 }`;
 
 const v3 = (hex: string) => new Float32Array(hexToRgb(hex));
@@ -148,19 +158,22 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
   const sheetA = new Float32Array(20);
   const sheetB = new Float32Array(20);
   const sheetC = new Float32Array(20);
+  const sheetD = new Float32Array(20);
   const defs = [
-    // baseY, halfW, zOff, curl | amp1, f1, amp2, f2 | turns, seed, hole, bright | share of particles
-    { A: [0.0, 4.5, -8.0, 0.55], B: [0.9, 0.16, 0.35, 0.41], C: [1, 0.3, 0.58, 0.55], share: 0.26 },
-    { A: [2.0, 4.5, -1.0, 0.7], B: [0.7, 0.13, 0.4, 0.37], C: [1, 1.7, 0.6, 0.55], share: 0.26 },
-    { A: [-1.5, 4.5, 6.0, 0.5], B: [1.0, 0.11, 0.3, 0.33], C: [2, 2.9, 0.58, 0.55], share: 0.24 },
-    // a near sheet crossing the upper-left: sparse, larger, paler grains
-    { A: [7.0, 4.0, 12.0, 0.35], B: [0.6, 0.1, 0.3, 0.27], C: [1, 5.3, 0.6, 0.4], share: 0.08 },
-    { A: [-3.0, 5.0, 14.0, 0.45], B: [0.8, 0.09, 0.5, 0.29], C: [1, 4.1, 0.58, 0.4], share: 0.16 },
+    // A: baseY, halfW, zOff, curl | B: amp1, f1, amp2, f2 | C: turns, seed, hole thr, bright
+    // D: grey amount, size mult, star rate, seam strength | share of particles
+    { A: [0.0, 5.0, -8.5, 0.4], B: [0.9, 0.16, 0.35, 0.41], C: [1, 0.3, 0.7, 0.62], D: [0, 0.95, 0.001, 0.8], share: 0.3 },
+    { A: [1.5, 4.6, -0.8, 0.45], B: [0.7, 0.13, 0.4, 0.37], C: [1, 1.7, 0.72, 0.62], D: [0.05, 0.9, 0.001, 1.0], share: 0.28 },
+    { A: [2.6, 3.4, 8.2, 0.4], B: [1.0, 0.11, 0.3, 0.33], C: [2, 2.9, 0.7, 0.5], D: [0.55, 0.9, 0.003, 1.0], share: 0.12 },
+    // the near, sparse, grey-white sheet across the upper-left with big sparkles
+    { A: [7.0, 4.5, 13.0, 0.3], B: [0.6, 0.1, 0.3, 0.27], C: [1, 5.3, 0.74, 0.55], D: [1.0, 1.25, 0.03, 1.0], share: 0.12 },
+    { A: [-2.0, 6.0, 16.0, 0.35], B: [0.8, 0.09, 0.5, 0.29], C: [1, 4.1, 0.74, 0.5], D: [0.85, 1.0, 0.006, 0.8], share: 0.18 },
   ];
   defs.forEach((d, i) => {
     sheetA.set(d.A, i * 4);
     sheetB.set(d.B, i * 4);
     sheetC.set(d.C, i * 4);
+    sheetD.set(d.D, i * 4);
   });
 
   const pos = new Float32Array(N * 2);
@@ -170,9 +183,8 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
     const t = i / N;
     const k = cum.findIndex((c) => t < c + 1e-9);
     pos[i * 2] = rng();
-    // more particles towards the middle of each sheet, some spill to the sides
-    const g = (rng() + rng() + rng()) / 3;
-    pos[i * 2 + 1] = (g - 0.5) * 2.0 * 1.05 + range(rng, -0.03, 0.03);
+    // across the sheet: uniform, so the sheets stay dense right up to their lips
+    pos[i * 2 + 1] = range(rng, -1, 1);
     rnd[i * 4] = Math.max(0, k);
     rnd[i * 4 + 1] = rng();
     rnd[i * 4 + 2] = rng();
@@ -199,10 +211,12 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
     uSheetA: { value: sheetA, type: "vec4<f32>", size: 5 },
     uSheetB: { value: sheetB, type: "vec4<f32>", size: 5 },
     uSheetC: { value: sheetC, type: "vec4<f32>", size: 5 },
+    uSheetD: { value: sheetD, type: "vec4<f32>", size: 5 },
     uDeep: { value: v3(params.deep), type: "vec3<f32>" },
     uSheet: { value: v3(params.sheet), type: "vec3<f32>" },
     uEdge: { value: v3(params.edge), type: "vec3<f32>" },
     uEdge2: { value: v3(params.edge2), type: "vec3<f32>" },
+    uGrey: { value: v3(params.grey), type: "vec3<f32>" },
   } as never);
   const program = GlProgram.from({ vertex: es300(VERT), fragment: es300(FRAG), name: "particle-flow" });
   validateProgram(ctx.renderer, program);
@@ -215,7 +229,7 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
     uPhase: { value: 0, type: "f32" },
   });
 
-  const grade: Grade = { mode: "rgb", bloom: 0.25, vignette: 0.35, vignetteShape: [0.5, 1.2], grain: 0.015, toneMap: true };
+  const grade: Grade = { mode: "rgb", bloom: 0.12, vignette: 0.12, vignetteShape: [0.6, 1.3], grain: 0.015, toneMap: true };
   ctx.post.setGrade(grade);
 
   const TAU = Math.PI * 2;
@@ -239,7 +253,7 @@ export const createParticleFlow: LookFactory<ParticleFlowParams> = (ctx, params)
       let right = norm(cross(fwd, [0, 1, 0]));
       let up = cross(right, fwd);
       // roll so the flow runs diagonally across the frame
-      const roll = -1.1 + 0.03 * Math.sin(TAU * ph);
+      const roll = -1.22 + 0.03 * Math.sin(TAU * ph);
       const cr = Math.cos(roll);
       const sr = Math.sin(roll);
       const r2: V = [right[0] * cr + up[0] * sr, right[1] * cr + up[1] * sr, right[2] * cr + up[2] * sr];

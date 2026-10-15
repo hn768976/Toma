@@ -11,8 +11,8 @@ export const VERSIONS: VersionRow[] = [
   { id: "FilmDust-Light", look: "filmdust", params: { seed: 2202, count: 1500 } },
   { id: "GlowingTissue-Orange", look: "tissue", params: { ramp: ["#000000", "#5A1A04", "#E8601A", "#FFE8B0", "#FFFBF0"] } },
   { id: "GlowingTissue-Blue", look: "tissue", params: { ramp: ["#000000", "#041A4A", "#2A8AE8", "#E0F8FF", "#FAFEFF"] } },
-  { id: "ParticleFlow-Blue", look: "particleflow", params: { seed: 4401, count: 250000, deep: "#0A1A4A", sheet: "#2A6AE8", edge: "#FFFFFF", edge2: "#BFDCFF", haze: "#06102A" } },
-  { id: "ParticleFlow-Gold", look: "particleflow", params: { seed: 4401, count: 250000, deep: "#2A1A04", sheet: "#C88A2A", edge: "#FFF0C8", edge2: "#FFFFFF", haze: "#1E1204" } },
+  { id: "ParticleFlow-Blue", look: "particleflow", params: { seed: 4401, count: 250000, deep: "#0A1A4A", sheet: "#2A6AE8", edge: "#FFFFFF", edge2: "#BFDCFF", grey: "#6B8594", haze: "#06102A" } },
+  { id: "ParticleFlow-Gold", look: "particleflow", params: { seed: 4401, count: 250000, deep: "#2A1A04", sheet: "#C88A2A", edge: "#FFF0C8", edge2: "#FFFFFF", grey: "#8E8270", haze: "#1E1204" } },
   {
     id: "CityBokeh-Warm",
     look: "bokeh",
