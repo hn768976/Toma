@@ -21,7 +21,7 @@ uniform vec3 uCore;
 ${NOISE}
 float win(float d, float r) { float x = clamp(1.0 - d / r, 0.0, 1.0); return x * x * (3.0 - 2.0 * x); }
 // glow tint deepens (more saturated, toward red/blue) as intensity falls
-vec3 tint(float I) { return I * pow(uGlow, vec3(0.85 + 0.6 * exp(-2.0 * I))); }
+vec3 tint(float I) { return I * pow(uGlow, vec3(1.0 + 0.85 * exp(-2.0 * I))); }
 void main() {
   vec2 px = vUV * uRes / uS;            // 4K design px, y down
   vec2 P = uPos * vec2(3840.0, 2160.0);
@@ -31,16 +31,16 @@ void main() {
   // hot core: small white disc with a warm halo
   // larger soft white-yellow core with a broad bright halo
   c += uCore * (3.5 * exp(-pow(r / 48.0, 4.0)) + 1.3 * exp(-r / 70.0));
-  c += mix(tint(1.0), uCore, 0.35) * 1.1 * exp(-r / 190.0);
+  c += mix(tint(1.0), uCore, 0.3) * 0.9 * exp(-r / 110.0);
   // short starburst spikes around the core
   float a = atan(d.y, d.x);
-  float spikes = pow(abs(cos(a * 4.0 + 0.3)), 40.0) + 0.7 * pow(abs(cos(a * 7.0 + 1.1)), 70.0);
-  c += mix(uCore, uGlow, 0.5) * spikes * 0.22 * exp(-r / 70.0) * smoothstep(30.0, 60.0, r);
+  float spikes = pow(abs(cos(a * 5.0 + 0.3)), 90.0) + 0.7 * pow(abs(cos(a * 6.0 + 1.1)), 120.0);
+  c += mix(uCore, uGlow, 0.4) * spikes * 0.9 * exp(-r / 55.0) * smoothstep(25.0, 45.0, r);
   // big radial glow (compact support so far areas stay exactly black)
   // glow spreads more downward than upward
-  vec2 dg2 = vec2(d.x, d.y < 0.0 ? d.y * 1.35 : d.y * 0.8);
+  vec2 dg2 = vec2(d.x, d.y < 0.0 ? d.y * 1.25 : d.y * 0.62);
   float rg = length(dg2);
-  float g = 0.8 * exp(-rg / 260.0) + 0.5 * exp(-pow(rg / 850.0, 2.0)) + 0.18 * exp(-pow(rg / 1650.0, 2.0));
+  float g = 0.7 * exp(-rg / 240.0) + 0.3 * exp(-pow(rg / 800.0, 2.0)) + 0.2 * exp(-pow(rg / 1700.0, 2.0));
   c += tint(g) * win(r, 3100.0);
   // a soft beam fanning back and down to the left of the source
   vec2 bd = vec2(-0.93, 0.36);
@@ -49,13 +49,16 @@ void main() {
   float cone = smoothstep(0.42, 0.0, across / max(along, 1.0)) * smoothstep(0.0, 300.0, along);
   c += tint(0.35 * cone * exp(-along / 1400.0)) * win(r, 2800.0);
   // anamorphic streak: two soft orange lines plus a thin bright core line
-  float L = 1350.0 * uStretch;
+  // streaks trail mostly to the left of the source; the right side is short
+  float L = 1350.0 * uStretch * (d.x > 0.0 ? 0.3 : 1.0);
   float ax = abs(d.x);
   float fall = exp(-ax / L) * win(ax, 3.0 * L);
+  float dash = 0.55 + 0.45 * smoothstep(-0.3, 0.3, gnoise(vec2(px.x / 260.0, 3.0)));
   // two soft, wide amber bands (no hard line) plus a warm haze along the row
-  c += tint(0.42 * fall * exp(-pow((d.y + 20.0) / 18.0, 2.0)));
-  c += tint(0.55 * exp(-ax / (0.75 * L)) * win(ax, 3.0 * L) * exp(-pow((d.y - 85.0) / 22.0, 2.0)));
-  c += tint(0.2 * fall * exp(-pow((d.y - 30.0) / 150.0, 2.0)));
+  // two thin bands with a dark gap; the lower one broken into dashes
+  c += tint(0.6 * fall * exp(-pow((d.y + 18.0) / 9.0, 2.0)));
+  c += tint(0.55 * dash * exp(-ax / (0.75 * L)) * win(ax, 3.0 * L) * exp(-pow((d.y - 80.0) / 9.0, 2.0)));
+  c += tint(0.08 * fall * exp(-pow((d.y - 30.0) / 150.0, 2.0)));
   // faint ghosts: discs on the line through the frame centre, opposite side
   vec2 C = vec2(1920.0, 1080.0);
   vec2 axis = C - P;
