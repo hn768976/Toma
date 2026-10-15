@@ -47,7 +47,7 @@ const STARS = (() => {
     const r = Math.min(1.08, 0.05 + -Math.log(1 - rnd() * 0.96) * 0.36);
     const th = rnd() * Math.PI * 2;
     const h = gauss() * 0.012 * (1.2 - 0.5 * r);
-    push(r, th, h, 2.2 + 2.6 * rnd() * rnd(), 0.35 + 0.65 * rnd(), 0, rnd(), 2 + rnd() * 3);
+    push(r, th, h, 3.2 + 3.5 * rnd() * rnd(), 0.35 + 0.65 * rnd(), 0, rnd(), 1.4 + rnd() * 2.2);
   }
   for (let k = 0; k < N_BULGE; k++) {
     const x = gauss() * 0.11;
@@ -57,11 +57,11 @@ const STARS = (() => {
   }
   for (let k = 0; k < N_CLUSTER; k++) {
     const r = 0.2 + 0.75 * Math.pow(rnd(), 0.9);
-    push(r, rnd() * Math.PI * 2, gauss() * 0.01, 7 + 9 * rnd(), 0.6 + 0.4 * rnd(), 2, rnd(), 4);
+    push(r, rnd() * Math.PI * 2, gauss() * 0.01, 14 + 12 * rnd(), 0.7 + 0.3 * rnd(), 2, rnd(), 3);
   }
   for (let k = 0; k < N_BG; k++) {
     // static distant stars in screen space (r, theta hold u, v)
-    push(rnd(), rnd(), 0, 1.6 + 1.6 * rnd() * rnd(), 0.05 + 0.25 * Math.pow(rnd(), 3), 3, rnd(), 0);
+    push(rnd(), rnd(), 0, 1.6 + 1.6 * rnd() * rnd(), 0.03 + 0.1 * Math.pow(rnd(), 3), 3, rnd(), 0);
   }
   return { pos, star, kind };
 })();
@@ -95,7 +95,7 @@ void main() {
     float r = aPosition.x;
     float th = aPosition.y + TAU * aStar.w * uPhase;         // whole turns per loop
     // two-arm logarithmic spiral pattern, turning half a turn per loop (2-fold symmetric)
-    float spiral = log(max(r, 0.03) / 0.12) * 3.6;
+    float spiral = log(max(r, 0.03) / 0.12) * 6.5;
     float phi = th - spiral - TAU * 0.5 * uPhase;
     float arm = pow(0.5 + 0.5 * cos(2.0 * phi), aKind.z);
     // dust lane on the inner (leading) edge of each arm: fewer visible stars there
@@ -103,15 +103,15 @@ void main() {
     float dust = smoothstep(0.75, 0.97, lane) * smoothstep(0.12, 0.3, r) * (1.0 - smoothstep(0.7, 0.95, r));
     vec3 P = vec3(r * cos(th), r * sin(th), aStar.x);
     if (type < 0.5) {
-      bright *= mix(0.1, 1.7, arm) * (1.0 - 0.85 * dust) * smoothstep(1.08, 0.8, r);
+      bright *= mix(0.3, 2.0, arm) * (1.0 - 0.7 * dust) * smoothstep(1.08, 0.85, r);
       float warm = 1.0 - smoothstep(0.1, 0.26, r);
       col = mix(mix(uArm, uArmAlt, aKind.y * aKind.y), uCore, warm * 0.8);
     } else if (type < 1.5) {
-      col = mix(uCore * vec3(1.0, 0.75, 0.45), uCore, aKind.y);
-      bright *= 0.3;
+      col = mix(uCore * vec3(1.0, 0.55, 0.22), uCore, aKind.y * 0.5);
+      bright *= 0.14;
     } else {
-      bright *= smoothstep(0.35, 0.9, arm) * 1.4;
-      col = mix(uArmAlt, uArm, 0.35 * aKind.y);
+      bright *= smoothstep(0.3, 0.85, arm) * 1.8;
+      col = mix(uArmAlt, uArm, 0.25 + 0.35 * aKind.y);
     }
     // tilt the disc away from face-on, then a gentle perspective
     float ct = cos(uTilt), st = sin(uTilt);
@@ -140,7 +140,8 @@ void main() {
   vec2 d = gl_PointCoord * 2.0 - 1.0;   // -1..1 across the sprite (2x the star size)
   float r2 = dot(d, d) * 4.0;           // in units of the star radius
   float g = exp(-r2 * (vSoft > 0.5 ? 1.2 : 2.2));
-  if (vSoft > 0.5) g += 0.25 * exp(-r2 * 0.3);
+  if (vSoft > 0.5) g += 0.35 * exp(-r2 * 0.6);
+  g *= 1.0 - smoothstep(0.6, 1.0, dot(d, d)); // round sprite, no square cut-off
   finalColor = vec4(vCol * g, 1.0);
 }
 `;
@@ -167,8 +168,14 @@ void main() {
   float rq = length(q);
   // warm core glow and the broad haze around it
   vec3 c = stars * 1.1 + bl * 0.9;
-  c += uCore * (2.2 * exp(-rq * rq / 0.003)) + uCore * vec3(1.0, 0.62, 0.3) * 1.1 * exp(-rq * rq / 0.022);
-  c += uHaze * (0.9 * exp(-rq * rq / 0.07) + 0.2 * exp(-rq * rq / 0.4)) * win(rq, 1.6);
+  // core: white-hot centre in a saturated gold/orange halo crossed by dark dust swirls
+  float ang = atan(q.y, q.x);
+  float swirl = gnoise(vec2(ang * 2.0 + rq * 14.0, rq * 9.0)) * 0.5 + 0.5;
+  float lanes = 1.0 - 0.55 * smoothstep(0.55, 0.85, swirl) * smoothstep(0.02, 0.06, rq);
+  c += uCore * 2.2 * exp(-rq * rq / 0.0008);
+  c += uCore * vec3(1.0, 0.5, 0.12) * (2.2 * exp(-rq * rq / 0.01) + 0.5 * exp(-rq * rq / 0.03)) * lanes;
+  // saturated blue-violet glow filling the disc, fading sharply at its edge
+  c += uHaze * (0.8 * exp(-rq * rq / 0.05) + 0.33 * smoothstep(1.0, 0.5, rq)) * win(rq, 1.15);
   c = 1.0 - exp(-c * 1.2);
   vec3 s = linearToSrgb(c);
   s = max(s - 1.0 / 255.0, 0.0) * (255.0 / 254.0);
@@ -190,7 +197,7 @@ export const galaxyScene: SceneFactory<GalaxyParams> = ({ renderer, w, h, s }, p
   const group = new UniformGroup({
     uS: { value: s, type: 'f32' },
     uPhase: { value: 0, type: 'f32' },
-    uTilt: { value: (63 * Math.PI) / 180, type: 'f32' },
+    uTilt: { value: (66 * Math.PI) / 180, type: 'f32' },
     uView: { value: [1920, 1080, 1400], type: 'vec3<f32>' },
     uArm: { value: hexToLinear(p.arm), type: 'vec3<f32>' },
     uArmAlt: { value: hexToLinear(p.armAlt), type: 'vec3<f32>' },
@@ -210,7 +217,7 @@ export const galaxyScene: SceneFactory<GalaxyParams> = ({ renderer, w, h, s }, p
       uRes: { value: [w, h], type: 'vec2<f32>' },
       uS: { value: s, type: 'f32' },
       uView: { value: [1920, 1080, 1400], type: 'vec3<f32>' },
-      uTilt: { value: (63 * Math.PI) / 180, type: 'f32' },
+      uTilt: { value: (66 * Math.PI) / 180, type: 'f32' },
       uCore: { value: hexToLinear(p.core), type: 'vec3<f32>' },
       uHaze: { value: hexToLinear(p.haze), type: 'vec3<f32>' },
       uFrameMod: { value: 0, type: 'f32' },
@@ -231,8 +238,8 @@ export const galaxyScene: SceneFactory<GalaxyParams> = ({ renderer, w, h, s }, p
       // fixed camera with a gentle closed drift
       const view = [
         1920 + 40 * Math.sin(2 * Math.PI * ph),
-        1080 + 22 * Math.sin(4 * Math.PI * ph + 0.6),
-        1450 * (1 + 0.02 * Math.cos(2 * Math.PI * ph)),
+        870 + 22 * Math.sin(4 * Math.PI * ph + 0.6),
+        1620 * (1 + 0.02 * Math.cos(2 * Math.PI * ph)),
       ];
       group.uniforms.uPhase = ph;
       group.uniforms.uView = view;

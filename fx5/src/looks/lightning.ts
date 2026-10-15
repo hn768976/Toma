@@ -65,30 +65,30 @@ interface Bolt {
 function makeBolt(k: number, sub: number): Bolt {
   const rnd = mulberry32(Math.floor(hash01(k, 911) * 2 ** 31));
   const jit = mulberry32(Math.floor(hash01(k, sub, 313) * 2 ** 31));
-  const x0 = W * (0.3 + 0.4 * rnd());
-  const x1 = x0 + W * (rnd() - 0.5) * 0.35;
+  const x0 = W * (0.4 + 0.2 * rnd());
+  const x1 = x0 + W * (rnd() - 0.5) * 0.12;
   // coarse shape from k, finest two levels from (k, sub) so it crackles
-  const coarse = displace([x0, -40], [x1, H + 40], 5, 340, rnd, 0.42);
+  const coarse = displace([x0, -40], [x1, H + 40], 5, 230, rnd, 0.38);
   const main: Pt[] = [coarse[0]];
   for (let i = 0; i < coarse.length - 1; i++) {
-    const seg = displace(coarse[i], coarse[i + 1], 2, 4, jit, 0.5);
+    const seg = displace(coarse[i], coarse[i + 1], 2, 2, jit, 0.5);
     main.push(...seg.slice(1));
   }
   const branches: Bolt['branches'] = [];
-  const nb = 6 + Math.floor(rnd() * 5);
+  const nb = 4 + Math.floor(rnd() * 3);
   for (let b = 0; b < nb; b++) {
     const u = 0.12 + 0.8 * Math.pow(rnd(), 0.7);
     const i0 = Math.floor(u * (main.length - 1));
     const [sx, sy] = main[i0];
     const side = rnd() < 0.5 ? -1 : 1;
     const ang = side * (0.3 + 0.8 * rnd()); // from straight down
-    const len = H * (0.25 + 0.5 * rnd()) * (1.1 - 0.4 * u);
+    const len = H * (0.4 + 0.5 * rnd()) * (1.1 - 0.4 * u);
     const ex = sx + Math.sin(ang) * len;
     const ey = sy + Math.cos(ang) * len;
-    const pts = displace([sx, sy], [ex, ey], 6, len * 0.08, rnd, 0.45);
+    const pts = displace([sx, sy], [ex, ey], 5, len * 0.07, rnd, 0.4);
     branches.push({ pts, level: 1, i0 });
     // sub-branches
-    const ns = Math.floor(rnd() * 3);
+    const ns = rnd() < 0.4 ? 1 : 0;
     for (let s = 0; s < ns; s++) {
       const j = Math.floor((0.2 + 0.6 * rnd()) * (pts.length - 1));
       const [qx, qy] = pts[j];
@@ -110,7 +110,7 @@ function toSegs(bolt: Bolt, reveal: number, branchOn: (i: number) => number): Se
   const m = bolt.main;
   for (let i = 0; i < m.length - 1; i++) {
     if (m[i][1] > revealY) break;
-    segs.push({ ax: m[i][0], ay: m[i][1], bx: m[i + 1][0], by: m[i + 1][1], w: 7, ia: 1, ib: 1, kind: 0 });
+    segs.push({ ax: m[i][0], ay: m[i][1], bx: m[i + 1][0], by: m[i + 1][1], w: 9, ia: 0.62, ib: 0.62, kind: 0 });
   }
   bolt.branches.forEach((br, bi) => {
     const on = branchOn(bi);
@@ -120,10 +120,10 @@ function toSegs(bolt: Bolt, reveal: number, branchOn: (i: number) => number): Se
       if (br.pts[i][1] > revealY) break;
       const fa = Math.pow(1 - i / n, 1.3);
       const fb = Math.pow(1 - (i + 1) / n, 1.3);
-      const base = (br.level === 1 ? 0.5 : 0.32) * on;
+      const base = (br.level === 1 ? 0.26 : 0.18) * on;
       segs.push({
         ax: br.pts[i][0], ay: br.pts[i][1], bx: br.pts[i + 1][0], by: br.pts[i + 1][1],
-        w: (br.level === 1 ? 4.5 : 3.2) * (0.6 + 0.4 * fa),
+        w: (br.level === 1 ? 10 : 7) * (0.6 + 0.4 * fa),
         ia: base * fa, ib: base * fb, kind: 1,
       });
     }
@@ -144,10 +144,13 @@ void main() {
   // soft-edged channel (gaussian core) plus a short halo that is gone well
   // before the quad edge (pad = 30 design px)
   float x = dh.x / w;
-  float core = (vProp.w < 0.5 ? exp(-x * x * 1.2) : exp(-x * x * 0.7)) * thin;
+  float core = (vProp.w < 0.5 ? exp(-x * x * 0.9) : exp(-x * x * 0.5)) * thin;
   float halo = exp(-dh.x / (w * 1.2)) * 0.35 * (1.0 - smoothstep(8.0, 28.0, dh.x - w));
   float i = mix(vProp.y, vProp.z, dh.y);
-  vec3 col = vProp.w < 0.5 ? uCore : uBranch;
+  // trunk: lavender-white at the top, the green-white core colour lower down;
+  // branches: the branch colour softened toward dusty mauve
+  vec3 trunk = mix(vec3(0.82, 0.8, 1.0), uCore, smoothstep(900.0, 2000.0, vP.y));
+  vec3 col = vProp.w < 0.5 ? trunk : mix(uBranch, vec3(0.75, 0.55, 0.8) * length(uBranch) * 0.58, 0.4);
   finalColor = vec4(col * i * (core + halo), 1.0);
 }
 `;
@@ -165,8 +168,8 @@ void main() {
   // sky: deep blue at the top to near-black at the bottom, slightly brighter centre-top
   float y = uv.y;
   // brightest at the top centre, falling off quickly downward and to the sides
-  float vig = exp(-pow((uv.x - 0.55) / 0.36, 2.0));
-  vec3 sky = uBottom + (uTop - uBottom) * exp(-4.6 * y) * mix(0.12, 1.0, vig);
+  float vig = exp(-pow((uv.x - 0.6) / 0.3, 2.0));
+  vec3 sky = uBottom * smoothstep(0.2, 1.0, y) * vec3(1.6, 1.6, 0.9) + (uTop - uBottom * 0.5) * exp(-5.8 * y) * mix(0.1, 1.0, vig);
   // faint whole-sky flash at each strike, strongest near the bolt's top
   float fd = length((uv - uFlashPos) * vec2(1.7778, 1.0));
   sky += uFlash * (uTop * 0.8 + uBranch * 0.12) * (0.6 * exp(-fd * 1.8) + 0.2) * exp(-2.5 * y);

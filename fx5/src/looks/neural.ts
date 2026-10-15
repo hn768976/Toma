@@ -55,8 +55,8 @@ function grow(x: number, y: number, ang: number, len: number, w0: number, s0: nu
   let cy = y;
   let curl = (rnd() - 0.5) * 0.06;
   for (let i = 0; i < n; i++) {
-    a += curl + (rnd() - 0.5) * 0.13;
-    curl = curl * 0.95 + (rnd() - 0.5) * 0.02;
+    a += curl + (rnd() - 0.5) * 0.16;
+    curl = curl * 0.9 + (rnd() - 0.5) * 0.06;
     cx += Math.cos(a) * step;
     cy += Math.sin(a) * step;
     if (brainSd(cx, cy) > -0.035) break;
@@ -67,7 +67,7 @@ function grow(x: number, y: number, ang: number, len: number, w0: number, s0: nu
   PATHS.push({ pts, w0, w1, s0, ds: step });
   if (depth >= 2) return;
   // side branches, plus many short spurs on the trunks
-  const kids = depth === 0 ? 2 + Math.floor(rnd() * 2) : Math.floor(rnd() * 2);
+  const kids = depth === 0 ? 1 + Math.floor(rnd() * 2) : rnd() < 0.4 ? 1 : 0;
   for (let k = 0; k < kids; k++) {
     const j = 1 + Math.floor(rnd() * (pts.length - 2));
     const t = j / (pts.length - 1);
@@ -78,32 +78,35 @@ function grow(x: number, y: number, ang: number, len: number, w0: number, s0: nu
     grow(px, py, base + side * (0.5 + 0.6 * rnd()), len * (0.3 + 0.35 * rnd()),
       w0 * (1 - 0.5 * t) * 0.65, s0 + j * step, depth + 1);
   }
-  const spurs = depth === 0 ? 2 + Math.floor(rnd() * 4) : Math.floor(rnd() * 2);
+  const spurs = depth === 1 ? Math.floor(rnd() * 3) : 0;
   for (let k = 0; k < spurs; k++) {
     const j = 1 + Math.floor(rnd() * (pts.length - 2));
     const side = rnd() < 0.5 ? -1 : 1;
     const [px, py] = pts[j];
     const prev = pts[j - 1];
     const base = Math.atan2(py - prev[1], px - prev[0]);
-    grow(px, py, base + side * (0.7 + 0.7 * rnd()), 0.03 + 0.07 * rnd(), w0 * 0.45, s0 + j * step, 2);
+    grow(px, py, base + side * (0.5 + 0.5 * rnd()), 0.03 + 0.05 * rnd(), w0 * 0.45, s0 + j * step, 2);
   }
 }
-// trunks rising from the lateral fissure, curving up and back
-for (let i = 0; i < 14; i++) {
-  const u = rnd();
-  const rx = -0.35 + 0.6 * u + (rnd() - 0.5) * 0.08;
-  const ry = 0.06 - 0.1 * u + (rnd() - 0.5) * 0.06;
-  const ang = -Math.PI / 2 + (u - 0.5) * 1.4 + (rnd() - 0.5) * 0.5;
-  grow(rx, ry, ang, 0.35 + 0.45 * rnd(), 0.016 + 0.006 * rnd(), rnd() * 0.3, 0);
-}
-// further main branches spread over the whole surface
-let placed = 0;
-while (placed < 26) {
-  const x = (rnd() * 2 - 1) * 0.85;
-  const y = -0.45 + rnd() * 0.85;
-  if (brainSd(x, y) > -0.08) continue;
-  grow(x, y, rnd() * Math.PI * 2, 0.2 + 0.35 * rnd(), 0.011 + 0.005 * rnd(), rnd() * 0.5, 0);
-  placed++;
+// four tree-like root systems: a trunk each, with ~10 main branches leaving
+// it (40 in all), each carrying a few sub-branches
+const ROOTS: [number, number, number][] = [
+  [-0.25, 0.24, -2.3], [0.0, 0.22, -1.65], [0.28, 0.14, -1.0], [-0.4, 0.05, -2.9],
+];
+for (const [rx, ry, ra] of ROOTS) {
+  const before = PATHS.length;
+  grow(rx, ry, ra, 0.6 + 0.2 * rnd(), 0.022, 0, 2); // trunk only (no auto children)
+  const trunk = PATHS[before];
+  if (!trunk) continue;
+  for (let k = 0; k < 10; k++) {
+    const j = 1 + Math.floor(((k + rnd()) / 10) * (trunk.pts.length - 2));
+    const [px, py] = trunk.pts[j];
+    const prev = trunk.pts[j - 1];
+    const base = Math.atan2(py - prev[1], px - prev[0]);
+    const side = k % 2 === 0 ? -1 : 1;
+    grow(px, py, base + side * (0.35 + 0.7 * rnd()), 0.25 + 0.35 * rnd(),
+      0.02 * (1 - 0.5 * (j / trunk.pts.length)), j * trunk.ds, 1);
+  }
 }
 // fine black specks scattered around the surface
 const SPECKS: [number, number, number][] = [];
@@ -120,8 +123,10 @@ function pathSegs(): Seg[] {
     for (let i = 0; i < n; i++) {
       const fa = i / n;
       const fb = (i + 1) / n;
-      const wa = p.w0 + (p.w1 - p.w0) * fa;
-      const wb = p.w0 + (p.w1 - p.w0) * fb;
+      const ta = Math.min(1, 0.55 + fa * 6);
+      const tb = Math.min(1, 0.55 + fb * 6);
+      const wa = (p.w0 + (p.w1 - p.w0) * fa) * ta;
+      const wb = (p.w0 + (p.w1 - p.w0) * fb) * tb;
       segs.push({
         ax: p.pts[i][0], ay: p.pts[i][1], bx: p.pts[i + 1][0], by: p.pts[i + 1][1],
         w: (wa + wb) / 2, ia: 1, ib: 1, kind: 0,
@@ -179,9 +184,10 @@ void main() {
   vec2 dh = segDist(vP, vSeg.xy, vSeg.zw);
   float w = max(vProp.x, 0.8 / uS);
   float x = dh.x / w;
-  float core = exp(-x * x * 1.6) * min(vProp.x / w, 1.0);
+  float core = exp(-pow(x, 4.0) * 0.8) * min(vProp.x / w, 1.0);
   float s = mix(vPath.x, vPath.y, dh.y);
   float pulse = vProp.w < 0.5 ? pow(0.5 + 0.5 * cos(6.2831853 * (s * 1.6 - uPhase)), 14.0) : 0.0;
+  pulse *= exp(-x * x * 4.0);  // the pulse glows along the vein's centre only
   finalColor = vec4(core * vProp.y, core * pulse, 0.0, 1.0);
 }
 `;
@@ -213,7 +219,7 @@ void main() {
   vec2 px = vUV * uRes / uS;                       // design px
   vec2 b = (px - vec2(1920.0, 1080.0)) / (uCam.z * ${UNIT.toFixed(1)}) + uCam.xy;
   // silhouette with bumpy gyri edge
-  float sd = brainSd(b) + 0.022 * fbm(b * 9.0 + 3.0, 3) + 0.008 * gnoise(b * 30.0);
+  float sd = brainSd(b) + 0.045 * fbm(b * 5.0 + 3.0, 4) + 0.012 * gnoise(b * 26.0);
   float aa = fwidth(sd) * 0.8 + 1e-5;
   float inside = smoothstep(aa, -aa, sd);
   // gyri: folds from warped noise; sulci are the zero lines
@@ -224,39 +230,46 @@ void main() {
   float rim = smoothstep(0.03, 0.09, abs(g)) * (1.0 - smoothstep(0.09, 0.16, abs(g)));
   // harsh lighting: blown out centre-low, falling off to the edges
   vec2 lc = vec2(-0.32, 0.14);
-  float L = 0.9 * exp(-dot(b - lc, b - lc) / 0.14) + 0.45 * exp(-dot(b - vec2(-0.1, -0.05), b - vec2(-0.1, -0.05)) / 0.6) + 0.3;
+  vec2 lc2 = vec2(0.02, 0.3);
+  float L = 0.85 * exp(-dot(b - lc, b - lc) / 0.12) + 0.6 * exp(-dot(b - lc2, b - lc2) / 0.06)
+          + 0.4 * exp(-dot(b - vec2(-0.15, -0.05), b - vec2(-0.15, -0.05)) / 0.5) + 0.16;
   L *= smoothstep(0.0, 0.1, -sd) * 0.45 + 0.55;
-  L *= 1.0 - 0.4 * smoothstep(0.25, 0.95, b.x);   // occipital side falls into shadow
+  L *= 1.0 - 0.6 * smoothstep(0.15, 0.85, b.x);  // occipital side falls into deep shadow
   // gritty speckle texture: mottled patches plus fine dark specks
   float sp = fbm(b * 30.0 + 5.0, 3);
   float sp2 = gnoise(b * 110.0);
-  float grit = smoothstep(0.25, 0.55, sp2 + 0.4 * sp);
-  L *= (0.62 + 0.75 * sp) * (1.0 - 0.45 * grit);
+  float grit = smoothstep(0.3, 0.6, sp2 + 0.4 * sp);
+  L *= (0.75 + 0.5 * sp) * (1.0 - 0.35 * grit);
   L *= 1.0 - 0.6 * sulcus;
   L += 0.12 * rim * smoothstep(0.2, 0.8, L);
   // dark pathways (and their travelling pulse)
   vec4 pth = texture(uPaths, vUV);
   float dark = clamp(pth.r, 0.0, 1.0);
   L *= 1.0 - 0.97 * dark;
-  L += 0.45 * pth.g * dark;
+  L += 0.13 * pth.g * dark;
   L *= uFlick;
   // posterise into ~5 levels, anti-aliased at the steps
   float x = clamp(L, 0.0, 1.3) * 4.0;
   float fx = fract(x);
   float fw = fwidth(x) * 0.75 + 1e-4;
-  float Lq = (floor(x) + smoothstep(0.5 - fw, 0.5 + fw, fx)) / 4.0;
+  // slightly soft steps so the posterised look reads as photographic grit
+  float Lq = (floor(x) + smoothstep(0.5 - fw - 0.08, 0.5 + fw + 0.08, fx)) / 4.0;
   // palette ramp: black → deep mid → mid → yellow-tinted light → highlight
   vec3 deep = uMid * 0.12;
-  vec3 warm = mix(uHi, uHi * vec3(1.0, 1.0, 0.55) + uMid * 0.1, 0.5);
+  vec3 warm = mix(uHi, uHi * vec3(1.0, 0.95, 0.45) + uMid * 0.1, 0.7);
   vec3 col = Lq < 0.25 ? mix(vec3(0.0), deep, Lq / 0.25)
            : Lq < 0.5 ? mix(deep, uMid, (Lq - 0.25) / 0.25)
            : Lq < 0.75 ? mix(uMid, warm, (Lq - 0.5) / 0.25)
            : mix(warm, uHi, clamp((Lq - 0.75) / 0.25, 0.0, 1.0)) * (1.0 + 0.3 * max(Lq - 1.0, 0.0));
   // cool tint toward the lower edge, like the reference's cyan fringe
   col = mix(col, col * vec3(0.7, 1.0, 1.25), smoothstep(0.0, 0.3, b.y) * smoothstep(0.25, 0.0, -sd) * 0.6);
+  // brownish speckle and warm tint in the lit areas
+  col *= mix(vec3(1.0), vec3(1.05, 0.85, 0.45), grit * smoothstep(0.3, 0.8, Lq) * 0.6);
   col *= inside;
   // edge glow round the silhouette
-  col += mix(uMid, uHi, 0.4) * 0.18 * exp(-abs(sd) * 200.0) * smoothstep(0.05, 0.4, L + 0.15);
+  // uneven rim: bright teal-tinted in places, absent elsewhere
+  float rimVar = smoothstep(0.0, 0.5, fbm(b * 3.0 + 7.0, 2));
+  col += mix(uMid, uHi, 0.5) * vec3(0.8, 1.0, 1.1) * 0.35 * rimVar * exp(-abs(sd) * 220.0) * smoothstep(0.05, 0.4, L + 0.15);
   finalColor = vec4(col, 1.0);
 }
 `;
