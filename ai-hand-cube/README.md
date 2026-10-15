@@ -152,10 +152,10 @@ glow above the cube, averaged to remove grain, then read left to right:
 
 | Version | 8-bit levels across the strip | largest step between neighbours | residual vs. smooth curve (rms) |
 |---|---|---|---|
-| Story | 29.9 → 7.6 | 0.18 | 0.30 |
-| HoldLoop | 30.1 → 7.3 | 0.18 | 0.27 |
-| Gold | 13.1 → 2.4 | 0.14 | 0.19 |
-| Mirrored | 6.5 → 28.2 → 18.1 | 0.15 | 0.27 |
+| Story | 35.3 → 7.5 | 0.19 | 0.29 |
+| HoldLoop | 33.0 → 7.4 | 0.16 | 0.27 |
+| Gold | 13.3 → 2.3 | 0.13 | 0.19 |
+| Mirrored | 31.7 → 11.2 | 0.14 | 0.30 |
 
 Values change smoothly (well under one 8-bit level per pixel, no plateaus or
 staircases); a contrast-stretched view (0–60 → 0–255) shows no rings. The few
@@ -170,17 +170,17 @@ frames (includes ~7 s of browser start-up spread over the run).
 
 | Composition | Frames | Full 720p render (wall) | Per frame at 720p |
 |---|---|---|---|
-| AIHandCube-Story | 450 | 1352 s | **3.0 s** |
-| AIHandCube-HoldLoop | 600 | 2122 s | **3.5 s** |
-| AIHandCube-Gold | 450 | 1431 s | **3.2 s** |
-| AIHandCube-Mirrored | 600 | 2249 s | **3.7 s** |
+| AIHandCube-Story | 450 | 1561 s | **3.5 s** |
+| AIHandCube-HoldLoop | 600 | 2433 s | **4.1 s** |
+| AIHandCube-Gold | 450 | 1560 s | **3.5 s** |
+| AIHandCube-Mirrored | 600 | 2225 s | **3.7 s** |
 
 (The final framing puts a large out-of-focus hand in the foreground; the
 depth-of-field gather over that area is the biggest cost.)
 
 **One real 4K frame** of `AIHandCube-Story` at the hold (frame 380,
-3840×2160): **~50 s** (62 s wall for a single cold `remotion still`, minus
-~12 s of browser start-up and scene build measured with the same command at
+3840×2160): **~50 s** (59 s wall for a single cold `remotion still`, minus
+~9 s of browser start-up and scene build measured with the same command at
 720p).
 
 **4K estimates on this CPU-only machine:** Story / Gold ≈ 450 × 50 s ≈ **6.3 h
@@ -223,9 +223,12 @@ figure is an estimate, not measured here.
 - Composition ids use `-` (Remotion forbids `_`); output files use `_`.
 - The cube is 80 % of the palm width (brief: ~70 %) to match the reference's
   proportions.
-- The hand colour is a light silver-grey `#C6CCD5`, metalness 0.5 (brief:
-  `#E8ECF2`, 0.3) — chosen in review as a middle ground between the brief and
-  the reference's grey metal. Gold uses silver-champagne `#D6CBB8`.
+- The hand colour is a light silver-grey `#C6CCD5` (brief: `#E8ECF2`) — chosen
+  in review as a middle ground between the brief and the reference. After
+  review the finish became polished satin metal (metalness 0.85, roughness
+  0.22, thin clearcoat) reflecting a procedural studio environment with strip
+  lights, to match the reference's polished silver hand (brief: metalness
+  0.3, roughness 0.3). Gold uses silver-champagne `#D6CBB8`.
 - The thumb is shorter than the fingers but the chunkiest digit (chosen in
   review).
 - Hand pose follows the reference: palm up, fingers toward the viewer as a
