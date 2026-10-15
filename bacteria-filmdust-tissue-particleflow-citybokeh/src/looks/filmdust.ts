@@ -48,8 +48,8 @@ const bakeSpeck = (rng: Rng, px: number) => {
 // short, jagged, flat shard: a few straight segments with sharp kinks, varying
 // width (ribbon), sometimes a twig-like fork; edge glint baked in as a glow
 const bakeShard = (rng: Rng, px: number) => {
-  const len = (12 + 48 * rng() ** 1.6) * px;
-  const segs = 2 + Math.floor(rng() * 5);
+  const len = (5 + 22 * rng() ** 1.8) * px; // short flakes and slivers
+  const segs = 1 + Math.floor(rng() * 4);
   const pts: [number, number][] = [[0, 0]];
   let a = range(rng, 0, TAU);
   for (let i = 0; i < segs; i++) {
@@ -66,7 +66,7 @@ const bakeShard = (rng: Rng, px: number) => {
     forks.push([x, y, x + Math.cos(fa) * fl, y + Math.sin(fa) * fl]);
   }
   const all = [...pts, ...forks.map((f) => [f[2], f[3]] as [number, number])];
-  const w = range(rng, 1.0, 2.6) * px;
+  const w = range(rng, 1.2, 3.0) * px;
   const pad = w * 3 + 3 * px + 4;
   const minx = Math.min(...all.map((p) => p[0])) - pad;
   const miny = Math.min(...all.map((p) => p[1])) - pad;
@@ -197,9 +197,9 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
     speck: Array.from({ length: 24 }, () => canvasTexture(bakeSpeck(rng, px))),
     fibre: Array.from({ length: 64 }, () => canvasTexture(bakeFibre(rng, px))),
     thread: Array.from({ length: 20 }, () => canvasTexture(bakeThread(rng, px))),
-    shard: Array.from({ length: 64 }, () => canvasTexture(bakeShard(rng, px))),
+    shard: Array.from({ length: 64 }, () => canvasTexture(blurred(bakeShard(rng, px), 0.55 * px))),
     // out-of-focus flakes behind the sharp ones (defocused depth layer)
-    soft: Array.from({ length: 32 }, () => canvasTexture(blurred(bakeShard(rng, px * 1.6), range(rng, 1.6, 3.4) * px))),
+    soft: Array.from({ length: 32 }, () => canvasTexture(blurred(bakeShard(rng, px * 1.8), range(rng, 1.8, 3.6) * px))),
     scratch: Array.from({ length: 6 }, () => canvasTexture(bakeScratch(rng, px))),
   };
 
@@ -221,14 +221,19 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
   ctx.post.setGrade({ mode: "rgb", bloom: 0, vignette: 0, grain: 0.015, toneMap: false });
 
   const kindFor = (h: number): Kind =>
-    h < 0.14 ? "speck" : h < 0.6 ? "shard" : h < 0.78 ? "soft" : h < 0.98 ? "fibre" : "thread";
+    h < 0.12 ? "speck" : h < 0.62 ? "shard" : h < 0.9 ? "soft" : h < 0.99 ? "fibre" : "thread";
 
   // density in soft patches; moves on a closed loop over 600 frames
   const density = (x: number, y: number, ph: number) => {
     const ox = Math.cos(TAU * ph) * 0.8;
     const oy = Math.sin(TAU * ph) * 0.8;
     const n = 0.65 * vnoise(x * 3 + ox, y * 3 + oy, 11) + 0.35 * vnoise(x * 7 - oy, y * 7 + ox, 12);
-    return 0.55 + 0.45 * Math.min(1, Math.max(0, (n - 0.2) / 0.6));
+    const base = 0.55 + 0.45 * Math.min(1, Math.max(0, (n - 0.2) / 0.6));
+    const yy = y * (W / H); // back to 0..1
+    const col = 0.72 + 0.28 * Math.exp(-(((x - 0.5) / 0.28) ** 2));
+    const tr = Math.hypot((x - 1) * 1.6, yy) < 0.75 ? 0.75 : 1;
+    const bl = Math.hypot(x * 1.6, yy - 1) < 0.75 ? 0.75 : 1;
+    return base * col * Math.min(tr, bl);
   };
 
   const place = (s: Sprite, a: number, b: number, c: number, ph: number, maxTries: number) => {
@@ -241,11 +246,13 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
         const list = tex[k];
         s.texture = list[Math.floor(hash3(a, b, c * 31 + 5) * list.length) % list.length];
         s.position.set(x * W, y * H);
-        s.rotation = hash3(a, b, c * 31 + 6) * TAU;
+        // a faint diagonal grain: most elements lie near one diagonal
+        const hr = hash3(a, b, c * 31 + 6);
+        s.rotation = hr < 0.6 ? -0.65 + (hr / 0.6 - 0.5) * 1.3 : hr * TAU;
         const sc = k === "speck" ? 0.7 + 0.6 * hash3(a, b, c * 31 + 8) : 0.75 + 0.5 * hash3(a, b, c * 31 + 8);
         s.scale.set(sc / ctx.res);
         const br = 0.3 + 0.7 * hash3(a, b, c * 31 + 9) ** 0.8; // 30-100 %
-        s.alpha = (k === "soft" ? br * 0.35 : br) * 0.62;
+        s.alpha = (k === "soft" ? br * 0.55 : br) * 0.74;
         s.visible = true;
         return;
       }
@@ -276,7 +283,7 @@ export const createFilmDust: LookFactory<FilmDustParams> = (ctx, params) => {
         s.position.set(hash3(bucket, k, 79) * W, H * (0.3 + 0.4 * hash3(bucket, k, 80)));
         s.rotation = (hash3(bucket, k, 81) - 0.5) * 0.03;
         s.scale.set(1 / ctx.res, (1.2 + hash3(bucket, k, 82)) / ctx.res);
-        s.alpha = 0.35 + 0.5 * hash3(bucket, k, 83);
+        s.alpha = 0.18 + 0.27 * hash3(bucket, k, 83);
       }
       drawInto(ctx.renderer, stage, ctx.post.hdr, true);
       ctx.post.present(f);
