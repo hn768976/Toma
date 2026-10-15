@@ -216,13 +216,8 @@ void main() {
   vec3 sky = vec3(0.0006, 0.0008, 0.0011) + vec3(0.0022, 0.0024, 0.0016) * smoothstep(0.35, 1.0, s.y);
   vec3 aur = texture(uCurtains, vUV).rgb * uBright;
   // broad scattered glow: the sky brightens around bright aurora
-  vec3 wide = vec3(0.0);
-  for (int i = 0; i < 8; i++) {
-    float a = float(i) * 0.785398;
-    wide += texture(uCurtains, vUV + vec2(cos(a), sin(a) * 1.7778) * 0.05).rgb;
-    wide += texture(uCurtains, vUV + vec2(cos(a + 0.39), sin(a + 0.39) * 1.7778) * 0.13).rgb;
-  }
-  wide *= uBright / 16.0;
+  // true wide blur from the curtain target's mip chain (no offset copies)
+  vec3 wide = (textureLod(uCurtains, vUV, 4.5).rgb + textureLod(uCurtains, vUV, 5.5).rgb + textureLod(uCurtains, vUV, 6.5).rgb) * (uBright / 3.0);
   vec3 stars = texture(uStars, vUV).rgb * 0.09 * (0.75 + 0.5 * LN(vUV * 60.0, 0.3).w);
   vec3 col = sky + stars * (1.0 - smoothstep(0.45, 0.75, s.y)) + aur + wide * 1.1;
   // Clouds, lower left, lit by the aurora above them.
@@ -249,7 +244,8 @@ const makeLook = (params: AuroraParams): PixiLook<Scene> => ({
     const noise = noiseTexture(256, [[4, 4], [4, 4], [8, 3], [16, 3]], 777);
     const trees = canvasTexture(drawTreeline(W, H, res));
     const stars = canvasTexture(drawStars(W, H, res));
-    const rt = RenderTexture.create({ width: W, height: H, resolution: res * 0.75, format: "rgba16float" });
+    const rt = RenderTexture.create({ width: W, height: H, resolution: res * 0.75, format: "rgba16float", autoGenerateMipmaps: true });
+    rt.source.style.mipmapFilter = "linear";
     const node = new Float32Array(RIBBONS * NODES * 4);
     const attr = new Float32Array(RIBBONS * NODES * 4);
     const common = {
@@ -290,6 +286,7 @@ const makeLook = (params: AuroraParams): PixiLook<Scene> => ({
     for (const m of s.meshes) m.u.uTheta = th;
     ribbonUniforms(th, s.node, s.attr);
     ctx.app.renderer.render({ container: s.curtains, target: s.rt, clear: true, clearColor: [0, 0, 0, 1] });
+    s.rt.source.updateMipmaps();
   },
   root: (s) => s.root,
 });
