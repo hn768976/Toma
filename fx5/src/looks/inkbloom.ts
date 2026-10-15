@@ -47,44 +47,46 @@ float dots(vec2 p, float scale, float prob, float sd) {
 }
 
 // one ink scene: returns rgb (already masked)
-vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, float dropMode) {
+// spread: how strongly the seeds confine the blots (low = blobs all over)
+vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, float dropMode, float spread, float pale, vec2 nz) {
   float sd = float(si) * 17.3 + 3.1;
   float t = uT;
   // domain warp, slowly drifting
   vec2 w1 = vec2(fbm(p * 1.6 + sd + vec2(0.05 * t, 0.0), 4), fbm(p * 1.6 + sd + 5.2 - vec2(0.0, 0.04 * t), 4));
-  vec2 q = p + 0.3 * w1;
-  float n = fbm(q * 2.4 + sd + 0.03 * t, 5);
+  vec2 q = p + 0.2 * w1;
+  float n = fbm(q * nz.y + sd + 0.03 * t, 5);
   float d = 10.0;
   for (int k = 0; k < 3; k++) d = min(d, length(p - uSeed[si * 3 + k]));
-  float f = grow - d + 0.2 * n;
-  // ragged, feathery edge
-  f += 0.035 * fbm(q * 13.0 + sd * 2.0, 3) + 0.012 * gnoise(q * 45.0 + sd);
+  float f = grow - spread * d + nz.x * n;
+  // ragged, splattery edge
+  f += 0.035 * fbm(q * 14.0 + sd * 2.0, 3) + 0.014 * gnoise(q * 48.0 + sd);
   float aa = max(fwidth(f), 1e-4) * 0.7;
   float mask = smoothstep(-aa, aa, f);
   // large holes eating the blot
   float hf = eat - 0.55 + 0.5 * fbm(q * 2.6 + sd + 9.0 + 0.02 * t, 4);
-  // round black droplets, densest near the edge (and everywhere in drop mode)
-  float edgeBand = exp(-abs(f) * 7.0);
+  // round black droplets (mostly in drop mode)
   float cluster = smoothstep(-0.3, 0.5, gnoise(p * 3.0 + sd + 11.0));
-  float bd = dots(p + 0.02 * w1, 9.0, (0.08 + 0.4 * edgeBand + 0.15 * dropMode) * cluster, sd);
+  float bd = dots(p + 0.02 * w1, 9.0, (0.03 + 0.3 * dropMode) * cluster, sd);
   float holeF = max(hf, -bd * 4.0);
   float holeAA = max(fwidth(holeF), 1e-4) * 0.7;
   float hole = smoothstep(-holeAA, holeAA, holeF);
-  // coloured droplets scattered just outside the edge
-  float od = dots(p + 0.02 * w1, 14.0, 0.5 * exp(min(f, 0.0) * 9.0) * step(-0.4, f), sd + 31.0);
+  // small splats sitting right against the edge
+  float od = dots(p + 0.02 * w1, 16.0, 0.6 * exp(min(f, 0.0) * 30.0), sd + 31.0);
   float odAA = max(fwidth(od), 1e-5) * 0.7;
   float outDrop = smoothstep(odAA, -odAA, od) * (1.0 - mask) * smoothstep(-0.7, -0.2, grow);
-  // interior shading: lighter centre, darker edge
-  float k = smoothstep(0.0, 0.3, f);
-  vec3 col = base * mix(0.45, 1.15, k) + base * base * 0.45 * k * k;
-  // broad tonal variation across the field
+  // flat, pale interior; only a thin darker band at the very edge
+  float k = smoothstep(0.0, 0.06, f);
+  vec3 paleCol = mix(base, vec3(0.92, 0.95, 0.86), pale);
+  vec3 col = mix(base * 0.55, paleCol, k);
   float tone = smoothstep(-0.55, 0.55, fbm(q * 1.3 + sd + 40.0, 3));
-  col *= mix(0.55, 1.2, tone);
-  // crackle / veins (ridged noise) and mottling
-  float r = ridged(q * 4.2 + sd, 5);
-  float crack = smoothstep(0.78, 0.9, r);
-  float mott = fbm(q * 22.0 + sd, 3);
-  col *= (1.0 - crackAmt * crack) * (0.72 + 0.5 * mott);
+  col *= mix(0.8, 1.08, tone);
+  // fine crackle and dry-brush scratches inside
+  float r = ridged(q * 5.0 + sd, 5);
+  float crack = smoothstep(0.86, 0.94, r);
+  vec2 sq = mat2(0.8, -0.6, 0.6, 0.8) * q;
+  float scratch = smoothstep(0.55, 0.85, gnoise(vec2(sq.x * 70.0, sq.y * 7.0) + sd)) * smoothstep(-0.1, 0.4, fbm(q * 4.0 + sd + 21.0, 2));
+  col = mix(col, base * 0.45, crackAmt * crack);
+  col = mix(col, mix(base, vec3(0.5), 0.5) * 0.7, 0.5 * scratch);
   // white droplets (drop mode)
   float wdd = dots(p + 0.02 * w1, 11.0, 0.3 * dropMode * (1.0 - cluster * 0.7), sd + 77.0);
   float wAA = max(fwidth(wdd), 1e-5) * 0.7;
@@ -93,18 +95,21 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float bigHole = smoothstep(-holeAA, holeAA, hf);
   float m = mask * (1.0 - max(bigHole, hole * (1.0 - wd)));
   vec3 c = col * m;
-  // slight glow hugging the edge
-  c += base * 0.06 * exp(max(-f, 0.0) * -40.0) * (1.0 - mask) * smoothstep(-0.7, -0.2, grow);
-  c += base * 0.75 * outDrop;
+  // dark ink wash with grungy texture in the gaps around the blots
+  float washF = f + 0.16 + 0.22 * fbm(q * 2.0 + sd + 60.0, 3);
+  float wash = smoothstep(0.0, 0.25, washF) * (1.0 - m) * smoothstep(-0.7, -0.15, grow);
+  float grunge = smoothstep(-0.2, 0.6, fbm(q * 9.0 + sd + 13.0, 4)) * (0.6 + 0.4 * gnoise(q * 40.0));
+  c += base * base * 0.22 * wash * grunge * (1.0 - 0.7 * dropMode);
+  c += paleCol * 0.85 * outDrop;
   return c;
 }
 
 void main() {
   vec2 p = (vUV - 0.5) * vec2(uRes.x / uRes.y, 1.0);
   vec3 c = vec3(0.0);
-  if (uGrow.x > -0.9) c += scene(p, 0, uGrow.x, uEat.x, uCol0, 0.8, 0.0);
-  if (uGrow.y > -0.9) c += scene(p, 1, uGrow.y, uEat.y, uCol1, 0.5, 0.0);
-  if (uGrow.z > -0.9) c += scene(p, 2, uGrow.z, uEat.z, uCol2, 0.35, 1.0);
+  if (uGrow.x > -0.9) c += scene(p, 0, uGrow.x, uEat.x, uCol0, 0.5, 0.0, 0.3, 0.6, vec2(0.62, 4.2));
+  if (uGrow.y > -0.9) c += scene(p, 1, uGrow.y, uEat.y, uCol1, 0.4, 0.0, 0.6, 0.25, vec2(0.4, 3.2));
+  if (uGrow.z > -0.9) c += scene(p, 2, uGrow.z, uEat.z, uCol2, 0.3, 1.0, 1.0, 0.1, vec2(0.32, 3.2));
   finalColor = vec4(c, 1.0);
 }
 `;
@@ -170,7 +175,7 @@ export const inkScene: SceneFactory<InkParams> = ({ renderer, w, h }, p) => {
     render(frame) {
       const t = frame / 30;
       // scene 1: lime blot grows 0.2–2s, morphs, shrinks away 2.9–4.1s
-      const g0 = t < 4.3 ? growCurve(t, 0.15, 2.2, 0.2, 3.0, 4.1, 0.85) : -1;
+      const g0 = t < 4.3 ? growCurve(t, 0.1, 1.6, 0.06, 3.0, 4.1, 0.8) : -1;
       // scene 2: sage shapes 3.9–8.1s, eaten by black holes from 6.6s
       const t1 = t - 3.9;
       const g1 = t1 > 0 && t < 8.3 ? growCurve(t1, 0.0, 1.8, 0.42, 3.4, 4.3, 0.75) : -1;
