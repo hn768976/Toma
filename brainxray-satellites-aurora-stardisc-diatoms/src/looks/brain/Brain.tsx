@@ -56,7 +56,7 @@ void main() {
   vec2 cc = vec2(450.0, 232.0) * vec2(${(K / 2160).toFixed(6)});
   float centre = exp(-pow(length((s - cc) * vec2(0.8, 1.3)) / 0.3, 2.0));
   a = max(a, centre * 0.85) * (0.3 + 1.1 * centre);
-  float act = min(m.a * a * 3.0, 1.6);
+  float act = min(m.a * a * 3.0, 1.0);
   float halo = m.b * a * smoothstep(0.05, 0.4, m.a + m.b * 0.5);
   // active folds replace the cyan with the signal colour (keeps the hue)
   col *= 1.0 - 0.85 * min(act + halo * 0.6, 1.0);
@@ -72,7 +72,9 @@ void main() {
   float pool = exp(-pow(length((s - cc) * vec2(0.75, 1.4)) / 0.2, 2.0));
   col += uBurst * pool * (0.16 + 0.06 * sin(uTheta * 2.0)) * (0.3 + m.b + m.g);
   // Gentle shoulder so bright overlaps roll off instead of clipping hard.
-  col = col / (1.0 + max(col - 0.85, 0.0) * 0.8);
+  // hue-preserving shoulder: compress by the brightest channel
+  float mx = max(col.r, max(col.g, col.b));
+  col *= mx > 0.85 ? (0.85 + (1.0 - exp(-(mx - 0.85) * 2.0)) * 0.15) / mx : 1.0;
   finalColor = vec4(col, 1.0);
 }`;
 
