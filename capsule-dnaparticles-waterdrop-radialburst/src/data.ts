@@ -74,7 +74,7 @@ export const BURST_ROWS: BurstRow[] = [
     dots: ['#E8302A', '#FF7A2A', '#3A6AFF', '#FFA040', '#E83A4A'],
   },
   {
-    id: 'RadialBurst_TealGold', durationInFrames: 600, side: 'right', background: '#021A1E', haze: '#14180A',
+    id: 'RadialBurst_TealGold', durationInFrames: 600, side: 'right', background: '#021A1E', haze: '#000000',
     tips: ['#FFC860', '#3AE8C8', '#FFFFFF', '#FFE0A0', '#3AE8C8'],
     dots: ['#FFC860', '#3AE8C8', '#2AA8A0', '#E8A040', '#3AE8C8'],
   },

@@ -131,6 +131,9 @@ void main() {
     viewPos = (uView * vec4(base + drift, 1.0)).xyz;
     col = mix(uColLoose, uColA, aD.z);
     bright *= uLooseAlpha;
+    // story: specks that hug the helix arrive with the gathering, so the
+    // helix path is not given away before it forms
+    if (uStory > 0.5 && aB.x > 0.5) bright *= smoothstep(5.5, 9.0, uTime);
   }
 
   float d = max(-viewPos.z, 0.05);

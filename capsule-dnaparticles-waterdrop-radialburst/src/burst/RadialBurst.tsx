@@ -277,8 +277,8 @@ void main() {
   vec2 uv = vUV;
   float aspect = uRes.x / uRes.y;
   float sx = mix(uv.x, 1.0 - uv.x, uMirror);
-  vec3 bg = uBg * (1.0 + 0.25 * exp(-pow(length((vec2(sx, uv.y) - vec2(0.1, 0.5)) * vec2(aspect, 1.0)), 2.0) * 1.5));
-  bg *= 1.0 - 0.15 * smoothstep(0.4, 1.3, length((uv - 0.5) * vec2(aspect, 1.0)));
+  // flat background: a near-black gradient only quantises into visible rings after H.264
+  vec3 bg = uBg;
   // soft coloured haze through the middle radii of the fan
   float r = length(vec2(sx * aspect, uv.y - 0.5));
   bg += uHaze * exp(-pow((r - 0.42) / 0.22, 2.0)) * smoothstep(0.14, 0.24, r);

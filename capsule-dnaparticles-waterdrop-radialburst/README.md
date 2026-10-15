@@ -89,7 +89,67 @@ of the middle frame.
 | `scripts/banding.py <dir> [t]` | Step 4: decodes a frame from each encoded mp4 and reads pixel rows/columns across the flat backgrounds. |
 | `scripts/pixdiff.py a.png b.png` | Pixel comparison helper. |
 
-<!-- RESULTS -->
+## Measured render times
+
+All times were measured in this sandbox: 4 CPU cores, **no GPU**, Chromium
+headless shell with `--gl=angle` (falling back to SwiftShader, which is
+software GL), and Remotion's default concurrency. Each time is the wall clock
+for the whole render (including bundle-free start-up and H.264 encode),
+divided by the number of frames.
+
+| Composition | Frames | 720p (`--scale=1/3`), s/frame | Estimated 4K, s/frame | Estimated 4K full render |
+|---|---|---|---|---|
+| CapsuleRelease_White | 360 | 0.90 | ~3.5 | ~21 min |
+| CapsuleRelease_TwoTone | 360 | 0.91 | ~3.5 | ~21 min |
+| DNAParticles_Violet | 600 | 1.95 | ~6.5 | ~65 min |
+| DNAForm_Teal | 360 | 1.94 | ~6.5 | ~39 min |
+| DNAParticles_Teal | 600 | 1.91 | ~6.5 | ~65 min |
+| WaterDrop_Blue | 600 | 0.58 | ~3.0 | ~30 min |
+| RadialBurst_Navy | 600 | 1.32 | ~4.5 | ~45 min |
+| RadialBurst_TealGold | 600 | 1.36 | ~4.5 | ~45 min |
+
+**Two real 4K frames were timed.** Each is the cost per frame, single-threaded
+(`--concurrency=1`), worked out as (time for 4 frames − time for 1 frame) / 3
+so that browser start-up is excluded:
+
+- `CapsuleRelease-White`, frames 150–153 (the powder burst): **6.1 s/frame**
+- `WaterDrop-Blue`, frames 300–303: **5.2 s/frame**
+
+**How the 4K estimates were made:**
+
+- For the two timed looks, a 4K frame costs about 3.4× (Capsule) and 4.5×
+  (Drop) the 720p cost per frame.
+- I applied that ratio, with Remotion's default parallelism, to all 8 looks.
+- The Pixi looks are fill-bound on SwiftShader, so their estimate uses the
+  upper end of that ratio.
+- **Total for all 8 at 4K on this 4-core CPU without a GPU: about 5.5 h.**
+- On a machine with a GPU (ANGLE on real GL/Vulkan/Metal) expect it to be
+  roughly 10–50× faster. On a GPU, the DNA and Burst looks are cheap (120k and
+  ~70k instanced quads).
+
+## Verification results (720p previews)
+
+| Check | Result |
+|---|---|
+| 1. ffprobe | All 8: h264, yuv420p, 1280×720, 30/1, no audio. Duration 12.000 s for 1, 2 and 4; 20.000 s for the rest. Each 720p PNG still is 1280×720. |
+| 2. Loop (frame 0 vs frame 600 of a 601-frame render) | All 5 loops are **pixel-identical** (max diff 0). |
+| 3. Cold middle frame vs out-of-order multi-threaded render | All 8 are **byte-identical** PNGs. |
+| 4. Banding, read on frames decoded from the encoded mp4 | **Capsule and Drop:** no plateaus longer than 25 px on their flat backgrounds; block-to-block steps ≤ 1.3 levels. **DNA:** smooth ramps under a 20× contrast stretch; only the intended faint vertical grid lines are visible. **Burst:** the first previews showed 1-level contour rings from a faint radial lift in the navy; I removed that and the background is now a flat colour, so there is no gradient left to band. |
+| 5. Contact sheets (`scripts/contact-sheet.sh`) | **Capsule:** the split and the powder burst read correctly in white and two-tone. **DNA:** right-handed, with rungs and visible major and minor grooves (confirmed by a fresh sub-agent on the final still); the teal story goes specks → cloud → gather → hold. **Drop:** wobble, top highlight, bottom crescent and refraction all read. **Burst:** fan from one edge, coloured tips, copy space on the other side. |
+| 6. Motion (`scripts/motion.py`, frame-to-frame change across each whole preview, plus consecutive frames stepped around frame 300) | No isolated spikes (pops) in any preview. The capsule split and the DNA gathering rise and fall smoothly; there is no particle flicker or shimmer. |
+
+## Completion checklist
+
+- [x] 8 compositions at 3840×2160, 30 fps; 360 frames for the stories, 600 for the loops; one data row per version
+- [x] three.js on WebGL2 for Capsule and Drop; PixiJS 8 on WebGL2 for DNA (~120k particles) and Burst (~60k ray dots)
+- [x] No text, logos or brands; plain capsules
+- [x] DNA is right-handed, has 10 base pairs per turn and rungs, and shows major and minor grooves
+- [x] Deterministic: seeded at module level, closed-form motion, no `Math.random`, `Date.now`, `useFrame`, ticker, TAA or accumulation
+- [x] Half-float targets, ±1/255 dither, 1.5 % grain from a fixed formula, blue-noise dither on the Capsule and Drop backgrounds
+- [x] Exact loops; cold-start frames identical to full-render frames
+- [x] 720p previews and stills checked with ffprobe; 4K and 6K commands documented
+- [x] Two 4K frames timed
+
 
 ## How it is built
 
@@ -165,14 +225,38 @@ Every value on screen comes from `useCurrentFrame()` only.
   - A soft "backdrop" disc hidden behind the drop is only ever seen refracted.
     It gives the darker left-side patch inside.
 - **Radial Burst** (`src/burst`)
-  - 700 rays from −80° to +80°. Dots are spaced at 0.4 % of the frame width,
-    about 60 000 in total.
+  - 700 rays from −80° to +80°. Dots are spaced at 0.4 % of the frame width:
+    about 42 000 ray dots, plus 9 000 globe-shell dots, 250 bokeh and 300
+    specks (~52 000 in total; the hollow core takes the inner part of each
+    ray).
   - Each ray ends in a ring or a coloured dot. One ray in nine is a "hero"
     spoke with a bright line and a ring bead on the outer arc.
   - The core is a dotted globe shell. Mid-radius dots get bokeh blur.
   - Motion: length breathing ±6 %, outward flow and a ±3° cosine sway. All of
     them make whole cycles.
   - TealGold is the same burst mirrored.
+
+## Deviations from the brief (deliberate)
+
+- **DNA framing.** The references show a fat, heavily defocused helix with
+  only about one turn on screen. Framed like that, the major and minor
+  grooves and the rungs cannot be read, which is a hard rule of the brief.
+  The helix is therefore a little smaller and sharper (about 2 turns visible,
+  pitch/diameter about 1.75, close to B-DNA).
+- **DNA lean.** The brief says "bottom left to top centre-left", but both
+  references lean the other way (top to the left). The helix follows the
+  references.
+- **Water Drop size.** The brief says 38 % of the frame height; the reference
+  drop's *diameter* is about 74 %. I read 38 % as the radius, giving a
+  diameter of about 72 %.
+- **Radial Burst origin.** The origin sits on the left edge, so half of the
+  dotted core is visible, as in the reference. It is not fully beyond the
+  edge.
+- **Radial Burst background.** It is the specified flat `#020A24` (or
+  `#021A1E` for TealGold). The reference navy is a little lighter and more
+  teal. A faint gradient on it banded after H.264, so it is kept flat.
+- **Composition IDs** use `-` instead of `_`, because Remotion forbids
+  underscores.
 
 ## Adding a colourway
 

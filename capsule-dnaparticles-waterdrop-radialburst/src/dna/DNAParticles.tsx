@@ -112,7 +112,7 @@ const buildParticles = (): Particles => {
     const amp = 0.04 + rand() * 0.12;
     put(
       [2, x, y, rand()],
-      [0, 0, z, size],
+      [nearHelix ? 1 : 0, 0, z, size],
       [amp * (rand() * 2 - 1), amp * (rand() * 2 - 1), amp * (rand() * 2 - 1), (nearHelix ? 0.32 : 0.2) * (0.4 + rand() * 0.6) * (big ? 0.55 : 1)],
       [1 + Math.floor(rand() * 3), 0, rand() < 0.6 ? 1 : rand() * 0.5, 1 + Math.floor(rand() * 2)],
     );

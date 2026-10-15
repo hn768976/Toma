@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# Re-render the step-7 comparison frames and stack mine|reference pairs.
+# Step 7 helper: side-by-side (mine | reference) for looks 1, 3, 4, 6 and 7,
+# taken from the 720p previews and the reference clips in refs/.
 cd "$(dirname "$0")/.."
-R=${REFS:-refs}
-npx remotion bundle --out-dir build >/dev/null 2>&1
-printf "CapsuleRelease-White 300\nDNAParticles-Violet 300\nDNAForm-Teal 330\nWaterDrop-Blue 300\nRadialBurst-Navy 300\n" | xargs -P 3 -n 2 sh -c 'npx remotion still build $0 out/cmp/$0.png --frame=$1 --scale=0.3333333333333333 >/dev/null 2>&1'
-scripts/cmp.sh out/cmp/CapsuleRelease-White.png $R/f_cap.png out/cmp/c1.png
-scripts/cmp.sh out/cmp/DNAParticles-Violet.png $R/f_dnav.png out/cmp/c3.png
-scripts/cmp.sh out/cmp/DNAForm-Teal.png $R/f_dnat.png out/cmp/c4.png
-scripts/cmp.sh out/cmp/WaterDrop-Blue.png $R/f_drop.png out/cmp/c6.png
-scripts/cmp.sh out/cmp/RadialBurst-Navy.png $R/f_burst.png out/cmp/c7.png
-ffmpeg -v error -y -i out/cmp/c1.png -i out/cmp/c3.png -i out/cmp/c4.png -i out/cmp/c6.png -i out/cmp/c7.png -filter_complex vstack=5 out/cmp/all.png
+mkdir -p out/cmp
+pair() { # name preview_time ref_id ref_time
+  ffmpeg -v error -y -ss "$2" -i "out/previews/$1.mp4" -frames:v 1 "out/cmp/$1_mine.png"
+  ffmpeg -v error -y -ss "$4" -i "refs/$3.mp4" -frames:v 1 "out/cmp/$1_ref.png"
+  scripts/cmp.sh "out/cmp/$1_mine.png" "out/cmp/$1_ref.png" "out/cmp/$1_pair.png"
+}
+pair CapsuleRelease_White 10 3504986287 10
+pair DNAParticles_Violet 10 1015826728 6
+pair DNAForm_Teal 11 1015826725 13.5
+pair WaterDrop_Blue 4 3437787813 4
+pair RadialBurst_Navy 4 3765695515 4
+ffmpeg -v error -y $(for n in CapsuleRelease_White DNAParticles_Violet DNAForm_Teal WaterDrop_Blue RadialBurst_Navy; do printf -- "-i out/cmp/%s_pair.png " $n; done) -filter_complex vstack=5 out/cmp/all.png
+echo out/cmp/all.png
