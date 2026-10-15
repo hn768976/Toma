@@ -11,6 +11,8 @@ servers); fonts are OFL.
 | `AIHandCube-HoldLoop` | `AIHandCube_HoldLoop.mp4` | 20 s, 600 f | the finished scene as a seamless loop |
 | `AIHandCube-Gold` | `AIHandCube_Gold.mp4` | 15 s, 450 f | the Story in gold-white / warm bronze |
 | `AIHandCube-Mirrored` | `AIHandCube_Mirrored.mp4` | 20 s, 600 f | the loop, hand + cube in the right third, left half clear |
+| `AIHandCube-HoldLoopViolet` | `AIHandCube_HoldLoopViolet.mp4` | 20 s, 600 f | the Hold Loop in dark violet (lavender circuit, magenta HUD accents) |
+| `AIHandCube-HoldLoopGold` | `AIHandCube_HoldLoopGold.mp4` | 20 s, 600 f | the Hold Loop in gold / warm bronze |
 | `HandStudy` | — | 3 f | realism-gate stills of the hand alone (front, ¾, below) |
 
 Remotion composition ids may not contain `_`, so the ids use `-`; the output
@@ -48,6 +50,8 @@ npx remotion render src/index.ts AIHandCube-Story    out/AIHandCube_Story.mp4   
 npx remotion render src/index.ts AIHandCube-HoldLoop out/AIHandCube_HoldLoop.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png
 npx remotion render src/index.ts AIHandCube-Gold     out/AIHandCube_Gold.mp4     --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png
 npx remotion render src/index.ts AIHandCube-Mirrored out/AIHandCube_Mirrored.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png
+npx remotion render src/index.ts AIHandCube-HoldLoopViolet out/AIHandCube_HoldLoopViolet.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png
+npx remotion render src/index.ts AIHandCube-HoldLoopGold out/AIHandCube_HoldLoopGold.mp4 --gl=angle --codec=h264 --crf=16 --pixel-format=yuv420p --image-format=png
 ```
 
 On a GPU machine raise `--concurrency`; on a CPU-only (SwiftShader) machine
@@ -174,6 +178,8 @@ frames (includes ~7 s of browser start-up spread over the run).
 | AIHandCube-HoldLoop | 600 | 2433 s | **4.1 s** |
 | AIHandCube-Gold | 450 | 1560 s | **3.5 s** |
 | AIHandCube-Mirrored | 600 | 2225 s | **3.7 s** |
+| AIHandCube-HoldLoopViolet | 600 | 2167 s | **3.6 s** |
+| AIHandCube-HoldLoopGold | 600 | 2073 s | **3.5 s** |
 
 (The final framing puts a large out-of-focus hand in the foreground; the
 depth-of-field gather over that area is the biggest cost.)
@@ -194,7 +200,7 @@ figure is an estimate, not measured here.
 | Check | Result |
 |---|---|
 | 1. ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, 15.0 s / 20.0 s | pass (all four; 450 / 600 frames) |
-| 2. Loop: frame 0 vs frame 600 of a temporary 601-frame composition | pass — 0 differing pixels (HoldLoop, Mirrored) |
+| 2. Loop: frame 0 vs frame 600 of a temporary 601-frame composition | pass — 0 differing pixels (HoldLoop, Mirrored, HoldLoopViolet, HoldLoopGold) |
 | 3. Determinism: middle frame rendered alone, cold, vs the same frame from a 3-tab out-of-order render | pass — byte-identical PNGs (all four) |
 | 4. Banding on frames decoded from the mp4 | pass (table above) |
 | 5. Contact sheets | pass — rise → square → edges → glass → circuit → "AI" → hold; loops move gently; Mirrored keeps the left half clear |
