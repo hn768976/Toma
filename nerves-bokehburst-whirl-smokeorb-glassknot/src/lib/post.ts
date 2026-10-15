@@ -99,8 +99,7 @@ const int N = 72;
 void main() {
   float cc = cocAt(vUv);
   float cz = uCocMode > 0.5 ? 0.0 : linDepth(vUv);
-  vec3 c0 = texture2D(tColor, vUv).rgb;
-  vec3 acc = c0;
+  vec3 acc = texture2D(tColor, vUv).rgb;
   float tot = 1.0;
   float R = max(cc, 0.3 * uMaxCoc);
   for (int i = 0; i < N; i++) {
@@ -115,9 +114,13 @@ void main() {
       float sz = linDepth(uv);
       if (sz > cz) scoc = min(scoc, cc * 2.0);
     }
+    // coverage: does the sample's own blur reach this pixel?
     float w = smoothstep(dist - 0.004, dist + 0.004, scoc);
-    acc += mix(acc / tot, sc, w);
-    tot += 1.0;
+    // Gaussian-like falloff within the sample's own blur radius -> soft blotches, no hard bokeh rings
+    float q = dist / max(scoc, 1e-4);
+    w *= exp(-2.2 * q * q);
+    acc += sc * w;
+    tot += w;
   }
   gl_FragColor = vec4(acc / tot, 1.0);
 }

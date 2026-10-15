@@ -20,8 +20,8 @@ export type BokehVariant = {
 };
 
 // 3 000 streaks in total: long curved fibres (ribbon mesh) + short hot sparks (sprites)
-const FIBRES = 1800;
-const SPARKS = 1200;
+const FIBRES = 1000;
+const SPARKS = 2000; // ~300 bright hot sparks, the rest faint dust streaks
 const SEG = 10; // segments per fibre ribbon
 const DISCS = 60;
 const DOTS = 24;
@@ -32,7 +32,7 @@ const smooth = (a: number, b: number, x: number) => {
 };
 
 // ---------- deterministic layout (seeded) ----------
-type FibreSpec = { ang: number; curl: number; wob: number; wobF: number; ph: number; cycles: number; off: number; len: number; thick: number; col: [number, number, number]; bright: number; r0: number };
+type FibreSpec = { blur: number; ang: number; curl: number; wob: number; wobF: number; ph: number; cycles: number; off: number; len: number; thick: number; col: [number, number, number]; bright: number; r0: number };
 type SparkSpec = { ang: number; cycles: number; off: number; len: number; thick: number; color: string; bright: number; r0: number };
 type DiscSpec = { x: number; y: number; z: number; size: number; color: string; alpha: number };
 type HazeSpec = { x: number; y: number; ax: number; ay: number; ph: number; size: number; color: string; alpha: number };
@@ -41,32 +41,35 @@ const buildLayout = (v: BokehVariant) => {
   const rng = mulberry32(0xb0ce4);
   const fibres: FibreSpec[] = [];
   for (let i = 0; i < FIBRES; i++) {
+    const blurred = rng() < 0.3;
     fibres.push({
+      blur: blurred ? 1 : 0,
       ang: rng() * TAU,
-      curl: range(rng, -0.35, 0.35),
-      wob: range(rng, 0, 0.05),
+      curl: range(rng, -0.9, 0.9),
+      wob: range(rng, 0.0, 0.09),
       wobF: range(rng, 4, 10),
       ph: rng() * TAU,
       // whole number of wraps per 600 frames -> exact loop
       cycles: irange(rng, 1, 3),
       off: rng(),
       len: range(rng, 0.25, 0.8),
-      thick: range(rng, 0.0011, 0.0019),
+      thick: blurred ? range(rng, 0.004, 0.007) : range(rng, 0.0011, 0.0018),
       col: hexToRgb(pick(rng, v.streakColors)),
-      bright: range(rng, 0.2, 0.6),
+      bright: blurred ? range(rng, 0.08, 0.18) : range(rng, 0.25, 0.75),
       r0: range(rng, 0.12, 0.26),
     });
   }
   const sparks: SparkSpec[] = [];
   for (let i = 0; i < SPARKS; i++) {
+    const hot = i < 300;
     sparks.push({
       ang: rng() * TAU,
       cycles: irange(rng, 2, 5),
       off: rng(),
       len: range(rng, 0.02, 0.055),
       thick: range(rng, 0.0011, 0.0018),
-      color: pick(rng, v.sparkColors),
-      bright: range(rng, 0.35, 1.0),
+      color: hot ? pick(rng, v.sparkColors) : pick(rng, v.streakColors),
+      bright: hot ? range(rng, 0.8, 1.6) : range(rng, 0.04, 0.12),
       r0: range(rng, 0.15, 0.3),
     });
   }
@@ -75,8 +78,9 @@ const buildLayout = (v: BokehVariant) => {
     const u = range(rng, -1, 1);
     const a = rng() * TAU;
     const s = Math.sqrt(1 - u * u);
-    const rr = Math.pow(rng(), 0.3);
-    discs.push({ x: s * Math.cos(a) * rr, y: u * rr, z: s * Math.sin(a) * rr, size: range(rng, 0.05, 0.1), color: pick(rng, v.discColors), alpha: range(rng, 0.07, 0.2) });
+    const rr = range(rng, 0.82, 1.0);
+    const crisp = rng() < 0.3;
+    discs.push({ x: s * Math.cos(a) * rr, y: u * rr, z: s * Math.sin(a) * rr, size: range(rng, 0.045, 0.075), color: crisp ? "#D8F6FF" : pick(rng, v.discColors), alpha: crisp ? range(rng, 0.3, 0.5) : range(rng, 0.1, 0.22) });
   }
   const dots: DiscSpec[] = [];
   for (let i = 0; i < DOTS; i++) {
@@ -95,6 +99,9 @@ const buildLayout = (v: BokehVariant) => {
     [0.65, 0.85, 0.45, v.hazeB, 0.2],
     [0.05, 0.6, 0.4, v.hazeA, 0.25],
     [0.55, 0.05, 0.4, v.hazeA, 0.2],
+    [0.97, 0.05, 0.45, v.hazeB, 0.3],
+    [0.97, 0.95, 0.45, v.hazeB, 0.3],
+    [0.02, 0.3, 0.35, v.hazeB, 0.25],
   ];
   const haze: HazeSpec[] = hazeDefs.map(([x, y, size, color, alpha]) => ({
     x,
@@ -119,7 +126,7 @@ const sparkTex = () =>
 const discTex = () =>
   makeTexture(128, 128, (u, v) => {
     const d = Math.hypot(u - 0.5, v - 0.5) * 2;
-    const a = (1 - smooth(0.8, 1.0, d)) * (0.8 + 0.2 * smooth(0.6, 0.95, d));
+    const a = (1 - smooth(0.88, 1.0, d)) * (0.65 + 0.35 * smooth(0.6, 0.96, d));
     return [1, 1, 1, a];
   });
 const glowTex = () =>
@@ -194,6 +201,8 @@ void main() {
   }
   c /= 12.0;
   c += texture(uBloom, vUV).rgb * uBloomAmt;
+  float vig = smoothstep(0.35, 1.0, length((vUV - vec2(0.5, 0.42)) * vec2(uAspect * 0.8, 1.0)));
+  c *= 1.0 - 0.45 * vig;
   c = shoulder(c);
   finalColor = vec4(finish(c, gl_FragCoord.xy, uFrame, 0.015, 0.0), 1.0);
 }
@@ -227,7 +236,7 @@ const makeFactory =
     core.anchor.set(0.5);
     core.blendMode = "add";
     core.tint = hexToNumber(v.discColors[0]);
-    core.alpha = 0.28;
+    core.alpha = 0.16;
     core.position.set(W / 2, H / 2);
     hazeLayer.addChild(core);
 
@@ -323,8 +332,8 @@ const makeFactory =
 
     const render = (frame: number) => {
       const t = loopPhase(frame);
-      const cx = W / 2;
-      const cy = H / 2;
+      const cx = W * 0.515;
+      const cy = H * 0.52;
 
       L.haze.forEach((h, i) => {
         hazeSprites[i].position.set((h.x + h.ax * Math.sin(TAU * (t + h.ph))) * W, (h.y + h.ay * Math.cos(TAU * (t + h.ph * 1.7))) * H);
@@ -384,7 +393,7 @@ const makeFactory =
 
       // bokeh cluster: a loose ball, turning one whole turn per loop and breathing twice
       const breathe = 1 + 0.05 * Math.sin(TAU * 2 * t);
-      const R = 0.2 * H * breathe;
+      const R = 0.24 * H * breathe;
       const rot = TAU * t;
       const ca = Math.cos(rot);
       const sa = Math.sin(rot);

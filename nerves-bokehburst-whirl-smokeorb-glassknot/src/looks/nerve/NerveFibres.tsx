@@ -27,8 +27,8 @@ export type NerveVariant = {
 const SLAB = 30;
 const COPIES = [1, 0, -1, -2, -3];
 const WEB_COUNT = 1100;
-const HERO_COUNT = 26;
-const SECONDARY_COUNT = 60;
+const HERO_COUNT = 36;
+const SECONDARY_COUNT = 80;
 const SPECK_COUNT = 450;
 
 const randUnit = (rng: Rng) => {
@@ -63,7 +63,7 @@ const buildFibres = (rng: Rng, count: number, rMin: number, rMax: number, beadSh
   for (let i = 0; i < count; i++) {
     const pts: THREE.Vector3[] = [];
     const start = new THREE.Vector3(range(rng, -14, 14), range(rng, -9, 9), range(rng, -SLAB, 0));
-    pushOut(start, 3.4);
+    pushOut(start, 3.8);
     let dir = randUnit(rng);
     dir.z *= 0.6;
     dir.normalize();
@@ -74,7 +74,7 @@ const buildFibres = (rng: Rng, count: number, rMin: number, rMax: number, beadSh
       const turn = randUnit(rng).multiplyScalar(0.55);
       dir = dir.add(turn).normalize();
       p = p.clone().addScaledVector(dir, range(rng, 2.2, 3.6));
-      pushOut(p, 3.4);
+      pushOut(p, 3.8);
     }
     out.push({
       curve: new THREE.CatmullRomCurve3(pts, false, "centripetal"),
@@ -187,7 +187,7 @@ uniform vec3 cGlow;
 varying vec2 vUv;
 void main() {
   vec2 p = vUv - 0.5;
-  float g = exp(-dot(p, p) * 10.0) * 0.9;
+  float g = exp(-dot(p, p) * 8.0) * 1.5;
   gl_FragColor = vec4(cGlow * g, 1.0);
 }
 `;
@@ -277,7 +277,7 @@ const makeFactory =
       const perp = pos.clone().sub(dir.clone().multiplyScalar(pos.dot(dir)));
       if (Math.hypot(perp.x, perp.y) < 1.5) pos.x += pos.x >= 0 ? 3 : -3;
       const side = randUnit(rng).cross(dir).normalize().multiplyScalar(range(rng, 1.0, 4.0));
-      webSpecs.push({ pos, dir, len, r: range(rng, 0.025, 0.07), bend: side, shade: range(rng, 0.7, 1.6) });
+      webSpecs.push({ pos, dir, len, r: range(rng, 0.018, 0.045), bend: side, shade: range(rng, 1.5, 2.4) });
     }
     let idx = 0;
     for (const k of COPIES) {
@@ -304,8 +304,7 @@ const makeFactory =
       sheen: 0.4,
       sheenColor: C(v.fibreSheen),
       sheenRoughness: 0.45,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.25,
+      clearcoat: 0.0,
       emissive: C(v.fibre).multiplyScalar(0.05),
       envMapIntensity: 0.45,
     });
@@ -314,18 +313,19 @@ const makeFactory =
       roughness: 0.25,
       sheen: 1,
       sheenColor: C("#ffffff"),
-      emissive: C(v.bead).multiplyScalar(0.6),
+      emissive: C(v.bead).multiplyScalar(1.4),
       envMapIntensity: 0.8,
     });
     disposables.push(heroMat, beadMat);
 
     const heroes = [
-      ...buildFibres(rng, HERO_COUNT, 0.13, 0.22, 0.75, 1.0),
-      ...buildFibres(rng, SECONDARY_COUNT, 0.05, 0.1, 0.6, 0.9),
+      ...buildFibres(rng, HERO_COUNT, 0.1, 0.16, 0.9, 1.0),
+      ...buildFibres(rng, SECONDARY_COUNT, 0.04, 0.07, 0.85, 1.0),
     ];
     const beadGeo = new THREE.SphereGeometry(1, 20, 14);
+    const ringGeo = new THREE.TorusGeometry(1, 0.38, 10, 24);
     const tipGeo = new THREE.SphereGeometry(1, 16, 12);
-    disposables.push(beadGeo, tipGeo);
+    disposables.push(beadGeo, tipGeo, ringGeo);
     const tips: { mat: THREE.MeshBasicMaterial; cycles: number; phase: number; gain: number }[] = [];
     const tipCol = C(v.tip);
 
@@ -339,8 +339,8 @@ const makeFactory =
       let p = end.clone();
       if (h.beads > 0) {
         for (let b = 0; b < h.beads; b++) {
-          const r = h.radius * (1.25 - (0.75 * b) / Math.max(1, h.beads - 1));
-          p = p.clone().addScaledVector(tan, r * (b === 0 ? 1.0 : 1.9));
+          const r = h.radius * (1.6 - (0.8 * b) / Math.max(1, h.beads - 1));
+          p = p.clone().addScaledVector(tan, r * (b === 0 ? 0.8 : 1.15));
           beads.push({ pos: p.clone(), r });
         }
         p = p.clone().addScaledVector(tan, beads[beads.length - 1].r * 1.6);
@@ -348,7 +348,7 @@ const makeFactory =
       const tipR = h.radius * (h.beads > 0 ? 0.75 : 1.05);
       const tipMat = new THREE.MeshBasicMaterial({ color: tipCol.clone(), fog: true });
       disposables.push(tipMat);
-      if (h.tip || h.beads > 0) tips.push({ mat: tipMat, cycles: h.pulseCycles, phase: h.pulsePhase, gain: h.beads > 0 ? 7 : 4 });
+      if (h.tip || h.beads > 0) tips.push({ mat: tipMat, cycles: h.pulseCycles, phase: h.pulsePhase, gain: h.beads > 0 ? 3.2 : 2.5 });
       for (const k of COPIES) {
         const off = new THREE.Vector3(0, 0, k * SLAB);
         const tube = new THREE.Mesh(geo, heroMat);
@@ -366,10 +366,11 @@ const makeFactory =
           world.add(cap2);
         }
         for (const b of beads) {
-          const bm = new THREE.Mesh(beadGeo, beadMat);
+          // sheath segment: a ring around the fibre axis (chain-link look)
+          const bm = new THREE.Mesh(ringGeo, beadMat);
           bm.position.copy(b.pos).add(off);
-          bm.quaternion.setFromUnitVectors(up, tan);
-          bm.scale.set(b.r, b.r * 0.8, b.r);
+          bm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tan);
+          bm.scale.setScalar(b.r);
           world.add(bm);
         }
         if (h.tip || h.beads > 0) {
@@ -387,7 +388,7 @@ const makeFactory =
     const speckSize = new Float32Array(SPECK_COUNT * COPIES.length);
     const base: number[][] = [];
     for (let i = 0; i < SPECK_COUNT; i++) {
-      base.push([range(rng, -16, 16), range(rng, -10, 10), range(rng, -SLAB, 0), rng(), rng(), rng(), range(rng, 0.25, 0.55)]);
+      base.push([range(rng, -16, 16), range(rng, -10, 10), range(rng, -SLAB, 0), rng(), rng(), rng(), range(rng, 0.45, 0.9)]);
     }
     let si = 0;
     for (const k of COPIES) {

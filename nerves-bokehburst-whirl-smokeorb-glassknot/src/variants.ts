@@ -9,8 +9,8 @@ export const WHIRL_VARIANTS: WhirlVariant[] = [
     id: "CosmicWhirl_Blue",
     core: "#C8E8FF",
     coreGlow: "#2A6AE8",
-    matter: "#1C3A78",
-    highlight: "#B8D0F0",
+    matter: "#1E4290",
+    highlight: "#94BCF4",
     deep: "#040A22",
     sparkleA: "#FFC870",
     sparkleB: "#FFFFFF",
@@ -20,17 +20,17 @@ export const WHIRL_VARIANTS: WhirlVariant[] = [
 
 import type { GlassKnotVariant } from "./looks/glassknot/GlassKnot";
 
-const KNOT_STARS = ["#FF4A3A", "#FFFFFF", "#FFFFFF", "#7AA0FF", "#FFA040", "#FFE0C0"];
+const KNOT_STARS = ["#FF3A2A", "#FF4A3A", "#FFFFFF", "#FFFFFF", "#7AA0FF", "#FFA040", "#FFE0C0"];
 
 export const GLASSKNOT_VARIANTS: GlassKnotVariant[] = [
   {
     id: "GlassKnot_Galaxy",
     background: "galaxy",
-    bgBase: "#16131C",
+    bgBase: "#1C1618",
     bgA: "#5E6E8E",
     bgB: "#3A4A6A",
     bgCore: "#FFF0D8",
-    inner: "#4A68F0",
+    inner: "#5060E0",
     starColors: KNOT_STARS,
   },
   {
@@ -80,8 +80,8 @@ export const BOKEH_VARIANTS: BokehVariant[] = [
     background: "#0A1A5A",
     hazeA: "#2A6AE8",
     hazeB: "#5A3AC8",
-    streakColors: ["#3A8AFF", "#3A8AFF", "#3A9AFF", "#4AB8FF", "#4AD0FF", "#5AA0FF", "#A87AFF"],
-    sparkColors: ["#FFFFFF", "#E8E0FF", "#A87AFF", "#FF8AD8", "#C8B0FF", "#8AE0FF"],
+    streakColors: ["#3A8AFF", "#3AA0FF", "#3AB0FF", "#4AC0FF", "#4AD0FF", "#2A80F0", "#9AE4FF"],
+    sparkColors: ["#FFFFFF", "#FFE0F4", "#FF8AD8", "#FF6AC8", "#E8C8FF", "#A87AFF"],
     discColors: ["#4AC8FF", "#6AD8FF", "#3AB0F0", "#8AE4FF"],
   },
 ];
@@ -89,6 +89,6 @@ export const BOKEH_VARIANTS: BokehVariant[] = [
 import type { SmokeOrbVariant } from "./looks/smokeorb/SmokeOrb";
 
 export const SMOKEORB_VARIANTS: SmokeOrbVariant[] = [
-  { id: "SmokeOrb_PinkGold", core: "#FFF8FC", rim: "#E8A0F0", halo: "#F0B8F0", smoke: "#E8B86A", smokeHighlight: "#FFE6B0" },
+  { id: "SmokeOrb_PinkGold", core: "#FFF8FC", rim: "#E8A0F0", halo: "#F0B8F0", smoke: "#E8B86A", smokeHighlight: "#F4E4CC" },
   { id: "SmokeOrb_CyanBlue", core: "#F4FCFF", rim: "#8AE8FF", halo: "#A8ECFF", smoke: "#4A8AFF", smokeHighlight: "#FFFFFF" },
 ];

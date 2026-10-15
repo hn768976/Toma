@@ -56,10 +56,10 @@ vec3 bokeh(vec2 p, float cells, float seed, float radMin, float radMax, float de
       vec2 c = (id + 0.2 + 0.6 * hash22(id + seed + 7.0)) / cells;
       float rad = mix(radMin, radMax, h.x * h.x);
       float d = length(p - c) / rad;
-      float disc = 1.0 - smoothstep(0.55, 1.0, d);
-      float rim = smoothstep(0.5, 0.9, d) * disc * 0.4;
+      float disc = 1.0 - smoothstep(0.25, 1.0, d);
+      float rim = 0.0;
       float hue = h.y;
-      vec3 col = hue < 0.22 ? vec3(1.0, 0.5, 0.5) : hue < 0.42 ? vec3(0.55, 0.68, 1.0) : hue < 0.6 ? vec3(1.0, 0.72, 0.45) : hue < 0.8 ? vec3(0.8, 0.6, 1.0) : vec3(1.0, 0.9, 0.9);
+      vec3 col = hue < 0.25 ? vec3(0.9, 0.55, 0.65) : hue < 0.45 ? vec3(0.55, 0.62, 0.85) : hue < 0.65 ? vec3(0.95, 0.65, 0.45) : hue < 0.85 ? vec3(0.75, 0.6, 0.85) : vec3(0.95, 0.85, 0.85);
       float b = mix(0.25, 1.0, fract(h.z * 17.0 + h.x * 3.0));
       acc += col * (disc * 0.7 + rim * 0.5) * b * gain;
     }
@@ -102,9 +102,9 @@ void main() {
   }
 
   // layers of bokeh stars (several sizes)
-  col += bokeh(p, 6.0, 1.0, 0.03, 0.07, 0.6, 0.12);
-  col += bokeh(p, 11.0, 13.0, 0.016, 0.04, 0.6, 0.13);
-  col += bokeh(p, 20.0, 41.0, 0.008, 0.02, 0.55, 0.12);
+  col += bokeh(p, 5.0, 1.0, 0.035, 0.08, 0.5, 0.09);
+  col += bokeh(p, 9.0, 13.0, 0.02, 0.045, 0.45, 0.09);
+  col += bokeh(p, 16.0, 41.0, 0.01, 0.022, 0.35, 0.08);
 
   gl_FragColor = vec4(col, 1.0);
 }

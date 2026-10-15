@@ -78,8 +78,9 @@ const buildStreamlines = () => {
   const lines = new Float32Array(LINES * STEPS * 3);
   let li = 0;
   for (let s = 0; s < SOURCES; s++) {
-    const u = range(rng, -1, 1);
-    const a = rng() * TAU;
+    // more material over the top and the left, so the swirl reads one-directional
+    const u = rng() < 0.65 ? range(rng, -0.2, 1) : range(rng, -1, 1);
+    const a = rng() < 0.65 ? range(rng, Math.PI * 0.5, Math.PI * 1.5) : rng() * TAU;
     const sq = Math.sqrt(1 - u * u);
     const r0 = range(rng, 1.08, 1.4);
     const c: V3 = [sq * Math.cos(a) * r0, u * r0, sq * Math.sin(a) * r0];
@@ -125,7 +126,7 @@ const buildStreamlines = () => {
       pJit[i * 3 + 1] = range(rng, -1, 1) * 0.005;
       pJit[i * 3 + 2] = range(rng, -1, 1) * 0.005;
       pData[i * 2] = rng() < 0.03 ? range(rng, 1.6, 2.2) : range(rng, 0.5, 1.0); // brightness
-      pData[i * 2 + 1] = range(rng, 0.9, 1.4); // size
+      pData[i * 2 + 1] = range(rng, 1.4, 2.2); // size
     }
   }
   return { lines, pLine, pOff, pCyc, pJit, pData };
@@ -151,6 +152,7 @@ uniform float uFocal;
 uniform float uD;
 out float vA;
 out float vHi;
+out float vNear;
 ${SIMPLEX3}
 #define TAU 6.28318530718
 void main() {
@@ -181,6 +183,7 @@ void main() {
   // smoke is lit by the orb: brighter close to it
   float rr = length(p - vec3(0.0, uBob, 0.0));
   a *= 0.45 + 1.4 * exp(-(rr - 1.0) * 2.2);
+  vNear = exp(-(rr - 1.0) * 4.0);
   // never draw sub-1.5px points (they shimmer); conserve energy instead
   if (sizePx < 1.5) { a *= (sizePx / 1.5) * (sizePx / 1.5); sizePx = 1.5; }
   gl_PointSize = sizePx;
@@ -194,15 +197,19 @@ void main() {
 const PARTICLE_FRAG = /* glsl */ `
 in float vA;
 in float vHi;
+in float vNear;
 out vec4 finalColor;
 uniform vec3 uSmoke;
 uniform vec3 uSmokeHi;
+uniform vec3 uRimTint;
 uniform float uGain;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float r = length(c) * 2.0;
-  float f = max(0.0, 1.0 - r * r);
-  vec3 col = mix(uSmoke, uSmokeHi, vHi) * f * vA * uGain;
+  float f = exp(-r * r * 3.0) * step(r, 1.0);
+  vec3 base = mix(uSmoke, uSmokeHi, 0.35 + 0.65 * vHi);
+  base = mix(base, uRimTint, vNear * 0.55);   // picks up the orb's colour close to it
+  vec3 col = base * f * vA * uGain;
   finalColor = vec4(col, 0.0);
 }
 `;
@@ -242,7 +249,8 @@ void main() {
     float g = 0.5 * snoise(n * 2.2 + T) + 0.25 * snoise(n * 4.7 - T * 1.3) + 0.125 * snoise(vec3(n.x * 9.0, n.y * 3.0, n.z * 9.0) + T);
     float fres = pow(1.0 - mu, 1.6);
     // marbled gas: white with lavender / pale-blue streaks, a cool lower-left rim, warm touches
-    float marb = snoise(vec3(n.x * 1.8 + g * 1.2, n.y * 9.0, n.z * 1.8) - T);
+    vec3 nd = vec3(0.7071 * (n.x + n.y), 0.7071 * (n.y - n.x), n.z);   // diagonal streaks
+    float marb = snoise(vec3(nd.x * 1.8 + g * 1.2, nd.y * 9.0, nd.z * 1.8) - T);
     vec3 base = mix(uCore, mix(uRim, vec3(0.62, 0.72, 1.0), 0.5), smoothstep(0.0, 0.9, marb) * 0.5);
     col = mix(base * 0.72, uRim * 1.0, fres);
     col *= 0.82 + 0.36 * g;
@@ -251,7 +259,7 @@ void main() {
     col = mix(col, vec3(1.0, 0.62, 0.45), smoothstep(0.55, 0.9, snoise(n * 1.7 + 9.0)) * pow(1.0 - mu, 2.0) * 0.5);
     col += uRim * pow(1.0 - mu, 4.0) * 1.4;
     // soft antialiased limb
-    col *= smoothstep(0.0, 0.03, disc);
+    col *= smoothstep(0.0, 0.07, disc);
   }
   // halo: bright near the limb, wide soft tail, forced to exactly zero well inside the frame
   float o = max(dr - 1.0, 0.0);
@@ -260,7 +268,13 @@ void main() {
   float dirK = 0.55 + 0.75 * max(dot(normalize(sp + 1e-4), normalize(vec2(0.75, 0.6))), 0.0);
   float halo = (exp(-o * 14.0) * 1.2 + exp(-o * 4.5) * 0.2 * dirK + exp(-o * 2.2) * 0.015) * dirK;
   halo *= 1.0 - smoothstep(1.0, 1.9, o);
-  col += uHalo * halo * mix(1.0, 0.4, smoothstep(0.0, 0.03, disc));
+  // coloured edge light: blue-violet on the right / lower right, a cool crescent below, warm on the left
+  vec2 dn = normalize(sp + 1e-4);
+  vec3 hc = uHalo;
+  hc = mix(hc, vec3(0.55, 0.45, 1.0), clamp(dot(dn, vec2(0.85, -0.5)), 0.0, 1.0) * 0.75);
+  hc = mix(hc, vec3(0.6, 0.75, 1.0), clamp(-dn.y, 0.0, 1.0) * 0.4);
+  hc = mix(hc, vec3(1.0, 0.6, 0.45), clamp(-dn.x, 0.0, 1.0) * 0.45);
+  col += hc * halo * mix(1.0, 0.4, smoothstep(0.0, 0.07, disc));
   finalColor = vec4(col, 1.0);
 }
 `;
@@ -285,7 +299,7 @@ const makeFactory =
   (v: SmokeOrbVariant): PixiLookFactory =>
   (renderer: Renderer, W: number, H: number) => {
     const L = layout();
-    const focal = 0.235 * Math.sqrt(CAM_D * CAM_D - 1); // orb radius ~0.235 of frame height
+    const focal = 0.225 * Math.sqrt(CAM_D * CAM_D - 1); // orb radius ~0.225 of frame height
     const lin = (h: string) => new Float32Array(hexToLinear(h));
 
     const pos = new Float32Array(PARTICLES * 4);
@@ -306,7 +320,8 @@ const makeFactory =
       uD: { value: CAM_D, type: "f32" },
       uSmoke: { value: lin(v.smoke), type: "vec3<f32>" },
       uSmokeHi: { value: lin(v.smokeHighlight), type: "vec3<f32>" },
-      uGain: { value: 0.12, type: "f32" },
+      uGain: { value: 0.075, type: "f32" },
+      uRimTint: { value: lin(v.rim), type: "vec3<f32>" },
     };
     const pShader = Shader.from({ gl: { vertex: PARTICLE_VERT, fragment: PARTICLE_FRAG }, resources: { pU: pUniforms } });
     const particles = new Mesh({ geometry: geometry as never, shader: pShader as never });

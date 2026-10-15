@@ -24,7 +24,7 @@ export type GlassKnotVariant = {
 const P = 2;
 const Q = 3;
 const KNOT_R = 1;
-const TUBE_R = 0.44;
+const TUBE_R = 0.52;
 
 const curve = (u: number, out: THREE.Vector3) => {
   const qu = (Q / P) * u;
@@ -57,21 +57,15 @@ const buildStars = (colors: string[]): Star[] => {
     const u = rng() * TAU * P;
     const rho = 0.75 * Math.sqrt(rng());
     const { pos } = tubePoint(u, rho, rng() * TAU);
-    const big = rng() < 0.12;
+    const big = i < 25;
     base.push({
       pos,
-      size: big ? range(rng, 0.022, 0.036) : range(rng, 0.007, 0.018),
+      size: big ? range(rng, 0.026, 0.042) : range(rng, 0.005, 0.01),
       color: new THREE.Color(pick(rng, colors)),
-      gain: big ? range(rng, 8, 16) : range(rng, 2, 7),
+      gain: big ? range(rng, 10, 20) : range(rng, 1.2, 3.5),
       cycles: 1 + Math.floor(rng() * 4),
       phase: rng(),
     });
-  }
-  // fine star dust between the stars
-  for (let i = 0; i < 150; i++) {
-    const u = rng() * TAU * P;
-    const { pos } = tubePoint(u, 0.8 * Math.sqrt(rng()), rng() * TAU);
-    base.push({ pos, size: range(rng, 0.004, 0.007), color: new THREE.Color("#ffffff"), gain: range(rng, 1.5, 4), cycles: 1 + Math.floor(rng() * 3), phase: rng() });
   }
   const out: Star[] = [];
   for (let k = 0; k < 3; k++) for (const s of base) out.push({ ...s, pos: rotZ(s.pos, k) });
@@ -142,8 +136,10 @@ const buildEnvironment = (gl: THREE.WebGLRenderer) => {
     m.lookAt(0, 0, 0);
     env.add(m);
   };
-  box(9, 5, [-7, 7, 7], 22);
-  box(3, 2.5, [6, 5, 5], 14, [1.2, 0.75, 0.45]);
+  // long thin strip -> long thin rim streaks on the upper-left edges
+  box(14, 0.9, [-7, 7, 6], 30);
+  box(4, 3, [-8, 4, 8], 6);
+  box(2, 2, [6, 5, 5], 24, [1.2, 0.7, 0.4]);
   box(2, 6, [8, 1, 3], 6, [0.9, 0.95, 1.1]);
   box(2, 1.5, [1, 8, -2], 20);
   box(8, 1.2, [0, -7, 4], 1.5, [0.7, 0.8, 1.2]);
@@ -161,7 +157,7 @@ const makeFactory =
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0, 0, 0);
     const cam = new THREE.PerspectiveCamera(35, aspect, 0.1, 100);
-    cam.position.set(0, 0, 6.3);
+    cam.position.set(0, 0, 5.8);
     cam.lookAt(0, 0, 0);
 
     const envRT = buildEnvironment(gl);
@@ -209,7 +205,7 @@ const makeFactory =
       clearcoat: 0.3,
       clearcoatRoughness: 0.05,
       attenuationColor: new THREE.Color(v.inner),
-      attenuationDistance: 0.9,
+      attenuationDistance: 1.3,
     });
     // Path length through a tube is long at its centre and short at its silhouette:
     // scale thickness by the facing ratio so the middle tints deep blue while the
@@ -240,8 +236,8 @@ const makeFactory =
 
     // glowing swirl streaks inside the glass (opaque, so they are refracted too)
     const swirlCurve = buildSwirl();
-    const swirlGeo = new THREE.TubeGeometry(swirlCurve, 120, 0.012, 6, false);
-    const swirlMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.8, 1.1, 4.5) });
+    const swirlGeo = new THREE.TubeGeometry(swirlCurve, 120, 0.018, 8, false);
+    const swirlMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.7, 0.55, 2.4) });
     for (let k = 0; k < 3; k++) {
       const m = new THREE.Mesh(swirlGeo, swirlMat);
       m.rotation.z = (k * TAU) / 3;
@@ -263,8 +259,8 @@ const makeFactory =
 
     const post = new PostPipeline(pxW, pxH, {
       msaa: 4,
-      bloom: { strength: 0.95, threshold: 0.75, knee: 0.7, radius: 0.95 },
-      streak: { strength: 0.5, length: 0.1 },
+      bloom: { strength: 0.5, threshold: 1.0, knee: 0.6, radius: 0.85 },
+      streak: { strength: 0.9, length: 0.08 },
       vignette: { strength: 0.6, color: [0, 0, 0] },
       exposure: 1,
       grain: 0.015,
