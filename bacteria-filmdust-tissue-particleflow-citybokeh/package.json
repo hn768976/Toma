@@ -1,0 +1,24 @@
+{
+  "name": "bacteria-filmdust-tissue-particleflow-citybokeh",
+  "version": "1.0.0",
+  "description": "Five looks x two colourways of 20s seamless loops (Remotion + PixiJS 8 / WebGL2)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "studio": "remotion studio",
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "pixi.js": "8.21.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
