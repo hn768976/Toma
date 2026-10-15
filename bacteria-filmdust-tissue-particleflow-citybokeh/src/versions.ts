@@ -5,8 +5,8 @@ import type { LookName } from "./looks";
 export type VersionRow = { id: string; look: LookName; params: Record<string, unknown> };
 
 export const VERSIONS: VersionRow[] = [
-  { id: "BacteriaChains-Red", look: "bacteria", params: { seed: 1101, ramp: ["#000000", "#5A0A0A", "#B0201C", "#E87A7A", "#FFE2DC"] } },
-  { id: "BacteriaChains-Blue", look: "bacteria", params: { seed: 1101, ramp: ["#000000", "#04122A", "#1C5AA8", "#A8E0FF", "#EEF9FF"] } },
+  { id: "BacteriaChains-Red", look: "bacteria", params: { seed: 1101, ramp: ["#000000", "#5A0A0A", "#A01C18", "#E87A7A", "#F2ACA4"] } },
+  { id: "BacteriaChains-Blue", look: "bacteria", params: { seed: 1101, ramp: ["#000000", "#04122A", "#18509A", "#A8E0FF", "#D4F0FF"] } },
   { id: "FilmDust-Dense", look: "filmdust", params: { seed: 2201, count: 9000 } },
   { id: "FilmDust-Light", look: "filmdust", params: { seed: 2202, count: 1500 } },
   { id: "GlowingTissue-Orange", look: "tissue", params: { ramp: ["#000000", "#5A1A04", "#E8601A", "#FFE8B0", "#FFFBF0"] } },

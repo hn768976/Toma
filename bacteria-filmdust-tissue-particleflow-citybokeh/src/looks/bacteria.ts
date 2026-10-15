@@ -31,24 +31,24 @@ void main() {
   float ph = uPhase;
   vec2 p = (vUV - 0.5) * vec2(uAspect, 1.0);
   vec2 cyc = vec2(cos(TAU * ph), sin(TAU * ph));
-  // mottled dark field, drifting on a closed path
-  vec2 q = p * 3.2 + cyc * 0.35 + 40.0;
-  vec2 w = vec2(fbm(q * 0.7 + 3.0, 4), fbm(q * 0.7 + 9.0, 4)) - 0.5;
-  float m = fbm(q + w * 1.8, 6);
-  float mott = smoothstep(0.30, 0.78, m);
-  float fine = fbm(q * 4.0 + w * 3.0 + 11.0, 4);
-  float field = 0.05 + 0.42 * mott + 0.10 * fine * mott;
-  // dark holes
-  field *= 0.45 + 0.55 * smoothstep(0.25, 0.55, fbm(q * 1.3 - w + 5.0, 4));
+  // blotchy, cellular dark field (smeared out-of-focus cells), closed drift
+  vec2 q = p * 2.6 + cyc * 0.3 + 40.0;
+  vec2 w = vec2(fbm(q * 0.8 + 3.0, 4), fbm(q * 0.8 + 9.0, 4)) - 0.5;
+  float m = fbm(q + w * 1.6, 5);
+  float blobs = smoothstep(0.42, 0.68, fbm(q * 2.2 + w * 2.0 + 21.0, 4));
+  float field = 0.03 + 0.34 * smoothstep(0.38, 0.75, m) + 0.16 * blobs * smoothstep(0.3, 0.6, m);
+  // crushed near-black patches
+  field *= smoothstep(0.30, 0.52, fbm(q * 1.1 - w + 5.0, 4));
 
-  // the bright hazy patch: drifts and swells (whole cycles)
-  vec2 c = vec2(0.10, -0.05) + vec2(0.16 * sin(TAU * ph), 0.07 * sin(TAU * 2.0 * ph + 1.0));
-  float size = 0.26 + 0.08 * (0.5 - 0.5 * cos(TAU * ph));
-  vec2 d = (p - c) / vec2(size * 1.45, size);
-  float edge = fbm(p * 4.0 + cyc * 0.3 + 70.0, 5) - 0.5;
-  float r = length(d) + edge * 0.9;
-  float haze = smoothstep(1.05, 0.35, r);
-  float lum = field + haze * (0.95 + 0.25 * fine);
+  // the hazy pink cloud: wide (about 2.5:1), mottled, ragged edges; drifts and swells
+  vec2 c = vec2(0.30, -0.06) + vec2(0.10 * sin(TAU * ph), 0.04 * sin(TAU * 2.0 * ph + 1.0));
+  float size = 0.17 + 0.04 * (0.5 - 0.5 * cos(TAU * ph));
+  vec2 d = (p - c) / vec2(size * 2.4, size);
+  float edge = fbm(p * 3.5 + cyc * 0.3 + 70.0, 5) - 0.5;
+  float r = length(d) + edge * 1.1;
+  float haze = smoothstep(1.1, 0.45, r);
+  float mottle = 0.62 + 0.38 * smoothstep(0.3, 0.7, fbm(p * 7.0 + w * 1.5 + 90.0, 4));
+  float lum = field * (1.0 - 0.5 * haze) + haze * 0.92 * mottle;
   o = vec4(vec3(lum), 1.0);
 }`;
 
@@ -64,15 +64,15 @@ const LAYER_DEF = [
   { scale: 0.92, bright: 0.85, drift: 0.06, rot: 0.04 },
   { scale: 0.7, bright: 0.7, drift: 0.045, rot: 0.03 },
 ];
-const BEAD_R = 5.2; // bead radius at 720p for scale 1
+const BEAD_R = 6.6; // bead radius at 720p for scale 1
 
 type Variant = { levels: Texture[] };
 
 const drawBead = (g: CanvasRenderingContext2D, x: number, y: number, r: number, rng: Rng) => {
   // dark-field cell: dim body, bright rim, soft outer halo
   const gr = g.createRadialGradient(x, y, 0, x, y, r * 1.25);
-  const core = range(rng, 0.3, 0.65);
-  const rim = range(rng, 0.7, 1.0);
+  const core = range(rng, 0.06, 0.2);
+  const rim = range(rng, 0.75, 1.0);
   gr.addColorStop(0, `rgba(255,255,255,${core})`);
   gr.addColorStop(0.45, `rgba(255,255,255,${core * 1.1})`);
   gr.addColorStop(0.7, `rgba(255,255,255,${rim})`);
@@ -92,10 +92,10 @@ const drawBead = (g: CanvasRenderingContext2D, x: number, y: number, r: number, 
 };
 
 const bakeChain = (rng: Rng, r: number) => {
-  const n = Math.floor(range(rng, 4, 21));
+  const n = Math.floor(4 + 16 * rng() ** 2); // mostly short chains, a few long
   const pts: [number, number][] = [];
   let a = range(rng, 0, Math.PI * 2);
-  const curl = range(rng, -0.35, 0.35);
+  const curl = range(rng, -0.2, 0.2);
   const wig = range(rng, 0.05, 0.35);
   const ph = range(rng, 0, 6.28);
   let x = 0;
@@ -191,9 +191,9 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
 
   const objs: Obj[] = [];
   const counts = [
-    { kind: "chain", n: 40 },
-    { kind: "clump", n: 25 },
-    { kind: "speck", n: 160 },
+    { kind: "chain", n: 12 },
+    { kind: "clump", n: 18 },
+    { kind: "speck", n: 195 },
   ];
   for (let L = 0; L < LAYERS; L++) {
     for (const { kind, n } of counts) {
@@ -210,8 +210,9 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
         objs.push({
           variant,
           layer: L,
-          x: rng(),
-          y: rng(),
+          ...(kind === "speck" && rng() < 0.55
+            ? { x: 0.5 + (rng() + rng() + rng() - 1.5) * 0.22 - 0.07, y: 0.5 + (rng() + rng() + rng() - 1.5) * 0.22 - 0.05 }
+            : { x: rng(), y: rng() }),
           rot: range(rng, 0, Math.PI * 2),
           rotAmp: range(rng, 0.1, 0.6),
           rotK: rng() < 0.5 ? 1 : 2,
@@ -219,8 +220,8 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
           wobR: range(rng, 0.004, 0.02),
           wobK: rng() < 0.6 ? 1 : 2,
           wobPh: range(rng, 0, Math.PI * 2),
-          scale: range(rng, 0.75, 1.2) * (kind === "speck" ? range(rng, 0.5, 1.4) : 1),
-          bright: range(rng, 0.45, 1.0) * (kind === "speck" ? 0.8 : 1),
+          scale: range(rng, 0.75, 1.2) * (kind === "speck" ? range(rng, 0.35, 0.9) : 1),
+          bright: kind === "chain" ? range(rng, 0.7, 1.3) : kind === "clump" ? range(rng, 0.4, 0.9) : range(rng, 0.8, 1.7),
           a: mk(),
           b: mk(),
         });
@@ -232,9 +233,9 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
   const grade: Grade = {
     mode: "ramp",
     ramp: params.ramp,
-    stops: [0.22, 0.55, 1.05, 1.9],
+    stops: [0.22, 0.55, 0.95, 1.6],
     exposure: 1.0,
-    bloom: 0.45,
+    bloom: 0.15,
     vignette: 0.75,
     vignetteShape: [0.35, 1.1],
     grain: 0.018,
@@ -265,7 +266,8 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
       }
       for (const o of objs) {
         const def = LAYER_DEF[o.layer];
-        const defocus = 0.5 + Math.abs(o.layer + 1 - focus) * 3.6; // 720p px
+        const dz = Math.abs(o.layer + 1 - focus);
+        const defocus = 0.3 + dz * 4.2; // 720p px
         let k = 0;
         while (k < BLUR_LEVELS.length - 2 && defocus > BLUR_LEVELS[k + 1]) k++;
         const t = Math.min(1, Math.max(0, (defocus - BLUR_LEVELS[k]) / (BLUR_LEVELS[k + 1] - BLUR_LEVELS[k])));
@@ -273,7 +275,7 @@ export const createBacteria: LookFactory<BacteriaParams> = (ctx, params) => {
         const y = (o.y - 0.5) * fieldH + H / 2 + Math.sin(TAU * o.wobK * ph + o.wobPh) * o.wobR * W;
         const rot = o.rot + o.rotAmp * Math.sin(TAU * o.rotK * ph + o.rotPh);
         const sc = (def.scale * o.scale) / maxScale / ctx.res;
-        const bright = def.bright * o.bright;
+        const bright = (def.bright * o.bright) / (1 + dz * 0.9); // defocused objects fade into the field
         const set = (s: Sprite, tex: Texture, alpha: number) => {
           s.texture = tex;
           s.position.set(x, y);
