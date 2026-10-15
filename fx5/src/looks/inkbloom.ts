@@ -110,7 +110,8 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float outDrop = smoothstep(odAA, -odAA, od) * (1.0 - mask) * smoothstep(-0.55, -0.2, grow) * (1.0 - roundBlots);
   // flat, pale interior; only a thin darker band at the very edge
   float k = smoothstep(0.0, mix(0.06, 0.012, roundBlots), f);
-  vec3 paleCol = mix(base, mix(vec3(0.92, 0.95, 0.86), vec3(0.84, 0.92, 0.66), roundBlots), pale * mix(1.0, 0.75 + 0.35 * smoothstep(-0.4, 0.4, fbm(q * 1.7 + sd + 3.0, 2)), roundBlots));
+  // pale target derived from the scene colour (cream-lime for lime, lavender-white for lavender)
+  vec3 paleCol = mix(base, mix(vec3(1.0), base, 0.4), pale * mix(1.0, 0.75 + 0.35 * smoothstep(-0.4, 0.4, fbm(q * 1.7 + sd + 3.0, 2)), roundBlots));
   vec3 col = mix(base * 0.55, paleCol, k);
   float tone = smoothstep(-0.55, 0.55, fbm(q * 1.3 + sd + 40.0, 3));
   col *= mix(0.8, 1.08, tone);
@@ -140,7 +141,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float patchMask = smoothstep(0.05, 0.3, fbm(p * 1.4 + sd + 70.0, 3));
   float grain = smoothstep(-0.15, 0.45, gnoise(p * 160.0 + sd) + 0.6 * gnoise(p * 45.0 + sd));
   grunge = mix(grunge, patchMask * (0.35 + 0.75 * grain), roundBlots);
-  vec3 washCol = mix(base * base * 0.22, base * vec3(0.58, 0.47, 0.22), roundBlots);
+  vec3 washCol = mix(base * base * 0.22, mix(base, vec3(dot(base, vec3(0.3, 0.6, 0.1))), 0.3) * vec3(0.62, 0.55, 0.4), roundBlots);
   c += washCol * wash * grunge * (1.0 - 0.7 * dropMode);
   if (roundBlots > 0.5) {
     vec2 gq = mat2(0.94, 0.34, -0.34, 0.94) * q;
@@ -156,7 +157,7 @@ void main() {
   vec3 c = vec3(0.0);
   if (uGrow.x > -0.9) c += scene(p, 0, uGrow.x, uEat.x, uCol0, 0.35, 0.0, 0.3, 0.62, vec2(0.62, 4.2), 1.0);
   if (uGrow.y > -0.9) c += scene(p, 1, uGrow.y, uEat.y, uCol1, 0.4, 0.0, 0.6, 0.25, vec2(0.4, 3.2), 0.0);
-  if (uGrow.z > -0.9) c += scene(p, 2, uGrow.z, uEat.z, uCol2, 0.3, 1.0, 1.0, 0.1, vec2(0.32, 3.2), 0.0);
+  if (uGrow.z > -0.9) c += scene(p, 2, uGrow.z, uEat.z, uCol2, 0.3, 1.0, 1.0, 0.0, vec2(0.32, 3.2), 0.0);
   finalColor = vec4(c, 1.0);
 }
 `;
@@ -225,7 +226,7 @@ export const inkScene: SceneFactory<InkParams> = ({ renderer, w, h }, p) => {
       const g0 = t < 4.3 ? growCurve(t, 0.1, 1.6, 0.06, 3.0, 4.1, 0.8) : -1;
       // scene 2: sage shapes 3.9–8.1s, eaten by black holes from 6.6s
       const t1 = t - 3.9;
-      const g1 = t1 > 0 && t < 8.3 ? growCurve(t1, 0.0, 1.8, 0.42, 3.4, 4.3, 0.75) : -1;
+      const g1 = t1 > 0 && t < 8.3 ? growCurve(t1, 0.0, 1.8, 0.16, 3.4, 4.3, 0.75) : -1;
       const e1 = 0.42 + 0.6 * smoothstep(2.4, 4.1, t1);
       // scene 3: red field fills the frame 7.9–10s, dissolves to black 11.6–13.6s
       const t2 = t - 7.9;
