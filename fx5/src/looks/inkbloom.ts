@@ -46,9 +46,32 @@ float dots(vec2 p, float scale, float prob, float sd) {
   return min(best, 1.0) / scale;
 }
 
+// clustered round blots with spiky splatter edges; returns signed distance-ish
+// (positive inside, frame-height units). rmul scales every blot's radius.
+float blots(vec2 p, float scale, float sd, float rmul) {
+  vec2 g = p * scale;
+  vec2 i = floor(g);
+  float best = -1.0;
+  for (int y = -1; y <= 1; y++)
+    for (int x = -1; x <= 1; x++) {
+      vec2 c = i + vec2(x, y);
+      vec3 h = hash33u(uvec3(uvec2(ivec2(c) + 4096), uint(sd * 31.0) + 5u));
+      if (h.z > 0.7) continue;
+      vec2 ctr = c + 0.2 + 0.6 * h.xy;
+      vec2 dv = g - ctr;
+      float a = atan(dv.y, dv.x);
+      float r0 = mix(0.2, 0.62, pow(fract(h.z * 7.13), 0.7)) * rmul;
+      // ragged rim: a few lobes plus many short spikes
+      float rim = 1.0 + 0.1 * gnoise(vec2(a * 1.6, h.x * 40.0)) + 0.07 * gnoise(vec2(a * 9.0, h.y * 40.0))
+                + 0.05 * max(gnoise(vec2(a * 26.0, h.z * 40.0)), 0.0);
+      best = max(best, r0 * rim - length(dv));
+    }
+  return best / scale;
+}
+
 // one ink scene: returns rgb (already masked)
 // spread: how strongly the seeds confine the blots (low = blobs all over)
-vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, float dropMode, float spread, float pale, vec2 nz) {
+vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, float dropMode, float spread, float pale, vec2 nz, float roundBlots) {
   float sd = float(si) * 17.3 + 3.1;
   float t = uT;
   // domain warp, slowly drifting
@@ -58,6 +81,13 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float d = 10.0;
   for (int k = 0; k < 3; k++) d = min(d, length(p - uSeed[si * 3 + k]));
   float f = grow - spread * d + nz.x * n;
+  if (roundBlots > 0.5) {
+    // grow scales the blots' radius; the seeds bias where the cluster is densest
+    // blots near the seeds appear first and the bloom spreads outward
+    float gr = clamp((grow + 0.55) / 0.6, 0.0, 1.2);
+    float rmul = clamp(gr * 2.2 - d * 1.5 + 0.25 * n, 0.0, 1.25);
+    f = max(blots(p + 0.04 * w1, 3.4, sd, rmul), blots(p + 0.04 * w1 + 3.7, 1.9, sd + 5.0, rmul * 0.92));
+  }
   // ragged, splattery edge
   f += 0.035 * fbm(q * 14.0 + sd * 2.0, 3) + 0.014 * gnoise(q * 48.0 + sd);
   float aa = max(fwidth(f), 1e-4) * 0.7;
@@ -66,17 +96,17 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float hf = eat - 0.55 + 0.5 * fbm(q * 2.6 + sd + 9.0 + 0.02 * t, 4);
   // round black droplets (mostly in drop mode)
   float cluster = smoothstep(-0.3, 0.5, gnoise(p * 3.0 + sd + 11.0));
-  float bd = dots(p + 0.02 * w1, 9.0, (0.03 + 0.3 * dropMode) * cluster, sd);
+  float bd = dots(p + 0.02 * w1, 9.0, (0.3 * dropMode) * cluster, sd);
   float holeF = max(hf, -bd * 4.0);
   float holeAA = max(fwidth(holeF), 1e-4) * 0.7;
   float hole = smoothstep(-holeAA, holeAA, holeF);
   // small splats sitting right against the edge
-  float od = dots(p + 0.02 * w1, 16.0, 0.6 * exp(min(f, 0.0) * 30.0), sd + 31.0);
+  float od = dots(p + 0.02 * w1, 10.0, 0.5 * exp(min(f, 0.0) * 60.0) * step(-0.03, f), sd + 31.0);
   float odAA = max(fwidth(od), 1e-5) * 0.7;
-  float outDrop = smoothstep(odAA, -odAA, od) * (1.0 - mask) * smoothstep(-0.7, -0.2, grow);
+  float outDrop = smoothstep(odAA, -odAA, od) * (1.0 - mask) * smoothstep(-0.7, -0.2, grow) * (1.0 - roundBlots);
   // flat, pale interior; only a thin darker band at the very edge
-  float k = smoothstep(0.0, 0.06, f);
-  vec3 paleCol = mix(base, vec3(0.92, 0.95, 0.86), pale);
+  float k = smoothstep(0.0, mix(0.06, 0.012, roundBlots), f);
+  vec3 paleCol = mix(base, vec3(0.92, 0.95, 0.86), pale * mix(1.0, 0.75 + 0.35 * smoothstep(-0.4, 0.4, fbm(q * 1.7 + sd + 3.0, 2)), roundBlots));
   vec3 col = mix(base * 0.55, paleCol, k);
   float tone = smoothstep(-0.55, 0.55, fbm(q * 1.3 + sd + 40.0, 3));
   col *= mix(0.8, 1.08, tone);
@@ -86,7 +116,7 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   vec2 sq = mat2(0.8, -0.6, 0.6, 0.8) * q;
   float scratch = smoothstep(0.55, 0.85, gnoise(vec2(sq.x * 70.0, sq.y * 7.0) + sd)) * smoothstep(-0.1, 0.4, fbm(q * 4.0 + sd + 21.0, 2));
   col = mix(col, base * 0.45, crackAmt * crack);
-  col = mix(col, mix(base, vec3(0.5), 0.5) * 0.7, 0.5 * scratch);
+  col = mix(col, mix(base, vec3(0.5), 0.3) * 0.75, mix(0.5, 0.8, roundBlots) * scratch);
   // white droplets (drop mode)
   float wdd = dots(p + 0.02 * w1, 11.0, 0.3 * dropMode * (1.0 - cluster * 0.7), sd + 77.0);
   float wAA = max(fwidth(wdd), 1e-5) * 0.7;
@@ -96,10 +126,16 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
   float m = mask * (1.0 - max(bigHole, hole * (1.0 - wd)));
   vec3 c = col * m;
   // dark ink wash with grungy texture in the gaps around the blots
-  float washF = f + 0.16 + 0.22 * fbm(q * 2.0 + sd + 60.0, 3);
+  float washF = f + mix(0.16, 0.09, roundBlots) + 0.22 * fbm(q * 2.0 + sd + 60.0, 3);
   float wash = smoothstep(0.0, 0.25, washF) * (1.0 - m) * smoothstep(-0.7, -0.15, grow);
   float grunge = smoothstep(-0.2, 0.6, fbm(q * 9.0 + sd + 13.0, 4)) * (0.6 + 0.4 * gnoise(q * 40.0));
-  c += base * base * 0.22 * wash * grunge * (1.0 - 0.7 * dropMode);
+  vec3 washCol = mix(base * base * 0.22, base * vec3(0.42, 0.34, 0.2), roundBlots);
+  c += washCol * wash * grunge * (1.0 - 0.7 * dropMode);
+  if (roundBlots > 0.5) {
+    vec2 gq = mat2(0.94, 0.34, -0.34, 0.94) * q;
+    float blade = smoothstep(0.55, 0.8, gnoise(vec2(gq.x * 2.2, gq.y * 70.0) + sd)) * smoothstep(0.2, 0.7, fbm(q * 2.5 + sd + 90.0, 2));
+    c += base * 0.8 * blade * wash * (1.0 - m) * smoothstep(0.3, -0.5, p.x);
+  }
   c += paleCol * 0.85 * outDrop;
   return c;
 }
@@ -107,9 +143,9 @@ vec3 scene(vec2 p, int si, float grow, float eat, vec3 base, float crackAmt, flo
 void main() {
   vec2 p = (vUV - 0.5) * vec2(uRes.x / uRes.y, 1.0);
   vec3 c = vec3(0.0);
-  if (uGrow.x > -0.9) c += scene(p, 0, uGrow.x, uEat.x, uCol0, 0.5, 0.0, 0.3, 0.6, vec2(0.62, 4.2));
-  if (uGrow.y > -0.9) c += scene(p, 1, uGrow.y, uEat.y, uCol1, 0.4, 0.0, 0.6, 0.25, vec2(0.4, 3.2));
-  if (uGrow.z > -0.9) c += scene(p, 2, uGrow.z, uEat.z, uCol2, 0.3, 1.0, 1.0, 0.1, vec2(0.32, 3.2));
+  if (uGrow.x > -0.9) c += scene(p, 0, uGrow.x, uEat.x, uCol0, 0.35, 0.0, 0.3, 0.62, vec2(0.62, 4.2), 1.0);
+  if (uGrow.y > -0.9) c += scene(p, 1, uGrow.y, uEat.y, uCol1, 0.4, 0.0, 0.6, 0.25, vec2(0.4, 3.2), 0.0);
+  if (uGrow.z > -0.9) c += scene(p, 2, uGrow.z, uEat.z, uCol2, 0.3, 1.0, 1.0, 0.1, vec2(0.32, 3.2), 0.0);
   finalColor = vec4(c, 1.0);
 }
 `;
