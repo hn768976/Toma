@@ -152,10 +152,10 @@ glow above the cube, averaged to remove grain, then read left to right:
 
 | Version | 8-bit levels across the strip | largest step between neighbours | residual vs. smooth curve (rms) |
 |---|---|---|---|
-| Story | 16.7 → 38.7 → 24.0 | 0.26 | 0.34 |
-| HoldLoop | 16.6 → 38.9 → 23.9 | 0.79 | 0.54 |
-| Gold | 6.7 → 18.8 → 9.8 | 0.25 | 0.28 |
-| Mirrored | 33.6 → 16.9 | 0.81 | 0.54 |
+| Story | 17.2 → 39.8 → 19.6 | 0.19 | 0.33 |
+| HoldLoop | 16.9 → 39.5 → 19.6 | 0.24 | 0.31 |
+| Gold | 7.4 → 19.4 → 7.8 | 0.24 | 0.26 |
+| Mirrored | 33.5 → 36.2 → 16.4 | 0.22 | 0.30 |
 
 Values change smoothly (well under one 8-bit level per pixel, no plateaus or
 staircases); a contrast-stretched view (0–60 → 0–255) shows no rings. The few
@@ -168,7 +168,12 @@ SwiftShader (CPU). `--concurrency=1` (more tabs were *slower*: 30 frames took
 70 s at 1 tab, 82 s at 4 tabs). Per-frame time = full-render wall time ÷
 frames (includes ~7 s of browser start-up spread over the run).
 
-TIMES_TABLE
+| Composition | Frames | Full 720p render (wall) | Per frame at 720p |
+|---|---|---|---|
+| AIHandCube-Story | 450 | 833 s | **1.85 s** |
+| AIHandCube-HoldLoop | 600 | 1265 s | **2.11 s** |
+| AIHandCube-Gold | 450 | 830 s | **1.84 s** |
+| AIHandCube-Mirrored | 600 | 1258 s | **2.10 s** |
 
 **One real 4K frame** of `AIHandCube-Story` at the hold (frame 380,
 3840×2160): **~27 s** (two runs: 32.9 s and 35.8 s wall, minus ~7 s browser
