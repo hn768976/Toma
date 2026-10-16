@@ -67,9 +67,9 @@ export const VERSIONS: Version[] = [
       mauve: "#B07A9A",
       cream: "#F8E8C0",
       ring: "#FFF0D8",
-      holeX: 0.485,
+      holeX: 0.5,
       holeY: 0.5,
-      holeRadius: 0.165,
+      holeRadius: 0.16,
     },
   },
   {

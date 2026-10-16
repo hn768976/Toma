@@ -10,7 +10,7 @@ import { HEIGHT, LOOP, TAU, WIDTH } from "../lib/constants";
 import { irange, mulberry32, range } from "../lib/random";
 import { GLSL_HEADER } from "../lib/glsl";
 import { GLStage, type GLFactory } from "../lib/three/GLStage";
-import { FullscreenPass, halfFloatTarget, makeFinalPass, srgb } from "../lib/three/pipeline";
+import { FullscreenPass, GaussianBlur, halfFloatTarget, makeFinalPass, srgb } from "../lib/three/pipeline";
 import { CODES } from "../data/tickers";
 import type { BarChartPalette } from "../versions";
 
@@ -24,7 +24,7 @@ const DATA = (() => {
   const rng = mulberry32(1010978468);
   const bars = Array.from({ length: N_BARS }, (_, i) => ({
     u: 0.06 + (i / N_BARS) * 0.9 + range(rng, -0.01, 0.01),
-    w: range(rng, 0.036, 0.046),
+    w: range(rng, 0.042, 0.052),
     base: range(rng, 5200, 7800),
     amp: range(rng, 900, 2000),
     m: irange(rng, 1, 3), // whole cycles per loop
@@ -49,7 +49,7 @@ const DATA = (() => {
       ph: rng() * TAU,
     })),
   }));
-  const labels = Array.from({ length: 12 }, (_, i) => ({
+  const labels = Array.from({ length: 7 }, (_, i) => ({
     code: CODES[(i * 5 + 3) % CODES.length],
     u: range(rng, 0.03, 0.92),
     v: range(rng, 0.06, 0.9),
@@ -72,11 +72,11 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
   };
 
   // grid
-  ctx.strokeStyle = rgba(ink, 0.42);
-  ctx.lineWidth = 2.2 * px;
+  ctx.strokeStyle = rgba(ink, 0.55);
+  ctx.lineWidth = 3.4 * px;
   ctx.beginPath();
-  const gx = 40;
-  const gy = 20;
+  const gx = 28;
+  const gy = 14;
   for (let i = 0; i <= gx; i++) {
     const x = (W * i) / gx;
     ctx.moveTo(x, 0);
@@ -90,7 +90,7 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
   ctx.stroke();
 
   const baseY = H * 0.97;
-  const vToY = (val: number) => baseY - (val / 10000) * H * 0.82;
+  const vToY = (val: number) => baseY - (val / 10000) * H * 0.93;
 
   // translucent bars with values
   for (const b of DATA.bars) {
@@ -99,7 +99,7 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
     const x = b.u * W;
     const bw = b.w * W;
     const top = vToY(val);
-    ctx.fillStyle = rgba(ink, 0.4);
+    ctx.fillStyle = rgba(ink, 0.3);
     ctx.fillRect(x, top, bw, baseY - top);
     ctx.fillStyle = rgba(ink, 0.55);
     ctx.fillRect(x, top, bw, 5 * px);
@@ -112,8 +112,8 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
 
   // wavy lines
   for (const l of DATA.lines) {
-    ctx.strokeStyle = rgba(line, 0.85);
-    ctx.lineWidth = 6 * px;
+    ctx.strokeStyle = rgba(line, 0.9);
+    ctx.lineWidth = 9 * px;
     ctx.beginPath();
     const N = 400;
     for (let i = 0; i <= N; i++) {
@@ -124,15 +124,18 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
       else ctx.lineTo(u * W, v * H);
     }
     ctx.stroke();
-    ctx.strokeStyle = rgba(line, 0.25);
-    ctx.lineWidth = 18 * px;
+    ctx.strokeStyle = rgba(line, 0.22);
+    ctx.lineWidth = 34 * px;
+    ctx.stroke();
+    ctx.strokeStyle = rgba(line, 0.1);
+    ctx.lineWidth = 70 * px;
     ctx.stroke();
   }
 
   // candlesticks: periodic series, scrolled by exactly two whole periods per loop
   const cw = W / N_CANDLES;
   const shift = (2 * t * N_CANDLES) % N_CANDLES;
-  const yC = (lv: number) => H * 0.5 - lv * H * 0.028;
+  const yC = (lv: number) => H * 0.52 - lv * H * 0.045;
   ctx.lineWidth = 3 * px;
   for (let k = -1; k <= N_CANDLES; k++) {
     const idx = (((k + Math.floor(shift)) % N_CANDLES) + N_CANDLES) % N_CANDLES;
@@ -149,6 +152,17 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
     const y1 = yC(Math.min(c.open, c.close));
     if (c.close >= c.open) ctx.fillRect(x - cw * 0.28, y0, cw * 0.56, Math.max(3 * px, y1 - y0));
     else ctx.strokeRect(x - cw * 0.28, y0, cw * 0.56, Math.max(3 * px, y1 - y0));
+    // second, smaller cluster high on the left of the chart (same periodic series)
+    if (x < W * 0.42) {
+      const yT = (lv: number) => H * 0.16 - lv * H * 0.03;
+      ctx.beginPath();
+      ctx.moveTo(x, yT(c.hi));
+      ctx.lineTo(x, yT(c.lo));
+      ctx.stroke();
+      const t0 = yT(Math.max(c.open, c.close));
+      const t1 = yT(Math.min(c.open, c.close));
+      ctx.fillRect(x - cw * 0.28, t0, cw * 0.56, Math.max(3 * px, t1 - t0));
+    }
   }
 
   // ticker labels (invented codes), values step 20 times per loop
@@ -178,11 +192,12 @@ in vec2 vUv;
 out vec4 outColor;
 void main() {
   vec2 p = vUv;
-  float g = smoothstep(-0.1, 1.15, dot(p, vec2(0.78, 0.62)));
+  float g = smoothstep(0.15, 1.35, dot(p, vec2(0.7, 0.72)));
   vec3 c = mix(cFrom, cTo, g);
   vec2 d = (p - vec2(1.0, 1.0)) * vec2(uRes.x / uRes.y, 1.0);
-  c += vec3(0.75, 0.9, 1.0) * 0.22 * exp(-dot(d, d) / 0.35);  // brighter top right
-  c *= 1.0 - 0.25 * smoothstep(0.5, 1.3, length((p - vec2(0.6, 0.6)) * vec2(1.4, 1.0)));
+  c += vec3(0.6, 0.95, 1.0) * 0.5 * exp(-dot(d, d) / 0.06);   // concentrated glow, top right
+  // deeper towards the lower left
+  c *= 0.62 + 0.38 * smoothstep(-0.2, 1.2, dot(p, vec2(0.6, 0.8)));
   outColor = vec4(c, 1.0);
 }
 `;
@@ -195,7 +210,7 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
 
   const factory = useCallback<GLFactory>(
     (gl, pw, ph) => {
-      const camera = new THREE.PerspectiveCamera(42, WIDTH / HEIGHT, 0.05, 200);
+      const camera = new THREE.PerspectiveCamera(50, WIDTH / HEIGHT, 0.05, 200);
       const scene = new THREE.Scene();
 
       // texture size follows output resolution (2048 wide at 720p, 8192 at 4K)
@@ -227,9 +242,9 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
       const plane = new THREE.Mesh(new THREE.PlaneGeometry(PLANE_W, PLANE_H), mat);
       // chart wall receding to the right and tilted back ~30°
       plane.rotation.order = "YXZ";
-      plane.rotation.y = -0.62;
-      plane.rotation.x = -0.52;
-      plane.position.set(2.5, 1.2, -6);
+      plane.rotation.y = -0.9;
+      plane.rotation.x = -0.3;
+      plane.position.set(2.0, 1.4, -4.0);
       plane.frustumCulled = false;
       scene.add(plane);
 
@@ -239,7 +254,24 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
         cFrom: { value: srgb(p.bgFrom) },
         cTo: { value: srgb(p.bgTo) },
       });
-      const final = makeFinalPass();
+      // depth of field toward the far (right) side + a soft overall bloom
+      const hw = Math.max(1, Math.round(pw / 2));
+      const hh = Math.max(1, Math.round(ph / 2));
+      const soft = halfFloatTarget(hw, hh);
+      const softBlur = new GaussianBlur(hw, hh);
+      const copy = new FullscreenPass(
+        GLSL_HEADER +
+          `uniform sampler2D uSrc; in vec2 vUv; out vec4 outColor; void main() { outColor = texture(uSrc, vUv); }`,
+        { uSrc: { value: target.texture } },
+      );
+      const final = makeFinalPass(
+        /* glsl */ `
+  vec3 sb = texture(uSoft, uv).rgb;
+  float dof = 0.85 * smoothstep(0.55, 1.0, uv.x) * smoothstep(0.0, 0.5, 1.0 - uv.y * 0.5);
+  c = mix(c, sb, dof) + sb * 0.16;`,
+        { uSoft: { value: soft.texture } },
+        "uniform sampler2D uSoft;",
+      );
       final.uniforms.uSrc.value = target.texture;
       final.uniforms.uRes.value.set(pw, ph);
 
@@ -249,12 +281,14 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
         tex.needsUpdate = true;
         // one whole cosine cycle: glide right and ease back, never accumulated
         const g = 0.5 - 0.5 * Math.cos(TAU * t);
-        camera.position.set(-3.2 + 2.6 * g, -1.6, 2.2);
-        camera.lookAt(0.6 + 2.6 * g, 0.6, -6.5);
+        camera.position.set(-3.6 + 2.4 * g, -1.4, 0.6);
+        camera.lookAt(-0.4 + 2.4 * g, 0.9, -4.4);
         gl.autoClear = false;
         bg.render(gl, target);
         gl.setRenderTarget(target);
         gl.render(scene, camera);
+        copy.render(gl, soft);
+        softBlur.apply(gl, soft, 6 * (ph / HEIGHT) * 3 * 0.5);
         final.uniforms.uFrame.value = f;
         final.render(gl, null);
       };
@@ -266,6 +300,9 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
           mat.dispose();
           plane.geometry.dispose();
           target.dispose();
+          soft.dispose();
+          softBlur.dispose();
+          copy.dispose();
           bg.dispose();
           final.dispose();
         },

@@ -46,13 +46,13 @@ type Bubble = {
   alpha: number;
 };
 
-type StreamBubble = { x: number; yOrigin: number; len: number; j: number; n: number; k: number; dMax: number };
+type StreamBubble = { x: number; yOrigin: number; len: number; j: number; n: number; k: number; dMax: number; alpha: number };
 
 const LAYERS = [
-  { count: 2050, dMin: 5, dMax: 20, kMin: 1, kMax: 3, alpha: [0.75, 1.0] },
-  { count: 1100, dMin: 7, dMax: 28, kMin: 1, kMax: 3, alpha: [0.55, 0.85] },
-  { count: 560, dMin: 12, dMax: 46, kMin: 2, kMax: 4, alpha: [0.35, 0.6] },
-  { count: 70, dMin: 60, dMax: 170, kMin: 4, kMax: 6, alpha: [0.18, 0.32] },
+  { count: 2200, dMin: 5, dMax: 17, kMin: 1, kMax: 3, alpha: [0.55, 1.0] },
+  { count: 1150, dMin: 5, dMax: 22, kMin: 1, kMax: 3, alpha: [0.4, 0.7] },
+  { count: 480, dMin: 9, dMax: 34, kMin: 2, kMax: 4, alpha: [0.22, 0.4] },
+  { count: 30, dMin: 50, dMax: 130, kMin: 4, kMax: 6, alpha: [0.05, 0.1] },
 ] as const;
 
 const buildBubbles = (): Bubble[] => {
@@ -87,12 +87,15 @@ const buildStreams = (): StreamBubble[] => {
   for (let s = 0; s < 8; s++) {
     const x = range(rng, 0.06, 0.94) * WIDTH;
     // nucleation point: somewhere in the lower part of the glass (or below it)
-    const yOrigin = range(rng, 0.55, 1.1) * HEIGHT;
+    // two prominent streams from visible nucleation points, six faint ones
+    const strong = s < 2;
+    const yOrigin = (strong ? range(rng, 0.62, 0.92) : range(rng, 0.6, 1.1)) * HEIGHT;
     const len = yOrigin + MARGIN;
-    const n = Math.round(len / range(rng, 34, 52));
+    const n = Math.round(len / range(rng, 70, 95));
     const k = 2 + Math.floor(rng() * 2);
-    const dMax = range(rng, 10, 17);
-    for (let j = 0; j < n; j++) out.push({ x, yOrigin, len, j, n, k, dMax });
+    const dMax = range(rng, 12, 19);
+    const alpha = strong ? 0.85 : range(rng, 0.22, 0.4);
+    for (let j = 0; j < n; j++) out.push({ x, yOrigin, len, j, n, k, dMax, alpha });
   }
   return out;
 };
@@ -119,9 +122,10 @@ const drawAtlas = (p: ChampagnePalette) => {
     ctx.filter = BLUR[i] > 0 ? `blur(${BLUR[i]}px)` : "none";
     // body: dark refracting rim, lighter core
     const body = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    body.addColorStop(0, hexA(p.rim, 0.12));
-    body.addColorStop(0.62, hexA(p.rim, 0.28));
-    body.addColorStop(0.86, hexA(p.rim, 0.92));
+    body.addColorStop(0, hexA(p.highlight, 0.3));
+    body.addColorStop(0.5, hexA(p.highlight, 0.12));
+    body.addColorStop(0.68, hexA(p.rim, 0.55));
+    body.addColorStop(0.88, hexA(p.rim, 0.95));
     body.addColorStop(1.0, hexA(p.rim, 0.0));
     ctx.fillStyle = body;
     ctx.beginPath();
@@ -129,7 +133,7 @@ const drawAtlas = (p: ChampagnePalette) => {
     ctx.fill();
     // faint inner glow: light focused through the sphere, lower right
     const glow = ctx.createRadialGradient(cx + R * 0.18, cy + R * 0.22, 0, cx + R * 0.18, cy + R * 0.22, R * 0.55);
-    glow.addColorStop(0, hexA(p.highlight, 0.55));
+    glow.addColorStop(0, hexA(p.highlight, 0.32));
     glow.addColorStop(1, hexA(p.highlight, 0));
     ctx.fillStyle = glow;
     ctx.beginPath();
@@ -138,13 +142,13 @@ const drawAtlas = (p: ChampagnePalette) => {
     // specular highlight dot, top left
     const hx = cx - R * 0.36;
     const hy = cy - R * 0.38;
-    const hl = ctx.createRadialGradient(hx, hy, 0, hx, hy, R * 0.26);
+    const hl = ctx.createRadialGradient(hx, hy, 0, hx, hy, R * 0.22);
     hl.addColorStop(0, hexA(p.highlight, 1));
     hl.addColorStop(0.5, hexA(p.highlight, 0.85));
     hl.addColorStop(1, hexA(p.highlight, 0));
     ctx.fillStyle = hl;
     ctx.beginPath();
-    ctx.arc(hx, hy, R * 0.26, 0, TAU);
+    ctx.arc(hx, hy, R * 0.22, 0, TAU);
     ctx.fill();
     ctx.restore();
   }
@@ -193,14 +197,15 @@ void main() {
   float asp = uRes.x / uRes.y;
   vec2 p = vec2(vUV.x * asp, vUV.y);
   // the light behind the glass drifts once round a small circle per loop
-  vec2 g = vec2(0.56 * asp + 0.05 * cos(6.28318530718 * uT), 0.16 + 0.03 * sin(6.28318530718 * uT));
-  float d = length(p - g);
-  vec3 c = mix(uGlow, uLiquid, smoothstep(0.0, 0.95, d));
-  c += (uGlow - uLiquid) * 0.25 * exp(-d * d / 0.03);
-  // warm vignette
-  vec2 q = (vUV - vec2(0.5, 0.45)) * vec2(1.0, 0.9);
-  float v = smoothstep(0.28, 0.85, length(q * vec2(1.25, 1.0)));
-  c = mix(c, uVignette, 0.78 * v);
+  vec2 g = vec2(0.56 * asp + 0.05 * cos(6.28318530718 * uT), 0.1 + 0.03 * sin(6.28318530718 * uT));
+  float d = length((p - g) * vec2(0.85, 0.7));
+  // pale glow → gold liquid → warm brown at the edges, darkest to the lower left
+  vec3 c = mix(uGlow, uLiquid, smoothstep(0.0, 0.9, d));
+  float diag = max(0.0, dot(vUV - vec2(0.6, 0.15), normalize(vec2(-1.0, 0.6))));
+  float v = smoothstep(0.62, 1.3, d + 0.35 * diag);
+  c = mix(c, uVignette, clamp(v, 0.0, 0.95));
+  c = mix(c, uVignette * 0.85, 0.5 * smoothstep(0.6, 1.1, diag));
+  c = mix(c, uVignette, 0.5 * smoothstep(0.72, 1.02, vUV.x) + 0.25 * smoothstep(0.75, 1.0, vUV.y));
   c *= 1.0 + 0.035 * cos(6.28318530718 * uT);
   finalColor = vec4(c, 1.0);
 }
@@ -275,6 +280,9 @@ const createScene = async (canvas: HTMLCanvasElement, pw: number, ph: number, p:
 
   const atlasSource = Texture.from(drawAtlas(p)).source;
   atlasSource.scaleMode = "linear";
+  // mipmaps: tiny bubbles stay round instead of turning into square specks
+  atlasSource.autoGenerateMipmaps = true;
+  atlasSource.updateMipmaps();
   const cellTex = [0, 1, 2, 3].map((i) => new Texture({ source: atlasSource, frame: new Rectangle(i * CELL, 0, CELL, CELL) }));
   const spriteScale = (d: number) => (d * s) / (CELL * 0.56);
 
@@ -290,8 +298,8 @@ const createScene = async (canvas: HTMLCanvasElement, pw: number, ph: number, p:
     layers[b.layer].addParticle(part);
     return part;
   });
-  const streamParticles = STREAMS.map(() => {
-    const part = new Particle({ texture: cellTex[0], anchorX: 0.5, anchorY: 0.5, alpha: 0.9 });
+  const streamParticles = STREAMS.map((b) => {
+    const part = new Particle({ texture: cellTex[0], anchorX: 0.5, anchorY: 0.5, alpha: b.alpha });
     streamC.addParticle(part);
     return part;
   });
@@ -330,8 +338,9 @@ const createScene = async (canvas: HTMLCanvasElement, pw: number, ph: number, p:
       const part = streamParticles[i];
       // evenly spaced; the whole line advances k stream-lengths per loop
       const u = (((b.j / b.n + b.k * t) % 1) + 1) % 1; // 0 at the nucleation point
-      const y = b.yOrigin - u * b.len;
-      const sc = spriteScale(3 + (b.dMax - 3) * Math.sqrt(u));
+      // bubbles accelerate and grow as they rise: spacing widens toward the top
+      const y = b.yOrigin - Math.pow(u, 1.7) * b.len;
+      const sc = spriteScale(2.5 + (b.dMax - 2.5) * Math.sqrt(u));
       part.x = b.x * s;
       part.y = y * s;
       part.scaleX = sc;

@@ -18,7 +18,9 @@ export type ElType =
   | "wave"
   | "numbers"
   | "globe"
-  | "grid";
+  | "grid"
+  | "panel"
+  | "specks";
 
 export type El = {
   type: ElType;
@@ -54,6 +56,8 @@ const ASPECT: Record<ElType, [number, number]> = {
   numbers: [0.55, 0.8],
   globe: [1, 1],
   grid: [0.5, 0.7],
+  panel: [0.45, 0.8],
+  specks: [0.5, 0.8],
 };
 const WIDTHS: Record<ElType, [number, number]> = {
   gaugeRow: [0.18, 0.3],
@@ -67,18 +71,20 @@ const WIDTHS: Record<ElType, [number, number]> = {
   numbers: [0.08, 0.14],
   globe: [0.1, 0.16],
   grid: [0.16, 0.28],
+  panel: [0.18, 0.34],
+  specks: [0.2, 0.32],
 };
-const STATIC: ElType[] = ["hex", "grid"];
+const STATIC: ElType[] = ["hex", "grid", "panel"];
 
 /** Planes per depth layer (near → far). 80 in total. */
 export const LAYER_COUNTS = [10, 15, 21, 18, 16];
 
 const TYPES_BY_LAYER: ElType[][] = [
-  ["gaugeRow", "bigGauge", "hex", "bars", "globe", "radar"],
-  ["gaugeRow", "bars", "line", "numbers", "hex", "globe", "wave", "bigGauge"],
-  ["gaugeRow", "bars", "line", "map", "numbers", "globe", "radar", "wave", "hex", "bigGauge", "grid"],
-  ["map", "line", "numbers", "grid", "gaugeRow", "bars", "wave", "radar"],
-  ["grid", "map", "line", "numbers", "hex", "gaugeRow", "bars"],
+  ["gaugeRow", "gaugeRow", "bigGauge", "bars", "panel", "specks"],
+  ["gaugeRow", "gaugeRow", "bars", "line", "numbers", "panel", "bigGauge", "specks", "map"],
+  ["gaugeRow", "gaugeRow", "bars", "bars", "line", "map", "numbers", "panel", "panel", "bigGauge", "grid", "specks", "radar", "hex", "wave"],
+  ["panel", "panel", "map", "line", "numbers", "grid", "gaugeRow", "bars", "specks"],
+  ["panel", "panel", "grid", "map", "numbers", "gaugeRow", "bars", "specks"],
 ];
 
 const makeEl = (rng: Rng, type: ElType, layer: number, i: number, n: number): El => {
@@ -111,11 +117,16 @@ export const ELEMENTS: El[] = (() => {
     const types = TYPES_BY_LAYER[layer];
     for (let i = 0; i < n; i++) out.push(makeEl(rng, pick(rng, types), layer, i, n));
   });
-  // globes: keep at most a few
-  let globes = 0;
-  for (const e of out) {
-    if (e.type === "globe" && ++globes > 4) e.type = "gaugeRow";
-  }
+  // two wireframe globes near the top (one in focus, one softer behind it)
+  const g1 = out.find((e) => e.layer === 2 && e.type !== "panel")!;
+  Object.assign(g1, { type: "globe", animated: true, y: 0.34, w: 0.13, aspect: 1 });
+  const g2 = out.find((e) => e.layer === 1 && e.type !== "panel")!;
+  Object.assign(g2, { type: "globe", animated: true, y: 0.38, w: 0.1, aspect: 1, x0: (g1.x0 + 0.3) % 1 });
+  // big donut rows cut off by the bottom edge
+  out.filter((e) => e.layer <= 2 && e.type === "gaugeRow").slice(0, 3).forEach((e) => {
+    e.y = -0.47;
+    e.w *= 1.3;
+  });
   return out;
 })();
 
@@ -143,12 +154,12 @@ const drawDonut = (
   label: boolean,
 ) => {
   ctx.lineCap = "butt";
-  ctx.strokeStyle = rgba(ink.dim, 0.28);
+  ctx.strokeStyle = rgba(ink.dim, 0.35);
   ctx.lineWidth = lw;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, TAU);
   ctx.stroke();
-  ctx.strokeStyle = rgba(ink.bright, 0.95);
+  ctx.strokeStyle = rgba(ink.dim, 1.0);
   ctx.beginPath();
   ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + TAU * frac);
   ctx.stroke();
@@ -228,7 +239,7 @@ export const drawElement = (
 ) => {
   ctx.clearRect(0, 0, w, h);
   ctx.globalCompositeOperation = "lighter";
-  const u = Math.max(1, w / 420); // one "line unit"
+  const u = Math.max(1, w / 300); // one "line unit"
   const m = Math.min(w, h);
   switch (el.type) {
     case "gaugeRow": {
@@ -236,7 +247,7 @@ export const drawElement = (
       const r = Math.min(h * 0.3, (w / n) * 0.3);
       for (let i = 0; i < n; i++) {
         const cx = (w * (i + 0.5)) / n;
-        drawDonut(ctx, cx, h * 0.5, r, r * 0.28, 0.12 + 0.82 * osc(el, i, t), ink, u, true);
+        drawDonut(ctx, cx, h * 0.5, r, r * 0.42, 0.12 + 0.82 * osc(el, i, t), ink, u, true);
       }
       break;
     }
@@ -523,6 +534,41 @@ export const drawElement = (
           ctx.fillStyle = rgba(ink.bright, 0.35 + 0.65 * z);
           ctx.fillRect(x - dot / 2, y - dot / 2, dot, dot);
         }
+      }
+      break;
+    }
+    case "panel": {
+      // hard-edged translucent block: the patchwork wall behind everything
+      ctx.fillStyle = rgba(ink.dim, 0.02 + 0.05 * el.vals[0]);
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = rgba(ink.dim, 0.3);
+      ctx.lineWidth = u;
+      ctx.strokeRect(u / 2, u / 2, w - u, h - u);
+      gridLines(ctx, 0, 0, w, h, 24, Math.round(24 * el.aspect), rgba(ink.dim, 0.07), u * 0.7);
+      ctx.fillStyle = rgba(ink.dim, 0.35);
+      ctx.fillRect(0, 0, w, h * 0.06);
+      ctx.font = `500 ${Math.round(h * 0.035)}px "JetBrains Mono"`;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      for (let r = 0; r < 6; r++) {
+        ctx.fillStyle = rgba(ink.dim, 0.25 + 0.3 * el.vals[r + 20]);
+        ctx.fillText(`${CODES[(el.seed + r) % CODES.length]} ${Math.floor(el.vals[r + 30] * 9000 + 1000)}`, w * 0.04, h * (0.1 + r * 0.055));
+      }
+      break;
+    }
+    case "specks": {
+      const n = 60;
+      for (let k = 0; k < n; k++) {
+        const x = (((el.vals[k % 48] * 7.31 + k * 0.618) % 1) * w);
+        const y = (((el.vals[(k * 7) % 48] * 3.17 + k * 0.382) % 1) * h);
+        const tw = 0.4 + 0.6 * osc(el, k, t);
+        ctx.fillStyle = rgba(k % 5 ? ink.dim : ink.bright, 0.5 + 0.5 * tw);
+        const sz = u * (1 + 2.5 * el.vals[(k * 3) % 48]);
+        if (k % 7 === 0) {
+          ctx.strokeStyle = ctx.fillStyle;
+          ctx.lineWidth = u;
+          ctx.strokeRect(x, y, sz * 3, sz * 3);
+        } else ctx.fillRect(x, y, sz, sz);
       }
       break;
     }
