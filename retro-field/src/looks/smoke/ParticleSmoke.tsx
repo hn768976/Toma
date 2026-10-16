@@ -152,7 +152,7 @@ vec2 density(vec2 q, float t) {
   // stretched across x so the grain reads as brushed, directional wisps
   float fib = 1.0 - abs(pnoise(pf * vec3(2.0, 5.0, 1.0) + vec3(0.0, 13.0, 0.0), vec3(PX * 2.0, 289.0, PT)) * 1.8);
   // heavier at the top, fading out toward the bottom edge
-  float bias = mix(0.04, -0.28, smoothstep(0.12, 1.0, q.y));
+  float bias = mix(0.04, -0.4, smoothstep(0.1, 0.95, q.y));
   return vec2(d + bias, fib);
 }
 
@@ -188,6 +188,9 @@ void main() {
   b *= 0.45 + 0.75 * clamp(fib, 0.0, 1.0);
   // sparse grains scattered between the wisps
   b = max(b, 0.03 * smoothstep(uThreshold - 0.12, uThreshold, d));
+  // vertical envelope: always heaviest at the top, thinning to almost
+  // nothing at the bottom edge whatever the field is doing
+  b *= 1.0 - 0.95 * smoothstep(0.42, 0.98, q.y);
   // compress the hottest billows so the cores stay soft grey-white
   b = b / (1.0 + 1.1 * b);
   float size = aSeed.w * uPxScale;
