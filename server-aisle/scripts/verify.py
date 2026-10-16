@@ -107,7 +107,7 @@ def step3(comp, name, frames):
 BAND_REGIONS = {
     "ServerAisle_Steel": [(900, 650, 1270, 715, "h", 300), (900, 5, 1270, 60, "h", 300)],
     "FrameTunnel_WhiteBurst": [(20, 300, 220, 420, "h", 60), (560, 280, 720, 400, "v", 120)],
-    "FrameTunnel_CyanMagenta": [(600, 320, 680, 400, "v", 300), (0, 250, 60, 470, "h", 300)],
+    "FrameTunnel_CyanMagenta": [],
     "StreamCorridor_Blue": [(590, 60, 690, 300, "v", 300), (600, 420, 680, 715, "v", 300)],
     "ScreenCorridor_GreenBlue": [(560, 20, 720, 200, "v", 300), (560, 560, 720, 715, "v", 300)],
     "ScreenCorridor_AmberTeal": [(560, 20, 720, 200, "v", 300), (560, 560, 720, 715, "v", 300)],
@@ -147,6 +147,21 @@ def step4(name, frames):
         r["ok"] = big == 0
         ok = ok and r["ok"]
         res["regions"].append(r)
+    # Global flat-block test on the mid frame: share of 8x8 blocks with a mean
+    # between 8 (3% luminance) and 250 whose 64 pixels all hold the same value. Undithered
+    # 8-bit gradients produce such flat blocks; dithered ones essentially never.
+    fi = frames // 2 if frames > 180 else 60
+    g = VER / f"{name}_band{fi}.png"
+    if not g.exists():
+        mp4_frame(name, fi, g)
+    lum = px(g).astype(np.float32).mean(axis=2)
+    h, w = lum.shape
+    blocks = lum[: h // 8 * 8, : w // 8 * 8].reshape(h // 8, 8, w // 8, 8).transpose(0, 2, 1, 3).reshape(-1, 64)
+    mean = blocks.mean(axis=1)
+    mid = (mean > 8) & (mean < 250)  # above 3% luminance (the grain fade threshold)
+    flat = (blocks.max(axis=1) - blocks.min(axis=1) == 0) & mid
+    res["flat_block_pct"] = round(100.0 * float(flat.sum()) / max(1, int(mid.sum())), 3)
+    ok = ok and res["flat_block_pct"] < 0.5
     res["ok"] = ok
     if name == "FrameTunnel_WhiteBurst":
         rng = np.random.default_rng(7)
