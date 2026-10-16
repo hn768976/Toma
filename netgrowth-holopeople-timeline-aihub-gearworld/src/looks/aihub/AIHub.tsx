@@ -83,7 +83,7 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
           acc += Math.hypot(r.pts[i] - r.pts[i - 2], r.pts[i + 1] - r.pts[i - 1]);
           if (acc <= s) {
             c.beginPath();
-            c.arc(r.pts[i], r.pts[i + 1], r.dotted ? 2.4 : 3.3, 0, TAU);
+            c.arc(r.pts[i], r.pts[i + 1], r.dotted ? 2.4 : 3.8, 0, TAU);
             c.fill();
           }
         }
@@ -149,9 +149,10 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
         const ringP = easeOutCubic(clamp01(p));
         const other = col[1 - b.ring];
         // dark inner disc
-        c.globalAlpha = 0.85;
-        c.strokeStyle = col[b.ring];
-        c.lineWidth = 2.2;
+        const dimRing = !b.hot && b.icon !== "cloud" && b.icon !== "chart";
+        c.globalAlpha = b.hot ? 1 : dimRing ? 0.45 : 0.75;
+        c.strokeStyle = dimRing ? "#5A8A8A" : col[b.ring];
+        c.lineWidth = b.hot ? 3 : 1.5;
         c.beginPath();
         c.arc(b.x, b.y, b.r, -Math.PI / 2, -Math.PI / 2 + TAU * ringP);
         c.stroke();
@@ -165,32 +166,38 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
         c.beginPath();
         c.arc(b.x, b.y, b.r - 12, 0, TAU * ringP);
         c.stroke();
-        // outer tick ring in the other colour
+        // faint second ring with small ticks and dots
         const rot = t * 0.22 * (i % 2 ? -1 : 1) + i;
-        c.strokeStyle = other;
-        c.globalAlpha = 0.5 * ringP;
-        c.lineWidth = 2.2;
-        for (let a = 0; a < 36; a++) {
-          if (a % 9 > 6) continue;
-          const an = rot + (a / 36) * TAU;
+        c.strokeStyle = dimRing ? "#5A8A8A" : col[b.ring];
+        c.globalAlpha = 0.35 * ringP;
+        c.lineWidth = 1;
+        c.beginPath();
+        c.arc(b.x, b.y, b.r + 9, 0, TAU);
+        c.stroke();
+        c.globalAlpha = 0.55 * ringP;
+        c.lineWidth = 1.6;
+        for (let a = 0; a < 24; a++) {
+          if (a % 6 > 3) continue;
+          const an = rot + (a / 24) * TAU;
           c.beginPath();
-          c.arc(b.x, b.y, b.r + 6, an, an + 0.07);
+          c.arc(b.x, b.y, b.r + 9, an, an + 0.05);
           c.stroke();
         }
-        // partial arcs + knobs
-        c.lineWidth = 2;
-        c.globalAlpha = 0.85 * ringP;
-        for (let a = 0; a < 2; a++) {
+        c.fillStyle = c.strokeStyle;
+        for (let a = 0; a < 3; a++) {
+          const an = -rot * 0.6 + (a * TAU) / 3;
           c.beginPath();
-          c.arc(b.x, b.y, b.r + 13, -rot * 0.6 + a * Math.PI, -rot * 0.6 + a * Math.PI + 0.8);
-          c.stroke();
-        }
-        c.fillStyle = other;
-        for (let a = 0; a < 2; a++) {
-          const an = -rot * 0.6 + a * Math.PI + 0.8;
-          c.beginPath();
-          c.arc(b.x + Math.cos(an) * (b.r + 13), b.y + Math.sin(an) * (b.r + 13), 2.6, 0, TAU);
+          c.arc(b.x + Math.cos(an) * (b.r + 9), b.y + Math.sin(an) * (b.r + 9), 2.2, 0, TAU);
           c.fill();
+        }
+        if (b.icon === "chart") {
+          // orange arc segment on the chart badge
+          c.strokeStyle = v.secondary;
+          c.lineWidth = 2.4;
+          c.globalAlpha = 0.9 * ringP;
+          c.beginPath();
+          c.arc(b.x, b.y, b.r + 2, Math.PI * 0.55 + rot * 0.3, Math.PI * 1.05 + rot * 0.3);
+          c.stroke();
         }
         c.globalAlpha = 1;
         // icon
@@ -241,7 +248,7 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
         }
         c.globalAlpha = 1;
         const sq = easeOutCubic(clamp01((cp - 0.3) / 0.5));
-        const h = 27;
+        const h = 34;
         if (sq > 0) {
           c.lineWidth = 2.2;
           c.setLineDash([8 * h * sq, 1e5]);
@@ -279,7 +286,7 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
           c.arc(CHIP.x + Math.cos(kn) * (CHIP.r + 9), CHIP.y + Math.sin(kn) * (CHIP.r + 9), 3, 0, TAU);
           c.fill();
           c.fillStyle = v.primary;
-          c.font = `600 22px ${INTER}`;
+          c.font = `600 28px ${INTER}`;
           c.textAlign = "center";
           c.textBaseline = "middle";
           c.fillText("AI", CHIP.x, CHIP.y + 1);
@@ -288,7 +295,7 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
       }
 
       // Glow the bright layer, then composite it.
-      addGlow(main, c.canvas, 5 * k, 0.3, "aihub-glow");
+      addGlow(main, c.canvas, 6 * k, 0.5, "aihub-glow");
 
       // Dim HUD layer straight onto main (under the bright layer).
       main.save();
@@ -305,9 +312,11 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
         if (pn.ink === 1) {
           d.globalAlpha = 0.09 * blink;
           d.fillRect(pn.x, pn.y, pn.w, pn.h);
-        } else if (pn.kind !== 5) {
-          d.globalAlpha = 0.06 * blink;
+        } else {
+          d.globalAlpha = 0.16 * blink;
+          d.fillStyle = "#3A4A48";
           d.fillRect(pn.x, pn.y, pn.w, pn.h);
+          d.fillStyle = ink;
         }
         d.globalAlpha = (pn.kind === 5 ? 0 : 0.22) * blink;
         d.strokeRect(pn.x + 0.5, pn.y + 0.5, pn.w - 1, pn.h - 1);
@@ -386,6 +395,11 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
       for (const rd of RADARS) {
         const p = appear(rd.t);
         if (p <= 0) continue;
+        d.fillStyle = "#3A4A48";
+        d.globalAlpha = 0.35 * p;
+        d.beginPath();
+        d.arc(rd.x, rd.y, rd.r, 0, TAU);
+        d.fill();
         d.strokeStyle = "#7A9A96";
         for (const [rr, a] of [[rd.r, 0.3], [rd.r * 0.7, 0.2], [rd.r * 0.35, 0.25]] as const) {
           d.globalAlpha = a * p;
@@ -428,14 +442,14 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
       for (const br of BUTTON_ROWS) {
         const p = appear(br.t);
         if (p <= 0) continue;
-        d.strokeStyle = v.primary;
+        d.strokeStyle = "#7A9A96";
         for (let j = 0; j < br.n; j++) {
-          d.globalAlpha = 0.3 * p;
+          d.globalAlpha = 0.4 * p;
           d.beginPath();
           d.arc(br.x + j * br.gap, br.y, br.r, 0, TAU);
           d.stroke();
           d.globalAlpha = (hash3(j, Math.floor(t * 2), br.x) > 0.6 ? 0.5 : 0.18) * p;
-          d.fillStyle = v.primary;
+          d.fillStyle = "#7A9A96";
           d.beginPath();
           d.arc(br.x + j * br.gap, br.y, br.r * 0.45, 0, TAU);
           d.fill();
@@ -503,8 +517,8 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
       for (const ro of READOUTS) {
         const p = appear(ro.t);
         if (p <= 0) continue;
-        d.fillStyle = ro.s === "SAT" ? v.secondary : v.primary;
-        d.font = ro.s === "SAT" ? `500 13px ${MONO}` : `500 10px ${MONO}`;
+        d.fillStyle = v.primary;
+        d.font = ro.s === "SAT" ? `500 12px ${MONO}` : `500 10px ${MONO}`;
         d.globalAlpha = 0.6 * p;
         const txt = ro.s === "SAT" ? `SAT ${30 + Math.floor(hash3(Math.floor(t * 2), 1, 9) * 40)}/65` : ro.s === "49" ? `${40 + Math.floor(hash3(Math.floor(t * 2), 2, 9) * 20)}` : ro.s;
         d.fillText(txt, ro.x, ro.y);
@@ -521,7 +535,7 @@ export const AIHub: React.FC<{ v: AIHubVersion }> = ({ v }) => {
         if (p > 0) {
           d.fillStyle = v.primary;
           d.globalAlpha = 0.6 * p;
-          d.font = `500 9px ${MONO}`;
+          d.font = `500 11px ${MONO}`;
           d.fillText("ELEMENTS / DATA", ELEMENTS.x + 60, ELEMENTS.y);
           d.globalAlpha = 0.3 * p;
           d.strokeStyle = v.primary;

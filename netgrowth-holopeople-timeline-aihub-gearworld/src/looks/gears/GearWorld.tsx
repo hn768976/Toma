@@ -16,10 +16,10 @@ const drawGear = (c: CanvasRenderingContext2D, g: PlacedGear, angle: number, fil
   c.save();
   c.translate(g.x, g.y);
   c.rotate(angle);
-  c.globalAlpha = alpha * 0.72;
+  c.globalAlpha = alpha * 0.8;
   c.fillStyle = fill;
   c.fill(g.shape.path, "evenodd");
-  c.globalAlpha = alpha * 0.45;
+  c.globalAlpha = alpha * 0.75;
   c.strokeStyle = edge;
   c.lineWidth = 1.2;
   c.stroke(g.shape.path);
@@ -42,11 +42,14 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       const t = (frame % LOOP) / LOOP;
       main.fillStyle = v.background;
       main.fillRect(0, 0, LW, LH);
+      // teal wash lifts the darks toward the reference's dark teal
+      main.fillStyle = "rgba(0,34,40,0.3)";
+      main.fillRect(0, 0, LW, LH);
 
       // blue haze
       const haze = (x: number, y: number, r: number, a: number) => {
         const g = main.createRadialGradient(x, y, 0, x, y, r);
-        g.addColorStop(0, `rgba(30,140,220,${a})`);
+        g.addColorStop(0, `rgba(24,156,220,${a})`);
         g.addColorStop(0.5, `rgba(16,90,160,${a * 0.35})`);
         g.addColorStop(1, "rgba(8,50,100,0)");
         main.fillStyle = g;
@@ -87,7 +90,7 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       const mp = getLayer("gw-map", bw, bh);
       mp.setTransform(k, 0, 0, k, 0, 0);
       mp.fillStyle = v.map;
-      const ds = MAP_DOT * 0.55;
+      const ds = MAP_DOT * 0.68;
       for (const d of MAP_DOTS) {
         let a = Math.min(1, 0.12 + 1.3 * d.b);
         if (d.tw) a *= 0.6 + 0.4 * Math.sin(TAU * (d.tw * 3 * t + d.ph));
@@ -105,14 +108,14 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       main.restore();
 
       // left light bloom + horizontal streak
-      haze(150, 320, 300, 0.55);
-      haze(120, 310, 160, 0.35);
+      haze(150, 320, 320, 0.7);
+      haze(110, 305, 170, 0.45);
       const st = main.createLinearGradient(0, 0, 300, 0);
       st.addColorStop(0, "rgba(90,200,255,0.55)");
       st.addColorStop(1, "rgba(90,200,255,0)");
       main.fillStyle = st;
       main.globalCompositeOperation = "lighter";
-      for (const [hh, a] of [[30, 0.12], [8, 0.18]] as const) {
+      for (const [hh, a] of [[30, 0.14], [8, 0.25], [2, 0.5]] as const) {
         main.globalAlpha = a;
         main.fillRect(0, 305 - hh / 2, 300, hh);
       }
@@ -133,7 +136,7 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       // labels
       main.font = `400 8.5px ${MONO}`;
       main.fillStyle = v.hot;
-      main.globalAlpha = 0.7;
+      main.globalAlpha = 0.9;
       main.textBaseline = "middle";
       for (const l of LABELS) main.fillText(l.s, l.x, l.y);
       main.globalAlpha = 1;
@@ -159,7 +162,7 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       // bright floating specks
       fg.fillStyle = v.hot;
       for (const sp of SPECKS) {
-        fg.globalAlpha = 0.2 + 0.2 * Math.sin(TAU * (sp.k * t + sp.ph));
+        fg.globalAlpha = 0.35 + 0.3 * Math.sin(TAU * (sp.k * t + sp.ph));
         fg.beginPath();
         fg.arc(sp.x, sp.y, sp.r, 0, TAU);
         fg.fill();
@@ -169,7 +172,7 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       addGlow(main, fg.canvas, 8 * k, 0.3, "gw-glow3");
       main.save();
       main.setTransform(1, 0, 0, 1, 0, 0);
-      main.filter = `blur(${0.5 * k}px)`;
+      main.filter = `blur(${0.3 * k}px)`;
       main.drawImage(fg.canvas, 0, 0);
       main.filter = "none";
       main.restore();
@@ -189,8 +192,8 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       fg.translate(gx, gy);
       fg.rotate(gAngle);
       const gg = fg.createRadialGradient(0, 0, gear.rd * 0.7, 0, 0, gear.ra);
-      gg.addColorStop(0, "rgba(20,90,150,0.55)");
-      gg.addColorStop(1, "rgba(40,140,200,0.7)");
+      gg.addColorStop(0, "rgba(30,130,190,0.75)");
+      gg.addColorStop(1, "rgba(70,180,230,0.9)");
       fg.fillStyle = gg;
       fg.fill(gear.path, "evenodd");
       fg.strokeStyle = v.hot;
@@ -215,6 +218,28 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
         fg.arc(gx, gy, rr, 0, TAU);
         fg.stroke();
       }
+      // dashed ring band + extra fine rings + diagonals
+      fg.globalAlpha = 0.5;
+      fg.setLineDash([6, 5]);
+      fg.lineWidth = 3;
+      fg.beginPath();
+      fg.arc(gx, gy, rIn * 0.7, 0, TAU);
+      fg.stroke();
+      fg.setLineDash([]);
+      fg.lineWidth = 1;
+      for (const rr of [0.92, 0.56, 0.3]) {
+        fg.globalAlpha = 0.35;
+        fg.beginPath();
+        fg.arc(gx, gy, rIn * rr, 0, TAU);
+        fg.stroke();
+      }
+      fg.globalAlpha = 0.3;
+      fg.beginPath();
+      fg.moveTo(gx - rIn * 0.7, gy - rIn * 0.7);
+      fg.lineTo(gx + rIn * 0.7, gy + rIn * 0.7);
+      fg.moveTo(gx + rIn * 0.5, gy - rIn * 0.86);
+      fg.lineTo(gx + rIn * 0.95, gy - rIn * 0.1);
+      fg.stroke();
       // ticks
       fg.globalAlpha = 0.7;
       for (let i = 0; i < 72; i++) {
@@ -274,13 +299,13 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       fg.strokeStyle = v.hot;
       fg.lineWidth = 1.3;
       fg.beginPath();
-      fg.moveTo(gx - 72, gy - 52);
-      fg.lineTo(gx - 22, gy - 52);
-      fg.lineTo(gx - 47, gy - 6);
+      fg.moveTo(gx - 100, gy - 58);
+      fg.lineTo(gx - 20, gy - 58);
+      fg.lineTo(gx - 60, gy + 6);
       fg.closePath();
       fg.stroke();
-      fg.globalAlpha = 0.15;
-      fg.fillStyle = v.hot;
+      fg.globalAlpha = 0.5;
+      fg.fillStyle = "#04203A";
       fg.fill();
       fg.globalAlpha = 0.85;
       fg.strokeRect(gx + 48, gy + 110, 9, 9);
@@ -324,9 +349,9 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
         fg.stroke();
       }
       // angular frame
-      fg.globalAlpha = 0.85;
-      fg.strokeStyle = v.edge;
-      fg.lineWidth = 1.3;
+      fg.globalAlpha = 1;
+      fg.strokeStyle = v.hot;
+      fg.lineWidth = 1.8;
       const frameP = [
         [gx - 92, gy - 228], [gx + 108, gy - 228], [gx + 178, gy - 118], [gx + 198, gy + 2],
         [gx + 178, gy + 112], [gx + 108, gy + 197], [gx - 92, gy + 197], [gx - 178, gy + 112],
@@ -336,7 +361,8 @@ export const GearWorld: React.FC<{ v: GearVersion; loopCheck?: boolean }> = ({ v
       frameP.forEach(([px, py], i) => (i ? fg.lineTo(px, py) : fg.moveTo(px, py)));
       fg.closePath();
       fg.stroke();
-      fg.globalAlpha = 0.4;
+      fg.globalAlpha = 0.6;
+      fg.lineWidth = 1.3;
       fg.beginPath();
       fg.arc(gx, gy, 226, 0, TAU);
       fg.stroke();

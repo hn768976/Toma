@@ -1,5 +1,5 @@
 // Involute spur-gear outlines + exact meshing phases.
-export type GearStyle = "spokes" | "holes" | "solid";
+export type GearStyle = "spokes" | "fine" | "holes" | "solid" | "button";
 
 const PRESSURE = (20 * Math.PI) / 180;
 const inv = (a: number) => Math.tan(a) - a;
@@ -43,10 +43,10 @@ export const gearShape = (N: number, m: number, style: GearStyle, seed: number):
 
   // cut-outs (filled with evenodd)
   const rin = rd - Math.max(3, m * 1.6);
-  if (style === "spokes") {
-    const spokes = 5 + (seed % 4);
-    const hub = Math.max(rp * 0.28, 5);
-    const w = Math.max(2.5, rp * 0.09);
+  if (style === "spokes" || style === "fine") {
+    const spokes = style === "fine" ? 16 : 5 + (seed % 4);
+    const hub = Math.max(rp * (style === "fine" ? 0.2 : 0.28), 5);
+    const w = style === "fine" ? Math.max(1.2, rp * 0.022) : Math.max(2.5, rp * 0.09);
     for (let s = 0; s < spokes; s++) {
       const a0 = (s / spokes) * Math.PI * 2;
       const a1 = ((s + 1) / spokes) * Math.PI * 2;
@@ -59,6 +59,17 @@ export const gearShape = (N: number, m: number, style: GearStyle, seed: number):
     }
     path.moveTo(hub * 0.45, 0);
     path.arc(0, 0, hub * 0.45, 0, Math.PI * 2);
+  } else if (style === "button") {
+    // round "button" face: two dots and a slot
+    for (const sx of [-1, 1]) {
+      const x = sx * rin * 0.32;
+      const y = -rin * 0.2;
+      path.moveTo(x + rin * 0.13, y);
+      path.arc(x, y, rin * 0.13, 0, Math.PI * 2);
+    }
+    const sw = rin * 0.7;
+    const sh = rin * 0.16;
+    path.roundRect(-sw / 2, rin * 0.22, sw, sh, sh / 2);
   } else if (style === "holes") {
     const n = 3 + (seed % 3);
     const rr = rin * 0.32;

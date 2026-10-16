@@ -7,6 +7,8 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setOverwriteOutput(true);
+// Video only: no (silent) audio track in the output.
+Config.setMuted(true);
 // WebGL2 through ANGLE works in headless Chromium (needed by HoloPeople_*).
 Config.setChromiumOpenGlRenderer("angle");
 

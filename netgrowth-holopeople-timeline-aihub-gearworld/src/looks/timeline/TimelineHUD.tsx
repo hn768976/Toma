@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import { CanvasStage, DrawInfo, LH, LW } from "../../lib/CanvasStage";
+import { getLayer } from "../../lib/layers";
 import { INTER, MONO } from "../../lib/fonts";
 import { clamp01, easeInOutCubic, easeOutBack, easeOutCubic } from "../../lib/random";
 import { TimelineVersion } from "./versions";
@@ -8,7 +9,7 @@ import { TimelineVersion } from "./versions";
 const Y = 360;
 const X0 = 210;
 const X1 = 1080;
-const NODE_X = [362, 476, 590, 704, 818, 932];
+const NODE_X = [0, 1, 2, 3, 4, 5].map((i) => 362 + i * 114.6);
 const NODE_R = 12;
 const STEM = 44;
 const HATCHED = [true, false, true, false, false, false];
@@ -19,11 +20,28 @@ const typed = (s: string, p: number) => s.slice(0, Math.round(s.length * clamp01
 
 export const TimelineHUD: React.FC<{ v: TimelineVersion }> = ({ v }) => {
   const draw = useCallback(
-    (ctx: CanvasRenderingContext2D, { frame, fps }: DrawInfo) => {
+    (main: CanvasRenderingContext2D, { frame, fps, bw, bh, k }: DrawInfo) => {
       const t = frame / fps;
       // Exactly black, no grain: made for Screen / Add blend modes.
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, LW, LH);
+      main.fillStyle = "#000000";
+      main.fillRect(0, 0, LW, LH);
+      const ctx = getLayer("timeline", bw, bh);
+      ctx.setTransform(k, 0, 0, k, 0, 0);
+      drawArt(ctx, t);
+      // slight softening of the strokes (blurring black keeps it exactly 0)
+      main.save();
+      main.setTransform(1, 0, 0, 1, 0, 0);
+      main.filter = `blur(${0.5 * k}px)`;
+      main.drawImage(ctx.canvas, 0, 0);
+      main.filter = "none";
+      main.globalAlpha = 0.35;
+      main.drawImage(ctx.canvas, 0, 0);
+      main.restore();
+    },
+    [v],
+  );
+  const drawArt = useCallback(
+    (ctx: CanvasRenderingContext2D, t: number) => {
       ctx.strokeStyle = v.ink;
       ctx.fillStyle = v.ink;
       ctx.lineWidth = LW_LINE;
@@ -67,10 +85,12 @@ export const TimelineHUD: React.FC<{ v: TimelineVersion }> = ({ v }) => {
         const pulse = pulseT > 0 && pulseT < 1 ? Math.sin(pulseT * Math.PI) : 0;
         const r = NODE_R * easeOutBack(pop, 1.6) * (1 + 0.25 * pulse);
         // clear the line inside the node
+        ctx.globalCompositeOperation = "destination-out";
         ctx.fillStyle = "#000000";
         ctx.beginPath();
         ctx.arc(nx, Y, r, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
         ctx.fillStyle = v.ink;
         ctx.lineWidth = 2.2;
         ctx.beginPath();
@@ -81,15 +101,21 @@ export const TimelineHUD: React.FC<{ v: TimelineVersion }> = ({ v }) => {
           // hatched node: a few thick, widely spaced stripes
           ctx.save();
           ctx.beginPath();
-          ctx.arc(nx, Y, r - 2.5, 0, Math.PI * 2);
+          ctx.arc(nx, Y, Math.max(0, r - 2.5), 0, Math.PI * 2);
           ctx.clip();
-          ctx.lineWidth = 2;
-          for (let k = -2; k <= 2; k++) {
+          // grey fill crossed by three bold dark stripes
+          ctx.globalAlpha = 0.72;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.lineWidth = 2.6;
+          for (let s2 = -1; s2 <= 1; s2++) {
             ctx.beginPath();
-            ctx.moveTo(nx + k * 4.6 - r, Y + r);
-            ctx.lineTo(nx + k * 4.6 + r, Y - r);
+            ctx.moveTo(nx + s2 * 6.5 - r, Y + r);
+            ctx.lineTo(nx + s2 * 6.5 + r, Y - r);
             ctx.stroke();
           }
+          ctx.globalCompositeOperation = "source-over";
           ctx.restore();
           ctx.lineWidth = LW_LINE;
         } else {
@@ -128,31 +154,31 @@ export const TimelineHUD: React.FC<{ v: TimelineVersion }> = ({ v }) => {
         ctx.save();
         ctx.globalAlpha = clamp01(lp2 * 4);
         ctx.beginPath();
-        ctx.rect(nx + 1, by - 13, 14, 14);
+        ctx.rect(nx - 7, by - 13, 14, 14);
         ctx.clip();
         ctx.lineWidth = 2.6;
-        for (let k = -2; k <= 2; k++) {
+        for (let s2 = -2; s2 <= 2; s2++) {
           ctx.beginPath();
-          ctx.moveTo(nx + 1 + k * 5.5, by + 1);
-          ctx.lineTo(nx + 15 + k * 5.5, by - 13);
+          ctx.moveTo(nx - 7 + s2 * 5.5, by + 1);
+          ctx.lineTo(nx + 7 + s2 * 5.5, by - 13);
           ctx.stroke();
         }
         ctx.restore();
         ctx.textBaseline = "alphabetic";
         ctx.textAlign = "left";
         ctx.font = `500 15px ${INTER}`;
-        ctx.fillText(typed(step.num, lp2 * 3), nx + 19, by + 1);
+        ctx.fillText(typed(step.num, lp2 * 3), nx + 14, by + 1);
         ctx.font = `500 7.5px ${INTER}`;
-        ctx.fillText(typed(step.title.toUpperCase(), (lp2 - 0.15) * 2), nx + 41, by - 6);
+        ctx.fillText(typed(step.title.toUpperCase(), (lp2 - 0.15) * 2), nx + 36, by - 6);
         ctx.font = `400 5.5px ${MONO}`;
         ctx.globalAlpha = 0.75;
-        ctx.fillText(typed(step.sub, (lp2 - 0.35) * 1.6), nx + 41, by + 1);
+        ctx.fillText(typed(step.sub, (lp2 - 0.35) * 1.6), nx + 36, by + 1);
         ctx.globalAlpha = 1;
         // dash beside the node
         const ul = easeOutCubic(clamp01((lp2 - 0.2) * 2));
-        const uy = up < 0 ? Y - 9 : Y + 9;
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.6;
+        const uy = up < 0 ? Y - 13 : Y + 12;
+        ctx.lineWidth = 1.8;
+        ctx.globalAlpha = 0.38;
         ctx.beginPath();
         ctx.moveTo(nx + NODE_R + 4, uy);
         ctx.lineTo(nx + NODE_R + 4 + DASH[i] * ul, uy);

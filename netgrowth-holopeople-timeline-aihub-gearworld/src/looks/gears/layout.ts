@@ -8,12 +8,12 @@ const rng = mulberry32(4067526391);
 export const NEAR: PlacedGear[] = buildTrainToward({ x: 0, y: 330, N: 34, style: "spokes", phase: 0.1 }, 5, [
   { parent: 0, x: 95, y: 240, N: 10, style: "solid" }, // 1
   { parent: 0, x: 135, y: 365, N: 11, style: "spokes" }, // 2
-  { parent: 2, x: 195, y: 455, N: 22, style: "holes" }, // 3
+  { parent: 2, x: 195, y: 455, N: 22, style: "button" }, // 3
   { parent: 3, x: 118, y: 515, N: 10, style: "solid" }, // 4
   { parent: 3, x: 285, y: 390, N: 13, style: "spokes" }, // 5
   { parent: 5, x: 362, y: 305, N: 22, style: "spokes" }, // 6
   { parent: 6, x: 285, y: 235, N: 10, style: "solid" }, // 7
-  { parent: 6, x: 470, y: 440, N: 36, style: "spokes" }, // 8
+  { parent: 6, x: 470, y: 440, N: 36, style: "fine" }, // 8
   { parent: 8, x: 632, y: 318, N: 30, style: "spokes" }, // 9
   { parent: 9, x: 735, y: 215, N: 20, style: "spokes" }, // 10
   { parent: 10, x: 668, y: 150, N: 10, style: "holes" }, // 11
@@ -23,7 +23,7 @@ export const NEAR: PlacedGear[] = buildTrainToward({ x: 0, y: 330, N: 34, style:
 
 // Far train (blurred, dimmer): fills the gap between the gear group and the gauge.
 export const FAR: PlacedGear[] = buildTrain(
-  800, 470, 16, 3,
+  150, 150, 16, 3,
   [
     [0, -80, 12, "solid"],
     [1, -60, 18, "holes"],
@@ -33,7 +33,7 @@ export const FAR: PlacedGear[] = buildTrain(
   0.4,
 );
 // Near-train gears drawn out of focus (depth).
-export const SOFT_NEAR = new Set([3, 4, 8]);
+export const SOFT_NEAR = new Set([4, 12, 13]);
 
 // Gauge.
 export const GAUGE = { x: 1032, y: 318, gear: gearShape(40, 9.2, "solid", 40) };
@@ -62,13 +62,13 @@ export const HEXES = [
   ...Array.from({ length: 4 }, (_, i) => ({ x: 700 + i * 62 + (i % 2) * 20, y: 30 + (i % 2) * 54, a: 0.25, dark: true })),
 ].filter(() => rng() < 0.8);
 
-export const SPECKS = Array.from({ length: 10 }, () => ({ x: rng() * 820, y: 120 + rng() * 480, r: 0.8 + rng() * 1.6, ph: rng(), k: 1 + Math.floor(rng() * 3) }));
+export const SPECKS = Array.from({ length: 22 }, (_, i) => ({ x: i < 14 ? rng() * 320 : rng() * 820, y: i < 14 ? 220 + rng() * 320 : 120 + rng() * 480, r: 0.8 + rng() * 1.6, ph: rng(), k: 1 + Math.floor(rng() * 3) }));
 
 export const LABELS = [
   { x: 92, y: 108, s: "[26/19]_index" },
   { x: 586, y: 107, s: "[26/19]" },
   { x: 96, y: 540, s: "[26/19]" },
-  { x: 210, y: 420, s: "EXT [207025]" },
+  { x: 250, y: 408, s: "EXT [207025]" },
   { x: 418, y: 613, s: "SYS.[8754674]_x_7220" },
   { x: 950, y: 60, s: "534867/4096_index [n]" },
   { x: 790, y: 442, s: "IDX.47/33" },
