@@ -18,6 +18,7 @@ export interface PeopleNetworkProps {
   halo: string;
   grain: number;
   farFade: number; // how much far badges fade (0..1)
+  badgeAlpha: number;
   background: string;
 }
 
@@ -58,7 +59,7 @@ const BADGES: Badge[] = Array.from({ length: COUNT }, () => {
     z,
     r: range(rng, 0.42, 0.62),
     filled: rng() < 0.92,
-    glow: rng() < 0.06,
+    glow: rng() < 0.08,
     colourB: rng() < 0.35,
     bob: range(rng, 0.03, 0.12),
     bobCycles: int(rng, 1, 2),
@@ -147,11 +148,9 @@ const buildAtlas = (cell: number) => {
       s.beginPath();
       s.arc(cx, cx, R, 0, Math.PI * 2);
       s.fill();
-      // pictogram as an outline drawn in G
-      s.strokeStyle = "#00ff00";
-      s.lineWidth = R * 0.12;
-      s.lineJoin = "round";
-      drawPictogram(s, cx, cx, R, true);
+      // pictogram as a solid silhouette drawn in G
+      s.fillStyle = "#00ff00";
+      drawPictogram(s, cx, cx, R, false);
     } else {
       s.strokeStyle = "#0000ff";
       s.lineWidth = R * 0.07;
@@ -346,7 +345,7 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
     fragmentShader: LINE_FS,
     uniforms: {
       uRes: { value: new THREE.Vector2(W, H) },
-      uHalfWidth: { value: 0.7 * u },
+      uHalfWidth: { value: 0.8 * u },
       uColor: { value: new THREE.Vector3(...hexToRgb(props.line)) },
     },
     ...premul,
@@ -421,7 +420,7 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
     });
     const m = new THREE.Mesh(quad, mat);
     m.frustumCulled = false;
-    const sz = b.r * 3.6;
+    const sz = b.r * 4.4;
     m.scale.set(sz, sz, 1);
     scene.add(m);
     return { m, i, cycles: 1 + (i % 2), phase: b.phase };
@@ -451,13 +450,13 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
         const mat = m.material as THREE.ShaderMaterial;
         // depth of field: blur from the circle of confusion around FOCUS
         const coc = Math.abs(1 - FOCUS / b.z);
-        const blurPx = (b.z < FOCUS ? 4.5 : 4) * coc * u;
+        const blurPx = (b.z < FOCUS ? 3 : 2.5) * coc * u;
         const rPx = (b.r / (b.z * tanHalf)) * (H / 2);
         const sigmaFrac = (blurPx * BADGE_R) / Math.max(rPx, 1);
         mat.uniforms.uLevel.value = Math.min(LEVELS - 1, (sigmaFrac / MAX_SIGMA) * (LEVELS - 1));
-        const nearSoft = b.z < 5.5 ? 0.38 + 0.5 * smooth(2.6, 5.5, b.z) : 1;
+        const nearSoft = b.z < 6 ? 0.3 + 0.55 * smooth(2.6, 6, b.z) : 1;
         const far = 1 - props.farFade * smooth(11, Z_FAR, b.z);
-        mat.uniforms.uAlpha.value = 0.95 * nearSoft * far;
+        mat.uniforms.uAlpha.value = props.badgeAlpha * nearSoft * far;
       });
 
       LINKS.forEach(([i, j], n) => {
@@ -497,7 +496,7 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
         const b = BADGES[h.i];
         const far = 1 - props.farFade * smooth(11, Z_FAR, b.z);
         (h.m.material as THREE.ShaderMaterial).uniforms.uAlpha.value =
-          (0.55 + 0.3 * Math.sin(2 * Math.PI * h.cycles * t + h.phase)) * far;
+          (0.85 + 0.15 * Math.sin(2 * Math.PI * h.cycles * t + h.phase)) * far;
       }
       post.render(scene, camera, f);
     },

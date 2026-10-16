@@ -36,7 +36,7 @@ const MARGIN = [500, 2400, 600, 900]; // plane extends past the drawn screen (L,
 // ---------------------------------------------------------------------------
 const clutterRng = mulberry32(0x7e1e7e);
 const CLUTTER = Array.from({ length: 160 }, () => ({
-  x: WAVE_X0 + clutterRng() * (WAVE_X1 - WAVE_X0 - 200),
+  x: WAVE_X0 + clutterRng() * (SW - WAVE_X0 - 220),
   y: 90 + clutterRng() * 1150,
   w: 60 + clutterRng() * 180,
   rows: int(clutterRng, 1, 4),
@@ -64,6 +64,15 @@ const drawStatic = (c: CanvasRenderingContext2D, p: VitalMonitorProps) => {
   c.moveTo(1890, 70);
   c.lineTo(1890, 1300);
   c.stroke();
+  // tick ruler under the pleth band and a dashed rule along the top
+  c.lineWidth = 2;
+  for (let x = WAVE_X0; x < SW - 40; x += 20) {
+    c.beginPath();
+    c.moveTo(x, BANDS.pleth.y1 + 40);
+    c.lineTo(x, BANDS.pleth.y1 + 40 + ((x - WAVE_X0) % 100 === 0 ? 18 : 9));
+    c.stroke();
+  }
+  for (let x = WAVE_X0; x < SW - 40; x += 28) c.fillRect(x, 74, 14, 2);
   // vertical grid inside the wave area (dotted)
   c.lineWidth = 1.5;
   for (let x = WAVE_X0; x <= WAVE_X1; x += 100) {
@@ -171,8 +180,8 @@ const drawTrace = (
   c.lineCap = "round";
   // glow: blurred copy underneath
   c.save();
-  c.globalAlpha = 0.45;
-  c.lineWidth = width * 1.5;
+  c.globalAlpha = 0.3;
+  c.lineWidth = width * 1.4;
   c.shadowColor = color;
   c.shadowBlur = width * 5;
   for (const seg of pts) strokePts(c, seg);
@@ -230,7 +239,8 @@ const drawDynamic = (c: CanvasRenderingContext2D, t: number, p: VitalMonitorProp
 
   // readouts: thin, inline with their labels
   c.save();
-  c.shadowBlur = 6;
+  c.shadowBlur = 2;
+  c.globalAlpha = 0.85;
   c.font = `300 104px "${SANS}"`;
   c.fillStyle = p.ecg;
   c.shadowColor = p.ecg;
@@ -356,7 +366,7 @@ const createApp = (props: VitalMonitorProps) => (ctx: StageCtx) => {
       uBgA: { value: new THREE.Vector3(...hexToRgb(props.bgA)) },
       uBgB: { value: new THREE.Vector3(...hexToRgb(props.bgB)) },
       uFocus: { value: 1 },
-      uCocScale: { value: 1.25 },
+      uCocScale: { value: 1.45 },
       uMargin: { value: new THREE.Vector4(MARGIN[0], MARGIN[1], MARGIN[2], MARGIN[3]) },
       uScreen: { value: new THREE.Vector2(SW, SH) },
     },

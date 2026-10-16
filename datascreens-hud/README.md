@@ -105,9 +105,9 @@ Each version is one data row in `src/compositions.ts`. Copy a row, give it a new
   props: {
     bgTop: "#03262A", bgBottom: "#0A3A40",
     badgeA: "#D8FFF8", badgeB: "#D8FFF8", glyph: "#05343A",
-    line: "#5AB8B0", lineAlpha: 0.42,
+    line: "#5AB8B0", lineAlpha: 0.5,
     pulse: "#E8FFFC", pulseAdditive: true, halo: "#8FFFF0",
-    grain: 0.01, farFade: 0.85, background: "#03262A",
+    grain: 0.01, farFade: 0.95, badgeAlpha: 0.82, background: "#03262A",
   },
 },
 ```

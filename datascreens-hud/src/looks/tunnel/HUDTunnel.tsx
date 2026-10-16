@@ -42,11 +42,11 @@ const drawCircuit = (c: CanvasRenderingContext2D, tw: number, th: number, r: Rng
   c.fillStyle = "#fff";
   c.lineCap = "square";
   // circuit traces: runs along the tunnel with right-angle jogs, pads at the ends
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 480; i++) {
     let x = r() * tw;
     let y = r() * th;
     const lw = pick(r, [1.5, 2, 2, 3]) * s;
-    const alpha = range(r, 0.35, 1);
+    const alpha = range(r, 0.55, 1);
     const pts: [number, number][] = [[x, y]];
     const segs = int(r, 2, 5);
     for (let k = 0; k < segs; k++) {
@@ -110,7 +110,7 @@ const drawCircuit = (c: CanvasRenderingContext2D, tw: number, th: number, r: Rng
     });
   }
   // free tiny text
-  for (let i = 0; i < 160; i++) {
+  for (let i = 0; i < 320; i++) {
     const x = r() * tw;
     const y = r() * th;
     const str = r() < 0.5 ? hexString(r, int(r, 6, 22)) : `${pick(r, ["NODE", "SCAN", "LINK", "SEG", "TRK"])} ${int(r, 10, 99)}`;
@@ -126,7 +126,7 @@ const drawCircuit = (c: CanvasRenderingContext2D, tw: number, th: number, r: Rng
   for (let i = 0; i < 90; i++) {
     const x = r() * tw;
     const y = r() * th;
-    const rad = range(r, 3, 8) * s;
+    const rad = range(r, 4, 11) * s;
     wrapDraw(tw, (dx) => {
       c.globalAlpha = 1;
       c.shadowColor = "#fff";
@@ -138,7 +138,7 @@ const drawCircuit = (c: CanvasRenderingContext2D, tw: number, th: number, r: Rng
   }
   c.shadowBlur = 0;
   // fine specks
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 1400; i++) {
     const x = r() * tw;
     const y = r() * th;
     const a = range(r, 0.3, 1);
@@ -204,17 +204,7 @@ const drawRing = (c: CanvasRenderingContext2D, S: number, r: Rng, variant: numbe
     c.arc(cx + Math.cos(a) * R * 0.95, cx + Math.sin(a) * R * 0.95, 9 * s, 0, Math.PI * 2);
     c.fill();
   }
-  // middle ring: segmented
-  c.globalAlpha = 0.75;
-  c.lineWidth = 4 * s;
-  const segs = variant === 0 ? 12 : 8;
-  for (let i = 0; i < segs; i++) {
-    const a0 = (i / segs) * Math.PI * 2 + 0.04;
-    const a1 = ((i + 1) / segs) * Math.PI * 2 - 0.04;
-    c.beginPath();
-    c.arc(cx, cx, R * 0.6, a0, a1);
-    c.stroke();
-  }
+  // middle ring
   c.globalAlpha = 1;
   c.lineWidth = 5 * s;
   c.beginPath();
@@ -229,10 +219,6 @@ const drawRing = (c: CanvasRenderingContext2D, S: number, r: Rng, variant: numbe
   c.arc(cx, cx, R * 0.3, 0, Math.PI * 2);
   c.stroke();
   c.shadowBlur = 0;
-  c.lineWidth = 2 * s;
-  c.beginPath();
-  c.arc(cx, cx, R * 0.25, 0, Math.PI * 2);
-  c.stroke();
   // labels
   c.globalAlpha = 0.9;
   c.font = `500 ${40 * s}px "${SANS}"`;
@@ -298,7 +284,7 @@ void main() {
   float a = texture(tCircuit, vec2(s, vUv.y + uVOffset)).a;
   float st = texture(tStreak, vec2(vDist / uL + uT * uStreakCycles, vUv.y + uVOffset)).a;
   float fog = exp(-vDist / 9.0) * smoothstep(26.0, 16.0, vDist) * smoothstep(0.0, 1.0, vDist);
-  vec3 col = (uLine * a * 0.8 + uAccent * st * 1.1) * fog * uGain;
+  vec3 col = (uLine * a * 0.9 + uAccent * st * 1.4) * fog * uGain;
   outColor = vec4(col, 1.0);
 }`;
 
@@ -378,7 +364,7 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
   const TH = hi ? 2048 : 1024;
   const circuitSide = canvasTex(TW, TH, (c) => drawCircuit(c, TW, TH, r));
   const circuitFloor = canvasTex(TW, TH, (c) => drawCircuit(c, TW, TH, r));
-  const streaks = canvasTex(TW / 2, TH / 2, (c) => drawStreaks(c, TW / 2, TH / 2, r, 110));
+  const streaks = canvasTex(TW / 2, TH / 2, (c) => drawStreaks(c, TW / 2, TH / 2, r, 220));
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(62, W / H, 0.05, 200);
@@ -431,19 +417,19 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
   };
   // plane's local x runs along the tunnel; centre it from z=+0.5 to z=-FAR
   const zc = -(FAR - 0.5) / 2 - 0.25;
-  wall(circuitSide, 2 * HALF_H, 0.0, 0.7, (m) => {
+  wall(circuitSide, 2 * HALF_H, 0.0, 0.8, (m) => {
     m.rotation.y = Math.PI / 2;
     m.position.set(-HALF_W, 0, zc);
   });
-  wall(circuitSide, 2 * HALF_H, 0.5, 0.7, (m) => {
+  wall(circuitSide, 2 * HALF_H, 0.5, 0.8, (m) => {
     m.rotation.y = Math.PI / 2;
     m.position.set(HALF_W, 0, zc);
   });
-  wall(circuitFloor, 2 * HALF_W, 0.0, 0.32, (m) => {
+  wall(circuitFloor, 2 * HALF_W, 0.0, 0.42, (m) => {
     m.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
     m.position.set(0, -HALF_H, zc);
   });
-  wall(circuitFloor, 2 * HALF_W, 0.5, 0.32, (m) => {
+  wall(circuitFloor, 2 * HALF_W, 0.5, 0.42, (m) => {
     m.rotation.set(Math.PI / 2, 0, Math.PI / 2);
     m.position.set(0, HALF_H, zc);
   });
@@ -451,11 +437,8 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
   // ring sets: two designs alternating (period 2 in index => exact loop)
   const RS = hi ? 4096 : 2048;
   const ringTex = [0, 1].map((v) => canvasTex(RS, RS, (c) => drawRing(c, RS, r, v), false));
-  const arcTex = [0, 1].map((v) => [
-    canvasTex(RS, RS, (c) => drawArc(c, RS, r, 0.8, v === 0 ? 10 : 7), false),
-    canvasTex(RS, RS, (c) => drawArc(c, RS, r, 0.45, 6), false),
-  ]);
-  const ringRadius = 2.6;
+  const arcTex = [0, 1].map((v) => [canvasTex(RS, RS, (c) => drawArc(c, RS, r, 0.86, v === 0 ? 12 : 9), false)]);
+  const ringRadius = 4.0;
   const ringGeo = new THREE.PlaneGeometry((2 * ringRadius) / 0.95, (2 * ringRadius) / 0.95);
   const line = new THREE.Vector3(...hexToRgb(props.line));
   const accent = new THREE.Vector3(...hexToRgb(props.accent));
@@ -475,7 +458,7 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
   const rings = Array.from({ length: RING_SETS }, (_, k) => ({
     k,
     base: mkRingMesh(ringTex[k % 2], line),
-    arcs: [mkRingMesh(arcTex[k % 2][0], accent), mkRingMesh(arcTex[k % 2][1], line)],
+    arcs: [mkRingMesh(arcTex[k % 2][0], accent)],
   }));
 
   return {

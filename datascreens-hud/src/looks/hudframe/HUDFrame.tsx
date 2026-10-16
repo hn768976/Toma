@@ -166,7 +166,7 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
   c.strokeStyle = p.ink;
   c.fillStyle = p.ink;
   // the reference HUD is quiet: thin grey-white rather than full white
-  c.globalAlpha = 0.68;
+  c.globalAlpha = 0.84;
   c.textBaseline = "alphabetic";
   c.lineCap = "butt";
 
@@ -306,6 +306,7 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
     text(c, `${Math.round(value * 0.86)}°`, 140, 604, 6, SANS, 500);
     text(c, `${Math.round(value * 0.43)}°`, 140, 626, 6, SANS, 500);
     const pct = Math.round((value / 289) * 100);
+    rect(c, 100, 634, 36, 16);
     text(c, `${pct}%`, 118, 646, 9, SANS, 500, "center");
   }
 
@@ -340,6 +341,9 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       const y = 92.5 + i * 34;
       line(c, 1112.5, y, 1132.5, y);
       c.fillRect(1110, y - 2.5, 5, 5);
+      // pins on both sides of the rail
+      line(c, 1220.5, y, 1228.5, y);
+      c.fillRect(1218, y - 2, 4, 4);
       if (i % 3 === 0) rect(c, 1118, y + 6, 8, 12);
     }
     const gy = 92 + 520 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t * 2));
@@ -360,12 +364,12 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
         c.fillStyle = p.accent;
         c.globalAlpha = 0.8;
         c.fillRect(x - 2, y - 8.5, 84, 11);
-        c.globalAlpha = 0.68;
+        c.globalAlpha = 0.84;
         c.fillStyle = p.background;
-        text(c, LIST_ROWS[i], x, y, 6.6, MONO, 500);
+        text(c, LIST_ROWS[i], x, y, 7.4, MONO, 500);
         c.fillStyle = p.ink;
       } else {
-        text(c, LIST_ROWS[i], x, y, 6.6, MONO, 400);
+        text(c, LIST_ROWS[i], x, y, 7.4, MONO, 400);
       }
     }
   }
@@ -396,7 +400,7 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
     c.globalAlpha = 0.5;
     for (let i = 0; i < 3; i++) text(c, `${vals[i]}%`, 1182, 274 + i * 36, 8, SANS, 500, "center");
   }
-  c.globalAlpha = 0.68;
+  c.globalAlpha = 0.84;
   // narrow tall panel of tiny text
   {
     const x = 1146;
@@ -413,6 +417,10 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
     }
     rect(c, x + 54, y + 196, 10, 16);
   }
+  // tall box on the far right + bar ruler under the tiny-text panel
+  rect(c, 1256, 60, 14, 320);
+  for (let i = 0; i < 9; i++) c.fillRect(1259, 70 + i * 34, 8, 12 + 10 * (0.5 + 0.5 * Math.sin(2 * Math.PI * t + i)));
+  for (let i = 0; i < 7; i++) c.fillRect(1150 + i * 8, 596 - 4 - i * 1.5, 5, 4 + i * 1.5);
   // bottom-right percentage
   roundRect(c, 1162, 616, 34, 16, 3);
   text(c, `${Math.round(15 + 3 * Math.sin(2 * Math.PI * t))}%`, 1179, 627, 7.5, SANS, 500, "center");
@@ -438,9 +446,9 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
     const hh = 195 + 20 * k;
     const cx = 640;
     const cy = 360;
-    const armX = 96;
-    const armY = 92;
-    const r = 18;
+    const armX = 100;
+    const armY = 100;
+    const r = 10;
     const corners: [number, number][] = [
       [-1, -1],
       [1, -1],
@@ -456,6 +464,18 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       c.quadraticCurveTo(x, y, x, y - sy * r);
       c.lineTo(x, y - sy * armY);
       c.stroke();
+      // bevel: a fainter parallel stroke just inside
+      const ga = c.globalAlpha;
+      c.globalAlpha = ga * 0.45;
+      const ix = x - sx * 3;
+      const iy = y - sy * 3;
+      c.beginPath();
+      c.moveTo(ix - sx * (armX - 3), iy);
+      c.lineTo(ix - sx * r, iy);
+      c.quadraticCurveTo(ix, iy, ix, iy - sy * r);
+      c.lineTo(ix, iy - sy * (armY - 3));
+      c.stroke();
+      c.globalAlpha = ga;
     }
   }
 };

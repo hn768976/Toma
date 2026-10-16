@@ -34,9 +34,9 @@ const LAYERS: LayerDef[] = [
   { z: 3.4, count: 5, widths: [0.45, 0.85], cycles: 1, span: 2.6, dz: 0.5, types: ["binary", "hex", "table"], bigBinary: true },
   // hero layer: the big binary grid and large login/readout panels, nearly in focus
   { z: 5.2, count: 3, widths: [0.45, 0.7], cycles: 1, span: 2.0, dz: 0.3, types: ["login", "marker"], bigBinary: true },
-  { z: 7, count: 18, widths: [0.09, 0.24], cycles: 1, span: 1.7, dz: 0.6, types: ["hex", "table", "form", "marker", "bracket", "code", "paragraph", "bars", "binary", "login"], bigBinary: false },
-  { z: 11, count: 16, widths: [0.08, 0.2], cycles: 1, span: 1.45, dz: 0.8, types: ["hex", "paragraph", "table", "marker", "code", "bars", "form", "binary"], bigBinary: false },
-  { z: 18, count: 18, widths: [0.06, 0.15], cycles: 1, span: 1.3, dz: 1.0, types: ["hex", "paragraph", "paragraph", "table", "code", "marker", "bars"], bigBinary: false },
+  { z: 7, count: 15, widths: [0.09, 0.24], cycles: 1, span: 1.7, dz: 0.6, types: ["hex", "table", "table", "form", "marker", "code", "paragraph", "binary", "login", "login"], bigBinary: false },
+  { z: 11, count: 16, widths: [0.08, 0.2], cycles: 1, span: 1.45, dz: 0.8, types: ["hex", "paragraph", "table", "code", "bars", "form", "binary", "bracket"], bigBinary: false },
+  { z: 18, count: 21, widths: [0.06, 0.15], cycles: 1, span: 1.3, dz: 1.0, types: ["hex", "paragraph", "paragraph", "table", "code", "marker", "bars"], bigBinary: false },
 ];
 
 interface PanelPlacement {
@@ -83,7 +83,7 @@ LAYERS.forEach((L, li) => {
     const maxPanelW = visW(L.z) * L.widths[1] * 1.3;
     const span = Math.max(L.span * visW(L.z + L.dz), visW(L.z * 1.12 + L.dz) + maxPanelW + 1);
     const coc = Math.abs(1 - FOCUS_Z / z);
-    const blur720 = li === 1 ? 1.6 : z < FOCUS_Z ? 5.5 * coc : 1.8 * coc;
+    const blur720 = li === 1 ? 0.8 : z < FOCUS_Z ? 5.5 * coc : 1.8 * coc;
     PLACEMENTS.push({
       spec,
       layer: li,
@@ -96,7 +96,7 @@ LAYERS.forEach((L, li) => {
       cycles: L.cycles,
       dz: L.dz,
       blur720,
-      brightness: (li === 0 && !big ? 0.55 : [0.9, 1.0, 1.0, 0.7, 0.45][li]) * range(layoutRng, 0.85, 1),
+      brightness: (li === 0 ? (big ? 0.6 : 0.5) : [0.9, 1.0, 1.0, 0.7, 0.45][li]) * range(layoutRng, 0.85, 1),
       dimInk: layoutRng() < 0.2,
     });
   }
