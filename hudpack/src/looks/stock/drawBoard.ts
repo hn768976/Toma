@@ -15,6 +15,8 @@ const PERIODS = [10, 12, 15, 20, 24, 25, 30, 40, 50, 60, 75, 100, 120];
 interface Quote {
   sym: string;
   period: number;
+  /** whole-frame phase, so quotes sharing a period don't all tick together */
+  offset: number;
   price: string[];
   change: number[];
 }
@@ -27,6 +29,7 @@ const makeQuote = (sym: string): Quote => {
   return {
     sym,
     period,
+    offset: Math.floor(rng() * period),
     price: raw.map((v) => v.toFixed(2)),
     change: raw.map((v, i) => {
       const d = v - raw[(i - 1 + n) % n];
@@ -63,6 +66,7 @@ const GRID = Array.from({ length: 4 }, (_, r) =>
     const signed = rng() < 0.3;
     return {
       period,
+      offset: Math.floor(rng() * period),
       table: tickTable(period, () => {
         const v = base * (1 + gauss(rng) * 0.01);
         return (signed ? (rng() < 0.5 ? "+" : "-") : "") + v.toFixed(dec);
@@ -152,7 +156,7 @@ const SLOT = 11.8;
  * offsets, so ticking digits never shift their neighbours.
  */
 const drawQuote = (ctx: CanvasRenderingContext2D, q: Quote, x: number, y: number, size: number, f: number, p: StockPalette) => {
-  const k = Math.floor(f / q.period) % q.price.length;
+  const k = Math.floor((f + q.offset) / q.period) % q.price.length;
   const ch = q.change[k];
   const up = ch >= 0;
   ctx.fillStyle = up ? p.up : p.down;
@@ -211,7 +215,7 @@ export const drawBoard = (ctx: CanvasRenderingContext2D, tw: number, f: number, 
       const y = 28 + r * 26;
       ctx.globalAlpha = 0.35 + c.tone * 0.4;
       ctx.font = font(r === 0 ? 20 : 15);
-      const s = tick(c.table, c.period, f);
+      const s = tick(c.table, c.period, f, c.offset);
       if (s.startsWith("+") || s.startsWith("-")) ctx.fillStyle = s.startsWith("+") ? p.up : p.down;
       ctx.fillText(s, x, y);
       ctx.fillStyle = p.text;
@@ -313,7 +317,7 @@ export const drawBoard = (ctx: CanvasRenderingContext2D, tw: number, f: number, 
     col.forEach((cell, ri) => {
       const x = 2180 + ci * 50;
       const y = 360 + ri * 62 + (ci % 2) * 20;
-      const kq = Math.floor(f / cell.q.period) % cell.q.price.length;
+      const kq = Math.floor((f + cell.q.offset) / cell.q.period) % cell.q.price.length;
       ctx.globalAlpha = 0.65;
       ctx.font = font(15);
       ctx.fillStyle = cell.kind === 0 ? p.text : cell.q.change[kq] >= 0 ? p.up : p.down;
@@ -354,7 +358,7 @@ export const drawBoard = (ctx: CanvasRenderingContext2D, tw: number, f: number, 
       const sp = spread[i % N];
       ctx.moveTo(x, yOf(Math.max(v, o) + sp));
       ctx.lineTo(x, yOf(Math.min(v, o) - sp));
-      ctx.rect(x - dx * 0.3, yOf(Math.max(v, o)), dx * 0.6, Math.max(1, Math.abs(yOf(v) - yOf(o))));
+      ctx.rect(x - dx * 0.38, yOf(Math.max(v, o)), dx * 0.76, Math.max(2, Math.abs(yOf(v) - yOf(o))));
     }
     ctx.stroke();
     const path = () => {
@@ -377,8 +381,8 @@ export const drawBoard = (ctx: CanvasRenderingContext2D, tw: number, f: number, 
     path();
     ctx.stroke();
     ctx.restore();
-    ctx.globalAlpha = 0.7;
-    ctx.lineWidth = Math.max(lw, 1.2);
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = Math.max(lw, 1.0);
     ctx.strokeStyle = p.priceLine;
     path();
     ctx.stroke();

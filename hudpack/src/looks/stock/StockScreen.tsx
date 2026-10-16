@@ -39,7 +39,7 @@ void main() {
   vec4 t = texture(tBoard, vUv);
   vec3 c = base * (1.0 - t.a) + t.rgb;
   float fade = smoothstep(uFadeNear, uFadeFar, vDepth);
-  c *= mix(1.0, 0.28, fade);
+  c *= mix(1.0, 0.5, fade);
   outColor = vec4(c, 1.0);
 }
 `;

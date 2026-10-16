@@ -246,18 +246,27 @@ const buildWorld = (dots: Dot[], palette: MapPalette) => {
 
 export const MarketMap: React.FC<{ palette: MapPalette }> = ({ palette }) => {
   const [dots, setDots] = useState<Dot[] | null>(null);
+  const handle = useRef<number | null>(null);
   useLayoutEffect(() => {
-    const handle = delayRender("Loading Natural Earth land");
+    handle.current = delayRender("Loading Natural Earth land");
     loadLandDots()
-      .then((d) => {
-        setDots(d);
-        continueRender(handle);
-      })
+      .then(setDots)
       .catch((e) => {
         console.error(e);
-        continueRender(handle);
+        setDots([]);
       });
+    return () => {
+      if (handle.current !== null) continueRender(handle.current);
+      handle.current = null;
+    };
   }, []);
+  // release only after the scene (and its own render holds) has mounted
+  useLayoutEffect(() => {
+    if (dots && handle.current !== null) {
+      continueRender(handle.current);
+      handle.current = null;
+    }
+  }, [dots]);
   return dots ? <MarketMapScene dots={dots} palette={palette} /> : null;
 };
 

@@ -119,7 +119,7 @@ const buildGlitter = (): GlitterData => {
     const gDur = 0.85 + 0.35 * rng();
     time.set([launch, dur, gStart, gDur], i * 4);
 
-    const tone = rng() < 0.7 ? 0 : rng() < 0.85 ? 1 : 2;
+    const tone = rng() < 0.78 ? 0 : rng() < 0.9 ? 1 : 2;
     const size = 1 + rng() * rng() * 1.1;
     const swirl = (0.9 + rng() * 1.6) * (rng() < 0.85 ? 1 : -1);
     misc.set([size, tone, swirl, heart ? 0 : 1], i * 4);

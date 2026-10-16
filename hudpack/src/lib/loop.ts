@@ -9,8 +9,16 @@ export const tickTable = <T,>(period: number, make: (i: number) => T): T[] => {
   return Array.from({ length: LOOP / period }, (_, i) => make(i));
 };
 
-export const tick = <T,>(table: T[], period: number, f: number) =>
-  table[Math.floor(f / period) % table.length];
+/**
+ * Current entry of a ticking table. `offset` (whole frames) staggers readouts
+ * that share a period so they don't all change on the same frame; the result
+ * still repeats exactly every LOOP frames.
+ */
+export const tick = <T,>(table: T[], period: number, f: number, offset = 0) =>
+  table[Math.floor((f + offset) / period) % table.length];
+
+/** A stable per-item frame offset in [0, period), from an index. */
+export const stagger = (i: number, period: number) => (i * 7919 + 13) % period;
 
 /** Periodic noise: n seeded samples, read with wrap-around and linear interpolation. */
 export class LoopNoise {

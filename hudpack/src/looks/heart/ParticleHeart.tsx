@@ -351,7 +351,7 @@ const createRig = async (host: HTMLDivElement, w: number, h: number, cssW: numbe
     uScale: { value: scale, type: "f32" },
     uOrigin: { value: origin, type: "vec2<f32>" },
     uPx: { value: px, type: "f32" },
-    uIntensity: { value: 0.62, type: "f32" },
+    uIntensity: { value: 0.78, type: "f32" },
     uTone0: { value: rgb(palette.glitter[0]), type: "vec3<f32>" },
     uTone1: { value: rgb(palette.glitter[1]), type: "vec3<f32>" },
     uTone2: { value: rgb(palette.glitter[2]), type: "vec3<f32>" },

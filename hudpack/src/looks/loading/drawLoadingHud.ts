@@ -338,9 +338,9 @@ export const drawLoadingHud = (ctx: CanvasRenderingContext2D, bw: number, _bh: n
     h.rect(bx, 186.5, bwid, 12.5, ia);
     for (const s of stripes) {
       if (s.on > 0.05 + 0.95 * Math.pow(load, 0.55) || s.x + s.w > 1) continue;
-      h.fill(bx + s.x * bwid, 158, s.w * bwid, 28.5, s.a * 0.92);
+      h.fill(bx + s.x * bwid, 158, s.w * bwid, 28.5, s.a * 0.92 * ia);
     }
-    h.fillSmooth(bx + 1.2, 188, (bwid - 2.4) * (0.35 + 0.65 * load), 9.5, 0.42);
+    h.fillSmooth(bx + 1.2, 188, (bwid - 2.4) * (0.35 + 0.65 * load), 9.5, 0.42 * ia);
     const tiny = "unit_map_data, mod11 ";
     h.text(tiny.repeat(8).slice(0, Math.floor(110 * (0.35 + 0.65 * load))), bx + 2, 194, 2.2, { alpha: 0.9 * ia });
     h.vline(433, 128, 222, 0.7 * ia);

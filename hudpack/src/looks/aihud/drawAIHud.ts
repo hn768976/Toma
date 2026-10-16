@@ -1,5 +1,5 @@
 import { Hud } from "../../lib/hud";
-import { fillerLine, LOOP, LoopNoise, tick, tickTable, typedChars } from "../../lib/loop";
+import { fillerLine, LOOP, LoopNoise, stagger, tick, tickTable, typedChars } from "../../lib/loop";
 import { mulberry32 } from "../../lib/random";
 import { easeInOutSine } from "../../lib/ease";
 
@@ -190,6 +190,9 @@ const bigNumTable = tickTable(30, () => [String(10 + Math.floor(rng() * 89)), St
 
 // ---------------------------------------------------------------- helpers
 
+/** Typed blocks fade out over the last 12 frames of their cycle, then restart. */
+const cycleFade = (f: number, period: number) => Math.min(1, (period - (f % period)) / 12);
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** Clock-style readout that advances with the frame and wraps with the loop. */
@@ -247,7 +250,7 @@ export const drawAIHud = (ctx: CanvasRenderingContext2D, bw: number, _bh: number
   for (let r = 0; r < LEFT_ROWS; r++) {
     const n = leftNumbers[r];
     const y = 127 + r * 20.2;
-    h.text(tick(n.table, n.period, f), 77, y, 6.0, { font: "sans", alpha: n.dim ? 0.45 : 1 });
+    h.text(tick(n.table, n.period, f, stagger(r, n.period)), 77, y, 6.0, { font: "sans", alpha: n.dim ? 0.45 : 1 });
   }
   const meterL = (y0: number, y1: number, ph: number) => {
     h.rect(22, y0, 3, y1 - y0, 0.35);
@@ -272,7 +275,7 @@ export const drawAIHud = (ctx: CanvasRenderingContext2D, bw: number, _bh: number
     CODE_LEFT.forEach((line, i) => {
       const n = Math.max(0, Math.min(line.length, left));
       left -= line.length;
-      if (n > 0) h.text(line.slice(0, n), 123, 175 + i * 14.4, 4.3, { weight: 400 });
+      if (n > 0) h.text(line.slice(0, n), 123, 175 + i * 14.4, 4.3, { weight: 400, alpha: cycleFade(f, 300) });
     });
     h.text("fn spawn_unit(node):", 124, 276, 4.3);
   }
@@ -283,7 +286,7 @@ export const drawAIHud = (ctx: CanvasRenderingContext2D, bw: number, _bh: number
     for (const t of circuit) {
       h.poly(t.pts, 0.5);
       const n = t.pts.length;
-      h.circle(t.pts[n - 2], t.pts[n - 1], 0.8, 0.75);
+      if (t.phase < 0.35) h.circle(t.pts[n - 2], t.pts[n - 1], 0.8, 0.75);
       // a pulse running out along the trace
       const p = ((f / t.period + t.phase) % 1) * 1.6;
       if (p < 1) {
@@ -335,14 +338,14 @@ export const drawAIHud = (ctx: CanvasRenderingContext2D, bw: number, _bh: number
   h.rect(328, 124, 30, 4, 0.9);
   for (let i = 0; i < 26; i++) h.vline(362 + i * 3.4, 122, 129, i % 5 === 0 ? 1 : 0.7);
   h.text("Loading Data" + ".".repeat(1 + (Math.floor(f / 10) % 6)), 322, 138, 3.6, { weight: 400 });
-  for (const n of MID_NUMBERS) h.text(tick(n.table, n.period, f), 324, n.y, 4.0, { alpha: 0.95 });
+  MID_NUMBERS.forEach((n, i) => h.text(tick(n.table, n.period, f, stagger(i + 3, n.period)), 324, n.y, 4.0, { alpha: 0.95 }));
   {
     const total = CODE_MID.join("").length;
     let left = typedChars(total, f, 300, 0.0, 0.45);
     CODE_MID.forEach((line, i) => {
       const n = Math.max(0, Math.min(line.length, left));
       left -= line.length;
-      if (n > 0) h.text(line.slice(0, n), 365, 148 + i * 6.05, 3.6);
+      if (n > 0) h.text(line.slice(0, n), 365, 148 + i * 6.05, 3.6, { alpha: cycleFade(f, 300) });
     });
   }
 
@@ -378,13 +381,13 @@ export const drawAIHud = (ctx: CanvasRenderingContext2D, bw: number, _bh: number
   {
     const r = readouts;
     h.fill(450, 71, 54, 10.5, 0.42);
-    h.text(tick(r[0].table, r[0].period, f), r[0].x, 79, 6.0, { font: "sans", align: "center" });
-    h.text(tick(r[1].table, r[1].period, f), r[1].x, 79, 6.0, { font: "sans", align: "center" });
+    h.text(tick(r[0].table, r[0].period, f, stagger(20, r[0].period)), r[0].x, 79, 6.0, { font: "sans", align: "center" });
+    h.text(tick(r[1].table, r[1].period, f, stagger(21, r[1].period)), r[1].x, 79, 6.0, { font: "sans", align: "center" });
     h.fill(578, 71, 54, 10.5, 0.42);
     h.text("■■■", 605, 79, 4.5, { align: "center", alpha: 0.35 });
     h.rect(642, 71, 54, 10.5);
-    h.text(tick(r[2].table, r[2].period, f), r[2].x, 79, 6.0, { font: "sans", align: "center" });
-    h.text(tick(r[3].table, r[3].period, f), r[3].x, 79, 6.0, { font: "sans", align: "center" });
+    h.text(tick(r[2].table, r[2].period, f, stagger(22, r[2].period)), r[2].x, 79, 6.0, { font: "sans", align: "center" });
+    h.text(tick(r[3].table, r[3].period, f, stagger(23, r[3].period)), r[3].x, 79, 6.0, { font: "sans", align: "center" });
   }
 
   // bar meters (8 columns of stacked segments)
@@ -431,7 +434,7 @@ export const drawAIHud = (ctx: CanvasRenderingContext2D, bw: number, _bh: number
     CODE_RIGHT.forEach((line, i) => {
       const n = Math.max(0, Math.min(line.length, left));
       left -= line.length;
-      if (n > 0) h.text(line.slice(0, n), 847, 136 + i * 14.3, 4.3, { align: "right" });
+      if (n > 0) h.text(line.slice(0, n), 847, 136 + i * 14.3, 4.3, { align: "right", alpha: cycleFade((f + 300) % LOOP, 600) });
     });
   }
   RIGHT_LETTERS.forEach((l, i) => h.text(l, 871, 331 + i * 15.1, 5.4, { font: "sans", weight: i === 5 ? 500 : 300 }));
