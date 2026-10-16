@@ -286,8 +286,14 @@ const createGlassScene = (v: GlassVersion) => (renderer: THREE.WebGLRenderer) =>
             float F = 0.04 + 0.96 * pow(1.0 - cosI, 5.0);
             // absorption grows with the path length through the slab
             vec3 transmit = behind * pow(uTint, vec3(1.0 / max(cosI, 0.35))) * (1.0 - F);
-            vec3 glass = transmit + gl_FragColor.rgb;
             vec3 untouched = texture2D(tBg, suv).rgb;
+            // Guard against NaN/Inf from the thin-film term at grazing angles:
+            // one bad fragment would poison the half-float buffer that every
+            // later plate (and the bloom) reads.
+            vec3 lit = gl_FragColor.rgb;
+            if (any(isnan(lit)) || any(isinf(lit))) lit = vec3(0.0);
+            if (any(isnan(transmit)) || any(isinf(transmit))) transmit = untouched * 0.5;
+            vec3 glass = clamp(transmit + lit, 0.0, 64.0);
             gl_FragColor = vec4(mix(untouched, glass, uFade), 1.0);
           }`,
         );
