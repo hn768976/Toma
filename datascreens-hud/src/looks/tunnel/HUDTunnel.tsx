@@ -242,7 +242,19 @@ const drawArc = (c: CanvasRenderingContext2D, S: number, r: Rng, radius: number,
   c.strokeStyle = "#fff";
   c.lineCap = "butt";
   let a = r() * Math.PI * 2;
-  for (let i = 0; i < 4; i++) {
+  // a bold tick ladder: short thick radial dashes along ~0.9 rad, like a gauge scale
+  const R0 = (S / 2) * radius;
+  c.globalAlpha = 0.95;
+  c.lineWidth = width * s * 1.4;
+  for (let k = 0; k < 26; k++) {
+    const ang = a + (k / 26) * 0.9;
+    c.beginPath();
+    c.moveTo(cx + Math.cos(ang) * (R0 - 26 * s), cx + Math.sin(ang) * (R0 - 26 * s));
+    c.lineTo(cx + Math.cos(ang) * (R0 + 26 * s), cx + Math.sin(ang) * (R0 + 26 * s));
+    c.stroke();
+  }
+  a += 0.9 + range(r, 0.3, 0.6);
+  for (let i = 0; i < 3; i++) {
     const len = range(r, 0.3, 1.1);
     c.globalAlpha = range(r, 0.6, 1);
     c.lineWidth = width * s * (i === 0 ? 2 : 1);
@@ -437,8 +449,8 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
   // ring sets: two designs alternating (period 2 in index => exact loop)
   const RS = hi ? 4096 : 2048;
   const ringTex = [0, 1].map((v) => canvasTex(RS, RS, (c) => drawRing(c, RS, r, v), false));
-  const arcTex = [0, 1].map((v) => [canvasTex(RS, RS, (c) => drawArc(c, RS, r, 0.86, v === 0 ? 12 : 9), false)]);
-  const ringRadius = 4.0;
+  const arcTex = [0, 1].map((v) => [canvasTex(RS, RS, (c) => drawArc(c, RS, r, 0.92, v === 0 ? 12 : 9), false)]);
+  const ringRadius = 5.0;
   const ringGeo = new THREE.PlaneGeometry((2 * ringRadius) / 0.95, (2 * ringRadius) / 0.95);
   const line = new THREE.Vector3(...hexToRgb(props.line));
   const accent = new THREE.Vector3(...hexToRgb(props.accent));

@@ -27,10 +27,10 @@ export interface PeopleNetworkProps {
 // camera trucks exactly one period per loop, so the loop is exact. P is wider
 // than the view at the far plane, so badges wrap outside the frame.
 // ---------------------------------------------------------------------------
-const P = 56;
+const P = 64; // > view width at Z_FAR (2 x 34 x tan25 x 16/9 = 56.4) + yaw and badge margin
 const Y_HALF = 13;
 const Z_NEAR = 2.6;
-const Z_FAR = 28;
+const Z_FAR = 34;
 const COUNT = 350;
 const FOCUS = 10;
 const FOV = 50;
@@ -43,6 +43,7 @@ interface Badge {
   filled: boolean;
   colourB: boolean;
   glow: boolean;
+  outlineIcon: boolean;
   bob: number;
   bobCycles: number;
   phase: number;
@@ -60,6 +61,7 @@ const BADGES: Badge[] = Array.from({ length: COUNT }, () => {
     r: range(rng, 0.42, 0.62),
     filled: rng() < 0.92,
     glow: rng() < 0.08,
+    outlineIcon: rng() < 0.45,
     colourB: rng() < 0.35,
     bob: range(rng, 0.03, 0.12),
     bobCycles: int(rng, 1, 2),
@@ -74,7 +76,7 @@ const LINKS: [number, number][] = [];
 {
   const seen = new Set<string>();
   BADGES.forEach((a, i) => {
-    const k = rng() < 0.7 ? 2 : 3;
+    const k = 2;
     const d = BADGES.map((b, j) => {
       if (j === i) return [Infinity, j];
       const dx = minImage(b.x - a.x);
@@ -128,7 +130,7 @@ const drawPictogram = (c: CanvasRenderingContext2D, cx: number, cy: number, R: n
 const buildAtlas = (cell: number) => {
   const cv = document.createElement("canvas");
   cv.width = cell * LEVELS;
-  cv.height = cell * 2;
+  cv.height = cell * 3;
   const c = cv.getContext("2d")!;
   c.fillStyle = "#000";
   c.fillRect(0, 0, cv.width, cv.height);
@@ -136,14 +138,24 @@ const buildAtlas = (cell: number) => {
   sharp.width = cell;
   sharp.height = cell;
   const s = sharp.getContext("2d")!;
-  for (let variant = 0; variant < 2; variant++) {
+  for (let variant = 0; variant < 3; variant++) {
     s.globalCompositeOperation = "source-over";
     s.fillStyle = "#000";
     s.fillRect(0, 0, cell, cell);
     s.globalCompositeOperation = "lighter";
     const R = cell * BADGE_R;
     const cx = cell / 2;
-    if (variant === 0) {
+    if (variant === 2) {
+      // filled disc, pictogram as a bold outline
+      s.fillStyle = "#ff0000";
+      s.beginPath();
+      s.arc(cx, cx, R, 0, Math.PI * 2);
+      s.fill();
+      s.strokeStyle = "#00ff00";
+      s.lineWidth = R * 0.12;
+      s.lineJoin = "round";
+      drawPictogram(s, cx, cx, R, true);
+    } else if (variant === 0) {
       s.fillStyle = "#ff0000";
       s.beginPath();
       s.arc(cx, cx, R, 0, Math.PI * 2);
@@ -197,13 +209,13 @@ in vec2 vUv;
 out vec4 outColor;
 uniform sampler2D tAtlas;
 uniform float uLevel;   // 0..LEVELS-1, fractional
-uniform float uVariant; // 0 filled, 1 outline
+uniform float uVariant; // 0 filled + solid pictogram, 1 outline badge, 2 filled + outline pictogram
 uniform vec3 uFill;
 uniform vec3 uGlyph;
 uniform float uAlpha;
 const float LEVELS = ${LEVELS.toFixed(1)};
 vec3 at(float level) {
-  vec2 uv = vec2((vUv.x + level) / LEVELS, (vUv.y + (1.0 - uVariant)) / 2.0);
+  vec2 uv = vec2((vUv.x + level) / LEVELS, (vUv.y + (2.0 - uVariant)) / 3.0);
   return texture(tAtlas, uv).rgb;
 }
 void main() {
@@ -212,7 +224,7 @@ void main() {
   vec3 m = mix(at(l0), at(l1), uLevel - l0);
   vec3 col;
   float a;
-  if (uVariant < 0.5) {
+  if (uVariant < 0.5 || uVariant > 1.5) {
     float g = min(m.g, m.r);
     a = m.r;
     col = uFill * (m.r - g) + uGlyph * g; // premultiplied
@@ -368,7 +380,7 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
       uniforms: {
         tAtlas: { value: atlas },
         uLevel: { value: 0 },
-        uVariant: { value: b.filled ? 0 : 1 },
+        uVariant: { value: b.filled ? (b.outlineIcon ? 2 : 0) : 1 },
         uFill: { value: b.colourB ? fillB : fillA },
         uGlyph: { value: glyph },
         uAlpha: { value: 1 },

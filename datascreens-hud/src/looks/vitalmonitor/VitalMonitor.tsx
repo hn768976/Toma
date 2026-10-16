@@ -19,7 +19,7 @@ export interface VitalMonitorProps {
 }
 
 // Screen design space (units). 1 world unit = 1000 screen units.
-const SW = 2400;
+const SW = 2900; // includes a fourth, faint status column on the far right
 const SH = 1350;
 const WAVE_X0 = 90;
 const WAVE_X1 = 1860;
@@ -29,7 +29,7 @@ const BANDS = {
   resp: { y0: 965, y1: 1185 },
 };
 const GAP_S = 0.22; // erase gap ahead of the write point
-const MARGIN = [500, 2400, 600, 900]; // plane extends past the drawn screen (L, R, T, B)
+const MARGIN = [500, 1900, 600, 900]; // plane extends past the drawn screen (L, R, T, B)
 
 // ---------------------------------------------------------------------------
 // static layer: grid, labels, clutter (drawn once)
@@ -133,8 +133,30 @@ const drawStatic = (c: CanvasRenderingContext2D, p: VitalMonitorProps) => {
     c.fillText(lo, 2330, y + 34);
   }
   c.font = `600 34px "${SANS}"`;
+  // fourth column: faint status panels (fills the far side of the screen)
   c.save();
-  c.translate(2370, 520);
+  c.globalAlpha = 0.5;
+  c.strokeStyle = p.grid;
+  c.fillStyle = p.grid;
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(2420, 70);
+  c.lineTo(2420, 1300);
+  c.stroke();
+  for (let k = 0; k < 6; k++) {
+    const y = 110 + k * 195;
+    c.strokeRect(2450, y, 380, 150);
+    for (let r = 0; r < 4; r++) c.fillRect(2470, y + 24 + r * 28, 120 + ((k * 37 + r * 53) % 200), 10);
+    for (let b = 0; b < 8; b++) c.fillRect(2690 + b * 16, y + 120 - ((k * 13 + b * 29) % 70), 10, ((k * 13 + b * 29) % 70) + 8);
+  }
+  c.restore();
+  c.save();
+  c.globalAlpha = 0.55;
+  c.font = `500 22px "${SANS}"`;
+  for (let k = 0; k < 6; k++) c.fillText(["ST II", "NIBP", "TEMP", "ALARMS", "TREND", "EVENTS"][k], 2470, 100 + k * 195);
+  c.restore();
+  c.save();
+  c.translate(2870, 520);
   c.rotate(Math.PI / 2);
   c.fillText("ECG", 0, 0);
   c.restore();

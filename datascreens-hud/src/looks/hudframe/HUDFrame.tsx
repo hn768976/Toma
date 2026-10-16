@@ -186,7 +186,8 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
     }
     rect(c, 208, 38, 36, 16);
     for (let k = 0; k < 8; k++) line(c, 212.5 + k * 4, 41.5, 212.5 + k * 4, 51.5);
-    rect(c, 250, 40, 22, 6);
+    c.fillRect(250, 39, 23, 8); // filled label boxes
+    c.fillRect(280, 39, 29, 8);
     line(c, 261.5, 46.5, 261.5, 76.5);
     rect(c, 278, 40, 30, 6);
     circle(c, 330.5, 47.5, 10);
@@ -354,7 +355,8 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
     const x = 1146;
     text(c, "Accolum <tmq>", x + 8, 90, 7.5, MONO, 500);
     rect(c, 1120, 64, 18, 8);
-    line(c, 1120.5, 58.5, 1228.5, 58.5);
+    line(c, 1120.5, 38.5, 1228.5, 38.5);
+    line(c, 1120.5, 50.5, 1228.5, 50.5);
     const y0 = 122;
     const lh = 12;
     const hi = Math.floor(f / 50) % LIST_ROWS.length;
@@ -362,7 +364,7 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       const y = y0 + i * lh;
       if (i === hi) {
         c.fillStyle = p.accent;
-        c.globalAlpha = 0.8;
+        c.globalAlpha = 0.62;
         c.fillRect(x - 2, y - 8.5, 84, 11);
         c.globalAlpha = 0.84;
         c.fillStyle = p.background;
@@ -421,6 +423,8 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
   rect(c, 1256, 60, 14, 320);
   for (let i = 0; i < 9; i++) c.fillRect(1259, 70 + i * 34, 8, 12 + 10 * (0.5 + 0.5 * Math.sin(2 * Math.PI * t + i)));
   for (let i = 0; i < 7; i++) c.fillRect(1150 + i * 8, 596 - 4 - i * 1.5, 5, 4 + i * 1.5);
+  circle(c, 1243.5, 572.5, 11);
+  circle(c, 1243.5, 572.5, 6);
   // bottom-right percentage
   roundRect(c, 1162, 616, 34, 16, 3);
   text(c, `${Math.round(15 + 3 * Math.sin(2 * Math.PI * t))}%`, 1179, 627, 7.5, SANS, 500, "center");

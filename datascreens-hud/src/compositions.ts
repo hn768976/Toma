@@ -48,7 +48,7 @@ export const ROWS: Row[] = [
     props: {
       bgTop: "#0A1040", bgBottom: "#141A5A",
       badgeA: "#D8DCFF", badgeB: "#D8DCFF", glyph: "#1A2066",
-      line: "#6A78C8", lineAlpha: 0.5,
+      line: "#6A78C8", lineAlpha: 0.42,
       pulse: "#E8ECFF", pulseAdditive: true, halo: "#8FA8FF",
       grain: 0.01, farFade: 0.95, badgeAlpha: 0.82, background: "#0A1040",
     },

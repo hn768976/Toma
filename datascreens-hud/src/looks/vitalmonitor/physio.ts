@@ -28,11 +28,11 @@ export const R_TIMES: number[] = [];
 
 // ECG timing (seconds relative to the R peak)
 export const ECG = {
-  P: { at: -0.155, sd: 0.019, amp: 0.12 }, // P onset ~ -0.20 s
+  P: { at: -0.152, sd: 0.023, amp: 0.13 }, // P onset ~ -0.20 s
   Q: { at: -0.022, sd: 0.0062, amp: -0.11 },
   R: { at: 0, sd: 0.0102, amp: 1.0 },
-  S: { at: 0.023, sd: 0.0068, amp: -0.24 },
-  T: { at: 0.205, sdL: 0.058, sdR: 0.04, amp: 0.32 },
+  S: { at: 0.023, sd: 0.0068, amp: -0.14 },
+  T: { at: 0.235, sdL: 0.048, sdR: 0.038, amp: 0.32 },
   PR: 0.16, // P onset -> QRS onset
   QRS: 0.08,
 };

@@ -70,7 +70,7 @@ LAYERS.forEach((L, li) => {
   for (let i = 0; i < L.count; i++) {
     const type = pick(layoutRng, L.types);
     const live = layoutRng() < 0.36;
-    const big = L.bigBinary && (li === 1 ? i === 0 : i === 0 || i === 3);
+    const big = L.bigBinary && (li === 1 ? i === 0 || i === 2 : i === 0);
     const spec = makePanel(layoutRng, big ? "binary" : type, live, big);
     const z = L.z + range(layoutRng, -0.12, 0.12) * L.z;
     let worldW = visW(L.z) * range(layoutRng, L.widths[0], L.widths[1]) * (big ? (li === 1 ? 1.15 : 1.3) : 1);
@@ -91,12 +91,13 @@ LAYERS.forEach((L, li) => {
       y,
       worldW,
       worldH,
-      phase: (order[i] + range(layoutRng, 0.1, 0.9)) / L.count,
+      // the two hero grids sit half a wrap apart so one is always in view
+      phase: li === 1 && big ? (i === 0 ? 0.25 : 0.75) : (order[i] + range(layoutRng, 0.1, 0.9)) / L.count,
       span,
       cycles: L.cycles,
       dz: L.dz,
       blur720,
-      brightness: (li === 0 ? (big ? 0.6 : 0.5) : [0.9, 1.0, 1.0, 0.7, 0.45][li]) * range(layoutRng, 0.85, 1),
+      brightness: (li === 0 ? (big ? 0.35 : 0.4) : [0.9, 1.0, 1.0, 0.7, 0.45][li]) * range(layoutRng, 0.85, 1),
       dimInk: layoutRng() < 0.2,
     });
   }
