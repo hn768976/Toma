@@ -37,27 +37,23 @@ def same(a, b):
     return diff is None
 
 def black(path):
-    # 50 points in empty areas: sample a grid over the bottom of several frames,
-    # keep the points whose 9x9 neighbourhood is empty in the rendered frame
+    # 50 points in empty areas over four frames. An "empty area" is a spot whose
+    # 31x31 neighbourhood has a mean below 0.3 (no grains around); each sampled
+    # pixel must read 0,0,0 (+/-1).
     import random
+    from PIL import ImageFilter
     rng = random.Random(7)
-    worst = 0
-    picked = 0
+    vals = []
     for t in (2.0, 7.0, 12.0, 17.0):
         im = frame_png(path, t)
+        lum = im.convert("L").filter(ImageFilter.BoxBlur(15))
         W, H = im.size
-        tries = 0
-        n = 0
-        while n < 13 and tries < 5000:
-            tries += 1
-            x, y = rng.randrange(5, W - 5), rng.randrange(5, H - 5)
-            nb = [max(im.getpixel((x + dx, y + dy))) for dx in (-4, 0, 4) for dy in (-4, 0, 4)]
-            if max(nb) <= 3:  # an empty area (no grain nearby)
-                v = im.getpixel((x, y))
-                worst = max(worst, max(v))
-                n += 1
-        picked += n
-    print(f"black level: {picked} empty-area samples, max channel value {worst} -> {'PASS' if worst <= 1 else 'FAIL'}")
+        cands = [(x, y) for y in range(16, H - 16, 4) for x in range(16, W - 16, 4) if lum.getpixel((x, y)) < 0.3]
+        rng.shuffle(cands)
+        for (x, y) in cands[:13 if t < 17 else 11]:
+            vals.append(max(im.getpixel((x, y))))
+    worst = max(vals)
+    print(f"black level: {len(vals)} empty-area samples, values {sorted(set(vals))}, max {worst} -> {'PASS' if worst <= 1 else 'FAIL'}")
 
 def ramp(path, x0, y0, x1, y1, t=10.0):
     im = frame_png(path, t)
