@@ -302,15 +302,16 @@ const createGlassScene = (v: GlassVersion) => (renderer: THREE.WebGLRenderer) =>
   // Plates are drawn one at a time, farthest first. Each draw reads the
   // resolved scene target (what is already behind it) and writes the
   // refracted, tinted result over it: no blending, so the order matters and is
-  // fixed by depth, which is a pure function of the frame.
-  const tmpV = new THREE.Vector3();
+  // fixed by position along the helix.
   const drawPlates = (r: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget) => {
     res.value.set(target.width, target.height);
     bgTex.value = target.texture;
+    // Draw order follows the helix: plates deeper along the spiral first.
+    // Ordering by view depth would swap neighbours as they turn, and since
+    // each plate composites over what is behind it, a swap shows as a pop.
+    // The slot order never changes, so the motion stays continuous.
     const vis = plates.filter((p) => p.mesh.visible);
-    const depthOf = (p: Plate) => tmpV.setFromMatrixPosition(p.mesh.matrixWorld).applyMatrix4(camera.matrixWorldInverse).z;
-    spiral.updateMatrixWorld(true);
-    vis.sort((a, b) => depthOf(a) - depthOf(b) || a.j - b.j);
+    vis.sort((a, b) => b.j - a.j);
     for (const p of vis) r.render(p.mesh, camera);
   };
 
