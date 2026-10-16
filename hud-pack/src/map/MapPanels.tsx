@@ -234,7 +234,11 @@ const panelMaterial = (tex: THREE.Texture, panelLin: [number, number, number]) =
         float along = vUv.x + vUv.y;
         float run = exp(-pow((along - uGlintPos) * 5.0, 2.0));
         // smoky grey glass with fine vertical stripes; dims what is behind it
-        float stripes = 0.6 + 0.4 * smoothstep(0.3, 0.7, abs(fract(vUv.x * 160.0) - 0.5) * 2.0);
+        float sx = vUv.x * 160.0;
+        float sfw = fwidth(sx);
+        float stripes = 0.6 + 0.4 * smoothstep(0.3, 0.7, abs(fract(sx) - 0.5) * 2.0);
+        // fade the stripes to their average once they approach pixel size (no moire / shimmer)
+        stripes = mix(stripes, 0.8, smoothstep(0.25, 0.6, sfw));
         float fillA = 0.22 * uFill * stripes;
         vec3 c = tex * uCol * 0.85 + vec3(0.03, 0.035, 0.06) * fillA;
         c += vec3(1.0) * edge * spec * (0.6 + 2.5 * run);
