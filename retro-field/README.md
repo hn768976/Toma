@@ -148,4 +148,105 @@ screen is computed from `useCurrentFrame()` alone:
 
 ## Measured results
 
-(see sections below; filled in from the verification run)
+Measured in a 4-core cloud container **with no GPU**: Chromium's WebGL2 ran on
+SwiftShader (software). Expect a machine with a real GPU to be many times
+faster, the three.js looks especially.
+
+### Render time per frame at 720p (`--scale=0.3333…`, 4 tabs)
+
+| Composition | Full 600-frame render | Wall time per frame | Per tab per frame |
+|---|---|---|---|
+| RetroMountains-Sunset | 537 s | 0.89 s | ≈3.6 s |
+| RetroMountains-Midnight | 521 s | 0.87 s | ≈3.5 s |
+| GlassSpiral-Blue | GLASSB s | GLASSBF s | ≈GLASSBT s |
+| GlassSpiral-Amber | GLASSA s | GLASSAF s | ≈GLASSAT s |
+| ParticleSmoke-White | 570 s | 0.95 s | ≈3.8 s |
+| FibreTunnel-RedCyan | 2688 s | 4.48 s | ≈17.9 s |
+| FibreTunnel-VioletGold | 2626 s | 4.38 s | ≈17.5 s |
+
+The Glass Spiral is costly because every plate is drawn on its own: each one
+refracts the resolved image behind it, so about 35 plates means about 35
+render-plus-resolve passes per frame. The Fibre Tunnel's cost is fill rate:
+thousands of overlapping additive line quads.
+
+### Two real 4K frames (3840×2160, frame 300, one tab)
+
+Each was timed as a 3-frame render minus a 1-frame render, divided by 2, so
+browser start-up cancels out.
+
+| Composition | 1 frame (incl. start-up) | 3 frames | **Per 4K frame** |
+|---|---|---|---|
+| GlassSpiral-Blue | 56.0 s | 121.2 s | **≈32.6 s** |
+| ParticleSmoke-White | 7.0 s | 19.9 s | **≈6.5 s** |
+
+### 4K estimates for a full 600-frame render (this CPU-only machine)
+
+Estimates use the measured 4K frames, and about 9× the 720p cost (the pixel
+ratio) where no 4K frame was timed. The range runs from ideal 4-tab
+parallelism to none, since SwiftShader already uses every core.
+
+| Composition | Estimate |
+|---|---|
+| Retro Mountains (each) | ≈1.5–5 h |
+| Glass Spiral (each) | ≈1.4–5.4 h (32.6 s × 600 / 4 … ×1) |
+| Particle Smoke | ≈16–65 min (6.5 s × 600 / 4 … ×1) |
+| Fibre Tunnel (each) | ≈7–25 h |
+
+On a workstation GPU these should come down to minutes per composition. GPU
+rasterisation, MSAA resolves and additive fill are exactly what SwiftShader
+is slow at. For a CPU-only render farm, raise `--concurrency` to the number of
+cores divided by 2 or 3.
+
+## Verification log
+
+All checks below were run on the delivered 720p previews and on stills from
+the same bundle.
+
+| Check | Result |
+|---|---|
+| 1. ffprobe: 1280×720, 30/1, H.264, yuv420p, no audio, 20.0 s | **Pass, all 7** |
+| 2. Loop: 601-frame comps, frame 600 vs frame 0 | **Pixel and byte identical, all 7**. The seam step (599→600) equals an ordinary step (598→599) to within 1 %. |
+| 3. Cold-start frame 300 vs the same frame from a 4-tab, out-of-order render | **Byte identical, all 7** |
+| 4. Banding, from frames decoded out of the MP4s | Sunset sky changes 1–2 levels per row with no plateaus. 5–8× contrast-stretched crops of the sky, the Fibre haze and the dark glass show no contour lines. |
+| 4. Particle Smoke black level, 50 points in empty areas | **0 or 1 on every channel: pass** |
+| 5. Contact sheets (frames 0/120/240/360/480) | Every look shows its required features. Smoke failed first time (it filled to the bottom edge at frames 360–480); fixed with a vertical envelope and re-rendered. |
+| 6. Motion, 2 s around frame 300 | Frame-to-frame change is steady: no pops, stutter or line crawl. Glass failed first time with two bugs: draw-order swaps that popped, and a NaN that blanked blades for one frame. Both fixed and re-rendered. A full 600-frame scan of every MP4 finds no one-frame glitches. |
+| Clean copy: `npm install && npx remotion studio` | **Pass**: studio serves, and `tsc` is clean |
+
+## Completion checklist
+
+- [x] 7 compositions, each one data row, 3840×2160 at 30 fps, 600 frames, seamless
+- [x] three.js on WebGL2 via `@remotion/three`; PixiJS 8 on WebGL2 for the smoke; no WebGPU
+- [x] No text, logos or brands; no MCP servers used
+- [x] Seeded `mulberry32` only; no `Math.random()`, `Date.now()`, clock or state-driven visuals
+- [x] Half-float post chain; ±1/255 dither and ~1 % grain on 1, 2, 3, 4, 6, 7; none on 5
+- [x] 720p previews of all 7 (H.264, yuv420p, CRF 16) and a 720p PNG still of each
+- [x] README: 4K commands, still command, GL flag, Screen/Add note, grain-scaling note, timings, checks, colourway how-to
+- [x] Zip without `node_modules`, `.git`, `refs/` or render output
+
+## Deviations from the brief
+
+- **Glass plate step is 14°, not about 9°.** With 9°, about 40 plates
+  overlapped into a dense rosette. Every reference comparison flagged this as
+  the largest difference, since the reference shows about 12–15 large,
+  separate slabs per turn. There are still 60 plates; about one turn is
+  visible.
+- **Glass transmission is screen-space.** three.js's built-in transmission
+  pass only sees opaque objects, so glass plates could not refract one
+  another. The plates still use `MeshPhysicalMaterial` (IOR 1.5, low
+  roughness, thin-film iridescence, PMREM environment with two strip lights).
+  Transmission is computed in the shader from the image already drawn behind
+  each plate, with bevel refraction, a little dispersion, path-length
+  absorption and Fresnel.
+- **Particle Smoke time loop.** The noise is periodic Perlin noise whose
+  lattice tiles in x (for the one-period sideways drift) and in time, rather
+  than 4D noise sampled on a `cos`/`sin` circle. Both loop exactly; the tiled
+  lattice is about 4× cheaper per grain. A blurred, dimmer copy of the grains
+  adds the soft glow under the wisps; blurring empty black leaves it exactly
+  black.
+- **Retro Mountains mountain mesh** uses a coarser jittered lattice (cells
+  about 2.5 × 2.7 floor cells) on top of the 1-cell floor grid. The reference
+  has large facets, and a 1-cell triangulation read as busy shards.
+- **Sunset sky colours** follow the brief's hex values (`#2A0A5A` →
+  `#5A2ADA` → `#E83A8A`). The reference is darker and more saturated at the
+  top (close to black); the brief's colours were kept.
