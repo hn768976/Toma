@@ -140,4 +140,88 @@ Both symbols are drawn as exact geometry in the shader:
 Each symbol is then quantised to the LED cell grid, about 88 cells across the ring diameter.
 Each cell takes the area coverage of 6 samples.
 
-<!-- RESULTS -->
+## Measured render times
+
+These were measured in a cloud container with **no GPU**. ANGLE fell back to SwiftShader (software
+WebGL2) on 4 CPU cores. On any machine with a GPU, expect these numbers to drop a lot.
+
+### 720p (scale 1/3 → 1280×720)
+
+Full PNG-sequence renders, `--concurrency=2`. The figure is total wall time ÷ frames, so it
+includes about 15 s of bundling.
+
+| Composition | Frames | s / frame |
+|---|---:|---:|
+| HazardGlitch_Radiation | 600 | 0.91 |
+| HazardGlitch_Biohazard | 600 | 0.94 |
+| BrainBoard_Blue | 600 | 1.62 |
+| PhoneHologram_Blue | 300 | 0.70 |
+| PhoneHologram_Violet | 300 | 0.69 |
+| MapPanels_Blue | 600 | 0.79 |
+| HUDFlythrough_Violet | 600 | 0.87 |
+| HUDFlythrough_Cyan | 600 | 0.84 |
+
+On this 4-core box, concurrency 1 and 2 were about the same speed (80 s vs 78 s for 40 frames)
+and concurrency 4 was slower (108 s), because software GL already uses every core.
+
+### Two real 4K frames (3840×2160, `--scale=1`)
+
+Each was rendered as a standalone still, frames 300 and 301:
+
+| Composition | Frame 300 | Frame 301 |
+|---|---:|---:|
+| BrainBoard_Blue (3) | 16.9 s | 17.5 s |
+| HUDFlythrough_Violet (7) | 15.7 s | 15.7 s |
+
+### 4K estimates for this software-GL box
+
+Brain Board and the HUD looks use the measured 4K frames. The other looks scale their 720p time by
+the measured 4K/720p ratio, which is about 10–18×. Shader-only and light scenes sit at the low end.
+
+| Composition | Estimated s / frame | Estimated total |
+|---|---:|---:|
+| HazardGlitch_* | ~10–12 | ~1.7–2.0 h each |
+| BrainBoard_Blue | ~17 | ~2.9 h |
+| PhoneHologram_* | ~8–10 | ~40–50 min each |
+| MapPanels_Blue | ~9–12 | ~1.5–2.0 h |
+| HUDFlythrough_* | ~15.5 | ~2.6 h each |
+
+All 8 together come to roughly 15–17 hours on this CPU. A desktop GPU through ANGLE should take
+well under a second per 4K frame (not measured here).
+
+## Banding check
+
+The check runs on the **encoded mp4s**, using `scripts/banding-check.py` and a second probe that
+finds the smoothest wide gradient in each file.
+
+- The final pass renders into **half-float targets**. It adds a triangular **±1/255 dither** and
+  **1.5 % grain**. The grain is a fixed hash of pixel and frame index (frame mod length), and it
+  fades to zero below about 3 % luminance.
+- Result: the glow falloffs change smoothly. The longest flat run of a single 8-bit value inside
+  a dark gradient is 5–14 px, against tens of px for real banding. There are no staircase steps.
+- Example: the Biohazard glow profile, sampled every 5 px, reads
+  `124 118 118 117 110 115 106 93 81 71 65 61 56 52 49 45 42 39 37 36 35 33 31 29 …`.
+
+## Completion checklist (verify loop)
+
+| # | Check | Result |
+|---|---|---|
+| 1 | ffprobe: 1280×720, 30/1, h264, yuv420p, no audio; 20.0 s / 10.0 s | ✅ all 8 |
+| 2 | Loop: 601-frame variant, frames 0 and 600 pixel-identical | ✅ all 6 loops. The 599→0 step also lies inside the normal step distribution (27th–95th percentile, never above the max). |
+| 3 | Middle frame from a cold start vs the full render, byte for byte | ✅ all 8 (md5 match) |
+| 4 | Banding read from the encoded mp4 | ✅ all 8 |
+| 5 | Contact sheets: symbols correct, brains/board/pulses/scan/DoF, phone story, panels over map, HUD widgets + generic "$" coin, no logos | ✅ |
+| 6 | Motion: stories in full, 2 s around frame 300 of each loop | ✅ after fixes (see below) |
+| 7 | Side-by-side with the references | ✅ |
+| 8 | Fresh-sub-agent visual comparison, 3 rounds for looks 1, 3, 4, 6, 7 | ✅ 3 rounds done (remaining differences listed in the delivery notes) |
+
+Fixes made because of step 6:
+- **Depth-of-field proxies are now masked by content.** HUD widgets and phone hologram layers
+  had been leaving hard sharp rectangles in the blur.
+- **The Map Panels glass stripes fade out near pixel size**, so they no longer shimmer.
+- **The readout glyphs are inset in their atlas cells**, so the neighbouring glyph no longer
+  bleeds in as a sliver.
+
+Scripts: `scripts/render-previews.sh`, `scripts/loop-check.mjs loop|cold <ids>`,
+`scripts/seam-stats.py`, `scripts/banding-check.py`, `scripts/sheet.mjs` (dev contact sheets).
+
