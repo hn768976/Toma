@@ -26,7 +26,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { canvasTexture, makeCanvas } from "../lib/canvasTex";
 import { makeLedMaterial } from "../lib/ledMaterial";
 import { makePipeline, GradeParams } from "../lib/post";
-import { LOOP_PERIODS, ledValue, mod, mulberry32, pick, Rng, smooth } from "../lib/random";
+import { LOOP_PERIODS, ledValue, mod, mulberry32, pick, Rng } from "../lib/random";
 import { makeReflectiveFloorMaterial, PlanarReflection } from "../lib/reflection";
 import type { LookRuntime } from "../lib/GLStage";
 
@@ -48,7 +48,7 @@ const OPEN_H = 1.93;
 const OPEN_Y0 = 0.085;
 const BAYS_BEHIND = 6;
 const BAYS_AHEAD = 64;
-const PANEL_EVERY = 3.5; // ceiling panels every 3.5 bays (2 per 7-bay period)
+const PANEL_EVERY = 7; // one ceiling panel per 7-bay period
 const CEIL_Y = 3.05;
 
 // Faceplate texture size (covers OPEN_W x OPEN_H)
@@ -235,7 +235,7 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
           if (r() < 0.45) led(r, cx + cw - 7, yy + 9, 3, 3, r() < 0.7 ? ledB : ledA, 0.3);
         }
         const xr = x0 + ww * 0.64;
-        if (r() < 0.3) lcd(r, xr + 4, yy + 10, ww * 0.16, h - 20, r() < 0.6 ? ledA : ledB);
+        if (r() < 0.1) lcd(r, xr + 4, yy + 10, ww * 0.16, h - 20, r() < 0.6 ? ledA : ledB);
         else label(xr + 4, yy + 12, ww * 0.16, h - 24);
         vent(xr + ww * 0.18, yy + 6, ww * 0.17, h - 12, unit.silver ? "#5c6066" : "#1b1c1f");
         led(r, x1 - 8, yy + h / 2 - 2, 4, 4, ledA, 0.25);
@@ -257,7 +257,7 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
             if (r() < 0.5) led(r, cx + cw - 8, cy + 4, 3, 3, r() < 0.6 ? ledB : ledA, 0.35);
           }
         const xr = x0 + ww * 0.58;
-        if (r() < 0.45) lcd(r, xr + 6, yy + h * 0.25, ww * 0.2, h * 0.38, r() < 0.55 ? ledA : ledB);
+        if (r() < 0.2) lcd(r, xr + 6, yy + h * 0.25, ww * 0.2, h * 0.38, r() < 0.55 ? ledA : ledB);
         label(xr + 6, yy + h * 0.72, ww * 0.2, h * 0.14);
         vent(xr + ww * 0.24, yy + 6, ww * 0.17, h - 12, unit.silver ? "#5c6066" : "#1b1c1f");
         led(r, x1 - 9, yy + 10, 5, 5, ledB, 0.2);
@@ -283,7 +283,7 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
             led(r, cx + cw - 15, cy + 6, 4, 4, r() < 0.5 ? ledB : ledA, 0.4);
           }
         const xr = x0 + ww * 0.8;
-        lcd(r, xr + 4, yy + 12, ww * 0.18, h * 0.22, ledA);
+        if (r() < 0.5) lcd(r, xr + 4, yy + 12, ww * 0.18, h * 0.22, ledA);
         label(xr + 4, yy + h * 0.45, ww * 0.18, h * 0.08);
         vent(xr + 4, yy + h * 0.6, ww * 0.18, h * 0.32, unit.silver ? "#5c6066" : "#1b1c1f");
         break;
@@ -318,12 +318,34 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
         // Coloured patch leads at the bottom, as in the reference.
         a.fillStyle = "#0c0d0f";
         a.fillRect(20, yy + 1, TW - 40, h - 2);
-        const cols = ["#c03a3a", "#d8b03a", "#3a6ad0", "#3aa860", "#d8d8d8"];
+        const cols = ["#7a3030", "#8a7838", "#34508a", "#3a6a48", "#8a8a8a", "#202224"];
         for (let k = 0; k < 30; k++) {
           a.fillStyle = cols[Math.floor(r() * cols.length)];
           a.fillRect(56 + k * 15, yy + h * 0.3, 8, h * 0.45);
         }
         break;
+      }
+    }
+  }
+  // Patch cords and side cable bundles (dark, with a soft highlight).
+  const cr = mulberry32(0xcab1e + t * 37);
+  a.lineCap = "round";
+  for (let k = 0; k < 4; k++) {
+    const side = k % 2;
+    const x0 = side ? TW - 34 - cr() * 8 : 34 + cr() * 8;
+    const yA = TH * (0.04 + cr() * 0.6);
+    const yB = Math.min(TH - 40, yA + TH * (0.2 + cr() * 0.3));
+    // A bundle: several cords leaving the ports and dropping down the side.
+    for (let c = 0; c < 4; c++) {
+      const off = (c - 1.5) * 5;
+      for (const [w, col] of [[6, "#040405"], [2, "#24272b"]] as const) {
+        a.strokeStyle = col;
+        a.lineWidth = w;
+        a.beginPath();
+        a.moveTo(x0 + (side ? -40 - c * 18 : 40 + c * 18), yA + c * 4);
+        a.bezierCurveTo(x0 + off, yA + 20, x0 + off, yA + 40, x0 + off, yA + 70);
+        a.lineTo(x0 + off, yB);
+        a.stroke();
       }
     }
   }
@@ -342,9 +364,9 @@ const makeLampGeometry = () => {
   const geoms: BufferGeometry[] = [];
   for (let i = 0; i < 4; i++)
     for (let j = 0; j < 4; j++) {
-      const g = new PlaneGeometry(0.2, 0.2);
+      const g = new PlaneGeometry(0.11, 0.11);
       g.rotateX(Math.PI / 2);
-      g.translate(-0.39 + i * 0.26, 0, -0.39 + j * 0.26);
+      g.translate(-0.21 + i * 0.14, 0, -0.21 + j * 0.14);
       geoms.push(g);
     }
   return mergeGeometries(geoms)!;
@@ -375,13 +397,13 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   const pmrem = new PMREMGenerator(gl);
   const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = env;
-  scene.environmentIntensity = 0.4;
+  scene.environmentIntensity = 0.3;
 
-  const camera = new PerspectiveCamera(30, 16 / 9, 0.05, 80);
+  const camera = new PerspectiveCamera(42, 16 / 9, 0.05, 80);
   // Low camera (0.9 m) looking slightly up, about 35 degrees to the row.
   // Rack fronts are turned ~35 degrees away from facing the camera.
-  camera.position.set(0, 0.9, 4.0);
-  camera.lookAt(new Vector3(2.8, 1.02, 0));
+  camera.position.set(0, 0.9, 2.75);
+  camera.lookAt(new Vector3(2.45, 1.24, 0));
   camera.updateMatrixWorld();
 
   const world = new Group(); // everything that scrolls with the truck
@@ -467,10 +489,10 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   // --- Ceiling light panels + area lights ---------------------------------
   const panelFrameMat = new MeshStandardMaterial({ color: 0x15171a, roughness: 0.6, metalness: 0.3 });
   const lampMat = new MeshBasicMaterial({ color: new Color(1, 0.98, 0.95).multiplyScalar(9), side: DoubleSide });
-  const panelZ = -0.85;
+  const panelZ = -1.6;
   const panelIdx: number[] = [];
   for (let k = Math.floor(firstBay / PANEL_EVERY) - 1; k * PANEL_EVERY < firstBay + nBays; k++) panelIdx.push(k);
-  const frameGeo = new BoxGeometry(1.1, 0.03, 1.1);
+  const frameGeo = new BoxGeometry(0.62, 0.03, 0.62);
   const lampGeo = makeLampGeometry();
   const frames = new InstancedMesh(frameGeo, panelFrameMat, panelIdx.length);
   const lamps = new InstancedMesh(lampGeo, lampMat, panelIdx.length);
@@ -481,20 +503,13 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   });
   frames.frustumCulled = lamps.frustumCulled = false;
   world.add(frames, lamps);
-  // Area lights: a fixed set attached to the scrolling world, with a smooth
-  // window weight by camera-relative position so lights fade in and out
-  // instead of popping (the loop stays seamless).
-  const areaLights: { light: RectAreaLight; x: number }[] = [];
-  for (const k of panelIdx) {
-    const x = k * PANEL_EVERY * BAY + 0.3;
-    if (x < -4 || x > 16) continue;
-    // Lights over the aisle (the panel row itself sits above the racks).
-    const l = new RectAreaLight(0xfff6ee, 0, 0.6, 0.6);
-    l.position.set(x, CEIL_Y - 0.01, 1.3);
-    l.lookAt(x, 0, 1.3);
-    world.add(l);
-    areaLights.push({ light: l, x });
-  }
+  // Ceiling light over the aisle: one long area light running with the row.
+  // It is uniform along x, so the truck needs no per-light windowing and the
+  // loop stays exact; the visible lamp panels carry the bloom.
+  const aisleLight = new RectAreaLight(0xfff6ee, 5.5, 60, 0.7);
+  aisleLight.position.set(10, CEIL_Y - 0.01, 1.3);
+  aisleLight.lookAt(10, 0, 1.3);
+  scene.add(aisleLight);
 
   // --- Floor ---------------------------------------------------------------
   const refl = new PlanarReflection(size.x / 2, size.y / 2, 0);
@@ -506,8 +521,12 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
     reflectStrength: 0.32,
     blur: 0.012,
     tile: [0.6, 0.6],
-    seamDarken: 0.06,
-    tileVariation: 0.03,
+    seamDarken: 0.14,
+    tileVariation: 0.04,
+    lod: 2.0,
+    aoZ: 0.0,
+    aoWidth: 0.16,
+    aoStrength: 0.65,
   });
   const floor = new Mesh(new PlaneGeometry(120, 40), floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -526,9 +545,11 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   scene.add(fill);
   // Key: a big soft source high and to the front-left, as in the reference,
   // so the near rack fronts and glass catch a broad highlight.
-  const key = new RectAreaLight(0xf4f6ff, 16, 3.0, 1.2);
-  key.position.set(-0.8, 2.7, 2.6);
-  key.lookAt(1.2, 1.3, 0);
+  // Placed where its mirror image lands on the near doors' glass, so the
+  // camera sees a broad warm glint there (as in the reference).
+  const key = new RectAreaLight(0xfff2e0, 22, 1.6, 0.8);
+  key.position.set(0.35, 2.55, 2.1);
+  key.lookAt(0.6, 1.4, 0);
   scene.add(key);
 
   // --- Post ----------------------------------------------------------------
@@ -541,7 +562,7 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   const pipe = makePipeline(gl, scene, camera, {
     grade: p.grade,
     bloom: { threshold: 1.1, smoothing: 0.35, intensity: 0.75, radius: 0.62 },
-    dof: { focusDistance: focusDist, focusRange: 1.6, bokehScale: 3.2 },
+    dof: { focusDistance: focusDist, focusRange: 2.2, bokehScale: 2.6 },
   });
 
   const travel = TYPES * BAY; // exactly 7 bays per loop
@@ -552,10 +573,6 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
       const shift = u * travel;
       world.position.x = -shift; // camera trucks toward +x: racks slide left
       floorU.uTileOffset.value.set(shift, 0);
-      for (const { light, x } of areaLights) {
-        const rel = x - shift;
-        light.intensity = 16 * smooth(-3.5, -1.5, rel) * (1 - smooth(9, 14, rel));
-      }
       for (const { u: uni, t } of blinkUniforms) {
         const gs = BAY_LAYOUTS[t].groups;
         uni.value.set(

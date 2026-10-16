@@ -2,6 +2,7 @@ import {
   Color,
   HalfFloatType,
   LinearFilter,
+  LinearMipmapLinearFilter,
   Material,
   Matrix4,
   MeshStandardMaterial,
@@ -35,8 +36,9 @@ export class PlanarReflection {
     this.target = new WebGLRenderTarget(Math.max(2, Math.round(width)), Math.max(2, Math.round(height)), {
       type: HalfFloatType,
       samples: 0,
-      minFilter: LinearFilter,
+      minFilter: LinearMipmapLinearFilter,
       magFilter: LinearFilter,
+      generateMipmaps: true,
       depthBuffer: true,
     });
   }
@@ -111,6 +113,14 @@ export type FloorOptions = MeshStandardMaterialParameters & {
   tile?: [number, number];
   seamDarken?: number;
   tileVariation?: number;
+  /** Mip level added to the blur (smooth, noise-free glossy blur). */
+  lod?: number;
+  /** Contact shadow along the line z = aoZ (floor at z > aoZ). */
+  aoZ?: number;
+  /** Contact shadow along both walls |x| = aoX. */
+  aoX?: number;
+  aoWidth?: number;
+  aoStrength?: number;
 };
 
 /**
@@ -119,7 +129,7 @@ export type FloorOptions = MeshStandardMaterialParameters & {
  * tile seams. `uTileOffset` scrolls the seams with the scene.
  */
 export const makeReflectiveFloorMaterial = (o: FloorOptions) => {
-  const { reflection, reflectStrength, blur, tile, seamDarken, tileVariation, ...params } = o;
+  const { reflection, reflectStrength, blur, tile, seamDarken, tileVariation, lod, aoZ, aoX, aoWidth, aoStrength, ...params } = o;
   const mat = new MeshStandardMaterial(params);
   const uniforms = {
     tRefl: { value: reflection.target.texture },
@@ -130,6 +140,8 @@ export const makeReflectiveFloorMaterial = (o: FloorOptions) => {
     uTileOffset: { value: new Vector2(0, 0) },
     uSeam: { value: seamDarken ?? 0.3 },
     uTileVar: { value: tileVariation ?? 0.05 },
+    uLod: { value: lod ?? 1.5 },
+    uAO: { value: new Vector4(aoZ ?? -1e6, aoX ?? 0, aoWidth ?? 0.3, aoStrength ?? 0) },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
@@ -153,6 +165,8 @@ uniform vec2 uTile;
 uniform vec2 uTileOffset;
 uniform float uSeam;
 uniform float uTileVar;
+uniform float uLod;
+uniform vec4 uAO;
 varying vec4 vReflCoord;
 varying vec3 vFloorPos;
 float tileHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -170,6 +184,13 @@ if (uTile.x > 0.0) {
   float s = seam.x * seam.y;
   diffuseColor.rgb *= mix(1.0 - uSeam, 1.0, s) * (1.0 + uTileVar * (tileHash(cell) - 0.5));
 }
+{
+  // Contact shadow where racks meet the floor.
+  float dz = vFloorPos.z - uAO.x;
+  float dx = uAO.y > 0.0 ? uAO.y - abs(vFloorPos.x) : 1e6;
+  float d = min(dz, dx);
+  diffuseColor.rgb *= 1.0 - uAO.w * exp(-max(d, 0.0) / uAO.z);
+}
 `,
       )
       .replace(
@@ -178,13 +199,13 @@ if (uTile.x > 0.0) {
   vec2 ruv = vReflCoord.xy / vReflCoord.w;
   vec3 refl = vec3(0.0);
   float tot = 0.0;
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < 12; i++) {
     float fi = float(i);
-    float r = sqrt((fi + 0.5) / 16.0);
+    float r = sqrt((fi + 0.5) / 12.0);
     float a = fi * 2.39996323;
     vec2 o = vec2(cos(a), sin(a)) * r * uBlur;
     float w = 1.0 - 0.5 * r;
-    refl += texture2D(tRefl, ruv + o * vec2(1.0, 1.6)).rgb * w;
+    refl += textureLod(tRefl, ruv + o * vec2(1.0, 1.6), uLod).rgb * w;
     tot += w;
   }
   refl /= tot;
@@ -195,6 +216,6 @@ if (uTile.x > 0.0) {
 #include <opaque_fragment>`,
       );
   };
-  mat.customProgramCacheKey = () => "reflective-floor-v1";
+  mat.customProgramCacheKey = () => "reflective-floor-v2";
   return { material: mat as Material & MeshStandardMaterial, uniforms };
 };

@@ -21,7 +21,7 @@ export const VARIANTS: Variant[] = [
     params: {
       ledA: "#5AE8FF",
       ledB: "#6AFF8A",
-      grade: { exposure: 1.0, contrast: 1.06, saturation: 0.92, lift: [0.0, 0.0, 0.004], gain: [0.97, 0.99, 1.02], vignette: 0.55, grain: 0.015 },
+      grade: { exposure: 1.05, contrast: 1.18, saturation: 0.95, lift: [0.0, 0.0, 0.0], gain: [1.02, 1.01, 0.95], vignette: 0.55, grain: 0.015 },
     },
   },
   {
@@ -34,7 +34,7 @@ export const VARIANTS: Variant[] = [
       colorA: "#F4F6FF",
       colorB: "#F4F6FF",
       slat: "#3a3b3e",
-      grade: { exposure: 1.0, contrast: 1.04, saturation: 1.0, vignette: 0.35, grain: 0.012 },
+      grade: { exposure: 1.0, contrast: 1.08, saturation: 1.0, vignette: 0.6, grain: 0.012 },
     },
   },
   {
@@ -57,8 +57,8 @@ export const VARIANTS: Variant[] = [
     loop: 600,
     params: {
       ribbon: "#2A7AFF",
-      edge: "#EEF4FF",
-      grade: { exposure: 1.0, contrast: 1.12, saturation: 1.05, lift: [0.0, 0.004, 0.012], gain: [0.94, 0.98, 1.06], vignette: 0.45, grain: 0.015 },
+      edge: "#D6E4FF",
+      grade: { exposure: 1.0, contrast: 1.1, saturation: 1.25, lift: [0.0, 0.01, 0.035], gain: [0.8, 0.95, 1.15], vignette: 0.45, grain: 0.015 },
     },
   },
   {
@@ -71,7 +71,7 @@ export const VARIANTS: Variant[] = [
       panels: "#2A6AFF",
       icons: "#C84AE8",
       floor: "#7A8CA0",
-      grade: { exposure: 1.0, contrast: 1.06, saturation: 1.0, vignette: 0.35, grain: 0.015 },
+      grade: { exposure: 1.0, contrast: 0.98, saturation: 1.05, vignette: 0.3, grain: 0.015, toneMap: false },
     },
   },
   {
@@ -84,7 +84,7 @@ export const VARIANTS: Variant[] = [
       panels: "#1AC8C0",
       icons: "#E8F0F0",
       floor: "#8A8070",
-      grade: { exposure: 1.0, contrast: 1.06, saturation: 1.0, lift: [0.004, 0.002, 0.0], vignette: 0.35, grain: 0.015 },
+      grade: { exposure: 1.0, contrast: 0.98, saturation: 1.05, lift: [0.004, 0.002, 0.0], vignette: 0.3, grain: 0.015, toneMap: false },
     },
   },
   {
@@ -97,7 +97,7 @@ export const VARIANTS: Variant[] = [
       fringe: "#E8803A",
       pool: "#9AC0E0",
       background: "#05080C",
-      grade: { exposure: 1.0, contrast: 1.0, saturation: 1.0, vignette: 0.35, vignetteSoft: 0.6, grain: 0.012 },
+      grade: { exposure: 1.0, contrast: 1.0, saturation: 1.0, vignette: 0.3, vignetteSoft: 0.6, grain: 0.025 },
     },
   },
   {
@@ -110,7 +110,7 @@ export const VARIANTS: Variant[] = [
       fringe: "#E86A4A",
       pool: "#E8C890",
       background: "#0A0705",
-      grade: { exposure: 1.0, contrast: 1.0, saturation: 1.0, vignette: 0.35, vignetteSoft: 0.6, grain: 0.012 },
+      grade: { exposure: 1.0, contrast: 1.0, saturation: 1.0, vignette: 0.3, vignetteSoft: 0.6, grain: 0.025 },
     },
   },
 ];

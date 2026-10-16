@@ -57,7 +57,7 @@ const CAB_LAYOUTS: CabLayout[] = Array.from({ length: TYPES }, (_, t) => {
     let y = 40 + r() * 30;
     while (y < TH - 50) {
       // Runs of lit dots with gaps, like the reference.
-      if (r() < 0.62) {
+      if (r() < 0.8) {
         const cRoll = r();
         const c = cRoll < 0.72 ? 0 : cRoll < 0.9 ? 1 : 2; // blue, white, amber
         const g = r() < 0.33 ? 1 + Math.floor(r() * 3) : 0;
@@ -78,7 +78,7 @@ const drawCabinet = (t: number) => {
   alb.ctx.fillStyle = "#06080c";
   alb.ctx.fillRect(0, 0, TW, TH);
   // Faint server stack lines behind the glass.
-  alb.ctx.fillStyle = "#0d1118";
+  alb.ctx.fillStyle = "#121c2e";
   for (let y = 20; y < TH; y += 22) alb.ctx.fillRect(16, y, TW - 32, 9);
   emi.ctx.fillStyle = "#000";
   emi.ctx.fillRect(0, 0, TW, TH);
@@ -89,7 +89,7 @@ const drawCabinet = (t: number) => {
     for (const d of col.dots) {
       emi.ctx.fillStyle = colors[d.c];
       emi.ctx.globalAlpha = d.c === 0 ? 0.95 : 1;
-      emi.ctx.fillRect(col.x - 3, d.y - 2, 6, 4);
+      emi.ctx.fillRect(col.x - 4, d.y - 3, 8, 5);
       emi.ctx.globalAlpha = 1;
       if (d.g) {
         msk.ctx.fillStyle = d.g === 1 ? "#ff0000" : d.g === 2 ? "#00ff00" : "#0000ff";
@@ -203,34 +203,46 @@ const RIBBONS: Ribbon[] = (() => {
   const r = ribbonRng;
   const list: Ribbon[] = [];
   const dashKs = [1, 2, 4, 5]; // dashes per 2.8 m (2.8, 1.4, 0.7, 0.56 m apart)
-  // Streaks along the cabinet faces.
-  for (let i = 0; i < 18; i++) {
-    const side = i % 2 === 0 ? -1 : 1;
-    const x = side * (HALF_AISLE - 0.06 - 0.12 * r());
-    const y = range(r, 0.15, 2.35);
-    const cycles = (r() < 0.75 ? 1 : -1) * pick(r, [2, 3, 4]);
-    list.push({ a: [0, x, y, 0], b: [0, 0, 0.005, 0.07], c: [pick(r, dashKs), cycles, range(r, 5, 12), range(r, 0.8, 1.4)] });
+  // Bright streams along the cabinet faces, bunched 3-5 together.
+  for (let g = 0; g < 4; g++) {
+    const side = g % 2 === 0 ? -1 : 1;
+    const n = 3 + Math.floor(r() * 3);
+    const y0 = range(r, 0.3, 2.0);
+    const x = side * (HALF_AISLE - 0.07 - 0.06 * r());
+    const cycles = (r() < 0.7 ? 1 : -1) * pick(r, [2, 3]);
+    for (let k = 0; k < n && list.length < 18; k++)
+      list.push({
+        a: [0, x - side * 0.015 * k, y0 + k * range(r, 0.04, 0.07), 0],
+        b: [0, 0, 0.009, 0.3],
+        c: [pick(r, dashKs), cycles, range(r, 4, 8), range(r, 1.2, 1.7)],
+      });
   }
-  // Horizontal loops near the walls and over the floor.
-  for (let i = 0; i < 6; i++) {
-    const side = i % 2 === 0 ? -1 : 1;
-    const R = range(r, 0.22, 0.36);
-    const x = side * (HALF_AISLE - R - 0.05 - 0.15 * r());
-    const y = i < 4 ? range(r, 0.35, 2.1) : 0.04;
+  while (list.length < 20) {
+    const side = list.length % 2 === 0 ? -1 : 1;
     list.push({
-      a: [2, x, y, R],
-      b: [pick(r, [4, 5]), r() * 6.28, 0.006, 0.05],
-      c: [pick(r, [2, 4]), pick(r, [2, 3]), range(r, 6, 10), range(r, 0.9, 1.3)],
+      a: [0, side * (HALF_AISLE - 0.08 - 0.1 * r()), range(r, 0.15, 2.35), 0],
+      b: [0, 0, 0.008, 0.25],
+      c: [pick(r, dashKs), pick(r, [2, 3]), range(r, 4, 8), range(r, 1.0, 1.4)],
     });
   }
-  // Cursive loops just in front of the cabinet faces.
-  for (let i = 0; i < 6; i++) {
+  // Big smooth S-curves and hairpin loops in the plane of the cabinet faces.
+  for (let i = 0; i < 8; i++) {
     const side = i % 2 === 0 ? -1 : 1;
-    const R = range(r, 0.18, 0.32);
+    const R = range(r, 0.35, 0.7);
     list.push({
-      a: [3, side * (HALF_AISLE - 0.1 - 0.1 * r()), range(r, 0.5, 1.9), R],
-      b: [pick(r, [4, 5]), r() * 6.28, 0.006, 0.04],
-      c: [pick(r, [2, 4]), (i % 3 ? 1 : -1) * 2, range(r, 6, 10), range(r, 0.9, 1.2)],
+      a: [3, side * (HALF_AISLE - 0.12 - 0.12 * r()), range(r, 0.8, 1.6), R],
+      b: [pick(r, [1, 2]), r() * 6.28, 0.009, 0.22],
+      c: [pick(r, [1, 2]), (i % 3 ? 1 : -1) * 2, range(r, 4, 7), range(r, 1.1, 1.5)],
+    });
+  }
+  // Curves sweeping across the floor near the walls.
+  for (let i = 0; i < 2; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const R = range(r, 0.3, 0.45);
+    list.push({
+      a: [2, side * (HALF_AISLE - R - 0.1), 0.03, R],
+      b: [pick(r, [1, 2]), r() * 6.28, 0.009, 0.2],
+      c: [pick(r, [1, 2]), 2, range(r, 4, 7), range(r, 1.0, 1.3)],
     });
   }
   return list;
@@ -239,8 +251,9 @@ const RIBBONS: Ribbon[] = (() => {
 export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams): LookRuntime => {
   const size = gl.getDrawingBufferSize(new Vector2());
   const scene = new Scene();
-  scene.background = new Color(0x000000);
-  scene.fog = new FogExp2(0x000000, 0.03);
+  // Background = fog colour, so the far end reads as a dim blue doorway.
+  scene.background = new Color("#0c2350");
+  scene.fog = new FogExp2(new Color("#0c2350").getHex(), 0.035);
   const pmrem = new PMREMGenerator(gl);
   const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = env;
@@ -282,12 +295,15 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
     g.translate(x, y, z);
     return g;
   };
+  // Edge-light outlines span pairs of cabinets (wide glass doors).
+  const zH2 = PITCH - inset;
   const edgeGeo = mergeGeometries([
-    box(0.012, CAB_H - 0.12, ew, 0.004, CAB_H / 2 + 0.03, -zH),
-    box(0.012, CAB_H - 0.12, ew, 0.004, CAB_H / 2 + 0.03, zH),
-    box(0.012, ew, 2 * zH, 0.004, CAB_H - 0.03, 0),
-    box(0.012, ew * 0.7, 2 * zH, 0.004, 0.09, 0),
+    box(0.012, CAB_H - 0.12, ew, 0.004, CAB_H / 2 + 0.03, -zH2),
+    box(0.012, CAB_H - 0.12, ew, 0.004, CAB_H / 2 + 0.03, zH2),
+    box(0.012, ew, 2 * zH2, 0.004, CAB_H - 0.03, 0),
+    box(0.012, ew * 0.7, 2 * zH2, 0.004, 0.09, 0),
   ])!;
+  void zH;
   const plinthGeo = box(0.02, 0.05, PITCH, 0.01, 0.025, 0);
   const plinthMat = new MeshBasicMaterial({ color: new Color(p.edge).multiplyScalar(0.5) });
 
@@ -305,7 +321,15 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
     return im;
   };
   allInst(bodyGeo, bodyMat);
-  allInst(edgeGeo, edgeMat);
+  {
+    const pairs: Matrix4[] = [];
+    for (let i = 0; i < nCab; i += 2)
+      for (const side of [-1, 1]) pairs.push(place(i, side).premultiply(new Matrix4().makeTranslation(0, 0, -PITCH / 2)));
+    const im = new InstancedMesh(edgeGeo, edgeMat, pairs.length);
+    pairs.forEach((m, k) => im.setMatrixAt(k, m));
+    im.frustumCulled = false;
+    scene.add(im);
+  }
   allInst(plinthGeo, plinthMat);
   const glass = allInst(glassGeo, glassMat);
   glass.renderOrder = 3;
@@ -318,7 +342,7 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
       emissiveMap: canvasTexture(gl, emi, true),
       blinkMap: canvasTexture(gl, msk, false),
       emissive: new Color(1, 1, 1),
-      emissiveIntensity: 2.0,
+      emissiveIntensity: 3.0,
       roughness: 0.6,
       metalness: 0.2,
     });
@@ -341,7 +365,7 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
   const zNear = zOf(0);
   const len = zNear - zFar;
   const zMid = (zNear + zFar) / 2;
-  const darkMat = new MeshStandardMaterial({ color: 0x07090d, roughness: 0.7, metalness: 0.3 });
+  const darkMat = new MeshStandardMaterial({ color: 0x18222f, roughness: 0.6, metalness: 0.3 });
   const ceil = new Mesh(new PlaneGeometry(2 * HALF_AISLE + 2, len), darkMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.set(0, CEIL_Y, zMid);
@@ -356,6 +380,12 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
   for (const x of [-0.92, 0.92]) {
     const s = new Mesh(new BoxGeometry(0.035, 0.015, len), stripMat);
     s.position.set(x, CEIL_Y - 0.16, zMid);
+    scene.add(s);
+  }
+  const strip3Mat = new MeshBasicMaterial({ color: new Color(p.edge).multiplyScalar(1.3) });
+  for (const x of [-0.55, -0.48, 0.48, 0.55]) {
+    const s = new Mesh(new BoxGeometry(0.02, 0.012, len), strip3Mat);
+    s.position.set(x, CEIL_Y - 0.15, zMid);
     scene.add(s);
   }
   const strip2Mat = new MeshBasicMaterial({ color: new Color(p.edge).multiplyScalar(1.4) });
@@ -404,12 +434,16 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
   // ---- Floor ----------------------------------------------------------------
   const refl = new PlanarReflection(size.x / 2, size.y / 2, 0);
   const { material: floorMat, uniforms: floorU } = makeReflectiveFloorMaterial({
-    color: new Color(0.025, 0.03, 0.045),
+    color: new Color(0.008, 0.014, 0.035),
     roughness: 0.3,
     metalness: 0.2,
     reflection: refl,
-    reflectStrength: 0.75,
+    reflectStrength: 0.38,
     blur: 0.006,
+    lod: 1.2,
+    aoX: HALF_AISLE,
+    aoWidth: 0.12,
+    aoStrength: 0.5,
     tile: [0.6, 0.6],
     seamDarken: 0.6,
     tileVariation: 0.15,

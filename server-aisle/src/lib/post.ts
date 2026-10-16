@@ -124,7 +124,7 @@ export class FinalEffect extends Effect {
 export type PipelineOptions = {
   grade: GradeParams;
   bloom?: { threshold: number; smoothing: number; intensity: number; radius: number; levels?: number };
-  dof?: { focusDistance: number; focusRange: number; bokehScale: number };
+  dof?: { focusDistance: number; focusRange: number; bokehScale: number; resolutionScale?: number };
   multisampling?: number;
 };
 
@@ -155,7 +155,7 @@ export const makePipeline = (
       focusDistance: opts.dof.focusDistance,
       focusRange: opts.dof.focusRange,
       bokehScale: opts.dof.bokehScale,
-      resolutionScale: 1,
+      resolutionScale: opts.dof.resolutionScale ?? 0.5,
     });
     composer.addPass(new EffectPass(camera, dof));
   }

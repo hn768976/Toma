@@ -4,6 +4,8 @@ import {
   CurvePath,
   InstancedBufferAttribute,
   InstancedMesh,
+  Mesh,
+  PlaneGeometry,
   LineCurve3,
   Matrix4,
   PerspectiveCamera,
@@ -31,7 +33,7 @@ export type FrameTunnelParams = {
 
 // Tunnel dimensions (metres). Frames are 16:10 and a little smaller than the
 // slatted tunnel.
-const SPACING = 0.4; // frame spacing
+const SPACING = 0.3; // frame spacing
 const FRAME_A = 1.76; // half width
 const FRAME_B = 1.1; // half height
 const TUBE_R = 0.008;
@@ -39,8 +41,9 @@ const WALL_X = 2.12; // inner face of wall slats
 const WALL_Y = 1.36; // inner face of floor / ceiling slats
 const SLAT_DEPTH = 0.34;
 const RIB_SPACING = SPACING * 1.5;
-const N_FRAMES = 52; // frames in the scene (indices 0..N-1, k * SPACING ahead)
-const N_RIBS = 40;
+const N_FRAMES = 64; // frames in the scene (indices 0..N-1, k * SPACING ahead)
+const N_RIBS = 48;
+const K_FAR_Z = 24 * SPACING; // distance of the White Burst's first frame
 
 const frameVert = /* glsl */ `
 attribute vec3 iColor;
@@ -110,6 +113,7 @@ uniform vec3 uAlbedo;
 uniform float uAmbient;
 uniform float uFog;
 uniform float uSpec;
+uniform float uSpacing;
 uniform vec3 uFogColor;
 varying vec3 vP;
 varying vec3 vN;
@@ -119,7 +123,11 @@ void main() {
   vec3 v = normalize(cameraPosition - vP);
   vec3 diff = vec3(0.0);
   vec3 spec = vec3(0.0);
-  for (int k = 0; k < NF; k++) {
+  // Only frames near this slat matter: frame k sits at z = -(k - 1) * spacing.
+  int kc = int(floor(-vP.z / uSpacing + 1.0 + 0.5));
+  for (int j = -7; j <= 7; j++) {
+    int k = kc + j;
+    if (k < 0 || k >= NF) continue;
     float I = uFrameI[k];
     if (I <= 0.0) continue;
     // Nearest point on the frame's rectangular tube to this slat point.
@@ -177,7 +185,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
   const fog = p.mode === "burst" ? 0.07 : 0.16;
 
   // --- Frames --------------------------------------------------------------
-  const tube = new TubeGeometry(roundedRect(FRAME_A, FRAME_B, 0.035) as never, 480, TUBE_R, 10, true);
+  const tube = new TubeGeometry(roundedRect(FRAME_A, FRAME_B, 0.008) as never, 480, TUBE_R, 10, true);
   const frameMat = new ShaderMaterial({
     vertexShader: frameVert,
     fragmentShader: frameFrag,
@@ -212,7 +220,8 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
       uAlbedo: { value: new Vector3(...new Color(p.slat).toArray()) },
       uAmbient: { value: 0 },
       uFog: { value: fog },
-      uSpec: { value: 0.6 },
+      uSpec: { value: 0.3 },
+      uSpacing: { value: SPACING },
       uFogColor: { value: new Vector3() },
     },
   });
@@ -251,9 +260,25 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
   slats.frustumCulled = false;
   scene.add(slats);
 
+  // End wall just behind the first (far) frame, burst only.
+  const endU = { uLevel: { value: 0 } };
+  if (p.mode === "burst") {
+    const wall = new Mesh(
+      new PlaneGeometry(2 * (WALL_X + SLAT_DEPTH * 1.6), 2 * (WALL_Y + SLAT_DEPTH * 1.6)),
+      new ShaderMaterial({
+        uniforms: endU,
+        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+        fragmentShader:
+          "uniform float uLevel; varying vec2 vUv; void main(){ vec2 q = (vUv - 0.5) * vec2(1.0, 1.4); float g = 1.0 - 0.45 * dot(q, q) * 2.0; gl_FragColor = vec4(vec3(uLevel * g), 1.0); }",
+      }),
+    );
+    wall.position.set(0, 0, -(K_FAR_Z + 0.22));
+    scene.add(wall);
+  }
+
   const pipe = makePipeline(gl, scene, camera, {
     grade: p.grade,
-    bloom: { threshold: 1.0, smoothing: 0.4, intensity: 0.8, radius: 0.55, levels: 8 },
+    bloom: { threshold: 1.0, smoothing: 0.4, intensity: 0.8, radius: p.mode === "burst" ? 0.72 : 0.6, levels: 8 },
   });
 
   const cA = new Color(p.colorA);
@@ -264,8 +289,8 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
   const cUni = slatMat.uniforms.uFrameC.value as Vector3[];
 
   // ---- White Burst timeline (180 frames) ----------------------------------
-  const K_FAR = 19; // first frame to light (index into scene frames, +2 offset)
-  const K_NEAR = 8;
+  const K_FAR = 25; // first frame to light: 7.2 m ahead
+  const K_NEAR = 12; // last frame switched on by 3.5 s: 3.3 m ahead
   const onTime = (k: number) => {
     if (k === K_FAR) return 4;
     if (k > K_FAR || k < K_NEAR) return Infinity;
@@ -294,7 +319,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
       let camZ: number;
       let ambient = 0;
       let exposure = p.grade.exposure ?? 1;
-      let bloomI = 0.8;
+      let bloomI = p.mode === "burst" ? 1.2 : 0.9;
       let fogGrey = 0;
       let whiteMix = 0;
       let grain = p.grade.grain ?? 0.015;
@@ -306,7 +331,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
         const f = Math.min(frame, p.duration - 1);
         // Push forward: slow start, steady glide, gentle acceleration into the white.
         const u = clamp01((f - 10) / 170);
-        camZ = -0.85 * u * u * u;
+        camZ = -(0.25 * u + 1.35 * u * u * u);
         const build = smooth(105, 162, f);
         for (let k = 0; k < N_FRAMES; k++) {
           intens[k] = flicker(k, f) * (2.6 + 4 * build);
@@ -318,7 +343,9 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
         fogGrey = 0.002 * lit + 0.03 * build;
         ambient = 0.07 * smooth(0, 60, f) + 0.025 + 1.3 * build * build;
         exposure *= 1 + 0.7 * smooth(120, 168, f);
-        bloomI = 0.8 + 0.5 * build;
+        bloomI = 1.2 + 0.6 * build;
+        // Lit end wall behind the far frame: a flat, softly lit grey.
+        endU.uLevel.value = Math.min(0.1, 0.007 * lit) * (1 + 1.6 * build);
         whiteMix = smooth(156, 168, f);
         if (f >= 168) {
           whiteMix = 1;

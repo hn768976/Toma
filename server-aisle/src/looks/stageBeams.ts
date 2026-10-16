@@ -79,10 +79,10 @@ float beam(vec2 p, vec2 L, float ang, out float along, out float acrossN) {
   vec2 v = p - L;
   along = dot(v, D);
   float across = abs(v.x * D.y - v.y * D.x);
-  float w = 0.012 + max(along, 0.0) * 0.15;
+  float w = 0.012 + max(along, 0.0) * 0.095;
   acrossN = across / w;
   float cone = exp(-acrossN * acrossN * 1.4);
-  float fall = 0.32 / (0.22 + along * along * 1.6);
+  float fall = 0.42 / (0.2 + along * along * 2.2);
   return along > 0.0 ? cone * fall : 0.0;
 }
 
@@ -96,24 +96,28 @@ void main() {
   float smoke = clamp(0.5 + 1.25 * sm + 0.75 * wisp, 0.0, 1.8);
   float wispy = smoothstep(0.05, 0.4, abs(wisp)) ;
 
-  // Beams from two lamps just above the top edge.
-  vec2 L1 = vec2(cx - 0.065, 1.16);
-  vec2 L2 = vec2(cx + 0.065, 1.16);
+  // Two lamps just above the top edge. Their beams cross a little above the
+  // frame (they "drift in and out of crossing" as they sway) and diverge into
+  // two separate cones with a dark gap between the lamp heads.
+  vec2 L1 = vec2(cx + 0.049, 1.35);
+  vec2 L2 = vec2(cx - 0.049, 1.35);
   float al1, an1, al2, an2;
   float b1 = beam(p, L1, uA1, al1, an1);
   float b2 = beam(p, L2, uA2, al2, an2);
-  float floorCut = smoothstep(0.07, 0.17, p.y);
+  // Beams fade out by about half height, as in the reference.
+  float floorCut = smoothstep(0.07, 0.17, p.y) * (0.25 + 0.75 * smoothstep(0.25, 0.75, p.y));
   float beams = (b1 + b2) * floorCut;
   vec3 col = uBg;
-  col += uBeam * beams * (0.25 + 0.75 * smoke) * 0.62;
-  // Warm fringe at the lamp heads (edges of the cone, very top).
-  float fr1 = exp(-max(al1, 0.0) / 0.13) * smoothstep(0.2, 1.1, an1) * exp(-an1 * an1 * 0.5);
-  float fr2 = exp(-max(al2, 0.0) / 0.13) * smoothstep(0.2, 1.1, an2) * exp(-an2 * an2 * 0.5);
-  col += uFringe * (fr1 + fr2) * 1.4;
-  col += mix(uBeam, vec3(1.0), 0.4) * (exp(-max(al1, 0.0) / 0.05) * exp(-an1 * an1) + exp(-max(al2, 0.0) / 0.05) * exp(-an2 * an2)) * 0.35;
-
-  // Ambient haze lit by the beams, very low.
-  col += uBeam * 0.02 * smoke * smoothstep(1.0, 0.2, length((p - vec2(cx, 0.55)) * vec2(0.6, 1.0)));
+  // Navy haze lift across the frame.
+  col += uBeam * 0.022 * (0.6 + 0.6 * smoke);
+  col += uBeam * beams * (0.2 + 0.8 * smoke) * 0.6;
+  // Small warm cores at the very top of each beam (the lamp heads).
+  float top = exp(-max(1.0 - p.y, 0.0) / 0.055);
+  float fr1 = top * exp(-an1 * an1 * 0.9) * step(0.0, al1);
+  float fr2 = top * exp(-an2 * an2 * 0.9) * step(0.0, al2);
+  col += uFringe * (fr1 * 0.5 + fr2 * 0.8) * 0.5;
+  float head = exp(-max(1.0 - p.y, 0.0) / 0.12);
+  col += mix(uBeam, vec3(1.0), 0.35) * (exp(-an1 * an1 * 1.5) + exp(-an2 * an2 * 1.5)) * head * 0.12;
 
   // Thin smoke column rising in the centre.
   float y = p.y;
@@ -121,22 +125,23 @@ void main() {
   float colX = (p.x - (cx - 0.02) - wig) / (0.01 + 0.03 * (1.0 - y));
   float column = exp(-colX * colX) * smoothstep(0.12, 0.3, y) * smoothstep(0.85, 0.45, y);
   column *= clamp(0.3 + 1.2 * wisp + 0.6 * sm, 0.0, 1.2);
-  col += mix(uBeam, vec3(1.0), 0.3) * column * 0.11;
+  col += mix(uBeam, vec3(1.0), 0.3) * column * 0.045;
 
   // Low glowing pool of haze along the bottom fifth, brightest under the beams.
   float hit1 = L1.x + (L1.y - 0.13) * tan(uA1);
   float hit2 = L2.x + (L2.y - 0.13) * tan(uA2);
-  float band = exp(-pow((y - 0.135) / 0.032, 2.0));
+  float band = exp(-pow((y - 0.14) / 0.04, 2.0));
   float spread = exp(-pow((p.x - cx) / (A * 0.4), 4.0));
-  float under = exp(-pow((p.x - hit1) / 0.2, 2.0)) + exp(-pow((p.x - hit2) / 0.2, 2.0));
+  float under = exp(-pow((p.x - hit1) / 0.25, 2.0)) + exp(-pow((p.x - hit2) / 0.25, 2.0));
   float poolTex = fbm(vec2(p.x * 0.7, p.y * 3.0) + vec2(5.0, 0.0), 3.0, uT, uT, 3, 2);
-  float pool = band * spread * (0.35 + 0.9 * under) * clamp(0.65 + 1.1 * poolTex, 0.15, 1.6);
-  col += uPool * pool * 0.75;
-  // Darker floor below the pool.
-  col *= mix(1.0, 0.55, smoothstep(0.1, 0.0, y));
+  float mott = fbm(vec2(p.x * 1.6, p.y * 5.0) + vec2(1.3, 0.0), 3.0, uT, uT, 3, 2);
+  float pool = band * spread * (0.3 + 0.9 * under) * clamp(0.5 + 1.6 * poolTex + 0.9 * mott, 0.05, 1.9);
+  col += uPool * pool * 0.7;
+  // Dim haze continues below the pool.
+  col += uPool * 0.035 * smoothstep(0.16, 0.0, y) * spread * clamp(0.6 + poolTex, 0.0, 1.5);
   // Heavy vignette, but keep the lamp heads at the top centre bright.
   vec2 vq = vec2((p.x - cx) / A, y - 0.6);
-  col *= mix(1.0, 0.25, smoothstep(0.25, 0.75, length(vq * vec2(1.25, 1.0))));
+  col *= mix(1.0, 0.4, smoothstep(0.3, 0.8, length(vq * vec2(1.25, 1.0))));
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -181,8 +186,9 @@ export const buildStageBeams = (gl: WebGLRenderer, p: StageBeamsParams): LookRun
     render: (frame) => {
       const f = mod(frame, p.loop);
       // Each beam swings +-6 degrees on a cosine: periods 600 and 300 frames.
-      mat.uniforms.uA1.value = 22 * deg + 6 * deg * Math.cos((2 * Math.PI * f) / 600);
-      mat.uniforms.uA2.value = -22 * deg + 6 * deg * Math.cos((2 * Math.PI * mod(f, 300)) / 300 + 1.1);
+      // Beam 1 (from the right lamp) points down-left, beam 2 down-right.
+      mat.uniforms.uA1.value = -26 * deg + 6 * deg * Math.cos((2 * Math.PI * f) / 600);
+      mat.uniforms.uA2.value = 26 * deg + 6 * deg * Math.cos((2 * Math.PI * mod(f, 300)) / 300 + 1.1);
       mat.uniforms.uT.value = f / p.loop;
       pipe.final.set("seed", f);
       pipe.render();

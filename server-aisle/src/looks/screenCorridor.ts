@@ -40,7 +40,7 @@ export type ScreenCorridorParams = {
 
 const BAY = 0.6;
 const TYPES = 5; // layout repeats every 5 bays = camera travel per loop
-const HALF_AISLE = 1.0;
+const HALF_AISLE = 1.35;
 const RACK_H = 2.62;
 const CEIL_Y = 2.9;
 const N_BEHIND = 4;
@@ -78,16 +78,16 @@ const drawAtlas = () => {
   // Row 0: bars.
   cell(0, (x, y, w, h) => {
     ctx.fillStyle = R(); ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = G(0.32); ctx.fillRect(x, y + 4, w, h * 0.14);
+    ctx.fillStyle = G(0.12); ctx.fillRect(x, y + 4, w, h * 0.14);
   });
   cell(1, (x, y, w, h) => {
     ctx.fillStyle = R(); ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = G(0.25); ctx.fillRect(x, y + h * 0.78, w, h * 0.12);
+    ctx.fillStyle = G(0.1); ctx.fillRect(x, y + h * 0.78, w, h * 0.12);
     ctx.fillStyle = G(0.55); ctx.fillRect(x + w - 34, y + 10, 22, h - 20);
   });
   cell(2, (x, y, w, h) => {
     for (let k = 0; k < 8; k++) { ctx.fillStyle = R(); ctx.fillRect(x + k * (w / 8), y, w / 8 - 5, h); }
-    ctx.fillStyle = G(0.3); ctx.fillRect(x, y + 5, w, 10);
+    ctx.fillStyle = G(0.1); ctx.fillRect(x, y + 5, w, 10);
   });
   cell(3, (x, y, w, h) => {
     ctx.fillStyle = R(); ctx.fillRect(x, y, w, h);
@@ -125,15 +125,15 @@ const drawAtlas = () => {
   });
   cell(7, (x, y, w, h) => {
     ctx.fillStyle = R(); ctx.fillRect(x, y, w, h);
-    lineGraph(x, y + 10, w, h - 20, 0.13, 0.85);
+    lineGraph(x, y + 10, w, h - 20, 0.13, 0.5);
   });
   cell(8, (x, y, w, h) => {
     ctx.fillStyle = R(); ctx.fillRect(x, y, w, h);
-    for (let k = 0; k < 12; k++) { ctx.fillStyle = G(0.6); const bh = h * (0.15 + 0.65 * r()); ctx.fillRect(x + 8 + k * 19, y + h - bh - 6, 11, bh); }
+    for (let k = 0; k < 12; k++) { ctx.fillStyle = B(0.9); const bh = h * (0.15 + 0.65 * r()); ctx.fillRect(x + 8 + k * 19, y + h - bh - 6, 11, bh); }
   });
   cell(9, (x, y, w, h) => {
     ctx.fillStyle = R(); ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = G(0.3);
+    ctx.fillStyle = G(0.15);
     ctx.beginPath(); ctx.moveTo(x, y + h);
     for (let k = 0; k <= 64; k++) {
       const t = k / 64;
@@ -141,7 +141,7 @@ const drawAtlas = () => {
       ctx.lineTo(x + t * w, y + h * (1 - v));
     }
     ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
-    lineGraph(x, y + 6, w, h * 0.5, 0.6, 0.5);
+    lineGraph(x, y + 6, w, h * 0.5, 0.6, 0.35);
   });
   cell(10, (x, y, w, h) => {
     ctx.fillStyle = R(); ctx.fillRect(x, y, w, h);
@@ -236,21 +236,21 @@ const makeBay = (r: typeof layoutRng): Screen[] => {
   const out: Screen[] = [];
   const rows = [0.3, 0.55, 0.8, 1.05, 1.3, 1.55, 1.8, 2.05, 2.3];
   // Pick 6-9 screens laid out on the slot rows.
-  const target = 7 + Math.floor(r() * 3);
+  const target = 8 + Math.floor(r() * 2);
   const order = rows.map((y, i) => ({ y, i, k: r() })).sort((a, b) => a.k - b.k);
   for (const { y } of order) {
     if (out.length >= target) break;
     const kind = r();
     if (kind < 0.42) {
       const anim = r() < 0.18 ? 1 : 0;
-      out.push({ cell: Math.floor(r() * 6), role: 0, x: -0.07, y, w: 0.4, h: 0.1, anim, period: pick(r, LOOP_PERIODS), phase: Math.floor(r() * 200) });
-      if (out.length < target && r() < 0.6)
+      out.push({ cell: Math.floor(r() * 6), role: 0, x: -0.07, y, w: 0.42, h: 0.12, anim, period: pick(r, LOOP_PERIODS), phase: Math.floor(r() * 200) });
+      if (out.length < target && r() < 0.85)
         out.push({ cell: 12 + Math.floor(r() * 6), role: 2, x: 0.205, y, w: 0.13, h: 0.085, anim: r() < 0.12 ? 4 : 0, period: pick(r, LOOP_PERIODS), phase: Math.floor(r() * 200) });
     } else if (kind < 0.8) {
       const cell = 6 + Math.floor(r() * 6);
       const anim = (cell === 7 || cell === 9) && r() < 0.4 ? 2 : 0;
-      out.push({ cell, role: 1, x: -0.06, y, w: 0.42, h: 0.13, anim, period: pick(r, [150, 200, 300, 600]), phase: Math.floor(r() * 200) });
-      if (out.length < target && r() < 0.5)
+      out.push({ cell, role: 1, x: -0.06, y, w: 0.44, h: 0.15, anim, period: pick(r, [150, 200, 300, 600]), phase: Math.floor(r() * 200) });
+      if (out.length < target && r() < 0.8)
         out.push({ cell: 12 + Math.floor(r() * 6), role: 2, x: 0.215, y, w: 0.11, h: 0.08, anim: 0, period: 100, phase: 0 });
     } else {
       const tick = r() < 0.5;
@@ -327,29 +327,38 @@ void main() {
 `;
 
 const drawRackFace = (seed: number) => {
-  // Black rack front with fine vent perforation and panel seams.
+  // Charcoal rack front: unit bezels, perforated mesh grilles and tiny
+  // red / green status LEDs (emissive canvas).
   const W = 300;
   const H = 1310;
-  const { canvas, ctx } = makeCanvas(W, H);
+  const alb = makeCanvas(W, H);
+  const emi = makeCanvas(W, H);
+  const ctx = alb.ctx;
   const r = mulberry32(seed);
-  ctx.fillStyle = "#0c0e12";
+  ctx.fillStyle = "#1a1d22";
   ctx.fillRect(0, 0, W, H);
-  for (let y = 0; y < H; y += 70) {
-    ctx.fillStyle = "#14171c";
-    ctx.fillRect(6, y + 2, W - 12, 66);
-    if (r() < 0.75) {
-      ctx.fillStyle = "#050608";
-      for (let vy = y + 8; vy < y + 62; vy += 5) for (let vx = 12 + ((vy / 5) % 2) * 2.5; vx < W - 12; vx += 5) ctx.fillRect(vx, vy, 2.5, 2.5);
+  emi.ctx.fillStyle = "#000";
+  emi.ctx.fillRect(0, 0, W, H);
+  for (let y = 0; y < H; y += 50) {
+    ctx.fillStyle = "#24282e";
+    ctx.fillRect(6, y + 2, W - 12, 46);
+    if (r() < 0.7) {
+      ctx.fillStyle = "#0d0f12";
+      for (let vy = y + 7; vy < y + 44; vy += 5) for (let vx = 12 + ((vy / 5) % 2) * 2.5; vx < W - 12; vx += 5) ctx.fillRect(vx, vy, 2.5, 2.5);
     }
-    ctx.fillStyle = "#08090b";
+    ctx.fillStyle = "#0b0c0e";
     ctx.fillRect(0, y, W, 2);
+    // A row of tiny LEDs on some units.
+    if (r() < 0.6) {
+      const n = 3 + Math.floor(r() * 6);
+      const x0 = 14 + r() * 60;
+      for (let k = 0; k < n; k++) {
+        emi.ctx.fillStyle = r() < 0.55 ? "#ff3040" : r() < 0.6 ? "#40ff60" : "#ff40c0";
+        emi.ctx.fillRect(x0 + k * 9, y + 40, 4, 3);
+      }
+    }
   }
-  // Small status pips in dark red / magenta as in the reference.
-  for (let k = 0; k < 18; k++) {
-    ctx.fillStyle = r() < 0.5 ? "#5a1a2a" : "#3a1a4a";
-    ctx.fillRect(20 + r() * (W - 40), r() * H, 6, 4);
-  }
-  return canvas;
+  return { alb: alb.canvas, emi: emi.canvas };
 };
 
 export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorParams): Promise<LookRuntime> => {
@@ -358,7 +367,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   const size = gl.getDrawingBufferSize(new Vector2());
   const scene = new Scene();
   scene.background = new Color(0x000000);
-  scene.fog = new Fog(0x000000, 24, 78);
+  scene.fog = new Fog(0x000000, 30, 95);
   const pmrem = new PMREMGenerator(gl);
   const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = env;
@@ -380,8 +389,15 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   const sideRot = (side: number) => new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), side < 0 ? Math.PI / 2 : -Math.PI / 2);
   for (const side of [-1, 1])
     for (let t = 0; t < TYPES; t++) {
-      const tex = canvasTexture(gl, drawRackFace(0x900 + t * 17 + (side > 0 ? 1000 : 0)), true);
-      const mat = new MeshStandardMaterial({ map: tex, roughness: 0.5, metalness: 0.35 });
+      const face = drawRackFace(0x900 + t * 17 + (side > 0 ? 1000 : 0));
+      const mat = new MeshStandardMaterial({
+        map: canvasTexture(gl, face.alb, true),
+        emissiveMap: canvasTexture(gl, face.emi, true),
+        emissive: new Color(1, 1, 1),
+        emissiveIntensity: 1.6,
+        roughness: 0.5,
+        metalness: 0.35,
+      });
       const idx: number[] = [];
       for (let i = 0; i < nBay; i++) if (mod(i, TYPES) === t) idx.push(i);
       const im = new InstancedMesh(faceGeo, mat, idx.length);
@@ -440,8 +456,8 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
       uPanels: { value: new Color(p.panels) },
       uIcons: { value: new Color(p.icons) },
       uFrame: { value: 0 },
-      uGain: { value: 1.6 },
-      uFogRange: { value: new Vector2(24, 78) },
+      uGain: { value: 1.15 },
+      uFogRange: { value: new Vector2(30, 95) },
     },
   });
   const screenMesh = new InstancedMesh(quad, screenMat, screens.length);
@@ -450,7 +466,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   scene.add(screenMesh);
 
   // ---- Ceiling and tubes ------------------------------------------------------
-  const ceilMat = new MeshStandardMaterial({ color: 0x0b0d10, roughness: 0.6, metalness: 0.3 });
+  const ceilMat = new MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6, metalness: 0.2 });
   const ceil = new Mesh(new PlaneGeometry(2 * HALF_AISLE + 0.2, len), ceilMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.set(0, CEIL_Y, zMid);
@@ -459,30 +475,57 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   for (let n = 0; n < ribs.count; n++) ribs.setMatrixAt(n, new Matrix4().makeTranslation(0, CEIL_Y - 0.02, zNear - n * 1.2));
   ribs.frustumCulled = false;
   scene.add(ribs);
-  const tubeMat = new MeshBasicMaterial({ color: new Color(1, 1, 1).multiplyScalar(5) });
-  for (const x of [-0.42, 0.42]) {
-    const tube = new Mesh(new BoxGeometry(0.045, 0.025, len), tubeMat);
+  const tubeMat = new MeshBasicMaterial({ color: new Color(1, 1, 1).multiplyScalar(3) });
+  for (const x of [-0.72, 0.72]) {
+    const tube = new Mesh(new BoxGeometry(0.03, 0.02, len), tubeMat);
     tube.position.set(x, CEIL_Y - 0.03, zMid);
     scene.add(tube);
-    const l = new RectAreaLight(0xffffff, 3.0, 0.06, 70);
+    const l = new RectAreaLight(0xffffff, 4.0, 0.06, 70);
     l.position.set(x, CEIL_Y - 0.05, -30);
     l.lookAt(x, 0, -30);
     scene.add(l);
   }
 
+  // ---- Lit end of the corridor --------------------------------------------
+  // Far enough (52 m) that it shows no parallax; it travels with the camera so
+  // the loop stays exact.
+  const endC = makeCanvas(512, 512);
+  {
+    const g = endC.ctx;
+    const r = mulberry32(0xe7d);
+    g.fillStyle = "#0a0c10";
+    g.fillRect(0, 0, 512, 512);
+    for (let y = 30; y < 500; y += 26)
+      for (let x = 20; x < 490; x += 70) {
+        if (r() < 0.25) continue;
+        g.fillStyle = r() < 0.55 ? p.bars : r() < 0.7 ? p.panels : p.icons;
+        g.globalAlpha = 0.85;
+        g.fillRect(x, y, 40 + r() * 20, 10);
+      }
+    g.globalAlpha = 1;
+  }
+  const endMat = new MeshBasicMaterial({ map: canvasTexture(gl, endC.canvas, true), fog: true });
+  endMat.color.setScalar(0.9);
+  const endWall = new Mesh(new PlaneGeometry(2 * HALF_AISLE, CEIL_Y), endMat);
+  scene.add(endWall);
+
   // ---- Floor ----------------------------------------------------------------
   const refl = new PlanarReflection(size.x / 2, size.y / 2, 0);
   const floorColor = new Color(p.floor);
   const { material: floorMat, uniforms: floorU } = makeReflectiveFloorMaterial({
-    color: floorColor.clone().multiplyScalar(0.55),
+    color: floorColor.clone().multiplyScalar(0.75),
     roughness: 0.35,
     metalness: 0.1,
     reflection: refl,
-    reflectStrength: 0.45,
-    blur: 0.01,
+    reflectStrength: 0.5,
+    blur: 0.012,
+    lod: 2.4,
     tile: [0.6, 0.6],
-    seamDarken: 0.35,
-    tileVariation: 0.06,
+    seamDarken: 0.1,
+    tileVariation: 0.03,
+    aoX: HALF_AISLE,
+    aoWidth: 0.15,
+    aoStrength: 0.35,
   });
   const floor = new Mesh(new PlaneGeometry(2 * HALF_AISLE, len), floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -492,7 +535,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
 
   const pipe = makePipeline(gl, scene, camera, {
     grade: p.grade,
-    bloom: { threshold: 1.0, smoothing: 0.35, intensity: 0.7, radius: 0.6 },
+    bloom: { threshold: 0.85, smoothing: 0.35, intensity: 0.75, radius: 0.72 },
   });
 
   return {
@@ -502,6 +545,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
       camera.position.set(0, camY, camZ);
       camera.lookAt(0, camY, camZ - 10);
       camera.updateMatrixWorld();
+      endWall.position.set(0, CEIL_Y / 2, camZ - 52);
       screenMat.uniforms.uFrame.value = f;
       floorU.uTileOffset.value.set(0, 0);
       pipe.final.set("seed", f);
