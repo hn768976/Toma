@@ -8,6 +8,13 @@ Config.setCodec("h264");
 Config.setPixelFormat("yuv420p");
 Config.setCrf(16);
 Config.setMuted(true); // no audio stream
+// Keep the +-1/255 dither and the grain through H.264: without "tune grain"
+// x264 smooths them away in flat gradients and the bands come back.
+Config.overrideFfmpegCommand(({ args }) => {
+  const i = args.indexOf("libx264");
+  if (i === -1 || args.includes("-tune")) return args;
+  return [...args.slice(0, i + 1), "-tune", "grain", ...args.slice(i + 1)];
+});
 Config.setOverwriteOutput(true);
 
 // Sandboxed dev boxes that can't download Remotion's headless shell ship a

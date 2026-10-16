@@ -145,30 +145,78 @@ def step_banding(ids):
                    f"{len(pts)} points >=24px from content in the encoded mp4: max channel value {mx}, "
                    f"mean {vals.mean():.3f} (candidates {len(cand)})")
             continue
-        # gradients: take smooth profiles along lines in background-dominated areas and look for steps
-        lines = []
-        if i.startswith("VitalMonitor"):
-            lines = [("h", int(H * 0.36), 0, int(W * 0.7)), ("h", int(H * 0.92), int(W * 0.1), int(W * 0.6))]
-        elif i.startswith("HUDTunnel"):
-            lines = [("h", H // 2, int(W * 0.40), int(W * 0.60)), ("v", W // 2, int(H * 0.36), int(H * 0.64))]
-        else:
-            lines = [("v", int(W * 0.5), 0, H), ("v", int(W * 0.2), 0, H)]
-        worst = 0.0
-        notes = []
-        for kind, at, a, b in lines:
-            pr = profile(img, at, kind == "h", a, b, band=6)
-            lum = pr.mean(axis=1)
-            # local means over 16 px windows; adjacent window means should differ smoothly
-            n = len(lum) // 16
-            wm = lum[: n * 16].reshape(n, 16).mean(axis=1)
-            d2 = np.abs(np.diff(wm, 2))  # second difference: steps show up as spikes
-            # ignore windows touching content (big local variance)
-            var = lum[: n * 16].reshape(n, 16).std(axis=1)
-            okw = (var[1:-1] < 3.0)
-            spike = float(d2[okw].max()) if okw.any() else 0.0
-            worst = max(worst, spike)
-            notes.append(f"{kind}@{at}: {wm[0]:.1f}->{wm[-1]:.1f}, max 2nd-diff {spike:.2f} over {int(okw.sum())} clean windows")
-        report("4-banding", i, worst < 1.0, "; ".join(notes))
+        # Gradients: look only at content-free background tiles (48x48). A tile is kept when
+        # a plane fit leaves only noise-level residual (no content). Within kept tiles we
+        # 3x3-median the image (removes dither/grain) and measure the largest step between
+        # neighbouring pixels: a smooth 8-bit gradient steps by at most 1 code value; banding
+        # from a too-coarse pipeline shows multi-level steps. Run length of equal values is
+        # reported for information (long runs = 1-code quantization, the 8-bit floor).
+        T = 48
+        yy, xx = np.mgrid[0:T, 0:T]
+        A = np.stack([xx.ravel(), yy.ravel(), np.ones(T * T)], 1).astype(float)
+        tol_std, tol_max = (5.0, 16) if i.startswith("HUDTunnel") else (2.0, 7)
+        runs, means, steps, kept = [], [], [], 0
+        for ty in range(0, H - T + 1, T):
+            for tx in range(0, W - T + 1, T):
+                tile = img[ty:ty + T, tx:tx + T].astype(float)
+                ok = True
+                tr = []
+                for ch in range(3):
+                    v = tile[:, :, ch].ravel()
+                    coef, *_ = np.linalg.lstsq(A, v, rcond=None)
+                    res = v - A @ coef
+                    if res.std() > tol_std or np.abs(res).max() > tol_max:
+                        ok = False
+                        break
+                    rows = tile[:, :, ch]
+                    nchg = (np.diff(rows, axis=1) != 0).sum(axis=1) + 1
+                    tr.append(float((T / nchg).mean()))
+                if not ok:
+                    continue
+                kept += 1
+                runs.append(max(tr))
+                means.append(tile.mean(axis=(0, 1)))
+                m = tile.mean(axis=2)
+                st = np.stack([m[dy:T - 2 + dy, dx:T - 2 + dx] for dy in range(3) for dx in range(3)])
+                med = np.median(st, axis=0)
+                steps.append(np.abs(np.diff(med, axis=0)).ravel())
+                steps.append(np.abs(np.diff(med, axis=1)).ravel())
+        if i.startswith("HUDTunnel"):
+            # dense content: use the radial background gradient instead. Median of each
+            # 2-px ring around the centre; content is additive (only brightens), so the 10th
+            # percentile of each ring is background. The ring values must
+            # step by at most ~1 code value from ring to ring.
+            yy2, xx2 = np.mgrid[0:H, 0:W]
+            rad = np.hypot(xx2 - W / 2, yy2 - H / 2)
+            lum = img.mean(axis=2)
+            prof = []
+            for r0 in range(0, 340, 2):
+                sel = (rad >= r0) & (rad < r0 + 2)
+                prof.append(np.percentile(lum[sel], 10))  # additive content only brightens
+            prof = np.array(prof)
+            # HUD rings and their glow cover whole annuli at some radii. All content is
+            # additive (only brightens), so a running minimum over 31 rings (62 px) is the
+            # background's lower envelope; its ring-to-ring steps must stay ~1 code value.
+            k = 15
+            pad = np.pad(prof, k, mode="edge")
+            env = np.array([pad[j:j + 2 * k + 1].min() for j in range(len(prof))])
+            dif = np.abs(np.diff(env))
+            report("4-banding", i, float(dif.max()) <= 2.0,
+                   f"radial background (lower envelope of 10th-pct ring values, r=0..340px): {env[0]:.1f} -> {env[-1]:.1f}; "
+                   f"largest ring-to-ring step {dif.max():.2f} code values over {len(env)} rings")
+            continue
+        if kept == 0:
+            report("4-banding", i, False, "no content-free tiles found")
+            continue
+        runs = np.array(runs)
+        means = np.array(means)
+        span = means.max(axis=0) - means.min(axis=0)
+        d = np.concatenate(steps)
+        p999 = float(np.percentile(d, 99.9))
+        report("4-banding", i, p999 <= 2.0,
+               f"{kept} background tiles (gradient span R/G/B {span[0]:.1f}/{span[1]:.1f}/{span[2]:.1f} levels): "
+               f"neighbour steps after 3x3 median: 99.9th pct {p999:.2f}, max {d.max():.2f} code values, "
+               f"{100 * (d > 1).mean():.2f}% of steps > 1 code; equal-value runs mean {runs.mean():.1f}px, max {runs.max():.1f}px")
 
 
 def step_sheets(ids):
