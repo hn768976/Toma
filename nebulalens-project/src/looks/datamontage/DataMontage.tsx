@@ -21,10 +21,10 @@ const DEPTH = [5, 7.5, 10, 13.5, 18];
 const WRAP = [1.7, 1.6, 1.5, 1.45, 1.4];
 const WRAPS_PER_LOOP = [2, 2, 1, 1, 1];
 /** depth-of-field blur, sigma in 4K pixels; the middle layer is in focus */
-const DOF_SIGMA_4K = [16, 5, 0, 4, 9];
+const DOF_SIGMA_4K = [9, 3, 0, 2.5, 5];
 /** texture resolution relative to on-screen size (blurred layers need less) */
 const TEX_RES = [0.5, 0.8, 1.0, 0.8, 0.6];
-const BRIGHT = [1.0, 1.15, 1.3, 0.95, 0.7];
+const BRIGHT = [1.2, 1.5, 1.8, 1.2, 0.9];
 
 const visibleH = (d: number) => 2 * d * Math.tan(((FOV / 2) * Math.PI) / 180);
 
@@ -35,7 +35,7 @@ uniform vec3 cTop, cBot, cFlare;
 const COMPOSITE = /* glsl */ `
   vec3 layers = c;   // uSrc = the in-focus layer
   layers += texture(uL0, uv).rgb + texture(uL1, uv).rgb + texture(uL3, uv).rgb + texture(uL4, uv).rgb;
-  vec3 bg = mix(cBot, cTop, smoothstep(0.35, 1.0, uv.y));
+  vec3 bg = mix(cBot * 0.8, cTop * 0.8, smoothstep(0.5, 1.1, uv.y));
   float vig = length((uv - 0.5) * vec2(1.0, 0.8));
   bg *= 1.0 - 0.6 * smoothstep(0.25, 0.8, vig);
   vec3 bloom = texture(uBloom, uv).rgb;
@@ -44,8 +44,8 @@ const COMPOSITE = /* glsl */ `
   vec2 fp = vec2(0.015, 0.95);
   vec2 d = (uv - fp) * vec2(asp, 1.0);
   float r = length(d);
-  float flare = 0.9 * exp(-r / 0.045) + 0.3 * exp(-r / 0.16) + 0.04 * exp(-r / 0.5);
-  flare += 0.35 * exp(-abs(d.y) / 0.012) * exp(-abs(d.x) / 0.45);  // anamorphic streak
+  float flare = 1.0 * exp(-r / 0.03) + 0.18 * exp(-r / 0.1);
+  flare += 0.3 * exp(-abs(d.y) / 0.008) * exp(-abs(d.x) / 0.25);  // anamorphic streak
   vec2 ghost = (uv - mix(fp, vec2(0.5), 1.35)) * vec2(asp, 1.0);
   flare += 0.06 * smoothstep(0.09, 0.07, length(ghost)) * smoothstep(0.04, 0.08, length(ghost));
   // global fine grid and faint scan lines over the whole wall
@@ -53,8 +53,8 @@ const COMPOSITE = /* glsl */ `
   vec2 gl2 = abs(fract(gp) - 0.5) / fwidth(gp);
   float grid = 1.0 - min(min(gl2.x, gl2.y), 1.0);
   float scan = 0.5 + 0.5 * sin(uv.y * uRes.y * 1.5708);
-  bg += cTop * (0.18 * grid + 0.06 * scan);
-  c = bg + layers * 1.0 + bloom * 0.6 + cFlare * flare;
+  bg += cTop * (0.22 * grid + 0.04 * scan);
+  c = bg + layers * 1.0 + bloom * 0.3 + cFlare * flare;
   // soft shoulder so stacked additive glows never clip hard
   c = mix(c, vec3(1.0) - exp(-c), smoothstep(0.6, 1.4, max(c.r, max(c.g, c.b))));
 `;

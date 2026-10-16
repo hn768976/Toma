@@ -18,13 +18,13 @@ import type { BarChartPalette } from "../versions";
 // Seeded chart data (module level)
 
 const N_BARS = 14;
-const N_CANDLES = 72;
+const N_CANDLES = 120;
 
 const DATA = (() => {
   const rng = mulberry32(1010978468);
   const bars = Array.from({ length: N_BARS }, (_, i) => ({
     u: 0.06 + (i / N_BARS) * 0.9 + range(rng, -0.01, 0.01),
-    w: range(rng, 0.042, 0.052),
+    w: range(rng, 0.032, 0.046),
     base: range(rng, 5200, 7800),
     amp: range(rng, 900, 2000),
     m: irange(rng, 1, 3), // whole cycles per loop
@@ -52,7 +52,7 @@ const DATA = (() => {
   const labels = Array.from({ length: 7 }, (_, i) => ({
     code: CODES[(i * 5 + 3) % CODES.length],
     u: range(rng, 0.03, 0.92),
-    v: range(rng, 0.06, 0.9),
+    v: i < 2 ? range(rng, 0.86, 0.95) : range(rng, 0.06, 0.9),
     price: range(rng, 120, 99000),
     chg: range(rng, 0.05, 140),
     up: rng() > 0.3,
@@ -72,11 +72,11 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
   };
 
   // grid
-  ctx.strokeStyle = rgba(ink, 0.55);
-  ctx.lineWidth = 3.4 * px;
+  ctx.strokeStyle = rgba(ink, 0.45);
+  ctx.lineWidth = 2.8 * px;
   ctx.beginPath();
-  const gx = 28;
-  const gy = 14;
+  const gx = 36;
+  const gy = 18;
   for (let i = 0; i <= gx; i++) {
     const x = (W * i) / gx;
     ctx.moveTo(x, 0);
@@ -99,12 +99,12 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
     const x = b.u * W;
     const bw = b.w * W;
     const top = vToY(val);
-    ctx.fillStyle = rgba(ink, 0.3);
+    ctx.fillStyle = rgba(ink, 0.2 + 0.2 * ((b.ph * 7) % 1));
     ctx.fillRect(x, top, bw, baseY - top);
     ctx.fillStyle = rgba(ink, 0.55);
     ctx.fillRect(x, top, bw, 5 * px);
     ctx.fillStyle = rgba(ink, 0.95);
-    ctx.font = `500 ${Math.round(92 * px)}px Inter`;
+    ctx.font = `500 ${Math.round(74 * px)}px Inter`;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     ctx.fillText(String(shown), x + bw * 0.02, top - 26 * px);
@@ -112,8 +112,8 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
 
   // wavy lines
   for (const l of DATA.lines) {
-    ctx.strokeStyle = rgba(line, 0.9);
-    ctx.lineWidth = 9 * px;
+    ctx.strokeStyle = rgba(line, 0.7);
+    ctx.lineWidth = 5 * px;
     ctx.beginPath();
     const N = 400;
     for (let i = 0; i <= N; i++) {
@@ -124,12 +124,12 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
       else ctx.lineTo(u * W, v * H);
     }
     ctx.stroke();
-    ctx.strokeStyle = rgba(line, 0.22);
-    ctx.lineWidth = 34 * px;
+    ctx.save();
+    ctx.filter = `blur(${Math.round(10 * px)}px)`;
+    ctx.strokeStyle = rgba(line, 0.35);
+    ctx.lineWidth = 16 * px;
     ctx.stroke();
-    ctx.strokeStyle = rgba(line, 0.1);
-    ctx.lineWidth = 70 * px;
-    ctx.stroke();
+    ctx.restore();
   }
 
   // candlesticks: periodic series, scrolled by exactly two whole periods per loop
@@ -141,7 +141,7 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
     const idx = (((k + Math.floor(shift)) % N_CANDLES) + N_CANDLES) % N_CANDLES;
     const c = DATA.candles[idx];
     const x = (k - (shift - Math.floor(shift))) * cw + cw / 2;
-    const a = c.close >= c.open ? 0.95 : 0.7;
+    const a = c.close >= c.open ? 0.75 : 0.55;
     ctx.strokeStyle = rgba(ink, a);
     ctx.fillStyle = rgba(ink, a);
     ctx.beginPath();
@@ -195,15 +195,15 @@ void main() {
   float g = smoothstep(0.15, 1.35, dot(p, vec2(0.7, 0.72)));
   vec3 c = mix(cFrom, cTo, g);
   vec2 d = (p - vec2(1.0, 1.0)) * vec2(uRes.x / uRes.y, 1.0);
-  c += vec3(0.6, 0.95, 1.0) * 0.5 * exp(-dot(d, d) / 0.06);   // concentrated glow, top right
+  c += vec3(0.5, 0.95, 1.0) * 0.4 * exp(-dot(d, d) / 0.018);   // small concentrated glow, top right
   // deeper towards the lower left
-  c *= 0.62 + 0.38 * smoothstep(-0.2, 1.2, dot(p, vec2(0.6, 0.8)));
+  c *= 0.5 + 0.45 * smoothstep(-0.1, 1.25, dot(p, vec2(0.6, 0.8)));
   outColor = vec4(c, 1.0);
 }
 `;
 
-const PLANE_W = 22;
-const PLANE_H = 11;
+const PLANE_W = 28;
+const PLANE_H = 14;
 
 export const BarChart: React.FC<BarChartPalette> = (p) => {
   const ready = useAssets([loadFonts]);
@@ -268,7 +268,7 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
         /* glsl */ `
   vec3 sb = texture(uSoft, uv).rgb;
   float dof = 0.85 * smoothstep(0.55, 1.0, uv.x) * smoothstep(0.0, 0.5, 1.0 - uv.y * 0.5);
-  c = mix(c, sb, dof) + sb * 0.16;`,
+  c = mix(c, sb, dof) + sb * 0.06;`,
         { uSoft: { value: soft.texture } },
         "uniform sampler2D uSoft;",
       );
@@ -288,7 +288,7 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
         gl.setRenderTarget(target);
         gl.render(scene, camera);
         copy.render(gl, soft);
-        softBlur.apply(gl, soft, 6 * (ph / HEIGHT) * 3 * 0.5);
+        softBlur.apply(gl, soft, 36 * (ph / HEIGHT) * 0.5);
         final.uniforms.uFrame.value = f;
         final.render(gl, null);
       };

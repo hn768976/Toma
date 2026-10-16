@@ -77,13 +77,13 @@ const WIDTHS: Record<ElType, [number, number]> = {
 const STATIC: ElType[] = ["hex", "grid", "panel"];
 
 /** Planes per depth layer (near → far). 80 in total. */
-export const LAYER_COUNTS = [10, 15, 21, 18, 16];
+export const LAYER_COUNTS = [8, 16, 26, 18, 16];
 
 const TYPES_BY_LAYER: ElType[][] = [
   ["gaugeRow", "gaugeRow", "bigGauge", "bars", "panel", "specks"],
   ["gaugeRow", "gaugeRow", "bars", "line", "numbers", "panel", "bigGauge", "specks", "map"],
-  ["gaugeRow", "gaugeRow", "bars", "bars", "line", "map", "numbers", "panel", "panel", "bigGauge", "grid", "specks", "radar", "hex", "wave"],
-  ["panel", "panel", "map", "line", "numbers", "grid", "gaugeRow", "bars", "specks"],
+  ["gaugeRow", "gaugeRow", "gaugeRow", "bars", "bars", "line", "map", "map", "numbers", "numbers", "panel", "bigGauge", "bigGauge", "specks", "specks", "radar"],
+  ["panel", "map", "map", "line", "numbers", "grid", "gaugeRow", "gaugeRow", "bars", "specks", "radar"],
   ["panel", "panel", "grid", "map", "numbers", "gaugeRow", "bars", "specks"],
 ];
 
@@ -97,7 +97,7 @@ const makeEl = (rng: Rng, type: ElType, layer: number, i: number, n: number): El
     // spread evenly along the strip with jitter, so density stays even
     x0: (i + range(rng, 0.1, 0.9)) / n,
     y: range(rng, -0.47, 0.47),
-    w: range(rng, w0, w1) * (layer === 0 ? 1.25 : 1),
+    w: range(rng, w0, w1) * (layer === 0 ? 1.0 : 0.78),
     aspect: range(rng, a0, a1),
     animated: !STATIC.includes(type),
     fm: irange(rng, 1, 3),
@@ -119,11 +119,11 @@ export const ELEMENTS: El[] = (() => {
   });
   // two wireframe globes near the top (one in focus, one softer behind it)
   const g1 = out.find((e) => e.layer === 2 && e.type !== "panel")!;
-  Object.assign(g1, { type: "globe", animated: true, y: 0.34, w: 0.13, aspect: 1 });
+  Object.assign(g1, { type: "globe", animated: true, y: 0.44, w: 0.1, aspect: 1 });
   const g2 = out.find((e) => e.layer === 1 && e.type !== "panel")!;
-  Object.assign(g2, { type: "globe", animated: true, y: 0.38, w: 0.1, aspect: 1, x0: (g1.x0 + 0.3) % 1 });
+  Object.assign(g2, { type: "globe", animated: true, y: 0.46, w: 0.08, aspect: 1, x0: (g1.x0 + 0.3) % 1 });
   // big donut rows cut off by the bottom edge
-  out.filter((e) => e.layer <= 2 && e.type === "gaugeRow").slice(0, 3).forEach((e) => {
+  out.filter((e) => (e.layer === 2 || e.layer === 1) && e.type === "gaugeRow").slice(0, 4).forEach((e) => {
     e.y = -0.47;
     e.w *= 1.3;
   });
@@ -316,8 +316,8 @@ export const drawElement = (
       const cols = 110;
       const rows = 46;
       const step = w / cols;
-      const dot = step * 0.32;
-      ctx.fillStyle = rgba(ink.dim, 0.75);
+      const dot = step * 0.42;
+      ctx.fillStyle = rgba(ink.dim, 0.95);
       for (let j = 0; j < rows; j++) {
         const lat = 80 - (j / (rows - 1)) * 140;
         const my = Math.min(land.h - 1, Math.floor(((90 - lat) / 180) * land.h));
@@ -384,6 +384,17 @@ export const drawElement = (
       ctx.lineTo(w / 2, h / 2 + r);
       ctx.stroke();
       const a = TAU * el.ms[0] * t + el.phs[0];
+      if (el.seed % 2 === 0) {
+        // plain concentric target: thick bright rings, slowly pulsing
+        for (let k = 1; k <= 3; k++) {
+          ctx.strokeStyle = rgba(ink.dim, 0.5 + 0.5 * osc(el, k, t));
+          ctx.lineWidth = u * (2 + k);
+          ctx.beginPath();
+          ctx.arc(w / 2, h / 2, (r * k) / 3.3, 0, TAU);
+          ctx.stroke();
+        }
+        break;
+      }
       const g = ctx.createConicGradient(a - 1.2, w / 2, h / 2);
       g.addColorStop(0, rgba(ink.bright, 0));
       g.addColorStop(1.2 / TAU, rgba(ink.bright, 0.55));
@@ -539,7 +550,7 @@ export const drawElement = (
     }
     case "panel": {
       // hard-edged translucent block: the patchwork wall behind everything
-      ctx.fillStyle = rgba(ink.dim, 0.02 + 0.05 * el.vals[0]);
+      ctx.fillStyle = rgba(ink.dim, 0.012 + 0.025 * el.vals[0]);
       ctx.fillRect(0, 0, w, h);
       ctx.strokeStyle = rgba(ink.dim, 0.3);
       ctx.lineWidth = u;

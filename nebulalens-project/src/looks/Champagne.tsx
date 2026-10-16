@@ -52,7 +52,7 @@ const LAYERS = [
   { count: 2200, dMin: 5, dMax: 17, kMin: 1, kMax: 3, alpha: [0.55, 1.0] },
   { count: 1150, dMin: 5, dMax: 22, kMin: 1, kMax: 3, alpha: [0.4, 0.7] },
   { count: 480, dMin: 9, dMax: 34, kMin: 2, kMax: 4, alpha: [0.22, 0.4] },
-  { count: 30, dMin: 50, dMax: 130, kMin: 4, kMax: 6, alpha: [0.05, 0.1] },
+  { count: 30, dMin: 45, dMax: 120, kMin: 4, kMax: 6, alpha: [0.25, 0.45] },
 ] as const;
 
 const buildBubbles = (): Bubble[] => {
@@ -85,13 +85,14 @@ const buildStreams = (): StreamBubble[] => {
   const rng = mulberry32(8);
   const out: StreamBubble[] = [];
   for (let s = 0; s < 8; s++) {
-    const x = range(rng, 0.06, 0.94) * WIDTH;
+    // one prominent full-height chain about a third of the way across
+    const x = (s === 0 ? 0.335 : range(rng, 0.06, 0.94)) * WIDTH;
     // nucleation point: somewhere in the lower part of the glass (or below it)
     // two prominent streams from visible nucleation points, six faint ones
     const strong = s < 2;
-    const yOrigin = (strong ? range(rng, 0.62, 0.92) : range(rng, 0.6, 1.1)) * HEIGHT;
+    const yOrigin = (s === 0 ? 1.08 : strong ? range(rng, 0.62, 0.92) : range(rng, 0.6, 1.1)) * HEIGHT;
     const len = yOrigin + MARGIN;
-    const n = Math.round(len / range(rng, 70, 95));
+    const n = Math.round(len / (s === 0 ? 30 : range(rng, 60, 85)));
     const k = 2 + Math.floor(rng() * 2);
     const dMax = range(rng, 12, 19);
     const alpha = strong ? 0.85 : range(rng, 0.22, 0.4);
@@ -122,11 +123,13 @@ const drawAtlas = (p: ChampagnePalette) => {
     ctx.filter = BLUR[i] > 0 ? `blur(${BLUR[i]}px)` : "none";
     // body: dark refracting rim, lighter core
     const body = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    body.addColorStop(0, hexA(p.highlight, 0.3));
-    body.addColorStop(0.5, hexA(p.highlight, 0.12));
-    body.addColorStop(0.68, hexA(p.rim, 0.55));
-    body.addColorStop(0.88, hexA(p.rim, 0.95));
-    body.addColorStop(1.0, hexA(p.rim, 0.0));
+    // small bubbles read as solid dark specks with a bright glint (as in the
+    // reference); the large out-of-focus ones as light-rimmed discs
+    const big = i === 3;
+    body.addColorStop(0, big ? hexA(p.highlight, 0.18) : hexA(p.rim, 0.62));
+    body.addColorStop(0.6, big ? hexA(p.highlight, 0.12) : hexA(p.rim, 0.72));
+    body.addColorStop(0.88, big ? hexA(p.highlight, 0.55) : hexA(p.rim, 0.95));
+    body.addColorStop(1.0, hexA(big ? p.highlight : p.rim, 0.0));
     ctx.fillStyle = body;
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, TAU);
@@ -197,15 +200,19 @@ void main() {
   float asp = uRes.x / uRes.y;
   vec2 p = vec2(vUV.x * asp, vUV.y);
   // the light behind the glass drifts once round a small circle per loop
-  vec2 g = vec2(0.56 * asp + 0.05 * cos(6.28318530718 * uT), 0.1 + 0.03 * sin(6.28318530718 * uT));
-  float d = length((p - g) * vec2(0.85, 0.7));
-  // pale glow → gold liquid → warm brown at the edges, darkest to the lower left
-  vec3 c = mix(uGlow, uLiquid, smoothstep(0.0, 0.9, d));
-  float diag = max(0.0, dot(vUV - vec2(0.6, 0.15), normalize(vec2(-1.0, 0.6))));
-  float v = smoothstep(0.62, 1.3, d + 0.35 * diag);
-  c = mix(c, uVignette, clamp(v, 0.0, 0.95));
-  c = mix(c, uVignette * 0.85, 0.5 * smoothstep(0.6, 1.1, diag));
-  c = mix(c, uVignette, 0.5 * smoothstep(0.72, 1.02, vUV.x) + 0.25 * smoothstep(0.75, 1.0, vUV.y));
+  // a soft, wide vertical column of light just left of centre, brightest
+  // near the top and still bright at the bottom; the light drifts round a
+  // small circle once per loop
+  float cx = 0.45 + 0.025 * cos(6.28318530718 * uT);
+  float cy = 0.2 + 0.03 * sin(6.28318530718 * uT);
+  float colX = exp(-pow((vUV.x - cx) / 0.34, 2.0));
+  float spot = exp(-dot((vUV - vec2(cx, cy)) * vec2(asp * 0.9, 1.1), (vUV - vec2(cx, cy)) * vec2(asp * 0.9, 1.1)) / 0.35);
+  float L = clamp(0.85 * colX * (0.82 + 0.18 * (1.0 - vUV.y)) + 0.45 * spot, 0.0, 1.0);
+  vec3 c = mix(uVignette, uLiquid, smoothstep(0.0, 0.55, L));
+  c = mix(c, uGlow, smoothstep(0.45, 1.0, L));
+  // darker amber corners, deepest at the bottom left
+  float corner = smoothstep(0.55, 0.95, length((vUV - vec2(0.47, 0.45)) * vec2(1.25, 1.1)));
+  c = mix(c, uVignette * 0.85, 0.55 * corner + 0.25 * smoothstep(0.6, 1.0, vUV.y) * smoothstep(0.5, 0.0, vUV.x));
   c *= 1.0 + 0.035 * cos(6.28318530718 * uT);
   finalColor = vec4(c, 1.0);
 }

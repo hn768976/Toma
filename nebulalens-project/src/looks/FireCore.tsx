@@ -66,7 +66,7 @@ float flames(float a, float s, uint seed) {
   for (int k = 0; k < 3; k++) {
     float n = pnoise3(P, ivec3(fa, fs, 2), seed + uint(k) * 17u);
     float rg = 1.0 - abs(n);
-    R += amp * rg * rg;
+    R += amp * pow(rg, 5.0);
     norm += amp;
     P = vec3(P.x * 2.0, P.y * 2.0, P.z) + vec3(0.0, 0.31, 0.0);
     fa *= 2;
@@ -77,7 +77,7 @@ float flames(float a, float s, uint seed) {
   float M = pnoise3(vec3(a * 10.0, flowY(s, 2) + 0.7, uT * 2.0 + 0.2), ivec3(10, 2, 2), seed + 29u);
   float mask = smoothstep(-0.04, 0.42, M);
   float fw = max(fwidth(R), 1e-4);
-  return smoothstep(0.58 - fw, 0.84 + fw, R) * mask;
+  return smoothstep(0.42 - fw, 0.8 + fw, R) * mask;
 }
 
 // Embers: sparse sparks flowing outward with the fire.
@@ -86,10 +86,10 @@ float sparks(float a, float s, float r) {
   ivec2 c = ivec2(floor(g));
   ivec2 cw = ivec2(((c.x % 260) + 260) % 260, ((c.y % 60) + 60) % 60);
   vec3 h = hash32(cw, 313u);
-  if (h.z > 0.035) return 0.0;
+  if (h.z > 0.015) return 0.0;
   vec2 f = fract(g) - (0.2 + 0.6 * h.xy);
   float d = length(f * vec2(1.0, 2.2));
-  return smoothstep(0.32, 0.0, d) * (0.4 + 0.6 * h.z / 0.035) * smoothstep(0.03, 0.06, r) * smoothstep(0.45, 0.15, r);
+  return smoothstep(0.32, 0.0, d) * (0.4 + 0.6 * h.z / 0.015) * smoothstep(0.03, 0.06, r) * smoothstep(0.45, 0.15, r);
 }
 
 void main() {
@@ -107,25 +107,26 @@ void main() {
   // brightness rises toward the core; flames start a little outside it
   float near = smoothstep(0.015, 0.08, r);
   float fall = 1.0 / (1.0 + pow(r / 0.45, 1.2));
-  float e = near * fall * (1.6 * fl + 0.9 * fine.x * smoothstep(0.5, 0.1, r) + 0.6 * hair.x * smoothstep(0.35, 0.05, r));
-  float g = near * fall * (0.25 * fine.y);
-  e += 3.0 * sparks(a, s, r);
+  float e = near * fall * (1.1 * fl + 1.3 * fine.x + 0.9 * hair.x * smoothstep(0.6, 0.05, r));
+  float g = near * fall * (0.5 * fine.y + 0.25 * hair.y);
+  e += 1.6 * sparks(a, s, r);
 
   // core: white-hot point, yellow gaussian halo, thin spiky radial rays
-  float halo = exp(-r * r / (2.0 * 0.03 * 0.03)) * 3.2;
+  float halo = exp(-r / 0.026) * 3.4 + exp(-r * r / (2.0 * 0.016 * 0.016)) * 1.5;
   float ra = pnoise2(vec2(a * 140.0, uT * 4.0), ivec2(140, 4), 77u);
   float rays = pow(max(ra, 0.0), 3.0) * exp(-r / 0.11) * 3.0 * smoothstep(0.004, 0.025, r);
   float core = halo * pulse;
 
   // haze: faint dark tint between the flames
   float hz = 0.5 + 0.5 * pnoise3(vec3(a * 6.0, (s - PS * uT) / PS * 2.0, uT * 2.0), ivec3(6, 2, 2), 91u);
-  vec3 c = cHaze * (0.15 + 0.9 * hz) * smoothstep(1.0, 0.1, r);
+  vec3 c = cHaze * (0.45 + 1.1 * hz) * (0.45 + 0.55 * smoothstep(1.1, 0.1, r));
 
   // one intensity → colour ramp: deep red → orange → white-hot
-  float I = e + 0.35 * g + 0.8 * rays + core + 2.0 * exp(-r / 0.075) * pulse + 0.5 * exp(-r / 0.18) * pulse;
+  float I = e + 0.35 * g + 0.8 * rays + core + 2.4 * exp(-r / 0.07) * pulse + 0.5 * exp(-r / 0.18) * pulse;
   vec3 ramp = cCool * smoothstep(0.0, 0.7, I);
   ramp = mix(ramp, cHot, smoothstep(0.55, 1.5, I));
-  ramp = mix(ramp, cCore, smoothstep(1.7, 3.2, I));
+  ramp = mix(ramp, mix(cHot, cCore, 0.55), smoothstep(1.3, 2.0, I));
+  ramp = mix(ramp, cCore, smoothstep(2.2, 3.4, I));
   c += ramp;
   // dark vignette: the edges fall to near black
   c *= 1.0 - 0.55 * smoothstep(0.5, 1.05, r);

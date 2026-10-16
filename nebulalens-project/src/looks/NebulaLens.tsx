@@ -46,8 +46,12 @@ float fbm(vec2 p, int oct, uint seed) {
 }
 
 // Background in source-plane coords s (frame heights, relative to the hole).
-vec3 nebula(vec2 s) {
+vec3 nebula(vec2 s0) {
   vec2 nrm = vec2(-BAND.y, BAND.x);
+  // the background clouds are wound into a loose spiral around the hole
+  float rr = length(s0);
+  float spin = 0.9 * exp(-rr / 0.6);
+  vec2 s = mat2(cos(spin), sin(spin), -sin(spin), cos(spin)) * s0;
   float u = dot(s, BAND) + TILE * uT;       // slides exactly one tile per loop
   float v = dot(s, nrm);
   vec2 p = vec2(u * float(F) / TILE, v * float(F) / TILE);
@@ -68,7 +72,7 @@ vec3 nebula(vec2 s) {
   float off = smoothstep(0.12, 0.6, abs(v + 0.15 * w.x));
   float pl = smoothstep(-0.25, 0.3, streak) * off;
   c = mix(c, cPlum * 1.25, 0.9 * pl);
-  c = mix(c, cMauve, 0.8 * smoothstep(0.0, 0.5, streak) * off);
+  c = mix(c, cMauve * 1.08, 0.9 * smoothstep(-0.05, 0.45, streak) * off);
   // bright dust band, meandering, clumpy
   float meander = 0.15 + 0.07 * w.y;   // band passes just beside the hole: two lensed lobes, not a full ring
   float band = exp(-pow((v - meander) / 0.11, 2.0));
@@ -76,28 +80,26 @@ vec3 nebula(vec2 s) {
   // keep the broad band away from the lens so only the infall stream wraps the rim
   float d = band * clump * smoothstep(0.22, 0.5, length(s));
   c = mix(c, cTeal * 0.9, 0.25 * band);
-  c = mix(c, cCream, 0.92 * d);
-  c += cCream * 0.18 * d * d;
+  c = mix(c, cCream, 0.6 * d);
 
   // infall stream: a clumpy diagonal stream of dust through the hole (fixed
   // to the hole, not tiled), flowing inward by exactly 2 noise cells per loop.
   // A line through the lens maps onto itself, so its lensed image is two
   // lobes that touch the rim on opposite sides, not a full ring.
-  float al = dot(s, BAND);
-  float ac = dot(s, nrm);
+  float al = dot(s0, BAND);
+  float ac = dot(s0, nrm);
   float aal = abs(al);
   float side = al > 0.0 ? 0.0 : 37.0;
   float Y = (log(max(aal, 0.004)) + 1.2 * uT) / 1.2 * 2.0;
   float sn1 = pnoise2(vec2(ac * 9.0 + side, Y), ivec2(4096, 2), 131u);
   float sn2 = pnoise2(vec2(ac * 21.0 + side, Y * 2.0 + 0.5), ivec2(4096, 4), 137u);
-  float wS = 0.018 + 0.085 * smoothstep(0.0, 0.3, aal);
+  float wS = 0.014 + 0.07 * smoothstep(0.0, 0.3, aal);
   float prof = exp(-pow((ac + 0.03 * sn1) / wS, 2.0));
   float len = smoothstep(0.012, 0.05, aal) * smoothstep(0.42, 0.2, aal);
   float puff = smoothstep(-0.75, 0.05, sn1 + 0.5 * sn2);
   float st = prof * len * puff;
-  c = mix(c, cTeal * 1.2, 0.35 * prof * smoothstep(0.5, 0.1, aal));
-  c = mix(c, cCream, 0.95 * st);
-  c += cCream * 0.25 * st * st;
+  c = mix(c, cTeal * 1.1, 0.25 * prof * smoothstep(0.5, 0.1, aal));
+  c = mix(c, cCream * vec3(1.0, 0.96, 0.82), 0.92 * st);   // warm yellow-tan, not white
   return c;
 }
 
@@ -166,21 +168,20 @@ void main() {
       float c2 = cos(sw2), s2 = sin(sw2);
       b2 = mat2(c2, s2, -s2, c2) * b2;
       float footS = foot / float(uSS);
-      st += starLayer(b2, 0.03125, 0.62, 0.0012, 0.0, footS, 101u);
-      st += starLayer(b2, 0.0625, 0.30, 0.0028, 0.009, footS, 211u);
+      st += starLayer(b2, 0.03125, 0.8, 0.0013, 0.0, footS, 101u);
+      st += starLayer(b2, 0.0625, 0.32, 0.0024, 0.0, footS, 211u);
     }
   }
   st *= inv * inv;
   // lensed star arcs near the ring stay subtle
-  st *= mix(0.3, 1.0, smoothstep(re, 2.0 * re, r));
+  st *= mix(0.12, 1.0, smoothstep(re, 2.2 * re, r));
   c += vec3(1.0, 0.97, 0.92) * st;
   // glowing teal haze swirled around the hole
-  float sp = atan(th.y, th.x) + 6.0 * r;
-  c += cTeal * 0.16 * exp(-max(r - rs, 0.0) / 0.25) * (0.85 + 0.15 * sin(3.0 * sp));
+
 
   // inside the Einstein ring we see the faint, inverted second image
   float inner = 1.0 - smoothstep(re * 0.9, re * 1.05, r);
-  c *= mix(1.0, 0.85, inner);
+  c *= mix(1.0, 0.92, inner);
 
   // photon ring: thin, beamed brighter on one side
   float phi = atan(th.y, th.x);
@@ -190,7 +191,7 @@ void main() {
   float wr = max(0.0018, pix * 0.9);
   float ring = exp(-pow((r - rp) / wr, 2.0));
   float halo = exp(-max(r - rp, 0.0) / 0.03) * smoothstep(rs * 0.98, rp, r);
-  c += cRing * (ring * (0.18 + 1.1 * beam) + halo * (0.05 + 0.3 * beam));
+  c += cRing * vec3(0.92, 1.0, 1.06) * (ring * (0.15 + 1.9 * beam) + halo * (0.03 + 0.45 * beam));
 
   // shadow: perfectly black inside, antialiased edge
   float shadow = smoothstep(rs - 0.75 * pix, rs + 0.75 * pix, r);
