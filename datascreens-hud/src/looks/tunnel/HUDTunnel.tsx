@@ -99,10 +99,11 @@ const drawCircuit = (c: CanvasRenderingContext2D, tw: number, th: number, r: Rng
     const x = r() * tw;
     const y = r() * (th - h);
     const lines = Array.from({ length: Math.floor(h / (16 * s)) - 1 }, () => hexString(r, int(r, 4, 12)));
+    const boxed = r() < 0.2;
     wrapDraw(tw, (dx) => {
       c.globalAlpha = 0.7;
       c.lineWidth = 1.5 * s;
-      c.strokeRect(x + dx, y, w, h);
+      if (boxed) c.strokeRect(x + dx, y, w, h);
       c.font = `500 ${12 * s}px "${MONO}"`;
       c.globalAlpha = 0.85;
       lines.forEach((ln, k) => c.fillText(ln, x + dx + 4 * s, y + (k + 1.4) * 16 * s, w - 8 * s));
@@ -125,12 +126,26 @@ const drawCircuit = (c: CanvasRenderingContext2D, tw: number, th: number, r: Rng
   for (let i = 0; i < 90; i++) {
     const x = r() * tw;
     const y = r() * th;
-    const rad = range(r, 2, 5) * s;
+    const rad = range(r, 3, 8) * s;
     wrapDraw(tw, (dx) => {
       c.globalAlpha = 1;
+      c.shadowColor = "#fff";
+      c.shadowBlur = rad * 2;
       c.beginPath();
       c.arc(x + dx, y, rad, 0, Math.PI * 2);
       c.fill();
+    });
+  }
+  c.shadowBlur = 0;
+  // fine specks
+  for (let i = 0; i < 500; i++) {
+    const x = r() * tw;
+    const y = r() * th;
+    const a = range(r, 0.3, 1);
+    const sz = range(r, 1, 2.5) * s;
+    wrapDraw(tw, (dx) => {
+      c.globalAlpha = a;
+      c.fillRect(x + dx, y, sz, sz);
     });
   }
   c.globalAlpha = 1;
@@ -164,11 +179,15 @@ const drawRing = (c: CanvasRenderingContext2D, S: number, r: Rng, variant: numbe
   c.fillStyle = "#fff";
   c.lineCap = "butt";
   // outer ring with ticks
-  c.globalAlpha = 0.9;
-  c.lineWidth = 3 * s;
+  c.globalAlpha = 1;
+  c.shadowColor = "#fff";
+  c.shadowBlur = 24 * s;
+  c.lineWidth = 9 * s;
   c.beginPath();
   c.arc(cx, cx, R * 0.95, 0, Math.PI * 2);
   c.stroke();
+  c.shadowBlur = 0;
+  c.globalAlpha = 0.9;
   for (let i = 0; i < 180; i++) {
     const a = (i / 180) * Math.PI * 2;
     const len = (i % 15 === 0 ? 34 : i % 5 === 0 ? 20 : 10) * s;
@@ -196,9 +215,10 @@ const drawRing = (c: CanvasRenderingContext2D, S: number, r: Rng, variant: numbe
     c.arc(cx, cx, R * 0.6, a0, a1);
     c.stroke();
   }
-  c.lineWidth = 2 * s;
+  c.globalAlpha = 1;
+  c.lineWidth = 5 * s;
   c.beginPath();
-  c.arc(cx, cx, R * 0.56, 0, Math.PI * 2);
+  c.arc(cx, cx, R * 0.54, 0, Math.PI * 2);
   c.stroke();
   // inner glowing ring
   c.globalAlpha = 1;
@@ -272,12 +292,13 @@ uniform vec3 uAccent;
 uniform float uL;
 uniform float uStreakCycles;
 uniform float uVOffset;
+uniform float uGain;
 void main() {
   float s = vDist / uL + uT;
   float a = texture(tCircuit, vec2(s, vUv.y + uVOffset)).a;
   float st = texture(tStreak, vec2(vDist / uL + uT * uStreakCycles, vUv.y + uVOffset)).a;
   float fog = exp(-vDist / 9.0) * smoothstep(26.0, 16.0, vDist) * smoothstep(0.0, 1.0, vDist);
-  vec3 col = (uLine * a * 0.85 + uAccent * st * 1.1) * fog;
+  vec3 col = (uLine * a * 0.8 + uAccent * st * 1.1) * fog * uGain;
   outColor = vec4(col, 1.0);
 }`;
 
@@ -327,7 +348,7 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
   const { gl, width: W, height: H } = ctx;
   const post = new PostChain(gl, W, H, {
     msaa: 4,
-    bloom: { threshold: 0.55, strength: 0.9 },
+    bloom: { threshold: 0.6, strength: 0.85 },
     dither: true,
     grain: 0.01,
   });
@@ -382,7 +403,7 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
 
   // walls
   const wallMats: THREE.ShaderMaterial[] = [];
-  const wall = (tex: THREE.Texture, width: number, vOffset: number, place: (m: THREE.Mesh) => void) => {
+  const wall = (tex: THREE.Texture, width: number, vOffset: number, gain: number, place: (m: THREE.Mesh) => void) => {
     const geo = new THREE.PlaneGeometry(FAR + 1, width, 1, 1);
     const mat = new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
@@ -397,6 +418,7 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
         uL: { value: L },
         uStreakCycles: { value: STREAK_CYCLES },
         uVOffset: { value: vOffset },
+        uGain: { value: gain },
       },
       side: THREE.DoubleSide,
       ...additive,
@@ -409,19 +431,19 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
   };
   // plane's local x runs along the tunnel; centre it from z=+0.5 to z=-FAR
   const zc = -(FAR - 0.5) / 2 - 0.25;
-  wall(circuitSide, 2 * HALF_H, 0.0, (m) => {
+  wall(circuitSide, 2 * HALF_H, 0.0, 0.7, (m) => {
     m.rotation.y = Math.PI / 2;
     m.position.set(-HALF_W, 0, zc);
   });
-  wall(circuitSide, 2 * HALF_H, 0.5, (m) => {
+  wall(circuitSide, 2 * HALF_H, 0.5, 0.7, (m) => {
     m.rotation.y = Math.PI / 2;
     m.position.set(HALF_W, 0, zc);
   });
-  wall(circuitFloor, 2 * HALF_W, 0.0, (m) => {
+  wall(circuitFloor, 2 * HALF_W, 0.0, 0.32, (m) => {
     m.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
     m.position.set(0, -HALF_H, zc);
   });
-  wall(circuitFloor, 2 * HALF_W, 0.5, (m) => {
+  wall(circuitFloor, 2 * HALF_W, 0.5, 0.32, (m) => {
     m.rotation.set(Math.PI / 2, 0, Math.PI / 2);
     m.position.set(0, HALF_H, zc);
   });
@@ -433,7 +455,7 @@ const createApp = (props: HUDTunnelProps) => (ctx: StageCtx) => {
     canvasTex(RS, RS, (c) => drawArc(c, RS, r, 0.8, v === 0 ? 10 : 7), false),
     canvasTex(RS, RS, (c) => drawArc(c, RS, r, 0.45, 6), false),
   ]);
-  const ringRadius = 2.3;
+  const ringRadius = 2.6;
   const ringGeo = new THREE.PlaneGeometry((2 * ringRadius) / 0.95, (2 * ringRadius) / 0.95);
   const line = new THREE.Vector3(...hexToRgb(props.line));
   const accent = new THREE.Vector3(...hexToRgb(props.accent));

@@ -28,11 +28,11 @@ export const R_TIMES: number[] = [];
 
 // ECG timing (seconds relative to the R peak)
 export const ECG = {
-  P: { at: -0.155, sd: 0.021, amp: 0.13 }, // P onset ~ -0.20 s
+  P: { at: -0.155, sd: 0.02, amp: 0.18 }, // P onset ~ -0.20 s
   Q: { at: -0.022, sd: 0.0062, amp: -0.11 },
-  R: { at: 0, sd: 0.0088, amp: 1.0 },
+  R: { at: 0, sd: 0.0092, amp: 1.0 },
   S: { at: 0.023, sd: 0.0068, amp: -0.24 },
-  T: { at: 0.205, sdL: 0.046, sdR: 0.034, amp: 0.28 },
+  T: { at: 0.2, sdL: 0.05, sdR: 0.036, amp: 0.26 },
   PR: 0.16, // P onset -> QRS onset
   QRS: 0.08,
 };
@@ -88,9 +88,9 @@ export const pleth = (t: number) => {
   for (let k = 0; k < BEATS; k++) {
     const tau = wrap(t - R_TIMES[k] - PLETH_DELAY);
     if (tau < -0.2 || tau > 1.0) continue;
-    v += 1.0 * ag(tau, 0.13, 0.05, 0.09); // systolic peak
-    v += 0.17 * g(tau, 0.34, 0.04); // dicrotic wave (notch just before it)
-    v += 0.2 * g(tau, 0.4, 0.12); // diastolic run-off
+    v += 1.0 * ag(tau, 0.15, 0.06, 0.085); // systolic peak
+    v += 0.2 * g(tau, 0.35, 0.038); // dicrotic wave (notch just before it)
+    v += 0.17 * g(tau, 0.42, 0.12); // diastolic run-off
   }
   return v;
 };

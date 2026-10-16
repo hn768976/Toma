@@ -24,18 +24,18 @@ const SH = 1350;
 const WAVE_X0 = 90;
 const WAVE_X1 = 1860;
 const BANDS = {
-  pleth: { y0: 95, y1: 335 },
+  pleth: { y0: 110, y1: 300 },
   ecg: { y0: 395, y1: 905 },
   resp: { y0: 965, y1: 1185 },
 };
 const GAP_S = 0.22; // erase gap ahead of the write point
-const MARGIN = [400, 1800, 500, 300]; // plane extends past the drawn screen (L, R, T, B)
+const MARGIN = [500, 2400, 600, 900]; // plane extends past the drawn screen (L, R, T, B)
 
 // ---------------------------------------------------------------------------
 // static layer: grid, labels, clutter (drawn once)
 // ---------------------------------------------------------------------------
 const clutterRng = mulberry32(0x7e1e7e);
-const CLUTTER = Array.from({ length: 70 }, () => ({
+const CLUTTER = Array.from({ length: 160 }, () => ({
   x: WAVE_X0 + clutterRng() * (WAVE_X1 - WAVE_X0 - 200),
   y: 90 + clutterRng() * 1150,
   w: 60 + clutterRng() * 180,
@@ -76,18 +76,19 @@ const drawStatic = (c: CanvasRenderingContext2D, p: VitalMonitorProps) => {
     for (let x = WAVE_X0; x < WAVE_X1; x += 12) c.fillRect(x, y - 1, 4, 2);
   }
   // clutter: faint bars and labels behind the traces
-  c.globalAlpha = 0.5;
+  c.globalAlpha = 0.42;
   for (const k of CLUTTER) {
     if (k.kind === 0) {
       for (let r = 0; r < k.rows; r++) c.fillRect(k.x, k.y + r * 16, k.w * (0.5 + 0.5 * hash01(r, k.x)), 7);
     } else if (k.kind === 1) {
-      c.font = `500 22px "${SANS}"`;
-      c.fillText(k.s, k.x, k.y);
+      c.font = `500 ${16 + (k.rows % 3) * 3}px "${SANS}"`;
+      c.fillText(k.rows % 2 ? k.s : `${k.s.slice(0, 2)} ${(k.w / 10).toFixed(1)}`, k.x, k.y);
+      c.fillText(`${Math.round(k.w)}  ${k.s.slice(2, 5)}`, k.x, k.y + 22);
     } else if (k.kind === 2) {
       c.strokeRect(k.x, k.y, k.w * 0.5, 34);
       c.fillRect(k.x + 6, k.y + 6, k.w * 0.3, 22);
     } else {
-      for (let r = 0; r < 6; r++) c.fillRect(k.x + r * 14, k.y - r * 9, 8, r * 9 + 8);
+      for (let r = 0; r < 6; r++) c.fillRect(k.x + r * 10, k.y - r * 6, 6, r * 6 + 6);
     }
   }
   c.globalAlpha = 1;
@@ -108,23 +109,20 @@ const drawStatic = (c: CanvasRenderingContext2D, p: VitalMonitorProps) => {
   c.fillText("MONITORING", 400, 40);
   c.fillText("NODE 07   LINK OK", 1500, 40);
   // right column labels
-  c.font = `600 40px "${SANS}"`;
-  c.fillText("PLS", 1930, 300);
-  c.fillText("SpO", 1930, 690);
-  c.font = `600 26px "${SANS}"`;
-  c.fillText("2", 2005, 700);
-  c.font = `600 40px "${SANS}"`;
-  c.fillText("RESP", 1930, 1060);
-  c.font = `400 24px "${SANS}"`;
-  c.fillText("bpm", 1930, 340);
-  c.fillText("%", 1930, 730);
-  c.fillText("rpm", 1930, 1100);
-  c.fillText("120", 2310, 300);
-  c.fillText("50", 2310, 340);
-  c.fillText("100", 2310, 690);
-  c.fillText("90", 2310, 730);
-  c.fillText("30", 2310, 1060);
-  c.fillText("8", 2310, 1100);
+  c.font = `500 44px "${SANS}"`;
+  c.fillText("PLS", 1930, 400);
+  c.fillText("RESP", 1930, 790);
+  c.fillText("SpO", 1930, 1170);
+  c.font = `500 28px "${SANS}"`;
+  c.fillText("2", 2012, 1180);
+  c.font = `400 22px "${SANS}"`;
+  c.fillText("bpm", 1930, 432);
+  c.fillText("rpm", 1930, 822);
+  c.fillText("%", 1930, 1202);
+  for (const [y, hi, lo] of [[360, "120", "50"], [750, "30", "8"], [1130, "100", "90"]] as const) {
+    c.fillText(hi, 2330, y);
+    c.fillText(lo, 2330, y + 34);
+  }
   c.font = `600 34px "${SANS}"`;
   c.save();
   c.translate(2370, 520);
@@ -230,26 +228,26 @@ const drawDynamic = (c: CanvasRenderingContext2D, t: number, p: VitalMonitorProp
   drawTrace(c, t, ecg, band(BANDS.ecg, -0.42, 1.12), p.ecg, W);
   drawTrace(c, t, resp, band(BANDS.resp, -0.1, 1.1), p.resp, W);
 
-  // readouts
+  // readouts: thin, inline with their labels
   c.save();
-  c.shadowBlur = 8;
-  c.font = `400 120px "${SANS}"`;
+  c.shadowBlur = 6;
+  c.font = `300 104px "${SANS}"`;
   c.fillStyle = p.ecg;
   c.shadowColor = p.ecg;
-  c.fillText(String(pulseRate(t)), 2060, 400);
-  c.fillStyle = p.pleth;
-  c.shadowColor = p.pleth;
-  c.fillText(String(spo2(t)), 2060, 790);
+  c.fillText(String(pulseRate(t)), 2060, 410);
   c.fillStyle = p.resp;
   c.shadowColor = p.resp;
-  c.fillText(String(RESP_RATE), 2060, 1160);
+  c.fillText(String(RESP_RATE), 2060, 800);
+  c.fillStyle = p.pleth;
+  c.shadowColor = p.pleth;
+  c.fillText(String(spo2(t)), 2060, 1180);
   c.restore();
 
-  // heart blinks for 0.16 s after each R peak
+  // heart blinks for 0.16 s after each R peak (next to SpO2, lower right)
   const sb = sinceBeat(t);
   c.fillStyle = p.ecg;
   c.globalAlpha = sb < 0.16 ? 1 : 0.22;
-  heart(c, 2110, 600, 52);
+  heart(c, 2250, 1090, 40);
   c.globalAlpha = 1;
 
   // pleth amplitude bar indicator
@@ -258,13 +256,13 @@ const drawDynamic = (c: CanvasRenderingContext2D, t: number, p: VitalMonitorProp
   for (let i = 0; i < segs; i++) {
     c.fillStyle = p.pleth;
     c.globalAlpha = i / segs < lvl ? 0.9 : 0.15;
-    c.fillRect(2290, 960 - i * 22 - 120, 30, 16);
+    c.fillRect(2300, 1210 - i * 20, 26, 14);
   }
   // faint indicator bars stepping with the beat
   for (let i = 0; i < 8; i++) {
     c.fillStyle = p.text;
     c.globalAlpha = 0.18 + 0.25 * hash01(i, Math.floor(t * 2));
-    c.fillRect(1930 + i * 40, 1230, 26, 40);
+    c.fillRect(1930 + i * 40, 560, 26, 30);
   }
   c.globalAlpha = 1;
 };
@@ -306,7 +304,7 @@ void main() {
   vec3 col = mix(uBgA, uBgB, k);
   // gentle vignette on the panel itself
   vec2 q = vUv - 0.5;
-  col *= 1.0 - 0.35 * dot(q, q);
+  col *= 1.0 - 0.12 * dot(q, q);
   vec4 s = texture(tStatic, tuv) * inside;   // premultiplied
   col = col * (1.0 - s.a) + s.rgb;
   vec4 d = texture(tDynamic, tuv) * inside;  // premultiplied
@@ -319,7 +317,7 @@ const createApp = (props: VitalMonitorProps) => (ctx: StageCtx) => {
   const { gl, width: W, height: H } = ctx;
   const post = new PostChain(gl, W, H, {
     msaa: 4,
-    dof: { maxRadius720: 9 },
+    dof: { maxRadius720: 7 },
     dither: true,
     grain: 0.01,
   });
@@ -358,7 +356,7 @@ const createApp = (props: VitalMonitorProps) => (ctx: StageCtx) => {
       uBgA: { value: new THREE.Vector3(...hexToRgb(props.bgA)) },
       uBgB: { value: new THREE.Vector3(...hexToRgb(props.bgB)) },
       uFocus: { value: 1 },
-      uCocScale: { value: 1.6 },
+      uCocScale: { value: 1.25 },
       uMargin: { value: new THREE.Vector4(MARGIN[0], MARGIN[1], MARGIN[2], MARGIN[3]) },
       uScreen: { value: new THREE.Vector2(SW, SH) },
     },
@@ -374,11 +372,11 @@ const createApp = (props: VitalMonitorProps) => (ctx: StageCtx) => {
   plane.rotation.order = "YXZ";
   plane.rotation.y = (40 * Math.PI) / 180;
   plane.rotation.x = (-4 * Math.PI) / 180;
-  plane.rotation.z = (9 * Math.PI) / 180;
+  plane.rotation.z = (13 * Math.PI) / 180;
   scene.add(plane);
   // aim at a point on the screen between the ECG and the readouts
-  const target = new THREE.Vector3(0.0, 0.17, 0).applyEuler(plane.rotation);
-  const baseCam = target.clone().add(new THREE.Vector3(0, 0.03, 0.95));
+  const target = new THREE.Vector3(0.0, 0.2, 0).applyEuler(plane.rotation);
+  const baseCam = target.clone().add(new THREE.Vector3(0, 0.03, 1.02));
   const fwd = target.clone().sub(baseCam);
   mat.uniforms.uFocus.value = fwd.length();
 

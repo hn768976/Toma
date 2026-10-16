@@ -15,6 +15,7 @@ export interface PeopleNetworkProps {
   lineAlpha: number;
   pulse: string;
   pulseAdditive: boolean;
+  halo: string;
   grain: number;
   farFade: number; // how much far badges fade (0..1)
   background: string;
@@ -40,6 +41,7 @@ interface Badge {
   r: number; // world radius
   filled: boolean;
   colourB: boolean;
+  glow: boolean;
   bob: number;
   bobCycles: number;
   phase: number;
@@ -55,7 +57,8 @@ const BADGES: Badge[] = Array.from({ length: COUNT }, () => {
     y: range(rng, -Y_HALF, Y_HALF) * (0.35 + 0.65 * (z / Z_FAR)),
     z,
     r: range(rng, 0.42, 0.62),
-    filled: rng() < 0.82,
+    filled: rng() < 0.92,
+    glow: rng() < 0.06,
     colourB: rng() < 0.35,
     bob: range(rng, 0.03, 0.12),
     bobCycles: int(rng, 1, 2),
@@ -70,7 +73,7 @@ const LINKS: [number, number][] = [];
 {
   const seen = new Set<string>();
   BADGES.forEach((a, i) => {
-    const k = int(rng, 2, 3);
+    const k = rng() < 0.7 ? 2 : 3;
     const d = BADGES.map((b, j) => {
       if (j === i) return [Infinity, j];
       const dx = minImage(b.x - a.x);
@@ -78,6 +81,7 @@ const LINKS: [number, number][] = [];
     }).sort((p, q) => p[0] - q[0] || p[1] - q[1]);
     for (let n = 0; n < k; n++) {
       const j = d[n][1];
+      if (d[n][0] > 36) continue; // no long cross-frame links
       const key = i < j ? `${i}-${j}` : `${j}-${i}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -103,22 +107,18 @@ const MAX_SIGMA = 0.075; // max blur (std dev) as a fraction of the cell
 
 const drawPictogram = (c: CanvasRenderingContext2D, cx: number, cy: number, R: number, stroke: boolean) => {
   // generic head + shoulders
-  const headR = R * 0.2;
-  const headY = cy - R * 0.17;
+  const headR = R * 0.24;
+  const headY = cy - R * 0.2;
   c.beginPath();
   c.arc(cx, headY, headR, 0, Math.PI * 2);
   if (stroke) c.stroke();
   else c.fill();
+  // rounded shoulders: the top half of an ellipse, closed along the bottom
+  const sw = R * 0.46;
+  const top = cy + R * 0.1;
+  const bottom = cy + R * 0.46;
   c.beginPath();
-  const sw = R * 0.42;
-  const top = cy + R * 0.12;
-  const bottom = cy + R * 0.42;
-  c.moveTo(cx - sw, bottom);
-  c.lineTo(cx - sw, top + R * 0.16);
-  c.quadraticCurveTo(cx - sw, top, cx - sw + R * 0.16, top);
-  c.lineTo(cx + sw - R * 0.16, top);
-  c.quadraticCurveTo(cx + sw, top, cx + sw, top + R * 0.16);
-  c.lineTo(cx + sw, bottom);
+  c.ellipse(cx, bottom, sw, bottom - top, 0, Math.PI, 2 * Math.PI);
   c.closePath();
   if (stroke) c.stroke();
   else c.fill();
@@ -149,7 +149,7 @@ const buildAtlas = (cell: number) => {
       s.fill();
       // pictogram as an outline drawn in G
       s.strokeStyle = "#00ff00";
-      s.lineWidth = R * 0.075;
+      s.lineWidth = R * 0.12;
       s.lineJoin = "round";
       drawPictogram(s, cx, cx, R, true);
     } else {
@@ -346,7 +346,7 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
     fragmentShader: LINE_FS,
     uniforms: {
       uRes: { value: new THREE.Vector2(W, H) },
-      uHalfWidth: { value: 0.5 * u },
+      uHalfWidth: { value: 0.7 * u },
       uColor: { value: new THREE.Vector3(...hexToRgb(props.line)) },
     },
     ...premul,
@@ -405,6 +405,28 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
     return m;
   });
 
+  // a few "lit" badges carry a soft halo that breathes (whole cycles per loop)
+  const haloColor = new THREE.Vector3(...hexToRgb(props.halo));
+  const halos = BADGES.map((b, i) => ({ b, i })).filter(({ b }) => b.glow).map(({ b, i }) => {
+    const mat = new THREE.ShaderMaterial({
+      glslVersion: THREE.GLSL3,
+      vertexShader: BADGE_VS,
+      fragmentShader: DOT_FS,
+      uniforms: {
+        uColor: { value: haloColor },
+        uAlpha: { value: 0 },
+        uAdditive: { value: props.pulseAdditive ? 1 : 0 },
+      },
+      ...premul,
+    });
+    const m = new THREE.Mesh(quad, mat);
+    m.frustumCulled = false;
+    const sz = b.r * 3.6;
+    m.scale.set(sz, sz, 1);
+    scene.add(m);
+    return { m, i, cycles: 1 + (i % 2), phase: b.phase };
+  });
+
   const pos = BADGES.map(() => new THREE.Vector3());
   const smooth = (a: number, b: number, x: number) => THREE.MathUtils.smoothstep(x, a, b);
 
@@ -429,11 +451,11 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
         const mat = m.material as THREE.ShaderMaterial;
         // depth of field: blur from the circle of confusion around FOCUS
         const coc = Math.abs(1 - FOCUS / b.z);
-        const blurPx = (b.z < FOCUS ? 13 : 5) * coc * u;
+        const blurPx = (b.z < FOCUS ? 4.5 : 4) * coc * u;
         const rPx = (b.r / (b.z * tanHalf)) * (H / 2);
         const sigmaFrac = (blurPx * BADGE_R) / Math.max(rPx, 1);
         mat.uniforms.uLevel.value = Math.min(LEVELS - 1, (sigmaFrac / MAX_SIGMA) * (LEVELS - 1));
-        const nearSoft = b.z < 5 ? 0.55 + 0.35 * smooth(2.6, 5, b.z) : 1;
+        const nearSoft = b.z < 5.5 ? 0.38 + 0.5 * smooth(2.6, 5.5, b.z) : 1;
         const far = 1 - props.farFade * smooth(11, Z_FAR, b.z);
         mat.uniforms.uAlpha.value = 0.95 * nearSoft * far;
       });
@@ -468,6 +490,15 @@ const createApp = (props: PeopleNetworkProps) => (ctx: StageCtx) => {
           Math.sin(Math.PI * k) * smooth(3, 6, zz) * (1 - 0.6 * smooth(12, Z_FAR, zz));
       });
 
+      for (const h of halos) {
+        // sits just behind its badge so depth sorting draws it first
+        h.m.position.set(pos[h.i].x, pos[h.i].y, pos[h.i].z - 0.02);
+        h.m.quaternion.copy(camera.quaternion);
+        const b = BADGES[h.i];
+        const far = 1 - props.farFade * smooth(11, Z_FAR, b.z);
+        (h.m.material as THREE.ShaderMaterial).uniforms.uAlpha.value =
+          (0.55 + 0.3 * Math.sin(2 * Math.PI * h.cycles * t + h.phase)) * far;
+      }
       post.render(scene, camera, f);
     },
     dispose() {

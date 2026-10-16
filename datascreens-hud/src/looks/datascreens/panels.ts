@@ -1,4 +1,4 @@
-import { MONO } from "../../lib/fonts";
+import { MONO, SANS } from "../../lib/fonts";
 import { HEX, Rng, binString, hash01, hexString, int, pick, range } from "../../lib/random";
 
 // Panel content for Data Screens. Each panel is drawn in its own "design
@@ -15,7 +15,8 @@ export type PanelType =
   | "marker"
   | "bracket"
   | "code"
-  | "bars";
+  | "bars"
+  | "login";
 
 export interface PanelSpec {
   type: PanelType;
@@ -38,6 +39,9 @@ const letters = (r: Rng, n: number) => {
 
 const font = (c: CanvasRenderingContext2D, size: number, weight = 400) => {
   c.font = `${weight} ${size}px "${MONO}"`;
+};
+const sans = (c: CanvasRenderingContext2D, size: number, weight = 400) => {
+  c.font = `${weight} ${size}px "${SANS}"`;
 };
 
 // mutate a few characters of a string, deterministically from (seed,row,key)
@@ -105,8 +109,8 @@ export const makePanel = (r: Rng, type: PanelType, live: boolean, big: boolean):
       };
     }
     case "binary": {
-      const n = big ? int(r, 10, 14) : int(r, 6, 16);
-      const rows = big ? int(r, 1, 2) : int(r, 1, 4);
+      const n = big ? int(r, 12, 14) : int(r, 6, 16);
+      const rows = big ? int(r, 3, 5) : int(r, 1, 4);
       const size = big ? 64 : 18;
       const lines = Array.from({ length: rows }, () => binString(r, n, " "));
       const w = n * 2 * size * 0.6 + 10;
@@ -139,7 +143,7 @@ export const makePanel = (r: Rng, type: PanelType, live: boolean, big: boolean):
         type, seed, w, h, live, period,
         key: live ? (f) => Math.floor(f / (period * 3)) % rows : () => (seed % rows),
         draw: (c, key) => {
-          font(c, size, 500);
+          sans(c, size, 500);
           c.fillText(head, 4, lh - 2);
           c.fillRect(4, lh + 2, w - 8, 1.5);
           data.forEach((row, i) => {
@@ -209,21 +213,21 @@ export const makePanel = (r: Rng, type: PanelType, live: boolean, big: boolean):
     }
     case "marker": {
       const num = int(r, 10000, 99999);
-      const w = 150;
-      const h = 34;
+      const w = 170;
+      const h = 40;
       return {
         type, seed, w, h, live, period,
         key: live ? (f) => Math.floor(f / (period * 2)) % (300 / period) : still,
         draw: (c, key) => {
           c.beginPath();
-          c.moveTo(4, 28);
-          c.lineTo(15, 8);
-          c.lineTo(26, 28);
+          c.moveTo(4, 34);
+          c.lineTo(18, 8);
+          c.lineTo(32, 34);
           c.closePath();
           c.fill();
-          font(c, 22, 500);
+          sans(c, 30, 700);
           const v = live ? 10000 + Math.floor(hash01(seed, key) * 89999) : num;
-          c.fillText(String(v), 36, 28);
+          c.fillText(String(v), 44, 34);
         },
       };
     }
@@ -286,6 +290,42 @@ export const makePanel = (r: Rng, type: PanelType, live: boolean, big: boolean):
               const m = c.measureText(shown).width;
               c.fillRect(6 + m, i * lh + 5, 7, 13);
             }
+          });
+        },
+      };
+    }
+    case "login": {
+      const rows = int(r, 4, 6);
+      const data = Array.from({ length: rows }, () => [
+        `${letters(r, 2)} = ${letters(r, 3)}-${letters(r, 5)}${int(r, 1000, 9999)}`,
+        "0".repeat(int(r, 13, 16)),
+        `${letters(r, 3)} + ${letters(r, 3)} ${letters(r, 3)}- PIN`,
+      ]);
+      const w = 640;
+      const lh = 26;
+      const h = (rows + 1) * lh + 40;
+      return {
+        type, seed, w, h, live, period,
+        key: live ? (f) => Math.floor(f / 50) % rows : () => rows - 1,
+        draw: (c, key) => {
+          c.lineWidth = 2;
+          c.strokeStyle = "#fff";
+          c.strokeRect(1, 1, w - 2, h - 2);
+          sans(c, 18, 500);
+          c.fillText("PASS_LOGIN", 16, 34);
+          data.forEach((row, i) => {
+            const y = 34 + (i + 1) * lh;
+            if (i === key) {
+              c.globalAlpha = 0.85;
+              c.fillRect(8, y - lh + 7, w - 16, lh - 2);
+              c.globalAlpha = 1;
+              c.globalCompositeOperation = "destination-out";
+            }
+            sans(c, 17, 500);
+            c.fillText(row[0], 16, y);
+            c.fillText(row[1], 260, y);
+            c.fillText(row[2], 450, y);
+            c.globalCompositeOperation = "source-over";
           });
         },
       };

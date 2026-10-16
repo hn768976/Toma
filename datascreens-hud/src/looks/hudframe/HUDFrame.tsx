@@ -48,7 +48,7 @@ const codeLine = (): string => {
 const CODE: string[] = Array.from({ length: 40 }, codeLine);
 const CODE_FRAMES_PER_LINE = LOOP_FRAMES / CODE.length;
 
-const HEXBLOCK: string[] = Array.from({ length: 9 }, () => hexString(rng, 30));
+const HEXBLOCK: string[] = Array.from({ length: 15 }, () => hexString(rng, 38));
 
 const LIST_ROWS = [
   "PASS_LOGIN",
@@ -165,6 +165,8 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
   c.lineWidth = 1;
   c.strokeStyle = p.ink;
   c.fillStyle = p.ink;
+  // the reference HUD is quiet: thin grey-white rather than full white
+  c.globalAlpha = 0.68;
   c.textBaseline = "alphabetic";
   c.lineCap = "butt";
 
@@ -227,15 +229,18 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       circle(c, 34.5, 580.5 + i * 26, 10);
       circle(c, 34.5, 580.5 + i * 26, 5);
     }
+    // long rounded bar outlines
+    roundRect(c, 46, 345, 6, 176, 3);
+    roundRect(c, 46, 120, 6, 90, 3);
+    // tall scrollbar pill with a thumb that travels once per loop
+    roundRect(c, 62, 86, 5, 454, 2.5);
+    const sy = 90 + 380 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t));
+    c.beginPath();
+    c.roundRect(63, sy, 3.5, 64, 1.75);
+    c.fill();
     // vertical rail with bracket ticks
-    line(c, 60.5, 92.5, 60.5, 545.5);
-    for (let y = 100; y < 540; y += 36) {
-      line(c, 56.5, y + 0.5, 64.5, y + 0.5);
-      line(c, 56.5, y + 0.5, 56.5, y + 6.5);
-    }
-    // a moving gauge marker on the rail
-    const gy = 100 + 430 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t));
-    c.fillRect(57, gy, 7, 18);
+    line(c, 56.5, 92.5, 56.5, 545.5);
+    for (let y = 100; y < 540; y += 36) line(c, 53.5, y + 0.5, 56.5, y + 0.5);
   }
 
   // pseudo-code block: one line every 15 frames, 40 lines per loop, scrolls
@@ -273,7 +278,7 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       const j2 = Math.floor(hash01(r, step, 23) * s.length);
       s = s.slice(0, j) + HEX[Math.floor(hash01(r, step, 3) * 16)] + s.slice(j + 1);
       s = s.slice(0, j2) + HEX[Math.floor(hash01(r, step, 5) * 16)] + s.slice(j2 + 1);
-      text(c, s, 74, 428 + r * 9, 6.6, MONO, 500);
+      text(c, s, 74, 424 + r * 7.6, 5.2, MONO, 400);
     }
   }
 
@@ -353,7 +358,9 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       const y = y0 + i * lh;
       if (i === hi) {
         c.fillStyle = p.accent;
+        c.globalAlpha = 0.8;
         c.fillRect(x - 2, y - 8.5, 84, 11);
+        c.globalAlpha = 0.68;
         c.fillStyle = p.background;
         text(c, LIST_ROWS[i], x, y, 6.6, MONO, 500);
         c.fillStyle = p.ink;
@@ -379,14 +386,17 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       Math.round(30 + 5 * Math.sin(2 * Math.PI * t + 2)),
     ];
     c.setLineDash([2, 2]);
+    c.globalAlpha = 0.4;
     for (let i = 0; i < 3; i++) {
       const y = 262 + i * 36;
       rect(c, 1166, y, 32, 18);
       line(c, 1182.5, y + 18.5, 1182.5, y + 30.5);
     }
     c.setLineDash([]);
+    c.globalAlpha = 0.5;
     for (let i = 0; i < 3; i++) text(c, `${vals[i]}%`, 1182, 274 + i * 36, 8, SANS, 500, "center");
   }
+  c.globalAlpha = 0.68;
   // narrow tall panel of tiny text
   {
     const x = 1146;
@@ -424,8 +434,8 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
   // ======================= CENTRE BRACKETS =======================
   {
     const k = 0.5 - 0.5 * Math.cos(2 * Math.PI * t); // 0 -> 1 -> 0 over the loop
-    const hw = 300 + 60 * k;
-    const hh = 190 + 30 * k;
+    const hw = 330 + 40 * k;
+    const hh = 195 + 20 * k;
     const cx = 640;
     const cy = 360;
     const armX = 96;
@@ -446,17 +456,6 @@ export const drawHUDFrame = (c: Ctx, frameIn: number, W: number, H: number, p: H
       c.quadraticCurveTo(x, y, x, y - sy * r);
       c.lineTo(x, y - sy * armY);
       c.stroke();
-      // inner parallel accent
-      c.beginPath();
-      c.moveTo(x - sx * 40, y - sy * 5);
-      c.lineTo(x - sx * (r + 2), y - sy * 5);
-      c.stroke();
-    }
-    // tiny centre-edge markers
-    for (const [sx, sy] of [[0, -1], [0, 1], [-1, 0], [1, 0]] as [number, number][]) {
-      const x = Math.round(cx + sx * (hw - 12)) + 0.5;
-      const y = Math.round(cy + sy * (hh - 12)) + 0.5;
-      c.fillRect(x - 3, y - 3, 6, 6);
     }
   }
 };

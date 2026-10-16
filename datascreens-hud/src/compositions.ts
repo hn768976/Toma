@@ -48,9 +48,9 @@ export const ROWS: Row[] = [
     props: {
       bgTop: "#0A1040", bgBottom: "#141A5A",
       badgeA: "#D8DCFF", badgeB: "#D8DCFF", glyph: "#1A2066",
-      line: "#6A78C8", lineAlpha: 0.55,
-      pulse: "#E8ECFF", pulseAdditive: true,
-      grain: 0.01, farFade: 0.6, background: "#0A1040",
+      line: "#6A78C8", lineAlpha: 0.42,
+      pulse: "#E8ECFF", pulseAdditive: true, halo: "#8FA8FF",
+      grain: 0.01, farFade: 0.85, background: "#0A1040",
     },
   },
   {
@@ -59,9 +59,9 @@ export const ROWS: Row[] = [
     props: {
       bgTop: "#F6F8FC", bgBottom: "#E4EAF4",
       badgeA: "#2A6AE8", badgeB: "#1AB0C0", glyph: "#FFFFFF",
-      line: "#9AAAC4", lineAlpha: 0.75,
-      pulse: "#2A6AE8", pulseAdditive: false,
-      grain: 0, farFade: 0.55, background: "#F6F8FC",
+      line: "#9AAAC4", lineAlpha: 0.6,
+      pulse: "#2A6AE8", pulseAdditive: false, halo: "#7FB0FF",
+      grain: 0, farFade: 0.75, background: "#F6F8FC",
     },
   },
   {

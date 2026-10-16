@@ -31,10 +31,12 @@ interface LayerDef {
 }
 
 const LAYERS: LayerDef[] = [
-  { z: 3.4, count: 6, widths: [0.45, 0.9], cycles: 1, span: 2.6, dz: 0.5, types: ["binary", "hex", "table"], bigBinary: true },
-  { z: 7, count: 20, widths: [0.09, 0.26], cycles: 1, span: 1.7, dz: 0.6, types: ["hex", "hex", "table", "form", "marker", "bracket", "code", "paragraph", "bars", "binary", "marker"], bigBinary: false },
-  { z: 11, count: 18, widths: [0.08, 0.22], cycles: 1, span: 1.45, dz: 0.8, types: ["hex", "paragraph", "table", "marker", "code", "bars", "form", "binary"], bigBinary: false },
-  { z: 18, count: 16, widths: [0.06, 0.16], cycles: 1, span: 1.3, dz: 1.0, types: ["hex", "paragraph", "paragraph", "table", "code", "marker", "bars"], bigBinary: false },
+  { z: 3.4, count: 5, widths: [0.45, 0.85], cycles: 1, span: 2.6, dz: 0.5, types: ["binary", "hex", "table"], bigBinary: true },
+  // hero layer: the big binary grid and large login/readout panels, nearly in focus
+  { z: 5.2, count: 3, widths: [0.45, 0.7], cycles: 1, span: 2.0, dz: 0.3, types: ["login", "marker"], bigBinary: true },
+  { z: 7, count: 18, widths: [0.09, 0.24], cycles: 1, span: 1.7, dz: 0.6, types: ["hex", "table", "form", "marker", "bracket", "code", "paragraph", "bars", "binary", "login"], bigBinary: false },
+  { z: 11, count: 16, widths: [0.08, 0.2], cycles: 1, span: 1.45, dz: 0.8, types: ["hex", "paragraph", "table", "marker", "code", "bars", "form", "binary"], bigBinary: false },
+  { z: 18, count: 18, widths: [0.06, 0.15], cycles: 1, span: 1.3, dz: 1.0, types: ["hex", "paragraph", "paragraph", "table", "code", "marker", "bars"], bigBinary: false },
 ];
 
 interface PanelPlacement {
@@ -68,17 +70,20 @@ LAYERS.forEach((L, li) => {
   for (let i = 0; i < L.count; i++) {
     const type = pick(layoutRng, L.types);
     const live = layoutRng() < 0.36;
-    const big = L.bigBinary && (i === 0 || i === 3);
+    const big = L.bigBinary && (li === 1 ? i === 0 : i === 0 || i === 3);
     const spec = makePanel(layoutRng, big ? "binary" : type, live, big);
     const z = L.z + range(layoutRng, -0.12, 0.12) * L.z;
-    const worldW = visW(L.z) * range(layoutRng, L.widths[0], L.widths[1]) * (big ? 1.3 : 1);
+    let worldW = visW(L.z) * range(layoutRng, L.widths[0], L.widths[1]) * (big ? (li === 1 ? 1.15 : 1.3) : 1);
+    // readout markers stay small; they read as labels, not as panels
+    if (spec.type === "marker") worldW = Math.min(worldW, visW(L.z) * 0.16);
     const worldH = (worldW * spec.h) / spec.w;
-    const yLim = visH(L.z) * 0.5 * (li === 0 ? 0.8 : 1.0);
-    const y = range(layoutRng, -yLim, yLim);
+    const yLim = visH(L.z) * 0.5 * (li <= 1 ? 0.75 : 1.0);
+    // the hero grid rides in the upper part of the frame
+    const y = li === 1 && big ? visH(L.z) * 0.22 : range(layoutRng, -yLim, yLim);
     const maxPanelW = visW(L.z) * L.widths[1] * 1.3;
     const span = Math.max(L.span * visW(L.z + L.dz), visW(L.z * 1.12 + L.dz) + maxPanelW + 1);
     const coc = Math.abs(1 - FOCUS_Z / z);
-    const blur720 = z < FOCUS_Z ? 5.5 * coc : 1.8 * coc;
+    const blur720 = li === 1 ? 1.6 : z < FOCUS_Z ? 5.5 * coc : 1.8 * coc;
     PLACEMENTS.push({
       spec,
       layer: li,
@@ -91,7 +96,7 @@ LAYERS.forEach((L, li) => {
       cycles: L.cycles,
       dz: L.dz,
       blur720,
-      brightness: [0.9, 1.0, 0.9, 0.75][li] * range(layoutRng, 0.85, 1),
+      brightness: (li === 0 && !big ? 0.55 : [0.9, 1.0, 1.0, 0.7, 0.45][li]) * range(layoutRng, 0.85, 1),
       dimInk: layoutRng() < 0.2,
     });
   }
