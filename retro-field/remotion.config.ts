@@ -16,6 +16,10 @@ Config.setChromiumOpenGlRenderer("angle");
 // WebGL contexts are heavy; four tabs is a good balance on most machines.
 Config.setConcurrency(4);
 
+// Software WebGL (SwiftShader) compiles the physical-material shaders and the
+// PMREM environment slowly; give the first frame of each tab time to finish.
+Config.setDelayRenderTimeoutInMilliseconds(300000);
+
 // Some sandboxed environments block Remotion's own Chrome Headless Shell
 // download but ship a Playwright Chromium here. On a normal machine this
 // path doesn't exist and Remotion uses its managed browser.

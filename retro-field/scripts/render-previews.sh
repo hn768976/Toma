@@ -16,9 +16,9 @@ for id in "${IDS[@]}"; do
   start=$(date +%s.%N)
   npx remotion render out/bundle "$id" "$OUT/$name.mp4" \
     --scale=$SCALE --gl=angle --codec=h264 --pixel-format=yuv420p --crf=16 \
-    --image-format=png --muted --concurrency=4 --log=error
+    --image-format=png --muted --concurrency=4 --timeout=300000 --log=error
   end=$(date +%s.%N)
   echo "$id $(echo "$end - $start" | bc)" >> "$OUT/render-times.txt"
-  npx remotion still out/bundle "$id" "$OUT/$name.png" --frame=150 --scale=$SCALE --gl=angle --log=error
+  npx remotion still out/bundle "$id" "$OUT/$name.png" --frame=150 --scale=$SCALE --gl=angle --timeout=300000 --log=error
   echo "rendered $id"
 done
