@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useMemo } from "react";
 import { useCurrentFrame } from "remotion";
 import * as THREE from "three";
-import { canvasTexture, depthOnlyMaterial, glowMaterial, makeCanvas } from "../lib/helpers";
+import { canvasTexture, glowMaterial, makeCanvas } from "../lib/helpers";
 import { readoutMaterial, setReadout } from "../lib/readout";
 import { hash1, loopPhase, mulberry32, smoothstep, TAU } from "../lib/random";
 import { PosedCamera, Stage } from "../lib/stage";
@@ -122,7 +122,30 @@ const HudScene: React.FC<{ v: HudVersion; frame: number }> = ({ v, frame }) => {
     const widgets = new THREE.InstancedMesh(igeo, widgetMaterial(atlas, v), N_WIDGETS);
     widgets.frustumCulled = false;
     widgets.renderOrder = 10;
-    const proxy = new THREE.InstancedMesh(geo, depthOnlyMaterial(), N_WIDGETS);
+    // depth only where a widget has content (blurred-mip mask), so empty parts of a
+    // widget's square don't punch sharp rectangles into the depth of field
+    const proxyMat = new THREE.ShaderMaterial({
+      transparent: true,
+      colorWrite: false,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+      uniforms: { map: { value: atlas } },
+      vertexShader: /* glsl */ `
+        attribute vec2 cell;
+        varying vec2 vUv;
+        void main() {
+          vUv = vec2((uv.x + cell.x) / ${GRID.toFixed(1)}, 1.0 - ((1.0 - uv.y) + cell.y) / ${GRID.toFixed(1)});
+          gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform sampler2D map; varying vec2 vUv;
+        void main() {
+          vec3 m = texture2D(map, vUv, 3.0).rgb;
+          if (max(m.r, m.g) < 0.03) discard;
+          gl_FragColor = vec4(0.0);
+        }`,
+    });
+    const proxy = new THREE.InstancedMesh(igeo, proxyMat, N_WIDGETS);
     proxy.frustumCulled = false;
     proxy.renderOrder = 100;
 

@@ -64,6 +64,28 @@ export const glowMaterial = (opts: { core?: number; soft?: number; depthTest?: b
       }`,
   });
 
+/**
+ * Depth-only twin of a textured additive plane: writes depth only where the texture
+ * (seen through a blurred mip, so a little dilated) has content. Without the mask the
+ * whole quad would be "in focus" and show up as a hard sharp rectangle over the blur.
+ */
+export const maskedDepthMaterial = (map: THREE.Texture, threshold = 0.02) =>
+  new THREE.ShaderMaterial({
+    transparent: true,
+    colorWrite: false,
+    depthWrite: true,
+    side: THREE.DoubleSide,
+    uniforms: { map: { value: map }, uT: { value: threshold } },
+    vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);} `,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D map; uniform float uT; varying vec2 vUv;
+      void main(){
+        vec3 m = texture2D(map, vUv, 3.0).rgb;
+        if (max(m.r, max(m.g, m.b)) < uT) discard;
+        gl_FragColor = vec4(0.0);
+      }`,
+  });
+
 /** Depth-only twin of a mesh: lets additive holograms take part in depth of field. */
 export const depthOnlyMaterial = () =>
   // transparent so it sorts with the additive pass by renderOrder (drawn after it)

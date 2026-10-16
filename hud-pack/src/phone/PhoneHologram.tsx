@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useMemo } from "react";
 import { useCurrentFrame } from "remotion";
 import * as THREE from "three";
 import { MONO, SANS } from "../lib/assets";
-import { canvasTexture, depthOnlyMaterial, glowMaterial, makeCanvas } from "../lib/helpers";
+import { canvasTexture, depthOnlyMaterial, glowMaterial, makeCanvas, maskedDepthMaterial } from "../lib/helpers";
 import { clamp01, easeInOut, easeOutBack, hash1, lerp, mulberry32, smoothstep, TAU } from "../lib/random";
 import { PosedCamera, Stage } from "../lib/stage";
 import { hexToLinear, PhoneVersion } from "../versions";
@@ -550,7 +550,7 @@ const PhoneScene: React.FC<{ v: PhoneVersion; f: number }> = ({ v, f }) => {
 
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), glowMaterial({ core: 3, soft: 0.4, tint: holo.map((x) => x * 0.12) as [number, number, number] }));
     const bodyMat = phoneBodyMat(hi);
-    return { L, iconProxyGeo, bodyMat, body, scr, layerGeo, frameMat, panelMat, iconMats, iconGeo, lines, floor, strips, wall, glow, depthMat: depthOnlyMaterial() };
+    return { L, panelDepth: maskedDepthMaterial(L.panels, 0.04), frameDepth: maskedDepthMaterial(L.frame, 0.03), iconProxyGeo, bodyMat, body, scr, layerGeo, frameMat, panelMat, iconMats, iconGeo, lines, floor, strips, wall, glow, depthMat: depthOnlyMaterial() };
   }, [v]);
 
   const s = story(f);
@@ -593,7 +593,8 @@ const PhoneScene: React.FC<{ v: PhoneVersion; f: number }> = ({ v, f }) => {
         <group rotation={[0, holoYaw, 0]}>
           <mesh geometry={res.layerGeo} material={res.frameMat} position={[0, 0, layerZ[0]]} scale={1 + 0.03 * s.lift} renderOrder={10} />
           <mesh geometry={res.layerGeo} material={res.panelMat} position={[0, 0.03 * s.lift, layerZ[1]]} renderOrder={11} />
-          <mesh geometry={res.layerGeo} material={res.depthMat} position={[0, 0, layerZ[1]]} renderOrder={30} />
+          <mesh geometry={res.layerGeo} material={res.frameDepth} position={[0, 0, layerZ[0]]} scale={1 + 0.03 * s.lift} renderOrder={30} />
+          <mesh geometry={res.layerGeo} material={res.panelDepth} position={[0, 0.03 * s.lift, layerZ[1]]} renderOrder={30} />
           <group position={[0, 0.05 * s.lift, layerZ[2]]}>
             {res.lines.map((l, i) => (
               <mesh key={i} geometry={l.geo} material={l.mat} renderOrder={12} />
