@@ -1,0 +1,28 @@
+{
+  "name": "retro-field",
+  "version": "1.0.0",
+  "description": "Retro Mountains, Glass Spiral, Particle Smoke and Fibre Tunnel — seamless 20s loops in Remotion",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "build": "remotion bundle",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.4.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "pixi.js": "8.14.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.180.0",
+    "typescript": "5.9.3"
+  }
+}
