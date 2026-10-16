@@ -133,4 +133,83 @@ Every pixel is a function of `useCurrentFrame()` only:
 - **Tickers:** invented. See `TICKERS.md`. All HUD text and code is made-up
   pseudo-code; no real code, logos, brands or exchange names.
 
-<!-- MEASUREMENTS -->
+## Measured render times
+
+Measured in a 4-vCPU cloud container with **no GPU**: WebGL2 runs on
+ANGLE → SwiftShader (software). On a machine with a GPU the three.js and
+PixiJS looks are many times faster; the Canvas 2D HUDs barely change.
+
+**720p (`--scale=1/3`), single-threaded steady state** (11-frame run minus
+1-frame run), plus the throughput of the full preview renders:
+
+| Composition | 720p ms/frame (concurrency 1) | Full preview render (throughput) |
+|---|---|---|
+| StockScreen-Teal | 987 | 773 ms/frame at concurrency 2 (600 f in 7.7 min) |
+| AIHUD-WhiteOverlay | 105 | 44 ms/frame at concurrency 3 |
+| ParticleHeart-Pink / Red / Gold | 245 | 130–134 ms/frame at concurrency 2 |
+| MarketMap-Blue / Gold | 837 | 739–761 ms/frame at concurrency 2 |
+| LoadingHUD-WhiteOverlay | 82 | 54 ms/frame at concurrency 3 |
+
+**Real 4K frames** (3840×2160, steady state, concurrency 1):
+
+| Frame | Seconds per 4K frame |
+|---|---|
+| **ParticleHeart-Pink, frame 75 (the burst)** | **1.09** |
+| **MarketMap-Blue, frame 300** | **7.08** |
+| StockScreen-Teal, frame 300 | 6.99 |
+| AIHUD-WhiteOverlay, frame 300 | 0.45 |
+| LoadingHUD-WhiteOverlay, frame 150 | 0.52 |
+
+**4K estimates** for a whole composition on this kind of machine (software
+GL, one render thread; divide by roughly 1.5–1.8 at concurrency 2):
+
+| Composition | Estimate |
+|---|---|
+| StockScreen-Teal (600 f) | ~70 min |
+| AIHUD-WhiteOverlay (600 f) | ~4.5 min |
+| ParticleHeart-* (300 f each) | ~5.5 min each |
+| MarketMap-* (600 f each) | ~71 min each |
+| LoadingHUD-WhiteOverlay (360 f) | ~3 min |
+
+On a desktop GPU expect the Stock Screen and Market Map to drop to well
+under a second per 4K frame. Their cost here is the software rasteriser
+redrawing a 3840–8192 px canvas texture, building its mipmaps and running
+the two depth-of-field passes.
+
+## Verification (720p previews)
+
+Run with `python3 scripts/verify.py <id>`; reports land in `renders/verify/`.
+
+| Check | Result |
+|---|---|
+| 1. ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, 20.0 / 10.0 / 12.0 s | all 8 pass |
+| 2. Loop: frame 0 vs frame 600 of a 601-frame version (`--props='{"loopCheck":true}'`) | identical pixels, 4/4 loops |
+| 3. Middle frame from a cold start vs the full multi-threaded render | byte-identical PNGs, 8/8 |
+| 4. Black level, 50 points away from content, read from the encoded mp4 | AI HUD 0, Particle Heart (all 3) 0, Loading HUD 0 |
+| 4. Banding, from the encoded mp4 | no contours in Stock Screen / Market Map gradients at 6–8× contrast stretch; Particle Heart glow steps by single 8-bit levels (no dither by design) |
+
+A further 24 cold-start stills of the three.js looks (including frame 600 of
+the loop-check variant) were compared with the full renders: all
+byte-identical.
+
+**Banding check method:** frames were decoded from the mp4s, the dark
+gradient ranges stretched 6–8× and inspected, and pixel values read across
+the gradients. The Stock Screen and Market Map gradients change smoothly with
+±1 dither and grain. The Particle Heart glow climbs 0 → 26 → 0 in steps of
+at most 2 levels between neighbouring pixels, with no plateaus.
+
+## Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, 600 / 300 / 360 frames, one data row each
+- [x] Stock Screen and Market Map: `@remotion/three`, WebGL2, Canvas 2D textures, DoF
+- [x] Particle Heart: PixiJS 8, 120,000 glitter particles + 300 heart sprites, half-float bloom
+- [x] AI HUD and Loading HUD: Canvas 2D, exact black, no grain, dither or vignette
+- [x] Half-float render targets; ±1/255 dither and ~1% hashed grain on Stock Screen and Market Map only
+- [x] Deterministic: seeded mulberry32, closed-form motion, no `Math.random()`, `Date.now()` or clock
+- [x] Loops exact (periods divide 600); candles shift one per 120 frames with a periodic series
+- [x] OFL fonts only (Inter, JetBrains Mono NL), with licence texts
+- [x] Natural Earth 1:110m land with its public-domain note
+- [x] Invented tickers (`TICKERS.md`); made-up HUD text and pseudo-code; no logos, brands or exchanges
+- [x] Verification checks 1–4 pass for all 8; contact sheets and motion stepping reviewed (steps 5–6)
+- [x] Three rounds of independent visual comparison against the references (step 8)
+
