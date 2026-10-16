@@ -102,28 +102,52 @@ def step3(comp, name, frames):
             "max_diff": int(np.abs(px(cold) - px(full)).max())}
 
 
+# Smooth gradient regions per composition (x0, y0, x1, y1, axis, mp4 frame).
+# axis "v": profile runs top->bottom (averaged across x); "h": left->right.
+BAND_REGIONS = {
+    "ServerAisle_Steel": [(900, 650, 1270, 715, "h", 300), (900, 5, 1270, 60, "h", 300)],
+    "FrameTunnel_WhiteBurst": [(20, 300, 220, 420, "h", 60), (560, 280, 720, 400, "v", 120)],
+    "FrameTunnel_CyanMagenta": [(600, 320, 680, 400, "v", 300), (0, 250, 60, 470, "h", 300)],
+    "StreamCorridor_Blue": [(590, 60, 690, 300, "v", 300), (600, 420, 680, 715, "v", 300)],
+    "ScreenCorridor_GreenBlue": [(560, 20, 720, 200, "v", 300), (560, 560, 720, 715, "v", 300)],
+    "ScreenCorridor_AmberTeal": [(560, 20, 720, 200, "v", 300), (560, 560, 720, 715, "v", 300)],
+    "StageBeams_Steel": [(560, 60, 720, 560, "v", 300), (20, 80, 300, 600, "h", 300)],
+    "StageBeams_Amber": [(560, 60, 720, 560, "v", 300), (20, 80, 300, 600, "h", 300)],
+}
+
+
 def step4(name, frames):
-    res = {}
-    f = VER / f"{name}_mp4mid.png"
-    mp4_frame(name, frames // 2 if frames > 180 else 60, f)
-    im = px(f).astype(np.float32)
-    lum = 0.2126 * im[..., 0] + 0.7152 * im[..., 1] + 0.0722 * im[..., 2]
-    # Banding probe: in the darkest smooth regions, steps show up as large
-    # runs of identical values followed by jumps. Look at a heavily
-    # smoothed version vs the raw: count distinct levels per dark row
-    # segment and the largest jump between neighbouring pixels of a
-    # box-filtered row (should be <= 2 code values for smooth gradients).
-    rows = {}
-    for y in (60, 200, 360, 520, 660):
-        r = lum[y]
-        k = np.ones(9) / 9
-        sm = np.convolve(r, k, mode="valid")
-        dark = sm < 60
-        jumps = np.abs(np.diff(sm))[dark[1:]] if dark[1:].any() else np.array([0.0])
-        rows[y] = {"max_jump_smoothed": round(float(jumps.max()), 2),
-                   "sample": [int(v) for v in r[::128]]}
-    res["rows"] = rows
-    res["ok"] = all(v["max_jump_smoothed"] <= 6 for v in rows.values())
+    """Banding probe on frames decoded from the encoded mp4.
+
+    Each region is averaged across its short axis (this removes grain and
+    dither and leaves the underlying gradient). A banded gradient shows as
+    plateaus separated by isolated jumps of >= 1 code value; a smooth one
+    changes by small, even amounts. We report the averaged profile, the
+    largest single step and the number of steps above 1.5 code values.
+    """
+    res = {"regions": []}
+    ok = True
+    for (x0, y0, x1, y1, axis, fi) in BAND_REGIONS[name]:
+        f = VER / f"{name}_band{fi}.png"
+        if not f.exists():
+            mp4_frame(name, fi, f)
+        im = px(f).astype(np.float32)
+        lum = 0.2126 * im[..., 0] + 0.7152 * im[..., 1] + 0.0722 * im[..., 2]
+        reg = lum[y0:y1, x0:x1]
+        prof = reg.mean(axis=1) if axis == "v" else reg.mean(axis=0)
+        # Light 5-px box to suppress residual grain; real bands are wider.
+        k = np.ones(5) / 5
+        sm = np.convolve(prof, k, mode="valid")
+        d = np.abs(np.diff(sm))
+        big = int((d > 1.5).sum())
+        r = {"region": [x0, y0, x1, y1, axis, fi], "min": round(float(prof.min()), 1),
+             "max": round(float(prof.max()), 1), "max_step": round(float(d.max()), 3),
+             "mean_step": round(float(d.mean()), 3), "steps_over_1.5": big,
+             "profile_every_8px": [round(float(v), 1) for v in prof[::8]]}
+        r["ok"] = big == 0
+        ok = ok and r["ok"]
+        res["regions"].append(r)
+    res["ok"] = ok
     if name == "FrameTunnel_WhiteBurst":
         rng = np.random.default_rng(7)
         pts = rng.integers([0, 0], [720, 1280], size=(50, 2))
@@ -131,8 +155,7 @@ def step4(name, frames):
         for i in range(frames - 12, frames):
             g = VER / f"white_{i}.png"
             mp4_frame(name, i, g)
-            a = px(g)
-            vals = a[pts[:, 0], pts[:, 1]]
+            vals = px(g)[pts[:, 0], pts[:, 1]]
             worst = min(worst, int(vals.min()))
         res["white_min_last12"] = worst
         res["white_ok"] = worst >= 254
@@ -178,8 +201,20 @@ def main():
     only = set(sys.argv[1:])
     path = VER / "report.json"
     report = json.loads(path.read_text()) if path.exists() else {}
+    steps = set((sys.argv[1].split("=")[1]).split(",")) if len(sys.argv) > 1 and sys.argv[1].startswith("--steps=") else None
+    if steps:
+        only = set(sys.argv[2:])
     for comp, name, frames, loop in COMPS:
         if only and name not in only:
+            continue
+        if steps:
+            r = report.get(name, {})
+            for st in steps:
+                r[st] = {"step4": lambda: step4(name, frames), "step5": lambda: step5(name, frames),
+                         "step1": lambda: step1(name, frames), "step6": lambda: step6(name, frames)}[st]()
+            report[name] = r
+            print(name, json.dumps({k: r[k] for k in steps}, indent=1))
+            path.write_text(json.dumps(report, indent=1))
             continue
         r = {"step1": step1(name, frames)}
         if loop:

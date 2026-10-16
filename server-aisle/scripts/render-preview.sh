@@ -10,12 +10,15 @@ OUT="${OUT:-out/previews}"
 SEQ="out/seq/$NAME"
 mkdir -p "$OUT" "$SEQ"
 START=$(date +%s.%N)
-npx remotion render "$ID" "$SEQ" --sequence --image-format=png \
+if [ "${SKIP_RENDER:-0}" != "1" ]; then
+npx remotion render "$ID" "$SEQ" </dev/null --sequence --image-format=png \
   --scale=0.3333333333333333 --concurrency=1 --log=error
 END=$(date +%s.%N)
 N=$(ls "$SEQ"/*.png | wc -l)
 echo "$NAME frames=$N seconds=$(echo "$END - $START" | bc)" | tee -a out/render-times.txt
-ffmpeg -v error -y -framerate 30 -i "$SEQ/element-%03d.png" \
+fi
+N=$(ls "$SEQ"/*.png | wc -l)
+ffmpeg -nostdin -v error -y -framerate 30 -i "$SEQ/element-%03d.png" \
   -c:v libx264 -preset slow -crf 16 -pix_fmt yuv420p \
   -vf "scale=out_color_matrix=bt709:out_range=tv" \
   -colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv \

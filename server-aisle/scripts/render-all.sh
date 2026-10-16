@@ -3,7 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 while read -r ID NAME; do
-  scripts/render-preview.sh "$ID" "$NAME"
+  [ -n "${ONLY:-}" ] && [[ " $ONLY " != *" $NAME "* ]] && continue
+  scripts/render-preview.sh "$ID" "$NAME" </dev/null
 done <<'LIST'
 ServerAisle-Steel ServerAisle_Steel
 FrameTunnel-WhiteBurst FrameTunnel_WhiteBurst
