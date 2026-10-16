@@ -47,8 +47,11 @@ export const readoutMaterial = (color: [number, number, number], slots: number) 
         int slot = int(floor(x));
         float g = 0.0;
         for (int i = 0; i < ${MAX}; i++) if (i == slot) g = uGlyphs[i];
-        vec2 uv = vec2((g + fract(x)) / ${GLYPHS.length.toFixed(1)}, vUv.y);
-        float a = texture2D(uAtlas, uv).r;
+        // sample only the inner 84% of the glyph cell (the glyph is ~75% wide, centred),
+        // so linear/mip filtering never pulls in a sliver of the neighbouring glyph
+        float fx = fract(x);
+        vec2 uv = vec2((g + 0.08 + fx * 0.84) / ${GLYPHS.length.toFixed(1)}, vUv.y);
+        float a = texture2D(uAtlas, uv).r * smoothstep(0.0, 0.05, fx) * smoothstep(1.0, 0.95, fx);
         gl_FragColor = vec4(uCol * a * uAmt, 1.0);
       }`,
   });
