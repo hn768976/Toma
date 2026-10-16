@@ -66,7 +66,32 @@ are written in resolution-independent units.
 
 ## Measured render times
 
-__RENDER_TIMES__
+Measured in a cloud container with **4 vCPUs and no GPU**, so WebGL2 ran on ANGLE →
+SwiftShader (CPU). Per-frame figures were measured one frame at a time (concurrency 1) as
+(time for 11 frames − time for 1 frame) / 10, which leaves out bundling and browser start-up.
+
+| # | Composition | 720p s/frame (conc. 1) | Full 720p preview, wall clock (conc. 2) | 4K estimate, this CPU (conc. 1) |
+|---|---|---|---|---|
+| 1 | DataFountain_Story | 2.03 | 450 fr in 885 s (1.97 s/fr) | ≈ 8 s/fr → ≈ 60 min |
+| 2 | DataFountain_Loop | 2.20 | 600 fr in 1197 s (2.00 s/fr) | **8.69 s/fr measured** → ≈ 87 min |
+| 3 | CodePanels_Dark | 2.04 | 600 fr in 1061 s (1.77 s/fr) | ≈ 7.5 s/fr → ≈ 75 min |
+| 4 | PastelSilk_PinkBlue | 0.54 | 600 fr in 326 s (0.54 s/fr) | ≈ 3.5 s/fr → ≈ 35 min |
+| 5 | PastelSilk_PeachMint | 0.67 | 600 fr in 338 s (0.56 s/fr) | ≈ 3.5 s/fr → ≈ 35 min |
+| 6 | TealHUD_Soft | 1.86 | 600 fr in 1131 s (1.89 s/fr) | ≈ 6.5 s/fr → ≈ 65 min |
+| 7 | LiquidRipples_White | 1.21 | 600 fr in 695 s (1.16 s/fr) | **3.96 s/fr measured** → ≈ 40 min |
+| 8 | LiquidRipples_Black | 1.28 | 600 fr in 722 s (1.20 s/fr) | ≈ 4.2 s/fr → ≈ 42 min |
+
+**Timed 4K frames (3840×2160, scale 1):**
+
+- DataFountain_Loop: **8.69 s/frame**.
+- LiquidRipples_White: **3.96 s/frame**.
+
+At 4K the fixed cost per frame (screenshot, PNG encode, R3F/React update) weighs less, so
+4K costs about 3.3–4× the 720p time, not 9×. The other 4K figures are estimates scaled from
+those two measured ratios. With the whole pack on this CPU-only box at concurrency 1, all
+8 compositions take ≈ 7.5 h. Expect several times faster at higher concurrency on a many-core
+machine, and far faster on a real GPU, where ANGLE uses hardware GL and these shaders run
+in milliseconds. There, screenshot and PNG encoding (≈ 0.3–0.6 s per 4K frame) dominate.
 
 ## How to add a colourway (one data row)
 
@@ -126,7 +151,23 @@ The check was done on frames decoded from the **encoded mp4s**, not the preview.
 `scripts/banding-check.py` reads luma along lines through the navy glow, the black around the
 flare, the pastel gradients, the teal mist, and the white and black liquid.
 
-__BANDING__
+Result: **smooth everywhere.** Each area was contrast-stretched 30–50× after a 7-px box
+blur to average out the grain. The stretched images show smooth gradients with no contour
+steps. The luma spans of the plain areas were:
+
+| Area | Frame | Luma span |
+|---|---|---|
+| Navy sky | story f30 | 3.9 levels |
+| Teal mist highlight | f300 | 2.2 levels |
+| Peach gradient | f300 | 7.8 levels |
+| Pastel pink-blue | f450 | 39 levels, mostly fold detail |
+| White liquid dish | f300 | 9.5 levels |
+| Black ink dish | f300 | 3.7 levels, grain faded |
+| Black around the flare | f300 | flare falloff |
+
+The profile script (`scripts/banding-check.py`) also reports the largest jump between 4-px
+bins. That figure is ≤ 1.2 levels on plain gradient lines. Where lines cross real content
+(icons, code text, silk folds), it flags those edges, not banding.
 
 ## Fonts and licences
 
@@ -152,4 +193,14 @@ mail, people and lock. The code is a made-up assembly-style grammar with a fixed
 
 ## Completion checklist
 
-__CHECKLIST__
+- [x] 8 compositions, one data row each, at 3840×2160 / 30 fps: 450 frames for the story, 600 for the loops.
+- [x] three.js on WebGL2 via `@remotion/three` for Looks 1, 2, 4 and 5; a single full-screen fragment shader for Look 3; no PixiJS, no WebGPU.
+- [x] OFL fonts only (JetBrains Mono, Inter), with licences; no logos; icons drawn in code; made-up pseudo-assembly.
+- [x] Step 1: all 8 previews are 1280×720, h264, yuv420p, 30/1, no audio, 15.0 s / 20.0 s (`--scale=0.3333333333333333` gives exactly 1280×720, so no fallback was needed).
+- [x] Step 2: in the 601-frame loop check, frame 0 = frame 600 pixel for pixel for all 7 loops.
+- [x] Step 3: a cold single-frame render of the middle frame matches the full render byte for byte (same PNG file hash) for all 8.
+- [x] Step 4: banding check on frames decoded from the encoded mp4s: smooth.
+- [x] Step 5: contact sheets checked (8 frames for the story, 5 per loop).
+- [x] Step 6: motion check (story in full, 2 s around frame 300 per loop): no frame-to-frame spikes; text and lines stable; points stream; rings are born at zero amplitude.
+- [x] Steps 7–8: compared against the references; 3 rounds of independent comparison per look.
+- [x] `npm install && npx remotion studio` works from a clean copy.
