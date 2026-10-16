@@ -152,4 +152,72 @@ long, so frames 0 and 600 can be rendered and compared.
 - **JetBrains Mono** (SIL OFL 1.1): `public/fonts/OFL-JetBrainsMono.txt`
 - **Natural Earth**: public domain, `data/natural-earth/README.md`
 
-<!-- MEASUREMENTS -->
+## Measured render times
+
+Machine: 4 vCPU cloud container, **no GPU** (WebGL runs on ANGLE's software
+path), Chromium headless shell 1194, Remotion 4.0.515.
+
+Per-frame time is single-threaded (`--concurrency=1`), measured as
+(time for 80 frames − time for 20 frames) / 60, which cancels browser and
+bundle start-up (`scripts/measure-timing.sh`).
+
+| Composition | 720p s/frame | 4K s/frame | 4K full render, 1 thread | 4K, `--concurrency=4` (est.) |
+|---|---|---|---|---|
+| NetworkGrowth-White | 0.109 | **0.67 (timed)** | ≈ 6.7 min | ≈ 2.5 min |
+| NetworkGrowth-Navy | 0.157 | ≈ 0.96 | ≈ 9.6 min | ≈ 3.5 min |
+| HoloPeople-Amber | 3.51 | **9.95 (timed)** | ≈ 100 min | ≈ 40 min |
+| HoloPeople-Cyan | 3.38 | ≈ 9.6 | ≈ 96 min | ≈ 38 min |
+| TimelineHUD-White | 0.090 | ≈ 0.55 | ≈ 2.7 min | ≈ 1 min |
+| AIHub-TealOrange | 0.128 | ≈ 0.78 | ≈ 4.7 min | ≈ 2 min |
+| AIHub-BlueViolet | 0.184 | ≈ 1.12 | ≈ 6.7 min | ≈ 2.5 min |
+| GearWorld-Blue | 0.333 | ≈ 2.0 | ≈ 20 min | ≈ 7.5 min |
+
+- The two **timed 4K frames** are frame 300 of `NetworkGrowth-White` (0.67 s)
+  and frame 300 of `HoloPeople-Amber` (9.95 s), measured the same way (3 frames −
+  1 frame, /2).
+- Canvas 4K estimates use the measured 4K/720p ratio of NetworkGrowth (×6.1).
+  The concurrency column assumes about 2.7× from 4 threads (measured on the 720p
+  previews).
+- The hologram is GPU-bound. On a machine with a real GPU and `--gl=angle`
+  it is many times faster than these software-GL numbers. Most of its cost
+  here is the wide-line wireframes.
+
+## Verification (run on the 720p previews)
+
+1. **ffprobe:** all 8 are 1280×720, h264, yuv420p, 30/1, video only, and exactly
+   20.0 / 10.0 / 12.0 s (600 / 300 / 360 frames).
+2. **Loop check** (`--props='{"loopCheck":true}'`, frames 0 and 600): HoloPeople-Amber,
+   HoloPeople-Cyan and GearWorld-Blue are byte-identical PNGs.
+3. **Determinism** (`scripts/verify/determinism.sh`): the middle frame from a full
+   4-thread PNG-sequence render matches a cold-start `remotion still` of that frame
+   **byte for byte** for all 8 compositions.
+4. **Banding / black level** (frames taken from the encoded mp4s,
+   `scripts/verify/banding.py`, `black_level.py`):
+   - Gradients (hologram bokeh glow, Gear World haze, flat navy backgrounds)
+     change by at most about 1 level per pixel after a 9×9 average. There is no
+     staircase; the grain/dither interleaves values (66 distinct raw values across
+     the hologram's glow).
+   - **Timeline:** 50 sample points away from the artwork all read **0,0,0**, and
+     every pixel in the empty rows (614,400 pixels) is 0.
+   - **AIHub-TealOrange:** the background stays exactly 0 (no grain on black).
+5. **Contact sheets** (`scripts/verify/contact_sheet.py`): checked for every
+   composition.
+6. **Motion:** stepped through frames. Badges pop with an overshoot, gears hold
+   their mesh frame to frame, the hologram flicker is subtle, and thin lines don't
+   shimmer.
+
+### Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, correct lengths
+- [x] Canvas 2D for Network, Timeline, AI Hub, Gear World; `@remotion/three` WebGL2 for Hologram
+- [x] Seeded `mulberry32` at module level; no `Math.random()` / `Date.now()` / clocks / carried state
+- [x] OFL fonts only (Inter, JetBrains Mono), licences included
+- [x] No logos or brands; generic code-drawn pictograms; "AI" in capitals
+- [x] Featureless mannequin figures
+- [x] Natural Earth 1:110m land as a dot grid, public-domain note included
+- [x] Exact 600-frame loops (gears advance whole teeth per loop)
+- [x] Dither ±1/255 + 1.5 % grain from pixel position and frame; none on the Timeline or the black AI Hub
+- [x] Timeline on exactly black, for Screen/Add
+- [x] One data row per colourway
+- [x] 4K looks the same as 720p (resolution-relative blur, line widths and point sizes)
+
