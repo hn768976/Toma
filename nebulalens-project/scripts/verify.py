@@ -70,7 +70,41 @@ def band(path, line):
     print(f"max step between neighbours (strip-avg)={max(steps):.2f}  longest identical raw run={best}px")
     return max(steps), best
 
+def band2(path, box, axis="x"):
+    """Banding test on a gradient patch. Per column (axis x) take the median
+    over the patch's rows (removes grain and particles), then the RMS of the
+    residual against a 31-px moving average. A smooth / dithered gradient
+    gives a residual well under 0.2 levels; 8-bit banding leaves a sawtooth
+    of about 0.29 levels plus long flat plateaus."""
+    import statistics
+    x0, y0, w, h = map(int, box.split(","))
+    im = Image.open(path).convert("L")
+    px = im.load()
+    def tmean(vals):
+        v = sorted(vals); q = len(v) // 4
+        mid = v[q:len(v) - q] or v
+        return sum(mid) / len(mid)
+    if axis == "x":
+        prof = [tmean([px[x, y] for y in range(y0, y0 + h)]) for x in range(x0, x0 + w)]
+    else:
+        prof = [tmean([px[x, y] for x in range(x0, x0 + w)]) for y in range(y0, y0 + h)]
+    k = 15
+    res = []
+    for i in range(k, len(prof) - k):
+        m = sum(prof[i - k:i + k + 1]) / (2 * k + 1)
+        res.append(prof[i] - m)
+    rms = (sum(r * r for r in res) / len(res)) ** 0.5
+    run = best = 1
+    for i in range(1, len(prof)):
+        run = run + 1 if prof[i] == prof[i - 1] else 1
+        best = max(best, run)
+    span = max(prof) - min(prof)
+    print(f"levels {min(prof):.0f}->{max(prof):.0f} (span {span:.0f}) over {len(prof)}px; "
+          f"residual RMS={rms:.3f}; longest flat run of profile={best}px")
+    return rms
+
 if __name__ == "__main__":
+    if sys.argv[1] == "band2": band2(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "x"); sys.exit(0)
     cmd = sys.argv[1]
     if cmd == "probe": sys.exit(0 if probe(sys.argv[2]) else 1)
     if cmd == "same": sys.exit(0 if same(sys.argv[2], sys.argv[3]) else 1)
