@@ -110,9 +110,13 @@ digits and `-`. Use `grain: 0` on pure black backgrounds so black stays black.
   resolution-independent.
 - **Hologram People** is `@remotion/three` (React Three Fiber) on WebGL2 with a
   small hand-written post pipeline (`src/looks/holo/pipeline.ts`): depth pre-pass →
-  MSAA colour pass → blur pyramid → depth of field (mip gather) + bloom → filmic
-  curve → ±1/255 TPDF dither + 1.5 % grain → crisp HUD-tag overlay. No TAA, no
-  accumulation, no shadows.
+  MSAA colour pass (back rows, floor, bokeh) + a separate MSAA pass for the front
+  row (so the depth-of-field blur never smears it into a halo) → blur pyramid
+  built from a 720p-equivalent base → depth of field (mip gather) + bloom →
+  filmic curve → crisp MSAA HUD-tag layer → ±1/255 TPDF dither + 1.5 % grain.
+  No TAA, no accumulation, no shadows. Blur radii, line widths (three.js
+  `LineSegments2`) and point sizes all scale with the output height, so a 4K
+  render looks like the 720p preview, only sharper.
   The figures are stylised, featureless mannequins (smooth lathe/capsule
   pieces, no face or anatomy).
 - **Gear World**: involute spur-gear outlines (20° pressure angle), each train

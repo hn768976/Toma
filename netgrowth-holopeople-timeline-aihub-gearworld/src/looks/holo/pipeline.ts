@@ -17,6 +17,23 @@ void main() {
 }
 `;
 
+// Box-resample a large frame down to the 720p-equivalent base (4x4 bilinear taps
+// across the source footprint), so blur radii are a fixed fraction of the frame
+// at any output resolution.
+const RESAMPLE = /* glsl */ `
+uniform sampler2D src; uniform vec2 footprint; varying vec2 vUv;
+void main() {
+  vec4 c = vec4(0.0);
+  for (int y = 0; y < 4; y++) {
+    for (int x = 0; x < 4; x++) {
+      vec2 o = (vec2(float(x), float(y)) + 0.5) / 4.0 - 0.5;
+      c += texture2D(src, vUv + o * footprint);
+    }
+  }
+  gl_FragColor = c / 16.0;
+}
+`;
+
 const BLUR = /* glsl */ `
 uniform sampler2D src; uniform vec2 dir; varying vec2 vUv;
 void main() {
@@ -29,7 +46,7 @@ void main() {
 
 const FINAL = /* glsl */ `
 uniform sampler2D sharp; uniform sampler2D b1; uniform sampler2D b2; uniform sampler2D b3; uniform sampler2D b4;
-uniform sampler2D depthTex; uniform sampler2D front; uniform sampler2D frontGlow; uniform float cameraNear; uniform float cameraFar;
+uniform sampler2D depthTex; uniform sampler2D front; uniform sampler2D frontGlow; uniform sampler2D hud; uniform float hasHud; uniform float cameraNear; uniform float cameraFar;
 uniform float focus; uniform float focusRange; uniform float frame; uniform float exposure;
 uniform float bloom;
 varying vec2 vUv;
@@ -67,6 +84,8 @@ void main() {
   col *= 1.0 - 0.55 * smoothstep(0.25, 0.75, length(vq * vec2(1.1, 1.35)));
   col = vec3(1.0) - exp(-col * exposure);
   col = pow(col, vec3(1.0 / 2.2));
+  // crisp HUD overlay (rendered with MSAA, added on top of the graded image)
+  col += pow(max(texture2D(hud, vUv).rgb, 0.0), vec3(1.0 / 2.2)) * hasHud;
   // grain ~1.5% p-p + TPDF dither of +-1/255, from pixel position and frame only
   vec2 px = floor(gl_FragCoord.xy);
   float h1 = hash3(vec3(px, frame * 2.0));
@@ -97,15 +116,19 @@ export class HoloPipeline {
   h = 0;
   sceneRT!: THREE.WebGLRenderTarget;
   frontRT!: THREE.WebGLRenderTarget;
+  hudRT!: THREE.WebGLRenderTarget;
   frontA!: THREE.WebGLRenderTarget;
   frontB!: THREE.WebGLRenderTarget;
   depthRT!: THREE.WebGLRenderTarget;
   levels: { a: THREE.WebGLRenderTarget; b: THREE.WebGLRenderTarget }[] = [];
   down = pass(DOWN, { src: { value: null }, texel: { value: new THREE.Vector2() } });
+  resample = pass(RESAMPLE, { src: { value: null }, footprint: { value: new THREE.Vector2() } });
+  baseRT: THREE.WebGLRenderTarget | null = null;
+  frontBaseRT: THREE.WebGLRenderTarget | null = null;
   blur = pass(BLUR, { src: { value: null }, dir: { value: new THREE.Vector2() } });
   final = pass(FINAL, {
     sharp: { value: null }, b1: { value: null }, b2: { value: null }, b3: { value: null }, b4: { value: null },
-    depthTex: { value: null }, front: { value: null }, frontGlow: { value: null }, cameraNear: { value: 0.1 }, cameraFar: { value: 100 }, focus: { value: 8 }, focusRange: { value: 6 },
+    depthTex: { value: null }, front: { value: null }, frontGlow: { value: null }, hud: { value: null }, hasHud: { value: 0 }, cameraNear: { value: 0.1 }, cameraFar: { value: 100 }, focus: { value: 8 }, focusRange: { value: 6 },
     frame: { value: 0 }, exposure: { value: 1.25 }, bloom: { value: 0.14 },
   });
   depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false });
@@ -117,13 +140,19 @@ export class HoloPipeline {
     this.h = h;
     this.sceneRT = rt(w, h, 4);
     this.frontRT = rt(w, h, 4);
-    this.frontA = rt(Math.max(1, Math.round(w / 2)), Math.max(1, Math.round(h / 2)));
-    this.frontB = rt(Math.max(1, Math.round(w / 2)), Math.max(1, Math.round(h / 2)));
+    this.hudRT = rt(w, h, 4);
+    // everything blurred is built from a 720p-equivalent base
+    const bh = Math.min(h, 720);
+    const bw = Math.max(1, Math.round((w * bh) / h));
+    this.baseRT = h > 720 ? rt(bw, bh) : null;
+    this.frontBaseRT = h > 720 ? rt(bw, bh) : null;
+    this.frontA = rt(Math.max(1, Math.round(bw / 2)), Math.max(1, Math.round(bh / 2)));
+    this.frontB = rt(Math.max(1, Math.round(bw / 2)), Math.max(1, Math.round(bh / 2)));
     this.depthRT = new THREE.WebGLRenderTarget(w, h, { depthBuffer: true });
     this.depthRT.depthTexture = new THREE.DepthTexture(w, h, THREE.UnsignedIntType);
     this.levels = [];
-    let lw = w;
-    let lh = h;
+    let lw = bw;
+    let lh = bh;
     for (let i = 0; i < 4; i++) {
       lw = Math.max(1, Math.round(lw / 2));
       lh = Math.max(1, Math.round(lh / 2));
@@ -134,13 +163,25 @@ export class HoloPipeline {
   dispose() {
     this.sceneRT?.dispose();
     this.frontRT?.dispose();
+    this.hudRT?.dispose();
     this.frontA?.dispose();
     this.frontB?.dispose();
+    this.baseRT?.dispose();
+    this.frontBaseRT?.dispose();
     this.depthRT?.dispose();
     this.levels.forEach((l) => {
       l.a.dispose();
       l.b.dispose();
     });
+  }
+
+  private toBase(gl: THREE.WebGLRenderer, tex: THREE.Texture, target: THREE.WebGLRenderTarget | null) {
+    if (!target) return { tex, w: this.w, h: this.h };
+    this.resample.mat.uniforms.src.value = tex;
+    this.resample.mat.uniforms.footprint.value.set(1 / target.width, 1 / target.height);
+    gl.setRenderTarget(target);
+    gl.render(this.resample.scene, ortho);
+    return { tex: target.texture, w: target.width, h: target.height };
   }
 
   render(
@@ -174,9 +215,10 @@ export class HoloPipeline {
     gl.clear();
     gl.render(scene, camera);
     camera.layers.set(0);
-    // tight glow for the front row: half-res, one blur
-    this.down.mat.uniforms.src.value = this.frontRT.texture;
-    this.down.mat.uniforms.texel.value.set(0.5 / this.w, 0.5 / this.h);
+    // tight glow for the front row: base res / 2, one blur
+    const frontSrc = this.toBase(gl, this.frontRT.texture, this.frontBaseRT);
+    this.down.mat.uniforms.src.value = frontSrc.tex;
+    this.down.mat.uniforms.texel.value.set(0.5 / frontSrc.w, 0.5 / frontSrc.h);
     gl.setRenderTarget(this.frontA);
     gl.render(this.down.scene, ortho);
     this.blur.mat.uniforms.src.value = this.frontA.texture;
@@ -188,10 +230,11 @@ export class HoloPipeline {
     gl.setRenderTarget(this.frontA);
     gl.render(this.blur.scene, ortho);
 
-    // 3) blur pyramid
-    let src: THREE.Texture = this.sceneRT.texture;
-    let sw = this.w;
-    let sh = this.h;
+    // 3) blur pyramid (from the 720p-equivalent base)
+    const base = this.toBase(gl, this.sceneRT.texture, this.baseRT);
+    let src: THREE.Texture = base.tex;
+    let sw = base.w;
+    let sh = base.h;
     for (const l of this.levels) {
       this.down.mat.uniforms.src.value = src;
       this.down.mat.uniforms.texel.value.set(0.5 / sw, 0.5 / sh);
@@ -227,15 +270,16 @@ export class HoloPipeline {
     u.focus.value = opts.focus;
     u.focusRange.value = opts.focusRange;
     u.frame.value = opts.frame;
+    // 5) crisp HUD overlay (tags, leader lines), composited in the final pass
+    u.hasHud.value = 0;
+    if (overlay) {
+      gl.setRenderTarget(this.hudRT);
+      gl.clear();
+      gl.render(overlay, camera);
+      u.hud.value = this.hudRT.texture;
+      u.hasHud.value = 1;
+    }
     gl.setRenderTarget(null);
     gl.render(this.final.scene, ortho);
-
-    // 5) crisp HUD overlay (tags, leader lines) on top
-    if (overlay) {
-      gl.autoClear = false;
-      gl.clearDepth();
-      gl.render(overlay, camera);
-      gl.autoClear = true;
-    }
   }
 }

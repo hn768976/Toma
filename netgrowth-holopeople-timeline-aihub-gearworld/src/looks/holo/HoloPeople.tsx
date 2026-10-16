@@ -2,6 +2,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { ThreeCanvas } from "@remotion/three";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { AbsoluteFill, continueRender, delayRender, useCurrentFrame, useVideoConfig } from "remotion";
 import { fontsLoaded, loadFonts } from "../../lib/fonts";
 import { bufferSize } from "../../lib/CanvasStage";
@@ -18,6 +21,10 @@ const FRONT_LAYER = 2;
 // Module-level geometry (deterministic, built once per tab).
 const MANNEQUIN = buildMannequin();
 const WIRE = new THREE.WireframeGeometry(MANNEQUIN);
+const WIRE_POS = Array.from(WIRE.getAttribute("position").array as Float32Array);
+// Lines are drawn as wide lines whose width scales with the output height,
+// so 4K renders look like the 720p previews (GL lines are always 1 device px).
+const REF_H = 720;
 const PLEX = buildPlexus();
 const OCCLUDER = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 });
 
@@ -95,25 +102,6 @@ void main() {
   gl_FragColor = vec4(color * a * alpha, 1.0);
 }
 `;
-const plexVert = /* glsl */ `
-attribute float bright; attribute float alt; varying float vB; varying float vA; varying float vD;
-void main() {
-  vB = bright; vA = alt;
-  vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  vD = -mv.z;
-  gl_Position = projectionMatrix * mv;
-}
-`;
-const plexFrag = /* glsl */ `
-uniform vec3 c1; uniform vec3 c2; uniform float t; varying float vB; varying float vA; varying float vD;
-void main() {
-  float isAlt = step(1.0, vA); float ph = fract(vA);
-  float tw = 0.75 + 0.25 * sin(6.2831 * (t * 2.0 + ph * 3.0));
-  float fog = clamp(1.0 - (vD - 8.0) / 14.0, 0.15, 1.0) * smoothstep(3.0, 7.5, vD);
-  vec3 c = mix(c1, c2, isAlt);
-  gl_FragColor = vec4(c * vB * tw * fog * 0.85, 1.0);
-}
-`;
 const pointFrag = /* glsl */ `
 uniform vec3 color; varying float vG;
 void main() {
@@ -123,12 +111,12 @@ void main() {
 }
 `;
 const pointVert = /* glsl */ `
-uniform float px; varying float vG;
+uniform float px; uniform float pxScale; varying float vG;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   // a few points are bright glints, the rest are faint
   vG = fract(sin(dot(position.xz, vec2(12.9898, 78.233))) * 43758.5453) > 0.85 ? 1.6 : 0.3;
-  gl_PointSize = px * 3.0 / -mv.z * (0.7 + 0.5 * vG);
+  gl_PointSize = px * pxScale * 3.0 / -mv.z * (0.7 + 0.5 * vG);
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -183,7 +171,7 @@ const Scene: React.FC<{ v: HoloVersion }> = ({ v }) => {
   const world = useMemo(() => {
     const scene = new THREE.Scene();
     const fig = col(v.figure);
-    const figs: { group: THREE.Group; mat: THREE.ShaderMaterial; wire: THREE.LineBasicMaterial; disc: THREE.ShaderMaterial; spec: (typeof FIGURES)[0] }[] = [];
+    const figs: { group: THREE.Group; mat: THREE.ShaderMaterial; wire: LineMaterial; disc: THREE.ShaderMaterial; spec: (typeof FIGURES)[0] }[] = [];
 
     // floor (also in the depth layer)
     const floor = new THREE.Mesh(
@@ -195,46 +183,51 @@ const Scene: React.FC<{ v: HoloVersion }> = ({ v }) => {
     floor.layers.enable(DEPTH_LAYER);
     scene.add(floor);
 
-    // plexus lines + dots
-    const pg = new THREE.BufferGeometry();
-    pg.setAttribute("position", new THREE.BufferAttribute(PLEX.seg, 3));
-    pg.setAttribute("bright", new THREE.BufferAttribute(PLEX.bright, 1));
-    pg.setAttribute("alt", new THREE.BufferAttribute(PLEX.alt, 1));
-    const plexMat = new THREE.ShaderMaterial({
-      vertexShader: plexVert,
-      fragmentShader: plexFrag,
-      uniforms: { c1: { value: fig.clone().lerp(new THREE.Color(1, 0.92, 0.6), 0.35).multiplyScalar(0.8) }, c2: { value: col(v.plexusAlt).multiplyScalar(0.6) }, t: { value: 0 } },
-      blending: THREE.AdditiveBlending,
-      transparent: true,
-      depthWrite: false,
-    });
-    scene.add(new THREE.LineSegments(pg, plexMat));
+    // plexus lines + dots (colours baked per vertex: brightness, tint, distance fade)
+    const fat: { mat: LineMaterial; width: number }[] = [];
+    const c1 = fig.clone().lerp(new THREE.Color(1, 0.92, 0.6), 0.35).multiplyScalar(0.8);
+    const c2 = col(v.plexusAlt).multiplyScalar(0.6);
+    const camRest = new THREE.Vector3(0.1, 2.45, 7.9);
+    const pcol: number[] = [];
+    for (let i = 0; i < PLEX.seg.length / 3; i++) {
+      const p = new THREE.Vector3(PLEX.seg[i * 3], PLEX.seg[i * 3 + 1], PLEX.seg[i * 3 + 2]);
+      const d = p.distanceTo(camRest);
+      const fog = Math.min(1, Math.max(0.15, 1 - (d - 8) / 14)) * THREE.MathUtils.smoothstep(d, 3, 7.5);
+      const alt = PLEX.alt[i];
+      const tw = 0.75 + 0.25 * Math.sin(Math.PI * 2 * (alt % 1) * 3);
+      const c = (alt >= 1 ? c2 : c1).clone().multiplyScalar(PLEX.bright[i] * fog * tw * 0.85);
+      pcol.push(c.r, c.g, c.b);
+    }
+    const pg = new LineSegmentsGeometry();
+    pg.setPositions(Array.from(PLEX.seg));
+    pg.setColors(pcol);
+    const plexMat = new LineMaterial({ vertexColors: true, linewidth: 1, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
+    fat.push({ mat: plexMat, width: 1.3 });
+    scene.add(new LineSegments2(pg, plexMat));
     const dots = new THREE.BufferGeometry().setFromPoints(PLEX.pts);
-    const dotMat = new THREE.ShaderMaterial({
+    const dotMat = new THREE.ShaderMaterial({ // eslint-disable-line
       vertexShader: pointVert,
       fragmentShader: pointFrag,
-      uniforms: { color: { value: fig.clone().lerp(new THREE.Color(1, 1, 0.9), 0.5).multiplyScalar(1.6) }, px: { value: 7 } },
+      uniforms: { color: { value: fig.clone().lerp(new THREE.Color(1, 1, 0.9), 0.5).multiplyScalar(1.6) }, px: { value: 7 }, pxScale: { value: 1 } },
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthWrite: false,
     });
     scene.add(new THREE.Points(dots, dotMat));
+    const pointMats: THREE.ShaderMaterial[] = [dotMat];
 
     // floating dust
     const dust = new THREE.BufferGeometry().setFromPoints(DUST.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
-    scene.add(
-      new THREE.Points(
-        dust,
-        new THREE.ShaderMaterial({
+    const dustMat = new THREE.ShaderMaterial({
           vertexShader: pointVert,
           fragmentShader: pointFrag,
-          uniforms: { color: { value: fig.clone().lerp(new THREE.Color(1, 1, 1), 0.4).multiplyScalar(0.7) }, px: { value: 5 } },
+          uniforms: { color: { value: fig.clone().lerp(new THREE.Color(1, 1, 1), 0.4).multiplyScalar(0.7) }, px: { value: 5 }, pxScale: { value: 1 } },
           blending: THREE.AdditiveBlending,
           transparent: true,
           depthWrite: false,
-        }),
-      ),
-    );
+    });
+    pointMats.push(dustMat);
+    scene.add(new THREE.Points(dust, dustMat));
 
     // background bokeh
     const bokehGeo = new THREE.PlaneGeometry(1, 1);
@@ -293,8 +286,11 @@ const Scene: React.FC<{ v: HoloVersion }> = ({ v }) => {
       const body = new THREE.Mesh(MANNEQUIN, mat);
       body.layers.enable(DEPTH_LAYER);
       body.renderOrder = 1;
-      const wire = new THREE.LineBasicMaterial({ color: fig.clone().multiplyScalar(0.55), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
-      const wireMesh = new THREE.LineSegments(WIRE, wire);
+      const wire = new LineMaterial({ color: fig.clone().multiplyScalar(0.55).getHex(), linewidth: 1, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
+      fat.push({ mat: wire, width: 1.1 });
+      const wg = new LineSegmentsGeometry();
+      wg.setPositions(WIRE_POS);
+      const wireMesh = new LineSegments2(wg, wire);
       const spinner = new THREE.Group();
       spinner.add(occluder, body, wireMesh);
       group.add(spinner);
@@ -353,11 +349,16 @@ const Scene: React.FC<{ v: HoloVersion }> = ({ v }) => {
         new THREE.Vector3(spec.x + side * 0.38, 1.7 + lift, spec.z),
         new THREE.Vector3(mesh.position.x - side * (h * aspect) / 2, mesh.position.y, spec.z),
       ]);
-      overlay.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: col(v.hud).multiplyScalar(0.7), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })));
+      const lp = lg.getAttribute("position").array as Float32Array;
+      const lsg = new LineSegmentsGeometry();
+      lsg.setPositions([lp[0], lp[1], lp[2], lp[3], lp[4], lp[5], lp[3], lp[4], lp[5], lp[6], lp[7], lp[8]]);
+      const lm = new LineMaterial({ color: col(v.hud).multiplyScalar(0.7).getHex(), linewidth: 1, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false });
+      fat.push({ mat: lm, width: 1.4 });
+      overlay.add(new LineSegments2(lsg, lm));
       tags.push({ mesh, tex, ctx, kind, seed: i });
     });
 
-    return { scene, overlay, figs, plexMat, tags };
+    return { scene, overlay, figs, tags, fat, pointMats };
   }, [v]);
 
   const pipeline = useMemo(() => new HoloPipeline(), []);
@@ -386,7 +387,14 @@ const Scene: React.FC<{ v: HoloVersion }> = ({ v }) => {
       wire.opacity = 0.6 * fl;
       disc.uniforms.pulse.value = 0.5 + 0.5 * Math.sin(TAU * (3 * t + i * 0.13));
     });
-    world.plexMat.uniforms.t.value = t;
+    // resolution-relative line widths and point sizes
+    const buf = gl.getDrawingBufferSize(new THREE.Vector2());
+    const pxScale = buf.y / REF_H;
+    world.fat.forEach(({ mat, width }) => {
+      mat.resolution.set(buf.x, buf.y);
+      mat.linewidth = width * pxScale;
+    });
+    world.pointMats.forEach((m) => (m.uniforms.pxScale.value = pxScale));
     const tick = Math.floor(f / 8);
     world.tags.forEach(({ mesh, tex, ctx, kind, seed }) => {
       mesh.quaternion.copy(cam.quaternion);
