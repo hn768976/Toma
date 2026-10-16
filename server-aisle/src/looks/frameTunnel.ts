@@ -138,7 +138,7 @@ void main() {
     vec3 l = L * inversesqrt(d2 + 1e-6);
     float ndl = max(dot(n, l), 0.0);
     // A long tube light falls off slower than a point light.
-    float fall = 0.13 / (d2 + 0.04) + 0.03 / sqrt(d2 + 0.04);
+    float fall = 0.075 / (d2 + 0.04) + 0.015 / sqrt(d2 + 0.04);
     vec3 col = uFrameC[k] * I;
     diff += col * ndl * fall;
     vec3 h = normalize(l + v);
@@ -182,7 +182,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
   camera.position.set(0, 0, 0);
   camera.lookAt(0, 0, -1);
   const pixelAngle = (2 * Math.tan(((fov / 2) * Math.PI) / 180)) / size.y;
-  const fog = p.mode === "burst" ? 0.07 : 0.16;
+  const fog = p.mode === "burst" ? 0.07 : 0.22;
 
   // --- Frames --------------------------------------------------------------
   const tube = new TubeGeometry(roundedRect(FRAME_A, FRAME_B, 0.008) as never, 480, TUBE_R, 10, true);
@@ -194,7 +194,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
       uTubeR: { value: TUBE_R },
       uFog: { value: fog },
       uFogColor: { value: new Vector3() },
-      uWhiteCore: { value: p.mode === "burst" ? 0.9 : 0.45 },
+      uWhiteCore: { value: p.mode === "burst" ? 0.9 : 0.25 },
     },
   });
   const frames = new InstancedMesh(tube, frameMat, N_FRAMES);
@@ -240,7 +240,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
     m.makeScale(d, 2 * (WALL_Y + d), t).setPosition(WALL_X + d / 2, 0, z);
     slats.setMatrixAt(n, m); shade[n++] = v.shade;
     m.makeScale(2 * (WALL_X + d), d, t).setPosition(0, -(WALL_Y + d / 2), z);
-    slats.setMatrixAt(n, m); shade[n++] = v.shade * 0.9;
+    slats.setMatrixAt(n, m); shade[n++] = v.shade * 0.6;
     m.makeScale(2 * (WALL_X + d), d, t).setPosition(0, WALL_Y + d / 2, z);
     slats.setMatrixAt(n, m); shade[n++] = v.shade * 0.9;
   }
@@ -249,13 +249,13 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
   const zc = -L / 2 + 2;
   const bd = 0.05;
   m.makeScale(bd, 2 * (WALL_Y + SLAT_DEPTH * 1.6), L).setPosition(-(WALL_X + SLAT_DEPTH * 1.4), 0, zc);
-  slats.setMatrixAt(n, m); shade[n++] = 0.45;
+  slats.setMatrixAt(n, m); shade[n++] = 0.12;
   m.makeScale(bd, 2 * (WALL_Y + SLAT_DEPTH * 1.6), L).setPosition(WALL_X + SLAT_DEPTH * 1.4, 0, zc);
-  slats.setMatrixAt(n, m); shade[n++] = 0.45;
+  slats.setMatrixAt(n, m); shade[n++] = 0.12;
   m.makeScale(2 * (WALL_X + SLAT_DEPTH * 1.6), bd, L).setPosition(0, -(WALL_Y + SLAT_DEPTH * 1.4), zc);
-  slats.setMatrixAt(n, m); shade[n++] = 0.45;
+  slats.setMatrixAt(n, m); shade[n++] = 0.12;
   m.makeScale(2 * (WALL_X + SLAT_DEPTH * 1.6), bd, L).setPosition(0, WALL_Y + SLAT_DEPTH * 1.4, zc);
-  slats.setMatrixAt(n, m); shade[n++] = 0.45;
+  slats.setMatrixAt(n, m); shade[n++] = 0.12;
   ribBox.setAttribute("iShade", new InstancedBufferAttribute(shade, 1));
   slats.frustumCulled = false;
   scene.add(slats);
@@ -269,7 +269,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
         uniforms: endU,
         vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
         fragmentShader:
-          "uniform float uLevel; varying vec2 vUv; void main(){ vec2 q = (vUv - 0.5) * vec2(1.0, 1.4); float g = 1.0 - 0.45 * dot(q, q) * 2.0; gl_FragColor = vec4(vec3(uLevel * g), 1.0); }",
+          "uniform float uLevel; varying vec2 vUv; void main(){ vec2 q = (vUv - 0.5) * vec2(1.0, 1.4); float g = (0.75 + 0.35 * vUv.y) * (0.75 + 1.4 * dot(q, q)); gl_FragColor = vec4(vec3(uLevel * g), 1.0); }",
       }),
     );
     wall.position.set(0, 0, -(K_FAR_Z + 0.22));
@@ -290,7 +290,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
 
   // ---- White Burst timeline (180 frames) ----------------------------------
   const K_FAR = 25; // first frame to light: 7.2 m ahead
-  const K_NEAR = 12; // last frame switched on by 3.5 s: 3.3 m ahead
+  const K_NEAR = 15; // last frame switched on by 3.5 s: 4.2 m ahead
   const onTime = (k: number) => {
     if (k === K_FAR) return 4;
     if (k > K_FAR || k < K_NEAR) return Infinity;
@@ -331,21 +331,21 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
         const f = Math.min(frame, p.duration - 1);
         // Push forward: slow start, steady glide, gentle acceleration into the white.
         const u = clamp01((f - 10) / 170);
-        camZ = -(0.25 * u + 1.35 * u * u * u);
+        camZ = -(0.15 * u + 2.1 * u * u * u * u);
         const build = smooth(105, 162, f);
         for (let k = 0; k < N_FRAMES; k++) {
-          intens[k] = flicker(k, f) * (2.6 + 4 * build);
+          intens[k] = flicker(k, f) * (3.4 + 4 * build);
           cols.push(cA.clone());
         }
         // Lit-frame count drives a faint grey haze at the far end, as in the reference.
         let lit = 0;
         for (let k = 0; k < N_FRAMES; k++) lit += intens[k] > 0.5 ? 1 : 0;
         fogGrey = 0.002 * lit + 0.03 * build;
-        ambient = 0.07 * smooth(0, 60, f) + 0.025 + 1.3 * build * build;
+        ambient = 0.11 * smooth(0, 90, f) + 0.015 + 1.1 * build * build * build;
         exposure *= 1 + 0.7 * smooth(120, 168, f);
         bloomI = 1.2 + 0.6 * build;
         // Lit end wall behind the far frame: a flat, softly lit grey.
-        endU.uLevel.value = Math.min(0.1, 0.007 * lit) * (1 + 1.6 * build);
+        endU.uLevel.value = Math.min(0.05, 0.004 * lit) * (1 + 1.4 * build);
         whiteMix = smooth(156, 168, f);
         if (f >= 168) {
           whiteMix = 1;
@@ -364,7 +364,7 @@ export const buildFrameTunnel = (gl: WebGLRenderer, p: FrameTunnelParams): LookR
           cols.push((mod(k, 2) === 0 ? cA : cB).clone());
         }
       }
-      camera.position.set(0, 0, camZ);
+      camera.position.set(p.mode === "burst" ? -0.08 : 0, p.mode === "burst" ? -0.2 : 0, camZ);
       camera.updateMatrixWorld();
       for (let k = 0; k < N_FRAMES; k++) {
         const c = cols[k];

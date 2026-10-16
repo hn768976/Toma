@@ -40,7 +40,7 @@ export type ScreenCorridorParams = {
 
 const BAY = 0.6;
 const TYPES = 5; // layout repeats every 5 bays = camera travel per loop
-const HALF_AISLE = 1.35;
+const HALF_AISLE = 1.45;
 const RACK_H = 2.62;
 const CEIL_Y = 2.9;
 const N_BEHIND = 4;
@@ -233,32 +233,30 @@ const drawAtlas = () => {
 type Screen = { cell: number; role: 0 | 1 | 2; x: number; y: number; w: number; h: number; anim: number; period: number; phase: number };
 const layoutRng = mulberry32(0x5c4ee7);
 const makeBay = (r: typeof layoutRng): Screen[] => {
+  // Regular shelf rows, as in the reference: every row carries one lit screen
+  // (bar, chart panel or readout) and most rows a magenta-style glyph beside
+  // it. 6-9 screens per bay (an occasional row is left dark).
   const out: Screen[] = [];
-  const rows = [0.3, 0.55, 0.8, 1.05, 1.3, 1.55, 1.8, 2.05, 2.3];
-  // Pick 6-9 screens laid out on the slot rows.
-  const target = 8 + Math.floor(r() * 2);
-  const order = rows.map((y, i) => ({ y, i, k: r() })).sort((a, b) => a.k - b.k);
-  for (const { y } of order) {
-    if (out.length >= target) break;
+  const rows = [0.34, 0.6, 0.86, 1.12, 1.38, 1.64, 1.9, 2.16, 2.42];
+  const dark = new Set<number>();
+  while (dark.size < Math.floor(r() * 3)) dark.add(Math.floor(r() * rows.length));
+  rows.forEach((y, i) => {
+    if (dark.has(i)) return;
     const kind = r();
-    if (kind < 0.42) {
+    if (kind < 0.45) {
       const anim = r() < 0.18 ? 1 : 0;
-      out.push({ cell: Math.floor(r() * 6), role: 0, x: -0.07, y, w: 0.42, h: 0.12, anim, period: pick(r, LOOP_PERIODS), phase: Math.floor(r() * 200) });
-      if (out.length < target && r() < 0.85)
-        out.push({ cell: 12 + Math.floor(r() * 6), role: 2, x: 0.205, y, w: 0.13, h: 0.085, anim: r() < 0.12 ? 4 : 0, period: pick(r, LOOP_PERIODS), phase: Math.floor(r() * 200) });
-    } else if (kind < 0.8) {
+      out.push({ cell: Math.floor(r() * 6), role: 0, x: -0.06, y, w: 0.42, h: 0.13, anim, period: pick(r, LOOP_PERIODS), phase: Math.floor(r() * 200) });
+    } else if (kind < 0.9) {
       const cell = 6 + Math.floor(r() * 6);
       const anim = (cell === 7 || cell === 9) && r() < 0.4 ? 2 : 0;
-      out.push({ cell, role: 1, x: -0.06, y, w: 0.44, h: 0.15, anim, period: pick(r, [150, 200, 300, 600]), phase: Math.floor(r() * 200) });
-      if (out.length < target && r() < 0.8)
-        out.push({ cell: 12 + Math.floor(r() * 6), role: 2, x: 0.215, y, w: 0.11, h: 0.08, anim: 0, period: 100, phase: 0 });
+      out.push({ cell, role: 1, x: -0.06, y, w: 0.42, h: 0.15, anim, period: pick(r, [150, 200, 300, 600]), phase: Math.floor(r() * 200) });
     } else {
-      const tick = r() < 0.5;
-      out.push({ cell: tick ? 18 : 22 + Math.floor(r() * 2), role: 1, x: -0.12, y, w: 0.24, h: 0.095, anim: tick ? 3 : 0, period: pick(r, [60, 75, 100, 120]), phase: Math.floor(r() * 200) });
-      if (out.length < target)
-        out.push({ cell: Math.floor(r() * 6), role: 0, x: 0.13, y, w: 0.24, h: 0.08, anim: 0, period: 100, phase: 0 });
+      const tick = r() < 0.6;
+      out.push({ cell: tick ? 18 : 22 + Math.floor(r() * 2), role: 1, x: -0.1, y, w: 0.3, h: 0.11, anim: tick ? 3 : 0, period: pick(r, [60, 75, 100, 120]), phase: Math.floor(r() * 200) });
     }
-  }
+    if (r() < 0.8)
+      out.push({ cell: 12 + Math.floor(r() * 6), role: 2, x: 0.215, y, w: 0.15, h: 0.1, anim: r() < 0.1 ? 4 : 0, period: pick(r, LOOP_PERIODS), phase: Math.floor(r() * 200) });
+  });
   return out;
 };
 // Separate layouts for the left and right walls; each repeats every 5 bays.
@@ -295,10 +293,11 @@ varying vec4 vAnim;
 varying float vDist;
 const vec2 GRID = vec2(6.0, 4.0);
 void main() {
-  float cell = vCell.x;
-  float anim = vCell.z;
-  float period = vAnim.x;
-  float t = mod(uFrame + vAnim.y, period) / period; // exact: period divides 600
+  // Varyings are interpolated: round the per-instance integers back.
+  float cell = floor(vCell.x + 0.5);
+  float anim = floor(vCell.z + 0.5);
+  float period = floor(vAnim.x + 0.5);
+  float t = mod(uFrame + floor(vAnim.y + 0.5), period) / period; // exact: period divides 600
   if (anim > 2.5 && anim < 3.5) cell += floor(t * 4.0); // digits tick
   vec2 uv = vUv;
   vec2 uvRaw = uv;
@@ -335,21 +334,21 @@ const drawRackFace = (seed: number) => {
   const emi = makeCanvas(W, H);
   const ctx = alb.ctx;
   const r = mulberry32(seed);
-  ctx.fillStyle = "#1a1d22";
+  ctx.fillStyle = "#0c0e11";
   ctx.fillRect(0, 0, W, H);
   emi.ctx.fillStyle = "#000";
   emi.ctx.fillRect(0, 0, W, H);
   for (let y = 0; y < H; y += 50) {
-    ctx.fillStyle = "#24282e";
+    ctx.fillStyle = "#15181c";
     ctx.fillRect(6, y + 2, W - 12, 46);
     if (r() < 0.7) {
-      ctx.fillStyle = "#0d0f12";
+      ctx.fillStyle = "#050607";
       for (let vy = y + 7; vy < y + 44; vy += 5) for (let vx = 12 + ((vy / 5) % 2) * 2.5; vx < W - 12; vx += 5) ctx.fillRect(vx, vy, 2.5, 2.5);
     }
     ctx.fillStyle = "#0b0c0e";
     ctx.fillRect(0, y, W, 2);
     // A row of tiny LEDs on some units.
-    if (r() < 0.6) {
+    if (r() < 0.15) {
       const n = 3 + Math.floor(r() * 6);
       const x0 = 14 + r() * 60;
       for (let k = 0; k < n; k++) {
@@ -366,14 +365,14 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   RectAreaLightUniformsLib.init();
   const size = gl.getDrawingBufferSize(new Vector2());
   const scene = new Scene();
-  scene.background = new Color(0x000000);
-  scene.fog = new Fog(0x000000, 30, 95);
+  scene.background = new Color(0x0b1a26);
+  scene.fog = new Fog(0x0b1a26, 26, 90);
   const pmrem = new PMREMGenerator(gl);
   const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = env;
   scene.environmentIntensity = 0.35;
 
-  const camera = new PerspectiveCamera(64, 16 / 9, 0.05, 100);
+  const camera = new PerspectiveCamera(66, 16 / 9, 0.15, 100);
   const camY = 1.3;
 
   const nBay = N_BEHIND + N_AHEAD;
@@ -431,7 +430,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
         // Local x across the bay (toward +z on the left wall).
         const zc = zOf(i) + (side < 0 ? s.x : -s.x);
         const m = new Matrix4().compose(
-          new Vector3(side * (HALF_AISLE - 0.004), s.y, zc),
+          new Vector3(side * (HALF_AISLE - 0.015), s.y, zc),
           sideRot(side),
           new Vector3(s.w, s.h, 1),
         );
@@ -466,7 +465,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   scene.add(screenMesh);
 
   // ---- Ceiling and tubes ------------------------------------------------------
-  const ceilMat = new MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6, metalness: 0.2 });
+  const ceilMat = new MeshStandardMaterial({ color: 0x15191d, roughness: 0.6, metalness: 0.2 });
   const ceil = new Mesh(new PlaneGeometry(2 * HALF_AISLE + 0.2, len), ceilMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.set(0, CEIL_Y, zMid);
@@ -475,10 +474,10 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   for (let n = 0; n < ribs.count; n++) ribs.setMatrixAt(n, new Matrix4().makeTranslation(0, CEIL_Y - 0.02, zNear - n * 1.2));
   ribs.frustumCulled = false;
   scene.add(ribs);
-  const tubeMat = new MeshBasicMaterial({ color: new Color(1, 1, 1).multiplyScalar(3) });
-  for (const x of [-0.72, 0.72]) {
+  const tubeMat = new MeshBasicMaterial({ color: new Color(1, 1, 1).multiplyScalar(4), fog: false });
+  for (const x of [-0.9, 0.9]) {
     const tube = new Mesh(new BoxGeometry(0.03, 0.02, len), tubeMat);
-    tube.position.set(x, CEIL_Y - 0.03, zMid);
+    tube.position.set(x, CEIL_Y - 0.08, zMid);
     scene.add(tube);
     const l = new RectAreaLight(0xffffff, 4.0, 0.06, 70);
     l.position.set(x, CEIL_Y - 0.05, -30);
@@ -513,15 +512,15 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
   const refl = new PlanarReflection(size.x / 2, size.y / 2, 0);
   const floorColor = new Color(p.floor);
   const { material: floorMat, uniforms: floorU } = makeReflectiveFloorMaterial({
-    color: floorColor.clone().multiplyScalar(0.75),
+    color: floorColor.clone().multiplyScalar(0.55),
     roughness: 0.35,
     metalness: 0.1,
     reflection: refl,
-    reflectStrength: 0.5,
-    blur: 0.012,
-    lod: 2.4,
+    reflectStrength: 0.9,
+    blur: 0.01,
+    lod: 2.6,
     tile: [0.6, 0.6],
-    seamDarken: 0.1,
+    seamDarken: 0.18,
     tileVariation: 0.03,
     aoX: HALF_AISLE,
     aoWidth: 0.15,
@@ -535,7 +534,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
 
   const pipe = makePipeline(gl, scene, camera, {
     grade: p.grade,
-    bloom: { threshold: 0.85, smoothing: 0.35, intensity: 0.75, radius: 0.72 },
+    bloom: { threshold: 0.7, smoothing: 0.35, intensity: 0.85, radius: 0.72 },
   });
 
   return {
@@ -543,7 +542,7 @@ export const buildScreenCorridor = async (gl: WebGLRenderer, p: ScreenCorridorPa
       const f = mod(frame, p.loop);
       const camZ = -(f / p.loop) * TYPES * BAY; // exactly 5 bays per loop, no sway
       camera.position.set(0, camY, camZ);
-      camera.lookAt(0, camY, camZ - 10);
+      camera.lookAt(0, camY - 0.5, camZ - 10); // slight down tilt: vanishing point above centre
       camera.updateMatrixWorld();
       endWall.position.set(0, CEIL_Y / 2, camZ - 52);
       screenMat.uniforms.uFrame.value = f;

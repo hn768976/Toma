@@ -83,7 +83,7 @@ const BAY_LAYOUTS: BayLayout[] = Array.from({ length: TYPES }, (_, t) => {
     ["1u", "2u", "blank", "1u", "4u", "1u", "1u"],
     ["2u", "1u", "1u", "2u", "cable", "2u", "1u"],
   ];
-  const silverBias = [0.85, 0.5, 0.75, 0.4, 0.7, 0.55, 0.8][t];
+  const silverBias = [0.45, 0.25, 0.4, 0.2, 0.35, 0.3, 0.4][t];
   units.push({ kind: "patch", u: 1, silver: false, seed: Math.floor(r() * 1e9) });
   used += 1;
   units.push({ kind: "switch", u: 1, silver: false, seed: Math.floor(r() * 1e9) });
@@ -187,9 +187,9 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
   const plate = (yy: number, h: number, silver: boolean) => {
     const g = a.createLinearGradient(0, yy, 0, yy + h);
     if (silver) {
-      g.addColorStop(0, "#9da2a8");
-      g.addColorStop(0.5, "#7e8389");
-      g.addColorStop(1, "#5f6368");
+      g.addColorStop(0, "#80858b");
+      g.addColorStop(0.5, "#62676d");
+      g.addColorStop(1, "#45494e");
     } else {
       g.addColorStop(0, "#3a3d42");
       g.addColorStop(0.5, "#2a2c30");
@@ -232,10 +232,10 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
           a.fillRect(cx + 1, yy + 6, cw - 2, h - 12);
           a.fillStyle = "rgba(0,0,0,0.5)";
           for (let gy = yy + 9; gy < yy + h - 9; gy += 4) a.fillRect(cx + 3, gy, cw - 10, 2);
-          if (r() < 0.45) led(r, cx + cw - 7, yy + 9, 3, 3, r() < 0.7 ? ledB : ledA, 0.3);
+          if (r() < 0.45) led(r, cx + cw - 7, yy + 9, 3, 3, r() < 0.4 ? ledB : ledA, 0.3);
         }
         const xr = x0 + ww * 0.64;
-        if (r() < 0.1) lcd(r, xr + 4, yy + 10, ww * 0.16, h - 20, r() < 0.6 ? ledA : ledB);
+        if (r() < 0.16) lcd(r, xr + 4, yy + 10, ww * 0.16, h - 20, r() < 0.6 ? ledA : ledB);
         else label(xr + 4, yy + 12, ww * 0.16, h - 24);
         vent(xr + ww * 0.18, yy + 6, ww * 0.17, h - 12, unit.silver ? "#5c6066" : "#1b1c1f");
         led(r, x1 - 8, yy + h / 2 - 2, 4, 4, ledA, 0.25);
@@ -252,9 +252,9 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
             const cy = yy + 6 + row * (h / 2 - 3);
             a.fillStyle = unit.silver ? "#4b4f55" : "#151619";
             a.fillRect(cx + 1, cy, cw - 2, h / 2 - 9);
-            a.fillStyle = "#3e66b8";
+            a.fillStyle = "#6a5ad8";
             a.fillRect(cx + 4, cy + 3, cw * 0.3, 5);
-            if (r() < 0.5) led(r, cx + cw - 8, cy + 4, 3, 3, r() < 0.6 ? ledB : ledA, 0.35);
+            if (r() < 0.5) led(r, cx + cw - 8, cy + 4, 3, 3, r() < 0.35 ? ledB : ledA, 0.35);
           }
         const xr = x0 + ww * 0.58;
         if (r() < 0.2) lcd(r, xr + 6, yy + h * 0.25, ww * 0.2, h * 0.38, r() < 0.55 ? ledA : ledB);
@@ -278,7 +278,7 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
             a.fillRect(cx + 2, cy + 1, cw - 4, ch - 2);
             a.fillStyle = "rgba(0,0,0,0.45)";
             for (let gx = cx + 6; gx < cx + cw - 20; gx += 5) a.fillRect(gx, cy + 5, 2, ch - 10);
-            a.fillStyle = "#3e66b8";
+            a.fillStyle = "#6a5ad8";
             a.fillRect(cx + cw - 16, cy + 5, 8, ch - 10);
             led(r, cx + cw - 15, cy + 6, 4, 4, r() < 0.5 ? ledB : ledA, 0.4);
           }
@@ -318,7 +318,7 @@ const drawFaceplate = (t: number, ledA: string, ledB: string) => {
         // Coloured patch leads at the bottom, as in the reference.
         a.fillStyle = "#0c0d0f";
         a.fillRect(20, yy + 1, TW - 40, h - 2);
-        const cols = ["#7a3030", "#8a7838", "#34508a", "#3a6a48", "#8a8a8a", "#202224"];
+        const cols = ["#5a2a2a", "#6a5e34", "#2c4070", "#2e5038", "#6a6a6a", "#1a1b1d", "#1a1b1d"];
         for (let k = 0; k < 30; k++) {
           a.fillStyle = cols[Math.floor(r() * cols.length)];
           a.fillRect(56 + k * 15, yy + h * 0.3, 8, h * 0.45);
@@ -399,13 +399,14 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   scene.environment = env;
   scene.environmentIntensity = 0.3;
 
-  const camera = new PerspectiveCamera(42, 16 / 9, 0.05, 80);
+  const camera = new PerspectiveCamera(44, 16 / 9, 0.05, 80);
   // Low camera (0.9 m) looking slightly up, about 35 degrees to the row.
   // Rack fronts are turned ~35 degrees away from facing the camera.
-  camera.position.set(0, 0.9, 2.75);
-  camera.lookAt(new Vector3(2.45, 1.24, 0));
+  camera.position.set(0, 0.72, 2.55);
+  camera.lookAt(new Vector3(1.85, 1.1, 0));
   camera.updateMatrixWorld();
 
+  let tileU: { uTileOffset: { value: Vector2 } } | null = null;
   const world = new Group(); // everything that scrolls with the truck
   scene.add(world);
 
@@ -417,10 +418,11 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   const chrome = new MeshStandardMaterial({ color: 0xb8bec6, roughness: 0.18, metalness: 1.0 });
   const glassMat = new MeshStandardMaterial({
     color: 0x0a0d10,
-    roughness: 0.06,
+    envMapIntensity: 1.2,
+    roughness: 0.16,
     metalness: 0.85,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.25,
     depthWrite: false,
   });
 
@@ -444,13 +446,13 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   const plateGeo = new PlaneGeometry(OPEN_W, OPEN_H);
   plateGeo.translate(0, OPEN_Y0 + OPEN_H / 2, -0.05);
   const handleGeo = makeHandleGeometry();
-  handleGeo.translate(OPEN_W / 2 - 0.035, OPEN_Y0 + OPEN_H * 0.55, 0.0);
+  handleGeo.translate(-OPEN_W / 2 + 0.03, OPEN_Y0 + OPEN_H * 0.62, 0.0);
 
   const bodies = new InstancedMesh(bodyGeo, black, nBays);
   const bezels = new InstancedMesh(bezelGeo, bezelMat, nBays);
   const chromes = new InstancedMesh(chromeGeo, chrome, nBays);
   const glasses = new InstancedMesh(glassGeo, glassMat, nBays);
-  const handles = new InstancedMesh(handleGeo, chrome, nBays);
+  const handles = new InstancedMesh(handleGeo, new MeshStandardMaterial({ color: 0x2c2e32, roughness: 0.35, metalness: 0.9 }), nBays);
   const mtx = new Matrix4();
   for (let k = 0; k < nBays; k++) {
     mtx.makeTranslation((firstBay + k) * BAY, 0, 0);
@@ -473,7 +475,7 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
       emissiveMap: canvasTexture(gl, emi, true),
       blinkMap: canvasTexture(gl, msk, false),
       emissive: new Color(1, 1, 1),
-      emissiveIntensity: 1.9,
+      emissiveIntensity: 3.2,
       roughness: 0.5,
       metalness: 0.2,
     });
@@ -514,11 +516,11 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   // --- Floor ---------------------------------------------------------------
   const refl = new PlanarReflection(size.x / 2, size.y / 2, 0);
   const { material: floorMat, uniforms: floorU } = makeReflectiveFloorMaterial({
-    color: new Color(0.78, 0.8, 0.82),
+    color: new Color(0.86, 0.87, 0.88),
     roughness: 0.32,
     metalness: 0.0,
     reflection: refl,
-    reflectStrength: 0.32,
+    reflectStrength: 0.5,
     blur: 0.012,
     tile: [0.6, 0.6],
     seamDarken: 0.14,
@@ -538,6 +540,27 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   ceil.rotation.x = Math.PI / 2;
   ceil.position.set(10, CEIL_Y + 0.04, 0);
   scene.add(ceil);
+  // Ceiling structure: cable trays over the racks and the aisle, and a
+  // ceiling-tile grid, so the space above the row is not a void.
+  const trayMat = new MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.45, metalness: 0.8 });
+  for (const [y, z, w] of [[2.42, -0.45, 0.45], [2.7, 0.9, 0.35], [2.55, -1.2, 0.3]] as const) {
+    const tray = new Mesh(new BoxGeometry(120, 0.07, w), trayMat);
+    tray.position.set(10, y, z);
+    scene.add(tray);
+  }
+  const tileMat = makeReflectiveFloorMaterial({
+    color: new Color(0.035, 0.037, 0.04),
+    roughness: 0.8,
+    reflection: refl,
+    reflectStrength: 0,
+    blur: 0,
+    tile: [0.6, 0.6],
+    seamDarken: 0.6,
+    tileVariation: 0.1,
+  });
+  ceil.material = tileMat.material;
+  ceil.material.side = DoubleSide;
+  tileU = tileMat.uniforms;
   // Fill light from the aisle so the rack fronts read.
   const fill = new RectAreaLight(0xdfe8ff, 1.2, 10, 2.5);
   fill.position.set(3, 1.4, 4.5);
@@ -547,9 +570,9 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   // so the near rack fronts and glass catch a broad highlight.
   // Placed where its mirror image lands on the near doors' glass, so the
   // camera sees a broad warm glint there (as in the reference).
-  const key = new RectAreaLight(0xfff2e0, 22, 1.6, 0.8);
-  key.position.set(0.35, 2.55, 2.1);
-  key.lookAt(0.6, 1.4, 0);
+  const key = new RectAreaLight(0xf2f4f8, 26, 2.6, 1.3);
+  key.position.set(0.5, 2.75, 2.2);
+  key.lookAt(0.4, 1.5, 0);
   scene.add(key);
 
   // --- Post ----------------------------------------------------------------
@@ -562,7 +585,7 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
   const pipe = makePipeline(gl, scene, camera, {
     grade: p.grade,
     bloom: { threshold: 1.1, smoothing: 0.35, intensity: 0.75, radius: 0.62 },
-    dof: { focusDistance: focusDist, focusRange: 2.2, bokehScale: 2.6 },
+    dof: { focusDistance: focusDist, focusRange: 2.0, bokehScale: 2.1 },
   });
 
   const travel = TYPES * BAY; // exactly 7 bays per loop
@@ -573,6 +596,7 @@ export const buildServerAisle = (gl: WebGLRenderer, p: ServerAisleParams): LookR
       const shift = u * travel;
       world.position.x = -shift; // camera trucks toward +x: racks slide left
       floorU.uTileOffset.value.set(shift, 0);
+      tileU?.uTileOffset.value.set(shift, 0);
       for (const { u: uni, t } of blinkUniforms) {
         const gs = BAY_LAYOUTS[t].groups;
         uni.value.set(

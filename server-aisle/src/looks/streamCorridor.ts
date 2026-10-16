@@ -49,7 +49,7 @@ const TH = 1280;
 type CabLayout = { cols: { x: number; dots: { y: number; c: number; g: number }[] }[]; groups: { p: number; ph: number }[] };
 const CAB_LAYOUTS: CabLayout[] = Array.from({ length: TYPES }, (_, t) => {
   const r = mulberry32(0xc0ffee + t * 131);
-  const nCols = 7 + Math.floor(r() * 4);
+  const nCols = 12 + Math.floor(r() * 5);
   const cols: CabLayout["cols"] = [];
   for (let i = 0; i < nCols; i++) {
     const x = 34 + ((TW - 68) * (i + 0.5 + (r() - 0.5) * 0.3)) / nCols;
@@ -59,11 +59,11 @@ const CAB_LAYOUTS: CabLayout[] = Array.from({ length: TYPES }, (_, t) => {
       // Runs of lit dots with gaps, like the reference.
       if (r() < 0.8) {
         const cRoll = r();
-        const c = cRoll < 0.72 ? 0 : cRoll < 0.9 ? 1 : 2; // blue, white, amber
+        const c = cRoll < 0.62 ? 0 : cRoll < 0.82 ? 1 : 2; // blue, white, amber
         const g = r() < 0.33 ? 1 + Math.floor(r() * 3) : 0;
         dots.push({ y, c, g });
       }
-      y += 11 + (r() < 0.12 ? 26 : 0);
+      y += 8 + (r() < 0.1 ? 22 : 0);
     }
     cols.push({ x, dots });
   }
@@ -84,12 +84,12 @@ const drawCabinet = (t: number) => {
   emi.ctx.fillRect(0, 0, TW, TH);
   msk.ctx.fillStyle = "#000";
   msk.ctx.fillRect(0, 0, TW, TH);
-  const colors = ["#2f7cff", "#d6ecff", "#ffb43a"];
+  const colors = ["#2fb8ff", "#d6f0ff", "#ffb43a"];
   for (const col of CAB_LAYOUTS[t].cols)
     for (const d of col.dots) {
       emi.ctx.fillStyle = colors[d.c];
       emi.ctx.globalAlpha = d.c === 0 ? 0.95 : 1;
-      emi.ctx.fillRect(col.x - 4, d.y - 3, 8, 5);
+      emi.ctx.fillRect(col.x - 2.5, d.y - 2, 5, 4);
       emi.ctx.globalAlpha = 1;
       if (d.g) {
         msk.ctx.fillStyle = d.g === 1 ? "#ff0000" : d.g === 2 ? "#00ff00" : "#0000ff";
@@ -98,7 +98,7 @@ const drawCabinet = (t: number) => {
     }
   // A few small horizontal indicator bars.
   const r = mulberry32(0xbeef + t);
-  for (let k = 0; k < 6; k++) {
+  for (let k = 0; k < 0; k++) {
     emi.ctx.fillStyle = "rgba(120,190,255,0.6)";
     emi.ctx.fillRect(40 + r() * (TW - 140), 60 + r() * (TH - 120), 40 + r() * 50, 3);
   }
@@ -191,7 +191,7 @@ void main() {
   float dash = smoothstep(0.0, 0.015, x) * exp(-x * vTail);
   float I = (vBase + 1.9 * dash) * vBright;
   float prof = exp(-vAcross * vAcross * 3.0);
-  vec3 c = mix(uColor, vec3(1.0), smoothstep(1.2, 3.0, I * prof)) * I * prof;
+  vec3 c = mix(uColor, vec3(1.0), smoothstep(0.7, 2.2, I * prof)) * I * prof;
   c *= exp(-vDist * 0.035);
   gl_FragColor = vec4(c, 1.0);
 }
@@ -207,17 +207,17 @@ const RIBBONS: Ribbon[] = (() => {
   for (let g = 0; g < 4; g++) {
     const side = g % 2 === 0 ? -1 : 1;
     const n = 3 + Math.floor(r() * 3);
-    const y0 = range(r, 0.3, 2.0);
+    const y0 = range(r, 0.75, 1.55);
     const x = side * (HALF_AISLE - 0.07 - 0.06 * r());
     const cycles = (r() < 0.7 ? 1 : -1) * pick(r, [2, 3]);
-    for (let k = 0; k < n && list.length < 18; k++)
+    for (let k = 0; k < n && list.length < 12; k++)
       list.push({
         a: [0, x - side * 0.015 * k, y0 + k * range(r, 0.04, 0.07), 0],
         b: [0, 0, 0.009, 0.3],
         c: [pick(r, dashKs), cycles, range(r, 4, 8), range(r, 1.2, 1.7)],
       });
   }
-  while (list.length < 20) {
+  while (list.length < 14) {
     const side = list.length % 2 === 0 ? -1 : 1;
     list.push({
       a: [0, side * (HALF_AISLE - 0.08 - 0.1 * r()), range(r, 0.15, 2.35), 0],
@@ -225,18 +225,20 @@ const RIBBONS: Ribbon[] = (() => {
       c: [pick(r, dashKs), pick(r, [2, 3]), range(r, 4, 8), range(r, 1.0, 1.4)],
     });
   }
-  // Big smooth S-curves and hairpin loops in the plane of the cabinet faces.
-  for (let i = 0; i < 8; i++) {
+  // Gentle S-swoops in the plane of the cabinet faces (non-looping), plus
+  // two hooks that make a single loop near the near frames.
+  for (let i = 0; i < 7; i++) {
     const side = i % 2 === 0 ? -1 : 1;
-    const R = range(r, 0.35, 0.7);
+    const hook = i >= 5;
+    const R = hook ? range(r, 0.22, 0.28) : range(r, 0.12, 0.26);
     list.push({
-      a: [3, side * (HALF_AISLE - 0.12 - 0.12 * r()), range(r, 0.8, 1.6), R],
-      b: [pick(r, [1, 2]), r() * 6.28, 0.009, 0.22],
+      a: [3, side * (HALF_AISLE - 0.12 - 0.1 * r()), range(r, 0.85, 1.55), R],
+      b: [hook ? 2 : 1, r() * 6.28, 0.009, 0.22],
       c: [pick(r, [1, 2]), (i % 3 ? 1 : -1) * 2, range(r, 4, 7), range(r, 1.1, 1.5)],
     });
   }
   // Curves sweeping across the floor near the walls.
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 1; i++) {
     const side = i % 2 === 0 ? -1 : 1;
     const R = range(r, 0.3, 0.45);
     list.push({
@@ -252,8 +254,8 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
   const size = gl.getDrawingBufferSize(new Vector2());
   const scene = new Scene();
   // Background = fog colour, so the far end reads as a dim blue doorway.
-  scene.background = new Color("#0c2350");
-  scene.fog = new FogExp2(new Color("#0c2350").getHex(), 0.035);
+  scene.background = new Color("#14325e");
+  scene.fog = new FogExp2(new Color("#14325e").getHex(), 0.05);
   const pmrem = new PMREMGenerator(gl);
   const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = env;
@@ -276,7 +278,7 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
     opacity: 0.32,
     depthWrite: false,
   });
-  const edgeColor = new Color(p.edge).multiplyScalar(2.2);
+  const edgeColor = new Color(p.edge).multiplyScalar(3.2);
   const edgeMat = new MeshBasicMaterial({ color: edgeColor });
   // Local cabinet frame: front face in the plane x = 0 facing +x, centred on z.
   const bodyGeo = new BoxGeometry(CAB_D, CAB_H, PITCH - 0.01);
@@ -366,15 +368,26 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
   const len = zNear - zFar;
   const zMid = (zNear + zFar) / 2;
   const darkMat = new MeshStandardMaterial({ color: 0x18222f, roughness: 0.6, metalness: 0.3 });
+  const beamMat = new MeshStandardMaterial({ color: 0x2c3a4e, roughness: 0.5, metalness: 0.4 });
   const ceil = new Mesh(new PlaneGeometry(2 * HALF_AISLE + 2, len), darkMat);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.set(0, CEIL_Y, zMid);
   scene.add(ceil);
   // Cross beams every 1.4 m (two per loop period).
-  const beams = new InstancedMesh(new BoxGeometry(2 * HALF_AISLE, 0.12, 0.14), darkMat, Math.ceil(len / 1.4));
+  const beams = new InstancedMesh(new BoxGeometry(2 * HALF_AISLE, 0.12, 0.14), beamMat, Math.ceil(len / 1.4));
   for (let k = 0; k < beams.count; k++) beams.setMatrixAt(k, new Matrix4().makeTranslation(0, CEIL_Y - 0.08, zNear - k * 1.4));
   beams.frustumCulled = false;
   scene.add(beams);
+  // Short white light bars across the ceiling every 2.8 m (one per loop period).
+  const barMat = new MeshBasicMaterial({ color: new Color(p.edge).multiplyScalar(1.0) });
+  const bars = new InstancedMesh(new BoxGeometry(0.5, 0.015, 0.05), barMat, Math.ceil(len / 2.8) * 2);
+  for (let k = 0; k < bars.count; k++)
+    bars.setMatrixAt(k, new Matrix4().makeTranslation(k % 2 ? 0.45 : -0.45, CEIL_Y - 0.15, zNear - Math.floor(k / 2) * 2.8 - 0.7));
+  bars.frustumCulled = false;
+  scene.add(bars);
+  // Lit doorway at the far end, travelling with the camera (no parallax at 38 m).
+  const door = new Mesh(new PlaneGeometry(1.1, 2.0), new MeshBasicMaterial({ color: new Color(0.75, 0.85, 1).multiplyScalar(0.9), fog: false }));
+  scene.add(door);
   // White light strips toward the vanishing point.
   const stripMat = new MeshBasicMaterial({ color: new Color(p.edge).multiplyScalar(2.6) });
   for (const x of [-0.92, 0.92]) {
@@ -434,11 +447,11 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
   // ---- Floor ----------------------------------------------------------------
   const refl = new PlanarReflection(size.x / 2, size.y / 2, 0);
   const { material: floorMat, uniforms: floorU } = makeReflectiveFloorMaterial({
-    color: new Color(0.008, 0.014, 0.035),
+    color: new Color(0.003, 0.006, 0.014),
     roughness: 0.3,
     metalness: 0.2,
     reflection: refl,
-    reflectStrength: 0.38,
+    reflectStrength: 0.22,
     blur: 0.006,
     lod: 1.2,
     aoX: HALF_AISLE,
@@ -471,6 +484,7 @@ export const buildStreamCorridor = (gl: WebGLRenderer, p: StreamCorridorParams):
       camera.updateMatrixWorld();
       // Ribbons are built in camera-relative depth; follow the camera's z.
       ribbonGroup.position.z = camZ;
+      door.position.set(0, 1.0, camZ - 38);
       ribbonMat.uniforms.uT.value = u;
       floorU.uTileOffset.value.set(0, 0);
       for (const { u: uni, t } of blinkU) {

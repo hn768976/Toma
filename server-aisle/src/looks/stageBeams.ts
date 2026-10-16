@@ -82,7 +82,7 @@ float beam(vec2 p, vec2 L, float ang, out float along, out float acrossN) {
   float w = 0.012 + max(along, 0.0) * 0.095;
   acrossN = across / w;
   float cone = exp(-acrossN * acrossN * 1.4);
-  float fall = 0.42 / (0.2 + along * along * 2.2);
+  float fall = 0.42 / (0.16 + along * along * 2.6);
   return along > 0.0 ? cone * fall : 0.0;
 }
 
@@ -99,23 +99,29 @@ void main() {
   // Two lamps just above the top edge. Their beams cross a little above the
   // frame (they "drift in and out of crossing" as they sway) and diverge into
   // two separate cones with a dark gap between the lamp heads.
-  vec2 L1 = vec2(cx + 0.049, 1.35);
-  vec2 L2 = vec2(cx - 0.049, 1.35);
+  vec2 L1 = vec2(cx + 0.075, 1.35);
+  vec2 L2 = vec2(cx - 0.045, 1.35);
   float al1, an1, al2, an2;
   float b1 = beam(p, L1, uA1, al1, an1);
   float b2 = beam(p, L2, uA2, al2, an2);
   // Beams fade out by about half height, as in the reference.
-  float floorCut = smoothstep(0.07, 0.17, p.y) * (0.25 + 0.75 * smoothstep(0.25, 0.75, p.y));
+  float floorCut = smoothstep(0.07, 0.17, p.y) * (0.08 + 0.92 * smoothstep(0.32, 0.85, p.y));
   float beams = (b1 + b2) * floorCut;
   vec3 col = uBg;
   // Navy haze lift across the frame.
-  col += uBeam * 0.022 * (0.6 + 0.6 * smoke);
-  col += uBeam * beams * (0.2 + 0.8 * smoke) * 0.6;
+  col += uBeam * 0.007 * (0.5 + 0.8 * smoke);
+  // Faint drifting wisps everywhere (ridged noise), strongest right of centre.
+  float ridge = 1.0 - abs(sm * 1.6);
+  ridge = ridge * ridge * ridge * ridge * ridge * ridge;
+  col += uBeam * 0.014 * ridge * (0.5 + 0.8 * exp(-pow((p.x - cx - 0.35) / 0.4, 2.0)));
+  col += uBeam * beams * (0.2 + 0.8 * smoke) * 1.0;
   // Small warm cores at the very top of each beam (the lamp heads).
-  float top = exp(-max(1.0 - p.y, 0.0) / 0.055);
+  float top = exp(-max(1.0 - p.y, 0.0) / 0.035);
   float fr1 = top * exp(-an1 * an1 * 0.9) * step(0.0, al1);
   float fr2 = top * exp(-an2 * an2 * 0.9) * step(0.0, al2);
-  col += uFringe * (fr1 * 0.5 + fr2 * 0.8) * 0.5;
+  col += uFringe * (fr1 * 0.75 + fr2 * 1.0) * 0.85;
+  // Cool glow at the top centre, between and behind the lamp heads.
+  col += mix(uBeam, vec3(1.0), 0.2) * 0.06 * exp(-pow((p.x - cx) / 0.16, 2.0)) * exp(-max(1.0 - p.y, 0.0) / 0.12);
   float head = exp(-max(1.0 - p.y, 0.0) / 0.12);
   col += mix(uBeam, vec3(1.0), 0.35) * (exp(-an1 * an1 * 1.5) + exp(-an2 * an2 * 1.5)) * head * 0.12;
 
@@ -132,16 +138,20 @@ void main() {
   float hit2 = L2.x + (L2.y - 0.13) * tan(uA2);
   float band = exp(-pow((y - 0.14) / 0.04, 2.0));
   float spread = exp(-pow((p.x - cx) / (A * 0.4), 4.0));
-  float under = exp(-pow((p.x - hit1) / 0.25, 2.0)) + exp(-pow((p.x - hit2) / 0.25, 2.0));
+  float under = 1.5 * (exp(-pow((p.x - hit1) / 0.2, 2.0)) + exp(-pow((p.x - hit2) / 0.2, 2.0)));
   float poolTex = fbm(vec2(p.x * 0.7, p.y * 3.0) + vec2(5.0, 0.0), 3.0, uT, uT, 3, 2);
   float mott = fbm(vec2(p.x * 1.6, p.y * 5.0) + vec2(1.3, 0.0), 3.0, uT, uT, 3, 2);
-  float pool = band * spread * (0.3 + 0.9 * under) * clamp(0.5 + 1.6 * poolTex + 0.9 * mott, 0.05, 1.9);
-  col += uPool * pool * 0.7;
+  float pool = band * spread * (0.3 + 0.9 * under) * clamp(0.45 + 2.2 * poolTex + 1.3 * mott, 0.0, 2.2);
+  col += uPool * pool * 1.6;
   // Dim haze continues below the pool.
   col += uPool * 0.035 * smoothstep(0.16, 0.0, y) * spread * clamp(0.6 + poolTex, 0.0, 1.5);
   // Heavy vignette, but keep the lamp heads at the top centre bright.
   vec2 vq = vec2((p.x - cx) / A, y - 0.6);
-  col *= mix(1.0, 0.4, smoothstep(0.3, 0.8, length(vq * vec2(1.25, 1.0))));
+  col *= mix(1.0, 0.32, smoothstep(0.28, 0.75, length(vq * vec2(1.35, 1.0))));
+  // Sparse dust specks drifting with the smoke (fixed formula of position and loop phase).
+  vec2 sp = floor(vUv * uRes / 2.0);
+  float spk = fract(sin(dot(sp + floor(vec2(0.0, uT * 60.0)), vec2(12.9898, 78.233))) * 43758.5453);
+  col += uBeam * 0.05 * step(0.9985, spk) * (0.4 + smoke);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -187,8 +197,8 @@ export const buildStageBeams = (gl: WebGLRenderer, p: StageBeamsParams): LookRun
       const f = mod(frame, p.loop);
       // Each beam swings +-6 degrees on a cosine: periods 600 and 300 frames.
       // Beam 1 (from the right lamp) points down-left, beam 2 down-right.
-      mat.uniforms.uA1.value = -26 * deg + 6 * deg * Math.cos((2 * Math.PI * f) / 600);
-      mat.uniforms.uA2.value = 26 * deg + 6 * deg * Math.cos((2 * Math.PI * mod(f, 300)) / 300 + 1.1);
+      mat.uniforms.uA1.value = -30 * deg + 6 * deg * Math.cos((2 * Math.PI * f) / 600);
+      mat.uniforms.uA2.value = 30 * deg + 6 * deg * Math.cos((2 * Math.PI * mod(f, 300)) / 300 + 1.1);
       mat.uniforms.uT.value = f / p.loop;
       pipe.final.set("seed", f);
       pipe.render();
