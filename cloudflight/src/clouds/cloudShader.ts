@@ -122,7 +122,8 @@ float densityAt(vec3 p, vec2 wt, bool full, float lod, float hf) {
     float prof = profile(h);
     // Far clouds sample a broader version of the base shape: wide, rounded
     // distant cumulus instead of thin spires.
-    float farS = 1.0 + 1.2 * ss(1500.0, 7000.0, length(p.xz - uCamPos.xz));
+    // (Flight only: the sea loop needs the base noise to keep its tile period.)
+    float farS = uStory < 0.5 ? 1.0 + 1.2 * ss(1500.0, 7000.0, length(p.xz - uCamPos.xz)) : 1.0;
     vec4 n = texture(uBase, (p + uWind) / (uLB * farS));
     float lowFbm = n.g * 0.625 + n.b * 0.25 + n.a * 0.125;
     float base = sat(remap(n.r, lowFbm - 1.0, 1.0, 0.0, 1.0));
