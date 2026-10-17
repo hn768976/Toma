@@ -35,19 +35,23 @@ def longest_run(v):
         best = max(best, cur)
     return best
 
-frame = int(sys.argv[1]) if len(sys.argv) > 1 else 300
-os.makedirs("out/verify/banding", exist_ok=True)
-for name, lines in LINES.items():
-    mp4 = f"out/previews/{name}.mp4"
-    png = f"out/verify/banding/{name}-{frame}.png"
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", mp4, "-vf", f"select=eq(n\\,{frame})", "-frames:v", "1", png], check=True)
-    im = Image.open(png).convert("RGB")
-    for label, a, b in lines:
-        px = sample(im, a, b)
-        out = []
-        for c, ch in enumerate("RGB"):
-            v = [p[c] for p in px]
-            m = runmed(v)
-            jump = max(abs(m[i] - m[i - 1]) for i in range(1, len(m)))
-            out.append(f"{ch}:{min(v)}-{max(v)} run{longest_run(v)} medjump{jump:g}")
-        print(f"{name:20s} {label:14s} " + " | ".join(out))
+def main():
+  frame = int(sys.argv[1]) if len(sys.argv) > 1 else 300
+  os.makedirs("out/verify/banding", exist_ok=True)
+  for name, lines in LINES.items():
+      mp4 = f"out/previews/{name}.mp4"
+      png = f"out/verify/banding/{name}-{frame}.png"
+      subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", mp4, "-vf", f"select=eq(n\\,{frame})", "-frames:v", "1", png], check=True)
+      im = Image.open(png).convert("RGB")
+      for label, a, b in lines:
+          px = sample(im, a, b)
+          out = []
+          for c, ch in enumerate("RGB"):
+              v = [p[c] for p in px]
+              m = runmed(v)
+              jump = max(abs(m[i] - m[i - 1]) for i in range(1, len(m)))
+              out.append(f"{ch}:{min(v)}-{max(v)} run{longest_run(v)} medjump{jump:g}")
+          print(f"{name:20s} {label:14s} " + " | ".join(out))
+
+if __name__ == "__main__":
+  main()
