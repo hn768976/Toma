@@ -68,7 +68,38 @@ fallback was not needed.
 
 ## Measured render times
 
-MEASUREMENTS_PLACEHOLDER
+Measured in this build environment: a 4-core cloud container with **no GPU**.
+WebGL ran on ANGLE → SwiftShader (CPU), so a machine with a real GPU will be much
+faster. The 720p numbers are wall-clock times for the full 600-frame
+`scripts/render-preview.sh` render at `--concurrency=4`.
+
+| Composition | 720p, 600 frames | 720p per frame | 4K per frame (estimate) | 4K, 600 frames (estimate) |
+|---|---|---|---|---|
+| `NebulaLens_Pastel` | 2156 s | 3.59 s | 18.7–32.3 s | 3.1–5.4 h |
+| `Champagne_Gold` | 73 s | 0.12 s | 0.7–1.1 s | 7–11 min |
+| `Champagne_Rose` | 74 s | 0.12 s | 0.7–1.1 s | 7–11 min |
+| `DataMontage_Blue` | 246 s | 0.41 s | 2.5–3.7 s | 25–37 min |
+| `FireCore_Ember` | 1683 s | 2.81 s | 14.6–25.2 s | 2.4–4.2 h |
+| `FireCore_Electric` | 1686 s | 2.81 s | 14.6–25.3 s | 2.4–4.2 h |
+| `BarChart_BlueViolet` | 172 s | 0.29 s | 1.7–2.6 s | 17–26 min |
+| `BarChart_TealGreen` | 168 s | 0.28 s | 1.7–2.5 s | 17–25 min |
+
+**Two real 4K frames were timed** (frame 300, `npx remotion still … --scale=1`,
+single still, cold browser). Browser and bundle start-up is about 2.7 s per
+still and is subtracted below:
+
+* **NebulaLens_Pastel:** 40.4 s wall for the 4K still, so about **38 s for the
+  frame**. The same frame at 720p took 10.1 s wall (about 7.3 s for the frame),
+  a 4K/720p ratio of about 5.2×. This is below the 9× pixel ratio because the
+  4K path uses 2×2 star supersampling instead of 3×3.
+* **Champagne_Gold:** 4.5 s wall for the 4K still, so about **1.8 s for the
+  frame**. At 720p it took 3.0 s wall (about 0.3 s for the frame).
+
+The 4K estimates take the multi-threaded 720p throughput and scale it. The low
+end uses the measured 4K/720p ratio: 5.2× for the shader looks and about 6× for
+the others. The high end is the full 9× pixel ratio. On a desktop GPU with
+`--gl=angle`, expect the shader looks to be one to two orders of magnitude
+faster.
 
 ## How it is built
 
@@ -140,4 +171,62 @@ The composition appears in the Studio and renders with the commands above.
 
 ## Verification
 
-VERIFICATION_PLACEHOLDER
+Every check below was run on the delivered 720p previews. The scripts are in
+`scripts/`, and the logs are in `verification/`: ffprobe output, the loop and
+determinism log, the banding report, motion stats, render timings, and the
+reference-comparison notes from each sub-agent round.
+
+1. **File checks** (`scripts/verify.py probe`): all 8 are 1280×720, 30/1, h264,
+   yuv420p, no audio stream, 20.000 s. **PASS.**
+2. **Loop** (`scripts/check-loop-determinism.sh`): `--props='{"loopCheck":true}'`
+   makes a composition 601 frames long, and frame 600 is rendered and compared
+   with frame 0. The two are **pixel- and byte-identical for all 8**.
+   Continuity across the seam: the mean change from frame 599 to frame 600 is
+   in line with an ordinary step (298→299). For example Nebula 4.34 vs 4.51,
+   Champagne 3.18 vs 3.00, Fire 1.92 vs 2.01, Data Montage 6.35 vs 6.98, and Bar
+   Chart 5.04 vs 5.30.
+   (The first run caught a seam in Nebula, 12.3 vs 4.5: two half-scale noise
+   fields advanced only 1.5 cells against a 3-cell period. This is fixed; the
+   tile now has F = 4 cells and the half-scale fields use a 2-cell period.)
+3. **Determinism:** frame 300 rendered alone from a cold start is
+   **byte-identical** to frame 300 of the full multi-threaded, out-of-order
+   render **for all 8**.
+4. **Banding** (`scripts/verify.py band2`, frames taken *from the encoded mp4*,
+   results in `verification/banding-report.txt`): along each gradient, the trimmed
+   mean of each column never stays on one value for more than 2–4 px. For
+   comparison, an undithered 8-bit version of the Champagne column (96 levels
+   over 720 px) would plateau for about 7 px per level, and the Data Montage
+   navy (37 levels over 720 px) for about 19 px. Fire's vignetted corners show
+   longer flat runs, but there the signal itself is constant near black
+   ((11,0,0) and (0,0,8)), and contrast-stretched crops show no contour steps.
+5. **Contact sheets** (`scripts/contact-sheet.sh`, frames 0/120/240/360/480):
+   each shows the required features. Nebula has the black disc, thin ring,
+   lensed nebula and stars, and drift. Champagne has gold or rosé liquid, rising
+   bubbles of many sizes, streams, a bright centre and a vignette. Data Montage
+   has layered glowing infographics, parallax, DoF and the violet flare. Fire
+   has the white-hot core and outward tendrils. Bar Chart has the tilted chart,
+   translucent bars, values, candles and lines, and only invented tickers.
+6. **Motion** (`scripts/motion-stats.py`, frames 285–345 of the full render):
+   the mean frame-to-frame change is steady, with max/median between 1.01 and
+   1.07 and no spikes, so there is no sparkle, boiling or popping. Strips of
+   consecutive crops show smooth lensing at the ring, steady outward tendrils,
+   and grid and values without shimmer. The bubble physics holds by
+   construction (`src/looks/Champagne.tsx`): wraps per loop *k* rise with
+   diameter, size grows 28% from bottom to top, the wobble has whole cycles,
+   and stream bubbles accelerate and grow.
+7. / 8. **Reference comparison:** done by eye, then three rounds of fresh,
+   context-free sub-agent comparisons for looks 1, 2, 4, 5 and 7, plus a
+   champagne-realism check each round. See the delivery notes for what each
+   round flagged and what changed.
+
+### Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, 600 frames, seamless loops
+- [x] Remotion + `@remotion/three` (WebGL2) for looks 1, 3, 4 and 5; PixiJS 8 (WebGL2) for look 2; `--gl=angle`
+- [x] Determinism: seeded `mulberry32` at module level, no `Math.random`, `Date.now`, R3F clock or state-driven visuals, no TAA or accumulation
+- [x] Half-float targets, ±1/255 blue-noise dither, ~1% grain from (pixel, frame) faded below 3% luminance
+- [x] OFL fonts only (Inter, JetBrains Mono) with licences; Natural Earth 1:110m land with public-domain note
+- [x] No logos, brands or real tickers (invented list in `src/data/tickers.ts`)
+- [x] One data row per version (`src/versions.ts`)
+- [x] 720p previews (1280×720 H.264 yuv420p CRF 16) and frame-300 PNG stills
+- [x] Render times measured; two 4K frames timed; 4K estimates

@@ -1,0 +1,8 @@
+Champagne_Gold render: 72.643064893 s for 600 frames (concurrency 4)
+Champagne_Rose render: 73.552870539 s for 600 frames (concurrency 4)
+BarChart_BlueViolet render: 172.069468824 s for 600 frames (concurrency 4)
+BarChart_TealGreen render: 168.279127481 s for 600 frames (concurrency 4)
+DataMontage_Blue render: 245.653127088 s for 600 frames (concurrency 4)
+FireCore_Ember render: 1683.180130763 s for 600 frames (concurrency 4)
+FireCore_Electric render: 1685.526459618 s for 600 frames (concurrency 4)
+NebulaLens_Pastel render: 2155.513312371 s for 600 frames (concurrency 4)

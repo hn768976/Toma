@@ -1,0 +1,22 @@
+# Step 8 round 1 (stills at frame 300)
+Nebula: cream S-stream lobes touching rim at 10 & 4 o'clock missing; bullseye rings + tangential star dashes too obvious; rim thin even white vs two glowing crescents; purple greyer, lopsided; muted colours; more empty space; airbrushed clouds; stars smaller; hole slightly big/left.
+Champagne cmp: vertical side bands vs diagonal falloff to lower-left; bottom too dark/muddy; desaturated beige vs rich gold; shadows not deep enough; 2-3x too many bubbles; too many strong regular streams; bubbles read as dark specks/dirt, need light centre thin rim; too many big bokeh discs.
+Champagne realism: even sprinkle not chains; trails don't grow/spacing widen; trails no start; random blur vs size; stamped sprites darker than liquid; square specks; no glass; lighting not affecting bubbles; blotches.
+DataMontage: sparse floating widgets vs dense tiled panel wall; global fine grid/scanlines missing; lavender vs saturated cyan; too much empty black; heavy bokeh; thin outlined gauges vs chunky filled arcs; globes missing at top; too many waveforms/radar/hex; few tiny specks.
+FireCore: smooth liquid ribbons vs broken flame licks; core small, no spiky rays, peach not yellow-white; mid-tones duller pinker; brightness distribution; edges not dark enough; haze lifted; no spark particles; no chroma fringe; core slightly off-centre.
+BarChart: too light/pastel vs deep indigo; shadows; empty sky top-left 30%; floor-like plane vs close wall; too many small bars vs 6-7 big; no DoF/bloom; lines thin; grid too fine; candles small, no top-left cluster; too many labels; no cyan corner glow.
+
+# Step 8 round 2 (stills at frame 300)
+Nebula: extra teal ring halo around hole; clouds near-white/bloomy, wrap left/right instead of two thin diagonal streams; extra top-left plume; purple muted, missing on right; rim crescents missing; stars smaller, glow halos, tangential dashes; less spiral streak texture; softer overall.
+Champagne realism: no visible streams; no upward motion cue; identical stamped rings, no highlight; bubbles darker than liquid; left side inconsistent; blur preset levels; no glass; lighting too smooth; even grain.
+DataMontage: lifted hazy background, pale periwinkle not saturated cyan; no near-black gaps; full-frame haze + translucent pale panels; fewer larger elements; bottom donuts blurred to blobs; too much DoF; flare too big/soft; globes too large/low; radar/hex/brackets extra; concentric target rings & dense dotted map missing; fewer specks; grid faint.
+FireCore: streaks now broad smeared sheets vs thin fibrous threads with bright cores; too filled; empty left; core a flat disc not a flare; lacks yellow glow zone; too uniform red, no yellow highlights, no fringe; darks too clean (ref has maroon haze); too blurred; spark dots too regular.
+BarChart: too light/pastel; gaps not dark; lines too prominent with stepped halo bands; empty top-left triangle; bars too uniform/wide; no DoF visible; cyan glow too big; candles too big/regular; labels too big; no bottom-right ticker text; grid too clean.
+
+# Step 8 round 3 (frames from the encoded 720p mp4, frame 300)
+Nebula: yellow lobes smeared saw-tooth tangentially and pressed against the hole (ref: soft puffy clouds, thin jets to rim); darks lifted (5th pct 20 vs 5); teal disc ~1.7 Rs with concentric ripples; single even rim vs broken arcs; purple blob lower-left, greyer; stars smaller/uniform. Hole size/position match.
+Champagne cmp: flat-topped column, left-shifted (ref: bell-shaped radial glow at x≈52%); edges lopsided; particles 3-4x too dense; stream too strong/dashed; particles solid dark discs, few large bubbles missing; extra bokeh discs.
+Champagne realism: dots not spheres; even noise scatter; one perfect column; sizes barely vary; blur filter-like; no glass; too smooth.
+DataMontage: now too dark/indigo (median L 22 vs 30); too crisp, ref hazy with heavy DoF; widgets too small/numerous, ref big translucent panels; bloom too tight; flare too small; extra crisp specks; globe/map placement.
+FireCore: too red, needs orange/yellow hot spots; continuous ribbons vs ragged debris fragments; core smaller, lacks yellow halo & needle rays; sparks nearly missing; no chroma fringe; ref asymmetric (right-heavy).
+BarChart: top-left royal blue instead of deep violet (ref violet→cyan diagonal across top); brighter/washed (median 146 vs 128); bars too opaque/milky; DoF fall-off missing; curves too tidy; candles larger; grid coarser.

@@ -1,0 +1,8 @@
+NebulaLens_Pastel      median  4.441  min  4.323  max  4.565  max/median  1.03
+Champagne_Gold         median  3.010  min  2.980  max  3.038  max/median  1.01
+Champagne_Rose         median  3.205  min  3.171  max  3.238  max/median  1.01
+DataMontage_Blue       median  6.713  min  5.999  max  7.024  max/median  1.05
+FireCore_Ember         median  2.007  min  1.999  max  2.027  max/median  1.01
+FireCore_Electric      median  1.943  min  1.933  max  1.962  max/median  1.01
+BarChart_BlueViolet    median  5.712  min  5.263  max  6.085  max/median  1.07
+BarChart_TealGreen     median  5.459  min  5.039  max  5.821  max/median  1.07

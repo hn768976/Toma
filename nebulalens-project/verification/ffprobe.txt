@@ -1,0 +1,8 @@
+renders/BarChart_BlueViolet.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+renders/BarChart_TealGreen.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+renders/Champagne_Gold.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+renders/Champagne_Rose.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+renders/DataMontage_Blue.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+renders/FireCore_Electric.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+renders/FireCore_Ember.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+renders/NebulaLens_Pastel.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS

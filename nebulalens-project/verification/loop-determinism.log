@@ -1,0 +1,49 @@
+# The first NebulaLens_Pastel block below is the run that caught the loop seam (599->600 = 12.26); the re-run after the fix is at the end.
+== NebulaLens_Pastel
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=12.264 max=241
+step2 typical diff 298->299: mean abs diff=4.455 max=240
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== Champagne_Gold
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=3.175 max=108
+step2 typical diff 298->299: mean abs diff=2.995 max=104
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== Champagne_Rose
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=3.310 max=115
+step2 typical diff 298->299: mean abs diff=3.187 max=112
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== DataMontage_Blue
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=6.349 max=147
+step2 typical diff 298->299: mean abs diff=6.979 max=147
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== FireCore_Ember
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=1.924 max=122
+step2 typical diff 298->299: mean abs diff=2.005 max=164
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== FireCore_Electric
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=1.800 max=153
+step2 typical diff 298->299: mean abs diff=1.935 max=185
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== BarChart_BlueViolet
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=5.036 max=181
+step2 typical diff 298->299: mean abs diff=5.298 max=176
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== BarChart_TealGreen
+step2 frame0 vs frame600: pixels identical=True file bytes identical=True
+step2 wrap diff 599->600: mean abs diff=4.822 max=178
+step2 typical diff 298->299: mean abs diff=5.074 max=173
+step3 cold 300 vs full-render 300: pixels identical=True file bytes identical=True
+== NebulaLens_Pastel (re-run after the loop-seam fix)
+NebulaLens_Pastel render: 2155.513312371 s for 600 frames (concurrency 4)
+renders/NebulaLens_Pastel.mp4: h264 1280x720 30/1 yuv420p audio=0 duration=20.000s -> PASS
+pixels identical=True file bytes identical=True
+mean abs diff=4.337 max=241
+mean abs diff=4.512 max=240
+pixels identical=True file bytes identical=True
+NEBFIX_DONE

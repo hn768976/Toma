@@ -1,0 +1,11 @@
+NebulaLens_Pastel [1180,0,80,720 y]: levels 17->44 (span 27) over 720px; residual RMS=0.484; longest flat run of profile=3px
+NebulaLens_Pastel [0,0,1280,60 x]: levels 14->94 (span 79) over 1280px; residual RMS=2.977; longest flat run of profile=3px
+Champagne_Gold [600,0,60,720 y]: levels 120->216 (span 96) over 720px; residual RMS=0.466; longest flat run of profile=2px
+Champagne_Gold [0,40,1280,60 x]: levels 72->216 (span 144) over 1280px; residual RMS=0.887; longest flat run of profile=3px
+Champagne_Rose [600,0,60,720 y]: levels 129->226 (span 96) over 720px; residual RMS=0.524; longest flat run of profile=3px
+Champagne_Rose [0,40,1280,60 x]: levels 73->226 (span 153) over 1280px; residual RMS=0.977; longest flat run of profile=3px
+DataMontage_Blue [0,0,1280,720 y]: levels 9->46 (span 37) over 720px; residual RMS=2.011; longest flat run of profile=2px
+FireCore_Ember [0,40,1280,60 x]: levels 2->39 (span 37) over 1280px; residual RMS=0.984; longest flat run of profile=60px
+FireCore_Electric [0,40,1280,60 x]: levels 1->34 (span 33) over 1280px; residual RMS=1.028; longest flat run of profile=143px
+BarChart_BlueViolet [0,0,1280,40 x]: levels 84->205 (span 121) over 1280px; residual RMS=2.132; longest flat run of profile=3px
+BarChart_TealGreen [0,0,1280,40 x]: levels 89->211 (span 121) over 1280px; residual RMS=1.853; longest flat run of profile=4px
