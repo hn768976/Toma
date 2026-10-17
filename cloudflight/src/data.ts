@@ -91,7 +91,7 @@ const DAY_CLOUDS: Omit<CloudRow, "id" | "story" | "durationInFrames" | "loop"> =
   ambientTop: "#8AA9D6",
   ambientBottom: "#5A6880",
   shadowTint: "#6F7F9C",
-  groundHaze: "#4E6A90",
+  groundHaze: "#5A6E88",
   groundDark: "#1A2638",
   groundLight: "#465866",
   exposure: 0.78,
@@ -149,8 +149,8 @@ export const ROWS: Row[] = [
       ["#6EB410", "#86C826"], // lime
       ["#D6B600", "#E9CC12"], // yellow
       ["#E68C08", "#F4A21E"], // orange
-      ["#E2440A", "#F15C1C"], // red
-      ["#D20030", "#F61A4E"], // magenta-crimson
+      ["#D4001C", "#FF1C40"], // red
+      ["#C8005A", "#EC1A78"], // magenta
     ],
   },
   {

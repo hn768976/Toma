@@ -154,7 +154,7 @@ float densityAt(vec3 p, vec2 wt, bool full, float lod, float hf) {
   }
   densitySoft = shape;
   // Crisp boundary, but with a soft toe so eroded edges read as wisps.
-  return ss(0.0, 0.7, shape);
+  return ss(0.06, 0.7, shape);
 }
 
 vec2 lastWeather;

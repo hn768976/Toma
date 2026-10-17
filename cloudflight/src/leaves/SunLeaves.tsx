@@ -70,8 +70,8 @@ void main() {
   vec3 over = max(c - 0.8, 0.0);
   c = min(c, 0.8) + over / (1.0 + over * 2.5);
   float l = dot(c, vec3(0.299, 0.587, 0.114));
-  c = mix(vec3(l), c, 0.88);           // natural, slightly muted
-  c = c * 0.94 + vec3(0.07, 0.07, 0.05); // hazy lift
+  c = mix(vec3(l), c, 1.08);           // rich greens
+  c = c * 0.97 + vec3(0.03, 0.03, 0.02); // slight lift
   c = clamp(c, 0.0, 1.0);
   vec2 fc = gl_FragCoord.xy;
   vec3 h = vec3(pcg3d(uvec3(uvec2(fc), uint(uFrame) + 7919u))) * (1.0 / 4294967296.0);
@@ -253,7 +253,7 @@ const build = async (canvas: HTMLCanvasElement, row: SunLeavesRow, W: number, H:
       angle,
       len: down ? 1.0 + rng() * 0.6 : 0.5 + rng() * 0.3,
       w: down ? 0.08 + rng() * 0.08 : 0.05 + rng() * 0.05,
-      base: down ? 0.1 + rng() * 0.08 : 0.04 + rng() * 0.05,
+      base: down ? 0.16 + rng() * 0.1 : 0.07 + rng() * 0.06,
       k: 1 + Math.floor(rng() * 3),
       ph: rng() * TAU,
     };
@@ -359,10 +359,10 @@ const build = async (canvas: HTMLCanvasElement, row: SunLeavesRow, W: number, H:
     const sx = sun.x * H;
     const sy = sun.y * H;
     sunCore.position.set(sx, sy);
-    sunCore.width = sunCore.height = 0.34 * H;
+    sunCore.width = sunCore.height = 0.25 * H;
     sunCore.alpha = 1;
     sunHalo.position.set(sx, sy);
-    sunHalo.width = sunHalo.height = 1.6 * H;
+    sunHalo.width = sunHalo.height = 1.1 * H;
     sunHalo.alpha = 0.8;
     glow.position.set(sx, sy);
     glow.width = glow.height = (0.55 + 0.2 * vis) * H;

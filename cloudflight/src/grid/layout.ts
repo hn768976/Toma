@@ -30,7 +30,7 @@ export const makeLayout = (seed: number, nLines = 1200, nTags = 150) => {
     const k = rng();
     let a: [number, number, number];
     let b: [number, number, number];
-    if (k < 0.3) {
+    if (k < 0.18) {
       // Receding along z, mostly on floor/ceiling planes.
       const x = snap(r(BOX.x[0], BOX.x[1]), 1.5);
       const y = rng() < 0.7 ? pick(LEVELS_Y) + snap(r(-0.6, 0.6), 0.3) : snap(r(BOX.y[0], BOX.y[1]), 1);

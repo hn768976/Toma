@@ -46,9 +46,9 @@ void main() {
   float groove = lineAt(x, 0.17, 0.008, w) + lineAt(x, 0.34, 0.008, w);
   float darkGroove = lineAt(x, 0.76, 0.01, w);
   col = mix(col, uEdge, clamp(edge, 0.0, 1.0) * 0.85);
-  col = mix(col, uEdge, clamp(groove, 0.0, 1.0) * 0.75);
+  col = mix(col, uEdge, clamp(groove, 0.0, 1.0) * 0.35);
   float grooveDark = lineAt(x, 0.255, 0.008, w);
-  col = mix(col, uDark, clamp(grooveDark, 0.0, 1.0) * 0.6);
+  col = mix(col, uDark, clamp(grooveDark, 0.0, 1.0) * 0.3);
   col = mix(col, mix(uDark, uLight, 0.4), clamp(darkGroove, 0.0, 1.0) * 0.5);
 
   fragColor = vec4(col, 1.0);

@@ -450,7 +450,7 @@ const GridScene: React.FC<{ row: DataGridRow }> = ({ row }) => {
       const cx = (i % ATLAS_COLS) * CELL_W;
       const cy = Math.floor(i / ATLAS_COLS) * CELL_H;
       const pad = 6;
-      ctx.fillStyle = "rgba(20, 96, 88, 0.7)";
+      ctx.fillStyle = "rgba(60, 170, 156, 0.75)";
       ctx.fillRect(cx + pad, cy + pad, CELL_W - 2 * pad, CELL_H - 2 * pad);
       ctx.strokeStyle = row.line;
       ctx.lineWidth = 3;

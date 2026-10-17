@@ -30,7 +30,7 @@ vec3 heightGrad(vec2 q, float t) {
   float k = TAU / uWavelength;
   float ph = k * r - TAU * uWavesPerLoop * t;
   // Broad raised bands that fade out about half way across the frame.
-  float env = (0.12 + 0.88 * exp(-r / 0.6)) * smoothstep(0.035, 0.06, r);
+  float env = (0.06 + 0.94 * exp(-r / 0.38)) * smoothstep(0.035, 0.06, r);
   float A = 0.0085 * env;
   float c = 0.5 + 0.5 * cos(ph);
   float h = A * c;
@@ -74,7 +74,7 @@ void main() {
   vec3 V = vec3(0.0, 0.0, 1.0);
   float ndl = max(dot(n, L), 0.0);
   float flat0 = L.z;                             // response of a flat surface
-  float diff = pow(ndl / flat0, 2.0) * 1.1;
+  float diff = pow(ndl / flat0, 2.0) * 0.72;
   float rim = pow(max(dot(n, R), 0.0) / R.z, 3.0) * 0.05;
   vec3 H = normalize(L + V);
   float nh = max(dot(n, H), 0.0);
@@ -84,7 +84,7 @@ void main() {
   vec3 col = uTrough;
   col += uBase * diff * cavity;
   col += uHigh * vec3(0.35, 0.75, 1.0) * (spec * 0.8 + sheen * 0.25) * (0.3 + 0.7 * cavity);
-  col += vec3(0.02, 0.1, 0.6) * rim * cavity;
+  col += vec3(0.0, 0.03, 0.5) * rim * cavity;
 
   // Black frame falloff, as the reference sits on black.
   float vig = smoothstep(0.0, 0.035, uv.y) * smoothstep(1.0, 0.965, uv.y)
