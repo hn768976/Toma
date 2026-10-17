@@ -1,0 +1,6 @@
+node_modules
+out
+refs
+build
+scripts/tmp
+*.zip
