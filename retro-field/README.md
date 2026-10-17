@@ -158,8 +158,8 @@ faster, the three.js looks especially.
 |---|---|---|---|
 | RetroMountains-Sunset | 537 s | 0.89 s | ≈3.6 s |
 | RetroMountains-Midnight | 521 s | 0.87 s | ≈3.5 s |
-| GlassSpiral-Blue | GLASSB s | GLASSBF s | ≈GLASSBT s |
-| GlassSpiral-Amber | GLASSA s | GLASSAF s | ≈GLASSAT s |
+| GlassSpiral-Blue | 1875 s | 3.13 s | ≈12.5 s |
+| GlassSpiral-Amber | 1865 s | 3.11 s | ≈12.4 s |
 | ParticleSmoke-White | 570 s | 0.95 s | ≈3.8 s |
 | FibreTunnel-RedCyan | 2688 s | 4.48 s | ≈17.9 s |
 | FibreTunnel-VioletGold | 2626 s | 4.38 s | ≈17.5 s |
