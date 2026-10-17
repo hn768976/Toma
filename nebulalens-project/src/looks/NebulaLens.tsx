@@ -27,13 +27,13 @@ out vec4 outColor;
 
 const float TAU = 6.28318530718;
 const float TILE = 2.0;          // background tile period along the drift (frame heights)
-const int   F = 3;               // noise lattice cells per tile at octave 0
+const int   F = 4;               // noise lattice cells per tile at octave 0 (even: half-scale fields use F/2)
 const vec2  BAND = vec2(0.9285, -0.3714); // drift / dust-band direction (upper-left → lower-right)
 
-// periodic fbm over (x along drift, y across); x period = F·2^k cells per octave
-float fbm(vec2 p, int oct, uint seed) {
+// x period = per·2^k cells per octave; the coordinate must advance by exactly
+// per cells per loop (full-scale fields: per = F; half-scale: per = F / 2).
+float fbmP(vec2 p, int oct, uint seed, int per) {
   float s = 0.0, a = 0.5, n = 0.0;
-  int per = F;
   for (int i = 0; i < 6; i++) {
     if (i >= oct) break;
     s += a * pnoise2(p, ivec2(per, 4096), seed + uint(i) * 101u);
@@ -44,6 +44,8 @@ float fbm(vec2 p, int oct, uint seed) {
   }
   return s / n;
 }
+
+float fbm(vec2 p, int oct, uint seed) { return fbmP(p, oct, seed, F); }
 
 // Background in source-plane coords s (frame heights, relative to the hole).
 vec3 nebula(vec2 s0) {
@@ -61,8 +63,8 @@ vec3 nebula(vec2 s0) {
   vec2 w = vec2(fbm(p + tc, 3, 11u), fbm(p + vec2(3.1, 7.7) - tc, 3, 23u));
   vec2 pw = p + 0.9 * w;
 
-  float haze = fbm(pw * 0.5 + vec2(0.0, 3.0), 4, 37u);
-  float streak = fbm(vec2(pw.x * 0.5, pw.y * 1.4) + vec2(0.0, 9.0) + 0.3 * tc, 4, 53u);
+  float haze = fbmP(pw * 0.5 + vec2(0.0, 3.0), 4, 37u, F / 2);
+  float streak = fbmP(vec2(pw.x * 0.5, pw.y * 1.4) + vec2(0.0, 9.0) + 0.3 * tc, 4, 53u, F / 2);
   float dust = fbm(pw * 1.0 + vec2(0.0, 5.0) + 0.5 * tc.yx, 5, 71u);
 
   vec3 c = cDeep;

@@ -5,3 +5,4 @@ refs
 build
 .remotion
 *.zip
+build-fix
