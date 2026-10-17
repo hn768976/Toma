@@ -86,10 +86,10 @@ float sparks(float a, float s, float r) {
   ivec2 c = ivec2(floor(g));
   ivec2 cw = ivec2(((c.x % 260) + 260) % 260, ((c.y % 60) + 60) % 60);
   vec3 h = hash32(cw, 313u);
-  if (h.z > 0.015) return 0.0;
+  if (h.z > 0.025) return 0.0;
   vec2 f = fract(g) - (0.2 + 0.6 * h.xy);
-  float d = length(f * vec2(1.0, 2.2));
-  return smoothstep(0.32, 0.0, d) * (0.4 + 0.6 * h.z / 0.015) * smoothstep(0.03, 0.06, r) * smoothstep(0.45, 0.15, r);
+  float d = length(f * vec2(1.7, 0.75));   // short radial speed streaks
+  return smoothstep(0.32, 0.0, d) * (0.4 + 0.6 * h.z / 0.025) * smoothstep(0.03, 0.06, r) * smoothstep(0.75, 0.2, r);
 }
 
 void main() {
@@ -109,12 +109,12 @@ void main() {
   float fall = 1.0 / (1.0 + pow(r / 0.45, 1.2));
   float e = near * fall * (1.1 * fl + 1.3 * fine.x + 0.9 * hair.x * smoothstep(0.6, 0.05, r));
   float g = near * fall * (0.5 * fine.y + 0.25 * hair.y);
-  e += 1.6 * sparks(a, s, r);
+  e += 3.0 * sparks(a, s, r);
 
   // core: white-hot point, yellow gaussian halo, thin spiky radial rays
-  float halo = exp(-r / 0.026) * 3.4 + exp(-r * r / (2.0 * 0.016 * 0.016)) * 1.5;
+  float halo = exp(-r / 0.036) * 3.4 + exp(-r * r / (2.0 * 0.02 * 0.02)) * 1.5;
   float ra = pnoise2(vec2(a * 140.0, uT * 4.0), ivec2(140, 4), 77u);
-  float rays = pow(max(ra, 0.0), 3.0) * exp(-r / 0.11) * 3.0 * smoothstep(0.004, 0.025, r);
+  float rays = pow(max(ra, 0.0), 5.0) * exp(-r / 0.16) * 7.0 * smoothstep(0.004, 0.025, r);
   float core = halo * pulse;
 
   // haze: faint dark tint between the flames
@@ -124,7 +124,7 @@ void main() {
   // one intensity → colour ramp: deep red → orange → white-hot
   float I = e + 0.35 * g + 0.8 * rays + core + 2.4 * exp(-r / 0.07) * pulse + 0.5 * exp(-r / 0.18) * pulse;
   vec3 ramp = cCool * smoothstep(0.0, 0.7, I);
-  ramp = mix(ramp, cHot, smoothstep(0.55, 1.5, I));
+  ramp = mix(ramp, cHot, smoothstep(0.35, 1.1, I));
   ramp = mix(ramp, mix(cHot, cCore, 0.55), smoothstep(1.3, 2.0, I));
   ramp = mix(ramp, cCore, smoothstep(2.2, 3.4, I));
   c += ramp;

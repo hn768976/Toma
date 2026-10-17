@@ -49,10 +49,10 @@ type Bubble = {
 type StreamBubble = { x: number; yOrigin: number; len: number; j: number; n: number; k: number; dMax: number; alpha: number };
 
 const LAYERS = [
-  { count: 2200, dMin: 5, dMax: 17, kMin: 1, kMax: 3, alpha: [0.55, 1.0] },
-  { count: 1150, dMin: 5, dMax: 22, kMin: 1, kMax: 3, alpha: [0.4, 0.7] },
-  { count: 480, dMin: 9, dMax: 34, kMin: 2, kMax: 4, alpha: [0.22, 0.4] },
-  { count: 30, dMin: 45, dMax: 120, kMin: 4, kMax: 6, alpha: [0.25, 0.45] },
+  { count: 2200, dMin: 3, dMax: 26, kMin: 1, kMax: 3, alpha: [0.2, 0.9] },
+  { count: 1150, dMin: 4, dMax: 20, kMin: 1, kMax: 3, alpha: [0.15, 0.45] },
+  { count: 480, dMin: 8, dMax: 30, kMin: 2, kMax: 4, alpha: [0.1, 0.25] },
+  { count: 30, dMin: 45, dMax: 120, kMin: 4, kMax: 6, alpha: [0.08, 0.16] },
 ] as const;
 
 const buildBubbles = (): Bubble[] => {
@@ -95,7 +95,7 @@ const buildStreams = (): StreamBubble[] => {
     const n = Math.round(len / (s === 0 ? 30 : range(rng, 60, 85)));
     const k = 2 + Math.floor(rng() * 2);
     const dMax = range(rng, 12, 19);
-    const alpha = strong ? 0.85 : range(rng, 0.22, 0.4);
+    const alpha = s === 0 ? 0.42 : strong ? 0.6 : range(rng, 0.15, 0.3);
     for (let j = 0; j < n; j++) out.push({ x, yOrigin, len, j, n, k, dMax, alpha });
   }
   return out;
@@ -203,16 +203,18 @@ void main() {
   // a soft, wide vertical column of light just left of centre, brightest
   // near the top and still bright at the bottom; the light drifts round a
   // small circle once per loop
-  float cx = 0.45 + 0.025 * cos(6.28318530718 * uT);
-  float cy = 0.2 + 0.03 * sin(6.28318530718 * uT);
-  float colX = exp(-pow((vUV.x - cx) / 0.34, 2.0));
+  float cx = 0.52 + 0.025 * cos(6.28318530718 * uT);
+  float cy = 0.12 + 0.03 * sin(6.28318530718 * uT);
+  float colX = exp(-pow((vUV.x - cx) / 0.33, 2.0));
   float spot = exp(-dot((vUV - vec2(cx, cy)) * vec2(asp * 0.9, 1.1), (vUV - vec2(cx, cy)) * vec2(asp * 0.9, 1.1)) / 0.35);
-  float L = clamp(0.85 * colX * (0.82 + 0.18 * (1.0 - vUV.y)) + 0.45 * spot, 0.0, 1.0);
+  // bell-shaped: a radial spot over a softer column, no flat top
+  float L = 0.55 * colX * (0.7 + 0.3 * (1.0 - vUV.y)) + 0.6 * spot;
+  L = 1.0 - exp(-2.0 * L);
   vec3 c = mix(uVignette, uLiquid, smoothstep(0.0, 0.55, L));
   c = mix(c, uGlow, smoothstep(0.45, 1.0, L));
   // darker amber corners, deepest at the bottom left
-  float corner = smoothstep(0.55, 0.95, length((vUV - vec2(0.47, 0.45)) * vec2(1.25, 1.1)));
-  c = mix(c, uVignette * 0.85, 0.55 * corner + 0.25 * smoothstep(0.6, 1.0, vUV.y) * smoothstep(0.5, 0.0, vUV.x));
+  float corner = smoothstep(0.38, 0.9, length((vUV - vec2(0.52, 0.35)) * vec2(1.3, 1.0)));
+  c = mix(c, uVignette * 0.85, 0.8 * corner + 0.25 * smoothstep(0.6, 1.0, vUV.y) * smoothstep(0.5, 0.0, vUV.x));
   c *= 1.0 + 0.035 * cos(6.28318530718 * uT);
   finalColor = vec4(c, 1.0);
 }

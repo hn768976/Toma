@@ -8,9 +8,9 @@ import { FireCore } from "./looks/FireCore";
 import { NebulaLens } from "./looks/NebulaLens";
 import { compositionId, VERSIONS, type Version } from "./versions";
 
-// LOOP_CHECK=1 at bundle time adds one frame (601) so frame 600 can be
+// --props='{"loopCheck":true}' adds one frame (601) so frame 600 can be
 // rendered and compared with frame 0. See README "Verification".
-const DURATION = process.env.REMOTION_LOOP_CHECK === "1" ? LOOP + 1 : LOOP;
+type RootProps = { loopCheck: boolean };
 
 const render = (v: Version): React.ReactElement | null => {
   switch (v.look) {
@@ -35,7 +35,9 @@ export const RemotionRoot: React.FC = () => (
         // Remotion ids allow [a-zA-Z0-9-] only: "NebulaLens_Pastel" → "NebulaLens-Pastel".
         id={compositionId(v)}
         component={() => render(v)}
-        durationInFrames={DURATION}
+        defaultProps={{ loopCheck: false } as RootProps}
+        calculateMetadata={({ props }) => ({ durationInFrames: props.loopCheck ? LOOP + 1 : LOOP })}
+        durationInFrames={LOOP}
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}

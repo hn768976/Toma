@@ -99,7 +99,7 @@ const drawChart = (ctx: CanvasRenderingContext2D, W: number, H: number, t: numbe
     const x = b.u * W;
     const bw = b.w * W;
     const top = vToY(val);
-    ctx.fillStyle = rgba(ink, 0.2 + 0.2 * ((b.ph * 7) % 1));
+    ctx.fillStyle = rgba(ink, 0.13 + 0.15 * ((b.ph * 7) % 1));
     ctx.fillRect(x, top, bw, baseY - top);
     ctx.fillStyle = rgba(ink, 0.55);
     ctx.fillRect(x, top, bw, 5 * px);
@@ -192,12 +192,13 @@ in vec2 vUv;
 out vec4 outColor;
 void main() {
   vec2 p = vUv;
-  float g = smoothstep(0.15, 1.35, dot(p, vec2(0.7, 0.72)));
+  // deep violet on the left sweeping to cyan at the top right
+  float g = smoothstep(0.05, 1.15, p.x * 0.85 + p.y * 0.35);
   vec3 c = mix(cFrom, cTo, g);
   vec2 d = (p - vec2(1.0, 1.0)) * vec2(uRes.x / uRes.y, 1.0);
   c += vec3(0.5, 0.95, 1.0) * 0.4 * exp(-dot(d, d) / 0.018);   // small concentrated glow, top right
   // deeper towards the lower left
-  c *= 0.5 + 0.45 * smoothstep(-0.1, 1.25, dot(p, vec2(0.6, 0.8)));
+  c *= 0.62 + 0.3 * smoothstep(-0.1, 1.25, dot(p, vec2(0.6, 0.8)));
   outColor = vec4(c, 1.0);
 }
 `;
@@ -267,7 +268,8 @@ export const BarChart: React.FC<BarChartPalette> = (p) => {
       const final = makeFinalPass(
         /* glsl */ `
   vec3 sb = texture(uSoft, uv).rgb;
-  float dof = 0.85 * smoothstep(0.55, 1.0, uv.x) * smoothstep(0.0, 0.5, 1.0 - uv.y * 0.5);
+  // far (right) side and the near lower-left corner fall out of focus
+  float dof = 0.9 * max(smoothstep(0.45, 0.95, uv.x), smoothstep(0.3, 0.0, uv.y) * smoothstep(0.45, 0.0, uv.x));
   c = mix(c, sb, dof) + sb * 0.06;`,
         { uSoft: { value: soft.texture } },
         "uniform sampler2D uSoft;",

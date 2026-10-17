@@ -568,7 +568,7 @@ export const drawElement = (
       break;
     }
     case "specks": {
-      const n = 60;
+      const n = 28;
       for (let k = 0; k < n; k++) {
         const x = (((el.vals[k % 48] * 7.31 + k * 0.618) % 1) * w);
         const y = (((el.vals[(k * 7) % 48] * 3.17 + k * 0.382) % 1) * h);
