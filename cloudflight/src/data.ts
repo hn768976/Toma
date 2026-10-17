@@ -169,7 +169,9 @@ export const ROWS: Row[] = [
     id: "SunLeaves_Autumn",
     durationInFrames: 600,
     loop: true,
-    leaves: ["#A83A1A", "#E8781A", "#F0A830", "#E8781A", "#7A9A30"],
+    // Order matters: the last entries are the backlit/highlight colours; the
+    // late green sits first so it only appears among shaded leaves.
+    leaves: ["#7A9A30", "#A83A1A", "#E8781A", "#E8781A", "#F0A830"],
     sun: "#FFE8B0",
     shadow: "#3A160A",
     backdrop: "#8A4A18",

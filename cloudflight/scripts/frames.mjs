@@ -5,7 +5,7 @@ import path from "node:path";
 import fs from "node:fs";
 
 const [id, scaleArg, outDir, start, end, nth = "1", props = "{}"] = process.argv.slice(2);
-const serveUrl = path.resolve("build");
+const serveUrl = path.resolve(process.env.SERVE || "build");
 const inputProps = JSON.parse(props);
 fs.mkdirSync(outDir, { recursive: true });
 const browser = await openBrowser("chrome", {

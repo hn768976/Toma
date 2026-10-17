@@ -153,18 +153,6 @@ const Inner: React.FC<InnerProps> = ({
     update(looped, { w, h });
   }, [looped, w, h, uniforms, finalMat, target, update]);
 
-  useMemo(() => {
-    const ctx = gl.getContext();
-    const ext = ctx.getExtension("WEBGL_debug_renderer_info");
-    // eslint-disable-next-line no-console
-    console.log(
-      "[gl]",
-      ext ? ctx.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ctx.getParameter(ctx.RENDERER),
-      w,
-      h,
-    );
-  }, [gl, w, h]);
-
   useFrame(() => {
     gl.autoClear = false;
     gl.setRenderTarget(target);

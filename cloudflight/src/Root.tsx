@@ -12,7 +12,13 @@ const Scene: React.FC<{ row: Row }> = ({ row }) => {
     case "rainbowRings":
       return <RainbowRings row={row} />;
     case "clouds":
-      return <CloudScene row={row} debug={debug} debugCam={debugCam} />;
+      return (
+        <CloudScene
+          row={cloudSteps ? { ...row, steps: cloudSteps } : row}
+          debug={debug}
+          debugCam={debugCam}
+        />
+      );
     case "sunLeaves":
       return <SunLeaves row={row} />;
     case "dataGrid":
@@ -26,8 +32,10 @@ const Scene: React.FC<{ row: Row }> = ({ row }) => {
 
 // `--props='{"loopCheck":true}'` makes every loop one frame longer (601) so
 // frame 600 can be compared with frame 0.
-const { loopCheck, debug, debugCam } = getInputProps() as {
+const { loopCheck, debug, debugCam, cloudSteps } = getInputProps() as {
   loopCheck?: boolean;
+  /** Overrides every cloud row's raymarch step budget, e.g. 48 for drafts. */
+  cloudSteps?: number;
   debug?: boolean | number;
   debugCam?: [number, number, number, number, number];
 };
