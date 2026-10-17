@@ -70,7 +70,40 @@ Trade-off: 48 roughly halves in-cloud cost (empty-space skipping is unchanged)
 but softens thin wisps and slightly increases edge grain; 96 is used for all
 deliverables. See measured numbers below.
 
-MEASUREMENTS_PLACEHOLDER
+## Measured render times
+
+Machine: 4 vCPU cloud container, **no GPU** — Chromium ran WebGL2 on
+SwiftShader (software rasteriser behind ANGLE). Any machine with a GPU will be
+dramatically faster; these numbers are a worst case.
+
+| Composition | 720p, steady-state per frame (1 tab) | 720p full preview (wall clock) | 4K estimate on this machine |
+|---|---|---|---|
+| CloudFlight_Day | 18.7 s | 2 h 06 m (450 f) | ~380 s/frame → ~47 h |
+| CloudFlight_Sunset | 18.8 s | 2 h 20 m (450 f) | ~380 s/frame → ~47 h |
+| CloudSea_Loop | 6.1 s | 1 h 33 m (600 f, shared CPU) | ~130 s/frame → ~22 h |
+| RainbowRings_Spectrum | 0.27 s | 1 m 47 s | ~2.5 s/frame → ~25 min |
+| SunLeaves_Summer | 2.6 s | 27 m | ~12 s/frame → ~2 h (est.) |
+| SunLeaves_Autumn | 2.7 s | 26 m | ~12 s/frame → ~2 h (est.) |
+| DataGrid_Teal | 0.59 s | 3 m 55 s | ~5 s/frame → ~50 min (est.) |
+| RippleRings_Blue | 0.31 s | 1 m 49 s | ~2.8 s/frame → ~28 min |
+
+**Two real 4K frames, timed** (cold `npx remotion still`, includes ~15 s of
+browser start and noise-volume build):
+
+* `CloudFlight-Day` frame 60 (inside the cloud banks): **397 s**
+* `CloudSea-Loop` frame 300: **147 s**
+
+Cloud 4K estimates scale these by pixel count; the others scale the 720p cost
+by 9× (shaders) or less (Pixi/three.js, partly CPU-bound) — estimates, not runs.
+
+**Cloud quality setting:** a 4K cloud frame is far above 20 s here, so the
+`steps` field (default 96) exists. Measured at 720p on frame 60: `steps 96` =
+21.4 s/frame, `steps 48` = 16.9 s/frame (−21 %); mean pixel difference 1.0/255,
+99th percentile 10/255 (thin wisps a little softer, edges slightly grainier).
+The gain is modest because empty-space traversal and the 6-step light march
+dominate, not the lit-sample budget. **Recommendation: render the clouds on a
+GPU machine at `steps 96`;** use `cloudSteps: 48` only for drafts.
+
 
 ## How it is built
 
@@ -124,4 +157,54 @@ automatically (with `_` → `-` in the id). E.g. a winter Sun Leaves:
 `public/fonts/JetBrainsMono-Medium.woff2` — JetBrains Mono, SIL Open Font
 License 1.1 (`public/fonts/OFL.txt`). No other text appears in any composition.
 
-VERIFY_PLACEHOLDER
+## Verification (run here on the 720p previews)
+
+Scripts live in `scripts/verify/`.
+
+| Check | Result |
+|---|---|
+| 1. ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, 15.0 s / 20.0 s | all 8 pass |
+| 2. Loop: frame 600 vs 0 with `--props='{"loopCheck":true}'` (601 frames) | all 6 loops pixel-identical, byte-identical |
+| 2b. Seam: step 599→0 vs a normal step 0→1 (mean abs diff) | equal for all 6 (e.g. Cloud Sea 2.00 vs 1.99) |
+| 3. Middle frame rendered alone from cold vs the same frame from the full render | all 8 **byte-identical** |
+| 4. Banding: frames decoded **from the mp4**, 3 vertical lines × 4 times | no bands: longest run of identical values in a smooth gradient ≤ 12 px (dithered) except one 13-px plateau at 238 inside the sun glow of Sun Leaves (soft-clipped highlight, no step) |
+| 5. Contact sheets (8 frames for stories, 5 for loops) | `out/sheets/` — story beats and colour cycles present |
+| 6. 2 s around the middle, frame-to-frame change | steady (no flicker/strobe); see `smoothness.txt` |
+
+Banding notes: everything renders to half-float targets; dither ±1/255 blue
+noise + ~1 % grain in the final pass. The first encodes showed x264 at CRF 16
+flattening the dither in the cloud skies (flat runs of 17–23 px); encoding with
+`-tune grain` (now in `remotion.config.ts` and `scripts/encode.sh`) fixed it.
+Values ≤ 8/255 are excluded from the run count: the brief fades grain out
+below 3 % luminance, so pure-black falloffs are flat by design.
+
+## Completion checklist
+
+- [x] 8 compositions, 3840×2160, 30 fps, 450/600 frames, one data row each
+- [x] Clouds: Perlin-Worley + Worley 3D noise built once (128³/32³), curl distortion, 96-step march with 6-step sun march, Beer–Lambert, powder, dual HG, ambient, Rayleigh-style sky, hazy terrain, fixed per-pixel blue-noise jitter, no temporal accumulation
+- [x] Cloud Flight story: banks → near-whiteout (~5.5–6.5 s) → out above the layer → glide; Day and Sunset
+- [x] Cloud Sea: one tile period per loop, evolution on a time circle — seamless
+- [x] Rainbow Rings: 12 whole ring spacings per loop, OKLCh hue cycle once, nine held keys, `fwidth` AA
+- [x] Sun Leaves: 500 pre-blurred sprites in 4 layers, whole-cycle sway, coverage-driven sun/rays, 60 bokeh, flare ghost; Summer + Autumn
+- [x] Data Grid: ~1200 axis-aligned lines, 150 JetBrains Mono tags with values on periods dividing 600, closed camera path, DoF
+- [x] Ripple Rings: source at (90 %, 76 %), 10 wavelengths per loop, dimple lattice, key/rim/specular
+- [x] Half-float targets, dither, fixed-formula grain, no `Math.random()`, no clocks, `delayRender` for textures/fonts
+- [x] Determinism verified byte-for-byte
+- [ ] Look-match to references — see "Known differences" below
+
+## Known differences from the references
+
+After three rounds of independent visual comparison, these remain:
+
+* **Clouds:** the reference at 3 s is almost all cloud with a milky veil; ours
+  shows more open sky and land through gaps. At 12 s the reference has distinct
+  towering cumulus; ours is a lower, lumpier deck with some spiky far tops.
+  Independent "is this real footage?" reviews still call both versions CGI
+  (lighting too even, grainy edges, a few stray small puffs, ground reads as water).
+* **Ripple Rings:** reference is softer and glowier (blurred blobs, black gaps);
+  ours reads as crisper embossed studs.
+* **Data Grid:** still more long lines and fewer tiny far tags than the reference.
+* **Sun Leaves:** reads as generated bokeh rather than a real canopy; Autumn
+  leans amber-gold more than orange/red-brown.
+* **Rainbow Rings:** close match (ring width, bevel, colours).
+

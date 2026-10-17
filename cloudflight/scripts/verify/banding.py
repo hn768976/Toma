@@ -29,9 +29,9 @@ for x in (200, 640, 1080):
         for c in range(3):
             v = col[a:b, c]; run = 1
             for k in range(1, len(v)):
-                # Near-black (<= 4) is flat by design (grain fades out below
+                # Near-black (<= 8 of 255, i.e. < ~3 %) is flat by design (grain fades out below
                 # 3 % luminance; dither clamps at 0) - not a band.
-                run = run + 1 if v[k] == v[k - 1] and v[k] > 4 else 1
+                run = run + 1 if v[k] == v[k - 1] and v[k] > 8 else 1
                 longest = max(longest, run)
     worst = max(worst, longest)
     print(f"  x={x}: smooth stretch {smooth_px:3d}px, longest identical-value run {longest}px")

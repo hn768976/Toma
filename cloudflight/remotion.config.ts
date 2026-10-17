@@ -19,3 +19,12 @@ const pwShell =
 if (existsSync(pwShell)) {
   Config.setBrowserExecutable(pwShell);
 }
+
+// Keep the dither/grain in smooth gradients (skies, bokeh, dark falloffs):
+// without this x264 flattens it at CRF 16 and 1-level steps reappear.
+Config.overrideFfmpegCommand(({ type, args }) => {
+  if (type !== "stitcher") return args;
+  const i = args.indexOf("libx264");
+  if (i === -1) return args;
+  return [...args.slice(0, i + 1), "-tune", "grain", ...args.slice(i + 1)];
+});

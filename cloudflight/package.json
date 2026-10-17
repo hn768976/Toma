@@ -7,11 +7,13 @@
     "dev": "remotion studio",
     "studio": "remotion studio",
     "build": "remotion bundle",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "render:previews": "bash scripts/render-all.sh"
   },
   "dependencies": {
     "@react-three/fiber": "9.4.0",
     "@remotion/cli": "4.0.515",
+    "@remotion/renderer": "4.0.515",
     "@remotion/three": "4.0.515",
     "pixi.js": "8.14.0",
     "react": "19.2.3",

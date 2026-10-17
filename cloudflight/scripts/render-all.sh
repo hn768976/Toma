@@ -11,7 +11,7 @@ for pair in RainbowRings-Spectrum:RainbowRings_Spectrum RippleRings-Blue:RippleR
   node scripts/render-seq.mjs $id out/frames/$name >> out/logs/$name.seq.log 2>&1 || { echo "$name FAILED" >> out/logs/summary.txt; continue; }
   ffmpeg -v error -y -framerate 30 -start_number 0 -i out/frames/$name/f%03d.png \
     -vf "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" \
-    -c:v libx264 -crf 16 -preset slow -pix_fmt yuv420p -colorspace bt709 -color_primaries bt709 -color_trc bt709 \
+    -c:v libx264 -crf 16 -preset slow -tune grain -pix_fmt yuv420p -colorspace bt709 -color_primaries bt709 -color_trc bt709 \
     -r 30 -an -movflags +faststart out/previews/$name.mp4
   echo "$name $(( $(date +%s) - s ))s" >> out/logs/summary.txt
 done
