@@ -147,7 +147,7 @@ def step_banding(ids):
             continue
         # Gradients: look only at content-free background tiles (48x48). A tile is kept when
         # a plane fit leaves only noise-level residual (no content). Within kept tiles we
-        # 3x3-median the image (removes dither/grain) and measure the largest step between
+        # 5x5-box-mean the image (removes dither/grain) and measure the largest step between
         # neighbouring pixels: a smooth 8-bit gradient steps by at most 1 code value; banding
         # from a too-coarse pipeline shows multi-level steps. Run length of equal values is
         # reported for information (long runs = 1-code quantization, the 8-bit floor).
@@ -177,8 +177,8 @@ def step_banding(ids):
                 runs.append(max(tr))
                 means.append(tile.mean(axis=(0, 1)))
                 m = tile.mean(axis=2)
-                st = np.stack([m[dy:T - 2 + dy, dx:T - 2 + dx] for dy in range(3) for dx in range(3)])
-                med = np.median(st, axis=0)
+                # 5x5 box mean: averages out dither and the 1% grain, keeps band edges
+                med = np.mean(np.stack([m[dy:T - 4 + dy, dx:T - 4 + dx] for dy in range(5) for dx in range(5)]), axis=0)
                 steps.append(np.abs(np.diff(med, axis=0)).ravel())
                 steps.append(np.abs(np.diff(med, axis=1)).ravel())
         if i.startswith("HUDTunnel"):
@@ -213,9 +213,9 @@ def step_banding(ids):
         span = means.max(axis=0) - means.min(axis=0)
         d = np.concatenate(steps)
         p999 = float(np.percentile(d, 99.9))
-        report("4-banding", i, p999 <= 2.0,
+        report("4-banding", i, p999 <= 1.0,
                f"{kept} background tiles (gradient span R/G/B {span[0]:.1f}/{span[1]:.1f}/{span[2]:.1f} levels): "
-               f"neighbour steps after 3x3 median: 99.9th pct {p999:.2f}, max {d.max():.2f} code values, "
+               f"neighbour steps after 5x5 mean: 99.9th pct {p999:.2f}, max {d.max():.2f} code values, "
                f"{100 * (d > 1).mean():.2f}% of steps > 1 code; equal-value runs mean {runs.mean():.1f}px, max {runs.max():.1f}px")
 
 
