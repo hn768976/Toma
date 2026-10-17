@@ -108,9 +108,9 @@ BAND_REGIONS = {
     "ServerAisle_Steel": [(900, 650, 1270, 715, "h", 300), (900, 5, 1270, 60, "h", 300)],
     "FrameTunnel_WhiteBurst": [(20, 300, 220, 420, "h", 60), (560, 280, 720, 400, "v", 120)],
     "FrameTunnel_CyanMagenta": [],
-    "StreamCorridor_Blue": [(590, 60, 690, 300, "v", 300), (600, 420, 680, 715, "v", 300)],
-    "ScreenCorridor_GreenBlue": [(560, 20, 720, 200, "v", 300), (560, 560, 720, 715, "v", 300)],
-    "ScreenCorridor_AmberTeal": [(560, 20, 720, 200, "v", 300), (560, 560, 720, 715, "v", 300)],
+    "StreamCorridor_Blue": [(600, 0, 680, 26, "v", 300)],
+    "ScreenCorridor_GreenBlue": [(600, 0, 680, 92, "v", 300)],
+    "ScreenCorridor_AmberTeal": [(600, 0, 680, 92, "v", 300)],
     "StageBeams_Steel": [(560, 60, 720, 560, "v", 300), (20, 80, 300, 600, "h", 300)],
     "StageBeams_Amber": [(560, 60, 720, 560, "v", 300), (20, 80, 300, 600, "h", 300)],
 }
