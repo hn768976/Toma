@@ -1,0 +1,7 @@
+node_modules
+out
+renders
+renders-4k
+stills-6k
+*.zip
+.DS_Store

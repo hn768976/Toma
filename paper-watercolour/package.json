@@ -1,0 +1,30 @@
+{
+  "name": "paper-watercolour-backgrounds",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "paint": "node scripts/paint-layers.mjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.515",
+    "@remotion/cli": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "d3-geo": "3.1.1",
+    "p5": "2.2.3",
+    "p5.brush": "2.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "roughjs": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.0",
+    "@types/geojson": "^7946.0.16",
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
