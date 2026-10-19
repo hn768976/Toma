@@ -39,7 +39,10 @@ void main() {
   float e = edgeDist(q);
   vec4 n = noiseAt(q, 1500.0);
   vec4 nf = noiseAt(q, 380.0);
-  float front = e + (n.x - 0.5) * 0.9 + (nf.y - 0.5) * (0.08 + 0.17 * (1.0 - wet));
+  // reach varies a lot along each side (low-frequency), then fingers (mid), then detail
+  // mostly pulls the wash back, so the clean window's edge wanders
+  float reach = max(0.0, noiseAt(q + 1234.0, 2600.0).y - 0.42) * 2.2;
+  float front = e + reach + (n.x - 0.5) * 0.7 + (nf.y - 0.5) * (0.08 + 0.17 * (1.0 - wet));
   // the front stops at ~1.15 wash depths, so the centre stays clean paper
   float P = uReveal * 1.4 - 0.25;
   float mask = smoothstep(P + 0.05 + 0.08 * wet, P - 0.05 - 0.08 * wet, front);
@@ -54,9 +57,11 @@ void main() {
 
   // splatters land during the bleed, each patch at its own moment
   float s = 1.0 - mix(texture(uSplat, uv).r, textureLod(uSplat, uv, 2.0).r, wet * 0.5);
+  // ink drops dry flat, with granulation and a faint tide line, not a glossy rim
+  float sMid = 1.0 - textureLod(uSplat, uv, 1.5).r;
   float ts = 0.15 + 0.75 * noiseAt(q, 2600.0).z;
   float sOn = smoothstep(ts, ts + 0.02, uReveal) * uSplatOn;
-  dens += smoothstep(0.02, 0.25, s) * (2.2 + 2.0 * s) * sOn * smoothstep(1.35, 1.05, e);
+  dens += (smoothstep(0.03, 0.12, s) * 1.7 * granulate(q, 0.5) + max(0.0, s - sMid) * 0.5) * sOn * smoothstep(1.35, 1.05, e);
 
   vec3 pig = mix(uLight, uDark, smoothstep(0.15, 0.75, dens));
   vec3 od = pig * dens * 1.5;

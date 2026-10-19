@@ -144,6 +144,7 @@ const buildWorld = (fc: FeatureCollection<Geometry>): World => {
   // hatching: diagonal strokes on land, only within a ragged band of the coast
   const rng = mulberry32(hashString("HatchedMap-hatch"));
   const hatch: [number, number, number, number][] = [];
+  let setIndex = 0;
   const addSet = (angle: number, spacing: number, bandBase: number) => {
     const dx = Math.cos(angle);
     const dy = Math.sin(angle);
@@ -160,7 +161,9 @@ const buildWorld = (fc: FeatureCollection<Geometry>): World => {
         const y = MAP_H / 2 + ny * o + dy * t;
         const inside = x >= 0 && y >= 0 && x < MAP_W && y < MAP_H;
         const d = inside ? distAt(x, y) : 0;
-        const ok = inside && d > 3 && d < band;
+        // hatch direction changes from region to region, as a hand would turn the page
+        const region = Math.sin(x * 0.0013 + 1.7) * Math.sin(y * 0.0021 + 0.4) + Math.sin(x * 0.0007 - y * 0.0009) * 0.6;
+        const ok = inside && d > 3 && d < band && (setIndex === 1 || (region > 0) === (angle < 0));
         if (ok && !start) start = [x, y];
         if (ok) last = [x, y];
         const len = start && last ? Math.hypot(last[0] - start[0], last[1] - start[1]) : 0;
@@ -174,6 +177,8 @@ const buildWorld = (fc: FeatureCollection<Geometry>): World => {
     }
   };
   addSet(-Math.PI / 4, 15, 66);
-  addSet(Math.PI / 5, 15, 28);
+  addSet(Math.PI / 3.2, 15, 66);
+  setIndex = 1;
+  addSet(Math.PI / 5, 17, 26);
   return { rings, graticule, hatch, landMask };
 };

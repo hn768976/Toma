@@ -68,18 +68,22 @@ for (const clip of CLIPS.filter((c) => only.length === 0 || only.includes(c.id) 
   const wall = (Date.now() - t0) / 1000;
   const n = clip.loop ? 600 : composition.durationInFrames;
   const mp4 = path.join(outRoot, `${clip.out}.mp4`);
-  const enc = (frames, file) =>
+  // Loop-check encode: constant QP 16 with an IDR forced at frame 600, so
+  // frames 0 and 600 are coded identically (CRF re-allocates bits per frame).
+  const enc = (frames, file, loopCheck = false) =>
     execFileSync("ffmpeg", [
       "-v", "error", "-y", "-framerate", "30", "-start_number", "0",
       "-i", path.join(framesDir, "element-%03d.png"),
       "-frames:v", String(frames),
       "-vf", "scale=out_color_matrix=bt709:out_range=tv:flags=lanczos+accurate_rnd+full_chroma_int",
-      "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p",
+      "-c:v", "libx264", "-preset", "slow",
+      ...(loopCheck ? ["-qp", "16", "-x264-params", "keyint=600:min-keyint=600:scenecut=0"] : ["-crf", "16"]),
+      "-pix_fmt", "yuv420p",
       "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
       "-r", "30", "-an", "-movflags", "+faststart", file,
     ]);
   enc(n, mp4);
-  if (clip.loop) enc(601, path.join(dir, `${clip.out}_601.mp4`));
+  if (clip.loop) enc(601, path.join(dir, `${clip.out}_601.mp4`), true);
   const sorted = [...perFrame].sort((a, b) => a - b);
   results[clip.out] = {
     id: clip.id,

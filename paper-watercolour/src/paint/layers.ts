@@ -47,6 +47,15 @@ const wash = (brush: Brush, pts: Pt[], opacity: number, bleed: number, texture: 
 
 // An ink drop hitting paper: a core blot, a tail thrown in the direction of
 // travel, and a spray of fine satellite droplets fanning the same way.
+// Tiny droplets: p5.brush's fast wash fill (a bleed is invisible at this size).
+const drop = (brush: Brush, pts: Pt[], opacity: number) => {
+  brush.noStroke();
+  brush.noFill();
+  brush.wash("#000000", opacity);
+  brush.polygon(pts);
+  brush.noWash();
+};
+
 const splat = (brush: Brush, rng: Rng, x: number, y: number, r: number, opacity: number) => {
   const dir = rng() * Math.PI * 2;
   const ux = Math.cos(dir);
@@ -57,14 +66,14 @@ const splat = (brush: Brush, rng: Rng, x: number, y: number, r: number, opacity:
     const L = r * range(rng, 1.5, 3.5);
     for (let k = 1; k <= 4; k++) {
       const t = k / 4;
-      wash(brush, blob(rng, x + ux * L * t, y + uy * L * t, r * (0.5 - 0.1 * k) * range(rng, 0.8, 1.1), 0.25, 16), opacity, 0.06, 0.2, 0.25);
+      drop(brush, blob(rng, x + ux * L * t, y + uy * L * t, r * (0.5 - 0.1 * k) * range(rng, 0.8, 1.1), 0.25, 16), opacity);
     }
   }
   const n = Math.floor(range(rng, 3, 14));
   for (let i = 0; i < n; i++) {
     const a = dir + range(rng, -0.7, 0.7);
     const d = r * range(rng, 1.3, 5.5);
-    wash(brush, blob(rng, x + Math.cos(a) * d, y + Math.sin(a) * d, Math.max(2, r * range(rng, 0.04, 0.2)), 0.2, 12), opacity, 0.04, 0.15, 0.2);
+    drop(brush, blob(rng, x + Math.cos(a) * d, y + Math.sin(a) * d, Math.max(2, r * range(rng, 0.04, 0.2)), 0.2, 12), opacity);
   }
 };
 

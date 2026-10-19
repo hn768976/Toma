@@ -27,7 +27,7 @@ void main() {
     vec2 dir = vec2(cos(fk * 2.4), sin(fk * 2.4));
     float span = smoothstep(0.1, 0.8, dot(normalize(q - cen), dir));
     float wob = (noiseAt(q, 1400.0).y - 0.5) * 260.0;
-    float streak = noiseAt(q + vec2(fk * 500.0), 300.0).x;
+    float streak = noiseAt(q + vec2(fk * 500.0), 900.0).x;
     sm += smoothstep(220.0, 30.0, abs(length(q - cen) - rad + wob)) * span * smoothstep(0.42, 0.75, streak);
   }
   sm = clamp(sm, 0.0, 1.0) * smoothstep(0.3, 0.6, noiseAt(q, 3400.0).z + 0.2);
@@ -37,7 +37,7 @@ void main() {
   float res = textureLod(uChalk, s, 1.5).g;
   // chalk only catches the tops of the board's tooth: grainy, broken edges
   float tooth = noiseAt(q, 48.0).x * 0.5 + noiseAt(q, 20.0).y * 0.2 + p.r * 0.3;
-  float a = smoothstep(0.3, 0.7, min(c.r, 1.0) * 0.85 + (tooth - 0.5) * 4.0) * smoothstep(0.03, 0.25, c.r);
+  float a = smoothstep(0.35, 0.7, min(c.r, 1.0) * 0.85 + (tooth - 0.5) * 4.6) * smoothstep(0.03, 0.25, c.r);
   // pressure varies along the stroke; dry patches skip
   a *= 0.7 + 0.3 * smoothstep(0.3, 0.6, noiseAt(q, 220.0).z);
   col = mix(col, uChalkCol, clamp(a, 0.0, 1.0) * 0.93);
@@ -159,14 +159,14 @@ export const Chalkboard: React.FC<ChalkboardProps> = ({ colourway, still = false
           // pressure: each stroke a little wider/brighter or thinner/fainter
           strokePartial(ctx, lines, st.drawFrac, (li) => {
             const h = ((li * 2654435761 + i * 40503) >>> 0) % 1000 / 1000;
-            ctx.lineWidth = CHALK_W * (0.7 + 0.6 * h);
-            ctx.strokeStyle = `rgb(${Math.round(170 + 85 * (1 - h * 0.6))},0,0)`;
+            ctx.lineWidth = CHALK_W * (0.55 + 0.8 * h);
+            ctx.strokeStyle = `rgb(${Math.round(120 + 135 * (1 - h * 0.7))},0,0)`;
           });
           // loose chalk dust: a faint haze that settles just below the strokes
           ctx.save();
           ctx.filter = `blur(${(10 * k).toFixed(2)}px)`;
-          ctx.globalAlpha = 0.18;
-          ctx.translate(0, 9);
+          ctx.globalAlpha = 0.07;
+          ctx.translate(0, 12);
           ctx.strokeStyle = "#00ff00";
           ctx.lineWidth = CHALK_W * 2.2;
           strokePartial(ctx, lines, st.drawFrac);

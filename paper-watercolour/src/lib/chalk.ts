@@ -140,8 +140,10 @@ export const designStrokes = (d: Design, seed: number): Polyline[] => {
       out.push(...rLines([[[-40, 290], [40, 290]]], seed + 30));
       out.push(...rLines([[[-60, 110], [-30, -60], [-10, -10], [10, -60], [30, -10], [60, 110]]], seed + 40));
       for (let i = 0; i < 7; i++) {
-        const a = (-160 + i * 23.3) * (Math.PI / 180);
-        out.push(...rLines([[[Math.cos(a) * 240, Math.sin(a) * 240 - 90], [Math.cos(a) * 330, Math.sin(a) * 330 - 90]]], seed + 50 + i));
+        const a = (-160 + i * 23.3 + [4, -6, 3, 7, -4, 5, -7][i]) * (Math.PI / 180);
+        const r0 = 230 + [10, -5, 20, 0, 15, -10, 5][i];
+        const r1 = r0 + 70 + [20, 40, 0, 30, 10, 45, 15][i];
+        out.push(...rLines([[[Math.cos(a) * r0, Math.sin(a) * r0 - 90], [Math.cos(a) * r1, Math.sin(a) * r1 - 90]]], seed + 50 + i));
       }
       return out;
     }

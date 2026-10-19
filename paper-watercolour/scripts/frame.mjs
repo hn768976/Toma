@@ -1,3 +1,5 @@
+// Renders one frame of any composition to PNG and prints browser logs.
+//   GL=swangle node scripts/frame.mjs <id> <frame> <out.png> [scale]
 import { getCompositions, renderStill } from "@remotion/renderer";
 import { browserExecutable, chromiumOptions, makeBundle } from "./common.mjs";
 const id = process.argv[2]; const frame = Number(process.argv[3] ?? 0); const out = process.argv[4];

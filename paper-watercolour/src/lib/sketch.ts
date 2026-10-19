@@ -36,6 +36,7 @@ export const drawShape = (rc: RoughCanvas, kind: ShapeKind, size: number, ink: s
     bowing: opts.bowing ?? 1.2,
     seed: opts.seed,
     preserveVertices: false,
+    fillShapeRoughnessGain: 2.2,
   };
   // loose fills: hachure / zigzag scribble / cross-hatch, never flat; gap,
   // angle and weight differ per element like separate hand-filled shapes
@@ -76,7 +77,7 @@ export const drawShape = (rc: RoughCanvas, kind: ShapeKind, size: number, ink: s
       const pts: P[] = [];
       for (let i = 0; i <= 14; i++) {
         const t = i / 14;
-        pts.push([(t - 0.5) * size * 1.3, Math.sin(t * Math.PI * 3 + variant) * size * 0.18]);
+        pts.push([(t - 0.5) * size * 1.3, Math.sin(t * Math.PI * (2 + variant * 0.7) + variant) * size * (0.12 + 0.04 * variant)]);
       }
       rc.curve(pts, { ...base, strokeWidth: base.strokeWidth! * 1.1 });
       break;
@@ -94,7 +95,7 @@ export const drawShape = (rc: RoughCanvas, kind: ShapeKind, size: number, ink: s
       const pts: P[] = [];
       for (let i = 0; i <= 44; i++) {
         const t = i / 44;
-        const a = t * Math.PI * 2 * 2.6;
+        const a = t * Math.PI * 2 * (1.6 + 0.45 * variant + size * 0.004);
         const r = t * size * 0.5;
         pts.push([Math.cos(a) * r, Math.sin(a) * r]);
       }

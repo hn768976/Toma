@@ -129,7 +129,42 @@ GL=swangle npm run paint edge-wash       # one layer
 
 ## Render times
 
-RENDER_TIMES_PLACEHOLDER
+Measured in a 4-core cloud container with **no GPU** (`--gl=swangle`, i.e.
+SwiftShader on the CPU), Remotion 4.0.515, PNG frames then ffmpeg. A
+GPU machine with `--gl=angle` will be much faster for the shader work. The
+Rough.js / Canvas2D work (sketches, map, chalk) is CPU-bound either way.
+
+**720p previews** (`--scale=1/3`, 4 tabs in parallel):
+
+| Clip | Frames | Wall time | Wall / frame | Per frame in one tab (median) |
+|---|---:|---:|---:|---:|
+| WatercolourBloom_Pastel | 601 | 510 s | 0.85 s | 3.3 s |
+| WatercolourBloom_Sunset | 601 | 560 s | 0.93 s | 3.2 s |
+| InkReveal_Indigo | 360 | 75 s | 0.21 s | 0.73 s |
+| InkReveal_Sepia | 360 | 76 s | 0.21 s | 0.74 s |
+| SketchyDrift_KidsBright | 601 | 259 s | 0.43 s | 1.7 s |
+| SketchyDrift_Muted | 601 | 242 s | 0.40 s | 1.6 s |
+| HatchedMap_Antique | 601 | 907 s | 1.5 s | 5.8 s |
+| Chalkboard_Green | 601 | 1315 s | 2.2 s | 8.7 s |
+
+**One 4K frame** (3840×2160, one tab, steady state after the first frame;
+the first frame also bakes the paper and uploads layers, ~13–20 s):
+
+| Clip | 4K frame |
+|---|---:|
+| WatercolourBloom_Pastel (paint-once layers + shader) | **8.2 s** |
+| WatercolourBloom_Pastel, p5.brush repainting live every frame | **71 s** (8.6× slower) |
+| InkReveal_Indigo | 1.8 s |
+| Chalkboard_Green | 9.5 s |
+
+**4K estimates on the same CPU-only box** (600 frames, one tab, so an
+upper bound): Bloom ≈ 80 min per clip, Ink Reveal ≈ 11 min, Chalkboard ≈
+95 min. Sketchy Drift ≈ 35 min and Map ≈ 90 min are extrapolated from the
+720p ratio, not measured. All eight ≈ 9 h CPU-only. With `--gl=angle` on a
+desktop GPU, expect the watercolour clips to be several times faster.
+
+Painting the layers once (`npm run paint`, CPU WebGL) took 35 s per bloom
+sprite and 85–240 s per 4K layer, about 25 min in total.
 
 ## Licences
 

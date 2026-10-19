@@ -76,6 +76,11 @@ for name, loop in CLIPS:
         r["loop_png_identical"] = bool((a == b).all())
         r["loop_png_maxdiff"] = int(np.abs(a.astype(int) - b.astype(int)).max())
         m601 = R / name / f"{name}_601.mp4"
+        # (re)encode the loop-check file: constant QP 16, IDR forced at frame 600
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-framerate", "30", "-start_number", "0", "-i", str(frames / "element-%03d.png"),
+                        "-frames:v", "601", "-vf", "scale=out_color_matrix=bt709:out_range=tv:flags=lanczos+accurate_rnd+full_chroma_int",
+                        "-c:v", "libx264", "-preset", "slow", "-qp", "16", "-x264-params", "keyint=600:min-keyint=600:scenecut=0",
+                        "-pix_fmt", "yuv420p", "-an", str(m601)], check=True)
         d0, d600 = decode(m601, 0), decode(m601, 600)
         diff = np.abs(d0.astype(int) - d600.astype(int))
         r["loop_mp4"] = {"frames": probe(m601)["frames"], "maxdiff": int(diff.max()), "meandiff": round(float(diff.mean()), 4),

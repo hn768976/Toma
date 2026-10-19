@@ -7,6 +7,8 @@ declare module "p5.brush" {
   export function noiseSeed(s: number): void;
   export function fill(color: string, opacity?: number): void;
   export function noFill(): void;
+  export function wash(color: string, opacity?: number): void;
+  export function noWash(): void;
   export function fillBleed(strength: number, direction?: "in" | "out", angle?: number): void;
   export function fillTexture(texture: number, border: number, scatter?: boolean): void;
   export function noStroke(): void;
