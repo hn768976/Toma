@@ -1,0 +1,27 @@
+{
+  "name": "hand-drawn-overlays",
+  "version": "1.0.0",
+  "description": "Hand-drawn overlay clips and clip-art sheets (Remotion, perfect-freehand, Tegaki, Rough.js)",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.533",
+    "@remotion/paths": "4.0.533",
+    "perfect-freehand": "1.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.533",
+    "roughjs": "4.6.6",
+    "tegaki": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "previews": "bash scripts/render-previews.sh",
+    "sheets": "bash scripts/render-sheets.sh"
+  }
+}
