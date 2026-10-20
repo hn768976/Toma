@@ -22,3 +22,11 @@ Most saleable of its group: soft violet-peach dusk, hazy ranges, believable refl
 Clear flat woodblock dusk with mist bands, but feels more vector than print; wood grain barely visible, reflections flat bars, square-cap ticks on key outlines; registration shift leaves bare-paper strips at full-bleed edges (worked around). 9 stages.
 ## linocut — 29.8s
 Strong, graphic, genuinely print-like; carved black sky streaks, orange afterglow block, good boat/reflection; far range reads snowy, left pines busy, right pines tiny; baren low-pressure blotches in black sky read as artefacts; dark and heavy. 10 stages.
+## oilpaint — 26.5s
+Pleasant amateur-painting look, calm horizontal strokes, not Starry Night; sky strokes busy, pines stiff/cartoonish, reflections stacked bars, mist barely shows; needed toned ground to hide white canvas specks. Weave/relief px-fixed. 7 stages.
+## papercut — 112.0s
+Charming at 1080p: torn-strip dusk sky, paper sun, cut-paper pines, kraft boat; crayon birds/ripples smudgy (ripples read as pills/ice), white rims make mist/pines read as snow, coarse at small sizes; opaque pieces so mist can't be translucent. Rim/shadow/tear px-fixed. 10 stages.
+## flatvector — 4.5s
+Strongest of its group, clean stock-ready flat landscape; far peaks generic triangles, mist bars look like UI bars, faint vertical seam on near range; no gradients (banded sky). 9 stages.
+## synthwave — 44.1s
+Striking wireframe magenta/cyan ranges, torn mirror bars, striped sun behind peak, tape playback; sun reflection reads as a second sun (known lib issue), sun stripes hidden, sky mostly violet, scratchy reeds. Bloom/haze px-fixed. 10 stages.

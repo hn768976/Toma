@@ -70,7 +70,6 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
         t.wash(head, 0.5, slip=0.3, pool=0.3)
         t.trek(P([(x - 2, y + 13), (x - 6, 1080)]), w(1.4), taper=(0.05, 0.1))
         t.occlude(head)
-    t.occlude(P([(0, 935), (300, 935), (300, 1080), (0, 1080)]), grow=0)
 
     # the rowing boat, rower seated, oars dipping
     BX, BY = 1080.0, 800.0
@@ -142,7 +141,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     t.wash(near, 0.24, angle=0.0, pool=0.4, grad=(S.pt(400, 450), S.pt(400, HORIZON), 0.7, 1.3))
     for (x0, x1) in [(20, 380), (980, 1150), (1760, 1910)]:
         seg = [(x, near_ridge(x) + 6) for x in np.linspace(x0, x1, 12)]
-        poly = P(seg + [(x1, HORIZON), (x0, HORIZON)])
+        poly = P(seg + [(x0 + (x1 - x0) * 0.55, HORIZON - 4)])          # a wedge under the slope, no vertical edges
         t.hatch(poly, angle=1.1, spacing=S(5), width=w(0.9), dens=0.6)
     t.occlude(near, grow=0)
 
@@ -154,8 +153,11 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     for (x, y, dx, dy) in [(1250, 310, -70, 120), (1250, 310, 80, 110), (760, 352, -40, 90), (1700, 360, 40, 80),
                            (260, 368, 30, 70)]:
         t.trek(P([(x, y + 8), (x + dx * 0.5, y + dy * 0.45), (x + dx, y + dy)]), w(1.1), 0.7, pounce=False, taper=(0.1, 0.8))
-    t.hatch(P([(x, far_ridge(x) + 8) for x in np.linspace(1262, 1460, 10)] + [(1460, 520), (1262, 520)]),
-            angle=1.2, spacing=S(5.5), width=w(0.8), dens=0.5)
+    for k in range(7):                                      # shade strokes down the lee flank of the high peak
+        x = 1275 + k * 26
+        y = far_ridge(x) + 10
+        t.trek(P([(x, y), (x + 14, y + 30 + 6 * (k % 3)), (x + 22, y + 58 + 8 * (k % 2))]), w(1.0), 0.6, pounce=False,
+               taper=(0.1, 0.7))
     t.occlude(far, grow=0)
 
     # sky: birds, one long low cloud bank, then the dusk wash -- darkest overhead, the glow left white
@@ -163,10 +165,8 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
             width=w(1.8), tilt=0.2)
     t.cloud(S(560), S(225), S(380), S(70), lean=0.35, tone=0.12, width=w(1.6), seed=seed + 20)
     sky = P([(-5, -5), (1925, -5), (1925, HORIZON), (-5, HORIZON)])
-    glow = ellipse_pts(*S.pt(1240, 400), S(380), S(150), 0, 60)
-    t.wash(sky, 0.3, angle=0.0, pool=0.2, band=S(14), grad=(S.pt(960, 0), S.pt(960, 470), 1.0, 0.12), holes=[glow])
-    t.wash(glow, 0.03, angle=0.0, pool=0.2)
-    t.hatch(P([(0, 0), (1920, 0), (1920, 120), (0, 120)]), angle=0.0, spacing=S(6), width=w(0.8), dens=0.45)
+    t.wash(sky, 0.3, angle=0.0, pool=0.2, band=S(14), grad=(S.pt(960, 0), S.pt(960, 440), 1.0, 0.0))
+    t.wash(sky, 0.16, angle=0.0, pool=0.2, band=S(14), grad=(S.pt(1240, 300), S.pt(0, 300), 0.0, 1.0))   # glow behind the peak
     t.clear_occlusion()
 
     # ------------------------------------------------------------ the workshop
@@ -178,8 +178,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     if stages_dir:
         t.stage('fired')
     t.set_wall()
-    t.age(craze=0.8, chips=6, specks=0.8, nails=0.3, dirt=0.8)
-    t.light(window=(S(300), S(120), S(110), S(150)), strength=0.35, soft=6.0 * s)
+    t.age(craze=0.8, chips=0, specks=0.6, nails=0.3, dirt=0.8)
     img = t.composite()
     if stages_dir:
         os.makedirs(stages_dir, exist_ok=True)
