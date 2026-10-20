@@ -41,14 +41,14 @@ type Motion = {
 
 const DEPTH = { sky: 0.04, clouds: 0.1, far: 0.22, near: 0.5, fore: 1.0, mist: 0.55, boat: 0.72, boat_refl: 0.72, birds: 0.3, reeds: 1.0 };
 const BASE: Motion = {
-  cam: 120, depth: DEPTH, waterAmp: 5, mistDrift: 480, cloudDrift: 150,
+  cam: 120, depth: DEPTH, waterAmp: 2.5, mistDrift: 480, cloudDrift: 150,
   boatAngle: 0.018, boatLift: 5, boatCycles: 4, birdsWrap: true, fx: 0,
 };
 export const MOTION: Record<string, Motion> = {
   watercolour: { ...BASE, mistDrift: 240 },
-  artdeco: { ...BASE, waterAmp: 6 },
+  artdeco: { ...BASE, waterAmp: 3 },
   // lino mist is a solid printed band: sliding it uncovers carving that was never printed, so it stays put
-  linocut: { ...BASE, waterAmp: 4, mistDrift: 0 },
+  linocut: { ...BASE, waterAmp: 2, mistDrift: 0 },
   // a leaded window is one flat panel: leads can't slide over leads, so only a hint of parallax;
   // the light sweep does the work
   stainedglass: { ...BASE, cam: 24, waterAmp: 0, mistDrift: 0, cloudDrift: 0, boatAngle: 0.01, boatLift: 3, fx: 1 },

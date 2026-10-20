@@ -55,3 +55,13 @@ glass types (cathedral, streaky, seedy, opalescent, reamy) with own shade/densit
 boat, rower, pines, reeds cut in glass with their own leads; grisaille only for fine detail. Draw-on in workshop
 order: cartoon → cut glass laid with gaps → grisaille → leading → solder → daylight. Saddle bars not added
 (would cross the stock image and be baked into every parallax layer).
+
+## Round 2 — verdicts
+frame_1 watercolour: PARTLY · frame_2 Art Deco: FAKE · frame_3 ink wash: PARTLY · frame_4 stained glass: FAKE ·
+frame_5 watercolour draw-on: FAKE as in-progress · frame_6 glass draw-on: FAKE · still_1 watercolour: PARTLY ·
+still_2 Art Deco: FAKE · still_3 ink indigo: PARTLY · still_4 linocut: MOSTLY CONVINCING (best of set).
+Findings caused by my compositor (fixed by me): water shimmer displacement too strong/high-frequency (stair-step
+"displacement filter" reflections) → 2.5 px, broader noise; stained-glass light sweep read as airbrushed hotspots →
+glass-only multiplicative brightening; ink-wash mist matte carried tree residue → ghost trees when drifting → correction
+may only lighten; all stills shared one paper texture (same seed) → per-scene seed.
+Remaining findings sent back to the style agents (round 2 fixes below).

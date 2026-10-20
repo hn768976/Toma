@@ -59,7 +59,7 @@ void main() {
   if (uMode == 1) {
     float k = clamp((p.y - uHorizon) / (uBottom - uHorizon), 0.0, 1.0);
     vec2 off = mix(uOff, uOff2, k);
-    vec2 q = vec2(p.x / 260.0, p.y / 46.0);
+    vec2 q = vec2(p.x / 420.0, p.y / 90.0);       // broad, slow swells: a shimmer, not a ripple filter
     float dx = (loopNoise(q) - 0.5) * 2.0 * uAmp * pow(k, 1.3);
     float dy = (loopNoise(q * 1.7 + 5.1) - 0.5) * 0.6 * uAmp * pow(k, 1.3);
     col = tap(p + uBleed + off + vec2(dx, dy));
@@ -107,7 +107,7 @@ void main() {
     float d = (p.x * 0.8 + p.y * 0.6) - uSweep;
     float band = 1.0 - smoothstep(0.0, 1100.0, abs(d));   // compact: exactly 0 once off-frame
     float glass = smoothstep(0.10, 0.35, max(c.r, max(c.g, c.b)));
-    c += band * glass * (0.55 * c + 0.06);
+    c += band * glass * 0.32 * c;               // light passing through the glass: brightens it, never the leads
   }
   // fixed per-pixel grain (composition-space, so it sits on the painting like paper texture)
   float g = h21(floor(p * 1.0) + 0.5) - 0.5;

@@ -77,10 +77,13 @@ def p2_save_times(t):
     json.dump(t, open(os.path.join(ROOT, 'docs', 'phase2_times.json'), 'w'), indent=1, sort_keys=True)
 
 
+SCENE_SEED = {'lake': 0, 'coast': 101, 'forest': 202}   # each painting gets its own sheet of paper
+
+
 def _paint_still(key, scene, cw, out):
     mod = importlib.import_module(f'scenes.{key}_{scene}')
     t = time.perf_counter()
-    img = mod.paint(3840, 2160, seed=SEED, colourway=cw)
+    img = mod.paint(3840, 2160, seed=SEED + SCENE_SEED[scene], colourway=cw)
     dt = time.perf_counter() - t
     img = drawkit.to_image(img).convert('RGB')
     assert img.size == (3840, 2160), img.size

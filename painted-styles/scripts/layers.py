@@ -89,7 +89,9 @@ def extract_key(B, C, sigma=60, smooth=True, grainy=False):
         r = C - (B * (1 - a[..., None]) + K * a[..., None])
         w = smoothstep(0.05, 0.2 if grainy else 0.15, a)[..., None]
         corr = w * r / np.maximum(a, 0.05)[..., None]
-        F = K + (np.clip(corr, -0.12, 0.12) if grainy else corr)
+        # on paper the correction may only lighten: darker residue is the scene behind (trees, shore)
+        # and would travel with the drifting mist as ghost shapes
+        F = K + (np.clip(corr, 0.0, 0.12) if grainy else corr)
     return np.clip(F, 0, 1), a
 
 
