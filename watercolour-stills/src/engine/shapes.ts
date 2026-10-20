@@ -36,7 +36,7 @@ export const blob = (
     const k =
       1 +
       irregular * 1.6 * noise.fbm(ox + Math.cos(a) * freq, oy + Math.sin(a) * freq, 3) +
-      0.035 * noise.fbm(ox + Math.cos(a) * freq * 9, oy + Math.sin(a) * freq * 9, 2) +
+      0.014 * noise.fbm(ox + Math.cos(a) * freq * 7, oy + Math.sin(a) * freq * 7, 2) +
       rng.range(-0.006, 0.006);
     const x = Math.cos(a) * rx * k;
     const y = Math.sin(a) * ry * k;

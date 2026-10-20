@@ -132,21 +132,29 @@ export const pourDrip: Layout = {
     const fx = fxOf(ctx);
     const [a, b, c] = colors;
     // the pour: heavy pigment pooled along the top, colours running together
-    await painter.wash(band(rng, noise, -150, W + 150, -120, H * 0.16, { wobble: 45, freq: 4 }), a, { opacity: 100, bleed: 0.18, texture: 0.5 });
+    await painter.wash(band(rng, noise, -150, W + 150, -120, H * 0.15, { wobble: 70, freq: 5 }), a, { opacity: 100, bleed: 0.16, texture: 0.5 });
+    const charges: { x: number; r: number; col: string }[] = [];
     for (const col of [b, c]) {
       for (let i = 0; i < 4; i++) {
-        await drop(fx, rng.range(0, W), H * rng.range(0.02, 0.12), W * rng.range(0.05, 0.09), col, { opacity: 75, bleed: 0.4 });
+        const ch = { x: rng.range(0, W), r: W * rng.range(0.05, 0.09), col };
+        charges.push(ch);
+        await drop(fx, ch.x, H * rng.range(0.03, 0.1), ch.r, col, { opacity: 75, bleed: 0.35 });
       }
     }
-    await painter.wash(band(rng, noise, -150, W + 150, -120, H * 0.07, { wobble: 30, freq: 5 }), concentrate(a, 1.6), { opacity: 70, bleed: 0.35, texture: 0.5 });
-    // streams running from the pooled edge down the tilted sheet
-    const streams = Math.round(rng.int(10, 15) * density);
-    const xs = Array.from({ length: streams }, (_, i) => W * ((i + 0.5 + rng.range(-0.35, 0.35)) / streams));
-    const colorOf = (i: number) => (i % 3 === 0 ? b : i % 4 === 1 ? c : a);
+    await painter.wash(band(rng, noise, -150, W + 150, -120, H * 0.06, { wobble: 50, freq: 4 }), concentrate(a, 1.6), { opacity: 65, bleed: 0.45, texture: 0.5, maxSeg: 150 });
+    // streams run from the pooled edge, irregularly spaced, each in the
+    // colour of the paint directly above it
+    const streams = Math.round(rng.int(9, 13) * density);
+    const xs: number[] = [];
+    let x = W * rng.range(0.02, 0.08);
+    while (xs.length < streams && x < W * 0.98) {
+      xs.push(x);
+      x += (W / streams) * rng.range(0.35, 1.7);
+    }
+    const colorAt = (px: number) => charges.find((ch) => Math.abs(ch.x - px) < ch.r * 0.8)?.col ?? a;
     for (const col of [a, b, c]) {
-      for (let i = 0; i < streams; i++) {
-        if (colorOf(i) !== col) continue;
-        await drip(fx, xs[i], H * rng.range(0.1, 0.16), H * rng.range(0.25, 0.78), rng.range(28, 58), col, { opacity: 110, pool: false });
+      for (const sx of xs.filter((q) => colorAt(q) === col)) {
+        await drip(fx, sx, H * rng.range(0.07, 0.1), H * rng.range(0.22, 0.78), rng.range(26, 54), col, { opacity: 110, pool: false });
       }
     }
   },

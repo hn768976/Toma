@@ -223,24 +223,28 @@ void main() {
   float relief = 2.6 * uUnit;
   vec3 n = normalize(vec3((hl - hr) * relief, (hd - hu) * relief, 1.0));
   vec3 L = normalize(vec3(-0.5, 0.55, 0.67));
-  float shade = 1.0 + 0.32 * (dot(n, L) - L.z) + 0.035 * (h - 0.5);
+  // the tooth is faint on bare paper and shows more where pigment sits in it
+  float Dl = clamp(dot(D, vec3(0.3333)) * 1.3, 0.0, 1.0);
+  float shade = 1.0 + (0.17 + 0.22 * Dl) * (dot(n, L) - L.z) + 0.03 * (h - 0.5);
 
   // On the outer fringe of a wash the water only reaches the paper's pits,
   // so the edge breaks up along the tooth instead of fading smoothly.
   float fringe = clamp(1.0 - min(ratio.r, min(ratio.g, ratio.b)), 0.0, 1.0);
   float bite = smoothstep(0.0, 0.5, 0.75 - fringe + (0.5 - h) * 0.8);
-  D *= mix(1.0, bite, smoothstep(0.3, 0.7, fringe));
+  D *= mix(1.0, bite, smoothstep(0.25, 0.6, fringe));
 
   // pigment pools in the valleys of the tooth and thins on the peaks
   float dip = clamp((0.5 - h) * 2.0, -1.0, 1.0);
-  D *= max(0.0, 1.0 + uSettle * (dip > 0.0 ? dip : 0.5 * dip));
+  float settle = uSettle * (0.45 + 1.1 * Dl);
+  D *= max(0.0, 1.0 + settle * (dip > 0.0 ? dip : 0.5 * dip));
 
   // Granulation: heavy pigment particles flocculate into fine dark specks
   // that drop into the grain; the effect is patchy across a wash.
   float speck = vnoise(q / 3.2, uSeed + 11u) * 0.5 + vnoise(q / 7.5, uSeed + 12u) * 0.5;
   speck = smoothstep(0.52, 0.86, speck);
   float clump = fbm(q / 110.0, uSeed + 13u);
-  float gstrength = uGran * (0.2 + 0.8 * smoothstep(0.3, 0.72, clump));
+  // patchy, strongest where paint pooled, absent in thin tints
+  float gstrength = uGran * (0.08 + 0.92 * smoothstep(0.38, 0.72, clump)) * smoothstep(0.06, 0.55, Dl);
   D *= max(0.0, 1.0 + gstrength * (1.0 * speck - 0.15 + 0.45 * max(dip, -0.4)));
 
   // uneven pigment load, at the scale of a brushload and of a few mm

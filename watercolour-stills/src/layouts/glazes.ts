@@ -72,7 +72,7 @@ export const layeredGlazes: Layout = {
 
 export const marbledBlend: Layout = {
   label: "MarbledBlend",
-  edge: 0.55,
+  edge: 0.3,
   async paint(ctx) {
     const { painter, rng, noise, colors, W, H, density } = ctx;
     const fx = fxOf(ctx);
@@ -90,9 +90,10 @@ export const marbledBlend: Layout = {
           const o = rng.range(0, 50);
           await painter.wash(ribbon(path, (t) => w * (0.55 + 0.45 * Math.sin(Math.PI * Math.min(1, t * 1.1 + 0.03))) * (0.75 + 0.25 * noise.n2(o + t * 4, 3))), concentrate(cols[ci], round === 0 ? 0.95 : 1.3), {
             opacity: rng.range(55, 72),
-            bleed: 0.42,
-            texture: 0.45,
+            bleed: 0.3,
+            texture: 0.6,
             border: 0.25,
+            maxSeg: 120,
           });
         }
       }

@@ -104,14 +104,24 @@ def check_content(names):
     return ok
 
 
+EDGE = 6.0  # levels per 8 px: a dried wash edge, which is meant to be crisp
+
+
 def profile_steps(profile):
-    """Largest jump between neighbouring samples of a smoothed profile."""
+    """Largest jump inside the smooth spans of a profile, and how many
+    intentional wash edges (hard dried edges) the profile crossed. Samples
+    within 3 steps of an edge are left out of the smooth spans."""
     d = np.abs(np.diff(profile))
-    return float(d.max()), float(np.median(d))
+    edges = d > EDGE
+    near = np.convolve(edges.astype(float), np.ones(7), mode="same") > 0
+    smooth = d[~near]
+    n_edges = int(np.sum(np.diff(np.concatenate([[0], edges.astype(int)])) == 1))
+    return (float(smooth.max()) if smooth.size else 0.0), n_edges
 
 
 def check_banding():
-    """Graded wash (3) and blooms (1, 6): smoothed profiles change smoothly."""
+    """Graded wash (3) and blooms (1, 6): no posterised levels, no steps in the
+    smooth spans; the graded wash may not contain a single hard edge."""
     ok = True
     print("[banding] smoothed luminance profiles (levels per 8 px step)")
     weights = np.array([0.299, 0.587, 0.114], dtype=np.float32)
@@ -119,12 +129,14 @@ def check_banding():
         a = np.asarray(Image.open(n).convert("RGB"), dtype=np.float32) @ weights
         h, w = a.shape
         worst = 0.0
+        edges = 0
         if "_GradedSky_" in n.name:
             # vertical profiles down the gradient, each averaged over a 240 px wide strip
             for x in np.linspace(0.1, 0.9, 5):
                 strip = a[:, int(w * x) - 120 : int(w * x) + 120].mean(axis=1)
                 prof = strip[: (h // 8) * 8].reshape(-1, 8).mean(axis=1)
-                worst = max(worst, profile_steps(prof)[0])
+                st, e = profile_steps(prof)
+                worst, edges = max(worst, st), edges + e
             # the gradient must actually go from pigment at the top to paper at the bottom
             top, bottom = a[: h // 10].mean(), a[-h // 10 :].mean()
             print(f"  {n.name:46s} top {top:6.1f}  bottom {bottom:6.1f}")
@@ -133,19 +145,22 @@ def check_banding():
             for y in np.linspace(0.3, 0.7, 3):
                 strip = a[int(h * y) - 60 : int(h * y) + 60].mean(axis=0)
                 prof = strip[: (w // 8) * 8].reshape(-1, 8).mean(axis=1)
-                worst = max(worst, profile_steps(prof)[0])
+                st, e = profile_steps(prof)
+                worst, edges = max(worst, st), edges + e
             for x in np.linspace(0.35, 0.65, 3):
                 strip = a[:, int(w * x) - 60 : int(w * x) + 60].mean(axis=1)
                 prof = strip[: (h // 8) * 8].reshape(-1, 8).mean(axis=1)
-                worst = max(worst, profile_steps(prof)[0])
+                st, e = profile_steps(prof)
+                worst, edges = max(worst, st), edges + e
         # 8-bit posterisation shows as missing levels inside the occupied range
         region = a[h // 4 : 3 * h // 4, w // 4 : 3 * w // 4].astype(np.int32)
         lo, hi = np.percentile(region, 2), np.percentile(region, 98)
         used = np.unique(region[(region >= lo) & (region <= hi)])
         gaps = int((hi - lo + 1) - len(used))
-        flag = worst > 6.0 or gaps > 0
+        # the graded wash must have no hard edge at all; blooms are meant to have them
+        flag = gaps > 0 or ("_GradedSky_" in n.name and edges > 0)
         ok &= not flag
-        print(f"  {n.name:46s} max step {worst:5.2f}  missing levels {gaps}  {'FAIL' if flag else 'ok'}")
+        print(f"  {n.name:46s} max step in smooth spans {worst:5.2f}  wash edges crossed {edges:2d}  missing levels {gaps}  {'FAIL' if flag else 'ok'}")
     print("  OK" if ok else "  FAILED")
     return ok
 

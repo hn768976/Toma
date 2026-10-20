@@ -22,21 +22,22 @@ const cells = ({ rng, W, H }: LayoutCtx, cols: number, rows: number, overhang = 
 
 export const bloomField: Layout = {
   label: "BloomField",
-  edge: 0.85,
+  edge: 0.55,
   async paint(ctx) {
     const { painter, rng, noise, colors, W, H, density } = ctx;
     const fx = fxOf(ctx);
-    const grid = cells(ctx, 6, 3, 0.06).map((c, i) => ({ ...c, col: colors[i % colors.length] }));
-    shuffle(rng, grid);
+    const grid = shuffle(rng, cells(ctx, 6, 3, 0.06).map((c, i) => ({ ...c, col: colors[i % colors.length] }))).slice(0, 16);
     // wet-in-wet base: soft, overlapping washes that merge into each other
     for (const col of colors) {
       for (const c of grid.filter((g) => g.col === col)) {
-        const r = W * rng.range(0.11, 0.16);
+        const r = W * 0.07 * Math.pow(3, rng());
         await painter.wash(blob(rng, noise, c.x, c.y, r, r * rng.range(0.75, 1.05), { irregular: 0.38 }), concentrate(col, 0.9), {
           opacity: rng.range(55, 75),
           bleed: 0.42,
           texture: 0.6,
           border: 0.3,
+          // coarse outline: p5.brush feathers it widely, as wet-in-wet spreads
+          maxSeg: 120,
         });
       }
     }
@@ -137,6 +138,7 @@ export const gradedSky: Layout = {
         bleed: 0.5,
         texture: 0.45,
         border: 0.15,
+        maxSeg: 400,
       });
     }
     // extra charges of pigment along the very top
@@ -147,6 +149,7 @@ export const gradedSky: Layout = {
         bleed: 0.5,
         texture: 0.45,
         border: 0.15,
+        maxSeg: 400,
       });
     }
     // second pigment glazed into the top, wet into wet
@@ -157,20 +160,25 @@ export const gradedSky: Layout = {
         bleed: 0.5,
         texture: 0.5,
         border: 0.1,
+        maxSeg: 400,
       });
     }
     // streaks dragged down through the wet gradient
     const tilt = rng.range(-0.12, 0.12);
-    for (let i = 0; i < 9; i++) {
-      await streak(fx, rng.range(0, W), rng.range(-40, H * 0.08), H * rng.range(0.3, 0.6), W * rng.range(0.02, 0.05), Math.PI / 2 + tilt + rng.gauss(0, 0.03), concentrate(a, 1.25), {
-        opacity: 28,
-        bleed: 0.4,
+    for (let i = 0; i < 6; i++) {
+      await streak(fx, rng.range(0, W), -60, H * rng.range(0.35, 0.6), W * rng.range(0.06, 0.11), Math.PI / 2 + tilt + rng.gauss(0, 0.03), concentrate(a, 1.3), {
+        opacity: 24,
+        bleed: 0.5,
+        texture: 0.4,
+        border: 0.05,
       });
     }
-    for (let i = 0; i < 4; i++) {
-      await streak(fx, rng.range(0, W), rng.range(-40, H * 0.05), H * rng.range(0.2, 0.4), W * rng.range(0.02, 0.04), Math.PI / 2 + tilt + rng.gauss(0, 0.03), c, {
-        opacity: 22,
-        bleed: 0.45,
+    for (let i = 0; i < 3; i++) {
+      await streak(fx, rng.range(0, W), -60, H * rng.range(0.25, 0.4), W * rng.range(0.05, 0.09), Math.PI / 2 + tilt + rng.gauss(0, 0.03), c, {
+        opacity: 20,
+        bleed: 0.5,
+        texture: 0.4,
+        border: 0.05,
       });
     }
   },
@@ -338,7 +346,7 @@ export const granulatingWash: Layout = {
       border: 0.3,
     });
     for (let i = 0; i < 4; i++) {
-      await drop(fx, cx + rng.gauss(0, W * 0.17), cy + rng.gauss(0, H * 0.2), W * rng.range(0.05, 0.09), concentrate(b, 1.3), { opacity: 65, bleed: 0.45 });
+      await drop(fx, cx + rng.gauss(0, W * 0.09), cy + rng.gauss(0, H * 0.1), W * rng.range(0.04, 0.07), concentrate(b, 1.3), { opacity: 65, bleed: 0.4 });
     }
     await bloom(fx, cx + rng.gauss(0, W * 0.15), cy + rng.gauss(0, H * 0.15), W * rng.range(0.04, 0.06), concentrate(a, 1.35), 0.5);
   },

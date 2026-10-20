@@ -9,8 +9,8 @@
 // Every primitive yields to the event loop afterwards so a long painting
 // never blocks the page that Remotion is waiting on.
 import p5 from "p5";
-// the package's "browser" field points at a UMD build; use the ES module source
-import * as brush from "p5.brush/src/index.js";
+// p5.brush 1.1.4 ES module source, vendored with one patch (see src/vendor/p5.brush.js)
+import * as brush from "../vendor/p5.brush.js";
 import type { Pt } from "./shapes";
 
 export const LOGICAL_W = 3000;
@@ -28,6 +28,8 @@ export type WashOpts = {
   direction?: "out" | "in";
   /** saturation pre-compensation against p5.brush's greying (default 0.22) */
   saturate?: number;
+  /** longest polygon edge in logical units before it is split (default 14) */
+  maxSeg?: number;
 };
 
 // p5.brush's watercolour shader greys every pigment by a noisy 0-50% mix
@@ -64,6 +66,18 @@ const waiting: (() => void)[] = [];
 channel.port1.onmessage = () => waiting.shift()?.();
 let lastYield = 0;
 export const yieldStats = { count: 0, ms: 0, max: 0 };
+/** Split long edges so no segment is longer than `maxSeg` logical units. */
+const densify = (pts: Pt[], maxSeg: number): Pt[] => {
+  const out: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i];
+    const [bx, by] = pts[(i + 1) % pts.length];
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / maxSeg));
+    for (let k = 0; k < n; k++) out.push([ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n]);
+  }
+  return out;
+};
+
 const tick = () => {
   const now = performance.now();
   if (now - lastYield < 150) return Promise.resolve();
@@ -138,6 +152,9 @@ export class Painter {
   async wash(points: Pt[], color: string, o: WashOpts = {}) {
     if (points.length < 3) return;
     const t0 = performance.now();
+    // p5.brush pushes each new vertex out by a fraction of its edge length, so
+    // long edges would throw soft halos far outside the shape
+    points = densify(points, o.maxSeg ?? 14);
     this.within(() => {
       brush.noStroke();
       brush.noHatch();

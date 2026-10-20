@@ -40,7 +40,7 @@ const run = async (props: WatercolourStillProps, out: HTMLCanvasElement, host: H
   composite(painter.canvas, out, {
     granulation: Math.min(1, palette.granulation * (layout.granulationBoost ?? 1)),
     settle: 0.22,
-    edge: layout.edge ?? 1.0,
+    edge: (layout.edge ?? 1.0) * 1.3,
     seed: props.seed,
     ...props.tuning,
   });

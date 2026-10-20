@@ -94,6 +94,8 @@ export const splatter = async (
   const { rng, noise, painter } = fx;
   const ca = Math.cos(angle);
   const sa = Math.sin(angle);
+  // the finest droplets dry darker: little water, the same pigment
+  const tiny: Pt[][] = [];
   for (let i = 0; i < count; i++) {
     // spread is stretched along the flick direction
     const u = rng.gauss(0, spread * (1 + flick));
@@ -108,12 +110,24 @@ export const splatter = async (
       freq: 1.1,
       rot: angle + rng.gauss(0, 0.15),
     });
+    if (r < rMax * 0.12) {
+      tiny.push(pts);
+      continue;
+    }
     await painter.wash(pts, color, {
       opacity: opacity * rng.range(0.8, 1.1),
       bleed: rng.range(0.04, 0.09),
       texture: 0,
       border: 0.7,
     });
+    // a drop that flew fast drags a short tapering tail away from the flick
+    if (stretch > 1.35) {
+      const sign = u >= 0 ? 1 : -1;
+      const tl = r * stretch * rng.range(1.2, 2.6);
+      const start: Pt = [x + sign * ca * r * stretch * 0.6, y + sign * sa * r * stretch * 0.6];
+      const tail = wander(rng, noise, start[0], start[1], angle + (sign < 0 ? Math.PI : 0) + rng.gauss(0, 0.08), tl, 8, 0.05);
+      await painter.wash(ribbon(tail, (t) => r * 0.45 * Math.pow(1 - t, 1.3) + 0.4), color, { opacity, bleed: 0.03, texture: 0, border: 0.6 });
+    }
     // a bigger drop throws a few satellites further along the flick
     if (r > rMax * 0.35 && rng.chance(0.6)) {
       for (let s = 0; s < rng.int(1, 4); s++) {
@@ -132,11 +146,15 @@ export const splatter = async (
       }
     }
   }
+  for (const pts of tiny) {
+    await painter.wash(pts, concentrate(color, 1.4), { opacity: opacity * 1.1, bleed: 0.04, texture: 0, border: 0.7 });
+  }
 };
 
 /**
- * A run of pigment down a tilted sheet: a heavy drop slid, leaving a trail
- * a little narrower than itself that thins out, ending in a small bead.
+ * A run of pigment down a tilted sheet. It grows out of its source (a pool
+ * or the bottom of a wash, which hides its start), thins as it runs and
+ * gathers a heavier, darker bead at the end.
  */
 export const drip = async (
   fx: Fx,
@@ -148,33 +166,28 @@ export const drip = async (
   { opacity = 110, pool = true } = {},
 ) => {
   const { rng, noise, painter } = fx;
-  const pr = width * rng.range(0.62, 0.78);
-  const startY = pool ? y + pr * 0.3 : y;
-  const path = wander(rng, noise, x, startY, Math.PI / 2 + rng.gauss(0, 0.04), length, Math.max(16, Math.round(length / 8)), 0.12);
+  if (pool) {
+    // the pool the run comes out of, drawn first so the run starts inside it
+    const pr = width * rng.range(0.75, 0.9);
+    await painter.wash(blob(rng, noise, x, y - pr * 0.2, pr * rng.range(1.05, 1.3), pr, { irregular: 0.15, freq: 1.2 }), color, { opacity, bleed: 0.06, texture: 0.3, border: 0.7 });
+  }
+  const path = wander(rng, noise, x, y, Math.PI / 2 + rng.gauss(0, 0.05), length, Math.max(16, Math.round(length / 8)), 0.16);
   const o = rng.range(0, 100);
   const body = ribbon(path, (t) => {
-    // wide where it leaves the drop, thinning, with a slight swell before the bead
-    const taper = 1 - 0.55 * Math.pow(t, 0.8) + 0.15 * Math.exp(-Math.pow((t - 0.93) / 0.05, 2));
-    const neck = 0.82 + 0.18 * noise.n2(o + t * 6, 0.3);
-    return width * 0.5 * taper * neck;
+    const flare = 1 + 1.2 * Math.exp(-t / 0.05);
+    const taper = 1 - 0.55 * Math.pow(t, 0.9);
+    const neck = 0.78 + 0.22 * noise.n2(o + t * 6, 0.3);
+    return width * 0.5 * flare * taper * neck;
   });
-  await painter.wash(body, color, { opacity, bleed: 0.04, texture: 0.15, border: 0.6 });
+  await painter.wash(body, color, { opacity, bleed: 0.03, texture: 0.15, border: 0.6 });
   const end = path[path.length - 1];
-  const br = width * rng.range(0.24, 0.32);
-  await painter.wash(blob(rng, noise, end[0], end[1], br, br * rng.range(1.25, 1.5), { n: 36, irregular: 0.08, rot: Math.PI / 2 }), color, {
-    opacity: opacity * 1.05,
-    bleed: 0.04,
+  const br = width * rng.range(0.32, 0.4);
+  await painter.wash(blob(rng, noise, end[0] + rng.gauss(0, br * 0.2), end[1] + br * 0.3, br, br * rng.range(1.2, 1.45), { n: 36, irregular: 0.12, rot: Math.PI / 2 }), concentrate(color, 1.35), {
+    opacity: opacity * 1.1,
+    bleed: 0.03,
     texture: 0,
-    border: 0.8,
+    border: 0.9,
   });
-  if (pool) {
-    await painter.wash(blob(rng, noise, x, y, pr * rng.range(1.0, 1.15), pr, { n: 60, irregular: 0.08, freq: 1.1, rot: rng.range(-0.3, 0.3) }), color, {
-      opacity,
-      bleed: 0.05,
-      texture: 0.2,
-      border: 0.7,
-    });
-  }
 };
 
 /**
@@ -192,7 +205,7 @@ export const salt = async (
 ) => {
   const { rng, noise, painter } = fx;
   // two tint levels only: every distinct colour costs p5.brush a blend pass
-  const tints = [concentrate(washColor, paleness), concentrate(washColor, paleness * 1.5)];
+  const tints = [concentrate(washColor, paleness * 0.5), concentrate(washColor, paleness * 0.85)];
   const marks: { pts: Pt[]; tint: number }[] = [];
   for (let i = 0; i < count; i++) {
     const x = cx + rng.gauss(0, spread);
@@ -215,7 +228,7 @@ export const salt = async (
   }
   for (let t = 0; t < tints.length; t++) {
     for (const m of marks.filter((q) => q.tint === t)) {
-      await painter.wash(m.pts, tints[t], { opacity: rng.range(60, 95), bleed: 0.14, texture: 0, border: 0.15, saturate: 0.45 });
+      await painter.wash(m.pts, tints[t], { opacity: rng.range(60, 95), bleed: 0.2, texture: 0, border: 0.1, saturate: 0.1 });
     }
   }
 };
