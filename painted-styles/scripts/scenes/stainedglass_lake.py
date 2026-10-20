@@ -109,27 +109,28 @@ def pine_shapes(seed):
         h = root - top
         tiers = int(r.integers(4, 6)) if h > 150 else int(r.integers(3, 5))
         lean = r.uniform(-0.05, 0.05)
-        gaps = r.uniform(0.7, 1.3, tiers)
-        tips = top + h * 0.88 * np.cumsum(gaps) / gaps.sum()
-        ax = lambda y: cx + lean * (root - y)
-        left, right = [], []
+        gaps = r.uniform(0.75, 1.3, tiers)
+        tips = top + h * 0.9 * np.cumsum(gaps) / gaps.sum()
+        ax = lambda y, cx=cx, lean=lean, root=root: cx + lean * (root - y)
+        left, right, ws = [], [], []
         prev = top
         for t, yt in enumerate(tips):
-            f = ((t + 1) / tiers) ** r.uniform(0.75, 1.0)
-            wl, wr = hw * f * r.uniform(0.82, 1.08), hw * f * r.uniform(0.82, 1.08)
-            yin = prev + (yt - prev) * r.uniform(0.45, 0.6)
-            ins = r.uniform(0.62, 0.78)
+            f = ((t + 1) / tiers) ** r.uniform(0.7, 0.95)
+            wl, wr = hw * f * r.uniform(0.82, 1.1), hw * f * r.uniform(0.82, 1.1)
+            ws.append((wl, wr))
+            yin = prev + (yt - prev) * r.uniform(0.5, 0.65)
             if t > 0:
-                left.append((ax(yin) - wl * ins, yin))
-                right.append((ax(yin) + wr * ins, yin))
-            left += [(ax(yt) - wl * 0.82, yt - 4), (ax(yt) - wl, yt + r.uniform(0, 5))]
-            right += [(ax(yt) + wr * 0.82, yt - 4), (ax(yt) + wr, yt + r.uniform(0, 5))]
+                left.append((ax(yin) - max(wl * r.uniform(0.42, 0.58), 10), yin))
+                right.append((ax(yin) + max(wr * r.uniform(0.42, 0.58), 10), yin))
+            dl, dr = r.uniform(2, 9), r.uniform(2, 9)
+            left += [(ax(yt) - wl * 0.7, yt - 6), (ax(yt) - wl, yt + dl), (ax(yt) - wl * 0.55, yt + dl * 0.4)]
+            right += [(ax(yt) + wr * 0.7, yt - 6), (ax(yt) + wr, yt + dr), (ax(yt) + wr * 0.55, yt + dr * 0.4)]
             prev = yt
-        tw = max(6, hw * 0.14)
+        tw = max(7, hw * 0.15)
         yb = tips[-1]
         pts = ([(ax(top), top)] + right + [(ax(yb) + tw, yb + 2), (cx + tw, root + 4), (cx - tw, root + 4),
                                            (ax(yb) - tw, yb + 2)] + left[::-1])
-        out.append(dict(pts=pts, cx=cx, top=top, root=root, hw=hw, ax=ax, tips=list(tips), lean=lean))
+        out.append(dict(pts=pts, cx=cx, top=top, root=root, hw=hw, ax=ax, tips=list(tips), ws=ws, lean=lean))
     return out
 
 
@@ -197,13 +198,15 @@ def cloud_shape(cx, cy, L, h, r):
 
 
 def bird_pts(bx, by, sc, fl, r):
-    w_ = 40 * sc * r.uniform(0.9, 1.1)
+    """a gull in flight, every one a little different: span, wing lift on each side, a stout body"""
+    w_ = 46 * sc * r.uniform(0.9, 1.1)
     a, b_ = r.uniform(0.85, 1.15), r.uniform(0.85, 1.15)
-    tl, tr = -0.45 * w_ * fl * a, -0.45 * w_ * fl * b_
-    up = [(-w_ * a, tl), (-0.55 * w_ * a, -0.34 * w_ * fl * a), (-0.15 * w_, -0.08 * w_), (0, 0.0),
-          (0.15 * w_, -0.08 * w_), (0.55 * w_ * b_, -0.34 * w_ * fl * b_), (w_ * b_, tr)]
-    lo = [(0.6 * w_ * b_, tr * 0.25 + 0.05 * w_), (0.16 * w_, 0.16 * w_), (0.03 * w_, 0.26 * w_), (-0.16 * w_, 0.16 * w_),
-          (-0.6 * w_ * a, tl * 0.25 + 0.05 * w_)]
+    tl, tr = -0.42 * w_ * fl * a, -0.42 * w_ * fl * b_
+    up = [(-w_ * a, tl), (-0.55 * w_ * a, -0.36 * w_ * fl * a - 0.04 * w_), (-0.18 * w_, -0.12 * w_), (0, -0.04 * w_),
+          (0.18 * w_, -0.12 * w_), (0.55 * w_ * b_, -0.36 * w_ * fl * b_ - 0.04 * w_), (w_ * b_, tr)]
+    lo = [(0.92 * w_ * b_, tr + 0.13 * w_), (0.5 * w_ * b_, -0.14 * w_ * fl * b_ + 0.12 * w_), (0.14 * w_, 0.2 * w_),
+          (0.0, 0.3 * w_), (-0.14 * w_, 0.2 * w_), (-0.5 * w_ * a, -0.14 * w_ * fl * a + 0.12 * w_),
+          (-0.92 * w_ * a, tl + 0.13 * w_)]
     return [(bx + x, by + y) for x, y in up + lo]
 
 
@@ -256,7 +259,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         if P['sun']:
             sx, sy, sr = P['sun']
             ring = g.circle(*S.pt(sx, sy), (sr + 40) * s) * (1 - g.circle(*S.pt(sx, sy), sr * s))
-            g.radial(ring, P['corona'], (sx, sy), [], length=(44, 60), tilt=0.05, flow=None,
+            g.radial(ring, P['corona'], (sx, sy), [sr + 0.5], length=(44, 60), tilt=0.05, flow=None,
                      mix=dict(streaky=0.5, cathedral=0.5))
             g.glass(g.circle(*S.pt(sx, sy), sr * s), ['#f2c230', '#f4d060'], mix=dict(cathedral=0.6, reamy=0.4))
             g.stain(g.circle(*S.pt(sx, sy), (sr - 4) * s), 0.7)
@@ -307,11 +310,14 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         for i, (p, pm) in enumerate(zip(PS, pine_ms)):
             ax, tips = p['ax'], p['tips']
             cuts = [('v', lambda y, ax=ax: ax(y))]
-            if p['root'] - p['top'] > 150:                   # a cut under a middle tier of a tall pine
-                ym = tips[len(tips) // 2 - 1] + 3
-                cuts.append(('h', const(ym)))
-            g.glass(pm, None, cuts=cuts, colour_fn=lambda cx, cy, ax=ax: P['pine_lit'] if cx < ax(cy) else P['pine_sh'],
-                    flow=np.pi / 2, flow_jit=0.3, mix=dict(cathedral=0.4, reamy=0.3, streaky=0.3))
+            for t_, yt in enumerate(tips[:-1]):              # a lead under every tier but the lowest: drooping boughs
+                wl, wr = p['ws'][t_]
+                cuts.append(('h', lambda x, yt=yt, ax=ax, w=max(wl, wr): yt + 2 - 0.4 * np.clip(w - np.abs(x - ax(yt)), 0, None)))
+            pal_t = [(rng.uniform(0.9, 1.1)) for _ in range(len(tips) + 1)]
+            g.glass(pm, None, cuts=cuts,
+                    colour_fn=lambda cx, cy, ax=ax, pal_t=pal_t, tips=tips: shade(
+                        P['pine_lit'] if cx < ax(cy) else P['pine_sh'], pal_t[int(np.searchsorted(tips, cy))]),
+                    flow=np.pi / 2, flow_jit=0.3, mix=dict(cathedral=0.4, reamy=0.3, streaky=0.3), amin=350, tmin=9)
             # needles: short drooping grisaille strokes along each tier, every one different
             for t, yt in enumerate(tips):
                 f = (t + 1) / len(tips)
@@ -456,8 +462,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         g.glass(body, P['body'], flow=np.pi / 2, mix=dict(cathedral=0.6, streaky=0.4))
         hx, hy = boat_pts([(1170, 727)])[0]
         head = g.ellipse(*S.pt(hx, hy), 12.5 * BOAT_K * s, 14 * BOAT_K * s, 0.15)
-        g.glass(head, None, cuts=[('h', lambda x: hy - 5 + 0.35 * (x - hx))],
-                colour_fn=lambda cx, cy: P['head'] if cy > hy - 4 else P['hair'], mix=dict(cathedral=1.0), streak=0.4)
+        g.glass(head, None, cuts=[('h', lambda x: hy - 1 + 0.45 * (x - hx))],
+                colour_fn=lambda cx, cy: P['head'] if cy > hy else P['hair'], mix=dict(cathedral=1.0), streak=0.4)
         st('rower')
         # grisaille: planks, gunwale, oars, arm and folds, hair and face
         g.trace(Q([(1074, 777), (1170, 788), (1265, 771)]), 2.6 * s, taper=(0.1, 0.1), clip=hull)
@@ -491,10 +497,10 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
             for k in range(n):
                 a = -np.pi / 2 + (k - (n - 1) / 2) * rng.uniform(0.18, 0.28) + rng.normal(0, 0.05)
                 L = h * rng.uniform(0.75, 1.15) + (yb - 1080)
-                bw = rng.uniform(17, 24)
+                bw = rng.uniform(24, 32)
                 tip = (cx + np.cos(a) * L + rng.uniform(-10, 10), yb + np.sin(a) * L)
                 mid = (cx + np.cos(a) * L * 0.55 + rng.uniform(-6, 6) * 2, yb + np.sin(a) * L * 0.55)
-                blades.append(g.branch(S.pts([(cx + (k - n / 2) * 5, yb), mid, tip]), bw * s, 3 * s))
+                blades.append(g.branch(S.pts([(cx + (k - n / 2) * 5, yb), mid, tip]), bw * s, 9 * s))
                 angs.append(a)
             m = np.clip(sum(blades), 0, 1)
             angs = sorted(angs)

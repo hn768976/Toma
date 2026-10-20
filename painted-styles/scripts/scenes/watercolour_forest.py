@@ -227,10 +227,10 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     keep_open = np.exp(-(((XD - 1250) / 360) ** 2 + ((YD - 120) / 220) ** 2))       # a gap where the light comes in
     cm = p.blobs(crown, rough=0.45, soft=S(6), ragged=0.5) * (1 - 0.85 * keep_open)
     K.wash(p, cm, [col('can_l'), col('can_l'), col('can_m')], 0.7, s, r, edge=0.55, edge_px=4, gran=0.45, flocc=0.4, var=0.4, var_px=60,
-           blooms=3, bloom_px=(30, 70), charge_px=120)
+           blooms=1, bloom_px=(30, 60), bloom_k=0.35, charge_px=120)
     items = [(cx_ + S(30), cy_ + S(25), rx * 0.7, ry * 0.6) for (cx_, cy_, rx, ry) in crown]
     m2 = p.blobs(items, rough=0.45, soft=S(10), ragged=0.5) * np.clip(cm * 1.3, 0, 1)
-    K.wash(p, m2, col('can_m'), 0.7, s, r, edge=0.4, edge_px=4, gran=0.45, var=0.4, var_px=50, blooms=2, bloom_px=(25, 55))
+    K.wash(p, m2, col('can_m'), 0.7, s, r, edge=0.4, edge_px=4, gran=0.45, var=0.4, var_px=50, blooms=1, bloom_px=(25, 50), bloom_k=0.35)
     items = [(cx_ + S(40), cy_ + S(45), rx * 0.45, ry * 0.4) for (cx_, cy_, rx, ry) in crown]
     m3 = p.blobs(items, rough=0.45, soft=S(14), ragged=0.5) * np.clip(cm * 1.3, 0, 1)
     K.wash(p, m3, col('can_d'), 0.6, s, r, edge=0.25, edge_px=4, gran=0.45, var=0.4, var_px=50)

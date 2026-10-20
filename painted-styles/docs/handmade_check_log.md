@@ -29,3 +29,12 @@ re-cut as knife facets with nicks; reflections carved as broken strokes (no flip
 ink starvation, brayer lanes, plate wear in solids; vermilion block with uneven film and larger fixed misregistration;
 waves, birds, clouds, ferns, tufts varied per instance; thin lines now >=2.6 px fragile ridges printing broken;
 pines individual; mist cleared with a U-gouge; forest rays waver and break.
+
+### Round 1 fixes — Watercolour
+New per-mark wash engine (_watercolour_kit.py): patchy pigment, wet-in-wet drop-ins, density-driven granulation,
+varying dried edges and pooling, irregular back-runs, uneven lifting; paper grain halved. Varied clouds, pines built
+tree by tree as one wet wash per island (no stacked opacity, ghost tree gone), reflections as sampled horizontal
+strokes (no mirror blur), clustered lifted water marks, mist as ragged lifted veils, real seated rower and wobbly hull,
+tapered reeds, varied birds. Draw-on now opens with a pencil underdrawing on raw paper and shows real unfinished
+passes. Coast: hand-nudged houses with individual windows, banded lighthouse with lifted beam, bowed sails,
+angular rock clusters, varied bushes. Forest: clumped varied trunks, lifted broken light shafts, varied ferns/tufts.

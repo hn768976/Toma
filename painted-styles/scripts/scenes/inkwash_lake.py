@@ -231,7 +231,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         cx = SX + rng.normal(0, S(6))
         if rng.random() < 0.8:
             p.stroke(spline([(cx - half, y), (cx + rng.normal(0, S(4)), y + rng.normal(0, S(0.8))), (cx + half, y)], 8),
-                     S(rng.uniform(1.0, 2.2)), 0.30 * (1 - 0.7 * f) * rng.uniform(0.6, 1.1), dry=rng.uniform(0.4, 0.8),
+                     S(rng.uniform(0.8, 1.8)), 0.22 * (1 - 0.6 * f) * rng.uniform(0.5, 1.1), dry=rng.uniform(0.5, 0.85),
                      taper=(0.3, 0.3), red=True)
         y += S(rng.uniform(8, 26))
     p.snap('sun path', dense=False)

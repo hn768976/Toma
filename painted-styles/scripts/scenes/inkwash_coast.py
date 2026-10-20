@@ -161,7 +161,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     # the headland is painted on its own sheet and cut off at its foot, so the sea runs in below it
     D_bg, R_bg = p.D, p.R
     p.D, p.R = np.zeros_like(D_bg), np.zeros_like(R_bg)
-    ink_mass(p, cliff, dens=0.72, reach=S(230), glazes=4, soft=0.9, pool=0.55, blooms=3, dry=0.35,
+    ink_mass(p, cliff, dens=0.72, reach=S(230), glazes=4, soft=0.9, pool=0.55, blooms=3, dry=0.2,
              mist=(S.y(770), S(34)))
     # axe-cut texture strokes down the cliff face and under the plateau lip
     for k in range(110):
@@ -176,14 +176,15 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         p.stroke(spline([(X, Y), (X + S(dx) * 0.4 + rng.normal(0, S(3)), Y + S(ln) * 0.5), (X + S(dx), Y + S(ln))], 8),
                  S(rng.uniform(2.0, 4.0)), rng.uniform(0.18, 0.34) * (1.0 if face else 0.55), dry=0.65, taper=(0.1, 0.5))
     ridge_accent(p, cliff, S.x(-200), S.x(860), ink=0.3, width=2.0, coverage=0.4)
-    for k in range(20):     # long, light hemp-fibre strokes following the slope of the headland
+    for k in range(16):     # long, light hemp-fibre strokes following the slope of the headland
         x = rng.uniform(-150, 800)
         top = float(np.interp(x, cx_, cy_)) + rng.uniform(40, 330)
-        ln = rng.uniform(160, 380)
+        ln = rng.uniform(80, 220)
         sl = rng.uniform(0.25, 0.6)
         X, Y = S.x(x), S.y(top)
         p.stroke(spline([(X, Y), (X - S(ln) * 0.45, Y + S(ln) * sl * 0.5 + rng.normal(0, S(8))), (X - S(ln), Y + S(ln) * sl)], 10),
-                 S(rng.uniform(1.6, 3.0)), rng.uniform(0.10, 0.18), dry=0.72, taper=(0.3, 0.5), jitter=1.0)
+                 S(rng.uniform(1.4, 3.0)), rng.uniform(0.06, 0.13), dry=rng.uniform(0.5, 0.7), taper=(rng.uniform(0.1, 0.4), 0.5),
+                 jitter=rng.uniform(0.6, 1.4))
     dian(p, cliff, S.x(-60), S.x(850), clusters=7, ink=0.6, depth=16)
     foot = S.y(800 + 12 * fbm1d(CW, S(80), 4, seed + 23))
     cut = 1 - np.clip((YY - foot[None, :]) / S(10), 0, 1)

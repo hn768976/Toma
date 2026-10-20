@@ -70,7 +70,7 @@ class Panel(StainedGlass):
         self.DX = ((self.XX - S.ox) / S.s).astype(np.float32)
         self.DY = ((self.YY - S.oy) / S.s).astype(np.float32)
         self.pp = {k: [] for k in ('col', 'col2', 'mix', 'thick', 'kind', 'ang', 'amp', 'freq', 'off', 'seeds',
-                                   'opal', 'gang', 'gamt', 'pit', 'group', 'region', 'warp')}
+                                   'opal', 'gang', 'gamt', 'pit', 'group', 'region', 'warp', 'cx', 'cy')}
         self.nreg = 0
         self.lead_a = None
         if TRACK:
@@ -181,6 +181,8 @@ class Panel(StainedGlass):
             P['warp'].append(float({'reamy': r.uniform(1.2, 2.2), 'streaky': r.uniform(0.6, 1.4)}.get(kind, r.uniform(0.2, 0.8))))
             P['group'].append(self.gidx)
             P['region'].append(reg)
+            P['cx'].append(float(cx[i]))
+            P['cy'].append(float(cy[i]))
 
     def _merge_small(self, L, n, amin, tmin):
         """merge pieces too small or too thin to cut into the neighbour they share most edge with"""
@@ -213,7 +215,7 @@ class Panel(StainedGlass):
         """earlier pieces the new glass has cut: thin leftovers (slivers, wedges, notches narrower than a
         cuttable piece) and tiny leftovers are given to the new glass or to a neighbouring piece"""
         s = self.s
-        r = max(2, int(round(7 * s)))
+        r = max(2, int(round(8 * s)))
         H, W = self.H, self.W
         y0, y1 = max(0, b[0].start - 3 * r), min(H, b[0].stop + 3 * r)
         x0, x1 = max(0, b[1].start - 3 * r), min(W, b[1].stop + 3 * r)
@@ -299,7 +301,7 @@ class Panel(StainedGlass):
         return self._lay(b, sub, keys, lambda k: colour, **kw)
 
     def band(self, mask, colours, top, bot, rows=None, row_h=60.0, levels=None, length=(140, 300), columns=(),
-             cut_dir=None, tilt=0.3, bend=0.5, size=None, feature=None, fid_colours=None, run_edit=None,
+             cut_dir=None, tilt=0.3, bend=0.25, size=None, feature=None, fid_colours=None, run_edit=None,
              row_colours=None, colour_fn=None, wave=(0.12, 260.0), vertical=False, stagger=True, **kw):
         """cut an area into rows following its outline (top(a) .. bot(a), design coordinates; with
         vertical=True `a` is y and the rows run downward, for trunks) and cut every row across.
@@ -379,7 +381,7 @@ class Panel(StainedGlass):
                     while True:
                         h = float(hgt(np.array([x]))[0])
                         sz = float(size(x, float(mid(np.array([x]))[0]))) if size is not None else 1.0
-                        ell = np.clip(r.uniform(*length) * sz, 1.3 * h, 5.5 * h)
+                        ell = np.clip(r.uniform(*length) * sz, 1.3 * h, 4.0 * h)
                         ell = max(ell, 34.0)
                         if rb - x < 1.5 * ell:
                             break
@@ -543,8 +545,7 @@ class Panel(StainedGlass):
         st = np.clip((1 - cord) * sb + cord * sc, -1.4, 1.4)
         del sb, sc, u
         ga = P['gang'][idx]
-        cxp = np.bincount(lab[m], Xd, len(col)) / (np.bincount(lab[m], minlength=len(col)) + 1e-6)
-        cyp = np.bincount(lab[m], Yd, len(col)) / (np.bincount(lab[m], minlength=len(col)) + 1e-6)
+        cxp, cyp = P['cx'], P['cy']                                 # stored when the piece was cut
         grad = ((Xd - cxp[idx]) * np.cos(ga) + (Yd - cyp[idx]) * np.sin(ga)) / 100.0
         th = P['thick'][idx] * (1 + 0.14 * self._thick_n[m]) * np.clip(1 + P['gamt'][idx] * grad, 0.6, 1.6)
         th *= np.clip(1 + 0.7 * P['amp'][idx] * st, 0.25, 3)
@@ -650,13 +651,13 @@ class Panel(StainedGlass):
                 key = (jy // cell).astype(np.int64) * 100000 + (jx // cell).astype(np.int64)
                 _, first = np.unique(key, return_index=True)
                 jy, jx = jy[first] + 0.5, jx[first] + 0.5
-                rr = np.random.default_rng(self._lazy[5] + 7)
                 n = len(jy)
-                cy_ = jy + rr.normal(0, 0.25 * hw0, n)
-                cx_ = jx + rr.normal(0, 0.25 * hw0, n)
-                rb = hw0 * rr.uniform(1.15, 1.45, n)
-                ex = rr.uniform(0.7, 1.0, n)
-                ro = rr.uniform(0, np.pi, n)
+                u = [_hash01(jy.astype(np.int64), jx.astype(np.int64), self._lazy[5] + k) for k in range(5)]
+                cy_ = jy + (u[0] - 0.5) * 0.5 * hw0
+                cx_ = jx + (u[1] - 0.5) * 0.5 * hw0
+                rb = hw0 * (1.15 + 0.3 * u[2])
+                ex = 0.7 + 0.3 * u[3]
+                ro = np.pi * u[4]
                 R = int(np.ceil(hw0 * 1.7 * 1.25 + 2))
                 ky, kx = np.mgrid[-R:R + 1, -R:R + 1]
                 ky, kx = ky.ravel(), kx.ravel()
@@ -896,6 +897,15 @@ class Panel(StainedGlass):
 
 
 # ---------------------------------------------------------------------- helpers
+def _hash01(i, j, seed):
+    """position-hashed uniform numbers in [0, 1): the same pixel always draws the same value"""
+    h = (i * 73856093) ^ (j * 19349663) ^ np.int64(seed * 83492791 & 0x7FFFFFFF)
+    h &= 0xFFFFFFFF
+    h = ((h ^ (h >> 16)) * 0x45d9f3b) & 0xFFFFFFFF
+    h = ((h ^ (h >> 16)) * 0x45d9f3b) & 0xFFFFFFFF
+    return ((h ^ (h >> 16)) & 0xFFFFFF) / float(1 << 24)
+
+
 def _side(c, X, Y):
     kind, f = c[0], c[1]
     if kind == 'h':
