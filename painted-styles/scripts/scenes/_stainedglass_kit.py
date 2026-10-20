@@ -20,7 +20,7 @@ import numpy as np
 import drawkit
 from drawkit import save_png
 from stainedglass import StainedGlass, NANG, lin
-from core import fbm1d, noise2d, smoothstep
+from core import blur, fbm1d, noise2d, smoothstep
 
 TRACK = False      # test hook: record per-group footprints (label / paint changes) on the painter
 LAST = {}          # test hook: LAST['g'] is the last painter when TRACK is on
@@ -235,6 +235,50 @@ class Panel(StainedGlass):
                 k = 1 - 0.55 * np.exp(-e * e * 1.5) + 0.12 * np.exp(-((e - 1.6) ** 2) / 0.3)
                 out[y - R:y + R + 1, x - R:x + R + 1] *= k
         self.weather_T = (Tm * out[..., None]).astype(np.float32)
+
+    def lead(self, width=6.0, rim=0.0, solder=True, mend=3.2):
+        """the lib's lead(), for a rimless full-frame panel, with the solder-joint blur scaled to the canvas so a
+        group's came (and its solder blobs) stays within a few px of that group's own outline"""
+        s = self.S.s
+        lab = self.label
+        H, W = self.H, self.W
+        B = np.zeros((H, W), bool)
+        dh = lab[:, 1:] != lab[:, :-1]
+        dv = lab[1:, :] != lab[:-1, :]
+        B[:, 1:] |= dh; B[:, :-1] |= dh
+        B[1:, :] |= dv; B[:-1, :] |= dv
+        B &= (lab >= 0) | np.roll(lab >= 0, 1, 0) | np.roll(lab >= 0, 1, 1)
+        B |= self.cuts
+        hw = width / 2
+        d = self._boundary_dist(B, int(hw + 4)) + 0.5
+        if solder:
+            a, b, c, e = lab[:-1, :-1], lab[:-1, 1:], lab[1:, :-1], lab[1:, 1:]
+            cnt = 1 + (b != a) + ((c != a) & (c != b)) + ((e != a) & (e != b) & (e != c))
+            J = np.zeros((H, W), np.float32); J[:-1, :-1] = (cnt >= 3)
+            J *= (lab >= 0)
+            sol = smoothstep(0.015 / s ** 2, 0.09 / s ** 2, blur(J, 2.6 * s))
+            sol *= (0.75 + 0.5 * (noise2d(H, W, 6, 2, self._seed())))
+        else:
+            sol = np.zeros((H, W), np.float32)
+        de = d - 2.4 * s * sol
+        cov = smoothstep(hw + 0.75, hw - 0.75, de)
+        h_in = np.sqrt(np.clip(1 - (np.clip(de, 0, None) / (hw + 0.6)) ** 2, 0, 1)) * cov
+        hgt = h_in * (hw * 0.9) + sol * 1.6 * s
+        gy, gx = np.gradient(hgt)
+        n = np.stack([-gx, -gy, np.ones_like(gx)], -1)
+        n /= np.linalg.norm(n, axis=-1, keepdims=True)
+        Ld = np.array([-0.35, -0.6, 0.72], np.float32); Ld /= np.linalg.norm(Ld)
+        diff = np.clip(n @ Ld, 0, 1)
+        hv = Ld + np.array([0, 0, 1], np.float32); hv /= np.linalg.norm(hv)
+        spec = np.clip(n @ hv, 0, 1) ** 30
+        pat = noise2d(H, W, 14, 3, self._seed())
+        alb = lin('#2c2d31') * (0.8 + 0.5 * pat)[..., None]
+        alb = alb * (1 - sol[..., None]) + lin('#6d6f72') * sol[..., None]
+        rgb = alb * (0.28 + 0.9 * diff)[..., None] + (0.035 + 0.06 * sol)[..., None] * spec[..., None]
+        self.lead_a = cov.astype(np.float32)
+        self.lead_rgb = rgb.astype(np.float32) * 0.55
+        self.lead_d = de.astype(np.float32)
+        self._T = None
 
     # ------------------------------------------------------------------ compositing
     def composite(self, cartoon=False):
