@@ -2,8 +2,8 @@
  "styles": [
   {
    "key": "artdeco",
-   "prefix": "Test",
-   "name": "Test",
+   "prefix": "ArtDeco",
+   "name": "Art Deco \u00b7 \u88c5\u9970\u827a\u672f",
    "canvas": [
     4608,
     2592
@@ -12,46 +12,110 @@
     384,
     216
    ],
-   "horizon": 1280,
+   "horizon": 1280.0,
    "boatPivot": [
-    2340,
-    1600
+    2338.9769012082443,
+    1612.0
    ],
    "layers": [
     {
      "group": "sky",
-     "src": "layers/test/00_sky.png"
+     "src": "layers/artdeco/00_sky.png"
+    },
+    {
+     "group": "clouds",
+     "src": "layers/artdeco/01_clouds.png"
     },
     {
      "group": "far",
-     "src": "layers/test/01_far.png"
+     "src": "layers/artdeco/02_far.png"
     },
     {
      "group": "near",
-     "src": "layers/test/02_near.png"
+     "src": "layers/artdeco/03_near.png"
     },
     {
      "group": "water",
-     "src": "layers/test/03_water.png"
+     "src": "layers/artdeco/04_water.png"
     },
     {
      "group": "mist",
-     "src": "layers/test/04_mist.png"
+     "src": "layers/artdeco/05_mist.png"
     },
     {
      "group": "boat",
-     "src": "layers/test/05_boat.png"
+     "src": "layers/artdeco/06_boat.png"
     },
     {
      "group": "boat_refl",
-     "src": "layers/test/06_boat_refl.png"
+     "src": "layers/artdeco/07_boat_refl.png"
     },
     {
      "group": "birds",
-     "src": "layers/test/07_birds.png"
+     "src": "layers/artdeco/08_birds.png"
+    },
+    {
+     "group": "reeds",
+     "src": "layers/artdeco/09_reeds.png"
     }
    ],
-   "drawon": null
+   "drawon": {
+    "frames": [
+     "drawon/artdeco/000.png",
+     "drawon/artdeco/001.png",
+     "drawon/artdeco/002.png",
+     "drawon/artdeco/003.png",
+     "drawon/artdeco/004.png",
+     "drawon/artdeco/005.png",
+     "drawon/artdeco/006.png",
+     "drawon/artdeco/007.png",
+     "drawon/artdeco/008.png",
+     "drawon/artdeco/009.png",
+     "drawon/artdeco/010.png",
+     "drawon/artdeco/011.png",
+     "drawon/artdeco/012.png",
+     "drawon/artdeco/013.png",
+     "drawon/artdeco/014.png",
+     "drawon/artdeco/015.png",
+     "drawon/artdeco/016.png",
+     "drawon/artdeco/017.png",
+     "drawon/artdeco/018.png",
+     "drawon/artdeco/019.png",
+     "drawon/artdeco/020.png",
+     "drawon/artdeco/021.png",
+     "drawon/artdeco/022.png",
+     "drawon/artdeco/023.png",
+     "drawon/artdeco/024.png",
+     "drawon/artdeco/025.png",
+     "drawon/artdeco/026.png",
+     "drawon/artdeco/027.png",
+     "drawon/artdeco/028.png",
+     "drawon/artdeco/029.png",
+     "drawon/artdeco/030.png",
+     "drawon/artdeco/031.png",
+     "drawon/artdeco/032.png",
+     "drawon/artdeco/033.png",
+     "drawon/artdeco/034.png",
+     "drawon/artdeco/035.png",
+     "drawon/artdeco/036.png",
+     "drawon/artdeco/037.png",
+     "drawon/artdeco/038.png",
+     "drawon/artdeco/039.png",
+     "drawon/artdeco/040.png",
+     "drawon/artdeco/041.png",
+     "drawon/artdeco/042.png",
+     "drawon/artdeco/043.png",
+     "drawon/artdeco/044.png",
+     "drawon/artdeco/045.png",
+     "drawon/artdeco/046.png",
+     "drawon/artdeco/047.png",
+     "drawon/artdeco/048.png",
+     "drawon/artdeco/049.png",
+     "drawon/artdeco/050.png",
+     "drawon/artdeco/051.png",
+     "drawon/artdeco/052.png"
+    ]
+   }
   }
  ]
 }

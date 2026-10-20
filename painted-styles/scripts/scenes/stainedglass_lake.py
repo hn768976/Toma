@@ -148,7 +148,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                 a = k * np.pi / 8 + 0.2
                 r0, r1 = sr + 10, sr + (34 if k % 2 else 22)
                 g.trace(S.pts([(sx + r0 * np.cos(a), sy + r0 * np.sin(a)), (sx + r1 * np.cos(a), sy + r1 * np.sin(a))]),
-                        3.0 * s, taper=(0.2, 0.9), smooth=False)
+                        5.0 * s, taper=(0.2, 0.9), smooth=False)
             g.trace(S.pts([(sx + (sr - 9) * np.cos(t), sy + (sr - 9) * np.sin(t)) for t in np.linspace(0, 2 * np.pi, 40)]),
                     1.6 * s, taper=(0.0, 0.0), wobble=0)
             g.stain(g.circle(*S.pt(sx, sy), (sr - 4) * s), 0.7)

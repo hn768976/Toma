@@ -47,7 +47,7 @@ class Lino(Linocut):
         acc = blur(acc, 1.6); acc = acc / (acc.mean() + 1e-6)
         acc = np.asarray(Image.fromarray(acc).resize((W, H), Image.BILINEAR))
         patch = noise2d(H, W, 380, 2, int(r.integers(1 << 30)))
-        press = 1 + 0.03 * np.clip(acc - 1, -1.5, 1.5) - 0.06 * smoothstep(0.6, 0.95, patch)
+        press = 1 + 0.03 * np.clip(acc - 1, -1.5, 1.5) - 0.035 * smoothstep(0.6, 0.95, patch)
         blk.film, blk.press = film.astype(np.float32), press.astype(np.float32)
 
 
@@ -60,6 +60,13 @@ class Lino(Linocut):
             near = np.asarray(a) > 0
             if blk.offset != (0, 0): near = shift(near.astype(np.float32), *blk.offset) > 0.5
             cov = cov * near
+            # the misregistered block is bigger than the sheet: fill the strip the offset uncovered at the
+            # canvas edge by mirroring the neighbouring print, instead of leaving a bare paper line
+            dx, dy = (int(round(v)) for v in blk.offset)
+            if dx > 0: cov[:, :dx] = cov[:, dx:2 * dx][:, ::-1]
+            if dx < 0: cov[:, dx:] = cov[:, 2 * dx:dx][:, ::-1]
+            if dy > 0: cov[:dy] = cov[dy:2 * dy][::-1]
+            if dy < 0: cov[dy:] = cov[2 * dy:dy][::-1]
         return cov, m
 
 

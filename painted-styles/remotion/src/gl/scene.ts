@@ -39,7 +39,7 @@ type Motion = {
 
 const DEPTH = { sky: 0.04, clouds: 0.1, far: 0.22, near: 0.5, fore: 1.0, mist: 0.55, boat: 0.72, boat_refl: 0.72, birds: 0.3, reeds: 1.0 };
 const BASE: Motion = {
-  cam: 120, depth: DEPTH, waterAmp: 5, mistDrift: 520, cloudDrift: 260,
+  cam: 120, depth: DEPTH, waterAmp: 5, mistDrift: 480, cloudDrift: 150,
   boatAngle: 0.018, boatLift: 5, boatCycles: 4, birdsWrap: true, fx: 0,
 };
 export const MOTION: Record<string, Motion> = {
@@ -50,6 +50,11 @@ export const MOTION: Record<string, Motion> = {
   stainedglass: { ...BASE, cam: 48, waterAmp: 0, mistDrift: 300, boatAngle: 0.01, boatLift: 3, fx: 1 },
   // ink wash: mist only, everything else perfectly still
   inkwash: { ...BASE, cam: 0, waterAmp: 0, mistDrift: 360, cloudDrift: 0, boatAngle: 0, boatLift: 0, birdsWrap: false },
+};
+
+const xfade = (u: number) => {
+  const t = Math.min(1, Math.max(0, (u - 0.3) / 0.4));
+  return t * t * (3 - 2 * t);
 };
 
 const loopDraws = (s: StyleManifest, m: Motion, u: number, still = false): LayerDraw[] => {
@@ -65,7 +70,10 @@ const loopDraws = (s: StyleManifest, m: Motion, u: number, still = false): Layer
         uHorizon: s.horizon, uBottom: 2160, uAmp: still ? 0 : m.waterAmp };
     } else if (group === "mist" || group === "clouds") {
       const drift = group === "mist" ? m.mistDrift : m.cloudDrift;
-      uniforms = { ...base, uMode: 2, uOff: off, uDrift: [drift * u, drift * (u - 1)], uWeight: [1 - u, u] };
+      // two copies drift together, one loop-length apart; we only hand over between them mid-loop,
+      // so most of the time exactly one copy is showing (no double image)
+      const w = xfade(u);
+      uniforms = { ...base, uMode: 2, uOff: off, uDrift: [drift * u, drift * (u - 1)], uWeight: [1 - w, w] };
     } else if (group === "boat" || group === "boat_refl") {
       const sgn = group === "boat" ? 1 : -1;
       const ph = TAU * m.boatCycles * u;

@@ -67,6 +67,15 @@ def poly_union(H, W, polys, ss=2):
     return np.asarray(im.resize((W, H), Image.BILINEAR), np.float32) / 255
 
 
+def bands(H, W, lines, soft):
+    """many thick soft strokes [(pts, width), ...] as ONE mask (one blur instead of one per stroke)"""
+    im = Image.new('L', (W, H), 0)
+    d = ImageDraw.Draw(im)
+    for pts, width in lines:
+        d.line([tuple(map(float, q)) for q in pts], fill=255, width=max(1, int(round(width))), joint='curve')
+    return blur(np.asarray(im, np.float32) / 255, soft)
+
+
 def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
           stages_dir=None, dense_stages=False):
     seed_all(seed)
@@ -161,8 +170,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     p.glaze(p.mirror(far_m * (YY < S.y(HZ)), S.y(HZ), soft=S(5), breakup=0.4), hexc(C['far']), 0.3, edge=0.05)
     # sky colour reflected in the sea at the sun's column
     p.glaze(p.mirror(glow, S.y(HZ), soft=S(10), breakup=0.5) * keep, hexc(C['glow']), 0.35, edge=0.0)
-    waves = np.zeros((CH, CW), np.float32)
-    lifts = np.zeros((CH, CW), np.float32)
+    waves, lifts = [], []
     n_w = int(150 * (X1 - X0) / 1920 * (Y1 - HZ) / 520)
     for _ in range(n_w):
         yd = HZ + 8 + (Y1 - HZ - 8) * r.uniform(0, 1) ** 1.25
@@ -171,15 +179,12 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         ln = (25 + 140 * f) * r.uniform(0.6, 1.4)
         wd = max(1.0, (1.2 + 4.5 * f) * r.uniform(0.7, 1.2))
         a = [(S.x(xd), S.y(yd)), (S.x(xd + ln * 0.5), S.y(yd - wd * 0.6)), (S.x(xd + ln), S.y(yd + r.normal(0, 0.6)))]
-        mk = p.band(a, S(wd), soft=S(0.8 + f))
-        if r.uniform() < 0.62:
-            waves = np.maximum(waves, mk)
-        else:
-            lifts = np.maximum(lifts, mk)
+        (waves if r.uniform() < 0.62 else lifts).append((a, S(wd)))
+    waves, lifts = bands(CH, CW, waves, S(1.1)), bands(CH, CW, lifts, S(1.1))
     p.glaze(waves * sea, hexc(C['wave']), 0.38, edge=0.0, gran=0.2, variation=0.3)
     p.lift(lifts * sea, 0.4)
     # glitter path under the sun (dusk) / scattered sparkle (day)
-    gl = np.zeros((CH, CW), np.float32)
+    gl = []
     for _ in range(int(70 * (Y1 - HZ) / 520)):
         yd = HZ + 4 + (Y1 - HZ) * r.uniform(0, 1) ** 1.6
         f = (yd - HZ) / 520
@@ -188,7 +193,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         else:
             xd = r.uniform(200, 1400) + 300 * f
         ln = (10 + 60 * f) * r.uniform(0.5, 1.3)
-        gl = np.maximum(gl, p.band([(S.x(xd - ln / 2), S.y(yd)), (S.x(xd + ln / 2), S.y(yd))], S(max(1.0, 1 + 2.5 * f)), soft=S(0.8)))
+        gl.append(([(S.x(xd - ln / 2), S.y(yd)), (S.x(xd + ln / 2), S.y(yd))], S(max(1.0, 1 + 2.5 * f))))
+    gl = bands(CH, CW, gl, S(0.8))
     if dusk:
         col = sea * np.exp(-((XD - sx) / (25 + 0.35 * (YD - HZ))) ** 2)
         p.lift(p.soften(col, S(6), 0.3), 0.3)
@@ -198,7 +204,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     st('sea', True)
 
     # ---------------- the headland: rock face, fissures, strata, grass cap
-    p.glaze(land, hexc(C['rock']), 0.7, edge=0.45, gran=0.45, variation=0.35, bloom=1)
+    p.glaze(land, hexc(C['rock']), 0.7, edge=0.45, gran=0.45, variation=0.35)
     # patchy second pigment (cooler) so the face is not one flat colour
     patch = land * smoothstep(0.45, 0.7, p.noise(S(110), 4))
     p.glaze(p.soften(patch, S(4), 0.4) * land, hexc(C['rock_sh']), 0.28, edge=0.25, gran=0.4)
@@ -245,11 +251,11 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     rk = p.blobs(rocks, rough=0.3, soft=S(2), ragged=0.25)
     p.glaze(rk, hexc(C['rock_dk']), 0.55, edge=0.5, gran=0.4)
     p.glaze(p.mirror(land * (YD < bl + 2), S.y(745), soft=S(4), breakup=0.55) * (YD > bl + 4), hexc(C['rock_sh']), 0.3, edge=0.05)
-    foam = np.zeros((CH, CW), np.float32)
+    foam = []
     for k in range(int(30 * (X1 - 800) / 1120)):
         x = r.uniform(820, X1 + 10); y = float(base_line(x)) + r.uniform(4, 26); ln = r.uniform(30, 110)
-        foam = np.maximum(foam, p.band(pts([(x, y), (x + ln / 2, y - 2), (x + ln, y + r.normal(0, 1.5))]), S(r.uniform(2, 4.5)), soft=S(1.2)))
-    p.lift(foam, 0.7)
+        foam.append((pts([(x, y), (x + ln / 2, y - 2), (x + ln, y + r.normal(0, 1.5))]), S(r.uniform(2, 4.5))))
+    p.lift(bands(CH, CW, foam, S(1.2)), 0.7)
     st('cliff base')
     # grass cap along the top edge, tapering away down the flank
     gx = np.linspace(930, X1 + 30, 140)
@@ -296,7 +302,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         gm_ = poly_union(CH, CW, [pts(gable)])
         rm = poly_union(CH, CW, [pts(roof_side)])
         body = np.maximum(fm, sm)
-        p.lift(np.maximum(body, np.maximum(gm_, rm)), 0.85)          # knock the house out of the cliff wash
+        p.lift(np.maximum(body, np.maximum(gm_, rm)), 0.95)          # knock the house out of the cliff wash
         p.glaze(p.soften(np.maximum(fm, gm_), S(1.2), 0.15), hexc(C['wall']), 0.55, edge=0.35, gran=0.25)
         p.glaze(p.soften(sm, S(1.2), 0.15), hexc(C['wall_sh']), 0.55 if dusk else 0.45, edge=0.3, gran=0.3)
         p.glaze(p.soften(rm, S(1.2), 0.15), hexc(C['roof']), 0.9, edge=0.5, gran=0.3)
@@ -304,14 +310,13 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
                 hexc(C['roof_sh']), 0.35, edge=0.1, gran=0.3)
         # windows and a door on the front face
         nwin = max(1, int(w // 30))
+        wins = []
         for k in range(nwin):
             wx = x_l + w * (k + 0.5) / nwin
             wy = gy0 - h * 0.62
-            win = poly_union(CH, CW, [pts([(wx - 5, wy - 7), (wx + 5, wy - 7), (wx + 5, wy + 6), (wx - 5, wy + 6)])])
-            if C['win_lit']:
-                p.glaze(p.soften(win, S(0.8), 0.1), hexc(C['win']), 0.95, edge=0.3, gran=0.1)
-            else:
-                p.glaze(p.soften(win, S(0.8), 0.1), hexc(C['win']), 0.75, edge=0.3, gran=0.1)
+            wins.append(pts([(wx - 5, wy - 7), (wx + 5, wy - 7), (wx + 5, wy + 6), (wx - 5, wy + 6)]))
+        win = poly_union(CH, CW, wins)
+        p.glaze(p.soften(win, S(0.8), 0.1), hexc(C['win']), 0.95 if C['win_lit'] else 0.75, edge=0.3, gran=0.1)
         walls_all = np.maximum(walls_all, body)
     st('village')
     # bushes / small trees between the houses

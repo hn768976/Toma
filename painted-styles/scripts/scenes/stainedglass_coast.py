@@ -131,7 +131,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                 a = k * np.pi / 8 + 0.2
                 r0, r1 = sr + 10, sr + (34 if k % 2 else 22)
                 g.trace(S.pts([(sx + r0 * np.cos(a), sy + r0 * np.sin(a)), (sx + r1 * np.cos(a), sy + r1 * np.sin(a))]),
-                        3.0 * s, taper=(0.2, 0.9), smooth=False)
+                        5.0 * s, taper=(0.2, 0.9), smooth=False)
         g.trace(S.pts([(sx + (sr - 9) * np.cos(t), sy + (sr - 9) * np.sin(t)) for t in np.linspace(0, 2 * np.pi, 40)]),
                 1.6 * s, taper=(0.0, 0.0), wobble=0, clip=(yy < HORIZON - 4))
         g.stain(sun * 0.8, 0.7)
@@ -187,7 +187,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         for bi, (bx, by, sc) in enumerate(BOATS):
             q = lambda pts: S.pts([(bx + x * sc, by + y * sc) for x, y in pts])
             g.glass(g.poly(q([(-58, 6), (60, 6), (50, 22), (-48, 24)])), P['boat_ref'], streak=0.3)
-            g.glass(g.poly(q([(-6, -158), (-6, -24), (-34, -60), (-58, -26), (-70, -28), (-40, -96)])),
+            g.glass(g.poly(q([(-6, -158), (-6, -24), (-70, -28), (-46, -88), (-24, -130)])),
                     P['sails'][bi][0], streak=0.4, streak_dir=np.pi / 2)
             g.glass(g.poly(q([(6, -146), (64, -24), (6, -26)])), P['sails'][bi][1], streak=0.4, streak_dir=np.pi / 2)
             g.glass(g.poly(q([(-76, -16), (76, -22), (62, 4), (-60, 4)])), P['hulls'][bi], streak=0.3, streak_dir=0.0)

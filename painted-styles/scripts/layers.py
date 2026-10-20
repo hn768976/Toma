@@ -51,24 +51,35 @@ def extract_opaque(B, C):
     return np.clip(F, 0, 1), a
 
 
-def extract_key(B, C):
+def extract_key(B, C, sigma=60):
+    """C = B*(1-a) + K*a with a smooth key colour K(x, y): start from one global key, then refine K
+    as an alpha-weighted local average of the un-mixed colour, and re-solve a against it."""
+    from core import blur
     d = C - B
     D = np.abs(d).max(-1)
     m = D > np.quantile(D[D > 0.004], 0.98) if (D > 0.004).any() else D > 1
-    K = C[m].mean(0)
+    K = np.broadcast_to(C[m].mean(0), C.shape).astype(np.float32)
+    for _ in range(3):
+        v = K - B
+        a = np.clip((d * v).sum(-1) / np.maximum((v * v).sum(-1), 1e-4), 0, 1)
+        a = np.where(D < 0.004, 0, a)
+        Fe = np.clip(B + d / np.maximum(a, 0.08)[..., None], 0, 1)
+        wsum = blur(a, sigma) + 1e-4
+        K = np.stack([blur(Fe[..., c] * a, sigma) / wsum for c in range(3)], -1)
+        K = np.where((wsum > 2e-3)[..., None], K, Fe)
     v = K - B
     a = np.clip((d * v).sum(-1) / np.maximum((v * v).sum(-1), 1e-4), 0, 1)
     a = np.where(D < 0.004, 0, a)
-    F = np.broadcast_to(K, C.shape).copy()
-    return F, a
+    return np.clip(K, 0, 1), a
 
 
-def seamless_x(F, a):
-    """blend the layer with itself rolled by half a width, weighted so the wrap seam disappears"""
+def seamless_x(F, a, keep):
+    """blend the layer with itself rolled by half a width so the wrap seam disappears; the blend
+    lives only in the outer `keep` px (the bleed), so the visible frame is untouched at rest"""
     Wc = a.shape[1]
     x = np.arange(Wc, dtype=np.float32)
-    r = np.abs(x - Wc / 2) / (Wc / 2)            # 0 at centre, 1 at both edges
-    r = smoothstep(0.5, 1.0, r)[None, :]
+    dist = np.abs(x - Wc / 2)
+    r = smoothstep(Wc / 2 - keep, Wc / 2, dist)[None, :]   # 0 inside the frame, 1 at both edges
     P = F * a[..., None]
     P2 = np.roll(P, Wc // 2, axis=1); a2 = np.roll(a, Wc // 2, axis=1)
     Pn = P * (1 - r[..., None]) + P2 * r[..., None]
@@ -120,7 +131,7 @@ def extract(key, G, cache, outdir, boat_y_design=806):
         else:
             F, a = extract_opaque(prev, C)
         if g in ('mist', 'clouds'):
-            F, a = seamless_x(F, a)
+            F, a = seamless_x(F, a, S.ox)
         if g == 'boat':
             cut = int(round(S.y(boat_y_design)))
             top = a.copy(); top[cut:] = 0

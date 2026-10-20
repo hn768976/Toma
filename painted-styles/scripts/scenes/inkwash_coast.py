@@ -159,12 +159,13 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         p.stroke(spline([(X, Y), (X + S(dx) * 0.4 + rng.normal(0, S(3)), Y + S(ln) * 0.5), (X + S(dx), Y + S(ln))], 8),
                  S(rng.uniform(2.0, 4.0)), rng.uniform(0.18, 0.34) * (1.0 if face else 0.55), dry=0.65, taper=(0.1, 0.5))
     p.ridge_line(cliff, S.x(-200), S.x(860), width=S(1.8), ink=0.26)
-    for k in range(26):     # long, light hemp-fibre strokes following the slope of the headland
+    for k in range(20):     # long, light hemp-fibre strokes following the slope of the headland
         x = rng.uniform(-150, 800)
         top = float(np.interp(x, cx_, cy_)) + rng.uniform(40, 330)
-        ln = rng.uniform(150, 320)
+        ln = rng.uniform(160, 380)
+        sl = rng.uniform(0.25, 0.6)
         X, Y = S.x(x), S.y(top)
-        p.stroke(spline([(X, Y), (X - S(ln) * 0.45, Y + S(ln) * 0.22 + rng.normal(0, S(6))), (X - S(ln), Y + S(ln) * 0.38)], 10),
+        p.stroke(spline([(X, Y), (X - S(ln) * 0.45, Y + S(ln) * sl * 0.5 + rng.normal(0, S(8))), (X - S(ln), Y + S(ln) * sl)], 10),
                  S(rng.uniform(1.6, 3.0)), rng.uniform(0.10, 0.18), dry=0.72, taper=(0.3, 0.5), jitter=1.0)
     for _ in range(40):
         x = rng.uniform(-60, 850)
@@ -309,12 +310,12 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         X, Y = S.x(x), S.y(top)
         p.stroke(curve((X, Y), (X + S(rng.normal(-10, 8)), Y + S(rng.uniform(20, 50))), S(rng.normal(0, 6)), 10),
                  S(rng.uniform(2.5, 4.5)), 0.32, dry=0.7)
-    for k in range(11):           # grass tufts on the rocks
+    for k in range(9):            # grass on the rocks: loose clumps of long and short blades
         x = rng.uniform(-20, 700)
         y = float(np.interp(x, rx_, ry_)) + 5
-        for j in range(int(rng.integers(3, 8))):
-            ln = rng.uniform(10, 46)
-            a = rng.uniform(-1.0, 0.7)
+        for j in range(int(rng.integers(2, 9))):
+            ln = rng.uniform(10, 46) * (2.0 if rng.random() < 0.25 else 1.0)
+            a = rng.uniform(-1.1, 0.8)
             X, Y = S.x(x + rng.uniform(-8, 8)), S.y(y + rng.uniform(-2, 4))
             p.stroke(spline([(X, Y), (X + S(ln) * np.sin(a) * 0.4, Y - S(ln) * 0.55), (X + S(ln) * np.sin(a), Y - S(ln))], 6),
                      S(1.6), 0.6, dry=0.4, taper=(0.02, 0.8))

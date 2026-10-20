@@ -30,7 +30,7 @@ PALETTES = {
                    paper=np.array([241, 238, 229], np.float32) / 255),
 }
 
-FOOT_THR = 1.0 / 512       # density below this cannot change an 8-bit pixel
+FOOT_THR = 1.0 / 4096      # density below this cannot change an 8-bit pixel
 
 
 class Ink(Painting):
@@ -192,7 +192,8 @@ def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None, spread=1.0,
     trunk = curve((x, root), (x + lean, tx), rng.normal(0, h * 0.025), 18, wig=s * 1.2,
                   seed=int(rng.integers(1 << 30)))
     tw = trunk_w if trunk_w is not None else s * 1.3 + h * 0.011
-    p.stroke(trunk, tw, ink * 0.8, dry=0.55, taper=(0.02, 0.75), jitter=0.8)
+    if tw > 0:
+        p.stroke(trunk, tw, ink * 0.8, dry=0.55, taper=(0.02, 0.75), jitter=0.8)
 
     def trunk_x(y):
         return float(np.interp(y, trunk[::-1, 1], trunk[::-1, 0]))

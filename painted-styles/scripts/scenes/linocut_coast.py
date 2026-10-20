@@ -107,7 +107,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     sea = rect(X0, HOR, X1, Y1)
     L.clear(L.poly(sea), chatter=0.4, angle=0)
     L.clear(L.poly(sea), on=col, chatter=0)
-    glit = lambda x, y: np.exp(-abs(x - SX) / (40 + 0.55 * (y - HOR)))         # the sun's path widens toward us
+    glit = lambda x, y: np.exp(-abs(x - SX) / max(40.0, 40 + 0.55 * (y - HOR)))         # the sun's path widens toward us
     L.hatch(sea, angle=0, spacing=S(10), width=S(2.6), dash=(S(30), S(240)), gap=(S(10), S(80)), cut=False,
             bend=lambda x, y: S(2.5) * np.sin(d.ux(x) / 120 + d.uy(y) / 26),
             density=d.fn(lambda x, y: np.clip(0.1 + 0.95 * max(0.0, (y - HOR) / (1080 - HOR)) ** 1.2, 0, 0.95)

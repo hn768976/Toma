@@ -1,0 +1,23 @@
+{
+ "layers": {
+  "artdeco": {
+   "birds": 19.4,
+   "boat": 21.3,
+   "clouds": 14.4,
+   "far": 17.3,
+   "mist": 17.8,
+   "near": 23.3,
+   "reeds": 243.7,
+   "sky": 14.3,
+   "water": 17.7
+  }
+ },
+ "stills": {
+  "ArtDeco_Coast_Day.png": 55.7,
+  "ArtDeco_Coast_Dusk.png": 63.7,
+  "ArtDeco_Forest_Day.png": 19.5,
+  "ArtDeco_Forest_Dusk.png": 18.4,
+  "ArtDeco_Lake_Day.png": 29.6,
+  "ArtDeco_Lake_Dusk.png": 29.4
+ }
+}

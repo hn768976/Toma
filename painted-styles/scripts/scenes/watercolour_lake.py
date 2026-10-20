@@ -36,9 +36,9 @@ PAL = {
         hull='#8a5a3a', rower='#3e4a68'),
     "Day": dict(
         sky_top='#4f86c6', sky_bot='#b7d3ea', sky_k=0.6, low='#f3e3c0', low_k=0.32,
-        glow='#fff0c4', glow_k=0.18, glow_lift=0.4,
+        glow='#fff0c4', glow_k=0.18, glow_lift=0.25,
         cloud='#8d9bb8', cloud_k=0.22, cloud_under='#a9b3c9', cloud_under_k=0.2, cloud_lift=0.62,
-        far='#93a3c6', far_lift=0.42, near='#4f7a72', near_shade='#2f4f50',
+        far='#8a9cc4', far_lift=0.3, near='#4f7a72', near_shade='#2f4f50',
         pines=('#2a5a3e', '#346548', '#284a36'), pine_r='#386052', pine_sh='#16302a', shore='#4a4236',
         trunk='#5a4230', w_top='#cfe2ea', w_top_k=0.4, w_deep='#2f6ea8',
         r_far='#8fa0c4', r_near='#4f7a72', r_pine='#2a5a3e', r_glow='#fff0c4',
@@ -75,6 +75,17 @@ def poly_union(H, W, polys, ss=2):
         d.polygon([(float(x) * ss, float(y) * ss) for x, y in pts], fill=255)
     im = im.resize((W, H), Image.BILINEAR)
     return np.asarray(im, np.float32) / 255
+
+
+def bands(H, W, lines, soft):
+    """many thick soft strokes [(pts, width), ...] as ONE mask (one blur instead of one per stroke)"""
+    from PIL import ImageDraw
+    from core import blur
+    im = Image.new('L', (W, H), 0)
+    d = ImageDraw.Draw(im)
+    for pts, width in lines:
+        d.line([tuple(map(float, q)) for q in pts], fill=255, width=max(1, int(width)), joint='curve')
+    return blur(np.asarray(im, np.float32) / 255, soft)
 
 
 def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
@@ -224,11 +235,11 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         n_rip = int(36 * (X1 - X0) / 1920 * (S.Y1 - Y0) / 440)
         batches = 3
         for b in range(batches):
-            rip = np.zeros((CH, CW), np.float32)
+            rip = []
             for _ in range(n_rip // batches):
                 y = S.y(r.uniform(Y0 + 20, S.Y1 - 15)); x = S.x(r.uniform(X0 - 50, X1 - 120)); ln = r.uniform(S(100), S(380))
-                rip = np.maximum(rip, p.band([(x, y), (x + ln, y + r.normal(0, S(1.5)))], max(1, r.uniform(S(2), S(3.5))), soft=S(1.2)))
-            p.lift(rip, 0.28)
+                rip.append(([(x, y), (x + ln, y + r.normal(0, S(1.5)))], max(1, r.uniform(S(2), S(3.5)))))
+            p.lift(np.clip(bands(CH, CW, rip, S(1.2)), 0, 1), 0.28)
             st(f'ripples {b + 1}', b == batches - 1)
 
     # ================= mist: lifted, feathered band over the waterline, thicker on the left
