@@ -347,7 +347,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         lay_lines(a, S, rng, speed_lines(rng, S.X0, 1100, HZ + 180, S.Y1, 2.5, 7.0, 160, 520, 12, cover=0.35),
                   P['line_dark'], 0.45)
         for x, y, nn, sp, dp in ((120, 760, 3, 110, 9), (520, 990, 4, 170, 15), (980, 700, 3, 80, 7)):
-            chevrons(a, S, rng, x + rng.uniform(-20, 20), y, nn, sp, dp, 2.4 + (y - HZ) / 130, P['chev'], 0.5,
+            chevrons(a, S, rng, x + rng.uniform(-20, 20), y, nn, sp, dp, 2.2 + (y - HZ) / 150, P['chev'], 0.4,
                      flip=1)
         st('sea')
         _cliff_reflection(a, S, P, rng)

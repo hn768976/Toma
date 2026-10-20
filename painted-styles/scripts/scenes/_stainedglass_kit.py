@@ -45,7 +45,7 @@ KINDS = ('cathedral', 'streaky', 'seedy', 'opal', 'reamy')
 MIX = dict(cathedral=0.38, streaky=0.27, seedy=0.15, reamy=0.2)
 TILE = 512
 NUM_KEYS = ('mix', 'thick', 'kind', 'ang', 'amp', 'freq', 'off', 'seeds', 'opal', 'gang', 'gamt', 'pit', 'group',
-            'region', 'warp', 'cx', 'cy', 'tsc', 'ox', 'oy', 'mk', 'mang', 'mext', 'dirt', 'uid')
+            'region', 'warp', 'cx', 'cy', 'tsc', 'ox', 'oy', 'mk', 'mang', 'mext', 'dirt', 'uid', 'size')
 
 
 def _hexs(c):
@@ -214,8 +214,8 @@ class Panel(StainedGlass):
         else:
             ang = fl + r.normal(0, max(flow_jit, 0.45))
         streak = kw.get('streak', 1.0)
-        amp = {'cathedral': r.uniform(0.10, 0.3), 'streaky': r.uniform(0.25, 0.6), 'seedy': r.uniform(0.04, 0.14),
-               'opal': r.uniform(0.08, 0.22), 'reamy': r.uniform(0.25, 0.55)}[kind] * streak
+        amp = {'cathedral': r.uniform(0.03, 0.12), 'streaky': r.uniform(0.18, 0.45), 'seedy': r.uniform(0.02, 0.08),
+               'opal': r.uniform(0.05, 0.15), 'reamy': r.uniform(0.15, 0.35)}[kind] * streak
         P['mix'].append({'streaky': r.uniform(0.35, 0.8), 'opal': r.uniform(0.1, 0.35)}.get(kind, r.uniform(0, 0.15)))
         P['seeds'].append(kw.get('seeds', 1.0) * {'seedy': r.uniform(0.5, 1.0), 'reamy': r.uniform(0.08, 0.22),
                                                   'cathedral': r.uniform(0.0, 0.08)}.get(kind, r.uniform(0.0, 0.04)))
@@ -232,7 +232,7 @@ class Panel(StainedGlass):
         P['gang'].append(float(r.uniform(0, 2 * np.pi)))
         P['gamt'].append(float(r.uniform(0.08, 0.42)))
         P['pit'].append(float(r.uniform(0.4, 1.0) if r.random() < 0.18 else r.uniform(0, 0.1)))
-        P['warp'].append(float({'reamy': r.uniform(1.2, 2.4), 'streaky': r.uniform(0.6, 1.6)}.get(kind, r.uniform(0.2, 1.0))))
+        P['warp'].append(float({'reamy': r.uniform(0.8, 1.7), 'streaky': r.uniform(0.25, 0.9)}.get(kind, r.uniform(0.1, 0.5))))
         P['tsc'].append(float(np.exp(r.uniform(np.log(0.5), np.log(1.9)))))
         P['ox'].append(float(r.uniform(0, TILE)))
         P['oy'].append(float(r.uniform(0, TILE)))
@@ -242,6 +242,7 @@ class Panel(StainedGlass):
         P['mext'].append(float(max(np.sqrt(area), 12.0) * r.uniform(0.55, 0.95)))
         P['dirt'].append(float(r.random()))
         P['uid'].append(int(r.integers(1, 1 << 30)))
+        P['size'].append(float(np.sqrt(max(area, 1.0))))
         P['group'].append(group)
         P['region'].append(region)
         P['cx'].append(float(cx))
@@ -286,7 +287,7 @@ class Panel(StainedGlass):
         """earlier pieces the new glass has cut: thin leftovers (slivers, wedges, notches narrower than a
         cuttable piece) and tiny leftovers are given to the new glass or to a neighbouring piece"""
         s = self.s
-        r = max(2, int(round(8 * s)))
+        r = max(2, int(round(6 * s)))
         H, W = self.H, self.W
         y0, y1 = max(0, b[0].start - 3 * r), min(H, b[0].stop + 3 * r)
         x0, x1 = max(0, b[1].start - 3 * r), min(W, b[1].stop + 3 * r)
@@ -731,7 +732,7 @@ class Panel(StainedGlass):
                     pal[int(k)] = p_
         return self._lay(b, sub, keys, lambda k: pal[int(k)], **kw)
 
-    def waves(self, mask, top, row_h, colour_fn, run=(5.0, 11.0), feature=None, wl=(240.0, 560.0), pinch=0.5,
+    def waves(self, mask, top, row_h, colour_fn, run=(5.0, 11.0), feature=None, wl=(55.0, 120.0), pinch=0.7,
               slant=(0.55, 1.0), fslant=(0.15, 0.55), depth=None, size=None, **kw):
         """glazier's water: rows of long wave-shaped pieces.  Each row's lower edge is the upper edge plus a
         thickness that swells and dies away (where it dies the row pinches to a point: two leads meet and a
@@ -877,7 +878,7 @@ class Panel(StainedGlass):
         ga = P['gang'][idx]
         grad = (lx * np.cos(ga) + ly * np.sin(ga)) / 100.0
         tn = _samp(self._tt, lx * k + ox + 211.0, ly * k + oy + 97.0)
-        th = P['thick'][idx] * (1 + 0.12 * tn) * np.clip(1 + P['gamt'][idx] * grad, 0.55, 1.7)
+        th = P['thick'][idx] * (1 + 0.07 * tn) * np.clip(1 + P['gamt'][idx] * grad, 0.55, 1.7)
         th *= np.clip(1 + 0.7 * P['amp'][idx] * st, 0.25, 3)
         del grad, tn, ga
         c1 = col[idx]
@@ -900,7 +901,7 @@ class Panel(StainedGlass):
         if sel.any():
             mg = P['mang'][idx][sel]
             g_ = np.clip(0.5 + (lx[sel] * np.cos(mg) + ly[sel] * np.sin(mg)) / P['mext'][idx][sel], 0, 1) ** 1.7
-            stp = np.clip(1 + 0.55 * fine[sel] + 0.25 * _samp(self._tm, lx[sel] * 2.1 + oy[sel], ly[sel] * 2.1 + ox[sel]), 0.2, 2)
+            stp = np.clip(1 + 0.6 * fine[sel] + 0.08 * _samp(self._tm, lx[sel] * 2.1 + oy[sel], ly[sel] * 2.1 + ox[sel]), 0.2, 2)
             ma = np.clip(mk[sel] * g_ * stp, 0, 0.9)[:, None]
             Tm[sel] = Tm[sel] * (1 - ma + ma * PAINT_T)
         T[m] = Tm
@@ -960,6 +961,7 @@ class Panel(StainedGlass):
         lab = self.label
         H, W = self.H, self.W
         uid = np.asarray(self.pp['uid'] + [7], np.int64)[lab]
+        psz = np.asarray(self.pp['size'] + [1e3], np.float32)[lab]
         reg = np.asarray(self.pp['region'] + [-1], np.int64)[lab]
         B = np.zeros((H, W), bool)
         ws = np.zeros((H, W), np.float32)
@@ -967,18 +969,21 @@ class Panel(StainedGlass):
         for ax in (0, 1):
             if ax == 1:
                 la, lb, ua, ub, ra, rb = lab[:, :-1], lab[:, 1:], uid[:, :-1], uid[:, 1:], reg[:, :-1], reg[:, 1:]
+                sa_, sb_ = psz[:, :-1], psz[:, 1:]
             else:
                 la, lb, ua, ub, ra, rb = lab[:-1], lab[1:], uid[:-1], uid[1:], reg[:-1], reg[1:]
+                sa_, sb_ = psz[:-1], psz[1:]
             d = la != lb
             hsh = _hash01(np.minimum(ua, ub), np.maximum(ua, ub), 41)
-            wv = ((0.72 + 0.6 * hsh) * np.where(ra != rb, 1.14, 1.0) * d).astype(np.float32)
+            fine = np.clip(np.minimum(sa_, sb_) / 60.0, 0.5, 1.0)          # narrow came round small detail pieces
+            wv = ((0.72 + 0.6 * hsh) * np.where(ra != rb, 1.14, 1.0) * fine * d).astype(np.float32)
             if ax == 1:
                 B[:, :-1] |= d; B[:, 1:] |= d
                 ws[:, :-1] += wv; ws[:, 1:] += wv; wc[:, :-1] += d; wc[:, 1:] += d
             else:
                 B[:-1] |= d; B[1:] |= d
                 ws[:-1] += wv; ws[1:] += wv; wc[:-1] += d; wc[1:] += d
-        del uid, reg
+        del uid, reg, psz
         hw0 = width / 2
         wf = np.where(wc > 0, ws / np.maximum(wc, 1), 0).astype(np.float32)
         wn = noise2d(H, W, 70 * s, 2, self._lazy[4])
@@ -1024,9 +1029,9 @@ class Panel(StainedGlass):
                 wob = noise2d(H, W, 9 * s, 2, self._lazy[5] + 7)
                 jq = jd * (0.8 + 0.4 * wob)
                 self._jq = jq.astype(np.float32)
-                sw = hw * (1.12 + 0.2 * lump) + hw0 * 0.5 * np.clip(1 - jq / 0.5, 0, 1) ** 1.5   # wider at the joint
+                sw = hw * (1.1 + 0.07 * lump) + hw0 * 0.32 * np.clip(1 - jq / 0.5, 0, 1) ** 1.5   # wider at the joint
                 sol_a = (smoothstep(sw + 0.7, sw - 0.7, d) * smoothstep(1.0, 0.78, jq)).astype(np.float32)
-                hs = (hw0 * (0.62 + 0.08 * lump) * np.sqrt(np.clip(1 - (d / np.maximum(sw, 0.5)) ** 4, 0, 1))
+                hs = (hw0 * (0.62 + 0.04 * lump) * np.sqrt(np.clip(1 - (d / np.maximum(sw, 0.5)) ** 4, 0, 1))
                       * smoothstep(1.0, 0.7, jq))
                 hgt = np.where(sol_a > 0.02, np.maximum(hgt * (1 - sol_a), hs), hgt)
                 del jd, lump, wob, hs, sw
@@ -1036,11 +1041,11 @@ class Panel(StainedGlass):
         nrm /= np.linalg.norm(nrm, axis=-1, keepdims=True)
         Ld = np.array([-0.35, -0.6, 0.72], np.float32); Ld /= np.linalg.norm(Ld)
         diff = np.clip(nrm @ Ld, 0, 1).astype(np.float32)
-        hv = Ld + np.array([0, 0, 1], np.float32); hv /= np.linalg.norm(hv)
-        spec = np.clip(nrm @ hv, 0, 1).astype(np.float32)
+        # sheen: only where the rounded flank turns toward the light (the flat face stays dark)
+        spec = (np.clip((diff - Ld[2]) / (1 - Ld[2]), 0, 1) ** 1.3).astype(np.float32)
         del nrm, gx, gy
         pat = noise2d(H, W, 9 * s, 3, self._lazy[4] + 11)
-        oxd = smoothstep(0.6, 0.78, noise2d(H, W, 5 * s, 3, self._lazy[4] + 13)) * (0.4 + 0.6 * pat)
+        oxd = smoothstep(0.66, 0.84, noise2d(H, W, 5 * s, 3, self._lazy[4] + 13)) * (0.3 + 0.7 * pat)
         self._lead_shade = (diff, spec, pat, oxd)
         self.came_a = cov.astype(np.float32)
         self.sol_a = sol_a
@@ -1053,16 +1058,16 @@ class Panel(StainedGlass):
         diff, spec, pat, oxd = self._lead_shade
         sol = self.sol_a[..., None]
         if aged:          # weathered came: dark grey, soft sheen, whitish oxide bloom; dull grey solder
-            alb_c = lin('#3b3c3f') * (0.78 + 0.45 * pat)[..., None]
-            alb_c = alb_c * (1 - 0.5 * oxd[..., None]) + lin('#86878a') * 0.5 * oxd[..., None]
-            alb_s = lin('#55575a') * (0.85 + 0.3 * pat)[..., None]
-            sheen = (0.045 * spec ** 6 + 0.03 * spec ** 28) * (1 - 0.6 * oxd)
+            alb_c = lin('#202125') * (0.8 + 0.4 * pat)[..., None]
+            alb_c = alb_c * (1 - 0.3 * oxd[..., None]) + lin('#5a5c5c') * 0.3 * oxd[..., None]
+            alb_s = lin('#33353a') * (0.85 + 0.3 * pat)[..., None]
+            sheen = 0.045 * spec * (1 - 0.6 * oxd)
         else:             # fresh from the box: bright silvery lead and shiny solder
             alb_c = lin('#8e9196') * (0.9 + 0.2 * pat)[..., None]
             alb_s = lin('#b4b7bb') * (0.92 + 0.16 * pat)[..., None]
-            sheen = 0.1 * spec ** 8 + 0.12 * spec ** 40
+            sheen = 0.16 * spec + 0.05 * spec ** 2
         alb = alb_c * (1 - sol) + alb_s * sol
-        rgb = alb * (0.3 + 0.8 * diff)[..., None] + (sheen * (1 + 0.6 * self.sol_a))[..., None]
+        rgb = alb * (0.35 + 0.75 * diff)[..., None] + (sheen * (1 + 0.4 * self.sol_a))[..., None]
         return rgb.astype(np.float32)
 
     def weather(self, grime=0.3, pits=0.25):

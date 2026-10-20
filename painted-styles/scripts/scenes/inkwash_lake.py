@@ -104,7 +104,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
 
     # ================================================================ far range
     p.begin('far', 'far' in inc)
-    fcov = ink_mass(p, far, dens=0.30, reach=S(120), glazes=3, soft=1.4, pool=0.5, blooms=2, dry=0.25,
+    fcov = ink_mass(p, far, dens=0.30, reach=S(120), glazes=3, soft=0.8, pool=0.5, blooms=2, dry=0.25,
                     floor=hz, mist=(S.y(612), S(26)))
     p.snap('far wash')
     cun_bold(p, far, S.x(1050), S.x(1420), n=6, shadow_x=S.x(1215), reach=S(70), ink=0.2, floor=S.y(600),
@@ -231,12 +231,12 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     p.snap('reflection strokes')
     # 3) the water itself: bare paper; a few long wind streaks dragged across with a nearly dry
     #    brush, each broken where the brush skipped
-    for k in range(4):
+    for k in range(3):
         y = rng.uniform(860, 1060)
-        xa = rng.uniform(-150, 1500); ln = rng.uniform(300, 900)
-        u0 = 0.0
+        xa = rng.uniform(-150, 1500); ln = rng.uniform(250, 900)
+        u0 = rng.uniform(0, 0.2)
         while u0 < 1.0:
-            u1 = min(1.0, u0 + rng.uniform(0.15, 0.5))
+            u1 = min(1.0, u0 + rng.choice([rng.uniform(0.05, 0.15), rng.uniform(0.2, 0.6)]))
             pts = [S.pt(xa + ln * u, y + rng.normal(0, 1.5) + 4 * u) for u in np.linspace(u0, u1, 4)]
             brush(p, pts, S(rng.uniform(2.5, 6)), rng.uniform(0.12, 0.22), dry=rng.uniform(0.6, 0.85),
                   taper=(rng.uniform(0.05, 0.3), rng.uniform(0.2, 0.6)), swell=0.4, pv=0.3, pool=0.3, hair=1.2)

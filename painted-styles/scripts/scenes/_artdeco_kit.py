@@ -206,6 +206,16 @@ class Deco(ArtDeco):
         full[sl] = d
         self.spray(full, colour, grain=0, blend=blend)
 
+    def finish(self, paper='#efe4cc', tooth=0.022, warm=0.04, vignette=0.12):
+        """the lithographic print on smooth illustration board: a fine, even tooth (no stretched paper fibres,
+        which read as brush streaks), a faint warm cast, a slight edge vignette"""
+        H, W = self.H, self.W
+        n = noise2d(H, W, 2.5, 2, self._seed()) - 0.5
+        img = self.img * (1 + tooth * n)[..., None]
+        img = img * (1 - warm) + warm * _c(paper) * (0.35 + 0.65 * img)
+        r = np.hypot((self.xx - W / 2) / (W / 2), (self.yy - H / 2) / (H / 2))
+        self.img = img * (1 - vignette * smoothstep(0.65, 1.45, r))[..., None]
+
     def poly(self, pts):
         """the lib's 4x supersampled polygon frisket, rasterised only inside the polygon's box"""
         pts = [(float(x), float(y)) for x, y in pts]
@@ -383,7 +393,7 @@ def streamline_cloud(a, S, rng, x0, x1, y, h, stops, lit_below, edge_col=None, h
         a.fade(m, vary(stops, rng.uniform(0.95, 1.04)), p0, p1)
         if edge_col is not None:
             a.overspray(m, edge_col, dx=0, dy=S(1.5 if lit_below else -1.5), width=S(rng.uniform(1.5, 2.6)),
-                        density=0.3)
+                        density=0.18)
         if stage:
             stage()
     return bands
@@ -495,8 +505,10 @@ def deco_pine(a, S, rng, x, root, h, w, lit, shade, trunk, light=1, tiers=None):
     shade half (two friskets, two fades). Tier count, spacing, widths, lean and tone differ tree to tree."""
     lean = rng.uniform(-0.03, 0.03)
     tw = max(1.2, w * rng.uniform(0.07, 0.11))
-    a.spray(a.poly(S.pts([(x - tw / 2, root + 1), (x + tw / 2, root + 1), (x + tw * 0.3, root - h * 0.22),
-                          (x - tw * 0.3, root - h * 0.22)])), trunk, grain=0.4)
+    tm = a.poly(S.pts([(x - tw / 2, root + 1), (x + tw / 2, root + 1), (x + tw * 0.3, root - h * 0.22),
+                       (x - tw * 0.3, root - h * 0.22)]))
+    a.spray(tm, trunk, grain=0.4)
+    union = tm
     n = int(tiers if tiers is not None else rng.integers(3, 6))
     f = rng.uniform(0.86, 1.12)
     ls, ss = vary(lit, f), vary(shade, f)
@@ -530,7 +542,9 @@ def deco_pine(a, S, rng, x, root, h, w, lit, shade, trunk, light=1, tiers=None):
         ml = a.poly(S.pts(hand(lit_pts, rng, amp=0.25, step=10)))
         a.fade(ms, ss, S.pt(0, ty), S.pt(0, by + sag))
         a.fade(ml, ls, S.pt(0, ty), S.pt(0, by + sag))
+        union = np.maximum(union, np.maximum(ms, ml))
         prev = bots[k]
+    return union
 
 
 def cypress(a, S, rng, x, base, h, lit, shade, light=1, steps=None):

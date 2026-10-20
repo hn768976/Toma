@@ -304,8 +304,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
             if ln < 15:
                 continue
             ang = r.normal(0.05, 0.12)
-            kind = int(r.choice(3, p=[0.55, 0.3, 0.15]))
+            kind = int(r.choice(3, p=[0.35, 0.35, 0.3]))
             wd = (r.uniform(1.6, 3.4), r.uniform(3.5, 6.5), r.uniform(8, 18))[kind]
+            ln = ln * (0.55 if kind == 0 else 1.0)
             c_ = spline([(fx, ty), (fx + ln * ang * 0.5 + r.normal(0, 3), ty + ln * 0.5), (fx + ln * ang + r.normal(0, 5), ty + ln)], 6)
             batches[kind].append(K.ribbon(pts(c_), S(wd * r.uniform(0.6, 1.2)), S(wd * r.uniform(0.2, 0.6)), r, wob=0.5,
                                           peak=r.uniform(0.2, 0.5), step=max(0.8, S(3)), ends=0.3))
@@ -324,9 +325,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         if not P_:
             continue
         m_ = K.soften(K.polys(P_, CH, CW), S((0.6, 0.9, 2.0)[kind]), 0.6, r, CH, CW)
-        m_ = K.drybrush(m_, p, r, s, dry=(0.35, 0.5, 0.7)[kind], scale=(10, 16, 25)[kind])
+        m_ = K.drybrush(m_, p, r, s, dry=(0.45, 0.5, 0.6)[kind], scale=(10, 16, 25)[kind])
         m_.a = m_.a * land[m_.sl]
-        K.wash(p, m_, [col('rock_dk'), col('rock_sh'), col('rock_dk')], (0.6, 0.48, 0.36)[kind], s, r, edge=0.5, edge_px=1.2,
+        K.wash(p, m_, [col('rock_dk'), col('rock_sh'), col('rock_dk')], (0.5, 0.48, 0.45)[kind], s, r, edge=0.5, edge_px=1.2,
                gran=0.4, var=0.5, var_px=15, charge_px=20)
     st('cliff face')
     # base: wet dark rock band run into the sea, clustered boulders of every size, broken foam

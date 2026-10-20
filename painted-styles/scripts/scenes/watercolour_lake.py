@@ -431,7 +431,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
                hold=glint)
         st('water horizon')
         dm = water * np.clip(0.1 + (YY - y0) / S(440), 0, 1) ** 1.2
-        box, T = K.wash(p, dm, [col('w_deep'), col('w_deep'), col('r_far')], 0.8, s, r, edge=0.0, gran=0.4, flocc=0.35,
+        box, T = K.wash(p, dm, [col('w_deep'), col('w_deep'), col('r_far')], 0.8, s, r, edge=0.0, gran=0.3, flocc=0.3,
                         var=0.25, var_px=140, apply=False, hold=glint)
         T = np.maximum(T, (K.on_box(glint, box) * 0.9)[..., None])
         # horizontal brush passes: the density changes a little from pass to pass
@@ -587,15 +587,16 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         # them, hard where they dried, dragged dry along the top
         dabs = []
         xb_ = X0 - 40
-        while xb_ < 300:
+        while xb_ < 270:
             ln_ = r.uniform(50, 150)
-            yc_ = 1050 + 18 * np.clip((xb_ - 120) / 200, 0, 1) + r.normal(0, 8)
-            dabs.append(blob_pts(S.x(xb_ + ln_ / 2), S.y(yc_ + 20), S(ln_ / 2), S(r.uniform(22, 40)), rough=0.4, n=60,
+            taper = 0.35 + 0.65 * np.clip((300 - xb_) / 260, 0, 1)
+            yc_ = 1050 + 22 * np.clip((xb_ - 100) / 200, 0, 1) + r.normal(0, 8)
+            dabs.append(blob_pts(S.x(xb_ + ln_ / 2), S.y(yc_ + 20), S(ln_ / 2), S(r.uniform(18, 36) * taper), rough=0.4, n=60,
                                  seed=int(r.integers(1 << 30)), rot=r.normal(-0.05, 0.08)))
             xb_ += ln_ * r.uniform(0.55, 1.05)
         bank = K.soften(K.polys(dabs, CH, CW, ss=1), S(2.0), 0.8, r, CH, CW)
         bank = K.drybrush(bank, p, r, s, dry=0.35, scale=25)
-        K.wash(p, bank, [col('bank'), col('bank'), hexc(C['reeds'][2]), col('bank')], 0.68, s, r, edge=0.8, edge_px=2.5, gran=0.6,
+        K.wash(p, bank, [col('bank'), col('bank'), hexc(C['reeds'][2]), col('bank')], 0.5, s, r, edge=0.8, edge_px=2.5, gran=0.6,
                flocc=0.5, var=0.5, var_px=25, charge_px=30, pool=0.8)
         dk = K.Crop(bank.x0, bank.y0, bank.a * smoothstep(0.45, 0.7, K.noise(r, *bank.a.shape, S(40), 3)))
         K.wash(p, K.soften(dk, S(3), 0.6, r, CH, CW), hexc(C['reeds'][2]), 0.45, s, r, edge=0.6, edge_px=1.5, gran=0.5, var=0.4)

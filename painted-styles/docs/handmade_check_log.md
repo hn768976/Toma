@@ -71,3 +71,11 @@ Minimum key-block line ~5–7.5 design px (anything under 4.6 px prints broken);
 lighthouse posts, glazing bars); visible ink mottle, starved paper grain, fuzzy edges and gouge chatter in solids;
 colour block offset (10, −7) px and turned 0.22° so it overlaps/gaps visibly; every cottage individual; gouge rows
 with per-row scale, short flicks/jabs and patchy density.
+
+### Round 2 fixes — Watercolour
+Granulation follows pigment load (pale washes smooth, raw-sheet shading 0.14→0.05); reserved-paper lights via a
+`hold=` reserve instead of opaque white dashes; stronger wet-in-wet sky with blooms, tide lines and back-runs;
+dried rims vary/lose along edges; pencil as an under-layer that vanishes under darks (no halos); more varied pines;
+boat/rower/oar as wet strokes bleeding into the water; tapered reeds and dry-brushed bank; underdrawing first in
+the draw-on; coast houses back-to-front solid, reserved-paper clouds, wobbly lighthouse, lifted sails, cliff base
+bleeding into the sea, clustered dry-brush cliff marks, wet-painted rocks.

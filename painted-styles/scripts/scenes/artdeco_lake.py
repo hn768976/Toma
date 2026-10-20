@@ -151,11 +151,10 @@ def g_near(a, S, P, st, rng, dense=True):
     pm = np.zeros_like(u)
     for i, (x, top, w) in enumerate(PINES_L + PINES_R):
         right = i >= len(PINES_L)
-        before = a.img.copy()
-        deco_pine(a, S, rng, x + rng.uniform(-6, 6), HZ + rng.uniform(-1, 2) - (6 if right else 10),
+        tm = deco_pine(a, S, rng, x + rng.uniform(-6, 6), HZ + rng.uniform(-1, 2) - (6 if right else 10),
                   HZ - top + rng.uniform(-8, 8), w * rng.uniform(0.85, 1.12), P['pine'], P['pine_sh'], P['trunk'],
                   light=_light_at(P, x), tiers=int(rng.integers(3, 5)) if right else None)
-        pm = np.maximum(pm, (np.abs(a.img - before).max(-1) > 1e-4).astype(np.float32))
+        pm = np.maximum(pm, tm)
         if i % 2 == 1 or i == len(PINES_L + PINES_R) - 1:
             st('pine', dense=dense)
     st('near')
@@ -204,18 +203,21 @@ def g_water(a, S, P, st, rng, masks):
     segs = speed_lines(rng, S.X0, S.X1, HZ + 200, S.Y1, 2.5, 7.0, 160, 520, 12, cover=0.35)
     lay_lines(a, S, rng, segs, P['line_dark'], 0.45)
     st('speed_lines_dark', dense=True)
-    for x, y, n, sp, dp in ((560, 720, 3, 70, 7), (1590, 905, 4, 120, 12), (300, 975, 3, 150, 14)):
+    for x, y, n, sp, dp in ((560, 720, 3, 70, 6), (1560, 900, 4, 80, 6), (330, 985, 3, 95, 8)):
         chevrons(a, S, rng, x + rng.uniform(-20, 20), y + rng.uniform(-6, 6), n, sp, dp, 2.4 + (y - HZ) / 140,
-                 P['chev'], 0.55, flip=1 if x < 960 else -1)
+                 P['chev'], 0.42, flip=1 if x < 960 else -1)
     st('water')
 
 
 def g_mist(a, S, P, st, rng):
-    haze(a, S, rng, S.X0, S.X1, 597, 18, P['mist'], 0.42 * P['mist_k'],
-         xfade=lambda x: 0.55 + 0.45 * np.cos((x - 1240) / 700) ** 2, jag=3)
+    """haze lying on the water: sprayed down from a frisket cut along the waterline (so it never veils the
+    shore and pines), densest at the cut edge and thinning smoothly toward the viewer; a second thin band
+    further out, thinned along its length"""
+    haze(a, S, rng, S.X0, S.X1, HZ + 1, 34, P['mist'], 0.42 * P['mist_k'],
+         xfade=lambda x: 0.5 + 0.5 * np.cos((x - P['sun'][0]) / 800) ** 2, jag=1.5, above=0.0)
     st('mist_band', dense=True)
-    haze(a, S, rng, S.X0, 1340, 652, 9, P['mist'], 0.28 * P['mist_k'],
-         xfade=lambda x: 1 - smoothstep(350, 1340, x), jag=2)
+    haze(a, S, rng, S.X0, 1340, 690, 10, P['mist'], 0.22 * P['mist_k'],
+         xfade=lambda x: 1 - smoothstep(350, 1340, x), jag=2, above=0.0)
     st('mist')
 
 
