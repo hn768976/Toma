@@ -473,7 +473,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                 bl = g.branch(S.pts([b0, p1, tip]), bw * s, 6 * s)
                 if L > 170:                                    # a long blade is two pieces, cut square across
                     nx_, ny_ = -np.sin(a), np.cos(a)
-                    q = ((xx - p1[0]) * np.cos(a) + (yy - p1[1]) * np.sin(a) + rng.uniform(-6, 6) * 0 +
+                    q = ((xx - p1[0]) * np.cos(a) + (yy - p1[1]) * np.sin(a) +
                          0.25 * ((xx - p1[0]) * nx_ + (yy - p1[1]) * ny_) > 0).astype(np.float32)
                     parts += [(bl * (1 - q), P['reed']), (bl * q, P['reed'])]
                 else:
