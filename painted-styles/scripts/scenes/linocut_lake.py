@@ -123,7 +123,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     L.stage('water', blocks=KEY)
 
     # ---- mist: a band carved white across the waterline, thicker at left, with a few wisps left standing
-    mtop = [(x, 610 - 26 * max(0, 1 - x / 1500) + 8 * np.sin(x / 140)) for x in np.linspace(-20, 1940, 40)]
+    mtop = [(x, 634 - 44 * max(0, 1 - x / 1500) + 8 * np.sin(x / 140)) for x in np.linspace(-20, 1940, 40)]
     mbot = [(x, 684 + 18 * max(0, 1 - x / 1400) + 6 * np.sin(x / 110 + 1)) for x in np.linspace(1940, -20, 40)]
     mist = L.poly(spline(S.pts(mtop), 6).tolist() + spline(S.pts(mbot), 6).tolist())
     L.clear(mist, chatter=0.25, angle=0)
