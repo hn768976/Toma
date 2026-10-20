@@ -52,10 +52,11 @@ def extract_opaque(B, C):
     return np.clip(F, 0, 1), a
 
 
-SMOOTH_KEY = {'watercolour', 'inkwash'}   # mist painted on textured paper: smooth veil instead of exact matte
+SMOOTH_KEY = set()                       # (smooth-veil matte: no longer used, it blurred the painted mist)
+GRAINY_KEY = {'watercolour', 'inkwash'}   # mist on textured paper: light alpha blur + clamped correction (no specks)
 
 
-def extract_key(B, C, sigma=60, smooth=True):
+def extract_key(B, C, sigma=60, smooth=True, grainy=False):
     """C = B*(1-a) + K*a with a smooth key colour K(x, y): start from one global key, then refine K
     as an alpha-weighted local average of the un-mixed colour, and re-solve a against it."""
     from core import blur
@@ -80,10 +81,15 @@ def extract_key(B, C, sigma=60, smooth=True):
         a = np.where(a < 0.01, 0, a)
         F = K
     else:
-        # grain-free media: put what the smooth key misses back into the colour, exact at rest
+        # put what the smooth key misses back into the colour (exact at rest for grain-free media);
+        # a 2 px alpha blur and a clamped correction keep paper-grain mists from throwing dark specks
+        if grainy:
+            a = np.clip(blur(a, 2), 0, 1)
+            a = np.where(a < 0.01, 0, a)
         r = C - (B * (1 - a[..., None]) + K * a[..., None])
-        w = smoothstep(0.05, 0.15, a)[..., None]
-        F = K + w * r / np.maximum(a, 0.05)[..., None]
+        w = smoothstep(0.05, 0.2 if grainy else 0.15, a)[..., None]
+        corr = w * r / np.maximum(a, 0.05)[..., None]
+        F = K + (np.clip(corr, -0.12, 0.12) if grainy else corr)
     return np.clip(F, 0, 1), a
 
 
@@ -141,7 +147,7 @@ def extract(key, G, cache, outdir, boat_y_design=806):
         if prev is None:
             F, a = C, np.ones(C.shape[:2], np.float32)
         elif g in KEY_GROUPS.get(key, {'mist'}):
-            F, a = extract_key(prev, C, smooth=key in SMOOTH_KEY)
+            F, a = extract_key(prev, C, smooth=key in SMOOTH_KEY, grainy=key in GRAINY_KEY)
         else:
             F, a = extract_opaque(prev, C)
         if g in ('mist', 'clouds'):

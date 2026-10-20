@@ -14,7 +14,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2341.915759086734,
+    2340.6284891726123,
     1612.0
    ],
    "layers": [
@@ -108,19 +108,7 @@
      "drawon/watercolour/044.png",
      "drawon/watercolour/045.png",
      "drawon/watercolour/046.png",
-     "drawon/watercolour/047.png",
-     "drawon/watercolour/048.png",
-     "drawon/watercolour/049.png",
-     "drawon/watercolour/050.png",
-     "drawon/watercolour/051.png",
-     "drawon/watercolour/052.png",
-     "drawon/watercolour/053.png",
-     "drawon/watercolour/054.png",
-     "drawon/watercolour/055.png",
-     "drawon/watercolour/056.png",
-     "drawon/watercolour/057.png",
-     "drawon/watercolour/058.png",
-     "drawon/watercolour/059.png"
+     "drawon/watercolour/047.png"
     ]
    }
   },
@@ -138,7 +126,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2338.9769012082443,
+    2334.9977324263036,
     1612.0
    ],
    "layers": [
@@ -199,7 +187,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2336.1037534698476,
+    2339.517128434357,
     1612.0
    ],
    "layers": [
@@ -292,13 +280,7 @@
      "drawon/stainedglass/043.png",
      "drawon/stainedglass/044.png",
      "drawon/stainedglass/045.png",
-     "drawon/stainedglass/046.png",
-     "drawon/stainedglass/047.png",
-     "drawon/stainedglass/048.png",
-     "drawon/stainedglass/049.png",
-     "drawon/stainedglass/050.png",
-     "drawon/stainedglass/051.png",
-     "drawon/stainedglass/052.png"
+     "drawon/stainedglass/046.png"
     ]
    }
   },
@@ -316,7 +298,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2333.620822218735,
+    2333.4808373337532,
     1612.0
    ],
    "layers": [
@@ -433,7 +415,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2334.2193833146835,
+    2339.55111995379,
     1612.0
    ],
    "layers": [
