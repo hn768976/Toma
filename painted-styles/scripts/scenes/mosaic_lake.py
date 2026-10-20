@@ -107,8 +107,8 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     water = refl * 0.86 * (1 - 0.65 * d) + deep * 0.65 * d
     m.cartoon = np.where(sea[..., None] > 0.5, water, m.cartoon).astype(np.float32)
     mx = 1 - 0.7 * Xd / 1920
-    mist = np.exp(-((Yd - 650) / (16 + 30 * mx)) ** 2) * mx * (0.75 + 0.25 * np.sin(Xd / 150.0)) * (1 - pine_all)
-    m.paint(np.clip(mist, 0, 1) * 0.8, 'mist')
+    mist = np.exp(-((Yd - 655) / (24 + 40 * mx)) ** 2) * (0.35 + 0.65 * mx) * (0.75 + 0.25 * np.sin(Xd / 150.0)) * (1 - 0.6 * pine_all)
+    m.paint(np.clip(mist * 1.1, 0, 0.9), 'mist')
 
     # boat, rower, oars (design coords)
     hull = m.poly_mask(S.pts(spline([(1072, 776), (1120, 784), (1170, 786), (1220, 783), (1266, 770),
