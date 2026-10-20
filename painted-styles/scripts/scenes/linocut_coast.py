@@ -422,7 +422,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         pts += [(cx + rx, max(cy + 40, Y1 + 10)), (cx - rx, max(cy + 40, Y1 + 10))]
         pts = knife_edge(pts, rng, step=(8, 24), wob=1.4, nick=0.12, nick_size=(2.5, 7))
         rmk = L.poly(P(pts))
-        L.outline(rmk, S(3.0))
+        # halo only round the rounded back: lower down the rocks merge into one black mass (no ruled verticals)
+        L.outline(rmk * (np.arange(CH)[:, None] < S.y(cy + rng.uniform(-10, 25))), S(3.0))
         L.leave(rmk)
         # gouge marks following the rock's rounded back: rows curving over it
         gouge_rows(L, S, rng, P(pts), (cx - rx - 10, cy - ry - 10, cx + rx + 10, cy + 60), angle=-24 + rng.normal(0, 8),

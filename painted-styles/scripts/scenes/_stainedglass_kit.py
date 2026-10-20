@@ -160,7 +160,7 @@ class Panel(StainedGlass):
                 c2 = c ** r.uniform(1.4, 1.9)                             # darker cords
             fl = flow(cx[i], cy[i]) if callable(flow) else flow
             ang = (fl + r.normal(0, flow_jit)) if (fl is not None and r.random() < 0.8) else r.uniform(0, np.pi)
-            amp = {'cathedral': r.uniform(0.10, 0.28), 'streaky': r.uniform(0.35, 0.75), 'seedy': r.uniform(0.04, 0.14),
+            amp = {'cathedral': r.uniform(0.10, 0.28), 'streaky': r.uniform(0.25, 0.55), 'seedy': r.uniform(0.04, 0.14),
                    'opal': r.uniform(0.08, 0.2), 'reamy': r.uniform(0.25, 0.5)}[kind] * streak
             P['mix'].append({'streaky': r.uniform(0.35, 0.8), 'opal': r.uniform(0.1, 0.35)}.get(kind, r.uniform(0, 0.15)))
             P['seeds'].append(seeds * {'seedy': r.uniform(0.5, 1.0), 'reamy': r.uniform(0.08, 0.22),
@@ -539,7 +539,7 @@ class Panel(StainedGlass):
         u = np.clip(u, 0, len(self._tab_b) - 2)
         sb = np.interp(u, np.arange(len(self._tab_b)), self._tab_b)
         sc = np.interp(u * 1.0, np.arange(len(self._tab_c)), self._tab_c)
-        cord = np.where(kind == 1, 0.45, np.where(kind == 4, 0.35, 0.12)).astype(np.float32)
+        cord = np.where(kind == 1, 0.2, np.where(kind == 4, 0.3, 0.08)).astype(np.float32)
         st = np.clip((1 - cord) * sb + cord * sc, -1.4, 1.4)
         del sb, sc, u
         ga = P['gang'][idx]
@@ -551,7 +551,7 @@ class Panel(StainedGlass):
         c1 = col[idx]
         Tm = c1 ** th[:, None]
         # wisps of the second colour (streaky), following the same reams
-        w = (P['mix'][idx] * np.clip(0.5 + 0.9 * st, 0, 1) ** 2)[:, None]
+        w = (P['mix'][idx] * smoothstep(-0.1, 0.9, st) ** 1.5)[:, None]
         Tm = Tm * (1 - w) + (col2[idx] ** th[:, None]) * w
         # opalescence: a milky, mottled, less transparent glass
         op = P['opal'][idx]

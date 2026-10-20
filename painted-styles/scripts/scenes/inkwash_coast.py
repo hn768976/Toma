@@ -306,10 +306,11 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     p.snap('surf')
 
     # ---------------------------------------------------------------- foreground rocks bottom-left
-    rock_ctrl = [(-400, 860), (0, 880), (160, 900), (330, 935), (480, 975), (620, 1020), (720, 1060), (800, 1110), (830, 1400)]
+    rock_ctrl = [(-400, 860), (0, 880), (160, 900), (330, 935), (480, 975), (620, 1020), (720, 1060), (800, 1110),
+                 (870, 1190), (920, 1300), (950, 1500)]
     rx_, ry_ = np.array(rock_ctrl, np.float32).T
     rock = S.y(np.interp(xd, rx_, ry_)) + S(10) * fbm1d(CW, S(50), 5, seed + 31)
-    rock[xd > 830] = CH + 400
+    rock[xd > 950] = CH + 400
     ink_mass(p, rock, dens=0.85, reach=S(160), glazes=4, soft=0.8, pool=0.6, blooms=2, dry=0.45)
     for k in range(40):
         x = rng.uniform(-60, 760)

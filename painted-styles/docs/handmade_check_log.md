@@ -22,3 +22,10 @@ even grain replaced by droplet speckle following spray density; lib ripple-displ
 stencilled horizontal strips sprayed with the reflected colour (never an image copy); varied pines (3–6 tiers,
 asymmetric, lean); cut-shape rower and per-bird wing poses; mist sprayed down from a hand-cut edge; limited
 period palette with stepped sky bands; forest trunks/agaves/shadows/canopy all varied, hand-cut light wedges.
+
+### Round 1 fixes — Linocut
+Lib's even hatch replaced by form-following gouge rows (irregular spacing, per-mark width/taper, slips); silhouettes
+re-cut as knife facets with nicks; reflections carved as broken strokes (no flipped block); baren pressure gradient,
+ink starvation, brayer lanes, plate wear in solids; vermilion block with uneven film and larger fixed misregistration;
+waves, birds, clouds, ferns, tufts varied per instance; thin lines now >=2.6 px fragile ridges printing broken;
+pines individual; mist cleared with a U-gouge; forest rays waver and break.

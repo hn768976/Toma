@@ -1,15 +1,15 @@
 {
  "layers": {
   "artdeco": {
-   "birds": 19.4,
-   "boat": 21.3,
-   "clouds": 14.4,
-   "far": 17.3,
-   "mist": 17.8,
-   "near": 23.3,
-   "reeds": 243.7,
-   "sky": 14.3,
-   "water": 17.7
+   "birds": 33.4,
+   "boat": 33.0,
+   "clouds": 22.4,
+   "far": 22.0,
+   "mist": 35.3,
+   "near": 28.0,
+   "reeds": 32.0,
+   "sky": 21.0,
+   "water": 34.0
   },
   "inkwash": {
    "birds": 55.6,

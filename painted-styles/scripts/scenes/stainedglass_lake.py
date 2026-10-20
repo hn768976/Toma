@@ -37,7 +37,7 @@ PAL = {
         bands=[['#1d2a6e', '#243380', '#1a2766'], ['#3a3488', '#4a3a8a', '#33307a'], ['#7a2c5c', '#8a3466', '#6e2a5a'],
                ['#c0405a', '#b3182c', '#cc5a5a'], ['#d0601e', '#e0922a', '#d8702a'], ['#f2c230', '#e8a830', '#f4d060']],
         arch=(0, 0, 10, 22, 34, 40), glow=(1240.0, 430.0), sun=None,
-        cloud=[['#b8608a', '#a85a86'], ['#d88aa0', '#e09aa8', '#c86a8c']], cloud_lit='below',
+        cloud=[['#c27a9c', '#b86e96', '#c886a2'], ['#eaa0aa', '#f0b4b0', '#e094a4', '#f4c0b0']], cloud_lit='below',
         far_lit=['#9580b4', '#8a74aa', '#9a86b8'], far_sh=['#7c6aa0', '#6e5e96', '#74649c'],
         near_lit=['#46337a', '#4a3a80', '#3c2f6e'], near_sh=['#33296a', '#2c2462', '#30285f'],
         pine_lit=['#2a6a40', '#2f7044', '#245e3a'], pine_sh=['#18492f', '#1f5a3a', '#143f2a'],
@@ -46,14 +46,14 @@ PAL = {
         glit=['#f2c230', '#e0922a', '#f4d060'], glit_x=1240.0,
         mist=['#b8a0cc', '#c6aed0', '#ad98c4'], mist_stain=0.6,
         hull=['#7a4e2c', '#6e4526'], hull_dk=['#5a3820', '#4e321c'], hull_ref=['#2a1a30', '#30203a'], body='#173c8f',
-        body_ref='#1a2450', head='#e9c9a8', bird=['#1c1a40', '#221e48'],
+        body_ref='#1a2450', head='#e9c9a8', hair='#3a2418', bird=['#1c1a40', '#221e48'],
         reed=['#2a4a30', '#33502e', '#26402c'], cattail=['#4a2a1c', '#5a3422'], sky=('#ffffff', '#f2eee6')),
     "Day": dict(
         bands=[['#1f4fa8', '#2456b0', '#1d4a9e'], ['#3368b8', '#3d74c2', '#2f60b0'], ['#5d8fd0', '#6a9ad6', '#5588cc'],
                ['#86b0de', '#93bae2', '#7ca8da'], ['#aecde8', '#bcd6ec', '#a4c6e4'], ['#dfe8e0', '#e8ecdc', '#d7e2ea']],
         arch=(0, 0, 0, 0, 0, 0), glow=None, sun=(640.0, 138.0, 44.0),
         corona=['#f4e6a0', '#f0dc8c', '#f6eab4'],
-        cloud=[['#e2e6ea', '#d7e2ea'], ['#f4f1e6', '#eeeadb', '#f6f4ec']], cloud_lit='above',
+        cloud=[['#c8d4e2', '#d0dae6', '#bccce0'], ['#f4f1e6', '#eeeadb', '#f6f4ec']], cloud_lit='above',
         far_lit=['#aca8c8', '#a39ec0', '#b4b0cc'], far_sh=['#968fb8', '#8c86b0', '#9a94bc'],
         near_lit=['#4a7a70', '#4f8074', '#457468'], near_sh=['#365f5a', '#3f6f68', '#325852'],
         pine_lit=['#3a7a3a', '#2f8a3c', '#3f823e'], pine_sh=['#1f5a3a', '#2a6a40', '#1b5034'],
@@ -62,7 +62,7 @@ PAL = {
         glit=['#eeeadb', '#f6f2e0', '#e8ecdc'], glit_x=640.0,
         mist=['#e4e9f0', '#eeeadb', '#d7e2ea'], mist_stain=0.25,
         hull=['#7a4e2c', '#6e4526'], hull_dk=['#5a3820', '#4e321c'], hull_ref=['#1a3060', '#22386a'], body='#b3182c',
-        body_ref='#3a3a70', head='#e9c9a8', bird=['#22223a', '#2a2a44'],
+        body_ref='#3a3a70', head='#e9c9a8', hair='#4a2c1c', bird=['#22223a', '#2a2a44'],
         reed=['#3a6a30', '#4a7a34', '#2f5a2c'], cattail=['#5a3422', '#6a4028'], sky=('#ffffff', '#f2eee6')),
 }
 
@@ -170,24 +170,29 @@ def spurs(fn, peaks, bottom, r):
 
 
 def cloud_shape(cx, cy, L, h, r):
-    """a cloud: a few lobes of different size along a flattish base, blunt ends; returns outline fns and
-    the valleys between the lobes"""
+    """a cloud: lobes of different size and height, the tallest off centre, a long low tail to one side, a
+    gently tilted base; returns outline arrays and the valleys between the lobes / the tail cut"""
     nl = int(r.integers(2, 4)) + (1 if L > 380 else 0)
-    w = r.uniform(0.7, 1.3, nl)
-    edges = -1 + 2 * np.r_[0, np.cumsum(w)] / w.sum()
-    hts = r.uniform(0.65, 1.0, nl)
+    tail = 1 if r.random() < 0.5 else -1
+    w = r.uniform(0.6, 1.4, nl)
+    span = 0.68
+    edges = -span + 2 * span * np.r_[0, np.cumsum(w)] / w.sum()
+    edges = edges + tail * (1 - span) * 0.9
+    hts = r.uniform(0.45, 0.85, nl)
     hts[int(r.integers(0, nl))] = 1.0
-    t = np.linspace(-1, 1, 160)
+    t = np.linspace(-1, 1, 200)
     top = np.zeros_like(t)
     for i in range(nl):
-        c, hw_ = (edges[i] + edges[i + 1]) / 2, (edges[i + 1] - edges[i]) / 2 * 1.25
-        top = np.maximum(top, hts[i] * np.sqrt(np.clip(1 - ((t - c) / hw_) ** 2, 0, 1)))
-    env = np.clip(1 - t ** 2, 0, 1) ** 0.3
+        c, hw_ = (edges[i] + edges[i + 1]) / 2, (edges[i + 1] - edges[i]) / 2 * r.uniform(1.15, 1.45)
+        top = np.maximum(top, hts[i] * np.clip(1 - ((t - c) / hw_) ** 2, 0, 1) ** r.uniform(0.45, 0.7))
+    ends = np.clip(1 - t ** 2, 0, 1) ** 0.28
+    top = np.maximum(top, 0.48 * ends)                        # the tail and the blunt ends
     xs = cx + t * L / 2
-    ty = cy - h * 0.72 * top * env - h * 0.08
-    by = cy + h * 0.28 * env * (1 + 0.15 * np.sin(t * 5 + r.uniform(0, 6)))
+    tilt = r.uniform(-0.03, 0.03)
+    ty = cy - h * 0.75 * top * ends + tilt * (xs - cx)
+    by = cy + h * 0.25 * ends * (1 + 0.2 * np.sin(t * 4 + r.uniform(0, 6))) + tilt * (xs - cx)
     valleys = [cx + e * L / 2 for e in edges[1:-1]]
-    caps = [cx - L / 2 * 0.8, cx + L / 2 * 0.8]
+    caps = [cx + edges[0] * L / 2 - 6, cx + edges[-1] * L / 2 + 6]
     return xs, ty, by, valleys, caps
 
 
@@ -325,7 +330,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         rng = g.group('water')
         levels, y = [], HORIZON
         while True:
-            y += (24 + (y - HORIZON) * 0.14) * rng.uniform(0.75, 1.3)
+            y += (22 + (y - HORIZON) * 0.11) * rng.uniform(0.75, 1.3)
             if y > S.Y1 + 10:
                 break
             levels.append(y)
@@ -342,9 +347,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
             pid = pref_id[iy, ix].astype(np.int64)
             f[pid > 0] = 10 + pid[pid > 0]
             depth = (c - HORIZON) / 440.0
-            gw = 18 + 110 * depth
+            gw = 56 + 230 * depth
             off = 14 * np.sin(c / 37.0 + wob[0]) + 9 * np.sin(c / 13.0 + wob[1])
-            f[(np.abs(a - gx - off) < gw / 2) & (c < 1000)] = 3
+            f[(np.abs(a - gx - 40 * depth - off) < gw / 2) & (c < 960)] = 3
             return f
 
         def run_edit(runs, yc, r):
@@ -357,14 +362,20 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                     gp = r.uniform(18, 34)
                     out += [[ra, m_ - gp / 2, fd], [m_ - gp / 2, m_ + gp / 2, 0], [m_ + gp / 2, rb, fd]]
                 elif fd == 3:
-                    if r.random() < 0.18 + 0.3 * depth:
+                    if r.random() < 0.6 * max(depth - 0.45, 0):
                         out.append([ra, rb, 0])
-                    elif L > 60 and r.random() < 0.6:
-                        m_ = ra + L * r.uniform(0.3, 0.7)
-                        gp = r.uniform(16, 26 + 20 * depth)
-                        out += [[ra, m_ - gp / 2, 3], [m_ - gp / 2, m_ + gp / 2, 0], [m_ + gp / 2, rb, 3]]
-                    else:
-                        out.append([ra, rb, 3])
+                        continue
+                    x = ra + r.uniform(0, 18)
+                    out.append([ra, x, 0])
+                    while x < rb - 20:
+                        ln = r.uniform(26, 50 + 50 * depth)
+                        gp = r.uniform(14, 26 + 20 * depth)
+                        e = min(x + ln, rb)
+                        out.append([x, e, 3])
+                        if e + gp < rb:
+                            out.append([e, e + gp, 0])
+                        x = e + gp
+                    out[-1][1] = rb
                 else:
                     out.append([ra, rb, fd])
             # reflections are a little shorter than what they reflect
@@ -382,8 +393,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
             k = 0 if cy < 745 + rng.uniform(-25, 25) else (1 if cy < 880 + rng.uniform(-30, 30) else 2)
             return P['water'][k]
         wm = g.poly(S.pts(hband(S, HORIZON, Y1)))
-        near_glit = lambda a, c: 0.45 if abs(a - gx) < 90 + 0.3 * (c - HORIZON) else 1.0
-        g.band(wm, P['water'][0], const(HORIZON), const(Y1), levels=levels, length=(130, 360), tilt=0.32,
+        near_glit = lambda a, c: 0.3 if abs(a - gx) < 70 + 0.5 * (c - HORIZON) else 1.0
+        g.band(wm, P['water'][0], const(HORIZON), const(Y1), levels=levels, length=(130, 360), tilt=0.42,
                wave=(8.0, 260.0), feature=feature, run_edit=run_edit, size=near_glit, vary=1.35,
                fid_colours=dict([(1, P['nref']), (3, P['glit'])] + [(11 + i, P['pref']) for i in range(len(PS))]),
                colour_fn=tone, amin=420, tmin=11,
@@ -444,8 +455,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                            (1147, 768)], 0.8)))
         g.glass(body, P['body'], flow=np.pi / 2, mix=dict(cathedral=0.6, streaky=0.4))
         hx, hy = boat_pts([(1170, 727)])[0]
-        g.glass(g.ellipse(*S.pt(hx, hy), 12.5 * BOAT_K * s, 14 * BOAT_K * s, 0.15), P['head'], mix=dict(cathedral=1.0),
-                streak=0.4)
+        head = g.ellipse(*S.pt(hx, hy), 12.5 * BOAT_K * s, 14 * BOAT_K * s, 0.15)
+        g.glass(head, None, cuts=[('h', lambda x: hy - 5 + 0.35 * (x - hx))],
+                colour_fn=lambda cx, cy: P['head'] if cy > hy - 4 else P['hair'], mix=dict(cathedral=1.0), streak=0.4)
         st('rower')
         # grisaille: planks, gunwale, oars, arm and folds, hair and face
         g.trace(Q([(1074, 777), (1170, 788), (1265, 771)]), 2.6 * s, taper=(0.1, 0.1), clip=hull)
@@ -455,7 +467,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         g.trace(Q([(1158, 752), (1152, 764), (1160, 768)]), 1.5 * s, taper=(0.2, 0.2), clip=body)
         g.trace(Q([(1176, 750), (1181, 762), (1176, 768)]), 1.3 * s, taper=(0.2, 0.2), clip=body)
         g.shade(body, offset=(-6 * s, 0), strength=0.35, soft=2 * s)
-        g.trace(Q([(1158, 724), (1164, 715), (1176, 715), (1183, 724)]), 4.2 * s, taper=(0.3, 0.4))      # hair
+        g.trace(Q([(1166, 733), (1170, 735)]), 1.2 * s, smooth=False)                                    # mouth
+        g.trace(Q([(1178, 727), (1180, 731)]), 1.6 * s, smooth=False)                                    # ear
         g.trace(Q([(1163, 729), (1165, 729)]), 1.8 * s, smooth=False)                                     # eye
         g.trace(Q([(1159, 731), (1157, 735), (1160, 736)]), 1.0 * s, taper=(0.2, 0.2))                   # nose
         g.matt(g.ellipse(*S.pt(hx + 3, hy), 12 * s, 13 * s), 0.18, soft=3 * s)

@@ -227,8 +227,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     if 'boat' in inc:
         r = pen('boat')
         lines.append(hull_pts)
-        lines.append([(CX - S(2), CY - S(9)), (CX - S(12), CY - S(30)), (CX - S(6), CY - S(40))])
-        hd = blob_pts(CX - S(6), CY - S(48), S(8), S(9), rough=0.2, n=14, seed=seed + 4)
+        lines.append([(CX - S(2), CY - S(9)), (CX - S(7), CY - S(24)), (CX - S(12), CY - S(36))])
+        lines.append([(CX - S(4), CY - S(11)), (CX - S(16), CY - S(17)), (CX - S(25), CY - S(14))])
+        hd = blob_pts(CX - S(15), CY - S(46), S(6.5), S(7.5), rough=0.2, n=14, seed=seed + 4)
         lines.append(np.vstack([hd, hd[:2]]))
         lines.append([(CX - S(34), CY - S(30)), (CX + S(72), CY + S(22))])
         K.pencil(p, lines, s, pen('boat draw'), k=0.5); lines = []
@@ -474,19 +475,23 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         K.lift(p, gun, 0.55, s, r, rough=0.5, rough_px=6)
         st('hull')
         # rower: a hunched, leaning torso in one stroke, arms reaching to the oar, a head with a darker cap of hair
-        torso = K.ribbon(spline([(CX - S(3), CY - S(8)), (CX - S(8), CY - S(24)), (CX - S(9), CY - S(37))], 6),
-                         S(17), S(11), r, wob=0.25, step=S(1.5))
-        arm = K.ribbon(spline([(CX - S(10), CY - S(34)), (CX - S(19), CY - S(26)), (CX - S(28), CY - S(28))], 6),
-                       S(5), S(3.5), r, wob=0.3, step=S(1.2))
-        body = K.soften(K.polys([torso, arm], CH, CW, ss=3), S(0.8), 0.3, r, CH, CW)
+        torso = K.ribbon(spline([(CX - S(2), CY - S(8)), (CX - S(6), CY - S(22)), (CX - S(12), CY - S(34))], 6),
+                         S(12), S(15.5), r, wob=0.25, step=S(1.2))
+        knee = K.ribbon(spline([(CX - S(4), CY - S(11)), (CX - S(15), CY - S(17)), (CX - S(24), CY - S(14))], 5),
+                        S(7), S(5), r, wob=0.3, step=S(1.2))
+        arm = K.ribbon(spline([(CX - S(9), CY - S(33)), (CX - S(20), CY - S(29)), (CX - S(29), CY - S(30))], 6),
+                       S(5.5), S(3.2), r, wob=0.3, step=S(1.0))
+        body = K.soften(K.polys([torso, knee, arm], CH, CW, ss=3), S(0.8), 0.35, r, CH, CW)
         K.wash(p, body, [col('rower'), col('rower'), col('hull_in')], 0.9, s, r, edge=0.6, edge_px=1.5, gran=0.3,
-               var=0.3, var_px=10, charge_px=12)
-        head = K.soften(K.polys([blob_pts(CX - S(7), CY - S(46), S(7.2), S(8.4), rough=0.18, n=30, seed=seed + 9, rot=0.3)],
-                                CH, CW, ss=3), S(0.7), 0.3, r, CH, CW)
-        K.wash(p, head, col('skin'), 0.85, s, r, edge=0.5, edge_px=1.2, gran=0.15, var=0.3, var_px=6)
-        hair = K.soften(K.polys([blob_pts(CX - S(5), CY - S(51), S(7.5), S(4.5), rough=0.25, n=24, seed=seed + 10, rot=0.35)],
+               var=0.35, var_px=8, charge_px=10)
+        neck = K.ribbon([(CX - S(12), CY - S(37)), (CX - S(14), CY - S(41))], S(4), S(3.5), r, wob=0.2, step=S(1))
+        head = K.soften(K.polys([blob_pts(CX - S(15.5), CY - S(45), S(5.8), S(6.6), rough=0.2, n=30, seed=seed + 9, rot=0.4), neck],
                                 CH, CW, ss=3), S(0.6), 0.3, r, CH, CW)
-        K.wash(p, hair, col('hair'), 0.8, s, r, edge=0.4, edge_px=1, gran=0.2, var=0.3, var_px=6)
+        K.wash(p, head, col('skin'), 0.8, s, r, edge=0.55, edge_px=1.0, gran=0.15, var=0.35, var_px=5)
+        hat = [K.ribbon([(CX - S(23), CY - S(48.5)), (CX - S(15), CY - S(50)), (CX - S(7), CY - S(48))], S(2.6), S(2.0), r, wob=0.3, step=S(1)),
+               blob_pts(CX - S(14.5), CY - S(53), S(5.2), S(3.6), rough=0.25, n=24, seed=seed + 10, rot=-0.1)]
+        K.wash(p, K.soften(K.polys(hat, CH, CW, ss=3), S(0.5), 0.3, r, CH, CW), col('hair'), 0.85, s, r, edge=0.4, edge_px=1,
+               gran=0.2, var=0.3, var_px=5)
         st('rower')
         oar = K.ribbon(spline([(CX - S(31), CY - S(31)), (CX + S(10), CY - S(14)), (CX + S(45), CY + S(4)), (CX + S(72), CY + S(21))], 6),
                        S(2.6), S(2.0), r, wob=0.4, step=S(1.5))

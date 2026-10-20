@@ -69,7 +69,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
             conifer(p, S.x(x), S.y(top), S.y(base), ink, wind=rng.normal(0, 0.2), halo=rng.uniform(0.6, 1.8),
                     spread=rng.uniform(0.4, 0.75), bare=rng.uniform(0.08, 0.3), style=('wet', 'mixed', 'brush')[int(rng.integers(3))])
         elif r < 0.8:
-            wet_tree(p, S.x(x), S.y(base - min(140, (base - top) * rng.uniform(0.25, 0.5))), S.y(base), ink * 1.2, lean=rng.normal(0, 0.05))
+            wet_tree(p, S.x(x), S.y(base - min(70, (base - top) * rng.uniform(0.2, 0.4))), S.y(base), ink * 1.2, lean=rng.normal(0, 0.05))
         else:                                           # just a pale upright stroke: a trunk lost in the mist
             broad_stroke(p, [S.pt(x, base), S.pt(x + rng.normal(0, 6), top)], S(rng.uniform(4, 12)), ink * 0.9,
                          dry=rng.uniform(0.3, 0.8), taper=(0.1, 0.6), pool=0.3, maxseg=12)
@@ -166,13 +166,13 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
 
         def tx(yd):
             return float(np.interp(yd, ctr[::-1, 1], ctr[::-1, 0]))
-        for k in range(int(rng.integers(2, 6 + w // 8))):                  # bark: short broken touches
-            yy = rng.uniform(top + 80, base - 10)
-            cx = tx(yy) + rng.uniform(-0.35, 0.35) * w
-            ln = w * rng.uniform(0.15, 0.55)
-            p.stroke([S.pt(cx - ln / 2, yy + rng.normal(0, 1)), S.pt(cx + ln / 2, yy + rng.normal(0, 3))],
-                     S(rng.uniform(1.0, 2.6)) * (0.6 + w / 50), ink * rng.uniform(0.4, 0.95), dry=rng.uniform(0.4, 0.85),
-                     taper=(0.2, 0.4))
+        for k in range(int(rng.integers(2, 5 + w // 10))):                 # bark: dry touches along the grain
+            yy = rng.uniform(top + 120, base - 20)
+            cx = tx(yy) + rng.uniform(-0.38, 0.38) * w
+            ln = rng.uniform(10, 40) + w * rng.uniform(0.2, 1.2)
+            p.stroke(spline([S.pt(cx, yy), S.pt(cx + rng.normal(0, w * 0.04), yy + ln * 0.5), S.pt(cx + rng.normal(0, w * 0.06), yy + ln)], 6),
+                     S(rng.uniform(1.0, 2.4)) * (0.6 + w / 60), ink * rng.uniform(0.35, 0.85), dry=rng.uniform(0.55, 0.88),
+                     taper=(rng.uniform(0.1, 0.4), 0.5))
         for k in range(int(rng.integers(0, 3))):                             # knots
             yy = rng.uniform(crown_lo, base - 30)
             p.wet_dot(*S.pt(tx(yy) + rng.uniform(-0.3, 0.3) * w, yy), S(rng.uniform(1.5, 3.5)) * (0.6 + w / 40),
@@ -183,7 +183,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         for j in range(int(rng.integers(0, 3))):
             tuft(S.x(x + rng.uniform(-1.4, 1.4) * (w + 14)), S.y(base + 3), S(rng.uniform(8, 22) * (0.6 + w / 40)), ink * 0.75)
         # branches, each its own
-        fol = ['pad', 'needle', 'pad', 'bare'][int(rng.integers(4))]
+        fol = ['pad', 'twig', 'pad', 'bare'][int(rng.integers(4))]
         y = crown_lo + rng.uniform(-30, 30)
         while y > -40:
             for side_b in ([rng.choice([-1, 1])] if rng.random() < 0.7 else [-1, 1]):
@@ -192,7 +192,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
                 sx_ = tx(y) + side_b * w * 0.35
                 ex, ey = sx_ + side_b * ln * np.cos(droop), y + ln * np.sin(droop)
                 bpts = curve(S.pt(sx_, y), S.pt(ex, ey), S(rng.normal(0, ln * 0.12)), 10)
-                p.stroke(bpts, S(rng.uniform(1.4, 3.6)) * (0.7 + w / 60), ink * rng.uniform(0.55, 0.95),
+                p.stroke(bpts, S(rng.uniform(1.2, 3.0)) * (0.8 + min(w, 40) / 80), ink * rng.uniform(0.5, 0.9),
                          dry=rng.uniform(0.35, 0.8), taper=(0.05, rng.uniform(0.6, 0.95)), jitter=rng.uniform(0.5, 1.2))
                 if fol == 'pad' or (fol == 'bare' and rng.random() < 0.3):
                     for q in range(int(rng.integers(1, 4))):
@@ -202,19 +202,14 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
                         broad_stroke(p, [(bq[0] - np.cos(ang) * l2, bq[1] + S(2) - np.sin(ang) * l2), (bq[0] + np.cos(ang) * l2, bq[1] + S(2) + np.sin(ang) * l2)],
                                      S(rng.uniform(5, 11)) * (0.7 + w / 70), ink * rng.uniform(0.18, 0.4), dry=rng.uniform(0.2, 0.6),
                                      taper=(0.3, 0.4), pool=rng.uniform(0.1, 0.4), side=rng.uniform(-0.6, 0.6), maxseg=6)
-                elif fol == 'needle':                     # a fan of needles at the tip, sometimes one midway
-                    for tq in ([1.0] if rng.random() < 0.6 else [1.0, rng.uniform(0.45, 0.75)]):
-                        bq = bpts[int(tq * 9)]
-                        nf = int(rng.integers(4, 12))
-                        a0 = (np.pi if side_b < 0 else 0) + side_b * rng.uniform(0.1, 0.6)
-                        span = rng.uniform(1.4, 2.6)
-                        l0 = S(rng.uniform(6, 15)) * (0.7 + w / 70)
-                        for a in a0 + span * (np.sort(rng.random(nf)) - 0.5):
-                            l2 = l0 * rng.uniform(0.6, 1.25)
-                            p.stroke([tuple(bq), (bq[0] + np.cos(a) * l2, bq[1] + np.sin(a) * l2 * 0.7 + l2 * 0.25)],
-                                     S(rng.uniform(0.8, 1.6)), ink * rng.uniform(0.4, 0.85), dry=rng.uniform(0.25, 0.6),
-                                     taper=(0.1, 0.7))
-            y -= rng.choice([rng.uniform(18, 40), rng.uniform(50, 110)])
+                elif fol == 'twig':                       # the branch forks into a couple of thin twigs
+                    for q in range(int(rng.integers(1, 4))):
+                        bq = bpts[int(rng.uniform(0.4, 1.0) * 9)]
+                        a = (np.pi if side_b < 0 else 0) + side_b * rng.uniform(-0.9, 0.5)
+                        l2 = S(rng.uniform(8, 26))
+                        p.stroke(curve(tuple(bq), (bq[0] + np.cos(a) * l2, bq[1] + np.sin(a) * l2), S(rng.normal(0, 2)), 6),
+                                 S(rng.uniform(0.8, 1.5)), ink * rng.uniform(0.4, 0.8), dry=rng.uniform(0.3, 0.7), taper=(0.1, 0.8))
+            y -= rng.choice([rng.uniform(30, 60), rng.uniform(70, 160)])
 
     mids = [(560, 672, 13, 0.36, 300), (700, 662, 10, 0.30, 330), (1250, 664, 11, 0.32, 320), (1390, 676, 15, 0.38, 290),
             (430, 690, 18, 0.44, 280), (1560, 700, 20, 0.42, 300), (820, 650, 7, 0.22, 360), (1180, 652, 8, 0.25, 360),
@@ -234,7 +229,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
             ln = S(20 + 110 * f) * rng.uniform(0.5, 1.4)
             broad_stroke(p, [(X - ln / 2, Y + rng.normal(0, S(1))), (X, Y - S(rng.uniform(0, 3))), (X + ln / 2, Y + rng.normal(0, S(1)))],
                          S(3 + 12 * f) * rng.uniform(0.6, 1.3), (0.08 + 0.2 * f) * rng.uniform(0.6, 1.2), dry=rng.uniform(0.3, 0.8),
-                         taper=(rng.uniform(0.2, 0.5), rng.uniform(0.2, 0.5)), pool=rng.uniform(0.1, 0.5), maxseg=10)
+                         taper=(rng.uniform(0.2, 0.5), rng.uniform(0.2, 0.5)), pool=rng.uniform(0.0, 0.2), rough=2.0, maxseg=10)
         if rng.random() < 0.75:
             tuft(X + S(rng.uniform(-14, 14) * (0.4 + f)), Y, S(10 + 34 * f) * rng.uniform(0.6, 1.3),
                  (0.22 + 0.45 * f) * rng.uniform(0.6, 1.0))
