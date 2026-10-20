@@ -422,7 +422,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                                                                                 ((1182, 751), (1186, 772))]]
         g.pieces([(body * lit, P['body'], dict(flow=np.pi / 2)), (body * (1 - lit), shade([P['body']], 0.78), dict(flow=np.pi / 2)),
                   (sleeves[0], shade([P['body']], 0.66)), (sleeves[1], shade([P['body']], 0.6)),
-                  (head * (1 - hair), P['head'], dict(streak=0.4)), (head * hair, P['hair'], dict(streak=0.4))],
+                  (head * (1 - hair), P['head'], dict(streak=0.12, mix=dict(cathedral=1.0))), (head * hair, P['hair'], dict(streak=0.4))],
                  mix=dict(cathedral=0.7, streaky=0.3), amin=80, tmin=4, matting=0.0)
         st('rower')
         # grisaille, with a brush: plank lines, the face (eye, brow, nose, mouth, ear), hair, folds; matt modelling
@@ -435,14 +435,16 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         g.trace(Q([(1176, 754), (1179, 765), (1176, 776)]), 1.0 * s, taper=(0.3, 0.5), clip=body, opacity=0.5)
         g.shade(head, offset=(-4 * s, -3 * s), strength=0.32, soft=2.2 * s)               # the cheek turned away
         g.matt(head, 0.07, soft=1.5 * s)
-        g.trace(Q([(1162.2, 727.6), (1164.2, 727.9)]), 1.5 * s, taper=(0.3, 0.3), smooth=False, opacity=0.7)   # eye
-        g.trace(Q([(1159.5, 724.2), (1162.5, 723.4), (1165.8, 723.9)]), 1.0 * s, taper=(0.4, 0.5), opacity=0.45)  # brow
-        g.trace(Q([(1158.6, 727.5), (1157.0, 731.4), (1159.4, 732.4)]), 1.0 * s, taper=(0.3, 0.5), opacity=0.55)  # nose
-        g.trace(Q([(1160.5, 735.6), (1163.0, 736.0), (1165.2, 735.5)]), 0.9 * s, taper=(0.4, 0.4), opacity=0.5)  # mouth
-        g.trace(Q([(1176.5, 726.0), (1178.6, 728.6), (1176.8, 731.2)]), 1.0 * s, taper=(0.3, 0.3), opacity=0.5)   # ear
+        w_ = K * s
+        g.trace(Q([(1161.8, 727.4), (1164.0, 727.6)]), 1.7 * w_, taper=(0.35, 0.35), smooth=False, opacity=0.8)  # eye
+        g.trace(Q([(1161.2, 726.2), (1164.6, 726.0)]), 0.7 * w_, taper=(0.4, 0.4), smooth=False, opacity=0.5)    # lid
+        g.trace(Q([(1159.5, 724.0), (1162.5, 723.1), (1166.0, 723.7)]), 1.0 * w_, taper=(0.4, 0.6), opacity=0.6)  # brow
+        g.trace(Q([(1158.8, 727.2), (1157.2, 731.2), (1159.6, 732.2)]), 0.9 * w_, taper=(0.3, 0.5), opacity=0.65)  # nose
+        g.trace(Q([(1160.6, 735.4), (1163.0, 735.9), (1165.0, 735.4)]), 0.8 * w_, taper=(0.4, 0.4), opacity=0.6)  # mouth
+        g.trace(Q([(1176.6, 726.2), (1178.6, 728.6), (1176.9, 731.0)]), 0.9 * w_, taper=(0.3, 0.3), opacity=0.55)  # ear
         for k in range(3):                                                                # hair strands
             y_ = 716 + k * 5
-            g.trace(Q([(1166 + k * 3, y_), (1175 + k * 2, y_ + 3), (1182, y_ + 7)]), 0.9 * s, taper=(0.3, 0.6),
+            g.trace(Q([(1166 + k * 3, y_), (1175 + k * 2, y_ + 3), (1182, y_ + 7)]), 0.8 * K * s, taper=(0.3, 0.6),
                     opacity=0.5, clip=head)
         st('boat paint')
 

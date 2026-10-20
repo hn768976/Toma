@@ -51,7 +51,7 @@ export const MOTION: Record<string, Motion> = {
   linocut: { ...BASE, waterAmp: 2, mistDrift: 0 },
   // a leaded window is one flat panel: leads can't slide over leads, so only a hint of parallax;
   // the light sweep does the work
-  stainedglass: { ...BASE, cam: 24, waterAmp: 0, mistDrift: 0, cloudDrift: 0, boatAngle: 0.01, boatLift: 3, fx: 1 },
+  stainedglass: { ...BASE, cam: 24, waterAmp: 0, mistDrift: 0, cloudDrift: 0, boatAngle: 0.01, boatLift: 3, birdsWrap: false, fx: 1 },
   // ink wash: mist only, everything else perfectly still
   inkwash: { ...BASE, cam: 0, waterAmp: 0, mistDrift: 360, cloudDrift: 0, boatAngle: 0, boatLift: 0, birdsWrap: false },
 };

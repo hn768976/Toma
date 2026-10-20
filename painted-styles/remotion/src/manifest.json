@@ -14,7 +14,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2340.6284891726123,
+    2344.8887515451174,
     1612.0
    ],
    "layers": [
@@ -108,7 +108,8 @@
      "drawon/watercolour/044.png",
      "drawon/watercolour/045.png",
      "drawon/watercolour/046.png",
-     "drawon/watercolour/047.png"
+     "drawon/watercolour/047.png",
+     "drawon/watercolour/048.png"
     ]
    }
   },
@@ -126,7 +127,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2334.9977324263036,
+    2278.206032182421,
     1612.0
    ],
    "layers": [
@@ -285,123 +286,6 @@
    }
   },
   {
-   "key": "inkwash",
-   "prefix": "InkWash",
-   "name": "Ink wash \u00b7 \u6c34\u58a8",
-   "canvas": [
-    4608,
-    2592
-   ],
-   "bleed": [
-    384,
-    216
-   ],
-   "horizon": 1280.0,
-   "boatPivot": [
-    2333.4808373337532,
-    1612.0
-   ],
-   "layers": [
-    {
-     "group": "sky",
-     "src": "layers/inkwash/00_sky.png"
-    },
-    {
-     "group": "clouds",
-     "src": "layers/inkwash/01_clouds.png"
-    },
-    {
-     "group": "far",
-     "src": "layers/inkwash/02_far.png"
-    },
-    {
-     "group": "near",
-     "src": "layers/inkwash/03_near.png"
-    },
-    {
-     "group": "water",
-     "src": "layers/inkwash/04_water.png"
-    },
-    {
-     "group": "mist",
-     "src": "layers/inkwash/05_mist.png"
-    },
-    {
-     "group": "boat",
-     "src": "layers/inkwash/06_boat.png"
-    },
-    {
-     "group": "boat_refl",
-     "src": "layers/inkwash/07_boat_refl.png"
-    },
-    {
-     "group": "birds",
-     "src": "layers/inkwash/08_birds.png"
-    },
-    {
-     "group": "reeds",
-     "src": "layers/inkwash/09_reeds.png"
-    }
-   ],
-   "drawon": {
-    "frames": [
-     "drawon/inkwash/000.png",
-     "drawon/inkwash/001.png",
-     "drawon/inkwash/002.png",
-     "drawon/inkwash/003.png",
-     "drawon/inkwash/004.png",
-     "drawon/inkwash/005.png",
-     "drawon/inkwash/006.png",
-     "drawon/inkwash/007.png",
-     "drawon/inkwash/008.png",
-     "drawon/inkwash/009.png",
-     "drawon/inkwash/010.png",
-     "drawon/inkwash/011.png",
-     "drawon/inkwash/012.png",
-     "drawon/inkwash/013.png",
-     "drawon/inkwash/014.png",
-     "drawon/inkwash/015.png",
-     "drawon/inkwash/016.png",
-     "drawon/inkwash/017.png",
-     "drawon/inkwash/018.png",
-     "drawon/inkwash/019.png",
-     "drawon/inkwash/020.png",
-     "drawon/inkwash/021.png",
-     "drawon/inkwash/022.png",
-     "drawon/inkwash/023.png",
-     "drawon/inkwash/024.png",
-     "drawon/inkwash/025.png",
-     "drawon/inkwash/026.png",
-     "drawon/inkwash/027.png",
-     "drawon/inkwash/028.png",
-     "drawon/inkwash/029.png",
-     "drawon/inkwash/030.png",
-     "drawon/inkwash/031.png",
-     "drawon/inkwash/032.png",
-     "drawon/inkwash/033.png",
-     "drawon/inkwash/034.png",
-     "drawon/inkwash/035.png",
-     "drawon/inkwash/036.png",
-     "drawon/inkwash/037.png",
-     "drawon/inkwash/038.png",
-     "drawon/inkwash/039.png",
-     "drawon/inkwash/040.png",
-     "drawon/inkwash/041.png",
-     "drawon/inkwash/042.png",
-     "drawon/inkwash/043.png",
-     "drawon/inkwash/044.png",
-     "drawon/inkwash/045.png",
-     "drawon/inkwash/046.png",
-     "drawon/inkwash/047.png",
-     "drawon/inkwash/048.png",
-     "drawon/inkwash/049.png",
-     "drawon/inkwash/050.png",
-     "drawon/inkwash/051.png",
-     "drawon/inkwash/052.png"
-    ]
-   }
-  },
-  {
    "key": "linocut",
    "prefix": "Linocut",
    "name": "Linocut \u00b7 \u9ed1\u767d\u9ebb\u80f6\u7248\u753b",
@@ -415,7 +299,7 @@
    ],
    "horizon": 1280.0,
    "boatPivot": [
-    2339.55111995379,
+    2339.92096724824,
     1612.0
    ],
    "layers": [

@@ -95,3 +95,12 @@ belly, wandering pressure and bursty dry breaks; ghost trees (pale boneless copi
 tiers; boat/fisherman as swelling strokes with a proper conical hat; reflections broken to object height (no lens
 edge); varied ripples; three different clouds and a wet irregular sun; indigo forest with varied branches, single
 loaded-stroke trunks, five tuft kinds, brushed deer, irregular wash patches and an asymmetric composition.
+
+### Round 2 fixes — Stained glass
+Every piece textured in its own frame (own grain angle, scale, warp, colour, density: neighbour texture correlation
+across a lead ≈ 0.0 vs 0.7 inside a piece); came width varies per lead, flattened solder puddles; automatic
+cuttability pass splits pieces at deep inside corners; redrawn clouds/gulls/pines/reeds/deer as cuttable pieces;
+wave-shaped glazier water rows; boat and rower fully cut glass with brush-painted face; airbrushed glows and the
+vignette removed; dirt film, grime along leads, matting, pits; draw-on = cartoon (8) → glass laid with gaps (11)
+→ grisaille → leading → solder → cement → final (40% shows unfinished workshop states). Birds no longer wrap
+across the leaded panel in the loop.

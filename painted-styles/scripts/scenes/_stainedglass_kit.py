@@ -209,10 +209,10 @@ class Panel(StainedGlass):
         else:
             c2 = c ** r.uniform(1.4, 1.9)                             # darker cords
         fl = flow(cx, cy) if callable(flow) else flow
-        if fl is None or r.random() < 0.35:
+        if fl is None or r.random() < 0.7:
             ang = r.uniform(0, np.pi)                                  # this sheet's grain, whatever its neighbours do
         else:
-            ang = fl + r.normal(0, max(flow_jit, 0.45))
+            ang = fl + r.normal(0, max(flow_jit, 0.5))                 # now and then laid along the form
         streak = kw.get('streak', 1.0)
         amp = {'cathedral': r.uniform(0.03, 0.12), 'streaky': r.uniform(0.18, 0.45), 'seedy': r.uniform(0.02, 0.08),
                'opal': r.uniform(0.05, 0.15), 'reamy': r.uniform(0.15, 0.35)}[kind] * streak
@@ -889,7 +889,11 @@ class Panel(StainedGlass):
         op = P['opal'][idx]
         sel = op > 0
         if sel.any():
-            mott = np.clip(0.5 + 0.28 * _samp(self._tm, lx[sel] * k[sel] + ox[sel] * 1.7, ly[sel] * k[sel] + oy[sel] * 1.3), 0, 1)
+            a_ = P['ang'][idx][sel]
+            uu = lx[sel] * np.cos(a_) + ly[sel] * np.sin(a_)
+            vv = ly[sel] * np.cos(a_) - lx[sel] * np.sin(a_)
+            mott = np.clip(0.5 + 0.3 * _samp(self._tm, uu * k[sel] * 0.45 + ox[sel] * 1.7, vv * k[sel] * 1.4 + oy[sel] * 1.3), 0, 1)
+            del a_, uu, vv
             o = np.clip(op[sel] * (0.55 + 0.9 * mott), 0, 0.95)[:, None]
             milk = (0.55 * c1[sel] + 0.45) ** (0.8 * th[sel][:, None]) * (0.62 + 0.25 * mott[:, None])
             Tm[sel] = Tm[sel] * (1 - o) + milk * o
@@ -1063,9 +1067,9 @@ class Panel(StainedGlass):
             alb_s = lin('#33353a') * (0.85 + 0.3 * pat)[..., None]
             sheen = 0.045 * spec * (1 - 0.6 * oxd)
         else:             # fresh from the box: bright silvery lead and shiny solder
-            alb_c = lin('#55585e') * (0.9 + 0.2 * pat)[..., None]
-            alb_s = lin('#a9acb1') * (0.92 + 0.16 * pat)[..., None]
-            sheen = 0.12 * spec + 0.04 * spec ** 2
+            alb_c = lin('#3c3f44') * (0.9 + 0.2 * pat)[..., None]
+            alb_s = lin('#7a7d83') * (0.92 + 0.16 * pat)[..., None]
+            sheen = 0.09 * spec + 0.03 * spec ** 2
         alb = alb_c * (1 - sol) + alb_s * sol
         rgb = alb * (0.35 + 0.75 * diff)[..., None] + (sheen * (1 + 0.4 * self.sol_a))[..., None]
         return rgb.astype(np.float32)
@@ -1218,13 +1222,14 @@ class Panel(StainedGlass):
         Tg = self._glass_T()
         PT = self._paint_T()
         table = np.array([1.0, 0.985, 0.95], np.float32) * 0.97
-        gap_k = 0.5 + 0.9 * _hash01(np.arange(n_p + 1, dtype=np.int64), np.full(n_p + 1, 3, np.int64), self._lazy[2])
+        gap_k = 0.85 + 0.75 * _hash01(np.arange(n_p + 1, dtype=np.int64), np.full(n_p + 1, 3, np.int64), self._lazy[2])
         gap = (hw * gap_k[lab]).astype(np.float32)
         edge = (1 - 0.4 * smoothstep(gap + 1.8 * s, gap, bd))[..., None]
         inside = (bd > gap)
         full_paper = cartoon(nreg, 1.0, 1.0)
+        thin = smoothstep(hw * 0.32 + 0.7, hw * 0.32 - 0.7, bd) * 0.9
+        bench_paper = paper * (1 - thin)[..., None] + lin('#2a2624') * 0.6 * thin[..., None]   # the line between pieces
         fresh = self._lead_colour(aged=False)
-        jgap = smoothstep(0.32, 0.12, self._jq)
 
         def bench(laid, painted, leaded, soldered, aged=0.0):
             Lp = np.append(laid, False)[lab]
@@ -1232,10 +1237,11 @@ class Panel(StainedGlass):
             Pp = np.append(painted, False)[lab].astype(np.float32)
             glass = Tg * (1 + (PT - 1) * Pp[..., None]) * table
             show = (Lp & inside) | Ld
-            img = np.where(show[..., None], np.where(Ld[..., None], glass, glass * edge), full_paper)
+            img = np.where(show[..., None], np.where(Ld[..., None], glass, glass * edge),
+                           np.where(Lp[..., None], bench_paper, full_paper))
             if leaded.any():
                 lm = _dilate(Ld, max(1, int(hw + 1)))
-                ca = self.came_a * lm * (1 - 0.75 * jgap * (1 - soldered))      # came ends not yet joined
+                ca = self.came_a * lm
                 sa = self.sol_a * soldered * lm
                 la = np.maximum(ca, sa)[..., None]
                 col = fresh * (1 - aged) + self.lead_rgb * aged
