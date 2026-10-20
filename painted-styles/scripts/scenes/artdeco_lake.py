@@ -167,6 +167,7 @@ def g_near(a, S, P, st, dense=True):
     for x, top, w in PINES_R:
         _pine(a, S, x, HZ, HZ - top, w, P['pine'], P['trunk'], P['sun'][0], tiers=3)
         st('pine', dense=dense)
+    st('near')
 
 
 UPPER = (('sky', g_sky), ('clouds', g_clouds), ('far', g_far), ('near', g_near))
@@ -195,9 +196,11 @@ def g_water(a, S, P, st, seed, inc):
 def g_mist(a, S, P, st):
     xx, yy = design_xy(a, S)
     band = np.exp(-((yy - 648) / 34.0) ** 2) * (0.62 - 0.4 * smoothstep(200, 1700, xx))
+    band[band < 0.01] = 0          # cut the gaussian tails so the haze has a definite footprint
     a.spray((band * P['mist_k']).astype(np.float32), P['mist'], grain=0.8, blend='paint')
     st('mist_band', dense=True)
     band = np.exp(-((yy - 690) / 16.0) ** 2) * 0.28 * (1 - smoothstep(300, 1300, xx))
+    band[band < 0.01] = 0
     a.spray((band * P['mist_k']).astype(np.float32), P['mist'], grain=0.8, blend='paint')
     st('mist')
 

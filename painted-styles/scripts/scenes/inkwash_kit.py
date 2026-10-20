@@ -12,7 +12,7 @@ Built on vendor lib/inkpaint.py `Painting`:
 import os
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 import drawkit
 from drawkit import save_png
@@ -153,8 +153,35 @@ class Ink(Painting):
         return self.noise2d(max(2.0, scale * self.s), octaves, seed)
 
 
+def fill_poly(p, pts, ink, buf=None, soft=0.8, rough=0.25):
+    """soft-edged ink fill of a polygon (canvas px), computed in its bounding window"""
+    buf = p.D if buf is None else buf
+    H, W = buf.shape
+    P = np.asarray(pts, np.float32)
+    pad = 6
+    x0, y0 = int(max(0, P[:, 0].min() - pad)), int(max(0, P[:, 1].min() - pad))
+    x1, y1 = int(min(W, P[:, 0].max() + pad + 1)), int(min(H, P[:, 1].max() + pad + 1))
+    if x1 <= x0 or y1 <= y0:
+        return None
+    ss = 2
+    im = Image.new('L', ((x1 - x0) * ss, (y1 - y0) * ss), 0)
+    ImageDraw.Draw(im).polygon([((x - x0) * ss, (y - y0) * ss) for x, y in P], fill=255)
+    m = np.asarray(im.resize((x1 - x0, y1 - y0), Image.BOX), np.float32) / 255
+    m = blur(m, soft)
+    if rough:
+        g = p.rng.random((5, 7)).astype(np.float32)
+        n = np.asarray(Image.fromarray(g).resize((x1 - x0, y1 - y0), Image.BICUBIC), np.float32)
+        m *= np.clip(1 - rough + rough * 2 * n, 0, 1.3)
+    sl = buf[y0:y1, x0:x1]
+    if ink < 0:                      # negative ink lifts (paper shows through)
+        np.multiply(sl, 1 - np.clip(m * -ink, 0, 1), out=sl)
+    else:
+        np.copyto(sl, 1 - (1 - sl) * (1 - np.clip(m * ink, 0, 1)))
+    return m
+
+
 # ---------------------------------------------------------------- sumi-e conifer
-def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None):
+def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None, spread=1.0, bare=None, trunk_w=None):
     """a 写意 conifer: one wavering, broken trunk stroke and irregular tiers of side-brush
     branch strokes (dry, flying-white, uneven lengths, the odd tier missing or lopsided), each
     sitting on a pale wet halo. Coordinates are canvas px; size follows (root - top)."""
@@ -164,7 +191,7 @@ def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None):
     tx = top + h * 0.05
     trunk = curve((x, root), (x + lean, tx), rng.normal(0, h * 0.025), 18, wig=s * 1.2,
                   seed=int(rng.integers(1 << 30)))
-    tw = s * 1.3 + h * 0.011
+    tw = trunk_w if trunk_w is not None else s * 1.3 + h * 0.011
     p.stroke(trunk, tw, ink * 0.8, dry=0.55, taper=(0.02, 0.75), jitter=0.8)
 
     def trunk_x(y):
@@ -172,7 +199,7 @@ def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None):
 
     # irregular tier heights: denser and smaller toward the top
     tiers = []
-    y = root - h * rng.uniform(0.08, 0.16)
+    y = root - h * (rng.uniform(0.08, 0.16) if bare is None else bare * rng.uniform(0.9, 1.1))
     while y > top + h * 0.12:
         f = (root - y) / h
         tiers.append((y, f))
@@ -182,7 +209,7 @@ def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None):
         if 0.25 < f < 0.85 and rng.random() < 0.12:
             continue                                         # a gap where the trunk shows
         cx = trunk_x(ty)
-        half = (h * 0.36 * (1 - f) ** 0.95 + s * 5) * rng.uniform(0.75, 1.2)
+        half = (h * 0.36 * spread * (1 - f) ** 0.95 + s * 5) * rng.uniform(0.75, 1.2)
         if halo:
             p.blob(cx + lopside * half * 0.3, ty + s * 2.5, half * 0.9, s * 3.5 + half * 0.14,
                    0.12 * ink * halo, rough=0.5)

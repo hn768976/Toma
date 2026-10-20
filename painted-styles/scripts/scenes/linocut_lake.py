@@ -16,7 +16,7 @@ import numpy as np
 import drawkit
 from drawkit import Scaler, seed_all, save_png
 from core import spline, fbm1d
-from linocut_common import STYLE, COLOURWAYS, make_print, D, Stager
+from linocut_common import STYLE, COLOURWAYS, make_print, D, Stager, day_sky, day_cloud
 
 LIB = "linocut"
 GROUPS = ("sky", "clouds", "far", "near", "water", "mist", "boat", "birds", "reeds")
@@ -74,6 +74,10 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     def g_sky(stage=True):
         group('sky')
         stg = st if stage else (lambda *a, **k: None)
+        if day:
+            day_sky(L, col, S, d, sky_poly, 40, HOR - 120, bands=((Y0 - 40, 250), (250, HOR + 10)), stg=stg)
+            stg('sky', major=True)
+            return
         L.clear(L.poly(band(400, HOR)), chatter=0.35, angle=2)
         stg('sky low cleared')
         # long horizontal V cuts, carved lighter toward the horizon (three passes, top down)
@@ -102,6 +106,10 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         if S.X0 < -60: clouds.append((-120, 150, 380, 0.75))
         if S.X1 > 1980: clouds.append((2040, 172, 300, 0.6))
         for (cx, cy, ln, k) in clouds:
+            if day:
+                day_cloud(L, col, S, rng, cx, cy, ln, k)
+                st('cloud')
+                continue
             rows = 4 + int(3 * k)
             for i in range(rows):
                 f = i / (rows - 1)                                    # 0 top .. 1 underside
@@ -267,8 +275,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         for (bx, by, sc) in [(1380, 250, 1.0), (1440, 222, 0.8), (1505, 262, 0.7), (1590, 205, 0.9), (1665, 242, 0.6)]:
             k = sc * 1.4
             wd = S(5.0) * max(k, 0.7)
-            L.gouge(S.pts(spline([(bx - 20 * k, by + 2 * k), (bx - 9 * k, by - 8 * k), (bx, by)], 6)), wd, 'v', smooth=False)
-            L.gouge(S.pts(spline([(bx, by), (bx + 9 * k, by - 9 * k), (bx + 20 * k, by)], 6)), wd, 'v', smooth=False)
+            if day: wd = wd * 0.8                       # daytime: black birds left standing on the pale sky
+            L.gouge(S.pts(spline([(bx - 20 * k, by + 2 * k), (bx - 9 * k, by - 8 * k), (bx, by)], 6)), wd, 'v', cut=not day, smooth=False)
+            L.gouge(S.pts(spline([(bx, by), (bx + 9 * k, by - 9 * k), (bx + 20 * k, by)], 6)), wd, 'v', cut=not day, smooth=False)
             st('bird')
         st('birds', major=True)
 

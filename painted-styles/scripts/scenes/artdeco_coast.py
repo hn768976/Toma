@@ -110,8 +110,8 @@ def _gull(a, S, bx, by, sz, col, under):
 def _sailboat(a, S, P, x, wl, h, face, sail_key, rip):
     """a sloop: hull frisket, mast, a curved mainsail and a jib, each sprayed light->shade across;
     a broken reflection of the sails and hull in the ripple dashes below"""
-    L = h * 0.72
-    hh = h * 0.1
+    L = h * 0.78
+    hh = h * 0.12
     f = face
     hull = [(x - L / 2 * f, wl - hh), (x + L / 2 * f, wl - hh), (x + L * 0.36 * f, wl), (x - L * 0.4 * f, wl)]
     mx = x - L * 0.06 * f
@@ -122,8 +122,9 @@ def _sailboat(a, S, P, x, wl, h, face, sail_key, rip):
     leech = [(mx + (boom - mx) * t + f * (-1) * h * 0.06 * np.sin(np.pi * t), top + (foot - top) * t)
              for t in np.linspace(0, 1, 9)]
     main = [(mx, top)] + leech[1:] + [(mx, foot)]
-    jib = [(mx + 2 * f, top + h * 0.12), (x + L * 0.47 * f, foot + h * 0.02),
-           (mx + L * 0.2 * f + f * h * 0.04, foot - h * 0.18), (mx + 2 * f, foot)]
+    jib = [(mx + 2 * f, top + h * 0.12)] + \
+          [(mx + 2 * f + (L * 0.5 + 2) * f * t + f * h * 0.035 * np.sin(np.pi * t), top + h * 0.12 + (foot - top - h * 0.12) * t)
+           for t in np.linspace(0.12, 1, 8)] + [(mx + 2 * f, foot)]
     sails = (main, jib)
     # reflection first (under everything of this boat)
     for poly, k in ((hull, 0.6), (main, 0.38), (jib, 0.38)):

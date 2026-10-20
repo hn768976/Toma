@@ -20,7 +20,7 @@ COLOURWAYS = ("Day", "Dusk")
 GROUPS = ("all",)
 
 GY = 628           # where the forest floor meets the light (design px)
-DEER = (1018, 652, 40)     # hoof line x, y, shoulder height
+DEER = (1004, 654, 46)     # hoof line x, y, shoulder height
 
 PAL = {
     'Dusk': dict(
@@ -69,10 +69,11 @@ def _trunk(a, S, x, base, w, stops, lean=0.0, flutes=0, top=None):
     wt = w * 0.82
     xt = x + lean * (base - top)
     m = a.poly(S.pts([(x - w / 2, base), (x + w / 2, base), (xt + wt / 2, top), (xt - wt / 2, top)]))
-    flare = a.poly(S.pts([(x - w * 0.95, base + 2), (x + w * 0.95, base + 2), (x + w * 0.5, base - w * 0.9),
-                          (x - w * 0.5, base - w * 0.9)]))
+    fl = min(w * 0.9, 34)
+    flare = a.poly(S.pts([(x - w * 0.5 - fl * 0.5, base + 2), (x + w * 0.5 + fl * 0.5, base + 2),
+                          (x + w * 0.5, base - fl), (x - w * 0.5, base - fl)]))
     m = np.maximum(m, flare)
-    a.fade(m, stops, S.pt(x - w * 0.95, base), S.pt(x + w * 0.95, base), grain=0.7)
+    a.fade(m, stops, S.pt(x - w * 0.5 - fl * 0.5, base), S.pt(x + w * 0.5 + fl * 0.5, base), grain=0.7)
     if flutes:
         for k in range(1, flutes):
             u = k / flutes
@@ -102,24 +103,26 @@ def _deer(a, S, P):
     x0, y0, u = DEER
     def T(p):
         return (x0 + p[0] * u, y0 - p[1] * u)
-    body = [(0.62, 0.95), (0.2, 1.0), (-0.32, 1.05), (-0.42, 1.12), (-0.5, 1.42), (-0.52, 1.5), (-0.47, 1.6),
-            (-0.56, 1.55), (-0.62, 1.52), (-0.84, 1.38), (-0.8, 1.32), (-0.6, 1.3), (-0.55, 1.0), (-0.5, 0.8),
-            (-0.32, 0.67), (0.3, 0.67), (0.52, 0.7), (0.66, 0.86)]
+    body = [(0.6, 1.0), (0.2, 1.02), (-0.3, 1.08), (-0.4, 1.2), (-0.47, 1.47), (-0.46, 1.55), (-0.34, 1.64),
+            (-0.42, 1.52), (-0.5, 1.56), (-0.58, 1.55), (-0.78, 1.42), (-0.8, 1.36), (-0.72, 1.31), (-0.58, 1.33),
+            (-0.52, 1.2), (-0.52, 1.0), (-0.52, 0.82), (-0.42, 0.66), (0.0, 0.6), (0.32, 0.63), (0.55, 0.66),
+            (0.67, 0.82), (0.7, 0.95)]
     m = a.poly(S.pts([T(p) for p in body]))
-    bars = [((-0.42, 0.75), (-0.44, 0.0)), ((-0.3, 0.72), (-0.27, 0.02)), ((0.46, 0.75), (0.52, 0.36)),
-            ((0.52, 0.36), (0.45, 0.0)), ((0.34, 0.7), (0.38, 0.0)),
+    bars = [((-0.43, 0.75), (-0.45, -0.02)), ((-0.3, 0.7), (-0.26, -0.02)), ((0.5, 0.75), (0.58, 0.36)),
+            ((0.58, 0.36), (0.5, -0.02)), ((0.36, 0.7), (0.42, 0.34)), ((0.42, 0.34), (0.38, -0.02)),
             ((-0.55, 1.55), (-0.45, 1.82)), ((-0.45, 1.82), (-0.52, 2.04)), ((-0.47, 1.76), (-0.64, 1.88)),
             ((-0.6, 1.55), (-0.7, 1.8)), ((-0.7, 1.8), (-0.64, 1.98)), ((-0.68, 1.74), (-0.84, 1.8)),
             ((-0.49, 1.92), (-0.4, 2.0))]
     for p0, p1 in bars:
-        m = np.maximum(m, a.bar(S.pt(*T(p0)), S.pt(*T(p1)), S(u * 0.065)))
+        m = np.maximum(m, a.bar(S.pt(*T(p0)), S.pt(*T(p1)), S(u * (0.075 if p0[1] < 1 else 0.055))))
     # a soft shadow pool on the ground
-    a.spray(a.capsule(S.x(x0 - u * 0.7), S.x(x0 + u * 0.9), S.y(y0 + 1), S(2.2)), P['shadow'], density=0.5, grain=0.3)
+    a.spray(a.capsule(S.x(x0 - u * 0.75), S.x(x0 + u * 0.95), S.y(y0 - 0.5), S(2.6)), P['shadow'], density=0.45,
+            grain=0.3)
     a.spray(m, P['deer'], grain=0.3)
     sh = np.zeros_like(m)
     d = max(1, int(round(S(1.6))))
     sh[d:] = m[:-d]
-    a.spray(np.clip(m - sh, 0, 1), P['deer_rim'], density=0.85, grain=0.2)
+    a.spray(np.clip(m - sh, 0, 1) * (a.yy < S.y(y0 - 0.9 * u)), P['deer_rim'], density=0.85, grain=0.2)
 
 
 def _fern(a, S, P, x, y, size, side, rng):

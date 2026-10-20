@@ -124,3 +124,41 @@ class Stager:
 
 def resample(P, step):
     return _resample(P, step)[0]
+
+
+def day_sky(L, col, S, d, region, y_top, y_hor, bands=((-1e9, 1e9),), stg=None):
+    """the Indigo (daytime) sky: the key cleared, thin black ridges left standing that thin out toward the
+    horizon, and the blue block solid at the top, broken into streaks lower down so the sky pales to paper
+    at the horizon. region: canvas-px polygon; y_top / y_hor: design y of the dark top and of the horizon."""
+    span = y_hor - y_top
+    L.clear(L.poly(region), chatter=0.3, angle=0)
+    if stg: stg('sky cleared')
+    for (a, b) in bands:
+        L.hatch(region, angle=0, spacing=S(9), width=S(2.4), dash=(S(60), S(320)), gap=(S(10), S(60)), cut=False,
+                density=d.band(lambda x, y: 0.6 * np.clip(1 - (y - y_top) / (0.7 * span), 0, 1) ** 1.4, a, b),
+                bend=lambda x, y: S(5) * np.sin(d.ux(x) / 260 + d.uy(y) / 90))
+        if stg: stg('sky ridges')
+    L.leave(L.poly(region), on=col)
+    for (a, b) in bands:
+        L.hatch(region, angle=0, spacing=S(6), width=S(5.2), dash=(S(50), S(300)), gap=(S(4), S(26)), cut=True, on=col,
+                density=d.band(lambda x, y: np.clip((y - y_top) / span * 1.25 - 0.1, 0, 1) ** 0.9, a, b),
+                bend=lambda x, y: S(5) * np.sin(d.ux(x) / 260 + d.uy(y) / 90))
+        if stg: stg('sky blue')
+
+
+def day_cloud(L, col, S, rng, cx, cy, ln, k):
+    """a thin white lens of cloud cleared out of the blue block, a black line left along its underside"""
+    rows = 4 + int(3 * k)
+    for i in range(rows):
+        f = i / (rows - 1)
+        half = ln / 2 * (0.35 + 0.65 * np.sin(np.pi * (0.15 + 0.7 * f))) * rng.uniform(0.85, 1.1)
+        y = cy + (f - 0.5) * 40 * k
+        a = cx - half + rng.uniform(-30, 30) + 40 * (1 - f)
+        b = cx + half + rng.uniform(-30, 30) - 20 * (1 - f)
+        m = (a + b) / 2
+        L.gouge(S.pts([(a, y + 1.5), (m, y - 1.8 * k), (b, y + 1.2)]), S((5 + 3 * f) * k + 2), 'v', cut=True, on=col,
+                taper=(0.3, 0.3))
+        L.clear(L.poly(S.pts([(a + 6, y - 3 * k), (b - 6, y - 3 * k), (b - 6, y + 3 * k), (a + 6, y + 3 * k)])), chatter=0)
+        if i == rows - 1 or (i == rows - 3 and rng.random() < 0.7):
+            L.gouge(S.pts([(a + 20, y + 5 * k), (m, y + 3 * k), (b - 10, y + 5.5 * k)]), S(2.2 * k + 0.8), 'v', cut=False,
+                    taper=(0.3, 0.3))
