@@ -84,9 +84,9 @@ Keep inks away from green hues or the key will eat them.
 | StarsSparkles (8 s) | 9 pop-ins 0.2–4.6 s (quick draw-on + overshoot on twos), then twinkle; exits from 6.3 s; clean from 7.6 s |
 | SpeechBubbles (10 s) | left, right, top, bottom draw on in turn 0.27–6.9 s, white paint fill after each outline; hold; exits from 8.1 s; clean from 9.3 s |
 | ScribbleWipe (3 s) | scribble 0–1.2 s; **fully covered 1.2–1.6 s (frames 36–47) = cut point**; un-scribbles to the right 1.6–2.9 s; clean green after |
-| BrushStrokeReveal (4 s) | sweep 0–1.5 s; hold (solid band, 35 % of frame height) 1.5–3.5 s; wipes off to the right 3.5–4 s |
-| TitleFrame (6 s) | frame 0.2–2.3 s, corner curls to 3.4 s, doodles pop to 4.2 s; staggered exits 4.5–5.6 s; clean green after |
-| LikeSubscribe (6 s) | writes 0–2.9 s; heart, bell, arrow 3–4 s; hold, bell wiggles at 4.2 s and 4.8 s; ink thins away 5.4–5.9 s |
+| BrushStrokeReveal (4 s) | sweep 0–1.5 s; hold (solid band, 35 % of frame height) 1.5–3.5 s; wipes off to the right 3.5–3.8 s; clean green to 4 s |
+| TitleFrame (6 s) | frame 0.2–2.3 s, corner curls to 3.4 s, doodles pop to 4.2 s; staggered exits 4.4–5.5 s; clean green after |
+| LikeSubscribe (6 s) | writes 0–2.9 s; heart, bell, arrow 3–4 s; hold, bell wiggles at 4.2 s and 4.8 s; ink thins away 5.33–5.8 s (a key-safe "fade": the ink erodes instead of going translucent); clean green to 6 s |
 | Countdown (5 s) | each number writes in 0.53 s, red circle at +0.6 s, clears at +0.97 s (per 1.2 s slot); burst 3.6–4.5 s; clean green 4.6–5 s |
 
 ## How it is built
@@ -101,6 +101,8 @@ Keep inks away from green hues or the key will eat them.
   `@remotion/paths` measures and resamples them into pen strokes.
 * `src/lib/TegakiText.tsx` is Tegaki handwriting, frame-driven (see below).
 * `src/clips/BrushStrokeReveal.tsx` is p5.brush, frame-driven (see below).
+* The scribble wipe uses a fat ~480 px marker (not the 28 px line weight) so a hand-speed zig-zag can bury a 4K frame in 1.2 s; overlapping passes darken like real marker ink.
+* Exports use a keyframe every 15 frames (`remotion.config.ts`) so H.264 never carries a faint ghost of erased ink into the clean-green tail.
 * Determinism: no `Math.random`, `Date.now`, `useFrame` or state-driven visuals. Everything comes from
   `useCurrentFrame()` and `mulberry32` seeded from the composition id, the element and `floor(frame/3)`.
 
