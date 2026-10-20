@@ -132,7 +132,16 @@ export const pourDrip: Layout = {
     const fx = fxOf(ctx);
     const [a, b, c] = colors;
     // the pour: heavy pigment pooled along the top, colours running together
-    await painter.wash(band(rng, noise, -150, W + 150, -120, H * 0.15, { wobble: 70, freq: 5 }), a, { opacity: 100, bleed: 0.16, texture: 0.5 });
+    const pour = band(rng, noise, -150, W + 150, -120, H * 0.15, { wobble: 70, freq: 5 });
+    await painter.wash(pour, a, { opacity: 100, bleed: 0.16, texture: 0.5 });
+    // lower edge of the pour at x (the band's bottom vertices)
+    const lower = pour.slice(Math.floor(pour.length / 2)).sort((p, q) => p[0] - q[0]);
+    const edgeAt = (px: number) => {
+      const i = Math.max(1, lower.findIndex((p) => p[0] >= px));
+      const [x0, y0] = lower[i - 1];
+      const [x1, y1] = lower[i] ?? lower[i - 1];
+      return x1 === x0 ? y0 : y0 + ((y1 - y0) * (px - x0)) / (x1 - x0);
+    };
     const charges: { x: number; r: number; col: string }[] = [];
     for (const col of [b, c]) {
       for (let i = 0; i < 4; i++) {
@@ -154,7 +163,7 @@ export const pourDrip: Layout = {
     const colorAt = (px: number) => charges.find((ch) => Math.abs(ch.x - px) < ch.r * 0.8)?.col ?? a;
     for (const col of [a, b, c]) {
       for (const sx of xs.filter((q) => colorAt(q) === col)) {
-        await drip(fx, sx, H * rng.range(0.07, 0.1), H * rng.range(0.22, 0.78), rng.range(26, 54), col, { opacity: 110, pool: false });
+        await drip(fx, sx, edgeAt(sx) - 30, H * rng.range(0.22, 0.78), rng.range(26, 54), col, { opacity: 110, pool: false });
       }
     }
   },

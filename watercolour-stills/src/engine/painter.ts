@@ -160,7 +160,8 @@ export class Painter {
       brush.noHatch();
       brush.fill(compensate(color, o.saturate ?? 0.22), o.opacity ?? 60);
       brush.bleed(o.bleed ?? 0.2, o.direction ?? "out");
-      brush.fillTexture(o.texture ?? 0.8, o.border ?? 0.5);
+      // rim strokes kept faint: the compositor draws the drying rim
+      brush.fillTexture(o.texture ?? 0.8, 0.4 * (o.border ?? 0.5));
       brush.polygon(points);
       brush.noFill();
     });

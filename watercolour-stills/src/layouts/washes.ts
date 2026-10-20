@@ -288,7 +288,7 @@ export const saltTexture: Layout = {
     const { painter, rng, noise, colors, W, H, density } = ctx;
     const fx = fxOf(ctx);
     const [a, b, c] = colors;
-    const deepA = concentrate(a, 1.45);
+    const deepA = concentrate(a, 1.2);
     // the deep wash: most of the sheet, ragged edge leaving paper on one side
     const right = rng.chance(0.5);
     const edgeX = right ? W * rng.range(0.76, 0.84) : W * rng.range(0.16, 0.24);
@@ -305,17 +305,19 @@ export const saltTexture: Layout = {
     // second and third pigments flooded in
     for (let i = 0; i < 5; i++) {
       const x = right ? rng.range(0.05, 0.65) * W : rng.range(0.35, 0.95) * W;
-      await drop(fx, x, rng.range(0.1, 0.9) * H, W * rng.range(0.06, 0.12), concentrate(b, 1.35), { opacity: 70, bleed: 0.45 });
+      await drop(fx, x, rng.range(0.1, 0.9) * H, W * rng.range(0.06, 0.12), concentrate(b, 1.15), { opacity: 70, bleed: 0.45 });
     }
     for (let i = 0; i < 3; i++) {
       const x = right ? rng.range(0.05, 0.65) * W : rng.range(0.35, 0.95) * W;
-      await drop(fx, x, rng.range(0.1, 0.9) * H, W * rng.range(0.05, 0.09), concentrate(c, 1.4), { opacity: 70, bleed: 0.45 });
+      await drop(fx, x, rng.range(0.1, 0.9) * H, W * rng.range(0.05, 0.09), concentrate(c, 1.15), { opacity: 70, bleed: 0.45 });
     }
     // salt sprinkled in patches while the wash was damp
     const patches = Math.round(5 * density);
     for (let i = 0; i < patches; i++) {
       const x = right ? rng.range(0.08, 0.66) * W : rng.range(0.34, 0.92) * W;
-      await salt(fx, x, rng.range(0.15, 0.85) * H, W * rng.range(0.035, 0.07), rng.int(70, 140), deepA, {
+      await salt(fx, x, rng.range(0.15, 0.85) * H, W * rng.range(0.035, 0.07), rng.int(35, 70), deepA, {
+        rMin: 8,
+        rMax: 46,
         paleness: 0.3,
         inside: (sx) => (right ? sx < edgeX - 160 : sx > edgeX + 160),
       });
@@ -334,12 +336,12 @@ export const granulatingWash: Layout = {
     // a heavy wash pooled across the sheet, its edge drying in a hard line
     const cx = W * rng.range(0.42, 0.58);
     const cy = H * rng.range(0.42, 0.58);
-    await painter.wash(blob(rng, noise, cx, cy, W * 0.42, H * 0.48, { irregular: 0.3, freq: 1.2 }), concentrate(a, 1.35), {
+    await painter.wash(blob(rng, noise, cx, cy, W * 0.42, H * 0.48, { irregular: 0.3, freq: 1.2 }), concentrate(a, 1.1), {
       opacity: 105,
       bleed: 0.12,
       texture: 0.6,
     });
-    await painter.wash(blob(rng, noise, cx + rng.gauss(0, W * 0.05), cy + rng.gauss(0, H * 0.05), W * 0.26, H * 0.3, { irregular: 0.4 }), concentrate(a, 1.6), {
+    await painter.wash(blob(rng, noise, cx + rng.gauss(0, W * 0.05), cy + rng.gauss(0, H * 0.05), W * 0.26, H * 0.3, { irregular: 0.4 }), concentrate(a, 1.3), {
       opacity: 70,
       bleed: 0.42,
       texture: 0.6,

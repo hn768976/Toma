@@ -104,12 +104,20 @@ export const splatter = async (
     const y = cy + u * sa + v * ca;
     const r = rMin * Math.pow(rMax / rMin, Math.pow(rng(), 3.2));
     const stretch = 1 + flick * Math.pow(rng(), 2) * 1.8 * Math.min(1, Math.abs(u) / spread);
-    const pts = blob(rng, noise, x, y, r * stretch, r, {
-      n: Math.max(16, Math.min(60, Math.round(r * 2.2))),
-      irregular: 0.1 + rng.range(0, 0.1),
-      freq: 1.1,
-      rot: angle + rng.gauss(0, 0.15),
-    });
+    // a fast drop is a teardrop: round head, a short tail pointing away from
+    // the flick, drawn as one outline so no overlap darkens the join
+    const away = (u >= 0 ? 0 : Math.PI) + angle + rng.gauss(0, 0.12);
+    const tail = stretch > 1.35 ? rng.range(0.8, 2.2) : 0;
+    const nPts = Math.max(18, Math.min(72, Math.round(r * 2.4)));
+    const o = rng.range(0, 300);
+    const pts: Pt[] = [];
+    for (let k = 0; k < nPts; k++) {
+      const a = (k / nPts) * Math.PI * 2;
+      const c = Math.cos(a - away);
+      const lobe = 1 + 0.14 * noise.fbm(o + Math.cos(a) * 1.3, o + Math.sin(a) * 1.3, 2) * 2;
+      const rr = r * lobe * (1 + tail * Math.pow(Math.max(0, c), 6)) * (1 - 0.12 * Math.max(0, -c));
+      pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * (0.9 + 0.1 * Math.abs(c))]);
+    }
     if (r < rMax * 0.12) {
       tiny.push(pts);
       continue;
@@ -120,14 +128,6 @@ export const splatter = async (
       texture: 0,
       border: 0.7,
     });
-    // a drop that flew fast drags a short tapering tail away from the flick
-    if (stretch > 1.35) {
-      const sign = u >= 0 ? 1 : -1;
-      const tl = r * stretch * rng.range(1.2, 2.6);
-      const start: Pt = [x + sign * ca * r * stretch * 0.6, y + sign * sa * r * stretch * 0.6];
-      const tail = wander(rng, noise, start[0], start[1], angle + (sign < 0 ? Math.PI : 0) + rng.gauss(0, 0.08), tl, 8, 0.05);
-      await painter.wash(ribbon(tail, (t) => r * 0.45 * Math.pow(1 - t, 1.3) + 0.4), color, { opacity, bleed: 0.03, texture: 0, border: 0.6 });
-    }
     // a bigger drop throws a few satellites further along the flick
     if (r > rMax * 0.35 && rng.chance(0.6)) {
       for (let s = 0; s < rng.int(1, 4); s++) {
@@ -152,9 +152,9 @@ export const splatter = async (
 };
 
 /**
- * A run of pigment down a tilted sheet. It grows out of its source (a pool
- * or the bottom of a wash, which hides its start), thins as it runs and
- * gathers a heavier, darker bead at the end.
+ * A run of pigment down a tilted sheet. Pool and run are one outline (no
+ * overlap darkening where they join): the run leaves the bottom of the pool,
+ * thins as it goes and gathers a heavier, darker bead at the end.
  */
 export const drip = async (
   fx: Fx,
@@ -166,22 +166,24 @@ export const drip = async (
   { opacity = 110, pool = true } = {},
 ) => {
   const { rng, noise, painter } = fx;
-  if (pool) {
-    // the pool the run comes out of, drawn first so the run starts inside it
-    const pr = width * rng.range(0.75, 0.9);
-    await painter.wash(blob(rng, noise, x, y - pr * 0.2, pr * rng.range(1.05, 1.3), pr, { irregular: 0.15, freq: 1.2 }), color, { opacity, bleed: 0.06, texture: 0.3, border: 0.7 });
-  }
-  const path = wander(rng, noise, x, y, Math.PI / 2 + rng.gauss(0, 0.05), length, Math.max(16, Math.round(length / 8)), 0.16);
+  const pr = pool ? width * rng.range(0.85, 1.1) : 0;
+  const path = wander(rng, noise, x, y, Math.PI / 2 + rng.gauss(0, 0.05), length + pr, Math.max(18, Math.round(length / 7)), 0.16);
   const o = rng.range(0, 100);
+  const total = length + pr;
   const body = ribbon(path, (t) => {
-    const flare = 1 + 1.2 * Math.exp(-t / 0.05);
-    const taper = 1 - 0.55 * Math.pow(t, 0.9);
-    const neck = 0.78 + 0.22 * noise.n2(o + t * 6, 0.3);
-    return width * 0.5 * flare * taper * neck;
+    const d = t * total;
+    const neck = 0.8 + 0.2 * noise.n2(o + t * 6, 0.3);
+    const run = width * 0.5 * (1 - 0.5 * Math.pow(t, 0.9)) * neck;
+    if (d < pr * 2) {
+      // the pool: a round head the run flows out of
+      const k = 1 - Math.pow((d - pr) / pr, 2);
+      return Math.max(run, pr * Math.sqrt(Math.max(0, k)) * (0.95 + 0.1 * noise.n2(o + t * 30, 9)));
+    }
+    return run;
   });
   await painter.wash(body, color, { opacity, bleed: 0.03, texture: 0.15, border: 0.6 });
   const end = path[path.length - 1];
-  const br = width * rng.range(0.32, 0.4);
+  const br = width * rng.range(0.3, 0.38);
   await painter.wash(blob(rng, noise, end[0] + rng.gauss(0, br * 0.2), end[1] + br * 0.3, br, br * rng.range(1.2, 1.45), { n: 36, irregular: 0.12, rot: Math.PI / 2 }), concentrate(color, 1.35), {
     opacity: opacity * 1.1,
     bleed: 0.03,

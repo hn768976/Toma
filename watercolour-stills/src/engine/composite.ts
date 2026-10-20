@@ -209,9 +209,22 @@ void main() {
   // edges: just inside an edge D > blur, on the outer fringe D < blur.
   // Raising D by (D / blur)^edge darkens the inner rim, where pigment is
   // carried as a wash dries, and tightens the feathered outer fringe.
-  vec3 Db = texture(uBlur, gl_FragCoord.xy / uOut).rgb;
+  vec2 uv = gl_FragCoord.xy / uOut;
+  vec3 Db = texture(uBlur, uv).rgb;
   vec3 ratio = clamp((D + 0.002) / (Db + 0.002), 0.0, 3.0);
-  D *= pow(ratio, vec3(uEdge));
+  // inside dense paint the term may only darken; lightening is for the
+  // feathered outer fringe, where the wash meets bare paper
+  float Dbl = dot(Db, vec3(0.3333));
+  ratio = max(ratio, vec3(0.92 * smoothstep(0.08, 0.45, Dbl)));
+  // gravity: the sheet was tilted, so pigment pools at the lower edge of
+  // each wash (GL y points up: more pigment just above means a lower edge)
+  float reach = 34.0 * uUnit / uOut.y;
+  float above = dot(texture(uBlur, uv + vec2(0.0, reach)).rgb, vec3(0.3333));
+  float below = dot(texture(uBlur, uv - vec2(0.0, reach)).rgb, vec3(0.3333));
+  float pool = clamp((above - below) / (Dbl + 0.08), 0.0, 1.0);
+  // rims are uneven: heavier where the wash dried last
+  float edgeK = uEdge * (0.5 + 0.9 * fbm(q / 380.0, uSeed + 31u)) * (1.0 + 0.8 * pool);
+  D *= pow(ratio, vec3(edgeK)) * (1.0 + 0.22 * pool);
 
   // paper height and its soft raking light
   ivec2 lim = ivec2(uOut) - 1;
@@ -231,7 +244,7 @@ void main() {
   // so the edge breaks up along the tooth instead of fading smoothly.
   float fringe = clamp(1.0 - min(ratio.r, min(ratio.g, ratio.b)), 0.0, 1.0);
   float bite = smoothstep(0.0, 0.5, 0.75 - fringe + (0.5 - h) * 0.8);
-  D *= mix(1.0, bite, smoothstep(0.25, 0.6, fringe));
+  D *= mix(1.0, bite, 0.7 * smoothstep(0.35, 0.75, fringe));
 
   // pigment pools in the valleys of the tooth and thins on the peaks
   float dip = clamp((0.5 - h) * 2.0, -1.0, 1.0);
@@ -244,8 +257,10 @@ void main() {
   speck = smoothstep(0.52, 0.86, speck);
   float clump = fbm(q / 110.0, uSeed + 13u);
   // patchy, strongest where paint pooled, absent in thin tints
-  float gstrength = uGran * (0.08 + 0.92 * smoothstep(0.38, 0.72, clump)) * smoothstep(0.06, 0.55, Dl);
-  D *= max(0.0, 1.0 + gstrength * (1.0 * speck - 0.15 + 0.45 * max(dip, -0.4)));
+  float rimmed = clamp(max(max(ratio.r, ratio.g), ratio.b) - 1.0, 0.0, 1.0);
+  float gstrength = uGran * (0.08 + 0.92 * smoothstep(0.42, 0.75, clump)) * smoothstep(0.08, 0.6, Dl)
+                    * (0.45 + 0.8 * pool + 0.8 * rimmed);
+  D *= max(0.0, 1.0 + gstrength * (0.75 * speck - 0.12 + 0.6 * max(dip, -0.4)));
 
   // uneven pigment load, at the scale of a brushload and of a few mm
   D *= 1.0 + 0.09 * (fbm(q / 260.0, uSeed + 14u) * 2.0 - 1.0)
@@ -361,9 +376,21 @@ export const composite = (
 
   const blurProg = compile(BLUR_FS);
   const tmp = target(pw, ph, "rgba16f");
+  // p5.brush outlines each of its wash layers with hairline strokes; a light
+  // blur keeps them from being amplified into line patterns by the rim term
+  const densS = target(pw, ph, "rgba16f");
+  const fine = 1.6 * paintUnit;
+  run(blurProg, tmp, [["uSrc", dens]], (u) => {
+    gl.uniform2i(u("uDir"), 1, 0);
+    gl.uniform1f(u("uSigma"), fine);
+  });
+  run(blurProg, densS, [["uSrc", tmp]], (u) => {
+    gl.uniform2i(u("uDir"), 0, 1);
+    gl.uniform1f(u("uSigma"), fine);
+  });
   const blur = target(pw, ph, "rgba16f", true);
   const sigma = 6 * paintUnit;
-  run(blurProg, tmp, [["uSrc", dens]], (u) => {
+  run(blurProg, tmp, [["uSrc", densS]], (u) => {
     gl.uniform2i(u("uDir"), 1, 0);
     gl.uniform1f(u("uSigma"), sigma);
   });
@@ -373,7 +400,7 @@ export const composite = (
   });
 
   const dh = target(outW, ph, "rgba16f");
-  run(compile(LANCZOS_H_FS), dh, [["uSrc", dens]], (u) => {
+  run(compile(LANCZOS_H_FS), dh, [["uSrc", densS]], (u) => {
     gl.uniform1f(u("uScale"), outW / pw);
   });
 
@@ -409,7 +436,7 @@ export const composite = (
   );
   // reading a pixel waits for the GPU, so the timing report is honest
   gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
-  for (const t of [dens, tmp, blur, dh, paper]) {
+  for (const t of [dens, densS, tmp, blur, dh, paper]) {
     gl.deleteTexture(t.tex);
     gl.deleteFramebuffer(t.fb!);
   }
