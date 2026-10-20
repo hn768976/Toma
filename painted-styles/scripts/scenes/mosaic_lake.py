@@ -24,6 +24,7 @@ BOX.update({
     'heather': ('#8c7d9c', 'stone'), 'peach': ('#eaa77c', 'marble'), 'apricot': ('#f2c18c', 'marble'),
     'coral': ('#d77a6c', 'marble'), 'pine': ('#24342f', 'stone'), 'moss': ('#3d5245', 'stone'),
     'ink': ('#1b1e33', 'glass'), 'mist': ('#ddc9cc', 'marble'),
+    'haze': ('#8a86b2', 'marble'), 'hazel': ('#a8a2c6', 'marble'),
 })
 
 
@@ -65,7 +66,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     seed_all(seed)
     S = Scaler(W, H)
     s = S.s
-    m = Mosaic(W, H, seed=seed, tile=13 * s, gap=1.8 * s, ss=2, stones=BOX)
+    m = Mosaic(W, H, seed=seed, tile=13 * s, gap=1.8 * s, ss=2, stones=BOX, bed='#9a9080', grout='#7f7668')
     rng = m.rng
     YY, XX = np.mgrid[0:H, 0:W].astype(np.float32)
     Xd, Yd = XX / s, YY / s                                   # design coordinates of every pixel
@@ -85,15 +86,15 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     # ---------------------------------------------------------------- the cartoon
     m.paint(np.ones((H, W), np.float32), 'white')
     t = np.clip(YY / hz, 0, 1)
-    stops = [(0.0, 'indigo'), (0.2, 'dusk'), (0.34, 'violet'), (0.45, 'plum'), (0.53, 'coral'), (0.62, 'peach'),
-             (1.0, 'apricot')]
+    stops = [(0.0, 'indigo'), (0.15, 'dusk'), (0.27, 'violet'), (0.35, 'plum'), (0.43, 'coral'), (0.52, 'peach'),
+             (0.6, 'apricot'), (1.0, 'apricot')]
     for (t0, c0), (t1, c1) in zip(stops[:-1], stops[1:]):
         band = sky * (t >= t0) * (t < t1 + 1e-6)
         m.shade(band, c0, c1, (0, t0 * hz), (0, t1 * hz))
     glow = np.exp(-(((Xd - 1240) / 330) ** 2 + ((Yd - 430) / 150) ** 2)) * sky
     m.paint(glow * 0.75, 'apricot')
-    m.shade(far_only, 'heather', 'mauve', (0, 300 * s), (0, hz))
-    m.paint(far_only * (Xd > 1250) * (Yd < far_ridge(Xd) + 140) * 0.45, 'violet')     # shade side of the high peak
+    m.shade(far_only, 'haze', 'hazel', (0, 300 * s), (0, hz))
+    m.paint(far_only * (Xd > 1250) * (Yd < far_ridge(Xd) + 140) * 0.5, 'heather')     # shade side of the high peak
     m.shade(near_only, 'violet', 'dusk', (0, 430 * s), (0, hz))
     m.paint(near_only * (Xd > 520) * (Xd < 900) * np.clip(1 - (Yd - near_ridge(Xd)) / 120, 0, 1) * 0.6, 'plum')
     for p, pm in zip(PINES, pines):
@@ -121,7 +122,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
                                           (1180, 846), (1120, 844), (1092, 812)], 6)))
     m.paint(boat_refl * 0.8, 'ink')
 
-    birds = [(1420, 210, 50, 4), (1500, 250, 40, -6), (1575, 190, 54, 8), (1640, 272, 34, -4), (1365, 285, 36, 2)]
+    birds = [(1420, 210, 74, 4), (1500, 250, 60, -6), (1575, 190, 80, 8), (1640, 272, 52, -4), (1365, 285, 56, 2)]
 
     def bird_strokes(cx, cy, w, ang):
         a = np.radians(ang); c_, s_ = np.cos(a), np.sin(a)
@@ -158,14 +159,14 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     m.outline(near_only, 'indigo', 1, FIG)
     m.fill(near_only, FIG * 1.1, stones=['violet', 'dusk', 'plum', 'heather', 'indigo', 'mauve', 'mist'])
     m.stage('near_mountains')
-    m.outline(far_only, 'heather', 1, FIG)
-    m.fill(far_only, FIG * 1.2, stones=['heather', 'mauve', 'lilac', 'violet', 'plum', 'mist', 'rose'])
+    m.outline(far_only, 'violet', 1, FIG)
+    m.fill(far_only, FIG * 1.2, stones=['haze', 'hazel', 'heather', 'lilac', 'mauve', 'mist'])
     m.stage('far_mountains')
 
     # ---------------------------------------------------------------- 5. birds
     for b in birds:
         for p in bird_strokes(*b):
-            m.line(p, 'indigo', 6.5 * s, across=6 * s)
+            m.line(p, 'ink', 8 * s, across=8 * s)
     m.stage('birds')
 
     # ---------------------------------------------------------------- 6. sky: a halo round everything, then rows
@@ -192,7 +193,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
             continue
         pts = [(x0 + u, y + 3 * np.sin(u / 18.0)) for u in np.linspace(0, L, 10)]
         m.line(S.pts(pts), 'apricot' if (y < 880 and k % 3) else 'mist', 7 * s, across=6 * s, keep=0.6)
-    sea_st = ['ink', 'indigo', 'dusk', 'violet', 'plum', 'mauve', 'heather', 'coral', 'peach', 'pine', 'mist', 'lilac']
+    sea_st = ['ink', 'indigo', 'dusk', 'violet', 'plum', 'mauve', 'heather', 'haze', 'coral', 'peach', 'apricot', 'pine', 'mist', 'lilac']
     m.halo(sea, rows=1, size=11 * s, stones=sea_st)
     wav = YY - 5 * s * np.sin(XX / (38.0 * s) + YY / (60.0 * s))
     m.rows(sea, size=11 * s, field=wav, stones=sea_st)

@@ -61,7 +61,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     L.stage('inked', blocks=KEY)
 
     # ---- sky: black at the top, carved lighter toward the horizon with long horizontal V cuts,
-    # the low sky cleared; broken rings cut round the hidden sun behind the peak
+    # the low sky cleared
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     L.clear(L.poly([(X0, S(400)), (X1, S(400)), (X1, hor), (X0, hor)]), chatter=0.35, angle=2)
     L.hatch([(X0, S(60)), (X1, S(60)), (X1, S(420)), (X0, S(420))], angle=0, spacing=S(8), width=S(3.4),
@@ -95,9 +95,9 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     left = [(75, 470), (130, 430), (190, 500), (245, 420), (300, 475), (355, 520), (400, 455),
             (455, 540), (505, 560), (165, 545), (275, 555), (425, 585)]
     for (x, ty) in sorted(left, key=lambda t: t[1]):
-        L.pine(S(x + rng.normal(0, 4)), S(652), S(652 - ty), snow=0, halo=S(3.6), nicks=0.6)
+        L.pine(S(x + rng.normal(0, 4)), S(652), S(652 - ty), snow=0, halo=S(2.4), nicks=0.3)
     for (x, ty) in [(1520, 575), (1580, 545), (1640, 590), (1720, 565), (1785, 600)]:
-        L.pine(S(x), S(650), S(650 - ty), snow=0, halo=S(3.2), nicks=0.5)
+        L.pine(S(x), S(650), S(650 - ty), snow=0, halo=S(4.0), nicks=0.2)
     L.stage('trees', blocks=KEY)
 
     # ---- water: cleared white near the horizon, horizontal ridges left standing, denser toward the viewer;
@@ -115,7 +115,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
             box=(0, hz, W, min(H, hz + int(S(360)))))
     L.hatch(water, angle=0, spacing=S(11), width=S(2.6), dash=(S(30), S(260)), gap=(S(10), S(90)), cut=False,
             bend=lambda x, y: S(2) * np.sin(x / S(140) + y / S(30)),
-            density=lambda x, y: np.clip(0.12 + 0.9 * ((y - hor) / (H - hor)) ** 1.4, 0, 0.95))
+            density=lambda x, y: np.clip(0.12 + 0.9 * max(0.0, (y - hor) / (H - hor)) ** 1.4, 0, 0.95))
     # the afterglow's reflection: short horizontal streaks on the colour block under the hidden sun
     L.hatch([(GX - S(420), hor + S(4)), (GX + S(420), hor + S(4)), (GX + S(420), S(1000)), (GX - S(420), S(1000))],
             angle=0, spacing=S(7), width=S(4.4), dash=(S(16), S(110)), gap=(S(8), S(50)), cut=False, on=glowc,
@@ -153,7 +153,7 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
 
     # ---- birds: white V cuts in the dark upper sky
     for (bx, by, sc) in [(1380, 250, 1.0), (1440, 222, 0.8), (1505, 262, 0.7), (1590, 205, 0.9), (1665, 242, 0.6)]:
-        bx, by, sc = S(bx), S(by), sc * s
+        bx, by, sc = S(bx), S(by), sc * s * 1.4
         L.gouge(spline([(bx - 20 * sc, by + 2 * sc), (bx - 9 * sc, by - 8 * sc), (bx, by)], 6), S(5.0) * max(sc / s, 0.7), 'v', smooth=False)
         L.gouge(spline([(bx, by), (bx + 9 * sc, by - 9 * sc), (bx + 20 * sc, by)], 6), S(5.0) * max(sc / s, 0.7), 'v', smooth=False)
     L.stage('birds', blocks=KEY)

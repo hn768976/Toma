@@ -55,14 +55,14 @@ def paint(W=1920, H=1080, seed=1, stages_dir=None):
     sw.stage('sun')
 
     # ---- far range: pale, hazy, low-contrast wireframe (peaks ~y 300-380, highest near x 1250)
-    sw.mountains(-2600, 2600, 1500, 2600, 430, cell=(90 * 1.0, 150), fill='#3b1d5e', edge=('#b04ab8', '#7fd6ff'),
+    sw.mountains(-2600, 2600, 1500, 2600, 560, cell=(90 * 1.0, 150), fill='#3b1d5e', edge=('#b04ab8', '#7fd6ff'),
                  width=1.2 * s, level=0.45, haze=0.8, seed=seed * 7 + 1)
     sw.mountains(80, 760, 1350, 1900, 540, cell=(60, 110), fill='#3b1d5e', edge=('#b04ab8', '#8fe0ff'),
                  width=1.2 * s, level=0.5, haze=0.8, seed=seed * 7 + 2)
     sw.stage('far_mountains')
 
     # ---- near range: darker, lower, a big shoulder on the left dipping to the right
-    sw.mountains(-560, -10, 480, 820, 105, cell=(26, 45), taper=(False, True), fill='#140626',
+    sw.mountains(-560, -10, 480, 820, 120, cell=(26, 45), taper=(False, True), fill='#140626',
                  width=1.5 * s, level=0.9, haze=0.5, seed=seed * 7 + 3)
     sw.mountains(80, 480, 520, 760, 50, cell=(24, 40), taper=(True, True), fill='#140626',
                  width=1.5 * s, level=0.8, haze=0.5, seed=seed * 7 + 4)

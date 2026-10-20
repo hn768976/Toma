@@ -6,3 +6,11 @@ Charming amber lamp-lit screen with dyed carved leather; strips of carved holes 
 Convincing blue radiograph but flat and low-detail; additive (no occlusion) so sun removed; pines read as white spikes; skeleton/birds/reeds barely visible. Edge enhancement/glow/noise in pixels. Novelty only. 9 stages.
 ## vhs — 55.1s
 Believable camcorder dusk lake; chroma bleed, dropouts, tracking band, no OSD. Too degraded for general stock; reeds invisible; dark wedge at left from hand-held tilt. Mostly resolution-independent (tape resampled to 760x480); bloom radii in px. 12 stages.
+## ballpoint — 46.4s
+Convincing biro + coloured pencil on copy paper, scene reads clearly; dense diagonal hatching busy, sky mostly violet; mist weak (can only darken); blue zigzag shadow blotches; water not darker toward viewer. Paper texture pixel-fixed. 15 stages.
+## pastelui — 4.8s
+Clean flat pastel dusk, light blooms, bokeh, rounded pines; pleasant but generic (looks like generic flat vector once UI chrome removed). Faint double-alpha edges in pine reflections, hard seam on near-mountain facet, reflection bands read as extra hills. Lib has no landscape primitives. 10 stages.
+## storybook — 16.3s
+Cheerful kids'-book page, gouache washes on warm paper; sky banded into 4 hard stripes (no gradient primitive), cartoon sun reads afternoon not dusk, mist a hard strip, crayon dashes on hills. Resolution-independent (scales internally). 10 keyframes.
+## pencilbook — 72.2s
+Richest texture: layered coloured pencil, stroke-built reflections; upper sky daytime blue, mountains low-contrast streaky, orange rim streaks on near ridge; look shifts between 960 and 1080 (fixed-px paper/flow scales). Slowest. 10 stages.
