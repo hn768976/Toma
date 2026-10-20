@@ -1,5 +1,49 @@
 {
  "layers": {
+  "artdeco": {
+   "birds": 26.9,
+   "boat": 27.6,
+   "clouds": 14.8,
+   "far": 18.5,
+   "mist": 27.4,
+   "near": 21.7,
+   "reeds": 28.9,
+   "sky": 15.7,
+   "water": 24.8
+  },
+  "inkwash": {
+   "birds": 47.7,
+   "boat": 48.1,
+   "clouds": 52.8,
+   "far": 52.7,
+   "mist": 49.0,
+   "near": 55.0,
+   "reeds": 522.4,
+   "sky": 55.8,
+   "water": 46.0
+  },
+  "linocut": {
+   "birds": 85.2,
+   "boat": 88.9,
+   "clouds": 45.5,
+   "far": 50.3,
+   "mist": 85.9,
+   "near": 62.5,
+   "reeds": 89.5,
+   "sky": 50.0,
+   "water": 84.7
+  },
+  "stainedglass": {
+   "birds": 106.5,
+   "boat": 104.1,
+   "clouds": 60.7,
+   "far": 67.3,
+   "mist": 100.7,
+   "near": 70.2,
+   "reeds": 551.2,
+   "sky": 62.4,
+   "water": 91.6
+  },
   "watercolour": {
    "birds": 57.0,
    "boat": 52.3,
@@ -11,5 +55,37 @@
    "sky": 26.7,
    "water": 53.7
   }
+ },
+ "stills": {
+  "ArtDeco_Coast_Day.png": 17.0,
+  "ArtDeco_Coast_Dusk.png": 22.0,
+  "ArtDeco_Forest_Day.png": 19.5,
+  "ArtDeco_Forest_Dusk.png": 18.2,
+  "ArtDeco_Lake_Day.png": 18.2,
+  "ArtDeco_Lake_Dusk.png": 16.5,
+  "InkWash_Coast_BlackInk.png": 38.2,
+  "InkWash_Coast_Indigo.png": 39.1,
+  "InkWash_Forest_BlackInk.png": 41.2,
+  "InkWash_Forest_Indigo.png": 43.5,
+  "InkWash_Lake_BlackInk.png": 27.0,
+  "InkWash_Lake_Indigo.png": 27.9,
+  "Linocut_Coast_Indigo.png": 42.5,
+  "Linocut_Coast_Vermilion.png": 39.7,
+  "Linocut_Forest_Indigo.png": 40.2,
+  "Linocut_Forest_Vermilion.png": 41.1,
+  "Linocut_Lake_Indigo.png": 47.2,
+  "Linocut_Lake_Vermilion.png": 40.8,
+  "StainedGlass_Coast_Day.png": 61.1,
+  "StainedGlass_Coast_Dusk.png": 62.0,
+  "StainedGlass_Forest_Day.png": 73.3,
+  "StainedGlass_Forest_Dusk.png": 68.9,
+  "StainedGlass_Lake_Day.png": 65.2,
+  "StainedGlass_Lake_Dusk.png": 62.0,
+  "Watercolour_Coast_Day.png": 35.8,
+  "Watercolour_Coast_Dusk.png": 35.3,
+  "Watercolour_Forest_Day.png": 68.6,
+  "Watercolour_Forest_Dusk.png": 65.2,
+  "Watercolour_Lake_Day.png": 28.3,
+  "Watercolour_Lake_Dusk.png": 29.6
  }
 }

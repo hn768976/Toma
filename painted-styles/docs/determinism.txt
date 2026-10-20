@@ -1,0 +1,4 @@
+Determinism: paint.py re-run from scratch (all caches cleared, one job at a time) vs the first run
+files compared: 271 (cumulative paints, 4K layers, draw-on frames, stills)
+differences: 0
+RESULT: BYTE-IDENTICAL

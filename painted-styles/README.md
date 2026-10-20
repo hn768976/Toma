@@ -125,7 +125,7 @@ npx remotion render src/index.ts Painted-Watercolour-DrawOn Painted_Watercolour_
 |---|---|---|
 | ffprobe: 1280×720, 30/1, h264, yuv420p, no audio, 20.0 / 12.0 s | 8/8 PASS (first time) | `scripts/verify_videos.sh` |
 | Loops: frame 0 vs 600 pixel-for-pixel | 5/5 PASS (Stained glass failed first time: light band never reached 0 → compact band) | `docs/loopcheck.txt` |
-| Re-run paint → identical files | see `docs/determinism.txt` | `docs/hashes_run1.txt`, `hashes_run2.txt` |
+| Re-run paint → identical files | PASS: 271 files byte-identical | `docs/hashes_run1.txt`, `hashes_run2.txt` |
 | Cold-start frame == full render frame | PASS (4 frames, byte-identical) | `docs/coldstart.txt` |
 | Layers: no gaps past the bleed / seams / halos | PASS after fixes (mist matte reworked twice) | `docs/layercheck.txt` |
 | Stills: 30 present, 3840×2160, named | PASS | `stills/` |
