@@ -19,6 +19,8 @@ export type StyleManifest = {
 };
 export const STYLES = manifest.styles as unknown as StyleManifest[];
 
+// the three styles whose stroke order reads best as "painting itself"
+export const DRAWON_STYLES = ["watercolour", "inkwash", "stainedglass"];
 export const FPS = 30;
 export const LOOP_FRAMES = 600;          // one full cycle; compositions are 601 frames so 600 can be checked against 0
 export const DRAWON_FRAMES = 360;        // 0-9 s painting, 9-12 s hold

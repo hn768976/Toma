@@ -1,6 +1,130 @@
 {
  "styles": [
   {
+   "key": "watercolour",
+   "prefix": "Watercolour",
+   "name": "Watercolour \u00b7 \u6c34\u5f69",
+   "canvas": [
+    4608,
+    2592
+   ],
+   "bleed": [
+    384,
+    216
+   ],
+   "horizon": 1280.0,
+   "boatPivot": [
+    2341.915759086734,
+    1612.0
+   ],
+   "layers": [
+    {
+     "group": "sky",
+     "src": "layers/watercolour/00_sky.png"
+    },
+    {
+     "group": "clouds",
+     "src": "layers/watercolour/01_clouds.png"
+    },
+    {
+     "group": "far",
+     "src": "layers/watercolour/02_far.png"
+    },
+    {
+     "group": "near",
+     "src": "layers/watercolour/03_near.png"
+    },
+    {
+     "group": "water",
+     "src": "layers/watercolour/04_water.png"
+    },
+    {
+     "group": "mist",
+     "src": "layers/watercolour/05_mist.png"
+    },
+    {
+     "group": "boat",
+     "src": "layers/watercolour/06_boat.png"
+    },
+    {
+     "group": "boat_refl",
+     "src": "layers/watercolour/07_boat_refl.png"
+    },
+    {
+     "group": "birds",
+     "src": "layers/watercolour/08_birds.png"
+    },
+    {
+     "group": "reeds",
+     "src": "layers/watercolour/09_reeds.png"
+    }
+   ],
+   "drawon": {
+    "frames": [
+     "drawon/watercolour/000.png",
+     "drawon/watercolour/001.png",
+     "drawon/watercolour/002.png",
+     "drawon/watercolour/003.png",
+     "drawon/watercolour/004.png",
+     "drawon/watercolour/005.png",
+     "drawon/watercolour/006.png",
+     "drawon/watercolour/007.png",
+     "drawon/watercolour/008.png",
+     "drawon/watercolour/009.png",
+     "drawon/watercolour/010.png",
+     "drawon/watercolour/011.png",
+     "drawon/watercolour/012.png",
+     "drawon/watercolour/013.png",
+     "drawon/watercolour/014.png",
+     "drawon/watercolour/015.png",
+     "drawon/watercolour/016.png",
+     "drawon/watercolour/017.png",
+     "drawon/watercolour/018.png",
+     "drawon/watercolour/019.png",
+     "drawon/watercolour/020.png",
+     "drawon/watercolour/021.png",
+     "drawon/watercolour/022.png",
+     "drawon/watercolour/023.png",
+     "drawon/watercolour/024.png",
+     "drawon/watercolour/025.png",
+     "drawon/watercolour/026.png",
+     "drawon/watercolour/027.png",
+     "drawon/watercolour/028.png",
+     "drawon/watercolour/029.png",
+     "drawon/watercolour/030.png",
+     "drawon/watercolour/031.png",
+     "drawon/watercolour/032.png",
+     "drawon/watercolour/033.png",
+     "drawon/watercolour/034.png",
+     "drawon/watercolour/035.png",
+     "drawon/watercolour/036.png",
+     "drawon/watercolour/037.png",
+     "drawon/watercolour/038.png",
+     "drawon/watercolour/039.png",
+     "drawon/watercolour/040.png",
+     "drawon/watercolour/041.png",
+     "drawon/watercolour/042.png",
+     "drawon/watercolour/043.png",
+     "drawon/watercolour/044.png",
+     "drawon/watercolour/045.png",
+     "drawon/watercolour/046.png",
+     "drawon/watercolour/047.png",
+     "drawon/watercolour/048.png",
+     "drawon/watercolour/049.png",
+     "drawon/watercolour/050.png",
+     "drawon/watercolour/051.png",
+     "drawon/watercolour/052.png",
+     "drawon/watercolour/053.png",
+     "drawon/watercolour/054.png",
+     "drawon/watercolour/055.png",
+     "drawon/watercolour/056.png",
+     "drawon/watercolour/057.png",
+     "drawon/watercolour/058.png",
+     "drawon/watercolour/059.png"
+    ]
+   }
+  },
+  {
    "key": "artdeco",
    "prefix": "ArtDeco",
    "name": "Art Deco \u00b7 \u88c5\u9970\u827a\u672f",
@@ -114,6 +238,357 @@
      "drawon/artdeco/050.png",
      "drawon/artdeco/051.png",
      "drawon/artdeco/052.png"
+    ]
+   }
+  },
+  {
+   "key": "stainedglass",
+   "prefix": "StainedGlass",
+   "name": "Stained glass \u00b7 \u5f69\u8272\u73bb\u7483\u82b1\u7a97",
+   "canvas": [
+    4608,
+    2592
+   ],
+   "bleed": [
+    384,
+    216
+   ],
+   "horizon": 1280.0,
+   "boatPivot": [
+    2336.1037534698476,
+    1612.0
+   ],
+   "layers": [
+    {
+     "group": "sky",
+     "src": "layers/stainedglass/00_sky.png"
+    },
+    {
+     "group": "clouds",
+     "src": "layers/stainedglass/01_clouds.png"
+    },
+    {
+     "group": "far",
+     "src": "layers/stainedglass/02_far.png"
+    },
+    {
+     "group": "near",
+     "src": "layers/stainedglass/03_near.png"
+    },
+    {
+     "group": "water",
+     "src": "layers/stainedglass/04_water.png"
+    },
+    {
+     "group": "mist",
+     "src": "layers/stainedglass/05_mist.png"
+    },
+    {
+     "group": "boat",
+     "src": "layers/stainedglass/06_boat.png"
+    },
+    {
+     "group": "boat_refl",
+     "src": "layers/stainedglass/07_boat_refl.png"
+    },
+    {
+     "group": "birds",
+     "src": "layers/stainedglass/08_birds.png"
+    },
+    {
+     "group": "reeds",
+     "src": "layers/stainedglass/09_reeds.png"
+    }
+   ],
+   "drawon": {
+    "frames": [
+     "drawon/stainedglass/000.png",
+     "drawon/stainedglass/001.png",
+     "drawon/stainedglass/002.png",
+     "drawon/stainedglass/003.png",
+     "drawon/stainedglass/004.png",
+     "drawon/stainedglass/005.png",
+     "drawon/stainedglass/006.png",
+     "drawon/stainedglass/007.png",
+     "drawon/stainedglass/008.png",
+     "drawon/stainedglass/009.png",
+     "drawon/stainedglass/010.png",
+     "drawon/stainedglass/011.png",
+     "drawon/stainedglass/012.png",
+     "drawon/stainedglass/013.png",
+     "drawon/stainedglass/014.png",
+     "drawon/stainedglass/015.png",
+     "drawon/stainedglass/016.png",
+     "drawon/stainedglass/017.png",
+     "drawon/stainedglass/018.png",
+     "drawon/stainedglass/019.png",
+     "drawon/stainedglass/020.png",
+     "drawon/stainedglass/021.png",
+     "drawon/stainedglass/022.png",
+     "drawon/stainedglass/023.png",
+     "drawon/stainedglass/024.png",
+     "drawon/stainedglass/025.png",
+     "drawon/stainedglass/026.png",
+     "drawon/stainedglass/027.png",
+     "drawon/stainedglass/028.png",
+     "drawon/stainedglass/029.png",
+     "drawon/stainedglass/030.png",
+     "drawon/stainedglass/031.png",
+     "drawon/stainedglass/032.png",
+     "drawon/stainedglass/033.png",
+     "drawon/stainedglass/034.png",
+     "drawon/stainedglass/035.png",
+     "drawon/stainedglass/036.png",
+     "drawon/stainedglass/037.png",
+     "drawon/stainedglass/038.png",
+     "drawon/stainedglass/039.png",
+     "drawon/stainedglass/040.png",
+     "drawon/stainedglass/041.png",
+     "drawon/stainedglass/042.png",
+     "drawon/stainedglass/043.png",
+     "drawon/stainedglass/044.png",
+     "drawon/stainedglass/045.png",
+     "drawon/stainedglass/046.png",
+     "drawon/stainedglass/047.png",
+     "drawon/stainedglass/048.png",
+     "drawon/stainedglass/049.png",
+     "drawon/stainedglass/050.png",
+     "drawon/stainedglass/051.png",
+     "drawon/stainedglass/052.png"
+    ]
+   }
+  },
+  {
+   "key": "inkwash",
+   "prefix": "InkWash",
+   "name": "Ink wash \u00b7 \u6c34\u58a8",
+   "canvas": [
+    4608,
+    2592
+   ],
+   "bleed": [
+    384,
+    216
+   ],
+   "horizon": 1280.0,
+   "boatPivot": [
+    2333.620822218735,
+    1612.0
+   ],
+   "layers": [
+    {
+     "group": "sky",
+     "src": "layers/inkwash/00_sky.png"
+    },
+    {
+     "group": "clouds",
+     "src": "layers/inkwash/01_clouds.png"
+    },
+    {
+     "group": "far",
+     "src": "layers/inkwash/02_far.png"
+    },
+    {
+     "group": "near",
+     "src": "layers/inkwash/03_near.png"
+    },
+    {
+     "group": "water",
+     "src": "layers/inkwash/04_water.png"
+    },
+    {
+     "group": "mist",
+     "src": "layers/inkwash/05_mist.png"
+    },
+    {
+     "group": "boat",
+     "src": "layers/inkwash/06_boat.png"
+    },
+    {
+     "group": "boat_refl",
+     "src": "layers/inkwash/07_boat_refl.png"
+    },
+    {
+     "group": "birds",
+     "src": "layers/inkwash/08_birds.png"
+    },
+    {
+     "group": "reeds",
+     "src": "layers/inkwash/09_reeds.png"
+    }
+   ],
+   "drawon": {
+    "frames": [
+     "drawon/inkwash/000.png",
+     "drawon/inkwash/001.png",
+     "drawon/inkwash/002.png",
+     "drawon/inkwash/003.png",
+     "drawon/inkwash/004.png",
+     "drawon/inkwash/005.png",
+     "drawon/inkwash/006.png",
+     "drawon/inkwash/007.png",
+     "drawon/inkwash/008.png",
+     "drawon/inkwash/009.png",
+     "drawon/inkwash/010.png",
+     "drawon/inkwash/011.png",
+     "drawon/inkwash/012.png",
+     "drawon/inkwash/013.png",
+     "drawon/inkwash/014.png",
+     "drawon/inkwash/015.png",
+     "drawon/inkwash/016.png",
+     "drawon/inkwash/017.png",
+     "drawon/inkwash/018.png",
+     "drawon/inkwash/019.png",
+     "drawon/inkwash/020.png",
+     "drawon/inkwash/021.png",
+     "drawon/inkwash/022.png",
+     "drawon/inkwash/023.png",
+     "drawon/inkwash/024.png",
+     "drawon/inkwash/025.png",
+     "drawon/inkwash/026.png",
+     "drawon/inkwash/027.png",
+     "drawon/inkwash/028.png",
+     "drawon/inkwash/029.png",
+     "drawon/inkwash/030.png",
+     "drawon/inkwash/031.png",
+     "drawon/inkwash/032.png",
+     "drawon/inkwash/033.png",
+     "drawon/inkwash/034.png",
+     "drawon/inkwash/035.png",
+     "drawon/inkwash/036.png",
+     "drawon/inkwash/037.png",
+     "drawon/inkwash/038.png",
+     "drawon/inkwash/039.png",
+     "drawon/inkwash/040.png",
+     "drawon/inkwash/041.png",
+     "drawon/inkwash/042.png",
+     "drawon/inkwash/043.png",
+     "drawon/inkwash/044.png",
+     "drawon/inkwash/045.png",
+     "drawon/inkwash/046.png",
+     "drawon/inkwash/047.png",
+     "drawon/inkwash/048.png",
+     "drawon/inkwash/049.png",
+     "drawon/inkwash/050.png",
+     "drawon/inkwash/051.png",
+     "drawon/inkwash/052.png"
+    ]
+   }
+  },
+  {
+   "key": "linocut",
+   "prefix": "Linocut",
+   "name": "Linocut \u00b7 \u9ed1\u767d\u9ebb\u80f6\u7248\u753b",
+   "canvas": [
+    4608,
+    2592
+   ],
+   "bleed": [
+    384,
+    216
+   ],
+   "horizon": 1280.0,
+   "boatPivot": [
+    2334.2193833146835,
+    1612.0
+   ],
+   "layers": [
+    {
+     "group": "sky",
+     "src": "layers/linocut/00_sky.png"
+    },
+    {
+     "group": "clouds",
+     "src": "layers/linocut/01_clouds.png"
+    },
+    {
+     "group": "far",
+     "src": "layers/linocut/02_far.png"
+    },
+    {
+     "group": "near",
+     "src": "layers/linocut/03_near.png"
+    },
+    {
+     "group": "water",
+     "src": "layers/linocut/04_water.png"
+    },
+    {
+     "group": "mist",
+     "src": "layers/linocut/05_mist.png"
+    },
+    {
+     "group": "boat",
+     "src": "layers/linocut/06_boat.png"
+    },
+    {
+     "group": "boat_refl",
+     "src": "layers/linocut/07_boat_refl.png"
+    },
+    {
+     "group": "birds",
+     "src": "layers/linocut/08_birds.png"
+    },
+    {
+     "group": "reeds",
+     "src": "layers/linocut/09_reeds.png"
+    }
+   ],
+   "drawon": {
+    "frames": [
+     "drawon/linocut/000.png",
+     "drawon/linocut/001.png",
+     "drawon/linocut/002.png",
+     "drawon/linocut/003.png",
+     "drawon/linocut/004.png",
+     "drawon/linocut/005.png",
+     "drawon/linocut/006.png",
+     "drawon/linocut/007.png",
+     "drawon/linocut/008.png",
+     "drawon/linocut/009.png",
+     "drawon/linocut/010.png",
+     "drawon/linocut/011.png",
+     "drawon/linocut/012.png",
+     "drawon/linocut/013.png",
+     "drawon/linocut/014.png",
+     "drawon/linocut/015.png",
+     "drawon/linocut/016.png",
+     "drawon/linocut/017.png",
+     "drawon/linocut/018.png",
+     "drawon/linocut/019.png",
+     "drawon/linocut/020.png",
+     "drawon/linocut/021.png",
+     "drawon/linocut/022.png",
+     "drawon/linocut/023.png",
+     "drawon/linocut/024.png",
+     "drawon/linocut/025.png",
+     "drawon/linocut/026.png",
+     "drawon/linocut/027.png",
+     "drawon/linocut/028.png",
+     "drawon/linocut/029.png",
+     "drawon/linocut/030.png",
+     "drawon/linocut/031.png",
+     "drawon/linocut/032.png",
+     "drawon/linocut/033.png",
+     "drawon/linocut/034.png",
+     "drawon/linocut/035.png",
+     "drawon/linocut/036.png",
+     "drawon/linocut/037.png",
+     "drawon/linocut/038.png",
+     "drawon/linocut/039.png",
+     "drawon/linocut/040.png",
+     "drawon/linocut/041.png",
+     "drawon/linocut/042.png",
+     "drawon/linocut/043.png",
+     "drawon/linocut/044.png",
+     "drawon/linocut/045.png",
+     "drawon/linocut/046.png",
+     "drawon/linocut/047.png",
+     "drawon/linocut/048.png",
+     "drawon/linocut/049.png",
+     "drawon/linocut/050.png",
+     "drawon/linocut/051.png",
+     "drawon/linocut/052.png"
     ]
    }
   }

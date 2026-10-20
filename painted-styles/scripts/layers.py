@@ -21,7 +21,8 @@ import drawkit
 from drawkit import save_png, ROOT
 
 W4, H4, BLEED = 3840, 2160, 0.1
-KEY_GROUPS = {'mist'}
+# translucent haze is cut with a colour-key matte; in glass and lino the mist is opaque material
+KEY_GROUPS = {'watercolour': {'mist'}, 'artdeco': {'mist'}, 'inkwash': {'mist'}, 'stainedglass': set(), 'linocut': set()}
 
 
 def load(p):
@@ -70,7 +71,12 @@ def extract_key(B, C, sigma=60):
     v = K - B
     a = np.clip((d * v).sum(-1) / np.maximum((v * v).sum(-1), 1e-4), 0, 1)
     a = np.where(D < 0.004, 0, a)
-    return np.clip(K, 0, 1), a
+    # whatever the smooth key misses goes back into the colour, so the layer is exact at rest;
+    # below a = 0.15 the correction is faded out to keep background structure out of the mist
+    r = C - (B * (1 - a[..., None]) + K * a[..., None])
+    w = smoothstep(0.05, 0.15, a)[..., None]
+    F = K + w * r / np.maximum(a, 0.05)[..., None]
+    return np.clip(F, 0, 1), a
 
 
 def seamless_x(F, a, keep):
@@ -126,7 +132,7 @@ def extract(key, G, cache, outdir, boat_y_design=806):
         C = load(os.path.join(cache, f'{i:02d}_{g}.png'))
         if prev is None:
             F, a = C, np.ones(C.shape[:2], np.float32)
-        elif g in KEY_GROUPS:
+        elif g in KEY_GROUPS.get(key, {'mist'}):
             F, a = extract_key(prev, C)
         else:
             F, a = extract_opaque(prev, C)

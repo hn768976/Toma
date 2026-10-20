@@ -21,6 +21,17 @@
    "reeds": 437.0,
    "sky": 84.3,
    "water": 57.2
+  },
+  "watercolour": {
+   "birds": 627.9,
+   "boat": 643.3,
+   "clouds": 189.9,
+   "far": 206.7,
+   "mist": 552.8,
+   "near": 472.7,
+   "reeds": 1029.7,
+   "sky": 104.6,
+   "water": 524.3
   }
  },
  "stills": {
@@ -29,6 +40,12 @@
   "ArtDeco_Forest_Day.png": 19.5,
   "ArtDeco_Forest_Dusk.png": 18.4,
   "ArtDeco_Lake_Day.png": 29.6,
-  "ArtDeco_Lake_Dusk.png": 29.4
+  "ArtDeco_Lake_Dusk.png": 29.4,
+  "Watercolour_Coast_Day.png": 587.4,
+  "Watercolour_Coast_Dusk.png": 604.7,
+  "Watercolour_Forest_Day.png": 268.5,
+  "Watercolour_Forest_Dusk.png": 268.5,
+  "Watercolour_Lake_Day.png": 292.0,
+  "Watercolour_Lake_Dusk.png": 297.3
  }
 }
