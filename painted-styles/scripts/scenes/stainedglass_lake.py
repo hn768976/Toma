@@ -72,8 +72,8 @@ BIRDS = [(1420, 210, 1.0, 1), (1500, 250, 0.8, 0.5), (1575, 190, 1.1, 0.9), (164
 PINES = [(85, 470, 52, 652), (170, 422, 66, 656), (255, 495, 50, 652), (330, 440, 62, 656),
          (410, 515, 46, 651), (470, 478, 52, 654), (520, 552, 36, 650),
          (1530, 578, 28, 646), (1592, 552, 34, 647), (1652, 590, 24, 645), (1765, 566, 30, 646)]
-FAR_PEAKS = [(260, 40), (760, -30), (1250, 25), (1700, -20)]          # summit x, spur drift
-NEAR_PEAKS = [(400, -35), (980, 30), (1760, 25)]
+FAR_PEAKS = [(260, 110), (760, -100), (1250, 130), (1700, -110)]          # summit x, spur drift
+NEAR_PEAKS = [(400, -120), (980, 90), (1760, 80)]
 BOAT_C = (1170.0, 790.0)
 BOAT_K = 1.2
 
@@ -156,8 +156,9 @@ def spurs(fn, peaks, bottom, r):
         sx = float(xx[np.argmin(fn(xx))])
         sy = float(fn(np.array([sx]))[0])
         yb = float(bottom(np.array([sx]))[0]) + 60
-        pts = [(sx, sy - 40), (sx, sy), (sx + drift * 0.4 + r.uniform(-6, 6), sy + (yb - sy) * 0.45),
-               (sx + drift + r.uniform(-8, 8), yb), (sx + drift * 1.2, yb + 200)]
+        pts = [(sx, sy - 40), (sx, sy), (sx + drift * 0.3 + r.uniform(-6, 6), sy + (yb - sy) * 0.3),
+               (sx + drift * 0.75 + r.uniform(-10, 10), sy + (yb - sy) * 0.7), (sx + drift + r.uniform(-8, 8), yb),
+               (sx + drift * 1.3, yb + 200)]
         cols.append(polyfn(pts))
         xs.append(sx)
     return cols, xs
@@ -205,16 +206,17 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         for k, cols in enumerate(P['bands']):
             m = g.poly(S.pts(hband(S, curve(k), curve(k + 1))))
             if P['sun']:
-                m = m * (1 - g.circle(*S.pt(*P['sun'][:2]), (P['sun'][2] + 40) * s))
+                m = m * (g.circle(*S.pt(*P['sun'][:2]), (P['sun'][2] + 40) * s) <= 0.5)
             g.band(m, cols, curve(k), curve(k + 1), row_h=72, length=(190, 380), cut_dir=to_sun, size=size,
                    tilt=0.08, bend=0.3, flow=0.05)
             st('sky band %d' % k)
         if P['sun']:
             sx, sy, sr = P['sun']
-            ring = g.circle(*S.pt(sx, sy), (sr + 40) * s) * (1 - g.circle(*S.pt(sx, sy), sr * s))
+            disc = (g.circle(*S.pt(sx, sy), sr * s) > 0.5).astype(np.float32)
+            ring = (g.circle(*S.pt(sx, sy), (sr + 40) * s) > 0.5) * (1 - disc)
             g.radial(ring, P['corona'], (sx, sy), [sr + 0.5], length=(44, 60), tilt=0.05, flow=None,
                      mix=dict(streaky=0.5, cathedral=0.5))
-            g.glass(g.circle(*S.pt(sx, sy), sr * s), ['#f2c230', '#f4d060'], mix=dict(cathedral=0.6, reamy=0.4))
+            g.glass(disc, ['#f2c230', '#f4d060'], mix=dict(cathedral=0.6, reamy=0.4))
             g.stain(g.circle(*S.pt(sx, sy), (sr - 4) * s), 0.7)
             st('sun')
 
@@ -254,8 +256,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         st('near glass')
         for i, (p, pm) in enumerate(zip(PS, pine_ms)):
             ax, tips = p['ax'], p['tips']
-            cuts = [('v', lambda y, ax=ax: ax(y))]
-            for t_, yt in enumerate(tips[:-1]):              # a lead under every tier but the lowest: drooping boughs
+            cuts = [('v', lambda y, ax=ax: ax(y))] if p['hw'] >= 40 else []
+            for t_, yt in enumerate(tips[:-1] if p['hw'] >= 45 else []):   # a lead under the tiers: drooping boughs
                 wl, wr = p['ws'][t_]
                 cuts.append(('h', lambda x, yt=yt, ax=ax, w=max(wl, wr): yt + 2 - 0.4 * np.clip(w - np.abs(x - ax(yt)), 0, None)))
             pal_t = [(rng.uniform(0.9, 1.1)) for _ in range(len(tips) + 1)]
@@ -319,8 +321,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                     x = ra + r.uniform(0, 18)
                     out.append([ra, x, 0])
                     while x < rb - 20:
-                        ln = r.uniform(26, 50 + 50 * depth)
-                        gp = r.uniform(14, 26 + 20 * depth)
+                        ln = r.uniform(22, 36 + 24 * depth)
+                        gp = r.uniform(16, 28 + 26 * depth)
                         e = min(x + ln, rb)
                         out.append([x, e, 3])
                         if e + gp < rb:
@@ -437,28 +439,32 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
     if 'reeds' in inc:
         rng = g.group('reeds')
         yb = S.Y1 + 25
-        for ci_, (cx, h, n) in enumerate([(30, 150, 5), (150, 115, 4), (262, 92, 4)]):
+        for ci_, (cx, h, n) in enumerate([(40, 250, 4), (166, 205, 3), (280, 165, 3)]):
             blades, angs = [], []
             for k in range(n):
-                a = -np.pi / 2 + (k - (n - 1) / 2) * rng.uniform(0.18, 0.28) + rng.normal(0, 0.05)
-                L = h * rng.uniform(0.75, 1.15) + (yb - 1080)
-                bw = rng.uniform(24, 32)
-                tip = (cx + np.cos(a) * L + rng.uniform(-10, 10), yb + np.sin(a) * L)
-                mid = (cx + np.cos(a) * L * 0.55 + rng.uniform(-6, 6) * 2, yb + np.sin(a) * L * 0.55)
-                blades.append(g.branch(S.pts([(cx + (k - n / 2) * 5, yb), mid, tip]), bw * s, 9 * s))
+                a = -np.pi / 2 + (k - (n - 1) / 2) * rng.uniform(0.22, 0.3) + rng.normal(0, 0.04)
+                L = h * rng.uniform(0.75, 1.15)
+                bw = rng.uniform(20, 26)
+                curl = rng.uniform(0.05, 0.2) * np.sign(np.cos(a) + 1e-3)       # leaves bend outward
+                b0 = (cx + (k - n / 2) * 6, yb)
+                p1 = (cx + np.cos(a) * (L * 0.5 + yb - 1080), yb + np.sin(a) * (L * 0.5 + yb - 1080))
+                a2 = a + curl
+                tip = (p1[0] + np.cos(a2) * L * 0.5, p1[1] + np.sin(a2) * L * 0.5)
+                blades.append(g.branch(S.pts([b0, p1, tip]), bw * s, 6 * s))
                 angs.append(a)
             m = np.clip(sum(blades), 0, 1)
             angs = sorted(angs)
             cuts = [('line', (cx, yb, cx + np.cos((angs[k] + angs[k + 1]) / 2) * 400, yb + np.sin((angs[k] + angs[k + 1]) / 2) * 400))
-                    for k in range(0, len(angs) - 1, 2)]
+                    for k in range(0, len(angs) - 1)]
             g.glass(m, P['reed'], cuts=cuts, flow=-np.pi / 2, flow_jit=0.15, mix=dict(streaky=0.6, cathedral=0.4))
             for k in range(n):
                 a = angs[k]
-                L = h * 0.8
-                g.trace(S.pts([(cx + np.cos(a) * 20, yb + np.sin(a) * 20 - 30), (cx + np.cos(a) * L * 0.9, yb + np.sin(a) * L * 0.9)]),
+                L = h * 0.7
+                g.trace(S.pts([(cx + np.cos(a) * 20, yb + np.sin(a) * 20 - 30 - (yb - 1080)),
+                               (cx + np.cos(a) * (L + yb - 1080), yb + np.sin(a) * (L + yb - 1080))]),
                         1.1 * s, taper=(0.2, 0.7), clip=m, opacity=0.8)
             st('reeds %d' % ci_)
-        for (x, y, lean) in [(92, 942, 0.1), (205, 968, -0.06)]:
+        for (x, y, lean) in [(98, 846, 0.06), (212, 892, -0.05)]:
             g.trace(S.pts([(x - lean * 120, yb - 40), (x - lean * 60, y + 60), (x, y + 24)]), 2.0 * s, taper=(0.0, 0.3))
             g.glass(g.ellipse(*S.pt(x, y), 6.5 * s, 21 * s, lean), P['cattail'], mix=dict(cathedral=1.0), seeds=0.5)
         st('reeds done')

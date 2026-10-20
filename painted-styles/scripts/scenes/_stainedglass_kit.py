@@ -95,9 +95,16 @@ class Panel(StainedGlass):
                              | (sc != self.scratch_a) | (st != self.stain_a))
             self._cur = None
 
-    def finish(self, lead=None, grime=0.25, pits=0.25):
+    def finish(self, lead=None, grime=0.25, pits=0.25, sweep=False):
+        """lead and weather; sweep=True (single-group scenes only) first merges any piece still too small or
+        too thin to cut into the neighbour it shares most edge with"""
         self._close()
         self.rng = drawkit.group_rng(self.seed0, 'finish')
+        if sweep and len(self.pp['col']):
+            s = self.s
+            self.label = self._merge_small(self.label.astype(np.int64), len(self.pp['col']), 450 * s * s,
+                                           10 * s).astype(np.int32)
+            self._T = None
         self.lead(width=(lead or self.lead_w) * self.s)
         self.weather(grime=grime, pits=pits)
 
@@ -375,7 +382,7 @@ class Panel(StainedGlass):
                     runs = _merge_runs(runs, 14.0)
                 else:
                     runs = [[a0 - 1, a1 + 1, 0]]
-                cuts = []          # (position, fid of the run that ends here, mandatory)
+                cuts = []          # (position, fid of the run that ends here)
                 for k, (ra, rb, fd) in enumerate(runs):
                     x = ra
                     while True:
@@ -392,16 +399,16 @@ class Panel(StainedGlass):
                                 nx += 0.35 * ell
                         if rb - nx < 0.6 * ell:
                             break
-                        cuts.append((nx, fd))
+                        cuts.append((nx, fd, False))
                         x = nx
                     if k < len(runs) - 1:
-                        cuts.append((rb, fd))
+                        cuts.append((rb, fd, True))
                 cuts.sort(key=lambda t: t[0])
                 idx = np.zeros(len(Ar), np.int64)
-                for (xc, fd) in cuts:
+                for (xc, fd, feat) in cuts:
                     cc = float(mid(np.array([xc]))[0])
                     hc = float(hgt(np.array([xc]))[0])
-                    th = (cut_dir(xc, cc) if cut_dir is not None else 0.0) + r.normal(0, tilt)
+                    th = (cut_dir(xc, cc) if cut_dir is not None else 0.0) + r.normal(0, tilt * (0.45 if feat else 1.0))
                     th = float(np.clip(th, -0.9, 0.9))
                     ca, sa = np.cos(th), np.sin(th)
                     da, dc = Ar - xc, Cr - cc
@@ -482,7 +489,7 @@ class Panel(StainedGlass):
             if nsp > 1:
                 a = np.sort((r.uniform(0, 2 * np.pi) + np.arange(nsp) * 2 * np.pi / nsp
                              + r.normal(0, 0.18 * np.pi / nsp, nsp)) % (2 * np.pi))
-                tw = r.normal(0, tilt, nsp)
+                tw = np.zeros(nsp) * r.normal(0, tilt, nsp)      # spokes exactly radial (a tilt breaks the wrap at 0)
                 th = (TH[pk] + np.pi) % (2 * np.pi)
                 rel = (R[pk] - rm) / max(rm, 1)
                 idx = _sector(th, a, tw, rel)

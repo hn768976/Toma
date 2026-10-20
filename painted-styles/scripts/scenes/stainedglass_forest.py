@@ -310,7 +310,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         st('foreground')
 
     # ================================================================ finishing: lead, weather (always run)
-    g.finish(lead=6.0, grime=0.25, pits=0.25)
+    g.finish(lead=6.0, grime=0.25, pits=0.25, sweep=True)
     img = g.composite()
     st.save(img, 'final')
     return img

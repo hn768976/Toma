@@ -52,11 +52,17 @@
   "ArtDeco_Forest_Dusk.png": 18.4,
   "ArtDeco_Lake_Day.png": 29.6,
   "ArtDeco_Lake_Dusk.png": 29.4,
-  "Watercolour_Coast_Day.png": 587.4,
-  "Watercolour_Coast_Dusk.png": 604.7,
-  "Watercolour_Forest_Day.png": 268.5,
-  "Watercolour_Forest_Dusk.png": 268.5,
-  "Watercolour_Lake_Day.png": 292.0,
-  "Watercolour_Lake_Dusk.png": 297.3
+  "Linocut_Coast_Indigo.png": 38.3,
+  "Linocut_Coast_Vermilion.png": 36.5,
+  "Linocut_Forest_Indigo.png": 41.2,
+  "Linocut_Forest_Vermilion.png": 38.0,
+  "Linocut_Lake_Indigo.png": 50.2,
+  "Linocut_Lake_Vermilion.png": 41.2,
+  "Watercolour_Coast_Day.png": 70.9,
+  "Watercolour_Coast_Dusk.png": 71.0,
+  "Watercolour_Forest_Day.png": 65.1,
+  "Watercolour_Forest_Dusk.png": 71.0,
+  "Watercolour_Lake_Day.png": 28.4,
+  "Watercolour_Lake_Dusk.png": 26.6
  }
 }

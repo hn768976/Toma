@@ -46,3 +46,12 @@ absorbency; ink colour follows dilution (no duotone); pale wet-wash sky with a p
 four tree types with irregular tiers; reflections as broken horizontal strokes over a pale broken wash; water
 mostly bare paper with clustered varied dashes; varied birds. Indigo forest: side-brush trunks with dry streaks,
 varied branches, ragged wash shadows, god-rays removed (light from reserved paper and mist).
+
+### Round 1 fixes — Stained glass
+Voronoi replaced by designed cut lines that follow the forms (sky rows arching over the glow, mountain strata and
+spur leads, water rows growing toward the viewer, cliff strata, converging path strips); aspect/min-width limits and
+merging remove uncuttable slivers; leads vary in width with rounded came and solder blobs at every joint; per-piece
+glass types (cathedral, streaky, seedy, opalescent, reamy) with own shade/density; clouds, sun glitter, reflections,
+boat, rower, pines, reeds cut in glass with their own leads; grisaille only for fine detail. Draw-on in workshop
+order: cartoon → cut glass laid with gaps → grisaille → leading → solder → daylight. Saddle bars not added
+(would cross the stock image and be baked into every parallax layer).

@@ -130,8 +130,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                                     - (14 * k if dusk else 0) * np.exp(-((np.asarray(xs) - sx) / 600.0) ** 2))
         to_sun = lambda a, c: float(np.arctan2(-(a - sx), -(c - sy) + 1e-3)) * 0.8
         size = lambda a, c: 0.5 + 0.6 * np.clip(np.hypot(a - sx, (c - sy) * 1.6) / 900.0, 0, 1)
-        sun = g.circle(*S.pt(sx, sy), sr * s) * (yy < HORIZON)
-        halo = g.circle(*S.pt(sx, sy), (sr + 40) * s) * (yy < HORIZON)
+        sun = ((g.circle(*S.pt(sx, sy), sr * s) > 0.5) * (yy < HORIZON)).astype(np.float32)
+        halo = ((g.circle(*S.pt(sx, sy), (sr + 40) * s) > 0.5) * (yy < HORIZON)).astype(np.float32)
         for k, cols in enumerate(P['bands']):
             m = g.poly(S.pts(hband(S, curve(k), curve(k + 1)))) * (1 - halo)
             g.band(m, cols, curve(k), curve(k + 1), row_h=74, length=(190, 380), cut_dir=to_sun, size=size,
@@ -392,7 +392,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         st('gulls')
 
     # ================================================================ finishing: lead, weather (always run)
-    g.finish(lead=6.0, grime=0.25, pits=0.25)
+    g.finish(lead=6.0, grime=0.25, pits=0.25, sweep=True)
     img = g.composite()
     st.save(img, 'final')
     return img
