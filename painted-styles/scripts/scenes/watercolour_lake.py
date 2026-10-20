@@ -394,6 +394,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
                 prev = cur
                 for q in sub:
                     m = q['m']
+                    if m is None:          # pine lies wholly in the bleed, off this canvas
+                        continue
                     hh, ww = m.a.shape
                     xx_ = np.arange(ww)[None, :] + m.x0
                     away = -1 if q['x'] < S.x(1240) else 1

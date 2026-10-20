@@ -34,15 +34,15 @@
    "water": 103.5
   },
   "stainedglass": {
-   "birds": 95.3,
-   "boat": 96.9,
-   "clouds": 60.5,
-   "far": 66.8,
-   "mist": 78.1,
-   "near": 68.7,
-   "reeds": 536.5,
-   "sky": 58.8,
-   "water": 80.6
+   "birds": 103.4,
+   "boat": 117.4,
+   "clouds": 61.2,
+   "far": 73.6,
+   "mist": 111.1,
+   "near": 73.7,
+   "reeds": 572.6,
+   "sky": 57.2,
+   "water": 106.6
   },
   "watercolour": {
    "birds": 627.9,
@@ -69,17 +69,17 @@
   "Linocut_Forest_Vermilion.png": 42.8,
   "Linocut_Lake_Indigo.png": 65.1,
   "Linocut_Lake_Vermilion.png": 65.8,
-  "StainedGlass_Coast_Day.png": 57.6,
-  "StainedGlass_Coast_Dusk.png": 57.0,
-  "StainedGlass_Forest_Day.png": 69.9,
-  "StainedGlass_Forest_Dusk.png": 69.2,
-  "StainedGlass_Lake_Day.png": 57.8,
-  "StainedGlass_Lake_Dusk.png": 58.2,
-  "Watercolour_Coast_Day.png": 70.9,
-  "Watercolour_Coast_Dusk.png": 71.0,
-  "Watercolour_Forest_Day.png": 65.1,
-  "Watercolour_Forest_Dusk.png": 71.0,
-  "Watercolour_Lake_Day.png": 28.4,
-  "Watercolour_Lake_Dusk.png": 26.6
+  "StainedGlass_Coast_Day.png": 72.6,
+  "StainedGlass_Coast_Dusk.png": 71.1,
+  "StainedGlass_Forest_Day.png": 84.2,
+  "StainedGlass_Forest_Dusk.png": 82.5,
+  "StainedGlass_Lake_Day.png": 80.8,
+  "StainedGlass_Lake_Dusk.png": 77.1,
+  "Watercolour_Coast_Day.png": 46.8,
+  "Watercolour_Coast_Dusk.png": 46.7,
+  "Watercolour_Forest_Day.png": 78.0,
+  "Watercolour_Forest_Dusk.png": 82.4,
+  "Watercolour_Lake_Day.png": 40.1,
+  "Watercolour_Lake_Dusk.png": 40.1
  }
 }
