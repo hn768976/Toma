@@ -22,19 +22,41 @@ def seed_all(seed):
 
 
 class Scaler:
-    """Map 1920x1080 design coordinates onto the real canvas (W x H, any 16:9 size)."""
-    def __init__(self, W, H):
-        self.W, self.H = W, H
+    """Map 1920x1080 design coordinates onto the real canvas.
+
+    W x H is the visible frame (any 16:9 size). With bleed=b the canvas grows by b on every
+    side (canvas = W*(1+2b) x H*(1+2b)) and design point (0, 0) lands at (b*W, b*H).
+    Full-width elements must cover the design range X0..X1 / Y0..Y1, which extends past
+    0..1920 / 0..1080 by the bleed."""
+    def __init__(self, W, H, bleed=0.0):
         self.s = W / DESIGN_W
+        self.ox, self.oy = round(W * bleed), round(H * bleed)
+        self.W, self.H = W + 2 * self.ox, H + 2 * self.oy          # canvas size
+        self.X0, self.X1 = -self.ox / self.s, DESIGN_W + self.ox / self.s
+        self.Y0, self.Y1 = -self.oy / self.s, DESIGN_H + self.oy / self.s
 
     def __call__(self, v):
+        """lengths (radii, widths, sigmas): scale only"""
         return v * self.s
 
+    def x(self, x):
+        return x * self.s + self.ox
+
+    def y(self, y):
+        return y * self.s + self.oy
+
     def pt(self, x, y):
-        return (x * self.s, y * self.s)
+        return (x * self.s + self.ox, y * self.s + self.oy)
 
     def pts(self, seq):
-        return [(x * self.s, y * self.s) for x, y in seq]
+        return [(x * self.s + self.ox, y * self.s + self.oy) for x, y in seq]
+
+
+def group_rng(seed, name):
+    """Independent, order-free generator for one layer group, so skipping a group never
+    changes what any other group (or the finishing passes) draws."""
+    gid = sum((i + 1) * ord(c) for i, c in enumerate(name))
+    return np.random.default_rng([int(seed), gid])
 
 
 def to_image(obj):

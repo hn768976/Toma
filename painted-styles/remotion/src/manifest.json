@@ -1,0 +1,57 @@
+{
+ "styles": [
+  {
+   "key": "artdeco",
+   "prefix": "Test",
+   "name": "Test",
+   "canvas": [
+    4608,
+    2592
+   ],
+   "bleed": [
+    384,
+    216
+   ],
+   "horizon": 1280,
+   "boatPivot": [
+    2340,
+    1600
+   ],
+   "layers": [
+    {
+     "group": "sky",
+     "src": "layers/test/00_sky.png"
+    },
+    {
+     "group": "far",
+     "src": "layers/test/01_far.png"
+    },
+    {
+     "group": "near",
+     "src": "layers/test/02_near.png"
+    },
+    {
+     "group": "water",
+     "src": "layers/test/03_water.png"
+    },
+    {
+     "group": "mist",
+     "src": "layers/test/04_mist.png"
+    },
+    {
+     "group": "boat",
+     "src": "layers/test/05_boat.png"
+    },
+    {
+     "group": "boat_refl",
+     "src": "layers/test/06_boat_refl.png"
+    },
+    {
+     "group": "birds",
+     "src": "layers/test/07_birds.png"
+    }
+   ],
+   "drawon": null
+  }
+ ]
+}
