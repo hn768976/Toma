@@ -104,3 +104,17 @@ wave-shaped glazier water rows; boat and rower fully cut glass with brush-painte
 vignette removed; dirt film, grime along leads, matting, pits; draw-on = cartoon (8) → glass laid with gaps (11)
 → grisaille → leading → solder → cement → final (40% shows unfinished workshop states). Birds no longer wrap
 across the leaded panel in the loop.
+
+## Round 3 — verdicts (final round)
+frame_1 watercolour: PARTLY · frame_2 Art Deco: FAKE ("modern vector wallpaper") · frame_3 ink wash: PARTLY ·
+frame_4 stained glass: FAKE · frame_5 watercolour draw-on: PARTLY · frame_6 glass draw-on: FAKE · still_1 watercolour: PARTLY ·
+still_2 Art Deco: FAKE ("more convincingly Deco in design, still vector in rendering") · still_3 ink indigo: PARTLY ·
+still_4 linocut: MOSTLY CONVINCING (best of set, all three rounds).
+Remaining findings (not fixed — three-round limit reached): uniform grain/texture density across shapes; watercolour
+reflections built from sampled horizontal strokes read as stair-stepped filter streaks (verified: present in the
+painting itself, not added by the compositor); props (boats, figures, houses, lighthouse, reeds) still too clean;
+repeated stamps (tufts, foliage dabs, rocks); ruler-straight horizons; Deco rendered as smooth vector gradients with
+rim-lights and halo rings; stained glass leads flat and uniform, marbling reads as "clouds" filter, solder reads as
+beads, in-progress frame not a workbench; ink wash sky/water too busy for the tradition. Reviewer also asked for
+lettering, borders, seals, margins and paper edges — declined throughout (stock backgrounds must be full-bleed and
+text-free).

@@ -2,3 +2,6 @@ Cold-start check (720p PNG): cold 'remotion still' vs frame from full '--sequenc
 Painted-ArtDeco-LakeLoop frame 300: BYTE-IDENTICAL
 Painted-Watercolour-DrawOn frame 180: BYTE-IDENTICAL
 Painted-Watercolour-DrawOn frame 300: BYTE-IDENTICAL
+Re-run on final (round-2) assets:
+Painted-InkWash-LakeLoop frame 300: BYTE-IDENTICAL
+Painted-StainedGlass-DrawOn frame 200: BYTE-IDENTICAL

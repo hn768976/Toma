@@ -1,0 +1,11 @@
+Layer/bleed check at 4K, camera extremes (frames 150 and 450): count of near-black (unpainted) pixels in a 4 px border
+Watercolour frame 150: border px with max<=3: 1 of 48000
+Watercolour frame 450: border px with max<=3: 3 of 48000
+ArtDeco frame 150: border px with max<=3: 0 of 48000
+ArtDeco frame 450: border px with max<=3: 0 of 48000
+StainedGlass frame 150: border px with max<=3: 0 of 48000
+StainedGlass frame 450: border px with max<=3: 0 of 48000
+Linocut frame 150: border px with max<=3: 0 of 48000
+Linocut frame 450: border px with max<=3: 0 of 48000
+InkWash frame 150: border px with max<=3: 0 of 48000
+InkWash frame 450: border px with max<=3: 0 of 48000

@@ -1,85 +1,15 @@
 {
  "layers": {
-  "artdeco": {
-   "birds": 33.4,
-   "boat": 33.0,
-   "clouds": 22.4,
-   "far": 22.0,
-   "mist": 35.3,
-   "near": 28.0,
-   "reeds": 32.0,
-   "sky": 21.0,
-   "water": 34.0
-  },
-  "inkwash": {
-   "birds": 55.6,
-   "boat": 56.9,
-   "clouds": 82.4,
-   "far": 63.9,
-   "mist": 58.2,
-   "near": 62.6,
-   "reeds": 437.0,
-   "sky": 84.3,
-   "water": 57.2
-  },
-  "linocut": {
-   "birds": 108.3,
-   "boat": 119.2,
-   "clouds": 53.5,
-   "far": 54.1,
-   "mist": 105.2,
-   "near": 79.4,
-   "reeds": 110.6,
-   "sky": 60.7,
-   "water": 103.5
-  },
-  "stainedglass": {
-   "birds": 103.4,
-   "boat": 117.4,
-   "clouds": 61.2,
-   "far": 73.6,
-   "mist": 111.1,
-   "near": 73.7,
-   "reeds": 572.6,
-   "sky": 57.2,
-   "water": 106.6
-  },
   "watercolour": {
-   "birds": 627.9,
-   "boat": 643.3,
-   "clouds": 189.9,
-   "far": 206.7,
-   "mist": 552.8,
-   "near": 472.7,
-   "reeds": 1029.7,
-   "sky": 104.6,
-   "water": 524.3
+   "birds": 57.0,
+   "boat": 52.3,
+   "clouds": 27.9,
+   "far": 33.3,
+   "mist": 51.2,
+   "near": 36.2,
+   "reeds": 330.8,
+   "sky": 26.7,
+   "water": 53.7
   }
- },
- "stills": {
-  "ArtDeco_Coast_Day.png": 55.7,
-  "ArtDeco_Coast_Dusk.png": 63.7,
-  "ArtDeco_Forest_Day.png": 19.5,
-  "ArtDeco_Forest_Dusk.png": 18.4,
-  "ArtDeco_Lake_Day.png": 29.6,
-  "ArtDeco_Lake_Dusk.png": 29.4,
-  "Linocut_Coast_Indigo.png": 50.0,
-  "Linocut_Coast_Vermilion.png": 52.6,
-  "Linocut_Forest_Indigo.png": 41.2,
-  "Linocut_Forest_Vermilion.png": 42.8,
-  "Linocut_Lake_Indigo.png": 65.1,
-  "Linocut_Lake_Vermilion.png": 65.8,
-  "StainedGlass_Coast_Day.png": 72.6,
-  "StainedGlass_Coast_Dusk.png": 71.1,
-  "StainedGlass_Forest_Day.png": 84.2,
-  "StainedGlass_Forest_Dusk.png": 82.5,
-  "StainedGlass_Lake_Day.png": 80.8,
-  "StainedGlass_Lake_Dusk.png": 77.1,
-  "Watercolour_Coast_Day.png": 46.8,
-  "Watercolour_Coast_Dusk.png": 46.7,
-  "Watercolour_Forest_Day.png": 78.0,
-  "Watercolour_Forest_Dusk.png": 82.4,
-  "Watercolour_Lake_Day.png": 40.1,
-  "Watercolour_Lake_Dusk.png": 40.1
  }
 }
