@@ -132,17 +132,32 @@ def soften(c, soft, ragged, rng, H, W):
 
 
 # ------------------------------------------------------------------ paper
-def paper(p, s, rng, shade=0.14):
-    """tooth (height map) for granulation and pencil; only a faint raking shade on the raw sheet"""
+def _composite(self):
+    """the sheet as seen: paint, with the graphite underneath it. Graphite is grey, so it only shows where the
+    paint is lighter than the lead (light washes, raw paper) and vanishes under darker passes."""
+    img = self.img
+    if getattr(self, 'has_graphite', False):
+        g = self.graphite[..., None]
+        img = np.minimum(img, img + g * (GRAPHITE - img))
+    return Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))
+
+
+def paper(p, s, rng, shade=0.05):
+    """tooth (height map) for granulation and pencil; only a very faint raking shade on the raw sheet --
+    the tooth shows up where pigment settles into it (see `wash`), not as an even overlay"""
+    import types
     H, W = p.H, p.W
     t = 0.55 * noise(rng, H, W, 2.5 * s, 2) + 0.3 * noise(rng, H, W, 10 * s, 3) + 0.15 * noise(rng, H, W, 60 * s, 3)
     p.tooth = t.astype(np.float32)
     tb = blur(t, max(0.6, 1.0 * s))
     sh = np.gradient(tb, axis=1) + np.gradient(tb, axis=0)
     sh = sh / (np.abs(sh).mean() + 1e-6) * 0.012          # resolution-independent shade amplitude
-    sizing = 0.992 + 0.012 * noise(rng, H, W, 300 * s, 3)   # slightly uneven sizing / tone
+    sizing = 0.993 + 0.01 * noise(rng, H, W, 300 * s, 3)    # slightly uneven sizing / tone
     p.base = (p.base * (1 - shade * 10 * sh[..., None]) * sizing[..., None]).astype(np.float32)
     p.img = p.base.copy()
+    p.graphite = np.zeros((H, W), np.float32)               # pencil lives under the paint (see _composite)
+    p.has_graphite = False
+    p.composite = types.MethodType(_composite, p)
 
 
 # ------------------------------------------------------------------ glaze
@@ -159,9 +174,21 @@ def _colour_field(colour, h, w, rng, charge_px):
     return sum(wts[i][..., None] * c[i] for i in range(k)) / tot[..., None]
 
 
+def _hold_on(hold, c, H, W):
+    if hold is None:
+        return None
+    if isinstance(hold, Crop):
+        return on_box(hold, c)
+    return np.asarray(hold, np.float32)[c.sl]
+
+
 def wash(p, m, colour, k=0.8, s=1.0, rng=None, edge=0.6, edge_px=4.0, gran=0.35, flocc=0.3, var=0.25, var_px=90,
-         pool=0.5, blooms=0, bloom_px=(25, 60), charge_px=120, apply=True, edge_var=0.9, bloom_k=0.5, bloom_zone=None):
-    """transparent glaze over mask `m` (Crop or full array). Returns (Crop-box, transmittance) when apply=False."""
+         pool=0.5, blooms=0, bloom_px=(25, 60), charge_px=120, apply=True, edge_var=0.9, bloom_k=0.5, bloom_zone=None,
+         hold=None, cover=0.3):
+    """transparent glaze over mask `m` (Crop or full array). Returns (Crop-box, transmittance) when apply=False.
+    `hold`: paper reserved while painting (the wash goes round it and dries with an edge against it).
+    The tooth shows only in proportion to the pigment load: pale washes stay smooth, heavy ones granulate.
+    The dried edge is broken and changes width along the rim instead of an even outline."""
     rng = rng if rng is not None else p.rng
     c = crop_of(m) if not isinstance(m, Crop) else m
     if c is None:
@@ -169,6 +196,9 @@ def wash(p, m, colour, k=0.8, s=1.0, rng=None, edge=0.6, edge_px=4.0, gran=0.35,
     pad = int(edge_px * s * 3) + 2
     c = c.grow(pad, p.H, p.W)
     a = c.a
+    hd = _hold_on(hold, c, p.H, p.W)
+    if hd is not None:
+        a = a * (1 - np.clip(hd, 0, 1))
     h, w = a.shape
     if h < 2 or w < 2:
         return None
@@ -179,17 +209,16 @@ def wash(p, m, colour, k=0.8, s=1.0, rng=None, edge=0.6, edge_px=4.0, gran=0.35,
         r = max(0.8, edge_px * s)
         ba = blur(a, r)
         ring = np.clip(a - ba, 0, None) * (a > 0.12)
-        ev = (1 - edge_var) + edge_var * 2 * noise(rng, h, w, 50 * s, 3)        # the dried edge is not even
+        ba2 = blur(a, r * 2.4)
+        ring2 = np.clip(a - ba2, 0, None) * (a > 0.12)
+        wm = smoothstep(0.35, 0.7, noise(rng, h, w, 70 * s, 3))                  # the rim widens and narrows
+        ring = ring * (1 - wm) + ring2 * 0.6 * wm
+        brk = smoothstep(0.38, 0.62, noise(rng, h, w, 40 * s, 3))                 # and is lost in places
+        ev = (1 - edge_var) * 0.7 + edge_var * brk * (0.3 + 1.7 * noise(rng, h, w, 18 * s, 2))
         d = d + edge * 2.4 * ring * ev
         if pool > 0:
             down = np.clip(-np.gradient(ba, axis=0) * r * 2.5, 0, 1)            # lower edges: pigment pools
             d = d + pool * 2.4 * ring * down * ev
-    tooth = p.tooth[sl]
-    if gran > 0:
-        hollow = (0.5 - tooth) * 2.2
-        fl = (noise(rng, h, w, 3.5 * s, 2) - 0.5) * 2 if flocc > 0 else 0
-        dens = np.clip(d * 1.6, 0, 1)
-        d = d * np.clip(1 + gran * (hollow * (0.5 + 0.8 * dens) + flocc * fl * dens), 0.15, None)
     for _ in range(blooms):
         ys, xs = np.nonzero((a > 0.7) if bloom_zone is None else (a > 0.7) & (on_box(crop_of(bloom_zone), c) > 0.5))
         if len(xs) == 0:
@@ -208,12 +237,22 @@ def wash(p, m, colour, k=0.8, s=1.0, rng=None, edge=0.6, edge_px=4.0, gran=0.35,
         rim = np.exp(-((dist - 1) / 0.05) ** 2) * (0.4 + 0.6 * noise(rng, bh, bw, r0 / 4, 2))
         aw = a[ya:yb, xa:xb]
         d[ya:yb, xa:xb] = d[ya:yb, xa:xb] * (1 - bloom_k * 0.55 * inner * aw) + bloom_k * 0.4 * rim * aw
-    d = np.clip(d * k, 0, 1.3)
     cf = np.asarray(colour, np.float32)
     if cf.ndim == 3 and cf.shape[:2] == (p.H, p.W):
         cf = cf[sl]
     col = _colour_field(cf, h, w, rng, charge_px * s)
+    if gran > 0:
+        # pigment load: how dark this wash makes the paper here. Granulation follows the load, so a pale
+        # wash barely shows the tooth and a heavy, pooled one settles hard into the hollows
+        strength = np.mean(1 - np.asarray(col, np.float32), axis=-1)
+        load = np.clip(d * k * strength * 2.4, 0, 1)
+        hollow = (0.5 - p.tooth[sl]) * 2.2
+        fl = (noise(rng, h, w, 3.5 * s, 2) - 0.5) * 2 if flocc > 0 else 0
+        d = d * np.clip(1 + gran * (hollow * (0.08 + 1.25 * load ** 1.5) + flocc * fl * load ** 1.2), 0.15, None)
+    d = np.clip(d * k, 0, 1.3)
     T = np.clip(1 - d[..., None] * (1 - col), 0.03, 1).astype(np.float32)
+    if getattr(p, 'has_graphite', False) and cover > 0:      # each pass softens the lead under it a little
+        p.graphite[sl] *= 1 - cover * np.clip(d, 0, 1)
     if apply:
         p.img[sl] *= T
         return None
@@ -235,7 +274,10 @@ def lift(p, m, amount, s=1.0, rng=None, rough=0.35, rough_px=30, tooth=0.5):
     h, w = a.shape
     sl = c.sl
     am = a * amount * (1 - rough + rough * noise(rng, h, w, rough_px * s, 3)) * (1 + tooth * (p.tooth[sl] - 0.5))
-    am = np.clip(am, 0, 1)[..., None]
+    am = np.clip(am, 0, 1)
+    if getattr(p, 'has_graphite', False):
+        p.graphite[sl] *= 1 - 0.5 * am
+    am = am[..., None]
     p.img[sl] = p.img[sl] + (p.base[sl] - p.img[sl]) * am
 
 
@@ -326,7 +368,12 @@ def pencil(p, lines, s, rng, k=0.55, width=1.3, colour=GRAPHITE, ss=3):
     a = np.asarray(im.resize((x1 - x0, y1 - y0), Image.BOX), np.float32) / 255
     sl = (slice(y0, y1), slice(x0, x1))
     a = a * np.clip(0.35 + 1.3 * p.tooth[sl], 0, 1.2)
-    p.img[sl] *= 1 - np.clip(k * a, 0, 0.9)[..., None] * (1 - colour)
+    if hasattr(p, 'graphite'):
+        g = p.graphite[sl]
+        p.graphite[sl] = 1 - (1 - g) * (1 - np.clip(k * a, 0, 0.9))
+        p.has_graphite = True
+    else:
+        p.img[sl] *= 1 - np.clip(k * a, 0, 0.9)[..., None] * (1 - colour)
 
 
 # ------------------------------------------------------------------ reflections as strokes
@@ -382,41 +429,66 @@ def reflect(m, y_w, s, rng, H, W, squash=0.8, band=(2.5, 7.0), gap=0.3, shift=5.
 
 # ------------------------------------------------------------------ fir tree
 def pine(x, root, h, rng, s=1.0, lean=0.0, sparse=0.0, width=1.0):
-    """one fir, built from drooping, ragged branch marks on a slightly bent trunk.
+    """one fir, built from drooping, ragged branch marks on a trunk that wanders and kinks a little.
+    Each tree gets its own crown profile (slender, broad, top-heavy), tier count and spacing, its own top
+    (straight spire, bent leader, forked or broken top) and a few gaps where branches are missing.
     Returns (polygons, trunk centre-line) in canvas px."""
     top = root - h
-    bow = rng.normal(0, h * 0.012)
-    bare = h * rng.uniform(0.05, 0.14)                    # bare trunk at the foot
+    bow = rng.normal(0, h * 0.02)
+    bare = h * rng.uniform(0.04, 0.16)                    # bare trunk at the foot
+    nW = 14
+    wig = fbm1d(nW, 4, 2, _seed(rng)) * h * rng.uniform(0.004, 0.012)
+    kink_f, kink = rng.uniform(0.3, 0.8), rng.normal(0, h * 0.012) if rng.uniform() < 0.5 else 0.0
 
     def tx(y):
-        f = (root - y) / h
-        return x + lean * h * f + bow * np.sin(np.pi * f)
+        f = np.clip((root - y) / h, 0, 1)
+        return (x + lean * h * f + bow * np.sin(np.pi * f) + np.interp(f, np.linspace(0, 1, nW), wig)
+                + kink * np.clip((f - kink_f) * 6, 0, 1))
 
-    trunk = [(tx(yy), yy) for yy in np.linspace(root, top + h * 0.04, 8)]
+    trunk = [(tx(yy), yy) for yy in np.linspace(root, top + h * 0.04, 12)]
     P = []
-    # spire: thin wavering tip
-    sp_h = h * rng.uniform(0.08, 0.15)
-    tip = (tx(top) + rng.normal(0, h * 0.006), top)
-    P.append(ribbon([tip, (tx(top + sp_h * 0.5), top + sp_h * 0.5), (tx(top + sp_h), top + sp_h)],
-                    h * 0.004, h * 0.035 * width, rng, wob=0.3, step=1.5 * s + 0.5))
+    kind = rng.choice(['spire', 'spire', 'bent', 'fork', 'broken'], p=[0.35, 0.15, 0.2, 0.12, 0.18])
+    prof_exp = rng.uniform(0.6, 1.25)                      # crown profile: <1 broad shoulders, >1 slender spire
+    Lmax = rng.uniform(0.14, 0.26)
+    sp_h = h * rng.uniform(0.06, 0.16)
+    if kind == 'broken':                                   # top snapped off: a flat, ragged crown top
+        top = top + sp_h * 0.8
+        sp_h = h * 0.02
+    tip = (tx(top) + rng.normal(0, h * 0.008), top)
+    if kind == 'broken':
+        pass                                               # no spire: the crown starts in a ragged tuft
+    elif kind == 'bent':
+        bend = rng.choice([-1, 1]) * h * rng.uniform(0.02, 0.05)
+        P.append(ribbon([(tip[0] + bend, top + sp_h * 0.15), (tx(top + sp_h * 0.4) + bend * 0.6, top + sp_h * 0.4),
+                         (tx(top + sp_h * 1.2), top + sp_h * 1.2)], h * 0.006, h * 0.035 * width, rng, wob=0.35, step=1.5 * s + 0.5))
+    else:
+        P.append(ribbon([tip, (tx(top + sp_h * 0.5), top + sp_h * 0.5), (tx(top + sp_h), top + sp_h)],
+                        h * 0.004, h * 0.035 * width, rng, wob=0.3, step=1.5 * s + 0.5))
+    if kind == 'fork':                                     # a second leader beside the first
+        sg = rng.choice([-1, 1])
+        y2 = top + sp_h * rng.uniform(0.7, 1.4)
+        P.append(ribbon([(tx(y2) + sg * h * 0.035, top + sp_h * 0.3), (tx(y2 + sp_h * 0.4) + sg * h * 0.012, y2 + sp_h * 0.4),
+                         (tx(y2 + sp_h), y2 + sp_h)], h * 0.004, h * 0.03 * width, rng, wob=0.35, step=1.5 * s + 0.5))
     # tiers: irregular spacing, getting longer and fuller downward, both sides independent
-    nt = int(rng.integers(9, 15))
-    gaps = rng.uniform(0.6, 1.4, nt)
+    nt = int(rng.integers(7, 16))
+    gaps = rng.uniform(0.5, 1.6, nt)
     pos = np.cumsum(gaps); pos = pos / pos[-1]
-    y_a, y_b = top + sp_h * 0.6, root - bare
+    y_a, y_b = (top + sp_h * 0.6) if kind != 'broken' else top + h * 0.01, root - bare
+    gap_tier = set(rng.choice(nt, int(rng.integers(0, 3)), replace=False).tolist()) if nt > 4 else set()
+    lop = rng.choice([-1, 1]) * rng.uniform(0, 0.35)        # wind-shaped: one side shorter
     for i, f in enumerate(pos):
         ty = y_a + (y_b - y_a) * f
         ff = (ty - top) / h
         for sgn in (-1, 1):
-            if rng.uniform() < sparse * (0.3 + ff):
+            if rng.uniform() < sparse * (0.3 + ff) or (i in gap_tier and rng.uniform() < 0.75):
                 continue                                    # a missing branch here and there
-            Lb = h * (0.025 + 0.2 * ff ** 0.85) * rng.uniform(0.6, 1.3) * width
-            droop = rng.uniform(0.15, 0.6) * Lb
-            th = h * (0.024 + 0.038 * ff) * rng.uniform(0.7, 1.3)
+            Lb = h * (0.025 + Lmax * ff ** prof_exp) * rng.uniform(0.55, 1.35) * width * (1 + lop * sgn)
+            droop = rng.uniform(0.1, 0.7) * Lb
+            th = h * (0.022 + 0.04 * ff) * rng.uniform(0.6, 1.4)
             bx = tx(ty)
             tipx, tipy = bx + sgn * Lb, ty + droop
             # upper edge bows up a little; under side is a fringe of needle tufts
-            upper = spline([(bx, ty - th * 0.6), (bx + sgn * Lb * 0.5, ty - th * 0.3 + droop * 0.25), (tipx, tipy)], 5)
+            upper = spline([(bx, ty - th * 0.6), (bx + sgn * Lb * 0.5, ty - th * rng.uniform(0.1, 0.5) + droop * 0.25), (tipx, tipy)], 5)
             nf = max(3, int(Lb / max(2.5 * s, th * 0.5)))
             under = []
             for j in range(nf + 1):
@@ -424,14 +496,82 @@ def pine(x, root, h, rng, s=1.0, lean=0.0, sparse=0.0, width=1.0):
                 px_ = bx + sgn * Lb * u
                 py_ = ty + droop * u ** 1.4 + th * (0.5 + 0.6 * (1 - u))
                 if j % 2 == 1:
-                    py_ += th * rng.uniform(0.3, 0.9)
-                under.append((px_ + rng.normal(0, th * 0.2), py_))
+                    py_ += th * rng.uniform(0.2, 1.0)
+                under.append((px_ + rng.normal(0, th * 0.25), py_))
             under.append((bx, ty + th * 1.2))
             P.append(np.vstack([upper, np.asarray(under, np.float32)]))
         # fill between trunk and branch roots so the crown is not a ladder
         P.append(ribbon([(tx(ty - h * 0.03), ty - h * 0.03), (tx(ty + h * 0.05), ty + h * 0.05)],
                         h * (0.02 + 0.04 * ff) * width, h * (0.03 + 0.05 * ff) * width, rng, wob=0.4, step=2 * s + 0.5))
     return P, trunk
+
+
+# ------------------------------------------------------------------ wet effects
+def bleed(c, px, rng, H, W, amt=0.7, up=False):
+    """the wet edge of a mark running into wet paper below it (or above, `up`): irregular fingers of paler
+    paint, each column running its own distance. Returns a new Crop: the mark plus its bleed."""
+    if c is None:
+        return None
+    c = c.grow(int(px * 2.2) + 3, H, W)
+    a = c.a if not up else c.a[::-1]
+    h, w = a.shape
+    reach = px * (0.25 + 1.5 * (fbm1d(w, max(3.0, px * 0.7), 3, _seed(rng)) * 0.5 + 0.5) ** 1.6)
+    dec = np.exp(-1.0 / np.maximum(reach, 0.5)).astype(np.float32)
+    run = a.copy()
+    for y in range(1, h):
+        np.maximum(run[y], run[y - 1] * dec, out=run[y])
+    fr = np.clip(run - a, 0, 1)
+    fr = blur(fr, max(0.6, px * 0.12))
+    fr = fr * (0.4 + 0.8 * noise(rng, h, w, max(3, px * 0.5), 3))
+    out = np.maximum(a, np.clip(fr * amt, 0, 1))
+    c.a = (out if not up else out[::-1]).astype(np.float32)
+    return c
+
+
+def drybrush(c, p, rng, s, dry=0.5, scale=30):
+    """a mark dragged with a drier brush: it catches the tooth tops and skips the hollows, more at its edges"""
+    if c is None:
+        return None
+    h, w = c.a.shape
+    t = p.tooth[c.sl] + (noise(rng, h, w, scale * s, 3) - 0.5) * 0.7
+    th = 0.25 + 0.5 * dry
+    edge_w = np.clip(1 - c.a, 0, 1)
+    gate = smoothstep(th - 0.12, th + 0.12, t + 0.35 * (1 - edge_w) - 0.2)
+    return Crop(c.x0, c.y0, (c.a * gate).astype(np.float32))
+
+
+def backrun(p, S, cx, cy, rx, ry, colour, rng, k=0.12, lift_amt=0.1, edge=2.2, hold=None):
+    """a cauliflower back-run (bloom): water crept back into a drying wash, pushed the pigment out and
+    left a pale centre inside a frilly, dark, hard rim. Design px."""
+    pts_ = blob_pts(S.x(cx), S.y(cy), S(rx), S(ry), rough=rng.uniform(0.25, 0.45), n=140, seed=_seed(rng), rot=rng.normal(0, 0.3))
+    m = polys([pts_], p.H, p.W, ss=1, pad=int(S(6)) + 2)
+    if m is None:
+        return
+    m = soften(m, S(rng.uniform(1.5, 3)), 0.9, rng, p.H, p.W)
+    h, w = m.a.shape
+    inner = Crop(m.x0, m.y0, blur(m.a, S(max(rx, ry) * 0.25)) * m.a)
+    lift(p, inner, lift_amt, S.s, rng, rough=0.5, rough_px=max(4, rx * 0.4), tooth=0.3)
+    wash(p, m, colour, k, S.s, rng, edge=edge, edge_px=1.3, gran=0.2, var=0.5, var_px=max(4, rx * 0.5), pool=0.3,
+         edge_var=0.8, hold=hold, cover=0.0)
+
+
+def tideline(p, S, x0, x1, y, amp, colour, rng, k=0.06, edge=2.0, depth=70, hold=None):
+    """a dried tide line: one pass of a wash dried before the next met it, leaving a long, wandering,
+    broken hard line with a faint step in tone above it. Design px; fades out at both ends."""
+    H, W = p.H, p.W
+    X0c, X1c = int(max(0, S.x(x0))), int(min(W, S.x(x1)))
+    Y0c, Y1c = int(max(0, S.y(y - depth - amp * 2))), int(min(H, S.y(y + amp * 2) + 4))
+    if X1c - X0c < 4 or Y1c - Y0c < 4:
+        return
+    w = X1c - X0c
+    xd = (np.arange(X0c, X1c, dtype=np.float32) - S.ox) / S.s
+    line = y + amp * fbm1d(w, max(4, S(120)), 4, _seed(rng)) + 0.3 * amp * fbm1d(w, max(3, S(14)), 2, _seed(rng))
+    yd = (np.arange(Y0c, Y1c, dtype=np.float32)[:, None] - S.oy) / S.s
+    m = np.clip((line[None, :] - yd) / 1.2, 0, 1) * np.clip((yd - (line[None, :] - depth)) / depth, 0, 1)
+    ends = np.clip((xd - x0) / ((x1 - x0) * 0.25), 0, 1) * np.clip((x1 - xd) / ((x1 - x0) * 0.25), 0, 1)
+    m = m * ends[None, :]
+    wash(p, Crop(X0c, Y0c, m.astype(np.float32)), colour, k, S.s, rng, edge=edge, edge_px=1.2, gran=0.15, var=0.4, var_px=40,
+         pool=0.6, edge_var=0.7, hold=hold, cover=0.0)
 
 
 # ------------------------------------------------------------------ clouds
@@ -523,7 +663,7 @@ def bird(p, S, x, y, sc, colour, rng, k=None, span=15.0):
 
 
 def sky(p, S, rng, YD, y_end, top, bot, k, charge=None, blooms=2, bloom_band=(0.65, 0.92), seed=0, ragged=26, gran=0.25,
-        apply=True):
+        apply=True, hold=None, var=0.4, bloom_k=0.5):
     """wet-in-wet sky wash: colour drifting between top and bottom, a third colour charged in, a ragged lower
     boundary (crisp where it dried, lost where it met the next wash) and a couple of back-runs low down"""
     from core import fbm1d as _f
@@ -540,5 +680,5 @@ def sky(p, S, rng, YD, y_end, top, bot, k, charge=None, blooms=2, bloom_band=(0.
         ch = smoothstep(0.55, 0.85, noise(rng, H, W, S(220), 3)) * 0.6
         cf = cf * (1 - ch[..., None]) + charge * ch[..., None]
     zone = ((YD > y_end * bloom_band[0]) & (YD < y_end * bloom_band[1])).astype(np.float32)
-    return wash(p, m, cf, k, S.s, rng, edge=0.25, edge_px=6, gran=gran, flocc=0.2, var=0.3, var_px=150, pool=0.6,
-                blooms=blooms, bloom_px=(45, 90), bloom_k=0.45, bloom_zone=zone, apply=apply)
+    return wash(p, m, cf, k, S.s, rng, edge=0.25, edge_px=6, gran=gran, flocc=0.2, var=var, var_px=120, pool=0.6,
+                blooms=blooms, bloom_px=(45, 90), bloom_k=bloom_k, bloom_zone=zone, apply=apply, hold=hold, charge_px=100)

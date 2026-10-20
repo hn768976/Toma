@@ -93,7 +93,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         L.clear(L.poly(band(400, HOR)), chatter=0.35, angle=2)
         stg('sky low cleared')
         # V-gouge streaks: few, bold, arcing over the glow, carved more and wider toward the horizon
-        skyd = lambda x, y: np.clip((y - 105) / 300, 0.0, 1) ** 1.25
+        skyd = lambda x, y: np.clip((y - 100) / 250, 0.0, 1) ** 1.15
         for (a, b) in ((Y0 - 40, 230), (230, 330), (330, 430)):
             gouge_rows(L, S, rng, band(40, 430), (X0, 40, X1, 430), spacing=(12, 25), length=(60, 380), gap=(10, 110),
                        width=(3.8, 8.5), cut=True, bend=sky_bend, slip=0.05,
@@ -148,12 +148,12 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         stg = st if stage else (lambda *a, **k: None)
         L.clear(L.poly(far_poly), chatter=0.3, angle=0)
         stg('far cleared')
-        ridge_line(L, S, rng, list(zip(d.ux(FKX), d.uy(FKY))), 2.8, breaks=0.12, seg=(30, 120), smooth=False)
+        ridge_line(L, S, rng, list(zip(d.ux(FKX), d.uy(FKY))), 5.4, breaks=0.15, seg=(30, 140), gap=(4, 10), smooth=False)
         stg('far contour')
         fbend = lambda x, y: (far_d(x) - far_d(1000)) * np.clip(1.15 - (y - far_d(x)) / 260, 0.35, 1)
         for (a, b) in ((X0, 960), (960, X1)):
-            gouge_rows(L, S, rng, far_poly, (X0, 200, X1, HOR), spacing=(10, 24), length=(16, 120), gap=(14, 90),
-                       width=(2.6, 4.2), cut=False, bend=fbend, tool='brush', end=0.5,
+            gouge_rows(L, S, rng, far_poly, (X0, 200, X1, HOR), spacing=(12, 28), length=(12, 150), gap=(14, 120),
+                       width=(4.8, 6.6), cut=False, bend=fbend, tool='brush', end=0.65,
                        density=lambda x, y, a=a, b=b: (a <= x < b) * np.clip(
                            0.08 + 0.4 * np.exp(-(y - far_d(x)) / 32) + 0.22 * (x < GX - 300), 0, 0.65))
             stg('far ridges')
@@ -172,7 +172,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     def g_near(stage=True):
         rng = group('near')
         stg = st if stage else (lambda *a, **k: None)
-        L.outline(L.poly(near_poly), S(2.8))
+        L.outline(L.poly(near_poly), S(3.6))
         L.leave(L.poly(near_poly))
         stg('near block')
         quiet = lambda x, y: 1 - 0.65 * np.exp(-((x - 1680) / 230) ** 2) * (y > 520)   # calm behind the right pines
@@ -224,8 +224,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         # swells: broken ridges left standing, sparse near the shore, bolder and closer toward us
         wbend = lambda x, y: 3 * np.sin(x / 150 + y / 31) + 2 * np.sin(x / 61 - y / 17)
         for (a, b) in ((HOR, 790), (790, 940), (940, Y1 + 40)):
-            gouge_rows(L, S, rng, water_poly, (X0, HOR, X1, Y1), spacing=(8, 20), length=(24, 240), gap=(10, 110),
-                       width=(2.6, 4.8), cut=False, bend=wbend, tool='brush', end=0.45, cluster=0.6,
+            gouge_rows(L, S, rng, water_poly, (X0, HOR, X1, Y1), spacing=(10, 26), length=(16, 300), gap=(10, 150),
+                       width=(4.8, 7.4), cut=False, bend=wbend, tool='brush', end=0.6, cluster=0.75,
                        density=lambda x, y, a=a, b=b: (a <= y < b) * np.clip(
                            0.1 + 0.85 * max(0.0, (y - HOR) / (1080 - HOR)) ** 1.4, 0, 0.9))
             st('ripple ridges')
@@ -268,7 +268,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
             x = rng.uniform(X0, X1 - 220); ln = rng.uniform(70, 300)
             y = rng.uniform(ytop(x) + 6, ybot(x) - 8)
             ridge_line(L, S, rng, [(x, y), (x + ln * rng.uniform(0.35, 0.65), y - rng.uniform(1, 5)), (x + ln, y + rng.uniform(-2, 2))],
-                       rng.uniform(2.6, 4.0), breaks=0.45, seg=(20, 90), gap=(4, 16))
+                       rng.uniform(5.2, 6.8), breaks=0.45, seg=(20, 90), gap=(5, 18))
             if i % 3 == 2: st('mist wisps')
         st('mist', major=True)
 
@@ -281,10 +281,10 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                  (BX + 5, BY - 38), (BX + 4, BY - 24), (BX + 7, BY - 12)]
         head = [(BX - 5 + 8.5 * np.cos(t) * (1 + 0.12 * np.sin(3 * t + 1)), BY - 62 + 8 * np.sin(t)) for t in np.linspace(0, 6.3, 14)]
         parts = [Pk(hull), Pk(rower), np.array(S.pts(head), np.float32),
-                 L.stroke(S.pts([(BX - 40, BY - 40), (BX + 12, BY - 25), (BX + 74, BY + 15)]), S(4.6), 'brush', end=S(3.4), jitter=0.2),
+                 L.stroke(S.pts([(BX - 40, BY - 40), (BX + 12, BY - 25), (BX + 74, BY + 15)]), S(6.4), 'brush', end=S(5.4), jitter=0.2),
                  L.stroke(S.pts([(BX + 64, BY + 8), (BX + 80, BY + 20)]), S(7), 'brush', end=S(3), jitter=0.2)]   # blade
         bm = L.mask_of(parts)
-        L.outline(bm, S(3))
+        L.outline(bm, S(3.8))
         L.leave(bm)
         st('boat')
         L.gouge(S.pts([(BX - 80, BY - 14), (BX - 20, BY - 6), (BX + 40, BY - 7), (BX + 82, BY - 16)]), S(2.4), 'v',
@@ -301,7 +301,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                 xb = min(BX + w * 0.9, xa + ln)
                 if rng.random() < 0.85 - 0.08 * k:
                     L.gouge(S.pts([(xa, y + rng.normal(0, 0.6)), (xb, y + rng.normal(0, 0.8))]),
-                            S((4.2 - k * 0.45) * rng.uniform(0.8, 1.2)), 'brush', end=S(rng.uniform(1.4, 3)), cut=False)
+                            S((6.4 - k * 0.3) * rng.uniform(0.85, 1.2)), 'brush', end=S(rng.uniform(3.8, 5.2)), cut=False)
                 xa = xb + rng.uniform(3, 12)
             y += rng.uniform(8, 13)
         st('boat reflection')
@@ -311,8 +311,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         rng = group('birds')
         for (bx, by, sc) in [(1380, 250, 1.0), (1440, 222, 0.8), (1505, 262, 0.7), (1590, 205, 0.9), (1665, 242, 0.6)]:
             k = sc * 1.4 * rng.uniform(0.85, 1.15)
-            wd = 5.0 * max(k, 0.7) * (0.8 if day else 1.0)       # daytime: black birds left standing on the pale sky
-            bird(L, S, rng, bx + rng.normal(0, 6), by + rng.normal(0, 5), 20 * k, wd, cut=not day)
+            wd = 6.6 * max(k, 0.85)                              # daytime: black birds left standing on the pale sky
+            bird(L, S, rng, bx + rng.normal(0, 6), by + rng.normal(0, 5), 25 * k, wd, cut=not day)
             st('bird')
         st('birds', major=True)
 
@@ -326,14 +326,14 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
             lean = rng.normal(10, 12)
             base = max(1084, Y1 + 4)
             reeds.append(L.stroke(S.pts(spline([(x, base), (x + lean * 0.4, 1080 - h * 0.5), (x + lean, 1080 - h)], 8)),
-                                  S(5), 'brush', end=S(1.2)))
+                                  S(rng.uniform(6.5, 8)), 'brush', end=S(rng.uniform(2.5, 4))))
             if rng.random() < 0.5:
                 q = (x + lean * 0.3, 1080 - h * 0.35); side = rng.choice([-1, 1])
-                reeds.append(L.stroke(S.pts([q, (q[0] + side * 30, q[1] - 40), (q[0] + side * 55, q[1] - 46)]), S(6), 'v'))
+                reeds.append(L.stroke(S.pts([q, (q[0] + side * 30, q[1] - 40), (q[0] + side * 55, q[1] - 46)]), S(7.5), 'v'))
         third = (len(reeds) + 2) // 3
         for j in range(3):
             rmk = L.mask_of(reeds[j * third:(j + 1) * third])
-            L.outline(rmk, S(2.4))
+            L.outline(rmk, S(3.4))
             L.leave(rmk)
             st('reeds')
         st('reeds', major=True)

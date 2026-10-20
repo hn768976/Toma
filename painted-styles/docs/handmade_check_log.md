@@ -65,3 +65,9 @@ Findings caused by my compositor (fixed by me): water shimmer displacement too s
 glass-only multiplicative brightening; ink-wash mist matte carried tree residue → ghost trees when drifting → correction
 may only lighten; all stills shared one paper texture (same seed) → per-scene seed.
 Remaining findings sent back to the style agents (round 2 fixes below).
+
+### Round 2 fixes — Linocut
+Minimum key-block line ~5–7.5 design px (anything under 4.6 px prints broken); finest details simplified (sun ring,
+lighthouse posts, glazing bars); visible ink mottle, starved paper grain, fuzzy edges and gouge chatter in solids;
+colour block offset (10, −7) px and turned 0.22° so it overlaps/gaps visibly; every cottage individual; gouge rows
+with per-row scale, short flicks/jabs and patchy density.

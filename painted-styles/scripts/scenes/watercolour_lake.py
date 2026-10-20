@@ -174,6 +174,23 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
                        (CX - S(60), CY - S(11)), (CX - S(93), CY - S(17))], 8)
     hull_pts = K.wobble_line(hull_pts, S(0.7), g, step=S(3), scale=8)
 
+    # reeds: blade centre lines computed up front (the pencil follows them); own generator, so painting
+    # or skipping any other group never changes them
+    gr = group_rng(seed, 'reeds geometry')
+    reeds_geo = []          # (centre line, base width, height, lean, batch, broken-at)
+    xa_r = min(-10, X0 + 10)
+    n_r = int(64 * (300 - xa_r) / 310)
+    for i in range(n_r):
+        xd = 300 - (300 - xa_r) * gr.uniform(0, 1) ** 1.3
+        x = S.x(xd)
+        yb = S.y(S.Y1 + 4) - S(gr.uniform(0, 26)) * np.clip(1 - (xd - 120) / 200, 0, 1)
+        hgt = S(gr.uniform(50, 210) * (1.1 - max(xd, 0) / 420) + (S.Y1 - 1080))
+        lean = gr.normal(S(8), S(16)) * (1.5 if gr.uniform() < 0.2 else 1)
+        cv = spline([(x, yb), (x + lean * gr.uniform(0.1, 0.35), yb - hgt * 0.5), (x + lean, yb - hgt)], 10)
+        w0 = S(gr.uniform(2.0, 11.0)) * (1.0 if gr.uniform() < 0.8 else 1.5)
+        brk = gr.uniform(0.45, 0.8) if gr.uniform() < 0.12 else None
+        reeds_geo.append((cv, w0, hgt, lean, i % 3, brk))
+
     # ================= pencil underdrawing: the whole composition, light and loose, before any paint
     def pen(name):
         return group_rng(seed, 'pencil ' + name)
@@ -211,36 +228,42 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         for batch, name in ((pines_L, 'pencil pines'), (pines_R, 'pencil island')):
             lines = []
             for q in batch:
-                L, R = contour(q['P'])
-                tp = q['trunk'][-1]
-                lines.append([tp] + L[1:]); lines.append([tp] + R[1:])
-                lines.append([q['trunk'][0], q['trunk'][-1]])
+                # trunk and a few branch gestures, all inside the tree's own silhouette (no outline round it)
+                tr = np.asarray(q['trunk'], np.float32)
+                cut = int(r.integers(0, 3))
+                lines.append(tr[cut:len(tr) - int(r.integers(0, 2))])
+                L, R = contour(q['P'], 9)
+                for (lx, ly), (rx_, ry_) in zip(L[2:], R[2:]):
+                    if r.uniform() < 0.4:
+                        continue
+                    xt = float(np.interp(ly, tr[::-1, 1], tr[::-1, 0]))
+                    for ex_ in ((lx,) if r.uniform() < 0.5 else (rx_,)):
+                        f_ = r.uniform(0.35, 0.6)
+                        lines.append([(xt, ly - q['h'] * 0.01), (xt + (ex_ - xt) * f_, ly + q['h'] * 0.015)])
             if batch is pines_L:
-                lines.append(S.pts([(X0 - 20, 632), (200, 632), (540, 640), (600, 652)]))
+                lines.append(S.pts([(X0 - 20, 640), (200, 640), (540, 645), (600, 650)]))
             else:
-                lines.append(S.pts([(1470, 651), (1500, 641), (1820, 640), (1850, 651)]))
-            K.pencil(p, lines, s, r, k=0.5)
+                lines.append(S.pts([(1480, 649), (1520, 645), (1820, 645), (1845, 650)]))
+            K.pencil(p, lines, s, r, k=0.45)
             st(name)
     else:
         st('pencil pines'); st('pencil island')
     lines = []
     if 'boat' in inc:
         r = pen('boat')
-        lines.append(hull_pts)
-        lines.append([(CX - S(2), CY - S(9)), (CX - S(7), CY - S(24)), (CX - S(12), CY - S(36))])
-        lines.append([(CX - S(4), CY - S(11)), (CX - S(16), CY - S(17)), (CX - S(25), CY - S(14))])
-        hd = blob_pts(CX - S(15), CY - S(46), S(6.5), S(7.5), rough=0.2, n=14, seed=seed + 4)
+        lines.append(hull_pts[::2])
+        lines.append([(CX - S(3), CY - S(9)), (CX - S(7), CY - S(24)), (CX - S(11), CY - S(34))])
+        lines.append([(CX - S(5), CY - S(11)), (CX - S(16), CY - S(16))])
+        hd = blob_pts(CX - S(15), CY - S(45), S(4.5), S(5), rough=0.2, n=10, seed=seed + 4)
         lines.append(np.vstack([hd, hd[:2]]))
-        lines.append([(CX - S(34), CY - S(30)), (CX + S(72), CY + S(22))])
-        K.pencil(p, lines, s, pen('boat draw'), k=0.5); lines = []
+        lines.append([(CX - S(28), CY - S(29)), (CX + S(64), CY + S(18))])
+        K.pencil(p, lines, s, pen('boat draw'), k=0.4); lines = []
     if 'reeds' in inc:
         r2 = pen('reeds')
-        lines.append(S.pts([(X0 - 10, 1036), (120, 1030), (250, 1060)]))
-        for _ in range(9):
-            xb = r2.uniform(min(-10, X0 + 10), 280)
-            ht = r2.uniform(90, 200)
-            lines.append(S.pts([(xb, S.Y1 + 4), (xb + r2.normal(4, 6), S.Y1 - ht * 0.5), (xb + r2.normal(10, 10), S.Y1 - ht)]))
-        K.pencil(p, lines, s, pen('reeds draw'), k=0.5)
+        for (c_, w0_, h_, *_rest) in reeds_geo[::4]:
+            if r2.uniform() < 0.6:
+                lines.append(c_[:max(3, int(len(c_) * r2.uniform(0.5, 0.9)))])
+        K.pencil(p, lines, s, pen('reeds draw'), k=0.4)
     st('pencil boat and reeds', True)
 
     # ================= sky: wet-in-wet wash laid top-down, colour charged in, a dried tide line and back-runs
@@ -256,8 +279,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         charge = smoothstep(0.55, 0.85, K.noise(r, CH, CW, S(220), 3)) * 0.6
         cfield = cfield * (1 - charge[..., None]) + hexc(C['sky_charge']) * charge[..., None]
         box, T = K.wash(p, sky_m, cfield, C['sky_k'] * 1.05, s, r, edge=0.25, edge_px=6, gran=0.25, flocc=0.2,
-                        var=0.3, var_px=150, pool=0.6, blooms=2, bloom_px=(45, 90), apply=False,
-                        bloom_k=0.45, bloom_zone=((YD > 235) & (YD < 320)).astype(np.float32))
+                        var=0.42, var_px=110, pool=0.6, blooms=2, bloom_px=(45, 85), apply=False,
+                        bloom_k=0.5, bloom_zone=((YD > 150) & (YD < 320)).astype(np.float32), charge_px=90)
         yb = (np.arange(box.a.shape[0])[:, None] + box.y0 - S.oy) / s
         xb_ = (np.arange(box.a.shape[1])[None, :] + box.x0 - S.ox) / s
         # (the wash goes on in three passes from the top; the parts multiply up to the full wash)
@@ -276,7 +299,14 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         g2 = glow * (0.75 + 0.5 * K.noise(r, CH, CW, S(120), 3))
         K.lift(p, g2, C['glow_lift'], s, r, rough=0.2, rough_px=80)
         K.wash(p, g2, col('glow'), C['glow_k'], s, r, edge=0.0, gran=0.08, var=0.15)
-        st('sky glow', True)
+        st('sky glow')
+        # where one pass dried before the next met it: long broken tide lines, and two cauliflower back-runs
+        K.tideline(p, S, X0 + r.uniform(60, 300), r.uniform(1000, 1350), 122 + r.uniform(-8, 8), 16, col('sky_charge'), r, k=0.07)
+        K.tideline(p, S, r.uniform(700, 1000), X1 - r.uniform(0, 200), 252 + r.uniform(-8, 8), 13, col('sky_top'), r, k=0.06)
+        for (bx_, by_, rx_) in ((r.uniform(180, 420), r.uniform(235, 270), r.uniform(45, 70)),
+                                (r.uniform(1480, 1760), r.uniform(70, 130), r.uniform(55, 85))):
+            K.backrun(p, S, bx_, by_, rx_, rx_ * r.uniform(0.5, 0.75), col('sky_top'), r, k=0.07, lift_amt=0.05, edge=1.6)
+        st('sky blooms', True)
 
     # ================= clouds: each one different -- streaks, puffs, wisps; lost-and-found edges
     if 'clouds' in inc:
@@ -350,8 +380,11 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
                 if not sub:
                     continue
                 for q in sub:
-                    tr = K.ribbon(spline(q['trunk'], 4), max(S(2), q['h'] * 0.03), max(S(0.8), q['h'] * 0.008), r, wob=0.35, step=S(2))
-                    K.wash(p, K.polys([tr], CH, CW), col('trunk'), 0.8, s, r, edge=0.4, edge_px=1.5, gran=0.3, var=0.3, var_px=20)
+                    # trunk: only the lower part, a broken stroke -- it shows in the gaps, not as a skewer
+                    trk = q['trunk'][:int(len(q['trunk']) * r.uniform(0.45, 0.75))]
+                    tr = K.ribbon(spline(trk, 4), max(S(1.6), q['h'] * 0.026), max(S(0.7), q['h'] * 0.01), r, wob=0.5, step=S(2))
+                    trm = K.drybrush(K.soften(K.polys([tr], CH, CW), S(0.6), 0.5, r, CH, CW), p, r, s, dry=0.3, scale=8)
+                    K.wash(p, trm, col('trunk'), 0.6, s, r, edge=0.4, edge_px=1.2, gran=0.3, var=0.4, var_px=10)
                 cum = prev.copy()
                 for q in sub:
                     cum = np.maximum(cum, K.on_box(q['m'], ubox))
@@ -383,11 +416,24 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         p.rng = group_rng(seed, 'water')
         r = p.rng
         water = np.clip((YY - y0) / 3, 0, 1)
-        K.wash(p, water * np.exp(-(YY - y0) / S(200)), col('w_top'), C['w_top_k'], s, r, edge=0.0, gran=0.15, var=0.2, var_px=160)
+
+        def ctr(rr):
+            f = rr.uniform(0, 1) ** 0.8
+            return rr.uniform(X0 - 60, X1 - 80), Y0 + 12 + f * (S.Y1 - Y0 - 20), f
+        nscale = (X1 - X0) / 1920 * (S.Y1 - Y0) / 440
+        # paper reserved for the light on the water before any paint goes on: few, broken, soft-edged, in the
+        # paper's own colour (the washes go round them and dry with an edge against them)
+        marks = K.dash_clusters(r, int(6 * nscale), ctr, per=(1, 4), length=(40, 230), width=(2.5, 7), spread=(45, 6))
+        glint = K.soften(K.polys(K.dash_polys(S, marks, r, curl=0.4), CH, CW), S(1.8), 0.85, r, CH, CW)
+        glint = K.drybrush(glint, p, r, s, dry=0.4, scale=18)
+        glint.a = glint.a * (0.55 + 0.45 * K.noise(r, *glint.a.shape, S(30), 2))
+        K.wash(p, water * np.exp(-(YY - y0) / S(200)), col('w_top'), C['w_top_k'], s, r, edge=0.0, gran=0.15, var=0.2, var_px=160,
+               hold=glint)
         st('water horizon')
         dm = water * np.clip(0.1 + (YY - y0) / S(440), 0, 1) ** 1.2
         box, T = K.wash(p, dm, [col('w_deep'), col('w_deep'), col('r_far')], 0.8, s, r, edge=0.0, gran=0.4, flocc=0.35,
-                        var=0.25, var_px=140, apply=False)
+                        var=0.25, var_px=140, apply=False, hold=glint)
+        T = np.maximum(T, (K.on_box(glint, box) * 0.9)[..., None])
         # horizontal brush passes: the density changes a little from pass to pass
         hh, ww = box.a.shape
         yb = np.arange(hh, dtype=np.float32)[:, None] + box.y0
@@ -402,39 +448,33 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
         st('water depth')
         R = K.reflect(far_m * (YY < y0), y0, s, r, CH, CW, squash=0.85, band=(5, 12), gap=0.15, shift=2, fade=0.45, gate_px=140,
                       jit=0.08, vsoft=5)
-        K.wash(p, R, col('r_far'), 0.38, s, r, edge=0.35, edge_px=2, gran=0.3, var=0.3)
+        K.wash(p, R, col('r_far'), 0.38, s, r, edge=0.35, edge_px=2, gran=0.3, var=0.3, hold=glint)
         st('reflect far')
         R = K.reflect(near_m * (YY < y0), y0, s, r, CH, CW, squash=0.8, band=(4, 10), gap=0.2, shift=2, fade=0.5, gate_px=110,
                       jit=0.1, vsoft=4)
-        K.wash(p, R, col('r_near'), 0.55, s, r, edge=0.4, edge_px=2, gran=0.35, var=0.3)
+        K.wash(p, R, col('r_near'), 0.55, s, r, edge=0.4, edge_px=2, gran=0.35, var=0.3, hold=glint)
         st('reflect near')
         R = K.reflect(allp, y0 + S(8), s, r, CH, CW, squash=0.72, band=(2, 6), gap=0.35, shift=3, fade=0.6, gate_px=18,
                       jit=0.2, vsoft=1.5)
-        K.wash(p, R, col('r_pine'), 0.6, s, r, edge=0.45, edge_px=1.5, gran=0.4, var=0.35, var_px=30)
+        K.wash(p, R, col('r_pine'), 0.6, s, r, edge=0.45, edge_px=1.5, gran=0.4, var=0.35, var_px=30, hold=glint)
         st('reflect pines')
         R = K.reflect(glow * (YY < y0), y0, s, r, CH, CW, squash=1.0, band=(2, 6), gap=0.45, shift=8, fade=0.5, gate_px=30)
         K.wash(p, R, col('r_glow'), 0.3, s, r, edge=0.0, gran=0.1)
         K.lift(p, R, 0.3, s, r, rough=0.3)
         st('reflect glow')
 
-        def ctr(rr):
-            f = rr.uniform(0, 1) ** 0.8
-            return rr.uniform(X0 - 60, X1 - 80), Y0 + 12 + f * (S.Y1 - Y0 - 20), f
-        nscale = (X1 - X0) / 1920 * (S.Y1 - Y0) / 440
         for b in range(2):
-            marks = K.dash_clusters(r, int(14 * nscale), ctr, per=(2, 6), length=(80, 300), width=(2.2, 6), spread=(40, 7))
-            m = K.polys(K.dash_polys(S, marks, r), CH, CW)
-            m = K.soften(m, S(0.8), 0.5, r, CH, CW)
-            dry = smoothstep(0.25, 0.6, p.tooth[m.sl] + (K.noise(r, *m.a.shape, S(40), 2) - 0.5) * 0.6)
-            m.a = m.a * (0.45 + 0.55 * dry)
-            K.lift(p, m, 0.85 if b == 0 else 0.6, s, r, rough=0.25, tooth=0.8)
             # broad scrubbed-out sheens (a damp flat brush dragged sideways), soft-edged and uneven
             marks = K.dash_clusters(r, int(4 * nscale), ctr, per=(1, 3), length=(220, 520), width=(7, 16), spread=(60, 10))
             m = K.soften(K.polys(K.dash_polys(S, marks, r, curl=0.1), CH, CW), S(4), 0.6, r, CH, CW)
-            K.lift(p, m, 0.28, s, r, rough=0.5, rough_px=20, tooth=0.6)
-            marks = K.dash_clusters(r, int(8 * nscale), ctr, per=(1, 4), length=(50, 180), width=(1.2, 3.2), spread=(30, 6))
+            K.lift(p, m, 0.25, s, r, rough=0.5, rough_px=20, tooth=0.6)
+            # a few small blotted lights, broken by the tooth -- never crisp white strokes
+            marks = K.dash_clusters(r, int(4 * nscale), ctr, per=(1, 3), length=(30, 120), width=(2, 4.5), spread=(30, 5))
+            m = K.soften(K.polys(K.dash_polys(S, marks, r, curl=0.4), CH, CW), S(1.5), 0.8, r, CH, CW)
+            K.lift(p, K.drybrush(m, p, r, s, dry=0.55, scale=14), 0.45, s, r, rough=0.45, rough_px=8, tooth=0.8)
+            marks = K.dash_clusters(r, int(8 * nscale), ctr, per=(1, 4), length=(50, 180), width=(1.2, 3.6), spread=(30, 6))
             m = K.polys(K.dash_polys(S, marks, r), CH, CW)
-            K.wash(p, K.soften(m, S(0.8), 0.4, r, CH, CW), col('w_deep'), 0.4, s, r, edge=0.5, edge_px=1.2, gran=0.3)
+            K.wash(p, K.soften(m, S(0.9), 0.5, r, CH, CW), col('w_deep'), 0.4, s, r, edge=0.5, edge_px=1.2, gran=0.3, hold=glint)
             st(f'water marks {b + 1}', b == 1)
 
     # ================= mist: paper lifted back with a damp brush/tissue in ragged veils, thicker on the left
@@ -464,49 +504,69 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     if 'boat' in inc:
         p.rng = group_rng(seed, 'boat')
         r = p.rng
-        hm = K.soften(K.polys([hull_pts], CH, CW, ss=3), S(0.8), 0.3, r, CH, CW)
-        K.wash(p, hm, [col('hull'), col('hull'), col('hull_in')], 0.95, s, r, edge=0.6, edge_px=1.5, gran=0.35,
-               var=0.35, var_px=20, charge_px=25)
+        hm = K.soften(K.polys([hull_pts], CH, CW, ss=3), S(0.9), 0.5, r, CH, CW)
+        # hull: a warm first stroke laid quickly, its wet lower edge bleeding into the damp water
+        K.wash(p, K.bleed(hm, S(7), r, CH, CW, amt=0.5), [col('hull'), col('hull'), col('oar')], 0.75, s, r, edge=0.7, edge_px=1.4,
+               gran=0.4, var=0.5, var_px=12, charge_px=14, pool=0.8)
+        # then the dark keel dropped in along the bottom while it was still wet: soft inside, running below
+        keel = K.polys([K.ribbon(spline([(CX - S(80), CY - S(9)), (CX - S(30), CY + S(3)), (CX + S(35), CY + S(3)),
+                                         (CX + S(82), CY - S(9))], 8), S(4), S(6), r, wob=0.7, peak=0.45, step=S(2), ends=0.3)],
+                       CH, CW, ss=2)
+        keel = K.soften(keel, S(2.2), 0.7, r, CH, CW)
+        keel.a = keel.a * K.on_box(K.bleed(hm, S(2), r, CH, CW, amt=0.9), keel)
+        K.wash(p, K.bleed(keel, S(10), r, CH, CW, amt=0.45), [col('hull_in'), col('hull_in'), col('w_deep')], 0.8, s, r, edge=0.6,
+               edge_px=1.2, gran=0.45, var=0.5, var_px=8, charge_px=10, pool=0.8)
         inner = K.polys([K.ribbon(spline([(CX - S(82), CY - S(14)), (CX - S(10), CY - S(9)), (CX + S(80), CY - S(15))], 6),
-                                  S(3.5), S(2), r, wob=0.5, step=S(2))], CH, CW, ss=3)
-        K.wash(p, inner, col('hull_in'), 0.6, s, r, edge=0.3, edge_px=1, gran=0.2)
+                                  S(4.5), S(2), r, wob=0.7, step=S(2))], CH, CW, ss=2)
+        K.wash(p, K.soften(inner, S(1.2), 0.6, r, CH, CW), col('hull_in'), 0.55, s, r, edge=0.5, edge_px=1, gran=0.3, var=0.5, var_px=6)
+        # the gunwale: a line of paper left between the strokes, broken where the brushes touched
         gun = K.polys([K.ribbon(spline([(CX - S(88), CY - S(15)), (CX - S(20), CY - S(6)), (CX + S(60), CY - S(7)),
-                                        (CX + S(90), CY - S(17))], 6), S(1.8), S(1.2), r, wob=0.6, step=S(2))], CH, CW, ss=3)
-        K.lift(p, gun, 0.55, s, r, rough=0.5, rough_px=6)
+                                        (CX + S(90), CY - S(17))], 6), S(2.2), S(1.2), r, wob=0.7, step=S(2))], CH, CW, ss=2)
+        gun.a = gun.a * smoothstep(0.35, 0.6, K.noise(r, *gun.a.shape, S(14), 2))
+        K.lift(p, K.drybrush(K.soften(gun, S(0.7), 0.6, r, CH, CW), p, r, s, dry=0.5, scale=6), 0.5, s, r, rough=0.5, rough_px=5)
         st('hull')
-        # rower: a hunched, leaning torso in one stroke, arms reaching to the oar, a head with a darker cap of hair
-        torso = K.ribbon(spline([(CX - S(2), CY - S(8)), (CX - S(6), CY - S(22)), (CX - S(12), CY - S(34))], 6),
-                         S(12), S(15.5), r, wob=0.25, step=S(1.2))
-        knee = K.ribbon(spline([(CX - S(4), CY - S(11)), (CX - S(15), CY - S(17)), (CX - S(24), CY - S(14))], 5),
-                        S(7), S(5), r, wob=0.3, step=S(1.2))
-        arm = K.ribbon(spline([(CX - S(9), CY - S(33)), (CX - S(20), CY - S(29)), (CX - S(29), CY - S(30))], 6),
-                       S(5.5), S(3.2), r, wob=0.3, step=S(1.0))
-        body = K.soften(K.polys([torso, knee, arm], CH, CW, ss=3), S(0.8), 0.35, r, CH, CW)
-        K.wash(p, body, [col('rower'), col('rower'), col('hull_in')], 0.9, s, r, edge=0.6, edge_px=1.5, gran=0.3,
-               var=0.35, var_px=8, charge_px=10)
-        neck = K.ribbon([(CX - S(12), CY - S(37)), (CX - S(14), CY - S(41))], S(4), S(3.5), r, wob=0.2, step=S(1))
-        head = K.soften(K.polys([blob_pts(CX - S(15.5), CY - S(45), S(5.8), S(6.6), rough=0.2, n=30, seed=seed + 9, rot=0.4), neck],
-                                CH, CW, ss=3), S(0.6), 0.3, r, CH, CW)
-        K.wash(p, head, col('skin'), 0.8, s, r, edge=0.55, edge_px=1.0, gran=0.15, var=0.35, var_px=5)
-        hat = [K.ribbon([(CX - S(23), CY - S(48.5)), (CX - S(15), CY - S(50)), (CX - S(7), CY - S(48))], S(2.6), S(2.0), r, wob=0.3, step=S(1)),
-               blob_pts(CX - S(14.5), CY - S(53), S(5.2), S(3.6), rough=0.25, n=24, seed=seed + 10, rot=-0.1)]
-        K.wash(p, K.soften(K.polys(hat, CH, CW, ss=3), S(0.5), 0.3, r, CH, CW), col('hair'), 0.85, s, r, edge=0.4, edge_px=1,
-               gran=0.2, var=0.3, var_px=5)
+        # rower: the hunched body in one loaded stroke that runs into the wet hull, arms a second flick,
+        # the head a single dab with the cap dropped into it while wet (no outline anywhere)
+        torso = K.ribbon(spline([(CX - S(1), CY - S(6)), (CX - S(6), CY - S(22)), (CX - S(12), CY - S(34))], 6),
+                         S(13), S(15), r, wob=0.5, peak=0.6, step=S(1.2), ends=0.5)
+        knee = K.ribbon(spline([(CX - S(4), CY - S(11)), (CX - S(15), CY - S(17)), (CX - S(25), CY - S(13))], 5),
+                        S(7.5), S(4), r, wob=0.5, step=S(1.2))
+        arm = K.ribbon(spline([(CX - S(9), CY - S(33)), (CX - S(19), CY - S(28)), (CX - S(29), CY - S(30))], 6),
+                       S(6), S(2.5), r, wob=0.5, step=S(1.0))
+        body = K.soften(K.polys([torso, knee, arm], CH, CW, ss=2), S(1.1), 0.7, r, CH, CW)
+        K.wash(p, K.bleed(body, S(4), r, CH, CW, amt=0.4), [col('rower'), col('rower'), col('hull_in'), col('w_deep')], 0.85, s, r,
+               edge=0.7, edge_px=1.3, gran=0.35, var=0.55, var_px=6, charge_px=7, pool=0.9)
+        head = K.soften(K.polys([blob_pts(CX - S(15.5), CY - S(44.5), S(5.6), S(6.4), rough=0.3, n=24, seed=seed + 9, rot=0.4),
+                                 K.ribbon([(CX - S(12), CY - S(37)), (CX - S(14), CY - S(41))], S(4.5), S(3.5), r, wob=0.3, step=S(1))],
+                                CH, CW, ss=2), S(0.9), 0.6, r, CH, CW)
+        K.wash(p, head, [col('skin'), col('skin'), col('hull')], 0.7, s, r, edge=0.4, edge_px=1.0, gran=0.15, var=0.5, var_px=4, charge_px=4)
+        hat = K.soften(K.polys([blob_pts(CX - S(15), CY - S(51), S(6.5), S(3.6), rough=0.35, n=20, seed=seed + 10, rot=-0.15)], CH, CW, ss=2),
+                       S(1.0), 0.7, r, CH, CW)
+        K.wash(p, K.bleed(hat, S(3), r, CH, CW, amt=0.5), col('hair'), 0.8, s, r, edge=0.5, edge_px=1, gran=0.25, var=0.45, var_px=4)
         st('rower')
-        oar = K.ribbon(spline([(CX - S(31), CY - S(31)), (CX + S(10), CY - S(14)), (CX + S(45), CY + S(4)), (CX + S(72), CY + S(21))], 6),
-                       S(2.6), S(2.0), r, wob=0.4, step=S(1.5))
-        blade = K.ribbon(spline([(CX + S(52), CY + S(9)), (CX + S(64), CY + S(16)), (CX + S(76), CY + S(23))], 4),
-                         S(3), S(5.5), r, wob=0.35, step=S(1.2))
-        K.wash(p, K.soften(K.polys([oar, blade], CH, CW, ss=3), S(0.6), 0.3, r, CH, CW), col('oar'), 0.85, s, r,
-               edge=0.5, edge_px=1, gran=0.25, var=0.3, var_px=10)
+        # oar: one quick, slightly bowed pull of a small brush -- it starves and breaks along its length,
+        # and the blade is a single dab whose wet edge runs into the water
+        oc = spline([(CX - S(31), CY - S(31)), (CX + S(8), CY - S(15) + S(r.normal(0, 1.5))), (CX + S(45), CY + S(2) + S(r.normal(0, 1.5))),
+                     (CX + S(70), CY + S(19))], 8)
+        oc = K.wobble_line(oc, S(0.9), r, step=S(2.5), scale=6)
+        oar = K.soften(K.polys([K.ribbon(oc, S(3.2), S(1.6), r, wob=0.6, step=S(1.5))], CH, CW, ss=2), S(0.7), 0.6, r, CH, CW)
+        oar.a = oar.a * (0.35 + 0.65 * smoothstep(0.3, 0.55, K.noise(r, *oar.a.shape, S(10), 2)))
+        oar = K.drybrush(oar, p, r, s, dry=0.4, scale=8)
+        blade = K.soften(K.polys([K.ribbon(spline([(CX + S(52), CY + S(9)), (CX + S(64), CY + S(16)), (CX + S(76), CY + S(22))], 4),
+                                           S(3), S(6.5), r, wob=0.6, peak=0.7, step=S(1.2), ends=0.4)], CH, CW, ss=2), S(1.2), 0.7, r, CH, CW)
+        blade = K.bleed(blade, S(5), r, CH, CW, amt=0.45)
+        K.wash(p, K.union([oar, blade], CH, CW), [col('oar'), col('oar'), col('hull_in')], 0.8, s, r,
+               edge=0.6, edge_px=1, gran=0.3, var=0.45, var_px=6, charge_px=8)
         st('oar')
         boat_m = K.union([hm, body, head], CH, CW)
-        R = K.reflect(boat_m, CY + S(6), s, r, CH, CW, squash=0.7, band=(1.5, 4), gap=0.3, shift=2.5, fade=0.5, gate_px=12)
-        K.wash(p, R, col('hull_in'), 0.45, s, r, edge=0.4, edge_px=1, gran=0.3, var=0.3, var_px=10)
+        R = K.reflect(boat_m, CY + S(6), s, r, CH, CW, squash=0.7, band=(1.5, 4.5), gap=0.35, shift=3, fade=0.55, gate_px=12, vsoft=1.5)
+        K.wash(p, R, [col('hull_in'), col('hull_in'), col('rower')], 0.42, s, r, edge=0.5, edge_px=1, gran=0.3, var=0.45, var_px=8,
+               charge_px=10)
         marks = [(1070 + r.uniform(-10, 10), 808 + r.uniform(-1, 1), r.uniform(110, 160), r.uniform(2, 3)),
                  (1150 + r.uniform(-10, 30), 811, r.uniform(80, 140), r.uniform(1.5, 2.5)),
                  (1230 + r.uniform(-10, 10), 807, r.uniform(40, 90), r.uniform(1.5, 2.5))]
-        K.lift(p, K.soften(K.polys(K.dash_polys(S, marks, r), CH, CW), S(0.7), 0.4, r, CH, CW), 0.55, s, r, rough=0.3)
+        wake = K.soften(K.polys(K.dash_polys(S, marks, r, curl=0.4), CH, CW), S(1.4), 0.8, r, CH, CW)
+        K.lift(p, K.drybrush(wake, p, r, s, dry=0.45, scale=10), 0.45, s, r, rough=0.45, rough_px=6)
         st('boat reflection', True)
 
     # ================= birds: each its own span, wing angle and weight
@@ -523,32 +583,61 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     if 'reeds' in inc:
         p.rng = group_rng(seed, 'reeds')
         r = p.rng
-        bank = K.polys([S.pts([(X0 - 20, S.Y1 + 20), (X0 - 20, 1036), (0, 1040), (60, 1033), (120, 1030), (190, 1046),
-                               (250, 1060), (290, S.Y1 + 20)])], CH, CW)
-        K.wash(p, K.soften(bank, S(4), 0.45, r, CH, CW), col('bank'), 0.5, s, r, edge=0.5, edge_px=2.5, gran=0.5, var=0.4, var_px=30)
+        # the bank: a few quick, overlapping dabs of a loaded brush, not one shape -- gaps of paper between
+        # them, hard where they dried, dragged dry along the top
+        dabs = []
+        xb_ = X0 - 40
+        while xb_ < 300:
+            ln_ = r.uniform(50, 150)
+            yc_ = 1050 + 18 * np.clip((xb_ - 120) / 200, 0, 1) + r.normal(0, 8)
+            dabs.append(blob_pts(S.x(xb_ + ln_ / 2), S.y(yc_ + 20), S(ln_ / 2), S(r.uniform(22, 40)), rough=0.4, n=60,
+                                 seed=int(r.integers(1 << 30)), rot=r.normal(-0.05, 0.08)))
+            xb_ += ln_ * r.uniform(0.55, 1.05)
+        bank = K.soften(K.polys(dabs, CH, CW, ss=1), S(2.0), 0.8, r, CH, CW)
+        bank = K.drybrush(bank, p, r, s, dry=0.35, scale=25)
+        K.wash(p, bank, [col('bank'), col('bank'), hexc(C['reeds'][2]), col('bank')], 0.68, s, r, edge=0.8, edge_px=2.5, gran=0.6,
+               flocc=0.5, var=0.5, var_px=25, charge_px=30, pool=0.8)
+        dk = K.Crop(bank.x0, bank.y0, bank.a * smoothstep(0.45, 0.7, K.noise(r, *bank.a.shape, S(40), 3)))
+        K.wash(p, K.soften(dk, S(3), 0.6, r, CH, CW), hexc(C['reeds'][2]), 0.45, s, r, edge=0.6, edge_px=1.5, gran=0.5, var=0.4)
         st('bank')
-        xa = min(-10, X0 + 10)
-        n = int(60 * (300 - xa) / 310)
-        batches = 3
-        for b in range(batches):
-            P, heads = [], []
-            for _ in range(n // batches):
-                xd = 300 - (300 - xa) * r.uniform(0, 1) ** 1.3
-                x = S.x(xd); yb = S.y(S.Y1 + 4)
-                h = S(r.uniform(60, 200) * (1.1 - max(xd, 0) / 400) + (S.Y1 - 1080))
-                lean = r.normal(S(8), S(14)) * (1.4 if r.uniform() < 0.2 else 1)
-                c = spline([(x, yb), (x + lean * 0.25, yb - h * 0.5), (x + lean, yb - h)], 8)
-                w0 = S(r.uniform(2.5, 8.0)) * (0.6 + 0.4 * (b + 1) / batches)
-                P.append(K.ribbon(c, w0, S(r.uniform(0.3, 1.2)), r, wob=0.25, step=S(2)))
-                if r.uniform() < 0.07 and h > S(110):
+        # blades: tapered, bellied low, each its own weight; some bent over; cattails as ragged loaded dabs
+        for b in range(3):
+            P, heads, tips = [], [], []
+            for (cv, w0, hgt, lean, bt, brk) in reeds_geo:
+                if bt != b:
+                    continue
+                c = np.asarray(cv, np.float32).copy()
+                if brk is not None:                       # the blade folds over and hangs
+                    j0 = int(len(c) * brk)
+                    piv = c[j0]
+                    ang = r.choice([-1, 1]) * r.uniform(1.8, 2.6)
+                    ca, sa = np.cos(ang), np.sin(ang)
+                    d_ = (c[j0:] - piv) * r.uniform(0.5, 0.8)
+                    c[j0:] = piv + np.stack([d_[:, 0] * ca - d_[:, 1] * sa, d_[:, 0] * sa + d_[:, 1] * ca], 1)
+                    c = spline(c[::2], 4)
+                w1 = S(r.uniform(0.2, 1.0))
+                P.append(K.ribbon(c, w0 * r.uniform(0.6, 0.9), w1, r, wob=0.35, peak=r.uniform(0.08, 0.35), step=S(2), ends=0.55))
+                if brk is None and r.uniform() < 0.08 and hgt > S(110):
                     hx, hy = c[-1]
-                    heads.append(blob_pts(hx - lean * 0.06, hy + S(14), S(r.uniform(3, 4.5)), S(r.uniform(11, 16)), rough=0.15,
-                                          n=24, seed=int(r.integers(1 << 30)), rot=float(np.arctan2(lean, h))))
-            m = K.soften(K.polys(P, CH, CW, ss=2), S(0.7), 0.35, r, CH, CW)
-            K.wash(p, m, [hexc(c_) for c_ in C['reeds']], 0.72 + 0.06 * b, s, r, edge=0.6, edge_px=1.5, gran=0.4, var=0.35,
-                   var_px=25, charge_px=40)
+                    ang_ = float(np.arctan2(lean, hgt))
+                    hc = (hx - lean * 0.08, hy + S(r.uniform(14, 22)))
+                    hl, hw_ = S(r.uniform(11, 18)), S(r.uniform(3, 4.8))
+                    heads.append(blob_pts(hc[0], hc[1], hw_, hl, rough=0.3, n=30, seed=int(r.integers(1 << 30)), rot=ang_))
+                    for _ in range(int(r.integers(2, 5))):            # ragged, fluffing bits
+                        o = r.uniform(-1, 1)
+                        heads.append(blob_pts(hc[0] + hw_ * r.normal(0, 0.7), hc[1] + hl * o * 0.9, hw_ * r.uniform(0.3, 0.6),
+                                              hw_ * r.uniform(0.4, 0.9), rough=0.5, n=14, seed=int(r.integers(1 << 30))))
+                    tips.append(K.ribbon([(hx, hy + S(2)), (hx + lean * 0.02, hy - S(r.uniform(6, 14)))], S(1.4), S(0.3), r, wob=0.3,
+                                         step=S(1)))
+            m = K.soften(K.polys(P, CH, CW, ss=2), S(0.8), 0.5, r, CH, CW)
+            K.wash(p, m, [hexc(c_) for c_ in C['reeds']], (0.8, 0.9, 1.0)[b], s, r, edge=0.3, edge_px=0.9, gran=0.45, var=0.4,
+                   var_px=18, charge_px=25, pool=0.4)
             if heads:
-                K.wash(p, K.polys(heads, CH, CW, ss=3), col('cattail'), 0.85, s, r, edge=0.5, edge_px=1.2, gran=0.4)
+                hm_ = K.soften(K.polys(heads, CH, CW, ss=2), S(1.0), 0.8, r, CH, CW)
+                hm_ = K.drybrush(hm_, p, r, s, dry=0.25, scale=5)
+                K.wash(p, hm_, [col('cattail'), col('cattail'), hexc(C['reeds'][2])], 0.85, s, r, edge=0.6, edge_px=1.0, gran=0.55,
+                       var=0.5, var_px=4, charge_px=5)
+                K.wash(p, K.polys(tips, CH, CW, ss=2), hexc(C['reeds'][2]), 0.7, s, r, edge=0.3, edge_px=0.8, gran=0.2)
             st(f'reeds {b + 1}')
 
     # ================= finishing (watercolour has no overlay pass; keep the seed contract anyway)

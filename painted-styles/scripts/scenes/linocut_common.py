@@ -27,15 +27,18 @@ INKS = {
     'Vermilion': dict(ink='#e0845a', mottle=0.25),     # Phase 1: dusk rose-orange / vermilion
     'Indigo': dict(ink='#7189b8', mottle=0.22),        # a soft cool indigo: a daytime print
 }
-MISREG = (7.0, -5.0)          # colour block offset in design px (one pull: the same for the whole sheet)
+MISREG = (10.0, -7.0, 0.22)    # colour block offset in design px and a slight twist (degrees): one hand-laid pull
+FRAGILE = 4.6                  # design px: a ridge of lino narrower than this does not hold -- it prints broken
 
 
 class Lino(Linocut):
-    """Linocut pulled by hand. Phase 1's big blacks showed large grey low-pressure blotches; round 0 calmed
-    them to near-perfect solids. This is the middle: a gentle baren pressure gradient across the sheet, a few
-    small starved patches and brayer lanes where the paper's tooth shows through, a worn plate (pits and fine
-    scratches that print white), and a colour block whose ink film is visibly thicker in places and thinner
-    (speckled) in others."""
+    """Linocut pulled by hand. The key block's solids are visibly uneven: a mottled ink film (charcoal where it
+    ran thin, dense black where it pooled), starved patches where the paper's tooth shows through as salt, soft
+    fuzzy edges where the ink squeezed into the fibres, a gentle baren pressure gradient across the sheet, brayer
+    lanes and stop-lines, and a worn plate (pits and fine scratches that print white). Ridges of lino too narrow
+    to hold crumble and print broken. Cleared areas carry stray gouge chatter: low ridges the gouge skipped that
+    catch a little ink. The colour block is laid on by hand, visibly off register (shifted and a little turned),
+    so it overlaps the black on one side and leaves a sliver of paper on the other."""
     s = 1.0                    # canvas px per design px (set by make_print)
 
     def _print_fields(self, blk):
@@ -67,8 +70,6 @@ class Lino(Linocut):
             np.add.at(acc, (ys, xs), 1.0)
         acc = blur(acc, 1.6 * max(s, 0.6)); acc = acc / (acc.mean() + 1e-6)
         acc = np.asarray(Image.fromarray(acc).resize((W, H), Image.BILINEAR))
-        # pressure: a gradient across the sheet (the printer leant harder on one side) and a few small soft
-        # patches the baren missed -- stronger than round 0, far weaker than Phase 1's blotches
         a = r.uniform(0, 2 * np.pi)
         ramp = (np.cos(a) * (xx / W - 0.5) + np.sin(a) * (yy / H - 0.5)) + 0.5
         patch = noise2d(H, W, 170 * s, 3, int(r.integers(1 << 30)))
@@ -76,67 +77,146 @@ class Lino(Linocut):
                  - 0.13 * smoothstep(0.7, 0.92, patch))
         blk.film, blk.press = film.astype(np.float32), press.astype(np.float32)
         blk.wear = self._wear(r)
-        if blk is not self.key:
-            # colour block: thick / thin ink film, low frequency, plus the pressure gradient
+        # paper tooth at a size that reads on screen (the lib's grain is one canvas px): fibre tops take ink first
+        tooth = 0.45 * self.grain + 0.55 * noise2d(H, W, max(2.0, 2.6 * s), 2, int(r.integers(1 << 30)))
+        lo, hi = np.percentile(tooth[::5, ::5], (2, 98))
+        blk.tooth = np.clip((tooth - lo) / (hi - lo + 1e-6), 0, 1).astype(np.float32)
+        # where fragile ridges hold and where they crumbled: long-ish runs along any line
+        blk.hold = smoothstep(0.36, 0.56, noise2d(H, W, 11 * s, 2, int(r.integers(1 << 30)))).astype(np.float32)
+        if blk is self.key:
+            # mottled ink film: blotchy at a few sizes, clearly uneven at full size
+            m1 = noise2d(H, W, 70 * s, 3, int(r.integers(1 << 30)))
+            m2 = noise2d(H, W, 22 * s, 2, int(r.integers(1 << 30)))
+            blk.thin = np.clip(0.75 * smoothstep(0.42, 0.85, m1) + 0.35 * smoothstep(0.55, 0.9, m2), 0, 1).astype(np.float32)
+            # starved patches: the paper's tooth shows through as salt (more where the film is thin anyway)
+            st = noise2d(H, W, 46 * s, 3, int(r.integers(1 << 30)))
+            blk.starve = np.clip(smoothstep(0.58, 0.86, st) + 0.35 * blk.thin * smoothstep(0.45, 0.7, st), 0, 1).astype(np.float32)
+        else:
             th = noise2d(H, W, 330 * s, 3, int(r.integers(1 << 30)))
             blk.thick = np.clip(0.25 + 1.1 * (th - 0.5) + 0.75 - 0.45 * np.clip(ramp, 0, 1.2), 0.12, 1.0).astype(np.float32)
 
     def _wear(self, r):
         """the plate's own damage, printing white wherever the surface would carry ink: pits, fine storage
-        scratches and dents (subtle; fixed per block so it never depends on what was carved)"""
+        scratches and dents (fixed per block so it never depends on what was carved)"""
         H, W, s = self.H, self.W, self.s
         im = Image.new('L', (W, H), 0); dr = ImageDraw.Draw(im)
-        n = int(W * H / (s * s) / 15000)
+        n = int(W * H / (s * s) / 11000)
         for _ in range(n):                                                    # pits
-            x, y = r.uniform(0, W), r.uniform(0, H); rr = r.uniform(0.4, 1.0) * s
+            x, y = r.uniform(0, W), r.uniform(0, H); rr = r.uniform(0.5, 1.4) * s
             dr.ellipse([x - rr, y - rr * r.uniform(0.6, 1), x + rr, y + rr], fill=int(r.uniform(150, 255)))
         ang0 = r.uniform(-0.5, 0.5)
         for _ in range(int(n * 0.08)):                                        # scratches, mostly one way
             x, y = r.uniform(0, W), r.uniform(0, H); a = ang0 + r.normal(0, 0.25); ln = r.uniform(6, 34) * s
             pts = [(x + np.cos(a) * ln * t + r.normal(0, 0.4), y + np.sin(a) * ln * t + r.normal(0, 0.4)) for t in np.linspace(0, 1, 5)]
-            dr.line(pts, fill=int(r.uniform(110, 230)), width=max(1, int(round(0.8 * s))))
+            dr.line(pts, fill=int(r.uniform(110, 230)), width=max(1, int(round(1.0 * s))))
         w = np.asarray(im, np.float32) / 255
         return np.clip(w * smoothstep(0.25, 0.6, self.grain + 0.2), 0, 1).astype(np.float32)
 
+    # ---------------------------------------------------------------- carving
+    def clear(self, shape, on=None, chatter=0.35, angle=0.0):
+        """as the lib's clear, but the chatter is sized in design px so it shows at any size: gouge-shaped low
+        ridges of every length, in clusters (where the carver hurried) and along the edges of the area, plus
+        islands the gouge skipped"""
+        Linocut.clear(self, shape, on, chatter=0, angle=angle)
+        if not chatter or (on is not None and on is not self.key): return
+        box = self._bbox(shape)
+        if not box: return
+        r, s, (x0, y0, x1, y1) = self.rng, self.s, box
+        t = self._region(shape, box)
+        m = np.asarray(Image.fromarray(t).resize((x1 - x0, y1 - y0), Image.BOX), np.float32) / 255
+        if m.max() < 0.95: return
+        near = np.clip((1 - blur(m, 12 * s)) * 2.2, 0, 1) * m
+        h, w = m.shape
+        clump = noise2d(h, w, 120 * s, 2, int(r.integers(1 << 30)))
+        prob = (0.12 + 0.6 * near + 1.0 * smoothstep(0.6, 0.85, clump)) * (m > 0.95)
+        n = int(prob.sum() / (s * s) * chatter / 1800)
+        if n <= 0: return
+        flat = (prob / prob.sum()).ravel()
+        idx = r.choice(flat.size, size=n, p=flat)
+        ys, xs = np.divmod(idx, w)
+        im = Image.new('L', (w, h), 0); d = ImageDraw.Draw(im)
+        for x, y in zip(xs, ys):
+            a = np.radians(angle + r.normal(0, 12))
+            if r.random() < 0.18:                                             # an island the gouge skipped
+                rx, ry = r.uniform(1.5, 5) * s, r.uniform(1.2, 3.5) * s
+                pts = [(x + np.cos(q) * rx * r.uniform(0.7, 1.2), y + np.sin(q) * ry * r.uniform(0.7, 1.2)) for q in np.linspace(0, 6.2, 9)]
+                d.polygon(pts, fill=int(r.uniform(110, 230)))
+                continue
+            Lm = np.exp(r.uniform(np.log(8), np.log(80))) * s
+            nrm = np.array([-np.sin(a), np.cos(a)])
+            for q in range(int(r.choice([1, 1, 2, 2, 3, 4]))):               # neighbouring passes of the gouge
+                o = nrm * q * r.uniform(4, 9) * s; Lq = Lm * r.uniform(0.4, 1.0); st0 = r.uniform(0, 0.4) * Lm
+                p0 = np.array([x, y]) + o + np.array([np.cos(a), np.sin(a)]) * st0
+                pts = [p0 + np.array([np.cos(a), np.sin(a)]) * Lq * tt + nrm * r.normal(0, 0.6 * s) for tt in np.linspace(0, 1, 5)]
+                poly = self.stroke([tuple(p) for p in pts], r.uniform(1.4, 3.6) * s, 'v', jitter=0.3)
+                if poly is not None:
+                    d.polygon([tuple(v) for v in poly], fill=int(r.uniform(90, 220)))
+        c = np.asarray(im, np.float32) / 255 * m
+        sl = self.chatter[y0:y1, x0:x1]
+        np.maximum(sl, c, out=sl)
+
+    # ---------------------------------------------------------------- printing
+    def warp(self, blk, arr):
+        """where a sheet-space array lands on the paper when `blk` is pulled off register (identity for the key)"""
+        wp = getattr(blk, 'warp', None)
+        if not wp: return arr
+        dx, dy, th = wp
+        H, W = arr.shape
+        p = int(np.ceil(abs(dx) + abs(dy) + abs(th) * (W + H))) + 2
+        A = np.pad(arr.astype(np.float32), p, mode='reflect')                 # the block is bigger than the sheet
+        cx, cy = W / 2 + p, H / 2 + p
+        c, sn = np.cos(th), np.sin(th)
+        # output (x, y) samples input R^-1 (out - c - d) + c
+        a_, b_ = c, sn
+        d_, e_ = -sn, c
+        ox, oy = -dx - cx, -dy - cy
+        coef = (a_, b_, a_ * ox + b_ * oy + cx, d_, e_, d_ * ox + e_ * oy + cy)
+        im = Image.fromarray(A, 'F').transform(A.shape[::-1], Image.AFFINE, coef, resample=Image.BILINEAR)
+        return np.asarray(im, np.float32)[p:p + H, p:p + W]
+
+    def _relief(self, blk):
+        return np.asarray(Image.fromarray(blk.a).resize((self.W, self.H), Image.BOX), np.float32) / 255
+
     def _coverage(self, blk):
         self._print_fields(blk)
-        m = np.asarray(Image.fromarray(blk.a).resize((self.W, self.H), Image.BOX), np.float32) / 255
-        m = smoothstep(0.22, 0.78, self._soft2(m) + self.crumble * 0.09)
-        wear = blk.wear
-        if blk.offset != (0, 0):
-            m = shift(m, *blk.offset)
-        contact = blk.film * blk.press
-        t = smoothstep(0.45, 0.72, contact * 0.70 + self.grain * 0.36)
-        edge = np.clip(m - blur(m, 1.6), 0, 1)                                # ink squeezed to the edges
-        cov = m * np.maximum(t, smoothstep(0.02, 0.3, edge)) * (1 - 0.85 * wear)
+        s = self.s
+        m = self._relief(blk)
+        # fragile ridges: whatever is narrower than FRAGILE design px does not hold -- it breaks into runs
         if blk is self.key:
-            cov = np.maximum(cov, self.chatter * (1 - m) * t * 0.8)
+            k = max(3, int(round(FRAGILE * s * 0.5)) * 2 + 1)
+            mu = Image.fromarray((m * 255).astype(np.uint8))
+            op = np.asarray(mu.filter(ImageFilter.MinFilter(k)).filter(ImageFilter.MaxFilter(k)), np.float32) / 255
+            thin = np.clip(m - op, 0, 1)
+            m = op + thin * blk.hold
+        tooth = blk.tooth
+        # slightly fuzzy edges: the ink spreads a hair into the fibres and the paper's tooth decides the edge
+        mb = blur(m, max(0.5, 0.9 * s))
+        m = smoothstep(0.2, 0.8, mb + (tooth - 0.5) * 0.42 + self.crumble * 0.05)
+        near = None
+        if blk is not self.key:
+            near = np.asarray(Image.fromarray(blk.a).resize((self.W, self.H), Image.BOX).filter(ImageFilter.MaxFilter(5))) > 0
+            m = self.warp(blk, m)
+            near = self.warp(blk, near.astype(np.float32)) > 0.5
+        contact = blk.film * blk.press
+        if blk is self.key:
+            t = smoothstep(0.45, 0.72, contact * 0.70 + tooth * 0.36 - 0.035 - 0.1 * blk.starve - 0.03 * blk.thin)
         else:
-            # a light ink shows every unevenness, the more so where the film is thin
+            t = smoothstep(0.45, 0.72, contact * 0.70 + tooth * 0.36)
+        edge = np.clip(m - blur(m, 1.6), 0, 1)                                # ink squeezed to the edges
+        cov = m * np.maximum(t, smoothstep(0.02, 0.3, edge)) * (1 - 0.85 * blk.wear)
+        if blk is self.key:
+            cov = cov * (1 - 0.09 * blk.thin)                                 # charcoal where the film ran thin
+            ch = self.chatter * smoothstep(0.15, 0.7, tooth * 0.8 + self.chatter * 0.35)
+            cov = np.maximum(cov, ch * (1 - m) * t * 0.85)
+        else:
             mot = getattr(blk, 'mottle', 0.0)
             th = blk.thick
             mot_e = np.clip(mot * (2.3 - 2.1 * th), 0.03, 0.8)
-            cov = cov * (1 - mot_e + mot_e * smoothstep(0.75, 1.15, contact * 0.6 + self.grain * 0.5))
+            cov = cov * (1 - mot_e + mot_e * smoothstep(0.75, 1.15, contact * 0.6 + tooth * 0.5))
             # edge crumble alone must not print faint specks where the colour block was cleared, so an empty
             # colour block prints exactly like a skipped one
-            a = Image.fromarray(blk.a).resize((self.W, self.H), Image.BOX).filter(ImageFilter.MaxFilter(5))
-            near = np.asarray(a) > 0
-            if blk.offset != (0, 0): near = shift(near.astype(np.float32), *blk.offset) > 0.5
             cov = cov * near
-            # the misregistered block is bigger than the sheet: fill the strip the offset uncovered at the
-            # canvas edge by mirroring the neighbouring print, instead of leaving a bare paper line
-            dx, dy = (int(round(v)) for v in blk.offset)
-            if dx > 0: cov[:, :dx] = cov[:, dx:2 * dx][:, ::-1]
-            if dx < 0: cov[:, dx:] = cov[:, 2 * dx:dx][:, ::-1]
-            if dy > 0: cov[:dy] = cov[dy:2 * dy][::-1]
-            if dy < 0: cov[dy:] = cov[2 * dy:dy][::-1]
         return np.clip(cov, 0, 1), m
-
-    @staticmethod
-    def _soft2(m):
-        p = np.pad(m, 1, mode='edge')
-        m = (p[:, :-2] + 2 * p[:, 1:-1] + p[:, 2:]) / 4
-        return (m[:-2] + 2 * m[1:-1] + m[2:]) / 4
 
     def pull(self, blocks=None):
         """as the lib's pull, but a colour block's ink prints deeper where its film is thick"""
@@ -168,7 +248,8 @@ def make_print(S, seed, colourway):
     Lino.s = S.s
     L = Lino(S.W, S.H, block=(-pad, -pad, S.W + pad, S.H + pad), seed=seed)
     c = INKS[colourway]
-    col = L.colour_block(c['ink'], offset=(int(round(S(MISREG[0]))), int(round(S(MISREG[1])))), mottle=c['mottle'])
+    col = L.colour_block(c['ink'], offset=(0, 0), mottle=c['mottle'])
+    col.warp = (S(MISREG[0]), S(MISREG[1]), np.radians(MISREG[2]))
     return L, col
 
 
@@ -232,26 +313,41 @@ def _smooth_noise(rng, n, knots):
 
 def gouge_rows(L, S, rng, region, box, angle=0.0, spacing=(10, 20), length=(40, 200), gap=(8, 60), width=(3, 6),
                density=None, cut=True, on=None, tool='v', bend=None, cluster=0.45, bow=0.35, slip=0.0, jitter=0.16,
-               taper=None, end=None):
+               taper=None, end=None, patch=1.0):
     """Rows of gouge marks across `region` (canvas polygon or mask), laid out in design units over `box`
     (x0, y0, x1, y1). Rows run along `angle` degrees; bend(x, y) -> design px pushed across the row, so rows
     curve with the form (sky arcs, rock beds, water swells). Row spacing is irregular and clustered, every mark
     has its own length, width, taper and a slight bow (the hand turns the tool), and density(x, y) -> 0..1
     decides whether a mark is cut (and scales its width). slip: chance of a short spur where the gouge slipped
-    in at the start of a mark."""
+    in at the start of a mark. patch: how unevenly the carver worked the area (patches dense / barely touched)."""
     x0, y0, x1, y1 = box
     th = np.radians(angle); dv = np.array([np.cos(th), np.sin(th)]); nv = np.array([-dv[1], dv[0]])
     c = np.array([(x0 + x1) / 2, (y0 + y1) / 2])
     R = 0.5 * np.hypot(x1 - x0, y1 - y0) + 10
     sp_mean = 0.5 * (spacing[0] + spacing[1])
     ph = rng.uniform(0, 6.3); ph2 = rng.uniform(0, 6.3)
+    # the carver works the block in patches: some worked over densely, some barely touched
+    waves = [(rng.uniform(140, 520), rng.uniform(0, 6.3), rng.uniform(0, 6.3)) for _ in range(3)]
+    def patchy(x, y):
+        q = sum(np.sin(x / wl * np.cos(a) + y / wl * np.sin(a) + p0) for wl, a, p0 in waves) / 3
+        return float(np.clip(1.0 + patch * q, 0.3, 1.75))
     polys = []
     v = -R + rng.uniform(0, spacing[1])
     while v < R:
         u = -R - rng.uniform(0, length[1])
         row_off = rng.normal(0, 0.12 * sp_mean)
+        rl = np.exp(rng.normal(0, 0.4))                  # this row's stroke: long sweeps or short choppy work
+        rw = np.exp(rng.normal(0, 0.12))
+        burst = 0
         while u < R:
-            Ld = rng.uniform(*length)
+            if burst > 0:                                # a run of short jabs, close together
+                Ld = rng.uniform(length[0] * 0.5, length[0] + 0.15 * (length[1] - length[0])); burst -= 1
+            elif rng.random() < 0.1:
+                burst = int(rng.integers(2, 5)); Ld = rng.uniform(length[0] * 0.5, length[0] * 1.3)
+            elif rng.random() < 0.3:
+                Ld = rng.uniform(length[0], length[0] + 0.3 * (length[1] - length[0]))
+            else:
+                Ld = float(np.clip(rng.uniform(*length) * rl, length[0] * 0.6, length[1] * 1.5))
             n = max(4, int(Ld / 5))
             us = np.linspace(u, u + Ld, n)
             vv = v + row_off + rng.normal(0, 0.1 * sp_mean)
@@ -259,14 +355,14 @@ def gouge_rows(L, S, rng, region, box, angle=0.0, spacing=(10, 20), length=(40, 
             off = np.zeros(n)
             if bend is not None: off = off + bend(base[:, 0], base[:, 1])
             tt = np.linspace(0, 1, n)
-            wb = rng.uniform(*width)
+            wb = rng.uniform(*width) * rw
             off = off + rng.normal(0, bow) * wb * np.sin(np.pi * tt) + rng.normal(0, 0.06) * wb * (tt - 0.5) * 2
             pts = base + nv * off[:, None]
             mx, my = pts[n // 2]
             if x0 - 40 <= mx <= x1 + 40 and y0 - 40 <= my <= y1 + 40:
                 dn = float(np.clip(density(mx, my), 0, 1)) if density else 1.0
-                if rng.random() < dn:
-                    w = wb * (0.5 + 0.5 * dn)
+                if rng.random() < min(1.0, dn * patchy(mx, my)):
+                    w = wb * ((0.5 + 0.5 * dn) if cut else (0.8 + 0.2 * dn))
                     tp = taper if taper is not None else (rng.uniform(0.08, 0.45), rng.uniform(0.06, 0.5))
                     polys.append(L.stroke(S.pts(pts), S(w), tool, taper=tp, jitter=jitter,
                                           end=None if end is None else S(end * w)))
@@ -276,8 +372,8 @@ def gouge_rows(L, S, rng, region, box, angle=0.0, spacing=(10, 20), length=(40, 
                         p0 = pts[0] + (pts[1] - pts[0]) * 0.3
                         polys.append(L.stroke(S.pts([p0, (p0[0] + np.cos(a) * ls, p0[1] + np.sin(a) * ls)]), S(w * 0.45), 'v',
                                               taper=(0.2, 0.6), jitter=0.2))
-            u += Ld + rng.uniform(*gap)
-        v += rng.uniform(*spacing) * (1 + cluster * np.sin(v / (sp_mean * 3.1) + ph) * np.cos(v / (sp_mean * 7.3) + ph2))
+            u += Ld + (rng.uniform(gap[0] * 0.4, gap[0] * 1.2) if burst else rng.uniform(*gap) * np.exp(rng.normal(0, 0.35)))
+        v += rng.uniform(*spacing) * np.exp(rng.normal(0, 0.28)) * (1 + cluster * np.sin(v / (sp_mean * 3.1) + ph) * np.cos(v / (sp_mean * 7.3) + ph2))
     L._draw(polys, cut, on, region)
 
 
@@ -326,7 +422,7 @@ def knife_edge(pts, rng, step=(12, 34), wob=1.4, nick=0.08, nick_size=(3, 9), cl
 def ridge_line(L, S, rng, pts, w, on=None, breaks=0.25, gap=(2.5, 6), seg=(18, 70), region=None, cut=False,
                smooth=True, tool='brush'):
     """a thin line of lino left standing (cut=False) -- fence post, rigging, seam, horizon: made bold enough to
-    survive the cut (w >= ~2.6 design px) and printed uneven: its width swells and pinches and it breaks where a
+    survive the cut (w >= ~5 design px; anything under FRAGILE crumbles in print) and printed uneven: its width swells and pinches and it breaks where a
     fragile ridge crumbled. pts: design polyline."""
     P = np.asarray(spline(pts, 8) if smooth and len(pts) > 2 else pts, np.float64)
     P = _resample(P.astype(np.float32), 1.5)[0].astype(np.float64)
@@ -375,7 +471,7 @@ def carved_reflection(L, S, rng, mask, axis, depth, squash=0.78, rows=(3.5, 6.5)
                 dl = S(rng.uniform(*dash)) * (1 - 0.45 * f)
                 e = min(b, pos + dl)
                 if e - pos > S(2.5) and rng.random() < keep:
-                    w = sp * rng.uniform(*width) * (1 - 0.35 * f)
+                    w = max(4.8 * rng.uniform(0.95, 1.2), sp * rng.uniform(*width) * (1 - 0.35 * f))   # bold enough to hold
                     x0, x1 = d_ux(S, pos), d_ux(S, e)
                     if x_range is None or (x_range[0] <= x0 and x1 <= x_range[1]):
                         yy = yc + rng.normal(0, 0.25 * sp)
@@ -520,7 +616,7 @@ def day_sky(L, col, S, d, rng, region, box, y_top, y_hor, bands=((-1e9, 1e9),), 
     L.clear(L.poly(region), chatter=0.3, angle=0)
     if stg: stg('sky cleared')
     for (a, b) in bands:
-        gouge_rows(L, S, rng, region, box, spacing=(11, 26), length=(50, 300), gap=(16, 120), width=(2.6, 4.6), cut=False,
+        gouge_rows(L, S, rng, region, box, spacing=(13, 30), length=(40, 320), gap=(16, 150), width=(5.0, 7.4), cut=False,
                    density=lambda x, y, a=a, b=b: 0.55 * np.clip(1 - (y - y_top) / (0.7 * span), 0, 1) ** 1.4 * (a <= y < b),
                    bend=bend, taper=(0.06, 0.12), tool='brush', end=0.6)
         if stg: stg('sky ridges')
@@ -548,4 +644,4 @@ def day_cloud(L, col, S, rng, cx, cy, ln, k):
         L.clear(L.poly(S.pts([(a + 6, y - 3 * k), (b - 6, y - 3 * k), (b - 6, y + 3 * k), (a + 6, y + 3 * k)])), chatter=0)
         if i == rows - 1 or (i == rows - 3 and rng.random() < 0.7):
             L.gouge(S.pts([(a + rng.uniform(10, 40), y + 5 * k), (m, y + 3 * k), (b - rng.uniform(5, 30), y + 5.5 * k)]),
-                    S(2.8 * k + 1.0), 'v', cut=False, taper=(0.2, 0.35))
+                    S(4.0 * k + 2.6), 'v', cut=False, taper=(0.15, 0.3))

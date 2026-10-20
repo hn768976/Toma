@@ -138,7 +138,12 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None,
     st('far trees', True)
 
     # ---------------- forest floor and the path
-    ground = np.clip((YD - GY + 6) / 10, 0, 1)
+    # the floor wash's top edge wanders, dries hard in places and is lost into the glow in others
+    gl_ = GY + 7 * fbm1d(CW, max(4, S(160)), 4, seed + 71)[None, :] + 2.5 * fbm1d(CW, max(3, S(18)), 2, seed + 72)[None, :]
+    g_hard = np.clip((YD - gl_ + 6) / 3, 0, 1)
+    g_soft = np.clip((YD - gl_ + 18) / 40, 0, 1)
+    lost_ = smoothstep(0.45, 0.65, K.noise(r, CH, CW, S(150), 3))
+    ground = (g_hard * (1 - lost_) + g_soft * lost_).astype(np.float32)
     K.wash(p, ground * (1 - path_m), [col('ground'), col('ground'), col('ground_d')], 0.6, s, r, edge=0.0, gran=0.45, flocc=0.4,
            var=0.4, var_px=90, charge_px=140)
     deep = ground * np.clip((YD - GY) / (Y1 - GY), 0, 1) ** 1.1

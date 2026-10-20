@@ -183,14 +183,16 @@ class Ink(Painting):
         p *= (1 - 0.055 * f - 0.018 * clump)[..., None]
         p = p + (1 - p) * (0.22 * l)[..., None]
         self.paper_rgb = p
-        self.absorb = ((1 + 0.25 * f - 0.55 * l) * (0.90 + 0.20 * clump)).astype(np.float32)
+        self.absorb = ((1 + 0.25 * f - 0.35 * l) * (0.90 + 0.20 * clump)).astype(np.float32)
 
     # ------------------------------------------------------------ output
     def composite(self):
         D, R = self._merged()
         pal = self.pal
         if self.absorb is not None:
-            D = np.clip(D * self.absorb, 0, 1); R = np.clip(R * self.absorb, 0, 1)
+            # fibres show in thin washes; under a loaded stroke the ink fills them (no scratch/craquelure)
+            D = np.clip(D * (1 + (self.absorb - 1) * (1 - D) ** 2), 0, 1)
+            R = np.clip(R * (1 + (self.absorb - 1) * (1 - R) ** 2), 0, 1)
         k1 = np.clip((D - 0.06) / 0.55, 0, 1)[..., None]
         k2 = np.clip((D - 0.62) / 0.33, 0, 1)[..., None]
         ink = pal['thin'] + (pal['ink'] - pal['thin']) * k1
@@ -272,10 +274,13 @@ class Ink(Painting):
 
 # ---------------------------------------------------------------- broad brush and washes
 def broad_stroke(p, pts, width, ink, dry=0.4, taper=(0.15, 0.3), side=0.0, pool=0.35, hair=1.0,
-                 rough=1.0, buf=None, red=False, grow=(1.0, 1.0), maxseg=90):
+                 rough=1.0, buf=None, red=False, grow=(1.0, 1.0), maxseg=90, swell=0.0, pv=0.10, skip=1.0):
     """a loaded broad brush (side brush / 侧锋) along `pts` (canvas px), computed in its window:
     hairs that run out (飞白) as the load is spent, a ragged edge, ink pooling at the edges,
-    `side` > 0 darkens the right-hand side of the stroke (ink-heavy side of the brush)."""
+    `side` > 0 darkens the right-hand side of the stroke (ink-heavy side of the brush).
+    swell: the brush is pressed down mid-stroke (belly) and lifted at the ends; pv: the hand's
+    pressure wanders along the stroke, so the two edges are never parallel; skip: the dry hairs
+    break in bursts where the brush skipped over the paper, not as evenly spaced streaks."""
     rng, s = p.rng, p.s
     buf = buf if buf is not None else (p.R if red else p.D)
     H, W = buf.shape
@@ -315,13 +320,27 @@ def broad_stroke(p, pts, width, ink, dry=0.4, taper=(0.15, 0.3), side=0.0, pool=
     t = U / L
     press = 0.3 + 0.7 * np.clip(np.minimum(t / max(taper[0], 1e-3), (1 - t) / max(taper[1], 1e-3)), 0, 1) ** 0.6
     press = press * (grow[0] + (grow[1] - grow[0]) * t)
+    if swell or pv:
+        pr = 1 + swell * (np.sin(np.pi * np.clip(t, 0, 1)) ** 1.4 - 0.45)
+        if pv:
+            pr = pr * (1 + pv * vnz(rng, U, U * 0, max(10 * s, L / 5), 1, 2))
+        press = np.clip(press * pr, 0.12, 1.3)
     ez = vnz(rng, U, V * 1000 + across * 0, max(4 * s, min(hw * 1.2, 40 * s)), 400, 2)  # each side its own ragged edge
     edge = np.clip((press - np.abs(v) + 0.10 * rough * ez * min(1.0, 6 * s / max(hw, 1e-3) + 0.3)) * hw / (0.6 * s + 0.45), 0, 1)
-    nh = float(np.clip(width / (1.5 * s + 0.6), 3, 70))
-    hz = vnz(rng, U, across, max(14 * s, width * 1.5, L / 12), max(0.9, width / nh), 3)
+    nh = float(np.clip(width / (2.2 * s + 0.6), 3, 32))
+    # hair noise: two hair sizes and a sideways drift of the hairs, so the white lines of a dry
+    # stroke are unevenly spaced, merge and split, instead of a regular comb
+    drift = vnz(rng, U, U * 0, max(20 * s, L / 3), 1, 2) * hw * 0.25
+    hz = 0.75 * vnz(rng, U, across + drift, max(14 * s, width * 1.5, L / 12), max(0.9, width / nh), 3) \
+        + 0.45 * vnz(rng, U, across - drift, max(8 * s, width * 0.7, L / 20), max(1.4, 2.7 * width / nh), 2)
     an = vnz(rng, U, U * 0, max(30 * s, L / 4), 1, 1)
     load = 1 - dry * t ** 1.15 * (0.8 + 0.25 * an)
     thr = -2.3 + 3.4 * (1 - load) * hair
+    if skip and dry > 0.05:
+        bz = vnz(rng, U, across * 0.2, max(9 * s, L / 9), max(hw, 1.0) * 1.8, 2)
+        thr = thr + 1.8 * skip * dry * sstep(0.35, 1.3, bz) - 0.5 * skip * dry * sstep(0.0, -1.2, bz)
+        if side:                     # the hairs run dry first on the side that carries less ink
+            thr = thr + 1.2 * dry * min(1.0, abs(side)) * np.clip(-v * np.sign(side), 0, 1) ** 1.5
     alive = sstep(thr - 0.35, thr + 0.35, hz)
     sidew = np.clip(1 + side * v, 0, 2) if side else 1.0
     tone = (1 + side * v * 0.4) * (1 + pool * sidew * np.exp(-((press - np.abs(v)) * hw / (1.1 * s + 0.5)) ** 2))
@@ -331,16 +350,32 @@ def broad_stroke(p, pts, width, ink, dry=0.4, taper=(0.15, 0.3), side=0.0, pool=
     np.copyto(sl, 1 - (1 - sl) * (1 - np.clip(a, 0, 1)))
 
 
-def wash_field(p, y0, y1, x0, x1, f, dens, soft, pool=0.4, gran=0.05, buf=None, red=False, hard=None):
-    """pale wet wash over window [y0:y1, x0:x1] from a field f (px, > 0 inside): a feathered,
-    dissolving edge in some places and a dried tide line in others; returns the alpha laid."""
+def fibre_bleed(p, y0, y1, x0, x1, reach):
+    """px offset an edge gains where ink creeps along the paper's fibres (> 0 along ink-taking
+    fibres and clumps, < 0 where bleached fibres repel it)"""
+    if p.absorb is None:
+        return 0.0
+    return (p.absorb[y0:y1, x0:x1] - 1.0) * reach
+
+
+def wash_field(p, y0, y1, x0, x1, f, dens, soft, pool=0.4, gran=0.05, buf=None, red=False, hard=None, ramp=None,
+               body=0.18, org=(0, 0)):
+    """pale wet wash over window [y0:y1, x0:x1] from a field f (px, > 0 inside). The wash is laid
+    flat and stops at a ragged edge: `soft` sets how far the edge wanders (wet spreading), `ramp`
+    how wide the actual fade is (a few px: a wash never fades as a smooth airbrush ramp). The
+    edge creeps along paper fibres, dries to a tide line in places, and the pigment settles
+    unevenly inside (`body`). Returns the alpha laid."""
     rng, s = p.rng, p.s
     buf = buf if buf is not None else (p.R if red else p.D)
+    ramp = max(1.5 * s, min(soft, 0.12 * soft + 3 * s)) if ramp is None else ramp
     Y, X = np.mgrid[y0:y1, x0:x1].astype(np.float32)
     n1 = vnz(rng, Y, X, max(6 * s, soft * 0.9), max(9 * s, soft * 1.6), 3)
-    n2 = vnz(rng, Y, X, 3 * s, 4 * s, 2)
-    fq = f + n1 * soft * 0.4 + n2 * 1.2 * s
-    a = np.clip(fq / soft, 0, 1)
+    n3 = vnz(rng, Y, X, max(4 * s, soft * 0.25), max(5 * s, soft * 0.4), 2)
+    n2 = vnz(rng, Y, X, 2.5 * s, 4 * s, 2)
+    fq = f + n1 * soft * 0.45 + n3 * soft * 0.12 + n2 * 1.6 * s + fibre_bleed(p, y0 + org[0], y1 + org[0], x0 + org[1], x1 + org[1], 9 * s)
+    a = np.clip(fq / ramp, 0, 1)
+    if body:
+        a = a * np.clip(1 - body + body * (0.5 + 0.5 * vnz(rng, Y, X, max(20 * s, soft * 1.2), max(30 * s, soft * 2), 2)), 0, 1.2)
     if pool:
         hd = np.clip(0.5 + 0.6 * vnz(rng, Y, X, 70 * s, 110 * s, 2), 0, 1) if hard is None else hard
         a = a * (1 + pool * hd * np.exp(-(np.clip(fq, 0, None) / (1.4 * s + 0.4)) ** 2)) * (fq > -0.5 * s)
@@ -380,13 +415,15 @@ def ink_mass(p, ridge, dens=0.4, reach=200, glazes=3, soft=1.0, pool=0.45, bloom
         e *= np.clip((floor - Y) / (1.2 * s + 0.4), 0, 1)
     a = np.zeros_like(Y)
     gn = vnz(rng, Y, X, 20 * s, 34 * s, 3)
+    gm = vnz(rng, Y, X, 7 * s, 10 * s, 2)
     gh = vnz(rng, Y, X, 3 * s, 5 * s, 2)
+    fb = fibre_bleed(p, y0, y1, 0, W, 8 * s)
     for k in range(glazes):
         f = k / max(1, glazes - 1)                                      # 0 broad pale ... 1 narrow dark
         rk = reach * (1.45 - 1.1 * f) * (0.62 + 0.65 * np.clip(0.5 + fbm1d(W, (190 - 70 * f) * s, 3, p.sd()), 0, 1))
-        sk = s * (2.5 + 40 * np.clip(0.6 + 0.9 * fbm1d(W, 150 * s, 3, p.sd()), 0, 1) ** 1.5)
+        sk = s * (2.5 + 20 * soft * np.clip(0.6 + 0.9 * fbm1d(W, 150 * s, 3, p.sd()), 0, 1) ** 1.5)
         rr, skk = rk[None, :], sk[None, :]
-        q = (rr - d + gn * skk * 0.5 + gh * 1.3 * s) / skk
+        q = (rr - d + gn * 9 * s + gm * 3 * s + gh * 1.4 * s + fb) / skk
         g = np.clip(q, 0, 1) * (1 - 0.3 * np.clip(d / rr, 0, 1))
         hard = np.clip(1 - (sk - 2.5 * s) / (12 * s), 0, 1)[None, :]
         tide = np.exp(-((rr - d + gn * 2.5 * s + gh * 1.0 * s) / (1.3 * s + 0.4)) ** 2) * hard * (d > 0)
@@ -428,8 +465,8 @@ def ink_mass(p, ridge, dens=0.4, reach=200, glazes=3, soft=1.0, pool=0.45, bloom
         yc, hh = mist
         wob = fbm1d(W, 320 * s, 3, p.sd()) * hh * 0.9
         half = hh * (0.35 + 1.0 * np.clip(0.5 + fbm1d(W, 230 * s, 3, p.sd()), 0, 1))
-        mz = vnz(rng, Y, X, 9 * s, 130 * s, 3)
-        r_ = np.clip((half[None, :] - np.abs(Y - yc - wob[None, :]) + mz * hh * 0.3) / (hh * 0.5 + 1), 0, 1)
+        mz = vnz(rng, Y, X, 7 * s, 45 * s, 4)
+        r_ = np.clip((half[None, :] - np.abs(Y - yc - wob[None, :]) + mz * hh * 0.45 + fb) / (3 * s + 1), 0, 1)
         a *= 1 - 0.97 * r_
     a *= e
     np.copyto(buf[y0:y1], 1 - (1 - buf[y0:y1]) * (1 - np.clip(a, 0, 1)))
@@ -552,7 +589,8 @@ def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None, spread=1.0,
     trunk = trunk + np.stack([fbm1d(len(trunk), 5, 2, p.sd()) * s * 1.3, np.zeros(len(trunk))], 1)
     tw = trunk_w if trunk_w is not None else (s * 1.1 + h * 0.011) * rng.uniform(0.7, 1.35)
     if tw > 0:
-        p.stroke(trunk, tw, ink * rng.uniform(0.7, 0.9), dry=rng.uniform(0.45, 0.75), taper=(0.02, 0.75), jitter=0.8)
+        broad_stroke(p, trunk, tw * 1.25, ink * rng.uniform(0.75, 0.92), dry=rng.uniform(0.2, 0.5), taper=(0.02, 0.4),
+                     grow=(1.0, rng.uniform(0.5, 0.75)), pv=0.22, side=rng.uniform(-0.7, 0.7), pool=0.3, maxseg=16)
 
     def trunk_x(y):
         return float(np.interp(y, trunk[::-1, 1], trunk[::-1, 0]))
@@ -566,26 +604,60 @@ def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None, spread=1.0,
         y -= (h * step0 + s * 3) * rng.choice([rng.uniform(0.45, 0.8), rng.uniform(0.9, 1.7)]) * (1 - 0.35 * f)
     lopside = rng.choice([-1, 1]) * rng.uniform(0.05, 0.45) + wind * 0.4
     shape_pow = rng.uniform(0.7, 1.25)
-    for (ty, f) in tiers:
+    droop_t = rng.uniform(-0.1, 0.24)                  # this tree's boughs: swept up ... hanging
+    needle_up = rng.random() < 0.5                      # needle touches point up or hang down
+    for ti, (ty, f) in enumerate(tiers):
         if 0.2 < f < 0.85 and rng.random() < 0.16:
             continue
         cx = trunk_x(ty)
-        half = (h * 0.36 * spread * (1 - f) ** shape_pow + s * 5) * rng.uniform(0.65, 1.3)
+        half = (h * 0.3 * spread * (1 - f) ** shape_pow + s * 5) * rng.uniform(0.6, 1.35)
         st = style if style != 'mixed' else ['brush', 'wet'][int(rng.integers(2))]
-        if halo and rng.random() < 0.9:
-            p.blob(cx + lopside * half * 0.3, ty + s * 2.5, half * rng.uniform(0.6, 1.0), s * 3 + half * 0.16,
-                   0.16 * ink * halo * rng.uniform(0.5, 1.3), rough=0.6)
-        if st == 'wet':
+        if halo and rng.random() < 0.5:
+            p.blob(cx + lopside * half * 0.3, ty + s * 2.5, half * rng.uniform(0.4, 0.8), s * 2 + half * 0.12,
+                   0.10 * ink * halo * rng.uniform(0.5, 1.3), rough=0.7)
+        if st in ('wet', 'brush'):
+            # each side its own bough: own height, angle, reach, number of strokes; sometimes missing
+            sdy = rng.normal(0, h * 0.012 + s * 2)
             for side in (-1, 1):
-                reach = half * (1 + lopside * side) * rng.uniform(0.6, 1.15)
+                if rng.random() < 0.13:
+                    continue
+                reach = half * (1 + lopside * side) * rng.uniform(0.5, 1.25)
                 if reach < s * 4:
                     continue
-                droop = reach * rng.uniform(0.05, 0.3)
-                pts = spline([(cx, ty), (cx + side * reach * 0.5, ty - reach * rng.uniform(0, 0.08)),
-                              (cx + side * reach, ty + droop)], 6)
-                broad_stroke(p, pts, s * rng.uniform(3.5, 7) * (0.7 + 0.6 * (1 - f)), ink * rng.uniform(0.45, 0.85),
-                             dry=rng.uniform(0.15, 0.55), taper=(0.05, rng.uniform(0.5, 0.9)), pool=rng.uniform(0.2, 0.6),
-                             side=rng.uniform(-0.6, 0.6))
+                ang = droop_t * (1.15 - 0.7 * f) + rng.normal(0, 0.16)
+                ca, sa = np.cos(ang), np.sin(ang)
+                yb = ty + side * sdy + rng.normal(0, s * 1.5)
+                if st == 'wet':
+                    reach *= rng.uniform(0.6, 0.85)
+                    arch = reach * rng.uniform(-0.03, 0.1)
+                    pts = spline([(cx, yb), (cx + side * reach * 0.5 * ca, yb + reach * 0.5 * sa - arch),
+                                  (cx + side * reach * ca, yb + reach * sa + reach * rng.uniform(0, 0.12))], 6)
+                    broad_stroke(p, pts, s * rng.uniform(4.5, 9.0) * (0.6 + 0.7 * (1 - f)), ink * rng.uniform(0.75, 1.05),
+                                 dry=rng.uniform(0.05, 0.3), taper=(0.05, rng.uniform(0.5, 0.9)), pool=rng.uniform(0.05, 0.2),
+                                 side=rng.uniform(-0.6, 0.6), swell=rng.uniform(0.2, 0.6), skip=0.4, maxseg=10)
+                    continue
+                nst = int(rng.integers(2, 6)) if f < 0.7 else int(rng.integers(1, 3))
+                for k in range(nst):
+                    ln = reach * rng.uniform(0.45, 1.0)
+                    if ln < s * 4:
+                        continue
+                    y0 = yb + rng.normal(0, s * 1.8) - k * s * rng.uniform(0.3, 1.6)
+                    x0 = cx + side * rng.uniform(0, s * 2)
+                    a2 = ang + rng.normal(0, 0.08)
+                    droop = ln * rng.uniform(-0.04, 0.3)
+                    lift = ln * rng.uniform(-0.04, 0.14)
+                    pts = spline([(x0, y0), (x0 + side * ln * 0.45 * np.cos(a2), y0 + ln * 0.45 * np.sin(a2) - lift),
+                                  (x0 + side * ln * np.cos(a2), y0 + ln * np.sin(a2) + droop)], 7)
+                    w = s * rng.uniform(1.3, 4.2) * (0.7 + 0.45 * (1 - f))
+                    p.stroke(pts, w, ink * rng.uniform(0.45, 0.95), dry=rng.uniform(0.4, 0.82),
+                             taper=(0.05, rng.uniform(0.55, 0.95)), jitter=rng.uniform(0.7, 1.5))
+                for k in range(int(rng.integers(0, 4))):
+                    tt = rng.uniform(0.3, 0.95)
+                    qx = cx + side * reach * tt * ca
+                    qy = yb + reach * tt * sa + rng.uniform(-s, s * 2)
+                    up = -1 if needle_up else 1
+                    p.stroke([(qx, qy), (qx + side * s * rng.uniform(1, 4), qy + up * s * rng.uniform(2.5, 6))],
+                             s * rng.uniform(1.1, 2.3), ink * rng.uniform(0.45, 0.8), dry=0.55, taper=(0.1, 0.7))
             continue
         for side in (-1, 1):
             reach = half * (1 + lopside * side) * rng.uniform(0.6, 1.2)
@@ -603,25 +675,6 @@ def conifer(p, x, top, root, ink=0.7, wind=0.0, halo=1.0, snap=None, spread=1.0,
                     p.stroke([(ex, ey), (ex + np.cos(a) * ln, ey + np.sin(a) * ln * 0.55)], s * rng.uniform(0.8, 1.4),
                              ink * rng.uniform(0.45, 0.8), dry=0.35, taper=(0.05, 0.6))
                 continue
-            nst = int(rng.integers(2, 5)) if f < 0.7 else int(rng.integers(1, 3))
-            for k in range(nst):
-                ln = reach * rng.uniform(0.5, 1.0)
-                if ln < s * 4:
-                    continue
-                y0 = ty + rng.normal(0, s * 1.8) - k * s * rng.uniform(0.4, 1.4)
-                x0 = cx + side * rng.uniform(0, s * 2)
-                droop = ln * rng.uniform(0.0, 0.42)
-                lift = ln * rng.uniform(-0.04, 0.16)
-                pts = spline([(x0, y0), (x0 + side * ln * 0.45, y0 - lift + rng.normal(0, s * 0.8)),
-                              (x0 + side * ln, y0 + droop)], 7)
-                w = s * rng.uniform(1.5, 3.8) * (0.7 + 0.45 * (1 - f))
-                p.stroke(pts, w, ink * rng.uniform(0.45, 0.95), dry=rng.uniform(0.45, 0.82),
-                         taper=(0.05, rng.uniform(0.6, 0.95)), jitter=rng.uniform(0.7, 1.4))
-            for k in range(int(rng.integers(0, 4))):
-                t = rng.uniform(0.3, 0.95)
-                qx, qy = cx + side * reach * t, ty + reach * t * 0.15 + rng.uniform(-s, s * 2)
-                p.stroke([(qx, qy - s), (qx + side * s * rng.uniform(1, 4), qy + s * rng.uniform(2.5, 6))],
-                         s * rng.uniform(1.2, 2.4), ink * rng.uniform(0.45, 0.8), dry=0.55, taper=(0.1, 0.7))
     lx = trunk_x(top + h * 0.14)
     p.stroke([(lx, top + h * 0.16), (x + lean + rng.normal(0, s), top)], s * rng.uniform(1.1, 1.9), ink * 0.85,
              dry=0.45, taper=(0.05, 0.9))
@@ -799,3 +852,160 @@ def water_dashes(p, y_lo, y_hi, x_lo, x_hi, clusters=9, ink=0.3, avoid=None, per
                          jitter=rng.uniform(0.3, 0.9), red=red)
                 xa += l2 + s * rng.uniform(4, 18)
             y += gap * rng.uniform(0.6, 1.6)
+
+
+# ---------------------------------------------------------------- calligraphic marks
+def brush(p, pts, width, ink, dry=0.3, taper=(0.1, 0.45), swell=0.45, pv=0.18, n=8, **kw):
+    """a pointed brush line that presses down and lifts: thick belly, tapered ends, the width
+    wandering with the hand; pts are control points (canvas px), splined."""
+    P = spline(np.asarray(pts, np.float32), n) if len(pts) > 2 else np.asarray(pts, np.float32)
+    broad_stroke(p, P, width, ink, dry=dry, taper=taper, swell=swell, pv=pv, maxseg=kw.pop('maxseg', 24), **kw)
+
+
+def wet_disc(p, cx, cy, r, ink, red=True, buf=None, wet_dir=None):
+    """a wet, pale round touch (a sun): not a geometric disc — the outline wanders, the pigment
+    settles unevenly and drifts to a broken tide line, and on its wetter side it has bled a
+    little into the paper fibre."""
+    rng, s = p.rng, p.s
+    buf = buf if buf is not None else (p.R if red else p.D)
+    H, W = buf.shape
+    pad = r * 0.5 + 14 * s
+    x0, x1 = int(max(0, cx - r - pad)), int(min(W, cx + r + pad + 1))
+    y0, y1 = int(max(0, cy - r - pad)), int(min(H, cy + r + pad + 1))
+    if x1 <= x0 or y1 <= y0:
+        return
+    Y, X = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    th = np.arctan2(Y - cy, X - cx)
+    ph = rng.uniform(0, 6.3, 4)
+    rad = r * (1 + 0.045 * np.sin(2 * th + ph[0]) + 0.03 * np.sin(3 * th + ph[1]) + 0.018 * np.sin(5 * th + ph[2])
+               + 0.01 * np.sin(8 * th + ph[3]))
+    d = np.hypot(X - cx, (Y - cy) * rng.uniform(0.97, 1.05))
+    wd = rng.uniform(0, 6.3) if wet_dir is None else wet_dir
+    wet = np.clip(np.cos(th - wd), 0, 1) ** 2
+    ramp = s * (1.2 + 5.0 * wet)
+    tmp = np.zeros((y1 - y0, x1 - x0), np.float32)
+    wash_field(p, 0, y1 - y0, 0, x1 - x0, rad - d, 1.0, max(3 * s, r * 0.08), pool=0.55, buf=tmp, ramp=ramp,
+               hard=np.clip(1 - wet * 1.5, 0, 1), body=0.0, org=(y0, x0))
+    # the middle dried paler where pigment ran to the edge, unevenly
+    cz = vnz(rng, Y, X, r * 0.5, r * 0.6, 2)
+    tmp *= 1 - 0.22 * np.clip(1 - d / (r * 0.85), 0, 1) * np.clip(0.6 + 0.5 * cz, 0, 1)
+    # bleed on the wet side: a faint fringe that creeps out along the fibres
+    fr = np.clip((rad + 4 * s * wet + 3 * s * vnz(rng, Y, X, 2 * s, 2 * s, 2) - d) / (3 * s), 0, 1) * wet
+    fr = fr * np.clip(0.5 + fibre_bleed(p, y0, y1, x0, x1, 2.0) if p.absorb is not None else 0.5, 0, 1)
+    tmp = 1 - (1 - tmp) * (1 - 0.35 * fr)
+    sl = buf[y0:y1, x0:x1]
+    np.copyto(sl, 1 - (1 - sl) * (1 - np.clip(tmp * ink, 0, 1)))
+
+
+def cun_bold(p, ridge, x0, x1, n=12, shadow_x=None, reach=100, ink=0.35, floor=None, shadow_left=True,
+             width=(4.0, 10.0), length=(40, 150)):
+    """a few deliberate texture strokes (皴) laid with the side of a loaded brush: each pressed in,
+    swelling, then lifted, running down the fall line from the ridge, breaking into flying white
+    (飞白) as the brush dries. Fewer and bolder than a hatch; each one different."""
+    rng, s, W = p.rng, p.s, p.W
+    sl = np.gradient(smooth1d(ridge, 25 * s))
+    sx = shadow_x if shadow_x is not None else (x0 + x1) / 2
+    made = tries = 0
+    while made < n and tries < n * 30:
+        tries += 1
+        cx = rng.uniform(x0, x1)
+        xi = int(np.clip(cx, 0, W - 1))
+        shade = (cx < sx) == shadow_left
+        if rng.random() > (0.85 if shade else 0.3) * (0.3 + min(1.0, abs(sl[xi]) * 2.2)):
+            continue
+        dirx = -np.sign(sl[xi]) if abs(sl[xi]) > 0.04 else rng.choice([-1, 1])
+        steep = np.clip(abs(sl[xi]) * 1.3, 0.25, 1.6)
+        y = ridge[xi] + 2 * s + abs(rng.normal(0, reach * 0.22))
+        ln = rng.uniform(*length) * s * (1 - 0.4 * np.clip((y - ridge[xi]) / max(reach, 1), 0, 1))
+        dv = np.array([dirx * steep * rng.uniform(0.6, 1.3), 1.0]); dv /= np.linalg.norm(dv)
+        nrm = np.array([-dv[1], dv[0]])
+        kink = rng.normal(0, 0.1) * ln
+        pts = [(cx, y), (cx + dv[0] * ln * 0.35 + nrm[0] * kink, y + dv[1] * ln * 0.35 + nrm[1] * kink),
+               (cx + dv[0] * ln * 0.7 - nrm[0] * kink * 0.4, y + dv[1] * ln * 0.7 - nrm[1] * kink * 0.4),
+               (cx + dv[0] * ln, y + dv[1] * ln)]
+        P = spline(np.asarray(pts, np.float32), 6)
+        if floor is not None:
+            P = P[P[:, 1] < floor - 4 * s]
+            if len(P) < 4:
+                continue
+        depthf = np.exp(-(y - ridge[xi]) / max(reach * 1.4, 1))
+        ik = ink * (1.0 if shade else 0.55) * rng.uniform(0.6, 1.2) * (0.45 + 0.55 * depthf)
+        w = s * rng.uniform(*width) * (1.0 if shade else 0.75)
+        broad_stroke(p, P, w, ik, dry=rng.uniform(0.45, 0.85), taper=(rng.uniform(0.02, 0.12), rng.uniform(0.35, 0.75)),
+                     side=rng.uniform(-0.9, 0.9), pool=rng.uniform(0.15, 0.45), swell=rng.uniform(0.15, 0.6), pv=0.25,
+                     hair=rng.uniform(0.9, 1.3), maxseg=20)
+        made += 1
+        # now and then a thinner companion pulled alongside before the brush is reloaded
+        if rng.random() < 0.35:
+            off = nrm * w * rng.uniform(1.2, 2.5) * rng.choice([-1, 1])
+            Q = P[int(len(P) * rng.uniform(0.0, 0.3)):int(len(P) * rng.uniform(0.6, 1.0))] + off
+            if len(Q) > 3:
+                broad_stroke(p, Q, w * rng.uniform(0.35, 0.6), ik * rng.uniform(0.6, 0.9), dry=rng.uniform(0.6, 0.9),
+                             taper=(0.1, 0.5), swell=0.3, pv=0.3, maxseg=14)
+
+
+def ripples(p, y_lo, y_hi, x_lo, x_hi, clusters=9, ink=0.3, avoid=None, persp=(0.5, 1.6), red=False):
+    """water marks in loose clusters: each mark its own kind — a pressed dash, a long broken
+    hairline, a dash with a flick, a pale wide pull — with its own length, weight and ink.
+    avoid: list of (x0, y0, x1, y1) boxes to keep clear."""
+    rng, s = p.rng, p.s
+    for c in range(clusters):
+        for _ in range(30):
+            cy = y_lo + (y_hi - y_lo) * rng.random() ** 0.8
+            cx = rng.uniform(x_lo, x_hi)
+            if not avoid or not any(a[0] < cx < a[2] and a[1] < cy < a[3] for a in avoid):
+                break
+        f = np.clip((cy - y_lo) / max(1, y_hi - y_lo), 0, 1)
+        pk = persp[0] + (persp[1] - persp[0]) * f
+        k = int(rng.integers(1, 7))
+        y = cy
+        for j in range(k):
+            kind = rng.choice(['dash', 'dash', 'line', 'flick', 'pale', 'pair'])
+            ln = s * pk * float(np.exp(rng.normal(np.log(40), 0.6)))
+            x = cx + rng.normal(0, ln * 0.8 + 20 * s)
+            y += s * pk * rng.uniform(3, 18) * (1 if rng.random() < 0.8 else 2.5)
+            if avoid and any(a[0] < x < a[2] and a[1] < y < a[3] for a in avoid):
+                continue
+            ik = ink * rng.uniform(0.35, 1.15) * (0.5 + 0.7 * f)
+            yb = y + rng.normal(0, s * 0.8)
+            if kind in ('dash', 'pair'):
+                for q in range(2 if kind == 'pair' else 1):
+                    l2 = ln * (rng.uniform(0.3, 0.6) if kind == 'pair' else rng.uniform(0.3, 0.8))
+                    xa = x + q * (l2 + s * rng.uniform(3, 14))
+                    brush(p, [(xa, yb), (xa + l2 * 0.5, yb + rng.normal(0, s * 0.9)), (xa + l2, yb + rng.normal(0, s * 0.7))],
+                          s * pk * rng.uniform(1.4, 3.4), ik, dry=rng.uniform(0.2, 0.7), taper=(rng.uniform(0.05, 0.4), rng.uniform(0.2, 0.6)),
+                          swell=rng.uniform(0.2, 0.8), red=red, pool=rng.uniform(0.1, 0.5), maxseg=8)
+            elif kind == 'line':
+                xa = x
+                for q in range(int(rng.integers(1, 4))):
+                    l2 = ln * rng.uniform(0.5, 1.6)
+                    p.stroke(spline([(xa, yb), (xa + l2 / 2, yb + rng.normal(0, s * 1.0)), (xa + l2, yb + rng.normal(0, s * 0.8))], 8),
+                             s * rng.uniform(0.6, 1.4) * (0.6 + 0.5 * f), ik * rng.uniform(0.5, 0.9), dry=rng.uniform(0.4, 0.85),
+                             taper=(rng.uniform(0.1, 0.5), rng.uniform(0.2, 0.6)), jitter=rng.uniform(0.3, 0.9), red=red)
+                    xa += l2 + s * rng.uniform(5, 30)
+            elif kind == 'flick':
+                sg = rng.choice([-1, 1])
+                brush(p, [(x, yb), (x + ln * 0.55, yb + sg * s * rng.uniform(0.5, 2)), (x + ln * 0.8, yb - sg * s * rng.uniform(0.5, 2.5)),
+                          (x + ln, yb - sg * s * rng.uniform(2, 5))], s * pk * rng.uniform(1.2, 2.6), ik, dry=rng.uniform(0.3, 0.7),
+                      taper=(0.08, 0.7), swell=rng.uniform(0.3, 0.7), red=red, maxseg=10)
+            else:
+                brush(p, [(x, yb), (x + ln * 0.7, yb + rng.normal(0, s)), (x + ln * 1.4, yb + rng.normal(0, s))],
+                      s * pk * rng.uniform(4, 9), ik * rng.uniform(0.2, 0.4), dry=rng.uniform(0.3, 0.7), taper=(0.3, 0.4),
+                      swell=0.3, red=red, pool=0.4, maxseg=10, rough=1.6)
+
+
+def wet_patch(p, cx, cy, rx, ry, dens, buf=None, red=False, tilt=0.0, pool=0.4):
+    """a small wet wash laid as a patch (ground shadow, undergrowth): its outline wanders on every
+    side — top and bottom alike — and dries to a tide line in places; no flat edge."""
+    rng, s = p.rng, p.s
+    H, W = p.H, p.W
+    pad = max(rx, ry) * 0.9 + 8 * s
+    x0, x1 = int(max(0, cx - rx - pad)), int(min(W, cx + rx + pad + 1))
+    y0, y1 = int(max(0, cy - ry - pad)), int(min(H, cy + ry + pad + 1))
+    if x1 <= x0 + 2 or y1 <= y0 + 2:
+        return
+    Y, X = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+    u = (X - cx) / max(rx, 1); v = (Y - cy - tilt * (X - cx)) / max(ry, 1)
+    f = (1 - np.sqrt(u * u + v * v)) * min(rx, ry)
+    wash_field(p, y0, y1, x0, x1, f, dens, max(3 * s, min(rx, ry) * 0.9), pool=pool, buf=buf, red=red,
+               ramp=max(1.5 * s, min(rx, ry) * 0.12))

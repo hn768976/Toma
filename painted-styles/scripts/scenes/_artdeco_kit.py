@@ -1,23 +1,31 @@
 """Shared helpers for the Art Deco scene scripts (artdeco_lake / _coast / _forest).
 
+The look is the 1920s-30s travel poster: airbrush through hand-cut friskets. Every shape is a cut mask and
+inside a mask the tone always flows (one airbrush pass = one smooth gradient); the only hard steps are the
+frisket edges, which are deliberate design lines (stepped terraces, rings round the sun, stacked cloud bands).
+
 `Deco` is the vendored `ArtDeco` class with the same frisket-and-airbrush model, but
   * every frisket pass is limited to the bounding box of its mask (much faster on big boards);
-  * the airbrush speckle is a field of discrete droplets: a pass of coverage d lands as a smooth film plus a
-    share of single droplets whose count follows d, so dense spray is more speckled than thin spray, and a
-    fade speckles across its gradient (instead of an even monochrome noise everywhere);
-  * `overspray()` lays the soft fog that drifts a little under one side of a frisket edge.
-Hand-cut helpers: `hand()` gives a frisket outline the tiny wobble of a knife cut; `burst()` is a sunburst cut
-ray by ray (unequal rays, one hard knife edge and one soft oversprayed edge, per-ray tone); `stencil_cloud()`,
-`facet_range()`, `pine()`, `dashes()` / `strip_mask()` / `stencil_water()` (water and reflections as stencilled
-horizontal strips) and `haze()` (mist sprayed down from an irregular cut edge) are shared by the three scenes.
-`Stager` writes draw-on snapshots straight to disk (NNN_name.png) instead of keeping them in memory."""
+  * the droplets (spatter) are not an even noise: a pass lands as a smooth film plus a share of discrete
+    droplets whose number follows the coat, and that share builds up along the frisket edge (the paint piles
+    against the film) and with the "pressure" of the pass (a slow per-pass field), so a gradient speckles
+    more toward its cut edges and in some passes than in others;
+  * `overspray()` lays the soft fog that drifts under one side of a frisket, mostly as coarse droplets.
+Motifs: `graded_sky()` (one smooth fade, plus optional stepped halo rings round the sun as design lines),
+`frisket_rays()` (a fan of rays each cut as a frisket: opaque paint through the cut, crisp on the knife side,
+irregular overspray on the other), `sun_disc()`, `streamline_cloud()` (stacked parallel bands with round heads
+and tapered tails), `terraced_range()` (ziggurat-like stepped mountains with rounded, streamlined ledges, each
+tier an airbrushed gradient, light side / shade side), `deco_pine()` / `cypress()` (stacked streamlined
+tiers, split light/shade), `deco_water()` (graded water, a reflection laid as stepped stencil bands, long
+tapered speed lines, a stacked sun path), `chevrons()` (stepped V ripples), `deco_bird()` (two smooth
+crescent wings), `haze()`, and `Stager` (draw-on snapshots written straight to disk)."""
 import os
 
 import numpy as np
 
 import drawkit
 from artdeco import ArtDeco, ramp, _c
-from core import polygon_mask, blur, shift, smoothstep
+from core import polygon_mask, blur, shift, smoothstep, noise2d
 
 
 def _box(m, pad=0, shape=None):
@@ -47,6 +55,13 @@ def vary(stops, f=1.0, warm=0.0):
         v = col(c) * f + np.float32([warm, warm * 0.3, -warm])
         out.append((p, np.clip(v, 0, 1)))
     return out
+
+
+def bez(p0, p1, p2, n=12):
+    """quadratic Bezier p0 -> p2 pulled toward p1 (list of points)"""
+    t = np.linspace(0, 1, n)[:, None]
+    P = (1 - t) ** 2 * np.asarray(p0, float) + 2 * (1 - t) * t * np.asarray(p1, float) + t ** 2 * np.asarray(p2, float)
+    return [tuple(p) for p in P]
 
 
 def hand(pts, rng, amp=0.8, step=12.0, closed=True, bow=0.0):
@@ -79,18 +94,43 @@ class Deco(ArtDeco):
     def __init__(self, W, H, seed=0, grain=1.0, s=1.0):
         super().__init__(W, H, seed=seed, grain=grain)
         self.s = s
-        # where the airbrush droplets land: one fixed field per board (independent of any group's rng)
-        self.drop = np.random.default_rng([int(seed), 7717]).random((H, W), dtype=np.float32)
+        r = np.random.default_rng([int(seed), 7717])
+        # where the airbrush droplets land: fixed fields per board (independent of any group's rng)
+        self.drop = r.random((H, W), dtype=np.float32)
+        b = max(1, int(round(2 * s)))                       # coarse droplets (overspray, edge build-up)
+        c = r.random(((H + b - 1) // b, (W + b - 1) // b), dtype=np.float32)
+        self.drop2 = np.repeat(np.repeat(c, b, 0), b, 1)[:H, :W]
+        # airbrush pressure: a slow field, read at a different place for every pass (offset by where the
+        # frisket is), so one pass is a little heavier with droplets than the next
+        self.press = (0.45 + 1.1 * noise2d(H, W, max(40.0, 260 * s), 3, int(seed) * 31 + 5)).astype(np.float32)
+        self.edge_r = max(1.0, 3.5 * s)
+
+    def _press_at(self, sl):
+        oy = (sl[0].start * 7919 + sl[1].start * 104729) % self.H
+        ox = (sl[1].start * 7907 + sl[0].start * 1009) % self.W
+        rows = (np.arange(sl[0].start, sl[0].stop) + oy) % self.H
+        cols = (np.arange(sl[1].start, sl[1].stop) + ox) % self.W
+        return self.press[np.ix_(rows, cols)]
+
+    def _edge(self, mbox):
+        """1 along the cut edge of a frisket, 0 well inside / outside (where the droplets pile up)"""
+        b = blur((mbox > 0.5).astype(np.float32), self.edge_r)
+        return np.clip(1 - np.abs(2 * b - 1), 0, 1) ** 0.8
 
     # -- one airbrush pass, restricted to the mask's bounding box
-    def _spray_in(self, sl, d, col_, grain, blend):
+    def _spray_in(self, sl, d, col_, grain, blend, edge=None):
         d = np.clip(d, 0, 1)
         if grain:
-            # a share k of the coat arrives as visible droplets: the number of droplets follows the coat
-            # density (thin spray -> a few scattered droplets, dense spray -> many), mean coverage unchanged
-            k = 0.07 * grain
-            dots = (self.drop[sl] < d).astype(np.float32)
-            d = d * (1 - k) + dots * k
+            # a share of the coat arrives as visible droplets: the number follows the coat density, the share
+            # follows the pressure of this pass and builds up along the frisket edge
+            pr = self._press_at(sl)
+            e = 0.3 if edge is None else edge
+            k = np.clip(0.06 * grain * pr * (0.35 + 1.3 * e), 0, 0.3)
+            fine = (self.drop[sl] < d).astype(np.float32)
+            if edge is not None:
+                coarse = (self.drop2[sl] < d).astype(np.float32)
+                fine = np.where(edge > 0.6, coarse, fine)
+            d = d * (1 - k) + fine * k
         img = self.img[sl]
         if blend == 'screen':
             img = 1 - (1 - img) * (1 - d[..., None] * col_)
@@ -100,7 +140,7 @@ class Deco(ArtDeco):
             img = img * (1 - d[..., None]) + col_ * d[..., None]
         self.img[sl] = img
 
-    def spray(self, mask, colour, density=1.0, grain=1.0, blend='paint'):
+    def spray(self, mask, colour, density=1.0, grain=1.0, blend='paint', edges=True):
         m = np.asarray(mask, np.float32)
         if m.ndim != 2:
             m = np.broadcast_to(m, (self.H, self.W))
@@ -112,11 +152,13 @@ class Deco(ArtDeco):
             c = _c(colour)
         else:
             c = np.asarray(colour, np.float32)[sl]
-        self._spray_in(sl, m[sl], c, grain, blend)
+        e = self._edge(np.asarray(mask, np.float32)[sl] if np.ndim(mask) == 2 else m[sl]) if (grain and edges) else None
+        self._spray_in(sl, m[sl], c, grain, blend, e)
 
     def fade(self, mask, stops, p0, p1, grain=1.0):
         """linear airbrush fade through colour stops. The fade is laid as droplets too: across the gradient
-        a share of the pixels take the colour a little further along / back (speckle follows the gradient)."""
+        a share of the pixels take the colour a little further along / back, more of them near the cut edge
+        and where this pass's pressure is high."""
         m = np.asarray(mask, np.float32)
         if m.ndim != 2:
             m = np.broadcast_to(m, (self.H, self.W))
@@ -126,16 +168,30 @@ class Deco(ArtDeco):
         dx, dy = p1[0] - p0[0], p1[1] - p0[1]
         L2 = dx * dx + dy * dy + 1e-6
         t = np.clip(((self.xx[sl] - p0[0]) * dx + (self.yy[sl] - p0[1]) * dy) / L2, 0, 1)
+        e = self._edge(m[sl]) if grain else None
         if grain:
             u = self.drop[sl]
-            # droplets of the later colour land where the coat of it is t: (u < t) -> +, else -
-            jit = np.where(u < t, 1.0, -1.0) * np.minimum(t, 1 - t) * 0.08 * grain
-            t = np.clip(t + jit * (np.abs(u - 0.5) > 0.36), 0, 1)
-        self._spray_in(sl, m[sl], ramp(t, stops), grain * 0.5, 'paint')
+            pr = self._press_at(sl)
+            amp = 0.05 * grain * pr * (0.5 + 2.0 * e)
+            jit = np.where(u < t, 1.0, -1.0) * np.minimum(t, 1 - t) * amp
+            t = np.clip(t + jit * (np.abs(u - 0.5) > 0.3), 0, 1)
+        self._spray_in(sl, m[sl], ramp(t, stops), grain * 0.5, 'paint', e)
+
+    def field(self, mask, colour_fn, grain=1.0, density=1.0):
+        """a pass whose colour is any smooth function of design-independent canvas coords inside the mask's
+        box: colour_fn(xx, yy) -> (h, w, 3). Used for gradients that are not linear (two-way modelling)."""
+        m = np.asarray(mask, np.float32)
+        sl = _box(m > 0)
+        if sl is None:
+            return
+        c = colour_fn(self.xx[sl], self.yy[sl])
+        e = self._edge(m[sl]) if grain else None
+        d = m[sl] * density if np.ndim(density) == 0 else m[sl] * np.asarray(density, np.float32)[sl]
+        self._spray_in(sl, d, c, grain, 'paint', e)
 
     def overspray(self, mask, colour, dx=0.0, dy=1.0, width=3.0, density=0.3, grain=1.0, blend='paint'):
         """the fog that drifts under one side of a frisket: the mask softened, pushed toward (dx, dy) and
-        kept only outside the cut shape. width in canvas px."""
+        kept only outside the cut shape; it lands mostly as coarse droplets. width in canvas px."""
         m = np.asarray(mask, np.float32)
         pad = int(3 * width + abs(dx) + abs(dy)) + 3
         sl = _box(m > 0, pad, m.shape)
@@ -144,9 +200,11 @@ class Deco(ArtDeco):
         sub = m[sl]
         b = shift(blur(sub, width), dx, dy)
         halo = np.clip(b - sub, 0, 1) * density
+        dots = (self.drop2[sl] < halo * 1.4).astype(np.float32)
+        d = halo * 0.7 + dots * np.minimum(halo * 1.4, 0.3) * grain
         full = np.zeros_like(m)
-        full[sl] = halo
-        self.spray(full, colour, grain=grain, blend=blend)
+        full[sl] = d
+        self.spray(full, colour, grain=0, blend=blend)
 
     def poly(self, pts):
         """the lib's 4x supersampled polygon frisket, rasterised only inside the polygon's box"""
@@ -160,318 +218,360 @@ class Deco(ArtDeco):
         out[y0:y1, x0:x1] = polygon_mask(y1 - y0, x1 - x0, [(x - x0, y - y0) for x, y in pts], ss=4)
         return out
 
-    def capsule(self, x0, x1, y, r):
-        """a horizontal bar with round ends (anti-aliased)"""
+    def disc(self, cx, cy, r):
         out = np.zeros((self.H, self.W), np.float32)
-        bx0, bx1 = max(0, int(x0 - r) - 2), min(self.W, int(x1 + r) + 3)
-        by0, by1 = max(0, int(y - r) - 2), min(self.H, int(y + r) + 3)
-        if bx1 <= bx0 or by1 <= by0:
-            return out
-        xx, yy = self.xx[by0:by1, bx0:bx1], self.yy[by0:by1, bx0:bx1]
-        dx = np.maximum(np.maximum(x0 - (xx + 0.5), (xx + 0.5) - x1), 0)
-        d = np.hypot(dx, yy + 0.5 - y)
-        out[by0:by1, bx0:bx1] = np.clip(r - d + 0.5, 0, 1)
+        y0, y1 = max(0, int(cy - r) - 2), min(self.H, int(cy + r) + 3)
+        x0, x1 = max(0, int(cx - r) - 2), min(self.W, int(cx + r) + 3)
+        if y1 > y0 and x1 > x0:
+            out[y0:y1, x0:x1] = np.clip(r - np.hypot(self.xx[y0:y1, x0:x1] + 0.5 - cx,
+                                                     self.yy[y0:y1, x0:x1] + 0.5 - cy) + 0.5, 0, 1)
         return out
 
     def bar(self, p0, p1, w):
         return self._bar(p0, p1, w)
 
-    # ------------------------------------------------------------ the sunburst, cut ray by ray
-    def burst(self, cx, cy, rays=36, contrast=0.12, reach=1200, colour='#ffffff', dark='#000000', glow=0.5,
-              phase=0.0, bottom=None, rng=None, soft_side=1):
-        """Deco sunburst laid like the artist does it: a fan of friskets cut with a knife, so the rays are a
-        little unequal in width, every edge wanders a hair, each ray got its own pass of the airbrush (tone and
-        reach differ ray to ray), and on one side of each light ray the spray crept under the frisket (soft
-        overspray) while the other side is the hard knife edge."""
-        rng = rng if rng is not None else np.random.default_rng(1)
-        n = rays // 2 * 2 // 2
-        y1 = self.H if bottom is None else int(min(self.H, np.ceil(bottom) + 1))
-        sl = (slice(0, y1), slice(0, self.W))
-        dx, dy = self.xx[sl] - cx, self.yy[sl] - cy
-        r = np.hypot(dx, dy) + 1e-3
-        b = np.linspace(0, 2 * np.pi, 2 * n + 1)[:-1] + np.radians(phase)
-        b = b + rng.uniform(-0.16, 0.16, 2 * n) * np.pi / n
-        b = np.sort(np.mod(b, 2 * np.pi))
-        bb = np.concatenate([b, [b[0] + 2 * np.pi]])
-        th = np.mod(np.arctan2(dy, dx) - b[0], 2 * np.pi) + b[0]
-        i = np.clip(np.searchsorted(bb, th, side='right') - 1, 0, 2 * n - 1)
-        # odd/even pairing: the bin starting at boundary i
-        lo, hi = bb[i], bb[i + 1]
-        # knife wobble of each boundary along the radius (px)
-        ph1, ph2 = rng.uniform(0, 6.3, 2 * n + 1), rng.uniform(0, 6.3, 2 * n + 1)
-        ph1[-1], ph2[-1] = ph1[0], ph2[0]
-        amp = 0.55 * self.s + 0.0012 * r
 
-        def wob(k):
-            return amp * (np.sin(r / (37 * self.s) + ph1[k]) * 0.6 + np.sin(r / (113 * self.s) + ph2[k]) * 0.4)
-        dlo = (th - lo) * r + wob(i)
-        dhi = (hi - th) * r + wob(i + 1)
-        ow = self.s * 1.2 + r * 0.006                              # overspray width grows away from the centre
-        light = (i % 2 == 0)
+# ------------------------------------------------------------ sky, sun, rays
+def graded_sky(a, S, stops, y_top, y_bot):
+    """the sky as ONE airbrush pass: a long smooth fade through the colour stops (design y_top..y_bot); the
+    whole design range is covered so the bleed is painted"""
+    m = np.zeros((a.H, a.W), np.float32)
+    m[:int(np.ceil(S.y(y_bot))) + 2] = 1
+    a.fade(m, stops, S.pt(0, y_top), S.pt(0, y_bot), grain=1.0)
+
+
+def halo_rings(a, S, rng, cx, cy, radii, colour, dens, bottom=None):
+    """stepped halo round the sun: discs cut with a compass, largest first, each sprayed with a radial fade
+    (heavier toward the centre). Within a disc the tone flows; the disc edges are the design lines."""
+    for k, R in enumerate(sorted(radii, reverse=True)):
+        R = R * rng.uniform(0.97, 1.03)
+        m = a.disc(S.x(cx), S.y(cy), S(R))
+        if bottom is not None:
+            m = m * np.clip(S.y(bottom) - a.yy, 0, 1)
+        sl = _box(m > 0)
+        if sl is None:
+            continue
+        r = np.hypot(a.xx[sl] - S.x(cx), a.yy[sl] - S.y(cy)) / S(R)
+        d = np.zeros_like(m)
+        dk = dens[k] if np.ndim(dens) else dens
+        d[sl] = m[sl] * (0.45 + 0.55 * np.clip(1 - r, 0, 1) ** 1.5) * dk
+        a.spray(d, colour, grain=1.0)
+
+
+def sun_disc(a, S, cx, cy, r, stops, bottom=None, light=(-0.3, -0.35)):
+    """the sun: a disc frisket with one off-centre radial fade (hot core, warmer limb)"""
+    m = a.disc(S.x(cx), S.y(cy), S(r))
+    if bottom is not None:
+        m = m * np.clip(S.y(bottom) - a.yy, 0, 1)
+    lx, ly = S.x(cx + light[0] * r), S.y(cy + light[1] * r)
+    a.field(m, lambda X, Y: ramp(np.clip(np.hypot(X - lx, Y - ly) / S(r * 1.7), 0, 1), stops), grain=0.6)
+
+
+def _wob1(rng, n=4):
+    """a smooth random 1D wobble function of r (sum of a few sines)"""
+    f = rng.uniform(1 / 160, 1 / 25, n)
+    ph = rng.uniform(0, 6.3, n)
+    w = rng.uniform(0.3, 1.0, n)
+    w /= w.sum()
+    return lambda r: sum(wk * np.sin(r * fk + pk) for wk, fk, pk in zip(w, f, ph))
+
+
+def frisket_rays(a, S, rng, cx, cy, angles, r0, reach, colour, dens, bottom=None, soft_side=1, blend='paint'):
+    """a fan of sun rays, each one a frisket cut with a knife and sprayed separately with opaque paint:
+    heavy near the sun, fading along its length. The knife side is crisp; on the other side the spray crept
+    under the film -- an overspray whose width wanders irregularly along the ray, landing partly as droplets.
+    angles: [(centre_deg, half_width_deg)], degrees counter-clockwise from 3 o'clock (design coords)."""
+    X, Y = S.x(cx), S.y(cy)
+    for k, (ang, hw) in enumerate(angles):
+        c0, c1 = np.radians(ang - hw), np.radians(ang + hw)
+        L = S(reach) * rng.uniform(0.82, 1.15)
+        # wedge box
+        pts = [(X, Y)] + [(X + np.cos(t) * L, Y - np.sin(t) * L) for t in np.linspace(c0, c1, 5)]
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        pad = S(14)
+        y0, y1 = max(0, int(min(ys) - pad)), min(a.H, int(max(ys) + pad) + 1)
+        if bottom is not None:
+            y1 = min(y1, int(np.ceil(S.y(bottom))) + 1)
+        x0, x1 = max(0, int(min(xs) - pad)), min(a.W, int(max(xs) + pad) + 1)
+        if y1 <= y0 or x1 <= x0:
+            continue
+        sl = (slice(y0, y1), slice(x0, x1))
+        dx, dy = a.xx[sl] + 0.5 - X, -(a.yy[sl] + 0.5 - Y)
+        r = np.hypot(dx, dy) + 1e-3
+        th = np.arctan2(dy, dx)
+        mid = (c0 + c1) / 2
+        front = np.cos(th - mid) > 0
+        wl, wh = _wob1(rng), _wob1(rng)
+        amp = S(0.7) + r * 0.0015
+        dlo = r * np.sin(th - c0) + amp * wl(r / a.s)                      # px inside the lower edge
+        dhi = r * np.sin(c1 - th) + amp * wh(r / a.s)                      # px inside the upper edge
         if soft_side < 0:
             dlo, dhi = dhi, dlo
-        hard_in, soft_in = np.clip(dlo + 0.5, 0, 1), smoothstep(-ow, ow, dhi)
-        on_light = np.minimum(hard_in, soft_in)
-        on_dark = np.maximum(np.clip(0.5 - dhi, 0, 1), smoothstep(-ow, ow, -dlo))
-        on = np.where(light, on_light, on_dark)
-        ray = np.where(light, i // 2, (i + (1 if soft_side < 0 else -1)) // 2 % n) % n
-        tone_l = rng.uniform(0.7, 1.18, n).astype(np.float32)
-        tone_d = rng.uniform(0.75, 1.2, n).astype(np.float32)
-        reach_k = rng.uniform(0.82, 1.18, n).astype(np.float32)
-        fall = np.exp(-r / (reach * reach_k[ray])) * smoothstep(0, 60 * self.s, r)
-        clip = np.ones_like(r) if bottom is None else np.clip(bottom - self.yy[sl], 0, 1)
-        lm = np.zeros((self.H, self.W), np.float32)
-        lm[sl] = on * fall * contrast * 2.2 * clip * tone_l[ray]
-        self.spray(lm, colour, grain=0.8, blend='screen')
-        dm = np.zeros((self.H, self.W), np.float32)
-        dm[sl] = (1 - on) * fall * contrast * 1.4 * clip * tone_d[(i // 2) % n]
-        self.spray(dm, dark, grain=0.8)
-        if glow:
-            cm = np.ones((self.H, self.W), np.float32)
-            if bottom is not None:
-                cm = np.clip(bottom - self.yy, 0, 1)
-            self.glow(cx, cy, reach * 0.55, colour, strength=glow * 0.55, power=2.2, mask=cm)
+        ws = _wob1(rng, 3)
+        ow = (S(2.0) + r * 0.012) * (0.55 + 0.45 * (1 + ws(r / a.s)))      # overspray width wanders
+        hard = np.clip(dlo + 0.5, 0, 1)
+        soft = smoothstep(-ow, ow * 0.6, dhi)
+        on = hard * soft * front
+        rs = r / L
+        fall = (1 - smoothstep(0.05, 1.0, rs)) ** 1.15 * smoothstep(S(r0) * 0.9, S(r0) * 1.15 + S(10), r)
+        d = on * fall * dens * rng.uniform(0.82, 1.1)
+        if bottom is not None:
+            d = d * np.clip(S.y(bottom) - a.yy[sl], 0, 1)
+        # the overspray outside the soft edge lands partly as coarse droplets
+        out = (dhi < 0) & front
+        spat = (a.drop2[sl] < d * 1.2) & out
+        d = np.where(out, d * 0.65 + spat * np.minimum(d * 1.2, 0.35), d)
+        full = np.zeros((a.H, a.W), np.float32)
+        full[sl] = d
+        a.spray(full, colour, grain=0.3, blend=blend, edges=False)
 
 
-# ------------------------------------------------------------ shared motifs (design coordinates)
-def banded_sky(a, S, rng, bands, stage=None):
-    """a period poster sky: stepped horizontal bands of flat ink, each sprayed through its own frisket (the
-    knife-cut edge wanders a hair) with a short fade toward its foot. bands: [(bottom_y, top_ink, foot_ink)]"""
-    y0 = S.Y0 - 10
-    for k, (yb, c0, c1) in enumerate(bands):
-        last = k == len(bands) - 1
-        top = [(S.X0 - 20, y0), (S.X1 + 20, y0)]
-        bot = [(S.X1 + 20, yb), (S.X0 - 20, yb)]
-        if not last:
-            bot = hand(bot, rng, amp=0.9, step=40, closed=False)
-        m = a.poly(S.pts(top + bot))
-        a.fade(m, [(0, c0), (1, c1)], S.pt(0, max(y0, yb - 140)), S.pt(0, yb))
-        y0 = yb - 3
-        if stage:
-            stage()
-
-
-def band_fields(a, S, bands, ray, k_lit=0.55, k_dark=0.62):
-    """per-pixel ray inks for a banded sky: each band's colour mixed toward the ray colour (light rays) and
-    down toward its own darker shade (dark rays)"""
-    Y = (a.yy[:, 0] - S.oy) / S.s
-    base = np.zeros((a.H, 1, 3), np.float32)
-    lo = -1e9
-    for yb, c0, c1 in bands:
-        sel = (Y > lo) & (Y <= yb)
-        base[sel, 0] = col(c0) * 0.5 + col(c1) * 0.5
-        lo = yb
-    base[Y > lo, 0] = col(bands[-1][2])
-    lit = np.broadcast_to(base * (1 - k_lit) + col(ray) * k_lit, (a.H, a.W, 3))
-    dark = np.broadcast_to(base * k_dark, (a.H, a.W, 3))
-    return lit, dark
-
-
-def bird(a, S, rng, bx, by, sz, lift, tilt, colour, under=None):
-    """a bird cut from one frisket: each wing has its own lift, sweep and length; a small body bump.
-    under: an optional second ink sprayed up from the belly (gulls by day)"""
-    c, s_ = np.cos(tilt), np.sin(tilt)
-    lw, rw = sz * rng.uniform(0.82, 1.06), sz * rng.uniform(0.82, 1.06)
-    ll, rl = lift * rng.uniform(0.75, 1.25), lift * rng.uniform(0.75, 1.25)
-    sweep = rng.uniform(0.05, 0.3)
-    th = sz * rng.uniform(0.11, 0.17)
-    up = [(-lw, -ll * sz * 0.6 - sweep * sz * 0.2), (-lw * 0.5, -ll * sz * 0.55 - th * 0.6),
-          (-sz * 0.12, -th * 0.4), (0, -th * 0.8), (sz * 0.12, -th * 0.4),
-          (rw * 0.5, -rl * sz * 0.55 - th * 0.6), (rw, -rl * sz * 0.6 - sweep * sz * 0.2)]
-    lo = [(rw * 0.55, -rl * sz * 0.5 + th * 0.35), (sz * 0.1, th * 0.9), (0, th * 1.2),
-          (-sz * 0.1, th * 0.9), (-lw * 0.55, -ll * sz * 0.5 + th * 0.35)]
-    pts = [(bx + x * c - y * s_, by + x * s_ + y * c) for x, y in up + lo]
-    m = a.poly(S.pts(pts))
-    if under is None:
-        a.spray(m, colour, grain=0.6)
-    else:
-        a.fade(m, [(0, colour), (0.55, colour), (1, under)], S.pt(bx, by - sz * 0.3), S.pt(bx, by + th * 1.2),
-               grain=0.6)
-
-
-def tier_outline(x0, x1, yb, th, lend, rend, rng, n=26):
-    """one stencil lump of a Deco cloud: flat cut underside, domed top; each end either 'round' or a long
-    streamlined 'tail'"""
-    L = x1 - x0
-    xs = np.linspace(x0, x1, n)
-    u = (xs - x0) / L
-    lw = min(0.45, th * (0.9 if lend == 'round' else 3.2) / L)
-    rw = min(0.45, th * (0.9 if rend == 'round' else 3.2) / L)
-    prof = np.ones_like(u)
-    for side, w, kind in ((u, lw, lend), (1 - u, rw, rend)):
-        m = side < w
-        v = np.clip(side[m] / w, 0, 1)
-        prof[m] = np.minimum(prof[m], np.sqrt(1 - (1 - v) ** 2) if kind == 'round' else v ** 1.6)
-    crown = 1 + rng.uniform(-0.08, 0.12) * np.sin(np.pi * u * rng.uniform(0.8, 1.6) + rng.uniform(0, 3))
-    top = [(x, yb - th * p * c) for x, p, c in zip(xs, prof, crown)]
-    return top + [(x1, yb), (x0, yb)]
-
-
-def stencil_cloud(a, S, rng, x0, x1, y, h, stops, lit_below, edge_col=None, density=0.95, stage=None):
-    """a hand-cut streamlined cloud: 2-4 stacked lumps of different lengths and end shapes, the back lump
-    cut first, each sprayed through its own frisket with a vertical fade (lit side toward the sun) and a soft
-    overspray on the shadow side. No inner hairline."""
-    L = x1 - x0
-    tiers = []
-    n = int(rng.integers(2, 5))
-    cx0, cx1, yb = x0, x1, y
-    for k in range(n):
-        th = h * rng.uniform(0.75, 1.15) * (1 - 0.12 * k)
-        ends = ('round', 'tail') if rng.random() < 0.5 else ('tail', 'round')
-        if k == 0 and rng.random() < 0.3:
-            ends = ('tail', 'tail')
-        tiers.append((cx0, cx1, yb, th, ends))
-        # the next lump up: shorter, shifted, sitting on this one's back
-        nl = (cx1 - cx0) * rng.uniform(0.38, 0.72)
-        off = rng.uniform(0.05, 0.95) * ((cx1 - cx0) - nl)
-        cx0, cx1 = cx0 + off, cx0 + off + nl
-        yb = yb - th * rng.uniform(0.45, 0.7)
-        if nl < 3 * h:
-            break
-    ys = [t[2] - t[3] for t in tiers]
-    ytop, ybot = min(ys), y
-    for cx0, cx1, yb, th, (le, re) in tiers[::-1]:          # back lump first
-        m = a.poly(S.pts(hand(tier_outline(cx0, cx1, yb, th, le, re, rng), rng, amp=0.5, step=16)))
-        if lit_below:
-            p0, p1 = S.pt(0, yb - th), S.pt(0, yb)
-        else:
-            p0, p1 = S.pt(0, yb), S.pt(0, yb - th)
-        a.fade(m * density, vary(stops, rng.uniform(0.94, 1.05)), p0, p1, grain=1.0)
-        if edge_col is not None:
-            a.overspray(m, edge_col, dx=S(rng.uniform(-1, 1)), dy=S(2.0 if lit_below else -2.0),
-                        width=S(rng.uniform(1.5, 3.0)), density=0.35)
-        if stage:
-            stage()
-    return ytop, ybot
-
-
-def facet_range(a, S, rng, ridge, base, lit, shade, light=1, mid=None, ext=None):
-    """a mountain range cut as facets under ONE light (light=+1: from the right, -1: from the left).
-    Every ridge vertex sends a kinked crease line down to the foot; each ridge segment is one face between two
-    creases. A face turned toward the light is sprayed with the lit ink (brighter the steeper it is), a face
-    turned away with the shade ink (darker the steeper); some faces get a second, smaller facet cut in, so no
-    two peaks are built alike."""
-    if ext is not None:
-        ridge = ext(ridge)
-    rj = hand(ridge, rng, amp=0.7, step=14, closed=False)
-    m = a.poly(S.pts(rj) + [S.pt(ridge[-1][0], base + 2), S.pt(ridge[0][0], base + 2)])
-    top = min(y for _, y in ridge)
-    a.fade(m, lit, S.pt(0, top), S.pt(0, base))
-    creases = []
-    for i, (x, y) in enumerate(ridge):
-        H = base - y
-        lean = rng.uniform(-0.12, 0.22) * H * 0.6
-        kink = (x + lean * 0.35 + rng.uniform(-5, 5), y + H * rng.uniform(0.28, 0.6))
-        foot = (x + lean + rng.uniform(-10, 10), base + 6)
-        creases.append((kink, foot))
-    for i in range(len(ridge) - 1):
-        A, B = ridge[i], ridge[i + 1]
-        (ka, fa), (kb, fb) = creases[i], creases[i + 1]
-        face = [A, B, kb, fb, fa, ka]
-        fm = a.poly(S.pts(hand(face, rng, amp=0.5, step=14))) * m
-        dy, dx = B[1] - A[1], abs(B[0] - A[0]) + 1e-3
-        steep = min(1.6, abs(dy) / dx)
-        toward = (dy > 0) if light > 0 else (dy < 0)        # a segment falling toward the light faces it
-        if toward:
-            stops = vary(lit, 0.94 + 0.1 * steep + rng.uniform(-0.03, 0.03))
-        else:
-            stops = vary(shade, 1.08 - 0.14 * steep + rng.uniform(-0.04, 0.04))
-        yt = min(A[1], B[1])
-        a.fade(fm, stops, S.pt(0, yt), S.pt(0, base))
-        if mid is not None and rng.random() < 0.6:
-            # a smaller facet cut into the face: from a point on the ridge down to a point on a crease
-            t = rng.uniform(0.3, 0.7)
-            C = (A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t)
-            k2 = kb if rng.random() < 0.5 else ka
-            D = (k2[0] + (C[0] - k2[0]) * rng.uniform(0.1, 0.4), k2[1] + (base - k2[1]) * rng.uniform(0.0, 0.4))
-            sub = [C, B, kb, D] if k2 is kb else [A, C, D, ka]
-            sm = a.poly(S.pts(hand(sub, rng, amp=0.5, step=14))) * fm
-            a.fade(sm * rng.uniform(0.35, 0.6), vary(mid if toward else shade, rng.uniform(0.85, 1.0)),
-                   S.pt(0, yt), S.pt(0, base))
-    if mid is not None:
-        # the nose of a peak: the face turned to the viewer, cut as a lopsided wedge between two diagonal
-        # creases running down from the summit; half lit, so it takes the middle ink
-        for i in range(1, len(ridge) - 1):
-            (x0, y0), (x1, y1), (x2, y2) = ridge[i - 1], ridge[i], ridge[i + 1]
-            if not (y1 < y0 and y1 < y2) or rng.random() < 0.2:
-                continue
-            H = base - y1
-            lx = x1 - (x1 - x0) * rng.uniform(0.2, 0.55)
-            rx = x1 + (x2 - x1) * rng.uniform(0.2, 0.55)
-            ly = y1 + H * rng.uniform(0.35, 0.95)
-            ry = y1 + H * rng.uniform(0.35, 0.95)
-            nose = [(x1, y1 + 1.5), (rx, ry), (rx + rng.uniform(-10, 25), base + 6),
-                    (lx + rng.uniform(-25, 10), base + 6), (lx, ly)]
-            if rng.random() < 0.4:      # a nose that ends in a point above the foot
-                bx = (lx + rx) / 2 + rng.uniform(-0.2, 0.2) * (rx - lx)
-                nose = [(x1, y1 + 1.5), (rx, ry), (bx, max(ly, ry) + H * rng.uniform(0.1, 0.4)), (lx, ly)]
-            nm = a.poly(S.pts(hand(nose, rng, amp=0.5, step=14))) * m
-            a.fade(nm * rng.uniform(0.75, 0.95), vary(mid, rng.uniform(0.92, 1.08)), S.pt(0, y1), S.pt(0, base))
-            # the lit side of the nose a step lighter where it turns toward the light
-            half = [(x1, y1 + 1.5), (rx, ry), ((x1 + rx) / 2 + rng.uniform(-8, 8), ry + (base - ry) * 0.3)] \
-                if light > 0 else [(x1, y1 + 1.5), (lx, ly), ((x1 + lx) / 2 + rng.uniform(-8, 8), ly + (base - ly) * 0.3)]
-            if rng.random() < 0.6:
-                hm = a.poly(S.pts(hand(half, rng, amp=0.4, step=12))) * nm
-                a.spray(hm, lit[-1][1], density=rng.uniform(0.25, 0.45), grain=1.0)
-    return m
-
-
-def pine(a, S, rng, x, root, h, w, body, trunk, light=1, tiers=None):
-    """a Deco conifer cut by hand: 3-6 tiers at irregular spacing, each tier asymmetric with its own droop,
-    the axis leaning a little, sprayed shadow -> lit across toward the light; tone varies tree to tree"""
-    lean = rng.uniform(-0.035, 0.035)
-    tw = max(1.0, w * rng.uniform(0.06, 0.1))
-    a.spray(a.poly(S.pts([(x - tw / 2, root), (x + tw / 2, root), (x + lean * h * 0.2 + tw * 0.3, root - h * 0.25),
-                          (x + lean * h * 0.2 - tw * 0.3, root - h * 0.25)])), trunk, grain=0.4)
-    n = int(tiers if tiers is not None else rng.integers(3, 7))
-    stops = vary(body, rng.uniform(0.82, 1.15), rng.uniform(-0.02, 0.02))
-    # tier bottoms: irregular spacing from the top
-    cuts = np.sort(rng.uniform(0.18, 1.0, n - 1))
-    bots = np.concatenate([cuts, [1.0]]) * (h * rng.uniform(0.76, 0.86))
-    top = root - h
-    prev = 0.0
-    for k in range(n):
-        f = (k + 1) / n
-        by = top + bots[k] + rng.uniform(-0.01, 0.01) * h
-        ty = top + (prev * rng.uniform(0.35, 0.75) if k else 0)
-        ax = x + lean * (root - ty) * 0.3
-        bx = x + lean * (root - by) * 0.3
-        hw = w / 2 * (0.32 + 0.68 * (bots[k] / bots[-1]) ** rng.uniform(0.8, 1.2)) * rng.uniform(0.88, 1.1)
-        hl, hr = hw * rng.uniform(0.8, 1.15), hw * rng.uniform(0.8, 1.15)
-        dl, dr = h * rng.uniform(0.0, 0.05), h * rng.uniform(0.0, 0.05)
-        notch = h * rng.uniform(0.015, 0.05)
-        pts = [(ax, ty), (bx + hr, by + dr), (bx + hr * rng.uniform(0.4, 0.65), by - notch),
-               (bx, by + h * rng.uniform(0.0, 0.02)), (bx - hl * rng.uniform(0.4, 0.65), by - notch),
-               (bx - hl, by + dl)]
-        m = a.poly(S.pts(hand(pts, rng, amp=0.35, step=10)))
-        a.fade(m, stops, S.pt(bx - hl * light, by), S.pt(bx + hr * light, ty))
-        prev = bots[k]
-
-
-def dashes(rng, x0, x1, y0, y1, th0, th1, len0, len1, cover0, cover1, spacing=1.6, cluster=0.5):
-    """layout of stencilled horizontal ripple strips over a band of water (design px): rows get thicker,
-    longer and sparser from y0 (far) to y1 (near). Strips cluster (a slow per-row noise opens gaps)."""
+def fan_angles(rng, a0, a1, n, w0=1.4, w1=3.6):
+    """n ray directions between a0 and a1 degrees: unequal spacing and widths (cut by eye, not by protractor)"""
+    base = np.linspace(a0, a1, n)
+    step = (a1 - a0) / max(1, n - 1)
     out = []
-    y = y0
-    while y < y1:
-        t = (y - y0) / max(1e-6, y1 - y0)
-        th = th0 + (th1 - th0) * t
-        Ln = len0 + (len1 - len0) * t
-        cov = cover0 + (cover1 - cover0) * t
-        x = x0 - rng.uniform(0, Ln)
-        ph, fr = rng.uniform(0, 6.3), rng.uniform(0.004, 0.012)
-        while x < x1:
-            L = Ln * rng.lognormal(0, 0.45)
-            local = cov * (1 + cluster * np.sin(x * fr + ph))
-            if rng.random() < np.clip(local, 0.03, 0.97):
-                out.append((x, x + L, y + rng.uniform(-0.25, 0.25) * th, th * rng.uniform(0.6, 1.25)))
-            x += L * rng.uniform(1.0, 1.0 + (1 - min(cov, 0.95)) * 1.8)
-        y += th * spacing * rng.uniform(0.8, 1.3)
+    for b in base:
+        out.append((b + rng.uniform(-0.18, 0.18) * step, rng.uniform(w0, w1)))
     return out
 
 
-def strip(a, S, x0, x1, y, th, rng=None, taper=None):
-    """one stencilled water strip: a long lens, thickest in the middle, ends cut to a point (design px in)"""
+# ------------------------------------------------------------ clouds
+def _band_outline(x0, x1, yc, th, head, tail, n=28):
+    """one streamlined cloud band: a round head on one end and a long tapering tail on the other
+    (head='L' or 'R'); slightly fuller on top than below"""
+    L = x1 - x0
+    u = np.linspace(0, 1, n)
+    hl = min(0.45, th * 0.9 / L)
+    tl = min(0.8, th * tail / L)
+    if head == 'L':
+        a_ = np.where(u < hl, np.sqrt(np.clip(1 - ((hl - u) / hl) ** 2, 0, 1)), 1.0)
+        b_ = np.where(u > 1 - tl, np.clip((1 - u) / tl, 0, 1) ** 1.3, 1.0)
+    else:
+        a_ = np.where(u > 1 - hl, np.sqrt(np.clip(1 - ((u - (1 - hl)) / hl) ** 2, 0, 1)), 1.0)
+        b_ = np.where(u < tl, np.clip(u / tl, 0, 1) ** 1.3, 1.0)
+    prof = a_ * b_
+    xs = x0 + u * L
+    top = [(x, yc - th * 0.55 * p) for x, p in zip(xs, prof)]
+    bot = [(x, yc + th * 0.45 * p) for x, p in zip(xs[::-1], prof[::-1])]
+    return top + bot
+
+
+def streamline_cloud(a, S, rng, x0, x1, y, h, stops, lit_below, edge_col=None, head=None, stage=None):
+    """a Deco cloud: 2-4 long parallel bands stacked with thin gaps of sky between, each with its own length,
+    offset, round head and tapered tail; each band one airbrush pass with a vertical fade (lit toward the
+    sun) and a little overspray on its shade side"""
+    n = int(rng.integers(2, 5))
+    head = head or ('L' if rng.random() < 0.5 else 'R')
+    L = x1 - x0
+    bands = []
+    yc = y
+    for k in range(n):
+        th = h * rng.uniform(0.55, 0.95) * (1 - 0.1 * k)
+        ln = L * (rng.uniform(0.75, 1.0) if k == 0 else rng.uniform(0.35, 0.85))
+        if head == 'L':
+            bx0 = x0 + rng.uniform(0, 0.35) * (L - ln) + k * h * rng.uniform(0.2, 1.4)
+        else:
+            bx0 = x1 - ln - rng.uniform(0, 0.35) * (L - ln) - k * h * rng.uniform(0.2, 1.4)
+        bands.append((bx0, bx0 + ln, yc, th))
+        yc -= th * rng.uniform(1.15, 1.45)
+    for bx0, bx1, yc, th in bands[::-1]:
+        pts = _band_outline(bx0, bx1, yc, th, head, rng.uniform(4, 9))
+        m = a.poly(S.pts(hand(pts, rng, amp=0.35, step=18)))
+        p0, p1 = (S.pt(0, yc - th * 0.6), S.pt(0, yc + th * 0.5)) if lit_below else \
+            (S.pt(0, yc + th * 0.5), S.pt(0, yc - th * 0.6))
+        a.fade(m, vary(stops, rng.uniform(0.95, 1.04)), p0, p1)
+        if edge_col is not None:
+            a.overspray(m, edge_col, dx=0, dy=S(1.5 if lit_below else -1.5), width=S(rng.uniform(1.5, 2.6)),
+                        density=0.3)
+        if stage:
+            stage()
+    return bands
+
+
+# ------------------------------------------------------------ stepped, streamlined mountains
+def _bell(cx, base, H, wl, wr, pa, pb, n=56):
+    """a smooth asymmetric bell (design px): y = base - H * (1 - |u|^pa)^pb, u in -1..1"""
+    u = np.concatenate([-(1 - np.linspace(0, 1, n // 2, endpoint=False)) ** 0.85, np.linspace(0, 1, n // 2 + 1) ** 1.18])
+    u = np.sort(np.unique(np.round(u, 6)))
+    xs = np.where(u < 0, cx + u * wl, cx + u * wr)
+    ys = base - H * np.clip(1 - np.abs(u) ** pa, 0, 1) ** pb
+    return xs, ys
+
+
+def terraced_mountain(rng, cx, base, H, wl, wr, n, peak='dome'):
+    """geometry of one stepped mountain (design px): n streamlined layers stacked like terraces. The lowest
+    is wide and low, each next one narrower and taller, its summit drifting a little, so the silhouette
+    climbs in rounded steps (smooth curves, a shoulder at each step) up to a domed or pointed top.
+    Returns [(xs, ys, base, H_layer)] bottom -> top (the top curve of every layer)."""
+    out = []
+    drift = 0.0
+    hs = np.sort(rng.uniform(0.38, 0.86, n - 1)) if n > 1 else np.array([])
+    hs = np.concatenate([hs, [1.0]])
+    for k in range(n):
+        t = k / max(1, n - 1)
+        Hk = H * hs[k]
+        shrink = 1 - (0.62 if peak == 'point' else 0.5) * t ** rng.uniform(0.8, 1.2)
+        wlk = wl * shrink * rng.uniform(0.9, 1.08)
+        wrk = wr * shrink * rng.uniform(0.9, 1.08)
+        drift += rng.normal(0, 0.04) * (wl + wr) * 0.5 * (k > 0)
+        top = k == n - 1
+        if top and peak == 'point':
+            pa, pb = rng.uniform(1.2, 1.5), rng.uniform(1.0, 1.25)
+        elif top:
+            pa, pb = rng.uniform(1.6, 2.2), rng.uniform(0.9, 1.3)
+        else:
+            pa, pb = rng.uniform(1.8, 2.8), rng.uniform(0.7, 1.1)        # broad rounded shoulders
+        xs, ys = _bell(cx + drift, base, Hk, wlk, wrk, pa, pb)
+        out.append((xs, ys, base, Hk))
+    return out
+
+
+def slab_masks(a, S, slabs, rng=None):
+    out = []
+    for xs, ys, base, Hk in slabs:
+        pts = list(zip(xs, ys)) + [(xs[-1], base + 3), (xs[0], base + 3)]
+        out.append(a.poly(S.pts(pts)))
+    return out
+
+
+def paint_terraces(a, S, rng, slabs, body, shade, rim, light=1, rim_k=0.6, shade_k=0.8, stage=None,
+                   masks=None):
+    """lay a stepped mountain layer by layer, bottom up. Each layer is one frisket and gets: a vertical fade
+    (body stops, its crest to its foot), the shade side sprayed across it from its far edge toward a spine
+    (a smooth horizontal gradient, no cut), and a streak of light sprayed down from its crest curve, strongest
+    on the lit side -- so every step of the terrace reads by its lit rounded edge."""
+    masks = masks or slab_masks(a, S, slabs)
+    n = len(slabs)
+    for k, ((xs, ys, base, Hk), m) in enumerate(zip(slabs, masks)):
+        sl = _box(m > 0)
+        if sl is None:
+            continue
+        yt = float(ys.min())
+        # the terraces step up in value: lower ones a shade deeper, the summit layer the lightest
+        f = 0.86 + 0.2 * k / max(1, n - 1)
+        stops = vary(body, f * rng.uniform(0.97, 1.03), rng.uniform(-0.01, 0.01))
+        a.fade(m, stops, S.pt(0, yt), S.pt(0, base))
+        xl, xr = float(xs.min()), float(xs.max())
+        cxp = float(xs[np.argmin(ys)])
+        spine = cxp + (xr - cxp if light > 0 else xl - cxp) * rng.uniform(0.1, 0.3)
+        far_x = xl if light > 0 else xr
+        sx0, sx1 = S.x(spine), S.x(far_x)
+        e = a._edge(m[sl])
+        t = np.clip((a.xx[sl] - sx0) / (sx1 - sx0 + 1e-6), 0, 1)
+        d = m[sl] * smoothstep(0, 1, t) ** 1.1 * shade_k * rng.uniform(0.85, 1.1)
+        sh = ramp(np.clip((a.yy[sl] - S.y(yt)) / max(1.0, S.y(base) - S.y(yt)), 0, 1), shade)
+        a._spray_in(sl, d, sh, 1.0, 'paint', e)
+        # the light along the crest curve
+        Xd = (a.xx[sl][0] + 0.5 - S.ox) / S.s
+        crest = S.y(np.interp(Xd, xs, ys))[None, :]
+        rw = S(max(2.5, Hk * rng.uniform(0.03, 0.055)))
+        below = np.maximum(a.yy[sl] + 0.5 - crest, 0)
+        dr = m[sl] * np.exp(-below / rw) * (0.2 + 0.8 * (1 - t) ** 1.5) * rim_k * rng.uniform(0.8, 1.1)
+        a._spray_in(sl, dr, col(rim), 0.6, 'paint', None)
+        if stage:
+            stage()
+    return masks
+
+
+def terraced_range(a, S, rng, peaks, base, body, shade, rim, light=1, rim_k=0.6, shade_k=0.8, stage=None):
+    """stepped mountains (in the given order). peaks: [(cx, height, half_width_left, half_width_right,
+    layers, 'dome'|'point')]. Returns the union of their friskets."""
+    union = np.zeros((a.H, a.W), np.float32)
+    for cx, Hh, wl, wr, n, peak in peaks:
+        slabs = terraced_mountain(rng, cx, base, Hh, wl, wr, n, peak)
+        ms = paint_terraces(a, S, rng, slabs, body, shade, rim, light, rim_k, shade_k)
+        for mm in ms:
+            union = np.maximum(union, mm)
+        if stage:
+            stage()
+    return union
+
+
+# ------------------------------------------------------------ trees
+def deco_pine(a, S, rng, x, root, h, w, lit, shade, trunk, light=1, tiers=None):
+    """a stylised Deco conifer: a stack of streamlined tiers, each with concave swept sides ending in a
+    slightly lifted tip and a gently bowed underside; each tier split down its axis into a lit half and a
+    shade half (two friskets, two fades). Tier count, spacing, widths, lean and tone differ tree to tree."""
+    lean = rng.uniform(-0.03, 0.03)
+    tw = max(1.2, w * rng.uniform(0.07, 0.11))
+    a.spray(a.poly(S.pts([(x - tw / 2, root + 1), (x + tw / 2, root + 1), (x + tw * 0.3, root - h * 0.22),
+                          (x - tw * 0.3, root - h * 0.22)])), trunk, grain=0.4)
+    n = int(tiers if tiers is not None else rng.integers(3, 6))
+    f = rng.uniform(0.86, 1.12)
+    ls, ss = vary(lit, f), vary(shade, f)
+    body_h = h * rng.uniform(0.8, 0.88)
+    cuts = np.sort(rng.uniform(0.22, 1.0, n - 1))
+    bots = np.concatenate([cuts, [1.0]]) * body_h
+    top = root - h
+    prev = 0.0
+    pw = rng.uniform(1.3, 2.2)
+    for k in range(n):
+        by = top + bots[k]
+        ty = top + (prev * rng.uniform(0.45, 0.8) if k else 0)
+        ax = x + lean * (root - ty)
+        bx = x + lean * (root - by)
+        hw = w / 2 * (0.3 + 0.7 * (bots[k] / bots[-1]) ** rng.uniform(0.8, 1.2)) * rng.uniform(0.9, 1.08)
+        hl, hr = hw * rng.uniform(0.85, 1.12), hw * rng.uniform(0.85, 1.12)
+        lift = (by - ty) * rng.uniform(0.0, 0.12)
+        sag = (by - ty) * rng.uniform(0.04, 0.14)
+        ts = np.linspace(0, 1, 9)
+        right = [(ax + (bx + hr - ax) * t ** pw, ty + (by - lift - ty) * t) for t in ts]
+        left = [(ax + (bx - hl - ax) * t ** pw, ty + (by - lift - ty) * t) for t in ts]
+        under_r = bez((bx + hr, by - lift), (bx + hr * 0.4, by + sag * 0.3), (bx, by + sag), 6)
+        under_l = bez((bx, by + sag), (bx - hl * 0.4, by + sag * 0.3), (bx - hl, by - lift), 6)
+        if light > 0:
+            lit_pts = right + under_r + [(ax, ty)]
+            sh_pts = [(ax, ty), (bx, by + sag)] + under_l + left[::-1]
+        else:
+            lit_pts = [(ax, ty), (bx, by + sag)] + under_l + left[::-1]
+            sh_pts = right + under_r + [(ax, ty)]
+        ms = a.poly(S.pts(hand(sh_pts, rng, amp=0.25, step=10)))
+        ml = a.poly(S.pts(hand(lit_pts, rng, amp=0.25, step=10)))
+        a.fade(ms, ss, S.pt(0, ty), S.pt(0, by + sag))
+        a.fade(ml, ls, S.pt(0, ty), S.pt(0, by + sag))
+        prev = bots[k]
+
+
+def cypress(a, S, rng, x, base, h, lit, shade, light=1, steps=None):
+    """a streamlined cypress: a tall ogive (pointed top, fullest low down) built of 2-4 stacked forms, each
+    set a hair narrower than the one below with a small notch between; split light/shade down the axis"""
+    w = h * rng.uniform(0.11, 0.17)
+    n = int(steps if steps is not None else rng.integers(2, 5))
+    lean = rng.uniform(-0.04, 0.04) * h
+    belly = rng.uniform(0.25, 0.4)
+    cuts = np.sort(rng.uniform(0.25, 0.8, n - 1))
+    edges = np.concatenate([[0.0], cuts, [1.0]])
+    f = rng.uniform(0.88, 1.12)
+    for k in range(n):
+        t0, t1 = edges[k], edges[k + 1]
+        ts = np.linspace(t0, t1, 10)
+
+        def hw(t):
+            return w * np.where(t < belly, 0.62 + 0.38 * np.sin(np.pi / 2 * t / belly),
+                                np.clip(np.cos(np.pi / 2 * (t - belly) / (1 - belly)), 0, 1) ** 0.75)
+        inset = 0.0 if k == 0 else 0.06
+        notch = (t1 - t0) * h * 0.06 if k < n - 1 else 0
+        cxs = x + lean * ts
+        ys = base - h * ts
+        hws = hw(ts) * (1 - inset)
+        # each form tucks in under the one above: the top of a lower form tapers a little (the notch)
+        hws[-1] = hws[-1] * (0.75 if k < n - 1 else 0.0)
+        right = [(c + q, y) for c, q, y in zip(cxs, hws, ys)]
+        left = [(c - q, y) for c, q, y in zip(cxs[::-1], hws[::-1], ys[::-1])]
+        axis = [(c, y) for c, y in zip(cxs[::-1], ys[::-1])]
+        lit_side = right if light > 0 else left[::-1]
+        sh_side = left[::-1] if light > 0 else right
+        ml = a.poly(S.pts(lit_side + axis))
+        ms = a.poly(S.pts(sh_side + axis))
+        a.fade(ms, vary(shade, f), S.pt(0, base - h * t1), S.pt(0, base - h * t0 + notch))
+        a.fade(ml, vary(lit, f), S.pt(0, base - h * t1), S.pt(0, base - h * t0 + notch))
+
+
+# ------------------------------------------------------------ water
+def strip(a, S, x0, x1, y, th, taper=None, point=0.6):
+    """one stencilled water strip: a long lens, thickest toward its head, ends cut to a point (design px in);
+    the knife edge is on top, the spray crept a little under the frisket along the bottom"""
     cx0, cx1, cy, r = S.x(x0), S.x(x1), S.y(y), max(0.35, S(th) / 2)
     out_sl = (slice(max(0, int(cy - r) - 2), min(a.H, int(cy + 1.5 * r) + 4)),
               slice(max(0, int(cx0) - 1), min(a.W, int(cx1) + 2)))
@@ -481,10 +581,9 @@ def strip(a, S, x0, x1, y, th, rng=None, taper=None):
     L = max(1.0, cx1 - cx0)
     tl, tr = taper if taper is not None else (0.25, 0.25)
     u = (xx - cx0) / L
-    prof = np.clip(np.minimum(u / tl, (1 - u) / tr), 0, 1) ** 0.55
+    prof = np.clip(np.minimum(u / tl, (1 - u) / tr), 0, 1) ** point
     half = r * prof
     dy = yy - cy
-    # the knife edge is on top; the spray crept a little under the frisket along the bottom (soft side)
     soft = max(0.6, 0.35 * r)
     top = np.clip(half + dy + 0.5, 0, 1)
     bot = np.clip((half - dy) / (2 * soft) + 0.5, 0, 1)
@@ -492,102 +591,183 @@ def strip(a, S, x0, x1, y, th, rng=None, taper=None):
     return out_sl, cov.astype(np.float32)
 
 
-def strip_mask(a, S, segs, rng):
-    """union of strips as one canvas mask (to break a reflection into horizontal stencil strokes)"""
-    out = np.zeros((a.H, a.W), np.float32)
-    for x0, x1, y, th in segs:
-        sl, cov = strip(a, S, x0, x1, y, th, taper=(rng.uniform(0.08, 0.35), rng.uniform(0.08, 0.35)))
-        if sl is not None:
-            out[sl] = np.maximum(out[sl], cov)
+def speed_lines(rng, x0, x1, y0, y1, th0, th1, len0, len1, n_rows, cover=0.35, x_pref=None):
+    """layout of Deco water speed lines: rows from y0 (far) to y1 (near), spacing and thickness growing
+    toward the viewer; in each row a few long tapered lines of very different lengths, clustered
+    (x_pref(x) -> weight). Returns [(x0, x1, y, th, head)]"""
+    out = []
+    ys = y0 + (y1 - y0) * np.sort(rng.uniform(0, 1, n_rows)) ** 1.35
+    for y in ys:
+        t = (y - y0) / max(1e-6, y1 - y0)
+        th = (th0 + (th1 - th0) * t) * rng.uniform(0.6, 1.3)
+        Ln = len0 + (len1 - len0) * t
+        x = x0 - rng.uniform(0, Ln)
+        while x < x1:
+            L = Ln * rng.lognormal(0, 0.75)
+            w = 1.0 if x_pref is None else x_pref(x + L / 2)
+            if rng.random() < cover * w:
+                out.append((x, x + L, y + rng.uniform(-0.3, 0.3) * th, th, 'L' if rng.random() < 0.5 else 'R'))
+            x += L * rng.uniform(1.1, 2.6)
     return out
 
 
-def stencil_water(a, S, rng, HZ, src, stops, reflect=0.75, compress=0.8, light=None, glint=None, dark=None,
-                  stage=None, x_sun=None):
-    """water as the poster artist cuts it: the lake sprayed with a few flat tones, then the reflection laid
-    as stencilled horizontal strips (each strip one pass of the airbrush in the colour of what it mirrors,
-    a gentle fade along its length), denser and finer near the shore, sparser, longer and paler toward the
-    viewer; then a few light ripple dashes (a glitter path under the sun) and dark ones in the foreground.
-    src: the board above the waterline (only sampled, never copied)."""
-    hz = int(round(S.y(HZ)))
-    H, W = a.H, a.W
-    m = np.zeros((H, W), np.float32)
-    m[hz:] = 1
-    a.fade(m, stops, S.pt(0, HZ), S.pt(0, S.Y1))
-    if stage:
-        stage()
-    srcs = np.stack([blur(src[:hz, :, c], max(0.8, S(3.0))) for c in range(3)], -1)           # sampling window of each strip's colour stops
-    depth = S.Y1 - HZ
-    segs = dashes(rng, S.X0 - 40, S.X1 + 40, HZ + 1.2, S.Y1 + 4, 2.0, 15.0, 80, 380, 0.85, 0.3, spacing=1.35)
-    n = len(segs)
-    for j, (x0, x1, y, th) in enumerate(segs):
-        sl, cov = strip(a, S, x0, x1, y, th, taper=(rng.uniform(0.06, 0.3), rng.uniform(0.06, 0.3)))
+def lay_lines(a, S, rng, segs, colour, dens, blend='paint'):
+    for x0, x1, y, th, head in segs:
+        tl, tr = (rng.uniform(0.03, 0.1), rng.uniform(0.35, 0.7)) if head == 'L' else \
+            (rng.uniform(0.35, 0.7), rng.uniform(0.03, 0.1))
+        sl, cov = strip(a, S, x0, x1, y, th, taper=(tl, tr), point=0.9)
         if sl is None:
             continue
-        t = (y - HZ) / depth
-        cy = S.y(y)
-        row = int(np.clip(hz - 1 - (cy - hz) * compress, 0, hz - 1))
-        ns = max(3, int((x1 - x0) / 28))                              # a colour stop every ~28 design px
-        xs = np.clip(np.linspace(S.x(x0), S.x(x1), ns), 0, W - 1).astype(int)
-        cs = srcs[row, xs]
+        # sprayed heavier at the head, thinning toward the tail
         u = np.clip((a.xx[sl] - S.x(x0)) / max(1.0, S.x(x1) - S.x(x0)), 0, 1)
-        field = ramp(u, [(k / (ns - 1), cs[k]) for k in range(ns)])
-        k = reflect * (1 - 0.55 * t) * rng.uniform(0.8, 1.05)
-        a._spray_in(sl, cov * k, field, 0.8, 'paint')
-        if stage and j % max(1, n // 6) == n // 6 - 1:
-            stage()
-    if light is not None:
-        segs = dashes(rng, S.X0, S.X1, HZ + 3, S.Y1, 1.2, 4.0, 40, 160, 0.03, 0.012, spacing=6.0, cluster=0.9)
-        for x0, x1, y, th in segs:
-            sl, cov = strip(a, S, x0, x1, y, th, taper=(0.3, 0.3))
-            if sl is not None:
-                a._spray_in(sl, cov * rng.uniform(0.25, 0.55), col(light), 0.8, 'paint')
-    if glint is not None and x_sun is not None:
-        gx, gw = x_sun
-        y = HZ + 2
-        while y < S.Y1:
-            t = (y - HZ) / depth
-            half = gw * (0.35 + 1.3 * t)
+        g = (1 - 0.6 * u) if head == 'L' else (0.4 + 0.6 * u)
+        c = col(colour) if isinstance(colour, str) else colour(y)
+        a._spray_in(sl, cov * g * dens * rng.uniform(0.7, 1.1), c, 1.0, blend, None)
+
+
+def reflect_bands(a, S, rng, mask, HZ, depth, stops, dens, compress=0.75, th0=3.0, th1=14.0, gap0=1.6, gap1=7.0,
+                  shear=1.0, cuts=0.25, x_clip=None):
+    """a reflection laid as stepped stencil bands: the silhouette above the waterline is read upside down
+    (shortened), and only horizontal bands of it are cut, each band shifted a little sideways and now and
+    then cut through; bands thicken and the gaps widen toward the viewer, the paint thins out with depth.
+    The colour of each band is a vertical fade through `stops` (near the shore -> far out)."""
+    hz = int(round(S.y(HZ)))
+    H, W = a.H, a.W
+    yd = HZ + gap0 * 0.6
+    while yd < HZ + depth:
+        t = (yd - HZ) / depth
+        th = (th0 + (th1 - th0) * t) * rng.uniform(0.7, 1.25)
+        y0c, y1c = S.y(yd), S.y(yd + th)
+        r0, r1 = max(hz, int(np.floor(y0c))), min(H, int(np.ceil(y1c)) + 2)
+        if r1 <= r0:
+            yd += th + gap0
+            continue
+        rows = np.arange(r0, r1)
+        src = np.clip(np.round(hz - 1 - (rows + 0.5 - hz) / compress).astype(int), 0, hz - 1)
+        band = mask[src].copy()
+        dx = int(round(S(rng.normal(0, 1.5 + 6 * t) * shear)))
+        if dx:
+            band = np.roll(band, dx, 1)
+            if dx > 0:
+                band[:, :dx] = 0
+            else:
+                band[:, dx:] = 0
+        yy = rows[:, None] + 0.5
+        cov = np.clip(yy - y0c + 0.5, 0, 1) * np.clip((y1c - yy) / max(0.8, S(th) * 0.35) + 0.5, 0, 1)
+        band = band * cov
+        if cuts and rng.random() < cuts * 2:
             for _ in range(int(rng.integers(1, 4))):
-                c = gx + rng.normal(0, half * 0.55)
-                L = rng.uniform(10, 50) * (1 + 3 * t) * np.exp(-abs(c - gx) / (half * 1.4))
-                if L < 4:
-                    continue
-                th = 1.0 + 4.5 * t * rng.uniform(0.6, 1.2)
-                sl, cov = strip(a, S, c - L / 2, c + L / 2, y, th, taper=(0.35, 0.35))
-                if sl is not None:
-                    a._spray_in(sl, cov * rng.uniform(0.45, 0.85) * (1 - 0.5 * t), col(glint), 0.8, 'screen')
-            y += (2.0 + 13 * t) * rng.uniform(0.7, 1.4)
-    if dark is not None:
-        segs = dashes(rng, S.X0, S.X1, HZ + depth * 0.35, S.Y1, 2.0, 6.0, 80, 260, 0.04, 0.12, spacing=3.0)
-        for x0, x1, y, th in segs:
-            sl, cov = strip(a, S, x0, x1, y, th, taper=(0.2, 0.3))
+                cx = rng.uniform(0, W)
+                cw = S(rng.uniform(6, 40)) * (0.5 + t)
+                xs = a.xx[0]
+                band = band * (1 - np.clip(1 - np.abs(xs - cx) / cw, 0, 1) ** 0.2 * (np.abs(xs - cx) < cw))[None, :]
+        if x_clip is not None:
+            band = band * x_clip[None, :]
+        full = np.zeros((H, W), np.float32)
+        full[r0:r1] = band
+        c = ramp(np.full((1, 1), t, np.float32), stops)[0, 0]
+        a.spray(full, c, density=dens * (1 - 0.55 * t) * rng.uniform(0.85, 1.05), grain=1.0)
+        yd += th + (gap0 + (gap1 - gap0) * t) * rng.uniform(0.6, 1.5)
+
+
+def sun_path(a, S, rng, sx, HZ, y_end, w0, w1, colour, dens):
+    """the sun's path on the water as stacked speed lines: knife-pointed bars, short and close near the
+    horizon, longer and further apart toward the viewer; each its own length, offset and lopsided taper, and
+    now and then a bar is cut in two"""
+    y = HZ + 2
+    while y < y_end:
+        t = (y - HZ) / (y_end - HZ)
+        L = (w0 + (w1 - w0) * t) * rng.uniform(0.35, 1.2)
+        c = sx + rng.normal(0, 0.14) * (w0 + (w1 - w0) * t)
+        th = 1.4 + 5.5 * t * rng.uniform(0.6, 1.25)
+        pieces = [(c - L / 2, c + L / 2)]
+        if L > 60 and rng.random() < 0.35:
+            g = rng.uniform(0.3, 0.7)
+            gw = L * rng.uniform(0.04, 0.12)
+            pieces = [(c - L / 2, c - L / 2 + L * g - gw / 2), (c - L / 2 + L * g + gw / 2, c + L / 2)]
+        for p0, p1 in pieces:
+            tl, tr = (rng.uniform(0.08, 0.2), rng.uniform(0.3, 0.6)) if rng.random() < 0.5 else \
+                (rng.uniform(0.3, 0.6), rng.uniform(0.08, 0.2))
+            sl, cov = strip(a, S, p0, p1, y, th, taper=(tl, tr), point=1.0)
             if sl is not None:
-                a._spray_in(sl, cov * rng.uniform(0.25, 0.5), col(dark), 0.8, 'paint')
-    if stage:
-        stage()
+                a._spray_in(sl, cov * dens * (1 - 0.5 * t) * rng.uniform(0.7, 1.0), col(colour), 1.0, 'paint', None)
+        y += th + (2.5 + 18 * t) * rng.uniform(0.6, 1.4)
 
 
+def chevrons(a, S, rng, x, y, n, span, depth, th, colour, dens, flip=1, gap=None):
+    """stepped chevron ripples: n nested shallow V's, each a pair of tapered bars meeting at a blunt point,
+    every step a little longer and thinner than the last (flip=-1 opens to the left)"""
+    gap = gap or th * 2.6
+    for k in range(n):
+        L = span * (0.55 + 0.45 * (k + 1) / n) * rng.uniform(0.85, 1.12)
+        tip = (x + flip * k * gap * 1.2, y)
+        for side in (-1, 1):
+            ex, ey = tip[0] + flip * L, tip[1] + side * depth * (0.6 + 0.4 * (k + 1) / n) * rng.uniform(0.85, 1.15)
+            ang = np.arctan2(ey - tip[1], ex - tip[0])
+            ln = np.hypot(ex - tip[0], ey - tip[1])
+            w = th * (1 - 0.35 * k / max(1, n)) * rng.uniform(0.8, 1.1)
+            nx, ny = -np.sin(ang), np.cos(ang)
+            ts = np.linspace(0, 1, 10)
+            prof = w * (1 - ts) ** 0.8 * np.clip(ts * 6, 0.35, 1)
+            cxs, cys = tip[0] + (ex - tip[0]) * ts, tip[1] + (ey - tip[1]) * ts
+            pts = [(cx_ + nx * p / 2, cy_ + ny * p / 2) for cx_, cy_, p in zip(cxs, cys, prof)] + \
+                  [(cx_ - nx * p / 2, cy_ - ny * p / 2) for cx_, cy_, p in zip(cxs[::-1], cys[::-1], prof[::-1])]
+            m = a.poly(S.pts(pts))
+            a.spray(m, colour, density=dens * rng.uniform(0.75, 1.05) * (1 - 0.3 * k / max(1, n)), grain=1.0)
+
+
+# ------------------------------------------------------------ birds
+def deco_bird(a, S, rng, bx, by, sz, lift, tilt, colour, under=None):
+    """a streamlined Deco bird: a slim spindle body and two long thin crescent wings (a gentle gull 'M'),
+    the leading edge an arch, the trailing edge following it a little lower and meeting it at a fine point;
+    each wing its own lift, length, sweep and thickness; sprayed with a short fade from the back down"""
+    c, s_ = np.cos(tilt), np.sin(tilt)
+    wings = []
+    for side in (-1, 1):
+        L = sz * rng.uniform(0.88, 1.08)
+        up = lift * rng.uniform(0.75, 1.25)
+        elbow = (side * L * rng.uniform(0.32, 0.42), -up * sz * 0.42 - sz * 0.06)
+        tip = (side * L, -up * sz * 0.18 + sz * rng.uniform(0.04, 0.14))
+        w = sz * rng.uniform(0.07, 0.11)                     # wing chord at the elbow
+        lead = bez((side * sz * 0.05, -sz * 0.035), (elbow[0] * 0.6, elbow[1] - w * 0.2), elbow, 8) + \
+            bez(elbow, ((elbow[0] + tip[0]) / 2, elbow[1] - sz * 0.02), tip, 8)[1:]
+        trail = bez(tip, ((elbow[0] + tip[0]) / 2 + side * w * 0.3, elbow[1] + w * 1.2), (elbow[0], elbow[1] + w), 8) + \
+            bez((elbow[0], elbow[1] + w), (elbow[0] * 0.5, elbow[1] * 0.4 + w * 1.4), (side * sz * 0.07, sz * 0.05), 8)[1:]
+        wings.append((lead, trail))
+    (ll, lt), (rl, rt) = wings
+    body = [(-sz * 0.03, sz * 0.02), (0, -sz * 0.06), (sz * 0.03, sz * 0.02)]
+    tail = [(sz * 0.035, sz * 0.09), (0, sz * 0.16), (-sz * 0.035, sz * 0.09)]
+    # outline: head -> right leading edge -> right trailing edge -> tail -> left trailing edge (body -> tip)
+    # -> left leading edge (tip -> body)
+    poly_ = [body[1]] + rl + rt + tail + lt[::-1] + ll[::-1]
+    P = [(bx + x * c - y * s_, by + x * s_ + y * c) for x, y in poly_]
+    m = a.poly(S.pts(P))
+    if under is None:
+        a.fade(m, [(0, vary([(0, colour)], 1.3)[0][1]), (1, colour)], S.pt(bx, by - sz * 0.4), S.pt(bx, by + sz * 0.1),
+               grain=0.6)
+    else:
+        a.fade(m, [(0, colour), (0.5, colour), (1, under)], S.pt(bx, by - sz * 0.3), S.pt(bx, by + sz * 0.15),
+               grain=0.6)
+
+
+# ------------------------------------------------------------ mist
 def haze(a, S, rng, x0, x1, y_edge, depth, colour, density, xfade=None, jag=6.0, above=0.18):
-    """mist laid with a cut frisket: an irregular knife-cut top edge (long gentle runs, small steps), the
-    airbrush passes along it so the haze is densest at the edge and thins downward; a little overspray creeps
-    above the edge. xfade(x_design) -> 0..1 thins it along its length."""
+    """mist laid with a cut frisket: a long straight-ish knife edge with a few small steps, the airbrush
+    passes along it so the haze is densest at the edge and thins downward (smoothly); a little overspray
+    creeps above the edge. xfade(x_design) -> 0..1 thins it along its length."""
     xs, ys = [x0 - 30], [y_edge]
     x, y = x0 - 30, y_edge
     while x < x1 + 30:
-        x += rng.uniform(50, 190)
-        y = y_edge + np.clip(y - y_edge + rng.normal(0, jag * 0.6), -jag * 1.6, jag * 1.6)
-        if rng.random() < 0.3:
+        x += rng.uniform(120, 380)
+        if rng.random() < 0.45:
             xs.append(x)
             ys.append(y)
-            y += rng.choice([-1, 1]) * rng.uniform(0.4, 1.0) * jag     # a small knife step
+            y = y_edge + np.clip(y - y_edge + rng.choice([-1, 1]) * rng.uniform(0.5, 1.0) * jag, -jag * 1.6, jag * 1.6)
         xs.append(x)
         ys.append(y)
-    edge = hand(list(zip(xs, ys)), rng, amp=0.8, step=14, closed=False)
-    ex = np.array([p[0] for p in edge])
-    ey = np.array([p[1] for p in edge])
+    ex, ey = np.array(xs), np.array(ys)
     X = (a.xx[0] - S.ox) / S.s
-    ey_c = np.interp(X, ex, ey)                                       # edge per canvas column (design y)
+    ey_c = np.interp(X, ex, ey)
     Y = (a.yy - S.oy) / S.s
     dd = Y - ey_c[None, :]
     below = np.exp(-np.maximum(dd, 0) / depth) * (dd >= 0)
@@ -598,7 +778,7 @@ def haze(a, S, rng, x0, x1, y_edge, depth, colour, density, xfade=None, jag=6.0,
         d = d * xfade(X)[None, :]
     d = (d * density).astype(np.float32)
     d[d < 0.012] = 0
-    a.spray(d, colour, grain=1.2)
+    a.spray(d, colour, grain=1.0, edges=False)
 
 
 class Stager:
@@ -618,14 +798,6 @@ class Stager:
         if self.dir:
             drawkit.save_png(img, os.path.join(self.dir, f'{self.n:03d}_final.png'))
             self.n += 1
-
-
-def ext_ridge(ridge, S, pad=20):
-    """stretch a ridge's end points out over the bleed so the range spans the whole canvas"""
-    r = list(ridge)
-    r[0] = (min(r[0][0], S.X0 - pad), r[0][1])
-    r[-1] = (max(r[-1][0], S.X1 + pad), r[-1][1])
-    return r
 
 
 def design_xy(a, S):

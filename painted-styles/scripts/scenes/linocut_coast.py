@@ -61,7 +61,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         # bold V-gouge streaks arcing over the low sun, carved more and wider toward the horizon
         gouge_rows(L, S, rng, rect(X0, 40, X1, 440), (X0, 40, X1, 440), spacing=(12, 25), length=(60, 380),
                    gap=(10, 110), width=(3.8, 8.5), cut=True, bend=sky_bend, slip=0.05,
-                   density=lambda x, y: np.clip((y - 95) / 300, 0.0, 1) ** 1.15)
+                   density=lambda x, y: np.clip((y - 90) / 250, 0.0, 1) ** 1.05)
         gd = lambda x, y: float(np.hypot((y - SY) * 1.5, x - SX))
         dens = lambda x, y: np.clip(0.95 - gd(x, y) / 900, 0.04, 0.8) * (y > 140)
         gouge_rows(L, S, rng, rect(X0, Y0, X1, HOR), (X0, Y0, X1, HOR), spacing=(5, 11), length=(40, 300), gap=(4, 40),
@@ -71,13 +71,16 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         sun = L.disc(S.x(SX), S.y(SY), S(SR)) * (np.arange(CH)[:, None] < hor - S(10))
         L.clear(sun, chatter=0.15, angle=0)
         L.leave(sun, on=col)
-        L.outline(sun, S(3.2), cut=False)               # a black rim so the disc reads against the streaks
-        L.outline(L.disc(S.x(SX), S.y(SY), S(SR + 4)) * (np.arange(CH)[:, None] < hor - S(10)), S(5.0), on=col)
-        for f in (0.33, 0.56, 0.76):                    # three ridges across the disc, uneven
-            yy_ = SY + SR * (f - 0.5) * 1.6 + rng.uniform(-2, 2)
-            hw = np.sqrt(max(SR ** 2 - (yy_ - SY) ** 2, 0)) * rng.uniform(0.7, 0.9)
-            ridge_line(L, S, rng, [(SX - hw, yy_ + rng.uniform(-1, 1)), (SX + rng.uniform(-8, 8), yy_ - 1), (SX + hw, yy_ + rng.uniform(-1, 1.5))],
-                       rng.uniform(2.8, 3.6), breaks=0.3, seg=(14, 50), region=sun)
+        # one bold rim of lino left standing round the disc (cut by hand: it wanders and breaks in places)
+        ta = np.linspace(-0.2, np.pi + 0.2, 40)
+        rr = SR - 2 + 1.6 * fbm1d(40, 6, 2, seed + 41)
+        rim = [(SX + np.cos(t) * r_, SY - np.sin(t) * r_) for t, r_ in zip(ta, rr)]
+        ridge_line(L, S, rng, rim, 6.4, breaks=0.25, seg=(40, 120), gap=(6, 14), smooth=False)
+        for f in (0.42, 0.72):                          # two bold ridges across the disc, uneven
+            yy_ = SY + SR * (f - 0.5) * 1.6 + rng.uniform(-3, 3)
+            hw = np.sqrt(max(SR ** 2 - (yy_ - SY) ** 2, 0)) * rng.uniform(0.62, 0.85)
+            ridge_line(L, S, rng, [(SX - hw, yy_ + rng.uniform(-1.5, 1.5)), (SX + rng.uniform(-8, 8), yy_ - 1.5), (SX + hw * rng.uniform(0.8, 1), yy_ + rng.uniform(-1, 2))],
+                       rng.uniform(5.6, 6.8), breaks=0.3, seg=(18, 60), gap=(5, 10), region=sun)
     st('sky')
 
     # ---------------------------------------------------------------- clouds
@@ -108,7 +111,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     fk = knife_edge(list(zip(fx, fy)), geo, step=(8, 26), wob=0.9, nick=0.06, nick_size=(2, 5), closed=False, side=1)
     far = P(fk + [(420, HOR + 2), (X0 - 40, HOR + 2)])
     L.clear(L.poly(far), on=col, chatter=0)
-    L.outline(L.poly(far), S(2.4))
+    L.outline(L.poly(far), S(3.4))
     L.leave(L.poly(far))                             # a low dark headland across the bay, a few cuts of haze
     gouge_rows(L, S, rng, far, (X0 - 40, HOR - 60, 430, HOR + 2), spacing=(5, 10), length=(14, 80), gap=(10, 60),
                width=(2.4, 3.6), cut=True, density=lambda x, y: 0.5)
@@ -120,8 +123,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     L.clear(L.poly(sea), on=col, chatter=0)
     glit = lambda x, y: np.exp(-abs(x - SX) / max(40.0, 40 + 0.55 * (y - HOR)))         # the sun's path widens toward us
     sbend = lambda x, y: 2.5 * np.sin(x / 120 + y / 26) + 2 * np.sin(x / 47 - y / 13)
-    gouge_rows(L, S, rng, sea, (X0, HOR, X1, Y1), spacing=(9, 22), length=(26, 240), gap=(10, 110), width=(2.6, 4.8),
-               cut=False, bend=sbend, tool='brush', end=0.45, cluster=0.6,
+    gouge_rows(L, S, rng, sea, (X0, HOR, X1, Y1), spacing=(11, 28), length=(16, 300), gap=(10, 150), width=(4.8, 7.6),
+               cut=False, bend=sbend, tool='brush', end=0.6, cluster=0.75,
                density=lambda x, y: np.clip(0.1 + 0.95 * max(0.0, (y - HOR) / (1080 - HOR)) ** 1.2, 0, 0.95)
                * (1 - (0 if day else 0.75) * glit(x, y)))
     # swells: dark crescents left standing, every one its own length, sag, lean and weight, some doubled
@@ -131,12 +134,12 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         ln = (16 + 0.12 * (y - HOR)) * rng.uniform(0.55, 1.6)
         pk = rng.uniform(-0.35, 0.35)                         # where the crest sits
         sag = ln * rng.uniform(0.05, 0.22); lean = rng.normal(0, 0.06) * ln
-        wv = (2.4 + 0.005 * (y - HOR)) * rng.uniform(0.8, 1.35)
+        wv = (4.9 + 0.005 * (y - HOR)) * rng.uniform(0.85, 1.3)
         pts = [(x - ln, y + sag * rng.uniform(0.5, 1.0) + lean), (x + pk * ln, y - sag), (x + ln, y + sag * rng.uniform(0.3, 1.0) - lean)]
         L.gouge(P(pts), S(wv), 'v', cut=False, taper=(rng.uniform(0.1, 0.45), rng.uniform(0.1, 0.5)))
         if rng.random() < 0.18:
             o = rng.uniform(5, 9)
-            L.gouge(P([(px + rng.uniform(4, 12), py + o) for px, py in pts]), S(wv * 0.75), 'v', cut=False)
+            L.gouge(P([(px + rng.uniform(4, 12), py + o * 1.4) for px, py in pts]), S(wv * 0.9), 'v', cut=False)
     st('sea')
     if day:
         gouge_rows(L, S, rng, sea, (X0, HOR, X1, Y1), spacing=(6, 14), length=(30, 260), gap=(8, 70), width=(4.5, 8),
@@ -149,7 +152,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                    cut=False, on=col, bend=sbend, tool='brush', end=0.5,
                    density=lambda x, y: np.clip(glit(x, y) * 1.3 * (1.15 - (y - HOR) / 600), 0, 1))
     # the horizon: one long ridge left standing, uneven and broken here and there
-    ridge_line(L, S, rng, [(X0, HOR + 0.5), (500, HOR), (X1, HOR + 0.5)], 3.0, breaks=0.35, seg=(60, 260), gap=(6, 30),
+    ridge_line(L, S, rng, [(X0, HOR + 0.5), (500, HOR), (X1, HOR + 0.5)], 5.6, breaks=0.35, seg=(60, 260), gap=(6, 30),
                smooth=False)
     st('sea colour')
 
@@ -168,7 +171,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                     keep=lambda x, y: x < X1 + 20)
     cliff = P(ck)
     cm = L.poly(cliff)
-    L.outline(cm, S(2.8))
+    L.outline(cm, S(3.8))
     L.leave(cm)
     L.clear(cm, on=col, chatter=0)                     # no sky colour under the rock
     st('cliff block')
@@ -200,7 +203,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         ln = rng.uniform(40, 130)
         if y0 + ln > BASE - 10: continue
         L.gouge(P([(x, y0), (x + rng.uniform(-10, 10), y0 + ln * rng.uniform(0.35, 0.65)), (x + rng.uniform(-16, 16), y0 + ln)]),
-                S(rng.uniform(2.4, 4.0)), 'v', cut=False, taper=(rng.uniform(0.1, 0.4), rng.uniform(0.2, 0.5)))
+                S(rng.uniform(5.2, 7.5)), 'v', cut=False, taper=(rng.uniform(0.1, 0.3), rng.uniform(0.2, 0.4)))
     st('cliff strata')
     # grass along the top: clustered tufts of short V cuts fanning up from a lit strip under the edge
     x = 990.0
@@ -217,63 +220,128 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     st('cliff grass')
 
     # ---------------------------------------------------------------- cottages along the top
-    def cottage(x, w, wall, roof, side, lit=(), seedk=0):
-        base = topf(x + w / 2) + 10
-        ax = x + w / 2 + rng.uniform(-3, 3); ay = base - wall - roof
-        rise = -0.08 + rng.uniform(-0.02, 0.02)
-        front = [(x, base), (x, base - wall), (ax, ay), (x + w, base - wall), (x + w, base)]
-        sidew = [(x + w, base), (x + w + side, base + side * rise), (x + w + side, base - wall + side * rise),
-                 (x + w, base - wall)]
-        roofp = [(ax, ay), (ax + side, ay + side * rise), (x + w + side + 4, base - wall + side * rise + 3), (x + w + 4, base - wall + 3)]
-        kn = lambda q: np.array(P(knife_edge(q, rng, step=(6, 16), wob=0.6, nick=0.05, nick_size=(1.5, 3))), np.float32)
-        m = L.mask_of([kn(front), kn(sidew), kn(roofp)])
-        L.outline(m, S(3.0))
+    # every house its own: gable-end or long side to us, pitch, height, roof (slate rows, thatch, plain black
+    # with a lit eave), wall (boards, stone jabs, bare), windows (size, number, glazing bars or none, one dark),
+    # a door here, a lean-to there, chimneys where they fall; each sits a little out of true
+    def window(q, bars, lit=True):
+        qk = knife_edge(q, rng, step=(4, 9), wob=0.5, nick=0.0)
+        L.clear(L.poly(P(qk)), chatter=0)
+        if lit and not day:
+            cx_, cy_ = np.mean(q, 0)
+            L.leave(L.poly(P([(cx_ + (px - cx_) * 1.3, cy_ + (py - cy_) * 1.3) for px, py in q])), on=col)
+        (ax_, ay_), (bx_, by_), (cx2, cy2), (dx_, dy_) = q          # tl, tr, br, bl
+        bw = rng.uniform(5.0, 6.2)
+        if bars in ('v', 'x'):
+            f = rng.uniform(0.42, 0.58)
+            L.gouge(P([(ax_ + (bx_ - ax_) * f, ay_ + (by_ - ay_) * f), (dx_ + (cx2 - dx_) * f, dy_ + (cy2 - dy_) * f)]), S(bw),
+                    'brush', end=S(bw * 0.9), cut=False, smooth=False, jitter=0.25)
+        if bars in ('h', 'x'):
+            f = rng.uniform(0.4, 0.6)
+            L.gouge(P([(ax_ + (dx_ - ax_) * f, ay_ + (dy_ - ay_) * f), (bx_ + (cx2 - bx_) * f, by_ + (cy2 - by_) * f)]), S(bw),
+                    'brush', end=S(bw * 0.9), cut=False, smooth=False, jitter=0.25)
+
+    def cottage(h):
+        x, w, wall, roof, side = h['x'], h['w'], h['wall'], h['roof'], h['side']
+        base = topf(x + w / 2) + 10 + rng.uniform(-2, 3)
+        lean = rng.normal(0, 0.035) * wall                  # out of true
+        rise = rng.uniform(-0.11, -0.05)
+        ov = rng.uniform(3, 8)                              # eave overhang
+        kn = lambda q: np.array(P(knife_edge(q, rng, step=(6, 16), wob=0.7, nick=0.06, nick_size=(1.5, 3.5))), np.float32)
+        TL, TR = (x + lean, base - wall), (x + w + lean, base - wall)
+        if h['kind'] == 'gable':
+            ax = x + w * rng.uniform(0.42, 0.58) + lean; ay = base - wall - roof
+            front = [(x, base), TL, (ax, ay), TR, (x + w, base)]
+            sidew = [(x + w, base), (x + w + side, base + side * rise), (x + w + side + lean, base - wall + side * rise), TR]
+            roofp = [(ax, ay), (ax + side, ay + side * rise), (TR[0] + side + ov, TR[1] + side * rise + ov * 0.7), (TR[0] + ov, TR[1] + ov * 0.7)]
+            ridge = [(ax, ay + 1), (ax + side, ay + side * rise + 1)]
+            ra = np.degrees(np.arctan2(roof, TR[0] - ax)) + rng.uniform(-3, 6)
+            rbox = (TR[0] - 10, ay - 4, TR[0] + side + 12, TR[1] + 10)
+        else:                                               # long side to us, gable end receding to the right
+            d2 = side * rng.uniform(0.42, 0.58)
+            R0 = (TL[0] + d2, TL[1] - roof + d2 * rise); R1 = (TR[0] + d2, TR[1] - roof + d2 * rise)
+            front = [(x, base), TL, TR, (x + w, base)]
+            sidew = [(x + w, base), (x + w + side, base + side * rise), (x + w + side + lean, base - wall + side * rise), R1, TR]
+            roofp = [(TL[0] - ov, TL[1] + ov * 0.6), R0, R1, (TR[0] + ov * 0.4, TR[1] + ov * 0.5)]
+            ridge = [(R0[0], R0[1] + 1), (R1[0], R1[1] + 1)]
+            ra = rng.uniform(-4, 3)
+            rbox = (TL[0] - ov - 6, R1[1] - 6, TR[0] + side, TR[1] + 10)
+        parts = [kn(front), kn(sidew), kn(roofp)]
+        if h.get('shed'):                                   # a lean-to against the left wall, one low slope
+            sw, sh_ = h['shed']
+            parts.append(kn([(x - sw, base + 2), (x - sw, base - sh_), (x + 2, base - sh_ - sw * 0.35), (x + 2, base + 2)]))
+        m = L.mask_of(parts)
+        L.outline(m, S(3.4))
         L.leave(m)
         L.clear(m, on=col, chatter=0)
-        # roof: slates as bold broken cuts across the slope (it catches the light); a black ridge line left
-        ra = np.degrees(np.arctan2(roof, w / 2)) + 4
-        gouge_rows(L, S, rng, P(roofp), (x + w - 10, ay - 4, x + w + side + 10, base - wall + 8), angle=ra,
-                   spacing=(5.5, 8.5), length=(8, 34), gap=(4, 12), width=(2.6, 3.6), cut=True, density=lambda x_, y_: 0.8,
-                   bow=0.2)
-        ridge_line(L, S, rng, [(ax, ay + 1), (ax + side, ay + side * rise + 1)], 3.0, breaks=0.2, seg=(14, 40), smooth=False)
-        # side wall: a couple of board lines
-        for f in (0.33 + rng.uniform(-0.05, 0.05), 0.68 + rng.uniform(-0.05, 0.05)):
-            yy_ = base - wall * f
-            L.gouge(P([(x + w + rng.uniform(3, 8), yy_), (x + w + side - rng.uniform(3, 12), yy_ + side * rise)]),
-                    S(rng.uniform(2.2, 3.0)), 'v', smooth=False)
-        # front: windows (glazing bars left as bold ridges)
-        for (u, v, ww, wh) in lit:
-            qx0, qy0 = x + u, base - v - wh
-            q = rect(qx0, qy0, qx0 + ww, qy0 + wh)
-            L.clear(L.poly(q), chatter=0)
-            if not day:
-                L.leave(L.poly(rect(qx0 - 1, qy0 - 1, qx0 + ww + 1, qy0 + wh + 1)), on=col)
-            L.gouge(P([(qx0 + ww / 2 + rng.uniform(-1, 1), qy0), (qx0 + ww / 2, qy0 + wh)]), S(rng.uniform(2.6, 3.4)), 'brush',
-                    end=S(2.4), cut=False, smooth=False, jitter=0.25)
-            L.gouge(P([(qx0, qy0 + wh * 0.5), (qx0 + ww, qy0 + wh * 0.5 + rng.uniform(-1, 1))]), S(rng.uniform(2.6, 3.4)), 'brush',
-                    end=S(2.4), cut=False, smooth=False, jitter=0.25)
-        return base
+        tex = h['roof_tex']
+        if tex == 'slate':                                  # slates: bold broken cuts across the slope
+            gouge_rows(L, S, rng, P(roofp), rbox, angle=ra, spacing=(6.5, 10), length=(8, 40), gap=(4, 14),
+                       width=(3.0, 4.2), cut=True, density=lambda x_, y_: 0.75, bow=0.2)
+        elif tex == 'thatch':                               # thatch: short cuts running down the slope
+            gouge_rows(L, S, rng, P(roofp), rbox, angle=ra + 90 + rng.uniform(-8, 8), spacing=(5, 9), length=(6, 18),
+                       gap=(3, 10), width=(2.8, 4.0), cut=True, density=lambda x_, y_: 0.6, bow=0.3)
+        else:                                               # plain black, a lit eave cut along the lower edge
+            a_, b_ = roofp[-1], roofp[-2] if h['kind'] == 'gable' else roofp[0]
+            L.gouge(P([(a_[0] - 2, a_[1] - 4), (b_[0] + 4, b_[1] - 4)]), S(rng.uniform(3.2, 4.4)), 'v', taper=(0.1, 0.3), smooth=False)
+        ridge_line(L, S, rng, ridge, rng.uniform(5.5, 6.5), breaks=0.2, seg=(14, 40), smooth=False)
+        wt = h['wall_tex']
+        if wt == 'boards':
+            for f in sorted(rng.uniform(0.2, 0.85, int(rng.integers(1, 4)))):
+                yy_ = base - wall * f
+                L.gouge(P([(x + w + rng.uniform(3, 8), yy_), (x + w + side - rng.uniform(3, 12), yy_ + side * rise)]),
+                        S(rng.uniform(2.6, 3.6)), 'v', smooth=False)
+        elif wt == 'stone':
+            for _ in range(int(side * wall / 260)):
+                u = rng.uniform(4, side - 6); v = rng.uniform(4, wall - 6)
+                L.jab(S.x(x + w + u), S.y(base - v + u * rise), S(rng.uniform(2.6, 4)), angle=rng.uniform(-20, 20))
+        # windows on the front and the side wall
+        for (where, u, v, ww, wh, bars, lit) in h['wins']:
+            if where == 'f':
+                q = [(x + u + lean * (v + wh) / wall, base - v - wh), (x + u + ww + lean * (v + wh) / wall, base - v - wh),
+                     (x + u + ww + lean * v / wall, base - v), (x + u + lean * v / wall, base - v)]
+            else:
+                q = [(x + w + u, base - v - wh + u * rise), (x + w + u + ww, base - v - wh + (u + ww) * rise),
+                     (x + w + u + ww, base - v + (u + ww) * rise), (x + w + u, base - v + u * rise)]
+            window(q, bars, lit)
+        if h.get('door'):
+            u, dw, dh = h['door']
+            q = [(x + u, base + 1), (x + u, base - dh), (x + u + dw, base - dh), (x + u + dw, base + 1)]
+            if h.get('door_lit') and not day:
+                window([q[1], q[2], q[3], q[0]], None, True)
+            else:                                           # a dark door: only its frame cut round it
+                L.gouge(P(q), S(3.4), 'knife', smooth=False, jitter=0.2)
+        for (fx, cw_, chh) in h.get('chim', ()):            # chimneys standing on the roof
+            if h['kind'] == 'gable':
+                p0 = np.array(roofp[0]) + (np.array(roofp[1]) - np.array(roofp[0])) * fx
+                cx_, cy_ = p0[0] + 4, p0[1] + 10
+            else:
+                cx_ = R0[0] + (R1[0] - R0[0]) * fx; cy_ = R0[1] + 8
+            cp = knife_edge([(cx_, cy_ - chh), (cx_ + cw_, cy_ - chh), (cx_ + cw_, cy_ + 4), (cx_, cy_ + 4)], rng, step=(5, 10), wob=0.6,
+                            nick=0.1, nick_size=(1.5, 3))
+            pot = [(cx_ - 2, cy_ - chh), (cx_ + cw_ + 2, cy_ - chh), (cx_ + cw_ + 2, cy_ - chh - 6), (cx_ - 2, cy_ - chh - 6)]
+            cm_ = L.mask_of([np.array(P(cp), np.float32), np.array(P(pot), np.float32)])
+            L.outline(cm_, S(3.0)); L.leave(cm_)
 
-    houses = [  # x, front w, wall, roof, side depth, windows
-        (1268, 64, 46, 34, 70, [(12, 16, 14, 16), (38, 16, 14, 16)]),
-        (1400, 78, 54, 40, 54, [(14, 18, 16, 18), (46, 18, 16, 18)]),
-        (1520, 56, 40, 32, 80, [(20, 14, 14, 15)]),
-        (1655, 84, 60, 44, 60, [(12, 20, 16, 20), (52, 20, 16, 20), (32, 46, 14, 14)]),
-        (1795, 62, 44, 34, 66, [(14, 15, 14, 16), (38, 15, 14, 16)]),
+    houses = [
+        dict(x=1262, w=58, wall=42, roof=40, side=76, kind='gable', roof_tex='slate', wall_tex='boards',
+             wins=[('f', 18, 12, 20, 19, 'x', True)], chim=[(0.78, 12, 20)]),
+        dict(x=1384, w=118, wall=46, roof=30, side=40, kind='long', roof_tex='thatch', wall_tex='stone',
+             wins=[('f', 12, 14, 22, 20, 'v', True), ('f', 82, 14, 20, 20, None, False)], door=(50, 18, 32), door_lit=True,
+             shed=(26, 26)),
+        dict(x=1552, w=50, wall=64, roof=50, side=52, kind='gable', roof_tex='plain', wall_tex='bare',
+             wins=[('f', 14, 30, 22, 18, 'h', True), ('s', 16, 14, 20, 18, None, True)], chim=[(0.25, 14, 26)]),
+        dict(x=1660, w=104, wall=38, roof=36, side=56, kind='long', roof_tex='slate', wall_tex='boards',
+             wins=[('f', 10, 10, 18, 18, None, True), ('f', 44, 10, 18, 18, 'v', False), ('f', 76, 10, 18, 18, None, True)],
+             chim=[(0.15, 13, 18), (0.82, 11, 22)]),
+        dict(x=1830, w=66, wall=52, roof=34, side=60, kind='gable', roof_tex='thatch', wall_tex='stone',
+             wins=[('f', 8, 16, 20, 20, 'v', True)], door=(36, 18, 34)),
     ]
     if S.X1 > 1990:
-        houses.append((1925, 70, 50, 38, 60, [(14, 16, 14, 16), (42, 16, 14, 16)]))
-    for (x, w, wall, roof, side, win) in houses:
-        cottage(x, w, wall, roof, side, win)
+        houses.append(dict(x=1965, w=90, wall=44, roof=32, side=50, kind='long', roof_tex='plain', wall_tex='boards',
+                           wins=[('f', 16, 14, 20, 18, 'x', True), ('f', 58, 14, 20, 18, None, False)], chim=[(0.5, 12, 20)]))
+    for h in houses:
+        cottage(h)
         st('cottage')
-    # chimneys
-    for (x, w, wall, roof) in [(1400, 78, 54, 40), (1655, 84, 60, 44)]:
-        base = topf(x + w / 2) + 10
-        cx, cy = x + w + 22, base - wall - roof * 0.55
-        cp = P(knife_edge([(cx, cy - 22), (cx + 12, cy - 22), (cx + 12, cy + 6), (cx, cy + 6)], rng, step=(5, 10), wob=0.6, nick=0.1,
-                          nick_size=(1.5, 3)))
-        L.outline(L.poly(cp), S(2.5)); L.leave(L.poly(cp))
-    st('chimneys')
 
     # ---------------------------------------------------------------- the lighthouse at the point
     LX, LB = 1062, topf(1062) + 12
@@ -281,7 +349,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     LT = LB - th
     tower = [(LX - rb, LB), (LX - rt, LT), (LX + rt, LT), (LX + rb, LB)]
     tm = L.poly(P(knife_edge(tower, rng, step=(8, 22), wob=0.8, nick=0.08, nick_size=(1.5, 4))))
-    L.outline(tm, S(3.4))                               # halo cut round it into the black
+    L.outline(tm, S(4.2))                               # halo cut round it into the black
     L.leave(tm)
     L.clear(tm, on=col, chatter=0)
     L.clear(L.poly(P(knife_edge([(LX - rb + 4, LB - 2), (LX - rt + 3, LT + 3), (LX + rt - 3, LT + 3), (LX + rb - 4, LB - 2)],
@@ -294,24 +362,24 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                                     nick=0.05, nick_size=(1.5, 3)))))
     for k in range(3):
         f = 0.38 + 0.2 * k + rng.uniform(-0.04, 0.04)
-        ridge_line(L, S, rng, [(LX + rb * f, LB - 4), (LX + rt * f, LT + 6)], 2.8 + 0.5 * k, breaks=0.3, seg=(20, 60), smooth=False)
+        if k == 0: continue                              # two bold shading ridges, not three fine ones
+        ridge_line(L, S, rng, [(LX + rb * (f + 0.05), LB - 4), (LX + rt * (f + 0.05), LT + 6)], 5.2 + 0.6 * k, breaks=0.3, seg=(20, 60), smooth=False)
     # gallery: a bold rail and a few stout posts (fragile ridges, printed uneven), lantern, dome
-    L.leave(L.poly(P(knife_edge([(LX - rt - 9, LT + 2), (LX + rt + 9, LT + 2), (LX + rt + 9, LT - 6), (LX - rt - 9, LT - 6)],
+    # gallery: one solid black deck and a stout rail (the posts were too fine to survive the cut)
+    L.leave(L.poly(P(knife_edge([(LX - rt - 10, LT + 2), (LX + rt + 10, LT + 2), (LX + rt + 10, LT - 7), (LX - rt - 10, LT - 7)],
                                 rng, step=(5, 10), wob=0.5, nick=0.05, nick_size=(1.2, 2.5)))))
-    for xx in np.linspace(LX - rt - 7, LX + rt + 7, 5) + rng.uniform(-1.5, 1.5, 5):
-        ridge_line(L, S, rng, [(xx, LT - 5), (xx + rng.uniform(-0.8, 0.8), LT - 16)], rng.uniform(2.8, 3.6), breaks=0.25,
-                   seg=(4, 10), gap=(1.5, 3), smooth=False)
-    ridge_line(L, S, rng, [(LX - rt - 9, LT - 16), (LX + rt + 9, LT - 16.5)], 3.2, breaks=0.25, seg=(10, 30), gap=(2, 4), smooth=False)
-    lan = P([(LX - 11, LT - 5), (LX + 11, LT - 5), (LX + 11, LT - 30), (LX - 11, LT - 30)])
-    L.outline(L.poly(lan), S(2.4)); L.leave(L.poly(lan))
-    glass = P([(LX - 8, LT - 8), (LX + 8, LT - 8), (LX + 8, LT - 27), (LX - 8, LT - 27)])
+    for xx in (LX - rt - 7, LX + rt + 7):
+        ridge_line(L, S, rng, [(xx, LT - 5), (xx + rng.uniform(-0.8, 0.8), LT - 17)], 5.4, breaks=0.0, seg=(20, 30), smooth=False)
+    ridge_line(L, S, rng, [(LX - rt - 10, LT - 16), (LX + rt + 10, LT - 16.5)], 5.6, breaks=0.15, seg=(14, 40), gap=(3, 5), smooth=False)
+    lan = P([(LX - 14, LT - 5), (LX + 14, LT - 5), (LX + 14, LT - 32), (LX - 14, LT - 32)])
+    L.outline(L.poly(lan), S(3.2)); L.leave(L.poly(lan))
+    glass = P([(LX - 8, LT - 10), (LX + 8, LT - 10), (LX + 8, LT - 27), (LX - 8, LT - 27)])
     L.clear(L.poly(glass), chatter=0)
     if not day:
-        L.leave(L.poly(P([(LX - 9, LT - 7), (LX + 9, LT - 7), (LX + 9, LT - 28), (LX - 9, LT - 28)])), on=col)
-    L.gouge(P([(LX, LT - 8), (LX + 0.5, LT - 27)]), S(3.0), 'brush', end=S(2.4), cut=False, smooth=False, jitter=0.25)
-    dome = [(LX - 14, LT - 30), (LX - 8, LT - 40), (LX, LT - 44), (LX + 8, LT - 40), (LX + 14, LT - 30)]
-    L.outline(L.poly(P(dome)), S(2.4)); L.leave(L.poly(P(dome)))
-    L.gouge(P([(LX, LT - 44), (LX + 1, LT - 57)]), S(3.0), 'brush', end=S(1.8), cut=False, smooth=False, jitter=0.2)
+        L.leave(L.poly(P([(LX - 11, LT - 8), (LX + 11, LT - 8), (LX + 11, LT - 29), (LX - 11, LT - 29)])), on=col)
+    dome = [(LX - 16, LT - 31), (LX - 9, LT - 42), (LX, LT - 46), (LX + 9, LT - 42), (LX + 16, LT - 31)]
+    L.outline(L.poly(P(dome)), S(3.2)); L.leave(L.poly(P(dome)))
+    L.gouge(P([(LX, LT - 44), (LX + 1, LT - 58)]), S(6.0), 'brush', end=S(4.6), cut=False, smooth=False, jitter=0.2)
     # keeper's cottage at its foot
     kx = LX + 30
     kh = [(kx, LB + 2), (kx, LB - 30), (kx + 28, LB - 50), (kx + 56, LB - 30), (kx + 56, LB + 2)]
@@ -324,14 +392,14 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         # beams: two long fans of cuts from the lantern into the dusk sky, printed in the colour; each cut its
         # own length, weight and a slight waver of the hand
         for ang, ln in ((198, 640), (-14, 560)):
-            for j in range(9):
-                a = np.radians(ang + (j - 4) * 0.9 + rng.normal(0, 0.15))
+            for j in range(7):
+                a = np.radians(ang + (j - 3) * 1.1 + rng.normal(0, 0.15))
                 x0, y0 = LX + np.cos(a) * 26, LT - 18 + np.sin(a) * 26
-                L_ = ln * (1 - abs(j - 4) * 0.07) * rng.uniform(0.82, 1.08)
+                L_ = ln * (1 - abs(j - 3) * 0.08) * rng.uniform(0.7, 1.1)
                 tt = np.linspace(0, 1, 8)
                 wv = rng.normal(0, 2.0) * np.sin(np.pi * tt)
                 pts = P([(x0 + np.cos(a) * L_ * t - np.sin(a) * o, y0 + np.sin(a) * L_ * t + np.cos(a) * o) for t, o in zip(tt, wv)])
-                wd = (3.6 - abs(j - 4) * 0.3) * rng.uniform(0.85, 1.2)
+                wd = (4.8 - abs(j - 4) * 0.3) * rng.uniform(0.85, 1.2)
                 L.gouge(pts, S(wd), 'v', taper=(0.04, rng.uniform(0.7, 0.9)), smooth=False)
                 L.gouge(pts, S(wd + 0.8), 'v', cut=False, on=col, taper=(0.04, 0.85), smooth=False)
         st('beams')
@@ -357,7 +425,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                 (x - 86 * k * flip, y + 10 * k)]
         mx_ = x + 6 * k * flip
         mast = L.stroke(P([(mx_, y - 12 * k), (mx_ + rng.normal(0, 1.0) * k, y - h * 0.55), (mx_ + rng.normal(0, 1.5) * k, y - h)]),
-                        S(max(3.0, 4.6 * k)), 'brush', end=S(max(2.6, 3.4 * k)), jitter=0.2)
+                        S(max(6.2, 6.4 * k)), 'brush', end=S(max(5.2, 5.0 * k)), jitter=0.2)
         belly = rng.uniform(0.9, 1.15)
         mainsail = [(x + 12 * k * flip, y - h + 8 * k), (x + 12 * k * flip, y - 22 * k), (x + 104 * k * flip * belly, y - 22 * k),
                     (x + 60 * k * flip * belly, y - h * 0.5)]
@@ -366,20 +434,23 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         sm = L.poly(P(spline(mainsail + [mainsail[0]], 6).tolist())); jm = L.poly(P(jib))
         L.clear(np.maximum(sm, jm), chatter=0)
         # the sails' black edges: bold ridges left standing, uneven and broken here and there
-        ew = max(2.8, 3.2 * k)
+        ew = max(5.6, 5.4 * k) * rng.uniform(0.95, 1.1)
         ms = spline(mainsail + [mainsail[0]], 6)
-        ridge_line(L, S, rng, ms.tolist(), ew, breaks=0.2, seg=(20, 70), gap=(2, 5), smooth=False)
-        ridge_line(L, S, rng, jib + [jib[0]], ew, breaks=0.2, seg=(20, 70), gap=(2, 5), smooth=False)
+        ridge_line(L, S, rng, ms.tolist(), ew, breaks=0.25, seg=(24, 80), gap=(3, 7), smooth=False)
+        if k < 0.55:                                    # too small to clear: the jib is left solid black
+            L.leave(jm)
+        else:
+            ridge_line(L, S, rng, jib + [jib[0]], ew, breaks=0.25, seg=(24, 80), gap=(3, 7), smooth=False)
         if main_col:
             L.leave(sm, on=col)
-        for f in (0.3, 0.55, 0.78):                                           # seams on the mainsail
-            if rng.random() < 0.2: continue
+        for f in (0.36, 0.7):                                                 # bold seams, big sails only
+            if k < 0.9 or rng.random() < 0.25: continue
             ya = y - 22 * k - (h - 30 * k) * (f + rng.uniform(-0.04, 0.04))
             ridge_line(L, S, rng, [(x + 12 * k * flip, ya), (x + (104 - 70 * f) * k * flip, ya + 8 * k * rng.uniform(0.7, 1.3))],
-                       max(2.6, 2.8 * k), breaks=0.35, seg=(12, 40), region=sm, smooth=False)
-        L.outline(hm, S(max(2.0, 2.6 * k)))
+                       max(5.2, 4.0 * k), breaks=0.35, seg=(16, 50), gap=(4, 9), region=sm, smooth=False)
+        L.outline(hm, S(max(3.2, 3.2 * k)))
         L.leave(hm)
-        L.gouge(P([(x - 96 * k * flip, y - 8 * k), (x + 104 * k * flip, y - 10 * k)]), S(max(2.4, 2.4 * k)), 'v')
+        L.gouge(P([(x - 96 * k * flip, y - 8 * k), (x + 104 * k * flip, y - 10 * k)]), S(max(3.4, 3.0 * k)), 'v')
         # broken reflection of the hull and sail: a few swaying dashes, shorter with depth
         yy_ = y + 14 * k
         for j in range(int(rng.integers(3, 6))):
@@ -389,7 +460,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                 xb = min(x + w * 0.9, xa + rng.uniform(14, 60) * max(k, 0.5))
                 if rng.random() < 0.85 - 0.1 * j:
                     L.gouge(P([(xa, yy_ + rng.normal(0, 0.6)), (xb, yy_ + rng.normal(0, 0.8))]),
-                            S(max(2.6, (4.4 - j * 0.6) * k * 1.3 * rng.uniform(0.8, 1.2))), 'brush', end=S(rng.uniform(1.4, 2.6)),
+                            S(max(5.4, (5.6 - j * 0.6) * k * 1.3 * rng.uniform(0.8, 1.2))), 'brush', end=S(rng.uniform(3.6, 5.0)),
                             cut=False)
                 xa = xb + rng.uniform(3, 12) * max(k, 0.5)
             yy_ += rng.uniform(8, 13) * max(k, 0.6)
@@ -405,12 +476,12 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     gulls = [(640, 250, 1.2), (735, 300, 0.9), (820, 228, 0.8), (930, 330, 0.7), (580, 360, 0.75), (1160, 250, 0.9)]
     for (gx_, gy_, sc) in gulls:
         k = sc * 1.5 * rng.uniform(0.85, 1.15)
-        bird(L, S, rng, gx_ + rng.normal(0, 8), gy_ + rng.normal(0, 6), 27 * k,
-             (3.8 if day else 4.6) * max(k / 1.4, 0.8), cut=not day, kind='gull')
+        bird(L, S, rng, gx_ + rng.normal(0, 8), gy_ + rng.normal(0, 6), 32 * k,
+             6.6 * max(k / 1.4, 0.95), cut=not day, kind='gull')
     # two gulls low over the sea: black, left standing
     for (gx_, gy_, sc) in [(300, 640, 0.9), (360, 668, 0.7)]:
         k = sc * 1.5 * rng.uniform(0.85, 1.15)
-        bird(L, S, rng, gx_, gy_, 27 * k, 4.2 * max(k / 1.4, 0.8), cut=False, kind='gull')
+        bird(L, S, rng, gx_, gy_, 32 * k, 6.4 * max(k / 1.4, 0.95), cut=False, kind='gull')
     st('gulls')
 
     # ---------------------------------------------------------------- foreground rocks in the surf (bottom right)

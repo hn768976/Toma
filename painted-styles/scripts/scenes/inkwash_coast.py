@@ -14,8 +14,8 @@ from PIL import Image, ImageDraw
 import drawkit
 from drawkit import Scaler, seed_all, save_png
 from inkpaint import spline, curve, blur, fbm1d
-from inkwash_kit import (Ink, conifer, any_tree, bird, fill_poly, ink_mass, cun, dian, ridge_accent, broad_stroke,
-                         wash_field, water_dashes, STYLE, COLOURWAYS)
+from inkwash_kit import (Ink, conifer, any_tree, bird, fill_poly, ink_mass, dian, ridge_accent, broad_stroke,
+                         wash_field, ripples, brush, wet_disc, cun_bold, STYLE, COLOURWAYS)
 
 LIB = "inkpaint"
 GROUPS = ("all",)
@@ -45,31 +45,27 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     SUNX, SUNY = 1480, 300
     # a pale grey wash brushed along the top, left to dissolve unevenly; the rest is bare paper
     yl = S.y(105) + fbm1d(CW, S(260), 4, p.sd()) * S(60) + fbm1d(CW, S(60), 3, p.sd()) * S(12)
-    y1 = int(min(CH, yl.max() + S(40)))
-    wash_field(p, 0, y1, 0, CW, yl[None, :] - YY[:y1], 0.09, S(70), pool=0.0)
+    y1 = int(min(CH, yl.max() + S(70)))
+    wash_field(p, 0, y1, 0, CW, yl[None, :] - YY[:y1], 0.09, S(45), pool=0.25, ramp=S(9))
     # dusk: a very pale vermilion wash laid wet across the lower right sky, ragged at the top
     yt = S.y(330) + fbm1d(CW, S(300), 4, p.sd()) * S(70) + np.clip((xd - SUNX) / 800, -1, 1) ** 2 * S(90)
-    y0 = int(max(0, yt.min() - S(30)))
+    y0 = int(max(0, yt.min() - S(80)))
     f = np.minimum(YY[y0:hzi + 1] - yt[None, :], (hz - YY[y0:hzi + 1]) * 3)
     Rk = np.zeros_like(p.R)
-    wash_field(p, y0, hzi + 1, 0, CW, f, 1.0, S(110), pool=0.2, buf=Rk)
+    wash_field(p, y0, hzi + 1, 0, CW, f, 1.0, S(55), pool=0.2, buf=Rk, ramp=S(14))
     p.over(p.R, Rk * (0.13 * (0.35 + 0.65 * np.exp(-((xd - SUNX) / 650) ** 2)))[None, :])
     del Rk
     # a pale, watery sun: one round touch of thin accent ink
-    p.wet_dot(S.x(SUNX), S.y(SUNY), S(34), 0.24, squash=1.03, red=True, irr=0.25)
-    # a few thin wet cloud strokes
-    for (cx, cy, ln, th, dens) in [(600, 150, 460, 20, 0.07), (1350, 205, 380, 14, 0.06), (1780, 122, 360, 18, 0.07)]:
-        u0 = rng.uniform(-1.0, -0.8)
-        for k in range(int(rng.integers(1, 3))):
-            u1 = min(1.0, u0 + rng.uniform(0.8, 1.9))
-            us = np.linspace(u0, u1, 9)
-            sag = rng.uniform(4, 14); tilt = rng.uniform(-8, 8)
-            pts = [(S.x(cx + ln * u), S.y(cy + sag * np.sin(u * 2.4) + tilt * u)) for u in us]
-            broad_stroke(p, pts, S(th) * rng.uniform(0.7, 1.3), dens * rng.uniform(0.8, 1.25), dry=rng.uniform(0.45, 0.8),
-                         taper=(rng.uniform(0.25, 0.5), rng.uniform(0.3, 0.6)), pool=rng.uniform(0.15, 0.6), hair=0.9)
-            u0 = u1 + rng.uniform(0.06, 0.2)
-            if u0 >= 0.9:
-                break
+    wet_disc(p, S.x(SUNX), S.y(SUNY), S(34), 0.24, red=True, wet_dir=0.8)
+    # two clouds, made differently: a dry side-brush pull breaking into flying white, and a pale wet smear
+    pts = [S.pt(1180, 196), S.pt(1330, 188), S.pt(1470, 200), S.pt(1590, 192)]
+    brush(p, pts, S(13), 0.075, dry=0.75, taper=(0.08, 0.6), swell=0.5, pv=0.3, hair=1.25, pool=0.4, side=0.6, rough=1.4)
+    cx, cy, ln, th = S.x(560), S.y(160), S(260), S(12)
+    x0, x1 = int(max(0, cx - ln - S(60))), int(min(CW, cx + ln + S(60)))
+    y0, y1 = int(max(0, cy - th * 5)), int(min(CH, cy + th * 5))
+    u = (XX[y0:y1, x0:x1] - cx) / ln
+    fcl = th * (1 - np.clip(np.abs(u), 0, 1.2) ** 1.4) - np.abs(YY[y0:y1, x0:x1] - cy - S(7) * u ** 2)
+    wash_field(p, y0, y1, x0, x1, fcl, 0.075, S(20), pool=0.6, ramp=S(3))
     p.snap('sky')
 
     # ---------------------------------------------------------------- distant headlands on the right
@@ -87,10 +83,16 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
 
     # ---------------------------------------------------------------- sea: mostly bare paper
     # a pale wash pulled across the sea, darker toward the viewer, its top edge broken
-    for (yc, dens, soft) in [(820, 0.07, 90), (960, 0.09, 70)]:
-        top = S.y(yc) + fbm1d(CW, S(260), 4, p.sd()) * S(30)
-        y0 = int(max(hzi, top.min() - S(40)))
-        wash_field(p, y0, CH, 0, CW, YY[y0:CH] - top[None, :], dens, S(soft), pool=0.3)
+    for k in range(5):            # long horizontal pulls of a nearly dry wide brush, broken where it skipped
+        y = rng.uniform(760, 1060)
+        xa = rng.uniform(900, 1700); ln = rng.uniform(250, 700)
+        u0 = 0.0
+        while u0 < 1.0:
+            u1 = min(1.0, u0 + rng.uniform(0.2, 0.55))
+            pts = [S.pt(xa + ln * u, y + rng.normal(0, 1.5) + 3 * u) for u in np.linspace(u0, u1, 4)]
+            brush(p, pts, S(rng.uniform(3, 8)), rng.uniform(0.1, 0.2), dry=rng.uniform(0.6, 0.85),
+                  taper=(rng.uniform(0.05, 0.3), rng.uniform(0.2, 0.6)), swell=0.4, pv=0.3, pool=0.3, hair=1.2)
+            u0 = u1 + rng.uniform(0.03, 0.15)
     # a soft band under the far headlands (their reflection, simplified to one pale pull)
     for k in range(4):
         x0 = rng.uniform(1250, 1800); x1 = min(2100, x0 + rng.uniform(150, 420))
@@ -98,9 +100,9 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         broad_stroke(p, [S.pt(x_, y + rng.normal(0, 1)) for x_ in np.linspace(x0, x1, 5)], S(rng.uniform(4, 9)),
                      rng.uniform(0.06, 0.12), dry=rng.uniform(0.4, 0.8), taper=(0.3, 0.4), pool=0.3)
     # swell marks in loose clusters, longer and heavier toward the viewer
-    water_dashes(p, S.y(HORIZON + 8), S.y(1075), S.x(860), S.x(S.X1), clusters=11, ink=0.32,
-                 avoid=[(S.x(1240), S.y(760), S.x(1440), S.y(900))])
-    water_dashes(p, S.y(HORIZON + 6), S.y(760), S.x(1000), S.x(S.X1), clusters=5, ink=0.2, persp=(0.35, 0.8))
+    ripples(p, S.y(HORIZON + 8), S.y(1075), S.x(860), S.x(S.X1), clusters=11, ink=0.38,
+            avoid=[(S.x(1240), S.y(760), S.x(1440), S.y(900))])
+    ripples(p, S.y(HORIZON + 6), S.y(760), S.x(1000), S.x(S.X1), clusters=5, ink=0.26, persp=(0.35, 0.8))
     # the sun's path: a few broken pale strokes under the sun
     y = hz + S(12)
     while y < hz + S(230):

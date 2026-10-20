@@ -23,8 +23,8 @@ import drawkit  # noqa: E402  (sets sys.path to the skill lib)
 from drawkit import Scaler, seed_all, save_png  # noqa: E402
 
 import numpy as np  # noqa: E402
-from _stainedglass_kit import (Panel, Stager, hband, design_xy, const, polyfn, shade, cloud_shape,  # noqa: E402
-                               bird_pts, lay_cloud)
+from _stainedglass_kit import (Panel, Stager, hband, design_xy, const, polyfn, shade,  # noqa: E402
+                               bird_pieces, lay_cloud)
 
 STYLE = "Stained glass · 彩色玻璃花窗"
 LIB = "stainedglass"
@@ -48,7 +48,8 @@ PAL = {
         mist=['#b8a0cc', '#c6aed0', '#ad98c4'], mist_stain=0.6,
         hull=['#7a4e2c', '#6e4526'], hull_dk=['#5a3820', '#4e321c'], hull_ref=['#2a1a30', '#30203a'], body='#173c8f',
         body_ref='#1a2450', head='#e9c9a8', hair='#3a2418', bird=['#1c1a40', '#221e48'],
-        reed=['#2a4a30', '#33502e', '#26402c'], cattail=['#4a2a1c', '#5a3422'], sky=('#ffffff', '#f2eee6')),
+        reed=['#2a4a30', '#33502e', '#26402c'], cattail=['#4a2a1c', '#5a3422'], trunk=['#3a2430', '#44283a'],
+        oar=['#b08850', '#a07a48'], hat=['#3a2418', '#4a2c1c'], sky=('#ffffff', '#f6f3ec')),
     "Day": dict(
         bands=[['#1f4fa8', '#2456b0', '#1d4a9e'], ['#3368b8', '#3d74c2', '#2f60b0'], ['#5d8fd0', '#6a9ad6', '#5588cc'],
                ['#86b0de', '#93bae2', '#7ca8da'], ['#aecde8', '#bcd6ec', '#a4c6e4'], ['#dfe8e0', '#e8ecdc', '#d7e2ea']],
@@ -64,7 +65,8 @@ PAL = {
         mist=['#e4e9f0', '#eeeadb', '#d7e2ea'], mist_stain=0.25,
         hull=['#7a4e2c', '#6e4526'], hull_dk=['#5a3820', '#4e321c'], hull_ref=['#1a3060', '#22386a'], body='#b3182c',
         body_ref='#3a3a70', head='#e9c9a8', hair='#4a2c1c', bird=['#22223a', '#2a2a44'],
-        reed=['#3a6a30', '#4a7a34', '#2f5a2c'], cattail=['#5a3422', '#6a4028'], sky=('#ffffff', '#f2eee6')),
+        reed=['#3a6a30', '#4a7a34', '#2f5a2c'], cattail=['#5a3422', '#6a4028'], trunk=['#4a3020', '#5a3a24'],
+        oar=['#c8a060', '#b8925a'], hat=['#4a2c1c', '#5a3422'], sky=('#ffffff', '#f6f3ec')),
 }
 
 CLOUDS = [(260, 102, 400, 48), (900, 172, 330, 40), (1480, 86, 460, 52), (1160, 250, 250, 36)]
@@ -94,36 +96,47 @@ def far_bottom(x):
 
 
 def pine_shapes(seed):
-    """every pine its own: tier count and spacing, side widths, droop, lean -- from a geometry generator that
-    does not belong to any group (the water group needs the shapes for the reflections)"""
+    """every pine its own, drawn as a glazier would cut it: a few tiers, each tier one piece (split lit / shade
+    down the stem on the big ones), each tier a little narrower at its top than the bough under it so the
+    outline steps in only gently (no serrations to cut), a drooping lower edge, a short trunk -- from a
+    geometry generator that does not belong to any group (the water group needs the shapes for reflections)"""
     r = drawkit.group_rng(seed, 'pine-geometry')
     out = []
     for (cx, top, hw, root) in PINES:
         h = root - top
-        tiers = int(r.integers(4, 6)) if h > 150 else int(r.integers(3, 5))
-        lean = r.uniform(-0.05, 0.05)
-        gaps = r.uniform(0.75, 1.3, tiers)
-        tips = top + h * 0.9 * np.cumsum(gaps) / gaps.sum()
+        nt = int(r.integers(3, 5)) if h > 150 else int(r.integers(2, 4))
+        lean = r.uniform(-0.04, 0.04)
         ax = lambda y, cx=cx, lean=lean, root=root: cx + lean * (root - y)
-        left, right, ws = [], [], []
-        prev = top
-        for t, yt in enumerate(tips):
-            f = ((t + 1) / tiers) ** r.uniform(0.7, 0.95)
-            wl, wr = hw * f * r.uniform(0.82, 1.1), hw * f * r.uniform(0.82, 1.1)
-            ws.append((wl, wr))
-            yin = prev + (yt - prev) * r.uniform(0.5, 0.65)
-            if t > 0:
-                left.append((ax(yin) - max(wl * r.uniform(0.42, 0.58), 10), yin))
-                right.append((ax(yin) + max(wr * r.uniform(0.42, 0.58), 10), yin))
-            dl, dr = r.uniform(2, 9), r.uniform(2, 9)
-            left += [(ax(yt) - wl * 0.7, yt - 6), (ax(yt) - wl, yt + dl), (ax(yt) - wl * 0.55, yt + dl * 0.4)]
-            right += [(ax(yt) + wr * 0.7, yt - 6), (ax(yt) + wr, yt + dr), (ax(yt) + wr * 0.55, yt + dr * 0.4)]
-            prev = yt
-        tw = max(7, hw * 0.15)
-        yb = tips[-1]
-        pts = ([(ax(top), top)] + right + [(ax(yb) + tw, yb + 2), (cx + tw, root + 4), (cx - tw, root + 4),
-                                           (ax(yb) - tw, yb + 2)] + left[::-1])
-        out.append(dict(pts=pts, cx=cx, top=top, root=root, hw=hw, ax=ax, tips=list(tips), ws=ws, lean=lean))
+        gaps = r.uniform(0.8, 1.25, nt)
+        ybs = top + h * r.uniform(0.86, 0.93) * np.cumsum(gaps) / gaps.sum()
+        tiers = []
+        prev_b, prev_w = top, 0.0
+        for t in range(nt):
+            yb = float(ybs[t])
+            f = ((t + 1) / nt) ** r.uniform(0.55, 0.8)
+            wl, wr = hw * f * r.uniform(0.88, 1.08), hw * f * r.uniform(0.88, 1.08)
+            if t == 0:
+                yt, wt = top, 0.0
+            else:
+                yt = prev_b - (prev_b - tiers[-1]['yt']) * r.uniform(0.3, 0.42)
+                wt = prev_w * r.uniform(0.32, 0.45)
+            lift = r.uniform(0.08, 0.16) * (yb - yt)            # the bough's lower edge droops at its ends
+            n_ = 9
+            xsb = np.linspace(-1, 1, n_)
+            bot = [(ax(yb) + x * (wr if x > 0 else wl), yb - lift * (1 - x * x)) for x in xsb[::-1]]
+            sides_r = [(ax(yt) + wt + (wr - wt) * k, yt + (yb - yt) * k + 0.0) for k in (0.0, 0.55)]
+            sides_l = [(ax(yt) - wt - (wl - wt) * k, yt + (yb - yt) * k) for k in (0.55, 0.0)]
+            if t == 0:
+                pts = [(ax(top), top - 3)] + [sides_r[1]] + bot + [sides_l[0]]
+            else:
+                pts = sides_r + bot + sides_l
+            tiers.append(dict(pts=pts, yt=yt, yb=yb, wl=wl, wr=wr))
+            prev_b, prev_w = yb, min(wl, wr)
+        tw = max(6, hw * 0.13)
+        yl = tiers[-1]['yb']
+        trunk = [(ax(yl - 10) - tw, yl - 10), (ax(yl - 10) + tw, yl - 10), (cx + tw * 1.1, root + 4), (cx - tw * 1.1, root + 4)]
+        out.append(dict(tiers=tiers, trunk=trunk, cx=cx, top=top, root=root, hw=hw, ax=ax,
+                        tips=[tt['yb'] for tt in tiers], lean=lean))
     return out
 
 
@@ -182,12 +195,13 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
 
     # geometry every group may need (cheap masks / shapes, made whatever is included)
     PS = pine_shapes(seed)
-    pine_ms = [g.poly(S.pts(p['pts'])) for p in PS]
+    pine_ms = [np.clip(sum(g.poly(S.pts(t['pts'])) for t in p['tiers']) + g.poly(S.pts(p['trunk'])), 0, 1) for p in PS]
     pines_m = np.clip(sum(pine_ms), 0, 1)
     pref_id = np.zeros_like(pines_m)                  # which pine each reflection pixel belongs to (1-based)
     for i, p in enumerate(PS):
-        pm_ = g.poly(S.pts(flip([(p['cx'] + (x - p['cx']) * 0.7, y) for x, y in p['pts']], 0.8)))
-        pref_id = np.where(pm_ > 0.5, i + 1, pref_id)
+        for t in p['tiers']:
+            pm_ = g.poly(S.pts(flip([(p['cx'] + (x - p['cx']) * 0.7, y) for x, y in t['pts']], 0.8)))
+            pref_id = np.where(pm_ > 0.5, i + 1, pref_id)
     glow = P['glow'] or P['sun'][:2]
 
     # ================================================================ sky: rows of glass, cuts radiate from the sun
@@ -255,40 +269,36 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                mix=dict(cathedral=0.45, reamy=0.25, streaky=0.3))
         st('near glass')
         for i, (p, pm) in enumerate(zip(PS, pine_ms)):
-            ax, tips = p['ax'], p['tips']
-            cuts = [('v', lambda y, ax=ax: ax(y))] if p['hw'] >= 40 else []
-            for t_, yt in enumerate(tips[:-1] if p['hw'] >= 45 else []):   # a lead under the tiers: drooping boughs
-                wl, wr = p['ws'][t_]
-                cuts.append(('h', lambda x, yt=yt, ax=ax, w=max(wl, wr): yt + 2 - 0.4 * np.clip(w - np.abs(x - ax(yt)), 0, None)))
-            pal_t = [(rng.uniform(0.9, 1.1)) for _ in range(len(tips) + 1)]
-            g.glass(pm, None, cuts=cuts,
-                    colour_fn=lambda cx, cy, ax=ax, pal_t=pal_t, tips=tips: shade(
-                        P['pine_lit'] if cx < ax(cy) else P['pine_sh'], pal_t[int(np.searchsorted(tips, cy))]),
-                    flow=np.pi / 2, flow_jit=0.3, mix=dict(cathedral=0.4, reamy=0.3, streaky=0.3), amin=350, tmin=9)
-            # needles: short drooping grisaille strokes along each tier, every one different
-            for t, yt in enumerate(tips):
-                f = (t + 1) / len(tips)
-                w = p['hw'] * f * 0.8
+            ax = p['ax']
+            g.glass(g.poly(S.pts(p['trunk'])), P['trunk'], flow=np.pi / 2, mix=dict(cathedral=0.6, streaky=0.4), amin=200, tmin=7)
+            for t_, tier in enumerate(p['tiers'][::-1]):             # the lower boughs first, the upper laid over them
+                tm = g.poly(S.pts(tier['pts']))
+                k_ = rng.uniform(0.88, 1.12)
+                if p['hw'] >= 44:
+                    g.glass(tm, None, cuts=[('v', lambda y, ax=ax: ax(y) + rng.uniform(-3, 3))],
+                            colour_fn=lambda cx, cy, ax=ax, k_=k_: shade(P['pine_lit'] if cx < ax(cy) else P['pine_sh'], k_),
+                            flow=np.pi / 2, flow_jit=0.4, mix=dict(cathedral=0.4, reamy=0.3, streaky=0.3), amin=300, tmin=8)
+                else:
+                    g.glass(tm, shade(P['pine_lit'] if rng.random() < 0.5 else P['pine_sh'], k_), flow=np.pi / 2,
+                            flow_jit=0.4, mix=dict(cathedral=0.4, reamy=0.3, streaky=0.3), amin=200, tmin=7)
+                g.shade(tm, offset=(-p['hw'] * 0.35 * s, -4 * s), strength=0.28, soft=3 * s)
+            # needles: a few short drooping brush strokes along each bough edge, every one different
+            for tier in p['tiers']:
+                w = (tier['wl'] + tier['wr']) / 2 * 0.8
                 for sgn in (-1, 1):
-                    n_ = int(rng.integers(2, 4))
-                    for j in range(n_):
-                        x0_ = ax(yt) + sgn * w * rng.uniform(0.1, 0.8)
-                        y0_ = yt - rng.uniform(2, 10)
-                        g.trace(S.pts([(x0_, y0_), (x0_ + sgn * rng.uniform(5, 12), y0_ + rng.uniform(2, 6))]),
-                                rng.uniform(1.1, 1.8) * s, taper=(0.2, 0.8), smooth=False, clip=pm)
+                    for j in range(int(rng.integers(1, 4))):
+                        x0_ = ax(tier['yb']) + sgn * w * rng.uniform(0.15, 0.8)
+                        y0_ = tier['yb'] - rng.uniform(6, 14)
+                        g.trace(S.pts([(x0_, y0_), (x0_ + sgn * rng.uniform(4, 10), y0_ + rng.uniform(2, 6))]),
+                                rng.uniform(1.0, 1.6) * s, taper=(0.2, 0.8), smooth=False, clip=pm, opacity=0.7)
             st('pine %d' % i)
 
     # ================================================================ water: perspective rows; reflections in glass
     if 'water' in inc:
         rng = g.group('water')
-        levels, y = [], HORIZON
-        while True:
-            y += (22 + (y - HORIZON) * 0.11) * rng.uniform(0.75, 1.3)
-            if y > S.Y1 + 10:
-                break
-            levels.append(y)
         gx = P['glit_x']
         wob = rng.uniform(0, 6.3, 3)
+        depth = lambda y: float(np.clip((y - HORIZON) / 440.0, 0, 1))
 
         def feature(a, c):
             a = np.asarray(a, float); c = np.asarray(c, float)
@@ -299,72 +309,41 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
             ix = np.clip(np.round(S.x(a)).astype(int), 0, g.W - 1)
             pid = pref_id[iy, ix].astype(np.int64)
             f[pid > 0] = 10 + pid[pid > 0]
-            depth = (c - HORIZON) / 440.0
-            gw = 56 + 230 * depth
+            dp = (c - HORIZON) / 440.0
+            gw = 50 + 210 * dp
             off = 14 * np.sin(c / 37.0 + wob[0]) + 9 * np.sin(c / 13.0 + wob[1])
-            f[(np.abs(a - gx - 40 * depth - off) < gw / 2) & (c < 960)] = 3
+            f[(np.abs(a - gx - 40 * dp - off) < gw / 2) & (c < 960)] = 3
             return f
 
-        def run_edit(runs, yc, r):
-            depth = (yc - HORIZON) / 440.0
-            out = []
-            for ra, rb, fd in runs:
-                L = rb - ra
-                if (fd == 1 or fd > 10) and L > 70 and r.random() < 0.25 + 0.5 * depth:
-                    m_ = ra + L * r.uniform(0.35, 0.65)
-                    gp = r.uniform(18, 34)
-                    out += [[ra, m_ - gp / 2, fd], [m_ - gp / 2, m_ + gp / 2, 0], [m_ + gp / 2, rb, fd]]
-                elif fd == 3:
-                    if r.random() < 0.6 * max(depth - 0.45, 0):
-                        out.append([ra, rb, 0])
-                        continue
-                    x = ra + r.uniform(0, 18)
-                    out.append([ra, x, 0])
-                    while x < rb - 20:
-                        ln = r.uniform(22, 36 + 24 * depth)
-                        gp = r.uniform(16, 28 + 26 * depth)
-                        e = min(x + ln, rb)
-                        out.append([x, e, 3])
-                        if e + gp < rb:
-                            out.append([e, e + gp, 0])
-                        x = e + gp
-                    out[-1][1] = rb
-                else:
-                    out.append([ra, rb, fd])
-            # reflections are a little shorter than what they reflect
-            for i in range(len(out) - 1):
-                a_, b_ = out[i], out[i + 1]
-                if (a_[2] == 1 or a_[2] > 10) and b_[2] == 0:
-                    a_[1] -= r.uniform(0, 10); b_[0] = a_[1]
-                elif a_[2] == 0 and (b_[2] == 1 or b_[2] > 10):
-                    b_[0] += r.uniform(0, 10); a_[1] = b_[0]
-            return out
-
-        def tone(cx, cy, pal):
-            if pal is not None and pal is not P['water'][0]:
-                return None
+        def colour(cx, cy, fid, row):
+            dp = depth(cy)
             k = 0 if cy < 745 + rng.uniform(-25, 25) else (1 if cy < 880 + rng.uniform(-30, 30) else 2)
-            return P['water'][k]
+            water = P['water'][k]
+            if fid == 3:                                     # the glitter path: broken, thinning toward us
+                return P['glit'] if rng.random() < 0.78 - 0.35 * dp else water
+            if fid == 1:                                     # the far shore's reflection, breaking up with depth
+                return P['nref'] if rng.random() < 0.92 - 0.6 * dp else water
+            if fid > 10:                                     # pines: dark broken streaks, paler and fewer deeper down
+                return P['pref'] if rng.random() < 0.9 - 0.7 * dp else P['nref']
+            return water
         wm = g.poly(S.pts(hband(S, HORIZON, Y1)))
-        near_glit = lambda a, c: 0.3 if abs(a - gx) < 70 + 0.5 * (c - HORIZON) else 1.0
-        g.band(wm, P['water'][0], const(HORIZON), const(Y1), levels=levels, length=(130, 360), tilt=0.42,
-               wave=(8.0, 260.0), feature=feature, run_edit=run_edit, size=near_glit, vary=1.35,
-               fid_colours=dict([(1, P['nref']), (3, P['glit'])] + [(11 + i, P['pref']) for i in range(len(PS))]),
-               colour_fn=tone, amin=420, tmin=11,
-               flow=0.0, flow_jit=0.12, mix=dict(streaky=0.35, cathedral=0.25, reamy=0.25, seedy=0.15))
+        near_glit = lambda a, c: 0.45 if abs(a - gx) < 80 + 0.5 * (c - HORIZON) else 1.0
+        g.waves(wm, HORIZON, lambda y: 20 + (y - HORIZON) * 0.13, colour, run=(4.5, 10.0), feature=feature,
+                depth=depth, size=near_glit, wl=(260.0, 600.0), pinch=0.5, vary=1.3, amin=380, tmin=10,
+                flow=0.0, flow_jit=0.3, mix=dict(streaky=0.35, cathedral=0.25, reamy=0.25, seedy=0.15), matting=0.12)
         st('water glass')
         # wavelets: a few fine painted marks, clustered, never the same twice
-        for k in range(28):
-            yv = HORIZON + 60 + (k / 28) ** 1.3 * 380 + rng.uniform(-8, 8)
+        for k in range(18):
+            yv = HORIZON + 60 + (k / 18) ** 1.3 * 380 + rng.uniform(-8, 8)
             x0_ = rng.uniform(S.X0 + 20, S.X1 - 80)
             if abs(x0_ - gx) < 160 and yv < 900:
                 continue
             L = rng.uniform(18, 60) * (0.6 + (yv - HORIZON) / 440)
-            for j in range(int(rng.integers(1, 4))):
+            for j in range(int(rng.integers(1, 3))):
                 xa = x0_ + j * L * rng.uniform(0.6, 1.1)
                 ya = yv + rng.uniform(-3, 3)
                 g.trace(S.pts([(xa, ya), (xa + L * 0.45, ya - rng.uniform(1, 3)), (xa + L, ya + rng.uniform(-1, 1))]),
-                        rng.uniform(1.0, 1.7) * s, taper=(0.3, 0.5), opacity=0.55, wobble=0.3 * s)
+                        rng.uniform(1.0, 1.6) * s, taper=(0.3, 0.5), opacity=0.45, wobble=0.3 * s)
         st('water done')
 
     # ================================================================ mist: one long row of opalescent glass
@@ -387,52 +366,85 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
     # ================================================================ boat, rower, reflection: cut glass
     if 'boat' in inc:
         rng = g.group('boat')
-        j = lambda pts, a=1.2: [(x + rng.uniform(-a, a), y + rng.uniform(-a, a)) for x, y in pts]
+        cx_, cy_ = BOAT_C
+        K = BOAT_K
+        j = lambda pts, a=1.0: [(x + rng.uniform(-a, a), y + rng.uniform(-a, a)) for x, y in pts]
         Q = lambda pts: S.pts(boat_pts(pts))
-        # reflection first (it lies on the water below the hull), broken into pieces with water between
-        rf = g.poly(Q([(1096, 810), (1240, 810), (1226, 834), (1112, 836)]))
-        gaps = g.poly(Q([(1150, 806), (1168, 806), (1172, 840), (1152, 840)])) + \
-            g.poly(Q([(1200, 822), (1250, 822), (1250, 840), (1200, 840)]))
-        g.band(rf * (1 - np.clip(gaps, 0, 1)), P['hull_ref'], const(boat_pts([(0, 810)])[0][1]), const(boat_pts([(0, 836)])[0][1]), rows=1,
-               length=(60, 90), tilt=0.3, flow=0.0, mix=dict(streaky=0.6, cathedral=0.4))
-        g.glass(g.poly(Q(j([(1150, 842), (1186, 842), (1180, 858), (1156, 858)]))), P['body_ref'], flow=0.0)
+        BX = lambda x: cx_ + (x - cx_) * K
+        BY = lambda y: cy_ + (y - cy_) * K
+        IX = lambda x: cx_ + (np.asarray(x) - cx_) / K
+
+        def lens(xa, xb, y0, t, bow=0.15):
+            u = np.linspace(0, 1, 16)
+            xs_ = xa + (xb - xa) * u
+            top = y0 - t * bow * np.sin(np.pi * u)
+            bot = y0 + t * np.sin(np.pi * u) ** 0.8
+            return list(zip(xs_, top)) + list(zip(xs_[::-1], bot[::-1]))
+        # the reflection: a few wave-shaped pieces of darker glass lying on the water under the hull
+        for (xa, xb, y0, t, col) in [(1088, 1160, 812, 15, P['hull_ref']), (1171, 1240, 814, 12, P['hull_ref']),
+                                     (1148, 1186, 834, 9, P['body_ref'])]:
+            g.glass(g.poly(Q(j(lens(xa + rng.uniform(-4, 4), xb + rng.uniform(-4, 4), y0, t)))), col, flow=0.0,
+                    flow_jit=0.2, mix=dict(streaky=0.6, cathedral=0.4), amin=200, tmin=7)
         st('boat reflection')
+        # the hull: two strakes, each cut at midships -- four pieces of wood-brown glass
         hull = g.poly(Q(j([(1072, 776), (1120, 784), (1170, 787), (1220, 784), (1266, 770), (1250, 790), (1236, 799),
                            (1200, 808), (1130, 808), (1100, 800), (1088, 790)])))
-        bc = boat_pts([(1176, 0)])[0][0]
-        g.glass(hull, None, cuts=[('line', (bc - 4, 700, bc + 6, 900))],
-                colour_fn=lambda cx, cy: P['hull'] if cx < bc else P['hull_dk'], flow=0.03, flow_jit=0.05,
-                mix=dict(streaky=0.7, reamy=0.3))
+        strake = lambda x: np.interp(IX(x), [1060, 1100, 1170, 1240, 1280], [790, 793, 797, 791, 784])
+        mid = lambda x: BY(strake(x))
+        bc = BX(1176)
+        g.glass(hull, None, cuts=[('h', mid), ('line', (bc - 5, BY(760), bc + 7, BY(820)))],
+                colour_fn=lambda cx, cy: shade(P['hull'] if cy < mid(np.array([cx]))[0] else P['hull_dk'],
+                                               1.0 if cx < bc else 0.86),
+                flow=0.03, flow_jit=0.2, mix=dict(streaky=0.7, reamy=0.3), amin=200, tmin=7, matting=0.0)
         st('hull')
+        # the rower: torso (lit and shaded halves), sleeves, oars, face and hair -- each a piece of glass
         body = g.poly(Q(j([(1150, 781), (1188, 781), (1186, 762), (1180, 748), (1170, 742), (1158, 744), (1150, 754),
                            (1147, 768)], 0.8)))
-        g.glass(body, P['body'], flow=np.pi / 2, mix=dict(cathedral=0.6, streaky=0.4))
+        g.glass(body, None, cuts=[('line', (BX(1169), BY(740), BX(1171), BY(785)))],
+                colour_fn=lambda cx, cy: shade([P['body']], 1.0 if cx < BX(1170) else 0.78),
+                flow=np.pi / 2, mix=dict(cathedral=0.6, streaky=0.4), amin=150, tmin=6, matting=0.0)
+        for (a, b_) in [((1140, 822), (1157, 773)), ((1236, 824), (1185, 773))]:      # oars, blade to hand
+            oar = g.branch(Q([a, b_]), 7.5 * K * s, 6.5 * K * s)
+            g.glass(oar, P['oar'], flow=float(np.arctan2(b_[1] - a[1], b_[0] - a[0])), flow_jit=0.1,
+                    mix=dict(streaky=0.7, cathedral=0.3), amin=100, tmin=5, matting=0.0)
+        for (a, b_) in [((1157, 751), (1154, 772)), ((1182, 751), (1186, 772))]:      # sleeves
+            g.glass(g.branch(Q([a, b_]), 8.5 * K * s, 7 * K * s), shade([P['body']], 0.66), flow=np.pi / 2,
+                    mix=dict(cathedral=1.0), amin=100, tmin=5, matting=0.0)
         hx, hy = boat_pts([(1170, 727)])[0]
-        head = g.ellipse(*S.pt(hx, hy), 12.5 * BOAT_K * s, 14 * BOAT_K * s, 0.15)
-        g.glass(head, None, cuts=[('h', lambda x: hy - 1 + 0.45 * (x - hx))],
-                colour_fn=lambda cx, cy: P['head'] if cy > hy else P['hair'], mix=dict(cathedral=1.0), streak=0.4)
+        head = g.ellipse(*S.pt(hx, hy), 12.5 * K * s, 14 * K * s, 0.12)
+        hl = (BX(1150), BY(713), BX(1188), BY(737))
+        g.glass(head, None, cuts=[('line', hl)],
+                colour_fn=lambda cx, cy: P['hair'] if (cx - hl[0]) * (hl[3] - hl[1]) - (cy - hl[1]) * (hl[2] - hl[0]) > 0
+                else P['head'], mix=dict(cathedral=1.0), streak=0.4, amin=100, tmin=5, matting=0.0)
         st('rower')
-        # grisaille: planks, gunwale, oars, arm and folds, hair and face
-        g.trace(Q([(1074, 777), (1170, 788), (1265, 771)]), 2.6 * s, taper=(0.1, 0.1), clip=hull)
-        g.trace(Q([(1094, 795), (1170, 799), (1246, 789)]), 1.3 * s, taper=(0.2, 0.2), clip=hull)
-        g.trace(Q([(1160, 765), (1138, 790), (1100, 826)]), 3.4 * s, taper=(0.1, 0.5), smooth=False)
-        g.trace(Q([(1180, 765), (1206, 792), (1242, 828)]), 3.4 * s, taper=(0.1, 0.5), smooth=False)
-        g.trace(Q([(1158, 752), (1152, 764), (1160, 768)]), 1.5 * s, taper=(0.2, 0.2), clip=body)
-        g.trace(Q([(1176, 750), (1181, 762), (1176, 768)]), 1.3 * s, taper=(0.2, 0.2), clip=body)
-        g.shade(body, offset=(-6 * s, 0), strength=0.35, soft=2 * s)
-        g.trace(Q([(1166, 733), (1170, 735)]), 1.2 * s, smooth=False)                                    # mouth
-        g.trace(Q([(1178, 727), (1180, 731)]), 1.6 * s, smooth=False)                                    # ear
-        g.trace(Q([(1163, 729), (1165, 729)]), 1.8 * s, smooth=False)                                     # eye
-        g.trace(Q([(1159, 731), (1157, 735), (1160, 736)]), 1.0 * s, taper=(0.2, 0.2))                   # nose
-        g.matt(g.ellipse(*S.pt(hx + 3, hy), 12 * s, 13 * s), 0.18, soft=3 * s)
-        g.scratch(Q([(1100, 783), (1160, 790), (1230, 783)]), 1.6 * s)
+        # grisaille, with a brush: plank lines, the face (eye, brow, nose, mouth, ear), hair, folds; matt modelling
+        g.trace(Q([(1092, 795), (1170, 802), (1246, 789)]), 1.2 * s, taper=(0.3, 0.3), clip=hull, opacity=0.55)
+        g.trace(Q([(1100, 803), (1170, 806), (1236, 798)]), 1.0 * s, taper=(0.3, 0.3), clip=hull, opacity=0.45)
+        g.shade(hull, offset=(0, -5 * s), strength=0.3, soft=3 * s)
+        g.scratch(Q([(1090, 780), (1160, 788), (1230, 783)]), 1.3 * s)
+        g.shade(body, offset=(-5 * s, -3 * s), strength=0.3, soft=2.5 * s)
+        g.trace(Q([(1159, 756), (1156, 766), (1160, 777)]), 1.1 * s, taper=(0.3, 0.5), clip=body, opacity=0.55)
+        g.trace(Q([(1176, 754), (1179, 765), (1176, 776)]), 1.0 * s, taper=(0.3, 0.5), clip=body, opacity=0.5)
+        g.shade(head, offset=(-4 * s, -3 * s), strength=0.32, soft=2.2 * s)               # the cheek turned away
+        g.matt(head, 0.07, soft=1.5 * s)
+        g.trace(Q([(1162.2, 727.6), (1164.2, 727.9)]), 1.5 * s, taper=(0.3, 0.3), smooth=False, opacity=0.7)   # eye
+        g.trace(Q([(1159.5, 724.2), (1162.5, 723.4), (1165.8, 723.9)]), 1.0 * s, taper=(0.4, 0.5), opacity=0.45)  # brow
+        g.trace(Q([(1158.6, 727.5), (1157.0, 731.4), (1159.4, 732.4)]), 1.0 * s, taper=(0.3, 0.5), opacity=0.55)  # nose
+        g.trace(Q([(1160.5, 735.6), (1163.0, 736.0), (1165.2, 735.5)]), 0.9 * s, taper=(0.4, 0.4), opacity=0.5)  # mouth
+        g.trace(Q([(1176.5, 726.0), (1178.6, 728.6), (1176.8, 731.2)]), 1.0 * s, taper=(0.3, 0.3), opacity=0.5)   # ear
+        for k in range(3):                                                                # hair strands
+            y_ = 716 + k * 5
+            g.trace(Q([(1166 + k * 3, y_), (1175 + k * 2, y_ + 3), (1182, y_ + 7)]), 0.9 * s, taper=(0.3, 0.6),
+                    opacity=0.5, clip=head)
         st('boat paint')
 
-    # ================================================================ birds: gulls cut in dark glass
+    # ================================================================ birds: gulls, three pieces of dark glass each
     if 'birds' in inc:
         rng = g.group('birds')
         for i, (bx, by, sc, fl) in enumerate(BIRDS):
-            g.glass(g.poly(S.pts(bird_pts(bx, by, sc, fl, rng))), P['bird'], mix=dict(cathedral=1.0), seeds=0.2)
+            for pc in bird_pieces(bx, by, sc, fl, rng):
+                g.glass(g.poly(S.pts(pc)), P['bird'], mix=dict(cathedral=1.0), seeds=0.2, amin=60, tmin=4,
+                        fix_old=False, matting=0.0)
             st('bird %d' % i)
 
     # ================================================================ reeds: clumps of cut glass, painted veins
@@ -470,7 +482,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         st('reeds done')
 
     # ================================================================ finishing: lead, weather (always run)
-    g.finish(lead=6.0, grime=0.25, pits=0.25)
+    g.finish(lead=6.0, grime=0.3, pits=0.25)
     img = g.composite()
     st.save(img, 'final')
     return img
