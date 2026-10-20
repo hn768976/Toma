@@ -87,3 +87,11 @@ wandering speckled overspray); water as tapered streaks, stepped reflection band
 ripples and a wake; speckle builds at mask edges; Deco geometry built into the scene (fans, rings, terraces,
 chevrons, banded clouds) — no text/border; stylised pines/cypresses, canoe, elongated rower, crescent gulls; coast
 rock shelves with lit noses; forest trunks varied with stepped bases, fan canopy, palmettes, elegant deer.
+
+### Round 2 fixes — Ink wash
+Washes with flat uneven bodies, tide lines and fibre bleed (no smooth ramps); mist as reserved paper with a ragged
+fibre-crept edge; bold side-brush cun with swell/taper/flying white instead of hatch; brush strokes with pressure
+belly, wandering pressure and bursty dry breaks; ghost trees (pale boneless copies, halo blobs) removed; varied pine
+tiers; boat/fisherman as swelling strokes with a proper conical hat; reflections broken to object height (no lens
+edge); varied ripples; three different clouds and a wet irregular sun; indigo forest with varied branches, single
+loaded-stroke trunks, five tuft kinds, brushed deer, irregular wash patches and an asymmetric composition.

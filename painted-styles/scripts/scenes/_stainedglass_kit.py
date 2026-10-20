@@ -988,7 +988,7 @@ class Panel(StainedGlass):
         wf = np.where(wc > 0, ws / np.maximum(wc, 1), 0).astype(np.float32)
         wn = noise2d(H, W, 70 * s, 2, self._lazy[4])
         wf = wf * (0.9 + 0.2 * wn)
-        sg = max(1.0, hw0 * 0.9)
+        sg = max(0.5, hw0 * 0.35)                         # each came keeps its own width up to the joint
         wsum = blur(wf, sg)
         bsum = blur(B.astype(np.float32), sg)
         hw = (hw0 * np.where(bsum > 1e-4, wsum / np.maximum(bsum, 1e-4), 1.0)).astype(np.float32)
@@ -1012,8 +1012,8 @@ class Panel(StainedGlass):
                 jy, jx = jy[first] + 0.5, jx[first] + 0.5
                 n = len(jy)
                 u = [_hash01(jy.astype(np.int64), jx.astype(np.int64), self._lazy[5] + k) for k in range(4)]
-                rj = hw0 * (2.0 + 1.6 * u[0])                  # how far the puddle runs along the cames
-                R = int(np.ceil(hw0 * 3.7 + 2))
+                rj = hw0 * (1.8 + 1.2 * u[0])                  # how far the puddle runs along the cames
+                R = int(np.ceil(hw0 * 3.0 + 2))
                 ky, kx = np.mgrid[-R:R + 1, -R:R + 1]
                 ky, kx = ky.ravel(), kx.ravel()
                 jd = np.full(H * W, 9.0, np.float32)
@@ -1027,7 +1027,7 @@ class Panel(StainedGlass):
                 jd = jd.reshape(H, W)
                 lump = noise2d(H, W, 3.2 * s, 2, self._lazy[5] + 3)
                 wob = noise2d(H, W, 9 * s, 2, self._lazy[5] + 7)
-                jq = jd * (0.8 + 0.4 * wob)
+                jq = jd * (0.9 + 0.2 * wob)
                 self._jq = jq.astype(np.float32)
                 sw = hw * (1.1 + 0.07 * lump) + hw0 * 0.32 * np.clip(1 - jq / 0.5, 0, 1) ** 1.5   # wider at the joint
                 sol_a = (smoothstep(sw + 0.7, sw - 0.7, d) * smoothstep(1.0, 0.78, jq)).astype(np.float32)
@@ -1089,8 +1089,8 @@ class Panel(StainedGlass):
             fine = noise2d(H, W, 4 * s, 3, self._lazy[4] + 21)
             ld = self.lead_d if self.lead_d is not None else np.full((H, W), 99, np.float32)
             near = smoothstep(5.5 * s, 0.5 * s, ld)
-            acc = blur(self.came_a if self.lead_a is not None else np.zeros((H, W), np.float32), 2.6 * s)
-            pack = smoothstep(0.32, 0.6, acc) * smoothstep(7 * s, 0, ld)
+            acc = blur(self.came_a if self.lead_a is not None else np.zeros((H, W), np.float32), 2.0 * s)
+            pack = smoothstep(0.32, 0.6, acc) * smoothstep(5 * s, 0, ld)
             g = (film * (0.55 + 0.7 * fine) + grime * near * (0.25 + 1.1 * fine) * 0.8 + grime * pack * 1.4)
             g *= (lab >= 0)
             Tm = 1 - np.clip(g, 0, 0.8)[..., None] * (1 - lin('#cbb48c'))[None, None, :] * 1.25
