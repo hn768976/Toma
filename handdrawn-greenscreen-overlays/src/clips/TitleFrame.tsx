@@ -20,10 +20,10 @@ const build = (): Element[] => {
   const over = 46;
   // four sides, each overshooting its corners a little, like a ruler-less hand
   const sides: SeqItem[] = [
-    { ...black, pts: handLine([m - over, m + 8], [W - m + over * 0.6, m - 6], r('top'), 5) },
-    { ...black, pts: handLine([W - m - 6, m - over * 0.8], [W - m + 10, H - m + over], r('right'), 4) },
-    { ...black, pts: handLine([W - m + over * 0.7, H - m + 4], [m - over, H - m - 10], r('bottom'), 5) },
-    { ...black, pts: handLine([m + 8, H - m + over * 0.5], [m - 4, m - over], r('left'), 4) },
+    { ...black, pts: handLine([m - over, m + 8], [W - m + over * 0.6, m - 6], r('top'), 9) },
+    { ...black, pts: handLine([W - m - 6, m - over * 0.8], [W - m + 10, H - m + over], r('right'), 8) },
+    { ...black, pts: handLine([W - m + over * 0.7, H - m + 4], [m - over, H - m - 10], r('bottom'), 9) },
+    { ...black, pts: handLine([m + 8, H - m + over * 0.5], [m - 4, m - over], r('left'), 8) },
   ];
   const els: Element[] = [];
   const frame = sequence(ID, 'frame', sides, 6);

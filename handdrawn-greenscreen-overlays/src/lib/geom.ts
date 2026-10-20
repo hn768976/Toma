@@ -128,7 +128,7 @@ export const handLine = (a: Pt, b: Pt, r: Rng, wob = 5): Pt[] => {
   const L = dist(a, b);
   const dx = (b[0] - a[0]) / L;
   const dy = (b[1] - a[1]) / L;
-  const bow = signed(r, L * 0.025);
+  const bow = signed(r, L * 0.022) + Math.sign(r() - 0.5) * L * 0.012;
   const a2: Pt = [a[0] + signed(r, 6), a[1] + signed(r, 6)];
   const ext = range(r, -0.015, 0.03) * L;
   const b2: Pt = [b[0] + dx * ext, b[1] + dy * ext];
@@ -154,12 +154,15 @@ export const handEllipse = (
   const drift = o.drift ?? range(r, 0.04, 0.09);
   const dir = o.dir ?? -1;
   const n = 140;
-  const squash = range(r, -0.05, 0.05);
+  const squash = range(r, -0.1, 0.1);
+  // lopsided: an egg bias towards one side, and a flat-ish side where the wrist turns
+  const eggA = range(r, 0, Math.PI * 2);
+  const egg = range(r, 0.05, 0.12);
   const pts: Pt[] = [];
   for (let i = 0; i <= n; i++) {
     const t = i / n;
     const a = start + dir * sweep * t;
-    const k = 1 + drift * (t - 0.5) + squash * Math.sin(2 * a);
+    const k = 1 + drift * (t - 0.5) + squash * Math.sin(2 * a) + egg * Math.cos(a - eggA);
     const x = Math.cos(a) * rx * k;
     const y = Math.sin(a) * ry * k;
     pts.push([c[0] + x * Math.cos(rot) - y * Math.sin(rot), c[1] + x * Math.sin(rot) + y * Math.cos(rot)]);
