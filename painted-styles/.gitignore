@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+vendor/claude-drawing-skill/
+node_modules/
+out/
