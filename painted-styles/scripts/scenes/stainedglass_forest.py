@@ -1,6 +1,8 @@
 """Forest path — Stained glass (彩色玻璃花窗): one full-bleed leaded panel. A path winds between tall trees
 toward a low sun; rays of pale glass slant through the trunks; a deer stands on the path in the distance.
-Painted with vendor lib/stainedglass.py `StainedGlass` (via scenes/_stainedglass_kit.Panel).
+Built on vendor lib/stainedglass.py `StainedGlass` via scenes/_stainedglass_kit.Panel: designed cut lines (rings and
+spokes round the sun, trunks cut across in lit and shaded strips, ground and path rows converging on the vanishing
+point, canopy rows following the leaf masses); grisaille only for fine detail (bark, leaflets, blades, antlers).
 
 python scripts/scenes/stainedglass_forest.py out.png [W H] [colourway] [bleed]
 """
@@ -14,7 +16,7 @@ import drawkit  # noqa: E402,F401  (sets sys.path to the skill lib)
 from drawkit import Scaler, seed_all, save_png  # noqa: E402
 
 import numpy as np  # noqa: E402
-from _stainedglass_kit import Panel, Stager, hband, design_xy  # noqa: E402
+from _stainedglass_kit import Panel, Stager, hband, design_xy, const, shade  # noqa: E402
 
 STYLE = "Stained glass · 彩色玻璃花窗"
 LIB = "stainedglass"
@@ -93,19 +95,19 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
 
     if 'all' in inc:
         rng = g.group('all')
-        # ============================================================ the low sun behind the wood: rings of glass
+        # ============================================================ the low sun behind the wood: rings and spokes
         r = np.hypot(xx - sx, yy - sy)
-        # sun rays: each glass area they cross is cut along the shaft and the shaft is glazed in a paler,
-        # warmer glass of the same colour (leaded, like real light-shaft windows); a pool of light where they land
+        # light shafts: every area they cross is cut along the shaft and the shaft glazed in a paler, warmer glass
+        # of the same colour (leaded, like real light-shaft windows); they start wide enough to cut
         ray = np.zeros_like(xx)
         for (ex, ey, wd) in RAYS:
             d = np.array([ex - sx, ey - sy]); d /= np.hypot(*d)
             n = np.array([-d[1], d[0]])
-            a0 = np.array([sx, sy]) + d * 60
+            a0 = np.array([sx, sy]) + d * 150
             e = np.array([ex, ey])
-            pts = [a0 + n * 8, e + n * wd / 2, e - n * wd / 2, a0 - n * 8]
+            pts = [a0 + n * 16, e + n * wd / 2, e - n * wd / 2, a0 - n * 16]
             ray = np.maximum(ray, g.poly(S.pts([tuple(p_) for p_ in pts])))
-            ray = np.maximum(ray, g.ellipse(*S.pt(ex, ey), wd * 0.62 * s, wd * 0.16 * s))
+            ray = np.maximum(ray, g.ellipse(*S.pt(ex, ey), wd * 0.62 * s, wd * 0.18 * s))
         ray = (ray > 0.5).astype(np.float32)
 
         def light(cols, t=P['ray_k']):
@@ -116,65 +118,75 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                 out.append('#%02x%02x%02x' % tuple(int(v) for v in a_ * (1 - t) + b_ * t))
             return out
 
-        def lay(m, cols, **kw):
-            g.glass(m * (1 - ray), cols, **kw)
-            g.glass(m * ray, light(cols), **kw)
+        def lay(fn, m, cols, *a, **kw):
+            fn(m * (1 - ray), cols, *a, **kw)
+            fn(m * ray, light(cols), *a, **kw)
         above = (yy < GROUND + 40).astype(np.float32)
-        rings = [0, 96, 290, 620, 1e9]
-        for k, cols in enumerate(P['glow']):
-            m = ((r >= rings[k]) & (r < rings[k + 1])).astype(np.float32) * above
-            if k == 0:
-                g.glass(m, cols, streak=0.3, thick=0.8)
-            else:
-                lay(m, cols, cell=(60 + 18 * k) * s, around=S.pt(sx, sy), streak=0.5, seeds=0.5)
+        g.glass(g.circle(*S.pt(sx, sy), 96 * s), P['glow'][0], thick=0.8, mix=dict(cathedral=0.6, reamy=0.4))
+        g.radial(above * (r >= 96), P['glow'][1], (sx, sy), [96.5, 290, 620], length=(110, 200), tilt=0.08,
+                 ring_colours=[P['glow'][0]] + P['glow'][1:], mix=dict(streaky=0.4, cathedral=0.4, seedy=0.2))
+        # the shafts in the glow are their own pieces, laid over the rings
+        g.radial(above * (r >= 150) * ray, light(P['glow'][2]), (sx, sy), [290, 620], length=(140, 240), tilt=0.05,
+                 ring_colours=[light(P['glow'][1]), light(P['glow'][2]), light(P['glow'][3])], mix=dict(opal=0.4, seedy=0.6))
         g.stain(np.clip(1 - r / 160, 0, 1), 0.5)
         st('glow')
-        # ---- far trunks: pale, in the haze
+        # ---- far trunks: pale, in the haze; cut across every so often
         for (x, w) in FAR_TREES:
             m = g.poly(S.pts(trunk_pts(x, w, 0.0, Y0, GROUND + 6, flare=0.3)))
-            lay(m, P['far_tr'], cell=90 * s, aspect=2.4, angle=np.pi / 2, streak=0.4, streak_dir=np.pi / 2)
+            lay(g.band, m, P['far_tr'], const(x - w), const(x + w), rows=1, vertical=True, length=(120, 260), tilt=0.25,
+                flow=np.pi / 2, flow_jit=0.15, amin=300, tmin=8)
         st('far trees')
 
-        # ============================================================ ground and path
-        gy = lambda xs: GROUND + 4 * np.sin(xs / 90.0)
+        # ============================================================ ground; the path in perspective
+        gy = lambda xs: GROUND + 4 * np.sin(np.asarray(xs) / 90.0)
         ground = g.poly(S.pts(hband(S, gy, Y1)))
-        lay(ground * (yy < 800), P['ground'], cell=70 * s, aspect=2.6, angle=0.0, streak=0.4, streak_dir=0.0)
-        lay(ground * (yy >= 800), P['ground2'], cell=96 * s, aspect=2.2, angle=0.0, streak=0.4, streak_dir=0.0)
         left, right = path_edges(max(1110.0, Y1))
         path = g.poly(S.pts(left + right))
-        lay(path * (yy < 800), P['path'], cell=46 * s, aspect=2.2, angle=0.0, streak=0.4, streak_dir=0.0)
-        lay(path * (yy >= 800), P['path'], cell=90 * s, aspect=1.8, angle=0.0, streak=0.4, streak_dir=0.0)
-        g.matt(ground * np.clip((yy - GROUND) / 440, 0, 1) * (1 - path) * (1 - 0.7 * ray), 0.45, soft=10 * s)
-        g.shade(path, offset=(18 * s, 0), strength=0.35, soft=8 * s)
-        for k in range(40):                                       # grass blades
+        glev, y = [], GROUND
+        while True:
+            y += (26 + (y - GROUND) * 0.22) * rng.uniform(0.8, 1.3)
+            if y > S.Y1 + 10:
+                break
+            glev.append(y)
+        tone = lambda cx, cy, pal: (P['ground'] if cy < 800 + rng.uniform(-40, 40) else P['ground2']) if pal is P['ground'] else None
+        lay(g.band, ground * (1 - path), P['ground'], gy, const(Y1), levels=glev, length=(200, 420), tilt=0.4,
+            wave=(7.0, 200.0), colour_fn=tone, flow=0.0, mix=dict(streaky=0.4, cathedral=0.3, reamy=0.3))
+        # the path: strips running along it toward the vanishing point, cut across further apart near the viewer
+        L_ = np.array(left[::-1], float); R_ = np.array(right, float)
+        pl = lambda a: np.interp(a, L_[:, 1], L_[:, 0])
+        pr = lambda a: np.interp(a, R_[:, 1], R_[:, 0])
+        lay(g.band, path, P['path'], pl, pr, rows=3, vertical=True, length=(40, 70), tilt=0.3, wave=(0.1, 90.0),
+            size=lambda a, c: 0.6 + (a - 642) / 60.0, flow=np.pi / 2, flow_jit=0.4,
+            mix=dict(cathedral=0.4, seedy=0.3, reamy=0.3), amin=300, tmin=9)
+        g.matt(ground * np.clip((yy - GROUND) / 440, 0, 1) * (1 - path) * (1 - 0.7 * ray), 0.3, soft=10 * s)
+        for k in range(46):                                       # grass blades: clusters, each one different
             x = rng.uniform(S.X0, S.X1)
             y = rng.uniform(GROUND + 20, 1060)
-            hh = 8 + (y - GROUND) * 0.05
-            g.trace(S.pts([(x, y), (x - 3, y - hh)]), 1.6 * s, taper=(0.1, 0.9), smooth=False, clip=(1 - path))
-            g.trace(S.pts([(x + 4, y), (x + 7, y - hh * 0.8)]), 1.6 * s, taper=(0.1, 0.9), smooth=False, clip=(1 - path))
-        for k in range(26):                                       # pebbles in the path
-            y = rng.uniform(680, 1060)
-            f = (y - 642) / 470
-            x = 1070 + rng.uniform(-1, 1) * (40 + 360 * f) * 0.8
-            g.matt(g.ellipse(*S.pt(x, y), (3 + 5 * f) * s, (1.6 + 2.4 * f) * s) * path, 0.6, soft=0.6 * s)
+            for b in range(int(rng.integers(2, 5))):
+                hh = (8 + (y - GROUND) * 0.05) * rng.uniform(0.7, 1.3)
+                dx, lean = rng.uniform(-5, 5), rng.uniform(-5, 5)
+                g.trace(S.pts([(x + dx, y), (x + dx + lean, y - hh)]), rng.uniform(1.1, 1.8) * s, taper=(0.1, 0.9),
+                        smooth=False, clip=(1 - path))
         st('ground')
 
         g.stain(ray * np.clip((yy - 560) / 300, 0, 1), P['ray_stain'])
         st('rays')
 
-        # ============================================================ middle trunks
+        # ============================================================ middle trunks: two strips, lit and shaded
         for (x, w, root) in MID_TREES:
             m = g.poly(S.pts(trunk_pts(x, w, 0.0, Y0, root, flare=0.5)))
-            g.glass(m, P['mid_tr'], cell=80 * s, aspect=2.4, angle=np.pi / 2, streak=0.5, streak_dir=np.pi / 2)
             side = 1 if x < sx else -1
-            g.shade(m, offset=(-side * w * 0.5 * s, 0), strength=0.4, soft=3 * s)
+            sh = [P['mid_tr'], shade(P['mid_tr'], 0.72)]
+            lay(g.band, m, P['mid_tr'], const(x - w * 0.6), const(x + w * 0.6), rows=2 if w > 34 else 1, vertical=True,
+                length=(140, 300), tilt=0.3, row_colours=sh if side > 0 else sh[::-1], flow=np.pi / 2, flow_jit=0.15,
+                amin=400, tmin=9)
             for k in range(3):
                 bx = x + rng.uniform(-0.3, 0.3) * w
                 y0_ = rng.uniform(200, root - 120)
-                g.trace(S.pts([(bx, y0_), (bx + rng.uniform(-3, 3), y0_ + 60)]), 1.5 * s, taper=(0.4, 0.4), clip=m)
+                g.trace(S.pts([(bx, y0_), (bx + rng.uniform(-3, 3), y0_ + rng.uniform(40, 80))]), 1.5 * s, taper=(0.4, 0.4), clip=m)
         st('mid trees')
 
-        # ============================================================ the deer on the path, far off
+        # ============================================================ the deer on the path, far off: cut glass
         dx0, dy0, k = 996.0, 670.0, 1.8
         D = lambda pts: S.pts([(dx0 + x * k, dy0 + y * k) for x, y in pts])
         deer = g.poly(D([(-62, -88), (-54, -96), (-44, -98), (-38, -94), (-30, -76), (-22, -62), (-10, -57), (10, -56),
@@ -183,10 +195,11 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         legs = np.zeros_like(xx)
         for leg in ([(-16, -40), (-15, -18), (-16, 0)], [(-23, -42), (-25, -18), (-27, 0)],
                     [(28, -40), (32, -20), (30, 0)], [(19, -40), (22, -18), (18, 0)]):
-            legs = np.maximum(legs, g.branch(D(leg), 6.5 * k * s, 4.0 * k * s))
+            legs = np.maximum(legs, g.branch(D(leg), 7.5 * k * s, 5.0 * k * s))
         deer = np.clip(deer + legs, 0, 1)
-        g.glass(deer, P['deer'], streak=0.3, seeds=0.2)
-        g.matt(deer, P['deer_matt'], soft=1 * s)
+        g.glass(deer, P['deer'], cuts=[('line', (dx0 - 30 * k, dy0 - 100 * k, dx0 - 26 * k, dy0))],
+                mix=dict(cathedral=0.6, streaky=0.4), seeds=0.2)
+        g.matt(deer, P['deer_matt'] * 0.6, soft=1 * s)
         g.trace(D([(32, -52), (40, -44)]), 3.0 * k * s, smooth=False)  # tail
         for sgn in (-1, 1):                                                                   # antlers
             bx, by = -42 + sgn * 3, -96
@@ -194,53 +207,64 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
             g.trace(D([(bx + sgn * 6, by - 13), (bx + sgn * 14, by - 18)]), 2.6 * k * s, taper=(0.1, 0.7), smooth=False)
         g.trace(D([(-38, -94), (-28, -100)]), 3.0 * k * s, smooth=False)  # ear
         g.trace(D([(-58, -88), (-62, -87)]), 3.0 * k * s, smooth=False)  # muzzle
-        g.shade(deer, offset=(0, -5 * s), strength=0.35, soft=2 * s)
-        g.matt(g.ellipse(*S.pt(dx0, dy0 + 2), 46 * k * s, 4 * k * s), 0.4, soft=2 * s)       # its shadow
+        g.trace(D([(-47, -91), (-46, -91)]), 2.0 * k * s, smooth=False)  # eye
+        g.shade(deer, offset=(0, -5 * s), strength=0.3, soft=2 * s)
         st('deer')
 
-        # ============================================================ canopy: one glass of mixed greens
+        # ============================================================ canopy: leaf masses cut along their outline
         can = np.zeros_like(xx)
         xsb = np.arange(S.X0 - 80, S.X1 + 120, 120)
+        lows = []
         for i, x in enumerate(xsb):
             dsun = abs(x - sx)
-            low = 150 + 70 * np.sin(x / 170.0 + 1) - (90 if dsun < 260 else 0)
-            can = np.maximum(can, g.blob(*S.pt(x, low), 120 * s, (80 + 25 * np.sin(i * 1.7)) * s, rough=0.15))
+            low = 150 + 70 * np.sin(x / 170.0 + 1) - (90 if dsun < 260 else 0) + rng.uniform(-14, 14)
+            lows.append(low)
+            can = np.maximum(can, g.blob(*S.pt(x + rng.uniform(-20, 20), low), rng.uniform(105, 135) * s,
+                                         (80 + 25 * np.sin(i * 1.7)) * rng.uniform(0.85, 1.15) * s, rough=0.15))
         can = np.maximum(can, g.poly(S.pts(hband(S, Y0, 90))))
-        g.glass(can, P['canopy'], cell=58 * s, streak=0.5, seeds=0.4)
-        g.shade(can, offset=(0, -14 * s), strength=0.5, soft=6 * s)
-        for i, x in enumerate(xsb):                                   # scalloped lower edges of the leaf masses
-            dsun = abs(x - sx)
-            low = 150 + 70 * np.sin(x / 170.0 + 1) - (90 if dsun < 260 else 0)
-            for j in range(3):
-                cxs = x + (j - 1) * 60
-                yb = low + 30 - abs(j - 1) * 18 + rng.uniform(-8, 8)
-                xs_ = np.linspace(cxs - 50, cxs + 50, 14)
-                ys_ = yb - 8 * np.abs(np.sin((xs_ - cxs) / 50 * np.pi * 1.5))
-                g.trace(S.pts(list(zip(xs_, ys_))), 1.8 * s, taper=(0.3, 0.3), wobble=0.3 * s, clip=can)
-        for k in range(70):                                           # leaves lifted out of the shade
+        g.contour(can, P['canopy'], row_h=48, length=(90, 190), tilt=0.45, flow=None, mix=dict(streaky=0.35, cathedral=0.3,
+                  reamy=0.2, opal=0.15), wave=(0.2, 120.0))
+        g.shade(can, offset=(0, -14 * s), strength=0.4, soft=6 * s)
+        for i, x in enumerate(xsb):                                   # scalloped leaf edges: fine painted detail
+            low = lows[i]
+            for j in range(int(rng.integers(2, 4))):
+                cxs = x + (j - 1) * rng.uniform(45, 70)
+                yb = low + 30 - abs(j - 1) * 18 + rng.uniform(-10, 10)
+                wl = rng.uniform(36, 56)
+                xs_ = np.linspace(cxs - wl, cxs + wl, 14)
+                ys_ = yb - rng.uniform(5, 10) * np.abs(np.sin((xs_ - cxs) / wl * np.pi * rng.uniform(1.2, 1.8)))
+                g.trace(S.pts(list(zip(xs_, ys_))), rng.uniform(1.4, 2.0) * s, taper=(0.3, 0.3), wobble=0.3 * s, clip=can)
+        for k in range(80):                                           # leaves lifted out of the shade
             x = rng.uniform(S.X0, S.X1); y = rng.uniform(S.Y0, 240)
-            a = rng.uniform(0, np.pi)
-            g.scratch(S.pts([(x - 6 * np.cos(a), y - 6 * np.sin(a)), (x + 6 * np.cos(a), y + 6 * np.sin(a))]), 3.0 * s)
+            a = rng.uniform(0, np.pi); ln = rng.uniform(4, 8)
+            g.scratch(S.pts([(x - ln * np.cos(a), y - ln * np.sin(a)), (x + ln * np.cos(a), y + ln * np.sin(a))]),
+                      rng.uniform(2.2, 3.4) * s)
         st('canopy')
 
         # ============================================================ near trunks, boughs
         for (x, w, lean) in NEAR_TREES:
             root = Y1 if w > 90 else 1000
             m = g.poly(S.pts(trunk_pts(x, w, lean, Y0, root, flare=0.45 if w > 90 else 0.6)))
-            g.glass(m, P['trunk'], cell=max(w * 0.9, 60) * s, aspect=1.8, angle=np.pi / 2, streak=0.5,
-                    streak_dir=np.pi / 2)
             side = 1 if x < sx else -1
-            g.shade(m, offset=(-side * w * 0.45 * s, 0), strength=0.5, soft=5 * s)
-            for k in range(int(w / 18) + 2):                          # bark: long wavy lines
+            lft = lambda a, x=x, w=w, lean=lean: x - w / 2 + lean * (np.asarray(a) - 540)
+            rgt = lambda a, x=x, w=w, lean=lean: x + w / 2 + lean * (np.asarray(a) - 540)
+            sh = [P['trunk'], shade(P['trunk'], 0.7)]
+            g.band(m, P['trunk'], lft, rgt, rows=2 if w > 70 else 1, vertical=True, length=(150, 320), tilt=0.35,
+                   row_colours=sh if side > 0 else sh[::-1], flow=np.pi / 2, flow_jit=0.15,
+                   mix=dict(streaky=0.5, reamy=0.3, cathedral=0.2))
+            g.shade(m, offset=(-side * w * 0.45 * s, 0), strength=0.35, soft=5 * s)
+            for k in range(int(w / 18) + 2):                          # bark: long wavy lines, all different
                 fx = rng.uniform(-0.35, 0.35)
                 ya = rng.uniform(S.Y0, 700); yb = ya + rng.uniform(120, 300)
-                pts = [(x + fx * w + lean * (y - 540) + 3 * np.sin(y / 30.0 + k), y) for y in np.linspace(ya, yb, 8)]
-                g.trace(S.pts(pts), (1.4 + w / 80) * s, taper=(0.4, 0.4), clip=m)
-            hx = x + lean * (380 - 540) + side * w * 0.2
-            g.scratch(S.pts([(hx, 200), (hx + lean * 400, 600)]), 2.0 * s)
-        for (x0, y0, x1, y1, w0) in [(214, 300, 380, 190, 26), (1508, 260, 1360, 160, 30), (1872, 340, 1980, 250, 24)]:
-            b = g.branch(S.pts([(x0, y0), ((x0 + x1) / 2, (y0 + y1) / 2 - 20), (x1, y1)]), w0 * s, w0 * 0.5 * s)
-            g.glass(b, P['trunk'], cell=70 * s, aspect=1.8, angle=float(np.arctan2(y1 - y0, x1 - x0)), streak=0.4)
+                ph = rng.uniform(0, 6)
+                pts = [(x + fx * w + lean * (y - 540) + rng.uniform(2, 4) * np.sin(y / rng.uniform(24, 36) + ph), y)
+                       for y in np.linspace(ya, yb, 8)]
+                g.trace(S.pts(pts), (1.2 + w / 90) * rng.uniform(0.8, 1.2) * s, taper=(0.4, 0.4), clip=m)
+        for (x0, y0, x1, y1, w0) in [(214, 300, 380, 190, 30), (1508, 260, 1360, 160, 34), (1872, 340, 1980, 250, 28)]:
+            b = g.branch(S.pts([(x0, y0), ((x0 + x1) / 2, (y0 + y1) / 2 - 20), (x1, y1)]), w0 * s, w0 * 0.6 * s)
+            mx_ = (x0 + x1) / 2
+            g.glass(b, P['trunk'], cuts=[('line', (mx_, y0 - 80, mx_ + 20, y1 + 80))], flow=float(np.arctan2(y1 - y0, x1 - x0)),
+                    mix=dict(streaky=0.6, cathedral=0.4))
             g.trace(S.pts([(x1, y1), (x1 + (x1 - x0) * 0.4, y1 - 40), (x1 + (x1 - x0) * 0.7, y1 - 50)]), 3.0 * s,
                     taper=(0.2, 0.9))
         st('near trees')
@@ -252,33 +276,41 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
                   (1600, 1095, 210, -0.9, 0.8, 1)]
         for i, (fx, fy, L, ang, curl, side) in enumerate(fronds):
             fy2 = max(fy, S.Y1 + 12)
-            sp = fern(fx, fy2, L + (fy2 - fy), ang, curl, side)
-            m = g.branch(S.pts(sp), 46 * s, 8 * s)
-            g.glass(m, P['fern'], cell=40 * s, streak=0.4, seeds=0.3)
+            L = L * rng.uniform(0.85, 1.12)
+            sp = fern(fx, fy2, L + (fy2 - fy), ang + rng.normal(0, 0.06), curl * rng.uniform(0.8, 1.2), side)
+            m = g.branch(S.pts(sp), 48 * s, 14 * s)
+            cuts = []
+            for kk in (5, 10, 14):                                    # cut across the frond, square to its rib
+                p_, q_ = sp[kk], sp[kk - 1]
+                tv = (p_ - q_) / (np.hypot(*(p_ - q_)) + 1e-6)
+                nv = np.array([-tv[1], tv[0]])
+                cuts.append(('line', (p_[0] - nv[0] * 40, p_[1] - nv[1] * 40, p_[0] + nv[0] * 40, p_[1] + nv[1] * 40)))
+            g.glass(m, P['fern'], cuts=cuts, flow=float(ang), flow_jit=0.3, mix=dict(streaky=0.5, cathedral=0.5),
+                    amin=400, tmin=9)
             g.trace(S.pts(sp), 2.2 * s, taper=(0.0, 0.6), clip=m)
-            for k in range(2, 17, 1):                                 # leaflets: little strokes off the rib
-                p, q = sp[k], sp[k - 1]
-                t = (p - q) / (np.hypot(*(p - q)) + 1e-6)
-                n = np.array([-t[1], t[0]])
-                ln = 20 * (1 - k / 18) + 4
+            for kk in range(2, 17, 1):                                # leaflets: little strokes off the rib
+                p_, q_ = sp[kk], sp[kk - 1]
+                tv = (p_ - q_) / (np.hypot(*(p_ - q_)) + 1e-6)
+                nv = np.array([-tv[1], tv[0]])
+                ln = (20 * (1 - kk / 18) + 4) * rng.uniform(0.8, 1.2)
                 for sg in (-1, 1):
-                    g.trace(S.pts([tuple(p), tuple(p + n * sg * ln + t * 6)]), 1.4 * s, taper=(0.2, 0.8), smooth=False,
-                            clip=m)
-            g.shade(m, offset=(0, -6 * s), strength=0.3, soft=2 * s)
-        for k in range(22):                                           # flowers in the verge
+                    g.trace(S.pts([tuple(p_), tuple(p_ + nv * sg * ln + tv * rng.uniform(4, 8))]), 1.4 * s,
+                            taper=(0.2, 0.8), smooth=False, clip=m)
+            g.shade(m, offset=(0, -6 * s), strength=0.25, soft=2 * s)
+        for k in range(22):                                           # flowers in the verge: cut glass discs
             side = -1 if k % 2 else 1
             fy = rng.uniform(900, 1050)
             f = (fy - 642) / 470
             fx = 1070 + side * (rng.uniform(70, 260) + 360 * f * 0.9)
-            r0 = 9 + (fy - 900) * 0.04
-            fm = g.circle(*S.pt(fx, fy), r0 * s)
-            g.trace(S.pts([(fx, fy + r0), (fx + 2, fy + r0 + 18)]), 1.8 * s, smooth=False)
-            g.glass(fm * (1 - path), P['flowers'][k % 4], streak=0.2)
+            r0 = (10 + (fy - 900) * 0.04) * rng.uniform(0.85, 1.15)
+            fm = g.ellipse(*S.pt(fx, fy), r0 * s, r0 * rng.uniform(0.75, 1.0) * s, rng.uniform(0, 3))
+            g.trace(S.pts([(fx, fy + r0), (fx + rng.uniform(-3, 3), fy + r0 + rng.uniform(14, 22))]), 1.8 * s, smooth=False)
+            g.glass(fm * (1 - path), P['flowers'][k % 4], mix=dict(cathedral=0.6, opal=0.4))
             g.matt(g.circle(*S.pt(fx, fy), r0 * 0.32 * s), 0.85, soft=0.5 * s)
         st('foreground')
 
     # ================================================================ finishing: lead, weather (always run)
-    g.finish(lead=6.0, grime=0.35, pits=0.3)
+    g.finish(lead=6.0, grime=0.25, pits=0.25)
     img = g.composite()
     st.save(img, 'final')
     return img

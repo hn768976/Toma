@@ -1,6 +1,8 @@
 """Coastal village on a cliff — Stained glass (彩色玻璃花窗): one full-bleed leaded panel. A headland on the
 left with a whitewashed village and a striped lighthouse, sailing boats on the sea, gulls.
-Painted with vendor lib/stainedglass.py `StainedGlass` (via scenes/_stainedglass_kit.Panel).
+Built on vendor lib/stainedglass.py `StainedGlass` via scenes/_stainedglass_kit.Panel: designed cut lines (sky rows
+radiating from the sun, sea in perspective rows with a glitter path of cut glass, cliff strata, turf rows), houses,
+doors, windows, boats, sails and gulls all cut glass; grisaille only for fine detail (tiles, rigging, cracks).
 
 python scripts/scenes/stainedglass_coast.py out.png [W H] [colourway] [bleed]
 """
@@ -14,7 +16,8 @@ import drawkit  # noqa: E402,F401  (sets sys.path to the skill lib)
 from drawkit import Scaler, seed_all, save_png  # noqa: E402
 
 import numpy as np  # noqa: E402
-from _stainedglass_kit import Panel, Stager, hband, design_xy  # noqa: E402
+from _stainedglass_kit import (Panel, Stager, hband, design_xy, const, polyfn, shade, bird_pts,  # noqa: E402
+                               lay_cloud)
 
 STYLE = "Stained glass · 彩色玻璃花窗"
 LIB = "stainedglass"
@@ -29,14 +32,15 @@ PAL = {
         bands=[['#1d2a6e', '#243380', '#1a2766'], ['#3a3488', '#4a3a8a', '#33307a'], ['#7a2c5c', '#8a3466', '#6e2a5a'],
                ['#c0405a', '#b3182c', '#cc5a5a'], ['#d0601e', '#e0922a', '#d8702a'], ['#f2c230', '#e8a830', '#f4d060']],
         radial=(3, 4, 5), sun=(1500.0, 562.0, 54.0), sun_col=['#f8e070', '#f4d060'],
-        cloud=['#c86a8c', '#d88aa0', '#b8608a'], cloud_lit='below',
+        cloud=[['#c27a9c', '#b86e96', '#c886a2'], ['#eaa0aa', '#f0b4b0', '#e094a4', '#f4c0b0']], cloud_lit='below',
         island=['#6e5a96', '#7c6aa0', '#66548e'],
         sea=[['#c0405a', '#cc5a5a', '#b3182c'], ['#7a2c5c', '#8a3466', '#6e2a5a'], ['#3a3488', '#4a3a8a', '#33307a'],
              ['#1d2a6e', '#172560', '#22306f']],
         glit=['#f2c230', '#e0922a', '#f4d060'], glit_x=1500.0,
         grass=['#2a5a3a', '#245236', '#30603c'], rock=['#7a3a5a', '#8a4a4a', '#6a3a6a', '#9a5248'],
         walls=['#e8c9a0', '#d8b48a', '#e0bca0'], roofs=['#8a2a2a', '#7a2a3a', '#6e3048'],
-        window='lit', win_col=['#f4d060', '#f2c230'],
+        window='lit', win_col=['#f4d060', '#f2c230'], win_dark=['#2a1a30'], door=['#3a2430', '#2e1e2a'],
+        corona=['#f8d870', '#f4c860', '#fae090'],
         tower=('#e8dcd0', '#b3182c'), lantern=['#f8e070', '#f4d060'], cap='#2a1a30', beam='#f4d878',
         hulls=['#3a2430', '#2a2450', '#5a2a2a'], sails=[['#f0c8a0', '#e8b890'], ['#f4d0a8', '#e8c098'], ['#e89a80', '#d88a78']],
         boat_ref='#1a1a40', foam=['#c8b0d8', '#d8c0e0', '#bca4cc'], rocks=['#2a2040', '#33284a'],
@@ -45,21 +49,22 @@ PAL = {
         bands=[['#1f4fa8', '#2456b0', '#1d4a9e'], ['#3368b8', '#3d74c2', '#2f60b0'], ['#5d8fd0', '#6a9ad6', '#5588cc'],
                ['#86b0de', '#93bae2', '#7ca8da'], ['#aecde8', '#bcd6ec', '#a4c6e4'], ['#c8dcec', '#d0e2ee', '#bcd4e8']],
         radial=(), sun=(1420.0, 140.0, 44.0), sun_col=['#f2c230', '#f4d060'],
-        cloud=['#eeeadb', '#f4f1e6', '#e2e6ea'], cloud_lit='above',
+        cloud=[['#c8d4e2', '#d0dae6', '#bccce0'], ['#f4f1e6', '#eeeadb', '#f6f4ec']], cloud_lit='above',
         island=['#6f86b4', '#7a90bc', '#6880ac'],
         sea=[['#3d7cc4', '#4a86c8', '#3572bc'], ['#2a64b4', '#2f6ec0', '#245cac'], ['#1f4fa8', '#2456b0', '#1d4a9e'],
              ['#173c8f', '#1a4296', '#143686']],
         glit=['#eeeadb', '#d7e2ea', '#f4f1e6'], glit_x=1420.0,
         grass=['#4fa83f', '#2f8a3c', '#5aa844'], rock=['#c8925a', '#b07a48', '#d8a868', '#a06c40'],
         walls=['#f4f1e6', '#eeeadb', '#f0e0b8'], roofs=['#b5482a', '#c0582e', '#a03c28'],
-        window='dark', win_col=None,
+        window='dark', win_col=None, win_dark=['#233048', '#2a3450'], door=['#4a3020', '#3e281c'],
+        corona=['#f4e6a0', '#f0dc8c', '#f6eab4'],
         tower=('#f4f1e6', '#b3182c'), lantern=['#d7e2ea', '#e4e9f0'], cap='#2a2a3a', beam=None,
         hulls=['#6e4526', '#173c8f', '#7a2c2c'], sails=[['#f4f1e6', '#eeeadb'], ['#b3182c', '#c0283a'], ['#f4f1e6', '#e8e4d4']],
         boat_ref='#123070', foam=['#f4f1e6', '#e4e9f0', '#eeeadb'], rocks=['#4a3a30', '#3e3028'],
         gull='#f4f1e6', gull_tip=True, sky=('#ffffff', '#f2eee6')),
 }
 
-CLOUDS = [(330, 118, 420, 32), (1080, 92, 380, 28), (1730, 236, 340, 22)]
+CLOUDS = [(330, 118, 420, 46), (1080, 92, 380, 42), (1730, 236, 340, 38)]
 GULLS = [(1020, 250, 1.0, 1.0), (1105, 312, 0.78, 0.6), (1190, 214, 0.9, 0.85), (950, 336, 0.66, 0.9), (1300, 288, 0.6, 0.5)]
 # village: (cx, width, wall height, roof height, front?)  -- the back row stands on the crest, the front row lower
 HOUSES = [(130, 86, 62, 34, 0), (470, 92, 58, 34, 0), (640, 78, 54, 30, 0),
@@ -85,17 +90,18 @@ def land_pts(S):
     return top + face[1:] + [(S.X0 - 30, FOOT)]
 
 
-def cloud_pts(cx, cy, L, h, phase=0.0):
-    t = np.linspace(-1, 1, 40)
-    env = np.clip(1 - t ** 2, 0, 1) ** 0.7
-    top = cy - h * env * (0.75 + 0.35 * np.abs(np.sin(t * 4.2 + phase)))
-    bot = cy + h * 0.35 * env
-    xs = cx + t * L / 2
-    return list(zip(xs, top)) + list(zip(xs[::-1], bot[::-1]))
+def face_x(y):
+    """x of the cliff face at height y (design)"""
+    pts = [(x, grass_y(EDGE_X) if y_ is None else y_) for x, y_ in FACE]
+    return np.interp(y, [p[1] for p in pts], [p[0] for p in pts])
 
 
 def house_base(cx, front):
     return grass_y(cx) + (44 if front else -4)
+
+
+def rect(x0, y0, x1, y1):
+    return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
 
 
 def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, stages_dir=None, dense_stages=False):
@@ -113,148 +119,189 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
 
     if 'all' in inc:
         rng = g.group('all')
-        # ============================================================ sky
+        # ============================================================ sky: rows, cuts radiating from the sun
         edges = [Y0, 110, 200, 290, 380, 470, HORIZON + 10]
-        curve = lambda k: (lambda xs: np.full(len(xs), float(edges[k])) if k in (0, len(edges) - 1)
-                           else edges[k] + 10 * np.sin(xs / 150.0 + 0.9 * k))
         sx, sy, sr = P['sun']
-        for k, cols in enumerate(P['bands']):
-            m = g.poly(S.pts(hband(S, curve(k), curve(k + 1))))
-            if k in P['radial']:
-                g.glass(m, cols, cell=58 * s, around=S.pt(sx, sy), streak=0.5, flashed=cols[1] == '#b3182c')
-            else:
-                g.glass(m, cols, cell=80 * s, streak=0.6, aspect=1.6, angle=0.05)
+
+        def curve(k):
+            if k in (0, len(edges) - 1):
+                return const(edges[k])
+            return lambda xs, k=k: (edges[k] + 10 * np.sin(np.asarray(xs) / 150.0 + 0.9 * k)
+                                    - (14 * k if dusk else 0) * np.exp(-((np.asarray(xs) - sx) / 600.0) ** 2))
+        to_sun = lambda a, c: float(np.arctan2(-(a - sx), -(c - sy) + 1e-3)) * 0.8
+        size = lambda a, c: 0.5 + 0.6 * np.clip(np.hypot(a - sx, (c - sy) * 1.6) / 900.0, 0, 1)
         sun = g.circle(*S.pt(sx, sy), sr * s) * (yy < HORIZON)
-        g.glass(sun, P['sun_col'], streak=0.3)
-        if not dusk:
-            for k in range(16):
-                a = k * np.pi / 8 + 0.2
-                r0, r1 = sr + 10, sr + (34 if k % 2 else 22)
-                g.trace(S.pts([(sx + r0 * np.cos(a), sy + r0 * np.sin(a)), (sx + r1 * np.cos(a), sy + r1 * np.sin(a))]),
-                        5.0 * s, taper=(0.2, 0.9), smooth=False)
-        g.trace(S.pts([(sx + (sr - 9) * np.cos(t), sy + (sr - 9) * np.sin(t)) for t in np.linspace(0, 2 * np.pi, 40)]),
-                1.6 * s, taper=(0.0, 0.0), wobble=0, clip=(yy < HORIZON - 4))
+        halo = g.circle(*S.pt(sx, sy), (sr + 40) * s) * (yy < HORIZON)
+        for k, cols in enumerate(P['bands']):
+            m = g.poly(S.pts(hband(S, curve(k), curve(k + 1)))) * (1 - halo)
+            g.band(m, cols, curve(k), curve(k + 1), row_h=74, length=(190, 380), cut_dir=to_sun, size=size,
+                   tilt=0.08, bend=0.3, flow=0.05)
+        ring = np.clip(halo - sun, 0, 1)
+        g.radial(ring, P['corona'], (sx, sy), [sr + 0.5], length=(44, 62), tilt=0.05, flow=None,
+                 mix=dict(streaky=0.5, cathedral=0.5))
+        g.glass(sun, P['sun_col'], mix=dict(cathedral=0.6, reamy=0.4))
         g.stain(sun * 0.8, 0.7)
-        g.matt(np.clip((150 - yy) / 150, 0, 1), 0.25, soft=20 * s)
         st('sky')
         for i, (cx, cy, L, h) in enumerate(CLOUDS):
-            m = g.poly(S.pts(cloud_pts(cx, cy, L, h, phase=i * 1.7)))
-            g.glass(m, P['cloud'], cell=max(L / 3.2, 60) * s, aspect=3.2, angle=0.0, streak=0.4, streak_dir=0.0, seeds=0.4)
-            g.shade(m, offset=(0, (7 if P['cloud_lit'] == 'below' else -6) * s), strength=0.45, soft=4 * s)
-            for j in range(2):
-                xs = np.linspace(cx - L * (0.32 - 0.1 * j), cx + L * (0.3 - 0.08 * j), 14)
-                ys = cy - h * (0.05 + 0.3 * j) - 3 * np.abs(np.sin((xs - cx) / 22.0 + j))
-                g.trace(S.pts(list(zip(xs, ys))), 1.5 * s, taper=(0.4, 0.4), wobble=0.3 * s, clip=m)
+            lay_cloud(g, S, cx, cy, L, h, P['cloud'], P['cloud_lit'], rng)
         st('clouds')
         # ---- lighthouse beam (dusk): a long wedge of pale glass to the left, over the village sky
         lx, ly = LH[0], 212.0
         if P['beam']:
-            beam = g.poly(S.pts([(lx - 20, ly - 6), (S.X0 - 40, ly - 78), (S.X0 - 40, ly - 6), (lx - 20, ly + 6)]))
-            g.glass(beam, P['beam'], cell=110 * s, aspect=3.0, angle=-0.05, streak=0.3, thick=0.9, seeds=0.3)
-            g.matt(beam * np.clip((lx - xx) / 900, 0, 1), 0.35, soft=12 * s)
+            bt = lambda a: ly - 8 - (lx - 20 - np.asarray(a)) * 0.085
+            bb = lambda a: ly + 8 + (lx - 20 - np.asarray(a)) * 0.0
+            beam = g.poly(S.pts([(lx - 20, float(bt(lx - 20))), (S.X0 - 40, float(bt(S.X0 - 40))),
+                                 (S.X0 - 40, float(bb(S.X0 - 40))), (lx - 20, float(bb(lx - 20)))]))
+            g.band(beam, P['beam'], bt, bb, rows=1, length=(160, 300), tilt=0.15, flow=-0.04, flow_jit=0.1,
+                   mix=dict(opal=0.5, seedy=0.5), opal=0.25)
+            g.matt(beam * np.clip((lx - xx) / 900, 0, 1), 0.3, soft=12 * s)
             st('beam')
 
-        # ============================================================ sea
+        # ============================================================ sea: perspective rows, glitter of glass
         far_isl = lambda xs: HORIZON - 34 * np.exp(-((xs - 1840) / 140) ** 2) - 18 * np.exp(-((xs - 1700) / 90) ** 2) \
             + 3 * np.sin(xs / 23.0)
-        wedges = [(HORIZON, 640), (640, 760), (760, 900), (900, 1080)]
-        wcurve = lambda y: (lambda xs: np.full(len(xs), float(y)) if y in (HORIZON, 1080)
-                            else y + 7 * np.sin(xs / 95.0 + y))
-        for (y0, y1), cols in zip(wedges, P['sea']):
-            bot = (lambda xs: np.full(len(xs), Y1)) if y1 == 1080 else wcurve(y1)
-            m = g.poly(S.pts(hband(S, wcurve(y0), bot)))
-            g.glass(m, cols, cell=(64 + 0.06 * (y0 - HORIZON)) * s, aspect=2.8, angle=0.0, streak=0.6, streak_dir=0.0)
-        isl = g.poly(S.pts(hband(S, far_isl, HORIZON + 1))) * (xx > 1560)
-        g.glass(isl, P['island'], cell=70 * s, aspect=2.0, angle=0.0, streak=0.4)
-        g.trace(S.pts(list(zip(np.linspace(1600, S.X1, 60), far_isl(np.linspace(1600, S.X1, 60))))), 1.6 * s,
-                taper=(0.3, 0.0), wobble=0.3 * s)
+        levels, y = [], HORIZON
+        while True:
+            y += (22 + (y - HORIZON) * 0.11) * rng.uniform(0.75, 1.3)
+            if y > S.Y1 + 10:
+                break
+            levels.append(y)
         gx = P['glit_x']
-        for k in range(11):
-            y = HORIZON + 14 + k * 30 * (1 + k * 0.06) + rng.uniform(-4, 4)
-            w = (40 + k * 9) * rng.uniform(0.8, 1.15)
-            g.glass(g.ellipse(*S.pt(gx + rng.uniform(-14, 14) + k * 6, y), w * s, (5 + k * 0.6) * s), P['glit'][k % 3],
-                    streak=0.3, streak_dir=0.0)
-        sea = (yy > HORIZON).astype(np.float32)
-        g.matt(sea * np.clip((yy - 640) / 440, 0, 1), 0.42, soft=10 * s)
-        for k in range(46):                                   # wave crests lifted out of the matt
-            y = 600 + (k / 46) ** 1.15 * 470 + rng.uniform(-6, 6)
-            x0 = rng.uniform(980 + (y - 600) * 0.3, S.X1 - 60)
-            L = rng.uniform(40, 150) * (0.5 + (y - HORIZON) / 420)
-            g.scratch(S.pts([(x0, y), (x0 + L * 0.3, y - 2.5), (x0 + L * 0.6, y - 1), (x0 + L, y + 1.5)]), 2.2 * s)
+        wob = rng.uniform(0, 6.3, 2)
+
+        def feature(a, c):
+            a = np.asarray(a, float); c = np.asarray(c, float)
+            f = np.zeros(len(a), np.int64)
+            depth = (c - HORIZON) / 520.0
+            gw = 40 + 200 * depth
+            off = 14 * np.sin(c / 37.0 + wob[0]) + 9 * np.sin(c / 13.0 + wob[1])
+            f[(np.abs(a - gx - off - 20 * depth) < gw / 2) & (c < 1000)] = 3
+            return f
+
+        def run_edit(runs, yc, r):
+            depth = (yc - HORIZON) / 520.0
+            out = []
+            for ra, rb, fd in runs:
+                if fd != 3:
+                    out.append([ra, rb, fd])
+                    continue
+                if r.random() < 0.6 * max(depth - 0.45, 0):
+                    out.append([ra, rb, 0])
+                    continue
+                x = ra + r.uniform(0, 18)
+                out.append([ra, x, 0])
+                while x < rb - 20:
+                    e = min(x + r.uniform(26, 50 + 50 * depth), rb)
+                    gp = r.uniform(16, 26 + 30 * depth)
+                    out.append([x, e, 3])
+                    if e + gp < rb:
+                        out.append([e, e + gp, 0])
+                    x = e + gp
+                out[-1][1] = rb
+            return out
+
+        def tone(cx, cy, pal):
+            if pal is P['glit']:
+                return None
+            d = cy + rng.uniform(-30, 30)
+            k = 0 if d < 640 else (1 if d < 760 else (2 if d < 900 else 3))
+            return P['sea'][k]
+        sea_m = g.poly(S.pts(hband(S, HORIZON, Y1)))
+        near_glit = lambda a, c: 0.3 if abs(a - gx) < 60 + 0.45 * (c - HORIZON) else 1.0
+        g.band(sea_m, P['sea'][0], const(HORIZON), const(Y1), levels=levels, length=(130, 360), tilt=0.42,
+               wave=(8.0, 260.0), feature=feature, run_edit=run_edit, size=near_glit, vary=1.3,
+               fid_colours={3: P['glit']}, colour_fn=tone, amin=420, tmin=11,
+               flow=0.0, flow_jit=0.12, mix=dict(streaky=0.35, cathedral=0.25, reamy=0.25, seedy=0.15))
+        isl = g.poly(S.pts(hband(S, far_isl, HORIZON + 1))) * (xx > 1560)
+        g.contour(isl, P['island'], row_h=40, length=(120, 240), tilt=0.3, flow=0.0)
+        for k in range(36):                                   # wavelets: fine painted marks, clustered, all different
+            yv = HORIZON + 40 + (k / 36) ** 1.15 * 470 + rng.uniform(-6, 6)
+            x0 = rng.uniform(1000 + (yv - 600) * 0.3, S.X1 - 60)
+            if abs(x0 - gx) < 120 and yv < 980:
+                continue
+            L = rng.uniform(20, 70) * (0.5 + (yv - HORIZON) / 420)
+            for j in range(int(rng.integers(1, 4))):
+                xa = x0 + j * L * rng.uniform(0.6, 1.1)
+                g.trace(S.pts([(xa, yv), (xa + L * 0.4, yv - 2.5), (xa + L, yv + rng.uniform(-1, 1.5))]),
+                        rng.uniform(1.0, 1.7) * s, taper=(0.3, 0.5), opacity=0.55, wobble=0.3 * s)
         st('sea')
 
-        # ============================================================ boats (behind the headland's foot is fine)
+        # ============================================================ boats: sails, hulls, broken reflections, cut glass
         for bi, (bx, by, sc) in enumerate(BOATS):
+            j = lambda pts, a=1.2: [(x + rng.uniform(-a, a), y + rng.uniform(-a, a)) for x, y in pts]
             q = lambda pts: S.pts([(bx + x * sc, by + y * sc) for x, y in pts])
-            g.glass(g.poly(q([(-58, 6), (60, 6), (50, 22), (-48, 24)])), P['boat_ref'], streak=0.3)
-            g.glass(g.poly(q([(-6, -158), (-6, -24), (-70, -28), (-46, -88), (-24, -130)])),
-                    P['sails'][bi][0], streak=0.4, streak_dir=np.pi / 2)
-            g.glass(g.poly(q([(6, -146), (64, -24), (6, -26)])), P['sails'][bi][1], streak=0.4, streak_dir=np.pi / 2)
-            g.glass(g.poly(q([(-76, -16), (76, -22), (62, 4), (-60, 4)])), P['hulls'][bi], streak=0.3, streak_dir=0.0)
-            g.trace(q([(0, -168), (0, -14)]), 3.0 * s * max(sc, 0.7), taper=(0.1, 0.0), smooth=False)
-            g.trace(q([(-74, -14), (0, -17), (74, -20)]), 2.4 * s * max(sc, 0.7), taper=(0.1, 0.1))
-            g.trace(q([(-70, -26), (0, -24)]), 2.0 * s * max(sc, 0.7), smooth=False, taper=(0.1, 0.1))
-            g.shade(g.poly(q([(-6, -158), (-6, -24), (-70, -28)])), offset=(-8 * s * sc, 0), strength=0.3, soft=3 * s)
-            g.scratch(q([(-48, 14), (0, 15), (40, 13)]), 1.8 * s)
+            rf = g.poly(q(j([(-58, 6), (60, 6), (50, 24), (-48, 26)])))
+            gap = g.poly(q([(-6 + rng.uniform(-14, 14), 2), (10 + rng.uniform(-14, 14), 2), (14, 30), (-2, 30)]))
+            g.glass(rf * (1 - gap), P['boat_ref'], flow=0.0, mix=dict(streaky=0.6, cathedral=0.4))
+            g.glass(g.poly(q(j([(-6, -158), (-6, -24), (-70, -28), (-46, -88), (-24, -130)]))),
+                    P['sails'][bi][0], cuts=[('h', const(by - 92 * sc))] if sc > 0.9 else (), flow=np.pi / 2,
+                    mix=dict(opal=0.5, cathedral=0.5))
+            g.glass(g.poly(q(j([(6, -146), (64, -24), (6, -26)]))), P['sails'][bi][1], flow=np.pi / 2,
+                    mix=dict(opal=0.5, cathedral=0.5))
+            g.glass(g.poly(q(j([(-76, -16), (76, -22), (62, 4), (-60, 4)]))), P['hulls'][bi], flow=0.0,
+                    cuts=[('line', (bx + 8 * sc, by - 40, bx + 2 * sc, by + 20))] if sc > 0.9 else (),
+                    mix=dict(streaky=0.6, reamy=0.4))
+            g.trace(q([(0, -168), (0, -14)]), 3.0 * s * max(sc, 0.7), taper=(0.1, 0.0), smooth=False)       # mast
+            g.trace(q([(0, -166), (-70, -27)]), 1.1 * s * max(sc, 0.7), taper=(0.1, 0.1), smooth=False)    # rigging
+            g.trace(q([(-74, -14), (0, -17), (74, -20)]), 2.0 * s * max(sc, 0.7), taper=(0.1, 0.1))
+            g.shade(g.poly(q([(-6, -158), (-6, -24), (-70, -28)])), offset=(-8 * s * sc, 0), strength=0.25, soft=3 * s)
         st('boats')
 
-        # ============================================================ the headland
+        # ============================================================ the headland: strata on the face, turf on top
         grass = land * (yy < grass_y(np.minimum(xx, EDGE_X)) + 64) * (xx < EDGE_X + 10)
         face = np.clip(land - grass, 0, 1)
-        g.glass(face, P['rock'], cell=78 * s, aspect=1.8, angle=0.08, streak=0.5, streak_dir=0.0)
-        g.glass(grass, P['grass'], cell=70 * s, aspect=2.4, angle=0.1, streak=0.5)
-        # strata, cracks, and the face darkening toward the sea
-        for k in range(9):
-            yb = 520 + k * 44 + rng.uniform(-8, 8)
-            xs = np.linspace(S.X0, 1100, 50)
-            ys = yb + 10 * np.sin(xs / 140.0 + k) + 0.03 * (xs - 500)
-            g.trace(S.pts(list(zip(xs, ys))), 1.7 * s, taper=(0.0, 0.0), wobble=0.6 * s, clip=face)
-        for k in range(12):
-            x = rng.uniform(40, 980)
-            y = rng.uniform(520, 860)
-            g.trace(S.pts([(x, y), (x + rng.uniform(-10, 10), y + 22), (x + rng.uniform(-14, 14), y + 44)]),
-                    1.6 * s, taper=(0.2, 0.8), clip=face)
-        g.matt(face * np.clip((yy - 520) / 420, 0, 1), 0.4, soft=8 * s)
-        g.matt(face * np.clip((xx - 700) / 300, 0, 1), 0.3, soft=8 * s)
-        g.shade(grass, offset=(0, -10 * s), strength=0.3, soft=4 * s)
-        for k in range(40):                                    # tufts on the grass
+        ftop = lambda a: grass_y(np.minimum(np.asarray(a, float), EDGE_X)) + 60
+        fbot = const(FOOT + 4)
+        g.band(face, P['rock'], ftop, fbot, row_h=58, length=(150, 300), tilt=0.3,
+               cut_dir=lambda a, c: 0.45 * np.sin(a / 110.0 + c / 90.0), wave=(0.22, 160.0),
+               colour_fn=lambda cx, cy, pal: shade(P['rock'], 1.0 - 0.35 * np.clip((cy - 560) / 380, 0, 1)
+                                                   - 0.15 * np.clip((cx - 720) / 300, 0, 1)),
+               flow=0.05, mix=dict(cathedral=0.35, reamy=0.35, streaky=0.3))
+        gt = lambda a: grass_y(np.asarray(a, float))
+        g.band(grass, P['grass'], gt, lambda a: gt(a) + 66, rows=2, length=(170, 320), tilt=0.3, flow=0.1,
+               mix=dict(streaky=0.5, cathedral=0.3, reamy=0.2))
+        for k in range(16):                                    # cracks in the rock: fine painted detail
+            x = rng.uniform(40, 980); y = rng.uniform(560, 860)
+            if x > face_x(y) - 20:
+                continue
+            g.trace(S.pts([(x, y), (x + rng.uniform(-10, 10), y + rng.uniform(14, 26)), (x + rng.uniform(-14, 14), y + rng.uniform(30, 50))]),
+                    rng.uniform(1.1, 1.8) * s, taper=(0.2, 0.8), clip=face, opacity=0.8)
+        for k in range(48):                                    # tufts: clusters, each one different
             x = rng.uniform(S.X0 + 10, EDGE_X - 10)
-            y = grass_y(x) + rng.uniform(8, 34)
-            g.trace(S.pts([(x, y), (x - 4, y - 9)]), 1.6 * s, taper=(0.1, 0.9), smooth=False, clip=grass)
-            g.trace(S.pts([(x + 3, y), (x + 6, y - 8)]), 1.6 * s, taper=(0.1, 0.9), smooth=False, clip=grass)
-        for k in range(10):                                    # scrub clinging to the face
-            x = rng.uniform(80, 900); y = rng.uniform(560, 860)
-            g.matt(g.ellipse(*S.pt(x, y), 16 * s, 6 * s), 0.55, soft=2 * s)
+            y = grass_y(x) + rng.uniform(8, 40)
+            for b in range(int(rng.integers(2, 5))):
+                dx = rng.uniform(-4, 4); hh = rng.uniform(6, 13); lean = rng.uniform(-6, 6)
+                g.trace(S.pts([(x + dx, y), (x + dx + lean, y - hh)]), rng.uniform(1.0, 1.8) * s, taper=(0.1, 0.9),
+                        smooth=False, clip=grass)
         st('headland')
 
-        # ============================================================ village
+        # ============================================================ village: walls, roofs, windows, doors -- all glass
         def house(cx, w, h, rh, front, wall, roof):
             base = house_base(cx, front)
-            body = [(cx - w / 2, base), (cx - w / 2, base - h), (cx + w / 2, base - h), (cx + w / 2, base)]
-            rf = [(cx - w / 2 - 8, base - h + 2), (cx, base - h - rh), (cx + w / 2 + 8, base - h + 2)]
+            jit = lambda pts: [(x + rng.uniform(-1.5, 1.5), y + rng.uniform(-1.5, 1.5)) for x, y in pts]
+            sk = rng.uniform(-4, 4)
+            body = jit([(cx - w / 2, base), (cx - w / 2, base - h), (cx + w / 2, base - h + sk * 0.3), (cx + w / 2, base)])
+            rf = jit([(cx - w / 2 - 8, base - h + 2), (cx + sk, base - h - rh), (cx + w / 2 + 8, base - h + 2)])
             bm = g.poly(S.pts(body))
-            g.glass(bm, wall, streak=0.3, seeds=0.5)
-            g.glass(g.poly(S.pts(rf)), roof, streak=0.4, streak_dir=0.0)
-            g.shade(bm, offset=(-w * 0.35 * s, 0), strength=0.35, soft=3 * s)
+            g.glass(bm, wall, mix=dict(cathedral=0.5, seedy=0.3, opal=0.2), seeds=0.8)
+            g.glass(g.poly(S.pts(rf)), roof, flow=0.0, mix=dict(streaky=0.6, cathedral=0.4))
+            g.shade(bm, offset=(-w * 0.35 * s, 0), strength=0.3, soft=3 * s)
             for k in range(3):                                 # roof tile rows
-                t = (k + 1) / 4
-                g.trace(S.pts([(cx - (w / 2 + 8) * (1 - t) - 2, base - h - rh * (1 - t) + 2),
-                               (cx + (w / 2 + 8) * (1 - t) + 2, base - h - rh * (1 - t) + 2)]), 1.4 * s, smooth=False)
+                tt = (k + 1) / 4
+                g.trace(S.pts([(cx - (w / 2 + 8) * (1 - tt) - 2 + sk * tt, base - h - rh * (1 - tt) + 2),
+                               (cx + (w / 2 + 8) * (1 - tt) + 2 + sk * tt, base - h - rh * (1 - tt) + 2)]),
+                        rng.uniform(1.1, 1.6) * s, smooth=False)
             nwin = 2 if w < 90 else 3
             for k in range(nwin):
-                wx = cx - w / 2 + w * (k + 0.5) / nwin
+                wx = cx - w / 2 + w * (k + 0.5) / nwin + rng.uniform(-3, 3)
                 if k == nwin // 2 and front:
-                    door = g.poly(S.pts([(wx - 9, base), (wx - 9, base - 30), (wx + 9, base - 30), (wx + 9, base)]))
-                    g.matt(door, 0.92, soft=0.5 * s)
+                    g.glass(g.poly(S.pts(jit(rect(wx - 10, base - 32, wx + 10, base + 1)))), P['door'], mix=dict(cathedral=1.0))
                     continue
                 wy = base - h * 0.62
-                if P['window'] == 'lit':
-                    g.glass(g.poly(S.pts([(wx - 8, wy - 10), (wx + 8, wy - 10), (wx + 8, wy + 10), (wx - 8, wy + 10)])),
-                            P['win_col'][k % 2], streak=0.2, thick=0.8)
-                    g.trace(S.pts([(wx, wy - 9), (wx, wy + 9)]), 1.3 * s, smooth=False)
-                else:
-                    g.matt(g.poly(S.pts([(wx - 7, wy - 9), (wx + 7, wy - 9), (wx + 7, wy + 9), (wx - 7, wy + 9)])), 0.92, soft=0.5 * s)
-                    g.scratch(S.pts([(wx, wy - 8), (wx, wy + 8)]), 1.2 * s)
+                wc = P['win_col'] if P['window'] == 'lit' else P['win_dark']
+                g.glass(g.poly(S.pts(jit(rect(wx - 9, wy - 11, wx + 9, wy + 11)))), wc, thick=0.8, mix=dict(cathedral=1.0))
+                g.trace(S.pts([(wx, wy - 9), (wx, wy + 9)]), 1.3 * s, smooth=False)
+                g.trace(S.pts([(wx - 7, wy), (wx + 7, wy)]), 1.1 * s, smooth=False)
 
         back = [hh for hh in HOUSES if not hh[4]]
         front = [hh for hh in HOUSES if hh[4]]
@@ -264,17 +311,19 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         ccx, cw, ch = CHURCH
         cb = house_base(ccx, 0)
         nave = g.poly(S.pts([(ccx - 60, cb), (ccx - 60, cb - 56), (ccx + 50, cb - 56), (ccx + 50, cb)]))
-        g.glass(nave, P['walls'][1], streak=0.3)
-        g.glass(g.poly(S.pts([(ccx - 66, cb - 54), (ccx - 5, cb - 92), (ccx + 56, cb - 54)])), P['roofs'][2], streak=0.4)
+        g.glass(nave, P['walls'][1], mix=dict(cathedral=0.6, seedy=0.4))
+        g.glass(g.poly(S.pts([(ccx - 66, cb - 54), (ccx - 5, cb - 92), (ccx + 56, cb - 54)])), P['roofs'][2], flow=0.0)
         twr = g.poly(S.pts([(ccx + 22, cb), (ccx + 22, cb - ch), (ccx + 22 + cw, cb - ch), (ccx + 22 + cw, cb)]))
-        g.glass(twr, P['walls'][0], streak=0.3)
+        g.glass(twr, P['walls'][0], cuts=[('h', const(cb - ch * 0.55))], mix=dict(cathedral=0.6, seedy=0.4))
         g.glass(g.poly(S.pts([(ccx + 18, cb - ch + 2), (ccx + 22 + cw / 2, cb - ch - 70), (ccx + 26 + cw, cb - ch + 2)])),
-                P['roofs'][0], streak=0.4, streak_dir=np.pi / 2)
-        g.shade(twr, offset=(-14 * s, 0), strength=0.35, soft=3 * s)
-        g.trace(S.pts([(ccx + 22 + cw / 2, cb - ch + 30), (ccx + 22 + cw / 2, cb - ch + 52)]), 8 * s, smooth=False,
-                taper=(0.0, 0.0))
-        g.trace(S.pts([(ccx + 22 + cw / 2 - 1, cb - ch - 70), (ccx + 22 + cw / 2 - 1, cb - ch - 92)]), 2.0 * s, smooth=False)
-        g.trace(S.pts([(ccx + 22 + cw / 2 - 8, cb - ch - 84), (ccx + 22 + cw / 2 + 6, cb - ch - 84)]), 2.0 * s, smooth=False)
+                P['roofs'][0], flow=np.pi / 2)
+        tx = ccx + 22 + cw / 2
+        g.glass(g.poly(S.pts([(tx - 7, cb - ch + 52), (tx - 7, cb - ch + 34), (tx, cb - ch + 26), (tx + 7, cb - ch + 34),
+                              (tx + 7, cb - ch + 52)])), P['win_col'] if P['window'] == 'lit' else P['win_dark'],
+                mix=dict(cathedral=1.0))
+        g.shade(twr, offset=(-14 * s, 0), strength=0.3, soft=3 * s)
+        g.trace(S.pts([(tx - 1, cb - ch - 70), (tx - 1, cb - ch - 92)]), 2.0 * s, smooth=False)
+        g.trace(S.pts([(tx - 8, cb - ch - 84), (tx + 6, cb - ch - 84)]), 2.0 * s, smooth=False)
         for i, (cx, w, h, rh, fr) in enumerate(front):
             house(cx, w, h, rh, fr, P['walls'][(i + 1) % 3], P['roofs'][(i + 2) % 3])
         st('village')
@@ -290,64 +339,60 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
             wa = bw - (bw - tw) * k / nb
             wb = bw - (bw - tw) * (k + 1) / nb
             band = g.poly(S.pts([(cx - wa, ya), (cx - wb, yb), (cx + wb, yb), (cx + wa, ya)]))
-            g.glass(band, P['tower'][k % 2], streak=0.3, streak_dir=np.pi / 2)
+            g.glass(band, P['tower'][k % 2], flow=np.pi / 2, mix=dict(cathedral=0.5, opal=0.3, streaky=0.2))
         tower = g.poly(S.pts([(cx - bw, base), (cx - tw, top), (cx + tw, top), (cx + bw, base)]))
-        g.shade(tower, offset=(-bw * 0.8 * s, 0), strength=0.4, soft=4 * s)
-        g.scratch(S.pts([(cx - bw * 0.55, base - 6), (cx - tw * 0.55, top + 8)]), 2.4 * s)
+        g.shade(tower, offset=(-bw * 0.8 * s, 0), strength=0.35, soft=4 * s)
         lan = g.poly(S.pts([(cx - 20, top), (cx - 20, top - 40), (cx + 20, top - 40), (cx + 20, top)]))
-        g.glass(lan, P['lantern'], streak=0.2, thick=0.7)
-        g.glass(g.poly(S.pts([(cx - 30, top + 6), (cx - 30, top - 2), (cx + 30, top - 2), (cx + 30, top + 6)])), P['cap'])
-        g.glass(g.poly(S.pts([(cx - 26, top - 38), (cx, top - 68), (cx + 26, top - 38)])), P['cap'], streak=0.2)
+        g.glass(lan, P['lantern'], thick=0.7, mix=dict(seedy=0.6, cathedral=0.4))
+        g.glass(g.poly(S.pts([(cx - 30, top + 7), (cx - 30, top - 3), (cx + 30, top - 3), (cx + 30, top + 7)])), P['cap'])
+        g.glass(g.poly(S.pts([(cx - 26, top - 38), (cx, top - 68), (cx + 26, top - 38)])), P['cap'])
         g.trace(S.pts([(cx, top - 40), (cx, top)]), 2.0 * s, smooth=False)
         g.trace(S.pts([(cx, top - 66), (cx, top - 84)]), 2.2 * s, smooth=False)
         g.trace(S.pts([(cx - 28, top - 14), (cx + 28, top - 14)]), 1.4 * s, smooth=False)
         if dusk:
             g.stain(lan, 0.9)
-        door = g.poly(S.pts([(cx - 10, base), (cx - 10, base - 34), (cx + 10, base - 34), (cx + 10, base)]))
-        g.matt(door, 0.92, soft=0.5 * s)
+        g.glass(g.poly(S.pts(rect(cx - 11, base - 36, cx + 11, base + 1))), P['door'], mix=dict(cathedral=1.0))
         for k in (0.35, 0.62):
             wy = base - (base - top) * k
-            g.trace(S.pts([(cx, wy - 7), (cx, wy + 7)]), 7 * s, smooth=False, taper=(0.0, 0.0))
+            g.glass(g.poly(S.pts(rect(cx - 6, wy - 9, cx + 6, wy + 9))), P['win_col'] if dusk else P['win_dark'],
+                    mix=dict(cathedral=1.0))
         st('lighthouse')
 
         # ============================================================ surf and rocks at the cliff foot
         xs = np.linspace(S.X0 - 30, 1170, 70)
-        ft = FOOT - 12 + 5 * np.sin(xs / 37.0) - np.clip((xs - 1000) * 0.2, 0, None)
-        fb = FOOT + 16 + 6 * np.sin(xs / 29.0 + 1)
+        ft = FOOT - 14 + 5 * np.sin(xs / 37.0) - np.clip((xs - 1000) * 0.2, 0, None)
+        fb = FOOT + 20 + 6 * np.sin(xs / 29.0 + 1)
         mid, taper = (ft + fb) / 2, np.clip((1170 - xs) / 140, 0, 1) ** 0.7
-        ft, fb = mid + (ft - mid) * taper, mid + (fb - mid) * taper
+        ft, fb = mid + (ft - mid) * np.maximum(taper, 0.55), mid + (fb - mid) * np.maximum(taper, 0.55)
         foam = g.poly(S.pts(list(zip(xs, ft)) + list(zip(xs[::-1], fb[::-1]))))
-        g.glass(foam, P['foam'], cell=90 * s, aspect=3.5, angle=0.0, streak=0.3, seeds=0.8)
+        g.band(foam, P['foam'], lambda a: np.interp(a, xs, ft), lambda a: np.interp(a, xs, fb), rows=1,
+               length=(150, 300), tilt=0.35, flow=0.0, mix=dict(opal=0.6, seedy=0.4), opal=0.3)
         for (rx, ry, rw, rh_) in ROCKS:
             rk = g.blob(*S.pt(rx, ry), rw * s, rh_ * s, rough=0.18, rot=0.0)
-            g.glass(rk, P['rocks'], cell=40 * s, streak=0.3)
-            g.shade(rk, offset=(-10 * s, -6 * s), strength=0.45, soft=3 * s)
+            cuts = [('line', (rx + rng.uniform(-10, 10), ry - rh_, rx + rng.uniform(-20, 20), ry + rh_))] if rw > 45 else []
+            g.glass(rk, P['rocks'], cuts=cuts, mix=dict(cathedral=0.6, reamy=0.4))
+            g.shade(rk, offset=(-10 * s, -6 * s), strength=0.4, soft=3 * s)
             g.scratch(S.pts([(rx - rw * 0.5, ry - rh_ * 0.55), (rx, ry - rh_ * 0.8), (rx + rw * 0.4, ry - rh_ * 0.6)]), 1.8 * s)
-        for k in range(20):                                    # spray scratched out of the matt
+        for k in range(20):                                    # spray: fine painted marks
             x = rng.uniform(S.X0, 1150)
-            y = FOOT + rng.uniform(26, 60)
-            L = rng.uniform(30, 90)
-            g.scratch(S.pts([(x, y), (x + L * 0.5, y - 2), (x + L, y)]), 2.0 * s)
+            y = FOOT + rng.uniform(30, 64)
+            L = rng.uniform(20, 70)
+            g.trace(S.pts([(x, y), (x + L * 0.5, y - 2), (x + L, y)]), rng.uniform(1.0, 1.5) * s, opacity=0.5)
         st('surf')
 
-        # ============================================================ gulls
+        # ============================================================ gulls: cut glass, every one different
         for i, (bx, by, sc, fl) in enumerate(GULLS):
-            w_ = 44 * sc
-            up = [(-w_, -0.45 * w_ * fl), (-0.55 * w_, -0.36 * w_), (-0.15 * w_, -0.1 * w_), (0, -0.02 * w_),
-                  (0.15 * w_, -0.1 * w_), (0.55 * w_, -0.36 * w_), (w_, -0.45 * w_ * fl)]
-            lo = [(0.55 * w_, -0.16 * w_), (0.16 * w_, 0.1 * w_), (0, 0.2 * w_), (-0.16 * w_, 0.1 * w_), (-0.55 * w_, -0.16 * w_)]
-            pts = [(bx + x, by + y) for x, y in up + lo]
-            m = g.poly(S.pts(pts))
-            g.glass(m, P['gull'], streak=0.2, seeds=0.2)
+            m = g.poly(S.pts(bird_pts(bx, by, sc, fl, rng)))
+            g.glass(m, P['gull'], mix=dict(cathedral=0.6, opal=0.4), seeds=0.2)
             if P['gull_tip']:
+                w_ = 44 * sc
                 for sgn in (-1, 1):
                     g.trace(S.pts([(bx + sgn * w_ * 0.72, by - 0.4 * w_ * fl), (bx + sgn * w_ * 0.98, by - 0.45 * w_ * fl)]),
                             4.2 * s * sc, taper=(0.0, 0.5), smooth=False, clip=m)
-                g.shade(m, offset=(0, -5 * s * sc), strength=0.3, soft=2 * s)
         st('gulls')
 
     # ================================================================ finishing: lead, weather (always run)
-    g.finish(lead=6.0, grime=0.35, pits=0.3)
+    g.finish(lead=6.0, grime=0.25, pits=0.25)
     img = g.composite()
     st.save(img, 'final')
     return img

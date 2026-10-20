@@ -1033,6 +1033,68 @@ class Stager:
         self.g.workshop(img, self.dir, self.dense)
 
 
+def shade(cols, k):
+    out = []
+    for c in cols:
+        v = [int(c[i:i + 2], 16) for i in (1, 3, 5)]
+        out.append('#%02x%02x%02x' % tuple(int(np.clip(t * k, 0, 255)) for t in v))
+    return out
+
+
+def cloud_shape(cx, cy, L, h, r):
+    """a cloud: lobes of different size and height, the tallest off centre, a long low tail to one side, a
+    gently tilted base; returns outline arrays and the valleys between the lobes / the tail cut"""
+    nl = int(r.integers(2, 4)) + (1 if L > 380 else 0)
+    tail = 1 if r.random() < 0.5 else -1
+    w = r.uniform(0.6, 1.4, nl)
+    span = 0.68
+    edges = -span + 2 * span * np.r_[0, np.cumsum(w)] / w.sum()
+    edges = edges + tail * (1 - span) * 0.9
+    hts = r.uniform(0.45, 0.85, nl)
+    hts[int(r.integers(0, nl))] = 1.0
+    t = np.linspace(-1, 1, 200)
+    top = np.zeros_like(t)
+    for i in range(nl):
+        c, hw_ = (edges[i] + edges[i + 1]) / 2, (edges[i + 1] - edges[i]) / 2 * r.uniform(1.15, 1.45)
+        top = np.maximum(top, hts[i] * np.clip(1 - ((t - c) / hw_) ** 2, 0, 1) ** r.uniform(0.45, 0.7))
+    ends = np.clip(1 - t ** 2, 0, 1) ** 0.28
+    top = np.maximum(top, 0.48 * ends)                        # the tail and the blunt ends
+    xs = cx + t * L / 2
+    tilt = r.uniform(-0.03, 0.03)
+    ty = cy - h * 0.75 * top * ends + tilt * (xs - cx)
+    by = cy + h * 0.25 * ends * (1 + 0.2 * np.sin(t * 4 + r.uniform(0, 6))) + tilt * (xs - cx)
+    valleys = [cx + e * L / 2 for e in edges[1:-1]]
+    caps = [cx + edges[0] * L / 2 - 6, cx + edges[-1] * L / 2 + 6]
+    return xs, ty, by, valleys, caps
+
+
+def bird_pts(bx, by, sc, fl, r):
+    """a gull in flight, every one a little different: span, wing lift on each side, a stout body"""
+    w_ = 46 * sc * r.uniform(0.9, 1.1)
+    a, b_ = r.uniform(0.85, 1.15), r.uniform(0.85, 1.15)
+    tl, tr = -0.42 * w_ * fl * a, -0.42 * w_ * fl * b_
+    up = [(-w_ * a, tl), (-0.55 * w_ * a, -0.36 * w_ * fl * a - 0.04 * w_), (-0.18 * w_, -0.12 * w_), (0, -0.04 * w_),
+          (0.18 * w_, -0.12 * w_), (0.55 * w_ * b_, -0.36 * w_ * fl * b_ - 0.04 * w_), (w_ * b_, tr)]
+    lo = [(0.92 * w_ * b_, tr + 0.13 * w_), (0.5 * w_ * b_, -0.14 * w_ * fl * b_ + 0.12 * w_), (0.14 * w_, 0.2 * w_),
+          (0.0, 0.3 * w_), (-0.14 * w_, 0.2 * w_), (-0.5 * w_ * a, -0.14 * w_ * fl * a + 0.12 * w_),
+          (-0.92 * w_ * a, tl + 0.13 * w_)]
+    return [(bx + x, by + y) for x, y in up + lo]
+
+
+def lay_cloud(g, S, cx, cy, L, h, cols, lit, rng):
+    """a cloud cut as glass: lobes split at the valleys, a shade row and a lit row (opalescent)"""
+    xs, ty, by, valleys, caps = cloud_shape(cx, cy, L, h, rng)
+    m = g.poly(S.pts(list(zip(xs, ty)) + list(zip(xs[::-1], by[::-1]))))
+    top = lambda a, xs=xs, ty=ty: np.interp(a, xs, ty)
+    bot = lambda a, xs=xs, by=by: np.interp(a, xs, by)
+    colf = [polyfn([(v + rng.uniform(-6, 6), cy - h), (v + rng.uniform(-8, 8), cy + h)]) for v in sorted(valleys + caps)]
+    dark, light = cols
+    rc = [dark, light] if lit == 'below' else [light, dark]
+    g.band(m, light, top, bot, row_h=h * 0.42, columns=colf, length=(500, 900), row_colours=rc,
+           flow=0.0, flow_jit=0.15, mix=dict(opal=0.55, streaky=0.3, cathedral=0.15))
+    return m
+
+
 def hband(S, ytop, ybot, n=80, pad=30):
     """full-bleed horizontal band between two y(x) functions of DESIGN x (or constants); design coords"""
     xs = np.linspace(S.X0 - pad, S.X1 + pad, n)

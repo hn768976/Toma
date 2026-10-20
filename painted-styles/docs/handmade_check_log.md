@@ -38,3 +38,11 @@ strokes (no mirror blur), clustered lifted water marks, mist as ragged lifted ve
 tapered reeds, varied birds. Draw-on now opens with a pencil underdrawing on raw paper and shows real unfinished
 passes. Coast: hand-nudged houses with individual windows, banded lighthouse with lifted beam, bowed sails,
 angular rock clusters, varied bushes. Forest: clumped varied trunks, lifted broken light shafts, varied ferns/tufts.
+
+### Round 1 fixes — Ink wash
+Mountains as 2–4 overlapping glazes with ragged wet/tide-line edges, pooling, dry-brush breaks, blooms
+(replacing lib gradient wash); cun/dian placed by form; even-width ridge outline removed; xuan fibre paper with
+absorbency; ink colour follows dilution (no duotone); pale wet-wash sky with a pale sun (no radial glow);
+four tree types with irregular tiers; reflections as broken horizontal strokes over a pale broken wash; water
+mostly bare paper with clustered varied dashes; varied birds. Indigo forest: side-brush trunks with dry streaks,
+varied branches, ragged wash shadows, god-rays removed (light from reserved paper and mist).
