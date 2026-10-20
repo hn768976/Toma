@@ -1,0 +1,32 @@
+{
+  "name": "watercolour-stills",
+  "version": "1.0.0",
+  "description": "35 pure-watercolour background stills (Remotion Still + p5.js + p5.brush)",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "node scripts/render.mjs",
+    "contact-sheet": "node scripts/contact-sheet.mjs",
+    "verify": "python3 scripts/verify.py",
+    "package": "node scripts/package.mjs",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.515",
+    "@remotion/cli": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "p5": "1.11.13",
+    "p5.brush": "1.1.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515"
+  },
+  "devDependencies": {
+    "@types/p5": "1.7.6",
+    "@types/react": "19.2.7",
+    "sharp": "0.34.5",
+    "typescript": "5.9.3"
+  }
+}
