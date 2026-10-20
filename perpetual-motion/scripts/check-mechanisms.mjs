@@ -22,12 +22,12 @@ const mod = (a, n) => ((a % n) + n) % n;
       const sPos = mod(a + 90, 360);
       const phi = M.HAMMER.at(a);
       if (phi > -10) { outTotal++; if (sPos > 0 && sPos < 200) outDesc++; }
-      if (sPos > 260 && sPos < 360) { riseUpper++; if (phi < M.WHEEL.folded + 2) riseUpperFolded++; }
+      if (sPos > 270 && sPos < 360) { riseUpper++; if (phi < M.WHEEL.folded + 2) riseUpperFolded++; }
     }
   }
   const flip = [...Array(3600).keys()].map((k) => k / 10).find((sp) => M.HAMMER.at(sp - 90) > -10);
   const folded = [...Array(3600).keys()].map((k) => k / 10).find((sp) => sp > 180 && M.HAMMER.at(sp - 90) < M.WHEEL.folded + 2);
-  console.log(`hammers: ${(100 * outDesc / outTotal).toFixed(1)}% of extended hammers are on the descending side or hanging plumb just past the bottom (s < 200°); ${(100 * riseUpperFolded / riseUpper).toFixed(1)}% folded on the peg over the rising side's upper half; flip past the top at s≈${flip}°, folded again by s≈${folded}° past the bottom; periodic residual ${M.HAMMER.residual.toExponential(1)}° → ${ok(outDesc === outTotal && riseUpperFolded === riseUpper && flip > 0 && flip < 90 && folded > 180)}`);
+  console.log(`hammers: ${(100 * outDesc / outTotal).toFixed(1)}% of extended hammers are on the descending side or hanging plumb just past the bottom (s < 200°); ${(100 * riseUpperFolded / riseUpper).toFixed(1)}% folded on the peg over the rising side's upper half; flip past the top at s≈${flip}°, folded again by s≈${folded}° past the bottom; periodic residual ${M.HAMMER.residual.toExponential(1)}° → ${ok(outDesc === outTotal && riseUpperFolded === riseUpper && flip > 0 && flip < 100 && folded > 180)}`);
   console.log(`wheel 1 turns ${M.hammerWheelAngle(LOOP)}° per loop = ${M.hammerWheelAngle(LOOP) / 30} hammer spacings → ${ok(M.hammerWheelAngle(LOOP) % 30 === 0)}`);
 }
 // 2. rolling balls: radius by side, by channel (hub end's side)

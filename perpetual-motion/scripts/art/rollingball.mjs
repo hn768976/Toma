@@ -21,8 +21,9 @@ export function build() {
   const out = parts();
 
   out.add("base", plinth(P, PLINTH, 12), { material: "oak" });
+  out.add("axleStub", rod(P, [-46, 0, cz], [-S.trestleX - 8, 0, cz], 3.4, "iron") + collar(P, [-46, 0, cz], [1, 0, 0], 4.6, 2.4, "iron"), { material: "iron" });
   out.add("trestleBack", aFrame(P, -S.trestleX, cz), { material: "oak" });
-  out.add("axleBack", rod(P, [-46, 0, cz], [S.web[0], 0, cz], 3.4, "iron") + collar(P, [-46, 0, cz], [1, 0, 0], 4.6, 2.4, "iron"), { material: "iron" });
+  out.add("axleBack", rod(P, [-S.trestleX + 8, 0, cz], [S.web[0], 0, cz], 3.4, "iron"), { material: "iron" });
 
   // the web: a solid oak disc the channels are fixed to
   const web = [];
@@ -36,7 +37,7 @@ export function build() {
   // channel walls, rim and hub stand in front of the web
   const front = [];
   const centre = channelPoints();
-  const half = S.ballRadius + 1.3;
+  const half = S.ballRadius + 2.4;
   for (let i = 0; i < S.channels; i++) {
     const b = (360 / S.channels) * i;
     const line = centre.map((p) => rot(p, b));

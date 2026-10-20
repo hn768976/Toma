@@ -71,7 +71,19 @@ or change `defaultProps` in `src/Root.tsx`. Both palettes are data rows in
 
 ## Timings
 
-TIMINGS
+Measured on the build machine (4 vCPU, 15 GB, Chromium headless shell, Remotion 4.0.515):
+
+| Clip | 720p preview, whole clip | per frame (wall, concurrency 4, incl. bundling) |
+|---|---|---|
+| OverbalancedWheel | 134 s | 223 ms |
+| WaterScrewMill | 154 s | 256 ms |
+| SelfFlowingFlask | 120 s | 200 ms |
+| MagnetRamp | 122 s | 203 ms |
+| RollingBallWheel | 133 s | 221 ms |
+
+One 4K frame (3840 × 2160, single frame, warm browser, median of 3): OverbalancedWheel
+2.94 s, WaterScrewMill 3.13 s. A full 600-frame 4K clip at concurrency 4 is therefore roughly
+8–10 minutes on a similar machine. A 6K still takes 6–9 s.
 
 ## How it is built
 
@@ -94,8 +106,21 @@ TIMINGS
 - Determinism: everything comes from `useCurrentFrame()`; no `Math.random()`, `Date.now()`
   or state; the only PRNG is `mulberry32`, seeded at module level for ripple variety.
 
-Checks: `bash scripts/verify.sh` (loop seam 0 = 600 and cold-start determinism), and
-`node scripts/contact.mjs` for review strips.
+Checks:
+
+- `bash scripts/verify.sh` — renders the 601-frame variant (`verify: true`) as PNGs; frame 0
+  must equal frame 600 pixel for pixel, and a cold-start still of frame 300 must equal the
+  full render's frame 300 byte for byte.
+- `node scripts/check-mechanisms.mjs` — reads each machine's own model: hammers out on the
+  descending side and folded on the rising side; balls out on the descending side; spur
+  gears opposite with the 32:16 ratio; crown 36 : lantern 9; the screw's water pockets rising;
+  the magnet ramp's closed path with two balls half a cycle apart; and that `isoFace · rotate(θ)`
+  keeps a rim point on its face ellipse at every angle.
+- `node scripts/time-4k.mjs` — times one 4K frame; `node scripts/contact.mjs` renders review strips.
+
+A note on Wilkins' ramp: its natural cycle is 6.5 s and it plays over 300 frames (10 s). Nothing
+in the frame fixes the scale, so this is the same physics on a machine about 2.4× the modelled
+size (a ~24 cm iron ball), and it keeps the fall and the roll down the chute readable.
 
 ## The designs (for stock descriptions)
 

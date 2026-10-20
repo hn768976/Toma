@@ -9,7 +9,7 @@ export const ROLLING = {
   channels: 8,
   ballRadius: 5.6,
   /** channel from the hub (r0) to the rim (r1), bending forward by `bend` degrees */
-  r0: 20,
+  r0: 23,
   r1: 74,
   bend: 55,
   wall: 2.4,

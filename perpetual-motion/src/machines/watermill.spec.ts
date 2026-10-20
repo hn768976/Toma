@@ -14,10 +14,10 @@ export const MILL = {
   g2: { teeth: 16, pitch: 12, width: 6, angle: -30 },
   stone: { x0: 41, x1: 53, r: 21 },
   /** crown wheel on the axle's end; its 30 pins face +x */
-  crown: { x: 56, pins: 30, pitch: 24, disc: 26, thick: 3, pinLength: 4 },
+  crown: { x: 56, pins: 36, pitch: 24, disc: 26, thick: 3, pinLength: 4 },
   /** the lantern: a cage of 10 pins round the screw, where it crosses in front of the crown */
-  lantern: { pins: 10, r: 15.5, half: 4 },
-  screw: { x: 75, slope: 35, from: -98, to: 145, flight: 10.5, shaft: 2.8, pitch: 26, trough: 13, drum: 12.2, drumHalf: 7 },
+  lantern: { pins: 9, r: 15.5, half: 4 },
+  screw: { x: 75, slope: 35, from: -90, to: 145, flight: 10.5, shaft: 2.8, pitch: 26, trough: 14.5, drum: 12.2, drumHalf: 7 },
   /** the upper tank: a hooped tub on a tower; its level is steady (a closed loop) */
   tank: { centre: [75, -132, 110] as V3, r: 20, h: 30, level: 136 },
   /** the launder from the tank's outlet: along −x, then along +y over the wheel */
@@ -56,7 +56,7 @@ export function millAngles(frame: number, loop: number) {
   // G2's phase puts a tooth gap on the line of centres when a G1 tooth is there
   const line = MILL.g2.angle;
   const g2 = line + 180 + 180 / MILL.g2.teeth - (wheel - line) * ratioG;
-  // crown (30 pins) drives the lantern (10 pins): the screw turns 3× the wheel.
+  // crown (36 pins) drives the lantern (9 pins): the screw turns 4× the wheel.
   // At the contact the crown's pins move toward −y and down; the lantern pin
   // facing the crown must move the same way, which is +ψ about the screw's
   // axis in SCREW_FRAME — so the screw's angle rises as the wheel's falls.

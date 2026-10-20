@@ -30,11 +30,11 @@ export const RAMP = {
   plankThickness: 3.2,
   magnet: [-78, 0, 88] as V3,
   /** how fast the J-curl's speed decays on the climb, and how steeply the pull grows */
-  decay: 30,
+  decay: 14,
   pullPower: 2,
-  chuteResistance: 0.2,
+  chuteResistance: 0.08,
   /** solved by scripts/tune-magnet.mjs */
-  crawl: 2.851726566744629,
+  crawl: 5.285340405629844,
   /** the cycle (natural 6.5 s) plays over 300 frames: the same physics on a machine ~2.4× this size */
   period: 10,
 };
@@ -196,7 +196,8 @@ export function simulate(crawl: number, v0: number, dt = 1 / 3000): Cycle {
       if (u >= EDGE_U) {
         phase = "air";
         pos = rampAt(u);
-        vel = [DIR[0] * v, 0, DIR[2] * v];
+        // tipping over the edge, the ball leaves level: its climb along the slope is spent
+        vel = [DIR[0] * v, 0, 0];
       }
     } else if (phase === "air") {
       samples.push({ p: pos, phase, s: 0 });
@@ -208,10 +209,10 @@ export function simulate(crawl: number, v0: number, dt = 1 / 3000): Cycle {
         const c = chuteAt(ground.s);
         const vt = vel[0] * c.t[0] + vel[2] * c.t[2];
         const vn = Math.abs(vel[0] * CHUTE_FRAME[c.i].up[0] + vel[2] * CHUTE_FRAME[c.i].up[2]);
-        // a curved catch under the hole turns the fall along the chute, losing
-        // about half the speed; a little of the impact comes back as a hop
+        // a curved catch under the hole turns the fall along the chute, keeping
+        // most of the speed; a little of the impact comes back as a hop
         void vt;
-        v = Math.hypot(vel[0], vel[2]) * 0.5;
+        v = Math.hypot(vel[0], vel[2]) * 0.8;
         hopV = vn * 0.1;
         hop = 0;
         s = ground.s;

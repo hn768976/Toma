@@ -127,7 +127,7 @@ function flights(psi: number) {
   let runFront: boolean | null = null;
   const dadt = (-2 * Math.PI) / SC.pitch;
   const { a: ax, e1, e2 } = SCREW_FRAME;
-  for (let t = SC.from + 2.5; t < SC.to - 0.5; t += step) {
+  for (let t = SC.from + 2.5; t < SC.to - 3; t += step) {
     const a0 = flightAngle(t, psi);
     const a1 = flightAngle(t + step, psi);
     const rad = (a0 * Math.PI) / 180;
@@ -229,9 +229,10 @@ const Body: React.FC<MachineProps> = ({ frame, look }) => {
       <Ripples P={P} centre={[top[0], top[1] - 2, S.tank.level]} frame={frame} every={RIPPLE_EVERY} life={60} maxRadius={12} seeds={TANK_SEEDS} color={look.waterLight} width={LINE} />
       <Static html={parts.launderA} />
       <Static html={parts.outlet} />
-      <FlowDashes d={LAUNDER_FLOW} frame={frame} dash={14} gap={30} period={20} width={6} color={look.waterLight} opacity={0.85} />
+      <FlowDashes d={LAUNDER_FLOW} frame={frame} dash={22} gap={34} period={12} width={10} color={look.highlight} opacity={0.75} />
       <Static html={parts.basinBack} />
-      <FlowDashes d={RACE_FLOW} frame={frame} dash={18} gap={40} period={30} width={6} color={look.waterLight} opacity={0.7} />
+      <FlowDashes d={RACE_FLOW} frame={frame} dash={26} gap={46} period={20} width={10} color={look.highlight} opacity={0.6} />
+      <Static html={parts.axleStub} />
       <Static html={parts.trestleBack} />
       <Static html={parts.axleBack} />
       <Planar P={P} face={WHEEL} along={[-sideWheel, -sideWheel + W.shroud]} items={[{ html: parts.shroud, local: wheelTurn, key: "s" }]} />
@@ -270,10 +271,10 @@ const Body: React.FC<MachineProps> = ({ frame, look }) => {
       <Planar P={P} face={LANTERN} along={[-S.lantern.half, -S.lantern.half - 1.4]} items={[{ html: parts.lanternDisc, local: `rotate(${ang.screw.toFixed(4)})`, key: "ld2" }]} />
       <Static html={parts.troughFront} />
       {/* the screw's head pours into the tank */}
-      <FallingStream P={P} top={[top[0], top[1] - 1, top[2] - 8.5]} drop={top[2] - 8.5 - S.tank.level} radius={2.6} v0={30} frame={frame} spacing={4} drift={[0, -0.18]} look={look} scale={K} />
+      <FallingStream P={P} top={[top[0], top[1] - 1, top[2] - 8.5]} drop={top[2] - 8.5 - S.tank.level} radius={3.4} v0={30} frame={frame} spacing={4} drift={[0, -0.18]} look={look} scale={K} />
       <Static html={parts.launderB} />
       {/* the launder pours onto the wheel's top, just left of centre */}
-      <FallingStream P={P} top={[0, L.endY + 1.2, L.z - 4]} drop={L.z - 4 - (W.centre[2] + W.outer - 6)} radius={2.2} v0={45} frame={frame} spacing={3} drift={[0, 0.25]} look={look} scale={K} />
+      <FallingStream P={P} top={[0, L.endY + 1.2, L.z - 4]} drop={L.z - 4 - (W.centre[2] + W.sole + 3)} radius={2.8} v0={45} frame={frame} spacing={3} drift={[0, 0.25]} look={look} scale={K} />
       <Static html={parts.basinFront} />
     </>
   );

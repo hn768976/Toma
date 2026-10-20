@@ -12,8 +12,9 @@ export function build() {
 
   // ---- static, behind the wheel --------------------------------------------
   out.add("base", plinth(P, PLINTH, 12), { material: "oak" });
+  out.add("axleStub", rod(P, [-46, 0, cz], [-S.trestleX - 8, 0, cz], 3.4, "iron") + collar(P, [-46, 0, cz], [1, 0, 0], 4.6, 2.4, "iron"), { material: "iron" });
   out.add("trestleBack", frame(-S.trestleX), { material: "oak" });
-  out.add("axleBack", rod(P, [-46, 0, cz], [-S.thickness / 2, 0, cz], 3.4, "iron") + collar(P, [-46, 0, cz], [1, 0, 0], 4.6, 2.4, "iron"), { material: "iron" });
+  out.add("axleBack", rod(P, [-S.trestleX + 8, 0, cz], [-S.thickness / 2, 0, cz], 3.4, "iron"), { material: "iron" });
 
   // ---- the wheel, flat in its own plane (centre at 0,0; y down) -------------
   const wheel = [];
@@ -51,13 +52,14 @@ export function build() {
   for (let i = 0; i < S.hammers; i++) {
     const b = (360 / S.hammers) * i;
     const h = rot([S.hinge, 0], b);
-    const at = (rel, side) => {
+    const at = (rel, side, along, aside) => {
       const dir = rot([1, 0], b + rel);
       const n = rot(dir, side * 90);
-      return [h[0] + dir[0] * 13 + n[0] * 4.1, h[1] + dir[1] * 13 + n[1] * 4.1];
+      return [h[0] + dir[0] * along + n[0] * aside, h[1] + dir[1] * along + n[1] * aside];
     };
-    const p = at(S.folded, -1);
-    const q = at(S.out, 1);
+    // the peg the folded arm rests on, near its middle; the stop beside the hinge, on the rim
+    const p = at(S.folded, -1, 13, 4.1);
+    const q = at(S.out, 1, 2.2, 3.9);
     pegs.push(fp(circlePath(p[0], p[1], 2.4, 24), "brass"));
     pegs.push(fp(circlePath(q[0], q[1], 2.4, 24), "brass"));
     pegs.push(fp(circlePath(h[0], h[1], 1.6, 20), "iron", "fp dark"));

@@ -25,6 +25,7 @@ const Body: React.FC<MachineProps> = ({ frame }) => {
   return (
     <>
       <Static html={parts.base} />
+      <Static html={parts.axleStub} />
       <Static html={parts.trestleBack} />
       <Static html={parts.axleBack} />
       <Planar P={P} face={FACE} along={[-S.thickness / 2, S.thickness / 2]} items={[{ html: parts.wheel, local: turn, key: "wheel" }]} />

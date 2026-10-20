@@ -16,7 +16,13 @@ const UNDER = NECK.findIndex((p) => p[0] > 30);
 const OUTER_UNDER = polyPath(NECK.slice(0, UNDER + 1).map((p) => iso(p, P)), false);
 const OUTER = polyPath(NECK.slice(UNDER, ENTER + 1).map((p) => iso(p, P)), false);
 const INNER = polyPath(NECK.slice(ENTER).map((p) => iso(p, P)), false);
-const WHOLE = polyPath(NECK.map((p) => iso(p, P)), false);
+const SCREEN = NECK.map((p) => iso(p, P));
+/** screen length of the neck up to point i, for continuous dashes across pieces */
+const lengthTo = (i: number) => {
+  let l = 0;
+  for (let k = 1; k <= i; k++) l += Math.hypot(SCREEN[k][0] - SCREEN[k - 1][0], SCREEN[k][1] - SCREEN[k - 1][1]);
+  return l;
+};
 const SURFACE_CLIP = (() => {
   const r = Math.sqrt(S.radius ** 2 - (S.water - S.centre[2]) ** 2) - S.glass;
   const pts = Array.from({ length: 96 }, (_, i) => iso([S.centre[0] + r * Math.cos((i / 96) * Math.PI * 2), S.centre[1] + r * Math.sin((i / 96) * Math.PI * 2), S.water], P));
@@ -28,7 +34,7 @@ const RIPPLE_EVERY = 10;
 const SEEDS = rippleSeeds(1618, RIPPLE_EVERY);
 
 /** A glass tube with water inside, as layered strokes in screen space. */
-const GlassTube: React.FC<{ d: string; look: Look; frame: number }> = ({ d, look, frame }) => {
+const GlassTube: React.FC<{ d: string; look: Look; frame: number; start: number }> = ({ d, look, frame, start }) => {
   const wOut = 2 * S.tubeOuter * K;
   const wIn = 2 * S.tubeInner * K;
   const ink = look.name === "blueprint" ? look.ink : look.materials.glass.edge;
@@ -41,7 +47,7 @@ const GlassTube: React.FC<{ d: string; look: Look; frame: number }> = ({ d, look
       <path d={d} fill="none" stroke={look.water} strokeWidth={wIn} strokeLinecap="round" strokeLinejoin="round" style={ve} />
       <g style={ve}>
         {/* the claimed flow: dashes climb the neck from the bowl to the spout, 30 frames per spacing */}
-        <FlowDashes d={WHOLE} frame={frame} dash={wIn * 0.9} gap={wIn * 2.4} period={30} width={wIn * 0.42} color={look.waterLight} />
+        <FlowDashes d={d} start={start} frame={frame} dash={wIn * 0.9} gap={wIn * 2.4} period={30} width={wIn * 0.42} color={look.waterLight} />
       </g>
       <path d={d} fill="none" stroke={look.glassShine} strokeWidth={wOut * 0.16} strokeLinecap="round" transform={`translate(${-wOut * 0.24} ${-wOut * 0.2})`} style={ve} opacity={0.8} />
     </g>
@@ -61,13 +67,13 @@ const Body: React.FC<MachineProps> = ({ frame, look }) => {
       <Static html={parts.glassBack} />
       <Static html={parts.water} />
       <Static html={parts.surface} />
-      <Ripples P={P} centre={[S.spout[0], S.spout[1], S.water]} frame={frame} every={RIPPLE_EVERY} life={80} maxRadius={17} seeds={SEEDS} color={look.waterLight} width={LINE * 1.1} clip="url(#flask-surface)" />
+      <Ripples P={P} centre={[S.spout[0], S.spout[1], S.water]} frame={frame} every={RIPPLE_EVERY} life={50} maxRadius={16} seeds={SEEDS} color={look.waterLight} width={LINE * 1.1} clip="url(#flask-surface)" />
       <FallingStream P={P} top={[S.spout[0], S.spout[1], S.spout[2] - S.tubeOuter * 0.4]} drop={S.spout[2] - S.tubeOuter * 0.4 - S.water} radius={1.45} v0={22} frame={frame} spacing={4} look={look} scale={K} />
-      <GlassTube d={INNER} look={look} frame={frame} />
-      <GlassTube d={OUTER_UNDER} look={look} frame={frame} />
+      <GlassTube d={INNER} look={look} frame={frame} start={lengthTo(ENTER)} />
+      <GlassTube d={OUTER_UNDER} look={look} frame={frame} start={0} />
       <Static html={parts.outlet} />
       <Static html={parts.glassFront} />
-      <GlassTube d={OUTER} look={look} frame={frame} />
+      <GlassTube d={OUTER} look={look} frame={frame} start={lengthTo(UNDER)} />
     </>
   );
 };

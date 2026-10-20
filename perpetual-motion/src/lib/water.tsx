@@ -15,13 +15,15 @@ export function loopPeriod(frames: number) {
 }
 
 /**
- * Flow dashes along a projected channel path: a dash pattern that slides at a
+ * Flow dashes along a projected channel path. `start` is how far along a longer
+ * path this piece begins (px), so dashes run on unbroken across pieces drawn
+ * in different layers.: a dash pattern that slides at a
  * constant speed. `period` frames for one dash spacing; `dash`+`gap` px.
  */
-export const FlowDashes: React.FC<{ d: string; frame: number; dash: number; gap: number; period: number; width: number; color: string; opacity?: number; reverse?: boolean }> = ({ d, frame, dash, gap, period, width, color, opacity = 1, reverse }) => {
+export const FlowDashes: React.FC<{ d: string; frame: number; dash: number; gap: number; period: number; width: number; color: string; opacity?: number; reverse?: boolean; start?: number }> = ({ d, frame, dash, gap, period, width, color, opacity = 1, reverse, start = 0 }) => {
   const p = loopPeriod(period);
   const phase = ((frame % p) / p) * (dash + gap);
-  return <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeDasharray={`${dash} ${gap}`} strokeDashoffset={reverse ? phase : -phase} opacity={opacity} />;
+  return <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeDasharray={`${dash} ${gap}`} strokeDashoffset={start + (reverse ? phase : -phase)} opacity={opacity} />;
 };
 
 /** A straight polyline path from world points. */

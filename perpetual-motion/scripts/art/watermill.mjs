@@ -75,8 +75,9 @@ export function build() {
   out.add("basinBack", backWalls.join("") + `<path class="water" d="${k.pathOf(waterPoly.map((p) => k.iso(p, P)), true)}"/>`, { material: "oak" });
 
   // ---- back trestle and axle ---------------------------------------------------
+  out.add("axleStub", rod(P, [S.axle.from, 0, wz], [S.trestles[0] - 8, 0, wz], S.axle.r, "iron") + collar(P, [S.axle.from, 0, wz], [1, 0, 0], 5, 2.4, "iron"), { material: "iron" });
   out.add("trestleBack", aFrame(P, S.trestles[0], wz, { spread: 46 }), { material: "oak" });
-  out.add("axleBack", rod(P, [S.axle.from, 0, wz], [-S.wheel.width / 2, 0, wz], S.axle.r, "iron") + collar(P, [S.axle.from, 0, wz], [1, 0, 0], 5, 2.4, "iron"), { material: "iron" });
+  out.add("axleBack", rod(P, [S.trestles[0] + 8, 0, wz], [-S.wheel.width / 2, 0, wz], S.axle.r, "iron"), { material: "iron" });
 
   // ---- the waterwheel, flat in its plane -------------------------------------
   const W = S.wheel;
@@ -185,7 +186,7 @@ export function build() {
   const troughBack = [];
   const troughFront = [];
   for (const [t0, t1] of pieces) {
-    const tr = troughRun(P, screwPoint(t0), screwPoint(t1), sc.trough, sc.trough, "oak", { thick: 2, wallTop: -6.5 });
+    const tr = troughRun(P, screwPoint(t0), screwPoint(t1), sc.trough, sc.trough, "oak", { thick: 2, wallTop: -3.5 });
     // lat points +x (toward the viewer's right): walls[0] is the far (−x) wall
     troughBack.push(tr.walls[0], tr.bottom);
     troughFront.push(tr.walls[1]);

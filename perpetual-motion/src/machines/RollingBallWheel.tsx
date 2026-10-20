@@ -28,6 +28,7 @@ const Body: React.FC<MachineProps> = ({ frame, look }) => {
     <>
       <BallDefs look={look} id="rb-ball" />
       <Static html={parts.base} />
+      <Static html={parts.axleStub} />
       <Static html={parts.trestleBack} />
       <Static html={parts.axleBack} />
       <Planar P={P} face={FACE} along={S.web} items={[{ html: parts.web, local: turn, key: "web" }]} />

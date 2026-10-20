@@ -14,7 +14,7 @@ export const WHEEL = {
   /** arm length to the head's centre, cm */
   arm: 27,
   /** relative arm angle on the peg (trailing) and on the stop (leading), degrees */
-  folded: -75,
+  folded: -82,
   out: 10,
   /** the hammer plane sits just in front of the wheel's face */
   hammerPlane: 8.5,

@@ -13,7 +13,7 @@ const out = join(root, "renders", "stills");
 mkdirSync(out, { recursive: true });
 
 const bundled = join(root, "renders", ".svg-entry.mjs");
-await build({ entryPoints: [join(root, "scripts", "svg-entry.tsx")], bundle: true, platform: "node", format: "esm", jsx: "automatic", outfile: bundled, logLevel: "error" });
+await build({ entryPoints: [join(root, "scripts", "svg-entry.tsx")], bundle: true, platform: "node", format: "esm", jsx: "automatic", packages: "external", outfile: bundled, logLevel: "error" });
 const { svgOf } = await import(pathToFileURL(bundled).href);
 
 const ctx = await setup();
