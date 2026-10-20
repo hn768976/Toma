@@ -54,6 +54,7 @@ def main():
     ap.add_argument('cmd')
     ap.add_argument('--keys', default=','.join(AUDIT_KEYS))
     ap.add_argument('--size', default='1920x1080')
+    ap.add_argument('--sizes', default='1920x1080,3840x2160,6000x3375')
     a = ap.parse_args()
     keys = a.keys.split(',')
     W, H = map(int, a.size.split('x'))
@@ -67,7 +68,7 @@ def main():
             save_times(times); print(k, f'{dt:.1f}s', flush=True)
     elif a.cmd in ('time4k', 'speed'):
         times = load_times()
-        sizes = [(3840, 2160)] if a.cmd == 'time4k' else [(1920, 1080), (3840, 2160), (6000, 3375)]
+        sizes = [(3840, 2160)] if a.cmd == 'time4k' else [tuple(map(int, z.split('x'))) for z in a.sizes.split(',')]
         for k in keys:
             for (w, h) in sizes:
                 img, dt = paint_timed(k, w, h)

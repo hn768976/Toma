@@ -30,3 +30,11 @@ Charming at 1080p: torn-strip dusk sky, paper sun, cut-paper pines, kraft boat; 
 Strongest of its group, clean stock-ready flat landscape; far peaks generic triangles, mist bars look like UI bars, faint vertical seam on near range; no gradients (banded sky). 9 stages.
 ## synthwave — 44.1s
 Striking wireframe magenta/cyan ranges, torn mirror bars, striped sun behind peak, tape playback; sun reflection reads as a second sun (known lib issue), sun stripes hidden, sky mostly violet, scratchy reeds. Bloom/haze px-fixed. 10 stages.
+## stitch — 105.5s
+Reads as real Aida cross-stitch with dusk gradient but muddy/low-contrast (cloth greys every colour), pines barely separate; quantised to 26 colours; every colour a full-frame pass (very slow); cell must be integer px. Not sellable as is. 9 stages.
+## stainedglass — 13.0s
+Strongest of its group: rich pot-metal bands, radial pieces behind peak, believable leading, glitter path; big Voronoi pieces make mountains busy, grisaille reeds vanish; strong built-in vignette; needed private g.win override for full-bleed. 5 workshop stages (cartoon, glass, trace, matt, lead).
+## mosaic — 37.4s
+Convincing tesserae, flowing rows around ridges, gold ripple lines, readable boat; left pines merge into near mountains, blocky pine reflections, crude dark bottom band; needed custom dusk stone palette + darker grout. 9 stages.
+## delft — 15.8s
+Clean, charming single tile picture, fluent cobalt ripples; monochrome so no dusk palette; pines built manually; reflections lost among ripple dashes, small birds. 4 workshop stages only (tiles, pounce, outline, fired).
