@@ -34,7 +34,9 @@ const StrokePath: React.FC<{ s: Stroke; frame: number; clip?: boolean }> = ({ s,
   const hasTex = g.streaks.length > 0;
   return (
     <g style={{ mixBlendMode: blend }}>
-      <path d={g.outline} fill={s.color} />
+      {g.outlines.map((d, i) => (
+        <path key={i} d={d} fill={s.color} style={i ? { mixBlendMode: blend } : undefined} />
+      ))}
       {hasTex ? (
         <>
           <clipPath id={clipId}>

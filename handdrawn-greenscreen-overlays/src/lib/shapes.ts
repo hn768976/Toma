@@ -1,5 +1,5 @@
 // Doodle shape generators (centre-lines for the pen).
-import { cubic, handEllipse, handLine, Pt, wobble } from './geom';
+import { cubic, handEllipse, handLine, lerpPt, Pt, wobble } from './geom';
 import { range, Rng, signed } from './random';
 
 /** 5-point star vertices with hand jitter. */
@@ -29,15 +29,15 @@ export const starStroke = (c: Pt, R: number, r: Rng, rot = 0): Pt[] => {
 /** 4-point sparkle (concave diamond), one stroke. */
 export const sparkleStroke = (c: Pt, R: number, r: Rng): Pt[] => {
   const tips: Pt[] = [0, 1, 2, 3, 4].map((i) => {
-    const a = -Math.PI / 2 + (i * Math.PI) / 2 + signed(r, 0.05);
-    const rad = R * (i % 2 ? range(r, 0.62, 0.78) : range(r, 0.95, 1.08));
+    const a = -Math.PI / 2 + (i * Math.PI) / 2 + signed(r, 0.16);
+    const rad = R * (i % 2 ? range(r, 0.5, 0.82) : range(r, 0.85, 1.2));
     return [c[0] + rad * Math.cos(a), c[1] + rad * Math.sin(a)];
   });
   const out: Pt[] = [];
   for (let i = 0; i < 4; i++) {
     const a = tips[i];
     const b = i === 3 ? ([tips[4][0] + signed(r, 10), tips[4][1] + range(r, 8, 22)] as Pt) : tips[i + 1];
-    const k = range(r, 0.1, 0.2);
+    const k = range(r, 0.02, 0.3);
     const m1: Pt = [a[0] + (c[0] - a[0]) * (0.75 - k), a[1] + (c[1] - a[1]) * (0.75 - k)];
     const m2: Pt = [b[0] + (c[0] - b[0]) * (0.75 - k), b[1] + (c[1] - b[1]) * (0.75 - k)];
     out.push(...cubic(a, m1, m2, b, 30).slice(i ? 1 : 0));
@@ -76,8 +76,9 @@ export const speechBubble = (c: Pt, rx: number, ry: number, tip: Pt, r: Rng, gap
     pts.push([c[0] + Math.cos(a) * rx * k, c[1] + Math.sin(a) * ry * k]);
   }
   const end = pts[pts.length - 1];
-  const t2 = handLine(end, tip, r, 3);
-  const t3 = handLine(tip, [pts[0][0] + signed(r, 6), pts[0][1] + signed(r, 6)], r, 3);
+  const t2 = wobble(cubic(end, lerpPt(end, tip, 0.4), lerpPt(end, tip, 0.75), tip, 30), r, 5, 300);
+  const tip2: Pt = [tip[0] + signed(r, 14), tip[1] + signed(r, 14)];
+  const t3 = wobble(cubic(tip2, lerpPt(tip2, pts[0], 0.3), lerpPt(tip2, pts[0], 0.6), [pts[0][0] + signed(r, 6), pts[0][1] + signed(r, 6)], 30), r, 6, 300);
   return [...pts, ...t2.slice(1), ...t3.slice(1)];
 };
 
@@ -106,9 +107,13 @@ export const boxBubble = (x: number, y: number, w: number, h: number, tipX: numb
 export const cloud = (c: Pt, rx: number, ry: number, bumps: number, r: Rng): Pt[] => {
   const pts: Pt[] = [];
   const start = range(r, 0, Math.PI * 2);
+  const wts = Array.from({ length: bumps }, () => range(r, 0.6, 1.5));
+  const tot = wts.reduce((x, y) => x + y, 0);
+  const acc = [0];
+  wts.forEach((w) => acc.push(acc[acc.length - 1] + w / tot));
   for (let b = 0; b < bumps; b++) {
-    const a0 = start + (b / bumps) * Math.PI * 2;
-    const a1 = start + ((b + 1) / bumps) * Math.PI * 2;
+    const a0 = start + acc[b] * Math.PI * 2;
+    const a1 = start + acc[b + 1] * Math.PI * 2;
     const p0: Pt = [c[0] + Math.cos(a0) * rx, c[1] + Math.sin(a0) * ry];
     const p1: Pt = [c[0] + Math.cos(a1) * rx, c[1] + Math.sin(a1) * ry];
     const am = (a0 + a1) / 2;

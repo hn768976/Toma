@@ -19,7 +19,7 @@ const X0 = 170; // left end of the band
 const X1 = 3680; // right end
 const SWEEP_END = 45; // 1.5 s
 const WIPE_FROM = 105; // 3.5 s
-const WIPE_TO = 119;
+const WIPE_TO = 114;
 /** Below 4K the canvas is supersampled 1.5x so brush grain edges come out antialiased (4K draws 1:1). */
 const SUPERSAMPLE = 1.5;
 
@@ -225,6 +225,9 @@ export const BrushStrokeReveal: React.FC = () => {
           <feComponentTransfer>
             <feFuncA type="linear" slope={2.4} intercept={-0.6} />
           </feComponentTransfer>
+          {/* morphological close: seals single-pixel pinholes in the grain (no blur) */}
+          <feMorphology operator="dilate" radius={2} />
+          <feMorphology operator="erode" radius={2} />
         </filter>
       </svg>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', filter: 'url(#inkify)' }} />

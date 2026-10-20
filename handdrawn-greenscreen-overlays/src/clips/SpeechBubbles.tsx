@@ -35,7 +35,7 @@ const bubbleElement = (shapes: Shape[], key: string, start: number, exitAt: numb
   const els: Element[] = [];
   let t = start;
   for (const sh of shapes) {
-    const rough = roughCurve(sh.loop, ID, sh.key, { roughness: 0.9, maxRandomnessOffset: 7, bowing: 1 });
+    const rough = roughCurve(sh.loop, ID, sh.key, { roughness: 1.5, maxRandomnessOffset: 11, bowing: 2 });
     const outline: SeqItem[] = rough.outline.map((pts, i) => ({ ...black, pts, speed: i ? 0.7 : 0.95, size: i ? LINE.doodle - 2 : LINE.doodle + 1 }));
     // fill paint starts right after the first outline pass
     const seq = sequence(ID, sh.key, outline, t);
@@ -48,7 +48,7 @@ const bubbleElement = (shapes: Shape[], key: string, start: number, exitAt: numb
     els.push({
       id: sh.key,
       strokes,
-      fill: { poly: inset(sh.loop, 11), color: INK.white, paint: withExit(paint.strokes, exitAt, 12, 'reverse'), solidFrom: paint.end + 1, exitAt },
+      fill: { poly: inset(sh.loop, 15), color: INK.white, paint: withExit(paint.strokes, exitAt, 12, 'reverse'), solidFrom: paint.end + 1, exitAt },
     });
     t = Math.max(seq.end, paint.end) + 3;
   }

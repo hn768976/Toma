@@ -51,22 +51,38 @@ export const resample = (pts: Pt[], step: number): Pt[] => {
   return out;
 };
 
-/** Low-frequency sideways wobble: a sum of a few seeded sines along the arc. */
+/**
+ * Sideways hand drift: one slow sag/bow over the whole stroke plus
+ * non-periodic wander from random control points at irregular spacing
+ * (cubic-smoothed). No sine waves, so nothing repeats evenly.
+ */
 export const wobble = (pts: Pt[], r: Rng, amp: number, wavelength = 900): Pt[] => {
   const dense = resample(pts, 6);
   const cum = cumulative(dense);
-  const waves = [0, 1, 2].map((i) => ({
-    k: (Math.PI * 2) / (wavelength * range(r, 0.6, 1.4) / (1 + i * 0.9)),
-    ph: range(r, 0, Math.PI * 2),
-    a: amp / (1 + i * 1.4),
-  }));
+  const L = cum[cum.length - 1] || 1;
+  // irregular knots
+  const knots: { s: number; v: number }[] = [{ s: 0, v: signed(r, amp * 0.6) }];
+  while (knots[knots.length - 1].s < L) {
+    const step = wavelength * range(r, 0.3, 1.25);
+    knots.push({ s: knots[knots.length - 1].s + step, v: signed(r, amp) * (r() < 0.25 ? 1.6 : 1) });
+  }
+  const sag = signed(r, amp * 1.4) * Math.min(1, L / 1500);
+  const noise = (s: number) => {
+    let i = 0;
+    while (i < knots.length - 2 && knots[i + 1].s < s) i++;
+    const k0 = knots[Math.max(0, i - 1)].v, k1 = knots[i].v, k2 = knots[i + 1].v, k3 = knots[Math.min(knots.length - 1, i + 2)].v;
+    const t = (s - knots[i].s) / (knots[i + 1].s - knots[i].s);
+    const t2 = t * t, t3 = t2 * t;
+    return 0.5 * (2 * k1 + (-k0 + k2) * t + (2 * k0 - 5 * k1 + 4 * k2 - k3) * t2 + (-k0 + 3 * k1 - 3 * k2 + k3) * t3);
+  };
   return dense.map((p, i) => {
     const a = dense[Math.max(0, i - 1)];
     const b = dense[Math.min(dense.length - 1, i + 1)];
     const len = dist(a, b) || 1;
     const nx = -(b[1] - a[1]) / len;
     const ny = (b[0] - a[0]) / len;
-    const o = waves.reduce((acc, w) => acc + w.a * Math.sin(w.k * cum[i] + w.ph), 0);
+    const u = cum[i] / L;
+    const o = noise(cum[i]) + sag * Math.sin(Math.PI * u);
     return [p[0] + nx * o, p[1] + ny * o] as Pt;
   });
 };
@@ -161,6 +177,37 @@ export const arrowHead = (tip: Pt, dir: number, size: number, r: Rng): Pt[] => {
   const b1: Pt = [tip[0] + Math.cos(a1) * l1, tip[1] + Math.sin(a1) * l1];
   const b2: Pt = [t2[0] + Math.cos(a2) * l2, t2[1] + Math.sin(a2) * l2];
   return [...handLine(b1, tip, r, 2), ...handLine(t2, b2, r, 2).slice(1)];
+};
+
+/**
+ * Arrowheads the way different people draw them, as pen strokes:
+ * 0 one-stroke V, 1 two separate barbs flicked into the tip,
+ * 2 open triangle in one loop (overshooting its start), 3 V with one long hooked barb.
+ */
+export const arrowHeads = (tip: Pt, dir: number, size: number, r: Rng, style: number): Pt[][] => {
+  const a1 = dir + Math.PI - range(r, 0.36, 0.66);
+  const a2 = dir + Math.PI + range(r, 0.34, 0.64);
+  const l1 = size * range(r, 0.75, 1.2);
+  const l2 = size * range(r, 0.65, 1.1);
+  const b1: Pt = [tip[0] + Math.cos(a1) * l1, tip[1] + Math.sin(a1) * l1];
+  const b2: Pt = [tip[0] + Math.cos(a2) * l2, tip[1] + Math.sin(a2) * l2];
+  const t2: Pt = [tip[0] + signed(r, 6), tip[1] + signed(r, 6)];
+  switch (style % 4) {
+    case 1:
+      return [handLine(b1, tip, r, 2), handLine(b2, t2, r, 2)];
+    case 2: {
+      const back: Pt = [b1[0] + (b2[0] - b1[0]) * 1.08, b1[1] + (b2[1] - b1[1]) * 1.08];
+      return [[...handLine(b1, tip, r, 2), ...handLine(t2, b2, r, 2).slice(1), ...handLine(b2, back, r, 1.5).slice(1), ...handLine(back, [b1[0] + signed(r, 8), b1[1] + signed(r, 8)], r, 1.5).slice(1)]];
+    }
+    case 3: {
+      const hookLen = l2 * 1.35;
+      const hb: Pt = [t2[0] + Math.cos(a2) * hookLen, t2[1] + Math.sin(a2) * hookLen];
+      const bend: Pt = [(t2[0] + hb[0]) / 2 + Math.cos(a2 + Math.PI / 2) * size * 0.18, (t2[1] + hb[1]) / 2 + Math.sin(a2 + Math.PI / 2) * size * 0.18];
+      return [[...handLine(b1, tip, r, 2), ...cubic(t2, bend, bend, hb, 24).slice(1)]];
+    }
+    default:
+      return [arrowHead(tip, dir, size, r)];
+  }
 };
 
 /** Direction at the end of a polyline. */

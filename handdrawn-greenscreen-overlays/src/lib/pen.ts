@@ -85,6 +85,7 @@ export const withExit = (strokes: Stroke[], exitStart: number, exitDur = 12, exi
 // ---------------------------------------------------------------------------
 
 interface Prepared {
+  splits: number[]; // arc fractions where the stroke re-enters its own ink (drawn as separate pieces so overlaps darken)
   pts: Pt[]; // time-uniform samples
   u: number[]; // arc fraction of each sample
   pressure: number[];
@@ -117,12 +118,52 @@ export const prepare = (s: Stroke): Prepared => {
     u.push(a);
     const v = clamp01(speedAt(t) / vmax);
     // faster -> lighter pressure -> thinner; plus a small wandering hand pressure
-    const p = 0.92 - 0.55 * v + 0.05 * Math.sin(f1 * 6.28 * a + ph1) + 0.03 * Math.sin(f2 * 6.28 * a + ph2);
+    // touch-down blot (ink floods while the pen is still), lighter on fast runs,
+    // plus a slow uneven hand pressure
+    const blot = 0.18 * Math.exp(-t * 14);
+    const p = 0.9 + blot - 0.62 * v + 0.1 * Math.sin(f1 * 6.28 * a + ph1) * Math.sin(f2 * 3.1 * a + ph2) + 0.05 * Math.sin(f2 * 6.28 * a + ph1);
     pressure.push(clamp01(p));
   }
-  const prep = { pts, u, pressure, len: L };
+  const prep = { pts, u, pressure, len: L, splits: findSelfOverlaps(s.pts, cum, s.size) };
   cache.set(s.id, prep);
   return prep;
+};
+
+/**
+ * Where a stroke runs back over ink it laid down earlier (a loop, a circle's
+ * overshoot): returns arc fractions to cut it at, so each piece is its own
+ * multiplied path and the overlap darkens like doubled marker ink.
+ */
+const findSelfOverlaps = (pts: Pt[], cum: number[], size: number): number[] => {
+  const L = cum[cum.length - 1] || 1;
+  const step = Math.max(4, size * 0.5);
+  const samples: { p: Pt; s: number }[] = [];
+  for (let s = 0; s <= L; s += step) samples.push({ p: pointAtLength(pts, cum, s), s });
+  const cell = size * 1.5;
+  const grid = new Map<string, number[]>();
+  const splits: number[] = [];
+  let lastCut = 0;
+  samples.forEach(({ p, s }, i) => {
+    const gx = Math.floor(p[0] / cell);
+    const gy = Math.floor(p[1] / cell);
+    let hit = false;
+    for (let dx = -1; dx <= 1 && !hit; dx++)
+      for (let dy = -1; dy <= 1 && !hit; dy++)
+        for (const j of grid.get(`${gx + dx},${gy + dy}`) ?? []) {
+          if (s - samples[j].s > size * 6 && samples[j].s >= lastCut && dist(p, samples[j].p) < size * 0.9) {
+            hit = true;
+            break;
+          }
+        }
+    if (hit && s - lastCut > size * 6 && splits.length < 6) {
+      splits.push(s / L);
+      lastCut = s;
+    }
+    const k = `${gx},${gy}`;
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k)!.push(i);
+  });
+  return splits;
 };
 
 /** Visible window [from, to] (arc-time fractions 0..1) of a stroke at a frame. */
@@ -160,7 +201,8 @@ const boilFn = (id: string, frame: number, amp: number) => {
 };
 
 export interface StrokeGeom {
-  outline: string;
+  outline: string; // all pieces (for clipping)
+  outlines: string[]; // pieces, each its own multiplied path
   streaks: string[];
   center: Pt[];
 }
@@ -192,19 +234,38 @@ export const strokeGeom = (s: Stroke, frame: number): StrokeGeom | null => {
   const visLen = prep.len * (prep.u[Math.min(M, Math.ceil(i1))] - prep.u[Math.floor(i0)]);
   const taper = s.taper !== false;
   const done = win[1] >= 1;
-  const startTaper = taper ? Math.min(s.size * 3.2, visLen * 0.18) : 0;
+  const startTaper = taper ? Math.min(s.size * 1.6, visLen * 0.1) : 0;
   const endTaper = taper ? Math.min(s.size * 4.5, visLen * 0.22) * (done ? 1 : smoothstep(0.75, 1, win[1])) : 0;
-  const outlinePts = getStroke(pts, {
-    size: s.size,
-    thinning: s.thinning ?? 0.6,
-    smoothing: 0.55,
-    streamline: 0.3,
-    simulatePressure: false,
-    start: { taper: startTaper, cap: true },
-    end: { taper: endTaper, cap: true },
-    last: done,
+  const opts = { size: s.size, thinning: s.thinning ?? 0.6, smoothing: 0.55, streamline: 0.3, simulatePressure: false };
+  // cut into pieces at self-overlaps (each piece is its own path)
+  const cuts = prep.splits.map((u) => u);
+  const pieces: number[][][] = [[]];
+  const us: number[] = [];
+  for (let k = Math.floor(i0); k <= Math.ceil(i1); k++) us.push(prep.u[Math.min(M, k)]);
+  let ci = 0;
+  pts.forEach((p, k) => {
+    const u = us[Math.min(us.length - 1, k)];
+    while (ci < cuts.length && u >= cuts[ci]) {
+      ci++;
+      const prev = pieces[pieces.length - 1];
+      if (prev.length) pieces.push([prev[prev.length - 1]]);
+    }
+    pieces[pieces.length - 1].push(p);
   });
-  const outline = toSvgPath(outlinePts);
+  const outlines = pieces
+    .filter((pc) => pc.length >= 2)
+    .map((pc, k, all) =>
+      toSvgPath(
+        getStroke(pc, {
+          ...opts,
+          start: { taper: k === 0 ? startTaper : 0, cap: true },
+          end: { taper: k === all.length - 1 ? endTaper : 0, cap: true },
+          last: k < all.length - 1 || done,
+        }),
+      ),
+    )
+    .filter(Boolean);
+  const outline = outlines.join(' ');
   const center = pts.map((p) => [p[0], p[1]] as Pt);
   const streaks: string[] = [];
   if (s.streak || s.edge) {
@@ -224,7 +285,7 @@ export const strokeGeom = (s: Stroke, frame: number): StrokeGeom | null => {
         streaks.push(toSvgPath(getStroke(line, { size: s.size * (s.edge ? 0.14 : 0.1), thinning: 0, smoothing: 0.5, streamline: 0.3, simulatePressure: false, last: done })));
     }
   }
-  return { outline, streaks, center };
+  return { outline, outlines, streaks, center };
 };
 
 /** perfect-freehand outline -> SVG path (quadratic midpoints). */

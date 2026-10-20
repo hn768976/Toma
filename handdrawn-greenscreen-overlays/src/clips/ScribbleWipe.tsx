@@ -17,7 +17,7 @@ const UNSCRIBBLE = 40;
 
 // A fat felt marker: the zig-zag passes are far wider than the 28 px line
 // weight so a hand-speed scribble can bury a 4K frame in 1.2 s.
-const MARKER = 400;
+const MARKER = 440;
 
 const build = (): Element[] => {
   const r = rngFor(ID, 'scribble');
@@ -25,11 +25,11 @@ const build = (): Element[] => {
   let x = -380;
   let up = true;
   while (x < W + 300) {
-    x += range(r, 195, 230);
-    const y = up ? range(r, -330, -230) : H + range(r, 230, 330);
+    x += range(r, 212, 245);
+    const y = up ? range(r, -440, -340) : H + range(r, 340, 440);
     // each pass bows a little, so the leading edge is never a ruler line
     const prev = ctrl[ctrl.length - 1];
-    ctrl.push([(prev[0] + x) / 2 + signed(r, 40), (prev[1] + y) / 2 + signed(r, 120)]);
+    ctrl.push([(prev[0] + x) / 2 + signed(r, 22), (prev[1] + y) / 2 + signed(r, 120)]);
     ctrl.push([x + signed(r, 25), y]);
     up = !up;
   }

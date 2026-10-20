@@ -13,7 +13,7 @@
 //    module-level promise awaited behind delayRender.
 import React, { useLayoutEffect, useRef } from 'react';
 import { continueRender, delayRender, staticFile, useCurrentFrame } from 'remotion';
-import { boilPlugin, TegakiEngine } from 'tegaki/core';
+import { boilPlugin, TegakiEngine, variationPlugin } from 'tegaki/core';
 import type { TegakiPlugin } from 'tegaki/core';
 import caveatBundle from 'tegaki/fonts/caveat';
 import { boilStep } from './random';
@@ -34,6 +34,8 @@ const loadFonts = () => (fontsReady ??= TegakiEngine.preload(CAVEAT as never));
 
 /** Boil plugin whose drawing comes from the frame (floor(frame/3)), not from Tegaki's clock. */
 const boilBase = boilPlugin({ drawings: 8, fps: 10, amount: 0.006, detail: 0.35, width: 0.07, idle: true }) as TegakiPlugin;
+/** Per-letter irregularity (Tegaki's variation plugin): no two letters drawn alike. */
+const variation = variationPlugin({ amount: 1.3 }) as TegakiPlugin;
 const boilCache = new Map<number, TegakiPlugin>();
 const frameBoil = (step: number): TegakiPlugin => {
   const key = ((step % 997) + 997) % 997;
@@ -74,7 +76,7 @@ export const TegakiText: React.FC<TegakiTextProps> = ({ text, progress, fontSize
         font: CAVEAT as never,
         seed,
         time: { mode: 'controlled' as const, value: Math.min(1, Math.max(0, progress)), unit: 'progress' as const },
-        plugins: [frameBoil(boilStep(frame))],
+        plugins: [variation, frameBoil(boilStep(frame))],
         quality: { pixelRatio: 2 },
         reducedMotion: 'never' as const,
       };

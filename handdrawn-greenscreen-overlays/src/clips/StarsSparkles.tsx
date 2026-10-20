@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { popScale, scaleAbout, twinkle } from '../lib/anim';
 import { INK, LINE } from '../lib/config';
-import { Pt } from '../lib/geom';
+import { Pt, wobble } from '../lib/geom';
 import { Element, GreenScreen, InkElements } from '../lib/InkLayer';
 import { sequence, SeqItem, withExit } from '../lib/pen';
 import { irange, range, rngFor } from '../lib/random';
@@ -23,12 +23,12 @@ const star = (key: string, c: Pt, R: number, rot: number): Kind => {
     fill: INK.orange,
     fillStyle: 'zigzag',
     hachureGap: R * 0.13,
-    hachureAngle: -41,
+    hachureAngle: range(rngFor(ID, key, 'angle'), -62, -22),
     disableMultiStrokeFill: true,
     roughness: 1.4,
   });
   // the hatch goes in as one continuous back-and-forth scribble
-  const fills = [chain(fill.fill, 1e9)[0]].filter((p) => p && p.length > 4);
+  const fills = [chain(fill.fill, 1e9)[0]].filter((p) => p && p.length > 4).map((p) => wobble(p, rngFor(ID, key, 'hatch'), 5, 160));
   return {
     key,
     c,

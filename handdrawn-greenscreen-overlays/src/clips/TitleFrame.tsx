@@ -75,7 +75,7 @@ const build = (): Element[] => {
   // exits: staggered reverse draw, 0.4 s each, clean green before 6 s
   const order = [...els].reverse();
   return order
-    .map((e, n) => ({ ...e, strokes: withExit(e.strokes, 136 + n * 2, 12, 'reverse') }))
+    .map((e, n) => ({ ...e, strokes: withExit(e.strokes, 132 + n * 2, 12, 'reverse') }))
     .reverse();
 };
 

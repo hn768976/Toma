@@ -16,7 +16,7 @@ export const H = 2160;
 export const FPS = 30;
 
 /** Line weights at 4K. */
-export const LINE = { doodle: 14, scribble: 28 };
+export const LINE = { doodle: 17, scribble: 28 }; // nominal pen size; with pressure thinning the drawn line averages ~14 px
 
 /** Streak tone inside main-ink strokes (a slightly lighter, dry-marker streak). */
 export const STREAK = '#2c2c2c';

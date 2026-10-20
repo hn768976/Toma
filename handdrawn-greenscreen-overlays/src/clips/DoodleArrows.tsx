@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { INK, LINE } from '../lib/config';
-import { arrowHead, cubic, endDir, handLine, lerp, Pt, spline, startDir, wobble } from '../lib/geom';
+import { arrowHeads, cubic, endDir, handLine, lerp, Pt, spline, startDir, wobble } from '../lib/geom';
 import { Element, GreenScreen, InkElements } from '../lib/InkLayer';
 import { sequence, SeqItem, withExit } from '../lib/pen';
 import { range, rngFor, signed } from '../lib/random';
@@ -73,8 +73,9 @@ const buildArrows = (): Element[] => {
     const s = shafts[idx];
     const rr = rngFor(ID, s.key, 'head');
     const items: SeqItem[] = [{ ...ink, pts: s.pts }];
-    items.push({ ...ink, pts: arrowHead(s.pts[s.pts.length - 1], endDir(s.pts, 60), s.head, rr), speed: 0.8 });
-    if (s.double) items.push({ ...ink, pts: arrowHead(s.pts[0], startDir(s.pts, 60), s.head * 0.92, rr), speed: 0.8 });
+    const style = [0, 3, 1, 2, 0, 1, 3, 2][n];
+    for (const pts of arrowHeads(s.pts[s.pts.length - 1], endDir(s.pts, 60), s.head, rr, style)) items.push({ ...ink, pts, speed: 0.75 });
+    if (s.double) for (const pts of arrowHeads(s.pts[0], startDir(s.pts, 60), s.head * 0.9, rr, style + 1)) items.push({ ...ink, pts, speed: 0.75 });
     const seq = sequence(ID, s.key, items, t);
     const exitAt = 246 + n * 4;
     els.push({ id: s.key, strokes: withExit(seq.strokes, exitAt, 12, 'reverse') });

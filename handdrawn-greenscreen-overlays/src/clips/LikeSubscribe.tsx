@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from 'remotion';
 import { popScale, scaleAbout } from '../lib/anim';
 import { GREEN, H, INK, LINE, W, WORDS } from '../lib/config';
-import { arrowHead, clamp01, cubic, endDir, Pt, wobble } from '../lib/geom';
+import { arrowHeads, clamp01, cubic, endDir, Pt, wobble } from '../lib/geom';
 import { Element, InkElements } from '../lib/InkLayer';
 import { sequence } from '../lib/pen';
 import { hashKeys, onTwos, rngFor } from '../lib/random';
@@ -17,8 +17,8 @@ export const LIKE_SUBSCRIBE_FRAMES = 180;
 // while leaving room for the heart and bell either side.
 const FONT_SIZE = 470;
 const WRITE_END = 88; // 0-3 s
-const FADE_FROM = 162; // 5.4 s
-const FADE_TO = 178;
+const FADE_FROM = 160; // 5.33 s
+const FADE_TO = 174;
 const HEART_C: Pt = [335, 960];
 const BELL_C: Pt = [3520, 960];
 const BELL_S = 190;
@@ -42,7 +42,7 @@ const build = (): Element[] => {
     'heart',
     [
       { color: INK.red, size: LINE.doodle + 6, pts: heartPts, speed: 0.5 },
-      ...[chain(hatch.fill, 1e9)[0]].map((pts) => ({ color: INK.red, size: LINE.doodle - 2, thinning: 0.3, pts, speed: 0.3 })),
+      ...[wobble(chain(hatch.fill, 1e9)[0], r('heart-hatch'), 4, 140)].map((pts) => ({ color: INK.red, size: LINE.doodle - 2, thinning: 0.3, pts, speed: 0.3 })),
     ],
     WRITE_END + 2,
   );
@@ -72,7 +72,7 @@ const build = (): Element[] => {
     'arrow',
     [
       { color: INK.main, size: LINE.doodle + 5, streak: true, pts: shaft },
-      { color: INK.main, size: LINE.doodle + 5, streak: true, pts: arrowHead(shaft[shaft.length - 1], endDir(shaft, 60), 140, r('head')), speed: 0.7 },
+      ...arrowHeads(shaft[shaft.length - 1], endDir(shaft, 60), 140, r('head'), 3).map((pts) => ({ color: INK.main, size: LINE.doodle + 5, streak: true, pts, speed: 0.7 })),
     ],
     WRITE_END + 12,
   );
