@@ -14,7 +14,7 @@ and rendered as **Remotion `<Still>` compositions** at **6000×3375** PNG.
 | remotion, @remotion/cli, @remotion/renderer, @remotion/bundler | 4.0.515 |
 | react, react-dom | 19.2.3 |
 | p5 | 1.11.13 |
-| p5.brush | 1.1.4 (its peer range is `p5 ^1.11.0`) |
+| p5.brush | 1.1.4 (its peer range is `p5 ^1.11.0`); vendored in `src/vendor/` with one patch, see below |
 | sharp (contact sheet) | 0.34.5 |
 | typescript | 5.9.3 |
 
@@ -109,7 +109,53 @@ p5.brush runs one full-sheet blend pass each time the fill colour changes.
 
 ## Render times
 
-RENDER_TIMES_PLACEHOLDER
+Measured in this repo's cloud container: 4 vCPU, no GPU (SwiftShader WebGL via Remotion's `swangle`), one still at a time. **All 35 are painted natively at 6000×3375 (`PAINT_SCALE = 1`, no upscaling).** The first still (WC_01, BloomField) took about 146 s at 6K, under the 3-minute threshold, so the Lanczos 2× path was not needed. It is still there: set `paintScale: 0.5` on a row, or pass `--paint-scale 0.5`.
+
+Total 66 min for 35 stills; per still 73–177 s (mean 113 s). Each total includes painting, compositing, the browser screenshot and PNG encoding.
+
+| still | total | paint | composite | p5.brush fills |
+|---|---:|---:|---:|---:|
+| WC_01_BloomField_BlushPastel.png | 136 s | 98 s | 36 s | 51 |
+| WC_01_BloomField_OceanBlues.png | 132 s | 95 s | 35 s | 51 |
+| WC_02_CornerWashes_SageEucalyptus.png | 91 s | 53 s | 36 s | 76 |
+| WC_02_CornerWashes_SunsetCoral.png | 87 s | 51 s | 34 s | 77 |
+| WC_03_GradedSky_LavenderDusk.png | 107 s | 70 s | 35 s | 39 |
+| WC_03_GradedSky_OceanBlues.png | 108 s | 72 s | 34 s | 39 |
+| WC_04_HorizontalBands_SoftRainbow.png | 100 s | 64 s | 34 s | 21 |
+| WC_04_HorizontalBands_TerracottaEarth.png | 87 s | 51 s | 35 s | 16 |
+| WC_05_SplatterDrips_IndigoNight.png | 149 s | 114 s | 33 s | 561 |
+| WC_05_SplatterDrips_SunsetCoral.png | 153 s | 116 s | 35 s | 562 |
+| WC_06_CentreBloom_GoldenOchre.png | 79 s | 43 s | 34 s | 14 |
+| WC_06_CentreBloom_LavenderDusk.png | 83 s | 45 s | 37 s | 14 |
+| WC_07_EdgeBleedFrame_BlushPastel.png | 123 s | 88 s | 33 s | 57 |
+| WC_07_EdgeBleedFrame_IndigoNight.png | 125 s | 90 s | 33 s | 57 |
+| WC_08_LayeredGlazes_MintPeach.png | 73 s | 39 s | 32 s | 13 |
+| WC_08_LayeredGlazes_OceanBlues.png | 82 s | 46 s | 34 s | 13 |
+| WC_09_LooseDots_SageEucalyptus.png | 114 s | 79 s | 33 s | 56 |
+| WC_09_LooseDots_SoftRainbow.png | 168 s | 133 s | 33 s | 61 |
+| WC_10_BrushSwatches_BlushPastel.png | 95 s | 60 s | 34 s | 117 |
+| WC_10_BrushSwatches_TerracottaEarth.png | 96 s | 60 s | 34 s | 123 |
+| WC_11_SaltTexture_IndigoNight.png | 137 s | 100 s | 35 s | 243 |
+| WC_11_SaltTexture_SageEucalyptus.png | 135 s | 100 s | 33 s | 249 |
+| WC_12_GranulatingWash_OceanBlues.png | 77 s | 43 s | 32 s | 9 |
+| WC_12_GranulatingWash_TerracottaEarth.png | 78 s | 43 s | 33 s | 9 |
+| WC_13_PourDrip_LavenderDusk.png | 151 s | 116 s | 33 s | 25 |
+| WC_13_PourDrip_SunsetCoral.png | 177 s | 141 s | 34 s | 29 |
+| WC_14_MarbledBlend_GoldenOchre.png | 123 s | 88 s | 33 s | 30 |
+| WC_14_MarbledBlend_MintPeach.png | 127 s | 94 s | 32 s | 30 |
+| WC_15_AbstractHorizon_LavenderDusk.png | 113 s | 78 s | 32 s | 14 |
+| WC_15_AbstractHorizon_SageEucalyptus.png | 113 s | 77 s | 34 s | 14 |
+| WC_16_ConfettiDabs_GoldenOchre.png | 127 s | 92 s | 33 s | 143 |
+| WC_16_ConfettiDabs_SoftRainbow.png | 161 s | 126 s | 33 s | 143 |
+| WC_17_DiagonalSweep_BlushPastel.png | 77 s | 43 s | 33 s | 31 |
+| WC_17_DiagonalSweep_IndigoNight.png | 76 s | 40 s | 33 s | 31 |
+| WC_18_HalfPageWash_OceanBlues.png | 88 s | 53 s | 33 s | 21 |
+
+Speed notes: each fill colour change costs p5.brush one full-sheet spectral blend pass (about 5–10 s at 6K on SwiftShader), so layouts group fills by colour. p5.brush's Canvas2D mask buffers are made CPU-backed (`willReadFrequently`). On a GPU-less renderer that alone cut painting time by more than 10×.
+
+## The p5.brush patch
+
+`src/vendor/p5.brush.js` is p5.brush 1.1.4's ES-module source with one change in `FillPolygon.trim`. The original removes one contiguous run of vertices from the middle of each layer polygon, which leaves a long straight chord across the shape. That chord showed as faceted inner layers and one-sided haze beside thin shapes. The patched version thins vertices evenly around the outline instead. The npm package stays a dependency (pinned) as the reference copy.
 
 ## Licences
 
