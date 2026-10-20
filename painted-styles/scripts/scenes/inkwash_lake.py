@@ -11,12 +11,14 @@ import numpy as np
 
 import drawkit
 from drawkit import Scaler, seed_all, save_png
-from inkpaint import spline, curve, blur
-from inkwash_kit import Ink, conifer, bird, depth_mask, STYLE, COLOURWAYS
+from inkpaint import spline, curve, blur, fbm1d
+from inkwash_kit import (Ink, conifer, leafy_tree, wet_tree, bird, ink_mass, cun, dian, ridge_accent,
+                         broad_stroke, wash_field, water_dashes, vnz, smooth1d, STYLE, COLOURWAYS)
 
 LIB = "inkpaint"
 GROUPS = ("sky", "clouds", "far", "near", "water", "mist", "boat", "birds", "reeds")
 HORIZON = 640
+SUN = (1335, 232, 30)      # pale dusk sun (design x, y, r)
 LAST = {}          # footprints of the last paint() (used by the independence check)
 
 
@@ -31,153 +33,223 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     CW, CH = S.W, S.H
     hz = S.y(HORIZON)
     hzi = int(round(hz))
-    below_hz = np.clip((YY - hz) / max(1.0, S(3)), 0, 1)
-    above_hz = 1 - below_hz
 
     p.setup_paper()
     p.snap('paper', dense=False)
 
-    # ridgelines are cheap 1D curves: computed up front so any group may use them
-    far = p.ridge(S.y(640), peaks=[(S.x(180), S(250), S(220)), (S.x(560), S(290), S(240)), (S.x(900), S(240), S(200)),
-                                   (S.x(1250), S(330), S(190)), (S.x(1560), S(270), S(230)), (S.x(1850), S(230), S(200)),
-                                   (S.x(-330), S(240), S(180)), (S.x(2250), S(250), S(180))],  # carry on into the bleed
-                  rough=S(18), rough_scale=S(150), seed=seed + 11)
-    near = p.ridge(S.y(650), peaks=[(S.x(80), S(210), S(260)), (S.x(420), S(220), S(300)), (S.x(820), S(150), S(220)),
-                                    (S.x(1150), S(60), S(180)), (S.x(1700), S(90), S(220)),
-                                    (S.x(-330), S(190), S(190))],
+    # ridgelines are cheap 1D curves: computed up front so any group may use them.
+    # The far range keeps to the middle and dissolves toward the right, leaving open sky.
+    far = p.ridge(S.y(648), peaks=[(S.x(170), S(150), S(200)), (S.x(560), S(250), S(230)), (S.x(880), S(215), S(190)),
+                                   (S.x(1215), S(300), S(170)), (S.x(1470), S(175), S(210)), (S.x(1850), S(70), S(260)),
+                                   (S.x(-330), S(150), S(180)), (S.x(2250), S(60), S(180))],
+                  rough=S(16), rough_scale=S(150), seed=seed + 11)
+    near = p.ridge(S.y(652), peaks=[(S.x(80), S(215), S(250)), (S.x(410), S(225), S(290)), (S.x(800), S(120), S(200)),
+                                    (S.x(1700), S(80), S(210)), (S.x(-330), S(190), S(190))],
                    rough=S(16), rough_scale=S(120), seed=seed + 21)
-    SX, SY = S.x(1240), S.y(560)
+    SX, SY, SR = S.x(SUN[0]), S.y(SUN[1]), S(SUN[2])
 
-    # ================================================================ sky
+    # ================================================================ sky: mostly bare paper
     p.begin('sky', 'sky' in inc)
-    t = np.clip(1 - YD / HORIZON, 0, 1.25)
-    sky = 0.24 * t ** 1.5 * (0.62 + 0.38 * p.noise2d(S(240), 4, seed + 3))
-    dist = np.hypot(XX - SX, (YY - SY) * 1.6)
-    sky *= 1 - 0.75 * np.exp(-dist / S(420))
-    sky *= np.clip((hz - YY) / S(40), 0, 1)
-    p.over(p.D, sky)
+    rng = p.rng
+    # a pale grey wash brushed across the top, its lower edge left to dissolve unevenly
+    yl = S.y(120) + fbm1d(CW, S(260), 4, p.sd()) * S(70) + fbm1d(CW, S(60), 3, p.sd()) * S(14)
+    y1 = int(min(CH, yl.max() + S(40)))
+    f = yl[None, :] - YY[:y1]
+    wash_field(p, 0, y1, 0, CW, f, 0.08, S(70), pool=0.0)
     p.snap('sky wash')
-    glow = 0.30 * np.exp(-(dist / S(560)) ** 2) + 0.12 * np.exp(-((YD - 600) / 170) ** 2)
-    glow *= (YY < hz)
-    p.over(p.R, glow * (0.8 + 0.2 * p.noise2d(S(160), 3, seed + 4)))
+    # dusk: a very pale vermilion wash laid wet across the lower sky, ragged at its top edge
+    yt = S.y(355) + fbm1d(CW, S(300), 4, p.sd()) * S(80) + np.clip((XD[0] - 1335) / 900, -1, 1) ** 2 * S(60)
+    yb = hz
+    y0 = int(max(0, yt.min() - S(30)))
+    f = np.minimum(YY[y0:hzi + 1] - yt[None, :], (hz - YY[y0:hzi + 1]) * 3)
+    hor = 0.55 + 0.45 * np.exp(-((XD[0] - 1250) / 700) ** 2)
+    a = wash_field(p, y0, hzi + 1, 0, CW, f, 1.0, S(110), pool=0.2, red=True)
+    p.R[y0:hzi + 1] *= (0.15 * hor)[None, :]
+    # the pale sun: one round touch of thin vermilion, its rim pooled where it dried
+    p.wet_dot(SX, SY, SR, 0.2, squash=1.04, red=True, irr=0.25)
     p.snap('sky glow', dense=False)
     p.end()
 
-    # ================================================================ clouds: thin dusk streaks
+    # ================================================================ clouds: a few thin wet strokes
     rng = p.begin('clouds', 'clouds' in inc)
-    cn = p.noise2d(S(90), 3, seed + 51)
-    for (cx, cy, ln, th, dens) in [(420, 150, 520, 9, 0.16), (980, 205, 420, 7, 0.13), (1540, 120, 600, 10, 0.15),
-                                   (700, 270, 300, 6, 0.10), (1760, 300, 260, 5, 0.09)]:
-        x0, x1 = int(max(0, S.x(cx - ln))), int(min(CW, S.x(cx + ln) + 1))
-        y0, y1 = int(max(0, S.y(cy - 60))), int(min(CH, S.y(cy + 60) + 1))
-        xd, yd = XD[y0:y1, x0:x1], YD[y0:y1, x0:x1]
-        u = (xd - cx) / ln                                   # -1..1 along the streak
-        wave = 10 * np.sin(u * 2.6 + cx * 0.01) - 6 * u      # gentle droop
-        env = np.clip(1 - u ** 2, 0, 1) ** 1.3
-        c = np.exp(-((yd - cy - wave) / th) ** 2) * env * (0.45 + 0.55 * cn[y0:y1, x0:x1])
-        p.over(p.D[y0:y1, x0:x1], dens * c)
-        # warm underside: the glow catches the cloud's lower edge
-        under = np.exp(-((yd - cy - wave - th * 0.9) / (th * 0.8)) ** 2) * env
-        p.over(p.R[y0:y1, x0:x1], 0.16 * under * (0.6 + 0.4 * cn[y0:y1, x0:x1]))
-        # one or two dry wisps riding the streak
-        for k in range(2):
-            a = rng.uniform(-0.8, 0.2); b = a + rng.uniform(0.35, 0.7)
-            pts = [(S.x(cx + ln * v), S.y(cy + 10 * np.sin(v * 2.6 + cx * 0.01) - 6 * v + rng.normal(0, th * 0.25)))
-                   for v in np.linspace(a, b, 5)]
-            p.stroke(spline(pts, 8), S(1.2), dens * 0.55, dry=0.7, taper=(0.45, 0.45))
+    for (cx, cy, ln, th, dens) in [(420, 170, 430, 20, 0.075), (1040, 232, 300, 13, 0.06), (1600, 132, 470, 24, 0.08),
+                                   (700, 300, 200, 10, 0.05)]:
+        pieces = int(rng.integers(1, 3))
+        u0 = rng.uniform(-1.0, -0.8)
+        for k in range(pieces):
+            u1 = min(1.0, u0 + 2.0 / pieces * rng.uniform(0.6, 1.0))
+            us = np.linspace(u0, u1, 9)
+            sag = rng.uniform(4, 16); tilt = rng.uniform(-8, 8)
+            pts = [(S.x(cx + ln * u), S.y(cy + sag * np.sin(u * 2.4 + cx * 0.01) + tilt * u + rng.normal(0, 1.5))) for u in us]
+            broad_stroke(p, pts, S(th) * rng.uniform(0.7, 1.3), dens * rng.uniform(0.8, 1.25), dry=rng.uniform(0.45, 0.8),
+                         taper=(rng.uniform(0.25, 0.5), rng.uniform(0.3, 0.6)), pool=rng.uniform(0.15, 0.6), hair=0.9)
+            if rng.random() < 0.6:                                    # dusk catching the underside
+                pts2 = [(x_, y_ + S(th) * rng.uniform(0.25, 0.5)) for (x_, y_) in pts[2:-2]]
+                broad_stroke(p, pts2, S(th) * rng.uniform(0.5, 0.8), 0.09, dry=0.5, taper=(0.4, 0.4), pool=0.2, red=True)
+            u0 = u1 + rng.uniform(0.06, 0.2)
+            if u0 >= 0.9:
+                break
         p.snap('cloud')
     p.end()
 
     # ================================================================ far range
     p.begin('far', 'far' in inc)
-    p.wash(far, dens=0.34, decay=S(240), tex=S(110), edge=0.3, mist_y=S.y(615), mist_h=S(55), seed=seed + 12)
+    fcov = ink_mass(p, far, dens=0.30, reach=S(120), glazes=3, soft=1.4, pool=0.5, blooms=2, dry=0.25,
+                    floor=hz, mist=(S.y(612), S(26)))
     p.snap('far wash')
-    p.ridge_line(far, S.x(980), S.x(1500), width=S(1.6), ink=0.14)
-    np.multiply(p.D, above_hz, out=p.D)
-    p.occlude(depth_mask(p, far, hz), np.clip((YY - far[None, :]) / S(3), 0, 1) * (YY < hz))
+    cun(p, far, S.x(1050), S.x(1420), n=int(16), shadow_x=S.x(1215), reach=S(70), ink=0.12, floor=S.y(600),
+        long_frac=0.4)
+    p.snap('far texture')
+    np.multiply(p.D, 1 - np.clip((YY - hz) / S(2), 0, 1), out=p.D)
+    p.occlude(0.97 * fcov, np.clip(fcov * 1.2, 0, 1) * (YY < hz))
     p.snap('far ridge', dense=False)
     p.end()
 
-    # ================================================================ near range + pines + shore
+    # ================================================================ near range + trees + shore
     rng = p.begin('near', 'near' in inc)
-    p.wash(near, dens=0.82, decay=S(300), tex=S(90), edge=0.45, mist_y=S.y(625), mist_h=S(45), seed=seed + 22)
+    ncov = ink_mass(p, near, dens=0.75, reach=S(150), glazes=4, soft=0.9, pool=0.55, blooms=2, dry=0.35,
+                    floor=hz, mist=(S.y(628), S(16)))
     p.snap('near wash')
-    p.cun(near, S.x(30), S.x(500), n=int(40 * s), shadow_x=S.x(420), spread=S(45), max_y=S.y(600), ink=0.16)
+    cun(p, near, S.x(-40), S.x(560), n=34, shadow_x=S.x(410), reach=S(110), ink=0.26, floor=S.y(612))
     p.snap('cun left')
-    p.cun(near, S.x(380), S.x(950), n=int(30 * s), shadow_x=S.x(420), spread=S(45), max_y=S.y(600), ink=0.16)
-    for _ in range(28):
-        x = rng.uniform(S.x(40), S.x(900))
-        p.dot(x, near[int(x)] + rng.uniform(S(2), S(16)), S(rng.uniform(1.6, 3.0)), 0.6)
-    np.multiply(p.D, above_hz, out=p.D)
-    p.snap('cun and moss')
-
-    left = [(70, 470, 0.55), (130, 430, 0.75), (190, 500, 0.6), (240, 420, 0.8), (300, 470, 0.7),
-            (350, 520, 0.6), (395, 455, 0.78), (450, 540, 0.62), (505, 560, 0.55), (165, 545, 0.85),
-            (275, 555, 0.9), (420, 580, 0.88)]
-    for i, (x, top, ink) in enumerate(left):
-        conifer(p, S.x(x) + rng.normal(0, S(4)), S.y(top), S.y(650) + rng.uniform(-S(4), S(4)), ink,
-                wind=0.25, halo=1.0)
-        p.snap(f'pine {i + 1}')
-    for i, (x, top, ink) in enumerate([(1520, 575, 0.55), (1580, 545, 0.62), (1640, 590, 0.5), (1720, 565, 0.6), (1785, 600, 0.5)]):
-        conifer(p, S.x(x), S.y(top), S.y(648), ink, wind=0.25, halo=0.8)
-        p.snap(f'right pine {i + 1}')
-    shore = S.y(645) + S(6) * np.sin(XD[0] / 90) + S(4)
-    shore_m = ((YY > shore[None, :] - S(6)) & (YY < hz + S(8))).astype(np.float32)
-    shore_m *= np.clip(1 - np.abs(XD - 290) / 300, 0, 1) ** 0.5 + np.clip(1 - np.abs(XD - 1650) / 190, 0, 1) ** 0.5
-    p.over(p.D, 0.55 * blur(shore_m, S(2)))
-    p.occlude(depth_mask(p, near, hz), np.clip((YY - near[None, :]) / S(3), 0, 1) * (YY < hz))
+    cun(p, near, S.x(560), S.x(960), n=16, shadow_x=S.x(800), reach=S(80), ink=0.22, floor=S.y(612))
+    cun(p, near, S.x(1500), S.x(1900), n=10, shadow_x=S.x(1700), reach=S(50), ink=0.18, floor=S.y(630))
+    ridge_accent(p, near, S.x(-60), S.x(700), ink=0.32, width=2.2, coverage=0.4)
+    p.snap('cun right')
+    dian(p, near, S.x(0), S.x(900), clusters=7, ink=0.62, depth=14, floor=S.y(620))
+    dian(p, near, S.x(1560), S.x(1860), clusters=2, ink=0.5, depth=8, floor=S.y(640))
+    p.snap('moss')
+    # trees: a loose grove on the left shore, a few on the right spit — each painted differently
+    grove = [(62, 470, 0.55, 'c'), (112, 452, 0.72, 'c'), (148, 520, 0.62, 'l'), (205, 430, 0.8, 'c'),
+             (232, 548, 0.58, 'w'), (300, 488, 0.7, 'c'), (338, 560, 0.66, 'l'), (402, 470, 0.78, 'c'),
+             (432, 585, 0.5, 'w'), (520, 575, 0.55, 'c'), (556, 600, 0.45, 'w')]
+    for i, (x, top, ink, kind) in enumerate(grove):
+        X = S.x(x) + rng.normal(0, S(6)); root = S.y(650) + rng.uniform(-S(5), S(4))
+        if kind == 'c':
+            conifer(p, X, S.y(top) + rng.normal(0, S(10)), root, ink, wind=0.25 + rng.normal(0, 0.15),
+                    halo=rng.uniform(0.4, 1.1))
+        elif kind == 'l':
+            leafy_tree(p, X, S.y(top), root, ink, lean=rng.normal(0.05, 0.08))
+        else:
+            wet_tree(p, X, S.y(top), root, ink * 0.8, lean=0.05)
+        p.snap(f'tree {i + 1}')
+    for i, (x, top, ink, kind) in enumerate([(1548, 572, 0.55, 'c'), (1592, 590, 0.42, 'w'), (1655, 556, 0.6, 'l'),
+                                             (1760, 602, 0.45, 'c')]):
+        X, root = S.x(x), S.y(648) + rng.uniform(-S(3), S(3))
+        if kind == 'c':
+            conifer(p, X, S.y(top), root, ink, wind=0.25, halo=0.6)
+        elif kind == 'l':
+            leafy_tree(p, X, S.y(top), root, ink, lean=0.04)
+        else:
+            wet_tree(p, X, S.y(top), root, ink, lean=0.0)
+        p.snap(f'right tree {i + 1}')
+    # the shore: a few broken horizontal pulls of a loaded brush along the waterline
+    for (xa, xb, k) in [(-60, 620, 5), (1490, 1860, 3)]:
+        for j in range(k):
+            x0 = rng.uniform(xa, xb - 80); x1 = min(xb, x0 + rng.uniform(80, 320))
+            y = 644 + rng.uniform(-1, 6)
+            pts = [S.pt(x_, y + rng.normal(0, 1.2)) for x_ in np.linspace(x0, x1, 5)]
+            broad_stroke(p, pts, S(rng.uniform(3, 7)), rng.uniform(0.35, 0.65), dry=rng.uniform(0.35, 0.75),
+                         taper=(rng.uniform(0.1, 0.4), rng.uniform(0.2, 0.5)), pool=0.4, side=rng.uniform(-0.5, 0.5))
+    np.multiply(p.D, 1 - np.clip((YY - hz - S(4)) / S(2), 0, 1), out=p.D)
+    p.occlude(0.97 * ncov, np.clip(ncov * 1.2, 0, 1) * (YY < hz))
     p.snap('shore', dense=False)
     p.end()
 
     # ================================================================ water + reflections
     rng = p.begin('water', 'water' in inc)
-    Hb = S.y(1080)                                   # design bottom (water keeps deepening into the bleed)
+    Hb = S.y(1080)
+    # mirrored back stack (included or not), squashed: reflections are shorter than the things
     rows = np.arange(hzi, CH)
-    src_rows = np.clip(2 * hzi - rows, 0, CH - 1)
-    refl = p.FD[src_rows, :].copy()                  # reflect the full back stack, included or not
-    rippl = p.noise2d(S(30), 3, seed + 31)
-    shift = ((rippl[hzi:CH] - 0.5) * S(14)).astype(np.float32)
-    cols = np.clip((p.xs[None, :] + shift).astype(int), 0, CW - 1)
+    src_rows = np.clip(np.round(hz - (rows - hz) / 0.72).astype(int), 0, CH - 1)
+    refl = p.FD[src_rows, :]
+    fade = np.exp(-((rows - hzi).astype(np.float32) / S(190)))[:, None]
+    # each brushed band of the reflection sits a little sideways of the next, and the far crest
+    # is not re-drawn: the reflection is a soft, simplified wash broken into horizontal pulls
+    bands = ((rows - hzi) / S(rng.uniform(3, 4))).astype(int)
+    off = (rng.normal(0, 1, bands.max() + 1) * S(5)).astype(np.float32)[bands]
+    cols = np.clip((p.xs[None, :] + off[:, None]).astype(int), 0, CW - 1)
     refl = np.take_along_axis(refl, cols, axis=1)
-    refl = blur(refl, S(2.5))
-    fade = np.exp(-((rows - hzi).astype(np.float32) / S(420)))[:, None]
-    refl *= 0.42 * fade * (0.8 + 0.2 * p.noise2d(S(18), 2, seed + 32)[hzi:CH])
-    rR = blur(p.FR[src_rows, :], S(3)) * 0.5 * fade
-    wy = np.clip((YY[hzi:CH] - hz) / (Hb - hz), 0, 1.2)
-    body = 0.05 + 0.28 * wy ** 1.4 * (0.75 + 0.25 * p.noise2d(S(200), 3, seed + 33)[hzi:CH])
+    refl = blur(refl, S(3))
+    # 1) a pale wash version of it: simplified sideways, broken into horizontal bands
+    Yw, Xw = YY[hzi:CH], XX[hzi:CH]
+    band = vnz(rng, Yw, Xw, S(3.2), S(140), 2)
+    pale = refl * fade * 0.36 * np.clip(0.7 + 0.6 * band, 0, 1)
+    pale *= np.clip(1 + 0.4 * vnz(rng, Yw, Xw, S(2.5), S(40), 1), 0, 2)
     Dw = p.D[hzi:CH]
-    p.over(Dw, refl)
-    p.snap('reflections')
-    p.over(Dw, body)
-    p.over(p.R[hzi:CH], rR)
-    p.snap('water body')
-    ys = rng.uniform(HORIZON + 18, 1060, 46); xs_ = rng.uniform(40, 1880, 46)
-    order = np.argsort(ys)                           # far ripples first
-    for b in range(3):
-        for j in order[b * 16:(b + 1) * 16]:
-            xdd, ydd = xs_[j], ys[j]
-            if 980 < xdd < 1360 and 770 < ydd < 860:
+    p.over(Dw, pale)
+    p.snap('reflection wash')
+    # 2) the dark things (trees, the near hill) re-stated with broken horizontal brush pulls
+    ry = hzi + S(3)
+    n_str = 0
+    while ry < hzi + S(150) and n_str < 160:
+        r = int(ry) - hzi
+        if r >= len(rows):
+            break
+        prof = smooth1d(refl[r], S(3)) * float(fade[r, 0])
+        on = prof > 0.3
+        xs_on = np.flatnonzero(np.diff(on.astype(np.int8)) != 0)
+        edges = np.concatenate([[0] if on[0] else [], xs_on + 1, [CW] if on[-1] else []]).astype(int)
+        for a_, b_ in zip(edges[::2], edges[1::2]):
+            if b_ - a_ < S(6):
                 continue
-            ln = rng.uniform(50, 170) * (0.5 + (ydd - HORIZON) / 400)
-            x, y = S.x(xdd), S.y(ydd)
-            p.stroke(spline([(x, y), (x + S(ln) / 2, y + rng.normal(0, S(1.2))), (x + S(ln), y)], 8),
-                     S(1.5), 0.12 + 0.16 * (ydd - HORIZON) / (1080 - HORIZON), dry=0.6, taper=(0.3, 0.3))
-        p.snap(f'ripples {b + 1}')
-    for i in range(10):
-        y = hz + S(20) + i * S(20) + rng.normal(0, S(3))
-        half = S(70) * (1 - i / 12) + rng.uniform(-S(10), S(10))
-        p.stroke(spline([(SX - half, y), (SX + rng.normal(0, S(8)), y), (SX + half, y)], 8), S(1.6), 0.28 * (1 - i / 12),
-                 dry=0.5, taper=(0.3, 0.3), red=True)
+            x0 = a_ + rng.uniform(0, 0.25) * (b_ - a_); x1 = b_ - rng.uniform(0, 0.25) * (b_ - a_)
+            pieces = int(rng.integers(1, 4))
+            xa = x0
+            for q in range(pieces):
+                xe = xa + (x1 - xa) * (rng.uniform(0.4, 1.0) if q < pieces - 1 else 1.0)
+                if xe - xa > S(5):
+                    ink = float(prof[int((xa + xe) / 2)]) * rng.uniform(0.35, 0.65)
+                    yy = ry + rng.normal(0, S(0.8))
+                    p.stroke([(xa, yy), ((xa + xe) / 2, yy + rng.normal(0, S(0.8))), (xe, yy + rng.normal(0, S(0.6)))],
+                             S(rng.uniform(1.4, 3.6)), ink, dry=rng.uniform(0.45, 0.85), taper=(0.15, 0.3), jitter=0.6)
+                    n_str += 1
+                xa = xe + S(rng.uniform(4, 22))
+                if xa >= x1:
+                    break
+        ry += S(rng.uniform(4, 11)) * (1 + (ry - hzi) / S(120))
+    p.snap('reflection strokes')
+    # 3) the water itself: mostly bare paper, a pale wash pulled across near the bottom
+    for k, (yc, hh, dens) in enumerate([(1000, 70, 0.10), (905, 22, 0.06)]):
+        top = S.y(yc - hh) + fbm1d(CW, S(240), 4, p.sd()) * S(18)
+        y0 = int(max(hzi, top.min() - S(30)))
+        f = np.minimum(YY[y0:CH] - top[None, :], S(hh * 2) + S(1200) * (k == 0))
+        f = np.minimum(f, (S.y(yc + hh) + fbm1d(CW, S(200), 3, p.sd())[None, :] * S(14) - YY[y0:CH]) + S(1200) * (k == 0))
+        wash_field(p, y0, CH, 0, CW, f, dens, S(60), pool=0.35)
+    p.snap('water body')
+    water_dashes(p, S.y(HORIZON + 16), S.y(1070), S.x(S.X0), S.x(S.X1), clusters=7, ink=0.30,
+                 avoid=[(S.x(1040), S.y(760), S.x(1340), S.y(880)), (S.x(-200), S.y(900), S.x(330), S.y(1200))])
+    p.snap('ripples 1')
+    water_dashes(p, S.y(HORIZON + 10), S.y(800), S.x(600), S.x(1500), clusters=4, ink=0.22,
+                 avoid=[(S.x(1040), S.y(760), S.x(1340), S.y(880))], persp=(0.4, 0.9))
+    p.snap('ripples 2')
+    # the sun's path: a few broken pale strokes under the sun
+    y = hz + S(14)
+    while y < hz + S(200):
+        f = (y - hz) / S(200)
+        half = SR * rng.uniform(0.6, 1.6) * (1.2 - 0.6 * f)
+        cx = SX + rng.normal(0, S(6))
+        if rng.random() < 0.8:
+            p.stroke(spline([(cx - half, y), (cx + rng.normal(0, S(4)), y + rng.normal(0, S(0.8))), (cx + half, y)], 8),
+                     S(rng.uniform(1.0, 2.2)), 0.30 * (1 - 0.7 * f) * rng.uniform(0.6, 1.1), dry=rng.uniform(0.4, 0.8),
+                     taper=(0.3, 0.3), red=True)
+        y += S(rng.uniform(8, 26))
     p.snap('sun path', dense=False)
     p.end()
 
-    # ================================================================ mist over the water, thicker at left
+    # ================================================================ mist: bare paper reserved over the water's edge
     p.begin('mist', 'mist' in inc)
-    m = np.exp(-((YD - 650 - 40 * (p.noise2d(S(380), 3, seed + 41) - 0.5)) / 42) ** 2)
-    m *= 0.55 + 0.45 * p.noise2d(S(160), 3, seed + 42)
-    m *= 0.45 + 0.55 * np.clip(1 - XD / 1500, 0, 1)
-    m[m < 0.003] = 0                                  # keep the lift strictly inside its band
-    p.occlude(0.82 * m, 0.6 * m)
+    rng = p.rng
+    y0, y1 = int(max(0, S.y(560))), int(min(CH, S.y(740)))
+    Ym, Xm = YY[y0:y1], XX[y0:y1]
+    wob = fbm1d(CW, S(380), 3, p.sd())[None, :] * S(22)
+    half = (S(14) + S(30) * np.clip(0.5 + fbm1d(CW, S(260), 3, p.sd()), 0, 1) * np.clip(1.25 - XD[0] / 1500, 0.3, 1))[None, :]
+    mz = vnz(rng, Ym, Xm, S(14), S(70), 3)
+    m = np.clip((half - np.abs(Ym - S.y(648) - wob) + mz * S(8)) / S(16), 0, 1)
+    m = m * np.clip(0.75 + 0.25 * vnz(rng, Ym, Xm, S(30), S(160), 2), 0, 1)
+    m[m < 0.003] = 0
+    occ = np.zeros_like(p.D); occ[y0:y1] = 0.85 * m
+    p.occlude(occ, 0.6 * occ)
     p.snap('mist', dense=False)
     p.end()
 
@@ -201,11 +273,11 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     p.snap('boat reflection', dense=False)
     p.end()
 
-    # ================================================================ birds, upper right
-    p.begin('birds', 'birds' in inc)
-    flock = [(1380, 250, 1.0), (1440, 225, 0.85), (1505, 262, 0.7), (1585, 205, 0.9), (1660, 240, 0.6)]
+    # ================================================================ birds, upper right: a loose, uneven flock
+    rng = p.begin('birds', 'birds' in inc)
+    flock = [(1395, 262, 1.0), (1452, 238, 0.82), (1478, 276, 0.62), (1590, 214, 0.9), (1672, 252, 0.55), (1712, 236, 0.45)]
     for i, (bx, by, sc) in enumerate(flock):
-        bird(p, S.x(bx), S.y(by), sc * s)
+        bird(p, S.x(bx + rng.normal(0, 6)), S.y(by + rng.normal(0, 5)), sc * s * rng.uniform(0.85, 1.15))
         p.snap(f'bird {i + 1}', dense=i < len(flock) - 1)
     p.end()
 
@@ -213,8 +285,8 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     rng = p.begin('reeds', 'reeds' in inc)
     for i in range(18):
         back = i < 6
-        x0 = S.x(rng.uniform(-10, 300)); y0 = S.y(1085)
-        h = rng.uniform(S(100), S(200))
+        x0 = S.x(rng.uniform(-10, 300)); y0 = S.y(max(1085, S.Y1 + 5))
+        h = rng.uniform(S(100), S(200)) + (y0 - S.y(1085))
         lean = rng.uniform(-S(25), S(30))
         top = (x0 + lean, y0 - h)
         stem = spline([(x0, y0), (x0 + lean * 0.35 + rng.normal(0, S(3)), y0 - h * 0.5), top], 10)

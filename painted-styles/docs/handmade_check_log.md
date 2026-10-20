@@ -14,3 +14,11 @@ honest (watercolour starts finished-looking without underdrawing; glass shows ov
 Declined: adding lettering/borders for period cues (stock backgrounds must stay text-free).
 
 Fixes: per-style rework of all 15 scene scripts (see docs/handmade_round1_brief.md and the per-style notes below).
+
+### Round 1 fixes — Art Deco
+Sunburst built ray by ray (unequal widths/tones, one knife edge + one oversprayed edge); clouds = stacked hand-cut
+stencil lumps (no inner hairline); mountains with one consistent sun-side light and varied creases/sub-facets;
+even grain replaced by droplet speckle following spray density; lib ripple-displacement water replaced by
+stencilled horizontal strips sprayed with the reflected colour (never an image copy); varied pines (3–6 tiers,
+asymmetric, lean); cut-shape rower and per-bird wing poses; mist sprayed down from a hand-cut edge; limited
+period palette with stepped sky bands; forest trunks/agaves/shadows/canopy all varied, hand-cut light wedges.

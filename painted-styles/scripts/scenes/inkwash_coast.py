@@ -14,7 +14,8 @@ from PIL import Image, ImageDraw
 import drawkit
 from drawkit import Scaler, seed_all, save_png
 from inkpaint import spline, curve, blur, fbm1d
-from inkwash_kit import Ink, conifer, bird, fill_poly, STYLE, COLOURWAYS
+from inkwash_kit import (Ink, conifer, any_tree, bird, fill_poly, ink_mass, cun, dian, ridge_accent, broad_stroke,
+                         wash_field, water_dashes, STYLE, COLOURWAYS)
 
 LIB = "inkpaint"
 GROUPS = ("all",)
@@ -42,60 +43,75 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
 
     # ---------------------------------------------------------------- sky: wash darker high up, a low sun
     SUNX, SUNY = 1480, 300
-    t = np.clip(1 - YD / HORIZON, 0, 1.25)
-    dist = np.hypot(XD - SUNX, (YD - SUNY) * 1.5)
-    sky = 0.22 * t ** 1.6 * (0.6 + 0.4 * p.noise2d(S(260), 4, seed + 3))
-    sky *= 1 - 0.7 * np.exp(-dist / 380)
-    sky *= np.clip((HORIZON - YD) / 30, 0, 1)
-    p.over(p.D, sky)
-    glow = (0.16 * np.exp(-(dist / 480) ** 2) + 0.07 * np.exp(-((YD - 560) / 120) ** 2)) * (YD < HORIZON)
-    p.over(p.R, glow * (0.8 + 0.2 * p.noise2d(S(160), 3, seed + 4)))
-    # a pale, watery sun: soft-edged disc of thin accent ink, not a seal-red stamp
-    sd = np.hypot(XD - SUNX, YD - SUNY)
-    disc = np.clip((36 - sd) / 5, 0, 1) * (0.7 + 0.3 * p.noise2d(S(14), 3, seed + 6))
-    p.over(p.R, 0.27 * disc + 0.06 * np.exp(-(sd / 70) ** 2))
-    # a few long thin cloud streaks
-    cn = p.noise2d(S(90), 3, seed + 5)
-    for (cx, cy, ln, th, dens) in [(600, 150, 560, 9, 0.14), (1350, 205, 480, 7, 0.12), (1780, 120, 420, 8, 0.12)]:
-        u = (XD - cx) / ln
-        env = np.clip(1 - u ** 2, 0, 1) ** 1.3
-        c = np.exp(-((YD - cy - 10 * np.sin(u * 2.4) + 5 * u) / th) ** 2) * env * (0.45 + 0.55 * cn)
-        p.over(p.D, dens * c)
+    # a pale grey wash brushed along the top, left to dissolve unevenly; the rest is bare paper
+    yl = S.y(105) + fbm1d(CW, S(260), 4, p.sd()) * S(60) + fbm1d(CW, S(60), 3, p.sd()) * S(12)
+    y1 = int(min(CH, yl.max() + S(40)))
+    wash_field(p, 0, y1, 0, CW, yl[None, :] - YY[:y1], 0.09, S(70), pool=0.0)
+    # dusk: a very pale vermilion wash laid wet across the lower right sky, ragged at the top
+    yt = S.y(330) + fbm1d(CW, S(300), 4, p.sd()) * S(70) + np.clip((xd - SUNX) / 800, -1, 1) ** 2 * S(90)
+    y0 = int(max(0, yt.min() - S(30)))
+    f = np.minimum(YY[y0:hzi + 1] - yt[None, :], (hz - YY[y0:hzi + 1]) * 3)
+    Rk = np.zeros_like(p.R)
+    wash_field(p, y0, hzi + 1, 0, CW, f, 1.0, S(110), pool=0.2, buf=Rk)
+    p.over(p.R, Rk * (0.13 * (0.35 + 0.65 * np.exp(-((xd - SUNX) / 650) ** 2)))[None, :])
+    del Rk
+    # a pale, watery sun: one round touch of thin accent ink
+    p.wet_dot(S.x(SUNX), S.y(SUNY), S(34), 0.24, squash=1.03, red=True, irr=0.25)
+    # a few thin wet cloud strokes
+    for (cx, cy, ln, th, dens) in [(600, 150, 460, 20, 0.07), (1350, 205, 380, 14, 0.06), (1780, 122, 360, 18, 0.07)]:
+        u0 = rng.uniform(-1.0, -0.8)
+        for k in range(int(rng.integers(1, 3))):
+            u1 = min(1.0, u0 + rng.uniform(0.8, 1.9))
+            us = np.linspace(u0, u1, 9)
+            sag = rng.uniform(4, 14); tilt = rng.uniform(-8, 8)
+            pts = [(S.x(cx + ln * u), S.y(cy + sag * np.sin(u * 2.4) + tilt * u)) for u in us]
+            broad_stroke(p, pts, S(th) * rng.uniform(0.7, 1.3), dens * rng.uniform(0.8, 1.25), dry=rng.uniform(0.45, 0.8),
+                         taper=(rng.uniform(0.25, 0.5), rng.uniform(0.3, 0.6)), pool=rng.uniform(0.15, 0.6), hair=0.9)
+            u0 = u1 + rng.uniform(0.06, 0.2)
+            if u0 >= 0.9:
+                break
     p.snap('sky')
 
     # ---------------------------------------------------------------- distant headlands on the right
     isl = p.ridge(S.y(HORIZON + 4), peaks=[(S.x(1380), S(28), S(110)), (S.x(1660), S(62), S(150)), (S.x(1900), S(92), S(170)),
                                          (S.x(2150), S(70), S(160))],
                   rough=S(6), rough_scale=S(90), seed=seed + 11)
-    p.wash(isl, dens=0.30, decay=S(90), tex=S(80), edge=0.35, mist_y=S.y(592), mist_h=S(14), seed=seed + 12)
+    Dh = np.zeros_like(p.D)
+    ink_mass(p, isl, dens=0.30, reach=S(50), glazes=2, soft=1.4, pool=0.5, blooms=1, dry=0.2, floor=hz,
+             mist=(S.y(594), S(6)), buf=Dh)
+    np.multiply(p.D, 1 - 0.97 * np.clip((YY - isl[None, :]) / S(3), 0, 1) * (YY < hz), out=p.D)
+    p.over(p.D, Dh); del Dh
     np.multiply(p.D, 1 - np.clip((YY - hz) / S(2), 0, 1), out=p.D)
     np.multiply(p.R, 1 - np.clip((YY - isl[None, :]) / S(2), 0, 1) * (YY < hz), out=p.R)
     p.snap('far headlands')
 
-    # ---------------------------------------------------------------- sea: mirrored sky, deepening toward the viewer
-    rows = np.arange(hzi, CH)
-    src = np.clip(2 * hzi - rows, 0, CH - 1)
-    refl = blur(p.D[src, :], S(3)) * 0.35 * np.exp(-((rows - hzi) / S(300)))[:, None]
-    rR = blur(p.R[src, :], S(4)) * 0.45 * np.exp(-((rows - hzi) / S(260)))[:, None]
-    wy = np.clip((YY[hzi:CH] - hz) / (S.y(1080) - hz), 0, 1.25)
-    body = 0.06 + 0.30 * wy ** 1.3 * (0.7 + 0.3 * p.noise2d(S(220), 3, seed + 13)[hzi:CH])
-    p.over(p.D[hzi:CH], refl)
-    p.over(p.D[hzi:CH], body)
-    p.over(p.R[hzi:CH], rR)
-    # horizontal swell strokes, longer and darker toward the viewer
-    for k in range(70):
-        y = rng.uniform(HORIZON + 8, 1075)
-        x = rng.uniform(820, 1920 + 120)
-        f = (y - HORIZON) / (1080 - HORIZON)
-        ln = rng.uniform(40, 140) * (0.4 + 1.6 * f)
-        X, Y = S.x(x), S.y(y)
-        p.stroke(spline([(X, Y), (X + S(ln) / 2, Y - S(1.5 + 3 * f)), (X + S(ln), Y)], 8),
-                 S(1.2 + 1.8 * f), 0.10 + 0.25 * f, dry=0.6, taper=(0.3, 0.4))
-    for i in range(12):     # sun path
-        y = S.y(HORIZON + 14 + i * 18) + rng.normal(0, S(2))
-        half = S(60) * (1 - i / 14) + rng.uniform(-S(8), S(8))
-        p.stroke(spline([(S.x(SUNX) - half, y), (S.x(SUNX) + rng.normal(0, S(6)), y), (S.x(SUNX) + half, y)], 8),
-                 S(1.6), 0.30 * (1 - i / 14), dry=0.5, taper=(0.3, 0.3), red=True)
+    # ---------------------------------------------------------------- sea: mostly bare paper
+    # a pale wash pulled across the sea, darker toward the viewer, its top edge broken
+    for (yc, dens, soft) in [(820, 0.07, 90), (960, 0.09, 70)]:
+        top = S.y(yc) + fbm1d(CW, S(260), 4, p.sd()) * S(30)
+        y0 = int(max(hzi, top.min() - S(40)))
+        wash_field(p, y0, CH, 0, CW, YY[y0:CH] - top[None, :], dens, S(soft), pool=0.3)
+    # a soft band under the far headlands (their reflection, simplified to one pale pull)
+    for k in range(4):
+        x0 = rng.uniform(1250, 1800); x1 = min(2100, x0 + rng.uniform(150, 420))
+        y = HORIZON + rng.uniform(3, 14)
+        broad_stroke(p, [S.pt(x_, y + rng.normal(0, 1)) for x_ in np.linspace(x0, x1, 5)], S(rng.uniform(4, 9)),
+                     rng.uniform(0.06, 0.12), dry=rng.uniform(0.4, 0.8), taper=(0.3, 0.4), pool=0.3)
+    # swell marks in loose clusters, longer and heavier toward the viewer
+    water_dashes(p, S.y(HORIZON + 8), S.y(1075), S.x(860), S.x(S.X1), clusters=11, ink=0.32,
+                 avoid=[(S.x(1240), S.y(760), S.x(1440), S.y(900))])
+    water_dashes(p, S.y(HORIZON + 6), S.y(760), S.x(1000), S.x(S.X1), clusters=5, ink=0.2, persp=(0.35, 0.8))
+    # the sun's path: a few broken pale strokes under the sun
+    y = hz + S(12)
+    while y < hz + S(230):
+        f = (y - hz) / S(230)
+        half = S(34) * rng.uniform(0.6, 1.7) * (1.2 - 0.6 * f)
+        cx = S.x(SUNX) + rng.normal(0, S(6))
+        if rng.random() < 0.8:
+            p.stroke(spline([(cx - half, y), (cx + rng.normal(0, S(4)), y + rng.normal(0, S(0.8))), (cx + half, y)], 8),
+                     S(rng.uniform(1.0, 2.2)), 0.32 * (1 - 0.7 * f) * rng.uniform(0.6, 1.1), dry=rng.uniform(0.4, 0.8),
+                     taper=(0.3, 0.3), red=True)
+        y += S(rng.uniform(8, 26))
     p.snap('sea')
 
     # ---------------------------------------------------------------- distant sailing boats (behind the cliff)
@@ -145,7 +161,8 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     # the headland is painted on its own sheet and cut off at its foot, so the sea runs in below it
     D_bg, R_bg = p.D, p.R
     p.D, p.R = np.zeros_like(D_bg), np.zeros_like(R_bg)
-    p.wash(cliff, dens=0.80, decay=S(330), tex=S(70), edge=0.55, mist_y=S.y(760), mist_h=S(60), seed=seed + 22)
+    ink_mass(p, cliff, dens=0.72, reach=S(230), glazes=4, soft=0.9, pool=0.55, blooms=3, dry=0.35,
+             mist=(S.y(770), S(34)))
     # axe-cut texture strokes down the cliff face and under the plateau lip
     for k in range(110):
         face = True
@@ -158,7 +175,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         X, Y = S.x(x), S.y(top)
         p.stroke(spline([(X, Y), (X + S(dx) * 0.4 + rng.normal(0, S(3)), Y + S(ln) * 0.5), (X + S(dx), Y + S(ln))], 8),
                  S(rng.uniform(2.0, 4.0)), rng.uniform(0.18, 0.34) * (1.0 if face else 0.55), dry=0.65, taper=(0.1, 0.5))
-    p.ridge_line(cliff, S.x(-200), S.x(860), width=S(1.8), ink=0.26)
+    ridge_accent(p, cliff, S.x(-200), S.x(860), ink=0.3, width=2.0, coverage=0.4)
     for k in range(20):     # long, light hemp-fibre strokes following the slope of the headland
         x = rng.uniform(-150, 800)
         top = float(np.interp(x, cx_, cy_)) + rng.uniform(40, 330)
@@ -167,9 +184,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
         X, Y = S.x(x), S.y(top)
         p.stroke(spline([(X, Y), (X - S(ln) * 0.45, Y + S(ln) * sl * 0.5 + rng.normal(0, S(8))), (X - S(ln), Y + S(ln) * sl)], 10),
                  S(rng.uniform(1.6, 3.0)), rng.uniform(0.10, 0.18), dry=0.72, taper=(0.3, 0.5), jitter=1.0)
-    for _ in range(40):
-        x = rng.uniform(-60, 850)
-        p.dot(S.x(x), S.y(float(np.interp(x, cx_, cy_))) + S(rng.uniform(4, 22)), S(rng.uniform(1.5, 2.8)), 0.6)
+    dian(p, cliff, S.x(-60), S.x(850), clusters=7, ink=0.6, depth=16)
     foot = S.y(800 + 12 * fbm1d(CW, S(80), 4, seed + 23))
     cut = 1 - np.clip((YY - foot[None, :]) / S(10), 0, 1)
     occ = 0.97 * np.clip((YY - cliff[None, :] + 1) / 6, 0, 1) * cut
@@ -239,7 +254,7 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     for (x, hgt, ink) in [(146, 84, 0.7), (196, 58, 0.55), (392, 74, 0.65), (440, 96, 0.75), (470, 60, 0.55),
                           (655, 70, 0.62), (760, 58, 0.55)]:
         base = float(np.interp(x, cx_, cy_)) + 6
-        conifer(p, S.x(x), S.y(base - hgt), S.y(base), ink, wind=-0.2, halo=0.8)
+        any_tree(p, S.x(x + rng.normal(0, 6)), S.y(base - hgt * rng.uniform(0.85, 1.15)), S.y(base), ink, wind=-0.2)
     p.snap('village trees')
 
     # ---------------------------------------------------------------- lighthouse on the cliff tip
@@ -267,16 +282,8 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     # the lamp: a warm accent glow and two faint beams lifted out of the sky wash
     lamp = (X, Yg - S(10))
     d = np.hypot(XX - lamp[0], YY - lamp[1])
-    p.over(p.R, 0.55 * np.exp(-(d / S(9)) ** 2) + 0.14 * np.exp(-(d / S(60)) ** 2))
-    for ang, ln in ((-0.10, 520), (np.pi + 0.18, 300)):
-        v = np.array([np.cos(ang), np.sin(ang)])
-        rx, ry = XX - lamp[0], YY - lamp[1]
-        along = rx * v[0] + ry * v[1]
-        perp = np.abs(-rx * v[1] + ry * v[0])
-        beam = (along > S(10)) * np.exp(-along / S(ln)) * np.exp(-(perp / (S(4) + along * 0.07)) ** 2)
-        beam *= (YY < hz)
-        np.multiply(p.D, 1 - 0.55 * beam, out=p.D)
-        p.over(p.R, 0.10 * beam)
+    p.wet_dot(lamp[0], lamp[1], S(5), 0.6, red=True, irr=0.5)
+    p.over(p.R, 0.10 * np.exp(-(d / S(40)) ** 2))
     p.snap('lighthouse')
 
     # leaning pine on the cliff edge beside the lighthouse
@@ -303,13 +310,13 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
     rx_, ry_ = np.array(rock_ctrl, np.float32).T
     rock = S.y(np.interp(xd, rx_, ry_)) + S(10) * fbm1d(CW, S(50), 5, seed + 31)
     rock[xd > 830] = CH + 400
-    p.wash(rock, dens=0.92, decay=S(330), tex=S(50), edge=0.7, seed=seed + 32)
+    ink_mass(p, rock, dens=0.85, reach=S(160), glazes=4, soft=0.8, pool=0.6, blooms=2, dry=0.45)
     for k in range(40):
         x = rng.uniform(-60, 760)
         top = float(np.interp(x, rx_, ry_)) + rng.uniform(4, 60)
         X, Y = S.x(x), S.y(top)
-        p.stroke(curve((X, Y), (X + S(rng.normal(-10, 8)), Y + S(rng.uniform(20, 50))), S(rng.normal(0, 6)), 10),
-                 S(rng.uniform(2.5, 4.5)), 0.32, dry=0.7)
+        p.stroke(curve((X, Y), (X + S(rng.normal(-10, 8)), Y + S(rng.uniform(12, 60))), S(rng.normal(0, 6)), 10),
+                 S(rng.uniform(1.5, 5)), rng.uniform(0.2, 0.42), dry=rng.uniform(0.55, 0.85), taper=(rng.uniform(0.05, 0.3), 0.5))
     for k in range(9):            # grass on the rocks: loose clumps of long and short blades
         x = rng.uniform(-20, 700)
         y = float(np.interp(x, rx_, ry_)) + 5
@@ -318,15 +325,15 @@ def paint(W=1920, H=1080, seed=1, colourway="BlackInk", bleed=0.0, include=None,
             a = rng.uniform(-1.1, 0.8)
             X, Y = S.x(x + rng.uniform(-8, 8)), S.y(y + rng.uniform(-2, 4))
             p.stroke(spline([(X, Y), (X + S(ln) * np.sin(a) * 0.4, Y - S(ln) * 0.55), (X + S(ln) * np.sin(a), Y - S(ln))], 6),
-                     S(1.6), 0.6, dry=0.4, taper=(0.02, 0.8))
+                     S(rng.uniform(1.0, 2.6)), rng.uniform(0.35, 0.75), dry=rng.uniform(0.25, 0.6), taper=(0.02, rng.uniform(0.6, 0.9)))
     p.snap('foreground rocks')
 
     sailboat(1330, 845, 118, 0.88)
     p.snap('sailboat')
 
     # ---------------------------------------------------------------- gulls
-    for (gx, gy, sc) in [(1010, 330, 0.9), (1080, 300, 0.7), (1160, 360, 0.6), (1300, 420, 0.55), (930, 250, 1.0), (1230, 250, 0.5)]:
-        bird(p, S.x(gx), S.y(gy), sc * s, ink=0.78)
+    for (gx, gy, sc) in [(1010, 330, 0.9), (1062, 304, 0.7), (1170, 368, 0.6), (1310, 428, 0.5), (930, 248, 1.05), (1236, 262, 0.45)]:
+        bird(p, S.x(gx + rng.normal(0, 8)), S.y(gy + rng.normal(0, 6)), sc * s * rng.uniform(0.85, 1.15), ink=0.78)
     p.snap('gulls')
 
     p.end()

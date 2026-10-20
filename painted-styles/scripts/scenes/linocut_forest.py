@@ -15,8 +15,8 @@ import numpy as np
 
 import drawkit
 from drawkit import Scaler, seed_all, save_png
-from core import spline, fbm1d
-from linocut_common import STYLE, COLOURWAYS, make_print, D, Stager
+from core import spline, fbm1d, noise2d
+from linocut_common import STYLE, COLOURWAYS, make_print, D, Stager, gouge_rows, knife_edge, ridge_line
 
 LIB = "linocut"
 GROUPS = ("all",)
@@ -54,20 +54,27 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     # the dark woods everywhere get a sparse texture of upright cuts (light between far trunks), so the solid
     # black trunks in front read as shapes rather than as more black
     wall = rect(X0, Y0, X1, FLOOR + 30)
-    L.hatch(wall, angle=90, spacing=S(11), width=S(2.4), dash=(S(30), S(160)), gap=(S(20), S(120)), cut=True,
-            density=d.fn(lambda x, y: 0.22 + 0.2 * np.clip(1.6 - glow_d(x, y), 0, 1)))
+    geo = drawkit.group_rng(seed, 'geometry')
+    trunk_sway = lambda x, y: 4 * np.sin(x / 37 + 1.3) + 3 * np.sin(y / 160 + x / 90)
+    gouge_rows(L, S, rng, wall, (X0, Y0, X1, FLOOR + 30), angle=90, spacing=(9, 30), length=(30, 220), gap=(20, 140),
+               width=(2.4, 4.6), cut=True, bend=trunk_sway, cluster=0.7, slip=0.04,
+               density=lambda x, y: 0.2 + 0.2 * np.clip(1.6 - glow_d(x, y), 0, 1))
     st('woods')
     # the glade: carved with wide upright strokes, solid at the centre, feathering out into the dark
     gbox = P([(GX - GRX * 1.5, GY - GRY * 1.5), (GX + GRX * 1.5, GY - GRY * 1.5), (GX + GRX * 1.5, FLOOR + 24),
               (GX - GRX * 1.5, FLOOR + 24)])
     L.clear(L.poly(gbox) * (glow_d(ux, uy) < 0.4), chatter=0.25, angle=90)
-    L.hatch(gbox, angle=90, spacing=S(6), width=S(7.5), dash=(S(80), S(320)), gap=(S(3), S(18)), cut=True,
-            density=d.fn(lambda x, y: np.clip(1.45 - 1.2 * glow_d(x, y), 0, 1) ** 1.3))
+    gb = (GX - GRX * 1.5, GY - GRY * 1.5, GX + GRX * 1.5, FLOOR + 24)
+    gouge_rows(L, S, rng, gbox, gb, angle=90, spacing=(4.5, 8.5), length=(80, 360), gap=(3, 22), width=(6, 10.5), cut=True,
+               bend=trunk_sway, cluster=0.5, density=lambda x, y: np.clip(1.45 - 1.2 * glow_d(x, y), 0, 1) ** 1.3)
     st('glade cleared')
     # the colour: a ring of it round the light, printed where the key is carved; the centre stays paper-white
     L.leave(L.poly(gbox) * (glow_d(ux, uy) < 1.3), on=col)
-    L.hatch(gbox, angle=0, spacing=S(5), width=S(5.4), dash=(S(40), S(240)), gap=(S(4), S(24)), cut=True, on=col,
-            density=d.fn(lambda x, y: np.clip(max(1.5 - glow_d(x, y) * 1.6, (glow_d(x, y) - 0.95) * 2.8), 0, 1) ** 0.7))
+    rag = (noise2d(CH, CW, S(60), 3, seed + 77) - 0.5) * 0.16          # a ragged, hand-cleared edge
+    L.clear(L.poly(gbox) * (glow_d(ux, uy) + rag < 0.2), on=col, chatter=0)
+    gouge_rows(L, S, rng, gbox, gb, angle=0, spacing=(4, 9), length=(40, 260), gap=(4, 26), width=(5.5, 9.5), cut=True, on=col,
+               bend=lambda x, y: 10 * ((x - GX) / 700) ** 2 + 3 * np.sin(x / 90 + y / 40),
+               density=lambda x, y: np.clip(max(1.5 - glow_d(x, y) * 1.6, (glow_d(x, y) - 0.95) * 2.8), 0, 1) ** 0.7)
     st('glade colour')
 
     # far trunks in the haze: thin, sparse, ridges left standing; nearer ones a little thicker
@@ -91,9 +98,10 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
                         cut=False)
     st('far trunks')
     # the glade floor: low ridges left standing across the light
-    L.hatch(P([(GX - GRX * 1.2, FLOOR - 26), (GX + GRX * 1.2, FLOOR - 26), (GX + GRX * 1.2, FLOOR + 60),
-               (GX - GRX * 1.2, FLOOR + 60)]), angle=0, spacing=S(7), width=S(2.2), dash=(S(20), S(110)), gap=(S(10), S(50)),
-            cut=False, density=d.fn(lambda x, y: np.clip(0.15 + (y - FLOOR + 20) / 70, 0, 0.8)))
+    gouge_rows(L, S, rng, P([(GX - GRX * 1.2, FLOOR - 26), (GX + GRX * 1.2, FLOOR - 26), (GX + GRX * 1.2, FLOOR + 60),
+                             (GX - GRX * 1.2, FLOOR + 60)]), (GX - GRX * 1.2, FLOOR - 26, GX + GRX * 1.2, FLOOR + 60),
+               spacing=(6, 13), length=(16, 110), gap=(10, 70), width=(2.6, 4.0), cut=False, tool='brush', end=0.45,
+               bend=lambda x, y: 2 * np.sin(x / 60), density=lambda x, y: np.clip(0.15 + (y - FLOOR + 20) / 70, 0, 0.8))
     st('glade floor')
 
     # ---------------------------------------------------------------- the forest floor and the path
@@ -110,9 +118,21 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     def near_path(x, y):
         dd = min(abs(x - pl(y)), abs(x - pr(y)))
         return np.exp(-dd / 160)
-    L.hatch(floor, angle=-90, spacing=S(9), width=S(2.6), dash=(S(8), S(22)), gap=(S(14), S(60)), cut=True,
-            density=d.fn(lambda x, y: np.clip(0.08 + 0.55 * near_path(x, y) * (1.25 - (y - FLOOR) / 600)
-                                              + 0.4 * np.clip(1.25 - glow_d(x, y), 0, 1), 0, 0.85)))
+    # tufts: clustered fans of short V cuts, never a grid
+    fden = lambda x, y: np.clip(0.08 + 0.55 * near_path(x, y) * (1.25 - (y - FLOOR) / 600)
+                                + 0.4 * np.clip(1.25 - glow_d(x, y), 0, 1), 0, 0.85)
+    tufts = []
+    for _ in range(int(1800 * (X1 - X0) / 1980)):
+        x = rng.uniform(X0, X1); y = rng.uniform(FLOOR - 10, Y1)
+        if rng.random() > fden(x, y): continue
+        k = 0.6 + 0.9 * (y - FLOOR) / (1080 - FLOOR)
+        lean0 = rng.normal(0, 0.3)
+        for _ in range(int(rng.integers(1, 5))):
+            a = lean0 + rng.normal(0, 0.35); h = rng.uniform(7, 20) * k
+            xb = x + rng.uniform(-5, 5) * k
+            tufts.append(L.stroke(P([(xb, y), (xb + np.sin(a) * h, y - np.cos(a) * h)]), S(rng.uniform(2.2, 3.4) * k), 'v',
+                                  taper=(0.05, rng.uniform(0.4, 0.7))))
+    L._draw(tufts, True, None, floor)
     st('forest floor')
     L.clear(pm, chatter=0.45, angle=90)
     L.outline(pm, S(2.2), cut=False)
@@ -130,8 +150,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         L.gouge(P([(x - s * 3, y), (x + s * 3, y + rng.uniform(-1, 1))]), S(s * 0.9), 'v', cut=False, region=pm)
     st('path')
     # the colour on the path: warm (or cool) light pooled on it, broken by ridges
-    L.hatch(path, angle=0, spacing=S(7), width=S(4.8), dash=(S(20), S(120)), gap=(S(8), S(40)), cut=False, on=col,
-            density=d.fn(lambda x, y: np.clip((0.95 if day else 0.75) - (y - FLOOR) / 650, 0.08, 0.8)))
+    gouge_rows(L, S, rng, path, (500, FLOOR, 1520, Y1), spacing=(6, 13), length=(20, 140), gap=(8, 50), width=(4.5, 8.5),
+               cut=False, on=col, tool='brush', end=0.5, bend=lambda x, y: 4 * np.sin(x / 70 + y / 30),
+               density=lambda x, y: np.clip((0.95 if day else 0.75) - (y - FLOOR) / 650, 0.08, 0.8))
     st('path colour')
 
     # ---------------------------------------------------------------- middle-distance trunks
@@ -151,8 +172,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
         for _ in range(int(w / 3)):
             f = rng.uniform(0.05, 0.42)
             bx_ = x + side * w * f
-            y0 = rng.uniform(Y0 - 30, yb - 120); ln = rng.uniform(60, 220)
-            L.gouge(P([(bx_ + lean * (yb - y0), y0), (bx_ + lean * (yb - y0 - ln), y0 + ln)]), S(rng.uniform(1.4, 2.4)), 'v',
+            y0 = rng.uniform(Y0 - 30, yb - 120); ln = rng.uniform(50, 240)
+            L.gouge(P([(bx_ + lean * (yb - y0), y0), (bx_ + lean * (yb - y0 - ln / 2) + rng.normal(0, 1.5), y0 + ln / 2),
+                       (bx_ + lean * (yb - y0 - ln) + rng.normal(0, 2), y0 + ln)]), S(rng.uniform(2.2, 3.4)), 'v',
                     region=tm)
         st('trunk')
 
@@ -163,23 +185,30 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
     dv = np.array([np.cos(a), np.sin(a)]); nv = np.array([-dv[1], dv[0]])
     for (xt, wd, yend) in [(640, 46, 760), (930, 34, 700), (1330, 52, 690), (1560, 40, 760), (1760, 30, 860)]:
         p_top = np.array([xt, Y0 - 20], np.float64)
-        t_end = (yend - p_top[1]) / dv[1]
-        nl = int(wd / 7) + 3
-        for j in range(nl):
-            off = (j - (nl - 1) / 2) * 7 + rng.uniform(-1.5, 1.5)
-            prof = np.sin(np.pi * (j + 0.5) / nl)
-            t = rng.uniform(0, 60)
+        a_r = np.radians(116 + rng.normal(0, 1.8) + (xt - SRC[0]) * 0.003)       # the shafts fan a little
+        dvr = np.array([np.cos(a_r), np.sin(a_r)]); nvr = np.array([-dvr[1], dvr[0]])
+        t_end = (yend - p_top[1]) / dvr[1]
+        nl = int(wd / rng.uniform(8, 12)) + 2
+        offs = np.sort(rng.uniform(-wd / 2, wd / 2, nl))
+        for j, off in enumerate(offs):
+            prof = np.cos(np.pi * off / wd) ** 0.7
+            t = rng.uniform(0, 90)
             while t < t_end:
-                ln = rng.uniform(80, 320)
-                q0 = p_top + dv * t + nv * off; q1 = p_top + dv * min(t + ln, t_end) + nv * off
+                ln = rng.uniform(60, 360)
+                tt = np.linspace(t, min(t + ln, t_end), 7)
+                sway = rng.normal(0, 1.6) * np.sin(np.pi * np.linspace(0, 1, 7))
+                pts = [tuple(p_top + dvr * q + nvr * (off + o)) for q, o in zip(tt, sway)]
                 fade = 0.4 + 0.6 * min(1.0, t / 300)
-                L.gouge(P([tuple(q0), tuple(q1)]), S((1.2 + 2.0 * prof) * fade), 'v', taper=(0.2, 0.3), smooth=False)
-                t += ln + rng.uniform(10, 70)
+                if rng.random() < 0.85:
+                    L.gouge(P(pts), S((2.0 + 2.6 * prof) * fade * rng.uniform(0.75, 1.25)), 'v',
+                            taper=(rng.uniform(0.1, 0.35), rng.uniform(0.15, 0.45)), smooth=True)
+                t += ln + rng.uniform(14, 110)
         # the pool of light on the floor
-        pe = p_top + dv * t_end
+        pe = p_top + dvr * t_end
         for _ in range(int(wd * 0.5)):
-            x = pe[0] + rng.normal(0, wd * 1.4); y = pe[1] + rng.normal(0, wd * 0.35)
-            L.gouge(P([(x - 10, y), (x + 10, y + rng.uniform(-1, 1))]), S(rng.uniform(2.0, 3.6)), 'v')
+            x = pe[0] + rng.normal(0, wd * 1.4); y = pe[1] + rng.normal(0, wd * 0.35); h_ = rng.uniform(6, 16)
+            L.gouge(P([(x - h_, y), (x + rng.uniform(-2, 2), y - rng.uniform(0, 2)), (x + h_, y + rng.uniform(-1, 1))]),
+                    S(rng.uniform(2.4, 4.2)), 'v')
     st('rays')
 
     # canopy: leaf nicks cut in the dark crown, thick toward the light
@@ -190,7 +219,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
 
     # ---------------------------------------------------------------- the stag in the glade
     DX, DY = DEER
-    def dp(pts): return np.array(P([(DX + x, DY + y) for x, y in pts]), np.float32)
+    def dp(pts): return np.array(P(knife_edge([(DX + x, DY + y) for x, y in pts], geo, step=(3, 7), wob=0.45, nick=0.04,
+                                              nick_size=(0.8, 1.6))), np.float32)
     body = [(18 + 26 * np.cos(t), -38 + 11 * np.sin(t)) for t in np.linspace(0, 2 * np.pi, 28, endpoint=False)]
     parts = [dp(body),
              dp([(-4, -44), (-14, -64), (-20, -76), (-12, -78), (-2, -62), (8, -46), (6, -32)]),       # neck
@@ -240,18 +270,22 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
             if rng.random() > 0.1 + 0.9 * lit ** 2: continue
             y0 = rng.uniform(Y0 - 30, yb - 80); ln = rng.uniform(40, 260)
             bx_ = x + f * w
-            L.gouge(P([(bx_ + lean * (yb - y0), y0), (bx_ + rng.uniform(-3, 3) + lean * (yb - y0 - ln), y0 + ln)]),
-                    S(rng.uniform(1.6, 3.4) * (0.6 + 0.6 * lit)), 'v', region=tm)
+            L.gouge(P([(bx_ + lean * (yb - y0), y0), (bx_ + rng.normal(0, 2.5) + lean * (yb - y0 - ln / 2), y0 + ln / 2),
+                       (bx_ + rng.uniform(-4, 4) + lean * (yb - y0 - ln), y0 + ln)]),
+                    S(rng.uniform(2.2, 4.0) * (0.6 + 0.6 * lit)), 'v', region=tm, taper=(rng.uniform(0.05, 0.4), rng.uniform(0.1, 0.5)))
         # a knot or a broken branch stub
-        ky = rng.uniform(250, 650)
-        L.gouge(P([(x + side * w * 0.5, ky), (x + side * (w * 0.5 + 34), ky - 22)]), S(14), 'brush', end=S(8), cut=False)
+        ky = rng.uniform(250, 650); kl = rng.uniform(20, 46); kw = rng.uniform(10, 17)
+        L.gouge(P([(x + side * w * 0.5, ky), (x + side * (w * 0.5 + kl * 0.5), ky - kl * rng.uniform(0.2, 0.5)),
+                   (x + side * (w * 0.5 + kl), ky - kl * rng.uniform(0.4, 0.9))]), S(kw), 'brush', end=S(kw * rng.uniform(0.45, 0.7)),
+                cut=False)
         st('big trunk')
     # ferns: fronds of white leaflets cut out of the dark floor in the front corners
     def fern(x, y, ln, ang, s):
-        a = np.radians(ang)
-        n = 14
-        spine = [(x + np.cos(a) * ln * t + s * 0.18 * ln * t * t * np.cos(a + np.pi / 2),
-                  y + np.sin(a) * ln * t + s * 0.18 * ln * t * t * np.sin(a + np.pi / 2)) for t in np.linspace(0, 1, n)]
+        a = np.radians(ang + rng.normal(0, 5))
+        ln = ln * rng.uniform(0.85, 1.15)
+        n = int(rng.integers(10, 17)); curl = rng.uniform(0.1, 0.28); lf = rng.uniform(0.16, 0.25)
+        spine = [(x + np.cos(a) * ln * t + s * curl * ln * t * t * np.cos(a + np.pi / 2),
+                  y + np.sin(a) * ln * t + s * curl * ln * t * t * np.sin(a + np.pi / 2)) for t in np.linspace(0, 1, n)]
         L.gouge(P(spine), S(2.6), 'v', taper=(0.05, 0.4))
         for i in range(1, n - 1):
             px, py = spine[i]
@@ -259,8 +293,9 @@ def paint(W=1920, H=1080, seed=1, colourway="Vermilion", bleed=0.0, include=None
             tx, ty = (qx - px), (qy - py)
             nrm = np.hypot(tx, ty) + 1e-6
             nx, ny = -ty / nrm, tx / nrm
-            ll = ln * 0.2 * (1 - i / n) ** 0.7 + 4
             for sd in (-1, 1):
+                if rng.random() < 0.08: continue                     # a leaflet broken off
+                ll = (ln * lf * (1 - i / n) ** 0.7 + 4) * rng.uniform(0.75, 1.2)
                 L.gouge(P([(px, py), (px + nx * sd * ll * 0.6 + tx * 0.6, py + ny * sd * ll * 0.6 + ty * 0.6),
                            (px + nx * sd * ll + tx * 1.2, py + ny * sd * ll + ty * 1.2)]), S(4.2 * (1 - i / n) + 1.6), 'v',
                         taper=(0.15, 0.5))
