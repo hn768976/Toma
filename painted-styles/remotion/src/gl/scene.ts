@@ -92,7 +92,7 @@ export const loopScene = (s: StyleManifest): Scene => {
   const m = MOTION[s.key];
   return {
     draws: (frame) => loopDraws(s, m, frame / LOOP_FRAMES),
-    finalUniforms: (frame) => ({ uFx: m.fx, uSweep: -1400 + (3840 * 0.8 + 2160 * 0.6 + 2800) * (frame / LOOP_FRAMES) }),
+    finalUniforms: (frame) => ({ uFx: m.fx, uSweep: -1150 + (3840 * 0.8 + 2160 * 0.6 + 2300) * (frame / LOOP_FRAMES) }),
   };
 };
 

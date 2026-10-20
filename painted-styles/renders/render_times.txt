@@ -1,0 +1,7 @@
+Painted-Watercolour-LakeLoop 0-599 610s
+Painted-ArtDeco-LakeLoop 0-599 604s
+Painted-InkWash-LakeLoop 0-599 606s
+Painted-Linocut-LakeLoop 0-599 629s
+Painted-Watercolour-DrawOn 0-359 212s
+Painted-InkWash-DrawOn 0-359 204s
+Painted-StainedGlass-DrawOn 0-359 207s

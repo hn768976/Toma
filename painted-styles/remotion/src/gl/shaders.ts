@@ -105,7 +105,7 @@ void main() {
   if (uFx == 1) {
     // a broad band of light travelling along the diagonal; glass brightens, lead (dark) stays dark
     float d = (p.x * 0.8 + p.y * 0.6) - uSweep;
-    float band = exp(-d * d / (2.0 * 520.0 * 520.0));
+    float band = 1.0 - smoothstep(0.0, 1100.0, abs(d));   // compact: exactly 0 once off-frame
     float glass = smoothstep(0.10, 0.35, max(c.r, max(c.g, c.b)));
     c += band * glass * (0.55 * c + 0.06);
   }

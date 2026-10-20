@@ -1,0 +1,5 @@
+Watercolour (720, 1280, 3) frame0 vs 600: max diff 0 differing px 0 PASS
+ArtDeco (720, 1280, 3) frame0 vs 600: max diff 0 differing px 0 PASS
+StainedGlass (720, 1280, 3) frame0 vs 600: max diff 2 differing px 18460 FAIL
+InkWash (720, 1280, 3) frame0 vs 600: max diff 0 differing px 0 PASS
+Linocut (720, 1280, 3) frame0 vs 600: max diff 0 differing px 0 PASS
