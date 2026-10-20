@@ -47,9 +47,11 @@ const BASE: Motion = {
 export const MOTION: Record<string, Motion> = {
   watercolour: { ...BASE, mistDrift: 240 },
   artdeco: { ...BASE, waterAmp: 6 },
-  linocut: { ...BASE, waterAmp: 4 },
-  // a leaded window is one flat panel: keep parallax small and let light do the work
-  stainedglass: { ...BASE, cam: 48, waterAmp: 0, mistDrift: 300, boatAngle: 0.01, boatLift: 3, fx: 1 },
+  // lino mist is a solid printed band: sliding it uncovers carving that was never printed, so it stays put
+  linocut: { ...BASE, waterAmp: 4, mistDrift: 0 },
+  // a leaded window is one flat panel: leads can't slide over leads, so only a hint of parallax;
+  // the light sweep does the work
+  stainedglass: { ...BASE, cam: 24, waterAmp: 0, mistDrift: 0, cloudDrift: 0, boatAngle: 0.01, boatLift: 3, fx: 1 },
   // ink wash: mist only, everything else perfectly still
   inkwash: { ...BASE, cam: 0, waterAmp: 0, mistDrift: 360, cloudDrift: 0, boatAngle: 0, boatLift: 0, birdsWrap: false },
 };
