@@ -10,6 +10,17 @@
    "reeds": 243.7,
    "sky": 14.3,
    "water": 17.7
+  },
+  "inkwash": {
+   "birds": 55.6,
+   "boat": 56.9,
+   "clouds": 82.4,
+   "far": 63.9,
+   "mist": 58.2,
+   "near": 62.6,
+   "reeds": 437.0,
+   "sky": 84.3,
+   "water": 57.2
   }
  },
  "stills": {
