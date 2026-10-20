@@ -1063,9 +1063,9 @@ class Panel(StainedGlass):
             alb_s = lin('#33353a') * (0.85 + 0.3 * pat)[..., None]
             sheen = 0.045 * spec * (1 - 0.6 * oxd)
         else:             # fresh from the box: bright silvery lead and shiny solder
-            alb_c = lin('#8e9196') * (0.9 + 0.2 * pat)[..., None]
-            alb_s = lin('#b4b7bb') * (0.92 + 0.16 * pat)[..., None]
-            sheen = 0.16 * spec + 0.05 * spec ** 2
+            alb_c = lin('#55585e') * (0.9 + 0.2 * pat)[..., None]
+            alb_s = lin('#a9acb1') * (0.92 + 0.16 * pat)[..., None]
+            sheen = 0.12 * spec + 0.04 * spec ** 2
         alb = alb_c * (1 - sol) + alb_s * sol
         rgb = alb * (0.35 + 0.75 * diff)[..., None] + (sheen * (1 + 0.4 * self.sol_a))[..., None]
         return rgb.astype(np.float32)
@@ -1200,7 +1200,7 @@ class Panel(StainedGlass):
         paper = (paper * (1 + 0.05 * self.grain[..., None])).astype(np.float32)
         wob = noise2d(H, W, 16 * s, 2, self._lazy[0] + 4)
         press = 0.6 + 0.4 * noise2d(H, W, 45 * s, 2, self._lazy[0] + 5)
-        lw = hw * (0.5 + 0.35 * wob)
+        lw = hw * (0.62 + 0.4 * wob)
         tooth = np.clip(0.75 + 0.5 * self.grain * 2.5, 0, 1)
         line = (smoothstep(lw + 0.9, lw - 0.9, bd) * press * tooth).astype(np.float32)
         del wob, press, lw
@@ -1212,8 +1212,8 @@ class Panel(StainedGlass):
 
         def cartoon(r_upto, det=0.0, num=0.0):
             ln = line * (rmap <= r_upto)
-            ink = 1 - (1 - 0.82 * ln) * (1 - 0.5 * detail * det * (rmap <= r_upto)) * (1 - 0.7 * numbers * num)
-            return paper * (1 - ink)[..., None] + lin('#2e2a28') * ink[..., None] * 0.9
+            ink = 1 - (1 - 0.95 * ln) * (1 - 0.7 * detail * det * (rmap <= r_upto)) * (1 - 0.8 * numbers * num)
+            return paper * (1 - ink)[..., None] + lin('#2a2624') * ink[..., None] * 0.6
 
         Tg = self._glass_T()
         PT = self._paint_T()

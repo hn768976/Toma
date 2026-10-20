@@ -79,3 +79,11 @@ dried rims vary/lose along edges; pencil as an under-layer that vanishes under d
 boat/rower/oar as wet strokes bleeding into the water; tapered reeds and dry-brushed bank; underdrawing first in
 the draw-on; coast houses back-to-front solid, reserved-paper clouds, wobbly lighthouse, lifted sails, cliff base
 bleeding into the sea, clustered dry-brush cliff marks, wet-painted rocks.
+
+### Round 2 fixes — Art Deco
+Faceted ranges replaced by stacked, rounded terraces (each one smooth airbrush gradient with a lit crest); sky one
+continuous fade with only deliberate rings round a now-visible sun; rays cut and sprayed individually (crisp edge +
+wandering speckled overspray); water as tapered streaks, stepped reflection bands, split sun-path bars, nested V
+ripples and a wake; speckle builds at mask edges; Deco geometry built into the scene (fans, rings, terraces,
+chevrons, banded clouds) — no text/border; stylised pines/cypresses, canoe, elongated rower, crescent gulls; coast
+rock shelves with lit noses; forest trunks varied with stepped bases, fan canopy, palmettes, elegant deer.

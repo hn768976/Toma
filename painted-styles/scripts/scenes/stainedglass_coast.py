@@ -16,7 +16,7 @@ import drawkit  # noqa: E402,F401  (sets sys.path to the skill lib)
 from drawkit import Scaler, seed_all, save_png  # noqa: E402
 
 import numpy as np  # noqa: E402
-from _stainedglass_kit import (Panel, Stager, hband, design_xy, const, polyfn, shade, bird_pts,  # noqa: E402
+from _stainedglass_kit import (Panel, Stager, hband, design_xy, const, polyfn, shade, bird_pieces,  # noqa: E402
                                lay_cloud)
 
 STYLE = "Stained glass · 彩色玻璃花窗"
@@ -44,7 +44,7 @@ PAL = {
         tower=('#e8dcd0', '#b3182c'), lantern=['#f8e070', '#f4d060'], cap='#2a1a30', beam='#f4d878',
         hulls=['#3a2430', '#2a2450', '#5a2a2a'], sails=[['#f0c8a0', '#e8b890'], ['#f4d0a8', '#e8c098'], ['#e89a80', '#d88a78']],
         boat_ref='#1a1a40', foam=['#c8b0d8', '#d8c0e0', '#bca4cc'], rocks=['#2a2040', '#33284a'],
-        gull='#1c1a40', gull_tip=False, sky=('#ffffff', '#f2eee6')),
+        gull='#1c1a40', gull_tip=False, sky=('#ffffff', '#f6f3ec')),
     "Day": dict(
         bands=[['#1f4fa8', '#2456b0', '#1d4a9e'], ['#3368b8', '#3d74c2', '#2f60b0'], ['#5d8fd0', '#6a9ad6', '#5588cc'],
                ['#86b0de', '#93bae2', '#7ca8da'], ['#aecde8', '#bcd6ec', '#a4c6e4'], ['#c8dcec', '#d0e2ee', '#bcd4e8']],
@@ -61,7 +61,7 @@ PAL = {
         tower=('#f4f1e6', '#b3182c'), lantern=['#d7e2ea', '#e4e9f0'], cap='#2a2a3a', beam=None,
         hulls=['#6e4526', '#173c8f', '#7a2c2c'], sails=[['#f4f1e6', '#eeeadb'], ['#b3182c', '#c0283a'], ['#f4f1e6', '#e8e4d4']],
         boat_ref='#123070', foam=['#f4f1e6', '#e4e9f0', '#eeeadb'], rocks=['#4a3a30', '#3e3028'],
-        gull='#f4f1e6', gull_tip=True, sky=('#ffffff', '#f2eee6')),
+        gull='#f4f1e6', gull_tip=True, sky=('#ffffff', '#f6f3ec')),
 }
 
 CLOUDS = [(330, 118, 420, 46), (1080, 92, 380, 42), (1730, 236, 340, 38)]
@@ -160,58 +160,33 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         # ============================================================ sea: perspective rows, glitter of glass
         far_isl = lambda xs: HORIZON - 34 * np.exp(-((xs - 1840) / 140) ** 2) - 18 * np.exp(-((xs - 1700) / 90) ** 2) \
             + 3 * np.sin(xs / 23.0)
-        levels, y = [], HORIZON
-        while True:
-            y += (22 + (y - HORIZON) * 0.11) * rng.uniform(0.75, 1.3)
-            if y > S.Y1 + 10:
-                break
-            levels.append(y)
         gx = P['glit_x']
-        wob = rng.uniform(0, 6.3, 2)
+        wob = rng.uniform(0, 6.3, 3)
+        depth = lambda y: float(np.clip((y - HORIZON) / 520.0, 0, 1))
 
         def feature(a, c):
             a = np.asarray(a, float); c = np.asarray(c, float)
             f = np.zeros(len(a), np.int64)
-            depth = (c - HORIZON) / 520.0
-            gw = 40 + 200 * depth
-            off = 14 * np.sin(c / 37.0 + wob[0]) + 9 * np.sin(c / 13.0 + wob[1])
-            f[(np.abs(a - gx - off - 20 * depth) < gw / 2) & (c < 1000)] = 3
+            dp = (c - HORIZON) / 520.0
+            gw = 40 + 200 * dp
+            off = 14 * np.sin(c / 37.0 + wob[0]) + 9 * np.sin(c / 13.0 + wob[1]) + 16 * np.sin(c / 6.1 + wob[2])
+            zone = (np.abs(a - gx - off - 20 * dp) < gw / 2) & (c < 1000)
+            per = 44 + 80 * dp
+            ph = (a - gx + 0.7 * (c - HORIZON) + 23 * np.sin(c / 9.0 + wob[2])) / per
+            f[zone] = np.where((ph[zone] % 1.0) < 0.6, 3, 4)
             return f
 
-        def run_edit(runs, yc, r):
-            depth = (yc - HORIZON) / 520.0
-            out = []
-            for ra, rb, fd in runs:
-                if fd != 3:
-                    out.append([ra, rb, fd])
-                    continue
-                if r.random() < 0.6 * max(depth - 0.45, 0):
-                    out.append([ra, rb, 0])
-                    continue
-                x = ra + r.uniform(0, 18)
-                out.append([ra, x, 0])
-                while x < rb - 20:
-                    e = min(x + r.uniform(26, 50 + 50 * depth), rb)
-                    gp = r.uniform(16, 26 + 30 * depth)
-                    out.append([x, e, 3])
-                    if e + gp < rb:
-                        out.append([e, e + gp, 0])
-                    x = e + gp
-                out[-1][1] = rb
-            return out
-
-        def tone(cx, cy, pal):
-            if pal is P['glit']:
-                return None
+        def tone(cx, cy, fid, row):
             d = cy + rng.uniform(-30, 30)
             k = 0 if d < 640 else (1 if d < 760 else (2 if d < 900 else 3))
+            if fid == 3 and rng.random() < 0.8 - 0.3 * depth(cy):
+                return P['glit']
             return P['sea'][k]
         sea_m = g.poly(S.pts(hband(S, HORIZON, Y1)))
-        near_glit = lambda a, c: 0.3 if abs(a - gx) < 60 + 0.45 * (c - HORIZON) else 1.0
-        g.band(sea_m, P['sea'][0], const(HORIZON), const(Y1), levels=levels, length=(130, 360), tilt=0.42,
-               wave=(8.0, 260.0), feature=feature, run_edit=run_edit, size=near_glit, vary=1.3,
-               fid_colours={3: P['glit']}, colour_fn=tone, amin=420, tmin=11,
-               flow=0.0, flow_jit=0.12, mix=dict(streaky=0.35, cathedral=0.25, reamy=0.25, seedy=0.15))
+        near_glit = lambda a, c: 0.6 if abs(a - gx) < 60 + 0.45 * (c - HORIZON) else 1.0
+        g.waves(sea_m, HORIZON, lambda y: 18 + (y - HORIZON) * 0.12, tone, run=(4.5, 10.0), feature=feature,
+                depth=depth, size=near_glit, wl=(50.0, 115.0), pinch=0.72, vary=1.3, amin=380, tmin=10,
+                flow=0.0, flow_jit=0.3, mix=dict(streaky=0.35, cathedral=0.25, reamy=0.25, seedy=0.15), matting=0.12)
         isl = g.poly(S.pts(hband(S, far_isl, HORIZON + 1))) * (xx > 1560)
         g.contour(isl, P['island'], row_h=40, length=(120, 240), tilt=0.3, flow=0.0)
         for k in range(36):                                   # wavelets: fine painted marks, clustered, all different
@@ -230,21 +205,27 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         for bi, (bx, by, sc) in enumerate(BOATS):
             j = lambda pts, a=1.2: [(x + rng.uniform(-a, a), y + rng.uniform(-a, a)) for x, y in pts]
             q = lambda pts: S.pts([(bx + x * sc, by + y * sc) for x, y in pts])
-            rf = g.poly(q(j([(-58, 6), (60, 6), (50, 24), (-48, 26)])))
-            gap = g.poly(q([(-6 + rng.uniform(-14, 14), 2), (10 + rng.uniform(-14, 14), 2), (14, 30), (-2, 30)]))
-            g.glass(rf * (1 - gap), P['boat_ref'], flow=0.0, mix=dict(streaky=0.6, cathedral=0.4))
-            g.glass(g.poly(q(j([(-6, -158), (-6, -24), (-70, -28), (-46, -88), (-24, -130)]))),
-                    P['sails'][bi][0], cuts=[('h', const(by - 92 * sc))] if sc > 0.9 else (), flow=np.pi / 2,
-                    mix=dict(opal=0.5, cathedral=0.5))
-            g.glass(g.poly(q(j([(6, -146), (64, -24), (6, -26)]))), P['sails'][bi][1], flow=np.pi / 2,
-                    mix=dict(opal=0.5, cathedral=0.5))
-            g.glass(g.poly(q(j([(-76, -16), (76, -22), (62, 4), (-60, 4)]))), P['hulls'][bi], flow=0.0,
-                    cuts=[('line', (bx + 8 * sc, by - 40, bx + 2 * sc, by + 20))] if sc > 0.9 else (),
-                    mix=dict(streaky=0.6, reamy=0.4))
-            g.trace(q([(0, -168), (0, -14)]), 3.0 * s * max(sc, 0.7), taper=(0.1, 0.0), smooth=False)       # mast
-            g.trace(q([(0, -166), (-70, -27)]), 1.1 * s * max(sc, 0.7), taper=(0.1, 0.1), smooth=False)    # rigging
-            g.trace(q([(-74, -14), (0, -17), (74, -20)]), 2.0 * s * max(sc, 0.7), taper=(0.1, 0.1))
-            g.shade(g.poly(q([(-6, -158), (-6, -24), (-70, -28)])), offset=(-8 * s * sc, 0), strength=0.25, soft=3 * s)
+            # the reflection: two wave-shaped pieces of dark glass, a gap of water between them
+            for (xa, xb, y0, t) in [(-60, -6, 8, 16), (4, 58, 10, 13)]:
+                u = np.linspace(0, 1, 14)
+                xs_ = xa + rng.uniform(-4, 4) + (xb - xa) * u
+                pts = list(zip(xs_, y0 - 2 * np.sin(np.pi * u))) + list(zip(xs_[::-1], (y0 + t * np.sin(np.pi * u) ** 0.8)[::-1]))
+                g.glass(g.poly(q(pts)), P['boat_ref'], flow=0.0, mix=dict(streaky=0.6, cathedral=0.4), amin=150, tmin=6)
+            mast = g.branch(q([(0, -168), (0, -14)]), 5.5 * sc * s, 4.5 * sc * s)
+            hull = g.poly(q(j([(-76, -16), (76, -22), (62, 4), (-60, 4)])))
+            mid_ = bx + rng.uniform(-6, 10) * sc
+            hk = (xx > mid_).astype(np.float32) if sc > 0.9 else np.zeros_like(xx)
+            sail1 = g.poly(q(j([(-6, -158), (-6, -24), (-70, -28), (-46, -88), (-24, -130)])))
+            sk = (yy > by - 92 * sc).astype(np.float32) if sc > 0.9 else np.zeros_like(xx)
+            sail2 = g.poly(q(j([(6, -146), (64, -24), (6, -26)])))
+            g.pieces([(sail1 * (1 - sk), P['sails'][bi][0], dict(flow=np.pi / 2)), (sail1 * sk, P['sails'][bi][0], dict(flow=np.pi / 2)),
+                      (sail2, P['sails'][bi][1], dict(flow=np.pi / 2)), (mast, ['#3a2418', '#4a2c1c'], dict(flow=np.pi / 2)),
+                      (hull * (1 - hk), P['hulls'][bi], dict(flow=0.0)), (hull * hk, shade(P['hulls'][bi], 0.85), dict(flow=0.0))],
+                     mix=dict(opal=0.4, cathedral=0.4, streaky=0.2), amin=120, tmin=5, matting=0.0)
+            g.trace(q([(0, -166), (-70, -27)]), 1.1 * s * max(sc, 0.7), taper=(0.1, 0.1), smooth=False, opacity=0.8)   # rigging
+            g.trace(q([(-74, -14), (0, -17), (74, -20)]), 1.4 * s * max(sc, 0.7), taper=(0.2, 0.2), clip=hull, opacity=0.6)
+            g.shade(sail1, offset=(-8 * s * sc, 0), strength=0.22, soft=3 * s)
+            g.shade(hull, offset=(0, -5 * s * sc), strength=0.3, soft=3 * s)
         st('boats')
 
         # ============================================================ the headland: strata on the face, turf on top
@@ -252,8 +233,8 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         face = np.clip(land - grass, 0, 1)
         ftop = lambda a: grass_y(np.minimum(np.asarray(a, float), EDGE_X)) + 60
         fbot = const(FOOT + 4)
-        g.band(face, P['rock'], ftop, fbot, row_h=58, length=(150, 300), tilt=0.3,
-               cut_dir=lambda a, c: 0.45 * np.sin(a / 110.0 + c / 90.0), wave=(0.22, 160.0),
+        g.band(face, P['rock'], ftop, fbot, row_h=58, length=(150, 320), tilt=0.45, bend=0.5,
+               cut_dir=lambda a, c: 0.55 * np.sin(a / 110.0 + c / 90.0), wave=(0.45, 150.0),
                colour_fn=lambda cx, cy, pal: shade(P['rock'], 1.0 - 0.35 * np.clip((cy - 560) / 380, 0, 1)
                                                    - 0.15 * np.clip((cx - 720) / 300, 0, 1)),
                flow=0.05, mix=dict(cathedral=0.35, reamy=0.35, streaky=0.3))
@@ -368,7 +349,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         g.band(foam, P['foam'], lambda a: np.interp(a, xs, ft), lambda a: np.interp(a, xs, fb), rows=1,
                length=(150, 300), tilt=0.35, flow=0.0, mix=dict(opal=0.6, seedy=0.4), opal=0.3)
         for (rx, ry, rw, rh_) in ROCKS:
-            rk = g.blob(*S.pt(rx, ry), rw * s, rh_ * s, rough=0.18, rot=0.0)
+            rk = g.blob(*S.pt(rx, ry), rw * s, rh_ * s, rough=0.05, rot=0.0)
             cuts = [('line', (rx + rng.uniform(-10, 10), ry - rh_, rx + rng.uniform(-20, 20), ry + rh_))] if rw > 45 else []
             g.glass(rk, P['rocks'], cuts=cuts, mix=dict(cathedral=0.6, reamy=0.4))
             g.shade(rk, offset=(-10 * s, -6 * s), strength=0.4, soft=3 * s)
@@ -382,8 +363,10 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
 
         # ============================================================ gulls: cut glass, every one different
         for i, (bx, by, sc, fl) in enumerate(GULLS):
-            m = g.poly(S.pts(bird_pts(bx, by, sc, fl, rng)))
-            g.glass(m, P['gull'], mix=dict(cathedral=0.6, opal=0.4), seeds=0.2)
+            pcs = [g.poly(S.pts(pc)) for pc in bird_pieces(bx, by, sc, fl, rng)]
+            m = np.clip(sum(pcs), 0, 1)
+            g.pieces([(pc, P['gull']) for pc in pcs], mix=dict(cathedral=0.6, opal=0.4), seeds=0.2, amin=40, tmin=3,
+                     matting=0.0)
             if P['gull_tip']:
                 w_ = 44 * sc
                 for sgn in (-1, 1):
@@ -392,7 +375,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         st('gulls')
 
     # ================================================================ finishing: lead, weather (always run)
-    g.finish(lead=6.0, grime=0.25, pits=0.25, sweep=True)
+    g.finish(lead=6.0, grime=0.3, pits=0.25, sweep=True)
     img = g.composite()
     st.save(img, 'final')
     return img

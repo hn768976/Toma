@@ -35,7 +35,7 @@ PAL = {
         path=['#d8b070', '#e0bc80', '#cca060'], ray_tint='#fff8d0', ray_k=0.5, deer_matt=0.35, ray_stain=0.25,
         deer='#8a5a2c', canopy=['#2f8a3c', '#4fa83f', '#3a7a30', '#5aa844', '#7c8a2a'],
         trunk=['#6e4526', '#7a5030', '#5e3c22'], fern=['#4fa83f', '#2f8a3c', '#6aa83a'],
-        flowers=['#b3182c', '#eeeadb', '#2456b0', '#f2c230'], sky=('#ffffff', '#f2eee6')),
+        flowers=['#b3182c', '#eeeadb', '#2456b0', '#f2c230'], sky=('#ffffff', '#f6f3ec')),
     "Dusk": dict(
         glow=[['#f8d880', '#f4d060'], ['#f0a050', '#e8a040', '#f4b060'], ['#c8604a', '#d07050', '#b85848'],
               ['#7a3a5a', '#8a4460', '#6e3456']],
@@ -44,7 +44,7 @@ PAL = {
         path=['#d89060', '#e0a070', '#c88058'], ray_tint='#ffe0a0', ray_k=0.45, deer_matt=0.5, ray_stain=0.35,
         deer='#4a2a22', canopy=['#1f4a3a', '#2a5a40', '#24403a', '#33504a', '#3a3a50'],
         trunk=['#3a2430', '#44283a', '#30202a'], fern=['#6a7a30', '#5a6a2a', '#7a8a3a'],
-        flowers=['#f2c230', '#e0922a', '#eeeadb', '#cc5a5a'], sky=('#ffffff', '#f2eee6')),
+        flowers=['#f2c230', '#e0922a', '#eeeadb', '#cc5a5a'], sky=('#ffffff', '#f6f3ec')),
 }
 
 FAR_TREES = [(40, 16), (150, 14), (250, 20), (360, 13), (470, 18), (560, 14), (700, 16), (780, 12), (930, 18),
@@ -142,15 +142,14 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         ground = g.poly(S.pts(hband(S, gy, Y1)))
         left, right = path_edges(max(1110.0, Y1))
         path = g.poly(S.pts(left + right))
-        glev, y = [], GROUND
-        while True:
-            y += (26 + (y - GROUND) * 0.22) * rng.uniform(0.8, 1.3)
-            if y > S.Y1 + 10:
-                break
-            glev.append(y)
-        tone = lambda cx, cy, pal: (P['ground'] if cy < 800 + rng.uniform(-40, 40) else P['ground2']) if pal is P['ground'] else None
-        lay(g.band, ground * (1 - path), P['ground'], gy, const(Y1), levels=glev, length=(200, 420), tilt=0.4,
-            wave=(7.0, 200.0), colour_fn=tone, flow=0.0, mix=dict(streaky=0.4, cathedral=0.3, reamy=0.3))
+        gdep = lambda y: float(np.clip((y - GROUND) / 440.0, 0, 1))
+        for rm, lt in ((1 - ray, False), (ray, True)):
+            def gtone(cx, cy, fid, row, lt=lt):
+                pal = P['ground'] if cy < 800 + rng.uniform(-40, 40) else P['ground2']
+                return light(pal) if lt else pal
+            g.waves(ground * (1 - path) * rm, GROUND, lambda y: 22 + (y - GROUND) * 0.2, gtone, run=(3.5, 7.5),
+                    depth=gdep, wl=(45.0, 100.0), pinch=0.55, slant=(0.4, 0.9), flow=0.0,
+                    mix=dict(streaky=0.4, cathedral=0.3, reamy=0.3), amin=500, tmin=12)
         # the path: strips running along it toward the vanishing point, cut across further apart near the viewer
         L_ = np.array(left[::-1], float); R_ = np.array(right, float)
         pl = lambda a: np.interp(a, L_[:, 1], L_[:, 0])
@@ -189,16 +188,18 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         # ============================================================ the deer on the path, far off: cut glass
         dx0, dy0, k = 996.0, 670.0, 1.8
         D = lambda pts: S.pts([(dx0 + x * k, dy0 + y * k) for x, y in pts])
-        deer = g.poly(D([(-62, -88), (-54, -96), (-44, -98), (-38, -94), (-30, -76), (-22, -62), (-10, -57), (10, -56),
-                         (26, -57), (36, -53), (40, -46), (36, -38), (28, -34), (8, -35), (-10, -35), (-20, -36),
-                         (-28, -42), (-36, -60), (-44, -76), (-52, -82), (-60, -84)]))
-        legs = np.zeros_like(xx)
-        for leg in ([(-16, -40), (-15, -18), (-16, 0)], [(-23, -42), (-25, -18), (-27, 0)],
-                    [(28, -40), (32, -20), (30, 0)], [(19, -40), (22, -18), (18, 0)]):
-            legs = np.maximum(legs, g.branch(D(leg), 7.5 * k * s, 5.0 * k * s))
-        deer = np.clip(deer + legs, 0, 1)
-        g.glass(deer, P['deer'], cuts=[('line', (dx0 - 30 * k, dy0 - 100 * k, dx0 - 26 * k, dy0))],
-                mix=dict(cathedral=0.6, streaky=0.4), seeds=0.2)
+        torso = g.poly(D([(-24, -58), (-8, -57), (10, -56), (26, -57), (36, -53), (40, -46), (36, -38), (28, -34),
+                          (8, -35), (-10, -35), (-20, -37), (-27, -45)]))
+        neck = g.poly(D([(-22, -57), (-27, -45), (-36, -60), (-43, -80), (-38, -90), (-31, -76)]))
+        head = g.poly(D([(-63, -88), (-55, -96), (-45, -99), (-37, -93), (-38, -86), (-46, -83), (-57, -83)]))
+        legs = [g.branch(D(leg), 7.5 * k * s, 5.0 * k * s) for leg in
+                ([(-16, -40), (-15, -18), (-16, 0)], [(-23, -42), (-25, -18), (-27, 0)],
+                 [(28, -40), (32, -20), (30, 0)], [(19, -40), (22, -18), (18, 0)])]
+        dk = shade([P['deer']], 0.8)
+        g.pieces([(legs[1], dk), (legs[3], dk), (torso, P['deer']), (legs[0], P['deer']), (legs[2], P['deer']),
+                  (neck, shade([P['deer']], 1.1)), (head, P['deer'])],
+                 mix=dict(cathedral=0.6, streaky=0.4), seeds=0.2, amin=60, tmin=4, matting=0.0)
+        deer = np.clip(torso + neck + head + sum(legs), 0, 1)
         g.matt(deer, P['deer_matt'] * 0.6, soft=1 * s)
         g.trace(D([(32, -52), (40, -44)]), 3.0 * k * s, smooth=False)  # tail
         for sgn in (-1, 1):                                                                   # antlers
@@ -220,20 +221,11 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
             low = 150 + 70 * np.sin(x / 170.0 + 1) - (90 if dsun < 260 else 0) + rng.uniform(-14, 14)
             lows.append(low)
             can = np.maximum(can, g.blob(*S.pt(x + rng.uniform(-20, 20), low), rng.uniform(105, 135) * s,
-                                         (80 + 25 * np.sin(i * 1.7)) * rng.uniform(0.85, 1.15) * s, rough=0.15))
+                                         (80 + 25 * np.sin(i * 1.7)) * rng.uniform(0.85, 1.15) * s, rough=0.05))
         can = np.maximum(can, g.poly(S.pts(hband(S, Y0, 90))))
         g.contour(can, P['canopy'], row_h=48, length=(90, 190), tilt=0.45, flow=None, mix=dict(streaky=0.35, cathedral=0.3,
                   reamy=0.2, opal=0.15), wave=(0.2, 120.0))
         g.shade(can, offset=(0, -14 * s), strength=0.4, soft=6 * s)
-        for i, x in enumerate(xsb):                                   # scalloped leaf edges: fine painted detail
-            low = lows[i]
-            for j in range(int(rng.integers(2, 4))):
-                cxs = x + (j - 1) * rng.uniform(45, 70)
-                yb = low + 30 - abs(j - 1) * 18 + rng.uniform(-10, 10)
-                wl = rng.uniform(36, 56)
-                xs_ = np.linspace(cxs - wl, cxs + wl, 14)
-                ys_ = yb - rng.uniform(5, 10) * np.abs(np.sin((xs_ - cxs) / wl * np.pi * rng.uniform(1.2, 1.8)))
-                g.trace(S.pts(list(zip(xs_, ys_))), rng.uniform(1.4, 2.0) * s, taper=(0.3, 0.3), wobble=0.3 * s, clip=can)
         for k in range(80):                                           # leaves lifted out of the shade
             x = rng.uniform(S.X0, S.X1); y = rng.uniform(S.Y0, 240)
             a = rng.uniform(0, np.pi); ln = rng.uniform(4, 8)
@@ -310,7 +302,7 @@ def paint(W=1920, H=1080, seed=1, colourway="Dusk", bleed=0.0, include=None, sta
         st('foreground')
 
     # ================================================================ finishing: lead, weather (always run)
-    g.finish(lead=6.0, grime=0.25, pits=0.25, sweep=True)
+    g.finish(lead=6.0, grime=0.3, pits=0.25, sweep=True)
     img = g.composite()
     st.save(img, 'final')
     return img
