@@ -1,0 +1,4 @@
+wheresryan22/anatomy @ 1482e8469b0a9e0d8cc18ea2740a01423d29ae80 (v1.1.0-53-g1482e84, 2026-10-18), MIT.
+Vendored without .git and without built outputs (examples/*.html, examples/*.pdf,
+.github/assets, tests/fixtures); every source file, the kit, references, scripts and
+LICENSE are unchanged. Rebuild the example pages with `node examples/<name>/build.mjs`.
