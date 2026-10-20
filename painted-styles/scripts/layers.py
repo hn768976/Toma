@@ -52,7 +52,10 @@ def extract_opaque(B, C):
     return np.clip(F, 0, 1), a
 
 
-def extract_key(B, C, sigma=60):
+SMOOTH_KEY = {'watercolour', 'inkwash'}   # mist painted on textured paper: smooth veil instead of exact matte
+
+
+def extract_key(B, C, sigma=60, smooth=True):
     """C = B*(1-a) + K*a with a smooth key colour K(x, y): start from one global key, then refine K
     as an alpha-weighted local average of the un-mixed colour, and re-solve a against it."""
     from core import blur
@@ -71,11 +74,16 @@ def extract_key(B, C, sigma=60):
     v = K - B
     a = np.clip((d * v).sum(-1) / np.maximum((v * v).sum(-1), 1e-4), 0, 1)
     a = np.where(D < 0.004, 0, a)
-    # whatever the smooth key misses goes back into the colour, so the layer is exact at rest;
-    # below a = 0.15 the correction is faded out to keep background structure out of the mist
-    r = C - (B * (1 - a[..., None]) + K * a[..., None])
-    w = smoothstep(0.05, 0.15, a)[..., None]
-    F = K + w * r / np.maximum(a, 0.05)[..., None]
+    if smooth:
+        # paper grain makes a per-pixel alpha speckle; mist is a soft veil, so smooth it (about 8 px at 4K)
+        a = np.clip(blur(a, 8), 0, 1)
+        a = np.where(a < 0.01, 0, a)
+        F = K
+    else:
+        # grain-free media: put what the smooth key misses back into the colour, exact at rest
+        r = C - (B * (1 - a[..., None]) + K * a[..., None])
+        w = smoothstep(0.05, 0.15, a)[..., None]
+        F = K + w * r / np.maximum(a, 0.05)[..., None]
     return np.clip(F, 0, 1), a
 
 
@@ -133,7 +141,7 @@ def extract(key, G, cache, outdir, boat_y_design=806):
         if prev is None:
             F, a = C, np.ones(C.shape[:2], np.float32)
         elif g in KEY_GROUPS.get(key, {'mist'}):
-            F, a = extract_key(prev, C)
+            F, a = extract_key(prev, C, smooth=key in SMOOTH_KEY)
         else:
             F, a = extract_opaque(prev, C)
         if g in ('mist', 'clouds'):

@@ -45,7 +45,7 @@ const BASE: Motion = {
   boatAngle: 0.018, boatLift: 5, boatCycles: 4, birdsWrap: true, fx: 0,
 };
 export const MOTION: Record<string, Motion> = {
-  watercolour: BASE,
+  watercolour: { ...BASE, mistDrift: 240 },
   artdeco: { ...BASE, waterAmp: 6 },
   linocut: { ...BASE, waterAmp: 4 },
   // a leaded window is one flat panel: keep parallax small and let light do the work
