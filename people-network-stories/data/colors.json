@@ -1,0 +1,11 @@
+{
+  "red": "#D01010",
+  "redSide": "#A00C0C",
+  "white": "#F5F5F5",
+  "cyan": "#7FE6FF",
+  "blue": "#22A8FF",
+  "lightBackground": "#FBFBFA",
+  "darkBackground": "#000000",
+  "greyLine": "#6A6A6A",
+  "floorGrid": "#C8C8C8"
+}
