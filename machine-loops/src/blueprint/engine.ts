@@ -86,16 +86,16 @@ export const G = {
   L: 1000, // beam half-length (pivot to end pins)
   O: { x: 0, y: 0 }, // beam pivot (top of the column)
   C: { x: 1000, y: -1600 }, // crankshaft
-  crank: 300,
+  crank: 250,
   conrod: 1600,
-  wattC: 500, // coupler A-E (Watt linkage)
-  F: { x: -2000, y: -500 }, // radius-rod fixed pivot
+  wattC: 400, // coupler A-E (Watt linkage)
+  F: { x: -2000, y: -400 }, // radius-rod fixed pivot
   rodX: -1000, // piston rod / cylinder axis
-  rodLen: 850, // linkage midpoint to piston top
+  rodLen: 950, // linkage midpoint to piston top
   pistonH: 120,
   bore: 520,
-  cylTop: -760,
-  cylBot: -1545,
+  cylTop: -860,
+  cylBot: -1548,
   ground: -1700,
   flyR: 700,
   ecc: 60, // eccentric throw

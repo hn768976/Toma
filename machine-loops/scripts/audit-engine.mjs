@@ -47,6 +47,9 @@ for (let f = 0; f <= ENGINE_LOOP; f++) {
   check(p.pistonTop - G.pistonH > G.cylBot + 20, `frame ${f}: piston hits the bottom cover`);
   // crosshead clears the stuffing box
   check(p.Mid.y - 60 > G.cylTop + 150, `frame ${f}: crosshead hits the gland`);
+  // parallel-motion lower pin (boss r=44) clears the stuffing box and gland
+  track("lower linkage pin clearance above gland", p.E.y - 44 - (G.cylTop + 150));
+  check(Math.abs(p.E.x - G.rodX) > 154 || p.E.y - 44 > G.cylTop + 160, `frame ${f}: parallel-motion pin hits the gland`);
   // pumps: bucket inside barrel, crosshead inside guides
   track("air pump bucket", p.Sa.y - G.airRod);
   check(p.Sa.y - G.airRod < -950 && p.Sa.y - G.airRod - 60 > -1350, `frame ${f}: air pump bucket leaves barrel`);

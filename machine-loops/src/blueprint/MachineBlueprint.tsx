@@ -65,8 +65,8 @@ export const MachineBlueprint: React.FC = () => {
     // far layer first (the twin beam plates / far frame, offset by parallax), then the near layer
     for (const layer of [0, 1]) {
     const layerAlpha = layer === 0 ? 0.55 : 1;
-    const ox = layer === 0 ? 140 + 0.06 * (cam.cx - 320) : 0;
-    const oy = layer === 0 ? 90 : 0;
+    const ox = layer === 0 ? 90 + 0.04 * (cam.cx - 320) : 0;
+    const oy = layer === 0 ? 55 : 0;
     for (const { part, xf } of list) {
       if (layer === 0 && part.name === "construction") continue;
       const c = Math.cos(xf.a);
