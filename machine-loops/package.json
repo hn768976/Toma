@@ -1,0 +1,32 @@
+{
+  "name": "machine-loops",
+  "version": "1.0.0",
+  "description": "Steampunk Frame, Robot Walk, Machine Blueprint, Ocean Depth: 8 Remotion compositions at 3840x2160, 30fps",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@react-three/fiber": "9.3.0",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "5.2.8",
+    "@remotion/eslint-config-flat": "4.0.515",
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "lint": "tsc",
+    "audit:engine": "node scripts/audit-engine.mjs",
+    "previews": "bash scripts/render-previews.sh"
+  }
+}

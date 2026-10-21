@@ -1,0 +1,9 @@
+{
+  "_comment": "Robot palette. Each colour is one row: change the hex and re-render. Keep every colour away from pure green so RobotWalk_Green keys cleanly (green channel should not exceed both red and blue by more than ~0.35).",
+  "body": "#D9F2F7",
+  "panel": "#1F7A80",
+  "accent": "#F2B32A",
+  "outline": "#141414",
+  "lens": "#1B2A33",
+  "light": "#FFF4C2"
+}

@@ -1,0 +1,14 @@
+{
+  "_comment": "All on-screen text for OceanDepth. Translate the strings; depths are in metres and drive the layout. Feet values are computed from the metre ticks (x 3.28084, rounded).",
+  "badgeFeet": "FT",
+  "badgeMetres": "M",
+  "pressureUnit": "MPa",
+  "zones": [
+    { "name": "Epipelagic Zone", "topM": 0, "bottomM": 200 },
+    { "name": "Mesopelagic Zone", "topM": 200, "bottomM": 1000 },
+    { "name": "Bathypelagic Zone", "topM": 1000, "bottomM": 4000 },
+    { "name": "Abyssopelagic Zone", "topM": 4000, "bottomM": 6000 },
+    { "name": "Hadal Zone", "topM": 6000, "bottomM": 11000 }
+  ],
+  "metreTicks": [200, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000]
+}
