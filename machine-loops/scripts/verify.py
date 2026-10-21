@@ -121,36 +121,45 @@ def levels():
 
 
 def key():
+    """Chroma-key over mid-grey (ffmpeg chromakey=0x00FF00:0.12:0.05, keyed in 4:4:4 so the test
+    itself adds no chroma subsampling). Counts, per frame:
+      subject_green - non-key source pixels that come out visibly green (true spill/fringe)
+      far_green     - green left more than 2 px away from the subject (a failed key; allowed: <= 92 px,
+                      0.01% of the frame, for isolated 4:2:0 encoder pixels)
+      holes         - solid subject pixels (not on the anti-aliased edge) the key made see-through
+      band          - key pixels within 2 px of the subject that stay partly opaque: ffmpeg's
+                      chromakey averages 3x3 pixels and 4:2:0 shares chroma over 2x2 blocks
+                      (reported for information; a despilling keyer removes it)"""
+    from numpy.lib.stride_tricks import sliding_window_view
     for name in ("SteampunkFrame_White", "SteampunkFrame_Green", "RobotWalk_Green"):
-        worst_fringe = 0
-        worst_holes = 0
+        worst = dict(subject_green=0, far_green=0, holes=0, band=0)
         for n in (0, 50, 100, 150, 200, 250):
             src = frame_rgb(os.path.join(OUT, name + ".mp4"), n)
             srcp = os.path.join(OUT, f"_src_{name}_{n}.png")
             Image.fromarray(src.astype(np.uint8)).save(srcp)
             raw = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=0x808080:s=1280x720:d=1", "-i", srcp,
-                                  "-filter_complex", "[1:v]chromakey=0x00FF00:0.12:0.05[k];[0:v][k]overlay",
+                                  "-filter_complex", "[1:v]format=yuva444p,chromakey=0x00FF00:0.12:0.05[k];[0:v][k]overlay=format=yuv444",
                                   "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
             os.remove(srcp)
             out = np.frombuffer(raw, np.uint8).reshape(720, 1280, 3).astype(int)
-            # fringe: visibly green pixels left after keying
-            g = out[..., 1] - np.maximum(out[..., 0], out[..., 2])
-            fringe = int((g > 40).sum())
-            # holes: non-green source pixels that the key made (partly) transparent
-            sg = src[..., 1] - np.maximum(src[..., 0], src[..., 2])
-            from numpy.lib.stride_tricks import sliding_window_view
-            greenish = np.pad(sg >= 30, 2)
-            near_key = sliding_window_view(greenish, (5, 5)).any(axis=(2, 3))  # anti-aliased edge band
-            solid = (sg < 30) & ~near_key
-            if name == "SteampunkFrame_White":
-                solid &= src.min(axis=2) < 250  # ignore the white background
-            changed = np.abs(out - src).max(axis=2) > 12
-            holes = int((solid & changed).sum())
-            worst_fringe = max(worst_fringe, fringe)
-            worst_holes = max(worst_holes, holes)
             Image.fromarray(out.astype(np.uint8)).save(os.path.join(OUT, f"key_{name}_{n}.png"))
-        say(worst_holes == 0 and worst_fringe < 200,
-            f"key {name}: worst frame has {worst_fringe} strongly green pixels left, {worst_holes} hole pixels")
+            sg = src[..., 1] - np.maximum(src[..., 0], src[..., 2])
+            keyish = sg >= 30  # key colour, including encoder-softened key pixels
+            subject = ~keyish
+            if name == "SteampunkFrame_White":
+                subject &= src.min(axis=2) < 250  # the white background is not subject
+            near_subject = sliding_window_view(np.pad(subject, 2), (5, 5)).any(axis=(2, 3))
+            near_key = sliding_window_view(np.pad(keyish, 2), (5, 5)).any(axis=(2, 3))
+            og = out[..., 1] - np.maximum(out[..., 0], out[..., 2])
+            green = og > 40
+            worst["subject_green"] = max(worst["subject_green"], int((green & subject & ~near_key).sum()))
+            worst["far_green"] = max(worst["far_green"], int((green & keyish & ~near_subject).sum()))
+            worst["band"] = max(worst["band"], int((green & keyish & near_subject).sum()))
+            solid = subject & ~near_key
+            worst["holes"] = max(worst["holes"], int((solid & (np.abs(out - src).max(axis=2) > 12)).sum()))
+        ok = worst["subject_green"] == 0 and worst["far_green"] <= 92 and worst["holes"] == 0
+        say(ok, f"key {name} (worst of 6 frames): subject pixels turned green {worst['subject_green']}, green left away "
+                f"from the subject {worst['far_green']}, holes {worst['holes']}; 2-px keyer band {worst['band']}")
 
 
 def numbers():
