@@ -14,7 +14,7 @@ import { useFont } from "../lib/useStaticData";
 const DURATION = 18;
 const MONO = "IBM Plex Mono";
 const TITLE_FONT = "Archivo Black";
-const FOG = { near: 110, far: 230 };
+const FOG = { near: 130, far: 210 };
 
 // ----- Camera path ------------------------------------------------------------------------
 // 0-5s eye level moving forward past the near people; 5-12s rising and tilting down;
@@ -22,13 +22,13 @@ const FOG = { near: 110, far: 230 };
 const camAt = (t: number) => {
   const pos = new THREE.Vector3(
     0,
-    keyframes(t, [[0, 1.95], [5, 2.1], [12, 30], [18, 32]]),
-    keyframes(t, [[0, 17], [5, 10], [12, 22], [18, 23]]),
+    keyframes(t, [[0, 1.95], [5, 2.1], [12, 30], [16, 32]]),
+    keyframes(t, [[0, 17], [5, 10], [12, 22], [16, 23]]),
   );
   const look = new THREE.Vector3(
     0,
-    keyframes(t, [[0, 3.4], [5, 4.4], [12, 2], [18, 2]]),
-    keyframes(t, [[0, -100], [5, -100], [12, -60], [18, -60]]),
+    keyframes(t, [[0, 3.4], [5, 4.4], [12, 2], [16, 2]]),
+    keyframes(t, [[0, -100], [5, -100], [12, -60], [16, -60]]),
   );
   return { pos, look };
 };
@@ -43,8 +43,8 @@ const CROWD: Person[] = [];
   const near: [number, number][] = [[-2.3, 12.4], [1.4, 10.6], [3.3, 11.8], [-4.6, 9.8], [5.6, 7.5], [-1.0, 6.2], [2.4, 3.5], [-3.6, 2.2]];
   for (const [x, z] of near) CROWD.push({ x, z, h: 1.8, rot: (rng() - 0.5) * 0.4, female: rng() < 0.3 });
   while (CROWD.length < COUNTS.bigDataCrowdPeople) {
-    const z = 4 - Math.pow(rng(), 0.8) * 150;
-    const x = (rng() * 2 - 1) * (40 + (4 - z) * 0.6);
+    const z = 4 - Math.pow(rng(), 0.8) * 250;
+    const x = (rng() * 2 - 1) * (70 + (4 - z) * 0.9);
     // Keep the camera's opening corridor clear, and the foreground sparser than the
     // distance, so the eye-level horizon is a thin band rather than a wall.
     if (z > -6 && Math.abs(x) < 6) continue;
@@ -91,13 +91,13 @@ const titleFrame = () => {
   cam.lookAt(finalCam.look);
   cam.updateMatrixWorld();
   // Centre of the title: top third of the final frame, 110 units away.
-  const dir = new THREE.Vector3(0, 0.7, 0.5).unproject(cam).sub(cam.position).normalize();
+  const dir = new THREE.Vector3(0, 0.64, 0.5).unproject(cam).sub(cam.position).normalize();
   const dist = 110;
   const center = cam.position.clone().addScaledVector(dir, dist);
   const viewH = 2 * dist * Math.tan(THREE.MathUtils.degToRad(FOV / 2));
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
-  return { center, right, up, width: viewH * (16 / 9) * 0.78 };
+  return { center, right, up, width: viewH * (16 / 9) * 0.74 };
 };
 
 const sampleTitle = (text: string) => {
@@ -123,12 +123,12 @@ const sampleTitle = (text: string) => {
   const data = ctx.getImageData(0, 0, W, H).data;
   const r = mulberry32(13);
   const pts: [number, number][] = [];
-  const step = 5;
+  const step = 6;
   for (let y = 0; y < H; y += step)
     for (let x = 0; x < W; x += step) {
       const jx = Math.min(W - 1, Math.max(0, Math.round(x + (r() - 0.5) * step)));
       const jy = Math.min(H - 1, Math.max(0, Math.round(y + (r() - 0.5) * step)));
-      if (data[(jy * W + jx) * 4 + 3] > 128 && r() < 0.9) pts.push([(jx - W / 2) / textW, -(jy - H / 2) / textW]);
+      if (data[(jy * W + jx) * 4 + 3] > 128 && r() < 0.8) pts.push([(jx - W / 2) / textW, -(jy - H / 2) / textW]);
     }
   return pts; // in units of the text width
 };
@@ -142,7 +142,7 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
   const gridLines: [number, number, number, number][] = [];
   for (let z = 20; z >= -300; z -= 2.5) gridLines.push([-250, z, 250, z]);
   for (let x = -150; x <= 150; x += 2.5) gridLines.push([x, 20, x, -300]);
-  const grid = new Lines(gridLines.length, info, { width: 0.8, fog: FOG });
+  const grid = new Lines(gridLines.length, info, { width: 1.1, fog: FOG });
   const gc = rgb(COLORS.floorGrid);
   gridLines.forEach(([x0, z0, x1, z1], i) => {
     grid.setEnds(i, x0, 0, z0, x1, 0, z1);
@@ -205,6 +205,8 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
     dur[i] = 1.8 + r() * 0.8;
   }
   const psize = withTitle ? 0.5 : 0.3;
+  // Varied particle sizes: a rough, stippled fill.
+  const pScale = Float32Array.from({ length: NP }, () => 0.7 + r() * r() * 1.4);
 
   // Web: lines from the title down into the crowd, and between title particles.
   const WEB = withTitle ? 1500 : 1300;
@@ -213,7 +215,7 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
   for (let i = 0; i < WEB; i++) {
     const a = targets[Math.floor(r() * NP)];
     let b: THREE.Vector3;
-    if (r() < 0.7) {
+    if (r() < 0.9) {
       // A person in the crowd in front of the title.
       let p = CROWD[Math.floor(r() * CROWD.length)];
       for (let k = 0; k < 10 && (p.z > -15 || p.z < -150 || Math.abs(p.x) > 70); k++) p = CROWD[Math.floor(r() * CROWD.length)];
@@ -222,11 +224,23 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
       b = targets[Math.floor(r() * NP)].clone().add(new THREE.Vector3(gauss(r) * 8, -6 - r() * 14, gauss(r) * 8));
     }
     web.setEnds(i, a.x, a.y, a.z, b.x, b.y, b.z);
-    web.setColor(i, 0.25, 0.25, 0.25, 0.2 + r() * 0.2);
+    web.setColor(i, 0.3, 0.3, 0.3, 0.35 + r() * 0.25);
     webAt[i] = 10 + r() * 4.5;
   }
 
-  scene.add(grid.mesh, people.group, sky.mesh, dotted.mesh, digits.mesh, web.mesh, particles.mesh);
+  // Links between people across the floor, appearing through the first half.
+  const FLOOR = 900;
+  const floor = new Lines(FLOOR, info, { width: 0.8, fog: FOG });
+  const floorAt = new Float32Array(FLOOR);
+  for (let i = 0; i < FLOOR; i++) {
+    const a = CROWD[Math.floor(r() * CROWD.length)];
+    let b = CROWD[Math.floor(r() * CROWD.length)];
+    for (let k = 0; k < 30 && Math.hypot(a.x - b.x, a.z - b.z) > 40; k++) b = CROWD[Math.floor(r() * CROWD.length)];
+    floor.setEnds(i, a.x, a.h * 0.85, a.z, b.x, b.h * 0.85, b.z);
+    floor.setColor(i, 0.45, 0.45, 0.45, 0.45 + r() * 0.3);
+    floorAt[i] = 1 + r() * 11;
+  }
+  scene.add(grid.mesh, floor.mesh, people.group, sky.mesh, dotted.mesh, digits.mesh, web.mesh, particles.mesh);
   const tmp = new THREE.Vector3();
 
   return {
@@ -293,9 +307,11 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
         const y = v * v * a.y + 2 * v * e * b.y + e * e * g.y;
         const z = v * v * a.z + 2 * v * e * b.z + e * e * g.z;
         const shade = withTitle ? 0.04 : 0.42;
-        particles.set(i, x, y, z, psize, shade, shade, shade, (withTitle ? 1 : 0.55) * clamp01(u * 4));
+        particles.set(i, x, y, z, psize * pScale[i], shade, shade, shade, (withTitle ? 1 : 0.55) * clamp01(u * 4));
       }
       for (let i = 0; i < WEB; i++) web.setRange(i, 0, smooth(remap(t, webAt[i], webAt[i] + 1.4)));
+      for (let i = 0; i < FLOOR; i++) floor.setRange(i, 0, smooth(remap(t, floorAt[i], floorAt[i] + 1.2)));
+      floor.commit();
       sky.commit();
       dotted.commit();
       digits.commit();

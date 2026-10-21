@@ -24,10 +24,10 @@ const DY = (GY1 - GY0) / (ROWS - 1);
 // (19-19.6s) so that from 20s every grid point is a person.
 const litCount = (t: number) => {
   if (t < 0.6) return 0;
-  if (t < 5) return Math.round(1 + 11 * remap(t, 0.6, 5));
-  if (t < 14) return Math.round(12 + 228 * easeIn(remap(t, 5, 14), 1.8));
-  if (t < 19) return Math.round(240 + 520 * easeIn(remap(t, 14, 19), 1.6));
-  return Math.round(760 + (N - 760) * remap(t, 19, 19.6));
+  if (t < 5) return Math.round(1 + 5 * remap(t, 0.6, 5));
+  if (t < 14) return Math.round(6 + 0.2 * N * easeIn(remap(t, 5, 14), 1.8));
+  if (t < 19) return Math.round(6 + 0.2 * N + (0.88 * N - 6 - 0.2 * N) * easeIn(remap(t, 14, 19), 1.4));
+  return Math.round(0.88 * N + 0.12 * N * remap(t, 19, 19.6));
 };
 
 const rngOrder = mulberry32(2606141);
@@ -45,8 +45,8 @@ const LIT_FRAME = new Float32Array(N).fill(1e9);
 // Spawn rate (per second): a trickle from 5s, rising to a dense criss-cross at 19s.
 const streakRate = (t: number) => {
   if (t < 4.5 || t > 19.2) return 0;
-  if (t < 14) return 0.6 + 11 * easeIn(remap(t, 4.5, 14), 1.6);
-  return 11.6 * Math.exp(3.9 * remap(t, 14, 19));
+  if (t < 14) return 0.6 + 90 * easeIn(remap(t, 4.5, 14), 1.9);
+  return 90.6 * Math.exp(2.0 * remap(t, 14, 19));
 };
 
 type Streak = { t0: number; life: number; x: number; y: number; ang: number; speed: number; len: number; bright: number };
@@ -71,9 +71,9 @@ const STREAKS: Streak[] = (() => {
         x: cx,
         y: cy,
         ang: rng() * Math.PI * 2,
-        speed: 160 + rng() * 380 + focus * 260,
-        len: 220 + rng() * 420,
-        bright: 0.24 + rng() * 0.26,
+        speed: 120 + rng() * 280 + focus * 200,
+        len: 380 + rng() * 420,
+        bright: 0.16 + rng() * 0.2,
       });
     }
   }
@@ -134,11 +134,11 @@ const dotTexture = () => {
   return new Texture({ source: new CanvasSource({ resource: c, autoGenerateMipmaps: true }) });
 };
 
-const MAX_STREAKS = 1400;
+const MAX_STREAKS = 2400;
 
 const setup: PixiSetup = (world: Container, info: PixiInfo) => {
   const k = info.width / 3840;
-  const iconPx = DY * 0.5 * k;
+  const iconPx = DY * 0.78 * k;
   const icons = makeIconTextures(iconPx, COLORS.cyan, { glow: 0.1 });
   const dotTex = dotTexture();
   const sTex = streakTexture();
@@ -211,13 +211,13 @@ const setup: PixiSetup = (world: Container, info: PixiInfo) => {
       s.y = (st.y + Math.sin(st.ang) * dist) * k;
       s.rotation = st.ang;
       s.width = st.len * k;
-      s.height = 56 * k;
+      s.height = 72 * k;
       s.alpha = st.bright * env * clear;
     }
     for (let i = n; i < MAX_STREAKS; i++) streaks[i].visible = false;
     // Central bloom to near-white at 19s, gone by 20s.
     const b = keyframes(t, [
-      [15.5, 0],
+      [17.2, 0],
       [19.0, 1],
       [19.25, 1],
       [19.95, 0],

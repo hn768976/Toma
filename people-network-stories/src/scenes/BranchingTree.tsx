@@ -23,11 +23,13 @@ type Branch = {
   leaf: boolean;
 };
 
-const TRUNK_TOP = 1.0;
+const TRUNK_TOP = 0.55;
 const LEVELS = 10;
-const CROWN_W = 1.85; // horizontal radius of the crown envelope
-const CROWN_H = 1.4; // vertical radius
-const CROWN_D = 0.85; // depth radius
+const CROWN_W = 1.3; // horizontal radius of the crown envelope
+const CROWN_H = 1.45; // vertical radius
+const CROWN_D = 0.75; // depth radius
+// Each tip ends in a few short twigs with nodes: the granular texture of the dense crown.
+const TWIGS = 3;
 
 // When each level grows (seconds): trunk 0-2, first splits 2-8, crown fills 8-24.
 const LEVEL_START = [0, 2.0, 3.9, 5.8, 8.0, 10.6, 13.2, 15.8, 18.4, 21.0];
@@ -40,14 +42,15 @@ const buildTree = (targetTips: number) => {
   branches.push({ parent: -1, level: 0, from: [0, 0, 0], to: O, start: 0, dur: 2, leaf: false });
 
   // Crown radius fraction reached by each level (the last level touches the envelope).
-  const reach = (lvl: number) => Math.pow(lvl / (LEVELS - 1), 0.85);
+  // Inner levels stay low and narrow (a funnel of links), the crown is a dome on top.
+  const reach = (lvl: number) => Math.pow(lvl / (LEVELS - 1), 1.25);
   // Mean branching per split so that the leaf count lands near the target.
   const splits = LEVELS - 1;
   const meanK = Math.pow(targetTips, 1 / splits);
   const p3 = clamp01(meanK - 2);
 
   type Node = { idx: number; a0: number; a1: number; b0: number; b1: number; pos: [number, number, number] };
-  let frontier: Node[] = [{ idx: 0, a0: -1.62, a1: 1.62, b0: -1.0, b1: 1.0, pos: O }];
+  let frontier: Node[] = [{ idx: 0, a0: -1.42, a1: 1.42, b0: -1.0, b1: 1.0, pos: O }];
   for (let lvl = 1; lvl < LEVELS; lvl++) {
     const next: Node[] = [];
     for (const n of frontier) {
@@ -78,14 +81,17 @@ const buildTree = (targetTips: number) => {
         // Fan direction: a sweeps across the front plane (beyond +-90deg at the sides,
         // so the rim droops), b tilts towards/away from the camera.
         // Early levels stay close to vertical, so the fan fills down to the fork.
-        const squeeze = lerp(0.3, 1, Math.pow(lvl / (LEVELS - 1), 0.6));
+        const squeeze = lerp(0.22, 1, Math.pow(lvl / (LEVELS - 1), 1.1));
         const ae = ac * squeeze;
         const be = bc * 0.55 * squeeze;
-        const dx = Math.sin(ae) * Math.cos(be);
-        const dy = Math.cos(ae) * Math.cos(be);
+        // Superellipse envelope: a rounded dome with steep sides (mushroom cap).
+        const se = (v: number) => Math.sign(v) * Math.pow(Math.abs(v), 0.6);
+        const dx = se(Math.sin(ae)) * Math.cos(be);
+        const dy = se(Math.cos(ae)) * Math.cos(be);
         const dz = Math.sin(be);
         // Tips end at varied radii, so the crown is a filled fan rather than a rim.
-        const r = lvl === LEVELS - 1 ? 0.5 + 0.55 * Math.sqrt(rng()) : reach(lvl) * (0.78 + rng() * 0.3);
+        // Tips sit in the outer shell of the dome (densest at the top).
+        const r = lvl === LEVELS - 1 ? 0.62 + 0.4 * Math.sqrt(rng()) : reach(lvl) * (0.8 + rng() * 0.3);
         const pos: [number, number, number] = [
           O[0] + dx * CROWN_W * r,
           O[1] + dy * CROWN_H * r + (lvl === 1 ? 0.05 : 0),
@@ -103,6 +109,23 @@ const buildTree = (targetTips: number) => {
           leaf: lvl === LEVELS - 1,
         });
         next.push({ idx, a0, a1, b0, b1, pos });
+        if (lvl === LEVELS - 1) {
+          for (let w = 0; w < TWIGS; w++) {
+            const len = 0.05 + rng() * 0.09;
+            const ta = rng() * Math.PI * 2;
+            const tb = (rng() - 0.5) * Math.PI;
+            branches.push({
+              parent: idx,
+              level: LEVELS,
+              from: pos,
+              to: [pos[0] + Math.cos(ta) * Math.cos(tb) * len, pos[1] + Math.abs(Math.sin(ta)) * len * 0.8, pos[2] + Math.sin(tb) * len],
+              start: branches[idx].start + branches[idx].dur + rng() * 2.5,
+              dur: 0.5,
+              leaf: true,
+            });
+          }
+          branches[idx].leaf = false;
+        }
       }
     }
     frontier = next;
@@ -130,24 +153,24 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
 
   const ink = dark ? rgb(COLORS.cyan) : rgb(COLORS.red);
   const bg = dark ? rgb(COLORS.darkBackground) : rgb(COLORS.lightBackground);
-  // Lighter towards the tips: on white mix towards the background, on black dim.
+  // Links: the open fan below the crown is a fine pale (pink-grey on white) web; the
+  // crown's own links are red. Each line gets lighter (more transparent) towards the
+  // tips; the crown reads dense and dark from the overlap and its nodes.
   const levelColor = (lvl: number): [number, number, number, number] => {
-    const t = lvl / (LEVELS - 1);
-    if (dark) return [ink[0], ink[1], ink[2], lerp(0.95, 0.16, Math.pow(t, 0.6))];
-    return [
-      lerp(ink[0] * 0.8, ink[0], t),
-      lerp(ink[1] * 0.8, lerp(ink[1], bg[1], 0.25), t),
-      lerp(ink[2] * 0.8, lerp(ink[2], bg[2], 0.25), t),
-      lerp(0.95, 0.55, Math.pow(t, 0.7)),
-    ];
+    const t = Math.min(1, lvl / (LEVELS - 1));
+    if (dark) return [ink[0], ink[1], ink[2], lvl === 0 ? 0.9 : lerp(0.6, 0.13, Math.pow(t, 0.6))];
+    const pale = [lerp(ink[0], 0.72, 0.55), lerp(ink[1], 0.6, 0.6), lerp(ink[2], 0.6, 0.6)];
+    const k = smooth(remap(t, 0.35, 0.9));
+    return [lerp(pale[0], ink[0] * 0.8, k), lerp(pale[1], ink[1] * 0.8, k), lerp(pale[2], ink[2] * 0.8, k), lvl === 0 ? 0.85 : lerp(0.75, 0.62, t)];
   };
+  const tipInk = dark ? ink : rgb(COLORS.redSide);
 
   BRANCHES.forEach((b, i) => {
     lines.setEnds(i, ...b.from, ...b.to);
     const c = levelColor(b.level);
     lines.setColor(i, c[0], c[1], c[2], c[3]);
     // Trunk stays a thin single line; branches get thinner towards the tips.
-    lines.w[i] = b.level === 0 ? 1.25 : lerp(1.15, 0.55, b.level / (LEVELS - 1));
+    lines.w[i] = b.level === 0 ? 1.1 : lerp(0.95, 0.5, Math.min(1, b.level / (LEVELS - 1)));
   });
 
   return {
@@ -174,13 +197,14 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
           const s = early ? 3.2 : 1.8;
           dots.set(d++, x, y, z, s, ink[0], ink[1], ink[2], 1);
         } else if (b.leaf) {
-          const s = 1.35 + 0.9 * thick;
-          if (dark) dots.set(d++, x, y, z, s, ink[0], ink[1], ink[2], 0.45 + 0.25 * thick);
-          else dots.set(d++, x, y, z, s, ink[0] * 0.85, ink[1], ink[2], 0.85 + 0.15 * thick);
+          const s = 1.5 + 0.7 * thick;
+          if (dark) dots.set(d++, x, y, z, s, ink[0], ink[1], ink[2], 0.3 + 0.15 * thick);
+          else dots.set(d++, x, y, z, s, tipInk[0], tipInk[1], tipInk[2], 0.9);
         } else {
           // Junction node.
-          const s = early ? 2.6 : 1.3;
-          dots.set(d++, x, y, z, s, ink[0], ink[1], ink[2], early ? 1 : 0.7);
+          const s = early ? 2.6 : b.level === LEVELS - 1 ? 1.9 + 0.6 * thick : 1.3;
+          const c = b.level === LEVELS - 1 ? tipInk : ink;
+          dots.set(d++, x, y, z, s, c[0], c[1], c[2], early ? 1 : dark ? 0.5 : 0.85);
         }
       }
       dots.setDrawCount(d);
@@ -188,21 +212,22 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
       dots.commit();
 
       // Camera: slow ~40deg orbit, pulling back as the crown widens.
-      const az = THREE.MathUtils.degToRad(lerp(-20, 20, smooth(t / 30)));
+      // Everything settles by 28s: the last 2s hold.
+      const az = THREE.MathUtils.degToRad(lerp(-20, 20, smooth(t / 28)));
       const dist = keyframes(t, [
-        [0, 3.0],
-        [2, 3.2],
-        [8, 3.9],
-        [16, 5.2],
-        [24, 5.9],
-        [30, 6.1],
+        [0, 2.2],
+        [2, 2.4],
+        [8, 3.0],
+        [16, 4.0],
+        [24, 4.45],
+        [28, 4.5],
       ]);
       const lookY = keyframes(t, [
-        [0, 0.75],
-        [2, 0.95],
-        [8, 1.25],
-        [16, 1.42],
-        [30, 1.45],
+        [0, 0.4],
+        [2, 0.55],
+        [8, 0.8],
+        [16, 1.0],
+        [28, 1.06],
       ]);
       const elev = THREE.MathUtils.degToRad(6);
       camera.position.set(Math.sin(az) * Math.cos(elev) * dist, lookY + Math.sin(elev) * dist, Math.cos(az) * Math.cos(elev) * dist);

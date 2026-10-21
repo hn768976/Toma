@@ -56,11 +56,15 @@ void main() {
 
 const FRAG = /* glsl */ `
 uniform float uOpacity;
+uniform float uSoft;
 varying float vDist;
 varying float vHalf;
 varying vec4 vCol;
 void main() {
-  float a = clamp(vHalf + 0.5 - abs(vDist), 0.0, 1.0) * vCol.a * uOpacity;
+  float hard = clamp(vHalf + 0.5 - abs(vDist), 0.0, 1.0);
+  // Soft lines: Gaussian cross-section (blurred light strands).
+  float r = vDist / max(vHalf, 0.5);
+  float a = mix(hard, exp(-r * r * 2.5), uSoft) * vCol.a * uOpacity;
   if (a <= 0.0) discard;
   gl_FragColor = vec4(vCol.rgb, a);
 }`;
@@ -69,6 +73,7 @@ export type LinesOptions = {
   width: number; // in 720p pixels
   additive?: boolean;
   depthTest?: boolean;
+  soft?: boolean;
   // Alpha fades out between these view distances (per vertex).
   fog?: { near: number; far: number };
 };
@@ -117,6 +122,7 @@ export class Lines {
         uWidth: { value: opts.width },
         uPx: { value: res.px },
         uOpacity: { value: 1 },
+        uSoft: { value: opts.soft ? 1 : 0 },
         uFogNear: { value: opts.fog?.near ?? 1e8 },
         uFogFar: { value: opts.fog?.far ?? 2e8 },
       },

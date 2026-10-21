@@ -2,10 +2,13 @@
   "red": "#D01010",
   "redSide": "#A00C0C",
   "white": "#F5F5F5",
+  "whiteSide": "#A9A9A9",
   "cyan": "#7FE6FF",
   "blue": "#22A8FF",
+  "blueSide": "#1474B4",
   "lightBackground": "#FBFBFA",
   "darkBackground": "#000000",
   "greyLine": "#6A6A6A",
+  "paleRedLine": "#E08C8C",
   "floorGrid": "#C8C8C8"
 }

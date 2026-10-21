@@ -10,14 +10,14 @@ import { useStaticJson } from "../lib/useStaticData";
 type Ring = [number, number][];
 type Land = Ring[][];
 
-// Equirectangular projection (standard parallel 25deg) filling 95% of the frame width;
+// Equirectangular projection (standard parallel 31deg) filling 95% of the frame width;
 // the land spans 83.6N (Greenland) to 55.6S (Cape Horn). Antarctica is left out.
 const LAT_TOP = 84;
 const LAT_BOTTOM = -56.5;
 const project = (lon: number, lat: number, W: number, H: number): [number, number] => {
   const mapW = W * 0.95;
   const x = (W - mapW) / 2 + ((lon + 180) / 360) * mapW;
-  const pxPerDegY = ((mapW / 360) / Math.cos((25 * Math.PI) / 180));
+  const pxPerDegY = ((mapW / 360) / Math.cos((31 * Math.PI) / 180));
   const mapH = (LAT_TOP - LAT_BOTTOM) * pxPerDegY;
   const top = (H - mapH) / 2;
   const y = top + (LAT_TOP - lat) * pxPerDegY;
@@ -105,7 +105,7 @@ const arrivedAt = (t: number, total: number) => {
   if (t < 2) return 0;
   if (t < 5) return Math.round(2 + 38 * Math.pow(remap(t, 2, 5), 1.4));
   const n12 = Math.round(total * 0.965);
-  if (t < 12) return Math.round(40 + (n12 - 40) * easeIn(remap(t, 5, 12), 2.4));
+  if (t < 12) return Math.round(40 + (n12 - 40) * easeIn(remap(t, 5, 12), 1.6));
   return Math.round(n12 + (total - n12) * easeOut(remap(t, 12, 13), 2));
 };
 
@@ -118,7 +118,7 @@ const makeSetup = (land: Land, dark: boolean): PixiSetup => (world: Container, i
   const iconPx = info.height * COUNTS.worldMapIconHeight;
   const tex = dark
     ? makeIconTextures(iconPx, COLORS.cyan, { glow: 0.12 })
-    : makeIconTextures(iconPx, COLORS.red, { shade: COLORS.redSide });
+    : makeIconTextures(iconPx, COLORS.red);
   // Arrival frame for each person.
   const total = people.length;
   const arrivalFrame = new Float32Array(total);

@@ -21,9 +21,9 @@ const profile: [number, number][] = (() => {
   // Neck: a smooth taper (cubic Bezier) into a straight cylinder.
   const p0 = pts[pts.length - 1];
   const t0: [number, number] = [-Math.cos((38 * Math.PI) / 180), -Math.sin((38 * Math.PI) / 180)];
-  const p3: [number, number] = [0.43, -1.45];
+  const p3: [number, number] = [0.5, -1.5];
   const p1: [number, number] = [p0[0] + t0[0] * 0.25, p0[1] + t0[1] * 0.25];
-  const p2: [number, number] = [0.43, -1.15];
+  const p2: [number, number] = [0.52, -1.2];
   for (let i = 1; i <= 40; i++) {
     const u = i / 40;
     const v = 1 - u;
@@ -32,7 +32,8 @@ const profile: [number, number][] = (() => {
       v * v * v * p0[1] + 3 * v * v * u * p1[1] + 3 * v * u * u * p2[1] + u * u * u * p3[1],
     ]);
   }
-  for (let i = 1; i <= 20; i++) pts.push([0.43, -1.45 - (0.55 * i) / 20]);
+  // A long, gently tapering neck (no metal base).
+  for (let i = 1; i <= 30; i++) pts.push([0.5 - 0.06 * (i / 30), -1.5 - (0.85 * i) / 30]);
   return pts;
 })();
 
@@ -54,7 +55,7 @@ const sampleProfile = (n: number) => {
   return { rows: out, spacing: total / n };
 };
 
-const MERIDIANS = 62;
+const MERIDIANS = 44;
 const ROWS = Math.round(COUNTS.peopleBulbPeople / MERIDIANS);
 const { rows: ROW_PTS, spacing: ROW_SPACING } = sampleProfile(ROWS);
 const SLOTS = MERIDIANS * ROWS;
@@ -104,7 +105,7 @@ for (let r = 0; r < ROWS; r++) {
 
 // ----- Curved light streaks drifting through the inside --------------------------------
 type Streak = { t0: number; life: number; axis: THREE.Vector3; r: number; c: THREE.Vector3; a0: number; speed: number; len: number; b: number };
-const streakRate = (t: number) => (t < 1.5 ? 0 : t < 8 ? 0.7 : t < 14 ? lerp(0.7, 14, remap(t, 8, 14)) : t < 20.5 ? 14 : 0);
+const streakRate = (t: number) => (t < 1.5 ? 0 : t < 8 ? 0.7 : t < 14 ? lerp(0.7, 60, remap(t, 8, 14)) : t < 20.5 ? 60 : 0);
 const STREAKS: Streak[] = [];
 {
   const r2 = mulberry32(61921);
@@ -119,18 +120,18 @@ const STREAKS: Streak[] = [];
         t0: t,
         life: 1.6 + r2() * 1.6,
         axis,
-        r: 0.45 + r2() * 0.5,
+        r: 0.6 + r2() * 0.38,
         c: new THREE.Vector3((r2() - 0.5) * 0.3, -0.15 + (r2() - 0.5) * 0.5, (r2() - 0.5) * 0.3),
         a0: r2() * Math.PI * 2,
         speed: (1.3 + r2() * 1.4) * (r2() < 0.5 ? -1 : 1),
         len: 0.6 + r2() * 0.9,
-        b: 0.45 + r2() * 0.4,
+        b: 0.1 + r2() * 0.14,
       });
     }
   }
 }
 const SEGS = 14;
-const MAX_STREAKS = 140;
+const MAX_STREAKS = 420;
 
 const glow: GlowOptions = { near: 0.7, far: 0.35 };
 
@@ -139,10 +140,10 @@ const createScene = (info: StageInfo): SceneRuntime => {
   const camera = new THREE.PerspectiveCamera(42, info.width / info.height, 0.01, 100);
   const bulb = new THREE.Group();
   scene.add(bulb);
-  const personH = ROW_SPACING * 0.72;
-  const people = new People(SLOTS, () => false, { front: COLORS.white, side: "#B0B0B0" });
+  const personH = ROW_SPACING * 0.62;
+  const people = new People(SLOTS, () => false, { front: COLORS.white, side: COLORS.whiteSide });
   const dots = new Dots(SLOTS, info, camera, {});
-  const lines = new Lines(MAX_STREAKS * SEGS, info, { width: 2.6, additive: true, depthTest: false });
+  const lines = new Lines(MAX_STREAKS * SEGS, info, { width: 12, additive: true, depthTest: false, soft: true });
   const inner = new Dots(5, info, camera, { world: true, soft: true, additive: true, depthTest: false });
   bulb.add(dots.mesh, people.group, lines.mesh, inner.mesh);
   const w = rgb(COLORS.white);
@@ -156,13 +157,13 @@ const createScene = (info: StageInfo): SceneRuntime => {
     update: (frame) => {
       const t = frame / FPS;
       // Camera: inside looking at the back wall, then pulling back through the surface.
-      const camZ = keyframes(t, [[0, 0.32], [8, 0.42], [14, 4.9], [24, 5.2]]);
-      const lookY = keyframes(t, [[0, 0.05], [8, 0.0], [14, -0.42], [24, -0.42]]);
+      const camZ = keyframes(t, [[0, 0.32], [8, 0.42], [14, 3.7], [18, 4.3], [22, 5.6]]);
+      const lookY = keyframes(t, [[0, 0.05], [8, 0.0], [14, -0.35], [18, -0.5], [22, -0.62]]);
       camera.position.set(0, lookY + 0.02, camZ);
       camera.lookAt(0, lookY, camZ - 1);
       camera.updateMatrixWorld();
       // The bulb turns slowly once revealed.
-      const spin = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [8, 2], [24, 40]], (x) => x));
+      const spin = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [8, 2], [21, 34], [22, 35]], (x) => x));
       bulb.rotation.y = spin;
       bulb.updateMatrixWorld();
       camLocal.copy(camera.position).applyMatrix4(new THREE.Matrix4().copy(bulb.matrixWorld).invert());
@@ -174,7 +175,9 @@ const createScene = (info: StageInfo): SceneRuntime => {
         const dx = camLocal.x - s.x;
         const dz = camLocal.z - s.z;
         const facing = (s.nx * dx + s.nz * dz) / Math.max(1e-6, Math.hypot(dx, dz));
-        const vis = lerp(1, lerp(0.22, 1, smooth(remap(facing, -0.3, 0.35))), outside);
+        // Sphere-like shading: the rim and the far side are dimmer; the narrow neck too.
+        const shade = facing > 0 ? 0.45 + 0.55 * Math.sqrt(facing) : lerp(0.45, 0.2, smooth(-facing / 0.4));
+        const vis = lerp(1, shade, outside) * lerp(0.6, 1, clamp01((Math.hypot(s.x, s.z) - 0.4) / 0.5));
         const age = t - s.at;
         if (age < 0) {
           people.hide(i);
@@ -184,7 +187,7 @@ const createScene = (info: StageInfo): SceneRuntime => {
         dots.hide(i);
         // A short brighten as each person appears, then brighter again when the bulb lights.
         const pop = 1 + 0.6 * Math.max(0, 1 - age / 0.4);
-        people.set(i, s.x, s.y, s.z, personH, vis * pop * lerp(0.92, 1.25, light), s.rot);
+        people.set(i, s.x, s.y, s.z, personH, vis * pop * lerp(0.85, 1.25, light), s.rot);
       }
       // Streaks.
       let n = 0;

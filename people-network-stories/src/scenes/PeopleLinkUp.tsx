@@ -2,7 +2,7 @@ import React from "react";
 import * as THREE from "three";
 import { COLORS, COUNTS, FPS, rgb } from "../lib/colors";
 import { easeIn, keyframes, lerp, remap, smooth } from "../lib/ease";
-import { mulberry32 } from "../lib/random";
+import { gauss, mulberry32 } from "../lib/random";
 import { Dots } from "../lib/three/dots";
 import { Lines } from "../lib/three/lines";
 import { People } from "../lib/three/people";
@@ -13,7 +13,7 @@ import { SceneRuntime, Stage, StageInfo } from "../lib/three/Stage";
 const PEOPLE = COUNTS.peopleLinkUpPeople;
 const DOTS = Math.round(PEOPLE * 0.45);
 const RX = 22; // field half-width
-const RZ = 14; // field half-depth
+const RZ = 22; // field half-depth
 const HY = 16; // field half-height
 
 type Node = { x: number; y: number; z: number; person: boolean; at: number; rot: number; female: boolean };
@@ -23,15 +23,16 @@ const buildField = (seed: number) => {
   const rng = mulberry32(seed);
   const raw: (Node & { d: number })[] = [];
   const add = (person: boolean) => {
-    // Uniform in a cylinder; the arrival key is the normalised distance from the centre.
-    // Soft-edged block: density falls off towards the sides.
-    const soft = () => (rng() + rng() + rng() * 0.6) / 2.6 * 2 - 1;
+    // A loose block, roughly even (no dense core), with soft edges.
+    const soft = () => (rng() * 2 - 1) * 0.85 + gauss(rng) * 0.08;
     const x = soft() * RX;
     const z = soft() * RZ;
     const y = soft() * HY;
     // Mostly centre-out, but newcomers land all over the view, sparse then dense.
-    const d = 0.5 * Math.max(Math.hypot(x / RX, z / RZ), Math.abs(y) / HY) + 0.5 * rng();
-    raw.push({ x, y, z, person, at: 0, rot: (rng() - 0.5) * 0.7, female: rng() < 0.4, d });
+    const d = 0.25 * Math.max(Math.hypot(x / RX, z / RZ), Math.abs(y) / HY) + 0.75 * rng();
+        // Some figures are turned nearly edge-on, which shows their extruded depth.
+    const rot = rng() < 0.3 ? (rng() < 0.5 ? -1 : 1) * (1.15 + rng() * 0.35) : (rng() - 0.5) * 1.0;
+    raw.push({ x, y, z, person, at: 0, rot, female: rng() < 0.4, d });
   };
   for (let i = 0; i < PEOPLE - 1; i++) add(true);
   for (let i = 0; i < DOTS - 3; i++) add(false);
@@ -49,7 +50,8 @@ const buildField = (seed: number) => {
   for (let i = 4; i < total; i++) {
     const f = (i - 3) / (total - 4);
     // invert f = easeIn(u, 2) -> u = sqrt(f)
-    nodes[i].at = 2 + 11 * Math.sqrt(f) * 0.985;
+    // Ease-in count: sparse for a long time, filling quickly towards 13s.
+    nodes[i].at = 2 + 11 * Math.pow(f, 1 / 4.2) * 0.985;
   }
   const links: Link[] = [
     { from: 0, to: 1, at: 0.3 },
@@ -58,7 +60,7 @@ const buildField = (seed: number) => {
   ];
   for (let i = 4; i < total; i++) {
     const n = nodes[i];
-    const k = 1 + Math.floor(rng() * 2.6);
+    const k = rng() < 0.45 ? 2 : 1;
     const best: [number, number][] = [];
     for (let j = 0; j < i; j++) {
       const m = nodes[j];
@@ -86,17 +88,17 @@ const createScene = (info: StageInfo): SceneRuntime => {
     const dark = half === 1;
     const people = new People(field.nodes.length, (i) => field.nodes[i].female, {
       front: dark ? COLORS.white : COLORS.red,
-      side: dark ? "#A9A9A9" : COLORS.redSide,
+      side: dark ? COLORS.whiteSide : COLORS.redSide,
     });
     const lines = new Lines(field.links.length, info, { width: 1.0 });
     const dots = new Dots(field.nodes.length, info, camera, { world: true });
-    const lc = dark ? rgb(COLORS.greyLine) : [0.88, 0.55, 0.55];
+    const lc = dark ? rgb(COLORS.greyLine) : rgb(COLORS.paleRedLine);
     field.links.forEach((l, i) => {
       const a = field.nodes[l.from];
       const b = field.nodes[l.to];
       // Lines join at the person's chest / the dot's centre.
       lines.setEnds(i, a.x, a.y + (a.person ? 0.6 : 0), a.z, b.x, b.y + (b.person ? 0.6 : 0), b.z);
-      lines.setColor(i, lc[0], lc[1], lc[2], dark ? 0.85 : 0.8);
+      lines.setColor(i, lc[0], lc[1], lc[2], dark ? 0.75 : 0.6);
     });
     const g = new THREE.Group();
     g.add(lines.mesh, people.group, dots.mesh);
@@ -115,7 +117,7 @@ const createScene = (info: StageInfo): SceneRuntime => {
         G.g.visible = h === half;
       });
       const G = groups[half];
-      const camAz = THREE.MathUtils.degToRad(lerp(-10, 12, smooth(lt / 15)));
+      const camAz = THREE.MathUtils.degToRad(lerp(-10, 12, smooth(lt / (half === 0 ? 15 : 13))));
       G.field.nodes.forEach((n, i) => {
         if (lt < n.at) {
           G.people.hide(i);
@@ -154,10 +156,14 @@ const createScene = (info: StageInfo): SceneRuntime => {
               [2, 11.5],
               [5, 22],
               [9, 40],
-              [13, 58],
-              [15, 62],
+              [13, 60],
             ];
       const dist = keyframes(lt, keys, half === 0 && lt > 13 ? (x) => easeIn(x, 2) : smooth);
+      // Far figures fade towards the background (depth haze).
+      const fogU = G.people.material.uniforms;
+      fogU.uFogColor.value.set(...rgb(G.dark ? COLORS.darkBackground : COLORS.lightBackground));
+      fogU.uFogNear.value = dist * 0.8;
+      fogU.uFogFar.value = dist * 0.8 + 110;
       const elev = THREE.MathUtils.degToRad(9);
       camera.position.set(Math.sin(camAz) * Math.cos(elev) * dist, Math.sin(elev) * dist, Math.cos(camAz) * Math.cos(elev) * dist);
       camera.lookAt(0, 0.2, 0);
