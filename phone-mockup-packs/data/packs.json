@@ -1,0 +1,80 @@
+{
+  "fps": 30,
+  "width": 3840,
+  "height": 2160,
+  "packs": [
+    {
+      "id": "PhonePack_White",
+      "reference": "3774395149",
+      "background": "white",
+      "durationInFrames": 872,
+      "segments": [
+        { "move": "brickStack", "start": 0, "length": 195, "phones": 3 },
+        { "move": "singlePass", "start": 195, "length": 195, "phones": 1 },
+        { "move": "rise", "start": 390, "length": 195, "phones": 1 },
+        { "move": "brickStackReturn", "start": 585, "length": 287, "phones": 3 }
+      ]
+    },
+    {
+      "id": "PhonePack_Black",
+      "reference": "4047177843",
+      "background": "black",
+      "durationInFrames": 1815,
+      "segments": [
+        { "move": "threeViews", "start": 0, "length": 200, "phones": 3 },
+        { "move": "centreHold", "start": 200, "length": 200, "phones": 1 },
+        { "move": "slideRight", "start": 400, "length": 200, "phones": 1 },
+        { "move": "pairOverlap", "start": 600, "length": 200, "phones": 2 },
+        { "move": "pairSwap", "start": 800, "length": 200, "phones": 2 },
+        { "move": "brickWall", "start": 1000, "length": 200, "phones": 12 },
+        { "move": "tiltedGrid", "start": 1200, "length": 200, "phones": 20 },
+        { "move": "lineupFive", "start": 1400, "length": 200, "phones": 5 },
+        { "move": "closeFloat", "start": 1600, "length": 215, "phones": 1 }
+      ]
+    },
+    {
+      "id": "PhonePack_DarkSpin",
+      "reference": "4036100879",
+      "background": "graphite",
+      "durationInFrames": 1656,
+      "segments": [
+        { "move": "spinReveal", "start": 0, "length": 240, "phones": 1 },
+        { "move": "tiltIn", "start": 240, "length": 200, "phones": 1 },
+        { "move": "diagonalFall", "start": 440, "length": 200, "phones": 1 },
+        { "move": "floatingPair", "start": 640, "length": 220, "phones": 2 },
+        { "move": "fanOfThree", "start": 860, "length": 220, "phones": 3 },
+        { "move": "closeUpPan", "start": 1080, "length": 220, "phones": 1 },
+        { "move": "pairFloat", "start": 1300, "length": 180, "phones": 2 },
+        { "move": "pushIntoScreen", "start": 1480, "length": 176, "phones": 1 }
+      ]
+    },
+    {
+      "id": "PhonePack_TrioGreen",
+      "reference": "4036105315",
+      "background": "green",
+      "durationInFrames": 720,
+      "segments": [
+        { "move": "trioSpread", "start": 0, "length": 240, "phones": 3 },
+        { "move": "trioTurn", "start": 240, "length": 240, "phones": 3 },
+        { "move": "trioClose", "start": 480, "length": 240, "phones": 3 }
+      ]
+    },
+    {
+      "id": "PhonePack_MixGreen",
+      "reference": "4029492917",
+      "background": "green",
+      "durationInFrames": 1803,
+      "segments": [
+        { "move": "dropIn", "start": 0, "length": 200, "phones": 1 },
+        { "move": "floatTurn", "start": 200, "length": 200, "phones": 1 },
+        { "move": "frontAndBack", "start": 400, "length": 200, "phones": 2 },
+        { "move": "pairLean", "start": 600, "length": 200, "phones": 2 },
+        { "move": "closeCrop", "start": 800, "length": 200, "phones": 1 },
+        { "move": "diagonalPair", "start": 1000, "length": 200, "phones": 2 },
+        { "move": "tumbleLand", "start": 1200, "length": 200, "phones": 1 },
+        { "move": "backReveal", "start": 1400, "length": 200, "phones": 1 },
+        { "move": "pushIntoScreen", "start": 1600, "length": 203, "phones": 1 }
+      ]
+    }
+  ]
+}

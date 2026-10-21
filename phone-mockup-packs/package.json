@@ -1,0 +1,30 @@
+{
+  "name": "phone-mockup-packs",
+  "version": "1.0.0",
+  "description": "Five green-screen phone mockup packs (Remotion + three.js)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "check": "node scripts/check-packs.mjs",
+    "retime": "node scripts/check-packs.mjs --fix",
+    "previews": "./scripts/render-previews.sh"
+  },
+  "dependencies": {
+    "@react-three/fiber": "9.8.2",
+    "@remotion/cli": "4.0.515",
+    "@remotion/three": "4.0.515",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "4.0.515",
+    "@remotion/renderer": "4.0.515",
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "typescript": "5.9.3"
+  }
+}
