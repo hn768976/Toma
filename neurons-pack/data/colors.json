@@ -1,0 +1,18 @@
+{
+  "neuron": { "silver": "#B8BEC4", "signal": "#FFFFFF", "background": "#000000" },
+  "flights": { "background": "#0A0A4A", "land": "#7E8CB8", "landOpacity": 0.6, "coast": "#C9D2FF", "trail": "#E8ECFF" },
+  "cityDay": {
+    "block": "#E6E6E2", "lot": "#D6D6D0", "streetMinor": "#FFFFFF", "streetSmall": "#F5E27A",
+    "streetMid": "#F2B266", "streetMajor": "#E8796B", "highway": "#7D93B5", "river": "#9BB8D8",
+    "park": "#B9DDA4", "haze": "#FFFFFF", "people": "#16181C", "ring": "#000000", "line": "#111111"
+  },
+  "cityNight": {
+    "block": "#0C1430", "lot": "#101A3C", "streetMinor": "#1C3566", "streetSmall": "#1F5EA8",
+    "streetMid": "#2A8FD6", "streetMajor": "#3FC6F2", "highway": "#8FEAFF", "river": "#0A2348",
+    "park": "#0F2A36", "haze": "#000000", "people": "#5FE3FF", "ring": "#5FE3FF", "line": "#5FE3FF"
+  },
+  "server": { "case": "#2B2E33", "screen": "#7FD4FF", "led": "#5CFF9A" },
+  "phone": { "frame": "#3A3D42", "glass": "#050608", "greenScreen": "#00FF00" },
+  "ink": { "particle": "#000000", "background": "#FFFFFF" },
+  "threads": { "white": "#F0F0F0", "black": "#000000", "ink": "#151515", "paper": "#FFFFFF" }
+}

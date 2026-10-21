@@ -1,0 +1,8 @@
+{
+  "neuronNetwork": { "neuronsPerTile": 70, "sparksAtOnce": 15, "dendritesMin": 4, "dendritesMax": 8, "branchDepth": 4 },
+  "flights": { "routes": 2500, "cities": 320, "visibleTarget": 600 },
+  "dataServer": { "people": 3000, "activeLinks": 12 },
+  "proximity": { "icons": 30 },
+  "ink": { "particles": 600000 },
+  "threads": { "threads": 700 }
+}

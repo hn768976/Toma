@@ -1,0 +1,10 @@
+{
+  "title": "NEURON",
+  "cellBody": "cell body",
+  "nucleus": "nucleus",
+  "axon": "axon",
+  "myelinSheath": "myelin sheath",
+  "nodeOfRanvier": "node of Ranvier",
+  "dendrites": "dendrites",
+  "axonTerminals": "axon terminals"
+}
