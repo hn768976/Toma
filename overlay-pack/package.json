@@ -1,0 +1,23 @@
+{
+  "name": "hearts-spinner-waveform-bulb-daisies",
+  "version": "1.0.0",
+  "description": "Overlay pack: floating hearts, spinners, voice waveforms, chalk idea bulb, falling daisies (Remotion, Canvas 2D)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "perfect-freehand": "1.2.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "roughjs": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}
