@@ -6,7 +6,7 @@ OUT=${OUT:-out/previews}
 mkdir -p "$OUT"
 render() { # id file crf
   local t0=$(date +%s.%N)
-  npx remotion render "$1" "$OUT/$2.mp4" --scale=0.3333333333333333 --crf="$3" --concurrency=3 --log=error
+  npx remotion render "$1" "$OUT/$2.mp4" --scale=0.3333333333333333 --crf="$3" --concurrency=3 --muted --log=error
   local t1=$(date +%s.%N)
   local n=$(ffprobe -v error -count_packets -select_streams v:0 -show_entries stream=nb_read_packets -of csv=p=0 "$OUT/$2.mp4")
   echo "$2 frames=$n wall=$(echo "$t1-$t0" | bc)s per_frame=$(echo "scale=3;($t1-$t0)/$n" | bc)s" | tee -a "$OUT/timings.txt"

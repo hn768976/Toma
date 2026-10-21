@@ -29,14 +29,14 @@ npm run dev     # Remotion Studio
 All renders need WebGL2 through ANGLE. `remotion.config.ts` already sets `--gl=angle`, PNG frames, H.264 and yuv420p, but it is spelled out here as well:
 
 ```bash
-npx remotion render HUDScope-Violet      out/HUDScope_Violet.mp4      --gl=angle --crf=16
-npx remotion render VHSPlayback-OSD      out/VHSPlayback_OSD.mp4      --gl=angle --crf=12
-npx remotion render VHSPlayback-Clean    out/VHSPlayback_Clean.mp4    --gl=angle --crf=12
-npx remotion render TVStatic-Datamosh    out/TVStatic_Datamosh.mp4    --gl=angle --crf=12
-npx remotion render TVStatic-Transition  out/TVStatic_Transition.mp4  --gl=angle --crf=12
-npx remotion render ChalkMath-Flythrough out/ChalkMath_Flythrough.mp4 --gl=angle --crf=16
-npx remotion render ChalkMath-Write      out/ChalkMath_Write.mp4      --gl=angle --crf=16
-npx remotion render NeuralGlobe-Labels   out/NeuralGlobe_Labels.mp4   --gl=angle --crf=16
+npx remotion render HUDScope-Violet      out/HUDScope_Violet.mp4      --gl=angle --muted --crf=16
+npx remotion render VHSPlayback-OSD      out/VHSPlayback_OSD.mp4      --gl=angle --muted --crf=12
+npx remotion render VHSPlayback-Clean    out/VHSPlayback_Clean.mp4    --gl=angle --muted --crf=12
+npx remotion render TVStatic-Datamosh    out/TVStatic_Datamosh.mp4    --gl=angle --muted --crf=12
+npx remotion render TVStatic-Transition  out/TVStatic_Transition.mp4  --gl=angle --muted --crf=12
+npx remotion render ChalkMath-Flythrough out/ChalkMath_Flythrough.mp4 --gl=angle --muted --crf=16
+npx remotion render ChalkMath-Write      out/ChalkMath_Write.mp4      --gl=angle --muted --crf=16
+npx remotion render NeuralGlobe-Labels   out/NeuralGlobe_Labels.mp4   --gl=angle --muted --crf=16
 ```
 
 - **ProRes for editing:** add `--codec=prores --prores-profile=4444`.
@@ -85,3 +85,45 @@ Most buyers tint HUD Scope and Neural Globe in the edit instead (both are Screen
 - Fonts: **VT323**, **Share Tech Mono** and **Rajdhani** (all OFL 1.1), via @fontsource.
 - Diagrams: **perfect-freehand** (MIT) and **Rough.js** (MIT, seeded hatching).
 - All HUD and globe labels are invented. No real brands appear.
+
+## Render times (measured)
+
+The measurements were taken in a cloud container: 4 vCPU, no GPU, so WebGL ran in software through ANGLE/SwiftShader. A machine with a GPU will be much faster.
+
+| Clip | 720p preview, s/frame (concurrency 3) |
+|---|---|
+| HUDScope_Violet | 0.063 |
+| VHSPlayback_OSD | 1.046 |
+| VHSPlayback_Clean | 0.885 |
+| TVStatic_Datamosh | 1.346 |
+| TVStatic_Transition | 0.775 |
+| ChalkMath_Flythrough | 0.091 |
+| ChalkMath_Write | 0.064 |
+| NeuralGlobe_Labels | 0.153 |
+
+At 4K, one frame takes about 0.83 s for ChalkMath_Flythrough and 0.59 s for NeuralGlobe_Labels (steady state, concurrency 1). The first frame needs about 6–7 s of extra start-up for bundling, the browser and texture generation.
+
+## Maths check
+
+All formulas on the cards are correct:
+
+- `a² + b² = c²`
+- `E = mc²`
+- `π = 3.1416` (π = 3.14159…, rounded to 4 d.p.)
+- `√1225 = 35` (35² = 1225)
+- `x = (−b ± √(b² − 4ac)) / 2a`
+- `6x² − 15xy = 3x(2x − 5y)` (3x·2x = 6x², 3x·5y = 15xy)
+- `dN/dt = rN(K − N)/K` (logistic growth, = rN(1 − N/K))
+- `Eₚ = mgh`
+- `d = √((x₂ − x₁)² + (y₂ − y₁)²)`
+- `x = √a`
+- `y = x³`
+- `eˣ = 1 + x + x²/2! + x³/3! + …`
+- Extras: `A = πr²`, `V = 4/3 πr³`, `(a + b)² = a² + 2ab + b²`, `F = ma`.
+
+The diagrams are labelled consistently:
+
+- **Triangle:** the right angle is at C, opposite the hypotenuse c. Sides a = BC (opposite A) and b = CA (opposite B). The 44° mark is at A, and the drawing has BC/CA = tan 44°.
+- **Golden spiral:** Fibonacci squares 8, 5, 3, 2, 1, 1 in a 13×8 rectangle, with one quarter arc per square.
+- **sin/cos graph:** the hatched areas sit between sin x and the axis over 0–π and π–2π, with ticks at π and 2π.
+- **Cone:** r and h are marked. **Sphere:** latitudes, a meridian and the radius r. **Venn:** A, B and C, with the triple overlap hatched.
