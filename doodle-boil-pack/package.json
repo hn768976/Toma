@@ -1,0 +1,24 @@
+{
+  "name": "doodle-boil-pack",
+  "version": "1.0.0",
+  "description": "Hand-drawn doodle overlays that boil on threes (Remotion, 30fps, 3840x2160)",
+  "private": true,
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@remotion/cli": "4.0.515",
+    "@remotion/paths": "4.0.515",
+    "perfect-freehand": "1.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "roughjs": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc"
+  }
+}
