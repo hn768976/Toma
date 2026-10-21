@@ -1,0 +1,28 @@
+{
+  "name": "hudscope-vhsplayback-tvstatic-chalkmath-neuralglobe",
+  "version": "1.0.0",
+  "description": "HUD Scope, VHS Playback, TV Static, Chalk Maths and Neural Globe motion graphics (Remotion, 30fps, 4K)",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "remotion studio",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/rajdhani": "5.3.0",
+    "@fontsource/share-tech-mono": "5.3.0",
+    "@fontsource/vt323": "5.3.0",
+    "@remotion/cli": "4.0.515",
+    "perfect-freehand": "1.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.515",
+    "roughjs": "4.6.6",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/three": "0.186.0",
+    "typescript": "5.9.3"
+  }
+}
