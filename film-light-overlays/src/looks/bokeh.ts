@@ -89,7 +89,9 @@ void main() {
     float rim = exp(-pow((d - Re * 0.95) / (Re * 0.18), 2.0));
     // Soft internal mottling.
     float tex = 0.85 + 0.15 * nLoop(p * 3.0 + seed, 0.5, seed + 2.0);
-    float v = (body * 1.05 * tex + rim * 0.12) * b.w;
+    // Faint onion-ring texture from the lens elements.
+    float onion = 1.0 + 0.012 * sin(d / Re * 15.0 + seed) * smoothstep(Re * 1.4, Re * 0.3, d);
+    float v = (body * 1.0 * tex * onion + rim * 0.2) * b.w;
     int ci = int(uBlobB[i].x + 0.5);
     acc += uCol[ci] * v;
   }

@@ -79,7 +79,8 @@ export const getSprocketTexture = () =>
       for (let pass = 0; pass < 3; pass++) {
         ctx.fillStyle = `rgba(255,255,255,${pass === 0 ? 1 : 0.5})`;
         const j = pass === 0 ? 0 : 1.2;
-        roundRect(ctx, 22 + range(rng, -j, j), cy - 16 + range(rng, -j, j), 84 + range(rng, -j, j), 34 + range(rng, -j, j), 5);
+        const wob = range(rng, -3, 3);
+        roundRect(ctx, 34 + wob + range(rng, -j, j), cy - 12 + range(rng, -2, 2) + range(rng, -j, j), 62 + range(rng, -2, 2) + range(rng, -j, j), 25 + range(rng, -1.5, 1.5) + range(rng, -j, j), 4 + range(rng, 0, 2));
         ctx.fill();
       }
     }
@@ -108,10 +109,10 @@ export const getGateEdgeTexture = (colour: string) =>
         for (let pass = 0; pass < 7; pass++) {
           ctx.save();
           ctx.strokeStyle = colour;
-          ctx.globalAlpha = pass === 0 ? 0.95 : range(rng, 0.08, 0.3);
-          ctx.lineWidth = pass === 0 ? 4.5 : range(rng, 1.5, 7);
+          ctx.globalAlpha = pass === 0 ? 0.85 : range(rng, 0.1, 0.35);
+          ctx.lineWidth = pass === 0 ? 3.5 : range(rng, 1, 9);
           ctx.shadowColor = colour;
-          ctx.shadowBlur = pass === 0 ? 6 : 0;
+          ctx.shadowBlur = pass === 0 ? 14 : range(rng, 0, 20);
           const jx = range(rng, -2.5, 2.5);
           const jy = range(rng, -2.5, 2.5);
           roundRect(ctx, -200, cy - half + jy, right + 200 + jx, 2 * half, r);

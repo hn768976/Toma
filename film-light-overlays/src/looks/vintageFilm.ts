@@ -98,12 +98,13 @@ export const makeVintage = (mono: boolean): Look => ({
         continue;
       }
       const big = rng() < 0.15;
-      const size = big ? range(rng, 0.004, 0.008) : range(rng, 0.0015, 0.0035);
+      // Power-law sizes: many tiny specks, a few clumps.
+      const size = big ? range(rng, 0.004, 0.009) : 0.0009 + 0.003 * Math.pow(rng(), 2.2);
       const colourRoll = rng();
       const colour = mono ? Math.floor(rng() * 4) : colourRoll < 0.5 ? 0 : colourRoll < 0.6 ? 1 : colourRoll < 0.88 ? 2 : 3;
       S[i].set(range(rng, -0.87, 0.87), range(rng, -0.49, 0.49), size, range(rng, 0.45, 1.0));
       // ~15% are fibres/hairs: long, thin and bent.
-      const fibre = rng() < 0.15;
+      const fibre = rng() < 0.25;
       if (fibre) S[i].z *= 2.6;
       SB[i].set(colour, rng() * TAU, fibre ? range(rng, 7, 12) : range(rng, 1, 2.6), rng() * 100);
     }
@@ -141,7 +142,8 @@ void main() {
   vec3 col = vec3(0.0);
 
   // Distance to the nearest frame edge (0 at the border, 0.5 at the centre).
-  float edge = -sdRoundBox(p, vec2(A, 0.5), 0.3);
+  // Elliptical keep-out (no box-shaped vignette).
+  float edge = 0.5 * (1.0 - length(p / vec2(A, 0.5) * vec2(0.96, 0.92)));
   // Nothing from the vignette or the leaks reaches the middle of the frame.
   float keepOut = 1.0 - smoothstep(0.06, 0.3, edge);
 
@@ -170,8 +172,9 @@ void main() {
     float w = (0.0007 + px * 0.6) * (0.6 + 0.8 * (0.5 + 0.5 * snoise(vec4(p.y * 14.0, s.w * 9.0, 0.0, 0.0))));
     float prof = exp(-pow((p.x - x) / w, 2.0));
     float along = texture(uScratchTex, vec2((s.z + 0.5) / 16.0, fract(p.y * 0.6 + s.w))).r;
-    float span = smoothstep(-0.05, 0.08, p.y - (fract(s.w * 3.1) - 0.75)) * (1.0 - smoothstep(-0.08, 0.05, p.y - (fract(s.w * 3.1) - 0.75) - 0.55 - 0.4 * fract(s.w * 7.3)));
-    vec3 tint = mod(s.z, 3.0) < 1.0 ? vec3(0.92, 0.95, 0.95) : uLeakCol[0] * 1.3;
+    float span = smoothstep(-0.18, 0.12, p.y - (fract(s.w * 3.1) - 0.75)) * (1.0 - smoothstep(-0.2, 0.12, p.y - (fract(s.w * 3.1) - 0.75) - 0.55 - 0.4 * fract(s.w * 7.3)));
+    // Base scratches read white, emulsion scratches slightly green.
+    vec3 tint = mod(s.z, 3.0) < 1.0 ? vec3(0.8, 0.95, 0.85) : vec3(0.93, 0.95, 0.95);
     col += tint * prof * along * s.y * span;
   }
 
@@ -196,7 +199,8 @@ void main() {
 
   // Grain on lit areas only (multiplicative, so empty black stays 0).
   float gr = hash2(uvec2(gl_FragCoord.xy), uint(uKey) * 7u + 3u) - 0.5;
-  col *= (1.0 + 0.22 * gr) * uFlicker;
+  float gn = snoise(vec4(p * 700.0, uKey * 1.3, 4.0));
+  col *= (1.0 + 0.2 * gn + 0.12 * gr) * uFlicker;
   outColor = vec4(col, 1.0);
 }
 `,

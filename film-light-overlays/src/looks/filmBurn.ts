@@ -92,8 +92,8 @@ const TRANSITION: Timeline = {
     {
       kind: 0, cx: 1.02, cy: 0.04, angle: 0.0, stretch: 1.15, seed: 2.7,
       R: (f) => 2.6 * Math.pow(clamp((f + 3) / 39), 1.35),
-      heat: (f) => smoothstep(-3, 4, f) * (1 - 0.65 * smoothstep(48, 78, f)) * (1 - smoothstep(70, 86, f)),
-      flood: { I: (f) => smoothstep(14, 35, f) * (1 - smoothstep(50, 84, f)), angle: 0.0, lo: 0.6, hi: 1.02 },
+      heat: (f) => smoothstep(-3, 4, f) * (1 - 0.55 * smoothstep(24, 36, f)) * (1 - 0.3 * smoothstep(48, 78, f)) * (1 - smoothstep(70, 86, f)),
+      flood: { I: (f) => smoothstep(14, 35, f) * (1 - smoothstep(50, 84, f)), angle: 0.0, lo: 0.3, hi: 0.88 },
       sparks: 80, sparkWindow: [0, 40], curls: 3,
     },
     {
@@ -411,7 +411,8 @@ void main() {
     // Embers scattered below the eroded edge.
     float below = (1.0 - inBot) * inTop * inEnd * smoothstep(bottom - W * 1.1, bottom, v);
     float gl = 0.5 + 0.5 * snoise(vec4(u * 70.0, v * 70.0, tm * 2.0, uDiag2.z));
-    float em = (0.35 * smoothstep(-0.1, 0.4, sp + 0.35 * sp2) + 0.6 * smoothstep(0.55, 0.85, gl)) * below * (0.45 + 0.5 * smoothstep(bottom - W * 1.1, bottom, v));
+    float endFade = smoothstep(0.02, -0.25, uw);
+    float em = endFade * (0.35 * smoothstep(-0.1, 0.4, sp + 0.35 * sp2) + 0.6 * smoothstep(0.55, 0.85, gl)) * below * (0.45 + 0.5 * smoothstep(bottom - W * 1.1, bottom, v));
     // Soft bloom around the slab (rounded at the corner, no notch).
     float dOut = length(vec2(max(u, 0.0), max(v, 0.0)));
     float bloom = exp(-dOut / 0.055) * (1.0 - body) * smoothstep(bottom - W * 0.2, bottom + W * 0.3, v) * 0.58 * (0.7 + 0.45 * (0.5 + 0.5 * snoise(vec4(p * 6.0, uDiag2.z, tm * 0.6))));
@@ -435,13 +436,19 @@ void main() {
   // Frame line between frames: a darker bar across the flood.
   float fl = uStrip.w < 0.0 ? 1.0 : 1.0 - 0.07 * (1.0 - smoothstep(0.002, 0.016, abs(p.y - (0.5 - uStrip.w))));
 
-  vec3 col = ramp(T) * (1.0 - 0.32 * hole) * fl;
+  // Perforations pass the light unfiltered: brighter and less saturated than the film around them.
+  // Where the burn is white-hot the perforations have melted away with the film.
+  hole *= 1.0 - smoothstep(0.85, 1.1, T);
+  vec3 col = ramp(T) * fl;
+  float lumH = max(col.r, max(col.g, col.b));
+  col = mix(col, vec3(lumH) * 1.15, 0.45 * hole) * (1.0 + 0.2 * hole);
+
   // Charred rim just outside a burning edge.
-  col = mix(col, uChar * step(0.02, T), clamp(charMask, 0.0, 1.0));
+  col = mix(col, mix(uChar, uRed * 0.45, 0.5) * step(0.02, T), clamp(charMask, 0.0, 1.0));
   col += strip * (1.0 - smoothstep(0.0, 0.15, T));
   // Grain in the colour too (multiplicative: black stays black).
   float lum = max(col.r, max(col.g, col.b));
-  col *= 1.0 + (grain - 0.5) * 0.16 * (1.0 - smoothstep(0.8, 1.0, lum));
+  col *= 1.0 + (grain - 0.5) * 0.24 * (1.0 - smoothstep(0.8, 1.0, lum));
 
   // Sparks: short motion-blurred bright particles.
   for (int i = 0; i < ${MAX_SPARKS}; i++) {
@@ -449,12 +456,12 @@ void main() {
     if (s.w <= 0.0) continue;
     vec2 v = uSparkV[i];
     vec2 q = p - s.xy;
-    float reach = s.z * 4.0 + length(v);
+    float reach = (s.z + px * 0.5) * 6.0 + length(v);
     if (abs(q.x) > reach || abs(q.y) > reach) continue;
     float d = sdSegment(p, s.xy, s.xy - v);
     float w = s.z + px * 0.5;
     float core = exp(-pow(d / w, 2.0));
-    float halo = exp(-d / (w * 2.2)) * 0.25;
+    float halo = exp(-d / (w * 2.2)) * 0.25 * (1.0 - smoothstep(w * 3.0, w * 5.5, d));
     col += ramp(0.45 + 0.45 * s.w) * (core + halo) * min(s.w * 1.4, 1.2);
   }
   // Glowing curls (burning fibres).
