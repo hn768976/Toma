@@ -126,17 +126,22 @@ def key():
         worst_holes = 0
         for n in (0, 50, 100, 150, 200, 250):
             src = frame_rgb(os.path.join(OUT, name + ".mp4"), n)
-            raw = subprocess.run(["ffmpeg", "-v", "error", "-i", os.path.join(OUT, name + ".mp4"), "-f", "lavfi", "-i",
-                                  "color=c=0x808080:s=1280x720", "-filter_complex",
-                                  f"[0:v]select=eq(n\\,{n}),chromakey=0x00FF00:0.12:0.05[k];[1:v][k]overlay=shortest=1",
+            srcp = os.path.join(OUT, f"_src_{name}_{n}.png")
+            Image.fromarray(src.astype(np.uint8)).save(srcp)
+            raw = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=0x808080:s=1280x720:d=1", "-i", srcp,
+                                  "-filter_complex", "[1:v]chromakey=0x00FF00:0.12:0.05[k];[0:v][k]overlay",
                                   "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
+            os.remove(srcp)
             out = np.frombuffer(raw, np.uint8).reshape(720, 1280, 3).astype(int)
             # fringe: visibly green pixels left after keying
             g = out[..., 1] - np.maximum(out[..., 0], out[..., 2])
-            fringe = int((g > 60).sum())
+            fringe = int((g > 40).sum())
             # holes: non-green source pixels that the key made (partly) transparent
             sg = src[..., 1] - np.maximum(src[..., 0], src[..., 2])
-            solid = sg < 30
+            from numpy.lib.stride_tricks import sliding_window_view
+            greenish = np.pad(sg >= 30, 2)
+            near_key = sliding_window_view(greenish, (5, 5)).any(axis=(2, 3))  # anti-aliased edge band
+            solid = (sg < 30) & ~near_key
             if name == "SteampunkFrame_White":
                 solid &= src.min(axis=2) < 250  # ignore the white background
             changed = np.abs(out - src).max(axis=2) > 12

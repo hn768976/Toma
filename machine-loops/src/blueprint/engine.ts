@@ -659,10 +659,10 @@ const globe = (cx: number, cy: number, R: number) => {
 };
 const vessels = (): Part =>
   part("airVessels", [
-    { d: circle(-2420, -950, 190) + circle(2760, -380, 160) + circle(300, G.steamY + 260, 170), w: "mid" },
-    { d: globe(-2420, -950, 190) + globe(2760, -380, 160) + globe(300, G.steamY + 260, 170), w: "hair" },
-    { d: rect(-2470, -1180, 100, 50) + line(-2420, -1180, -2420, G.ground) + rect(2710, -580, 100, 50) + line(2760, -580, 2760, G.ground + 100) + rect(250, G.steamY + 60, 100, 40), w: "thin" },
-    { d: poly([[-2420, -760], [-2420, -600], [G.airAt - 120, -600], [G.airAt - 120, -950]]) + poly([[2760, -220], [2760, -120], [G.feedAt + 90, -120], [G.feedAt + 90, -720]]), w: "thin" },
+    { d: circle(-2420, -950, 190) + circle(3050, -1250, 150) + circle(300, G.steamY + 260, 170), w: "mid" },
+    { d: globe(-2420, -950, 190) + globe(3050, -1250, 150) + globe(300, G.steamY + 260, 170), w: "hair" },
+    { d: rect(-2470, -1180, 100, 50) + line(-2420, -1180, -2420, G.ground) + rect(3000, -1450, 100, 50) + line(3050, -1450, 3050, G.ground) + rect(250, G.steamY + 60, 100, 40), w: "thin" },
+    { d: poly([[-2420, -760], [-2420, -600], [G.airAt - 120, -600], [G.airAt - 120, -950]]) + poly([[3050, -1100], [3050, -60], [G.feedAt + 90, -60], [G.feedAt + 90, -720]]), w: "thin" },
   ]);
 const rack = (): Part => {
   let t = "";

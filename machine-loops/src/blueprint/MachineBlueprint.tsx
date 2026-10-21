@@ -10,6 +10,8 @@ const INK = "#F2F2F2";
 const WEIGHT: Record<Weight, number> = { thick: 7.6, mid: 5.6, thin: 4.0, hair: 3.0 };
 const VIEW_W = 4300; // model units across the frame at rest (machine overfills)
 
+const STATIC = new Set(["foundation", "entablature", "ladder", "column", "radiusColumn", "cylinder", "valveChest", "airPump", "feedPump", "crankPedestal", "governorStand", "pinionPedestal", "condenser"]);
+
 const cache = new Map<string, Path2D>();
 const path = (d: string, dynamic: boolean) => {
   if (dynamic) return new Path2D(d);
@@ -68,7 +70,8 @@ export const MachineBlueprint: React.FC = () => {
     const ox = layer === 0 ? 90 + 0.04 * (cam.cx - 320) : 0;
     const oy = layer === 0 ? 55 : 0;
     for (const { part, xf } of list) {
-      if (layer === 0 && part.name === "construction") continue;
+      // the far layer is the twin frame (static structure only), never the moving parts
+      if (layer === 0 && (part.name === "construction" || !STATIC.has(part.name))) continue;
       const c = Math.cos(xf.a);
       const sn = Math.sin(xf.a);
       // world = T(xf) R(a) local; screen = Wm * world

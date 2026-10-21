@@ -4,8 +4,8 @@
 // light. A final full-screen pass applies a per-channel tone curve that maps
 // 0 -> 0 and 1 -> 1 exactly, encodes sRGB, and adds +-1/255 triangular dither
 // from a static per-pixel hash. Pixels whose channels are all exactly 0 or 1
-// (pure white, #00FF00, pure black) skip the curve's dither, so keying colours
-// reach the screenshot untouched.
+// (pure white, #00FF00, pure black) skip dither and despill, so keying
+// colours reach the screenshot untouched.
 import * as THREE from "three";
 
 const vert = /* glsl */ `
@@ -42,8 +42,12 @@ bool isPure(float c) { return c <= 0.0 || c >= 1.0; }
 void main() {
   vec3 lin = texture2D(tScene, vUv).rgb;
   vec3 c = vec3(curve(lin.r * exposure), curve(lin.g * exposure), curve(lin.b * exposure));
+  bool pure = isPure(c.r) && isPure(c.g) && isPure(c.b);
+  // Despill: nothing in these scenes is green-dominant, so any green above
+  // max(r, b) on a non-key pixel is #00FF00 blended in at an anti-aliased edge.
+  if (!pure) c.g = min(c.g, max(c.r, c.b));
   vec3 s = vec3(srgb(c.r), srgb(c.g), srgb(c.b));
-  if (!(isPure(c.r) && isPure(c.g) && isPure(c.b))) {
+  if (!pure) {
     float n = hash(gl_FragCoord.xy) + hash(gl_FragCoord.xy + 17.17) - 1.0; // triangular, -1..1
     s += n / 255.0;
   }
