@@ -103,4 +103,22 @@ src/looks/*.ts          one file per look (shader + per-frame uniforms)
 
 ## Timings
 
-TIMINGS_PLACEHOLDER
+These were measured in a cloud container: 4 vCPU, **no GPU**, Chrome Headless Shell with
+ANGLE falling back to SwiftShader (software rendering). Remotion's default concurrency was
+used. A machine with a real GPU will be many times faster.
+
+| Clip | 720p preview (full render, incl. ~15 s startup) | 4K, one warm frame |
+|---|---|---|
+| FilmBurn_Sequence (300 f) | 614 s → **2.05 s/frame** | **≈ 21.5 s/frame** |
+| FilmBurn_Transition (90 f) | 189 s → 2.10 s/frame | – |
+| VintageFilm_Colour (600 f) | 1133 s → 1.89 s/frame | – |
+| VintageFilm_Mono (600 f) | 1115 s → 1.86 s/frame | – |
+| FilmGate_16mm (600 f) | 874 s → 1.46 s/frame | – |
+| PrismGlints_Teal (600 f) | 739 s → 1.23 s/frame (a clean 120-frame re-run gave 1.21 s/frame) | **≈ 11.7 s/frame** |
+| BokehLeak_Warm (600 f) | 578 s → 0.96 s/frame | – |
+| Starburst_White (600 f) | 320 s → 0.53 s/frame (a clean 120-frame re-run gave 0.60 s/frame) | – |
+
+- **How the 4K figure was measured:** the time for a 3-frame 4K sequence render minus a
+  1-frame one, divided by 2.
+- **Estimate for the rest:** the shaders cost roughly 9–10× more at 4K than at 720p, so
+  expect about 9× the 720p figures on the same hardware.
