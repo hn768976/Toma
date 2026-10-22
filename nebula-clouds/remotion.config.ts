@@ -11,6 +11,9 @@ import { Config } from "@remotion/cli/config";
 Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
+// TV-range BT.709 output, matching the reference and standard players.
+Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
 Config.setDefaultPremountInSeconds(2);
 
 // The nebula is a WebGL 2 shader. "angle" uses the GPU when one exists;

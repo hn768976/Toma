@@ -1,11 +1,6 @@
 import { Composition } from "remotion";
 import { NebulaClouds } from "./nebula/NebulaClouds";
-import {
-  DURATION_IN_FRAMES,
-  FPS,
-  HEIGHT,
-  WIDTH,
-} from "./nebula/constants";
+import { DURATION_IN_FRAMES, FPS, HEIGHT, WIDTH } from "./nebula/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (

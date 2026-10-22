@@ -21,6 +21,7 @@ const UNIFORMS = [
   "uAspect",
   "uTime",
   "uProgress",
+  "uFrame",
   "uDeep",
   "uMid",
   "uLight",
@@ -82,9 +83,9 @@ const initGl = (canvas: HTMLCanvasElement): GlState => {
 // measured per second in the reference (normalised to 0..1), so the noise
 // clock follows the same pacing.
 const PACING = [
-  0, 0.033, 0.103, 0.184, 0.286, 0.391, 0.526, 0.677, 0.832, 0.921, 1,
+  0, 0.021, 0.072, 0.132, 0.22, 0.306, 0.437, 0.619, 0.831, 0.933, 1,
 ];
-const NOISE_CLOCK_RANGE = 28;
+const NOISE_CLOCK_RANGE = 58;
 
 const noiseClock = (frame: number, fps: number) =>
   interpolate(
@@ -114,6 +115,7 @@ export const NebulaClouds: React.FC<NebulaCloudsProps> = ({ palette }) => {
     gl.uniform1f(uniforms.uAspect, width / height);
     gl.uniform1f(uniforms.uTime, noiseClock(frame, fps));
     gl.uniform1f(uniforms.uProgress, frame / (durationInFrames - 1));
+    gl.uniform1f(uniforms.uFrame, frame);
     setColor("uDeep", colors.deep);
     setColor("uMid", colors.mid);
     setColor("uLight", colors.light);

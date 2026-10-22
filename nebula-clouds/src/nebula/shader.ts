@@ -25,6 +25,7 @@ out vec4 outColor;
 uniform float uAspect;
 uniform float uTime;     // seconds, drives the slow evolution
 uniform float uProgress; // 0..1 across the whole clip
+uniform float uFrame;    // current frame, for one-off transients
 
 uniform vec3 uDeep;
 uniform vec3 uMid;
@@ -147,7 +148,7 @@ void main() {
     fbm(p + vec2(0.0, 0.0), t * 0.018, 3),
     fbm(p + vec2(5.2, 1.3), t * 0.018 + 3.1, 3)
   );
-  vec2 w = p + 0.45 * (q - 0.5);
+  vec2 w = p + 0.28 * (q - 0.5);
   float f = fbm(w, t * 0.022, 4);
 
   // Large-scale lighting layout, laid out like the reference: lit sky top
@@ -160,17 +161,17 @@ void main() {
   light += 0.55 * exp(-pow(length((uv - vec2(0.24, 0.70)) * vec2(2.2, 2.4)), 2.0));
   light += 0.70 * exp(-pow(length((uv - vec2(0.95, 1.00)) * vec2(3.6, 4.2)), 2.0));
   light -= (0.75 - 0.35 * lift) * exp(-pow(length((uv - vec2(0.06, 0.06)) * vec2(3.0, 3.4)), 2.0));
-  light -= (0.55 - 0.25 * lift) * exp(-pow(length((uv - vec2(0.86, 0.52)) * vec2(3.6, 3.4)), 2.0));
+  light -= (0.55 - 0.45 * lift) * exp(-pow(length((uv - vec2(0.86, 0.52)) * vec2(3.6, 3.4)), 2.0));
   light -= (0.50 - 0.15 * lift) * exp(-pow(length((uv - vec2(0.47, 0.86)) * vec2(4.6, 3.6)), 2.0));
   light += 0.12 * lift;
 
   // Puffy texture inside the clouds and stringy filaments along their edges.
   float puff = billow(w * 2.6 + vec2(2.0, 4.0), t * 0.03 + 11.0);
   float strands = ridged(p * 3.4 + 0.6 * q, t * 0.025 + 4.0);
-  float detail = puff;
+  float finepuff = billow(w * 6.5 + vec2(5.0, 1.0), t * 0.04 + 17.0);
 
   // Brightness of the sky: 0 = deep cloud shadow, 1 = lit haze.
-  float b = (f - 0.5) * 2.0 + 0.52 + 0.50 * light + 0.40 * (puff - 0.32);
+  float b = (f - 0.5) * 1.5 + 0.52 + 0.50 * light + 0.65 * (puff - 0.32) + 0.25 * (finepuff - 0.32);
   b = clamp(b, 0.0, 1.0);
 
   vec3 cDeep = srgb(uDeep);
@@ -181,12 +182,12 @@ void main() {
   vec3 cWash = srgb(uWash);
   vec3 cGlow = srgb(uGlow);
 
-  vec3 col = mix(cDeep, cMid, smoothstep(0.0, 0.55, b));
+  vec3 col = mix(cDeep, cMid, smoothstep(-0.2, 0.55, b));
   col = mix(col, cLight, smoothstep(0.50, 1.0, b) * 0.85);
 
   // Milky haze in broad, slow patches keeps everything soft.
   float hz = fbm(p * 0.7 + vec2(3.3, 7.7), t * 0.015 + 5.0, 3);
-  col = mix(col, cHaze, smoothstep(0.50, 0.78, hz + 0.25 * light) * 0.28);
+  col = mix(col, cHaze, smoothstep(0.50, 0.78, hz + 0.25 * light) * 0.20);
 
   // Lilac filaments: thin, jagged, connected lines (zero-crossings of
   // noise, perturbed by fine turbulence) that glow around the cloud edges.
@@ -194,40 +195,58 @@ void main() {
     fbm(p * 7.0 + vec2(1.3, 8.1), t * 0.03 + 2.0, 4),
     fbm(p * 7.0 + vec2(6.4, 3.7), t * 0.03 + 9.0, 4)
   ) - 0.5;
-  float l1 = 1.0 - abs(snoise(vec3(w * 1.7 + 0.22 * jag, t * 0.02 + 20.0)));
-  float l2 = 1.0 - abs(snoise(vec3(w * 3.3 + 0.30 * jag + 4.0, t * 0.02 + 30.0)));
-  float lines = 0.75 * pow(l1, 9.0) + 0.35 * pow(l2, 11.0);
-  float glowLines = 0.45 * pow(l1, 2.6) + 0.15 * pow(l2, 3.0);
+  float l1 = 1.0 - abs(snoise(vec3(w * 1.7 + 0.12 * jag, t * 0.02 + 20.0)));
+  float l2 = 1.0 - abs(snoise(vec3(w * 3.3 + 0.18 * jag + 4.0, t * 0.02 + 30.0)));
+  float lines = 0.65 * pow(l1, 5.0) + 0.35 * pow(l2, 6.0);
+  float glowLines = 0.55 * pow(l1, 2.2) + 0.22 * pow(l2, 2.6);
   // Filaments only show up in some regions, like the reference.
-  float presence = smoothstep(0.38, 0.66, fbm(p * 1.1 + vec2(9.1, 2.6), t * 0.015 + 40.0, 3));
+  float presence = smoothstep(0.25, 0.60, fbm(p * 1.1 + vec2(9.1, 2.6), t * 0.015 + 40.0, 3));
   float edge = exp(-pow((b - 0.45) / 0.22, 2.0));
   float vein = (lines + glowLines) * (0.25 + 0.75 * edge) * (0.30 + 0.70 * presence);
   vein += 0.20 * smoothstep(0.55, 0.95, strands) * edge;
   // Diffuse lilac fog hugging the shadow edges.
-  vein += 0.16 * edge * smoothstep(0.35, 0.75, puff * 1.6 + 0.2 * presence);
+  vein += 0.08 * edge * smoothstep(0.35, 0.75, puff * 1.6 + 0.2 * presence);
+  // A long vein that runs top to bottom just right of centre.
+  float vx = 0.69 + 0.035 * snoise(vec3(uv.y * 2.4, 3.0, t * 0.02))
+    + 0.012 * snoise(vec3(uv.y * 9.0, 5.0, t * 0.03)) + 0.03 * jag.x;
+  float spine = exp(-abs(uv.x - vx) * uAspect * 140.0);
+  spine *= 0.55 + 0.45 * smoothstep(0.3, 0.7, fbm(vec2(uv.y * 5.0, 7.0), t * 0.03, 3));
+  vein += spine * 0.55 + exp(-abs(uv.x - vx) * uAspect * 30.0) * 0.12;
   vein = clamp(vein, 0.0, 1.0);
-  col = mix(col, cVein, vein * 0.55);
+  col = mix(col, cVein, vein * 0.45);
   // Pale, almost white cores in the brightest filaments.
   col = mix(col, mix(cVein, cGlow, 0.6), pow(l1, 18.0) * (0.25 + 0.75 * edge) * presence * 0.35);
 
   // Lilac-pink wash that blooms up from the bottom centre over the second
   // half of the clip, keeping the cloud structure visible underneath.
-  float washMask = exp(-pow(length((uv - vec2(0.52, 0.86)) * vec2(1.9, 2.2)), 2.0));
+  float washMask = exp(-pow(length((uv - vec2(0.52, 0.86)) * vec2(1.2, 2.0)), 2.0));
   float washAmt = smoothstep(0.25, 0.95, uProgress) * 0.62 + 0.06;
   col = mix(col, cWash, washMask * washAmt * (0.45 + 0.55 * (1.0 - b)));
 
   // Gentle overall lift toward the haze tone at the end of the clip.
-  col = mix(col, cHaze, smoothstep(0.45, 1.0, uProgress) * 0.08);
+  col = mix(col, cHaze, smoothstep(0.45, 1.0, uProgress) * 0.10);
 
-  // Bright core near the top right that fades as the clouds roll in.
+  // Bright pinpoint near the top right inside a soft cyan glow; it fades as
+  // the clouds roll in.
   vec2 gd = (uv - vec2(0.738, 0.225)) * vec2(uAspect, 1.0);
-  float core = exp(-dot(gd, gd) * 3500.0);
-  float halo = exp(-dot(gd, gd) * 45.0);
+  float core = exp(-dot(gd, gd) * 15000.0);
+  float halo = exp(-dot(gd, gd) * 30.0);
   float glowAmt = 1.0 - smoothstep(0.35, 0.90, uProgress) * 0.75;
-  col = mix(col, cGlow, clamp(core * 0.85 + halo * 0.22, 0.0, 1.0) * glowAmt);
+  col = mix(col, mix(cLight, cGlow, 0.25), halo * 0.55 * glowAmt);
+  col = mix(col, cGlow, core * 0.9 * glowAmt);
 
-  // Subtle bottom-edge brightening (cloud bank catching light).
-  col = mix(col, cGlow, smoothstep(0.86, 1.0, uv.y) * smoothstep(0.55, 1.0, uv.x) * 0.40 * (0.6 + 0.4 * f));
+  // Lit cloud bank in the bottom-right corner.
+  col = mix(col, cGlow, smoothstep(0.80, 1.0, uv.y) * smoothstep(0.50, 1.0, uv.x) * 0.55 * (0.6 + 0.4 * f));
+
+  // Brief transients from the reference: a soft flash in the top-left
+  // around frame 127 and a short-lived bright point near the bottom around
+  // frame 200.
+  float flash = exp(-pow((uFrame - 127.0) / 1.5, 2.0));
+  float flashMask = exp(-pow(length((uv - vec2(0.10, 0.12)) * vec2(2.2, 2.6)), 2.0));
+  col = mix(col, mix(cVein, cGlow, 0.5), flash * flashMask * 0.45);
+  vec2 sd = (uv - vec2(0.83, 0.96)) * vec2(uAspect, 1.0);
+  float spark = exp(-pow((uFrame - 200.0) / 12.0, 2.0));
+  col = mix(col, cGlow, spark * (exp(-dot(sd, sd) * 12000.0) * 0.85 + exp(-dot(sd, sd) * 300.0) * 0.25));
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

@@ -19,12 +19,12 @@ export type NebulaPalette = {
 
 // Sampled from the reference footage (sRGB, 0-255).
 export const referencePalette: NebulaPalette = {
-  deep: [56, 98, 210],
-  mid: [106, 158, 238],
-  light: [150, 208, 252],
-  haze: [190, 206, 246],
-  vein: [214, 176, 236],
-  wash: [178, 146, 228],
+  deep: [56, 94, 204],
+  mid: [100, 148, 232],
+  light: [162, 214, 252],
+  haze: [196, 208, 246],
+  vein: [224, 194, 242],
+  wash: [190, 152, 226],
   glow: [236, 250, 255],
 };
 
