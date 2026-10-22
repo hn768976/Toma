@@ -49,6 +49,11 @@ def bg_check(arr, bgfn, rng):
             p = img[y, x]
             if np.abs(p - bg).max() > 25:
                 continue
+            # Truly empty: nothing drawn within 12 px (codec ringing next to drawn
+            # elements is not background).
+            y0, y1, x0, x1 = max(0, y - 12), y + 13, max(0, x - 12), x + 13
+            if np.abs(img[y0:y1, x0:x1] - bg).max() > 6:
+                continue
             patch = img[y - 4:y + 5, x - 4:x + 5]
             cands.append((patch.std(), y, x))
         cands.sort()

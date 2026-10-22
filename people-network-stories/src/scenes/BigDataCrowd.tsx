@@ -253,7 +253,8 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
       camera.lookAt(c.look);
       camera.updateMatrixWorld();
       // Sky streams thin out as they converge into the title.
-      const skyFade = lerp(1, 0.12, smooth(remap(t, 8.5, 13)));
+      // They thin out as they converge into the title and are gone for the 16-18s hold.
+      const skyFade = lerp(1, 0.12, smooth(remap(t, 8.5, 13))) * (1 - smooth(remap(t, 13.5, 15.8)));
       let nl = 0;
       let nd = 0;
       let ng = 0;

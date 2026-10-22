@@ -46,7 +46,7 @@ for (let i = 0; i < N; i++) {
     let at: number;
     if (k < 40) at = 0;
     else if (k < 200) at = lerp(3, 9, (k - 40) / 160);
-    else at = lerp(9, 17.5, Math.pow((k - 200) / (N - 200), 1 / 2.6));
+    else at = lerp(9, 17.3, Math.pow((k - 200) / (N - 200), 1 / 2.6));
     PEOPLE[idx].at = at;
   });
 }
@@ -57,7 +57,7 @@ const LINKS: L[] = [];
 {
   const hubs = Math.round(N * 0.06);
   for (let h = 0; h < hubs; h++) {
-    const t = lerp(3, 17.5, Math.pow(h / hubs, 0.55)) + rng() * 0.3;
+    const t = lerp(3, 16.6, Math.pow(h / hubs, 0.55)) + rng() * 0.3;
     // Hub: someone already present.
     let a = Math.floor(rng() * N);
     for (let tries = 0; tries < 20 && PEOPLE[a].at > t; tries++) a = Math.floor(rng() * N);
@@ -107,10 +107,10 @@ const makeCreate = (dark: boolean) => (info: StageInfo): SceneRuntime => {
     camera,
     update: (frame) => {
       const t = frame / FPS;
-      // Gathering 9-18s, then a very slight drift in the hold.
+      // Gathering 9-18s, then the 18-20s hold.
       const g = smooth(remap(t, 8.5, 18));
-      const drift = remap(t, 18, 20) * 0.006;
-      const az = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [9, 4], [18, 28], [20, 28.3]]));
+      const drift = 0;
+      const az = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [9, 4], [18, 28]]));
       for (let i = 0; i < N; i++) {
         const p = PEOPLE[i];
         const x = lerp(p.spread[0], p.cloud[0], g) * (1 - drift);
@@ -129,7 +129,7 @@ const makeCreate = (dark: boolean) => (info: StageInfo): SceneRuntime => {
       });
       people.commit();
       lines.commit();
-      const dist = keyframes(t, [[0, 16], [3, 18], [9, 30], [14, 46], [18, 56], [20, 56.2]]);
+      const dist = keyframes(t, [[0, 16], [3, 18], [9, 30], [14, 46], [18, 56]]);
       const elev = THREE.MathUtils.degToRad(keyframes(t, [[0, 2], [18, 12], [20, 12]]));
       camera.position.set(Math.sin(az) * Math.cos(elev) * dist, Math.sin(elev) * dist, Math.cos(az) * Math.cos(elev) * dist);
       camera.lookAt(0, 0, 0);
