@@ -52,3 +52,27 @@ Found an issue with Remotion? [File an issue here](https://github.com/remotion-d
 ## License
 
 Note that for some entities a company license is needed. [Read the terms here](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md).
+
+## Code Grid (glass-cube code wall)
+
+A lattice of glowing glass cubes, each holding a scrolling code screen,
+with light rays, dust and bloom. three.js (WebGL2) + `UnrealBloomPass`,
+driven frame-by-frame by Remotion. Source: `src/code-grid/`.
+
+| Composition       | Size      | FPS | Length            | Palette                 |
+| ----------------- | --------- | --- | ----------------- | ----------------------- |
+| `CodeGrid4K`      | 3840x2160 | 30  | 447 frames, 14.9s | Cyber Blue (reference)  |
+| `CodeGridEmber4K` | 3840x2160 | 30  | 447 frames, 14.9s | Ember Gold (alternate)  |
+
+Render (H.264 MP4):
+
+```console
+npm run render:codegrid:1080p   # 4K compositions downscaled to 1920x1080
+npm run render:codegrid:4k      # full 3840x2160
+```
+
+On a machine without a GPU (servers, containers) swap `--gl=angle` for
+`--gl=swangle` (software WebGL; ~2-3 s per frame).
+
+Palettes live in `src/code-grid/palettes.ts`; add one there and to the
+`palette` enum in `CodeGrid.tsx` to make another colorway.

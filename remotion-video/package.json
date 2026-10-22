@@ -12,11 +12,13 @@
     "react-dom": "19.2.3",
     "remotion": "4.0.515",
     "tailwindcss": "4.0.0",
+    "three": "^0.170.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.515",
     "@types/react": "19.2.7",
+    "@types/three": "^0.170.0",
     "@types/web": "0.0.166",
     "eslint": "9.19.0",
     "prettier": "3.8.1",
@@ -26,7 +28,9 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:codegrid:1080p": "remotion render CodeGrid4K out/CodeGrid_CyberBlue_1080p.mp4 --scale=0.5 --codec=h264 --crf=16 --gl=angle && remotion render CodeGridEmber4K out/CodeGrid_EmberGold_1080p.mp4 --scale=0.5 --codec=h264 --crf=16 --gl=angle",
+    "render:codegrid:4k": "remotion render CodeGrid4K out/CodeGrid_CyberBlue_4K.mp4 --codec=h264 --crf=16 --gl=angle && remotion render CodeGridEmber4K out/CodeGrid_EmberGold_4K.mp4 --codec=h264 --crf=16 --gl=angle"
   },
   "sideEffects": [
     "*.css",
