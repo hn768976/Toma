@@ -23,3 +23,7 @@ const playwrightHeadlessShell =
 if (existsSync(playwrightHeadlessShell)) {
   Config.setBrowserExecutable(playwrightHeadlessShell);
 }
+
+// The particle-wave compositions draw with WebGL 2; "angle" gives a
+// working GPU-or-software GL backend in headless Chrome.
+Config.setChromiumOpenGlRenderer("angle");

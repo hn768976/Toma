@@ -18,6 +18,16 @@ import {
   DURATION_IN_FRAMES as RING_DURATION_IN_FRAMES,
   FPS as RING_FPS,
 } from "./particle-ring/constants";
+import {
+  ParticleWave,
+  particleWaveSchema,
+} from "./particle-wave/ParticleWave";
+import {
+  DURATION_IN_FRAMES as WAVE_DURATION_IN_FRAMES,
+  FPS as WAVE_FPS,
+  WIDTH_4K as WAVE_WIDTH,
+  HEIGHT_4K as WAVE_HEIGHT,
+} from "./particle-wave/constants";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -51,6 +61,27 @@ export const RemotionRoot: React.FC = () => {
         height={BASE_HEIGHT * 2}
         schema={particleRingHaloSchema}
         defaultProps={{ ...particleRingHaloDefaults, resolutionScale: 2 }}
+      />
+      {/* Particle wave, authored at 4K. Deliver 1080p with --scale=0.5. */}
+      <Composition
+        id="ParticleWave4K"
+        component={ParticleWave}
+        durationInFrames={WAVE_DURATION_IN_FRAMES}
+        fps={WAVE_FPS}
+        width={WAVE_WIDTH}
+        height={WAVE_HEIGHT}
+        schema={particleWaveSchema}
+        defaultProps={{ palette: "silver" as const }}
+      />
+      <Composition
+        id="ParticleWaveAurora4K"
+        component={ParticleWave}
+        durationInFrames={WAVE_DURATION_IN_FRAMES}
+        fps={WAVE_FPS}
+        width={WAVE_WIDTH}
+        height={WAVE_HEIGHT}
+        schema={particleWaveSchema}
+        defaultProps={{ palette: "aurora" as const }}
       />
     </>
   );
