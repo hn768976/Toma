@@ -47,17 +47,17 @@ export type FieldLook = {
 };
 
 export const DEFAULT_LOOK: FieldLook = {
-  strandWidth: 0.009,
+  strandWidth: 0.0075,
   minPixels: 1.6,
-  hump: 0.25,
-  wave: 0.16,
+  hump: 0.1,
+  wave: 0.13,
   turbulence: 0.8,
   intensity: 0.9,
   floor: 0.2,
   haze: 1,
   hueSpin: 1,
   bloom: 0.45,
-  longStrands: 800,
+  longStrands: 1050,
   shortStrands: 220,
 };
 
@@ -197,7 +197,7 @@ const createScene = (
       fragmentShader: POST_FRAGMENT,
       uniforms: {
         tScene: { value: target.texture },
-        uWhiteMix: { value: 0.2 },
+        uWhiteMix: { value: 0.3 },
       },
       depthTest: false,
       depthWrite: false,

@@ -90,22 +90,24 @@ vec2 warpOffset(vec2 p, float r, float seed) {
   // Shared flow field: neighbouring strands bend together, like combed hair.
   float w = 0.0;
   w += 0.16 * sin(dot(p, vec2(1.7, 0.6)) + ph);
-  w += 0.12 * sin(dot(p, vec2(-0.8, 2.3)) - ph * 2.0);
-  w += 0.08 * sin(dot(p, vec2(2.9, -1.9)) + ph * 3.0);
-  w += 0.14 * loopFbm(p * 0.6 + 3.1, 1.0, 0.35);
-  w += 0.08 * loopFbm(p * 1.1 + 8.4, 2.0, 0.3);
+  w += 0.12 * sin(dot(p, vec2(-0.8, 2.3)) - ph);
+  w += 0.08 * sin(dot(p, vec2(2.9, -1.9)) + ph * 2.0);
+  w += 0.14 * loopFbm(p * 0.6 + 3.1, 1.0, 0.25);
+  w += 0.08 * loopFbm(p * 1.1 + 8.4, 1.0, 0.25);
   // Sinuous ripples running outward along the strands.
-  w += 0.12 * smoothstep(0.5, 2.0, r) * sin(r * 3.6 - ph * 3.0 + a * 3.0);
+  w += 0.12 * smoothstep(0.5, 2.0, r) * sin(r * 3.6 - ph * 2.0 + a * 3.0);
   // A little individuality per strand.
-  w += 0.16 * loopFbm(vec2(r * 1.3, seed * 0.37), 1.0, 0.3);
+  w += 0.16 * loopFbm(vec2(r * 1.3, seed * 0.37), 1.0, 0.2);
+  // Fine jitter so strands read crisp and electric.
+  w += 0.025 * loopFbm(vec2(r * 7.0, seed * 0.53), 1.0, 0.25);
   // Tight turbulence around the core.
   float knot = exp(-r * 1.4);
-  w += knot * 0.5 * loopFbm(p * 3.5 + seed * 0.07, 2.0, 0.5);
+  w += knot * 0.5 * loopFbm(p * 3.5 + seed * 0.07, 1.0, 0.35);
 
   float h = 0.0;
-  h += 0.5 * loopFbm(p * 2.0 + 7.7, 1.0, 0.45);
-  h += 0.35 * sin(r * 4.0 - ph * 3.0 + a * 3.0);
-  h += 0.25 * loopFbm(vec2(r * 1.7, seed * 0.29), 2.0, 0.3);
+  h += 0.5 * loopFbm(p * 2.6 + 7.7, 1.0, 0.3);
+  h += 0.12 * sin(r * 5.0 - ph * 2.0 + a * 3.0 + 2.0 * loopFbm(p * 0.8, 1.0, 0.2));
+  h += 0.25 * loopFbm(vec2(r * 2.5, seed * 0.29), 1.0, 0.25);
   return vec2(w * uTurb, h);
 }
 
@@ -165,7 +167,7 @@ void main() {
   // Sparks gliding outward along some strands (whole cycles per loop).
   float spark = 0.0;
   if (rnd > 0.85) {
-    float u = fract(r * 0.4 - uPhase * 2.0 + hash11(seed * 1.37));
+    float u = fract(r * 0.4 - uPhase + hash11(seed * 1.37));
     spark = exp(-pow((u - 0.5) * 10.0, 2.0)) * 1.2;
   }
 
@@ -210,7 +212,7 @@ void main() {
   float e = 0.05 * exp(-r * 0.45) + 0.5 * exp(-r * 1.4);
   vec3 col = c * e * uFloor;
   // Hot spot where all strands converge.
-  col += mix(uColA, uColHot, 0.5) * exp(-r * 7.0) * 0.6;
+  col += mix(uColA, uColHot, 0.6) * (exp(-r * 14.0) * 5.0 + exp(-r * 6.0) * 2.2 + exp(-r * 2.2) * 0.25);
   outColor = vec4(col, 1.0);
 }
 `;
@@ -243,10 +245,10 @@ void main() {
   float above = max(d.y, 0.0);
   float rays = 0.6 + 0.4 * loopFbm(vec2(d.x * 28.0, above * 2.0), 1.0, 0.6);
   float column = exp(-abs(d.x) * 7.0) * exp(-above * 3.2) * rays;
-  col += mix(uColMid, uColA, 0.35) * column * 0.09 * uHaze;
+  col += mix(uColMid, uColA, 0.35) * column * 0.2 * uHaze;
   // Core bloom.
   float rr = length(d * vec2(1.0, 1.6));
-  col += mix(uColA, uColHot, 0.25) * exp(-rr * 22.0) * 0.25 * uHaze;
+  col += mix(uColA, uColHot, 0.4) * exp(-rr * 18.0) * 0.45 * uHaze;
   col += uColMid * exp(-rr * 4.5) * 0.05 * uHaze;
   outColor = vec4(col, 1.0);
 }

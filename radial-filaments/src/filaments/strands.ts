@@ -44,7 +44,7 @@ export const buildStrandGeometry = ({
       ? ((s + rand() * 0.8) / longStrands) * Math.PI * 2
       : rand() * Math.PI * 2;
     const seed = rand() * 1000;
-    const start = isLong ? rand() * rand() * 0.9 : rand() * 0.5;
+    const start = isLong ? rand() * rand() * 0.9 : rand() * rand() * 0.3;
     const end = isLong
       ? rimRadius * (0.55 + 0.45 * Math.sqrt(rand()))
       : start + 0.6 + rand() * 1.6;
