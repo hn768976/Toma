@@ -120,23 +120,6 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
       height="100%"
       style={{ position: "absolute", inset: 0 }}
     >
-      <defs>
-        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2.2" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="0.9" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
       {/* Grid */}
       <g stroke={P.hud} strokeWidth={0.55} opacity={0.42}>
         {[-3, -2, -1, 1, 2, 3, 4].map((k) => (
@@ -160,16 +143,11 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
       </g>
 
       {/* Crosshair */}
-      <g
-        stroke={P.hudText}
-        strokeWidth={0.9}
-        opacity={0.85}
-        filter="url(#soft)"
-      >
+      <g stroke={P.hudText} strokeWidth={0.9} opacity={0.85}>
         <line x1={200} y1={CY} x2={1000} y2={CY} />
         <line x1={CX} y1={0} x2={CX} y2={672} />
       </g>
-      <g fill="none" stroke={P.hudText} filter="url(#soft)">
+      <g fill="none" stroke={P.hudText}>
         <circle cx={CX} cy={CY} r={7} strokeWidth={1.2} />
         <circle cx={CX} cy={CY} r={2} fill={P.hudText} strokeWidth={0} />
       </g>
@@ -183,14 +161,15 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
       />
 
       {/* Target hexagon */}
-      <path
-        d={HEX_PATH}
+      <g
         fill="none"
         stroke={hexColor}
-        strokeWidth={hexWarn ? 1.3 : 1.9}
         opacity={hexFlicker * (hexWarn ? 0.9 : 0.95)}
-        filter="url(#glow)"
-      />
+      >
+        <path d={HEX_PATH} strokeWidth={7} opacity={0.12} />
+        <path d={HEX_PATH} strokeWidth={3.8} opacity={0.25} />
+        <path d={HEX_PATH} strokeWidth={hexWarn ? 1.3 : 1.9} />
+      </g>
 
       {/* Map-anchored target markers */}
       {targets && (
@@ -205,7 +184,6 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
                 key={`r${i}`}
                 transform={`translate(${x},${y}) scale(${s})`}
                 opacity={a}
-                filter="url(#soft)"
               >
                 <circle
                   r={r.r}
@@ -322,7 +300,7 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
         >
           ENGAGE
         </text>
-        <circle cx={53} cy={66} r={2} fill={P.hud} filter="url(#soft)" />
+        <circle cx={53} cy={66} r={2} fill={P.hud} />
       </g>
 
       {/* Bracket frame icon */}
@@ -416,7 +394,7 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
 
       {/* Location readout */}
       {mapB && (
-        <g fill={P.hudText} filter="url(#soft)">
+        <g fill={P.hudText}>
           <circle
             cx={173}
             cy={42}
