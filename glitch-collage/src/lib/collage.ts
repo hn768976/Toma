@@ -94,22 +94,23 @@ const makeCanvas = (w: number, h: number) => {
 const planShot = (rng: Rng): Shot => {
   const roll = rng();
   const mode: Mode = roll < 0.5 ? "dense" : roll < 0.75 ? "halftone" : "sparse";
-  const cx = range(rng, 0.47, 0.58);
+  const cx = range(rng, 0.47, 0.54);
   const pw =
-    mode === "sparse" ? range(rng, 0.16, 0.24) : range(rng, 0.22, 0.32);
+    mode === "sparse" ? range(rng, 0.2, 0.28) : range(rng, 0.26, 0.34);
   const panels: Panel[] = [];
   // Dim, textured full-height strips fill the field around the main panel
-  const nBg = irange(rng, 3, 6);
+  const nBg = irange(rng, 4, 7);
   for (let i = 0; i < nBg; i++) {
     const w = range(rng, 0.04, 0.16);
-    const x = chance(rng, 0.7) ? range(rng, cx, 0.98) : range(rng, 0.12, cx);
+    // first one or two always land in the left third, the rest mostly right
+    const x = i < 2 ? range(rng, 0.04, 0.3) : chance(rng, 0.75) ? range(rng, cx, 0.98) : range(rng, 0.12, cx);
     panels.push({
       x0: x - w / 2,
       x1: x + w / 2,
       y0: chance(rng, 0.7) ? -0.2 : range(rng, 0, 0.4),
       y1: 1.2,
-      bright: range(rng, 0.05, 0.12),
-      holeThr: range(rng, 0.18, 0.32),
+      bright: range(rng, 0.12, 0.22),
+      holeThr: range(rng, 0.12, 0.24),
       rough: range(rng, 0.002, 0.006),
       soft: range(rng, 0.001, 0.003),
       cell: 1,
@@ -129,12 +130,24 @@ const planShot = (rng: Rng): Shot => {
       y1: fullHeight ? 1.2 : range(rng, 0.75, 1.2),
       bright:
         mode === "sparse" ? range(rng, 0.45, 0.7) : range(rng, 0.68, 1.05),
-      holeThr: mode === "halftone" ? range(rng, 0.28, 0.36) : range(rng, 0.22, 0.36),
+      holeThr: mode === "halftone" ? range(rng, 0.24, 0.32) : range(rng, 0.18, 0.3),
       rough: range(rng, 0.003, 0.012),
       soft: range(rng, 0.0015, 0.004),
       cell: chance(rng, 0.4) ? irange(rng, 2, 5) : 1,
     });
   }
+  // A mid-grey strip hugging the left edge widens the lit region
+  panels.push({
+    x0: left - range(rng, 0.0, 0.03),
+    x1: left + range(rng, 0.06, 0.12),
+    y0: -0.2,
+    y1: 1.2,
+    bright: range(rng, 0.4, 0.6),
+    holeThr: range(rng, 0.2, 0.3),
+    rough: range(rng, 0.003, 0.01),
+    soft: range(rng, 0.0015, 0.004),
+    cell: 1,
+  });
   const main = { x0: left, x1: left + pw };
   // Rectangular data blocks inside the panel that brighten or darken it
   const blocks: Block[] = [];
@@ -238,7 +251,7 @@ const buildPanelTexture = (rng: Rng, shot: Shot, palette: Palette) => {
         let l =
           p.bright * (0.66 + (tone(u, v) - 0.5) * 1.1 + (gr - 0.5) * 0.8) *
             (0.84 + 0.32 * colN[x]) +
-          (rowN[y] - 0.5) * 0.12;
+          (p.bright > 0.3 ? (rowN[y] - 0.5) * 0.12 : 0);
         const sc = scratch(u, v);
         l *= 0.55 + 0.9 * sc * sc + (sc > 0.72 ? 0.5 : 0);
         // the reference brightens toward the bottom of frame
@@ -248,7 +261,7 @@ const buildPanelTexture = (rng: Rng, shot: Shot, palette: Palette) => {
         const qy = Math.floor(y / p.cell) * p.cell;
         const hv = holes(qx / TW, qy / TH) + (hz - 0.5) * 0.1 + (gr - 0.5) * 0.16;
         const h = smoothstep(p.holeThr - 0.02, p.holeThr + 0.02, hv);
-        l *= 0.05 + 0.95 * h;
+        l *= p.bright > 0.3 ? 0.05 + 0.95 * h : 0.55 + 0.45 * h;
         if (hz > 0.985) l *= 1.6;
         else if (hz < 0.02) l *= 0.15;
         if (p.bright > 0.2) l *= rowMesh * (x % 3 === 0 ? 0.86 : 1);
@@ -389,7 +402,7 @@ const drawLightDots = (ctx: CanvasRenderingContext2D, rng: Rng, p: Palette) => {
 };
 
 const drawSplats = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p: Palette) => {
-  const n = irange(rng, 1, 5);
+  const n = irange(rng, 0, 3);
   ctx.fillStyle = rgba(p.void, 0.92);
   for (let i = 0; i < n; i++) {
     const cx = (shot.cx + range(rng, -shot.pw / 2, shot.pw / 2)) * U;
@@ -489,7 +502,7 @@ const drawGlyphColumns = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p
     const x = nearPanel
       ? (shot.cx + range(rng, -shot.pw * 0.7, shot.pw * 0.7)) * U
       : range(rng, 0.06, 0.95) * U;
-    const red = chance(rng, 0.28);
+    const red = chance(rng, 0.15);
     const big = chance(rng, 0.3);
     const size = red || big ? range(rng, 22, 42) : range(rng, 9, 17);
     const color = red ? p.accent : p.ink;
@@ -616,6 +629,34 @@ const drawScratches = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p: P
   }
 };
 
+// Short horizontal rules, dash ladders and typewriter rows
+const drawHorizontalMarks = (ctx: CanvasRenderingContext2D, rng: Rng, p: Palette) => {
+  const n = irange(rng, 10, 30);
+  for (let i = 0; i < n; i++) {
+    const x = range(rng, 0.05, 0.9) * U;
+    const y = Math.round(range(rng, 0.03, 0.97) * V) + 0.5;
+    const len = range(rng, 30, 200);
+    ctx.strokeStyle = rgba(p.ink, range(rng, 0.45, 0.8));
+    ctx.lineWidth = range(rng, 0.8, 1.4);
+    if (chance(rng, 0.35)) ctx.setLineDash([range(rng, 2, 6), range(rng, 2, 6)]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  const rows = irange(rng, 1, 3);
+  for (let i = 0; i < rows; i++) {
+    const size = range(rng, 11, 22);
+    ctx.font = `${size}px ${MONO}`;
+    ctx.textBaseline = "top";
+    ctx.fillStyle = rgba(p.ink, range(rng, 0.45, 0.85));
+    let str = "";
+    for (let k = irange(rng, 3, 9); k > 0; k--) str += pick(rng, GLYPHS.split(""));
+    ctx.fillText(chance(rng, 0.5) ? str : pick(rng, ["011 SEP", "0 1", "04 OCT", "A-17", "N°08"]), range(rng, 0.1, 0.8) * U, range(rng, 0.05, 0.92) * V);
+  }
+};
+
 const drawHexGrid = (ctx: CanvasRenderingContext2D, rng: Rng, p: Palette) => {
   const r = range(rng, 18, 34);
   const x0 = range(rng, 0.5, 0.75) * U;
@@ -657,8 +698,8 @@ const drawRedFeature = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p: 
       y += h + range(rng, 3, 14);
     }
   };
-  if (chance(rng, 0.6)) dashColumn((shot.cx + range(rng, -shot.pw * 0.4, shot.pw * 0.4)) * U, range(rng, 4, 8));
-  if (chance(rng, 0.5)) dashColumn(range(rng, 0.04, 0.2) * U, range(rng, 3, 6));
+  if (chance(rng, 0.6)) dashColumn((shot.cx + range(rng, -shot.pw * 0.4, shot.pw * 0.4)) * U, range(rng, 6, 10));
+  if (chance(rng, 0.5)) dashColumn(range(rng, 0.08, 0.2) * U, range(rng, 5, 9));
   if (chance(rng, 0.4)) {
     const size = range(rng, 22, 38);
     ctx.font = `${size}px ${MONO}`;
@@ -682,14 +723,14 @@ const drawPost = (
 ) => {
   // Left edge falls to black, broad vignette elsewhere
   const left = ctx.createLinearGradient(0, 0, U * 0.3, 0);
-  left.addColorStop(0, rgba(p.bgDeep, 0.92));
-  left.addColorStop(0.3, rgba(p.bgDeep, 0.6));
+  left.addColorStop(0, rgba(p.bgDeep, 0.8));
+  left.addColorStop(0.3, rgba(p.bgDeep, 0.4));
   left.addColorStop(1, rgba(p.bgDeep, 0));
   ctx.fillStyle = left;
   ctx.fillRect(0, 0, U, V);
   const vg = ctx.createRadialGradient(U * 0.5, V * 0.55, U * 0.25, U * 0.5, V * 0.55, U * 0.78);
   vg.addColorStop(0, rgba(p.bgDeep, 0));
-  vg.addColorStop(1, rgba(p.bgDeep, 0.75));
+  vg.addColorStop(1, rgba(p.bgDeep, 0.5));
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, U, V);
   const top = ctx.createLinearGradient(0, 0, 0, V * 0.45);
@@ -765,6 +806,7 @@ export const renderCollage = (canvas: HTMLCanvasElement, o: CollageOptions) => {
   if (shot.mode === "halftone") drawHalftone(ctx, rng, shot, o.palette, true);
   else if (chance(rng, 0.3)) drawHalftone(ctx, rng, shot, o.palette, false);
   if (chance(rng, 0.3)) drawHexGrid(ctx, rng, o.palette);
+  drawHorizontalMarks(ctx, rng, o.palette);
   if (chance(rng, 0.5)) drawLightDots(ctx, rng, o.palette);
   drawSplats(ctx, rng, shot, o.palette);
   drawHairlines(ctx, rng, shot, o.palette);

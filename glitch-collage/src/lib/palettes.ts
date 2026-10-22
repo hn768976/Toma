@@ -18,8 +18,8 @@ export type Palette = {
 
 // Matches the reference: teal-black ground, cold grey panel, crimson accents.
 export const REFERENCE_PALETTE: Palette = {
-  bgDeep: [3, 8, 9],
-  bgLift: [16, 25, 27],
+  bgDeep: [5, 11, 12],
+  bgLift: [22, 33, 35],
   slab: [34, 48, 51],
   panel: [196, 202, 202],
   ink: [228, 234, 234],
@@ -29,8 +29,8 @@ export const REFERENCE_PALETTE: Palette = {
 
 // Alternate grade: midnight indigo ground, ice-cyan panel, amber accents.
 export const ALT_PALETTE: Palette = {
-  bgDeep: [3, 4, 14],
-  bgLift: [14, 16, 38],
+  bgDeep: [5, 6, 18],
+  bgLift: [19, 22, 48],
   slab: [30, 36, 78],
   panel: [150, 214, 238],
   ink: [214, 236, 255],
