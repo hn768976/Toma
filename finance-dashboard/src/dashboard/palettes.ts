@@ -23,7 +23,7 @@ export type Palette = {
 export const oceanPalette: Palette = {
   bg: "#04273f",
   grid: "#2a8cc8",
-  bar: "#12f2bf",
+  bar: "#00f29c",
   accent: "#5fd8ee",
   ink: "#f2fbff",
   inkDark: "#08243a",

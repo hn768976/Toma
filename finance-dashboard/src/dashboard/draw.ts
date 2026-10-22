@@ -7,6 +7,7 @@ import {
   BASELINE_Y,
   BOARD_H,
   BOARD_W,
+  TEXELS_PER_UNIT,
 } from "./constants";
 import type { Palette } from "./palettes";
 import { hash, noise1 } from "./random";
@@ -170,7 +171,7 @@ const drawLineChart = (ctx: Ctx, p: Palette, f: number) => {
 
 // Row of small wedges under the x-axis that sweep open.
 const drawWedgeRow = (ctx: Ctx, p: Palette, f: number) => {
-  const count = 14;
+  const count = 10;
   ctx.fillStyle = p.accent;
   for (let i = 0; i < count; i++) {
     const x = 990 + i * 68;
@@ -178,7 +179,9 @@ const drawWedgeRow = (ctx: Ctx, p: Palette, f: number) => {
     const appear = easeOutBack((f + 20 - i * 6) / 20);
     if (appear <= 0) continue;
     // Solid "pac-man" wedges that keep opening and closing.
-    const frac = 0.55 + 0.35 * noise1(40 + i, f / 40 + i * 0.37);
+    // Each wedge opens from a thin slice to a full "pac-man".
+    const open = easeOutCubic((f + 10 - i * 6) / 45);
+    const frac = (0.08 + 0.82 * open) * (0.6 + 0.4 * noise1(40 + i, f / 40 + i * 0.37));
     const rot = hash(41, i) * Math.PI * 2 + f * 0.012;
     const r = 22 * appear;
     ctx.beginPath();
@@ -315,6 +318,9 @@ const drawTextBlock = (
   ctx.font = `bold ${size}px 'DejaVu Sans Mono', monospace`;
   ctx.textBaseline = "top";
   ctx.fillStyle = p.ink;
+  // Soft glow around the glyphs, like the reference's blurred text columns.
+  ctx.shadowColor = withAlpha(p.ink, 0.8);
+  ctx.shadowBlur = size * 0.6 * TEXELS_PER_UNIT;
   let budget = typed;
   for (let r = 0; r < rows && budget > 0; r++) {
     const len = Math.floor(cols * (0.45 + 0.55 * hash(seed, r, 1)));
@@ -328,6 +334,7 @@ const drawTextBlock = (
     }
     ctx.fillText(line, x, y + r * size * 1.25);
   }
+  ctx.shadowBlur = 0;
 };
 
 const drawAreaChart = (

@@ -108,15 +108,15 @@ const fragmentShader = /* glsl */ `
     // Screen-space light pool towards the upper right, as if the board were
     // lit by a soft key light; the lower corners fall off into shade.
     vec2 sp = gl_FragCoord.xy / resolution;
-    vec2 d = (sp - vec2(0.82, 0.92)) / vec2(0.62, 0.55);
+    vec2 d = (sp - vec2(0.86, 0.92)) / vec2(0.5, 0.55);
     float light = exp(-dot(d, d));
     // Secondary, cooler glow pooling in the lower left.
     vec2 d2 = (sp - vec2(0.08, 0.1)) / vec2(0.55, 0.5);
     float fill = exp(-dot(d2, d2));
 
     col *= mix(0.85, 1.3, light);
-    col += glowA * 0.55 + glowB * 0.45;
-    col += lightColor * light * 0.8 + lightColor * fill * 0.45;
+    col += glowA * 0.7 + glowB * 0.6;
+    col += lightColor * light * 0.8 + lightColor * fill * 0.95;
     col = mix(shadeColor, col, 0.5 + 0.5 * smoothstep(0.0, 0.5, light + fill + 0.2));
     gl_FragColor = vec4(col, 1.0);
   }
