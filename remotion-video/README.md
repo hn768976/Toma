@@ -39,15 +39,23 @@ variant: `--props='{"extraFrame":true}'`.
 
 ### Timings (this machine: 4 vCPU, no GPU — ANGLE/SwiftShader)
 
-Measured per frame, warm, one render tab:
+720p previews (`--scale=1/3`, 3 render tabs; wall time per frame) and 4K
+(measured on one tab for clips 1, 4, 7; others estimated from the 720p ratio):
 
-| Clip | 720p | 4K |
-|---|---|---|
-| 1 Membrane | see report | 2.8 s |
-| 4 Solid | see report | 5.2 s |
-| 7 Assemble | see report | 2.7 s |
+| Clip | 720p s/frame | 720p clip | 4K s/frame | 4K clip (1 tab) |
+|---|---|---|---|---|
+| 1 Membrane | 0.58 | 5.8 min | 2.8 (measured) | ~28 min |
+| 2 Fibre reveal | 1.45 | 7.2 min | ~7 (est.) | ~35 min |
+| 3 Fibre loop | 1.40 | 14 min | ~7 (est.) | ~70 min |
+| 4 Solid black | 1.09 | 10.9 min | 5.2 (measured) | ~52 min |
+| 5 Solid green | 1.04 | 10.4 min | ~5 (est.) | ~50 min |
+| 6 Glass | 0.77 | 9.3 min | ~3.7 (est.) | ~45 min |
+| 7 Assemble | 0.42 | 4.2 min | 2.7 (measured) | ~27 min |
+| 8 Orbit | 0.59 | 5.9 min | ~2.8 (est.) | ~28 min |
 
-On a machine with a GPU, ANGLE uses it and these drop by an order of magnitude.
+All eight at 4K: roughly 5–6 hours on this CPU-only box (less with
+`CONCURRENCY=2`–`3`); on a machine with a GPU, ANGLE uses it and these drop by
+an order of magnitude.
 
 ## Using the clips
 

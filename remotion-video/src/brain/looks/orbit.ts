@@ -53,12 +53,15 @@ const SHELL_VERT = /* glsl */ `
 in float curv;
 in float ao;
 in float depth;
+in float label;
 out vec3 vN;
 out vec3 vV;
 out float vCurv;
 out float vAo;
 out float vDepth;
+out float vLabel;
 void main() {
+  vLabel = label;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   vN = normalize(normalMatrix * normal);
   vV = -mv.xyz;
@@ -79,6 +82,7 @@ in vec3 vV;
 in float vCurv;
 in float vAo;
 in float vDepth;
+in float vLabel;
 out vec4 outColor;
 void main() {
   vec3 N = normalize(vN);
@@ -91,6 +95,11 @@ void main() {
   vec3 c = uBody * (0.015 + 0.07 * fr);
   c += uVein * (fold * 0.09 + fr * 0.11);
   c += uEmber * pow(1.0 - ndv, 7.0) * 0.06;
+  // cerebellum: its own fine parallel folia lines and a cooler, brighter tint
+  // so it reads as a separate structure under the occipital lobe
+  float cb = step(0.5, vLabel) * (1.0 - step(1.5, vLabel));
+  float folia = smoothstep(0.15, 0.55, vCurv);
+  c = mix(c, c * 0.55 + uCrest * folia * 0.07 + uVein * (0.025 + 0.06 * fr), cb);
   c += uCrest * crest * (0.015 + 0.03 * ndv) * vAo;
   c *= uBack > 0.5 ? 0.35 : 1.0;
   outColor = vec4(c, 0.0);
@@ -99,6 +108,7 @@ void main() {
 const FIBRE_VERT = /* glsl */ `
 in float aT;
 in vec4 aCurve;
+in float aLabel;
 uniform float uPhase;
 uniform float uPx;
 out float vI;
@@ -108,7 +118,7 @@ void main() {
   float w = mix(0.9, 2.6, aCurve.y * aCurve.y) * uPx;
   // slow luminous pulses along the veins (periodic in the loop)
   float pulse = 0.5 + 0.5 * sin(6.28318 * (uPhase * 2.0 + aCurve.z) - aT * 9.0);
-  vI = w * (0.35 + 0.65 * aCurve.z) * (0.65 + 0.6 * pow(pulse, 6.0)) * (aCurve.x > 0.5 ? 0.45 : 1.0);
+  vI = w * (0.35 + 0.65 * aCurve.z) * (0.65 + 0.6 * pow(pulse, 6.0)) * (aCurve.x > 0.5 ? 0.45 : 1.0) * (aLabel > 0.5 && aLabel < 1.5 ? 0.35 : 1.0);
   vW = aCurve.y;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;
