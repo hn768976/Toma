@@ -66,7 +66,7 @@ const sceneData = (): SceneData => {
       nodes.push({
         x: -GRID_X + c * GRID_SPACING + jx + (r % 2) * GRID_SPACING * 0.5,
         z: GRID_Z0 + r * GRID_SPACING + jz,
-        warm: rnd() < 0.62,
+        warm: rnd() < 0.68,
         size: 0.7 + rnd() * 0.7,
         ph: rnd() * Math.PI * 2,
         show: rnd() < 0.85,
@@ -92,7 +92,8 @@ const sceneData = (): SceneData => {
   const addRisers = (kind: Riser["kind"], count: number, start: number) => {
     for (let i = 0; i < count; i++) {
       // Emission rate ramps up linearly: sqrt of a uniform variable.
-      const birth = start - 20 + (end - start + 20) * rnd();
+      // Emission rate ramps up linearly: sqrt of a uniform variable.
+      const birth = start + (end - start) * Math.sqrt(rnd());
       // Uniform over the disk of the portal.
       const a = rnd() * Math.PI * 2;
       const rr = Math.sqrt(rnd()) * 1.2;
@@ -103,10 +104,10 @@ const sceneData = (): SceneData => {
         birth,
         speed:
           kind === "streak"
-            ? 0.75 + rnd() * 0.75
+            ? 0.3 + rnd() * 0.22
             : kind === "icon"
-              ? 0.32 + rnd() * 0.3
-              : 0.28 + rnd() * 0.55,
+              ? 0.2 + rnd() * 0.18
+              : 0.18 + rnd() * 0.27,
         len: 0.3 + rnd() * 1.0,
         size: kind === "icon" ? 0.066 + rnd() * 0.03 : 0.6 + rnd() * 1.3,
         icon: Math.floor(rnd() * ICONS.length),
@@ -115,20 +116,20 @@ const sceneData = (): SceneData => {
       });
     }
   };
-  addRisers("streak", 150, STREAKS_START);
+  addRisers("streak", 120, STREAKS_START);
   addRisers("icon", 150, ICONS_START);
   addRisers("dot", 460, STREAKS_START);
   risers.sort((a, b) => b.z - a.z);
 
   const bokeh: Bokeh[] = [];
-  for (let i = 0; i < 2600; i++) {
+  for (let i = 0; i < 1500; i++) {
     bokeh.push({
       x: (rnd() - 0.5) * 22,
       y: Math.pow(rnd(), 2.2) * 0.5,
       z: -6 + rnd() * 18,
       size: 0.6 + rnd() * 1.4,
       ph: rnd() * Math.PI * 2,
-      warm: rnd() < 0.25,
+      warm: rnd() < 0.4,
     });
   }
   cached = { nodes, cols, rows, edges, risers, bokeh };
@@ -295,8 +296,8 @@ export const renderScene = (
     const hy = hz.z > 0 ? hz.y : 690;
     const g = main.createLinearGradient(0, hy - 60, 0, 1080);
     g.addColorStop(0, "rgba(30,70,100,0)");
-    g.addColorStop(0.18, "rgba(30,70,100,0.42)");
-    g.addColorStop(1, "rgba(24,52,76,0.6)");
+    g.addColorStop(0.18, "rgba(34,76,106,0.5)");
+    g.addColorStop(1, "rgba(30,62,88,0.72)");
     main.fillStyle = g;
     main.fillRect(0, hy - 60, BASE_WIDTH, 1080 - hy + 60);
   }
@@ -305,7 +306,7 @@ export const renderScene = (
   const far = ctxFor(buf.softFar);
   const near = ctxFor(buf.softNear);
   const proj: Projected[] = new Array(data.nodes.length);
-  const drift = t * 0.05;
+  const drift = 0;
   for (let i = 0; i < data.nodes.length; i++) {
     const n = data.nodes[i];
     const x = n.x + drift;

@@ -44,12 +44,10 @@ const lookAt = (pos: Vec3, target: Vec3, focal: number): Camera => {
 export const cameraAt = (frame: number, mode: CameraMode): Camera => {
   const t = frame / (DURATION_IN_FRAMES - 1);
   if (mode === "reference") {
-    // Near-locked-off camera with a very slow push-in, as in the reference.
-    const dist = CAM_DISTANCE + 0.12 - 0.3 * easeInOutSine(t);
-    const sway = 0.04 * Math.sin(t * Math.PI * 0.9);
+    // Locked-off camera, as in the reference.
     return lookAt(
-      [sway, CAM_HEIGHT, -dist],
-      [sway * 0.4, CAM_HEIGHT, 0],
+      [0, CAM_HEIGHT, -CAM_DISTANCE],
+      [0, CAM_HEIGHT - 0.012, 0],
       FOCAL,
     );
   }
@@ -59,7 +57,7 @@ export const cameraAt = (frame: number, mode: CameraMode): Camera => {
   const azimuth = -0.42 + 0.66 * e;
   const elevation = 0.06 + 0.3 * e;
   const dist = 6.6 - 1.5 * e;
-  const targetY = 0.95 - 0.35 * e;
+  const targetY = 0.95 - 0.47 * e;
   const target: Vec3 = [0, targetY, 0];
   const pos: Vec3 = [
     dist * Math.sin(azimuth) * Math.cos(elevation),
