@@ -158,3 +158,24 @@ The timings stay the same when counts change; only the density does.
 
 Fonts: Archivo Black and IBM Plex Mono, SIL Open Font License (`public/fonts/*-OFL.txt`).
 Map data: Natural Earth, public domain.
+
+## Render times (measured)
+
+Measured in a 4-core cloud container with **no GPU** (ANGLE → SwiftShader, i.e. CPU WebGL),
+concurrency 2. A machine with a GPU will be much faster.
+
+| Clip | 720p preview, s per frame (wall clock / frames) |
+|---|---|
+| BranchingTree_Red / _Cyan | 0.50 / 0.59 |
+| PeopleLinkUp_Flip | 0.34 |
+| SocialCluster_Red / _White | 0.24 / 0.24 |
+| PeopleWorldMap_Red / _Cyan | 0.07 / 0.09 |
+| PeopleGrid_Cyan | 0.08 |
+| PeopleBulb_White | 0.53 |
+| CrowdPlatform_Blue | 0.40 |
+| BigDataCrowd_Title / _Clean | 0.74 / 0.73 |
+
+Single 4K frames (3840×2160, same container, warm browser): BranchingTree_Red 3.7 s,
+PeopleWorldMap_Red 1.4 s, BigDataCrowd_Title 3.4 s. Estimated full 4K renders on that CPU-only
+container: Branching Tree ≈ 55 min, World Map ≈ 11 min, Big Data ≈ 30 min (less with more
+concurrency or a GPU).
