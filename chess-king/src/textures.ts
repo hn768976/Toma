@@ -60,7 +60,8 @@ export const studioEnvironment = (renderer: THREE.WebGLRenderer, tint: string) =
     m.lookAt(...look);
     scene.add(m);
   };
-  panel(6, 1.2, 6, [0, 6, 0], [0, 0, 0]);
+  panel(6, 1.6, 7, [0, 6, 0], [0, 0, 0]);
+  panel(5, 1.4, 4, [0, 5, 4], [0, 1, 0]);
   panel(1.2, 5, 3.2, [-5, 2, 1], [0, 1, 0]);
   panel(1.0, 5, 2.4, [5, 2, -1], [0, 1, 0]);
   panel(5, 2.6, 2.6, [0, 2, 6], [0, 1, 0]);

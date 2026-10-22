@@ -19,7 +19,7 @@ export const GOLD_NOIR: Palette = {
   name: "Gold Noir",
   hero: { color: "#e3b55c", roughness: 0.2, metalness: 1 },
   army: { color: "#0d0d0f", roughness: 0.16, sheen: "#5a5a60" },
-  boardLight: "#d9d7d2",
+  boardLight: "#c9c7c2",
   boardDark: "#070707",
   backdropTop: "#3d3a33",
   backdropBottom: "#24221e",
@@ -34,9 +34,9 @@ export const GOLD_NOIR: Palette = {
 // Alternate grade: platinum king against a crimson army on a midnight stage.
 export const PLATINUM_CRIMSON: Palette = {
   name: "Platinum Crimson",
-  hero: { color: "#e6ebf2", roughness: 0.14, metalness: 1 },
+  hero: { color: "#f2f5fa", roughness: 0.24, metalness: 1 },
   army: { color: "#5c0712", roughness: 0.18, sheen: "#ff6b7a" },
-  boardLight: "#d6d9e0",
+  boardLight: "#c6c9d0",
   boardDark: "#05070d",
   backdropTop: "#16203a",
   backdropBottom: "#080c18",

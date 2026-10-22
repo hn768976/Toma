@@ -18,9 +18,9 @@ const CameraRig: React.FC<{ time: TimeRef }> = ({ time }) => {
     // Thick haze hides the board while the camera descends with the king,
     // then clears as we reach board level.
     if (scene.fog instanceof THREE.Fog) {
-      const clear = smooth((time.current - 0.3) / 0.35);
-      scene.fog.near = lerp(5.5, 11, clear);
-      scene.fog.far = lerp(12, 24, clear);
+      const clear = smooth((time.current - 0.32) / 0.3);
+      scene.fog.near = lerp(3, 11, clear);
+      scene.fog.far = lerp(8.5, 24, clear);
     }
     const { pos, target } = cameraAt(time.current);
     camera.position.set(...pos);
@@ -159,7 +159,7 @@ const reflectorShader = {
       c += texture2D(tDiffuse, uv - vec2(0.0, b * 1.8)).rgb * 0.16;
       vec2 cell = floor(vWorld.xz / uSquare);
       float dark = mod(cell.x + cell.y, 2.0);
-      float k = mix(0.22, 0.6, dark);
+      float k = mix(0.2, 0.32, dark);
       vec3 V = normalize(uCam - vWorld);
       float fres = 0.25 + 0.35 * pow(1.0 - clamp(V.y, 0.0, 1.0), 5.0);
       vec2 a = abs(vWorld.xz);
@@ -178,7 +178,7 @@ const Board: React.FC<{ palette: Palette }> = ({ palette }) => {
     const r = new Reflector(new THREE.PlaneGeometry(BOARD_SQUARES * SQUARE, BOARD_SQUARES * SQUARE), {
       textureWidth: Math.round(size.width * dpr * 0.5),
       textureHeight: Math.round(size.height * dpr * 0.5),
-      clipBias: 0.003,
+      clipBias: 0.0,
       multisample: 4,
       shader: reflectorShader,
     });
@@ -220,7 +220,7 @@ const Board: React.FC<{ palette: Palette }> = ({ palette }) => {
       {/* Stage floor beyond the board */}
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.12, 0]} receiveShadow>
         <planeGeometry args={[120, 120]} />
-        <meshBasicMaterial color={new THREE.Color(palette.backdropBottom).lerp(new THREE.Color(palette.backdropTop), 0.55)} fog={false} />
+        <meshBasicMaterial color={new THREE.Color(palette.backdropBottom).lerp(new THREE.Color(palette.backdropTop), 0.9)} fog={false} />
       </mesh>
     </group>
   );
@@ -236,7 +236,7 @@ const King: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, time }) 
         roughness: palette.hero.roughness,
         clearcoat: 0.35,
         clearcoatRoughness: 0.12,
-        envMapIntensity: 1.5,
+        envMapIntensity: 2.1,
         fog: false,
       }),
     [palette],
@@ -425,7 +425,7 @@ const Dust: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, time }) 
 
 const Lights: React.FC<{ palette: Palette }> = ({ palette }) => {
   const key = useMemo(() => {
-    const l = new THREE.SpotLight(palette.keyLight, 3.6, 0, 0.36, 0.9, 0);
+    const l = new THREE.SpotLight(palette.keyLight, 3.0, 0, 0.36, 0.9, 0);
     l.position.set(0.6, 11, 4.5);
     l.target.position.set(0, 0.6, 0.2);
     l.castShadow = true;

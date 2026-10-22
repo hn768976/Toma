@@ -42,7 +42,7 @@ const rateAt = (t: number) => {
   if (t < 0.76) return 1;
   if (t < 0.95) return lerp(1, 0.09, smooth((t - 0.76) / 0.19));
   if (t < 3.0) return 0.09;
-  if (t < 3.5) return lerp(0.09, 1, smooth((t - 3.0) / 0.5));
+  if (t < 3.9) return lerp(0.09, 1, smooth((t - 3.0) / 0.9));
   return 1;
 };
 
@@ -87,7 +87,7 @@ const buildPieces = (): PieceSpec[] => {
   const rnd = mulberry32(7);
   const types: PieceType[] = [
     "rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook",
-    "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn",
+    "pawn", "pawn", "pawn", "pawn", "pawn",
   ];
 
   // Standing crowd around the gold king.
@@ -111,14 +111,13 @@ const buildPieces = (): PieceSpec[] => {
   // Resting spots: hand-placed for the hero framing, the rest scattered.
   type Rest = { p: THREE.Vector2; yaw: number; upright: boolean };
   const rests: Rest[] = [
-    { p: new THREE.Vector2(-2.0, 3.1), yaw: 0.3, upright: false },
-    { p: new THREE.Vector2(1.75, 0.6), yaw: 1.35, upright: false },
-    { p: new THREE.Vector2(-1.7, 0.7), yaw: 1.15, upright: false },
-    { p: new THREE.Vector2(2.3, 2.9), yaw: 2.6, upright: false },
-    { p: new THREE.Vector2(-3.2, 1.0), yaw: 1.9, upright: false },
-    { p: new THREE.Vector2(0.9, -1.6), yaw: 0.2, upright: false },
-    { p: new THREE.Vector2(-1.0, -1.7), yaw: 2.8, upright: false },
-    { p: new THREE.Vector2(3.4, 0.0), yaw: 1.0, upright: false },
+    { p: new THREE.Vector2(-2.1, 3.2), yaw: 0.75, upright: false },
+    { p: new THREE.Vector2(1.8, 0.35), yaw: 1.95, upright: false },
+    { p: new THREE.Vector2(-1.65, 1.1), yaw: 4.1, upright: false },
+    { p: new THREE.Vector2(2.5, 2.6), yaw: 2.3, upright: false },
+    { p: new THREE.Vector2(-3.4, -0.6), yaw: 1.6, upright: false },
+    { p: new THREE.Vector2(1.2, -2.2), yaw: 0.5, upright: false },
+    { p: new THREE.Vector2(-0.9, -1.5), yaw: 2.4, upright: false },
   ];
   const segOf = (r: Rest, len = 2.2) => {
     const d = new THREE.Vector2(Math.cos(r.yaw), -Math.sin(r.yaw));
@@ -190,7 +189,7 @@ const buildPieces = (): PieceSpec[] => {
     const contact = new THREE.Vector3(rest.p.x, restComY, rest.p.y).addScaledVector(slideDir, -slide);
 
     // Ballistic launch that peaks at `apex` and touches down at `contact`.
-    const apex = 2.4 + rnd() * 1.4 + (s2.y > 2.5 ? 0.4 : 0);
+    const apex = 2.3 + rnd() * 2.0;
     const vy = Math.sqrt(2 * GRAVITY * (apex - start.y));
     const tLand = (vy + Math.sqrt(vy * vy + 2 * GRAVITY * (start.y - contact.y))) / GRAVITY;
     const launchV = new THREE.Vector3(
@@ -218,7 +217,7 @@ const buildPieces = (): PieceSpec[] => {
       slide,
       rollAxis,
       rollRadius: 0.24,
-      bounce: 0.28 + rnd() * 0.32,
+      bounce: 0.3 + rnd() * 0.45,
       qStart,
       spinAxis: angle < 1e-4 ? UP.clone() : spinAxis,
       spinAngle: angle + extra,
@@ -247,11 +246,11 @@ export const piecePose = (p: PieceSpec, tau: number, pos: THREE.Vector3, quat: T
     return;
   }
   const s = tau - p.tLand;
-  const d = p.slide * (1 - Math.exp(-2.2 * s));
+  const d = p.slide * (1 - Math.exp(-1.8 * s));
   pos.copy(p.contact).addScaledVector(p.slideDir, d);
-  pos.y += p.bounce * Math.exp(-2.8 * s) * Math.abs(Math.sin(8.5 * s));
+  pos.y += p.bounce * Math.exp(-2.1 * s) * Math.abs(Math.sin(7 * s));
   const roll = p.upright ? 0 : d / p.rollRadius;
-  const wobble = 0.35 * Math.exp(-3.4 * s) * Math.sin(13 * s);
+  const wobble = 0.42 * Math.exp(-2.6 * s) * Math.sin(11 * s);
   quat
     .copy(tmpQ.setFromAxisAngle(p.slideDir, wobble))
     .multiply(tmpQ2.setFromAxisAngle(p.rollAxis, roll))
