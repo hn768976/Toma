@@ -36,8 +36,8 @@ so every frame is computed at 4K and downsampled (supersampled) to 1920 × 1080.
 Codec settings (H.264, yuv420p, CRF 16) live in `remotion.config.ts`.
 
 WebGL uses software ANGLE (`swangle`) so the shader renders identically on machines
-without a GPU. Rendering takes roughly 4 min per Canvas composition and 10–20 min per
-WebGL composition at 1080p on a 4-core CPU (4K takes longer).
+without a GPU. On a 4-core CPU with no GPU, each composition renders at 1080p in about
+3–5 minutes (4K takes longer).
 
 ## Project layout
 

@@ -28,40 +28,41 @@ const float ASPECT = 1.7777778;
 const float PI = 3.14159265;
 const float PERIOD = 6.6733; // seconds per full phase turn (3 turns in 20.02 s)
 
-// Per vortex: x, y (y down, height-normalised), alpha, broad sigma, broad core
-// radius, broad amplitude, spiral k, tight sigma, tight amplitude, tight core.
-// The broad term shapes the overall light/dark lobes; the tight term adds the
-// crisp crescent that hugs each dark eye.
-const int N = 6;
-const int STRIDE = 10;
-const float V[60] = float[60](
-  0.3935, 0.0134, -0.7141, 0.1956, 0.3000, 242.6730,  0.6273, 0.1027, 73.6054, 0.0577,
-  1.4569, 0.1567,  0.7778, 0.4891, 0.0899,  59.2813, -0.3473, 0.0891, 15.5537, 0.0293,
-  0.8604, 0.3566, -0.2875, 0.2384, 0.0336,  53.6806, -0.2698, 0.0204, 12.0462, 0.0097,
-  0.2086, 0.7226, -0.6901, 1.5000, 0.0155,  12.1976,  2.2791, 0.1945, 55.7784, 0.0650,
-  1.5324, 0.7697,  2.7431, 0.3617, 0.0970,  54.8754, -1.3261, 0.0517, 10.7175, 0.0277,
-  0.9103, 0.9007, -2.1679, 0.2172, 0.0473,  60.0048,  1.3239, 0.0357,  8.3966, 0.0093
-);
+// Contribution of one vortex at offset d from its core: broad and tight
+// Gaussian-weighted conic waves sharing the phase -angle + alpha + k*r.
+vec2 vortex(vec2 d, float alpha, float sigma, float r0, float amp, float k,
+            float sigma2, float amp2, float r02, float maxSigma) {
+  sigma = min(sigma, maxSigma);
+  float r2 = dot(d, d);
+  float reach = 2.6 * max(sigma, sigma2);
+  if (r2 > reach * reach) {
+    return vec2(0.0); // contribution < 0.12% of its peak
+  }
+  float broad = amp * exp(-r2 / (sigma * sigma)) * (1.0 - exp(-r2 / (r0 * r0)));
+  float tight = amp2 * exp(-r2 / (sigma2 * sigma2)) * (1.0 - exp(-r2 / (r02 * r02)));
+  float ph = -atan(d.y, d.x) + alpha + k * sqrt(r2);
+  return (broad + tight) * vec2(cos(ph), sin(ph));
+}
 
+// Per vortex: x, y (y down, height-normalised), then alpha, broad sigma, broad
+// core radius, broad amplitude, spiral k, tight sigma, tight amplitude, tight
+// core radius. The broad term shapes the overall light/dark lobes; the tight
+// term adds the crisp crescent that hugs each dark eye. Written out as direct
+// calls (no array indexing), which is much faster in software GL.
 vec2 vortexSum(vec2 p, vec2 tileOffset, float maxSigma) {
   vec2 acc = vec2(0.0);
-  for (int i = 0; i < N; i++) {
-    int o = i * STRIDE;
-    vec2 c = vec2(V[o], V[o + 1]) + tileOffset;
-    vec2 d = p - c;
-    float r2 = dot(d, d);
-    float sigma = min(V[o + 3], maxSigma);
-    float reach = 3.0 * max(sigma, V[o + 7]);
-    if (r2 > reach * reach) {
-      continue; // contribution < e^-9 of its peak
-    }
-    float broad = V[o + 5] * exp(-r2 / (sigma * sigma)) *
-      (1.0 - exp(-r2 / (V[o + 4] * V[o + 4])));
-    float tight = V[o + 8] * exp(-r2 / (V[o + 7] * V[o + 7])) *
-      (1.0 - exp(-r2 / (V[o + 9] * V[o + 9])));
-    float ph = -atan(d.y, d.x) + V[o + 2] + V[o + 6] * sqrt(r2);
-    acc += (broad + tight) * vec2(cos(ph), sin(ph));
-  }
+  acc += vortex(p - vec2(0.3935, 0.0134) - tileOffset,
+    -0.7141, 0.1956, 0.3000, 242.6730, 0.6273, 0.1027, 73.6054, 0.0577, maxSigma);
+  acc += vortex(p - vec2(1.4569, 0.1567) - tileOffset,
+    0.7778, 0.4891, 0.0899, 59.2813, -0.3473, 0.0891, 15.5537, 0.0293, maxSigma);
+  acc += vortex(p - vec2(0.8604, 0.3566) - tileOffset,
+    -0.2875, 0.2384, 0.0336, 53.6806, -0.2698, 0.0204, 12.0462, 0.0097, maxSigma);
+  acc += vortex(p - vec2(0.2086, 0.7226) - tileOffset,
+    -0.6901, 1.5000, 0.0155, 12.1976, 2.2791, 0.1945, 55.7784, 0.0650, maxSigma);
+  acc += vortex(p - vec2(1.5324, 0.7697) - tileOffset,
+    2.7431, 0.3617, 0.0970, 54.8754, -1.3261, 0.0517, 10.7175, 0.0277, maxSigma);
+  acc += vortex(p - vec2(0.9103, 0.9007) - tileOffset,
+    -2.1679, 0.2172, 0.0473, 60.0048, 1.3239, 0.0357, 8.3966, 0.0093, maxSigma);
   return acc;
 }
 
@@ -70,31 +71,38 @@ vec2 field(vec2 p, bool tiled) {
     return vortexSum(p, vec2(0.0), 10.0);
   }
   // Periodic copy of the vortex cell so a moving camera never runs out of field.
-  // Broad lobes are capped at sigma 0.5 so the 3x5 neighbourhood below covers
-  // every copy that still contributes (no visible tile seams).
+  // Broad lobes are capped at sigma 0.35 (reach 0.91 < one cell) so the 3x3
+  // neighbourhood below covers every copy that still contributes, leaving no
+  // visible tile seams.
   vec2 cell = vec2(ASPECT, 1.0);
   vec2 base = floor(p / cell) * cell;
   vec2 acc = vec2(0.0);
-  for (int ty = -2; ty <= 2; ty++) {
+  for (int ty = -1; ty <= 1; ty++) {
     for (int tx = -1; tx <= 1; tx++) {
-      acc += vortexSum(p, base + vec2(float(tx), float(ty)) * cell, 0.5);
+      acc += vortexSum(p, base + vec2(float(tx), float(ty)) * cell, 0.35);
     }
   }
   return acc;
 }
 
-// Piecewise-linear tone curve matching the reference's luminance quantiles.
+// Piecewise-linear tone curve matching the reference's luminance quantiles
+// (raw field value -> 0..255), unrolled for speed.
+float seg(float x, float x0, float x1, float y0, float y1) {
+  return mix(y0, y1, (x - x0) / (x1 - x0));
+}
+
 float tone(float raw) {
-  float xs[11] = float[11](-118.8, -63.9, -41.9, -23.7, -10.6, 0.0, 10.6, 23.7, 41.9, 63.9, 118.8);
-  float ys[11] = float[11](1.0, 44.0, 59.0, 71.0, 85.0, 101.0, 118.0, 138.0, 160.0, 185.0, 232.0);
-  if (raw <= xs[0]) return ys[0];
-  for (int i = 1; i < 11; i++) {
-    if (raw <= xs[i]) {
-      float t = (raw - xs[i - 1]) / (xs[i] - xs[i - 1]);
-      return mix(ys[i - 1], ys[i], t);
-    }
-  }
-  return ys[10];
+  float x = clamp(raw, -118.8, 118.8);
+  if (x <= -63.9) return seg(x, -118.8, -63.9, 1.0, 44.0);
+  if (x <= -41.9) return seg(x, -63.9, -41.9, 44.0, 59.0);
+  if (x <= -23.7) return seg(x, -41.9, -23.7, 59.0, 71.0);
+  if (x <= -10.6) return seg(x, -23.7, -10.6, 71.0, 85.0);
+  if (x <= 0.0) return seg(x, -10.6, 0.0, 85.0, 101.0);
+  if (x <= 10.6) return seg(x, 0.0, 10.6, 101.0, 118.0);
+  if (x <= 23.7) return seg(x, 10.6, 23.7, 118.0, 138.0);
+  if (x <= 41.9) return seg(x, 23.7, 41.9, 138.0, 160.0);
+  if (x <= 63.9) return seg(x, 41.9, 63.9, 160.0, 185.0);
+  return seg(x, 63.9, 118.8, 185.0, 232.0);
 }
 
 void main() {
