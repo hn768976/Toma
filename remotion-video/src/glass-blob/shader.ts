@@ -81,12 +81,14 @@ mat3 rotZ(float a) { float c = cos(a), s = sin(a); return mat3(c, s, 0.0, -s, c,
 mat3 gSpin;
 vec3 gFlowA;
 vec3 gFlowB;
+float gScale;
 
 float sdBlob(vec3 p) {
+  p /= gScale;
   vec3 q = gSpin * p;
-  float d = 0.16 * snoise(q * 0.62 + gFlowA)
-          + 0.022 * snoise(q * 1.45 + gFlowB);
-  return (length(p) - RADIUS - d) * 0.8;
+  float d = 0.16 * snoise(q * 0.5 + gFlowA)
+          + 0.008 * snoise(q * 1.45 + gFlowB);
+  return (length(p) - RADIUS - d) * 0.8 * gScale;
 }
 
 vec3 calcNormal(vec3 p) {
@@ -121,8 +123,11 @@ void main() {
   gSpin = rotY(uPhase) * rotX(0.35 * sin(uPhase)) * rotZ(0.25 * cos(uPhase));
   gFlowA = vec3(cos(uPhase), sin(uPhase), 0.0) * 0.55;
   gFlowB = vec3(0.0, cos(uPhase), sin(uPhase)) * 0.8 + 7.3;
+  // Slow "breathing", largest around mid-loop and smallest near its end.
+  gScale = 0.86 * (1.0 - 0.07 * cos(uPhase) + 0.03 * sin(uPhase));
 
-  vec3 ro = vec3(0.0, 0.0, 4.0);
+  // Gentle drift of the whole blob around the frame centre.
+  vec3 ro = vec3(0.07 * sin(uPhase + 0.8), 0.04 * sin(2.0 * uPhase), 4.0);
   vec3 rd = normalize(vec3(uv, -2.95));
 
   vec3 col = uBg;
@@ -150,8 +155,10 @@ void main() {
   vec3 p = ro + rd * t;
   vec3 n = calcNormal(p);
   float ndv = clamp(dot(n, -rd), 0.0, 1.0);
-  float fres = pow(1.0 - ndv, 5.0);
-  float edge = pow(1.0 - ndv, 10.0);
+  float fres = pow(1.0 - ndv, 4.5);
+  float edge = pow(1.0 - ndv, 8.0);
+  // Second, fainter band parallel to the edge (fold of the shell).
+  float inner = smoothstep(0.55, 0.68, 1.0 - ndv) * smoothstep(0.82, 0.72, 1.0 - ndv) * 0.12;
 
   vec3 key = normalize(vec3(-0.6, 0.65, 0.55));
   float keyLobe = pow(clamp(dot(reflect(rd, n), key), 0.0, 1.0), 6.0);
@@ -169,13 +176,13 @@ void main() {
   vec3 pb = p + rr * tb;
   vec3 nb = -calcNormal(pb);
   float back = pow(1.0 - clamp(abs(dot(nb, rr)), 0.0, 1.0), 3.0);
-  float swirl = 0.5 + 0.5 * snoise(gSpin * pb * 3.2 + gFlowA * 2.0);
+  float swirl = 0.5 + 0.5 * snoise(gSpin * pb * vec3(1.5, 0.75, 1.5) + gFlowA * 2.0);
   float folds = back * (0.22 + 0.35 * swirl);
 
   vec3 rim = rimColor(ndv + 0.25 * swirl);
-  vec3 light = rim * (fres * 0.55 + edge * 1.1 + keyRim * 0.8 + fill)
+  vec3 light = rim * (fres * 0.6 + edge * 1.2 + inner + keyRim * 0.6 + fill)
              + uRimBase * keyLobe * 0.07
-             + uInterior * (0.03 + folds * 0.16 + swirl * 0.025 * (1.0 - fres));
+             + uInterior * (0.06 + folds * 0.24 + swirl * 0.01 * (1.0 - fres));
 
   col = screen(col, clamp(light, 0.0, 1.0));
   outColor = vec4(col, 1.0);
