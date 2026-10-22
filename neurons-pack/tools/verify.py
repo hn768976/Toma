@@ -49,7 +49,7 @@ def still(cid, frame, out, props=None):
         print(r.stderr[-2000:])
     return np.asarray(Image.open(out).convert("RGB")).astype(int)
 
-def empty_points(frames, bg, n=50, tol=3, rad=7, seed=1):
+def empty_points(frames, bg, n=50, tol=2, rad=7, seed=1):
     """Points whose whole (2*rad+1)^2 neighbourhood is within tol of bg in
     every sampled frame: the 'empty' background."""
     ok = None
