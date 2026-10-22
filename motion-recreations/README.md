@@ -33,7 +33,8 @@ npm run lint             # ESLint + TypeScript
 
 The 1080p deliverables are rendered from the 4K compositions with `--scale=0.5`,
 so every frame is computed at 4K and downsampled (supersampled) to 1920 × 1080.
-Codec settings (H.264, yuv420p, CRF 16) live in `remotion.config.ts`.
+Codec settings (H.264 High, yuv420p, BT.709 limited range, CRF 16) live in
+`remotion.config.ts`. No audio track is rendered (the references have none).
 
 WebGL uses software ANGLE (`swangle`) so the shader renders identically on machines
 without a GPU. On a 4-core CPU with no GPU, each composition renders at 1080p in about
