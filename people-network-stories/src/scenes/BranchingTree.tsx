@@ -184,7 +184,7 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
   // tips; the crown reads dense and dark from the overlap and its nodes.
   const levelColor = (lvl: number): [number, number, number, number] => {
     const t = Math.min(1, lvl / (LEVELS - 1));
-    if (dark) return [ink[0], ink[1], ink[2], lvl === 0 ? 0.9 : lerp(0.6, 0.13, Math.pow(t, 0.6))];
+    if (dark) return [ink[0], ink[1], ink[2], lvl === 0 ? 0.9 : lerp(0.5, 0.09, Math.pow(t, 0.6))];
     const pale = [lerp(ink[0], 0.72, 0.55), lerp(ink[1], 0.6, 0.6), lerp(ink[2], 0.6, 0.6)];
     const k = smooth(remap(t, 0.35, 0.9));
     return [lerp(pale[0], ink[0] * 0.8, k), lerp(pale[1], ink[1] * 0.8, k), lerp(pale[2], ink[2] * 0.8, k), lvl === 0 ? 0.85 : lerp(0.75, 0.62, t)];
@@ -270,7 +270,7 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
 
 const createRed = makeCreate("red");
 const createCyan = makeCreate("cyan");
-const CYAN_GLOW: GlowOptions = { near: 0.55, far: 0.25 };
+const CYAN_GLOW: GlowOptions = { near: 0.35, far: 0.15 };
 
 export const BranchingTreeRed: React.FC = () => <Stage create={createRed} background={COLORS.lightBackground} />;
 export const BranchingTreeCyan: React.FC = () => (

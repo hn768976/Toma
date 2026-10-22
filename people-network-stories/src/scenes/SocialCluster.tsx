@@ -129,7 +129,7 @@ const makeCreate = (dark: boolean) => (info: StageInfo): SceneRuntime => {
       });
       people.commit();
       lines.commit();
-      const dist = keyframes(t, [[0, 16], [3, 18], [9, 30], [14, 46], [18, 56]]);
+      const dist = keyframes(t, [[0, 16], [3, 18], [9, 28], [18, 56]]);
       const elev = THREE.MathUtils.degToRad(keyframes(t, [[0, 2], [18, 12], [20, 12]]));
       camera.position.set(Math.sin(az) * Math.cos(elev) * dist, Math.sin(elev) * dist, Math.cos(az) * Math.cos(elev) * dist);
       camera.lookAt(0, 0, 0);

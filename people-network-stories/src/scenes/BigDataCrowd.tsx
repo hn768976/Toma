@@ -22,12 +22,13 @@ const FOG = { near: 130, far: 210 };
 const camAt = (t: number) => {
   const pos = new THREE.Vector3(
     0,
-    keyframes(t, [[0, 1.95], [5, 2.1], [12, 30], [16, 32]]),
+    // Eye level just below head height, so the crowd stands up into the horizon.
+    keyframes(t, [[0, 1.35], [5, 1.5], [12, 30], [16, 32]]),
     keyframes(t, [[0, 17], [5, 10], [12, 22], [16, 23]]),
   );
   const look = new THREE.Vector3(
     0,
-    keyframes(t, [[0, 3.4], [5, 4.4], [12, 2], [16, 2]]),
+    keyframes(t, [[0, 2.6], [5, 3.6], [12, 2], [16, 2]]),
     keyframes(t, [[0, -100], [5, -100], [12, -60], [16, -60]]),
   );
   return { pos, look };
