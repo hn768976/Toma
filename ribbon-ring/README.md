@@ -14,7 +14,7 @@ Rebuilt from a 6-second reference clip.
   glow and haze track the light's on-screen position.
 - **Composition size:** 3840x2160 (4K), 30 fps, 180 frames (6.0 s, same
   length as the reference).
-- **Loop:** the fan turns exactly four blade spacings over the 180
+- **Loop:** the fan turns exactly one blade spacing over the 180
   frames, so version A loops seamlessly, as the reference does.
 
 ## Compositions

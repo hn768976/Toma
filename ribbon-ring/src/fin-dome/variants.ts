@@ -25,15 +25,17 @@ const ORBIT_ANGLE = (-45 * Math.PI) / 180;
 // it goes. It starts on the reference framing and ends looking down
 // into the fan from above the rim.
 const ORBIT_END: CameraPose = {
-  position: orbit([-3, 6.5, 9.5], HUB, ORBIT_ANGLE),
-  target: orbit([-1.5, -0.5, 0], HUB, ORBIT_ANGLE),
+  position: orbit([-2.5, 4.5, 7.5], HUB, ORBIT_ANGLE),
+  target: orbit([-1.2, -0.6, 0], HUB, ORBIT_ANGLE),
   fov: 48,
   roll: 0,
-  focus: 10,
+  focus: 5,
 };
 
 export const orbitVariantProps: FinDomeProps = {
   ...finDomeDefaults,
   cameraStart: REFERENCE_CAMERA,
   cameraEnd: ORBIT_END,
+  // Shallower defocus than A, so the fan stays readable from higher up.
+  focusScale: 7,
 };

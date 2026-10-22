@@ -60,34 +60,34 @@ export const finDomeSchema = z.object({
 export type FinDomeProps = z.infer<typeof finDomeSchema>;
 export type CameraPose = z.infer<typeof cameraPoseSchema>;
 
-// Locked-off framing matched to the reference: above the bowl's near
-// rim, slightly rolled, looking down the blades as they fan out of the
-// hub and sweep up towards the glow at upper right.
+// Locked-off framing matched to the reference: low over the blade tips,
+// slightly rolled, looking along the blades as they converge on the
+// glowing hub at upper right.
 export const REFERENCE_CAMERA: CameraPose = {
-  position: [-3, 3, 10],
-  target: [-2.5, 0, 0],
+  position: [-2, 1.3, 6],
+  target: [-2.4, -0.7, 0],
   fov: 50,
-  roll: 0.25,
-  focus: 8,
+  roll: 0.22,
+  focus: 3,
 };
 
 export const finDomeDefaults: FinDomeProps = {
   bladeColor: "#8a4ee0",
   sheenColor: "#e0a8ff",
   skyLight: "#b890ff",
-  groundLight: "#2030c0",
+  groundLight: "#4a38d0",
   backgroundColor: "#3360d0",
   cornerColor: "#5a3fc8",
   glowColor: "#d4caf2",
-  glowRadius: 0.8,
-  hazeRadius: 0.7,
-  hazeStrength: 0.35,
+  glowRadius: 0.9,
+  hazeRadius: 0.8,
+  hazeStrength: 0.5,
   cameraStart: REFERENCE_CAMERA,
   cameraEnd: REFERENCE_CAMERA,
-  focusScale: 10,
+  focusScale: 12,
   maxBlur: 0.04,
-  // Behind the bowl's far rim, so the glow blooms over the blade tips.
-  lightPosition: [3, 3, -14],
+  // Just behind the hub, so the glow blooms where the blades converge.
+  lightPosition: [0.5, 0.6, -2],
 };
 
 const bladeTop = (r: number) => BOWL_HEIGHT * Math.pow(Math.min(1, r / BOWL_RADIUS), BOWL_FLARE);
@@ -125,7 +125,7 @@ const createBladeGeometry = () => {
   const pos = geometry.attributes.position;
   const colors = new Float32Array(pos.count * 3);
   const lip = new THREE.Color(1, 1, 1);
-  const core = new THREE.Color(0.22, 0.27, 0.9);
+  const core = new THREE.Color(0.42, 0.36, 0.95);
   const c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const r = pos.getX(i);
@@ -247,7 +247,7 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
   const rimLight = new THREE.DirectionalLight(0xfff4ff, 3);
   rimLight.target.position.set(0, 0, 0);
   scene.add(rimLight, rimLight.target);
-  const key = new THREE.DirectionalLight(0xf2e8ff, 0.45);
+  const key = new THREE.DirectionalLight(0xf2e8ff, 1.3);
   key.position.set(-8, 10, 14);
   scene.add(key);
   const fill = new THREE.DirectionalLight(0x5c7cff, 1.0);
