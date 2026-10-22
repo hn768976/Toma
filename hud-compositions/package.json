@@ -1,0 +1,49 @@
+{
+  "name": "hud-compositions",
+  "version": "1.0.0",
+  "description": "My Remotion video",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/share-tech-mono": "^5.3.0",
+    "@remotion/cli": "4.0.537",
+    "d3-geo": "^3.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.537",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.537",
+    "@types/d3-geo": "^3.1.1",
+    "@types/geojson": "^7946.0.16",
+    "@types/react": "19.2.7",
+    "@types/topojson-client": "^3.1.5",
+    "@types/topojson-specification": "^1.0.5",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "bake": "npm run bake:terrain && npm run bake:map",
+    "bake:terrain": "remotion still TerrainBake-Wide public/terrain/terrain-wide.jpg --image-format=jpeg --jpeg-quality=95 --timeout=600000 && remotion still TerrainBake-Close public/terrain/terrain-close.jpg --image-format=jpeg --jpeg-quality=95 --timeout=600000",
+    "bake:map": "remotion still MapTextureBake public/map/land-relief.jpg --image-format=jpeg --jpeg-quality=95 --timeout=600000",
+    "render:1080": "for c in SatelliteTargeting-V1 SatelliteTargeting-V2 WorldTracking-V1 WorldTracking-V2; do remotion render $c out/$c-1080p.mp4 --scale=0.5 || exit 1; done",
+    "render:4k": "for c in SatelliteTargeting-V1 SatelliteTargeting-V2 WorldTracking-V1 WorldTracking-V2; do remotion render $c out/$c-4K.mp4 || exit 1; done"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
