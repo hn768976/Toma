@@ -222,7 +222,7 @@ const NodeMesh: React.FC<{
           <meshLambertMaterial
             color={sideColor}
             transparent
-            opacity={ghostOpacity * (0.7 + 0.3 * a)}
+            opacity={ghostOpacity * (0.92 + 0.08 * a)}
             emissive={sideColor}
             emissiveIntensity={0.35}
           />
@@ -362,7 +362,7 @@ const Scene: React.FC<{ theme: Theme; rig: CameraRig; assets: NonNullable<Assets
   const speed = PERIOD / duration;
   const timing = useMemo(() => layoutTiming(speed), [speed]);
   const t = frame / fps;
-  const front = timing.get("sign")!.key + 1.2 + speed * t;
+  const front = timing.get("sign")!.key + 0.4 + speed * t;
 
   return (
     <>

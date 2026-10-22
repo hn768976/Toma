@@ -9,10 +9,10 @@ const DURATION = 14 * FPS;
 export const referenceRig: CameraRig = {
   azimuth: 30,
   elevation: 37,
-  distance: 15.5,
+  distance: 16.2,
   fov: 46,
-  lead: 2.2,
-  lateral: 3.0,
+  lead: 0.3,
+  lateral: 1.8,
   sway: 0,
 };
 

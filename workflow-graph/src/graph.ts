@@ -1,4 +1,5 @@
 import {
+  CubicBezierCurve3,
   CurvePath,
   LineCurve3,
   QuadraticBezierCurve3,
@@ -145,7 +146,26 @@ export const edgePoints = (e: EdgeDef): Vector3[] => {
   return [p3(s.u, s.v), p3(m, s.v), p3(m, t.v), p3(t.u, t.v)];
 };
 
-export const edgePath = (e: EdgeDef) => roundedPath(edgePoints(e), 0.55);
+export const edgePath = (e: EdgeDef) => {
+  const pts = edgePoints(e);
+  if (e.dotted) {
+    // loose S-curve from the agent down to its tool, like the reference
+    const a = pts[0];
+    const b = pts[pts.length - 1];
+    const dz = b.z - a.z;
+    const path = new CurvePath<Vector3>();
+    path.add(
+      new CubicBezierCurve3(
+        a,
+        new Vector3(a.x + (b.x - a.x) * 0.1, WIRE_Y, a.z + dz * 0.75),
+        new Vector3(b.x - (b.x - a.x) * 0.1, WIRE_Y, b.z - dz * 0.75),
+        b,
+      ),
+    );
+    return path;
+  }
+  return roundedPath(pts, 0.7);
+};
 
 // Compute when each node is born: a node is built only after all of its
 // parents are, so the graph grows along its edges like the reference.
