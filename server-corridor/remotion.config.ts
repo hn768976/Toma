@@ -12,6 +12,8 @@ Config.setRspack(true);
 Config.setChromiumOpenGlRenderer("angle");
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
+// Tag output as BT.709 limited range (yuv420p) for broad player support.
+Config.setColorSpace("bt709");
 
 // Sandboxed environments that block downloading Remotion's Chrome Headless
 // Shell often ship a Playwright one; use it when present.

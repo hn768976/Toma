@@ -14,6 +14,7 @@ void main() {
 const fragmentShader = /* glsl */ `
 uniform sampler2D uBase;
 uniform sampler2D uLeds;
+uniform sampler2D uLedMeta;
 uniform float uTime;
 uniform float uLedBoost;
 uniform vec3 uLed0;
@@ -23,8 +24,9 @@ varying vec2 vUv;
 
 void main() {
   vec3 base = texture2D(uBase, vUv).rgb;
-  vec3 led = texture2D(uLeds, vUv).rgb;
-  float phase = led.g;
+  float intensity = texture2D(uLeds, vUv).r;
+  vec2 meta = texture2D(uLedMeta, vUv).gb;
+  float phase = meta.x;
   float kind = fract(phase * 13.73);
   float on = 1.0;
   if (kind < 0.35) {
@@ -33,8 +35,8 @@ void main() {
   } else if (kind < 0.5) {
     on = 0.75 + 0.25 * sin(uTime * 3.0 + phase * 40.0);
   }
-  vec3 ledColor = led.b < 0.25 ? uLed0 : (led.b < 0.75 ? uLed1 : uLed2);
-  vec3 col = base + ledColor * led.r * on * uLedBoost;
+  vec3 ledColor = meta.y < 0.25 ? uLed0 : (meta.y < 0.75 ? uLed1 : uLed2);
+  vec3 col = base + ledColor * intensity * on * uLedBoost;
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
 }
@@ -51,6 +53,7 @@ export const makeGlassMaterial = (
     uniforms: {
       uBase: { value: set.base as Texture },
       uLeds: { value: set.leds as Texture },
+      uLedMeta: { value: set.ledMeta as Texture },
       uTime: { value: 0 },
       uLedBoost: { value: ledBoost },
       uLed0: { value: new Color(ledColors[0]) },

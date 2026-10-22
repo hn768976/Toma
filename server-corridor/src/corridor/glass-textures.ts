@@ -1,4 +1,9 @@
-import { CanvasTexture, LinearMipmapLinearFilter, SRGBColorSpace } from "three";
+import {
+  CanvasTexture,
+  LinearMipmapLinearFilter,
+  NearestFilter,
+  SRGBColorSpace,
+} from "three";
 import { Palette } from "./palette";
 import { mulberry32 } from "./random";
 
@@ -8,8 +13,11 @@ const TEX_H = 680;
 export type GlassTextureSet = {
   // Colour of the cabinet interior seen through the smoked glass.
   base: CanvasTexture;
-  // R = LED intensity (core + glow), G = blink phase, B = LED colour index.
+  // LED intensity (core + glow), filtered and mipmapped.
   leds: CanvasTexture;
+  // Per-LED data: G = blink phase, B = colour index. Sampled with
+  // NearestFilter so neighbouring texels never blend into a different LED.
+  ledMeta: CanvasTexture;
 };
 
 const hexToRgb = (hex: string) => {
@@ -40,6 +48,10 @@ export const makeGlassTextures = (
   ledCanvas.height = TEX_H;
   const b = baseCanvas.getContext("2d")!;
   const l = ledCanvas.getContext("2d")!;
+  const metaCanvas = document.createElement("canvas");
+  metaCanvas.width = TEX_W;
+  metaCanvas.height = TEX_H;
+  const meta = metaCanvas.getContext("2d")!;
 
   b.fillStyle = palette.glassBase;
   b.fillRect(0, 0, TEX_W, TEX_H);
@@ -72,7 +84,7 @@ export const makeGlassTextures = (
             if (rand() < 0.4) continue;
             const count = rand() < 0.7 ? 2 : 1;
             for (let k = 0; k < count; k++) {
-              drawLed(l, cx + k * 13, ly, rand, weights);
+              drawLed(l, meta, cx + k * 12, ly, rand, weights);
             }
           }
         }
@@ -96,14 +108,19 @@ export const makeGlassTextures = (
   b.fillStyle = sheen;
   b.fillRect(0, 0, TEX_W, TEX_H);
   b.strokeStyle = palette.glassStreak;
-  b.globalAlpha = 0.45;
-  b.lineWidth = 1.6;
+  b.lineCap = "round";
   for (let i = 0; i < 3; i++) {
-    b.beginPath();
     const sx = rand() * TEX_W;
-    b.moveTo(sx, 0);
-    b.lineTo(sx + (rand() - 0.5) * TEX_W * 1.6, TEX_H);
-    b.stroke();
+    const ex = sx + (rand() - 0.5) * TEX_W * 1.6;
+    // soft wide band with a slightly brighter core
+    for (const [width, alpha] of [[18, 0.05], [8, 0.06], [3, 0.08]]) {
+      b.globalAlpha = alpha;
+      b.lineWidth = width;
+      b.beginPath();
+      b.moveTo(sx, 0);
+      b.lineTo(ex, TEX_H);
+      b.stroke();
+    }
   }
   b.globalAlpha = 1;
 
@@ -114,11 +131,16 @@ export const makeGlassTextures = (
   const leds = new CanvasTexture(ledCanvas);
   leds.anisotropy = 8;
   leds.minFilter = LinearMipmapLinearFilter;
-  return { base, leds };
+  const ledMeta = new CanvasTexture(metaCanvas);
+  ledMeta.minFilter = NearestFilter;
+  ledMeta.magFilter = NearestFilter;
+  ledMeta.generateMipmaps = false;
+  return { base, leds, ledMeta };
 };
 
 const drawLed = (
   l: CanvasRenderingContext2D,
+  meta: CanvasRenderingContext2D,
   x: number,
   y: number,
   rand: () => number,
@@ -134,15 +156,19 @@ const drawLed = (
     colorIndex++;
   }
   const blue = [0, 128, 255][colorIndex];
-  const glow = l.createRadialGradient(x, y, 0, x, y, 11);
-  glow.addColorStop(0, `rgb(120,${phase},${blue})`);
-  glow.addColorStop(1, `rgb(0,${phase},${blue})`);
+  // Metadata square covers the whole glow so every texel of an LED agrees.
+  meta.fillStyle = `rgb(0,${phase},${blue})`;
+  meta.fillRect(x - 7, y - 7, 14, 14);
+
+  const glow = l.createRadialGradient(x, y, 0, x, y, 6.5);
+  glow.addColorStop(0, "rgba(255,255,255,0.35)");
+  glow.addColorStop(1, "rgba(255,255,255,0)");
   l.fillStyle = glow;
   l.beginPath();
-  l.arc(x, y, 11, 0, Math.PI * 2);
+  l.arc(x, y, 6.5, 0, Math.PI * 2);
   l.fill();
-  l.fillStyle = `rgb(255,${phase},${blue})`;
+  l.fillStyle = "#fff";
   l.beginPath();
-  l.arc(x, y, 4.2, 0, Math.PI * 2);
+  l.arc(x, y, 3.1, 0, Math.PI * 2);
   l.fill();
 };

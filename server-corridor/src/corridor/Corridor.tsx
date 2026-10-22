@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import {
   BoxGeometry,
+  CanvasTexture,
   Material,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -24,7 +25,8 @@ import { Palette } from "./palette";
 import { makeGlassTextures } from "./glass-textures";
 import { makeGlassMaterial } from "./glass-material";
 
-const GLASS_RECESS = 0.07;
+const GLASS_RECESS = 0.1;
+const BEZEL = 0.08; // door frame around each glass pane
 const GLASS_H = GLASS_TOP_Y - PLINTH_TOP_Y;
 const RACK_DEPTH = 1.0;
 const NEAR_Z = 8; // corridor extends this far behind the camera start
@@ -36,7 +38,10 @@ type Materials = {
   frame: MeshStandardMaterial;
   ceiling: MeshStandardMaterial;
   strip: MeshBasicMaterial;
+  cove: MeshBasicMaterial;
+  coveGlow: MeshBasicMaterial;
   slot: MeshBasicMaterial;
+  bezel: MeshStandardMaterial;
   handle: MeshStandardMaterial;
   glass: ShaderMaterial[];
 };
@@ -50,13 +55,31 @@ export const useCorridorMaterials = (palette: Palette, ledBoost: number): Materi
       frame: new MeshStandardMaterial({ color: palette.frame, roughness: 0.55, metalness: 0 }),
       ceiling: new MeshStandardMaterial({ color: palette.ceiling, roughness: 0.8 }),
       strip: new MeshBasicMaterial({ color: palette.stripLight, toneMapped: false, transparent: palette.stripOpacity < 1, opacity: palette.stripOpacity }),
-      slot: new MeshBasicMaterial({ color: palette.stripLight, toneMapped: false, transparent: true, opacity: palette.stripOpacity * 0.85 }),
+      cove: new MeshBasicMaterial({ color: palette.stripLight, toneMapped: false }),
+      coveGlow: new MeshBasicMaterial({ color: palette.stripLight, toneMapped: false, transparent: true, opacity: 0.3, depthWrite: false }),
+      slot: new MeshBasicMaterial({ color: palette.stripLight, toneMapped: false, transparent: true, opacity: 0.9, alphaMap: pillTexture() }),
+      bezel: new MeshStandardMaterial({ color: palette.frame, roughness: 0.4, emissive: palette.frame, emissiveIntensity: 0.12 }),
       handle: new MeshStandardMaterial({ color: palette.handle, roughness: 0.4, emissive: palette.handle, emissiveIntensity: palette.handleGlow }),
       glass: new Array(VARIANTS)
         .fill(0)
         .map((_, i) => makeGlassMaterial(makeGlassTextures(palette, 1013 + i * 7919), ledColors, ledBoost)),
     };
   }, [palette, ledBoost]);
+
+// Rounded "pill" mask for the plinth light slots.
+const pillTexture = () => {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 64;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#000";
+  g.fillRect(0, 0, 512, 64);
+  g.fillStyle = "#fff";
+  g.beginPath();
+  g.roundRect(4, 6, 504, 52, 26);
+  g.fill();
+  return new CanvasTexture(c);
+};
 
 const box = new BoxGeometry(1, 1, 1);
 const plane = new PlaneGeometry(1, 1);
@@ -102,6 +125,18 @@ const SideRow: React.FC<{ side: -1 | 1; m: Materials }> = ({ side, m }) => {
         scale={[GLASS_WIDTH + 0.02, GLASS_H, 1]}
       />,
     );
+    // door bezel inside the recess
+    const bx0 = glassX;
+    const bx1 = glassX - side * 0.075;
+    const zA = cz - GLASS_WIDTH / 2;
+    const zB = cz + GLASS_WIDTH / 2;
+    items.push(
+      <Box key={`bt${k}`} x0={bx0} x1={bx1} y0={GLASS_TOP_Y - BEZEL} y1={GLASS_TOP_Y} z0={zA} z1={zB} material={m.bezel} />,
+      <Box key={`bb${k}`} x0={bx0} x1={bx1} y0={PLINTH_TOP_Y} y1={PLINTH_TOP_Y + BEZEL} z0={zA} z1={zB} material={m.bezel} />,
+      <Box key={`bl${k}`} x0={bx0} x1={bx1} y0={PLINTH_TOP_Y} y1={GLASS_TOP_Y} z0={zA} z1={zA + BEZEL} material={m.bezel} />,
+      <Box key={`br${k}`} x0={bx0} x1={bx1} y0={PLINTH_TOP_Y} y1={GLASS_TOP_Y} z0={zB - BEZEL} z1={zB} material={m.bezel} />,
+      <Box key={`bm${k}`} x0={bx0} x1={bx1 + side * 0.015} y0={PLINTH_TOP_Y} y1={GLASS_TOP_Y} z0={cz - 0.012} z1={cz + 0.012} material={m.bezel} />,
+    );
     // plinth light slot
     items.push(
       <mesh
@@ -121,6 +156,9 @@ const SideRow: React.FC<{ side: -1 | 1; m: Materials }> = ({ side, m }) => {
       <Box x0={front} x1={back} y0={0} y1={PLINTH_TOP_Y} z0={END_WALL_Z} z1={NEAR_Z} material={m.frame} />
       <Box x0={front} x1={back} y0={GLASS_TOP_Y} y1={CEILING_Y} z0={END_WALL_Z} z1={NEAR_Z} material={m.frame} />
       <Box x0={glassX + side * 0.01} x1={back} y0={0} y1={CEILING_Y} z0={END_WALL_Z} z1={NEAR_Z} material={m.frame} />
+      {/* cove light where the ceiling meets the cabinets */}
+      <Box x0={front - side * 0.04} x1={front - side * 0.24} y0={CEILING_Y - 0.012} y1={CEILING_Y} z0={END_WALL_Z} z1={NEAR_Z} material={m.cove} />
+      <Box x0={front - side * 0.24} x1={front - side * 0.6} y0={CEILING_Y - 0.008} y1={CEILING_Y - 0.002} z0={END_WALL_Z} z1={NEAR_Z} material={m.coveGlow} />
       {/* header light strip */}
       <Box x0={front - side * 0.012} x1={front} y0={RACK_TOP_Y - 0.075} y1={RACK_TOP_Y - 0.03} z0={END_WALL_Z} z1={NEAR_Z} material={m.strip} />
     </group>
@@ -143,6 +181,10 @@ const EndWall: React.FC<{ m: Materials }> = ({ m }) => {
     const gx = x0 + END_PILLAR + END_GLASS_W / 2;
     items.push(
       <mesh key={`g${i}`} geometry={plane} material={m.glass[(i * 2 + 1) % VARIANTS]} position={[gx, (PLINTH_TOP_Y + GLASS_TOP_Y) / 2, z - GLASS_RECESS]} scale={[END_GLASS_W + 0.02, GLASS_H, 1]} />,
+      <Box key={`bt${i}`} x0={gx - END_GLASS_W / 2} x1={gx + END_GLASS_W / 2} y0={GLASS_TOP_Y - BEZEL} y1={GLASS_TOP_Y} z0={z - GLASS_RECESS} z1={z - GLASS_RECESS + 0.075} material={m.bezel} />,
+      <Box key={`bb${i}`} x0={gx - END_GLASS_W / 2} x1={gx + END_GLASS_W / 2} y0={PLINTH_TOP_Y} y1={PLINTH_TOP_Y + BEZEL} z0={z - GLASS_RECESS} z1={z - GLASS_RECESS + 0.075} material={m.bezel} />,
+      <Box key={`bl${i}`} x0={gx - END_GLASS_W / 2} x1={gx - END_GLASS_W / 2 + BEZEL} y0={PLINTH_TOP_Y} y1={GLASS_TOP_Y} z0={z - GLASS_RECESS} z1={z - GLASS_RECESS + 0.075} material={m.bezel} />,
+      <Box key={`br${i}`} x0={gx + END_GLASS_W / 2 - BEZEL} x1={gx + END_GLASS_W / 2} y0={PLINTH_TOP_Y} y1={GLASS_TOP_Y} z0={z - GLASS_RECESS} z1={z - GLASS_RECESS + 0.075} material={m.bezel} />,
       <mesh key={`s${i}`} geometry={plane} material={m.slot} position={[gx, 0.23, z + 0.003]} scale={[END_GLASS_W * 0.8, 0.1, 1]} />,
     );
   }
@@ -151,6 +193,7 @@ const EndWall: React.FC<{ m: Materials }> = ({ m }) => {
       {items}
       <Box x0={-HALF_WIDTH} x1={HALF_WIDTH} y0={0} y1={PLINTH_TOP_Y} z0={z - RACK_DEPTH} z1={z} material={m.frame} />
       <Box x0={-HALF_WIDTH} x1={HALF_WIDTH} y0={GLASS_TOP_Y} y1={CEILING_Y} z0={z - RACK_DEPTH} z1={z} material={m.frame} />
+      <Box x0={-HALF_WIDTH} x1={HALF_WIDTH} y0={CEILING_Y - 0.012} y1={CEILING_Y} z0={z + 0.04} z1={z + 0.24} material={m.cove} />
       <Box x0={-HALF_WIDTH} x1={HALF_WIDTH} y0={RACK_TOP_Y - 0.075} y1={RACK_TOP_Y - 0.03} z0={z} z1={z + 0.012} material={m.strip} />
     </group>
   );

@@ -25,9 +25,9 @@ export type Palette = {
 export const REFERENCE_PALETTE: Palette = {
   background: "#d4d3d7",
   frame: "#e2e1e5",
-  ceiling: "#dddce0",
-  floor: "#d9d8dc",
-  floorOpacity: 0.95,
+  ceiling: "#ebeaef",
+  floor: "#cfced3",
+  floorOpacity: 0.975,
   stripLight: "#ffffff",
   stripOpacity: 0.55,
   handle: "#15191b",
