@@ -19,6 +19,7 @@ export const MEMBRANE_COLORS = {
   membraneDim: "#6450E0",
   sparkA: "#E040D8",
   sparkB: "#FFFFFF",
+  sparkC: "#FF9A60",
   bg: "#05061A",
   streak: "#2443B8",
   line: "#7A8CFF",
@@ -32,11 +33,11 @@ const N_SPARK = 400;
 // Camera keyframes: [frame, distance, azimuth, elevation, target x, target y]
 // azimuth 0 = looking at the right hemisphere (front to the left of frame).
 const KEYS: [number, number, number, number, number, number][] = [
-  [0, 5.0, -0.05, 0.08, 0.0, -0.02],
-  [150, 2.9, 0.3, 0.1, 0.02, 0.0],
+  [0, 4.6, -0.05, 0.08, 0.0, -0.02],
+  [150, 2.6, 0.3, 0.1, 0.02, 0.0],
   [300, 0.3, 0.95, 0.12, 0.08, 0.1],
-  [450, 2.9, 0.3, 0.1, 0.02, 0.0],
-  [600, 5.0, -0.05, 0.08, 0.0, -0.02],
+  [450, 2.6, 0.3, 0.1, 0.02, 0.0],
+  [600, 4.6, -0.05, 0.08, 0.0, -0.02],
 ];
 
 const camAt = (frame: number) => {
@@ -45,7 +46,11 @@ const camAt = (frame: number) => {
   while (k < KEYS.length - 2 && f >= KEYS[k + 1][0]) k++;
   const a = KEYS[k];
   const b = KEYS[k + 1];
-  const t = easeInOutSine((f - a[0]) / (b[0] - a[0]));
+  const u = (f - a[0]) / (b[0] - a[0]);
+  // approach fast then settle (and the mirror image on the way back out); every
+  // keyframe is still reached with zero velocity, so the loop seam is smooth
+  const fastOut = (x: number) => 1 - Math.pow(1 - Math.pow(x, 1.5), 3);
+  const t = k === 0 ? fastOut(u) : k === KEYS.length - 2 ? 1 - fastOut(1 - u) : easeInOutSine(u);
   // distance interpolated in log space so the approach feels even
   const d = Math.exp(Math.log(a[1]) + (Math.log(b[1]) - Math.log(a[1])) * t);
   const az = a[2] + (b[2] - a[2]) * t;
@@ -60,12 +65,13 @@ const camAt = (frame: number) => {
 const BG = /* glsl */ `
   vec3 c = uBg;
   // soft blue light streak, top left
-  float sx = exp(-pow((uv.x - 0.07) / 0.09, 2.0)) + 0.5 * exp(-pow((uv.x - 0.16) / 0.05, 2.0));
+  // a few soft vertical light rays
+  float sx = 0.55 * exp(-pow((uv.x - 0.04) / 0.025, 2.0)) + 0.8 * exp(-pow((uv.x - 0.1) / 0.02, 2.0)) + 0.45 * exp(-pow((uv.x - 0.17) / 0.03, 2.0)) + 0.25 * exp(-pow((uv.x - 0.26) / 0.05, 2.0));
   c += uStreak * sx * smoothstep(0.45, 1.0, uv.y) * 0.55;
   c += uStreak * exp(-length((uv - vec2(0.05, 1.05)) * vec2(aspect, 1.0)) * 3.0) * 0.25;
   // faint horizontal light line low in the frame
   float ly = exp(-pow((uv.y - 0.205) / 0.0035, 2.0)) + 0.25 * exp(-pow((uv.y - 0.205) / 0.02, 2.0));
-  c += uLine * ly * (0.22 * smoothstep(0.85, 0.0, uv.x) + 0.04);
+  c += uLine * ly * 0.3 * smoothstep(0.62, 0.0, uv.x);
   return c;
 `;
 
@@ -79,15 +85,15 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   vec3 V = normalize(uCam - position);
   float ndv = abs(dot(normal, V));
-  float fr = pow(1.0 - ndv, 1.6);
+  float fr = pow(1.0 - ndv, 2.2);
   bool inner = aAttr.z > 2.5;
   float dist = -mv.z;
   // sharp close dots: grow with proximity but stay crisp, fade right at the lens
-  float s = pointSize(0.0042, mv.z, 1.6);
+  float s = pointSize(inner ? 0.0065 : 0.0034, mv.z, inner ? 2.4 : 1.4);
   gl_PointSize = min(s, 16.0 * uPx + 1.5);
   float near = smoothstep(0.015, 0.09, dist);
   float far = 1.0;
-  vI = (inner ? (0.5 + 0.5 * fr) * 1.05 : (0.3 + 0.7 * fr)) * (0.75 + 0.5 * aAttr.w) * vPtAlpha * near * far;
+  vI = (inner ? (0.75 + 0.25 * fr) * 0.3 : (0.42 + 0.6 * fr)) * (0.75 + 0.5 * aAttr.w) * vPtAlpha * near * far;
   vF = fr;
   gl_Position = dist > 0.01 ? projectionMatrix * mv : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
@@ -118,7 +124,7 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float k = 1.0 + floor(aR.y * 4.0);
   float tw = pow(0.5 + 0.5 * sin(6.28318 * (uPhase * k + aR.x)), 2.0);
-  float s = pointSize(mix(0.026, 0.07, aR.w * aR.w), mv.z, 6.0);
+  float s = pointSize(mix(0.01, 0.026, aR.w * aR.w), mv.z, 3.5);
   vI = (0.25 + 0.75 * tw) * vPtAlpha * smoothstep(0.02, 0.2, -mv.z);
   vMix = aR.z;
   gl_PointSize = min(s, 120.0 * uPx + 2.0);
@@ -128,6 +134,7 @@ void main() {
 const SPARK_FRAG = /* glsl */ `
 uniform vec3 uA;
 uniform vec3 uB;
+uniform vec3 uC;
 in float vI;
 in float vMix;
 out vec4 outColor;
@@ -137,7 +144,7 @@ void main() {
   if (r2 > 1.0) discard;
   float core = exp(-r2 * 7.0);
   float halo = exp(-r2 * 2.5) * 0.3;
-  vec3 c = mix(uA, uB, step(0.62, vMix));
+  vec3 c = vMix < 0.32 ? uA : (vMix < 0.88 ? uB : uC);
   outColor = vec4(c * vI * (core * 2.2 + halo), 0.0);
 }`;
 
@@ -152,7 +159,7 @@ const sparkGeometry = (a: BrainAssets) =>
       const x = (rng() * 2 - 1) * 1.08;
       const y = (rng() * 2 - 1) * 0.92;
       const z = (rng() * 2 - 1) * 0.92;
-      if ((x / 1.08) ** 2 + ((y - 0.05) / 0.92) ** 2 + (z / 0.92) ** 2 > 1) continue;
+      if ((x / 0.95) ** 2 + ((y - 0.05) / 0.78) ** 2 + (z / 0.8) ** 2 > 1) continue;
       pos.set([x, y, z], i * 3);
       r.set([rng(), rng(), rng(), rng()], i * 4);
       i++;
@@ -168,7 +175,7 @@ export const membraneLook: LookFactory = ({ gl, assets, width, height }) => {
     gl,
     {
       msaa: 0,
-      bloom: { strength: 0.6, threshold: 0.5, knee: 0.3, levels: 6, radius: 0.85 },
+      bloom: { strength: 0.4, threshold: 0.55, knee: 0.3, levels: 6, radius: 0.8 },
       background: BG,
       uniforms: {
         uBg: { value: srgb(MEMBRANE_COLORS.bg) },
@@ -199,7 +206,7 @@ export const membraneLook: LookFactory = ({ gl, assets, width, height }) => {
       ...common,
       uMem: { value: new Vector3(...lin(MEMBRANE_COLORS.membrane)) },
       uDim: { value: new Vector3(...lin(MEMBRANE_COLORS.membraneDim)) },
-      uGain: { value: 0.16 },
+      uGain: { value: 0.21 },
     },
     ...ADDITIVE,
     depthTest: false,
@@ -216,6 +223,7 @@ export const membraneLook: LookFactory = ({ gl, assets, width, height }) => {
       ...common,
       uA: { value: new Vector3(...lin(MEMBRANE_COLORS.sparkA)).multiplyScalar(1.6) },
       uB: { value: new Vector3(...lin(MEMBRANE_COLORS.sparkB)).multiplyScalar(1.3) },
+      uC: { value: new Vector3(...lin(MEMBRANE_COLORS.sparkC)).multiplyScalar(1.4) },
     },
     ...ADDITIVE,
     depthTest: false,

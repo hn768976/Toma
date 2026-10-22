@@ -42,7 +42,7 @@ export const FIBRE_COLORS = {
 };
 
 const PERIOD = 600;
-const N_BEADS = 700;
+const N_BEADS = 2600;
 const MAX_SIG = 14;
 const SIG_PTS = 64;
 const ELEV = 0.36; // three-quarter elevation (rad)
@@ -71,8 +71,8 @@ void main() {
   float w = mix(0.8, 2.4, aCurve.y * aCurve.y) * uPx; // width carried as coverage
   float inner = aCurve.x > 0.5 ? 0.35 : 1.0;
   float ends = smoothstep(0.0, 0.08, aT) * smoothstep(1.0, 0.92, aT);
-  vA = clamp(w, 0.0, 1.6) * 0.75 * depthFade * inner * ends;
-  vMix = clamp(0.45 * aCurve.z + 0.75 * smoothstep(-0.8, 0.9, dz) - 0.15, 0.0, 1.0);
+  vA = clamp(w, 0.0, 1.6) * 0.6 * depthFade * inner * ends;
+  vMix = clamp(0.5 * aCurve.z + 0.8 * smoothstep(-0.8, 0.9, dz) - 0.05, 0.0, 1.0);
   gl_Position = projectionMatrix * mv;
 }`;
 
@@ -83,7 +83,7 @@ in float vA;
 in float vMix;
 out vec4 outColor;
 void main() {
-  vec3 c = mix(uA * 0.8, uB, vMix * vMix);
+  vec3 c = mix(uA * 0.5, uB, vMix * vMix);
   float a = clamp(vA, 0.0, 1.0);
   outColor = vec4(c * a, a);
 }`;
@@ -100,6 +100,7 @@ uniform float uDepthSpan;
 uniform float uFocus;
 uniform float uCoc;
 uniform float uProjY;
+uniform float uHero;
 out float vA;
 out float vMix;
 void main() {
@@ -113,7 +114,7 @@ void main() {
   float dz = (va.z - uCentreView.z) / uDepthSpan;
   float depthFade = mix(0.45, 1.0, smoothstep(-1.0, 0.6, dz));
   float ends = smoothstep(0.0, 0.06, aSeg.x) * smoothstep(1.0, 0.94, aSeg.y);
-  vA = 0.85 * depthFade * ends * mix(0.3, 1.0, blur);
+  vA = 0.85 * uHero * depthFade * ends * mix(0.3, 1.0, blur);
   vMix = aCurve.z;
   gl_Position = fatLine(aA, aB, min(w, 160.0), position.x, position.y);
 }`;
@@ -144,7 +145,7 @@ void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   vYel = step(aR.w, 0.3);
   float z = max(-mv.z, 0.02);
-  float px = pointSize(mix(0.0025, 0.005, aR.x), mv.z, 3.6);
+  float px = pointSize(mix(0.0012, 0.0026, aR.x), mv.z, 7.0);
   float coc = uCoc * abs(1.0 / z - 1.0 / uFocus) * uRes.y;
   float s = max(px, coc);
   vBokeh = smoothstep(1.0, 3.0, s / px);
@@ -170,7 +171,7 @@ void main() {
   float bokeh = smoothstep(1.0, 0.8, r2) * (0.7 + 0.3 * r2);
   float a = mix(sharp, bokeh, vBokeh);
   vec3 c = mix(mix(uBead, uSig * vec3(1.0, 0.9, 0.5), vYel), uBokeh, vBokeh);
-  outColor = vec4(c * vI * a * 1.2, 0.0);
+  outColor = vec4(c * vI * a * 3.0, 0.0);
 }`;
 
 const SIG_VERT = /* glsl */ `
@@ -197,11 +198,11 @@ void main() {
   if (uHalo > 0.5) {
     // wide soft additive glow under the trace
     float g = core * core * cov;
-    outColor = vec4(uSig * g * min(vI, 1.5) * 0.07, 0.0);
+    outColor = vec4(uSig * g * min(vI, 1.5) * 0.2, 0.0);
     return;
   }
-  float a = clamp(cov * sqrt(core) * min(vI, 1.0) * 1.15, 0.0, 1.0);
-  vec3 c = mix(uSig, vec3(1.0), core * core * 0.35);
+  float a = clamp(cov * smoothstep(0.0, 0.35, core) * min(vI * 1.3, 1.0), 0.0, 1.0);
+  vec3 c = mix(uSig, vec3(1.0), smoothstep(0.75, 1.0, core) * 0.5);
   outColor = vec4(c * a, a);
 }`;
 
@@ -250,11 +251,11 @@ const writeSignal = (
   const { per, position } = a.fibres;
   const fib = ev.id;
   const crackle = Math.floor(frame / 2);
-  const head = Math.min(1, (age + 1) / Math.max(3, ev.dur * 0.55));
-  const tail = Math.max(0, head - (big ? 0.85 : 0.6));
+  const head = Math.min(1, (age + 1) / Math.max(2, ev.dur * 0.3));
+  const tail = p < 0.7 ? 0 : (p - 0.7) / 0.3;
   const fade = p < 0.75 ? 1 : 1 - (p - 0.75) / 0.25;
   const flick = 0.75 + 0.25 * hash01(crackle, fib);
-  const amp = (big ? 0.02 : 0.011) * (0.6 + 0.8 * ev.r);
+  const amp = (big ? 0.035 : 0.016) * (0.6 + 0.8 * ev.r);
   const pts: number[] = [];
   for (let k = 0; k < SIG_PTS; k++) {
     const u = k / (SIG_PTS - 1);
@@ -269,13 +270,18 @@ const writeSignal = (
     sigTmp.d.normalize();
     sigTmp.n1.set(0.31, 0.95, 0.12).cross(sigTmp.d).normalize();
     sigTmp.n2.crossVectors(sigTmp.d, sigTmp.n1);
-    const j1 = (hash01(crackle * 131 + k, fib) - 0.5) * 2;
-    const j2 = (hash01(crackle * 177 + k, fib + 9) - 0.5) * 2;
+    const kk = k / 4;
+    const k0 = Math.floor(kk);
+    const kt = kk - k0;
+    const sm = kt * kt * (3 - 2 * kt);
+    const jit = (salt: number, q: number) => (hash01(crackle * 131 + q * 7 + salt, fib + salt) - 0.5) * 2;
+    const j1 = jit(0, k0) + (jit(0, k0 + 1) - jit(0, k0)) * sm;
+    const j2 = jit(9, k0) + (jit(9, k0 + 1) - jit(9, k0)) * sm;
     const env = k === 0 || k === SIG_PTS - 1 ? 0 : 1;
     sigTmp.p.addScaledVector(sigTmp.n1, j1 * amp * env).addScaledVector(sigTmp.n2, j2 * amp * env);
     pts.push(sigTmp.p.x, sigTmp.p.y, sigTmp.p.z);
   }
-  const width = big ? 22 : 12;
+  const width = big ? 30 : 8;
   for (let k = 0; k < SIG_PTS - 1; k++) {
     const s = slot * (SIG_PTS - 1) + k;
     const u0 = k / (SIG_PTS - 1);
@@ -285,7 +291,8 @@ const writeSignal = (
       B[s * 3 + c] = pts[(k + 1) * 3 + c];
     }
     const headGlow = Math.exp(-Math.max(0, head - u0) * 6);
-    Sx[s * 2] = on ? fade * flick * (0.55 + 0.9 * headGlow) * (big ? 1.4 : 1) : 0;
+    const taper = Math.min(1, (head - u0) * 25 + 0.15, (u0 - tail) * 25 + 0.15);
+    Sx[s * 2] = on ? taper * fade * flick * (0.55 + 0.9 * headGlow) * (big ? 1.4 : 1) : 0;
     Sx[s * 2 + 1] = width * (0.8 + 0.5 * headGlow);
   }
 };
@@ -295,7 +302,7 @@ type Variant = "reveal" | "loop";
 const scheduleFor = (a: BrainAssets, variant: Variant) =>
   memo(a, `fibre-signals-${variant}`, () => {
     const surf: number[] = [];
-    for (let i = 0; i < a.fibres.count; i++) if (a.fibres.kind[i] === 0 && a.fibres.length[i] > 0.45) surf.push(i);
+    for (let i = 0; i < a.fibres.count; i++) if (a.fibres.kind[i] === 0 && a.fibres.length[i] > 0.75) surf.push(i);
     return makeSchedule({
       seed: variant === "loop" ? 3303 : 2302,
       period: PERIOD,
@@ -331,7 +338,7 @@ export const makeFibreLook =
     scene.add(brain);
     const cam = new PerspectiveCamera(FOV, width / height, 0.01, 50);
     const projY = cam.projectionMatrix.elements[5];
-    const viewH = 1.95;
+    const viewH = 1.68;
     const farDist = viewH / 2 / Math.tan((FOV / 2) * (Math.PI / 180));
     const centreView = new Vector3();
     const colA = new Vector3(...lin(FIBRE_COLORS.fibreA));
@@ -349,6 +356,7 @@ export const makeFibreLook =
       uCoc: { value: 0 },
       uA: { value: colA },
       uB: { value: colB },
+      uHero: { value: 1 },
     };
     const hero = heroIds(assets);
     const lineMat = new ShaderMaterial({
@@ -415,7 +423,7 @@ export const makeFibreLook =
       glslVersion: "300 es" as never,
       vertexShader: SIG_VERT,
       fragmentShader: SIG_FRAG,
-      uniforms: { ...sigMat.uniforms, uWidthMul: { value: 3.5 }, uHalo: { value: 1 } },
+      uniforms: { ...sigMat.uniforms, uWidthMul: { value: 4.5 }, uHalo: { value: 1 } },
       ...ADDITIVE,
       depthTest: false,
     });
@@ -426,7 +434,7 @@ export const makeFibreLook =
 
     const events = scheduleFor(assets, variant);
     // Reveal: big signals on fibres close to the starting camera, 0-3 s.
-    const camDir = new Vector3(Math.sin(0.75) * Math.cos(0.22), Math.sin(0.22), Math.cos(0.75) * Math.cos(0.22)).normalize();
+    const camDir = new Vector3(Math.sin(0.75) * Math.cos(-0.08), Math.sin(-0.08), Math.cos(0.75) * Math.cos(-0.08)).normalize();
     const START_D = 0.98;
     const start = camDir.clone().multiplyScalar(START_D);
     const bigEvents: Ev[] = [];
@@ -460,6 +468,7 @@ export const makeFibreLook =
           cam.position.set(0, Math.sin(ELEV) * d, Math.cos(ELEV) * d);
           cam.lookAt(0, 0, 0);
           common.uCoc.value = 0;
+          common.uHero.value = 0.0;
           common.uFocus.value = d;
         } else {
           // 0-3 s inside the tangle, 3-7 s pull back through the surface, 7-10 s turn
@@ -468,10 +477,11 @@ export const makeFibreLook =
           const drift = (1 - pull) * 0.05 * Math.sin(f / 25);
           cam.position.copy(camDir).multiplyScalar(d);
           cam.position.y += drift;
-          cam.lookAt(0, -0.02 * pull, 0);
+          cam.lookAt(0, 0.2 * pull, 0);
           yaw = -0.25 * easeInOutSine(smoothstep(195, 300, f)) + 0.04 * (1 - pull) * Math.sin(f / 40);
           common.uFocus.value = 0.22 + (farDist - 0.22) * pull;
           common.uCoc.value = 0.009 * (1 - pull) + 0.0004;
+          common.uHero.value = 1 - pull;
           post.composite.uniforms.uHaze.value = 0.85 * (1 - smoothstep(0.15, 0.75, pull));
         }
         brain.rotation.set(0, yaw, 0);

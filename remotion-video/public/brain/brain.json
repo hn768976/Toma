@@ -31,8 +31,10 @@
   "relaxed_folded_faces": 37,
   "relaxed_pits": 525,
   "occipital_smoothed_vertices": 90,
-  "brainstem": "thickened 22 percent, pons bulge 0.065 (anterior) at y=-0.410",
-  "fissure_pull_max": 0.012
+  "brainstem": "thickened 12 percent, pons bulge 0.045 (anterior) at y=-0.410",
+  "brainstem_bend": "forward shear, bottom moved +0.40",
+  "fissure_pull_max": 0.012,
+  "relaxed_spike_vertices": 554
  },
  "normalise": {
   "rotation": [
@@ -279,18 +281,18 @@
    "pointsPerLine": 12
   },
   "arcs": {
-   "bytes": 96768,
+   "bytes": 124416,
    "arrays": {
     "main": {
      "offset": 0,
      "dtype": "float32",
      "shape": [
-      3840,
+      6144,
       3
      ]
     },
     "forks": {
-     "offset": 46080,
+     "offset": 73728,
      "dtype": "float32",
      "shape": [
       4032,
@@ -298,7 +300,7 @@
      ]
     },
     "forkAt": {
-     "offset": 94464,
+     "offset": 122112,
      "dtype": "float32",
      "shape": [
       96,
@@ -306,7 +308,7 @@
      ]
     },
     "centre": {
-     "offset": 95616,
+     "offset": 123264,
      "dtype": "float32",
      "shape": [
       96,
@@ -315,7 +317,7 @@
     }
    },
    "count": 96,
-   "mainPts": 40,
+   "mainPts": 64,
    "forkPts": 14,
    "forks": 3
   }

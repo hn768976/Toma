@@ -214,19 +214,45 @@ def repair(m, labels_fn, report):
             w[st] = 1.0
         w *= smooth01(-0.24, -0.34, v[:, 1])  # never move the cerebrum
         radial = np.stack([v[:, 0] - cx, np.zeros(len(v)), v[:, 2]], 1)
-        thick = 0.22 * w
+        thick = 0.12 * w
         pons_y = ys.max() - 0.11
-        pons = 0.065 * np.exp(-((v[:, 1] - pons_y) / 0.065) ** 2) * w
+        pons = 0.045 * np.exp(-((v[:, 1] - pons_y) / 0.065) ** 2) * w
         ant = np.clip((v[:, 0] - cx) / 0.06, 0, 1)  # anterior side only
         rlen = np.linalg.norm(radial, axis=1) + 1e-9
         v = v + radial * thick[:, None] + (radial / rlen[:, None]) * (pons * (0.35 + 0.65 * ant))[:, None]
-        report["brainstem"] = f"thickened 22 percent, pons bulge 0.065 (anterior) at y={pons_y:.3f}"
+        report["brainstem"] = f"thickened 12 percent, pons bulge 0.045 (anterior) at y={pons_y:.3f}"
+        # bend the stem forward: it descended backward under the cerebellum;
+        # anatomically it runs down and slightly forward, in front of it. A
+        # smooth shear (cross-sections translate, never rotate) avoids kinks.
+        top = ys.max()
+        dep = np.clip(top - v[:, 1], 0, None)
+        shear = 0.92 * dep * dep / (dep + 0.1)
+        v[:, 0] = v[:, 0] + shear * w
+        report["brainstem_bend"] = "forward shear, bottom moved +%.2f" % float((shear * w)[st].max())
     # 5. longitudinal fissure: pull medial walls of the cerebrum toward midline
     az = np.abs(v[:, 2])
     pull = 0.012 * np.exp(-((az - 0.0) / 0.07) ** 2) * smooth01(0.0, 0.15, v[:, 1] + 0.1) * (labels_fn(v) == 0)
     v[:, 2] -= np.sign(v[:, 2]) * np.minimum(pull, az * 0.6)
     report["fissure_pull_max"] = 0.012
-    return trimesh.Trimesh(v, m.faces, process=False)
+    m = trimesh.Trimesh(v, m.faces, process=False)
+    # 6. single-vertex spikes ("flecks"): normal far off its neighbours' average
+    spikes = 0
+    for _ in range(5):
+        n = m.vertex_normals
+        na = W @ n
+        na /= np.linalg.norm(na, axis=1, keepdims=True) + 1e-12
+        dev = np.degrees(np.arccos(np.clip((n * na).sum(1), -1, 1)))
+        bad = np.where(dev > 22)[0]
+        if len(bad) == 0:
+            break
+        spikes = max(spikes, len(bad))
+        ring = np.unique(m.edges_unique[np.isin(m.edges_unique, bad).any(1)].ravel())
+        vv = m.vertices.copy()
+        vv[bad] = (W @ vv)[bad]
+        m = trimesh.Trimesh(vv, m.faces, process=False)
+        m = trimesh.Trimesh(_ring_relax(m, W, ring, 2, 0.4), m.faces, process=False)
+    report["relaxed_spike_vertices"] = int(spikes)
+    return m
 
 
 def smooth01(a, b, x):

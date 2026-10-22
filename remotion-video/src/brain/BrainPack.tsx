@@ -3,6 +3,7 @@ import { Composition, Folder } from "remotion";
 import { z } from "zod";
 import { BrainStage, type LookFactory } from "./engine/Stage";
 import { modelCheckLook, type ModelView } from "./looks/modelCheck";
+import { assembleLook } from "./looks/assemble";
 import { makeFibreLook } from "./looks/fibreLight";
 import { glassLook } from "./looks/glass";
 import { membraneLook } from "./looks/membrane";
@@ -27,6 +28,7 @@ export const LOOKS: Row[] = [
   { id: "BrainSolid-Black", look: makeSolidLook("black"), seconds: 20, loop: true },
   { id: "BrainSolid-Green", look: makeSolidLook("green"), seconds: 20, loop: true },
   { id: "BrainGlass-Thoughts", look: glassLook, seconds: 24, loop: false },
+  { id: "BrainParticles-Assemble", look: assembleLook, seconds: 20, loop: false },
   { id: "BrainOrbit-DeepBlue", look: orbitLook, seconds: 20, loop: true },
 ];
 

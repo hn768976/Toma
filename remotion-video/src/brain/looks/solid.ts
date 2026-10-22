@@ -1,9 +1,9 @@
-import { Group, Matrix4, Mesh, PerspectiveCamera, Scene, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
+import { BufferAttribute, BufferGeometry, Group, Matrix4, Mesh, PerspectiveCamera, Points, Scene, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
 import type { BrainAssets } from "../engine/assets";
 import { cortexGeometry, memo } from "../engine/geometry";
 import { lin, TAU } from "../engine/math";
 import { Post, pxScale } from "../engine/post";
-import { ADDITIVE, buildSegments, FATLINE_FRAG_GLSL, FATLINE_GLSL } from "../engine/primitives";
+import { ADDITIVE, buildSegments, FATLINE_FRAG_GLSL, FATLINE_GLSL, POINT_GLSL } from "../engine/primitives";
 import { activeAt, hash01, makeSchedule } from "../engine/schedule";
 import type { LookFactory } from "../engine/Stage";
 
@@ -16,17 +16,17 @@ export const SOLID_COLORS = {
   warm: "#C9746A",
   key: "#FFF4EC",
   rim: "#9FB8FF",
-  arc: "#DCE6FF",
-  arcGlow: "#6F86FF",
+  arc: "#E2DEFF",
+  arcGlow: "#8C9CFF",
 };
 
 const PERIOD = 600;
 const MAX_ACTIVE = 4;
-const GLOW_PTS = 6;
+const GLOW_PTS = 10;
 
-const ELEV = 0.2; // camera elevation (rad)
+const ELEV = 0.3; // camera elevation (rad)
 const FOV = 30;
-const VIEW_H = 2.0; // visible height in brain units
+const VIEW_H = 1.8; // visible height in brain units
 const START_YAW = -0.7; // frame 0 shows the left hemisphere, three-quarter front
 
 const yawAt = (f: number) => START_YAW + (TAU * (f % PERIOD)) / PERIOD;
@@ -50,7 +50,10 @@ const arcSchedule = (a: BrainAssets) =>
         for (let k = 0; k < 24; k++) {
           const i = Math.floor(rng() * a.arcs.count);
           c.fromArray(a.arcs.centre, i * 3).applyMatrix4(rot);
-          const score = c.clone().normalize().dot(camDir) + c.y * 0.15;
+          const m0 = i * a.arcs.mainPts * 3;
+          const m1 = ((i + 1) * a.arcs.mainPts - 1) * 3;
+          const vertical = Math.abs(a.arcs.main[m1 + 1] - a.arcs.main[m0 + 1]);
+          const score = c.clone().normalize().dot(camDir) + c.y * 0.15 + vertical * 0.6;
           if (score > bestScore) {
             bestScore = score;
             best = i;
@@ -135,18 +138,18 @@ void main() {
   float wrap = 0.45;
   float nl = dot(N, uKeyDir);
   float kd = max((nl + wrap) / (1.0 + wrap), 0.0);
-  float occ = mix(0.32, 1.0, vAo);
+  float occ = mix(0.2, 1.0, vAo * vAo);
   vec3 col = uTissue * uKeyCol * kd * 0.95 * occ;
   // hemispheric ambient
   float sky = N.y * 0.5 + 0.5;
-  col += uTissue * mix(vec3(0.10, 0.09, 0.10), vec3(0.22, 0.22, 0.25), sky) * occ;
+  col += uTissue * mix(vec3(0.08, 0.075, 0.08), vec3(0.17, 0.17, 0.19), sky) * occ;
   // subsurface: warm tint where light wraps past the terminator and on thin crests
   float thin = smoothstep(0.0, 0.9, vCurv);
   float sss = max(nl + 0.6, 0.0) / 1.6 - max(nl, 0.0) * 0.6;
   col += uWarm * (0.10 * sss + 0.06 * thin * kd) * occ;
   // wet sheen on the gyri, damped in the sulci
   vec3 H = normalize(uKeyDir + V);
-  float spec = pow(max(dot(N, H), 0.0), 48.0) * 0.38 + pow(max(dot(N, H), 0.0), 12.0) * 0.05;
+  float spec = pow(max(dot(N, H), 0.0), 18.0) * 0.22 + pow(max(dot(N, H), 0.0), 6.0) * 0.06;
   col += uKeyCol * spec * smoothstep(-0.2, 0.5, vCurv) * vAo * vAo;
   // cool rim from behind
   float fr = pow(1.0 - ndv, 3.0);
@@ -158,9 +161,11 @@ void main() {
     if (p.w <= 0.0) continue;
     vec3 d = vW - p.xyz;
     float r2 = dot(d, d);
-    g += p.w * exp(-r2 / 0.006);
+    g += p.w * (exp(-r2 / 0.003) * 0.5 + exp(-r2 / 0.03) * 0.4 + exp(-r2 / 0.09) * 0.12);
   }
-  col += uGlowCol * g * (0.6 + 0.4 * ndv);
+  // discharge light: a pale translucent haze that washes the folds toward blue-white
+  float gh = clamp(g.x, 0.0, 2.0);
+  col = mix(col, col * 0.45 + uGlowCol * 0.55, clamp(gh * 0.55, 0.0, 0.7)) + uGlowCol * gh * (0.18 + 0.2 * ndv);
   outColor = vec4(col, 1.0);
 }`;
 
@@ -180,7 +185,7 @@ void main() {
   float h = aCurve.y > 0.5 ? (head - aCurve.z) / max(1.0 - aCurve.z, 0.2) * 1.6 : head;
   float on = (head >= 0.0 && t1 <= h + 1e-4) ? 1.0 : 0.0;
   vI = st.y * on * (aCurve.y > 0.5 ? 0.75 : 1.0);
-  float w = aCurve.y > 0.5 ? 2.2 : 3.4;
+  float w = aCurve.y > 0.5 ? 2.0 : 3.0;
   vec4 c = fatLine(aA, aB, w, position.x, position.y);
   gl_Position = on > 0.0 ? c : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
@@ -194,6 +199,49 @@ void main() {
   float a = lineCoverage() * lineProfile();
   outColor = vec4(uArcCol * vI * a, 0.0);
 }`;
+
+// Star glints where a discharge ends (both ends of the main channel).
+const GLINT_VERT = /* glsl */ `
+${POINT_GLSL}
+in vec2 aEnd; // arc index, end (0 start / 1 finish)
+uniform vec2 uArc[96];
+out float vI;
+void main() {
+  vec2 st = uArc[int(aEnd.x)];
+  float on = st.x >= 0.0 && (aEnd.y < 0.5 || st.x >= 0.999) ? 1.0 : 0.0;
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  gl_PointSize = pointSize(0.05, mv.z, 18.0);
+  vI = on * st.y;
+  gl_Position = on > 0.0 ? projectionMatrix * mv : vec4(2.0, 2.0, 2.0, 1.0);
+}`;
+const GLINT_FRAG = /* glsl */ `
+uniform vec3 uArcCol;
+uniform float uStar;
+in float vI;
+out vec4 outColor;
+void main() {
+  vec2 d = gl_PointCoord * 2.0 - 1.0;
+  float r2 = dot(d, d);
+  float star = max(exp(-abs(d.x) * 22.0) * exp(-abs(d.y) * 3.0), exp(-abs(d.y) * 22.0) * exp(-abs(d.x) * 3.0));
+  float core = exp(-r2 * 28.0);
+  outColor = vec4(uArcCol * vI * (core * 1.4 + star * 0.8 * uStar), 0.0);
+}`;
+
+const glintGeometry = (a: BrainAssets) =>
+  memo(a, "solid-glints", () => {
+    const { count, mainPts, main } = a.arcs;
+    const pos = new Float32Array(count * 2 * 3);
+    const end = new Float32Array(count * 2 * 2);
+    for (let i = 0; i < count; i++) {
+      pos.set(main.subarray(i * mainPts * 3, i * mainPts * 3 + 3), i * 6);
+      pos.set(main.subarray(((i + 1) * mainPts - 1) * 3, (i + 1) * mainPts * 3), i * 6 + 3);
+      end.set([i, 0, i, 1], i * 4);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new BufferAttribute(pos, 3));
+    g.setAttribute("aEnd", new BufferAttribute(end, 2));
+    return g;
+  });
 
 export const makeSolidLook =
   (variant: "black" | "green"): LookFactory =>
@@ -217,7 +265,7 @@ export const makeSolidLook =
     const camPos = new Vector3(0, Math.sin(ELEV), Math.cos(ELEV)).multiplyScalar(VIEW_H / 2 / Math.tan((FOV / 2) * (Math.PI / 180)));
     const cam = new PerspectiveCamera(FOV, width / height, 0.1, 30);
     cam.position.copy(camPos);
-    cam.lookAt(0, -0.02, 0);
+    cam.lookAt(0, 0.0, 0);
     cam.updateMatrixWorld();
 
     const glow = Array.from({ length: MAX_ACTIVE * GLOW_PTS }, () => new Vector4());
@@ -229,7 +277,7 @@ export const makeSolidLook =
         uTissue: { value: new Vector3(...lin(SOLID_COLORS.tissue)) },
         uWarm: { value: new Vector3(...lin(SOLID_COLORS.warm)) },
         uKeyDir: { value: new Vector3(-0.35, 0.75, 0.6).normalize() },
-        uKeyCol: { value: new Vector3(...lin(SOLID_COLORS.key)).multiplyScalar(1.5) },
+        uKeyCol: { value: new Vector3(...lin(SOLID_COLORS.key)).multiplyScalar(0.86) },
         uRimDir: { value: new Vector3(0.3, 0.35, -1).normalize() },
         uRimCol: { value: new Vector3(...lin(SOLID_COLORS.rim)) },
         uCam: { value: camPos },
@@ -259,6 +307,19 @@ export const makeSolidLook =
     arcs.frustumCulled = false;
     arcs.renderOrder = 1;
     brain.add(arcs);
+
+    const glintMat = new ShaderMaterial({
+      glslVersion: "300 es" as never,
+      vertexShader: GLINT_VERT,
+      fragmentShader: GLINT_FRAG,
+      uniforms: { ...arcMat.uniforms, uProjY: { value: cam.projectionMatrix.elements[5] }, uStar: { value: green ? 0 : 1 } },
+      ...ADDITIVE,
+      depthTest: true,
+    });
+    const glints = new Points(glintGeometry(assets), glintMat);
+    glints.frustumCulled = false;
+    glints.renderOrder = 2;
+    brain.add(glints);
 
     const events = arcSchedule(assets);
     const tmp = new Vector3();
@@ -298,6 +359,7 @@ export const makeSolidLook =
         post.dispose();
         mat.dispose();
         arcMat.dispose();
+        glintMat.dispose();
       },
     };
   };

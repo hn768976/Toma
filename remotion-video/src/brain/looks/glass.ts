@@ -70,12 +70,39 @@ const thoughtData = (a: BrainAssets) =>
     const { lines, per, position, count } = a.thoughts;
     const timing = lineTiming(lines);
     const ids = Array.from({ length: lines }, (_, i) => i);
+    // smooth the node polylines into curves (Catmull-Rom, SUB samples per span)
+    const SUB = 5;
+    const cper = (per - 1) * SUB + 1;
+    const curves = new Float32Array(lines * cper * 3);
+    const ccount = new Uint16Array(lines);
+    const P = (i: number, j: number, d: number) => position[(i * per + Math.max(0, Math.min(count[i] - 1, j))) * 3 + d];
+    for (let i = 0; i < lines; i++) {
+      const n = count[i];
+      let k = 0;
+      for (let j = 0; j < n - 1; j++) {
+        for (let q = 0; q < SUB; q++) {
+          const t = q / SUB;
+          const t2 = t * t;
+          const t3 = t2 * t;
+          for (let d = 0; d < 3; d++) {
+            const p0 = P(i, j - 1, d);
+            const p1 = P(i, j, d);
+            const p2 = P(i, j + 1, d);
+            const p3 = P(i, j + 2, d);
+            curves[(i * cper + k) * 3 + d] = 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+          }
+          k++;
+        }
+      }
+      for (let d = 0; d < 3; d++) curves[(i * cper + k) * 3 + d] = P(i, n - 1, d);
+      ccount[i] = k + 1;
+    }
     const geo = buildSegments(
-      position,
-      per,
+      curves,
+      cper,
       ids,
       (c) => [timing.birth[c], timing.dur[c], c, 0],
-      (c) => count[c],
+      (c) => ccount[c],
     );
     // node dots at polyline vertices
     let nn = 0;
@@ -156,9 +183,9 @@ void main() {
   vec3 N = normalize(vN);
   vec3 V = normalize(vV);
   float ndv = abs(dot(N, V));
-  float fr = pow(1.0 - ndv, 2.6);
+  float fr = pow(1.0 - ndv, 3.2);
   // folds: sulcal walls turn away from the eye -> bright violet edges
-  float front = gl_FrontFacing ? 1.0 : 0.55;
+  float front = gl_FrontFacing ? 1.0 : 0.25;
   vec3 c = uEdge * fr * front * mix(0.45, 0.8, vAo);
   // a hint of crest highlight so the gyri read as glass
   float crest = smoothstep(0.35, 1.0, vCurv) * pow(ndv, 4.0);
@@ -175,6 +202,7 @@ in vec4 aSeg;
 in vec4 aCurve;
 uniform float uFrame;
 uniform float uLineGain;
+uniform float uWide;
 out float vI;
 void main() {
   float birth = aCurve.x;
@@ -189,18 +217,20 @@ void main() {
   float headDist = max(h - t1, 0.0);
   float head = (h < 1.0) ? exp(-headDist * 9.0) * 1.6 : 0.0;
   float settle = smoothstep(0.0, 0.6, (uFrame - birth - dur) / 30.0 + 0.6);
-  vI = on * uLineGain * (0.42 + head + 0.1 * settle);
-  vec4 c = fatLine(aA, b, 2.6 + head * 1.6, position.x, position.y);
+  vI = on * uLineGain * (0.2 + head * 0.6 + 0.06 * settle);
+  vec4 c = fatLine(aA, b, (10.0 + head * 3.0) * uWide, position.x, position.y);
   gl_Position = on > 0.0 ? c : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
 
 const LINE_FRAG = /* glsl */ `
 ${FATLINE_FRAG_GLSL}
 uniform vec3 uLine;
+uniform float uWide;
 in float vI;
 out vec4 outColor;
 void main() {
-  float a = lineCoverage() * (0.35 + 0.65 * lineProfile());
+  float pr = lineProfile();
+  float a = uWide > 1.5 ? lineCoverage() * pr * pr * 0.06 : lineCoverage() * (0.1 + 0.9 * pr * pr * pr);
   outColor = vec4(uLine * vI * a, 0.0);
 }`;
 
@@ -213,10 +243,10 @@ out float vI;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float h = clamp((uFrame - aTime.x) / aTime.y, 0.0, 1.0);
-  float on = (uFrame >= aTime.x && aTime.z <= h + 1e-3) ? 1.0 : 0.0;
+  float on = (uFrame >= aTime.x && aTime.z <= h + 1e-3 && fract(position.x * 91.7 + position.y * 53.3) < 0.35) ? 1.0 : 0.0;
   float pop = exp(-max(h - aTime.z, 0.0) * 6.0);
-  vI = on * uLineGain * (0.7 + 1.5 * pop);
-  gl_PointSize = pointSize(0.012, mv.z, 7.0);
+  vI = on * uLineGain * (1.0 + 1.6 * pop);
+  gl_PointSize = pointSize(0.03, mv.z, 16.0);
   gl_Position = on > 0.0 ? projectionMatrix * mv : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
 
@@ -228,7 +258,11 @@ out vec4 outColor;
 void main() {
   vec2 d = gl_PointCoord * 2.0 - 1.0;
   float r2 = dot(d, d);
-  float a = exp(-r2 * 4.0) * step(r2, 1.0);
+  // star-like speck: bright core, faint cross glint, soft glow
+  float core = exp(-r2 * 30.0);
+  float glow = exp(-r2 * 6.0) * 0.25;
+  float star = max(exp(-abs(d.x) * 16.0) * exp(-abs(d.y) * 4.0), exp(-abs(d.y) * 16.0) * exp(-abs(d.x) * 4.0)) * 0.35;
+  float a = (core + glow + star) * step(r2, 1.0);
   outColor = vec4(uLine * vI * a * vPtAlpha, 0.0);
 }`;
 
@@ -277,7 +311,7 @@ export const glassLook: LookFactory = ({ gl, assets, width, height }) => {
     gl,
     {
       msaa: 0,
-      bloom: { strength: 0.45, threshold: 0.55, knee: 0.25, levels: 6, radius: 0.8 },
+      bloom: { strength: 0.3, threshold: 0.55, knee: 0.3, levels: 6, radius: 0.75 },
       background: "return vec3(0.0);",
       key: [0, 0, 0],
       exposure: 1,
@@ -286,14 +320,14 @@ export const glassLook: LookFactory = ({ gl, assets, width, height }) => {
   );
   const scene = new Scene();
   const fov = 22;
-  const viewH = 2.08;
+  const viewH = 1.9;
   const dist = viewH / 2 / Math.tan((fov / 2) * (Math.PI / 180));
   const cam = new PerspectiveCamera(fov, width / height, 0.1, 40);
   // Side view of the left hemisphere, front to the right; the brain sits a
   // little left of centre as in the reference.
-  const cx = 0.5;
-  cam.position.set(cx, -0.02, dist);
-  cam.lookAt(cx, -0.02, 0);
+  const cx = 0.45;
+  cam.position.set(cx, -0.07, dist);
+  cam.lookAt(cx, -0.07, 0);
   cam.updateMatrixWorld();
 
   const glass = new ShaderMaterial({
@@ -324,13 +358,18 @@ export const glassLook: LookFactory = ({ gl, assets, width, height }) => {
     glslVersion: "300 es" as never,
     vertexShader: LINE_VERT,
     fragmentShader: LINE_FRAG,
-    uniforms: { ...common, uLine: { value: new Vector3(...lin(GLASS_COLORS.line)) } },
+    uniforms: { ...common, uLine: { value: new Vector3(...lin(GLASS_COLORS.line)) }, uWide: { value: 1 } },
     ...ADDITIVE,
     depthTest: false,
   });
   const lines = new Mesh(td.geo, lineMat);
   lines.frustumCulled = false;
-  scene.add(lines);
+  // soft haze under the thought-lines (same geometry, 7x wider, faint)
+  const hazeMat = lineMat.clone();
+  hazeMat.uniforms = { ...lineMat.uniforms, uWide: { value: 5 } };
+  const haze = new Mesh(td.geo, hazeMat);
+  haze.frustumCulled = false;
+  scene.add(haze, lines);
   const nodeMat = new ShaderMaterial({
     glslVersion: "300 es" as never,
     vertexShader: NODE_VERT,
@@ -374,7 +413,7 @@ export const glassLook: LookFactory = ({ gl, assets, width, height }) => {
     },
     dispose() {
       post.dispose();
-      [glass, lineMat, nodeMat, sparkMat].forEach((m) => m.dispose());
+      [glass, lineMat, hazeMat, nodeMat, sparkMat].forEach((m) => m.dispose());
     },
   };
 };

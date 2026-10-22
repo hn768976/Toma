@@ -40,7 +40,7 @@ FIBRE_PTS = 32
 THOUGHT_PTS = 12
 N_THOUGHTS = 420
 N_ARCS = 96
-ARC_MAIN_PTS = 40
+ARC_MAIN_PTS = 64
 ARC_FORK_PTS = 14
 ARC_FORKS = 3
 
@@ -287,9 +287,9 @@ def thought_lines(S, rng):
     """Polylines of straight segments between nodes inside the cerebrum, kept
     well inside (>= 0.07 below the surface) so the side view stays inside the
     outline. Ordered: the first lines are the 'early' few."""
-    cand = rng.uniform([-0.9, -0.25, -0.55], [0.9, 0.72, 0.55], (300_000, 3))
+    cand = rng.uniform([-0.9, -0.42, -0.6], [0.9, 0.72, 0.6], (300_000, 3))
     sd = S.sdf(cand)
-    ok = (sd < -0.07) & ~((cand[:, 0] < -0.3) & (cand[:, 1] < -0.05))
+    ok = (sd < -0.11)
     nodes = cand[ok]
     nodes = nodes[rng.choice(len(nodes), 3000, replace=False)]
     tree = cKDTree(nodes)
@@ -362,12 +362,24 @@ def surface_arcs(S, lab_of, rng):
         cp, cn, _ = S.closest(a[None])
         t = np.cross(cn[0], rng.normal(size=3))
         t /= np.linalg.norm(t)
-        L = rng.uniform(0.28, 0.55)
+        L = rng.uniform(1.3, 1.9)
         b = a + t * L
         b = S.closest(b[None])[0][0]
-        path = lightning(a, b, rng, ARC_MAIN_PTS, 0.22)
-        cp, cn, _ = S.closest(path)
-        path = cp + cn * 0.006
+        if np.linalg.norm(b - a) < 1.0:
+            continue
+        # straight chord pulled onto the surface, smoothed (so it glides over the
+        # folds instead of diving into sulci), then a fine jagged crackle on top
+        base = a + (b - a) * np.linspace(0, 1, ARC_MAIN_PTS)[:, None]
+        for _ in range(4):
+            cp, cn, _ = S.closest(base)
+            base = smooth_poly(cp + cn * 0.03, 3)
+        cp, cn, _ = S.closest(base)
+        lift = smooth_poly(cp + cn * 0.008, 2)
+        # fine crackle in the tangent plane (no re-projection, so no jumps)
+        jit = rng.normal(0, 0.006, (ARC_MAIN_PTS, 3))
+        jit -= cn * (jit * cn).sum(1, keepdims=True)
+        jit[0] = jit[-1] = 0
+        path = lift + jit
         main[i] = path
         centres[i] = path[ARC_MAIN_PTS // 2]
         for f in range(ARC_FORKS):
@@ -379,7 +391,7 @@ def surface_arcs(S, lab_of, rng):
             side /= np.linalg.norm(side) + 1e-9
             fwd = path[-1] - path[0]
             fwd /= np.linalg.norm(fwd) + 1e-9
-            end = start + (side * rng.choice([-1, 1]) * 0.7 + fwd * 0.6) * rng.uniform(0.06, 0.16)
+            end = start + (side * rng.choice([-1, 1]) * 0.7 + fwd * 0.6) * rng.uniform(0.12, 0.35)
             fp = lightning(start, end, rng, ARC_FORK_PTS, 0.3)
             fcp, fcn, _ = S.closest(fp)
             forks[i, f] = fcp + fcn * 0.006

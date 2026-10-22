@@ -14,7 +14,7 @@ export const ORBIT_COLORS = {
   // One data row: veins, crest highlight, body glow, background top, background bottom, embers, dust
   vein: "#5AB8FF",
   crest: "#FFFFFF",
-  body: "#1E5FD0",
+  body: "#1A8FE0",
   bgTop: "#06142A",
   bgBottom: "#020610",
   ember: "#FF7A3A",
@@ -41,7 +41,11 @@ const BG = /* glsl */ `
   c += vec3(0.03, 0.08, 0.16) * exp(-pow(length(d) - 0.9, 2.0) * 3.0) * 0.6;
   // gentle vignette toward the corners
   vec2 q = uv - 0.5;
-  c *= 1.0 - 0.35 * dot(q * vec2(aspect * 0.8, 1.0), q * vec2(aspect * 0.8, 1.0));
+  c *= 1.0 - 0.75 * smoothstep(0.05, 0.5, dot(q * vec2(aspect * 0.7, 1.0), q * vec2(aspect * 0.7, 1.0)));
+  // faint smoky fog (static)
+  vec2 f = uv * vec2(aspect, 1.0) * 3.0;
+  float fog = sin(f.x * 1.3 + sin(f.y * 1.7)) * sin(f.y * 1.1 + sin(f.x * 0.9 + 1.0)) + 0.5 * sin(f.x * 2.7 - f.y * 2.1 + 2.0);
+  c += vec3(0.010, 0.016, 0.026) * smoothstep(0.1, 1.2, fog) * smoothstep(0.9, 0.2, abs(uv.y - 0.5) * 2.0);
   return c;
 `;
 
@@ -68,6 +72,7 @@ const SHELL_FRAG = /* glsl */ `
 uniform vec3 uVein;
 uniform vec3 uCrest;
 uniform vec3 uBody;
+uniform vec3 uEmber;
 uniform float uBack;
 in vec3 vN;
 in vec3 vV;
@@ -83,8 +88,9 @@ void main() {
   // glowing lines in the sulci (the folds) and white at the gyral crests
   float fold = smoothstep(0.35, 0.75, vDepth) * (1.0 - smoothstep(0.85, 1.0, vDepth));
   float crest = smoothstep(0.45, 1.0, vCurv);
-  vec3 c = uBody * (0.02 + 0.08 * fr);
-  c += uVein * (fold * 0.05 + fr * 0.12);
+  vec3 c = uBody * (0.015 + 0.07 * fr);
+  c += uVein * (fold * 0.09 + fr * 0.11);
+  c += uEmber * pow(1.0 - ndv, 7.0) * 0.06;
   c += uCrest * crest * (0.015 + 0.03 * ndv) * vAo;
   c *= uBack > 0.5 ? 0.35 : 1.0;
   outColor = vec4(c, 0.0);
@@ -115,7 +121,7 @@ in float vW;
 out vec4 outColor;
 void main() {
   vec3 c = mix(uVein, uCrest, 0.15 + 0.45 * vW * vW);
-  outColor = vec4(c * vI * 0.13, 0.0);
+  outColor = vec4(c * vI * 0.065, 0.0);
 }`;
 
 const SPARK_VERT = /* glsl */ `
@@ -123,10 +129,12 @@ ${POINT_GLSL}
 in vec4 aAttr;
 uniform float uPhase;
 out float vI;
+out float vOr;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vOr = step(0.988, fract(aAttr.w * 7.77));
   float tw = 0.5 + 0.5 * sin(6.28318 * (uPhase * (2.0 + floor(aAttr.w * 5.0)) + aAttr.w * 13.0));
-  gl_PointSize = pointSize(0.006, mv.z, 2.4);
+  gl_PointSize = pointSize(vOr > 0.5 ? 0.02 : 0.006, mv.z, vOr > 0.5 ? 5.0 : 2.4);
   vI = (0.25 + 0.75 * smoothstep(0.0, 0.9, aAttr.x)) * (0.4 + 0.6 * tw) * vPtAlpha;
   gl_Position = projectionMatrix * mv;
 }`;
@@ -134,13 +142,16 @@ void main() {
 const SPARK_FRAG = /* glsl */ `
 uniform vec3 uCrest;
 uniform vec3 uVein;
+uniform vec3 uEmber;
 in float vI;
+in float vOr;
 out vec4 outColor;
 void main() {
   vec2 d = gl_PointCoord * 2.0 - 1.0;
   float r2 = dot(d, d);
   float a = exp(-r2 * 4.0) * step(r2, 1.0);
-  outColor = vec4(mix(uVein, uCrest, 0.6) * vI * a * 0.3, 0.0);
+  vec3 c = mix(mix(uVein, uCrest, 0.35) * 0.26, uEmber * 2.8, vOr);
+  outColor = vec4(c * vI * a, 0.0);
 }`;
 
 export const orbitLook: LookFactory = ({ gl, assets, width, height }) => {
@@ -161,7 +172,7 @@ export const orbitLook: LookFactory = ({ gl, assets, width, height }) => {
   );
   const scene = new Scene();
   const fov = 30;
-  const viewH = 2.75;
+  const viewH = 3.1;
   const dist = viewH / 2 / Math.tan((fov / 2) * (Math.PI / 180));
   const cam = new PerspectiveCamera(fov, width / height, 0.05, 60);
   cam.position.set(0, 0.06, dist);
@@ -179,6 +190,7 @@ export const orbitLook: LookFactory = ({ gl, assets, width, height }) => {
     uVein: { value: new Vector3(...lin(ORBIT_COLORS.vein)) },
     uCrest: { value: new Vector3(...lin(ORBIT_COLORS.crest)) },
     uBody: { value: new Vector3(...lin(ORBIT_COLORS.body)) },
+    uEmber: { value: new Vector3(...lin(ORBIT_COLORS.ember)) },
   };
   const shell = (side: typeof FrontSide | typeof BackSide) =>
     new ShaderMaterial({
@@ -226,7 +238,7 @@ export const orbitLook: LookFactory = ({ gl, assets, width, height }) => {
     ...ADDITIVE,
     depthTest: false,
   });
-  const sparks = new Points(pointCloud(assets, "orbit", 50_000, 0), sparkMat);
+  const sparks = new Points(pointCloud(assets, "orbit", 120_000, 0), sparkMat);
   sparks.frustumCulled = false;
   sparks.renderOrder = 3;
   brain.add(sparks);
@@ -235,18 +247,23 @@ export const orbitLook: LookFactory = ({ gl, assets, width, height }) => {
   const dustCol = lin(ORBIT_COLORS.dust);
   const ember = lin(ORBIT_COLORS.ember);
   const drifts = [
-    makeDrift({ seed: 81, count: 2600, min: [-7, -4.2, -9], max: [7, 4.2, -3], laps: [1, 0, 0], period: PERIOD, size: [0.006, 0.02], minPx: 2.2, color: dustCol, intensity: 0.35, twinkle: 0.5, wobble: 0.05 }, post, projY),
+    makeDrift({ seed: 81, count: 1100, min: [-7, -4.2, -9], max: [7, 4.2, -3], laps: [1, 0, 0], period: PERIOD, size: [0.006, 0.02], minPx: 2.2, color: dustCol, intensity: 0.35, twinkle: 0.5, wobble: 0.05 }, post, projY),
     makeDrift({ seed: 82, count: 1100, min: [-4.5, -2.6, -3], max: [4.5, 2.6, 0.5], laps: [-1, 0, 0], period: PERIOD, size: [0.005, 0.016], minPx: 2.4, color: dustCol, intensity: 0.5, twinkle: 0.6, wobble: 0.06 }, post, projY),
     makeDrift({ seed: 83, count: 420, min: [-3, -1.8, 0.5], max: [3, 1.8, 3.2], laps: [1, 0, 0], period: PERIOD, size: [0.004, 0.012], minPx: 2.6, color: dustCol, intensity: 0.6, twinkle: 0.6, wobble: 0.04, focus: dist, coc: 0.0035 }, post, projY),
-    makeDrift({ seed: 84, count: 26, min: [-2.2, -1.3, 2.6], max: [2.2, 1.3, 4.4], laps: [0, 1, 0], period: PERIOD, size: [0.01, 0.02], minPx: 3, color: dustCol, colorB: ember, intensity: 0.12, twinkle: 0.2, focus: dist, coc: 0.02, soft: 1 }, post, projY),
+    makeDrift({ seed: 84, count: 44, min: [-2.6, -1.6, 2.6], max: [2.6, 1.6, 5.0], laps: [0, 1, 0], period: PERIOD, size: [0.01, 0.02], minPx: 3, color: dustCol, colorB: ember, intensity: 0.14, twinkle: 0.2, focus: dist, coc: 0.02, soft: 1 }, post, projY),
     makeDrift({ seed: 85, count: 190, min: [-3.6, -2.4, -2.5], max: [3.6, 2.4, 2.0], laps: [0, 1, 0], period: PERIOD, size: [0.006, 0.016], minPx: 2.6, color: ember, intensity: 1.3, twinkle: 0.7, wobble: 0.08, focus: dist, coc: 0.0015 }, post, projY),
   ];
+  // a particle stream running vertically through the brain, and clusters drifting around it
+  drifts.push(
+    makeDrift({ seed: 86, count: 320, min: [-0.14, -2.6, -0.16], max: [0.14, 2.6, 0.16], laps: [0, 1, 0], period: PERIOD, size: [0.004, 0.012], minPx: 2.4, color: lin("#BFEFFF"), intensity: 0.9, twinkle: 0.5, wobble: 0.05 }, post, projY),
+    makeDrift({ seed: 87, count: 900, min: [-1.9, -1.2, -1.0], max: [1.9, 1.2, 1.0], laps: [1, 0, 0], period: PERIOD, size: [0.004, 0.014], minPx: 2.4, color: lin("#9FE6FF"), colorB: ember, intensity: 0.55, twinkle: 0.6, wobble: 0.12, focus: dist, coc: 0.0025 }, post, projY),
+  );
   drifts.forEach((d) => scene.add(d.points));
 
   return {
     render(frame) {
       const f = frame % PERIOD;
-      brain.rotation.y = -0.35 + (TAU * f) / PERIOD;
+      brain.rotation.y = (TAU * f) / PERIOD; // frame 150: back view, as in the reference
       tilt.updateMatrixWorld(true);
       common.uPhase.value = f / PERIOD;
       drifts.forEach((d) => d.set(f));
