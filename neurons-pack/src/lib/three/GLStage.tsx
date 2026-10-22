@@ -45,6 +45,8 @@ void main() {
 export const fullscreenTriangle = () => {
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2));
+  // 2D positions: give three.js the bounds instead of letting it misread them.
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 4);
   return g;
 };
 

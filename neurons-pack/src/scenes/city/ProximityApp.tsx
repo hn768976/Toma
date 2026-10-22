@@ -59,7 +59,9 @@ const makeBuild = (green: boolean) => (ctx: StageContext): Stage => {
   // Translucent radius disc with a soft edge, pulsing.
   const discMat = new THREE.RawShaderMaterial({
     glslVersion: THREE.GLSL3,
-    transparent: true,
+    // Opaque pass (blended, no depth write): drawn before the phone, so it
+    // can never wash over the screen.
+    transparent: false,
     depthTest: false,
     depthWrite: false,
     blending: THREE.CustomBlending,
@@ -102,7 +104,7 @@ void main() {
     new THREE.PlaneGeometry(PHONE.w * 2.2, PHONE.w * 1.1).rotateX(-Math.PI / 2),
     new THREE.RawShaderMaterial({
       glslVersion: THREE.GLSL3,
-      transparent: true,
+      transparent: false,
       depthTest: false,
       depthWrite: false,
       blending: THREE.CustomBlending,
@@ -136,6 +138,7 @@ void main() {
   const phone = makePhone(colors.phone, screenMat);
   if (!green) (screenMat as THREE.RawShaderMaterial).uniforms.uAspect.value = phone.screenSize[0] / phone.screenSize[1];
   phone.group.position.set(0, PHONE.h / 2, 0);
+  phone.group.traverse((o) => (o.renderOrder = 10));
   scene.add(phone.group);
 
   // Icons: mostly inside the disc, a few outside.
