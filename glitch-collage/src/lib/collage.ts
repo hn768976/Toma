@@ -109,7 +109,7 @@ const planShot = (rng: Rng): Shot => {
       x1: x + w / 2,
       y0: chance(rng, 0.7) ? -0.2 : range(rng, 0, 0.4),
       y1: 1.2,
-      bright: range(rng, 0.12, 0.22),
+      bright: i < 2 ? range(rng, 0.05, 0.1) : range(rng, 0.12, 0.22),
       holeThr: range(rng, 0.12, 0.24),
       rough: range(rng, 0.002, 0.006),
       soft: range(rng, 0.001, 0.003),
@@ -636,8 +636,8 @@ const drawHorizontalMarks = (ctx: CanvasRenderingContext2D, rng: Rng, p: Palette
     const x = range(rng, 0.05, 0.9) * U;
     const y = Math.round(range(rng, 0.03, 0.97) * V) + 0.5;
     const len = range(rng, 30, 200);
-    ctx.strokeStyle = rgba(p.ink, range(rng, 0.45, 0.8));
-    ctx.lineWidth = range(rng, 0.8, 1.4);
+    ctx.strokeStyle = rgba(p.ink, range(rng, 0.65, 0.9));
+    ctx.lineWidth = range(rng, 1.2, 2.4);
     if (chance(rng, 0.35)) ctx.setLineDash([range(rng, 2, 6), range(rng, 2, 6)]);
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -647,7 +647,7 @@ const drawHorizontalMarks = (ctx: CanvasRenderingContext2D, rng: Rng, p: Palette
   }
   const rows = irange(rng, 1, 3);
   for (let i = 0; i < rows; i++) {
-    const size = range(rng, 11, 22);
+    const size = range(rng, 14, 44);
     ctx.font = `${size}px ${MONO}`;
     ctx.textBaseline = "top";
     ctx.fillStyle = rgba(p.ink, range(rng, 0.45, 0.85));
@@ -699,7 +699,7 @@ const drawRedFeature = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p: 
     }
   };
   if (chance(rng, 0.6)) dashColumn((shot.cx + range(rng, -shot.pw * 0.4, shot.pw * 0.4)) * U, range(rng, 6, 10));
-  if (chance(rng, 0.5)) dashColumn(range(rng, 0.08, 0.2) * U, range(rng, 5, 9));
+  if (chance(rng, 0.55)) dashColumn(range(rng, 0.1, 0.15) * U, range(rng, 6, 10));
   if (chance(rng, 0.4)) {
     const size = range(rng, 22, 38);
     ctx.font = `${size}px ${MONO}`;
@@ -723,8 +723,8 @@ const drawPost = (
 ) => {
   // Left edge falls to black, broad vignette elsewhere
   const left = ctx.createLinearGradient(0, 0, U * 0.3, 0);
-  left.addColorStop(0, rgba(p.bgDeep, 0.8));
-  left.addColorStop(0.3, rgba(p.bgDeep, 0.4));
+  left.addColorStop(0, rgba(p.bgDeep, 0.95));
+  left.addColorStop(0.3, rgba(p.bgDeep, 0.6));
   left.addColorStop(1, rgba(p.bgDeep, 0));
   ctx.fillStyle = left;
   ctx.fillRect(0, 0, U, V);
