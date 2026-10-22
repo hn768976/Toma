@@ -198,7 +198,7 @@ const createScene = (info: StageInfo): SceneRuntime => {
       const p0 = ctrl(CELLS[l.a], CELLS[l.b], k / SEGS);
       const p1 = ctrl(CELLS[l.a], CELLS[l.b], (k + 1) / SEGS);
       arcs.setEnds(li * SEGS + k, ...p0, ...p1);
-      arcs.setColor(li * SEGS + k, 0.85, 0.92, 1, 0.26);
+      arcs.setColor(li * SEGS + k, 1, 0.95, 0.84, 0.34);
     }
   });
 

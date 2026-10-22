@@ -16,10 +16,17 @@ type P = { cloud: [number, number, number]; spread: [number, number, number]; at
 
 const rng = mulberry32(2601677);
 const PEOPLE: P[] = [];
+const CLUSTERS: [number, number, number][] = [[-9, 1, 0], [-1, -1.5, 2], [6, 3.5, -2], [11, -2, 1], [2, 4, 3]];
 for (let i = 0; i < N; i++) {
   // Final cloud: Gaussian, elongated (x), denser at the centre.
   const g = () => gauss(rng);
-  const cloud: [number, number, number] = [g() * 11, g() * 3.6, g() * 6];
+  // Even, organic spread (triangular) with a few local clusters around hubs.
+  const tri = () => rng() + rng() - 1;
+  let cloud: [number, number, number];
+  if (rng() < 0.45) {
+    const c = CLUSTERS[Math.floor(rng() * CLUSTERS.length)];
+    cloud = [c[0] + g() * 3, c[1] + g() * 1.8, c[2] + g() * 3];
+  } else cloud = [g() * 9 + tri() * 4, g() * 4.6, g() * 6];
   // Early, the crowd is loose: the same people spread out further.
   const spread: [number, number, number] = [cloud[0] * 1.35 + g() * 2, cloud[1] * 1.9 + g() * 1.5, cloud[2] * 1.4 + g() * 2];
   PEOPLE.push({ cloud, spread, at: 0, female: rng() < 0.45, rot: (rng() - 0.5) * 0.6 });
@@ -55,10 +62,12 @@ const LINKS: L[] = [];
     let a = Math.floor(rng() * N);
     for (let tries = 0; tries < 20 && PEOPLE[a].at > t; tries++) a = Math.floor(rng() * N);
     if (PEOPLE[a].at > t) continue;
+    // Every link ends at someone already there.
+    const present = (c: number) => PEOPLE[c].at <= t;
     const k = 5 + Math.floor(rng() * 10);
     for (let j = 0; j < k; j++) {
       let b = Math.floor(rng() * N);
-      // Mostly nearby targets, some long links.
+      for (let tries = 0; tries < 30 && !present(b); tries++) b = Math.floor(rng() * N);
       // Mostly nearby targets; the rest are long links fanning out to outlying people.
       if (rng() < 0.55) {
         let best = b;
@@ -68,14 +77,14 @@ const LINKS: L[] = [];
           const pa = PEOPLE[a].cloud;
           const pc = PEOPLE[c].cloud;
           const d = (pa[0] - pc[0]) ** 2 + (pa[1] - pc[1]) ** 2 + (pa[2] - pc[2]) ** 2;
-          if (c !== a && d < bd) {
+          if (c !== a && present(c) && d < bd) {
             bd = d;
             best = c;
           }
         }
         b = best;
       }
-      if (b === a) continue;
+      if (b === a || !present(b)) continue;
       LINKS.push({ a, b, at: t + rng() * 0.25, dur: 0.25 + rng() * 0.3 });
     }
   }
@@ -89,7 +98,7 @@ const makeCreate = (dark: boolean) => (info: StageInfo): SceneRuntime => {
     side: dark ? COLORS.whiteSide : COLORS.redSide,
   });
   const lines = new Lines(LINKS.length, info, { width: 0.75 });
-  const lc = dark ? rgb(COLORS.greyLine) : [0.62, 0.63, 0.62];
+  const lc = dark ? rgb(COLORS.greyLine) : [0.5, 0.5, 0.5];
   LINKS.forEach((_, i) => lines.setColor(i, lc[0], lc[1], lc[2], dark ? 0.5 : 0.6));
   scene.add(lines.mesh, people.group);
   const pos = new Float32Array(N * 3);
@@ -100,8 +109,8 @@ const makeCreate = (dark: boolean) => (info: StageInfo): SceneRuntime => {
       const t = frame / FPS;
       // Gathering 9-18s, then a very slight drift in the hold.
       const g = smooth(remap(t, 8.5, 18));
-      const drift = remap(t, 18, 20) * 0.04;
-      const az = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [9, 4], [18, 28], [20, 29.5]]));
+      const drift = remap(t, 18, 20) * 0.006;
+      const az = THREE.MathUtils.degToRad(keyframes(t, [[0, 0], [9, 4], [18, 28], [20, 28.3]]));
       for (let i = 0; i < N; i++) {
         const p = PEOPLE[i];
         const x = lerp(p.spread[0], p.cloud[0], g) * (1 - drift);
@@ -120,7 +129,7 @@ const makeCreate = (dark: boolean) => (info: StageInfo): SceneRuntime => {
       });
       people.commit();
       lines.commit();
-      const dist = keyframes(t, [[0, 16], [3, 18], [9, 34], [14, 60], [18, 68], [20, 69]]);
+      const dist = keyframes(t, [[0, 16], [3, 18], [9, 30], [14, 46], [18, 56], [20, 56.2]]);
       const elev = THREE.MathUtils.degToRad(keyframes(t, [[0, 2], [18, 12], [20, 12]]));
       camera.position.set(Math.sin(az) * Math.cos(elev) * dist, Math.sin(elev) * dist, Math.cos(az) * Math.cos(elev) * dist);
       camera.lookAt(0, 0, 0);

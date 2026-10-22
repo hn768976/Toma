@@ -34,8 +34,12 @@ for poly in land:
                 pts.append(project(lon + off + shift, lat))
             d.polygon(pts, fill=255 if k == 0 else 0)
 landm = np.array(mask) > 127
-# Icons stand on their sample point and are ~10 px tall: allow that much around the coast.
-near = np.array(mask.filter(ImageFilter.MaxFilter(25))) > 127
+# Icons stand on their sample point and extend upwards (~16 px tall at 720p, plus a
+# tight glow on the cyan map): allow 18 px above the land and 6 px around it.
+base = np.array(mask.filter(ImageFilter.MaxFilter(13))) > 127
+near = base.copy()
+for dy in range(1, 19):
+    near[:-dy] |= base[dy:]
 
 raw = subprocess.check_output(["ffmpeg", "-v", "error", "-sseof", "-0.5", "-i", path, "-frames:v", "1",
                                "-f", "rawvideo", "-pix_fmt", "rgb24", "-"])
@@ -62,3 +66,7 @@ for args in [("Australia", 113, 154, -39, -11), ("Greenland", -73, -12, 60, 83),
              ("Eurasia", -10, 180, 10, 77)]:
     ok &= region(*args) > 0.5
 print("MAP CHECK", "PASS" if ok else "FAIL")
+if len(sys.argv) > 3:
+    vis = img.astype(np.uint8).copy()
+    vis[ocean] = [0, 160, 255]
+    Image.fromarray(vis).save(sys.argv[3])

@@ -29,7 +29,7 @@ const buildField = (seed: number) => {
     const z = soft() * RZ;
     const y = soft() * HY;
     // Mostly centre-out, but newcomers land all over the view, sparse then dense.
-    const d = 0.25 * Math.max(Math.hypot(x / RX, z / RZ), Math.abs(y) / HY) + 0.75 * rng();
+    const d = 0.5 * Math.max(Math.hypot(x / RX, z / RZ), Math.abs(y) / HY) + 0.5 * rng();
         // Some figures are turned nearly edge-on, which shows their extruded depth.
     const rot = rng() < 0.3 ? (rng() < 0.5 ? -1 : 1) * (1.15 + rng() * 0.35) : (rng() - 0.5) * 1.0;
     raw.push({ x, y, z, person, at: 0, rot, female: rng() < 0.4, d });
@@ -51,7 +51,7 @@ const buildField = (seed: number) => {
     const f = (i - 3) / (total - 4);
     // invert f = easeIn(u, 2) -> u = sqrt(f)
     // Ease-in count: sparse for a long time, filling quickly towards 13s.
-    nodes[i].at = 2 + 11 * Math.pow(f, 1 / 4.2) * 0.985;
+    nodes[i].at = 2 + 11 * Math.pow(f, 1 / 5.5) * 0.985;
   }
   const links: Link[] = [
     { from: 0, to: 1, at: 0.3 },
@@ -60,7 +60,7 @@ const buildField = (seed: number) => {
   ];
   for (let i = 4; i < total; i++) {
     const n = nodes[i];
-    const k = rng() < 0.45 ? 2 : 1;
+    const k = rng() < 0.25 ? 2 : 1;
     const best: [number, number][] = [];
     for (let j = 0; j < i; j++) {
       const m = nodes[j];

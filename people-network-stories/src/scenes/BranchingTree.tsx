@@ -21,6 +21,8 @@ type Branch = {
   start: number; // seconds
   dur: number;
   leaf: boolean;
+  // Pale cross-link between neighbouring nodes (the lattice in the open fan).
+  cross?: boolean;
 };
 
 const TRUNK_TOP = 0.55;
@@ -50,12 +52,13 @@ const buildTree = (targetTips: number) => {
   const p3 = clamp01(meanK - 2);
 
   type Node = { idx: number; a0: number; a1: number; b0: number; b1: number; pos: [number, number, number] };
-  let frontier: Node[] = [{ idx: 0, a0: -1.42, a1: 1.42, b0: -1.0, b1: 1.0, pos: O }];
+  let frontier: Node[] = [{ idx: 0, a0: -1.5, a1: 1.5, b0: -1.0, b1: 1.0, pos: O }];
   for (let lvl = 1; lvl < LEVELS; lvl++) {
     const next: Node[] = [];
     for (const n of frontier) {
       // First split is a clear 2-way fork, like the reference.
-      const k = lvl === 1 ? 2 : rng() < p3 ? 3 : 2;
+      // The first split is three-way, so there is a central stem up to the top of the dome.
+      const k = lvl === 1 ? 3 : rng() < p3 ? 3 : 2;
       const wa = n.a1 - n.a0;
       const wb = n.b1 - n.b0;
       const splitA = wa * 1.0 >= wb * 0.9;
@@ -81,12 +84,12 @@ const buildTree = (targetTips: number) => {
         // Fan direction: a sweeps across the front plane (beyond +-90deg at the sides,
         // so the rim droops), b tilts towards/away from the camera.
         // Early levels stay close to vertical, so the fan fills down to the fork.
-        const squeeze = lerp(0.22, 1, Math.pow(lvl / (LEVELS - 1), 1.1));
+        const squeeze = lerp(0.32, 1, Math.pow(lvl / (LEVELS - 1), 1.1));
         const ae = ac * squeeze;
         const be = bc * 0.55 * squeeze;
         // Superellipse envelope: a rounded dome with steep sides (mushroom cap).
         const se = (v: number) => Math.sign(v) * Math.pow(Math.abs(v), 0.6);
-        const dx = se(Math.sin(ae)) * Math.cos(be);
+        const dx = Math.sin(ae) * Math.cos(be);
         const dy = se(Math.cos(ae)) * Math.cos(be);
         const dz = Math.sin(be);
         // Tips end at varied radii, so the crown is a filled fan rather than a rim.
@@ -129,6 +132,27 @@ const buildTree = (targetTips: number) => {
       }
     }
     frontier = next;
+    // Cross-links between neighbouring nodes of the mid levels: a fine lattice in the fan.
+    if (lvl >= 3 && lvl <= 6) {
+      const sorted = next.slice().sort((p, q) => p.pos[0] - q.pos[0]);
+      for (let n = 0; n + 1 < sorted.length; n++) {
+        const A = sorted[n];
+        const B = sorted[n + 1];
+        if (rng() < 0.45) continue;
+        const a = branches[A.idx];
+        const b = branches[B.idx];
+        branches.push({
+          parent: A.idx,
+          level: lvl,
+          from: A.pos,
+          to: B.pos,
+          start: Math.max(a.start + a.dur, b.start + b.dur) + rng() * 2,
+          dur: 0.8,
+          leaf: false,
+          cross: true,
+        });
+      }
+    }
   }
   return branches;
 };
@@ -163,12 +187,14 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
     const k = smooth(remap(t, 0.35, 0.9));
     return [lerp(pale[0], ink[0] * 0.8, k), lerp(pale[1], ink[1] * 0.8, k), lerp(pale[2], ink[2] * 0.8, k), lvl === 0 ? 0.85 : lerp(0.75, 0.62, t)];
   };
-  const tipInk = dark ? ink : rgb(COLORS.redSide);
+  const tipInk = dark ? ink : rgb(COLORS.redSide).map((v) => v * 0.85);
 
+  const baseAlpha = new Float32Array(BRANCHES.length);
   BRANCHES.forEach((b, i) => {
     lines.setEnds(i, ...b.from, ...b.to);
-    const c = levelColor(b.level);
+    const c = b.cross ? levelColor(1).map((v, k) => (k === 3 ? (dark ? 0.35 : 0.55) : v)) : levelColor(b.level);
     lines.setColor(i, c[0], c[1], c[2], c[3]);
+    baseAlpha[i] = c[3];
     // Trunk stays a thin single line; branches get thinner towards the tips.
     lines.w[i] = b.level === 0 ? 1.1 : lerp(0.95, 0.5, Math.min(1, b.level / (LEVELS - 1)));
   });
@@ -185,9 +211,8 @@ const makeCreate = (variant: Variant) => (info: StageInfo): SceneRuntime => {
         const b = BRANCHES[i];
         const p = smooth(clamp01((t - b.start) / b.dur));
         lines.setRange(i, 0, p);
-        const c = levelColor(b.level);
-        lines.col[i * 4 + 3] = c[3] * (1 + 0.35 * thick);
-        if (p <= 0) continue;
+        lines.col[i * 4 + 3] = baseAlpha[i] * (1 + 0.35 * thick);
+        if (p <= 0 || b.cross) continue;
         const x = lerp(b.from[0], b.to[0], p);
         const y = lerp(b.from[1], b.to[1], p);
         const z = lerp(b.from[2], b.to[2], p);

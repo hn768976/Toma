@@ -7,8 +7,8 @@ mkdir -p out/compare
 while read name ref t len; do
   rlen=$(ffprobe -v error -show_entries format=duration -of csv=p=0 refs/$ref.mp4)
   rt=$(echo "scale=3; $t * $rlen / $len" | bc)
-  ffmpeg -v error -y -ss $rt -i refs/$ref.mp4 -frames:v 1 out/compare/${name}_ref.png
-  ffmpeg -v error -y -ss $t -i out/previews/$name.mp4 -frames:v 1 -vf scale=596:336:flags=lanczos out/compare/${name}_ours.png
+  ffmpeg -nostdin -v error -y -ss $rt -i refs/$ref.mp4 -frames:v 1 out/compare/${name}_ref.png
+  ffmpeg -nostdin -v error -y -ss $t -i out/previews/$name.mp4 -frames:v 1 -vf scale=596:336:flags=lanczos out/compare/${name}_ours.png
 done <<LIST
 BranchingTree_Red 2602325 26 30
 PeopleLinkUp_Flip 2608517 10 30

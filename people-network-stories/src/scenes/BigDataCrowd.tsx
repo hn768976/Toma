@@ -43,7 +43,7 @@ const CROWD: Person[] = [];
   const near: [number, number][] = [[-2.3, 12.4], [1.4, 10.6], [3.3, 11.8], [-4.6, 9.8], [5.6, 7.5], [-1.0, 6.2], [2.4, 3.5], [-3.6, 2.2]];
   for (const [x, z] of near) CROWD.push({ x, z, h: 1.8, rot: (rng() - 0.5) * 0.4, female: rng() < 0.3 });
   while (CROWD.length < COUNTS.bigDataCrowdPeople) {
-    const z = 4 - Math.pow(rng(), 0.8) * 250;
+    const z = 4 - Math.pow(rng(), 0.85) * 330;
     const x = (rng() * 2 - 1) * (70 + (4 - z) * 0.9);
     // Keep the camera's opening corridor clear, and the foreground sparser than the
     // distance, so the eye-level horizon is a thin band rather than a wall.
@@ -204,12 +204,12 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
     start[i] = 8 + Math.pow(r(), 1.3) * 2.6;
     dur[i] = 1.8 + r() * 0.8;
   }
-  const psize = withTitle ? 0.5 : 0.3;
+  const psize = withTitle ? 0.62 : 0.3;
   // Varied particle sizes: a rough, stippled fill.
   const pScale = Float32Array.from({ length: NP }, () => 0.7 + r() * r() * 1.4);
 
   // Web: lines from the title down into the crowd, and between title particles.
-  const WEB = withTitle ? 1500 : 1300;
+  const WEB = withTitle ? 800 : 800;
   const web = new Lines(WEB, info, { width: 0.75, fog: { near: 140, far: 300 } });
   const webAt = new Float32Array(WEB);
   for (let i = 0; i < WEB; i++) {
@@ -224,7 +224,7 @@ const makeCreate = (withTitle: boolean) => (info: StageInfo): SceneRuntime => {
       b = targets[Math.floor(r() * NP)].clone().add(new THREE.Vector3(gauss(r) * 8, -6 - r() * 14, gauss(r) * 8));
     }
     web.setEnds(i, a.x, a.y, a.z, b.x, b.y, b.z);
-    web.setColor(i, 0.3, 0.3, 0.3, 0.35 + r() * 0.25);
+    web.setColor(i, 0.35, 0.35, 0.35, 0.3 + r() * 0.25);
     webAt[i] = 10 + r() * 4.5;
   }
 

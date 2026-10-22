@@ -60,7 +60,7 @@ const STREAKS: Streak[] = (() => {
     while (acc >= 1) {
       acc -= 1;
       // Late streaks gather towards the centre, where the flash blooms.
-      const focus = clamp01(remap(t, 13, 19));
+      const focus = 0.7 * clamp01(remap(t, 16.5, 19.2));
       const ux = rng();
       const uy = rng();
       const cx = Math.min(GX1, Math.max(GX0, (1 - focus) * (GX0 + ux * (GX1 - GX0)) + focus * (1920 + gauss(rng) * 900)));
@@ -70,7 +70,8 @@ const STREAKS: Streak[] = (() => {
         life: 0.7 + rng() * 0.9 - focus * 0.25,
         x: cx,
         y: cy,
-        ang: rng() * Math.PI * 2,
+        // Mostly shallow angles, as in the reference.
+        ang: (rng() < 0.5 ? 0 : Math.PI) + (rng() - 0.5) * (rng() < 0.7 ? 1.0 : 3.0),
         speed: 120 + rng() * 280 + focus * 200,
         len: 380 + rng() * 420,
         bright: 0.16 + rng() * 0.2,
@@ -89,8 +90,8 @@ const streakTexture = () => {
   const img = ctx.createImageData(256, 32);
   for (let y = 0; y < 32; y++) {
     const dy = (y + 0.5 - 16) / 16;
-    const core = Math.exp(-dy * dy * 40);
-    const halo = Math.exp(-dy * dy * 7) * 0.3;
+    const core = Math.exp(-dy * dy * 14);
+    const halo = Math.exp(-dy * dy * 3.5) * 0.45;
     for (let x = 0; x < 256; x++) {
       const u = (x + 0.5) / 256;
       const taper = Math.min(1, u / 0.35) * Math.min(1, (1 - u) / 0.12);
@@ -158,7 +159,7 @@ const setup: PixiSetup = (world: Container, info: PixiInfo) => {
     d.anchor.set(0.5);
     d.width = d.height = 4.2 * k * 1.0;
     d.tint = COLORS.cyan;
-    d.alpha = 0.15 * 2.2;
+    d.alpha = 0.15 * 3;
     d.x = x;
     d.y = y + iconPx * 0.08;
     dotLayer.addChild(d);
@@ -212,7 +213,9 @@ const setup: PixiSetup = (world: Container, info: PixiInfo) => {
       s.rotation = st.ang;
       s.width = st.len * k;
       s.height = 72 * k;
-      s.alpha = st.bright * env * clear;
+      // Streaks stay inside the grid: they fade out as they cross its edge.
+      const inside = Math.min(1, Math.max(0, Math.min(s.x / k - GX0, GX1 - s.x / k, s.y / k - GY0, GY1 - s.y / k) / 120 + 0.6));
+      s.alpha = st.bright * env * clear * inside;
     }
     for (let i = n; i < MAX_STREAKS; i++) streaks[i].visible = false;
     // Central bloom to near-white at 19s, gone by 20s.

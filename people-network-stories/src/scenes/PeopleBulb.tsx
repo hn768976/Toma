@@ -105,7 +105,7 @@ for (let r = 0; r < ROWS; r++) {
 
 // ----- Curved light streaks drifting through the inside --------------------------------
 type Streak = { t0: number; life: number; axis: THREE.Vector3; r: number; c: THREE.Vector3; a0: number; speed: number; len: number; b: number };
-const streakRate = (t: number) => (t < 1.5 ? 0 : t < 8 ? 0.7 : t < 14 ? lerp(0.7, 60, remap(t, 8, 14)) : t < 20.5 ? 60 : 0);
+const streakRate = (t: number) => (t < 1.5 ? 0 : t < 8 ? 0.7 : t < 14 ? lerp(0.7, 130, remap(t, 8, 14)) : t < 20.5 ? 130 : 0);
 const STREAKS: Streak[] = [];
 {
   const r2 = mulberry32(61921);
@@ -115,23 +115,27 @@ const STREAKS: Streak[] = [];
     acc += streakRate(t) * dt;
     while (acc >= 1) {
       acc -= 1;
+      // Mostly short curves hugging the glass (globe and neck), some loops inside.
       const axis = new THREE.Vector3(r2() - 0.5, r2() - 0.5, r2() - 0.5).normalize();
+      const surface = r2() < 0.8;
+      const cy = surface ? -1.9 + r2() * 2.1 : -0.15 + (r2() - 0.5) * 0.5;
+      const rad = cy > -0.75 ? Math.sqrt(Math.max(0.2, 1 - cy * cy)) : 0.5;
       STREAKS.push({
         t0: t,
         life: 1.6 + r2() * 1.6,
         axis,
-        r: 0.6 + r2() * 0.38,
-        c: new THREE.Vector3((r2() - 0.5) * 0.3, -0.15 + (r2() - 0.5) * 0.5, (r2() - 0.5) * 0.3),
+        r: surface ? rad * (0.9 + r2() * 0.1) : 0.6 + r2() * 0.38,
+        c: surface ? new THREE.Vector3(0, cy, 0) : new THREE.Vector3((r2() - 0.5) * 0.3, cy, (r2() - 0.5) * 0.3),
         a0: r2() * Math.PI * 2,
         speed: (1.3 + r2() * 1.4) * (r2() < 0.5 ? -1 : 1),
-        len: 0.6 + r2() * 0.9,
-        b: 0.1 + r2() * 0.14,
+        len: surface ? 0.35 + r2() * 0.5 : 0.6 + r2() * 0.9,
+        b: 0.12 + r2() * 0.16,
       });
     }
   }
 }
 const SEGS = 14;
-const MAX_STREAKS = 420;
+const MAX_STREAKS = 800;
 
 const glow: GlowOptions = { near: 0.7, far: 0.35 };
 
@@ -157,7 +161,7 @@ const createScene = (info: StageInfo): SceneRuntime => {
     update: (frame) => {
       const t = frame / FPS;
       // Camera: inside looking at the back wall, then pulling back through the surface.
-      const camZ = keyframes(t, [[0, 0.32], [8, 0.42], [14, 3.7], [18, 4.3], [22, 5.6]]);
+      const camZ = keyframes(t, [[0, 0.32], [8, 0.42], [14, 3.7], [18, 4.6], [22, 5.6]]);
       const lookY = keyframes(t, [[0, 0.05], [8, 0.0], [14, -0.35], [18, -0.5], [22, -0.62]]);
       camera.position.set(0, lookY + 0.02, camZ);
       camera.lookAt(0, lookY, camZ - 1);
