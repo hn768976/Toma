@@ -98,17 +98,20 @@ vec3 backdrop(vec2 uv) {
   float aspect = 1192.0 / 672.0;
   // Horizontal band of light through the middle of the frame.
   float band = exp(-pow((uv.y - 0.5) / 0.4, 2.0));
+  band = max(band, 0.55 * smoothstep(0.6, 1.0, uv.y));
   vec3 col = mix(uBgDark, uBgMid, band * 0.55);
   // Darker vertical column left of centre, darker right edge.
   col = mix(col, uBgDark, 0.55 * exp(-pow((uv.x - 0.34) / 0.13, 2.0)));
   // Large soft backlight glow right of centre, elongated vertically and
   // leaning toward the top, drifting very slightly.
-  // The light source drifts toward the hero cell as the scene turns.
+  // The backlight drifts in behind the hero cell and tightens as the scene
+  // turns, so the frame edges darken over the clip.
   float k = smoothstep(0.0, 9.0, uTime);
-  vec2 gc = vec2(mix(0.78, 0.64, k), mix(0.42, 0.47, k));
+  vec2 gc = vec2(mix(0.78, 0.55, k), mix(0.4, 0.46, k));
+  float gs = mix(1.0, 0.68, k);
   vec2 d = (uv - gc) * vec2(aspect, 1.0);
   d = mat2(0.94, 0.34, -0.34, 0.94) * d;
-  d *= vec2(1.0, 0.72);
+  d *= vec2(1.0, 0.72) / gs;
   col = mix(col, uBgMid, 0.7 * exp(-dot(d, d) / 0.24));
   col = mix(col, uBgGlow, 0.97 * exp(-dot(d, d) / 0.075));
   // Fall off toward the right edge.
@@ -203,6 +206,7 @@ uniform vec3 uRim;
 uniform vec3 uSeam;
 uniform float uHaze;
 uniform float uBump;
+uniform float uSoft;
 varying vec3 vObj;
 varying vec3 vNormalV;
 varying vec2 vWorld;
@@ -211,7 +215,7 @@ varying vec2 vWorld;
 float fineHeight(vec3 p) {
   vec3 q = uSpin * p + uSeed * 3.17;
   vec2 w = worley(q * 7.5 + 11.0);
-  return (1.0 - w.x * w.x) * 0.45 + snoise(q * 18.0) * 0.08;
+  return (1.0 - w.x * w.x) * 0.35 + snoise(q * 12.0) * 0.04;
 }
 
 void main() {
@@ -237,13 +241,14 @@ void main() {
   vec3 col = mix(uCore, uBody, (0.02 + 0.9 * dif * dif * (0.3 + 0.7 * cav)) * (0.5 + 0.5 * smoothstep(0.0, 0.7, fres)));
   col += uSeam * back * 0.35;
   // Light scattering through the lumps towards the limb.
-  col = mix(col, uSeam, smoothstep(0.45, 1.0, fres) * (0.2 + 0.4 * cav));
+  col = mix(col, uSeam, smoothstep(0.45, 1.0, fres) * (0.2 + 0.25 * cav));
   // Backlit rim.
   col = mix(col, uRim, clamp(pow(fres, 2.1) * 1.3, 0.0, 1.0));
   col += uRim * pow(fres, 8.0) * 0.5;
   vec3 bg = backdrop(worldToUv(vWorld));
   col = mix(col, bg, uHaze);
-  gl_FragColor = vec4(col, 1.0);
+  float alpha = smoothstep(0.0, uSoft, ndv);
+  gl_FragColor = vec4(col, alpha);
   #include <colorspace_fragment>
 }
 `;
@@ -298,7 +303,7 @@ void main() {
   // Soft translucent fill, brightest just outside the nucleus.
   float fill = smoothstep(1.0, uCoreRatio, rho) * 0.12;
   vec3 bg = backdrop(worldToUv(vWorld));
-  float aLine = line * (0.1 + 0.4 * vis) * uOpacity;
+  float aLine = line * (0.04 + 0.22 * vis) * uOpacity;
   float aShadow = shadow * 0.16 * vis * uOpacity;
   float aFill = fill * uOpacity;
   float outA = clamp(aLine + aShadow + aFill, 0.0, 1.0);

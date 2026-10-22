@@ -72,6 +72,7 @@ const Cell: React.FC<{
       new ShaderMaterial({
         vertexShader: cellVertex,
         fragmentShader: cellFragment,
+        transparent: true,
         uniforms: {
           ...backdropUniforms(palette),
           uCore: { value: new Color(palette.core) },
@@ -81,8 +82,9 @@ const Cell: React.FC<{
           uHaze: { value: cell.haze },
           uSeed: { value: cell.seed },
           uSpin: { value: new Matrix3() },
-          uAmp: { value: 0.13 },
-          uBump: { value: 0.025 },
+          uAmp: { value: 0.1 },
+          uBump: { value: 0.014 },
+          uSoft: { value: cell.soft },
         },
       }),
     [cell, palette],
@@ -134,18 +136,18 @@ const Cell: React.FC<{
 
   return (
     <group position={[x, y, z]}>
-      <mesh geometry={geometry} material={body} scale={r} renderOrder={cell.depth * 3} />
+      <mesh geometry={geometry} material={body} scale={r} renderOrder={cell.depth * 3 + 1} />
       <mesh
         geometry={smoothGeometry}
         material={halo}
         scale={r * 1.07}
-        renderOrder={cell.depth * 3 + 1}
+        renderOrder={cell.depth * 3 + 2}
       />
       <mesh
         material={membrane}
         scale={membraneScale}
         position={[0, 0, -r * 1.2]}
-        renderOrder={cell.depth * 3 + 2}
+        renderOrder={cell.depth * 3}
       >
         <planeGeometry args={[2.2, 2.2]} />
       </mesh>

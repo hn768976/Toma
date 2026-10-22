@@ -13,26 +13,28 @@ export type CellDef = {
   membrane: number;
   // Haze toward the backdrop colour (distant cells look softer/lighter).
   haze: number;
+  // Silhouette softness, a cheap stand-in for depth of field on distant cells.
+  soft: number;
   seed: number;
 };
 
 export const CELLS: CellDef[] = [
   // Large cell top-left, drifting up-left and out of frame.
-  { id: "A", keys: [[288, 44, 128], [225, -20, 155], [130, -80, 165], [10, -150, 175]], depth: 9, membrane: 1.45, haze: 0.0, seed: 1.7 },
+  { id: "A", keys: [[288, 44, 128], [225, -20, 155], [130, -80, 165], [10, -150, 175]], depth: 9, membrane: 1.45, haze: 0.0, soft: 0.08, seed: 1.7 },
   // Large cell entering from the bottom-right corner.
-  { id: "G", keys: [[1215, 665, 120], [1135, 640, 128], [1090, 620, 145], [1030, 610, 158]], depth: 8, membrane: 1.4, haze: 0.0, seed: 4.2 },
+  { id: "G", keys: [[1215, 665, 120], [1135, 640, 128], [1090, 620, 145], [1030, 610, 158]], depth: 8, membrane: 1.4, haze: 0.0, soft: 0.08, seed: 4.2 },
   // Hero cell, centre of frame.
-  { id: "C", keys: [[605, 345, 112], [602, 345, 110], [600, 352, 109], [594, 356, 112]], depth: 7, membrane: 1.62, haze: 0.0, seed: 2.9 },
+  { id: "C", keys: [[605, 345, 112], [602, 345, 110], [600, 352, 109], [594, 356, 112]], depth: 7, membrane: 1.62, haze: 0.0, soft: 0.05, seed: 2.9 },
   // Left cell.
-  { id: "B", keys: [[237, 415, 95], [226, 442, 91], [212, 467, 88], [196, 488, 90]], depth: 6, membrane: 1.5, haze: 0.0, seed: 7.3 },
+  { id: "B", keys: [[237, 415, 95], [226, 442, 91], [212, 467, 88], [196, 488, 90]], depth: 6, membrane: 1.5, haze: 0.0, soft: 0.06, seed: 7.3 },
   // Right cell, rising.
-  { id: "D", keys: [[925, 380, 62], [928, 333, 63], [934, 286, 66], [941, 241, 71]], depth: 5, membrane: 1.65, haze: 0.02, seed: 5.5 },
+  { id: "D", keys: [[925, 380, 62], [928, 333, 63], [934, 286, 66], [941, 241, 71]], depth: 5, membrane: 1.65, haze: 0.02, soft: 0.14, seed: 5.5 },
   // Small cell, lower middle, sinking down-left.
-  { id: "F", keys: [[800, 548, 46], [735, 580, 42], [678, 615, 39], [627, 640, 36]], depth: 4, membrane: 1.55, haze: 0.03, seed: 9.1 },
+  { id: "F", keys: [[800, 548, 46], [735, 580, 42], [678, 615, 39], [627, 640, 36]], depth: 4, membrane: 1.55, haze: 0.08, soft: 0.3, seed: 9.1 },
   // Small cell top-right, drifting to the corner.
-  { id: "E", keys: [[992, 145, 36], [1030, 128, 42], [1073, 105, 46], [1126, 78, 50]], depth: 3, membrane: 1.6, haze: 0.04, seed: 3.3 },
+  { id: "E", keys: [[992, 145, 36], [1030, 128, 42], [1073, 105, 46], [1126, 78, 50]], depth: 3, membrane: 1.6, haze: 0.08, soft: 0.3, seed: 3.3 },
   // Small cell descending from the top edge.
-  { id: "H", keys: [[500, -80, 30], [425, -5, 42], [355, 75, 55], [308, 162, 56]], depth: 2, membrane: 1.55, haze: 0.03, seed: 6.6 },
+  { id: "H", keys: [[500, -80, 30], [425, -5, 42], [355, 75, 55], [308, 162, 56]], depth: 2, membrane: 1.55, haze: 0.03, soft: 0.22, seed: 6.6 },
 ];
 
 const KEY_TIMES = [0, 3, 6, 9];
