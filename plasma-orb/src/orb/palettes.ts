@@ -29,9 +29,9 @@ export const SOLAR_GOLD: OrbPalette = {
   bgGlow: "#3d2205",
   rays: "#ffc04a",
   core: "#fff6d2",
-  blue: "#ffbe3a",
-  violet: "#ff8a1c",
-  magenta: "#e8502a",
+  blue: "#f0a62a",
+  violet: "#b8520e",
+  magenta: "#a62c18",
   flare: "#fff0c8",
-  haze: "#8a4a10",
+  haze: "#4a2406",
 };
