@@ -1,0 +1,44 @@
+{
+  "name": "motion-recreations",
+  "version": "1.0.0",
+  "description": "Two 4K Remotion compositions (dot grid + vortex field), each with a reference-matched and an alternative version",
+  "repository": {},
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.537",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.537"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.537",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "10.12.0",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "render:c1v1": "remotion render C1-V1-DotGrid out/C1-V1-DotGrid-1080p.mp4 --scale=0.5",
+    "render:c1v1:4k": "remotion render C1-V1-DotGrid out/C1-V1-DotGrid-4K.mp4",
+    "render:c1v2": "remotion render C1-V2-DotGrid-Midnight out/C1-V2-DotGrid-Midnight-1080p.mp4 --scale=0.5",
+    "render:c1v2:4k": "remotion render C1-V2-DotGrid-Midnight out/C1-V2-DotGrid-Midnight-4K.mp4",
+    "render:c2v1": "remotion render C2-V1-VortexField out/C2-V1-VortexField-1080p.mp4 --scale=0.5",
+    "render:c2v1:4k": "remotion render C2-V1-VortexField out/C2-V1-VortexField-4K.mp4",
+    "render:c2v2": "remotion render C2-V2-VortexField-Flyover out/C2-V2-VortexField-Flyover-1080p.mp4 --scale=0.5",
+    "render:c2v2:4k": "remotion render C2-V2-VortexField-Flyover out/C2-V2-VortexField-Flyover-4K.mp4",
+    "render:all": "npm run render:c1v1 && npm run render:c1v2 && npm run render:c2v1 && npm run render:c2v2",
+    "render:all:4k": "npm run render:c1v1:4k && npm run render:c1v2:4k && npm run render:c2v1:4k && npm run render:c2v2:4k"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}
