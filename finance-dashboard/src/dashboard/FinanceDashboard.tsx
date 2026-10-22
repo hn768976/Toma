@@ -88,14 +88,21 @@ const fragmentShader = /* glsl */ `
     dots *= dotMask;
 
     vec3 col = bgColor;
-    col += gridColor * (lines * 0.42 + dots * 0.55) * fade;
+    col += gridColor * (lines * 0.3 + dots * 0.75) * fade;
     col += gridColor * 0.06 * (1.0 - fade);
 
     vec2 uv = vec2(bu.x / (boardHalf.x * 2.0), 1.0 - bu.y / (boardHalf.y * 2.0));
     float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
     vec4 tex = texture2D(map, uv, bias) * inside;
-    vec3 glowA = texture2D(map, uv, bias + 3.0).rgb * inside;
-    vec3 glowB = texture2D(map, uv, bias + 5.0).rgb * inside;
+    // Bloom from coarse mips; fade it out softly past the board edge so the
+    // glow never shows a hard border.
+    vec2 outside = max(-uv, uv - 1.0);
+    float glowMask = 1.0 - smoothstep(0.0, 0.35, max(outside.x, outside.y));
+    vec2 uvc = clamp(uv, 0.0, 1.0);
+    // Fixed bloom radii (the DOF bias would push these into blocky mips).
+    float gBias = min(bias, 1.0);
+    vec3 glowA = texture2D(map, uvc, gBias + 3.0).rgb * glowMask;
+    vec3 glowB = texture2D(map, uvc, gBias + 4.5).rgb * glowMask;
     col = col * (1.0 - tex.a) + tex.rgb;
 
     // Screen-space light pool towards the upper right, as if the board were
@@ -103,11 +110,14 @@ const fragmentShader = /* glsl */ `
     vec2 sp = gl_FragCoord.xy / resolution;
     vec2 d = (sp - vec2(0.82, 0.92)) / vec2(0.62, 0.55);
     float light = exp(-dot(d, d));
+    // Secondary, cooler glow pooling in the lower left.
+    vec2 d2 = (sp - vec2(0.08, 0.1)) / vec2(0.55, 0.5);
+    float fill = exp(-dot(d2, d2));
 
     col *= mix(0.85, 1.3, light);
-    col += glowA * 0.45 + glowB * 0.4;
-    col += lightColor * light * 0.8;
-    col = mix(shadeColor, col, 0.5 + 0.5 * smoothstep(0.0, 0.5, light + 0.2));
+    col += glowA * 0.55 + glowB * 0.45;
+    col += lightColor * light * 0.8 + lightColor * fill * 0.45;
+    col = mix(shadeColor, col, 0.5 + 0.5 * smoothstep(0.0, 0.5, light + fill + 0.2));
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -143,7 +153,7 @@ const Board: React.FC<FinanceDashboardProps> = ({ palette, camera }) => {
           map: { value: texture },
           camPos: { value: new THREE.Vector3() },
           focusDist: { value: 20 },
-          blurScale: { value: 0.12 },
+          blurScale: { value: 0.3 },
           resolution: { value: new THREE.Vector2(1, 1) },
           lightColor: { value: new THREE.Vector3(...p.light) },
           shadeColor: { value: new THREE.Vector3(...p.shade) },

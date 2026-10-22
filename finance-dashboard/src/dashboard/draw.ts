@@ -170,27 +170,30 @@ const drawLineChart = (ctx: Ctx, p: Palette, f: number) => {
 
 // Row of small wedges under the x-axis that sweep open.
 const drawWedgeRow = (ctx: Ctx, p: Palette, f: number) => {
+  const count = 14;
   ctx.fillStyle = p.accent;
-  for (let i = 0; i < 20; i++) {
-    const x = 980 + i * 68;
-    const y = BASELINE_Y + 95;
-    const appear = easeOutBack((f + 20 - i * 5) / 20);
+  for (let i = 0; i < count; i++) {
+    const x = 990 + i * 68;
+    const y = BASELINE_Y + 85;
+    const appear = easeOutBack((f + 20 - i * 6) / 20);
     if (appear <= 0) continue;
-    const frac = 0.22 + 0.48 * noise1(40 + i, f / 40 + i * 0.37);
+    // Solid "pac-man" wedges that keep opening and closing.
+    const frac = 0.55 + 0.35 * noise1(40 + i, f / 40 + i * 0.37);
     const rot = hash(41, i) * Math.PI * 2 + f * 0.012;
-    const r = 19 * appear;
+    const r = 22 * appear;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.arc(x, y, r, rot, rot + frac * Math.PI * 2);
     ctx.closePath();
     ctx.fill();
   }
-  // Dash clusters at the end of the row.
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 7; c++) {
-      if (hash(42, r, c, Math.floor(f / 9)) < 0.35) continue;
-      ctx.fillStyle = withAlpha(p.accent, 0.85);
-      ctx.fillRect(2290 + c * 26, BASELINE_Y + 60 + r * 26, 18, 12);
+  // Block row at the end of the wedges, under the far end of the x-axis.
+  const x0 = 990 + count * 68 + 20;
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 12; c++) {
+      if (hash(42, r, c, Math.floor(f / 9)) < 0.3) continue;
+      ctx.fillStyle = withAlpha(p.accent, 0.9);
+      ctx.fillRect(x0 + c * 30 + r * 14, BASELINE_Y + 40 + r * 34, 22, 16);
     }
   }
 };
@@ -198,12 +201,12 @@ const drawWedgeRow = (ctx: Ctx, p: Palette, f: number) => {
 // Black/white pie icons that rotate.
 const drawPieIcons = (ctx: Ctx, p: Palette, f: number) => {
   const groups = [
-    { x: 985, y: 520, start: 40 },
-    { x: 1290, y: 400, start: 55 },
+    { x: 985, y: 520, start: 45 },
+    { x: 1290, y: 400, start: 115 },
   ];
   for (const [gi, g] of groups.entries()) {
     for (let j = 0; j < 3; j++) {
-      const s = easeOutBack((f - g.start - j * 4) / 16);
+      const s = easeOutBack((f - g.start - j * 14) / 16);
       if (s <= 0) continue;
       const x = g.x + j * 82;
       const r = 25 * s;
@@ -251,7 +254,9 @@ const drawDotMatrix = (
   chars: number,
   seed: number,
   dot = 6,
+  start = -Infinity,
 ) => {
+  if (f < start) return;
   const step = dot * 2.6;
   const tick = Math.floor(f / 8);
   ctx.fillStyle = p.accent;
@@ -309,7 +314,7 @@ const drawTextBlock = (
   if (typed <= 0) return;
   ctx.font = `bold ${size}px 'DejaVu Sans Mono', monospace`;
   ctx.textBaseline = "top";
-  ctx.fillStyle = withAlpha(p.ink, 0.92);
+  ctx.fillStyle = p.ink;
   let budget = typed;
   for (let r = 0; r < rows && budget > 0; r++) {
     const len = Math.floor(cols * (0.45 + 0.55 * hash(seed, r, 1)));
@@ -434,8 +439,8 @@ export const drawDashboard = (ctx: Ctx, p: Palette, f: number) => {
 
   // Floating widgets above the chart.
   drawPieIcons(ctx, p, f);
-  drawDotMatrix(ctx, p, f, 1500, 190, 2, 4, 6);
-  drawDotMatrix(ctx, p, f, 1060, 300, 3, 5, 5);
+  drawDotMatrix(ctx, p, f, 1500, 190, 2, 4, 5, 150);
+  drawDotMatrix(ctx, p, f, 1060, 300, 3, 5, 4.5, 105);
   drawSquareStacks(ctx, p, f);
   drawTextBlock(ctx, p, f, 1210, 610, 8, 6, 6, 40);
   drawTextBlock(ctx, p, f, 1500, 560, 10, 5, 7, 55);
@@ -443,9 +448,9 @@ export const drawDashboard = (ctx: Ctx, p: Palette, f: number) => {
   drawTextBlock(ctx, p, f, 1640, 360, 7, 7, 9, 80);
 
   // Right-hand panel.
-  drawBlockGrid(ctx, p, f, 2420, 110, 13, 4, 12);
-  drawHistogram(ctx, p, f, 2430, 360, 440, 230);
-  drawAreaChart(ctx, p, f, 2420, 640, 470, 250, 13);
-  drawTextBlock(ctx, p, f, 2420, 960, 12, 34, 14, -30, 15);
-  drawDashColumn(ctx, p, f, 2660, 970, 16);
+  drawBlockGrid(ctx, p, f, 2400, 150, 9, 3, 12);
+  drawHistogram(ctx, p, f, 2400, 360, 330, 200);
+  drawAreaChart(ctx, p, f, 2390, 610, 350, 210, 13);
+  drawTextBlock(ctx, p, f, 2400, 900, 11, 30, 14, -30, 15);
+  drawDashColumn(ctx, p, f, 2580, 910, 16);
 };

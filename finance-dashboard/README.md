@@ -43,8 +43,8 @@ npm i
 npm run dev                      # Remotion Studio
 
 # 1080p deliverables from the 4K compositions
-npx remotion render FinanceDashboard      out/FinanceDashboard-1080p.mp4      --scale=0.5 --codec=h264 --crf=16
-npx remotion render FinanceDashboardEmber out/FinanceDashboardEmber-1080p.mp4 --scale=0.5 --codec=h264 --crf=16
+npx remotion render FinanceDashboard      out/FinanceDashboard-1080p.mp4      --scale=0.5 --codec=h264 --crf=16 --image-format=png --pixel-format=yuv420p
+npx remotion render FinanceDashboardEmber out/FinanceDashboardEmber-1080p.mp4 --scale=0.5 --codec=h264 --crf=16 --image-format=png --pixel-format=yuv420p
 
 # Full 4K master
 npx remotion render FinanceDashboard out/FinanceDashboard-4k.mp4 --codec=h264

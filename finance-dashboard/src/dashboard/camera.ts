@@ -75,11 +75,15 @@ export const poseToWorld = (pose: CameraPose) => {
   };
 };
 
-// Reference move: a slow, oblique drift from the chart origin towards the
-// growing head of the bars, easing towards a more frontal view.
+// Reference move: eases in, pans quickly over the chart between ~1.5 s and
+// 6 s, then decelerates and settles on the head of the chart by ~9 s.
+// A wider lens than before gives the reference's strong foreshortening.
 export const referenceCamera: CameraKey[] = [
-  { frame: 0, u: 1000, v: 960, dist: 2300, tilt: 56, az: 102, roll: -6, fov: 18 },
-  { frame: 90, u: 1250, v: 940, dist: 3000, tilt: 50, az: 100, roll: 2, fov: 18 },
-  { frame: 180, u: 1700, v: 820, dist: 3100, tilt: 42, az: 97, roll: 9, fov: 18 },
-  { frame: 359, u: 2080, v: 660, dist: 2750, tilt: 38, az: 95, roll: 20, fov: 18 },
+  { frame: 0, u: 980, v: 980, dist: 1500, tilt: 57, az: 104, roll: -6, fov: 30 },
+  { frame: 40, u: 1020, v: 970, dist: 1560, tilt: 55, az: 103, roll: -4, fov: 30 },
+  { frame: 110, u: 1320, v: 920, dist: 1650, tilt: 51, az: 100, roll: 3, fov: 30 },
+  { frame: 180, u: 1720, v: 820, dist: 1720, tilt: 45, az: 97, roll: 11, fov: 30 },
+  { frame: 230, u: 1960, v: 730, dist: 1800, tilt: 41, az: 95, roll: 18, fov: 30 },
+  { frame: 270, u: 2010, v: 710, dist: 1900, tilt: 40, az: 95, roll: 20, fov: 30 },
+  { frame: 359, u: 2010, v: 710, dist: 1900, tilt: 40, az: 95, roll: 20, fov: 30 },
 ];
