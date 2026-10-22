@@ -157,15 +157,17 @@ def green_checks(mp4, frames):
     test = os.path.join(WORK, "_bars.png")
     keyed = os.path.join(WORK, "green_keyed.png")
     run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "smptehdbars=s=1280x720", "-frames:v", "1", test])
-    run(["ffmpeg", "-v", "error", "-y", "-i", test, "-i", mp4, "-filter_complex",
-         f"[1:v]select=eq(n\\,{t}),chromakey=0x00FF00:0.12:0.05[k];[0:v][k]overlay", "-frames:v", "1", keyed])
+    run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", test, "-i", mp4, "-filter_complex",
+         f"[1:v]select=eq(n\\,{t}),setpts=PTS-STARTPTS,format=yuva444p,chromakey=0x00FF00:0.12:0.05[k];"
+         f"[0:v]format=yuva444p[b];[b][k]overlay=shortest=1:format=yuv444,format=rgb24", "-frames:v", "1", keyed])
     K = np.asarray(Image.open(keyed).convert("RGB")).astype(int)
     F = frame_at(mp4, t)
     Bars = np.asarray(Image.open(test).convert("RGB")).astype(int)
-    changed = np.abs(K - F).max(axis=2) > 24  # pixel now shows the test image
+    changed = np.abs(K - F).max(axis=2) > 24  # pixel no longer shows the clip
+    shows_bars = np.abs(K - Bars).max(axis=2) <= 12
     screen = m
     res["key"] = dict(frame=t, screen_pixels=int(screen.sum()),
-                      screen_replaced_fraction=float((changed & screen).sum() / max(1, screen.sum())),
+                      screen_replaced_fraction=float((shows_bars & screen).sum() / max(1, screen.sum())),
                       keyed_outside_screen=int((changed & ~screen).sum()))
     # outside pixels within 3 px of the screen edge are anti-aliased edge blends
     from numpy.lib.stride_tricks import sliding_window_view
