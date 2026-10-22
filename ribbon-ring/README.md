@@ -1,20 +1,20 @@
 # Fin Dome (Remotion + Three.js)
 
-An abstract loop: a ring of thick violet fins (washer-shaped slices of a
-torus) turning slowly around its axis, shot close up with a very
-shallow depth of field, sweeping away towards a lavender glow over a
-blue backdrop. Rebuilt from a 6-second reference clip.
+An abstract loop: a fan of curved violet blades rising out of a hub
+like gills, turning slowly, shot close up with a very shallow depth of
+field and sweeping up towards a lavender glow over a blue backdrop.
+Rebuilt from a 6-second reference clip.
 
 - **Tech:** Three.js (WebGL 2) driven frame-by-frame from Remotion. Real
-  3D fins (bevelled extrusions with a baked lip-to-shadow gradient),
-  physical material, rim and glow lights, and a custom depth-of-field
-  pipeline (`src/fin-dome/dof.ts`): a round golden-angle bokeh gather at
-  quarter resolution composited over the sharp full-res render, plus a
-  lens-haze pass. The backdrop glow and haze track the light's
-  on-screen position.
+  3D blades (bowl-profile plates bent into a plan-view sweep, bevelled,
+  with a baked lip-to-shadow gradient), physical material, rim and glow
+  lights, and a custom depth-of-field pipeline (`src/fin-dome/dof.ts`):
+  a round golden-angle bokeh gather at quarter resolution composited
+  over the sharp full-res render, plus a lens-haze pass. The backdrop
+  glow and haze track the light's on-screen position.
 - **Composition size:** 3840x2160 (4K), 30 fps, 180 frames (6.0 s, same
   length as the reference).
-- **Loop:** the ring turns exactly one fin spacing over the 180
+- **Loop:** the fan turns exactly four blade spacings over the 180
   frames, so version A loops seamlessly, as the reference does.
 
 ## Compositions
@@ -22,7 +22,7 @@ blue backdrop. Rebuilt from a 6-second reference clip.
 | ID | Version |
 | --- | --- |
 | `FinDome4K` | A: matches the reference (locked-off camera, same palette and motion) |
-| `FinDomeOrbit4K` | B: same scene and palette, camera cranes up and orbits 40 deg around the near fins, levelling its roll and pulling focus |
+| `FinDomeOrbit4K` | B: same scene and palette, camera cranes up and orbits 45 deg around the hub, levelling its roll and pulling focus |
 
 Every look parameter (colours, glow, blur, camera start/end poses) is a
 zod-typed prop, editable in Remotion Studio.

@@ -15,20 +15,21 @@ const orbit = (
   ];
 };
 
-// The point the reference camera looks at, on the near stretch of ring.
-const PIVOT = REFERENCE_CAMERA.target;
-const ORBIT_ANGLE = (-40 * Math.PI) / 180;
+// The fan's hub, on its spin axis.
+const HUB: [number, number, number] = [0, 0, 0];
+const ORBIT_ANGLE = (-45 * Math.PI) / 180;
 
-// Version B: same ring, palette and timing, but the camera cranes up and
-// orbits 40 degrees around the near stretch of fins, levelling its roll
-// and pulling focus as it goes. It starts on the reference framing and
-// ends looking down along the ring as it curves away.
+// Version B: same fan, palette and timing, but the camera cranes up and
+// orbits 45 degrees around the hub (with the blades' drift, so the fan
+// appears to wheel past faster), levelling its roll and pulling focus as
+// it goes. It starts on the reference framing and ends looking down
+// into the fan from above the rim.
 const ORBIT_END: CameraPose = {
-  position: orbit([-2, 8.5, 42], PIVOT, ORBIT_ANGLE),
-  target: [PIVOT[0], PIVOT[1] - 0.5, PIVOT[2]],
-  fov: 40,
+  position: orbit([-3, 6.5, 9.5], HUB, ORBIT_ANGLE),
+  target: orbit([-1.5, -0.5, 0], HUB, ORBIT_ANGLE),
+  fov: 48,
   roll: 0,
-  focus: 7,
+  focus: 10,
 };
 
 export const orbitVariantProps: FinDomeProps = {

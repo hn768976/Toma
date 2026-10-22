@@ -4,15 +4,16 @@ import * as THREE from "three";
 import { z } from "zod";
 import { DofPipeline } from "./dof";
 import {
+  BLADE_COUNT,
+  BLADE_DEPTH,
+  BLADE_SWEEP,
+  BLADE_THICKNESS,
+  BOWL_FLARE,
+  BOWL_HEIGHT,
+  BOWL_RADIUS,
   DURATION_IN_FRAMES,
-  FIN_COUNT,
-  FIN_THICKNESS,
+  HUB_RADIUS,
   LOOP_ROTATION,
-  MAJOR_RADIUS,
-  NEAR_ANGLE,
-  TUBE_INNER_RADIUS,
-  TUBE_RADIUS,
-  VISIBLE_ARC,
 } from "./constants";
 
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
@@ -28,13 +29,13 @@ const cameraPoseSchema = z.object({
 });
 
 export const finDomeSchema = z.object({
-  // Fin surface colour, and the sheen tint picked up on fin edges.
+  // Blade surface colour, and the sheen tint picked up on blade edges.
   bladeColor: z.string(),
   sheenColor: z.string(),
   // Hemisphere light: sky (upper faces) and ground (lower faces) colours.
   skyLight: z.string(),
   groundLight: z.string(),
-  // Backdrop colour and the light blooming from behind the ring.
+  // Backdrop colour and the light blooming from behind the far rim.
   backgroundColor: z.string(),
   // Tint the backdrop drifts to far from the glow (frame corners).
   cornerColor: z.string(),
@@ -59,71 +60,83 @@ export const finDomeSchema = z.object({
 export type FinDomeProps = z.infer<typeof finDomeSchema>;
 export type CameraPose = z.infer<typeof cameraPoseSchema>;
 
-// Locked-off framing matched to the reference: just outside the near
-// side of the ring and slightly rolled, looking along the fins as the
-// ring sweeps up and away towards the glow at upper right.
+// Locked-off framing matched to the reference: above the bowl's near
+// rim, slightly rolled, looking down the blades as they fan out of the
+// hub and sweep up towards the glow at upper right.
 export const REFERENCE_CAMERA: CameraPose = {
-  position: [-2, 5, 41.5],
-  target: [3, 0.5, 31],
-  fov: 38,
-  roll: 0.22,
-  focus: 5,
+  position: [-3, 3, 10],
+  target: [-2.5, 0, 0],
+  fov: 50,
+  roll: 0.25,
+  focus: 8,
 };
 
 export const finDomeDefaults: FinDomeProps = {
-  bladeColor: "#b060e0",
+  bladeColor: "#8a4ee0",
   sheenColor: "#e0a8ff",
-  skyLight: "#d0a8ff",
-  groundLight: "#2236c0",
+  skyLight: "#b890ff",
+  groundLight: "#2030c0",
   backgroundColor: "#3360d0",
   cornerColor: "#5a3fc8",
-  glowColor: "#d8d0f4",
-  glowRadius: 0.6,
+  glowColor: "#d4caf2",
+  glowRadius: 0.8,
   hazeRadius: 0.7,
-  hazeStrength: 0.3,
+  hazeStrength: 0.35,
   cameraStart: REFERENCE_CAMERA,
   cameraEnd: REFERENCE_CAMERA,
   focusScale: 10,
-  maxBlur: 0.035,
-  // Behind the ring, where it projects to the reference's glow spot.
-  lightPosition: [16.2, -2.8, 19],
+  maxBlur: 0.04,
+  // Behind the bowl's far rim, so the glow blooms over the blade tips.
+  lightPosition: [3, 3, -14],
 };
 
-// One fin = a thin washer (the tube's annular cross-section), extruded
-// along the ring's tangent. Generous rounded bevels give the soft lit lip
-// that runs along every fin edge in the reference.
-const createFinGeometry = () => {
+const bladeTop = (r: number) => BOWL_HEIGHT * Math.pow(Math.min(1, r / BOWL_RADIUS), BOWL_FLARE);
+
+// One blade: a thin plate whose top edge follows the bowl profile, built
+// flat in (radius, height) and then bent round the Y axis so it sweeps
+// in plan view. Rounded bevels give the soft lit lip along every blade
+// edge, and a baked vertex-colour gradient falls from full colour at the
+// lip to deep blue lower down the face.
+const createBladeGeometry = () => {
+  const steps = 96;
   const shape = new THREE.Shape();
-  shape.absarc(0, 0, TUBE_RADIUS, 0, Math.PI * 2, false);
-  const hole = new THREE.Path();
-  hole.absarc(0, 0, TUBE_INNER_RADIUS, 0, Math.PI * 2, true);
-  shape.holes.push(hole);
+  for (let i = 0; i <= steps; i++) {
+    const r = HUB_RADIUS + (i / steps) * (BOWL_RADIUS - HUB_RADIUS);
+    if (i === 0) shape.moveTo(r, bladeTop(r));
+    else shape.lineTo(r, bladeTop(r));
+  }
+  for (let i = steps; i >= 0; i--) {
+    const r = HUB_RADIUS + (i / steps) * (BOWL_RADIUS - HUB_RADIUS);
+    shape.lineTo(r, bladeTop(r) - BLADE_DEPTH);
+  }
+  shape.closePath();
+
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: FIN_THICKNESS * 0.2,
-    curveSegments: 96,
+    depth: BLADE_THICKNESS * 0.2,
+    curveSegments: 1,
+    steps: 1,
     bevelEnabled: true,
-    bevelThickness: FIN_THICKNESS * 0.4,
-    bevelSize: FIN_THICKNESS * 0.4,
+    bevelThickness: BLADE_THICKNESS * 0.4,
+    bevelSize: BLADE_THICKNESS * 0.4,
     bevelSegments: 5,
   });
-  geometry.translate(0, 0, -FIN_THICKNESS * 0.1);
-  geometry.computeVertexNormals();
+  geometry.translate(0, 0, -BLADE_THICKNESS * 0.1);
 
-  // Bake a radial shade into vertex colours: full colour at the fin's
-  // outer lip, falling to a deep blue towards its inner edge, which gives
-  // the reference's lit-lip / blue-shadow look on each fin face.
   const pos = geometry.attributes.position;
   const colors = new Float32Array(pos.count * 3);
   const lip = new THREE.Color(1, 1, 1);
   const core = new THREE.Color(0.22, 0.27, 0.9);
   const c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
-    const r = Math.hypot(pos.getX(i), pos.getY(i));
-    const t = THREE.MathUtils.smoothstep(r, TUBE_INNER_RADIUS, TUBE_RADIUS);
-    c.copy(core).lerp(lip, t);
+    const r = pos.getX(i);
+    const below = bladeTop(r) - pos.getY(i);
+    c.copy(lip).lerp(core, THREE.MathUtils.smoothstep(below, 0.1, 2.5));
     colors.set([c.r, c.g, c.b], i * 3);
+    const angle = BLADE_SWEEP * r + pos.getZ(i) / Math.max(r, HUB_RADIUS);
+    pos.setXYZ(i, r * Math.cos(angle), pos.getY(i), r * Math.sin(angle));
   }
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
   return geometry;
 };
 
@@ -178,8 +191,7 @@ type SceneState = {
   scene: THREE.Scene;
   dof: DofPipeline;
   camera: THREE.PerspectiveCamera;
-  ring: THREE.Group;
-  fins: THREE.Mesh[];
+  fan: THREE.Group;
   bladeMaterial: THREE.MeshPhysicalMaterial;
   background: THREE.ShaderMaterial;
   hemi: THREE.HemisphereLight;
@@ -215,29 +227,25 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
     clearcoatRoughness: 0.5,
   });
 
-  const geometry = createFinGeometry();
-  const ring = new THREE.Group();
-  const fins: THREE.Mesh[] = [];
-  for (let i = 0; i < FIN_COUNT; i++) {
-    const theta = (i / FIN_COUNT) * Math.PI * 2;
-    const fin = new THREE.Mesh(geometry, bladeMaterial);
-    fin.position.set(MAJOR_RADIUS * Math.cos(theta), 0, MAJOR_RADIUS * Math.sin(theta));
-    fin.rotation.y = -theta;
-    ring.add(fin);
-    fins.push(fin);
+  const geometry = createBladeGeometry();
+  const fan = new THREE.Group();
+  for (let i = 0; i < BLADE_COUNT; i++) {
+    const blade = new THREE.Mesh(geometry, bladeMaterial);
+    blade.rotation.y = (i / BLADE_COUNT) * Math.PI * 2;
+    fan.add(blade);
   }
-  scene.add(ring);
+  scene.add(fan);
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.75);
   scene.add(hemi);
   // The glow is the light source: a point light at lightPosition, plus a
   // soft white key from the camera side.
-  const glowLight = new THREE.PointLight(0xf4ecff, 40, 0, 1.0);
+  const glowLight = new THREE.PointLight(0xf4ecff, 22, 0, 1.0);
   scene.add(glowLight);
-  // Rim light from above and behind the glow, aimed at the fins nearest
-  // camera: lights the fin lips while their faces fall into blue shadow.
-  const rimLight = new THREE.DirectionalLight(0xfff4ff, 4.5);
-  rimLight.target.position.set(0, 0, MAJOR_RADIUS);
+  // Rim light from above and behind the glow: lights the blade lips
+  // while their faces fall into blue shadow.
+  const rimLight = new THREE.DirectionalLight(0xfff4ff, 3);
+  rimLight.target.position.set(0, 0, 0);
   scene.add(rimLight, rimLight.target);
   const key = new THREE.DirectionalLight(0xf2e8ff, 0.45);
   key.position.set(-8, 10, 14);
@@ -248,16 +256,16 @@ const buildScene = (canvas: HTMLCanvasElement, width: number, height: number): S
 
   const dof = new DofPipeline(width, height);
 
-  return { renderer, scene, dof, camera, ring, fins, bladeMaterial, background, hemi, glowLight, rimLight };
+  return { renderer, scene, dof, camera, fan, bladeMaterial, background, hemi, glowLight, rimLight };
 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const lerp3 = (a: number[], b: number[], t: number) =>
   a.map((v, i) => lerp(v, b[i], t)) as [number, number, number];
 
-// Abstract ring of thick violet fins, standing like mushroom gills and
-// turning slowly around the ring axis, filmed close up with a very shallow depth of
-// field. Real 3D geometry (Three.js / WebGL 2) so fin overlap, rim
+// Abstract fan of curved violet blades rising out of a hub like gills,
+// turning slowly around it, filmed close up with a very shallow depth of
+// field. Real 3D geometry (Three.js / WebGL 2) so blade overlap, rim
 // lighting and defocus all come out of one camera, like the reference.
 export const FinDome: React.FC<FinDomeProps> = ({
   bladeColor,
@@ -301,16 +309,8 @@ export const FinDome: React.FC<FinDomeProps> = ({
     s.hemi.color.set(skyLight);
     s.hemi.groundColor.set(groundLight);
 
-    // Constant angular speed: one fin spacing per loop.
-    const spin = (frame / DURATION_IN_FRAMES) * LOOP_ROTATION;
-    s.ring.rotation.y = spin;
-    // Culling uses the spun angle, so frame 0 and the loop point cull
-    // identical fins.
-    s.fins.forEach((fin, i) => {
-      const theta = (i / FIN_COUNT) * Math.PI * 2 - spin;
-      const fromNear = Math.atan2(Math.sin(theta - NEAR_ANGLE), Math.cos(theta - NEAR_ANGLE));
-      fin.visible = Math.abs(fromNear) < VISIBLE_ARC / 2;
-    });
+    // Constant angular speed: one blade spacing per loop.
+    s.fan.rotation.y = (frame / DURATION_IN_FRAMES) * LOOP_ROTATION;
 
     const t = interpolate(frame, [0, DURATION_IN_FRAMES - 1], [0, 1], {
       easing: Easing.inOut(Easing.sin),
