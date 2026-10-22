@@ -48,7 +48,7 @@ export const Effects: React.FC<{ time: React.MutableRefObject<number> }> = ({ ti
     c.renderTarget1.samples = 4;
     c.renderTarget2.samples = 4;
     c.addPass(new RenderPass(scene, camera));
-    const b = new BokehPass(scene, camera, { focus: 8, aperture: 0.0011, maxblur: 0.0065 });
+    const b = new BokehPass(scene, camera, { focus: 8, aperture: 0.0026, maxblur: 0.012 });
     c.addPass(b);
     c.addPass(new UnrealBloomPass(new THREE.Vector2(size.width, size.height), 0.22, 0.45, 1.1));
     c.addPass(new OutputPass());

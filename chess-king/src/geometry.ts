@@ -47,19 +47,22 @@ const foot = (s: number): Profile => [
 
 const kingProfile: Profile = [
   [0, 0],
-  [0.45, 0],
-  [0.47, 0.03],
-  [0.465, 0.08],
-  [0.42, 0.11],
-  [0.43, 0.15],
-  [0.4, 0.2],
-  [0.355, 0.27],
-  [0.3, 0.38],
-  [0.24, 0.52],
-  [0.19, 0.68],
-  [0.16, 0.86],
-  [0.145, 1.05],
-  [0.14, 1.22],
+  [0.46, 0],
+  [0.48, 0.025],
+  [0.48, 0.07],
+  [0.44, 0.09],
+  [0.455, 0.12],
+  [0.455, 0.15],
+  [0.425, 0.175],
+  [0.42, 0.2],
+  [0.41, 0.27],
+  [0.37, 0.34],
+  [0.29, 0.42],
+  [0.21, 0.52],
+  [0.165, 0.65],
+  [0.145, 0.85],
+  [0.135, 1.05],
+  [0.135, 1.22],
   [0.17, 1.28],
   [0.26, 1.33],
   [0.27, 1.37],
@@ -161,7 +164,7 @@ const knightBaseProfile: Profile = [
 const kingCross = () => {
   // Ornamental cross with flared, pointed arms.
   const s = new THREE.Shape();
-  const w = 0.045;
+  const w = 0.038;
   const arm = (ang: number, len: number) => {
     const c = Math.cos(ang);
     const n = Math.sin(ang);
@@ -169,9 +172,9 @@ const kingCross = () => {
     return [px(w, -w), px(len * 0.7, -w * 1.9), px(len, 0), px(len * 0.7, w * 1.9), px(w, w)];
   };
   const pts = [
-    ...arm(0, 0.14),
-    ...arm(Math.PI / 2, 0.2),
-    ...arm(Math.PI, 0.14),
+    ...arm(0, 0.17),
+    ...arm(Math.PI / 2, 0.25),
+    ...arm(Math.PI, 0.17),
     ...arm(-Math.PI / 2, 0.12),
   ];
   s.moveTo(pts[0][0], pts[0][1]);
@@ -234,7 +237,7 @@ const build = (type: PieceType): THREE.BufferGeometry => {
     case "king": {
       parts.push(prep(lathe(kingProfile)));
       parts.push(prep(new THREE.SphereGeometry(0.06, 24, 16), m.makeTranslation(0, 2.08, 0)));
-      parts.push(prep(kingCross(), new THREE.Matrix4().makeTranslation(0, 2.18, 0)));
+      parts.push(prep(kingCross(), new THREE.Matrix4().makeTranslation(0, 2.2, 0)));
       break;
     }
     case "queen": {

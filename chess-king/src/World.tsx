@@ -19,8 +19,8 @@ const CameraRig: React.FC<{ time: TimeRef }> = ({ time }) => {
     // then clears as we reach board level.
     if (scene.fog instanceof THREE.Fog) {
       const clear = smooth((time.current - 0.3) / 0.35);
-      scene.fog.near = lerp(9.2, 11, clear);
-      scene.fog.far = lerp(13, 24, clear);
+      scene.fog.near = lerp(5.5, 11, clear);
+      scene.fog.far = lerp(12, 24, clear);
     }
     const { pos, target } = cameraAt(time.current);
     camera.position.set(...pos);
@@ -81,7 +81,7 @@ void main() {
   b += beam(uv, 0.33, 0.01, 0.25);
   b += beam(uv, 0.675, 0.01, 0.28);
   float flicker = 0.97 + 0.03 * sin(uTime * 2.3);
-  col += uBeam * b * 0.12 * flicker;
+  col += uBeam * b * 0.2 * flicker;
   vec2 c = (uv - vec2(0.5, 0.36)) * vec2(1.6, 2.4);
   col += uBeam * 0.03 * exp(-dot(c, c) * 3.0);
   float edge = smoothstep(0.0, 0.42, uv.x) * smoothstep(1.0, 0.58, uv.x);
@@ -214,7 +214,7 @@ const Board: React.FC<{ palette: Palette }> = ({ palette }) => {
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.0005, 0]} receiveShadow>
         <planeGeometry args={[half * 2, half * 2]} />
-        <meshPhysicalMaterial map={tex} roughness={0.32} metalness={0} clearcoat={0.25} clearcoatRoughness={0.3} envMapIntensity={0.08} />
+        <meshPhysicalMaterial map={tex} roughness={0.32} metalness={0} clearcoat={0.1} clearcoatRoughness={0.3} envMapIntensity={0.08} />
       </mesh>
       <primitive object={reflector} />
       {/* Stage floor beyond the board */}
@@ -237,6 +237,7 @@ const King: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, time }) 
         clearcoat: 0.35,
         clearcoatRoughness: 0.12,
         envMapIntensity: 1.5,
+        fog: false,
       }),
     [palette],
   );
@@ -310,7 +311,7 @@ const ImpactFlash: React.FC<{ palette: Palette; time: TimeRef }> = ({ palette, t
     const t = time.current;
     const f = flashCurve(t);
     const s = Math.max(0, t - T_KING_LAND);
-    sprite.current!.scale.set(1.2 + 4.5 * f, 0.6 + 1.6 * f, 1);
+    sprite.current!.scale.set(1.6 + 8.5 * f, 0.3 + 0.9 * f, 1);
     (sprite.current!.material as THREE.SpriteMaterial).opacity = Math.min(1, f * 1.4);
     const r = ring.current!;
     const grow = 1 - Math.exp(-s * 2.2);

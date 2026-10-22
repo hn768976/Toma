@@ -22,7 +22,7 @@ export const ChessKing: React.FC<z.infer<typeof chessKingSchema>> = ({ palette }
         dpr={typeof window === "undefined" ? 1 : window.devicePixelRatio}
         shadows="soft"
         camera={{ fov: 30, near: 0.1, far: 120, position: [0, 1, 8] }}
-        gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.85 }}
+        gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.95 }}
       >
         <World palette={pal} />
       </ThreeCanvas>

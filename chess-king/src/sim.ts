@@ -41,8 +41,8 @@ const rateAt = (t: number) => {
   if (t < T_KING_LAND) return 0;
   if (t < 0.76) return 1;
   if (t < 0.95) return lerp(1, 0.09, smooth((t - 0.76) / 0.19));
-  if (t < 3.25) return 0.09;
-  if (t < 3.75) return lerp(0.09, 1, smooth((t - 3.25) / 0.5));
+  if (t < 3.0) return 0.09;
+  if (t < 3.5) return lerp(0.09, 1, smooth((t - 3.0) / 0.5));
   return 1;
 };
 
@@ -87,14 +87,14 @@ const buildPieces = (): PieceSpec[] => {
   const rnd = mulberry32(7);
   const types: PieceType[] = [
     "rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook",
-    "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn",
+    "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn",
   ];
 
   // Standing crowd around the gold king.
   const starts: THREE.Vector2[] = [];
   const handStarts: [number, number][] = [
-    [-2.9, 1.6], [-1.3, 2.2], [-1.0, 1.0], [1.15, 0.9], [1.6, -0.5], [0.8, 2.1],
-    [-1.9, -0.3], [2.9, 1.9], [-0.4, 2.9], [2.1, 2.8], [-3.1, 2.8], [3.4, -0.9],
+    [-2.9, 1.6], [-1.7, 2.4], [-1.35, 0.6], [1.4, 0.5], [1.6, -0.6], [1.35, 2.0],
+    [-1.9, -0.4], [2.9, 1.7], [-0.6, -1.4], [0.7, -1.5], [-3.2, -1.2], [3.4, -0.9],
   ];
   handStarts.forEach(([x, z]) => starts.push(new THREE.Vector2(x, z)));
   while (starts.length < types.length) {
@@ -102,6 +102,8 @@ const buildPieces = (): PieceSpec[] => {
     const z = -3.8 + rnd() * 6.3;
     const p = new THREE.Vector2(x, z);
     if (p.length() < 1.1) continue;
+    // Nothing stands directly between the camera and the king.
+    if (z > -0.3 && Math.abs(x) < 1.25) continue;
     if (starts.some((s) => s.distanceTo(p) < 0.95)) continue;
     starts.push(p);
   }
@@ -109,16 +111,16 @@ const buildPieces = (): PieceSpec[] => {
   // Resting spots: hand-placed for the hero framing, the rest scattered.
   type Rest = { p: THREE.Vector2; yaw: number; upright: boolean };
   const rests: Rest[] = [
-    { p: new THREE.Vector2(-2.0, 3.1), yaw: 2.4, upright: false },
-    { p: new THREE.Vector2(1.75, 0.6), yaw: -1.2, upright: false },
-    { p: new THREE.Vector2(-1.7, 0.7), yaw: 4.3, upright: false },
-    { p: new THREE.Vector2(2.3, 2.9), yaw: 0.5, upright: false },
-    { p: new THREE.Vector2(-3.2, 1.0), yaw: 0.4, upright: false },
-    { p: new THREE.Vector2(0.9, -1.6), yaw: 0.15, upright: false },
-    { p: new THREE.Vector2(-1.0, -1.7), yaw: 2.9, upright: false },
-    { p: new THREE.Vector2(3.4, 0.0), yaw: -1.1, upright: false },
+    { p: new THREE.Vector2(-2.0, 3.1), yaw: 0.3, upright: false },
+    { p: new THREE.Vector2(1.75, 0.6), yaw: 1.35, upright: false },
+    { p: new THREE.Vector2(-1.7, 0.7), yaw: 1.15, upright: false },
+    { p: new THREE.Vector2(2.3, 2.9), yaw: 2.6, upright: false },
+    { p: new THREE.Vector2(-3.2, 1.0), yaw: 1.9, upright: false },
+    { p: new THREE.Vector2(0.9, -1.6), yaw: 0.2, upright: false },
+    { p: new THREE.Vector2(-1.0, -1.7), yaw: 2.8, upright: false },
+    { p: new THREE.Vector2(3.4, 0.0), yaw: 1.0, upright: false },
   ];
-  const segOf = (r: Rest, len = 1.9) => {
+  const segOf = (r: Rest, len = 2.2) => {
     const d = new THREE.Vector2(Math.cos(r.yaw), -Math.sin(r.yaw));
     return r.upright
       ? [r.p.clone(), r.p.clone()]
@@ -139,13 +141,13 @@ const buildPieces = (): PieceSpec[] => {
     const r: Rest = {
       p: new THREE.Vector2((rnd() - 0.5) * 10, -4.2 + rnd() * 7.0),
       yaw: rnd() * Math.PI * 2,
-      upright: rnd() < 0.08,
+      upright: false,
     };
     const seg = segOf(r);
     if (segDist(seg, [new THREE.Vector2(), new THREE.Vector2()]) < 1.05) continue;
     // Keep the sight line from the camera to the king clear.
     if (segDist(seg, [new THREE.Vector2(0, -0.5), new THREE.Vector2(0, 6)]) < 1.1) continue;
-    if (rests.some((o) => segDist(seg, segOf(o)) < 0.75)) continue;
+    if (rests.some((o) => segDist(seg, segOf(o)) < 0.95)) continue;
     rests.push(r);
   }
 
@@ -182,7 +184,7 @@ const buildPieces = (): PieceSpec[] => {
     const outward = new THREE.Vector3(rest.p.x, 0, rest.p.y).normalize();
     if (slideDir.dot(outward) < 0) slideDir.negate();
     if (rest.upright) slideDir = outward.clone();
-    const slide = rest.upright ? 0.15 : 0.25 + rnd() * 0.45;
+    const slide = rest.upright ? 0.15 : 0.45 + rnd() * 0.6;
     const rollAxis = new THREE.Vector3().crossVectors(UP, slideDir).normalize();
 
     const contact = new THREE.Vector3(rest.p.x, restComY, rest.p.y).addScaledVector(slideDir, -slide);
@@ -203,7 +205,7 @@ const buildPieces = (): PieceSpec[] => {
     const sign = delta.w < 0 ? -1 : 1;
     const sinH = Math.sqrt(Math.max(1e-9, 1 - delta.w * delta.w));
     const spinAxis = new THREE.Vector3(delta.x, delta.y, delta.z).multiplyScalar(sign / sinH).normalize();
-    const extra = rnd() < 0.5 ? Math.PI * 2 : 0;
+    const extra = Math.PI * 2 * (rnd() < 0.5 ? 1 : 2);
 
     return {
       type,
@@ -216,7 +218,7 @@ const buildPieces = (): PieceSpec[] => {
       slide,
       rollAxis,
       rollRadius: 0.24,
-      bounce: 0.12 + rnd() * 0.2,
+      bounce: 0.28 + rnd() * 0.32,
       qStart,
       spinAxis: angle < 1e-4 ? UP.clone() : spinAxis,
       spinAngle: angle + extra,
@@ -245,11 +247,11 @@ export const piecePose = (p: PieceSpec, tau: number, pos: THREE.Vector3, quat: T
     return;
   }
   const s = tau - p.tLand;
-  const d = p.slide * (1 - Math.exp(-3.2 * s));
+  const d = p.slide * (1 - Math.exp(-2.2 * s));
   pos.copy(p.contact).addScaledVector(p.slideDir, d);
-  pos.y += p.bounce * Math.exp(-4.5 * s) * Math.abs(Math.sin(11 * s));
+  pos.y += p.bounce * Math.exp(-2.8 * s) * Math.abs(Math.sin(8.5 * s));
   const roll = p.upright ? 0 : d / p.rollRadius;
-  const wobble = 0.22 * Math.exp(-5 * s) * Math.sin(16 * s);
+  const wobble = 0.35 * Math.exp(-3.4 * s) * Math.sin(13 * s);
   quat
     .copy(tmpQ.setFromAxisAngle(p.slideDir, wobble))
     .multiply(tmpQ2.setFromAxisAngle(p.rollAxis, roll))

@@ -21,13 +21,13 @@ export const GOLD_NOIR: Palette = {
   army: { color: "#0d0d0f", roughness: 0.16, sheen: "#5a5a60" },
   boardLight: "#d9d7d2",
   boardDark: "#070707",
-  backdropTop: "#2c2a25",
-  backdropBottom: "#1a1916",
+  backdropTop: "#3d3a33",
+  backdropBottom: "#24221e",
   beam: "#fff3d6",
   fog: "#1c1b18",
   keyLight: "#fff2dc",
   rimLight: "#ffe9c4",
-  flash: "#ffd88a",
+  flash: "#fff0d2",
   dust: "#fff1d0",
 };
 
