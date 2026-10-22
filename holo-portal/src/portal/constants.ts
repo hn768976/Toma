@@ -17,11 +17,11 @@ export const CAM_HEIGHT = 0.843;
 export const CAM_DISTANCE = 6;
 
 // Timeline (frames)
-export const RING_IN_START = 15;
-export const RING_IN_END = 34;
+export const RING_IN_START = 16;
+export const RING_IN_END = 32;
 export const SHOCK_START = 20;
 export const SHOCK_END = 60;
-export const STREAKS_START = 38;
-export const ICONS_START = 52;
-export const BARS_START = 95;
-export const BARS_END = 165;
+export const STREAKS_START = 34;
+export const ICONS_START = 42;
+export const BARS_START = 66;
+export const BARS_END = 96;
