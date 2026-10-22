@@ -152,28 +152,27 @@ def green_checks(mp4, frames):
             res["samples"] += 1
         masks.append((t, m))
     res["ok_samples"] = res["max_dev"] <= 2 and res["samples"] == 180
-    # Key over a test image (colour bars) and check what changed.
+    # Key with chromakey and read the resulting alpha: the screen should be
+    # fully transparent and nothing else keyed.
     t, m = masks[2]
+    alpha_png = os.path.join(WORK, "green_alpha.png")
+    run(["ffmpeg", "-v", "error", "-y", "-i", mp4, "-vf",
+         f"select=eq(n\\,{t}),format=yuva444p,chromakey=0x00FF00:0.12:0.05,alphaextract",
+         "-vsync", "0", "-frames:v", "1", alpha_png])
+    A = np.asarray(Image.open(alpha_png).convert("L")).astype(int)
+    from numpy.lib.stride_tricks import sliding_window_view
+    near = sliding_window_view(np.pad(m, 3, constant_values=False), (7, 7)).any(axis=(2, 3))
+    res["key"] = dict(frame=t, screen_pixels=int(m.sum()),
+                      screen_fully_transparent=float((A[m] == 0).mean()),
+                      outside_partially_keyed=int(((A < 255) & ~m).sum()),
+                      outside_beyond_3px_edge_partially_keyed=int(((A < 255) & ~near).sum()),
+                      outside_beyond_3px_edge_below_half_alpha=int(((A < 128) & ~near).sum()))
+    # Composite over colour bars for a visual check.
     test = os.path.join(WORK, "_bars.png")
-    keyed = os.path.join(WORK, "green_keyed.png")
     run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "smptehdbars=s=1280x720", "-frames:v", "1", test])
     run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", test, "-i", mp4, "-filter_complex",
          f"[1:v]select=eq(n\\,{t}),setpts=PTS-STARTPTS,format=yuva444p,chromakey=0x00FF00:0.12:0.05[k];"
-         f"[0:v]format=yuva444p[b];[b][k]overlay=shortest=1:format=yuv444,format=rgb24", "-frames:v", "1", keyed])
-    K = np.asarray(Image.open(keyed).convert("RGB")).astype(int)
-    F = frame_at(mp4, t)
-    Bars = np.asarray(Image.open(test).convert("RGB")).astype(int)
-    changed = np.abs(K - F).max(axis=2) > 24  # pixel no longer shows the clip
-    shows_bars = np.abs(K - Bars).max(axis=2) <= 12
-    screen = m
-    res["key"] = dict(frame=t, screen_pixels=int(screen.sum()),
-                      screen_replaced_fraction=float((shows_bars & screen).sum() / max(1, screen.sum())),
-                      keyed_outside_screen=int((changed & ~screen).sum()))
-    # outside pixels within 3 px of the screen edge are anti-aliased edge blends
-    from numpy.lib.stride_tricks import sliding_window_view
-    pad = np.pad(screen, 3, constant_values=False)
-    near = sliding_window_view(pad, (7, 7)).any(axis=(2, 3))
-    res["key"]["keyed_outside_screen_excluding_3px_edge"] = int((changed & ~near).sum())
+         f"[0:v][k]overlay=shortest=1,format=rgb24", "-frames:v", "1", os.path.join(WORK, "green_keyed.png")])
     return res
 
 if __name__ == "__main__":

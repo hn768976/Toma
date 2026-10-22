@@ -136,6 +136,23 @@ The camera circles about 48° over the whole clip.
 - The camera drift is one tile (Neuron Network) or one whole sine cycle (Data Server).
 - The flight routes repeat every 600, 300 or 200 frames, and the walkers pace out and back once per 600 frames.
 
+## Render times
+
+Measured on a 4-core cloud container with no GPU (Chrome with SwiftShader, `--gl=angle`). A machine with a GPU will be much faster.
+
+| Clip | 720p preview, whole clip (concurrency 2) | 720p per frame | 4K per frame (measured) | 4K whole clip (estimate, concurrency 1) |
+|---|---|---|---|---|
+| Flight Trails | 143 s | 0.24 s | 1.4 s | about 14 min |
+| Data Server City | 255 s | 0.42 s | 2.1 s | about 21 min |
+| Ink Cloth | 626 s | 1.04 s | 3.3 s | about 33 min |
+| Data Server Dark | 288 s | 0.48 s | — | about 25 min |
+| Neuron Network Silver | 659 s | 1.10 s | — | about 45 min |
+| Neuron Anatomy Labelled / Clean | 201 s / 192 s | 0.22 s | — | about 15 min each |
+| Proximity App City / GreenScreen | 203 s / 167 s | 0.33 s | — | about 15 min each |
+| Tangled Threads White / Ink | 104 s / 95 s | 0.19 s | — | about 6 min each |
+
+The three measured 4K times are the extra cost of each frame beyond the first: a 5-frame render minus a 1-frame render, divided by 4. They include PNG capture and H.264 encoding. The other 4K figures are estimates, scaled from each clip's 720p time by the 4K/720p ratio of a similar measured clip.
+
 ## How it is built
 
 - **Determinism:** every value comes from `useCurrentFrame()`. All data — neurons, map, routes, threads, people, events — is generated once from `mulberry32` seeds. Nothing uses `Math.random()`, `useFrame`, `Date.now()`, state-driven animation or temporal AA. Fonts load behind `delayRender`, and so does the PixiJS init. The map data is bundled JSON.
