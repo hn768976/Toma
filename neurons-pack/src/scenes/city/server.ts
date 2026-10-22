@@ -49,8 +49,12 @@ in vec3 vVN;
 in vec3 vV;
 out vec4 outColor;
 float box(vec2 p, vec2 c, vec2 h) { vec2 q = abs(p - c) - h; return max(q.x, q.y); }
-float cov(float d) { float a = fwidth(d) * 0.8 + 1e-5; return 1.0 - smoothstep(-a, a, d); }
+// Anti-aliasing width from derivatives taken in uniform control flow
+// (derivatives inside the per-face branches below would be undefined).
+float AW;
+float cov(float d) { return 1.0 - smoothstep(-AW, AW, d); }
 void main() {
+  AW = 0.6 * (fwidth(vP.x) + fwidth(vP.y) + fwidth(vP.z)) + 1e-5;
   vec3 N = normalize(vVN);
   vec3 V = normalize(vV);
   vec3 L = normalize(vec3(-0.4, 0.8, 0.6));
@@ -94,9 +98,10 @@ void main() {
     col = mix(col, col * 0.25, holes);
     col += vec3(0.02) * cov(box(p, vec2(0.0, -2.6), vec2(3.2, 6.6)));
   } else if (abs(vN.x) > 0.9) {
-    // Side vent lines.
-    float lines = cov(abs(fract(vP.y * 1.25) - 0.5) - 0.12) * cov(box(vP.zy, vec2(0.0, -4.0), vec2(hs.z - 2.0, 4.0)));
-    col *= 1.0 - 0.35 * lines;
+    // Side vent lines: analytic (no derivatives), soft-edged bands.
+    float band = smoothstep(0.32, 0.4, abs(fract(vP.y * 1.25) - 0.5));
+    float zone = step(abs(vP.z), hs.z - 2.0) * step(abs(vP.y + 4.0), 4.0);
+    col *= 1.0 - 0.3 * (1.0 - band) * zone;
   }
   outColor = vec4(col + emit, 1.0);
 }`,

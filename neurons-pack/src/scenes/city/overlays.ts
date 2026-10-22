@@ -69,7 +69,7 @@ void main() {
   int kind = int(vB.x + 0.5);
   vec2 p = vUv;
   float d;
-  float aa;
+  float aa = 0.7 * length(fwidth(p)) + 1e-5; // uniform control flow
   vec4 c = vec4(uColor, 1.0);
   if (kind == ${SPRITE.ring}) {
     d = abs(length(p) - 0.4) - 0.085;
@@ -85,7 +85,6 @@ void main() {
     outColor = vec4(mix(e.rgb, uHaze, f * f) * e.a * vB.y, e.a * vB.y);
     return;
   }
-  aa = 0.7 * length(fwidth(p)) + 1e-5;
   float cov = (1.0 - smoothstep(-aa, aa, d)) * vB.y;
   if (cov <= 0.0) discard;
   float f = smoothstep(uFog.x, uFog.y, length(vWorld - uCam));
