@@ -1,4 +1,4 @@
-import { lerp, smooth } from "../gl/timeline";
+import { lerp } from "../gl/timeline";
 
 export type WavePalette = {
   bgDeep: string;
@@ -30,23 +30,23 @@ export const TEAL: WavePalette = {
 export const HOVER_RIG: CameraRig = (t) => {
   const k = t / 15;
   return {
-    position: [lerp(0.15, -0.15, k), lerp(1.85, 1.75, k), lerp(1.55, 1.4, k)],
-    target: [lerp(0.05, -0.15, k), -0.1, lerp(-0.35, -0.5, k)],
+    position: [lerp(0.15, -0.2, k), lerp(1.45, 1.38, k), lerp(1.3, 1.1, k)],
+    target: [lerp(0.05, -0.2, k), -0.45, lerp(-0.25, -0.45, k)],
     roll: 0.03 * Math.sin(t * 0.35),
   };
 };
 
-// Version 2 — low-altitude flyover: the camera skims just above the cloth,
-// banking through a sweeping arc so the folds rise like dunes toward a
-// fog-softened horizon.
+// Version 2 — low-altitude flyover: the camera travels forward a few metres
+// over the cloth on a gentle S-curve, banking into each turn, so the folds
+// stream beneath the lens toward a fog-softened horizon.
 export const FLYOVER_RIG: CameraRig = (t) => {
-  const k = smooth(0, 15, t) * 0.6 + (t / 15) * 0.4;
-  const angle = lerp(-0.75, 0.65, k);
-  const radius = lerp(5.4, 4.2, k);
-  const height = lerp(1.05, 1.45, k) + 0.06 * Math.sin(t * 0.7);
+  const z = lerp(5.2, -1.6, t / 15);
+  const x = 1.3 * Math.sin(t * 0.33);
+  const heading = 1.3 * 0.33 * Math.cos(t * 0.33) / (6.8 / 15); // dx/dz along the path
+  const height = 1.3 + 0.08 * Math.sin(t * 0.6);
   return {
-    position: [Math.sin(angle) * radius, height, Math.cos(angle) * radius],
-    target: [Math.sin(angle + 0.9) * 1.2, -0.35, Math.cos(angle + 0.9) * 1.2 - 0.6],
-    roll: -0.11 * Math.sin(lerp(-0.9, 1.4, k)),
+    position: [x, height, z],
+    target: [x - heading * 1.6, -0.25, z - 1.9],
+    roll: 0.12 * heading,
   };
 };

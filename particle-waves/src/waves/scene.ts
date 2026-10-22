@@ -10,7 +10,7 @@ import { rgb } from "../gl/color";
 import type { CameraRig, WavePalette } from "./looks";
 
 // Spacing between neighbouring particles of the cloth, in world units.
-const GRID_SPACING = 0.0165;
+const GRID_SPACING = 0.022;
 
 const PARTICLE_VERT = /* glsl */ `
 ${SIMPLEX_NOISE}
@@ -27,7 +27,7 @@ varying vec3 vColor;
 // The cloth: broad folds that roll and fold over each other, with lateral
 // displacement so crests pinch into bright creases.
 vec3 surface(vec2 g) {
-  float t = uTime;
+  float t = uTime * 1.5;
   vec3 q = vec3(g * 0.42, t * 0.07);
   float h = snoise(q + vec3(0.0, t * 0.035, 0.0)) * 0.72
           + snoise(q * 2.1 + vec3(3.1, -t * 0.05, 1.7)) * 0.28
@@ -61,14 +61,15 @@ void main() {
   float spec = pow(max(dot(n, hv), 0.0), 28.0);
   float grazing = pow(1.0 - abs(dot(n, viewDir)), 3.0);
 
-  vec3 col = uDeep * 0.5 + uBase * (0.25 + 0.75 * diffuse) + uHighlight * (spec * 1.6 + grazing * 0.55);
+  // Whole sheets read as lit particle cloth; crests get a restrained glint.
+  vec3 col = uDeep * 0.6 + uBase * (0.55 + 0.9 * diffuse) + uHighlight * (spec * 0.9 + grazing * 0.25);
   col *= mix(1.0, 0.45, dustMask) * (0.8 + 0.4 * aRand.w);
 
   float depth = -mv.z;
   float fog = exp(-max(depth - 2.5, 0.0) * 0.2);
   float coc = abs(depth - uFocus) * 0.45;
   gl_Position = projectionMatrix * mv;
-  float size = uPixel * (10.0 / depth + coc * 2.2) * (1.0 - 0.35 * dustMask);
+  float size = uPixel * (14.0 / depth + coc * 2.2) * (1.0 - 0.35 * dustMask);
   gl_PointSize = clamp(size, 0.0, uPixel * 18.0);
   col *= fog * 0.55 / (1.0 + coc * coc * 2.5);
   vColor = col;
@@ -103,7 +104,7 @@ void main() {
   vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
   vec3 col = uBgDeep;
   float drift = snoise(vec3(p * 0.8, uTime * 0.05)) * 0.5 + 0.5;
-  col += uBgGlow * (0.35 + 0.4 * drift) * exp(-dot(p - vec2(-0.85, 0.05), p - vec2(-0.85, 0.05)) / 0.12);
+  col += uBgGlow * (0.7 + 0.5 * drift) * exp(-dot(p - vec2(-0.88, 0.05), p - vec2(-0.88, 0.05)) / 0.16);
   col += uBgGlow * 0.25 * exp(-dot(p - vec2(0.7, 0.35), p - vec2(0.7, 0.35)) / 0.2);
   col += uBgGlow * 0.18 * exp(-dot(p, p) / 0.5);
   col *= smoothstep(1.35, 0.3, length(p));

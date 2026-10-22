@@ -26,6 +26,7 @@ uniform vec3 uBlue;
 uniform vec3 uViolet;
 uniform vec3 uMagenta;
 uniform vec3 uFlareColor;
+uniform float uTendril;
 attribute vec4 aInfo; // class, strand brightness, arc length, core-thread flag
 attribute vec4 aRand;
 varying vec3 vColor;
@@ -37,7 +38,7 @@ void main() {
 
   // Low-frequency morph field: whole strands bend and drift together so the
   // pattern keeps evolving while each strand stays smooth.
-  vec3 mq = p * 0.85 + vec3(0.0, -uTime * 0.075, uTime * 0.02);
+  vec3 mq = p * 0.85 + vec3(0.0, -uTime * 0.11, uTime * 0.03);
   vec3 disp = vec3(
     snoise(mq),
     snoise(mq + vec3(13.1, 4.7, 0.0)),
@@ -70,14 +71,20 @@ void main() {
     col = uMagenta * 0.38 * b;
   } else {
     float speck = smoothstep(0.0, 0.6, snoise(p * 3.2 + vec3(0.0, -uTime * 0.12, 0.0)));
-    col = (aRand.y > 0.35 ? uMagenta : uViolet) * (0.035 + 0.16 * speck) * aInfo.y + mix(uBlue, uViolet, 0.4) * rim * 0.24;
+    col = (aRand.y > 0.25 ? uMagenta : uViolet) * (0.09 + 0.42 * speck) * aInfo.y + mix(uBlue, uViolet, 0.4) * rim * 0.09;
+    // Sparse cyan glints scattered through the volume.
+    col += uCore * step(0.93, aRand.x) * speck * 0.35;
   }
   col *= twinkle;
 
+  // Build-up: strands curling at the left limb brighten before the surge.
+  float limb = smoothstep(-0.8, -0.97, nrm.x) * exp(-pow((nrm.y + 0.05) / 0.22, 2.0));
+  col += uCore * uTendril * limb * (cls < 2.5 ? 0.35 : 0.03) * pulse;
+
   // Excitation band: a latitude ring on the shell that ignites from the left limb.
-  float band = exp(-pow((nrm.y - uFlareLat) / 0.06, 2.0));
+  float band = exp(-pow((nrm.y - uFlareLat) / 0.1, 2.0));
   float sweep = smoothstep(uFlareFront, uFlareFront - 0.35, nrm.x);
-  col += uFlareColor * uFlare * band * sweep * shell * (0.15 + 0.3 * aRand.w) * (1.0 - 0.6 * rim);
+  col += uFlareColor * uFlare * band * sweep * (0.05 + 0.1 * aRand.w) * (1.0 - 0.6 * rim);
 
   col *= depthFade;
   float bright = max(col.r, max(col.g, col.b));
@@ -117,6 +124,7 @@ uniform float uRays;
 uniform vec3 uBgDeep;
 uniform vec3 uBgGlow;
 uniform vec3 uRayColor;
+uniform vec3 uHaze;
 varying vec2 vUv;
 void main() {
   vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0);
@@ -124,6 +132,8 @@ void main() {
   vec3 col = uBgDeep;
   col += uBgGlow * exp(-r * r / 0.12) * 0.85;
   col += uBgGlow * exp(-r * r / 0.6) * 0.25;
+  // Luminous haze filling the orb's volume.
+  col += uHaze * smoothstep(0.37, 0.0, r) * 0.22;
 
   float streak = snoise(vec3(p.x * 22.0, 0.0, uTime * 0.05)) * 0.5 + 0.5;
   col += uBgGlow * pow(streak, 4.0) * 0.10 * smoothstep(0.9, 0.0, abs(p.x));
@@ -133,7 +143,7 @@ void main() {
   float rays = pow(rayN, 3.0) * above * exp(-pow(p.x / 0.1, 2.0)) * smoothstep(0.5, 0.3, p.y);
   col += uRayColor * rays * uRays * 0.9;
 
-  col *= smoothstep(1.25, 0.25, r);
+  col *= mix(0.6, 1.0, smoothstep(1.25, 0.25, r));
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -148,10 +158,10 @@ uniform vec3 uColor;
 varying vec2 vUv;
 void main() {
   vec2 p = (vUv - 0.5) * vec2(uAspect, 1.0) - uPos;
-  float core = exp(-dot(p, p) / 0.0012) * 0.05;
-  float halo = exp(-dot(p, p) / 0.01) * 0.22;
+  float core = exp(-dot(p, p) / 0.0016) * 0.02;
+  float halo = exp(-dot(p, p) / 0.014) * 0.2;
   float dx = p.x > 0.0 ? p.x / uLength : p.x / (uLength * 0.2);
-  float streak = exp(-dx * dx - pow(p.y / 0.011, 2.0)) * 0.4;
+  float streak = exp(-dx * dx - pow(p.y / 0.02, 2.0)) * 0.3;
   vec3 col = uColor * (core + halo + streak) * uIntensity;
   gl_FragColor = vec4(col, 1.0);
 }
@@ -175,6 +185,7 @@ export const createOrbStage = (palette: OrbPalette): CreateStage => (renderer, w
     uBgDeep: { value: rgb(palette.bgDeep) },
     uBgGlow: { value: rgb(palette.bgGlow) },
     uRayColor: { value: rgb(palette.rays) },
+    uHaze: { value: rgb(palette.haze) },
   };
   const bg = new THREE.Mesh(
     quad,
@@ -206,6 +217,7 @@ export const createOrbStage = (palette: OrbPalette): CreateStage => (renderer, w
     uViolet: { value: rgb(palette.violet) },
     uMagenta: { value: rgb(palette.magenta) },
     uFlareColor: { value: rgb(palette.flare) },
+    uTendril: { value: 0 },
   };
   const orb = new THREE.Points(
     geo,
@@ -257,21 +269,25 @@ export const createOrbStage = (palette: OrbPalette): CreateStage => (renderer, w
     render: (frame) => {
       const t = frame / fps;
       // Slow spin with a gentle wobble of the axis.
-      orb.rotation.set(0.14 + 0.05 * Math.sin(t * 0.4), t * 0.2 + 0.4, 0.06 * Math.sin(t * 0.3));
+      orb.rotation.set(0.14 + 0.05 * Math.sin(t * 0.4), t * 0.28 + 0.4, 0.06 * Math.sin(t * 0.3));
 
-      // Energy surge: flare at the left limb (≈3.0–6.0 s), band sweeping across.
-      const surge = envelope(t, 2.8, 3.8, 4.6, 6.4);
+      // Energy surge: strands curl and brighten at the left limb (2.4–3.9 s),
+      // then a wide band ignites across the lower orb, slides down and fades
+      // by ~6.3 s.
+      const surge = envelope(t, 3.0, 3.9, 5.1, 6.3);
+      const lat = lerp(-0.12, -0.42, smooth(3.6, 6.3, t));
       pUniforms.uTime.value = t;
+      pUniforms.uTendril.value = envelope(t, 2.4, 3.3, 3.7, 4.6);
       pUniforms.uFlare.value = surge;
-      pUniforms.uFlareFront.value = lerp(-1.1, 1.25, smooth(3.0, 5.4, t));
-      pUniforms.uFlareLat.value = lerp(-0.08, -0.3, smooth(3.6, 6.0, t));
-      flareUniforms.uIntensity.value = envelope(t, 2.9, 3.7, 4.3, 5.6) * 0.9;
-      flareUniforms.uLength.value = lerp(0.03, 0.16, smooth(3.0, 4.8, t));
-      flareUniforms.uPos.value.set(-0.355, lerp(-0.02, -0.06, smooth(3.6, 5.2, t)));
+      pUniforms.uFlareFront.value = lerp(-1.1, 1.25, smooth(3.2, 5.0, t));
+      pUniforms.uFlareLat.value = lat;
+      flareUniforms.uIntensity.value = envelope(t, 3.0, 3.9, 4.6, 6.0) * 0.75;
+      flareUniforms.uLength.value = lerp(0.04, 0.2, smooth(3.0, 4.8, t));
+      flareUniforms.uPos.value.set(-0.33, lat * 0.36);
 
       bgUniforms.uTime.value = t;
       bgUniforms.uRays.value =
-        0.35 + 0.45 * envelope(t, -1, 0, 0.8, 2.4) + 0.7 * envelope(t, 8.6, 9.6, 11.8, 13.2);
+        0.3 + [0, 1.5, 6, 9, 10.5, 12].reduce((sum, c) => sum + 0.6 * Math.exp(-(((t - c) / 0.55) ** 2)), 0);
 
       composer.render();
     },

@@ -8,7 +8,7 @@ export const CLASS_MAGENTA = 2;
 export const CLASS_FILL = 3;
 
 const STRANDS = 1000;
-const FILL_PARTICLES = 260_000;
+const FILL_PARTICLES = 480_000;
 const BEAD_SPACING = 0.011;
 // Strength of the swirling component relative to the pull toward the poles.
 const CURL_WEIGHT = 0.55;
