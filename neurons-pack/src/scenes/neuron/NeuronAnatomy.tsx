@@ -158,7 +158,7 @@ const Labels: React.FC = () => {
     { key: "myelinSheath", text: [0.34, 0.62], anchors: [A.myelin], from: [[0.37, 0.635]] },
     { key: "nodeOfRanvier", text: [0.5, 0.905], anchors: [A.node], from: [[0.51, 0.855]] },
     { key: "dendrites", text: [0.055, 0.925], anchors: A.dendrites, from: [[0.06, 0.865], [0.075, 0.865]] },
-    { key: "axonTerminals", text: [0.585, 0.34], anchors: A.terminals, from: [[0.83, 0.355], [0.835, 0.355]] },
+    { key: "axonTerminals", text: [0.56, 0.34], anchors: A.terminals, from: [[0.795, 0.33], [0.8, 0.33]] },
   ];
   const fontSize = 104;
   const stroke = 5;

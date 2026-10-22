@@ -31,11 +31,11 @@ const AXON_CTRL: V3[] = [
   [2.4, -0.4, 0.05],
   [2.95, -0.42, 0.05],
 ];
-const AXON_R = 0.024;
-const MYELIN_R = 0.04;
-const MYELIN_START = 0.75; // arc length before the first sheath (bare axon)
+const AXON_R = 0.019;
+const MYELIN_R = 0.05;
+const MYELIN_START = 1.0; // arc length before the first sheath (bare axon)
 const MYELIN_LEN = 0.62;
-const NODE_GAP = 0.11;
+const NODE_GAP = 0.15;
 
 export type AnatomyModel = {
   fibres: THREE.BufferGeometry;
@@ -219,11 +219,15 @@ const build = (): AnatomyModel => {
     anchors: {
       cellBody: add(SOMA, [0.22, 0.28, 0.1]),
       nucleus: NUC,
-      axon: axonLine.at(0.45 / axonLen),
+      axon: axonLine.at(0.78 / axonLen),
       myelin: myelinAnchor,
       node: nodes[3],
       dendrites: [mid(dendAnchorA, dLeaf(0.3)), mid(dendAnchorB, dLeaf(0.2))],
-      terminals: [sortedBulbs[0], sortedBulbs[Math.floor(sortedBulbs.length * 0.35)]],
+      // Two boutons on the right-hand side of the arbor (leaders come in from the right).
+      terminals: [
+        [...bulbs].filter((p) => p[1] > sortedBulbs[Math.floor(bulbs.length / 3)][1]).sort((a, b) => b[0] - a[0])[0],
+        [...bulbs].sort((a, b) => b[0] - a[0])[0],
+      ],
     },
   };
 };
