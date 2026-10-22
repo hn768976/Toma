@@ -37,7 +37,7 @@ const MOTES: Mote[] = (() => {
       dirX: Math.cos(a),
       dirY: Math.sin(a),
       dist0: 0.12 + rnd() * 0.32,
-      size: 0.045 + Math.pow(rnd(), 2) * 0.035,
+      size: 0.063 + Math.pow(rnd(), 2) * 0.05,
     });
   }
   return motes;

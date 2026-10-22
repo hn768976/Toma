@@ -54,7 +54,7 @@ added only when the pixel size can resolve them.
   - a spiky magenta core with drifting sparks
   - four hashed star layers
 - `src/nebula/flyby.ts` adds the soft foreground motes that drift past the
-  lens between about 15 and 19 seconds.
+  lens between about 16 and 19 seconds.
 - `src/nebula/palettes.ts` holds the two colour palettes.
 
 `remotion.config.ts` selects the ANGLE GL backend, so headless rendering works

@@ -41,10 +41,10 @@ export const PALETTE_KEYS: (keyof Palette)[] = [
 // Matches the reference: deep navy space, royal-blue clouds, lavender-white
 // ring and a magenta core.
 export const referencePalette: Palette = {
-  space: "#07101e",
-  cloud: "#2c4aae",
+  space: "#0c1626",
+  cloud: "#3050bc",
   fog: "#78868e",
-  shell: "#2c47a6",
+  shell: "#2a4192",
   shellHi: "#7d93ff",
   gap: "#4650c8",
   ringEdge: "#a6acdc",
@@ -75,7 +75,7 @@ export const emberPalette: Palette = {
   coreInner: "#9ff6ff",
   star1: "#fff6e8",
   star2: "#ffc35f",
-  star3: "#6fe8d0",
+  star3: "#ffd9a8",
   star4: "#ff5f5f",
   flare: "#fff4dc",
 };

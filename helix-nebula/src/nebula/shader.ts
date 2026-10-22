@@ -140,12 +140,14 @@ vec3 nebula(vec2 w) {
   vec2 ul = w - vec2(-0.6, -0.3);
   float upperLeft = exp(-dot(ul, ul) / (0.45 * 0.45));
   float rightVoid = smoothstep(0.45, 0.85, w.x) * smoothstep(-0.55, -0.15, w.y);
-  float clouds = smoothstep(-0.15, 0.55, c1 + 0.4 * bandMask + 0.7 * upperLeft - 0.1 - 0.5 * rightVoid);
+  vec2 ll = w - vec2(-0.5, 0.38);
+  float lowerLeft = exp(-dot(ll, ll) / (0.35 * 0.35));
+  float clouds = smoothstep(-0.15, 0.55, c1 + 0.4 * bandMask + 0.7 * upperLeft - 0.1 - 0.5 * rightVoid - 0.35 * lowerLeft);
   vec3 col = mix(SPACE, CLOUD * 0.85, clouds * clouds);
   col += CLOUD * 0.3 * smoothstep(-0.1, 0.6, c2) * clouds;
   float fogAmt = bandMask * smoothstep(-0.15, 0.45, fbm(w + 7.3, 2.2, 31)) * (1.0 - rightVoid);
   col = mix(col, FOG * (0.6 + 0.35 * c2), fogAmt * 0.55);
-  col += CLOUD * 0.25 * bandMask * smoothstep(0.0, 0.5, c1) * (1.0 - rightVoid);
+  col += CLOUD * 0.12 * bandMask * smoothstep(0.0, 0.5, c1) * (1.0 - rightVoid);
   col *= 0.65 + 0.35 * smoothstep(0.95, 0.25, abs(band));
 
   vec2 core = vec2(0.003, -0.021);
@@ -154,6 +156,8 @@ vec3 nebula(vec2 w) {
   float grain = fbm(w + 4.2, 40.0, 61);
   float speck = fbm(w + 9.1, 120.0, 63);
   float lump = clumps(w + 2.7, 9.0, 71);
+  // Space immediately around the nebula is darker navy than the far clouds.
+  col *= mix(0.62, 1.0, smoothstep(0.3, 0.75, r));
 
   // Outer helix shell: a large ellipse offset to the upper-left plus a
   // second loop sweeping out to the left.
@@ -162,10 +166,15 @@ vec3 nebula(vec2 w) {
   vec2 e3 = rot(0.35) * (w - vec2(-0.47, -0.08)) / vec2(0.36, 0.40);
   float r3 = length(e3);
   float shellTex = 0.55 + 0.45 * clumps(w + 1.3, 4.0, 41);
-  float shell = exp(-pow((r2 - 0.93) / 0.14, 2.0)) * (0.9 + 0.5 * fbm(e2 * 2.0, 1.0, 43)) + smoothstep(0.98, 0.45, r2) * 0.34;
+  float shell = exp(-pow((r2 - 0.93) / 0.14, 2.0)) * (0.9 + 0.5 * fbm(e2 * 2.0, 1.0, 43)) + smoothstep(0.98, 0.45, r2) * 0.2;
   float loop = exp(-pow((r3 - 0.9) / 0.15, 2.0)) * smoothstep(0.4, -0.5, e3.x) * 0.85;
   float shellAmt = (shell + loop) * shellTex * (0.9 + 0.3 * grain);
-  col = mix(col, SHELL, clamp(shellAmt, 0.0, 1.0) * 0.9);
+  shellAmt *= 1.0 - 0.45 * lowerLeft;
+  col = mix(col, SHELL, clamp(shellAmt, 0.0, 1.0) * 0.8);
+  // Thin, offset outer arc of the second loop, visible on the left.
+  vec2 e4 = rot(-0.2) * (w - vec2(-0.1, -0.01)) / vec2(0.64, 0.52);
+  float arc = exp(-pow((length(e4) - 1.0) / 0.05, 2.0)) * smoothstep(-0.2, -0.6, e4.x);
+  col += SHELL_HI * arc * shellTex * 0.25;
   col += SHELL_HI * max(shellAmt - 0.7, 0.0) * 0.6;
   col += SHELL_HI * exp(-pow((r2 - 0.97) / 0.05, 2.0)) * shellTex * 0.07;
 
@@ -178,7 +187,7 @@ vec3 nebula(vec2 w) {
   float sMid = streaks(n, r, 24.0, 59);
   float width = re < 1.0 ? 0.42 : 0.2;
   float ring = exp(-pow((re - 1.0) / width, 2.0));
-  float inner = exp(-pow((re - 0.55) / 0.12, 2.0)) * 0.55;
+  float inner = exp(-pow((re - 0.5) / 0.11, 2.0)) * 0.6;
   float side = 0.75 + 0.15 * cos(ea - 2.6) + 0.35 * fbm(vec2(cos(ea), sin(ea)) * 1.6, 1.0, 67);
   float fib = 0.78 + 0.3 * lump + 0.14 * sFine + 0.1 * sMid + 0.25 * grain + 0.18 * speck;
   float ringAmt = (ring + inner * (0.6 + 0.6 * lump)) * side * fib;
@@ -190,17 +199,17 @@ vec3 nebula(vec2 w) {
 
   vec3 ringCol = mix(RING_EDGE, RING_HOT, smoothstep(0.4, 1.1, ringAmt));
   ringCol = mix(ringCol, RING_TINT, smoothstep(0.88, 1.15, re) * 0.55);
-  col = mix(col, ringCol, 0.85 * smoothstep(0.05, 0.9, ringAmt));
+  col = mix(col, ringCol * 1.25, 0.85 * smoothstep(0.05, 0.9, ringAmt));
   col = mix(col, RING_TINT, 0.2 * ring * smoothstep(0.0, 0.6, lump));
   float bloom = exp(-pow((re - 1.0) / 0.45, 2.0)) * side;
-  col += RING_EDGE * bloom * 0.2;
+  col += RING_EDGE * bloom * 0.34;
   col += RING_HOT * max(speck, 0.0) * ring * side * 0.3;
 
   // Central glow with a ragged rim and a purple surround.
   float rc = r * (1.0 + 0.12 * streaks(n, r, 40.0, 71) + 0.15 * lump);
-  col = mix(col, CORE_OUTER * 0.4, smoothstep(0.16, 0.1, rc) * 0.6);
-  float glow = exp(-pow(rc / 0.095, 3.0));
-  vec3 coreCol = mix(CORE_OUTER, CORE_INNER, exp(-pow(r / 0.07, 2.0)));
+  col = mix(col, CORE_OUTER * 0.4, smoothstep(0.18, 0.115, rc) * 0.6);
+  float glow = exp(-pow(rc / 0.109, 3.0));
+  vec3 coreCol = mix(CORE_OUTER, CORE_INNER, exp(-pow(r / 0.08, 2.0)));
   col = mix(col, coreCol, glow * 0.95);
   col += CORE_INNER * exp(-pow(r / 0.03, 2.0)) * 0.25;
 
