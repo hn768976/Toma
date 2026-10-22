@@ -7,22 +7,23 @@ export const DURATION_IN_FRAMES = 180;
 export const WIDTH = 3840;
 export const HEIGHT = 2160;
 
-// Fin dome geometry (world units): BLADE_COUNT thin blades radiate from
-// a hub on the Y axis; their top edges trace a dome of DOME_RADIUS x
-// DOME_HEIGHT.
-export const BLADE_COUNT = 40;
-export const DOME_RADIUS = 12;
-export const DOME_HEIGHT = 3;
-// >1 = profile falls steeply off the hub and flattens out at the rim.
-export const DOME_FLARE = 2.6;
-export const HUB_RADIUS = 0.35;
-export const BLADE_DEPTH = 6;
-export const BLADE_THICKNESS = 0.14;
-// Plan-view sweep of each blade (radians per world unit of radius), so
-// the blades curve like turbine vanes instead of running dead straight.
-export const BLADE_SWEEP = -0.18;
+// Ring geometry (world units): FIN_COUNT thin washer-shaped slices of a
+// torus (major radius MAJOR_RADIUS, tube radius TUBE_RADIUS), standing
+// side by side around the ring like the gills of a mushroom.
+export const MAJOR_RADIUS = 36;
+export const TUBE_RADIUS = 3.2;
+export const TUBE_INNER_RADIUS = 1.1;
+export const FIN_COUNT = 396;
+export const FIN_THICKNESS = 0.16;
 
-// The dome turns by exactly one blade spacing per loop, so frame 0 and
+// Only the stretch of ring facing the camera is drawn (the far side
+// would otherwise cross the top of frame, which the reference never
+// shows): NEAR_ANGLE is the ring angle nearest the camera (+z side),
+// VISIBLE_ARC how much of the ring around it is drawn.
+export const NEAR_ANGLE = Math.PI / 2;
+export const VISIBLE_ARC = (Math.PI * 2) / 3;
+
+// The ring turns by exactly one fin spacing per loop, so frame 0 and
 // frame DURATION_IN_FRAMES are identical and the clip loops seamlessly
 // (same as the reference).
-export const LOOP_ROTATION = (Math.PI * 2) / BLADE_COUNT;
+export const LOOP_ROTATION = (Math.PI * 2) / FIN_COUNT;
