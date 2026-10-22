@@ -1,63 +1,58 @@
 // Shot timing, measured from the reference (10.04 s; rendered as 301 frames @ 30 fps).
 //
-// 0.0 – 2.93 s  Map A (wide). Slow drone pull-back: zoom 1.38 -> 1.0 while the
-//               view drifts down from the airfield onto the compound.
-// 2.93 s        Hard switch with a soft flash into Map B, punched in and defocused.
-// 2.93 – 4.3 s  Map B pulls out (ease-out) and resolves to sharp by ~4.1 s.
-// 4.3 – 10 s    Map B keeps easing out very slowly.
+// 0.0 – 2.77 s   Map A (wide). Slow drone pull-back: zoom 1.38 -> 1.0 while the
+//                view drifts down from the airfield onto the compound.
+// 2.77 – 3.07 s  Crossfade: Map A keeps pushing in and softens while Map B fades in
+//                over it, defocused.
+// 3.07 – 3.9 s   Map B resolves to sharp.
+// 3.9 – 10 s     Map B holds, with a barely perceptible drift.
 
 import { mix, smoothstep } from "./random";
 
-export type View = {
-  map: "A" | "B";
+export type MapCam = {
   zoom: number;
   cx: number; // layout point at the screen centre
   cy: number;
-  blur: number; // extra mip bias (0 = sharp)
-  flash: number; // additive exposure (0..1)
+  blur: number; // extra mip LOD (0 = sharp)
   exposure: number;
 };
 
-export const SWITCH_T = 2.93;
-
-const easeOutCubic = (x: number) => 1 - Math.pow(1 - x, 3);
-
-export const viewAt = (t: number): View => {
-  if (t < SWITCH_T) {
-    const p = t / SWITCH_T;
-    const e = p * 0.85 + smoothstep(0, 1, p) * 0.15;
-    const pre = smoothstep(SWITCH_T - 0.12, SWITCH_T, t);
-    return {
-      map: "A",
-      zoom: mix(1.38, 1.0, e) * (1 + pre * 0.08),
-      cx: mix(596, 600, e),
-      cy: mix(440, 334, e),
-      blur: pre * 3.0,
-      flash: pre * 0.25,
-      exposure: 1,
-    };
-  }
-  const u = (t - SWITCH_T) / (4.3 - SWITCH_T);
-  const settle = easeOutCubic(Math.min(1, u));
-  const tail = smoothstep(4.3, 10.1, t);
-  const zoom = mix(1.5, 1.1, settle) * mix(1, 0.91, tail);
-  const sharpen = 1 - smoothstep(SWITCH_T + 0.25, 4.1, t);
-  const flash = Math.exp(-(t - SWITCH_T) / 0.14) * 0.3;
-  return {
-    map: "B",
-    zoom,
-    cx: mix(560, 596, settle) + tail * 6,
-    cy: mix(330, 338, settle) + tail * 4,
-    blur: sharpen * 4.2,
-    flash,
-    exposure: 1 + sharpen * 0.35,
-  };
+export type View = {
+  a: MapCam;
+  b: MapCam;
+  mix: number; // 0 = only map A, 1 = only map B
 };
 
-// Layout point -> layout-frame screen point (1192 x 672 space).
-export const toScreen = (v: View, x: number, y: number): [number, number] => [
-  (x - v.cx) * v.zoom + 596,
-  (y - v.cy) * v.zoom + 336,
+export const FADE_START = 2.77;
+export const FADE_END = 3.07;
+
+export const viewAt = (t: number): View => {
+  const p = Math.min(1, t / FADE_START);
+  const e = p * 0.85 + smoothstep(0, 1, p) * 0.15;
+  const push = smoothstep(FADE_START - 0.1, FADE_END, t);
+  const a: MapCam = {
+    zoom: mix(1.38, 1.0, e) * (1 + push * 0.1),
+    cx: mix(596, 600, e),
+    cy: mix(440, 334, e),
+    blur: push * 1.5,
+    exposure: 1 + push * 0.08,
+  };
+  const sharpen = 1 - smoothstep(FADE_START + 0.15, 3.9, t);
+  const hold = smoothstep(FADE_START, 10.1, t);
+  const b: MapCam = {
+    zoom: mix(1.07, 0.985, hold),
+    cx: mix(590, 600, hold),
+    cy: mix(332, 340, hold),
+    blur: sharpen * 3.6,
+    exposure: 1 + sharpen * 0.14,
+  };
+  return { a, b, mix: smoothstep(FADE_START, FADE_END, t) };
+};
+
+// Layout point on a map -> layout-frame screen point (1192 x 672 space).
+export const toScreen = (c: MapCam, x: number, y: number): [number, number] => [
+  (x - c.cx) * c.zoom + 596,
+  (y - c.cy) * c.zoom + 336,
 ];
 
 // Typewriter helper: how many characters of `text` are visible at time t.

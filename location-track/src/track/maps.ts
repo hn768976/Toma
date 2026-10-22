@@ -330,7 +330,7 @@ const ragged = (pts: Pt[], amp: number, seed: number): Pt[] => {
     let off = 0;
     for (let k = 0; k < n; k++) {
       const t = k / n;
-      off = off * 0.6 + (rnd() - 0.5) * amp;
+      off = off * 0.82 + (rnd() - 0.5) * amp * 0.45;
       out.push([
         a[0] + (b[0] - a[0]) * t + nx * off,
         a[1] + (b[1] - a[1]) * t + ny * off,
@@ -351,7 +351,7 @@ const clearing = (
   const shape = ragged(pts, 13, seed + Math.round(pts[0][0] * 7 + pts[0][1]));
   g.save();
   g.shadowColor = gray(l * 0.8, 0.8);
-  g.shadowBlur = 10;
+  g.shadowBlur = 18;
   poly(g, shape);
   g.fillStyle = gray(l);
   g.fill();
@@ -367,8 +367,8 @@ type Hub = { x: number; y: number; r: number };
 
 // Compound layout in layout units, matching the reference's close-up framing.
 export const HUBS: Hub[] = [
-  { x: 617, y: 290, r: 62 },
-  { x: 497, y: 390, r: 64 },
+  { x: 617, y: 290, r: 50 },
+  { x: 497, y: 390, r: 52 },
 ];
 
 const hubPads = (h: Hub) => {
@@ -549,7 +549,7 @@ const drawCompound = (g: Ctx, o: Ctx, grain: CanvasPattern, detail: number) => {
   // Hubs: ring road, central disc, eight pads with buildings.
   for (const h of HUBS) {
     g.beginPath();
-    g.arc(h.x, h.y, h.r + 14, 0, Math.PI * 2);
+    g.arc(h.x, h.y, h.r + 11, 0, Math.PI * 2);
     g.fillStyle = gray(0.34);
     g.fill();
     g.beginPath();
@@ -580,9 +580,9 @@ const drawCompound = (g: Ctx, o: Ctx, grain: CanvasPattern, detail: number) => {
     g.lineWidth = 2;
     g.stroke();
     for (const p of hubPads(h)) {
-      const bx = h.x + Math.cos(p.a) * (h.r + 20);
-      const by = h.y + Math.sin(p.a) * (h.r + 20);
-      building(g, bx, by, 16, 11, 0.86, p.a + Math.PI / 2);
+      const bx = h.x + Math.cos(p.a) * (h.r + 17);
+      const by = h.y + Math.sin(p.a) * (h.r + 17);
+      building(g, bx, by, 13, 9, 0.86, p.a + Math.PI / 2);
       road(
         g,
         [
@@ -643,12 +643,12 @@ const drawCompound = (g: Ctx, o: Ctx, grain: CanvasPattern, detail: number) => {
     o.arc(h.x, h.y, h.r * 0.42 + 4, 0, Math.PI * 2);
     o.stroke();
     for (const p of hubPads(h)) {
-      const bx = h.x + Math.cos(p.a) * (h.r + 20);
-      const by = h.y + Math.sin(p.a) * (h.r + 20);
+      const bx = h.x + Math.cos(p.a) * (h.r + 17);
+      const by = h.y + Math.sin(p.a) * (h.r + 17);
       o.save();
       o.translate(bx, by);
       o.rotate(p.a + Math.PI / 2);
-      o.strokeRect(-10, -7, 20, 14);
+      o.strokeRect(-8, -6, 16, 12);
       o.restore();
     }
   }
@@ -825,7 +825,7 @@ export const drawMapB = (): MapLayers => {
 export const drawMapA = (): MapLayers => {
   const base = makeCanvas(TEX_W, TEX_H);
   const overlay = makeCanvas(TEX_W, TEX_H);
-  terrain(base, 23, 0.3, 0.72);
+  terrain(base, 23, 0.36, 0.8);
   const g = layoutCtx(base);
   const o = layoutCtx(overlay);
   const grain = g.createPattern(
@@ -1010,34 +1010,12 @@ export const drawMapA = (): MapLayers => {
     true,
   );
 
-  // Airfield: runway, taxiway, aprons.
-  g.fillStyle = gray(0.1);
-  g.fillRect(462, 232, 310, 14);
-  g.fillStyle = gray(0.62);
-  g.fillRect(466, 235, 302, 8);
-  road(
-    g,
-    [
-      [480, 252],
-      [760, 252],
-    ],
-    { width: 3, asphalt: 0.2, edge: 0.6 },
-  );
-  for (const [x, y, w, h] of [
-    [520, 258, 40, 14],
-    [600, 260, 30, 10],
-    [680, 256, 46, 16],
-  ]) {
-    g.fillStyle = gray(0.58);
-    g.fillRect(x, y, w, h);
-  }
-
   // The compound itself, far away (scaled-down copy of map B's layout).
   g.save();
   o.save();
   for (const c of [g, o]) {
-    c.translate(600, 330);
-    c.scale(0.34, 0.34);
+    c.translate(600, 322);
+    c.scale(0.6, 0.6);
     c.translate(-596, -336);
   }
   drawCompound(g, o, grain, 0.6);
@@ -1047,7 +1025,7 @@ export const drawMapA = (): MapLayers => {
   // Building clusters and roads radiating from the compound.
   for (let i = 0; i < 160; i++) {
     const a = rnd() * Math.PI * 2;
-    const r = 60 + rnd() * 150;
+    const r = 150 + rnd() * 130;
     const x = 600 + Math.cos(a) * r * 1.3;
     const y = 320 + Math.sin(a) * r * 0.8;
     building(g, x, y, 2 + rnd() * 6, 2 + rnd() * 4, 0.6 + rnd() * 0.35);
@@ -1099,11 +1077,12 @@ export const drawMapA = (): MapLayers => {
       [880, 380],
     ],
   ];
-  for (const n of net) {
+  for (const n0 of net) {
+    // Spokes start at the compound's edge rather than its centre.
+    const n = n0[0][0] === 600 && n0[0][1] === 330 ? n0.slice(1) : n0;
     road(g, n, { width: 1.6, asphalt: 0.62, edge: 0.25 }, true);
     line(o, n, 0.9, OVERLAY, true);
   }
-  o.strokeRect(462, 232, 310, 14);
   line(
     o,
     [

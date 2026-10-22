@@ -5,7 +5,7 @@ import React from "react";
 import { hash1, smoothstep } from "./random";
 import { Palette } from "./palette";
 import { FONT_HEAD, FONT_MONO } from "./fonts";
-import { SWITCH_T, toScreen, typed, View } from "./timeline";
+import { FADE_END, toScreen, typed, View } from "./timeline";
 
 const CX = 596;
 const CY = 336;
@@ -80,14 +80,19 @@ const blinkOn = (t: number, start: number) => {
 type Props = { t: number; frame: number; view: View; palette: Palette };
 
 export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
-  const mapB = view.map === "B";
+  const mapB = view.mix > 0.5;
+  const cam = view.b;
   // The target frame flashes red while the new location locks on.
-  const hexWarn = t > 3.36 && t < 3.74;
+  const hexWarn = t > 3.38 && t < 3.62;
+  // The frame opens taller and eases down to its final size.
+  const hexIn = 1 - Math.pow(1 - Math.min(1, t / 1.2), 3);
+  const hexSx = 1;
+  const hexSy = 1 + (1 - hexIn) * 0.28;
   const hexFlicker = hexWarn ? (Math.floor(t * 30) % 3 === 0 ? 0.55 : 1) : 1;
   const hexColor = hexWarn ? P.warn : P.hud;
 
-  const title = typed("LOCATION TRACK", t, 0.12, 15);
-  const sub = typed("DESTINATION APPROVED", t, 0.85, 34);
+  const title = typed("LOCATION TRACK", t, 0.05, 19);
+  const sub = typed("DESTINATION APPROVED", t, 0.7, 34);
   const place = typed("RAU-94", t, 3.1, 18);
   const coords = typed("-12.623333, 142.086667", t, 3.45, 24);
   const loadP = smoothstep(5.0, 8.6, t);
@@ -121,7 +126,7 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
       style={{ position: "absolute", inset: 0 }}
     >
       {/* Grid */}
-      <g stroke={P.hud} strokeWidth={0.55} opacity={0.42}>
+      <g stroke={P.hud} strokeWidth={0.6} opacity={0.5}>
         {[-3, -2, -1, 1, 2, 3, 4].map((k) => (
           <line
             key={`v${k}`}
@@ -164,21 +169,22 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
       <g
         fill="none"
         stroke={hexColor}
-        opacity={hexFlicker * (hexWarn ? 0.9 : 0.95)}
+        opacity={hexFlicker * (hexWarn ? 0.55 : 0.95)}
+        transform={`translate(${CX},${CY}) scale(${hexSx},${hexSy}) translate(${-CX},${-CY})`}
       >
-        <path d={HEX_PATH} strokeWidth={7} opacity={0.12} />
-        <path d={HEX_PATH} strokeWidth={3.8} opacity={0.25} />
-        <path d={HEX_PATH} strokeWidth={hexWarn ? 1.3 : 1.9} />
+        <path d={HEX_PATH} strokeWidth={7} opacity={hexWarn ? 0.05 : 0.12} />
+        <path d={HEX_PATH} strokeWidth={3.8} opacity={hexWarn ? 0.1 : 0.25} />
+        <path d={HEX_PATH} strokeWidth={hexWarn ? 1.1 : 1.9} />
       </g>
 
       {/* Map-anchored target markers */}
       {targets && (
         <g opacity={tracking > 0 ? 1 : 0}>
           {targets.rings.map((r, i) => {
-            const [x, y] = toScreen(view, r.x, r.y);
+            const [x, y] = toScreen(cam, r.x, r.y);
             const a = blinkOn(t, r.at);
             const s =
-              view.zoom * (1 + (1 - smoothstep(r.at, r.at + 0.3, t)) * 0.8);
+              cam.zoom * (1 + (1 - smoothstep(r.at, r.at + 0.3, t)) * 0.8);
             return (
               <g
                 key={`r${i}`}
@@ -202,13 +208,13 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
             );
           })}
           {targets.circles.map((c, i) => {
-            const [x, y] = toScreen(view, c.x, c.y);
+            const [x, y] = toScreen(cam, c.x, c.y);
             return (
               <circle
                 key={`c${i}`}
                 cx={x}
                 cy={y}
-                r={5.5 * view.zoom}
+                r={5.5 * cam.zoom}
                 fill="none"
                 stroke={P.warn}
                 strokeWidth={1.3}
@@ -217,8 +223,8 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
             );
           })}
           {targets.tris.map((m, i) => {
-            const [x, y] = toScreen(view, m.x, m.y);
-            const s = m.s * view.zoom;
+            const [x, y] = toScreen(cam, m.x, m.y);
+            const s = m.s * cam.zoom;
             return (
               <path
                 key={`t${i}`}
@@ -280,7 +286,7 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
           {sub}
         </text>
       </g>
-      <g opacity={fadeIn(t, 0, 0.15)}>
+      <g>
         <rect
           x={10.5}
           y={65}
@@ -402,7 +408,7 @@ export const Hud: React.FC<Props> = ({ t, frame, view, palette: P }) => {
             fill="none"
             stroke={P.hud}
             strokeWidth={0.8}
-            opacity={blinkOn(t, SWITCH_T + 0.3)}
+            opacity={blinkOn(t, FADE_END + 0.1)}
           />
           <text
             x={180}

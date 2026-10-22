@@ -27,8 +27,8 @@ const hex = (h: string): Rgb => [
 
 export const STEEL_BLUE: Palette = {
   shadow: hex("#03070d"),
-  mid: hex("#2d5274"),
-  high: hex("#d7e6f3"),
+  mid: hex("#3a6489"),
+  high: hex("#e2eef8"),
   mapLine: hex("#9fd2ff"),
   hud: "#8fd0ff",
   hudText: "#dceeff",
@@ -41,7 +41,7 @@ export const STEEL_BLUE: Palette = {
 
 export const THERMAL_AMBER: Palette = {
   shadow: hex("#080402"),
-  mid: hex("#6a3a12"),
+  mid: hex("#80491a"),
   high: hex("#ffe1b0"),
   mapLine: hex("#ffc066"),
   hud: "#ffb85c",
