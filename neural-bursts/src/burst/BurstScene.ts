@@ -11,7 +11,6 @@ import { CloudUniforms, makeCloud, PointSpec, tw } from "../lib/cloud";
 import {
   easeInCubic,
   easeInOutSine,
-  easeOutCubic,
   gaussian,
   Key,
   mulberry32,
@@ -160,11 +159,10 @@ const CAM_Z: Key[] = [
   { t: 0, v: 6.6 },
   { t: 1.3, v: 5.6 },
   { t: 2.3, v: 9.5 },
-  { t: 3.15, v: 2.6, ease: easeInCubic },
-  { t: 4.0, v: 13, ease: easeOutCubic },
-  { t: 4.75, v: 13.5 },
-  { t: 6.1, v: 8.5 },
-  { t: 14.1, v: 12 },
+  { t: 3.25, v: 3.2, ease: easeInCubic },
+  { t: 4.6, v: 12.5, ease: easeInOutSine },
+  { t: 6.1, v: 9 },
+  { t: 14.1, v: 12.5 },
 ];
 
 export const createBurstStage =
@@ -217,7 +215,7 @@ export const createBurstStage =
           return {
             pos: [d[0] * r, d[1] * r, d[2] * r],
             color: pickWeighted(rng, pal.beads),
-            size: range(rng, 4, 7),
+            size: range(rng, 13, 20),
             seed: tw(rng, 1, range(rng, 0.7, 1.3)),
           };
         }),
@@ -231,7 +229,7 @@ export const createBurstStage =
           dir: d,
           len: [0.05, 0.55, 0.55, range(rng, 0.7, 1.3)],
           color: pickWeighted(rng, pal.rays),
-          misc: [0.7, 0.45, rng() * 6, 0.2],
+          misc: [0.6, 0.18, rng() * 6, 0.2],
         })),
         ctx,
       ),
@@ -239,8 +237,11 @@ export const createBurstStage =
     // Dim "ghost" rays around the sphere at the very start.
     const ghost = addRays(
       makeRays(
-        Array.from({ length: 34 }, () => ({
-          dir: randomUnitVector(rng),
+        Array.from({ length: 12 }, () => ({
+          // Mostly below the sphere, as in the reference.
+          dir: new THREE.Vector3(range(rng, -0.7, 0.7), range(rng, -1, -0.3), range(rng, -0.4, 0.4))
+            .normalize()
+            .toArray() as [number, number, number],
           len: [range(rng, 1.1, 1.8), range(rng, 2.5, 5), 0, 1],
           color: pickWeighted(rng, pal.rays),
           misc: [0.7, 0.1, rng() * 6, 0.9],
@@ -261,8 +262,8 @@ export const createBurstStage =
       makeRays(
         aDirs.map((d, i) => ({
           dir: [d.x, d.y, d.z],
-          len: [0.12, range(rng, 1.3, 3.2), aSticks[i], aSpeeds[i]],
-          color: pickWeighted(rng, pal.rays),
+          len: [0.12, range(rng, 1.3, 3.0), aSticks[i], aSpeeds[i]],
+          color: pickWeighted(rng, pal.rays.slice(0, 4)),
           misc: [range(rng, 0.7, 1.3), range(rng, 0.55, 1), rng() * 6, 0.85],
         })),
         ctx,
@@ -273,7 +274,7 @@ export const createBurstStage =
         aDirs.map((d, i) => ({
           pos: [d.x * aSticks[i], d.y * aSticks[i], d.z * aSticks[i]],
           color: pickWeighted(rng, pal.beads),
-          size: range(rng, 0.055, 0.095),
+          size: range(rng, 0.07, 0.11),
           seed: tw(rng, 1, aSpeeds[i]),
         })),
         px,
@@ -337,8 +338,8 @@ export const createBurstStage =
       makeRays(
         netDirs.map((d, i) => ({
           dir: [d.x, d.y, d.z],
-          len: [range(rng, 0.05, 0.3), netLens[i] * range(rng, 1.4, 2.6), netLens[i] * range(rng, 0.8, 1.15), netSpeeds[i]],
-          color: pickWeighted(rng, pal.rays.slice(1)),
+          len: [range(rng, 0.05, 0.3), netLens[i] * range(rng, 1.2, 2.2), netLens[i] * range(rng, 0.25, 0.7), netSpeeds[i]],
+          color: pickWeighted(rng, pal.rays.slice(0, 3)),
           misc: [range(rng, 0.8, 1.7), range(rng, 0.45, 1), rng() * 6, 0.25],
         })),
         ctx,
@@ -347,7 +348,7 @@ export const createBurstStage =
     // Dense short fibres around the hub.
     const fibres = addRays(
       makeRays(
-        Array.from({ length: 280 }, () => ({
+        Array.from({ length: 140 }, () => ({
           dir: randomUnitVector(rng),
           len: [0.02, range(rng, 0.3, 2.2), 0, range(rng, 0.8, 1.2)],
           color: pickWeighted(rng, pal.rays),
@@ -362,24 +363,24 @@ export const createBurstStage =
     const particleSpecs: PointSpec[] = [];
     // Clumps sit out along the rays (the tufts at the ends of the network),
     // leaving dark gaps between them, as in the reference.
-    const clumps = Array.from({ length: 150 }, () => {
+    const clumps = Array.from({ length: 60 }, () => {
       const k = Math.floor(rng() * N_RAYS);
       const r = netLens[k] * range(rng, 0.45, 1.15);
       const d = netDirs[k];
-      return { k, c: new THREE.Vector3(d.x * r, d.y * r, d.z * r), spread: 0.09 * r + 0.1 };
+      return { k, c: new THREE.Vector3(d.x * r, d.y * r, d.z * r), spread: 0.075 * r + 0.08 };
     });
     for (let i = 0; i < 8000; i++) {
       let pos: [number, number, number];
       const speed = range(rng, 0.65, 1.35);
       const roll = rng();
-      if (roll < 0.78) {
+      if (roll < 0.86) {
         const cl = clumps[Math.floor(rng() * clumps.length)];
         pos = [
           cl.c.x + gaussian(rng) * cl.spread,
           cl.c.y + gaussian(rng) * cl.spread,
           cl.c.z + gaussian(rng) * cl.spread,
         ];
-      } else if (roll < 0.95) {
+      } else if (roll < 0.99) {
         const k = Math.floor(rng() * N_RAYS);
         const d = netDirs[k];
         const r = netLens[k] * range(rng, 0.15, 1.1);
@@ -435,7 +436,7 @@ export const createBurstStage =
           return {
             pos: [d[0] * r, d[1] * r * 0.7, d[2] * r],
             color: pal.star,
-            size: range(rng, 0.08, 0.16),
+            size: range(rng, 0.1, 0.2),
             seed: tw(rng, range(rng, 0.5, 1), range(rng, 0.8, 1.2)),
           };
         }),
@@ -475,7 +476,7 @@ export const createBurstStage =
       sphereMat.uniforms.uOpacity.value = 1 - smoothstep(1.15, 1.4, t);
       sphere.visible = t < 1.4;
       inner.uScale.value = sScale;
-      inner.uOpacity.value = smoothstep(0.0, 0.35, t + 0.08) * (1 - smoothstep(0.9, 1.1, t));
+      inner.uOpacity.value = 1.6 * smoothstep(0.0, 0.35, t + 0.08) * (1 - smoothstep(0.9, 1.1, t));
       innerLinks.uScale.value = sScale;
       innerLinks.uBurstT.value = t + 0.1;
       innerLinks.uBurstDur.value = 0.5;
@@ -515,42 +516,40 @@ export const createBurstStage =
       // Burst B / network ---------------------------------------------------
       burstB.uBurstT.value = t - 2.3;
       burstB.uBurstDur.value = 1.1;
-      burstB.uRetract.value = easeInOutSine((t - 3.1) / 1.0);
+      burstB.uRetract.value = easeInOutSine((t - 3.3) / 1.8);
       burstB.uOpacity.value =
         smoothstep(2.3, 2.45, t) *
-        track([{ t: 2.8, v: 1.0 }, { t: 3.6, v: 0.6 }, { t: 6.5, v: 0.5 }, { t: 14, v: 0.18 }], t);
+        track([{ t: 2.8, v: 1.0 }, { t: 3.6, v: 0.55 }, { t: 5, v: 0.3 }, { t: 9, v: 0.13 }, { t: 14, v: 0.08 }], t);
       burstB.uScale.value = 1 + 0.06 * Math.max(0, t - 3);
       burstB.uFlicker.value = 0.3;
 
-      const netT = t - 2.95;
       const growth = 1 + 0.06 * Math.max(0, t - 4);
-      for (const u of [particles, nodes]) {
-        u.uBurstT.value = netT;
-        u.uBurstDur.value = 1.3;
-        u.uScale.value = growth;
-      }
-      particles.uOpacity.value = smoothstep(2.95, 3.2, t) * track([{ t: 4, v: 1.6 }, { t: 14, v: 1.2 }], t);
-      nodes.uOpacity.value = smoothstep(3.0, 3.3, t) * track([{ t: 4, v: 2.2 }, { t: 14, v: 1.2 }], t);
+      particles.uBurstT.value = t - 3.25;
+      particles.uBurstDur.value = 1.8;
+      nodes.uBurstT.value = t - 2.85;
+      nodes.uBurstDur.value = 1.0;
+      for (const u of [particles, nodes]) u.uScale.value = growth;
+      particles.uOpacity.value = smoothstep(3.45, 4.2, t) * track([{ t: 4, v: 1.5 }, { t: 14, v: 1.2 }], t);
+      nodes.uOpacity.value = smoothstep(3.15, 3.4, t) * track([{ t: 3.6, v: 2.8 }, { t: 5, v: 2.0 }, { t: 14, v: 1.3 }], t);
       fibres.uBurstT.value = t - 2.1;
       fibres.uBurstDur.value = 0.8;
-      fibres.uOpacity.value = smoothstep(2.1, 2.3, t) * track([{ t: 2.4, v: 0.9 }, { t: 3.5, v: 0.45 }, { t: 14, v: 0.25 }], t);
+      fibres.uOpacity.value = smoothstep(2.1, 2.3, t) * track([{ t: 2.4, v: 0.9 }, { t: 3.5, v: 0.4 }, { t: 8, v: 0.2 }, { t: 14, v: 0.14 }], t);
       fibres.uScale.value = growth;
-      stars.uOpacity.value = smoothstep(5.0, 8.0, t) * 1.3;
+      stars.uOpacity.value = smoothstep(4.5, 7.5, t) * 1.6;
       stars.uScale.value = growth;
 
-      const bgGlow = smoothstep(2.5, 4, t) * 0.12 + 0.06;
       return {
         scene,
         camera,
         post: {
-          bloom: 1.1,
-          threshold: 0.12,
-          exposure: 1.3 * pal.exposure,
+          bloom: 0.9,
+          threshold: 0.15,
+          exposure: 0.95 * pal.exposure,
           vignette: 0.55,
           background: pal.background,
-          bgGlowColor: pal.bgGlow,
+          bgGlowColor: [0, 0, 0] as [number, number, number],
           bgGlowPos: [0.5, 0.5] as [number, number],
-          bgGlow: bgGlow * 0.5,
+          bgGlow: 0,
           fade: 1,
         },
       };
