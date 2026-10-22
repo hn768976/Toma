@@ -31,20 +31,20 @@ export const Chrome: React.FC<{ frame: number; pal: WorldPalette }> = ({ frame, 
       {/* Header labels */}
       <div style={{ opacity: p }}>
         <Label x={22} y={24} text="LOCATION" pal={pal} size={7} mono color={pal.dim} />
-        <Label x={22} y={33} text={scanLabel} pal={pal} size={15} weight={600} />
-        <ProgressLine x={22} y={52} w={66} p={1} pal={pal} />
+        <Label x={22} y={30} text={scanLabel} pal={pal} size={21} weight={600} color={pal.header} />
+        <ProgressLine x={22} y={54} w={90} p={1} pal={pal} />
       </div>
       <div style={{ opacity: p2 }}>
-        <Label x={108} y={33} text={posLabel} pal={pal} size={15} weight={600} />
-        <ProgressLine x={108} y={52} w={120} p={0.35} pal={pal} />
+        <Label x={128} y={30} text={posLabel} pal={pal} size={21} weight={600} color={pal.header} />
+        <ProgressLine x={128} y={54} w={170} p={0.35} pal={pal} />
         {/* Folder list */}
         <div style={{ position: "absolute", left: 22, top: 66 }}>
           <DataRows n={6} seed={40} frame={frame} pal={pal} icon len={12} lineH={13} />
         </div>
       </div>
       <div style={{ opacity: p }}>
-        <Label x={1890} y={20} text={searchLabel} pal={pal} size={15} weight={600} anchor="right" />
-        <ProgressLine x={1720} y={40} w={170} p={ramp(frame, W.panelsIn, W.alpha)} pal={pal} />
+        <Label x={1890} y={18} text={searchLabel} pal={pal} size={21} weight={600} anchor="right" color={pal.header} />
+        <ProgressLine x={1680} y={42} w={210} p={ramp(frame, W.panelsIn, W.alpha)} pal={pal} />
         <Label x={1890} y={46} text={`${Math.round(ramp(frame, W.panelsIn, W.alpha) * 100)}% / NODE 07`} pal={pal} size={7} mono color={pal.dim} anchor="right" />
       </div>
       {/* INFO */}
@@ -94,7 +94,7 @@ export const BootDialogs: React.FC<{ frame: number; pal: WorldPalette }> = ({ fr
   const loadP = ramp(frame, W.loadingIn, W.loadingDone);
   const loading = flickerIn(frame, W.loadingIn, 5) * (1 - ramp(frame, W.loadingDone + 2, W.loadingDone + 6));
   const search = ramp(frame, W.searchIn, W.searchIn + 6, easeOut) * (1 - ramp(frame, W.searchOut - 4, W.searchOut));
-  const query = typed("OBJ-96-BETA", frame, W.searchType, 9);
+  const query = typed("OBJ-96-BETA", frame, W.searchType, 14);
   const caret = Math.floor(frame / 8) % 2 ? "▌" : " ";
   const field = (x: number, y: number, w: number, text: string, active: boolean) => (
     <div
@@ -119,7 +119,7 @@ export const BootDialogs: React.FC<{ frame: number; pal: WorldPalette }> = ({ fr
   return (
     <>
       {auth > 0 ? (
-        <div style={{ position: "absolute", left: 700, top: 395, width: 520, height: 170, opacity: auth, transform: `scaleY(${0.3 + 0.7 * auth})` }}>
+        <div style={{ position: "absolute", left: 700, top: 395, width: 520, height: 170, opacity: auth, transform: `scale(1.25, ${1.25 * (0.3 + 0.7 * auth)})` }}>
           <Panel x={0} y={0} w={520} h={170} title="" pal={pal} opacity={1}>
             <Label x={260} y={6} text="AUTHENTICATION PROTOCOL" pal={pal} size={14} weight={600} anchor="center" />
             <Label x={260} y={26} text="USER ACCESS LEVEL 4 REQUIRED" pal={pal} size={7} mono color={pal.dim} anchor="center" />
@@ -167,7 +167,7 @@ export const BootDialogs: React.FC<{ frame: number; pal: WorldPalette }> = ({ fr
         </div>
       ) : null}
       {search > 0 ? (
-        <div style={{ position: "absolute", left: 690, top: 488, width: 540, height: 88, opacity: search, transform: `scaleY(${0.3 + 0.7 * search})` }}>
+        <div style={{ position: "absolute", left: 690, top: 488, width: 540, height: 88, opacity: search, transform: `scale(1.25, ${1.25 * (0.3 + 0.7 * search)})` }}>
           <Panel x={0} y={0} w={540} h={88} title="SEARCH REQUEST" pal={pal} opacity={1}>
             <Label x={270} y={4} text="INSERT OBJECT DESIGNATION" pal={pal} size={7} mono color={pal.dim} anchor="center" />
             {field(14, 22, 380, query + caret, true)}
@@ -296,7 +296,12 @@ export const SearchFrame: React.FC<{ frame: number; cam: MapCamera; pal: WorldPa
                         const r = rng(Math.floor((frame - W.gridScan) / 6) * 31 + i);
                         const gx = FOCUS.x + 40 * Math.floor(10 + r() * 14);
                         const gy = FOCUS.y + 40 * Math.floor(4 + r() * 8);
-                        return <rect key={i} x={gx} y={gy} width={40} height={40} fill={pal.accentSoft} stroke={pal.accent} strokeWidth={0.8} />;
+                        return (
+                          <g key={i}>
+                            <rect x={gx} y={gy} width={40} height={40} fill="none" stroke={pal.accent} strokeWidth={0.8} opacity={0.7} />
+                            <circle cx={gx + 20} cy={gy + 20} r={2.5} fill={pal.accent} />
+                          </g>
+                        );
                       })
                     : null}
                 </g>
@@ -312,14 +317,30 @@ export const SearchFrame: React.FC<{ frame: number; cam: MapCamera; pal: WorldPa
               {alpha ? (
                 <g opacity={alphaIn}>
                   {/* Red Sea corridor and target */}
-                  <path d={`M${P(32.5, 31).x} ${P(32.5, 31).y}L${P(33.8, 27.8).x} ${P(33.8, 27.8).y}L${P(36, 24).x} ${P(36, 24).y}L${P(38.5, 19).x} ${P(38.5, 19).y}`} stroke={pal.accent} strokeWidth={2.5} fill="none" />
                   <path d={`M${tgt.x} ${tgt.y - 9}L${tgt.x + 8} ${tgt.y + 6}L${tgt.x - 8} ${tgt.y + 6}Z`} fill={pal.accent} />
-                  <g transform={`translate(${cairo.x + 14} ${cairo.y - 10})`}>
-                    <rect width={46} height={14} fill="rgba(0,0,0,0.35)" stroke={pal.text} strokeWidth={0.8} />
-                    <text x={23} y={10.5} textAnchor="middle" fontFamily={FONT_LABEL} fontSize={9} fill={pal.text} letterSpacing={1}>
+                  <line x1={cairo.x} y1={cairo.y} x2={cairo.x + 30} y2={cairo.y - 16} stroke={pal.text} strokeWidth={1} />
+                  <circle cx={cairo.x} cy={cairo.y} r={3} fill={pal.text} />
+                  <g transform={`translate(${cairo.x + 30} ${cairo.y - 30})`}>
+                    <rect width={84} height={24} fill="rgba(0,0,0,0.45)" stroke={pal.text} strokeWidth={1.2} />
+                    <text x={42} y={17} textAnchor="middle" fontFamily={FONT_LABEL} fontWeight={600} fontSize={15} fill={pal.text} letterSpacing={2}>
                       CAIRO
                     </text>
                   </g>
+                  {/* Grid box over North Africa with status triangles */}
+                  <rect x={P(-2, 33).x} y={P(-2, 33).y} width={P(26, 18).x - P(-2, 33).x} height={P(26, 18).y - P(-2, 33).y} fill="none" stroke={pal.accent} strokeWidth={1} strokeDasharray="5 4" />
+                  {[
+                    [8, 28],
+                    [18, 22],
+                    [24, 30],
+                  ].map(([lo, la], i) => {
+                    const q = P(lo, la);
+                    return (
+                      <g key={i} transform={`translate(${q.x} ${q.y})`}>
+                        <path d="M0 -6L6 5H-6Z" fill={pal.accent} />
+                        <text x={10} y={4} fontFamily={FONT_MONO} fontSize={8} fill={pal.text}>STATUS {i + 3}</text>
+                      </g>
+                    );
+                  })}
                   {[
                     ["LIBYA SECTOR", 17, 26],
                     ["SUDAN SECTOR", 29, 15],
@@ -352,8 +373,8 @@ export const SearchFrame: React.FC<{ frame: number; cam: MapCamera; pal: WorldPa
           <Label x={FOCUS.x + 12} y={FOCUS.y + 10} text={alpha ? "SEARCH COMPLETE" : "SEARCH IN PROGRESS"} pal={pal} size={13} weight={600} opacity={alpha ? 0.45 : 1} />
           {alpha ? (
             <>
-              <Label x={FOCUS.x + 180} y={FOCUS.y + 12} text="TARGET IDENTIFIED // PRIORITY ONE" pal={pal} size={7} mono color={pal.accent} opacity={alphaIn} />
-              <Label x={FOCUS.x + 180} y={FOCUS.y + 22} text="ALPHA PROTOCOL INITIALIZATION" pal={pal} size={15} weight={600} color={pal.accent} opacity={alphaIn} />
+              <Label x={FOCUS.x + 180} y={FOCUS.y + 10} text="TARGET IDENTIFIED" pal={pal} size={9} weight={600} color={pal.accent} opacity={alphaIn} spacing={1.5} />
+              <Label x={FOCUS.x + 180} y={FOCUS.y + 22} text="ALPHA PROTOCOL INITIALIZATION" pal={pal} size={17} weight={600} color={pal.text} opacity={alphaIn} />
             </>
           ) : null}
           <Label x={FOCUS.x + FOCUS.w - 120} y={FOCUS.y + 10} text={scramble(cn, 1)} pal={pal} size={14} weight={600} anchor="right" />
@@ -415,18 +436,46 @@ export const SearchFrame: React.FC<{ frame: number; cam: MapCamera; pal: WorldPa
 
 /** Procedural street network "satellite extraction" (draws on over time). */
 const NET = (() => {
+  // Dense radial city: arterials from the centre, ring roads, then a mesh
+  // of short local streets.
   const r = rng(4242);
+  const cx = 172;
+  const cy = 83;
   const lines: string[] = [];
-  for (let i = 0; i < 70; i++) {
-    let x = r() * 340;
-    let y = r() * 160;
-    let a = r() * Math.PI * 2;
+  for (let i = 0; i < 22; i++) {
+    let a = (i / 22) * Math.PI * 2 + r() * 0.2;
+    let x = cx;
+    let y = cy;
+    let d = `M${x} ${y}`;
+    for (let s = 0; s < 26; s++) {
+      a += (r() - 0.5) * 0.18;
+      x += Math.cos(a) * 8;
+      y += Math.sin(a) * 8;
+      d += `L${x.toFixed(1)} ${y.toFixed(1)}`;
+    }
+    lines.push(d);
+  }
+  for (let k = 1; k <= 7; k++) {
+    const rad = k * 22 + r() * 6;
+    let d = "";
+    for (let s = 0; s <= 48; s++) {
+      const a = (s / 48) * Math.PI * 2;
+      const rr = rad * (1 + 0.08 * Math.sin(a * 3 + k));
+      d += `${s ? "L" : "M"}${(cx + Math.cos(a) * rr).toFixed(1)} ${(cy + Math.sin(a) * rr * 0.8).toFixed(1)}`;
+    }
+    lines.push(d);
+  }
+  for (let i = 0; i < 260; i++) {
+    const a = r() * Math.PI * 2;
+    const rad = Math.pow(r(), 0.7) * 170;
+    let x = cx + Math.cos(a) * rad;
+    let y = cy + Math.sin(a) * rad * 0.8;
+    let h = r() * Math.PI * 2;
     let d = `M${x.toFixed(1)} ${y.toFixed(1)}`;
-    const steps = 6 + Math.floor(r() * 18);
-    for (let s = 0; s < steps; s++) {
-      a += (r() - 0.5) * 0.5;
-      x += Math.cos(a) * 9;
-      y += Math.sin(a) * 9;
+    for (let s = 0; s < 3 + Math.floor(r() * 4); s++) {
+      h += (r() < 0.5 ? 1 : -1) * Math.PI * 0.5 * (r() < 0.6 ? 1 : 0);
+      x += Math.cos(h) * 9;
+      y += Math.sin(h) * 9;
       d += `L${x.toFixed(1)} ${y.toFixed(1)}`;
     }
     lines.push(d);
@@ -443,7 +492,7 @@ const StreetNet: React.FC<{ frame: number; pal: WorldPalette }> = ({ frame, pal 
           key={i}
           d={d}
           stroke={pal.text}
-          strokeWidth={i % 7 === 0 ? 1.6 : 0.7}
+          strokeWidth={i < 22 ? 1.4 : i < 29 ? 1.0 : 0.5}
           fill="none"
           opacity={0.55 + 0.4 * hash(i)}
           pathLength={1}

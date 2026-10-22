@@ -8,33 +8,33 @@ export const W = {
   authUser: 22,
   authPass: 34,
   authButton: 50,
-  authOut: 60, // 2.0 s
-  panelsIn: 60, // 2.0 s side panels flicker on
-  loadingIn: 62, // INTERFACE LOADING bar
+  authOut: 57, // 1.9 s
+  panelsIn: 57, // 1.9 s side panels flicker on
+  loadingIn: 58, // INTERFACE LOADING bar
   loadingDone: 116,
   decodeIn: 70,
   searchIn: 122, // 4.1 s SEARCH REQUEST dialog
-  searchType: 132,
-  searchOut: 180, // 6.0 s
-  objLabel: 182,
-  brighten: 196, // 6.5 s land highlight
-  zoomNA: [208, 226], // 6.9-7.5 s dive into North America
-  frameIn: 226,
-  whipAsia: [300, 318], // 10.0-10.6 s
+  searchType: 128,
+  searchOut: 195, // 6.5 s
+  objLabel: 197,
+  brighten: 206, // 6.9 s land highlight
+  zoomNA: [222, 232], // 7.4-7.7 s dive into North America
+  frameIn: 232,
+  whipAsia: [321, 333], // 10.7-11.1 s
   whipAfrica: [404, 418], // 13.5-13.9 s
   targetMarks: 430,
   gridScan: 452,
   alpha: 510, // 17.0 s ALPHA PROTOCOL INITIALIZATION
-  targetData: 526, // 17.5 s TARGET DATA panel
+  targetData: 518, // 17.3 s TARGET DATA panel
 } as const;
 
 const WORLD: MapCamera = { lon: 8, lat: 8, k: 1.0 };
-const NA: MapCamera = { lon: -96, lat: 49, k: 2.15 };
-const NA2: MapCamera = { lon: -93, lat: 48, k: 2.22 };
-const ASIA: MapCamera = { lon: 96, lat: 50, k: 2.3 };
-const ASIA2: MapCamera = { lon: 100, lat: 49, k: 2.36 };
-const AFR: MapCamera = { lon: 38, lat: 21, k: 2.5 };
-const AFR2: MapCamera = { lon: 39, lat: 22, k: 2.62 };
+const NA: MapCamera = { lon: -86, lat: 42, k: 1.62 };
+const NA2: MapCamera = { lon: -84, lat: 42, k: 1.68 };
+const ASIA: MapCamera = { lon: 78, lat: 47, k: 1.75 };
+const ASIA2: MapCamera = { lon: 81, lat: 47, k: 1.8 };
+const AFR: MapCamera = { lon: 25, lat: 15, k: 1.7 };
+const AFR2: MapCamera = { lon: 26, lat: 16, k: 1.78 };
 
 const mix = (a: MapCamera, b: MapCamera, t: number, dip = 0): MapCamera => ({
   lon: lerp(a.lon, b.lon, t),

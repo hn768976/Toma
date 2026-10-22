@@ -135,12 +135,15 @@ export const buildLandTexture = (w = 2048): LandTexture => {
       const edge = (n1 - 0.5) * 0.8;
       // Elevation from mountain belts.
       let e = 0.08 * fbm(lon * 0.15 + 3, lat * 0.15, 5);
+      // Domain-warp ridge lines so ranges meander instead of reading as seams.
+      const wlon = lon + (fbm(lon * 0.12, lat * 0.12 + 7, 4) - 0.5) * 7;
+      const wlat = lat + (fbm(lon * 0.12 + 3, lat * 0.12, 4) - 0.5) * 7;
       for (const r of RANGES) {
         let d = 1e9;
         for (let k = 0; k < r.pts.length - 1; k++) {
           const a = r.pts[k];
           const b = r.pts[k + 1];
-          d = Math.min(d, segDist(lon, lat, a[0], a[1], b[0], b[1]));
+          d = Math.min(d, segDist(wlon, wlat, a[0], a[1], b[0], b[1]));
         }
         const ww = r.w * (0.7 + 0.6 * n1);
         if (d < ww * 2.5) {
@@ -160,7 +163,7 @@ export const buildLandTexture = (w = 2048): LandTexture => {
       const greenland = blob(lon, lat, { c: [-41, 74], r: [13, 9], v: 1 }, edge * 0.5);
       const polar = Math.max(0, Math.min(1, (Math.abs(lat) - (lat > 0 ? 70 : 62)) / 6 + edge));
       const snow = Math.max(greenland, polar, Math.max(0, Math.min(1, (e - 0.85) * 3)));
-      a = a + (0.97 - a) * snow;
+      a = a + (0.86 - a) * snow * (0.85 + 0.3 * fbm(lon * 0.7, lat * 0.7, 4));
       elev[j * w + i] = e;
       alb[j * w + i] = a;
     }

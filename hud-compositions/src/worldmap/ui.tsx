@@ -35,6 +35,7 @@ export const Panel: React.FC<{
       opacity,
       background: pal.panel,
       border: `1px solid ${pal.panelEdge}`,
+      borderTop: `3px solid ${pal.panelEdge}`,
       boxShadow: "0 0 18px rgba(0,0,0,0.45)",
       overflow: "hidden",
     }}
@@ -42,6 +43,7 @@ export const Panel: React.FC<{
     <div
       style={{
         height: 18,
+        background: pal.panelHeader,
         borderBottom: `1px solid ${pal.panelEdge}`,
         display: "flex",
         alignItems: "center",

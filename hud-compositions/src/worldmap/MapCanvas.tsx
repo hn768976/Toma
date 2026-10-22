@@ -51,7 +51,8 @@ const getTextures = (pal: WorldPalette, relief: ImageData) => {
   const img = tctx.createImageData(relief.width, relief.height);
   const n = relief.width * relief.height;
   for (let i = 0; i < n; i++) {
-    const l = relief.data[i * 4] / 255;
+    const l0 = relief.data[i * 4] / 255;
+    const l = Math.min(1, Math.max(0, 0.5 + (l0 - 0.45) * 1.45));
     img.data[i * 4] = pal.landLo[0] + (pal.landHi[0] - pal.landLo[0]) * l;
     img.data[i * 4 + 1] = pal.landLo[1] + (pal.landHi[1] - pal.landLo[1]) * l;
     img.data[i * 4 + 2] = pal.landLo[2] + (pal.landHi[2] - pal.landLo[2]) * l;
@@ -240,17 +241,31 @@ export const MapCanvas: React.FC<{
       }
       ctx.globalAlpha = 1;
     }
-    // Opening glitch: black out random horizontal bands.
+    // Opening glitch: the frame starts mostly black with fragmented,
+    // horizontally offset and repeated slices of the map that resolve.
     if (look.reveal < 1) {
+      scratch.width = bw;
+      scratch.height = bh;
+      const sctx = scratch.getContext("2d")!;
+      sctx.setTransform(1, 0, 0, 1, 0, 0);
+      sctx.globalAlpha = 1;
+      sctx.globalCompositeOperation = "copy";
+      sctx.drawImage(ref.current!, 0, 0);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = "#000";
-      const bands = 18;
+      ctx.fillRect(0, 0, bw, bh);
+      const bands = 24;
       for (let i = 0; i < bands; i++) {
         const r = Math.abs(Math.sin((i + 1) * 91.7 + look.revealSeed * 13.1)) % 1;
-        if (r > look.reveal) {
-          const y0 = (i / bands) * bh;
-          const xoff = (Math.sin(i * 7.3 + look.revealSeed) * 0.5 + 0.5) * bw * (1 - look.reveal);
-          ctx.fillRect(look.reveal > 0.5 ? xoff : 0, y0, bw, bh / bands + 1);
+        const y0 = Math.floor((i / bands) * bh);
+        const hgt = Math.ceil(bh / bands) + 1;
+        if (r < look.reveal * 1.25) {
+          const settled = r < look.reveal * 0.7;
+          const xoff = settled ? 0 : Math.round((Math.sin(i * 7.3 + look.revealSeed) * 0.5) * bw * 0.35);
+          ctx.drawImage(scratch, 0, y0, bw, hgt, xoff, y0, bw, hgt);
+          if (xoff !== 0) ctx.drawImage(scratch, 0, y0, bw, hgt, xoff - Math.sign(xoff) * bw, y0, bw, hgt);
         }
       }
     }
