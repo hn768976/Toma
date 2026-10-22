@@ -33,7 +33,8 @@ export const GlitchCollage: React.FC<GlitchCollageProps> = ({ palette, seed }) =
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const ref = useRef<HTMLCanvasElement>(null);
-  const index = Math.floor((frame % CYCLE_FRAMES) / HOLD_FRAMES);
+  // The reference opens on a one-off still that never comes back in the loop
+  const index = frame < HOLD_FRAMES ? 1000 : Math.floor((frame % CYCLE_FRAMES) / HOLD_FRAMES);
 
   useLayoutEffect(() => {
     const key = `${seed}-${index}-${width}x${height}-${palette.accent.join(",")}`;

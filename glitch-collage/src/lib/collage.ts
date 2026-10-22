@@ -94,43 +94,51 @@ const makeCanvas = (w: number, h: number) => {
 const planShot = (rng: Rng): Shot => {
   const roll = rng();
   const mode: Mode = roll < 0.5 ? "dense" : roll < 0.75 ? "halftone" : "sparse";
-  const cx = range(rng, 0.4, 0.58);
+  const cx = range(rng, 0.47, 0.58);
   const pw =
-    mode === "sparse" ? range(rng, 0.12, 0.2) : range(rng, 0.17, 0.28);
-  const fullHeight = chance(rng, 0.65);
-  const main: Panel = {
-    x0: cx - pw / 2,
-    x1: cx + pw / 2,
-    y0: fullHeight ? -0.2 : range(rng, 0.0, 0.2),
-    y1: fullHeight ? 1.2 : range(rng, 0.75, 1.0),
-    bright:
-      mode === "sparse" ? range(rng, 0.4, 0.6) : range(rng, 0.68, 1.0),
-    holeThr: mode === "halftone" ? range(rng, 0.3, 0.38) : range(rng, 0.27, 0.4),
-    rough: range(rng, 0.012, 0.04),
-    soft: range(rng, 0.003, 0.008),
-    cell: chance(rng, 0.5) ? irange(rng, 2, 6) : 1,
-  };
-  const panels = [main];
-  const extra = mode === "sparse" ? irange(rng, 1, 3) : irange(rng, 0, 2);
-  for (let i = 0; i < extra; i++) {
-    const w = range(rng, 0.04, 0.12);
-    const x = cx + range(rng, -0.22, 0.2);
-    const y = range(rng, -0.1, 0.6);
+    mode === "sparse" ? range(rng, 0.16, 0.24) : range(rng, 0.22, 0.32);
+  const panels: Panel[] = [];
+  // Dim, textured full-height strips fill the field around the main panel
+  const nBg = irange(rng, 3, 6);
+  for (let i = 0; i < nBg; i++) {
+    const w = range(rng, 0.04, 0.16);
+    const x = chance(rng, 0.7) ? range(rng, cx, 0.98) : range(rng, 0.12, cx);
     panels.push({
       x0: x - w / 2,
       x1: x + w / 2,
-      y0: y,
-      y1: y + range(rng, 0.2, 0.7),
-      bright: range(rng, 0.25, 0.55),
-      holeThr: range(rng, 0.3, 0.45),
-      rough: range(rng, 0.01, 0.03),
-      soft: range(rng, 0.003, 0.008),
-      cell: irange(rng, 1, 4),
+      y0: chance(rng, 0.7) ? -0.2 : range(rng, 0, 0.4),
+      y1: 1.2,
+      bright: range(rng, 0.05, 0.12),
+      holeThr: range(rng, 0.18, 0.32),
+      rough: range(rng, 0.002, 0.006),
+      soft: range(rng, 0.001, 0.003),
+      cell: 1,
     });
   }
+  // Main panel: 2-4 overlapping hard-edged vertical strips of differing grey
+  const nStrips = irange(rng, 2, 4);
+  const left = cx - pw / 2;
+  const fullHeight = chance(rng, 0.75);
+  for (let i = 0; i < nStrips; i++) {
+    const w = range(rng, pw * 0.4, pw * 0.75);
+    const x0 = left + range(rng, 0, pw - w);
+    panels.push({
+      x0,
+      x1: x0 + w,
+      y0: fullHeight ? -0.2 : range(rng, -0.2, 0.25),
+      y1: fullHeight ? 1.2 : range(rng, 0.75, 1.2),
+      bright:
+        mode === "sparse" ? range(rng, 0.45, 0.7) : range(rng, 0.68, 1.05),
+      holeThr: mode === "halftone" ? range(rng, 0.28, 0.36) : range(rng, 0.22, 0.36),
+      rough: range(rng, 0.003, 0.012),
+      soft: range(rng, 0.0015, 0.004),
+      cell: chance(rng, 0.4) ? irange(rng, 2, 5) : 1,
+    });
+  }
+  const main = { x0: left, x1: left + pw };
   // Rectangular data blocks inside the panel that brighten or darken it
   const blocks: Block[] = [];
-  const nb = irange(rng, 4, 12);
+  const nb = irange(rng, 2, 7);
   for (let i = 0; i < nb; i++) {
     const w = range(rng, 0.02, pw * 0.8);
     const h = range(rng, 0.01, 0.25);
@@ -141,12 +149,12 @@ const planShot = (rng: Rng): Shot => {
       x1: x + w,
       y0: y,
       y1: y + h,
-      mul: chance(rng, 0.45) ? range(rng, 0.05, 0.4) : range(rng, 1.1, 1.5),
+      mul: chance(rng, 0.4) ? range(rng, 0.3, 0.6) : range(rng, 1.1, 1.4),
       mesh: chance(rng, 0.35),
     });
   }
   const streaks: Streak[] = [];
-  const ns = irange(rng, 3, 10);
+  const ns = irange(rng, 1, 4);
   for (let i = 0; i < ns; i++) {
     const y = rng();
     const h = range(rng, 0.0015, 0.008);
@@ -183,6 +191,8 @@ const buildPanelTexture = (rng: Rng, shot: Shot, palette: Palette) => {
   const tone = makeFbm(rng, 10, 7, 4);
   const holes = makeFbm(rng, 18, 12, 4);
   const grit = makeFbm(rng, 90, 50, 2);
+  // Strongly anisotropic noise: thin vertical scratches and streaks
+  const scratch = makeFbm(rng, 260, 3, 2);
   // Per-pixel white noise dithers every threshold into a sprayed, speckled edge
   const hash = new Float32Array(TW * TH);
   for (let i = 0; i < hash.length; i++) hash[i] = rng();
@@ -194,7 +204,7 @@ const buildPanelTexture = (rng: Rng, shot: Shot, palette: Palette) => {
   let jag = 0;
   for (let y = 0; y < TH; y++) {
     if (y % irange(rng, 2, 9) === 0) band = rng();
-    if (chance(rng, 0.12)) jag = (rng() - 0.5) * (chance(rng, 0.25) ? 4 : 1);
+    if (chance(rng, 0.04)) jag = chance(rng, 0.5) ? 0 : (rng() - 0.5) * 2;
     rowN[y] = band;
     rowJag[y] = jag;
   }
@@ -228,7 +238,11 @@ const buildPanelTexture = (rng: Rng, shot: Shot, palette: Palette) => {
         let l =
           p.bright * (0.66 + (tone(u, v) - 0.5) * 1.1 + (gr - 0.5) * 0.8) *
             (0.84 + 0.32 * colN[x]) +
-          (rowN[y] - 0.5) * 0.2;
+          (rowN[y] - 0.5) * 0.12;
+        const sc = scratch(u, v);
+        l *= 0.55 + 0.9 * sc * sc + (sc > 0.72 ? 0.5 : 0);
+        // the reference brightens toward the bottom of frame
+        l *= 0.72 + 0.5 * v;
         // Holes sampled on a coarse grid read as digital, blocky damage
         const qx = Math.floor(x / p.cell) * p.cell;
         const qy = Math.floor(y / p.cell) * p.cell;
@@ -237,7 +251,7 @@ const buildPanelTexture = (rng: Rng, shot: Shot, palette: Palette) => {
         l *= 0.05 + 0.95 * h;
         if (hz > 0.985) l *= 1.6;
         else if (hz < 0.02) l *= 0.15;
-        l *= rowMesh * (x % 3 === 0 ? 0.86 : 1);
+        if (p.bright > 0.2) l *= rowMesh * (x % 3 === 0 ? 0.86 : 1);
         lum = lum * (1 - m) + l * m;
         alpha = alpha + m * (1 - alpha);
       }
@@ -344,7 +358,7 @@ const drawHalftone = (
   const y1 = Math.min(V, y0 + range(rng, 0.15, 0.45) * V);
   const step = range(rng, 9, 15);
   const maxR = step * (strong ? 0.55 : 0.4);
-  ctx.fillStyle = rgba(p.void, 0.9);
+  ctx.fillStyle = rgba(p.void, strong ? 0.75 : 0.5);
   for (let y = y0; y < y1; y += step) {
     const stretch = chance(rng, 0.3) ? range(rng, 1.5, 3) : 1;
     for (let x = x0; x < x1; x += step) {
@@ -421,7 +435,7 @@ const drawHairlines = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p: P
     ctx.lineTo(x, y1);
     ctx.stroke();
   }
-  const nc = irange(rng, 1, 5);
+  const nc = irange(rng, 0, 2);
   for (let i = 0; i < nc; i++) {
     const x = range(rng, 0.2, 0.9) * U;
     const y = range(rng, 0.1, 0.9) * V;
@@ -476,8 +490,8 @@ const drawGlyphColumns = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p
       ? (shot.cx + range(rng, -shot.pw * 0.7, shot.pw * 0.7)) * U
       : range(rng, 0.06, 0.95) * U;
     const red = chance(rng, 0.28);
-    const big = chance(rng, 0.2);
-    const size = red || big ? range(rng, 14, 32) : range(rng, 9, 17);
+    const big = chance(rng, 0.3);
+    const size = red || big ? range(rng, 22, 42) : range(rng, 9, 17);
     const color = red ? p.accent : p.ink;
     let y = range(rng, 0, 0.5) * V;
     const count = irange(rng, 3, 14);
@@ -489,7 +503,7 @@ const drawGlyphColumns = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p
       y += size * range(rng, 1.15, 2.2);
     }
   }
-  const nl = irange(rng, 1, 4);
+  const nl = irange(rng, 0, 2);
   for (let i = 0; i < nl; i++) {
     const size = range(rng, 10, 15);
     ctx.font = `${size}px ${MONO}`;
@@ -572,6 +586,94 @@ const drawBoxes = (ctx: CanvasRenderingContext2D, rng: Rng, p: Palette) => {
   }
 };
 
+// Pen-like scratches, drips and streaks across the bright panel
+const drawScratches = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p: Palette) => {
+  const n = irange(rng, 12, 40);
+  const x0 = (shot.cx - shot.pw / 2) * U;
+  const w = shot.pw * U;
+  for (let i = 0; i < n; i++) {
+    const dark = chance(rng, 0.6);
+    let x = x0 + rng() * w;
+    let y = range(rng, -0.1, 0.8) * V;
+    const len = range(rng, 0.1, 1.0) * V;
+    const end = y + len;
+    ctx.strokeStyle = dark ? rgba(p.void, range(rng, 0.35, 0.85)) : rgba(p.ink, range(rng, 0.2, 0.6));
+    ctx.lineWidth = range(rng, 0.6, dark ? 2.2 : 1.4);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    while (y < end) {
+      y += range(rng, 6, 30);
+      x += range(rng, -1.2, 1.2);
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    if (dark && chance(rng, 0.25)) {
+      ctx.fillStyle = rgba(p.void, 0.85);
+      ctx.beginPath();
+      ctx.ellipse(x, y, range(rng, 1.5, 4), range(rng, 2.5, 7), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+};
+
+const drawHexGrid = (ctx: CanvasRenderingContext2D, rng: Rng, p: Palette) => {
+  const r = range(rng, 18, 34);
+  const x0 = range(rng, 0.5, 0.75) * U;
+  const y0 = range(rng, 0.1, 0.6) * V;
+  const cols = irange(rng, 3, 7);
+  const rows = irange(rng, 3, 8);
+  ctx.strokeStyle = rgba(p.ink, range(rng, 0.1, 0.22));
+  ctx.lineWidth = 1;
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      if (chance(rng, 0.2)) continue;
+      const cx = x0 + i * r * 1.5;
+      const cy = y0 + j * r * Math.sqrt(3) + (i % 2) * r * (Math.sqrt(3) / 2);
+      ctx.beginPath();
+      for (let k = 0; k <= 6; k++) {
+        const a = (k / 6) * Math.PI * 2;
+        const px = cx + Math.cos(a) * r;
+        const py = cy + Math.sin(a) * r;
+        if (k === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+  }
+};
+
+// Stronger crimson moments: glowing dashed bars and red glyph stacks
+const drawRedFeature = (ctx: CanvasRenderingContext2D, rng: Rng, shot: Shot, p: Palette) => {
+  ctx.save();
+  ctx.shadowColor = rgba(p.accent, 0.9);
+  ctx.shadowBlur = 10;
+  const dashColumn = (x: number, w: number) => {
+    let y = range(rng, -0.05, 0.4) * V;
+    const end = y + range(rng, 0.3, 0.9) * V;
+    while (y < end) {
+      const h = range(rng, 4, 16);
+      ctx.fillStyle = rgba(p.accent, range(rng, 0.55, 0.95));
+      ctx.fillRect(x + range(rng, -1, 1), y, w * range(rng, 0.6, 1), h);
+      y += h + range(rng, 3, 14);
+    }
+  };
+  if (chance(rng, 0.6)) dashColumn((shot.cx + range(rng, -shot.pw * 0.4, shot.pw * 0.4)) * U, range(rng, 4, 8));
+  if (chance(rng, 0.5)) dashColumn(range(rng, 0.04, 0.2) * U, range(rng, 3, 6));
+  if (chance(rng, 0.4)) {
+    const size = range(rng, 22, 38);
+    ctx.font = `${size}px ${MONO}`;
+    ctx.textBaseline = "top";
+    let y = range(rng, 0.05, 0.4) * V;
+    const x = (shot.cx + range(rng, -shot.pw * 0.6, shot.pw * 0.6)) * U;
+    for (let k = irange(rng, 3, 7); k > 0; k--) {
+      ctx.fillStyle = rgba(p.accent, range(rng, 0.6, 0.95));
+      ctx.fillText(pick(rng, GLYPHS.split("")), x, y);
+      y += size * range(rng, 1.1, 1.5);
+    }
+  }
+  ctx.restore();
+};
+
 const drawPost = (
   ctx: CanvasRenderingContext2D,
   rng: Rng,
@@ -580,7 +682,8 @@ const drawPost = (
 ) => {
   // Left edge falls to black, broad vignette elsewhere
   const left = ctx.createLinearGradient(0, 0, U * 0.3, 0);
-  left.addColorStop(0, rgba(p.bgDeep, 0.85));
+  left.addColorStop(0, rgba(p.bgDeep, 0.92));
+  left.addColorStop(0.3, rgba(p.bgDeep, 0.6));
   left.addColorStop(1, rgba(p.bgDeep, 0));
   ctx.fillStyle = left;
   ctx.fillRect(0, 0, U, V);
@@ -588,6 +691,11 @@ const drawPost = (
   vg.addColorStop(0, rgba(p.bgDeep, 0));
   vg.addColorStop(1, rgba(p.bgDeep, 0.75));
   ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, U, V);
+  const top = ctx.createLinearGradient(0, 0, 0, V * 0.45);
+  top.addColorStop(0, rgba(p.bgDeep, 0.45));
+  top.addColorStop(1, rgba(p.bgDeep, 0));
+  ctx.fillStyle = top;
   ctx.fillRect(0, 0, U, V);
 
   // Glitch: a few horizontal strips displaced sideways
@@ -653,8 +761,10 @@ export const renderCollage = (canvas: HTMLCanvasElement, o: CollageOptions) => {
   ctx.drawImage(small, 0, 0, U, V);
   ctx.restore();
 
-  drawHalftone(ctx, rng, shot, o.palette, shot.mode === "halftone");
-  if (shot.mode === "halftone") drawHalftone(ctx, rng, shot, o.palette, false);
+  drawScratches(ctx, rng, shot, o.palette);
+  if (shot.mode === "halftone") drawHalftone(ctx, rng, shot, o.palette, true);
+  else if (chance(rng, 0.3)) drawHalftone(ctx, rng, shot, o.palette, false);
+  if (chance(rng, 0.3)) drawHexGrid(ctx, rng, o.palette);
   if (chance(rng, 0.5)) drawLightDots(ctx, rng, o.palette);
   drawSplats(ctx, rng, shot, o.palette);
   drawHairlines(ctx, rng, shot, o.palette);
@@ -663,6 +773,7 @@ export const renderCollage = (canvas: HTMLCanvasElement, o: CollageOptions) => {
   drawGlyphColumns(ctx, rng, shot, o.palette);
   drawAccents(ctx, rng, shot, o.palette);
   drawBoxes(ctx, rng, o.palette);
+  if (chance(rng, 0.38)) drawRedFeature(ctx, rng, shot, o.palette);
   ctx.restore();
 
   drawPost(ctx, rng, canvas, o.palette);
