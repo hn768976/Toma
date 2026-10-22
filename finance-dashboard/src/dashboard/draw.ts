@@ -455,9 +455,9 @@ export const drawDashboard = (ctx: Ctx, p: Palette, f: number) => {
   drawTextBlock(ctx, p, f, 1640, 360, 7, 7, 9, 80);
 
   // Right-hand panel.
-  drawBlockGrid(ctx, p, f, 2400, 150, 9, 3, 12);
-  drawHistogram(ctx, p, f, 2400, 360, 330, 200);
-  drawAreaChart(ctx, p, f, 2390, 610, 350, 210, 13);
-  drawTextBlock(ctx, p, f, 2400, 900, 11, 30, 14, -30, 15);
-  drawDashColumn(ctx, p, f, 2580, 910, 16);
+  drawBlockGrid(ctx, p, f, 2360, 150, 9, 3, 12);
+  drawHistogram(ctx, p, f, 2360, 360, 330, 200);
+  drawAreaChart(ctx, p, f, 2350, 610, 350, 210, 13);
+  drawTextBlock(ctx, p, f, 2360, 900, 11, 30, 14, -30, 15);
+  drawDashColumn(ctx, p, f, 2540, 910, 16);
 };

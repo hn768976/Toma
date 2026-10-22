@@ -79,11 +79,11 @@ export const poseToWorld = (pose: CameraPose) => {
 // 6 s, then decelerates and settles on the head of the chart by ~9 s.
 // A wider lens than before gives the reference's strong foreshortening.
 export const referenceCamera: CameraKey[] = [
-  { frame: 0, u: 980, v: 1110, dist: 1500, tilt: 57, az: 104, roll: -6, fov: 30 },
-  { frame: 40, u: 1020, v: 1100, dist: 1560, tilt: 55, az: 103, roll: -4, fov: 30 },
-  { frame: 115, u: 1320, v: 1050, dist: 1650, tilt: 51, az: 100, roll: 3, fov: 30 },
-  { frame: 190, u: 1720, v: 950, dist: 1720, tilt: 45, az: 97, roll: 11, fov: 30 },
-  { frame: 245, u: 1960, v: 870, dist: 1800, tilt: 41, az: 95, roll: 18, fov: 30 },
-  { frame: 285, u: 2010, v: 850, dist: 1900, tilt: 40, az: 95, roll: 20, fov: 30 },
-  { frame: 359, u: 2010, v: 850, dist: 1900, tilt: 40, az: 95, roll: 20, fov: 30 },
+  { frame: 0, u: 980, v: 1070, dist: 1500, tilt: 57, az: 104, roll: -6, fov: 30 },
+  { frame: 35, u: 990, v: 1068, dist: 1510, tilt: 56.5, az: 103.8, roll: -5.5, fov: 30 },
+  { frame: 115, u: 1340, v: 1010, dist: 1650, tilt: 51, az: 100, roll: 3, fov: 30 },
+  { frame: 190, u: 1740, v: 890, dist: 1720, tilt: 45, az: 97, roll: 11, fov: 30 },
+  { frame: 245, u: 1960, v: 800, dist: 1800, tilt: 41, az: 95, roll: 18, fov: 30 },
+  { frame: 285, u: 2000, v: 780, dist: 1900, tilt: 40, az: 95, roll: 20, fov: 30 },
+  { frame: 359, u: 2000, v: 780, dist: 1900, tilt: 40, az: 95, roll: 20, fov: 30 },
 ];
