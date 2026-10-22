@@ -101,7 +101,7 @@ export const World: React.FC<{ pal: Palette }> = ({ pal }) => {
           h={OUTPUT.h}
           icon={r.icon}
           kind={r.kind}
-          appear={T.outputCards + i * 10}
+          appear={T.outputCards + i * 18}
         />
       ))}
 
@@ -141,7 +141,9 @@ export const World: React.FC<{ pal: Palette }> = ({ pal }) => {
       <EffectComposer multisampling={0}>
         <Bloom mipmapBlur intensity={0.85} luminanceThreshold={0.36} luminanceSmoothing={0.35} radius={0.72} />
         {/* Shallow focus: sharp band through the card, soft far/near corners. */}
-        <TiltShift2 blur={0.16} taper={0.55} start={[0.0, 0.9]} end={[1.0, 0.18]} samples={10} />
+        {/* Two perpendicular passes so the blur spreads evenly, not in one direction. */}
+        <TiltShift2 blur={0.09} taper={0.55} start={[0.0, 0.9]} end={[1.0, 0.18]} samples={12} direction={[1, 0]} />
+        <TiltShift2 blur={0.09} taper={0.55} start={[0.0, 0.9]} end={[1.0, 0.18]} samples={12} direction={[0, 1]} />
       </EffectComposer>
     </>
   );

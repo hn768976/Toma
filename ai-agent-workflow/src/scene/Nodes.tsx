@@ -49,7 +49,7 @@ export const AgentCard: React.FC<{ pal: Palette }> = ({ pal }) => {
   const S = CARD.size;
 
   const ghost = prog(frame, T.cardGhost, 8, easeOut);
-  const grow = prog(frame, T.cardGrow, 14, easeOutBack);
+  const grow = prog(frame, T.cardGrow, 10, easeOutBack);
   const scale = interpolate(grow, [0, 1], [0.14, 1]);
   const alpha = ghost * interpolate(grow, [0, 1], [0.45, 1]);
   const ringsP = prog(frame, T.rings, 48, (x) => x);

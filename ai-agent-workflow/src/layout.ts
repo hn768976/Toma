@@ -16,22 +16,22 @@ export const T = {
   guideLines: 8,
   inputStubs: 8,
   inputLines: 40,
-  cardGhost: 20,
-  cardGrow: 27,
-  rings: 29,
-  brain: 30,
-  agentLabel: 38,
-  agentOut: 78,
-  workflowBranches: 98,
-  workflowLabel: 104,
-  workflowTiles: [116, 104, 130] as const, // flowchart, shield, gear
-  shieldOut: 140,
-  outputLabel: 152,
-  outputBus: 162,
-  outputCards: 168,
-  nextLines: 228,
-  nextLabel: 250,
-  nextIcons: 258,
+  cardGhost: 28,
+  cardGrow: 32,
+  rings: 34,
+  brain: 35,
+  agentLabel: 40,
+  agentOut: 80,
+  workflowBranches: 104,
+  workflowLabel: 110,
+  workflowTiles: [129, 117, 143] as const, // flowchart, shield, gear
+  shieldOut: 172,
+  outputLabel: 196,
+  outputBus: 200,
+  outputCards: 206,
+  nextLines: 282,
+  nextLabel: 300,
+  nextIcons: 304,
 };
 
 // ---------------------------------------------------------------------------
@@ -62,10 +62,10 @@ export const INPUT_ICONS: IconName[] = [
 ];
 
 export const INPUT = {
-  u: -11.0,
+  u: -12.3,
   vs: [-3.7, -1.1, 1.5, 4.1, 6.7],
   size: 1.75,
-  label: [-12.4, -6.6] as V2,
+  label: [-13.7, -6.6] as V2,
 };
 
 export const WORKFLOW = {
@@ -116,8 +116,8 @@ const inR = INPUT.u + INPUT.size / 2 + 0.25;
 const cardL = CARD.u - CARD.size / 2 - 0.15;
 const cardR = CARD.u + CARD.size / 2 + 0.15;
 const trunkV = INPUT.vs[2];
-const BUS_A = -8.4;
-const BUS_B = -7.0;
+const BUS_A = -9.2;
+const BUS_B = -7.6;
 
 // Short straight arrows that shoot out of each input first, then give way
 // to the routed bus (as in the reference).

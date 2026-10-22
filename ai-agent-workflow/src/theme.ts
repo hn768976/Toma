@@ -25,8 +25,8 @@ export type Palette = {
 
 // Matches the reference: deep teal backdrop, cyan glass, violet accents.
 export const TEAL_PALETTE: Palette = {
-  bgCenter: "#003a48",
-  bgMid: "#00222e",
+  bgCenter: "#003442",
+  bgMid: "#001f2a",
   bgEdge: "#000a12",
   primary: "#4fe6ff",
   secondary: "#b45cff",
