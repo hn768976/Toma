@@ -35,26 +35,29 @@ const depthAlong = (pos: Vec3, target: Vec3, point: Vec3) => {
   );
 };
 
-// Version 1: long-lens oblique view across the waveforms with the numeric column in
-// focus at frame right. Pose solved from point matches against the reference
+// Version 1: long-lens oblique view across the waveforms; the middle trace and the
+// numeric column at frame right are in focus. Pose solved from point matches against the reference
 // (first and last frames); the shot drifts linearly between the two.
 const V1_POS: Vec3 = [-2.1548, 1.1882, 2.0493];
-const PANEL_FOCUS: Vec3 = [1.53, 0.52, 0];
+const FOCUS_POINT: Vec3 = [1.2, 0.54, 0];
 
 export const cameraV1 = (t: number, duration: number): CameraState => {
   const p = t / duration;
   const pos = add(V1_POS, sway(t, 0.004));
   const target = add(
-    lerp3([0.7188, 0.6024, 0], [0.6114, 0.6273, 0], p),
+    lerp3([0.7188, 0.614, 0], [0.585, 0.632, 0], p),
     sway(t + 30, 0.0025),
   );
   return {
     pos,
     target,
     roll: mix(-0.0034, -0.0693, p),
-    fovY: (mix(9.74, 8.81, p) * Math.PI) / 180,
-    focusDist: depthAlong(pos, target, PANEL_FOCUS),
-    aperture: 120,
+    fovY: (mix(9.74, 8.45, p) * Math.PI) / 180,
+    focusDist: depthAlong(pos, target, FOCUS_POINT),
+    // Sharp zone spans the middle trace through to the numeric column; the near
+    // (left) part of the screen falls off into blur, as in the reference.
+    focusRange: 0.085,
+    aperture: 150,
   };
 };
 
@@ -92,5 +95,6 @@ export const cameraV2 = (t: number, duration: number): CameraState => {
     fovY: (34 * Math.pow(7.6 / 34, move) * Math.PI) / 180,
     focusDist: mix(fNumbers, fTraces, rack),
     aperture: mix(70, 125, move),
+    focusRange: 0.03,
   };
 };

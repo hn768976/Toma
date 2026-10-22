@@ -11,39 +11,39 @@ const k = (t: number, value: string | null, alarm = false): Readout => ({
 
 export const TOP_READOUT: Readout[] = [
   k(0, "13"),
-  k(0.34, "11"),
+  k(0.2, "11"),
   k(0.5, "10"),
-  k(0.84, "8"),
-  k(1.0, "6"),
-  k(1.34, "5"),
-  k(1.5, "3"),
-  k(1.84, "2", true),
-  k(2.0, "0", true),
+  k(0.75, "8"),
+  k(0.95, "6"),
+  k(1.15, "5"),
+  k(1.55, "3"),
+  k(1.8, "2", true),
+  k(1.95, "0", true),
 ];
 
 export const MID_READOUT: Readout[] = [
   k(0, "32"),
-  k(0.34, "24"),
-  k(0.5, "16"),
-  k(0.67, "8"),
-  k(0.84, "5"),
-  k(1.67, "4"),
-  k(3.17, "3"),
-  k(3.67, "2"),
+  k(0.35, "24"),
+  k(0.47, "16"),
+  k(0.58, "8"),
+  k(0.75, "5"),
+  k(1.55, "4"),
+  k(3.15, "3"),
+  k(3.55, "2"),
   k(3.9, "0", true),
 ];
 
 export const BOTTOM_READOUT: Readout[] = [
   k(0, "16"),
-  k(0.67, null),
-  k(1.17, "7"),
-  k(1.5, "8"),
-  k(1.84, null),
-  k(3.3, "0"),
-  k(4.5, null),
-  k(5.45, "0", true),
-  k(6.85, null, true),
-  k(7.2, "0", true),
+  k(0.55, null),
+  k(1.35, "7"),
+  k(1.75, "8"),
+  k(2.35, null),
+  k(3.15, "0"),
+  k(4.35, null),
+  k(5.35, "0", true),
+  k(6.35, null, true),
+  k(7.35, "0", true),
   k(11.4, null, true),
   k(11.7, "0", true),
   k(16.1, null, true),
@@ -59,6 +59,6 @@ export const readoutAt = (keys: Readout[], t: number): Readout => {
 };
 
 // When each channel's alarm latches (used for label / tick colouring).
-export const ALARM_TOP = 1.84;
+export const ALARM_TOP = 1.8;
 export const ALARM_MID = 3.9;
-export const ALARM_BOTTOM = 5.45;
+export const ALARM_BOTTOM = 5.35;

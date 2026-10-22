@@ -11,6 +11,7 @@ export type CameraState = {
   fovY: number; // radians
   focusDist: number; // world units along view axis
   aperture: number; // blur in output pixels (at 2160p) per unit of relative defocus
+  focusRange: number; // relative depth either side of focus that stays sharp
 };
 
 export type Grade = {
@@ -39,6 +40,7 @@ uniform vec3 uFwd;
 uniform float uTanHalf;
 uniform float uFocus;
 uniform float uAperture;
+uniform float uFocusRange;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -64,7 +66,7 @@ vec3 sampleScreen(vec2 uv, float lod) {
   // heavily-filtered sample of the nearest edge so there is no visible seam.
   vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
   float m = inside.x * inside.y;
-  vec3 edge = textureLod(uTex, clamp(uv, 0.0, 1.0), 8.0).rgb * 0.6;
+  vec3 edge = textureLod(uTex, clamp(uv, 0.0, 1.0), 8.0).rgb;
   return mix(edge, textureLod(uTex, uv, lod).rgb, m);
 }
 
@@ -79,7 +81,8 @@ void project(vec2 frag, out vec2 uv, out vec2 uvx, out vec2 uvy, out float fp,
   uvy = planeUv(ray(frag + vec2(0.0, 1.0)), d2) - uv;
   fp = max(length(uvx * uTexSize), length(uvy * uTexSize));
   float scale = uRes.y / 2160.0;
-  coc = uAperture * scale * abs(depth - uFocus) / max(depth, 1e-3);
+  coc = uAperture * scale *
+    max(0.0, abs(depth - uFocus) / max(depth, 1e-3) - uFocusRange);
   coc = min(coc, 160.0 * scale);
 }
 `;
@@ -191,6 +194,7 @@ const UNIFORMS = [
   "uUp",
   "uFwd",
   "uTanHalf",
+  "uFocusRange",
   "uFocus",
   "uAperture",
   "uBlur",
@@ -342,6 +346,7 @@ export class MonitorRenderer {
     gl.uniform1f(L.uTanHalf, Math.tan(cam.fovY / 2));
     gl.uniform1f(L.uFocus, cam.focusDist);
     gl.uniform1f(L.uAperture, cam.aperture);
+    gl.uniform1f(L.uFocusRange, cam.focusRange);
   }
 
   render(

@@ -23,11 +23,11 @@ const PANEL_X = 3960;
 
 export const COLORS = {
   bg: "#061a1d",
-  grid: "rgba(110, 170, 165, 0.045)",
-  gridMajor: "rgba(110, 170, 165, 0.07)",
+  grid: "rgba(110, 170, 165, 0.075)",
+  gridMajor: "rgba(110, 170, 165, 0.13)",
   divider: "rgba(90, 150, 145, 0.35)",
   green: "#5fcf9a",
-  cyan: "#8ee6e2",
+  cyan: "#a8f2ee",
   sand: "#e3d394",
   red: "#ff3b22",
   label: "rgba(150, 200, 195, 0.75)",
@@ -54,7 +54,7 @@ const CHANNELS: Channel[] = [
     y: 470,
     amp: 13,
     color: COLORS.green,
-    width: 7,
+    width: 5,
     seed: 1,
     period: 5.6,
     phase: 0.42,
@@ -68,7 +68,7 @@ const CHANNELS: Channel[] = [
     y: 1330,
     amp: 17,
     color: COLORS.cyan,
-    width: 8,
+    width: 5.5,
     seed: 2,
     period: 5.2,
     phase: 0.25,
@@ -82,7 +82,7 @@ const CHANNELS: Channel[] = [
     y: 2190,
     amp: 11,
     color: COLORS.sand,
-    width: 6,
+    width: 4.5,
     seed: 3,
     period: 6.1,
     phase: 0.86,
@@ -168,7 +168,7 @@ const drawStatic = (): HTMLCanvasElement => {
 const traceValue = (ch: Channel, tw: number) => {
   // Low amplitude, jittery waveform with a slow wandering baseline.
   const fast =
-    noise1(tw * 34, ch.seed) * 0.55 + noise1(tw * 71, ch.seed + 5) * 0.3;
+    noise1(tw * 60, ch.seed) * 0.5 + noise1(tw * 140, ch.seed + 5) * 0.4;
   const beat = Math.pow(Math.max(0, Math.sin(tw * 7.4 + ch.seed)), 18) * 0.9;
   const slow = fbm1(tw * 0.6, ch.seed + 11) * 2.2;
   return (fast + beat) * ch.amp + slow * ch.amp * 0.6;
@@ -176,7 +176,7 @@ const traceValue = (ch: Channel, tw: number) => {
 
 const drawTrace = (g: CanvasRenderingContext2D, ch: Channel, t: number) => {
   const span = WAVE_X1 - 140 - WAVE_X0;
-  const n = 1400;
+  const n = 2600;
   const gap = 0.055;
   const cursor = (t / ch.period + ch.phase) % 1;
 
@@ -214,10 +214,10 @@ const drawTrace = (g: CanvasRenderingContext2D, ch: Channel, t: number) => {
     }
     g.stroke();
   };
-  stroke(ch.width * 3, 0.1, ch.color);
-  stroke(ch.width * 1.6, 0.3, ch.color);
+  stroke(ch.width * 3, 0.08, ch.color);
+  stroke(ch.width * 1.7, 0.25, ch.color);
   stroke(ch.width, 0.95, ch.color);
-  stroke(ch.width * 0.3, 0.55, "#ffffff");
+  stroke(ch.width * 0.45, 0.8, "#ffffff");
   g.globalAlpha = 1;
 };
 
@@ -231,7 +231,7 @@ const drawDotRow = (
   for (let x = WAVE_X0 + 30, i = 0; x < WAVE_X1 - 120; x += 46, i++) {
     const h = hash1(i * 3.1 + idx * 17);
     const red = alarm && h > 0.86;
-    g.fillStyle = red ? "rgba(255, 70, 50, 0.7)" : "rgba(120, 190, 185, 0.38)";
+    g.fillStyle = red ? "rgba(255, 70, 50, 0.7)" : "rgba(130, 200, 195, 0.62)";
     g.fillRect(x, y - 18, 7, 36);
   }
 };
